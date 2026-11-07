@@ -12,17 +12,21 @@ export default {
   sec: [[-0.5, 0], [-0.22, 0.6], [0.22, 1], [0.47, 0.6], [0.5, 0]],
   // the same turned over, for a roll whose lower edge is on the head's right of its spine
   secR: [[-0.5, 0], [-0.47, 0.6], [-0.22, 1], [0.22, 0.6], [0.5, 0]],
+  // the back's: a ridge down the middle
+  secC: [[-0.5, 0], [-0.32, 0.72], [0, 1], [0.32, 0.72], [0.5, 0]],
   clumps: [
     // the lowest: from the point at the back along his right side, round the temple, across the forehead, up at his left
-    { id: 'low', sec: 'secR', n: 13, path: [[194, -0.5], [166, -12], [135, -36, 0.01], [95, -58, 0.03], [52, -54, 0.04], [37, -20, 0.04], [38, 18, 0.05], [52, 38, 0.09]], w: [0.32, 0.4, 0.48, 0.5, 0.48, 0.42, 0.42, 0.38], h: [0.08, 0.13, 0.16, 0.17, 0.16, 0.14, 0.15, 0.15], ends: [0.5, 0.4], tipUp: [0.1, 0.4] },
+    { id: 'low', sec: 'secR', n: 13, path: [[178, -16], [158, -26], [132, -38, 0.01], [95, -58, 0.03], [56, -52, 0.05], [44, -20, 0.07], [46, 16, 0.09], [58, 36, 0.12]], w: [0.3, 0.38, 0.44, 0.48, 0.44, 0.36, 0.36, 0.34], h: [0.04, 0.08, 0.11, 0.15, 0.16, 0.15, 0.16, 0.15], ends: [0.4, 0.4], tipUp: [0, 0.4] },
     // his left side, low: from under the low roll's curl back down the side to the point
-    { id: 'side_l', sec: 'secR', n: 10, path: [[40, 46, 0.03], [72, 60, 0.03], [120, 56, 0.02], [135, 36], [166, 12], [194, 0.5]], w: [0.46, 0.52, 0.5, 0.44, 0.4, 0.32], h: [0.17, 0.18, 0.16, 0.14, 0.11, 0.08], ends: [0.4, 0.5], tipUp: [0.4, 0.1] },
+    { id: 'side_l', sec: 'secR', n: 10, path: [[46, 44, 0.06], [72, 58, 0.04], [112, 56, 0.02], [132, 38], [158, 26], [178, 16]], w: [0.42, 0.48, 0.48, 0.42, 0.36, 0.3], h: [0.17, 0.16, 0.13, 0.1, 0.07, 0.04], ends: [0.4, 0.4], tipUp: [0.4, 0] },
     // the middle: from the back of the crown along his right, over the forehead's top, curled over to his left
-    { id: 'mid', sec: 'secR', n: 12, path: [[185, -0.5], [145, -34, 0.02], [85, -40, 0.05], [55, -22, 0.09], [52, 8, 0.12], [64, 30, 0.12]], w: [0.42, 0.48, 0.5, 0.5, 0.48, 0.4], h: [0.1, 0.16, 0.19, 0.2, 0.2, 0.17], ends: [0.5, 0.4], tipUp: [0.1, 0.4] },
+    { id: 'mid', sec: 'secR', n: 12, path: [[172, -9], [150, -18, 0.01], [125, -32, 0.02], [85, -40, 0.06], [60, -22, 0.12], [58, 8, 0.16], [68, 28, 0.16]], w: [0.24, 0.38, 0.46, 0.5, 0.48, 0.46, 0.4], h: [0.04, 0.08, 0.12, 0.18, 0.21, 0.21, 0.18], ends: [0.4, 0.4], tipUp: [0, 0.4] },
     // his left, high: from under the middle roll's curl back along the upper side to the point
-    { id: 'mid_l', sec: 'secR', n: 10, path: [[58, 26, 0.08], [95, 38, 0.05], [145, 32, 0.02], [185, 0.5]], w: [0.46, 0.5, 0.48, 0.42], h: [0.19, 0.18, 0.15, 0.1], ends: [0.4, 0.5], tipUp: [0.4, 0.1] },
+    { id: 'mid_l', sec: 'secR', n: 10, path: [[62, 26, 0.12], [95, 38, 0.05], [125, 32, 0.02], [150, 18, 0.01], [172, 9]], w: [0.44, 0.5, 0.48, 0.4, 0.24], h: [0.19, 0.17, 0.12, 0.08, 0.04], ends: [0.4, 0.4], tipUp: [0.4, 0] },
     // the quiff: from the crown forward over the top, lifted off the forehead and curled to his left
-    { id: 'quiff', n: 10, path: [[176, 0], [125, -8, 0.05], [80, -8, 0.12], [62, 4, 0.16], [66, 18, 0.17]], w: [0.4, 0.5, 0.54, 0.52, 0.42], h: [0.1, 0.18, 0.22, 0.24, 0.2], ends: [0.6, 0.4], tipUp: [0.1, 0.4] },
+    { id: 'quiff', n: 12, path: [[192, 0], [160, -2, 0.02], [120, -8, 0.07], [85, -8, 0.15], [68, 4, 0.22], [72, 18, 0.24]], w: [0.24, 0.4, 0.5, 0.54, 0.52, 0.42], h: [0.04, 0.11, 0.18, 0.22, 0.25, 0.22], ends: [0.4, 0.4], tipUp: [0, 0.4] },
+    // the back: a shield from the crown down to the point at the nape the rolls run into, a ridge down its middle
+    { id: 'back', sec: 'secC', n: 8, path: [[112, 0, 0.02], [140, 0, 0.02], [168, 0, 0.01], [197, 0]], w: [0.86, 0.84, 0.66, 0.4, 0.2], h: [0.13, 0.14, 0.13, 0.1, 0.07], ends: [0.6, 0.8], tipUp: [0, 0.2] },
   ],
   // the shaved: the temples, the skull's sides above the ears and behind them, the back of the skull down to the nape
   // (and the scalp under the clumps, so a chink between two shows the shave, not skin)

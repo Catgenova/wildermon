@@ -89,9 +89,11 @@ for (const c of window.CELLS) {
     gl.uniform3fv(U('SHC'), window.SHS[m.who]);
     gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(m.a), gl.DYNAMIC_DRAW);
     gl.vertexAttribPointer(AL.p, 3, gl.FLOAT, false, 36, 0); gl.vertexAttribPointer(AL.n, 3, gl.FLOAT, false, 36, 12); gl.vertexAttribPointer(AL.m, 3, gl.FLOAT, false, 36, 24);
-    gl.uniform1f(U('ALPHA'), m.alpha); if (m.alpha < 1) { gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); } else gl.disable(gl.BLEND);
+    gl.uniform1f(U('ALPHA'), m.alpha); gl.disable(gl.BLEND); // (a see-through mesh writes its alpha as it is: the front-most layer alone, over the page)
     gl.uniform1i(U('mode'), m.flat ? 2 : 0); gl.uniform1f(U('lift'), 0); gl.uniform2f(U('RAMP'), window.RAMP[0], window.RAMP[1]);
+    if (m.depthOnly) gl.colorMask(false, false, false, false);
     gl.drawArrays(gl.TRIANGLES, 0, m.a.length / 9);
+    gl.colorMask(true, true, true, true);
   }
   for (const m of c.meshes) {
     if (!m.e) continue;
@@ -119,7 +121,7 @@ export async function shoot(w, h, cells, file, { texts = [], imgs = [] } = {}) {
   const p = await browser.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: 1 });
   p.on('pageerror', (e) => console.log('ERR', e.message));
   await p.setContent(PAGE(w, h));
-  const data = cells.map((c) => ({ ...c, meshes: c.meshes.map((m) => ({ who: m.who ?? 'male', a: flatMesh(m), e: m.edges ? edgesOf(m) : null, ec: m.edgec ?? [0.15, 0.1, 0.1], flat: !!m.flat, alpha: m.alpha ?? 1 })) }));
+  const data = cells.map((c) => ({ ...c, meshes: c.meshes.map((m) => ({ who: m.who ?? 'male', a: flatMesh(m), e: m.edges ? edgesOf(m) : null, ec: m.edgec ?? [0.15, 0.1, 0.1], flat: !!m.flat, alpha: m.alpha ?? 1, depthOnly: !!m.depthOnly })) }));
   const SHS = { male: shOf('male'), female: shOf('female') };
   // the references: each a crop of an image scaled into its box
   const urls = {};
@@ -157,6 +159,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { buildRig, posed, skin } from './lowrig.mjs';
 import { buildHair, skinHair, STYLES, crossings, openEdges } from './lowhair.mjs';
+import { carve, hullSurface } from './lowhairhull.mjs';
 
 const REF = join(DIR, 'ref/hair-swept-undercut.png'), REF_SIZE = [1536, 1024];
 const PIV = [0, 1, 0.1];
@@ -186,7 +189,12 @@ if (MAIN) {
   const only = opt('only', 'views').split(','), style = STYLES[opt('style', 'swept')];
   const CAMS = JSON.parse(readFileSync(join(DIR, 'lowhaircams.json'), 'utf8'));
   const RIGS = {}, HAIRS = {};
-  for (const who of opt('who', 'male,female').split(',')) { RIGS[who] = buildRig(who); HAIRS[who] = buildHair(RIGS[who], style); }
+    const HULL = args.includes('--hull') ? carve(opt('style', 'swept')) : null;
+  for (const who of opt('who', 'male,female').split(',')) {
+    RIGS[who] = buildRig(who);
+    // --hull: the carved hull's outer skin in place of the hair (with the shave of the style)
+    HAIRS[who] = HULL ? { ...hullSurface(HULL, RIGS[who]), shave: buildHair(RIGS[who], style).shave } : buildHair(RIGS[who], style);
+  }
   const stage = opt('tag', '');
 
   if (only.includes('views')) for (const who of Object.keys(RIGS)) {
@@ -198,9 +206,9 @@ if (MAIN) {
       imgs.push({ src: REF, size: REF_SIZE, crop: [c.cx - cw / 2, c.cy - ch / 2, cw, ch], box: [x, y1, cw, ch] });
       cells.push({ meshes: [bodyMesh(rig, hair), hairMesh(rig, hair)], cam: camOf(c), box: [x, y2, cw, ch], label });
       if (!over) return;
-      // the third row: the sheet with ours over it, the hair a see-through teal, the head left out
+      // the third row: the sheet with our hair laid over it, a see-through teal with its outline (the head left out)
       imgs.push({ src: REF, size: REF_SIZE, crop: [c.cx - cw / 2, c.cy - ch / 2, cw, ch], box: [x, y3, cw, ch] });
-      cells.push({ meshes: [{ ...hairMesh(rig, hair), col: hair.polys.map(() => [0.2, 0.95, 0.85]), flat: true, alpha: 0.45, edges: true, edgec: [0.1, 0.5, 0.45] }], cam: camOf(c), box: [x, y3, cw, ch], see: true });
+      cells.push({ meshes: [{ ...bodyMesh(rig, hair), depthOnly: true }, { ...hairMesh(rig, hair), col: hair.polys.map(() => [0.2, 0.95, 0.85]), flat: true, alpha: 0.42 }], cam: camOf(c), box: [x, y3, cw, ch], see: true, label: 'ours (teal) over the sheet' });
     });
     texts.push({ css: 'left:12px;top:6px', html: `Swept back undercut — the sheet (top), the ${who === 'male' ? 'man' : 'woman'} (below): ${hair.tris.length} hair triangles, ${hair.pieces.length} clumps` });
     await shoot(x0 * 2 + 5 * cw + 4 * gap, (over ? y3 : y2) + ch + 10, cells, join(out, `hair-sheet-${who}${stage}.png`), { texts, imgs });
