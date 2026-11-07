@@ -9,7 +9,8 @@ import { whoAmI } from './accounts';
 import { supabase } from './supabase';
 import { toldOf, toldWire } from './told';
 import { PRESENCE_FRESH_MS } from './presence';
-import { ACT_MANY_JOBS, Island, type CastMore, type CastWire, type HeldSaid, type ItemRow, type PlayerRow, type SkinSaid } from './island';
+import { ACT_MANY_JOBS, Island, rowSaid, type CastMore, type CastWire, type HeldSaid, type ItemRow, type PlayerRow, type SkinSaid } from './island';
+import { nutritionSaid } from '../game/nutrition';
 import { heldFrom } from '../ui/effects';
 import { isSpell } from '../render/spells/info';
 import type { CastAt } from '../game/events';
@@ -612,10 +613,8 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
     // And the shut recipes you have read, which the crafting window opens (`recipebook.ts`).
     if (what.recipes) game.knownRecipes = new Set(what.recipes);
     if (what.title !== undefined) game.player.title = what.title;
-    if (what.nutrition) {
-      const n = game.player.nutrition as unknown as Record<string, number>;
-      for (const [k, v] of Object.entries(what.nutrition)) if (typeof v === 'number') n[k] = v;
-    }
+    // The island's four, wholesale: one it does not name is nought there too (`nutritionSaid`).
+    if (what.nutrition) Object.assign(game.player.nutrition, nutritionSaid(what.nutrition));
     if (what.marks !== undefined) game.showProspected(what.marks?.tiles ?? [], what.marks?.secs ?? 0);
     // And your path, which sight, the map and a wildermon's blood are worked out from here (`setPath`).
     if (what.path) game.setPath(what.path);
@@ -646,6 +645,8 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
     }
     if (what.ticked) game.heardTicked(what.ticked);
   };
+  // And the same off the join's row, so a refreshed page holds them from the first frame, not the first beat (`rowSaid`).
+  island.hooks.mine(rowSaid(me));
 
   island.hooks.doing = (what) => {
     if (!what.act) {

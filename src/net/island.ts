@@ -420,6 +420,29 @@ export interface PlayerRow {
   [key: string]: unknown;
 }
 
+/** What a beat says about you (`IslandHooks.mine`). */
+export type MineSaid = Parameters<NonNullable<IslandHooks['mine']>>[0];
+
+/**
+ * The join's row in the beat's words: the columns of you that only the beat said (`rpc_settle`), read off the row
+ * `rpc_join` hands over. The first beat is a `HEARTBEAT` after the join, so until then a refreshed page drew these
+ * from nothing: "browser refresh seems to reset nutritions". Not `equipped`: it names items of the pack, which lands
+ * after the join.
+ */
+export function rowSaid(me: PlayerRow): MineSaid {
+  const record = (v: unknown): v is Record<string, number> => !!v && typeof v === 'object' && !Array.isArray(v);
+  const said: MineSaid = {};
+  if (record(me.nutrition)) said.nutrition = me.nutrition;
+  if (typeof me.rested === 'number') said.rested = me.rested;
+  if (typeof me.sleep_on === 'boolean') said.sleepOn = me.sleep_on;
+  if (Array.isArray(me.boons)) said.boons = me.boons;
+  if (record(me.knacks)) said.knacks = me.knacks;
+  if (Array.isArray(me.titles)) said.titles = me.titles.filter((t): t is string => typeof t === 'string');
+  if (typeof me.title === 'string' || me.title === null) said.title = me.title;
+  if (Array.isArray(me.wounds)) said.wounds = me.wounds;
+  return said;
+}
+
 /**
  * How early, in seconds, the creatures or the ground read is asked when the other is due, so that the two go in one
  * round trip (`Island.refreshNear`) and stay in step after: half the beat of either.

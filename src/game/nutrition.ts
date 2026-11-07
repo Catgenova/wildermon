@@ -38,6 +38,16 @@ export const NUTRIENT_NOTES: Record<Nutrient, string> = {
 /** A body with nothing in it. */
 export const emptyNutrition = (): Record<Nutrient, number> => ({ starch: 0, flesh: 0, fat: 0, greens: 0 });
 
+/** The island's `player.nutrition` as the four: one it does not name has never been eaten, and is nought. */
+export const nutritionSaid = (said: Record<string, unknown>): Record<Nutrient, number> => {
+  const n = emptyNutrition();
+  for (const k of NUTRIENTS) {
+    const v = said[k];
+    if (typeof v === 'number' && Number.isFinite(v)) n[k] = v;
+  }
+  return n;
+};
+
 /** Seconds a full measure takes to fall away to nothing. */
 export const NUTRIENT_HOURS = world(50 * 60);
 export const NUTRIENT_DECAY = 1 / NUTRIENT_HOURS;

@@ -4963,6 +4963,17 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/favour.mjs --log-level=error
           node node_modules/.cache/favour.mjs
 
+      - name: What is on your table is the island's, through a refresh
+        if: matrix.shard == 5
+        run: |
+          # The page read nutrition off the beat only, and the first beat goes a
+          # minute after the join, so a refresh showed all four at nought. This
+          # asks that what was eaten is on the row, the join and the first beat,
+          # that the browser reads the join's row, and the beat wholesale.
+          npx esbuild supabase/test/nutritionrefresh.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/nutritionrefresh.mjs --log-level=error
+          node node_modules/.cache/nutritionrefresh.mjs
+
       - name: A corner the island moves is said to the browsers watching
         if: matrix.shard == 5
         run: |

@@ -4266,6 +4266,7 @@ export const NEWS: News[] = [
         + `${percent(OWN_FRUIT_SHARE)} of the wild apple and olive trees off settlements on those islands, at their own age (was: only on the map with the fog off).`,
       `Fixed: with the fog off, the map and the world show only land read from the island; the rest is dark until read, ${LAND_STEP} × ${LAND_STEP} tiles `
         + `every ${LAND_UNFOGGED_EVERY} s, nearest first (was: drawn from the seed, without anybody's changes).`,
+      `Fixed: nutrition, sleep bonus, meal boosts, knacks, titles and wounds shown from the moment a page opens (was: empty for up to ${HEARTBEAT} s after a refresh).`,
     ],
   },
   {
