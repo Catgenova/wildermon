@@ -51,3 +51,9 @@ Decisions
   y -3.79 (was 0.71), the ring scaled across only, its depth and height kept; the row above it (hw0..hw8) refitted so
   the planes between stay flat. Here the full-body reference wins over the torso sheet's narrower cut. The fitter holds
   the ring fixed; the torso sheet's bottom-cut-corner landmarks are dropped.
+- 2026-11-07, the user's decision: her breasts grow out of the chest as her reference's do ("the muscles in breasts come
+  down from the chest as in the reference"), not two domes set on a flat chest. The upper half has no ring of its own:
+  its facets run straight from the foot to the point, and the foot's upper points lie on the pectoral planes' slope from
+  the collarbone (the collarbone's point, the foot's top and the point in one line, as the topology panel's line from
+  the collarbone through the breast), so the profile's upper slope is the chest continuing; the sides and the underside
+  keep the middle ring that rounds them. The point at her reference's front (213, 184), where its facets meet.

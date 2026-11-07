@@ -524,12 +524,12 @@
    "shoulder widest": [
     270,
     161.7,
-    "sd4"
+    "da4"
    ],
    "shoulder widest'": [
     53.3,
     161.7,
-    "sd4'"
+    "da4'"
    ],
    "breast top": [
     196,
@@ -537,13 +537,13 @@
     "da1"
    ],
    "breast point": [
-    206.7,
-    175,
+    213,
+    184,
     "db1"
    ],
    "breast point'": [
-    123.3,
-    175,
+    110.4,
+    184,
     "db1'"
    ],
    "breast outer": [
@@ -635,7 +635,7 @@
    ],
    "breast point": [
     695,
-    180,
+    186,
     "db1'"
    ],
    "breast lower edge": [
@@ -660,7 +660,7 @@
    "waist back": [
     593.3,
     270,
-    "rc8"
+    "rc7"
    ],
    "buttocks": [
     560,
@@ -707,12 +707,12 @@
    "shoulder widest": [
     963.3,
     168.7,
-    "sd4"
+    "da4"
    ],
    "shoulder widest'": [
     1178.3,
     168.7,
-    "sd4'"
+    "da4'"
    ],
    "shoulder blade tip": [
     1038.3,

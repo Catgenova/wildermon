@@ -209,6 +209,7 @@ if (stage === 'mesh') {
   if (preset.dome && (!sel.length || sel.includes('dome'))) {
     ps.push({ step: 0.03, get: () => preset.dome.mu, set: (x) => { preset.dome.mu = Math.min(0.9, Math.max(+opt('mumin', '0.2'), x)); } });
     for (let k = 0; k < 3; k++) ps.push({ step: 0.02, get: () => preset.dome.d[k], set: (x) => { preset.dome.d[k] = x; } });
+    if (preset.dome.e) for (let k = 1; k < 3; k++) ps.push({ step: 0.02, get: () => preset.dome.e[k], set: (x) => { preset.dome.e[k] = x; } });
   }
   const flatW = +opt('flat', '200'), reg = +opt('reg', '0');
   const start = structuredClone(preset.V);
