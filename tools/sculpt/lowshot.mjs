@@ -6,7 +6,7 @@
 //
 // Flat shading (each triangle its own normal), a cool light from the left, a warm one from the right, a front fill.
 // The top and the bottom views leave the shoulder stub out, as the references do; the bottom view looks up from the
-// front at --pitch degrees (default 35), the top view down at --top (default 78) so the jaw's underside and the neck read.
+// front at --pitch degrees (default 40), the top view down at --top (default 86) so the jaw's underside and the neck read.
 // Uses Playwright's Chromium at /opt/pw-browsers/chromium with software GL.
 import { chromium } from 'playwright-core';
 import { existsSync, mkdirSync } from 'node:fs';
@@ -18,8 +18,8 @@ const opt = (name, fallback) => { const i = args.indexOf(`--${name}`); return i 
 const who = opt('who', 'male');
 const out = resolve(opt('out', 'tmp/lowhead'));
 const dsf = +opt('scale', '1');
-const pitch = +opt('pitch', '35');
-const topPitch = +opt('top', '78'); // the top view looks down from a little in front, as the references' does
+const pitch = +opt('pitch', '40');
+const topPitch = +opt('top', '86'); // the top view looks down from a little in front, as the references' does
 const normals = args.includes('--normals'); // a pass of the view-space normals of the skin, for fitting the light to a reference
 mkdirSync(out, { recursive: true });
 
@@ -76,14 +76,48 @@ const ao = T.map(([a, b, c], i) => {
   // The winding does not say which side is outside, so both sides are tried and the opener one is the outside.
   return Math.max(...samples.flatMap((at) => [open(n, at), open(n.map((v) => -v), at)]));
 });
+// One normal and one occlusion per polygon, not per triangle: a quad that is nearly flat shades as the one plane the
+// wireframe draws, with no seam along its diagonal. The normal is the polygon's Newell normal, turned to agree with its
+// first triangle's.
+const polyN = mesh.polys.map((p) => {
+  const pts = p.v.map((k) => mesh.verts[k]);
+  let n = [0, 0, 0];
+  for (let i = 0; i < pts.length; i++) { const a = pts[i], b = pts[(i + 1) % pts.length]; n = [n[0] + (a[1] - b[1]) * (a[2] + b[2]), n[1] + (a[2] - b[2]) * (a[0] + b[0]), n[2] + (a[0] - b[0]) * (a[1] + b[1])]; }
+  return n;
+});
+const polyAo = new Map();
+mesh.tris.forEach((t, i) => { const e = polyAo.get(t.poly) ?? [0, 0]; e[0] += ao[i]; e[1]++; polyAo.set(t.poly, e); });
+// A smooth normal per vertex position (the skin's polygons around it, area-weighted, each turned away from the head's
+// axis), blended a little into the flat one in the shader for the gradient the references' planes carry; where the two
+// differ by more than 40 degrees (a crease: the chin's underside, the brow, the ears) the plane stays flat.
+const keyOf = (p) => p.map((v) => v.toFixed(4)).join(',');
+const smoothAcc = new Map();
+const outFrom = (c) => [c[0], 0, c[2] - (c[1] > 0.5 ? 0.1 : 0)];
+mesh.polys.forEach((p, pi) => {
+  if (p.mat !== 'skin') return;
+  const pts = p.v.map((k) => mesh.verts[k]);
+  const c = pts.reduce((a, q) => [a[0] + q[0] / pts.length, a[1] + q[1] / pts.length, a[2] + q[2] / pts.length], [0, 0, 0]);
+  let n = polyN[pi];
+  if (dot(n, outFrom(c)) < 0) n = n.map((v) => -v);
+  for (const q of pts) { const k = keyOf(q); const e = smoothAcc.get(k) ?? [0, 0, 0]; smoothAcc.set(k, [e[0] + n[0], e[1] + n[1], e[2] + n[2]]); }
+});
 const parts = {};
 mesh.tris.forEach((t, i) => {
   const [a, b, c] = T[i];
-  const n = cross(sub(b, a), sub(c, a)); const l = Math.hypot(...n) || 1;
+  const nt = cross(sub(b, a), sub(c, a));
+  let n = polyN[t.poly];
+  if (dot(n, nt) < 0) n = n.map((v) => -v);
+  const l = Math.hypot(...n) || 1;
   const P = (parts[t.part] ??= []);
   // m.z: the occlusion in hundredths, plus the facet's colour jitter as the fraction
-  const mz = Math.round(ao[i] * 100) + ((t.poly * 2654435761) % 1000) / 1001;
-  for (const p of [a, b, c]) P.push(p[0], p[1], p[2], n[0] / l, n[1] / l, n[2] / l, MAT[t.mat], REG[t.region], mz);
+  const [aoSum, aoN] = polyAo.get(t.poly);
+  const mz = Math.round((aoSum / aoN) * 100) + ((t.poly * 2654435761) % 1000) / 1001;
+  for (const p of [a, b, c]) {
+    let sn = t.mat === 'skin' ? smoothAcc.get(keyOf(p)) : null;
+    if (sn) { const sl = Math.hypot(...sn) || 1; sn = sn.map((v) => v / sl); if (dot(sn, n) < 0) sn = sn.map((v) => -v); }
+    else sn = n.map((v) => v / l);
+    P.push(p[0], p[1], p[2], n[0] / l, n[1] / l, n[2] / l, MAT[t.mat], REG[t.region], mz, sn[0], sn[1], sn[2]);
+  }
 });
 // The wireframe: each polygon's outline once (the quads' diagonals left out), the head and the neck and the stub.
 const seen = new Set(), lines = [];
@@ -100,6 +134,7 @@ for (const p of mesh.polys) {
 
 const female = who === 'female';
 const DATA = {
+  smooth: +opt('smooth', '0.3'), // how far the shading leans to the smooth normal, 0 for strictly flat
   parts, lines, pitch, topPitch, normals, counts: mesh.counts,
   pupil: female ? [0.2, 0.21, 0.25] : [0.09, 0.09, 0.11],
   lid: female ? [0.09, 0.075, 0.075] : [0.36, 0.24, 0.2],
@@ -130,12 +165,12 @@ const D = window.DATA, dpr = window.devicePixelRatio;
 const cv = document.getElementById('gl');
 cv.width = 1536 * dpr; cv.height = 1024 * dpr;
 const gl = cv.getContext('webgl', { antialias: true, preserveDrawingBuffer: true, alpha: true, premultipliedAlpha: false });
-const vs = 'attribute vec3 p; attribute vec3 n; attribute vec3 m; uniform mat3 R; uniform vec3 piv; uniform vec2 sc; uniform vec2 off; uniform float lift;' +
-  'varying vec3 vn; varying vec3 vm; void main(){ vec3 q = R*(p - piv); vn = R*n; vm = m;' +
+const vs = 'attribute vec3 p; attribute vec3 n; attribute vec3 m; attribute vec3 s; uniform mat3 R; uniform vec3 piv; uniform vec2 sc; uniform vec2 off; uniform float lift;' +
+  'varying vec3 vn; varying vec3 vm; varying vec3 vs; void main(){ vec3 q = R*(p - piv); vn = R*n; vs = R*s; vm = m;' +
   ' gl_Position = vec4(off + sc*q.xy, -q.z/8.0 - lift, 1.0); }';
-const fs = 'precision highp float; varying vec3 vn; varying vec3 vm; uniform int mode; uniform vec3 lidc; uniform vec3 pupc; uniform vec3 linec;' +
+const fs = '#define SMOOTH ' + D.smooth.toFixed(2) + '\nprecision highp float; varying vec3 vn; varying vec3 vm; varying vec3 vs; uniform int mode; uniform vec3 lidc; uniform vec3 pupc; uniform vec3 linec;' +
   'void main(){ if (mode == 2) { gl_FragColor = vec4(linec, 1.0); return; }' +
-  ' vec3 nn = normalize(vn); if (!gl_FrontFacing) nn = -nn;' +
+  ' vec3 nf = normalize(vn), ns = normalize(vs); vec3 nn = dot(nf, ns) > 0.766 ? normalize(mix(nf, ns, SMOOTH)) : nf; if (!gl_FrontFacing) nn = -nn;' +
   ' vec3 base = vec3(0.68, 0.49, 0.41);' +
   ' float jit = fract(vm.z) - 0.5, occ = floor(vm.z) / 100.0; base *= 1.0 + jit*0.02; base.r += jit*0.01;' +
   ' if (vm.x > 0.5 && vm.x < 1.5) base = vec3(0.27, 0.17, 0.13);' +
@@ -148,15 +183,15 @@ const fs = 'precision highp float; varying vec3 vn; varying vec3 vm; uniform int
   '   float l = 0.82 + 0.18*max(dot(nn, normalize(vec3(-0.4,0.5,0.8))),0.0); gl_FragColor = vec4(rc*l,1.0); return; }' +
   // The light, in view space: a warm key from the front and above, a warm fill from the right, a cool rim from the
   // upper left, planes facing down darker; other materials take it times their colour.
-  ' vec3 Lk = normalize(vec3(0.15,0.2,0.97)), Lr = normalize(vec3(1.0,0.1,0.1)), Lc = normalize(vec3(-0.7,0.6,0.35));' +
+  ' vec3 Lk = normalize(vec3(0.45,0.3,0.84)), Lr = normalize(vec3(1.0,0.1,0.1)), Lc = normalize(vec3(-0.7,0.6,0.35)), Lb = normalize(vec3(-0.95,0.25,-0.2));' +
   ' float dk = max(dot(nn,Lk),0.0), dr = max(dot(nn,Lr),0.0), dc = max(dot(nn,Lc),0.0);' +
-  ' vec3 L = vec3(0.74 + 0.14*min(nn.y,0.0) + 0.06*max(nn.y,0.0)) + 0.25*dk*vec3(1.0,0.98,0.95) + 0.31*dr*vec3(1.04,0.98,0.86);' +
-  ' vec3 c = (base*L + vec3(0.08,0.38,0.78)*pow(dc,6.0)*(0.3+0.7*base.r/0.68)) * mix(0.2, 1.06, occ*occ);' +
+  ' vec3 L = vec3(0.62 + 0.14*min(nn.y,0.0) + 0.06*max(nn.y,0.0)) * vec3(1.02,0.98,0.94) + 0.34*dk*vec3(1.0,0.97,0.92) + 0.16*dr*vec3(1.04,0.96,0.84);' +
+  ' vec3 c = (base*L + vec3(0.12,0.34,0.6)*pow(dc,6.0)*(0.3+0.7*base.r/0.68) + vec3(0.2,0.27,0.36)*pow(max(dot(nn,Lb),0.0),2.5)*(0.3+0.7*base.r/0.68)) * mix(0.2, 1.06, occ*occ);' +
   ' gl_FragColor = vec4(c, 1.0); }';
 function sh(t, s) { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; }
 const pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(pr); gl.useProgram(pr);
 const U = (n) => gl.getUniformLocation(pr, n);
-const A = { p: gl.getAttribLocation(pr, 'p'), n: gl.getAttribLocation(pr, 'n'), m: gl.getAttribLocation(pr, 'm') };
+const A = { p: gl.getAttribLocation(pr, 'p'), n: gl.getAttribLocation(pr, 'n'), m: gl.getAttribLocation(pr, 'm'), s: gl.getAttribLocation(pr, 's') };
 const buf = (arr) => { const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(arr), gl.STATIC_DRAW); return { b, n: arr.length }; };
 const B = {}; for (const k in D.parts) B[k] = buf(D.parts[k]);
 const LB = buf(D.lines);
@@ -167,9 +202,9 @@ const pitchM = (d) => { const a = d * Math.PI / 180, c = Math.cos(a), s = Math.s
 function drawMesh(part) {
   const b = B[part]; if (!b) return;
   gl.bindBuffer(gl.ARRAY_BUFFER, b.b);
-  gl.enableVertexAttribArray(A.p); gl.enableVertexAttribArray(A.n); gl.enableVertexAttribArray(A.m);
-  gl.vertexAttribPointer(A.p, 3, gl.FLOAT, false, 36, 0); gl.vertexAttribPointer(A.n, 3, gl.FLOAT, false, 36, 12); gl.vertexAttribPointer(A.m, 3, gl.FLOAT, false, 36, 24);
-  gl.drawArrays(gl.TRIANGLES, 0, b.n / 9);
+  gl.enableVertexAttribArray(A.p); gl.enableVertexAttribArray(A.n); gl.enableVertexAttribArray(A.m); gl.enableVertexAttribArray(A.s);
+  gl.vertexAttribPointer(A.p, 3, gl.FLOAT, false, 48, 0); gl.vertexAttribPointer(A.n, 3, gl.FLOAT, false, 48, 12); gl.vertexAttribPointer(A.m, 3, gl.FLOAT, false, 48, 24); gl.vertexAttribPointer(A.s, 3, gl.FLOAT, false, 48, 36);
+  gl.drawArrays(gl.TRIANGLES, 0, b.n / 12);
 }
 /** One view: R (column-major mat3) about the pivot, the pivot at (cx, cy) css px, s px per unit. */
 function view({ R, cx, cy, s, piv = [0, 1, 0.1], parts = ['head', 'neck', 'shoulders'], mode = 0, wire = false }) {
@@ -183,7 +218,7 @@ function view({ R, cx, cy, s, piv = [0, 1, 0.1], parts = ['head', 'neck', 'shoul
   if (wire && !D.normals) {
     gl.uniform1i(U('mode'), 2); gl.uniform3fv(U('linec'), [0.99, 0.93, 0.86]);
     gl.bindBuffer(gl.ARRAY_BUFFER, LB.b);
-    gl.disableVertexAttribArray(A.n); gl.disableVertexAttribArray(A.m);
+    gl.disableVertexAttribArray(A.n); gl.disableVertexAttribArray(A.m); gl.disableVertexAttribArray(A.s);
     gl.vertexAttribPointer(A.p, 3, gl.FLOAT, false, 12, 0);
     gl.uniform1f(U('lift'), 0.0015);
     for (const [dx, dy] of [[0, 0], [0.6, 0], [0, 0.6]]) {
