@@ -36,7 +36,7 @@ export const MATS_PLAIN = {
   leather: { c: '#8f746b' },
   leather2: { c: '#7a6159' },
   panel: { c: '#aca0b9' },
-  engrave: { c: '#8a7f99' },
+  engrave: { c: '#93889f' },
   core: { c: '#c9b28a' },
   gem: { c: '#d4b47a' },
   glow: { c: '#ff9a35', glow: 1 },
@@ -44,7 +44,7 @@ export const MATS_PLAIN = {
 export const MATS_ENCHANTED = {
   ...MATS_PLAIN,
   wall: { c: '#ffc46a', emit: true },
-  engrave: { c: '#ffd583', emit: true },
+  engrave: { c: '#ffb347', emit: true },
   core: { c: '#fff6d8', emit: true },
   gem: { c: '#ffe7a6', emit: true },
 };
@@ -248,13 +248,34 @@ export function buildLongSword({ enchanted = false, length } = {}) {
     const disc = (cx, cu, z, r, a, n = 10) => { const c = P(cx, cu, z, a), rim = [...Array(n).keys()].map((j) => P(cx + r * Math.cos(j * 2 * Math.PI / n), cu + r * Math.sin(j * 2 * Math.PI / n), z, 0)); for (let j = 0; j < n; j++) F([c, rim[j], rim[(j + 1) % n]], 'glow', z >= 0 ? FRONT : BACK); };
     for (const sz of [1, -1]) { disc(C[0], C[1], 31 * sz, 85, 0.6); disc(0, 116, 33 * sz, 40, 0.55); }
     disc(Fo[0], Fo[1], zE + 1, 42, 0.8);
+    // the panel warmed by the lit lines
+    F(full(PE).map(([x, u]) => P(x, u, zE + 0.8, 0.16)), 'glow', FRONT);
   }
   for (let i = 0; i < G.V.length; i++) if (G.A[i] === undefined) G.A[i] = 1;
 
   return {
     G, MATS: enchanted ? MATS_ENCHANTED : MATS_PLAIN, L: length, k, tris, all: trisOf(G).length,
-    // where the fists close (frame, game units): the main hand just under the collar, the off hand just over the lower one
-    grips: { main: [0, 375 * k, 0], off: [0, 228 * k, 0] },
+    // the grip, in its frame (game units): the haft's axis (toward the point), where the leading hand's fist closes (just
+    // below the guard's collar) and the second hand's (a hand's breadth lower, toward the pommel), the grip's radius, and
+    // which way the edges and the engraved face lie (the edges along the hand's length, knuckles to wrist: the socket's x;
+    // the engraved face out of the back of the right hand: the socket's z)
+    grip: { axis: [0, 1, 0], lead: [0, 372 * k, 0], second: [0, 292 * k, 0], radius: 21.5 * k, edge: [1, 0, 0], face: [0, 0, 1], from: 199 * k, to: 400 * k },
+    grips: { main: [0, 372 * k, 0], off: [0, 292 * k, 0] },
     gripR: 21.5 * k,
+    halfWidth: 86 * k,
   };
+}
+
+/* ---- the game's copy: node tools/sculpt/gear/long_sword.mjs [--out src/sculpt/assets/long_sword.json] ------------------- */
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const { writeFileSync } = await import('node:fs');
+  const { resolve } = await import('node:path');
+  const { buildRig } = await import('../lowrig.mjs');
+  const { gearAsset } = await import('../lowgear.mjs');
+  const args = process.argv.slice(2), at = args.indexOf('--out');
+  const out = resolve(at < 0 ? new URL('../../../src/sculpt/assets/long_sword.json', import.meta.url).pathname : args[at + 1]);
+  const L = await swordLength();
+  const asset = await gearAsset('long_sword', buildLongSword({ length: L }), buildLongSword({ length: L, enchanted: true }), { male: buildRig('male'), female: buildRig('female') });
+  writeFileSync(out, JSON.stringify(asset));
+  console.log(`wrote ${out}: ${asset.counts.tris} triangles (${asset.counts.glowTris} more of glow), ${L.toFixed(4)} game units`);
 }
