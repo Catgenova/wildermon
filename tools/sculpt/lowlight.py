@@ -68,7 +68,29 @@ report('ours', [r['me'] for r in rows])
 A = np.array([basis(r['n']) for r in rows]); W = np.sqrt(np.array([r['k'] for r in rows], float) * np.array([0.5 if r['stub'] else 1 for r in rows]))
 AOT = np.array([r['aot'] for r in rows])
 Y = np.array([r['ref'] for r in rows]) / AOT[:, None]
+# Anchors where the views show no facet (straight up, straight down, the far side): the hand-set rig's colour
+# (lowshot.mjs --rig) over the whole sphere, scaled to the data, with a small weight, so the fitted light stays a light
+# there instead of running off to blue or black
+RIG = dict(amb=0.57, key=0.42, warm=0.32, cool=2, rim=0.42, upr=0.12, cspec=0.52, kx=-0.15, ky=1.4, lcz=0.35, lbz=-0.2, cpow=8, rpow=3)
+if who == 'female': RIG.update(cool=0.2, cpow=0.8, ky=0.7)
+def unit(v): v = np.array(v, float); return v / np.linalg.norm(v)
+def rig(n):
+  R = RIG; base = np.array([0.68, 0.49, 0.41]); k = 1.0
+  dk, dr, dc = max(np.dot(n, unit([R['kx'], R['ky'], 0.84])), 0), max(np.dot(n, unit([1, 0.45, 0.05])), 0), max(np.dot(n, unit([-0.7, 0.6, R['lcz']])), 0)
+  du = max(np.dot(n, unit([0.6, 0.75, 0.3])), 0); a = R['amb'] + 0.06 * max(n[1], 0)
+  L = np.array([a * 1.02, a * 0.98, a * 0.94]) + R['key'] * dk * np.array([1, 0.97, 0.92]) + R['warm'] * dr * np.array([1.04, 0.96, 0.84]) + R['upr'] * du * du * np.array([1.08, 0.9, 0.86])
+  cool = R['cool'] * max(np.dot(n, unit([-0.95, 0.25, R['lbz']])), 0) ** R['cpow']; rim = R['rim'] * max(-n[0], 0) * (1 - max(n[2], 0)) ** R['rpow']
+  return 255 * (base * L + k * (R['cspec'] * dc ** 6 * np.array([0.12, 0.34, 0.6]) + cool * np.array([0.2, 0.27, 0.36]) + rim * np.array([0.5, 0.62, 0.85])))
+anc = [unit((math.sin(t) * math.cos(f), math.cos(t), math.sin(t) * math.sin(f))) for t in np.linspace(0, math.pi, 13) for f in np.linspace(0, 2 * math.pi, 24, endpoint=False)]
+anc = [n for n in anc if n[2] > -0.3]
+Ar = np.array([rig(n) for n in anc]); Aa = np.array([basis(n) for n in anc])
+# the rig's colour scaled to the data's level: the data's mean over the rig's at the data's own normals
+scale = np.average(Y, axis=0, weights=W ** 2).sum() / np.average(np.array([rig(r['n']) for r in rows]), axis=0, weights=W ** 2).sum()
+wa = math.sqrt(float(os.environ.get('ANCHOR', '0.03')) * np.sum(W ** 2) / len(anc))
+A = np.vstack([A, Aa]); Y = np.vstack([Y, Ar * scale]); W = np.concatenate([W, np.full(len(anc), wa)])
+NROW = len(rows)
 Cg, *_ = np.linalg.lstsq(A * W[:, None], Y * W[:, None], rcond=None)
+A, Y, W = A[:NROW], Y[:NROW], W[:NROW]
 report('global', (A @ Cg) * AOT[:, None])
 P = np.zeros_like(Y); out = {'order': order, 'aolo': AOLO, 'global': Cg.T.tolist(), 'views': {}}
 nb = A.shape[1]
