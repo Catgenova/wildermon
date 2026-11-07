@@ -74,3 +74,15 @@ Decisions
   row across the buttocks lowered about 0.2 and back 0.07 at the peak (gl7 -1.32 at -5.3, the cleft -1.12 at -5.18), the
   gluteal fold under it moved down with it (th4 -0.98 at -5.88, th5 -5.96, th3 -5.62) so its faces still turn down; the
   thighs part where they did.
+- 2026-11-07, the user's request ("match the butt to the reference exactly"): her buttocks re-laid as her leg sheet's
+  back view and topology panel draw them (P.retopo, her preset only): a row across the upper buttock between the hip cut
+  and the hip row (gm6..gm8, a chevron down to the cleft as the topology panel's), so the profile rounds out from the
+  waist; the hip row the buttock's lower edge (gl7 -1.24 at -5.16, the cleft gl8 -1.08 at -4.97); under it the fold's V:
+  from the hip row's side corner (gl5) down to the fold's inner corner (th4 0.69, -5.87, -1.01), the faces fanned round
+  th4 (the one by the cleft, gl8 th5 th4, the V's dark face), the fold level from th4 to the cleft (th5 0.10 at -5.87);
+  outside the V the thigh's back plane runs up to gl5 in one face (gl5 th4 tm4 tm3 th3). Placed by the sheet's profile
+  outline (wins), its three-quarter and rear three-quarter outlines and the faces flat. Measured against the sheet's
+  outline from the belt's lower edge to mid-thigh: profile mean 1.4 px (worst 5, at the hip cut: the torso's waist sits
+  about 4 px behind the sheet's there), three-quarter 0.7 px, rear three-quarter's buttock side 1.3 px. The sheet's back
+  view draws the hip row and the fold 6-10 px higher than its profile and rear three-quarter do; the profile wins. Where
+  the thighs part in the back view (cx) the full-body front holds it (the sheet's back has it 12 px higher).

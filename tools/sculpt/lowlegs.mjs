@@ -96,6 +96,12 @@ export function halfFaces(P) {
   f('foot in front', [Cf(5), Cf(0), 'ft0', 'ft5'], 'legs', 'foot');
   for (let k = 0; k < 6; k++) { const k1 = (k + 1) % 6; f(`sole edge${k}`, [`ft${k}`, `ft${k1}`, `so${k1}`, `so${k}`], 'legs', 'foot'); }
   f('sole', ['so0', 'so1', 'so2', 'so3', 'so4', 'so5'], 'legs', 'foot');
+  // P.retopo: a preset's own faces where its reference draws more planes than the rows give: the cells in drop left
+  // out, the faces in add (by vertex name, extra vertices placed in V) put in their place over the same outline
+  for (const { drop = [], add = [] } of P.retopo ?? []) {
+    for (const c of drop) { if (!F.has(c)) throw new Error(`retopo: no cell ${c}`); F.delete(c); }
+    for (const a of add) f(a.name, a.v, a.part ?? 'pelvis', a.region ?? 'pelvis');
+  }
   for (const { name, cells, region } of P.merge ?? []) {
     const edges = new Map();
     let part = 'legs';
@@ -220,6 +226,21 @@ export const PRESETS = {
     fixed: ['gl.0', 'gl.2', 'tm.0', 'cx.1', 'cx.2', 'foot.ht', 'foot.hh', 'foot.hc', 'foot.hcf', 'foot.wt'],
     split: ['kb0/', 'kb7', 'gr0', 'gr1/'],
     merge: KNEECAP,
+    // the buttocks as her leg sheet's back view and topology panel draw them: a row across the upper buttock (gm6..gm8,
+    // between the hip cut and the hip row, so the profile rounds out from the waist), the hip row the buttock's lower
+    // edge, under it the fold's V: from the hip row's side corner (gl5) down to the fold's inner corner (th4), its faces
+    // fanned round th4; outside it the thigh's back plane runs up to the hip row's side corner
+    retopo: [{
+      drop: ['bt5', 'bt6', 'bt7', 'gr5', 'gr6', 'gr7', 'th3'],
+      add: [
+        { name: 'bt5a', v: ['bt5', 'bt6', 'gm6'] }, { name: 'bt5b', v: ['bt5', 'gm6', 'gl5'] }, { name: 'bt5c', v: ['gm6', 'gl6', 'gl5'] },
+        { name: 'bt6', v: ['bt6', 'bt7', 'gm7', 'gm6'] }, { name: 'bt7', v: ['bt7', 'bt8', 'gm8', 'gm7'] },
+        { name: 'gm6', v: ['gm6', 'gm7', 'gl7', 'gl6'] }, { name: 'gm7', v: ['gm7', 'gm8', 'gl8', 'gl7'] },
+        { name: 'gr5', v: ['gl5', 'gl6', 'th4'], region: 'thigh' }, { name: 'gr6', v: ['gl6', 'gl7', 'th4'], region: 'thigh' },
+        { name: 'th3', v: ['gl5', 'th4', 'tm4', 'tm3', 'th3'], part: 'legs', region: 'thigh' },
+        { name: 'gr7a', v: ['gl7', 'gl8', 'th4'], region: 'thigh' }, { name: 'gr7b', v: ['gl8', 'th5', 'th4'], region: 'thigh' },
+      ],
+    }],
   },
 };
 
