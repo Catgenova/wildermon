@@ -9,7 +9,9 @@
 /** The facet's light (its shade over the skin's, by luminance) where the hair steps from its main tone to the mid and
  * from the mid to the highlight; within a tone the facet is lit a little by that light (RAMPK, about the tone's middle),
  * so two facets of one tone still part. */
-export const HAIR_RAMP = [1.08, 1.33];
+export const HAIR_RAMP = [1.15, 1.4];
+/** The mid tone and the highlight: the hair's colour this far toward a warm light (#ffc8aa), from the sheet's palette. */
+export const HAIR_TONES = [0.22, 0.45];
 import { chromium } from 'playwright-core';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -55,14 +57,14 @@ const cv = document.getElementById('gl'); cv.width = W * dpr; cv.height = Hh * d
 const gl = cv.getContext('webgl', { antialias: true, preserveDrawingBuffer: true, premultipliedAlpha: false });
 const vs = 'attribute vec3 p; attribute vec3 n; attribute vec3 m; uniform mat3 R; uniform vec3 piv; uniform float s; uniform vec2 asp; uniform float lift; varying vec3 vn; varying vec3 vm;' +
   'void main(){ vec3 q = R*(p - piv); vn = R*n; vm = m; gl_Position = vec4(q.x*s*asp.x, q.y*s*asp.y, -q.z/30.0 - lift, 1.0); }';
-const fs = 'precision highp float; varying vec3 vn; varying vec3 vm; uniform vec3 SHC[19]; uniform int mode; uniform vec3 linec; uniform vec2 RAMP; uniform float ALPHA; const float RAMPK = 0.45;' +
+const fs = 'precision highp float; varying vec3 vn; varying vec3 vm; uniform vec3 SHC[19]; uniform int mode; uniform vec3 linec; uniform vec2 RAMP; uniform float ALPHA; const float RAMPK = 0.45; const float HAIR_MID = ${HAIR_TONES[0].toFixed(3)}; const float HAIR_HI = ${HAIR_TONES[1].toFixed(3)};' +
   'void main(){ if (mode == 1) { gl_FragColor = vec4(linec, 1.0); return; } vec3 nn = normalize(vn); if (!gl_FrontFacing) nn = -nn; float x = nn.x, y = nn.y, z = nn.z;' +
   ' vec3 c = SHC[0] + SHC[1]*x + SHC[2]*y + SHC[3]*z + SHC[4]*x*y + SHC[5]*y*z + SHC[6]*(3.0*z*z-1.0) + SHC[7]*x*z + SHC[8]*(x*x-y*y)' +
   '   + SHC[9]*y*(3.0*x*x-y*y) + SHC[10]*x*y*z + SHC[11]*y*(5.0*z*z-1.0) + SHC[12]*z*(5.0*z*z-3.0) + SHC[13]*x*(5.0*z*z-1.0) + SHC[14]*z*(x*x-y*y) + SHC[15]*x*(x*x-3.0*y*y)' +
   '   + SHC[16]*pow(max(dot(nn, normalize(vec3(-0.95,0.25,-0.2))),0.0),8.0) + SHC[17]*max(-x,0.0)*pow(1.0-max(z,0.0),3.0) + SHC[18]*max(x,0.0)*pow(1.0-max(z,0.0),3.0);' +
   ' if (mode == 2) { gl_FragColor = vec4(abs(vm), ALPHA); return; }' +
   ' if (vm.x < 0.0) { vec3 hc = -vm; float l = dot(c, vec3(0.3,0.59,0.11)) / dot(vec3(0.68,0.49,0.41), vec3(0.3,0.59,0.11));' +
-  '   vec3 W = vec3(1.0,0.784,0.667); c = l < RAMP.x ? hc : (l < RAMP.y ? mix(hc, W, 0.35) : mix(hc, W, 0.7));' +
+  '   vec3 W = vec3(1.0,0.784,0.667); c = l < RAMP.x ? hc : (l < RAMP.y ? mix(hc, W, HAIR_MID) : mix(hc, W, HAIR_HI));' +
   '   c *= 1.0 + RAMPK * (l - (l < RAMP.x ? RAMP.x - 0.2 : (l < RAMP.y ? 0.5 * (RAMP.x + RAMP.y) : RAMP.y + 0.1))); }' +
   ' else c *= vm/vec3(0.68,0.49,0.41); gl_FragColor = vec4(min(c, vec3(1.0)), ALPHA); }';
 function sh(t, s) { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; }
@@ -213,6 +215,67 @@ if (MAIN) {
     });
     texts.push({ css: 'left:12px;top:6px', html: `Swept back undercut — the sheet (top), the ${who === 'male' ? 'man' : 'woman'} (below): ${hair.tris.length} hair triangles, ${hair.pieces.length} clumps` });
     await shoot(x0 * 2 + 5 * cw + 4 * gap, (over ? y3 : y2) + ch + 10, cells, join(out, `hair-sheet-${who}${stage}.png`), { texts, imgs });
+  }
+
+  const POSES = { headturn: { label: 'Head turned 70°', pose: { neck_01: [0, 16, 0], neck_02: [0, 16, 0], head: [0, 38, 0] } }, nod: { label: 'Head nod (down 40°)', pose: { neck_01: [12, 0, 0], neck_02: [14, 0, 0], head: [14, 0, 0] } } };
+  const report = {};
+  if (only.includes('turn')) {
+    const cells = [], cw = 300, ch = 330;
+    let x = 10;
+    for (const who of Object.keys(RIGS)) {
+      const rig = RIGS[who], hair = HAIRS[who];
+      report[who] = { tris: hair.tris.length, open: openEdges(hair), rest: crossings(rig, hair, rig.B.verts, hair.verts).n };
+      for (const [id, e] of Object.entries(POSES)) {
+        const f = posed(rig, e.pose), P = skin(rig, f), Hp = skinHair(rig, hair, f), n = crossings(rig, hair, P, Hp).n;
+        report[who][id] = n;
+        for (const [yaw, pitch] of [[-30, -5], [-95, 0]]) {
+          cells.push({ meshes: [bodyMesh(rig, hair, P), hairMesh(rig, hair, Hp)], cam: { yaw, pitch, s: 105, c: [0, 0.9, 0.1] }, box: [x, 34, cw, ch], label: `${who === 'male' ? 'Man' : 'Woman'}: ${e.label}, crossings ${n}` });
+          x += cw + 8;
+        }
+      }
+    }
+    await shoot(x + 2, 34 + ch + 10, cells, join(out, `hair-turn${stage}.png`), { texts: [{ css: 'left:12px;top:6px', html: 'The hair on the head bone (rigid): the head turned and nodded, the hair\'s triangles through the neck or the shoulders counted' }] });
+    console.log(JSON.stringify(report));
+  }
+
+  if (only.includes('wire') && RIGS.male) {
+    const rig = RIGS.male, hair = HAIRS.male, cw = 330, ch = 380;
+    const cells = [[0, 'Front'], [-90, 'Profile']].map(([yaw, label], i) => ({ meshes: [{ ...bodyMesh(rig, hair, rig.B.verts, SHEET_HAIR, { parts: ['head', 'neck'] }), edges: true, edgec: [0.95, 0.85, 0.78] }, { ...hairMesh(rig, hair), edges: true, edgec: [1, 0.93, 0.85] }], cam: { yaw, pitch: 0, s: 125, c: [0, 1.15, 0.1] }, box: [10 + i * (cw + 8), 34, cw, ch], label }));
+    await shoot(2 * cw + 28, ch + 44, cells, join(out, `hair-wire${stage}.png`), { texts: [{ css: 'left:12px;top:6px', html: `Topology: ${hair.tris.length} hair triangles in ${hair.pieces.length} closed pieces (${hair.pieces.map((p) => p.id).join(', ')})` }], imgs: [] });
+  }
+
+  if (only.includes('sil') && RIGS.male) {
+    const rig = RIGS.male, hair = HAIRS.male, cream = [0.98, 0.9, 0.8];
+    const flat = (m) => ({ ...m, col: m.col.map(() => cream), flat: true });
+    const cells = [{ meshes: [flat(bodyMesh(rig, hair, rig.B.verts, SHEET_HAIR, { parts: ['head', 'neck', 'torso'] })), flat(hairMesh(rig, hair))], cam: { yaw: -93, pitch: 0, s: 52, c: [0, 0.7, 0.1] }, box: [190, 34, 170, 200], label: 'Ours' }];
+    await shoot(370, 244, cells, join(out, `hair-sil${stage}.png`), { texts: [{ css: 'left:12px;top:6px', html: 'Silhouette: the sheet, ours' }], imgs: [{ src: REF, size: REF_SIZE, crop: [1375, 860, 135, 160], box: [10, 34, 170, 200] }] });
+  }
+
+  if (only.includes('exploded') && RIGS.male) {
+    const rig = RIGS.male, hair = HAIRS.male, C = hair.centre;
+    // each piece moved out from the skull's centre along its own middle's direction
+    const H2 = hair.verts.map((p) => [...p]);
+    for (const pc of hair.pieces) {
+      const vs = hair.verts.slice(...pc.verts), mid = vs.reduce((a, p) => a.map((x, k) => x + p[k] / vs.length), [0, 0, 0]);
+      const d = mid.map((x, k) => x - C[k]), l = Math.hypot(...d);
+      for (let i = pc.verts[0]; i < pc.verts[1]; i++) H2[i] = H2[i].map((x, k) => x + (d[k] / l) * 0.45);
+    }
+    const cells = [{ meshes: [bodyMesh(rig, hair, rig.B.verts, SHEET_HAIR, { parts: ['head', 'neck'] }), hairMesh(rig, hair, H2)], cam: { yaw: -35, pitch: 8, s: 95, c: [0, 1.25, 0.1] }, box: [560, 34, 420, 440], label: 'Ours: the pieces pulled apart' }];
+    await shoot(990, 484, cells, join(out, `hair-exploded${stage}.png`), { texts: [{ css: 'left:12px;top:6px', html: `Clump breakdown: the sheet, ours (${hair.pieces.map((p) => p.id).join(', ')})` }], imgs: [{ src: REF, size: REF_SIZE, crop: [480, 540, 560, 480], box: [10, 34, 540, 440] }] });
+  }
+
+  if (only.includes('game')) {
+    // the full bodies at the game's zooms: the man about 58 game units tall, the woman 0.85 of him (src/sculpt/lowpoly.ts),
+    // the island's camera looking down 30°
+    const cells = [];
+    let x = 10;
+    for (const zoom of [5, 10]) for (const who of Object.keys(RIGS)) {
+      const rig = RIGS[who], hair = HAIRS[who], top = Math.max(...rig.B.verts.map((p) => p[1])), tall = top - rig.J.floor;
+      const px = (58 * (who === 'female' ? 0.85 : 1) * zoom) / tall, h = Math.ceil(58 * zoom * 1.05) + 20, w = Math.ceil(px * 7);
+      cells.push({ meshes: [bodyMesh(rig, hair), hairMesh(rig, hair)], cam: { yaw: -30, pitch: -30, s: px, c: [0, (top + rig.J.floor) / 2, 0] }, box: [x, 34, w, h], label: `${who === 'male' ? 'Man' : 'Woman'}, zoom ${zoom}` });
+      x += w + 8;
+    }
+    await shoot(x + 2, 34 + Math.ceil(58 * 10 * 1.05) + 30, cells, join(out, `hair-game${stage}.png`), { texts: [{ css: 'left:12px;top:6px', html: 'At the game\'s zooms (5 and 10), the full body' }] });
   }
   await closeBrowser();
 }

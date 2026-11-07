@@ -10,6 +10,7 @@
 //           at `n` stations; the first and the last are the clump's tips, single points.
 //     w, h  its width across the skull and its height off it, along the inner stations (the first value at the first
 //           ring after the front tip, the last at the last ring before the back tip; between, evenly).
+//     scale the hull's thickness taken this many times (the views disagree: one may carve what the others keep).
 //     lip   the front ring's roots stand just off the skin (LIP), so the lock's front edge overhangs; float: every
 //           ring's (a lip along the whole lock, as the fringe's lower edge over the forehead).
 //     ends  [front, back]: how far each tip stands beyond its ring, as a share of the spline's own spacing (1 the
@@ -85,11 +86,12 @@ export function buildHair(rig, style = SWEPT, hull = null) {
   const surf = (over, out) => { const d = dirOf(over, out), h = hit(skull, C, d); return { p: add(C, mul(d, h.t)), n: h.n, d }; };
   const verts = [], polys = [], pieces = [];
   // a point moved along its direction from the skull's centre to `b` of the hull's thickness off the skin there
+  let cl = null;
   const onHull = (q, b) => {
     const dq = unit(sub(q, C)), hq = hit(skull, C, dq), [o, u] = angOf(dq);
-    return add(C, mul(dq, hq.t + Math.max(MIN_H * k, b * hull.thick.at(o, u) * k * (style.hullScale ?? 1))));
+    return add(C, mul(dq, hq.t + Math.max(MIN_H * k, b * hull.thick.at(o, u) * k * (cl.scale ?? 1))));
   };
-  for (const cl of style.clumps) {
+  for (cl of style.clumps) {
     const n = cl.n ?? 9, sec = typeof cl.sec === 'string' ? style[cl.sec] : cl.sec ?? style.sec;
     const first = polys.length, base = verts.length;
     // the spine: each control point on the skin, stood off it by its lift along the skull's outward direction
@@ -160,8 +162,8 @@ export function buildHair(rig, style = SWEPT, hull = null) {
     }
   });
   const weights = weightsOf(rig, verts, style);
-  const shave = shaveOf(B, style.shave);
-  return { verts, polys, tris, weights, pieces, shave, centre: C, k };
+  const shave = shaveOf(B, style.shave), scalp = shaveOf(B, style.scalp ?? style.shave);
+  return { verts, polys, tris, weights, pieces, shave, scalp, centre: C, k };
 }
 
 /** Each piece's faces turned outward: the faces are built wound one way round the piece; all turned over where that
@@ -239,10 +241,10 @@ function triTri(A, Bt) {
 
 /** The hair's triangles that pass through the body's skin where it does not move with the head: the face and the
  * ears at rest (a clump fitted through them), the neck and the shoulders in a pose (the head turned or nodded onto them).
- * The clumps' roots sit in the scalp by design: the polygons in the shave set and the rigid scalp are left out. P, H: the
+ * The clumps' roots sit in the scalp by design: the style's scalp polygons, where rigid on the head, are left out. P, H: the
  * body's and the hair's vertices posed. */
 export function crossings(rig, hair, P, H) {
-  const B = rig.B, scalp = new Set(hair.shave);
+  const B = rig.B, scalp = new Set(hair.scalp ?? hair.shave);
   const rigid = (i) => rig.weights[B.names[i]].every(([bn, w]) => bn === 'head' || w < 1e-3);
   const skinT = B.tris.filter((t) => { const p = B.polys[t.poly]; return ['head', 'neck', 'torso'].includes(p.part) && !(scalp.has(t.poly) && t.v.every(rigid)); });
   const bb = (pts) => [0, 1, 2].map((k) => [Math.min(...pts.map((p) => p[k])), Math.max(...pts.map((p) => p[k]))]);
