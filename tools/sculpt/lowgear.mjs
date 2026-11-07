@@ -199,9 +199,22 @@ export function fistOn(rig, pose, s, fd) {
  */
 export function reach(rig, pose, s, target, o = {}) {
   const side = s.side;
-  const keys = [[`upperarm_${side}`, 0], [`upperarm_${side}`, 1], [`upperarm_${side}`, 2], [`lowerarm_${side}`, 0], [`lowerarm_${side}`, 1], [`hand_${side}`, 0], [`hand_${side}`, 1], [`hand_${side}`, 2], ...(o.clavicle ? [[`clavicle_${side}`, 0], [`clavicle_${side}`, 2]] : [])];
-  const lim = { [`upperarm_${side}`]: [[-170, 60], [-90, 90], [-100, 100]], [`lowerarm_${side}`]: [[0, 150], [-100, 100], [0, 0]], [`hand_${side}`]: [[-70, 70], [-60, 60], [-40, 40]], [`clavicle_${side}`]: [[-25, 25], [0, 0], [-25, 25]] };
-  const cur = { ...pose };
+  const keys = [[`upperarm_${side}`, 0], [`upperarm_${side}`, 1], [`upperarm_${side}`, 2], [`lowerarm_${side}`, 0], [`hand_${side}`, 0], [`hand_${side}`, 1], [`hand_${side}`, 2], ...(o.clavicle ? [[`clavicle_${side}`, 0], [`clavicle_${side}`, 2]] : [])];
+  // the ranges: the upper arm raised forward (+rx) or back, twisted, swung; the elbow bent forward only; the forearm's turn
+  // (pronation) is the hand's own twist (ry), which the rig's twist helpers spread up the forearm
+  const lim = { [`upperarm_${side}`]: [[-60, 170], [-90, 90], [-110, 110]], [`lowerarm_${side}`]: [[0, 150], [0, 0], [0, 0]], [`hand_${side}`]: [[-70, 70], [-110, 110], [-40, 40]], [`clavicle_${side}`]: [[-25, 25], [0, 0], [-25, 25]] };
+  // from the pose given, and from the elbow bent and the arm raised forward, the better kept
+  const starts = [{}, { [`upperarm_${side}`]: [30, 0, 0], [`lowerarm_${side}`]: [90, 0, 0] }, { [`upperarm_${side}`]: [60, 0, 0], [`lowerarm_${side}`]: [120, 0, 0], [`hand_${side}`]: [0, 60, 0] }, { [`upperarm_${side}`]: [10, 0, 0], [`lowerarm_${side}`]: [130, 0, 0], [`hand_${side}`]: [0, -60, 0] }];
+  let best = null;
+  for (const st of starts) {
+    const r = descend({ ...pose, ...st });
+    if (!best || r.e < best.e) best = r;
+  }
+  const cur = best.cur;
+  const F = posed(rig, cur), S = socketAt(rig, F, s);
+  return { pose: cur, cost: best.e, err: { pos: Math.hypot(...sub(S.o, target.o)), ang: [0, 1, 2].map((k) => Math.acos(Math.max(-1, Math.min(1, dot(colOf(S.R, k), colOf(target.R, k))))) * 180 / Math.PI) } };
+  function descend(p0) {
+  const cur = { ...p0 };
   for (const [b] of keys) cur[b] = Array.isArray(cur[b]) && cur[b].length === 3 ? [...cur[b]] : [0, 0, 0];
   const wPos = o.wPos ?? 4, wRot = o.wRot ?? 1;
   const cost = (p) => {
@@ -230,8 +243,8 @@ export function reach(rig, pose, s, target, o = {}) {
       if (!moved) break;
     }
   }
-  const F = posed(rig, cur), S = socketAt(rig, F, s);
-  return { pose: cur, err: { pos: Math.hypot(...sub(S.o, target.o)), ang: [0, 1, 2].map((k) => Math.acos(Math.max(-1, Math.min(1, dot(colOf(S.R, k), colOf(target.R, k))))) * 180 / Math.PI) } };
+  return { cur, e };
+  }
 }
 
 /**
@@ -240,6 +253,54 @@ export function reach(rig, pose, s, target, o = {}) {
  */
 export function placed(V, frame, scale, grip = [0, 0, 0]) {
   return V.map((p) => add(frame.o, mv(frame.R, mul(sub(p, grip), 1 / scale))));
+}
+
+/* ---- the game's copy ---------------------------------------------------------------------------------------------- */
+/**
+ * A prop as the game loads it (src/sculpt/assets/<id>.json), rigid on one hand bone: its points (its own frame, game units),
+ * its polygons (corners, material index; a face off its plane split into its triangles, so each polygon is one flat
+ * facet as the bodies' are), its triangles [a, b, c, polygon], each point's glow alpha, the materials' colours and kinds
+ * plain and enchanted (kind: 0 lit, 1 emissive, 2 glow: added, its alpha per corner), the polygons from `glowFrom` on
+ * drawn only enchanted; its grip; and per body the hand sockets at rest (mesh units and axes, on the bone named) and the
+ * body's mesh-to-game scale. A point p goes onto a body as o + R ((p - grip.lead) / scale) in the body's rest, skinned
+ * wholly to the socket's bone (the body's own skinning then takes it to the figure's frame).
+ */
+export async function gearAsset(id, plain, lit, rigs) {
+  const r5 = (x) => +x.toFixed(5);
+  const G = lit.G, nPlain = plain.G.F.length;
+  // the enchanted mesh is the plain one with the glow's faces after it
+  if (plain.G.V.length > G.V.length || plain.G.F.some((f, i) => f.mat !== G.F[i].mat || f.v.join() !== G.F[i].v.join())) throw new Error('gearAsset: the enchanted mesh is not the plain one and its glow');
+  const names = [...new Set(G.F.map((f) => f.mat))];
+  const kind = (m) => (m.glow ? 2 : m.emit ? 1 : 0);
+  const polys = [], tris = [];
+  let glowFrom = -1;
+  const T = trisOf(G);
+  G.F.forEach((f, fi) => {
+    if (fi === nPlain) glowFrom = polys.length;
+    const ts = T.filter((t) => t.face === fi), flat = ts.every((t) => Math.abs(dot(t.n, unit(newell(G.V, f.v))) - 1) < 1e-6);
+    if (flat) { const pi = polys.length; polys.push([f.v, names.indexOf(f.mat)]); for (const t of ts) tris.push(...t.v, pi); }
+    else for (const t of ts) { const pi = polys.length; polys.push([t.v, names.indexOf(f.mat)]); tris.push(...t.v, pi); }
+  });
+  const sockets = {}, scale = {};
+  for (const [who, rig] of Object.entries(rigs)) {
+    const sc = await gameScale(rig);
+    scale[who] = r5(sc.scale);
+    sockets[who] = Object.fromEntries(['r', 'l'].map((side) => { const s = socketOf(rig, side, plain.grip.radius / sc.scale); return [side, { bone: rig.bones[s.bone].name, o: s.o.map(r5), R: s.R.map(r5) }]; }));
+  }
+  return {
+    built: `node tools/sculpt/gear/${id}.mjs (tools/sculpt/lowgear.mjs gearAsset)`, id,
+    units: 'game units; its own frame: y along it from the pommel\'s point (0) to the point, x across the flat, z out of the engraved face',
+    length: r5(plain.L),
+    verts: G.V.flat().map(r5), alpha: G.V.map((_, i) => r5(G.A?.[i] ?? 1)),
+    polys, tris, glowFrom,
+    mats: names,
+    plain: names.map((n) => ({ c: plain.MATS[n].c, kind: kind(plain.MATS[n]) })),
+    enchanted: names.map((n) => ({ c: lit.MATS[n].c, kind: kind(lit.MATS[n]) })),
+    grip: Object.fromEntries(Object.entries(plain.grip).map(([k, v]) => [k, Array.isArray(v) ? v.map(r5) : r5(v)])),
+    sockets, scale,
+    socket: 'o: the grip\'s axis at the fist\'s middle, in the body\'s rest (mesh units and axes); R (row-major, columns x y z): x along the hand toward the knuckles, y along the grip toward the thumb, z = x × y. The prop\'s x, y, z go to R\'s columns, its grip.lead (or grip.second, for the other hand) to o.',
+    counts: { tris: plain.tris, glowTris: lit.all - plain.tris, polys: polys.length },
+  };
 }
 
 /* ---- materials ------------------------------------------------------------------------------------------------- */

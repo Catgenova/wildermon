@@ -21,6 +21,7 @@ const opt = (n, f) => { const i = args.indexOf(`--${n}`); return i < 0 ? f : arg
 const out = resolve(opt('out', 'tmp/lowgear'));
 mkdirSync(out, { recursive: true });
 const only = opt('only', 'block,sheet,wire,engrave,held,game').split(',');
+const MAIN = import.meta.url === `file://${process.argv[1]}`;
 
 const L = await swordLength();
 const plain = buildLongSword({ length: L }), lit = buildLongSword({ length: L, enchanted: true });
@@ -88,6 +89,96 @@ if (only.includes('engrave')) {
   const cells = [plain, lit].map((sw, i) => ({ items: [swordD(sw)], cam: { yaw: 0, pitch: 0, s, c }, box: [i * cw, 0, cw, ch], bg: BG, label: i ? 'Enchanted' : 'Plain (line engraving)' }));
   cells.push({ items: [swordD(lit)], cam: { yaw: 25, pitch: 8, s: s * 0.62, c: [0, L * 0.5, 0] }, box: [2 * cw, 0, cw * 1.3, ch], bg: [0.2, 0.22, 0.24], label: 'Enchanted, three-quarter, dark ground' });
   await shoot(Math.round(3.3 * cw), ch, cells, `${out}/engrave.png`);
+}
+
+/* ---- held: the poses --------------------------------------------------------------------------------------------- */
+const deg = Math.PI / 180;
+const frameOf = (x, y) => { const X = unit(x), Y = unit(sub(y, mul(X, dot(y, X)))); return cols(X, Y, cross(X, Y)); };
+/**
+ * The sword held by one body: 'one' in the right hand, upright and leant forward in front of the hip; 'two' in both, the
+ * right under the guard and the left below it, pointed forward and up at the middle of the body; 'carry' on the right
+ * shoulder, the right fist before the chest and the blade back over the shoulder. Returns { pose, P (the body), Q (the
+ * sword), errs } in mesh units.
+ */
+export function heldPose(who, how, sw = plain) {
+  const rig = rigs[who], sca = sc[who].scale, r = sw.gripR / sca, J = rig.J;
+  const sR = socketOf(rig, 'r', r), sL = socketOf(rig, 'l', r);
+  const mx = (p) => [-p[0], p[1], p[2]];
+  const shR = mx(J.shoulder), gap = (sw.grips.main[1] - sw.grips.off[1]) / sca;
+  let pose = {}, errs = {};
+  if (how === 'one') {
+    const t = 32 * deg, y = [0, Math.cos(t), Math.sin(t)], x = [0, -Math.sin(t), Math.cos(t)];
+    const o = [shR[0] - 0.1, J.elbow[1] - 0.35, 1.25];
+    const a = reach(rig, {}, sR, { o, R: frameOf(x, y) }, { elbowOut: Math.abs(shR[0]) + 0.25 });
+    pose = a.pose; errs.right = a.err;
+  } else if (how === 'two') {
+    // pointed forward and up at 48 degrees, the point a little out to the right of the face
+    const t = 48 * deg, y = unit([-0.28, Math.cos(t), Math.sin(t)]), x = [0, -Math.sin(t), Math.cos(t)];
+    const o = [-0.35, J.elbow[1] - 0.2, 1.75];
+    const a = reach(rig, {}, sR, { o, R: frameOf(x, y) }, { elbowOut: Math.abs(shR[0]) + 0.1 });
+    const b = reach(rig, a.pose, sL, { o: sub(o, mul(y, gap)), R: frameOf(x, y) }, { elbowOut: Math.abs(J.shoulder[0]) + 0.1 });
+    pose = b.pose; errs.right = a.err; errs.left = b.err;
+  } else {
+    // the blade on its edge on the shoulder's top (the body's highest point over the shoulder, cleared by half the blade's
+    // width), sloping back and up at 40 degrees, its engraved face out; the fist before the chest on that line, the hand's
+    // length square to it, up and forward, so the forearm rises from the elbow by the side
+    let top = -Infinity;
+    rig.B.verts.forEach((p) => { if (Math.abs(p[0] - shR[0] * 0.9) < 0.25 && Math.abs(p[2] - shR[2]) < 0.5) top = Math.max(top, p[1]); });
+    const half = (sw.halfWidth + 0.06) / sca, t = 40 * deg, y = [0, Math.sin(t), -Math.cos(t)];
+    const C = [shR[0] * 0.95, top + half, shR[2] - 0.05];
+    const o = sub(C, mul(y, 2.45 / sca));
+    const x = [0, Math.cos(t), Math.sin(t)];
+    const a = reach(rig, {}, sR, { o, R: frameOf(x, y) }, { elbowOut: Math.abs(shR[0]) + 0.15 });
+    pose = a.pose; errs.right = a.err;
+  }
+  pose = fistOn(rig, pose, sR, r * 0.55);
+  if (how === 'two') pose = fistOn(rig, pose, sL, r * 0.55);
+  const F = posed(rig, pose), P = skin(rig, F), at = socketAt(rig, F, sR);
+  const Q = placed(sw.G.V, at, sca, sw.grips.main);
+  return { pose, P, Q, errs, F, at };
+}
+const HOWS = [['one', 'In the right hand'], ['two', 'In both hands'], ['carry', 'Carried on the shoulder']];
+const toGame = (who, P) => P.map((p) => [p[0] * sc[who].scale, (p[1] - rigs[who].J.floor) * sc[who].scale, p[2] * sc[who].scale]);
+const HELD = {};
+const heldOf = (who, how, sw = plain) => (HELD[`${who}${how}${sw === lit}`] ??= heldPose(who, how, sw));
+
+if (only.includes('held')) {
+  // a column a pose and a body: front and three-quarter (the right side toward the viewer), game units
+  const cw = 260, ch = 600, s = ch * 0.7 / sc.male.height;
+  const cells = [], close = [];
+  let col = 0;
+  for (const who of ['male', 'female']) for (const [how, lab] of HOWS) {
+    const h = heldOf(who, how, who === 'female' && how === 'carry' ? lit : plain);
+    console.log(who, how, JSON.stringify(h.errs, (k, v) => (typeof v === 'number' ? +v.toFixed(3) : v)));
+    const items = [bodyDrawable(rigs[who], toGame(who, h.P)), swordD(who === 'female' && how === 'carry' ? lit : plain, toGame(who, h.Q))];
+    const c = [0, sc.male.height * 0.62, 0];
+    cells.push({ items, cam: { yaw: 0, pitch: 6, s, c }, box: [col * cw, 0, cw, ch], bg: BG, ink: 1, label: `${who === 'male' ? 'Him' : 'Her'}: ${lab}` });
+    cells.push({ items, cam: { yaw: -40, pitch: 8, s, c }, box: [col * cw, ch, cw, ch], bg: BG, ink: 1, label: 'Three-quarter' });
+    // the right fist close
+    const f = toGame(who, [h.at.o])[0];
+    close.push({ items, cam: { yaw: -50, pitch: 15, s: 75, c: f }, box: [col * cw, 0, cw, 260], bg: BG, ink: 1, label: `${who === 'male' ? 'Him' : 'Her'}: ${how}, the fists` });
+    close.push({ items, cam: { yaw: -100, pitch: -10, s: 75, c: f }, box: [col * cw, 260, cw, 260], bg: BG, ink: 1, label: 'From the right, below' });
+    col++;
+  }
+  await shoot(col * cw, 2 * ch, cells, `${out}/held.png`);
+  await shoot(col * cw, 520, close, `${out}/held-close.png`);
+  // the right fist alone, seen down the grip from the blade's side and across it: the body's triangles within reach of
+  // the socket and the sword's grip, in the socket's frame (y up the grip, x along the hand)
+  const fists = [];
+  col = 0;
+  for (const who of ['male', 'female']) for (const [how] of HOWS) {
+    const h = heldOf(who, how, who === 'female' && how === 'carry' ? lit : plain), R = tr(h.at.R), loc = (p) => mv(R, sub(p, h.at.o));
+    const near = (D, r) => { const o = []; for (let i = 0; i < D.length; i += 33) { let ok = true; for (let k = 0; k < 3; k++) if (Math.hypot(D[i + k * 11], D[i + k * 11 + 1], D[i + k * 11 + 2]) > r) ok = false; if (ok) for (let j = 0; j < 33; j++) o.push(D[i + j]); } return o; };
+    const body = near(bodyDrawable(rigs[who], h.P.map(loc)), 0.75), grip = near(swordD(plain, h.Q.map(loc)), 0.6);
+    const lab = `${who === 'male' ? 'Him' : 'Her'}: ${how}`;
+    fists.push({ items: [body, grip], cam: { yaw: 0, pitch: -90, s: 170, c: [0, 0, 0] }, box: [col * cw, 0, cw, 260], bg: BG, ink: 1, label: `${lab}, down the grip` });
+    fists.push({ items: [body, grip], cam: { yaw: 0, pitch: 0, s: 170, c: [0, 0, 0] }, box: [col * cw, 260, cw, 260], bg: BG, ink: 1, label: 'Across, the back of the hand' });
+    fists.push({ items: [body, grip], cam: { yaw: 180, pitch: 0, s: 170, c: [0, 0, 0] }, box: [col * cw, 520, cw, 260], bg: BG, ink: 1, label: 'Across, the palm' });
+    const curl = ['fingers_01_r', 'fingers_02_r', 'thumb_01_r', 'thumb_02_r', 'thumb_03_r'].map((n) => (h.pose[n] ?? [0])[0]).join(' ');
+    console.log(who, how, 'curl (fingers 1 2, thumb 1 2 3):', curl);
+    col++;
+  }
+  await shoot(col * cw, 780, fists, `${out}/held-fists.png`);
 }
 
 await closeBrowser();
