@@ -118,7 +118,10 @@ mesh.tris.forEach((t, i) => {
   const [aoSum, aoN] = polyAo.get(t.poly);
   const mz = Math.round((aoSum / aoN) * 100) + ((t.poly * 2654435761) % 1000) / 1001;
   const pc = polyC[t.poly];
-  for (const p of [a, b, c]) P.push(p[0], p[1], p[2], n[0] / l, n[1] / l, n[2] / l, MAT[t.mat], REG[t.region], mz, pc[0], pc[1], pc[2]);
+  // m.y: the region, plus 4 where the facet takes no cast shadow: the stub, and the neck's back half (the nape under
+  // the skull), where the references show none
+  const noShadow = t.part === 'shoulders' || (t.part === 'neck' && pc[2] < 0);
+  for (const p of [a, b, c]) P.push(p[0], p[1], p[2], n[0] / l, n[1] / l, n[2] / l, MAT[t.mat], REG[t.region] + (noShadow ? 4 : 0), mz, pc[0], pc[1], pc[2]);
 });
 // The wireframe: each polygon's outline once (the quads' diagonals left out), the head and the neck and the stub.
 const seen = new Set(), lines = [];
@@ -210,7 +213,7 @@ const gl = cv.getContext('webgl', { antialias: true, preserveDrawingBuffer: true
 const vs = '#define GRADPOS ' + D.gradpos.toFixed(1) + '\nattribute vec3 p; attribute vec3 n; attribute vec3 m; attribute vec3 s; uniform mat3 R; uniform vec3 piv; uniform vec2 sc; uniform vec2 off; uniform float lift; uniform float persp;' +
   'varying vec3 vn; varying vec3 vm; varying vec3 vd; varying float vy; varying vec3 vp; void main(){ vec3 q = R*(p - piv); vn = R*n; vp = p; vd = GRADPOS > 0.5 ? q - R*(vec3(0.0, 1.1, 0.0) - piv) : q - R*(s - piv); vm = m; vy = p.y;' +
   ' float k = persp > 0.0 ? persp/(persp - q.z) : 1.0; gl_Position = vec4(off + sc*q.xy*k, -q.z/8.0 - lift, 1.0); }';
-const fs = '#define FLATBROW ' + (D.flatBrow ? '1.0' : '0.0') + '\n#define GRAD ' + D.grad.toFixed(2) + '\n#define AMB ' + D.amb.toFixed(3) + '\n#define KEY ' + D.key.toFixed(3) + '\n#define WARM ' + D.warm.toFixed(3) + '\n#define COOL ' + D.cool.toFixed(3) + '\n#define RIM ' + D.rim.toFixed(3) + '\n#define UPR ' + D.upr.toFixed(3) + '\n#define LCZ ' + D.lcz.toFixed(3) + '\n#define LBZ ' + D.lbz.toFixed(3) + '\n#define CPOW ' + D.cpow.toFixed(2) + '\n#define RPOW ' + D.rpow.toFixed(2) + '\n#define CSPEC ' + D.cspec.toFixed(3) + '\n#define KX ' + D.kx.toFixed(3) + '\n#define KY ' + D.ky.toFixed(3) + '\n#define AOLO ' + D.aolo.toFixed(3) + '\n#define DOWN ' + D.down.toFixed(3) + '\nprecision highp float; varying vec3 vn; varying vec3 vm; varying vec3 vd; varying float vy; varying vec3 vp; uniform sampler2D shm; uniform mat3 LM; uniform mat3 RT; uniform vec3 pivU; uniform vec3 Lv; uniform float useShadow; uniform float recv; uniform vec3 shK3; uniform float shSoft; uniform float shBias; uniform float shMask; uniform float clipY;' +
+const fs = '#define FLATBROW ' + (D.flatBrow ? '1.0' : '0.0') + '\n#define GRAD ' + D.grad.toFixed(2) + '\n#define AMB ' + D.amb.toFixed(3) + '\n#define KEY ' + D.key.toFixed(3) + '\n#define WARM ' + D.warm.toFixed(3) + '\n#define COOL ' + D.cool.toFixed(3) + '\n#define RIM ' + D.rim.toFixed(3) + '\n#define UPR ' + D.upr.toFixed(3) + '\n#define LCZ ' + D.lcz.toFixed(3) + '\n#define LBZ ' + D.lbz.toFixed(3) + '\n#define CPOW ' + D.cpow.toFixed(2) + '\n#define RPOW ' + D.rpow.toFixed(2) + '\n#define CSPEC ' + D.cspec.toFixed(3) + '\n#define KX ' + D.kx.toFixed(3) + '\n#define KY ' + D.ky.toFixed(3) + '\n#define AOLO ' + D.aolo.toFixed(3) + '\n#define DOWN ' + D.down.toFixed(3) + '\nprecision highp float; varying vec3 vn; varying vec3 vm; varying vec3 vd; varying float vy; varying vec3 vp; uniform sampler2D shm; uniform mat3 LM; uniform mat3 RT; uniform vec3 pivU; uniform vec3 Lv; uniform float useShadow; uniform vec3 shK3; uniform float shSoft; uniform float shBias; uniform float shMask; uniform float clipY;' +
   ' float unpack(vec4 c){ return dot(c, vec4(1.0, 1.0/255.0, 1.0/65025.0, 1.0/16581375.0)); }' +
   // the share of the key light blocked at this fragment: its position pushed off the surface along the normal, looked up
   // in the light's depth map over a disc of 16 taps
@@ -232,11 +235,11 @@ const fs = '#define FLATBROW ' + (D.flatBrow ? '1.0' : '0.0') + '\n#define GRAD 
   ' else if (vm.x > 1.5 && vm.x < 2.5) base = pupc;' +
   ' else if (vm.x > 2.5 && vm.x < 3.5) base = lidc;' +
   ' if (mode == 3) { gl_FragColor = vm.x < 0.5 ? vec4(nn*0.5+0.5, 1.0) : vec4(0.0,0.0,0.0,1.0); return; }' +
-  ' if (mode == 1) { vec3 rc = vm.y < 0.5 ? vec3(0.62,0.60,0.60) : (vm.y < 1.5 ? vec3(0.82,0.62,0.45) : vec3(0.70,0.52,0.50));' +
+  ' if (mode == 1) { float reg = mod(vm.y, 4.0); vec3 rc = reg < 0.5 ? vec3(0.62,0.60,0.60) : (reg < 1.5 ? vec3(0.82,0.62,0.45) : vec3(0.70,0.52,0.50));' +
   '   if (vm.x > 0.5) rc = vm.x < 2.5 ? vec3(0.2,0.16,0.15) : rc;' +
   '   float l = 0.82 + 0.18*max(dot(nn, normalize(vec3(-0.4,0.5,0.8))),0.0); gl_FragColor = vec4(rc*l,1.0); return; }' +
   // the key light's cast shadow: the share of it blocked times the facet's cosine to it
-  ' float shs = useShadow > 0.5 && recv > 0.5 ? shadowAt(nn)*max(dot(nn, Lv), 0.0) : 0.0;' +
+  ' float shs = useShadow > 0.5 && vm.y < 3.5 ? shadowAt(nn)*max(dot(nn, Lv), 0.0) : 0.0;' +
   ' if (shMask > 0.5) { gl_FragColor = vec4(vec3(shs), 1.0); return; }' +
   // The light, in view space: a warm key from the front and above, a warm fill from the right, a cool rim from the
   // upper left, planes facing down darker; other materials take it times their colour.
@@ -313,8 +316,6 @@ const yaw = (d) => { const a = d * Math.PI / 180, c = Math.cos(a), s = Math.sin(
 const pitchM = (d) => { const a = d * Math.PI / 180, c = Math.cos(a), s = Math.sin(a); return [1, 0, 0, 0, c, s, 0, -s, c]; };
 function drawMesh(part) {
   const b = B[part]; if (!b) return;
-  // the shoulder stub takes no shadow: the references' shoulders and chest show none of the head's
-  gl.uniform1f(U('recv'), part === 'shoulders' ? 0 : 1);
   gl.bindBuffer(gl.ARRAY_BUFFER, b.b);
   for (const k of [A.p, A.n, A.m, A.s]) if (k >= 0) gl.enableVertexAttribArray(k);
   gl.vertexAttribPointer(A.p, 3, gl.FLOAT, false, 48, 0); gl.vertexAttribPointer(A.n, 3, gl.FLOAT, false, 48, 12); gl.vertexAttribPointer(A.m, 3, gl.FLOAT, false, 48, 24); if (A.s >= 0) gl.vertexAttribPointer(A.s, 3, gl.FLOAT, false, 48, 36);
