@@ -31,7 +31,7 @@ export const MATS = {
 
 /**
  * The design per body: values [front, side, back] blend round the azimuth; heights are the body's y, lengths its units.
- *   z0: the axis; N: columns round; OUT, IN: the clearance of the cape's outside and of the cowl's inside; THICK: the
+ *   z0: the axis; front, back: columns to a quarter round, in front and behind; OUT, IN: the clearance of the cape's outside and of the cowl's inside; THICK: the
  *   cloth's thickness; bevel: how much lower the underside's hem is than the outside's;
  *   hem: the V's point in front, the corners (at the sides), the V's point behind, and how the hem runs between (sin^p);
  *   flare: how far out the hanging cloth leans per unit of drop;
@@ -43,18 +43,18 @@ export const MATS = {
  */
 export const DESIGN = {
   male: {
-    z0: -0.12, N: 24, OUT: 0.16, IN: 0.05, THICK: 0.11, bevel: 0.09, flare: 0.15,
+    z0: -0.12, front: 6, back: 5, OUT: 0.16, IN: 0.05, THICK: 0.11, bevel: 0.09, flare: 0.15, soften: 0.6,
     hem: { front: -3.55, corner: -2.3, back: -3.35, p: 1.2 },
     border: [0.08, 0.3, 0.06],
-    rim: { r: [0.5, 0.36, 0.42], up: [-0.3, 0.35, 0.15] },
-    vee: ['T0', 'a'], cowl: { T0: [[1.6, 0.15], [0.75, 0.15], [1.55, 0.15]], a: [[1.35, 0.45], [0.95, 0.35], [1.35, 0.42]], b: [[1.0, 0.35], [0.5, 0.35], [0.75, 0.38]], c: [[0.6, 0.55], [0.25, 0.6], [0.3, 0.5]] },
+    rim: { r: [0.5, 0.36, 0.42], up: [-0.15, 0.35, 0.3] },
+    vee: ['T0', 'a'], cowl: { T0: [[1.5, 0.15], [1.05, 0.15], [1.5, 0.15]], a: [[1.35, 0.3], [0.92, 0.28], [1.35, 0.3]], b: [[1.0, 0.35], [0.5, 0.35], [0.75, 0.38]], c: [[0.6, 0.55], [0.25, 0.6], [0.3, 0.65]] },
   },
   female: {
-    z0: -0.14, N: 24, OUT: 0.13, IN: 0.045, THICK: 0.08, bevel: 0.08, flare: 0.15,
+    z0: -0.14, front: 6, back: 5, OUT: 0.14, IN: 0.045, THICK: 0.095, bevel: 0.08, flare: 0.15, soften: 0.4,
     hem: { front: -2.95, corner: -1.85, back: -2.75, p: 1.2 },
     border: [0.07, 0.26, 0.05],
     rim: { r: [0.42, 0.3, 0.36], up: [-0.25, 0.3, 0.12] },
-    vee: ['T0', 'a'], cowl: { T0: [[1.36, 0.13], [0.64, 0.13], [1.3, 0.13]], a: [[1.15, 0.38], [0.8, 0.3], [1.15, 0.36]], b: [[0.85, 0.3], [0.42, 0.3], [0.64, 0.32]], c: [[0.5, 0.47], [0.2, 0.5], [0.25, 0.43]] },
+    vee: ['T0', 'a'], cowl: { T0: [[1.28, 0.14], [0.9, 0.14], [1.28, 0.14]], a: [[1.15, 0.26], [0.78, 0.24], [1.15, 0.26]], b: [[0.85, 0.3], [0.42, 0.3], [0.64, 0.32]], c: [[0.5, 0.47], [0.2, 0.5], [0.25, 0.43]] },
   },
 };
 
@@ -113,13 +113,19 @@ function clearOf(L, E, fixedFirst = false) {
 }
 
 export function buildShawl(rig, design = DESIGN[rig.who]) {
-  const { B } = rig, D = design, N = D.N, z0 = D.z0;
+  const { B } = rig, D = design, z0 = D.z0;
+  // the columns: `front` to a quarter round the front half (the V's point at 0, the corners at 90), `back` behind
+  const angles = [];
+  for (let k = 0; k < D.front; k++) angles.push((k * 90) / D.front);
+  for (let k = 0; k < 2 * D.back; k++) angles.push(90 + (k * 90) / D.back);
+  for (let k = D.front; k > 0; k--) angles.push(360 - (k * 90) / D.front);
+  const N = angles.length;
   const S = samplesOf(B);
-  const half = 360 / N;
   const hemY = (deg) => { const a = Math.abs(((deg + 540) % 360) - 180), s = Math.pow(Math.sin(a * Math.PI / 180), D.hem.p); return a <= 90 ? D.hem.front + (D.hem.corner - D.hem.front) * s : D.hem.back + (D.hem.corner - D.hem.back) * s; };
   const cols = [];
+  const cowls = [];
   for (let k = 0; k < N; k++) {
-    const deg = k * half;
+    const deg = angles[k], half = Math.max(((angles[(k + 1) % N] - deg + 360) % 360), ((deg - angles[(k + N - 1) % N] + 360) % 360));
     const F = neckFoot(B, z0, deg);
     const yH = hemY(deg);
     // the cowl's section on the body's own line down from the neck's foot (the bare drape: down the chest in front, out
@@ -143,6 +149,21 @@ export function buildShawl(rig, design = DESIGN[rig.who]) {
     const d = clear([F[0] + blend(D.rim.r, deg), F[1] + blend(D.rim.up, deg, true)], EI);
     const c = sec('c', EO), b = sec('b', EO), a = sec('a', EO);
     let T0 = sec('T0', EO, 0);
+    cowls.push({ deg, half, F, yH, EO, EI, d, c, b, a, T0 });
+  }
+  // the cowl's points smoothed round the neck (the neck's foot turns sharply behind the shoulders), then cleared again
+  for (const key of ['d', 'c', 'b', 'a', 'T0']) {
+    const v = cowls.map((q) => q[key]);
+    cowls.forEach((q, k) => { const p = v[(k + N - 1) % N], n = v[(k + 1) % N], m = v[k]; q[key] = [0.25 * p[0] + 0.5 * m[0] + 0.25 * n[0], 0.25 * p[1] + 0.5 * m[1] + 0.25 * n[1]]; });
+  }
+  for (let k = 0; k < N; k++) {
+    const { deg, half, F, yH, EO, EI } = cowls[k];
+    const clr = (p, E = EO) => { const r = reachAt(E, p[1], 0.04); return [Math.max(p[0], r), p[1]]; };
+    let T0 = clr(cowls[k].T0), a = clr(cowls[k].a), b = clr(cowls[k].b), c = clr(cowls[k].c);
+    const d = clr(cowls[k].d, EI);
+    // the crease stays inside the roll over it and the swag under it (no ridge standing out between them): where the
+    // body pushes it out, the roll and the swag go out with it
+    if (b[0] > Math.min(a[0], c[0]) - 0.08) { a = [Math.max(a[0], b[0] + 0.08), a[1]]; c = [Math.max(c[0], b[0] + 0.06), c[1]]; }
     // the cape: the drape over the body grown by OUT, from under the swag down to the hem
     const E = envelope(S, z0, deg, half, D.OUT, yH - 0.05, T0[1] + 0.6);
     const L = drape(E, T0, yH);
@@ -154,7 +175,11 @@ export function buildShawl(rig, design = DESIGN[rig.who]) {
     let T5 = [Hm[0], yH];
     // the hanging part leans out by the flare
     T5 = [T5[0] + D.flare * (T1[1] - yH), yH];
-    const prof = clearOf([T0, T1, T5], E.filter(([, y]) => y <= T0[1]));
+    // the corner softened toward the straight line from T0 to the hem (a poncho's sloped shoulder), then pushed back out
+    // as far as the body needs
+    const mid = P2.add(T0, P2.mul(P2.sub(T5, T0), ((T0[1] - T1[1]) / Math.max(1e-6, T0[1] - T5[1]))));
+    T1 = P2.add(T1, P2.mul(P2.sub(mid, T1), D.soften ?? 0));
+    const prof = clearOf([T0, T1, T5], E.filter(([, y]) => y <= T0[1]), true);
     [T0, T1, T5] = prof;
     // the border's rows up from the hem along T5→T1
     const up = unit2(P2.sub(T1, T5)), [h4, h3, h2] = D.border;
