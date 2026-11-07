@@ -81,7 +81,7 @@ export const PRESETS = {
     },
     ear: { c: [0.6, 0.84, -0.04], s: 1.12, gap: 0.03, flare: 0.62, lift: 0.18, thick: 0.14 },
     nose: { top: 1.13, tip: 0.6, under: 0.54, wTop: 0.08, wBridge: 0.115, wWing: 0.14, out: 0.1, tipOut: 0.14 },
-    brow: { x: [0.12, 0.33, 0.56], yb: [1.12, 1.135, 1.115], h: [0.08, 0.075, 0.05], out: 0.045 },
+    brow: { x: [0.17, 0.32, 0.46, 0.56], yb: [1.155, 1.165, 1.16, 1.15], h: [0.085, 0.085, 0.075, 0.06], out: 0.055 },
     eye: { x: 0.31, y: 1.0, w: 0.11, h: 0.09, lid: 0.03, almond: 0 },
     lips: null,
     mouth: { y: 0.27, w: 0.15, d: 0.008 },
@@ -110,8 +110,8 @@ PRESETS.female = {
   },
   ear: { c: [0.56, 0.77, -0.04], s: 0.9, gap: 0.025, flare: 0.5, lift: 0.16, thick: 0.12 },
   nose: { top: 1.06, tip: 0.6, under: 0.55, wTop: 0.045, wBridge: 0.065, wWing: 0.095, out: 0.09, tipOut: 0.12 },
-  brow: { x: [0.11, 0.32, 0.5], yb: [1.17, 1.235, 1.14], h: [0.055, 0.05, 0.03], out: 0.04 },
-  eye: { x: 0.31, y: 0.99, w: 0.13, h: 0.11, lid: 0.03, almond: 1 },
+  brow: { x: [0.18, 0.31, 0.43, 0.54], yb: [1.19, 1.235, 1.235, 1.195], h: [0.045, 0.045, 0.035, 0.022], out: 0.03 },
+  eye: { x: 0.345, y: 0.975, w: 0.14, h: 0.13, lid: 0.035, almond: 1 },
   lips: { y: 0.38, w: 0.16, upper: 0.06, lower: 0.065 },
 };
 
@@ -197,23 +197,25 @@ export function buildLowHead(who = 'male') {
     }
   }
 
-  // The brows: a strip along three points, its front and top and underside, the ends closed.
+  // The brows: a strip along the brow's points, its front and top and underside, the ends closed; it stands off the head
+  // along the head's outward direction there, so the outer end wraps round the temple.
   {
     const b = P.brow;
+    const off = (x, y, d) => { const p = on(x, y, 0); const o = unit([p[0], 0, p[2] - 0.1]); return add(p, mul(o, d)); };
     both((s) => {
       const sec = b.x.map((x, i) => {
         const y0 = b.yb[i], y1 = b.yb[i] + b.h[i];
-        return [on(x, y0, b.out), on(x, y1, b.out * 0.7), on(x, y1, -0.04), on(x, y0, -0.04)];
+        return [off(x, y0, b.out), off(x, y1, b.out * 0.7), off(x, y1, -0.04), off(x, y0, -0.04)];
       });
       const ids = sec.map((q) => q.map((p) => vert(flip(p, s))));
       const o = (v) => poly(s > 0 ? v : [...v].reverse(), 'head', 'face', 'brow');
-      for (let i = 0; i < 2; i++) {
+      for (let i = 0; i + 1 < ids.length; i++) {
         const A = ids[i], B = ids[i + 1];
         o([A[0], B[0], B[1], A[1]]); // front
         o([A[1], B[1], B[2], A[2]]); // top
         o([A[3], B[3], B[0], A[0]]); // underside
       }
-      o([...ids[0]].reverse()); o(ids[2]);
+      o([...ids[0]].reverse()); o(ids[ids.length - 1]);
     });
   }
 
@@ -228,7 +230,7 @@ export function buildLowHead(who = 'male') {
       const a = e.almond;
       const xs = a ? [x0 - 0.035, e.x, x1 + 0.03, x1 + 0.1] : [x0 - 0.035, e.x, x1 + 0.035];
       const yb = a ? [y1 - 0.03, y1 - 0.004, y1 - 0.006, y1 + 0.04] : [y1 - 0.004, y1, y1 - 0.006];
-      const hh = a ? [0.012, 0.024, 0.022, 0.006] : [0.03, 0.034, 0.026];
+      const hh = a ? [0.016, 0.03, 0.028, 0.008] : [0.03, 0.034, 0.026];
       const sec = xs.map((x, i) => [on(x, yb[i], e.lid), on(x, yb[i] + hh[i], e.lid * 0.5), on(x, yb[i] + hh[i], -0.03), on(x, yb[i], -0.03)]);
       const ids = sec.map((q) => q.map((p) => vert(flip(p, s))));
       const o = (v) => poly(s > 0 ? v : [...v].reverse(), 'head', 'face', 'lid');
