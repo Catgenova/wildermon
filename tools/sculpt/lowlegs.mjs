@@ -60,7 +60,7 @@ export function halfFaces(P) {
   // ring's front to gl1, its outside to gl4, its back to gl7, its
   // inside to the crotch cx; gl2 and gl5 close in triangles
   const T = (k) => `th${k}`;
-  f('gr0', ['gl0', 'gl1', T(0), T(7)], 'pelvis', 'thigh');
+  quad('gr0', 'gl0', 'gl1', T(0), T(7), 'pelvis', 'thigh');
   f('gr1', ['gl1', 'gl2', T(1), T(0)], 'pelvis', 'thigh');
   f('gr2', ['gl2', 'gl3', T(1)], 'pelvis', 'thigh');
   f('gr3', ['gl3', 'gl4', T(2), T(1)], 'pelvis', 'thigh');
@@ -212,11 +212,13 @@ export const PRESETS = {
       foot: { x: 1.45, zh: -0.92, zt: 0.76, zb: 0.2, wt: 0.33, wb: 0.4, wh: 0.28, ht: 0.32, hh: 0.5, turn: 12 },
     },
     D: { th: [0, 0, 0, -0.4, -0.65, -0.5, -0.15, -0.05], ka: [0, 0, 0, 0, 0, 0, 0, 0], kb: [0.1, 0, 0, 0, 0, 0, 0, 0], kc: [-0.1, 0, 0, 0, 0, 0, 0, 0] },
+    // the groin's face from the pubic point to the thigh's front in two triangles (the thigh's front stands out beyond
+    // the hip line there)
     // the thigh's middle ring half way between its top and the knee, so the thigh tapers straight into the knee as her
     // full-body front draws it (no step above the knee)
     // the crotch under the loincloth, between the thighs' inner sides (the fit had pushed it out in front of the body)
     fixed: ['gl.0', 'gl.2', 'tm.0', 'cx.1', 'cx.2', 'foot.ht', 'foot.hh', 'foot.hc', 'foot.hcf', 'foot.wt'],
-    split: ['kb0/', 'kb7'],
+    split: ['kb0/', 'kb7', 'gr0'],
     merge: KNEECAP,
   },
 };
