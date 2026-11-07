@@ -4263,7 +4263,7 @@ export const NEWS: News[] = [
       'Fixed: Shoe it is on a mount\'s and a draught beast\'s menu (it was on no menu). Leach into lye is on a barrel\'s menu.',
       `Fixed: wild fruit trees on their islands, ${percent(OWN_FRUIT_SHARE)} of each island's wild fruit trees: ${REGIONS.map((R) => [R, R.trees.filter((t) => ISLAND_FRUIT.includes(t))] as const)
         .filter(([, own]) => own.length).map(([R, own]) => `${listed(own.map((t) => TREE_DEFS[t].name.toLowerCase()))} on ${R.name}`).join('; ')}. `
-        + 'In place of wild apple and olive trees nobody had touched (was: only on the map with the fog off).',
+        + `${percent(OWN_FRUIT_SHARE)} of the wild apple and olive trees off settlements on those islands, at their own age (was: only on the map with the fog off).`,
       `Fixed: with the fog off, the map and the world show only land read from the island; the rest is dark until read, ${LAND_STEP} × ${LAND_STEP} tiles `
         + `every ${LAND_UNFOGGED_EVERY} s, nearest first (was: drawn from the seed, without anybody's changes).`,
     ],

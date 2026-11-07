@@ -4136,6 +4136,20 @@ jobs:
             --outfile=node_modules/.cache/fruithome.mjs --log-level=error
           node --max-old-space-size=4096 node_modules/.cache/fruithome.mjs
 
+      - name: Each island's own fruit trees, by kind, on woods that have turned over
+        if: matrix.shard == 6
+        run: |
+          # The fruit move by tile found 28 trees on the live island: a tree
+          # lives six days and seeds its own kind round it, so after fifty days
+          # nothing stands where founding day put it. The move by kind
+          # (tools/move-ground.ts `fruitByKind`) takes the apples and olives as
+          # they stand: OWN_FRUIT_SHARE of them off settlements become the
+          # island's own fruit at their own age, lemons on Volcano Isle only,
+          # nothing else changed, written down once, a second run a no-op.
+          npx esbuild supabase/test/fruitkind.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/fruitkind.mjs --log-level=error
+          node --max-old-space-size=4096 node_modules/.cache/fruitkind.mjs
+
       - name: With the fog off, the map and the world show the island and not the seed
         if: matrix.shard == 6
         run: |

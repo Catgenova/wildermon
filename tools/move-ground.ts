@@ -26,6 +26,15 @@
  *    an island founded before it holds the apple or olive the old generator
  *    grew there. Those trees, on tiles nobody has touched, become the island's
  *    fruit, keeping their age.
+ *  - `fruitByKind`: the same move by kind rather than by tile. The woods turn
+ *    over every six days (`TREE_AGES`), a dead tree seeding its own kind round
+ *    it, so after a month and more nothing stands where founding day put it and
+ *    `fruitHome` found its trees almost nowhere (28 on the live island). This
+ *    takes the wild apple and olive trees an island has now, off any deed, and
+ *    turns `OWN_FRUIT_SHARE` of them into the island's own fruit, as the
+ *    generator does where the climate rolls a fruit tree, keeping their age.
+ *    Which ones is a hash of the island's seed and the tile, so it is the same
+ *    answer however often it is asked.
  *
  * Each island a move has done goes into `land_move`, and an island already
  * there is skipped without reading its land, so a deploy can run this every
@@ -37,7 +46,7 @@
  */
 import { execFileSync } from 'node:child_process';
 import { generateAtlasWindow, regionAt } from '../src/world/atlas-world';
-import { REGIONS } from '../src/world/regions';
+import { OWN_FRUIT_SHARE, REGIONS } from '../src/world/regions';
 import { ISLAND_FRUIT, packTreeData, ROCK_VARIANTS, TileType, TREE_DEFS, treeSpecies, treeVariant } from '../src/world/tiles';
 import { readAtlas } from './atlas-node';
 
@@ -277,7 +286,61 @@ export function fruitHome(sql: Sql, world: World): string {
   return `${world.name}: ${moved} apple and olive trees grown back as their island's own fruit`;
 }
 
-export const MOVES: Array<[string, (sql: Sql, world: World) => string]> = [[MOVE, move], [CLEAR, clearTrees], [GOLD_MOVE, goldOff], [FRUIT_MOVE, fruitHome]];
+/** A number in [0, 1) for a tile of an island, the same every time it is asked. */
+export function tileRoll(seed: number, x: number, y: number): number {
+  let h = (Math.imul(x, 0x27d4eb2d) ^ Math.imul(y, 0x165667b1) ^ Math.imul(seed | 0, 0x9e3779b1)) >>> 0;
+  h = Math.imul(h ^ (h >>> 15), 0x85ebca6b) >>> 0;
+  h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35) >>> 0;
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+
+/** The island's own fruit a wild apple or olive on a tile becomes, or -1 for one that stays as it is. */
+export function ownFruitFor(seed: number, region: number, x: number, y: number): number {
+  const own = OWN_FRUIT[region];
+  if (!own?.length) return -1;
+  const f = tileRoll(seed, x, y);
+  return f < OWN_FRUIT_SHARE ? own[Math.floor((f / OWN_FRUIT_SHARE) * own.length)] : -1;
+}
+
+export const FRUIT_KIND_MOVE = '2026-11-07 wild fruit trees to their islands, by kind';
+export function fruitByKind(sql: Sql, world: World): string {
+  const regions = new Set(OWN_FRUIT.map((f, i) => (f.length ? i : -1)).filter((i) => i >= 0));
+  const b = boundsOf(world, regions);
+  const S = world.size;
+  // A settlement's square is where trees are planted, and where no seed of the woods ever takes: what stands
+  // there is somebody's, and stays.
+  const deeds = sql(`select x, y, radius from deed where world_id = ${lit(world.id)};`).map((r) => r.map(Number));
+  const deeded = (x: number, y: number): boolean => deeds.some(([dx, dy, r]) => Math.abs(x - dx) <= r && Math.abs(y - dy) <= r);
+  const tally = new Map<string, number>();
+  let moved = 0;
+  if (b) {
+    const atlas = readAtlas();
+    for (let y0 = b.yLo; y0 <= b.yHi; y0 += BAND) {
+      const h = Math.min(BAND, b.yHi + 1 - y0);
+      const land = readBand(sql, world, y0, h, ['tiles', 'data']);
+      const statements: string[] = [];
+      for (const [y, row] of land) {
+        const xs: number[] = [], from: number[] = [], to: number[] = [];
+        for (let x = b.xLo; x <= b.xHi; x++) {
+          if (row.tiles[x] !== TileType.Tree || !FOUNDING_FRUIT.has(treeSpecies(row.data[x]))) continue;
+          const now = ownFruitFor(world.seed, regionAt(atlas, x, y, S), x, y);
+          if (now < 0 || deeded(x, y)) continue;
+          xs.push(x); from.push(row.data[x]); to.push(packTreeData(now, treeVariant(row.data[x])));
+          tally.set(TREE_DEFS[now].name, (tally.get(TREE_DEFS[now].name) ?? 0) + 1);
+        }
+        if (xs.length) statements.push(`select land_regrow_row(${lit(world.id)}, ${y}, ${arr([])}, ${arr([])}, ${arr(xs)}, ${arr(from)}, ${arr(to)}, ${TileType.Tree})`);
+      }
+      moved += writeBand(sql, statements);
+    }
+  }
+  finish(sql, world, FRUIT_KIND_MOVE, 0, moved);
+  const kinds = [...tally].sort((p, q) => q[1] - p[1]).map(([k, n]) => `${n} ${k.toLowerCase()}`).join(', ');
+  return `${world.name}: ${moved} wild apple and olive trees grown back as their island's own fruit${kinds ? ` (${kinds})` : ''}`;
+}
+
+export const MOVES: Array<[string, (sql: Sql, world: World) => string]> = [
+  [MOVE, move], [CLEAR, clearTrees], [GOLD_MOVE, goldOff], [FRUIT_MOVE, fruitHome], [FRUIT_KIND_MOVE, fruitByKind],
+];
 
 /** Every move not yet made, on every island that is open. */
 export function moveAll(sql: Sql): void {
