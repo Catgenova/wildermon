@@ -58,8 +58,8 @@ export const DESIGN = {
   male: {
     z0: -0.02, clear: 0.05,
     waist: -3.35, rim: 0.1, band: 0.24, notch: { top: 0.14, bottom: 0.26, at: 9 }, lip: 0.14,
-    hips: [-4.4, -5.05], hipEase: { H1: [0.08, 0.1, 0.12], H2: [0.1, 0.14, 0.2] },
-    crotch: { y: -6.2, rise: 0.55, dip: 0.14, front: 0.5, back: 0.55, zf: 0.22, zb: -0.18, ease: [0.12, 0.14, 0.05, 0.1] },
+    hips: [-4.4, -5.05], hipEase: { H1: [0, 0.1, 0.16], H2: [0, 0.14, 0.26] },
+    crotch: { y: -6.2, rise: 0.55, dip: 0.14, front: 0.5, back: 0.55, zf: 0.22, zb: -0.18, ease: [0.02, 0.14, 0.05, 0.1] },
     stripe: { y: -6.6, amp: 0.85, phi: 110, w: 0.48 },
     knee: { y: -7.5, amp: 0.45 },
     blouse: [-8.3, -9.0], cuff: [-9.4, -10.04],
@@ -71,8 +71,8 @@ export const DESIGN = {
   female: {
     z0: -0.38, clear: 0.045,
     waist: -2.88, rim: 0.09, band: 0.22, notch: { top: 0.13, bottom: 0.27, at: 9 }, lip: 0.13,
-    hips: [-3.5, -4.05], hipEase: { H1: [0.07, 0.08, 0.1], H2: [0.08, 0.1, 0.16] },
-    crotch: { y: -4.55, rise: 0.22, dip: 0.12, front: 0.42, back: 0.5, zf: 0.12, zb: -0.3, ease: [0.09, 0.1, 0.04, 0.08] },
+    hips: [-3.5, -4.05], hipEase: { H1: [0, 0.08, 0.16], H2: [0, 0.1, 0.24] },
+    crotch: { y: -4.55, rise: 0.22, dip: 0.12, front: 0.42, back: 0.5, zf: 0.12, zb: -0.3, ease: [0.02, 0.1, 0.04, 0.08] },
     stripe: { y: -5.85, amp: 0.95, phi: 120, w: 0.48 },
     knee: { y: -6.85, amp: 0.45 },
     blouse: [-8.3, -9.05], cuff: [-9.5, -10.22],
@@ -103,8 +103,11 @@ function bodySamples(B) {
  * round) that keep every sample inside it: a sample in the gap between vertices k and k + 1 (g degrees wide, at a degrees
  * from k) and at distance d from the centre is inside their edge when both are at least d cos(a - g/2) / cos(g/2) out.
  * Only samples between heights win[k] = [lo, hi] (the gap takes its two vertices' together) and passing `keep` count.
+ * With `own`, each vertex only reaches the samples in the half of each gap nearer it, as far as they lie (the cloth may
+ * cut a little into the body between columns: where the body under it is left out, so it can follow the body's own
+ * lines rather than stand out round them).
  */
-function ringRadii(S, c, az, win, keep = null) {
+function ringRadii(S, c, az, win, keep = null, own = false) {
   const N = az.length, r = new Array(N).fill(0);
   const lo = Math.min(...win.map((w) => w[0])), hi = Math.max(...win.map((w) => w[1]));
   for (const p of S) {
@@ -116,6 +119,7 @@ function ringRadii(S, c, az, win, keep = null) {
       const j = (k + 1) % N, g = ((az[j] - az[k]) % 360 + 360) % 360, a = ((ap - az[k]) % 360 + 360) % 360;
       if (a > g) continue;
       if (p[1] < Math.min(win[k][0], win[j][0]) || p[1] > Math.max(win[k][1], win[j][1])) continue;
+      if (own) { if (a <= g / 2) r[k] = Math.max(r[k], d); else r[j] = Math.max(r[j], d); continue; }
       const need = d * Math.cos(rad(a - g / 2)) / Math.cos(rad(g / 2));
       r[k] = Math.max(r[k], need); r[j] = Math.max(r[j], need);
     }
@@ -161,7 +165,8 @@ export function buildTrousers(rig, design = DESIGN[rig.who], { stage = 9 } = {})
       // (the blouse and the cuff as straight walls: each the furthest reach over its pair of rows)
       return row === 'B2' ? [D.blouse[1] - 0.25, D.blouse[0] + 0.1] : row === 'B3' || row === 'F' || row === 'E' || row === 'Ei' ? [D.cuff[1] - 0.05, D.cuff[0] + 0.1] : [y - 0.2, y + 0.2];
     });
-    const r0 = ringRadii(SL, c, LAZ, win, (p) => p[0] > 0.04);
+    // (the cuff's rows clear the calf whole, the skin below them being drawn; the rest cover skin that is left out)
+    const r0 = ringRadii(SL, c, LAZ, win, (p) => p[0] > 0.04, !['B3', 'F', 'E', 'Ei'].includes(row));
     legV[row] = LAZ.map((az, k) => {
       const y = yRow[row](az);
       const ease = row === 'Ei' ? round4(D.ease.E, az) - 0.06 : row === 'F' ? round4(D.ease.E, az) + 0.05 : row === 'C' ? round4(cr.ease, az) : stage <= 1 ? 0.1 : round4(D.ease[row], az);
@@ -176,8 +181,9 @@ export function buildTrousers(rig, design = DESIGN[rig.who], { stage = 9 } = {})
     const C = legV.C, cen = S.filter((p) => Math.abs(p[0]) < 0.12);
     const zAt = (y, front) => { let z = front ? -Infinity : Infinity; for (const p of cen) if (Math.abs(p[1] - y) < 0.15) z = front ? Math.max(z, p[2]) : Math.min(z, p[2]); return z; };
     const yF = cr.y + cr.front, yB = cr.y + cr.back;
-    // (CFc and CBc no deeper in between the legs than `dip` behind the line across the legs' front and back columns)
-    C[9] = [0, yF, Math.max(zAt(yF, true) + D.clear + cr.ease[0] * 0.6, C[0][2] - cr.dip)];
+    // (CFc on the body's own front between the legs: the front comes down as a V from the abdomen, no padding; CBc no
+    // deeper in between the buttocks than `dip` behind the line across the legs' back columns)
+    C[9] = [0, yF, zAt(yF, true) + D.clear + cr.ease[0]];
     C[8] = [0, cr.y, cr.zf];
     C[7] = [0, cr.y, cr.zb];
     C[6] = [0, yB, Math.min(zAt(yB, false) - D.clear - cr.ease[2] * 0.6, C[5][2] + cr.dip)];
@@ -200,7 +206,7 @@ export function buildTrousers(rig, design = DESIGN[rig.who], { stage = 9 } = {})
   for (const row of hipRows) {
     const full = [...hipAz, ...hipAz.slice(1, -1).map((a) => -a).reverse()], band = row[0] === 'W';
     const ys = full.map((_, k) => yHip[row](k < 8 ? k : 14 - k));
-    const r0 = ringRadii(S, [0, D.z0], full, ys.map((y) => [y - (band ? 0.1 : 0.25), y + (band ? 0.1 : 0.25)]));
+    const r0 = ringRadii(S, [0, D.z0], full, ys.map((y) => [y - (band ? 0.1 : 0.25), y + (band ? 0.1 : 0.25)]), null, !band);
     hipV[row] = hipAz.map((az, k) => {
       const y = ys[k];
       const ease = row === 'Wi' ? -D.clear + 0.008 : row === 'W0' ? 0 : row === 'Wt' ? 0.005 : row === 'W1' ? 0.012 : round3(D.hipEase[row] ?? [0.1, 0.1, 0.1], az);
@@ -215,6 +221,13 @@ export function buildTrousers(rig, design = DESIGN[rig.who], { stage = 9 } = {})
     if (rp >= rq + 0.02) return p;
     const s = (rq + 0.02) / rp; return [p[0] * s, p[1], D.z0 + (p[2] - D.z0) * s];
   });
+  // (the front, from under the waistband to the crotch, flat on the body: each front vertex of the hip's rows and of
+  // the crotch row no further forward than the body's front there (the furthest skin within 0.15 across and 0.2 up or
+  // down) and the clearance; the front comes down as a V from the abdomen, no padding)
+  const frontZ = (x, y) => { let z = -Infinity; for (const p of S) if (Math.abs(p[0] - x) < 0.15 && Math.abs(p[1] - y) < 0.2) z = Math.max(z, p[2]); return z; };
+  const flat = (p) => { if (Math.atan2(p[0], p[2] - D.z0) > rad(60)) return p; const z = frontZ(p[0], p[1]) + D.clear + (D.front ?? 0.02); return z < p[2] ? [p[0], p[1], z] : p; };
+  for (const row of ['H1', 'H2']) if (hipV[row]) hipV[row] = hipV[row].map(flat);
+  for (const k of [0, 1]) C[k] = flat(C[k]);
   // (the waistband's rows each no tighter than the one below it, so it stands as a band)
   if (stage > 1) for (const [a, b] of [['W1', 'Wt'], ['Wt', 'W0']]) hipV[b] = hipV[b].map((p, k) => { const q = hipV[a][k], ra = Math.hypot(q[0], q[2] - D.z0), rb = Math.hypot(p[0], p[2] - D.z0); if (rb >= ra - 0.01) return p; const s = (ra - 0.01) / rb; return [p[0] * s, p[1], D.z0 + (p[2] - D.z0) * s]; });
   // (the V notch's sides: on each waistband row, a vertex either side of the centre front at notch.at degrees, on the
