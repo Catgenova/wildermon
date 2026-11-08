@@ -3,6 +3,11 @@ import { TURNS, VIEWS, type View } from '../render/view';
 
 const clamp = (v: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, v));
 
+/** How far in the camera goes. Asked for: five. */
+export const MAX_ZOOM = 5;
+/** And with the "Sculpted figures" setting on, to see one's own body close: ten (a man about 400 px tall). */
+export const SCULPTED_MAX_ZOOM = 10;
+
 /**
  * The camera lives in iso space: (cx, cy) is the iso point shown at the centre
  * of the viewport, `zoom` scales iso units to CSS pixels.
@@ -25,7 +30,8 @@ export class Camera {
   private sin = 0;
   minZoom = 0.35;
   /**
-   * How far in you may go. Asked for: five.
+   * How far in you may go: `MAX_ZOOM`, or `SCULPTED_MAX_ZOOM` with the
+   * "Sculpted figures" setting on (`closest`).
    *
    * The ground costs nothing to zoom — it is drawn as polygons and gets
    * sharper. What has a resolution is the sprites: a tree or a body is a
@@ -34,7 +40,7 @@ export class Camera {
    * here and that number are one decision in two places, which is why the
    * renderer reads this one to pick the other.
    */
-  maxZoom = 5;
+  maxZoom = MAX_ZOOM;
   /** When true the camera glides towards the focus target every frame. */
   follow = true;
   width = 1;
@@ -151,6 +157,22 @@ export class Camera {
     this.cx -= dx / this.zoom;
     this.cy -= dy / this.zoom;
     this.follow = false;
+  }
+
+  /** The ceiling on the zoom set, and the zoom brought in under it about the screen's centre if it was past it. */
+  closest(max: number): void {
+    this.maxZoom = max;
+    if (this.zoom > max) this.zoom = max;
+  }
+
+  /**
+   * Height units to raise a body's focus by so that one `top` iso px tall
+   * stays in view past `MAX_ZOOM`: none up to it, half the body at
+   * `SCULPTED_MAX_ZOOM`, where the feet at the centre would put the head off
+   * the top of a short screen.
+   */
+  bodyLift(top: number): number {
+    return (clamp((this.zoom - MAX_ZOOM) / (SCULPTED_MAX_ZOOM - MAX_ZOOM), 0, 1) * top) / 2 / HEIGHT_SCALE;
   }
 
   /** Zoom keeping the iso point under (sx, sy) fixed on screen. */

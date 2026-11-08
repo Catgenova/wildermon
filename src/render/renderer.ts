@@ -1,7 +1,7 @@
 import { actOf, beastFrame } from './beasts';
 import { sunAt } from './sun';
 import { gearFrom, wornWire } from '../game/worn';
-import { Camera } from '../engine/camera';
+import { Camera, MAX_ZOOM, SCULPTED_MAX_ZOOM } from '../engine/camera';
 import { emoteAt } from '../game/emotes';
 import { ACTION_BY_ID } from '../game/actions';
 import type { FullscreenCanvas } from '../engine/canvas';
@@ -480,7 +480,7 @@ import type { Body as SpellBody, WorldRec as SpellRec } from './spells/kit';
 import type { CastAt, CastTold } from '../game/events';
 import { lookStep, nextLookAt, yearAt } from './foliage';
 import { DAY_SECONDS } from '../game/pace';
-import { cartSway, FIGURE_TOP, figurePicture, sculptedFigures, type Seat } from './figure';
+import { cartSway, FIGURE_TOP, figurePicture, sculptedFigures, type GearLook, type Seat } from './figure';
 /**
  * How much larger a beast in the traces is drawn than one loose: enough that
  * a grown orse, the draught beast, stands a quarter again as tall as a body
@@ -1308,6 +1308,11 @@ const FIELD_LIP_SHADE = 'rgba(70,50,32,0.38)';
 const FIELD_LIP_FOOT = 'rgba(58,40,26,0.5)';
 /** The most a field's picture is sheared down the screen for each pixel across or down it (`fieldTilt`). */
 const FIELD_TILT_MOST = 0.45;
+
+/** Your gear with the weapon marked enchanted when it is (`GearPiece.enchanted`: a sculpted figure's sword glows): your own only, the wire not saying. */
+function enchantedFrom(gear: GearLook | undefined, enchant: unknown): GearLook | undefined {
+  return gear?.weapon && enchant ? { ...gear, weapon: { ...gear.weapon, enchanted: true } } : gear;
+}
 
 export class Renderer {
   readonly camera = new Camera();
@@ -4036,6 +4041,8 @@ export class Renderer {
    */
   render(dt: number): void {
     const cam = this.camera;
+    // Closer with the sculpted bodies on; turned off, the zoom is brought back under the ceiling without them.
+    cam.closest(this.game.settings.sculpted ? SCULPTED_MAX_ZOOM : MAX_ZOOM);
     const cx = cam.cx, cy = cam.cy;
     const unit = cam.zoom * this.canvas.dpr;
     cam.cx = Math.round(cx * unit) / unit;
@@ -6829,11 +6836,13 @@ export class Renderer {
             working: this.game.action?.state === 'performing',
             // What at: meditating is done sat on the ground rather than at the bench (`FigurePose.job`).
             job: this.game.action?.def.id,
+            // How far into its go, and how long a go takes, for a clip fitted to it (`FigurePose.act`).
+            act: this.game.action?.state === 'performing' ? { t: this.game.wallNow() - (this.game.action.began ?? this.game.wallNow()), length: this.game.action.duration } : undefined,
             driving: (ent.lift ?? 0) > 0 && !ent.standing,
             seat: ent.seat,
             look: player.look,
             // Everything on, each piece drawn in its own material, dye and rarity.
-            gear: gearFrom(wornWire((slot) => this.game.worn(slot))),
+            gear: enchantedFrom(gearFrom(wornWire((slot) => this.game.worn(slot))), this.game.worn('weapon')?.enchant),
             // Both clocks here are `performance.now()`: the one the emote was
             // stamped on and the one the frames are drawn on.
             emote: player.emote,
