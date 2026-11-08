@@ -98,7 +98,8 @@ function upsample(D) {
  *     the design's pushed out from the foot's middle by this at most (a rounder toe and heel);
  *   cols: per column [f, v] on the foot; wall, top: r3's and r4's heights over the floor; lean, shrink: r3 and r4 in
  *     from the outline; mix: r4 the share of the way from the outline to the shaft;
- *   clear: the shaft off the leg; over: off what it is worn over (buildPlateBoots `under`: the plate leggings); win: the window of heights its reach is taken over; fill: per column further out;
+ *   clear: the shaft off the leg; over: off what it is worn over (buildPlateBoots `under`: the plate leggings); innerFit:
+ *     both on the inner side, a share (hers: her knees pass close in the walk); win: the window of heights its reach is taken over; fill: per column further out;
  *   band: { y, rise, w, gold } (head heights over the ground: the front's foot, the sides' rise, its height, the gold
  *     strip's), out (its thickness);
  *   dome: per column r4 moved back along the foot from the outline (the toe cap's dome set back from its tip);
@@ -141,14 +142,14 @@ export const DESIGN = {
     top: [0.32, 0.31, 0.36, 0.58, 0.6, 0.6, 0.6, 0.58, 0.36, 0.31],
     shrink: [0.07, 0.06, 0.04, 0.02, 0.02, 0.02, 0.02, 0.02, 0.04, 0.06],
     mix: [0, 0.05, 0.3, 0.8, 1, 1, 1, 0.8, 0.3, 0.05],
-    clear: 0.1, over: 0.03, win: 0.3, fill: [0.01, 0, 0, 0, 0.01, 0.02, 0.01, 0, 0, 0],
+    clear: 0.1, over: 0.03, innerFit: 0.4, win: 0.3, fill: [0.01, 0, 0, 0, 0.01, 0.02, 0.01, 0, 0, 0],
     cap: { du: [0.56, 0.46, 0.04, null, null, null, null, null, 0.04, 0.46], h: [0.36, 0.35, 0.42, 0, 0, 0, 0, 0, 0.42, 0.35], in: [0.09, 0.1, 0.1, 0, 0, 0, 0, 0, 0.1, 0.1], t: 0.35, lip: 0.025, seam: 0.14, sink: 0.03 },
     band: { y: 0.58, rise: 0.1, w: 0.19, gold: 0.08, out: 0.09 },
     mid: 0.4,
-    cuff: { lo: 0.36, rise: 0.2, gold: 0.08, out: 0.11, top: [0.8, 0.74, 0.72, 0.68, 0.67, 0.67, 0.67, 0.68, 0.7, 0.74], flare: [0.07, 0.08, 0.3, 0.1, 0.06, 0.06, 0.05, 0.04, 0.06, 0.07], rim: 0.06, lip: 0.15, gap: 0.5, inner: 0.35 },
+    cuff: { lo: 0.36, rise: 0.2, gold: 0.08, out: 0.11, top: [0.8, 0.74, 0.72, 0.68, 0.67, 0.67, 0.67, 0.68, 0.7, 0.74], flare: [0.07, 0.08, 0.3, 0.1, 0.06, 0.06, 0.05, 0.04, 0.06, 0.07], rim: 0.06, lip: 0.15, gap: 0.5, inner: 0.15 },
     rib: { w: 0.15, h: 0.05 },
     crest: { t: 0.52, w: 0.3, h: 0.48, inset: 0.8, lift: 0.038 },
-    plates: { ang: [72, 90, 108, 144], lo: 0.12, hi: 0.92, rows: [0, 0.5, 1], taper: 0.45, lift: 0.035 },
+    plates: { ang: [72, 90, 108, 144], lo: 0.12, hi: 0.92, rows: [0, 0.5, 1], taper: 0.45, lift: 0.035, sides: [1] },
   },
 };
 
@@ -208,7 +209,9 @@ export function buildPlateBoots(rig, design = DESIGN[rig.who], { under = [] } = 
       return r;
     };
     // (the shaft's radius: `clear` off the skin, or `over` off what it is worn over, whichever is further)
-    const base = (k, y) => Math.max(reach(k, y) + D.clear, SU.length ? reach(k, y, SU) + D.over : 0);
+    // (on the inner side `innerFit` of those, where it would meet the other leg's in a narrow walk)
+    const fit = (k) => 1 - (1 - (D.innerFit ?? 1)) * Math.max(0, -Math.sin(ANG[k] * Math.PI / 180));
+    const base = (k, y) => Math.max(reach(k, y) + D.clear * fit(k), SU.length ? reach(k, y, SU) + D.over * fit(k) : 0);
     const onShaft = (k, y, extra = 0) => { const c = axis(y), r = base(k, y) + (D.fill?.[k] ?? 0) + extra; return [c[0] + ang[k][0] * r, y, c[2] + ang[k][2] * r]; };
     // (a chevron's rise round the leg: nought at the front and the back, one from 45 degrees off them on, straight between)
     const chev = (k) => Math.min(1, Math.min(Math.abs(ANG[k]), 180 - Math.abs(ANG[k])) / 45);
@@ -291,7 +294,7 @@ export function buildPlateBoots(rig, design = DESIGN[rig.who], { under = [] } = 
   orient(G, (c) => { const s = c[0] > 0 ? 'L' : 'R', R = G.rings[s], m = mul(R.r4.reduce((a, i) => add(a, G.verts[i]), [0, 0, 0]), 1 / K), a = G.legOf[s].axis(c[1]); return c[1] > m[1] + 0.3 ? [c[0] - a[0], 0, c[2] - a[2]] : [c[0] - m[0], (c[1] - m[1]) * 0.3, c[2] - m[2]]; });
   G.decal = new Set();
   if (D.rib) for (const side of ['L', 'R']) ribOf(G, D, side);
-  if (D.plates) for (const side of ['L', 'R']) for (const sg of [1, -1]) sidePlateOf(G, D, side, sg);
+  if (D.plates) for (const side of ['L', 'R']) for (const sg of D.plates.sides ?? [1, -1]) sidePlateOf(G, D, side, sg);
   // the crests last: their polygons from `dropFrom` on, left out while the plate leggings are worn (their knee guard's
   // diamond is then the one diamond at the knee, as the set's lineup draws it)
   G.dropFrom = G.polys.length;
