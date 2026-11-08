@@ -503,8 +503,8 @@ function band(G, D, legR, legAxis, side, stage) {
   // the stitching: a dash on every other column near each edge of the band's face, light leather, just proud of it
   if (stage >= 5) for (let k = 0; k < (gap ? N - 1 : N); k += 2) {
     const a = P[k], c = P[(k + 1) % N], ax = legAxis(a[2][1]), out = [a[2][0] - side * ax[0], 0, a[2][2] - ax[1]];
-    for (const f of [0.2, 0.8]) {
-      const pa = lerp(a[2], a[3], f), pb = lerp(c[2], c[3], f), up = sub(a[2], a[3]), h = mul(up, 0.035 / Math.hypot(...up));
+    for (const f of [0.17, 0.83]) {
+      const pa = lerp(a[2], a[3], f), pb = lerp(c[2], c[3], f), up = sub(a[2], a[3]), h = mul(up, 0.011 / Math.hypot(...up));
       let n = cross(sub(pb, pa), up); n = mul(n, 1 / Math.hypot(...n)); if (dot(n, out) < 0) n = mul(n, -1);
       const lift = mul(n, 0.004), q0 = add(lerp(pa, pb, 0.18), lift), q1 = add(lerp(pa, pb, 0.82), lift);
       G.tag = 'stitch';
