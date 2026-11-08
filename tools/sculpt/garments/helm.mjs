@@ -73,17 +73,17 @@ export const DESIGN = {
   // the cheek's height: tools/sculpt/lowhelmfit.mjs)
   male: {
     z0: 0.1,
-    sec: [[-0.3, 0.82, 1.0, 0.8, 2.6], [0.4, 0.85, 1.0, 0.8, 2.6], [0.8, 0.9, 1.0, 0.82, 2.6], [1.1, 0.95, 0.98, 0.88, 2.6], [1.32, 0.97, 0.96, 0.97, 2.6], [1.56, 0.96, 0.94, 0.93, 2.5],
-      [1.8, 0.94, 0.88, 0.9, 2.5], [1.92, 0.9, 0.8, 0.82, 2.5], [2.04, 0.85, 0.72, 0.74, 2.4], [2.16, 0.79, 0.64, 0.66, 2.3], [2.29, 0.65, 0.6, 0.58, 2.2], [2.42, 0.44, 0.44, 0.5, 2.1], [2.5, 0.2, 0.2, 0.24, 2.0]],
+    sec: [[-0.3, 0.82, 1.0, 0.8, 2.3], [0.4, 0.85, 1.0, 0.8, 2.3], [0.8, 0.9, 1.0, 0.82, 2.3], [1.1, 0.95, 0.98, 0.88, 2.3], [1.32, 0.97, 0.96, 0.97, 2.3], [1.56, 0.96, 0.94, 0.93, 2.5],
+      [1.8, 0.94, 0.88, 0.9, 2.25], [1.92, 0.9, 0.8, 0.82, 2.25], [2.04, 0.85, 0.72, 0.74, 2.4], [2.16, 0.79, 0.64, 0.66, 2.3], [2.29, 0.65, 0.6, 0.58, 2.2], [2.42, 0.44, 0.44, 0.5, 2.1], [2.5, 0.2, 0.2, 0.24, 2.0]],
     top: [0, 2.5, -0.04], rings: [2.36, 2.2, 2.0], domeStep: 0.045,
-    band: { top: [[0, 1.82], [22, 1.72], [44, 1.6], [62, 1.55], [180, 1.58]], bot: [[0, 0.83], [22, 1.0], [44, 1.14], [62, 1.2], [82, 1.22], [126, 1.17], [180, 1.17]], out: [[0, 0.32], [22, 0.24], [44, 0.2], [62, 0.12], [82, 0.09], [102, 0.09], [126, 0.12], [180, 0.12]], rim: 0.07, rimOut: 0.035, topRim: [[0, 0.07, 0.035], [62, 0.07, 0.035], [82, 0, 0]] },
+    band: { top: [[0, 1.82], [22, 1.72], [44, 1.6], [62, 1.55], [180, 1.58]], bot: [[0, 0.83], [22, 1.0], [44, 1.14], [62, 1.2], [82, 1.22], [126, 1.17], [180, 1.17]], out: [[0, 0.42], [22, 0.32], [44, 0.22], [62, 0.12], [82, 0.09], [102, 0.09], [126, 0.12], [180, 0.12]], rim: 0.09, rimOut: 0.05, topRim: [[0, 0.07, 0.035], [62, 0.07, 0.035], [82, 0, 0]] },
     ledge: 0.03,
-    back: { out: [[0, 0], [76, 0], [82, 0.1], [180, 0.1]], p1: [[0, 0.6], [82, 1.0], [126, 0.95], [180, 0.93]], step: [[0, 0], [82, 0], [102, 0.04], [126, 0.05], [180, 0.06]], p3: [[0, 0.4], [82, 0.75], [126, 0.68], [180, 0.65]], step2: [[0, 0], [82, 0], [102, 0.04], [126, 0.05], [180, 0.06]], bot: [[0, -0.16], [22, 0.0], [44, 0.14], [62, 0.24], [82, 0.36], [102, 0.4], [126, 0.4], [180, 0.4]], flare: [[0, 0], [102, 0.0], [126, 0.04], [180, 0.05]] },
-    face: { yTop: 0.71, yBot: -0.16, zTop: 1.24, zBot: 1.16, ang: 40, xOutTop: 0.82, xOutBot: 0.68, eye: 0.17, botOut: 0.1, seam: 0.05, t: 0.07, vents: [[0.18, 0.27], [0.42, 0.51], [0.66, 0.75]], vt: [0.1, 0.78] },
-    gap: 0.01, thick: 0.07, skirtIn: 0.12, window: 82, panels: true,
-    crest: { w: 0.48, wt: 0.4, h: 0.26 }, badge: { az: 44, inset: 0.02, t: 0.05 }, star: 0.38,
+    back: { out: [[0, 0], [76, 0], [82, 0.1], [180, 0.1]], p1: [[0, 0.6], [82, 1.0], [126, 0.95], [180, 0.93]], step: [[0, 0], [82, 0], [102, 0.04], [126, 0.05], [180, 0.06]], p3: [[0, 0.4], [82, 0.75], [126, 0.68], [180, 0.65]], step2: [[0, 0], [82, 0], [102, 0.04], [126, 0.05], [180, 0.06]], bot: [[0, -0.16], [22, 0.0], [44, 0.16], [62, 0.28], [82, 0.36], [102, 0.4], [126, 0.4], [180, 0.4]], flare: [[0, 0], [102, 0.0], [126, 0.04], [180, 0.05]] },
+    face: { yTop: 0.66, yBot: -0.16, zTop: 1.32, zBot: 1.24, ang: 46, xOutTop: 0.9, xOutBot: 0.74, eye: 0.17, botOut: 0.1, seam: 0.05, t: 0.1, vents: [[0.18, 0.27], [0.42, 0.51], [0.66, 0.75]], vt: [0.1, 0.78] },
+    gap: 0.01, thick: 0.07, skirtIn: 0.12, window: 82, panels: 0.035,
+    crest: { w: 0.56, wt: 0.42, h: 0.2 }, badge: { az: 44, inset: 0.02, t: 0.05 }, star: 0.33,
     disc: { y: 1.17, r: 0.3, boss: 0.18, h: 0.05, stem: 0.08, bh: 0.05, off: 0.045 },
-    cheek: { az: [[70, 1.1, 0.07], [90, 1.1, -0.05], [86, 0.4, -0.05], [70, 0.3, 0.07]], t: 0.07 },
+    cheek: { az: [[76, 1.1, 0.07], [92, 1.1, -0.05], [88, 0.42, -0.05], [76, 0.34, 0.07]], t: 0.07 },
   },
   // (hers: 47 px a unit, her faceplate's foot at -0.18, her profile's faceplate at z 1.07 at the cheek's height: her head
   // is longer from the nose back than the sheet's helm allows at his scale)
@@ -92,12 +92,12 @@ export const DESIGN = {
     sec: [[-0.3, 0.78, 0.95, 0.86, 2.3], [0.4, 0.82, 0.98, 0.86, 2.3], [0.8, 0.88, 0.98, 0.88, 2.3], [1.1, 0.93, 0.96, 0.9, 2.3], [1.37, 0.95, 0.94, 1.0, 2.3], [1.56, 0.94, 0.94, 0.99, 2.3],
       [1.82, 0.91, 0.9, 0.9, 2.3], [1.95, 0.88, 0.8, 0.82, 2.3], [2.08, 0.83, 0.72, 0.72, 2.3], [2.2, 0.76, 0.64, 0.64, 2.3], [2.33, 0.64, 0.58, 0.58, 2.2], [2.46, 0.45, 0.45, 0.5, 2.1], [2.56, 0.2, 0.2, 0.24, 2.0]],
     top: [0, 2.58, -0.06], rings: [2.44, 2.26, 2.06], domeStep: 0.04,
-    band: { top: [[0, 1.86], [22, 1.76], [44, 1.64], [62, 1.58], [180, 1.6]], bot: [[0, 0.88], [22, 1.04], [44, 1.18], [62, 1.24], [82, 1.28], [126, 1.22], [180, 1.22]], out: [[0, 0.28], [22, 0.21], [44, 0.17], [62, 0.1], [82, 0.08], [102, 0.08], [126, 0.1], [180, 0.1]], rim: 0.06, rimOut: 0.03, topRim: [[0, 0.06, 0.03], [62, 0.06, 0.03], [82, 0, 0]] },
+    band: { top: [[0, 1.86], [22, 1.76], [44, 1.64], [62, 1.58], [180, 1.6]], bot: [[0, 0.88], [22, 1.04], [44, 1.18], [62, 1.24], [82, 1.28], [126, 1.22], [180, 1.22]], out: [[0, 0.36], [22, 0.27], [44, 0.19], [62, 0.1], [82, 0.08], [102, 0.08], [126, 0.1], [180, 0.1]], rim: 0.08, rimOut: 0.045, topRim: [[0, 0.06, 0.03], [62, 0.06, 0.03], [82, 0, 0]] },
     ledge: 0.03,
-    back: { out: [[0, 0], [76, 0], [82, 0.09], [180, 0.09]], p1: [[0, 0.62], [82, 1.04], [126, 0.99], [180, 0.97]], step: [[0, 0], [82, 0], [102, 0.04], [126, 0.04], [180, 0.05]], p3: [[0, 0.42], [82, 0.79], [126, 0.72], [180, 0.69]], step2: [[0, 0], [82, 0], [102, 0.04], [126, 0.04], [180, 0.05]], bot: [[0, -0.14], [22, 0.02], [44, 0.16], [62, 0.26], [82, 0.4], [102, 0.44], [126, 0.44], [180, 0.44]], flare: [[0, 0], [102, 0.0], [126, 0.04], [180, 0.05]] },
-    face: { yTop: 0.76, yBot: -0.14, zTop: 1.15, zBot: 0.97, ang: 36, xOutTop: 0.76, xOutBot: 0.62, eye: 0.17, botOut: 0.1, seam: 0.045, t: 0.06, vents: [[0.18, 0.27], [0.42, 0.51], [0.66, 0.75]], vt: [0.1, 0.78] },
-    gap: 0.01, thick: 0.06, skirtIn: 0.1, window: 82, panels: true,
-    crest: { w: 0.42, wt: 0.34, h: 0.23 }, badge: { az: 44, inset: 0.02, t: 0.045 }, star: 0.34,
+    back: { out: [[0, 0], [76, 0], [82, 0.09], [180, 0.09]], p1: [[0, 0.62], [82, 1.04], [126, 0.99], [180, 0.97]], step: [[0, 0], [82, 0], [102, 0.04], [126, 0.04], [180, 0.05]], p3: [[0, 0.42], [82, 0.79], [126, 0.72], [180, 0.69]], step2: [[0, 0], [82, 0], [102, 0.04], [126, 0.04], [180, 0.05]], bot: [[0, -0.14], [22, 0.02], [44, 0.18], [62, 0.28], [82, 0.4], [102, 0.44], [126, 0.44], [180, 0.44]], flare: [[0, 0], [102, 0.0], [126, 0.04], [180, 0.05]] },
+    face: { yTop: 0.71, yBot: -0.14, zTop: 1.2, zBot: 1.04, ang: 40, xOutTop: 0.82, xOutBot: 0.66, eye: 0.17, botOut: 0.1, seam: 0.045, t: 0.09, vents: [[0.18, 0.27], [0.42, 0.51], [0.66, 0.75]], vt: [0.1, 0.78] },
+    gap: 0.01, thick: 0.06, skirtIn: 0.1, window: 82, panels: 0.035,
+    crest: { w: 0.48, wt: 0.36, h: 0.18 }, badge: { az: 44, inset: 0.02, t: 0.045 }, star: 0.34,
     disc: { y: 1.3, r: 0.28, boss: 0.17, h: 0.05, stem: 0.07, bh: 0.05, off: 0.04 },
     cheek: { az: [[70, 1.16, 0.06], [90, 1.16, -0.05], [86, 0.44, -0.05], [70, 0.34, 0.06]], t: 0.06 },
   },
@@ -138,7 +138,8 @@ export function buildHelm(rig, design = DESIGN[rig.who]) {
     const Rf = (y) => Math.min(R(y), rPlane(az, y, D.gap)) + byAz(BK.out, az);
     const yl = bb - D.ledge;
     const P = [
-      ...D.rings.map((y, k) => [`r${k + 1}`, y, R(y)]),
+      // (the dome's seams between its panels a little proud, a ridge down each)
+      ...D.rings.map((y, k) => [`r${k + 1}`, y, R(y) + (D.panels && PANEL.has(Math.abs(az)) ? D.panels : 0)]),
       // (the dome's lower ring stands out from its cap by domeStep)
       ['ds', D.rings[D.rings.length - 1] - 0.005, R(D.rings[D.rings.length - 1]) + D.domeStep],
       ['bt', bt, R(bt)],
@@ -184,7 +185,6 @@ export function buildHelm(rig, design = DESIGN[rig.who]) {
   const matOf = (k, az) => {
     const key = st[0][k][0];
     if (key === 'bt' || key === 'bto' || key === 'bt3') return 'gold'; // the band's top ledge, the badge's top rim
-    if (k < kBand && D.panels && PANEL.has(Math.abs(az))) return 'shade'; // the dome's panels
     if (key === 'brr' || key === 'brg') return 'gold'; // the rim's ledge and face
     if (key === 'blo') return Math.abs(az) <= 62 ? 'under' : 'shade'; // the band's underside: over the eye, the dark under-layer
     if (key === 'bli') return 'shade'; // the side and plate 1 under the band
@@ -241,9 +241,9 @@ export function buildHelm(rig, design = DESIGN[rig.who]) {
     return { q: best.q, n };
   };
   /** Where the ray from o along unit d first meets the shell's outside: the point and the normal facing back along d. */
-  const rayShell = (o, d) => {
+  const rayShell = (o, d, TT = ST) => {
     let best = null;
-    for (const t of ST) {
+    for (const t of TT) {
       const [a, b, c] = t.map((i) => G.verts[i]);
       const e1 = sub(b, a), e2 = sub(c, a), h = cross(d, e2), det = dot(e1, h);
       if (Math.abs(det) < 1e-12) continue;
@@ -292,7 +292,8 @@ export function buildHelm(rig, design = DESIGN[rig.who]) {
       const base = add(p, mul(n, D.gap));
       return [add(base, mul(x, C.w / 2)), add(add(base, mul(x, C.wt / 2)), mul(n, C.h)), add(add(base, mul(x, -C.wt / 2)), mul(n, C.h)), add(base, mul(x, -C.w / 2))].map((q) => G.vert(q, 'crest'));
     });
-    for (let i = 0; i + 1 < rows.length; i++) for (let k = 0; k < 3; k++) G.poly([rows[i][k], rows[i][k + 1], rows[i + 1][k + 1], rows[i + 1][k]], 'gold', 'helm');
+    // (its top plate, its sides gold)
+    for (let i = 0; i + 1 < rows.length; i++) for (let k = 0; k < 3; k++) G.poly([rows[i][k], rows[i][k + 1], rows[i + 1][k + 1], rows[i + 1][k]], k === 1 ? 'plate' : 'gold', 'helm');
     G.poly([...rows[0]], 'gold', 'helm');
     G.poly([...rows[rows.length - 1]].reverse(), 'gold', 'helm');
   }
@@ -373,19 +374,22 @@ export function buildHelm(rig, design = DESIGN[rig.who]) {
     const foot = rows.map(([a, b], i) => [add(a, mul(nOf(cols[i]), D.gap)), add(b, mul(nOf(cols[i]), D.gap))]);
     const ring = [...out.map((r) => r[0]), ...out.map((r) => r[1]).reverse()], fring = [...foot.map((r) => r[0]), ...foot.map((r) => r[1]).reverse()];
     const n = cols.length, faces = cols.slice(0, -1).map((_, i) => [i, i + 1, 2 * n - 2 - i, 2 * n - 1 - i]);
+    const n0 = G.polys.length;
     plate('badge', ring, faces, 'plate', 'gold', { foot: fring });
+    // (its outer face, for the star to lie on)
+    G.badgeTris = G.polys.slice(n0, n0 + faces.length * 2).filter((q) => q.mat === 'plate').flatMap((q) => { const o = []; for (let k = 1; k + 1 < q.v.length; k++) o.push([q.v[0], q.v[k], q.v[k + 1]]); return o; });
     G.badgeT = D.gap + BADGE.t;
   }
 
   /* ---- the star on the brow: a four-pointed star laid on the badge, seen from the front ---- */
   {
     const yS = (byAz(B.bot, 0) + B.rim + byAz(B.top, 0)) / 2, R = D.star, r = R * 0.26;
-    const hit = (x, y) => rayShell([x, y, 6], [0, 0, -1]);
+    const hit = (x, y) => rayShell([x, y, 6], [0, 0, -1], G.badgeTris) ?? rayShell([x, y, 6], [0, 0, -1]);
     const pts = Array.from({ length: 8 }, (_, k) => { const a = k * Math.PI / 4, l = k % 2 ? r : R; return [Math.sin(a) * l * 0.78, yS + Math.cos(a) * l]; });
     G.tag = 'star';
-    const T = pts.map(([x, y]) => { const h = hit(x, y); return G.vert(add(h.q, mul(h.n, G.badgeT + 2 * D.gap + 0.035)), 'star'); });
-    const Fo = pts.map(([x, y]) => { const h = hit(x, y); return G.vert(add(h.q, mul(h.n, G.badgeT + 2 * D.gap)), 'star'); });
-    const h0 = hit(0, yS), cT = G.vert(add(h0.q, mul(h0.n, G.badgeT + 2 * D.gap + 0.06)), 'star');
+    const T = pts.map(([x, y]) => { const h = hit(x, y); return G.vert(add(h.q, mul(h.n, 0.04 + 0.035)), 'star'); });
+    const Fo = pts.map(([x, y]) => { const h = hit(x, y); return G.vert(add(h.q, mul(h.n, 0.04)), "star"); });
+    const h0 = hit(0, yS), cT = G.vert(add(h0.q, mul(h0.n, 0.04 + 0.06)), 'star');
     for (let k = 0; k < 8; k++) { const k1 = (k + 1) % 8; G.poly([cT, T[k], T[k1]], 'core', 'helm'); G.poly([Fo[k], Fo[k1], T[k1], T[k]], 'gold', 'helm'); }
   }
 
