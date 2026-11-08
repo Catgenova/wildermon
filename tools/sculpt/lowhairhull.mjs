@@ -166,7 +166,7 @@ export function centreOf(B) { const P = (n) => B.verts[B.index.get(n)]; return [
  * pixels), outside the skull; the
  * thickness along a direction is how far past the skin the hull runs on without a break.
  */
-export function carve(style = 'swept', vox = 0.02, grow = 2, need = 5) {
+export function carve(style = 'swept', vox = 0.02, grow = 2, need = 5, mirror = true) {
   const rig = buildRig('male'), B = rig.B, C = centreOf(B), skull = skullTable(B, C);
   const inside = maskOf(style, grow);
   const cams = VIEWS.map((v) => CAMS[v]);
@@ -183,7 +183,17 @@ export function carve(style = 'swept', vox = 0.02, grow = 2, need = 5) {
   };
   // (the sheet's views are drawn, not rendered from one model: they disagree by a few pixels here and there, the profile
   // most, so a voxel stays where `need` of the five keep it)
-  const inHull = (p) => { let n = 0; for (let k = 0; k < cams.length; k++) if (keeps(p, k)) n++; return n >= need; };
+  // (his left side: the sheet draws only his right in the three-quarter, the profile and the rear three-quarter, so his
+  // left is carved by those three mirrored too, the hair's envelope the same both sides; else only the front and the
+  // back would carve it, and it stands out in their corners)
+  const side = VIEWS.map((v, k) => (['q3', 'profile', 'r3'].includes(v) ? k : -1)).filter((k) => k >= 0);
+  const inHull = (p) => {
+    let n = 0; for (let k = 0; k < cams.length; k++) if (keeps(p, k)) n++;
+    if (n < need) return false;
+    if (!mirror) return true;
+    const m = [2 * C[0] - p[0], p[1], p[2]];
+    return side.every((k) => keeps(m, k));
+  };
   const thick = gridOf(2, (over, out) => {
     const d = dirOf(over, out), r0 = skull.at(over, out);
     if (!(r0 > 0)) return 0;

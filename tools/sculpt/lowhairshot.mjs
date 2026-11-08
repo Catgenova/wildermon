@@ -237,6 +237,32 @@ if (MAIN) {
     await shoot(x0 * 2 + 5 * cw + 4 * gap, (over ? y3 : y2) + ch + 10, cells, join(out, `hair-sheet-${who}${stage}.png`), { texts, imgs });
   }
 
+  if (only.includes('tufts')) for (const who of Object.keys(RIGS)) {
+    // per tuft: each of ours in its own colour (flat, see-through) over the sheet, the sheet's creases traced in that
+    // view (tools/sculpt/hairs/swept-lines2d.json, solid where the view sees them) in the crease's colour over it; the
+    // sheet alone beside it with the same creases
+    const rig = RIGS[who], hair = HAIRS[who], L2 = JSON.parse(readFileSync(join(DIR, 'hairs/swept-lines2d.json'), 'utf8'));
+    const cw = 280, ch = 300, gap = 8, K = 1.4, cells = [], imgs = [], texts = [];
+    const PAL = [[0.95, 0.3, 0.3], [0.98, 0.65, 0.2], [0.95, 0.9, 0.25], [0.45, 0.85, 0.3], [0.25, 0.8, 0.85], [0.35, 0.5, 0.98], [0.75, 0.4, 0.95], [0.98, 0.45, 0.75], [0.6, 0.95, 0.7], [0.9, 0.9, 0.9]];
+    const col = hair.polys.map((p) => (p.buzz ? [0, 0, 0] : p.tuft === undefined ? [0.5, 0.5, 0.5] : p.tuft < 0 ? [0.08, 0.05, 0.05] : PAL[(p.piece * 6 + p.tuft) % PAL.length]));
+    VIEWS.forEach(([v, label], i) => {
+      const c = CAMW[who][v], x = 10 + i * (cw * K + gap), y0 = 34, y1 = y0 + ch * K + gap, sx = c.cx - cw / 2, sy = c.cy - ch / 2 - 20;
+      for (const y of [y0, y1]) imgs.push({ src: REF, size: REF_SIZE, crop: [sx, sy, cw, ch], box: [x, y, cw * K, ch * K] });
+      const w = warpOf(c);
+      cells.push({ meshes: [{ ...bodyMesh(rig, hair, rig.B.verts.map(w)), depthOnly: true }, { ...hairMesh(rig, hair, hair.verts.map(w)), tris: hair.tris.filter(([, , , pi]) => !hair.polys[pi].buzz), col, flat: true, alpha: 0.62 }], cam: { ...camOf(c, K), c: sheetPivot(c, sx + cw / 2, sy + ch / 2) }, box: [x, y1, cw * K, ch * K], see: true, label: label + ': ours per tuft' });
+      const svg = (L2[v] ?? []).map((ln) => {
+        const segs = []; let cur = [];
+        ln.pts.forEach(([px, py, seen]) => { if (seen) cur.push(`${((px - sx) * K).toFixed(1)},${((py - sy) * K).toFixed(1)}`); else { if (cur.length > 1) segs.push(cur); cur = []; } });
+        if (cur.length > 1) segs.push(cur);
+        return segs.map((sg) => `<polyline points="${sg.join(' ')}" fill="none" stroke="rgb(${ln.col.join(',')})" stroke-width="2.2" stroke-linejoin="round"/>`).join('');
+      }).join('');
+      for (const y of [y0, y1]) texts.push({ cls: 'lab', css: `left:${x}px;top:${y}px;width:${cw * K}px;height:${ch * K}px`, html: `<svg width="${cw * K}" height="${ch * K}">${svg}</svg>` });
+      texts.push({ cls: 'lab', css: `left:${x + 6}px;top:${y0 + 4}px;text-shadow:0 0 3px #000`, html: label + ': the sheet, its creases traced' });
+    });
+    texts.unshift({ css: 'left:12px;top:6px', html: `Per tuft: the sheet's creases (lines, each its colour) over the sheet (top) and over the ${who === 'male' ? 'man' : 'woman'}'s tufts, each its own colour, the valleys near-black (below)` });
+    await shoot(10 + 5 * (cw * K + gap), 34 + 2 * (ch * K + gap) + 4, cells, join(out, `hair-tufts-${who}${stage}.png`), { texts, imgs });
+  }
+
   if (only.includes('reg')) for (const who of Object.keys(RIGS)) {
     // the registration: the body's head and neck as a wire over each sheet view (2x), the sheet's landmarks (yellow
     // rings) and the body's (cyan dots) with their residuals, the outline's mean distance
