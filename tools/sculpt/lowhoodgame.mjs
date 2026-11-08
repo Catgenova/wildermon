@@ -72,10 +72,16 @@ try {
   await p.setContent('<!doctype html><html><head><style>body{margin:0;background:#2f292b;font:13px sans-serif;color:#eee}#root{display:inline-block;padding:4px}.row{display:flex;gap:6px;align-items:flex-start}.c{display:flex;flex-direction:column}.l{padding:2px 2px 6px}.h{padding:4px 2px;font-weight:600}canvas{display:block}#frame{gap:0}</style></head><body><div id=root></div></body></html>');
   await p.addScriptTag({ content: b.outputFiles[0].text });
   await p.evaluate(() => window.ready());
+  // (the page sized to the element first, so a sheet wider than the window is shot whole, without scrolling)
+  const shot = async (sel, path) => {
+    const r = await p.evaluate((q) => { const b = document.querySelector(q).getBoundingClientRect(); return { x: b.x, y: b.y, width: Math.ceil(b.width), height: Math.ceil(b.height) }; }, sel);
+    await p.setViewportSize({ width: Math.max(1200, Math.ceil(r.x + r.width)), height: Math.max(800, Math.ceil(r.y + r.height)) });
+    await p.screenshot({ path, clip: r, timeout: 180000 });
+  };
   for (const z of zooms) {
     await p.evaluate((zz) => window.sheet(zz), z);
     const file = join(out, `${name}-game-z${z}.png`);
-    await (await p.$('#root')).screenshot({ path: file });
+    await shot('#root', file);
     console.log('wrote', file);
   }
   if (gifZoom > 0) {
@@ -83,7 +89,7 @@ try {
     mkdirSync(dir, { recursive: true });
     for (let k = 0; k < F; k++) {
       await p.evaluate(([zz, u]) => window.frame(zz, u), [gifZoom, k / F]);
-      await (await p.$('#frame')).screenshot({ path: join(dir, `f${String(k).padStart(2, '0')}.png`) });
+      await shot('#frame', join(dir, `f${String(k).padStart(2, '0')}.png`));
     }
     const gif = join(out, `${name}-game-walk-z${gifZoom}.gif`);
     execFileSync('python3', ['-c', `
