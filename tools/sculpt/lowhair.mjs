@@ -38,7 +38,8 @@
 import { writeFileSync } from 'node:fs';
 import { buildRig, posed, skin, add, sub, mul, dot, cross, unit, lerp } from './lowrig.mjs';
 import SWEPT from './hairs/swept.mjs';
-import { angOf, carve, outlineDiff } from './lowhairhull.mjs';
+import { dirOfMap, mapOfDir } from './lowhairlines.mjs';
+import { angOf, carve, outlineDiff, camsFor, maskOf, project, raster, bodyTris, VIEWS } from './lowhairhull.mjs';
 
 export const STYLES = { swept: SWEPT };
 // (the game's 'undercut', "Shaved sides", may later take this style's shave with a top of its own)
@@ -46,6 +47,8 @@ export const STYLES = { swept: SWEPT };
 const SINK = 0.04;
 /** A corner's least height off the skin (a lock never thinner), and the gap under a lip's front edge. */
 const MIN_H = 0.03, LIP = 0.015;
+/** How far a mass's border over the face's skin (not the scalp) stands off it. */
+const FACE_LIP = 0.015;
 
 /** The skull: the head's skin without the ears, as triangles (each with its polygon, .poly), and its centre (level with
  * the brow's outer end, midway between the forehead and the back of the skull). */
@@ -97,6 +100,46 @@ const at = (arr, u) => { const n = arr.length - 1, x = Math.min(n, Math.max(0, u
  * there (sec's up, of the hull rather than of h), so the locks fill the sheet's outline and their ridges and grooves
  * are the section's. */
 export function buildHair(rig, style = SWEPT, hull = null) {
+  const o = style.outline;
+  if (!(o?.tube && hull && (o.who ?? ['male']).includes(rig.who))) return buildOnce(rig, style, hull);
+  // tube: the outline fitted (outlineFit) on a copy, each tuft's height per station then scaled by the share its
+  // corners moved there (averaged over the corners the fit moved, smoothed along the run), and the hair built again:
+  // the silhouette fitted, each tuft still one clean run
+  const gains = style.clumps.map((cl) => (cl.mass && cl.tube ? Array.from({ length: cl.lines.length - 1 }, () => Array(cl.lines[0].length).fill(1)) : null));
+  for (let r = 0; r < (o.tube.rounds ?? 2); r++) {
+    const h = buildOnce(rig, style, hull, gains, false), V = h.verts.map((p) => [...p]);
+    const { tris: skull } = skullOf(rig.B), C = h.centre;
+    const above = (p) => { const d = sub(p, C), l = Math.hypot(...d); return l - hit(skull, C, mul(d, 1 / l)).t; };
+    outlineFit(rig, o, V, h.polys, h.pieces, skull, C, h.k);
+    style.clumps.forEach((cl, ci) => {
+      const g = gains[ci]; if (!g) return;
+      const pc = h.pieces[ci], { ids, tufts, n } = pc.mass, sum = g.map((r) => r.map(() => [0, 0]));
+      ids.forEach((row, i) => row.forEach((v, j) => {
+        const a = above(h.verts[v]), b = above(V[v]);
+        if (a < 0.02 * h.k || Math.abs(b - a) < 0.002 * h.k) return;
+        for (const t of tufts[i]) { sum[t][j][0] += b / a; sum[t][j][1]++; }
+      }));
+      g.forEach((r, t) => {
+        // (a station the fit did not reach takes its share from the nearest that it did, either way along the run, so a
+        // tuft's front is not left standing where the rest of it was drawn in)
+        const has = r.map((x, j) => sum[t][j][1] > 0), f0 = r.map((x, j) => (has[j] ? sum[t][j][0] / sum[t][j][1] : null));
+        const f = f0.map((x, j) => {
+          if (x !== null) return x;
+          let a = j - 1, b = j + 1; while (a >= 0 && f0[a] === null) a--; while (b < n && f0[b] === null) b++;
+          if (a < 0 && b >= n) return 1; if (a < 0) return f0[b]; if (b >= n) return f0[a];
+          return f0[a] + ((f0[b] - f0[a]) * (j - a)) / (b - a);
+        });
+        const sm = f.map((x, j) => (j === 0 || j === n - 1 ? x : (f[j - 1] + 2 * x + f[j + 1]) / 4));
+        for (let j = 0; j < n; j++) r[j] = Math.max(o.tube.lo ?? 0.8, Math.min(o.tube.hi ?? 1.25, r[j] * sm[j]));
+      });
+    });
+  }
+  const out = buildOnce(rig, style, hull, gains, false);
+  out.gains = gains;
+  return out;
+}
+
+function buildOnce(rig, style, hull, gains = null, fit = true) {
   const B = rig.B, { tris: skull, centre: C } = skullOf(B);
   // the skull's size against the male's, for the clumps' widths and heights
   const P = (n) => B.verts[B.index.get(n)];
@@ -110,7 +153,7 @@ export function buildHair(rig, style = SWEPT, hull = null) {
     return add(C, mul(dq, hq.t + Math.max(MIN_H * k, b * hull.thick.at(o, u) * k * (cl.scale ?? 1))));
   };
   for (cl of style.clumps) {
-    if (cl.mass) { massOf(cl, { skull, C, k, verts, polys, pieces, hull, scalp: new Set(shaveOf(B, style.scalp ?? style.shave)) }); continue; }
+    if (cl.mass) { massOf(cl, { skull, C, k, verts, polys, pieces, hull, scalp: new Set(shaveOf(B, style.scalp ?? style.shave)), gain: gains?.[style.clumps.indexOf(cl)], mapScale: style.mapScale?.[rig.who] ?? 1 }); continue; }
     const n = cl.n ?? 9, sec = typeof cl.sec === 'string' ? style[cl.sec] : cl.sec ?? style.sec;
     const first = polys.length, base = verts.length;
     // the spine: each control point on the skin, stood off it by its lift along the skull's outward direction
@@ -182,6 +225,8 @@ export function buildHair(rig, style = SWEPT, hull = null) {
   const roots = new Set(verts.map((p, i) => i).filter((i) => { const r = sub(verts[i], C), l = Math.hypot(...r); return l <= hit(skull, C, mul(r, 1 / l)).t; }));
   if (style.layers) layersOf(style, verts, polys, pieces, skull, C, k, roots);
   orientOut(verts, polys, pieces);
+  // the outline onto the sheet's in its five views (outlineFit)
+  if (fit && style.outline && hull && (style.outline.who ?? ['male']).includes(rig.who)) outlineFit(rig, style.outline, verts, polys, pieces, skull, C, k);
   // the buzz: the head's side faces forward of the shave as far as the sideburn's line, as patches just off them
   if (style.buzz) buzzOf(B, style, verts, polys, k);
   const tris = [];
@@ -233,8 +278,14 @@ export function buildHair(rig, style = SWEPT, hull = null) {
       verts[i] = add(C, mul(d, l - 0.006 * k));
     }
   }
-  const weights = weightsOf(rig, verts, style);
   const shave = shaveOf(B, style.shave), scalp = shaveOf(B, style.scalp ?? style.shave);
+  // a face still through the skin at rest (the face's, off the scalp): its corners stood off the skin a little at a time
+  for (let it = 0; it < 12; it++) {
+    const X = crossings(rig, { verts, polys, tris, scalp, pieces }, B.verts, verts);
+    if (!X.n) break;
+    for (const [pi] of X.hits) for (const i of polys[pi].v) { const r = sub(verts[i], C), l = Math.hypot(...r); verts[i] = add(C, mul(r, (l + 0.004 * k) / l)); }
+  }
+  const weights = weightsOf(rig, verts, style);
   return { verts, polys, tris, weights, pieces, shave, scalp, centre: C, k };
 }
 
@@ -247,13 +298,13 @@ export function buildHair(rig, style = SWEPT, hull = null) {
  * with notches between and their tops are ridges running back; grooveAt: the groove's share per station). Every
  * corner stands on the ray from the skull's centre through it, off the skin by its thickness: the sole's and the
  * tip's `flush` ([sole, tip]: the tip on the forehead at the hairline, nothing hanging over the brow), the rest the
- * solved one (cl.fit.t, per row and station, head units on the male, tools/sculpt/lowhairfront.mjs) or, unsolved, the
+ * solved one (cl.fit.t, per row and station, head units on the male, from a solver since retired) or, unsolved, the
  * hull's. The border (the first and the last rows, the roots behind the hairline and at the crown) are sunk in the
  * skin, the undersides clear of the face; the piece closes in a fan from the skull's centre under them. The pieces'
  * record keeps each corner's ray, its drop and its role (sole, tip) for the solver, and each row's line or band (src:
  * a crease's two rows the one).
  */
-export function massOf(cl, { skull, C, k, verts, polys, pieces, hull, scalp }) {
+export function massOf(cl, { skull, C, k, verts, polys, pieces, hull, scalp, gain, mapScale = 1 }) {
   const n = cl.lines[0].length, band = cl.band ?? [[0.5, 0]], groove = cl.groove ?? 0.04, laid = [];
   cl.lines.forEach((cr, i) => {
     if (cr.length !== n) throw new Error(`${cl.id}: every line ${n} stations`);
@@ -284,19 +335,80 @@ export function massOf(cl, { skull, C, k, verts, polys, pieces, hull, scalp }) {
   // (a solve for another layout of rows and stations is not this one's)
   const fit = cl.fit && cl.fit.t.length === laid.length && cl.fit.t[0].length === n ? cl.fit : null;
   const ids = [];
+  // tube: each tuft one height per station (the hull's thickness over its rows, averaged, then smoothed along its run
+  // `tube.smooth` times), its rows that height less their drop as a share of it, a crease the lower of its two tufts'
+  // less the groove as a share of it; so each tuft is one clean rounded run, its valleys V-shaped and proportional
+  const TH = cl.tube && hull ? (() => {
+    const T = Array.from({ length: cl.lines.length - 1 }, () => Array(n).fill(0)), c = T.map(() => Array(n).fill(0));
+    rows.forEach((row) => { if (row.tuft === undefined) return; row.dirs.forEach(([o, u], j) => { T[row.tuft][j] += hull.thick.at(o, u) * (cl.scale ?? 1); c[row.tuft][j]++; }); });
+    T.forEach((r, a) => r.forEach((x, j) => { r[j] = x / Math.max(1, c[a][j]); }));
+    for (const r of T) for (let s = 0; s < (cl.tube.smooth ?? 2); s++) { const o = [...r]; for (let j = 1; j < n - 1; j++) r[j] = (o[j - 1] + 2 * o[j] + o[j + 1]) / 4; }
+    // (across: the tufts' heights smoothed with their neighbours' that many times, so the mass's envelope is one)
+    for (let s = 0; s < (cl.tube.across ?? 0); s++) { const o = T.map((r) => [...r]); for (let a = 0; a < T.length; a++) for (let j = 0; j < n; j++) T[a][j] = (o[Math.max(0, a - 1)][j] + 2 * o[a][j] + o[Math.min(T.length - 1, a + 1)][j]) / 4; }
+    // (each tuft's own height share, cl.tube.gain: one per tuft, uneven sizes)
+    T.forEach((r, a) => { const g = cl.tube.gain?.[a] ?? 1; for (let j = 0; j < n; j++) r[j] *= g * (gain?.[a]?.[j] ?? 1); });
+    return T;
+  })() : null;
+  // (perRow: the envelope each row's own, the hull's thickness under it smoothed along the run and across the rows,
+  // the tufts' gains on it; the tuft's section carved from that envelope rather than set on its average)
+  const HR = TH && cl.tube.perRow ? (() => {
+    const T = rows.map((row) => row.dirs.map(([o, u]) => hull.thick.at(o, u) * (cl.scale ?? 1)));
+    for (const r of T) for (let s = 0; s < (cl.tube.smooth ?? 2); s++) { const o = [...r]; for (let j = 1; j < n - 1; j++) r[j] = (o[j - 1] + 2 * o[j] + o[j + 1]) / 4; }
+    for (let s = 0; s < (cl.tube.acrossRows ?? 2); s++) { const o = T.map((r) => [...r]); for (let i = 1; i < T.length - 1; i++) for (let j = 0; j < n; j++) T[i][j] = (o[i - 1][j] + 2 * o[i][j] + o[i + 1][j]) / 4; }
+    // (no row higher than its tuft's ridge there, a crease than either ridge beside it: the section stays a tuft's
+    // where the hull runs thicker at its edge than over its middle, a lip's overhang at the temple)
+    const ridge = {}; rows.forEach((row, i) => { if (row.tuft !== undefined && !row.drop) ridge[row.tuft] = i; });
+    const T0 = T.map((r) => [...r]);
+    rows.forEach((row, i) => { const tf = row.tuft !== undefined ? [row.tuft] : row.crease ? [row.ci, row.ci + 1] : i === 0 ? [0] : i === rows.length - 1 ? [cl.lines.length - 2] : []; for (let j = 0; j < n; j++) for (const t of tf) if (ridge[t] !== undefined && ridge[t] !== i) T[i][j] = Math.min(T[i][j], T0[ridge[t]][j]); });
+    rows.forEach((row, i) => { const tf = row.tuft !== undefined ? [row.tuft] : row.crease ? [row.ci, row.ci + 1] : i === 0 ? [0] : i === rows.length - 1 ? [cl.lines.length - 2] : []; for (let j = 0; j < n; j++) T[i][j] *= tf.length ? tf.reduce((a, t) => a + (gain?.[t]?.[j] ?? 1) * (cl.tube.gain?.[t] ?? 1), 0) / tf.length : 1; });
+    return T;
+  })() : null;
+  const tubeT = (row, j, i) => {
+    if (HR) return HR[i][j] * (1 - (row.tuft !== undefined ? row.drop : dropOf(row, j) * gAt(j)));
+    if (row.tuft !== undefined) return TH[row.tuft][j] * (1 - row.drop);
+    const a = TH[row.ci][j], b = TH[row.ci + 1][j];
+    return Math.min(a, b) * (1 - dropOf(row, j) * gAt(j));
+  };
   rows.forEach((row, i) => ids.push(row.dirs.map(([o, u], j) => {
-    let d = dirOf(o, u), h = hit(skull, C, d);
+    let d = dirOf(o, u);
+    // (mapScale: the lines drawn toward the crown by this share of their angle from straight up, on a skull whose
+    // hairline the male's degrees would set too low: hers)
+    if (mapScale !== 1) d = dirOfMap(mapOfDir(d).map((x) => x * mapScale));
+    let h = hit(skull, C, d);
     const border = i === 0 || i === R - 1 || j === 0 || j === n - 1;
     let t;
-    if (border) t = -(cl.sink ?? SINK);
+    // (a border that meets another mass rather than the skin: its first or last row (borderUp) or its last station
+    // (endUp) at that share of the hull's thickness, where the two masses meet in a crease, not sunk)
+    const up = j === 0 ? null : i === 0 ? cl.borderUp?.[0] : i === R - 1 ? cl.borderUp?.[1] : j === n - 1 ? cl.endUp : null;
+    const upEnd = j === n - 1 && cl.endUp != null && !(i === 0 && cl.borderUp?.[0] == null) && !(i === R - 1 && cl.borderUp?.[1] == null);
+    if (border && (up != null || upEnd)) t = Math.max(MIN_H, (HR ? HR[i][j] : hull ? hull.thick.at(o, u) * (cl.scale ?? 1) : 0.12) * Math.min(up ?? 1, upEnd ? cl.endUp : 1));
+    // (a border over the face's skin, not the scalp, stands on it rather than in it: the whorl on the forehead)
+    else if (border) t = scalp && !scalp.has(h.poly) ? FACE_LIP : -(cl.sink ?? SINK);
     else if ((j === 1 || j === 2) && cl.flush) t = cl.flush[j - 1];
+    else if (TH) t = Math.max(MIN_H, tubeT(row, j, i));
     else if (fit) t = fit.t[row.src][j] + (row.drop - dropOf(row, j)) * gAt(j);
     else t = Math.max(MIN_H, Math.max(cl.least ? cl.least[j] : 0, hull ? hull.thick.at(o, u) * (cl.scale ?? 1) : 0.12) - dropOf(row, j) * gAt(j));
     // each tuft's lifted front (lift: one per tuft) raised or lowered by its share, half that a station behind
-    if (cl.lift && row.tuft !== undefined && !border && (j === 3 || j === 4)) t *= 1 + (cl.lift[row.tuft] - 1) * (j === 3 ? 1 : 0.5);
+    // (roll: { tufts, at: { station: share }, gain, deepen }: the lowest tufts' turn at the temple as stacked rolled
+    // lips, each such tuft's rows `gain` times higher there and the creases between two of them `deepen` deeper, of
+    // the envelope)
+    if (cl.roll && !border) {
+      const sh = cl.roll.at[j] ?? 0, R0 = cl.roll.tufts;
+      if (sh && row.tuft !== undefined && R0.includes(row.tuft)) t *= 1 + (cl.roll.gain - 1) * sh;
+      else if (sh && row.crease && (R0.includes(row.ci) || R0.includes(row.ci + 1)) && HR) t = Math.max(MIN_H, t - cl.roll.deepen * sh * HR[i][j]);
+    }
+    // (liftAt: per station its share of the lift, default the fourth station whole and the fifth half; a crease beside
+    // a lifted tuft lifted by the lower of its two tufts', so the lifted fronts stand apart over a deeper notch)
+    const la = (cl.liftAt ?? { 3: 1, 4: 0.5 })[j];
+    if (cl.lift && la && !border) {
+      if (row.tuft !== undefined) t *= 1 + (cl.lift[row.tuft] - 1) * la;
+      else if (row.crease) t *= 1 + (Math.min(cl.lift[row.ci], cl.lift[row.ci + 1]) - 1) * la * (cl.liftCrease ?? 0);
+    }
     rays.push({ i, j, d, r0: h.t, border, drop: dropOf(row, j) * gAt(j), role: j === 1 ? 'sole' : j === 2 ? 'tip' : '' });
-    // (a crease's second row shares the first's corners where it is not split)
+    // (a crease's second row shares the first's corners where it is not split; with apex, every row's first corner is
+    // the one, the tufts' common root)
     if (row.side === 1 && !split(j, row.ci)) return ids[i - 1][j];
+    if (cl.apex && j === 0 && i > 0) return ids[0][0];
     return verts.push(add(C, mul(d, h.t + t * k))) - 1;
   })));
   // the tuft's underside clear of the face on any head: where a root's quads to the rows beside it (either way split)
@@ -309,9 +421,24 @@ export function massOf(cl, { skull, C, k, verts, polys, pieces, hull, scalp }) {
     const clear = (i) => [i - 1, i + 1].filter((m) => m >= 0 && m < R).every((m) => [0, 1, 2].every((j) =>
       ![[V(i, j), V(i, j + 1), V(m, j + 1)], [V(i, j), V(m, j + 1), V(m, j)], [V(i, j), V(i, j + 1), V(m, j)], [V(i, j + 1), V(m, j + 1), V(m, j)]]
         .some((A) => face.some((T) => cross2(A, T)))));
+    // (clearCap: no corner raised past its own height by more than this, head units: a forehead far from the male's
+    // would else stand it out as a spike; the rest left to the crossings' pass after)
+    const hOf = (i, j) => Math.hypot(...sub(verts[ids[i][j]], C)) - rays[i * n + j].r0;
+    const h0 = ids.map((row, i) => row.map((v, j) => hOf(i, j)));
     for (let i = 1; i < R - 1; i++) for (let up = 0; up < 30 && !clear(i); up++) for (const j of up < 10 ? [1] : [1, 2]) {
       const r = rays[i * n + j];
+      if (cl.clearCap != null && hOf(i, j) > h0[i][j] + cl.clearCap * k) continue;
       verts[ids[i][j]] = add(verts[ids[i][j]], mul(r.d, 0.01 * k));
+    }
+    // a border's corner whose faces pass through the face (sunk in the scalp at the face's edge) raised out of the skin
+    // a little at a time, with the row beside it, to stand on it
+    for (const i of [0, R - 1]) {
+      const m = i ? R - 2 : 1;
+      for (let j = 1; j < n - 1; j++) for (let up = 0; up < 8; up++) {
+        const quads = [j - 1, j].filter((q) => q >= 0 && q + 1 < n).flatMap((q) => [[V(i, q), V(i, q + 1), V(m, q + 1)], [V(i, q), V(m, q + 1), V(m, q)]]);
+        if (!quads.some((A) => face.some((T) => cross2(A, T)))) break;
+        for (const r of [i, m]) verts[ids[r][j]] = add(verts[ids[r][j]], mul(rays[r * n + j].d, 0.006 * k));
+      }
     }
   }
   const centre = verts.push([...C]) - 1;
@@ -326,14 +453,29 @@ export function massOf(cl, { skull, C, k, verts, polys, pieces, hull, scalp }) {
     if (rows[i].side === 0 && rows[i + 1].side === 1 && split(j, c) && j >= from(c)) {
       const f = (j - from(c)) / Math.max(1, to(c) - from(c));
       shade = depth(c) * (1 - 0.75 * (st.peak === 'to' ? 1 - f : f));
+    } else if (cl.rimShade && j >= 1 && ((i === 0 && cl.borderUp?.[0] == null) || (i === R - 2 && cl.borderUp?.[1] == null))) {
+      // the hair's underside along its lower edge (the wall from the hairline up to its tuft's outer row): the
+      // valleys' tone, so the edge reads as the sheet's dark rim under the lowest tufts
+      shade = cl.rimShade;
+    } else if (cl.endShade && j >= n - 1 - cl.endShade.length) {
+      // the faces into the back's centre line (the last stations): the centre valley's tone
+      // (endLow: [from, to] degrees off straight up of the row's end on the centre line: none above `from`, whole
+      // below `to`, so the dark is the V's wedge low on the back, not the crown)
+      const e = rays[i * n + n - 1].d, a = (Math.acos(Math.max(-1, Math.min(1, e[1]))) * 180) / Math.PI, [lo, hi] = cl.endLow ?? [0, 0];
+      shade = cl.endShade[n - 2 - j] * (hi > lo ? Math.max(0, Math.min(1, (a - lo) / (hi - lo))) : 1);
+    } else if (st?.side && j >= 1 && j < n - 2 && (rows[i].crease !== rows[i + 1].crease) && (rows[i].crease || rows[i + 1].crease)) {
+      // a tuft's wall down into the valley beside it (between the crease's row and the tuft's outer row): a lighter
+      // valley tone, so the valley reads as wide as its walls
+      const cr = rows[i].crease ? rows[i] : rows[i + 1];
+      shade = st.side * gAt(j) * (cr.drop ? dropOf(cr, j) / cr.drop : 1);
     }
-    face([ids[i][j], ids[i][j + 1], ids[i + 1][j + 1], ids[i + 1][j]], shadeOf(shade));
+    face([ids[i][j], ids[i][j + 1], ids[i + 1][j + 1], ids[i + 1][j]], { ...shadeOf(shade), tuft: rows[i].tuft ?? rows[i + 1].tuft ?? -1 });
   }
   // the border, once round (the first row front to back, the back end across, the last row back to front, the front
   // end across), fanned to the centre
   const ring = [...ids[0], ...ids.slice(1).map((r) => r[n - 1]), ...ids[R - 1].slice(0, -1).reverse(), ...ids.slice(1, -1).reverse().map((r) => r[0])].filter((a, m, all) => a !== all[(m + 1) % all.length]);
   ring.forEach((a, m) => polys.push({ v: [centre, ring[(m + 1) % ring.length], a], piece: pieces.length }));
-  pieces.push({ id: cl.id, polys: [first, polys.length], verts: [base, verts.length], mass: { ids, rays, rows: R, n, src: rows.map((r) => r.src) } });
+  pieces.push({ id: cl.id, polys: [first, polys.length], verts: [base, verts.length], mass: { ids, rays, rows: R, n, src: rows.map((r) => r.src), tufts: rows.map((r) => (r.tuft !== undefined ? [r.tuft] : r.crease ? [r.ci, r.ci + 1] : [])) } });
 }
 
 /**
@@ -364,6 +506,79 @@ function sideOf(side, verts, pieces, skull, C, k) {
       d2 = dirOf(o, hi);
     }
     verts[i] = add(C, mul(d2, hit(skull, C, d2).t + (h > 0 && lip ? lip * k : h)));
+  }
+}
+
+/** A signed distance (px) to a mask's edge over a W x H grid: negative inside, positive outside (chamfer, 3-4). */
+function signedDist(M, W, Hh) {
+  const pass = (on) => {
+    const D = new Float32Array(W * Hh).fill(1e6);
+    for (let i = 0; i < M.length; i++) if (!!M[i] === on) D[i] = 0;
+    const f = (i, j, w) => { if (D[j] + w < D[i]) D[i] = D[j] + w; };
+    for (let y = 0; y < Hh; y++) for (let x = 0; x < W; x++) { const i = y * W + x; if (x) f(i, i - 1, 1); if (y) { f(i, i - W, 1); if (x) f(i, i - W - 1, 1.4); if (x < W - 1) f(i, i - W + 1, 1.4); } }
+    for (let y = Hh - 1; y >= 0; y--) for (let x = W - 1; x >= 0; x--) { const i = y * W + x; if (x < W - 1) f(i, i + 1, 1); if (y < Hh - 1) { f(i, i + W, 1); if (x < W - 1) f(i, i + W + 1, 1.4); if (x) f(i, i + W - 1, 1.4); } }
+    return D;
+  };
+  const out = pass(true), inn = pass(false), S = new Float32Array(W * Hh);
+  for (let i = 0; i < S.length; i++) S[i] = M[i] ? -inn[i] + 0.5 : out[i] - 0.5;
+  return S;
+}
+let SD = null;
+const BODY = new Map();
+/**
+ * The hair's outline onto the sheet's (outline: { rounds, step }): in each of the five views (the body's own cameras,
+ * tools/sculpt/lowhairreg.mjs), every corner above the skin on the hair's outline there (seen, with a pixel within 2
+ * of it not the hair's: the background or the skin) stands where the sheet's silhouette is: moved along its ray from the skull's centre by the
+ * signed distance (px) from its projection to the sheet's hair's edge, over the pixels a head unit of that ray spans,
+ * at most `step` (head units) a round, the views' moves averaged.
+ */
+function outlineFit(rig, o, verts, polys, pieces, skull, C, k) {
+  const cams = camsFor(rig.who), M = maskOf('swept');
+  SD ??= signedDist(M.raw, M.w, M.h);
+  const N = verts.map(() => [0, 0, 0]);
+  const fixed = new Set();
+  // (a mass's centre, and its border's corners: where it meets the skin or the other mass, kept in their order)
+  for (const pc of pieces) if (pc.mass) {
+    fixed.add(pc.verts[1] - 1);
+    const { ids, rows, n } = pc.mass;
+    ids.forEach((row, i) => row.forEach((v, j) => { if (i === 0 || i === rows - 1 || j === 0 || j === n - 1) fixed.add(v); }));
+  }
+  for (let r = 0; r < (o.rounds ?? 8); r++) {
+    N.forEach((n) => n.fill(0));
+    for (const p of polys) {
+      if (p.buzz) continue;
+      const v = p.v, nn = [0, 0, 0];
+      for (let i = 0; i < v.length; i++) { const a = verts[v[i]], b = verts[v[(i + 1) % v.length]]; nn[0] += (a[1] - b[1]) * (a[2] + b[2]); nn[1] += (a[2] - b[2]) * (a[0] + b[0]); nn[2] += (a[0] - b[0]) * (a[1] + b[1]); }
+      for (const i of v) for (let c = 0; c < 3; c++) N[i][c] += nn[c];
+    }
+    const moves = verts.map(() => [0, 0]);
+    const tris = [];
+    for (const p of polys) if (!p.buzz) for (let j = 1; j + 1 < p.v.length; j++) tris.push([verts[p.v[0]], verts[p.v[j]], verts[p.v[j + 1]]]);
+    for (const v of VIEWS) {
+      const c = cams[v], Z = new Float32Array(M.w * M.h).fill(-Infinity), id = new Uint8Array(M.w * M.h);
+      raster(BODY.get(rig.who) ?? BODY.set(rig.who, bodyTris(rig.B)).get(rig.who), c, Z, M.w, M.h, id, 2);
+      raster(tris, c, Z, M.w, M.h, id, 1);
+      verts.forEach((q, i) => {
+        if (fixed.has(i)) return;
+        const r0 = sub(q, C), l = Math.hypot(...r0), d = mul(r0, 1 / l), skin = hit(skull, C, d).t;
+        if (l - skin < 0.01 * k) return;
+        const s = project(q, c), X = Math.floor(s[0]), Y = Math.floor(s[1]);
+        if (X < 2 || Y < 2 || X >= M.w - 2 || Y >= M.h - 2 || s[2] < Z[Y * M.w + X] - 0.02) return;
+        // (on the hair's outline in this view: a pixel within 2 of it not the hair's)
+        let edge = false;
+        for (let dy = -2; dy <= 2 && !edge; dy++) for (let dx = -2; dx <= 2; dx++) if (id[(Y + dy) * M.w + X + dx] !== 1) { edge = true; break; }
+        if (!edge) return;
+        const s2 = project(add(q, mul(d, 0.05)), c), ppu = Math.hypot(s2[0] - s[0], s2[1] - s[1]) / 0.05;
+        if (ppu < 20) return;
+        moves[i][0] += -SD[Y * M.w + X] / ppu; moves[i][1]++;
+      });
+    }
+    verts.forEach((q, i) => {
+      if (!moves[i][1]) return;
+      const r0 = sub(q, C), l = Math.hypot(...r0), d = mul(r0, 1 / l), skin = hit(skull, C, d).t;
+      const m = Math.max(-(o.step ?? 0.02) * k, Math.min((o.step ?? 0.02) * k, moves[i][0] / moves[i][1]));
+      verts[i] = add(C, mul(d, Math.max(skin + MIN_H * k, l + m)));
+    });
   }
 }
 
@@ -620,8 +835,10 @@ export function crossings(rig, hair, P, H) {
   const bb = (pts) => [0, 1, 2].map((k) => [Math.min(...pts.map((p) => p[k])), Math.max(...pts.map((p) => p[k]))]);
   const tb = skinT.map((t) => bb(t.v.map((i) => P[i])));
   const hits = [];
+  // (a mass's underside, its fan to the skull's centre, is inside the head: left out)
+  const fanOf = (pi) => { const p = hair.polys[pi], pc = hair.pieces[p.piece]; return !!(pc && pc.mass && p.v.includes(pc.verts[1] - 1)); };
   for (const [a, b, c, pi] of hair.tris) {
-    if (hair.polys[pi].buzz) continue;
+    if (hair.polys[pi].buzz || fanOf(pi)) continue;
     const A = [H[a], H[b], H[c]], ab = bb(A);
     for (let s = 0; s < skinT.length; s++) {
       if (ab.some(([lo, hi], k) => hi < tb[s][k][0] || lo > tb[s][k][1])) continue;
@@ -669,6 +886,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     console.log(who, 'tris', hair.tris.length, 'valleys', hair.polys.filter((p) => p.valley).length, 'pieces', hair.pieces.map((p) => `${p.id}:${(p.polys[1] - p.polys[0])}`).join(' '), 'open edges', openEdges(hair), 'shaved polys', hair.shave.length, 'crossings at rest', rest.n, JSON.stringify(rest.hits.slice(0, 6).map(([h, s]) => [h, rig.B.polys[s].name])));
     const X = hairCrossings(rig, hair), count = (l) => { const m = {}; for (const x of l) { const key = [x.a, x.b].sort().join('-'); m[key] = (m[key] ?? 0) + 1; } return JSON.stringify(m); };
     console.log('  pieces through one another where it shows:', X.length, count(X), 'on the sides', X.filter((x) => x.side).length, count(X.filter((x) => x.side)));
-    if (who === 'male') console.log('outline difference against the sheet (mean px):', Object.entries(outlineDiff(hair.tris.filter(([, , , pi]) => !hair.polys[pi].buzz).map(([a, b, c]) => [hair.verts[a], hair.verts[b], hair.verts[c]]))).map(([v, d]) => `${v} ${d.px}`).join(', '));
+    console.log('outline difference against the sheet (mean px, her own registration for her):', Object.entries(outlineDiff(hair.tris.filter(([, , , pi]) => !hair.polys[pi].buzz).map(([a, b, c]) => [hair.verts[a], hair.verts[b], hair.verts[c]]), 'swept', bodyTris(rig.B), camsFor(who))).map(([v, d]) => `${v} ${d.px}`).join(', '));
   }
 }
