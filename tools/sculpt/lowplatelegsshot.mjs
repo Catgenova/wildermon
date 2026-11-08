@@ -15,7 +15,7 @@
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
-import { buildRig, posed, skin, fromGame, gameRig, armsOut, axisAngle, mm, tr } from './lowrig.mjs';
+import { buildRig, posed, skin, armsOut, axisAngle, mm, tr } from './lowrig.mjs';
 import { skinGarment, crossPairs, bonesWith, offPlane, edgesOf } from './lowgarment.mjs';
 import { buildWithBase, plateLegsWeights, MATS, LOOKS as PIECE_LOOKS } from './garments/platelegs.mjs';
 import { shoot, closeBrowser, LOOKS, lookColour } from './lowgarmentshot.mjs';
@@ -85,12 +85,26 @@ function testPoses(rig) {
   if (rig.who === 'female') for (const e of P) e.pose = armsOut(rig, e.pose);
   return P;
 }
+// the game's clips (src/sculpt/anim) and their player, as the game runs them, bundled for Node: a clip's pose at a share
+// u of it, onto the rig's control bones (as tools/sculpt/lowanim.mjs takes them); the swing with the long sword in hand
+const AN = await (async () => {
+  const { build } = await import('esbuild');
+  const ROOT = new URL('../..', import.meta.url).pathname;
+  const b = await build({ stdin: { contents: "export { CLIPS } from './src/sculpt/anim'; export { clipLocal } from './src/sculpt/anim/player'; export { lowSkeleton, lowHeld } from './src/sculpt/lowpoly';", resolveDir: ROOT, loader: 'ts' }, bundle: true, format: 'esm', platform: 'node', write: false, logLevel: 'error', target: 'es2022', absWorkingDir: ROOT, loader: { '.png': 'dataurl', '.svg': 'dataurl', '.webp': 'dataurl', '.wav': 'dataurl', '.ogg': 'dataurl', '.mp3': 'dataurl' }, define: { 'import.meta.env': '{}', __DEPLOY__: 'undefined' } });
+  return import('data:text/javascript;base64,' + Buffer.from(b.outputFiles[0].text).toString('base64'));
+})();
 const games = {};
 async function game(rig) {
   if (games[rig.who]) return games[rig.who];
-  const g = await gameRig(rig, join(out, 'game'));
-  const at = (moving, u) => fromGame(rig, g.bonesOf(g.sculptRig({ phase: u * Math.PI * 2, moving, facing: 0, swimming: false, working: false, look: g.look }).rig, g.PROPS, [], g.REST_EXTRAS), g.gRest);
-  return (games[rig.who] = { at });
+  const body = rig.who === 'male' ? 'man' : 'woman', sk = AN.lowSkeleton(body);
+  const clipAt = (name, u) => {
+    const clip = AN.CLIPS[name], r = AN.clipLocal(sk, clip, u * clip.length, clip.grip ? AN.lowHeld(body) : undefined), pose = { $move: r.move };
+    r.local.forEach((m, i) => { if (m && rig.bones[i].kind === 'control') pose[rig.bones[i].name] = m; });
+    return pose;
+  };
+  // (moving: the walk; else the idle, u over its whole loop)
+  const at = (moving, u) => clipAt(moving ? 'walk' : 'idle', u);
+  return (games[rig.who] = { at, clipAt, swing: AN.CLIPS.swing });
 }
 /** Body and leggings in a pose, stood on the floor as ground() stands the body. */
 function dress(who, pose) {
@@ -184,8 +198,9 @@ async function poseList(who) {
   const { rig } = M[who], g = await game(rig);
   return [
     { id: 'rest', label: 'Rest', pose: {} },
-    ...Array.from({ length: 4 }, (_, k) => ({ id: `idle-${k}`, label: `Idle ${k}`, pose: g.at(false, k * 0.12) })),
+    ...Array.from({ length: 8 }, (_, k) => ({ id: `idle-${k}`, label: `Idle ${k}/8`, pose: g.at(false, k / 8) })),
     ...Array.from({ length: 16 }, (_, k) => ({ id: `walk-${k}`, label: `Walk ${k}/16`, pose: g.at(true, k / 16) })),
+    ...Array.from({ length: 12 }, (_, k) => ({ id: `swing-${k}`, label: `Swing ${k}/12`, pose: g.clipAt('swing', k / 12) })),
     ...testPoses(rig),
   ];
 }
@@ -195,12 +210,14 @@ if (only.includes('metrics') || only.includes('poses')) {
     metrics[who] = { poses: {} };
     for (const e of list) { const d = dress(who, e.pose); metrics[who].poses[e.id] = crossings(who, d.PB, d.PG); }
     metrics.rest[who] = restChecks(who);
-    const walk = Object.entries(metrics[who].poses).filter(([k]) => k.startsWith('walk')), parts = {};
-    for (const [, v] of walk) for (const [k, n] of Object.entries(v.parts)) parts[k] = (parts[k] ?? 0) + n;
-    metrics[who].walk = { body: walk.reduce((s, [, v]) => s + v.body, 0), base: walk.reduce((s, [, v]) => s + v.base, 0), self: walk.reduce((s, [, v]) => s + v.self, 0), parts };
+    for (const clip of ['walk', 'idle', 'swing']) {
+      const run = Object.entries(metrics[who].poses).filter(([k]) => k.startsWith(clip + '-')), parts = {};
+      for (const [, v] of run) for (const [k, n] of Object.entries(v.parts)) parts[k] = (parts[k] ?? 0) + n;
+      metrics[who][clip] = { body: run.reduce((s, [, v]) => s + v.body, 0), base: run.reduce((s, [, v]) => s + v.base, 0), self: run.reduce((s, [, v]) => s + v.self, 0), parts };
+    }
     console.log(who, 'rest', JSON.stringify(metrics.rest[who]));
     console.log(who, Object.entries(metrics[who].poses).map(([k, v]) => `${k}:${v.body}/${v.base}/${v.self}`).join(' '));
-    console.log(who, 'walk', JSON.stringify(metrics[who].walk));
+    for (const clip of ['walk', 'idle', 'swing']) console.log(who, clip, JSON.stringify(metrics[who][clip]));
   }
   writeFileSync(join(out, 'platelegs-metrics.json'), JSON.stringify(metrics, null, 1));
 }
@@ -208,7 +225,7 @@ if (only.includes('metrics') || only.includes('poses')) {
 if (only.includes('poses')) {
   const cells = [], cw = 200, ch = 380, rows = [];
   for (const who of ['male', 'female']) {
-    const all = await poseList(who), pick = ['rest', 'walk-0', 'walk-2', 'walk-4', 'walk-6', 'walk-8', 'walk-10', 'walk-12', 'stride', 'kneel'];
+    const all = await poseList(who), pick = ['rest', 'walk-0', 'walk-4', 'walk-8', 'walk-12', 'idle-2', 'swing-2', 'swing-5', 'swing-8', 'swing-10'];
     rows.push([who, pick.map((id) => all.find((e) => e.id === id))]);
   }
   rows.forEach(([who, list], r) => list.forEach((e, k) => {

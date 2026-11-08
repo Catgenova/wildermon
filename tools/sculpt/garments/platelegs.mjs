@@ -33,14 +33,21 @@ import { meshOf, orient, trisOf, lerp, sub, add, mul, unit, cross, dot, newell, 
  * plain, lit when enchanted).
  */
 export const MATS = {
-  plate: [0.7, 0.58, 0.52],
-  shade: [0.59, 0.49, 0.44],
+  plate: [0.84, 0.71, 0.63],
+  shade: [0.72, 0.6, 0.53],
   gold: [0.96, 0.74, 0.4],
   core: [0.86, 0.62, 0.3],
   rune: [0.96, 0.74, 0.4],
 };
-/** The two looks (lowgarment.mjs garmentAsset `looks`): plain, every material its colour, lit; enchanted, the core and the runes unlit, glowing. */
-export const LOOKS = { plain: {}, enchanted: { core: { c: [1, 0.906, 0.651], kind: 1 }, rune: { c: [1, 0.8, 0.45], kind: 1 } } };
+/**
+ * The two looks (lowgarment.mjs garmentAsset `looks`): plain, every material metal (kind 2: lit by the light's brightness,
+ * as the long sword); enchanted, the core and the runes unlit at the set's glow (kind 1, one shared slot).
+ */
+const GLOW = [1, 0.906, 0.651];
+export const LOOKS = {
+  plain: Object.fromEntries(Object.entries(MATS).map(([n, c]) => [n, { c, kind: 2 }])),
+  enchanted: Object.fromEntries(Object.entries(MATS).map(([n, c]) => [n, n === 'core' || n === 'rune' ? { c: GLOW, kind: 1 } : { c, kind: 2 }])),
+};
 
 const rad = (d) => d * Math.PI / 180;
 
@@ -69,24 +76,24 @@ function tab(T) {
  */
 export const DESIGN = {
   male: {
-    sink: 0.035, clear: 0.015, gap: 0.012, t: 0.04, raise: 0.024, trim: 0.1, thigh: [0, 50, 91, 132, 180, 229, 271, 312],
+    sink: 0.06, clear: 0.015, gap: 0.012, t: 0.04, raise: 0.024, trim: 0.1, seam: 5, thigh: [0, 50, 91, 132, 180, 229, 271, 312],
     low: { clear: 0.012, gap: 0.01, t: 0.03, raise: 0.018, trim: 0.085 },
     band: { z0: -0.06, az: [0, 30, 70, 110, 150, 180], top: [-3.99, -3.97, -3.94, -3.94, -3.97, -3.99], bottom: [-5.45, -4.95, -4.6, -4.62, -4.74, -4.86] },
-    lame: { stops: 'skin', ease: [[0.4, 0.75, 'thigh'], [0.25, 0.05, 'pelvis']], az: [-40, 0, 50, 91, 132, 180, 216], rows: [{ y: tab([[0, -4.85], [91, -4.42], [180, -4.66], [229, -5.4], [271, -5.6], [320, -5.45]]), lvl: 0 }, { y: [-6.05, -5.95, -6.0, -6.1], lvl: 1.3 }] },
+    lame: { stops: 'skin', ease: [[0.4, 0.75, 'thigh']], az: [-40, 0, 50, 91, 132, 180, 216], rows: [{ y: tab([[0, -4.85], [91, -4.42], [180, -4.66], [229, -5.4], [271, -5.6], [320, -5.45]]), lvl: 0.4 }, { y: [-6.05, -5.95, -6.0, -6.1], lvl: 1.3 }] },
     cuisse: { rows: [{ y: tab([[0, -5.75], [91, -5.68], [180, -5.75], [271, -6.3], [320, -6.25]]), lvl: 0 }, { y: -6.62, lvl: 0 }, { y: [-7.3, -7.12, -7.05, -7.05], lvl: 0 }] },
     knee: { top: -6.66, mid: -7.42, bottom: -8.12, wing: 90, flare: 0.06, lvl: 1, bulge: 0.14, inset: [14, 0.27], ringIn: [18, 0.34], ring: [25, 0.46] },
-    shinUp: { az: [-94, -50, -8, 8, 50, 94], rows: [{ y: [-7.72, -7.85, -7.85, -7.85], lvl: 0 }, { y: [-8.62, -8.58, -8.58, -8.58], lvl: 1 }] },
+    shinUp: { az: [-94, -50, -8, 8, 50, 94], rows: [{ y: [-7.72, -7.85, -7.85, -7.85], lvl: 0 }, { y: tab([[0, -8.76], [50, -8.56], [94, -8.46], [180, -8.46], [266, -8.46], [310, -8.56]]), lvl: 1 }] },
     shinLow: { az: [-94, -50, -8, 8, 50, 94], rows: [{ y: -8.4, lvl: 0 }, { y: -10.36, lvl: 0.4 }] },
     kneeBack: { az: [118, 149, 180, 211, 242], y: [-6.85, -8.3] },
     calf: { az: [98, 139, 180, 221, 262], segs: [[-7.92, -8.9], [-8.75, -9.6], [-9.45, -10.36]], chevron: 0.3 },
   },
   female: {
-    sink: 0.035, clear: 0.012, gap: 0.01, t: 0.036, raise: 0.022, trim: 0.085, thigh: [0, 38, 88, 143, 180, 218, 275, 325],
+    sink: 0.06, clear: 0.012, gap: 0.01, t: 0.036, raise: 0.022, trim: 0.085, seam: 5, thigh: [0, 38, 88, 143, 180, 218, 275, 325],
     low: { clear: 0.01, gap: 0.008, t: 0.026, raise: 0.016, trim: 0.075 },
-    band: { z0: -0.38, az: [0, 30, 70, 110, 150, 180], top: [-3.63, -3.61, -3.58, -3.58, -3.61, -3.64], bottom: [-4.24, -3.98, -3.9, -3.95, -4.06, -4.16], gap: 0.035, ease: [[0.7, 0.2, 'pelvis']] },
+    band: { z0: -0.38, az: [0, 30, 70, 110, 150, 180], top: [-3.63, -3.61, -3.58, -3.58, -3.61, -3.64], bottom: [-4.16, -3.98, -3.9, -3.95, -4.06, -4.16], gap: 0.035, ease: [[0.7, 0.2, 'pelvis']] },
     cuisse: { stops: 'skin', ease: [], rows: [{ y: tab([[0, -4.16], [50, -4.04], [88, -3.92], [180, -3.98], [218, -5.0], [275, -5.05], [325, -4.45]]), lvl: 0 }, { y: [-6.45, -6.45, -6.32, -6.35], lvl: 0 }] },
     knee: { top: -6.02, mid: -6.74, bottom: -7.44, wing: 88, flare: 0.05, lvl: 1, bulge: 0.12, inset: [13, 0.26], ringIn: [17, 0.33], ring: [24, 0.44] },
-    shinUp: { az: [-94, -50, -8, 8, 50, 94], rows: [{ y: [-7.02, -7.15, -7.15, -7.15], lvl: 0 }, { y: [-8.0, -7.95, -7.95, -7.95], lvl: 1 }] },
+    shinUp: { az: [-94, -50, -8, 8, 50, 94], rows: [{ y: [-7.02, -7.15, -7.15, -7.15], lvl: 0 }, { y: tab([[0, -8.12], [50, -7.92], [94, -7.82], [180, -7.82], [266, -7.82], [310, -7.92]]), lvl: 1 }] },
     shinLow: { az: [-94, -50, -8, 8, 50, 94], rows: [{ y: -7.8, lvl: 0 }, { y: -10.5, lvl: 0.4 }] },
     kneeBack: { az: [118, 149, 180, 211, 242], y: [-6.15, -7.6] },
     calf: { az: [98, 139, 180, 221, 262], segs: [[-7.3, -8.4], [-8.25, -9.4], [-9.25, -10.5]], chevron: 0.3 },
@@ -317,11 +324,13 @@ export function buildPlateLegs(rig, design = DESIGN[rig.who], { stage = 9 } = {}
     legPlate(tag, 'calf', d.rows, d.az, LOW, { rings: tag !== 'shinUp', lipTop: false, ridge: (k) => (k === c || k === c - 1 ? 0.015 : 0), inset: (i, k) => (k === c - 1 ? 'rune' : null) });
   }
   // ---- the cuisse round the thigh, his lame over its top --------------------------------------------------------------
-  legPlate('cuisse', 'thigh', D.cuisse.rows, D.thigh, D, { closed: true, lipTop: false, stops: D.cuisse.stops, ease: D.cuisse.ease });
+  // (its seam down the front: the columns either side of it raised, the strip between them an inlay, rune)
+  const cAz = [D.seam, ...D.thigh.slice(1), 360 - D.seam], seamK = cAz.length - 1;
+  legPlate('cuisse', 'thigh', D.cuisse.rows, cAz, D, { closed: true, lipTop: false, stops: D.cuisse.stops, ease: D.cuisse.ease, ridge: (k) => (k === 0 || k === seamK ? 0.012 : 0), inset: (i, k) => (k === seamK ? 'rune' : null) });
   // ---- the knee guard ---------------------------------------------------------------------------------------------------
   kneeGuard(G, D, F);
   // (his lame open on the inside: the thighs nearly meet under the crotch)
-  if (D.lame) legPlate('lame', 'hip', D.lame.rows, D.lame.az, D, { trimSides: true, stops: D.lame.stops, ease: D.lame.ease });
+  if (D.lame) legPlate('lame', 'hip', D.lame.rows, D.lame.az, D, { sides: false, stops: D.lame.stops, ease: D.lame.ease });
   // ---- the right leg: the left's mirror ----------------------------------------------------------------------------
   const nL = G.verts.length, nP = G.polys.length;
   const mir = new Array(nL);
@@ -506,6 +515,7 @@ export function buildWithBase(rig, design, o) {
 /**
  * The weights: each plate rigid on its bone (the side's), the base layer the body's own at its vertices.
  */
+const KEEP = +(process.env.KEEP ?? 2);
 export function plateLegsWeights(rig, G) {
   const vw = new Array(G.verts.length).fill(null);
   const at = (n) => rig.at.get(n);
@@ -515,7 +525,7 @@ export function plateLegsWeights(rig, G) {
   const parts = new Set(['pelvis', 'legs', 'torso']);
   const skinW = skinned.size ? transferWeights(rig, G, { only: (i) => skinned.has(i), keep: (i) => parts.has(rig.B.part[i]), smooth: 2, map: (n) => (/^spine/.test(n) ? 'pelvis' : n) }).map((l) => {
     if (!l) return l;
-    const two = [...l].sort((a, b) => b[1] - a[1]).slice(0, 2), t = two.reduce((a, [, w]) => a + w, 0);
+    const two = [...l].sort((a, b) => b[1] - a[1]).slice(0, KEEP), t = two.reduce((a, [, w]) => a + w, 0);
     return two.map(([b, w]) => [b, w / t]);
   }) : [];
   for (const pl of G.plates) {
@@ -532,7 +542,7 @@ export function plateLegsWeights(rig, G) {
           for (const [b, w] of m) m.set(b, w * (1 - f));
           const bi = at(name(bone)); m.set(bi, (m.get(bi) ?? 0) + f);
         }
-        const two = [...m].sort((a, b) => b[1] - a[1]).slice(0, 2), t = two.reduce((a, [, w]) => a + w, 0);
+        const two = [...m].sort((a, b) => b[1] - a[1]).slice(0, KEEP), t = two.reduce((a, [, w]) => a + w, 0);
         vw[v] = two.map(([b, w]) => [b, w / t]);
         return;
       }
