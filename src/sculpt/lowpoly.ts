@@ -45,6 +45,8 @@ import FEMALE_BOOTS from './assets/lowboots-female.json';
 import MALE_TUNIC from './assets/lowtunic-male.json';
 import FEMALE_TUNIC from './assets/lowtunic-female.json';
 import MALE_HOOD from './assets/lowhood-male.json';
+import MALE_PLATE_CHEST from './assets/lowplatechest-male.json';
+import FEMALE_PLATE_CHEST from './assets/lowplatechest-female.json';
 import FEMALE_HOOD from './assets/lowhood-female.json';
 import LONG_SWORD from './assets/long_sword.json';
 import HAIR_ASSET from './assets/lowhair.json';
@@ -562,6 +564,12 @@ const wearsHood = (pose: FigurePose): boolean => (pose.outfit?.hood ?? false) &&
 export const hairShown = (pose: FigurePose): boolean => !wearsHood(pose);
 
 /**
+ * Whether a figure wears the plate set's chest & arms (`tools/sculpt/garments/platechest.mjs`: collar, breast and back
+ * plates, lames, faulds, pauldrons, vambraces, gauntlets, over bare skin, the body it covers hidden); off unless asked for.
+ */
+const wearsPlateChest = (pose: FigurePose): boolean => pose.outfit?.plateChest ?? false;
+
+/**
  * Whether a piece of the plate set is enchanted (`FigurePose.outfit.enchanted`): its cores and its engraving lit, as the
  * long sword's when it is; plain unless asked for.
  */
@@ -577,6 +585,7 @@ const GARMENTS: ReadonlyArray<{ man: GarmentAsset; woman: GarmentAsset; wears: (
   { man: MALE_BOOTS as unknown as GarmentAsset, woman: FEMALE_BOOTS as unknown as GarmentAsset, wears: wearsBoots },
   { man: MALE_TUNIC as unknown as GarmentAsset, woman: FEMALE_TUNIC as unknown as GarmentAsset, wears: wearsTunic },
   { man: MALE_HOOD as unknown as GarmentAsset, woman: FEMALE_HOOD as unknown as GarmentAsset, wears: wearsHood },
+  { man: MALE_PLATE_CHEST as unknown as GarmentAsset, woman: FEMALE_PLATE_CHEST as unknown as GarmentAsset, wears: wearsPlateChest, enchanted: enchantedOf('chest') },
 ];
 
 const BODIES = {

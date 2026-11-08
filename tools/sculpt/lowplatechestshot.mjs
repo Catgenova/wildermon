@@ -112,7 +112,7 @@ function crossings(who, d) {
 // the sheet's views (plate-chest.png, 1536 x 1024): his row at y 95, hers at 438
 const CROPS = { male: [[18, 95, 205, 250], [228, 95, 172, 250], [398, 95, 100, 250], [495, 95, 190, 250], [668, 95, 180, 250]], female: [[18, 438, 205, 250], [228, 438, 172, 250], [398, 438, 100, 250], [495, 438, 190, 250], [668, 438, 180, 250]] };
 const VIEWS = [[0, 'Front (0°)'], [-45, 'Three-quarter (45°)'], [-90, 'Side (90°)'], [-135, 'Rear three-quarter (135°)'], [180, 'Back (180°)']];
-async function sheet(file, wire) {
+async function sheet(file, wire, look = 'plain') {
   const cw = 230, ch = 280, top = 34, cells = [], imgs = [], texts = [];
   ['male', 'female'].forEach((who, r) => {
     const { G, rig } = M[who], d = dress(who, {});
@@ -122,7 +122,7 @@ async function sheet(file, wire) {
     const keep = (pi) => rig.B.polys[pi].v.every((i) => d.PB[i][1] > cut);
     VIEWS.forEach(([yaw, lab], i) => {
       imgs.push({ src: SHEET, size: [1536, 1024], crop: CROPS[who][i], box: [i * cw, top + r * 2 * ch, cw, ch] });
-      const body = bodyMesh(who, d.PB, keep), arm = armourMesh(who, d.PG);
+      const body = bodyMesh(who, d.PB, keep), arm = armourMesh(who, d.PG, look);
       if (wire) { arm.edges = true; arm.edgec = [0.2, 0.12, 0.08]; }
       cells.push({ meshes: [body, arm], cam: { yaw, pitch: -8, s, c }, box: [i * cw, top + (r * 2 + 1) * ch, cw, ch], label: `${who} ${lab}` });
     });
@@ -133,7 +133,7 @@ async function sheet(file, wire) {
   texts.push({ css: 'left:10px;top:6px', html: `Plate chest & arms, ${tag}: the sheet (tools/sculpt/ref/plate-chest.png) above each body's row, the model below` });
   await shoot(5 * cw + 270, top + 4 * ch, cells, file, { texts, imgs });
 }
-if (only.includes('sheet')) await sheet(join(out, `platechest-${tag}-sheet.png`), false);
+if (only.includes('sheet')) for (const look of SHOW) await sheet(join(out, `platechest-${tag}-sheet${look === 'plain' ? '' : '-' + look}.png`), false, look);
 if (only.includes('wire')) await sheet(join(out, `platechest-${tag}-wire.png`), true);
 
 /* ---- metrics -------------------------------------------------------------------------------------------------------- */
@@ -223,5 +223,48 @@ if (only.includes('tunic')) {
     cells.push({ meshes: [bodyMesh(who, d.PB), armourMesh(who, d.PG)], cam: { yaw, pitch: -4, s: 80, c }, box: [(k * 2 + 1) * cw, 30, cw, ch], label: `${who} ${-yaw}°: the plate` });
   });
   await shoot(6 * cw, ch + 30, cells, join(out, `platechest-${tag}-vs-tunic-${who}.png`), { texts: [{ css: 'left:10px;top:4px', html: `Plate chest, ${tag}: the fit beside the tunic's (tools/sculpt/garments/tunic.mjs), close up` }] });
+}
+/* ---- worn with the rest of the plate set (their assets, from --set <dir>: lowplatelegs, lowplateboots, lowhelm, lowmantle) - */
+if (only.includes('set')) {
+  const { readFileSync, existsSync } = await import('node:fs');
+  const dir = opt('set', '.'), NAMES = ['lowplatelegs', 'lowplateboots', 'lowhelm', 'lowmantle'];
+  const rgbOf = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
+  const report = {}, cells = [], cw = 230, ch = 520, top = 34;
+  let k = 0;
+  for (const who of ['male', 'female']) {
+    const { rig, G } = M[who];
+    const set = NAMES.filter((n) => existsSync(join(dir, `${n}-${who}.json`))).map((n) => {
+      const A = JSON.parse(readFileSync(join(dir, `${n}-${who}.json`), 'utf8'));
+      const verts = []; for (let i = 0; i < A.verts.length; i += 3) verts.push([A.verts[i], A.verts[i + 1], A.verts[i + 2]]);
+      const tris = []; for (let i = 0; i < A.tris.length; i += 4) tris.push({ v: [A.tris[i], A.tris[i + 1], A.tris[i + 2]], poly: A.tris[i + 3] });
+      const vw = A.weights.map((w) => { const o = []; for (let j = 0; j < w.length; j += 2) o.push([w[j], w[j + 1]]); return o; });
+      const col = A.polys.map(([, m]) => (A.plain ? lookColour(A.plain[m]) : A.colours[m]));
+      return { name: n, P: { verts, tris, vw, bones: [] }, hides: A.hides ?? [], polys: A.polys.map(([v]) => v), col };
+    });
+    const hidden = new Set([...M[who].hidden, ...set.flatMap((g) => g.hides)]);
+    const shownAll = rig.B.tris.filter((t) => !hidden.has(t.poly));
+    report[who] = {};
+    const poses = allPoses(who).filter((e) => /^(rest|walk|idle|swing-(rest|top|impact))/.test(e.id));
+    for (const e of poses) {
+      const d = dress(who, e.pose), f = posed(rig, e.pose), dy = d.PB[0][1] - skin(rig, f)[0][1];
+      const r = { body: crossPairs(d.PG, G.tris, d.PB, shownAll).length };
+      for (const g of set) { const PS = skinGarment(rig, f, g.P).map((p) => [p[0], p[1] + dy, p[2]]); r[g.name] = crossPairs(d.PG, G.tris, PS, g.P.tris).length; }
+      report[who][e.id] = r;
+    }
+    const sc = { male: 1, female: 0.85 }[who], Fl = rig.J.floor;
+    for (const [lab, yaw] of [['front', 0], ['3/4', -40], ['side', -90], ['back', 180]]) for (const look of SHOW) {
+      const d = dress(who, {}), S = (P) => P.map((p) => [p[0] * sc, (p[1] - Fl) * sc, p[2] * sc]);
+      const body = { ...bodyMesh(who, S(d.PB)), tris: shownAll.map((t) => [...t.v, t.poly]) };
+      const meshes = [body, armourMesh(who, S(d.PG), look), ...set.map((g) => ({ who, P: S(g.P.verts), polys: g.polys, tris: g.P.tris.map((t) => [...t.v, t.poly]), col: g.col }))];
+      cells.push({ meshes, cam: { yaw, pitch: 2, s: 34, c: [0, 7.0, 0] }, box: [k++ * cw, top, cw, ch], label: `${who} ${lab}${look === 'plain' ? '' : ' (enchanted)'}` });
+    }
+  }
+  await shoot(k * cw, top + ch, cells, join(out, `platechest-${tag}-set.png`), { texts: [{ css: 'left:10px;top:6px', html: `Plate chest & arms, ${tag}: worn with the plate set's leggings, boots, helm and mantle (their branches' assets), at the game's heights` }] });
+  writeFileSync(join(out, `platechest-${tag}-set.json`), JSON.stringify(report, null, 1));
+  for (const who in report) {
+    const mx = {};
+    for (const [id, r] of Object.entries(report[who])) { const g = id.replace(/-\d+$/, ''); for (const [n, v] of Object.entries(r)) { mx[g] ??= {}; mx[g][n] = Math.max(mx[g][n] ?? 0, v); } }
+    console.log(who, JSON.stringify(mx));
+  }
 }
 await closeBrowser();

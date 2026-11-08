@@ -59,7 +59,8 @@ def fit(who, view, yaw0, held, shared=None):
 
 def shade(col, n):
     k = 0.5 + 0.5 * max(0.0, abs(n[2]))
-    return tuple(int(max(0, min(1, x)) * 255 * k) if x <= 1.5 else int(min(1, x - 2) * 255) for x in col)
+    # (a colour over 3.5 metal, lit by brightness; over 1.5 unlit; else lit)
+    return tuple(int(min(1, x - 4) * 255 * (0.35 + 0.65 * k)) if x > 3.5 else int(min(1, x - 2) * 255) if x > 1.5 else int(max(0, min(1, x)) * 255 * k) for x in col)
 
 
 def draw_mesh(img, verts, tris, cols, c, ox, oy, mask=None):

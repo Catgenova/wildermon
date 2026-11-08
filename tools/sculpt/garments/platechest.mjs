@@ -33,15 +33,16 @@ import { TORSO_RING } from '../lowarm.mjs';
  * stone), shade (a step darker), gold (the raised trim), under (the dark under-layer), core (the cores and the elbow
  * diamonds), rune (the engraved inlay lines). MATS: each one's colour as the shot tools draw it plain.
  */
-export const MATS = { plate: [0.7, 0.58, 0.52], shade: [0.59, 0.49, 0.44], gold: [0.96, 0.74, 0.4], under: [0.29, 0.22, 0.2], core: [0.86, 0.62, 0.3], rune: [0.96, 0.74, 0.4] };
+export const MATS = { plate: [0.84, 0.71, 0.63], shade: [0.72, 0.6, 0.53], gold: [0.96, 0.74, 0.4], under: [0.29, 0.22, 0.2], core: [0.86, 0.62, 0.3], rune: [0.96, 0.74, 0.4] };
 /**
  * The two looks (tools/sculpt/../ENCHANT spec, as the long sword's `plain` and `enchanted`): each material's colour and
- * kind (0 lit by the body's light, 1 unlit and blooming). Plain, the cores are a lit amber gem and the runes the trim's
- * gold; enchanted, the cores glow (#FFE7A6) and the runes light up; the trim stays metal either way.
+ * kind (2 metal, lit by the light's brightness as the long sword; 1 unlit and blooming). Plain, the cores are an amber gem
+ * and the runes the trim's gold; enchanted, the cores and the runes glow (#FFE7A6); the trim stays metal either way.
  */
+const GLOWING = [1, 0.906, 0.651];
 export const LOOKS = {
-  plain: { ...MATS },
-  enchanted: { ...MATS, core: { c: [1, 0.906, 0.651], kind: 1 }, rune: { c: [1, 0.8, 0.45], kind: 1 } },
+  plain: Object.fromEntries(Object.entries(MATS).map(([n, c]) => [n, { c, kind: 2 }])),
+  enchanted: { ...Object.fromEntries(Object.entries(MATS).map(([n, c]) => [n, { c, kind: 2 }])), core: { c: GLOWING, kind: 1 }, rune: { c: GLOWING, kind: 1 } },
 };
 
 /**
@@ -55,7 +56,7 @@ export const DESIGN = {
     rim: { w: 0.11, h: 0.04, t: 0.035 },
     fit: { trunk: 0.045, lame: 0.025, fauld: 0.1, arm: 0.04, gap: 0.02 },
     wedge: 8,
-    collar: { cols: [[14, 60, 104], [114, 148, 180]], base: [-0.78, -0.78, -0.62], top: [-0.06, 0.12, 0.19], trim: 0.12, c: 0.22, flare: 0.05, wall: 0.07, spread: 0.12, sink: 0.04, open: 46 },
+    collar: { cols: [[14, 60, 104], [114, 148, 180]], base: [-0.78, -0.78, -0.62], top: [-0.06, 0.12, 0.19], trim: 0.12, c: 0.17, flare: 0.05, wall: 0.07, spread: 0.12, sink: 0.04, open: 46 },
     breast: { az: [0, 22, 46, 70, 94], top: [-0.62, -0.64, -0.68, -0.82, -1.95], bottom: [-4.05, -3.8, -3.45, -3.2, -3.1], rows: [0, 0.3, 0.55, 0.8, 1], c: [0.05, 0.05, 0.055, 0.06, 0.065], flat: 22, core: { y: -1.9, r: 0.44, n: 8 } },
     back: { az: [100, 118, 140, 160, 180], top: [-1.95, -0.78, -0.6, -0.56, -0.54], bottom: [-3.0, -3.2, -3.4, -3.55, -3.65], rows: [0, 0.45, 1], c: [0.045, 0.05, 0.055], ridge: 0.06, side: 0 },
     lames: [
@@ -73,7 +74,7 @@ export const DESIGN = {
       ],
     },
     pauldron: {
-      lift: -0.08, inset: 0.0, pole: 0.5, near: 1.1, round: 0.2, inner: 0.3, cols: 8, phi0: 22, phi: [78, 95, 78, 46], rows: [0, 0.5, 1], c: [0.12, 0.34, 0.46], cone: 34,
+      lift: -0.08, inset: 0.0, pole: 0.5, near: 1.1, round: 0.2, inner: 0.3, cols: 8, phi0: 22, phi: [76, 88, 76, 46], rows: [0, 0.5, 1], c: [0.12, 0.26, 0.34], cone: 34,
       core: { psi: 55, f: 0.6, r: 0.3, n: 6 },
       lames: [{ t: [0.45, 1.05], c: [0.15, 0.25], th: [-60, 240] }, { t: [0.9, 1.55], c: [0.1, 0.18], th: [-50, 230] }],
     },
@@ -87,7 +88,7 @@ export const DESIGN = {
     rim: { w: 0.095, h: 0.035, t: 0.03 },
     fit: { trunk: 0.04, lame: 0.022, fauld: 0.09, arm: 0.035, gap: 0.018 },
     wedge: 8,
-    collar: { cols: [[14, 60, 104], [114, 148, 180]], base: [-0.85, -0.78, -0.62], top: [-0.25, -0.1, 0.0], trim: 0.11, c: 0.16, flare: 0.04, wall: 0.06, spread: 0.1, sink: 0.035, open: 46 },
+    collar: { cols: [[14, 60, 104], [114, 148, 180]], base: [-0.85, -0.78, -0.62], top: [-0.25, -0.1, 0.0], trim: 0.11, c: 0.13, flare: 0.04, wall: 0.06, spread: 0.1, sink: 0.035, open: 46 },
     breast: { az: [0, 18, 36, 56, 76, 96], top: [-0.7, -0.71, -0.74, -0.8, -0.95, -1.85], bottom: [-3.55, -3.4, -3.2, -3.0, -2.85, -2.75], rows: [0, 0.23, 0.44, 0.56, 0.78, 1], c: [0.04, 0.04, 0.04, 0.045, 0.05, 0.055], flat: 18, bridge: [3], core: { y: -1.6, r: 0.38, n: 8 } },
     back: { az: [100, 118, 140, 160, 180], top: [-1.85, -0.9, -0.72, -0.64, -0.6], bottom: [-2.6, -2.8, -2.95, -3.05, -3.15], rows: [0, 0.45, 1], c: [0.04, 0.045, 0.05], ridge: 0.05, side: 0 },
     lames: [
@@ -105,7 +106,7 @@ export const DESIGN = {
       ],
     },
     pauldron: {
-      lift: -0.06, inset: 0.0, pole: 0.5, near: 0.95, round: 0.2, inner: 0.3, cols: 8, phi0: 22, phi: [76, 92, 76, 46], rows: [0, 0.5, 1], c: [0.09, 0.24, 0.34], cone: 34,
+      lift: -0.06, inset: 0.0, pole: 0.5, near: 0.95, round: 0.2, inner: 0.3, cols: 8, phi0: 22, phi: [74, 86, 74, 46], rows: [0, 0.5, 1], c: [0.09, 0.19, 0.26], cone: 34,
       core: { psi: 55, f: 0.6, r: 0.25, n: 6 },
       lames: [{ t: [0.38, 0.85], c: [0.12, 0.2], th: [-60, 240] }, { t: [0.72, 1.3], c: [0.08, 0.15], th: [-50, 230] }],
     },
