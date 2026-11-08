@@ -20,6 +20,8 @@ import { buildRig, posed, skin, fromGame, gameRig, armsOut, axisAngle, mm, tr } 
 import { skinGarment, checks, crossPairs } from './lowgarment.mjs';
 import { buildBoots, bootWeights, MATS, DESIGN } from './garments/boots.mjs';
 import { shoot, closeBrowser } from './lowgarmentshot.mjs';
+import { buildShawl, shawlWeights, MATS as SHAWL_MATS } from './garments/shawl.mjs';
+import { buildTrousers, trousersWeights, hiddenPolys, MATS as TROUSER_MATS } from './garments/trousers.mjs';
 
 const args = process.argv.slice(2);
 const opt = (n, f) => { const i = args.indexOf(`--${n}`); return i < 0 ? f : args[i + 1]; };
@@ -167,6 +169,53 @@ if (only.includes('full')) {
     }
   }
   await shoot(k * cw, top + ch, cells, join(out, `boots-${tag}-full.png`), { texts: [{ css: 'left:10px;top:6px', html: `Boots, ${tag}: both bodies whole at the game's heights (she is 0.85 of him)` }] });
+}
+
+/* ---- worn with the outfit: the shawl and the trousers over the boots ----------------------------------------------- */
+if (only.includes('shawl')) {
+  const O = {};
+  for (const who of ['male', 'female']) {
+    const { rig } = M[who], S = buildShawl(rig), T = buildTrousers(rig);
+    S.vw = shawlWeights(rig, S); T.vw = trousersWeights(rig, T);
+    O[who] = { S, T, hidden: new Set([...M[who].hidden, ...hiddenPolys(rig, T)]) };
+  }
+  const garMesh = (who, G, P, mats) => ({ who, P, polys: G.polys.map((p) => p.v), tris: G.tris.map((t) => [...t.v, t.poly]), col: G.polys.map((p) => mats[p.mat]) });
+  const outfit = (who, pose, k = 1, cut = Infinity) => {
+    const { rig, G } = M[who], { S, T, hidden } = O[who];
+    const f = posed(rig, pose), d = dress(who, pose), sh = (P) => P.map((p) => [p[0] * k, (p[1] + d.dy - G.ground) * k, p[2] * k]);
+    const PB = sh(skin(rig, f)), PS = sh(skinGarment(rig, f, S)), PT = sh(skinGarment(rig, f, T)), PG = d.PG.map((p) => [p[0] * k, (p[1] - G.ground) * k, p[2] * k]);
+    const keep = rig.B.polys.map((p, pi) => !hidden.has(pi) && p.v.every((i) => PB[i][1] < cut));
+    const body = { who, P: PB, polys: rig.B.polys.map((p) => p.nv ?? p.v), tris: rig.B.tris.filter((t) => keep[t.poly]).map((t) => [...t.v, t.poly]), col: rig.B.polys.map((p) => (p.mat === 'skin' ? SKIN : p.mat === 'pupil' ? [0.08, 0.06, 0.06] : [0.22, 0.15, 0.13])) };
+    // (the crossings: boots with trousers, boots with the shawl, unscaled)
+    const P0 = { B: skin(rig, f), S: skinGarment(rig, f, S), T: skinGarment(rig, f, T), G: skinGarment(rig, f, G) };
+    const x = { trousers: crossPairs(P0.G, G.tris, P0.T, T.tris).length, shawl: crossPairs(P0.G, G.tris, P0.S, S.tris).length };
+    return { meshes: [body, garMesh(who, S, PS, SHAWL_MATS), garMesh(who, T, PT, TROUSER_MATS), bootMesh(who, PG)], x };
+  };
+  const cw = 260, ch = 560, top = 34, cells = [], sc = { male: 1, female: 0.85 }, xs = {};
+  let k = 0;
+  for (const who of ['male', 'female']) {
+    const g = await game(who);
+    for (const [lab, pose, yaw] of [['front', {}, 0], ['3/4', {}, -40], ['back', {}, 180], ['walk', g.at(true, 0.25), -60], ['idle', g.at(false, 0.12), -20]]) {
+      const o = outfit(who, pose, sc[who]);
+      xs[`${who} ${lab}`] = o.x;
+      cells.push({ meshes: o.meshes, cam: { yaw, pitch: 4, s: 36, c: [0, 7.2, 0] }, box: [k * cw, top, cw, ch], label: `${who} ${lab} · boots×trousers ${o.x.trousers}` });
+      k++;
+    }
+  }
+  // the cuffs close up: the trouser cuff over the boot's, both bodies, front and side, rest and a walk key
+  const cells2 = [], cw2 = 260, ch2 = 300;
+  let j = 0;
+  for (const who of ['male', 'female']) {
+    const g = await game(who);
+    for (const [lab, pose, yaw] of [['rest', {}, 0], ['rest', {}, -90], ['walk', g.at(true, 0.4), -90], ['walk', g.at(true, 0.9), -30]]) {
+      const o = outfit(who, pose, 1), Lx = o.meshes[3].P.filter((_, i) => M[who].G.side[i] === 'L'), m = Lx.reduce((a, p) => [a[0] + p[0] / Lx.length, 0, a[2] + p[2] / Lx.length], [0, 0, 0]);
+      cells2.push({ meshes: o.meshes, cam: { yaw, pitch: 6, s: 78, c: [m[0], 1.5, m[2]] }, box: [j * cw2, top + ch + 30, cw2, ch2], label: `${who} ${lab} (left)` });
+      j++;
+    }
+  }
+  await shoot(Math.max(k * cw, j * cw2), top + ch + 30 + ch2, [...cells, ...cells2], join(out, `boots-${tag}-outfit.png`), { texts: [{ css: 'left:10px;top:6px', html: `Boots, ${tag}: worn with the shawl and the trousers, both bodies at the game's heights; below, the trouser cuff over the boot cuff close up` }] });
+  writeFileSync(join(out, 'boots-outfit-crossings.json'), JSON.stringify(xs, null, 1));
+  console.log(JSON.stringify(xs));
 }
 
 /* ---- the walk as a GIF ---------------------------------------------------------------------------------------------- */
