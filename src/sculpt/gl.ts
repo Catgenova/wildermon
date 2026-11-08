@@ -32,7 +32,7 @@ export interface DrawOpts {
 /** The screen box a body fits in at zoom one, in figure units, as the 2D figure's `STILL_BOX`. */
 export const BOX = { left: -42, right: 42, top: -66, bottom: 14 };
 const MAX_BONES = 80;
-/** Materials a draw may use: a low-poly body's own (`bodyMaterials`), its garment's and its sword's (plain and enchanted) after them. */
+/** Materials a draw may use: a low-poly body's own (`bodyMaterials`), its garments' and its sword's (plain or enchanted) after them. */
 const MAX_MATS = 64;
 /** How far behind the body's surface (figure units, toward the viewer) the trail is still hidden by it: so the blade shows over its own trail. */
 const TRAIL_BEHIND = 0.6;
@@ -40,6 +40,9 @@ const TRAIL_BEHIND = 0.6;
 const TRAIL_PLAIN = 0.6, TRAIL_LIT = 0.8, TRAIL_ADD = 0.7;
 /** The trail's colours, at its inner edge and toward the point: plain, a pale cream; lit, the enchanted sword's golds (`assets/long_sword.json`). */
 const TRAIL_RGB = { plain: { edge: '#f3ead8', mid: '#fffaf0' }, lit: { edge: '#ffb347', mid: '#ffe7a6' } };
+/** A low-poly body's hair in a valley (`Material.valley`, its step: the darkest first): its colour times this, however
+ * lit (the numbers; `tools/sculpt/lowhairshot.mjs` reads them from here). */
+export const HAIR_VALLEYS = [0.62, 0.7, 0.78, 0.86];
 /** Terms of the review renders' light (`LowLight.sh`). */
 export const SH_TERMS = 19;
 /** Degrees the whole-body review renders' camera looks down (their fitted cameras: the man's 8, the woman's 7.5). */
@@ -112,7 +115,8 @@ void main() {
   int flags = int(uMat[mi].a + 0.5);
   // Lids shut: the eye's parts take the lid's colour, the first material's a shade darker, and shade as skin.
   if (uBlink > 0.5 && (flags & 8) != 0) { base = uMat[0].rgb * 0.94; flags = 2; }
-  bool emissive = (flags & 1) != 0, skin = (flags & 2) != 0, metal = (flags & 4) != 0, soft = (flags & 16) != 0, noInk = (flags & 32) != 0, noCrease = (flags & 64) != 0, thinInk = (flags & 128) != 0, cloth = (flags & 256) != 0, gear = (flags & 512) != 0;
+  bool emissive = (flags & 1) != 0, skin = (flags & 2) != 0, metal = (flags & 4) != 0, soft = (flags & 16) != 0, noInk = (flags & 32) != 0, noCrease = (flags & 64) != 0, thinInk = (flags & 128) != 0, cloth = (flags & 256) != 0, gear = (flags & 512) != 0, ramp = (flags & 1024) != 0, shave = (flags & 2048) != 0, valley = (flags & 4096) != 0;
+  int step = (flags >> 13) & 3;
   float dl = dot(n, uL);
   vec3 c = base;
   if (uMode > 0.5) {
@@ -124,10 +128,24 @@ void main() {
   } else if (uLow > 0.5) {
     // A low-poly body as its review renders: one shade a polygon, skin lit by their light in the look's tone, cloth by the
     // same light in its own colour over the skin it was fitted to, the rest its colour.
-    vec3 lit = lowLight(vec3(dot(n, uXv), dot(n, uYv), dot(n, uZv)));
-    // and gear in hand (a sword) by its brightness only, as the gear's review renders light it
-    const vec3 LUM = vec3(0.299, 0.587, 0.114);
-    c = skin ? min(lit * uTone, 1.0) : cloth ? min(lit * base / uFit, 1.0) : gear ? min(base * (0.18 + 0.82 * dot(lit, LUM) / dot(uFit, LUM)), 1.0) : base;
+    vec3 lv = vec3(dot(n, uXv), dot(n, uYv), dot(n, uZv)), lit = lowLight(lv);
+    if (ramp) {
+      // Hair: its colour, a mid tone or a highlight (toward a warm light) by the facet's light over the review skin's
+      // (tools/sculpt/lowhairshot.mjs HAIR_RAMP, HAIR_TONES), each lit a little within its step so two facets part; a
+      // facet in a valley in its valley's tone however lit (HAIR_VALLEYS, by its step).
+      float l = dot(lit, vec3(0.3, 0.59, 0.11)) / 0.5382;
+      vec3 W = vec3(1.0, 0.784, 0.667);
+      float vt[4] = float[4](${HAIR_VALLEYS.map((x) => x.toFixed(3)).join(', ')});
+      c = valley ? base * vt[step] : (l < 1.15 ? base : (l < 1.4 ? mix(base, W, 0.22) : mix(base, W, 0.45)));
+      c = min(c * (1.0 + 0.45 * (l - (valley || l < 1.15 ? 0.95 : (l < 1.4 ? 1.275 : 1.5)))), 1.0);
+    } else if (shave) {
+      // The shaved scalp: the skin's light, its colour 0.65 of the way to the hair's (tools/sculpt/lowhairshot.mjs SHAVE).
+      c = min(lit * uTone * mix(vec3(1.0), base / max(uMat[0].rgb, vec3(0.05)), 0.65), 1.0);
+    } else {
+      // and gear in hand (a sword) by its brightness only, as the gear's review renders light it
+      const vec3 LUM = vec3(0.299, 0.587, 0.114);
+      c = skin ? min(lit * uTone, 1.0) : cloth ? min(lit * base / uFit, 1.0) : gear ? min(base * (0.18 + 0.82 * dot(lit, LUM) / dot(uFit, LUM)), 1.0) : base;
+    }
   } else if (uFlat > 0.5) {
     c = base;
   } else {
@@ -374,7 +392,7 @@ function matsOf(ms: Material[]): Float32Array {
   ms.forEach((m, i) => {
     if (i >= MAX_MATS) return;
     const c = hexOf(m.colour);
-    f.set([c[0], c[1], c[2], (m.emissive ? 1 : 0) + (m.skin ? 2 : 0) + (m.metal ? 4 : 0) + (m.eye ? 8 : 0) + (m.soft ? 16 : 0) + (m.noInk ? 32 : 0) + (m.noCrease ? 64 : 0) + (m.thinInk ? 128 : 0) + (m.cloth ? 256 : 0) + (m.gear ? 512 : 0)], i * 4);
+    f.set([c[0], c[1], c[2], (m.emissive ? 1 : 0) + (m.skin ? 2 : 0) + (m.metal ? 4 : 0) + (m.eye ? 8 : 0) + (m.soft ? 16 : 0) + (m.noInk ? 32 : 0) + (m.noCrease ? 64 : 0) + (m.thinInk ? 128 : 0) + (m.cloth ? 256 : 0) + (m.gear ? 512 : 0) + (m.ramp ? 1024 : 0) + (m.shave ? 2048 : 0) + (m.valley ? 4096 + (m.valley - 1) * 8192 : 0)], i * 4);
   });
   MATS.set(ms, f);
   return f;

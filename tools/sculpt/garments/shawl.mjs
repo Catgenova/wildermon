@@ -8,9 +8,9 @@
 //   shawlBones(rig, design, cols) → the cape's bones (lowgarment.mjs garmentBone), six: cape_l, cape_front_l,
 //   cape_back_l and the right's, driven from the upper arms (59 + 6 = 65 bones, within the renderer's 80)
 //
-//   node tools/sculpt/garments/shawl.mjs
-//     writes the game's copy beside each body: src/sculpt/assets/lowshawl-male.json and lowshawl-female.json
-//     (lowgarment.mjs garmentAsset; loaded by src/sculpt/lowpoly.ts)
+//   node tools/sculpt/garments/shawl.mjs (or garments/outfit1.mjs, which writes the tunic's too)
+//     writes the game's copy beside each body, fitted over the tunic (`under`): src/sculpt/assets/lowshawl-male.json and
+//     lowshawl-female.json (lowgarment.mjs garmentAsset; loaded by src/sculpt/lowpoly.ts)
 //
 // The shape, in columns: N columns round a vertical axis through the neck (azimuth 0 the front, 90 the body's left),
 // each a closed section in its half-plane (radius r from the axis, height y), the rows of every section joined round:
@@ -137,7 +137,7 @@ function clearOf(L, E, fixedFirst = false) {
   return L;
 }
 
-export function buildShawl(rig, design = DESIGN[rig.who]) {
+export function buildShawl(rig, design = DESIGN[rig.who], { under = [] } = {}) {
   const { B } = rig, D = design, z0 = D.z0;
   // the columns: `front` to a quarter round the front half (the V's point at 0, the corners at 90), `back` behind
   const angles = [];
@@ -145,7 +145,8 @@ export function buildShawl(rig, design = DESIGN[rig.who]) {
   for (let k = 0; k < 2 * D.back; k++) angles.push(90 + (k * 90) / D.back);
   for (let k = D.front; k > 0; k--) angles.push(360 - (k * 90) / D.front);
   const N = angles.length;
-  const S = samplesOf(B);
+  // (the body's surface, and any garment worn under it at rest, `under` ({ verts, tris }): the shawl clears them all)
+  const S = [...samplesOf(B), ...under.flatMap((m) => samplesOf(m))];
   const hemY = (deg) => { const a = Math.abs(((deg + 540) % 360) - 180), s = Math.pow(Math.sin(a * Math.PI / 180), D.hem.p); return a <= 90 ? D.hem.front + (D.hem.corner - D.hem.front) * s : D.hem.back + (D.hem.corner - D.hem.back) * s; };
   const cols = [];
   const cowls = [];
@@ -366,16 +367,5 @@ export function shawlWeights(rig, G, o = {}) {
 }
 
 /* ---- the game's copy ------------------------------------------------------------------------------------------------ */
-if (import.meta.url === `file://${process.argv[1]}`) {
-  const { writeFileSync } = await import('node:fs');
-  const { buildRig } = await import('../lowrig.mjs');
-  const { garmentAsset } = await import('../lowgarment.mjs');
-  for (const who of ['male', 'female']) {
-    const rig = buildRig(who), G = buildShawl(rig);
-    G.vw = shawlWeights(rig, G);
-    const file = new URL(`../../../src/sculpt/assets/lowshawl-${who}.json`, import.meta.url);
-    const A = { built: 'node tools/sculpt/garments/shawl.mjs (tools/sculpt/lowgarment.mjs garmentAsset)', ...garmentAsset(rig, G, MATS) };
-    writeFileSync(file, JSON.stringify(A));
-    console.log(who, `${G.verts.length} vertices, ${G.tris.length} triangles, ${A.base} + ${A.bones.length} bones: wrote`, file.pathname);
-  }
-}
+// (worn over the tunic: its copy is fitted over it and written by garments/outfit1.mjs)
+if (import.meta.url === `file://${process.argv[1]}`) await (await import('./outfit1.mjs')).writeAssets(['shawl']);
