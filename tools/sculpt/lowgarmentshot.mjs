@@ -2,15 +2,24 @@
 // shading (one normal per polygon, the heads' camera-fixed light tools/sculpt/lowlight-<who>.json, as
 // tools/sculpt/lowrigshot.mjs draws them), each polygon in its material's colour, and reference images laid beside.
 //
-// A colour over 1.5 in red is drawn unlit at that colour less 2 (a glow: emissive in the game).
-//
 // shoot(w, h, cells, file, { texts, imgs }) — cells: { meshes: [{ P, polys, tris, col }], cam: { yaw, pitch, s, c },
 // box: [x, y, w, h], label, bg }; imgs: { src (a file), crop: [x, y, w, h], box: [x, y, w, h] }.
+// A polygon's colour each channel over 2 (its colour plus 2) is drawn unlit, as the game draws an emissive.
+//
+// --enchanted (on a shot tool's command line): LOOKS is ['plain', 'enchanted'], and a shot tool draws each view in both
+// side by side; lookColour(m) is a material's colour for the page in a look ({ c: [r, g, b] or '#rrggbb', kind }: kind 1,
+// unlit, as its colour plus 2).
 import { chromium } from 'playwright-core';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const DIR = new URL('.', import.meta.url).pathname;
+export const ENCHANTED = process.argv.includes('--enchanted');
+export const LOOKS = ENCHANTED ? ['plain', 'enchanted'] : ['plain'];
+export const lookColour = (m) => {
+  const c = typeof m.c === 'string' ? [1, 3, 5].map((i) => parseInt(m.c.slice(i, i + 2), 16) / 255) : m.c;
+  return m.kind === 1 ? c.map((x) => x + 2) : c;
+};
 const SKIN = [0.68, 0.49, 0.41];
 const shOf = (who) => {
   const C = JSON.parse(readFileSync(join(DIR, `lowlight-${who}.json`), 'utf8')).global, o = new Array(57).fill(0);

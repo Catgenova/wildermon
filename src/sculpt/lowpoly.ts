@@ -92,6 +92,14 @@ export interface GarmentAsset {
   hides?: number[];
   /** The garment's vertices the body stands on while it is worn (a boot's sole), with the body's own sole. */
   soles?: number[];
+  /**
+   * Its materials plain and enchanted, parallel to `mats` (kind 0 lit by the body's light, 1 unlit, glowing in the
+   * bloom), as the long sword's: without them every material is its colour, lit, in both.
+   */
+  plain?: Array<{ c: string; kind: number }>;
+  enchanted?: Array<{ c: string; kind: number }>;
+  /** The polygons from here on drawn only while it is enchanted (a halo, an inset's glow). */
+  glowFrom?: number;
 }
 
 /**
@@ -230,12 +238,17 @@ export function garmentFrames(body: ReadonlyArray<{ R: M3; head: V }>, own: read
 const hexOf = (c: readonly number[]): string => `#${c.map((x) => Math.round(Math.max(0, Math.min(1, x)) * 255).toString(16).padStart(2, '0')).join('')}`;
 /** Where the garments' materials start among a low-poly body's: after the body's own (`bodyMaterials`, indexed by `M`). */
 const GARMENT_MAT = Object.keys(M).length;
-/** The garments' colours, each once (garments of one outfit share theirs): a garment's material is its colour's index here. */
-const GARMENT_COLOURS: string[] = [];
-const colourIndex = (c: readonly number[]): number => {
-  const h = hexOf(c), k = GARMENT_COLOURS.indexOf(h);
-  return k >= 0 ? k : GARMENT_COLOURS.push(h) - 1;
+/**
+ * The garments' materials, each once (garments of one outfit share theirs): a colour, lit (kind 0) or unlit (kind 1); a
+ * garment's material is its index here, plain or enchanted.
+ */
+const GARMENT_COLOURS: Array<{ c: string; kind: number }> = [];
+const colourIndex = (m: { c: string; kind: number }): number => {
+  const k = GARMENT_COLOURS.findIndex((x) => x.c === m.c && x.kind === m.kind);
+  return k >= 0 ? k : GARMENT_COLOURS.push({ c: m.c, kind: m.kind }) - 1;
 };
+/** A garment's materials in a look: its own plain or enchanted, else its colours, lit. */
+const looksOf = (g: GarmentAsset, look: 'plain' | 'enchanted'): Array<{ c: string; kind: number }> => (look === 'enchanted' ? g.enchanted : undefined) ?? g.plain ?? g.colours.map((c) => ({ c: hexOf(c), kind: 0 }));
 /**
  * Where the sword's materials start: after the garments' (all their colours, once the bodies are built). Its plain and
  * its enchanted materials take the same places (`materialsOf` lays in the one it is drawn with), so the draw keeps within
@@ -248,7 +261,7 @@ const swordMat = (): number => GARMENT_MAT + GARMENT_COLOURS.length;
  * garments it can wear (their own bones posed with the body's always, each garment's after the one before; each drawn
  * when the bake is asked for with it worn), and its hairstyles.
  */
-function lowBody(A: Asset, P: Proportions, share: number, garments: readonly GarmentAsset[], hairs: Record<string, HairAsset>): { baked: (worn: readonly boolean[], sword?: 'hand' | 'back', style?: string) => Baked; bones: (pose: FigurePose, worn?: readonly boolean[]) => Float32Array; trail: (pose: FigurePose, lit: boolean) => TrailDraw | undefined; skeleton: Skeleton; held: Held; figure: (pose: FigurePose) => Array<M3 | undefined> } {
+function lowBody(A: Asset, P: Proportions, share: number, garments: readonly GarmentAsset[], hairs: Record<string, HairAsset>): { baked: (worn: readonly boolean[], sword?: 'hand' | 'back', style?: string, lit?: readonly boolean[]) => Baked; bones: (pose: FigurePose, worn?: readonly boolean[]) => Float32Array; trail: (pose: FigurePose, lit: boolean) => TrailDraw | undefined; skeleton: Skeleton; held: Held; figure: (pose: FigurePose) => Array<M3 | undefined> } {
   const BONES = A.bones;
   const AT = new Map(BONES.map((b, i) => [b.name, i]));
   for (const g of garments) if (g.base !== BONES.length) throw new Error(`garment for ${g.base} bones on a body of ${BONES.length}`);
@@ -257,8 +270,8 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
   const OWN = garments.map((_, k) => BONES.length + garments.slice(0, k).reduce((n, g) => n + g.bones.length, 0));
   /** A garment's weights with its own bones moved to where they sit among all. */
   const WEIGHTS = garments.map((g, k) => g.weights.map((w) => w.map((x, j) => (j % 2 === 0 && x >= g.base ? x - g.base + OWN[k] : x))));
-  /** Each garment's materials: its colours' indices among the garments'. */
-  const MATS_OF = garments.map((g) => g.colours.map(colourIndex));
+  /** Each garment's materials, plain and enchanted: their indices among the garments'. */
+  const MATS_OF = { plain: garments.map((g) => looksOf(g, 'plain').map(colourIndex)), enchanted: garments.map((g) => looksOf(g, 'enchanted').map(colourIndex)) };
 
   /**
    * Where the other fist closes on a prop's grip on this body: where the grip says, or further down it by as much as keeps
@@ -387,13 +400,14 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
   /**
    * The body with the hairstyle's hair if it has one, and the garments worn over it, laid out for the GPU in one bake:
    * every polygon its own corners, each with the polygon's normal, so it is drawn flat; the body's polygons a worn
-   * garment covers whole left out. The hair's vertices follow the body's; its polygons take the hair's material
+   * garment covers whole left out, each garment plain or enchanted (`lit`: its enchanted materials, and its polygons from
+   * `glowFrom` on). The hair's vertices follow the body's; its polygons take the hair's material
    * (`M.hairCut`, three tones; in a valley `M.hairValley` to `M.hairValley4`, its valley's step), the body's shaved
    * polygons the scalp's (`M.hairUnder`).
    */
-  function lowBaked(worn: readonly boolean[], sword?: 'hand' | 'back', style = ''): Baked {
+  function lowBaked(worn: readonly boolean[], sword?: 'hand' | 'back', style = '', lit: readonly boolean[] = []): Baked {
     const hair = hairs[style];
-    const key = `${garments.map((_, k) => (worn[k] ? 1 : 0)).join('')}|${sword ?? ''}|${hair ? style : ''}`, had = BAKED.get(key);
+    const key = `${garments.map((_, k) => (worn[k] ? (lit[k] ? 2 : 1) : 0)).join('')}|${sword ?? ''}|${hair ? style : ''}`, had = BAKED.get(key);
     if (had) return had;
     const t0 = performance.now();
     const verts: number[] = [], tris: number[] = [], faceSkin: number[] = [];
@@ -441,7 +455,12 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
     const allTris = hair ? A.tris.concat(hair.tris.map((x, k) => (k % 4 === 3 ? x + nPolys : x + nBody))) : A.tris;
     const hidden = new Set(garments.flatMap((g, k) => (worn[k] ? g.hides ?? [] : [])));
     lay(allVerts, allPolys, allTris, allWeights, (pi) => MATS[allPolys[pi][1]] ?? M.skin, hidden);
-    garments.forEach((g, k) => { if (worn[k]) lay(g.verts, g.polys, g.tris, WEIGHTS[k], (pi) => GARMENT_MAT + MATS_OF[k][g.polys[pi][1]]); });
+    garments.forEach((g, k) => {
+      if (!worn[k]) return;
+      // (plain: its glow's polygons left out)
+      const mats = MATS_OF[lit[k] ? 'enchanted' : 'plain'][k], T3 = lit[k] || g.glowFrom === undefined ? g.tris : g.tris.filter((_, t) => g.tris[t - (t % 4) + 3] < (g.glowFrom as number));
+      lay(g.verts, g.polys, T3, WEIGHTS[k], (pi) => GARMENT_MAT + mats[g.polys[pi][1]]);
+    });
     if (sword) {
       // laid at rest on the right hand's socket, all of it on that hand, or on the back's, all of it on the upper back;
       // its glow's polygons left out
@@ -541,8 +560,17 @@ const wearsHood = (pose: FigurePose): boolean => (pose.outfit?.hood ?? false) &&
  */
 export const hairShown = (pose: FigurePose): boolean => !wearsHood(pose);
 
-/** The garments a low-poly body can wear, in the order they are laid over it: each its copy for the man and the woman, and its wear hook. */
-const GARMENTS: ReadonlyArray<{ man: GarmentAsset; woman: GarmentAsset; wears: (pose: FigurePose) => boolean }> = [
+/**
+ * Whether a piece of the plate set is enchanted (`FigurePose.outfit.enchanted`): its cores and its engraving lit, as the
+ * long sword's when it is; plain unless asked for.
+ */
+export const enchantedOf = (piece: 'chest' | 'legs' | 'boots' | 'helm' | 'mantle') => (pose: FigurePose): boolean => pose.outfit?.enchanted?.[piece] ?? false;
+
+/**
+ * The garments a low-poly body can wear, in the order they are laid over it: each its copy for the man and the woman, its
+ * wear hook and, for one that can be enchanted, its enchantment's.
+ */
+const GARMENTS: ReadonlyArray<{ man: GarmentAsset; woman: GarmentAsset; wears: (pose: FigurePose) => boolean; enchanted?: (pose: FigurePose) => boolean }> = [
   { man: MALE_SHAWL as unknown as GarmentAsset, woman: FEMALE_SHAWL as unknown as GarmentAsset, wears: wearsShawl },
   { man: MALE_TROUSERS as unknown as GarmentAsset, woman: FEMALE_TROUSERS as unknown as GarmentAsset, wears: wearsTrousers },
   { man: MALE_BOOTS as unknown as GarmentAsset, woman: FEMALE_BOOTS as unknown as GarmentAsset, wears: wearsBoots },
@@ -554,8 +582,8 @@ const BODIES = {
   man: lowBody(MALE_ASSET as unknown as Asset, MALE, 1, GARMENTS.map((g) => g.man), HAIRS.male),
   woman: lowBody(FEMALE_ASSET as unknown as Asset, FEMALE, WOMAN_OF_MAN, GARMENTS.map((g) => g.woman), HAIRS.female),
 };
-/** The garments' materials after the body's (a colour once, however many garments share it), lit by the body's light in their own colours. */
-const GARMENT_MATS: Material[] = GARMENT_COLOURS.map((colour) => ({ colour, cloth: true }));
+/** The garments' materials after the body's (each once, however many garments share it): lit by the body's light in their own colours, or unlit (glowing in the bloom). */
+const GARMENT_MATS: Material[] = GARMENT_COLOURS.map((m) => (m.kind === 1 ? { colour: m.c, emissive: true } : { colour: m.c, cloth: true }));
 /** The sword's materials, plain or enchanted: lit by the body's light by brightness in its own colours, or unlit (and so glowing in the bloom). */
 const SWORD_MATS = { plain: SWORD.plain, enchanted: SWORD.enchanted } as const;
 const swordMats = (which: 'plain' | 'enchanted'): Material[] => SWORD_MATS[which].map((m) => (m.kind === 0 ? { colour: m.c, gear: true } : { colour: m.c, emissive: true }));
@@ -614,11 +642,11 @@ export function lowScene(pose: FigurePose): SculptDraw {
   const look = pose.look ?? DEFAULT_LOOK;
   const facing = ((Math.round(pose.facing) % 8) + 8) % 8;
   const who = look.gender === 'woman' ? 'woman' : 'man', body = BODIES[who];
-  const worn = GARMENTS.map((g) => g.wears(pose));
+  const worn = GARMENTS.map((g) => g.wears(pose)), enchanted = GARMENTS.map((g) => g.enchanted?.(pose) ?? false);
   // the sword in both hands while a clip grips it, else on the back while it is wielded
   const weapon = pose.gear?.weapon, inHand = heldIn(pose) === SWORD.id, sword = inHand ? 'hand' : weapon?.id === SWORD.id ? 'back' : undefined;
   const lit = weapon?.enchanted ? 'enchanted' : 'plain';
   const materials = materialsOf(look, lit), low: LowLight = { sh: SH[who], tone: toneOf(materials), fit: FIT_SKIN };
   const bones = body.bones(pose, worn), trail = inHand ? body.trail(pose, lit === 'enchanted') : undefined;
-  return { baked: body.baked(worn, sword, hairShown(pose) ? look.hair : ''), bones, materials, view: viewOf(facing), blink: 0, low, ...(trail ? { trail } : {}) };
+  return { baked: body.baked(worn, sword, hairShown(pose) ? look.hair : '', enchanted), bones, materials, view: viewOf(facing), blink: 0, low, ...(trail ? { trail } : {}) };
 }
