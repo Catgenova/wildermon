@@ -119,18 +119,18 @@ export const DESIGN = {
     wall: [0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22],
     lean: [0.03, 0.03, 0.03, 0.02, 0.02, 0.02, 0.02, 0.02, 0.03, 0.03],
     dome: [0.14, 0.1, 0.03, 0, 0, 0, 0, 0, 0.03, 0.1],
-    top: [0.5, 0.48, 0.5, 0.6, 0.62, 0.62, 0.62, 0.6, 0.5, 0.48],
+    top: [0.5, 0.48, 0.5, 0.56, 0.52, 0.5, 0.52, 0.56, 0.5, 0.48],
     shrink: [0.08, 0.07, 0.05, 0.02, 0.02, 0.02, 0.02, 0.02, 0.05, 0.07],
     mix: [0, 0.05, 0.3, 0.8, 1, 1, 1, 0.8, 0.3, 0.05],
     clear: 0.1, over: 0.035, win: 0.3, fill: [0.02, 0, 0, 0, 0.02, 0.03, 0.02, 0, 0, 0],
     cap: { du: [0.66, 0.56, 0.16, null, null, null, null, null, 0.16, 0.56], h: [0.54, 0.53, 0.56, 0, 0, 0, 0, 0, 0.56, 0.53], in: [0.1, 0.08, 0.06, 0, 0, 0, 0, 0, 0.06, 0.08], t: 0.3, lip: 0.03, seam: 0.12, sink: 0.04 },
     tall: 2.0,
     h: {
-      strap: [0.25, 0.25, 0.25, 0.26, 0.26, 0.26, 0.26, 0.26, 0.25, 0.25],
+      strap: [0.27, 0.265, 0.25, 0.23, 0.215, 0.21, 0.215, 0.23, 0.25, 0.265],
       band: [0.6, 0.63, 0.67, 0.68, 0.65, 0.61, 0.65, 0.68, 0.67, 0.63],
       bandTop: [0.8, 0.8, 0.78, 0.77, 0.74, 0.71, 0.74, 0.77, 0.78, 0.8],
-      cuffLo: [0.69, 0.73, 0.78, 0.79, 0.81, 0.82, 0.81, 0.79, 0.78, 0.73],
-      cuffTop: [0.93, 0.96, 0.95, 0.97, 0.99, 1, 0.99, 0.97, 0.95, 0.96],
+      cuffLo: [0.67, 0.72, 0.77, 0.79, 0.81, 0.82, 0.81, 0.79, 0.77, 0.72],
+      cuffTop: [0.91, 0.95, 0.96, 0.98, 1, 1.01, 1, 0.98, 0.96, 0.95],
       flare: [0.2, 0.18, 0.18, 0.18, 0.16, 0.16, 0.16, 0.18, 0.18, 0.18],
     },
     strap: { w: 0.15, trim: 0.035, out: 0.06 },
@@ -150,18 +150,18 @@ export const DESIGN = {
     wall: [0.19, 0.19, 0.19, 0.19, 0.19, 0.19, 0.19, 0.19, 0.19, 0.19],
     lean: [0.02, 0.02, 0.03, 0.02, 0.02, 0.02, 0.02, 0.02, 0.03, 0.02],
     dome: [0.18, 0.13, 0.03, 0, 0, 0, 0, 0, 0.03, 0.13],
-    top: [0.44, 0.42, 0.44, 0.58, 0.6, 0.6, 0.6, 0.58, 0.44, 0.42],
+    top: [0.44, 0.42, 0.44, 0.52, 0.48, 0.46, 0.48, 0.52, 0.44, 0.42],
     shrink: [0.07, 0.06, 0.04, 0.02, 0.02, 0.02, 0.02, 0.02, 0.04, 0.06],
     mix: [0, 0.05, 0.3, 0.8, 1, 1, 1, 0.8, 0.3, 0.05],
     clear: 0.09, over: 0.03, win: 0.3, fill: [0.01, 0, 0, 0, 0.01, 0.02, 0.01, 0, 0, 0],
     cap: { du: [0.62, 0.52, 0.1, null, null, null, null, null, 0.1, 0.52], h: [0.48, 0.47, 0.5, 0, 0, 0, 0, 0, 0.5, 0.47], in: [0.09, 0.09, 0.08, 0, 0, 0, 0, 0, 0.08, 0.09], t: 0.3, lip: 0.025, seam: 0.14, sink: 0.03 },
     tall: 2.0,
     h: {
-      strap: [0.25, 0.25, 0.25, 0.26, 0.26, 0.26, 0.26, 0.26, 0.25, 0.25],
+      strap: [0.27, 0.265, 0.25, 0.23, 0.215, 0.21, 0.215, 0.23, 0.25, 0.265],
       band: [0.6, 0.63, 0.67, 0.68, 0.65, 0.61, 0.65, 0.68, 0.67, 0.63],
       bandTop: [0.8, 0.8, 0.78, 0.77, 0.74, 0.71, 0.74, 0.77, 0.78, 0.8],
-      cuffLo: [0.69, 0.73, 0.78, 0.79, 0.81, 0.82, 0.81, 0.79, 0.78, 0.73],
-      cuffTop: [0.93, 0.96, 0.95, 0.97, 0.99, 1, 0.99, 0.97, 0.95, 0.96],
+      cuffLo: [0.67, 0.72, 0.77, 0.79, 0.81, 0.82, 0.81, 0.79, 0.77, 0.72],
+      cuffTop: [0.91, 0.95, 0.96, 0.98, 1, 1.01, 1, 0.98, 0.96, 0.95],
       flare: [0.17, 0.15, 0.15, 0.15, 0.14, 0.14, 0.14, 0.15, 0.15, 0.15],
     },
     strap: { w: 0.13, trim: 0.03, out: 0.05 },
@@ -259,7 +259,7 @@ export function buildLeatherBoots(rig, design = DESIGN[rig.who], { under = [], p
     const hy = (key, k) => ground + D.h[key][k] * tall;
     // the sole and the foot
     // (the arch's columns lifted: the heel's block; the toe sprung up a little)
-    const lift0 = (k) => { const a = Math.abs(ANG[k]); return a === 108 ? D.arch : a === 90 ? D.arch * 0.6 : a <= 36 ? (D.spring?.[0] ?? 0) + ((D.spring?.[1] ?? 0) - (D.spring?.[0] ?? 0)) * a / 36 : 0; };
+    const lift0 = (k) => { const a = Math.abs(ANG[k]); return a === 90 ? D.arch : a === 72 ? D.arch * 0.85 : a <= 36 ? (D.spring?.[0] ?? 0) + ((D.spring?.[1] ?? 0) - (D.spring?.[0] ?? 0)) * a / 36 : 0; };
     put('r0', each((k) => onOutline(k, ground + lift0(k), -D.lip)));
     put('r1', each((k) => onOutline(k, top, -D.lip)));
     put('r2', each((k) => onOutline(k, top)));
@@ -327,10 +327,15 @@ export function buildLeatherBoots(rig, design = DESIGN[rig.who], { under = [], p
     G.legOf[side] = { axis, ang, dirOf, onShaft, onUpper, sLo, sHi, bLo, bTop, cLo, cTop };
     // the polygons
     const band = (A, Bq, mat, tag) => { G.tag = tag; for (let k = 0; k < K; k++) { const j = (k + 1) % K; G.poly([A[k], A[j], Bq[j], Bq[k]], typeof mat === 'function' ? mat(k) : mat, 'boot'); } };
-    const mid = mul(R.r0.reduce((a, i) => add(a, G.verts[i]), [0, 0, 0]), 1 / K), cI = G.vert(mid, 'boot');
-    G.side[cI] = side; R.c = cI;
+    // the sole's underside: rungs across the foot between each column and its mirror (the toe's to the heel's), so the
+    // arch's lifted columns leave the heel's block and the forefoot on the ground
     G.tag = 'sole';
-    for (let k = 0; k < K; k++) G.poly([R.r0[(k + 1) % K], R.r0[k], cI], 'dark', 'boot');
+    const mir = (k) => ANG.indexOf(-ANG[k] === -0 ? 0 : ANG[k] === 180 ? 180 : -ANG[k]);
+    const half0 = ANG.map((a, k) => k).filter((k) => ANG[k] > 0 && ANG[k] < 180);
+    G.poly([R.r0[k0], R.r0[half0[0]], R.r0[mir(half0[0])]], 'dark', 'boot');
+    for (let i = 0; i + 1 < half0.length; i++) { const a = half0[i], b = half0[i + 1]; G.poly([R.r0[a], R.r0[b], R.r0[mir(b)], R.r0[mir(a)]], 'dark', 'boot'); }
+    const kl = half0[half0.length - 1];
+    G.poly([R.r0[kl], R.r0[ANG.indexOf(180)], R.r0[mir(kl)]], 'dark', 'boot');
     band(R.r0, R.r1, 'light', 'sole edge');
     band(R.r1, R.r2, 'trim', 'welt');
     band(R.r2, R.r3, 'leather', 'wall');
@@ -353,7 +358,7 @@ export function buildLeatherBoots(rig, design = DESIGN[rig.who], { under = [], p
     band(R.c2, R.c3, 'rune', 'rim');
     band(R.c3, R.c4, 'trim', 'rim top');
     band(R.c4, R.c5, 'leather', 'lip');
-    G.soles.push(...R.r0, cI);
+    G.soles.push(...R.r0);
   }
   B.polys.forEach((p, pi) => { if (hidden(p)) G.hides.push(pi); });
   orient(G, (c) => { const s = c[0] > 0 ? 'L' : 'R', R = G.rings[s], m = mul(R.r4.reduce((a, i) => add(a, G.verts[i]), [0, 0, 0]), 1 / K), a = G.legOf[s].axis(c[1]); return c[1] > m[1] + 0.3 ? [c[0] - a[0], 0, c[2] - a[2]] : [c[0] - m[0], (c[1] - m[1]) * 0.3, c[2] - m[2]]; });
