@@ -469,14 +469,14 @@ function lacingOf(G, D, side) {
   for (let i = 0; i + 1 < ys.length; i++) {
     for (const s of [1, -1]) {
       // (a cord from (s a, ys[i]) to (-s a, ys[i+1]), its ends in from the eyelets by their radius)
+      // (sampled between the eyelets' rims: t from t0 to 1 - t0 of the way, t0 the rim's share of the cord's length)
+      const e0 = surfAt(G, side, SHAFT, s * Lc.a, ys[i]), e1 = surfAt(G, side, SHAFT, -s * Lc.a, ys[i + 1]);
+      const t0 = Math.min(0.3, (D.eyelet.r * 1.05 + Lc.w * 0.35) / Math.hypot(...sub(e1.q, e0.q)));
       const n = 7, pts = [];
       for (let j = 0; j < n; j++) {
-        const t = j / (n - 1), g = s * Lc.a * (1 - 2 * t), y = ys[i] + (ys[i + 1] - ys[i]) * t;
+        const t = t0 + (1 - 2 * t0) * j / (n - 1), g = s * Lc.a * (1 - 2 * t), y = ys[i] + (ys[i + 1] - ys[i]) * t;
         pts.push(surfAt(G, side, SHAFT, g, y));
       }
-      // (trimmed back to the eyelets' rims)
-      const trim = (a, b) => { const d = sub(b.q, a.q), l = Math.hypot(...d); return { ...a, q: add(a.q, mul(d, Math.min(0.45, D.eyelet.r * 0.9 / l))) }; };
-      pts[0] = trim(pts[0], pts[1]); pts[n - 1] = trim(pts[n - 1], pts[n - 2]);
       const up = s * sg > 0; // (which cord goes over: the same on both boots, mirrored)
       const base = pts.map((_, j) => Lc.base + (up ? Lc.lift * Math.sin(Math.PI * j / (n - 1)) : 0));
       ridge(G, side, pts, Lc.w, Lc.h, base, 'rune', 'lace');
