@@ -16,9 +16,9 @@ import { project, raster, skullTable, centreOf, dirOf, angOf } from './lowhairhu
 import { shadeOf, openEdges, crossings, skinHair } from './lowhair.mjs';
 import BRAID from './hairs/braid.mjs';
 import { BRAID_VIEWS as VIEWS, BRAID_SPAN as SPAN } from './lowbraidcams.mjs';
-import { addCrown, skullMap, thickMap, composeLines } from './lowbraidcrown.mjs';
-import { addBraid, addCrownBraids } from './lowbraidbraid.mjs';
-import { dirOfMap } from './lowbraidlift.mjs';
+import { addCrown, skullMap, thickMap, composeLines, smoothRun } from './lowbraidcrown.mjs';
+import { addBraid, addCrownLinks } from './lowbraidbraid.mjs';
+import { dirOfMap, mapOfDir } from './lowbraidlift.mjs';
 const SPINE = JSON.parse(readFileSync(new URL('./hairs/braid-spine.json', import.meta.url), 'utf8'));
 
 const DIR = new URL('.', import.meta.url).pathname;
@@ -242,16 +242,26 @@ export function buildBraid(rig, style = BRAID, H = carve(), { clear = true } = {
   // the crown's clumps (tools/sculpt/lowbraidcrown.mjs): her hull's thickness over this body's skull, by k
   if (!MAPS.has(H)) MAPS.set(H, thickMap(H, centreOf(H.rig.B), skullMap(H.rig.B, centreOf(H.rig.B))));
   if (!MAPS.has(B)) MAPS.set(B, skullMap(B, C));
-  addCrown(style.crown, { V, poly: (v, sh) => polys.push({ v, piece: pieces.length, ...sh }), piece, skull: MAPS.get(B), thick: MAPS.get(H), C, k, face: faceShare });
-
-  // the crown's two braids down the back (tools/sculpt/lowbraidbraid.mjs addCrownBraids): along the seam from a point on
-  // the part through the chevrons' tips to its end
-  if (style.crownBraids) {
-    const { lines: CL, seam: SM } = composeLines(style.crown), cb = style.crownBraids, P = CL.part, x = cb.start * (P.length - 1);
-    const path = [P[Math.floor(x)], ...SM];
-    const surf = (m, lift) => { const d = dirOfMap(m); return add(C, mul(d, MAPS.get(B).at(m) + (Math.max(0.05, MAPS.get(H).at(m)) + lift) * k)); };
-    addCrownBraids(cb, path, { V, poly: (v, sh) => polys.push({ v, piece: pieces.length, ...sh }), piece, surf, k });
+  // the braid's first links' way over the crown (map degrees): along the seam from a point on the part through the
+  // chevrons' tips to its end; the clumps under them lowered (dip: the share of the hull's thickness they keep there,
+  // `under` of it within `half` degrees of the way, rising to the whole over `soft` more), so that they run in under the
+  // links
+  const cl = style.braid.crownLinks;
+  let linkWay = null, dip = null;
+  const place = (d, w) => { const m = mapOfDir(d); return add(C, mul(d, MAPS.get(B).at(m) + Math.max(0.05, MAPS.get(H).at(m)) * k + w)); };
+  if (cl) {
+    const { lines: CL, seam: SM } = composeLines(style.crown), Pt = CL.part, x = Math.min(Pt.length - 1.001, cl.start * (Pt.length - 1)), i0 = Math.floor(x);
+    const m0 = [0, 1].map((c) => Pt[i0][c] + (Pt[i0 + 1][c] - Pt[i0][c]) * (x - i0));
+    linkWay = smoothRun([m0, ...Pt.slice(i0 + 1, -1).filter((_, j) => j % 4 === 3), ...SM], 40);
+    const dirs = smoothRun(linkWay, 120).map(dirOfMap);
+    dip = (m) => {
+      const d = dirOfMap(m), a = Math.min(...dirs.map((q) => Math.acos(Math.min(1, dot(d, q))))) * 180 / Math.PI;
+      const f = Math.min(1, Math.max(0, (a - cl.dip.half) / cl.dip.soft));
+      return cl.dip.under + (1 - cl.dip.under) * f * f * (3 - 2 * f);
+    };
   }
+  addCrown(style.crown, { V, poly: (v, sh) => polys.push({ v, piece: pieces.length, ...sh }), piece, skull: MAPS.get(B), thick: MAPS.get(H), C, k, face: faceShare, dip });
+
   // the braid (tools/sculpt/lowbraidbraid.mjs): its root on the crown's seam end, on this body
   const seamEnd = composeLines(style.crown).seam.at(-1), dR = dirOfMap(seamEnd), skR = MAPS.get(B).at(seamEnd);
   if (!MAPS.has(rig.B.verts)) {
@@ -266,8 +276,10 @@ export function buildBraid(rig, style = BRAID, H = carve(), { clear = true } = {
     }
     return false;
   };
+  // its first links on the crown (addCrownLinks), along the links' way laid out before the crown
+  if (linkWay) addCrownLinks(cl, linkWay.map((m) => place(dirOfMap(m), 0)), { V, poly: (v, sh) => polys.push({ v, piece: pieces.length, ...sh }), piece, place, C, k, sheetScale: CAMS.front.s, names: cl.links.map((_, j) => `heart${j + 1}`) });
   addBraid(style.braid, { ...SPINE, rows: [...SPINE.rows] }, { inside, V, poly: (v, sh) => polys.push({ v, piece: pieces.length, ...sh }), piece, toBody, k, sheetScale: CAMS.front.s,
-    root: add(C, mul(dR, skR + 0.5 * MAPS.get(H).at(seamEnd) * k)) });
+    root: add(C, mul(dR, skR + 0.5 * MAPS.get(H).at(seamEnd) * k)), first: cl ? cl.links.length : 0 });
 
   // the face strands: a flat lock along a wavy path, its tip a point
   // (and the locks over the sides behind the ears: the same, broader, a hexagon round their path, on the head)

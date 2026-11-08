@@ -49,9 +49,9 @@ const OUTLINE = [[0, 0.13], [0.24, -0.02], [0.47, 0.18], [0.43, 0.48], [0.22, 0.
 const DEPTH = 0.5, INSIDE = 5, BEND = 60, HOME = 6;
 
 /** One heart: centred at c, across U, down T, its face out N, H long and Wd wide (DEPTH of that deep); each vertex's
- * share down the braid s. */
-export function heartAt(V, poly, c, U, T, N, H, Wd, s) {
-  const D = Wd * DEPTH, pt = (u, v, w) => add(c, add(add(mul(U, u * Wd), mul(T, (v - 0.5) * H)), mul(N, w * D)));
+ * share down the braid s. (at(u, v, w): a corner's point in place of the flat heart's, for one bent onto the crown.) */
+export function heartAt(V, poly, c, U, T, N, H, Wd, s, at) {
+  const D = Wd * DEPTH, pt = at ?? ((u, v, w) => add(c, add(add(mul(U, u * Wd), mul(T, (v - 0.5) * H)), mul(N, w * D))));
   const rim = OUTLINE.map(([u, v]) => V(pt(u, v, 0.2), s)), side = OUTLINE.map(([u, v]) => V(pt(u * 0.92, 0.05 + v * 0.92, -0.45), s));
   const Lp = V(pt(-0.23, 0.33, 1), s), Rp = V(pt(0.23, 0.33, 1), s), Cn = V(pt(0, 0.2, 0.62), s), Cm = V(pt(0, 0.62, 0.86), s), Bc = V(pt(0, 0.45, -0.95), s);
   const [o0, o1, o2, o3, o4, o5, o6, o7, o8, o9] = rim;
@@ -64,34 +64,28 @@ export function heartAt(V, poly, c, U, T, N, H, Wd, s) {
 }
 
 /**
- * The crown's two narrow braids (the user's addition: down the back of the head from near the crown to the side braid's
- * root, one each side of the seam): each along the seam's path (map degrees: from a point on the part through the
- * chevrons' tips to the seam's end) offset `apart` degrees to its side, closing to the seam's end, a chain of `n` small
- * hearts lying on the crown, their backs just over its outer surface (surf(m, lift): this body's point over the map
- * point m, `lift` head units past the hull), each tucked under the one above, the last under the side braid's first.
- * Each heart its own piece, on the head.
+ * The braid's first links (the user's: the braid starts high on the back of the head, its links largest there): hearts
+ * along the crown's seam (path: this body's points over the hull, from a point on the part through the chevrons' tips
+ * to the seam's end, where the hanging braid's first heart starts), each `links[i]` = [from, to, width px] as shares of
+ * the path's length, each tucked under the one above, the last over the hanging braid's first heart. Each lies on the
+ * crown: every corner carried out from the skull's centre onto the hull (place(d, w): this body's point on the hull in
+ * the direction d, w head units past it), its face out from the skull, `depth` of its width deep, `lift` over the hull.
+ * Each its own piece, on the head.
  */
-export function addCrownBraids(cb, path, ctx) {
-  const { V, poly, piece, surf, k } = ctx;
-  const L = [0]; for (let i = 1; i < path.length; i++) L.push(L[i - 1] + Math.hypot(path[i][0] - path[i - 1][0], path[i][1] - path[i - 1][1]));
-  const along = (f) => { const w = f * L[L.length - 1]; let i = 1; while (i < L.length - 1 && L[i] < w) i++; const g = (w - L[i - 1]) / Math.max(1e-9, L[i] - L[i - 1]); return [path[i - 1][0] + (path[i][0] - path[i - 1][0]) * g, path[i - 1][1] + (path[i][1] - path[i - 1][1]) * g]; };
-  for (const [side, name] of [[1, 'L'], [-1, 'R']]) {
-    // the map path offset to its side (her left +: west on the map), the offset closing over the last CLOSE of the way
-    const at = (f) => {
-      const p = along(f), q = along(Math.min(1, f + 0.01)), o = along(Math.max(0, f - 0.01)), t = [q[0] - o[0], q[1] - o[1]], l = Math.hypot(...t) || 1;
-      const off = cb.apart * Math.min(1, (1 - f) / cb.close), nrm = [t[1] / l, -t[0] / l];
-      // (square to the path, to its right as it runs: west where it runs south over the crown, her left)
-      return [p[0] + side * nrm[0] * off, p[1] + side * nrm[1] * off];
-    };
-    for (let i = 0; i < cb.n; i++) piece(`crown${name}${i + 1}`, 'clump', () => {
-      const f0 = cb.from + ((cb.to - cb.from) * i) / cb.n, f1 = cb.from + ((cb.to - cb.from) * (i + 1)) / cb.n, fm = (f0 + f1) / 2;
-      const w = cb.w * (1 - cb.taper * fm) * k, D = w * DEPTH * 0.8;
-      const top = surf(at(f0), 0), bot = surf(at(f1), 0), mid = surf(at(fm), 0), out = unit(sub(surf(at(fm), 0.1), mid));
-      const T = unit(sub(sub(bot, top), mul(out, dot(sub(bot, top), out)))), U = cross(out, T);
-      const H = Math.hypot(...sub(bot, top)) * cb.stretch;
-      heartAt(V, poly, add(mid, mul(out, D * 0.95 + cb.lift * k)), U, T, out, H, w, 0);
+export function addCrownLinks(cl, path, ctx) {
+  const { V, poly, piece, place, C, k, sheetScale, names } = ctx;
+  const L = [0]; for (let i = 1; i < path.length; i++) L.push(L[i - 1] + Math.hypot(...sub(path[i], path[i - 1])));
+  const along = (f) => { const w = Math.min(1, Math.max(0, f)) * L[L.length - 1]; let i = 1; while (i < L.length - 1 && L[i] < w) i++; const g = (w - L[i - 1]) / Math.max(1e-9, L[i] - L[i - 1]); return add(path[i - 1], mul(sub(path[i], path[i - 1]), g)); };
+  cl.links.forEach(([f0, f1, wpx], i) => piece(names[i], 'braid', () => {
+    const top = along(f0), bot = along(f1), mid = along((f0 + f1) / 2), N = unit(sub(mid, C));
+    const T = unit(sub(sub(bot, top), mul(N, dot(sub(bot, top), N)))), U = cross(N, T);
+    const H = Math.hypot(...sub(bot, top)) * cl.stretch, Wd = (wpx / sheetScale) * k, D = Wd * cl.depth;
+    const c = add(top, mul(sub(bot, top), 0.5));
+    heartAt(V, poly, null, U, T, N, H, Wd, 0, (u, v, w) => {
+      const q = add(c, add(mul(U, u * Wd), mul(T, (v - 0.5) * H))), d = unit(sub(q, C));
+      return place(d, cl.lift * k + (w - cl.sink) * D);
     });
-  }
+  }));
 }
 
 /**
@@ -148,7 +142,7 @@ export function addBraid(br, spine, ctx) {
   };
   const scale = (px) => (px / ctx.sheetScale) * k;
   if (ctx.inside) settle();
-  br.hearts.forEach(([top, bot, wpx], hi) => piece(`heart${hi + 1}`, 'braid', () => {
+  br.hearts.forEach(([top, bot, wpx], hi) => piece(`heart${hi + 1 + (ctx.first ?? 0)}`, 'braid', () => {
     const mid = (top + bot) / 2, { T, N, U } = frame(mid), H = Math.hypot(...sub(at(bot), at(top))) * br.stretch;
     heartAt(V, poly, at(mid), U, T, N, H, scale(wpx), share(mid));
   }));

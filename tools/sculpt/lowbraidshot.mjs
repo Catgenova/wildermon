@@ -4,9 +4,10 @@
 // (tools/sculpt/lowbraid.mjs outlineDiff) per view.
 //
 //   node tools/sculpt/lowbraidshot.mjs --out <dir> [--tag -x] [--who female,male]
-//        [--only cams,hull,views,close,turn,wire,sil,exploded,game,shawl]
+//        [--only cams,hull,views,close,rear,pieces,turn,wire,sil,exploded,game,shawl]
 // cams: the cameras' registration (her head and neck over the sheet's skin and hair silhouettes); hull: the carved hull
-// in place of the hair; views: the sheet, ours, ours over the sheet; close: the views larger; turn: the head turned 70°
+// in place of the hair; views: the sheet, ours, ours over the sheet; close: the views larger; rear: the profile, the
+// rear three-quarter and the back larger, with ours per piece over the sheet; pieces: per piece over the sheet; turn: the head turned 70°
 // and nodded 40°, the idle and the walk, crossings counted; wire: the topology; sil: the silhouette; exploded: the pieces
 // pulled apart; game: the full bodies at the game's zooms 5 and 10; shawl: the braid over the outfit's shawl.
 import { mkdirSync, readFileSync } from 'node:fs';
@@ -92,6 +93,24 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     });
     await shoot(10 + 5 * (cw2 + gap), ch2 + 44, cells, join(out, `braid-pieces-${w}${tag}.png`), { imgs,
       texts: [{ css: 'left:12px;top:6px', html: `Per piece over the sheet: her right's clumps R1-R6 warm, her left's L1-L6 cool, the hearts green, the tie white (${hair.pieces.map((p) => p.id).join(', ')})` }] });
+  }
+
+  if (only.includes('rear')) for (const w of who) {
+    // the back of the head larger: the profile, the rear three-quarter and the back, each the sheet (top), ours (middle)
+    // and ours per piece over the sheet (bottom)
+    const rig = RIGS[w], hair = HAIRS[w], K = 1.3, cw2 = 380, ch2 = 420, cells = [], imgs = [];
+    const PAL = { R: [[1, 0.45, 0.35], [1, 0.75, 0.3], [1, 0.4, 0.75], [0.95, 0.95, 0.35], [1, 0.6, 0.5], [0.85, 0.5, 1]], L: [[0.3, 0.7, 1], [0.35, 1, 0.75], [0.6, 0.55, 1], [0.3, 1, 1], [0.5, 0.85, 0.5], [0.4, 0.5, 0.95]], heart: [[0.1, 0.55, 0.15], [0.55, 1, 0.35], [0.4, 1, 0.4], [0.2, 0.75, 0.3], [0.6, 1, 0.5], [0.3, 0.9, 0.6]] };
+    const colOf = (id) => { const m = id.match(/^(R|L|heart)(\d+)$/); return m ? PAL[m[1]][(+m[2] - 1) % PAL[m[1]].length] : id === 'tie' ? [1, 1, 1] : id === 'tip' ? [0.2, 0.5, 0.25] : [1, 0.85, 0.6]; };
+    const col = hair.polys.map((p) => colOf(hair.pieces[p.piece].id));
+    LABELS.filter(([v]) => ['profile', 'r3', 'back'].includes(v)).forEach(([v, label], i) => {
+      const c = C[v], x = 10 + i * (cw2 + gap), cy = c.cy + 40, crop = [c.cx - cw2 / K / 2, cy - ch2 / K / 2, cw2 / K, ch2 / K], wv = warpOf(c);
+      const ys = [34, 34 + ch2 + gap, 34 + 2 * (ch2 + gap)];
+      imgs.push({ src: REF, size: REF_SIZE, crop, box: [x, ys[0], cw2, ch2] }, { src: REF, size: REF_SIZE, crop, box: [x, ys[2], cw2, ch2] });
+      cells.push({ meshes: [bodyMesh(rig, hair, rig.B.verts.map(wv)), hairMesh(rig, hair, hair.verts.map(wv))], cam: camOf(c, K, c.cy - cy), box: [x, ys[1], cw2, ch2], label });
+      cells.push({ meshes: [{ ...bodyMesh(rig, hair, rig.B.verts.map(wv)), depthOnly: true }, { ...hairMesh(rig, hair, hair.verts.map(wv)), col, flat: true, alpha: 0.6 }], cam: camOf(c, K, c.cy - cy), box: [x, ys[2], cw2, ch2], see: true, label: 'per piece over the sheet' });
+    });
+    await shoot(10 + 3 * (cw2 + gap), 34 + 3 * (ch2 + gap), cells, join(out, `braid-rear-${w}${tag}.png`), { imgs,
+      texts: [{ css: 'left:12px;top:6px', html: `Back of the head: sheet, ${w === 'male' ? 'man' : 'woman'}, per piece (links dark to light green from the start)` }] });
   }
 
   if (only.includes('wire')) for (const w of who) {

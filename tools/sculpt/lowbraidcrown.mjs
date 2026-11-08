@@ -145,7 +145,8 @@ export function addCrown(crown, ctx, lines = composeLines(crown).lines) {
     // (over the forehead no thicker than BROW: the sheet's hair meets the brow thin, and her forehead is further back
     // than the sheet's, which left the hull standing off it there)
     const brow = m[1] <= 35 ? Infinity : BROW + (35 - Math.min(60, m[1])) * -0 + (m[1] < 60 ? ((60 - m[1]) / 25) * 0.4 : 0);
-    const d = dirOfMap(m), r0 = skull.at(m), t = Math.max(MIN_T, Math.min(brow, thick.at(m))) * k;
+    // (and lower under the braid's first links: ctx.dip)
+    const d = dirOfMap(m), r0 = skull.at(m), t = Math.max(MIN_T, Math.min(brow, thick.at(m))) * k * (ctx.dip ? ctx.dip(m) : 1);
     if (h === 'root') { const p = add(C, mul(d, r0)); return add(C, mul(d, r0 + (face(p) > 0.5 ? 0.012 * k : -SINK * k))); }
     return add(C, mul(d, r0 + h * t));
   };

@@ -39,11 +39,6 @@ export const CROWN_LINES = {
 
 export default {
   crown: CROWN_LINES,
-  // the crown's two narrow braids down the back of the head (the user's addition; tools/sculpt/lowbraidbraid.mjs
-  // addCrownBraids): along the seam from `start` of the way down the part, `apart` degrees either side of it closing to
-  // its end over the last `close` of the way, n hearts each from `from` to `to` of the way, `w` wide (head units)
-  // narrowing by `taper` to the end, `stretch` their length against their spacing, their backs `lift` over the hull
-  crownBraids: { start: 0.5, apart: 11, close: 0.35, n: 6, from: 0, to: 1, w: 0.34, taper: 0.3, stretch: 1.12, lift: 0.005 },
   // the braid (tools/sculpt/lowbraidbraid.mjs): sheet rows in the front view. The root's row (where the braid leaves the
   // crown's seam); each heart's top, bottom (its point) and width (px); the tie's rows and width; the tip's rows and
   // width; the rows over which its face turns from out of her neck (faceFrom) to the front (faceTo); the hearts'
@@ -55,6 +50,12 @@ export default {
     tip: [352, 398, 44],
     face: [200, 280], faceFrom: [-0.7, 0, 0.5], faceTo: [-0.25, 0, 1],
     stretch: 1.22,
+    // its first links, on the crown (tools/sculpt/lowbraidbraid.mjs addCrownLinks): along the seam from `start` of the
+    // way down the part to the seam's end, each [from, to, width px] as shares of that way, larger toward the start;
+    // `stretch` their length against their spacing, `depth` their depth against their width, their backs `sink` of that
+    // into the hull and `lift` over it; the clumps under them lowered to `under` of the hull's thickness within `half`
+    // degrees of their way, the whole `soft` degrees further
+    crownLinks: { start: 0.83, links: [[0, 0.44, 88], [0.38, 1, 80]], stretch: 1, depth: 0.3, sink: 1, lift: 0.05, dip: { under: 0.35, half: 16, soft: 14 } },
   },
   // the face strands: each a wavy path (her body's units, from its root under the clumps at the temple), its width and
   // thickness tapering to the tip
