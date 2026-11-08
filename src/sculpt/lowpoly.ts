@@ -7,7 +7,10 @@
  * kept; the arms kept off the body, hers turned further out as they swing, the ankles and toes as hinges on the body's
  * own axes, the thumbs closed toward the palm), the helpers driven from those, and the body stood on its lowest sole.
  * Shaded as the review renders shade it: one colour a polygon, from its normal in view space, by the light fitted for
- * that body (`tools/sculpt/lowlight-<who>.json`, written by `tools/sculpt/lowlight.py`), in the look's skin.
+ * that body (`tools/sculpt/lowlight-<who>.json`, written by `tools/sculpt/lowlight.py`), in the look's skin. A hairstyle
+ * made for the low-poly bodies (`tools/sculpt/lowhair.mjs`, `./assets/lowhair.json`: so far 'swept') is drawn with the
+ * body, on the head bone, in three tones of the look's hair colour (its valleys a fourth, darker), the body's scalp
+ * under it shaved; any other style draws no hair yet, and none is drawn while the hood is up (`hairShown`).
  *
  * Over the body, a garment (`tools/sculpt/lowgarment.mjs` garmentAsset, written beside each body: the first outfit's
  * shawl, `assets/lowshawl-<who>.json` by `tools/sculpt/garments/shawl.mjs`): laid out flat with the body in one bake,
@@ -41,6 +44,7 @@ import FEMALE_TUNIC from './assets/lowtunic-female.json';
 import MALE_HOOD from './assets/lowhood-male.json';
 import FEMALE_HOOD from './assets/lowhood-female.json';
 import LONG_SWORD from './assets/long_sword.json';
+import HAIR_ASSET from './assets/lowhair.json';
 import MALE_LIGHT from '../../tools/sculpt/lowlight-male.json';
 import FEMALE_LIGHT from '../../tools/sculpt/lowlight-female.json';
 import { sculptRig, viewOf, type FigurePose, type Rig } from '../render/figure';
@@ -107,6 +111,12 @@ const ENDS: V[] = (() => {
   for (const i of used) if (SWORD.verts[i * 3 + 1] > from) out.push([SWORD.verts[i * 3], SWORD.verts[i * 3 + 1], SWORD.verts[i * 3 + 2]]);
   return out;
 })();
+
+/** A hairstyle on one body (`tools/sculpt/lowhair.mjs` gameHair): its vertices, polygons and triangles (corners, polygon),
+ * each polygon's material (4 the hair, 5 to 8 the hair in a valley by its step, 3 the buzzed sides' patches), each vertex's (bone, weight) pairs, and the body's
+ * polygons drawn shaved. */
+interface HairAsset { verts: number[]; polys: number[][]; mat: number[]; tris: number[]; weights: number[][]; shave: number[] }
+const HAIRS = HAIR_ASSET as unknown as Record<'male' | 'female', Record<string, HairAsset>>;
 
 /* ---- 3x3 rotations (row-major) and quaternions [w, x, y, z], as lowrig.mjs ------------------------------------- */
 const I3: M3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
@@ -231,9 +241,9 @@ const swordMat = (): number => GARMENT_MAT + GARMENT_COLOURS.length;
 /**
  * One body: its asset, the figure's proportions it is posed with, its height as a share of the base man's, and the
  * garments it can wear (their own bones posed with the body's always, each garment's after the one before; each drawn
- * when the bake is asked for with it worn).
+ * when the bake is asked for with it worn), and its hairstyles.
  */
-function lowBody(A: Asset, P: Proportions, share: number, garments: readonly GarmentAsset[]): { baked: (worn: readonly boolean[], sword?: 'plain' | 'enchanted') => Baked; bones: (pose: FigurePose, worn?: readonly boolean[]) => Float32Array; trail: (pose: FigurePose, lit: boolean) => TrailDraw | undefined; skeleton: Skeleton; held: Held; figure: (pose: FigurePose) => Array<M3 | undefined> } {
+function lowBody(A: Asset, P: Proportions, share: number, garments: readonly GarmentAsset[], hairs: Record<string, HairAsset>): { baked: (worn: readonly boolean[], sword?: 'plain' | 'enchanted', style?: string) => Baked; bones: (pose: FigurePose, worn?: readonly boolean[]) => Float32Array; trail: (pose: FigurePose, lit: boolean) => TrailDraw | undefined; skeleton: Skeleton; held: Held; figure: (pose: FigurePose) => Array<M3 | undefined> } {
   const BONES = A.bones;
   const AT = new Map(BONES.map((b, i) => [b.name, i]));
   for (const g of garments) if (g.base !== BONES.length) throw new Error(`garment for ${g.base} bones on a body of ${BONES.length}`);
@@ -370,11 +380,15 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
 
   const BAKED = new Map<string, Baked>();
   /**
-   * The body, and the garments worn over it, laid out for the GPU in one bake: every polygon its own corners, each with
-   * the polygon's normal, so it is drawn flat; the body's polygons a worn garment covers whole left out.
+   * The body with the hairstyle's hair if it has one, and the garments worn over it, laid out for the GPU in one bake:
+   * every polygon its own corners, each with the polygon's normal, so it is drawn flat; the body's polygons a worn
+   * garment covers whole left out. The hair's vertices follow the body's; its polygons take the hair's material
+   * (`M.hairCut`, three tones; in a valley `M.hairValley` to `M.hairValley4`, its valley's step), the body's shaved
+   * polygons the scalp's (`M.hairUnder`).
    */
-  function lowBaked(worn: readonly boolean[], sword?: 'plain' | 'enchanted'): Baked {
-    const key = `${garments.map((_, k) => (worn[k] ? 1 : 0)).join('')}|${sword ? 'sword' : ''}`, had = BAKED.get(key);
+  function lowBaked(worn: readonly boolean[], sword?: 'plain' | 'enchanted', style = ''): Baked {
+    const hair = hairs[style];
+    const key = `${garments.map((_, k) => (worn[k] ? 1 : 0)).join('')}|${sword ? 'sword' : ''}|${hair ? style : ''}`, had = BAKED.get(key);
     if (had) return had;
     const t0 = performance.now();
     const verts: number[] = [], tris: number[] = [], faceSkin: number[] = [];
@@ -413,9 +427,15 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
       };
       for (let t = 0; t < T3.length; t += 4) { const pi = T3[t + 3]; if (hidden?.has(pi)) continue; tris.push(idx(T3[t], pi), idx(T3[t + 1], pi), idx(T3[t + 2], pi)); }
     };
-    const MATS = [M.skin, M.hair, M.pupil];
+    // the body and the hair as one mesh: its vertices, polygons ([corners, material, outline]), weights and triangles
+    const MATS = [M.skin, M.hair, M.pupil, M.hairUnder, M.hairCut, M.hairValley, M.hairValley2, M.hairValley3, M.hairValley4];
+    const nBody = A.verts.length / 3, nPolys = A.polys.length, shaved = new Set(hair ? hair.shave : []);
+    const allPolys: Array<[number[], number, number[]?]> = A.polys.map(([v, m, nv], pi) => [v, shaved.has(pi) ? 3 : m, nv]);
+    if (hair) hair.polys.forEach((v, j) => allPolys.push([v.map((i) => i + nBody), hair.mat[j]]));
+    const allVerts = hair ? A.verts.concat(hair.verts) : A.verts, allWeights = hair ? A.weights.concat(hair.weights) : A.weights;
+    const allTris = hair ? A.tris.concat(hair.tris.map((x, k) => (k % 4 === 3 ? x + nPolys : x + nBody))) : A.tris;
     const hidden = new Set(garments.flatMap((g, k) => (worn[k] ? g.hides ?? [] : [])));
-    lay(A.verts, A.polys, A.tris, A.weights, (pi) => MATS[A.polys[pi][1]] ?? M.skin, hidden);
+    lay(allVerts, allPolys, allTris, allWeights, (pi) => MATS[allPolys[pi][1]] ?? M.skin, hidden);
     garments.forEach((g, k) => { if (worn[k]) lay(g.verts, g.polys, g.tris, WEIGHTS[k], (pi) => GARMENT_MAT + MATS_OF[k][g.polys[pi][1]]); });
     if (sword) {
       // laid at rest on the right hand's socket, all of it on that hand; its glow's polygons left out
@@ -524,8 +544,8 @@ const GARMENTS: ReadonlyArray<{ man: GarmentAsset; woman: GarmentAsset; wears: (
 ];
 
 const BODIES = {
-  man: lowBody(MALE_ASSET as unknown as Asset, MALE, 1, GARMENTS.map((g) => g.man)),
-  woman: lowBody(FEMALE_ASSET as unknown as Asset, FEMALE, WOMAN_OF_MAN, GARMENTS.map((g) => g.woman)),
+  man: lowBody(MALE_ASSET as unknown as Asset, MALE, 1, GARMENTS.map((g) => g.man), HAIRS.male),
+  woman: lowBody(FEMALE_ASSET as unknown as Asset, FEMALE, WOMAN_OF_MAN, GARMENTS.map((g) => g.woman), HAIRS.female),
 };
 /** The garments' materials after the body's (a colour once, however many garments share it), lit by the body's light in their own colours. */
 const GARMENT_MATS: Material[] = GARMENT_COLOURS.map((colour) => ({ colour, cloth: true }));
@@ -568,6 +588,12 @@ function materialsOf(look: Look, sword: 'plain' | 'enchanted' = 'plain'): Materi
   let out = DRESSED.get(key);
   if (!out) {
     out = [...body];
+    // the hairstyle's hair in three tones of the look's hair colour (a fourth, darker, in its valleys), its shave the
+    // skin toward that colour
+    const hair = body[M.hair].colour;
+    out[M.hairCut] = { colour: hair, ramp: true, noCrease: true };
+    [M.hairValley, M.hairValley2, M.hairValley3, M.hairValley4].forEach((m, i) => { (out as Material[])[m] = { colour: hair, ramp: true, valley: i + 1, noCrease: true }; });
+    out[M.hairUnder] = { colour: hair, shave: true };
     GARMENT_MATS.forEach((m, k) => { (out as Material[])[GARMENT_MAT + k] = m; });
     swordMats(sword).forEach((m, k) => { (out as Material[])[swordMat() + k] = m; });
     if (DRESSED.size > 64) DRESSED.clear();
@@ -585,5 +611,5 @@ export function lowScene(pose: FigurePose): SculptDraw {
   const sword = heldIn(pose) === SWORD.id ? (pose.gear?.weapon?.enchanted ? 'enchanted' : 'plain') : undefined;
   const materials = materialsOf(look, sword), low: LowLight = { sh: SH[who], tone: toneOf(materials), fit: FIT_SKIN };
   const bones = body.bones(pose, worn), trail = sword ? body.trail(pose, sword === 'enchanted') : undefined;
-  return { baked: body.baked(worn, sword), bones, materials, view: viewOf(facing), blink: 0, low, ...(trail ? { trail } : {}) };
+  return { baked: body.baked(worn, sword, hairShown(pose) ? look.hair : ''), bones, materials, view: viewOf(facing), blink: 0, low, ...(trail ? { trail } : {}) };
 }
