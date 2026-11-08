@@ -96,7 +96,8 @@ export interface GarmentAsset {
   soles?: number[];
   /**
    * Its materials plain and enchanted, parallel to `mats` (kind 0 lit by the body's light, 1 unlit, glowing in the
-   * bloom), as the long sword's: without them every material is its colour, lit, in both.
+   * bloom, 2 metal: lit by the light's brightness only, as the long sword's), as the long sword's: without them every
+   * material is its colour, lit, in both.
    */
   plain?: Array<{ c: string; kind: number }>;
   enchanted?: Array<{ c: string; kind: number }>;
@@ -587,8 +588,8 @@ const BODIES = {
   man: lowBody(MALE_ASSET as unknown as Asset, MALE, 1, GARMENTS.map((g) => g.man), HAIRS.male),
   woman: lowBody(FEMALE_ASSET as unknown as Asset, FEMALE, WOMAN_OF_MAN, GARMENTS.map((g) => g.woman), HAIRS.female),
 };
-/** The garments' materials after the body's (each once, however many garments share it): lit by the body's light in their own colours, or unlit (glowing in the bloom). */
-const GARMENT_MATS: Material[] = GARMENT_COLOURS.map((m) => (m.kind === 1 ? { colour: m.c, emissive: true } : { colour: m.c, cloth: true }));
+/** The garments' materials after the body's (each once, however many garments share it): lit by the body's light in their own colours, unlit (glowing in the bloom), or metal (lit by its brightness, as the sword). */
+const GARMENT_MATS: Material[] = GARMENT_COLOURS.map((m) => (m.kind === 1 ? { colour: m.c, emissive: true } : m.kind === 2 ? { colour: m.c, gear: true } : { colour: m.c, cloth: true }));
 /** The sword's materials, plain or enchanted: lit by the body's light by brightness in its own colours, or unlit (and so glowing in the bloom). */
 const SWORD_MATS = { plain: SWORD.plain, enchanted: SWORD.enchanted } as const;
 const swordMats = (which: 'plain' | 'enchanted'): Material[] => SWORD_MATS[which].map((m) => (m.kind === 0 ? { colour: m.c, gear: true } : { colour: m.c, emissive: true }));
