@@ -17,7 +17,7 @@ export async function solveCrown(rounds = 3, fresh = false) {
   const H = carve(), rig = H.rig, body = bodyTris(rig.B);
   const M = Object.fromEntries(style.clumps.map((c) => [c.id, c.m ? [...c.m] : new Array(c.n - 1).fill(1)]));
   const cost = (Mx) => {
-    const hair = buildBraid(rig, { ...style, clumps: style.clumps.map((c) => ({ ...c, m: Mx[c.id] })) }, H);
+    const hair = buildBraid(rig, { ...style, clumps: style.clumps.map((c) => ({ ...c, m: Mx[c.id] })) }, H, { clear: false });
     const d = outlineDiff(hair.tris.map(([a, b, e]) => [hair.verts[a], hair.verts[b], hair.verts[e]]), body);
     let c = 0; for (const [v, x] of Object.entries(d)) c += VW[v] * x.px;
     for (const m of Object.values(Mx)) for (let i = 1; i < m.length; i++) c += SMOOTH * (m[i] - m[i - 1]) ** 2;

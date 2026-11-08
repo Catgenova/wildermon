@@ -48,21 +48,22 @@ export default {
   lines,
   // the crown's clumps: each between two border lines (upper: under the clump above it, its edge tucked; lower: its lip
   // over the next), `n` stations front to back, `taper` how far in from its front end it narrows to a point (share of
-  // the length; its back end blunt, along the seam), and `lift`: its lip's height, a share of the hull's thickness there
+  // the length; its back end blunt, along the seam), `lift`: its lip's height, a share of the hull's thickness there, and
+  // `groove`: the depth of the valley under its lip (the shade's step, darkest at 0.85 and over)
   clumps: withFit([
-    { id: 'r1', upper: 'crown', lower: 'r1', n: 7, taper: [0.2, 0], lift: 1.0 },
-    { id: 'r2', upper: 'r1', lower: 'r2', n: 7, taper: [0.2, 0], lift: 0.95 },
-    { id: 'r3', upper: 'r2', lower: 'r3', n: 8, taper: [0.16, 0], lift: 0.9 },
-    { id: 'r4', upper: 'r3', lower: 'r4', n: 8, taper: [0.12, 0], lift: 0.85 },
-    { id: 'l1', upper: 'crown', lower: 'l1', n: 7, taper: [0.2, 0], lift: 1.0 },
-    { id: 'l2', upper: 'l1', lower: 'l2', n: 7, taper: [0.2, 0], lift: 0.95 },
-    { id: 'l3', upper: 'l2', lower: 'l3', n: 8, taper: [0.16, 0], lift: 0.9 },
-    { id: 'l4', upper: 'l3', lower: 'l4', n: 8, taper: [0.12, 0], lift: 0.85 },
+    { id: 'r1', upper: 'crown', lower: 'r1', n: 7, taper: [0.2, 0], lift: 1.0, groove: 1.0 },
+    { id: 'r2', upper: 'r1', lower: 'r2', n: 7, taper: [0.2, 0], lift: 1.0, groove: 0.95 },
+    { id: 'r3', upper: 'r2', lower: 'r3', n: 9, taper: [0.16, 0], lift: 1.0, groove: 0.85 },
+    { id: 'r4', upper: 'r3', lower: 'r4', n: 9, taper: [0.12, 0], lift: 1.0, groove: 0.7 },
+    { id: 'l1', upper: 'crown', lower: 'l1', n: 7, taper: [0.2, 0], lift: 1.0, groove: 1.0 },
+    { id: 'l2', upper: 'l1', lower: 'l2', n: 7, taper: [0.2, 0], lift: 1.0, groove: 0.95 },
+    { id: 'l3', upper: 'l2', lower: 'l3', n: 9, taper: [0.16, 0], lift: 1.0, groove: 0.85 },
+    { id: 'l4', upper: 'l3', lower: 'l4', n: 9, taper: [0.12, 0], lift: 1.0, groove: 0.7 },
   ]),
   // a clump's cross-section, its upper border (-0.5) to its lower (0.5): [across, height] (height a share of the hull's
   // thickness; 'root' a corner sunk in the scalp); the upper edge tucked under the clump above, the lower a lip standing
   // over the next clump, the face under the lip its valley
-  sec: [[-0.62, 'root'], [-0.54, 0.55], [-0.05, 1.02], [0.45, 1], [0.58, 0.72], [0.5, 'root']],
+  sec: [[-0.68, 'root'], [-0.6, 0.7], [-0.12, 1.06], [0.4, 1.04], [0.62, 0.8], [0.55, 'root']],
   // the braid: its spine (her body's units, from behind her right ear down over the shoulder onto the chest), its
   // segments' starts along it (shares of its length; then the tie, then the tip), their half-widths across (deep:
   // `depth` of that), the tip's a share of the last segment's
@@ -76,6 +77,13 @@ export default {
     // each body's own, fitted
     fits: SPINE,
   },
+  // the locks over the sides behind the ears (the sheet's mass, wider than the ears seen from the front): each a broad
+  // lock along a path (her units) from over the ear down behind it to the nape (her left) or the braid's root (her
+  // right), its half-width and half-thickness
+  locks: [
+    { id: 'sideL', lock: true, n: 6, path: [[0.78, 1.34, -0.08], [0.86, 1.04, -0.26], [0.78, 0.74, -0.42], [0.56, 0.52, -0.58]], w: 0.2, t: 0.13 },
+    { id: 'sideR', lock: true, n: 6, path: [[-0.78, 1.34, -0.1], [-0.88, 1.02, -0.28], [-0.8, 0.72, -0.44], [-0.6, 0.47, -0.58]], w: 0.2, t: 0.14 },
+  ],
   // the face strands: each a wavy path (her body's units, from its root under the clumps at the temple), its width and
   // thickness tapering to the tip
   strands: [
