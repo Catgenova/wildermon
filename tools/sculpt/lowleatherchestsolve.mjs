@@ -146,8 +146,9 @@ export async function solve() {
         const topAt = (a) => { const ys = cells.filter((c, i) => Math.abs(A[i] - a) <= 4.5).map((c) => c.y); return ys.length >= 2 ? Math.max(...ys) : null; };
         const mine = plates.filter((p) => p.name === name);
         if (name === 'skirt.f' || name === 'skirt.b') {
-          const half = Math.min(22, Math.max(12, hi)), c0 = name === 'skirt.f' ? 0 : 180, f = fill([footAt(half * 0.9), footAt(0)]);
-          mine[0].az = [c0 - half, c0, c0 + half].map(r3); mine[0].bottom = [f[0], f[1], f[0]].map(r3);
+          // (a tongue pointed as drawn: its tip the lowest of its cells, its corners a third of its width higher)
+          const half = Math.min(22, Math.max(12, hi)), c0 = name === 'skirt.f' ? 0 : 180, tip = Math.min(...cells.map((c) => c.y)), corner = tip + (2 * half * Math.PI / 180) * 1.8 / 3;
+          mine[0].az = [c0 - half, c0, c0 + half].map(r3); mine[0].bottom = [corner, tip, corner].map(r3);
         } else {
           // (three plates round the span, overlapping by 4 degrees; each one's foot at its columns)
           const w = (hi - lo) / 3;

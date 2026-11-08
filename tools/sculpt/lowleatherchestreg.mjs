@@ -163,6 +163,32 @@ for (const who of ['male', 'female']) {
   C.sx = ratios(0, ['front', 'back']); C.sz = depthRatios();
   fitCams(); fitViews();
   C.sx = ratios(0, ['front', 'back']); C.sz = depthRatios();
+  // the arms' thickness: in the front and back views, per row down the bracer and the band, the sheet's across over our
+  // forearm's across (the review pose's skin of that arm in that row) plus the bracer's clearance and leather, the median
+  {
+    const ks = [];
+    for (const v of ['front', 'back']) {
+      const S = sheetLabels(who, v), { PB } = reviewVerts(rig, null, { ...C, sa: 1 }, v);
+      for (const s of ['l', 'r']) {
+        const labs = new Set([`bracer.${s}`, `band.${s}`].map((n) => PIECES.indexOf(n) + 1)), side = (s === 'l') === (v === 'front') ? 1 : -1;
+        const arm = PB.map((p, i) => [p, i]).filter(([, i]) => rig.B.part[i] === 'arm' && Math.sign(rig.B.verts[i][0]) === (s === 'l' ? 1 : -1)).map(([p]) => proj(p, C, v));
+        for (let y = 0; y < S.H; y++) {
+          let x0 = -1, x1 = -1;
+          for (let x = 0; x < S.W; x++) if (labs.has(S.L[y * S.W + x])) { if (x0 < 0) x0 = x; x1 = x; }
+          if (x0 < 0 || x1 - x0 < 4) continue;
+          const row = S.y0 + y + 0.5, sl = arm.filter((q) => Math.abs(q[1] - row) < 1.5);
+          if (sl.length < 4) continue;
+          const ours = Math.max(...sl.map((q) => q[0])) - Math.min(...sl.map((q) => q[0])) + 2 * C.s * (DES.bracer.c[1] + DES.rim.t);
+          ks.push((x1 - x0 + 1) / ours);
+          void side;
+        }
+      }
+    }
+    ks.sort((a, b) => a - b);
+    // (held between 0.7 and 1: a few rows of a thin mask read too slim)
+    C.sa = ks.length >= 20 ? +Math.max(0.7, Math.min(1, ks[Math.floor(ks.length / 2)])).toFixed(3) : 1;
+    console.log('  arm thickness sa', C.sa, 'from', ks.length, 'rows');
+  }
   fitCams(); fitViews();
   C.s = +C.s.toFixed(4); C.cy = +C.cy.toFixed(3);
   for (const v of VIEWS) C.views[v] = { yaw: +C.views[v].yaw.toFixed(2), cx: +C.views[v].cx.toFixed(3), dp: C.views[v].dp, dl: C.views[v].dl };

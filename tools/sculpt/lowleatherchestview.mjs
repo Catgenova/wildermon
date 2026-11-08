@@ -9,7 +9,8 @@
 //   the review pose: the sheet's arms (each upper arm out by `abd` and forward by `flex`, each elbow bent by `elbow` and
 //   its forearm turned out by `fadd`, degrees, both sides alike; each view its own correction `dp` and arm lengths `dl`);
 //   the sheet's body: a 3D map on top of the pose, x by sx(y) and z by sz(y) (piecewise linear in the body's y) on the
-//   trunk, each arm moved with its shoulder; a vertex takes each bone's map by its weight.
+//   trunk, each arm moved with its shoulder and its
+//   thickness about its bone scaled by sa; a vertex takes each bone's map by its weight.
 //
 // Also a small rasteriser (flat-shaded triangles with depth, a piece label per pixel) and the sheet's pieces
 // (tools/sculpt/leather/chest-masks.json) as label images per view.
@@ -78,7 +79,17 @@ export function bodyMap(rig, C, f, view = null) {
     d[s] = { upper: d0, fore: d1, hand: d2 };
   }
   const seg = (n) => (/^(upperarm|shoulder)/.test(n) ? 'upper' : /^(lowerarm|elbow)/.test(n) ? 'fore' : 'hand');
-  const per = rig.bones.map((b) => { const m = b.name.match(/_(l|r)$/); if (!(ARM.test(b.name) && m)) return trunk; const t = d[m[1]][seg(b.name)]; return (p) => [p[0] + t[0], p[1] + t[1], p[2] + t[2]]; });
+  // (and the limb thinner or thicker about its own bone, `sa`: the sheet's arms are drawn slimmer than ours)
+  const sa = C.sa ?? 1;
+  const axisOf = (s, g) => (g === 'upper' ? [P(`upperarm_${s}`), P(`lowerarm_${s}`)] : g === 'fore' ? [P(`lowerarm_${s}`), P(`hand_${s}`)] : null);
+  const per = rig.bones.map((b) => {
+    const m = b.name.match(/_(l|r)$/);
+    if (!(ARM.test(b.name) && m)) return trunk;
+    const g = seg(b.name), t = d[m[1]][g], ax = axisOf(m[1], g);
+    if (!ax || sa === 1) return (p) => [p[0] + t[0], p[1] + t[1], p[2] + t[2]];
+    const [A, Bq] = ax, u = (() => { const v = [Bq[0] - A[0], Bq[1] - A[1], Bq[2] - A[2]], l = Math.hypot(...v); return v.map((x) => x / l); })();
+    return (p) => { const r = [p[0] - A[0], p[1] - A[1], p[2] - A[2]], k = r[0] * u[0] + r[1] * u[1] + r[2] * u[2]; return [0, 1, 2].map((j) => A[j] + k * u[j] + sa * (r[j] - k * u[j]) + t[j]); };
+  });
   return (p, w) => { let x = 0, y = 0, z = 0; for (const [bi, ww] of w) { const q = per[bi](p); x += ww * q[0]; y += ww * q[1]; z += ww * q[2]; } return [x, y, z]; };
 }
 /**

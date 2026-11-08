@@ -88,8 +88,8 @@ export const DESIGN = {
       ],
     },
     pauldron: {
-      lift: -0.08, inset: 0.0, pole: 0.25, near: 1.1, round: 0.25, inner: 0.35, cols: 12, phi0: 16, phi: [62, 96, 62, 40], rows: [0, 0.5, 1], c: [0.06, 0.12, 0.16], cone: 34,
-      zig: { f: [0.5, 0.9], n: 5 },
+      lift: 0.1, inset: 0.1, pole: 0.2, near: 1.2, round: 0.3, inner: 0.5, cols: 12, phi0: 12, phi: [72, 125, 72, 45], footY: [-1.72, -1.78, -1.68], rows: [0, 0.5, 1], c: [0.05, 0.1, 0.14], cone: 34,
+      zig: { f: [0.3, 0.8], n: 6, psi: [-40, 230] },
       lames: [{ t: [0.42, 0.95], c: [0.14, 0.22], th: [-40, 220] }, { t: [0.8, 1.32], c: [0.1, 0.17], th: [-50, 230] }],
     },
     sleeve: { rings: [['$torso', 0.02], ['ja', 0.025], ['jb', 0.028], ['ua', 0.028], ['uc', 0.028], ['ue', 0.028], ['el', 0.032], ['fa', 0.032]] },
@@ -122,8 +122,8 @@ export const DESIGN = {
       ],
     },
     pauldron: {
-      lift: -0.06, inset: 0.0, pole: 0.25, near: 0.95, round: 0.25, inner: 0.35, cols: 12, phi0: 16, phi: [60, 92, 60, 40], rows: [0, 0.5, 1], c: [0.05, 0.1, 0.14], cone: 34,
-      zig: { f: [0.5, 0.9], n: 5 },
+      lift: 0.08, inset: 0.08, pole: 0.2, near: 1.0, round: 0.3, inner: 0.5, cols: 12, phi0: 12, phi: [70, 120, 70, 45], footY: [-1.5, -1.55, -1.48], rows: [0, 0.5, 1], c: [0.045, 0.09, 0.12], cone: 34,
+      zig: { f: [0.3, 0.8], n: 6, psi: [-40, 230] },
       lames: [{ t: [0.36, 0.8], c: [0.11, 0.18], th: [-40, 220] }, { t: [0.68, 1.12], c: [0.08, 0.14], th: [-50, 230] }],
     },
     sleeve: { rings: [['$torso', 0.018], ['ja', 0.022], ['jb', 0.025], ['ua', 0.025], ['uc', 0.025], ['ue', 0.025], ['el', 0.028], ['fa', 0.028]] },
@@ -346,10 +346,12 @@ function onPlate(pl, p, out) {
 /** A point on a plate's grid at fractional row rf and column cf (bilinear), laid on its face. */
 function gridAt(pl, rf, cf) {
   const R = pl.rows.length - 1, n = pl.rows[0].length;
-  const r0 = Math.max(0, Math.min(R - 1, Math.floor(rf))), c0 = Math.max(0, Math.min(n - 2, Math.floor(cf)));
+  // (a ring's columns wrap round)
+  if (pl.ring) cf = ((cf % n) + n) % n;
+  const r0 = Math.max(0, Math.min(R - 1, Math.floor(rf))), c0 = pl.ring ? Math.floor(cf) % n : Math.max(0, Math.min(n - 2, Math.floor(cf))), c1 = pl.ring ? (c0 + 1) % n : c0 + 1;
   const u = rf - r0, v = cf - c0, P = pl.rows;
-  const p = lerp(lerp(P[r0][c0], P[r0][c0 + 1], v), lerp(P[r0 + 1][c0], P[r0 + 1][c0 + 1], v), u);
-  const nn = unit(lerp(lerp(pl.N[r0][c0], pl.N[r0][c0 + 1], v), lerp(pl.N[r0 + 1][c0], pl.N[r0 + 1][c0 + 1], v), u));
+  const p = lerp(lerp(P[r0][c0], P[r0][c1], v), lerp(P[r0 + 1][c0], P[r0 + 1][c1], v), u);
+  const nn = unit(lerp(lerp(pl.N[r0][c0], pl.N[r0][c1], v), lerp(pl.N[r0 + 1][c0], pl.N[r0 + 1][c1], v), u));
   return onPlate(pl, p, nn);
 }
 
@@ -774,8 +776,21 @@ function armPieces(G, rig, D, S) {
       return add(centre, mul(d, Math.max(H.r[r][k], reach(d) + D.fit.arm + 0.02)));
     }));
   } else {
+    // (the foot per column: with `footY` [front, out, back], the φ where the cap comes down to that height, the inside
+    // (toward the neck) at its φ of `phi`; else phiMax)
+    const footPhi = (psi) => {
+      if (!Pd.footY) return phiMax(psi);
+      const t = psi * Math.PI / 180, c = Math.cos(t), sn = Math.sin(t), [yf, yo, yb] = Pd.footY;
+      if (sn < -0.35) return phiMax(psi);
+      const want = (c > 0 ? yf * c * c : yb * c * c) + yo * Math.max(0, sn) ** 2 + (sn < 0 ? ((c > 0 ? yf : yb) * sn * sn) : 0);
+      let ph = Pd.phi0;
+      for (; ph < 150; ph += 1) { const d = dirAt(psi * outSign, ph), p = add(centre, mul(d, reach(d) + Pd.c[2])); if (p[1] <= want) break; }
+      // (blended toward phiMax on the inside)
+      const w = sn < 0 ? Math.min(1, -sn / 0.35) : 0;
+      return Math.min(phiMax(psi), ph * (1 - w) + phiMax(psi) * w);
+    };
     capRows = Pd.rows.map((f, r) => psis.map((psi) => {
-      const ps = psi * outSign, phi = Pd.phi0 + (phiMax(psi) - Pd.phi0) * f, d = dirAt(ps, phi);
+      const ps = psi * outSign, phi = Pd.phi0 + (footPhi(psi) - Pd.phi0) * f, d = dirAt(ps, phi);
       const o = Math.max(0, Math.sin(psi * Math.PI / 180)), k = Pd.inner + (1 - Pd.inner) * o;
       return add(centre, mul(d, reach(d) + Pd.c[r] * k));
     }));
@@ -802,13 +817,16 @@ function armPieces(G, rig, D, S) {
   // its zig-zag: trim teeth pointing up from the cap's foot, round its outside (front, out and back)
   {
     const Z = Pd.zig, nR = capRows.length - 1, q0 = G.polys.length;
-    const teeth = Z.n, ps0 = 0, ps1 = psiN * 0.62, dps = (ps1 - ps0) / teeth;
+    const teeth = Z.n, ps0 = psiN * (Z.psi[0] / 360), ps1 = psiN * (Z.psi[1] / 360), dps = (ps1 - ps0) / teeth;
     const at = (rf, cf) => { const h = gridAt(cap, rf * nR, cf); return add(h.q, mul(h.n, 0.022)); };
     const V = (p) => { const i = G.vert(p, 'zigzag'); G.wt[i] = cap.wt; return i; };
     G.tag = 'zigzag';
     for (let k = 0; k < teeth; k++) {
       const c0 = ps0 + k * dps, c1 = c0 + dps;
-      G.poly([V(at(0.97, c0)), V(at(Z.f[1], c0)), V(at(Z.f[0], (c0 + c1) / 2)), V(at(Z.f[1], c1)), V(at(0.97, c1))], 'trim', 'zigzag');
+      // (a tooth: a triangle up from the band, and the band under it down to the cap's foot)
+      const b0 = V(at(Z.f[1], c0)), b1 = V(at(Z.f[1], c1));
+      G.poly([b0, V(at(Z.f[0], (c0 + c1) / 2)), b1], 'trim', 'zigzag');
+      G.poly([V(at(0.97, c0)), V(at(Z.f[1], c0)), V(at(Z.f[1], c1)), V(at(0.97, c1))], 'trim', 'zigzag');
     }
     piece(G, q0, () => [0, 1, 0]);
     for (let k = q0; k < G.polys.length; k++) { const p = G.polys[k]; const c = mul(p.v.reduce((s, i) => add(s, G.verts[i]), [0, 0, 0]), 1 / p.v.length); if (dot(newellOf(G, p.v), sub(c, centre)) < 0) p.v.reverse(); }
