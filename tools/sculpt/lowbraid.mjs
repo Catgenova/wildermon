@@ -11,7 +11,7 @@
 //   node tools/sculpt/lowbraid.mjs [--hull] [--who female,male]   # counts, checks and the outline difference per view
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { buildRig, add, sub, mul, dot, cross, unit, lerp, posed, skin } from './lowrig.mjs';
+import { buildRig, add, sub, mul, dot, cross, unit, lerp, posed, skin, mm, tr, axisAngle, armsOut, tuneOf } from './lowrig.mjs';
 import { project, raster, skullTable, centreOf, dirOf, angOf } from './lowhairhull.mjs';
 import { shadeOf, openEdges, crossings, skinHair } from './lowhair.mjs';
 import BRAID from './hairs/braid.mjs';
@@ -103,6 +103,29 @@ export function carve({ who = 'female', vox = 0.03, grow = 3, need = 5, rig = bu
     if (kept >= need) solid[idx] = 1;
   }
   return { solid, lo, n, vox, rig };
+}
+
+/** A grid's signed distance (its solid voxels negative), in head units: a chamfer transform (two passes over the 26
+ * neighbours) each way. */
+export function signedDistance(I, n, vox) {
+  const [nx, ny, nz] = n, N = nx * ny * nz, BIG = 1e9;
+  const pass = (solid) => {
+    const D = new Float32Array(N);
+    for (let i = 0; i < N; i++) D[i] = I[i] === solid ? 0 : BIG;
+    const nb = []; for (let c = -1; c <= 1; c++) for (let b = -1; b <= 1; b++) for (let a = -1; a <= 1; a++) if (c < 0 || (c === 0 && (b < 0 || (b === 0 && a < 0)))) nb.push([a, b, c, Math.hypot(a, b, c)]);
+    for (const dir of [1, -1]) {
+      for (let k = dir > 0 ? 0 : nz - 1; dir > 0 ? k < nz : k >= 0; k += dir) for (let j = dir > 0 ? 0 : ny - 1; dir > 0 ? j < ny : j >= 0; j += dir) for (let i = dir > 0 ? 0 : nx - 1; dir > 0 ? i < nx : i >= 0; i += dir) {
+        const id = i + nx * (j + ny * k); let d = D[id];
+        if (!d) continue;
+        for (const [a, b, c, w] of nb) { const X = i + a * dir, Y = j + b * dir, Z = k + c * dir; if (X < 0 || Y < 0 || Z < 0 || X >= nx || Y >= ny || Z >= nz) continue; const q = D[X + nx * (Y + ny * Z)] + w; if (q < d) d = q; }
+        D[id] = d;
+      }
+    }
+    return D;
+  };
+  const out = pass(1), inn = pass(0), S = new Float32Array(N);
+  for (let i = 0; i < N; i++) S[i] = (I[i] ? -(inn[i] - 0.5) : out[i] - 0.5) * vox;
+  return S;
 }
 
 /** Which voxel centres lie inside the body's closed triangles: per (x, y) column the crossings along z, inside between
@@ -203,6 +226,19 @@ function even(pts, n) {
   });
 }
 
+/** The head turned 70 degrees each way and nodded 40 (tools/sculpt/lowhairshot.mjs's poses): the braid kept clear of the
+ * body in each. */
+export const POSES = { 'turn left': { neck_01: [0, 16, 0], neck_02: [0, 16, 0], head: [0, 38, 0] }, 'turn right': { neck_01: [0, -16, 0], neck_02: [0, -16, 0], head: [0, -38, 0] }, nod: { neck_01: [12, 0, 0], neck_02: [14, 0, 0], head: [14, 0, 0] } };
+/** The arms forward and out (tools/sculpt/lowrigshot.mjs's poses; hers turned out as the game's walk keeps them:
+ * lowrig.mjs armsOut): the braid on the shoulder kept clear of them. */
+export function armPoses(rig) {
+  const { bones, at } = rig, X = [1, 0, 0], Y = [0, 1, 0], Z = [0, 0, 1], I = [1, 0, 0, 0, 1, 0, 0, 0, 1];
+  const W = (bone, axis, deg) => { const R = bones[at.get(bone)].R; return mm(tr(R), mm(axisAngle(axis, deg), R)); };
+  const symW = (p, bone, axis, deg) => { p[`${bone}_l`] = mm(W(`${bone}_l`, axis, deg), p[`${bone}_l`] ?? I); p[`${bone}_r`] = mm(W(`${bone}_r`, [-axis[0], axis[1], axis[2]], -deg), p[`${bone}_r`] ?? I); return p; };
+  const out = { 'arms forward': symW(symW(symW({}, 'clavicle', Y, -14), 'upperarm', X, -84), 'upperarm', Y, -2), 'arms out': symW(symW({}, 'upperarm', Z, 74), 'lowerarm', Z, 10) };
+  if (tuneOf(rig.who).GAME.armSwing) for (const k of Object.keys(out)) out[k] = armsOut(rig, out[k]);
+  return out;
+}
 const MIN_H = 0.03, NAPE = 248, SINK = 0.04, LIFT = 0.05, CACHE = new WeakMap(), MAPS = new WeakMap();
 
 /**
@@ -248,7 +284,7 @@ export function buildBraid(rig, style = BRAID, H = carve(), { clear = true } = {
   // links
   const cl = style.braid.crownLinks;
   let linkWay = null, dip = null;
-  const place = (d, w) => { const m = mapOfDir(d); return add(C, mul(d, MAPS.get(B).at(m) + Math.max(0.05, MAPS.get(H).at(m)) * k + w)); };
+  const place = (d, w) => { const m = mapOfDir(d), r0 = MAPS.get(B).at(m); return add(C, mul(d, Math.max(r0 + 0.03 * k, r0 + Math.max(0.05, MAPS.get(H).at(m)) * k + w))); };
   if (cl) {
     const { lines: CL, seam: SM } = composeLines(style.crown), Pt = CL.part, x = Math.min(Pt.length - 1.001, cl.start * (Pt.length - 1)), i0 = Math.floor(x);
     const m0 = [0, 1].map((c) => Pt[i0][c] + (Pt[i0 + 1][c] - Pt[i0][c]) * (x - i0));
@@ -264,22 +300,60 @@ export function buildBraid(rig, style = BRAID, H = carve(), { clear = true } = {
 
   // the braid (tools/sculpt/lowbraidbraid.mjs): its root on the crown's seam end, on this body
   const seamEnd = composeLines(style.crown).seam.at(-1), dR = dirOfMap(seamEnd), skR = MAPS.get(B).at(seamEnd);
+  // (the body's inside on a grid, at rest and in the head's turns and nod (POSES): each closed shell's own (the ears,
+  // the brows, the lids and the pupils apart from the skin), so that one inside another does not undo it)
   if (!MAPS.has(rig.B.verts)) {
     const lo = [-1.6, -2.4, -1.4], vox = 0.03, n = [Math.ceil(3.2 / vox), Math.ceil(4.2 / vox), Math.ceil(3 / vox)];
-    MAPS.set(rig.B.verts, { lo, vox, n, I: bodyInside(bodyTris(B), lo, n, vox) });
+    const shells = B.tris.map((t) => { const p = B.polys[t.poly]; return ['head', 'neck', 'torso'].includes(p.part) ? (p.ear ? 'ear' : p.mat) : null; });
+    const grids = Object.entries({ rest: {}, ...POSES, ...armPoses(rig) }).map(([name, pose]) => {
+      const f = posed(rig, pose), Pp = name === 'rest' ? B.verts : skin(rig, f), I = new Uint8Array(n[0] * n[1] * n[2]);
+      for (const sh of new Set(shells.filter(Boolean))) {
+        const g = bodyInside(B.tris.filter((_, i) => shells[i] === sh).map((t) => t.v.map((i) => Pp[i])), lo, n, vox);
+        for (let i = 0; i < I.length; i++) I[i] |= g[i];
+      }
+      return { name, f, I };
+    });
+    MAPS.set(rig.B.verts, { lo, vox, n, grids, sdf: signedDistance(grids[0].I, n, vox) });
   }
-  const BI = MAPS.get(rig.B.verts), inside = (p) => {
-    // (inside the body or within a voxel and a half of its skin)
+  const BI = MAPS.get(rig.B.verts);
+  // (the body's signed distance at rest, trilinear (negative inside), and the way out of it)
+  const sdf = (p) => {
+    const x = (p[0] - BI.lo[0]) / BI.vox - 0.5, y = (p[1] - BI.lo[1]) / BI.vox - 0.5, z = (p[2] - BI.lo[2]) / BI.vox - 0.5;
+    const i = Math.max(0, Math.min(BI.n[0] - 2, Math.floor(x))), j = Math.max(0, Math.min(BI.n[1] - 2, Math.floor(y))), kk = Math.max(0, Math.min(BI.n[2] - 2, Math.floor(z)));
+    const fx = Math.min(1, Math.max(0, x - i)), fy = Math.min(1, Math.max(0, y - j)), fz = Math.min(1, Math.max(0, z - kk)), D = BI.sdf, nx = BI.n[0], ny = BI.n[1];
+    let v = 0;
+    for (const [a, b, c] of [[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 1], [1, 0, 1], [0, 1, 1], [1, 1, 1]]) v += D[i + a + nx * (j + b + ny * (kk + c))] * (a ? fx : 1 - fx) * (b ? fy : 1 - fy) * (c ? fz : 1 - fz);
+    return v;
+  };
+  const away = (p) => unit([0, 1, 2].map((c) => { const e = [0, 0, 0]; e[c] = 0.04; return sdf(add(p, e)) - sdf(sub(p, e)); }));
+  // (a braid point, its share s down the braid, inside the body or within a voxel and a half of its skin: in how many of
+  // the poses, carried by the braid's weights there)
+  const at3 = (G, p) => {
     for (const d of [[0, 0, 0], [1.5, 0, 0], [-1.5, 0, 0], [0, 0, 1.5], [0, 0, -1.5], [0, 1.5, 0], [0, -1.5, 0]]) {
       const i = Math.floor((p[0] - BI.lo[0]) / BI.vox + d[0]), j = Math.floor((p[1] - BI.lo[1]) / BI.vox + d[1]), kk = Math.floor((p[2] - BI.lo[2]) / BI.vox + d[2]);
-      if (i >= 0 && j >= 0 && kk >= 0 && i < BI.n[0] && j < BI.n[1] && kk < BI.n[2] && BI.I[i + BI.n[0] * (j + BI.n[1] * kk)]) return true;
+      if (i >= 0 && j >= 0 && kk >= 0 && i < BI.n[0] && j < BI.n[1] && kk < BI.n[2] && G[i + BI.n[0] * (j + BI.n[1] * kk)]) return true;
     }
     return false;
+  };
+  const inside = (p, s = 0) => {
+    let c = 0;
+    const W = weightOf(s, 'braid', style.braid.weights);
+    for (const g of BI.grids) {
+      let q = p;
+      if (g.name !== 'rest') {
+        q = [0, 0, 0];
+        for (const [bn, w] of W) { const bi = rig.at.get(bn), F = g.f[bi], S = F.S, v = sub(p, rig.bones[bi].head); q = add(q, mul(add([S[0] * v[0] + S[1] * v[1] + S[2] * v[2], S[3] * v[0] + S[4] * v[1] + S[5] * v[2], S[6] * v[0] + S[7] * v[1] + S[8] * v[2]], F.P), w)); }
+      }
+      if (at3(g.I, q)) c++;
+    }
+    return c;
   };
   // its first links on the crown (addCrownLinks), along the links' way laid out before the crown
   if (linkWay) addCrownLinks(cl, linkWay.map((m) => place(dirOfMap(m), 0)), { V, poly: (v, sh) => polys.push({ v, piece: pieces.length, ...sh }), piece, place, C, k, sheetScale: CAMS.front.s, names: cl.links.map((_, j) => `heart${j + 1}`) });
   addBraid(style.braid, { ...SPINE, rows: [...SPINE.rows] }, { inside, V, poly: (v, sh) => polys.push({ v, piece: pieces.length, ...sh }), piece, toBody, k, sheetScale: CAMS.front.s,
-    root: add(C, mul(dR, skR + 0.5 * MAPS.get(H).at(seamEnd) * k)), first: cl ? cl.links.length : 0 });
+    root: linkWay ? place(dirOfMap(linkWay[Math.round(cl.join * (linkWay.length - 1))]), 0) : add(C, mul(dR, skR + 0.5 * MAPS.get(H).at(seamEnd) * k)),
+    rootDir: linkWay ? unit(sub(place(dirOfMap(linkWay.at(-1)), 0), place(dirOfMap(linkWay[Math.round(0.6 * (linkWay.length - 1))]), 0))) : null,
+    sdf, away, first: cl ? cl.links.length : 0 });
 
   // the face strands: a flat lock along a wavy path, its tip a point
   // (and the locks over the sides behind the ears: the same, broader, a hexagon round their path, on the head)
@@ -325,7 +399,7 @@ export function buildBraid(rig, style = BRAID, H = carve(), { clear = true } = {
     if (!hits.length) break;
     for (const v of new Set(hits.flatMap(([hp]) => polys[hp].v))) verts[v] = add(verts[v], mul(unit(sub(verts[v], C)), 0.005 * k));
   }
-  const weights = verts.map((_, i) => weightOf(role[i], pieces.find((pc) => i >= pc.verts[0] && i < pc.verts[1]).kind));
+  const weights = verts.map((_, i) => weightOf(role[i], pieces.find((pc) => i >= pc.verts[0] && i < pc.verts[1]).kind, style.braid.weights));
   const scalp = scalpOf(B, C, verts, polys, tris, pieces);
   return { verts, polys, tris, weights, pieces, shave: scalp, scalp, centre: C, k };
 }
@@ -403,12 +477,16 @@ function orient(verts, polys, pieces) {
 }
 
 /** A vertex's bones: the crown, the strands and the braid's root on the head; down the braid (s, its share of the
- * spine's length) the neck, then the chest and the right clavicle. */
-export function weightOf(s, kind) {
+ * spine's length) the neck (head to neck_02 to neck_01 to the body over W.neck's four shares), then the right clavicle
+ * and the chest (W.shoulder, W.chest). */
+export function weightOf(s, kind, W = { neck: [0.2, 0.38, 0.54, 0.7], shoulder: [0.7, 0.7], chest: 0.6 }) {
   if (kind === 'clump' || kind === 'strand') return [['head', 1]];
   const ramp = (x, a, b) => Math.min(1, Math.max(0, (x - a) / (b - a)));
-  const h = 1 - ramp(s, 0.2, 0.38), n2 = ramp(s, 0.2, 0.38) * (1 - ramp(s, 0.38, 0.54)), n1 = ramp(s, 0.38, 0.54) * (1 - ramp(s, 0.54, 0.7)), ch = ramp(s, 0.54, 0.7);
-  return [['head', h], ['neck_02', n2], ['neck_01', n1], ['spine_03', ch * 0.6], ['clavicle_r', ch * 0.4]].filter(([, w]) => w > 1e-4);
+  const [a, b, c, d] = W.neck, h = 1 - ramp(s, a, b), n2 = ramp(s, a, b) * (1 - ramp(s, b, c)), n1 = ramp(s, b, c) * (1 - ramp(s, c, d)), ch = ramp(s, c, d);
+  // (the body's share: on the shoulder (from W.shoulder[0]) the clavicle's half, over the chest (by W.shoulder[1])
+  // the chest's W.chest)
+  const sp = W.shoulder[1] > W.shoulder[0] ? 0.5 + (W.chest - 0.5) * ramp(s, W.shoulder[0], W.shoulder[1]) : W.chest;
+  return [['head', h], ['neck_02', n2], ['neck_01', n1], ['spine_03', ch * sp], ['clavicle_r', ch * (1 - sp)]].filter(([, w]) => w > 1e-4);
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
@@ -424,8 +502,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const rig = who === 'female' ? H.rig : buildRig(who), hair = buildBraid(rig, BRAID, H);
     const rest = crossReport(rig, hair);
     console.log(who, 'tris', hair.tris.length, 'pieces', hair.pieces.length, hair.pieces.map((p) => `${p.id}:${p.polys[1] - p.polys[0]}`).join(' '), 'open edges', openEdges(hair), 'crossings at rest', JSON.stringify(rest));
-    // the head turned 70 degrees each way and nodded 40 (tools/sculpt/lowhairshot.mjs's poses)
-    const POSES = { 'turn left': { neck_01: [0, 16, 0], neck_02: [0, 16, 0], head: [0, 38, 0] }, 'turn right': { neck_01: [0, -16, 0], neck_02: [0, -16, 0], head: [0, -38, 0] }, nod: { neck_01: [12, 0, 0], neck_02: [14, 0, 0], head: [14, 0, 0] } };
+    // the head turned 70 degrees each way and nodded 40 (POSES)
     console.log(who, 'crossings posed', Object.entries(POSES).map(([n, pose]) => { const f = posed(rig, pose); const r = crossReport(rig, hair, skin(rig, f), skinHair(rig, hair, f)); return `${n} ${JSON.stringify({ face: r.face, neck: r.neck, torso: r.torso, ...r.byPiece })}`; }).join('; '));
     if (who === 'female') console.log('outline difference (sheet px):', Object.entries(outlineDiff(hair.tris.map(([a, b, c]) => [hair.verts[a], hair.verts[b], hair.verts[c]]), bodyTris(rig.B))).map(([v, d]) => `${v} ${d.px}`).join(', '));
   }

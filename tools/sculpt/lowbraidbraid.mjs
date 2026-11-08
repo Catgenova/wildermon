@@ -46,12 +46,18 @@ export function triangulate(FROM = 215, TO = 395, STEP = 10) {
 /** A heart's outline, across (u, her right to her left as seen from the front: -0.5 to 0.5) and down (v: 0 its top, 1 its
  * point): the notch, the right lobe, its side, the point, the left. */
 const OUTLINE = [[0, 0.13], [0.24, -0.02], [0.47, 0.18], [0.43, 0.48], [0.22, 0.8], [0, 1], [-0.22, 0.8], [-0.43, 0.48], [-0.47, 0.18], [-0.24, -0.02]];
-const DEPTH = 0.5, INSIDE = 5, BEND = 60, HOME = 6;
+/** Catmull-Rom through points, at u in [0, 1] over the whole run. */
+function spline(pts, u) {
+  const n = pts.length - 1, x = Math.min(n - 1e-9, Math.max(0, u * n)), i = Math.floor(x), t = x - i;
+  const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(n, i + 2)];
+  return p1.map((_, c) => 0.5 * (2 * p1[c] + (-p0[c] + p2[c]) * t + (2 * p0[c] - 5 * p1[c] + 4 * p2[c] - p3[c]) * t * t + (-p0[c] + 3 * p1[c] - 3 * p2[c] + p3[c]) * t * t * t));
+}
+const DEPTH = 0.5, DEPTH0 = DEPTH, INSIDE = 5, BEND = 60, HOME = 25;
 
 /** One heart: centred at c, across U, down T, its face out N, H long and Wd wide (DEPTH of that deep); each vertex's
  * share down the braid s. (at(u, v, w): a corner's point in place of the flat heart's, for one bent onto the crown.) */
-export function heartAt(V, poly, c, U, T, N, H, Wd, s, at) {
-  const D = Wd * DEPTH, pt = at ?? ((u, v, w) => add(c, add(add(mul(U, u * Wd), mul(T, (v - 0.5) * H)), mul(N, w * D))));
+export function heartAt(V, poly, c, U, T, N, H, Wd, s, at, depth = DEPTH) {
+  const D = Wd * depth, pt = at ?? ((u, v, w) => add(c, add(add(mul(U, u * Wd), mul(T, (v - 0.5) * H)), mul(N, w * D))));
   const rim = OUTLINE.map(([u, v]) => V(pt(u, v, 0.2), s)), side = OUTLINE.map(([u, v]) => V(pt(u * 0.92, 0.05 + v * 0.92, -0.45), s));
   const Lp = V(pt(-0.23, 0.33, 1), s), Rp = V(pt(0.23, 0.33, 1), s), Cn = V(pt(0, 0.2, 0.62), s), Cm = V(pt(0, 0.62, 0.86), s), Bc = V(pt(0, 0.45, -0.95), s);
   const [o0, o1, o2, o3, o4, o5, o6, o7, o8, o9] = rim;
@@ -95,9 +101,10 @@ export function addCrownLinks(cl, path, ctx) {
  */
 export function addBraid(br, spine, ctx) {
   const { V, poly, piece, toBody, k } = ctx;
-  const { rows } = spine, P = spine.pts.map(toBody);
+  const { rows } = spine, P = spine.pts.map(toBody), DEPTH = br.depth ?? DEPTH0;
   // (the spine settled on the body: each point moved square to the spine, across and out (U, N), so that no heart, nor
-  // the tie or the tip, has a corner inside the body or within a voxel and a half of its skin (INSIDE per corner),
+  // the tie or the tip, has a corner inside the body or within a voxel and a half of its skin, at rest or with the head
+  // turned or nodded (INSIDE per corner and pose; ctx.inside(p, s) counts the poses),
   // the spine kept smooth (BEND per square unit of second difference) and near where the sheet puts it (HOME per square
   // unit). Coordinate descent.)
   const settle = () => {
@@ -106,25 +113,55 @@ export function addBraid(br, spine, ctx) {
       let c = 0;
       for (const [top, bot, w] of parts) {
         const mid = (top + bot) / 2, { N, U, T } = frame(mid), cc = at(mid), H = Math.hypot(...sub(at(bot), at(top))) * br.stretch, Wd = scale(w);
-        for (const [u, v] of [...OUTLINE, ...[-0.3, 0, 0.3].flatMap((uu) => [0.2, 0.45, 0.7].map((vv) => [uu, vv]))]) for (const ww of [-1.15, -0.5, 0, 1]) if (ctx.inside(add(cc, add(add(mul(U, u * Wd), mul(T, (v - 0.5) * H)), mul(N, ww * Wd * DEPTH))))) c += INSIDE;
+        for (const [u, v] of [...OUTLINE, ...[-0.3, 0, 0.3].flatMap((uu) => [0.2, 0.45, 0.7].map((vv) => [uu, vv]))]) for (const ww of [-1.15, -0.5, 0, 0.5, 1]) c += INSIDE * ctx.inside(add(cc, add(add(mul(U, u * Wd), mul(T, (v - 0.5) * H)), mul(N, ww * Wd * DEPTH))), share(mid));
       }
-      for (const y of [br.tip[1], br.tip[1] - 8]) if (ctx.inside(at(y))) c += 4 * INSIDE;
+      for (const y of [br.tip[1], br.tip[1] - 8]) c += 4 * INSIDE * ctx.inside(at(y), share(y));
       for (let i = 1; i + 1 < P.length; i++) c += BEND * sub(add(P[i - 1], P[i + 1]), mul(P[i], 2)).reduce((a2, x) => a2 + x * x, 0);
       P.forEach((p, i) => { c += HOME * sub(p, P0[i]).reduce((a2, x) => a2 + x * x, 0); });
       return c;
     };
     let best = cost(); const c0 = best;
-    for (const st of [0.1, 0.05, 0.025, 0.012]) for (let r = 0; r < 8; r++) for (let i = 0; i < P.length; i++) {
+    for (const st of [0.4, 0.2, 0.1, 0.05, 0.025, 0.012]) for (let r = 0; r < 8; r++) for (let i = 0; i < P.length; i++) {
       const { N, U } = frame(rows[i]);
-      for (const d of [N, mul(U, 0.5)]) for (const sg of [1, -1]) {
+      for (const d of [N, U]) for (const sg of [1, -1]) {
         // (the point and its neighbours, by a bell three rows wide either side)
         const was = P.map((p) => p);
-        for (let j = 0; j < P.length; j++) { const g = Math.exp(-(((j - i) / 2) ** 2)); if (g > 0.05) P[j] = add(P[j], mul(d, sg * st * k * g)); }
+        // (the root, on the crown, stays)
+        for (let j = br.drape ? 1 : 0; j < P.length; j++) { const g = Math.exp(-(((j - i) / 2) ** 2)); if (g > 0.05) P[j] = add(P[j], mul(d, sg * st * k * g)); }
         const c = cost(); if (c < best) { best = c; } else was.forEach((p, j) => { P[j] = p; });
       }
     }
-    if (process.env.BRAID_DEBUG) console.log('settle', c0.toFixed(1), '->', best.toFixed(1));
+    if (process.env.BRAID_DEBUG) {
+      const by = parts.map(([top, bot, w]) => { const mid = (top + bot) / 2, { N, U, T } = frame(mid), cc = at(mid), H = Math.hypot(...sub(at(bot), at(top))) * br.stretch, Wd = scale(w); let n = 0; for (const [u, v] of OUTLINE) for (const ww of [-1.15, -0.5, 0, 0.5, 1]) n += ctx.inside(add(cc, add(add(mul(U, u * Wd), mul(T, (v - 0.5) * H)), mul(N, ww * Wd * DEPTH))), share(mid)); return n; });
+      { const y = br.tip[1], { N, U } = frame(y), p = at(y); console.log('tip end', p.map((x) => x.toFixed(2)), 'N', N.map((x) => x.toFixed(2)), [-0.4, -0.2, 0, 0.2, 0.4, 0.6].map((t) => t + ':' + ctx.inside(add(p, mul(N, t)), share(y)) + '/' + ctx.inside(add(p, mul(U, t)), share(y))).join(' ')); }
+      console.log('settle', c0.toFixed(1), '->', best.toFixed(1), 'inside per part', by.join(' '), 'tip', [br.tip[1], br.tip[1] - 8].map((y) => ctx.inside(at(y), share(y))).join(' '));
+    }
   };
+  // (the spine draped on the body (br.drape): from the root on the crown, first `lead` on along the last crown link's
+  // length (ctx.rootDir), down onto the shoulder (her point over it, `shoulder` [x, z], let down until its heart's back, 0.95 of
+  // its depth and `gap`, meets the body: ctx.sdf) and over its front down the chest (each `chest` [x, y] brought back
+  // from in front of her until it meets it), a curve through them in `n` links, each point then kept that far off the
+  // body (ctx.away), smoothed; its rows spread evenly from the root to the tip's)
+  if (br.drape && ctx.sdf) {
+    const d = br.drape, end = br.tip[1], R = ctx.root;
+    const rowOf = (f) => br.root[0] + f * (end - br.root[0]);
+    const wAt = (y) => { let w = 0; for (const [t, b, px] of [...br.hearts, br.tie, br.tip]) if (y >= t && y <= b) w = Math.max(w, px); return ((w || br.tip[2]) / ctx.sheetScale) * k; };
+    const clearAt = (f) => 0.95 * DEPTH * wAt(rowOf(f)) + d.gap * k;
+    const meet = (p, dir, c) => { let q = p; for (let t = 0; t < 400 && ctx.sdf(q) > c; t++) q = add(q, mul(dir, 0.01 * k)); return q; };
+    const her = (x, y, z) => ctx.toBody([x, y, z]);
+    const S = meet(her(d.shoulder[0], d.shoulder[2], d.shoulder[1]), [0, -1, 0], clearAt(d.at[0]));
+    const F = d.chest.map(([x, y], j) => meet(her(x, y, 2), [0, 0, -1], clearAt(d.at[j + 1])));
+    const G = [R, add(R, mul(ctx.rootDir ?? [0, -1, 0], d.lead * k)), S, ...F];
+    const fine = Array.from({ length: 401 }, (_, i) => spline(G, i / 400)), Lf = [0];
+    for (let i = 1; i < fine.length; i++) Lf.push(Lf[i - 1] + Math.hypot(...sub(fine[i], fine[i - 1])));
+    const X = Array.from({ length: d.n + 1 }, (_, i) => { const w = (Lf[400] * i) / d.n; let j = 1; while (j < 400 && Lf[j] < w) j++; return add(fine[j - 1], mul(sub(fine[j], fine[j - 1]), (w - Lf[j - 1]) / Math.max(1e-9, Lf[j] - Lf[j - 1]))); });
+    for (let r = 0; r < 30; r++) {
+      for (let i = 1; i <= d.n; i++) { const c = clearAt(i / d.n), sd = ctx.sdf(X[i]); if (sd < c) X[i] = add(X[i], mul(ctx.away(X[i]), c - sd)); }
+      for (let i = 2; i < d.n; i++) X[i] = add(mul(X[i], 0.5), mul(add(X[i - 1], X[i + 1]), 0.25));
+    }
+    P.length = 0; P.push(...X); rows.length = 0; rows.push(...X.map((_, i) => rowOf(i / d.n)));
+    if (process.env.BRAID_DEBUG) console.log('drape', X.map((p, i) => `${i}:${p.map((x) => x.toFixed(2)).join(',')} sd ${ctx.sdf(p).toFixed(2)}/${clearAt(i / d.n).toFixed(2)}`).join(' | '));
+  }
   const r0 = rows[0], r1 = rows[rows.length - 1], share = (y) => Math.min(1, Math.max(0, (y - br.root[0]) / (r1 - br.root[0])));
   // the spine at a sheet row (linear between the triangulated rows; above the first, toward the root on the crown)
   const at = (y) => {
@@ -132,11 +169,12 @@ export function addBraid(br, spine, ctx) {
     let i = 0; while (i + 2 < rows.length && rows[i + 1] < y) i++;
     const f = Math.min(1, (y - rows[i]) / (rows[i + 1] - rows[i])); return add(P[i], mul(sub(P[i + 1], P[i]), f));
   };
-  // the frame at a row: down the spine, the face's normal (out from her neck at the root, to the front by the chest)
-  // square to it, and across
+  // the frame at a row: down the spine, the face's normal (out from her neck at the root, to the front by the chest;
+  // draped, from out of her neck at the root to out from the body under it, a little to the front) square to it, and
+  // across
   const frame = (y) => {
     const T = unit(sub(at(y + 4), at(y - 4))), f = Math.min(1, Math.max(0, (y - br.face[0]) / (br.face[1] - br.face[0])));
-    let N = unit(add(mul(br.faceFrom, 1 - f), mul(br.faceTo, f)));
+    let N = br.drape && ctx.away ? unit(add(mul(unit(br.faceFrom), 1 - f), mul(unit(add(ctx.away(at(y)), mul(unit(br.faceTo), br.drape.front))), f))) : unit(add(mul(br.faceFrom, 1 - f), mul(br.faceTo, f)));
     N = unit(sub(N, mul(T, dot(N, T))));
     return { T, N, U: cross(N, T) };
   };
@@ -144,7 +182,7 @@ export function addBraid(br, spine, ctx) {
   if (ctx.inside) settle();
   br.hearts.forEach(([top, bot, wpx], hi) => piece(`heart${hi + 1 + (ctx.first ?? 0)}`, 'braid', () => {
     const mid = (top + bot) / 2, { T, N, U } = frame(mid), H = Math.hypot(...sub(at(bot), at(top))) * br.stretch;
-    heartAt(V, poly, at(mid), U, T, N, H, scale(wpx), share(mid));
+    heartAt(V, poly, at(mid), U, T, N, H, scale(wpx), share(mid), undefined, DEPTH);
   }));
   // the tie: a hexagonal band; the tip: a six-sided point from under the tie
   const ring = (y, w, d, n = 6, twist = 0) => { const { N, U } = frame(y), c = at(y); return Array.from({ length: n }, (_, j) => { const a = ((j / n) * 360 + twist) * Math.PI / 180; return V(add(c, add(mul(U, Math.cos(a) * scale(w) / 2), mul(N, Math.sin(a) * scale(d) / 2))), share(y)); }); };

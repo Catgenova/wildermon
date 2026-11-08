@@ -4,10 +4,11 @@
 // (tools/sculpt/lowbraid.mjs outlineDiff) per view.
 //
 //   node tools/sculpt/lowbraidshot.mjs --out <dir> [--tag -x] [--who female,male]
-//        [--only cams,hull,views,close,rear,pieces,turn,wire,sil,exploded,game,shawl]
+//        [--only cams,hull,views,close,rear,joints,pieces,turn,wire,sil,exploded,game,shawl]
 // cams: the cameras' registration (her head and neck over the sheet's skin and hair silhouettes); hull: the carved hull
 // in place of the hair; views: the sheet, ours, ours over the sheet; close: the views larger; rear: the profile, the
-// rear three-quarter and the back larger, with ours per piece over the sheet; pieces: per piece over the sheet; turn: the head turned 70°
+// rear three-quarter and the back larger, with ours per piece over the sheet; pieces: per piece over the sheet; joints:
+// the braid's joints and its rest on the shoulder close; turn: the head turned 70°
 // and nodded 40°, the idle and the walk, crossings counted; wire: the topology; sil: the silhouette; exploded: the pieces
 // pulled apart; game: the full bodies at the game's zooms 5 and 10; shawl: the braid over the outfit's shawl.
 import { mkdirSync, readFileSync } from 'node:fs';
@@ -111,6 +112,25 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     });
     await shoot(10 + 3 * (cw2 + gap), 34 + 3 * (ch2 + gap), cells, join(out, `braid-rear-${w}${tag}.png`), { imgs,
       texts: [{ css: 'left:12px;top:6px', html: `Back of the head: sheet, ${w === 'male' ? 'man' : 'woman'}, per piece (links dark to light green from the start)` }] });
+  }
+
+  if (only.includes('joints')) for (const w of who) {
+    // the braid's joints close: link 1 into link 2 (the back), link 2 into the hanging braid (the rear three-quarter), the
+    // braid on the shoulder (the profile and the front three-quarter); ours (top), per piece (bottom)
+    const rig = RIGS[w], hair = HAIRS[w], K = 2.4, cw2 = 320, ch2 = 340, cells = [];
+    const PAL = [[0.1, 0.55, 0.15], [0.55, 1, 0.35], [0.95, 0.75, 0.3], [0.3, 0.75, 1], [0.95, 0.45, 0.8], [0.6, 1, 0.9]];
+    const col = hair.polys.map((p) => { const id = hair.pieces[p.piece].id, m = id.match(/^heart(\d+)$/); return m ? PAL[(+m[1] - 1) % PAL.length] : id === 'tie' ? [1, 1, 1] : id === 'tip' ? [0.2, 0.5, 0.25] : [0.55, 0.45, 0.42]; });
+    const mid = (...ids) => { const vs = hair.pieces.filter((p) => ids.includes(p.id)).flatMap((p) => hair.verts.slice(...p.verts)); return vs.reduce((a, q) => a.map((x, k) => x + q[k] / vs.length), [0, 0, 0]); };
+    // (the joints under the sheet's back and rear three-quarter cameras; the shoulder from her right and from the front
+    // right, level)
+    const shots = [['back', 'Link 1 into link 2', mid('heart1', 'heart2'), 1], ['r3', 'Link 2 into the hanging braid', mid('heart2', 'heart3'), 1], [{ yaw: 90, pitch: 0 }, 'On the shoulder, her right', mid('heart4', 'heart5'), 0.6], [{ yaw: 40, pitch: 0 }, 'On the shoulder, front right', mid('heart4', 'heart5'), 0.6]];
+    shots.forEach(([v, label, q, kk], i) => {
+      const c = typeof v === 'string' ? C[v] : { ...v, s: C.front.s }, wv = typeof v === 'string' ? warpOf(c) : (p) => p, x = 10 + i * (cw2 + gap), cam = { yaw: -c.yaw, pitch: -c.pitch, s: c.s * K * kk, c: wv(q) };
+      cells.push({ meshes: [bodyMesh(rig, hair, rig.B.verts.map(wv)), hairMesh(rig, hair, hair.verts.map(wv))], cam, box: [x, 34, cw2, ch2], label });
+      cells.push({ meshes: [bodyMesh(rig, hair, rig.B.verts.map(wv)), { ...hairMesh(rig, hair, hair.verts.map(wv)), col, flat: true }], cam, box: [x, 34 + ch2 + gap, cw2, ch2], label: 'per piece' });
+    });
+    await shoot(10 + 4 * (cw2 + gap), 34 + 2 * (ch2 + gap), cells, join(out, `braid-joints-${w}${tag}.png`), { imgs: [],
+      texts: [{ css: 'left:12px;top:6px', html: `The braid's joints, the ${w === 'male' ? 'man' : 'woman'}: links 1 and 2 dark and light green, then the hanging hearts` }] });
   }
 
   if (only.includes('wire')) for (const w of who) {

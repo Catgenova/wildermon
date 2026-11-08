@@ -50,12 +50,24 @@ export default {
     tip: [352, 398, 44],
     face: [200, 280], faceFrom: [-0.7, 0, 0.5], faceTo: [-0.25, 0, 1],
     stretch: 1.22,
+    // the braid's bones down its length (tools/sculpt/lowbraid.mjs weightOf): the head to the neck to the body over
+    // `neck`'s shares, on the shoulder from `shoulder[0]` the clavicle's half, over the chest by `shoulder[1]` the
+    // chest's `chest`
+    weights: { neck: [0.1, 0.18, 0.26, 0.34], shoulder: [0.34, 0.55], chest: 0.75 },
+    // the hanging hearts' depth against their width
+    depth: 0.36,
+    // the hanging braid draped on the body (tools/sculpt/lowbraidbraid.mjs addBraid): from `join` of the crown links' way,
+    // `lead` on along the last link,
+    // down onto her right shoulder (`shoulder`: [x, z, y], her units, let down from y) and over its front down her chest (`chest`: [x, y] each),
+    // those at `at` of its length, in `n` links, `gap` off the body past its hearts' backs; its hearts' faces out from the
+    // body and `front` toward the front
+    drape: { n: 24, lead: 0.3, shoulder: [-0.84, 0.02, -0.1], chest: [[-0.62, -0.95], [-0.56, -1.35], [-0.52, -1.75]], at: [0.3, 0.55, 0.75, 1], gap: 0.03, front: 0.3 },
     // its first links, on the crown (tools/sculpt/lowbraidbraid.mjs addCrownLinks): along the seam from `start` of the
     // way down the part to the seam's end, each [from, to, width px] as shares of that way, larger toward the start;
     // `stretch` their length against their spacing, `depth` their depth against their width, their backs `sink` of that
     // into the hull and `lift` over it; the clumps under them lowered to `under` of the hull's thickness within `half`
     // degrees of their way, the whole `soft` degrees further
-    crownLinks: { start: 0.83, links: [[0, 0.44, 88], [0.38, 1, 80]], stretch: 1, depth: 0.3, sink: 1, lift: 0.05, dip: { under: 0.35, half: 16, soft: 14 } },
+    crownLinks: { start: 0.83, join: 0.97, links: [[0, 0.46, 88], [0.33, 1, 80]], stretch: 1, depth: 0.3, sink: 1, lift: 0.05, dip: { under: 0.35, half: 16, soft: 14 } },
   },
   // the face strands: each a wavy path (her body's units, from its root under the clumps at the temple), its width and
   // thickness tapering to the tip
