@@ -9,12 +9,12 @@
 //
 // The vertices searched: those of the garment's triangles crossing anything in any sampled frame, and their neighbours,
 // whose key (the REFIT table's: trousers `row:column` of the left leg, tunic `row:azimuth`, shawl `ring:azimuth`, hood
-// `out:row:column` and the chin patch's) matches --keys; a vertex the builder copies (a turned-in edge, the lining) moves
+// `out:row:column`, the chin patch's and `tooth:n` under the chin) matches --keys; a vertex the builder copies (a turned-in edge, the lining) moves
 // with the one it copies. The candidates for a vertex: its weights blended toward one bone (--amts), a share of one of
 // its bones moved to another (--shifts; with each neighbour's the same at once), a neighbour's weights; the bones its
 // own and its neighbours' weights name and their parents, --extra added, --ban taken out.
 //
-// Against: the trousers the body, the shawl, the boots and the tunic; the tunic the body, the trousers and the shawl;
+// Against: the trousers the body, the shawl, the boots and the tunic; the tunic the body, the trousers, the shawl and the hood;
 // the shawl the body, the trousers, the tunic and the hood; the hood the body, the shawl and the tunic (the hood up).
 import { build } from 'esbuild';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -66,7 +66,7 @@ const n = {
   T: assets.trousers.tris.length / 4, G: boots.tris.length / 4, U: assets.tunic.tris.length / 4, H: assets.hood.tris.length / 4,
 };
 const ORDER = ['B', 'S', 'T', 'G', 'U', 'H'];
-const OTHERS = { T: ['B', 'S', 'G', 'U'], U: ['B', 'T', 'S'], S: ['B', 'T', 'U', 'H'], H: ['B', 'S', 'U'] }[X];
+const OTHERS = { T: ['B', 'S', 'G', 'U'], U: ['B', 'T', 'S', 'H'], S: ['B', 'T', 'U', 'H'], H: ['B', 'S', 'U'] }[X];
 const look = { gender: who === 'male' ? 'man' : 'woman', skin: 'light', hair: 'bald', hairColour: 'brown', eyes: 'brown', beard: 'none', shirt: 'unbleached', trousers: 'walnut' };
 
 /* ---- the crossings --------------------------------------------------------------------------------------------- */
@@ -88,7 +88,7 @@ function hits(A, tris, grid, skip) {
 
 /* ---- the frames: the walk (16) and the whole idle (24), facing 0, the hood up ---------------------------------- */
 const XT = G.tris.map((t) => t.v);
-let REST = null;
+let REST = null, BAKED = null;
 const posedOf = (Bn, i, w) => { const p = REST[i], q = [0, 0, 0]; for (const [b, x] of w) { const m = b * 12; for (let c = 0; c < 3; c++) q[c] += x * (Bn[m + c * 4] * p[0] + Bn[m + c * 4 + 1] * p[1] + Bn[m + c * 4 + 2] * p[2] + Bn[m + c * 4 + 3]); } return q; };
 const PH = [];
 for (const [kind, moving, N] of [['walk', true, 16], ['idle', false, 24]]) for (let k = 0; k < N; k++) {
@@ -101,6 +101,8 @@ for (const [kind, moving, N] of [['walk', true, 16], ['idle', false, 24]]) for (
   if (o !== s.baked.nTris) throw new Error('the bake is not the body less the hidden and the garments');
   // (the garment's rest vertices as the bake has them: the figure's frame)
   if (!REST) {
+    // (the bake's own corners: a polygon's are its own, so two triangles of the garment touch only within one polygon)
+    BAKED = XT.map((_, t) => [0, 1, 2].map((c) => s.baked.tris[(start[X] + t) * 3 + c]));
     REST = G.verts.map(() => null);
     for (let t = 0; t < n[X]; t++) for (let c = 0; c < 3; c++) { const o2 = s.baked.tris[(start[X] + t) * 3 + c] * 17; REST[XT[t][c]] = [V[o2], V[o2 + 1], V[o2 + 2]]; }
     let d = 0; for (let t = 0; t < n[X]; t++) { const A = tri(start[X] + t); XT[t].forEach((vi, c) => { const q = posedOf(Bn, vi, G.vw[vi]); d = Math.max(d, Math.hypot(q[0] - A[c][0], q[1] - A[c][1], q[2] - A[c][2])); }); }
@@ -113,7 +115,8 @@ const incident = G.verts.map(() => []); XT.forEach((t, k) => t.forEach((vi) => i
 const nb = G.verts.map(() => new Set()); for (const t of XT) for (const a of t) for (const b of t) if (a !== b) nb[a].add(b);
 const vw = G.vw.map((l) => l.map(([b, w]) => [b, w]));
 for (const p of PH) { p.X = G.verts.map((_, i) => (REST[i] ? posedOf(p.Bn, i, vw[i]) : [0, 0, 0])); p.XT = XT.map((t) => t.map((i) => p.X[i])); p.xg = gridOf(p.XT); }
-const shares = (k, j) => XT[j].some((q) => XT[k].includes(q));
+// (as lowgarmentcheck.mjs counts a garment's own crossings: two triangles sharing a corner of the bake are skipped)
+const shares = (k, j) => BAKED[j].some((q) => BAKED[k].includes(q));
 const triCost = (p, k, A) => hits(A, p.others, p.og) + SELF * hits(A, p.XT, p.xg, (j) => j === k || shares(k, j));
 const total = () => { const c = { other: 0, self: 0 }; for (const p of PH) XT.forEach((_, k) => { c.other += hits(p.XT[k], p.others, p.og); c.self += hits(p.XT[k], p.XT, p.xg, (j) => j <= k || shares(k, j)); }); return c; };
 console.log(who, garment, 'before', JSON.stringify(total()));
@@ -143,6 +146,8 @@ if (X === 'H') {
   const mid = [...G.frontC0.S.map((v, k) => [v, `S:${k}`]), ...G.frontC0.L.map((v, k) => [v, `L:${k}`]), [G.frontC0.R, 'R'], ...(G.lr0 !== null ? [[G.lr0, 'lr']] : []), [G.tip, 'tip']];
   for (const [v, key] of mid) { keyOf.set(v, [key, false]); mirV[v] = v; }
   copyOf.push([G.lineApex, G.V.out[0][G.design.Kf][0]], [G.tipIn, G.tip]);
+  // (the teeth under the chin: keyed, mirrored by half)
+  for (const [x, h, k] of G.teeth) if (k < 0) { keyOf.set(x, [`tooth:${-k}`, h === 1]); mirV[x] = G.teeth.find(([, h2, k2]) => h2 === 1 - h && k2 === k)[0]; }
 }
 const copies = new Map(), copyOfV = new Map();
 for (const [c, f] of copyOf) { (copies.get(f) ?? copies.set(f, []).get(f)).push(c); copyOfV.set(c, f); }
@@ -176,7 +181,14 @@ const parentOf = (b) => (b < rig.bones.length ? rig.bones[b].p ?? -1 : -1);
 const allowedOf = (g) => { const s = new Set(EXTRA); for (const i of g) for (const j of [i, ...nb[i]]) for (const [b] of G.vw[j]) { s.add(b); if (parentOf(b) >= 0) s.add(parentOf(b)); } return [...s].filter((b) => b >= 0 && !BAN.has(b)); };
 const groupOf = new Map(); for (const [r, g] of groups) for (const i of [...g, ...(g.mirror ?? [])]) groupOf.set(i, r);
 const nbGroups = (r) => { const o = new Set(); for (const i of groups.get(r)) for (const j of nb[i]) { const h = groupOf.get(j); if (h !== undefined && h !== r) o.add(h); } return [...o]; };
-const setOf = (mv) => { const set = new Map(); for (const [root, w0] of mv) { const g = groups.get(root), w = mirV[root] === root ? blend(w0, mirW(w0), 0.5) : w0; for (const i of g) set.set(i, w); for (const i of g.mirror ?? []) set.set(i, mirW(w)); } return set; };
+// (the hood's teeth between two of the frame's columns take the mean of theirs, as hoodWeights gives them)
+const TEETH = X === 'H' ? G.teeth.filter(([, , k]) => k >= 0).map(([x, h, k]) => [x, G.V.out[h][k][0], G.V.out[h][k + 1][0]]) : [];
+const setOf = (mv) => {
+  const set = new Map();
+  for (const [root, w0] of mv) { const g = groups.get(root), w = mirV[root] === root ? blend(w0, mirW(w0), 0.5) : w0; for (const i of g) set.set(i, w); for (const i of g.mirror ?? []) set.set(i, mirW(w)); }
+  for (const [x, a, b] of TEETH) if (set.has(a) || set.has(b)) set.set(x, blend(set.get(a) ?? vw[a], set.get(b) ?? vw[b], 0.5));
+  return set;
+};
 const trisOf = (set) => [...new Set([...set.keys()].flatMap((i) => incident[i]))];
 const costOf = (set, tris) => { let c = 0; for (const p of PH) { const pos = new Map(); for (const [i, w] of set) pos.set(i, posedOf(p.Bn, i, w)); for (const k of tris) c += triCost(p, k, XT[k].map((x) => pos.get(x) ?? p.X[x])); } return c; };
 for (let sw = 0; sw < sweeps; sw++) {

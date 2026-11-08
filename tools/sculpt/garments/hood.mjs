@@ -458,7 +458,8 @@ export const CHIN_SHARE = { male: 0.25, female: 0.2 };
 /**
  * The shell's vertices refitted to the game's idle and walk (lowgarment.mjs applyRefit): per body, the left half's by row
  * and column (`out:3:2`, G.V.out[0]; the right half's, G.V.out[1], mirrored) and the chin patch's on the middle line
- * (`S:0`, `L:0`, `R`, `lr`, G.frontC0, G.lr0) and the tip; the lining and the frame's line follow as before. Found by
+ * (`S:0`, `L:0`, `R`, `lr`, G.frontC0, G.lr0), the tip, and the teeth under the chin (`tooth:1` the left half's
+ * first beside the middle, the right half's mirrored); the lining and the frame's line follow as before. Found by
  * tools/sculpt/lowrefit.mjs.
  */
 export const REFIT = { male: {}, female: {} };
@@ -489,7 +490,8 @@ export function hoodWeights(rig, G, shawl, o = {}) {
     W[vi] = m[1] === 'lr' ? chinW(vi, 'lr', 0, +m[2]) : chinW(vi, m[1], +m[2], +m[3]);
   }
   // the refitted vertices (REFIT), before the lining and the frame's line take the shell's
-  applyRefit(rig, W, o.refit ?? REFIT[rig.who], (key, mirror) => {
+  const refit = o.refit ?? REFIT[rig.who], pick = (f) => Object.fromEntries(Object.entries(refit).filter(([k]) => f(k)));
+  applyRefit(rig, W, pick((k) => !k.startsWith('tooth:')), (key, mirror) => {
     const m = key.match(/^out:(\d+):(\d+)$/);
     if (m) return G.V.out[mirror ? 1 : 0][+m[1]]?.[+m[2]];
     if (mirror) return undefined;
@@ -501,6 +503,9 @@ export function hoodWeights(rig, G, shawl, o = {}) {
   for (const h of [0, 1]) G.line[h].forEach((vi, k) => { if (vi !== undefined) W[vi] = W[col0(h, k)]; });
   W[G.lineApex] = W[col0(0, Kf)];
   for (const [x, h, k] of G.teeth) W[x] = k < 0 ? chinW(x, 'S', 2, -1 - k + 0.5) : mixW(W[col0(h, k)], W[col0(h, k + 1)], 0.5);
+  // (the teeth under the chin refitted: `tooth:1` the first beside the middle on the left half, its mirror the right's)
+  const tooth = (h, k) => G.teeth.find(([, th, tk]) => th === h && tk === k)?.[0];
+  applyRefit(rig, W, pick((k) => k.startsWith('tooth:')), (key, mirror) => tooth(mirror ? 1 : 0, -+key.slice(6)));
   return W.map((w) => w ?? [[head, 1]]);
 }
 const mixW = (A, Bw, t) => { const o = new Map(); for (const [b, w] of A) o.set(b, (o.get(b) ?? 0) + w * (1 - t)); for (const [b, w] of Bw) o.set(b, (o.get(b) ?? 0) + w * t); const l = [...o].filter(([, w]) => w > 1e-6).sort((x, y) => y[1] - x[1]).slice(0, 4), s = l.reduce((a, [, w]) => a + w, 0); return l.map(([b, w]) => [b, w / s]); };
