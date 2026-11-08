@@ -4,7 +4,9 @@
 // and walking, front (facing 0), three-quarter (facing 1), side (facing 2) and back (facing 4), at each zoom asked; and
 // the walk as a looping GIF at one zoom. (tools/sculpt/lowhoodgame.mjs, the helm worn in place of the hood.)
 //
-//   node tools/sculpt/lowhelmgame.mjs --out <dir> [--zooms 1,5,10] [--gif 10] [--frames 12] [--enchanted]
+//   node tools/sculpt/lowhelmgame.mjs --out <dir> [--zooms 1,5,10] [--gif 10] [--frames 12] [--enchanted] [--swing t1,t2,... [--swingzoom 8]]
+//     --swing: the two-handed swing (src/sculpt/anim/clips/swing.ts, the long sword in hand) at those clip times, both
+//     bodies, front, three-quarter, side and back, the plate set alone (the first outfit off): <dir>/<name>-game-swing.png
 //     writes <dir>/helm[-enchanted]-game-z<zoom>.png for each zoom (zoom 1 also four times larger beside it) and
 //     <dir>/helm[-enchanted]-game-walk-z<gif>.gif
 //
@@ -20,6 +22,7 @@ const args = process.argv.slice(2);
 const opt = (n, f) => { const i = args.indexOf(`--${n}`); return i < 0 ? f : args[i + 1]; };
 const out = resolve(opt('out', 'tmp/lowhelmgame'));
 const zooms = opt('zooms', '1,5,10').split(',').map(Number).filter((z) => z > 0);
+const swingT = opt('swing', '').split(',').filter(Boolean).map(Number), swingZoom = +opt('swingzoom', '8');
 const gifZoom = +opt('gif', '10'), F = +opt('frames', '12'), ench = args.includes('--enchanted'), name = opt('name', ench ? 'helm-enchanted' : 'helm');
 mkdirSync(out, { recursive: true });
 const ROOT = new URL('../..', import.meta.url).pathname;
@@ -36,6 +39,21 @@ function cell(zoom, gender, facing, moving, phase) {
   drawFigure(g, cw / 2, ch - 2 * zoom - 8, zoom, { phase, moving, facing, swimming: false, working: false, look: look(gender), outfit: { plateHelm: true, enchanted: { helm: ENCH } } });
   return cv;
 }
+// the swing at clip time t: at work with the long sword, the plate set alone
+function swingCell(zoom, gender, facing, t) {
+  const cw = Math.ceil(56 * zoom), ch = Math.ceil(64 * zoom), cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
+  const g = cv.getContext('2d'); g.fillStyle = '#7d9b5e'; g.fillRect(0, 0, cw, ch);
+  drawFigure(g, cw / 2, ch - 2 * zoom - 8, zoom, { phase: 0, moving: false, facing, swimming: false, working: true, job: 'attack_creature', act: { t, length: 2 }, gear: { weapon: { id: 'long_sword', material: 'iron', enchanted: false } }, look: look(gender), outfit: { shawl: false, trousers: false, boots: false, tunic: false, hood: false, plateHelm: true, enchanted: { helm: ENCH } } });
+  return cv;
+}
+window.swing = (zoom, times) => {
+  const root = document.getElementById('root'); root.innerHTML = '';
+  root.appendChild(lab(NAME.replace(' over the first outfit', '') + ' in the swing (the long sword in hand), zoom ' + zoom + ': front, 3/4, side, back', 'h'));
+  for (const t of times) for (const gender of ['man', 'woman']) {
+    const row = document.createElement('div'); row.className = 'row'; root.appendChild(row);
+    for (const facing of [0, 1, 2, 4]) { const box = document.createElement('div'); box.className = 'c'; box.appendChild(swingCell(zoom, gender, facing, t)); box.appendChild(lab(gender + ' t ' + t.toFixed(2) + ' ' + ['front', '3/4', 'side', '', 'back'][facing])); row.appendChild(box); }
+  }
+};
 const lab = (t, cls = 'l') => { const d = document.createElement('div'); d.className = cls; d.textContent = t; return d; };
 window.ready = async () => { sculptedFigures(true); await import('./src/sculpt/sculpted'); await new Promise((r) => setTimeout(r, 50)); };
 // one zoom's sheet: the man and the woman, each idle and walking, front and three-quarter
@@ -82,6 +100,12 @@ try {
   for (const z of zooms) {
     await p.evaluate((zz) => window.sheet(zz), z);
     const file = join(out, `${name}-game-z${z}.png`);
+    await shot('#root', file);
+    console.log('wrote', file);
+  }
+  if (swingT.length) {
+    await p.evaluate(([zz, ts]) => window.swing(zz, ts), [swingZoom, swingT]);
+    const file = join(out, `${name}-game-swing.png`);
     await shot('#root', file);
     console.log('wrote', file);
   }
