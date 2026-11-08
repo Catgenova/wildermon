@@ -361,13 +361,13 @@ if (MAIN) {
     // the island's camera looking down 30°
     const cells = [];
     let x = 10;
-    for (const zoom of [5, 10]) for (const who of Object.keys(RIGS)) {
+    for (const zoom of [1, 5, 10]) for (const who of Object.keys(RIGS)) {
       const rig = RIGS[who], hair = HAIRS[who], top = Math.max(...rig.B.verts.map((p) => p[1])), tall = top - rig.J.floor;
-      const px = (58 * (who === 'female' ? 0.85 : 1) * zoom) / tall, h = Math.ceil(58 * zoom * 1.05) + 20, w = Math.ceil(px * 7);
+      const px = (58 * (who === 'female' ? 0.85 : 1) * zoom) / tall, h = Math.ceil(58 * zoom * 1.05) + 20, w = Math.max(110, Math.ceil(px * 7));
       cells.push({ meshes: [bodyMesh(rig, hair), hairMesh(rig, hair)], cam: { yaw: -30, pitch: -30, s: px, c: [0, (top + rig.J.floor) / 2, 0] }, box: [x, 34, w, h], label: `${who === 'male' ? 'Man' : 'Woman'}, zoom ${zoom}` });
       x += w + 8;
     }
-    await shoot(x + 2, 34 + Math.ceil(58 * 10 * 1.05) + 30, cells, join(out, `hair-game${stage}.png`), { texts: [{ css: 'left:12px;top:6px', html: 'At the game\'s zooms (5 and 10), the full body' }] });
+    await shoot(x + 2, 34 + Math.ceil(58 * 10 * 1.05) + 30, cells, join(out, `hair-game${stage}.png`), { texts: [{ css: 'left:12px;top:6px', html: 'At the game\'s zooms (1, 5 and 10), the full body' }] });
   }
   await closeBrowser();
 }

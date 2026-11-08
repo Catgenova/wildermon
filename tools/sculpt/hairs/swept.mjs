@@ -23,7 +23,7 @@ const grooveAt = [0, 0.55, 1, 1, 0.9, 0.75, 0.55, 0.4, 0.3, 0.25, 0];
 
 /** Each tuft's section across: five rows between its creases, the middle at the hull's height and the others falling
  * away from it (a rounded top: under it by these, head units), the creases `groove` under it. */
-const TUFT = { clearCap: 0.04, tube: { smooth: 3, perRow: true, acrossRows: 1 }, endShade: [0.95, 0.6], endLow: [48, 72], band: [[0.16, 0.14], [0.5, 0], [0.84, 0.14]], groove: 0.42, grooveAt };
+const TUFT = { clearCap: 0.04, tube: { smooth: 3, perRow: true, acrossRows: 1 }, endShade: [0.95, 0.75, 0.4], endLow: [40, 70], rimShade: 0.75, band: [[0.16, 0.14], [0.5, 0], [0.84, 0.14]], groove: 0.42, grooveAt };
 /** Where the two masses meet (the parting C over the top, the back's centre line): the left's edge at this share of
  * the hull's thickness, the right's a little over it (laid on the left's), in a crease. */
 const MEET = 0.5;
@@ -36,10 +36,10 @@ export default {
   outline: { rounds: 10, step: 0.015, who: ['male', 'female'], tube: { rounds: 6, lo: 0.6, hi: 1.25 } },
   // the right mass laid over the left where they meet (the parting, the back's centre line): a corner of the left still
   // showing through pressed under (tools/sculpt/lowhair.mjs layersOf)
-  layers: [['right', 'left']], layerGap: 0.01, layerPress: 30, layerKeep: 0.6,
+  layers: [['right', 'left']], layerGap: 0.01, layerPress: 60, layerKeep: 0.6,
   clumps: [
     // his right: the hairline (r0), five creases, the parting (C); six tufts
-    { id: 'right', mass: true, apex: true, sink: 0.015, ...TUFT, lift: [1.35, 1.3, 1.25, 1.2, 1.15, 1.1], liftAt: { 1: 0.6, 2: 1, 3: 0.6, 4: 0.25 }, liftCrease: 0.5, borderUp: [null, MEET + 0.08], endUp: MEET + 0.08, strip: strip(5), lines: lines(['r0', 'r1', 'r2', 'r3', 'r4', 'r5', 'C']) },
+    { id: 'right', mass: true, apex: true, sink: 0.015, ...TUFT, lift: [1.35, 1.3, 1.25, 1.2, 1.15, 1.1], liftAt: { 1: 0.6, 2: 1, 3: 0.6, 4: 0.25 }, liftCrease: 0.5, roll: { tufts: [0, 1, 2], at: { 2: 0.5, 3: 1, 4: 0.8, 5: 0.4 }, gain: 1.25, deepen: 0.25 }, borderUp: [null, MEET + 0.12], endUp: MEET + 0.12, strip: strip(5), lines: lines(['r0', 'r1', 'r2', 'r3', 'r4', 'r5', 'C']) },
     // his left: the parting, three creases, the hairline (l0); four tufts
     { id: 'left', mass: true, apex: true, sink: 0.015, ...TUFT, lift: [1.3, 1.35, 1.3, 1.2], liftAt: { 1: 0.6, 2: 1, 3: 0.6, 4: 0.25 }, liftCrease: 0.5, borderUp: [MEET, null], endUp: MEET, strip: strip(3), lines: lines(['C', 'l1', 'l2', 'l3', 'l0']) },
   ],

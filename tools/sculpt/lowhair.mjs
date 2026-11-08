@@ -389,6 +389,14 @@ export function massOf(cl, { skull, C, k, verts, polys, pieces, hull, scalp, gai
     else if (fit) t = fit.t[row.src][j] + (row.drop - dropOf(row, j)) * gAt(j);
     else t = Math.max(MIN_H, Math.max(cl.least ? cl.least[j] : 0, hull ? hull.thick.at(o, u) * (cl.scale ?? 1) : 0.12) - dropOf(row, j) * gAt(j));
     // each tuft's lifted front (lift: one per tuft) raised or lowered by its share, half that a station behind
+    // (roll: { tufts, at: { station: share }, gain, deepen }: the lowest tufts' turn at the temple as stacked rolled
+    // lips, each such tuft's rows `gain` times higher there and the creases between two of them `deepen` deeper, of
+    // the envelope)
+    if (cl.roll && !border) {
+      const sh = cl.roll.at[j] ?? 0, R0 = cl.roll.tufts;
+      if (sh && row.tuft !== undefined && R0.includes(row.tuft)) t *= 1 + (cl.roll.gain - 1) * sh;
+      else if (sh && row.crease && (R0.includes(row.ci) || R0.includes(row.ci + 1)) && HR) t = Math.max(MIN_H, t - cl.roll.deepen * sh * HR[i][j]);
+    }
     // (liftAt: per station its share of the lift, default the fourth station whole and the fifth half; a crease beside
     // a lifted tuft lifted by the lower of its two tufts', so the lifted fronts stand apart over a deeper notch)
     const la = (cl.liftAt ?? { 3: 1, 4: 0.5 })[j];
@@ -445,6 +453,10 @@ export function massOf(cl, { skull, C, k, verts, polys, pieces, hull, scalp, gai
     if (rows[i].side === 0 && rows[i + 1].side === 1 && split(j, c) && j >= from(c)) {
       const f = (j - from(c)) / Math.max(1, to(c) - from(c));
       shade = depth(c) * (1 - 0.75 * (st.peak === 'to' ? 1 - f : f));
+    } else if (cl.rimShade && j >= 1 && ((i === 0 && cl.borderUp?.[0] == null) || (i === R - 2 && cl.borderUp?.[1] == null))) {
+      // the hair's underside along its lower edge (the wall from the hairline up to its tuft's outer row): the
+      // valleys' tone, so the edge reads as the sheet's dark rim under the lowest tufts
+      shade = cl.rimShade;
     } else if (cl.endShade && j >= n - 1 - cl.endShade.length) {
       // the faces into the back's centre line (the last stations): the centre valley's tone
       // (endLow: [from, to] degrees off straight up of the row's end on the centre line: none above `from`, whole
