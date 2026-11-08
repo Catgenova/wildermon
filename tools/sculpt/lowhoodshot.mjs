@@ -124,7 +124,7 @@ async function sheet(file, edges) {
     const d0 = { PB: at(d.PB), PG: at(d.PG), PS: at(d.PS) };
     VIEWS.forEach(([yaw, lab], i) => {
       imgs.push({ src: SHEET, size: [1448, 1086], crop: [SX[who][i] - 68, 112, 136, 206], box: [i * cw, top + r * 2 * (ch + 22), cw, ch] });
-      cells.push({ meshes: scene(who, d0, { edges }), cam: { yaw, pitch: 0, s: 60, c: [0, 0.5, 0] }, box: [i * cw, top + (r * 2 + 1) * (ch + 22) - 22 + 22, cw, ch], label: `${who} ${lab}` });
+      cells.push({ meshes: scene(who, d0, { edges }), cam: { yaw, pitch: 0, s: 50, c: [0, 0.95, 0] }, box: [i * cw, top + (r * 2 + 1) * (ch + 22) - 22 + 22, cw, ch], label: `${who} ${lab}` });
     });
     texts.push({ cls: 'lab', css: `left:${5 * cw + 10}px;top:${top + r * 2 * (ch + 22) + 10}px`, html: `${who}: the sheet ↑` });
     texts.push({ cls: 'lab', css: `left:${5 * cw + 10}px;top:${top + (r * 2 + 1) * (ch + 22) + 10}px`, html: `${who}: the model ↑<br>${M[who].G.tris.length} triangles` });
