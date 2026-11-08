@@ -1,7 +1,7 @@
 // The hood (tools/sculpt/garments/hood.mjs) on the low-poly bodies, worn with the shawl, looked over against the hood
 // sheet and in the rig's poses:
 //
-//   node tools/sculpt/lowhoodshot.mjs --out <dir> [--only sheet,wire,poses,walk,metrics] [--sheet <hood sheet png>]
+//   node tools/sculpt/lowhoodshot.mjs --out <dir> [--only sheet,close,wire,poses,walk,metrics] [--sheet <hood sheet png>]
 //        [--tag <name>] [--mono] [--plain] [--shawl] [--title <text>]
 //     hood-sheet<tag>.png: the sheet's five views (0, 45, 90, 135, 180) of each body's hood beside the model's, hers above
 //       his (--mono: the shell one colour, the border plain; --plain: no teeth; --shawl: the shawl drawn too);
@@ -133,6 +133,23 @@ async function sheet(file, edges) {
   texts.push({ css: 'left:10px;top:6px', html: opt('title', 'The hood on both low-poly bodies: the sheet\'s five views above each body\'s') });
   await shoot(5 * cw + 170, top + 4 * (ch + 22), cells, file, { texts, imgs });
 }
+/** Close: each body's front and profile at twice the sheet's scale, the sheet's beside each (`--only close`). */
+async function close(file, edges) {
+  const cw = 540, ch = 720, top = 34, cells = [], imgs = [], texts = [];
+  ['male', 'female'].forEach((who, r) => {
+    const d = dress(who, {}), lift = -d.dy;
+    const at = (P) => P.map((p) => [p[0], p[1] + lift, p[2]]);
+    const d0 = { PB: at(d.PB), PG: at(d.PG), PS: at(d.PS) };
+    [0, 2].forEach((i, n) => {
+      const [yaw, lab] = VIEWS[i];
+      imgs.push({ src: SHEET, size: [1448, 1086], crop: [SX[who][i] - 68, 112, 136, 206], box: [n * 2 * cw, top + r * ch, cw, ch] });
+      cells.push({ meshes: scene(who, d0, { edges }), cam: { yaw, pitch: 0, s: 148, c: [0, 0.55, 0] }, box: [(n * 2 + 1) * cw, top + r * ch, cw, ch], label: `${who} ${lab}` });
+    });
+  });
+  texts.push({ css: 'left:10px;top:6px', html: opt('title', 'The hood close: the sheet\'s front and profile beside each body\'s') });
+  await shoot(4 * cw, top + 2 * ch, cells, file, { texts, imgs });
+}
+if (only.includes('close')) await close(join(out, `hood-close${tag}.png`), false);
 if (only.includes('sheet')) await sheet(join(out, `hood-sheet${tag}.png`), false);
 if (only.includes('wire')) await sheet(join(out, `hood-wire${tag}.png`), true);
 
