@@ -19,8 +19,9 @@ export const camsFor = (who = 'male') => JSON.parse(readFileSync(existsSync(cams
 export const CAMS = camsFor('male');
 
 /** A point on the sheet under one of its cameras (tools/sculpt/lowcam.mjs project, orthographic), then the view's own
- * 2D correction (tools/sculpt/lowhairreg.mjs: the sheet's face drawn a little narrower or sheared against the body's):
- * turned `roll` degrees in the picture, its across stretched `ax`, its up `ay`, and sheared `sh` (across by up). */
+ * 2D correction, if it has one (tools/sculpt/lowbraidreg.mjs: the sheet's face drawn a little narrower or sheared against
+ * the body's): turned `roll` degrees in the picture, its across stretched `ax`, its up `ay`, and sheared `sh` (across by
+ * up). */
 export function project(p, c) {
   const a = (c.yaw * Math.PI) / 180, b = (c.pitch * Math.PI) / 180, ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b);
   const x = p[0] - PIV[0], y = p[1] - PIV[1], z = p[2] - PIV[2];
@@ -34,7 +35,7 @@ export function project(p, c) {
   return [c.cx + c.s * qx, c.cy - c.s * qy, qz];
 }
 /** The view's 2D correction as a map of the head's space (for a renderer that takes yaw, pitch and scale only): a point
- * moved so that the plain camera draws it where project() puts it. */
+ * moved so that the plain camera draws it where project() puts it. For the review renders only. */
 export function warpOf(c) {
   if (!(c.roll || c.ax || c.ay || c.sh)) return (p) => p;
   const a = (c.yaw * Math.PI) / 180, b = (c.pitch * Math.PI) / 180, ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b);
