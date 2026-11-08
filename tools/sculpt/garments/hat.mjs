@@ -64,28 +64,29 @@ const byAz = (T, az) => interp(T, Math.abs(az));
 /**
  * The design per body (the body's units: y up, the chin's underside 0; z forward; x the body's left):
  *   C: the hat's origin (the crown's foot on the axis); pitch: the hat tipped back (degrees, the front up);
- *   sec: the crown's stations [h, apothem]: the foot, the band's top, the wall's top, the shoulder, the top's ring; apex:
+ *   sec: the crown's stations [h, apothem]: the foot, the band's top, the wall's top, and if given the shoulder and the
+ *   top's ring (the sheet's crown: a wall, then six facets to the apex); apex:
  *   the apex's height (each pushed out, the apex raised, until the crown clears the head and the hair);
  *   oval: the section's scale across (x), forward and back; round: how far a panel bulges toward the circle (0 flat);
  *   band: its height, how far it stands out, its edge strips' height and how far they stand out again;
  *   brim: R (outer radius by azimuth), drop (by azimuth), curve (the drop's power along the brim), T (thickness),
  *   trim: [width, height, overhang];
- *   ring: az, height on the band (share), outer and inner radius, thickness, its gap off the band (the feathers' roots in it);
- *   feathers: per feather its root's azimuth, height over the ring's centre and offset out from the band, length, half-width, its spine's direction
+ *   ring: az (a flat panel's middle), height on the band (share), outer and inner radius, thickness;
+ *   feathers: per feather its plane's offset out from the ring's back (within the ring's thickness), length, half-width, its spine's direction
  *   (the hat's frame), its bow (in its plane, a share of its length), its turn (degrees about its own spine), notches a side;
  *   clear: the crown's clearance outside the head and the hair.
  */
 export const DESIGN = {
   male: {
     C: [0, 1.5, -0.04], pitch: 4,
-    sec: [[0, 0.98], [0.3, 0.96], [0.56, 0.875], [0.99, 0.735], [1.12, 0.42]], apex: 1.12,
-    oval: [1, 0.98, 1.07], round: 0.15,
+    sec: [[0, 0.92], [0.3, 0.9], [0.94, 0.83]], apex: 1.16,
+    oval: [1, 0.98, 1.07], round: 0, panelAz: 30,
     band: {h: 0.3, out: 0.04, edge: 0.045, edgeOut: 0.025},
-    brim: {R: [[0, 1.57], [90, 2.05], [180, 1.84]], drop: [[0, 0.37], [30, 0.5], [60, 0.95], [90, 0.65], [135, 0.5], [180, 0.6]], curve: 2.3, T: 0.06, trim: [0.09, 0.045, 0.02]},
-    ring: {az: 31, at: 0.82, ro: 0.25, ri: 0.1, t: 0.06, gap: 0.12},
+    brim: {R: [[0, 1.72], [45, 1.78], [75, 2.2], [105, 2.0], [135, 1.9], [180, 1.85]], drop: [[0, 0.37], [30, 0.45], [60, 1.1], [75, 0.9], [105, 0.75], [135, 0.55], [180, 0.6]], curve: 1.8, T: 0.06, trim: [0.09, 0.045, 0.02]},
+    ring: {az: 30, at: 1.02, ro: 0.29, ri: 0.12, t: 0.09},
     feathers: [
-      {az: 35, up: 0, off: 0.09, len: 1.5, w: 0.28, dir: [0.85, 0.5, -0.35], bow: 0.1, turn: 0, notches: 3},
-      {az: 28, up: 0.02, off: 0.04, len: 1.12, w: 0.24, dir: [0.55, 0.78, -0.25], bow: 0.1, turn: 0, notches: 3},
+      {off: 0.06, len: 1.5, w: 0.28, dir: [0.85, 0.5, -0.35], bow: 0.1, turn: 0, notches: 3},
+      {off: 0.025, len: 1.12, w: 0.24, dir: [0.55, 0.78, -0.25], bow: 0.1, turn: 0, notches: 3},
     ],
     clear: 0.04,
   },
@@ -102,15 +103,15 @@ export function scaled(D, k, place) {
     sec: D.sec.map(([h, a]) => [L(h), L(a)]), apex: L(D.apex),
     band: { ...D.band, h: L(D.band.h), out: L(D.band.out), edge: L(D.band.edge), edgeOut: L(D.band.edgeOut) },
     brim: { ...D.brim, R: D.brim.R.map(([a, r]) => [a, L(r)]), drop: D.brim.drop.map(([a, d]) => [a, L(d)]), T: L(D.brim.T), trim: D.brim.trim.map(L) },
-    ring: { ...D.ring, ro: L(D.ring.ro), ri: L(D.ring.ri), t: L(D.ring.t), gap: L(D.ring.gap) },
-    feathers: D.feathers.map((f) => ({ ...f, len: L(f.len), w: L(f.w), up: L(f.up), off: L(f.off) })),
+    ring: { ...D.ring, ro: L(D.ring.ro), ri: L(D.ring.ri), t: L(D.ring.t) },
+    feathers: D.feathers.map((f) => ({ ...f, len: L(f.len), w: L(f.w), off: L(f.off) })),
   };
 }
-DESIGN.female = scaled(DESIGN.male, 0.98, { C: [0, 1.633, -0.08], pitch: 7 });
+DESIGN.female = scaled(DESIGN.male, 0.98, { C: [0, 1.633, -0.06], pitch: 6 });
 /** The columns: every 15 degrees, 0 forward, +90 the body's left, in order round. */
 export const AZ = Array.from({ length: 24 }, (_, k) => (k <= 12 ? k * 15 : (k - 24) * 15));
-/** The crown's panel corners (its seams) among the columns. */
-export const SEAMS = new Set([30, 90, 150, -30, -90, -150]);
+/** The crown's panel corners (its seams) among the columns: the panels' middles at panelAz (30) and every 60 from it, a corner at the front and the back as on the sheet's back view. */
+export const SEAMS = new Set([0, 60, 120, 180, -60, -120]);
 
 /** The hat's frame: a point in it to the body's space, and back. */
 export function frameOf(D) {
@@ -124,7 +125,7 @@ const dirOf = (az) => [Math.sin(az * Math.PI / 180), 0, Math.cos(az * Math.PI / 
 
 /** The hexagonal section's radius toward az for apothem a (a panel's middle at 0, ±60, ±120, 180), the oval applied. */
 function secR(D, az, a) {
-  const rel = ((((az % 60) + 60) % 60) + 30) % 60 - 30, hex = a / Math.cos(rel * Math.PI / 180);
+  const rel = (((((az - (D.panelAz ?? 0)) % 60) + 60) % 60) + 30) % 60 - 30, hex = a / Math.cos(rel * Math.PI / 180);
   const r = hex + (a - hex) * D.round, t = az * Math.PI / 180, sx = Math.sin(t), cz = Math.cos(t);
   const [ox, of, ob] = D.oval, oz = cz >= 0 ? of : ob;
   return r * Math.hypot(sx * ox, cz * oz);
@@ -175,34 +176,45 @@ export function buildHat(rig, design = DESIGN[rig.who]) {
   const D = design, F = frameOf(D), G = meshOf(), reach = reachOf(rig, D), N = AZ.length;
   const BAND = D.band, BR = D.brim;
   const A = (h) => interp(D.sec, h);
-  // per column the crown's radius at height h: the section, pushed out to clear the obstacle
-  const need = (az, h) => reach(az, h) + D.clear;
-  const rAt = (az, h) => Math.max(secR(D, az, A(h)), need(az, h));
+  // the crown's radius toward az at height h: the section, scaled up as one (its panels kept flat) until it clears the
+  // obstacle all round (every 5 degrees)
+  const need = (az, h) => { const r = reach(az, h); return r > 0 ? r + D.clear : 0; };
+  const AZ5 = Array.from({ length: 72 }, (_, k) => k * 5 - 180), FAC = new Map();
+  const facAt = (h) => { const key = h.toFixed(4); if (!FAC.has(key)) FAC.set(key, Math.max(1, ...AZ5.map((az) => need(az, h) / secR(D, az, A(h))))); return FAC.get(key); };
+  const rAt = (az, h) => secR(D, az, A(h)) * facAt(h);
   const P = (az, r, h) => { const d = dirOf(az); return [d[0] * r, h, d[2] * r]; };
   const V = (p, part) => G.vert(F.toBody(p), part);
 
   /* ---- the crown: per column the stations up from the foot ---- */
   const e = BAND.edge, eo = BAND.edgeOut, bo = BAND.out, bh = BAND.h;
-  const hw = D.sec[2][0], hs = D.sec[3][0], ht = D.sec[4]?.[0];
+  const hw = D.sec[2][0], hs = D.sec[3]?.[0], ht = D.sec[4]?.[0];
   const ST = [
     // [name, h, extra out, material of the face above it]
     ['foot', 0, bo + eo, 'rune'], ['e1', e, bo + eo, 'leather'], ['e1i', e, bo, 'leather'], ['e2i', bh - e, bo, 'rune'], ['e2', bh - e, bo + eo, 'rune'], ['bt', bh, bo + eo, 'leather'],
-    ['bti', bh, 0, 'leather'], ['wall', hw, 0, 'leather'], ['sh', hs, 0, 'leather'], ...(ht ? [['top', ht, 0, 'leather']] : []),
+    ['bti', bh, 0, 'leather'], ['wall', hw, 0, 'leather'], ...(hs ? [['sh', hs, 0, 'leather']] : []), ...(ht ? [['top', ht, 0, 'leather']] : []),
   ];
-  const rBase = AZ.map((az) => rAt(az, 0));
-  const crownR = AZ.map((az, k) => ST.map(([name, h, out]) => (h <= bh ? Math.max(rAt(az, h), rBase[k] - 0.02 * h) : rAt(az, h)) + out));
+  // (the crown never wider higher up than its design's taper allows: each station at least the one over it, scaled by
+  // the design's own taper, so a push for the hair high up carries down the wall and the band)
+  const baseR = AZ.map((az) => { const r = ST.map(([, h]) => rAt(az, h)); for (let s = ST.length - 2; s >= 0; s--) r[s] = Math.max(r[s], r[s + 1] * secR(D, az, A(ST[s][1])) / secR(D, az, A(ST[s + 1][1]))); return r; });
+  const crownR = AZ.map((az, k) => ST.map(([, h, out], s) => baseR[k][s] + out));
+  // (the crown's surface, less the band, toward any azimuth at any height: the section scaled as the stations are)
+  const facS = () => ST.map(([, h], s) => [h, baseR[0][s] / secR(D, AZ[0], A(h))]).filter(([h], i, L) => i === 0 || h > L[i - 1][0]);
+  let FS = facS();
+  const surfR = (az, h) => secR(D, az, A(h)) * interp(FS, h);
   // (between the stations too: each segment above the band pushed out until every height along it clears the head and
   // the hair; the apex raised until the top's facets clear them)
   const ib = ST.findIndex(([n]) => n === 'bti');
-  for (let k = 0; k < N; k++) for (let s = ib; s + 1 < ST.length; s++) {
-    const [ha, hb] = [ST[s][1], ST[s + 1][1]];
-    let f = 1; for (let q = 1; q < 8; q++) { const t = q / 8, h = ha + (hb - ha) * t, r = crownR[k][s] * (1 - t) + crownR[k][s + 1] * t; f = Math.max(f, need(AZ[k], h) / r); }
-    if (f > 1) { crownR[k][s + 1] *= f; if (s > ib) crownR[k][s] *= f; }
+  for (let s = ib; s + 1 < ST.length; s++) {
+    const [ha, hb] = [ST[s][1], ST[s + 1][1]], ra = (az) => secR(D, az, A(ha)) * crownR[0][s] / secR(D, AZ[0], A(ha)), rb = (az) => secR(D, az, A(hb)) * crownR[0][s + 1] / secR(D, AZ[0], A(hb));
+    let f = 1; for (const az of AZ5) for (let q = 1; q < 8; q++) { const t = q / 8, h = ha + (hb - ha) * t; f = Math.max(f, need(az, h) / (ra(az) * (1 - t) + rb(az) * t)); }
+    if (f > 1) for (let k = 0; k < N; k++) { crownR[k][s + 1] *= f; if (s > ib) crownR[k][s] *= f; }
   }
+  FS = ST.map(([, h, out], s) => [h, (crownR[0][s] - out) / secR(D, AZ[0], A(h))]).filter(([h], i, L) => i === 0 || h > L[i - 1][0]);
   let apexH = D.apex;
   for (let it = 0; it < 40; it++) {
     const hs0 = ST[ST.length - 1][1];
-    const ok = AZ.every((az, k) => { for (let q = 1; q < 10; q++) { const t = q / 10, h = hs0 + (apexH - hs0) * t; if (crownR[k][ST.length - 1] * (1 - t) < need(az, h)) return false; } return true; });
+    const top = (az) => secR(D, az, A(hs0)) * crownR[0][ST.length - 1] / secR(D, AZ[0], A(hs0));
+    const ok = AZ5.every((az) => { for (let q = 1; q < 10; q++) { const t = q / 10, h = hs0 + (apexH - hs0) * t; if (top(az) * (1 - t) < need(az, h)) return false; } return true; });
     if (ok) break; apexH += 0.02;
   }
   G.apexH = apexH;
@@ -220,11 +232,54 @@ export function buildHat(rig, design = DESIGN[rig.who]) {
     G.poly([crown[k][ST.length - 1], crown[k2][ST.length - 1], apex], 'leather', 'crown');
   }
 
+  /* ---- the crown's seams: a raised bead along each panel corner, from the band's top to the apex ---- */
+  {
+    const Pv = (i) => G.verts[i], sw = D.seam?.w ?? 0.018, so = D.seam?.out ?? 0.013;
+    const axis = (y) => F.toBody([0, y, 0]);
+    AZ.forEach((az, k) => {
+      if (!SEAMS.has(az)) return;
+      const kl = (k + N - 1) % N, kr = (k + 1) % N, rows = [];
+      for (let st = ib; st < ST.length; st++) {
+        // (the first row a little over the band's top step)
+        const lift = (kk) => (st === ib ? lerp(Pv(crown[kk][st]), Pv(crown[kk][st + 1]), 0.05) : Pv(crown[kk][st]));
+        const c = lift(k), dl = unit(sub(lift(kl), c)), dr = unit(sub(lift(kr), c));
+        const hb = F.toHat(c), o = unit(sub(c, axis(hb[1])));
+        rows.push([V(F.toHat(add(add(c, mul(dl, sw)), mul(o, 0.004))), 'crown'), V(F.toHat(add(c, mul(o, so))), 'crown'), V(F.toHat(add(add(c, mul(dr, sw)), mul(o, 0.004))), 'crown')]);
+      }
+      // (up the top's facet to just short of the apex)
+      const a = Pv(apex), c = Pv(crown[k][ST.length - 1]), tip = add(c, mul(sub(a, c), 0.85)), o = unit(cross(sub(Pv(crown[kr][ST.length - 1]), c), sub(a, c)));
+      const oo = dot(o, sub(c, axis(F.toHat(c)[1]))) < 0 ? mul(o, -1) : o;
+      rows.push([V(F.toHat(add(tip, mul(oo, 0.004))), 'crown'), V(F.toHat(add(tip, mul(oo, so * 0.7))), 'crown'), V(F.toHat(add(tip, mul(oo, 0.004))), 'crown')]);
+      G.tag = 'seam';
+      for (let i = 0; i + 1 < rows.length; i++) { G.poly([rows[i][0], rows[i + 1][0], rows[i + 1][1], rows[i][1]], 'trim', 'crown'); G.poly([rows[i][1], rows[i + 1][1], rows[i + 1][2], rows[i][2]], 'trim', 'crown'); }
+    });
+  }
+
+  /* ---- the band's stitch dividers: small raised blocks between its edge strips, every 30 degrees off the ring ---- */
+  {
+    const dw = BAND.divW ?? 0.035;
+    for (const az of AZ.filter((a) => ((a % 30) + 30) % 30 === 15)) {
+      if (Math.abs(((az - D.ring.az + 540) % 360) - 180) < (D.ring.ro / 1.0) * 180 / Math.PI + 6) continue;
+      const n = dirOf(az), side = cross([0, 1, 0], n), corners = [];
+      for (const h of [e + 0.004, bh - e - 0.004]) for (const sg of [-1, 1]) {
+        // (on the band's face, along it: its corners at the azimuths dw either side)
+        const a2 = az + sg * (dw / (surfR(az, h) + bo)) * 180 / Math.PI, base = P(a2, surfR(a2, h) + bo, h);
+        corners.push([V(add(base, mul(n, 0.003)), 'crown'), V(add(base, mul(n, eo * 0.9)), 'crown')]);
+      }
+      // (corners: [bottom left, bottom right, top left, top right], each [at the band's face, standing out])
+      const [bl, br, tl, tr] = corners;
+      G.tag = 'divider';
+      G.poly([bl[1], br[1], tr[1], tl[1]], 'trim', 'crown');
+      G.poly([bl[0], bl[1], tl[1], tl[0]], 'trim', 'crown');
+      G.poly([br[0], tr[0], tr[1], br[1]], 'trim', 'crown');
+    }
+  }
+
   /* ---- the brim: from the crown's foot out, its trim bead, its underside back to the sweatband ---- */
   const TS = [0, 0.2, 0.42, 0.64, 0.84, 1];
   const [tw, th, tov] = BR.trim;
   const brim = AZ.map((az) => {
-    const r0 = rAt(az, 0) + bo + eo, R = byAz(BR.R, az), Dd = byAz(BR.drop, az);
+    const r0 = crownR[AZ.indexOf(az)][0], R = byAz(BR.R, az), Dd = byAz(BR.drop, az);
     const top = TS.map((t) => [r0 + (R - tw - r0) * t, -Dd * Math.pow((r0 + (R - tw - r0) * t - r0) / (R - r0), BR.curve)]);
     // the profile's tangent at the edge, and its normal (up)
     const E = [R - tw, -Dd * Math.pow((R - tw - r0) / (R - r0), BR.curve)], E2 = [R, -Dd];
@@ -235,7 +290,7 @@ export function buildHat(rig, design = DESIGN[rig.who]) {
     // the underside: the top moved down by T along each ring's normal (approximately straight down the axis)
     const under = top.slice().reverse().map(([r, h], i, L) => [r, h - T]);
     under[under.length - 1] = [r0 - T * 0.4 - bo - eo, -T];
-    const sweat = [[r0 - T * 0.4 - bo - eo, bh * 0.8]];
+    const sweat = [[r0 - T * 0.4 - bo - eo, 0.04]];
     return { az, prof: [...top, ...trim, ...under, ...sweat], nTop: top.length, nTrim: trim.length };
   });
   const bv = brim.map(({ az, prof }, k) => prof.map(([r, h], i) => (i === 0 ? crown[k][0] : V(P(az, r, h), 'brim'))));
@@ -249,42 +304,48 @@ export function buildHat(rig, design = DESIGN[rig.who]) {
     }
   }
 
-  /* ---- the ring on the band ---- */
+  /* ---- the ring on the band: flush on the band's edge strips, on the middle of a flat panel ---- */
+  const R0 = D.ring, ringH = bh * R0.at;
+  const ringN = dirOf(R0.az), ringUp = [0, 1, 0], ringSide = cross(ringUp, ringN);
+  // (its back on the furthest point of the band under it: a flat panel's edge strips)
+  let ringR = 0; for (let d = -20; d <= 20; d += 1) for (const dh of [-R0.ro, 0, R0.ro]) { const h = Math.max(0, Math.min(bh, ringH + dh)); ringR = Math.max(ringR, (surfR(R0.az + d, h) + bo + eo) * Math.cos(d * Math.PI / 180)); }
+  ringR += 0.004;
+  const ringC = P(R0.az, ringR, ringH);
   {
-    const R0 = D.ring, az = R0.az, h = bh * R0.at;
-    // (its back off the band's furthest point under it)
-    const span = (R0.ro / 1.0) * 180 / Math.PI;
-    let r = 0; for (let d = -span; d <= span; d += span / 16) for (const dh of [-R0.ro, 0, R0.ro]) r = Math.max(r, (Math.max(rAt(az + d, Math.max(0, h + dh)), rBase[0] - 0.02) + bo + eo) / Math.cos(d * Math.PI / 180));
-    r += R0.gap ?? 0.01;
-    const c = P(az, r, h), n = dirOf(az), up = [0, 1, 0], side = cross(up, n);
-    const pt = (rad, ang, off) => add(add(c, mul(n, off)), add(mul(side, rad * Math.cos(ang)), mul(up, rad * Math.sin(ang))));
-    const K = 12, ro = R0.ro, ri = R0.ri, t = R0.t, mid = (ro + ri) / 2;
+    const pt = (rad, ang, off) => add(add(ringC, mul(ringN, off)), add(mul(ringSide, rad * Math.cos(ang)), mul(ringUp, rad * Math.sin(ang))));
+    const K = 16, ro = R0.ro, ri = R0.ri, t = R0.t;
     // (each spoke: the outer foot, the outer bevel, the face's outer, the face's inner, the inner bevel, the inner foot)
-    const prof = [[ro, 0], [ro, t * 0.55], [ro - (ro - ri) * 0.22, t], [ri + (ro - ri) * 0.22, t], [ri, t * 0.55], [ri, 0]];
-    const rv = Array.from({ length: K }, (_, j) => prof.map(([rad, off]) => V(pt(rad, (j / K) * Math.PI * 2, off), 'ring')));
+    const prof = [[ro, 0], [ro, t * 0.6], [ro - (ro - ri) * 0.2, t], [ri + (ro - ri) * 0.2, t], [ri, t * 0.6], [ri, 0]];
+    // (its feet, outer and inner, back on the surface behind them: the band's strips, or the crown's wall over the band)
+    const surf = (rad, ang) => {
+      const q = pt(rad, ang, 0), az = Math.atan2(q[0], q[2]) * 180 / Math.PI, h = q[1];
+      const r = h <= bh ? surfR(az, Math.max(0, h)) + bo + eo : surfR(az, h);
+      return r * Math.cos((az - R0.az) * Math.PI / 180) - ringR + 0.003;
+    };
+    // (each foot no deeper than its neighbours' and the points between: the chords between the feet clear the band's
+    // top step)
+    const foot = (rad, j) => Math.max(...[-1, -0.5, 0, 0.5, 1].map((d) => surf(rad, ((j + d) / K) * Math.PI * 2)));
+    const rv = Array.from({ length: K }, (_, j) => { const ang = (j / K) * Math.PI * 2; return prof.map(([rad, off], i) => V(pt(rad, ang, i === 0 || i === prof.length - 1 ? foot(rad, j) : off), 'ring')); });
     G.tag = 'ring';
     for (let j = 0; j < K; j++) for (let i = 0; i + 1 < prof.length; i++) G.poly([rv[j][i], rv[(j + 1) % K][i], rv[(j + 1) % K][i + 1], rv[j][i + 1]], 'rune', 'ring');
-    void mid;
   }
 
   /* ---- the feathers ---- */
   D.feathers.forEach((f, fi) => {
-    // (its root behind the ring, in the gap between the ring and the band, `off` out from the band's face)
-    const h0 = bh * D.ring.at + f.up, r0 = Math.max(...Array.from({ length: 31 }, (_, j) => j - 15).map((d) => Math.max(rAt(f.az + d, Math.min(bh, h0)), rBase[0] - 0.02) / Math.cos(d * Math.PI / 180))) + bo + eo + f.off, base = sub(P(f.az, r0, h0), mul(unit(f.dir), 0.08));
-    const n0 = dirOf(f.az), back = dirOf(f.az + 90); // (back: round the side toward the hat's rear)
-    // the spine's direction in the hat's frame
-    const u = unit(f.dir);
-    void back;
+    // (its spine out from behind the ring: from the ring's centre `off` out from its back, its root just outside the
+    // ring's rim, so the ring hides where it is tucked)
+    const n0 = ringN, u = unit(f.dir), ut = Math.hypot(dot(u, ringSide), dot(u, ringUp)) || 1;
+    const base = add(add(ringC, mul(ringN, f.off)), mul(u, (R0.ro + 0.012) / ut));
     // the vane's width direction: across the spine, in the plane facing out (turned by `turn` about the spine)
     let wv = unit(cross(n0, u)); const tn = f.turn * Math.PI / 180, nn = unit(cross(u, wv));
     wv = unit(add(mul(wv, Math.cos(tn)), mul(nn, Math.sin(tn))));
     const nrm = unit(cross(u, wv));
-    const quill = 0.16 * f.len + 0.08, L = f.len, th = 0.012, rib = 0.016;
+    const quill = 0.14 * f.len, L = f.len, th = 0.012, rib = 0.016;
     const spine = (s) => add(base, add(mul(u, s), mul(wv, f.bow * L * ((s / (L + quill)) ** 2))));
     G.tag = `feather ${fi}`;
     // quill: a thin square stick from the band to the vane's root
     {
-      const q0 = base, q1 = spine(quill - 0.012), qw = 0.025;
+      const q0 = base, q1 = spine(quill - 0.012), qw = 0.022;
       const ring = (p) => [0, 1, 2, 3].map((j) => V(add(p, add(mul(wv, qw * Math.cos(j * Math.PI / 2 + Math.PI / 4)), mul(nrm, qw * Math.sin(j * Math.PI / 2 + Math.PI / 4)))), 'feather'));
       const a0 = ring(q0), a1 = ring(q1);
       for (let j = 0; j < 4; j++) G.poly([a0[j], a0[(j + 1) % 4], a1[(j + 1) % 4], a1[j]], 'trim', 'feather');
