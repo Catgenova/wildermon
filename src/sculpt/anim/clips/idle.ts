@@ -76,6 +76,7 @@ export const IDLE: Clip = {
     head: [{ t: 0, v: [0, 0, 0] }, { t: 3.25, v: [0, 0, 0] }, { t: 3.46, v: [3, 0, 0] }, { t: 3.72, v: [-2, 2, -3], ease: 'back' }, { t: 4.42, v: [-2, 2, -3] }, { t: 4.72, v: [0, 0, 0], ease: 'hold', hold: 0.35 }],
   },
   bodies: {
+    man: { armsOut: 0.08 },
     woman: { armsOut: 0.07, scale: { clavicle_r: 0.6 }, add: { thigh_l: [0, 0, -6], thigh_r: [0, 0, 6], upperarm_l: [0, 0, 4], upperarm_r: [0, 0, -4], lowerarm_l: [4, 0, 0], lowerarm_r: [4, 0, 0] } },
   },
 };
