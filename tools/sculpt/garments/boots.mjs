@@ -1,7 +1,7 @@
 // The boots of the first outfit (tools/sculpt/ref/outfit1-boots.png, worn in tools/sculpt/ref/outfit1-lineup.png): a
 // flat dark sole, a tan leather foot and shaft up to a structured cuff round the ankle, two cream straps crossing over
-// the shaft (an X in front and behind) and a cream band over the forefoot. His closed, a rounded block toe; hers open,
-// her toes bare in front of the forefoot band. Fitted to each low-poly body from the one design (DESIGN, per body),
+// the shaft (an X in front and behind) and a cream band over the forefoot behind a rounded closed toe; hers slimmer and
+// lighter, her cuff fitted (no ledge). Fitted to each low-poly body from the one design (DESIGN, per body),
 // skinned to its rig's leg and foot bones (no bones of its own).
 //
 //   buildBoots(rig) → { verts, polys: [{ v, mat, part, tag }], tris, part, side, rings, design, hides, soles }
@@ -22,7 +22,7 @@
 // foot's middle for r3 r4, the leg's axis for r5..r8) at its own height, each column's point the further of its design
 // and the body's reach that way grown by the clearance `clear` (so the body is always inside). The sole's underside is
 // closed; the rim's inside edge is the one open edge (round the leg). Materials: leather (the shaft and the cuff), tan (the
-// foot), strap, sole, skin (her toes: the body's own skin colour in the game).
+// foot), strap, sole.
 //
 // Heights: the body stands on the boots' soles (the game stands a body on its lowest sole: with the boots on, theirs),
 // so the ground is the body's floor less the sole and `gap`; the cuff's foot at `cuff[0]` and its top at `cuff[1]` head
@@ -39,8 +39,6 @@ export const MATS = {
   tan: [0.77, 0.51, 0.35],
   strap: [0.88, 0.79, 0.7],
   sole: [0.46, 0.29, 0.2],
-  // (her bare toes: the body's own skin in the game, src/sculpt/lowpoly.ts; this the skin the light was fitted to)
-  skin: [0.68, 0.49, 0.41],
 };
 
 /**
@@ -49,8 +47,8 @@ export const MATS = {
  *   margin: the outline past the body's foot at the toe and the heel;
  *   lip: the welt, how far the upper stands in from the sole's edge; clear: the upper off the body; step: the cuff out
  *   from the shaft; cuff: its foot and top, head heights above the ground; wall, top: r3's and r4's heights per column;
- *   cols: the columns, [f, v (off the foot's middle line, + out), angle round the ankle (degrees, 0 forward, +90 out)]; open: her toes bare (the columns
- *   in front of the forefoot band, r2 to r4, in skin); fill: the shaft and the cuff further out per column (the heel's
+ *   cols: the columns, [f, v (off the foot's middle line, + out), angle round the ankle (degrees, 0 forward, +90 out)];
+ *   fill: the shaft and the cuff further out per column (the heel's
  *   back kept straight up to the cuff); collar: r4 and the wall clear the body from r4's height to this above it (the
  *   ankle's foot); cone: the half-angle round each column the body's reach is taken over (degrees).
  */
@@ -66,23 +64,20 @@ export const DESIGN = {
     mix: [0, 0.15, 0.55, 0.95, 1, 1, 0.95, 0.55, 0.15, 0],
     base: [0.66, 0.7, 0.8, 0.86, 0.86, 0.86, 0.86, 0.8, 0.7, 0.66],
     fill: [0.02, 0, 0, 0.02, 0.03, 0.03, 0.02, 0, 0, 0.02],
-    open: false,
-    straps: { x: [[90, 0.025], [-90, 0.055]], give: 0.05, c: 0.42, amp: 0.15, w: 0.11, band: { w: 0.16, lift: 0.06, foot: 0.02 } },
+    straps: { x: [[90, 0.045], [-90, 0.08]], give: 0.05, c: 0.42, amp: 0.15, w: 0.11, band: { w: 0.16, lift: 0.09, foot: 0.02 } },
   },
   female: {
-    H: 2.07, sole: 0.09, gap: 0.012, margin: { toe: -0.04, heel: 0 }, lip: 0.045, shaft: 0.08, step: 0, flare: 0.05,
+    H: 2.07, sole: 0.09, gap: 0.012, margin: { toe: -0.1, heel: 0 }, lip: 0.045, shaft: 0.08, step: 0, flare: 0.05,
     cuff: [0.6, 0.78], rim: 0.035,
     cols: [[1, 0.2, 18], [0.66, 0.44, 62], [0.33, 0.36, 102], [0.07, 0.31, 142], [0, 0.14, 168], [0, -0.14, -168], [0.07, -0.31, -142], [0.33, -0.33, -102], [0.66, -0.42, -62], [1, -0.2, -18]],
-    wall: null,
+    wall: [0.14, 0.15, 0.15, 0.16, 0.16, 0.16, 0.16, 0.15, 0.15, 0.14],
     lean: [0.02, 0.02, 0.03, 0.02, 0.02, 0.02, 0.02, 0.03, 0.02, 0.02],
-    top: [0.2, 0.22, 0.52, 0.6, 0.6, 0.6, 0.6, 0.52, 0.22, 0.2],
-    shrink: [0.5, 0.06, 0.04, 0.02, 0.02, 0.02, 0.02, 0.04, 0.06, 0.5],
+    top: [0.28, 0.34, 0.52, 0.6, 0.6, 0.6, 0.6, 0.52, 0.34, 0.28],
+    shrink: [0.2, 0.06, 0.04, 0.02, 0.02, 0.02, 0.02, 0.04, 0.06, 0.2],
     mix: [0, 0.1, 0.5, 0.95, 1, 1, 0.95, 0.5, 0.1, 0],
     base: null,
     fill: [0.02, 0, 0, 0.02, 0.03, 0.03, 0.02, 0, 0, 0.02],
-    open: true,
-    straps: { x: [[90, 0.025], [-90, 0.052]], give: 0.05, c: 0.42, amp: 0.14, w: 0.1, band: { w: 0.12, lift: 0.05, foot: 0.02 } },
-    toes: { count: 5, big: 1.6, edge: 0.03, root: 0.12, tip: 0.95, back: 0.07, shoulder: 0.2, round: 0.55, height: 0.17, bigRise: 1.15, tipH: 0.75 },
+    straps: { x: [[90, 0.045], [-90, 0.08]], give: 0.05, c: 0.42, amp: 0.14, w: 0.1, band: { w: 0.12, lift: 0.08, foot: 0.02 } },
   },
 };
 
@@ -144,64 +139,6 @@ function zipper(G, A, Bq, mat) {
   }
 }
 
-/**
- * Her toes (DESIGN.toes), in skin, in the open toe in front of the forefoot band: five, the big toe inside (`big` times
- * the others' width), across the front from the ball's inner column to its outer. Two rows across them, three points a
- * toe (its sides `shoulder` of its width in, `round` of its height; its middle, `height`, the big toe `bigRise` times
- * it): their roots `root` of the way from the band's line (r4) to the welt (r2), their tips `tip` of the way (the sides
- * `back` behind), `tipH` of the roots' height. The band's line down to the roots, the tips down to the welt, and the
- * sides, all in skin.
- */
-function toesOf(G, D, ft, R, side) {
-  const T = D.toes, cols = D.cols;
-  const front = cols.map((c, k) => k).filter((k) => cols[k][0] >= 0.6);
-  // the front columns in order from the inner side's ball round to the outer's
-  const inner = front.filter((k) => cols[k][1] < 0).sort((a, b) => cols[a][0] - cols[b][0]), outer = front.filter((k) => cols[k][1] > 0).sort((a, b) => cols[b][0] - cols[a][0]);
-  const ord = [...inner, ...outer];
-  const uvOf = (i) => ft.uv(G.verts[i]);
-  // a point along the polyline of (u, v, y) at share s of its length
-  const along = (P, s) => {
-    const L = []; let tot = 0;
-    for (let k = 0; k + 1 < P.length; k++) { const l = Math.hypot(P[k + 1][0] - P[k][0], P[k + 1][1] - P[k][1]); L.push(l); tot += l; }
-    let x = s * tot;
-    for (let k = 0; k < L.length; k++) { if (x <= L[k] || k === L.length - 1) { const t = Math.min(1, x / L[k]); return P[k].map((q, c) => q + (P[k + 1][c] - q) * t); } x -= L[k]; }
-  };
-  const band = ord.map((k) => [...uvOf(R.r4[k]), G.verts[R.r4[k]][1]]), welt = ord.map((k) => [...uvOf(R.r2[k]), G.verts[R.r2[k]][1]]);
-  // across the front, share s from the inner side: toe t spans [a_t, b_t]; the roots a row of each toe's middle and the
-  // grooves between (2 count - 1), the tips a row of each toe's groove, shoulder, middle, shoulder (4 count + 1), the
-  // shoulders `shoulder` of the toe's width in from its sides, lower (`round` of its height) and back (`back`)
-  const w = Array.from({ length: T.count }, (_, t) => (t === 0 ? T.big : 1)), tot = w.reduce((x, y) => x + y, 0);
-  const span = w.map((_, t) => [w.slice(0, t).reduce((x, y) => x + y, 0) / tot, w.slice(0, t + 1).reduce((x, y) => x + y, 0) / tot]);
-  const sc = (x) => T.edge + (1 - 2 * T.edge) * x;
-  const hOf = (t) => T.height * (t === 0 ? T.bigRise : 1);
-  // (a point at share x across, `f` of the way from the band's line to the welt, h over the welt)
-  const pt = (x, f, h) => { const b = along(band, sc(x)), wl = along(welt, sc(x)), q = b.map((v, c) => v + (wl[c] - v) * f); return ft.at(q[0], q[1], wl[2] + h); };
-  const root = [], tip = [];
-  span.forEach(([a, b], t) => {
-    // (each toe three across: its sides `shoulder` of its width in, lower (`round` of its height) and back (`back`) at the
-    // tip, its middle; the groove between two toes the gap between one's side and the next's)
-    for (const [x, f, k] of [[a + (b - a) * T.shoulder, T.tip - T.back, T.round], [(a + b) / 2, T.tip, 1], [b - (b - a) * T.shoulder, T.tip - T.back, T.round]]) {
-      root.push(pt(x, T.root, hOf(t) * k));
-      tip.push(pt(x, f, hOf(t) * k * T.tipH));
-    }
-  });
-  const vert = (p) => { const i = G.vert(p, 'boot'); G.side[i] = side; return i; };
-  // (and the tips' feet on the sole's top under them)
-  const foot = tip.map((p, j) => { const wl = welt[0][2]; return [p[0], wl + 0.004, p[2]]; });
-  const Ro = root.map(vert), Tp = tip.map(vert), Ft = foot.map(vert), n = Ro.length;
-  G.tag = 'toes';
-  zipper(G, ord.map((k) => R.r4[k]), Ro, 'skin');
-  for (let j = 0; j + 1 < n; j++) { G.poly([Ro[j], Ro[j + 1], Tp[j + 1], Tp[j]], 'skin', 'boot'); G.poly([Tp[j], Tp[j + 1], Ft[j + 1], Ft[j]], 'skin', 'boot'); }
-  // the sides: from the ball's column (r4, r3, r2) to the first and last toe
-  const [ki, ko] = [ord[0], ord[ord.length - 1]];
-  G.poly([R.r4[ki], R.r3[ki], R.r2[ki], Ft[0], Tp[0], Ro[0]], 'skin', 'boot');
-  G.poly([R.r4[ko], Ro[n - 1], Tp[n - 1], Ft[n - 1], R.r2[ko], R.r3[ko]], 'skin', 'boot');
-  // the sole's top round the tips
-  G.tag = 'toe sole';
-  zipper(G, Ft, ord.map((k) => R.r2[k]), 'sole');
-  R.toes = { root: Ro, tip: Tp, foot: Ft };
-}
-
 /** The closest point on the boot's upper (`tags`) of one side to p: the point, the outward normal there, the host triangle's corners and their shares. */
 function onUpper(G, side, p, tags) {
   let best = null;
@@ -225,7 +162,7 @@ function onUpper(G, side, p, tags) {
  */
 function strapsOf(G, D, side) {
   const R = G.rings[side], ft = G.foot[side], cols = D.cols, K = cols.length, S = D.straps;
-  const tags = ['wall', 'over', 'shoulder', 'shaft', 'toes'];
+  const tags = ['wall', 'over', 'shoulder', 'shaft'];
   const put = (p, lift) => {
     const h = onUpper(G, side, p, tags), i = G.vert(add(h.q, mul(h.n, lift)), 'strap');
     G.side[i] = side; G.host[i] = h.v.map((v, k) => [v, h.w[k]]); G.nrm[i] = h.n;
@@ -338,11 +275,8 @@ export function buildBoots(rig, design = DESIGN[rig.who]) {
     for (let k = 0; k < K; k++) G.poly([R.r0[(k + 1) % K], R.r0[k], cI], 'sole', 'boot');
     band(R.r0, R.r1, 'sole', 'sole edge');
     band(R.r1, R.r2, 'sole', 'welt');
-    // her toes: the columns in front of the forefoot band (front's and ball's columns between them)
-    const toeGap = (k) => D.open && D.cols[k][0] >= 0.6 && D.cols[(k + 1) % K][0] >= 0.6;
-    if (D.wall) band(R.r2, R.r3, 'tan', 'wall', null, toeGap);
-    band(R.r3, R.r4, 'tan', 'over', null, toeGap);
-    if (D.open) toesOf(G, D, ft, R, side);
+    if (D.wall) band(R.r2, R.r3, 'tan', 'wall');
+    band(R.r3, R.r4, 'tan', 'over');
     band(R.r4, R.r5, 'leather', 'shoulder');
     if (D.base) band(R.r5, R.r6, 'leather', 'shaft');
     if (D.step) { band(R.r6, R.r6b, 'leather', 'ledge'); band(R.r6b, R.r7, 'leather', 'cuff'); } else band(R.r6, R.r7, 'leather', 'cuff');
@@ -392,6 +326,12 @@ export function bootWeights(rig, G, o = {}) {
     return `calf_${s}`;
   };
   const vw = transferWeights(rig, G, { map, smooth: o.smooth ?? 2, keep: (i) => near[i], only: (i) => !G.host?.[i] });
+  // the cuff (its foot, ledge, top and rim) on the shin alone: it rides with the leg's front over the ankle as it bends
+  const at = new Map(rig.bones.map((b, i) => [b.name, i]));
+  for (const side of ['L', 'R']) {
+    const R = G.rings[side], calf = at.get(`calf_${side === 'L' ? 'l' : 'r'}`);
+    for (const key of ['r6', 'r6b', 'r7', 'r8']) for (const i of R[key] ?? []) vw[i] = [[calf, 1]];
+  }
   // the straps ride on the upper under them: their host triangle's corners' weights, by their shares
   G.host?.forEach((h, i) => {
     if (!h) return;
