@@ -24,7 +24,7 @@
 // One closed surface: the shell, the lining, the border (E0 to E1), the hem (the shell to the lining at row 0).
 // Materials: fabric (the shell), trim (the border, its teeth and its line at the opening), pattern (the cream between
 // the teeth), inner (the lining).
-import { samplesOf, meshOf, orient, trisOf, atRY, dirOf, sub, add, mul, dot, cross, unit, lerp } from '../lowgarment.mjs';
+import { offPlane, TOL, samplesOf, meshOf, orient, trisOf, atRY, dirOf, sub, add, mul, dot, cross, unit, lerp } from '../lowgarment.mjs';
 import { MATS as SHAWL_MATS } from './shawl.mjs';
 
 /**
@@ -50,17 +50,17 @@ export const DESIGN = {
     O: [0, 1.0, 0.35],
     bottom: 70, frame: [[0.95, 0.8, 0.66], [0.88, 1.45, 0.7], [0.7, 2.08, 0.7]], apex: [0, 2.75, 0.72],
     band: [0.36, 0.08], line: 0.16, teeth: [3, 9],
-    back: [[0, 2.35, -0.85], [0, 1.5, -1.38], [0, 0.85, -1.32]],
-    width: [[0.2, 1.35], [0.7, 1.45], [1.4, 1.38], [2.1, 1.05], [2.6, 0.6], [3.05, 0.05]], power: 2.8,
-    THICK: 0.07, IN: 0.07, gap: 0.035, lift: 0.1, drop: 0.24, over: 0.06, flare: 0.06, rise: 0.18, step: 0.12, K: 9, seam: 0,
+    back: [[0, 2.55, -0.6], [0, 2.0, -1.0], [0, 1.35, -1.2]],
+    width: [[0.4, 1.32], [1.0, 1.26], [1.6, 1.12], [2.2, 0.87], [2.7, 0.47], [3.1, 0.05]], power: 2.8,
+    THICK: 0.07, IN: 0.07, gap: 0.035, lift: 0.1, drop: 0.24, over: 0.06, flare: 0.1, rise: 0.14, step: 0.12, K: 9, seam: 0,
   },
   female: {
     O: [0, 1.0, 0.3],
     bottom: 68, frame: [[0.84, 0.7, 0.58], [0.8, 1.4, 0.62], [0.65, 2.0, 0.62]], apex: [0, 2.62, 0.64],
     band: [0.32, 0.07], line: 0.16, teeth: [3, 9],
-    back: [[0, 2.25, -0.8], [0, 1.45, -1.28], [0, 0.82, -1.22]],
-    width: [[0.2, 1.2], [0.7, 1.28], [1.4, 1.2], [2.05, 0.9], [2.45, 0.5], [2.88, 0.05]], power: 2.2,
-    THICK: 0.06, IN: 0.065, gap: 0.03, lift: 0.1, drop: 0.2, over: 0.06, flare: 0.05, rise: 0.16, step: 0.11, K: 9, seam: 0,
+    back: [[0, 2.4, -0.55], [0, 1.85, -0.95], [0, 1.25, -1.12]],
+    width: [[0.3, 1.16], [0.9, 1.1], [1.5, 0.97], [2.05, 0.75], [2.5, 0.4], [2.94, 0.05]], power: 2.2,
+    THICK: 0.06, IN: 0.065, gap: 0.03, lift: 0.1, drop: 0.2, over: 0.06, flare: 0.1, rise: 0.12, step: 0.11, K: 9, seam: 0,
   },
 };
 /** The columns: fractions of the way round from the frame (0) to the back line (1); the seam at TS[SEAM]. */
@@ -141,10 +141,17 @@ export function buildHood(rig, shawl, design = DESIGN[rig.who], opts = {}) {
   // the hem's rows in the cowl: `gap` inside its rim (the lining's THICK further in, and at row 1 higher, over the flare);
   // row 0 `drop` under the rim, row 1 `lift` over the upper roll's top: a short upright wall through the cowl's opening; row 2 flared out over the roll's
   // top, `flare` past it and `rise` over it: the hood's lower edge resting on the cowl
+  const row1Y = (d) => d[1] + D.lift;
+  // (row 2's height at radius r: `rise` over the roll's top, and high enough that the line up to it from row 1 passes
+  // over the roll's top by `rise` too)
+  const row2Y = (deg, r) => {
+    const [d, u1] = cowlTop(deg), r1 = d[0] - D.gap, y1 = row1Y(d, u1);
+    return Math.max(u1[1] + D.rise, y1 + (u1[1] + D.rise - y1) * (r - r1) / Math.max(0.05, u1[0] - r1));
+  };
   const inCowl = (deg, row, layer) => {
     const [d, u1] = cowlTop(deg), lin = layer === 'in' ? D.THICK : 0;
-    if (row === 2) return atRY(deg, u1[0] + D.flare - lin, u1[1] + D.rise - lin * 0.5, z0);
-    return atRY(deg, d[0] - D.gap - lin, row === 1 ? d[1] + D.lift + 1.3 * lin : d[1] - D.drop, z0);
+    if (row === 2) return atRY(deg, u1[0] + D.flare - lin, row2Y(deg, u1[0] + D.flare) - lin * 0.5, z0);
+    return atRY(deg, d[0] - D.gap - lin, row === 1 ? row1Y(d, u1) + 1.3 * lin : d[1] - D.drop, z0);
   };
   // a point kept over the cowl's top by `over`: pulled in toward the shawl's axis until it is
   const overCowl = (p) => {
@@ -168,7 +175,7 @@ export function buildHood(rig, shawl, design = DESIGN[rig.who], opts = {}) {
     const n = unit([T[1], -T[0], 0]);
     let q = add(add(p, mul(n, bandW)), [0, 0, -bandBack]);
     // (row 2, the lower edge resting on the cowl: `rise` over the roll's top, as the shell's row 2)
-    if (k === 2) { const deg = Math.atan2(q[0], q[2] - z0) * 180 / Math.PI, [d, u1] = cowlTop(deg); if (Math.hypot(q[0], q[2] - z0) > d[0] - D.gap) q = [q[0], Math.max(q[1], u1[1] + D.rise), q[2]]; }
+    if (k === 2) { const deg = Math.atan2(q[0], q[2] - z0) * 180 / Math.PI, [d] = cowlTop(deg), r = Math.hypot(q[0], q[2] - z0); if (r > d[0] - D.gap) q = [q[0], Math.max(q[1], row2Y(deg, r)), q[2]]; }
     return overCowl(q);
   });
   // (under row 2, in the cowl, E1 straight down at row 2's azimuth: the shell's rows there start from it)
@@ -263,7 +270,10 @@ function meshOfHood(D, rows, peak, apex, opts) {
   }
   // (a quad of the shell or the lining as two triangles, always cut on the same diagonal, so the two layers stay apart
   // when a pose shears them)
-  const quad = (a, b, c, d, m, part) => { G.poly([a, b, c], m, part); G.poly([a, c, d], m, part); };
+  const quad = (a, b, c, d, m, part) => {
+    if (offPlane(G.verts, [a, b, c, d]) <= TOL) { G.poly([a, b, c, d], m, part, true); G.polys[G.polys.length - 1].anchor = a; return; }
+    G.poly([a, b, c], m, part); G.poly([a, c, d], m, part);
+  };
   const P = G.vert(peak, 'border'), A = G.vert(apex, 'border'), LA = G.vert(lerp(apex, peak, D.line), 'border'), Ln = [[], []], teeth = [];
   for (const h of [0, 1]) {
     const Vo = V.out[h], Vi = V.in[h];
@@ -298,6 +308,8 @@ function meshOfHood(D, rows, peak, apex, opts) {
     for (let j = 0; j + 1 < J; j++) G.poly([Vo[0][j], Vo[0][j + 1], Vi[0][j + 1], Vi[0][j], ...(j === 0 && !mono ? [lineOf(0)] : [])], mat('fabric'), 'hem');
   }
   orient(G, (p) => sub(p, D.O));
+  // (a whole quad's fan from its anchor, whichever way round it was turned: the same diagonal as the layer under it)
+  for (const q of G.polys) if (q.anchor !== undefined) { const i = q.v.indexOf(q.anchor); q.v = [...q.v.slice(i), ...q.v.slice(0, i)]; }
   G.tris = trisOf(G);
   G.V = V; G.peak = P; G.apex = A; G.line = Ln; G.lineApex = LA; G.teeth = teeth;
   return G;
@@ -311,7 +323,7 @@ function meshOfHood(D, rows, peak, apex, opts) {
  */
 export const HEAD_SHARE = [0, 0, 0.15, 0.4, 0.7, 0.9, 1];
 /** And more of it toward the frame (by 1 - the column's TS), so the opening's lower sides go with the jaw. */
-export const FRONT_SHARE = [0, 0, 0, 0.25, 0.35, 0.1];
+export const FRONT_SHARE = [0, 0, 0, 0.15, 0.35, 0.15];
 export function hoodWeights(rig, G, shawl) {
   const head = rig.at.get('head'), z0 = shawl.design.z0, K = G.design.K;
   const SC = shawl.cols, N = SC.length;
