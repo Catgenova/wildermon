@@ -46,6 +46,8 @@ import MALE_TUNIC from './assets/lowtunic-male.json';
 import FEMALE_TUNIC from './assets/lowtunic-female.json';
 import MALE_HOOD from './assets/lowhood-male.json';
 import FEMALE_HOOD from './assets/lowhood-female.json';
+import MALE_LEATHER_CHEST from './assets/lowleatherchest-male.json';
+import FEMALE_LEATHER_CHEST from './assets/lowleatherchest-female.json';
 import LONG_SWORD from './assets/long_sword.json';
 import HAIR_ASSET from './assets/lowhair.json';
 import MALE_LIGHT from '../../tools/sculpt/lowlight-male.json';
@@ -568,6 +570,13 @@ export const hairShown = (pose: FigurePose): boolean => !wearsHood(pose);
 export const enchantedOf = (piece: 'chest' | 'legs' | 'boots' | 'helm' | 'mantle' | 'leatherChest' | 'leatherLegs' | 'leatherBoots' | 'leatherShawl' | 'leatherHat') => (pose: FigurePose): boolean => pose.outfit?.enchanted?.[piece] ?? false;
 
 /**
+ * Whether a figure wears the leather set's chest & arms (`tools/sculpt/garments/leatherchest.mjs`: the layered cuirass,
+ * its collar, pauldrons, base sleeves, bracers and wrist bands, over bare skin, the body it covers hidden); off unless
+ * asked for.
+ */
+const wearsLeatherChest = (pose: FigurePose): boolean => pose.outfit?.leatherChest ?? false;
+
+/**
  * The garments a low-poly body can wear, in the order they are laid over it: each its copy for the man and the woman, its
  * wear hook and, for one that can be enchanted, its enchantment's.
  */
@@ -577,6 +586,7 @@ const GARMENTS: ReadonlyArray<{ man: GarmentAsset; woman: GarmentAsset; wears: (
   { man: MALE_BOOTS as unknown as GarmentAsset, woman: FEMALE_BOOTS as unknown as GarmentAsset, wears: wearsBoots },
   { man: MALE_TUNIC as unknown as GarmentAsset, woman: FEMALE_TUNIC as unknown as GarmentAsset, wears: wearsTunic },
   { man: MALE_HOOD as unknown as GarmentAsset, woman: FEMALE_HOOD as unknown as GarmentAsset, wears: wearsHood },
+  { man: MALE_LEATHER_CHEST as unknown as GarmentAsset, woman: FEMALE_LEATHER_CHEST as unknown as GarmentAsset, wears: wearsLeatherChest, enchanted: enchantedOf('leatherChest') },
 ];
 
 const BODIES = {
