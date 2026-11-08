@@ -1,0 +1,146 @@
+{
+ "about": "The leather shawl's reference views registered to the low-poly bodies (tools/sculpt/lowlshawlsheet.py project): screen x = cx + s ax (cos yaw x + sin yaw z), screen y = cy + dy - s y, in the reference's pixels. s and cy from the head's top and the floor (the boot's sole), cx from the head; yaw fitted to the figure. ax, dy: per-view 2D corrections where the reference's proportions differ from the body's (review renders only). The glow reference shows only him: her back, side and rear views are his, fitted to her shoulders (ax, s), and marked so.",
+ "refs": {
+  "lineup": "lineup-shawl.png",
+  "glow": "enchanted-glow-ref.png"
+ },
+ "male": {
+  "front": {
+   "ref": "lineup",
+   "box": [
+    40,
+    40,
+    380,
+    520
+   ],
+   "yaw": 0,
+   "s": 68.44,
+   "cx": 229.9,
+   "cy": 188,
+   "ax": 1,
+   "dy": 0
+  },
+  "q3": {
+   "ref": "lineup",
+   "box": [
+    820,
+    70,
+    300,
+    520
+   ],
+   "yaw": -40,
+   "s": 66.6,
+   "cx": 971.7,
+   "cy": 215.6,
+   "ax": 1,
+   "dy": 0
+  },
+  "gfront": {
+   "ref": "glow",
+   "box": [
+    30,
+    45,
+    280,
+    400
+   ],
+   "yaw": 0,
+   "s": 54.54,
+   "cx": 171.1,
+   "cy": 165.3,
+   "ax": 1,
+   "dy": 0
+  },
+  "gback": {
+   "ref": "glow",
+   "box": [
+    306,
+    45,
+    270,
+    400
+   ],
+   "yaw": 180,
+   "s": 53.75,
+   "cx": 444.0,
+   "cy": 163.7,
+   "ax": 1,
+   "dy": 0
+  },
+  "gq3": {
+   "ref": "glow",
+   "box": [
+    565,
+    55,
+    230,
+    400
+   ],
+   "yaw": -30,
+   "s": 54.03,
+   "cx": 680.5,
+   "cy": 176.4,
+   "ax": 1,
+   "dy": 0
+  },
+  "gq3b": {
+   "ref": "glow",
+   "box": [
+    800,
+    60,
+    210,
+    400
+   ],
+   "yaw": -55,
+   "s": 53.9,
+   "cx": 897.1,
+   "cy": 182.9,
+   "ax": 1,
+   "dy": 0
+  },
+  "gside": {
+   "ref": "glow",
+   "box": [
+    1030,
+    70,
+    160,
+    400
+   ],
+   "yaw": -90,
+   "s": 53.1,
+   "cx": 1115.0,
+   "cy": 194.4,
+   "ax": 1,
+   "dy": 0
+  }
+ },
+ "female": {
+  "front": {
+   "ref": "lineup",
+   "box": [
+    450,
+    180,
+    300,
+    420
+   ],
+   "yaw": 0,
+   "s": 57.3,
+   "cx": 594.9,
+   "cy": 305.8,
+   "ax": 1,
+   "dy": 0
+  },
+  "q3": {
+   "ref": "lineup",
+   "box": [
+    1170,
+    205,
+    245,
+    420
+   ],
+   "yaw": -40,
+   "s": 55.76,
+   "cx": 1277.2,
+   "cy": 330.4,
+   "ax": 1,
+   "dy": 0
+  }
+ }
+}
