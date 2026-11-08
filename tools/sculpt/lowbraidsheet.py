@@ -26,14 +26,14 @@ import numpy as np
 from PIL import Image
 
 D = os.path.dirname(os.path.abspath(__file__))
-H = 400
+H = 405
 im = np.asarray(Image.open(os.path.join(D, 'ref/hair-side-braid.png')).convert('RGB')).astype(float)[:H]
 W = im.shape[1]
 R, G, B = im[..., 0], im[..., 1], im[..., 2]
 lum = 0.3 * R + 0.59 * G + 0.11 * B
 SPAN = {'front': (40, 345), 'q3': (345, 650), 'profile': (650, 955), 'r3': (955, 1245), 'back': (1245, 1536)}
 BG = np.array([58, 42, 47])
-BG_D, SKIN_H, FLOOR = 22, 0.122, 392
+BG_D, SKIN_H, FLOOR = 22, 0.122, 405
 
 
 def box(a, r):

@@ -1,89 +1,56 @@
 // The side braid updo (tools/sculpt/ref/hair-side-braid.png): the game's 'braid', "Braid". Built by
-// tools/sculpt/lowbraid.mjs (the format is there): the crown's clumps laid between border lines over the skull, fitted to
-// the sheet's creases on the carved hull (tools/sculpt/lowbraidlines.mjs), their heights the hull's (and solved,
-// tools/sculpt/lowbraidcrown.mjs);
-// the braid along a spine from behind her right ear over the shoulder onto the chest, its segments, its tie and its
-// tip; two wavy strands at the temples.
+// tools/sculpt/lowbraid.mjs: the crown's clumps between border lines traced on the sheet and lifted onto its carved
+// hull (tools/sculpt/lowbraidcrown.mjs), the braid's hearts on a spine triangulated from the sheet
+// (tools/sculpt/lowbraidbraid.mjs), the tie, the tip and the face strands.
 
-/** The crown's border lines, each front to back as (over, out) points (tools/sculpt/lowhair.mjs dirOf: over 0 ahead,
- * 90 up, 180 back; out + her left). The part runs back from the hairline over her left brow to the crown, where the
- * seam starts: a herringbone down the back of the head to the braid's root behind her right ear (SEAM). Her right
- * side's clumps sweep from the part across the crown and down her right side, round to the seam; her left side's back
- * over her left side and round the back of the head to it; each side's clumps end on the seam one below the other. */
-import { existsSync, readFileSync } from 'node:fs';
-
-/** The seam's points, the crown to the root: each side's n-th border ends on the n-th. */
-export const SEAM = [[108, 2], [150, -8], [186, -18], [220, -26], [250, -32]];
-/** As drawn, before tools/sculpt/lowbraidlines.mjs fits them to the sheet's creases. Every border but the crown's
- * starts on the part, the hairline's at its front, each higher one further back, so each side's clumps fan out of the
- * part: the lowest across the forehead's hairline to the temple and on over the ear, the highest over the crown. */
-export const LINES = {
-  // the part's back end, up to the seam's top: the highest clumps' upper border
-  crown: [[76, 10], [92, 6], [108, 2]],
-  // her right: the borders between the sweep's clumps, the crown's down to the hairline over the ear
-  r1: [[70, 11], [84, -16], [108, -30], [132, -24], SEAM[1]],
-  r2: [[56, 13], [64, -28], [104, -52], [155, -46], SEAM[2]],
-  r3: [[42, 15], [42, -32], [58, -62], [118, -74], [180, -58], SEAM[3]],
-  r4: [[30, 17], [28, -24], [14, -52], [4, -66], [48, -84], [120, -90], [200, -72], [235, -52], SEAM[4]],
-  // her left: each wrapping round the back
-  l1: [[70, 13], [84, 30], [110, 28], [135, 18], SEAM[1]],
-  l2: [[56, 15], [64, 40], [112, 45], [165, 22], SEAM[2]],
-  l3: [[42, 16], [44, 45], [40, 62], [125, 62], [195, 32], SEAM[3]],
-  l4: [[30, 17], [26, 45], [12, 68], [2, 78], [62, 88], [150, 82], [222, 60], [248, 24], SEAM[4]],
+/** The crown as the sheet shows it (tools/sculpt/lowbraidcrown.mjs): its borders over the scalp (map degrees, east her
+ * right, north her face), each from its anchors: a map point, a lifted trace (tools/sculpt/hairs/braid-traces.json: the
+ * back's chevrons bl1-bl5 (her left) and br1-br5 (her right), the profile's and front's r1-r3 and hairR, the rear
+ * three-quarter's l3a and l3b, the front's fl1 and hairL), a seam tip V<k>. Every border on each side starts at the fan's
+ * point on the part (the outermost at its front, P0 over the brow, where the profile's blades meet; each further in
+ * further back along it) and ends on the seam, the
+ * k-th border of each side at the k-th chevron's tip; the outermost (the hairline) at the braid's root. Between two
+ * borders a clump. Six clumps each side. */
+const P0 = [3, 60];
+export const CROWN_LINES = {
+  seam: [['bl1', 'br1'], ['bl2', 'br2'], ['bl3', 'br3'], ['bl4', 'br4'], ['bl5', 'br5'], [100, -104]],
+  lines: {
+    part: [P0, [-3, 30], [-9, 0], [-13, -32], 'V1'],
+    br1: ['part@0.32', [6, 0], 'br1'],
+    br2: ['part@0.22', [14, 15], [20, 0], 'br2'],
+    br3: ['part@0.12', [18, 35], [30, 5], 'br3'],
+    br4: ['part@0.05', [14, 52], 'r1:profile', 'br4'],
+    br5: [P0, 'r2', 'br5'],
+    hairR: ['hairR', [124, -60], 'V6'],
+    bl1: ['part@0.3', [-20, -5], 'bl1'],
+    bl2: ['part@0.2', [-24, 20], [-38, -20], 'bl2'],
+    bl3: ['part@0.11', [-38, 35], [-58, 0], 'l3b', 'bl3'],
+    bl4: ['part@0.04', 'fl1', [-80, 15], [-85, -40], 'bl4'],
+    bl5: [P0, [-30, 64], [-72, 50], [-98, 5], [-100, -50], 'bl5'],
+    hairL: ['hairL:front', [-90, 62], [-112, 15], [-115, -45], 'hairL:back', 'V6'],
+  },
+  // (the hairlines: a clump's edge there lies on the skin)
+  edges: ['hairR', 'hairL'],
+  clumps: [
+    ['R1', 'part', 'br1'], ['R2', 'br1', 'br2'], ['R3', 'br2', 'br3'], ['R4', 'br3', 'br4'], ['R5', 'br4', 'br5'], ['R6', 'br5', 'hairR'],
+    ['L1', 'part', 'bl1'], ['L2', 'bl1', 'bl2'], ['L3', 'bl2', 'bl3'], ['L4', 'bl3', 'bl4'], ['L5', 'bl4', 'bl5'], ['L6', 'bl5', 'hairL'],
+  ].map(([id, inner, outer]) => ({ id, inner, outer })),
 };
-// the braid's spine and widths fitted to the sheet's five views (tools/sculpt/lowbraidspine.mjs), if fitted
-const SPINE_FIT = new URL('./braid-spine.json', import.meta.url);
-const SPINE = existsSync(SPINE_FIT) ? JSON.parse(readFileSync(SPINE_FIT, 'utf8')) : {};
-// each clump's heights per station solved against the sheet's five views (tools/sculpt/lowbraidcrown.mjs), if solved
-const CROWN_FIT = new URL('./braid-crown.json', import.meta.url);
-const CROWN = existsSync(CROWN_FIT) ? JSON.parse(readFileSync(CROWN_FIT, 'utf8')) : {};
-// the lines fitted to the sheet's creases, if fitted
-const FIT = new URL('./braid-lines.json', import.meta.url);
-const lines = existsSync(FIT) ? JSON.parse(readFileSync(FIT, 'utf8')) : LINES;
-
-/** The clumps with their solved heights (m: per inner station, a share of the section's). */
-const withFit = (clumps) => clumps.map((c) => (CROWN[c.id] && CROWN[c.id].length === c.n - 1 ? { ...c, m: CROWN[c.id] } : c));
 
 export default {
-  lines,
-  // the crown's clumps: each between two border lines (upper: under the clump above it, its edge tucked; lower: its lip
-  // over the next), `n` stations front to back, `taper` how far in from its front end it narrows to a point (share of
-  // the length; its back end blunt, along the seam), `lift`: its lip's height, a share of the hull's thickness there, and
-  // `groove`: the depth of the valley under its lip (the shade's step, darkest at 0.85 and over)
-  clumps: withFit([
-    { id: 'r1', upper: 'crown', lower: 'r1', n: 7, taper: [0.2, 0], lift: 1.0, groove: 1.0 },
-    { id: 'r2', upper: 'r1', lower: 'r2', n: 7, taper: [0.2, 0], lift: 1.0, groove: 0.95 },
-    { id: 'r3', upper: 'r2', lower: 'r3', n: 9, taper: [0.16, 0], lift: 1.0, groove: 0.85 },
-    { id: 'r4', upper: 'r3', lower: 'r4', n: 9, taper: [0.12, 0], lift: 1.0, groove: 0.7 },
-    { id: 'l1', upper: 'crown', lower: 'l1', n: 7, taper: [0.2, 0], lift: 1.0, groove: 1.0 },
-    { id: 'l2', upper: 'l1', lower: 'l2', n: 7, taper: [0.2, 0], lift: 1.0, groove: 0.95 },
-    { id: 'l3', upper: 'l2', lower: 'l3', n: 9, taper: [0.16, 0], lift: 1.0, groove: 0.85 },
-    { id: 'l4', upper: 'l3', lower: 'l4', n: 9, taper: [0.12, 0], lift: 1.0, groove: 0.7 },
-  ]),
-  // a clump's cross-section, its upper border (-0.5) to its lower (0.5): [across, height] (height a share of the hull's
-  // thickness; 'root' a corner sunk in the scalp); the upper edge tucked under the clump above, the lower a lip standing
-  // over the next clump, the face under the lip its valley
-  sec: [[-0.68, 'root'], [-0.6, 0.7], [-0.12, 1.06], [0.4, 1.04], [0.62, 0.8], [0.55, 'root']],
-  // the braid: its spine (her body's units, from behind her right ear down over the shoulder onto the chest), its
-  // segments' starts along it (shares of its length; then the tie, then the tip), their half-widths across (deep:
-  // `depth` of that), the tip's a share of the last segment's
+  crown: CROWN_LINES,
+  // the braid (tools/sculpt/lowbraidbraid.mjs): sheet rows in the front view. The root's row (where the braid leaves the
+  // crown's seam); each heart's top, bottom (its point) and width (px); the tie's rows and width; the tip's rows and
+  // width; the rows over which its face turns from out of her neck (faceFrom) to the front (faceTo); the hearts'
+  // length against their rows (each tucked under the one above).
   braid: {
-    spine: [[-0.55, 0.4, -0.58], [-0.56, 0.3, -0.26], [-0.7, -0.18, 0.1], [-0.54, -0.66, 0.48], [-0.48, -1.22, 0.83], [-0.56, -1.52, 0.92]],
-    seg: [0, 0.17, 0.34, 0.51],
-    tie: [0.68, 0.73],
-    w: [0.46, 0.46, 0.45, 0.44],
-    tipW: 0.66,
-    depth: 0.6,
-    // each body's own, fitted
-    fits: SPINE,
+    root: [196],
+    hearts: [[200, 248, 66], [240, 290, 66], [282, 322, 60], [314, 342, 52]],
+    tie: [340, 354, 36],
+    tip: [352, 398, 44],
+    face: [220, 300], faceFrom: [-1, 0, -0.3], faceTo: [-0.25, 0, 1],
+    stretch: 1.08,
   },
-  // the locks over the sides behind the ears (the sheet's mass, wider than the ears seen from the front): each a broad
-  // lock along a path (her units) from over the ear down behind it to the nape (her left) or the braid's root (her
-  // right), its half-width and half-thickness
-  locks: [
-    { id: 'sideL', lock: true, n: 6, path: [[0.78, 1.34, -0.08], [0.86, 1.04, -0.26], [0.78, 0.74, -0.42], [0.56, 0.52, -0.58]], w: 0.2, t: 0.13 },
-    { id: 'sideR', lock: true, n: 6, path: [[-0.78, 1.34, -0.1], [-0.88, 1.02, -0.28], [-0.8, 0.72, -0.44], [-0.6, 0.47, -0.58]], w: 0.2, t: 0.14 },
-  ],
   // the face strands: each a wavy path (her body's units, from its root under the clumps at the temple), its width and
   // thickness tapering to the tip
   strands: [

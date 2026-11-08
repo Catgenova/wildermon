@@ -1,20 +1,9 @@
 // The side braid updo (tools/sculpt/ref/hair-side-braid.png) for the low-poly bodies: the game's 'braid', "Braid". The
-// sheet's five views (their hair silhouettes, tools/sculpt/lowbraidmask.py; their cameras, tools/sculpt/lowbraidcams.mjs)
+// sheet's five views (their hair silhouettes, tools/sculpt/lowbraidsheet.py; their cameras, tools/sculpt/lowbraidreg.mjs)
 // carved into a visual hull on her body (carve), the hair built from it (buildBraid) as the style says
-// (tools/sculpt/hairs/braid.mjs):
-//
-//   lines   the crown's border lines over the skull, each [over, out] points front to back (tools/sculpt/lowhair.mjs
-//           dirOf), fitted to the sheet's creases (tools/sculpt/lowbraidlines.mjs).
-//   clumps  { id, upper, lower, n, taper: [front, back], lift, m? }: a clump between two lines, n stations front to
-//           back, pointed at the front (taper: how far in it narrows, a share of its length) and blunt at the back
-//           (taper 0: a ring on the seam, capped); its corners off the skin by `sec`'s heights as shares of the hull's
-//           thickness there (m: per station, solved by tools/sculpt/lowbraidcrown.mjs), the lip's by `lift` of that.
-//   sec     the clumps' section, upper border (-0.5) to lower (0.5): [across, height | 'root'] (a root sinks into the
-//           scalp; over the face and low at the nape it stands on the skin); the face under the lip its valley.
-//   braid   { spine, seg, tie, w, tipW, depth, fits }: the braid along a spine (her units; fits: each body's own,
-//           tools/sculpt/lowbraidspine.mjs), each segment from seg[i] two lobes (a heart), the tie a band from tie[0] to
-//           tie[1], the tip a point.
-//   strands [{ id, path, w, t }]: a flat lock along a path (her units), pointed at its end.
+// (tools/sculpt/hairs/braid.mjs): the crown's clumps between border lines traced on the sheet and lifted onto the hull
+// (tools/sculpt/lowbraidcrown.mjs), the braid's hearts, tie and tip on a spine triangulated from the sheet and settled on
+// the body (tools/sculpt/lowbraidbraid.mjs), the face strands along their paths.
 //
 // Weights: the crown and the strands on the head; the braid from the head at its root through the neck to the chest and
 // the right clavicle (weightOf).
@@ -27,6 +16,10 @@ import { project, raster, skullTable, centreOf, dirOf, angOf } from './lowhairhu
 import { shadeOf, openEdges, crossings } from './lowhair.mjs';
 import BRAID from './hairs/braid.mjs';
 import { BRAID_VIEWS as VIEWS, BRAID_SPAN as SPAN } from './lowbraidcams.mjs';
+import { addCrown, skullMap, thickMap, composeLines } from './lowbraidcrown.mjs';
+import { addBraid } from './lowbraidbraid.mjs';
+import { dirOfMap } from './lowbraidlift.mjs';
+const SPINE = JSON.parse(readFileSync(new URL('./hairs/braid-spine.json', import.meta.url), 'utf8'));
 
 const DIR = new URL('.', import.meta.url).pathname;
 export const CAMS = JSON.parse(readFileSync(join(DIR, 'hairs/braid-cams.json'), 'utf8'));
@@ -210,7 +203,7 @@ function even(pts, n) {
   });
 }
 
-const MIN_H = 0.03, NAPE = 248, SINK = 0.04, LIFT = 0.05, CACHE = new WeakMap();
+const MIN_H = 0.03, NAPE = 248, SINK = 0.04, LIFT = 0.05, CACHE = new WeakMap(), MAPS = new WeakMap();
 
 /**
  * The side braid on a body: { verts, polys: [{ v, piece, valley? }], tris: [[a, b, c, poly]], weights, pieces: [{ id,
@@ -246,90 +239,31 @@ export function buildBraid(rig, style = BRAID, H = carve(), { clear = true } = {
   const piece = (id, kind, fn) => { const p0 = polys.length, v0 = verts.length; fn(); pieces.push({ id, kind, polys: [p0, polys.length], verts: [v0, verts.length] }); };
   const V = (p, r = 0) => { role.push(r); return verts.push(p) - 1; };
 
-  // the crown's clumps
-  for (const cl of style.clumps) piece(cl.id, 'clump', () => {
-    const n = cl.n, A = even(style.lines[cl.upper], n), Bv = even(style.lines[cl.lower], n), sec = style.sec;
-    const ring = [];
-    for (let i = 0; i < n; i++) {
-      const u = i / (n - 1), mid = A[i].map((x, c) => (x + Bv[i][c]) / 2);
-      // the front end a point; the back end a point, or blunt (a ring along the seam, capped at its middle)
-      if (i === 0 || (i === n - 1 && cl.taper[1])) { ring.push([V(onHull(mid[0], mid[1], 0.55))]); continue; }
-      const w = Math.min(1, Math.pow(Math.min(u / cl.taper[0], cl.taper[1] ? (1 - u) / cl.taper[1] : 1), 0.6));
-      ring.push(sec.map(([a, b]) => {
-        const q = mid.map((x, c) => x + (Bv[i][c] - A[i][c]) * a * w);
-        // (lower toward the pointed front, so the tips lie in the mass rather than stand out of it)
-        const fade = 0.55 + 0.45 * Math.min(1, u / 0.35);
-        return V(onHull(q[0], q[1], b === 'root' ? 'root' : b * (a > 0.4 ? cl.lift : 1) * (cl.m ? cl.m[i - 1] : 1) * fade));
-      }));
-    }
-    if (!cl.taper[1]) { const m = A[n - 1].map((x, c) => (x + Bv[n - 1][c]) / 2); ring.push([V(onHull(m[0] + 3, m[1], 0.3))]); }
-    // the valleys, a strip each side of the groove between this clump and the next, the length of the clump: the face
-    // under the lip the darker, the tucked edge's a step lighter; each fading in from the pointed front and toward the
-    // blunt back (g)
-    const g = (f) => Math.sin(Math.PI * Math.min(1, 0.15 + f * 1.1)) ** 0.7;
-    tube(ring, sec.length, (j, f) => (j === sec.length - 2 ? shadeOf(cl.groove * g(f)) : j === 0 ? shadeOf(0.68 * cl.groove * g(f)) : {}));
-  });
+  // the crown's clumps (tools/sculpt/lowbraidcrown.mjs): her hull's thickness over this body's skull, by k
+  if (!MAPS.has(H)) MAPS.set(H, thickMap(H, centreOf(H.rig.B), skullMap(H.rig.B, centreOf(H.rig.B))));
+  if (!MAPS.has(B)) MAPS.set(B, skullMap(B, C));
+  addCrown(style.crown, { V, poly: (v, sh) => polys.push({ v, piece: pieces.length, ...sh }), piece, skull: MAPS.get(B), thick: MAPS.get(H), C, k, face: faceShare });
 
-  // the braid: rings round its spine, each segment a heart (two lobes over a point), the tie, the pointed tip
-  const br = { ...style.braid, ...(style.braid.fits?.[rig.who] ?? {}) }, S = even(br.spine.map(toBody), 121), Ls = [0];
-  for (let i = 1; i < S.length; i++) Ls.push(Ls[i - 1] + Math.hypot(...sub(S[i], S[i - 1])));
-  const L = Ls[Ls.length - 1];
-  const along = (s) => { const x = Math.min(119.999, Math.max(0, s * 120)), i = Math.floor(x); return lerp(S[i], S[i + 1], x - i); };
-  const frame = (s) => {
-    const p = along(s), T = unit(sub(along(Math.min(1, s + 0.01)), along(Math.max(0, s - 0.01))));
-    // out: away from the body's middle line (the neck's, the chest's), square to the spine
-    let N = [p[0], 0, p[2] + 0.25]; N = unit(sub(N, mul(T, dot(N, T))));
-    return { p, T, N, X: cross(T, N) };
-  };
-  const ringAt = (s, wx, wy, shape, twist = 0, shift = 0) => {
-    const f = frame(s), out = [];
-    shape.forEach(([ang, r, dz = 0]) => {
-      const a = ((ang + twist) * Math.PI) / 180;
-      out.push(V(add(add(f.p, mul(f.T, -dz * L * 0.17)), add(mul(f.X, Math.cos(a) * r * wx * k + shift * k), mul(f.N, Math.sin(a) * r * wy * k))), s));
-    });
-    return out;
-  };
-  // each segment two lobes side by side, each from high at its own side down across to past the middle, one a little
-  // in front of the other (the front one changing side each segment), so the segments read as the braid's chevrons;
-  // each lobe a pentagon round its own axis (one face out, flat), pointed at both ends
-  // the lobes in two rows, her left and her right by turns, each half a segment below the last: each from high at its
-  // own side down across the middle to a point, its lower end over the next lobe's upper (the classic braid's chevrons);
-  // each a pentagon round its own axis (a flat face out), widest a third of the way down; a segment the pair of lobes
-  // from its start, its own piece
-  const lobeRing = [54, 126, -162, -90, -18];
-  const nl = br.seg.length * 2, sEnd = br.tie[0] - 0.03, sp = (sEnd - br.seg[0]) / nl;
-  br.seg.forEach((_, i) => piece(`braid${i + 1}`, 'braid', () => {
-    for (const j of [2 * i, 2 * i + 1]) {
-      const sj = br.seg[0] + (j + 0.5) * sp, f = frame(sj), Lsp = sp * L, side = j % 2 ? 1 : -1;
-      const w = (br.w[Math.min(br.w.length - 1, Math.floor(j / 2))] ?? br.w[0]) * k;
-      const a = add(add(f.p, mul(f.X, side * 0.48 * w)), add(mul(f.T, -1.0 * Lsp), mul(f.N, -0.05 * w)));
-      const b = add(add(f.p, mul(f.X, -side * 0.22 * w)), add(mul(f.T, 1.05 * Lsp), mul(f.N, 0.08 * w)));
-      const ax = unit(sub(b, a)), Xl = unit(sub(f.N, mul(ax, dot(f.N, ax)))), Yl = cross(ax, Xl);
-      const rl = 0.46 * w, rd = 0.6 * w * br.depth;
-      const rings = [[0.14, 0.82], [0.4, 1], [0.74, 0.6]].map(([t, sc]) => lobeRing.map((ang) => {
-        const g = (ang * Math.PI) / 180, c = add(a, mul(sub(b, a), t));
-        return V(add(c, add(mul(Xl, Math.sin(g) * rd * sc), mul(Yl, Math.cos(g) * rl * sc * side))), sj + (t - 0.5) * 2 * sp);
-      }));
-      // (the lobe's upper end, tucked under the lobe above, and its lower, in the braid's valleys)
-      capped([[V(a, sj - sp)], ...rings, [V(b, sj + sp)]], 5, (jj, t) => (t < 0.2 ? shadeOf(0.7) : t > 0.8 ? shadeOf(0.4) : {}));
+  // the braid (tools/sculpt/lowbraidbraid.mjs): its root on the crown's seam end, on this body
+  const seamEnd = composeLines(style.crown).seam.at(-1), dR = dirOfMap(seamEnd), skR = MAPS.get(B).at(seamEnd);
+  if (!MAPS.has(rig.B.verts)) {
+    const lo = [-1.6, -2.4, -1.4], vox = 0.03, n = [Math.ceil(3.2 / vox), Math.ceil(4.2 / vox), Math.ceil(3 / vox)];
+    MAPS.set(rig.B.verts, { lo, vox, n, I: bodyInside(bodyTris(B), lo, n, vox) });
+  }
+  const BI = MAPS.get(rig.B.verts), inside = (p) => {
+    // (inside the body or within a voxel and a half of its skin)
+    for (const d of [[0, 0, 0], [1.5, 0, 0], [-1.5, 0, 0], [0, 0, 1.5], [0, 0, -1.5], [0, 1.5, 0], [0, -1.5, 0]]) {
+      const i = Math.floor((p[0] - BI.lo[0]) / BI.vox + d[0]), j = Math.floor((p[1] - BI.lo[1]) / BI.vox + d[1]), kk = Math.floor((p[2] - BI.lo[2]) / BI.vox + d[2]);
+      if (i >= 0 && j >= 0 && kk >= 0 && i < BI.n[0] && j < BI.n[1] && kk < BI.n[2] && BI.I[i + BI.n[0] * (j + BI.n[1] * kk)]) return true;
     }
-  }));
-  const hex = [0, 60, 120, 180, -120, -60].map((a) => [a, 1, 0]);
-  piece('tie', 'tie', () => {
-    const [t0, t1] = br.tie, w = br.w[br.seg.length - 1] * 0.62;
-    const r = [ringAt(t0, w, w * br.depth, hex, 30), ringAt(t1, w, w * br.depth, hex, 30)];
-    capped([[V(along(t0), t0)], ...r, [V(along(t1), t1)]], 6, () => ({}));
-  });
-  piece('tip', 'braid', () => {
-    // (as wide as the last segment, a share of it)
-    const t1 = br.tie[1], w = br.w[br.seg.length - 1] * br.tipW;
-    const r = [ringAt(t1 - 0.02, w * 0.7, w * br.depth * 0.75, hex), ringAt(t1 + (1 - t1) * 0.32, w * 1.05, w * br.depth, hex, 30), ringAt(t1 + (1 - t1) * 0.7, w * 0.62, w * br.depth * 0.62, hex)];
-    capped([[V(along(t1 - 0.03), t1)], ...r, [V(along(1), 1)]], 6, (j, f) => (f > 0.75 ? shadeOf(0.3) : {}));
-  });
+    return false;
+  };
+  addBraid(style.braid, { ...SPINE, rows: [...SPINE.rows] }, { inside, V, poly: (v, sh) => polys.push({ v, piece: pieces.length, ...sh }), piece, toBody, k, sheetScale: CAMS.front.s,
+    root: add(C, mul(dR, skR + 0.5 * MAPS.get(H).at(seamEnd) * k)) });
 
   // the face strands: a flat lock along a wavy path, its tip a point
   // (and the locks over the sides behind the ears: the same, broader, a hexagon round their path, on the head)
-  for (const st of [...style.strands, ...(style.locks ?? [])]) piece(st.id, st.lock ? 'clump' : 'strand', () => {
+  for (const st of style.strands) piece(st.id, st.lock ? 'clump' : 'strand', () => {
     const pts = even(st.path.map(toBody), st.n ?? 7), ring = [];
     const sec = st.lock ? [0, 60, 120, 180, 240, 300].map((a) => [Math.cos((a * Math.PI) / 180), Math.sin((a * Math.PI) / 180)]) : [[1, 0], [0, 1], [-1, 0], [0, -1]];
     pts.forEach((p, i) => {
@@ -373,7 +307,7 @@ export function buildBraid(rig, style = BRAID, H = carve(), { clear = true } = {
   }
   const weights = verts.map((_, i) => weightOf(role[i], pieces.find((pc) => i >= pc.verts[0] && i < pc.verts[1]).kind));
   const scalp = scalpOf(B, C, verts, polys, tris, pieces);
-  return { verts, polys, tris, weights, pieces, shave: scalp, scalp, centre: C, k, spine: S, braidW: br.w.map((x) => x * k), depth: br.depth };
+  return { verts, polys, tris, weights, pieces, shave: scalp, scalp, centre: C, k };
 }
 
 /** The scalp: the head's skin polygons (not the ears) the crown's clumps cover, every corner, seen from the skull's
@@ -417,12 +351,34 @@ export function crossReport(rig, hair, P = rig.B.verts, Hv = hair.verts) {
   return out;
 }
 
-/** Each piece's faces turned outward (all turned over where they enclose a negative volume). */
+/** Each piece's faces wound alike (each face turned to agree with a neighbour across a shared edge, from the first),
+ * then turned outward (all turned over where they enclose a negative volume). */
 function orient(verts, polys, pieces) {
   for (const pc of pieces) {
+    const ids = []; for (let i = pc.polys[0]; i < pc.polys[1]; i++) ids.push(i);
+    const byEdge = new Map(), key = (a, b) => (a < b ? a + ',' + b : b + ',' + a);
+    for (const i of ids) polys[i].v.forEach((a, j) => { const b = polys[i].v[(j + 1) % polys[i].v.length], kk = key(a, b); (byEdge.get(kk) ?? byEdge.set(kk, []).get(kk)).push(i); });
+    const done = new Set();
+    for (const s0 of ids) {
+      if (done.has(s0)) continue;
+      done.add(s0); const q = [s0];
+      while (q.length) {
+        const i = q.pop(), v = polys[i].v;
+        v.forEach((a, j) => {
+          const b = v[(j + 1) % v.length];
+          for (const n of byEdge.get(key(a, b))) {
+            if (n === i || done.has(n)) continue;
+            const w = polys[n].v, m = w.indexOf(a);
+            // (a neighbour wound alike runs the shared edge the other way: b then a)
+            if (w[(m + 1) % w.length] === b) w.reverse();
+            done.add(n); q.push(n);
+          }
+        });
+      }
+    }
     let vol = 0;
-    for (let i = pc.polys[0]; i < pc.polys[1]; i++) { const v = polys[i].v; for (let j = 1; j + 1 < v.length; j++) vol += dot(verts[v[0]], cross(verts[v[j]], verts[v[j + 1]])); }
-    if (vol < 0) for (let i = pc.polys[0]; i < pc.polys[1]; i++) polys[i].v.reverse();
+    for (const i of ids) { const v = polys[i].v; for (let j = 1; j + 1 < v.length; j++) vol += dot(verts[v[0]], cross(verts[v[j]], verts[v[j + 1]])); }
+    if (vol < 0) for (const i of ids) polys[i].v.reverse();
   }
 }
 

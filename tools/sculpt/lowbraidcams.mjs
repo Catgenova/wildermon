@@ -1,6 +1,6 @@
 // The side braid's sheet cameras (tools/sculpt/ref/hair-side-braid.png, five views of a woman's bust): each view's turn,
 // tilt, scale and centre fitted to the low-poly woman's head and neck, so they cover the sheet's skin there
-// (tools/sculpt/hairs/braid-mask.json, its skin: lowbraidmask.py) and nothing of the sheet's background, and her pupils,
+// (tools/sculpt/hairs/braid-mask.json, its skin: lowbraidsheet.py) and nothing of the sheet's background, and her pupils,
 // chin, nose and ears land on the sheet's (MARKS); each view's turn kept near its label, its tilt near level and its
 // scale near the front's. Only the rows above the chin count in the views that show the face, above the neck's foot in
 // the others (the sheet's neck is longer than hers). Coordinate descent from the labels' turns (or the last fit).

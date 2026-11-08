@@ -39,7 +39,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       const c = C[v], x = x0 + i * (cw + gap), crop = [c.cx - cw / 2, 205 - ch / 2, cw, ch], dy = (c.cy - 205);
       imgs.push({ src: REF, size: REF_SIZE, crop, box: [x, y1, cw, ch] });
       imgs.push({ src: REF, size: REF_SIZE, crop, box: [x, y2, cw, ch] });
-      imgs.push({ src: MASK, size: [1536, 400], crop, box: [x, y3, cw, ch] });
+      imgs.push({ src: MASK, size: [1536, 405], crop, box: [x, y3, cw, ch] });
       const body = bodyMesh(rig, bare, rig.B.verts.map(warpOf(c)), SHEET_HAIR, { parts: ['head', 'neck', 'torso'] });
       cells.push({ meshes: [{ ...body, alpha: 0.55 }], cam: camOf(c, 1, dy), box: [x, y2, cw, ch], see: true, label });
       cells.push({ meshes: [{ ...body, col: body.col.map(() => TEAL), flat: true, alpha: 0.5 }], cam: camOf(c, 1, dy), box: [x, y3, cw, ch], see: true, label: `yaw ${c.yaw}°, pitch ${c.pitch}°, ${c.s} px/unit` });
@@ -78,6 +78,22 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       imgs, texts: [{ css: 'left:12px;top:6px', html: `Side braid — the sheet (top), the ${w === 'male' ? 'man' : 'woman'} (middle), ours over the sheet (bottom): ${what}; outline off ${mean} px on average` }] });
     console.log(w, 'outline difference', JSON.stringify(diff));
   }
+  if (only.includes('pieces')) for (const w of who) {
+    // each piece in its own colour over the sheet (the crown's clumps her right warm, her left cool; the braid's hearts
+    // greens; the tie, the tip and the strands their own), see-through, the body hiding what is behind it
+    const rig = RIGS[w], hair = HAIRS[w], cells = [], imgs = [], K = 1.35, cw2 = 360, ch2 = 470;
+    const PAL = { R: [[1, 0.45, 0.35], [1, 0.75, 0.3], [1, 0.4, 0.75], [0.95, 0.95, 0.35], [1, 0.6, 0.5], [0.85, 0.5, 1]], L: [[0.3, 0.7, 1], [0.35, 1, 0.75], [0.6, 0.55, 1], [0.3, 1, 1], [0.5, 0.85, 0.5], [0.4, 0.5, 0.95]], heart: [[0.4, 1, 0.4], [0.2, 0.75, 0.3], [0.6, 1, 0.5], [0.3, 0.9, 0.6]] };
+    const colOf = (id) => { const m = id.match(/^(R|L|heart)(\d+)$/); return m ? PAL[m[1]][(+m[2] - 1) % PAL[m[1]].length] : id === 'tie' ? [1, 1, 1] : id === 'tip' ? [0.2, 0.5, 0.25] : [1, 0.85, 0.6]; };
+    const col = hair.polys.map((p) => colOf(hair.pieces[p.piece].id));
+    LABELS.forEach(([v, label], i) => {
+      const c = C[v], x = 10 + i * (cw2 + gap), cy = c.cy + 45, crop = [c.cx - cw2 / K / 2, cy - ch2 / K / 2, cw2 / K, ch2 / K], wv = warpOf(c);
+      imgs.push({ src: REF, size: REF_SIZE, crop, box: [x, 34, cw2, ch2] });
+      cells.push({ meshes: [{ ...bodyMesh(rig, hair, rig.B.verts.map(wv)), depthOnly: true }, { ...hairMesh(rig, hair, hair.verts.map(wv)), col, flat: true, alpha: 0.55 }], cam: camOf(c, K, c.cy - cy), box: [x, 34, cw2, ch2], see: true, label });
+    });
+    await shoot(10 + 5 * (cw2 + gap), ch2 + 44, cells, join(out, `braid-pieces-${w}${tag}.png`), { imgs,
+      texts: [{ css: 'left:12px;top:6px', html: `Per piece over the sheet: her right's clumps R1-R6 warm, her left's L1-L6 cool, the hearts green, the tie white (${hair.pieces.map((p) => p.id).join(', ')})` }] });
+  }
+
   if (only.includes('wire')) for (const w of who) {
     // the topology: front, profile and back, every polygon's edges
     const rig = RIGS[w], hair = HAIRS[w], cw2 = 330, ch2 = 520;
