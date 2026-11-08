@@ -74,15 +74,15 @@ export const DESIGN = {
     z0: 0.1,
     sec: [[-0.3, 0.82, 1.0, 0.8, 2.6], [0.4, 0.85, 1.0, 0.8, 2.6], [0.8, 0.9, 1.0, 0.82, 2.6], [1.1, 0.95, 0.98, 0.88, 2.6], [1.32, 0.97, 0.96, 0.97, 2.6], [1.56, 0.96, 0.94, 0.93, 2.5],
       [1.8, 0.94, 0.88, 0.9, 2.5], [1.92, 0.9, 0.8, 0.82, 2.5], [2.04, 0.85, 0.72, 0.74, 2.4], [2.16, 0.79, 0.64, 0.66, 2.3], [2.29, 0.65, 0.6, 0.58, 2.2], [2.42, 0.44, 0.44, 0.5, 2.1], [2.5, 0.2, 0.2, 0.24, 2.0]],
-    top: [0, 2.5, -0.04], rings: [2.36, 2.2, 2.06], domeStep: 0.045,
-    band: { top: [[0, 1.98], [22, 1.82], [44, 1.64], [62, 1.6], [180, 1.6]], bot: [[0, 0.88], [22, 0.98], [44, 1.1], [62, 1.2], [82, 1.24], [180, 1.24]], out: [[0, 0.32], [22, 0.22], [44, 0.15], [62, 0.12], [100, 0.12], [180, 0.12]], rim: 0.07, rimOut: 0.035, topRim: [[0, 0.07, 0.035], [62, 0.07, 0.035], [82, 0, 0]] },
+    top: [0, 2.5, -0.04], rings: [2.36, 2.2, 2.0], domeStep: 0.045,
+    band: { top: [[0, 1.82], [22, 1.72], [44, 1.6], [62, 1.55], [180, 1.58]], bot: [[0, 0.83], [22, 0.93], [44, 1.05], [62, 1.15], [82, 1.22], [126, 1.17], [180, 1.17]], out: [[0, 0.32], [22, 0.24], [44, 0.2], [62, 0.12], [82, 0.09], [102, 0.09], [126, 0.12], [180, 0.12]], rim: 0.07, rimOut: 0.035, topRim: [[0, 0.07, 0.035], [62, 0.07, 0.035], [82, 0, 0]] },
     ledge: 0.03,
-    back: { out: [[0, 0], [96, 0], [102, 0.1], [180, 0.1]], p1: [[0, 0.6], [102, 0.8], [126, 0.76], [180, 0.74]], step: [[0, 0], [102, 0], [126, 0.07], [180, 0.08]], bot: [[0, -0.16], [22, 0.0], [44, 0.14], [62, 0.24], [82, 0.36], [102, 0.52], [126, 0.44], [180, 0.36]], flare: [[0, 0], [102, 0.0], [126, 0.04], [180, 0.05]] },
-    face: { yTop: 0.76, yBot: -0.16, zTop: 1.24, zBot: 1.16, ang: 40, xOutTop: 0.82, xOutBot: 0.68, eye: 0.12, botOut: 0.0, seam: 0.05, t: 0.07, vents: [[0.2, 0.3], [0.44, 0.54], [0.68, 0.78]], vt: [0.16, 0.66] },
-    gap: 0.01, thick: 0.07, skirtIn: 0.12, window: 102,
-    crest: { w: 0.48, wt: 0.4, h: 0.19 }, star: 0.38,
-    disc: { r: 0.34, boss: 0.2, h: 0.14, bh: 0.08 },
-    cheek: { az: [[84, 1.16, 0.08], [110, 1.16, -0.01], [106, 0.56, -0.01], [84, 0.32, 0.08]], t: 0.07 },
+    back: { out: [[0, 0], [76, 0], [82, 0.1], [180, 0.1]], p1: [[0, 0.6], [82, 1.0], [126, 0.95], [180, 0.93]], step: [[0, 0], [82, 0], [102, 0.04], [126, 0.05], [180, 0.06]], p3: [[0, 0.4], [82, 0.75], [126, 0.68], [180, 0.65]], step2: [[0, 0], [82, 0], [102, 0.04], [126, 0.05], [180, 0.06]], bot: [[0, -0.16], [22, 0.0], [44, 0.14], [62, 0.24], [82, 0.47], [102, 0.44], [126, 0.4], [180, 0.4]], flare: [[0, 0], [102, 0.0], [126, 0.04], [180, 0.05]] },
+    face: { yTop: 0.71, yBot: -0.16, zTop: 1.24, zBot: 1.16, ang: 40, xOutTop: 0.82, xOutBot: 0.68, eye: 0.12, botOut: 0.0, seam: 0.05, t: 0.07, vents: [[0.2, 0.3], [0.44, 0.54], [0.68, 0.78]], vt: [0.16, 0.66] },
+    gap: 0.01, thick: 0.07, skirtIn: 0.12, window: 82,
+    crest: { w: 0.48, wt: 0.4, h: 0.2 }, star: 0.38,
+    disc: { y: 1.17, r: 0.3, boss: 0.19, h: 0.05, bh: 0.06, off: 0.045 },
+    cheek: { az: [[70, 1.1, 0.07], [90, 1.1, -0.05], [86, 0.36, -0.05], [70, 0.26, 0.07]], t: 0.07 },
   },
   // (hers: 47 px a unit, her faceplate's foot at -0.18, her profile's faceplate at z 1.07 at the cheek's height: her head
   // is longer from the nose back than the sheet's helm allows at his scale)
@@ -90,15 +90,15 @@ export const DESIGN = {
     z0: 0.05,
     sec: [[-0.3, 0.78, 0.95, 0.86, 2.3], [0.4, 0.82, 0.98, 0.86, 2.3], [0.8, 0.88, 0.98, 0.88, 2.3], [1.1, 0.93, 0.96, 0.9, 2.3], [1.37, 0.95, 0.94, 1.0, 2.3], [1.56, 0.94, 0.94, 0.99, 2.3],
       [1.82, 0.91, 0.9, 0.9, 2.3], [1.95, 0.88, 0.8, 0.82, 2.3], [2.08, 0.83, 0.72, 0.72, 2.3], [2.2, 0.76, 0.64, 0.64, 2.3], [2.33, 0.64, 0.58, 0.58, 2.2], [2.46, 0.45, 0.45, 0.5, 2.1], [2.56, 0.2, 0.2, 0.24, 2.0]],
-    top: [0, 2.58, -0.06], rings: [2.44, 2.26, 2.1], domeStep: 0.04,
-    band: { top: [[0, 2.0], [22, 1.84], [44, 1.66], [62, 1.62], [180, 1.6]], bot: [[0, 0.92], [22, 1.02], [44, 1.14], [62, 1.24], [82, 1.3], [180, 1.31]], out: [[0, 0.28], [22, 0.19], [44, 0.13], [62, 0.11], [100, 0.1], [180, 0.1]], rim: 0.06, rimOut: 0.03, topRim: [[0, 0.06, 0.03], [62, 0.06, 0.03], [82, 0, 0]] },
+    top: [0, 2.58, -0.06], rings: [2.44, 2.26, 2.06], domeStep: 0.04,
+    band: { top: [[0, 1.86], [22, 1.76], [44, 1.64], [62, 1.58], [180, 1.6]], bot: [[0, 0.88], [22, 0.98], [44, 1.1], [62, 1.2], [82, 1.28], [126, 1.22], [180, 1.22]], out: [[0, 0.28], [22, 0.21], [44, 0.17], [62, 0.1], [82, 0.08], [102, 0.08], [126, 0.1], [180, 0.1]], rim: 0.06, rimOut: 0.03, topRim: [[0, 0.06, 0.03], [62, 0.06, 0.03], [82, 0, 0]] },
     ledge: 0.03,
-    back: { out: [[0, 0], [96, 0], [102, 0.09], [180, 0.09]], p1: [[0, 0.62], [102, 0.82], [126, 0.78], [180, 0.76]], step: [[0, 0], [102, 0], [126, 0.06], [180, 0.07]], bot: [[0, -0.14], [22, 0.02], [44, 0.16], [62, 0.26], [82, 0.38], [102, 0.54], [126, 0.48], [180, 0.4]], flare: [[0, 0], [102, 0.0], [126, 0.04], [180, 0.05]] },
-    face: { yTop: 0.8, yBot: -0.14, zTop: 1.15, zBot: 0.97, ang: 36, xOutTop: 0.76, xOutBot: 0.62, eye: 0.12, botOut: 0.0, seam: 0.045, t: 0.06, vents: [[0.2, 0.3], [0.44, 0.54], [0.68, 0.78]], vt: [0.16, 0.66] },
-    gap: 0.01, thick: 0.06, skirtIn: 0.1, window: 102,
-    crest: { w: 0.42, wt: 0.34, h: 0.17 }, star: 0.34,
-    disc: { r: 0.31, boss: 0.18, h: 0.12, bh: 0.07 },
-    cheek: { az: [[84, 1.22, 0.07], [110, 1.22, -0.01], [106, 0.58, -0.01], [84, 0.36, 0.07]], t: 0.06 },
+    back: { out: [[0, 0], [76, 0], [82, 0.09], [180, 0.09]], p1: [[0, 0.62], [82, 1.04], [126, 0.99], [180, 0.97]], step: [[0, 0], [82, 0], [102, 0.04], [126, 0.04], [180, 0.05]], p3: [[0, 0.42], [82, 0.79], [126, 0.72], [180, 0.69]], step2: [[0, 0], [82, 0], [102, 0.04], [126, 0.04], [180, 0.05]], bot: [[0, -0.14], [22, 0.02], [44, 0.16], [62, 0.26], [82, 0.5], [102, 0.48], [126, 0.44], [180, 0.44]], flare: [[0, 0], [102, 0.0], [126, 0.04], [180, 0.05]] },
+    face: { yTop: 0.76, yBot: -0.14, zTop: 1.15, zBot: 0.97, ang: 36, xOutTop: 0.76, xOutBot: 0.62, eye: 0.12, botOut: 0.0, seam: 0.045, t: 0.06, vents: [[0.2, 0.3], [0.44, 0.54], [0.68, 0.78]], vt: [0.16, 0.66] },
+    gap: 0.01, thick: 0.06, skirtIn: 0.1, window: 82,
+    crest: { w: 0.42, wt: 0.34, h: 0.18 }, star: 0.34,
+    disc: { y: 1.2, r: 0.28, boss: 0.18, h: 0.05, bh: 0.06, off: 0.04 },
+    cheek: { az: [[70, 1.16, 0.06], [90, 1.16, -0.05], [86, 0.4, -0.05], [70, 0.3, 0.06]], t: 0.06 },
   },
 };
 /** The shell's columns: azimuths round the axis (degrees, 0 forward, +90 the body's left), in order round. */
@@ -128,7 +128,7 @@ export function buildHelm(rig, design = DESIGN[rig.who]) {
   const N = AZ.length;
   const st = AZ.map((az) => {
     const bt = byAz(B.top, az), bb = byAz(B.bot, az), bo = byAz(B.out, az);
-    const p1 = byAz(BK.p1, az), sp = byAz(BK.step, az), yb = byAz(BK.bot, az), fl = byAz(BK.flare, az);
+    const p1 = byAz(BK.p1, az), sp = byAz(BK.step, az), p3 = byAz(BK.p3, az), sp2 = byAz(BK.step2, az), yb = byAz(BK.bot, az), fl = byAz(BK.flare, az);
     const R = (y) => secR(D, az, y);
     // under the band at the front, the faceplate's planes set back by gap (the face's dark), never further out than the section
     // (the back shell below the band stands out by `out` over the visor's rear edge)
@@ -149,7 +149,10 @@ export function buildHelm(rig, design = DESIGN[rig.who]) {
       ['bli', yl, Rf(yl)],
       ['p1b', p1, Rf(p1)],
       ['p2t', p1, Rf(p1) + sp],
-      ['bot', yb, Rf(yb) + sp + fl],
+      // (a second tier below the first, as the sheet's back: p3 its top, step2 how far it stands out)
+      ['p3b', p3, Rf(p3) + sp],
+      ['p4t', p3, Rf(p3) + sp + sp2],
+      ['bot', yb, Rf(yb) + sp + sp2 + fl],
     ];
     return P;
   });
@@ -172,7 +175,7 @@ export function buildHelm(rig, design = DESIGN[rig.who]) {
   });
   // the window under the band at the front, between the columns at +-WINDOW: open, the faceplate and the visor's sides
   // over it (the face is seen through the vents, the eye slit and the seam)
-  const kWin = st[0].findIndex((x) => x[0] === 'bli');
+  const kWin = st[0].findIndex((x) => x[0] === 'bli'), kBand = st[0].findIndex((x) => x[0] === 'bt');
   const inWindow = (j, jn) => Math.abs(AZ[j]) <= D.window && Math.abs(AZ[jn]) <= D.window;
   const front = (az) => Math.abs(az) < 64;
   const matOf = (k, az) => {
@@ -180,7 +183,7 @@ export function buildHelm(rig, design = DESIGN[rig.who]) {
     if (key === 'bt' || key === 'bto' || key === 'bt3') return 'gold'; // the band's top ledge, the badge's top rim
     if (key === 'brr' || key === 'brg') return 'gold'; // the rim's ledge and face
     if (key === 'blo' || key === 'bli') return 'shade'; // the band's underside; the side and plate 1 under it
-    if (key === 'p1b') return 'gold';                // plate 2's top ledge
+    if (key === 'p1b' || key === 'p3b') return 'gold'; // the tiers' top ledges
     return 'plate';
   };
   G.tag = 'shell';
@@ -188,9 +191,15 @@ export function buildHelm(rig, design = DESIGN[rig.who]) {
     const jn = (j + 1) % N, win = inWindow(j, jn);
     // the crown's cap
     G.poly([top, V[j][0], V[jn][0]], 'plate', 'shell');
+    G.polys[G.polys.length - 1].piece = 'dome';
     for (let k = 0; k + 1 < KS; k++) {
       if (win && k >= kWin) continue;
-      G.poly([V[j][k], V[jn][k], V[jn][k + 1], V[j][k + 1]], matOf(k, Math.abs(AZ[j]) < Math.abs(AZ[jn]) ? AZ[j] : AZ[jn]), 'shell');
+      const n0 = G.polys.length, azn = Math.abs(AZ[j]) < Math.abs(AZ[jn]) ? AZ[j] : AZ[jn];
+      G.poly([V[j][k], V[jn][k], V[jn][k + 1], V[j][k + 1]], matOf(k, azn), 'shell');
+      // (which of the sheet's pieces it is: the dome, the band, the brow's badge, the back shell)
+      const key = st[0][k][0], piece = k < kBand ? 'dome' : k < kWin ? (Math.abs(AZ[j]) <= 62 && Math.abs(AZ[jn]) <= 62 ? 'badge' : 'band') : 'back';
+      for (let i = n0; i < G.polys.length; i++) G.polys[i].piece = piece;
+      void key;
     }
     if (win) continue;
     // (the back shell's front edge, by the window: its thickness, turned in)
@@ -333,8 +342,8 @@ export function buildHelm(rig, design = DESIGN[rig.who]) {
 
   /* ---- the side discs: on the band at 90, a boss on each ---- */
   for (const sg of [1, -1]) {
-    const C = D.disc, yc = (byAz(B.top, 92) + byAz(B.bot, 92) + B.rim) / 2;
-    const dr = unit([Math.sin(sg * 89 * Math.PI / 180), 0, Math.cos(89 * Math.PI / 180)]), h = rayShell(add([0, yc, z0], mul(dr, 4)), mul(dr, -1)), n = h.n, c0 = add(h.q, mul(n, D.gap + B.rimOut + C.h));
+    const C = D.disc, yc = C.y;
+    const dr = unit([Math.sin(sg * 89 * Math.PI / 180), 0, Math.cos(89 * Math.PI / 180)]), h = rayShell(add([0, yc, z0], mul(dr, 4)), mul(dr, -1)), n = h.n, c0 = add(h.q, mul(n, C.off + C.h));
     const u = unit(cross([0, 1, 0], n)), w = unit(cross(n, u));
     const oct = (r, h) => Array.from({ length: 8 }, (_, k) => { const a = (k + 0.5) * Math.PI / 4; return add(add(c0, mul(n, h)), add(mul(u, r * Math.cos(a)), mul(w, r * Math.sin(a)))); });
     const tag = `disc ${sg > 0 ? 'L' : 'R'}`;
@@ -359,6 +368,7 @@ export function buildHelm(rig, design = DESIGN[rig.who]) {
   }
 
   orient(G, (c) => [c[0], (c[1] - 1) * 0.3, c[2] - z0]);
+  for (const p of G.polys) p.piece ??= p.tag === 'rim' ? 'back' : p.tag.startsWith('face') || p.tag.startsWith('cheek') ? 'visor' : p.tag.startsWith('disc') ? 'disc' : p.tag;
   G.tris = trisOf(G);
   // the head's polygons the helm covers whole: left out while it is worn (those seen through an opening kept)
   G.hides = coveredHead(rig, G);

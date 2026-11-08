@@ -144,11 +144,13 @@ if (only.includes('wire')) await sheet(join(out, `helm-wire${tag}.png`), true);
  * white), each twice the sheet's size; the overlap and the mean outline distance under each.
  */
 if (only.includes('fit')) {
-  const { fit } = await import('./lowhelmfit.mjs');
+  const { fit, piecesFit } = await import('./lowhelmfit.mjs');
+  const pieceTiles = [];
   const K = 2, cells = [], imgs = [], texts = [], over = [], top = 34;
   let cw = 0, ch = 0;
   ['male', 'female'].forEach((who, r) => {
     const { rig, G } = M[who], R = fit(who, G, rig), d0 = rest(who);
+    for (const [vi, L] of Object.entries(piecesFit(who, G, rig, R))) pieceTiles.push({ who, view: VIEWS[vi][1], box: R[vi].box, w: R[vi].w, h: R[vi].h, pieces: L.map((p) => ({ piece: p.piece, iou: p.iou, outline: p.outline, S: [...p.S].join(''), O: [...p.O].join('') })) });
     R.forEach((v, i) => {
       const m = { x0: v.cam.x0, w: v.w, h: v.h };
       cw = v.w * K; ch = v.h * K;
@@ -167,6 +169,36 @@ if (only.includes('fit')) {
   const W = 5 * (2 + LOOKS_SHOWN.length) * cw, H = top + 2 * (ch + 40), file = join(out, `helm-fit${tag}.png`);
   await shoot(W, H, cells, file, { texts, imgs });
   writeFileSync(join(out, 'helm-fit-over.json'), JSON.stringify({ K, over }));
+  // the pieces: on the sheet's own view, each traced piece's outline (thin, dark) and ours (bright), in its own colour
+  writeFileSync(join(out, 'helm-fit-pieces.json'), JSON.stringify({ sheet: SHEET, tiles: pieceTiles }));
+  execFileSync('python3', ['-c', `
+import sys, json
+import numpy as np
+from PIL import Image, ImageDraw
+D = json.load(open(sys.argv[1])); sheet = Image.open(D['sheet']).convert('RGB'); K = 4
+COL = {'crest': (255, 200, 40), 'badge': (255, 90, 200), 'band': (80, 220, 120), 'band+badge': (80, 220, 120), 'visor': (70, 170, 255), 'back': (255, 110, 70), 'disc': (200, 120, 255)}
+def edge(A):
+    E = np.zeros_like(A); E[1:-1, 1:-1] = A[1:-1, 1:-1] & ~(A[:-2, 1:-1] & A[2:, 1:-1] & A[1:-1, :-2] & A[1:-1, 2:]); return E
+T = []
+for t in D['tiles']:
+    w, h = t['w'], t['h']; x0, y0 = t['box']
+    im = sheet.crop((x0, y0, x0 + w, y0 + h)).resize((w * K, h * K), Image.NEAREST)
+    a = np.array(im).astype(float) * 0.55
+    for p in t['pieces']:
+        c = np.array(COL.get(p['piece'], (255, 255, 255)), float)
+        S = np.array([q == '1' for q in p['S']]).reshape(h, w); O = np.array([q == '1' for q in p['O']]).reshape(h, w)
+        for M, k in ((S, 0.55), (O, 1.0)):
+            E = np.kron(edge(M), np.ones((K, K), bool))
+            a[E] = c * k
+    im = Image.fromarray(a.clip(0, 255).astype(np.uint8)); d = ImageDraw.Draw(im)
+    d.text((6, 4), t['who'] + ' ' + t['view'], fill=(255, 255, 255))
+    for i, p in enumerate(t['pieces']): d.text((6, 18 + 13 * i), '%s %d%% %.1fpx' % (p['piece'], round(p['iou'] * 100), p['outline']), fill=COL.get(p['piece'], (255, 255, 255)))
+    T.append(im)
+W = sum(t.width for t in T); out = Image.new('RGB', (W, max(t.height for t in T)))
+x = 0
+for t in T: out.paste(t, (x, 0)); x += t.width
+out.save(sys.argv[2])
+`, join(out, 'helm-fit-pieces.json'), join(out, `helm-pieces${tag}.png`)]);
   execFileSync('python3', ['-c', `
 import sys, json
 import numpy as np

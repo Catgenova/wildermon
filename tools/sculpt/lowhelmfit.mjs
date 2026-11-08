@@ -89,6 +89,45 @@ export function fit(who, G, rig) {
   });
 }
 
+/** The sheet's pieces traced by hand (tools/sculpt/plate/helm-pieces.json), per body and view. */
+const PIECES = JSON.parse(readFileSync(join(DIR, 'plate/helm-pieces.json'), 'utf8'));
+/** A traced piece filled in a view's own pixels (polygons, or circles [cx, cy, r]), from the sheet's pixels. */
+function tracedMask(list, x0, y0, w, h) {
+  const A = new Uint8Array(w * h);
+  for (const P of list) {
+    if (typeof P[0] === 'number') { const [cx, cy, r] = P; for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if ((x + x0 + 0.5 - cx) ** 2 + (y + y0 + 0.5 - cy) ** 2 <= r * r) A[y * w + x] = 1; continue; }
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const px = x + x0 + 0.5, py = y + y0 + 0.5;
+      let inside = false;
+      for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const [xi, yi] = P[i], [xj, yj] = P[j]; if ((yi > py) !== (yj > py) && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) inside = !inside; }
+      if (inside) A[y * w + x] = 1;
+    }
+  }
+  return A;
+}
+/**
+ * Per piece (the sheet's traced pieces, where a view has them): our piece's pixels seen in front (the helm's polygons
+ * labelled `piece` by garments/helm.mjs) against the traced outline, overlap and outline distance.
+ */
+export function piecesFit(who, G, rig, R) {
+  const hide = new Set(G.hides ?? []), body = { P: rig.B.verts, tris: rig.B.tris.filter((t) => !hide.has(t.poly)).map((t) => t.v) };
+  const out = {};
+  for (const [vi, pieces] of Object.entries(PIECES[who] ?? {})) {
+    const v = R[+vi], names = Object.keys(pieces);
+    // (each piece its own mesh in the depth buffer, the body last)
+    const ours = (n) => n.split('+'), all = names.flatMap(ours);
+    const meshes = names.map((n) => ({ P: G.verts, tris: G.tris.filter((t) => ours(n).includes(G.polys[t.poly].piece)).map((t) => t.v) }));
+    const rest = { P: G.verts, tris: G.tris.filter((t) => !all.includes(G.polys[t.poly].piece)).map((t) => t.v) };
+    const ID = rasterDepth([...meshes, rest, body], v.yaw, v.cam, v.w, v.h);
+    out[vi] = names.map((n, k) => {
+      const O = new Uint8Array(v.w * v.h); for (let i = 0; i < O.length; i++) O[i] = ID[i] === k + 1 ? 1 : 0;
+      const S = tracedMask(pieces[n], v.box[0], v.box[1], v.w, v.h);
+      return { piece: n, S, O, ...compare(S, O, v.w, v.h) };
+    });
+  }
+  return out;
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   const out = opt('out', null);
   if (out) mkdirSync(out, { recursive: true });
@@ -96,6 +135,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   for (const who of ['male', 'female']) {
     const rig = buildRig(who), G = buildHelm(rig), R = fit(who, G, rig);
     console.log(who, R.map((r) => `${r.yaw}: iou ${r.iou.toFixed(3)} outline ${r.outline.toFixed(2)} px (sheet only ${r.sheetOnly}, ours only ${r.oursOnly})`).join(' | '));
+    for (const [vi, L] of Object.entries(piecesFit(who, G, rig, R))) console.log('  view', YAWS[vi], L.map((p) => `${p.piece} ${(p.iou * 100).toFixed(0)}% ${p.outline.toFixed(1)}px`).join(', '));
     if (out) writeFileSync(join(out, `helmfit-${who}.json`), JSON.stringify(R.map(({ yaw, w, h, S, O }) => ({ yaw, w, h, S: [...S].join(''), O: [...O].join('') }))));
   }
 }
