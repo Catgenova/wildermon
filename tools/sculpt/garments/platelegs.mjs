@@ -78,9 +78,9 @@ export const DESIGN = {
   male: {
     sink: 0.06, clear: 0.015, gap: 0.012, t: 0.04, raise: 0.024, trim: 0.1, seam: 5, thigh: [0, 50, 91, 132, 180, 229, 271, 312],
     low: { clear: 0.012, gap: 0.01, t: 0.03, raise: 0.018, trim: 0.085 },
-    band: { z0: -0.06, az: [0, 30, 70, 110, 150, 180], top: [-3.99, -3.97, -3.94, -3.94, -3.97, -3.99], bottom: [-5.45, -4.95, -4.6, -4.62, -4.74, -4.86], gap: 0.035 },
+    band: { z0: -0.06, cols: [0, 15, 30, 50, 70, 90, 110, 130, 150, 165, 180], az: [0, 30, 70, 110, 150, 180], top: [-3.99, -3.97, -3.94, -3.94, -3.97, -3.99], bottom: [-5.45, -4.95, -4.6, -4.62, -4.74, -4.86], gap: 0.08 },
     cuisse: { stops: 'skin', ease: [], recess: { az: [20, 125], y: [-6.7, -4.5], by: 0.075 }, rows: [{ y: tab([[0, -4.85], [50, -4.6], [91, -4.42], [180, -4.66], [229, -5.7], [271, -6.3], [320, -5.6]]), lvl: 0.6 }, { y: -6.62, lvl: 0 }, { y: [-7.3, -7.12, -7.05, -7.05], lvl: 0 }] },
-    knee: { top: -6.55, mid: -7.42, bottom: -8.25, wing: 92, flare: 0.1, lvl: 1, bulge: 0.2, inset: [14, 0.27], ringIn: [18, 0.34], ring: [25, 0.46] },
+    knee: { top: -6.55, mid: -7.42, bottom: -8.08, wing: 92, flare: 0.1, lvl: 1, bulge: 0.2, inset: [14, 0.27], ringIn: [18, 0.34], ring: [25, 0.46] },
     shinUp: { az: [-94, -50, -8, 8, 50, 94], rows: [{ y: [-7.72, -7.85, -7.85, -7.85], lvl: 0 }, { y: tab([[0, -8.76], [50, -8.56], [94, -8.46], [180, -8.46], [266, -8.46], [310, -8.56]]), lvl: 1 }] },
     shinLow: { az: [-94, -50, -8, 8, 50, 94], rows: [{ y: -8.4, lvl: 0 }, { y: -10.36, lvl: 0.4 }] },
     kneeBack: { az: [118, 149, 180, 211, 242], y: [-6.85, -8.3] },
@@ -89,8 +89,8 @@ export const DESIGN = {
   female: {
     sink: 0.085, clear: 0.012, gap: 0.01, t: 0.036, raise: 0.022, trim: 0.085, seam: 5, thigh: [0, 38, 88, 143, 180, 218, 275, 325],
     low: { clear: 0.01, gap: 0.008, t: 0.026, raise: 0.016, trim: 0.075 },
-    band: { z0: -0.38, az: [0, 30, 70, 110, 150, 180], top: [-3.63, -3.61, -3.58, -3.58, -3.61, -3.64], bottom: [-4.16, -3.98, -3.9, -3.95, -4.06, -4.16], gap: 0.035, ease: [[0.7, 0.2, 'pelvis']] },
-    cuisse: { stops: 'skin', ease: [], rows: [{ y: tab([[0, -4.16], [50, -4.04], [88, -3.92], [180, -3.98], [218, -5.0], [275, -5.05], [325, -4.45]]), lvl: 0 }, { y: [-6.45, -6.45, -6.32, -6.35], lvl: 0 }] },
+    band: { z0: -0.38, cols: [0, 15, 30, 50, 70, 90, 110, 130, 150, 165, 180], az: [0, 30, 70, 110, 150, 180], top: [-3.63, -3.61, -3.58, -3.58, -3.61, -3.64], bottom: [-4.16, -3.98, -3.9, -3.95, -4.06, -4.16], gap: 0.035, ease: [[0.7, 0.2, 'pelvis']] },
+    cuisse: { stops: 'skin', ease: [], rows: [{ y: tab([[0, -4.18], [50, -4.06], [88, -3.85], [180, -4.08], [218, -5.0], [275, -5.05], [325, -4.45]]), lvl: 0 }, { y: [-6.45, -6.45, -6.32, -6.35], lvl: 0 }] },
     knee: { top: -5.92, mid: -6.74, bottom: -7.56, wing: 90, flare: 0.08, lvl: 1, bulge: 0.17, inset: [13, 0.26], ringIn: [17, 0.33], ring: [24, 0.44] },
     shinUp: { az: [-94, -50, -8, 8, 50, 94], rows: [{ y: [-7.02, -7.15, -7.15, -7.15], lvl: 0 }, { y: tab([[0, -8.12], [50, -7.92], [94, -7.82], [180, -7.82], [266, -7.82], [310, -7.92]]), lvl: 1 }] },
     shinLow: { az: [-94, -50, -8, 8, 50, 94], rows: [{ y: -7.8, lvl: 0 }, { y: -10.5, lvl: 0.4 }] },
@@ -424,7 +424,8 @@ function kneeGuard(G, D, F) {
  */
 function hipBand(G, D, B) {
   const Bd = D.band, z0 = Bd.z0, gapU = Bd.gap ?? D.gap;
-  const az = [...Bd.az, ...Bd.az.slice(1, -1).map((a) => -a).reverse()];
+  // (its ring's columns: CF, `cols` a side (else the design's), CB)
+  const half = Bd.cols ?? Bd.az, az = [...half, ...half.slice(1, -1).map((a) => -a).reverse()];
   const body = bodyTris(B, new Set(['torso', 'pelvis', 'legs']));
   const plates = G.tris ? [] : trisOf(G).map((t) => t.v.map((i) => G.verts[i]));
   const yTop = az.map((a) => roundBand(a, Bd.az, Bd.top)), yBot = az.map((a) => roundBand(a, Bd.az, Bd.bottom));
@@ -452,8 +453,8 @@ function hipBand(G, D, B) {
     const x = Math.sin(rad(a)) * r, cap = (frontZ(x, ys[i][k]) + D.clear + D.t - z0) / Math.cos(rad(a));
     if (cap < r && rp0(i, k) === 0) row[k] = cap;
   }));
-  // (the rows no tighter than the one below: the band stands as a band)
-  for (let i = R.length - 2; i >= 0; i--) R[i] = R[i].map((r, k) => Math.max(r, R[i + 1][k] - 0.03));
+  // (its middle row no tighter than its foot: the band stands straight down over the plates' tops under its foot)
+  R[R.length - 2] = R[R.length - 2].map((r, k) => Math.max(r, R[R.length - 1][k] - 0.02));
   // (each cell of the band clear of the body and the plates under it, as the leg plates')
   cellOut(ys, az, R, true, () => [0, z0], (y, a) => { const rb = reachB(y, a) + D.clear + D.t, rpp = reachP(y, a); return Math.max(rb, rpp > 0 ? rpp + gapU + D.t : 0); });
   const pt = (n) => { const r = n.r; return [Math.sin(rad(n.az)) * r, n.y, z0 + Math.cos(rad(n.az)) * r]; };
