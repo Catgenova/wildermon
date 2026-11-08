@@ -131,13 +131,13 @@ export const DESIGN = {
       bandTop: [0.8, 0.8, 0.78, 0.77, 0.74, 0.71, 0.74, 0.77, 0.78, 0.8],
       cuffLo: [0.67, 0.72, 0.77, 0.79, 0.81, 0.82, 0.81, 0.79, 0.77, 0.72],
       cuffTop: [0.91, 0.95, 0.96, 0.98, 1, 1.01, 1, 0.98, 0.96, 0.95],
-      flare: [0.2, 0.18, 0.18, 0.18, 0.16, 0.16, 0.16, 0.18, 0.18, 0.18],
+      flare: [0.25, 0.23, 0.24, 0.22, 0.2, 0.2, 0.17, 0.16, 0.17, 0.21],
     },
-    strap: { w: 0.15, trim: 0.035, out: 0.06 },
+    strap: { w: 0.17, trim: 0.035, out: 0.08 },
     band: { out: 0.06, trim: 0.03 },
     cuff: { out: 0.08, trim: 0.03, rim: 0.035, lip: 0.12, gap: 0.5 },
     mid: 0.5,
-    lace: { a: 22, rows: 4, lo: 0.37, hi: 0.6, w: 0.06, h: 0.025, base: 0.012, lift: 0.032 },
+    lace: { a: 22, tongue: 0.6, rows: 4, lo: 0.39, hi: 0.575, w: 0.06, h: 0.025, base: 0.016, lift: 0.032 },
     eyelet: { r: 0.045, h: 0.03 },
     rivet: { r: 0.04, h: 0.025 },
     vee: { a: 30, w: 0.05, h: 0.02, down: 0.18 },
@@ -162,13 +162,13 @@ export const DESIGN = {
       bandTop: [0.8, 0.8, 0.78, 0.77, 0.74, 0.71, 0.74, 0.77, 0.78, 0.8],
       cuffLo: [0.67, 0.72, 0.77, 0.79, 0.81, 0.82, 0.81, 0.79, 0.77, 0.72],
       cuffTop: [0.91, 0.95, 0.96, 0.98, 1, 1.01, 1, 0.98, 0.96, 0.95],
-      flare: [0.17, 0.15, 0.15, 0.15, 0.14, 0.14, 0.14, 0.15, 0.15, 0.15],
+      flare: [0.21, 0.19, 0.2, 0.19, 0.17, 0.17, 0.14, 0.13, 0.14, 0.18],
     },
-    strap: { w: 0.13, trim: 0.03, out: 0.05 },
+    strap: { w: 0.15, trim: 0.03, out: 0.065 },
     band: { out: 0.05, trim: 0.028 },
     cuff: { out: 0.07, trim: 0.028, rim: 0.03, lip: 0.11, gap: 0.5 },
     mid: 0.5,
-    lace: { a: 22, rows: 4, lo: 0.37, hi: 0.6, w: 0.055, h: 0.022, base: 0.012, lift: 0.03 },
+    lace: { a: 22, tongue: 0.6, rows: 4, lo: 0.39, hi: 0.575, w: 0.055, h: 0.022, base: 0.016, lift: 0.03 },
     eyelet: { r: 0.04, h: 0.026 },
     rivet: { r: 0.035, h: 0.022 },
     vee: { a: 30, w: 0.045, h: 0.018, down: 0.18 },
@@ -228,7 +228,9 @@ export function buildLeatherBoots(rig, design = DESIGN[rig.who], { under = [], p
       .filter((p) => p[1] < yKnee + 0.6 && Math.sign(p[0]) === ft.sg);
     // the outline: each column's station along the foot, v off the foot's middle line
     const uB = ft.u0 - D.margin.heel, uT = ft.L + D.margin.toe;
-    const mH = ft.span(ft.u0).reduce((a, b) => (a + b) / 2), mT = ft.span(ft.L).reduce((a, b) => (a + b) / 2);
+    // (the foot's middle line: from the heel's middle to the toe's, the frame's own axis, v 0; the outline's extreme
+    // corners would skew it where the heel's back edge is not square to the foot, as hers)
+    const mH = 0, mT = 0;
     const outline0 = D.cols.map(([f, v]) => { const u = uB + f * (uT - uB), t = (u - ft.u0) / (ft.L - ft.u0); return [u, mH + (mT - mH) * t + v]; });
     const mid0 = [(uB + uT) / 2, outline0.reduce((s0, p) => s0 + p[1], 0) / K];
     const outline = outline0.map(([u, v], k) => { const d = [u - mid0[0], v - mid0[1]], l = Math.hypot(...d) || 1, b = (D.round ?? 0) * D.bulge[k]; return [u + d[0] / l * b, v + d[1] / l * b]; });
@@ -275,7 +277,9 @@ export function buildLeatherBoots(rig, design = DESIGN[rig.who], { under = [], p
     put('r4', each((k) => {
       const p = lerp(onFoot(k, D.dome[k], F + D.top[k], D.shrink[k]), onShaft(k, F + D.top[k]), D.mix[k]), c = axis(p[1]);
       const r = dot(sub(p, c), ang[k]), r3 = dot(sub(G.verts[R.r3[k]], c), ang[k]) - D.shrink[k] - 0.02;
-      return r < r3 ? add(p, mul(ang[k], r3 - r)) : p;
+      // (and round the heel no further out than the wall's top: the heel cup closes over the heel)
+      const hi = Math.abs(ANG[k]) >= 108 ? r3 + D.shrink[k] + 0.06 : Infinity;
+      return r < r3 ? add(p, mul(ang[k], r3 - r)) : r > hi ? add(p, mul(ang[k], hi - r)) : p;
     }));
     // the toe cap's back edge (r5) on its columns: on the foot, `du` back from the outline (the edge between the front
     // and the sides' columns straight across, each at its own height)
@@ -471,6 +475,14 @@ const SHAFT = ['shaft', 'shaft top', 'strap top', 'band trim', 'instep'];
 function lacingOf(G, D, side) {
   const Lc = D.lace, L = G.legOf[side], y0 = G.ground + Lc.lo * G.tall, y1 = G.ground + Lc.hi * G.tall;
   const ys = Array.from({ length: Lc.rows }, (_, i) => y0 + (y1 - y0) * i / (Lc.rows - 1));
+  // the tongue: the dark gap between the lacing's flaps, a flat panel ±`tongue` of the eyelets' angle round the front,
+  // from under the lowest row to over the highest, under the cords
+  if (Lc.tongue) {
+    G.tag = 'tongue';
+    const n = 14, gs = [-1, -0.5, 0, 0.5, 1].map((x) => x * Lc.a * Lc.tongue), yy = Array.from({ length: n }, (_, i) => y0 - 0.04 + (y1 - y0 + 0.08) * i / (n - 1));
+    const grid = yy.map((y) => gs.map((g) => { const p = surfAt(G, side, SHAFT, g, y); return { i: decalVert(G, side, add(p.q, mul(p.n, 0.003)), p.host), n: p.n }; }));
+    for (let i = 0; i + 1 < n; i++) for (let j = 0; j + 1 < gs.length; j++) facing(G, [grid[i][j].i, grid[i][j + 1].i, grid[i + 1][j + 1].i, grid[i + 1][j].i], 'dark', grid[i][j].n);
+  }
   const sg = side === 'L' ? 1 : -1;
   for (let i = 0; i + 1 < ys.length; i++) {
     for (const s of [1, -1]) {
