@@ -7,8 +7,8 @@
 //   shawlWeights(rig, G) → per vertex [[bone, weight], ...] (bone indices: the body's, then the cape's own, G.bones)
 //   shawlBones(rig, design, cols) → the cape's bones (lowgarment.mjs garmentBone), six: cape_l, cape_front_l,
 //   cape_back_l and the right's, driven from the upper arms (59 + 6 = 65 bones, within the renderer's 80)
-//   G.shapes → the corrective shapes (SHAPES, shapeOffsets): over_l, cross_l and the right's, each from a few numbers a
-//   column sculpted by tools/sculpt/garments/shawlshapes.mjs into shawlshapes-<who>.json
+//   G.shapes → the corrective shapes (SHAPES, shapesOf): eight, each from a few numbers a column and free offsets on the
+//   vertices it moves, sculpted by tools/sculpt/garments/shawlshapes.mjs into shawlshapes-<who>.json
 //
 //   node tools/sculpt/garments/shawl.mjs
 //     writes the game's copy beside each body: src/sculpt/assets/lowshawl-male.json and lowshawl-female.json
@@ -142,16 +142,25 @@ function clearOf(L, E, fixedFirst = false) {
 
 /**
  * The corrective shapes (tools/sculpt/garments/shawlshapes.mjs sculpts them into shawlshapes-<who>.json): offsets at bind
- * added by weight as the arms move where the cape's bones alone put the cloth through them, each weight from its arm
- * (lowgarment.mjs driveOf, in upper arms' lengths from the shoulder in the chest's frame): `over` the elbow raised over
- * the shoulder (nought at 0.1 over it, all at 0.45); `cross` the hand across the front of the chest (all from 0.3
- * of its side's way to the midline and past it, nought at 0.6; ahead of the shoulder from 0.4 to 0.9; nought with the hand
- * 1.0 over the shoulder, all at 0.6). All nought at rest, idle, walking, arms out and arms forward.
+ * added by weight where the cape's bones alone put the cloth through the arms, each weight from the pose (lowgarment.mjs
+ * poseIn, driveOf: arms in the chest's frame in upper arms' lengths from the shoulder, the chest's lean in degrees):
+ *   over_l, over_r: that elbow raised over the shoulder (nought at 0.1 over it, all at 0.45);
+ *   side_l, side_r: as over, with the elbow no further forward than 0.1 (nought from 0.4): an arm raised out to the side;
+ *   top: both elbows raised (0.1 to 0.4) and forward (0.3 to 0.6): a two-handed blade over the head;
+ *   cross_l, cross_r: that hand across the front of the chest (all from 0.3 of its side's way to the midline and past it,
+ *   nought at 0.6; ahead of the shoulder from 0.4 to 0.9; nought with the hand 1.0 over the shoulder, all at 0.6);
+ *   impact: the chest leant forward (nought at 20 degrees, all at 45) with either hand ahead (0.5 to 1.0) and below the
+ *   head (as cross).
+ * All nought at rest, idle, walking, arms out and arms forward.
  */
-export const SHAPES = ['l', 'r'].flatMap((side) => [
-  { name: `over_${side}`, drive: { kind: 'raise', side, at: [0.1, 0.45] } },
-  { name: `cross_${side}`, drive: { kind: 'cross', side, across: [0.6, 0.3], fwd: [0.4, 0.9], up: [1.0, 0.6] } },
-]);
+export const SHAPES = [
+  ...['l', 'r'].map((side) => ({ name: `over_${side}`, drive: { side, ramps: [['raise', 0.1, 0.45]] } })),
+  ...['l', 'r'].map((side) => ({ name: `side_${side}`, drive: { side, ramps: [['raise', 0.1, 0.45], ['elbowFwd', 0.4, 0.1]] } })),
+  { name: 'top', drive: { side: 'both', ramps: [['raise', 0.1, 0.4], ['elbowFwd', 0.3, 0.6]] } },
+  ...['l', 'r'].map((side) => ({ name: `cross_${side}`, drive: { side, ramps: [['across', 0.6, 0.3], ['fwd', 0.4, 0.9], ['up', 1.0, 0.6]] } })),
+  { name: 'impact', drive: { side: 'either', ramps: [['bend', 20, 45], ['fwd', 0.5, 1.0], ['up', 1.0, 0.6]] } },
+];
+
 /** The rings of a column's cape, turned about its top in a shape (shapeOffsets), and of its cowl. */
 const CAPE_RINGS = ['T1', 'T2', 'T3', 'T4', 'T5', 'I1', 'I5', 'IT'], COWL_RINGS = ['d', 'u1', 'u2', 'b', 'l1', 'l2'];
 /**
@@ -182,23 +191,24 @@ export function shapeOffsets(G, q) {
 /** Each column's mirror (azimuth deg to 360 - deg). */
 export const mirrorCols = (G) => G.cols.map((c) => G.cols.findIndex((e) => Math.abs((e.deg + c.deg) % 360) < 1e-6));
 /**
- * The shapes from their columns' numbers (cols: { over_l: [[a, o, h], ...], cross_l: ... }, the left's; the right's
- * their mirror's), each with d its offsets on this shawl.
+ * The shapes from what was sculpted (S: { columns: { name: [[a, o, h, ow, hw], ...] }, free: { name: { at, d } } }), each
+ * with d its offsets on this shawl: its columns' moves (shapeOffsets; none where it has none) and its free offsets, per
+ * vertex, where it has them.
  */
-export function shapesOf(G, cols) {
-  const mir = mirrorCols(G);
+export function shapesOf(G, S) {
   return SHAPES.map((s) => {
-    const q = cols[s.name.replace(/_r$/, '_l')], side = s.drive.side;
-    return { ...s, d: shapeOffsets(G, side === 'l' ? q : q.map((_, k) => q[mir[k]])) };
+    const q = S.columns?.[s.name], d = q ? shapeOffsets(G, q) : G.verts.map(() => [0, 0, 0]), f = S.free?.[s.name];
+    if (f) f.at.forEach((i, k) => { for (let j = 0; j < 3; j++) d[i][j] += f.d[k * 3 + j]; });
+    return { ...s, d };
   });
 }
-/** The sculpted shapes for a body's shawl (shawlshapes-<who>.json: their columns' numbers), or none yet. */
+/** The sculpted shapes for a body's shawl (shawlshapes-<who>.json), or none yet. */
 export function shawlShapes(who, G) {
   const file = new URL(`./shawlshapes-${who}.json`, import.meta.url);
   if (!existsSync(file)) return undefined;
   const J = JSON.parse(readFileSync(file, 'utf8'));
-  if (J.columns.over_l.length !== G.cols.length) throw new Error(`shawlshapes-${who}.json is for ${J.columns.over_l.length} columns, the shawl has ${G.cols.length}: run tools/sculpt/garments/shawlshapes.mjs`);
-  return shapesOf(G, J.columns);
+  for (const q of Object.values(J.columns ?? {})) if (q.length !== G.cols.length) throw new Error(`shawlshapes-${who}.json is for ${q.length} columns, the shawl has ${G.cols.length}: run tools/sculpt/garments/shawlshapes.mjs`);
+  return shapesOf(G, J);
 }
 
 /** The shawl fitted to a body; with its corrective shapes (G.shapes) unless o.shapes is false. */

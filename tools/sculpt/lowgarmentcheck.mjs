@@ -88,10 +88,11 @@ for (const who of ['male', 'female']) {
   const shapes = G.shapes ?? [];
   r.shapes = { names: shapes.map((x) => x.name).join(' '), offsets: 0, weights: 0, nought: 0, most: 0 };
   if ((shawl.shapes ?? []).length !== shapes.length) { console.log(who, 'shapes differ'); fail = true; }
-  (shawl.shapes ?? []).forEach((x, k) => { r.shapes.offsets = Math.max(r.shapes.offsets, md(x.d, shapes[k].d.flat())); });
-  if (r.shapes.offsets > 1e-5) fail = true;
+  (shawl.shapes ?? []).forEach((x, k) => { const full = shapes[k].d.map(() => [0, 0, 0]); x.at.forEach((i, j) => { full[i] = x.d.slice(j * 3, j * 3 + 3); }); r.shapes.offsets = Math.max(r.shapes.offsets, md(full.flat(), shapes[k].d.flat())); });
+  // (written to four decimals)
+  if (r.shapes.offsets > 5e-5 + 1e-9) fail = true;
   for (const q of [...poses, ...swing]) {
-    const F = posed(rig, q), mine = shapeWeights(rig, F, G), theirs = TS.shapeWeights(body.bones, shawl.shapes, F);
+    const F = posed(rig, q), mine = shapeWeights(rig, F, G), theirs = TS.shapeWeights(body.bones, shawl, F);
     if (mine.length) r.shapes.weights = Math.max(r.shapes.weights, md(mine, theirs));
     r.shapes.most = Math.max(r.shapes.most, ...mine, 0);
   }
@@ -109,7 +110,7 @@ for (const who of ['male', 'female']) {
   const cross = { walk: 0, idle: 0, checked: 0, swing: 0, swingSelf: 0, swingAt: 0 };
   const frames = [
     ...[['walk', true, 16], ['idle', false, 16]].flatMap(([kind, moving, n]) => Array.from({ length: 8 * n }, (_, j) => ({ kind, pose: { phase: moving ? ((j % n) / n) * Math.PI * 2 : (j % n) * 0.75, moving, facing: Math.floor(j / n), swimming: false, working: false, look } }))),
-    ...Array.from({ length: 31 }, (_, k) => ({ kind: 'swing', t: k / 30, pose: { phase: 0, moving: false, facing: 0, swimming: false, working: true, job: 'attack_creature', act: { t: k / 30, length: TS.SWING.length }, gear: { weapon: { id: 'long_sword' } }, look } })),
+    ...Array.from({ length: 31 }, (_, k) => ({ kind: 'swing', t: (k / 30) * TS.SWING.length, pose: { phase: 0, moving: false, facing: 0, swimming: false, working: true, job: 'attack_creature', act: { t: (k / 30) * TS.SWING.length, length: TS.SWING.length }, gear: { weapon: { id: 'long_sword' } }, look } })),
   ];
   for (const { kind, pose, t } of frames) {
     const s = TS.lowScene(pose);

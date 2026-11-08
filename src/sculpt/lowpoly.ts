@@ -66,19 +66,18 @@ interface GarmentBone extends Lift { name: string; p: number; kind: 'helper'; he
 export interface GarmentAsset {
   who: string; base: number; mats: string[]; colours: Array<[number, number, number]>;
   verts: number[]; polys: Array<[number[], number]>; tris: number[]; weights: number[][]; bones: GarmentBone[];
-  /** Its corrective shapes: each an offset at rest per vertex (`d`, three a vertex), added by its drive's weight. */
+  /** The body's bones its shapes' drives read (`poseIn`): spine_03, the left's upperarm, lowerarm and hand, the right's. */
+  shapeBones?: number[];
+  /** Its corrective shapes: each its drive and its offsets at rest on the vertices it moves (`at`; `d` three a vertex). */
   shapes?: GarmentShape[];
 }
 /**
- * A corrective shape's drive (`tools/sculpt/lowgarment.mjs` driveOf), from one arm in the chest's frame (`armIn`):
- * 'raise' the elbow over the shoulder, ramp(raise, at); 'cross' the hand across the front of the chest, ramp(across) ·
- * ramp(fwd) · ramp(up). `bones`: spine_03 and the side's upperarm, lowerarm and hand, the body's bone indices.
+ * A corrective shape's drive (`tools/sculpt/lowgarment.mjs` driveOf): on an arm the product of ramp(feature, a, b) over
+ * `ramps` (a feature of the arm's, `poseIn`, or the body's bend); `side` 'l' or 'r' that arm, 'both' the two arms'
+ * product, 'either' the greater.
  */
-export interface ShapeDrive {
-  kind: 'raise' | 'cross'; side: 'l' | 'r'; bones: [number, number, number, number];
-  at?: [number, number]; across?: [number, number]; fwd?: [number, number]; up?: [number, number];
-}
-interface GarmentShape { name: string; drive: ShapeDrive; d: number[] }
+export interface ShapeDrive { side: 'l' | 'r' | 'both' | 'either'; ramps: Array<[string, number, number]> }
+interface GarmentShape { name: string; drive: ShapeDrive; at: number[]; d: number[] }
 
 /**
  * A prop held in the hand as `tools/sculpt/lowgear.mjs` gearAsset writes it: vertices in its own frame (game units; y from
@@ -179,20 +178,31 @@ export function liftOf(Lsrc: M3, d: Lift): M3 {
 }
 /** 0 below a, 1 past b (b may be below a), smoothstep between: exactly 0 and 1 outside (lowgarment.mjs ramp). */
 const ramp = (x: number, [a, b]: [number, number]): number => { const u = Math.min(1, Math.max(0, (x - a) / (b - a))); return u * u * (3 - 2 * u); };
-/** An arm in the chest's frame, in upper arms' lengths from the shoulder at rest (`tools/sculpt/lowgarment.mjs` armIn). */
-export function armIn(heads: readonly V[], chestR: M3, F: ReadonlyArray<{ W: M3; P: V }>, [c, , l, h]: readonly number[], s: number): { raise: number; across: number; fwd: number; up: number } {
-  const C = mm(F[c].W, tr(chestR)), rel = (p: V): V => mv(tr(C), sub(p, F[c].P));
-  const S0 = sub(heads[1], heads[0]), L = Math.hypot(...sub(heads[2], heads[1])), e = rel(F[l].P), hd = rel(F[h].P);
-  return { raise: (e[1] - S0[1]) / L, across: (s * hd[0]) / L, fwd: (hd[2] - S0[2]) / L, up: (hd[1] - S0[1]) / L };
+type Arm = { raise: number; elbowFwd: number; across: number; fwd: number; up: number };
+/**
+ * The pose as a corrective shape's drive reads it (`tools/sculpt/lowgarment.mjs` poseIn): each arm in the chest's frame,
+ * in upper arms' lengths from the shoulder at rest, and the chest's lean forward, degrees. `bones`: spine_03, the left's
+ * upperarm, lowerarm and hand, the right's; `heads` their heads at rest.
+ */
+export function poseIn(heads: readonly V[], chestR: M3, F: ReadonlyArray<{ W: M3; P: V }>, bones: readonly number[]): { l: Arm; r: Arm; bend: number } {
+  const c = bones[0], C = mm(F[c].W, tr(chestR)), rel = (p: V): V => mv(tr(C), sub(p, F[c].P));
+  const arm = (k: number, s: number): Arm => {
+    const S0 = sub(heads[k], heads[0]), L = Math.hypot(...sub(heads[k + 1], heads[k])), e = rel(F[bones[k + 1]].P), hd = rel(F[bones[k + 2]].P);
+    return { raise: (e[1] - S0[1]) / L, elbowFwd: (e[2] - S0[2]) / L, across: (s * hd[0]) / L, fwd: (hd[2] - S0[2]) / L, up: (hd[1] - S0[1]) / L };
+  };
+  return { l: arm(1, 1), r: arm(4, -1), bend: (Math.atan2(C[7], C[4]) * 180) / Math.PI };
 }
-/** A corrective shape's weight from its arm (`tools/sculpt/lowgarment.mjs` driveOf). */
-export function driveOf(a: { raise: number; across: number; fwd: number; up: number }, d: ShapeDrive): number {
-  if (d.kind === 'raise') return ramp(a.raise, d.at as [number, number]);
-  return ramp(a.across, d.across as [number, number]) * ramp(a.fwd, d.fwd as [number, number]) * ramp(a.up, d.up as [number, number]);
+/** A corrective shape's weight from the pose (`tools/sculpt/lowgarment.mjs` driveOf). */
+export function driveOf(f: { l: Arm; r: Arm; bend: number }, d: ShapeDrive): number {
+  const on = (s: 'l' | 'r'): number => d.ramps.reduce((w, [k, a, b]) => w * ramp(k in f[s] ? f[s][k as keyof Arm] : (f as unknown as Record<string, number>)[k], [a, b]), 1);
+  return d.side === 'both' ? on('l') * on('r') : d.side === 'either' ? Math.max(on('l'), on('r')) : on(d.side);
 }
 /** A garment's corrective shapes' weights from the body's frames. */
-export function shapeWeights(body: ReadonlyArray<{ R: M3; head: V }>, shapes: readonly GarmentShape[] | undefined, F: ReadonlyArray<{ W: M3; P: V }>): number[] {
-  return (shapes ?? []).map(({ drive: d }) => driveOf(armIn(d.bones.map((i) => body[i].head), body[d.bones[0]].R, F, d.bones, d.side === 'l' ? 1 : -1), d));
+export function shapeWeights(body: ReadonlyArray<{ R: M3; head: V }>, garment: Pick<GarmentAsset, 'shapes' | 'shapeBones'>, F: ReadonlyArray<{ W: M3; P: V }>): number[] {
+  const sb = garment.shapeBones;
+  if (!garment.shapes?.length || !sb) return [];
+  const f = poseIn(sb.map((i) => body[i].head), body[sb[0]].R, F, sb);
+  return garment.shapes.map(({ drive }) => driveOf(f, drive));
 }
 
 const angleOf = (q: Q): number => (2 * Math.acos(Math.min(1, Math.abs(q[0]))) * 180) / Math.PI;
@@ -400,12 +410,14 @@ function lowBody(A: Asset, P: Proportions, share: number, garment: GarmentAsset)
         const l = Math.hypot(n[0], n[1], n[2]) || 1;
         return [n[0] / l, n[1] / l, n[2] / l];
       };
+      // (each shape's offsets per vertex, nought where it has none)
+      const full = SH.map((sh) => { const o = new Float64Array(garment.verts.length); sh.at.forEach((i, k) => { o[i * 3] = sh.d[k * 3]; o[i * 3 + 1] = sh.d[k * 3 + 1]; o[i * 3 + 2] = sh.d[k * 3 + 2]; }); return o; });
       const N0 = garment.polys.map(([v]) => normalOf(v, () => [0, 0, 0]));
-      const NS = SH.map((sh) => garment.polys.map(([v]) => normalOf(v, (i) => [sh.d[i * 3], sh.d[i * 3 + 1], sh.d[i * 3 + 2]])));
+      const NS = full.map((o) => garment.polys.map(([v]) => normalOf(v, (i) => [o[i * 3], o[i * 3 + 1], o[i * 3 + 2]])));
       const sc = scale();
       lay(garment.verts, garment.polys, garment.tris, garment.weights, (pi) => GARMENT_MAT + garment.polys[pi][1], SH.length ? (i, pi) => {
-        SH.forEach((sh, k) => {
-          const d = mv(T, [sh.d[i * 3], sh.d[i * 3 + 1], sh.d[i * 3 + 2]]), n = sub(NS[k][pi], N0[pi]);
+        full.forEach((o, k) => {
+          const d = mv(T, [o[i * 3], o[i * 3 + 1], o[i * 3 + 2]]), n = sub(NS[k][pi], N0[pi]);
           data.push(d[0] * sc, d[1] * sc, d[2] * sc, 0, n[0], n[1], n[2], 0);
         });
       } : undefined);
@@ -466,7 +478,7 @@ function lowBody(A: Asset, P: Proportions, share: number, garment: GarmentAsset)
       const sh = mv(T, add(sub(add(mv(S[i], FLOOR), t[i]), FLOOR), [0, dy, 0]));
       out.set([Ag[0], Ag[1], Ag[2], sh[0] * s, Ag[3], Ag[4], Ag[5], sh[1] * s, Ag[6], Ag[7], Ag[8], sh[2] * s], i * 12);
     });
-    return { bones: out, shapes: shapeWeights(BONES, garment.shapes, Fb) };
+    return { bones: out, shapes: shapeWeights(BONES, garment, Fb) };
   }
 
   return { baked: lowBaked, bones: (pose) => lowPosed(pose).bones, posed: lowPosed, skeleton: SK, held: HELD, figure: (pose) => fromGame(bonesOf(rigFor(pose), P, [], REST_EXTRAS), gameRest()) };
