@@ -88,7 +88,7 @@ export const DESIGN = {
 
 
 /** A foot's frame: the heel's back middle (the origin, on the floor), a (along the foot, heel to toe, level), b (across, outward), and its outline. */
-function footOf(B, side) {
+export function footOf(B, side) {
   const P = (n) => B.verts[B.index.get(`${n}.${side}`)];
   const heel = lerp(P('ft3'), P('ft4'), 0.5), toe = lerp(P('ft0'), P('ft1'), 0.5);
   const a = unit([toe[0] - heel[0], 0, toe[2] - heel[2]]), sg = side === 'L' ? 1 : -1;
