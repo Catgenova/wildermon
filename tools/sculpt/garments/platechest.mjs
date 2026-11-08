@@ -26,6 +26,7 @@
 //
 // Units and axes are the body's: y up (the chin's underside 0), z forward, x the body's left.
 import { meshOf, orient, trisOf, samplesOf, closestOnTri, sub, add, mul, dot, cross, unit, lerp } from '../lowgarment.mjs';
+import { TORSO_RING } from '../lowarm.mjs';
 
 /**
  * The materials, shared with the rest of the plate set by name (so the game gives each one slot): plate (the cream
@@ -54,7 +55,7 @@ export const DESIGN = {
     rim: { w: 0.11, h: 0.04, t: 0.035 },
     fit: { trunk: 0.045, lame: 0.025, fauld: 0.1, arm: 0.04, gap: 0.02 },
     wedge: 8,
-    collar: { cols: [[14, 60, 104], [114, 148, 180]], base: [-0.78, -0.78, -0.62], top: [-0.14, 0.02, 0.18], trim: 0.12, c: 0.16, flare: 0.05, wall: 0.07, foot: -0.06, spread: 0.3, open: 46 },
+    collar: { cols: [[14, 60, 104], [114, 148, 180]], base: [-0.78, -0.78, -0.62], top: [-0.14, 0.02, 0.18], trim: 0.12, c: 0.16, flare: 0.05, wall: 0.07, spread: 0.12, sink: 0.04, open: 46 },
     breast: { az: [0, 22, 46, 70, 94], top: [-0.62, -0.64, -0.68, -0.82, -1.95], bottom: [-3.1, -2.9, -2.65, -2.5, -2.45], rows: [0, 0.4, 0.75, 1], c: [0.05, 0.05, 0.055, 0.06], flat: 22, core: { y: -1.4, r: 0.46, n: 8 } },
     back: { az: [100, 118, 140, 160, 180], top: [-1.95, -0.78, -0.6, -0.56, -0.54], bottom: [-2.5, -2.62, -2.75, -2.85, -2.92], rows: [0, 0.45, 1], c: [0.045, 0.05, 0.055], ridge: 0.06, side: 0 },
     lames: [
@@ -77,7 +78,7 @@ export const DESIGN = {
       lames: [{ t: [0.22, 0.6], c: [0.07, 0.13], th: [-40, 230] }, { t: [0.48, 0.86], c: [0.04, 0.09], th: [-30, 220] }],
     },
     rerebrace: { t: [0.72, 1.7], c: [0.035, 0.045], th: [-45, 228], cols: 5 },
-    sleeve: { rings: [['jb', 0.04], ['uc', 0.05], ['el', 0.05], ['fa', 0.04]] },
+    sleeve: { rings: [['$torso', 0.03], ['ja', 0.035], ['jb', 0.04], ['uc', 0.045], ['el', 0.045], ['fa', 0.04]] },
     vambrace: { cols: 6, top: [0.42, 0.2, -0.32, 0.2], mid: 0.55, bottom: 1.3, c: [0.07, 0.045, 0.045], flare: 0.08, diamond: { t: 0.6, r: 0.14 } },
     cuff: { cols: 6, t: [-0.42, 0.06], c: [0.1, 0.13] },
     hand: { off: 0.045 },
@@ -86,7 +87,7 @@ export const DESIGN = {
     rim: { w: 0.095, h: 0.035, t: 0.03 },
     fit: { trunk: 0.04, lame: 0.022, fauld: 0.09, arm: 0.035, gap: 0.018 },
     wedge: 8,
-    collar: { cols: [[14, 60, 104], [114, 148, 180]], base: [-0.85, -0.78, -0.62], top: [-0.2, -0.05, 0.1], trim: 0.11, c: 0.13, flare: 0.04, wall: 0.06, foot: -0.05, spread: 0.25, open: 46 },
+    collar: { cols: [[14, 60, 104], [114, 148, 180]], base: [-0.85, -0.78, -0.62], top: [-0.2, -0.05, 0.1], trim: 0.11, c: 0.13, flare: 0.04, wall: 0.06, spread: 0.1, sink: 0.035, open: 46 },
     breast: { az: [0, 18, 36, 56, 76, 96], top: [-0.7, -0.71, -0.74, -0.8, -0.95, -1.85], bottom: [-2.6, -2.5, -2.35, -2.22, -2.14, -2.1], rows: [0, 0.34, 0.66, 0.84, 1], c: [0.04, 0.04, 0.04, 0.045, 0.05], flat: 18, bridge: [3], core: { y: -1.38, r: 0.38, n: 8 } },
     back: { az: [100, 118, 140, 160, 180], top: [-1.85, -0.9, -0.72, -0.64, -0.6], bottom: [-2.12, -2.22, -2.32, -2.4, -2.45], rows: [0, 0.45, 1], c: [0.04, 0.045, 0.05], ridge: 0.05, side: 0 },
     lames: [
@@ -109,7 +110,7 @@ export const DESIGN = {
       lames: [{ t: [0.2, 0.52], c: [0.06, 0.11], th: [-40, 230] }, { t: [0.42, 0.74], c: [0.035, 0.075], th: [-30, 220] }],
     },
     rerebrace: { t: [0.62, 1.45], c: [0.03, 0.04], th: [-45, 228], cols: 5 },
-    sleeve: { rings: [['jb', 0.035], ['uc', 0.04], ['el', 0.045], ['fa', 0.035]] },
+    sleeve: { rings: [['$torso', 0.025], ['ja', 0.03], ['jb', 0.035], ['uc', 0.04], ['el', 0.04], ['fa', 0.035]] },
     vambrace: { cols: 6, top: [0.38, 0.18, -0.28, 0.18], mid: 0.5, bottom: 1.2, c: [0.06, 0.04, 0.04], flare: 0.07, diamond: { t: 0.55, r: 0.12 } },
     cuff: { cols: 6, t: [-0.38, 0.05], c: [0.085, 0.11] },
     hand: { off: 0.04 },
@@ -538,19 +539,30 @@ function torsoPieces(G, rig, D, S) {
   // the collar: segments round the neck (front left and right, the back), each a wall with a gold top and a dark inside,
   // standing out of the plates' top edge
   const neck = sectioner(parts(['neck']), { o: [0, 0, 0], a: [0, 1, 0], e1: [0, 0, 1], e2: [1, 0, 0], dt: 0.12, centred: true });
-  const nz = neck.axisAt(-0.45)[2], nr = (a) => { const p = neck.at(-0.3, a, 0); return Math.hypot(p[0], p[2] - nz); };
-  const r0n = Math.max(...[0, 45, 90, 135, 180].map(nr));
+  const nz = neck.axisAt(-0.45)[2], nr = (a) => Math.max(...[-0.5, -0.3, -0.1, 0.05].map((y) => { const p = neck.at(y, a, 0); return Math.hypot(p[0], p[2] - nz); }));
+  const r0n = Math.max(...[0, 30, 60, 90, 120, 150, 180].map(nr));
   const hAt = (L, a) => { const x = Math.abs(a) / 180; return x < 0.5 ? L[0] + (L[1] - L[0]) * x * 2 : L[1] + (L[2] - L[1]) * (x - 0.5) * 2; };
   const segs = [{ cols: Cd.cols[0], s: 1 }, { cols: Cd.cols[0], s: -1 }, { cols: [...Cd.cols[1], ...Cd.cols[1].slice(0, -1).reverse().map((a) => 360 - a)], s: 1 }];
   for (const sg of segs) {
     const az = sg.s > 0 ? sg.cols : sg.cols.slice().reverse().map((a) => -a);
     // (the foot stands on the plates' top edge: the chest's reach there, out past the plates' clearance, kept within
     // `spread` of the neck's ring; the top round the neck)
+    // (the wall's top round the neck: its own reach that way at any height the collar spans, out by the clearance; the
+    // foot `spread` further out, set on the skin there: the highest of the trunk's samples at that radius and azimuth)
     const rTop = r0n + Cd.c;
-    const rFoot = (a, y) => { const p = chest.at(y, a, Bp.c[0] + Cd.foot); return Math.max(rTop, Math.min(rTop + Cd.spread, Math.hypot(p[0], p[2] - nz))); };
+    const rFoot = () => rTop + Cd.spread;
+    const surfY = (a) => {
+      let y = -Infinity;
+      for (const p of trunk) {
+        if (p[1] < -1.6) continue;
+        const r = Math.hypot(p[0], p[2] - nz), d = Math.abs(((Math.atan2(p[0], p[2] - nz) * 180 / Math.PI - a + 540) % 360) - 180);
+        if (d < 12 && Math.abs(r - rFoot()) < 0.08) y = Math.max(y, p[1]);
+      }
+      return y;
+    };
     const P = (a, y, dr, f = 1, yb = y) => { const t = a * Math.PI / 180, rr = rFoot(a, yb) + (rTop - rFoot(a, yb)) * f + dr; return [Math.sin(t) * rr, y, nz + Math.cos(t) * rr]; };
     const wrap = (a) => ((a + 540) % 360) - 180;
-    const yb = az.map((a) => hAt(Cd.base, wrap(a))), yt = az.map((a) => hAt(Cd.top, wrap(a)));
+    const yb = az.map((a) => Math.min(hAt(Cd.top, wrap(a)) - 0.3, Math.max(hAt(Cd.base, wrap(a)), surfY(a) - Cd.sink))), yt = az.map((a) => hAt(Cd.top, wrap(a)));
     const fr = (k, y) => (y - yb[k]) / (yt[k] - yb[k]);
     const outer = [az.map((a, k) => P(a, yb[k], 0, 0, yb[k])), az.map((a, k) => P(a, yt[k] - Cd.trim, Cd.flare * 0.8, fr(k, yt[k] - Cd.trim), yb[k])), az.map((a, k) => P(a, yt[k], Cd.flare, 1, yb[k]))];
     const inner = [az.map((a, k) => P(a, yt[k], Cd.flare - Cd.wall, 1, yb[k])), az.map((a, k) => P(a, yb[k] + 0.1, -Cd.wall, fr(k, yb[k] + 0.1), yb[k]))];
@@ -616,11 +628,12 @@ function armPieces(G, rig, D, S) {
   // vambrace, the cuff over both, the rerebrace, the pauldron's lames, its cap)
   const gap = rim.t + D.fit.gap, lay = (p0) => surfOf(G, p0);
   // the under-layer: a sleeve of the arm's own rings, pushed out from each ring's middle (skinned as those rings)
-  const ringPts = (nm) => Array.from({ length: 8 }, (_, k) => B.index.get(`arm/${nm}${k}.L`));
-  const rings = D.sleeve.rings.map(([nm, c]) => {
-    const ids = ringPts(nm), m = mul(ids.reduce((a, i) => add(a, B.verts[i]), [0, 0, 0]), 1 / 8);
-    return ids.map((i) => { const v = G.vert(add(B.verts[i], mul(unit(sub(B.verts[i], m)), c)), 'sleeve'); G.wt[v] = { $body: i }; return v; });
-  });
+  // (from the torso's ring where the arm meets it, `$torso`, over the armpit to the forearm inside the vambrace; each
+  // ring's vertices pushed out along the body's normals there)
+  const VN = B.verts.map(() => [0, 0, 0]);
+  for (const t of B.tris) { const [a, b, c] = t.v.map((i) => B.verts[i]), n = cross(sub(b, a), sub(c, a)); for (const i of t.v) VN[i] = add(VN[i], n); }
+  const ringPts = (nm) => (nm === '$torso' ? TORSO_RING.map((n) => B.index.get(`${n}.L`)) : Array.from({ length: 8 }, (_, k) => B.index.get(`arm/${nm}${k}.L`)));
+  const rings = D.sleeve.rings.map(([nm, c]) => ringPts(nm).map((i) => { const v = G.vert(add(B.verts[i], mul(unit(VN[i]), c)), 'sleeve'); G.wt[v] = { $body: i }; return v; }));
   G.tag = 'sleeve';
   const sStart = G.polys.length;
   for (let r = 0; r + 1 < rings.length; r++) for (let k = 0; k < 8; k++) G.poly([rings[r][k], rings[r][(k + 1) % 8], rings[r + 1][(k + 1) % 8], rings[r + 1][k]], 'under', 'sleeve');
