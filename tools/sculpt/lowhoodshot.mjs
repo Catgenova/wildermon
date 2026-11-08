@@ -46,7 +46,7 @@ for (const who of ['male', 'female']) {
 /* ---- checks ----------------------------------------------------------------------------------------------------------- */
 const headIdx = (rig) => new Set(rig.B.verts.map((_, i) => i).filter((i) => rig.B.part[i] === 'head' || rig.B.part[i] === 'neck'));
 /** The face's points from the eyes down (eyes, lids, nose, mouth, chin, cheeks), by name: the hood hangs to the brow. */
-const FACE = /^(pupil|lid|tc|tb|k[0-3]|ch[01]|e[1-3]|jl|u[01])/;
+const FACE = /^(pupil|lid|tc|tb|k[0-3]|e[1-3]|jl)/;
 const faceIdx = (rig) => rig.B.names.map((n, i) => (FACE.test(n ?? '') ? i : -1)).filter((i) => i >= 0);
 /** Whether the ray from p along d meets triangle abc. */
 function rayHits(p, d, a, b, c) {
@@ -83,6 +83,7 @@ function testPoses(rig) {
     { id: 'turn40r', label: 'Head turned 40° right', pose: { neck_01: [0, -7, 0], neck_02: [0, -7, 0], head: [0, -26, 0] } },
     { id: 'turn70', label: 'Head turned 70°', pose: { neck_01: [0, 16, 0], neck_02: [0, 16, 0], head: [0, 38, 0] } },
     { id: 'nod', label: 'Nod down 40°', pose: { neck_01: [12, 0, 0], neck_02: [14, 0, 0], head: [14, 0, 0] } },
+    { id: 'nod24', label: 'Nod down 24° (the idle\'s deepest bow)', pose: { neck_01: [7, 0, 0], neck_02: [8, 0, 0], head: [9, 0, 0] } },
     { id: 'nodup', label: 'Head back 20°', pose: { neck_01: [-6, 0, 0], neck_02: [-7, 0, 0], head: [-7, 0, 0] } },
     { id: 'turnnod', label: 'Turned 40°, nodded 24°', pose: { neck_01: [8, 7, 0], neck_02: [8, 7, 0], head: [8, 26, 0] } },
   ];
