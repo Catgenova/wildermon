@@ -24,15 +24,19 @@
 // Each vertex's radius is the body's reach in its wedge (lowgarment.mjs envelope's rule: the furthest point within half
 // the gap to its neighbours, grown by 1/cos of that half) plus the clearance and the design's ease there. One surface,
 // open only at the two lips (inside the waistband and the cuffs, against the body). Materials: fabric (cream), trim (the
-// band, the stripes), inner (the cuffs' and the waistband's inside).
+// band), rune (the stripes: the trim's tan plain, glowing enchanted), inner (the cuffs' and the waistband's inside).
 import { samplesOf, meshOf, orient, trisOf, transferWeights, applyRefit, offPlane, TOL, lerp } from '../lowgarment.mjs';
+import { clothLooks } from './shawl.mjs';
 
 /** The first outfit's colours (the shawl's: cream, tan, the darker tan of a cloth's inside). */
 export const MATS = {
   fabric: [0.72, 0.62, 0.56],
   trim: [0.603, 0.421, 0.294],
   inner: [0.51, 0.356, 0.268],
+  rune: [0.603, 0.421, 0.294],
 };
+/** Plain and enchanted (garments/shawl.mjs clothLooks): the stripes glowing enchanted. */
+export const LOOKS = clothLooks(MATS);
 
 /** The leg's own columns L0..L5 and its inside ones I0..I3, degrees round the leg from its front toward its outside. */
 export const LEG_AZ = [-20, 25, 70, 110, 155, 200], IN_AZ = [235, 260, 290, 320];
@@ -301,7 +305,7 @@ function meshOfTrousers(rig, D, { legV, hipV, rows, hipRows, stage }) {
   const hc = [0, 0, D.z0];
   for (let i = 0; i + 1 < H.length; i++) (R.hip[H[i]].length === R.hip[H[i + 1]].length ? band : zip)(R.hip[H[i]], R.hip[H[i + 1]], M(hipMat[`${H[i]}-${H[i + 1]}`] ?? 'fabric'), H[i + 1][0] === 'W' ? 'waistband' : 'hip', `${H[i]}-${H[i + 1]}`, hc);
   // each leg: from the crotch row down to the cuff's foot and in to its lip
-  const legMat = { 'S1-S2': 'trim', 'E-Ei': 'inner' };
+  const legMat = { 'S1-S2': 'rune', 'E-Ei': 'inner' };
   for (const s of ['l', 'r']) for (let i = 0; i + 1 < rows.length; i++) {
     const a = rows[i], b = rows[i + 1];
     band(R.leg[s][a], R.leg[s][b], M(legMat[`${a}-${b}`] ?? 'fabric'), b === 'E' || b === 'Ei' || b === 'B3' || b === 'F' ? 'cuff' : 'leg', `${a}-${b}`);
@@ -399,7 +403,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const rig = buildRig(who), G = buildTrousers(rig);
     G.vw = trousersWeights(rig, G);
     const file = new URL(`../../../src/sculpt/assets/lowtrousers-${who}.json`, import.meta.url);
-    const A = { built: 'node tools/sculpt/garments/trousers.mjs (tools/sculpt/lowgarment.mjs garmentAsset)', ...garmentAsset(rig, G, MATS), hides: hiddenPolys(rig, G) };
+    const A = { built: 'node tools/sculpt/garments/trousers.mjs (tools/sculpt/lowgarment.mjs garmentAsset)', ...garmentAsset(rig, G, MATS, LOOKS), hides: hiddenPolys(rig, G) };
     writeFileSync(file, JSON.stringify(A));
     console.log(who, `${G.verts.length} vertices, ${G.tris.length} triangles, ${A.base} + ${A.bones.length} bones, ${A.hides.length} body polygons hidden: wrote`, file.pathname);
   }

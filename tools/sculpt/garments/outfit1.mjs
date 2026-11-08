@@ -10,8 +10,8 @@
 //     lowshawl-<who>.json; lowgarment.mjs garmentAsset, the tunic's with `hides`); the trousers' are written by
 //     garments/trousers.mjs (fitted to the body alone, they are the same either way)
 import { buildTrousers, trousersWeights, hiddenPolys as trousersHides } from './trousers.mjs';
-import { buildTunic, tunicWeights, hiddenPolys as tunicHides, MATS as TUNIC_MATS } from './tunic.mjs';
-import { buildShawl, shawlWeights, MATS as SHAWL_MATS } from './shawl.mjs';
+import { buildTunic, tunicWeights, hiddenPolys as tunicHides, MATS as TUNIC_MATS, LOOKS as TUNIC_LOOKS } from './tunic.mjs';
+import { buildShawl, shawlWeights, MATS as SHAWL_MATS, LOOKS as SHAWL_LOOKS } from './shawl.mjs';
 
 export function buildOutfit(rig) {
   const trousers = buildTrousers(rig);
@@ -32,7 +32,7 @@ export async function writeAssets(which = ['tunic', 'shawl']) {
     const rig = buildRig(who), O = buildOutfit(rig);
     for (const what of which) {
       const G = O[what], file = new URL(`../../../src/sculpt/assets/low${what}-${who}.json`, import.meta.url);
-      const A = { built: 'node tools/sculpt/garments/outfit1.mjs (tools/sculpt/lowgarment.mjs garmentAsset)', ...garmentAsset(rig, G, what === 'tunic' ? TUNIC_MATS : SHAWL_MATS), ...(what === 'tunic' ? { hides: O.hides.tunic } : {}) };
+      const A = { built: 'node tools/sculpt/garments/outfit1.mjs (tools/sculpt/lowgarment.mjs garmentAsset)', ...garmentAsset(rig, G, what === 'tunic' ? TUNIC_MATS : SHAWL_MATS, what === 'tunic' ? TUNIC_LOOKS : SHAWL_LOOKS), ...(what === 'tunic' ? { hides: O.hides.tunic } : {}) };
       writeFileSync(file, JSON.stringify(A));
       console.log(who, what, `${G.verts.length} vertices, ${G.tris.length} triangles, ${A.base} + ${A.bones.length} bones${A.hides ? `, ${A.hides.length} body polygons hidden` : ''}: wrote`, file.pathname);
     }

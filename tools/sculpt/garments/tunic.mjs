@@ -30,18 +30,23 @@
 // seams creased in (DESIGN.seams). Materials: linen, panel (linen's tone a step down, every other panel), trim, inner.
 import { meshOf, orient, trisOf, transferWeights, applyRefit, closestOnTri, sub, add, mul, dot, cross, unit, lerp } from '../lowgarment.mjs';
 import { TORSO_RING } from '../lowarm.mjs';
-import { MATS as SHAWL_MATS } from './shawl.mjs';
+import { MATS as SHAWL_MATS, clothLooks } from './shawl.mjs';
 
 /**
- * The materials: fabric, trim and inner are the shawl's own (garments/shawl.mjs MATS, the same names and colours: the
- * game gives them one slot each, the outfit one palette); seam, the stitch lines (the fabric a tone down), the tunic's own.
+ * The materials: fabric, trim, inner and rune are the shawl's own (garments/shawl.mjs MATS, the same names and colours:
+ * the game gives them one slot each, the outfit one palette); seam, the stitch lines (the fabric a tone down), the
+ * tunic's own. Rune: the cuffs' tan bands (and the step over them) and the collar's tan top, the trim's tan plain,
+ * glowing enchanted.
  */
 export const MATS = {
   fabric: SHAWL_MATS.fabric,
   trim: SHAWL_MATS.trim,
   inner: SHAWL_MATS.inner,
   seam: SHAWL_MATS.fabric.map((x) => +(x * 0.84).toFixed(4)),
+  rune: SHAWL_MATS.rune,
 };
+/** Plain and enchanted (garments/shawl.mjs clothLooks). */
+export const LOOKS = clothLooks(MATS);
 
 /**
  * The design per body. Heights are the body's y, lengths its units; [front, side, back] blend round the azimuth.
@@ -78,7 +83,7 @@ export const DESIGN = {
     skirt: { L: [-5.0, -4.95, -5.0], E: [-6.05, -5.95, -6.1], trim: 0.26, c: [0.09, 0.07, 0.06] },
     thigh: 0.9,
     vsplit: 0.85,
-    sleeve: { rings: [['jb', 0.035], ['ua', 0.04], ['ue', 0.045], ['el', 0.05]], inner: 0.7, under: 0.16, cuff: { at: 0.42, len: 0.22, c: 0.06, step: 0.03, bands: [['trim', 0.55], ['fabric', 0.45]] } },
+    sleeve: { rings: [['jb', 0.035], ['ua', 0.04], ['ue', 0.045], ['el', 0.05]], inner: 0.7, under: 0.16, cuff: { at: 0.42, len: 0.22, c: 0.06, step: 0.03, bands: [['rune', 0.55], ['fabric', 0.45]] } },
     seams: [{ at: 90, dir: 1, from: 'N', to: 'S', w: 0.035 }, { at: 90, dir: 1, from: 'B', to: 'LH', w: 0.035 }, { at: 180, dir: -1, from: 'S', to: 'LH', w: 0.018 }],
   },
   female: {
@@ -104,7 +109,7 @@ export const DESIGN = {
     skirt: { L: [-4.05, -4.0, -4.05], E: [-4.8, -4.65, -4.85], trim: 0.22, c: [0.1, 0.05, 0.07] },
     thigh: 0.9,
     vsplit: 0.62,
-    sleeve: { rings: [['jb', 0.03], ['ua', 0.035], ['ue', 0.04], ['el', 0.045]], inner: 0.7, under: 0.14, cuff: { at: 0.45, len: 0.22, c: 0.05, step: 0.025, bands: [['trim', 0.3], ['fabric', 0.2], ['trim', 0.3], ['fabric', 0.2]] } },
+    sleeve: { rings: [['jb', 0.03], ['ua', 0.035], ['ue', 0.04], ['el', 0.045]], inner: 0.7, under: 0.14, cuff: { at: 0.45, len: 0.22, c: 0.05, step: 0.025, bands: [['rune', 0.3], ['fabric', 0.2], ['rune', 0.3], ['fabric', 0.2]] } },
     seams: [{ at: 90, dir: 1, from: 'N', to: 'S', w: 0.03 }, { at: 42, dir: 1, from: 'A1', to: 'LH', w: 0.03 }, { at: 136, dir: -1, from: 'A1', to: 'LH', w: 0.03 }, { at: 90, dir: 1, from: 'B', to: 'LH', w: 0.03 }],
   },
 };
@@ -627,7 +632,7 @@ function meshOfTunic(rig, D, S) {
     const a = COL[j], b = COL[(j + 1) % NC];
     if (!collarCols.includes(a) || !collarCols.includes(b)) continue;
     poly([`N:${a}`, `N:${b}`, `K0:${b}`, `K0:${a}`], 'fabric', 'collar', 'N-K0');
-    poly([`K0:${a}`, `K0:${b}`, `K1:${b}`, `K1:${a}`], 'trim', 'collar', 'K0-K1');
+    poly([`K0:${a}`, `K0:${b}`, `K1:${b}`, `K1:${a}`], 'rune', 'collar', 'K0-K1');
   }
   // the sleeves and the cuffs
   for (const s of ['L', 'R']) {
@@ -635,7 +640,7 @@ function meshOfTunic(rig, D, S) {
     const hole = [['S', f], ['S', m], ['S', b], ['A1', b], ['A2', b], ['A2', m], ['A2', f], ['A1', f]].map(([r, a]) => `${r}:${a * sg}`);
     const rings = [{ key: 'arm', keys: hole }, ...sleeveRings[s].map((x) => ({ ...x, keys: Array.from({ length: 8 }, (_, k) => `${s}:${x.key}:${k}`) }))];
     for (let i = 0; i + 1 < rings.length; i++) {
-      const nx = rings[i + 1], mat = nx.key === 'c1' ? 'trim' : nx.mat ?? panelOf(0, 0);
+      const nx = rings[i + 1], mat = nx.key === 'c1' ? 'rune' : nx.mat ?? panelOf(0, 0);
       for (let k = 0; k < 8; k++) poly([rings[i].keys[k], rings[i].keys[(k + 1) % 8], nx.keys[(k + 1) % 8], nx.keys[k]], mat, `sleeve_${s}`, `${rings[i].key}-${nx.key}`);
     }
   }
@@ -680,7 +685,7 @@ function meshOfTunic(rig, D, S) {
   for (let j = 0; j < NC; j++) {
     const a = COL[j], b = COL[(j + 1) % NC];
     if (collarCols.includes(a) && collarCols.includes(b)) {
-      poly([`K1:${a}`, `K1:${b}`, K2[b], K2[a]], 'trim', 'collar', 'K1-K2');
+      poly([`K1:${a}`, `K1:${b}`, K2[b], K2[a]], 'rune', 'collar', 'K1-K2');
       poly([K2[a], K2[b], K0i[b], K0i[a]], 'inner', 'collar', 'K2-K0i');
       poly([K0i[a], K0i[b], Ni[b], Ni[a]], 'inner', 'collar', 'K0i-Ni');
     } else poly([`N:${a}`, `N:${b}`, Ni[b], Ni[a]], 'inner', 'collar', 'N-Ni');

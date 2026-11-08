@@ -4,10 +4,12 @@
 // -> drawSculptGL), as tools/sculpt/lowhoodgame.mjs draws it.
 //
 //   node tools/sculpt/lowoutfitgame.mjs --out <dir> [--zoom 10] [--views front,q3,side,back,rq3] [--phase 1.5]
-//       [--gif q3] [--fps 12] [--gender man] [--hair swept] [--hood] [--enchanted] [--name outfit]
+//       [--gif q3] [--fps 12] [--gender man] [--hair swept] [--hood] [--enchanted] [--cloth] [--walk] [--name outfit]
 //     writes <dir>/<name>-z<zoom>-<view>.png for each view and <dir>/<name>-z<zoom>.png (the views side by side), and with
 //     --gif one whole loop of the idle clip from that view at --fps (<dir>/<name>-idle-z<zoom>-<view>.gif); --gif none
-//     skips it; --hood draws the hood up (the hair hidden under it), --enchanted the sword lit
+//     skips it; --hood draws the hood up (the hair hidden under it), --enchanted the sword lit, --cloth the outfit's pieces
+//     enchanted (outfit.enchanted: clothShawl, clothHood, clothTunic, clothTrousers, clothBoots), --walk the GIF of one
+//     loop of the walk (<dir>/<name>-walk-z<zoom>-<view>.gif) in place of the idle's
 //
 // Views: front (facing 0), q3 (three-quarter, facing 1), side (facing 2), rq3 (rear three-quarter, facing 3), back
 // (facing 4). Playwright's Chromium (/opt/pw-browsers/chromium) with software GL, one device pixel a canvas pixel; the
@@ -30,7 +32,7 @@ mkdirSync(out, { recursive: true });
 const ROOT = new URL('../..', import.meta.url).pathname;
 const pose = {
   gender: opt('gender', 'man'), hair: opt('hair', 'swept'), hairColour: opt('colour', 'brown'),
-  hood: flag('hood'), enchanted: flag('enchanted'),
+  hood: flag('hood'), enchanted: flag('enchanted'), cloth: flag('cloth'), walk: flag('walk'),
 };
 const entry = `
 import { drawFigure, sculptedFigures } from './src/render/figure';
@@ -41,17 +43,18 @@ const look = { ...DEFAULT_LOOK, gender: P.gender, hair: P.hair, hairColour: P.ha
 // the cell: the figure's box at this zoom, wide enough for the sword on the back
 const size = (zoom) => [Math.ceil(44 * zoom) + 30, Math.ceil(48 * zoom) + 24];
 window.idleLength = () => CLIPS.idle.length;
-window.cell = (zoom, facing, phase) => {
+window.cell = (zoom, facing, phase, moving = false) => {
   const [cw, ch] = size(zoom), cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
   const g = cv.getContext('2d'); g.fillStyle = '#7d9b5e'; g.fillRect(0, 0, cw, ch);
-  drawFigure(g, cw / 2, ch - 2 * zoom - 8, zoom, { phase, moving: false, facing, swimming: false, working: false, look,
-    gear: { weapon: { id: 'long_sword', ...(P.enchanted ? { enchanted: true } : {}) } }, outfit: { hood: P.hood } });
+  drawFigure(g, cw / 2, ch - 2 * zoom - 8, zoom, { phase, moving, facing, swimming: false, working: false, look,
+    gear: { weapon: { id: 'long_sword', ...(P.enchanted ? { enchanted: true } : {}) } },
+    outfit: { hood: P.hood, ...(P.cloth ? { enchanted: { clothShawl: true, clothHood: true, clothTunic: true, clothTrousers: true, clothBoots: true } } : {}) } });
   return cv;
 };
 window.ready = async () => { sculptedFigures(true); await import('./src/sculpt/sculpted'); await new Promise((r) => setTimeout(r, 50)); };
-window.show = (zoom, facings, phase) => {
+window.show = (zoom, facings, phase, moving = false) => {
   const root = document.getElementById('root'); root.innerHTML = '';
-  for (const f of facings) { const c = window.cell(zoom, f, phase); c.id = 'f' + f; root.appendChild(c); }
+  for (const f of facings) { const c = window.cell(zoom, f, phase, moving); c.id = 'f' + f; root.appendChild(c); }
 };`;
 const b = await build({ stdin: { contents: entry, resolveDir: ROOT, loader: 'ts' }, bundle: true, format: 'iife', write: false, logLevel: 'error', target: 'es2022', loader: { '.png': 'dataurl', '.svg': 'dataurl', '.webp': 'dataurl', '.wav': 'dataurl', '.ogg': 'dataurl', '.mp3': 'dataurl' }, define: { 'import.meta.env': '{}', __DEPLOY__: 'undefined' }, absWorkingDir: ROOT });
 const kept = '/opt/pw-browsers/chromium';
@@ -75,13 +78,14 @@ try {
   }
   if (gifView in FACING) {
     // one loop of the idle: its time is the figure's phase over six (no id, so no offset into the loop)
-    const len = await p.evaluate(() => window.idleLength()), n = Math.round(len * fps), dir = join(out, 'gif-frames');
+    // (the walk: one stride, the phase once round in 16 frames)
+    const len = await p.evaluate(() => window.idleLength()), n = pose.walk ? 16 : Math.round(len * fps), dir = join(out, 'gif-frames');
     mkdirSync(dir, { recursive: true });
     for (let k = 0; k < n; k++) {
-      await p.evaluate(([z, f, ph]) => window.show(z, [f], ph), [zoom, FACING[gifView], (6 * k * len) / n]);
+      await p.evaluate(([z, f, ph, mv]) => window.show(z, [f], ph, mv), [zoom, FACING[gifView], pose.walk ? (2 * Math.PI * k) / n : (6 * k * len) / n, pose.walk]);
       await shot(`#f${FACING[gifView]}`, join(dir, `f${String(k).padStart(3, '0')}.png`));
     }
-    const gif = join(out, `${name}-idle-z${zoom}-${gifView}.gif`);
+    const gif = join(out, `${name}-${pose.walk ? 'walk' : 'idle'}-z${zoom}-${gifView}.gif`);
     // (cropped to what moves over the loop, a margin round it; one palette for the whole loop)
     execFileSync('python3', ['-c', `
 import sys, glob
