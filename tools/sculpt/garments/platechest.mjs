@@ -56,7 +56,7 @@ export const DESIGN = {
     rim: { w: 0.11, h: 0.04, t: 0.035 },
     fit: { trunk: 0.045, lame: 0.025, fauld: 0.1, arm: 0.04, gap: 0.02 },
     wedge: 8,
-    collar: { cols: [[14, 60, 104], [114, 148, 180]], base: [-0.78, -0.78, -0.62], top: [-0.06, 0.12, 0.19], trim: 0.12, c: 0.17, flare: 0.05, wall: 0.07, spread: 0.12, sink: 0.04, open: 46 },
+    collar: { cols: [[14, 66, 118], [128, 154, 180]], base: [-0.78, -0.78, -0.62], top: [-0.06, 0.12, 0.19], trim: 0.12, c: 0.17, flare: 0.05, wall: 0.07, spread: 0.12, sink: -0.1, open: 46, shrug: 0.4 },
     breast: { az: [0, 22, 46, 70, 94], top: [-0.62, -0.64, -0.68, -0.82, -1.95], bottom: [-4.05, -3.8, -3.45, -3.2, -3.1], rows: [0, 0.3, 0.55, 0.8, 1], c: [0.05, 0.05, 0.055, 0.06, 0.065], flat: 22, core: { y: -1.9, r: 0.44, n: 8 } },
     back: { az: [100, 118, 140, 160, 180], top: [-1.95, -0.78, -0.6, -0.56, -0.54], bottom: [-3.0, -3.2, -3.4, -3.55, -3.65], rows: [0, 0.45, 1], c: [0.045, 0.05, 0.055], ridge: 0.06, side: 0 },
     lames: [
@@ -66,17 +66,17 @@ export const DESIGN = {
     ],
     lameCols: 10,
     faulds: {
-      top: -4.15, c: 0.1, flare: 0.05,
+      top: -4.15, c: 0.17, flare: 0.12,
       plates: [
-        { az: [-22, 0, 22], bottom: [-5.7, -6.07, -5.7], bone: { pelvis: 0.6, thigh_l: 0.2, thigh_r: 0.2 } },
-        { az: [28, 50, 72], bottom: [-5.6, -5.7, -5.45], bone: { pelvis: 0.45, thigh_l: 0.55 }, mirror: true },
-        { az: [140, 180, 220], bottom: [-5.5, -5.85, -5.5], bone: { pelvis: 0.7, thigh_l: 0.15, thigh_r: 0.15 } },
+        { az: [-22, 0, 22], bottom: [-5.7, -6.07, -5.7], bone: { pelvis: 0.4, thigh_l: 0.3, thigh_r: 0.3 } },
+        { az: [28, 50, 72], bottom: [-5.6, -5.7, -5.45], bone: { pelvis: 0.25, thigh_l: 0.75 }, mirror: true },
+        { az: [140, 180, 220], bottom: [-5.5, -5.85, -5.5], bone: { pelvis: 0.4, thigh_l: 0.3, thigh_r: 0.3 } },
       ],
     },
     pauldron: {
       lift: -0.08, inset: 0.0, pole: 0.5, near: 1.1, round: 0.2, inner: 0.3, cols: 8, phi0: 22, phi: [76, 88, 76, 46], rows: [0, 0.5, 1], c: [0.12, 0.26, 0.34], cone: 34,
       core: { psi: 55, f: 0.6, r: 0.3, n: 6 },
-      lames: [{ t: [0.45, 1.05], c: [0.15, 0.25], th: [-60, 240] }, { t: [0.9, 1.55], c: [0.1, 0.18], th: [-50, 230] }],
+      lames: [{ t: [0.45, 1.05], c: [0.15, 0.25], th: [-35, 215] }, { t: [0.9, 1.55], c: [0.1, 0.18], th: [-50, 230] }],
     },
     rerebrace: { t: [1.25, 1.62], c: [0.035, 0.045], th: [-45, 228], cols: 5 },
     sleeve: { rings: [['$torso', 0.03], ['ja', 0.035], ['jb', 0.04], ['uc', 0.045], ['el', 0.045], ['fa', 0.04]] },
@@ -88,7 +88,7 @@ export const DESIGN = {
     rim: { w: 0.095, h: 0.035, t: 0.03 },
     fit: { trunk: 0.04, lame: 0.022, fauld: 0.09, arm: 0.035, gap: 0.018 },
     wedge: 8,
-    collar: { cols: [[14, 60, 104], [114, 148, 180]], base: [-0.85, -0.78, -0.62], top: [-0.25, -0.1, 0.0], trim: 0.11, c: 0.13, flare: 0.04, wall: 0.06, spread: 0.1, sink: 0.035, open: 46 },
+    collar: { cols: [[14, 66, 118], [128, 154, 180]], base: [-0.85, -0.78, -0.62], top: [-0.25, -0.1, 0.0], trim: 0.11, c: 0.13, flare: 0.04, wall: 0.06, spread: 0.1, sink: -0.05, open: 46, shrug: 0.35 },
     breast: { az: [0, 18, 36, 56, 76, 96], top: [-0.7, -0.71, -0.74, -0.8, -0.95, -1.85], bottom: [-3.55, -3.4, -3.2, -3.0, -2.85, -2.75], rows: [0, 0.23, 0.44, 0.56, 0.78, 1], c: [0.04, 0.04, 0.04, 0.045, 0.05, 0.055], flat: 18, bridge: [3], core: { y: -1.6, r: 0.38, n: 8 } },
     back: { az: [100, 118, 140, 160, 180], top: [-1.85, -0.9, -0.72, -0.64, -0.6], bottom: [-2.6, -2.8, -2.95, -3.05, -3.15], rows: [0, 0.45, 1], c: [0.04, 0.045, 0.05], ridge: 0.05, side: 0 },
     lames: [
@@ -98,17 +98,17 @@ export const DESIGN = {
     ],
     lameCols: 10,
     faulds: {
-      top: -3.6, c: 0.09, flare: 0.04,
+      top: -3.6, c: 0.2, flare: 0.14,
       plates: [
-        { az: [-22, 0, 22], bottom: [-4.7, -4.96, -4.7], bone: { pelvis: 0.6, thigh_l: 0.2, thigh_r: 0.2 } },
-        { az: [30, 50, 70], bottom: [-4.8, -5.05, -4.7], bone: { pelvis: 0.45, thigh_l: 0.55 }, mirror: true },
+        { az: [-22, 0, 22], bottom: [-4.7, -4.96, -4.7], bone: { pelvis: 0.2, thigh_l: 0.4, thigh_r: 0.4 } },
+        { az: [30, 50, 70], bottom: [-4.8, -5.05, -4.7], bone: { pelvis: 0.1, thigh_l: 0.9 }, mirror: true },
         { az: [140, 180, 220], bottom: [-4.6, -4.9, -4.6], bone: { pelvis: 0.7, thigh_l: 0.15, thigh_r: 0.15 } },
       ],
     },
     pauldron: {
       lift: -0.06, inset: 0.0, pole: 0.5, near: 0.95, round: 0.2, inner: 0.3, cols: 8, phi0: 22, phi: [74, 86, 74, 46], rows: [0, 0.5, 1], c: [0.09, 0.19, 0.26], cone: 34,
       core: { psi: 55, f: 0.6, r: 0.25, n: 6 },
-      lames: [{ t: [0.38, 0.85], c: [0.12, 0.2], th: [-60, 240] }, { t: [0.72, 1.3], c: [0.08, 0.15], th: [-50, 230] }],
+      lames: [{ t: [0.38, 0.85], c: [0.12, 0.2], th: [-35, 215] }, { t: [0.72, 1.3], c: [0.08, 0.15], th: [-50, 230] }],
     },
     rerebrace: { t: [1.05, 1.35], c: [0.03, 0.04], th: [-45, 228], cols: 5 },
     sleeve: { rings: [['$torso', 0.025], ['ja', 0.03], ['jb', 0.035], ['uc', 0.04], ['el', 0.04], ['fa', 0.035]] },
@@ -552,12 +552,12 @@ function torsoPieces(G, rig, D, S) {
     // foot `spread` further out, set on the skin there: the highest of the trunk's samples at that radius and azimuth)
     const rTop = r0n + Cd.c;
     const rFoot = () => rTop + Cd.spread;
-    const surfY = (a) => {
+    const surfY = (a, at = rFoot()) => {
       let y = -Infinity;
       for (const p of trunk) {
         if (p[1] < -1.6) continue;
         const r = Math.hypot(p[0], p[2] - nz), d = Math.abs(((Math.atan2(p[0], p[2] - nz) * 180 / Math.PI - a + 540) % 360) - 180);
-        if (d < 12 && Math.abs(r - rFoot()) < 0.08) y = Math.max(y, p[1]);
+        if (d < 14 && Math.abs(r - at) < 0.1) y = Math.max(y, p[1]);
       }
       return y;
     };
@@ -566,8 +566,13 @@ function torsoPieces(G, rig, D, S) {
     const yb = az.map((a) => Math.min(hAt(Cd.top, wrap(a)) - 0.3, Math.max(hAt(Cd.base, wrap(a)), surfY(a) - Cd.sink))), yt = az.map((a) => hAt(Cd.top, wrap(a)));
     const fr = (k, y) => (y - yb[k]) / (yt[k] - yb[k]);
     const outer = [az.map((a, k) => P(a, yb[k], 0, 0, yb[k])), az.map((a, k) => P(a, yt[k] - Cd.trim, Cd.flare * 0.8, fr(k, yt[k] - Cd.trim), yb[k])), az.map((a, k) => P(a, yt[k], Cd.flare, 1, yb[k]))];
-    const inner = [az.map((a, k) => P(a, yt[k], Cd.flare - Cd.wall, 1, yb[k])), az.map((a, k) => P(a, yb[k] + 0.1, -Cd.wall, fr(k, yb[k] + 0.1), yb[k]))];
-    const V = (p) => { const i = G.vert(p, 'collar'); G.wt[i] = { spine_03: 1 }; return i; };
+    // (the inside's foot above the skin under it: the trapezius rises toward the neck)
+    const yIn = az.map((a, k) => Math.min(yt[k] - 0.08, Math.max(yb[k] + 0.1, surfY(a, rTop - Cd.wall) + 0.04)));
+    const inner = [az.map((a, k) => P(a, yt[k], Cd.flare - Cd.wall, 1, yb[k])), az.map((a, k) => P(a, yIn[k], -Cd.wall, fr(k, yIn[k]), yb[k]))];
+    // (the front segments a fixed share on their side's clavicle, so they rise with the shoulder's shrug over the
+    // trapezius; the back one on the chest alone)
+    const cw = sg.cols === Cd.cols[0] ? { spine_03: 1 - Cd.shrug, [`clavicle_${sg.s > 0 ? 'l' : 'r'}`]: Cd.shrug } : { spine_03: 1 };
+    const V = (p) => { const i = G.vert(p, 'collar'); G.wt[i] = cw; return i; };
     const io = outer.map((row) => row.map(V)), ii = inner.map((row) => row.map(V));
     const rowsAll = [...io, ...ii], mats = ['plate', 'gold', 'gold', 'under'];
     G.tag = 'collar';
@@ -786,8 +791,11 @@ export function hiddenPolys(rig, G, { reach = 0.6 } = {}) {
     }
     return false;
   };
+  // (the arm and the shoulder's joint above the forearm's top ring all under the sleeve, the pauldron and its lames)
+  const faY = Math.min(...Array.from({ length: 8 }, (_, k) => B.verts[B.index.get(`arm/fa${k}.L`)][1]));
   const cov = B.verts.map((p, i) => {
     if (B.part[i] === 'hand') return true;
+    if ((B.part[i] === 'arm' || B.part[i] === 'joint') && p[1] > faY) return true;
     if (!['torso', 'arm', 'joint', 'neck', 'pelvis'].includes(B.part[i])) return false;
     return hit(p, unit(N[i]));
   });

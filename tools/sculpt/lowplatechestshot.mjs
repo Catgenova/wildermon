@@ -97,6 +97,8 @@ function dress(who, pose) {
 }
 /** Which piece a triangle is of (the plate's tag, decals with their plate), and which bones move it. */
 const pieceOf = (G, t) => G.polys[G.tris[t].poly].tag;
+const DIAGS = new Set();
+let DIAG_ON = false;
 function crossings(who, d) {
   const { rig, G, shown } = M[who];
   const body = crossPairs(d.PG, G.tris, d.PB, shown);
@@ -105,6 +107,8 @@ function crossings(who, d) {
   for (const [i, j] of self) { const k = [pieceOf(G, i), pieceOf(G, j)].sort().join('×'); pairs[k] = (pairs[k] ?? 0) + 1; }
   const bodyBy = {};
   for (const [i, j] of body) { const k = `${pieceOf(G, i)}×${rig.B.part[shown[j].v[0]]}`; bodyBy[k] = (bodyBy[k] ?? 0) + 1; }
+  // (DIAG=1: which of the body's vertices, by name, and which of the armour's polygons cross)
+  if (process.env.DIAG && DIAG_ON) for (const [i, j] of body) DIAGS.add(`${who} ${pieceOf(G, i)}/${G.polys[G.tris[i].poly].mat} × ${shown[j].v.map((v) => rig.B.names[v]).join(' ')}`);
   return { body: body.length, self: self.length, pairs, bodyBy };
 }
 
@@ -142,12 +146,13 @@ if (only.includes('metrics')) {
   for (const who of ['male', 'female']) {
     const { rig, G } = M[who], c = checks(G, G.verts, rig.B, rig.B.verts);
     metrics[who] = { tris: c.tris, open: c.open, nonManifold: c.nonManifold, offPlane: c.offPlane, hides: G.hides.length, bones: rig.bones.length, mats: Object.keys(MATS).length, poses: {} };
-    for (const e of allPoses(who)) metrics[who].poses[e.id] = crossings(who, dress(who, e.pose));
+    for (const e of allPoses(who)) { DIAG_ON = /^(idle|walk)/.test(e.id); metrics[who].poses[e.id] = crossings(who, dress(who, e.pose)); }
     const P = metrics[who].poses;
     console.log(who, JSON.stringify({ ...metrics[who], poses: undefined }));
     console.log('  ', Object.entries(P).map(([k, v]) => `${k}:${v.body}/${v.self}`).join(' '));
   }
   writeFileSync(join(out, 'platechest-metrics.json'), JSON.stringify(metrics, null, 1));
+  if (process.env.DIAG) console.log([...DIAGS].filter((d) => !/swing|tpose/.test(d)).join('\n'));
 }
 
 /* ---- poses ---------------------------------------------------------------------------------------------------------- */
