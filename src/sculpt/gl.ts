@@ -32,8 +32,14 @@ export interface DrawOpts {
 /** The screen box a body fits in at zoom one, in figure units, as the 2D figure's `STILL_BOX`. */
 export const BOX = { left: -42, right: 42, top: -66, bottom: 14 };
 const MAX_BONES = 80;
-/** Materials a draw may use: a low-poly body's own (`bodyMaterials`) and its garment's after them. */
-const MAX_MATS = 40;
+/** Materials a draw may use: a low-poly body's own (`bodyMaterials`), its garments' and its sword's (plain or enchanted) after them. */
+const MAX_MATS = 64;
+/** How far behind the body's surface (figure units, toward the viewer) the trail is still hidden by it: so the blade shows over its own trail. */
+const TRAIL_BEHIND = 0.6;
+/** The trail's opacity at its fullest, plain and lit, and the light a lit one adds over its opacity. */
+const TRAIL_PLAIN = 0.6, TRAIL_LIT = 0.8, TRAIL_ADD = 0.7;
+/** The trail's colours, at its inner edge and toward the point: plain, a pale cream; lit, the enchanted sword's golds (`assets/long_sword.json`). */
+const TRAIL_RGB = { plain: { edge: '#f3ead8', mid: '#fffaf0' }, lit: { edge: '#ffb347', mid: '#ffe7a6' } };
 /** Terms of the review renders' light (`LowLight.sh`). */
 export const SH_TERMS = 19;
 /** Degrees the whole-body review renders' camera looks down (their fitted cameras: the man's 8, the woman's 7.5). */
@@ -106,7 +112,7 @@ void main() {
   int flags = int(uMat[mi].a + 0.5);
   // Lids shut: the eye's parts take the lid's colour, the first material's a shade darker, and shade as skin.
   if (uBlink > 0.5 && (flags & 8) != 0) { base = uMat[0].rgb * 0.94; flags = 2; }
-  bool emissive = (flags & 1) != 0, skin = (flags & 2) != 0, metal = (flags & 4) != 0, soft = (flags & 16) != 0, noInk = (flags & 32) != 0, noCrease = (flags & 64) != 0, thinInk = (flags & 128) != 0, cloth = (flags & 256) != 0;
+  bool emissive = (flags & 1) != 0, skin = (flags & 2) != 0, metal = (flags & 4) != 0, soft = (flags & 16) != 0, noInk = (flags & 32) != 0, noCrease = (flags & 64) != 0, thinInk = (flags & 128) != 0, cloth = (flags & 256) != 0, gear = (flags & 512) != 0;
   float dl = dot(n, uL);
   vec3 c = base;
   if (uMode > 0.5) {
@@ -119,7 +125,9 @@ void main() {
     // A low-poly body as its review renders: one shade a polygon, skin lit by their light in the look's tone, cloth by the
     // same light in its own colour over the skin it was fitted to, the rest its colour.
     vec3 lit = lowLight(vec3(dot(n, uXv), dot(n, uYv), dot(n, uZv)));
-    c = skin ? min(lit * uTone, 1.0) : cloth ? min(lit * base / uFit, 1.0) : base;
+    // and gear in hand (a sword) by its brightness only, as the gear's review renders light it
+    const vec3 LUM = vec3(0.299, 0.587, 0.114);
+    c = skin ? min(lit * uTone, 1.0) : cloth ? min(lit * base / uFit, 1.0) : gear ? min(base * (0.18 + 0.82 * dot(lit, LUM) / dot(uFit, LUM)), 1.0) : base;
   } else if (uFlat > 0.5) {
     c = base;
   } else {
@@ -218,11 +226,44 @@ void main() {
   else o = vec4(glow, glow == vec3(0.0) ? 0.0 : min(1.0, length(glow) * 2.0));
 }`;
 
+/*
+ * The slash trail over a body (`SculptDraw.trail`): a ribbon in the figure's frame, projected as the body is, drawn after
+ * the ink onto the canvas, hidden where the body stands in front of it (its depth, from the body's pass), its edges soft.
+ * Plain: pale and see-through, washed at night as the body is. Lit (an enchanted blade): the sword's gold, brighter than
+ * it is opaque, so it adds light over what is behind it, and kept through the night.
+ */
+const TRAIL_VS = `#version 300 es
+precision highp float;
+layout(location=0) in vec3 aPos; layout(location=1) in vec2 aAV;
+uniform vec2 uEx, uEy; uniform float uHS; uniform vec3 uT; uniform vec2 uHalf; uniform vec2 uOff;
+out float vA; out float vV; out float vDepth;
+void main() {
+  float sx = aPos.x * uEx.x + aPos.y * uEy.x - uOff.x;
+  float sy = aPos.x * uEx.y + aPos.y * uEy.y - aPos.z * uHS - uOff.y;
+  vDepth = -dot(aPos, uT); vA = aAV.x; vV = aAV.y;
+  gl_Position = vec4(sx / uHalf.x, -sy / uHalf.y, 0.0, 1.0);
+}`;
+const TRAIL_FS = `#version 300 es
+precision highp float;
+in float vA; in float vV; in float vDepth;
+uniform sampler2D uCol; uniform sampler2D uNd; uniform vec2 uPx; uniform vec3 uRgb; uniform vec3 uEdge; uniform float uLit; uniform float uNight;
+out vec4 o;
+void main() {
+  vec2 uv = gl_FragCoord.xy * uPx;
+  if (texture(uCol, uv).a > 0.5 && texture(uNd, uv).w < vDepth + ${TRAIL_BEHIND.toFixed(2)}) discard;
+  float a = clamp(vA, 0.0, 1.0) * smoothstep(0.0, 0.35, vV) * (1.0 - smoothstep(0.8, 1.0, vV));
+  vec3 c = mix(uEdge, uRgb, smoothstep(0.15, 0.85, vV));
+  if (uLit < 0.5) { c = mix(c, vec3(12.0, 20.0, 44.0) / 255.0, uNight * 0.68); a *= ${TRAIL_PLAIN.toFixed(2)}; o = vec4(c * a, a); }
+  else { float k = a * ${TRAIL_LIT.toFixed(2)}; o = vec4(c * k * (1.0 + ${TRAIL_ADD.toFixed(2)} * a), k); }
+}`;
+
 const WIRE_FS = `#version 300 es
 precision highp float; out vec4 o; void main(){ o = vec4(0.1, 0.08, 0.1, 1.0); }`;
 
 interface Ctx {
   gl: WebGL2RenderingContext; cv: HTMLCanvasElement; prog: WebGLProgram; edge: WebGLProgram; wire: WebGLProgram;
+  /** The slash trail's program, its uniforms and its buffer, made the first time one is drawn. */
+  trail?: { prog: WebGLProgram; u: Record<string, WebGLUniformLocation | null>; buf: WebGLBuffer };
   fbo: WebGLFramebuffer; tCol: WebGLTexture; tNd: WebGLTexture; tId: WebGLTexture; depth: WebGLRenderbuffer; quad: WebGLBuffer;
   w: number; h: number; u: Record<string, WebGLUniformLocation | null>; eu: Record<string, WebGLUniformLocation | null>; wu: Record<string, WebGLUniformLocation | null>;
 }
@@ -333,7 +374,7 @@ function matsOf(ms: Material[]): Float32Array {
   ms.forEach((m, i) => {
     if (i >= MAX_MATS) return;
     const c = hexOf(m.colour);
-    f.set([c[0], c[1], c[2], (m.emissive ? 1 : 0) + (m.skin ? 2 : 0) + (m.metal ? 4 : 0) + (m.eye ? 8 : 0) + (m.soft ? 16 : 0) + (m.noInk ? 32 : 0) + (m.noCrease ? 64 : 0) + (m.thinInk ? 128 : 0) + (m.cloth ? 256 : 0)], i * 4);
+    f.set([c[0], c[1], c[2], (m.emissive ? 1 : 0) + (m.skin ? 2 : 0) + (m.metal ? 4 : 0) + (m.eye ? 8 : 0) + (m.soft ? 16 : 0) + (m.noInk ? 32 : 0) + (m.noCrease ? 64 : 0) + (m.thinInk ? 128 : 0) + (m.cloth ? 256 : 0) + (m.gear ? 512 : 0)], i * 4);
   });
   MATS.set(ms, f);
   return f;
@@ -354,7 +395,15 @@ export interface SculptDraw {
   baked: Baked; bones: Float32Array; materials: Material[]; view: View; /** Lids shut, past a half. */ blink?: number;
   /** A low-poly body (`./lowpoly`): one shade a polygon (the bake's `faceSkin`) in this light. */
   low?: LowLight;
+  /** A slash trail over it (`./anim/trail.ts`). */
+  trail?: TrailDraw;
 }
+/**
+ * A slash trail as drawn: a triangle strip, five numbers a point (x, y, z in the figure's frame as the body's skinned
+ * points are; how opaque, nought to one; across the ribbon, nought at its inner edge to one at the point's), and whether
+ * it is lit (an enchanted blade's).
+ */
+export interface TrailDraw { strip: Float32Array; n: number; lit: boolean }
 
 /**
  * A body drawn on `ctx` with its feet at (sx, sy) at `zoom`, or false where
@@ -454,9 +503,45 @@ export function drawSculptGL(ctx: CanvasRenderingContext2D, sx: number, sy: numb
   gl.uniform1f(C.eu.uShow, o.debug === 'edges' ? 1 : 0);
   gl.uniform1f(C.eu.uNight, o.night ?? 0);
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  if (d.trail && d.trail.n > 2) drawTrail(C, d, d.trail, w, h, o.night ?? 0);
   gl.flush();
   ctx.drawImage(C.cv, 0, 0, w, h, sx + BOX.left * zoom, sy + BOX.top * zoom, w / dpr, h / dpr);
   return true;
+}
+
+/** The slash trail onto the canvas over the inked body, blended (premultiplied), the body's colour and depth textures still bound. */
+function drawTrail(C: Ctx, d: SculptDraw, t: TrailDraw, w: number, h: number, night: number): void {
+  const { gl } = C;
+  if (!C.trail) {
+    const prog = compile(gl, TRAIL_VS, TRAIL_FS);
+    C.trail = { prog, buf: gl.createBuffer()!, u: Object.fromEntries(['uEx', 'uEy', 'uHS', 'uT', 'uHalf', 'uOff', 'uCol', 'uNd', 'uPx', 'uRgb', 'uEdge', 'uLit', 'uNight'].map((n) => [n, gl.getUniformLocation(prog, n)])) };
+  }
+  const { prog, u, buf } = C.trail, v = d.view, rgb = t.lit ? TRAIL_RGB.lit : TRAIL_RGB.plain;
+  gl.useProgram(prog);
+  gl.uniform2f(u.uEx, v.ex[0], v.ex[1]);
+  gl.uniform2f(u.uEy, v.ey[0], v.ey[1]);
+  gl.uniform1f(u.uHS, HEIGHT_SCALE);
+  gl.uniform3f(u.uT, v.T[0], v.T[1], v.T[2]);
+  gl.uniform2f(u.uHalf, (BOX.right - BOX.left) / 2, (BOX.bottom - BOX.top) / 2);
+  gl.uniform2f(u.uOff, (BOX.left + BOX.right) / 2, (BOX.top + BOX.bottom) / 2);
+  gl.uniform1i(u.uCol, 0);
+  gl.uniform1i(u.uNd, 1);
+  gl.uniform2f(u.uPx, 1 / w, 1 / h);
+  gl.uniform3fv(u.uRgb, hexOf(rgb.mid));
+  gl.uniform3fv(u.uEdge, hexOf(rgb.edge));
+  gl.uniform1f(u.uLit, t.lit ? 1 : 0);
+  gl.uniform1f(u.uNight, night);
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, t.strip.subarray(0, t.n * 5), gl.DYNAMIC_DRAW);
+  for (let i = 2; i < 8; i++) gl.disableVertexAttribArray(i);
+  gl.enableVertexAttribArray(0);
+  gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 20, 0);
+  gl.enableVertexAttribArray(1);
+  gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 20, 12);
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, t.n);
+  gl.disable(gl.BLEND);
 }
 
 let PAD: Float32Array | null = null;

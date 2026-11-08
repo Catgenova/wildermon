@@ -26,7 +26,7 @@
 //     7. the hood (src/sculpt/assets/lowhood-<who>.json, tools/sculpt/garments/hood.mjs, built round the shawl's cowl):
 //        the asset's weights as the tools build them, no bones of its own; in the game's path the hood's triangles crossing
 //        the body's (the head's above all) and the shawl's in the same walk and idle, and its own (reported: the rim's fold
-//        where the border under the chin meets the frame's foot; not a failure); and the draw within the renderer's 40
+//        where the border under the chin meets the frame's foot; not a failure); and the draw within the renderer's 64
 //        materials and 80 bones.
 //   Exits 1 when a difference passes its tolerance or a crossing is found.
 import { build } from 'esbuild';
@@ -183,7 +183,7 @@ for (const who of ['male', 'female']) {
   for (const k of ['walk', 'idle']) if (r.hood[k].body || r.hood[k].shawl || r.hood[k].tunic) fail = true;
   if (s0.baked.nTris !== bodyTris + nShawlTris + r.trousers.tris + r.boots.tris + r.tunic.tris + r.hood.tris) { console.log(who, 'the bake is not the body less the hidden, the shawl, the trousers, the boots, the tunic and the hood'); fail = true; }
   r.draw = { materials: s0.materials.length, bones: s0.bones.length / 12 };
-  if (r.draw.materials > 40 || r.draw.bones > 80) { console.log(who, 'over the renderer\'s limits'); fail = true; }
+  if (r.draw.materials > 64 || r.draw.bones > 80) { console.log(who, 'over the renderer\'s limits'); fail = true; }
   console.log(who, JSON.stringify(r));
 }
 console.log(fail ? 'FAIL' : 'ok');

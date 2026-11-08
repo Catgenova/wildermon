@@ -17,6 +17,7 @@ import { fixed, html, setMarkup, type Markup } from '../html';
 import { setUiSize, UI_SIZE_MAX, UI_SIZE_MIN, UI_SIZE_PRESETS, uiSizeShown } from '../screen';
 import { FAST_DPR, FRAME_CAPS, FULL_DPR, LOW_POWER_FPS, type Graphics, type UiColours, type UiFrames, type UiLight, type UiStyle } from '../../game/settings';
 import type { Motion } from '../../engine/motion';
+import { MAX_ZOOM, SCULPTED_MAX_ZOOM } from '../../engine/camera';
 import { BUSH3D_SPECIES, STUMP3D_SPECIES, TREE3D_SPECIES } from '../../render/trees3d';
 import { FRAME_REACH, FRAME_REACHES, FRAME_RIM, FRAMES, frameLabel, frameOddities, RIM, RIMS } from '../runecut-art';
 import { lifeWords } from '../runecut-life';
@@ -447,7 +448,8 @@ export class SettingsPanel {
     add(
       'Sculpted figures',
       'Bodies from the sculpted base, drawn by the graphics chip, in place of the flat figure. New look: the flat figure until '
-        + 'its bake is made, in idle time. Not sculpted yet: held gear, swimming, seats, veils. No WebGL: the flat figure.',
+        + 'its bake is made, in idle time. Not sculpted yet: held gear, swimming, seats, veils. No WebGL: the flat figure. '
+        + `Max zoom ${SCULPTED_MAX_ZOOM}× (off: ${MAX_ZOOM}×).`,
       () => game.settings.sculpted,
       (v) => (game.settings.sculpted = v),
     );
