@@ -178,7 +178,9 @@ export function buildHair(rig, style = SWEPT, hull = null) {
   }
   if (style.v) aboveV(style, verts, pieces, skull, C, k);
   if (style.side) sideOf(style.side, verts, pieces, skull, C, k);
-  if (style.layers) layersOf(style, verts, polys, pieces, skull, C, k);
+  // (the pieces' roots, their edges sunk in the skin, before any is laid on another)
+  const roots = new Set(verts.map((p, i) => i).filter((i) => { const r = sub(verts[i], C), l = Math.hypot(...r); return l <= hit(skull, C, mul(r, 1 / l)).t; }));
+  if (style.layers) layersOf(style, verts, polys, pieces, skull, C, k, roots);
   orientOut(verts, polys, pieces);
   // the buzz: the head's side faces forward of the shave as far as the sideburn's line, as patches just off them
   if (style.buzz) buzzOf(B, style, verts, polys, k);
@@ -192,21 +194,43 @@ export function buildHair(rig, style = SWEPT, hull = null) {
       if (dac <= dbd) tris.push([a, b, c, pi], [a, c, d, pi]); else tris.push([a, b, d, pi], [b, c, d, pi]);
     }
   });
-  // where a lower piece still shows through an upper on the sides (hairCrossings), its corners there pressed down
-  // toward the skin a little at a time
-  if (style.layers) for (let it = 0; it < 12; it++) {
-    const X = hairCrossings(rig, { verts, polys, tris, pieces, centre: C, k }).filter((x) => x.side);
+  // where a lower piece still shows through an upper (hairCrossings), its corners there pressed down toward the skin a
+  // little at a time
+  const upper = new Map(), height0 = new Map(), outsideOf = (pc) => outsideFaces(polys, pieces[pc]), farOf = (F, d) => farAlong(verts, C, F, d);
+  if (style.layers) for (let it = 0; it < (style.layerPress ?? 12); it++) {
+    upper.clear();
+    const X = hairCrossings(rig, { verts, polys, tris, pieces, centre: C, k });
     if (!X.length) break;
     for (const x of X) {
       const pair = style.layers.find(([u, l]) => (u === x.a && l === x.b) || (u === x.b && l === x.a));
       if (!pair) continue;
-      for (const pi of x.polys) {
-        if (polys[pi].buzz || pieces[polys[pi].piece].id !== pair[1]) continue;
-        for (const i of polys[pi].v) {
-          const r = sub(verts[i], C), l = Math.hypot(...r), d = mul(r, 1 / l), skin = hit(skull, C, d).t;
-          if (l > skin + 0.004 * k) verts[i] = add(C, mul(d, Math.max(skin + 0.002 * k, l - 0.01 * k)));
-        }
+      const pi = x.polys.find((q) => !polys[q].buzz && pieces[polys[q].piece].id === pair[1]);
+      if (pi === undefined) continue;
+      // the lower face's corner nearest where they cross a step toward the skin, if the upper is over it (so the step is
+      // hidden); else the upper face's nearest corner on its edge a step out, so its edge rides over the lower
+      const at = x.points[0], near = (v) => v.reduce((m, j) => (Math.hypot(...sub(verts[j], at)) < Math.hypot(...sub(verts[m], at)) ? j : m), v[0]);
+      const upPi = x.polys.find((q) => q !== pi), upPc = polys[upPi].piece;
+      const U = upper.get(upPc) ?? upper.set(upPc, outsideOf(upPc)).get(upPc);
+      // (covered: the upper's outside along the corner's ray stands a good way off the skin, over where it goes)
+      const off = (j) => { const r = sub(verts[j], C), l = Math.hypot(...r), d = mul(r, 1 / l), skin = hit(skull, C, d).t; return l - skin > 0.004 * k && farOf(U, d) > skin + 0.03 * k; };
+      const v = polys[pi].v.filter(off);
+      if (v.length) {
+        const i = near(v), r = sub(verts[i], C), l = Math.hypot(...r), d = mul(r, 1 / l), skin = hit(skull, C, d).t;
+        verts[i] = add(C, mul(d, Math.max(skin + 0.002 * k, l - 0.006 * k)));
+        continue;
       }
+      // (the upper's edge: its roots, or corners low on the skin)
+      const w = polys[upPi].v.filter((j) => { const r = sub(verts[j], C), l = Math.hypot(...r); return roots.has(j) || l - hit(skull, C, mul(r, 1 / l)).t < 0.06 * k; });
+      if (w.length) {
+        const u = near(w), r = sub(verts[u], C), l = Math.hypot(...r), d = mul(r, 1 / l);
+        if (l - hit(skull, C, d).t < (style.layerLift ?? 0.1) * k) { verts[u] = add(verts[u], mul(d, 0.006 * k)); continue; }
+      }
+      // neither: the lower face's nearest corner off the skin a step down all the same, to no less than layerKeep (0.6) of its height
+      const lo = polys[pi].v.filter((j) => { const r = sub(verts[j], C), l = Math.hypot(...r), skin = hit(skull, C, mul(r, 1 / l)).t; return l - skin > (style.layerKeep ?? 0.6) * (height0.get(j) ?? l - skin) + 0.006 * k; });
+      if (!lo.length) continue;
+      const i = near(lo), r = sub(verts[i], C), l = Math.hypot(...r), d = mul(r, 1 / l);
+      height0.has(i) || height0.set(i, l - hit(skull, C, d).t);
+      verts[i] = add(C, mul(d, l - 0.006 * k));
     }
   }
   const weights = weightsOf(rig, verts, style);
@@ -343,6 +367,28 @@ function sideOf(side, verts, pieces, skull, C, k) {
   }
 }
 
+/** A piece's outside as triangles (corner indices): its faces bar a mass's underside (the fan to the centre). */
+function outsideFaces(polys, pc) {
+  const out = [], centre = pc.mass ? pc.verts[1] - 1 : -1;
+  for (let i = pc.polys[0]; i < pc.polys[1]; i++) {
+    const v = polys[i].v; if (v.includes(centre)) continue;
+    for (let j = 1; j + 1 < v.length; j++) out.push([v[0], v[j], v[j + 1]]);
+  }
+  return out;
+}
+/** The outermost crossing of the ray from C along d with the triangles F (its distance), or -1. */
+function farAlong(verts, C, F, d) {
+  let best = -1;
+  for (const [ia, ib, ic] of F) {
+    const a = verts[ia], b = verts[ib], c = verts[ic], e1 = sub(b, a), e2 = sub(c, a), p = cross(d, e2), det = dot(e1, p);
+    if (Math.abs(det) < 1e-12) continue;
+    const s0 = sub(C, a), u = dot(s0, p) / det; if (u < 0 || u > 1) continue;
+    const q = cross(s0, e1), v = dot(d, q) / det; if (v < 0 || u + v > 1) continue;
+    const t = dot(e2, q) / det; if (t > best) best = t;
+  }
+  return best;
+}
+
 /**
  * Pieces laid one on another (style.layers: [upper, lower] ids), so neither pokes through the other: twice over, each
  * corner of the lower (above the skin) under the upper's outside by `gap` where the upper is over it, and each root of
@@ -350,33 +396,14 @@ function sideOf(side, verts, pieces, skull, C, k) {
  * edge rests on the lower rather than cutting through it. Along the ray from the skull's centre; the outside of a
  * piece its faces bar a mass's underside (the fan to the centre).
  */
-function layersOf(style, verts, polys, pieces, skull, C, k) {
+function layersOf(style, verts, polys, pieces, skull, C, k, roots, rest = false) {
   const gap = (style.layerGap ?? 0.004) * k, byId = (id) => pieces.findIndex((p) => p.id === id);
-  const outside = (pi) => {
-    const pc = pieces[pi], out = [], centre = pc.mass ? pc.verts[1] - 1 : -1;
-    for (let i = pc.polys[0]; i < pc.polys[1]; i++) {
-      const v = polys[i].v; if (v.includes(centre)) continue;
-      for (let j = 1; j + 1 < v.length; j++) out.push([v[0], v[j], v[j + 1]]);
-    }
-    return out;
-  };
-  // the outermost crossing of the ray from the centre along d with the faces (its distance), or -1
-  const far = (F, d) => {
-    let best = -1;
-    for (const [ia, ib, ic] of F) {
-      const a = verts[ia], b = verts[ib], c = verts[ic], e1 = sub(b, a), e2 = sub(c, a), p = cross(d, e2), det = dot(e1, p);
-      if (Math.abs(det) < 1e-12) continue;
-      const s0 = sub(C, a), u = dot(s0, p) / det; if (u < 0 || u > 1) continue;
-      const q = cross(s0, e1), v = dot(d, q) / det; if (v < 0 || u + v > 1) continue;
-      const t = dot(e2, q) / det; if (t > best) best = t;
-    }
-    return best;
-  };
-  for (let pass = 0; pass < (style.layerPasses ?? 2); pass++) for (const [upId, loId] of style.layers) {
+  const outside = (pi) => outsideFaces(polys, pieces[pi]), far = (F, d) => farAlong(verts, C, F, d);
+  for (let pass = 0; pass < (rest ? 1 : style.layerPasses ?? 2); pass++) for (const [upId, loId] of style.layers) {
     const up = byId(upId), lo = byId(loId);
     if (up < 0 || lo < 0) continue;
     const U = outside(up), L = outside(lo), mine = (pc, i) => i >= pc.verts[0] && i < pc.verts[1] && !(pc.mass && i === pc.verts[1] - 1);
-    for (let i = pieces[lo].verts[0]; i < pieces[lo].verts[1]; i++) {
+    if (!rest) for (let i = pieces[lo].verts[0]; i < pieces[lo].verts[1]; i++) {
       if (!mine(pieces[lo], i)) continue;
       const r = sub(verts[i], C), l = Math.hypot(...r), d = mul(r, 1 / l), skin = hit(skull, C, d).t;
       if (l <= skin) continue;
@@ -385,9 +412,8 @@ function layersOf(style, verts, polys, pieces, skull, C, k) {
     }
     for (let i = pieces[up].verts[0]; i < pieces[up].verts[1]; i++) {
       if (!mine(pieces[up], i)) continue;
-      const r = sub(verts[i], C), l = Math.hypot(...r), d = mul(r, 1 / l);
-      if (l > hit(skull, C, d).t) continue;
-      const t = far(L, d);
+      if (!roots.has(i)) continue;
+      const d = unit(sub(verts[i], C)), t = far(L, d);
       if (t > 0) verts[i] = add(C, mul(d, t + gap));
     }
   }
@@ -537,7 +563,10 @@ function triTri(A, Bt) {
  * Where the hair's pieces pass through one another or through the buzz where it shows: each pair of triangles (of two
  * pieces, or of a piece and a buzz patch) that cross at a point standing off the skin (over 0.01 of the skull's size)
  * with no other hair farther out along the ray from the skull's centre through it (so on the hair's outside, not
- * under another piece). Each: { a, b } (the pieces' ids, 'buzz'), the points, and whether one is on a side (|x| over
+ * under another piece). A mass's underside (its fan to the centre, every point of it straight under the mass's edge
+ * along the ray from the centre) meeting a piece is that edge resting on the piece (layersOf), not a crossing. Each:
+ * { a, b } (the pieces' ids,
+ * 'buzz'), the points, and whether one is on a side (|x| over
  * 0.4 of the skull's size, z from 0.3 behind the skull's centre to 0.2 ahead: the temple's corner back to the V's
  * start). H: the hair's vertices (posed, or as built).
  */
@@ -551,7 +580,13 @@ export function hairCrossings(rig, hair, H = hair.verts) {
     const t = dot(e2, qq) / det; return t > 1e-6 && t < 1 - 1e-6 ? add(p, mul(d, t)) : null;
   };
   const bb = (P) => [0, 1, 2].map((c) => [Math.min(...P.map((p) => p[c])), Math.max(...P.map((p) => p[c]))]);
-  const T = hair.tris.map(([a, b, c, pi]) => { const P = [H[a], H[b], H[c]]; return { v: [a, b, c], P, piece: hair.polys[pi].piece, buzz: !!hair.polys[pi].buzz, pi, bb: bb(P) }; });
+  const T = hair.tris.map(([a, b, c, pi]) => {
+    const P = [H[a], H[b], H[c]], p = hair.polys[pi], pc = p.buzz ? null : hair.pieces[p.piece];
+    // a mass's underside
+    const fan = !!(pc && pc.mass && p.v.includes(pc.verts[1] - 1));
+    return { v: [a, b, c], P, piece: p.piece, buzz: !!p.buzz, pi, bb: bb(P), fan };
+  });
+
   const above = (p) => { const r = sub(p, C), l = Math.hypot(...r); return l - hit(skull0, C, mul(r, 1 / l)).t; };
   const outer = (p, A, B) => {
     const d = unit(sub(p, C)), q0 = add(p, mul(d, 0.002 * k)), q1 = add(p, mul(d, 2));
@@ -565,6 +600,7 @@ export function hairCrossings(rig, hair, H = hair.verts) {
     if (A.v.some((a) => B.v.includes(a)) || A.bb.some(([lo, hi], c) => hi < B.bb[c][0] || lo > B.bb[c][1])) continue;
     const X = [];
     for (let e = 0; e < 3; e++) for (const x of [segX(A.P[e], A.P[(e + 1) % 3], B.P), segX(B.P[e], B.P[(e + 1) % 3], A.P)]) if (x) X.push(x);
+    if (A.fan || B.fan) continue;
     const seen = X.filter((p) => above(p) > 0.01 * k && outer(p, A, B));
     if (!seen.length) continue;
     const id = (t) => (t.buzz ? 'buzz' : hair.pieces[t.piece].id);

@@ -73,7 +73,7 @@ export default {
   // the sides' lower edge one straight line, the same both sides, from the temple's corner back to the V's start
   // (tools/sculpt/lowhair.mjs sideOf)
   // the pieces laid one on another, the upper's edge resting on the lower (tools/sculpt/lowhair.mjs layersOf)
-  layers: [['front', 'left'], ['front', 'back'], ['left', 'back']], layerGap: 0.02, layerPasses: 4,
+  layers: [['front', 'left'], ['front', 'back'], ['front', 'top'], ['left', 'back'], ['left', 'top'], ['top', 'back']], layerGap: 0.02, layerPress: 60, layerKeep: 0.4,
   side: { a: 0.185, b: 0.25, from: -0.26, to: 0.13, x: 0.4, pull: 0.25, band: 0.05, lip: 0.07 },
   clumps: [
     // the front and the top: one mass of tufts combed straight back (tools/sculpt/lowhair.mjs massOf), the creases
