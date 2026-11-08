@@ -169,17 +169,18 @@ if (only.includes('lineup')) {
 
 /* ---- close up: the sheet's key details (waist, band, knee, cuff) beside the model's ---------------------------------- */
 if (only.includes('close')) {
-  const cw = 300, ch = 300, cells = [], imgs = [];
-  const det = [[943, 165, 'Waist / hip', 0], [1101, 150, 'Diagonal band', -60], [943, 300, 'Knee fold', -20], [1101, 300, 'Cuff / ankle', 0]];
-  const blockH = ch * (1 + LOOKS.length) + 10;
+  const cw = 300, ih = 214, ch = 300, cells = [], imgs = [];
+  // (the sheet's tiles: crop x, y; the label; the model's yaw)
+  const det = [[873, 100, 'Waist / hip', 0], [1031, 100, 'Diagonal band', -60], [873, 250, 'Knee fold', -25], [1031, 250, 'Cuff / ankle', 0]];
+  const blockH = ih + ch * LOOKS.length + 10;
   ['male', 'female'].forEach((who, r) => {
-    const d = dress(who, {}), D = M[who].G.design, kneeY = D.legs.find((q) => q.n === 'K').y;
-    const at = [[0, D.waist.top - 0.75, 2.1], [D.band.y + 0.1, 2.4], [kneeY, 2.2], [(D.cuff.top + D.cuff.foot) / 2 - 0.1, 2.0]];
+    const d = dress(who, {}), G = M[who].G, D = G.design, kneeY = D.legs.find((q) => q.n === 'K').y;
+    const leg = (y) => { const c = G.legAxis(y); return [c[0], y, c[1]]; };
+    const at = [[[0, D.waist.top - 0.8, 0], 2.4], [leg(D.band.y), 2.6], [leg(kneeY), 2.2], [leg((D.cuff.top + D.cuff.foot) / 2), 1.8]];
     det.forEach(([x, y, lab, yaw], k) => {
-      imgs.push({ src: SHEET, size: [1536, 1024], crop: [x - 72, y - 66, 144, 132], box: [k * cw, 34 + r * blockH, cw, ch] });
-      const [cy, span] = k === 0 ? [at[0][1], at[0][2]] : at[k];
-      const cx = k === 0 ? 0 : 0.95;
-      LOOKS.forEach((look, j) => cells.push({ meshes: scene(who, { PB: d.PB.map((p) => [p[0], p[1] - d.dy, p[2]]), PG: d.PG.map((p) => [p[0], p[1] - d.dy, p[2]]), PN: d.PN.map((P) => P.map((p) => [p[0], p[1] - d.dy, p[2]])) }, { look }), cam: { yaw, pitch: 4, s: ch / span, c: [cx * Math.cos(yaw * Math.PI / 180), cy, -cx * Math.sin(yaw * Math.PI / 180) * 0] }, box: [k * cw, 34 + r * blockH + ch * (j + 1), cw, ch], label: `${who} ${lab}${LOOKS.length > 1 ? ', ' + look : ''}` }));
+      imgs.push({ src: SHEET, size: [1536, 1024], crop: [x, y, 140, 100], box: [k * cw, 34 + r * blockH, cw, ih] });
+      const [c, span] = at[k];
+      LOOKS.forEach((look, j) => cells.push({ meshes: scene(who, { PB: d.PB.map((p) => [p[0], p[1] - d.dy, p[2]]), PG: d.PG.map((p) => [p[0], p[1] - d.dy, p[2]]), PN: d.PN.map((P) => P.map((p) => [p[0], p[1] - d.dy, p[2]])) }, { look }), cam: { yaw, pitch: 4, s: ch / span, c }, box: [k * cw, 34 + r * blockH + ih + ch * j, cw, ch], label: `${who} ${lab}${LOOKS.length > 1 ? ', ' + look : ''}` }));
     });
   });
   await shoot(4 * cw, 34 + 2 * blockH, cells, join(out, 'leatherlegs-close.png'), { imgs, texts: [{ css: 'left:10px;top:6px', html: 'Close up: the sheet\'s key details above each body\'s, the model below (the left leg; the waist from the front)' + (LOOKS.length > 1 ? ', plain then enchanted' : '') }] });

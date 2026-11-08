@@ -66,19 +66,19 @@ export const DESIGN = {
     legs: [
       { n: 'T1', y: -6.5, e: [0.08, 0.08, 0.06, 0.02], s: 0.5 },
       { n: 'T2', y: -6.95, e: [0.08, 0.08, 0.06, 0.02], s: 0 },
-      { n: 'K1', y: -7.25, e: [0.03, 0.04, 0.03, 0.02], s: 0 },
-      { n: 'K', y: -7.52, e: [0.07, 0.07, 0.05, 0.03], s: 0.5, pt: 0.15 },
-      { n: 'K2', y: -7.82, e: [0.02, 0.03, 0.02, 0.02], s: 0 },
+      { n: 'K1', y: -7.25, e: [0.0, 0.02, 0.02, 0.01], s: 0 },
+      { n: 'K', y: -7.52, e: [0.07, 0.07, 0.05, 0.03], s: 0.5, pt: 0.2 },
+      { n: 'K2', y: -7.82, e: [-0.01, 0.01, 0.01, 0.01], s: 0 },
       { n: 'N1', y: -8.2, e: [0.08, 0.09, 0.09, 0.04], s: 0.5 },
       { n: 'N2', y: -8.75, e: [0.07, 0.08, 0.08, 0.04], s: 0 },
       { n: 'N3', y: -9.3, e: [0.02, 0.02, 0.02, 0.02], s: 0.5 },
     ],
     cuff: { top: -9.38, foot: -10.18, step: 0.05, lip: 0.1 },
-    band: { y: -6.8, amp: 0.55, phi: 45, w: 0.3, t: 0.045, bevel: 0.02 },
+    band: { y: -6.82, amp: 0.48, phi: 58, w: 0.3, t: 0.045, bevel: 0.02 },
     flaps: {
-      front: { az: [[15, 88], [32, 98]], foot: [-5.2, -5.65] },
-      back: { az: [[102, 165], [98, 150]], foot: [-5.65, -5.25] },
-      gap: [0.012, 0.11], t: 0.045, rim: 0.07, raise: 0.014,
+      front: { az: [[12, 86], [40, 95]], foot: [-5.0, -5.6] },
+      back: { az: [[99, 168], [101, 140]], foot: [-5.6, -5.05] },
+      gap: [0.012, 0.06, 0.14], t: 0.045, rim: 0.07, raise: 0.014,
     },
   },
   female: {
@@ -89,26 +89,26 @@ export const DESIGN = {
     legs: [
       { n: 'T1', y: -5.15, e: [0.05, 0.05, 0.04, 0.0], s: 0.5 },
       { n: 'T2', y: -5.85, e: [0.05, 0.05, 0.04, 0.0], s: 0 },
-      { n: 'K1', y: -6.4, e: [0.02, 0.03, 0.02, 0.01], s: 0 },
-      { n: 'K', y: -6.72, e: [0.05, 0.05, 0.03, 0.02], s: 0.5, pt: 0.13 },
-      { n: 'K2', y: -7.05, e: [0.02, 0.02, 0.02, 0.01], s: 0 },
+      { n: 'K1', y: -6.4, e: [0.0, 0.01, 0.01, 0.0], s: 0 },
+      { n: 'K', y: -6.72, e: [0.05, 0.05, 0.03, 0.02], s: 0.5, pt: 0.18 },
+      { n: 'K2', y: -7.05, e: [-0.01, 0.0, 0.01, 0.0], s: 0 },
       { n: 'N1', y: -7.55, e: [0.07, 0.08, 0.08, 0.03], s: 0.5 },
       { n: 'N2', y: -8.3, e: [0.06, 0.07, 0.07, 0.03], s: 0 },
       { n: 'N3', y: -9.35, e: [0.02, 0.02, 0.02, 0.02], s: 0.5 },
     ],
     cuff: { top: -9.45, foot: -10.32, step: 0.045, lip: 0.1 },
-    band: { y: -5.85, amp: 0.7, phi: 45, w: 0.32, t: 0.04, bevel: 0.018 },
+    band: { y: -5.85, amp: 0.62, phi: 58, w: 0.32, t: 0.04, bevel: 0.018 },
     flaps: {
-      front: { az: [[16, 88], [32, 98]], foot: [-4.15, -4.55] },
-      back: { az: [[102, 164], [98, 150]], foot: [-4.55, -4.2] },
-      gap: [0.012, 0.1], t: 0.04, rim: 0.065, raise: 0.012,
+      front: { az: [[14, 86], [40, 95]], foot: [-4.0, -4.55] },
+      back: { az: [[99, 166], [101, 140]], foot: [-4.55, -4.05] },
+      gap: [0.012, 0.05, 0.12], t: 0.04, rim: 0.065, raise: 0.012,
     },
   },
 };
 
 const rad = (d) => d * Math.PI / 180;
 /** How far a strip's inside edges stand off the cloth (clear of it: the cloth's sag between the strip's columns). */
-const IN = 0.006;
+const IN = 0.012;
 const round4 = ([f, o, b, i], az) => { const c = Math.cos(rad(az)), s = Math.sin(rad(az)); return (c > 0 ? f * c * c : b * c * c) + (s > 0 ? o * s * s : i * s * s); };
 const round3 = ([f, s, b], az) => { const c = Math.cos(rad(az)); return c > 0 ? f * c * c + s * (1 - c * c) : b * c * c + s * (1 - c * c); };
 
@@ -146,18 +146,23 @@ function legCentre(S, y, dy = 0.12) {
   for (const p of S) if (Math.abs(p[1] - y) <= dy && p[0] > 0.04) { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); z0 = Math.min(z0, p[2]); z1 = Math.max(z1, p[2]); }
   return [(x0 + x1) / 2, (z0 + z1) / 2];
 }
+/**
+ * The furthest reach of a surface (fn(y, a), a radius) over heights ys and over a column's own wedge (half degrees either
+ * side, each grown by 1/cos of its offset: a chord between columns that far apart clears it).
+ */
+const reach = (fn, ys, a, half) => { let r = 0; for (const y of ys) for (const o of [-half, -half / 2, 0, half / 2, half]) r = Math.max(r, fn(y, a + o) / Math.cos(rad(o))); return r; };
 /** A ring's azimuths turned a share s of each gap toward the next column. */
 const turned = (az, s) => az.map((a, k) => { const b = az[(k + 1) % az.length], g = ((b - a) % 360 + 360) % 360; return a + s * g; });
 
-/** The nearest hit of a ray (origin o, unit direction d) on triangles T (each three points), or null. */
-function rayHit(T, o, d) {
+/** The nearest hit of a ray (origin o, unit direction d) on triangles T (each three points), or null; with far, the furthest. */
+function rayHit(T, o, d, far = false) {
   let best = null;
   for (const [a, b, c] of T) {
     const e1 = sub(b, a), e2 = sub(c, a), h = cross(d, e2), det = dot(e1, h);
     if (Math.abs(det) < 1e-12) continue;
     const f = 1 / det, s = sub(o, a), u = f * dot(s, h); if (u < 0 || u > 1) continue;
     const q = cross(s, e1), v = f * dot(d, q); if (v < 0 || u + v > 1) continue;
-    const t = f * dot(e2, q); if (t > 1e-6 && (best === null || t < best)) best = t;
+    const t = f * dot(e2, q); if (t > 1e-6 && (best === null || (far ? t > best : t < best))) best = t;
   }
   return best;
 }
@@ -168,7 +173,7 @@ export function buildLeatherLegs(rig, design = DESIGN[rig.who], { stage = 9 } = 
   const cr = D.crotch, cf = D.cuff;
   // ---- the leg's rows ------------------------------------------------------------------------------------------------
   // (the blockout: the crotch, mid-thigh, knee, calf and the cuff's foot, no turn, no knee point, no step)
-  let rows = [...D.legs.map((r) => ({ ...r })), { n: 'U', y: cf.top - 0.06, s: 0.5, cuff: 'step' }, { n: 'E', y: cf.foot, s: 0.5, cuff: 'foot' }, { n: 'Ei', y: cf.foot + 0.1, s: 0.5, cuff: 'lip' }];
+  let rows = [...D.legs.map((r) => ({ ...r })), { n: 'U', y: cf.top - 0.06, s: 0.5, cuff: 'step' }, { n: 'Um', y: cf.top - 0.36, s: 0, cuff: 'ridge' }, { n: 'Uf', y: cf.top - 0.5, s: 0, cuff: 'step' }, { n: 'E', y: cf.foot, s: 0.5, cuff: 'foot' }, { n: 'Ei', y: cf.foot + 0.1, s: 0.5, cuff: 'lip' }];
   if (stage <= 1) rows = rows.filter((r) => ['T2', 'K', 'N2', 'E'].includes(r.n)).map((r) => ({ ...r, s: 0, pt: 0, cuff: r.cuff ? 'plain' : undefined }));
   const yC = (az) => cr.y + Math.min(cr.front, cr.back) + cr.rise * Math.max(0, Math.sin(rad(az)));
   const legV = {}, legAz = {}, legC = {};
@@ -185,7 +190,7 @@ export function buildLeatherLegs(rig, design = DESIGN[rig.who], { stage = 9 } = 
     const win = az.map(() => wall ?? [row.y - 0.2, row.y + 0.2]);
     const r0 = ringRadii(SL, c, az, win, (p) => p[0] > 0.04, !row.cuff);
     legV[row.n] = az.map((a, k) => {
-      let e = row.cuff === 'lip' ? 0.02 - cf.step : row.cuff === 'plain' ? 0.04 : row.cuff ? cf.step : round4(row.e, a);
+      let e = row.cuff === 'lip' ? 0.02 - cf.step : row.cuff === 'plain' ? 0.04 : row.cuff === 'ridge' ? cf.step + 0.035 : row.cuff ? cf.step : round4(row.e, a);
       if (row.pt && stage > 1) { const d = Math.abs(((a + 180) % 360 + 360) % 360 - 180); e += row.pt * Math.max(0, 1 - d / 50); }
       const r = r0[k] + D.clear + e;
       return [c[0] + Math.sin(rad(a)) * r, row.y, c[1] + Math.cos(rad(a)) * r];
@@ -243,7 +248,7 @@ export function buildLeatherLegs(rig, design = DESIGN[rig.who], { stage = 9 } = 
   const clothT = G.polys.flatMap((p) => { const out = []; for (let k = 1; k + 1 < p.v.length; k++) out.push([p.v[0], p.v[k], p.v[k + 1]].map((i) => G.verts[i])); return out; });
   const leftT = clothT.filter((t) => t.some((p) => p[0] > 0.02));
   /** The cloth's radius on the ray from the hip's axis at height y, azimuth a (degrees). */
-  const hipR = (y, a) => { const o = [0, Math.min(y, D.waist.top - 0.02), D.z0], d = [Math.sin(rad(a)), 0, Math.cos(rad(a))]; return rayHit(a >= 0 ? leftT : clothT, o, d) ?? 0; };
+  const hipR = (y, a) => { const o = [0, Math.min(y, D.waist.top - 0.02), D.z0], d = [Math.sin(rad(a)), 0, Math.cos(rad(a))]; return rayHit(a >= 0 ? leftT : clothT, o, d, true) ?? 0; };
   /** The leg's centre at height y (the rings' centres, straight between them) and the cloth's radius out from it at azimuth a. */
   const legRowsY = legRows.map((n) => ({ y: n === 'C' ? cr.y : rows.find((r) => r.n === n).y, c: legC[n] })).sort((a, b) => b.y - a.y);
   const legAxis = (y) => {
@@ -301,7 +306,7 @@ function clothMesh(G, D, { legV, hipV, legRows, hipRows }) {
   };
   const H = ['C', ...hipRows], hc = [0, 0, D.z0];
   for (let i = 0; i + 1 < H.length; i++) ring(R.hip[H[i]], R.hip[H[i + 1]], 'leather', 'hip', 'cloth', hc);
-  for (const s of ['l', 'r']) for (let i = 0; i + 1 < legRows.length; i++) ring(R.leg[s][legRows[i]], R.leg[s][legRows[i + 1]], 'leather', 'leg', legRows[i + 1] === 'E' || legRows[i + 1] === 'Ei' || legRows[i + 1] === 'U' ? 'cuff' : 'cloth');
+  for (const s of ['l', 'r']) for (let i = 0; i + 1 < legRows.length; i++) ring(R.leg[s][legRows[i]], R.leg[s][legRows[i + 1]], 'leather', 'leg', ['U', 'Um', 'Uf', 'E', 'Ei'].includes(legRows[i + 1]) ? 'cuff' : 'cloth');
   G.rows = R; G.rowNames = { leg: legRows, hip: hipRows };
 }
 
@@ -344,7 +349,7 @@ function waistband(G, D, hipR, stage) {
   for (let k = 0; k < N; k++) {
     const a = -180 + k * 360 / N, dir = [Math.sin(rad(a)), 0, Math.cos(rad(a))];
     const yt = W.top - (stage > 1 ? vee(a, W.vt, 0) * 0.6 : 0), yb = W.top - W.depth - (stage > 1 ? vee(a, W.vf, 0) + vee(a, W.vb, 180) : 0);
-    const rs = [yt, (yt + yb) / 2, yb].map((y) => hipR(y, a)), r = Math.max(...rs), b = stage > 1 ? W.bevel : 0;
+    const h = 180 / N, rs = [[yt, yt - 0.05], [yt, (yt + yb) / 2, yb], [yb + 0.05, yb]].map((ys) => reach(hipR, ys, a, h)), r = Math.max(...rs), b = stage > 1 ? W.bevel : 0;
     const pt = (rr, y) => [dir[0] * rr, y, D.z0 + dir[2] * rr];
     P.push([pt(rs[0] + IN, yt), pt(r + W.t - b, yt), pt(r + W.t, yt - b), pt(r + W.t, yb + b), pt(r + W.t - b, yb), pt(rs[2] + IN, yb)]);
   }
@@ -353,7 +358,10 @@ function waistband(G, D, hipR, stage) {
   G.waistP = P;
   // (rivets across the band's face: two a side in front, two behind)
   if (stage >= 5) for (const a of [-150, -122, -58, -26, 26, 58, 122, 150]) {
-    const k = Math.round((a + 180) / 360 * N) % N, s = P[k], p = lerp(s[2], s[3], 0.5), n = [Math.sin(rad(a)), 0, Math.cos(rad(a))];
+    // (on the face between two columns, at its middle, along its own normal)
+    const k = Math.floor((a + 180) / 360 * N) % N, s0 = P[k], s1 = P[(k + 1) % N], p = lerp(lerp(s0[2], s0[3], 0.5), lerp(s1[2], s1[3], 0.5), 0.5);
+    let n = cross(sub(s1[2], s0[2]), sub(s0[3], s0[2])); n = mul(n, 1 / Math.hypot(...n));
+    if (dot(n, [p[0], 0, p[2] - D.z0]) < 0) n = mul(n, -1);
     rivet(G, p, n, 0.04, 0.03, 'waistband');
   }
 }
@@ -378,14 +386,28 @@ function flap(G, D, hipR, which, side, stage) {
     const u = cs[k], v = rs[i];
     const a = (ai0 + (ao0 - ai0) * u) * (1 - v) + (ai1 + (ao1 - ai1) * u) * v;
     const y0 = yTop(a), y1 = yi + (yo - yi) * u, y = y0 + (y1 - y0) * v;
-    return { a, y, y0 };
+    return { a, y, y0, u };
   };
   const grid = rs.map((_, i) => cs.map((_, k) => node(i, k)));
   // the radius: the cloth's furthest reach from the flap's top down to this node (it hangs), plus the gap
   for (const row of grid) for (const n of row) {
     let r = 0; for (let s = 0; s <= 4; s++) r = Math.max(r, G.hipR(n.y0 + (n.y - n.y0) * s / 4, n.a));
-    const v = (n.y0 - n.y) / Math.max(1e-6, n.y0 - Math.min(yi, yo));
-    n.r = r + F.gap[0] + (F.gap[1] - F.gap[0]) * Math.min(1, v);
+    const v = (n.y0 - n.y) / Math.max(1e-6, n.y0 - Math.min(yi, yo)), side2 = which === 'front' ? n.u : 1 - n.u;
+    n.r = r + F.gap[0] + (F.gap[1] + (F.gap[2] - F.gap[1]) * side2 - F.gap[0]) * Math.min(1, v);
+  }
+  // (each cell clear of the cloth under it: where its face, its corners blended, falls short of the cloth plus the
+  // least gap at a point inside it, its corners go out by the shortfall)
+  for (let pass = 0; pass < 3; pass++) for (let i = 0; i + 1 < grid.length; i++) for (let k = 0; k + 1 < grid[0].length; k++) {
+    const q = [grid[i][k], grid[i][k + 1], grid[i + 1][k + 1], grid[i + 1][k]];
+    let short = 0;
+    for (let fu = 0; fu <= 6; fu++) for (let fv = 0; fv <= 6; fv++) {
+      const u = fu / 6, v = fv / 6, w = [(1 - u) * (1 - v), u * (1 - v), u * v, (1 - u) * v];
+      const a = w.reduce((s2, x, j) => s2 + x * q[j].a, 0), y = w.reduce((s2, x, j) => s2 + x * q[j].y, 0), r = w.reduce((s2, x, j) => s2 + x * q[j].r, 0);
+      // (the face's chord between corners at different azimuths runs in by 1 - cos of half their spread)
+      const spread = Math.abs(q[1].a - q[0].a) * (1 - v) + Math.abs(q[2].a - q[3].a) * v, chord = r * Math.cos(rad(spread / 2 * (1 - Math.abs(2 * u - 1)) ));
+      short = Math.max(short, G.hipR(y, a) + F.gap[0] + 0.008 - chord);
+    }
+    if (short > 0) for (const n of q) n.r += short;
   }
   const pt = (n, off) => { const a = side * n.a; return [Math.sin(rad(a)) * (n.r + off), n.y, D.z0 + Math.cos(rad(a)) * (n.r + off)]; };
   const part = `flap`, tag = 'flap';
@@ -397,9 +419,11 @@ function flap(G, D, hipR, which, side, stage) {
   const M = stage >= 4 ? 'light' : 'leather', T = stage >= 4 ? 'trim' : 'leather';
   const quad = (q, mat) => (side > 0 ? G.poly(q, mat, part) : G.poly([...q].reverse(), mat, part));
   // (the outer face: a cell is rim when it lies along the sides or the foot)
+  const outPolys = [];
   for (let i = 0; i + 1 < nr; i++) for (let k = 0; k + 1 < nc; k++) {
-    const r = rim && (i + 1 === nr - 1 || k === 0 || k + 1 === nc - 1);
+    const r = rim && (i + 1 === nr - 1 || k === 0 || k + 1 === nc - 1), n0 = G.polys.length;
     quad([out[i][k], out[i + 1][k], out[i + 1][k + 1], out[i][k + 1]], r ? T : M);
+    for (let j = n0; j < G.polys.length; j++) outPolys.push(j);
   }
   // (the underside, and the edges turned in: the sides and the foot in the rim's colour, the top hidden under the band)
   for (let i = 0; i + 1 < nr; i++) for (let k = 0; k + 1 < nc; k++) quad([inn[i][k], inn[i][k + 1], inn[i + 1][k + 1], inn[i + 1][k]], M);
@@ -407,11 +431,30 @@ function flap(G, D, hipR, which, side, stage) {
   for (let k = 0; k + 1 < nc; k++) { quad([out[nr - 1][k], inn[nr - 1][k], inn[nr - 1][k + 1], out[nr - 1][k + 1]], T); quad([out[0][k + 1], inn[0][k + 1], inn[0][k], out[0][k]], M); }
   // rivets: a pair along the top, one at each corner of the foot, inside the rim
   if (stage >= 5) {
-    const at = (u, v) => { const n = node(0, 0); void n; // bilinear in the grid's parameters
-      const a = (ai0 + (ao0 - ai0) * u) * (1 - v) + (ai1 + (ao1 - ai1) * u) * v, y0 = yTop(a), y1 = yi + (yo - yi) * u, y = y0 + (y1 - y0) * v;
-      let r = 0; for (let s = 0; s <= 4; s++) r = Math.max(r, G.hipR(y0 + (y - y0) * s / 4, a));
-      const vv = (y0 - y) / Math.max(1e-6, y0 - Math.min(yi, yo)); r += F.gap[0] + (F.gap[1] - F.gap[0]) * Math.min(1, vv) + F.t;
-      const aa = side * a; return { p: [Math.sin(rad(aa)) * r, y, D.z0 + Math.cos(rad(aa)) * r], n: [Math.sin(rad(aa)), 0, Math.cos(rad(aa))] };
+    // (on the outer face as built: the cell holding (u, v) in the grid's parameters, its corners blended)
+    const at = (u, v) => {
+      const k = Math.min(nc - 2, cs.findIndex((c, j) => j + 1 < nc && u <= cs[j + 1])), i = Math.min(nr - 2, rs.findIndex((r, j) => j + 1 < nr && v <= rs[j + 1]));
+      const fu = (u - cs[k]) / (cs[k + 1] - cs[k]), fv = (v - rs[i]) / (rs[i + 1] - rs[i]), V = (ii, kk) => G.verts[out[ii][kk]];
+      const p = lerp(lerp(V(i, k), V(i, k + 1), fu), lerp(V(i + 1, k), V(i + 1, k + 1), fu), fv);
+      // (the normal across the cell's diagonals; the stud lifted clear of the cell's fold: by each corner's rise over
+      // its plane at the stud's own radius)
+      let n = cross(sub(V(i + 1, k + 1), V(i, k)), sub(V(i, k + 1), V(i + 1, k))); n = mul(n, 1 / Math.hypot(...n));
+      if (dot(n, [p[0], 0, p[2] - D.z0]) < 0) n = mul(n, -1);
+      let lift = 0;
+      for (const c of [V(i, k), V(i, k + 1), V(i + 1, k), V(i + 1, k + 1)]) { const d = sub(c, p), h = dot(d, n), t = Math.hypot(...sub(d, mul(n, h))); if (h > 0 && t > 1e-6) lift = Math.max(lift, h * Math.min(1, 0.04 / t)); }
+      lift += 0.007;
+      // (then onto the face as cut: the ray from the hip's axis through it, onto the cell's own triangles)
+      const o = [0, p[1], D.z0], dir = (() => { const d = sub(p, o); return mul(d, 1 / Math.hypot(...d)); })();
+      let best = null;
+      for (const pi of outPolys) for (let fk = 1; fk + 1 < G.polys[pi].v.length; fk++) {
+        const pv = G.polys[pi].v, [a, b, c] = [pv[0], pv[fk], pv[fk + 1]].map((x) => G.verts[x]), e1 = sub(b, a), e2 = sub(c, a), h = cross(dir, e2), det = dot(e1, h);
+        if (Math.abs(det) < 1e-12) continue;
+        const f = 1 / det, s2 = sub(o, a), uu = f * dot(s2, h); if (uu < -1e-6 || uu > 1 + 1e-6) continue;
+        const q = cross(s2, e1), vv = f * dot(dir, q); if (vv < -1e-6 || uu + vv > 1 + 1e-6) continue;
+        const t = f * dot(e2, q); if (best === null || t > best.t) { let nn = cross(e1, e2); nn = mul(nn, 1 / Math.hypot(...nn)); if (dot(nn, dir) < 0) nn = mul(nn, -1); best = { t, nn }; }
+      }
+      if (best) { const q = add(o, mul(dir, best.t)); return { p: add(q, mul(best.nn, lift)), n: best.nn }; }
+      return { p: add(p, mul(n, lift)), n };
     };
     for (const [u, v] of [[0.3, 0.18], [0.7, 0.18], [0.16, 0.78], [0.84, 0.78]]) { const { p, n } = at(u, v); rivet(G, p, n, 0.035, 0.026, part); }
   }
@@ -422,11 +465,11 @@ function flap(G, D, hipR, which, side, stage) {
  * raised t off the cloth (out along the ray from the leg's axis to the cloth at each column's height).
  */
 function band(G, D, legR, legAxis, side, stage) {
-  const Bd = D.band, N = 30, P = [], b = stage > 1 ? Bd.bevel : 0;
+  const Bd = D.band, N = 40, P = [], b = stage > 1 ? Bd.bevel : 0;
   for (let k = 0; k < N; k++) {
     const a = k * 360 / N, ym = Bd.y + Bd.amp * Math.cos(rad(a - Bd.phi)), yt = ym + Bd.w / 2, yb = ym - Bd.w / 2;
     const pt = (y, off, r0) => { const c = legAxis(y), aa = a; const r = r0 + off, p = [c[0] + Math.sin(rad(aa)) * r, y, c[1] + Math.cos(rad(aa)) * r]; return side > 0 ? p : [-p[0], p[1], p[2]]; };
-    const rt = legR(yt, a), rm = legR(ym, a), rb = legR(yb, a), r = Math.max(rt, rm, rb);
+    const h = 180 / N, rt = reach(legR, [yt, yt - 0.04], a, h), rb = reach(legR, [yb, yb + 0.04], a, h), r = Math.max(rt, rb, reach(legR, [yt, ym, yb], a, h));
     P.push([pt(yt, IN, rt), pt(yt, r - rt + Bd.t - b, rt), pt(yt - b, r - rt + Bd.t, rt), pt(yb + b, r - rb + Bd.t, rb), pt(yb, r - rb + Bd.t - b, rb), pt(yb, IN, rb)]);
   }
   const M = stage >= 4 ? 'trim' : 'leather';
@@ -454,7 +497,7 @@ export function leatherLegsWeights(rig, G, o = {}) {
   const set = (i, list) => { const s = list.reduce((a, [, w]) => a + w, 0); vw[i] = list.filter(([, w]) => w > 0).map(([n, w]) => [at(n), w / s]); };
   const R = G.rows, ctr = R.leg.l.C.slice(6);
   for (const [i, [p, h]] of [[ctr[0], [0.6, 0.2]], [ctr[3], [0.6, 0.2]], [ctr[1], [0.4, 0.3]], [ctr[2], [0.4, 0.3]]]) set(i, [['pelvis', p], ['hip_l', h], ['hip_r', h]]);
-  for (const s of ['l', 'r']) for (const row of ['U', 'E', 'Ei']) for (const i of R.leg[s][row] ?? []) set(i, [[`calf_${s}`, 1]]);
+  for (const s of ['l', 'r']) for (const row of ['U', 'Um', 'Uf', 'E', 'Ei']) for (const i of R.leg[s][row] ?? []) set(i, [[`calf_${s}`, 1]]);
   // the flaps: by their height from the top (pelvis) to the foot (a share on the hip's helper)
   const flapV = G.verts.map((_, i) => i).filter((i) => G.part[i] === 'flap');
   const D = G.design, yTop = D.waist.top - D.waist.depth, yLow = Math.min(D.flaps.front.foot[1], D.flaps.back.foot[0]);
