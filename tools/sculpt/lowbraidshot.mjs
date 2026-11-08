@@ -13,6 +13,7 @@ import { mkdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { buildRig } from './lowrig.mjs';
 import { shoot, closeBrowser, bodyMesh, hairMesh, SHEET_HAIR } from './lowhairshot.mjs';
+import { carve, hullMesh, outlineDiff, bodyTris } from './lowbraid.mjs';
 
 const DIR = new URL('.', import.meta.url).pathname;
 export const REF = join(DIR, 'ref/hair-side-braid.png'), REF_SIZE = [1536, 1024], MASK = join(DIR, 'hairs/braid-mask.png');
@@ -44,6 +45,34 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     });
     await shoot(x0 * 2 + 5 * cw + 4 * gap, y3 + ch + 10, cells, join(out, `braid-cams${tag}.png`), {
       imgs, texts: [{ css: 'left:12px;top:6px', html: 'Side braid sheet: the cameras registered to her head and neck (row 2 her body over the sheet; row 3 over the sheet\'s hair, white, and skin, grey)' }] });
+  }
+  // the hair to draw: the carved hull's outer faces (--only hull) or the built hair
+  const RIGS = {}, HAIRS = {};
+  const who = opt('who', 'female').split(',');
+  for (const w of who) {
+    RIGS[w] = buildRig(w);
+    if (only.includes('hull')) HAIRS[w] = hullMesh(carve({ rig: RIGS[w], vox: 0.05 }));
+  }
+  const tri3 = (h) => h.tris.filter(([, , , pi]) => !h.polys[pi].buzz).map(([a, b, c]) => [h.verts[a], h.verts[b], h.verts[c]]);
+
+  if (only.includes('views') || only.includes('hull')) for (const w of who) {
+    // row 1 the sheet; row 2 ours; row 3 ours over the sheet, a see-through teal (the head left out), with each view's
+    // outline difference
+    const rig = RIGS[w], hair = HAIRS[w], diff = outlineDiff(tri3(hair), bodyTris(rig.B));
+    const cells = [], imgs = [], y1 = 34, y2 = y1 + ch + 22, y3 = y2 + ch + 22;
+    LABELS.forEach(([v, label], i) => {
+      const c = C[v], x = x0 + i * (cw + gap), crop = [c.cx - cw / 2, 205 - ch / 2, cw, ch], dy = c.cy - 205;
+      imgs.push({ src: REF, size: REF_SIZE, crop, box: [x, y1, cw, ch] });
+      imgs.push({ src: REF, size: REF_SIZE, crop, box: [x, y3, cw, ch] });
+      cells.push({ meshes: [bodyMesh(rig, hair), hairMesh(rig, hair)], cam: camOf(c, 1, dy), box: [x, y2, cw, ch], label });
+      cells.push({ meshes: [{ ...bodyMesh(rig, hair), depthOnly: true }, { ...hairMesh(rig, hair), tris: hair.tris.filter(([, , , pi]) => !hair.polys[pi].buzz), col: hair.polys.map(() => TEAL), flat: true, alpha: 0.42 }],
+        cam: camOf(c, 1, dy), box: [x, y3, cw, ch], see: true, label: `ours over the sheet: outline off ${diff[v].px} px` });
+    });
+    const mean = (Object.values(diff).reduce((a, d) => a + d.px, 0) / 5).toFixed(2);
+    const what = only.includes('hull') ? 'the hull carved from the sheet\'s five silhouettes' : `${hair.tris.length} hair triangles, ${hair.pieces.length} pieces`;
+    await shoot(x0 * 2 + 5 * cw + 4 * gap, y3 + ch + 10, cells, join(out, `braid-${only.includes('hull') ? 'hull' : 'sheet'}-${w}${tag}.png`), {
+      imgs, texts: [{ css: 'left:12px;top:6px', html: `Side braid — the sheet (top), the ${w === 'male' ? 'man' : 'woman'} (middle), ours over the sheet (bottom): ${what}; outline off ${mean} px on average` }] });
+    console.log(w, 'outline difference', JSON.stringify(diff));
   }
   await closeBrowser();
 }
