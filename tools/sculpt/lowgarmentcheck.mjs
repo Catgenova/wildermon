@@ -22,7 +22,12 @@
 //        under the shawl by garments/outfit1.mjs): the asset's weights, triangles and hidden polygons as the tools build
 //        them, no bones of its own; in the game's path its triangles crossing the body's (less what the trousers and the
 //        tunic hide), the trousers', the shawl's and its own, in the walk and the idle (the idle sampled over its whole
-//        loop: 24 phases), every facing.
+//        loop: 24 phases), every facing;
+//     7. the hood (src/sculpt/assets/lowhood-<who>.json, tools/sculpt/garments/hood.mjs, built round the shawl's cowl):
+//        the asset's weights as the tools build them, no bones of its own; in the game's path the hood's triangles crossing
+//        the body's (the head's above all) and the shawl's in the same walk and idle, and its own (reported: the rim's fold
+//        where the border under the chin meets the frame's foot; not a failure); and the draw within the renderer's 40
+//        materials and 80 bones.
 //   Exits 1 when a difference passes its tolerance or a crossing is found.
 import { build } from 'esbuild';
 import { readFileSync } from 'node:fs';
@@ -30,6 +35,7 @@ import { buildRig, posed, fromGame, gameRig, armsOut, axisAngle, mm, tr } from '
 import { liftOf, garmentFrames, crossPairs, bonesWith } from './lowgarment.mjs';
 import { buildOutfit } from './garments/outfit1.mjs';
 import { buildBoots, bootWeights } from './garments/boots.mjs';
+import { buildHood, hoodWeights } from './garments/hood.mjs';
 
 const ROOT = new URL('../..', import.meta.url).pathname;
 const b = await build({
@@ -123,6 +129,16 @@ for (const who of ['male', 'female']) {
     walk: { body: 0, trousers: 0, shawl: 0, self: 0 }, idle: { body: 0, trousers: 0, shawl: 0, self: 0 },
   };
   if (tunic.bones.length || tunic.base !== rig.bones.length || r.tunic.weights > 1e-5 || O.hides.tunic.join() !== tunic.hides.join() || Ug.tris.length !== r.tunic.tris) { console.log(who, 'tunic asset differs'); fail = true; }
+  // (the hood: its asset against the tools')
+  const Hg = buildHood(rig, G, undefined, { under: [O.tunic] });
+  Hg.vw = hoodWeights(rig, Hg, G);
+  const hood = json(`src/sculpt/assets/lowhood-${who}.json`);
+  r.hood = {
+    bones: hood.bones.length, base: hood.base, tris: hood.tris.length / 4,
+    weights: Math.max(...Hg.vw.map((l, i) => Math.max(...l.map(([bi, w], j) => (hood.weights[i][2 * j] === bi ? Math.abs(hood.weights[i][2 * j + 1] - w) : 1))))),
+    walk: { body: 0, shawl: 0, tunic: 0, self: 0 }, idle: { body: 0, shawl: 0, tunic: 0, self: 0 },
+  };
+  if (hood.bones.length || hood.base !== rig.bones.length || r.hood.weights > 1e-5 || Hg.tris.length !== r.hood.tris) { console.log(who, 'hood asset differs'); fail = true; }
   const hidden = new Set([...trousers.hides, ...boots.hides, ...tunic.hides]), nShawlTris = shawl.tris.length / 4, nTrouserTris = trousers.tris.length / 4, nBootTris = boots.tris.length / 4;
   const bodyTris = body.tris.filter((_, k) => k % 4 === 3).filter((pi) => !hidden.has(pi)).length;
   let s0 = null;
@@ -142,9 +158,11 @@ for (const who of ['male', 'female']) {
       P.push(q);
     }
     const T = Array.from({ length: s.baked.nTris }, (_, t) => ({ v: [s.baked.tris[t * 3], s.baked.tris[t * 3 + 1], s.baked.tris[t * 3 + 2]] }));
-    // (the bake: the body's triangles less the hidden, the shawl's, the trousers', the boots', the tunic's)
-    const o1 = bodyTris + nShawlTris, o2 = o1 + nTrouserTris, o3 = o2 + nBootTris;
-    const tB = T.slice(0, bodyTris), tS = T.slice(bodyTris, o1), tT = T.slice(o1, o2), tG = T.slice(o2, o3), tU = T.slice(o3);
+    // (the bake: the body's triangles less the hidden, the shawl's, the trousers', the boots', the tunic's, the hood's)
+    const o1 = bodyTris + nShawlTris, o2 = o1 + nTrouserTris, o3 = o2 + nBootTris, o4 = o3 + r.tunic.tris;
+    const tB = T.slice(0, bodyTris), tS = T.slice(bodyTris, o1), tT = T.slice(o1, o2), tG = T.slice(o2, o3), tU = T.slice(o3, o4), tH = T.slice(o4);
+    const ht = r.hood[kind];
+    ht.body += crossPairs(P, tH, P, tB).length; ht.shawl += crossPairs(P, tH, P, tS).length; ht.tunic += crossPairs(P, tH, P, tU).length; ht.self += crossPairs(P, tH).length;
     const bt = r.boots[kind];
     bt.body += crossPairs(P, tG, P, tB).length; bt.shawl += crossPairs(P, tG, P, tS).length; bt.trousers += crossPairs(P, tG, P, tT).length; bt.self += crossPairs(P, tG).length;
     // (the figure stands on the lowest vertex of all: the boots' soles; their lowest on the floor, z 0)
@@ -162,7 +180,10 @@ for (const who of ['male', 'female']) {
   for (const k of ['walk', 'idle']) if (r.boots[k].body || r.boots[k].shawl || r.boots[k].trousers) fail = true;
   if (r.boots.ground > 1e-3) { console.log(who, 'the boots are not on the floor'); fail = true; }
   for (const k of ['walk', 'idle']) if (r.tunic[k].body || r.tunic[k].trousers || r.tunic[k].shawl) fail = true;
-  if (s0.baked.nTris !== bodyTris + nShawlTris + r.trousers.tris + r.boots.tris + r.tunic.tris) { console.log(who, 'the bake is not the body less the hidden, the shawl, the trousers, the boots and the tunic'); fail = true; }
+  for (const k of ['walk', 'idle']) if (r.hood[k].body || r.hood[k].shawl || r.hood[k].tunic) fail = true;
+  if (s0.baked.nTris !== bodyTris + nShawlTris + r.trousers.tris + r.boots.tris + r.tunic.tris + r.hood.tris) { console.log(who, 'the bake is not the body less the hidden, the shawl, the trousers, the boots, the tunic and the hood'); fail = true; }
+  r.draw = { materials: s0.materials.length, bones: s0.bones.length / 12 };
+  if (r.draw.materials > 40 || r.draw.bones > 80) { console.log(who, 'over the renderer\'s limits'); fail = true; }
   console.log(who, JSON.stringify(r));
 }
 console.log(fail ? 'FAIL' : 'ok');

@@ -17,8 +17,10 @@
  * (`assets/lowtrousers-<who>.json` by `tools/sculpt/garments/trousers.mjs`, no bones of their own; the body's polygons
  * they cover whole, `hides`, are left out of the bake while they are worn), its boots (`assets/lowboots-<who>.json`
  * by `tools/sculpt/garments/boots.mjs`, no bones of their own, hiding the foot and the ankle; the body stands on their
- * soles, `soles`, while they are worn) and its tunic (`assets/lowtunic-<who>.json`, fitted over the trousers and under
- * the shawl by `tools/sculpt/garments/outfit1.mjs`, no bones of its own, `hides` too). Garments share materials by colour.
+ * soles, `soles`, while they are worn), its tunic (`assets/lowtunic-<who>.json`, fitted over the trousers and under
+ * the shawl by `tools/sculpt/garments/outfit1.mjs`, no bones of its own, `hides` too) and its hood
+ * (`assets/lowhood-<who>.json` by `tools/sculpt/garments/hood.mjs`, no bones of its own, rising out of the shawl's cowl;
+ * while it is up the hair is not drawn, `hairShown`). Garments share materials by colour.
  */
 import MALE_ASSET from './assets/lowmale.json';
 import FEMALE_ASSET from './assets/lowfemale.json';
@@ -30,6 +32,8 @@ import MALE_BOOTS from './assets/lowboots-male.json';
 import FEMALE_BOOTS from './assets/lowboots-female.json';
 import MALE_TUNIC from './assets/lowtunic-male.json';
 import FEMALE_TUNIC from './assets/lowtunic-female.json';
+import MALE_HOOD from './assets/lowhood-male.json';
+import FEMALE_HOOD from './assets/lowhood-female.json';
 import MALE_LIGHT from '../../tools/sculpt/lowlight-male.json';
 import FEMALE_LIGHT from '../../tools/sculpt/lowlight-female.json';
 import { sculptRig, viewOf, type FigurePose, type Rig } from '../render/figure';
@@ -416,6 +420,13 @@ const wearsTrousers = (_pose: FigurePose): boolean => true;
 const wearsBoots = (_pose: FigurePose): boolean => true;
 /** Whether a figure wears the tunic (under the shawl, over the trousers); for now every figure does. */
 const wearsTunic = (_pose: FigurePose): boolean => true;
+/** Whether a figure has the hood up (it rises out of the shawl's cowl); for now every figure has. */
+const wearsHood = (_pose: FigurePose): boolean => true;
+/**
+ * Whether a figure's hair is drawn over its low-poly head: not while the hood is up (the hood's shell is snug on the
+ * skull, so any hairstyle would come through it). A hairstyle drawn with the body checks this before it is laid in.
+ */
+export const hairShown = (pose: FigurePose): boolean => !wearsHood(pose);
 
 /** The garments a low-poly body can wear, in the order they are laid over it: each its copy for the man and the woman, and its wear hook. */
 const GARMENTS: ReadonlyArray<{ man: GarmentAsset; woman: GarmentAsset; wears: (pose: FigurePose) => boolean }> = [
@@ -423,6 +434,7 @@ const GARMENTS: ReadonlyArray<{ man: GarmentAsset; woman: GarmentAsset; wears: (
   { man: MALE_TROUSERS as unknown as GarmentAsset, woman: FEMALE_TROUSERS as unknown as GarmentAsset, wears: wearsTrousers },
   { man: MALE_BOOTS as unknown as GarmentAsset, woman: FEMALE_BOOTS as unknown as GarmentAsset, wears: wearsBoots },
   { man: MALE_TUNIC as unknown as GarmentAsset, woman: FEMALE_TUNIC as unknown as GarmentAsset, wears: wearsTunic },
+  { man: MALE_HOOD as unknown as GarmentAsset, woman: FEMALE_HOOD as unknown as GarmentAsset, wears: wearsHood },
 ];
 
 const BODIES = {
