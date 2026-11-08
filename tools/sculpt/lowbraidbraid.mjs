@@ -151,7 +151,11 @@ export function addBraid(br, spine, ctx) {
     const her = (x, y, z) => ctx.toBody([x, y, z]);
     const S = meet(her(d.shoulder[0], d.shoulder[2], d.shoulder[1]), [0, -1, 0], clearAt(d.at[0]));
     const F = d.chest.map(([x, y], j) => meet(her(x, y, 2), [0, 0, -1], clearAt(d.at[j + 1])));
-    const G = [R, add(R, mul(ctx.rootDir ?? [0, -1, 0], d.lead * k)), S, ...F];
+    // (`neck`: points [x, y, z] behind and beside her neck, each brought in toward the neck's axis until it meets it, so
+    // the braid runs down close along the back of the neck from behind the ear to the shoulder)
+    const N = (d.neck ?? []).map(([x, y, z], j) => { const p = her(x, y, z), ax = her(0, y, 0); return meet(p, unit(sub(ax, p)), clearAt(d.neckAt?.[j] ?? d.at[0] * (j + 1) / ((d.neck.length) + 1))); });
+    const G = [R, ...(d.lead ? [add(R, mul(ctx.rootDir ?? [0, -1, 0], d.lead * k))] : []), ...N, S, ...F];
+    if (process.env.BRAID_DEBUG) { const inv = (q) => q.map((v, i) => ((v - ctx.toBody([0, 0, 0])[i]) / k).toFixed(2)); console.log('guide (her units)', G.map(inv).join(' | ')); }
     const fine = Array.from({ length: 401 }, (_, i) => spline(G, i / 400)), Lf = [0];
     for (let i = 1; i < fine.length; i++) Lf.push(Lf[i - 1] + Math.hypot(...sub(fine[i], fine[i - 1])));
     const X = Array.from({ length: d.n + 1 }, (_, i) => { const w = (Lf[400] * i) / d.n; let j = 1; while (j < 400 && Lf[j] < w) j++; return add(fine[j - 1], mul(sub(fine[j], fine[j - 1]), (w - Lf[j - 1]) / Math.max(1e-9, Lf[j] - Lf[j - 1]))); });
