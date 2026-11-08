@@ -87,7 +87,7 @@ export const DESIGN = {
     },
   },
   female: {
-    z0: -0.38, clear: 0.035, flat: ['H2'],
+    z0: -0.38, clear: 0.035, flat: ['H2'], seat: 0.45,
     waist: { top: -3.0, depth: 0.3, vf: 0.22, vb: 0.16, vw: 62, vt: 0.05, t: 0.075, bevel: 0.026 },
     hips: [-3.65, -4.15], hipEase: { W1: [0, 0.02, 0.03], H1: [0, 0.04, 0.06], H2: [0, 0.05, 0.09] },
     crotch: { y: -4.55, rise: 0.22, dip: 0.12, front: 0.42, back: 0.5, zf: 0.12, zb: -0.3, ease: [0.02, 0.05, 0.03, 0.05] },
@@ -218,7 +218,8 @@ export function buildLeatherLegs(rig, design = DESIGN[rig.who], { stage = 9 } = 
   const hipAz = [0, ...LEG_AZ.slice(0, 6).map((_, k) => Math.atan2(C[k][0], C[k][2] - D.z0) * 180 / Math.PI), 180];
   const yHip = {
     // (the seat's row halfway from H2's own height to the crotch row, column by column)
-    H2: (k) => (D.hips[1] + (k === 0 ? C[9][1] : k === 7 ? C[6][1] : C[k - 1][1])) / 2,
+    // (and at least `seat` of the way from the crotch row up to H1, where the crotch row rises high at the outside)
+    H2: (k) => { const cy = k === 0 ? C[9][1] : k === 7 ? C[6][1] : C[k - 1][1]; return Math.max((D.hips[1] + cy) / 2, cy + (D.seat ?? 0) * (D.hips[0] - cy)); },
     H1: () => D.hips[0], W1: () => W.top - W.depth - 0.08, W0: () => W.top + 0.01,
   };
   const hipRows = stage <= 1 ? ['H1', 'W0'] : ['H2', 'H1', 'W1', 'W0'];
@@ -277,7 +278,6 @@ export function buildLeatherLegs(rig, design = DESIGN[rig.who], { stage = 9 } = 
   G.hipR = hipR; G.legR = legR; G.legAxis = legAxis;
 
   waistband(G, D, hipR, stage);
-  if (stage >= 5) fly(G, D, hipR);
   for (const side of [1, -1]) {
     for (const which of ['front', 'back']) flap(G, D, hipR, which, side, stage);
     band(G, D, legR, legAxis, side, stage);
@@ -461,7 +461,7 @@ function flap(G, D, hipR, which, side, stage) {
       if (dot(n, [p[0], 0, p[2] - D.z0]) < 0) n = mul(n, -1);
       let lift = 0;
       for (const c of [V(i, k), V(i, k + 1), V(i + 1, k), V(i + 1, k + 1)]) { const d = sub(c, p), h = dot(d, n), t = Math.hypot(...sub(d, mul(n, h))); if (h > 0 && t > 1e-6) lift = Math.max(lift, h * Math.min(1, 0.04 / t)); }
-      lift += 0.012;
+      lift += 0.02;
       // (then onto the face as cut: the ray from the hip's axis through it, onto the cell's own triangles)
       const o = [0, p[1], D.z0], dir = (() => { const d = sub(p, o); return mul(d, 1 / Math.hypot(...d)); })();
       let best = null;
@@ -492,7 +492,7 @@ function band(G, D, legR, legAxis, side, stage) {
     const a = a0 + k * span / (gap ? N - 1 : N), ym = Bd.y + Bd.amp * Math.cos(rad(a - Bd.phi)), yt = ym + Bd.w / 2, yb = ym - Bd.w / 2;
     const pt = (y, off, r0) => { const c = legAxis(y), aa = a; const r = r0 + off, p = [c[0] + Math.sin(rad(aa)) * r, y, c[1] + Math.cos(rad(aa)) * r]; return side > 0 ? p : [-p[0], p[1], p[2]]; };
     // (thinner on the inside of the thigh, where the legs pass each other: a third of its thickness there)
-    const tk = Bd.t * (1 - 0.65 * Math.max(0, Math.cos(rad(a - 270))) ** 2);
+    const tk = gap ? Bd.t : Bd.t * (1 - 0.65 * Math.max(0, Math.cos(rad(a - 270))) ** 2);
     const h = 180 / N, rt = reach(legR, [yt, yt - 0.04], a, h), rb = reach(legR, [yb, yb + 0.04], a, h), r = Math.max(rt, rb, reach(legR, [yt, ym, yb], a, h));
     const bk = Math.min(b, tk * 0.45);
     P.push([pt(yt, IN + 0.01, rt), pt(yt, r - rt + tk - bk, rt), pt(yt - bk, r - rt + tk, rt), pt(yb + bk, r - rb + tk, rb), pt(yb, r - rb + tk - bk, rb), pt(yb, IN + 0.01, rb)]);
@@ -506,7 +506,7 @@ function band(G, D, legR, legAxis, side, stage) {
     for (const f of [0.17, 0.83]) {
       const pa = lerp(a[2], a[3], f), pb = lerp(c[2], c[3], f), up = sub(a[2], a[3]), h = mul(up, 0.011 / Math.hypot(...up));
       let n = cross(sub(pb, pa), up); n = mul(n, 1 / Math.hypot(...n)); if (dot(n, out) < 0) n = mul(n, -1);
-      const lift = mul(n, 0.004), q0 = add(lerp(pa, pb, 0.18), lift), q1 = add(lerp(pa, pb, 0.82), lift);
+      const lift = mul(n, 0.009), q0 = add(lerp(pa, pb, 0.18), lift), q1 = add(lerp(pa, pb, 0.82), lift);
       G.tag = 'stitch';
       const v = [sub(q0, h), sub(q1, h), add(q1, h), add(q0, h)].map((x) => G.vert(x, 'band'));
       G.poly(v, stage >= 4 ? 'light' : 'leather', 'band', true);
@@ -514,22 +514,6 @@ function band(G, D, legR, legAxis, side, stage) {
   }
 }
 
-/**
- * The fly: a raised placket down the centre front, from under the waistband's V to the crotch, a little to the body's
- * left of the centre line, in the cloth's own leather (the sheet's two seam lines down the front).
- */
-function fly(G, D, hipR) {
-  const W = D.waist, cr = D.crotch, y0 = W.top - W.depth - W.vf - 0.01, y1 = cr.y + cr.front + 0.12, M = 6, P = [];
-  for (let i = 0; i <= M; i++) {
-    const y = y0 + (y1 - y0) * i / M, sec = [];
-    for (const [a, off] of [[0.5, IN + 0.006], [1.5, 0.026], [5.5, 0.026], [6.5, IN + 0.006]]) {
-      const r = Math.max(hipR(y, a), hipR(y, 3.5), hipR(y, 0)) + off;
-      sec.push([Math.sin(rad(a)) * r, y, D.z0 + Math.cos(rad(a)) * r]);
-    }
-    P.push(sec);
-  }
-  strip(G, P, ['leather', 'leather', 'leather'], 'fly', 'fly', false);
-}
 
 /* ---- weights ------------------------------------------------------------------------------------------------------- */
 /**
@@ -556,20 +540,21 @@ export function leatherLegsWeights(rig, G, o = {}) {
   // cloth under it (its triangle's corners' blended), so a piece moves with the cloth it lies on and keeps its gap
   const clothTris = G.tris.filter((t) => ['cloth', 'cuff'].includes(G.polys[t.poly].tag));
   for (let i = 0; i < G.verts.length; i++) {
-    if (!['waistband', 'flap', 'band', 'fly'].includes(G.part[i]) || G.rivetV?.has(i)) continue;
+    if (!['waistband', 'flap', 'band'].includes(G.part[i]) || G.rivetV?.has(i)) continue;
     const c = closestOnBody(G.verts, clothTris, G.verts[i]), acc = new Map();
     clothTris[c.tri].v.forEach((vi, k) => { for (const [bi, w] of vw[vi]) acc.set(bi, (acc.get(bi) ?? 0) + w * c.w[k]); });
     const l = [...acc].filter(([, w]) => w > 1e-4).sort((x, y) => y[1] - x[1]).slice(0, 4), t = l.reduce((s2, [, w]) => s2 + w, 0);
     vw[i] = l.map(([bi, w]) => [bi, w / t]);
   }
-  // the rivets: each stud rigid, all its vertices the weights of the piece it sits on at the closest point under its base
+  // the rivets: each vertex the weights of the piece it sits on at the closest point of it (the stud rides the face)
   for (const ids of G.studs ?? []) {
-    const part = G.part[ids[0]], c0 = mul(ids.slice(0, 6).reduce((s2, i) => add(s2, G.verts[i]), [0, 0, 0]), 1 / 6);
-    const hostT = G.tris.filter((t) => G.polys[t.poly].tag !== 'rivet' && G.part[t.v[0]] === part);
-    const c = closestOnBody(G.verts, hostT, c0), acc = new Map();
-    hostT[c.tri].v.forEach((vi, q) => { for (const [bi, w] of vw[vi]) acc.set(bi, (acc.get(bi) ?? 0) + w * c.w[q]); });
-    const l = [...acc].filter(([, w]) => w > 1e-4).sort((x, y) => y[1] - x[1]).slice(0, 4), t = l.reduce((s2, [, w]) => s2 + w, 0);
-    for (const i of ids) vw[i] = l.map(([bi, w]) => [bi, w / t]);
+    const part = G.part[ids[0]], hostT = G.tris.filter((t) => G.polys[t.poly].tag !== 'rivet' && G.part[t.v[0]] === part);
+    for (const i of ids) {
+      const c = closestOnBody(G.verts, hostT, G.verts[i]), acc = new Map();
+      hostT[c.tri].v.forEach((vi, q) => { for (const [bi, w] of vw[vi]) acc.set(bi, (acc.get(bi) ?? 0) + w * c.w[q]); });
+      const l = [...acc].filter(([, w]) => w > 1e-4).sort((x, y) => y[1] - x[1]).slice(0, 4), t = l.reduce((s2, [, w]) => s2 + w, 0);
+      vw[i] = l.map(([bi, w]) => [bi, w / t]);
+    }
   }
   return vw;
 }
