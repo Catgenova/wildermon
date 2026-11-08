@@ -127,7 +127,8 @@ export function addBraid(br, spine, ctx) {
         // (the point and its neighbours, by a bell three rows wide either side)
         const was = P.map((p) => p);
         // (the root, on the crown, stays)
-        for (let j = br.drape ? 1 : 0; j < P.length; j++) { const g = Math.exp(-(((j - i) / 2) ** 2)); if (g > 0.05) P[j] = add(P[j], mul(d, sg * st * k * g)); }
+        // (and, draped, the first `pin` points after it held too, so the hanging braid stays joined to the crown's link)
+        for (let j = br.drape ? 1 + (br.drape.pin ?? 0) : 0; j < P.length; j++) { const g = Math.exp(-(((j - i) / 2) ** 2)); if (g > 0.05) P[j] = add(P[j], mul(d, sg * st * k * g)); }
         const c = cost(); if (c < best) { best = c; } else was.forEach((p, j) => { P[j] = p; });
       }
     }
