@@ -127,8 +127,9 @@ if (only.includes('metrics') || only.includes('poses')) {
   for (const who of ['male', 'female']) {
     const { rig, G } = M[who];
     metrics[who] = {};
-    for (const e of await poseList(who)) { const d = dress(who, e.pose); const c = checks(G, d.PG, rig.B, d.PB); metrics[who][e.id] = { self: c.self, body: c.body, bodyParts: c.bodyParts }; }
+    for (const e of (await poseList(who)).filter((e) => !process.env.POSES || new RegExp(process.env.POSES).test(e.id))) { const d = dress(who, e.pose); const c = checks(G, d.PG, rig.B, d.PB); metrics[who][e.id] = { self: c.self, body: c.body, bodyParts: c.bodyParts }; }
     const sum = (re) => Object.entries(metrics[who]).filter(([k]) => re.test(k)).reduce((s, [, v]) => s + v.body, 0);
+    if (process.env.POSES) { console.log(who, 'idle', sum(/^idle/), 'walk', sum(/^walk/), JSON.stringify(Object.fromEntries(Object.entries(metrics[who]).filter(([, v]) => v.body).map(([k, v]) => [k, v.bodyParts])))); continue; }
     metrics[who].summary = { idle: sum(/^idle/), walk: sum(/^walk/), swing: sum(/^swing/), tests: Object.fromEntries(testPoses(rig).map((e) => [e.id, metrics[who][e.id].body])) };
     metrics[who].bones = { body: rig.bones.length, garment: G.bones.length, total: bonesWith(rig, G).length };
     console.log(who, JSON.stringify(metrics[who].summary));

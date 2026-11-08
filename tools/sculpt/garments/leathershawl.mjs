@@ -28,7 +28,7 @@
 //   the lower tier on Lb: L1, L2, the band's foot BT0, raised BT1, the top stripe's foot S1, the bottom stripe's top S2,
 //   the hem's edge H; the hem's lip down to the underside IH (bevelled: lower than the outside's);
 //   the underside, THICK in from Lb: IB, IY, IM, IT; the collar's inside: ci (its foot), up to d.
-import { offPlane, TOL, samplesOf, envelope, drape, reachAt, atRY, dirOf, meshOf, orient, trisOf, transferWeights, sub, add, mul, lerp, unit, cross, dot } from '../lowgarment.mjs';
+import { crossPairs, triTri, offPlane, TOL, samplesOf, envelope, drape, reachAt, atRY, dirOf, meshOf, orient, trisOf, transferWeights, sub, add, mul, lerp, unit, cross, dot } from '../lowgarment.mjs';
 import { shawlBones } from './shawl.mjs';
 
 /** The palette's swatches (sRGB 0..1; enchanted-glow-ref.png): dark brown, leather, light leather, trim tan, glow. */
@@ -64,9 +64,9 @@ export const LOOKS = { plain: lit, enchanted: { ...lit, rune: { c: MATS.glow, ki
 const LIFT = (side) => ({ side: { a: side, knee: 20, b: 1.3, max: 100, also: { axis: 'x', a: 0.3, max: 12 } }, front: { a: 0.3, knee: 40, b: 2.3, max: 100 }, back: { a: 0.4, knee: 30, b: 1.0, max: 60 }, frontAt: 60, backAt: 140, reach: [40, 40], from: 0.2, top: 0.2, roll: {} });
 export const DESIGN = {
   male: {
-    z0: -0.12, front: 6, back: 6, OUT: [0.12, 0.15, 0.12], THICK: 0.1, TIER: 0.07, RAISE: 0.035, bevel: 0.06,
+    z0: -0.12, front: 6, back: 6, OUT: [0.13, 0.15, 0.13], THICK: 0.1, TIER: 0.07, RAISE: 0.035, bevel: 0.06,
     collar: { rim: [-0.74, 0.0, 0.38], p: 1.8, IN: 0.16, wall: 0.18, lean: 0.35, low: 0.18 },
-    yoke: { table: [[0, -1.62], [15, -1.42], [30, -1.2], [45, -0.98], [60, -0.86], [75, -0.86], [90, -0.9], [105, -0.88], [120, -0.9], [135, -1.02], [150, -1.22], [165, -1.44], [180, -1.62]], band: 0.28, line: 0.05 },
+    yoke: { table: [[0, -1.72], [15, -1.6], [30, -1.2], [45, -0.98], [60, -0.86], [75, -0.86], [90, -0.9], [105, -0.88], [120, -0.9], [135, -1.02], [150, -1.22], [165, -1.6], [180, -1.72]], band: 0.28, line: 0.05 },
     hem: { at: [-3.33, -2.1, -3.28], p: 1.0, flare: [0.04, 0.08, 0.04], soften: 0, band: 0.66, stripe: 0.075 },
     tri: { w: 0.36, gap: 0.16, raise: 0.03 }, ytri: { w: 0.2, gap: 0.14 },
     tabs: { gap: 0.31, w: 0.21, len: [0.3, 0.64], thick: 0.075, tilt: 9, seed: 7 },
@@ -74,9 +74,9 @@ export const DESIGN = {
     lift: LIFT(0.4),
   },
   female: {
-    z0: -0.14, front: 6, back: 6, OUT: [0.11, 0.13, 0.11], THICK: 0.09, TIER: 0.06, RAISE: 0.03, bevel: 0.05,
+    z0: -0.14, front: 6, back: 6, OUT: 0.13, THICK: 0.09, TIER: 0.06, RAISE: 0.03, bevel: 0.05,
     collar: { rim: [-0.7, -0.05, 0.3], p: 1.9, IN: 0.14, wall: 0.15, lean: 0.35, low: 0.16 },
-    yoke: { table: [[0, -1.47], [15, -1.3], [30, -1.12], [45, -0.94], [60, -0.84], [75, -0.84], [90, -0.88], [105, -0.86], [120, -0.88], [135, -0.98], [150, -1.14], [165, -1.32], [180, -1.47]], band: 0.25, line: 0.045 },
+    yoke: { table: [[0, -1.55], [15, -1.42], [30, -1.12], [45, -0.94], [60, -0.84], [75, -0.84], [90, -0.88], [105, -0.86], [120, -0.88], [135, -0.98], [150, -1.14], [165, -1.42], [180, -1.55]], band: 0.25, line: 0.045 },
     hem: { at: [-2.95, -1.85, -2.9], p: 1.0, flare: [0.04, 0.07, 0.04], soften: 0, band: 0.6, stripe: 0.065 },
     tri: { w: 0.31, gap: 0.14, raise: 0.026 }, ytri: { w: 0.18, gap: 0.12 },
     tabs: { gap: 0.28, w: 0.18, len: [0.27, 0.5], thick: 0.06, tilt: 18, seed: 7 },
@@ -189,10 +189,11 @@ export function buildLeatherShawl(rig, design = DESIGN[rig.who], { under = [] } 
     // the rows along the base line: the yoke's hem at its height (at least 0.3 below the collar's foot, 0.5 above the band)
     const sH = pl.tot, sB = sH - D.hem.band, sY = Math.max(0.3, Math.min(pl.sAtY(yY), sB - 0.5)), sYB = sY - D.yoke.band;
     const off = (s, k) => { const a = pl.at(s); return P2.add(a.p, P2.mul(a.n, k)); };
-    const T = D.TIER, R = D.RAISE;
+    // (the yoke's band flush under the emblem's ring, front and back: it ends at the ring, not under it)
+    const a0 = Math.abs(((deg + 540) % 360) - 180), T = D.TIER, R = a0 <= 15.1 || a0 >= 164.9 ? 0 : D.RAISE, RB = D.RAISE;
     const q = {
       Y0: off(0, T), Ym: off(sYB * 0.5, T), YB0: off(sYB, T), YB1: off(sYB, T + R), YL: off(sYB + D.yoke.line, T + R), Y1: off(sY, T + R), Y1b: off(sY + 0.02, 0),
-      L1: off(sY + (sB - sY) / 3, 0), L2: off(sY + (2 * (sB - sY)) / 3, 0), BT0: off(sB, 0), BT1: off(sB, R), S1: off(sB + D.hem.stripe, R), S2: off(sH - D.hem.stripe, R), H: off(sH, R),
+      L1: off(sY + (sB - sY) / 3, 0), L2: off(sY + (2 * (sB - sY)) / 3, 0), BT0: off(sB, 0), BT1: off(sB, RB), S1: off(sB + D.hem.stripe, RB), S2: off(sH - D.hem.stripe, RB), H: off(sH, RB),
     };
     const dn = pl.at(sH).down;
     q.IH = P2.add(off(sH, -D.THICK), P2.mul(dn, D.bevel));
@@ -210,11 +211,40 @@ export function buildLeatherShawl(rig, design = DESIGN[rig.who], { under = [] } 
   return G;
 }
 
+/** Whether a prism (as prism() would build it) crosses any of the shell's faces. */
+function prismCuts(G, pts, nrm, h, lift) {
+  const bot = pts.map((p, k) => add(p, mul(nrm[k], lift))), top = pts.map((p, k) => add(p, mul(nrm[k], lift + h))), n = pts.length;
+  const T = [];
+  for (let k = 0; k < n; k++) { const j = (k + 1) % n; T.push([bot[k], bot[j], top[j]], [bot[k], top[j], top[k]]); }
+  const c = mul(top.reduce((s2, p) => add(s2, p), [0, 0, 0]), 1 / n), cb = mul(bot.reduce((s2, p) => add(s2, p), [0, 0, 0]), 1 / n);
+  for (let k = 0; k < n; k++) { const j = (k + 1) % n; T.push([top[k], top[j], c], [bot[j], bot[k], cb]); }
+  const lo = [0, 1, 2].map((d) => Math.min(...T.flat().map((p) => p[d])) - 0.01), hi = [0, 1, 2].map((d) => Math.max(...T.flat().map((p) => p[d])) + 0.01);
+  for (const p of G.polys) {
+    if (p.part !== 'cape' && p.part !== 'collar') continue;
+    const P = p.v.map((i) => G.verts[i]);
+    if (P.every((q) => q[0] < lo[0]) || P.every((q) => q[0] > hi[0]) || P.every((q) => q[1] < lo[1]) || P.every((q) => q[1] > hi[1]) || P.every((q) => q[2] < lo[2]) || P.every((q) => q[2] > hi[2])) continue;
+    for (let k = 1; k + 1 < P.length; k++) for (const t of T) if (triTri([P[0], P[k], P[k + 1]], t)) return true;
+  }
+  return false;
+}
+/** p moved along n onto the nearest of the faces (triangles, three points each) the line meets within 0.06 of it, or p. */
+function onFaces(G, faces, p, n) {
+  let best = null;
+  for (const [a, b, c] of faces) {
+    const e1 = sub(b, a), e2 = sub(c, a), h = cross(n, e2), det = dot(e1, h);
+    if (Math.abs(det) < 1e-12) continue;
+    const f = 1 / det, s0 = sub(p, a), u = f * dot(s0, h); if (u < -1e-6 || u > 1 + 1e-6) continue;
+    const qv = cross(s0, e1), v = f * dot(n, qv); if (v < -1e-6 || u + v > 1 + 1e-6) continue;
+    const t = f * dot(e2, qv);
+    if (Math.abs(t) < 0.06 && (best === null || Math.abs(t) < Math.abs(best))) best = t;
+  }
+  return best === null ? p : add(p, mul(n, best));
+}
 /** The distance from p to the nearest of the samples S (the body and what is worn under it). */
 const clearOfBody = (S, p) => { let d = Infinity; for (const q of S) { const dx = q[0] - p[0], dy = q[1] - p[1], dz = q[2] - p[2]; if (Math.abs(dy) > 0.5) continue; d = Math.min(d, Math.hypot(dx, dy, dz)); } return d; };
 /** A small deterministic pattern in [0, 1) (so the tabs vary without repeating evenly). */
 /** How far the laid pieces' bottoms stand off the shell: over its folds between columns (TOL) and the chords' sag. */
-const PLIFT = 0.036;
+const PLIFT = 0.03;
 const hash = (i, seed) => { const x = Math.sin(i * 127.1 + seed * 311.7) * 43758.5453; return x - Math.floor(x); };
 
 function meshOfLeather(rig, D, cols, S) {
@@ -246,8 +276,19 @@ function meshOfLeather(rig, D, cols, S) {
   const axisOut = (p) => [p[0], 0, p[2] - z0];
   // the pieces laid on it and hung under it
   G.pieces = [];
+  const n0 = G.polys.length;
+  // (the shell oriented first: its quads' fans, which way each is cut, as drawn, for the pieces to lie on)
+  orient(G, (p) => [p[0], 0, p[2] - z0]);
   if (D.pieces !== false) laid(G, D, cols, R);
   orient(G, axisOut);
+  // (each laid piece that still cuts the shell anywhere, as the shell is drawn once oriented, left out: the pattern ends
+  // there; nothing sinks into the shell or stands off it to clear it)
+  {
+    const T = trisOf(G), cut = new Set();
+    for (const [i, j] of crossPairs(G.verts, T)) for (const t of [T[i], T[j]]) if (t.poly >= n0 && G.polys[t.poly].tag !== 'tab' && (T[i].poly < n0 || T[j].poly < n0)) cut.add(G.polys[t.poly].pid);
+    if (cut.size) G.polys = G.polys.filter((p) => p.pid === undefined || !cut.has(p.pid));
+    G.cut = cut.size;
+  }
   G.tris = trisOf(G);
   G.cols = cols; G.design = D; G.rings = R;
   return G;
@@ -261,6 +302,7 @@ function meshOfLeather(rig, D, cols, S) {
  */
 function prism(G, pts, nrm, h, lift, mat, tag, src, part = 'piece') {
   G.tag = tag;
+  const p0 = G.polys.length, pid = (G.npid = (G.npid ?? 0) + 1);
   const bot = pts.map((p, k) => G.vert(add(p, mul(nrm[k], lift)), part)), top = pts.map((p, k) => G.vert(add(p, mul(nrm[k], lift + h)), part));
   if (pts.length <= 4) { G.poly(top, mat, part, true); G.poly([...bot].reverse(), mat, part, true); }
   else {
@@ -272,6 +314,7 @@ function prism(G, pts, nrm, h, lift, mat, tag, src, part = 'piece') {
   }
   for (let k = 0; k < pts.length; k++) { const j = (k + 1) % pts.length; G.poly([bot[k], bot[j], top[j], top[k]], mat, part); }
   [...bot, ...top].forEach((v, i) => { G.src ??= []; G.src[v] = src[i % pts.length]; });
+  for (let k = p0; k < G.polys.length; k++) G.polys[k].pid = pid;
 }
 
 /**
@@ -301,6 +344,7 @@ function laid(G, D, cols, R) {
   // the hem from the front's point each way (a triangle on each V's point)
   const tri = (A, Bq, T, tag, raise, skip = null) => {
     const rb = ribbon(G, A, Bq, z0), L = rb.len(1), tot = L[L.length - 1], step = T.w + T.gap;
+    const faces = G.polys.filter((p) => p.tag === `${tag === 'tri' ? 'S1-S2' : 'YL-Y1'}`).flatMap((p) => p.v.slice(1, -1).map((_, k) => [p.v[0], p.v[k + 1], p.v[k + 2]].map((i) => G.verts[i])));
     // (from the front's point round to the back's: each side its own whole number of triangles)
     const half = L[N / 2], n = Math.max(1, Math.round(half / step)), st = half / n;
     for (const [from, dir] of [[0, 1], [tot, -1]]) for (let i = 0; i < n; i++) {
@@ -310,13 +354,17 @@ function laid(G, D, cols, R) {
       const cs = [[rb.uAt(L, c - w), 0.93], [rb.uAt(L, c + w), 0.93], [rb.uAt(L, c), 0.09]], q = [];
       for (let e = 0; e < 3; e++) for (let t = 0; t < 6; t++) { const [u0, v0] = cs[e], [u1, v1] = cs[(e + 1) % 3]; q.push(rb.at(u0 + (u1 - u0) * t / 6, v0 + (v1 - v0) * t / 6)); }
       if (skip && skip(q[12].p)) continue;
-      // (where the band turns sharply under it, the triangle stands off further: its corners' normals' spread)
-      const md = Math.min(...q.map((x) => dot(x.n, q[12].n)));
-      prism(G, q.map((x) => x.p), q.map((x) => x.n), raise, PLIFT + 0.25 * (1 - md), 'rune', tag, q.map((x) => x.src));
+      // (none across a sharp turn of the band, round the shoulder's edge: the pattern ends there; each outline point
+      // moved onto the band's own faces along its normal, so the triangle lies on them, PLIFT off)
+      if (Math.min(...q.map((x) => dot(x.n, q[12].n))) < (T.turn ?? 0.8)) continue;
+      const on = q.map((x) => onFaces(G, faces, x.p, x.n));
+      // (and none that would cut the shell anywhere: the pattern ends there rather than a triangle sinking in)
+      if (prismCuts(G, on, q.map((x) => x.n), raise, PLIFT)) continue;
+      prism(G, on, q.map((x) => x.n), raise, PLIFT, 'rune', tag, q.map((x) => x.src));
     }
   };
   tri(R.S1, R.S2, D.tri, 'tri', D.tri.raise);
-  tri(R.YL, R.Y1, D.ytri, 'ytri', D.tri.raise * 0.8, (p) => Math.abs(p[0]) < D.emblem.ring[0] + 0.08);
+  tri(R.YL, R.Y1, D.ytri, 'ytri', D.tri.raise * 0.8, (p) => Math.abs(p[0]) < D.emblem.ring[0] + 0.12);
   // the tabs: under the hem, each from its own two points on the hem (its top following the hem's slope), hanging
   // straight down by its own length, a little out and turned; widths and lengths varied by the pattern
   {
@@ -347,10 +395,15 @@ function laid(G, D, cols, R) {
       const { a, b, top, out, at } = tabs[i], extra = Math.max(...[-2, -1, 0, 1, 2].map((d) => tabs[(i + d + n) % n].need * (1 - Math.abs(d) * 0.25)));
       const bot = at(extra);
       const th = T.thick / 2, o = mul(out, th);
-      const pts = [sub(top[0], o), sub(top[1], o), sub(bot[1], o), sub(bot[0], o)];
       const outs = [o, o, o, o].map(() => out);
+      let pts = [sub(top[0], o), sub(top[1], o), sub(bot[1], o), sub(bot[0], o)];
+      // (its top lowered a little at a time while it would cut the hem's lip: at the V's points the lip bends under it)
+      for (let k = 0; k < 4 && prismCuts(G, pts, outs, T.thick, 0); k++) pts = pts.map((p, j) => (j < 2 ? [p[0], p[1] - 0.015, p[2]] : p));
       const s0 = a.src, s1 = b.src;
+      const v0 = G.verts.length;
       prism(G, pts, outs, T.thick, 0, 'trim', 'tab', [s0, s1, s1, s0], 'tab');
+      // (its foot's corners: they take a share of the body's own weights under them)
+      G.tabFoot ??= new Set(); for (const d of [2, 3, 6, 7]) G.tabFoot.add(v0 + d);
     }
   }
   // the emblem, front and back: the ring (an annulus of 16), the two stripes from under it to the band's top, ending in a
@@ -359,32 +412,33 @@ function laid(G, D, cols, R) {
     const hit = (x, y) => surfaceAt(G, cols, R, z0, side, x, y);
     const [ro, ri] = D.emblem.ring, ring = [];
     for (let k = 0; k < 16; k++) { const a = (k / 16) * Math.PI * 2; ring.push([Math.cos(a), Math.sin(a)]); }
-    // (the annulus one closed piece, flat, square to the view, just in front of the shell under it: a raised medallion
-    // over the yoke's point)
-    const H = ring.map(([cx, cy]) => [hit(cx * ro, y0 + cy * ro), hit(cx * ri, y0 + cy * ri)]);
+    // (the annulus one closed piece of 32, each corner on the shell under it: its foot PLIFT off it, its top `raise`
+    // further, along the shell's normal there; it follows the yoke's curve rather than standing flat off it)
+    const K = 32, ringK = Array.from({ length: K }, (_, k) => [Math.cos((k / K) * Math.PI * 2), Math.sin((k / K) * Math.PI * 2)]);
+    const H = ringK.map(([cx, cy]) => [hit(cx * ro, y0 + cy * ro), hit(cx * ri, y0 + cy * ri)]);
     if (H.flat().every(Boolean)) {
-      const zf = side > 0 ? Math.max(...H.flat().map((h) => h.z)) : Math.min(...H.flat().map((h) => h.z)), lift = 0.012, h = D.emblem.raise;
+      const h = D.emblem.raise;
       G.tag = 'ring';
-      const V = (x, y, dz, srcOf) => { const v = G.vert([x, y, zf + side * dz], 'piece'); G.src ??= []; G.src[v] = srcOf; return v; };
-      const vs = ring.map(([cx, cy], k) => [ro, ri].flatMap((r, m) => [lift, lift + h].map((dz) => V(cx * r, y0 + cy * r, dz, H[k][m].src))));
+      const V = (hh, dz) => { const v = G.vert(add(hh.p, mul(hh.n, dz)), 'piece'); G.src ??= []; G.src[v] = hh.src; return v; };
+      const vs = H.map(([o, i]) => [V(o, PLIFT), V(o, PLIFT + h), V(i, PLIFT), V(i, PLIFT + h)]);
       // (per corner: outer bottom, outer top, inner bottom, inner top)
-      for (let k = 0; k < 16; k++) {
-        const [ob, ot, ib, it] = vs[k], [ob2, ot2, ib2, it2] = vs[(k + 1) % 16];
+      for (let k = 0; k < K; k++) {
+        const [ob, ot, ib, it] = vs[k], [ob2, ot2, ib2, it2] = vs[(k + 1) % K];
         G.poly([ot, ot2, it2, it], 'rune', 'piece'); G.poly([ob, ib, ib2, ob2], 'rune', 'piece');
         G.poly([ob, ob2, ot2, ot], 'rune', 'piece'); G.poly([ib, it, it2, ib2], 'rune', 'piece');
       }
     }
     // the stripes: from the ring's foot to the band's top at the centre line, in segments (following the shell)
-    const [sx, sw] = D.emblem.stripes, c0 = cols[side > 0 ? 0 : N / 2], yBot = atRY(c0.deg, c0.BT0[0], c0.BT0[1], z0)[1] + 0.06, yTop = Math.min(y0 - ro - 0.04, atRY(c0.deg, c0.Y1b[0], c0.Y1b[1], z0)[1] - 0.04);
+    const [sx, sw] = D.emblem.stripes, c0 = cols[side > 0 ? 0 : N / 2], yBot = atRY(c0.deg, c0.BT0[0], c0.BT0[1], z0)[1] + 0.06, yTop = Math.min(y0 - ro - 0.04, atRY(c0.deg, c0.Y1b[0], c0.Y1b[1], z0)[1] - 0.1);
     for (const xs of [-sx, sx]) {
-      const n = 6, segs = [];
+      const n = 10, segs = [];
       for (let i = 0; i <= n; i++) segs.push(yTop + (yBot - yTop) * (i / n));
       for (let i = 0; i < n; i++) {
         // (the last segment narrows to a point toward the centre line)
         const last = i === n - 1, x0 = xs - sw / 2, x1 = xs + sw / 2;
         const xin = xs > 0 ? x0 : x1, xo = xs > 0 ? x1 : x0;
         const q = last ? [hit(x0, segs[i]), hit(x1, segs[i]), hit(xin, segs[i + 1])] : [hit(x0, segs[i]), hit(x1, segs[i]), hit(x1, segs[i + 1]), hit(x0, segs[i + 1])];
-        if (q.some((x) => !x)) continue;
+        if (q.some((x) => !x) || prismCuts(G, q.map((x) => x.p), q.map((x) => x.n), D.emblem.raise, PLIFT)) continue;
         void xo;
         prism(G, q.map((x) => x.p), q.map((x) => x.n), D.emblem.raise, PLIFT, 'rune', 'stripe', q.map((x) => x.src));
       }
@@ -456,6 +510,13 @@ export function leatherShawlWeights(rig, G, o = {}) {
   for (let k = 0; k < N; k++) for (const [u, o2] of Object.entries(pair)) vw[R[u][k]] = vw[R[o2][k]];
   // the pieces: their shell corners'
   for (let i = 0; i < G.verts.length; i++) if (!shell.has(i)) vw[i] = blendW(G.src[i]);
+  // the tabs' feet: half their hem's weights, half the body's closest to them (the arm swinging under them, the belly and
+  // the hips moving under the chest: the tabs ride over them as they are pushed)
+  const feet = G.tabFoot ?? new Set();
+  if (feet.size) {
+    const bw = transferWeights(rig, G, { smooth: 0, only: (i) => feet.has(i) });
+    for (const i of feet) vw[i] = mix(vw[i], bw[i], o.foot ?? 0.5);
+  }
   return vw;
 }
 
