@@ -187,14 +187,16 @@ export function buildHair(rig, style = SWEPT, hull = null) {
 /**
  * A mass (the front and top of the hair as one piece, its tufts combed straight back): the creases between its tufts as
  * lines over the skull, his right to his left, the first and the last its borders; each line its stations front to
- * back as (over, out) points: the root on the scalp at the hairline, the sole, the tuft's tip hanging over the
- * forehead, the tuft's lifted front, on back to its end at the crown. Between two creases the band's rows (band:
- * [share of the way across, drop under the envelope]; the creases `groove` under it, so the tips stand apart with
- * notches between and the tufts' tops are ridges running back; grooveAt: the groove's share per station). Every corner stands on the ray from the skull's centre
- * through it, off the skin by its thickness: the solved one (cl.fit.t, per row and station, head units on the male,
- * tools/sculpt/lowhairfront.mjs) or, unsolved, the hull's. The border (the first and the last rows, the roots at the
- * hairline and at the crown) are sunk in the skin, the hairline's clear of the face; the piece closes in a fan from the skull's centre under them. The pieces' record keeps
- * each corner's ray, its drop and its role (sole, tip) for the solver.
+ * back as (over, out) points: the root on the scalp, the sole, the tip at the hairline on the forehead, the tuft's
+ * front lifted up off it and rolled back, on back to its end at the crown. Between two creases the band's rows (band:
+ * [share of the way across, drop under the envelope]; the creases `groove` under it, so the tufts' fronts stand apart
+ * with notches between and their tops are ridges running back; grooveAt: the groove's share per station). Every
+ * corner stands on the ray from the skull's centre through it, off the skin by its thickness: the sole's and the
+ * tip's `flush` ([sole, tip]: the tip on the forehead at the hairline, nothing hanging over the brow), the rest the
+ * solved one (cl.fit.t, per row and station, head units on the male, tools/sculpt/lowhairfront.mjs) or, unsolved, the
+ * hull's. The border (the first and the last rows, the roots behind the hairline and at the crown) are sunk in the
+ * skin, the undersides clear of the face; the piece closes in a fan from the skull's centre under them. The pieces'
+ * record keeps each corner's ray, its drop and its role (sole, tip) for the solver.
  */
 export function massOf(cl, { skull, C, k, verts, polys, pieces, hull, scalp }) {
   const n = cl.lines[0].length, band = cl.band ?? [[0.5, 0]], groove = cl.groove ?? 0.04, rows = [];
@@ -213,29 +215,25 @@ export function massOf(cl, { skull, C, k, verts, polys, pieces, hull, scalp }) {
     const border = i === 0 || i === R - 1 || j === 0 || j === n - 1;
     let t;
     if (border) t = -(cl.sink ?? SINK);
+    else if ((j === 1 || j === 2) && cl.flush) t = cl.flush[j - 1];
     else if (fit) t = fit.t[i][j];
     else t = Math.max(MIN_H, (hull ? hull.thick.at(o, u) * (cl.scale ?? 1) : 0.12) - row.drop * gAt(j));
     rays.push({ i, j, d, r0: h.t, border, drop: row.drop * gAt(j), role: j === 1 ? 'sole' : j === 2 ? 'tip' : '' });
     return verts.push(add(C, mul(d, h.t + t * k))) - 1;
   }));
-  // each root at the hairline walked back up the skull until the tuft's underside from it (its quads to the rows beside
-  // it) clears the face (a head whose forehead runs higher than the male's)
+  // the tuft's underside clear of the face on any head: where a root's quads to the rows beside it (either way split)
+  // pass through the face (a forehead that runs higher than the male's), that row's sole (and then its tip) raised off
+  // the skin until they do not
   if (scalp) {
     const face = skull.filter((tri) => !scalp.has(tri.poly));
-    // the root's two quads to the rows beside it, as triangles, each tested against the face both ways
     const cross2 = (A, T) => [0, 1, 2].some((e) => segTri(A[e], A[(e + 1) % 3], T) || segTri(T[e], T[(e + 1) % 3], A));
-    const clear = (i) => [i - 1, i + 1].filter((m) => m >= 0 && m < R).every((m) => {
-      const V = (r, j) => verts[ids[r][j]];
-      return ![[V(i, 0), V(i, 1), V(m, 1)], [V(i, 0), V(m, 1), V(m, 0)]].some((A) => face.some((T) => cross2(A, T)));
-    });
-    for (let i = 0; i < R; i++) {
-      let [o, u] = rows[i].dirs[0];
-      for (let up = 0; up < 12 && !clear(i); up++) {
-        o += 1.5;
-        const d = dirOf(o, u), h = hit(skull, C, d);
-        verts[ids[i][0]] = add(C, mul(d, h.t - (cl.sink ?? SINK) * k));
-        Object.assign(rays[i * n], { d, r0: h.t });
-      }
+    const V = (r, j) => verts[ids[r][j]];
+    const clear = (i) => [i - 1, i + 1].filter((m) => m >= 0 && m < R).every((m) => [0, 1, 2].every((j) =>
+      ![[V(i, j), V(i, j + 1), V(m, j + 1)], [V(i, j), V(m, j + 1), V(m, j)], [V(i, j), V(i, j + 1), V(m, j)], [V(i, j + 1), V(m, j + 1), V(m, j)]]
+        .some((A) => face.some((T) => cross2(A, T)))));
+    for (let i = 1; i < R - 1; i++) for (let up = 0; up < 30 && !clear(i); up++) for (const j of up < 10 ? [1] : [1, 2]) {
+      const r = rays[i * n + j];
+      verts[ids[i][j]] = add(verts[ids[i][j]], mul(r.d, 0.01 * k));
     }
   }
   const centre = verts.push([...C]) - 1;

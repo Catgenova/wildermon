@@ -13,10 +13,11 @@ const FIT = new URL('./swept-front.json', import.meta.url);
 const fit = existsSync(FIT) ? JSON.parse(readFileSync(FIT, 'utf8')) : null;
 
 /**
- * The creases between the front's tufts, his right to his left: each from its root at the hairline (over, out), its
- * tip `tip` degrees ahead of the root (hanging over the forehead; less at the sides, clear of the temples), back to its
- * end at the crown. Stations: the root, the sole (halfway to the tip), the tip, the tuft's lifted front (just ahead of
- * the root), then on back to the end.
+ * The creases between the front's tufts, his right to his left: each from its root on the scalp (over, out), its tip
+ * `tip` degrees ahead of the root (the hairline on the forehead; less at the sides, clear of the temples), back to its
+ * end (on his right side behind the ear; on top under the top's front, so the back stays the top's and the back's).
+ * Stations: the root, the sole (halfway to the tip), the tip, the tuft's lifted front (a little behind the tip, so it
+ * rises off the hairline and rolls forward over it), then on back to the end.
  */
 function tuftLines() {
   const creases = [
@@ -34,7 +35,7 @@ function tuftLines() {
   const lerp = (a, b, f) => [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
   return creases.map(([[o, u], e, tip]) => {
     const back = [o + 16, u];
-    return [[o, u], [o - tip / 2, u], [o - tip, u], [o - 6, u], ...[0, 0.3, 0.58, 0.82].map((f) => lerp(back, e, f)), e];
+    return [[o, u], [o - tip / 2, u], [o - tip, u], [o - tip * 0.6, u], ...[0, 0.3, 0.58, 0.82].map((f) => lerp(back, e, f)), e];
   });
 }
 
@@ -49,7 +50,7 @@ export default {
   clumps: [
     // the front and the top: one mass of tufts combed straight back (tools/sculpt/lowhair.mjs massOf), the creases
     // between them below
-    { id: 'front', mass: true, sink: 0.015, band: [[0.5, 0]], groove: 0.1, grooveAt: [0, 1, 1, 1, 0.6, 0.3, 0.3, 0.3, 0], fit, lines: tuftLines() },
+    { id: 'front', mass: true, sink: 0.015, band: [[0.5, 0]], groove: 0.1, grooveAt: [0, 0, 0, 1, 0.6, 0.3, 0.3, 0.3, 0], flush: [0.1, 0.03], fit, lines: tuftLines() },
     // the top: from under the front's back edge, back over the crown
     { id: 'top', sec: 'sec3', n: 6, scale: 0.825, path: [[92, -2, 0.06], [110, 3], [130, 3], [165, 2], [190, 0]], w: [0.8, 0.8, 0.6, 0.32], h: [0.1], ends: [0.15, 0.6], tipUp: [0.2, 0.2] },
     // his left: three locks from under the front's left end back down the side to the nape

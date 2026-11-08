@@ -28,8 +28,10 @@ export function solve({ sweeps = 30, fresh = false, log = true } = {}) {
   const hair = buildHair(rig, style, H), pc = hair.pieces.find((p) => p.mass), { ids, rays, rows: R, n } = pc.mass, k = hair.k;
   const C = hair.centre, drop = (i, j) => rays[i * n + j].drop;
   // the free corners: every one off the border
+  // the sole and the tip lie on the forehead (cl.flush): not the solve's
+  const fixed = (i, j) => cl.flush != null && rays[i * n + j].role !== '';
   const T = ids.map((row, i) => row.map((v, j) => { const r = rays[i * n + j]; return r.border ? null : (Math.hypot(...hair.verts[v].map((x, c) => x - C[c])) - r.r0) / k; }));
-  for (let i = 1; i < R - 1; i++) for (let j = 1; j < n - 1; j++) T[i][j] = Math.max(least(i, j), T[i][j]);
+  for (let i = 1; i < R - 1; i++) for (let j = 1; j < n - 1; j++) if (!fixed(i, j)) T[i][j] = Math.max(least(i, j), T[i][j]);
   function least(i, j) { const role = rays[i * n + j].role; return role === 'sole' ? SOLE : role === 'tip' ? TIP : MIN + 0.01 - Math.min(0.01, drop(i, j)); }
   const place = (i, j) => { const r = rays[i * n + j]; hair.verts[ids[i][j]] = add(C, mul(r.d, r.r0 + T[i][j] * k)); };
   for (let i = 1; i < R - 1; i++) for (let j = 1; j < n - 1; j++) place(i, j);
@@ -97,6 +99,7 @@ export function solve({ sweeps = 30, fresh = false, log = true } = {}) {
   for (let s = 0, step = 0.06; s < sweeps; s++) {
     let moved = 0;
     for (let i = 1; i < R - 1; i++) for (let j = 1; j < n - 1; j++) {
+      if (fixed(i, j)) continue;
       for (const dt of [step, -step]) {
         const old = T[i][j], nt = Math.max(least(i, j), old + dt);
         if (nt === old) continue;
