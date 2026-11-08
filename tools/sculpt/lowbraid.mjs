@@ -11,13 +11,13 @@
 //   node tools/sculpt/lowbraid.mjs [--hull] [--who female,male]   # counts, checks and the outline difference per view
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { buildRig, add, sub, mul, dot, cross, unit, lerp } from './lowrig.mjs';
+import { buildRig, add, sub, mul, dot, cross, unit, lerp, posed, skin } from './lowrig.mjs';
 import { project, raster, skullTable, centreOf, dirOf, angOf } from './lowhairhull.mjs';
-import { shadeOf, openEdges, crossings } from './lowhair.mjs';
+import { shadeOf, openEdges, crossings, skinHair } from './lowhair.mjs';
 import BRAID from './hairs/braid.mjs';
 import { BRAID_VIEWS as VIEWS, BRAID_SPAN as SPAN } from './lowbraidcams.mjs';
 import { addCrown, skullMap, thickMap, composeLines } from './lowbraidcrown.mjs';
-import { addBraid } from './lowbraidbraid.mjs';
+import { addBraid, addCrownBraids } from './lowbraidbraid.mjs';
 import { dirOfMap } from './lowbraidlift.mjs';
 const SPINE = JSON.parse(readFileSync(new URL('./hairs/braid-spine.json', import.meta.url), 'utf8'));
 
@@ -244,6 +244,14 @@ export function buildBraid(rig, style = BRAID, H = carve(), { clear = true } = {
   if (!MAPS.has(B)) MAPS.set(B, skullMap(B, C));
   addCrown(style.crown, { V, poly: (v, sh) => polys.push({ v, piece: pieces.length, ...sh }), piece, skull: MAPS.get(B), thick: MAPS.get(H), C, k, face: faceShare });
 
+  // the crown's two braids down the back (tools/sculpt/lowbraidbraid.mjs addCrownBraids): along the seam from a point on
+  // the part through the chevrons' tips to its end
+  if (style.crownBraids) {
+    const { lines: CL, seam: SM } = composeLines(style.crown), cb = style.crownBraids, P = CL.part, x = cb.start * (P.length - 1);
+    const path = [P[Math.floor(x)], ...SM];
+    const surf = (m, lift) => { const d = dirOfMap(m); return add(C, mul(d, MAPS.get(B).at(m) + (Math.max(0.05, MAPS.get(H).at(m)) + lift) * k)); };
+    addCrownBraids(cb, path, { V, poly: (v, sh) => polys.push({ v, piece: pieces.length, ...sh }), piece, surf, k });
+  }
   // the braid (tools/sculpt/lowbraidbraid.mjs): its root on the crown's seam end, on this body
   const seamEnd = composeLines(style.crown).seam.at(-1), dR = dirOfMap(seamEnd), skR = MAPS.get(B).at(seamEnd);
   if (!MAPS.has(rig.B.verts)) {
@@ -300,7 +308,7 @@ export function buildBraid(rig, style = BRAID, H = carve(), { clear = true } = {
   // the crown and the strands clear of the face and the neck: a face of theirs through the face's skin (in front of the
   // temples, below the forehead's hairline, or an ear) or the neck's has its corners moved out from the skull's centre a little at a time
   const notFace = B.polys.map((p, i) => i).filter((i) => { const p = B.polys[i]; if (p.part !== 'head') return p.part !== 'neck' && p.part !== 'torso'; if (p.ear) return false; const c = p.v.reduce((a, v) => add(a, mul(B.verts[v], 1 / p.v.length)), [0, 0, 0]); return !isFace(c); });
-  for (let it = 0; clear && it < 40; it++) {
+  for (let it = 0; clear && it < 90; it++) {
     const hits = crossings(rig, { verts, polys, tris, scalp: notFace }, B.verts, verts).hits.filter(([hp]) => pieces[polys[hp].piece].kind === 'clump' || pieces[polys[hp].piece].kind === 'strand');
     if (!hits.length) break;
     for (const v of new Set(hits.flatMap(([hp]) => polys[hp].v))) verts[v] = add(verts[v], mul(unit(sub(verts[v], C)), 0.005 * k));
@@ -387,7 +395,7 @@ function orient(verts, polys, pieces) {
 export function weightOf(s, kind) {
   if (kind === 'clump' || kind === 'strand') return [['head', 1]];
   const ramp = (x, a, b) => Math.min(1, Math.max(0, (x - a) / (b - a)));
-  const h = 1 - ramp(s, 0.08, 0.3), n2 = ramp(s, 0.08, 0.3) * (1 - ramp(s, 0.3, 0.48)), n1 = ramp(s, 0.3, 0.48) * (1 - ramp(s, 0.48, 0.66)), ch = ramp(s, 0.48, 0.66);
+  const h = 1 - ramp(s, 0.2, 0.38), n2 = ramp(s, 0.2, 0.38) * (1 - ramp(s, 0.38, 0.54)), n1 = ramp(s, 0.38, 0.54) * (1 - ramp(s, 0.54, 0.7)), ch = ramp(s, 0.54, 0.7);
   return [['head', h], ['neck_02', n2], ['neck_01', n1], ['spine_03', ch * 0.6], ['clavicle_r', ch * 0.4]].filter(([, w]) => w > 1e-4);
 }
 
@@ -404,6 +412,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const rig = who === 'female' ? H.rig : buildRig(who), hair = buildBraid(rig, BRAID, H);
     const rest = crossReport(rig, hair);
     console.log(who, 'tris', hair.tris.length, 'pieces', hair.pieces.length, hair.pieces.map((p) => `${p.id}:${p.polys[1] - p.polys[0]}`).join(' '), 'open edges', openEdges(hair), 'crossings at rest', JSON.stringify(rest));
+    // the head turned 70 degrees each way and nodded 40 (tools/sculpt/lowhairshot.mjs's poses)
+    const POSES = { 'turn left': { neck_01: [0, 16, 0], neck_02: [0, 16, 0], head: [0, 38, 0] }, 'turn right': { neck_01: [0, -16, 0], neck_02: [0, -16, 0], head: [0, -38, 0] }, nod: { neck_01: [12, 0, 0], neck_02: [14, 0, 0], head: [14, 0, 0] } };
+    console.log(who, 'crossings posed', Object.entries(POSES).map(([n, pose]) => { const f = posed(rig, pose); const r = crossReport(rig, hair, skin(rig, f), skinHair(rig, hair, f)); return `${n} ${JSON.stringify({ face: r.face, neck: r.neck, torso: r.torso, ...r.byPiece })}`; }).join('; '));
     if (who === 'female') console.log('outline difference (sheet px):', Object.entries(outlineDiff(hair.tris.map(([a, b, c]) => [hair.verts[a], hair.verts[b], hair.verts[c]]), bodyTris(rig.B))).map(([v, d]) => `${v} ${d.px}`).join(', '));
   }
 }

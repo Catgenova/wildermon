@@ -46,7 +46,53 @@ export function triangulate(FROM = 215, TO = 395, STEP = 10) {
 /** A heart's outline, across (u, her right to her left as seen from the front: -0.5 to 0.5) and down (v: 0 its top, 1 its
  * point): the notch, the right lobe, its side, the point, the left. */
 const OUTLINE = [[0, 0.13], [0.24, -0.02], [0.47, 0.18], [0.43, 0.48], [0.22, 0.8], [0, 1], [-0.22, 0.8], [-0.43, 0.48], [-0.47, 0.18], [-0.24, -0.02]];
-const DEPTH = 0.42, INSIDE = 5, BEND = 60, HOME = 6;
+const DEPTH = 0.5, INSIDE = 5, BEND = 60, HOME = 6;
+
+/** One heart: centred at c, across U, down T, its face out N, H long and Wd wide (DEPTH of that deep); each vertex's
+ * share down the braid s. */
+export function heartAt(V, poly, c, U, T, N, H, Wd, s) {
+  const D = Wd * DEPTH, pt = (u, v, w) => add(c, add(add(mul(U, u * Wd), mul(T, (v - 0.5) * H)), mul(N, w * D)));
+  const rim = OUTLINE.map(([u, v]) => V(pt(u, v, 0.2), s)), side = OUTLINE.map(([u, v]) => V(pt(u * 0.92, 0.05 + v * 0.92, -0.45), s));
+  const Lp = V(pt(-0.23, 0.33, 1), s), Rp = V(pt(0.23, 0.33, 1), s), Cn = V(pt(0, 0.2, 0.62), s), Cm = V(pt(0, 0.62, 0.86), s), Bc = V(pt(0, 0.45, -0.95), s);
+  const [o0, o1, o2, o3, o4, o5, o6, o7, o8, o9] = rim;
+  // the face: each lobe a fan round its peak, the crease down the middle from the notch to the point (darker)
+  for (const t of [[o0, o1, Rp], [o1, o2, Rp], [o2, o3, Rp], [o3, o4, Rp], [o4, Cm, Rp], [o0, o9, Lp], [o9, o8, Lp], [o8, o7, Lp], [o7, o6, Lp], [o6, Cm, Lp]]) poly(t, {});
+  for (const t of [[o0, Rp, Cn], [Cn, Rp, Cm], [o0, Cn, Lp], [Cn, Cm, Lp], [o4, o5, Cm], [o5, o6, Cm]]) poly(t, { valley: 3 });
+  // the side, and the back a fan
+  for (let j = 0; j < 10; j++) { const a = rim[j], b = rim[(j + 1) % 10], c2 = side[(j + 1) % 10], d = side[j]; poly([a, b, c2, d], j === 0 || j === 9 ? { valley: 2 } : {}); }
+  for (let j = 0; j < 10; j++) poly([side[j], side[(j + 1) % 10], Bc], { valley: 2 });
+}
+
+/**
+ * The crown's two narrow braids (the user's addition: down the back of the head from near the crown to the side braid's
+ * root, one each side of the seam): each along the seam's path (map degrees: from a point on the part through the
+ * chevrons' tips to the seam's end) offset `apart` degrees to its side, closing to the seam's end, a chain of `n` small
+ * hearts lying on the crown, their backs just over its outer surface (surf(m, lift): this body's point over the map
+ * point m, `lift` head units past the hull), each tucked under the one above, the last under the side braid's first.
+ * Each heart its own piece, on the head.
+ */
+export function addCrownBraids(cb, path, ctx) {
+  const { V, poly, piece, surf, k } = ctx;
+  const L = [0]; for (let i = 1; i < path.length; i++) L.push(L[i - 1] + Math.hypot(path[i][0] - path[i - 1][0], path[i][1] - path[i - 1][1]));
+  const along = (f) => { const w = f * L[L.length - 1]; let i = 1; while (i < L.length - 1 && L[i] < w) i++; const g = (w - L[i - 1]) / Math.max(1e-9, L[i] - L[i - 1]); return [path[i - 1][0] + (path[i][0] - path[i - 1][0]) * g, path[i - 1][1] + (path[i][1] - path[i - 1][1]) * g]; };
+  for (const [side, name] of [[1, 'L'], [-1, 'R']]) {
+    // the map path offset to its side (her left +: west on the map), the offset closing over the last CLOSE of the way
+    const at = (f) => {
+      const p = along(f), q = along(Math.min(1, f + 0.01)), o = along(Math.max(0, f - 0.01)), t = [q[0] - o[0], q[1] - o[1]], l = Math.hypot(...t) || 1;
+      const off = cb.apart * Math.min(1, (1 - f) / cb.close), nrm = [t[1] / l, -t[0] / l];
+      // (square to the path, to its right as it runs: west where it runs south over the crown, her left)
+      return [p[0] + side * nrm[0] * off, p[1] + side * nrm[1] * off];
+    };
+    for (let i = 0; i < cb.n; i++) piece(`crown${name}${i + 1}`, 'clump', () => {
+      const f0 = cb.from + ((cb.to - cb.from) * i) / cb.n, f1 = cb.from + ((cb.to - cb.from) * (i + 1)) / cb.n, fm = (f0 + f1) / 2;
+      const w = cb.w * (1 - cb.taper * fm) * k, D = w * DEPTH * 0.8;
+      const top = surf(at(f0), 0), bot = surf(at(f1), 0), mid = surf(at(fm), 0), out = unit(sub(surf(at(fm), 0.1), mid));
+      const T = unit(sub(sub(bot, top), mul(out, dot(sub(bot, top), out)))), U = cross(out, T);
+      const H = Math.hypot(...sub(bot, top)) * cb.stretch;
+      heartAt(V, poly, add(mid, mul(out, D * 0.95 + cb.lift * k)), U, T, out, H, w, 0);
+    });
+  }
+}
 
 /**
  * The braid added to a mesh being built. ctx: { V(p, s), poly(v, shade), piece(id, kind, fn), toBody(q) (her body's
@@ -66,8 +112,9 @@ export function addBraid(br, spine, ctx) {
       let c = 0;
       for (const [top, bot, w] of parts) {
         const mid = (top + bot) / 2, { N, U, T } = frame(mid), cc = at(mid), H = Math.hypot(...sub(at(bot), at(top))) * br.stretch, Wd = scale(w);
-        for (const [u, v] of [...OUTLINE, [0, 0.45], [0, 0.25], [0, 0.7]]) for (const ww of [-1.15, -0.5, 0, 1]) if (ctx.inside(add(cc, add(add(mul(U, u * Wd), mul(T, (v - 0.5) * H)), mul(N, ww * Wd * DEPTH))))) c += INSIDE;
+        for (const [u, v] of [...OUTLINE, ...[-0.3, 0, 0.3].flatMap((uu) => [0.2, 0.45, 0.7].map((vv) => [uu, vv]))]) for (const ww of [-1.15, -0.5, 0, 1]) if (ctx.inside(add(cc, add(add(mul(U, u * Wd), mul(T, (v - 0.5) * H)), mul(N, ww * Wd * DEPTH))))) c += INSIDE;
       }
+      for (const y of [br.tip[1], br.tip[1] - 8]) if (ctx.inside(at(y))) c += 4 * INSIDE;
       for (let i = 1; i + 1 < P.length; i++) c += BEND * sub(add(P[i - 1], P[i + 1]), mul(P[i], 2)).reduce((a2, x) => a2 + x * x, 0);
       P.forEach((p, i) => { c += HOME * sub(p, P0[i]).reduce((a2, x) => a2 + x * x, 0); });
       return c;
@@ -75,7 +122,7 @@ export function addBraid(br, spine, ctx) {
     let best = cost(); const c0 = best;
     for (const st of [0.1, 0.05, 0.025, 0.012]) for (let r = 0; r < 8; r++) for (let i = 0; i < P.length; i++) {
       const { N, U } = frame(rows[i]);
-      for (const d of [N, U]) for (const sg of [1, -1]) {
+      for (const d of [N, mul(U, 0.5)]) for (const sg of [1, -1]) {
         // (the point and its neighbours, by a bell three rows wide either side)
         const was = P.map((p) => p);
         for (let j = 0; j < P.length; j++) { const g = Math.exp(-(((j - i) / 2) ** 2)); if (g > 0.05) P[j] = add(P[j], mul(d, sg * st * k * g)); }
@@ -102,18 +149,8 @@ export function addBraid(br, spine, ctx) {
   const scale = (px) => (px / ctx.sheetScale) * k;
   if (ctx.inside) settle();
   br.hearts.forEach(([top, bot, wpx], hi) => piece(`heart${hi + 1}`, 'braid', () => {
-    const mid = (top + bot) / 2, { T, N, U } = frame(mid), c = at(mid), H = Math.hypot(...sub(at(bot), at(top))) * br.stretch, Wd = scale(wpx), D = Wd * DEPTH;
-    const pt = (u, v, w) => add(c, add(add(mul(U, u * Wd), mul(T, (v - 0.5) * H)), mul(N, w * D)));
-    const s = share(mid);
-    const rim = OUTLINE.map(([u, v]) => V(pt(u, v, 0.2), s)), side = OUTLINE.map(([u, v]) => V(pt(u * 0.92, 0.05 + v * 0.92, -0.45), s));
-    const Lp = V(pt(-0.23, 0.33, 1), s), Rp = V(pt(0.23, 0.33, 1), s), Cn = V(pt(0, 0.2, 0.62), s), Cm = V(pt(0, 0.62, 0.86), s), Bc = V(pt(0, 0.45, -0.95), s);
-    const [o0, o1, o2, o3, o4, o5, o6, o7, o8, o9] = rim;
-    // the face: each lobe a fan round its peak, the crease down the middle from the notch to the point (darker)
-    for (const t of [[o0, o1, Rp], [o1, o2, Rp], [o2, o3, Rp], [o3, o4, Rp], [o4, Cm, Rp], [o0, o9, Lp], [o9, o8, Lp], [o8, o7, Lp], [o7, o6, Lp], [o6, Cm, Lp]]) poly(t, {});
-    for (const t of [[o0, Rp, Cn], [Cn, Rp, Cm], [o0, Cn, Lp], [Cn, Cm, Lp], [o4, o5, Cm], [o5, o6, Cm]]) poly(t, { valley: 3 });
-    // the side, and the back a fan
-    for (let j = 0; j < 10; j++) { const a = rim[j], b = rim[(j + 1) % 10], c2 = side[(j + 1) % 10], d = side[j]; poly([a, b, c2, d], j === 0 || j === 9 ? { valley: 2 } : {}); }
-    for (let j = 0; j < 10; j++) poly([side[j], side[(j + 1) % 10], Bc], { valley: 2 });
+    const mid = (top + bot) / 2, { T, N, U } = frame(mid), H = Math.hypot(...sub(at(bot), at(top))) * br.stretch;
+    heartAt(V, poly, at(mid), U, T, N, H, scale(wpx), share(mid));
   }));
   // the tie: a hexagonal band; the tip: a six-sided point from under the tie
   const ring = (y, w, d, n = 6, twist = 0) => { const { N, U } = frame(y), c = at(y); return Array.from({ length: n }, (_, j) => { const a = ((j / n) * 360 + twist) * Math.PI / 180; return V(add(c, add(mul(U, Math.cos(a) * scale(w) / 2), mul(N, Math.sin(a) * scale(d) / 2))), share(y)); }); };

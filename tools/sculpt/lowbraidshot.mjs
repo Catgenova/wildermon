@@ -83,7 +83,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     // greens; the tie, the tip and the strands their own), see-through, the body hiding what is behind it
     const rig = RIGS[w], hair = HAIRS[w], cells = [], imgs = [], K = 1.35, cw2 = 360, ch2 = 470;
     const PAL = { R: [[1, 0.45, 0.35], [1, 0.75, 0.3], [1, 0.4, 0.75], [0.95, 0.95, 0.35], [1, 0.6, 0.5], [0.85, 0.5, 1]], L: [[0.3, 0.7, 1], [0.35, 1, 0.75], [0.6, 0.55, 1], [0.3, 1, 1], [0.5, 0.85, 0.5], [0.4, 0.5, 0.95]], heart: [[0.4, 1, 0.4], [0.2, 0.75, 0.3], [0.6, 1, 0.5], [0.3, 0.9, 0.6]] };
-    const colOf = (id) => { const m = id.match(/^(R|L|heart)(\d+)$/); return m ? PAL[m[1]][(+m[2] - 1) % PAL[m[1]].length] : id === 'tie' ? [1, 1, 1] : id === 'tip' ? [0.2, 0.5, 0.25] : [1, 0.85, 0.6]; };
+    const colOf = (id) => { if (/^crownL/.test(id)) return +id.slice(6) % 2 ? [1, 1, 1] : [0.75, 0.75, 0.8]; if (/^crownR/.test(id)) return +id.slice(6) % 2 ? [0.15, 0.15, 0.2] : [0.4, 0.4, 0.45]; const m = id.match(/^(R|L|heart)(\d+)$/); return m ? PAL[m[1]][(+m[2] - 1) % PAL[m[1]].length] : id === 'tie' ? [1, 1, 1] : id === 'tip' ? [0.2, 0.5, 0.25] : [1, 0.85, 0.6]; };
     const col = hair.polys.map((p) => colOf(hair.pieces[p.piece].id));
     LABELS.forEach(([v, label], i) => {
       const c = C[v], x = 10 + i * (cw2 + gap), cy = c.cy + 45, crop = [c.cx - cw2 / K / 2, cy - ch2 / K / 2, cw2 / K, ch2 / K], wv = warpOf(c);

@@ -138,11 +138,14 @@ export const SEC = [[0.02, 'root'], [0, GROOVE], [0.32, 0.9], [0.62, 1], [1, GRO
  * 5 to 12), the front a point, the back capped. ctx: { V(p, role), poly(v, shade), piece(id, kind, fn), skull, thick,
  * C, k, face(p) (0 the scalp, 1 the face: the roots stand on the skin there) }.
  */
-const STATION = 16, OVER = 6, SINK = 0.035, MIN_T = 0.05;
+const STATION = 16, OVER = 6, BROW = 0.14, SINK = 0.035, MIN_T = 0.05;
 export function addCrown(crown, ctx, lines = composeLines(crown).lines) {
   const { V, poly, piece, skull, thick, C, k, face } = ctx;
   const at = (m, h) => {
-    const d = dirOfMap(m), r0 = skull.at(m), t = Math.max(MIN_T, thick.at(m)) * k;
+    // (over the forehead no thicker than BROW: the sheet's hair meets the brow thin, and her forehead is further back
+    // than the sheet's, which left the hull standing off it there)
+    const brow = m[1] <= 35 ? Infinity : BROW + (35 - Math.min(60, m[1])) * -0 + (m[1] < 60 ? ((60 - m[1]) / 25) * 0.4 : 0);
+    const d = dirOfMap(m), r0 = skull.at(m), t = Math.max(MIN_T, Math.min(brow, thick.at(m))) * k;
     if (h === 'root') { const p = add(C, mul(d, r0)); return add(C, mul(d, r0 + (face(p) > 0.5 ? 0.012 * k : -SINK * k))); }
     return add(C, mul(d, r0 + h * t));
   };
