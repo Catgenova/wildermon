@@ -42,6 +42,8 @@ import MALE_TROUSERS from './assets/lowtrousers-male.json';
 import FEMALE_TROUSERS from './assets/lowtrousers-female.json';
 import MALE_BOOTS from './assets/lowboots-male.json';
 import FEMALE_BOOTS from './assets/lowboots-female.json';
+import MALE_LEATHER_BOOTS from './assets/lowleatherboots-male.json';
+import FEMALE_LEATHER_BOOTS from './assets/lowleatherboots-female.json';
 import MALE_TUNIC from './assets/lowtunic-male.json';
 import FEMALE_TUNIC from './assets/lowtunic-female.json';
 import MALE_HOOD from './assets/lowhood-male.json';
@@ -549,8 +551,10 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
  */
 const wearsShawl = (pose: FigurePose): boolean => pose.outfit?.shawl ?? true;
 const wearsTrousers = (pose: FigurePose): boolean => pose.outfit?.trousers ?? true;
-/** Whether a figure wears the boots (the body stands on their soles while it does). */
-const wearsBoots = (pose: FigurePose): boolean => pose.outfit?.boots ?? true;
+/** Whether a figure wears the leather set's boots (`tools/sculpt/garments/leatherboots.mjs`; the body stood on their soles): off unless asked for. */
+const wearsLeatherBoots = (pose: FigurePose): boolean => pose.outfit?.leatherBoots ?? false;
+/** Whether a figure wears the boots (the body stands on their soles while it does): not under the leather boots. */
+const wearsBoots = (pose: FigurePose): boolean => (pose.outfit?.boots ?? true) && !wearsLeatherBoots(pose);
 /** Whether a figure wears the tunic (under the shawl, over the trousers). */
 const wearsTunic = (pose: FigurePose): boolean => pose.outfit?.tunic ?? true;
 /** Whether a figure has the hood up: down unless asked for, and only with the shawl (it rises out of the shawl's cowl). */
@@ -577,6 +581,7 @@ const GARMENTS: ReadonlyArray<{ man: GarmentAsset; woman: GarmentAsset; wears: (
   { man: MALE_BOOTS as unknown as GarmentAsset, woman: FEMALE_BOOTS as unknown as GarmentAsset, wears: wearsBoots },
   { man: MALE_TUNIC as unknown as GarmentAsset, woman: FEMALE_TUNIC as unknown as GarmentAsset, wears: wearsTunic },
   { man: MALE_HOOD as unknown as GarmentAsset, woman: FEMALE_HOOD as unknown as GarmentAsset, wears: wearsHood },
+  { man: MALE_LEATHER_BOOTS as unknown as GarmentAsset, woman: FEMALE_LEATHER_BOOTS as unknown as GarmentAsset, wears: wearsLeatherBoots, enchanted: enchantedOf('leatherBoots') },
 ];
 
 const BODIES = {

@@ -40,25 +40,25 @@
 // is the floor less the sole and `gap`.
 import { meshOf, orient, trisOf, transferWeights, samplesOf, crossPairs, sub, add, mul, dot, cross, unit, lerp } from '../lowgarment.mjs';
 
-/** sRGB 0..255 to 0..1. */
-const C = (r, g, b) => [r / 255, g / 255, b / 255];
 /**
- * The materials, shared by the leather set's pieces (the same names and colours: the game shares the slots): the dark
- * brown, the leather, the light leather, the trim tan, and the rune (the lacing and the cuff's V: trim when plain, the
- * glow when enchanted). The sheet's swatches until the chest's measured values are relayed.
+ * The materials, shared by the leather set's pieces (the same names and colours as tools/sculpt/garments/leatherchest.mjs,
+ * so the game shares the slots): dark (insides only: the sole's underside, the cuff's lip), leather, light leather, the
+ * trim tan, the rune (the lacing, the cuff's V and its rim: the trim's colour plain, glowing enchanted) and the glow.
  */
 export const MATS = {
-  dark: C(81, 47, 44),
-  leather: C(112, 60, 43),
-  light: C(148, 81, 54),
-  trim: C(222, 132, 79),
-  rune: C(222, 132, 79),
+  dark: [0.29, 0.157, 0.129],
+  leather: [0.416, 0.224, 0.176],
+  light: [0.533, 0.286, 0.22],
+  trim: [0.91, 0.518, 0.282],
+  rune: [0.91, 0.518, 0.282],
+  glow: [0.996, 0.792, 0.427],
 };
-export const GLOW = C(254, 202, 109);
-/** The boots plain and enchanted (lowgarment.mjs garmentAsset `looks`): enchanted, the rune unlit at the glow. */
+/** How the set's leather is lit: 2, by the light's brightness only (kind 0, cloth, turned its shadows red-black in the game). */
+const KIND = 2;
+/** The boots plain and enchanted (lowgarment.mjs garmentAsset `looks`): plain every material lit (KIND), the rune the trim's colour; enchanted the rune unlit at the glow (kind 1). */
 export const LOOKS = {
-  plain: Object.fromEntries(Object.entries(MATS).map(([n, c]) => [n, { c, kind: 0 }])),
-  enchanted: { ...Object.fromEntries(Object.entries(MATS).map(([n, c]) => [n, { c, kind: 0 }])), rune: { c: GLOW, kind: 1 } },
+  plain: Object.fromEntries(Object.entries(MATS).map(([n, c]) => [n, n === 'glow' ? { c, kind: 1 } : { c, kind: KIND }])),
+  enchanted: { ...Object.fromEntries(Object.entries(MATS).map(([n, c]) => [n, n === 'glow' ? { c, kind: 1 } : { c, kind: KIND }])), rune: { c: MATS.glow, kind: 1 } },
 };
 
 /** The design's columns (its per-column lists are given at these angles round the leg)... */
@@ -119,19 +119,19 @@ export const DESIGN = {
     wall: [0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22],
     lean: [0.03, 0.03, 0.03, 0.02, 0.02, 0.02, 0.02, 0.02, 0.03, 0.03],
     dome: [0.14, 0.1, 0.03, 0, 0, 0, 0, 0, 0.03, 0.1],
-    top: [0.5, 0.48, 0.5, 0.56, 0.52, 0.5, 0.52, 0.56, 0.5, 0.48],
+    top: [0.5, 0.48, 0.5, 0.52, 0.46, 0.44, 0.46, 0.52, 0.5, 0.48],
     shrink: [0.08, 0.07, 0.05, 0.02, 0.02, 0.02, 0.02, 0.02, 0.05, 0.07],
     mix: [0, 0.05, 0.3, 0.8, 1, 1, 1, 0.8, 0.3, 0.05],
     clear: 0.1, over: 0.035, win: 0.3, fill: [0.02, 0, 0, 0, 0.02, 0.03, 0.02, 0, 0, 0],
-    cap: { du: [0.66, 0.56, 0.16, null, null, null, null, null, 0.16, 0.56], h: [0.54, 0.53, 0.56, 0, 0, 0, 0, 0, 0.56, 0.53], in: [0.1, 0.08, 0.06, 0, 0, 0, 0, 0, 0.06, 0.08], t: 0.3, lip: 0.03, seam: 0.12, sink: 0.04 },
+    cap: { du: [0.52, 0.44, 0.1, null, null, null, null, null, 0.1, 0.44], h: [0.53, 0.52, 0.54, 0, 0, 0, 0, 0, 0.54, 0.52], in: [0.1, 0.08, 0.06, 0, 0, 0, 0, 0, 0.06, 0.08], t: 0.3, lip: 0.03, seam: 0.12, sink: 0.04 },
     tall: 2.0,
     h: {
-      strap: [0.27, 0.265, 0.25, 0.23, 0.215, 0.21, 0.215, 0.23, 0.25, 0.265],
+      strap: [0.27, 0.265, 0.26, 0.26, 0.26, 0.26, 0.26, 0.26, 0.26, 0.265],
       band: [0.6, 0.63, 0.67, 0.68, 0.65, 0.61, 0.65, 0.68, 0.67, 0.63],
       bandTop: [0.8, 0.8, 0.78, 0.77, 0.74, 0.71, 0.74, 0.77, 0.78, 0.8],
       cuffLo: [0.67, 0.72, 0.77, 0.79, 0.81, 0.82, 0.81, 0.79, 0.77, 0.72],
       cuffTop: [0.91, 0.95, 0.96, 0.98, 1, 1.01, 1, 0.98, 0.96, 0.95],
-      flare: [0.25, 0.23, 0.24, 0.22, 0.2, 0.2, 0.17, 0.16, 0.17, 0.21],
+      flare: [0.25, 0.23, 0.24, 0.22, 0.2, 0.18, 0.12, 0.1, 0.12, 0.2],
     },
     strap: { w: 0.17, trim: 0.035, out: 0.08 },
     band: { out: 0.06, trim: 0.03 },
@@ -150,23 +150,23 @@ export const DESIGN = {
     wall: [0.19, 0.19, 0.19, 0.19, 0.19, 0.19, 0.19, 0.19, 0.19, 0.19],
     lean: [0.02, 0.02, 0.03, 0.02, 0.02, 0.02, 0.02, 0.02, 0.03, 0.02],
     dome: [0.18, 0.13, 0.03, 0, 0, 0, 0, 0, 0.03, 0.13],
-    top: [0.44, 0.42, 0.44, 0.52, 0.48, 0.46, 0.48, 0.52, 0.44, 0.42],
+    top: [0.44, 0.42, 0.44, 0.48, 0.42, 0.4, 0.42, 0.48, 0.44, 0.42],
     shrink: [0.07, 0.06, 0.04, 0.02, 0.02, 0.02, 0.02, 0.02, 0.04, 0.06],
     mix: [0, 0.05, 0.3, 0.8, 1, 1, 1, 0.8, 0.3, 0.05],
     clear: 0.09, over: 0.03, win: 0.3, fill: [0.01, 0, 0, 0, 0.01, 0.02, 0.01, 0, 0, 0],
-    cap: { du: [0.62, 0.52, 0.1, null, null, null, null, null, 0.1, 0.52], h: [0.48, 0.47, 0.5, 0, 0, 0, 0, 0, 0.5, 0.47], in: [0.09, 0.09, 0.08, 0, 0, 0, 0, 0, 0.08, 0.09], t: 0.3, lip: 0.025, seam: 0.14, sink: 0.03 },
+    cap: { du: [0.5, 0.42, 0.06, null, null, null, null, null, 0.06, 0.42], h: [0.47, 0.46, 0.48, 0, 0, 0, 0, 0, 0.48, 0.46], in: [0.09, 0.09, 0.08, 0, 0, 0, 0, 0, 0.08, 0.09], t: 0.3, lip: 0.025, seam: 0.14, sink: 0.03 },
     tall: 2.0,
     h: {
-      strap: [0.27, 0.265, 0.25, 0.23, 0.215, 0.21, 0.215, 0.23, 0.25, 0.265],
+      strap: [0.27, 0.265, 0.26, 0.26, 0.26, 0.26, 0.26, 0.26, 0.26, 0.265],
       band: [0.6, 0.63, 0.67, 0.68, 0.65, 0.61, 0.65, 0.68, 0.67, 0.63],
       bandTop: [0.8, 0.8, 0.78, 0.77, 0.74, 0.71, 0.74, 0.77, 0.78, 0.8],
       cuffLo: [0.67, 0.72, 0.77, 0.79, 0.81, 0.82, 0.81, 0.79, 0.77, 0.72],
       cuffTop: [0.91, 0.95, 0.96, 0.98, 1, 1.01, 1, 0.98, 0.96, 0.95],
-      flare: [0.21, 0.19, 0.2, 0.19, 0.17, 0.17, 0.14, 0.13, 0.14, 0.18],
+      flare: [0.21, 0.19, 0.2, 0.19, 0.17, 0.15, 0.06, 0.02, 0.04, 0.14],
     },
     strap: { w: 0.15, trim: 0.03, out: 0.065 },
     band: { out: 0.05, trim: 0.028 },
-    cuff: { out: 0.07, trim: 0.028, rim: 0.03, lip: 0.11, gap: 0.5 },
+    cuff: { out: 0.07, trim: 0.028, rim: 0.03, lip: 0.11, gap: 0.5, inner: 0.4 },
     mid: 0.5,
     lace: { a: 22, tongue: 0.6, rows: 4, lo: 0.39, hi: 0.575, w: 0.055, h: 0.022, base: 0.016, lift: 0.03 },
     eyelet: { r: 0.04, h: 0.026 },
@@ -307,6 +307,11 @@ export function buildLeatherBoots(rig, design = DESIGN[rig.who], { under = [], p
     put('a2', each((k) => onUpper(k, sHi(k) - D.strap.trim * H, D.strap.out)));
     put('a3', each((k) => onUpper(k, sHi(k), D.strap.out)));
     put('a4', each((k) => onUpper(k, sHi(k) + 0.012)));
+    // (the shaft from where the upper meets it, or just over the strap: rigid on the shin from here up, so the lacing
+    // and everything above ride the shin whole)
+    put('j1', each((k) => onUpper(k, Math.max(yJ(k), sHi(k) + 0.05))));
+    // (how far up the instep's slope a height is: 0 at its foot, 1 where it meets the shaft; the weights blend by it)
+    const slopeT = (k, y) => { if (y >= yJ(k)) return 1; const a = cap[k] ?? r4p(k); return Math.max(0, Math.min(1, (y - a[1]) / (J[k][1] - a[1]))); };
     // the toe cap's back edge on the other columns and the seam: on the way from r4 to the strap's foot, stood out or
     // sunk toward the leg
     const between = (k, t, up, sink) => {
@@ -322,19 +327,21 @@ export function buildLeatherBoots(rig, design = DESIGN[rig.who], { under = [], p
     const bTop = (k) => Math.min(hy('bandTop', k), cLo(k) - 0.025);
     const bBack = (k) => Math.max(0, Math.min(1, (hy('bandTop', k) - cLo(k)) > 0 ? 0 : (cLo(k) - hy('bandTop', k)) / 0.12));
     put('g1', each((k) => onUpper(k, sHi(k) + (bLo(k) - sHi(k)) * D.mid)));
+    // (the band's and the cuff's thickness and flare less on the inner side by `inner`, where they pass the other leg's)
+    const inn = (k) => 1 - (1 - (D.cuff.inner ?? 1)) * Math.max(0, -Math.sin(ANG[k] * Math.PI / 180));
     put('b0', each((k) => onShaft(k, bLo(k))));
-    put('b1', each((k) => onShaft(k, bLo(k) + D.band.trim * H, D.band.out)));
-    put('b2', each((k) => onShaft(k, bTop(k), D.band.out)));
-    put('b3', each((k) => onShaft(k, bTop(k) + 0.012, D.band.out * (1 - bBack(k)))));
-    const cIn = (k) => D.band.out * (1 - bBack(k));
+    put('b1', each((k) => onShaft(k, bLo(k) + D.band.trim * H, D.band.out * inn(k))));
+    put('b2', each((k) => onShaft(k, bTop(k), D.band.out * inn(k))));
+    put('b3', each((k) => onShaft(k, bTop(k) + 0.012, D.band.out * inn(k) * (1 - bBack(k)))));
+    const cIn = (k) => D.band.out * inn(k) * (1 - bBack(k));
     put('c0', each((k) => onShaft(k, cLo(k), cIn(k))));
-    put('c1', each((k) => onShaft(k, cLo(k) + D.cuff.trim * H, cIn(k) + D.cuff.out)));
-    put('c2', each((k) => onShaft(k, cTop(k) - D.cuff.rim * H, cIn(k) + D.cuff.out + D.h.flare[k] * 0.85)));
-    put('c3', each((k) => onShaft(k, cTop(k), cIn(k) + D.cuff.out + D.h.flare[k])));
+    put('c1', each((k) => onShaft(k, cLo(k) + D.cuff.trim * H, cIn(k) + D.cuff.out * inn(k))));
+    put('c2', each((k) => onShaft(k, cTop(k) - D.cuff.rim * H, cIn(k) + D.cuff.out * inn(k) + D.h.flare[k] * 0.85)));
+    put('c3', each((k) => onShaft(k, cTop(k), cIn(k) + D.cuff.out * inn(k) + D.h.flare[k])));
     put('c4', each((k) => onShaft(k, cTop(k) - 0.02, cIn(k) + D.h.flare[k] * 0.9)));
     put('c5', each((k) => { const y = cTop(k) - D.cuff.lip * H, c = axis(y), r = Math.max(reach(k, y) + D.clear * D.cuff.gap, SU.length ? reach(k, y, SU) + D.over * 0.5 : 0); return [c[0] + ang[k][0] * r, y, c[2] + ang[k][2] * r]; }));
     G.rings[side] = R; G.foot[side] = ft;
-    G.legOf[side] = { axis, ang, dirOf, onShaft, onUpper, sLo, sHi, bLo, bTop, cLo, cTop };
+    G.legOf[side] = { axis, ang, dirOf, onShaft, onUpper, slopeT, sLo, sHi, bLo, bTop, cLo, cTop };
     // the polygons
     const band = (A, Bq, mat, tag) => { G.tag = tag; for (let k = 0; k < K; k++) { const j = (k + 1) % K; G.poly([A[k], A[j], Bq[j], Bq[k]], typeof mat === 'function' ? mat(k) : mat, 'boot'); } };
     // the sole's underside: rungs across the foot between each column and its mirror (the toe's to the heel's), so the
@@ -351,13 +358,14 @@ export function buildLeatherBoots(rig, design = DESIGN[rig.who], { under = [], p
     band(R.r2, R.r3, 'leather', 'wall');
     band(R.r3, R.r4, 'leather', 'over');
     band(R.r4, R.r5, 'leather', 'cap');
-    band(R.r5, R.r6, 'dark', 'seam');
+    band(R.r5, R.r6, 'leather', 'seam');
     band(R.r6, R.a0, 'leather', 'instep');
     band(R.a0, R.a1, 'trim', 'strap foot');
     band(R.a1, R.a2, 'light', 'strap');
     band(R.a2, R.a3, 'trim', 'strap trim');
     band(R.a3, R.a4, 'trim', 'strap top');
-    band(R.a4, R.g1, 'leather', 'shaft');
+    band(R.a4, R.j1, 'leather', 'shaft');
+    band(R.j1, R.g1, 'leather', 'shaft');
     band(R.g1, R.b0, 'leather', 'shaft top');
     band(R.b0, R.b1, 'trim', 'band trim');
     band(R.b1, R.b2, 'light', 'band');
@@ -367,7 +375,7 @@ export function buildLeatherBoots(rig, design = DESIGN[rig.who], { under = [], p
     band(R.c1, R.c2, 'light', 'cuff');
     band(R.c2, R.c3, 'rune', 'rim');
     band(R.c3, R.c4, 'trim', 'rim top');
-    band(R.c4, R.c5, 'leather', 'lip');
+    band(R.c4, R.c5, 'dark', 'lip');
     G.soles.push(...R.r0);
   }
   B.polys.forEach((p, pi) => { if (hidden(p)) G.hides.push(pi); });
@@ -475,13 +483,13 @@ const SHAFT = ['shaft', 'shaft top', 'strap top', 'band trim', 'instep'];
 function lacingOf(G, D, side) {
   const Lc = D.lace, L = G.legOf[side], y0 = G.ground + Lc.lo * G.tall, y1 = G.ground + Lc.hi * G.tall;
   const ys = Array.from({ length: Lc.rows }, (_, i) => y0 + (y1 - y0) * i / (Lc.rows - 1));
-  // the tongue: the dark gap between the lacing's flaps, a flat panel ±`tongue` of the eyelets' angle round the front,
+  // the tongue: the gap between the lacing's flaps, a flat panel ±`tongue` of the eyelets' angle round the front,
   // from under the lowest row to over the highest, under the cords
   if (Lc.tongue) {
     G.tag = 'tongue';
     const n = 14, gs = [-1, -0.5, 0, 0.5, 1].map((x) => x * Lc.a * Lc.tongue), yy = Array.from({ length: n }, (_, i) => y0 - 0.04 + (y1 - y0 + 0.08) * i / (n - 1));
     const grid = yy.map((y) => gs.map((g) => { const p = surfAt(G, side, SHAFT, g, y); return { i: decalVert(G, side, add(p.q, mul(p.n, 0.003)), p.host), n: p.n }; }));
-    for (let i = 0; i + 1 < n; i++) for (let j = 0; j + 1 < gs.length; j++) facing(G, [grid[i][j].i, grid[i][j + 1].i, grid[i + 1][j + 1].i, grid[i + 1][j].i], 'dark', grid[i][j].n);
+    for (let i = 0; i + 1 < n; i++) for (let j = 0; j + 1 < gs.length; j++) facing(G, [grid[i][j].i, grid[i][j + 1].i, grid[i + 1][j + 1].i, grid[i + 1][j].i], 'leather', grid[i][j].n);
   }
   const sg = side === 'L' ? 1 : -1;
   for (let i = 0; i + 1 < ys.length; i++) {
@@ -519,7 +527,7 @@ function rivetOf(G, D, side, where, a, t) {
   const L = G.legOf[side], k = ANG.reduce((b, g, j) => (Math.abs(g - a) < Math.abs(ANG[b] - a) ? j : b), 0);
   const [lo, hi, tags] = where === 'strap' ? [L.sLo(k) + 0.02, L.sHi(k) - D.strap.trim * D.H, ['strap']] : where === 'band' ? [L.bLo(k) + D.band.trim * D.H, L.bTop(k), ['band']] : [L.cLo(k) + D.cuff.trim * D.H, L.cTop(k) - D.cuff.rim * D.H, ['cuff']];
   const p = surfAt(G, side, tags, a, lo + (hi - lo) * t);
-  if (p) dome(G, side, p, D.rivet.r, D.rivet.h, 'trim', 'rivet');
+  if (p) dome(G, side, p, D.rivet.r, D.rivet.h, 'trim', 'rivet', where === 'strap' ? 0.014 : 0.004);
 }
 /** The cuff's back badge: a small pointed shield (trim) on the cuff's back, its point down. */
 function badgeOf(G, D, side) {
@@ -549,7 +557,7 @@ export function leatherBootWeights(rig, G, o = {}) {
   const map = (n) => { if (/^(calf|foot|toes|ball)_(l|r)$/.test(n)) return n; const s = n.match(/_(l|r)$/)?.[1] ?? 'l'; return /^ankle/.test(n) ? `foot_${s}` : `calf_${s}`; };
   const vw = transferWeights(rig, G, { map, smooth: o.smooth ?? 2, keep: (i) => near[i], only: (i) => !G.decal?.has(i) });
   const at = new Map(rig.bones.map((b, i) => [b.name, i]));
-  const rigid = o.rigid ?? { r6: 0.1, a0: 0.4, a1: 0.4, a2: 0.5, a3: 0.5, a4: 0.6, g1: 1, b0: 1, b1: 1, b2: 1, b3: 1, c0: 1, c1: 1, c2: 1, c3: 1, c4: 1, c5: 1 };
+  const rigid = o.rigid ?? { r6: 0.1, j1: 1, g1: 1, b0: 1, b1: 1, b2: 1, b3: 1, c0: 1, c1: 1, c2: 1, c3: 1, c4: 1, c5: 1 };
   for (const side of ['L', 'R']) {
     const R = G.rings[side], calf = at.get(`calf_${side === 'L' ? 'l' : 'r'}`);
     for (const [key, f] of Object.entries(rigid)) for (const i of R[key] ?? []) {
@@ -559,15 +567,24 @@ export function leatherBootWeights(rig, G, o = {}) {
       const t = vw[i].reduce((a, [, w]) => a + w, 0); vw[i] = vw[i].map(([b, w]) => [b, w / t]);
     }
   }
+  // the strap (a0..a4) by how far up the instep's slope it lies: the foot's weights at the slope's foot (r4's), the shin's
+  // where it meets the shaft, so it rides the instep as it bends
+  for (const side of ['L', 'R']) {
+    const R = G.rings[side], calf = at.get(`calf_${side === 'L' ? 'l' : 'r'}`), Lg = G.legOf[side];
+    for (const key of ['a0', 'a1', 'a2', 'a3', 'a4']) R[key].forEach((i, k) => {
+      const t = Lg.slopeT(k, G.verts[i][1]) ** (o.strapPow ?? 1), acc = new Map(vw[R.r4[k]].map(([b, w]) => [b, w * (1 - t)]));
+      acc.set(calf, (acc.get(calf) ?? 0) + t);
+      vw[i] = [...acc].filter(([, w]) => w > 1e-4).sort((a, b) => b[1] - a[1]).slice(0, 4);
+      const tt = vw[i].reduce((a, [, w]) => a + w, 0); vw[i] = vw[i].map(([b, w]) => [b, w / tt]);
+    });
+  }
   // the toe cap a rigid piece: its back edge (r5) on its dome's bones (r4's), the seam behind it (r6) half on the foot
   for (const side of ['L', 'R']) {
     const R = G.rings[side], foot = at.get(`foot_${side === 'L' ? 'l' : 'r'}`);
     G.design.cap.du.forEach((du, k) => {
       if (du == null) return;
-      vw[R.r5[k]] = vw[R.r4[k]].map(([b, w]) => [b, w]);
-      const acc = new Map(vw[R.r4[k]].map(([b, w]) => [b, w * 0.5]));
-      acc.set(foot, (acc.get(foot) ?? 0) + 0.5);
-      vw[R.r6[k]] = [...acc].sort((a, b) => b[1] - a[1]).slice(0, 4);
+      const mixFoot = (f) => { const acc = new Map(vw[R.r4[k]].map(([b, w]) => [b, w * (1 - f)])); acc.set(foot, (acc.get(foot) ?? 0) + f); return [...acc].filter(([, w]) => w > 1e-4).sort((a, b) => b[1] - a[1]).slice(0, 4); };
+      vw[R.r5[k]] = mixFoot(o.capFoot?.[0] ?? 0); vw[R.r6[k]] = mixFoot(o.capFoot?.[1] ?? 0.5);
     });
   }
   // the decals ride the boot under them: their host triangle's corners' weights, by their shares
