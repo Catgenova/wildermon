@@ -375,9 +375,7 @@ export function buildHat(rig, design = DESIGN[rig.who]) {
         G.poly([A0[side][0], A1[side][0], A1[side][1], A0[side][1]], 'trim', 'feather');
       }
     }
-    // (the root's end closed)
-    G.poly([sv[0].l[0], sv[0].s[0], sv[0].r[0], sv[0].r[1], sv[0].s[1], sv[0].l[1]], 'trim', 'feather', true);
-    G.poly([sv[n].l[0], sv[n].s[0], sv[n].r[0], sv[n].r[1], sv[n].s[1], sv[n].l[1]], 'trim', 'feather', true);
+    // (the root's and the tip's ends left open: the vane is no wider than its rib there, the root behind the ring)
   });
 
   // outward: away from the hat's axis (the brim's underside down, the crown out)
