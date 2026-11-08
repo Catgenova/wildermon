@@ -56,14 +56,14 @@ export const DESIGN = {
   male: {
     rim: { w: 0.11, h: 0.04, t: 0.035 },
     fit: { trunk: 0.045, lame: 0.025, fauld: 0.1, arm: 0.04, gap: 0.02 },
+    legs: { top: -3.94, bottom: -5.45, c: [0.035, 0.095, 0.16, 0.29, 0.28, 0.27, 0.21] },
     wedge: 8,
-    collar: { cols: [[14, 66, 118], [128, 154, 180]], base: [-0.78, -0.78, -0.62], top: [-0.06, 0.12, 0.19], trim: 0.12, c: 0.17, flare: 0.05, wall: 0.07, spread: 0.12, sink: -0.1, open: 46, shrug: 0.4 },
+    collar: { cols: [[14, 66, 118], [128, 154, 180]], base: [-0.78, -0.78, -0.62], top: [-0.06, 0.12, 0.19], lip: [55, -0.38], trim: 0.12, c: 0.38, flare: 0.05, wall: 0.07, spread: 0.12, sink: -0.1, open: 46, shrug: 0.4 },
     breast: { az: [0, 22, 46, 70, 94], top: [-0.62, -0.64, -0.68, -0.82, -1.95], bottom: [-4.05, -3.8, -3.45, -3.2, -3.1], rows: [0, 0.3, 0.55, 0.8, 1], c: [0.05, 0.05, 0.055, 0.06, 0.065], flat: 22, core: { y: -1.9, r: 0.44, n: 8 } },
     back: { az: [100, 118, 140, 160, 180], top: [-1.95, -0.78, -0.6, -0.56, -0.54], bottom: [-3.0, -3.2, -3.4, -3.55, -3.65], rows: [0, 0.45, 1], c: [0.045, 0.05, 0.055], ridge: 0.06, side: 0 },
     lames: [
-      { bone: { spine_02: 1 }, top: -2.9, bottom: -3.6, v: 0.1, c: [0.02, 0.06] },
-      { bone: { spine_01: 1 }, top: -3.35, bottom: -4.0, v: 0.1, c: [0.02, 0.06] },
-      { bone: { pelvis: 1 }, top: -3.75, bottom: -4.3, v: 0.08, c: [0.02, 0.06], mat: 'shade' },
+      { piece: 'lame1', bone: { spine_01: 1 }, top: -2.9, bottom: -3.6, v: 0.1, c: [0.02, 0.06] },
+      { piece: 'belt', bone: { pelvis: 1 }, top: -3.75, bottom: -4.3, v: 0.08, c: [0.02, 0.06], mat: 'shade' },
     ],
     lameCols: 10,
     faulds: {
@@ -77,25 +77,25 @@ export const DESIGN = {
     pauldron: {
       lift: -0.08, inset: 0.0, pole: 0.5, near: 1.1, round: 0.2, inner: 0.3, cols: 8, phi0: 22, phi: [76, 88, 76, 46], rows: [0, 0.5, 1], c: [0.12, 0.26, 0.34], cone: 34,
       core: { psi: 55, f: 0.6, r: 0.3, n: 6 },
-      lames: [{ t: [0.45, 1.05], c: [0.15, 0.25], th: [-35, 215] }, { t: [0.9, 1.55], c: [0.1, 0.18], th: [-50, 230] }],
+      lames: [{ t: [0.45, 1.05], c: [0.07, 0.11], th: [-35, 215] }],
     },
     rerebrace: { t: [1.25, 1.62], c: [0.035, 0.045], th: [-45, 228], cols: 5 },
-    sleeve: { rings: [['$torso', 0.03], ['ja', 0.035], ['jb', 0.04], ['uc', 0.045], ['el', 0.045], ['fa', 0.04]] },
-    vambrace: { cols: 6, top: [0.42, 0.2, -0.32, 0.2], mid: 0.55, bottom: 1.3, c: [0.07, 0.045, 0.045], flare: 0.08, diamond: { t: 0.6, r: 0.14 } },
-    cuff: { cols: 6, t: [-0.42, 0.06], c: [0.1, 0.13] },
-    hand: { off: 0.045 },
+    sleeve: { rings: [['ja', 0.035], ['jb', 0.04], ['uc', 0.045], ['el', 0.045], ['fa', 0.04]] },
+    vambrace: { cols: 8, top: [0.42, 0.2, -0.32, 0.2], mid: 0.55, bottom: 1.3, c: [0.045, 0.035, 0.03], flare: 0.03, ridge: 0.08, diamond: { t: 0.6, r: 0.14 } },
+    cuff: { cols: 8, t: [-0.42, 0.06], c: [0.04, 0.06] },
+    hand: { off: 0.035 },
   },
   female: {
     rim: { w: 0.095, h: 0.035, t: 0.03 },
     fit: { trunk: 0.04, lame: 0.022, fauld: 0.09, arm: 0.035, gap: 0.018 },
+    legs: { top: -3.58, bottom: -4.16, c: [0.05, 0.1, 0.14, 0.18, 0.17, 0.16, 0.11] },
     wedge: 8,
-    collar: { cols: [[14, 66, 118], [128, 154, 180]], base: [-0.85, -0.78, -0.62], top: [-0.25, -0.1, 0.0], trim: 0.11, c: 0.13, flare: 0.04, wall: 0.06, spread: 0.1, sink: -0.05, open: 46, shrug: 0.35 },
+    collar: { cols: [[14, 66, 118], [128, 154, 180]], base: [-0.85, -0.78, -0.62], top: [-0.25, -0.1, 0.0], trim: 0.11, c: 0.28, flare: 0.04, wall: 0.06, spread: 0.1, sink: -0.05, open: 46, shrug: 0.35 },
     breast: { az: [0, 18, 36, 56, 76, 96], top: [-0.7, -0.71, -0.74, -0.8, -0.95, -1.85], bottom: [-3.55, -3.4, -3.2, -3.0, -2.85, -2.75], rows: [0, 0.23, 0.44, 0.56, 0.78, 1], c: [0.04, 0.04, 0.04, 0.045, 0.05, 0.055], flat: 18, bridge: [3], core: { y: -1.6, r: 0.38, n: 8 } },
     back: { az: [100, 118, 140, 160, 180], top: [-1.85, -0.9, -0.72, -0.64, -0.6], bottom: [-2.6, -2.8, -2.95, -3.05, -3.15], rows: [0, 0.45, 1], c: [0.04, 0.045, 0.05], ridge: 0.05, side: 0 },
     lames: [
-      { bone: { spine_02: 1 }, top: -2.5, bottom: -3.1, v: 0.1, c: [0.018, 0.05] },
-      { bone: { spine_01: 1 }, top: -2.9, bottom: -3.45, v: 0.08, c: [0.018, 0.05] },
-      { bone: { pelvis: 1 }, top: -3.25, bottom: -3.75, v: 0.06, c: [0.018, 0.05], mat: 'shade' },
+      { piece: 'lame1', bone: { spine_01: 1 }, top: -2.5, bottom: -3.1, v: 0.1, c: [0.018, 0.05] },
+      { piece: 'belt', bone: { pelvis: 1 }, top: -3.25, bottom: -3.75, v: 0.06, c: [0.018, 0.05], mat: 'shade' },
     ],
     lameCols: 10,
     faulds: {
@@ -109,13 +109,13 @@ export const DESIGN = {
     pauldron: {
       lift: -0.06, inset: 0.0, pole: 0.5, near: 0.95, round: 0.2, inner: 0.3, cols: 8, phi0: 22, phi: [74, 86, 74, 46], rows: [0, 0.5, 1], c: [0.09, 0.19, 0.26], cone: 34,
       core: { psi: 55, f: 0.6, r: 0.25, n: 6 },
-      lames: [{ t: [0.38, 0.85], c: [0.12, 0.2], th: [-35, 215] }, { t: [0.72, 1.3], c: [0.08, 0.15], th: [-50, 230] }],
+      lames: [{ t: [0.38, 0.85], c: [0.06, 0.1], th: [-35, 215] }],
     },
     rerebrace: { t: [1.05, 1.35], c: [0.03, 0.04], th: [-45, 228], cols: 5 },
-    sleeve: { rings: [['$torso', 0.025], ['ja', 0.03], ['jb', 0.035], ['uc', 0.04], ['el', 0.04], ['fa', 0.035]] },
-    vambrace: { cols: 6, top: [0.38, 0.18, -0.28, 0.18], mid: 0.5, bottom: 1.2, c: [0.06, 0.04, 0.04], flare: 0.07, diamond: { t: 0.55, r: 0.12 } },
-    cuff: { cols: 6, t: [-0.38, 0.05], c: [0.085, 0.11] },
-    hand: { off: 0.04 },
+    sleeve: { rings: [['ja', 0.03], ['jb', 0.035], ['uc', 0.04], ['el', 0.04], ['fa', 0.035]] },
+    vambrace: { cols: 8, top: [0.38, 0.18, -0.28, 0.18], mid: 0.5, bottom: 1.2, c: [0.04, 0.03, 0.028], flare: 0.028, ridge: 0.07, diamond: { t: 0.55, r: 0.12 } },
+    cuff: { cols: 8, t: [-0.38, 0.05], c: [0.045, 0.06] },
+    hand: { off: 0.03 },
   },
 };
 
@@ -360,7 +360,14 @@ function coreOn(G, pl, p, up, r, nSides, tag) {
   piece(G, start, () => n);
 }
 /** An inlay: a gold strip of width w along points on a plate (each { q, n } from gridAt / onPlate), lifted off its face. */
-function inlayOn(G, pl, pts, w, tag, mat = 'rune', lift = 0.022) {
+function inlayOn(G, pl, pts0, w, tag, mat = 'rune', lift = 0.022) {
+  // (each span split in four, the points between laid back on the plate's face, so the strip follows its curve)
+  const pts = [];
+  pts0.forEach((h, k) => {
+    pts.push(h);
+    const b = pts0[k + 1];
+    if (b) for (const t of [0.25, 0.5, 0.75]) pts.push(onPlate(pl, lerp(h.q, b.q, t), unit(lerp(h.n, b.n, t))));
+  });
   const V = (q) => { const i = G.vert(q, tag); G.wt[i] = pl.wt; return i; };
   const L = pts.map((h, k) => {
     const tan = unit(sub(pts[Math.min(k + 1, pts.length - 1)].q, pts[Math.max(k - 1, 0)].q)), x = unit(cross(h.n, tan));
@@ -432,6 +439,18 @@ function torsoPieces(G, rig, D, S) {
   const low = chest;
   const outOf = (sec) => (p) => { const a = sec.axisAt(p[1]); return [p[0] - a[0], 0, p[2] - a[2]]; };
   const trunk = parts(['torso', 'neck', 'pelvis']), hipS = parts(['torso', 'pelvis', 'legs']).filter((p) => p[1] > D.faulds.top - 3);
+  // the set's leggings under the belt and the faulds (D.legs: their hip band's top and foot and their outer face's
+  // clearance off the body by row down it, held below): the body there pushed out by it, sideways from the thigh's axis
+  // or the pelvis's, a surface the belt and the faulds clear by the rim's thickness and the gap
+  let legS = null;
+  if (D.legs) {
+    const Lg = D.legs, hx = rig.J.hip[0], hz = rig.J.hip[2];
+    const cl = (y) => { const f = (Lg.top - y) / (Lg.top - Lg.bottom) * (Lg.c.length - 1); if (f <= 0) return Lg.c[0]; if (f >= Lg.c.length - 1) return Lg.c[Lg.c.length - 1]; const i = Math.floor(f); return Lg.c[i] + (Lg.c[i + 1] - Lg.c[i]) * (f - i); };
+    legS = S.filter((s0) => ['pelvis', 'legs'].includes(s0.part) && s0.p[1] < Lg.top + 0.05 && s0.p[1] > Lg.bottom - 2.2).map(({ p, part }) => {
+      const o = part === 'legs' ? [Math.sign(p[0]) * hx, hz] : [0, hz], d = unit([p[0] - o[0], 0, p[2] - o[1]]);
+      return add(p, mul(d, cl(p[1])));
+    });
+  }
   const grid = (sec, az, top, bottom, rows, c, extra = () => 0) => rows.map((f, r) => az.map((a, k) => {
     const y = top[k] + (bottom[k] - top[k]) * f;
     return sec.at(y, a, (Array.isArray(c) ? c[r] : c) + extra(r, k, a));
@@ -497,31 +516,40 @@ function torsoPieces(G, rig, D, S) {
       }
       return p;
     }));
-    fitOut(rows, false, (p) => [p[0], 0, p[2] - fz], hipS, D.fit.fauld);
+    fitOut(rows, false, (p) => [p[0], 0, p[2] - fz], legS ? [[hipS, D.fit.fauld], [legS, rim.t + D.fit.gap]] : hipS, D.fit.fauld);
     const bone = s > 0 ? pl.bone : Object.fromEntries(Object.entries(pl.bone).map(([b, w]) => [b.replace(/_l$/, '_x').replace(/_r$/, '_l').replace(/_x$/, '_r'), w]));
-    fauldRows.push({ rows, ring: false, az, bone });
+    fauldRows.push({ rows, ring: false, az, bone, name: pl.mirror ? (s > 0 ? 'fauld.l' : 'fauld.r') : Math.abs(az[(az.length - 1) / 2]) > 90 ? 'fauld.b' : 'fauld.f' });
   }
   // laid from the inside out, each fitted over the ones under it as well as the body (clear of their faces by the rim's
   // thickness and a gap): the faulds, the belt over their tops, each lame over the one under it, the back and breast
   // plates over the lames
-  const gap = rim.t + D.fit.gap, under = [];
-  const faulds = fauldRows.map(({ rows, az, bone }) => {
+  const gap = rim.t + D.fit.gap, under = legS ? [legS] : [];
+  // (the front and back plates first, the side plates over them)
+  fauldRows.sort((a, b) => /[lr]$/.test(a.name) - /[lr]$/.test(b.name));
+  const fauldSurf = [];
+  const faulds = fauldRows.map(({ rows, az, bone, name }) => {
+    if (/[lr]$/.test(name)) fitOut(rows, false, (p) => [p[0], 0, p[2] - fz], [[hipS, D.fit.fauld], ...(legS ? [[legS, gap]] : []), ...fauldSurf.map((P) => [P, gap])]);
+    const f0 = G.polys.length;
     const pc = plateOf(G, rows, { tag: 'fauld', bone, rim, out: (p) => [p[0], 0, p[2] - fz], border: { top: 'open' } });
     // the V trim: a gold inlay from either top corner down to the middle of the foot
     const M = (az.length - 1) / 2;
     inlayOn(G, pc, [[0.12, 0.3], [0.55, M], [0.12, az.length - 1.3]].map(([rf, cf]) => gridAt(pc, rf, cf)), 0.07, 'fauld inlay');
+    for (let k = f0; k < G.polys.length; k++) G.polys[k].piece = name;
+    if (!/[lr]$/.test(name)) fauldSurf.push(surfOf(G, f0));
     return pc;
   });
-  under.push(surfOf(G, faulds[0].p0));
+  under.push(surfOf(G, Math.min(...faulds.map((f) => f.p0))));
   for (let li = lames.length - 1; li >= 0; li--) {
     const { rows, L } = lames[li], p0 = G.polys.length;
     fitOut(rows, true, outOf(chest), [[trunk, D.fit.lame], ...under.map((P) => [P, gap])]);
     plateOf(G, rows, { tag: `lame ${li + 1}`, bone: L.bone, rim, out: outOf(chest), ring: true, border: { top: 'open', bottom: 'trim' }, mat: L.mat ?? 'plate' });
+    for (let k = p0; k < G.polys.length; k++) G.polys[k].piece = L.piece;
     under.push(surfOf(G, p0));
   }
   fitOut(kRows, false, outOf(chest), [[trunk, D.fit.trunk], ...under.map((P) => [P, gap])]);
   fitOut(bRows, false, outOf(chest), [[trunk, D.fit.trunk], ...under.map((P) => [P, gap])]);
 
+  G.trunkStart = G.polys.length;
   const breast = plateOf(G, bRows, { tag: 'breast', bone: { spine_03: 1 }, rim, out: outOf(chest), border: { top: (r, c) => (Math.abs(bAz[c]) <= Cd.open && Math.abs(bAz[c + 1] ?? 999) <= Cd.open ? 'open' : 'trim') } });
   // the core under the collar's notch, and the inlays from it: down the middle to the V, and out and down either side
   const mid = (bAz.length - 1) / 2, R = Bp.rows.length - 1;
@@ -547,12 +575,17 @@ function torsoPieces(G, rig, D, S) {
 
   const backTop = (r, c) => (Math.abs(180 - kAzL[c]) <= 45 && Math.abs(180 - (kAzL[c + 1] ?? 999)) <= 45 ? 'open' : 'trim');
   plateOf(G, kRows, { tag: 'back', bone: { spine_03: 1 }, rim, out: outOf(chest), border: { left: 'edge', right: 'edge', top: backTop },  mat: (r, c) => (c === 0 || c === kAzL.length - 2 ? 'shade' : 'plate') });
+  G.trunkEnd = G.polys.length;
 
   // the collar: segments round the neck (front left and right, the back), each a wall with a gold top and a dark inside,
   // standing out of the plates' top edge
-  const { nz, r0n } = collarFrame(D, S);
+  const { nz, r0n } = collarFrame(D, S, B);
   // (heights by azimuth: the sheet's table `topTab` over |az|, or [front, side, back] blended)
-  const hAt = (L, a) => { if (L === Cd.top && Cd.topTab) return tabAt(Cd.topTab, 'top', a); const x = Math.abs(a) / 180; return x < 0.5 ? L[0] + (L[1] - L[0]) * x * 2 : L[1] + (L[2] - L[1]) * (x - 0.5) * 2; };
+  // (Cd.lip [az, y]: the front no higher than y within az of the middle, easing back by az + 20, so the helm's visor
+  // clears it as the head nods)
+  const lipCap = (a, y) => { if (!Cd.lip) return y; const x = Math.abs(((a + 540) % 360) - 180), [az, ly] = Cd.lip; return x <= az ? Math.min(y, ly) : x >= az + 20 ? y : Math.min(y, ly + ((y - ly) * (x - az)) / 20); };
+  const hAt = (L, a) => { if (L === Cd.top && Cd.topTab) return lipCap(a, tabAt(Cd.topTab, 'top', a)); if (L === Cd.top) return lipCap(a, hAt0(L, a)); return hAt0(L, a); };
+  const hAt0 = (L, a) => { const x = Math.abs(a) / 180; return x < 0.5 ? L[0] + (L[1] - L[0]) * x * 2 : L[1] + (L[2] - L[1]) * (x - 0.5) * 2; };
   // (the segments' columns: the front flaps from `seg.a0` to `seg.a1` either side, the back from a1 + gap round; or
   // the design's few)
   const span = (a, b, n) => Array.from({ length: n + 1 }, (_, k) => +(a + ((b - a) * k) / n).toFixed(2));
@@ -624,10 +657,12 @@ export function pauldronFrame(rig, D, S) {
   return { centre, pole, dirAt, reach, near, outSign, phiMax };
 }
 
-/* ---- the arm (built on the left, mirrored) ----------------------------------------------------------------------------- */
-function armPieces(G, rig, D, S) {
-  const { B, J } = rig, rim = D.rim;
-  const UP = [0, 1, 0], FWD = [0, 0, 1];
+/**
+ * The left arm's sections: the upper arm's (t from the shoulder's joint toward the elbow), the forearm's (from the
+ * elbow toward the wrist) and the wrist's (the forearm's axis from the wrist, with the hand); θ 0 forward, 90 out.
+ */
+export function armCharts(rig, S) {
+  const { J } = rig, FWD = [0, 0, 1];
   const frameOf = (o, tail) => {
     const a = unit(sub(tail, o)), e1 = unit(sub(FWD, mul(a, dot(FWD, a)))), e2 = cross(e1, a);
     return { o, a, e1, e2: dot(e2, [1, 0, 0]) >= 0 ? e2 : mul(e2, -1), len: Math.hypot(...sub(tail, o)) };
@@ -635,6 +670,15 @@ function armPieces(G, rig, D, S) {
   const armS = S.filter((s) => (s.part === 'arm' || s.part === 'joint') && s.p[0] > 0).map((s) => s.p);
   const up = frameOf(J.shoulder, J.elbow), fo = frameOf(J.elbow, J.wrist);
   const upper = sectioner(armS, { ...up, dt: 0.12 }), fore = sectioner(armS, { ...fo, dt: 0.12 });
+  const wsec = sectioner(armS.concat(S.filter((s) => s.part === 'hand' && s.p[0] > 0).map((s) => s.p)), { ...fo, o: J.wrist, dt: 0.1 });
+  return { frameOf, armS, up, fo, upper, fore, wsec };
+}
+
+/* ---- the arm (built on the left, mirrored) ----------------------------------------------------------------------------- */
+function armPieces(G, rig, D, S) {
+  const { B, J } = rig, rim = D.rim;
+  const UP = [0, 1, 0], FWD = [0, 0, 1];
+  const { frameOf, armS, up, fo, upper, fore, wsec } = armCharts(rig, S);
   const outOf = (fr) => (p) => { const d = sub(p, fr.o), t = dot(d, fr.a); return sub(d, mul(fr.a, t)); };
 
   // the pauldron's cap (on the shoulder helper: half the upper arm's turn): a dome over the shoulder round a pole up and
@@ -652,6 +696,14 @@ function armPieces(G, rig, D, S) {
       const phi = Pd.phi0 + (H.phi[k] - Pd.phi0) * f, d = dirAt(psi * outSign, phi);
       return add(centre, mul(d, Math.max(H.r[r][k], reach(d) + D.fit.arm + 0.02)));
     }));
+    // (smoothed round each row and down each column, never in from its own: one shell over the deltoid's bumps)
+    for (let it = 0; it < 3; it++) {
+      const rr = capRows.map((row) => row.map((p) => Math.hypot(...sub(p, centre))));
+      capRows = capRows.map((row, r) => row.map((p, k) => {
+        const n = row.length, m = (rr[r][(k + n - 1) % n] + 2 * rr[r][k] + rr[r][(k + 1) % n] + rr[Math.max(0, r - 1)][k] + rr[Math.min(rr.length - 1, r + 1)][k]) / 6;
+        return add(centre, mul(unit(sub(p, centre)), Math.max(m, rr[r][k])));
+      }));
+    }
   } else {
     capRows = Pd.rows.map((f, r) => psis.map((psi) => {
       const ps = psi * outSign, phi = Pd.phi0 + (phiMax(psi) - Pd.phi0) * f, d = dirAt(ps, phi);
@@ -715,19 +767,22 @@ function armPieces(G, rig, D, S) {
   const underArm = [[armS, D.fit.arm], [sleeveS, gap], [lay(rStart), gap]];
 
   // the vambrace (the forearm): an angular tube, its top flared and high over the elbow's point, low at its inside
-  const Vb = D.vambrace, vTh = Array.from({ length: Vb.cols }, (_, k) => (k * 360) / Vb.cols + 360 / Vb.cols / 2);
+  // (columns from the front round, one straight out: there the plate's ridge stands `ridge` further off, the
+  // sheet's angular outer face)
+  const Vb = D.vambrace, vTh = Array.from({ length: Vb.cols }, (_, k) => (k * 360) / Vb.cols + (Vb.ridge ? 0 : 360 / Vb.cols / 2));
+  const vR = (a) => (Vb.ridge ?? 0) * Math.max(0, Math.cos(((a - 90) * Math.PI) / 180)) ** 4;
   const tTop = (a) => { const t = a * Math.PI / 180, c = Math.cos(t), s = Math.sin(t); const [f, o, b, i] = Vb.top; return (c > 0 ? f * c * c : b * c * c) + (s > 0 ? o * s * s : i * s * s); };
   const vRows = [
-    vTh.map((a) => fore.at(tTop(a), a, Vb.c[0] + Vb.flare)),
-    vTh.map((a) => fore.at(Vb.mid, a, Vb.c[1])),
-    vTh.map((a) => fore.at(Vb.bottom, a, Vb.c[2])),
+    vTh.map((a) => fore.at(tTop(a), a, Vb.c[0] + Vb.flare + vR(a))),
+    vTh.map((a) => fore.at(Vb.mid, a, Vb.c[1] + vR(a))),
+    vTh.map((a) => fore.at(Vb.bottom, a, Vb.c[2] + vR(a) * 0.6)),
   ];
   const vStart = G.polys.length;
   const vam = plateOf(G, vRows, { tag: 'vambrace', bone: { lowerarm_l: 0.5, lowerarm_twist_01_l: 0.5 }, rim, out: outOf(fo), ring: true, fit: { S: [[armS, D.fit.arm], [sleeveS, gap], underArm[2]] }, border: { bottom: 'open' }, mat: (r, c) => (Math.cos(vTh[c] * Math.PI / 180) < -0.3 && Math.sin(vTh[c] * Math.PI / 180) < 0.3 ? 'shade' : 'plate') });
   // its diamond on the outside (glowing, in a gold frame) and an inlay down from it
   {
     const cOut = vTh.reduce((best, a, k) => (Math.sin(a * Math.PI / 180) > Math.sin(vTh[best] * Math.PI / 180) ? k : best), 0);
-    const h = gridAt(vam, 1.45, cOut + 0.5);
+    const cD = Vb.ridge ? cOut : cOut + 0.5, h = gridAt(vam, 1.45, cD);
     const along = unit(fo.a), n = h.n, x = unit(cross(n, along)), r = Vb.diamond.r;
     const V = (q) => { const i = G.vert(q, 'diamond'); G.wt[i] = vam.wt; return i; };
     const c0 = add(h.q, mul(n, 0.015));
@@ -736,13 +791,11 @@ function armPieces(G, rig, D, S) {
     G.tag = 'diamond';
     for (let k = 0; k < 4; k++) G.poly([outer[k], outer[(k + 1) % 4], innerP[(k + 1) % 4], innerP[k]], 'gold', 'diamond', true);
     G.poly(innerP, 'core', 'diamond', true);
-    inlayOn(G, vam, [0.2, 0.9].map((rf) => gridAt(vam, rf, cOut + 0.5)), 0.035, 'vambrace inlay', 'rune', 0.022);
+    inlayOn(G, vam, [0.2, 0.9].map((rf) => gridAt(vam, rf, cD)), 0.035, 'vambrace inlay', 'rune', 0.022);
   }
 
   // the gauntlet's cuff (the wrist helper: half the hand's turn), flared over the vambrace's foot
   const Cf = D.cuff, cTh = Array.from({ length: Cf.cols }, (_, k) => (k * 360) / Cf.cols + 360 / Cf.cols / 2);
-  const wr = frameOf(J.wrist, J.knuckle), wsec = sectioner(armS.concat(S.filter((s) => s.part === 'hand' && s.p[0] > 0).map((s) => s.p)), { ...fo, o: J.wrist, dt: 0.1 });
-  void wr;
   plateOf(G, [0, 1].map((f) => cTh.map((a) => wsec.at(Cf.t[0] + (Cf.t[1] - Cf.t[0]) * f, a, Cf.c[1 - f]))), { tag: 'cuff', bone: { wrist_l: 1 }, rim, out: outOf({ ...fo, o: J.wrist }), ring: true, border: { top: 'edge' }, fit: { S: [[surfOf(G, vStart), gap], [gauntS, gap]] } });
 
   // its lames under it down the upper arm (on the upper arm), open toward the body
@@ -755,7 +808,9 @@ function armPieces(G, rig, D, S) {
     plateOf(G, rows, { tag: `pauldron lame ${li + 1}`, bone: li === 0 ? { shoulder_l: 0.5, upperarm_l: 0.5 } : { upperarm_l: 1 }, rim, out: outOf(up), fit: { S: underArm }, border: { top: 'open' } });
     underArm.push([lay(p0), gap]);
   }
-  const cap = plateOf(G, capRows, { tag: 'pauldron', bone: { shoulder_l: 1 }, rim, out: (p) => sub(p, centre), ring: true, fit: { S: [[near, D.fit.arm], ...underArm.slice(3)] }, border: { top: 'open', bottom: 'trim' } });
+  // (over the breast and back plates too, where its inside edge lies on them)
+  const trunkSurf = surfOf(G, G.trunkStart, G.trunkEnd).filter((p) => p[0] > 0);
+  const cap = plateOf(G, capRows, { tag: 'pauldron', bone: { shoulder_l: 1 }, rim, out: (p) => sub(p, centre), ring: true, fit: { S: [[near, D.fit.arm], [trunkSurf, gap], ...underArm.slice(3)] }, border: { top: 'open', bottom: 'trim' } });
   // (its top closed by one polygon)
   { const ids = capRows[0].map((p) => G.verts.findIndex((q) => q === p)); G.tag = 'pauldron'; G.poly(ids.slice().reverse(), 'plate', 'pauldron'); }
   // its core, on the outside
@@ -791,8 +846,9 @@ export function designOf(who) {
   return over(D, F);
 }
 /** The collar's frame: the neck's axis (its z) and reach (the furthest of the neck's samples round it). */
-export function collarFrame(D, S) {
-  const neck = sectioner(S.filter((s) => s.part === 'neck').map((s) => s.p), { o: [0, 0, 0], a: [0, 1, 0], e1: [0, 0, 1], e2: [1, 0, 0], dt: 0.12, centred: true });
+export function collarFrame(D, S, B) {
+  // (the neck's own vertices: samples on triangles that only start at the neck reach out over the shoulders)
+  const neck = sectioner(B.verts.filter((_, i) => B.part[i] === 'neck'), { o: [0, 0, 0], a: [0, 1, 0], e1: [0, 0, 1], e2: [1, 0, 0], dt: 0.12, centred: true });
   const nz = neck.axisAt(-0.45)[2], nr = (a) => Math.max(...[-0.5, -0.3, -0.1, 0.05].map((y) => { const p = neck.at(y, a, 0); return Math.hypot(p[0], p[2] - nz); }));
   const r0n = Math.max(...[0, 30, 60, 90, 120, 150, 180].map(nr));
   return { nz, r0n, rTop: r0n + D.collar.c };

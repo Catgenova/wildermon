@@ -140,6 +140,59 @@ async function sheet(file, wire, look = 'plain') {
 if (only.includes('sheet')) for (const look of SHOW) await sheet(join(out, `platechest-${tag}-sheet${look === 'plain' ? '' : '-' + look}.png`), false, look);
 if (only.includes('wire')) await sheet(join(out, `platechest-${tag}-wire.png`), true);
 
+/* ---- against the sheet: the review pose on the sheet's body map, under each view's camera ------------------------- */
+// platechest-<tag>-review-<who>.png: per view the sheet, ours (with the body, in the browser renderer) and ours over the
+// sheet; a row per look (plain, and enchanted with --enchanted)
+if (only.includes('review')) {
+  const V = await import('./lowplatechestview.mjs');
+  for (const who of ['male', 'female']) {
+    const { rig, G, hidden } = M[who], C = V.loadCams()[who], { PB, PG } = V.reviewVerts(rig, G, C);
+    const cut = who === 'male' ? -7.2 : -6.2;
+    const boxes = V.VIEWS.map((v) => V.MASKS.views[who][v].box);
+    const sizes = boxes.map((b) => [(b[2] - b[0]) * V.K, (b[3] - b[1]) * V.K]);
+    const files = [];
+    for (const look of SHOW) {
+      const cells = [];
+      let x = 0;
+      V.VIEWS.forEach((v, i) => {
+        const yaw = C.views[v].yaw * Math.PI / 180, ca = Math.cos(yaw), sa = Math.sin(yaw);
+        const cam = (P) => P.map((p) => [ca * p[0] + sa * p[2], p[1], -sa * p[0] + ca * p[2]]);
+        const [bw, bh] = sizes[i], S = C.s * V.K, b = boxes[i];
+        const c = [(bw / 2 - (C.views[v].cx - b[0]) * V.K) / S, ((C.cy - b[1]) * V.K - bh / 2) / S, 0];
+        const body = bodyMesh(who, cam(PB), (pi) => rig.B.polys[pi].v.every((j) => PB[j][1] > cut) && rig.B.part[rig.B.polys[pi].v[0]] !== 'head');
+        cells.push({ meshes: [body, armourMesh(who, cam(PG), look)], cam: { yaw: 0, pitch: 0, s: S, c }, box: [x, 0, bw, bh], bg: [0.176, 0.11, 0.118] });
+        x += bw;
+      });
+      const f = join(out, `.review-${who}-${look}-${process.pid}.png`);
+      await shoot(x, Math.max(...sizes.map((z) => z[1])), cells, f);
+      files.push([look, f]);
+    }
+    const dst = join(out, `platechest-${tag}-review-${who}.png`);
+    execFileSync('python3', ['-c', `
+import sys, json, os
+from PIL import Image, ImageDraw
+a = json.loads(sys.argv[1]); S = Image.open(a['sheet']).convert('RGB'); K = a['K']
+rows = []
+for look, f in a['files']:
+    im = Image.open(f).convert('RGB'); x = 0; tiles = []
+    for v, b in zip(a['views'], a['boxes']):
+        w, h = (b[2] - b[0]) * K, (b[3] - b[1]) * K
+        sh = S.crop(tuple(b)).resize((w, h), Image.LANCZOS); ours = im.crop((x, 0, x + w, h)); x += w
+        tiles += [(sh, v + ': the sheet'), (ours, 'ours' + ('' if look == 'plain' else ' (enchanted)')), (Image.blend(sh, ours, 0.5), 'ours over the sheet')]
+    rows.append(tiles)
+    os.remove(f)
+W = sum(t[0].size[0] for t in rows[0]); H = sum(max(t[0].size[1] for t in r) + 18 for r in rows) + 24
+out = Image.new('RGB', (W, H), (28, 24, 26)); d = ImageDraw.Draw(out); d.text((6, 6), a['title'], fill=(240, 225, 205)); y = 24
+for r in rows:
+    x = 0
+    for t, lab in r: out.paste(t, (x, y + 18)); d.text((x + 4, y + 3), lab, fill=(230, 215, 190)); x += t.size[0]
+    y += max(t[0].size[1] for t in r) + 18
+out.save(a['dst'])
+`, JSON.stringify({ sheet: SHEET, K: V.K, files, views: V.VIEWS, boxes, dst, title: `Plate chest & arms ${tag}, ${who}: the sheet, ours (the review pose, on the sheet's body: ${JSON.stringify(C.pose)}), ours over the sheet` })]);
+    console.log('wrote', dst);
+  }
+}
+
 /* ---- metrics -------------------------------------------------------------------------------------------------------- */
 if (only.includes('metrics')) {
   const metrics = {};

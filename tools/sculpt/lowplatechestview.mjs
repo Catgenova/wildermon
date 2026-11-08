@@ -76,7 +76,18 @@ export function bodyMap(rig, C, f) {
     d[s] = { upper: d0, fore: d1, hand: d2 };
   }
   const seg = (n) => (/^(upperarm|shoulder)/.test(n) ? 'upper' : /^(lowerarm|elbow)/.test(n) ? 'fore' : 'hand');
-  const per = rig.bones.map((b) => { const m = b.name.match(/_(l|r)$/); if (!(ARM.test(b.name) && m)) return trunk; const t = d[m[1]][seg(b.name)]; return (p) => [p[0] + t[0], p[1] + t[1], p[2] + t[2]]; });
+  // (and each arm's thickness by sa: a point's offset from its segment's bone, upper arm or forearm, scaled)
+  const sa = C.sa ?? 1, bonesOf = { upper: ['upperarm', 'lowerarm'], fore: ['lowerarm', 'hand'] };
+  const per = rig.bones.map((b) => {
+    const m = b.name.match(/_(l|r)$/); if (!(ARM.test(b.name) && m)) return trunk;
+    const sg = seg(b.name), t = d[m[1]][sg];
+    if (sa === 1 || sg === 'hand') return (p) => [p[0] + t[0], p[1] + t[1], p[2] + t[2]];
+    const A = P(`${bonesOf[sg][0]}_${m[1]}`), Bq = P(`${bonesOf[sg][1]}_${m[1]}`), ax = [Bq[0] - A[0], Bq[1] - A[1], Bq[2] - A[2]], L2 = ax[0] ** 2 + ax[1] ** 2 + ax[2] ** 2;
+    return (p) => {
+      const u = Math.max(0, Math.min(1, ((p[0] - A[0]) * ax[0] + (p[1] - A[1]) * ax[1] + (p[2] - A[2]) * ax[2]) / L2)), o = [A[0] + ax[0] * u, A[1] + ax[1] * u, A[2] + ax[2] * u];
+      return [o[0] + (p[0] - o[0]) * sa + t[0], o[1] + (p[1] - o[1]) * sa + t[1], o[2] + (p[2] - o[2]) * sa + t[2]];
+    };
+  });
   return (p, w) => { let x = 0, y = 0, z = 0; for (const [bi, ww] of w) { const q = per[bi](p); x += ww * q[0]; y += ww * q[1]; z += ww * q[2]; } return [x, y, z]; };
 }
 /** Body and armour in the review pose, mapped onto the sheet's body: { PB, PG, joints }. */

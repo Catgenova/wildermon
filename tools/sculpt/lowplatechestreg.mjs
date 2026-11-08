@@ -14,10 +14,10 @@
 //   each one's miss in px; printed: the misses, the map's knots.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { buildRig } from './lowrig.mjs';
+import { buildRig, posed, skin } from './lowrig.mjs';
 import { TORSO_RING } from './lowarm.mjs';
 import { DESIGN } from './garments/platechest.mjs';
-import { VIEWS, YAW0, DIR, CAMS_FILE, K, reviewVerts, proj, sheetLabels, sheetCanvas, line, savePNG, mkdir, PIECES } from './lowplatechestview.mjs';
+import { VIEWS, YAW0, DIR, CAMS_FILE, K, reviewVerts, reviewPose, proj, sheetLabels, sheetCanvas, line, savePNG, mkdir, PIECES } from './lowplatechestview.mjs';
 
 const args = process.argv.slice(2);
 const opt = (n, f) => { const i = args.indexOf(`--${n}`); return i < 0 ? f : args[i + 1]; };
@@ -122,10 +122,33 @@ for (const who of ['male', 'female']) {
     }
     return { y: ys, k: ks };
   };
+  // the arms' thickness: the sheet's vambraces against ours (the forearm's reach plus the vambrace's clearance), row
+  // by row between the elbow and the wrist, front and back, both arms: the median
+  const armRatio = () => {
+    const f0 = posed(rig, reviewPose(rig, C.pose)), PBs = skin(rig, f0), r = [];
+    for (const v of ['front', 'back']) {
+      const S = sheetLabels(who, v);
+      for (const s of ['l', 'r']) {
+        const k = PIECES.indexOf(`vambrace.${s}`) + 1, E = M[v].elbow[s], Wr = M[v].wrist[s];
+        if (!E || !Wr) continue;
+        const fa = PBs.filter((p, i) => rig.B.part[i] === 'arm' && Math.sign(p[0]) === (s === 'l' ? 1 : -1));
+        for (let y = Math.round(E[1] + 10); y < Wr[1] - 8; y++) {
+          const xs = []; for (let x = 0; x < S.W; x++) if (S.L[(y - S.y0) * S.W + x] === k) xs.push(x);
+          if (xs.length < 4) continue;
+          const by = (C.cy - y - 0.5) / C.s, sl = fa.filter((p) => Math.abs(p[1] - by) < 0.06);
+          if (sl.length < 3) continue;
+          const ours = Math.max(...sl.map((p) => p[0])) - Math.min(...sl.map((p) => p[0])) + 2 * DES.vambrace.c[1];
+          r.push((xs[xs.length - 1] - xs[0] + 1) / C.s / ours);
+        }
+      }
+    }
+    r.sort((a, b) => a - b);
+    return r.length ? +r[Math.floor(r.length / 2)].toFixed(3) : 1;
+  };
   fitCams();
   C.sx = ratios(0, ['front', 'back']); C.sz = ratios(2, ['side']);
   fitCams();
-  C.sx = ratios(0, ['front', 'back']); C.sz = ratios(2, ['side']);
+  C.sx = ratios(0, ['front', 'back']); C.sz = ratios(2, ['side']); C.saMeasured = armRatio(); C.sa = Math.min(1, C.saMeasured);
   fitCams();
   C.s = +C.s.toFixed(4); C.cy = +C.cy.toFixed(3);
   for (const v of VIEWS) C.views[v] = { yaw: +C.views[v].yaw.toFixed(2), cx: +C.views[v].cx.toFixed(3) };
@@ -135,7 +158,7 @@ for (const who of ['male', 'female']) {
   const TR = trunkMiss(C);
   console.log('  armpit', armpitY.toFixed(2), 'waist', waistY.toFixed(2), JSON.stringify(sheetRows));
   report[who] = { rms: +Math.sqrt(R.reduce((s, r) => s + r.du * r.du + r.dv * r.dv, 0) / R.length).toFixed(2), byView: Object.fromEntries(VIEWS.map((v) => { const rr = R.filter((r) => r.v === v); return [v, +Math.sqrt(rr.reduce((s, r) => s + r.du * r.du + r.dv * r.dv, 0) / rr.length).toFixed(2)]; })), misses: R.map((r) => `${r.v} ${r.k} ${Math.hypot(r.du, r.dv).toFixed(1)}`), trunkCheck: TR.map((r) => `${r.v} ${r.k} ${r.dv.toFixed(1)}`) };
-  console.log(who, 'pose', JSON.stringify(C.pose), 'la', C.la, 's', C.s, 'rms', report[who].rms, JSON.stringify(report[who].byView));
+  console.log(who, 'pose', JSON.stringify(C.pose), 'sa', C.sa, 's', C.s, 'rms', report[who].rms, JSON.stringify(report[who].byView));
   console.log('  sx', JSON.stringify(C.sx), '\n  sz', JSON.stringify(C.sz));
   console.log('  views', JSON.stringify(C.views));
 }
