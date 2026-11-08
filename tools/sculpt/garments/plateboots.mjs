@@ -47,8 +47,8 @@ import { footOf } from './boots.mjs';
  * engraving (`rune`, gold).
  */
 export const MATS = {
-  plate: [0.7, 0.58, 0.52],
-  shade: [0.59, 0.49, 0.44],
+  plate: [0.84, 0.71, 0.63],
+  shade: [0.72, 0.6, 0.53],
   gold: [0.96, 0.74, 0.4],
   under: [0.29, 0.22, 0.2],
   core: [0.86, 0.62, 0.3],
@@ -58,9 +58,10 @@ export const MATS = {
  * The boots plain and enchanted (lowgarment.mjs garmentAsset `looks`): enchanted, the core glows (unlit, in the bloom)
  * and the engraving is lit, as the long sword's; the raised trim stays gold.
  */
+const METAL = Object.fromEntries(Object.entries(MATS).map(([n, c]) => [n, { c, kind: 2 }]));
 export const LOOKS = {
-  plain: {},
-  enchanted: { core: { c: [1, 0.906, 0.651], kind: 1 }, rune: { c: [1, 0.8, 0.45], kind: 1 } },
+  plain: METAL,
+  enchanted: { ...METAL, core: { c: [1, 0.906, 0.651], kind: 1 }, rune: { c: [1, 0.906, 0.651], kind: 1 } },
 };
 
 const ANG = [0, 36, 72, 108, 144, 180, -144, -108, -72, -36];
@@ -100,9 +101,9 @@ export const DESIGN = {
     cap: { du: [0.6, 0.5, 0.12, null, null, null, null, null, 0.12, 0.5], h: [0.42, 0.41, 0.5, 0, 0, 0, 0, 0, 0.5, 0.41], in: [0.1, 0.08, 0.06, 0, 0, 0, 0, 0, 0.06, 0.08], t: 0.35, lip: 0.03, mid: [1, 9], seam: 0.12, sink: 0.05 },
     band: { y: 0.56, rise: 0.12, w: 0.22, gold: 0.09, out: 0.11 },
     mid: 0.4,
-    cuff: { lo: 0.46, rise: 0.22, gold: 0.09, out: 0.13, top: [0.96, 0.86, 0.84, 0.8, 0.8, 0.8, 0.8, 0.8, 0.84, 0.86], flare: [0.2, 0.24, 0.42, 0.24, 0.16, 0.14, 0.12, 0.1, 0.16, 0.18], rim: 0.07, lip: 0.12 },
+    cuff: { lo: 0.4, rise: 0.22, gold: 0.09, out: 0.13, top: [0.96, 0.88, 0.86, 0.8, 0.8, 0.8, 0.8, 0.8, 0.84, 0.88], flare: [0.08, 0.1, 0.36, 0.12, 0.08, 0.08, 0.06, 0.06, 0.14, 0.09], rim: 0.07, lip: 0.16, gap: 0.6 },
     rib: { w: 0.18, h: 0.06 },
-    crest: { t: 0.52, w: 0.36, h: 0.56, inset: 0.68, lift: 0.045 },
+    crest: { t: 0.52, w: 0.36, h: 0.56, inset: 0.8, lift: 0.045 },
   },
   female: {
     H: 2.07, sole: 0.2, gap: 0.012, lip: 0.04, margin: { toe: 0.09, heel: 0.02 }, arch: 0.09, spring: [0.05, 0.025],
@@ -117,9 +118,9 @@ export const DESIGN = {
     cap: { du: [0.56, 0.46, 0.04, null, null, null, null, null, 0.04, 0.46], h: [0.36, 0.35, 0.42, 0, 0, 0, 0, 0, 0.42, 0.35], in: [0.09, 0.1, 0.1, 0, 0, 0, 0, 0, 0.1, 0.1], t: 0.35, lip: 0.025, mid: [1, 9], seam: 0.14, sink: 0.03 },
     band: { y: 0.58, rise: 0.1, w: 0.19, gold: 0.08, out: 0.09 },
     mid: 0.4,
-    cuff: { lo: 0.42, rise: 0.2, gold: 0.08, out: 0.11, top: [0.8, 0.72, 0.7, 0.68, 0.67, 0.67, 0.67, 0.68, 0.7, 0.72], flare: [0.16, 0.2, 0.34, 0.2, 0.12, 0.11, 0.06, 0.04, 0.06, 0.1], rim: 0.06, lip: 0.11 },
+    cuff: { lo: 0.36, rise: 0.2, gold: 0.08, out: 0.11, top: [0.8, 0.74, 0.72, 0.68, 0.67, 0.67, 0.67, 0.68, 0.7, 0.74], flare: [0.07, 0.08, 0.3, 0.1, 0.06, 0.06, 0.05, 0.04, 0.06, 0.07], rim: 0.06, lip: 0.15, gap: 0.6 },
     rib: { w: 0.15, h: 0.05 },
-    crest: { t: 0.52, w: 0.3, h: 0.48, inset: 0.68, lift: 0.038 },
+    crest: { t: 0.52, w: 0.3, h: 0.48, inset: 0.8, lift: 0.038 },
   },
 };
 
@@ -219,7 +220,9 @@ export function buildPlateBoots(rig, design = DESIGN[rig.who]) {
     put('c3', each((k) => onShaft(k, cuffTop(k), D.cuff.out + D.cuff.flare[k])));
     // (the rim: the flared plate's top edge, `rim` thick, a little lower inside; the lip down its inside toward the leg)
     put('c4', each((k) => onShaft(k, cuffTop(k) - 0.02, D.cuff.out + D.cuff.flare[k] - D.cuff.rim)));
-    put('c5', each((k) => onShaft(k, cuffTop(k) - D.cuff.lip * H, D.cuff.out * 0.5 + D.cuff.flare[k] * 0.4 - D.cuff.rim)));
+    // (the lip goes in nearly to the leg, closing the gap between the cuff and the leg: what shows inside the cuff is
+    // the lip's face, not the plates' backs)
+    put('c5', each((k) => onShaft(k, cuffTop(k) - D.cuff.lip * H, -D.clear * (1 - (D.cuff.gap ?? 0.6)))));
     G.rings[side] = R; G.foot[side] = ft;
     G.legOf = G.legOf ?? {}; G.legOf[side] = { axis, ang, onShaft, cuffLo, cuffTop, bandHi };
     // the polygons
