@@ -70,6 +70,11 @@ export default {
   secLeft: [[-0.5, 0], [-0.47, 0.82], [-0.29, 1], [-0.12, 0.9, 0.6], [-0.085, 0.9, 0.6], [0.06, 1], [0.2, 0.88, 0.9], [0.245, 0.88, 0.9], [0.36, 0.97], [0.47, 0.82], [0.5, 0]],
   // the V at the nape (vLines): the other pieces kept above it (each clump's `aboveV`: by so many degrees)
   v: V,
+  // the sides' lower edge one straight line, the same both sides, from the temple's corner back to the V's start
+  // (tools/sculpt/lowhair.mjs sideOf)
+  // the pieces laid one on another, the upper's edge resting on the lower (tools/sculpt/lowhair.mjs layersOf)
+  layers: [['front', 'left'], ['front', 'back'], ['left', 'back']], layerGap: 0.02, layerPasses: 4,
+  side: { a: 0.185, b: 0.25, from: -0.26, to: 0.13, x: 0.4, pull: 0.25, band: 0.05, lip: 0.07 },
   clumps: [
     // the front and the top: one mass of tufts combed straight back (tools/sculpt/lowhair.mjs massOf), the creases
     // between them below
@@ -83,7 +88,7 @@ export default {
     // the top: from under the front's back edge, back over the crown
     { id: 'top', aboveV: 12, sec: 'secTop', n: 5, scale: 0.825, path: [[92, -2, 0.06], [110, 3], [130, 3], [165, 2], [190, 0]], w: [0.8, 0.8, 0.6, 0.32], h: [0.1], ends: [0.15, 0.6], tipUp: [0.2, 0.2] },
     // his left: three locks from under the front's left end back down the side to the nape
-    { id: 'left', aboveV: 12, sec: 'secLeft', n: 6, scale: 0.825, path: [[66, 40, 0.03], [80, 44, 0.03], [100, 48], [135, 45], [160, 32], [186, 8]], w: [0.5, 0.56, 0.6, 0.58, 0.5, 0.32], h: [0.1], ends: [0.15, 0.6], tipUp: [0, 0.2] },
+    { id: 'left', aboveV: 16, sec: 'secLeft', n: 6, scale: 0.9, path: [[96, 46, 0.02], [135, 45], [160, 32], [186, 8]], w: [0.58, 0.6, 0.5, 0.32], h: [0.1], ends: [0.15, 0.6], tipUp: [0, 0.2] },
     // the back: three tufts from under the others down to the wide V at the nape (vLines), their valleys darkest at the
     // lip where the tufts part
     { id: 'back', mass: true, sink: 0.015, scale: 0.7, least: [0, 0.12, 0.1, 0.08, 0], groove: 0.04, grooveAt: [0, 1, 1, 1, 0], strip: { w: 0.2, from: 1, to: 3, depth: [0.8, 0.65], peak: 'to' }, ...vLines() },

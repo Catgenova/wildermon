@@ -10,7 +10,8 @@
 //           at `n` stations; the first and the last are the clump's tips, single points.
 //     w, h  its width across the skull and its height off it, along the inner stations (the first value at the first
 //           ring after the front tip, the last at the last ring before the back tip; between, evenly).
-//     scale the hull's thickness taken this many times (the views disagree: one may carve what the others keep).
+//     scale the hull's thickness taken this many times (the views disagree: one may carve what the others keep); hs, a
+//           further share of it along the inner stations (a lock kept low where it runs under another).
 //     lip   the front ring's roots stand just off the skin (LIP), so the lock's front edge overhangs; float: every
 //           ring's (a lip along the whole lock, as the fringe's lower edge over the forehead).
 //     ends  [front, back]: how far each tip stands beyond its ring, as a share of the spline's own spacing (1 the
@@ -155,7 +156,7 @@ export function buildHair(rig, style = SWEPT, hull = null) {
         // a root on the skin under it, sunk into it
         // (at a lip, the front ring's roots stand just off the skin: the lock's front edge overhangs the forehead)
         if (root) { const dq = unit(sub(q, C)), hq = hit(skull, C, dq); if (hq.t > 0) q = add(C, mul(dq, hq.t + ((cl.lip && i === 1) || cl.float ? LIP * k : -SINK * k))); }
-        else if (hull) q = onHull(q, b);
+        else if (hull) q = onHull(q, b * (cl.hs ? at(cl.hs, ui(i)) : 1));
         if (!root && style.jitter) q = add(q, [0, 1, 2].map((c) => (hash(pieces.length * 101 + i * 7 + key[j], c) - 0.5) * 2 * style.jitter * Math.min(1, hh / (0.2 * k)) * k));
         verts.push(q);
         r.push(verts.length - 1);
@@ -176,6 +177,8 @@ export function buildHair(rig, style = SWEPT, hull = null) {
     pieces.push({ id: cl.id, polys: [first, polys.length], verts: [base, verts.length] });
   }
   if (style.v) aboveV(style, verts, pieces, skull, C, k);
+  if (style.side) sideOf(style.side, verts, pieces, skull, C, k);
+  if (style.layers) layersOf(style, verts, polys, pieces, skull, C, k);
   orientOut(verts, polys, pieces);
   // the buzz: the head's side faces forward of the shave as far as the sideburn's line, as patches just off them
   if (style.buzz) buzzOf(B, style, verts, polys, k);
@@ -189,6 +192,23 @@ export function buildHair(rig, style = SWEPT, hull = null) {
       if (dac <= dbd) tris.push([a, b, c, pi], [a, c, d, pi]); else tris.push([a, b, d, pi], [b, c, d, pi]);
     }
   });
+  // where a lower piece still shows through an upper on the sides (hairCrossings), its corners there pressed down
+  // toward the skin a little at a time
+  if (style.layers) for (let it = 0; it < 12; it++) {
+    const X = hairCrossings(rig, { verts, polys, tris, pieces, centre: C, k }).filter((x) => x.side);
+    if (!X.length) break;
+    for (const x of X) {
+      const pair = style.layers.find(([u, l]) => (u === x.a && l === x.b) || (u === x.b && l === x.a));
+      if (!pair) continue;
+      for (const pi of x.polys) {
+        if (polys[pi].buzz || pieces[polys[pi].piece].id !== pair[1]) continue;
+        for (const i of polys[pi].v) {
+          const r = sub(verts[i], C), l = Math.hypot(...r), d = mul(r, 1 / l), skin = hit(skull, C, d).t;
+          if (l > skin + 0.004 * k) verts[i] = add(C, mul(d, Math.max(skin + 0.002 * k, l - 0.01 * k)));
+        }
+      }
+    }
+  }
   const weights = weightsOf(rig, verts, style);
   const shave = shaveOf(B, style.shave), scalp = shaveOf(B, style.scalp ?? style.shave);
   return { verts, polys, tris, weights, pieces, shave, scalp, centre: C, k };
@@ -290,6 +310,87 @@ export function massOf(cl, { skull, C, k, verts, polys, pieces, hull, scalp }) {
   const ring = [...ids[0], ...ids.slice(1).map((r) => r[n - 1]), ...ids[R - 1].slice(0, -1).reverse(), ...ids.slice(1, -1).reverse().map((r) => r[0])].filter((a, m, all) => a !== all[(m + 1) % all.length]);
   ring.forEach((a, m) => polys.push({ v: [centre, ring[(m + 1) % ring.length], a], piece: pieces.length }));
   pieces.push({ id: cl.id, polys: [first, polys.length], verts: [base, verts.length], mass: { ids, rays, rows: R, n, src: rows.map((r) => r.src) } });
+}
+
+/**
+ * The sides' lower edge straight (side: { a, b, from, to, x, pull, band, lip }): on either side (|x| over `x` of the
+ * skull's size), between z `from` and `to` from the skull's centre (from the start of the back's V to the temple's
+ * corner), the hair's edge on the skin the one line y = a + b z (from the skull's centre, head units; mirrored, the two
+ * sides alike): a corner whose foot (the skin under it, along the ray from the centre) is below it moved up onto it,
+ * at its own height off the skin, and a root less than `pull` above it down onto it; a corner a little above it
+ * (within `band`), not a root, stood `lip` off the skin, so the side's lowest faces are one even wall over the buzz.
+ */
+function sideOf(side, verts, pieces, skull, C, k) {
+  const { a, b, from, to, x = 0.4, pull = 0, band = 0, lip = 0 } = side;
+  const foot = (d) => add(C, mul(d, hit(skull, C, d).t));
+  // how far the foot under a direction is above the line (head units, the skull's own)
+  const over = (d) => { const f = foot(d); return (f[1] - C[1]) / k - (a + (b * (f[2] - C[2])) / k); };
+  for (const pc of pieces) for (let i = pc.verts[0]; i < pc.verts[1]; i++) {
+    const p = verts[i], d = unit(sub(p, C)), f = foot(d), z = (f[2] - C[2]) / k;
+    if (Math.abs(f[0] - C[0]) < x * k || z < from || z > to) continue;
+    const h = Math.hypot(...sub(p, C)) - hit(skull, C, d).t, g = over(d);
+    const root = h <= 0;
+    if (root ? g >= pull : g >= band) continue;
+    // onto the line (up, or a root down): the direction's out moved, its over kept, until the foot is on the line
+    let d2 = d;
+    if (g < 0 || root) {
+      const [o, u] = angOf(d);
+      let lo = g < 0 ? u : Math.sign(u) * Math.min(89, Math.abs(u) * 1.5), hi = g < 0 ? u * 0.3 : u;
+      for (let it = 0; it < 30; it++) { const m = (lo + hi) / 2; if (over(dirOf(o, m)) < 0) lo = m; else hi = m; }
+      d2 = dirOf(o, hi);
+    }
+    verts[i] = add(C, mul(d2, hit(skull, C, d2).t + (h > 0 && lip ? lip * k : h)));
+  }
+}
+
+/**
+ * Pieces laid one on another (style.layers: [upper, lower] ids), so neither pokes through the other: twice over, each
+ * corner of the lower (above the skin) under the upper's outside by `gap` where the upper is over it, and each root of
+ * the upper (its edge sunk in the skin) over the lower's outside by `gap` where the lower is under it, so the upper's
+ * edge rests on the lower rather than cutting through it. Along the ray from the skull's centre; the outside of a
+ * piece its faces bar a mass's underside (the fan to the centre).
+ */
+function layersOf(style, verts, polys, pieces, skull, C, k) {
+  const gap = (style.layerGap ?? 0.004) * k, byId = (id) => pieces.findIndex((p) => p.id === id);
+  const outside = (pi) => {
+    const pc = pieces[pi], out = [], centre = pc.mass ? pc.verts[1] - 1 : -1;
+    for (let i = pc.polys[0]; i < pc.polys[1]; i++) {
+      const v = polys[i].v; if (v.includes(centre)) continue;
+      for (let j = 1; j + 1 < v.length; j++) out.push([v[0], v[j], v[j + 1]]);
+    }
+    return out;
+  };
+  // the outermost crossing of the ray from the centre along d with the faces (its distance), or -1
+  const far = (F, d) => {
+    let best = -1;
+    for (const [ia, ib, ic] of F) {
+      const a = verts[ia], b = verts[ib], c = verts[ic], e1 = sub(b, a), e2 = sub(c, a), p = cross(d, e2), det = dot(e1, p);
+      if (Math.abs(det) < 1e-12) continue;
+      const s0 = sub(C, a), u = dot(s0, p) / det; if (u < 0 || u > 1) continue;
+      const q = cross(s0, e1), v = dot(d, q) / det; if (v < 0 || u + v > 1) continue;
+      const t = dot(e2, q) / det; if (t > best) best = t;
+    }
+    return best;
+  };
+  for (let pass = 0; pass < (style.layerPasses ?? 2); pass++) for (const [upId, loId] of style.layers) {
+    const up = byId(upId), lo = byId(loId);
+    if (up < 0 || lo < 0) continue;
+    const U = outside(up), L = outside(lo), mine = (pc, i) => i >= pc.verts[0] && i < pc.verts[1] && !(pc.mass && i === pc.verts[1] - 1);
+    for (let i = pieces[lo].verts[0]; i < pieces[lo].verts[1]; i++) {
+      if (!mine(pieces[lo], i)) continue;
+      const r = sub(verts[i], C), l = Math.hypot(...r), d = mul(r, 1 / l), skin = hit(skull, C, d).t;
+      if (l <= skin) continue;
+      const t = far(U, d);
+      if (t > 0 && l > t - gap) verts[i] = add(C, mul(d, Math.max(skin + 0.002 * k, t - gap)));
+    }
+    for (let i = pieces[up].verts[0]; i < pieces[up].verts[1]; i++) {
+      if (!mine(pieces[up], i)) continue;
+      const r = sub(verts[i], C), l = Math.hypot(...r), d = mul(r, 1 / l);
+      if (l > hit(skull, C, d).t) continue;
+      const t = far(L, d);
+      if (t > 0) verts[i] = add(C, mul(d, t + gap));
+    }
+  }
 }
 
 /** A face's shade (0 none .. 1 the darkest) as its valley tone's step: 1 the darkest (HAIR_VALLEYS in src/sculpt/gl.ts)
@@ -432,6 +533,46 @@ function triTri(A, Bt) {
   return false;
 }
 
+/**
+ * Where the hair's pieces pass through one another or through the buzz where it shows: each pair of triangles (of two
+ * pieces, or of a piece and a buzz patch) that cross at a point standing off the skin (over 0.01 of the skull's size)
+ * with no other hair farther out along the ray from the skull's centre through it (so on the hair's outside, not
+ * under another piece). Each: { a, b } (the pieces' ids, 'buzz'), the points, and whether one is on a side (|x| over
+ * 0.4 of the skull's size, z from 0.3 behind the skull's centre to 0.2 ahead: the temple's corner back to the V's
+ * start). H: the hair's vertices (posed, or as built).
+ */
+export function hairCrossings(rig, hair, H = hair.verts) {
+  const { tris: skull0 } = skullOf(rig.B), C = hair.centre, k = hair.k;
+  const segX = (p, q, [a, b, c]) => {
+    const d = sub(q, p), e1 = sub(b, a), e2 = sub(c, a), h = cross(d, e2), det = dot(e1, h);
+    if (Math.abs(det) < 1e-12) return null;
+    const s = sub(p, a), u = dot(s, h) / det; if (u < 0 || u > 1) return null;
+    const qq = cross(s, e1), v = dot(d, qq) / det; if (v < 0 || u + v > 1) return null;
+    const t = dot(e2, qq) / det; return t > 1e-6 && t < 1 - 1e-6 ? add(p, mul(d, t)) : null;
+  };
+  const bb = (P) => [0, 1, 2].map((c) => [Math.min(...P.map((p) => p[c])), Math.max(...P.map((p) => p[c]))]);
+  const T = hair.tris.map(([a, b, c, pi]) => { const P = [H[a], H[b], H[c]]; return { v: [a, b, c], P, piece: hair.polys[pi].piece, buzz: !!hair.polys[pi].buzz, pi, bb: bb(P) }; });
+  const above = (p) => { const r = sub(p, C), l = Math.hypot(...r); return l - hit(skull0, C, mul(r, 1 / l)).t; };
+  const outer = (p, A, B) => {
+    const d = unit(sub(p, C)), q0 = add(p, mul(d, 0.002 * k)), q1 = add(p, mul(d, 2));
+    return !T.some((t) => t !== A && t !== B && !t.buzz && segX(q0, q1, t.P));
+  };
+  const side = (p) => Math.abs(p[0] - C[0]) >= 0.4 * k && (p[2] - C[2]) / k >= -0.3 && (p[2] - C[2]) / k <= 0.2;
+  const out = [];
+  for (let i = 0; i < T.length; i++) for (let j = i + 1; j < T.length; j++) {
+    const A = T[i], B = T[j];
+    if ((A.buzz && B.buzz) || (!A.buzz && !B.buzz && A.piece === B.piece)) continue;
+    if (A.v.some((a) => B.v.includes(a)) || A.bb.some(([lo, hi], c) => hi < B.bb[c][0] || lo > B.bb[c][1])) continue;
+    const X = [];
+    for (let e = 0; e < 3; e++) for (const x of [segX(A.P[e], A.P[(e + 1) % 3], B.P), segX(B.P[e], B.P[(e + 1) % 3], A.P)]) if (x) X.push(x);
+    const seen = X.filter((p) => above(p) > 0.01 * k && outer(p, A, B));
+    if (!seen.length) continue;
+    const id = (t) => (t.buzz ? 'buzz' : hair.pieces[t.piece].id);
+    out.push({ a: id(A), b: id(B), points: X, polys: [A.pi, B.pi], side: seen.some(side) });
+  }
+  return out;
+}
+
 /** The hair's triangles that pass through the body's skin where it does not move with the head: the face and the
  * ears at rest (a clump fitted through them), the neck and the shoulders in a pose (the head turned or nodded onto them).
  * The clumps' roots sit in the scalp by design: the style's scalp polygons, where rigid on the head, are left out. P, H: the
@@ -490,6 +631,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const rig = buildRig(who), hair = buildHair(rig, STYLES[opt('style', 'swept')], HULL);
     const rest = crossings(rig, hair, rig.B.verts, hair.verts);
     console.log(who, 'tris', hair.tris.length, 'valleys', hair.polys.filter((p) => p.valley).length, 'pieces', hair.pieces.map((p) => `${p.id}:${(p.polys[1] - p.polys[0])}`).join(' '), 'open edges', openEdges(hair), 'shaved polys', hair.shave.length, 'crossings at rest', rest.n, JSON.stringify(rest.hits.slice(0, 6).map(([h, s]) => [h, rig.B.polys[s].name])));
+    const X = hairCrossings(rig, hair), count = (l) => { const m = {}; for (const x of l) { const key = [x.a, x.b].sort().join('-'); m[key] = (m[key] ?? 0) + 1; } return JSON.stringify(m); };
+    console.log('  pieces through one another where it shows:', X.length, count(X), 'on the sides', X.filter((x) => x.side).length, count(X.filter((x) => x.side)));
     if (who === 'male') console.log('outline difference against the sheet (mean px):', Object.entries(outlineDiff(hair.tris.filter(([, , , pi]) => !hair.polys[pi].buzz).map(([a, b, c]) => [hair.verts[a], hair.verts[b], hair.verts[c]]))).map(([v, d]) => `${v} ${d.px}`).join(', '));
   }
 }

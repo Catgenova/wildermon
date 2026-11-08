@@ -143,7 +143,7 @@ export async function shoot(w, h, cells, file, { texts = [], imgs = [] } = {}) {
       const [x, y, cw, ch] = im.crop, [bx, by, bw, bh] = im.box, k = Math.min(bw / cw, bh / ch);
       const e = document.createElement('div'); e.className = 'im';
       e.style.cssText = `left:${bx}px;top:${by}px;width:${bw}px;height:${bh}px;background:#362a2e url(${U[im.src]}) no-repeat;` +
-        `background-size:${im.size[0] * k}px ${im.size[1] * k}px;background-position:${-x * k + (bw - cw * k) / 2}px ${-y * k + (bh - ch * k) / 2}px`;
+        `background-size:${im.size[0] * k}px ${im.size[1] * k}px;background-position:${-x * k + (bw - cw * k) / 2}px ${-y * k + (bh - ch * k) / 2}px` + (im.flip ? ';transform:scaleX(-1)' : '');
       host.appendChild(e);
     }
     document.getElementById('gl').style.pointerEvents = 'none';
@@ -169,7 +169,7 @@ export { SKIN };
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { buildRig, posed, skin } from './lowrig.mjs';
-import { buildHair, skinHair, STYLES, crossings, openEdges } from './lowhair.mjs';
+import { buildHair, skinHair, STYLES, crossings, openEdges, hairCrossings } from './lowhair.mjs';
 import { carve, hullSurface } from './lowhairhull.mjs';
 
 const REF = join(DIR, 'ref/hair-swept-undercut.png'), REF_SIZE = [1536, 1024];
@@ -228,14 +228,21 @@ if (MAIN) {
   }
 
   if (only.includes('close')) for (const who of Object.keys(RIGS)) {
-    // close: the rear three-quarter and the back twice the size, the sheet's (left) beside ours (right)
+    // close: each view larger, the sheet's (left) beside ours (right); his left side the sheet's profile mirrored; where
+    // the pieces pass through one another (tools/sculpt/lowhair.mjs hairCrossings), red lines
     const rig = RIGS[who], hair = HAIRS[who], K = 1.8, cw = 420, ch = 420, gap = 8, cells = [], imgs = [];
-    VIEWS.filter(([v]) => v !== 'profile').forEach(([v, label], i) => {
+    const X = hairCrossings(rig, hair), xp = X.flatMap((x) => x.points.length >= 2 ? x.points.slice(0, 2) : []);
+    const red = { who: rig.who, P: xp.length ? xp : [[0, 0, 0]], polys: xp.length ? Array.from({ length: xp.length / 2 }, (_, i) => [2 * i, 2 * i + 1]) : [], tris: [], col: [], edges: true, edgec: [1, 0.1, 0.1] };
+    const views = [['front', 'Front (0°)'], ['q3', 'Three-quarter (45°)'], ['profile', 'Profile, his right (90°)'], ['profile', 'Profile, his left (270°; the sheet mirrored)', true], ['r3', 'Rear three-quarter (135°)'], ['back', 'Back (180°)']];
+    views.forEach(([v, label, flip], i) => {
       const c = CAMS[v], x = 10 + (i % 2) * 2 * (cw + gap), y = 34 + Math.floor(i / 2) * (ch + gap), cy = c.cy - 30;
-      imgs.push({ src: REF, size: REF_SIZE, crop: [c.cx - cw / K / 2, cy - ch / K / 2, cw / K, ch / K], box: [x, y, cw, ch] });
-      cells.push({ meshes: [bodyMesh(rig, hair), hairMesh(rig, hair)], cam: { ...camOf(c, K), c: [PIV[0], PIV[1] + 30 / c.s, PIV[2]] }, box: [x + cw + gap, y, cw, ch], label });
+      imgs.push({ src: REF, size: REF_SIZE, crop: [c.cx - cw / K / 2, cy - ch / K / 2, cw / K, ch / K], box: [x, y, cw, ch], flip });
+      const cam = { ...camOf(c, K), c: [PIV[0], PIV[1] + 30 / c.s, PIV[2]] };
+      if (flip) cam.yaw = -cam.yaw;
+      cells.push({ meshes: [bodyMesh(rig, hair), hairMesh(rig, hair), red], cam, box: [x + cw + gap, y, cw, ch], label });
     });
-    await shoot(10 + 4 * (cw + gap) + 2, 34 + 2 * (ch + gap) + 10, cells, join(out, `hair-close-${who}${stage}.png`), { texts: [{ css: 'left:12px;top:6px', html: `Close: the sheet (left), the ${who === 'male' ? 'man' : 'woman'} (right)` }], imgs });
+    const sideN = X.filter((x) => x.side).length;
+    await shoot(10 + 4 * (cw + gap) + 2, 34 + 3 * (ch + gap) + 10, cells, join(out, `hair-close-${who}${stage}.png`), { texts: [{ css: 'left:12px;top:6px', html: `Close: the sheet (left), the ${who === 'male' ? 'man' : 'woman'} (right); red: pieces through one another where it shows (${X.length}, on the sides ${sideN})` }], imgs });
   }
 
   const POSES = { headturn: { label: 'Head turned 70°', pose: { neck_01: [0, 16, 0], neck_02: [0, 16, 0], head: [0, 38, 0] } }, nod: { label: 'Head nod (down 40°)', pose: { neck_01: [12, 0, 0], neck_02: [14, 0, 0], head: [14, 0, 0] } } };
