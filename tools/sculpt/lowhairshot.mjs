@@ -170,7 +170,8 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { buildRig, posed, skin } from './lowrig.mjs';
 import { buildHair, skinHair, STYLES, crossings, openEdges, hairCrossings } from './lowhair.mjs';
-import { carve, hullSurface } from './lowhairhull.mjs';
+import { carve, hullSurface, warpOf, project as sheetAt } from './lowhairhull.mjs';
+import { sheetOf, bodyMarks, pairsOf, outlineOf, headTris } from './lowhairreg.mjs';
 
 const REF = join(DIR, 'ref/hair-swept-undercut.png'), REF_SIZE = [1536, 1024];
 const PIV = [0, 1, 0.1];
@@ -192,6 +193,12 @@ export function hairMesh(rig, hair, H = hair.verts, hairCol = SHEET_HAIR) {
   return { who: rig.who, P: H, polys: hair.polys.map((p) => p.v), tris: hair.tris, col: hair.polys.map((p) => (p.buzz ? mix(SKIN, hairCol, SHAVE) : hairCol.map((x, c) => -x - (p.valley && !c ? VALLEY_MARK * p.valley : 0)))) };
 }
 const camOf = (c, k = 1) => ({ yaw: -c.yaw, pitch: -c.pitch, s: c.s * k, c: PIV });
+/** The head-space point the plain camera draws at sheet pixel (x, y) (at the pivot's depth): a cell's centre. */
+function sheetPivot(c, x, y) {
+  const a = (c.yaw * Math.PI) / 180, b = (c.pitch * Math.PI) / 180, ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b);
+  const qx = (x - c.cx) / c.s, qy = (c.cy - y) / c.s;
+  return [PIV[0] + qx * ca + qy * sb * sa, PIV[1] + qy * cb, PIV[2] + qx * sa - qy * sb * ca];
+}
 
 const MAIN = import.meta.url === `file://${process.argv[1]}`;
 if (MAIN) {
@@ -216,15 +223,44 @@ if (MAIN) {
     VIEWS.forEach(([v, label], i) => {
       const c = CAMS[v], x = x0 + i * (cw + gap);
       imgs.push({ src: REF, size: REF_SIZE, crop: [c.cx - cw / 2, c.cy - ch / 2, cw, ch], box: [x, y1, cw, ch] });
-      cells.push({ meshes: [bodyMesh(rig, hair), hairMesh(rig, hair)], cam: camOf(c), box: [x, y2, cw, ch], label });
+      // (the view's 2D correction, tools/sculpt/lowhairreg.mjs, as a map of the head's space: the body and the hair alike)
+      const w = warpOf(c), Pw = rig.B.verts.map(w), Hw = hair.verts.map(w);
+      cells.push({ meshes: [bodyMesh(rig, hair, Pw), hairMesh(rig, hair, Hw)], cam: camOf(c), box: [x, y2, cw, ch], label });
       if (!over) return;
       // the third row: the sheet with our hair laid over it, a see-through teal with its outline (the head left out)
       imgs.push({ src: REF, size: REF_SIZE, crop: [c.cx - cw / 2, c.cy - ch / 2, cw, ch], box: [x, y3, cw, ch] });
       // (the buzz patches left out: they lie on the skin, as the sheet's buzz, not in its hair's silhouette)
-      cells.push({ meshes: [{ ...bodyMesh(rig, hair), depthOnly: true }, { ...hairMesh(rig, hair), tris: hair.tris.filter(([, , , pi]) => !hair.polys[pi].buzz), col: hair.polys.map(() => [0.2, 0.95, 0.85]), flat: true, alpha: 0.42 }], cam: camOf(c), box: [x, y3, cw, ch], see: true, label: 'ours (teal, no buzz) over the sheet' });
+      cells.push({ meshes: [{ ...bodyMesh(rig, hair, Pw), depthOnly: true }, { ...hairMesh(rig, hair, Hw), tris: hair.tris.filter(([, , , pi]) => !hair.polys[pi].buzz), col: hair.polys.map(() => [0.2, 0.95, 0.85]), flat: true, alpha: 0.42 }], cam: camOf(c), box: [x, y3, cw, ch], see: true, label: 'ours (teal, no buzz) over the sheet' });
     });
     texts.push({ css: 'left:12px;top:6px', html: `Swept back undercut — the sheet (top), the ${who === 'male' ? 'man' : 'woman'} (below): ${hair.tris.length} hair triangles, ${hair.pieces.length} clumps` });
     await shoot(x0 * 2 + 5 * cw + 4 * gap, (over ? y3 : y2) + ch + 10, cells, join(out, `hair-sheet-${who}${stage}.png`), { texts, imgs });
+  }
+
+  if (only.includes('reg') && RIGS.male) {
+    // the registration: the male's head and neck as a wire over each sheet view (2x), the sheet's landmarks (yellow
+    // rings) and the body's (cyan dots) with their residuals, the outline's mean distance
+    const rig = RIGS.male, S = sheetOf(), M = bodyMarks(rig.B), tris = headTris(rig.B), K = 2, cw = 250, ch = 270;
+    const cells = [], imgs = [], texts = [];
+    VIEWS.forEach(([v, label], i) => {
+      const c = CAMS[v], x = 10 + (i % 3) * (cw * K + 8), y = 34 + Math.floor(i / 3) * (ch * K + 30), x0 = c.cx - cw / 2, y0 = 30;
+      imgs.push({ src: REF, size: REF_SIZE, crop: [x0, y0, cw, ch], box: [x, y, cw * K, ch * K] });
+      const w = warpOf(c), Pw = rig.B.verts.map(w);
+      const head = { ...bodyMesh(rig, { shave: [] }, Pw, SHEET_HAIR, { parts: ['head', 'neck'] }) };
+      cells.push({ meshes: [{ ...head, depthOnly: true }, { ...head, tris: [], edges: true, edgec: [0.2, 1, 0.95] }], cam: { ...camOf(c, K), c: sheetPivot(c, x0 + cw / 2, y0 + ch / 2) }, box: [x, y, cw * K, ch * K], see: true });
+      const at = (q) => [x + (q[0] - x0) * K, y + (q[1] - y0) * K];
+      const res = [];
+      for (const [n, sp, p] of pairsOf(v, c, S, M)) {
+        const a = at(sp), b = at(sheetAt(p, c)), d = Math.hypot(...sheetAt(p, c).slice(0, 2).map((q, k) => q - sp[k]));
+        texts.push({ cls: 'lab', css: `left:${a[0] - 7}px;top:${a[1] - 7}px;width:10px;height:10px;border:2px solid #ffe14a;border-radius:50%`, html: '' });
+        texts.push({ cls: 'lab', css: `left:${b[0] - 3}px;top:${b[1] - 3}px;width:6px;height:6px;background:#2ff;border-radius:50%`, html: '' });
+        texts.push({ cls: 'lab', css: `left:${a[0] + 8}px;top:${a[1] + 4}px;font-size:12px;color:#ffe14a;text-shadow:0 0 3px #000`, html: d.toFixed(1) });
+        res.push(d);
+      }
+      const o = outlineOf(v, c, S, tris);
+      texts.push({ cls: 'lab', css: `left:${x + 6}px;top:${y + 4}px;text-shadow:0 0 3px #000`, html: `${label}: outline ${o.px.toFixed(2)} px` + (res.length ? `, landmarks mean ${(res.reduce((a, q) => a + q, 0) / res.length).toFixed(1)} px` : ', no face landmarks') + `<br>correction: roll ${(c.roll ?? 0).toFixed(1)}°, across ×${(c.ax ?? 1).toFixed(3)}, up ×${(c.ay ?? 1).toFixed(3)}, shear ${(c.sh ?? 0).toFixed(3)}` });
+    });
+    texts.unshift({ css: 'left:12px;top:6px', html: 'Registration: the man\'s head (wire) over the sheet at 2×; yellow rings the sheet\'s landmarks, cyan dots his, residuals in px' });
+    await shoot(10 + 3 * (cw * K + 8), 34 + 2 * (ch * K + 30), cells, join(out, `hair-reg${stage}.png`), { texts, imgs });
   }
 
   if (only.includes('close')) for (const who of Object.keys(RIGS)) {
@@ -239,7 +275,8 @@ if (MAIN) {
       imgs.push({ src: REF, size: REF_SIZE, crop: [c.cx - cw / K / 2, cy - ch / K / 2, cw / K, ch / K], box: [x, y, cw, ch], flip });
       const cam = { ...camOf(c, K), c: [PIV[0], PIV[1] + 30 / c.s, PIV[2]] };
       if (flip) cam.yaw = -cam.yaw;
-      cells.push({ meshes: [bodyMesh(rig, hair), hairMesh(rig, hair), red], cam, box: [x + cw + gap, y, cw, ch], label });
+      const w = warpOf(c);
+      cells.push({ meshes: [bodyMesh(rig, hair, rig.B.verts.map(w)), hairMesh(rig, hair, hair.verts.map(w)), { ...red, P: red.P.map(w) }], cam, box: [x + cw + gap, y, cw, ch], label });
     });
     const sideN = X.filter((x) => x.side).length;
     await shoot(10 + 4 * (cw + gap) + 2, 34 + 3 * (ch + gap) + 10, cells, join(out, `hair-close-${who}${stage}.png`), { texts: [{ css: 'left:12px;top:6px', html: `Close: the sheet (left), the ${who === 'male' ? 'man' : 'woman'} (right); red: pieces through one another where it shows (${X.length}, on the sides ${sideN})` }], imgs });

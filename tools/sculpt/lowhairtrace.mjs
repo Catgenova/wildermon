@@ -16,7 +16,12 @@ const SPAN = { front: [40, 370], q3: [345, 660], profile: [650, 960], r3: [960, 
 /** A sheet pixel and its depth under a camera back to the head's space. */
 export function unproject(sx, sy, qz, c) {
   const a = (c.yaw * Math.PI) / 180, b = (c.pitch * Math.PI) / 180, ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b);
-  const qx = (sx - c.cx) / c.s, qy = (c.cy - sy) / c.s;
+  let qx = (sx - c.cx) / c.s, qy = (c.cy - sy) / c.s;
+  if (c.roll || c.ax || c.ay || c.sh) {
+    // (project's correction undone: the shear and stretch, then the roll)
+    const ry = qy / (c.ay ?? 1), rx = qx / (c.ax ?? 1) - (c.sh ?? 0) * ry, r = ((c.roll ?? 0) * Math.PI) / 180, cr = Math.cos(r), sr = Math.sin(r);
+    qx = cr * rx + sr * ry; qy = -sr * rx + cr * ry;
+  }
   return [PIV[0] + qx * ca + qy * sb * sa - qz * cb * sa, PIV[1] + qy * cb + qz * sb, PIV[2] + qx * sa - qy * sb * ca + qz * cb * ca];
 }
 
