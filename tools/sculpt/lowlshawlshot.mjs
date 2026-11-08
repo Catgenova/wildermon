@@ -162,27 +162,27 @@ if (only.includes('neighbours')) {
     const { rig, G } = M[who], N = { chest: load(opt('chest'), who), hat: load(opt('hat'), who) }, hide = new Set(N.chest.A.hides ?? []);
     const TG = trisOfG(G);
     report[who] = {};
-    for (const e of await poseList(who)) {
+    for (const e of process.env.NB_RENDER_ONLY ? [] : await poseList(who)) {
       const f = posed(rig, e.pose), PG = skinGarment(rig, f, G), r = {};
       for (const [k, n] of Object.entries(N)) { const PN = skinGarment(rig, f, n.G, n.G.vw); r[k] = crossPairs(PG, TG, PN, n.T).length; }
       report[who][e.id] = r;
     }
     const sum = (re, k) => Object.entries(report[who]).filter(([id]) => re.test(id)).reduce((a, [, v]) => a + v[k], 0);
-    report[who].summary = Object.fromEntries(['chest', 'hat'].map((k) => [k, { rest: report[who].rest[k], idle: sum(/^idle/, k), walk: sum(/^walk/, k), swing: sum(/^swing/, k), tests: Object.fromEntries(['tpose', 'forward', 'overhead', 'headturn', 'nod'].map((id) => [id, report[who][id][k]])) }]));
-    console.log(who, JSON.stringify(report[who].summary));
+    if (!process.env.NB_RENDER_ONLY) report[who].summary = Object.fromEntries(['chest', 'hat'].map((k) => [k, { rest: report[who].rest[k], idle: sum(/^idle/, k), walk: sum(/^walk/, k), swing: sum(/^swing/, k), tests: Object.fromEntries(['tpose', 'forward', 'overhead', 'headturn', 'nod'].map((id) => [id, report[who][id][k]])) }]));
+    if (!process.env.NB_RENDER_ONLY) console.log(who, 'summary', JSON.stringify(report[who].summary));
     // the set worn together: rest and head turned, front, three-quarter, side, back; plain and enchanted
     const neigh = (P, look) => Object.values(N).map((n) => ({ ...n.m, P, col: n.A.polys.map(([, m]) => lookColour((look === 'enchanted' ? n.A.enchanted : n.A.plain)?.[m] ?? { c: n.A.colours[m] })) }));
-    const row = cells.length ? Math.max(...cells.map((c) => c.row)) + 1 : 0;
-    [['rest', {}], ['headturn', testPoses(rig).find((e) => e.id === 'headturn').pose]].forEach(([id, pose], pi) => ['plain', 'enchanted'].forEach((look, li) => [0, -40, -90, 180].forEach((yaw, vi) => {
+    cells.length = 0; const row = 0;
+    [['rest', {}, 'plain'], ['rest', {}, 'enchanted'], ['headturn', testPoses(rig).find((e) => e.id === 'headturn').pose, 'plain']].forEach(([id, pose, look], pi) => [0, -40, -90, 180].forEach((yaw, vi) => { const li = 0;
       const f = posed(rig, pose), PB = skin(rig, f), PG = skinGarment(rig, f, G), mesh = [bodyMesh(rig, PB, new Set([...hide])), garMesh(G, PG, look), ...Object.values(N).map((n) => { const P = skinGarment(rig, f, n.G, n.G.vw); return { ...n.m, P, col: n.A.polys.map(([, m]) => lookColour(((look === 'enchanted' ? n.A.enchanted : n.A.plain) ?? [])[m] ?? { c: n.A.colours[m] })) }; })];
-      const k = (pi * 2 + li) * 4 + vi;
-      cells.push({ row: row + Math.floor(k / 8), meshes: mesh, cam: { yaw, pitch: 4, s: 70, c: [0, -1.3, 0] }, box: [(k % 8) * 240, 34 + (row + Math.floor(k / 8)) * 330, 240, 330], label: k % 4 ? '' : `${who} ${id} ${look}` });
-    })));
+      const k = (pi + li) * 4 + vi;
+      cells.push({ row: Math.floor(k / 4), meshes: mesh, cam: { yaw, pitch: 4, s: 36, c: [0, -1.6, 0] }, box: [(k % 4) * 230, 34 + Math.floor(k / 4) * 300, 230, 300], label: k % 4 ? '' : `${who} ${id} ${look}` });
+    }));
     void neigh;
+    await shoot(4 * 230, 34 + 3 * 300, cells, join(out, `${name}-neighbours-${who}.png`), { texts: [{ css: 'left:10px;top:6px', html: `Leather shawl over the leather chest, under the leather hat (${who}): rest plain, rest enchanted, head turned 70°` }] });
+    await closeBrowser();
   }
-  writeFileSync(join(out, `${name}-neighbours.json`), JSON.stringify(report, null, 1));
-  const rows = Math.max(...cells.map((c) => c.row)) + 1;
-  await shoot(8 * 240, 34 + rows * 330, cells, join(out, `${name}-neighbours.png`), { texts: [{ css: 'left:10px;top:6px', html: 'Leather shawl worn over the leather chest and under the leather hat: rest and head turned, plain and enchanted' }] });
+  if (!process.env.NB_RENDER_ONLY) writeFileSync(join(out, `${name}-neighbours.json`), JSON.stringify(report, null, 1));
 }
 
 /* ---- the walk GIF ---------------------------------------------------------------------------------------------------- */
