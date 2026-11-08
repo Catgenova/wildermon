@@ -2357,6 +2357,8 @@ export interface FigurePose {
   look?: Look;
   emote?: string;
   emoteT?: number;
+  /** For a body `working`, where it is in the go of its job and how long a go takes, seconds, when known (a sculpted figure's clip is fitted to it). */
+  act?: { t: number; length: number };
   /**
    * Who this is, for a body drawn frame after frame: with it, going from
    * standing to walking, into the water or down to work is a blend over a
@@ -2366,6 +2368,12 @@ export interface FigurePose {
   id?: string;
   /** What is worn and held, each piece drawn on the body in its own material, dye and rarity. */
   gear?: GearLook;
+  /**
+   * Which garments a low-poly body has on (Sculpted figures, `../sculpt/lowpoly`): each left out at the game's default,
+   * the shawl, the trousers, the boots and the tunic worn and the hood down; the hood is up only with the shawl, and the
+   * hair is not drawn under it.
+   */
+  outfit?: Partial<Record<'shawl' | 'trousers' | 'boots' | 'tunic' | 'hood', boolean>>;
   /**
    * A spell part way through being cast: which, and how far through it, nought to one. What it does to the body
    * is the spell's own (`./spells`, registered with `castPosesBy`), laid over whatever else the body is doing --
@@ -6380,6 +6388,8 @@ export interface GearPiece {
   material?: string;
   /** The dye's colour, as `#rrggbb`. */
   dye?: string;
+  /** Enchanted: a sculpted figure's sword drawn with its engraving lit. */
+  enchanted?: boolean;
 }
 export type GearSlot = 'head' | 'chest' | 'arms' | 'legs' | 'feet' | 'weapon' | 'offhand' | 'belt' | 'jewel';
 export type GearLook = Partial<Record<GearSlot, GearPiece>>;
