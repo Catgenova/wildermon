@@ -246,11 +246,12 @@ export function buildLeatherLegs(rig, design = DESIGN[rig.who], { stage = 9 } = 
   for (const row of D.flat ?? ['H1', 'H2']) if (hipV[row]) hipV[row] = hipV[row].map(flat);
   for (const k of [0, 1]) C[k] = flat(C[k]);
   // (a ring between the crotch row and the first thigh row, halfway, out by `t0` from the leg's axis on its outer six
-  // columns: smaller faces over the hip's crease, so the band and the flaps above follow the cloth through the walk)
+  // columns: smaller faces over the hip's crease, so the band and the flaps above follow the cloth through the walk; its
+  // four inside columns `t0In` of the way down, clear of the other leg's across the crotch's centre line)
   if (stage > 1 && legV.T1) {
     const cT = legC.T1, cC = legC.C;
     legV.T0 = C.map((p, k) => {
-      const m = lerp(p, legV.T1[k], 0.5);
+      const m = lerp(p, legV.T1[k], k >= 6 ? D.t0In ?? 0.7 : 0.5);
       if (k >= 6) return m;
       const c = lerp(cC, cT, 0.5), d = [m[0] - c[0], m[2] - c[1]], l = Math.hypot(...d), r = l + (D.t0 ?? 0.03);
       return [c[0] + d[0] / l * r, m[1], c[1] + d[1] / l * r];
