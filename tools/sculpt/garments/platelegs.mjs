@@ -67,21 +67,21 @@ export const DESIGN = {
     clear: 0.04, gap: 0.02, t: 0.045, raise: 0.022, trim: 0.07, thigh: [0, 50, 91, 132, 180, 229, 271, 312],
     low: { clear: 0.025, gap: 0.01, t: 0.03, raise: 0.015, trim: 0.06 },
     band: { z0: -0.06, az: [0, 30, 70, 110, 150, 180], top: [-3.99, -3.97, -3.94, -3.94, -3.97, -3.99], bottom: [-5.45, -4.95, -4.6, -4.62, -4.74, -4.86] },
-    lame: { rows: [{ y: tab([[0, -4.85], [91, -4.42], [180, -4.66], [229, -5.62], [271, -5.88], [312, -5.62]]), lvl: 0 }, { y: tab([[0, -5.45], [91, -5.25], [180, -5.3], [229, -5.85], [271, -6.0], [312, -5.85]]), lvl: 1 }, { y: [-6.05, -5.95, -6.0, -6.2], lvl: 1 }] },
-    cuisse: { rows: [{ y: [-5.75, -5.68, -5.75, -6.05], lvl: 0 }, { y: -6.62, lvl: 0 }, { y: [-7.3, -7.12, -6.95, -7.05], lvl: 0 }] },
-    knee: { top: -6.68, mid: -7.42, bottom: -8.1, wing: 84, lvl: 1.7, bulge: 0.12, inset: 0.24, ring: [0.33, 0.42] },
-    shinUp: { az: [-92, -48, -6, 0, 6, 48, 92], rows: [{ y: [-7.72, -7.85, -7.85, -7.85], lvl: 0 }, { y: [-8.62, -8.58, -8.58, -8.58], lvl: 1 }] },
-    shinLow: { az: [-92, -48, -6, 0, 6, 48, 92], rows: [{ y: -8.4, lvl: 0 }, { y: -10.36, lvl: 0.4 }] },
+    lame: { az: [-40, 0, 50, 91, 132, 180, 216], rows: [{ y: tab([[0, -4.85], [91, -4.42], [180, -4.66], [229, -5.4], [271, -5.6], [320, -5.45]]), lvl: 0 }, { y: [-6.05, -5.95, -6.0, -6.1], lvl: 1 }] },
+    cuisse: { rows: [{ y: [-5.75, -5.68, -5.75, -6.3], lvl: 0 }, { y: -6.62, lvl: 0 }, { y: [-7.3, -7.12, -6.95, -7.05], lvl: 0 }] },
+    knee: { top: -6.66, mid: -7.42, bottom: -8.12, wing: 84, lvl: 1, bulge: 0.14, inset: [14, 0.27], ringIn: [18, 0.34], ring: [25, 0.46] },
+    shinUp: { az: [-92, -48, -5, 5, 48, 92], rows: [{ y: [-7.72, -7.85, -7.85, -7.85], lvl: 0 }, { y: [-8.62, -8.58, -8.58, -8.58], lvl: 1 }] },
+    shinLow: { az: [-92, -48, -5, 5, 48, 92], rows: [{ y: -8.4, lvl: 0 }, { y: -10.36, lvl: 0.4 }] },
     calf: { az: [98, 139, 180, 221, 262], segs: [[-8.05, -8.9], [-8.75, -9.6], [-9.45, -10.36]], chevron: 0.18 },
   },
   female: {
     clear: 0.035, gap: 0.018, t: 0.04, raise: 0.02, trim: 0.06, thigh: [0, 38, 88, 143, 180, 218, 275, 325],
     low: { clear: 0.02, gap: 0.008, t: 0.026, raise: 0.012, trim: 0.05 },
     band: { z0: -0.38, az: [0, 30, 70, 110, 150, 180], top: [-3.63, -3.61, -3.58, -3.58, -3.61, -3.64], bottom: [-4.32, -3.98, -3.9, -3.95, -4.06, -4.16] },
-    cuisse: { hip: 2, rows: [{ y: tab([[0, -3.95], [88, -3.76], [180, -3.98], [218, -4.4], [275, -4.75], [325, -4.45]]), lvl: 0 }, { y: tab([[0, -4.45], [88, -4.4], [180, -4.5], [218, -4.75], [275, -5.0], [325, -4.8]]), lvl: 0 }, { y: [-6.58, -6.45, -6.25, -6.35], lvl: 0 }] },
-    knee: { top: -6.0, mid: -6.74, bottom: -7.42, wing: 82, lvl: 1.7, bulge: 0.1, inset: 0.24, ring: [0.33, 0.42] },
-    shinUp: { az: [-92, -48, -6, 0, 6, 48, 92], rows: [{ y: [-7.02, -7.15, -7.15, -7.15], lvl: 0 }, { y: [-8.0, -7.95, -7.95, -7.95], lvl: 1 }] },
-    shinLow: { az: [-92, -48, -6, 0, 6, 48, 92], rows: [{ y: -7.8, lvl: 0 }, { y: -10.5, lvl: 0.4 }] },
+    cuisse: { hip: 2, rows: [{ y: tab([[0, -3.95], [88, -3.76], [180, -3.98], [218, -4.6], [275, -4.75], [325, -4.45]]), lvl: 0 }, { y: [-6.58, -6.45, -6.25, -6.35], lvl: 0 }] },
+    knee: { top: -6.02, mid: -6.74, bottom: -7.44, wing: 82, lvl: 1, bulge: 0.12, inset: [13, 0.26], ringIn: [17, 0.33], ring: [24, 0.44] },
+    shinUp: { az: [-92, -48, -5, 5, 48, 92], rows: [{ y: [-7.02, -7.15, -7.15, -7.15], lvl: 0 }, { y: [-8.0, -7.95, -7.95, -7.95], lvl: 1 }] },
+    shinLow: { az: [-92, -48, -5, 5, 48, 92], rows: [{ y: -7.8, lvl: 0 }, { y: -10.5, lvl: 0.4 }] },
     calf: { az: [98, 139, 180, 221, 262], segs: [[-7.4, -8.4], [-8.25, -9.4], [-9.25, -10.5]], chevron: 0.2 },
   },
 };
@@ -124,7 +124,7 @@ const bodyTris = (B, parts, keep = () => true) => B.tris.filter((t) => t.v.every
  * from it: at (y, az, off) the point off the body's surface by `off` along the horizontal ray from the axis at height y.
  */
 function legField(B) {
-  const T = bodyTris(B, new Set(['torso', 'pelvis', 'legs']), (p) => p[0] > -1e-6);
+  const T = bodyTris(B, new Set(['torso', 'pelvis', 'legs'])).filter((t) => t[0][0] + t[1][0] + t[2][0] > 0);
   const names = ['th', 'tg', 'tm', 'tl', 'ka', 'kb', 'kc', 'ca', 'cb', 'an'].filter((r) => B.index.has(`${r}0.L`));
   const rings = names.map((r) => {
     const ps = B.names.map((n, i) => (new RegExp(`^${r}\\d\\.L$`).test(n) ? B.verts[i] : null)).filter(Boolean);
@@ -175,32 +175,61 @@ function chordOut(az, closed, off, seg, passes = 3) {
   }
 }
 
+/**
+ * Push a grid's nodes out (radii R[i][k] from the axis at their heights Y[i][k], columns at azimuths az) until every cell
+ * clears what lies under it: at points inside each cell (and along its edges) want(y, a, i, k, fy, fk) is the radius the
+ * surface must reach there; where the cell's face (its corners blended) falls short, its four corners go out by as much.
+ */
+function cellOut(Y, az, R, closed, axis, want, passes = 4) {
+  const N = az.length, n = closed ? N : N - 1, F = [0, 0.25, 0.5, 0.75, 1];
+  const pt = (y, a, r) => { const c = axis(y); return [c[0] + Math.sin(rad(a)) * r, y, c[1] + Math.cos(rad(a)) * r]; };
+  for (let it = 0; it < passes; it++) {
+    const bump = R.map((row) => row.map(() => 0));
+    for (let i = 0; i + 1 < Y.length; i++) for (let k = 0; k < n; k++) {
+      const j = (k + 1) % N, P00 = pt(Y[i][k], az[k], R[i][k]), P01 = pt(Y[i][j], az[j], R[i][j]), P10 = pt(Y[i + 1][k], az[k], R[i + 1][k]), P11 = pt(Y[i + 1][j], az[j], R[i + 1][j]);
+      let worst = 0;
+      for (const fy of F) for (const fk of F) {
+        if ((fy === 0 || fy === 1) && (fk === 0 || fk === 1)) continue;
+        // (the face's point there: the corners blended, as the quad's two triangles hold it within a little)
+        const q = lerp(lerp(P00, P01, fk), lerp(P10, P11, fk), fy);
+        const c = axis(q[1]), dx = q[0] - c[0], dz = q[2] - c[1], a = Math.atan2(dx, dz) * 180 / Math.PI;
+        const need = want(q[1], a, i, k, fy, fk), have = Math.hypot(dx, dz);
+        if (need > have) worst = Math.max(worst, need - have);
+      }
+      if (worst > 1e-4) for (const [ii, kk] of [[i, k], [i, j], [i + 1, k], [i + 1, j]]) bump[ii][kk] = Math.max(bump[ii][kk], worst * 1.1 + 0.002);
+    }
+    if (bump.every((row) => row.every((b) => b < 1e-4))) return;
+    bump.forEach((row, i) => row.forEach((b, k) => { R[i][k] += b; }));
+  }
+}
+
 /* ---- a plate ------------------------------------------------------------------------------------------------------- */
 /**
  * A plate as a grid of nodes (y, az, off) evaluated by `pt`: its rows (each a height and an outer offset per column),
  * its edges turned in by the thickness t (a lip) where `lip` says, a trimmed edge raised by `raise` over a band `trim`
  * wide (gold), an open plate turned in at its sides too (`sides`). Returns { nodes, pts, closed, mat(i, k) }.
  */
-function shell(rows, az, pt, { t, raise, trim, closed = false, lipTop = true, trimTop = false, trimBottom = true, sides = true, mat = 'plate', lipMat = 'shade', inset = null }) {
+function shell(rows, az, pt, { t, raise, trim, closed = false, lipTop = true, trimTop = false, trimBottom = true, sides = true, trimSides = false, mat = 'plate', lipMat = 'shade', inset = null }) {
   const R = rows.length;
   const node = (i, k, dOff = 0) => ({ y: rows[i].y[k], az: az[k], off: rows[i].off[k] + dOff });
   // (the node `trim` along the plate from row i toward row j, raised)
   const toward = (i, j, k) => { const a = rows[i], b = rows[j], f = Math.min(0.4, trim / (Math.abs(a.y[k] - b.y[k]) || 1)); return { y: a.y[k] + (b.y[k] - a.y[k]) * f, az: az[k], off: a.off[k] + (b.off[k] - a.off[k]) * f + raise }; };
-  const N = [], band = [], up = [];
-  const push = (row, m, r = false) => { N.push(row); band.push(m); up.push(r); };
+  const N = [], band = [], up = [], lipRow = [];
+  const push = (row, m, r = false, l = false) => { N.push(row); band.push(m); up.push(r); lipRow.push(l); };
   const C = az.length, cols = [...Array(C).keys()];
-  if (trimTop) { push(cols.map((k) => node(0, k, -t)), 'gold'); push(cols.map((k) => node(0, k, raise)), 'gold', true); push(cols.map((k) => toward(0, 1, k)), null, true); }
-  else { if (lipTop) push(cols.map((k) => node(0, k, -t)), lipMat); push(cols.map((k) => node(0, k)), null); }
+  if (trimTop) { push(cols.map((k) => node(0, k, -t)), 'gold', false, true); push(cols.map((k) => node(0, k, raise)), 'gold', true); push(cols.map((k) => toward(0, 1, k)), null, true); }
+  else { if (lipTop) push(cols.map((k) => node(0, k, -t)), lipMat, false, true); push(cols.map((k) => node(0, k)), null); }
   for (let i = 1; i < R - 1; i++) push(cols.map((k) => node(i, k)), null);
-  if (trimBottom) { push(cols.map((k) => toward(R - 1, R - 2, k)), 'gold', true); push(cols.map((k) => node(R - 1, k, raise)), 'gold', true); push(cols.map((k) => node(R - 1, k, -t)), null); }
-  else { push(cols.map((k) => node(R - 1, k)), lipMat); push(cols.map((k) => node(R - 1, k, -t)), null); }
+  if (trimBottom) { push(cols.map((k) => toward(R - 1, R - 2, k)), 'gold', true); push(cols.map((k) => node(R - 1, k, raise)), 'gold', true); push(cols.map((k) => node(R - 1, k, -t)), null, false, true); }
+  else { push(cols.map((k) => node(R - 1, k)), lipMat); push(cols.map((k) => node(R - 1, k, -t)), null, false, true); }
   let nodes = N;
   const open = !closed && sides;
-  if (open) nodes = N.map((row, i) => [{ ...row[0], off: row[0].off - t - (up[i] ? raise : 0) }, ...row, { ...row[C - 1], off: row[C - 1].off - t - (up[i] ? raise : 0) }]);
+  const sideIn = (i) => (lipRow[i] ? 0 : t + (up[i] ? raise : 0));
+  if (open) nodes = N.map((row, i) => [{ ...row[0], off: row[0].off - sideIn(i) }, ...row, { ...row[C - 1], off: row[C - 1].off - sideIn(i) }]);
   const W = nodes[0].length;
   const m = (i, k) => {
     if (band[i]) return band[i];
-    if (open && (k === 0 || k === W - 2)) return lipMat;
+    if (open && (k === 0 || k === W - 2)) return trimSides ? 'gold' : lipMat;
     return (inset && inset(i, open ? k - 1 : k)) || mat;
   };
   return { nodes, pts: nodes.map((row) => row.map(pt)), closed, mat: m };
@@ -243,14 +272,22 @@ export function buildPlateLegs(rig, design = DESIGN[rig.who], { stage = 9 } = {}
     }
     for (const m of more.reverse()) rows.splice(m.i + 1, 0, { y: m.y, lvl: m.lvl });
     rows.sort((p, q) => q.y.reduce((s2, x) => s2 + x, 0) - p.y.reduce((s2, x) => s2 + x, 0));
+    // (each column's rows downward by at least 0.04; a ring row that would fold over a design row is dropped there)
+    rows = rows.filter((r, i) => i === 0 || i === rows.length - 1 || r.y.every((y, k) => y < rows[i - 1].y[k] - 0.04 && y > rows[rows.length - 1].y[k] + 0.04));
+    for (let i = 1; i < rows.length; i++) rows[i].y = rows[i].y.map((y, k) => Math.min(y, rows[i - 1].y[k] - 0.04));
     rows = rows.map((r) => ({ y: r.y, off: r.lvl.map((l, k) => offOf(S, l) + (o.ridge ? o.ridge(k) : 0)) }));
-    // (each face across from one column to the next clear of the body as the columns are: where the body under it
-    // bulges past the straight face, both columns out by as much)
+    // (each face clear of the body by its offset, and of the plates laid under it by the gap and the thickness: sub-rays
+    // inside each cell of the grid, the cell's corners out by any shortfall)
     const closed = o.closed ?? false;
-    for (const r of rows) { const base = r.off.slice(); chordOut(az, closed, r.off, (k, f) => {
-      const j = (k + 1) % az.length, y = r.y[k] + (r.y[j] - r.y[k]) * f, a = az[k] + ((((az[j] - az[k]) % 360) + 540) % 360 - 180) * f;
-      return { want: F.at(y, a, base[k] + (base[j] - base[k]) * f), p0: F.at(r.y[k], az[k], r.off[k]), p1: F.at(r.y[j], az[j], r.off[j]), c: F.axis(y) };
-    }); }
+    const soup = trisOf(G).map((t) => t.v.map((i) => G.verts[i]));
+    const R = rows.map((r) => r.y.map((y, k) => F.reach(y, az[k]) + r.off[k]));
+    const offAt = (i, k, fy, fk) => { const j = (k + 1) % az.length, a = rows[i], b = rows[i + 1]; return (a.off[k] * (1 - fk) + a.off[j] * fk) * (1 - fy) + (b.off[k] * (1 - fk) + b.off[j] * fk) * fy; };
+    cellOut(rows.map((r) => r.y), az, R, closed, F.axis, (y, a, i, k, fy, fk) => {
+      const c = F.axis(y), d = [Math.sin(rad(a)), 0, Math.cos(rad(a))];
+      const rp = soup.length ? rayOut(soup, [c[0], y, c[1]], d) : 0;
+      return Math.max(F.reach(y, a) + offAt(i, k, fy, fk), rp > 0 ? rp + S.gap + S.t + (o.ridge ? 0.01 : 0) : 0);
+    });
+    rows.forEach((r, i) => { r.off = r.y.map((y, k) => R[i][k] - F.reach(y, az[k])); });
     const P = shell(rows, az, (n) => F.at(n.y, n.az, n.off), { t: S.t, raise: S.raise, trim: S.trim, ...o });
     const ids = lay(G, P, tag);
     G.plates.push({ tag, bone, ids, side: 'l', rowW: o.rowW ?? null, nodes: P.nodes });
@@ -259,17 +296,18 @@ export function buildPlateLegs(rig, design = DESIGN[rig.who], { stage = 9 } = {}
   const LOW = { ...D, ...D.low };
   // ---- the calf: three chevrons behind, each over the top of the one below it ---------------------------------------
   const C3 = D.calf, chev = (y, a) => y - C3.chevron * Math.max(0, -Math.cos(rad(a))) ** 2;
-  C3.segs.forEach(([top, bot], s) => legPlate(`calf${s}`, 'calf', [{ y: (a) => chev(top, a), lvl: 0 }, { y: (a) => chev(bot, a), lvl: 1 }], C3.az, LOW, { lipTop: s === 0 }));
+  [...C3.segs.keys()].reverse().forEach((s) => { const [top, bot] = C3.segs[s]; legPlate(`calf${s}`, 'calf', [{ y: (a) => chev(top, a), lvl: 0 }, { y: (a) => chev(bot, a), lvl: 1 }], C3.az, LOW, { lipTop: s === 0, sides: false }); });
   // ---- the shin: the lower plate, the upper over its top; the centre line raised, gold either side of it -------------
   for (const [tag, d] of [['shinLow', D.shinLow], ['shinUp', D.shinUp]]) {
-    const c = d.az.indexOf(0);
-    legPlate(tag, 'calf', d.rows, d.az, LOW, { lipTop: false, ridge: (k) => (k === c ? 0.02 : 0), inset: (i, k) => (k === c - 1 || k === c ? 'gold' : null) });
+    const c = d.az.indexOf(5);
+    legPlate(tag, 'calf', d.rows, d.az, LOW, { lipTop: false, ridge: (k) => (k === c || k === c - 1 ? 0.015 : 0), inset: (i, k) => (k === c - 1 ? 'gold' : null) });
   }
   // ---- the cuisse round the thigh, his lame over its top --------------------------------------------------------------
   legPlate('cuisse', 'thigh', D.cuisse.rows, D.thigh, D, { closed: true, lipTop: false });
   // ---- the knee guard ---------------------------------------------------------------------------------------------------
   kneeGuard(G, D, F);
-  if (D.lame) legPlate('lame', 'hip', D.lame.rows, D.thigh, D, { closed: true });
+  // (his lame open on the inside: the thighs nearly meet under the crotch)
+  if (D.lame) legPlate('lame', 'hip', D.lame.rows, D.lame.az, D, { trimSides: true });
   // ---- the right leg: the left's mirror ----------------------------------------------------------------------------
   const nL = G.verts.length, nP = G.polys.length;
   const mir = new Array(nL);
@@ -287,23 +325,48 @@ export function buildPlateLegs(rig, design = DESIGN[rig.who], { stage = 9 } = {}
 /**
  * The knee guard: an apex out over the kneecap, the glowing diamond inset round it (tip up and down), a gold ring round
  * that, the plate out to its outline (the top point, the wings round the sides, the bottom point), raised at its rim and
- * turned in by the thickness; all round the knee's axis at its middle height.
+ * turned in by the thickness; all round the knee's axis at its middle height. Its underside (the floor) clears the body
+ * by the clearance and `lvl` layers, and the plates under it (the cuisse's foot, the upper shin's top) by the gap, over
+ * the guard's whole span round each node (so its straight faces clear them too).
  */
 function kneeGuard(G, D, F) {
-  const K = D.knee, c = F.axis(K.mid), base = D.clear + K.lvl * (D.t + D.gap) + D.t;
-  const W = K.wing;
-  const outline = [[0, K.top], [W * 0.55, (K.top + K.mid) / 2 + 0.05], [W, K.mid], [W * 0.55, (K.mid + K.bottom) / 2 - 0.03], [0, K.bottom], [-W * 0.55, (K.mid + K.bottom) / 2 - 0.03], [-W, K.mid], [-W * 0.55, (K.top + K.mid) / 2 + 0.05]];
-  const at = (az, y, off) => F.at(y, az, off, c);
-  // (the apex out by the bulge over the guard's base offset; a node f of the way from the outline in to the apex)
-  const apexN = [0, K.mid, base + K.bulge];
-  const toward = ([az, y], f, raise) => [az + (apexN[0] - az) * f, y + (apexN[1] - y) * f, base + (apexN[2] - base) * f + raise];
-  const ptOf = ([az, y, off]) => at(az, y, off);
-  const lip = outline.map(([az, y]) => at(az, y, base - D.t)), rim = outline.map(([az, y]) => at(az, y, base + D.raise));
-  const rimIn = outline.map((o) => ptOf(toward(o, 0.16, D.raise)));
-  // (the gold ring and the inset: diamonds, the outline's top, wings and bottom only)
-  const dia = [0, 2, 4, 6].map((k) => outline[k]);
-  const ring = dia.map((o) => ptOf(toward(o, 1 - K.ring[1], 0.012))), ringIn = dia.map((o) => ptOf(toward(o, 1 - K.ring[0], 0.012)));
-  const inset = dia.map((o) => ptOf(toward(o, 1 - K.inset, 0.004))), apex = ptOf(apexN);
+  const K = D.knee, c = F.axis(K.mid), W = K.wing;
+  const soup = trisOf(G).map((t) => t.v.map((i) => G.verts[i]));
+  const ray = (y, az) => { const d = [Math.sin(rad(az)), 0, Math.cos(rad(az))]; return [F.reach(y, az, c), rayOut(soup, [c[0], y, c[1]], d)]; };
+  const floor = (az, y) => {
+    let r = 0;
+    for (const da of [-22, -11, 0, 11, 22]) for (const dy of [-0.12, 0, 0.12]) {
+      const [rb, rp] = ray(y + dy, az + da);
+      r = Math.max(r, rb + D.clear + K.lvl * (D.t + D.gap), rp > 0 ? rp + D.gap : 0);
+    }
+    return r;
+  };
+  // (a straight face across W / 2 degrees between two nodes sags in by 1 - cos(W / 4) of their radius)
+  const sag = 1 / Math.cos(rad(W / 4));
+  const at = (az, y, extra) => { const r = floor(az, y) * sag + extra; return [c[0] + Math.sin(rad(az)) * r, y, c[1] + Math.cos(rad(az)) * r]; };
+  const outline = [[0, K.top], [W * 0.5, (K.top + K.mid) / 2 + 0.05], [W, K.mid], [W * 0.5, (K.mid + K.bottom) / 2 - 0.03], [0, K.bottom], [-W * 0.5, (K.mid + K.bottom) / 2 - 0.03], [-W, K.mid], [-W * 0.5, (K.top + K.mid) / 2 + 0.05]];
+  // (the outline's floor: each straight edge between two of its nodes clear of what lies under it too, by sub-rays)
+  const fl = outline.map(([az, y]) => floor(az, y) * sag);
+  const want = (az, y) => { const [rb, rp] = ray(y, az); return Math.max(rb + D.clear + K.lvl * (D.t + D.gap), rp > 0 ? rp + D.gap : 0); };
+  for (let it = 0; it < 4; it++) {
+    let moved = false;
+    outline.forEach(([a0, y0], k) => {
+      const j = (k + 1) % 8, [a1, y1] = outline[j];
+      const p0 = [c[0] + Math.sin(rad(a0)) * fl[k], y0, c[1] + Math.cos(rad(a0)) * fl[k]], p1 = [c[0] + Math.sin(rad(a1)) * fl[j], y1, c[1] + Math.cos(rad(a1)) * fl[j]];
+      for (const f of [0.2, 0.4, 0.6, 0.8]) {
+        const q = lerp(p0, p1, f), dx = q[0] - c[0], dz = q[2] - c[1], need = want(Math.atan2(dx, dz) * 180 / Math.PI, q[1]), have = Math.hypot(dx, dz);
+        if (need > have + 1e-4) { fl[k] += (need - have) * 1.1; fl[j] += (need - have) * 1.1; moved = true; }
+      }
+    });
+    if (!moved) break;
+  }
+  const atO = (k, extra) => { const [az, y] = outline[k], r = fl[k] + extra; return [c[0] + Math.sin(rad(az)) * r, y, c[1] + Math.cos(rad(az)) * r]; };
+  const lip = outline.map((_, k) => atO(k, 0)), rim = outline.map((_, k) => atO(k, D.t + D.raise));
+  const rimIn = outline.map(([az, y]) => { const f = 0.16; return at(az * (1 - f), y + (K.mid - y) * f, D.t + D.raise + K.bulge * 0.1); });
+  // (the gold ring and the glowing inset: upright diamonds round the apex, half widths in degrees and half heights)
+  const dia = ([w, h], extra) => [[0, K.mid + h], [w, K.mid], [0, K.mid - h], [-w, K.mid]].map(([az, y]) => at(az, y, D.t + extra));
+  const ring = dia(K.ring, K.bulge * 0.55 + 0.012), ringIn = dia(K.ringIn, K.bulge * 0.68 + 0.012), inset = dia(K.inset, K.bulge * 0.72 + 0.004);
+  const apex = at(0, K.mid, D.t + K.bulge);
   const tag = 'knee';
   G.tag = tag;
   const id = (L) => L.map((p) => G.vert(p, tag));
@@ -362,18 +425,10 @@ function hipBand(G, D, B) {
     const x = Math.sin(rad(a)) * r, cap = (frontZ(x, ys[i][k]) + D.clear + D.t - z0) / Math.cos(rad(a));
     if (cap < r && rp0(i, k) === 0) row[k] = cap;
   }));
-  // (each face between columns clear of the body and the plates under it, as the leg plates')
-  const ptR = (y, a, r) => [Math.sin(rad(a)) * r, y, z0 + Math.cos(rad(a)) * r];
-  R.forEach((row, i) => {
-    const base = row.slice();
-    chordOut(az, true, row, (k, f) => {
-      const j = (k + 1) % az.length, y = ys[i][k] + (ys[i][j] - ys[i][k]) * f, a = az[k] + ((((az[j] - az[k]) % 360) + 540) % 360 - 180) * f;
-      const rb = reachB(y, a) + D.clear + D.t, rpp = reachP(y, a), rw = Math.min(Math.max(rb, rpp > 0 ? rpp + D.gap + D.t : 0), Math.max(base[k], base[j]) + 0.15);
-      return { want: ptR(y, a, rw), p0: ptR(ys[i][k], az[k], row[k]), p1: ptR(ys[i][j], az[j], row[j]), c: [0, z0] };
-    });
-  });
   // (the rows no tighter than the one below: the band stands as a band)
   for (let i = R.length - 2; i >= 0; i--) R[i] = R[i].map((r, k) => Math.max(r, R[i + 1][k] - 0.03));
+  // (each cell of the band clear of the body and the plates under it, as the leg plates')
+  cellOut(ys, az, R, true, () => [0, z0], (y, a) => { const rb = reachB(y, a) + D.clear + D.t, rpp = reachP(y, a); return Math.max(rb, rpp > 0 ? rpp + D.gap + D.t : 0); });
   const pt = (n) => { const r = n.r; return [Math.sin(rad(n.az)) * r, n.y, z0 + Math.cos(rad(n.az)) * r]; };
   // (the shell's nodes as the band's: y, az, and the reach in `off`)
   const rows = ys.map((row, i) => ({ y: row, off: R[i] }));

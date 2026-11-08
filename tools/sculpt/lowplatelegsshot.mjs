@@ -143,9 +143,9 @@ if (only.includes('close')) {
   // (the sheet's key details: knee front and side, thigh, shin front and side, calf)
   const det = { male: [[878, 100], [1017, 100], [1155, 100], [878, 238], [1017, 238], [1155, 238]], female: [[880, 437], [1019, 437], [1157, 437], [880, 570], [1019, 570], [1157, 570]] };
   const views = (who) => { const D = M[who].G.design, y0 = (r) => (typeof r.y === 'number' ? r.y : r.y[0]), shin = (y0(D.shinUp.rows[0]) + y0(D.shinLow.rows.at(-1))) / 2; return [
-    ['Knee guard (front)', 0, D.knee.mid, 1.5], ['Knee guard (side)', -90, D.knee.mid, 1.5], ['Thigh plate', -30, (y0(D.cuisse.rows[1]) + D.band.bottom[3]) / 2, 2.6],
-    ['Shin plate (front)', 0, shin, 3], ['Shin plate (side)', -90, shin, 3], ['Calf / back', 180, (D.calf.segs[0][0] + D.calf.segs[2][1]) / 2, 2.8],
-    ['Hip band (front)', 0, (D.band.top[0] + D.band.bottom[0]) / 2, 2.6], ['Hip band (back)', 180, (D.band.top[0] + D.band.bottom[6]) / 2, 2.6],
+    ['Knee guard (front)', 0, D.knee.mid, 2.4], ['Knee guard (side)', -90, D.knee.mid, 2.4], ['Thigh plate', -30, (y0(D.cuisse.rows.at(-1)) + D.band.bottom[3]) / 2, 3.6],
+    ['Shin plate (front)', 0, shin, 4], ['Shin plate (side)', -90, shin, 4], ['Calf / back', 180, (D.calf.segs[0][0] + D.calf.segs[2][1]) / 2, 3.6],
+    ['Hip band (front)', 0, (D.band.top[0] + D.band.bottom[0]) / 2, 3.4], ['Hip band (back)', 180, (D.band.top[0] + D.band.bottom[5]) / 2, 3.4],
   ]; };
   ['male', 'female'].forEach((who, r) => {
     const d = dress(who, {}), x0 = who === 'male' ? 0.95 : 0.95;
