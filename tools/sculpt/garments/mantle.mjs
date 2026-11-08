@@ -545,7 +545,7 @@ export function mantleWeights(rig, G, o = {}) {
     return n;
   };
   const vw = transferWeights(rig, G, { map, smooth: 0 });
-  const P = G.verts, reach = o.reach ?? 1.0, it = o.smooth ?? 12, armMax = o.armMax ?? 0.45;
+  const P = G.verts, reach = o.reach ?? 1.0, it = o.smooth ?? G.design?.smooth ?? 12, armMax = o.armMax ?? 0.45;
   const nb = P.map((p, i) => P.map((q, j) => (j !== i && Math.hypot(...sub(p, q)) < reach ? j : -1)).filter((j) => j >= 0));
   let cur = vw.map((l) => Object.fromEntries(l.map(([b, w]) => [b, w])));
   for (let s = 0; s < it; s++) {
@@ -559,13 +559,18 @@ export function mantleWeights(rig, G, o = {}) {
     });
   }
   const at = rig.at, sp = at.get('spine_03');
-  const fin = (w) => {
+  // (the arm's share falls off toward the back and the front: the fur over the shoulder blades and the chest stays on
+  // the clavicle, so a swinging arm does not shear the back's clumps; full over the arm, nothing past 30 degrees off the
+  // front or the back)
+  const z0 = G.design?.z0 ?? -0.12, armK = P.map((p) => Math.min(1, Math.max(0, (Math.abs(p[0]) / (Math.hypot(p[0], p[2] - z0) || 1) - 0.5) / 0.5)));
+  const fin = (w, i) => {
     // (an upper arm takes at most armMax: the mantle is stiff; the rest goes to its clavicle)
-    for (const s of ['l', 'r']) { const u = at.get(`upperarm_${s}`), c = at.get(`clavicle_${s}`); if ((w[u] ?? 0) > armMax) { w[c] = (w[c] ?? 0) + w[u] - armMax; w[u] = armMax; } }
+    const cap = i == null ? armMax : armMax * armK[i];
+    for (const s of ['l', 'r']) { const u = at.get(`upperarm_${s}`), c = at.get(`clavicle_${s}`); if ((w[u] ?? 0) > cap) { w[c] = (w[c] ?? 0) + w[u] - cap; w[u] = cap; } }
     const l = Object.entries(w).map(([b, x]) => [+b, x]).filter(([, x]) => x > 1e-3).sort((a, b) => b[1] - a[1]).slice(0, 4), t = l.reduce((a, [, x]) => a + x, 0);
     return l.map(([b, x]) => [b, x / t]);
   };
-  const out = cur.map(fin);
+  const out = cur.map((w, i) => fin(w, i));
   // the ring: spine_03 and the clavicles as the body under it has them
   G.verts.forEach((_, i) => { if (G.part[i] === 'ring') { const w = Object.fromEntries(out[i]); const o3 = {}; for (const [b, x] of Object.entries(w)) { const name = rig.bones[+b].name; const key = /^clavicle_/.test(name) ? +b : sp; o3[key] = (o3[key] ?? 0) + x; } out[i] = fin(o3); } });
   // each clasp rigid: the mean of its vertices'
