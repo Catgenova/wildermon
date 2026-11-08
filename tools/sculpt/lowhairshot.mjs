@@ -2,7 +2,8 @@
 // tools/sculpt/lowgarmentshot.mjs (sculpt-cloth): the bodies' own flat shading (one normal per polygon, the heads'
 // camera-fixed light tools/sculpt/lowlight-<who>.json, as tools/sculpt/lowrigshot.mjs draws them), each polygon in its
 // own colour, reference crops laid beside. A polygon whose colour is negative is hair: drawn in three tones of that
-// colour (main, mid, highlight) by how much light its facet takes (HAIR_RAMP, against the skin's), as the game draws it.
+// colour (main, mid, highlight) by how much light its facet takes (HAIR_RAMP, against the skin's), as the game draws it;
+// one in a valley (its red under -VALLEY_MARK) a tone darker than the main (HAIR_VALLEY).
 //
 // shoot(w, h, cells, file, { texts, imgs }) — cells: { meshes: [{ who, P, polys, tris, col, edges?, edgec?, flat? }],
 // cam: { yaw, pitch, s, c }, box: [x, y, w, h], label, bg }; imgs: { src, size: [w, h], crop: [x, y, w, h], box }.
@@ -12,6 +13,10 @@
 export const HAIR_RAMP = [1.15, 1.4];
 /** The mid tone and the highlight: the hair's colour this far toward a warm light (#ffc8aa), from the sheet's palette. */
 export const HAIR_TONES = [0.22, 0.45];
+/** The valleys' tone (a groove between two tufts, tools/sculpt/lowhair.mjs valleyOf): the hair's colour times this, one
+ * step under the main tone (the sheet's grooves, about 0.6 of its main brown). */
+export const HAIR_VALLEY = 0.62;
+const VALLEY_MARK = 10;
 import { chromium } from 'playwright-core';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -57,14 +62,15 @@ const cv = document.getElementById('gl'); cv.width = W * dpr; cv.height = Hh * d
 const gl = cv.getContext('webgl', { antialias: true, preserveDrawingBuffer: true, premultipliedAlpha: false });
 const vs = 'attribute vec3 p; attribute vec3 n; attribute vec3 m; uniform mat3 R; uniform vec3 piv; uniform float s; uniform vec2 asp; uniform float lift; varying vec3 vn; varying vec3 vm;' +
   'void main(){ vec3 q = R*(p - piv); vn = R*n; vm = m; gl_Position = vec4(q.x*s*asp.x, q.y*s*asp.y, -q.z/30.0 - lift, 1.0); }';
-const fs = 'precision highp float; varying vec3 vn; varying vec3 vm; uniform vec3 SHC[19]; uniform int mode; uniform vec3 linec; uniform vec2 RAMP; uniform float ALPHA; const float RAMPK = 0.45; const float HAIR_MID = ${HAIR_TONES[0].toFixed(3)}; const float HAIR_HI = ${HAIR_TONES[1].toFixed(3)};' +
+const fs = 'precision highp float; varying vec3 vn; varying vec3 vm; uniform vec3 SHC[19]; uniform int mode; uniform vec3 linec; uniform vec2 RAMP; uniform float ALPHA; const float RAMPK = 0.45; const float HAIR_MID = ${HAIR_TONES[0].toFixed(3)}; const float HAIR_HI = ${HAIR_TONES[1].toFixed(3)}; const float HAIR_VALLEY = ${HAIR_VALLEY.toFixed(3)};' +
   'void main(){ if (mode == 1) { gl_FragColor = vec4(linec, 1.0); return; } vec3 nn = normalize(vn); if (!gl_FrontFacing) nn = -nn; float x = nn.x, y = nn.y, z = nn.z;' +
   ' vec3 c = SHC[0] + SHC[1]*x + SHC[2]*y + SHC[3]*z + SHC[4]*x*y + SHC[5]*y*z + SHC[6]*(3.0*z*z-1.0) + SHC[7]*x*z + SHC[8]*(x*x-y*y)' +
   '   + SHC[9]*y*(3.0*x*x-y*y) + SHC[10]*x*y*z + SHC[11]*y*(5.0*z*z-1.0) + SHC[12]*z*(5.0*z*z-3.0) + SHC[13]*x*(5.0*z*z-1.0) + SHC[14]*z*(x*x-y*y) + SHC[15]*x*(x*x-3.0*y*y)' +
   '   + SHC[16]*pow(max(dot(nn, normalize(vec3(-0.95,0.25,-0.2))),0.0),8.0) + SHC[17]*max(-x,0.0)*pow(1.0-max(z,0.0),3.0) + SHC[18]*max(x,0.0)*pow(1.0-max(z,0.0),3.0);' +
   ' if (mode == 2) { gl_FragColor = vec4(abs(vm), ALPHA); return; }' +
-  ' if (vm.x < 0.0) { vec3 hc = -vm; float l = dot(c, vec3(0.3,0.59,0.11)) / dot(vec3(0.68,0.49,0.41), vec3(0.3,0.59,0.11));' +
-  '   vec3 W = vec3(1.0,0.784,0.667); c = l < RAMP.x ? hc : (l < RAMP.y ? mix(hc, W, HAIR_MID) : mix(hc, W, HAIR_HI));' +
+  ' if (vm.x < 0.0) { vec3 hc = -vm; bool valley = hc.x > ${VALLEY_MARK / 2}.0; if (valley) hc.x -= ${VALLEY_MARK}.0;' +
+  '   float l = dot(c, vec3(0.3,0.59,0.11)) / dot(vec3(0.68,0.49,0.41), vec3(0.3,0.59,0.11));' +
+  '   vec3 W = vec3(1.0,0.784,0.667); c = l < RAMP.x ? (valley ? hc * HAIR_VALLEY : hc) : (l < RAMP.y ? mix(hc, W, HAIR_MID) : mix(hc, W, HAIR_HI));' +
   '   c *= 1.0 + RAMPK * (l - (l < RAMP.x ? RAMP.x - 0.2 : (l < RAMP.y ? 0.5 * (RAMP.x + RAMP.y) : RAMP.y + 0.1))); }' +
   ' else c *= vm/vec3(0.68,0.49,0.41); gl_FragColor = vec4(min(c, vec3(1.0)), ALPHA); }';
 function sh(t, s) { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; }
@@ -152,7 +158,8 @@ export { SKIN };
 
 /* ---- the sheets ------------------------------------------------------------------------------------------------------ */
 //   node tools/sculpt/lowhairshot.mjs --out <dir> [--style swept] [--only views,wire,sil,exploded,game,turn]
-// views: the reference sheet's five views over ours, per body (hair-sheet-<who>.png); wire: the topology (hair-wire.png);
+// views: the reference sheet's five views over ours, per body (hair-sheet-<who>.png); close: the rear three-quarter and
+// the back, twice the size, the sheet's beside ours (hair-close-<who>.png); wire: the topology (hair-wire.png);
 // sil: the silhouette; exploded: the clumps pulled apart (hair-exploded.png); game: the full bodies at the game's zooms
 // (hair-game.png); turn: the head turned 70° and nodded, with the crossings counted (hair-turn.png).
 // The cameras are the hair sheet's own (tools/sculpt/lowhaircams.json: the head sheets' turns, tools/sculpt/lowcams.json,
@@ -180,7 +187,7 @@ export function bodyMesh(rig, hair, P = rig.B.verts, hairCol = SHEET_HAIR, o = {
   return { who: rig.who, P, polys: B.polys.map((p) => p.nv ?? p.v), tris: B.tris.filter((t) => keep(B.polys[t.poly])).map((t) => [...t.v, t.poly]), col };
 }
 export function hairMesh(rig, hair, H = hair.verts, hairCol = SHEET_HAIR) {
-  return { who: rig.who, P: H, polys: hair.polys.map((p) => p.v), tris: hair.tris, col: hair.polys.map((p) => (p.buzz ? mix(SKIN, hairCol, SHAVE) : hairCol.map((x) => -x))) };
+  return { who: rig.who, P: H, polys: hair.polys.map((p) => p.v), tris: hair.tris, col: hair.polys.map((p) => (p.buzz ? mix(SKIN, hairCol, SHAVE) : hairCol.map((x, c) => -x - (p.valley && !c ? VALLEY_MARK : 0)))) };
 }
 const camOf = (c, k = 1) => ({ yaw: -c.yaw, pitch: -c.pitch, s: c.s * k, c: PIV });
 
@@ -216,6 +223,17 @@ if (MAIN) {
     });
     texts.push({ css: 'left:12px;top:6px', html: `Swept back undercut — the sheet (top), the ${who === 'male' ? 'man' : 'woman'} (below): ${hair.tris.length} hair triangles, ${hair.pieces.length} clumps` });
     await shoot(x0 * 2 + 5 * cw + 4 * gap, (over ? y3 : y2) + ch + 10, cells, join(out, `hair-sheet-${who}${stage}.png`), { texts, imgs });
+  }
+
+  if (only.includes('close')) for (const who of Object.keys(RIGS)) {
+    // close: the rear three-quarter and the back twice the size, the sheet's (left) beside ours (right)
+    const rig = RIGS[who], hair = HAIRS[who], K = 1.8, cw = 420, ch = 420, gap = 8, cells = [], imgs = [];
+    VIEWS.filter(([v]) => v === 'r3' || v === 'back').forEach(([v, label], i) => {
+      const c = CAMS[v], x = 10 + i * 2 * (cw + gap), cy = c.cy - 30;
+      imgs.push({ src: REF, size: REF_SIZE, crop: [c.cx - cw / K / 2, cy - ch / K / 2, cw / K, ch / K], box: [x, 34, cw, ch] });
+      cells.push({ meshes: [bodyMesh(rig, hair), hairMesh(rig, hair)], cam: { ...camOf(c, K), c: [PIV[0], PIV[1] + 30 / c.s, PIV[2]] }, box: [x + cw + gap, 34, cw, ch], label });
+    });
+    await shoot(10 + 4 * (cw + gap) + 2, 34 + ch + 10, cells, join(out, `hair-close-${who}${stage}.png`), { texts: [{ css: 'left:12px;top:6px', html: `Close: the sheet (left), the ${who === 'male' ? 'man' : 'woman'} (right)` }], imgs });
   }
 
   const POSES = { headturn: { label: 'Head turned 70°', pose: { neck_01: [0, 16, 0], neck_02: [0, 16, 0], head: [0, 38, 0] } }, nod: { label: 'Head nod (down 40°)', pose: { neck_01: [12, 0, 0], neck_02: [14, 0, 0], head: [14, 0, 0] } } };

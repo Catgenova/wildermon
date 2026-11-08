@@ -50,7 +50,7 @@ export default {
   clumps: [
     // the front and the top: one mass of tufts combed straight back (tools/sculpt/lowhair.mjs massOf), the creases
     // between them below
-    { id: 'front', mass: true, sink: 0.015, band: [[0.5, 0]], groove: 0.1, grooveAt: [0, 0, 0, 1, 0.6, 0.3, 0.3, 0.3, 0], flush: [0.1, 0.03], fit, lines: tuftLines() },
+    { id: 'front', mass: true, sink: 0.015, band: [[0.5, 0]], groove: 0.1, grooveAt: [0, 0, 0, 1, 0.6, 0.3, 0.3, 0.3, 0], valleyFrom: 4, flush: [0.1, 0.03], fit, lines: tuftLines() },
     // the top: from under the front's back edge, back over the crown
     { id: 'top', sec: 'sec3', n: 6, scale: 0.825, path: [[92, -2, 0.06], [110, 3], [130, 3], [165, 2], [190, 0]], w: [0.8, 0.8, 0.6, 0.32], h: [0.1], ends: [0.15, 0.6], tipUp: [0.2, 0.2] },
     // his left: three locks from under the front's left end back down the side to the nape

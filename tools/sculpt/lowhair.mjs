@@ -99,6 +99,8 @@ export function buildHair(rig, style = SWEPT, hull = null) {
   const k = (P('f3.L')[0] + P('t0')[2] - P('bk')[2]) / (0.73 + 0.739 + 0.79);
   const surf = (over, out) => { const d = dirOf(over, out), h = hit(skull, C, d); return { p: add(C, mul(d, h.t)), n: h.n, d }; };
   const verts = [], polys = [], pieces = [];
+  // the corners down in a groove between two locks (valleyOf)
+  const groove = new Set();
   // a point moved along its direction from the skull's centre to `b` of the hull's thickness off the skin there
   let cl = null;
   const onHull = (q, b) => {
@@ -106,7 +108,7 @@ export function buildHair(rig, style = SWEPT, hull = null) {
     return add(C, mul(dq, hq.t + Math.max(MIN_H * k, b * hull.thick.at(o, u) * k * (cl.scale ?? 1))));
   };
   for (cl of style.clumps) {
-    if (cl.mass) { massOf(cl, { skull, C, k, verts, polys, pieces, hull, scalp: new Set(shaveOf(B, style.scalp ?? style.shave)) }); continue; }
+    if (cl.mass) { massOf(cl, { skull, C, k, verts, polys, pieces, hull, groove, scalp: new Set(shaveOf(B, style.scalp ?? style.shave)) }); continue; }
     const n = cl.n ?? 9, sec = typeof cl.sec === 'string' ? style[cl.sec] : cl.sec ?? style.sec;
     const first = polys.length, base = verts.length;
     // the spine: each control point on the skin, stood off it by its lift along the skull's outward direction
@@ -153,6 +155,8 @@ export function buildHair(rig, style = SWEPT, hull = null) {
         if (!root && style.jitter) q = add(q, [0, 1, 2].map((c) => (hash(pieces.length * 101 + i * 7 + j, c) - 0.5) * 2 * style.jitter * Math.min(1, hh / (0.2 * k)) * k));
         verts.push(q);
         r.push(verts.length - 1);
+        // a groove: a corner lower than both its neighbours across the section (not a root)
+        if (!root && b < sec[j - 1][1] && b < sec[j + 1][1]) groove.add(verts.length - 1);
       });
       ring.push(r);
     }
@@ -167,6 +171,7 @@ export function buildHair(rig, style = SWEPT, hull = null) {
     pieces.push({ id: cl.id, polys: [first, polys.length], verts: [base, verts.length] });
   }
   orientOut(verts, polys, pieces);
+  valleyOf(verts, polys, pieces, groove);
   // the buzz: the head's side faces forward of the shave as far as the sideburn's line, as patches just off them
   if (style.buzz) buzzOf(B, style, verts, polys, k);
   const tris = [];
@@ -198,7 +203,7 @@ export function buildHair(rig, style = SWEPT, hull = null) {
  * skin, the undersides clear of the face; the piece closes in a fan from the skull's centre under them. The pieces'
  * record keeps each corner's ray, its drop and its role (sole, tip) for the solver.
  */
-export function massOf(cl, { skull, C, k, verts, polys, pieces, hull, scalp }) {
+export function massOf(cl, { skull, C, k, verts, polys, pieces, hull, groove: low, scalp }) {
   const n = cl.lines[0].length, band = cl.band ?? [[0.5, 0]], groove = cl.groove ?? 0.04, rows = [];
   cl.lines.forEach((cr, i) => {
     if (cr.length !== n) throw new Error(`${cl.id}: every line ${n} stations`);
@@ -219,7 +224,10 @@ export function massOf(cl, { skull, C, k, verts, polys, pieces, hull, scalp }) {
     else if (fit) t = fit.t[i][j];
     else t = Math.max(MIN_H, (hull ? hull.thick.at(o, u) * (cl.scale ?? 1) : 0.12) - row.drop * gAt(j));
     rays.push({ i, j, d, r0: h.t, border, drop: row.drop * gAt(j), role: j === 1 ? 'sole' : j === 2 ? 'tip' : '' });
-    return verts.push(add(C, mul(d, h.t + t * k))) - 1;
+    const id = verts.push(add(C, mul(d, h.t + t * k))) - 1;
+    // a crease's corner where it runs below the tufts' tops: a groove (valleyOf)
+    if (low && !border && j >= (cl.valleyFrom ?? 1) && row.drop * gAt(j) > 0) low.add(id);
+    return id;
   }));
   // the tuft's underside clear of the face on any head: where a root's quads to the rows beside it (either way split)
   // pass through the face (a forehead that runs higher than the male's), that row's sole (and then its tip) raised off
@@ -243,6 +251,31 @@ export function massOf(cl, { skull, C, k, verts, polys, pieces, hull, scalp }) {
   const ring = [...ids[0], ...ids.slice(1).map((r) => r[n - 1]), ...ids[R - 1].slice(0, -1).reverse(), ...ids.slice(1, -1).reverse().map((r) => r[0])];
   ring.forEach((a, m) => polys.push({ v: [centre, ring[(m + 1) % ring.length], a], piece: pieces.length }));
   pieces.push({ id: cl.id, polys: [first, polys.length], verts: [base, verts.length], mass: { ids, rays, rows: R, n } });
+}
+
+/**
+ * The valleys: every quad with two corners side by side in a groove (a crease between two tufts, a section's low
+ * corner between two locks) split into its two triangles along its shorter diagonal (as it is drawn anyway), the one
+ * along the groove marked `valley` (drawn a tone darker than the hair's main, HAIR_VALLEY in tools/sculpt/lowhairshot.mjs).
+ * Each piece's polygon range follows.
+ */
+function valleyOf(verts, polys, pieces, groove) {
+  const out = [];
+  for (const pc of pieces) {
+    const first = out.length;
+    for (let i = pc.polys[0]; i < pc.polys[1]; i++) {
+      const p = polys[i], v = p.v;
+      const low = v.map((a) => groove.has(a));
+      const side = v.length === 4 && [0, 1, 2, 3].some((j) => low[j] && low[(j + 1) % 4]);
+      if (!side) { out.push(p); continue; }
+      const [a, b, c, d] = v, dac = Math.hypot(...sub(verts[a], verts[c])), dbd = Math.hypot(...sub(verts[b], verts[d]));
+      const two = dac <= dbd ? [[a, b, c], [a, c, d]] : [[a, b, d], [b, c, d]];
+      const n = two.map((t) => t.filter((x) => groove.has(x)).length);
+      two.forEach((t, m) => out.push({ v: t, piece: p.piece, ...(n[m] >= 2 && n[1 - m] < 2 ? { valley: true } : {}) }));
+    }
+    pc.polys = [first, out.length];
+  }
+  polys.splice(0, polys.length, ...out);
 }
 
 /**
@@ -394,8 +427,8 @@ export function gameHair(rig, hair) {
   return {
     verts: hair.verts.flat().map(r5),
     polys: hair.polys.map((p) => p.v),
-    // each polygon's material: 4 the hair, 3 the buzz (the shave's tone)
-    mat: hair.polys.map((p) => (p.buzz ? 3 : 4)),
+    // each polygon's material: 4 the hair, 5 the hair in a valley (a tone darker), 3 the buzz (the shave's tone)
+    mat: hair.polys.map((p) => (p.buzz ? 3 : p.valley ? 5 : 4)),
     tris: hair.tris.flat(),
     weights: hair.weights.map((l) => l.flatMap(([bn, w]) => [rig.at.get(bn), +w.toFixed(4)])),
     shave: hair.shave,
@@ -418,7 +451,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   for (const who of opt('who', args.includes('--asset') ? '' : 'male,female').split(',').filter(Boolean)) {
     const rig = buildRig(who), hair = buildHair(rig, STYLES[opt('style', 'swept')], HULL);
     const rest = crossings(rig, hair, rig.B.verts, hair.verts);
-    console.log(who, 'tris', hair.tris.length, 'pieces', hair.pieces.map((p) => `${p.id}:${(p.polys[1] - p.polys[0])}`).join(' '), 'open edges', openEdges(hair), 'shaved polys', hair.shave.length, 'crossings at rest', rest.n, JSON.stringify(rest.hits.slice(0, 6).map(([h, s]) => [h, rig.B.polys[s].name])));
+    console.log(who, 'tris', hair.tris.length, 'valleys', hair.polys.filter((p) => p.valley).length, 'pieces', hair.pieces.map((p) => `${p.id}:${(p.polys[1] - p.polys[0])}`).join(' '), 'open edges', openEdges(hair), 'shaved polys', hair.shave.length, 'crossings at rest', rest.n, JSON.stringify(rest.hits.slice(0, 6).map(([h, s]) => [h, rig.B.polys[s].name])));
     if (who === 'male') console.log('outline difference against the sheet (mean px):', Object.entries(outlineDiff(hair.tris.filter(([, , , pi]) => !hair.polys[pi].buzz).map(([a, b, c]) => [hair.verts[a], hair.verts[b], hair.verts[c]]))).map(([v, d]) => `${v} ${d.px}`).join(', '));
   }
 }
