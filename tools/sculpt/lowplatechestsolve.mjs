@@ -140,8 +140,8 @@ export async function solve() {
       const az = cols.map((c) => c[0]);
       { const f = fill(cols.map((c) => c[1])); cols.forEach((c, i) => { c[1] = f[i]; }); }
       // (the top the design's, and under the armpit (the ring where the arm meets the torso) at the side columns)
-      const pit = Math.min(...TORSO_RING.map((n) => rig.B.verts[rig.B.index.get(`${n}.L`)][1])) - 0.1;
-      out.breast = { az, top: az.map((a) => r3(a >= 80 ? Math.min(pit, interp(B.az, B.top, a)) : interp(B.az, B.top, a))), bottom: cols.map((c) => r3(c[1])), flat: az.reduce((b, a) => (Math.abs(a - B.flat) < Math.abs(b - B.flat) ? a : b), az[0]) };
+      const pit = Math.min(...TORSO_RING.map((n) => rig.B.verts[rig.B.index.get(`${n}.L`)][1])) - 0.35;
+      out.breast = { az, top: az.map((a) => r3(a >= az[az.length - 1] - 7 ? Math.min(pit, interp(B.az, B.top, a)) : interp(B.az, B.top, a))), bottom: cols.map((c) => r3(c[1])), flat: az.reduce((b, a) => (Math.abs(a - B.flat) < Math.abs(b - B.flat) ? a : b), az[0]) };
       out.breast.top[az.length - 1] = r3(Math.min(out.breast.top[az.length - 1], interp(B.az, B.top, Math.min(last, B.az[B.az.length - 1]))));
     }
     // the back plate: from the back (180) toward the side, where it stops
@@ -152,8 +152,8 @@ export async function solve() {
       for (let a = first; a <= 180; a += step) cols.push([a, footAt(trunk, 'back', a)]);
       { const f = fill(cols.map((c) => c[1])); cols.forEach((c, i) => { c[1] = f[i]; }); }
       const az = cols.map((c) => c[0]);
-      const pit = Math.min(...TORSO_RING.map((n) => rig.B.verts[rig.B.index.get(`${n}.L`)][1])) - 0.1;
-      out.back = { az, top: az.map((a) => r3(a <= 110 ? Math.min(pit, interp(K2.az, K2.top, a)) : interp(K2.az, K2.top, a))), bottom: cols.map((c) => r3(c[1])) };
+      const pit = Math.min(...TORSO_RING.map((n) => rig.B.verts[rig.B.index.get(`${n}.L`)][1])) - 0.35;
+      out.back = { az, top: az.map((a) => r3(a <= 116 ? Math.min(pit, interp(K2.az, K2.top, a)) : interp(K2.az, K2.top, a))), bottom: cols.map((c) => r3(c[1])) };
     }
     // the lames and the belt: each one's foot per column, its top under the foot of the one above by the overlap
     {

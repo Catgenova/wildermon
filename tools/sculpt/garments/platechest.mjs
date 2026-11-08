@@ -57,9 +57,9 @@ export const DESIGN = {
     rim: { w: 0.11, h: 0.04, t: 0.035 },
     fit: { trunk: 0.045, lame: 0.025, fauld: 0.1, arm: 0.04, gap: 0.02 },
     legs: { top: -3.94, bottom: -5.45, c: [0.035, 0.095, 0.16, 0.29, 0.28, 0.27, 0.21] },
-    wedge: 8,
-    collar: { cols: [[14, 66, 118], [128, 154, 180]], base: [-0.78, -0.78, -0.62], top: [-0.06, 0.12, 0.19], lip: [55, -0.38], trim: 0.12, c: 0.38, flare: 0.05, wall: 0.07, spread: 0.12, sink: -0.1, open: 46, shrug: 0.4 },
-    breast: { az: [0, 22, 46, 70, 94], top: [-0.62, -0.64, -0.68, -0.82, -1.95], bottom: [-4.05, -3.8, -3.45, -3.2, -3.1], rows: [0, 0.3, 0.55, 0.8, 1], c: [0.05, 0.05, 0.055, 0.06, 0.065], flat: 22, core: { y: -1.9, r: 0.44, n: 8 } },
+    wedge: 8, sideC: 0.08, shrugC: 0.08,
+    collar: { cols: [[14, 66, 118], [128, 154, 180]], base: [-0.78, -0.78, -0.62], top: [-0.06, 0.12, 0.19], lip: [55, -0.38], lipIn: 0.14, trim: 0.12, c: 0.38, flare: 0.05, wall: 0.07, spread: 0.12, sink: -0.18, open: 46, shrug: 0.4 },
+    breast: { az: [0, 22, 46, 70, 94], top: [-0.62, -0.64, -0.68, -0.82, -1.95], bottom: [-4.05, -3.8, -3.45, -3.2, -3.1], rows: [0, 0.3, 0.55, 0.8, 1], c: [0.1, 0.075, 0.055, 0.06, 0.065], flat: 22, core: { y: -1.9, r: 0.44, n: 8 } },
     back: { az: [100, 118, 140, 160, 180], top: [-1.95, -0.78, -0.6, -0.56, -0.54], bottom: [-3.0, -3.2, -3.4, -3.55, -3.65], rows: [0, 0.45, 1], c: [0.045, 0.05, 0.055], ridge: 0.06, side: 0 },
     lames: [
       { piece: 'lame1', bone: { spine_01: 1 }, top: -2.9, bottom: -3.6, v: 0.1, c: [0.02, 0.06] },
@@ -80,7 +80,7 @@ export const DESIGN = {
       lames: [{ t: [0.45, 1.05], c: [0.07, 0.11], th: [-35, 215] }],
     },
     rerebrace: { t: [1.25, 1.62], c: [0.035, 0.045], th: [-45, 228], cols: 5 },
-    sleeve: { rings: [['ja', 0.035], ['jb', 0.04], ['uc', 0.045], ['el', 0.045], ['fa', 0.04]] },
+    sleeve: { rings: [['ja', 0.065], ['jb', 0.05], ['uc', 0.045], ['el', 0.045], ['fa', 0.04]] },
     vambrace: { cols: 8, top: [0.42, 0.2, -0.32, 0.2], mid: 0.55, bottom: 1.3, c: [0.045, 0.035, 0.03], flare: 0.03, ridge: 0.08, diamond: { t: 0.6, r: 0.14 } },
     cuff: { cols: 8, t: [-0.42, 0.06], c: [0.04, 0.06] },
     hand: { off: 0.035 },
@@ -89,8 +89,8 @@ export const DESIGN = {
     rim: { w: 0.095, h: 0.035, t: 0.03 },
     fit: { trunk: 0.04, lame: 0.022, fauld: 0.09, arm: 0.035, gap: 0.018 },
     legs: { top: -3.58, bottom: -4.16, c: [0.05, 0.1, 0.14, 0.18, 0.17, 0.16, 0.11] },
-    wedge: 8,
-    collar: { cols: [[14, 66, 118], [128, 154, 180]], base: [-0.85, -0.78, -0.62], top: [-0.25, -0.1, 0.0], trim: 0.11, c: 0.28, flare: 0.04, wall: 0.06, spread: 0.1, sink: -0.05, open: 46, shrug: 0.35 },
+    wedge: 8, sideC: 0.06,
+    collar: { cols: [[14, 66, 118], [128, 154, 180]], base: [-0.85, -0.78, -0.62], top: [-0.25, -0.1, 0.0], lipIn: 0.12, trim: 0.11, c: 0.28, flare: 0.04, wall: 0.06, spread: 0.1, sink: -0.05, open: 46, shrug: 0.35 },
     breast: { az: [0, 18, 36, 56, 76, 96], top: [-0.7, -0.71, -0.74, -0.8, -0.95, -1.85], bottom: [-3.55, -3.4, -3.2, -3.0, -2.85, -2.75], rows: [0, 0.23, 0.44, 0.56, 0.78, 1], c: [0.04, 0.04, 0.04, 0.045, 0.05, 0.055], flat: 18, bridge: [3], core: { y: -1.6, r: 0.38, n: 8 } },
     back: { az: [100, 118, 140, 160, 180], top: [-1.85, -0.9, -0.72, -0.64, -0.6], bottom: [-2.6, -2.8, -2.95, -3.05, -3.15], rows: [0, 0.45, 1], c: [0.04, 0.045, 0.05], ridge: 0.05, side: 0 },
     lames: [
@@ -460,7 +460,11 @@ function torsoPieces(G, rig, D, S) {
   // the breastplate (spine_03): columns from the right side through the front to the left
   const Bp = D.breast;
   const bAz = mirrorCols(Bp.az, (x) => -x), bTop = mirrorCols(Bp.top), bBot = mirrorCols(Bp.bottom);
-  const bRows = grid(chest, bAz, bTop, bBot, Bp.rows, Bp.c);
+  // (out a further `sideC` toward its sides, from 66° to 90°, where the side under the arm moves with the shoulder)
+  const sideOut = (a, a0 = 66, a1 = 90) => (D.sideC ?? 0) * Math.max(0, Math.min(1, (Math.abs(a) - a0) / (a1 - a0)));
+  // (and over the upper chest toward the shoulder, `shrugC` from 35° to 60° on the top two rows, where the chest under
+  // it moves with the clavicle)
+  const bRows = grid(chest, bAz, bTop, bBot, Bp.rows, Bp.c, (r, k, a) => sideOut(a) + (r <= 1 ? (D.shrugC ?? 0) * (r === 0 ? 1 : 0.6) * Math.max(0, Math.min(1, (Math.abs(a) - 35) / 25)) : 0));
   // drawn straight across between the breasts (the columns within `flat` of the front on the line between the two at
   // `flat`), never further in than the body; the bridged rows no further in than the mean of the rows either side
   const rad = (p) => { const a = chest.axisAt(p[1]); return Math.hypot(p[0] - a[0], p[2] - a[2]); };
@@ -484,7 +488,7 @@ function torsoPieces(G, rig, D, S) {
   const kAzL = [...Kp.az, ...Kp.az.slice(0, -1).reverse().map((a) => 360 - a)];
   const kTop = [...Kp.top, ...Kp.top.slice(0, -1).reverse()], kBot = [...Kp.bottom, ...Kp.bottom.slice(0, -1).reverse()];
   const midK = Kp.az.length - 1;
-  const kRows = grid(chest, kAzL, kTop, kBot, Kp.rows, Kp.c, (r, k) => (k === midK ? Kp.ridge : k === 0 || k === kAzL.length - 1 ? -Kp.side : 0));
+  const kRows = grid(chest, kAzL, kTop, kBot, Kp.rows, Kp.c, (r, k, a) => (k === midK ? Kp.ridge : k === 0 || k === kAzL.length - 1 ? -Kp.side : 0) + sideOut(180 - Math.abs(((a + 540) % 360) - 180), 66, 90));
   fitOut(kRows, false, outOf(chest), trunk, D.fit.trunk);
   // the lames and the belt: rings round the waist, the top tucked under the plate above, the foot with a V at the front
   const K = D.lames.some((L) => L.edge) ? 24 : D.lameCols, ringAz = Array.from({ length: K }, (_, k) => (k * 360) / K);
@@ -610,11 +614,16 @@ function torsoPieces(G, rig, D, S) {
     };
     const P = (a, y, dr, f = 1, yb = y) => { const t = a * Math.PI / 180, rr = rFoot(a, yb) + (rTop - rFoot(a, yb)) * f + dr; return [Math.sin(t) * rr, y, nz + Math.cos(t) * rr]; };
     const wrap = (a) => ((a + 540) % 360) - 180;
-    const yb = az.map((a) => Math.min(hAt(Cd.top, wrap(a)) - 0.3, Math.max(hAt(Cd.base, wrap(a)), surfY(a) - Cd.sink))), yt = az.map((a) => hAt(Cd.top, wrap(a)));
+    // (the foot above the skin all the way in from the foot's radius to the top's, as the trapezius rises toward the
+    // neck faster than the wall leans in)
+    const surfMax = (a) => Math.max(surfY(a), surfY(a, (rFoot() + rTop) / 2), surfY(a, rTop + Cd.flare));
+    const yb = az.map((a) => Math.min(hAt(Cd.top, wrap(a)) - 0.16, Math.max(hAt(Cd.base, wrap(a)), surfMax(a) - Cd.sink))), yt = az.map((a) => hAt(Cd.top, wrap(a)));
     const fr = (k, y) => (y - yb[k]) / (yt[k] - yb[k]);
     const outer = [az.map((a, k) => P(a, yb[k], 0, 0, yb[k])), az.map((a, k) => P(a, yt[k] - Cd.trim, Cd.flare * 0.8, fr(k, yt[k] - Cd.trim), yb[k])), az.map((a, k) => P(a, yt[k], Cd.flare, 1, yb[k]))];
     // (the inside's foot above the skin under it: the trapezius rises toward the neck)
-    const yIn = az.map((a, k) => Math.min(yt[k] - 0.08, Math.max(yb[k] + 0.1, surfY(a, rTop - Cd.wall) + 0.04)));
+    // (a short lip only, `Cd.lipIn` down from the top, so the inside stays clear of the neck and the trapezius as the
+    // head and shoulders move)
+    const yIn = az.map((a, k) => (Cd.lipIn ? Math.max(yb[k] + 0.06, yt[k] - Cd.lipIn) : Math.min(yt[k] - 0.08, Math.max(yb[k] + 0.1, surfY(a, rTop - Cd.wall) + 0.04))));
     const inner = [az.map((a, k) => P(a, yt[k], Cd.flare - Cd.wall, 1, yb[k])), az.map((a, k) => P(a, yIn[k], -Cd.wall, fr(k, yIn[k]), yb[k]))];
     // (the front segments a fixed share on their side's clavicle, so they rise with the shoulder's shrug over the
     // trapezius; the back one on the chest alone)
