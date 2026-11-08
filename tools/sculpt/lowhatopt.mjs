@@ -3,12 +3,14 @@
 // stepped one by one (steps halving) while the mean overlap over the views (the equipped view twice) grows. Prints the
 // design found; garments/hat.mjs DESIGN takes it by hand.
 //
-//   node tools/sculpt/lowhatopt.mjs --reg <hat-reg.json> [--who male] [--rounds 3] [--loops 1] [--only brim,crown,feather,place]
+//   node tools/sculpt/lowhatopt.mjs --reg <hat-reg.json> [--who male] [--rounds 3] [--loops 1] [--only brim,crown,feather,ring,place] [--pieces k]
+//     [--pieceViews eq] (the views whose pieces count: the equipped ones; the turnaround keeps the ring toward the viewer
+//     in every view, at 15 degrees in its front view and 80 in its side view, so its pieces cannot agree with one hat)
 //     (--loops n: n times the design searched, then the cameras searched again from where they were)
 import { readFileSync } from 'node:fs';
 import { buildRig } from './lowrig.mjs';
 import { buildHat, DESIGN } from './garments/hat.mjs';
-import { raster, VIEWS, fit } from './lowhatfit.mjs';
+import { raster, VIEWS, fit, piecesFit } from './lowhatfit.mjs';
 import { hairMesh } from './garments/hat.mjs';
 
 const args = process.argv.slice(2), opt = (n, f) => { const i = args.indexOf(`--${n}`); return i < 0 ? f : args[i + 1]; };
@@ -26,7 +28,8 @@ const PARAMS = {
     ['brim.curve', 0.3, 0.8, 4],
   ],
   crown: [['sec.0.1', 0.04, 0.8, 1.2], ['sec.2.0', 0.08, 0.45, 1.0], ['sec.2.1', 0.05, 0.6, 1.1], ['sec.3.0', 0.08, 0.7, 1.3], ['sec.3.1', 0.06, 0.3, 1.0], ['apex', 0.08, 0.8, 1.6], ['oval.1', 0.04, 0.9, 1.25], ['oval.2', 0.04, 0.9, 1.25], ['band.h', 0.04, 0.18, 0.42]],
-  feather: [0, 1].flatMap((f) => [[`feathers.${f}.len`, 0.12, 0.6, 1.8], [`feathers.${f}.w`, 0.03, 0.1, 0.3], [`feathers.${f}.dir.0`, 0.1, -0.2, 1], [`feathers.${f}.dir.1`, 0.1, 0.2, 1], [`feathers.${f}.dir.2`, 0.1, -1, 0.3]]),
+  feather: [0, 1].flatMap((f) => [[`feathers.${f}.az`, 6, 10, 80], [`feathers.${f}.up`, 0.05, -0.25, 0.1], [`feathers.${f}.len`, 0.12, 0.6, 1.8], [`feathers.${f}.w`, 0.03, 0.1, 0.3], [`feathers.${f}.dir.0`, 0.1, -0.2, 1], [`feathers.${f}.dir.1`, 0.1, 0.2, 1], [`feathers.${f}.dir.2`, 0.1, -1, 0.3]]),
+  ring: [['ring.az', 4, 10, 60], ['ring.at', 0.1, 0.2, 0.8], ['ring.ro', 0.02, 0.12, 0.32], ['ring.ri', 0.015, 0.05, 0.16]],
   place: [['C.1', 0.05, 1.2, 1.8], ['C.2', 0.04, -0.3, 0.2], ['pitch', 2, -10, 15]],
 };
 const get = (o, p) => p.split('.').reduce((a, k) => a[k], o);
@@ -46,6 +49,13 @@ for (const who of opt('who', 'male,female').split(',')) {
       const O = raster(hat, v === 'eq' ? occ : [], cam, m.w, m.h);
       let b = 0, u = 0; for (let i = 0; i < A.length; i++) { if (A[i] && O[i]) b++; if (A[i] || O[i]) u++; }
       tot += wgt * b / u; W += wgt;
+    }
+    // (with --pieces k: the feathers' and the ring's overlap, each view's, k times over)
+    const kp = +opt('pieces', 0);
+    if (kp) {
+      const R = Object.fromEntries(views.map(({ v, m, A, cam }) => [v, { key: v === 'eq' ? (who === 'male' ? 'eqm' : 'eqf') : v, cam, box: [m.x0, m.y0], w: m.w, h: m.h, S: A }]));
+      const pv = opt('pieceViews', 'eq').split(',');
+      for (const [v, res] of Object.entries(piecesFit(who, G, rig, R))) if (pv.includes(v)) for (const [n, x] of Object.entries(res)) if (n !== 'trim') { tot += kp * x.iou; W += kp; }
     }
     return tot / W;
   };

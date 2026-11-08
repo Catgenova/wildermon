@@ -150,3 +150,53 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   }
   if (outDir) writeFileSync(join(outDir, 'hat-reg.json'), JSON.stringify(reg, null, 1));
 }
+
+/* ---- the pieces ------------------------------------------------------------------------------------------------------- */
+/**
+ * The sheet's pieces per view, cut from its pixels: the trim-coloured ones (red over 175, green over 100, red over blue
+ * by 70: the tan of the feathers, the ring, the band's strips and the brim's trim) inside the hat's silhouette; the
+ * feathers those inside a box over the crown (sheet pixels [x0, y0, x1, y1]) less the ring; the ring a circle [cx, cy,
+ * r] (sheet pixels, its outer edge), found where a tan annulus round a dark hole fits the sheet's pixels best.
+ */
+export const PIECES = {
+  eq: { male: { feathers: [155, 108, 265, 176], ring: [165.5, 172.5, 14.9] }, female: { feathers: [398, 108, 508, 184], ring: [401, 181, 13.8] } },
+  front: { feathers: [612, 106, 676, 152], ring: [613.5, 157, 8.4] },
+  q45: { feathers: [748, 106, 812, 154], ring: [752.5, 152.5, 8.9] },
+  side: { feathers: [886, 106, 957, 152], ring: [882.5, 159, 9.1] },
+  rq: { feathers: [555, 252, 600, 300] },
+};
+const SHEET_PX = (() => {
+  // (the sheet's own pixels are read once, from the masks' sheet: tools/sculpt/lowhatmask.py writes them beside the masks)
+  try { return JSON.parse(readFileSync(join(DIR, 'leather/hat-bright.json'), 'utf8')); } catch { return null; }
+})();
+/** Our piece masks: the front-most surface's piece per pixel (feathers, ring, or anything trim-coloured). */
+export function piecesFit(who, G, rig, R) {
+  if (!SHEET_PX) return {};
+  const occ = occluders(rig), out = {};
+  const ofTag = (pred) => ({ P: G.verts, tris: G.tris.filter((t) => pred(G.polys[t.poly])).map((t) => t.v) });
+  const meshes = [ofTag((p) => p.piece === 'feather'), ofTag((p) => p.piece === 'ring'), ofTag((p) => p.mat === 'trim' || p.mat === 'rune'), ofTag((p) => p.piece !== 'feather' && p.piece !== 'ring' && p.mat !== 'trim' && p.mat !== 'rune')];
+  for (const v of Object.keys(PIECES)) {
+    const r = R[v]; if (!r) continue;
+    const spec = v === 'eq' ? PIECES.eq[who] : PIECES[v], key = r.key, B = SHEET_PX[key], w = r.w, h = r.h;
+    const bright = new Uint8Array(w * h); for (let i = 0; i < w * h; i++) bright[i] = B[i] === '1' && r.S[i] ? 1 : 0;
+    const ID = rasterDepth([...meshes, ...(v === 'eq' ? occ : [])], r.cam, w, h);
+    const [x0, y0] = r.box, inRing = (x, y, c) => c && (x + x0 + 0.5 - c[0]) ** 2 + (y + y0 + 0.5 - c[1]) ** 2 <= c[2] ** 2;
+    const res = {};
+    if (spec.feathers) {
+      const S = new Uint8Array(w * h), O = new Uint8Array(w * h), [fx0, fy0, fx1, fy1] = spec.feathers;
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        const i = y * w + x, X = x + x0, Y = y + y0, inBox = X >= fx0 && X < fx1 && Y >= fy0 && Y < fy1;
+        S[i] = inBox && bright[i] && !inRing(x, y, spec.ring) ? 1 : 0; O[i] = ID[i] === 1 ? 1 : 0;
+      }
+      res.feathers = { S, O, ...compare(S, O, w, h) };
+    }
+    if (spec.ring) {
+      const S = new Uint8Array(w * h), O = new Uint8Array(w * h);
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const i = y * w + x; S[i] = inRing(x, y, spec.ring) ? 1 : 0; O[i] = ID[i] === 2 ? 1 : 0; }
+      res.ring = { S, O, ...compare(S, O, w, h) };
+    }
+    { const S = bright, O = new Uint8Array(w * h); for (let i = 0; i < w * h; i++) O[i] = ID[i] >= 1 && ID[i] <= 3 ? 1 : 0; res.trim = { S, O, ...compare(S, O, w, h) }; }
+    out[v] = res;
+  }
+  return out;
+}

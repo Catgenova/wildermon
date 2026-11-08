@@ -153,12 +153,14 @@ if (only.includes('close')) await close(join(out, `hat-close${tag}.png`), false)
  * sheet's size, laid out in rows; the overlap and the mean outline distance under each.
  */
 if (only.includes('fit')) {
-  const { fit, VIEWS } = await import('./lowhatfit.mjs');
+  const { fit, VIEWS, piecesFit } = await import('./lowhatfit.mjs');
+  const pieceTiles = [];
   const K = 2, cells = [], imgs = [], texts = [], over = [], top = 34, maxW = 2700, reg = {};
   let x = 0, y = top, rowH = 0;
   for (const who of ['male', 'female']) {
     const { rig, G } = M[who], R = fit(who, G, rig), d0 = rest(who);
     reg[who] = Object.fromEntries(Object.entries(R).map(([v, r]) => [v, { cam: r.cam, iou: r.iou, outline: r.outline }]));
+    for (const [v, res] of Object.entries(piecesFit(who, G, rig, R))) pieceTiles.push({ who, view: v, box: R[v].box, w: R[v].w, h: R[v].h, pieces: Object.entries(res).map(([piece, p]) => ({ piece, iou: p.iou, outline: p.outline, S: [...p.S].join(''), O: [...p.O].join('') })) });
     for (const v of VIEWS) {
       const r = R[v], cw = r.w * K, ch = r.h * K, bw = cw * (2 + LOOKS_SHOWN.length);
       if (x + bw > maxW) { x = 0; y += rowH + 24; rowH = 0; }
@@ -193,6 +195,42 @@ for o in D['over']:
 im.save(sys.argv[1])
 `, file, join(out, 'hat-fit-over.json')]);
   rmSync(join(out, 'hat-fit-over.json'));
+  // the pieces: on the sheet's own view, each piece's outline from the sheet (dim) and ours (bright), in its own colour
+  writeFileSync(join(out, 'hat-fit-pieces.json'), JSON.stringify({ sheet: SHEET, tiles: pieceTiles }));
+  execFileSync('python3', ['-c', `
+import sys, json
+import numpy as np
+from PIL import Image, ImageDraw
+D = json.load(open(sys.argv[1])); sheet = Image.open(D['sheet']).convert('RGB'); K = 3
+COL = {'feathers': (255, 210, 40), 'ring': (255, 80, 220), 'trim': (80, 230, 120)}
+def edge(A):
+    E = np.zeros_like(A); E[1:-1, 1:-1] = A[1:-1, 1:-1] & ~(A[:-2, 1:-1] & A[2:, 1:-1] & A[1:-1, :-2] & A[1:-1, 2:]); return E
+T = []
+for t in D['tiles']:
+    w, h = t['w'], t['h']; x0, y0 = t['box']
+    for only in (('feathers', 'ring'), ('trim',)):
+        im = sheet.crop((x0, y0, x0 + w, y0 + h)).resize((w * K, h * K), Image.NEAREST)
+        a = np.array(im).astype(float) * 0.45
+        for p in t['pieces']:
+            if p['piece'] not in only: continue
+            c = np.array(COL[p['piece']], float)
+            S = np.array([q == '1' for q in p['S']]).reshape(h, w); O = np.array([q == '1' for q in p['O']]).reshape(h, w)
+            for M, k in ((S, 0.5), (O, 1.0)):
+                a[np.kron(edge(M), np.ones((K, K), bool))] = c * k
+        im = Image.fromarray(a.clip(0, 255).astype(np.uint8)); d = ImageDraw.Draw(im)
+        d.text((6, 4), t['who'] + ' ' + t['view'], fill=(255, 255, 255))
+        for i, p in enumerate([p for p in t['pieces'] if p['piece'] in only]): d.text((6, 18 + 13 * i), '%s %d%% %.1fpx' % (p['piece'], round(p['iou'] * 100), p['outline']), fill=COL[p['piece']])
+        T.append(im)
+rows = [T[i:i + 6] for i in range(0, len(T), 6)]
+W = max(sum(t.width for t in r) for r in rows); H = sum(max(t.height for t in r) for r in rows)
+out = Image.new('RGB', (W, H)); y = 0
+for r in rows:
+    x = 0
+    for t in r: out.paste(t, (x, y)); x += t.width
+    y += max(t.height for t in r)
+out.save(sys.argv[2])
+`, join(out, 'hat-fit-pieces.json'), join(out, `hat-pieces${tag}.png`)]);
+  rmSync(join(out, 'hat-fit-pieces.json'));
 }
 
 /* ---- poses and metrics ------------------------------------------------------------------------------------------------- */

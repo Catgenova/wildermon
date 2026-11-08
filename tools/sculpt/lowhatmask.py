@@ -1,7 +1,8 @@
 """The hat sheet's silhouettes (the leather set's hat sheet, 1536 x 1024): per view the hat cut from the dark ground
 (every pixel the ground's flood from the view's border cannot reach), the turnaround's six views alone, the equipped
 views (his, hers) with the face, the hair and the collar under the brim's traced lower edge (LOWER) cut off. Written to
-tools/sculpt/leather/hat-masks.json as runs per row, each view with its box on the sheet, for tools/sculpt/lowhatfit.mjs.
+tools/sculpt/leather/hat-masks.json as runs per row, each view with its box on the sheet, for tools/sculpt/lowhatfit.mjs;
+its trim-coloured pixels to tools/sculpt/leather/hat-bright.json (the pieces).
 
   python3 tools/sculpt/lowhatmask.py <hat sheet png> [<preview png>]
 """
@@ -52,6 +53,14 @@ for k, (x0, y0, x1, y1) in V.items():
     tiles.append((k, hat, im[y0:y1, x0:x1]))
 dst = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'leather', 'hat-masks.json')
 json.dump(out, open(dst, 'w'))
+# the trim-coloured pixels per view (the tan: red over 175, green over 100, red over blue by 70), as '0'/'1' per pixel,
+# for the pieces (tools/sculpt/lowhatfit.mjs piecesFit)
+bright = {}
+for k, (x0, y0, x1, y1) in V.items():
+    a = im[y0:y1, x0:x1]
+    b = (a[..., 0] > 175) & (a[..., 1] > 100) & (a[..., 0] - a[..., 2] > 70)
+    bright[k] = ''.join('1' if v else '0' for v in b.flatten())
+json.dump(bright, open(os.path.join(os.path.dirname(dst), 'hat-bright.json'), 'w'))
 print('wrote', dst)
 if len(sys.argv) > 2:
     T = []
