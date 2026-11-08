@@ -48,6 +48,8 @@ import MALE_HOOD from './assets/lowhood-male.json';
 import FEMALE_HOOD from './assets/lowhood-female.json';
 import MALE_LEATHER_LEGS from './assets/lowleatherlegs-male.json';
 import FEMALE_LEATHER_LEGS from './assets/lowleatherlegs-female.json';
+import MALE_LEATHER_LEGS_FLAPS from './assets/lowleatherlegsflaps-male.json';
+import FEMALE_LEATHER_LEGS_FLAPS from './assets/lowleatherlegsflaps-female.json';
 import LONG_SWORD from './assets/long_sword.json';
 import HAIR_ASSET from './assets/lowhair.json';
 import MALE_LIGHT from '../../tools/sculpt/lowlight-male.json';
@@ -581,6 +583,8 @@ const GARMENTS: ReadonlyArray<{ man: GarmentAsset; woman: GarmentAsset; wears: (
   { man: MALE_HOOD as unknown as GarmentAsset, woman: FEMALE_HOOD as unknown as GarmentAsset, wears: wearsHood },
   // the leather set's leggings (`tools/sculpt/garments/leatherlegs.mjs`, no bones of their own, `hides`; the wrap bands glow when enchanted)
   { man: MALE_LEATHER_LEGS as unknown as GarmentAsset, woman: FEMALE_LEATHER_LEGS as unknown as GarmentAsset, wears: (p) => p.outfit?.leatherLegs ?? false, enchanted: enchantedOf('leatherLegs') },
+  // (their hip flaps, only without the leather chest: its skirt takes their place over the hip)
+  { man: MALE_LEATHER_LEGS_FLAPS as unknown as GarmentAsset, woman: FEMALE_LEATHER_LEGS_FLAPS as unknown as GarmentAsset, wears: (p) => (p.outfit?.leatherLegs ?? false) && !(p.outfit?.leatherChest ?? false), enchanted: enchantedOf('leatherLegs') },
 ];
 
 const BODIES = {
