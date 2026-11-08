@@ -28,9 +28,9 @@ import { samplesOf, envelope, drape, reachAt, atRY, dirOf, meshOf, orient, trisO
 
 /** The mantle's colours: the fur's cream, its underside a shade darker, the valley between tufts darker again, the neck's lining (the set's dark under-layer), gold, the glowing cores. */
 export const MATS = {
-  fur: [0.88, 0.68, 0.56],
-  fur_under: [0.74, 0.56, 0.47],
-  fur_valley: [0.58, 0.43, 0.38],
+  fur: [0.92, 0.74, 0.62],
+  fur_under: [0.77, 0.59, 0.5],
+  fur_valley: [0.6, 0.43, 0.37],
   under: [0.29, 0.22, 0.2],
   gold: [0.96, 0.74, 0.4],
   glow: [1.0, 0.906, 0.651],
@@ -69,7 +69,7 @@ export const DESIGN = {
     ],
     collar: { n: 9, from: 40, len: [[40, 0.6], [90, 1.0], [180, 0.85]], lean: [16, 28, 18], thick: 0.05, h: 0.07, flare: 0.06, foot: 0.14 },
     lean: [0.1, 0.3, 0.12], raise: [0.08, 0.28, 0.14],
-    clasp: { on: 'mid1', at: 30, fr: 0.42, r: 0.36, t: 0.07, boss: 0.05, sides: 6 },
+    clasp: { on: 'mid1', at: 30, fr: 0.42, r: 0.36, t: 0.07, boss: 0.05, sides: 8 },
     jit: { tip: 0.16, side: 0.22, h: 0.35 },
   },
 };
@@ -325,7 +325,7 @@ function tierShell(G, T, sd, pos, D, k) {
 function clasp(G, c, n, C, k, side) {
   const up = Math.abs(n[1]) > 0.9 ? [1, 0, 0] : [0, 1, 0], u = unit(cross(up, n)), v = cross(n, u), r = C.r * k, t = C.t * k, part = `clasp_${side}`;
   const ring = (rad, h) => Array.from({ length: C.sides }, (_, j) => { const a = (j / C.sides) * 2 * Math.PI + Math.PI / C.sides; return G.vert(add(add(c, mul(n, h)), add(mul(u, Math.cos(a) * rad), mul(v, Math.sin(a) * rad))), part); });
-  const back = ring(r * 0.92, -t * 0.4), rimO = ring(r, t * 0.6), rimI = ring(r * 0.62, t * 0.75), core = ring(r * 0.55, t * 0.6), boss = G.vert(add(c, mul(n, t * 0.6 + C.boss * k)), part);
+  const back = ring(r * 0.92, -t * 0.4), rimO = ring(r, t * 0.6), rimI = ring(r * 0.56, t * 0.8), core = ring(r * 0.46, t * 0.62), boss = G.vert(add(c, mul(n, t * 0.6 + C.boss * k)), part);
   G.tag = part;
   const m = C.sides;
   for (let j = 0; j < m; j++) {

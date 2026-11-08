@@ -10,7 +10,7 @@
 //       triangles crossing the body's and its own;
 //     mantle-metrics.json: the checks at rest and in every pose, each body.
 //   --tunic: worn over the first outfit's tunic (garments/outfit1.mjs), fitted over it, the tunic drawn;
-//   --room: the fitting room for the chest piece drawn as a grey shell (its collar and pauldrons, garments/mantle.mjs).
+//   --plate: the torso and the arms drawn in the plate set's plate colour (the fur beside it).
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { buildRig, posed, skin, fromGame, gameRig, armsOut, axisAngle, mm, tr } from './lowrig.mjs';
@@ -38,7 +38,9 @@ for (const who of ['male', 'female']) {
   G.vw = mantleWeights(rig, G);
   M[who] = { rig, G, tunic };
 }
-const bodyMesh = (rig, P, hidden = new Set()) => ({ who: rig.who, P, polys: rig.B.polys.map((p) => p.nv ?? p.v), tris: rig.B.tris.filter((t) => !hidden.has(t.poly)).map((t) => [...t.v, t.poly]), col: rig.B.polys.map((p) => (p.mat === 'skin' ? SKIN : p.mat === 'pupil' ? [0.08, 0.06, 0.06] : [0.22, 0.15, 0.13])) });
+// (--plate: the torso and the arms in the plate set's plate colour, to see the fur beside it)
+const PLATE = [0.82, 0.65, 0.54], plated = new Set(['torso', 'joint', 'arm', 'pelvis']);
+const bodyMesh = (rig, P, hidden = new Set()) => ({ who: rig.who, P, polys: rig.B.polys.map((p) => p.nv ?? p.v), tris: rig.B.tris.filter((t) => !hidden.has(t.poly)).map((t) => [...t.v, t.poly]), col: rig.B.polys.map((p) => (p.mat === 'skin' ? (flag('plate') && plated.has(rig.B.part[p.v[0]]) ? PLATE : SKIN) : p.mat === 'pupil' ? [0.08, 0.06, 0.06] : [0.22, 0.15, 0.13])) });
 const garMesh = (rig, G, P, mats, edges = false) => ({ who: rig.who, P, polys: G.polys.map((p) => p.v), tris: G.tris.map((t) => [...t.v, t.poly]), col: G.polys.map((p) => (GLOW.includes(p.mat) ? mats[p.mat].map((x) => x + 2) : mats[p.mat])), edges, edgec: [0.25, 0.16, 0.12] });
 
 /* ---- poses ---------------------------------------------------------------------------------------------------------- */
