@@ -15,12 +15,34 @@ export const VIEWS = ['front', 'q3', 'profile', 'r3', 'back'];
 export const PIV = [0, 1, 0.1];
 export const CAMS = JSON.parse(readFileSync(join(DIR, 'lowhaircams.json'), 'utf8'));
 
-/** A point on the sheet under one of its cameras (tools/sculpt/lowcam.mjs project, orthographic). */
+/** A point on the sheet under one of its cameras (tools/sculpt/lowcam.mjs project, orthographic), then the view's own
+ * 2D correction, if it has one (tools/sculpt/lowbraidreg.mjs: the sheet's face drawn a little narrower or sheared against
+ * the body's): turned `roll` degrees in the picture, its across stretched `ax`, its up `ay`, and sheared `sh` (across by
+ * up). */
 export function project(p, c) {
   const a = (c.yaw * Math.PI) / 180, b = (c.pitch * Math.PI) / 180, ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b);
   const x = p[0] - PIV[0], y = p[1] - PIV[1], z = p[2] - PIV[2];
-  const qx = ca * x + sa * z, qy = sb * sa * x + cb * y - sb * ca * z, qz = -cb * sa * x + sb * y + cb * ca * z;
+  let qx = ca * x + sa * z, qy = sb * sa * x + cb * y - sb * ca * z;
+  const qz = -cb * sa * x + sb * y + cb * ca * z;
+  if (c.roll || c.ax || c.ay || c.sh) {
+    const r = ((c.roll ?? 0) * Math.PI) / 180, cr = Math.cos(r), sr = Math.sin(r);
+    const rx = cr * qx - sr * qy, ry = sr * qx + cr * qy;
+    qx = (c.ax ?? 1) * (rx + (c.sh ?? 0) * ry); qy = (c.ay ?? 1) * ry;
+  }
   return [c.cx + c.s * qx, c.cy - c.s * qy, qz];
+}
+/** The view's 2D correction as a map of the head's space (for a renderer that takes yaw, pitch and scale only): a point
+ * moved so that the plain camera draws it where project() puts it. For the review renders only. */
+export function warpOf(c) {
+  if (!(c.roll || c.ax || c.ay || c.sh)) return (p) => p;
+  const a = (c.yaw * Math.PI) / 180, b = (c.pitch * Math.PI) / 180, ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b);
+  const Rm = [[ca, 0, sa], [sb * sa, cb, -sb * ca], [-cb * sa, sb, cb * ca]];
+  const r = ((c.roll ?? 0) * Math.PI) / 180, cr = Math.cos(r), sr = Math.sin(r);
+  return (p) => {
+    const d = [p[0] - PIV[0], p[1] - PIV[1], p[2] - PIV[2]], q = Rm.map((row) => row[0] * d[0] + row[1] * d[1] + row[2] * d[2]);
+    const rx = cr * q[0] - sr * q[1], ry = sr * q[0] + cr * q[1], w = [(c.ax ?? 1) * (rx + (c.sh ?? 0) * ry), (c.ay ?? 1) * ry, q[2]];
+    return [0, 1, 2].map((k) => PIV[k] + Rm[0][k] * w[0] + Rm[1][k] * w[1] + Rm[2][k] * w[2]);
+  };
 }
 /** The view's direction toward the viewer, in the head's space. */
 export function toViewer(c) {

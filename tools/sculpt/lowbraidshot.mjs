@@ -14,6 +14,7 @@ import { join, resolve } from 'node:path';
 import { buildRig } from './lowrig.mjs';
 import { shoot, closeBrowser, bodyMesh, hairMesh, SHEET_HAIR } from './lowhairshot.mjs';
 import { carve, hullMesh, outlineDiff, bodyTris, buildBraid } from './lowbraid.mjs';
+import { warpOf } from './lowhairhull.mjs';
 
 const DIR = new URL('.', import.meta.url).pathname;
 export const REF = join(DIR, 'ref/hair-side-braid.png'), REF_SIZE = [1536, 1024], MASK = join(DIR, 'hairs/braid-mask.png');
@@ -38,8 +39,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       const c = C[v], x = x0 + i * (cw + gap), crop = [c.cx - cw / 2, 205 - ch / 2, cw, ch], dy = (c.cy - 205);
       imgs.push({ src: REF, size: REF_SIZE, crop, box: [x, y1, cw, ch] });
       imgs.push({ src: REF, size: REF_SIZE, crop, box: [x, y2, cw, ch] });
-      imgs.push({ src: MASK, size: [1536, 410], crop, box: [x, y3, cw, ch] });
-      const body = bodyMesh(rig, bare, rig.B.verts, SHEET_HAIR, { parts: ['head', 'neck', 'torso'] });
+      imgs.push({ src: MASK, size: [1536, 400], crop, box: [x, y3, cw, ch] });
+      const body = bodyMesh(rig, bare, rig.B.verts.map(warpOf(c)), SHEET_HAIR, { parts: ['head', 'neck', 'torso'] });
       cells.push({ meshes: [{ ...body, alpha: 0.55 }], cam: camOf(c, 1, dy), box: [x, y2, cw, ch], see: true, label });
       cells.push({ meshes: [{ ...body, col: body.col.map(() => TEAL), flat: true, alpha: 0.5 }], cam: camOf(c, 1, dy), box: [x, y3, cw, ch], see: true, label: `yaw ${c.yaw}°, pitch ${c.pitch}°, ${c.s} px/unit` });
     });
@@ -66,8 +67,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       const c = C[v], x = x0 + i * (cw + gap), crop = [c.cx - cw / 2, 205 - ch / 2, cw, ch], dy = c.cy - 205;
       imgs.push({ src: REF, size: REF_SIZE, crop, box: [x, y1, cw, ch] });
       imgs.push({ src: REF, size: REF_SIZE, crop, box: [x, y3, cw, ch] });
-      cells.push({ meshes: [bodyMesh(rig, hair), hairMesh(rig, hair)], cam: camOf(c, 1, dy), box: [x, y2, cw, ch], label });
-      cells.push({ meshes: [{ ...bodyMesh(rig, hair), depthOnly: true }, { ...hairMesh(rig, hair), tris: hair.tris.filter(([, , , pi]) => !hair.polys[pi].buzz), col: hair.polys.map(() => TEAL), flat: true, alpha: 0.42 }],
+      const w = warpOf(c), Pw = rig.B.verts.map(w), Hw = hair.verts.map(w);
+      cells.push({ meshes: [bodyMesh(rig, hair, Pw), hairMesh(rig, hair, Hw)], cam: camOf(c, 1, dy), box: [x, y2, cw, ch], label });
+      cells.push({ meshes: [{ ...bodyMesh(rig, hair, Pw), depthOnly: true }, { ...hairMesh(rig, hair, Hw), tris: hair.tris.filter(([, , , pi]) => !hair.polys[pi].buzz), col: hair.polys.map(() => TEAL), flat: true, alpha: 0.42 }],
         cam: camOf(c, 1, dy), box: [x, y3, cw, ch], see: true, label: `ours over the sheet: outline off ${diff[v].px} px` });
     });
     const mean = (Object.values(diff).reduce((a, d) => a + d.px, 0) / 5).toFixed(2);
@@ -105,7 +107,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     LABELS.filter(([v]) => v !== 'r3').forEach(([v, label], i) => {
       const c = C[v], x = 10 + (i % 2) * 2 * (cw2 + gap), y = 34 + Math.floor(i / 2) * (ch2 + gap), cy = braid ? c.cy + 150 : c.cy - 10;
       imgs.push({ src: REF, size: REF_SIZE, crop: [c.cx - cw2 / K / 2, cy - ch2 / K / 2, cw2 / K, ch2 / K], box: [x, y, cw2, ch2] });
-      cells.push({ meshes: [bodyMesh(rig, hair), hairMesh(rig, hair)], cam: camOf(c, K, c.cy - cy), box: [x + cw2 + gap, y, cw2, ch2], label });
+      const w = warpOf(c);
+      cells.push({ meshes: [bodyMesh(rig, hair, rig.B.verts.map(w)), hairMesh(rig, hair, hair.verts.map(w))], cam: camOf(c, K, c.cy - cy), box: [x + cw2 + gap, y, cw2, ch2], label });
     });
     await shoot(10 + 4 * (cw2 + gap) + 2, 34 + 2 * (ch2 + gap) + 10, cells, join(out, `braid-close-${w}${braid ? '-braid' : ''}${tag}.png`), { imgs,
       texts: [{ css: 'left:12px;top:6px', html: `Close: the sheet (left), the ${w === 'male' ? 'man' : 'woman'} (right)` }] });
