@@ -6,14 +6,17 @@
 // the hull stands off the skin. A thickness, so it carries to any head: hers takes his hair's thickness on her own skull.
 //
 //   node tools/sculpt/lowhairhull.mjs [--style swept]      # the hull's size, per view how much of the silhouette it fills
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { buildRig, add, sub, mul, dot, cross, unit } from './lowrig.mjs';
 
 const DIR = new URL('.', import.meta.url).pathname;
 export const VIEWS = ['front', 'q3', 'profile', 'r3', 'back'];
 export const PIV = [0, 1, 0.1];
-export const CAMS = JSON.parse(readFileSync(join(DIR, 'lowhaircams.json'), 'utf8'));
+/** A body's sheet cameras (tools/sculpt/lowhairreg.mjs: the man's lowhaircams.json, the woman's lowhaircams-female.json). */
+export const camsFile = (who = 'male') => join(DIR, who === 'female' ? 'lowhaircams-female.json' : 'lowhaircams.json');
+export const camsFor = (who = 'male') => JSON.parse(readFileSync(existsSync(camsFile(who)) ? camsFile(who) : camsFile('male'), 'utf8'));
+export const CAMS = camsFor('male');
 
 /** A point on the sheet under one of its cameras (tools/sculpt/lowcam.mjs project, orthographic), then the view's own
  * 2D correction (tools/sculpt/lowhairreg.mjs: the sheet's face drawn a little narrower or sheared against the body's):

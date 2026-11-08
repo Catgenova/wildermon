@@ -170,7 +170,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { buildRig, posed, skin } from './lowrig.mjs';
 import { buildHair, skinHair, STYLES, crossings, openEdges, hairCrossings } from './lowhair.mjs';
-import { carve, hullSurface, warpOf, project as sheetAt } from './lowhairhull.mjs';
+import { carve, hullSurface, warpOf, camsFor, project as sheetAt } from './lowhairhull.mjs';
 import { sheetOf, bodyMarks, pairsOf, outlineOf, headTris } from './lowhairreg.mjs';
 
 const REF = join(DIR, 'ref/hair-swept-undercut.png'), REF_SIZE = [1536, 1024];
@@ -205,7 +205,8 @@ if (MAIN) {
   const args = process.argv.slice(2), opt = (n, f) => { const i = args.indexOf(`--${n}`); return i < 0 ? f : args[i + 1]; };
   const out = resolve(opt('out', 'tmp/lowhair')); mkdirSync(out, { recursive: true });
   const only = opt('only', 'views').split(','), style = STYLES[opt('style', 'swept')];
-  const CAMS = JSON.parse(readFileSync(join(DIR, 'lowhaircams.json'), 'utf8'));
+  // (each body's own registration: tools/sculpt/lowhairreg.mjs)
+  const CAMW = { male: camsFor('male'), female: camsFor('female') };
   const RIGS = {}, HAIRS = {};
     // the hull carved from the sheet's silhouettes: the locks' heights (and, with --hull, drawn itself in their place)
   const HULL = carve(opt('style', 'swept'));
@@ -221,7 +222,7 @@ if (MAIN) {
     const cw = 280, ch = 330, gap = 8, x0 = 10, y1 = 34, y2 = y1 + ch + 26, y3 = y2 + ch + 26, over = who === 'male';
     const cells = [], imgs = [], texts = [];
     VIEWS.forEach(([v, label], i) => {
-      const c = CAMS[v], x = x0 + i * (cw + gap);
+      const c = CAMW[who][v], x = x0 + i * (cw + gap);
       imgs.push({ src: REF, size: REF_SIZE, crop: [c.cx - cw / 2, c.cy - ch / 2, cw, ch], box: [x, y1, cw, ch] });
       // (the view's 2D correction, tools/sculpt/lowhairreg.mjs, as a map of the head's space: the body and the hair alike)
       const w = warpOf(c), Pw = rig.B.verts.map(w), Hw = hair.verts.map(w);
@@ -236,10 +237,10 @@ if (MAIN) {
     await shoot(x0 * 2 + 5 * cw + 4 * gap, (over ? y3 : y2) + ch + 10, cells, join(out, `hair-sheet-${who}${stage}.png`), { texts, imgs });
   }
 
-  if (only.includes('reg') && RIGS.male) {
-    // the registration: the male's head and neck as a wire over each sheet view (2x), the sheet's landmarks (yellow
+  if (only.includes('reg')) for (const who of Object.keys(RIGS)) {
+    // the registration: the body's head and neck as a wire over each sheet view (2x), the sheet's landmarks (yellow
     // rings) and the body's (cyan dots) with their residuals, the outline's mean distance
-    const rig = RIGS.male, S = sheetOf(), M = bodyMarks(rig.B), tris = headTris(rig.B), K = 2, cw = 250, ch = 270;
+    const rig = RIGS[who], CAMS = CAMW[who], S = sheetOf(), M = bodyMarks(rig.B), tris = headTris(rig.B), K = 2, cw = 250, ch = 270;
     const cells = [], imgs = [], texts = [];
     VIEWS.forEach(([v, label], i) => {
       const c = CAMS[v], x = 10 + (i % 3) * (cw * K + 8), y = 34 + Math.floor(i / 3) * (ch * K + 30), x0 = c.cx - cw / 2, y0 = 30;
@@ -259,8 +260,8 @@ if (MAIN) {
       const o = outlineOf(v, c, S, tris);
       texts.push({ cls: 'lab', css: `left:${x + 6}px;top:${y + 4}px;text-shadow:0 0 3px #000`, html: `${label}: outline ${o.px.toFixed(2)} px` + (res.length ? `, landmarks mean ${(res.reduce((a, q) => a + q, 0) / res.length).toFixed(1)} px` : ', no face landmarks') + `<br>correction: roll ${(c.roll ?? 0).toFixed(1)}°, across ×${(c.ax ?? 1).toFixed(3)}, up ×${(c.ay ?? 1).toFixed(3)}, shear ${(c.sh ?? 0).toFixed(3)}` });
     });
-    texts.unshift({ css: 'left:12px;top:6px', html: 'Registration: the man\'s head (wire) over the sheet at 2×; yellow rings the sheet\'s landmarks, cyan dots his, residuals in px' });
-    await shoot(10 + 3 * (cw * K + 8), 34 + 2 * (ch * K + 30), cells, join(out, `hair-reg${stage}.png`), { texts, imgs });
+    texts.unshift({ css: 'left:12px;top:6px', html: `Registration: the ${who === 'male' ? 'man' : 'woman'}'s head (wire) over the sheet at 2×; yellow rings the sheet's landmarks, cyan dots ${who === 'male' ? 'his' : 'hers'}, residuals in px` });
+    await shoot(10 + 3 * (cw * K + 8), 34 + 2 * (ch * K + 30), cells, join(out, `hair-reg-${who}${stage}.png`), { texts, imgs });
   }
 
   if (only.includes('close')) for (const who of Object.keys(RIGS)) {
@@ -271,7 +272,7 @@ if (MAIN) {
     const red = { who: rig.who, P: xp.length ? xp : [[0, 0, 0]], polys: xp.length ? Array.from({ length: xp.length / 2 }, (_, i) => [2 * i, 2 * i + 1]) : [], tris: [], col: [], edges: true, edgec: [1, 0.1, 0.1] };
     const views = [['front', 'Front (0°)'], ['q3', 'Three-quarter (45°)'], ['profile', 'Profile, his right (90°)'], ['profile', 'Profile, his left (270°; the sheet mirrored)', true], ['r3', 'Rear three-quarter (135°)'], ['back', 'Back (180°)']];
     views.forEach(([v, label, flip], i) => {
-      const c = CAMS[v], x = 10 + (i % 2) * 2 * (cw + gap), y = 34 + Math.floor(i / 2) * (ch + gap), cy = c.cy - 30;
+      const c = CAMW[who][v], x = 10 + (i % 2) * 2 * (cw + gap), y = 34 + Math.floor(i / 2) * (ch + gap), cy = c.cy - 30;
       imgs.push({ src: REF, size: REF_SIZE, crop: [c.cx - cw / K / 2, cy - ch / K / 2, cw / K, ch / K], box: [x, y, cw, ch], flip });
       const cam = { ...camOf(c, K), c: [PIV[0], PIV[1] + 30 / c.s, PIV[2]] };
       if (flip) cam.yaw = -cam.yaw;

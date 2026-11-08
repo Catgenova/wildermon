@@ -1,4 +1,5 @@
-// The swept-back hair's sheet cameras registered to the male's head (tools/sculpt/lowhaircams.json, read by
+// The swept-back hair's sheet cameras registered to a body's head (tools/sculpt/lowhaircams.json the man's,
+// lowhaircams-female.json the woman's, read by
 // tools/sculpt/lowhairhull.mjs project): per view its turn, tilt, scale and centre, and a 2D correction (roll, across
 // stretch ax, shear sh: the sheet's face is drawn a little longer and narrower than the body's), fitted so that
 //   - the body's landmarks land on the sheet's (tools/sculpt/lowhairsheet.py: the pupils, the brows' two ends, the
@@ -8,11 +9,11 @@
 // Coordinate descent from the last fit; the priors keep the correction small (roll 0, ax 1, sh 0). Prints each
 // landmark's residual (px) and the outline's mean distance (px).
 //
-//   node tools/sculpt/lowhairreg.mjs [--rounds 7]
+//   node tools/sculpt/lowhairreg.mjs [--who male|female] [--rounds 7]
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { buildRig } from './lowrig.mjs';
-import { project, raster } from './lowhairhull.mjs';
+import { project, raster, camsFile, camsFor } from './lowhairhull.mjs';
 
 const DIR = new URL('.', import.meta.url).pathname;
 export const VIEWS = ['front', 'q3', 'profile', 'r3', 'back'];
@@ -90,9 +91,9 @@ export function camsOf(g) {
   return Object.fromEntries(VIEWS.map((v) => { const p = g[v]; return [v, { yaw: p.yaw, pitch: g.pitch, s: g.sv, cx: p.cx, cy: g.cy, roll: p.roll, ax: p.sx / g.sv, ay: 1, sh: p.sh }]; }));
 }
 
-function fit(rounds) {
-  const rig = buildRig('male'), B = rig.B, M = bodyMarks(B), tris = headTris(B), S = sheetOf();
-  const old = JSON.parse(readFileSync(join(DIR, 'lowhaircams.json'), 'utf8'));
+function fit(rounds, who) {
+  const rig = buildRig(who), B = rig.B, M = bodyMarks(B), tris = headTris(B), S = sheetOf();
+  const old = camsFor(who);
   const g = { pitch: old.front.pitch, sv: old.front.s * (old.front.ay ?? 1), cy: old.front.cy };
   for (const v of VIEWS) g[v] = { yaw: old[v].yaw, cx: old[v].cx, sx: old[v].s * (old[v].ax ?? 1), roll: old[v].roll ?? 0, sh: old[v].sh ?? 0 };
   const viewCost = (v, c) => {
@@ -126,10 +127,10 @@ function fit(rounds) {
     const o = outlineOf(v, c, S, tris), res = pairsOf(v, c, S, M).map(([n, at, p]) => { const q = project(p, c); return n === 'ear' ? `ear across ${Math.abs(q[0] - at[0]).toFixed(2)}` : `${n} ${Math.hypot(q[0] - at[0], q[1] - at[1]).toFixed(2)}`; });
     console.log(v, JSON.stringify(c), `outline ${o.px.toFixed(2)} px; landmarks (px): ${res.join(', ')}`);
   }
-  writeFileSync(join(DIR, 'lowhaircams.json'), JSON.stringify(out, null, 1) + '\n');
+  writeFileSync(camsFile(who), JSON.stringify(out, null, 1) + '\n');
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const args = process.argv.slice(2), opt = (n, f) => { const i = args.indexOf(`--${n}`); return i < 0 ? f : args[i + 1]; };
-  fit(+opt('rounds', 7));
+  fit(+opt('rounds', 7), opt('who', 'male'));
 }
