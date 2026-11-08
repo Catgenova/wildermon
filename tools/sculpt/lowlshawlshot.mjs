@@ -150,6 +150,41 @@ if (only.includes('poses')) {
   await shoot(6 * cw, 34 + r * ch, cells, join(out, `${name}-poses.png`), { texts: [{ css: 'left:10px;top:6px', html: 'Leather shawl in poses: the shawl\'s triangles crossing the body\'s' }] });
 }
 
+/* ---- worn with its neighbours: the chest under it, the hat over it (assets written beside each body, read-only) ---- */
+// --chest <file with {who}> --hat <file with {who}>: the shawl's triangles crossing each in the poses (the idle's whole
+// loop, the walk, the test poses, the swing), and the set worn together drawn front, three-quarter, side and back, plain
+// and enchanted, at rest and with the head turned.
+if (only.includes('neighbours')) {
+  const { crossPairs, trisOf: trisOfG } = await import('./lowgarment.mjs');
+  const load = (file, who) => { const A = JSON.parse(readFileSync(file.replace('{who}', who), 'utf8')); const m = assetMesh(A); return { A, m, G: { verts: m.P, vw: Array.from({ length: m.P.length }, (_, i) => { const w = A.weights[i], o = []; for (let k = 0; k < w.length; k += 2) o.push([w[k], w[k + 1]]); return o; }) }, T: m.tris.map((t) => ({ v: t.slice(0, 3) })) }; };
+  const report = {}, cells = [];
+  for (const who of ['male', 'female']) {
+    const { rig, G } = M[who], N = { chest: load(opt('chest'), who), hat: load(opt('hat'), who) }, hide = new Set(N.chest.A.hides ?? []);
+    const TG = trisOfG(G);
+    report[who] = {};
+    for (const e of await poseList(who)) {
+      const f = posed(rig, e.pose), PG = skinGarment(rig, f, G), r = {};
+      for (const [k, n] of Object.entries(N)) { const PN = skinGarment(rig, f, n.G, n.G.vw); r[k] = crossPairs(PG, TG, PN, n.T).length; }
+      report[who][e.id] = r;
+    }
+    const sum = (re, k) => Object.entries(report[who]).filter(([id]) => re.test(id)).reduce((a, [, v]) => a + v[k], 0);
+    report[who].summary = Object.fromEntries(['chest', 'hat'].map((k) => [k, { rest: report[who].rest[k], idle: sum(/^idle/, k), walk: sum(/^walk/, k), swing: sum(/^swing/, k), tests: Object.fromEntries(['tpose', 'forward', 'overhead', 'headturn', 'nod'].map((id) => [id, report[who][id][k]])) }]));
+    console.log(who, JSON.stringify(report[who].summary));
+    // the set worn together: rest and head turned, front, three-quarter, side, back; plain and enchanted
+    const neigh = (P, look) => Object.values(N).map((n) => ({ ...n.m, P, col: n.A.polys.map(([, m]) => lookColour((look === 'enchanted' ? n.A.enchanted : n.A.plain)?.[m] ?? { c: n.A.colours[m] })) }));
+    const row = cells.length ? Math.max(...cells.map((c) => c.row)) + 1 : 0;
+    [['rest', {}], ['headturn', testPoses(rig).find((e) => e.id === 'headturn').pose]].forEach(([id, pose], pi) => ['plain', 'enchanted'].forEach((look, li) => [0, -40, -90, 180].forEach((yaw, vi) => {
+      const f = posed(rig, pose), PB = skin(rig, f), PG = skinGarment(rig, f, G), mesh = [bodyMesh(rig, PB, new Set([...hide])), garMesh(G, PG, look), ...Object.values(N).map((n) => { const P = skinGarment(rig, f, n.G, n.G.vw); return { ...n.m, P, col: n.A.polys.map(([, m]) => lookColour(((look === 'enchanted' ? n.A.enchanted : n.A.plain) ?? [])[m] ?? { c: n.A.colours[m] })) }; })];
+      const k = (pi * 2 + li) * 4 + vi;
+      cells.push({ row: row + Math.floor(k / 8), meshes: mesh, cam: { yaw, pitch: 4, s: 70, c: [0, -1.3, 0] }, box: [(k % 8) * 240, 34 + (row + Math.floor(k / 8)) * 330, 240, 330], label: k % 4 ? '' : `${who} ${id} ${look}` });
+    })));
+    void neigh;
+  }
+  writeFileSync(join(out, `${name}-neighbours.json`), JSON.stringify(report, null, 1));
+  const rows = Math.max(...cells.map((c) => c.row)) + 1;
+  await shoot(8 * 240, 34 + rows * 330, cells, join(out, `${name}-neighbours.png`), { texts: [{ css: 'left:10px;top:6px', html: 'Leather shawl worn over the leather chest and under the leather hat: rest and head turned, plain and enchanted' }] });
+}
+
 /* ---- the walk GIF ---------------------------------------------------------------------------------------------------- */
 if (only.includes('walk')) {
   const frames = join(out, 'walk-frames'), F = 12, cw = 220, ch = 420;

@@ -69,7 +69,7 @@ export const DESIGN = {
     yoke: { table: [[0, -1.72], [15, -1.6], [30, -1.2], [45, -0.98], [60, -0.86], [75, -0.86], [90, -0.9], [105, -0.88], [120, -0.9], [135, -1.02], [150, -1.22], [165, -1.6], [180, -1.72]], band: 0.28, line: 0.05 },
     hem: { at: [-3.33, -2.1, -3.28], p: 1.0, flare: [0.04, 0.08, 0.04], soften: 0, band: 0.66, stripe: 0.075 },
     tri: { w: 0.36, gap: 0.16, raise: 0.03 }, ytri: { w: 0.2, gap: 0.14 },
-    tabs: { gap: 0.31, w: 0.21, len: [0.3, 0.64], thick: 0.075, tilt: 9, seed: 7 },
+    tabs: { gap: 0.31, w: 0.21, len: [0.3, 0.64], thick: 0.075, tilt: 9, seed: 7, foot: 0.3 },
     emblem: { ring: [0.3, 0.17], at: [-1.29, -1.33], stripes: [0.11, 0.07], raise: 0.03 },
     lift: LIFT(0.4),
   },
@@ -79,7 +79,7 @@ export const DESIGN = {
     yoke: { table: [[0, -1.55], [15, -1.42], [30, -1.12], [45, -0.94], [60, -0.84], [75, -0.84], [90, -0.88], [105, -0.86], [120, -0.88], [135, -0.98], [150, -1.14], [165, -1.42], [180, -1.55]], band: 0.25, line: 0.045 },
     hem: { at: [-2.95, -1.85, -2.9], p: 1.0, flare: [0.04, 0.07, 0.04], soften: 0, band: 0.6, stripe: 0.065 },
     tri: { w: 0.31, gap: 0.14, raise: 0.026 }, ytri: { w: 0.18, gap: 0.12 },
-    tabs: { gap: 0.28, w: 0.18, len: [0.27, 0.5], thick: 0.06, tilt: 18, seed: 7 },
+    tabs: { gap: 0.28, w: 0.18, len: [0.27, 0.5], thick: 0.06, tilt: 18, seed: 7, foot: 0.5 },
     emblem: { ring: [0.25, 0.12], at: [-1.15, -1.2], stripes: [0.095, 0.06], raise: 0.026 },
     lift: LIFT(0.45),
   },
@@ -508,14 +508,18 @@ export function leatherShawlWeights(rig, G, o = {}) {
   // the underside the outside's over it; the hem's lip the hem's
   const pair = { IH: 'H', IB: 'BT0', IY: 'Y1b', IM: 'Ym', IT: 'Y0' };
   for (let k = 0; k < N; k++) for (const [u, o2] of Object.entries(pair)) vw[R[u][k]] = vw[R[o2][k]];
+  // (the underside under the collar's foot the collar's own, the cape's lift not taking it into the neck and the
+  // trapezius)
+  for (let k = 0; k < N; k++) vw[R.IT[k]] = vw[R.ci[k]];
   // the pieces: their shell corners'
   for (let i = 0; i < G.verts.length; i++) if (!shell.has(i)) vw[i] = blendW(G.src[i]);
   // the tabs' feet: half their hem's weights, half the body's closest to them (the arm swinging under them, the belly and
   // the hips moving under the chest: the tabs ride over them as they are pushed)
   const feet = G.tabFoot ?? new Set();
   if (feet.size) {
-    const bw = transferWeights(rig, G, { smooth: 0, only: (i) => feet.has(i) });
-    for (const i of feet) vw[i] = mix(vw[i], bw[i], o.foot ?? 0.5);
+    // (the arm's below the shoulder taken as the upper arm's: the tab rides on the arm's swing, not the forearm's bend)
+    const bw = transferWeights(rig, G, { smooth: 0, only: (i) => feet.has(i), map: (n) => { const m = n.match(/^(lowerarm|hand|thumb|fingers|elbow|wrist|knuckles)\w*_(l|r)$/); return m ? `upperarm_${m[2]}` : n; } });
+    for (const i of feet) vw[i] = mix(vw[i], bw[i], o.foot ?? G.design.tabs.foot ?? 0.5);
   }
   return vw;
 }
