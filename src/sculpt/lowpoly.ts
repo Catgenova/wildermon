@@ -13,9 +13,11 @@
  * shawl, `assets/lowshawl-<who>.json` by `tools/sculpt/garments/shawl.mjs`): laid out flat with the body in one bake,
  * skinned to the body's bones and its own (the cape's, appended after the body's, each driven from the body's pose by
  * `liftOf`, the 'lift' rule of lowgarment.mjs), lit by the same light in its own colours, inked with the body as one
- * silhouette. Garments are listed in GARMENTS, each with its wear hook: the first outfit's shawl and its trousers
+ * silhouette. Garments are listed in GARMENTS, each with its wear hook: the first outfit's shawl, its trousers
  * (`assets/lowtrousers-<who>.json` by `tools/sculpt/garments/trousers.mjs`, no bones of their own; the body's polygons
- * they cover whole, `hides`, are left out of the bake while they are worn). Garments share materials by colour.
+ * they cover whole, `hides`, are left out of the bake while they are worn) and its boots (`assets/lowboots-<who>.json`
+ * by `tools/sculpt/garments/boots.mjs`, no bones of their own, hiding the foot and the ankle; the body stands on their
+ * soles, `soles`, while they are worn). Garments share materials by colour.
  */
 import MALE_ASSET from './assets/lowmale.json';
 import FEMALE_ASSET from './assets/lowfemale.json';
@@ -23,6 +25,8 @@ import MALE_SHAWL from './assets/lowshawl-male.json';
 import FEMALE_SHAWL from './assets/lowshawl-female.json';
 import MALE_TROUSERS from './assets/lowtrousers-male.json';
 import FEMALE_TROUSERS from './assets/lowtrousers-female.json';
+import MALE_BOOTS from './assets/lowboots-male.json';
+import FEMALE_BOOTS from './assets/lowboots-female.json';
 import MALE_LIGHT from '../../tools/sculpt/lowlight-male.json';
 import FEMALE_LIGHT from '../../tools/sculpt/lowlight-female.json';
 import { sculptRig, viewOf, type FigurePose, type Rig } from '../render/figure';
@@ -61,6 +65,8 @@ export interface GarmentAsset {
   verts: number[]; polys: Array<[number[], number]>; tris: number[]; weights: number[][]; bones: GarmentBone[];
   /** The body's polygons the garment covers whole: left out of the body while it is worn. */
   hides?: number[];
+  /** The garment's vertices the body stands on while it is worn (a boot's sole), with the body's own sole. */
+  soles?: number[];
 }
 
 /* ---- 3x3 rotations (row-major) and quaternions [w, x, y, z], as lowrig.mjs ------------------------------------- */
@@ -182,7 +188,7 @@ const colourIndex = (c: readonly number[]): number => {
  * garments it can wear (their own bones posed with the body's always, each garment's after the one before; each drawn
  * when the bake is asked for with it worn).
  */
-function lowBody(A: Asset, P: Proportions, share: number, garments: readonly GarmentAsset[]): { baked: (worn: readonly boolean[]) => Baked; bones: (pose: FigurePose) => Float32Array } {
+function lowBody(A: Asset, P: Proportions, share: number, garments: readonly GarmentAsset[]): { baked: (worn: readonly boolean[]) => Baked; bones: (pose: FigurePose, worn?: readonly boolean[]) => Float32Array } {
   const BONES = A.bones;
   const AT = new Map(BONES.map((b, i) => [b.name, i]));
   for (const g of garments) if (g.base !== BONES.length) throw new Error(`garment for ${g.base} bones on a body of ${BONES.length}`);
@@ -293,7 +299,6 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
   }
   /** A mesh point in the figure's frame: x the body's right, y forward, z up, the floor at z 0. */
   const toGame = (p: V): V => { const s = scale(), q = mv(T, sub(p, FLOOR)); return [q[0] * s, q[1] * s, q[2] * s]; };
-  const vert = (i: number): V => [A.verts[i * 3], A.verts[i * 3 + 1], A.verts[i * 3 + 2]];
 
   const BAKED = new Map<string, Baked>();
   /**
@@ -366,8 +371,8 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
     return idle ? relaxedIdle(figure, pose.phase / 6, pose.facing) : figure;
   }
 
-  /** The skinning matrices for a pose (3x4 rows per bone, the figure's frame), the body stood on its lowest sole. */
-  function lowBones(pose: FigurePose): Float32Array {
+  /** The skinning matrices for a pose (3x4 rows per bone, the figure's frame), the body stood on its lowest sole (or a worn garment's). */
+  function lowBones(pose: FigurePose, worn: readonly boolean[] = []): Float32Array {
     const local = fromGame(bonesOf(rigFor(pose), P, [], REST_EXTRAS), gameRest());
     const Fb = posed(local), F = [...Fb, ...garments.flatMap((g) => garmentFrames(BONES, g.bones, Fb))];
     // each bone's skinning turn and shift in the mesh's frame: v -> S v + t
@@ -375,12 +380,16 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
     const t = F.map((f, i) => sub(f.P, mv(S[i], ALL[i].head)));
     // stood on the lowest sole: the sole's vertices skinned
     let low = Infinity;
-    for (const vi of A.soles) {
-      const v = vert(vi), w = A.weights[vi];
-      let y = 0;
-      for (let j = 0; j < w.length; j += 2) { const b = w[j]; y += w[j + 1] * (dot([S[b][3], S[b][4], S[b][5]], v) + t[b][1]); }
-      low = Math.min(low, y);
-    }
+    const stand = (V3s: number[], W: number[][], soles: readonly number[]): void => {
+      for (const vi of soles) {
+        const v: V = [V3s[vi * 3], V3s[vi * 3 + 1], V3s[vi * 3 + 2]], w = W[vi];
+        let y = 0;
+        for (let j = 0; j < w.length; j += 2) { const b = w[j]; y += w[j + 1] * (dot([S[b][3], S[b][4], S[b][5]], v) + t[b][1]); }
+        low = Math.min(low, y);
+      }
+    };
+    stand(A.verts, A.weights, A.soles);
+    garments.forEach((g, k) => { if (worn[k] && g.soles) stand(g.verts, WEIGHTS[k], g.soles); });
     const dy = A.floor - low, s = scale();
     const out = new Float32Array(ALL.length * 12);
     ALL.forEach((_, i) => {
@@ -400,11 +409,14 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
  */
 const wearsShawl = (_pose: FigurePose): boolean => true;
 const wearsTrousers = (_pose: FigurePose): boolean => true;
+/** Whether a figure wears the boots (the body stands on their soles while it does); for now every figure wears them. */
+const wearsBoots = (_pose: FigurePose): boolean => true;
 
 /** The garments a low-poly body can wear, in the order they are laid over it: each its copy for the man and the woman, and its wear hook. */
 const GARMENTS: ReadonlyArray<{ man: GarmentAsset; woman: GarmentAsset; wears: (pose: FigurePose) => boolean }> = [
   { man: MALE_SHAWL as unknown as GarmentAsset, woman: FEMALE_SHAWL as unknown as GarmentAsset, wears: wearsShawl },
   { man: MALE_TROUSERS as unknown as GarmentAsset, woman: FEMALE_TROUSERS as unknown as GarmentAsset, wears: wearsTrousers },
+  { man: MALE_BOOTS as unknown as GarmentAsset, woman: FEMALE_BOOTS as unknown as GarmentAsset, wears: wearsBoots },
 ];
 
 const BODIES = {
@@ -455,5 +467,6 @@ export function lowScene(pose: FigurePose): SculptDraw {
   const facing = ((Math.round(pose.facing) % 8) + 8) % 8;
   const who = look.gender === 'woman' ? 'woman' : 'man', body = BODIES[who];
   const materials = materialsOf(look), low: LowLight = { sh: SH[who], tone: toneOf(materials), fit: FIT_SKIN };
-  return { baked: body.baked(GARMENTS.map((g) => g.wears(pose))), bones: body.bones(pose), materials, view: viewOf(facing), blink: 0, low };
+  const worn = GARMENTS.map((g) => g.wears(pose));
+  return { baked: body.baked(worn), bones: body.bones(pose, worn), materials, view: viewOf(facing), blink: 0, low };
 }
