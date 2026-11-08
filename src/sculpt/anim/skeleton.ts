@@ -76,6 +76,11 @@ const PALM = 0.012;
 const REACH_ARM = 0.975;
 /** The most a held prop's far end is let down onto the ground by turning the right wrist down (`GripAt.rest`): degrees. */
 const DOWN = 40;
+/**
+ * The furthest in toward the chest (the cosine from straight out) the left elbow is put to line its forearm up with its
+ * hand, by body: hers kept further out, off her chest.
+ */
+const ELBOW_IN: Record<Body, number> = { man: -0.1, woman: 0.2 };
 /** Game units between the fists on a handle when nothing held says. */
 const GAP = 0.76;
 
@@ -218,8 +223,15 @@ export function skeleton(A: AnimAsset, canon: AnimAsset, gameHeight = 0): Skelet
     // and drawn toward the side that lines the forearm up with the hand on the grip (the elbow away from where the hand
     // points), as far as `lineUp` says, so the wrist is bent as little as the reach allows
     const lineUp = scl(off(add(S, col(W, 1))), -1);
-    const k = Math.min(1, Math.max(0, grip.lineUp));
-    if (k > 0 && len(lineUp) > 1e-6) { const p2 = add(scl(pole, 1 - k), scl(unit(lineUp), k)); if (len(p2) > 1e-3) pole = unit(p2); }
+    // (never so far that the elbow turns in toward the chest: less of the way where it would)
+    const k = Math.min(1, Math.max(0, grip.lineUp)), outN = unit(off(add(S, outW)));
+    if (k > 0 && len(lineUp) > 1e-6) {
+      const at = (w: number): V => add(scl(pole, 1 - w), scl(unit(lineUp), w)), fits = (w: number): boolean => { const p2 = at(w); return len(p2) > 1e-3 && dot(unit(p2), outN) >= Math.min(ELBOW_IN[body], dot(pole, outN)); };
+      // the most of the way that keeps it (found by halving, so it changes smoothly as the pose does)
+      let w = k;
+      if (!fits(k)) { let lo = 0, hi = k; for (let n = 0; n < 14; n++) { const m = (lo + hi) / 2; if (fits(m)) lo = m; else hi = m; } w = lo; }
+      if (w > 1e-4) pole = unit(at(w));
+    }
     const K1 = F[lh.lower].P, W1 = F[lh.hand].P, la = len(sub(K1, S)), lb = len(sub(W1, K1)), lw = Math.max(1e-6, len(sub(W1, S)));
     const ca = Math.max(-1, Math.min(1, (la * la + lw * lw - lb * lb) / (2 * la * lw))), Ke = add(S, scl(add(scl(n, ca), scl(pole, Math.sqrt(1 - ca * ca))), la));
     const frame = (x: V, y: V): M3 => { const X = unit(x), Y = unit(sub(y, scl(X, dot(y, X)))), Z = cross(X, Y); return [X[0], Y[0], Z[0], X[1], Y[1], Z[1], X[2], Y[2], Z[2]]; };
@@ -236,7 +248,10 @@ export function skeleton(A: AnimAsset, canon: AnimAsset, gameHeight = 0): Skelet
       const f = mv(mm(F[i].W, tr(bones[i].R)), [0, 0, 1]);
       return mm(axisAngle([0, 1, 0], (Math.atan2(f[0], f[2]) * 180) / Math.PI), bones[i].R);
     };
-    return { at: [F[LEG[0].foot].P, F[LEG[1].foot].P], W: [flat(LEG[0].foot), flat(LEG[1].foot)] };
+    // each ankle as high as stands its own sole on the ground (the stance's turns at the hips lift one foot more than
+    // the other: the body stood on the lower would leave the higher in the air)
+    const on = (s: number): V => { const P = F[LEG[s].foot].P; return [P[0], FOOT[s].ankle[1] - (FOOT[s].sole - A.floor), P[2]]; };
+    return { at: [on(0), on(1)], W: [flat(LEG[0].foot), flat(LEG[1].foot)] };
   }
 
   function finish(pose: Pose, o: { plant?: Plant; armsOut?: number; grip?: GripAt; held?: Held } = {}): { local: Array<M3 | undefined>; move: V } {
@@ -315,15 +330,18 @@ export function skeleton(A: AnimAsset, canon: AnimAsset, gameHeight = 0): Skelet
     return { local: L, move: pose.move };
   }
 
-  // each foot's ankle, ball and the back of its heel at rest: the heel the sole's hindmost point on that side
+  // each foot's ankle, ball and the back of its heel at rest: the heel the sole's hindmost point on that side; its sole's lowest
   const FOOT = LEG.map(({ foot }) => {
     const ballBone = bones.findIndex((b) => b.p === foot && b.kind === 'control'), ankle = bones[foot].head, ball = ballBone >= 0 ? bones[ballBone].head : ankle;
-    let heel: V = [ankle[0], A.floor, ankle[2]];
+    let heel: V = [ankle[0], A.floor, ankle[2]], sole = Infinity;
     for (const vi of A.soles ?? []) {
       const p: V = [A.verts[vi * 3], A.verts[vi * 3 + 1], A.verts[vi * 3 + 2]];
-      if (Math.sign(p[0]) === Math.sign(ankle[0]) && p[2] < heel[2]) heel = p;
+      if (Math.sign(p[0]) !== Math.sign(ankle[0])) continue;
+      if (p[2] < heel[2]) heel = p;
+      sole = Math.min(sole, p[1]);
     }
-    return { ankle, ball, heel, ballBone };
+    // (and its sole's lowest point at rest)
+    return { ankle, ball, heel, ballBone, sole: Number.isFinite(sole) ? sole : A.floor };
   });
   const perGame = gameHeight > 0 ? height / gameHeight : 0;
 
