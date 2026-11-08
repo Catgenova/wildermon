@@ -7,18 +7,22 @@
 //        low<who>.json) against lowgarment.mjs garmentFrames from the rig, on the same body frames (the test poses, the
 //        game's walk and idle as fromGame takes them): the largest difference of the world rotations and heads; the
 //        asset's bones named and ordered as the rig's, its weights the garment's;
-//     3. the game's own figure path (lowScene: the bake and the bones the GPU draws with), skinned here as the shader
-//        skins it: the shawl's triangles crossing the body's in the game's walk and idle, every facing, both bodies.
-//   Exits 1 when a difference passes its tolerance or a crossing is found.
+//     3. the corrective shapes: lowpoly.ts shapeWeights against lowgarment.mjs shapeWeights on the same body frames (and
+//        on the swing's), the largest difference; every weight nought at rest, in the test poses but overhead, the walk
+//        and the idle; the asset's shapes the garment's;
+//     4. the game's own figure path (lowScene: the bake, the bones and the shapes' weights the GPU draws with), skinned
+//        here as the shader skins it: the shawl's triangles crossing the body's in the game's walk and idle, every
+//        facing, both bodies (none allowed), and in the swing with the long sword (reported, worst frame).
+//   Exits 1 when a difference passes its tolerance or a crossing is found in the walk or the idle.
 import { build } from 'esbuild';
 import { readFileSync } from 'node:fs';
 import { buildRig, posed, fromGame, gameRig, armsOut, axisAngle, mm, tr } from './lowrig.mjs';
-import { liftOf, garmentFrames, crossPairs, bonesWith } from './lowgarment.mjs';
+import { liftOf, garmentFrames, crossPairs, bonesWith, shapeWeights } from './lowgarment.mjs';
 import { buildShawl, shawlWeights } from './garments/shawl.mjs';
 
 const ROOT = new URL('../..', import.meta.url).pathname;
 const b = await build({
-  stdin: { contents: `export { liftOf, garmentFrames, lowScene } from './src/sculpt/lowpoly';`, resolveDir: ROOT, loader: 'ts' },
+  stdin: { contents: `export { liftOf, garmentFrames, lowScene, shapeWeights, lowSkeleton, lowHeld } from './src/sculpt/lowpoly'; export { clipLocal } from './src/sculpt/anim/player'; export { SWING } from './src/sculpt/anim/clips/swing';`, resolveDir: ROOT, loader: 'ts' },
   bundle: true, format: 'esm', platform: 'node', write: false, logLevel: 'error', target: 'es2022', absWorkingDir: ROOT,
   loader: { '.png': 'dataurl', '.svg': 'dataurl', '.webp': 'dataurl', '.wav': 'dataurl', '.ogg': 'dataurl', '.mp3': 'dataurl' },
   define: { 'import.meta.env': '{}', __DEPLOY__: 'undefined' },
@@ -78,16 +82,44 @@ for (const who of ['male', 'female']) {
   // (the asset's heads and frames are written to five decimals)
   if (dW > 1e-4 || dP > 1e-4) fail = true;
 
-  // 3. the game's own path: lowScene's bake and bones, skinned as the shader skins them
+  // 3. the corrective shapes: the asset's the garment's; their weights the same both ways; nought where they must be
+  const sk = TS.lowSkeleton(who === 'male' ? 'man' : 'woman'), held = TS.lowHeld(who === 'male' ? 'man' : 'woman');
+  const swing = Array.from({ length: 31 }, (_, k) => { const c = TS.clipLocal(sk, TS.SWING, k * 0.05, held), q = { $move: c.move }; c.local.forEach((m, i) => { if (m && rig.bones[i].kind === 'control') q[rig.bones[i].name] = m; }); return q; });
+  const shapes = G.shapes ?? [];
+  r.shapes = { names: shapes.map((x) => x.name).join(' '), offsets: 0, weights: 0, nought: 0, most: 0 };
+  if ((shawl.shapes ?? []).length !== shapes.length) { console.log(who, 'shapes differ'); fail = true; }
+  (shawl.shapes ?? []).forEach((x, k) => { r.shapes.offsets = Math.max(r.shapes.offsets, md(x.d, shapes[k].d.flat())); });
+  if (r.shapes.offsets > 1e-5) fail = true;
+  for (const q of [...poses, ...swing]) {
+    const F = posed(rig, q), mine = shapeWeights(rig, F, G), theirs = TS.shapeWeights(body.bones, shawl.shapes, F);
+    if (mine.length) r.shapes.weights = Math.max(r.shapes.weights, md(mine, theirs));
+    r.shapes.most = Math.max(r.shapes.most, ...mine, 0);
+  }
+  // (nought at rest, arms out and forward, the head turned and nodded, the game's walk and idle: all the poses but the
+  // overhead one and the random ones)
+  const still = [poses[0], poses[1], poses[2], ...poses.slice(16)];
+  const W0 = (who === 'female' ? (q) => armsOut(rig, q) : (q) => q);
+  for (const q of [...still, W0({ neck_01: [0, 16, 0], neck_02: [0, 16, 0], head: [0, 38, 0] }), W0({ neck_01: [12, 0, 0], neck_02: [14, 0, 0], head: [14, 0, 0] })]) r.shapes.nought = Math.max(r.shapes.nought, ...shapeWeights(rig, posed(rig, q), G), 0);
+  // (the asset's heads are written to five decimals)
+  if (r.shapes.weights > 1e-4 || r.shapes.nought > 0) fail = true;
+
+  // 4. the game's own path: lowScene's bake, bones and shapes' weights, skinned as the shader skins them
   const look = { gender: who === 'male' ? 'man' : 'woman', skin: 'light', hair: 'bald', hairColour: 'brown', eyes: 'brown', beard: 'none', shirt: 'unbleached', trousers: 'walnut' };
   const nBodyTris = body.tris.length / 4;
-  const cross = { walk: 0, idle: 0, checked: 0 };
-  for (const [kind, moving, n] of [['walk', true, 16], ['idle', false, 16]]) for (let facing = 0; facing < 8; facing++) for (let k = 0; k < n; k++) {
-    const phase = moving ? (k / n) * Math.PI * 2 : k * 0.75;
-    const s = TS.lowScene({ phase, moving, facing, swimming: false, working: false, look });
-    const V = s.baked.verts, Bn = s.bones, P = [];
+  const cross = { walk: 0, idle: 0, checked: 0, swing: 0, swingSelf: 0, swingAt: 0 };
+  const frames = [
+    ...[['walk', true, 16], ['idle', false, 16]].flatMap(([kind, moving, n]) => Array.from({ length: 8 * n }, (_, j) => ({ kind, pose: { phase: moving ? ((j % n) / n) * Math.PI * 2 : (j % n) * 0.75, moving, facing: Math.floor(j / n), swimming: false, working: false, look } }))),
+    ...Array.from({ length: 31 }, (_, k) => ({ kind: 'swing', t: k / 30, pose: { phase: 0, moving: false, facing: 0, swimming: false, working: true, job: 'attack_creature', act: { t: k / 30, length: TS.SWING.length }, gear: { weapon: { id: 'long_sword' } }, look } })),
+  ];
+  for (const { kind, pose, t } of frames) {
+    const s = TS.lowScene(pose);
+    const V = s.baked.verts, Bn = s.bones, P = [], SH = s.baked.shapes, sw = s.shapes;
+    if (kind !== 'swing' && sw) { console.log(who, kind, 'shapes weighed', sw); fail = true; }
     for (let i = 0; i < s.baked.nVerts; i++) {
       const o = i * 17, p = [V[o], V[o + 1], V[o + 2]], q = [0, 0, 0];
+      // (the shapes added at rest, as the shader adds them)
+      const c = SH && sw ? i - SH.from : -1;
+      if (c >= 0 && c < SH.count) sw.forEach((w, k) => { if (w > 0) for (let j = 0; j < 3; j++) p[j] += w * SH.data[(c * SH.shapes + k) * 8 + j]; });
       for (let j = 0; j < 4; j++) {
         const w = V[o + 11 + j]; if (w <= 0) continue;
         const m = V[o + 7 + j] * 12;
@@ -95,8 +127,10 @@ for (const who of ['male', 'female']) {
       }
       P.push(q);
     }
-    const T = Array.from({ length: s.baked.nTris }, (_, t) => ({ v: [s.baked.tris[t * 3], s.baked.tris[t * 3 + 1], s.baked.tris[t * 3 + 2]] }));
-    cross[kind] += crossPairs(P, T.slice(nBodyTris), P, T.slice(0, nBodyTris)).length;
+    const T = Array.from({ length: s.baked.nTris }, (_, k) => ({ v: [s.baked.tris[k * 3], s.baked.tris[k * 3 + 1], s.baked.tris[k * 3 + 2]] }));
+    const gT = T.slice(nBodyTris, nBodyTris + shawl.tris.length / 4), n = crossPairs(P, gT, P, T.slice(0, nBodyTris)).length;
+    if (kind === 'swing') { if (n >= cross.swing) { cross.swing = n; cross.swingAt = +t.toFixed(2); } cross.swingSelf = Math.max(cross.swingSelf, crossPairs(P, gT).length); }
+    else cross[kind] += n;
     cross.checked++;
   }
   r.crossings = cross;

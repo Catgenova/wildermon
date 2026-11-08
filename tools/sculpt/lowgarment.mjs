@@ -301,11 +301,55 @@ export function garmentFrames(rig, G, frames) {
 /** All the bones a garment's weights index: the body's, then its own. */
 export const bonesWith = (rig, G) => [...rig.bones, ...(G.bones ?? [])];
 
-/** The garment's vertices in a pose (frames from lowrig.mjs posed(); its own bones driven from them), as skin() poses the body. */
-export function skinGarment(rig, frames, G, vw = G.vw) {
-  const bones = bonesWith(rig, G);
+/* ---- corrective shapes ------------------------------------------------------------------------------------------- */
+/** 0 below a, 1 past b (b may be below a: 1 below b), smoothstep between; exactly 0 and 1 outside. */
+export const ramp = (x, a, b) => { const u = Math.min(1, Math.max(0, (x - a) / (b - a))); return u * u * (3 - 2 * u); };
+/**
+ * One arm in the chest's frame (spine_03, its turn from bind taken off), in upper arms' lengths L (shoulder to elbow, at
+ * bind) from the shoulder at bind: `raise` the elbow's height over the shoulder; `across` the hand's distance from the
+ * body's midline toward its own side (below 0 past the midline); `fwd` the hand ahead of the shoulder; `up` the hand's
+ * height over the shoulder. `bones` the indices of spine_03 and the side's upperarm, lowerarm and hand; `heads` their
+ * heads at bind; s the side (+1 the left, -1 the right).
+ */
+export function armIn(heads, chestR, frames, bones, s) {
+  const [c, u, l, h] = bones, F = frames[c], C = mm3(F.W, tr3(chestR));
+  const rel = (P) => mv(tr3(C), sub(P, F.P)), S0 = sub(heads[1], heads[0]), L = Math.hypot(...sub(heads[2], heads[1]));
+  const e = rel(frames[l].P), hd = rel(frames[h].P);
+  return { raise: (e[1] - S0[1]) / L, across: (s * hd[0]) / L, fwd: (hd[2] - S0[2]) / L, up: (hd[1] - S0[1]) / L };
+}
+/**
+ * A corrective shape's weight from the body's pose (drive: { kind, side, ... }): 'raise' the arm's elbow raised over the
+ * shoulder, ramp(raise, at[0], at[1]); 'cross' its hand in front of the chest toward the midline and below the head,
+ * ramp(across, across[0], across[1]) · ramp(fwd, ...) · ramp(up, ...). Exactly 0 outside the ramps' first ends.
+ */
+export function driveOf(arm, d) {
+  if (d.kind === 'raise') return ramp(arm.raise, d.at[0], d.at[1]);
+  if (d.kind === 'cross') return ramp(arm.across, d.across[0], d.across[1]) * ramp(arm.fwd, d.fwd[0], d.fwd[1]) * ramp(arm.up, d.up[0], d.up[1]);
+  return 0;
+}
+/** The bones a drive reads, by index: spine_03 and its side's upperarm, lowerarm, hand. */
+export const driveBones = (rig, side) => ['spine_03', `upperarm_${side}`, `lowerarm_${side}`, `hand_${side}`].map((n) => rig.at.get(n));
+/** Each of a garment's corrective shapes' weights (G.shapes: [{ name, drive, d }]) in a pose (lowrig.mjs posed() frames). */
+export function shapeWeights(rig, frames, G) {
+  return (G.shapes ?? []).map(({ drive }) => {
+    const bi = driveBones(rig, drive.side), arm = armIn(bi.map((i) => rig.bones[i].head), rig.bones[bi[0]].R, frames, bi, drive.side === 'l' ? 1 : -1);
+    return driveOf(arm, drive);
+  });
+}
+/** The garment's vertices at bind with its corrective shapes added by weight (each d: per vertex an offset at bind). */
+export function shaped(G, w) {
+  if (!w || !w.some((x) => x > 0)) return G.verts;
+  return G.verts.map((v, i) => { const o = [...v]; G.shapes.forEach((sh, k) => { if (w[k] > 0) for (let j = 0; j < 3; j++) o[j] += w[k] * sh.d[i][j]; }); return o; });
+}
+
+/**
+ * The garment's vertices in a pose (frames from lowrig.mjs posed(); its own bones driven from them), as skin() poses the
+ * body; its corrective shapes (G.shapes) added at bind first, by their weights in the pose (or `w`).
+ */
+export function skinGarment(rig, frames, G, vw = G.vw, w = shapeWeights(rig, frames, G)) {
+  const bones = bonesWith(rig, G), V = shaped(G, w);
   frames = garmentFrames(rig, G, frames);
-  return G.verts.map((v, i) => {
+  return V.map((v, i) => {
     let x = 0, y = 0, z = 0;
     for (const [bi, w] of vw[i]) {
       const f = frames[bi], q = add(mv(f.S, sub(v, bones[bi].head)), f.P);
@@ -397,7 +441,8 @@ export const MAX_BONES = 80;
  * vertices (the body's units and axes), the polygons (corners, material index into `mats`), the triangles, each
  * vertex's (bone, weight) list (bone indices: the body's, then the garment's own from `base` on), and its own bones as
  * the body's helpers are written (parent `p` and driver `from` the body's bone indices, rest head and frame R, `drive`
- * and its settings), so the game drives them from the body's pose as lowrig.mjs posed() drives its helpers.
+ * and its settings), so the game drives them from the body's pose as lowrig.mjs posed() drives its helpers; and its
+ * corrective shapes (G.shapes: each its drive, with the body's bones it reads by index, and its offsets at bind).
  */
 export function garmentAsset(rig, G, mats) {
   const r5 = (x) => +x.toFixed(5), names = Object.keys(mats), all = bonesWith(rig, G);
@@ -412,5 +457,6 @@ export function garmentAsset(rig, G, mats) {
       const { from, kind, ...set } = b.driver;
       return { name: b.name, p: rig.at.get(b.parent), kind: b.kind, head: b.head.map(r5), R: b.R.map(r5), from: rig.at.get(from), drive: kind, ...set };
     }),
+    ...(G.shapes ? { shapes: G.shapes.map((sh) => ({ name: sh.name, drive: { ...sh.drive, bones: driveBones(rig, sh.drive.side) }, d: sh.d.flat().map(r5) })) } : {}),
   };
 }

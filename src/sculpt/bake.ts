@@ -26,6 +26,12 @@ export interface Baked {
   cell: number;
   /** A low-poly body's (`./lowpoly`), per vertex: its polygon's bones (4) and weights (4), the same at every corner of it, that turn the face's normal. */
   faceSkin?: Float32Array;
+  /**
+   * A low-poly garment's corrective shapes (`./lowpoly`): for the `count` vertices from `from` on, per vertex and shape
+   * (`shapes` of them) its offset at rest (3) and its polygon's normal's (3), each in four floats (the fourth 0): what the
+   * shape adds at weight one (`SculptDraw.shapes`).
+   */
+  shapes?: { from: number; count: number; shapes: number; data: Float32Array };
 }
 
 /** Floats per vertex. */

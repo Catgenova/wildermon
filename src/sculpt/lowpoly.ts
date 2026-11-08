@@ -13,7 +13,10 @@
  * shawl, `assets/lowshawl-<who>.json` by `tools/sculpt/garments/shawl.mjs`): laid out flat with the body in one bake,
  * skinned to the body's bones and its own (the cape's, appended after the body's, each driven from the body's pose by
  * `liftOf`, the 'lift' rule of lowgarment.mjs), lit by the same light in its own colours, inked with the body as one
- * silhouette.
+ * silhouette. Its corrective shapes (`tools/sculpt/garments/shawlshapes.mjs`: offsets at rest that part the cloth round
+ * the arms raised over the shoulders or brought across the chest) ride in the bake (`Baked.shapes`), weighed each frame
+ * from the body's pose (`shapeWeights`, the drives of lowgarment.mjs driveOf) and added by the shader; all nought at rest,
+ * idle, walking, arms out and arms forward.
  *
  * In both hands while a clip grips it (`./anim` Clip.grip, `heldIn`), the long sword (`assets/long_sword.json`,
  * `tools/sculpt/lowgear.mjs` gearAsset): laid at rest on the right hand's socket (its grip's lead point at the fist,
@@ -63,7 +66,19 @@ interface GarmentBone extends Lift { name: string; p: number; kind: 'helper'; he
 export interface GarmentAsset {
   who: string; base: number; mats: string[]; colours: Array<[number, number, number]>;
   verts: number[]; polys: Array<[number[], number]>; tris: number[]; weights: number[][]; bones: GarmentBone[];
+  /** Its corrective shapes: each an offset at rest per vertex (`d`, three a vertex), added by its drive's weight. */
+  shapes?: GarmentShape[];
 }
+/**
+ * A corrective shape's drive (`tools/sculpt/lowgarment.mjs` driveOf), from one arm in the chest's frame (`armIn`):
+ * 'raise' the elbow over the shoulder, ramp(raise, at); 'cross' the hand across the front of the chest, ramp(across) ·
+ * ramp(fwd) · ramp(up). `bones`: spine_03 and the side's upperarm, lowerarm and hand, the body's bone indices.
+ */
+export interface ShapeDrive {
+  kind: 'raise' | 'cross'; side: 'l' | 'r'; bones: [number, number, number, number];
+  at?: [number, number]; across?: [number, number]; fwd?: [number, number]; up?: [number, number];
+}
+interface GarmentShape { name: string; drive: ShapeDrive; d: number[] }
 
 /**
  * A prop held in the hand as `tools/sculpt/lowgear.mjs` gearAsset writes it: vertices in its own frame (game units; y from
@@ -162,6 +177,24 @@ export function liftOf(Lsrc: M3, d: Lift): M3 {
   if (d.also) { const [k2, t2] = about(d.also.axis); q = qmul(turn(k2, Math.max(-d.also.max, Math.min(d.also.max, d.also.a * t2))), q); }
   return qmat(q);
 }
+/** 0 below a, 1 past b (b may be below a), smoothstep between: exactly 0 and 1 outside (lowgarment.mjs ramp). */
+const ramp = (x: number, [a, b]: [number, number]): number => { const u = Math.min(1, Math.max(0, (x - a) / (b - a))); return u * u * (3 - 2 * u); };
+/** An arm in the chest's frame, in upper arms' lengths from the shoulder at rest (`tools/sculpt/lowgarment.mjs` armIn). */
+export function armIn(heads: readonly V[], chestR: M3, F: ReadonlyArray<{ W: M3; P: V }>, [c, , l, h]: readonly number[], s: number): { raise: number; across: number; fwd: number; up: number } {
+  const C = mm(F[c].W, tr(chestR)), rel = (p: V): V => mv(tr(C), sub(p, F[c].P));
+  const S0 = sub(heads[1], heads[0]), L = Math.hypot(...sub(heads[2], heads[1])), e = rel(F[l].P), hd = rel(F[h].P);
+  return { raise: (e[1] - S0[1]) / L, across: (s * hd[0]) / L, fwd: (hd[2] - S0[2]) / L, up: (hd[1] - S0[1]) / L };
+}
+/** A corrective shape's weight from its arm (`tools/sculpt/lowgarment.mjs` driveOf). */
+export function driveOf(a: { raise: number; across: number; fwd: number; up: number }, d: ShapeDrive): number {
+  if (d.kind === 'raise') return ramp(a.raise, d.at as [number, number]);
+  return ramp(a.across, d.across as [number, number]) * ramp(a.fwd, d.fwd as [number, number]) * ramp(a.up, d.up as [number, number]);
+}
+/** A garment's corrective shapes' weights from the body's frames. */
+export function shapeWeights(body: ReadonlyArray<{ R: M3; head: V }>, shapes: readonly GarmentShape[] | undefined, F: ReadonlyArray<{ W: M3; P: V }>): number[] {
+  return (shapes ?? []).map(({ drive: d }) => driveOf(armIn(d.bones.map((i) => body[i].head), body[d.bones[0]].R, F, d.bones, d.side === 'l' ? 1 : -1), d));
+}
+
 const angleOf = (q: Q): number => (2 * Math.acos(Math.min(1, Math.abs(q[0]))) * 180) / Math.PI;
 
 /** The low-poly woman's height, sole to crown, as a share of the low-poly man's. */
@@ -193,7 +226,7 @@ const SWORD_MAT = GARMENT_MAT + (MALE_SHAWL as unknown as GarmentAsset).colours.
  * One body: its asset, the figure's proportions it is posed with, its height as a share of the base man's, and the
  * garment it can wear (its own bones posed with the body's always; drawn when the bake is asked for with it).
  */
-function lowBody(A: Asset, P: Proportions, share: number, garment: GarmentAsset): { baked: (dressed: boolean, sword?: 'plain' | 'enchanted') => Baked; bones: (pose: FigurePose) => Float32Array; skeleton: Skeleton; held: Held; figure: (pose: FigurePose) => Array<M3 | undefined> } {
+function lowBody(A: Asset, P: Proportions, share: number, garment: GarmentAsset): { baked: (dressed: boolean, sword?: 'plain' | 'enchanted') => Baked; bones: (pose: FigurePose) => Float32Array; posed: (pose: FigurePose) => { bones: Float32Array; shapes: number[] }; skeleton: Skeleton; held: Held; figure: (pose: FigurePose) => Array<M3 | undefined> } {
   const BONES = A.bones;
   const AT = new Map(BONES.map((b, i) => [b.name, i]));
   if (garment.base !== BONES.length) throw new Error(`garment for ${garment.base} bones on a body of ${BONES.length}`);
@@ -317,7 +350,7 @@ function lowBody(A: Asset, P: Proportions, share: number, garment: GarmentAsset)
     const t0 = performance.now();
     const verts: number[] = [], tris: number[] = [], faceSkin: number[] = [];
     /** One mesh's polygons added: its vertices (the body's units), polygons (corners, the outline whose normal shades them), triangles and weights, and each polygon's material index. */
-    const lay = (V3s: number[], polys: Array<[number[], number, number[]?]>, T3: number[], weights: number[][], matOf: (pi: number) => number): void => {
+    const lay = (V3s: number[], polys: Array<[number[], number, number[]?]>, T3: number[], weights: number[][], matOf: (pi: number) => number, corner0?: (i: number, pi: number) => void): void => {
       const at = (i: number): V => [V3s[i * 3], V3s[i * 3 + 1], V3s[i * 3 + 2]];
       const corner = new Map<number, number>();
       // Each polygon's weights, its corners' summed, the heaviest four kept: one turn for the face's normal at every corner.
@@ -347,13 +380,37 @@ function lowBody(A: Asset, P: Proportions, share: number, garment: GarmentAsset)
         for (let j = 0; j < 4 && j * 2 < w.length; j++) { bi[j] = w[j * 2]; bw[j] = w[j * 2 + 1]; }
         verts.push(p[0], p[1], p[2], n[0], n[1], n[2], mat, ...bi, ...bw, mat, -1);
         faceSkin.push(...faceWeights[pi]);
+        corner0?.(i, pi);
         return k;
       };
       for (let t = 0; t < T3.length; t += 4) { const pi = T3[t + 3]; tris.push(idx(T3[t], pi), idx(T3[t + 1], pi), idx(T3[t + 2], pi)); }
     };
     const MATS = [M.skin, M.hair, M.pupil];
     lay(A.verts, A.polys, A.tris, A.weights, (pi) => MATS[A.polys[pi][1]] ?? M.skin);
-    if (dressed) lay(garment.verts, garment.polys, garment.tris, garment.weights, (pi) => GARMENT_MAT + garment.polys[pi][1]);
+    // the garment, and its corrective shapes at each of its corners: the offset (the figure's units and axes) and its
+    // polygon's normal's
+    let shapes: Baked['shapes'];
+    if (dressed) {
+      const from = verts.length / STRIDE, SH = garment.shapes ?? [], data: number[] = [];
+      const gv = (i: number): V => [garment.verts[i * 3], garment.verts[i * 3 + 1], garment.verts[i * 3 + 2]];
+      const normalOf = (v: number[], off: (i: number) => V): V => {
+        const pts = v.map((i) => toGame(add(gv(i), off(i))));
+        let n: V = [0, 0, 0];
+        for (let k = 0; k < pts.length; k++) { const a = pts[k], b = pts[(k + 1) % pts.length]; n = [n[0] + (a[1] - b[1]) * (a[2] + b[2]), n[1] + (a[2] - b[2]) * (a[0] + b[0]), n[2] + (a[0] - b[0]) * (a[1] + b[1])]; }
+        const l = Math.hypot(n[0], n[1], n[2]) || 1;
+        return [n[0] / l, n[1] / l, n[2] / l];
+      };
+      const N0 = garment.polys.map(([v]) => normalOf(v, () => [0, 0, 0]));
+      const NS = SH.map((sh) => garment.polys.map(([v]) => normalOf(v, (i) => [sh.d[i * 3], sh.d[i * 3 + 1], sh.d[i * 3 + 2]])));
+      const sc = scale();
+      lay(garment.verts, garment.polys, garment.tris, garment.weights, (pi) => GARMENT_MAT + garment.polys[pi][1], SH.length ? (i, pi) => {
+        SH.forEach((sh, k) => {
+          const d = mv(T, [sh.d[i * 3], sh.d[i * 3 + 1], sh.d[i * 3 + 2]]), n = sub(NS[k][pi], N0[pi]);
+          data.push(d[0] * sc, d[1] * sc, d[2] * sc, 0, n[0], n[1], n[2], 0);
+        });
+      } : undefined);
+      if (SH.length) shapes = { from, count: verts.length / STRIDE - from, shapes: SH.length, data: Float32Array.from(data) };
+    }
     if (sword) {
       // laid at rest on the right hand's socket, all of it on that hand; its glow's polygons left out
       const so = SWORD.sockets[WHO].r, hand = AT.get(so.bone) as number, k = 1 / SWORD.scale[WHO], g = SWORD.grip.lead, V3s: number[] = [];
@@ -363,7 +420,7 @@ function lowBody(A: Asset, P: Proportions, share: number, garment: GarmentAsset)
       const off = SWORD_MAT + (sword === 'enchanted' ? SWORD.plain.length : 0);
       lay(V3s, SWORD.polys, T3, Array.from({ length: V3s.length / 3 }, () => [hand, 1]), (pi) => off + SWORD.polys[pi][1]);
     }
-    return (BAKED[key] = { band: 1, verts: Float32Array.from(verts), tris: Uint32Array.from(tris), nVerts: verts.length / STRIDE, nTris: tris.length / 3, bones: ALL.map((b) => b.name), ms: performance.now() - t0, grid: [0, 0, 0], cell: 0, faceSkin: Float32Array.from(faceSkin) });
+    return (BAKED[key] = { band: 1, verts: Float32Array.from(verts), tris: Uint32Array.from(tris), nVerts: verts.length / STRIDE, nTris: tris.length / 3, bones: ALL.map((b) => b.name), ms: performance.now() - t0, grid: [0, 0, 0], cell: 0, faceSkin: Float32Array.from(faceSkin), ...(shapes ? { shapes } : {}) });
   }
 
   let G_REST: Bones | null = null;
@@ -383,8 +440,11 @@ function lowBody(A: Asset, P: Proportions, share: number, garment: GarmentAsset)
     return idle ? relaxedIdle(figure, pose.phase / 6, pose.facing) : figure;
   }
 
-  /** The skinning matrices for a pose (3x4 rows per bone, the figure's frame), the body stood on its lowest sole. */
-  function lowBones(pose: FigurePose): Float32Array {
+  /**
+   * The skinning matrices for a pose (3x4 rows per bone, the figure's frame), the body stood on its lowest sole; and the
+   * garment's corrective shapes' weights in it.
+   */
+  function lowPosed(pose: FigurePose): { bones: Float32Array; shapes: number[] } {
     // a clip where the state has one (./anim), else the figure's pose on the rig
     const { local, move } = animate(SK, pose, () => fromGame(bonesOf(rigFor(pose), P, [], REST_EXTRAS), gameRest()), heldIn(pose) === SWORD.id ? HELD : undefined);
     const Fb = posed(local, move), F = [...Fb, ...garmentFrames(BONES, garment.bones, Fb)];
@@ -406,10 +466,10 @@ function lowBody(A: Asset, P: Proportions, share: number, garment: GarmentAsset)
       const sh = mv(T, add(sub(add(mv(S[i], FLOOR), t[i]), FLOOR), [0, dy, 0]));
       out.set([Ag[0], Ag[1], Ag[2], sh[0] * s, Ag[3], Ag[4], Ag[5], sh[1] * s, Ag[6], Ag[7], Ag[8], sh[2] * s], i * 12);
     });
-    return out;
+    return { bones: out, shapes: shapeWeights(BONES, garment.shapes, Fb) };
   }
 
-  return { baked: lowBaked, bones: lowBones, skeleton: SK, held: HELD, figure: (pose) => fromGame(bonesOf(rigFor(pose), P, [], REST_EXTRAS), gameRest()) };
+  return { baked: lowBaked, bones: (pose) => lowPosed(pose).bones, posed: lowPosed, skeleton: SK, held: HELD, figure: (pose) => fromGame(bonesOf(rigFor(pose), P, [], REST_EXTRAS), gameRest()) };
 }
 
 const BODIES = {
@@ -476,5 +536,6 @@ export function lowScene(pose: FigurePose): SculptDraw {
   const who = look.gender === 'woman' ? 'woman' : 'man', body = BODIES[who];
   const materials = materialsOf(look), low: LowLight = { sh: SH[who], tone: toneOf(materials), fit: FIT_SKIN };
   const sword = heldIn(pose) === SWORD.id ? (pose.gear?.weapon?.enchanted ? 'enchanted' : 'plain') : undefined;
-  return { baked: body.baked(wearsShawl(pose), sword), bones: body.bones(pose), materials, view: viewOf(facing), blink: 0, low };
+  const dressed = wearsShawl(pose), { bones, shapes } = body.posed(pose);
+  return { baked: body.baked(dressed, sword), bones, materials, view: viewOf(facing), blink: 0, low, ...(dressed && shapes.some((w) => w > 0) ? { shapes } : {}) };
 }
