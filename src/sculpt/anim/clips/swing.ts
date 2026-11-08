@@ -50,7 +50,7 @@ export const TRUNK: Record<string, KeyPose> = {
     rot: {
       pelvis: [-5, 0, 0], spine_01: [-5, -3, 0], spine_02: [-8, -4, 0], spine_03: [-8, -3, 0],
       neck_01: [9, 5, 0], neck_02: [3, 1, 0], head: [5, 1, 0],
-      clavicle_l: [0, 0, 16], clavicle_r: [0, 0, -16],
+      clavicle_l: [0, 0, 22], clavicle_r: [0, 0, -22],
     },
     move: [0, 0.002, -0.02],
   },
@@ -85,36 +85,49 @@ export const TRUNK: Record<string, KeyPose> = {
 
 /** The right arm at each key, solved on him for `ARM_AT`; the left reached onto the grip. */
 export const ARMS: Record<string, Record<string, Euler>> = {
-  ready: { upperarm_r: [41, -7, 60], lowerarm_r: [54, 18, 0], hand_r: [15, 8, 40] },
-  lift: { upperarm_r: [96, 1, -11], lowerarm_r: [71, 70, 0], hand_r: [30, 42, 32] },
-  top: { upperarm_r: [94, 1, 16], lowerarm_r: [111, 37, 0], hand_r: [10, 22, 29] },
-  strike: { upperarm_r: [166, 13, 16], lowerarm_r: [5, 65, 0], hand_r: [64, 36, 30] },
-  smear: { upperarm_r: [100, 1, 0], lowerarm_r: [42, 93, 0], hand_r: [66, 54, 47] },
-  impact: { upperarm_r: [68, 10, 60], lowerarm_r: [5, 23, 0], hand_r: [7, 6, 72] },
+  ready: { upperarm_r: [90, -65, 0], lowerarm_r: [37, 73, 0], hand_r: [31, 107, 57] },
+  lift: { upperarm_r: [89, -4, -25], lowerarm_r: [71, 63, 0], hand_r: [-19, 73, 44] },
+  top: { upperarm_r: [112, 47, -16], lowerarm_r: [76, 25, 0], hand_r: [14, 53, -7] },
+  strike: { upperarm_r: [154, 1, 9], lowerarm_r: [5, 69, 0], hand_r: [-5, 34, 38] },
+  smear: { upperarm_r: [117, 7, 4], lowerarm_r: [22, 77, 0], hand_r: [63, 33, 68] },
+  impact: { upperarm_r: [104, -49, 5], lowerarm_r: [9, 109, 0], hand_r: [32, 26, 72] },
 };
 /** Where the right fist is wanted at each key on him, body heights (across, up from the ground, forward), and the blade's way. */
 export const ARM_AT: Record<string, { at: [number, number, number]; way: [number, number, number] }> = {
-  ready: { at: [-0.03, 0.6, 0.25], way: [0.05, 0.8, 0.6] },
-  lift: { at: [-0.03, 0.88, 0.14], way: [0, 0.85, -0.5] },
-  top: { at: [-0.1, 0.94, -0.08], way: [0.3, -0.45, -0.84] },
-  strike: { at: [-0.02, 0.98, 0.12], way: [0, 0.95, -0.3] },
-  smear: { at: [-0.02, 0.7, 0.3], way: [0, 0.3, 0.95] },
-  impact: { at: [-0.03, 0.4, 0.18], way: [0, -0.6, 0.8] },
+  ready: { at: [-0.03, 0.62, 0.3], way: [0.05, 0.8, 0.6] },
+  lift: { at: [-0.03, 0.9, 0.18], way: [0, 0.85, -0.5] },
+  top: { at: [-0.05, 0.98, -0.06], way: [0.25, -0.45, -0.85] },
+  strike: { at: [-0.02, 0.98, 0.22], way: [0, 0.95, -0.3] },
+  smear: { at: [-0.02, 0.72, 0.32], way: [0, 0.3, 0.95] },
+  impact: { at: [-0.03, 0.4, 0.27], way: [0, -0.6, 0.8] },
 };
-/** The left arm keyed as the right's mirror, for the side its elbow is kept on as it is reached onto the grip. */
+/** The left arm keyed as the right's mirror (or as a key gives it), for the side its elbow is kept on as it is reached onto the grip. */
 const mirrorArm = (a: Record<string, Euler>): Record<string, Euler> => Object.fromEntries(Object.entries(a).map(([b, e]) => [b.replace(/_r$/, '_l'), [e[0], -e[1], -e[2]] as Euler]));
 /**
  * Her own turns at a key, where the man's do not fit her (the sword is as long as she is tall: its guard by her head at
  * the top, so her hands further back and her shoulders higher there): solved as his are, for her.
  */
 export const WOMAN: Record<string, Record<string, Euler>> = {
-  top: { upperarm_r: [118, 13, 7], lowerarm_r: [121, 23, 0], hand_r: [5, 8, 54], clavicle_l: [0, 0, 26], clavicle_r: [0, 0, -20] },
-  impact: { upperarm_r: [87, 12, 65], lowerarm_r: [3, 90, 0], hand_r: [-4, -10, 36] },
+  ready: { upperarm_r: [106, 22, -38], lowerarm_r: [5, 23, 0], hand_r: [42, 106, 43] },
+  lift: { upperarm_r: [138, 77, -1], lowerarm_r: [5, -34, 0], hand_r: [7, 85, 29], clavicle_l: [0, 0, 14], clavicle_r: [0, 0, -14] },
+  // (her left elbow kept up and out, so the forearm goes over her head and not across her face)
+  top: { upperarm_r: [123, 4, 25], lowerarm_r: [61, 49, 0], hand_r: [11, 47, 28], upperarm_l: [150, 0, 30], clavicle_l: [0, 0, 28], clavicle_r: [0, 0, -26] },
+  strike: { upperarm_r: [154, 38, 20], lowerarm_r: [4, 31, 0], hand_r: [2, 48, 42], clavicle_l: [0, 0, 16], clavicle_r: [0, 0, -16] },
+  // (the blow: her hips turned the other way so the pommel goes by her right hip, crouched lower and bent further)
+  smear: { upperarm_r: [136, 2, 18], lowerarm_r: [4, 76, 0], hand_r: [11, 46, 52], pelvis: [9, 10, 0], spine_01: [9, -4, 0], spine_02: [10, -4, 0], spine_03: [8, -3, 0], $move: [0, -0.05, 0.008] },
+  impact: {
+    upperarm_r: [118, -35, 17], lowerarm_r: [4, 120, 0], hand_r: [20, 44, 63],
+    pelvis: [13, 12, 0], spine_01: [20, -6, 0], spine_02: [23, -6, 0], spine_03: [19, -4, 0], neck_01: [-30, -6, 0], head: [-12, -4, 0], $move: [0, -0.075, 0.004],
+  },
 };
+/** The right arm's bones, keyed; the left's are their mirror. */
+const RIGHT_ARM = ['upperarm_r', 'lowerarm_r', 'hand_r'];
+/** A key pose, with a body's own turns (`$move`: its shift) over his where it has them. */
 const keyOf = (k: string, own: Record<string, Record<string, Euler>> = {}): KeyPose => {
-  const arms = { ...ARMS[k], ...own[k] };
-  const rh = Object.fromEntries(['upperarm_r', 'lowerarm_r', 'hand_r'].map((b) => [b, arms[b]]));
-  return merge(FISTS, TRUNK[k], { rot: { ...rh, ...mirrorArm(rh), ...(own[k]?.clavicle_l ? { clavicle_l: own[k].clavicle_l } : {}), ...(own[k]?.clavicle_r ? { clavicle_r: own[k].clavicle_r } : {}) } });
+  const o = own[k] ?? {}, arms = Object.fromEntries(RIGHT_ARM.map((b) => [b, o[b] ?? ARMS[k][b]]));
+  const base = merge(FISTS, TRUNK[k], { rot: { ...arms, ...mirrorArm(arms), ...Object.fromEntries(Object.entries(ARMS[k]).filter(([b]) => b.endsWith('_l'))) } });
+  const rest = Object.fromEntries(Object.entries(o).filter(([b]) => !RIGHT_ARM.includes(b) && b !== '$move'));
+  return { rot: { ...base.rot, ...rest }, move: o.$move ?? base.move };
 };
 
 /** A pose carried further the way it was going: each turn and the shift `by` of the way from `from` again. */
@@ -123,6 +136,11 @@ const past = (from: KeyPose, to: KeyPose, by: number): KeyPose => {
   for (const [b, e] of Object.entries(to.rot)) { const f = from.rot[b] ?? [0, 0, 0]; rot[b] = [e[0] + (e[0] - f[0]) * by, e[1] + (e[1] - f[1]) * by, e[2] + (e[2] - f[2]) * by]; }
   const m = to.move ?? [0, 0, 0], fm = from.move ?? [0, 0, 0];
   return { rot, move: [m[0] + (m[0] - fm[0]) * by, m[1] + (m[1] - fm[1]) * by, m[2] + (m[2] - fm[2]) * by] };
+};
+/** A pose's trunk carried on as `past` does, its arms kept: a hold that keeps moving, or a follow-through, with the hands where they were. */
+const settle = (from: KeyPose, to: KeyPose, by: number, still = false): KeyPose => {
+  const p = past(from, to, by);
+  return { rot: { ...p.rot, ...Object.fromEntries(Object.entries(to.rot).filter(([b]) => /^(upperarm_|lowerarm_|hand_|fingers_|thumb_|clavicle_|neck_|head)/.test(b))) }, move: still ? to.move : p.move };
 };
 /** Between two poses: `w` of the way from one to the other. */
 const toward = (a: KeyPose, b: KeyPose, w: number): KeyPose => past(b, a, -w);
@@ -135,11 +153,11 @@ function beatsOf(key: (k: string) => KeyPose): Beat[] {
     { t: 0.16, pose: past(HIT, READY, 0.06), ease: 'inOut', name: 'braced' },
     { t: 0.36, pose: LIFT, ease: 'inOut', name: 'lift' },
     { t: 0.56, pose: TOP, ease: 'out', stage: 'key', name: 'top' },
-    { t: 0.76, pose: past(LIFT, TOP, 0.06), ease: 'inOut', name: 'held' },
+    { t: 0.76, pose: settle(LIFT, TOP, 0.06), ease: 'inOut', name: 'held' },
     { t: 0.82, pose: STRIKE, ease: 'in', name: 'strike' },
     { t: 0.86, pose: SMEAR, ease: 'linear', name: 'down' },
     { t: IMPACT, pose: HIT, ease: 'linear', stage: 'key', name: 'impact' },
-    { t: 1.0, pose: past(SMEAR, HIT, 0.1), ease: 'out', stage: 'key', name: 'follow-through' },
+    { t: 1.0, pose: settle(SMEAR, HIT, 0.06, true), ease: 'out', stage: 'key', name: 'follow-through' },
     { t: 1.12, pose: toward(HIT, READY, 0.3), ease: 'inOut', name: 'rebound' },
   ];
 }
@@ -147,9 +165,9 @@ export const BEATS: Beat[] = beatsOf((k) => keyOf(k));
 /** Her correction: at each beat, her turns less his, keyed as the beats are. */
 const HERS = beatsOf((k) => keyOf(k, WOMAN));
 const herTracks = (): Record<string, Array<Key<Euler>>> => {
-  const bones = new Set(Object.values(WOMAN).flatMap((o) => Object.keys(o)).flatMap((b) => [b, b.replace(/_r$/, '_l')]));
+  const bones = new Set(Object.values(WOMAN).flatMap((o) => Object.keys(o)).flatMap((b) => (RIGHT_ARM.includes(b) ? [b, b.replace(/_r$/, '_l')] : [b])));
   return Object.fromEntries([...bones].map((b) => [b, BEATS.map((beat, i): Key<Euler> => {
-    const m = beat.pose.rot[b] ?? [0, 0, 0], w = HERS[i].pose.rot[b] ?? [0, 0, 0];
+    const m = (b === '$move' ? beat.pose.move : beat.pose.rot[b]) ?? [0, 0, 0], w = (b === '$move' ? HERS[i].pose.move : HERS[i].pose.rot[b]) ?? [0, 0, 0];
     return { t: beat.t, v: [w[0] - m[0], w[1] - m[1], w[2] - m[2]], ...(beat.ease ? { ease: beat.ease } : {}) };
   })]));
 };

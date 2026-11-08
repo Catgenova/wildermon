@@ -37,7 +37,7 @@ export type Mask = 'full' | 'upper' | 'additive';
 export interface Correction {
   /** Turns added to the authored turns, per bone, degrees. */
   add?: Record<string, Euler>;
-  /** Turns added over time, per bone, degrees (keyed as the clip's own tracks): a key pose put right for this body alone. */
+  /** Turns added over time, per bone, degrees (keyed as the clip's own tracks; `$move` the shift, body heights): a key pose put right for this body alone. */
   tracks?: Record<string, Array<Key<Euler>>>;
   /** Scales on the authored turns, per bone (1: as authored): one for all three, or one each for rx, ry, rz. */
   scale?: Record<string, number | Euler>;
@@ -196,11 +196,14 @@ export function sampleClip(c: Clip, t: number, body?: 'man' | 'woman'): { rot: R
     rot[bone] = [e[0] + d[0], e[1] + d[1], e[2] + d[2]];
   }
   for (const [bone, keys] of Object.entries(fix?.tracks ?? {})) {
+    if (bone === '$move') continue;
     const d = sampleKeys(keys, tt, c.length, c.loop), e = rot[bone] ?? [0, 0, 0];
     rot[bone] = [e[0] + d[0], e[1] + d[1], e[2] + d[2]];
   }
   for (const [bone, d] of Object.entries(fix?.add ?? {})) { const e = rot[bone] ?? [0, 0, 0]; rot[bone] = [e[0] + d[0], e[1] + d[1], e[2] + d[2]]; }
-  return { rot, move: scaled(c.move ? sampleKeys(c.move, tt, c.length, c.loop) : [0, 0, 0], fix?.move) };
+  const move = scaled(c.move ? sampleKeys(c.move, tt, c.length, c.loop) : [0, 0, 0], fix?.move), dm = fix?.tracks?.$move;
+  if (dm) { const d = sampleKeys(dm, tt, c.length, c.loop); move[0] += d[0]; move[1] += d[1]; move[2] += d[2]; }
+  return { rot, move };
 }
 
 /** A clip's stance (`Clip.plant`) for a body, its corrections made: each bone's turn and the body's shift. */
