@@ -2371,9 +2371,9 @@ export interface FigurePose {
   /**
    * Which garments a low-poly body has on (Sculpted figures, `../sculpt/lowpoly`): each left out at the game's default,
    * the shawl, the trousers, the boots and the tunic worn and the hood down; the hood is up only with the shawl, and the
-   * hair is not drawn under it.
+   * hair is not drawn under it; the plate set's fur mantle off.
    */
-  outfit?: Partial<Record<'shawl' | 'trousers' | 'boots' | 'tunic' | 'hood', boolean>>;
+  outfit?: Partial<Record<'shawl' | 'trousers' | 'boots' | 'tunic' | 'hood' | 'mantle', boolean>>;
   /**
    * A spell part way through being cast: which, and how far through it, nought to one. What it does to the body
    * is the spell's own (`./spells`, registered with `castPosesBy`), laid over whatever else the body is doing --

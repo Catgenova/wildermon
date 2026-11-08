@@ -32,7 +32,7 @@ export const MATS = {
   fur_under: [0.74, 0.56, 0.47],
   fur_valley: [0.58, 0.43, 0.38],
   under: [0.29, 0.22, 0.2],
-  gold: [0.851, 0.659, 0.353],
+  gold: [0.96, 0.74, 0.4],
   glow: [1.0, 0.906, 0.651],
 };
 /** The materials the game draws emissive (the plate set's convention: any garment material named 'glow'). */
@@ -69,7 +69,7 @@ export const DESIGN = {
     ],
     collar: { n: 9, from: 40, len: [[40, 0.6], [90, 1.0], [180, 0.85]], lean: [16, 28, 18], thick: 0.05, h: 0.07, flare: 0.06, foot: 0.14 },
     lean: [0.1, 0.3, 0.12], raise: [0.08, 0.28, 0.14],
-    clasp: { on: 'mid1', at: 30, fr: 0.42, r: 0.3, t: 0.07, boss: 0.05, sides: 6 },
+    clasp: { on: 'mid1', at: 30, fr: 0.42, r: 0.36, t: 0.07, boss: 0.05, sides: 6 },
     jit: { tip: 0.16, side: 0.22, h: 0.35 },
   },
 };
@@ -156,6 +156,8 @@ export function buildMantle(rig, design = DESIGN[rig.who], { under = [] } = {}) 
     const rI = Math.max(...near.map((c) => c.rI)) / Math.cos(hw * Math.PI / 180), c0 = cols[Math.round(deg / STEP) % NC];
     ring.push({ deg, rI, rO: rI + D.ring.t * k, yT: c0.yT, yB: c0.yB });
   }
+  // (rounded: no column far inside its two neighbours, so the ring has no sharp corner for the fur to catch)
+  for (let it = 0; it < 4; it++) ring.forEach((q, j) => { const m = 0.5 * (ring[(j + nR - 1) % nR].rI + ring[(j + 1) % nR].rI); if (q.rI < m) { q.rI = m; q.rO = m + D.ring.t * k; } });
   // (the ring's outside where the half-plane of azimuth deg crosses its chords: [r, top, foot])
   const ringAt = (deg) => {
     const x = (((deg % 360) + 360) % 360) / (360 / nR), j = Math.floor(x) % nR, a = ring[j], b = ring[(j + 1) % nR], d = dirOf(deg);
@@ -163,11 +165,13 @@ export function buildMantle(rig, design = DESIGN[rig.who], { under = [] } = {}) 
     const r = (pa[0] * ez - pa[2] * ex) / den, t = (pa[0] * d[2] - pa[2] * d[0]) / den;
     return [r, a.yT + (b.yT - a.yT) * t, a.yB + (b.yB - a.yB) * t];
   };
+  // (the ring's furthest outside within `half` degrees of deg: what a chord of the fur from there must clear)
+  const ringMax = (deg, half) => { let m = 0; for (let d = -half; d <= half; d += 2) m = Math.max(m, ringAt(deg + d)[0]); return m; };
   for (const col of cols) {
     const deg = col.deg, [rO, yT] = ringAt(deg);
     // the collar rises from the ring's outside at yT - foot, leaning out; the body's line starts outside its root
     const C = D.collar, th = blend3(C.lean, deg) * Math.PI / 180, cy = yT + blend3(D.raise, deg) * k;
-    const cr = rO / Math.cos(((360 - 2 * C.from) / C.n / 2) * (1 + D.jit.side) * Math.PI / 180) + 0.04 + (cy - yT + C.foot * k) * Math.tan(th) + D.gap + ((C.thick + C.h * (1 + D.jit.h)) * k + D.gap) / Math.cos(th);
+    const cw = ((360 - 2 * C.from) / C.n / 2) * (1 + D.jit.side), cr = ringMax(deg, cw) / Math.cos(cw * Math.PI / 180) + 0.04 + (cy - yT + C.foot * k) * Math.tan(th) + D.gap + ((C.thick + C.h * (1 + D.jit.h)) * k + D.gap) / Math.cos(th);
     // the body's line from there down: the drape over the body grown by OUT, below the shoulder's corner leaning out
     const A = [cr, cy], E = envelope(S, z0, deg, STEP, D.OUT, A[1] - 3.2, A[1] + 0.01).filter(([, y]) => y < A[1] - 1e-4);
     let L = drape(E, A, A[1] - 3.2);
@@ -245,9 +249,9 @@ export function buildMantle(rig, design = DESIGN[rig.who], { under = [] } = {}) 
   {
     const C = D.collar;
     const pos = (deg, f, lift) => {
-      const [rO, yT] = ringAt(deg);
+      const [, yT] = ringAt(deg), cw = ((360 - 2 * C.from) / C.n / 2) * (1 + D.jit.side), rO = ringMax(deg, cw);
       const len = interp(C.len, fromFront(deg)) * k, th = blend3(C.lean, deg) * Math.PI / 180, dir = [Math.sin(th), Math.cos(th)], nrm = [Math.cos(th), -Math.sin(th)];
-      const root = [rO / Math.cos(((360 - 2 * C.from) / C.n / 2) * (1 + D.jit.side) * Math.PI / 180) + 0.04, yT - C.foot * k];
+      const root = [rO / Math.cos(cw * Math.PI / 180) + 0.04, yT - C.foot * k];
       return at3(deg, P2.add(P2.add(root, P2.mul(dir, f * len)), P2.mul(nrm, lift + D.gap)));
     };
     G.tiers.collar = tierShell(G, { ...C, name: 'collar', fr: [0, 0.68, 1] }, seed.collar, pos, D, k);
@@ -284,8 +288,10 @@ function tierShell(G, T, sd, pos, D, k) {
     // (each tuft its own length and ridge: a little uneven)
     const tip = T.fr[1] + (T.fr[2] - T.fr[1]) * (1 + (hash(sd + 20, q) - 0.5) * 2 * J.tip), hq = T.h * k * (1 + (hash(sd + 30, q) - 0.5) * 2 * J.h);
     const vf = T.fr[1] + (T.fr[2] - T.fr[1]) * (hash(sd + 40, q) - 0.5) * 0.3;
-    Lc.push(G.vert(pos(b[q] + 0.1 * w, vf, thick * 0.45), part));
-    Rc.push(G.vert(pos(b[q + 1] - 0.1 * w, vf, thick * 0.45), part));
+    // (the corners over the underside's face from the root to the tip, out by the flare there, and some of the thickness)
+    const lc = thick * 0.45 + T.flare * k * Math.max(0, (vf - T.fr[0]) / (tip - T.fr[0]));
+    Lc.push(G.vert(pos(b[q] + 0.1 * w, vf, lc), part));
+    Rc.push(G.vert(pos(b[q + 1] - 0.1 * w, vf, lc), part));
     R.push(G.vert(pos(c, T.fr[0] + (vf - T.fr[0]) * 0.62, thick + hq), part));
     P.push(G.vert(pos(c, tip, T.flare * k), part));
   }

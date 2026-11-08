@@ -101,7 +101,7 @@ async function sheet(file, edges) {
     texts.push({ cls: 'lab', css: `left:${5 * cw + 10}px;top:${y + 10}px;white-space:normal;width:200px`, html: `<b>${who}</b><br>${G.tris.length} triangles<br>` + Object.entries(parts).map(([k, v]) => `${k} ${v}`).join('<br>') + (edges ? '' : '<br><br>rows: the sheet, the model at the sheet\'s framing, close up') });
     y += edges ? cc : 2 * ch + cc;
   }
-  imgs.push({ src: SHEET, size: [1536, 1024], crop: [828, 92, 400, 345], box: [5 * cw, y - 330, 220, 300] });
+  if (!edges) imgs.push({ src: SHEET, size: [1536, 1024], crop: [828, 92, 400, 345], box: [5 * cw, y - 330, 220, 300] });
   texts.push({ css: 'left:10px;top:6px', html: opt('title', `The fur mantle on both low-poly bodies${flag('tunic') ? ', over the tunic' : ''}: ${edges ? 'the polygons' : 'the sheet\'s five views above the model\'s'} ${tag}`) });
   await shoot(5 * cw + 220, y + 6, cells, file, { texts, imgs });
 }

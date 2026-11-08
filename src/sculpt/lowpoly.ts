@@ -46,6 +46,8 @@ import MALE_TUNIC from './assets/lowtunic-male.json';
 import FEMALE_TUNIC from './assets/lowtunic-female.json';
 import MALE_HOOD from './assets/lowhood-male.json';
 import FEMALE_HOOD from './assets/lowhood-female.json';
+import MALE_MANTLE from './assets/lowmantle-male.json';
+import FEMALE_MANTLE from './assets/lowmantle-female.json';
 import LONG_SWORD from './assets/long_sword.json';
 import HAIR_ASSET from './assets/lowhair.json';
 import MALE_LIGHT from '../../tools/sculpt/lowlight-male.json';
@@ -92,6 +94,8 @@ export interface GarmentAsset {
   hides?: number[];
   /** The garment's vertices the body stands on while it is worn (a boot's sole), with the body's own sole. */
   soles?: number[];
+  /** Its materials drawn emissive (unlit, glowing in the bloom): the plate set's 'glow'. */
+  glow?: string[];
 }
 
 /**
@@ -230,10 +234,13 @@ export function garmentFrames(body: ReadonlyArray<{ R: M3; head: V }>, own: read
 const hexOf = (c: readonly number[]): string => `#${c.map((x) => Math.round(Math.max(0, Math.min(1, x)) * 255).toString(16).padStart(2, '0')).join('')}`;
 /** Where the garments' materials start among a low-poly body's: after the body's own (`bodyMaterials`, indexed by `M`). */
 const GARMENT_MAT = Object.keys(M).length;
-/** The garments' colours, each once (garments of one outfit share theirs): a garment's material is its colour's index here. */
+/**
+ * The garments' colours, each once (garments of one outfit share theirs): a garment's material is its colour's index here.
+ * An emissive colour (a material a garment lists in `glow`) is its own entry, marked by a trailing '*'.
+ */
 const GARMENT_COLOURS: string[] = [];
-const colourIndex = (c: readonly number[]): number => {
-  const h = hexOf(c), k = GARMENT_COLOURS.indexOf(h);
+const colourIndex = (c: readonly number[], glow = false): number => {
+  const h = hexOf(c) + (glow ? '*' : ''), k = GARMENT_COLOURS.indexOf(h);
   return k >= 0 ? k : GARMENT_COLOURS.push(h) - 1;
 };
 /**
@@ -258,7 +265,7 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
   /** A garment's weights with its own bones moved to where they sit among all. */
   const WEIGHTS = garments.map((g, k) => g.weights.map((w) => w.map((x, j) => (j % 2 === 0 && x >= g.base ? x - g.base + OWN[k] : x))));
   /** Each garment's materials: its colours' indices among the garments'. */
-  const MATS_OF = garments.map((g) => g.colours.map(colourIndex));
+  const MATS_OF = garments.map((g) => g.colours.map((c, i) => colourIndex(c, g.glow?.includes(g.mats[i]) ?? false)));
 
   /**
    * Where the other fist closes on a prop's grip on this body: where the grip says, or further down it by as much as keeps
@@ -536,6 +543,11 @@ const wearsTunic = (pose: FigurePose): boolean => pose.outfit?.tunic ?? true;
 /** Whether a figure has the hood up: down unless asked for, and only with the shawl (it rises out of the shawl's cowl). */
 const wearsHood = (pose: FigurePose): boolean => (pose.outfit?.hood ?? false) && wearsShawl(pose);
 /**
+ * Whether a figure wears the plate set's fur mantle (`assets/lowmantle-<who>.json` by `tools/sculpt/garments/mantle.mjs`,
+ * over the chest piece's collar and pauldrons, its clasps' cores emissive): off unless asked for.
+ */
+const wearsMantle = (pose: FigurePose): boolean => pose.outfit?.mantle ?? false;
+/**
  * Whether a figure's hair is drawn over its low-poly head: not while the hood is up (the hood's shell is snug on the
  * skull, so any hairstyle would come through it). A hairstyle drawn with the body checks this before it is laid in.
  */
@@ -548,6 +560,7 @@ const GARMENTS: ReadonlyArray<{ man: GarmentAsset; woman: GarmentAsset; wears: (
   { man: MALE_BOOTS as unknown as GarmentAsset, woman: FEMALE_BOOTS as unknown as GarmentAsset, wears: wearsBoots },
   { man: MALE_TUNIC as unknown as GarmentAsset, woman: FEMALE_TUNIC as unknown as GarmentAsset, wears: wearsTunic },
   { man: MALE_HOOD as unknown as GarmentAsset, woman: FEMALE_HOOD as unknown as GarmentAsset, wears: wearsHood },
+  { man: MALE_MANTLE as unknown as GarmentAsset, woman: FEMALE_MANTLE as unknown as GarmentAsset, wears: wearsMantle },
 ];
 
 const BODIES = {
@@ -555,7 +568,7 @@ const BODIES = {
   woman: lowBody(FEMALE_ASSET as unknown as Asset, FEMALE, WOMAN_OF_MAN, GARMENTS.map((g) => g.woman), HAIRS.female),
 };
 /** The garments' materials after the body's (a colour once, however many garments share it), lit by the body's light in their own colours. */
-const GARMENT_MATS: Material[] = GARMENT_COLOURS.map((colour) => ({ colour, cloth: true }));
+const GARMENT_MATS: Material[] = GARMENT_COLOURS.map((colour) => (colour.endsWith('*') ? { colour: colour.slice(0, -1), emissive: true } : { colour, cloth: true }));
 /** The sword's materials, plain or enchanted: lit by the body's light by brightness in its own colours, or unlit (and so glowing in the bloom). */
 const SWORD_MATS = { plain: SWORD.plain, enchanted: SWORD.enchanted } as const;
 const swordMats = (which: 'plain' | 'enchanted'): Material[] => SWORD_MATS[which].map((m) => (m.kind === 0 ? { colour: m.c, gear: true } : { colour: m.c, emissive: true }));
