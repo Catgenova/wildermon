@@ -46,6 +46,8 @@ import MALE_TUNIC from './assets/lowtunic-male.json';
 import FEMALE_TUNIC from './assets/lowtunic-female.json';
 import MALE_HOOD from './assets/lowhood-male.json';
 import FEMALE_HOOD from './assets/lowhood-female.json';
+import MALE_PLATE_LEGS from './assets/lowplatelegs-male.json';
+import FEMALE_PLATE_LEGS from './assets/lowplatelegs-female.json';
 import LONG_SWORD from './assets/long_sword.json';
 import HAIR_ASSET from './assets/lowhair.json';
 import MALE_LIGHT from '../../tools/sculpt/lowlight-male.json';
@@ -576,6 +578,8 @@ const GARMENTS: ReadonlyArray<{ man: GarmentAsset; woman: GarmentAsset; wears: (
   { man: MALE_BOOTS as unknown as GarmentAsset, woman: FEMALE_BOOTS as unknown as GarmentAsset, wears: wearsBoots },
   { man: MALE_TUNIC as unknown as GarmentAsset, woman: FEMALE_TUNIC as unknown as GarmentAsset, wears: wearsTunic },
   { man: MALE_HOOD as unknown as GarmentAsset, woman: FEMALE_HOOD as unknown as GarmentAsset, wears: wearsHood },
+  // the plate set's leggings (`tools/sculpt/garments/platelegs.mjs`): off unless asked for; their base layer takes the place of the legs' skin
+  { man: MALE_PLATE_LEGS as unknown as GarmentAsset, woman: FEMALE_PLATE_LEGS as unknown as GarmentAsset, wears: (p) => p.outfit?.plateLegs ?? false, enchanted: enchantedOf('legs') },
 ];
 
 const BODIES = {

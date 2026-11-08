@@ -17,14 +17,14 @@ import { execFileSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { buildRig, posed, skin, fromGame, gameRig, armsOut, axisAngle, mm, tr } from './lowrig.mjs';
 import { skinGarment, crossPairs, bonesWith, offPlane, edgesOf } from './lowgarment.mjs';
-import { buildWithBase, plateLegsWeights, MATS, GLOW } from './garments/platelegs.mjs';
-import { shoot, closeBrowser } from './lowgarmentshot.mjs';
+import { buildWithBase, plateLegsWeights, MATS, LOOKS as PIECE_LOOKS } from './garments/platelegs.mjs';
+import { shoot, closeBrowser, LOOKS, lookColour } from './lowgarmentshot.mjs';
 
 const args = process.argv.slice(2);
 const opt = (n, f) => { const i = args.indexOf(`--${n}`); return i < 0 ? f : args[i + 1]; };
 const out = resolve(opt('out', 'tmp/lowplatelegs'));
 const stage = +opt('stage', '9');
-const only = opt('only', 'sheet,wire,lineup,close,poses,walk,metrics').split(',');
+const only = opt('only', 'sheet,wire,lineup,close,knee,poses,walk,metrics').split(',');
 const tag = opt('tag', '');
 mkdirSync(out, { recursive: true });
 const DIR = new URL('.', import.meta.url).pathname;
@@ -32,12 +32,12 @@ const SHEET = join(DIR, 'ref/plate-legs.png'), LINEUP = join(DIR, 'ref/plate-lin
 
 const SKIN = [0.68, 0.49, 0.41];
 // (the colours as drawn: one plate colour for the blockout and the shaping; the glow unlit)
-const colOf = (m) => (stage < 4 ? (m === 'under' ? MATS.under : MATS.plate) : GLOW.includes(m) ? MATS[m].map((x) => x + 2) : MATS[m]);
+const colOf = (m, look = 'plain') => (stage < 4 ? MATS.plate : lookColour(PIECE_LOOKS[look][m] ?? { c: MATS[m], kind: 0 }));
 const bodyMesh = (rig, P, hide = null) => {
   const tris = rig.B.tris.filter((t) => !hide || !hide.has(t.poly));
   return { who: rig.who, P, polys: rig.B.polys.map((p) => p.nv ?? p.v), tris: tris.map((t) => [...t.v, t.poly]), col: rig.B.polys.map((p) => (p.mat === 'skin' ? SKIN : p.mat === 'pupil' ? [0.08, 0.06, 0.06] : [0.22, 0.15, 0.13])) };
 };
-const garMesh = (rig, G, P, edges = false) => ({ who: rig.who, P, polys: G.polys.map((p) => p.v), tris: G.tris.map((t) => [...t.v, t.poly]), col: G.polys.map((p) => colOf(p.mat)), edges });
+const garMesh = (rig, G, P, edges = false, look = 'plain') => ({ who: rig.who, P, polys: G.polys.map((p) => p.v), tris: G.tris.map((t) => [...t.v, t.poly]), col: G.polys.map((p) => colOf(p.mat, look)), edges });
 
 const M = {};
 for (const who of ['male', 'female']) {
@@ -101,7 +101,7 @@ function dress(who, pose) {
   const sh = (P) => P.map((p) => [p[0], p[1] + dy, p[2]]);
   return { PB: sh(PB), PG: sh(PG), dy };
 }
-const scene = (who, d, { edges = false } = {}) => [bodyMesh(M[who].rig, d.PB, M[who].hide), garMesh(M[who].rig, M[who].G, d.PG, edges)];
+const scene = (who, d, { edges = false, look = 'plain' } = {}) => [bodyMesh(M[who].rig, d.PB, M[who].hide), garMesh(M[who].rig, M[who].G, d.PG, edges, look)];
 
 /* ---- the sheet: five views against the reference --------------------------------------------------------------------- */
 // (the sheet turns the figure to show its right side: our yaw the other way)
@@ -112,13 +112,14 @@ async function sheet(who, edges, file) {
   const cw = 300, ch = 440, top = 34, d = dress(who, {}), floor = M[who].rig.J.floor, s = 400 / (TOPS[who] - floor), cy = (TOPS[who] + floor) / 2 - 0.1;
   const cells = [], imgs = [];
   const y0 = who === 'female' ? 428 : 92;
+  const looks = edges ? ['plain'] : LOOKS;
   VIEWS.forEach(([yaw, lab, x], i) => {
     imgs.push({ src: SHEET, size: [1536, 1024], crop: [x - 82, y0, 164, 250], box: [i * cw, top, cw, ch] });
-    cells.push({ meshes: scene(who, { PB: d.PB.map((p) => [p[0], p[1] - d.dy, p[2]]), PG: d.PG.map((p) => [p[0], p[1] - d.dy, p[2]]) }, { edges }), cam: { yaw, pitch: 0, s, c: [0, cy, 0] }, box: [i * cw, top + ch + 24, cw, ch], label: lab });
+    looks.forEach((look, r) => cells.push({ meshes: scene(who, { PB: d.PB.map((p) => [p[0], p[1] - d.dy, p[2]]), PG: d.PG.map((p) => [p[0], p[1] - d.dy, p[2]]) }, { edges, look }), cam: { yaw, pitch: 0, s, c: [0, cy, 0] }, box: [i * cw, top + (ch + 24) * (r + 1), cw, ch], label: `${lab}${looks.length > 1 ? ', ' + look : ''}` }));
   });
   const c = restChecks(who);
   const texts = [{ css: 'left:10px;top:6px', html: `Plate leggings on the low-poly ${who}${tag ? ' — ' + tag : ''}: the sheet above, the model below; plates ${c.plateTris} triangles${edges ? ' (' + Object.entries(c.byTag).map(([k, v]) => `${k} ${v}`).join(', ') + ')' : ''}, base layer ${c.baseTris} (the body's own, hidden under it)` }];
-  await shoot(5 * cw, top + 2 * ch + 24, cells, file, { texts, imgs });
+  await shoot(5 * cw, top + ch + (ch + 24) * looks.length, cells, file, { texts, imgs });
 }
 if (only.includes('sheet')) for (const who of ['male', 'female']) await sheet(who, false, join(out, `platelegs-sheet-${who}.png`));
 if (only.includes('wire')) for (const who of ['male', 'female']) await sheet(who, true, join(out, `platelegs-wire-${who}.png`));
@@ -128,13 +129,13 @@ if (only.includes('lineup')) {
   const H = Math.round(1061 * 0.5), cw = 1482 * 0.5 / 4, top = 34;
   const cells = [], imgs = [{ src: LINEUP, size: [1482, 1061], crop: [0, 0, 1482, 1061], box: [0, top, 4 * cw, H] }];
   const sc = { male: 1, female: 0.85 };
-  [['male', 0], ['female', 0], ['male', -40], ['female', -40]].forEach(([who, yaw], i) => {
+  LOOKS.flatMap((look) => [['male', 0, look], ['female', 0, look], ['male', -40, look], ['female', -40, look]]).forEach(([who, yaw, look], i) => {
     const d = dress(who, {}), k = sc[who];
     const S = (P) => P.map((p) => [p[0] * k, (p[1] - M[who].rig.J.floor) * k, p[2] * k]);
     const s = H / 15.4;
-    cells.push({ meshes: scene(who, { PB: S(d.PB), PG: S(d.PG) }), cam: { yaw, pitch: 0, s, c: [0, (H - 26) / 2 / s, 0] }, box: [i * cw, top + H + 20, cw, H], label: `${who} ${yaw ? '3/4' : 'front'}` });
+    cells.push({ meshes: scene(who, { PB: S(d.PB), PG: S(d.PG) }, { look }), cam: { yaw, pitch: 0, s, c: [0, (H - 26) / 2 / s, 0] }, box: [i * cw, top + H + 20, cw, H], label: `${who} ${yaw ? '3/4' : 'front'}${LOOKS.length > 1 ? ', ' + look : ''}` });
   });
-  await shoot(4 * cw, top + 2 * H + 20, cells, join(out, 'platelegs-lineup.png'), { imgs, texts: [{ css: 'left:10px;top:6px', html: 'The plate leggings on both bodies at the game\'s heights (she is 0.85 of him), the reference lineup above' }] });
+  await shoot(4 * cw * LOOKS.length, top + 2 * H + 20, cells, join(out, 'platelegs-lineup.png'), { imgs, texts: [{ css: 'left:10px;top:6px', html: 'The plate leggings on both bodies at the game\'s heights (she is 0.85 of him), the reference lineup above' }] });
 }
 
 /* ---- close up: the knee, the shin, the calf, the thigh, the band ----------------------------------------------------- */
@@ -147,16 +148,34 @@ if (only.includes('close')) {
     ['Shin plate (front)', 0, shin, 4], ['Shin plate (side)', -90, shin, 4], ['Calf / back', 180, (D.calf.segs[0][0] + D.calf.segs[2][1]) / 2, 3.6],
     ['Hip band (front)', 0, (D.band.top[0] + D.band.bottom[0]) / 2, 3.4], ['Hip band (back)', 180, (D.band.top[0] + D.band.bottom[5]) / 2, 3.4],
   ]; };
+  const blockH = ch * (1 + LOOKS.length) + 10;
   ['male', 'female'].forEach((who, r) => {
-    const d = dress(who, {}), x0 = who === 'male' ? 0.95 : 0.95;
+    const d = dress(who, {}), x0 = 0.95;
     views(who).forEach(([lab, yaw, y, span], k) => {
-      const box = [k * cw, 34 + r * (ch * 2 + 10) + ch, cw, ch];
-      if (k < 6) imgs.push({ src: SHEET, size: [1536, 1024], crop: [det[who][k][0] - 62, det[who][k][1], 124, 94], box: [k * cw, 34 + r * (ch * 2 + 10), cw, ch] });
+      if (k < 6) imgs.push({ src: SHEET, size: [1536, 1024], crop: [det[who][k][0] - 62, det[who][k][1], 124, 94], box: [k * cw, 34 + r * blockH, cw, ch] });
       const cx = k >= 6 ? 0 : (yaw === 180 ? -x0 : x0);
-      cells.push({ meshes: scene(who, { PB: d.PB.map((p) => [p[0], p[1] - d.dy, p[2]]), PG: d.PG.map((p) => [p[0], p[1] - d.dy, p[2]]) }), cam: { yaw, pitch: 4, s: ch / span, c: [yaw === -90 ? 0 : cx, y, 0] }, box, label: `${who} ${lab}` });
+      LOOKS.forEach((look, j) => cells.push({ meshes: scene(who, { PB: d.PB.map((p) => [p[0], p[1] - d.dy, p[2]]), PG: d.PG.map((p) => [p[0], p[1] - d.dy, p[2]]) }, { look }), cam: { yaw, pitch: 4, s: ch / span, c: [yaw === -90 ? 0 : cx, y, 0] }, box: [k * cw, 34 + r * blockH + ch * (j + 1), cw, ch], label: `${who} ${lab}${LOOKS.length > 1 ? ', ' + look : ''}` }));
     });
   });
-  await shoot(8 * cw, 34 + 2 * (ch * 2 + 10), cells, join(out, 'platelegs-close.png'), { imgs, texts: [{ css: 'left:10px;top:6px', html: 'Close up: the sheet\'s key details above each body\'s, the model below (the left leg; the hip band front and back)' }] });
+  await shoot(8 * cw, 34 + 2 * blockH, cells, join(out, 'platelegs-close.png'), { imgs, texts: [{ css: 'left:10px;top:6px', html: 'Close up: the sheet\'s key details above each body\'s, the model below (the left leg; the hip band front and back)' + (LOOKS.length > 1 ? ', plain then enchanted' : '') }] });
+}
+
+/* ---- behind the knee: rear, rear three-quarter and side, at rest and at the walk's deepest knee bend ------------------ */
+if (only.includes('knee')) {
+  const cw = 260, ch = 420, cells = [];
+  let row = 0;
+  for (const who of ['male', 'female']) {
+    const g = await game(M[who].rig), D = M[who].G.design;
+    // (the walk's deepest bend of the left knee: the key whose calf turns furthest)
+    let best = 0, bu = 0;
+    for (let k = 0; k < 32; k++) { const p = g.at(true, k / 32), L = p.calf_l; const a = L ? Math.acos(Math.max(-1, Math.min(1, (L[0] + L[4] + L[8] - 1) / 2))) : 0; if (a > best) { best = a; bu = k / 32; } }
+    for (const [lab, pose] of [['rest', {}], [`walk ${bu.toFixed(2)}, knee ${(best * 180 / Math.PI).toFixed(0)}°`, g.at(true, bu)]]) {
+      const d = dress(who, pose);
+      [[180, 'back'], [-135, 'rear 3/4'], [-90, 'side'], [-45, '3/4']].forEach(([yaw, vl], k) => cells.push({ meshes: scene(who, d), cam: { yaw, pitch: 4, s: ch / 5.2, c: [0, D.knee.mid + d.dy + 0.2, 0] }, box: [k * cw, 34 + row * ch, cw, ch], label: `${who} ${lab}, ${vl}` }));
+      row++;
+    }
+  }
+  await shoot(4 * cw, 34 + row * ch, cells, join(out, 'platelegs-knee.png'), { texts: [{ css: 'left:10px;top:6px', html: 'Behind the knee: back, rear three-quarter, side and three-quarter, at rest and at the walk\'s deepest knee bend' }] });
 }
 
 /* ---- metrics: every pose ------------------------------------------------------------------------------------------- */

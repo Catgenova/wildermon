@@ -13,7 +13,7 @@
 //     src/sculpt/lowpoly.ts behind the outfit switch `plateLegs`)
 //
 // The base layer: the body's own pelvis and leg polygons from the hip cut (bt) down to the ankle ring, on the body's own
-// vertices and weights, in the dark under-material; the body's polygons it copies are hidden while it is worn, so it can
+// vertices and weights, in the plate's shade (it reads as plate where the plates part); the body's polygons it copies are hidden while it is worn, so it can
 // neither cross the body nor show skin where the plates part at the joints.
 //
 // Each plate: a grid of points on rays out from an axis (the leg's centre at that height, or the hip's vertical axis for
@@ -26,16 +26,21 @@
 // turn), the shin and calf plates on the calf.
 import { meshOf, orient, trisOf, lerp, sub, add, mul, unit, cross, dot, newell, transferWeights } from '../lowgarment.mjs';
 
-/** The plate set's materials, shared by name and colour with the set's other pieces: plate, its darker shade, gold, the glow (emissive), the base layer. */
+/**
+ * The plate set's materials, shared by name and colour with the set's other pieces (tools/sculpt ENCHANT spec): plate,
+ * its darker shade (the edges turned in), the gold trim, the base layer; core, the knee guard's diamond inset (a gold-amber
+ * gem when plain, glowing when enchanted); rune, the inlay lines set into the plate (the shins' centre lines: gold when
+ * plain, lit when enchanted).
+ */
 export const MATS = {
   plate: [0.7, 0.58, 0.52],
   shade: [0.59, 0.49, 0.44],
   gold: [0.96, 0.74, 0.4],
-  glow: [1, 0.906, 0.651],
-  under: [0.29, 0.22, 0.2],
+  core: [0.86, 0.62, 0.3],
+  rune: [0.96, 0.74, 0.4],
 };
-/** The emissive materials (unlit, glowing in the renderer's bloom). */
-export const GLOW = ['glow'];
+/** The two looks (lowgarment.mjs garmentAsset `looks`): plain, every material its colour, lit; enchanted, the core and the runes unlit, glowing. */
+export const LOOKS = { plain: {}, enchanted: { core: { c: [1, 0.906, 0.651], kind: 1 }, rune: { c: [1, 0.8, 0.45], kind: 1 } } };
 
 const rad = (d) => d * Math.PI / 180;
 
@@ -64,25 +69,27 @@ function tab(T) {
  */
 export const DESIGN = {
   male: {
-    sink: 0.035, clear: 0.015, gap: 0.012, t: 0.04, raise: 0.02, trim: 0.07, thigh: [0, 50, 91, 132, 180, 229, 271, 312],
-    low: { clear: 0.012, gap: 0.01, t: 0.03, raise: 0.015, trim: 0.06 },
+    sink: 0.035, clear: 0.015, gap: 0.012, t: 0.04, raise: 0.024, trim: 0.1, thigh: [0, 50, 91, 132, 180, 229, 271, 312],
+    low: { clear: 0.012, gap: 0.01, t: 0.03, raise: 0.018, trim: 0.085 },
     band: { z0: -0.06, az: [0, 30, 70, 110, 150, 180], top: [-3.99, -3.97, -3.94, -3.94, -3.97, -3.99], bottom: [-5.45, -4.95, -4.6, -4.62, -4.74, -4.86] },
-    lame: { stops: 'skin', ease: [[0.55, 0.85, 'thigh'], [0.25, 0.05, 'pelvis']], az: [-40, 0, 50, 91, 132, 180, 216], rows: [{ y: tab([[0, -4.85], [91, -4.42], [180, -4.66], [229, -5.4], [271, -5.6], [320, -5.45]]), lvl: 0 }, { y: [-6.05, -5.95, -6.0, -6.1], lvl: 1.3 }] },
-    cuisse: { rows: [{ y: [-5.75, -5.68, -5.75, -6.3], lvl: 0 }, { y: -6.62, lvl: 0 }, { y: [-7.3, -7.12, -6.95, -7.05], lvl: 0 }] },
+    lame: { stops: 'skin', ease: [[0.4, 0.75, 'thigh'], [0.25, 0.05, 'pelvis']], az: [-40, 0, 50, 91, 132, 180, 216], rows: [{ y: tab([[0, -4.85], [91, -4.42], [180, -4.66], [229, -5.4], [271, -5.6], [320, -5.45]]), lvl: 0 }, { y: [-6.05, -5.95, -6.0, -6.1], lvl: 1.3 }] },
+    cuisse: { rows: [{ y: tab([[0, -5.75], [91, -5.68], [180, -5.75], [271, -6.3], [320, -6.25]]), lvl: 0 }, { y: -6.62, lvl: 0 }, { y: [-7.3, -7.12, -7.05, -7.05], lvl: 0 }] },
     knee: { top: -6.66, mid: -7.42, bottom: -8.12, wing: 90, flare: 0.06, lvl: 1, bulge: 0.14, inset: [14, 0.27], ringIn: [18, 0.34], ring: [25, 0.46] },
-    shinUp: { az: [-92, -48, -5, 5, 48, 92], rows: [{ y: [-7.72, -7.85, -7.85, -7.85], lvl: 0 }, { y: [-8.62, -8.58, -8.58, -8.58], lvl: 1 }] },
-    shinLow: { az: [-92, -48, -5, 5, 48, 92], rows: [{ y: -8.4, lvl: 0 }, { y: -10.36, lvl: 0.4 }] },
-    calf: { az: [98, 139, 180, 221, 262], segs: [[-8.05, -8.9], [-8.75, -9.6], [-9.45, -10.36]], chevron: 0.18 },
+    shinUp: { az: [-94, -50, -8, 8, 50, 94], rows: [{ y: [-7.72, -7.85, -7.85, -7.85], lvl: 0 }, { y: [-8.62, -8.58, -8.58, -8.58], lvl: 1 }] },
+    shinLow: { az: [-94, -50, -8, 8, 50, 94], rows: [{ y: -8.4, lvl: 0 }, { y: -10.36, lvl: 0.4 }] },
+    kneeBack: { az: [118, 149, 180, 211, 242], y: [-6.85, -8.3] },
+    calf: { az: [98, 139, 180, 221, 262], segs: [[-7.92, -8.9], [-8.75, -9.6], [-9.45, -10.36]], chevron: 0.3 },
   },
   female: {
-    sink: 0.035, clear: 0.012, gap: 0.01, t: 0.036, raise: 0.018, trim: 0.06, thigh: [0, 38, 88, 143, 180, 218, 275, 325],
-    low: { clear: 0.01, gap: 0.008, t: 0.026, raise: 0.012, trim: 0.05 },
+    sink: 0.035, clear: 0.012, gap: 0.01, t: 0.036, raise: 0.022, trim: 0.085, thigh: [0, 38, 88, 143, 180, 218, 275, 325],
+    low: { clear: 0.01, gap: 0.008, t: 0.026, raise: 0.016, trim: 0.075 },
     band: { z0: -0.38, az: [0, 30, 70, 110, 150, 180], top: [-3.63, -3.61, -3.58, -3.58, -3.61, -3.64], bottom: [-4.24, -3.98, -3.9, -3.95, -4.06, -4.16], gap: 0.035, ease: [[0.7, 0.2, 'pelvis']] },
-    cuisse: { stops: 'skin', ease: [], rows: [{ y: tab([[0, -4.16], [50, -4.04], [88, -3.92], [180, -3.98], [218, -4.8], [275, -4.98], [325, -4.45]]), lvl: 0 }, { y: [-6.45, -6.45, -6.25, -6.35], lvl: 0 }] },
+    cuisse: { stops: 'skin', ease: [], rows: [{ y: tab([[0, -4.16], [50, -4.04], [88, -3.92], [180, -3.98], [218, -5.0], [275, -5.05], [325, -4.45]]), lvl: 0 }, { y: [-6.45, -6.45, -6.32, -6.35], lvl: 0 }] },
     knee: { top: -6.02, mid: -6.74, bottom: -7.44, wing: 88, flare: 0.05, lvl: 1, bulge: 0.12, inset: [13, 0.26], ringIn: [17, 0.33], ring: [24, 0.44] },
-    shinUp: { az: [-92, -48, -5, 5, 48, 92], rows: [{ y: [-7.02, -7.15, -7.15, -7.15], lvl: 0 }, { y: [-8.0, -7.95, -7.95, -7.95], lvl: 1 }] },
-    shinLow: { az: [-92, -48, -5, 5, 48, 92], rows: [{ y: -7.8, lvl: 0 }, { y: -10.5, lvl: 0.4 }] },
-    calf: { az: [98, 139, 180, 221, 262], segs: [[-7.4, -8.4], [-8.25, -9.4], [-9.25, -10.5]], chevron: 0.2 },
+    shinUp: { az: [-94, -50, -8, 8, 50, 94], rows: [{ y: [-7.02, -7.15, -7.15, -7.15], lvl: 0 }, { y: [-8.0, -7.95, -7.95, -7.95], lvl: 1 }] },
+    shinLow: { az: [-94, -50, -8, 8, 50, 94], rows: [{ y: -7.8, lvl: 0 }, { y: -10.5, lvl: 0.4 }] },
+    kneeBack: { az: [118, 149, 180, 211, 242], y: [-6.15, -7.6] },
+    calf: { az: [98, 139, 180, 221, 262], segs: [[-7.3, -8.4], [-8.25, -9.4], [-9.25, -10.5]], chevron: 0.3 },
   },
 };
 
@@ -209,7 +216,7 @@ function cellOut(Y, az, R, closed, axis, want, passes = 4) {
  * its edges turned in by the thickness t (a lip) where `lip` says, a trimmed edge raised by `raise` over a band `trim`
  * wide (gold), an open plate turned in at its sides too (`sides`). Returns { nodes, pts, closed, mat(i, k) }.
  */
-function shell(rows, az, pt, { t, raise, trim, closed = false, lipTop = true, trimTop = false, trimBottom = true, sides = true, trimSides = false, mat = 'plate', lipMat = 'shade', inset = null }) {
+function shell(rows, az, pt, { t, raise, trim, closed = false, lipTop = true, lipBottom = true, trimTop = false, trimBottom = true, sides = true, trimSides = false, mat = 'plate', lipMat = 'shade', inset = null }) {
   const R = rows.length;
   const node = (i, k, dOff = 0) => ({ y: rows[i].y[k], az: az[k], off: rows[i].off[k] + dOff });
   // (the node `trim` along the plate from row i toward row j, raised)
@@ -221,7 +228,8 @@ function shell(rows, az, pt, { t, raise, trim, closed = false, lipTop = true, tr
   else { if (lipTop) push(cols.map((k) => node(0, k, -t)), lipMat, false, true); push(cols.map((k) => node(0, k)), null); }
   for (let i = 1; i < R - 1; i++) push(cols.map((k) => node(i, k)), null);
   if (trimBottom) { push(cols.map((k) => toward(R - 1, R - 2, k)), 'gold', true); push(cols.map((k) => node(R - 1, k, raise)), 'gold', true); push(cols.map((k) => node(R - 1, k, -t)), null, false, true); }
-  else { push(cols.map((k) => node(R - 1, k)), lipMat); push(cols.map((k) => node(R - 1, k, -t)), null, false, true); }
+  else if (lipBottom) { push(cols.map((k) => node(R - 1, k)), lipMat); push(cols.map((k) => node(R - 1, k, -t)), null, false, true); }
+  else push(cols.map((k) => node(R - 1, k)), null);
   let nodes = N;
   const open = !closed && sides;
   const sideIn = (i) => (lipRow[i] ? 0 : t + (up[i] ? raise : 0));
@@ -262,7 +270,7 @@ export function buildPlateLegs(rig, design = DESIGN[rig.who], { stage = 9 } = {}
     const more = [];
     for (let i = 0; i + 1 < rows.length; i++) {
       const a = rows[i], b = rows[i + 1];
-      for (const ring of F.ringY) {
+      for (const ring of o.rings === false ? [] : F.ringY) {
         const ys = az.map((x) => ring.yAt(x));
         const inside = ys.filter((y, k) => y < a.y[k] - 0.08 && y > b.y[k] + 0.08).length;
         if (inside < az.length / 2) continue;
@@ -298,13 +306,15 @@ export function buildPlateLegs(rig, design = DESIGN[rig.who], { stage = 9 } = {}
     return P;
   };
   const LOW = { ...D, ...D.low };
+  // ---- behind the knee: a plate on the knee helper (half the calf's turn), under the cuisse's foot and the calf's top --
+  legPlate('kneeBack', 'knee', [{ y: D.kneeBack.y[0], lvl: 0 }, { y: D.kneeBack.y[1], lvl: 0 }], D.kneeBack.az, LOW, { trimBottom: false, lipTop: false, lipBottom: false, stops: 'skin' });
   // ---- the calf: three chevrons behind, each over the top of the one below it ---------------------------------------
   const C3 = D.calf, chev = (y, a) => y - C3.chevron * Math.max(0, -Math.cos(rad(a))) ** 2;
   [...C3.segs.keys()].reverse().forEach((s) => { const [top, bot] = C3.segs[s]; legPlate(`calf${s}`, 'calf', [{ y: (a) => chev(top, a), lvl: 0 }, { y: (a) => chev(bot, a), lvl: 1 }], C3.az, LOW, { lipTop: s === 0, sides: false }); });
   // ---- the shin: the lower plate, the upper over its top; the centre line raised, gold either side of it -------------
   for (const [tag, d] of [['shinLow', D.shinLow], ['shinUp', D.shinUp]]) {
-    const c = d.az.indexOf(5);
-    legPlate(tag, 'calf', d.rows, d.az, LOW, { lipTop: false, ridge: (k) => (k === c || k === c - 1 ? 0.015 : 0), inset: (i, k) => (k === c - 1 ? 'gold' : null) });
+    const c = d.az.indexOf(8);
+    legPlate(tag, 'calf', d.rows, d.az, LOW, { rings: tag !== 'shinUp', lipTop: false, ridge: (k) => (k === c || k === c - 1 ? 0.015 : 0), inset: (i, k) => (k === c - 1 ? 'rune' : null) });
   }
   // ---- the cuisse round the thigh, his lame over its top --------------------------------------------------------------
   legPlate('cuisse', 'thigh', D.cuisse.rows, D.thigh, D, { closed: true, lipTop: false, stops: D.cuisse.stops, ease: D.cuisse.ease });
@@ -390,7 +400,7 @@ function kneeGuard(G, D, F) {
     G.poly([iRimIn[k + 1], iRimIn[(k + 2) % 8], b], 'plate', tag);
     G.poly([iRing[q], iRing[(q + 1) % 4], iRingIn[(q + 1) % 4], iRingIn[q]], 'gold', tag);
     G.poly([iRingIn[q], iRingIn[(q + 1) % 4], iInset[(q + 1) % 4], iInset[q]], 'gold', tag);
-    G.poly([iInset[q], iInset[(q + 1) % 4], iApex], 'glow', tag);
+    G.poly([iInset[q], iInset[(q + 1) % 4], iApex], 'core', tag);
   }
   G.plates.push({ tag, bone: 'knee', ids: [iLip, iRim, iRimIn, iRing, iRingIn, iInset, [iApex]], side: 'l' });
 }
@@ -469,7 +479,7 @@ export function buildWithBase(rig, design, o) {
   G.tag = 'base';
   for (const k of hides) {
     const v = B.polys[k].v.map((i) => { if (!map.has(i)) map.set(i, G.vert([...B.verts[i]], 'base')); return map.get(i); });
-    G.polys.push({ v, mat: 'under', part: 'base', tag: 'base' });
+    G.polys.push({ v, mat: 'shade', part: 'base', tag: 'base' });
   }
   G.baseOf = map;
   // (pulled in under the plates: each vertex off the layer's edge in along its normal by `sink`, so the plates hug the
@@ -550,7 +560,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const rig = buildRig(who), G = buildWithBase(rig);
     G.vw = plateLegsWeights(rig, G);
     const file = new URL(`../../../src/sculpt/assets/lowplatelegs-${who}.json`, import.meta.url);
-    const A = { built: 'node tools/sculpt/garments/platelegs.mjs (tools/sculpt/lowgarment.mjs garmentAsset)', ...garmentAsset(rig, G, MATS), hides: G.hides, glow: GLOW.map((n) => Object.keys(MATS).indexOf(n)) };
+    const A = { built: 'node tools/sculpt/garments/platelegs.mjs (tools/sculpt/lowgarment.mjs garmentAsset)', ...garmentAsset(rig, G, MATS, LOOKS), hides: G.hides };
     writeFileSync(file, JSON.stringify(A));
     console.log(who, `${G.verts.length} vertices, ${G.tris.length} triangles, ${A.base} + ${A.bones.length} bones, ${A.hides.length} body polygons hidden: wrote`, file.pathname);
   }
