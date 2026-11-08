@@ -50,7 +50,7 @@ export const TRUNK: Record<string, KeyPose> = {
     rot: {
       pelvis: [-5, 0, 0], spine_01: [-5, -3, 0], spine_02: [-8, -4, 0], spine_03: [-8, -3, 0],
       neck_01: [9, 5, 0], neck_02: [3, 1, 0], head: [5, 1, 0],
-      clavicle_l: [0, 0, 22], clavicle_r: [0, 0, -22],
+      clavicle_l: [0, 0, 28], clavicle_r: [0, 0, -22],
     },
     move: [0, 0.002, -0.02],
   },

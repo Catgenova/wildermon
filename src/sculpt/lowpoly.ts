@@ -74,7 +74,7 @@ export interface GarmentAsset {
 interface PropAsset {
   id: string; length: number; verts: number[]; polys: Array<[number[], number]>; tris: number[]; glowFrom: number;
   plain: Array<{ c: string; kind: number }>; enchanted: Array<{ c: string; kind: number }>;
-  grip: { lead: V; second: V };
+  grip: { lead: V; second: V; from?: number; to?: number };
   sockets: Record<'male' | 'female', Record<'l' | 'r', { bone: string; o: V; R: M3; curl?: Record<string, [number, number, number]> }>>; scale: Record<'male' | 'female', number>;
 }
 const SWORD = LONG_SWORD as unknown as PropAsset;
@@ -200,6 +200,24 @@ function lowBody(A: Asset, P: Proportions, share: number, garment: GarmentAsset)
   /** The body's bones and the garment's, in the order the weights index them. */
   const ALL = [...BONES, ...garment.bones];
 
+  /**
+   * Where the other fist closes on a prop's grip on this body: where the grip says, or further down it by as much as keeps
+   * the two fists from overlapping (the fist's width along the grip, from the right hand's vertices, and a tenth more).
+   */
+  function secondOn(prop: PropAsset, who: 'male' | 'female'): number {
+    const so = prop.sockets[who].r, y: V = [so.R[1], so.R[4], so.R[7]], hand = new Set(['hand_r', 'knuckles_r', 'thumb_01_r', 'thumb_02_r', 'thumb_03_r', 'fingers_01_r', 'fingers_02_r', 'fingers_mid_r'].map((n) => AT.get(n)).filter((i) => i !== undefined));
+    let lo = Infinity, hi = -Infinity;
+    A.weights.forEach((w, i) => {
+      let b = -1, top = 0;
+      for (let j = 0; j < w.length; j += 2) if (w[j + 1] > top) { top = w[j + 1]; b = w[j]; }
+      if (!hand.has(b)) return;
+      const d = dot([A.verts[i * 3] - so.o[0], A.verts[i * 3 + 1] - so.o[1], A.verts[i * 3 + 2] - so.o[2]], y);
+      lo = Math.min(lo, d); hi = Math.max(hi, d);
+    });
+    const width = hi > lo ? (hi - lo) * prop.scale[who] * 1.1 : 0;
+    return Math.max(prop.grip.from ?? 0, Math.min(prop.grip.second[1], prop.grip.lead[1] - width));
+  }
+
   /* ---- the rig's rest, done once ----------------------------------------------------------------------------------- */
   const REL = BONES.map((b) => (b.p >= 0 ? mm(tr(BONES[b.p].R), b.R) : b.R));
   const OFF = BONES.map((b) => (b.p >= 0 ? mv(tr(BONES[b.p].R), sub(b.head, BONES[b.p].head)) : b.head));
@@ -208,7 +226,7 @@ function lowBody(A: Asset, P: Proportions, share: number, garment: GarmentAsset)
   const SK = skeleton(A as unknown as AnimAsset, MALE_ASSET as unknown as AnimAsset, heightOf(humanProportions(0)) * share);
   /** The sword as this body holds it: its sockets, its grip and its point along it, its scale. */
   const WHO = (A as unknown as { who?: string }).who === 'female' ? 'female' : 'male';
-  const HELD: Held = { sockets: SWORD.sockets[WHO], lead: SWORD.grip.lead[1], second: SWORD.grip.second[1], tip: SWORD.length, scale: SWORD.scale[WHO] };
+  const HELD: Held = { sockets: SWORD.sockets[WHO], lead: SWORD.grip.lead[1], second: secondOn(SWORD, WHO), tip: SWORD.length, scale: SWORD.scale[WHO] };
 
   /** Each bone's world rotation and head for a local pose (bone index -> 3x3), the helpers driven, as lowrig.mjs posed(). */
   function posed(local: Array<M3 | undefined>, move: V = [0, 0, 0]): Frame[] {
