@@ -142,7 +142,9 @@ if (only.includes('feet')) {
     for (const [yaw, view] of [[-90, 'side'], [0, 'front']]) {
       keys.forEach(([lab, pose], k) => {
         const d = dress(who, pose), x = crossings(who, d);
-        cells.push({ meshes: [bodyMesh(who, d.PB, G.ground + 2.6), bootMesh(who, d.PG)], cam: { yaw, pitch: 8, s: 62, c: [0, G.ground + 0.9, 0] }, box: [k * cw, top + row * ch, cw, ch], label: `${who} ${view} ${lab} · ${x.shown}` });
+        // (the side view on the left boot alone: the stride is wider than a cell)
+        const L = d.PG.filter((_, i) => yaw === 0 || G.side[i] === 'L'), m = L.reduce((a, p) => [a[0] + p[0] / L.length, 0, a[2] + p[2] / L.length], [0, 0, 0]);
+        cells.push({ meshes: [bodyMesh(who, d.PB, G.ground + 2.6), bootMesh(who, d.PG)], cam: { yaw, pitch: 8, s: yaw ? 70 : 52, c: [m[0], G.ground + 1.0, m[2]] }, box: [k * cw, top + row * ch, cw, ch], label: `${who} ${view === 'side' ? 'left side' : view} ${lab} · ${x.shown}` });
       });
       row++;
     }
@@ -177,7 +179,8 @@ if (only.includes('walk')) {
     let i = 0;
     for (const who of ['male', 'female']) for (const yaw of [-90, -30]) {
       const g = await game(who), d = dress(who, g.at(true, k / F)), G0 = M[who].G.ground;
-      cells.push({ meshes: [bodyMesh(who, d.PB, G0 + 3), bootMesh(who, d.PG)], cam: { yaw, pitch: 6, s: 52, c: [0, G0 + 1.2, 0] }, box: [i++ * cw, 0, cw, ch] });
+      const L = d.PG.filter((_, j) => yaw !== -90 || M[who].G.side[j] === 'L'), m = L.reduce((a, p) => [a[0] + p[0] / L.length, 0, a[2] + p[2] / L.length], [0, 0, 0]);
+      cells.push({ meshes: [bodyMesh(who, d.PB, G0 + 3), bootMesh(who, d.PG)], cam: { yaw, pitch: 6, s: yaw === -90 ? 60 : 44, c: [m[0], G0 + 1.4, m[2]] }, box: [i++ * cw, 0, cw, ch] });
     }
     await shoot(cw * 4, ch, cells, join(frames, `f${String(k).padStart(2, '0')}.png`));
   }
