@@ -32,7 +32,7 @@ mkdirSync(out, { recursive: true });
 
 const SKIN = [0.68, 0.49, 0.41];
 // the two looks' colours by material, as the page draws them (lowgarmentshot.mjs lookColour: an unlit one as its colour + 2)
-const LOOK = Object.fromEntries(['plain', 'enchanted'].map((look) => [look, Object.fromEntries(Object.entries(MATS).map(([k, c]) => [k, lookColour(LOOKS[look][k] ? (Array.isArray(LOOKS[look][k]) ? { c: LOOKS[look][k], kind: 0 } : LOOKS[look][k]) : { c, kind: 0 })]))]));
+const LOOK = Object.fromEntries(['plain', 'enchanted'].map((look) => [look, Object.fromEntries(Object.entries(MATS).map(([k, c]) => [k, lookColour(LOOKS[look][k] ?? { c, kind: 0 })]))]));
 const ENCH = LOOKS_SHOWN.length > 1;
 const COL = LOOK.plain;
 const bodyMesh = (rig, P, hide) => {
@@ -137,6 +137,50 @@ if (only.includes('close')) await close(join(out, `helm-close${tag}.png`), false
 if (only.includes('closeback')) await close(join(out, `helm-closeback${tag}.png`), false, [2, 3, 4]);
 if (only.includes('sheet')) await sheet(join(out, `helm-sheet${tag}.png`), false);
 if (only.includes('wire')) await sheet(join(out, `helm-wire${tag}.png`), true);
+
+/**
+ * Fit: per body and view the sheet's view, ours under the sheet's own camera (tools/sculpt/lowhelmfit.mjs: the same
+ * pixels), plain and enchanted, and the two silhouettes laid over each other (sheet only red, ours only cyan, both
+ * white), each twice the sheet's size; the overlap and the mean outline distance under each.
+ */
+if (only.includes('fit')) {
+  const { fit } = await import('./lowhelmfit.mjs');
+  const K = 2, cells = [], imgs = [], texts = [], over = [], top = 34;
+  let cw = 0, ch = 0;
+  ['male', 'female'].forEach((who, r) => {
+    const { rig, G } = M[who], R = fit(who, G, rig), d0 = rest(who);
+    R.forEach((v, i) => {
+      const m = { x0: v.cam.x0, w: v.w, h: v.h };
+      cw = v.w * K; ch = v.h * K;
+      const col = i * (2 + LOOKS_SHOWN.length), y = top + r * (ch + 40);
+      const box0 = v.box;
+      imgs.push({ src: SHEET, size: SIZE, crop: [box0[0], box0[1], v.w, v.h], box: [col * cw, y, cw, ch] });
+      // (the cell's middle as a point in the head's space under the view's turn)
+      const a = v.yaw * Math.PI / 180, u0 = (v.w / 2 - v.cam.cx) / v.cam.s, y0 = (v.cam.cy - v.h / 2) / v.cam.s;
+      const piv = [u0 * Math.cos(a), y0, -u0 * Math.sin(a)];
+      LOOKS_SHOWN.forEach((look, l) => cells.push({ meshes: scene(who, d0, { look }), cam: { yaw: v.yaw, pitch: 0, s: v.cam.s * K, c: piv }, box: [(col + 1 + l) * cw, y, cw, ch], label: l === 0 ? `${who} ${VIEWS[i][1]}` : look }));
+      over.push({ box: [(col + 1 + LOOKS_SHOWN.length) * cw, y, cw, ch], w: v.w, h: v.h, S: [...v.S].join(''), O: [...v.O].join('') });
+      texts.push({ cls: 'lab', css: `left:${(col + 1 + LOOKS_SHOWN.length) * cw + 4}px;top:${y + ch + 4}px`, html: `overlap ${(v.iou * 100).toFixed(1)}%, outline ${v.outline.toFixed(1)} px` });
+    });
+  });
+  texts.push({ css: 'left:10px;top:6px', html: opt('title', 'The helm under the sheet\'s own cameras: the sheet, ours, and the silhouettes over each other (sheet only red, ours only cyan)') });
+  const W = 5 * (2 + LOOKS_SHOWN.length) * cw, H = top + 2 * (ch + 40), file = join(out, `helm-fit${tag}.png`);
+  await shoot(W, H, cells, file, { texts, imgs });
+  writeFileSync(join(out, 'helm-fit-over.json'), JSON.stringify({ K, over }));
+  execFileSync('python3', ['-c', `
+import sys, json
+import numpy as np
+from PIL import Image
+im = Image.open(sys.argv[1]).convert('RGB'); D = json.load(open(sys.argv[2])); K = D['K']
+for o in D['over']:
+    w, h = o['w'], o['h']
+    S = np.array([c == '1' for c in o['S']]).reshape(h, w); O = np.array([c == '1' for c in o['O']]).reshape(h, w)
+    t = np.zeros((h, w, 3), np.uint8) + np.array([54, 42, 46], np.uint8)
+    t[S & O] = (235, 235, 235); t[S & ~O] = (230, 60, 60); t[O & ~S] = (60, 200, 230)
+    im.paste(Image.fromarray(t).resize((w * K, h * K), Image.NEAREST), (o['box'][0], o['box'][1]))
+im.save(sys.argv[1])
+`, file, join(out, 'helm-fit-over.json')]);
+}
 
 /* ---- poses and metrics ------------------------------------------------------------------------------------------------- */
 const metrics = {};

@@ -31,16 +31,18 @@ import { meshOf, orient, trisOf, samplesOf, closestOnTri, sub, add, mul, dot, cr
  * discs' bosses).
  */
 export const MATS = {
-  plate: [0.7, 0.58, 0.52],
-  shade: [0.59, 0.49, 0.44],
+  plate: [0.84, 0.71, 0.63],
+  shade: [0.72, 0.6, 0.53],
   gold: [0.96, 0.74, 0.4],
   core: [0.86, 0.62, 0.3],
 };
 /**
- * The two looks (lowgarment.mjs garmentAsset `looks`): plain, every material lit, the cores a gold-amber gem; enchanted,
- * the cores glowing #FFE7A6, unlit (the plate set's ENCHANT rule, as the long sword's). The gold trim is metal in both.
+ * The two looks (lowgarment.mjs garmentAsset `looks`): plain, every material metal (kind 2, lit by the light's
+ * brightness only, as the long sword), the cores a gold-amber gem; enchanted, the cores glowing #FFE7A6, unlit (kind 1;
+ * the plate set's ENCHANT rule). The gold trim is metal in both.
  */
-export const LOOKS = { plain: { core: MATS.core }, enchanted: { core: { c: [1, 0.906, 0.651], kind: 1 } } };
+const metal = Object.fromEntries(Object.entries(MATS).map(([k, c]) => [k, { c, kind: 2 }]));
+export const LOOKS = { plain: metal, enchanted: { ...metal, core: { c: [1, 0.906, 0.651], kind: 1 } } };
 
 /** Piecewise linear through [x, y] pairs (sorted by x), held at the ends. */
 const interp = (P, x) => {
@@ -66,31 +68,37 @@ const byAz = (T, az) => interp(T, Math.abs(az));
  *   crest: width at its foot and top, height; disc: radius, boss radius, heights; cheek: its corners (azimuth, height);
  */
 export const DESIGN = {
+  // (his: the sheet's silhouettes at 49.5 px a unit, the faceplate's foot at -0.22, the profile's faceplate at z 1.26 at
+  // the cheek's height: tools/sculpt/lowhelmfit.mjs)
   male: {
     z0: 0.1,
-    sec: [[-0.3, 0.74, 0.96, 0.82, 2.6], [0.3, 0.84, 1.04, 0.8, 2.6], [0.6, 0.92, 1.06, 0.84, 2.6], [0.9, 0.97, 1.06, 0.95, 2.6], [1.4, 0.97, 1.0, 1.0, 2.5], [1.8, 0.88, 0.88, 0.94, 2.3], [2.1, 0.64, 0.62, 0.72, 2.1], [2.26, 0.3, 0.28, 0.36, 2.0]],
-    top: [0, 2.31, -0.04], rings: [2.04, 1.76], domeStep: 0.045,
-    band: { top: [[0, 1.68], [22, 1.56], [44, 1.44], [62, 1.42], [82, 1.54], [102, 1.54], [126, 1.42], [180, 1.42]], bot: [[0, 0.8], [22, 0.88], [44, 0.96], [62, 1.0], [82, 0.84], [102, 0.84], [126, 1.0], [180, 1.0]], out: [[0, 0.34], [22, 0.22], [44, 0.16], [62, 0.15], [100, 0.15], [180, 0.15]], rim: 0.07, rimOut: 0.035, topRim: [[0, 0.07, 0.035], [62, 0.07, 0.035], [82, 0, 0]] },
+    sec: [[-0.3, 0.82, 1.0, 0.8, 2.6], [0.4, 0.85, 1.0, 0.8, 2.6], [0.8, 0.9, 1.0, 0.82, 2.6], [1.1, 0.95, 0.98, 0.88, 2.6], [1.32, 0.97, 0.96, 0.97, 2.6], [1.56, 0.96, 0.94, 0.93, 2.5],
+      [1.8, 0.94, 0.88, 0.9, 2.5], [1.92, 0.9, 0.8, 0.82, 2.5], [2.04, 0.85, 0.72, 0.74, 2.4], [2.16, 0.79, 0.64, 0.66, 2.3], [2.29, 0.65, 0.6, 0.58, 2.2], [2.42, 0.44, 0.44, 0.5, 2.1], [2.5, 0.2, 0.2, 0.24, 2.0]],
+    top: [0, 2.5, -0.04], rings: [2.36, 2.2, 2.06], domeStep: 0.045,
+    band: { top: [[0, 1.98], [22, 1.82], [44, 1.64], [62, 1.6], [180, 1.6]], bot: [[0, 0.88], [22, 0.98], [44, 1.1], [62, 1.2], [82, 1.24], [180, 1.24]], out: [[0, 0.32], [22, 0.22], [44, 0.15], [62, 0.12], [100, 0.12], [180, 0.12]], rim: 0.07, rimOut: 0.035, topRim: [[0, 0.07, 0.035], [62, 0.07, 0.035], [82, 0, 0]] },
     ledge: 0.03,
-    back: { p1: [[0, 0.6], [82, 0.66], [102, 0.76], [180, 0.76]], step: [[0, 0], [102, 0], [126, 0.09], [180, 0.11]], bot: [[0, -0.16], [22, 0.0], [44, 0.14], [62, 0.2], [82, 0.24], [102, 0.24], [180, 0.12]], flare: [[0, 0], [102, 0.0], [126, 0.1], [180, 0.15]] },
-    face: { yTop: 0.72, yBot: -0.16, zTop: 1.24, zBot: 1.14, ang: 34, xOutTop: 0.86, xOutBot: 0.66, eye: 0.08, botOut: 0.0, seam: 0.05, t: 0.07, vents: [[0.2, 0.3], [0.44, 0.54], [0.68, 0.78]], vt: [0.16, 0.66] },
-    gap: 0.01, thick: 0.07, skirtIn: 0.12, window: 82,
-    crest: { w: 0.44, wt: 0.36, h: 0.17 }, star: 0.34,
-    disc: { r: 0.3, boss: 0.17, h: 0.08, bh: 0.07 },
-    cheek: { az: [[83, 0.78], [98, 0.78], [92, 0.32], [83, 0.3]], t: 0.07 },
+    back: { out: [[0, 0], [96, 0], [102, 0.1], [180, 0.1]], p1: [[0, 0.6], [102, 0.8], [126, 0.76], [180, 0.74]], step: [[0, 0], [102, 0], [126, 0.07], [180, 0.08]], bot: [[0, -0.16], [22, 0.0], [44, 0.14], [62, 0.24], [82, 0.36], [102, 0.52], [126, 0.44], [180, 0.36]], flare: [[0, 0], [102, 0.0], [126, 0.04], [180, 0.05]] },
+    face: { yTop: 0.76, yBot: -0.16, zTop: 1.24, zBot: 1.16, ang: 40, xOutTop: 0.82, xOutBot: 0.68, eye: 0.12, botOut: 0.0, seam: 0.05, t: 0.07, vents: [[0.2, 0.3], [0.44, 0.54], [0.68, 0.78]], vt: [0.16, 0.66] },
+    gap: 0.01, thick: 0.07, skirtIn: 0.12, window: 102,
+    crest: { w: 0.48, wt: 0.4, h: 0.19 }, star: 0.38,
+    disc: { r: 0.34, boss: 0.2, h: 0.14, bh: 0.08 },
+    cheek: { az: [[84, 1.16, 0.08], [110, 1.16, -0.01], [106, 0.56, -0.01], [84, 0.32, 0.08]], t: 0.07 },
   },
+  // (hers: 47 px a unit, her faceplate's foot at -0.18, her profile's faceplate at z 1.07 at the cheek's height: her head
+  // is longer from the nose back than the sheet's helm allows at his scale)
   female: {
     z0: 0.05,
-    sec: [[-0.3, 0.62, 0.86, 0.74, 2.3], [0.3, 0.74, 0.96, 0.72, 2.3], [0.6, 0.84, 0.98, 0.8, 2.3], [0.9, 0.89, 0.99, 0.96, 2.3], [1.4, 0.89, 0.95, 1.01, 2.25], [1.8, 0.8, 0.82, 0.92, 2.15], [2.1, 0.58, 0.56, 0.7, 2.0], [2.26, 0.26, 0.24, 0.32, 2.0]],
-    top: [0, 2.31, -0.06], rings: [2.04, 1.76], domeStep: 0.04,
-    band: { top: [[0, 1.7], [22, 1.58], [44, 1.46], [62, 1.44], [82, 1.54], [102, 1.54], [126, 1.44], [180, 1.44]], bot: [[0, 0.84], [22, 0.92], [44, 0.99], [62, 1.02], [82, 0.86], [102, 0.86], [126, 1.02], [180, 1.02]], out: [[0, 0.3], [22, 0.19], [44, 0.13], [62, 0.12], [100, 0.12], [180, 0.12]], rim: 0.06, rimOut: 0.03, topRim: [[0, 0.06, 0.03], [62, 0.06, 0.03], [82, 0, 0]] },
+    sec: [[-0.3, 0.78, 0.95, 0.86, 2.3], [0.4, 0.82, 0.98, 0.86, 2.3], [0.8, 0.88, 0.98, 0.88, 2.3], [1.1, 0.93, 0.96, 0.9, 2.3], [1.37, 0.95, 0.94, 1.0, 2.3], [1.56, 0.94, 0.94, 0.99, 2.3],
+      [1.82, 0.91, 0.9, 0.9, 2.3], [1.95, 0.88, 0.8, 0.82, 2.3], [2.08, 0.83, 0.72, 0.72, 2.3], [2.2, 0.76, 0.64, 0.64, 2.3], [2.33, 0.64, 0.58, 0.58, 2.2], [2.46, 0.45, 0.45, 0.5, 2.1], [2.56, 0.2, 0.2, 0.24, 2.0]],
+    top: [0, 2.58, -0.06], rings: [2.44, 2.26, 2.1], domeStep: 0.04,
+    band: { top: [[0, 2.0], [22, 1.84], [44, 1.66], [62, 1.62], [180, 1.6]], bot: [[0, 0.92], [22, 1.02], [44, 1.14], [62, 1.24], [82, 1.3], [180, 1.31]], out: [[0, 0.28], [22, 0.19], [44, 0.13], [62, 0.11], [100, 0.1], [180, 0.1]], rim: 0.06, rimOut: 0.03, topRim: [[0, 0.06, 0.03], [62, 0.06, 0.03], [82, 0, 0]] },
     ledge: 0.03,
-    back: { p1: [[0, 0.62], [82, 0.68], [102, 0.78], [180, 0.78]], step: [[0, 0], [102, 0], [126, 0.08], [180, 0.09]], bot: [[0, -0.1], [22, 0.05], [44, 0.2], [62, 0.26], [82, 0.28], [102, 0.28], [180, 0.16]], flare: [[0, 0], [102, 0.0], [126, 0.09], [180, 0.12]] },
-    face: { yTop: 0.76, yBot: -0.1, zTop: 1.17, zBot: 1.04, ang: 37, xOutTop: 0.78, xOutBot: 0.56, eye: 0.08, botOut: 0.0, seam: 0.045, t: 0.06, vents: [[0.2, 0.3], [0.44, 0.54], [0.68, 0.78]], vt: [0.16, 0.66] },
-    gap: 0.01, thick: 0.06, skirtIn: 0.1, window: 82,
-    crest: { w: 0.36, wt: 0.28, h: 0.15 }, star: 0.3,
-    disc: { r: 0.27, boss: 0.15, h: 0.07, bh: 0.06 },
-    cheek: { az: [[83, 0.8], [98, 0.8], [92, 0.36], [83, 0.34]], t: 0.06 },
+    back: { out: [[0, 0], [96, 0], [102, 0.09], [180, 0.09]], p1: [[0, 0.62], [102, 0.82], [126, 0.78], [180, 0.76]], step: [[0, 0], [102, 0], [126, 0.06], [180, 0.07]], bot: [[0, -0.14], [22, 0.02], [44, 0.16], [62, 0.26], [82, 0.38], [102, 0.54], [126, 0.48], [180, 0.4]], flare: [[0, 0], [102, 0.0], [126, 0.04], [180, 0.05]] },
+    face: { yTop: 0.8, yBot: -0.14, zTop: 1.15, zBot: 0.97, ang: 36, xOutTop: 0.76, xOutBot: 0.62, eye: 0.12, botOut: 0.0, seam: 0.045, t: 0.06, vents: [[0.2, 0.3], [0.44, 0.54], [0.68, 0.78]], vt: [0.16, 0.66] },
+    gap: 0.01, thick: 0.06, skirtIn: 0.1, window: 102,
+    crest: { w: 0.42, wt: 0.34, h: 0.17 }, star: 0.34,
+    disc: { r: 0.31, boss: 0.18, h: 0.12, bh: 0.07 },
+    cheek: { az: [[84, 1.22, 0.07], [110, 1.22, -0.01], [106, 0.58, -0.01], [84, 0.36, 0.07]], t: 0.06 },
   },
 };
 /** The shell's columns: azimuths round the axis (degrees, 0 forward, +90 the body's left), in order round. */
@@ -123,7 +131,8 @@ export function buildHelm(rig, design = DESIGN[rig.who]) {
     const p1 = byAz(BK.p1, az), sp = byAz(BK.step, az), yb = byAz(BK.bot, az), fl = byAz(BK.flare, az);
     const R = (y) => secR(D, az, y);
     // under the band at the front, the faceplate's planes set back by gap (the face's dark), never further out than the section
-    const Rf = (y) => Math.min(R(y), rPlane(az, y, D.gap));
+    // (the back shell below the band stands out by `out` over the visor's rear edge)
+    const Rf = (y) => Math.min(R(y), rPlane(az, y, D.gap)) + byAz(BK.out, az);
     const yl = bb - D.ledge;
     const P = [
       ...D.rings.map((y, k) => [`r${k + 1}`, y, R(y)]),
@@ -184,6 +193,14 @@ export function buildHelm(rig, design = DESIGN[rig.who]) {
       G.poly([V[j][k], V[jn][k], V[jn][k + 1], V[j][k + 1]], matOf(k, Math.abs(AZ[j]) < Math.abs(AZ[jn]) ? AZ[j] : AZ[jn]), 'shell');
     }
     if (win) continue;
+    // (the back shell's front edge, by the window: its thickness, turned in)
+    for (const [jj, other] of [[j, jn], [jn, j]]) {
+      if (Math.abs(AZ[jj]) > D.window || Math.abs(AZ[other]) <= D.window) continue;
+      G.tag = 'rim';
+      const ins = (i) => { if (i === V[jj][KS - 1]) return inner[jj][0]; const p = G.verts[i], d = unit([p[0], 0, p[2] - z0]); return (G.ret ??= new Map()).get(i) ?? G.ret.set(i, G.vert(add(p, mul(d, -D.thick)), 'shell')).get(i); };
+      for (let k = kWin; k + 1 < KS; k++) if (V[jj][k] !== V[jj][k + 1]) G.poly([V[jj][k], V[jj][k + 1], ins(V[jj][k + 1]), ins(V[jj][k])], 'gold', 'shell');
+      G.tag = 'shell';
+    }
     // the bottom rim (gold), the plate's inner face above it
     G.tag = 'rim';
     G.poly([V[j][KS - 1], V[jn][KS - 1], inner[jn][0], inner[j][0]], 'gold', 'shell');
@@ -304,10 +321,9 @@ export function buildHelm(rig, design = DESIGN[rig.who]) {
   /* ---- the visor's sides: from the faceplate's outer edge back to the disc, its rear edge down and forward ---- */
   for (const sg of [1, -1]) {
     const C = D.cheek, [Bt, Ct, Bb, Cb] = G.faceOut[sg];
-    // (its points on the shell straight in toward the axis: [middle top, back top, back bottom, middle bottom])
-    const on = C.az.map(([az, y]) => { const d = [Math.sin(sg * az * Math.PI / 180), 0, Math.cos(az * Math.PI / 180)]; const o = add([0, y, z0], mul(d, 4)), h = rayShell(o, mul(d, -1)); return h && h.t < 4 ? h : onShell(o); });
-    // (its foot a little further off the shell than a plate's: the shell folds under its rear edge)
-    const top = on.map((h) => add(h.q, mul(h.n, D.gap + C.t))), foot = on.map((h) => add(h.q, mul(h.n, 4 * D.gap)));
+    // (its points [middle top, rear top, rear bottom, middle bottom], each [azimuth, height, out from the dome's section]:
+    // the rear edge under the back shell's front edge)
+    const top = C.az.map(([az, y, o]) => at(sg * az, secR(D, sg * az, y) + o, y)), foot = C.az.map(([az, y, o]) => at(sg * az, secR(D, sg * az, y) + o - C.t, y));
     const pts = [Bt, ...top, Ct], feet = [Bb, ...foot, Cb];
     // (its front edge on the faceplate's, its foot there the faceplate's inner face, no wall; its rear edge gold; two
     // faces, front and back of the middle)
@@ -318,13 +334,13 @@ export function buildHelm(rig, design = DESIGN[rig.who]) {
   /* ---- the side discs: on the band at 90, a boss on each ---- */
   for (const sg of [1, -1]) {
     const C = D.disc, yc = (byAz(B.top, 92) + byAz(B.bot, 92) + B.rim) / 2;
-    const dr = unit([Math.sin(sg * 92 * Math.PI / 180), 0, Math.cos(92 * Math.PI / 180)]), h = rayShell(add([0, yc, z0], mul(dr, 4)), mul(dr, -1)), n = h.n, c0 = add(h.q, mul(n, D.gap + C.h));
+    const dr = unit([Math.sin(sg * 89 * Math.PI / 180), 0, Math.cos(89 * Math.PI / 180)]), h = rayShell(add([0, yc, z0], mul(dr, 4)), mul(dr, -1)), n = h.n, c0 = add(h.q, mul(n, D.gap + B.rimOut + C.h));
     const u = unit(cross([0, 1, 0], n)), w = unit(cross(n, u));
     const oct = (r, h) => Array.from({ length: 8 }, (_, k) => { const a = (k + 0.5) * Math.PI / 4; return add(add(c0, mul(n, h)), add(mul(u, r * Math.cos(a)), mul(w, r * Math.sin(a)))); });
     const tag = `disc ${sg > 0 ? 'L' : 'R'}`;
     const outer = oct(C.r, 0), bossB = oct(C.boss, 0);
-    // (on the band's face, inside its rims)
-    const { T } = plate(tag, outer, [], 'plate', 'shade');
+    // (a prism standing off the band's face, clear of its rims, over the dome above and the visor below)
+    const { T } = plate(tag, outer, [], 'plate', 'shade', { foot: oct(C.r, -C.h), closed: true });
     // (the face: the ring between the rim and the boss, then the boss, a low eight-sided dome)
     const Bi = bossB.map((p) => G.vert(p, tag)), cT = G.vert(add(c0, mul(n, C.bh)), tag);
     for (let k = 0; k < 8; k++) { const k1 = (k + 1) % 8; G.poly([T[k], T[k1], Bi[k1], Bi[k]], 'plate', 'helm'); G.poly([Bi[k], Bi[k1], cT], 'core', 'helm'); }
@@ -334,11 +350,11 @@ export function buildHelm(rig, design = DESIGN[rig.who]) {
   {
     const yS = (byAz(B.bot, 0) + B.rim + byAz(B.top, 0)) / 2, R = D.star, r = R * 0.26;
     const hit = (x, y) => rayShell([x, y, 6], [0, 0, -1]);
-    const pts = Array.from({ length: 8 }, (_, k) => { const a = k * Math.PI / 4, l = k % 2 ? r : R; return [Math.sin(a) * l, yS + Math.cos(a) * l]; });
+    const pts = Array.from({ length: 8 }, (_, k) => { const a = k * Math.PI / 4, l = k % 2 ? r : R; return [Math.sin(a) * l * 0.78, yS + Math.cos(a) * l]; });
     G.tag = 'star';
-    const T = pts.map(([x, y]) => { const h = hit(x, y); return G.vert(add(h.q, mul(h.n, D.gap + 0.035)), 'star'); });
-    const Fo = pts.map(([x, y]) => { const h = hit(x, y); return G.vert(add(h.q, mul(h.n, D.gap)), 'star'); });
-    const h0 = hit(0, yS), cT = G.vert(add(h0.q, mul(h0.n, D.gap + 0.06)), 'star');
+    const T = pts.map(([x, y]) => { const h = hit(x, y); return G.vert(add(h.q, mul(h.n, 4 * D.gap + 0.035)), "star"); });
+    const Fo = pts.map(([x, y]) => { const h = hit(x, y); return G.vert(add(h.q, mul(h.n, 4 * D.gap)), "star"); });
+    const h0 = hit(0, yS), cT = G.vert(add(h0.q, mul(h0.n, 4 * D.gap + 0.06)), "star");
     for (let k = 0; k < 8; k++) { const k1 = (k + 1) % 8; G.poly([cT, T[k], T[k1]], 'core', 'helm'); G.poly([Fo[k], Fo[k1], T[k1], T[k]], 'gold', 'helm'); }
   }
 
