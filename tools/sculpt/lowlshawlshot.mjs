@@ -29,7 +29,7 @@ const CAMS = JSON.parse(readFileSync(join(DIR, 'lowlshawlcams.json'), 'utf8'));
 const SIZE = { lineup: [1448, 1086], glow: [1214, 1295] };
 
 const SKIN = [0.68, 0.49, 0.41];
-const colOf = (look, m) => lookColour(look === 'enchanted' && LOOKS.enchanted[m] ? LOOKS.enchanted[m] : look === 'plain' && LOOKS.plain[m] ? { c: LOOKS.plain[m] } : { c: MATS[m] });
+const colOf = (look, m) => lookColour(LOOKS[look][m] ?? { c: MATS[m] });
 const bodyMesh = (rig, P, hide = new Set()) => ({ P, polys: rig.B.polys.map((p) => p.nv ?? p.v), tris: rig.B.tris.filter((t) => !hide.has(t.poly)).map((t) => [...t.v, t.poly]), col: rig.B.polys.map((p) => (p.mat === 'skin' ? SKIN : p.mat === 'pupil' ? [0.08, 0.06, 0.06] : [0.22, 0.15, 0.13])) });
 const garMesh = (G, P, look = 'plain') => ({ P, polys: G.polys.map((p) => p.v), tris: G.tris.map((t) => [...t.v, t.poly]), col: G.polys.map((p) => colOf(look, p.mat)) });
 /** A garment asset (lowgarment.mjs garmentAsset, as written beside the body) as a mesh in its rest pose, its own colours. */

@@ -159,7 +159,7 @@ def trace(refdir, out):
     print('wrote', out)
 
 
-MATCOL = {'leather': (112, 60, 43), 'dark': (81, 47, 44), 'light': (148, 81, 54), 'trim': (222, 132, 79), 'rune': (222, 132, 79)}
+MATCOL = {'leather': (106, 57, 45), 'dark': (74, 40, 33), 'light': (136, 73, 56), 'trim': (232, 132, 72), 'rune': (232, 132, 72)}
 GLOW = (254, 202, 109)
 SKIN = (173, 125, 105)
 

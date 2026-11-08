@@ -33,10 +33,16 @@ import { shawlBones } from './shawl.mjs';
 
 /** The palette's swatches (sRGB 0..1; enchanted-glow-ref.png): dark brown, leather, light leather, trim tan, glow. */
 export const SWATCH = { dark: [81, 47, 44], leather: [112, 60, 43], light: [148, 81, 54], trim: [222, 132, 79], glow: [254, 202, 109] };
-const c255 = (c) => c.map((x) => +(x / 255).toFixed(4));
-export const MATS = { leather: c255(SWATCH.leather), dark: c255(SWATCH.dark), light: c255(SWATCH.light), trim: c255(SWATCH.trim), rune: c255(SWATCH.trim) };
-/** Plain: the runes the trim's tan, lit; enchanted: the glow, unlit. */
-export const LOOKS = { plain: { rune: MATS.trim }, enchanted: { rune: { c: c255(SWATCH.glow), kind: 1 } } };
+/**
+ * The set's shared colours, exactly the chest's (garments/leatherchest.mjs on sculpt-leather-chest, read off the sheet
+ * under the game's light), so the material slots dedupe: dark, leather, light, trim, rune (plain the trim, enchanted the
+ * glow), glow; the leather lit by the light's brightness only (kind 2), the glow unlit (kind 1).
+ */
+export const MATS = { dark: [0.29, 0.157, 0.129], leather: [0.416, 0.224, 0.176], light: [0.533, 0.286, 0.22], trim: [0.91, 0.518, 0.282], rune: [0.91, 0.518, 0.282], glow: [0.996, 0.792, 0.427] };
+export const KIND = 2;
+const lit = Object.fromEntries(Object.entries(MATS).map(([n, c]) => [n, n === 'glow' ? { c, kind: 1 } : { c, kind: KIND }]));
+/** Plain: every material lit, the runes the trim's tan; enchanted: the runes unlit at the glow. */
+export const LOOKS = { plain: lit, enchanted: { ...lit, rune: { c: MATS.glow, kind: 1 } } };
 
 /**
  * The design per body (the body's units; values [front, side, back] blend round the azimuth):
@@ -60,20 +66,20 @@ export const DESIGN = {
   male: {
     z0: -0.12, front: 6, back: 6, OUT: 0.15, THICK: 0.1, TIER: 0.07, RAISE: 0.035, bevel: 0.06,
     collar: { rim: [-0.74, 0.0, 0.38], p: 1.8, IN: 0.16, wall: 0.18, lean: 0.35, low: 0.18 },
-    yoke: { at: [-1.62, -0.68, -1.62], p: 1.15, band: 0.22, line: 0.05 },
+    yoke: { at: [-1.62, -0.68, -1.62], p: 1.15, band: 0.28, line: 0.05 },
     hem: { at: [-3.33, -1.95, -3.28], p: 1.0, flare: [0.04, 0.08, 0.04], soften: 0, band: 0.66, stripe: 0.075 },
     tri: { w: 0.36, gap: 0.16, raise: 0.03 }, ytri: { w: 0.2, gap: 0.14 },
-    tabs: { gap: 0.25, w: 0.17, len: [0.26, 0.5], thick: 0.055, tilt: 8, seed: 7 },
+    tabs: { gap: 0.31, w: 0.21, len: [0.3, 0.64], thick: 0.075, tilt: 9, seed: 7 },
     emblem: { ring: [0.3, 0.17], at: [-1.29, -1.33], stripes: [0.11, 0.07], raise: 0.03 },
     lift: LIFT(0.4),
   },
   female: {
     z0: -0.14, front: 6, back: 6, OUT: 0.13, THICK: 0.09, TIER: 0.06, RAISE: 0.03, bevel: 0.05,
     collar: { rim: [-0.7, -0.05, 0.3], p: 1.9, IN: 0.14, wall: 0.15, lean: 0.35, low: 0.16 },
-    yoke: { at: [-1.47, -0.7, -1.47], p: 1.2, band: 0.2, line: 0.045 },
+    yoke: { at: [-1.47, -0.7, -1.47], p: 1.2, band: 0.25, line: 0.045 },
     hem: { at: [-2.95, -1.85, -2.9], p: 1.0, flare: [0.04, 0.07, 0.04], soften: 0, band: 0.6, stripe: 0.065 },
     tri: { w: 0.31, gap: 0.14, raise: 0.026 }, ytri: { w: 0.18, gap: 0.12 },
-    tabs: { gap: 0.23, w: 0.15, len: [0.24, 0.45], thick: 0.05, tilt: 14, seed: 7 },
+    tabs: { gap: 0.28, w: 0.18, len: [0.27, 0.5], thick: 0.06, tilt: 18, seed: 7 },
     emblem: { ring: [0.25, 0.12], at: [-1.15, -1.2], stripes: [0.095, 0.06], raise: 0.026 },
     lift: LIFT(0.45),
   },
@@ -226,7 +232,7 @@ function meshOfLeather(rig, D, cols) {
   // border, the hem's lip, the underside
   const seq = [
     ['ci', 'd', 'dark', 'collar', -1], ['d', 'u0', 'trim', 'collar'], ['u0', 'u', 'trim', 'collar'], ['u', 'cm', 'leather', 'collar'], ['cm', 'Y0', 'leather', 'collar'],
-    ['Y0', 'Ym', 'leather', 'cape'], ['Ym', 'YB0', 'leather', 'cape'], ['YB0', 'YB1', 'rune', 'cape'], ['YB1', 'YL', 'rune', 'cape'], ['YL', 'Y1', 'light', 'cape'], ['Y1', 'Y1b', 'dark', 'cape'],
+    ['Y0', 'Ym', 'leather', 'cape'], ['Ym', 'YB0', 'leather', 'cape'], ['YB0', 'YB1', 'rune', 'cape'], ['YB1', 'YL', 'rune', 'cape'], ['YL', 'Y1', 'light', 'cape'], ['Y1', 'Y1b', 'leather', 'cape'],
     ['Y1b', 'L1', 'leather', 'cape'], ['L1', 'L2', 'leather', 'cape'], ['L2', 'BT0', 'leather', 'cape'], ['BT0', 'BT1', 'rune', 'cape'], ['BT1', 'S1', 'rune', 'cape'], ['S1', 'S2', 'light', 'cape'], ['S2', 'H', 'rune', 'cape'],
     ['H', 'IH', 'light', 'cape'], ['IH', 'IB', 'dark', 'cape', -1], ['IB', 'IY', 'dark', 'cape', -1], ['IY', 'IM', 'dark', 'cape', -1], ['IM', 'IT', 'dark', 'cape', -1], ['IT', 'ci', 'dark', 'collar', -1],
   ];
@@ -296,9 +302,11 @@ function laid(G, D, cols, R) {
       const w = Math.min(T.w, st - 0.04) / 2;
       // (its outline in the ribbon's own coordinates, each edge in four, so it follows the band round the columns)
       const cs = [[rb.uAt(L, c - w), 0.93], [rb.uAt(L, c + w), 0.93], [rb.uAt(L, c), 0.09]], q = [];
-      for (let e = 0; e < 3; e++) for (let t = 0; t < 4; t++) { const [u0, v0] = cs[e], [u1, v1] = cs[(e + 1) % 3]; q.push(rb.at(u0 + (u1 - u0) * t / 4, v0 + (v1 - v0) * t / 4)); }
-      if (skip && skip(q[8].p)) continue;
-      prism(G, q.map((x) => x.p), q.map((x) => x.n), raise, PLIFT, 'rune', tag, q.map((x) => x.src));
+      for (let e = 0; e < 3; e++) for (let t = 0; t < 6; t++) { const [u0, v0] = cs[e], [u1, v1] = cs[(e + 1) % 3]; q.push(rb.at(u0 + (u1 - u0) * t / 6, v0 + (v1 - v0) * t / 6)); }
+      if (skip && skip(q[12].p)) continue;
+      // (where the band turns sharply under it, the triangle stands off further: its corners' normals' spread)
+      const md = Math.min(...q.map((x) => dot(x.n, q[12].n)));
+      prism(G, q.map((x) => x.p), q.map((x) => x.n), raise, PLIFT + 0.25 * (1 - md), 'rune', tag, q.map((x) => x.src));
     }
   };
   tri(R.S1, R.S2, D.tri, 'tri', D.tri.raise);
