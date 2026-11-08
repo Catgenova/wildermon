@@ -55,7 +55,7 @@ export const MATS = {
 export const DESIGN = {
   male: {
     H: 2.06, sole: 0.1, gap: 0.012, margin: { toe: 0.04, heel: 0.02 }, lip: 0.05, shaft: 0.1, step: 0.04, flare: 0.05,
-    cuff: [0.62, 0.8], rim: 0.035,
+    cuff: [0.725, 0.905], rim: 0.035, rigid: { r5: 0.7, r6: 1, r6b: 1, r7: 1, r8: 1 },
     cols: [[1, 0.2, 18], [0.66, 0.5, 62], [0.33, 0.44, 102], [0.07, 0.36, 142], [0, 0.16, 168], [0, -0.16, -168], [0.07, -0.36, -142], [0.33, -0.4, -102], [0.66, -0.48, -62], [1, -0.2, -18]],
     wall: [0.16, 0.18, 0.18, 0.2, 0.2, 0.2, 0.2, 0.18, 0.18, 0.16],
     lean: [0.03, 0.03, 0.03, 0.02, 0.02, 0.02, 0.02, 0.03, 0.03, 0.03],
@@ -64,20 +64,20 @@ export const DESIGN = {
     mix: [0, 0.15, 0.55, 0.95, 1, 1, 0.95, 0.55, 0.15, 0],
     base: [0.66, 0.7, 0.8, 0.86, 0.86, 0.86, 0.86, 0.8, 0.7, 0.66],
     fill: [0.02, 0, 0, 0.02, 0.03, 0.03, 0.02, 0, 0, 0.02],
-    straps: { x: [[90, 0.045], [-90, 0.08]], give: 0.05, c: 0.42, amp: 0.15, w: 0.11, band: { w: 0.16, lift: 0.09, foot: 0.02 } },
+    straps: { x: [[90, 0.045], [-90, 0.08]], give: 0.05, c: 0.53, amp: 0.14, w: 0.11, band: { w: 0.16, lift: 0.035, foot: 0.02 } },
   },
   female: {
     H: 2.07, sole: 0.09, gap: 0.012, margin: { toe: -0.1, heel: 0 }, lip: 0.045, shaft: 0.08, step: 0, flare: 0.05,
-    cuff: [0.6, 0.78], rim: 0.035,
+    cuff: [0.71, 0.89], rim: 0.035, rigid: { r5: 0.7, r6: 1, r6b: 1, r7: 1, r8: 1 },
     cols: [[1, 0.2, 18], [0.66, 0.44, 62], [0.33, 0.36, 102], [0.07, 0.31, 142], [0, 0.14, 168], [0, -0.14, -168], [0.07, -0.31, -142], [0.33, -0.33, -102], [0.66, -0.42, -62], [1, -0.2, -18]],
     wall: [0.14, 0.15, 0.15, 0.16, 0.16, 0.16, 0.16, 0.15, 0.15, 0.14],
     lean: [0.02, 0.02, 0.03, 0.02, 0.02, 0.02, 0.02, 0.03, 0.02, 0.02],
     top: [0.28, 0.34, 0.52, 0.6, 0.6, 0.6, 0.6, 0.52, 0.34, 0.28],
     shrink: [0.2, 0.06, 0.04, 0.02, 0.02, 0.02, 0.02, 0.04, 0.06, 0.2],
     mix: [0, 0.1, 0.5, 0.95, 1, 1, 0.95, 0.5, 0.1, 0],
-    base: null,
+    base: [0.55, 0.6, 0.72, 0.8, 0.8, 0.8, 0.8, 0.72, 0.6, 0.55],
     fill: [0.02, 0, 0, 0.02, 0.03, 0.03, 0.02, 0, 0, 0.02],
-    straps: { x: [[90, 0.045], [-90, 0.08]], give: 0.05, c: 0.42, amp: 0.14, w: 0.1, band: { w: 0.12, lift: 0.08, foot: 0.02 } },
+    straps: { x: [[90, 0.045], [-90, 0.08]], give: 0.05, c: 0.48, amp: 0.17, w: 0.1, band: { w: 0.12, lift: 0.035, foot: 0.02 } },
   },
 };
 
@@ -291,9 +291,9 @@ export function buildBoots(rig, design = DESIGN[rig.who]) {
   G.host = []; G.nrm = []; G.ground = ground;
   for (const side of ['L', 'R']) strapsOf(G, D, side);
   G.tris = trisOf(G);
-  // where a strap still meets what lies under it (the boot, an earlier strap: the band over the second over the first over
+  // where a strap still meets what lies under it (the boot, an earlier strap: the second over the first over the band over
   // the boot), the upper one's corners there go out along their normals a little at a time
-  const rank = (tag) => (tag === 'band' ? 3 : tag === 'strap 2' ? 2 : tag === 'strap 1' ? 1 : 0);
+  const rank = (tag) => (tag === 'strap 2' ? 3 : tag === 'strap 1' ? 2 : tag === 'band' ? 1 : 0);
   for (let it = 0; it < 80; it++) {
     const pairs = crossPairs(G.verts, G.tris);
     if (!pairs.length) break;
@@ -326,11 +326,17 @@ export function bootWeights(rig, G, o = {}) {
     return `calf_${s}`;
   };
   const vw = transferWeights(rig, G, { map, smooth: o.smooth ?? 2, keep: (i) => near[i], only: (i) => !G.host?.[i] });
-  // the cuff (its foot, ledge, top and rim) on the shin alone: it rides with the leg's front over the ankle as it bends
+  // the shaft and the cuff (the shaft's base up: stiff leather) on the shin alone: it holds its shape above the ankle's
+  // bend and rides with the leg; the bend is taken between the foot's top (r4) and the shaft's base
   const at = new Map(rig.bones.map((b, i) => [b.name, i]));
   for (const side of ['L', 'R']) {
     const R = G.rings[side], calf = at.get(`calf_${side === 'L' ? 'l' : 'r'}`);
-    for (const key of ['r6', 'r6b', 'r7', 'r8']) for (const i of R[key] ?? []) vw[i] = [[calf, 1]];
+    for (const [key, f] of Object.entries(o.rigid ?? G.design.rigid)) for (const i of R[key] ?? []) {
+      const acc = new Map(vw[i].map(([b, w]) => [b, w * (1 - f)]));
+      acc.set(calf, (acc.get(calf) ?? 0) + f);
+      vw[i] = [...acc].filter(([, w]) => w > 1e-4).sort((a, b) => b[1] - a[1]).slice(0, 4);
+      const t = vw[i].reduce((a, [, w]) => a + w, 0); vw[i] = vw[i].map(([b, w]) => [b, w / t]);
+    }
   }
   // the straps ride on the upper under them: their host triangle's corners' weights, by their shares
   G.host?.forEach((h, i) => {
@@ -340,6 +346,15 @@ export function bootWeights(rig, G, o = {}) {
     const l = [...acc].sort((a, b) => b[1] - a[1]).slice(0, 4), t = l.reduce((a, [, w]) => a + w, 0);
     vw[i] = l.map(([b, w]) => [b, w / t]);
   });
+  // the forefoot band on the foot alone (the weights of the band's line, r4, at the nearest column): it rides the
+  // forefoot rigidly while the ankle bends behind it
+  const bandV = new Set(G.polys.filter((p) => p.tag === 'band').flatMap((p) => p.v));
+  for (const i of bandV) {
+    const R = G.rings[G.side[i]];
+    let best = null;
+    for (const j of R.r4) { const d = Math.hypot(...sub(G.verts[i], G.verts[j])); if (!best || d < best[0]) best = [d, j]; }
+    vw[i] = vw[best[1]];
+  }
   return vw;
 }
 
