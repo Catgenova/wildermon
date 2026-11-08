@@ -76,6 +76,8 @@ const PALM = 0.012;
 const REACH_ARM = 0.975;
 /** The most a held prop's far end is let down onto the ground by turning the right wrist down (`GripAt.rest`): degrees. */
 const DOWN = 40;
+/** The furthest in toward the chest (the cosine from straight out) the left elbow is put to line its forearm up with its hand. */
+const ELBOW_IN = -0.1;
 /** Game units between the fists on a handle when nothing held says. */
 const GAP = 0.76;
 
@@ -218,8 +220,12 @@ export function skeleton(A: AnimAsset, canon: AnimAsset, gameHeight = 0): Skelet
     // and drawn toward the side that lines the forearm up with the hand on the grip (the elbow away from where the hand
     // points), as far as `lineUp` says, so the wrist is bent as little as the reach allows
     const lineUp = scl(off(add(S, col(W, 1))), -1);
-    const k = Math.min(1, Math.max(0, grip.lineUp));
-    if (k > 0 && len(lineUp) > 1e-6) { const p2 = add(scl(pole, 1 - k), scl(unit(lineUp), k)); if (len(p2) > 1e-3) pole = unit(p2); }
+    // (never so far that the elbow turns in toward the chest: less of the way where it would)
+    const k = Math.min(1, Math.max(0, grip.lineUp)), outN = unit(off(add(S, outW)));
+    if (k > 0 && len(lineUp) > 1e-6) for (let w = k; w > 1e-3; w -= k / 4) {
+      const p2 = add(scl(pole, 1 - w), scl(unit(lineUp), w));
+      if (len(p2) > 1e-3 && dot(unit(p2), outN) >= Math.min(ELBOW_IN, dot(pole, outN))) { pole = unit(p2); break; }
+    }
     const K1 = F[lh.lower].P, W1 = F[lh.hand].P, la = len(sub(K1, S)), lb = len(sub(W1, K1)), lw = Math.max(1e-6, len(sub(W1, S)));
     const ca = Math.max(-1, Math.min(1, (la * la + lw * lw - lb * lb) / (2 * la * lw))), Ke = add(S, scl(add(scl(n, ca), scl(pole, Math.sqrt(1 - ca * ca))), la));
     const frame = (x: V, y: V): M3 => { const X = unit(x), Y = unit(sub(y, scl(X, dot(y, X)))), Z = cross(X, Y); return [X[0], Y[0], Z[0], X[1], Y[1], Z[1], X[2], Y[2], Z[2]]; };
