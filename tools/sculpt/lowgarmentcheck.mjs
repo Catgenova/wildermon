@@ -13,7 +13,12 @@
 //        and the body polygons it hides as the tools build them, no bones of their own; in the game's path (the bake
 //        with the body's covered polygons left out) the trousers' triangles crossing the body's and the shawl's, and
 //        their own, in the same walk and idle;
-//     5. the tunic (src/sculpt/assets/lowtunic-<who>.json, tools/sculpt/garments/tunic.mjs, fitted over the trousers and
+//     5. the boots (src/sculpt/assets/lowboots-<who>.json, tools/sculpt/garments/boots.mjs): the asset's weights, the body
+//        polygons it hides and the sole vertices the body stands on as the tools build them, no bones of their own; in
+//        the game's path the boots' lowest sole on the ground (the figure's floor, z 0), and the boots' triangles
+//        crossing the body's, the shawl's and the trousers' in the same walk and idle, and their own (reported: the
+//        straps against the boot where the ankle bends; not a failure);
+//     6. the tunic (src/sculpt/assets/lowtunic-<who>.json, tools/sculpt/garments/tunic.mjs, fitted over the trousers and
 //        under the shawl by garments/outfit1.mjs): the asset's weights, triangles and hidden polygons as the tools build
 //        them, no bones of its own; in the game's path its triangles crossing the body's (less what the trousers and the
 //        tunic hide), the trousers', the shawl's and its own, in the walk and the idle (the idle sampled over its whole
@@ -24,6 +29,7 @@ import { readFileSync } from 'node:fs';
 import { buildRig, posed, fromGame, gameRig, armsOut, axisAngle, mm, tr } from './lowrig.mjs';
 import { liftOf, garmentFrames, crossPairs, bonesWith } from './lowgarment.mjs';
 import { buildOutfit } from './garments/outfit1.mjs';
+import { buildBoots, bootWeights } from './garments/boots.mjs';
 
 const ROOT = new URL('../..', import.meta.url).pathname;
 const b = await build({
@@ -99,6 +105,16 @@ for (const who of ['male', 'female']) {
     walk: { body: 0, shawl: 0, self: 0 }, idle: { body: 0, shawl: 0, self: 0 },
   };
   if (trousers.bones.length || trousers.base !== rig.bones.length || r.trousers.weights > 1e-5 || hides.join() !== trousers.hides.join() || Tg.tris.length !== r.trousers.tris) { console.log(who, 'trousers asset differs'); fail = true; }
+  // (the boots: their asset against the tools')
+  const Bg = buildBoots(rig);
+  Bg.vw = bootWeights(rig, Bg);
+  const boots = json(`src/sculpt/assets/lowboots-${who}.json`);
+  r.boots = {
+    bones: boots.bones.length, base: boots.base, tris: boots.tris.length / 4, hides: boots.hides.length, soles: boots.soles.length,
+    weights: Math.max(...Bg.vw.map((l, i) => Math.max(...l.map(([bi, w], j) => (boots.weights[i][2 * j] === bi ? Math.abs(boots.weights[i][2 * j + 1] - w) : 1))))),
+    ground: 0, walk: { body: 0, shawl: 0, trousers: 0, self: 0 }, idle: { body: 0, shawl: 0, trousers: 0, self: 0 },
+  };
+  if (boots.bones.length || boots.base !== rig.bones.length || r.boots.weights > 1e-5 || Bg.hides.join() !== boots.hides.join() || Bg.soles.join() !== boots.soles.join() || Bg.tris.length !== r.boots.tris) { console.log(who, 'boots asset differs'); fail = true; }
   // (the tunic: its asset against the tools')
   const Ug = O.tunic, tunic = json(`src/sculpt/assets/lowtunic-${who}.json`);
   r.tunic = {
@@ -107,7 +123,7 @@ for (const who of ['male', 'female']) {
     walk: { body: 0, trousers: 0, shawl: 0, self: 0 }, idle: { body: 0, trousers: 0, shawl: 0, self: 0 },
   };
   if (tunic.bones.length || tunic.base !== rig.bones.length || r.tunic.weights > 1e-5 || O.hides.tunic.join() !== tunic.hides.join() || Ug.tris.length !== r.tunic.tris) { console.log(who, 'tunic asset differs'); fail = true; }
-  const hidden = new Set([...trousers.hides, ...tunic.hides]), nShawlTris = shawl.tris.length / 4, nTrousersTris = trousers.tris.length / 4;
+  const hidden = new Set([...trousers.hides, ...boots.hides, ...tunic.hides]), nShawlTris = shawl.tris.length / 4, nTrouserTris = trousers.tris.length / 4, nBootTris = boots.tris.length / 4;
   const bodyTris = body.tris.filter((_, k) => k % 4 === 3).filter((pi) => !hidden.has(pi)).length;
   let s0 = null;
   for (const [kind, moving, n] of [['walk', true, 16], ['idle', false, 24]]) for (let facing = 0; facing < 8; facing++) for (let k = 0; k < n; k++) {
@@ -126,8 +142,13 @@ for (const who of ['male', 'female']) {
       P.push(q);
     }
     const T = Array.from({ length: s.baked.nTris }, (_, t) => ({ v: [s.baked.tris[t * 3], s.baked.tris[t * 3 + 1], s.baked.tris[t * 3 + 2]] }));
-    // (the bake: the body's triangles less the hidden, the shawl's, the trousers', the tunic's)
-    const tB = T.slice(0, bodyTris), tS = T.slice(bodyTris, bodyTris + nShawlTris), tT = T.slice(bodyTris + nShawlTris, bodyTris + nShawlTris + nTrousersTris), tU = T.slice(bodyTris + nShawlTris + nTrousersTris);
+    // (the bake: the body's triangles less the hidden, the shawl's, the trousers', the boots', the tunic's)
+    const o1 = bodyTris + nShawlTris, o2 = o1 + nTrouserTris, o3 = o2 + nBootTris;
+    const tB = T.slice(0, bodyTris), tS = T.slice(bodyTris, o1), tT = T.slice(o1, o2), tG = T.slice(o2, o3), tU = T.slice(o3);
+    const bt = r.boots[kind];
+    bt.body += crossPairs(P, tG, P, tB).length; bt.shawl += crossPairs(P, tG, P, tS).length; bt.trousers += crossPairs(P, tG, P, tT).length; bt.self += crossPairs(P, tG).length;
+    // (the figure stands on the lowest vertex of all: the boots' soles; their lowest on the floor, z 0)
+    r.boots.ground = Math.max(r.boots.ground, Math.abs(Math.min(...P.map((q) => q[2]))));
     const u = r.tunic[kind];
     u.body += crossPairs(P, tU, P, tB).length; u.trousers += crossPairs(P, tU, P, tT).length; u.shawl += crossPairs(P, tU, P, tS).length; u.self += crossPairs(P, tU).length;
     cross[kind] += crossPairs(P, tS, P, tB).length;
@@ -138,8 +159,10 @@ for (const who of ['male', 'female']) {
   r.crossings = cross;
   if (cross.walk || cross.idle) fail = true;
   for (const k of ['walk', 'idle']) if (r.trousers[k].body || r.trousers[k].shawl || r.trousers[k].self) fail = true;
+  for (const k of ['walk', 'idle']) if (r.boots[k].body || r.boots[k].shawl || r.boots[k].trousers) fail = true;
+  if (r.boots.ground > 1e-3) { console.log(who, 'the boots are not on the floor'); fail = true; }
   for (const k of ['walk', 'idle']) if (r.tunic[k].body || r.tunic[k].trousers || r.tunic[k].shawl) fail = true;
-  if (s0.baked.nTris !== bodyTris + nShawlTris + r.trousers.tris + r.tunic.tris) { console.log(who, 'the bake is not the body less the hidden, the shawl, the trousers and the tunic'); fail = true; }
+  if (s0.baked.nTris !== bodyTris + nShawlTris + r.trousers.tris + r.boots.tris + r.tunic.tris) { console.log(who, 'the bake is not the body less the hidden, the shawl, the trousers, the boots and the tunic'); fail = true; }
   console.log(who, JSON.stringify(r));
 }
 console.log(fail ? 'FAIL' : 'ok');
