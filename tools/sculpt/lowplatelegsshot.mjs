@@ -12,7 +12,7 @@
 //     platelegs-walk.gif: the game's walk, both bodies, front, three-quarter and side;
 //     platelegs-metrics.json: the checks at rest and in every pose.
 //   --stage: 1 the blockout (one colour), 2 to 3 shaped in one colour, 4 and on coloured.
-import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdirSync, writeFileSync, rmSync, readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { buildRig, posed, skin, armsOut, axisAngle, mm, tr } from './lowrig.mjs';
@@ -26,6 +26,7 @@ const out = resolve(opt('out', 'tmp/lowplatelegs'));
 const stage = +opt('stage', '9');
 const only = opt('only', 'sheet,wire,lineup,close,knee,poses,walk,metrics').split(',');
 const tag = opt('tag', '');
+const NBDIR = opt('neighbours', ''), NEIGHBOURS = NBDIR ? opt('pieces', 'platechest,plateboots').split(',') : [];
 mkdirSync(out, { recursive: true });
 const DIR = new URL('.', import.meta.url).pathname;
 const SHEET = join(DIR, 'ref/plate-legs.png'), LINEUP = join(DIR, 'ref/plate-lineup.png');
@@ -44,15 +45,22 @@ for (const who of ['male', 'female']) {
   const rig = buildRig(who);
   const G = buildWithBase(rig, undefined, { stage });
   G.vw = plateLegsWeights(rig, G);
-  const hide = new Set(G.hides);
+  // (the set's other pieces worn with them, from --neighbours <dir>: their game copies, low<piece>-<who>.json, each
+  // skinned to the body's bones as the game skins it; the body's polygons any of them hides left out)
+  const NB = NEIGHBOURS.map((n) => { const A = JSON.parse(readFileSync(join(NBDIR, `low${n}-${who}.json`), 'utf8')); return { name: n, A, verts: Array.from({ length: A.verts.length / 3 }, (_, i) => A.verts.slice(i * 3, i * 3 + 3)), tris: Array.from({ length: A.tris.length / 4 }, (_, t) => ({ v: A.tris.slice(t * 4, t * 4 + 3), poly: A.tris[t * 4 + 3] })) }; });
+  const hide = new Set([...G.hides, ...NB.flatMap((n) => n.A.hides ?? [])]);
   const body = { ...rig.B, tris: rig.B.tris.filter((t) => !hide.has(t.poly)) };
-  M[who] = { rig, G, hide, body };
+  M[who] = { rig, G, hide, body, NB };
+}
+/** A game copy's vertices in a pose (frames from posed()): each its weights' bones' skinning, as the shader does. */
+function skinAsset(rig, f, N) {
+  return N.verts.map((v, i) => { const w = N.A.weights[i], q = [0, 0, 0]; for (let j = 0; j < w.length; j += 2) { const b = f[w[j]], h = rig.bones[w[j]].head, d = [v[0] - h[0], v[1] - h[1], v[2] - h[2]]; for (let c = 0; c < 3; c++) q[c] += w[j + 1] * (b.S[c * 3] * d[0] + b.S[c * 3 + 1] * d[1] + b.S[c * 3 + 2] * d[2] + b.P[c]); } return q; });
 }
 
 /** The checks in a pose: the plates' triangles crossing the body's (less the hidden), the base layer's, and each other's (pairs of plates). */
 const plateTris = (G) => G.tris.filter((t) => G.polys[t.poly].tag !== 'base');
 const baseTris = (G) => G.tris.filter((t) => G.polys[t.poly].tag === 'base');
-function crossings(who, PB, PG) {
+function crossings(who, PB, PG, PN = null) {
   const { G, body } = M[who], T = plateTris(G), Tb = baseTris(G);
   const withBody = crossPairs(PG, T, PB, body.tris), withBase = crossPairs(PG, T, PG, Tb), self = crossPairs(PG, T);
   const parts = {};
@@ -61,7 +69,9 @@ function crossings(who, PB, PG) {
   for (const [i] of withBase) { const k = `${G.polys[T[i].poly].tag}×base`; parts[k] = (parts[k] ?? 0) + 1; }
   for (const [i, j] of self) { const k = [G.polys[T[i].poly].tag, G.polys[T[j].poly].tag].sort().join('×'); parts[k] = (parts[k] ?? 0) + 1; }
   void name;
-  return { body: withBody.length, base: withBase.length, self: self.length, parts };
+  const nb = {};
+  (PN ?? []).forEach((P, k) => { const N = M[who].NB[k], x = crossPairs(PG, T, P, N.tris); nb[N.name] = x.length; for (const [i, j] of x) { const key = `${G.polys[T[i].poly].tag}×${N.name}:${N.A.polys[N.tris[j].poly][2] ?? N.A.mats[N.A.polys[N.tris[j].poly][1]]}`; parts[key] = (parts[key] ?? 0) + 1; } });
+  return { body: withBody.length, base: withBase.length, self: self.length, ...(PN ? { neighbours: nb } : {}), parts };
 }
 function restChecks(who) {
   const { G } = M[who], e = edgesOf({ polys: G.polys.filter((p) => p.tag !== 'base') });
@@ -109,13 +119,14 @@ async function game(rig) {
 /** Body and leggings in a pose, stood on the floor as ground() stands the body. */
 function dress(who, pose) {
   const { rig, G } = M[who];
-  const f = posed(rig, pose), PB = skin(rig, f), PG = skinGarment(rig, f, G);
+  const f = posed(rig, pose), PB = skin(rig, f), PG = skinGarment(rig, f, G), PN = M[who].NB.map((n) => skinAsset(rig, f, n));
   const so = rig.B.names.map((n, i) => (/^so\d\.[LR]$/.test(n) ? i : -1)).filter((i) => i >= 0);
   const dy = rig.J.floor - Math.min(...so.map((i) => PB[i][1]));
   const sh = (P) => P.map((p) => [p[0], p[1] + dy, p[2]]);
-  return { PB: sh(PB), PG: sh(PG), dy };
+  return { PB: sh(PB), PG: sh(PG), PN: PN.map(sh), dy };
 }
-const scene = (who, d, { edges = false, look = 'plain' } = {}) => [bodyMesh(M[who].rig, d.PB, M[who].hide), garMesh(M[who].rig, M[who].G, d.PG, edges, look)];
+const nbMesh = (who, N, P, look) => ({ who, P, polys: N.A.polys.map((p) => p[0]), tris: N.tris.map((t) => [...t.v, t.poly]), col: N.A.polys.map((p) => { const L = N.A[look] ?? N.A.plain; return L ? lookColour(L[p[1]]) : N.A.colours[p[1]]; }) });
+const scene = (who, d, { edges = false, look = 'plain' } = {}) => [bodyMesh(M[who].rig, d.PB, M[who].hide), garMesh(M[who].rig, M[who].G, d.PG, edges, look), ...(d.PN ?? []).map((P, k) => nbMesh(who, M[who].NB[k], P, look))];
 
 /* ---- the sheet: five views against the reference --------------------------------------------------------------------- */
 // (the sheet turns the figure to show its right side: our yaw the other way)
@@ -201,6 +212,8 @@ async function poseList(who) {
     ...Array.from({ length: 8 }, (_, k) => ({ id: `idle-${k}`, label: `Idle ${k}/8`, pose: g.at(false, k / 8) })),
     ...Array.from({ length: 16 }, (_, k) => ({ id: `walk-${k}`, label: `Walk ${k}/16`, pose: g.at(true, k / 16) })),
     ...Array.from({ length: 12 }, (_, k) => ({ id: `swing-${k}`, label: `Swing ${k}/12`, pose: g.clipAt('swing', k / 12) })),
+    // (the swing's guard, its top and its impact: the clip's rest, its `top` beat and its `impact` event)
+    ...[['guard', 0], ['top', 1.34], ['impact', g.swing.events.find((e) => e.name === 'impact').t]].map(([id, t]) => ({ id, label: `Swing ${id}`, pose: g.clipAt('swing', t / g.swing.length) })),
     ...testPoses(rig),
   ];
 }
@@ -208,12 +221,12 @@ if (only.includes('metrics') || only.includes('poses')) {
   for (const who of ['male', 'female']) {
     const list = await poseList(who);
     metrics[who] = { poses: {} };
-    for (const e of list) { const d = dress(who, e.pose); metrics[who].poses[e.id] = crossings(who, d.PB, d.PG); }
+    for (const e of list) { const d = dress(who, e.pose); metrics[who].poses[e.id] = crossings(who, d.PB, d.PG, NEIGHBOURS.length ? d.PN : null); }
     metrics.rest[who] = restChecks(who);
     for (const clip of ['walk', 'idle', 'swing']) {
       const run = Object.entries(metrics[who].poses).filter(([k]) => k.startsWith(clip + '-')), parts = {};
       for (const [, v] of run) for (const [k, n] of Object.entries(v.parts)) parts[k] = (parts[k] ?? 0) + n;
-      metrics[who][clip] = { body: run.reduce((s, [, v]) => s + v.body, 0), base: run.reduce((s, [, v]) => s + v.base, 0), self: run.reduce((s, [, v]) => s + v.self, 0), parts };
+      metrics[who][clip] = { body: run.reduce((s, [, v]) => s + v.body, 0), base: run.reduce((s, [, v]) => s + v.base, 0), self: run.reduce((s, [, v]) => s + v.self, 0), ...Object.fromEntries(NEIGHBOURS.map((n) => [n, run.reduce((s, [, v]) => s + (v.neighbours?.[n] ?? 0), 0)])), parts };
     }
     console.log(who, 'rest', JSON.stringify(metrics.rest[who]));
     console.log(who, Object.entries(metrics[who].poses).map(([k, v]) => `${k}:${v.body}/${v.base}/${v.self}`).join(' '));
@@ -225,14 +238,14 @@ if (only.includes('metrics') || only.includes('poses')) {
 if (only.includes('poses')) {
   const cells = [], cw = 200, ch = 380, rows = [];
   for (const who of ['male', 'female']) {
-    const all = await poseList(who), pick = ['rest', 'walk-0', 'walk-4', 'walk-8', 'walk-12', 'idle-2', 'swing-2', 'swing-5', 'swing-8', 'swing-10'];
+    const all = await poseList(who), pick = ['rest', 'idle-2', 'idle-5', 'walk-0', 'walk-4', 'walk-8', 'walk-12', 'tpose', 'forward', 'guard', 'top', 'impact', 'stride', 'kneel', 'swing-5'];
     rows.push([who, pick.map((id) => all.find((e) => e.id === id))]);
   }
   rows.forEach(([who, list], r) => list.forEach((e, k) => {
     const d = dress(who, e.pose), m = metrics[who].poses[e.id], top = TOPS[who] + 0.6, bot = M[who].rig.J.floor;
-    for (const [j, yaw] of [[0, 20], [1, -90]]) cells.push({ meshes: scene(who, d), cam: { yaw, pitch: 4, s: ch / (top - bot + 1), c: [0, (top + bot) / 2, 0] }, box: [(k % 5) * cw * 2 + j * cw, 34 + (r * 2 + Math.floor(k / 5)) * ch, cw, ch], label: j ? `${m.body}/${m.base}/${m.self}` : `${who} ${e.label}` });
+    for (const [j, yaw] of [[0, 20], [1, -90]]) cells.push({ meshes: scene(who, d), cam: { yaw, pitch: 4, s: ch / (top - bot + 1), c: [0, (top + bot) / 2, 0] }, box: [(k % 5) * cw * 2 + j * cw, 34 + (r * 3 + Math.floor(k / 5)) * ch, cw, ch], label: j ? `${m.body}/${m.base}/${m.self}` : `${who} ${e.label}` });
   }));
-  await shoot(5 * cw * 2, 34 + 4 * ch, cells, join(out, 'platelegs-poses.png'), { texts: [{ css: 'left:10px;top:6px', html: 'Poses, front-left and side: the plates\' triangles crossing the body\'s / the base layer\'s / each other\'s' }] });
+  await shoot(5 * cw * 2, 34 + 6 * ch, cells, join(out, 'platelegs-poses.png'), { texts: [{ css: 'left:10px;top:6px', html: 'Poses, front-left and side, the game\'s clips (idle, walk, the swing\'s guard, top and impact), arms out and forward, and past them a deep stride and knee up: the plates\' triangles crossing the body\'s / the base layer\'s / each other\'s' }] });
 }
 
 /* ---- the walk: a GIF of both bodies, front, three-quarter, side ----------------------------------------------------- */

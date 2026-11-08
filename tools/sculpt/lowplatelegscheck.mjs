@@ -70,7 +70,7 @@ for (const who of ['male', 'female']) {
       const xb = crossPairs(P, tP, P, tB), xu = crossPairs(P, tP, P, tU), xp = crossPairs(P, tP), x = [xb.length, xu.length, xp.length];
       // (where: each plate against the body's parts, the base layer, the other plates)
       const tag = (i) => G.polys[G.tris[i].poly].tag + (G.verts[G.tris[i].v[0]][0] < 0 ? 'R' : 'L');
-      for (const [i, j] of xb) { const key = `${tag(i)}×${PART[j]}`; c.where[key] = (c.where[key] ?? 0) + 1; }
+      for (const [i, j] of xb) { const key = `${tag(i)}×${PART[j]}`; c.where[key] = (c.where[key] ?? 0) + 1; if (process.env.DEBUG) console.log(kind, k, key, G.polys[G.tris[i].poly].cell, G.tris[i].v.map((v) => G.verts[v].map((x) => x.toFixed(2)).join(',')).join(' ')); }
       for (const [i] of xu) { const key = `${tag(i)}×base`; c.where[key] = (c.where[key] ?? 0) + 1; }
       for (const [i, j] of xp) { const key = [tag(i), tag(j)].sort().join('×'); c.where[key] = (c.where[key] ?? 0) + 1; }
       c.body += x[0]; c.base += x[1]; c.plates += x[2]; c.worst = Math.max(c.worst, x[0] + x[1] + x[2]);

@@ -78,21 +78,20 @@ export const DESIGN = {
   male: {
     sink: 0.06, clear: 0.015, gap: 0.012, t: 0.04, raise: 0.024, trim: 0.1, seam: 5, thigh: [0, 50, 91, 132, 180, 229, 271, 312],
     low: { clear: 0.012, gap: 0.01, t: 0.03, raise: 0.018, trim: 0.085 },
-    band: { z0: -0.06, az: [0, 30, 70, 110, 150, 180], top: [-3.99, -3.97, -3.94, -3.94, -3.97, -3.99], bottom: [-5.45, -4.95, -4.6, -4.62, -4.74, -4.86] },
-    lame: { stops: 'skin', ease: [[0.4, 0.75, 'thigh']], az: [-40, 0, 50, 91, 132, 180, 216], rows: [{ y: tab([[0, -4.85], [91, -4.42], [180, -4.66], [229, -5.4], [271, -5.6], [320, -5.45]]), lvl: 0.4 }, { y: [-6.05, -5.95, -6.0, -6.1], lvl: 1.3 }] },
-    cuisse: { rows: [{ y: tab([[0, -5.75], [91, -5.68], [180, -5.75], [271, -6.3], [320, -6.25]]), lvl: 0 }, { y: -6.62, lvl: 0 }, { y: [-7.3, -7.12, -7.05, -7.05], lvl: 0 }] },
-    knee: { top: -6.66, mid: -7.42, bottom: -8.12, wing: 90, flare: 0.06, lvl: 1, bulge: 0.14, inset: [14, 0.27], ringIn: [18, 0.34], ring: [25, 0.46] },
+    band: { z0: -0.06, az: [0, 30, 70, 110, 150, 180], top: [-3.99, -3.97, -3.94, -3.94, -3.97, -3.99], bottom: [-5.45, -4.95, -4.6, -4.62, -4.74, -4.86], gap: 0.035 },
+    cuisse: { stops: 'skin', ease: [], recess: { az: [20, 125], y: [-6.7, -4.5], by: 0.075 }, rows: [{ y: tab([[0, -4.85], [50, -4.6], [91, -4.42], [180, -4.66], [229, -5.7], [271, -6.3], [320, -5.6]]), lvl: 0.6 }, { y: -6.62, lvl: 0 }, { y: [-7.3, -7.12, -7.05, -7.05], lvl: 0 }] },
+    knee: { top: -6.55, mid: -7.42, bottom: -8.25, wing: 92, flare: 0.1, lvl: 1, bulge: 0.2, inset: [14, 0.27], ringIn: [18, 0.34], ring: [25, 0.46] },
     shinUp: { az: [-94, -50, -8, 8, 50, 94], rows: [{ y: [-7.72, -7.85, -7.85, -7.85], lvl: 0 }, { y: tab([[0, -8.76], [50, -8.56], [94, -8.46], [180, -8.46], [266, -8.46], [310, -8.56]]), lvl: 1 }] },
     shinLow: { az: [-94, -50, -8, 8, 50, 94], rows: [{ y: -8.4, lvl: 0 }, { y: -10.36, lvl: 0.4 }] },
     kneeBack: { az: [118, 149, 180, 211, 242], y: [-6.85, -8.3] },
     calf: { az: [98, 139, 180, 221, 262], segs: [[-7.92, -8.9], [-8.75, -9.6], [-9.45, -10.36]], chevron: 0.3 },
   },
   female: {
-    sink: 0.06, clear: 0.012, gap: 0.01, t: 0.036, raise: 0.022, trim: 0.085, seam: 5, thigh: [0, 38, 88, 143, 180, 218, 275, 325],
+    sink: 0.085, clear: 0.012, gap: 0.01, t: 0.036, raise: 0.022, trim: 0.085, seam: 5, thigh: [0, 38, 88, 143, 180, 218, 275, 325],
     low: { clear: 0.01, gap: 0.008, t: 0.026, raise: 0.016, trim: 0.075 },
     band: { z0: -0.38, az: [0, 30, 70, 110, 150, 180], top: [-3.63, -3.61, -3.58, -3.58, -3.61, -3.64], bottom: [-4.16, -3.98, -3.9, -3.95, -4.06, -4.16], gap: 0.035, ease: [[0.7, 0.2, 'pelvis']] },
     cuisse: { stops: 'skin', ease: [], rows: [{ y: tab([[0, -4.16], [50, -4.04], [88, -3.92], [180, -3.98], [218, -5.0], [275, -5.05], [325, -4.45]]), lvl: 0 }, { y: [-6.45, -6.45, -6.32, -6.35], lvl: 0 }] },
-    knee: { top: -6.02, mid: -6.74, bottom: -7.44, wing: 88, flare: 0.05, lvl: 1, bulge: 0.12, inset: [13, 0.26], ringIn: [17, 0.33], ring: [24, 0.44] },
+    knee: { top: -5.92, mid: -6.74, bottom: -7.56, wing: 90, flare: 0.08, lvl: 1, bulge: 0.17, inset: [13, 0.26], ringIn: [17, 0.33], ring: [24, 0.44] },
     shinUp: { az: [-94, -50, -8, 8, 50, 94], rows: [{ y: [-7.02, -7.15, -7.15, -7.15], lvl: 0 }, { y: tab([[0, -8.12], [50, -7.92], [94, -7.82], [180, -7.82], [266, -7.82], [310, -7.92]]), lvl: 1 }] },
     shinLow: { az: [-94, -50, -8, 8, 50, 94], rows: [{ y: -7.8, lvl: 0 }, { y: -10.5, lvl: 0.4 }] },
     kneeBack: { az: [118, 149, 180, 211, 242], y: [-6.15, -7.6] },
@@ -291,6 +290,9 @@ export function buildPlateLegs(rig, design = DESIGN[rig.who], { stage = 9 } = {}
     rows = rows.filter((r, i) => i === 0 || i === rows.length - 1 || r.y.every((y, k) => y < rows[i - 1].y[k] - 0.04 && y > rows[rows.length - 1].y[k] + 0.04));
     for (let i = 1; i < rows.length; i++) rows[i].y = rows[i].y.map((y, k) => Math.min(y, rows[i - 1].y[k] - 0.04));
     rows = rows.map((r) => ({ y: r.y, off: r.lvl.map((l, k) => offOf(S, l) + (o.ridge ? o.ridge(k) : 0)) }));
+    // (a recess: in a window round the leg and up it, the plate nearer the body by `by`, the base layer sunk under it
+    // leaving it room; where the arm's hand rests on the thigh)
+    if (o.recess) { const W = o.recess; rows.forEach((r) => r.y.forEach((y, k) => { const a = ((az[k] % 360) + 360) % 360; if (a >= W.az[0] && a <= W.az[1] && y >= W.y[0] && y <= W.y[1]) r.off[k] -= W.by; })); }
     // (each face clear of the body by its offset, and of the plates laid under it by the gap and the thickness: sub-rays
     // inside each cell of the grid, the cell's corners out by any shortfall)
     const closed = o.closed ?? false;
@@ -326,7 +328,7 @@ export function buildPlateLegs(rig, design = DESIGN[rig.who], { stage = 9 } = {}
   // ---- the cuisse round the thigh, his lame over its top --------------------------------------------------------------
   // (its seam down the front: the columns either side of it raised, the strip between them an inlay, rune)
   const cAz = [D.seam, ...D.thigh.slice(1), 360 - D.seam], seamK = cAz.length - 1;
-  legPlate('cuisse', 'thigh', D.cuisse.rows, cAz, D, { closed: true, lipTop: false, stops: D.cuisse.stops, ease: D.cuisse.ease, ridge: (k) => (k === 0 || k === seamK ? 0.012 : 0), inset: (i, k) => (k === seamK ? 'rune' : null) });
+  legPlate('cuisse', 'thigh', D.cuisse.rows, cAz, D, { closed: true, lipTop: false, stops: D.cuisse.stops, ease: D.cuisse.ease, recess: D.cuisse.recess, ridge: (k) => (k === 0 || k === seamK ? 0.012 : 0), inset: (i, k) => (k === seamK ? 'rune' : null) });
   // ---- the knee guard ---------------------------------------------------------------------------------------------------
   kneeGuard(G, D, F);
   // (his lame open on the inside: the thighs nearly meet under the crotch)
