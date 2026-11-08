@@ -304,20 +304,6 @@ export function buildHat(rig, design = DESIGN[rig.who]) {
     }
   }
 
-  /* ---- the brim's two seams (the sheet's brim cut in two halves): a stitched bead from the crown's foot to the trim, front and back ---- */
-  for (const az of D.brimSeams ?? [0, 180]) {
-    const k = AZ.indexOf(az); if (k < 0) continue;
-    const kl = (k + N - 1) % N, kr = (k + 1) % N, Pv = (i) => G.verts[i], rows = [], up = F.dirBody([0, 1, 0]);
-    for (let i = 1; i < nT; i++) {
-      const c = Pv(bv[k][i]), along = sub(Pv(bv[k][Math.min(nT - 1, i + 1)]), Pv(bv[k][i - 1])), across = sub(Pv(bv[kr][i]), Pv(bv[kl][i]));
-      let n = unit(cross(across, along)); if (dot(n, up) < 0) n = mul(n, -1);
-      const a = unit(across), w = 0.016;
-      rows.push([add(add(c, mul(a, -w)), mul(n, 0.003)), add(c, mul(n, 0.014)), add(add(c, mul(a, w)), mul(n, 0.003))].map((q) => V(F.toHat(q), 'brim')));
-    }
-    G.tag = 'seam';
-    for (let i = 0; i + 1 < rows.length; i++) { G.poly([rows[i][0], rows[i + 1][0], rows[i + 1][1], rows[i][1]], 'trim', 'brim'); G.poly([rows[i][1], rows[i + 1][1], rows[i + 1][2], rows[i][2]], 'trim', 'brim'); }
-  }
-
   /* ---- the ring on the band: flush on the band's edge strips, on the middle of a flat panel ---- */
   const R0 = D.ring, ringH = bh * R0.at;
   const ringN = dirOf(R0.az), ringUp = [0, 1, 0], ringSide = cross(ringUp, ringN);
