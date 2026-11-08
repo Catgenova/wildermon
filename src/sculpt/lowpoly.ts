@@ -565,7 +565,7 @@ export const hairShown = (pose: FigurePose): boolean => !wearsHood(pose);
  * Whether a piece of the plate set is enchanted (`FigurePose.outfit.enchanted`): its cores and its engraving lit, as the
  * long sword's when it is; plain unless asked for.
  */
-export const enchantedOf = (piece: 'chest' | 'legs' | 'boots' | 'helm' | 'mantle') => (pose: FigurePose): boolean => pose.outfit?.enchanted?.[piece] ?? false;
+export const enchantedOf = (piece: 'chest' | 'legs' | 'boots' | 'helm' | 'mantle' | 'leatherChest' | 'leatherLegs' | 'leatherBoots' | 'leatherShawl' | 'leatherHat') => (pose: FigurePose): boolean => pose.outfit?.enchanted?.[piece] ?? false;
 
 /**
  * The garments a low-poly body can wear, in the order they are laid over it: each its copy for the man and the woman, its
