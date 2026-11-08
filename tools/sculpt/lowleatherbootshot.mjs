@@ -143,20 +143,20 @@ if (only.includes('wire')) await sheet(join(out, `leather-boots-${tag}-wire.png`
 if (only.includes('detail')) {
   const cw = 250, ch = 240, top = 34, cells = [], imgs = [];
   // the sheet's key details: his greave top, plate layer, toe cap, heel
-  const D = [[[877, 108, 142, 106], 'cuff'], [[1037, 108, 142, 106], 'lacing'], [[877, 258, 142, 100], 'toe cap'], [[1037, 258, 142, 100], 'heel / sole']];
+  const D = [[[877, 108, 142, 106], 'cuff'], [[1037, 108, 142, 106], 'lacing'], [[877, 266, 142, 92], 'toe cap'], [[1037, 266, 142, 92], 'heel / sole']];
   ['male', 'female'].forEach((who, r) => {
     const { rig, G } = M[who], d = dress(who, {});
     const L = (i) => G.side[i] === 'L';
     const R = G.rings.L, at = (ring, k) => d.PG[R[ring][k]];
-    const crest = lerpY(at('c1', 2), 0.25), lace = lerpY(at('g1', 0), 0.2), toe = lerpY(at('r5', 0), -0.15), heel = lerpY(at('r4', ANG.indexOf(180)), -0.25);
+    const crest = lerpY(at('c1', 0), 0.45), lace = lerpY(at('g1', 0), 0.35), toe = lerpY(at('r5', 0), -0.15), heel = lerpY(at('r2', ANG.indexOf(180)), 0.3);
     const P = d.PG, PB = d.PB;
     const body = bodyMesh(who, PB, rig.J.knee[1] + 0.5);
     const boots = SHOWN.map((look) => { const b = bootMesh(who, P, look); b.tris = b.tris.filter((t) => L(t[0])); return b; });
     const bodyL = { ...body, tris: body.tris.filter((t) => PB[t[0]][0] > 0) };
-    const views = [[20, -8, crest, 120, 'cuff'], [0, -4, lace, 130, 'lacing'], [-60, -16, toe, 120, 'toe cap'], [150, -6, heel, 120, 'heel / sole']];
+    const views = [[25, -8, crest, 95, 'cuff'], [0, -4, lace, 110, 'lacing'], [-60, -16, toe, 110, 'toe cap'], [140, -6, heel, 105, 'heel / sole']];
     views.forEach(([yaw, pitch, c, s, lab], i) => {
       if (r === 0) imgs.push({ src: SHEET, size: [1536, 1024], crop: D[i][0], box: [i * cw, top, cw, ch] });
-      boots.forEach((boot, j) => cells.push({ meshes: dressed(who, d, bodyL, boot, SHOWN[j], (m) => ({ ...m, tris: m.tris.filter((t) => m.P[t[0]][0] > 0 && m.P[t[0]][1] < rig.J.knee[1] + 0.5) })), cam: { yaw, pitch, s, c: [c[0], c[1] - (i === 0 ? 0.25 : 0), c[2]] }, box: [i * cw, top + (1 + r * NL + j) * ch, cw, ch], label: `${who} ${lab}${NL > 1 ? ` · ${SHOWN[j]}` : ''}` }));
+      boots.forEach((boot, j) => cells.push({ meshes: dressed(who, d, bodyL, boot, SHOWN[j], (m) => ({ ...m, tris: m.tris.filter((t) => m.P[t[0]][0] > 0 && m.P[t[0]][1] < rig.J.knee[1] + 0.5) })), cam: { yaw, pitch, s, c: [c[0], c[1], c[2]] }, box: [i * cw, top + (1 + r * NL + j) * ch, cw, ch], label: `${who} ${lab}${NL > 1 ? ` · ${SHOWN[j]}` : ''}` }));
     });
   });
   function lerpY(p, dy) { return [p[0], p[1] + dy, p[2]]; }

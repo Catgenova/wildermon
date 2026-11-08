@@ -270,7 +270,13 @@ export function buildLeatherBoots(rig, design = DESIGN[rig.who], { under = [], p
       const p = ft.at(q[0], q[1], y), d = unit([p[0] - centre[0], 0, p[2] - centre[2]]);
       return [p[0] - d[0] * inset, y, p[2] - d[2] * inset];
     };
-    put('r4', each((k) => lerp(onFoot(k, D.dome[k], F + D.top[k], D.shrink[k]), onShaft(k, F + D.top[k]), D.mix[k])));
+    // (each column no further in than the wall's top under it less `shrink`: where the leg's reach is short, at her
+    // heel, the shaft's point there would fold in behind the wall)
+    put('r4', each((k) => {
+      const p = lerp(onFoot(k, D.dome[k], F + D.top[k], D.shrink[k]), onShaft(k, F + D.top[k]), D.mix[k]), c = axis(p[1]);
+      const r = dot(sub(p, c), ang[k]), r3 = dot(sub(G.verts[R.r3[k]], c), ang[k]) - D.shrink[k] - 0.02;
+      return r < r3 ? add(p, mul(ang[k], r3 - r)) : p;
+    }));
     // the toe cap's back edge (r5) on its columns: on the foot, `du` back from the outline (the edge between the front
     // and the sides' columns straight across, each at its own height)
     const r4p = (k) => G.verts[R.r4[k]];
