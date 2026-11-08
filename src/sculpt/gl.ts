@@ -32,7 +32,10 @@ export interface DrawOpts {
 /** The screen box a body fits in at zoom one, in figure units, as the 2D figure's `STILL_BOX`. */
 export const BOX = { left: -42, right: 42, top: -66, bottom: 14 };
 const MAX_BONES = 80;
-const MAX_MATS = 32;
+const MAX_MATS = 36;
+/** A low-poly body's hair in a valley (`Material.valley`, its step: the darkest first): its colour times this, however
+ * lit (the numbers; `tools/sculpt/lowhairshot.mjs` reads them from here). */
+export const HAIR_VALLEYS = [0.62, 0.7, 0.78, 0.86];
 /** Terms of the review renders' light (`LowLight.sh`). */
 export const SH_TERMS = 19;
 /** Degrees the whole-body review renders' camera looks down (their fitted cameras: the man's 8, the woman's 7.5). */
@@ -106,6 +109,7 @@ void main() {
   // Lids shut: the eye's parts take the lid's colour, the first material's a shade darker, and shade as skin.
   if (uBlink > 0.5 && (flags & 8) != 0) { base = uMat[0].rgb * 0.94; flags = 2; }
   bool emissive = (flags & 1) != 0, skin = (flags & 2) != 0, metal = (flags & 4) != 0, soft = (flags & 16) != 0, noInk = (flags & 32) != 0, noCrease = (flags & 64) != 0, thinInk = (flags & 128) != 0, ramp = (flags & 256) != 0, shave = (flags & 512) != 0, valley = (flags & 1024) != 0;
+  int step = (flags >> 11) & 3;
   float dl = dot(n, uL);
   vec3 c = base;
   if (uMode > 0.5) {
@@ -120,10 +124,11 @@ void main() {
     if (ramp) {
       // Hair: its colour, a mid tone or a highlight (toward a warm light) by the facet's light over the review skin's
       // (tools/sculpt/lowhairshot.mjs HAIR_RAMP, HAIR_TONES), each lit a little within its step so two facets part; a
-      // facet in a valley a step under the main tone however lit (HAIR_VALLEY).
+      // facet in a valley in its valley's tone however lit (HAIR_VALLEYS, by its step).
       float l = dot(lowLight(lv), vec3(0.3, 0.59, 0.11)) / 0.5382;
       vec3 W = vec3(1.0, 0.784, 0.667);
-      c = valley ? base * 0.62 : (l < 1.15 ? base : (l < 1.4 ? mix(base, W, 0.22) : mix(base, W, 0.45)));
+      float vt[4] = float[4](${HAIR_VALLEYS.map((x) => x.toFixed(3)).join(', ')});
+      c = valley ? base * vt[step] : (l < 1.15 ? base : (l < 1.4 ? mix(base, W, 0.22) : mix(base, W, 0.45)));
       c = min(c * (1.0 + 0.45 * (l - (valley || l < 1.15 ? 0.95 : (l < 1.4 ? 1.275 : 1.5)))), 1.0);
     } else if (shave) {
       // The shaved scalp: the skin's light, its colour 0.65 of the way to the hair's (tools/sculpt/lowhairshot.mjs SHAVE).
@@ -342,7 +347,7 @@ function matsOf(ms: Material[]): Float32Array {
   ms.forEach((m, i) => {
     if (i >= MAX_MATS) return;
     const c = hexOf(m.colour);
-    f.set([c[0], c[1], c[2], (m.emissive ? 1 : 0) + (m.skin ? 2 : 0) + (m.metal ? 4 : 0) + (m.eye ? 8 : 0) + (m.soft ? 16 : 0) + (m.noInk ? 32 : 0) + (m.noCrease ? 64 : 0) + (m.thinInk ? 128 : 0) + (m.ramp ? 256 : 0) + (m.shave ? 512 : 0) + (m.valley ? 1024 : 0)], i * 4);
+    f.set([c[0], c[1], c[2], (m.emissive ? 1 : 0) + (m.skin ? 2 : 0) + (m.metal ? 4 : 0) + (m.eye ? 8 : 0) + (m.soft ? 16 : 0) + (m.noInk ? 32 : 0) + (m.noCrease ? 64 : 0) + (m.thinInk ? 128 : 0) + (m.ramp ? 256 : 0) + (m.shave ? 512 : 0) + (m.valley ? 1024 + (m.valley - 1) * 2048 : 0)], i * 4);
   });
   MATS.set(ms, f);
   return f;

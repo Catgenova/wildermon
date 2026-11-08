@@ -50,9 +50,9 @@ export interface Material {
   thinInk?: boolean;
   /** A low-poly body's hair (`./lowpoly`): three tones of its colour (the main, a mid and a highlight) by how much of the body's light a facet takes. */
   ramp?: boolean;
-  /** With `ramp`, a facet in a valley between two locks: its colour times the valley's share however lit
-   * (`tools/sculpt/lowhairshot.mjs` HAIR_VALLEY), a step under the main tone. */
-  valley?: boolean;
+  /** With `ramp`, a facet in a valley between two locks, its step (1 the darkest to 4): its colour times that step's
+   * share however lit (`./gl` HAIR_VALLEYS), under the main tone. */
+  valley?: number;
   /** A low-poly body's shaved scalp (`./lowpoly`): lit as the skin, its colour 0.65 of the way to the hair's (this material's). */
   shave?: boolean;
   /** No ink inside the silhouette: a mitt's grooves and tips are read by their shading alone. */

@@ -21,15 +21,16 @@ const fit = existsSync(FIT) ? JSON.parse(readFileSync(FIT, 'utf8')) : null;
  */
 function tuftLines() {
   const creases = [
-    // [root, end, tip]: the first and the last the piece's borders (roots all along)
+    // [root, end, tip]: the first and the last the piece's borders (roots all along); the tufts between of uneven widths
+    // (11 to 24 degrees across) and reach
     [[60, -70], [168, -58], 0],
-    [[52, -58], [170, -46], 6],
-    [[44, -44], [165, -34], 14],
-    [[42, -22], [140, -18], 23],
-    [[42, -6], [128, -4], 24],
-    [[42, 10], [126, 10], 24],
-    [[43, 26], [124, 24], 22],
-    [[46, 42], [122, 38], 14],
+    [[52, -59], [170, -47], 7],
+    [[44, -45], [165, -35], 13],
+    [[42, -21], [141, -17], 22],
+    [[42, -10], [130, -8], 25],
+    [[42, 9], [126, 9], 23],
+    [[43, 22], [124, 21], 21],
+    [[46, 42], [122, 38], 15],
     [[58, 64], [112, 58], 0],
   ];
   const lerp = (a, b, f) => [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
@@ -63,23 +64,29 @@ function vLines({ point, arm, rise } = V, lip = 2, tuck = 2) {
 export default {
   // the corners above the roots moved by up to this much (head units, where the lock is 0.2 high; less where lower)
   jitter: 0.006,
-  // the sections, the piece's one edge to its other (up: the share of the hull's thickness): two locks, three locks,
-  // one lock with a ridge down its middle
-  sec2: [[-0.5, 0], [-0.46, 0.8], [-0.22, 1], [0.02, 0.86], [0.27, 1], [0.46, 0.8], [0.5, 0]],
-  sec3: [[-0.5, 0], [-0.47, 0.82], [-0.31, 1], [-0.175, 0.9, 1], [-0.125, 0.9, 1], [0.02, 1], [0.155, 0.9, 1], [0.205, 0.9, 1], [0.33, 1], [0.47, 0.82], [0.5, 0]],
-  sec1: [[-0.5, 0], [-0.3, 0.75], [0, 1], [0.3, 0.75], [0.5, 0]],
+  // the sections, the piece's one edge to its other (up: the share of the hull's thickness; a third value, a groove's
+  // floor and its depth): the top's three locks and the left's, each of uneven widths
+  secTop: [[-0.5, 0], [-0.47, 0.82], [-0.33, 1], [-0.2, 0.88, 0.8], [-0.155, 0.88, 0.8], [0, 0.95], [0.15, 0.91, 0.5], [0.19, 0.91, 0.5], [0.34, 1], [0.47, 0.82], [0.5, 0]],
+  secLeft: [[-0.5, 0], [-0.47, 0.82], [-0.29, 1], [-0.12, 0.9, 0.6], [-0.085, 0.9, 0.6], [0.06, 1], [0.2, 0.88, 0.9], [0.245, 0.88, 0.9], [0.36, 0.97], [0.47, 0.82], [0.5, 0]],
   // the V at the nape (vLines): the other pieces kept above it (each clump's `aboveV`: by so many degrees)
   v: V,
   clumps: [
     // the front and the top: one mass of tufts combed straight back (tools/sculpt/lowhair.mjs massOf), the creases
     // between them below
-    { id: 'front', mass: true, aboveV: 12, sink: 0.015, band: [[0.5, 0]], groove: 0.1, grooveAt: [0, 0, 0, 1, 0.6, 0.3, 0.3, 0.3, 0], strip: { from: 3, to: 7, w: 0.2 }, flush: [0.1, 0.03], fit, lines: tuftLines() },
+    { id: 'front', mass: true, aboveV: 12, sink: 0.015, band: [[0.5, 0]], groove: 0.1, grooveAt: [0, 0, 0, 1, 0.6, 0.3, 0.3, 0.3, 0],
+      // the valleys: per crease, his right to his left, how wide, where its strip runs, how deep, and past it the tufts
+      // closing up
+      strip: { w: [0.16, 0.24, 0.14, 0.22, 0.17, 0.25, 0.15], from: [4, 3, 3, 3, 3, 3, 4], to: [6, 7, 5, 7, 6, 7, 5], depth: [0.7, 0.95, 0.6, 1, 0.75, 0.9, 0.6], merge: 0.4, peak: 'from' },
+      // each tuft's lifted front raised or lowered; the shade under the rolls (the sole's faces, the tip's)
+      lift: [1, 1.04, 0.96, 0.94, 1.07, 0.95, 1.05, 0.97], under: [0.62, 0.3],
+      flush: [0.1, 0.03], fit, lines: tuftLines() },
     // the top: from under the front's back edge, back over the crown
-    { id: 'top', aboveV: 12, sec: 'sec3', n: 5, scale: 0.825, path: [[92, -2, 0.06], [110, 3], [130, 3], [165, 2], [190, 0]], w: [0.8, 0.8, 0.6, 0.32], h: [0.1], ends: [0.15, 0.6], tipUp: [0.2, 0.2] },
+    { id: 'top', aboveV: 12, sec: 'secTop', n: 5, scale: 0.825, path: [[92, -2, 0.06], [110, 3], [130, 3], [165, 2], [190, 0]], w: [0.8, 0.8, 0.6, 0.32], h: [0.1], ends: [0.15, 0.6], tipUp: [0.2, 0.2] },
     // his left: three locks from under the front's left end back down the side to the nape
-    { id: 'left', aboveV: 12, sec: 'sec3', n: 6, scale: 0.825, path: [[66, 40, 0.03], [80, 44, 0.03], [100, 48], [135, 45], [160, 32], [186, 8]], w: [0.5, 0.56, 0.6, 0.58, 0.5, 0.32], h: [0.1], ends: [0.15, 0.6], tipUp: [0, 0.2] },
-    // the back: from the crown down the middle to the point at the nape
-    { id: 'back', mass: true, sink: 0.015, scale: 0.7, least: [0, 0.12, 0.1, 0.08, 0], groove: 0.04, grooveAt: [0, 1, 1, 1, 0], strip: { from: 1, to: 3, w: 0.2 }, ...vLines() },
+    { id: 'left', aboveV: 12, sec: 'secLeft', n: 6, scale: 0.825, path: [[66, 40, 0.03], [80, 44, 0.03], [100, 48], [135, 45], [160, 32], [186, 8]], w: [0.5, 0.56, 0.6, 0.58, 0.5, 0.32], h: [0.1], ends: [0.15, 0.6], tipUp: [0, 0.2] },
+    // the back: three tufts from under the others down to the wide V at the nape (vLines), their valleys darkest at the
+    // lip where the tufts part
+    { id: 'back', mass: true, sink: 0.015, scale: 0.7, least: [0, 0.12, 0.1, 0.08, 0], groove: 0.04, grooveAt: [0, 1, 1, 1, 0], strip: { w: 0.2, from: 1, to: 3, depth: [0.8, 0.65], peak: 'to' }, ...vLines() },
   ],
   // the shaved: the skull's sides above and behind the ears, the back of the skull down to the nape (and the scalp under
   // the clumps, so a chink between two shows the shave, not skin); the temples, in front of the ears, stay bare skin as

@@ -20,8 +20,9 @@
 //           stations.
 //     sec   its cross-section (or the name of one of the style's), [across (-0.5..0.5 of w), up (0..1 of h)] corners, the first and the last on the skin (sunk
 //           SINK into it so the root never shows a gap); the corners' order runs from the head's right to its left.
-//           Two corners side by side marked by a third value (1) are a groove's floor: the faces between them, the
-//           lock's length, its valley (polygon `valley`, drawn a tone darker).
+//           Two corners side by side marked by a third value (the groove's depth, 0..1) are a groove's floor: the faces
+//           between them, the lock's length, its valley (polygon `valley`, a shade: shadeOf), darkest at the lock's
+//           root and fading toward its tip.
 //   jitter: the corners above the roots moved by up to this much (head units, where the roll is 0.2 high; less where it
 //           is lower), each its own way (repeatably), so the rolls break into facets.
 //   buzz:  { lean, drop, ahead }: the side faces forward of the shave buzzed as far as a sideburn's line (buzzOf).
@@ -163,13 +164,14 @@ export function buildHair(rig, style = SWEPT, hull = null) {
     }
     // the faces: each band between two stations, a fan to each tip, outward
     const m = sec.length;
-    // (a face between a groove's two corners is its valley, the whole length of the lock)
-    const vl = (j) => (sec[j][2] && sec[(j + 1) % m][2] ? { valley: true } : {});
-    const quad = (a, b, c, d, j) => polys.push({ v: [a, b, c, d], piece: pieces.length, ...vl(j) });
-    for (let i = 1; i < n - 2; i++) for (let j = 0; j < m; j++) quad(ring[i][j], ring[i][(j + 1) % m], ring[i + 1][(j + 1) % m], ring[i + 1][j], j);
+    // (a face between a groove's two corners is its valley, the whole length of the lock: its depth, fading from the
+    // root (u 0) toward the tip (u 1))
+    const vl = (j, u) => (sec[j][2] && sec[(j + 1) % m][2] ? shadeOf(sec[j][2] * (1 - 0.7 * u)) : {});
+    const quad = (a, b, c, d, j, u) => polys.push({ v: [a, b, c, d], piece: pieces.length, ...vl(j, u) });
+    for (let i = 1; i < n - 2; i++) for (let j = 0; j < m; j++) quad(ring[i][j], ring[i][(j + 1) % m], ring[i + 1][(j + 1) % m], ring[i + 1][j], j, (i - 0.5) / (n - 2));
     for (let j = 0; j < m; j++) {
-      polys.push({ v: [ring[0][0], ring[1][(j + 1) % m], ring[1][j]], piece: pieces.length, ...vl(j) });
-      polys.push({ v: [ring[n - 1][0], ring[n - 2][j], ring[n - 2][(j + 1) % m]], piece: pieces.length, ...vl(j) });
+      polys.push({ v: [ring[0][0], ring[1][(j + 1) % m], ring[1][j]], piece: pieces.length, ...vl(j, 0) });
+      polys.push({ v: [ring[n - 1][0], ring[n - 2][j], ring[n - 2][(j + 1) % m]], piece: pieces.length, ...vl(j, 1) });
     }
     pieces.push({ id: cl.id, polys: [first, polys.length], verts: [base, verts.length] });
   }
@@ -211,20 +213,27 @@ export function massOf(cl, { skull, C, k, verts, polys, pieces, hull, scalp }) {
   const n = cl.lines[0].length, band = cl.band ?? [[0.5, 0]], groove = cl.groove ?? 0.04, laid = [];
   cl.lines.forEach((cr, i) => {
     if (cr.length !== n) throw new Error(`${cl.id}: every line ${n} stations`);
-    laid.push({ dirs: cr, drop: i > 0 && i < cl.lines.length - 1 ? groove : 0, crease: i > 0 && i < cl.lines.length - 1 });
+    const crease = i > 0 && i < cl.lines.length - 1;
+    laid.push({ dirs: cr, drop: crease ? groove : 0, crease, ci: crease ? i - 1 : -1 });
     // (ridges: each tuft's one band row laid out on its own, rather than between its creases)
-    if (i < cl.lines.length - 1) for (const [f, drop] of band) laid.push({ dirs: cl.ridges ? cl.ridges[i] : cr.map((a, j) => [0, 1].map((c) => a[c] + (cl.lines[i + 1][j][c] - a[c]) * f)), drop });
+    if (i < cl.lines.length - 1) for (const [f, drop] of band) laid.push({ dirs: cl.ridges ? cl.ridges[i] : cr.map((a, j) => [0, 1].map((c) => a[c] + (cl.lines[i + 1][j][c] - a[c]) * f)), drop, tuft: i });
   });
-  // the valleys (strip: { from, to, w }): each crease from station `from` to `to` two rows, each `w` of the way toward
-  // the ridge beside it at the crease's own depth, the strip between them its valley; before and after, one row (the
-  // two share their corners)
-  const st = cl.strip, split = (j) => !!st && j >= st.from && j <= st.to, rows = [];
+  // the valleys (strip: { from, to, w, depth, merge, peak }, each but peak a number or one per crease between two tufts):
+  // each crease from station `from` to `to` two rows, each `w` of the way toward the ridge beside it at the crease's
+  // own depth, the strip between them its valley; before and after, one row (the two share their corners). The crease
+  // `depth` deep (of the groove; its shade the same share), past `to` `merge` of that (the two tufts closing up); the
+  // strip darkest at its `peak` end ('from' or 'to'), fading toward the other
+  const st = cl.strip, per = (x, c) => (Array.isArray(x) ? x[c] : x ?? 1);
+  const from = (c) => per(st.from, c), to = (c) => per(st.to, c), depth = (c) => (st ? per(st.depth, c) : 1);
+  const split = (j, c) => !!st && c >= 0 && j >= from(c) && j <= to(c), rows = [];
   laid.forEach((row, i) => {
     if (!st || !row.crease) { rows.push({ ...row, src: i }); return; }
     for (const [side, nb] of [[0, laid[i - 1]], [1, laid[i + 1]]]) {
-      rows.push({ ...row, src: i, side, dirs: row.dirs.map((a, j) => (split(j) ? [0, 1].map((c) => a[c] + (nb.dirs[j][c] - a[c]) * st.w) : a)) });
+      rows.push({ ...row, src: i, side, dirs: row.dirs.map((a, j) => (split(j, row.ci) ? [0, 1].map((c) => a[c] + (nb.dirs[j][c] - a[c]) * per(st.w, row.ci)) : a)) });
     }
   });
+  // the crease's drop at a station: its depth, less past its strip
+  const dropOf = (row, j) => row.drop * (row.crease ? depth(row.ci) * (st && j > to(row.ci) ? st.merge ?? 1 : 1) : 1);
   const R = rows.length, first = polys.length, base = verts.length, rays = [];
   // the groove's share at each station (grooveAt: deep at the tips' notches, shallow over the top), 1 without
   const gAt = (j) => (cl.grooveAt ? cl.grooveAt[j] : 1);
@@ -237,11 +246,13 @@ export function massOf(cl, { skull, C, k, verts, polys, pieces, hull, scalp }) {
     let t;
     if (border) t = -(cl.sink ?? SINK);
     else if ((j === 1 || j === 2) && cl.flush) t = cl.flush[j - 1];
-    else if (fit) t = fit.t[row.src][j];
-    else t = Math.max(MIN_H, Math.max(cl.least ? cl.least[j] : 0, hull ? hull.thick.at(o, u) * (cl.scale ?? 1) : 0.12) - row.drop * gAt(j));
-    rays.push({ i, j, d, r0: h.t, border, drop: row.drop * gAt(j), role: j === 1 ? 'sole' : j === 2 ? 'tip' : '' });
+    else if (fit) t = fit.t[row.src][j] + (row.drop - dropOf(row, j)) * gAt(j);
+    else t = Math.max(MIN_H, Math.max(cl.least ? cl.least[j] : 0, hull ? hull.thick.at(o, u) * (cl.scale ?? 1) : 0.12) - dropOf(row, j) * gAt(j));
+    // each tuft's lifted front (lift: one per tuft) raised or lowered by its share, half that a station behind
+    if (cl.lift && row.tuft !== undefined && !border && (j === 3 || j === 4)) t *= 1 + (cl.lift[row.tuft] - 1) * (j === 3 ? 1 : 0.5);
+    rays.push({ i, j, d, r0: h.t, border, drop: dropOf(row, j) * gAt(j), role: j === 1 ? 'sole' : j === 2 ? 'tip' : '' });
     // (a crease's second row shares the first's corners where it is not split)
-    if (row.side === 1 && !split(j)) return ids[i - 1][j];
+    if (row.side === 1 && !split(j, row.ci)) return ids[i - 1][j];
     return verts.push(add(C, mul(d, h.t + t * k))) - 1;
   })));
   // the tuft's underside clear of the face on any head: where a root's quads to the rows beside it (either way split)
@@ -263,9 +274,16 @@ export function massOf(cl, { skull, C, k, verts, polys, pieces, hull, scalp }) {
   // (a face with corners shared, where a crease's two rows meet, a triangle or none)
   const face = (v, extra) => { v = v.filter((a, m) => a !== v[(m + 1) % v.length]); if (v.length >= 3) polys.push({ v, piece: pieces.length, ...extra }); };
   for (let i = 0; i + 1 < R; i++) for (let j = 0; j + 1 < n; j++) {
-    // a valley: between a crease's two rows, from where they part (not the front end) to the back
-    const valley = rows[i].side === 0 && rows[i + 1].side === 1 && split(j) && j >= st.from;
-    face([ids[i][j], ids[i][j + 1], ids[i + 1][j + 1], ids[i + 1][j]], valley ? { valley: true } : {});
+    // a valley: between a crease's two rows, from where they part (not the front end) to the back, its shade the
+    // crease's depth fading from its peak end; under the lifted fronts (under: per station, the faces from the sole and
+    // from the tip) the occlusion's shade
+    const c = rows[i].ci;
+    let shade = cl.under && j >= 1 && j <= cl.under.length ? cl.under[j - 1] : 0;
+    if (rows[i].side === 0 && rows[i + 1].side === 1 && split(j, c) && j >= from(c)) {
+      const f = (j - from(c)) / Math.max(1, to(c) - from(c));
+      shade = depth(c) * (1 - 0.75 * (st.peak === 'to' ? 1 - f : f));
+    }
+    face([ids[i][j], ids[i][j + 1], ids[i + 1][j + 1], ids[i + 1][j]], shadeOf(shade));
   }
   // the border, once round (the first row front to back, the back end across, the last row back to front, the front
   // end across), fanned to the centre
@@ -273,6 +291,10 @@ export function massOf(cl, { skull, C, k, verts, polys, pieces, hull, scalp }) {
   ring.forEach((a, m) => polys.push({ v: [centre, ring[(m + 1) % ring.length], a], piece: pieces.length }));
   pieces.push({ id: cl.id, polys: [first, polys.length], verts: [base, verts.length], mass: { ids, rays, rows: R, n, src: rows.map((r) => r.src) } });
 }
+
+/** A face's shade (0 none .. 1 the darkest) as its valley tone's step: 1 the darkest (HAIR_VALLEYS in src/sculpt/gl.ts)
+ * to 4 the lightest, none under a fifth. */
+export const shadeOf = (s) => (s >= 0.85 ? { valley: 1 } : s >= 0.6 ? { valley: 2 } : s >= 0.38 ? { valley: 3 } : s >= 0.2 ? { valley: 4 } : {});
 
 /**
  * Every piece with `aboveV` kept above the style's V at the nape (style.v: { point, arm, rise }, the V's lower edge at
@@ -442,8 +464,9 @@ export function gameHair(rig, hair) {
   return {
     verts: hair.verts.flat().map(r5),
     polys: hair.polys.map((p) => p.v),
-    // each polygon's material: 4 the hair, 5 the hair in a valley (a tone darker), 3 the buzz (the shave's tone)
-    mat: hair.polys.map((p) => (p.buzz ? 3 : p.valley ? 5 : 4)),
+    // each polygon's material: 4 the hair, 5 to 8 the hair in a valley (its step, the darkest first), 3 the buzz (the
+    // shave's tone)
+    mat: hair.polys.map((p) => (p.buzz ? 3 : p.valley ? 4 + p.valley : 4)),
     tris: hair.tris.flat(),
     weights: hair.weights.map((l) => l.flatMap(([bn, w]) => [rig.at.get(bn), +w.toFixed(4)])),
     shave: hair.shave,

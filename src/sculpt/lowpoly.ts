@@ -37,7 +37,7 @@ interface Asset {
 }
 
 /** A hairstyle on one body (`tools/sculpt/lowhair.mjs` gameHair): its vertices, polygons and triangles (corners, polygon),
- * each polygon's material (4 the hair, 5 the hair in a valley, 3 the buzzed sides' patches), each vertex's (bone, weight) pairs, and the body's
+ * each polygon's material (4 the hair, 5 to 8 the hair in a valley by its step, 3 the buzzed sides' patches), each vertex's (bone, weight) pairs, and the body's
  * polygons drawn shaved. */
 interface HairAsset { verts: number[]; polys: number[][]; mat: number[]; tris: number[]; weights: number[][]; shave: number[] }
 const HAIRS = HAIR_ASSET as unknown as Record<'male' | 'female', Record<string, HairAsset>>;
@@ -206,7 +206,7 @@ function lowBody(A: Asset, P: Proportions, share: number, hairs: Record<string, 
   /**
    * The body laid out for the GPU, with the hairstyle's hair if it has one: every polygon its own corners, each with the
    * polygon's normal, so it is drawn flat. The hair's vertices follow the body's; its polygons take the hair's material
-   * (`M.hairCut`, three tones; in a valley `M.hairValley`, a step darker), the body's shaved polygons the scalp's (`M.hairUnder`).
+   * (`M.hairCut`, three tones; in a valley `M.hairValley` to `M.hairValley4`, its valley's step), the body's shaved polygons the scalp's (`M.hairUnder`).
    */
   function lowBaked(style: string): Baked {
     const hair = hairs[style], key = hair ? style : '';
@@ -222,7 +222,7 @@ function lowBody(A: Asset, P: Proportions, share: number, hairs: Record<string, 
     const allWeights = hair ? A.weights.concat(hair.weights) : A.weights;
     const allTris = hair ? A.tris.concat(hair.tris.map((x, k) => (k % 4 === 3 ? x + nPolys : x + nBody))) : A.tris;
     const at = (i: number): V => [allVerts[i * 3], allVerts[i * 3 + 1], allVerts[i * 3 + 2]];
-    const MATS = [M.skin, M.hair, M.pupil, M.hairUnder, M.hairCut, M.hairValley];
+    const MATS = [M.skin, M.hair, M.pupil, M.hairUnder, M.hairCut, M.hairValley, M.hairValley2, M.hairValley3, M.hairValley4];
     const corner = new Map<string, number>();
     const verts: number[] = [], tris: number[] = [], faceSkin: number[] = [];
     // Each polygon's weights, its corners' summed, the heaviest four kept: one turn for the face's normal at every corner.
@@ -335,7 +335,7 @@ export function lowScene(pose: FigurePose): SculptDraw {
   // darker, in its valleys), its shave the skin toward that colour
   const hair = materials[M.hair].colour;
   materials[M.hairCut] = { colour: hair, ramp: true, noCrease: true };
-  materials[M.hairValley] = { colour: hair, ramp: true, valley: true, noCrease: true };
+  [M.hairValley, M.hairValley2, M.hairValley3, M.hairValley4].forEach((m, i) => { materials[m] = { colour: hair, ramp: true, valley: i + 1, noCrease: true }; });
   materials[M.hairUnder] = { colour: hair, shave: true };
   return { baked: body.baked(look.hair), bones: body.bones(pose), materials, view: viewOf(facing), blink: 0, low };
 }
