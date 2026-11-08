@@ -253,13 +253,14 @@ export function transferWeights(rig, G, { map = (n) => n, smooth = 2, keep = nul
  * Weights set per vertex, refitted to the game's clips (src/sculpt/anim: the idle and the walk; found by
  * tools/sculpt/lowrefit.mjs): `table` { key: [[bone, weight], ...] } for the body's left side, vertexOf(key, false) its
  * vertex; vertexOf(key, true) the mirror vertex, which takes the same weights with each bone's side swapped (a vertex on
- * the middle line is its own mirror and keeps them as given). Weights as written, normalised.
+ * the middle line is its own mirror and keeps them as given). At most four bones a vertex; weights normalised.
  */
 export function applyRefit(rig, vw, table, vertexOf) {
   const swap = (n) => n.replace(/_(l|r)$/, (_, c) => (c === 'l' ? '_r' : '_l'));
   for (const [key, list] of Object.entries(table ?? {})) {
     const s = list.reduce((a, [, w]) => a + w, 0), i = vertexOf(key, false), m = vertexOf(key, true);
     if (i === undefined) throw new Error(`refit: no vertex ${key}`);
+    if (list.length > 4 || list.some(([n]) => rig.at.get(n) === undefined)) throw new Error(`refit: ${key} needs at most four of the rig's bones`);
     vw[i] = list.map(([n, w]) => [rig.at.get(n), w / s]);
     if (m !== undefined && m !== i) vw[m] = list.map(([n, w]) => [rig.at.get(swap(n)), w / s]);
   }
