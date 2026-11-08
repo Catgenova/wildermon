@@ -46,6 +46,8 @@ import MALE_BOOTS from './assets/lowboots-male.json';
 import FEMALE_BOOTS from './assets/lowboots-female.json';
 import MALE_PLATE_BOOTS from './assets/lowplateboots-male.json';
 import FEMALE_PLATE_BOOTS from './assets/lowplateboots-female.json';
+import MALE_LEATHER_BOOTS from './assets/lowleatherboots-male.json';
+import FEMALE_LEATHER_BOOTS from './assets/lowleatherboots-female.json';
 import MALE_TUNIC from './assets/lowtunic-male.json';
 import FEMALE_TUNIC from './assets/lowtunic-female.json';
 import MALE_HOOD from './assets/lowhood-male.json';
@@ -567,8 +569,10 @@ const wearsShawl = (pose: FigurePose): boolean => pose.outfit?.shawl ?? true;
 const wearsTrousers = (pose: FigurePose): boolean => pose.outfit?.trousers ?? true;
 /** Whether a figure wears the plate set's boots (`tools/sculpt/garments/plateboots.mjs`; over the leggings, the body stood on their soles): off unless asked for. */
 const wearsPlateBoots = (pose: FigurePose): boolean => pose.outfit?.plateBoots ?? false;
-/** Whether a figure wears the boots (the body stands on their soles while it does): not under the plate boots. */
-const wearsBoots = (pose: FigurePose): boolean => (pose.outfit?.boots ?? true) && !wearsPlateBoots(pose);
+/** Whether a figure wears the boots (the body stands on their soles while it does): not under the plate or leather boots. */
+/** Whether a figure wears the leather set's boots (`tools/sculpt/garments/leatherboots.mjs`; the body stood on their soles): off unless asked for. */
+const wearsLeatherBoots = (pose: FigurePose): boolean => pose.outfit?.leatherBoots ?? false;
+const wearsBoots = (pose: FigurePose): boolean => (pose.outfit?.boots ?? true) && !wearsPlateBoots(pose) && !wearsLeatherBoots(pose);
 /** Whether a figure wears the tunic (under the shawl, over the trousers). */
 const wearsTunic = (pose: FigurePose): boolean => pose.outfit?.tunic ?? true;
 /** Whether a figure has the hood up: down unless asked for, and only with the shawl (it rises out of the shawl's cowl). */
@@ -609,14 +613,10 @@ const GARMENTS: ReadonlyArray<{ man: GarmentAsset; woman: GarmentAsset; wears: (
   { man: MALE_PLATE_LEGS as unknown as GarmentAsset, woman: FEMALE_PLATE_LEGS as unknown as GarmentAsset, wears: (p) => p.outfit?.plateLegs ?? false, enchanted: enchantedOf('legs') },
   { man: MALE_PLATE_BOOTS as unknown as GarmentAsset, woman: FEMALE_PLATE_BOOTS as unknown as GarmentAsset, wears: wearsPlateBoots, enchanted: enchantedOf('boots'), drops: (pose) => pose.outfit?.plateLegs ?? false },
   { man: MALE_PLATE_CHEST as unknown as GarmentAsset, woman: FEMALE_PLATE_CHEST as unknown as GarmentAsset, wears: wearsPlateChest, enchanted: enchantedOf('chest') },
-  { man: MALE_SHAWL as unknown as GarmentAsset, woman: FEMALE_SHAWL as unknown as GarmentAsset, wears: wearsShawl },
-  { man: MALE_TROUSERS as unknown as GarmentAsset, woman: FEMALE_TROUSERS as unknown as GarmentAsset, wears: wearsTrousers },
-  { man: MALE_BOOTS as unknown as GarmentAsset, woman: FEMALE_BOOTS as unknown as GarmentAsset, wears: wearsBoots },
-  { man: MALE_TUNIC as unknown as GarmentAsset, woman: FEMALE_TUNIC as unknown as GarmentAsset, wears: wearsTunic },
-  { man: MALE_HOOD as unknown as GarmentAsset, woman: FEMALE_HOOD as unknown as GarmentAsset, wears: wearsHood },
   // the plate set's fur mantle (`assets/lowmantle-<who>.json` by `tools/sculpt/garments/mantle.mjs`): off unless asked
   // for; enchanted, its clasps' cores glow
   { man: MALE_MANTLE as unknown as GarmentAsset, woman: FEMALE_MANTLE as unknown as GarmentAsset, wears: (p) => p.outfit?.plateMantle ?? false, enchanted: enchantedOf('mantle') },
+  { man: MALE_LEATHER_BOOTS as unknown as GarmentAsset, woman: FEMALE_LEATHER_BOOTS as unknown as GarmentAsset, wears: wearsLeatherBoots, enchanted: enchantedOf('leatherBoots') },
 ];
 
 const BODIES = {
