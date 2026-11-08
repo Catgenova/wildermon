@@ -6,6 +6,9 @@
 //     mantle-sheet<tag>.png: the sheet's five worn views (front, three-quarter, side, back, rear three-quarter) of each
 //       body beside the model's at the sheet's framing, and the shoulders close up below;
 //     mantle-wire<tag>.png: the close-ups with every polygon's outline, the triangle counts by part;
+//     mantle-layers<tag>.png: each layer alone (main, mid2, mid1, the collar with the ring and the clasps) from the back
+//       and the side, then stacked, beside the sheet's back and side views;
+//     mantle-looks<tag>.png: plain and enchanted side by side (the clasps' cores), front and three-quarter, both bodies;
 //     mantle-poses<tag>.png: rest, arms out, forward and overhead, the game's walk and idle, each with the mantle's
 //       triangles crossing the body's and its own;
 //     mantle-metrics.json: the checks at rest and in every pose, each body.
@@ -15,8 +18,8 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { buildRig, posed, skin, fromGame, gameRig, armsOut, axisAngle, mm, tr } from './lowrig.mjs';
 import { skinGarment, checks, crossPairs } from './lowgarment.mjs';
-import { buildMantle, mantleWeights, MATS, GLOW, DESIGN } from './garments/mantle.mjs';
-import { shoot, closeBrowser } from './lowgarmentshot.mjs';
+import { buildMantle, mantleWeights, MATS, LOOKS as MANTLE_LOOKS, DESIGN } from './garments/mantle.mjs';
+import { shoot, closeBrowser, lookColour } from './lowgarmentshot.mjs';
 
 const args = process.argv.slice(2);
 const opt = (n, f) => { const i = args.indexOf(`--${n}`); return i < 0 ? f : args[i + 1]; };
@@ -39,9 +42,11 @@ for (const who of ['male', 'female']) {
   M[who] = { rig, G, tunic };
 }
 // (--plate: the torso and the arms in the plate set's plate colour, to see the fur beside it)
-const PLATE = [0.82, 0.65, 0.54], plated = new Set(['torso', 'joint', 'arm', 'pelvis']);
+const PLATE = [0.7, 0.58, 0.52], plated = new Set(['torso', 'joint', 'arm', 'pelvis']);
 const bodyMesh = (rig, P, hidden = new Set()) => ({ who: rig.who, P, polys: rig.B.polys.map((p) => p.nv ?? p.v), tris: rig.B.tris.filter((t) => !hidden.has(t.poly)).map((t) => [...t.v, t.poly]), col: rig.B.polys.map((p) => (p.mat === 'skin' ? (flag('plate') && plated.has(rig.B.part[p.v[0]]) ? PLATE : SKIN) : p.mat === 'pupil' ? [0.08, 0.06, 0.06] : [0.22, 0.15, 0.13])) });
-const garMesh = (rig, G, P, mats, edges = false) => ({ who: rig.who, P, polys: G.polys.map((p) => p.v), tris: G.tris.map((t) => [...t.v, t.poly]), col: G.polys.map((p) => (GLOW.includes(p.mat) ? mats[p.mat].map((x) => x + 2) : mats[p.mat])), edges, edgec: [0.25, 0.16, 0.12] });
+// (the mantle in a look, plain or enchanted: its materials' colours, the unlit ones as lowgarmentshot.mjs draws them)
+const colourIn = (mats, look) => (n) => { const m = mats === MATS ? MANTLE_LOOKS[look]?.[n] : null; return m ? lookColour(m) : mats[n]; };
+const garMesh = (rig, G, P, mats, edges = false, parts = null, look = 'plain') => ({ who: rig.who, P, polys: G.polys.map((p) => p.v), tris: G.tris.filter((t) => !parts || parts.includes(G.polys[t.poly].part)).map((t) => [...t.v, t.poly]), col: G.polys.map((p) => colourIn(mats, look)(p.mat)), edges, edgec: [0.25, 0.16, 0.12] });
 
 /* ---- poses ---------------------------------------------------------------------------------------------------------- */
 function testPoses(rig) {
@@ -72,7 +77,7 @@ const scene = (who, d, o = {}) => {
   const { rig, G, tunic } = M[who];
   const m = [bodyMesh(rig, d.PB, tunic ? new Set(tunic.hides.tunic) : new Set())];
   if (tunic) m.push(garMesh(rig, tunic, d.PT, { fabric: [0.72, 0.62, 0.56], trim: [0.603, 0.421, 0.294], inner: [0.51, 0.356, 0.268], pattern: [0.72, 0.62, 0.56] }));
-  m.push(garMesh(rig, G, d.PG, MATS, o.edges));
+  m.push(garMesh(rig, G, d.PG, MATS, o.edges, null, o.look ?? 'plain'));
   return m;
 };
 function measure(who, d) {
@@ -109,6 +114,34 @@ async function sheet(file, edges) {
 }
 if (only.includes('sheet')) await sheet(join(out, `mantle-sheet${tag}.png`), false);
 if (only.includes('wire')) await sheet(join(out, `mantle-wire${tag}.png`), true);
+
+/* ---- the layers apart: each alone, back and side, and stacked, beside the sheet's back and side ------------------------ */
+if (only.includes('layers')) {
+  const cw = 168, ch = 250, top = 34, cells = [], imgs = [], texts = [];
+  const LAYERS = [['main', ['main']], ['mid2', ['mid2']], ['mid1', ['mid1']], ['collar, ring, clasps', ['collar', 'ring', 'clasp_l', 'clasp_r']], ['stacked', null]];
+  ['male', 'female'].forEach((who, r) => {
+    const { rig, G } = M[who], d = dress(who, {}), sc = who === 'male' ? 1 : 0.85, y = top + r * (ch + 20);
+    imgs.push({ src: SHEET, size: [1536, 1024], crop: CROPS[who][3], box: [0, y, cw, ch] }, { src: SHEET, size: [1536, 1024], crop: CROPS[who][2], box: [cw, y, cw, ch] });
+    LAYERS.forEach(([lab, parts], i) => [[180, 'back'], [-90, 'side']].forEach(([yaw, v], j) => {
+      cells.push({ meshes: [bodyMesh(rig, d.PB), garMesh(rig, G, d.PG, MATS, false, parts)], cam: { yaw, pitch: 0, s: 30 / sc, c: [0, -2.2, 0] }, box: [(2 + 2 * i + j) * cw, y, cw, ch], label: `${lab} ${v}` });
+    }));
+    texts.push({ cls: 'lab', css: `left:6px;top:${y + ch + 1}px`, html: `${who}: the sheet's back and side` });
+  });
+  texts.push({ css: 'left:10px;top:6px', html: `The fur mantle's layers apart ${tag}: each alone from the back and the side, then stacked, beside the sheet's` });
+  await shoot(12 * cw, top + 2 * (ch + 20), cells, join(out, `mantle-layers${tag}.png`), { texts, imgs });
+}
+
+/* ---- plain and enchanted: the clasps close up, both bodies --------------------------------------------------------------- */
+if (only.includes('looks')) {
+  const cw = 240, ch = 230, top = 34, cells = [];
+  ['male', 'female'].forEach((who, r) => {
+    const d = dress(who, {}), sc = who === 'male' ? 1 : 0.85;
+    [[0, 'front'], [-40, 'three-quarter']].forEach(([yaw, v], j) => ['plain', 'enchanted'].forEach((look, i) => {
+      cells.push({ meshes: scene(who, d, { look }), cam: { yaw, pitch: 6, s: 64 / sc, c: [0, -1.0, 0] }, box: [(2 * j + i) * cw, top + r * ch, cw, ch], label: `${who} ${v}, ${look}` });
+    }));
+  });
+  await shoot(4 * cw, top + 2 * ch, cells, join(out, `mantle-looks${tag}.png`), { texts: [{ css: 'left:10px;top:6px', html: `The fur mantle plain and enchanted ${tag}: the clasps' cores a gem, then glowing` }] });
+}
 
 /* ---- poses ---------------------------------------------------------------------------------------------------------- */
 if (only.includes('poses')) {

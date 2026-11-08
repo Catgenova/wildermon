@@ -1,6 +1,6 @@
 // The plate armour set's fur mantle (the sheet: a shoulder mantle of feathered fur, worn over the plate chest piece's
 // high collar and pauldrons): a neck base ring with a dark lining, and over it tiers of faceted pointed tufts laid one
-// over another like feathers, the front open between two round gold clasps with glowing centres. Shoulders and the upper
+// over another, the front open between two round gold clasps with gem centres (glowing when enchanted). Shoulders and the upper
 // chest; no hanging cloak. One design for both bodies, scaled to the body (DESIGN, per body), skinned to its rig's
 // clavicles, spine_03 and upper arms (no bones of its own).
 //
@@ -14,63 +14,72 @@
 // The shape, round a vertical axis through the neck (azimuth 0 the front, 90 the body's left):
 //   the ring: the neck base, a band round the neck's foot (its inside the dark lining, its top the gold rim), higher
 //   behind than in front;
-//   the tiers: each a ring of tufts over an arc of azimuths (the front left open), each tuft a faceted point: its root
-//   row (tucked under the tier over it), a ridge down its middle standing off the tier, its two lower corners and its
-//   tip; between two tufts a narrow groove from the root to the corners in the valley's darker fur. Each tier is one
-//   closed shell (its underside the tier's surface, its outside the tufts). The down tiers lie along the body's line
-//   from the ring (lowgarment.mjs drape over the body, or what is worn under the mantle, grown by OUT), each over the
-//   ones under it (its underside off their outside by `gap`): `main` the largest and lowest, `mid2`, `mid1` from the
-//   ring; the `collar` tier rises from the ring, its tufts up and leaning out round the neck.
-//   the clasps: two discs on the front ends of the tiers, a gold rim round a glowing centre.
+//   the layers: three pelts of thick fur, each its own outline, laid one over another down the body's line from the ring
+//   (lowgarment.mjs drape over the body, or what is worn under the mantle, grown by OUT; each layer's underside off the
+//   outside of the ones under it by `gap`): `main` the lowest, far down the back and over the upper arms, a deep V
+//   behind; `mid2` about two thirds of it, a rounder hem; `mid1` from the ring, down to the shoulder blades and just
+//   over the shoulders, the furthest round the front; and the `collar`, rising from the ring round the neck, leaning
+//   out. Each layer is a ring of fur clumps over an arc of azimuths (the front left open), each clump a thick blunt
+//   point: its root row (thin, tucked under the layer over it), a ridge down its middle, its hem (two corners and a blunt
+//   tip) with its thickness showing as a darker edge, its underside; between two clumps a groove of darker fur from the
+//   root to the hem. Each layer is one closed shell.
+//   the clasps: two discs on the top layer's front ends, a gold rim round a gem centre (core; glowing when enchanted).
 // Fitting room for the plate chest piece (its high collar and pauldrons) while it is not here to fit over: the body's
 // shoulders grown by `room.pauldron` round the shoulder joint, a stand-up collar `room.collar` off the neck's foot.
-import { samplesOf, envelope, drape, reachAt, atRY, dirOf, meshOf, orient, trisOf, transferWeights, sub, add, mul, unit, cross, dot, lerp } from '../lowgarment.mjs';
+import { samplesOf, envelope, drape, reachAt, atRY, dirOf, meshOf, orient, trisOf, transferWeights, crossPairs, sub, add, mul, unit, cross, dot, lerp } from '../lowgarment.mjs';
 
-/** The mantle's colours: the fur's cream, its underside a shade darker, the valley between tufts darker again, the neck's lining (the set's dark under-layer), gold, the glowing cores. */
+/** The mantle's colours: the fur's cream, its underside a shade darker, the groove between clumps darker again, the neck's lining (the set's dark under-layer), gold, the clasps' gem cores (plain). */
 export const MATS = {
   fur: [0.92, 0.74, 0.62],
   fur_under: [0.77, 0.59, 0.5],
   fur_valley: [0.6, 0.43, 0.37],
   under: [0.29, 0.22, 0.2],
   gold: [0.96, 0.74, 0.4],
-  glow: [1.0, 0.906, 0.651],
+  core: [0.86, 0.62, 0.3],
 };
-/** The materials the game draws emissive (the plate set's convention: any garment material named 'glow'). */
-export const GLOW = ['glow'];
+/**
+ * The two looks (the plate set's: tools/sculpt/lowgarment.mjs garmentAsset `looks`): plain, every material lit in its
+ * own colour; enchanted, the clasps' cores unlit and glowing. The fur never glows.
+ */
+export const LOOKS = { plain: {}, enchanted: { core: { c: [1.0, 0.906, 0.651], kind: 1 } } };
 
 /**
  * The design, in the man's units; `scale` takes it to a body (lengths along the body, the tufts' size; the shape round
  * the body is the body's own).
  *   z0: the axis; OUT: the fur's underside off the body (or what is under it); gap: each tier's underside off the
- *   outside of the tiers under it;
+ *   outside of the tiers under it; snug: the least share of that stand-off a layer is tried at (it takes the least that
+ *   clears what is under it);
  *   room: fitting room for the chest piece: the shoulders grown by `pauldron` within `reach` of the shoulder joint
  *   (`at`: the joint's point inside the shoulder, off the upper arm's head), the neck's foot by `collar` up to `collarH`;
  *   ring: the neck base: `in` off the neck (or the room's collar), its thickness `t`, its top over the neck's foot
  *   [front, side, back], its foot under it `drop`, `cols` columns round;
- *   cover: how far the fur reaches along the body from the ring, by degrees from the front ([deg, length]);
- *   tiers: each { name, n tufts, from (degrees from the front where it starts, each side), fr: its root, its valley
- *   corners and its tips as shares of cover, thick, h (the ridge off the tier), flare (the tips out) };
- *   collar: the rising tier: n, from, len ([deg, length]), lean (degrees out from upright), thick, h, flare, foot (its
- *   root under the ring's top);
- *   clasp: on the tier `on`, at `at` degrees from the front and `fr` of its length, radius r, thickness t, boss (the
+ *   depth: how far down the body's line the layers may reach; lean: below the shoulder's corner the line leans out by
+ *   this per unit of drop [front, side, back]; raise: the layers' line starts this over the ring's top [front, side, back];
+ *   tiers (lowest first): each { name, n clumps, from (degrees from the front where it starts, each side), hem
+ *   ([deg from the front, length along the body's line] of the clumps' corners), root (its clumps' root, a share of the
+ *   hem of the layer over it; the top layer's at the ring), ridge (where the ridge stands, a share from the root to the
+ *   hem), tip (the clumps' blunt tips past the hem), endW (the two clumps at the front ends, a share of the others' width), thick (at the root), h (the ridge off it), edge (the hem's
+ *   thickness), flare (the hem out off the layer under it) };
+ *   collar: the rising layer: n, from, len ([deg, length]), lean (degrees out from upright [front, side, back]), hem (a
+ *   share of len), thick, h, edge, flare, foot (its root under the ring's top);
+ *   clasp: on the layer `on`, at `at` degrees from the front and `s` along it, radius r, thickness t, boss (the
  *   centre's rise), sides;
  *   jit: the tufts' unevenness: tip length, the boundaries' spacing, the ridge's height (shares).
  */
 export const DESIGN = {
   male: {
-    scale: 1, z0: -0.12, OUT: 0.04, gap: 0.05,
-    room: { pauldron: 0.3, reach: 1.15, at: 0.35, collar: 0.16, collarH: 0.5 },
-    ring: { in: 0.04, t: 0.1, top: [0.12, 0.3, 0.32], drop: 0.08, cols: 10, near: 0.45 },
-    cover: [[0, 1.7], [35, 1.95], [90, 2.6], [140, 2.45], [180, 3.0]],
+    scale: 1, z0: -0.12, OUT: 0.04, gap: 0.04, snug: 0.3,
+    room: { pauldron: 0.24, reach: 1.15, at: 0.35, collar: 0.16, collarH: 0.5 },
+    ring: { in: 0.04, t: 0.07, top: [0.12, 0.3, 0.32], drop: 0.08, cols: 8, near: 0.35 },
+    depth: 6, lean: [0.06, 0.04, 0.06], raise: [0.06, 0.12, 0.1],
     tiers: [
-      { name: 'main', n: 13, from: 33, fr: [0.36, 0.82, 1.0], thick: 0.06, h: 0.15, flare: 0.2 },
-      { name: 'mid2', n: 12, from: 29, fr: [0.18, 0.53, 0.68], thick: 0.06, h: 0.13, flare: 0.16 },
-      { name: 'mid1', n: 11, from: 25, fr: [0.0, 0.31, 0.44], thick: 0.06, h: 0.11, flare: 0.12 },
+      { name: 'main', n: 13, from: 33, hem: [[33, 1.9], [60, 2.0], [90, 2.05], [130, 2.8], [155, 3.7], [180, 4.6]], root: 0.55, ridge: 0.62, tip: 0.45, endW: 0.6, thick: 0.12, h: 0.14, edge: 0.1, flare: 0.12 },
+      { name: 'mid2', n: 12, from: 28, hem: [[28, 1.5], [60, 1.4], [90, 1.4], [130, 2.2], [160, 2.95], [180, 3.1]], root: 0.5, ridge: 0.68, tip: 0.38, endW: 0.6, thick: 0.12, h: 0.13, edge: 0.1, flare: 0.1 },
+      { name: 'mid1', n: 11, from: 21, hem: [[21, 1.0], [60, 0.85], [90, 0.8], [130, 1.4], [180, 1.85]], root: 0, ridge: 0.6, tip: 0.32, endW: 0.4, thick: 0.12, h: 0.12, edge: 0.09, flare: 0.09 },
     ],
-    collar: { n: 9, from: 40, len: [[40, 0.6], [90, 1.0], [180, 0.85]], lean: [16, 28, 18], thick: 0.05, h: 0.07, flare: 0.06, foot: 0.14 },
-    lean: [0.1, 0.3, 0.12], raise: [0.08, 0.28, 0.14],
-    clasp: { on: 'mid1', at: 30, fr: 0.42, r: 0.36, t: 0.07, boss: 0.05, sides: 8 },
-    jit: { tip: 0.16, side: 0.22, h: 0.35 },
+    collar: { n: 6, from: 34, len: [[34, 0.8], [90, 1.1], [180, 0.9]], lean: [20, 20, 16], hem: 0.66, ridge: 0.55, thick: 0.08, h: 0.08, edge: 0.07, flare: 0.05, foot: 0.14 },
+    clasp: { on: 'mid1', at: 26, s: 0.7, r: 0.36, t: 0.07, boss: 0.05, sides: 6 },
+    jit: { tip: 0.16, side: 0.22, h: 0.25 },
   },
 };
 DESIGN.female = { ...DESIGN.male, scale: 0.86, z0: -0.14, room: { ...DESIGN.male.room, pauldron: 0.26, reach: 1.0 } };
@@ -171,10 +180,10 @@ export function buildMantle(rig, design = DESIGN[rig.who], { under = [] } = {}) 
     const deg = col.deg, [rO, yT] = ringAt(deg);
     // the collar rises from the ring's outside at yT - foot, leaning out; the body's line starts outside its root
     const C = D.collar, th = blend3(C.lean, deg) * Math.PI / 180, cy = yT + blend3(D.raise, deg) * k;
-    const cw = ((360 - 2 * C.from) / C.n / 2) * (1 + D.jit.side), cr = ringMax(deg, cw) / Math.cos(cw * Math.PI / 180) + 0.04 + (cy - yT + C.foot * k) * Math.tan(th) + D.gap + ((C.thick + C.h * (1 + D.jit.h)) * k + D.gap) / Math.cos(th);
+    const cw = ((360 - 2 * C.from) / C.n / 2) * (1 + D.jit.side), cr = ringMax(deg, cw) / Math.cos(cw * Math.PI / 180) + 0.04 + (cy - yT + C.foot * k) * Math.tan(th) + D.gap + (Math.max(C.thick + C.h * (1 + D.jit.h), C.edge + C.flare) * k + D.gap) / Math.cos(th);
     // the body's line from there down: the drape over the body grown by OUT, below the shoulder's corner leaning out
-    const A = [cr, cy], E = envelope(S, z0, deg, STEP, D.OUT, A[1] - 3.2, A[1] + 0.01).filter(([, y]) => y < A[1] - 1e-4);
-    let L = drape(E, A, A[1] - 3.2);
+    const A = [cr, cy], E = envelope(S, z0, deg, STEP, D.OUT, A[1] - D.depth, A[1] + 0.01).filter(([, y]) => y < A[1] - 1e-4);
+    let L = drape(E, A, A[1] - D.depth);
     const ci = L.findIndex((p, i) => i > 0 && (L[i - 1][1] - p[1]) > 1.2 * (p[0] - L[i - 1][0]));
     if (ci > 0) { const yc = L[ci - 1][1], lean = blend3(D.lean, deg); L = L.map((p, i) => (i >= ci ? [p[0] + (yc - p[1]) * lean, p[1]] : p)); }
     const s = [0];
@@ -200,8 +209,6 @@ export function buildMantle(rig, design = DESIGN[rig.who], { under = [] } = {}) 
     return P2.add(P2.mul(pa, 1 - t), P2.mul(pb, t));
   };
   const at3 = (deg, rv) => atRY(deg, rv[0], rv[1], z0);
-  const cover = (deg) => interp(D.cover, fromFront(deg)) * k;
-
   const G = meshOf();
   G.tiers = {};
   // ---- the ring
@@ -222,45 +229,72 @@ export function buildMantle(rig, design = DESIGN[rig.who], { under = [] } = {}) 
     }
     G.ring = R;
   }
-  // ---- the down tiers, from the lowest up: each one's underside over the outside of the ones under it
-  const DS = 0.05, NS = Math.ceil(3.2 / DS) + 1;
+  // ---- the layers, from the lowest up: each one's underside over the outside of the ones under it
+  const DS = 0.05, NS = Math.ceil(D.depth / DS) + 1;
   const top = cols.map(() => new Float32Array(NS));   // per column, the outside's offset off the line so far, by s
+  const rAt = cols.map((c) => Array.from({ length: NS }, (_, j) => onLine(c, j * DS).p[0]));
   const seed = { main: 1, mid2: 2, mid1: 3, collar: 4 };
-  for (const T of D.tiers) {
-    // the tier's underside offset per column and s: the outside of those under it plus gap, spread by a slope so it rises smoothly
-    // (and the sag of its own faces: each spans a tuft's width w round the axis, a chord, inside the circle by r (1 - cos w/2))
+  const hemOf = (T) => (deg) => interp(T.hem, fromFront(deg)) * k;
+  D.tiers.forEach((T, ti) => {
+    const above = D.tiers[ti + 1], hem = hemOf(T), rootS = above ? (deg) => T.root * hemOf(above)(deg) : () => 0;
+    // the layer's underside offset per column and s: the outside of those under it plus gap, spread by a slope so it
+    // rises smoothly, and the sag of its own faces (each spans a clump's width w round the axis, a chord, inside the
+    // circle by r (1 - cos w/2))
     const sag = 1 - Math.cos(((360 - 2 * T.from) / T.n / 2) * (1 + D.jit.side) * Math.PI / 180);
     const und = cols.map((c, ci) => {
       const o = new Float32Array(NS), tp = top[ci];
-      for (let i = 0; i < NS; i++) { let m = 0; for (let j = 0; j < NS; j++) if (tp[j] > 0) m = Math.max(m, tp[j] + D.gap + sag * onLine(c, j * DS).p[0] - 0.6 * Math.abs(i - j) * DS); o[i] = m; }
+      for (let i = 0; i < NS; i++) { let m = 0; for (let j = 0; j < NS; j++) if (tp[j] > 0) m = Math.max(m, tp[j] + D.gap + sag * rAt[ci][j] - 0.6 * Math.abs(i - j) * DS); o[i] = m; }
       return o;
     });
-    const offAt = (deg, sv) => { const [a, b, t] = colPair(deg), ia = cols.indexOf(a), ib = cols.indexOf(b), i = Math.max(0, Math.min(NS - 1, Math.round(sv / DS))); return und[ia][i] * (1 - t) + und[ib][i] * t; };
-    const tier = tierShell(G, T, seed[T.name], (deg, f, lift) => { const sv = f * cover(deg); return at3(deg, sec(deg, sv, offAt(deg, sv) + lift)); }, D, k);
-    G.tiers[T.name] = tier;
-    // its outside, for the tiers over it (the most of its ridge, from its root to its tips)
+    // (and the bend of the line under each clump: its underside is one face from the root to the tip, a chord of the line,
+    // so the whole layer stands off by as much as the line, with what is under it, bulges past that chord)
     cols.forEach((c, ci) => {
-      const cv = cover(c.deg), a = fromFront(c.deg);
-      if (a < T.from - 1) return;
-      for (let i = 0; i < NS; i++) { const f = (i * DS) / cv; if (f >= T.fr[0] - 0.02 && f <= T.fr[2] + 0.04) top[ci][i] = Math.max(top[ci][i], und[ci][i] + (T.thick + T.h * (1 + D.jit.h)) * k); }
+      if (fromFront(c.deg) < T.from - STEP - 1) return;
+      const r0 = rootS(c.deg), e = Math.min(D.depth - DS, hem(c.deg) + T.tip * k * (1 + D.jit.tip)), u = und[ci];
+      const at = (sv, o) => { const q = onLine(c, sv); return P2.add(q.p, P2.mul(q.n, o)); }, ix = (sv) => Math.max(0, Math.min(NS - 1, Math.round(sv / DS)));
+      const A0 = at(r0, u[ix(r0)]), A1 = at(e, u[ix(e)] + T.flare * k), d = P2.sub(A1, A0), l = P2.len(d) || 1, nn = [-d[1] / l, d[0] / l];
+      const nOut = nn[0] < 0 ? [-nn[0], -nn[1]] : nn;
+      let bump = 0;
+      for (let sv = r0 + DS; sv < e; sv += DS) { const Q = at(sv, u[ix(sv)]); bump = Math.max(bump, (Q[0] - A0[0]) * nOut[0] + (Q[1] - A0[1]) * nOut[1]); }
+      if (bump > 0) for (let i = 0; i < NS; i++) u[i] += bump;
     });
-  }
+    // that much is enough everywhere but more than most places need: the layer is laid at the least share f of it (from
+    // D.snug up, in steps) that leaves it clear of everything laid before it, so it lies as close as it can
+    const placed = trisOf(G);
+    let f = D.snug ?? 1;
+    for (;; f = Math.min(1, f + 0.1)) {
+      const offAt = (deg, sv) => { const [a, b, t] = colPair(deg), ia = cols.indexOf(a), ib = cols.indexOf(b), i = Math.max(0, Math.min(NS - 1, Math.round(sv / DS))); return f * (und[ia][i] * (1 - t) + und[ib][i] * t); };
+      const pos = (deg, sv, lift) => at3(deg, sec(deg, sv, offAt(deg, sv) + lift));
+      const Gt = meshOf(), shell = tierShell(Gt, T, seed[T.name], pos, { root: rootS, hem, tip: () => T.tip * k }, D, k);
+      if (f < 1 && crossPairs(Gt.verts, trisOf(Gt), G.verts, placed).length) continue;
+      G.tiers[T.name] = { ...appendMesh(G, Gt, shell), pos, f };
+      break;
+    }
+    for (const u of und) for (let i = 0; i < NS; i++) u[i] *= f;
+    // its outside, for the layers over it (the most of its ridge and its hem, from its root to its tips)
+    const out = Math.max(T.thick + T.h * (1 + D.jit.h), T.edge + T.flare) * k;
+    cols.forEach((c, ci) => {
+      if (fromFront(c.deg) < T.from - STEP - 1) return;
+      const r0 = rootS(c.deg), r1 = hem(c.deg) + T.tip * k * (1 + D.jit.tip);
+      for (let i = 0; i < NS; i++) { const sv = i * DS; if (sv >= r0 - 0.05 && sv <= r1 + 0.1) top[ci][i] = Math.max(top[ci][i], und[ci][i] + out); }
+    });
+  });
   // ---- the collar: rising from under the ring's top, leaning out
   {
-    const C = D.collar;
-    const pos = (deg, f, lift) => {
+    const C = D.collar, len = (deg) => interp(C.len, fromFront(deg)) * k;
+    const pos = (deg, sv, lift) => {
       const [, yT] = ringAt(deg), cw = ((360 - 2 * C.from) / C.n / 2) * (1 + D.jit.side), rO = ringMax(deg, cw);
-      const len = interp(C.len, fromFront(deg)) * k, th = blend3(C.lean, deg) * Math.PI / 180, dir = [Math.sin(th), Math.cos(th)], nrm = [Math.cos(th), -Math.sin(th)];
+      const th = blend3(C.lean, deg) * Math.PI / 180, dir = [Math.sin(th), Math.cos(th)], nrm = [Math.cos(th), -Math.sin(th)];
       const root = [rO / Math.cos(cw * Math.PI / 180) + 0.04, yT - C.foot * k];
-      return at3(deg, P2.add(P2.add(root, P2.mul(dir, f * len)), P2.mul(nrm, lift + D.gap)));
+      return at3(deg, P2.add(P2.add(root, P2.mul(dir, sv)), P2.mul(nrm, lift + D.gap)));
     };
-    G.tiers.collar = tierShell(G, { ...C, name: 'collar', fr: [0, 0.68, 1] }, seed.collar, pos, D, k);
+    G.tiers.collar = tierShell(G, { ...C, name: 'collar' }, seed.collar, pos, { root: () => 0, hem: (deg) => C.hem * len(deg), tip: (deg) => (1 - C.hem) * len(deg) }, D, k);
   }
   // ---- the clasps
   G.clasps = ['l', 'r'].map((side) => {
     const Cl = D.clasp, T = D.tiers.find((t) => t.name === Cl.on), deg = side === 'l' ? Cl.at : 360 - Cl.at;
-    const f = Cl.fr, tierPos = G.tiers[Cl.on].pos;
-    const c = tierPos(deg, f, (T.thick + T.h) * k + 0.01), u = tierPos(deg, f - 0.05, (T.thick + T.h) * k + 0.01), w = tierPos(deg + 3, f, (T.thick + T.h) * k + 0.01);
+    const sv = Cl.s * k, tierPos = G.tiers[Cl.on].pos, lift = (T.thick + T.h * (1 + D.jit.h)) * k + 0.16;
+    const c = tierPos(deg, sv, lift), u = tierPos(deg, sv - 0.1, lift), w = tierPos(deg + 3, sv, lift);
     const nrm = unit(cross(sub(w, c), sub(u, c))), n2 = dot(nrm, [Math.sin(deg * Math.PI / 180), 0, Math.cos(deg * Math.PI / 180)]) < 0 ? mul(nrm, -1) : nrm;
     return clasp(G, c, n2, Cl, k, side);
   });
@@ -270,70 +304,86 @@ export function buildMantle(rig, design = DESIGN[rig.who], { under = [] } = {}) 
   return G;
 }
 
+/** Gt's vertices and polygons appended to G; the shell's vertex rows renumbered to G's. */
+function appendMesh(G, Gt, shell) {
+  const o = G.verts.length;
+  Gt.verts.forEach((p, i) => G.vert(p, Gt.part[i]));
+  for (const p of Gt.polys) G.polys.push({ ...p, v: p.v.map((v) => v + o) });
+  const out = {};
+  for (const [key, val] of Object.entries(shell)) out[key] = Array.isArray(val) && key !== 'b' ? val.map((v) => v + o) : val;
+  return out;
+}
+
 /**
- * One tier: n tufts over the arc from `from` degrees off the front round the back to the same on the other side, at
- * pos(deg, f, lift) (f the share along the tier, its root fr[0], valley corners fr[1], tips fr[2]; lift off its
- * underside). Its rows: the root's top and underside at the boundaries between tufts (TO, TI), each tuft's two lower
- * corners (Lc, Rc, a little in from the boundaries), its ridge (R, standing off by thick + h) and its tip (P, out by the
- * flare); the groove between two tufts from the root to their corners. One closed shell.
+ * One layer: n clumps over the arc from `from` degrees off the front round the back to the same on the other side, at
+ * pos(deg, s, lift) (s along the layer's line; lift off its underside); at azimuth deg its clumps' root at S.root(deg),
+ * their hem's corners at S.hem(deg), their blunt tips S.tip(deg) further. Its rows: the root's top and underside at the
+ * boundaries between clumps (TO, TI); each clump's two hem corners (Lc, Rc, a little in from the boundaries) and its tip
+ * (P), each on the outside and on the underside (uLc, uRc, uP: the hem's thickness `edge`), its ridge (R, standing off
+ * by thick + h); between two clumps the groove from the root to their corners, its edge and its underside. One closed
+ * shell, 16 triangles a clump.
  */
-function tierShell(G, T, sd, pos, D, k) {
+function tierShell(G, T, sd, pos, S, D, k) {
   const n = T.n, a0 = T.from, a1 = 360 - T.from, J = D.jit;
-  const b = Array.from({ length: n + 1 }, (_, j) => { const base = a0 + ((a1 - a0) * j) / n; return j === 0 || j === n ? base : base + (hash(sd, j) - 0.5) * J.side * ((a1 - a0) / n); });
-  const thick = T.thick * k, part = T.name;
-  const TO = b.map((d) => G.vert(pos(d, T.fr[0], thick), part)), TI = b.map((d) => G.vert(pos(d, T.fr[0], 0), part));
-  const Lc = [], Rc = [], R = [], P = [];
+  // (the clumps at the front ends narrower, `endW` of the others: the line twists there, from down the chest to over the shoulder)
+  const ew = T.endW ?? 1, unitW = (a1 - a0) / (n - 2 + 2 * ew), at = (j) => (j === 0 ? a0 : j === n ? a1 : a0 + unitW * (ew + j - 1));
+  const b = Array.from({ length: n + 1 }, (_, j) => (j === 0 || j === n ? at(j) : at(j) + (hash(sd, j) - 0.5) * J.side * unitW * (j === 1 || j === n - 1 ? ew : 1)));
+  const thick = T.thick * k, edge = T.edge * k, part = T.name;
+  // (the root thin: it is tucked under the layer over it; the pelt's thickness shows at its hem)
+  const TO = b.map((d) => G.vert(pos(d, S.root(d), 0), part)), TI = TO;
+  const Lc = [], Rc = [], uLc = [], uRc = [], R = [], P = [], uP = [];
   for (let q = 0; q < n; q++) {
-    const w = b[q + 1] - b[q], c = (b[q] + b[q + 1]) / 2 + (hash(sd + 10, q) - 0.5) * 0.15 * w;
-    // (each tuft its own length and ridge: a little uneven)
-    const tip = T.fr[1] + (T.fr[2] - T.fr[1]) * (1 + (hash(sd + 20, q) - 0.5) * 2 * J.tip), hq = T.h * k * (1 + (hash(sd + 30, q) - 0.5) * 2 * J.h);
-    const vf = T.fr[1] + (T.fr[2] - T.fr[1]) * (hash(sd + 40, q) - 0.5) * 0.3;
-    // (the corners over the underside's face from the root to the tip, out by the flare there, and some of the thickness)
-    const lc = thick * 0.45 + T.flare * k * Math.max(0, (vf - T.fr[0]) / (tip - T.fr[0]));
-    Lc.push(G.vert(pos(b[q] + 0.1 * w, vf, lc), part));
-    Rc.push(G.vert(pos(b[q + 1] - 0.1 * w, vf, lc), part));
-    R.push(G.vert(pos(c, T.fr[0] + (vf - T.fr[0]) * 0.62, thick + hq), part));
-    P.push(G.vert(pos(c, tip, T.flare * k), part));
+    const w = b[q + 1] - b[q], c = (b[q] + b[q + 1]) / 2 + (hash(sd + 10, q) - 0.5) * 0.2 * w;
+    // (each clump its own length, ridge and hem: a little uneven)
+    const r0 = S.root(c), tip = S.tip(c) * (1 + (hash(sd + 20, q) - 0.5) * 2 * J.tip), hq = T.h * k * (1 + (hash(sd + 30, q) - 0.5) * 2 * J.h);
+    const vL = S.hem(b[q]) * (1 + (hash(sd + 40, q) - 0.5) * 0.08), vR = S.hem(b[q + 1]) * (1 + (hash(sd + 41, q) - 0.5) * 0.08), vC = S.hem(c);
+    const end = vC + tip, fl = (sv) => T.flare * k * Math.max(0, (sv - r0) / Math.max(1e-6, end - r0));
+    const dL = b[q] + 0.05 * w, dR = b[q + 1] - 0.05 * w;
+    Lc.push(G.vert(pos(dL, vL, fl(vL) + edge), part)); uLc.push(G.vert(pos(dL, vL, fl(vL)), part));
+    Rc.push(G.vert(pos(dR, vR, fl(vR) + edge), part)); uRc.push(G.vert(pos(dR, vR, fl(vR)), part));
+    R.push(G.vert(pos(c, r0 + (vC - r0) * T.ridge, thick * T.ridge + hq), part));
+    P.push(G.vert(pos(c, end, fl(end) + edge * 0.6), part)); uP.push(G.vert(pos(c, end, fl(end)), part));
   }
   G.tag = part;
   for (let q = 0; q < n; q++) {
-    // the tuft's outside: the root's face up to the ridge, its two flanks, its two tip faces
-    G.poly([TO[q], TO[q + 1], R[q]], 'fur', part);
-    G.poly([TO[q], R[q], Lc[q]], 'fur', part);
-    G.poly([TO[q + 1], Rc[q], R[q]], 'fur', part);
-    G.poly([Lc[q], R[q], P[q]], 'fur', part);
-    G.poly([R[q], Rc[q], P[q]], 'fur', part);
-    // its underside
-    G.poly([TI[q], P[q], Lc[q]], 'fur_under', part);
-    G.poly([TI[q], TI[q + 1], P[q]], 'fur_under', part);
-    G.poly([TI[q + 1], Rc[q], P[q]], 'fur_under', part);
-    // the root's back edge
-    G.poly([TO[q], TI[q], TI[q + 1], TO[q + 1]], 'fur_under', part);
+    // the clump's outside: the root's face up to the ridge, its two flanks, its two tip faces
+    const f = 'fur';
+    G.poly([TO[q], TO[q + 1], R[q]], f, part);
+    G.poly([TO[q], R[q], Lc[q]], f, part);
+    G.poly([TO[q + 1], Rc[q], R[q]], f, part);
+    G.poly([Lc[q], R[q], P[q]], f, part);
+    G.poly([R[q], Rc[q], P[q]], f, part);
+    // its hem's thickness, and its underside
+    G.poly([Lc[q], P[q], uP[q], uLc[q]], 'fur_under', part);
+    G.poly([P[q], Rc[q], uRc[q], uP[q]], 'fur_under', part);
+    G.poly([TI[q], uP[q], uLc[q]], 'fur_under', part);
+    G.poly([TI[q], TI[q + 1], uP[q]], 'fur_under', part);
+    G.poly([TI[q + 1], uRc[q], uP[q]], 'fur_under', part);
   }
   for (let j = 1; j < n; j++) {
-    // the groove between two tufts, outside and under
+    // the groove between two clumps: its floor, its edge at the hem, its underside
     G.poly([TO[j], Lc[j], Rc[j - 1]], 'fur_valley', part);
-    G.poly([TI[j], Rc[j - 1], Lc[j]], 'fur_under', part);
+    G.poly([Rc[j - 1], Lc[j], uLc[j], uRc[j - 1]], 'fur_under', part);
+    G.poly([TI[j], uRc[j - 1], uLc[j]], 'fur_under', part);
   }
   // the ends
-  G.poly([TO[0], Lc[0], TI[0]], 'fur_under', part);
-  G.poly([TO[n], TI[n], Rc[n - 1]], 'fur_under', part);
+  G.poly([TO[0], Lc[0], uLc[0]], 'fur_under', part);
+  G.poly([TO[n], uRc[n - 1], Rc[n - 1]], 'fur_under', part);
   return { TO, TI, Lc, Rc, R, P, b, pos };
 }
 
-/** A clasp: a disc of `sides` round centre c facing n: the gold rim (front face and edge) round the glowing centre (a low boss). */
+/** A clasp: a disc of `sides` round centre c facing n: the gold rim (front face and edge) round the gem centre (a low boss). */
 function clasp(G, c, n, C, k, side) {
   const up = Math.abs(n[1]) > 0.9 ? [1, 0, 0] : [0, 1, 0], u = unit(cross(up, n)), v = cross(n, u), r = C.r * k, t = C.t * k, part = `clasp_${side}`;
   const ring = (rad, h) => Array.from({ length: C.sides }, (_, j) => { const a = (j / C.sides) * 2 * Math.PI + Math.PI / C.sides; return G.vert(add(add(c, mul(n, h)), add(mul(u, Math.cos(a) * rad), mul(v, Math.sin(a) * rad))), part); });
-  const back = ring(r * 0.92, -t * 0.4), rimO = ring(r, t * 0.6), rimI = ring(r * 0.56, t * 0.8), core = ring(r * 0.46, t * 0.62), boss = G.vert(add(c, mul(n, t * 0.6 + C.boss * k)), part);
+  const back = ring(r * 0.92, -t * 0.4), rimO = ring(r, t * 0.6), core = ring(r * 0.5, t * 0.8), boss = G.vert(add(c, mul(n, t * 0.6 + C.boss * k)), part);
   G.tag = part;
   const m = C.sides;
   for (let j = 0; j < m; j++) {
     const i = (j + 1) % m;
     G.poly([back[j], back[i], rimO[i], rimO[j]], 'gold', part);
-    G.poly([rimO[j], rimO[i], rimI[i], rimI[j]], 'gold', part);
-    G.poly([rimI[j], rimI[i], core[i], core[j]], 'gold', part);
-    G.poly([core[j], core[i], boss], 'glow', part);
+    G.poly([rimO[j], rimO[i], core[i], core[j]], 'gold', part);
+    G.poly([core[j], core[i], boss], 'core', part);
   }
   G.poly([...back].reverse(), 'gold', part, true);
   return { c, n, part };
@@ -398,7 +448,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const rig = buildRig(who), G = buildMantle(rig);
     G.vw = mantleWeights(rig, G);
     const file = new URL(`../../../src/sculpt/assets/lowmantle-${who}.json`, import.meta.url);
-    const A = { built: 'node tools/sculpt/garments/mantle.mjs (tools/sculpt/lowgarment.mjs garmentAsset)', ...garmentAsset(rig, G, MATS), glow: GLOW };
+    const A = { built: 'node tools/sculpt/garments/mantle.mjs (tools/sculpt/lowgarment.mjs garmentAsset)', ...garmentAsset(rig, G, MATS, LOOKS) };
     writeFileSync(file, JSON.stringify(A));
     console.log(who, `${G.verts.length} vertices, ${G.tris.length} triangles, ${A.base} bones: wrote`, file.pathname);
   }

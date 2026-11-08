@@ -46,6 +46,8 @@ import MALE_TUNIC from './assets/lowtunic-male.json';
 import FEMALE_TUNIC from './assets/lowtunic-female.json';
 import MALE_HOOD from './assets/lowhood-male.json';
 import FEMALE_HOOD from './assets/lowhood-female.json';
+import MALE_MANTLE from './assets/lowmantle-male.json';
+import FEMALE_MANTLE from './assets/lowmantle-female.json';
 import LONG_SWORD from './assets/long_sword.json';
 import HAIR_ASSET from './assets/lowhair.json';
 import MALE_LIGHT from '../../tools/sculpt/lowlight-male.json';
@@ -576,6 +578,9 @@ const GARMENTS: ReadonlyArray<{ man: GarmentAsset; woman: GarmentAsset; wears: (
   { man: MALE_BOOTS as unknown as GarmentAsset, woman: FEMALE_BOOTS as unknown as GarmentAsset, wears: wearsBoots },
   { man: MALE_TUNIC as unknown as GarmentAsset, woman: FEMALE_TUNIC as unknown as GarmentAsset, wears: wearsTunic },
   { man: MALE_HOOD as unknown as GarmentAsset, woman: FEMALE_HOOD as unknown as GarmentAsset, wears: wearsHood },
+  // the plate set's fur mantle (`assets/lowmantle-<who>.json` by `tools/sculpt/garments/mantle.mjs`): off unless asked
+  // for; enchanted, its clasps' cores glow
+  { man: MALE_MANTLE as unknown as GarmentAsset, woman: FEMALE_MANTLE as unknown as GarmentAsset, wears: (p) => p.outfit?.plateMantle ?? false, enchanted: enchantedOf('mantle') },
 ];
 
 const BODIES = {
