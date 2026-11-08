@@ -351,9 +351,11 @@ export function buildBraid(rig, style = BRAID, H = carve(), { clear = true } = {
   // its first links on the crown (addCrownLinks), along the links' way laid out before the crown
   if (linkWay) addCrownLinks(cl, linkWay.map((m) => place(dirOfMap(m), 0)), { V, poly: (v, sh) => polys.push({ v, piece: pieces.length, ...sh }), piece, place, C, k, sheetScale: CAMS.front.s, names: cl.links.map((_, j) => `heart${j + 1}`) });
   addBraid(style.braid, { ...SPINE, rows: [...SPINE.rows] }, { inside, V, poly: (v, sh) => polys.push({ v, piece: pieces.length, ...sh }), piece, toBody, k, sheetScale: CAMS.front.s,
-    root: linkWay ? place(dirOfMap(linkWay[Math.round(cl.join * (linkWay.length - 1))]), 0) : add(C, mul(dR, skR + 0.5 * MAPS.get(H).at(seamEnd) * k)),
+    root: linkWay ? place(dirOfMap(linkWay[Math.round(cl.join * (linkWay.length - 1))]), (style.braid.drape?.rootLift ?? 0) * k) : add(C, mul(dR, skR + 0.5 * MAPS.get(H).at(seamEnd) * k)),
     rootDir: linkWay ? unit(sub(place(dirOfMap(linkWay.at(-1)), 0), place(dirOfMap(linkWay[Math.round(0.6 * (linkWay.length - 1))]), 0))) : null,
-    sdf, away, first: cl ? cl.links.length : 0 });
+    sdf, away, first: cl ? cl.links.length : 0,
+    // (a point inside the carved hull: the hair's mass, hers mapped to this body)
+    inHull: (p) => { const q = add(Cf, mul(sub(p, C), 1 / k)), { solid, lo, n: [nx, ny, nz], vox } = H; const i = Math.floor((q[0] - lo[0]) / vox), j = Math.floor((q[1] - lo[1]) / vox), kk = Math.floor((q[2] - lo[2]) / vox); return i >= 0 && j >= 0 && kk >= 0 && i < nx && j < ny && kk < nz && solid[i + nx * (j + ny * kk)] === 1; } });
 
   // the face strands: a flat lock along a wavy path, its tip a point
   // (and the locks over the sides behind the ears: the same, broader, a hexagon round their path, on the head)
