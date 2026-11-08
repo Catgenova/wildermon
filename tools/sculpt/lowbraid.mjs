@@ -1,12 +1,31 @@
 // The side braid updo (tools/sculpt/ref/hair-side-braid.png) for the low-poly bodies: the game's 'braid', "Braid". The
 // sheet's five views (their hair silhouettes, tools/sculpt/lowbraidmask.py; their cameras, tools/sculpt/lowbraidcams.mjs)
-// carved into a visual hull on her body, the hair built from it.
+// carved into a visual hull on her body (carve), the hair built from it (buildBraid) as the style says
+// (tools/sculpt/hairs/braid.mjs):
 //
-//   node tools/sculpt/lowbraid.mjs [--hull]   # the hull's size and its outline difference per view
+//   lines   the crown's border lines over the skull, each [over, out] points front to back (tools/sculpt/lowhair.mjs
+//           dirOf), fitted to the sheet's creases (tools/sculpt/lowbraidlines.mjs).
+//   clumps  { id, upper, lower, n, taper: [front, back], lift, m? }: a clump between two lines, n stations front to
+//           back, pointed at the front (taper: how far in it narrows, a share of its length) and blunt at the back
+//           (taper 0: a ring on the seam, capped); its corners off the skin by `sec`'s heights as shares of the hull's
+//           thickness there (m: per station, solved by tools/sculpt/lowbraidcrown.mjs), the lip's by `lift` of that.
+//   sec     the clumps' section, upper border (-0.5) to lower (0.5): [across, height | 'root'] (a root sinks into the
+//           scalp; over the face and low at the nape it stands on the skin); the face under the lip its valley.
+//   braid   { spine, seg, tie, w, tipW, depth, fits }: the braid along a spine (her units; fits: each body's own,
+//           tools/sculpt/lowbraidspine.mjs), each segment from seg[i] two lobes (a heart), the tie a band from tie[0] to
+//           tie[1], the tip a point.
+//   strands [{ id, path, w, t }]: a flat lock along a path (her units), pointed at its end.
+//
+// Weights: the crown and the strands on the head; the braid from the head at its root through the neck to the chest and
+// the right clavicle (weightOf).
+//
+//   node tools/sculpt/lowbraid.mjs [--hull] [--who female,male]   # counts, checks and the outline difference per view
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { buildRig } from './lowrig.mjs';
-import { project, raster } from './lowhairhull.mjs';
+import { buildRig, add, sub, mul, dot, cross, unit, lerp } from './lowrig.mjs';
+import { project, raster, skullTable, centreOf, dirOf, angOf } from './lowhairhull.mjs';
+import { shadeOf, openEdges, crossings } from './lowhair.mjs';
+import BRAID from './hairs/braid.mjs';
 import { BRAID_VIEWS as VIEWS, BRAID_SPAN as SPAN } from './lowbraidcams.mjs';
 
 const DIR = new URL('.', import.meta.url).pathname;
@@ -95,7 +114,7 @@ export function carve({ who = 'female', vox = 0.03, grow = 3, need = 5, rig = bu
 
 /** Which voxel centres lie inside the body's closed triangles: per (x, y) column the crossings along z, inside between
  * pairs. */
-function bodyInside(tris, lo, n, vox) {
+export function bodyInside(tris, lo, n, vox) {
   const [nx, ny, nz] = n, out = new Uint8Array(nx * ny * nz);
   const cols = new Map();
   for (const [a, b, c] of tris) {
@@ -152,12 +171,269 @@ export function hullMesh(H, smooth = 2) {
   return { verts: P, polys, tris, pieces: [{ id: 'hull', polys: [0, polys.length] }], shave: [] };
 }
 
+/* ---- the hair ----------------------------------------------------------------------------------------------------- */
+/** The hull's thickness over her skull: per direction from her skull's centre (over, out) how far past the skin the hull
+ * runs on without a break (head units), as a table read back bilinearly. */
+export function thickOf(H) {
+  const B = H.rig.B, C = centreOf(B), skull = skullTable(B, C), { solid, lo, n: [nx, ny, nz], vox } = H;
+  const at = (p) => { const i = Math.floor((p[0] - lo[0]) / vox), j = Math.floor((p[1] - lo[1]) / vox), k = Math.floor((p[2] - lo[2]) / vox); return i >= 0 && j >= 0 && k >= 0 && i < nx && j < ny && k < nz && solid[i + nx * (j + ny * k)] === 1; };
+  const step = 2, no = 361 / step + 1 | 0, nu = 181 / step + 1 | 0, T = new Float64Array(no * nu);
+  for (let a = 0; a < no; a++) for (let b = 0; b < nu; b++) {
+    const o = -60 + a * step, u = -90 + b * step, d = dirOf(o, u), r0 = skull.at(o, u);
+    let first = -1, last = 0;
+    for (let t = 0; t < 1; t += 0.01) {
+      if (at(add(C, mul(d, r0 + t)))) { if (first < 0) first = t; last = t; } else if (first >= 0 && t - last > 0.04) break;
+    }
+    T[a * nu + b] = first < 0 || first > 0.1 ? 0 : last;
+  }
+  return (o, u) => {
+    const x = Math.min(no - 1.001, Math.max(0, (o + 60) / step)), y = Math.min(nu - 1.001, Math.max(0, (u + 90) / step)), i = Math.floor(x), j = Math.floor(y), fx = x - i, fy = y - j;
+    const v = (a, b) => T[a * nu + b];
+    return v(i, j) * (1 - fx) * (1 - fy) + v(i + 1, j) * fx * (1 - fy) + v(i, j + 1) * (1 - fx) * fy + v(i + 1, j + 1) * fx * fy;
+  };
+}
+
+/** Catmull-Rom through points (arrays of numbers), at u in [0, 1] over the whole run. */
+function spline(pts, u) {
+  const n = pts.length - 1, x = Math.min(n - 1e-9, Math.max(0, u * n)), i = Math.floor(x), t = x - i;
+  const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(n, i + 2)];
+  return p1.map((_, k) => 0.5 * (2 * p1[k] + (-p0[k] + p2[k]) * t + (2 * p0[k] - 5 * p1[k] + 4 * p2[k] - p3[k]) * t * t + (-p0[k] + 3 * p1[k] - 3 * p2[k] + p3[k]) * t * t * t));
+}
+/** A spline resampled at `n` points evenly along its length. */
+function even(pts, n) {
+  const fine = Array.from({ length: 201 }, (_, i) => spline(pts, i / 200));
+  const len = [0]; for (let i = 1; i < fine.length; i++) len.push(len[i - 1] + Math.hypot(...fine[i].map((x, k) => x - fine[i - 1][k])));
+  return Array.from({ length: n }, (_, i) => {
+    const want = (len[200] * i) / (n - 1); let j = 1; while (j < 200 && len[j] < want) j++;
+    const f = (want - len[j - 1]) / Math.max(1e-9, len[j] - len[j - 1]);
+    return fine[j - 1].map((x, k) => x + (fine[j][k] - x) * f);
+  });
+}
+
+const MIN_H = 0.03, NAPE = 248, SINK = 0.04, LIFT = 0.05, CACHE = new WeakMap();
+
+/**
+ * The side braid on a body: { verts, polys: [{ v, piece, valley? }], tris: [[a, b, c, poly]], weights, pieces: [{ id,
+ * polys, verts, kind }], shave: [], centre }. The crown's clumps rigid on the head; the braid from the head at its root
+ * to the neck, the chest and the right clavicle along its length; the strands on the head.
+ */
+export function buildBraid(rig, style = BRAID, H = carve()) {
+  const B = rig.B, C = centreOf(B);
+  // (the skull's table and the hull's thickness, once per body and hull)
+  if (!CACHE.has(B)) CACHE.set(B, skullTable(B, C));
+  if (!CACHE.has(H)) CACHE.set(H, thickOf(H));
+  const skull = CACHE.get(B), thick = CACHE.get(H);
+  // the body's skull against hers (the hull is carved on hers), for its thickness and the braid's and strands' places
+  const P = (n) => B.verts[B.index.get(n)], Pf = (n) => H.rig.B.verts[H.rig.B.index.get(n)];
+  const k = (P('f3.L')[0] + P('t0')[2] - P('bk')[2]) / (Pf('f3.L')[0] + Pf('t0')[2] - Pf('bk')[2]);
+  const Cf = centreOf(H.rig.B), toBody = (q) => add(C, mul(sub(q, Cf), k));
+  const verts = [], polys = [], pieces = [], role = [];
+  // (a root sinks into the scalp; over the face, the temples and the brow, it sits on the skin instead)
+  const onHull = (o, u, share) => {
+    // (no lower at the nape than the braid's root; a direction there that misses this body's skull, his, raised until it
+    // meets it)
+    o = Math.min(o, NAPE);
+    while (skull.at(o, u) < 0.3 && o > 150) o -= 2;
+    const d = dirOf(o, u), r = skull.at(o, u);
+    if (share !== 'root') return add(C, mul(d, r + Math.max(isFace(add(C, mul(d, r))) ? 2 * MIN_H : MIN_H, share * thick(o, u)) * k));
+    const f = faceShare(add(C, mul(d, r)));
+    return add(C, mul(d, r + (-SINK + (SINK + LIFT) * f) * k));
+  };
+  // how far into the face a skin point is (0 the scalp, 1 in front of the temple below the forehead's hairline)
+  // (and low at the nape, where the skin is the neck's as much as the head's, as far as it is below the skull's middle)
+  const faceShare = (p) => Math.max(p[1] < C[1] + 0.4 * k ? Math.min(1, Math.max(0, (p[2] - C[2] - 0.05 * k) / (0.35 * k))) : 0, Math.min(1, Math.max(0, (C[1] - 0.3 * k - p[1]) / (0.25 * k))));
+  const isFace = (p) => faceShare(p) > 0.5;
+  const piece = (id, kind, fn) => { const p0 = polys.length, v0 = verts.length; fn(); pieces.push({ id, kind, polys: [p0, polys.length], verts: [v0, verts.length] }); };
+  const V = (p, r = 0) => { role.push(r); return verts.push(p) - 1; };
+
+  // the crown's clumps
+  for (const cl of style.clumps) piece(cl.id, 'clump', () => {
+    const n = cl.n, A = even(style.lines[cl.upper], n), Bv = even(style.lines[cl.lower], n), sec = style.sec;
+    const ring = [];
+    for (let i = 0; i < n; i++) {
+      const u = i / (n - 1), mid = A[i].map((x, c) => (x + Bv[i][c]) / 2);
+      // the front end a point; the back end a point, or blunt (a ring along the seam, capped at its middle)
+      if (i === 0 || (i === n - 1 && cl.taper[1])) { ring.push([V(onHull(mid[0], mid[1], 0.55))]); continue; }
+      const w = Math.min(1, Math.pow(Math.min(u / cl.taper[0], cl.taper[1] ? (1 - u) / cl.taper[1] : 1), 0.6));
+      ring.push(sec.map(([a, b]) => {
+        const q = mid.map((x, c) => x + (Bv[i][c] - A[i][c]) * a * w);
+        return V(onHull(q[0], q[1], b === 'root' ? 'root' : b * (a > 0.4 ? cl.lift : 1) * (cl.m ? cl.m[i - 1] : 1)));
+      }));
+    }
+    if (!cl.taper[1]) { const m = A[n - 1].map((x, c) => (x + Bv[n - 1][c]) / 2); ring.push([V(onHull(m[0] + 3, m[1], 0.3))]); }
+    tube(ring, sec.length, (j, f) => (j === sec.length - 2 ? shadeOf(0.9 - 0.5 * f) : {}));
+  });
+
+  // the braid: rings round its spine, each segment a heart (two lobes over a point), the tie, the pointed tip
+  const br = { ...style.braid, ...(style.braid.fits?.[rig.who] ?? {}) }, S = even(br.spine.map(toBody), 121), Ls = [0];
+  for (let i = 1; i < S.length; i++) Ls.push(Ls[i - 1] + Math.hypot(...sub(S[i], S[i - 1])));
+  const L = Ls[Ls.length - 1];
+  const along = (s) => { const x = Math.min(119.999, Math.max(0, s * 120)), i = Math.floor(x); return lerp(S[i], S[i + 1], x - i); };
+  const frame = (s) => {
+    const p = along(s), T = unit(sub(along(Math.min(1, s + 0.01)), along(Math.max(0, s - 0.01))));
+    // out: away from the body's middle line (the neck's, the chest's), square to the spine
+    let N = [p[0], 0, p[2] + 0.25]; N = unit(sub(N, mul(T, dot(N, T))));
+    return { p, T, N, X: cross(T, N) };
+  };
+  const ringAt = (s, wx, wy, shape, twist = 0, shift = 0) => {
+    const f = frame(s), out = [];
+    shape.forEach(([ang, r, dz = 0]) => {
+      const a = ((ang + twist) * Math.PI) / 180;
+      out.push(V(add(add(f.p, mul(f.T, -dz * L * 0.17)), add(mul(f.X, Math.cos(a) * r * wx * k + shift * k), mul(f.N, Math.sin(a) * r * wy * k))), s));
+    });
+    return out;
+  };
+  // each segment two lobes side by side, each from high at its own side down across to past the middle, one a little
+  // in front of the other (the front one changing side each segment), so the segments read as the braid's chevrons;
+  // each lobe a pentagon round its own axis (one face out, flat), pointed at both ends
+  const lobeRing = [54, 126, -162, -90, -18];
+  br.seg.forEach((s0, i) => piece(`braid${i + 1}`, 'braid', () => {
+    const s1 = i + 1 < br.seg.length ? br.seg[i + 1] : br.tie[0] - 0.05, ds = s1 - s0, w = br.w[i] * k, sm = (s0 + s1) / 2, f = frame(sm), Ls = ds * L;
+    for (const side of [-1, 1]) {
+      const front = (i % 2 ? 1 : -1) === side ? 1 : -1;
+      const a = add(add(f.p, mul(f.X, side * 0.5 * w)), add(mul(f.T, -0.72 * Ls), mul(f.N, front * 0.03 * w)));
+      const b = add(add(f.p, mul(f.X, -side * 0.18 * w)), add(mul(f.T, 0.68 * Ls), mul(f.N, front * 0.05 * w)));
+      const ax = unit(sub(b, a)), Xl = unit(sub(f.N, mul(ax, dot(f.N, ax)))), Yl = cross(ax, Xl);
+      const rl = 0.5 * w, rd = 0.62 * w * br.depth;
+      // (wide high at its own side, narrowing down across to its point: the segment's two lobes a heart)
+      const rings = [[0.18, 0.92], [0.45, 1], [0.78, 0.5]].map(([t, sc]) => lobeRing.map((ang) => {
+        const g = (ang * Math.PI) / 180, c = add(a, mul(sub(b, a), t));
+        return V(add(c, add(mul(Xl, Math.sin(g) * rd * sc), mul(Yl, Math.cos(g) * rl * sc * side))), sm + (t - 0.5) * ds);
+      }));
+      capped([[V(a, s0 - 0.1 * ds)], ...rings, [V(b, s1)]], 5, (j, t) => (t > 0.7 ? shadeOf(0.4) : {}));
+    }
+  }));
+  const hex = [0, 60, 120, 180, -120, -60].map((a) => [a, 1, 0]);
+  piece('tie', 'tie', () => {
+    const [t0, t1] = br.tie, w = br.w[br.seg.length - 1] * 0.62;
+    const r = [ringAt(t0, w, w * br.depth, hex, 30), ringAt(t1, w, w * br.depth, hex, 30)];
+    capped([[V(along(t0), t0)], ...r, [V(along(t1), t1)]], 6, () => ({}));
+  });
+  piece('tip', 'braid', () => {
+    // (as wide as the last segment, a share of it)
+    const t1 = br.tie[1], w = br.w[br.seg.length - 1] * br.tipW;
+    const r = [ringAt(t1 - 0.02, w * 0.7, w * br.depth * 0.75, hex), ringAt(t1 + (1 - t1) * 0.32, w * 1.05, w * br.depth, hex, 30), ringAt(t1 + (1 - t1) * 0.7, w * 0.62, w * br.depth * 0.62, hex)];
+    capped([[V(along(t1 - 0.03), t1)], ...r, [V(along(1), 1)]], 6, (j, f) => (f > 0.75 ? shadeOf(0.3) : {}));
+  });
+
+  // the face strands: a flat lock along a wavy path, its tip a point
+  for (const st of style.strands) piece(st.id, 'strand', () => {
+    const pts = even(st.path.map(toBody), 9), ring = [];
+    pts.forEach((p, i) => {
+      if (i === pts.length - 1) { ring.push([V(p)]); return; }
+      const T = unit(sub(pts[Math.min(pts.length - 1, i + 1)], pts[Math.max(0, i - 1)]));
+      let N = unit(sub([p[0], 0, p[2] + 0.1], mul(T, dot([p[0], 0, p[2] + 0.1], T)))); const X = cross(T, N);
+      const f = 1 - (i / (pts.length - 1)) ** 1.5, w = st.w * f * k, t = st.t * Math.max(0.4, f) * k;
+      ring.push([add(p, mul(X, w)), add(p, mul(N, t)), add(p, mul(X, -w)), add(p, mul(N, -t))].map((q) => V(q)));
+    });
+    capped([[V(add(pts[0], mul(sub(pts[0], pts[1]), 0.3)))], ...ring], 4, () => ({}));
+  });
+
+  /** Faces of a run of rings (the first and the last single points) round `m` corners. */
+  function capped(rings, m, shade) {
+    const R = rings.length;
+    for (let i = 0; i + 1 < R; i++) for (let j = 0; j < m; j++) {
+      const a = rings[i], b = rings[i + 1], f = (i + 0.5) / (R - 1);
+      const v = a.length === 1 ? [a[0], b[(j + 1) % m], b[j]] : b.length === 1 ? [a[j], a[(j + 1) % m], b[0]] : [a[j], a[(j + 1) % m], b[(j + 1) % m], b[j]];
+      polys.push({ v, piece: pieces.length, ...shade(j, f) });
+    }
+  }
+  function tube(rings, m, shade) { capped(rings, m, shade); }
+
+  orient(verts, polys, pieces);
+  const tris = [];
+  const triangulate = () => {
+    tris.length = 0;
+  polys.forEach((p, pi) => {
+    if (p.v.length === 3) tris.push([...p.v, pi]);
+    else { const [a, b, c, d] = p.v; if (Math.hypot(...sub(verts[a], verts[c])) <= Math.hypot(...sub(verts[b], verts[d]))) tris.push([a, b, c, pi], [a, c, d, pi]); else tris.push([a, b, d, pi], [b, c, d, pi]); }
+  });
+  };
+  triangulate();
+  // the crown and the strands clear of the face and the neck: a face of theirs through the face's skin (in front of the
+  // temples, below the forehead's hairline, or an ear) or the neck's has its corners moved out from the skull's centre a little at a time
+  const notFace = B.polys.map((p, i) => i).filter((i) => { const p = B.polys[i]; if (p.part !== 'head') return p.part !== 'neck' && p.part !== 'torso'; if (p.ear) return false; const c = p.v.reduce((a, v) => add(a, mul(B.verts[v], 1 / p.v.length)), [0, 0, 0]); return !isFace(c); });
+  for (let it = 0; it < 40; it++) {
+    const hits = crossings(rig, { verts, polys, tris, scalp: notFace }, B.verts, verts).hits.filter(([hp]) => pieces[polys[hp].piece].kind === 'clump' || pieces[polys[hp].piece].kind === 'strand');
+    if (!hits.length) break;
+    for (const v of new Set(hits.flatMap(([hp]) => polys[hp].v))) verts[v] = add(verts[v], mul(unit(sub(verts[v], C)), 0.005 * k));
+  }
+  const weights = verts.map((_, i) => weightOf(role[i], pieces.find((pc) => i >= pc.verts[0] && i < pc.verts[1]).kind));
+  return { verts, polys, tris, weights, pieces, shave: [], scalp: scalpOf(B, C, verts, polys, tris, pieces), centre: C, k };
+}
+
+/** The scalp: the head's skin polygons (not the ears) the crown's clumps cover, every corner, seen from the skull's
+ * centre (the ray from it through the corner meets a clump). The clumps' roots sink into these by design: the crossing
+ * checks leave them out. */
+function scalpOf(B, C, verts, polys, tris, pieces) {
+  const crown = tris.filter(([, , , pi]) => { const pc = pieces[polys[pi].piece]; return pc && pc.kind === 'clump'; }).map(([a, b, c]) => [verts[a], verts[b], verts[c]]);
+  const covered = new Map();
+  const under = (vi) => {
+    if (covered.has(vi)) return covered.get(vi);
+    const d = unit(sub(B.verts[vi], C));
+    const hitAny = crown.some(([a, b, c]) => {
+      const e1 = sub(b, a), e2 = sub(c, a), p = cross(d, e2), det = dot(e1, p);
+      if (Math.abs(det) < 1e-12) return false;
+      const s = sub(C, a), u = dot(s, p) / det; if (u < 0 || u > 1) return false;
+      const q = cross(s, e1), v = dot(d, q) / det; if (v < 0 || u + v > 1) return false;
+      return dot(e2, q) / det > 0;
+    });
+    covered.set(vi, hitAny);
+    return hitAny;
+  };
+  const out = [];
+  B.polys.forEach((p, i) => { if (p.part === 'head' && p.mat === 'skin' && !p.ear && p.v.every(under)) out.push(i); });
+  return out;
+}
+
+/**
+ * The hair's crossings through the body (tools/sculpt/lowhair.mjs crossings: the scalp the clumps cover left out), by
+ * where: the face (the head's skin in front of the temples below the forehead's hairline, the ears), the neck, the chest and shoulders (the torso), and
+ * the scalp's edge (the head's skin behind the face the clumps' roots sink into at the hairline). P, Hv: the body's
+ * and the hair's vertices (posed).
+ */
+export function crossReport(rig, hair, P = rig.B.verts, Hv = hair.verts) {
+  const B = rig.B, r = crossings(rig, hair, P, Hv), out = { face: 0, neck: 0, torso: 0, edge: 0, byPiece: {} };
+  for (const [hp, sp] of r.hits) {
+    const poly = B.polys[sp], c = poly.v.reduce((a, i) => a.map((x, k) => x + B.verts[i][k] / poly.v.length), [0, 0, 0]);
+    const where = poly.part === 'neck' ? 'neck' : poly.part === 'torso' ? 'torso' : poly.ear || (c[1] < hair.centre[1] + 0.4 * hair.k && c[2] > hair.centre[2] + 0.4 * hair.k) ? 'face' : 'edge';
+    out[where]++;
+    if (where !== 'edge') { const id = hair.pieces[hair.polys[hp].piece].id; out.byPiece[`${id}>${where}`] = (out.byPiece[`${id}>${where}`] ?? 0) + 1; }
+  }
+  return out;
+}
+
+/** Each piece's faces turned outward (all turned over where they enclose a negative volume). */
+function orient(verts, polys, pieces) {
+  for (const pc of pieces) {
+    let vol = 0;
+    for (let i = pc.polys[0]; i < pc.polys[1]; i++) { const v = polys[i].v; for (let j = 1; j + 1 < v.length; j++) vol += dot(verts[v[0]], cross(verts[v[j]], verts[v[j + 1]])); }
+    if (vol < 0) for (let i = pc.polys[0]; i < pc.polys[1]; i++) polys[i].v.reverse();
+  }
+}
+
+/** A vertex's bones: the crown, the strands and the braid's root on the head; down the braid (s, its share of the
+ * spine's length) the neck, then the chest and the right clavicle. */
+export function weightOf(s, kind) {
+  if (kind === 'clump' || kind === 'strand') return [['head', 1]];
+  const ramp = (x, a, b) => Math.min(1, Math.max(0, (x - a) / (b - a)));
+  const h = 1 - ramp(s, 0.08, 0.3), n2 = ramp(s, 0.08, 0.3) * (1 - ramp(s, 0.3, 0.48)), n1 = ramp(s, 0.3, 0.48) * (1 - ramp(s, 0.48, 0.66)), ch = ramp(s, 0.48, 0.66);
+  return [['head', h], ['neck_02', n2], ['neck_01', n1], ['spine_03', ch * 0.6], ['clavicle_r', ch * 0.4]].filter(([, w]) => w > 1e-4);
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   const args = process.argv.slice(2), opt = (n, f) => { const i = args.indexOf(`--${n}`); return i < 0 ? f : args[i + 1]; };
   const t0 = Date.now(), H = carve({ vox: +opt('vox', 0.03), grow: +opt('grow', 3), need: +opt('need', 5) });
-  let n = 0; for (const v of H.solid) n += v;
-  const M = hullMesh(H);
-  console.log('hull voxels', n, 'faces', M.polys.length, 'ms', Date.now() - t0);
-  const tris = M.tris.map(([a, b, c]) => [M.verts[a], M.verts[b], M.verts[c]]);
-  console.log('outline difference (sheet px):', Object.entries(outlineDiff(tris, bodyTris(H.rig.B))).map(([v, d]) => `${v} ${d.px} (bare ${d.bare}, over ${d.over})`).join(', '));
+  if (args.includes('--hull')) {
+    let n = 0; for (const v of H.solid) n += v;
+    const M = hullMesh(H), tris = M.tris.map(([a, b, c]) => [M.verts[a], M.verts[b], M.verts[c]]);
+    console.log('hull voxels', n, 'faces', M.polys.length, 'ms', Date.now() - t0);
+    console.log('outline difference (sheet px):', Object.entries(outlineDiff(tris, bodyTris(H.rig.B))).map(([v, d]) => `${v} ${d.px} (bare ${d.bare}, over ${d.over})`).join(', '));
+  }
+  for (const who of opt('who', 'female,male').split(',')) {
+    const rig = who === 'female' ? H.rig : buildRig(who), hair = buildBraid(rig, BRAID, H);
+    const rest = crossReport(rig, hair);
+    console.log(who, 'tris', hair.tris.length, 'pieces', hair.pieces.length, hair.pieces.map((p) => `${p.id}:${p.polys[1] - p.polys[0]}`).join(' '), 'open edges', openEdges(hair), 'crossings at rest', JSON.stringify(rest));
+    if (who === 'female') console.log('outline difference (sheet px):', Object.entries(outlineDiff(hair.tris.map(([a, b, c]) => [hair.verts[a], hair.verts[b], hair.verts[c]]), bodyTris(rig.B))).map(([v, d]) => `${v} ${d.px}`).join(', '));
+  }
 }

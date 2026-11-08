@@ -13,7 +13,7 @@ import { mkdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { buildRig } from './lowrig.mjs';
 import { shoot, closeBrowser, bodyMesh, hairMesh, SHEET_HAIR } from './lowhairshot.mjs';
-import { carve, hullMesh, outlineDiff, bodyTris } from './lowbraid.mjs';
+import { carve, hullMesh, outlineDiff, bodyTris, buildBraid } from './lowbraid.mjs';
 
 const DIR = new URL('.', import.meta.url).pathname;
 export const REF = join(DIR, 'ref/hair-side-braid.png'), REF_SIZE = [1536, 1024], MASK = join(DIR, 'hairs/braid-mask.png');
@@ -49,9 +49,11 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   // the hair to draw: the carved hull's outer faces (--only hull) or the built hair
   const RIGS = {}, HAIRS = {};
   const who = opt('who', 'female').split(',');
+  const H = only.includes('cams') && only.length === 1 ? null : carve();
   for (const w of who) {
-    RIGS[w] = buildRig(w);
+    RIGS[w] = w === 'female' && H ? H.rig : buildRig(w);
     if (only.includes('hull')) HAIRS[w] = hullMesh(carve({ rig: RIGS[w], vox: 0.05 }));
+    else if (H) HAIRS[w] = buildBraid(RIGS[w], undefined, H);
   }
   const tri3 = (h) => h.tris.filter(([, , , pi]) => !h.polys[pi].buzz).map(([a, b, c]) => [h.verts[a], h.verts[b], h.verts[c]]);
 
@@ -73,6 +75,40 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     await shoot(x0 * 2 + 5 * cw + 4 * gap, y3 + ch + 10, cells, join(out, `braid-${only.includes('hull') ? 'hull' : 'sheet'}-${w}${tag}.png`), {
       imgs, texts: [{ css: 'left:12px;top:6px', html: `Side braid — the sheet (top), the ${w === 'male' ? 'man' : 'woman'} (middle), ours over the sheet (bottom): ${what}; outline off ${mean} px on average` }] });
     console.log(w, 'outline difference', JSON.stringify(diff));
+  }
+  if (only.includes('wire')) for (const w of who) {
+    // the topology: front, profile and back, every polygon's edges
+    const rig = RIGS[w], hair = HAIRS[w], cw2 = 330, ch2 = 520;
+    const cells = [[0, 'Front'], [-90, 'Profile (her right)'], [180, 'Back']].map(([yaw, label], i) => ({ meshes: [{ ...bodyMesh(rig, hair, rig.B.verts, SHEET_HAIR, { parts: ['head', 'neck', 'torso'] }), edges: true, edgec: [0.95, 0.85, 0.78] }, { ...hairMesh(rig, hair), edges: true, edgec: [1, 0.93, 0.85] }], cam: { yaw, pitch: 0, s: 105, c: [0, 0.55, 0.1] }, box: [10 + i * (cw2 + 8), 34, cw2, ch2], label }));
+    await shoot(3 * cw2 + 36, ch2 + 44, cells, join(out, `braid-wire-${w}${tag}.png`), { texts: [{ css: 'left:12px;top:6px', html: `Topology: ${hair.tris.length} hair triangles in ${hair.pieces.length} closed pieces (${hair.pieces.map((p) => p.id).join(', ')})` }], imgs: [] });
+  }
+
+  if (only.includes('exploded')) for (const w of who) {
+    // each piece moved out from the skull's centre (the braid's down and out from its spine) along its own middle's
+    // direction
+    const rig = RIGS[w], hair = HAIRS[w], Cn = hair.centre, H2 = hair.verts.map((p) => [...p]);
+    hair.pieces.forEach((pc, n) => {
+      const vs = hair.verts.slice(...pc.verts), mid = vs.reduce((a, p) => a.map((x, k) => x + p[k] / vs.length), [0, 0, 0]);
+      let d = mid.map((x, k) => x - Cn[k]);
+      const l = Math.hypot(...d), first = hair.pieces.findIndex((q) => q.kind === 'braid');
+      // (the braid's pieces out to her right, each further down than the one above)
+      const off = pc.kind === 'braid' || pc.kind === 'tie' ? [-0.75, -0.22 * (n - first), 0.25] : d.map((x) => (x / l) * (pc.kind === 'clump' ? 0.45 : 0.35));
+      for (let i = pc.verts[0]; i < pc.verts[1]; i++) H2[i] = H2[i].map((x, k) => x + off[k]);
+    });
+    const cells = [{ meshes: [bodyMesh(rig, hair, rig.B.verts, SHEET_HAIR, { parts: ['head', 'neck', 'torso'] }), hairMesh(rig, hair, H2)], cam: { yaw: -30, pitch: 6, s: 72, c: [-0.4, 0.4, 0.1] }, box: [560, 34, 460, 520], label: 'Ours: the pieces pulled apart' }];
+    await shoot(1030, 564, cells, join(out, `braid-exploded-${w}${tag}.png`), { texts: [{ css: 'left:12px;top:6px', html: `Clump breakdown: the sheet, ours (${hair.pieces.map((p) => p.id).join(', ')})` }], imgs: [{ src: REF, size: REF_SIZE, crop: [470, 480, 520, 540], box: [10, 34, 540, 520] }] });
+  }
+
+  if (only.includes('close')) for (const w of who) {
+    // the views larger, the sheet's (left) beside ours (right); `--focus braid` on the braid
+    const rig = RIGS[w], hair = HAIRS[w], K = 1.7, cw2 = 400, ch2 = 460, cells = [], imgs = [], braid = opt('focus', '') === 'braid';
+    LABELS.filter(([v]) => v !== 'r3').forEach(([v, label], i) => {
+      const c = C[v], x = 10 + (i % 2) * 2 * (cw2 + gap), y = 34 + Math.floor(i / 2) * (ch2 + gap), cy = braid ? c.cy + 150 : c.cy - 10;
+      imgs.push({ src: REF, size: REF_SIZE, crop: [c.cx - cw2 / K / 2, cy - ch2 / K / 2, cw2 / K, ch2 / K], box: [x, y, cw2, ch2] });
+      cells.push({ meshes: [bodyMesh(rig, hair), hairMesh(rig, hair)], cam: camOf(c, K, c.cy - cy), box: [x + cw2 + gap, y, cw2, ch2], label });
+    });
+    await shoot(10 + 4 * (cw2 + gap) + 2, 34 + 2 * (ch2 + gap) + 10, cells, join(out, `braid-close-${w}${braid ? '-braid' : ''}${tag}.png`), { imgs,
+      texts: [{ css: 'left:12px;top:6px', html: `Close: the sheet (left), the ${w === 'male' ? 'man' : 'woman'} (right)` }] });
   }
   await closeBrowser();
 }
