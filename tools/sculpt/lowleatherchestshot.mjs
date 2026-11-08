@@ -117,6 +117,9 @@ function crossings(who, d) {
 // its rear three-quarter the left side and the back
 const CROPS = { male: [[18, 98, 210, 250], [222, 98, 165, 250], [388, 98, 102, 250], [488, 98, 166, 250], [654, 98, 175, 250]], female: [[18, 432, 210, 232], [222, 432, 165, 232], [388, 432, 102, 232], [488, 432, 166, 232], [654, 432, 175, 232]] };
 const VK = ['front', 'q3', 'side', 'r3', 'back'];
+// the sheet's rows for the chin and the wrists' bands (front view; read off at 3x): the framing that compares the
+// armour one to one (the sheet's head is drawn much smaller than ours, so framing by the crown would shrink our armour)
+const FRAME = { male: { chin: 128, wrist: 303 }, female: { chin: 462, wrist: 613 } };
 const VIEWS = [[0, 'Front (0°)'], [-45, 'Three-quarter (45°)'], [90, 'Side (90°)'], [135, 'Rear three-quarter (135°)'], [180, 'Back (180°)']];
 async function sheet(file, wire, look = 'plain') {
   const cw = 230, ch = 280, top = 34, cells = [], imgs = [], texts = [];
@@ -126,16 +129,19 @@ async function sheet(file, wire, look = 'plain') {
     // place, so the model stands where the sheet's figure does; our own body's proportions, without the sheet's body map)
     const Cm = JSON.parse(readFileSync(join(DIR, 'lowleatherchestcams.json'), 'utf8'))[who];
     // (the body below the faulds' foot left out, as the sheet shows only the armour)
-    const cut = who === 'male' ? -6.3 : -5.5;
+    const cut = who === 'male' ? -7.2 : -6.2;
     const keep = (pi) => rig.B.polys[pi].v.every((i) => d.PB[i][1] > cut);
     VIEWS.forEach(([yaw, lab], i) => {
       imgs.push({ src: SHEET, size: [1536, 1024], crop: CROPS[who][i], box: [i * cw, top + r * 2 * ch, cw, ch] });
       const body = bodyMesh(who, d.PB, keep), arm = armourMesh(who, d.PG, look);
       if (wire) { arm.edges = true; arm.edgec = [0.2, 0.12, 0.08]; }
-      const [x, y, w, h] = CROPS[who][i], k = Math.min(cw / w, ch / h), v = Cm.views[VK[i]], sy = v.yaw;
-      const dx = (x + w / 2 - v.cx) / Cm.s, dy = (Cm.cy - (y + h / 2)) / Cm.s, ca = Math.cos(sy * Math.PI / 180), sa = Math.sin(sy * Math.PI / 180);
+      // (framed as the sheet frames its figure: the chin and the wrists on the sheet's rows for them, FRAME, so the two
+      // rows compare one to one at the same body height; turned as the registered view, on its neck's column)
+      const [x, y, w, h] = CROPS[who][i], k = Math.min(cw / w, ch / h), v = Cm.views[VK[i]], sy = v.yaw, F = FRAME[who], J = M[who].rig.J;
+      const sF = (F.wrist - F.chin) / (0 - J.wrist[1]);
+      const dx = (x + w / 2 - v.cx) / sF, dy = -(y + h / 2 - F.chin) / sF, ca = Math.cos(sy * Math.PI / 180), sa = Math.sin(sy * Math.PI / 180);
       // (the sheet's u = cx + s (cos·x + sin·z); the page's x = cos(-yaw)·x - sin(-yaw)·z: the page's yaw is minus the sheet's)
-      cells.push({ meshes: [body, arm], cam: { yaw: -sy, pitch: 0, s: Cm.s * k, c: [dx * ca, dy, dx * sa] }, box: [i * cw, top + (r * 2 + 1) * ch, cw, ch], label: `${who} ${lab}` });
+      cells.push({ meshes: [body, arm], cam: { yaw: -sy, pitch: 0, s: sF * k, c: [dx * ca, dy, dx * sa] }, box: [i * cw, top + (r * 2 + 1) * ch, cw, ch], label: `${who} ${lab}` });
     });
     const parts = {};
     for (const t of G.tris) { const p = G.polys[t.poly]; if (G.side[p.v[0]] === 'L' || !/pauldron|zigzag|bracer|rune|band$|sleeve/.test(p.tag)) parts[p.tag] = (parts[p.tag] ?? 0) + 1; }
@@ -144,6 +150,21 @@ async function sheet(file, wire, look = 'plain') {
   texts.push({ css: 'left:10px;top:6px', html: `Leather chest & arms, ${tag}: the sheet (tools/sculpt/ref/leather-chest.png) above each body's row, the model below` });
   await shoot(5 * cw + 270, top + 4 * ch, cells, file, { texts, imgs });
 }
+/** One view per body large: the sheet's crop and the model beside it at the same framing (FRAME), plain and enchanted. */
+async function pair(file, view = 'front') {
+  const i = VK.indexOf(view), cw = 460, ch = 560, top = 34, cells = [], imgs = [];
+  ['male', 'female'].forEach((who, r) => {
+    const { rig } = M[who], d = dress(who, {}), Cm = JSON.parse(readFileSync(join(DIR, 'lowleatherchestcams.json'), 'utf8'))[who];
+    const cut = who === 'male' ? -7.2 : -6.2, keep = (pi) => rig.B.polys[pi].v.every((j) => d.PB[j][1] > cut);
+    const [x, y, w, h] = CROPS[who][i], k = Math.min(cw / w, ch / h), v = Cm.views[view], sy = v.yaw, F = FRAME[who], J = rig.J;
+    const sF = (F.wrist - F.chin) / (0 - J.wrist[1]);
+    const dx = (x + w / 2 - v.cx) / sF, dy = -(y + h / 2 - F.chin) / sF, ca = Math.cos(sy * Math.PI / 180), sa = Math.sin(sy * Math.PI / 180);
+    imgs.push({ src: SHEET, size: [1536, 1024], crop: CROPS[who][i], box: [r * 3 * cw, top, cw, ch] });
+    SHOW.forEach((look, l) => cells.push({ meshes: [bodyMesh(who, d.PB, keep), armourMesh(who, d.PG, look)], cam: { yaw: -sy, pitch: 0, s: sF * k, c: [dx * ca, dy, dx * sa] }, box: [(r * 3 + 1 + l) * cw, top, cw, ch], label: `${who} ${view}${look === 'plain' ? '' : ' (enchanted)'}` }));
+  });
+  await shoot(6 * cw, top + ch, cells, file, { imgs, texts: [{ css: 'left:10px;top:6px', html: `Leather chest & arms, ${tag}: the sheet's ${view} view and the model at the sheet's framing (chin and wrists on the sheet's rows)` }] });
+}
+if (only.includes('pair')) await pair(join(out, `leatherchest-${tag}-pair-${opt('view', 'front')}.png`), opt('view', 'front'));
 if (only.includes('sheet')) for (const look of SHOW) await sheet(join(out, `leatherchest-${tag}-sheet${look === 'plain' ? '' : '-' + look}.png`), false, look);
 if (only.includes('wire')) await sheet(join(out, `leatherchest-${tag}-wire.png`), true);
 
@@ -277,6 +298,35 @@ if (only.includes('set')) {
     const mx = {};
     for (const [id, r] of Object.entries(report[who])) { const g = id.replace(/-\d+$/, ''); for (const [n, v] of Object.entries(r)) { mx[g] ??= {}; mx[g][n] = Math.max(mx[g][n] ?? 0, v); } }
     console.log(who, JSON.stringify(mx));
+  }
+}
+/* ---- crossings by piece: with the body and with the pieces under (--set <dir>), per group of poses (the most) ---------- */
+if (only.includes('cross')) {
+  const dir = opt('set', join(DIR, 'leather/under')), NAMES = opt('names', 'lowleatherlegs').split(',');
+  const { existsSync } = await import('node:fs');
+  for (const who of ['male', 'female']) {
+    const { rig, G } = M[who];
+    const set = NAMES.filter((n) => existsSync(join(dir, `${n}-${who}.json`))).map((n) => {
+      const A = JSON.parse(readFileSync(join(dir, `${n}-${who}.json`), 'utf8'));
+      const verts = []; for (let i = 0; i < A.verts.length; i += 3) verts.push([A.verts[i], A.verts[i + 1], A.verts[i + 2]]);
+      // (the leggings' flaps, `light`, left out unless --flaps: switched off while the chest is worn)
+      const skip = n === 'lowleatherlegs' && !args.includes('--flaps') ? ['light'] : [];
+      const tris = []; for (let i = 0; i < A.tris.length; i += 4) if (!skip.includes(A.mats[A.polys[A.tris[i + 3]][1]])) tris.push({ v: [A.tris[i], A.tris[i + 1], A.tris[i + 2]], poly: A.tris[i + 3] });
+      const vw = A.weights.map((w) => { const o = []; for (let j = 0; j < w.length; j += 2) o.push([w[j], w[j + 1]]); return o; });
+      return { name: n, P: { verts, tris, vw, bones: [] }, hides: A.hides ?? [] };
+    });
+    const hidden = new Set([...M[who].hidden, ...set.flatMap((g) => g.hides)]);
+    const shownAll = rig.B.tris.filter((t) => !hidden.has(t.poly));
+    const groups = {};
+    for (const e of allPoses(who)) {
+      const g = e.id.replace(/-\d+$/, '').replace(/^swing-.*/, 'swing'), d = dress(who, e.pose), f = posed(rig, e.pose), dy = d.PB[0][1] - skin(rig, f)[0][1];
+      const by = {};
+      for (const [i, j] of crossPairs(d.PG, G.tris, d.PB, shownAll)) { const k = `${G.polys[G.tris[i].poly].piece ?? G.polys[G.tris[i].poly].tag}×body.${rig.B.part[shownAll[j].v[0]]}`; by[k] = (by[k] ?? 0) + 1; }
+      for (const u of set) { const PS = skinGarment(rig, f, u.P).map((p) => [p[0], p[1] + dy, p[2]]); for (const [i] of crossPairs(d.PG, G.tris, PS, u.P.tris)) { const k = `${G.polys[G.tris[i].poly].piece ?? G.polys[G.tris[i].poly].tag}×${u.name}`; by[k] = (by[k] ?? 0) + 1; } }
+      groups[g] ??= {};
+      for (const [k, v] of Object.entries(by)) groups[g][k] = Math.max(groups[g][k] ?? 0, v);
+    }
+    for (const [g, by] of Object.entries(groups)) console.log(who, g, Object.values(by).reduce((a, b) => a + b, 0), JSON.stringify(Object.fromEntries(Object.entries(by).sort((a, b) => b[1] - a[1]))));
   }
 }
 await closeBrowser();

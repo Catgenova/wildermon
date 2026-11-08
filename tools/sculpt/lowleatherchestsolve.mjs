@@ -170,7 +170,9 @@ export async function solve() {
       // (a view without the collar in its mask: the mean of the others)
       const yOf2 = (v) => (topRow(v) === null ? null : yOf(v));
       const f0 = yOf2('front'), b0 = yOf2('back'), s0 = yOf2('side') ?? r3((f0 + b0) / 2);
-      out.collar = { top: { az: [0, 30, 90, 180], top: [r3(f0 - 0.12), f0, s0, b0] } };
+      // (kept as a record: the sheet's neck is short, its collar standing to just under the jaw; on our longer neck the
+      // design's top keeps that share of the neck, DESIGN collar.top)
+      out.collarRead = { top: { az: [0, 30, 90, 180], top: [r3(f0 - 0.12), f0, s0, b0] } };
     }
     // the arm: along the upper arm and the forearm, each arm piece's span (the median over the round of its first and
     // last t), in the views that see that side; the pauldron's dome as the visual hull of its side's arm pieces
@@ -245,7 +247,7 @@ export async function solve() {
     if (!out.lameFrac && FIT.male?.lameFrac) out.lameFrac = FIT.male.lameFrac;
     if (out.lameFrac) out.pauldron.lames = D.pauldron.lames.map((L, i) => ({ ...L, t: out.lameFrac[i].map((x) => r3(x * out.arm.upLen)) }));
     FIT[who] = out;
-    console.log(who, JSON.stringify({ belt: out.belt, collar: out.collar, arm: out.arm, pauldronPhi: out.pauldronHull.phi }));
+    console.log(who, JSON.stringify({ belt: out.belt, collar: out.collarRead, arm: out.arm, pauldronPhi: out.pauldronHull.phi }));
     console.log('  core', JSON.stringify(out.core.az), JSON.stringify(out.core.bottom), 'back', JSON.stringify(out.back.az), JSON.stringify(out.back.bottom));
     console.log('  skirt', JSON.stringify(out.skirt.plates.map((p) => [p.name, p.az, p.bottom, p.top])));
   }

@@ -62,19 +62,19 @@ export const LOOKS = {
  */
 export const DESIGN = {
   male: {
-    rim: { w: 0.07, h: 0.03, t: 0.04 },
-    fit: { trunk: 0.03, belt: 0.03, skirt: 0.08, arm: 0.03, gap: 0.012 },
+    rim: { w: 0.05, h: 0.035, t: 0.05, in: 0.35 },
+    fit: { trunk: 0.02, belt: 0.025, skirt: 0.05, arm: 0.02, gap: 0.008 },
     wedge: 8,
-    collar: { notch: [12, 1.5], top: { az: [0, 30, 60, 90, 135, 180], top: [-0.42, -0.38, -0.33, -0.3, -0.28, -0.28] }, base: [-1.1, -1.0, -0.9], trim: 0.07, c: 0.06, flare: 0.02, wall: 0.06, spread: 0.03, sink: 0.02, shrug: 0.4 },
-    core: { az: [0, 14, 28, 40, 43, 62, 80, 96], top: [-0.78, -0.8, -0.86, -0.92, -0.94, -0.95, -1.0, -1.9], bottom: [-3.78, -3.72, -3.64, -3.58, -2.0, -1.95, -1.95, -1.95], rows: [0, 0.25, 0.5, 0.75, 1], c: 0.03, flat: 14 },
-    back: { az: [96, 112, 116, 130, 150, 165, 180], top: [-1.9, -1.0, -0.85, -0.7, -0.6, -0.56, -0.54], bottom: [-1.95, -1.95, -3.5, -3.55, -3.6, -3.62, -3.64], rows: [0, 0.3, 0.6, 1], c: 0.03, panel: { top: -0.9, bottom: -2.85, half: 34, tip: -3.15 } },
-    side: { az: [38, 60, 80, 100, 120], top: [-1.75, -1.75, -1.8, -1.75, -1.75], bottom: [-3.62, -3.6, -3.58, -3.56, -3.55], rows: [0, 0.5, 1], c: 0.025 },
+    collar: { notch: [12, 1.5], top: { az: [0, 30, 90, 180], top: [-0.34, -0.2, -0.16, -0.12] }, base: [-1.1, -1.0, -0.9], trim: 0.07, c: 0.06, flare: 0.02, wall: 0.06, spread: 0.03, sink: 0.02, shrug: 0.4 },
+    core: { az: [0, 14, 28, 40, 43, 62, 80, 96], top: [-0.78, -0.8, -0.86, -0.92, -0.94, -0.95, -1.0, -1.9], bottom: [-3.78, -3.72, -3.64, -3.58, -2.0, -1.95, -1.95, -1.95], rows: [0, 0.14, 0.28, 0.42, 0.56, 0.7, 0.85, 1], c: 0.02, flat: 14, drape: true },
+    back: { az: [96, 112, 116, 130, 150, 165, 180], top: [-1.9, -1.0, -0.85, -0.7, -0.6, -0.56, -0.54], bottom: [-1.95, -1.95, -3.5, -3.55, -3.6, -3.62, -3.64], rows: [0, 0.2, 0.4, 0.6, 0.8, 1], c: 0.02, panel: { top: -0.9, bottom: -2.85, half: 34, tip: -3.15 } },
+    side: { az: [38, 60, 80, 100, 120], top: [-1.75, -1.75, -1.8, -1.75, -1.75], bottom: [-3.62, -3.6, -3.58, -3.56, -3.55], rows: [0, 0.33, 0.67, 1], c: 0.018 },
     bands: [{ top: { y0: -1.53, k: 0.46 }, bottom: { y0: -2.28, k: 0.5 }, x: [-1.0, 1.25], lift: 2 }, { top: { y0: -2.0, k: 0.5 }, bottom: { y0: -3.14, k: 0.35 }, x: [-1.0, 1.4], lift: 1 }],
     emblem: { x: 0.6, y: -1.9, r: 0.3, w: 0.08, stripes: [[-0.07, 0.07], [0.12, 0.2]], bottom: -3.05 },
     lacing: [{ az: -42, y: [-2.05, -3.5], n: 5, w: 0.2 }, { az: 42, y: [-3.05, -3.5], n: 2, w: 0.16 }],
-    belt: { az: [0, 30, 60, 90, 120, 150, 180], top: [-3.62, -3.56, -3.5, -3.48, -3.48, -3.5, -3.52], bottom: [-4.26, -4.05, -3.95, -3.92, -3.88, -3.9, -3.98], c: [0.04, 0.06] },
+    belt: { az: [0, 30, 60, 90, 120, 150, 180], top: [-3.62, -3.56, -3.5, -3.48, -3.48, -3.5, -3.52], bottom: [-4.26, -4.05, -3.95, -3.92, -3.88, -3.9, -3.98], c: [0.03, 0.04] },
     skirt: {
-      top: -3.85, c: 0.06, flare: 0.05,
+      top: -3.85, c: 0.04, flare: 0, arm: { az: [58, 122], bottom: -4.3 },
       plates: [
         // (tiers: 'u' over 'l'; columns over |az|; the tongues over the side plates)
         { name: 'skirtL', az: [18, 38, 58], top: -4.55, bottom: [-5.65, -5.7, -5.6], bone: { pelvis: 0.2, thigh_l: 0.8 }, mirror: true },
@@ -88,28 +88,28 @@ export const DESIGN = {
       ],
     },
     pauldron: {
-      lift: 0.1, inset: 0.1, pole: 0.2, near: 1.2, round: 0.3, inner: 0.5, cols: 12, phi0: 12, phi: [72, 125, 72, 45], footY: [-1.72, -1.78, -1.68], rows: [0, 0.5, 1], c: [0.05, 0.1, 0.14], cone: 34,
+      lift: 0.1, inset: 0.1, pole: 0.2, near: 1.3, round: 0.15, inner: 1, cols: 12, phi0: 12, phi: [76, 125, 76, 30], footY: [-1.72, -1.8, -1.68], rows: [0, 0.5, 1], c: [0.08, 0.15, 0.22], cone: 34,
       zig: { f: [0.3, 0.8], n: 6, psi: [-40, 230] },
-      lames: [{ t: [0.42, 0.95], c: [0.14, 0.22], th: [-40, 220] }, { t: [0.8, 1.32], c: [0.1, 0.17], th: [-50, 230] }],
+      lames: [{ t: [0.42, 0.95], c: [0.14, 0.22], th: [-45, 210] }, { t: [0.8, 1.32], c: [0.1, 0.17], th: [-50, 215] }],
     },
     sleeve: { rings: [['$torso', 0.02], ['ja', 0.025], ['jb', 0.028], ['ua', 0.028], ['uc', 0.028], ['ue', 0.028], ['el', 0.032], ['fa', 0.032]] },
     bracer: { cols: 8, t: [0.42, 1.48], c: [0.05, 0.035], flare: 0.035, rune: { t: 0.66, r: 0.17, w: 0.05, bar: [0.92, 1.25] } },
-    band: { cols: 8, t: [-0.14, 0.06], c: [0.06, 0.07] },
+    band: { cols: 8, t: [-0.14, 0.06], c: [0.035, 0.045] },
   },
   female: {
-    rim: { w: 0.06, h: 0.026, t: 0.036 },
-    fit: { trunk: 0.028, belt: 0.028, skirt: 0.075, arm: 0.028, gap: 0.011 },
+    rim: { w: 0.045, h: 0.032, t: 0.045, in: 0.35 },
+    fit: { trunk: 0.018, belt: 0.022, skirt: 0.045, arm: 0.018, gap: 0.007 },
     wedge: 8,
-    collar: { notch: [12, 1.5], top: { az: [0, 30, 60, 90, 135, 180], top: [-0.3, -0.27, -0.23, -0.2, -0.18, -0.18] }, base: [-1.05, -0.95, -0.85], trim: 0.06, c: 0.05, flare: 0.018, wall: 0.05, spread: 0.025, sink: 0.02, shrug: 0.35 },
-    core: { az: [0, 12, 24, 36, 40, 58, 76, 96], top: [-0.8, -0.81, -0.84, -0.9, -0.92, -0.95, -1.0, -1.85], bottom: [-3.25, -3.2, -3.12, -3.06, -1.95, -1.9, -1.9, -1.9], rows: [0, 0.23, 0.44, 0.56, 0.78, 1], c: 0.028, flat: 12, bridge: [3] },
-    back: { az: [96, 112, 116, 130, 150, 165, 180], top: [-1.85, -1.0, -0.9, -0.75, -0.66, -0.62, -0.6], bottom: [-1.9, -1.9, -3.0, -3.05, -3.1, -3.12, -3.14], rows: [0, 0.3, 0.6, 1], c: 0.028, panel: { top: -0.95, bottom: -2.45, half: 34, tip: -2.7 } },
-    side: { az: [34, 56, 78, 100, 120], top: [-1.75, -1.75, -1.8, -1.75, -1.75], bottom: [-3.1, -3.08, -3.06, -3.05, -3.04], rows: [0, 0.5, 1], c: 0.022 },
+    collar: { notch: [12, 1.5], top: { az: [0, 30, 90, 180], top: [-0.3, -0.18, -0.14, -0.1] }, base: [-1.05, -0.95, -0.85], trim: 0.06, c: 0.05, flare: 0.018, wall: 0.05, spread: 0.025, sink: 0.02, shrug: 0.35 },
+    core: { az: [0, 12, 24, 36, 40, 58, 76, 96], top: [-0.8, -0.81, -0.84, -0.9, -0.92, -0.95, -1.0, -1.85], bottom: [-3.25, -3.2, -3.12, -3.06, -1.95, -1.9, -1.9, -1.9], rows: [0, 0.14, 0.28, 0.42, 0.56, 0.7, 0.85, 1], c: 0.018, flat: 12, drape: true },
+    back: { az: [96, 112, 116, 130, 150, 165, 180], top: [-1.85, -1.0, -0.9, -0.75, -0.66, -0.62, -0.6], bottom: [-1.9, -1.9, -3.0, -3.05, -3.1, -3.12, -3.14], rows: [0, 0.2, 0.4, 0.6, 0.8, 1], c: 0.018, panel: { top: -0.95, bottom: -2.45, half: 34, tip: -2.7 } },
+    side: { az: [34, 56, 78, 100, 120], top: [-1.75, -1.75, -1.8, -1.75, -1.75], bottom: [-3.1, -3.08, -3.06, -3.05, -3.04], rows: [0, 0.33, 0.67, 1], c: 0.016 },
     bands: [{ top: { y0: -1.3, k: 0.42 }, bottom: { y0: -1.95, k: 0.45 }, x: [-0.95, 1.15], lift: 2 }, { top: { y0: -1.7, k: 0.45 }, bottom: { y0: -2.7, k: 0.32 }, x: [-0.95, 1.25], lift: 1 }],
     emblem: { x: 0.5, y: -1.55, r: 0.27, w: 0.07, stripes: [[-0.06, 0.06], [0.1, 0.17]], bottom: -2.6 },
     lacing: [{ az: -38, y: [-1.7, -3.0], n: 5, w: 0.17 }, { az: 38, y: [-2.6, -3.0], n: 2, w: 0.14 }],
-    belt: { az: [0, 30, 60, 90, 120, 150, 180], top: [-3.12, -3.06, -3.0, -2.98, -2.98, -3.0, -3.02], bottom: [-3.78, -3.58, -3.48, -3.44, -3.42, -3.45, -3.52], c: [0.035, 0.05] },
+    belt: { az: [0, 30, 60, 90, 120, 150, 180], top: [-3.12, -3.06, -3.0, -2.98, -2.98, -3.0, -3.02], bottom: [-3.78, -3.58, -3.48, -3.44, -3.42, -3.45, -3.52], c: [0.025, 0.035] },
     skirt: {
-      top: -3.35, c: 0.06, flare: 0.05,
+      top: -3.35, c: 0.035, flare: 0, arm: { az: [58, 122], bottom: -3.9 },
       plates: [
         { name: 'skirtL', az: [18, 38, 58], top: -4.0, bottom: [-4.98, -5.02, -4.95], bone: { pelvis: 0.15, thigh_l: 0.85 }, mirror: true },
         { name: 'skirtL', az: [54, 82, 110], top: -3.95, bottom: [-4.9, -4.85, -4.8], bone: { pelvis: 0.4, thigh_l: 0.6 }, mirror: true },
@@ -122,13 +122,13 @@ export const DESIGN = {
       ],
     },
     pauldron: {
-      lift: 0.08, inset: 0.08, pole: 0.2, near: 1.0, round: 0.3, inner: 0.5, cols: 12, phi0: 12, phi: [70, 120, 70, 45], footY: [-1.5, -1.55, -1.48], rows: [0, 0.5, 1], c: [0.045, 0.09, 0.12], cone: 34,
+      lift: 0.08, inset: 0.08, pole: 0.2, near: 1.1, round: 0.15, inner: 1, cols: 12, phi0: 12, phi: [74, 120, 74, 30], footY: [-1.5, -1.58, -1.48], rows: [0, 0.5, 1], c: [0.06, 0.12, 0.18], cone: 34,
       zig: { f: [0.3, 0.8], n: 6, psi: [-40, 230] },
-      lames: [{ t: [0.36, 0.8], c: [0.11, 0.18], th: [-40, 220] }, { t: [0.68, 1.12], c: [0.08, 0.14], th: [-50, 230] }],
+      lames: [{ t: [0.36, 0.8], c: [0.11, 0.18], th: [-45, 210] }, { t: [0.68, 1.12], c: [0.08, 0.14], th: [-50, 215] }],
     },
     sleeve: { rings: [['$torso', 0.018], ['ja', 0.022], ['jb', 0.025], ['ua', 0.025], ['uc', 0.025], ['ue', 0.025], ['el', 0.028], ['fa', 0.028]] },
     bracer: { cols: 8, t: [0.38, 1.36], c: [0.045, 0.03], flare: 0.03, rune: { t: 0.6, r: 0.15, w: 0.045, bar: [0.84, 1.14] } },
-    band: { cols: 8, t: [-0.12, 0.05], c: [0.05, 0.06] },
+    band: { cols: 8, t: [-0.12, 0.05], c: [0.03, 0.04] },
   },
 };
 
@@ -254,8 +254,11 @@ function plateOf(G, rows, o) {
   if (o.fit) fitOut(rows, !!o.ring, o.out, o.fit.S, o.fit.c);
   const ring = !!o.ring, R = rows.length - 1, n = rows[0].length, C = ring ? n : n - 1, rim = o.rim;
   const tag = o.tag, wt = o.bone, mat = o.mat ?? 'light', faceMat = (r, c) => (o.mat?.call ? o.mat(Math.max(0, Math.min(R - 1, r)), Math.max(0, Math.min(C - 1, c))) : mat);
-  const V = (p) => { const i = G.vert(p, tag); G.wt[i] = wt; return i; };
-  const id = rows.map((row) => row.map(V));
+  // (its weights: `bone` everywhere, or with `boneRow(f)` by row, f 0 at the top to 1 at the foot: leather bends)
+  // (or with `boneAt(p)` by the point: down the trunk, the spine's bones in turn)
+  const wtOf = (r, p) => (o.boneAt ? o.boneAt(p) : o.boneRow ? o.boneRow(R ? r / R : 0) : wt);
+  const V = (p, r = 0) => { const i = G.vert(p, tag); G.wt[i] = wtOf(r, p); return i; };
+  const id = rows.map((row, r) => row.map((p) => V(p, r)));
   const P = (r, c) => rows[Math.max(0, Math.min(R, r))][ring ? ((c % n) + n) % n : Math.max(0, Math.min(n - 1, c))];
   const N = rows.map((row, r) => row.map((p, c) => {
     let nn = unit(cross(sub(P(r, c + 1), P(r, c - 1)), sub(P(r + 1, c), P(r - 1, c))));
@@ -294,15 +297,18 @@ function plateOf(G, rows, o) {
       const up = (k) => k === 'trim' || k === 'bevel';
       const trim = sides.some((s) => up(kindOf(s, r, c)) || (s === 'top' && up(kindOf(s, r, c - 1))) || (s === 'bottom' && up(kindOf(s, r, c + 1))));
       const T = trim ? add(add(b, mul(d, w)), mul(nn, rim.h)) : b;
-      const E = add(add(b, mul(d, trim ? w + 0.01 : 0.01)), mul(nn, -rim.t));
-      return { b: id[r][c], T, E };
+      // (the edge down behind the face by a share of the leather's thickness, `rim.in`, the rest of it standing above as
+      // the raised strip: the plate reads its full thickness at its edge without its back reaching into what is under it)
+      const E = add(add(b, mul(d, trim ? w + 0.01 : 0.01)), mul(nn, -rim.t * (rim.in ?? 1)));
+      return { b: id[r][c], T, E, r };
     });
-    const lazy = (k, key) => { const x = pts[k]; if (x[key + 'i'] == null) x[key + 'i'] = V(x[key]); return x[key + 'i']; };
+    const lazy = (k, key) => { const x = pts[k]; if (x[key + 'i'] == null) x[key + 'i'] = V(x[key], x.r); return x[key + 'i']; };
     for (let k = 0; k < L.length; k++) {
       const j = (k + 1) % L.length, kind = kindOf(L[k].seg, L[k].r, L[k].c);
       if (kind === 'open') continue;
       // (the strip's face in the trim colour or the plate's own, the edge behind it the plate's)
-      const fm = faceMat(L[k].r - (L[k].seg === 'bottom' ? 1 : 0), L[k].c - (L[k].seg === 'right' ? 1 : 0)), em = o.edgeMat ?? fm;
+      // (the edge under a plate's foot in the dark leather: the shadow line the sheet draws under each plate)
+      const fm = faceMat(L[k].r - (L[k].seg === 'bottom' ? 1 : 0), L[k].c - (L[k].seg === 'right' ? 1 : 0)), em = o.edgeMat ?? (L[k].seg === (o.footSide ?? 'bottom') && o.shadow !== false ? 'dark' : fm);
       if (kind === 'trim' || kind === 'bevel') {
         G.poly([pts[k].b, pts[j].b, lazy(j, 'T'), lazy(k, 'T')], kind === 'trim' ? (o.rimMat ?? 'trim') : fm, tag);
         G.poly([lazy(k, 'T'), lazy(j, 'T'), lazy(j, 'E'), lazy(k, 'E')], em, tag);
@@ -446,7 +452,7 @@ function onTop(plates, p, d) {
  * point), its sides down into the surface; `closed` round. Its vertices weighted `wt`. Returns nothing.
  */
 function stripOn(G, pts, w, mat, tag, wt, { h = 0.025, closed = false, sink = 0.012 } = {}) {
-  const V = (q) => { const i = G.vert(q, tag); G.wt[i] = wt; return i; };
+  const V = (q) => { const i = G.vert(q, tag); G.wt[i] = typeof wt === 'function' ? wt(q) : wt; return i; };
   const n = pts.length, at = (k) => pts[closed ? (k + n) % n : Math.max(0, Math.min(n - 1, k))];
   const L = pts.map((p, k) => {
     const tan = unit(sub(at(k + 1).q, at(k - 1).q)), x = unit(cross(p.n, tan)), hw = (Array.isArray(w) ? w[k] : w) / 2;
@@ -465,6 +471,33 @@ function stripOn(G, pts, w, mat, tag, wt, { h = 0.025, closed = false, sink = 0.
   piece(G, start, () => pts[0].n);
 }
 
+/* ---- the pieces worn under this one ------------------------------------------------------------------------------- */
+/**
+ * Points on the leather set's pieces under the chest at rest (their assets beside this builder,
+ * tools/sculpt/leather/under/<name>-<who>.json: the leggings, their flaps left out), each triangle sampled about 0.06 apart.
+ */
+export function underPieces(who, names = ['lowleatherlegs']) {
+  // (the leggings' hip flaps, their `light` panels, left out: they are switched off while the chest is worn, the skirt
+  // hanging where they would)
+  const SKIP = { lowleatherlegs: ['light'] };
+  const out = [];
+  for (const n of names) {
+    const f = new URL(`../leather/under/${n}-${who}.json`, import.meta.url);
+    if (!existsSync(f)) continue;
+    const A = JSON.parse(readFileSync(f, 'utf8')), P = [];
+    for (let i = 0; i < A.verts.length; i += 3) P.push([A.verts[i], A.verts[i + 1], A.verts[i + 2]]);
+    const pts = [];
+    for (let i = 0; i < A.tris.length; i += 4) {
+      if ((SKIP[n] ?? []).includes(A.mats[A.polys[A.tris[i + 3]][1]])) continue;
+      const [a, b, c] = [A.tris[i], A.tris[i + 1], A.tris[i + 2]].map((k) => P[k]);
+      const m = Math.max(1, Math.ceil(Math.max(Math.hypot(...sub(b, a)), Math.hypot(...sub(c, b)), Math.hypot(...sub(a, c))) / 0.06));
+      for (let u = 0; u <= m; u++) for (let v = 0; v <= m - u; v++) { const x = u / m, y = v / m, z = 1 - x - y; pts.push([a[0] * z + b[0] * x + c[0] * y, a[1] * z + b[1] * x + c[1] * y, a[2] * z + b[2] * x + c[2] * y]); }
+    }
+    out.push(pts);
+  }
+  return out;
+}
+
 /* ---- the trunk ---------------------------------------------------------------------------------------------------------- */
 const rad = Math.PI / 180;
 /** The az at which the chest's section at height y (out by c) reaches x, between a0 and a1 (x monotone there). */
@@ -480,8 +513,19 @@ function onLine(sec, L, az, c) {
   return y;
 }
 
+/**
+ * Weights down the trunk by height: the spine's bones in turn, each blended into the next between their heads (the
+ * leather bends with the back as it bows and twists, so a plate's foot stays with the belt and the waistband under it).
+ */
+export function trunkWt(rig, y) {
+  const H = ['spine_03', 'spine_02', 'spine_01', 'pelvis'].map((n) => [n, rig.bones[rig.at.get(n)].head[1]]);
+  if (y >= H[0][1]) return { [H[0][0]]: 1 };
+  for (let i = 0; i + 1 < H.length; i++) if (y >= H[i + 1][1]) { const t = (H[i][1] - y) / (H[i][1] - H[i + 1][1]); return t < 0.02 ? { [H[i][0]]: 1 } : t > 0.98 ? { [H[i + 1][0]]: 1 } : { [H[i][0]]: 1 - t, [H[i + 1][0]]: t }; }
+  return { pelvis: 1 };
+}
+
 function torsoPieces(G, rig, D, S) {
-  const rim = D.rim;
+  const rim = D.rim, TW = (p) => trunkWt(rig, p[1]);
   const { chest, fsec, fz, parts } = trunkCharts(D, S);
   const outOf = (sec) => (p) => { const a = sec.axisAt(p[1]); return [p[0] - a[0], 0, p[2] - a[2]]; };
   const out = outOf(chest), hipOut = (p) => [p[0], 0, p[2] - fz];
@@ -493,14 +537,25 @@ function torsoPieces(G, rig, D, S) {
   const grid = (az, top, bottom, rows, c) => rows.map((f, r) => az.map((a, k) => chest.at(top(a, k) + (bottom(a, k) - top(a, k)) * f, a, Array.isArray(c) ? c[r] : c)));
 
   /* the skirt: plates hanging from under the belt over the hips, out by the clearance and flaring as they fall */
-  const Sk = D.skirt, skirts = [], under = [];
+  // (everything on the trunk laid over the leggings, the piece under it, where this branch has their asset:
+  // tools/sculpt/leather/under/lowleatherlegs-<who>.json, their waistband and hip flaps cleared by the leather's thickness)
+  const Sk = D.skirt, skirts = [], under = [...underPieces(rig.who)];
+  // (over the leggings: the belt's top above their waistband's, so it covers it; the cores' and side panels' feet over
+  // the belt, kept above the waistband's top so their backs do not reach into it as the spine bends)
+  const legsTop = under.length ? Math.max(...under[0].map((p) => p[1])) : null;
+  if (legsTop !== null) {
+    D = structuredClone(D);
+    D.belt.top = D.belt.top.map((y) => Math.max(y, legsTop + 0.12));
+    const foot = (y) => (y < legsTop + 0.6 ? Math.max(y, legsTop + 0.04) : y);
+    D.core.bottom = D.core.bottom.map(foot); D.back.bottom = D.back.bottom.map(foot); D.side.bottom = D.side.bottom.map(foot);
+  }
   const skirtRows = (az, top, bottom) => {
     const rows = [];
-    for (let r = 0; r < 2; r++) rows.push(az.map((a, k) => {
-      const y = top + (bottom[k] - top) * r;
+    for (let r = 0; r < 3; r++) rows.push(az.map((a, k) => {
+      const y = top + ((bottom[k] - top) * r) / 2;
       let p = fsec.at(y, a, Sk.c + Sk.flare * (top - y) / 2);
       if (r > 0) {
-        const prev = rows[0][k], d = [Math.sin(a * rad), 0, Math.cos(a * rad)];
+        const prev = rows[r - 1][k], d = [Math.sin(a * rad), 0, Math.cos(a * rad)];
         const rp = dot(sub(prev, [0, prev[1], fz]), d), rc = dot(sub(p, [0, p[1], fz]), d);
         if (rc < rp) p = add([0, y, fz], mul(d, rp));
       }
@@ -508,16 +563,30 @@ function torsoPieces(G, rig, D, S) {
     }));
     return rows;
   };
-  // (inside out: the lower tier, the upper, the tongues; within a tier the back-side plate, the side, the front-side)
-  const order = ['skirtL', 'skirtU', 'skirt.f', 'skirt.b'];
-  for (const name of order) for (const pl of Sk.plates.filter((p) => p.name === name).slice().reverse()) for (const s of pl.mirror ? [1, -1] : [1]) {
+  // (inside out: the tongues, the lower tier, the upper; within a tier the back-side plate, the side, the front-side)
+  const order = ['skirt.f', 'skirt.b', 'skirtL', 'skirtU'];
+  // (the arm's lane: our arms hang close by the hip, the hand and the forearm passing there in the idle and the walk;
+  // the side plates there end above them (`arm.bottom`), the plates either side of the lane kept out of it)
+  const lane = Sk.arm;
+  const laneOf = (pl) => {
+    if (!lane || !pl.mirror) return pl;
+    const [a0, a1] = [pl.az[0], pl.az[pl.az.length - 1]], mid = (a0 + a1) / 2;
+    if (mid > lane.az[0] && mid < lane.az[1]) return { ...pl, bottom: pl.bottom.map((y) => Math.max(y, lane.bottom)) };
+    if (mid <= lane.az[0] && a1 > lane.az[0]) { const k = (lane.az[0] - a0) / (a1 - a0); return { ...pl, az: pl.az.map((a) => a0 + (a - a0) * k) }; }
+    if (mid >= lane.az[1] && a0 < lane.az[1]) { const k = (a1 - lane.az[1]) / (a1 - a0); return { ...pl, az: pl.az.map((a) => a1 - (a1 - a) * k) }; }
+    return pl;
+  };
+  for (const name of order) for (const pl0 of Sk.plates.filter((p) => p.name === name).slice().reverse()) for (const s of pl0.mirror ? [1, -1] : [1]) {
+    const pl = laneOf(pl0);
     const az0 = s > 0 ? pl.az : pl.az.slice().reverse().map((a) => -a), bottom0 = s > 0 ? pl.bottom : pl.bottom.slice().reverse();
     const az = refine(az0.map((a, i) => a), 12), bottom = az.map((a) => { for (let i = 0; i + 1 < az0.length; i++) if ((a - az0[i]) * (a - az0[i + 1]) <= 0) { const t = (a - az0[i]) / (az0[i + 1] - az0[i] || 1); return bottom0[i] + (bottom0[i + 1] - bottom0[i]) * t; } return bottom0[0]; });
     const rows = skirtRows(az, pl.top ?? Sk.top, bottom);
-    fitOut(rows, false, hipOut, [[hipS, D.fit.skirt], ...under.map((P) => [P, gap])]);
+    fitOut(rows, false, hipOut, [[hipS, D.fit.skirt], ...under.map((P) => [P, gap + 0.02])]);
     const bone = s > 0 ? pl.bone : Object.fromEntries(Object.entries(pl.bone).map(([b, w]) => [b.replace(/_l$/, '_x').replace(/_r$/, '_l').replace(/_x$/, '_r'), w]));
     const p0 = G.polys.length;
-    const pc = plateOf(G, rows, { tag: name, bone, rim, out: hipOut, border: { top: 'open', bottom: 'bevel', left: 'bevel', right: 'bevel' } });
+    // (its top with the pelvis, under the belt; its foot with the plate's own shares of the pelvis and the thigh)
+    const mix = (f) => { const o = {}; for (const [b, w] of Object.entries(bone)) o[b] = (o[b] ?? 0) + w * f; o.pelvis = (o.pelvis ?? 0) + (1 - f); return o; };
+    const pc = plateOf(G, rows, { tag: name, bone, boneRow: mix, rim, out: hipOut, border: { top: 'open', bottom: 'bevel', left: 'bevel', right: 'bevel' } });
     const pieceName = pl.mirror ? `${name}.${s > 0 ? 'l' : 'r'}` : name;
     for (let k = p0; k < G.polys.length; k++) G.polys[k].piece = pieceName;
     skirts.push(pc);
@@ -542,7 +611,7 @@ function torsoPieces(G, rig, D, S) {
     const rows = grid(s > 0 ? az : az.slice().reverse(), top, bot, Sd.rows, Sd.c);
     fitOut(rows, false, out, [[trunk, D.fit.trunk], ...under.map((P) => [P, gap])]);
     p0 = G.polys.length;
-    sides.push(plateOf(G, rows, { tag: 'side', bone: { spine_03: 0.5, spine_02: 0.5 }, rim, out, border: { top: 'bevel', bottom: 'open', left: 'edge', right: 'edge' } }));
+    sides.push(plateOf(G, rows, { tag: 'side', boneAt: TW, rim, out, mat: 'leather', border: { top: 'bevel', bottom: 'open', left: 'edge', right: 'edge' } }));
     for (let k = p0; k < G.polys.length; k++) G.polys[k].piece = `side.${s > 0 ? 'l' : 'r'}`;
     under.push(lay(p0));
   }
@@ -555,14 +624,14 @@ function torsoPieces(G, rig, D, S) {
   fitOut(kRows, false, out, [[trunk, D.fit.trunk], ...under.map((P) => [P, gap])]);
   p0 = G.polys.length;
   const backTop = (r, c) => (Math.abs(180 - kAz[c]) <= 50 && Math.abs(180 - (kAz[c + 1] ?? 999)) <= 50 ? 'open' : 'bevel');
-  const back = plateOf(G, kRows, { tag: 'back', bone: { spine_03: 1 }, rim, out, border: { left: 'edge', right: 'edge', top: backTop, bottom: 'bevel' } });
+  const back = plateOf(G, kRows, { tag: 'back', boneAt: TW, rim, out, border: { left: 'edge', right: 'edge', top: backTop, bottom: 'bevel' } });
   // its raised panel: a pentagon on the upper back, pointed at its foot
   {
     const P = Kp.panel, az = span(180 - P.half, 180 + P.half, 6);
     const bot = (a) => P.bottom + (P.tip - P.bottom) * (1 - Math.abs(a - 180) / P.half);
     const rows = [0, 0.5, 1].map((f) => az.map((a) => chest.at(P.top + (bot(a) - P.top) * f, a, Kp.c)));
     fitOut(rows, false, out, [[trunk, D.fit.trunk], [lay(p0), gap - 0.03]]);
-    plateOf(G, rows, { tag: 'back panel', bone: { spine_03: 1 }, rim: { ...rim, w: rim.w * 0.6, t: rim.t * 0.5 }, out, border: { top: 'bevel', bottom: 'bevel', left: 'bevel', right: 'bevel' } });
+    plateOf(G, rows, { tag: 'back panel', boneAt: TW, rim: { ...rim, w: rim.w * 0.6, t: rim.t * 0.5 }, out, border: { top: 'bevel', bottom: 'bevel', left: 'bevel', right: 'bevel' } });
   }
   for (let k = p0; k < G.polys.length; k++) G.polys[k].piece = 'back';
   under.push(lay(p0));
@@ -584,10 +653,16 @@ function torsoPieces(G, rig, D, S) {
     for (let k = Math.min(ia, ib) + 1; k < Math.max(ia, ib); k++) { const t = (row[k][0] - Bq[0]) / (A[0] - Bq[0]), q = lerp(Bq, A, t); if (radOf(q) > radOf(row[k])) row[k] = setRad(row[k], radOf(q)); }
   });
   for (const r of Cp.bridge ?? []) cRows[r].forEach((p, k) => { const want = (radOf(cRows[r - 1][k]) + radOf(cRows[r + 1][k])) / 2; if (radOf(p) < want) cRows[r][k] = setRad(p, want); });
+  // (in profile a plate: down each column from its fullest row to its foot no further in than the straight line between
+  // them, so it falls from the chest to the waist in one smooth line, as drawn, rather than following under the bust)
+  if (Cp.drape) for (let k = 0; k < cAz.length; k++) {
+    const rr = cRows.map((row) => radOf(row[k])), top = rr.indexOf(Math.max(...rr)), R0 = cRows.length - 1;
+    for (let r = top + 1; r < R0; r++) { const want = rr[top] + ((rr[R0] - rr[top]) * (r - top)) / (R0 - top); if (rr[r] < want) cRows[r][k] = setRad(cRows[r][k], want); }
+  }
   fitOut(cRows, false, out, [[trunk, D.fit.trunk], ...under.map((P) => [P, gap])]);
   p0 = G.polys.length;
   const coreTop = (r, c) => (Math.abs(cAz[c]) <= 40 && Math.abs(cAz[c + 1] ?? 999) <= 40 ? 'open' : 'bevel');
-  const core = plateOf(G, cRows, { tag: 'chest', bone: { spine_03: 1 }, rim, out, border: { top: coreTop, bottom: 'bevel', left: 'edge', right: 'edge' } });
+  const core = plateOf(G, cRows, { tag: 'chest', boneAt: TW, rim, out, border: { top: coreTop, bottom: 'bevel', left: 'edge', right: 'edge' } });
 
   // the diagonal layered plates over it: each between two lines across the chest, the upper over the lower
   const bandPlates = [];
@@ -603,7 +678,7 @@ function torsoPieces(G, rig, D, S) {
     }));
     fitOut(rows, false, out, [[trunk, D.fit.trunk], ...below]);
     const q0 = G.polys.length;
-    bandPlates.push(plateOf(G, rows, { tag: `band ${bi + 1}`, bone: { spine_03: 1 }, rim, out, border: { top: bi === 0 ? 'trim' : 'bevel', bottom: 'bevel', left: 'edge', right: 'edge' } }));
+    bandPlates.push(plateOf(G, rows, { tag: `band ${bi + 1}`, boneAt: TW, rim, out, border: { top: bi === 0 ? 'trim' : 'bevel', bottom: 'bevel', left: 'edge', right: 'edge' } }));
     below = [...below, [lay(q0), gap]];
   }
   for (let k = p0; k < G.polys.length; k++) G.polys[k].piece = 'chest';
@@ -614,11 +689,11 @@ function torsoPieces(G, rig, D, S) {
     const E = D.emblem, FWD = [0, 0, -1], q0 = G.polys.length;
     const at = (x, y) => onTop(front, [x, y, 0], FWD);
     const ring = Array.from({ length: 14 }, (_, k) => { const a = (k / 14) * 2 * Math.PI; return at(E.x + Math.cos(a) * E.r, E.y + Math.sin(a) * E.r); }).filter(Boolean);
-    if (ring.length === 14) stripOn(G, ring, E.w, 'rune', 'emblem', { spine_03: 1 }, { closed: true, h: 0.03 });
+    if (ring.length === 14) stripOn(G, ring, E.w, 'rune', 'emblem', TW, { closed: true, h: 0.03 });
     for (const [x0, x1] of E.stripes) {
       const x = E.x + (x0 + x1) / 2, w = x1 - x0, ys = span(E.y - E.r - E.w * 0.6, E.bottom, 5);
       const pts = ys.map((y) => at(x, y)).filter(Boolean);
-      if (pts.length > 1) stripOn(G, pts, w, 'rune', 'emblem', { spine_03: 1 }, { h: 0.03 });
+      if (pts.length > 1) stripOn(G, pts, w, 'rune', 'emblem', TW, { h: 0.03 });
     }
     for (let k = q0; k < G.polys.length; k++) G.polys[k].piece = 'chest';
   }
@@ -632,7 +707,7 @@ function torsoPieces(G, rig, D, S) {
         const pt = (u, v) => { const o = chest.axisAt(yc + v), ax = [Math.cos(L.az * rad), 0, -Math.sin(L.az * rad)], p = add(add(o, mul(ax, u)), mul(d, -2)); return onTop([...front, ...sides], [p[0], yc + v, p[2]], d); };
         for (const [s, lift] of [[1, 0.03], [-1, 0.038]]) {
           const pts = span(-1, 1, 2).map((t) => pt(s * t * L.w / 2, -t * h)).filter(Boolean);
-          if (pts.length === 3) stripOn(G, pts, 0.055, 'trim', 'lacing', { spine_03: 0.7, spine_02: 0.3 }, { h: lift });
+          if (pts.length === 3) stripOn(G, pts, 0.055, 'trim', 'lacing', TW, { h: lift });
         }
       }
     }
@@ -688,7 +763,7 @@ export function pauldronFrame(rig, D, S) {
   const centre = add(add(J.shoulder, mul(UP, Pd.lift)), [-Pd.inset, 0, 0]);
   const pole = unit(add(mul(UP, 1 - Pd.pole), mul([1, 0, 0], Pd.pole)));
   const q1 = unit(sub(FWD, mul(pole, dot(FWD, pole)))), q2 = cross(pole, q1);
-  const near = S.filter((s) => ['joint', 'arm', 'torso'].includes(s.part) && Math.hypot(...sub(s.p, centre)) < Pd.near && s.p[0] > J.shoulder[0] * 0.55).map((s) => s.p);
+  const near = S.filter((s) => ['joint', 'arm', 'torso', 'neck'].includes(s.part) && Math.hypot(...sub(s.p, centre)) < Pd.near && s.p[0] > J.shoulder[0] * 0.3).map((s) => s.p);
   const reach = (dir) => {
     const cc = Math.cos(Pd.cone * Math.PI / 180);
     let r = 0;
