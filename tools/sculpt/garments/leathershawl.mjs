@@ -59,21 +59,21 @@ const LIFT = (side) => ({ side: { a: side, knee: 20, b: 1.3, max: 100, also: { a
 export const DESIGN = {
   male: {
     z0: -0.12, front: 6, back: 6, OUT: 0.15, THICK: 0.1, TIER: 0.07, RAISE: 0.035, bevel: 0.06,
-    collar: { rim: [-0.72, -0.05, 0.3], p: 1.5, IN: 0.16, wall: 0.14, lean: 0.3, low: 0.16 },
-    yoke: { at: [-1.62, -0.75, -1.62], p: 1.3, band: 0.22, line: 0.05 },
+    collar: { rim: [-0.74, 0.0, 0.38], p: 1.8, IN: 0.16, wall: 0.18, lean: 0.35, low: 0.18 },
+    yoke: { at: [-1.62, -0.68, -1.62], p: 1.15, band: 0.22, line: 0.05 },
     hem: { at: [-3.33, -1.95, -3.28], p: 1.0, flare: [0.04, 0.08, 0.04], soften: 0, band: 0.66, stripe: 0.075 },
-    tri: { w: 0.3, gap: 0.12, raise: 0.025 }, ytri: { w: 0.16, gap: 0.1 },
+    tri: { w: 0.36, gap: 0.16, raise: 0.03 }, ytri: { w: 0.2, gap: 0.14 },
     tabs: { gap: 0.25, w: 0.17, len: [0.26, 0.5], thick: 0.055, tilt: 8, seed: 7 },
     emblem: { ring: [0.3, 0.17], at: [-1.29, -1.33], stripes: [0.11, 0.07], raise: 0.03 },
     lift: LIFT(0.4),
   },
   female: {
     z0: -0.14, front: 6, back: 6, OUT: 0.13, THICK: 0.09, TIER: 0.06, RAISE: 0.03, bevel: 0.05,
-    collar: { rim: [-0.68, -0.1, 0.25], p: 1.5, IN: 0.14, wall: 0.12, lean: 0.3, low: 0.14 },
-    yoke: { at: [-1.47, -0.75, -1.47], p: 1.3, band: 0.2, line: 0.045 },
+    collar: { rim: [-0.7, -0.05, 0.3], p: 1.9, IN: 0.14, wall: 0.15, lean: 0.35, low: 0.16 },
+    yoke: { at: [-1.47, -0.7, -1.47], p: 1.2, band: 0.2, line: 0.045 },
     hem: { at: [-2.95, -1.85, -2.9], p: 1.0, flare: [0.04, 0.07, 0.04], soften: 0, band: 0.6, stripe: 0.065 },
-    tri: { w: 0.27, gap: 0.11, raise: 0.022 }, ytri: { w: 0.14, gap: 0.09 },
-    tabs: { gap: 0.23, w: 0.15, len: [0.24, 0.45], thick: 0.05, tilt: 8, seed: 7 },
+    tri: { w: 0.31, gap: 0.14, raise: 0.026 }, ytri: { w: 0.18, gap: 0.12 },
+    tabs: { gap: 0.23, w: 0.15, len: [0.24, 0.45], thick: 0.05, tilt: 14, seed: 7 },
     emblem: { ring: [0.25, 0.12], at: [-1.15, -1.2], stripes: [0.095, 0.06], raise: 0.026 },
     lift: LIFT(0.45),
   },
@@ -191,7 +191,7 @@ export function buildLeatherShawl(rig, design = DESIGN[rig.who], { under = [] } 
     // the collar's outside: its outer rim `wall` out from the inner, its top between, its wall down to the yoke's top (cm
     // halfway, bulging out a little: a rolled edge)
     const u = [d[0] + C.wall, rim - 0.03], u0 = [d[0] + C.wall * 0.5, rim + 0.02];
-    const cm = [Math.max(u[0], q.Y0[0]) + 0.02, (u[1] + q.Y0[1]) / 2];
+    const cm = [Math.max(u[0], q.Y0[0]) + 0.04, (u[1] + q.Y0[1]) / 2];
     // (the collar's inner foot inside the underside's top: no fold)
     if (ci[0] > q.IT[0] - 0.02) q.IT = [ci[0] + 0.02, q.IT[1]];
     cols.push({ deg, F, yH, yY, rim, Lb, sY, sB, sH, ci, d, u0, u, cm, T0: Lb[0], ...q });
@@ -250,8 +250,14 @@ function meshOfLeather(rig, D, cols) {
 function prism(G, pts, nrm, h, lift, mat, tag, src, part = 'piece') {
   G.tag = tag;
   const bot = pts.map((p, k) => G.vert(add(p, mul(nrm[k], lift)), part)), top = pts.map((p, k) => G.vert(add(p, mul(nrm[k], lift + h)), part));
-  G.poly(top, mat, part, true);
-  G.poly([...bot].reverse(), mat, part, true);
+  if (pts.length <= 4) { G.poly(top, mat, part, true); G.poly([...bot].reverse(), mat, part, true); }
+  else {
+    // (a long outline: each face a fan round its centre)
+    const n = pts.length, cen = (vs) => G.vert(mul(vs.reduce((s2, v) => add(s2, G.verts[v]), [0, 0, 0]), 1 / n), part);
+    const ct = cen(top), cb = cen(bot);
+    G.src ??= []; G.src[ct] = G.src[cb] = src.flat().map(([v, w]) => [v, w / n]);
+    for (let k = 0; k < n; k++) { const j = (k + 1) % n; G.poly([top[k], top[j], ct], mat, part); G.poly([bot[j], bot[k], cb], mat, part); }
+  }
   for (let k = 0; k < pts.length; k++) { const j = (k + 1) % pts.length; G.poly([bot[k], bot[j], top[j], top[k]], mat, part); }
   [...bot, ...top].forEach((v, i) => { G.src ??= []; G.src[v] = src[i % pts.length]; });
 }
@@ -288,8 +294,10 @@ function laid(G, D, cols, R) {
     for (const [from, dir] of [[0, 1], [tot, -1]]) for (let i = 0; i < n; i++) {
       const c = from + dir * (i + 0.5) * st;
       const w = Math.min(T.w, st - 0.04) / 2;
-      const q = [rb.at(rb.uAt(L, c - w), 0.96), rb.at(rb.uAt(L, c + w), 0.96), rb.at(rb.uAt(L, c), 0.06)];
-      if (skip && skip(q[2].p)) continue;
+      // (its outline in the ribbon's own coordinates, each edge in four, so it follows the band round the columns)
+      const cs = [[rb.uAt(L, c - w), 0.93], [rb.uAt(L, c + w), 0.93], [rb.uAt(L, c), 0.09]], q = [];
+      for (let e = 0; e < 3; e++) for (let t = 0; t < 4; t++) { const [u0, v0] = cs[e], [u1, v1] = cs[(e + 1) % 3]; q.push(rb.at(u0 + (u1 - u0) * t / 4, v0 + (v1 - v0) * t / 4)); }
+      if (skip && skip(q[8].p)) continue;
       prism(G, q.map((x) => x.p), q.map((x) => x.n), raise, PLIFT, 'rune', tag, q.map((x) => x.src));
     }
   };
@@ -371,7 +379,6 @@ function surfaceAt(G, cols, R, z0, side, x, y) {
   let best = null;
   for (const p of G.polys) {
     if (p.part !== 'cape' && p.part !== 'collar') continue;
-    if (p.mat === 'dark') continue;
     for (let k = 1; k + 1 < p.v.length; k++) {
       const [a, b, c] = [P[p.v[0]], P[p.v[k]], P[p.v[k + 1]]];
       // barycentric in xy

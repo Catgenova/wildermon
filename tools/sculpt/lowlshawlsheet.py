@@ -223,6 +223,12 @@ def compare(M, refdir, out, enchanted=False, k=2):
             ours = Image.new('RGB', ref.size, (44, 40, 42))
             r = render(M, who, c, c['box'], k, enchanted=(c['ref'] == 'glow') or enchanted)
             ours.paste(r, (0, 0), r)
+            if '--wire' in sys.argv:
+                m = M[who]['shawl']
+                P3 = project(m['verts'], c)
+                # (the edges in front: each polygon facing the viewer whose centre is not behind the rendered depth is
+                # approximated by drawing polygons facing the viewer of the shell's outside and the pieces)
+                wire(ImageDraw.Draw(ours), P3, m['polys'], c['box'], k, (40, 22, 18), keep=[mt != 'dark' for mt in m['mat']])
             # the overlay: the reference, our shawl's silhouette outline (green) and the traced outline (magenta)
             ov = ref.copy()
             sil = render(M, who, c, c['box'], k, body=False, flat={'shawl': (255, 255, 255)})
