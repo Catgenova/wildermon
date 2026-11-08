@@ -7,9 +7,11 @@
 //   buildTunic(rig, design?) → { verts, polys: [{ v, mat, part, tag }], tris, part, rings, design }
 //   tunicWeights(rig, G) → per vertex [[bone, weight], ...] (the body's bones only: the tunic has none of its own)
 //
-//   node tools/sculpt/garments/tunic.mjs
-//     writes the game's copy beside each body: src/sculpt/assets/lowtunic-male.json and lowtunic-female.json
-//     (lowgarment.mjs garmentAsset; loaded by src/sculpt/lowpoly.ts), and the shawl over it (garments/shawl.mjs)
+//   hiddenPolys(rig, G) → the body's polygons the tunic covers whole (left out of the body while it is worn)
+//
+//   node tools/sculpt/garments/tunic.mjs (or garments/outfit1.mjs, which writes the shawl's too)
+//     writes the game's copy beside each body, fitted over the trousers (`under`): src/sculpt/assets/lowtunic-male.json
+//     and lowtunic-female.json (lowgarment.mjs garmentAsset, with `hides`; loaded by src/sculpt/lowpoly.ts)
 //
 // The shape:
 //   the torso: a grid of columns round a vertical axis (DESIGN.cols, azimuth 0 the front, 90 the body's left; mirrored)
@@ -56,45 +58,52 @@ export const MATS = {
  */
 export const DESIGN = {
   male: {
-    cols: [0, 9, 28, 48, 70, 90, 110, 132, 156, 180], vcol: 9, vwide: 17, arm: [70, 90, 110],
-    THICK: 0.06, CLEAR: 0.03,
-    neck: { c: 0.12, v: 0.32, lift: 0.02 },
-    collar: { h: [0.4, 0.5, 0.55], linen: 0.4, c: 0.15 },
-    armhole: { c: 0.09, drop: 0.7, room: 0.03, side: 0.6, below: 0.25, pit: 0.3 },
+    cols: [0, 9, 28, 48, 70, 90, 110, 132, 156, 180], vcol: 9, vwide: 17, notch: 15, arm: [70, 90, 110], wedge: 0.3,
+    THICK: 0.045, CLEAR: 0.012,
+    neck: { c: 0.06, v: 0.4, lift: 0.02 },
+    collar: { h: [0.5, 0.56, 0.56], linen: 0.4, c: 0.12 },
+    armhole: { c: 0.04, drop: 0.7, room: 0.1, side: 0.6, below: 0.25, pit: 0.3, follow: [0.3, 0.6, 0.9] },
     rows: [
-      { key: 'S', y: [-1.0, -0.69, -0.95], c: [0.12, 0.1, 0.12] },
-      { key: 'A1', y: [-1.45, -1.3, -1.4], c: [0.13, 0.12, 0.13] },
-      { key: 'A2', y: [-1.95, -1.86, -1.9], c: [0.14, 0.1, 0.14] },
-      { key: 'B', y: [-2.45, -2.65, -2.45], c: [0.15, 0.1, 0.15] },
-      { key: 'U', y: [-2.95, -3.0, -2.95], c: [0.16, 0.13, 0.16] },
-      { key: 'W', y: [-3.45, -3.45, -3.45], c: [0.18, 0.18, 0.18] },
-      { key: 'H', y: [-4.1, -4.1, -4.1], c: [0.18, 0.18, 0.18] },
+      { key: 'Y', y: [-1.08, -0.5, -0.45], c: [0.04, 0.04, 0.04] },
+      { key: 'S', y: [-1.2, -0.69, -0.95], c: [0.055, 0.04, 0.04] },
+      { key: 'A1', y: [-1.45, -1.3, -1.4], c: [0.055, 0.04, 0.04] },
+      { key: 'A2', y: [-1.95, -1.86, -1.9], c: [0.04, 0.04, 0.04] },
+      { key: 'B', y: [-2.45, -2.65, -2.45], c: [0.04, 0.04, 0.04] },
+      { key: 'U', y: [-2.95, -3.0, -2.95], c: [0.04, 0.04, 0.04] },
+      { key: 'W', y: [-3.45, -3.45, -3.45], c: [0.04, 0.04, 0.04] },
+      { key: 'H', y: [-4.1, -4.1, -4.1], c: [0.04, 0.04, 0.04] },
     ],
-    hang: { from: 'U', flare: [0.02, 0.06, 0.03] },
-    skirt: { L: [-5.0, -4.95, -5.0], E: [-6.05, -5.95, -6.1], trim: 0.26, c: 0.2 },
+    hang: { from: 'H', flare: [0, 0, 0] },
+    skirt: { L: [-5.0, -4.95, -5.0], E: [-6.05, -5.95, -6.1], trim: 0.26, c: [0.09, 0.07, 0.06] },
+    thigh: 0.9,
     vsplit: 0.85,
-    sleeve: { rings: [['jb', 0.09], ['ua', 0.12], ['ue', 0.15]], inner: 0.7, under: 0.16, cuff: { at: 0.42, len: 0.3, c: 0.18, step: 0.035, bands: [['trim', 0.55], ['fabric', 0.45]] } },
+    sleeve: { rings: [['jb', 0.035], ['ua', 0.04], ['ue', 0.045], ['el', 0.05]], inner: 0.7, under: 0.16, cuff: { at: 0.42, len: 0.22, c: 0.06, step: 0.03, bands: [['trim', 0.55], ['fabric', 0.45]] } },
     seams: [{ at: 90, dir: 1, from: 'N', to: 'S', w: 0.035 }, { at: 90, dir: 1, from: 'B', to: 'LH', w: 0.035 }, { at: 180, dir: -1, from: 'S', to: 'LH', w: 0.018 }],
   },
   female: {
-    cols: [0, 9, 26, 42, 72, 90, 108, 136, 158, 180], vcol: 9, vwide: 17, arm: [72, 90, 108],
-    THICK: 0.055, CLEAR: 0.025,
-    neck: { c: 0.1, v: 0.28, lift: 0.02 },
-    collar: { h: [0.34, 0.42, 0.46], linen: 0.4, c: 0.12 },
-    armhole: { c: 0.08, drop: 0.7, room: 0.03, side: 0.6, below: 0.22, pit: 0.25 },
+    cols: [0, 9, 26, 42, 72, 90, 108, 136, 158, 180], vcol: 9, vwide: 17, notch: 15, arm: [72, 90, 108],
+    THICK: 0.04, CLEAR: 0.012,
+    neck: { c: 0.08, v: 0.34, lift: 0.02 },
+    collar: { h: [0.42, 0.5, 0.55], linen: 0.4, c: 0.1 },
+    armhole: { c: 0.035, drop: 0.7, room: 0.1, side: 0.6, below: 0.22, pit: 0.25, follow: [0.3, 0.6, 0.9] },
     rows: [
-      { key: 'S', y: [-1.0, -0.92, -0.95], c: [0.1, 0.08, 0.1] },
-      { key: 'A1', y: [-1.4, -1.18, -1.3], c: [0.1, 0.09, 0.1] },
-      { key: 'A2', y: [-1.75, -1.52, -1.7], c: [0.1, 0.09, 0.1] },
-      { key: 'B', y: [-2.08, -2.2, -2.05], c: [0.1, 0.09, 0.1] },
-      { key: 'U', y: [-2.45, -2.5, -2.4], c: [0.1, 0.09, 0.1], bridge: 1.0 },
-      { key: 'W', y: [-2.8, -2.8, -2.8], c: [0.12, 0.11, 0.12], bridge: 0.99 },
-      { key: 'H', y: [-3.5, -3.5, -3.5], c: [0.14, 0.14, 0.14] },
+      { key: 'Y', y: [-1.02, -0.62, -0.58], c: [0.035, 0.05, 0.035] },
+      { key: 'S', y: [-1.12, -0.92, -0.95], c: [0.035, 0.06, 0.035] },
+      { key: 'A1', y: [-1.4, -1.18, -1.3], c: [0.035, 0.035, 0.035] },
+      { key: 'A2', y: [-1.75, -1.52, -1.7], c: [0.035, 0.035, 0.035] },
+      { key: 'B', y: [-2.08, -2.2, -2.05], c: [0.035, 0.035, 0.035] },
+      { key: 'U', y: [-2.45, -2.5, -2.4], c: [0.035, 0.035, 0.035], bridge: 1.0 },
+      { key: 'W', y: [-2.8, -2.8, -2.8], c: [0.035, 0.035, 0.035] },
+      { key: 'W2', y: [-3.15, -3.15, -3.15], c: [0.035, 0.035, 0.035] },
+      { key: 'H', y: [-3.5, -3.5, -3.5], c: [0.035, 0.035, 0.035] },
     ],
-    hang: { from: 'H', flare: [0.07, 0.06, 0.07] },
-    skirt: { L: [-4.05, -4.0, -4.05], E: [-4.8, -4.65, -4.85], trim: 0.22, c: 0.16 },
+    hang: { from: 'H', flare: [0.04, 0.02, 0.04] },
+    taper: { from: 'A2', to: 'H', curve: 0.06 },
+    flat: { rows: ['A2', 'B', 'U'], from: 26 },
+    skirt: { L: [-4.05, -4.0, -4.05], E: [-4.8, -4.65, -4.85], trim: 0.22, c: [0.1, 0.05, 0.07] },
+    thigh: 0.9,
     vsplit: 0.62,
-    sleeve: { rings: [['jb', 0.05], ['ua', 0.08], ['ue', 0.1]], inner: 0.7, under: 0.14, cuff: { at: 0.45, len: 0.28, c: 0.15, step: 0.03, bands: [['trim', 0.3], ['fabric', 0.2], ['trim', 0.3], ['fabric', 0.2]] } },
+    sleeve: { rings: [['jb', 0.03], ['ua', 0.035], ['ue', 0.04], ['el', 0.045]], inner: 0.7, under: 0.14, cuff: { at: 0.45, len: 0.22, c: 0.05, step: 0.025, bands: [['trim', 0.3], ['fabric', 0.2], ['trim', 0.3], ['fabric', 0.2]] } },
     seams: [{ at: 90, dir: 1, from: 'N', to: 'S', w: 0.03 }, { at: 42, dir: 1, from: 'A1', to: 'LH', w: 0.03 }, { at: 136, dir: -1, from: 'A1', to: 'LH', w: 0.03 }, { at: 90, dir: 1, from: 'B', to: 'LH', w: 0.03 }],
   },
 };
@@ -108,14 +117,15 @@ const mean = (ps) => mul(ps.reduce((a, p) => add(a, p), [0, 0, 0]), 1 / ps.lengt
 /** Points on the body's surface, each with its part: every vertex and a grid on each triangle about `step` apart. */
 export function partSamples(B, step = 0.07) {
   const out = [];
-  B.verts.forEach((p, i) => out.push({ p, part: B.part[i] }));
+  B.verts.forEach((p, i) => out.push({ p, part: B.part[i], polys: [] }));
+  for (const t of B.tris) for (const i of t.v) out[i].polys.push(t.poly);
   for (const t of B.tris) {
-    const [a, b, c] = t.v.map((i) => B.verts[i]), part = B.part[t.v[0]];
+    const [a, b, c] = t.v.map((i) => B.verts[i]), part = B.part[t.v[0]], poly = t.poly;
     const n = Math.max(1, Math.ceil(Math.max(Math.hypot(...sub(b, a)), Math.hypot(...sub(c, b)), Math.hypot(...sub(a, c))) / step));
     for (let i = 0; i <= n; i++) for (let j = 0; j <= n - i; j++) {
       if ((i === 0 && j === 0) || (i === n && j === 0) || (i === 0 && j === n)) continue;
       const u = i / n, v = j / n, w = 1 - u - v;
-      out.push({ p: [a[0] * w + b[0] * u + c[0] * v, a[1] * w + b[1] * u + c[1] * v, a[2] * w + b[2] * u + c[2] * v], part });
+      out.push({ p: [a[0] * w + b[0] * u + c[0] * v, a[1] * w + b[1] * u + c[1] * v, a[2] * w + b[2] * u + c[2] * v], part, polys: [poly] });
     }
   }
   return out;
@@ -134,7 +144,7 @@ function vertexNormals(B) {
  * own normals by the shortfall (shared by the point's barycentric weights), repeated until nothing is short. P: the
  * positions (changed in place); quads: [[a, b, c, d], group]; groups: [{ pts, faces: Set of quad groups, need }].
  */
-export function clearOut(P, quads, groups, { iters = 40, fixed = new Set(), reach = 0.6, keep = 8, outward = null, most = 0.3 } = {}) {
+export function clearOut(P, quads, groups, { iters = 80, fixed = new Set(), reach = 0.6, keep = 8, outward = null, most = 0.3, damp = 0.5 } = {}) {
   const P0 = P.map((p) => [...p]);
   // the quads' triangles (each along its shorter diagonal at the start)
   const T = [];
@@ -170,9 +180,13 @@ export function clearOut(P, quads, groups, { iters = 40, fixed = new Set(), reac
     const vnu = vn.map(unit), push = P.map(() => 0);
     worst = 0;
     for (const { s, need, cand } of work) {
-      let best = null;
-      for (const k of cand) { const [a, b, c] = T[k][0].map((i) => P[i]), [q, w] = closestOnTri(s, a, b, c), d = Math.hypot(...sub(s, q)); if (!best || d < best.d) best = { d, q, w, k }; }
-      const short = dot(sub(s, best.q), tn[best.k]) + need;
+      // (the nearest triangle, and any as near within 0.02: where they meet at an edge, the sample is inside if it is
+      // inside any of them, so a neck sample over the neckline is held by the collar, not pushed by the shoulder)
+      const near = [];
+      for (const k of cand) { const [a, b, c] = T[k][0].map((i) => P[i]), [q, w] = closestOnTri(s, a, b, c), d = Math.hypot(...sub(s, q)); near.push({ d, q, w, k }); }
+      const d0 = Math.min(...near.map((x) => x.d));
+      let best = null, short = Infinity;
+      for (const x of near) { if (x.d > d0 + 0.02) continue; const sh = dot(sub(s, x.q), tn[x.k]) + need; if (sh < short) { short = sh; best = x; } }
       if (short <= 1e-4) continue;
       if (short > worst) { worst = short; clearOut.at = { s, g: T[best.k][1], tri: T[best.k][0], it }; }
       const v = T[best.k][0], ww = best.w, s2 = ww.reduce((a, x) => a + x * x, 0);
@@ -181,7 +195,7 @@ export function clearOut(P, quads, groups, { iters = 40, fixed = new Set(), reac
     if (worst <= 1e-4) break;
     P.forEach((p, i) => {
       if (!(push[i] > 0) || fixed.has(i)) return;
-      const q = add(p, mul(vnu[i], Math.min(push[i], 0.05))), d = sub(q, P0[i]), l = Math.hypot(...d);
+      const q = add(p, mul(vnu[i], Math.min(push[i] * damp, 0.03))), d = sub(q, P0[i]), l = Math.hypot(...d);
       P[i] = l > most ? add(P0[i], mul(d, most / l)) : q;
     });
   }
@@ -192,7 +206,9 @@ export function clearOut(P, quads, groups, { iters = 40, fixed = new Set(), reac
 export function buildTunic(rig, design = DESIGN[rig.who], opts = {}) {
   const { B, J } = rig, D = design, T = D.THICK;
   const SM = partSamples(B), FINE = partSamples(B, 0.035);
-  const torsoPts = SM.filter((s) => s.part === 'torso' || s.part === 'pelvis' || s.part === 'legs').map((s) => s.p);
+  // (the garments worn under it, `opts.under` ({ verts, tris }, at rest): their surfaces join the torso's, as the body's)
+  const UNDER = (opts.under ?? []).flatMap((m) => partSamples({ verts: m.verts, tris: m.tris, part: m.verts.map(() => 'torso') }).map((s) => s.p));
+  const torsoPts = [...SM.filter((s) => s.part === 'torso' || s.part === 'pelvis' || s.part === 'legs').map((s) => s.p), ...UNDER];
   const neckPts = SM.filter((s) => s.part === 'neck').map((s) => s.p), collarPts = SM.filter((s) => s.part === 'neck' || s.part === 'head').map((s) => s.p);
   const VN = vertexNormals(B);
   const BV = (n) => B.verts[B.index.get(n)];
@@ -201,7 +217,7 @@ export function buildTunic(rig, design = DESIGN[rig.who], opts = {}) {
   const side = D.cols, NC = 2 * side.length - 2;
   const COL = [...side, ...side.slice(1, -1).reverse().map((a) => -a)];
   const mirrorOf = (j) => (j === 0 || j === side.length - 1 ? j : NC - j);
-  const half = (j) => Math.max(Math.abs(wrap(COL[(j + 1) % NC] - COL[j])), Math.abs(wrap(COL[j] - COL[(j + NC - 1) % NC]))) * 0.5 + 2;
+  const half = (j) => Math.max(Math.abs(wrap(COL[(j + 1) % NC] - COL[j])), Math.abs(wrap(COL[j] - COL[(j + NC - 1) % NC]))) * (D.wedge ?? 0.5) + 1;
 
   /** The torso's centre z at height y: halfway between its front and its back on the centre line. */
   const zcAt = (y) => {
@@ -210,7 +226,7 @@ export function buildTunic(rig, design = DESIGN[rig.who], opts = {}) {
     return lo < hi ? (lo + hi) / 2 : -0.15;
   };
   /** The body's reach at (azimuth, height) from the centre zc: the farthest sample within the column's wedge and dy. */
-  const reach = (pts, deg, y, zc, hw, dy = 0.1) => {
+  const reach = (pts, deg, y, zc, hw, dy = 0.05) => {
     const k = 1 / Math.cos(hw * Math.PI / 180);
     let r = 0;
     for (const p of pts) { if (Math.abs(p[1] - y) > dy) continue; const a = Math.abs(wrap(azOf(p, zc) - deg)); if (a > hw) continue; r = Math.max(r, Math.hypot(p[0], p[2] - zc) * k); }
@@ -280,7 +296,11 @@ export function buildTunic(rig, design = DESIGN[rig.who], opts = {}) {
     COL.forEach((deg, j) => {
       const [r, y] = foot(deg);
       const dip = Math.abs(deg) < 1e-9 ? D.neck.v : 0;
-      put(`N:${deg}`, at(deg, r + D.neck.c, y + D.neck.lift - dip, zN), 'torso');
+      // (the collar's ends, either side of the notch, at `notch` round from the front)
+      const az = Math.abs(Math.abs(deg) - D.vcol) < 1e-9 ? Math.sign(deg) * D.notch : deg, [r2, y2] = az === deg ? [r, y] : foot(az);
+      // (the V's foot, dipped down the chest, clear of the chest there)
+      const rv = dip ? Math.max(r2, reach(torsoPts, 0, y2 + D.neck.lift - dip, zN, 8, 0.08)) : r2;
+      put(`N:${deg}`, at(az, rv + D.neck.c, y2 + D.neck.lift - dip, zN), 'torso');
     });
     ROWS.push({ key: 'N', zc: zN });
   }
@@ -308,6 +328,42 @@ export function buildTunic(rig, design = DESIGN[rig.who], opts = {}) {
       put(key, at(deg, r, y, zc), 'torso');
     });
   });
+  // each fitted row made convex round its axis (the cloth drawn across the hollows: between the breasts, along the spine):
+  // a vertex inside the row's outline's hull pushed out to it; the armhole's own left where they are
+  for (const [ri, row] of D.rows.entries()) {
+    const zc = ROWS[ri + 1].zc, keys = COL.map((deg) => `${row.key}:${deg}`).filter((k) => id(k) !== undefined);
+    for (let it = 0; it < 3; it++) keys.forEach((key, k) => {
+      if (fixedKey(key)) return;
+      const a = P[id(keys[(k + keys.length - 1) % keys.length])], b = P[id(keys[(k + 1) % keys.length])], p = P[id(key)];
+      // (the chord a-b's distance from the axis along p's direction, in the plane)
+      const d = [p[0], p[2] - zc], l = Math.hypot(...d), u = [d[0] / l, d[1] / l], ax = a[0], az = a[2] - zc, ex = b[0] - ax, ez = b[2] - zc - az, den = u[0] * ez - u[1] * ex;
+      if (Math.abs(den) < 1e-9) return;
+      const t = (ax * ez - az * ex) / den;
+      if (t > l) P[id(key)] = [u[0] * t, p[1], zc + u[1] * t];
+    });
+  }
+  // the front drawn flat between the breasts (DESIGN.flat: rows, and the column either side the cloth spans from): each
+  // column between on the straight line from that column on one side to the same on the other
+  if (D.flat) for (const row of D.flat.rows) {
+    const a = P[id(`${row}:${D.flat.from}`)], b = P[id(`${row}:${-D.flat.from}`)];
+    if (!a || !b) continue;
+    for (const deg of COL) {
+      if (Math.abs(deg) >= D.flat.from - 1e-9) continue;
+      const i = id(`${row}:${deg}`), p = P[i], t = (p[0] - b[0]) / (a[0] - b[0]);
+      P[i] = lerp(b, a, t);
+    }
+  }
+  // the taper spread (DESIGN.taper: rows from..to): down each column no row further in than the mean of the rows either
+  // side less `curve`, so the waist narrows over several rows, not at one
+  if (D.taper) {
+    const ks = D.rows.map((r) => r.key), i0 = ks.indexOf(D.taper.from), i1 = ks.indexOf(D.taper.to);
+    for (let it = 0; it < 6; it++) for (let ri = i0 + 1; ri < i1; ri++) for (const deg of COL) {
+      const key = `${ks[ri]}:${deg}`, i = id(key), a = id(`${ks[ri - 1]}:${deg}`), b = id(`${ks[ri + 1]}:${deg}`);
+      if (i === undefined || a === undefined || b === undefined || fixedKey(key)) continue;
+      const zc = ROWS[ri + 1].zc, rr = (p) => Math.hypot(p[0], p[2] - zc), want = (rr(P[a]) + rr(P[b])) / 2 - D.taper.curve, p = P[i];
+      if (rr(p) < want) P[i] = at(azOf(p, zc), want, p[1], zc);
+    }
+  }
   // rows bridged (DESIGN row.bridge): no further in than that share of the way between the rows either side (the cloth
   // drawn across under the bust, not into it)
   D.rows.forEach((row, ri) => {
@@ -333,7 +389,7 @@ export function buildTunic(rig, design = DESIGN[rig.who], opts = {}) {
         const legs = torsoPts.filter((p) => p[1] > y - 0.1);
         // (the V's corners at the hem wider apart than the collar's notch above them: vwide)
         const az = key === 'E' && Math.abs(Math.abs(deg) - D.vcol) < 1e-9 ? Math.sign(deg) * D.vwide : deg;
-        const r = Math.max(reach(legs, az, y, zc, half(j), 0.12) + D.skirt.c, rp + blend(D.hang.flare, deg) * (prev[1] - y));
+        const r = Math.max(reach(legs, az, y, zc, half(j), 0.12) + (Array.isArray(D.skirt.c) ? blend(D.skirt.c, deg) : D.skirt.c), rp + blend(D.hang.flare, deg) * (prev[1] - y));
         put(`${key}:${deg}`, at(az, r, y, zc), 'torso');
       });
     }
@@ -352,7 +408,8 @@ export function buildTunic(rig, design = DESIGN[rig.who], opts = {}) {
       const r = Math.max(reach(collarPts, deg, y, zN, half(j), 0.08) + D.collar.c, 0);
       // (never further out than the neckline: the collar stands up the neck)
       const rn = Math.hypot(n[0], n[2] - zN);
-      put(`${key}:${deg}`, at(deg, Math.min(rn, r), y, zN), 'collar');
+      const az = Math.atan2(n[0], n[2] - zN) * 180 / Math.PI;
+      put(`${key}:${deg}`, at(az, Math.min(rn, r), y, zN), 'collar');
       // (the linen's top on the straight line from the neckline to the rim, so the band is one slope)
       if (key === 'K1') { const k1 = P[id(`K1:${deg}`)]; P[id(`K0:${deg}`)] = lerp(n, k1, D.collar.linen); }
     }
@@ -360,7 +417,7 @@ export function buildTunic(rig, design = DESIGN[rig.who], opts = {}) {
 
   // the sleeves: rings round the arm from the armhole to the cuff's edge
   const SL = D.sleeve, cuff = SL.cuff;
-  const sleeveRings = {};
+  const sleeveRings = {}, ringFrom = new Map();
   for (const [s, sg] of [['L', 1], ['R', -1]]) {
     const ringOf = (r) => Array.from({ length: 8 }, (_, k) => BV(`arm/${r}${k}.${s}`));
     const m = (p) => [p[0] * sg, p[1], p[2]];
@@ -381,7 +438,7 @@ export function buildTunic(rig, design = DESIGN[rig.who], opts = {}) {
     const named = SL.rings.map(([r, c]) => ({ pts: ringOf(r), c }));
     const tTop = cuff.at - cuff.len, tEdge = cuff.at;
     const ctrs = [...named.map((x) => mean(x.pts)), mean(ringAt(tTop))];
-    named.forEach((x, i) => list.push({ key: `s${i}`, pts: out(x.pts, x.c, unit(sub(ctrs[i + 1], i ? ctrs[i - 1] : mean(hole[s].ring)))) }));
+    named.forEach((x, i) => list.push({ key: `s${i}`, ring: SL.rings[i][0], pts: out(x.pts, x.c, unit(sub(ctrs[i + 1], i ? ctrs[i - 1] : mean(hole[s].ring)))) }));
     // the cuff: its top at the sleeve's clearance, stepped out, then its bands down to the edge
     const fax = unit(fore);
     list.push({ key: 'c0', pts: out(ringAt(tTop), cuff.c, fax) });
@@ -400,10 +457,13 @@ export function buildTunic(rig, design = DESIGN[rig.who], opts = {}) {
       list.forEach((x, i) => {
         const lim = hole[s].ring[k][1] - SL.under * (i + 1);
         if (x.pts[k][1] <= lim) return;
+        (x.slid ??= new Set()).add(k);
         for (let j = i; j + 1 < line.length; j++) { const a = line[j], b = line[j + 1]; if (b[1] <= lim) { x.pts[k] = lerp(a, b, (a[1] - lim) / Math.max(1e-9, a[1] - b[1])); break; } }
       });
     }
     list.forEach((x) => x.pts.forEach((p, k) => put(`${s}:${x.key}:${k}`, p, `sleeve_${s}`)));
+    // (a ring on one of the arm's own rings skinned as that ring, each corner not slid down the arm)
+    list.forEach((x) => { if (x.ring) x.pts.forEach((_, k) => { if (!x.slid?.has(k)) ringFrom.set(`${s}:${x.key}:${k}`, `arm/${x.ring}${k}.${s}`); }); });
     sleeveRings[s] = list;
   }
 
@@ -444,11 +504,18 @@ export function buildTunic(rig, design = DESIGN[rig.who], opts = {}) {
     const s = p[0] > 0 ? 'L' : 'R', h = hole[s].ring, top = B.verts[B.index.get(`dc4.${s}`)][1] + 0.15;
     return p[1] <= top && p[1] >= h[5][1] - 0.02 && Math.abs(p[0]) >= Math.abs(h[5][0]) - D.armhole.pit && Math.abs(p[0]) <= Math.abs(h[5][0]) + D.armhole.pit && p[2] <= h[6][2] && p[2] >= h[4][2];
   };
+  // (the body's samples well under the tunic, which the game leaves out with the polygons the tunic hides, hold
+  // nothing: the cloth sits on its own ease there; those near its edges, and the trousers, hold it out)
+  // (a sample is free when every body polygon it lies on is hidden: polygons a little further under the tunic than the
+  // game's own hidden ones, the tunic still to be pushed out)
+  const hidPre = new Set(hiddenPolys(rig, { verts: P, keys: K, cols: COL, zN, zE: ROWS.at(-1).zc, cuffAt: cuff.at, design: D }, D.free ?? { m: 0.12, hem: 0.45, cuff: 0.08 }));
+  const free = (s) => !opts.holdAll && s.polys.length > 0 && s.polys.every((k) => hidPre.has(k));
   const groups = [
-    { pts: SM.filter((s) => (s.part === 'torso' || s.part === 'pelvis' || (s.part === 'legs' && s.p[1] > hemY(s.p) + 0.02)) && !pit(s.p)).map((s) => s.p), faces: new Set(['torso', 'hem', 'cap_L', 'cap_R']), need },
-    { pts: SM.filter((s) => (s.part === 'neck' || s.part === 'head') && s.p[1] < collarTop(s.p) - 0.02).map((s) => s.p), faces: new Set(['collar', 'torso']), need },
+    { pts: SM.filter((s) => (s.part === 'torso' || s.part === 'pelvis' || (s.part === 'legs' && s.p[1] > hemY(s.p) + 0.02)) && !pit(s.p) && !free(s)).map((s) => s.p), faces: new Set(['torso', 'hem', 'cap_L', 'cap_R']), need },
+    { pts: UNDER.filter((p) => p[1] > hemY(p) + 0.02), faces: new Set(['torso', 'hem']), need: need + D.CLEAR },
+    { pts: SM.filter((s) => (s.part === 'neck' || s.part === 'head') && s.p[1] < collarTop(s.p) + 0.03 && !free(s)).map((s) => s.p), faces: new Set(['collar', 'torso']), need },
   ];
-  for (const [s, sg] of [['L', 1], ['R', -1]]) groups.push({ pts: SM.filter((q) => (q.part === 'arm' || q.part === 'joint') && q.p[0] * sg > 0 && armT(q.p, sg) < cuff.at - 0.03).map((q) => q.p), faces: new Set([`sleeve_${s}`, `cap_${s}`]), need }); groups.forEach((g, i) => { if (i >= 2) g.pts = g.pts.filter((p) => !pit(p)); });
+  for (const [s, sg] of [['L', 1], ['R', -1]]) groups.push({ pts: SM.filter((q) => (q.part === 'arm' || q.part === 'joint') && q.p[0] * sg > 0 && armT(q.p, sg) < cuff.at - 0.03 && !free(q)).map((q) => q.p), faces: new Set([`sleeve_${s}`, `cap_${s}`]), need }); groups.forEach((g, i) => { if (i >= 2) g.pts = g.pts.filter((p) => !pit(p)); });
   const segOut = (p, a, b) => { const d = sub(b, a), t = Math.max(0, Math.min(1, dot(sub(p, a), d) / dot(d, d))); return sub(p, add(a, mul(d, t))); };
   const outward = (p, g) => {
     if (!g.startsWith('sleeve') && !g.startsWith('cap')) return [p[0], 0, p[2] - zN];
@@ -483,7 +550,10 @@ export function buildTunic(rig, design = DESIGN[rig.who], opts = {}) {
     const p = P[i]; P[K.get(m)] = [-p[0], p[1], p[2]];
   }
 
-  return meshOfTunic(rig, D, { P, K, part, quads, COL, NC, rowKeys, collarCols, sleeveRings, ROWS, zN, short });
+  const G = meshOfTunic(rig, D, { P, K, part, quads, COL, NC, rowKeys, collarCols, sleeveRings, ROWS, zN, short });
+  G.ringFrom = ringFrom;
+  G.zN = zN; G.zE = ROWS.at(-1).zc; G.cuffAt = cuff.at;
+  return G;
 }
 
 /**
@@ -570,18 +640,18 @@ function meshOfTunic(rig, D, S) {
   }
 
   /* -- the edges turned in -- */
-  const inner = (key, d, up = [0, 0, 0], prt) => { const i = id(key); return G.vert(add(add(P[i], mul(outward(i, key), -d)), up), prt ?? part[i]); };
+  // (each turned-in vertex skinned as the outer one it turns in from: copyOf)
+  G.copyOf = new Map();
+  const inner = (key, d, up = [0, 0, 0], prt) => { const i = id(key), v = G.vert(add(add(P[i], mul(outward(i, key), -d)), up), prt ?? part[i]); G.copyOf.set(v, i); return v; };
   // the hem: in by the thickness, then up inside
   const Ei = {}, Ei2 = {};
   COL.forEach((deg, j) => {
     const e = `E:${deg}`, [up, k] = hemUp(P, (d) => id(`E:${d}`), COL, j, ROWS.at(-1).zc);
-    Ei[deg] = inner(e, T, mul(up, T * 0.4 * k));
-    Ei2[deg] = G.verts.push(add(G.verts[Ei[deg]], mul(up, D.skirt.trim * 1.1 * k))) - 1; G.part.push('torso');
+    Ei[deg] = inner(e, T * 0.7, mul(up, T * 0.8 * k));
   });
   for (let j = 0; j < NC; j++) {
     const a = COL[j], b = COL[(j + 1) % NC];
     poly([`E:${a}`, `E:${b}`, Ei[b], Ei[a]], 'trim', 'torso', 'E-Ei');
-    poly([Ei[a], Ei[b], Ei2[b], Ei2[a]], 'inner', 'torso', 'Ei-Ei2');
   }
   // the cuffs: in by the thickness, then up inside
   for (const s of ['L', 'R']) {
@@ -590,13 +660,12 @@ function meshOfTunic(rig, D, S) {
     for (let k = 0; k < 8; k++) {
       const key = `${s}:${last.key}:${k}`, up = unit(sub(P[id(`${s}:c0:${k}`)], P[id(key)]));
       ci.push(inner(key, T, mul(up, T * 0.4)));
-      ci2.push(G.verts.push(add(G.verts[ci[k]], mul(up, 0.22))) - 1); G.part.push(`sleeve_${s}`);
+      ci2.push(G.verts.push(add(G.verts[ci[k]], mul(up, 0.12))) - 1); G.part.push(`sleeve_${s}`); G.copyOf.set(ci2[k], id(key));
     }
     void top;
     for (let k = 0; k < 8; k++) {
       const k2 = (k + 1) % 8;
       poly([`${s}:${last.key}:${k}`, `${s}:${last.key}:${k2}`, ci[k2], ci[k]], 'trim', `sleeve_${s}`, 'cuff-edge');
-      poly([ci[k], ci[k2], ci2[k2], ci2[k]], 'inner', `sleeve_${s}`, 'cuff-in');
     }
   }
   // the neckline: in by the thickness all round (the collar's inside comes down to it); the collar's rim and inside; the
@@ -604,9 +673,9 @@ function meshOfTunic(rig, D, S) {
   const Ni = {}, K2 = {};
   // (square in from the collar: toward the neck's axis, level)
   const toAxis = (key) => { const p = P[id(key)]; return mul(unit([p[0], 0, p[2] - zN]), -T); };
-  for (const deg of COL) { Ni[deg] = G.vert(add(P[id(`N:${deg}`)], toAxis(`N:${deg}`)), 'collar'); }
+  for (const deg of COL) { Ni[deg] = G.vert(add(P[id(`N:${deg}`)], toAxis(`N:${deg}`)), 'collar'); G.copyOf.set(Ni[deg], id(`N:${deg}`)); }
   const K0i = {};
-  for (const deg of collarCols) { K2[deg] = G.vert(add(add(P[id(`K1:${deg}`)], toAxis(`K1:${deg}`)), [0, -T * 0.3, 0]), 'collar'); K0i[deg] = G.vert(add(P[id(`K0:${deg}`)], toAxis(`K0:${deg}`)), 'collar'); }
+  for (const deg of collarCols) { K2[deg] = G.vert(add(add(P[id(`K1:${deg}`)], toAxis(`K1:${deg}`)), [0, -T * 0.3, 0]), 'collar'); K0i[deg] = G.vert(add(P[id(`K0:${deg}`)], toAxis(`K0:${deg}`)), 'collar'); G.copyOf.set(K2[deg], id(`K1:${deg}`)); G.copyOf.set(K0i[deg], id(`K0:${deg}`)); }
   for (let j = 0; j < NC; j++) {
     const a = COL[j], b = COL[(j + 1) % NC];
     if (collarCols.includes(a) && collarCols.includes(b)) {
@@ -640,23 +709,80 @@ function meshOfTunic(rig, D, S) {
  * weights of the outer edge they turn in from.
  */
 export function tunicWeights(rig, G, o = {}) {
-  const k = o.thigh ?? G.design.thigh ?? 0.45;
-  const map = (n) => {
+  const D = G.design, B = rig.B;
+  // (the hem's rows, T and E, all with the thigh: hemThigh; the rest of the skirt `thigh` of it)
+  const hemRow = new Set([...G.keys].filter(([key]) => /^(T|E):/.test(key)).map(([, i]) => i));
+  const kOf = (i) => (hemRow.has(i) ? o.hemThigh ?? D.hemThigh ?? 1 : o.thigh ?? D.thigh ?? 0.45);
+  const map = (n, i) => {
     if (/^(head|jaw)$/.test(n)) return 'neck_02';
-    const m = n.match(/^(thigh|hip|calf|knee|foot|ankle|ball|toes)_(l|r)$/);
+    const m = n.match(/^(thigh|hip|calf|knee|foot|ankle|ball|toes)_(l|r)$/), k = kOf(i);
     if (m) return [[m[1] === 'hip' ? `hip_${m[2]}` : `thigh_${m[2]}`, k], ['pelvis', 1 - k]];
     if (/^(hand|thumb|fingers|wrist|knuckles)/.test(n)) return `lowerarm_${n.match(/_(l|r)$/)[1]}`;
     return n;
   };
-  const vw = transferWeights(rig, G, { map, smooth: o.smooth ?? 3 });
+  // the torso's and the collar's from the body's torso, neck and legs; the sleeves' from the arm
+  const armish = (i) => B.part[i] === 'arm' || B.part[i] === 'hand' || B.part[i] === 'joint';
+  const torso = transferWeights(rig, G, { map, smooth: o.smooth ?? 3, keep: (i) => !armish(i) && B.part[i] !== 'head', only: (i) => !G.part[i].startsWith('sleeve') });
+  const sleeve = transferWeights(rig, G, { map, smooth: o.smooth ?? 3, keep: (i) => armish(i), only: (i) => G.part[i].startsWith('sleeve') });
+  const vw = torso.map((w, i) => w ?? sleeve[i]);
+  const norm = (m) => [...m].sort((a, b2) => b2[1] - a[1]).slice(0, 4).map(([bn, w], _, l) => [bn, w / l.reduce((a, [, x]) => a + x, 0)]);
+  // the armhole: the body's own ring's weights (it is that ring, pushed out), its foot and corners (lowered below the
+  // body's ring) also a share `follow` with the arm's shoulder helper (half the upper arm's turn)
+  for (const s of ['L', 'R']) {
+    const sg = s === 'L' ? 1 : -1, [f, m, b] = D.arm;
+    const keys = [['S', f], ['S', m], ['S', b], ['A1', b], ['A2', b], ['A2', m], ['A2', f], ['A1', f]].map(([r, a]) => `${r}:${a * sg}`);
+    const helper = rig.at.get(`shoulder_${s.toLowerCase()}`), fol = o.follow ?? D.armhole.follow ?? [0, 0, 0];
+    keys.forEach((key, kk) => {
+      const bi = B.index.get(`${TORSO_RING[kk]}.${s}`), t = kk === 5 ? fol[2] : kk === 4 || kk === 6 ? fol[1] : kk === 3 || kk === 7 ? fol[0] : 0;
+      const mm = new Map(); for (const [bn, w] of rig.vw[bi]) mm.set(bn, w * (1 - t)); mm.set(helper, (mm.get(helper) ?? 0) + t);
+      vw[G.keys.get(key)] = norm(mm);
+    });
+  }
+  // a sleeve ring on one of the arm's own rings skinned as that ring
+  for (const [key, name] of G.ringFrom ?? []) vw[G.keys.get(key)] = rig.vw[B.index.get(name)].map(([bn, w]) => [bn, w]);
+  // the turned-in edges as the outer edge they turn in from
+  for (const [v, from] of G.copyOf ?? []) vw[v] = vw[from];
   return vw;
 }
 
-/* ---- the game's copy ------------------------------------------------------------------------------------------------ */
-if (import.meta.url === `file://${process.argv[1]}`) {
-  const { buildRig } = await import('../lowrig.mjs');
-  for (const who of ['male', 'female']) {
-    const rig = buildRig(who), G = buildTunic(rig);
-    console.log(who, `${G.verts.length} vertices, ${G.tris.length} triangles, short ${G.short}`, JSON.stringify(clearOut.at), [...G.keys].filter(([k, i]) => clearOut.at.tri.includes(i)).map(([k]) => k).join(' '));
-  }
+/**
+ * The body's polygons the tunic covers whole at rest: the torso, the pelvis and the legs between the neckline (less `m`)
+ * and the hem (more `hem`, as the legs swing under it), the shoulder's joint and the arm down to the cuff's edge (less
+ * `cuff` of the forearm). Left out of the body while the tunic is worn: they cannot show, and they cannot cross the cloth.
+ */
+export function hiddenPolys(rig, G, o = {}) {
+  const { B } = rig, covered = coverTest(rig, G, o);
+  const cov = B.verts.map((p, i) => covered(p, B.part[i]));
+  return B.polys.map((p, k) => (p.v.every((i) => cov[i]) ? k : -1)).filter((k) => k >= 0);
 }
+
+/**
+ * Whether a point of the body (its part) is under the tunic: the torso, the pelvis and the legs between the neckline
+ * (less `m`; under the collar, off the notch, too) and the hem (more `hem`), the neck under the collar, the shoulder's
+ * joint and the arm down to the cuff's edge (less `cuff` of the forearm). G: the tunic (verts, keys, cols, zN, zE, cuffAt,
+ * design), finished or still being fitted.
+ */
+export function coverTest(rig, G, { m = 0.06, hem = 0.4, cuff = 0.05 } = {}) {
+  const { J } = rig, COL = G.cols;
+  const P = (key) => G.verts[G.keys.get(key)];
+  // (a row's height at an azimuth: between its two nearest columns)
+  const rowY = (row, p, zc) => {
+    const az = Math.atan2(p[0], p[2] - zc) * 180 / Math.PI;
+    const pts = COL.filter((d) => G.keys.has(`${row}:${d}`)).map((d) => { const q = P(`${row}:${d}`); return [Math.atan2(q[0], q[2] - zc) * 180 / Math.PI, q[1]]; }).sort((a, b) => a[0] - b[0]), N = pts.length;
+    for (let k = 0; k < N; k++) { const [a0, y0] = pts[k], [a1, y1] = pts[(k + 1) % N], span = ((a1 - a0) + 360) % 360, d = ((az - a0) + 360) % 360; if (d <= span) return y0 + (y1 - y0) * (span ? d / span : 0); }
+    return pts[0][1];
+  };
+  const armT = (p) => { const sg = Math.sign(p[0]) || 1, e = [J.elbow[0] * sg, J.elbow[1], J.elbow[2]], w = [J.wrist[0] * sg, J.wrist[1], J.wrist[2]], f = sub(w, e); return dot(sub(p, e), f) / dot(f, f); };
+  return (p, part) => {
+    // (under the collar too, off the notch at the front)
+    const az = Math.abs(Math.atan2(p[0], p[2] - G.zN) * 180 / Math.PI), collar = az > G.design.notch + 8 && p[1] < rowY('K1', p, G.zN) - m;
+    if (part === 'neck') return collar;
+    if (part === 'torso' || part === 'pelvis' || part === 'legs') return (collar || p[1] < rowY('N', p, G.zN) - m) && p[1] > rowY('E', p, G.zE) + hem;
+    if (part === 'joint' || part === 'arm') return armT(p) < G.cuffAt - cuff;
+    return false;
+  };
+}
+
+/* ---- the game's copy ------------------------------------------------------------------------------------------------ */
+// (worn over the trousers and under the shawl: its copy is fitted over them and written by garments/outfit1.mjs)
+if (import.meta.url === `file://${process.argv[1]}`) await (await import('./outfit1.mjs')).writeAssets(['tunic']);

@@ -12,14 +12,18 @@
 //     4. the trousers (src/sculpt/assets/lowtrousers-<who>.json, tools/sculpt/garments/trousers.mjs): the asset's weights
 //        and the body polygons it hides as the tools build them, no bones of their own; in the game's path (the bake
 //        with the body's covered polygons left out) the trousers' triangles crossing the body's and the shawl's, and
-//        their own, in the same walk and idle.
+//        their own, in the same walk and idle;
+//     5. the tunic (src/sculpt/assets/lowtunic-<who>.json, tools/sculpt/garments/tunic.mjs, fitted over the trousers and
+//        under the shawl by garments/outfit1.mjs): the asset's weights, triangles and hidden polygons as the tools build
+//        them, no bones of its own; in the game's path its triangles crossing the body's (less what the trousers and the
+//        tunic hide), the trousers', the shawl's and its own, in the walk and the idle (the idle sampled over its whole
+//        loop: 24 phases), every facing.
 //   Exits 1 when a difference passes its tolerance or a crossing is found.
 import { build } from 'esbuild';
 import { readFileSync } from 'node:fs';
 import { buildRig, posed, fromGame, gameRig, armsOut, axisAngle, mm, tr } from './lowrig.mjs';
 import { liftOf, garmentFrames, crossPairs, bonesWith } from './lowgarment.mjs';
-import { buildShawl, shawlWeights } from './garments/shawl.mjs';
-import { buildTrousers, trousersWeights, hiddenPolys } from './garments/trousers.mjs';
+import { buildOutfit } from './garments/outfit1.mjs';
 
 const ROOT = new URL('../..', import.meta.url).pathname;
 const b = await build({
@@ -40,8 +44,8 @@ const randTurn = (deg) => { const u = 2 * rnd() - 1, t = 2 * Math.PI * rnd(), r 
 let fail = false;
 const report = {};
 for (const who of ['male', 'female']) {
-  const rig = buildRig(who), G = buildShawl(rig);
-  G.vw = shawlWeights(rig, G);
+  // (the outfit as the game wears it: the trousers, the tunic over them, the shawl over the tunic)
+  const rig = buildRig(who), O = buildOutfit(rig), G = O.shawl;
   const body = json(`src/sculpt/assets/low${who}.json`), shawl = json(`src/sculpt/assets/lowshawl-${who}.json`);
   const r = (report[who] = {});
 
@@ -87,20 +91,28 @@ for (const who of ['male', 'female']) {
   const look = { gender: who === 'male' ? 'man' : 'woman', skin: 'light', hair: 'bald', hairColour: 'brown', eyes: 'brown', beard: 'none', shirt: 'unbleached', trousers: 'walnut' };
   const cross = { walk: 0, idle: 0, checked: 0 };
   // (the trousers: their asset against the tools', then their triangles in the same bake)
-  const Tg = buildTrousers(rig);
-  Tg.vw = trousersWeights(rig, Tg);
-  const trousers = json(`src/sculpt/assets/lowtrousers-${who}.json`), hides = hiddenPolys(rig, Tg);
+  const Tg = O.trousers;
+  const trousers = json(`src/sculpt/assets/lowtrousers-${who}.json`), hides = O.hides.trousers;
   r.trousers = {
     bones: trousers.bones.length, base: trousers.base, tris: trousers.tris.length / 4, hides: trousers.hides.length,
     weights: Math.max(...Tg.vw.map((l, i) => Math.max(...l.map(([bi, w], j) => (trousers.weights[i][2 * j] === bi ? Math.abs(trousers.weights[i][2 * j + 1] - w) : 1))))),
     walk: { body: 0, shawl: 0, self: 0 }, idle: { body: 0, shawl: 0, self: 0 },
   };
   if (trousers.bones.length || trousers.base !== rig.bones.length || r.trousers.weights > 1e-5 || hides.join() !== trousers.hides.join() || Tg.tris.length !== r.trousers.tris) { console.log(who, 'trousers asset differs'); fail = true; }
-  const hidden = new Set(trousers.hides), nShawlTris = shawl.tris.length / 4;
+  // (the tunic: its asset against the tools')
+  const Ug = O.tunic, tunic = json(`src/sculpt/assets/lowtunic-${who}.json`);
+  r.tunic = {
+    bones: tunic.bones.length, base: tunic.base, tris: tunic.tris.length / 4, hides: tunic.hides.length,
+    weights: Math.max(...Ug.vw.map((l, i) => Math.max(...l.map(([bi, w], j) => (tunic.weights[i][2 * j] === bi ? Math.abs(tunic.weights[i][2 * j + 1] - w) : 1))))),
+    walk: { body: 0, trousers: 0, shawl: 0, self: 0 }, idle: { body: 0, trousers: 0, shawl: 0, self: 0 },
+  };
+  if (tunic.bones.length || tunic.base !== rig.bones.length || r.tunic.weights > 1e-5 || O.hides.tunic.join() !== tunic.hides.join() || Ug.tris.length !== r.tunic.tris) { console.log(who, 'tunic asset differs'); fail = true; }
+  const hidden = new Set([...trousers.hides, ...tunic.hides]), nShawlTris = shawl.tris.length / 4, nTrousersTris = trousers.tris.length / 4;
   const bodyTris = body.tris.filter((_, k) => k % 4 === 3).filter((pi) => !hidden.has(pi)).length;
   let s0 = null;
-  for (const [kind, moving, n] of [['walk', true, 16], ['idle', false, 16]]) for (let facing = 0; facing < 8; facing++) for (let k = 0; k < n; k++) {
-    const phase = moving ? (k / n) * Math.PI * 2 : k * 0.75;
+  for (const [kind, moving, n] of [['walk', true, 16], ['idle', false, 24]]) for (let facing = 0; facing < 8; facing++) for (let k = 0; k < n; k++) {
+    // (the idle's loop: relaxedIdle breathes at 1.9 a unit of phase / 6, about 20 of phase round)
+    const phase = moving ? (k / n) * Math.PI * 2 : (k / n) * (12 * Math.PI / 1.9);
     const s = TS.lowScene({ phase, moving, facing, swimming: false, working: false, look });
     s0 ??= s;
     const V = s.baked.verts, Bn = s.bones, P = [];
@@ -114,8 +126,10 @@ for (const who of ['male', 'female']) {
       P.push(q);
     }
     const T = Array.from({ length: s.baked.nTris }, (_, t) => ({ v: [s.baked.tris[t * 3], s.baked.tris[t * 3 + 1], s.baked.tris[t * 3 + 2]] }));
-    // (the bake: the body's triangles less the hidden, the shawl's, the trousers')
-    const tB = T.slice(0, bodyTris), tS = T.slice(bodyTris, bodyTris + nShawlTris), tT = T.slice(bodyTris + nShawlTris);
+    // (the bake: the body's triangles less the hidden, the shawl's, the trousers', the tunic's)
+    const tB = T.slice(0, bodyTris), tS = T.slice(bodyTris, bodyTris + nShawlTris), tT = T.slice(bodyTris + nShawlTris, bodyTris + nShawlTris + nTrousersTris), tU = T.slice(bodyTris + nShawlTris + nTrousersTris);
+    const u = r.tunic[kind];
+    u.body += crossPairs(P, tU, P, tB).length; u.trousers += crossPairs(P, tU, P, tT).length; u.shawl += crossPairs(P, tU, P, tS).length; u.self += crossPairs(P, tU).length;
     cross[kind] += crossPairs(P, tS, P, tB).length;
     const t = r.trousers[kind];
     t.body += crossPairs(P, tT, P, tB).length; t.shawl += crossPairs(P, tT, P, tS).length; t.self += crossPairs(P, tT).length;
@@ -124,7 +138,8 @@ for (const who of ['male', 'female']) {
   r.crossings = cross;
   if (cross.walk || cross.idle) fail = true;
   for (const k of ['walk', 'idle']) if (r.trousers[k].body || r.trousers[k].shawl || r.trousers[k].self) fail = true;
-  if (s0.baked.nTris !== bodyTris + nShawlTris + r.trousers.tris) { console.log(who, 'the bake is not the body less the hidden, the shawl and the trousers'); fail = true; }
+  for (const k of ['walk', 'idle']) if (r.tunic[k].body || r.tunic[k].trousers || r.tunic[k].shawl) fail = true;
+  if (s0.baked.nTris !== bodyTris + nShawlTris + r.trousers.tris + r.tunic.tris) { console.log(who, 'the bake is not the body less the hidden, the shawl, the trousers and the tunic'); fail = true; }
   console.log(who, JSON.stringify(r));
 }
 console.log(fail ? 'FAIL' : 'ok');

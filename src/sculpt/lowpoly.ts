@@ -15,7 +15,9 @@
  * `liftOf`, the 'lift' rule of lowgarment.mjs), lit by the same light in its own colours, inked with the body as one
  * silhouette. Garments are listed in GARMENTS, each with its wear hook: the first outfit's shawl and its trousers
  * (`assets/lowtrousers-<who>.json` by `tools/sculpt/garments/trousers.mjs`, no bones of their own; the body's polygons
- * they cover whole, `hides`, are left out of the bake while they are worn). Garments share materials by colour.
+ * they cover whole, `hides`, are left out of the bake while they are worn) and its tunic (`assets/lowtunic-<who>.json`,
+ * fitted over the trousers and under the shawl by `tools/sculpt/garments/outfit1.mjs`, no bones of its own, `hides` too).
+ * Garments share materials by colour.
  */
 import MALE_ASSET from './assets/lowmale.json';
 import FEMALE_ASSET from './assets/lowfemale.json';
@@ -23,6 +25,8 @@ import MALE_SHAWL from './assets/lowshawl-male.json';
 import FEMALE_SHAWL from './assets/lowshawl-female.json';
 import MALE_TROUSERS from './assets/lowtrousers-male.json';
 import FEMALE_TROUSERS from './assets/lowtrousers-female.json';
+import MALE_TUNIC from './assets/lowtunic-male.json';
+import FEMALE_TUNIC from './assets/lowtunic-female.json';
 import MALE_LIGHT from '../../tools/sculpt/lowlight-male.json';
 import FEMALE_LIGHT from '../../tools/sculpt/lowlight-female.json';
 import { sculptRig, viewOf, type FigurePose, type Rig } from '../render/figure';
@@ -400,11 +404,14 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
  */
 const wearsShawl = (_pose: FigurePose): boolean => true;
 const wearsTrousers = (_pose: FigurePose): boolean => true;
+/** Whether a figure wears the tunic (under the shawl, over the trousers); for now every figure does. */
+const wearsTunic = (_pose: FigurePose): boolean => true;
 
 /** The garments a low-poly body can wear, in the order they are laid over it: each its copy for the man and the woman, and its wear hook. */
 const GARMENTS: ReadonlyArray<{ man: GarmentAsset; woman: GarmentAsset; wears: (pose: FigurePose) => boolean }> = [
   { man: MALE_SHAWL as unknown as GarmentAsset, woman: FEMALE_SHAWL as unknown as GarmentAsset, wears: wearsShawl },
   { man: MALE_TROUSERS as unknown as GarmentAsset, woman: FEMALE_TROUSERS as unknown as GarmentAsset, wears: wearsTrousers },
+  { man: MALE_TUNIC as unknown as GarmentAsset, woman: FEMALE_TUNIC as unknown as GarmentAsset, wears: wearsTunic },
 ];
 
 const BODIES = {
