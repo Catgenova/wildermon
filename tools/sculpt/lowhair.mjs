@@ -95,6 +95,7 @@ export function buildHair(rig, style = SWEPT, hull = null) {
     return add(C, mul(dq, hq.t + Math.max(MIN_H * k, b * hull.thick.at(o, u) * k * (cl.scale ?? 1))));
   };
   for (cl of style.clumps) {
+    if (cl.mass) { massOf(cl, { skull, C, k, verts, polys, pieces, hull }); continue; }
     const n = cl.n ?? 9, sec = typeof cl.sec === 'string' ? style[cl.sec] : cl.sec ?? style.sec;
     const first = polys.length, base = verts.length;
     // the spine: each control point on the skin, stood off it by its lift along the skull's outward direction
@@ -170,6 +171,53 @@ export function buildHair(rig, style = SWEPT, hull = null) {
   const weights = weightsOf(rig, verts, style);
   const shave = shaveOf(B, style.shave), scalp = shaveOf(B, style.scalp ?? style.shave);
   return { verts, polys, tris, weights, pieces, shave, scalp, centre: C, k };
+}
+
+/**
+ * A mass (the front of the hair as one piece): its locks' creases as lines over the skull, each from the piece's right
+ * end to its left end ((over, out) control points, the lowest the roots along the hairline, the highest the back edge),
+ * sampled at `n` stations; between two creases a ridge row (`ridge` of the way up). Every corner stands on the ray from
+ * the skull's centre through it, off the skin by its thickness: the solved one (cl.fit.t, per row and station, head
+ * units on the male, tools/sculpt/lowhairfront.mjs) or, unsolved, the hull's (less `groove` on a crease). The border
+ * (the first and last rows and stations) are roots, sunk in the skin; the piece closes in a fan from the skull's centre
+ * under them. Returns the rows' vertex indices and each corner's ray (for the solver).
+ */
+export function massOf(cl, { skull, C, k, verts, polys, pieces, hull }) {
+  const lines = cl.lines, n = cl.n, rows = [];
+  // each crease line at the n stations (Catmull-Rom through its control points, evenly in the control points' run)
+  const line = (L) => {
+    const fine = Array.from({ length: 201 }, (_, i) => spline(L, i / 200)), len = [0];
+    for (let i = 1; i < fine.length; i++) len.push(len[i - 1] + Math.hypot(fine[i][0] - fine[i - 1][0], fine[i][1] - fine[i - 1][1]));
+    return Array.from({ length: n }, (_, j) => { const want = (len[200] * j) / (n - 1); let i = 1; while (i < 200 && len[i] < want) i++; const f = (want - len[i - 1]) / Math.max(1e-9, len[i] - len[i - 1]); return [0, 1].map((c) => fine[i - 1][c] + (fine[i][c] - fine[i - 1][c]) * f); });
+  };
+  const creases = lines.map(line);
+  // each row's drop under the envelope: a crease the groove's depth, the band's rows (cl.band: [share of the way to the
+  // next crease, drop]) their own
+  const band = cl.band ?? [[cl.ridge ?? 0.35, 0]], groove = cl.groove ?? 0.04;
+  creases.forEach((cr, i) => {
+    rows.push({ dirs: cr, drop: i >= (cl.edge ? 2 : 1) && i < creases.length - 1 ? groove : 0 });
+    // (between the roots and the front edge, its underside, one row over the forehead: `sole`)
+    if (cl.edge && i === 0) rows.push({ dirs: cr.map((a, j) => [0, 1].map((c) => a[c] + (creases[1][j][c] - a[c]) * 0.5)), drop: 0, sole: true });
+    else if (i < creases.length - 1) for (const [f, drop] of band) rows.push({ dirs: cr.map((a, j) => [0, 1].map((c) => a[c] + (creases[i + 1][j][c] - a[c]) * f)), drop });
+  });
+  const R = rows.length, first = polys.length, base = verts.length, rays = [];
+  // (a solve for another layout of rows and stations is not this one's)
+  const fit = cl.fit && cl.fit.t.length === R && cl.fit.t[0].length === n ? cl.fit : null;
+  const ids = rows.map((row, i) => row.dirs.map(([o, u], j) => {
+    const d = dirOf(o, u), h = hit(skull, C, d), border = i === 0 || i === R - 1 || j === 0 || j === n - 1;
+    let t;
+    if (border) t = -(cl.sink ?? SINK);
+    else if (fit) t = fit.t[i][j];
+    else t = Math.max(MIN_H, (hull ? hull.thick.at(o, u) * (cl.scale ?? 1) : 0.12) - row.drop);
+    rays.push({ i, j, d, r0: h.t, border });
+    return verts.push(add(C, mul(d, h.t + t * k))) - 1;
+  }));
+  const centre = verts.push([...C]) - 1;
+  for (let i = 0; i + 1 < R; i++) for (let j = 0; j + 1 < n; j++) polys.push({ v: [ids[i][j], ids[i][j + 1], ids[i + 1][j + 1], ids[i + 1][j]], piece: pieces.length });
+  // the border, once round (row 0 right to left, the left end up, the last row back, the right end down), fanned to the centre
+  const ring = [...ids[0], ...ids.slice(1).map((r) => r[n - 1]), ...ids[R - 1].slice(0, -1).reverse(), ...ids.slice(1, -1).reverse().map((r) => r[0])];
+  ring.forEach((a, m) => polys.push({ v: [centre, ring[(m + 1) % ring.length], a], piece: pieces.length }));
+  pieces.push({ id: cl.id, polys: [first, polys.length], verts: [base, verts.length], mass: { ids, rays, rows: R, n, drop: rows.map((r) => r.drop), sole: rows.map((r) => !!r.sole) } });
 }
 
 /**

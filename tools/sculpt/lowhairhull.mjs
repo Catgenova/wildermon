@@ -1,6 +1,7 @@
 // The hair's volume carved from the reference sheet's five silhouettes (tools/sculpt/lowhairmask.py writes them to
 // tools/sculpt/hairs/<style>-mask.json): a visual hull on the male's head, under the sheet's five cameras
-// (tools/sculpt/lowhaircams.json, fitted to the sheet's face, ears and neck), kept outside his skull. Read back as a
+// (tools/sculpt/lowhaircams.json, fitted to the sheet's face, ears and neck; the back's scale and height its own, by
+// its ears against the front's: the sheet draws that view about 6% smaller), kept outside his skull. Read back as a
 // thickness over the skull: per direction from the skull's centre (over, out: tools/sculpt/lowhair.mjs dirOf) how far
 // the hull stands off the skin. A thickness, so it carries to any head: hers takes his hair's thickness on her own skull.
 //

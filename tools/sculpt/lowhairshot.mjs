@@ -211,7 +211,8 @@ if (MAIN) {
       if (!over) return;
       // the third row: the sheet with our hair laid over it, a see-through teal with its outline (the head left out)
       imgs.push({ src: REF, size: REF_SIZE, crop: [c.cx - cw / 2, c.cy - ch / 2, cw, ch], box: [x, y3, cw, ch] });
-      cells.push({ meshes: [{ ...bodyMesh(rig, hair), depthOnly: true }, { ...hairMesh(rig, hair), col: hair.polys.map(() => [0.2, 0.95, 0.85]), flat: true, alpha: 0.42 }], cam: camOf(c), box: [x, y3, cw, ch], see: true, label: 'ours (teal) over the sheet' });
+      // (the buzz patches left out: they lie on the skin, as the sheet's buzz, not in its hair's silhouette)
+      cells.push({ meshes: [{ ...bodyMesh(rig, hair), depthOnly: true }, { ...hairMesh(rig, hair), tris: hair.tris.filter(([, , , pi]) => !hair.polys[pi].buzz), col: hair.polys.map(() => [0.2, 0.95, 0.85]), flat: true, alpha: 0.42 }], cam: camOf(c), box: [x, y3, cw, ch], see: true, label: 'ours (teal, no buzz) over the sheet' });
     });
     texts.push({ css: 'left:12px;top:6px', html: `Swept back undercut — the sheet (top), the ${who === 'male' ? 'man' : 'woman'} (below): ${hair.tris.length} hair triangles, ${hair.pieces.length} clumps` });
     await shoot(x0 * 2 + 5 * cw + 4 * gap, (over ? y3 : y2) + ch + 10, cells, join(out, `hair-sheet-${who}${stage}.png`), { texts, imgs });
