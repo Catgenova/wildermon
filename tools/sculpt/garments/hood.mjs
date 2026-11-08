@@ -11,19 +11,22 @@
 //     writes the game's copy beside each body: src/sculpt/assets/lowhood-male.json and lowhood-female.json
 //     (lowgarment.mjs garmentAsset; loaded by src/sculpt/lowpoly.ts)
 //
-// The shape, in rows and columns. The opening's inner edge E0 (the frame's line, where the lining starts) runs from inside
-// the cowl at the front up past the jaw and the cheek to the apex A over the brow (a pointed arch: the curve's last
-// tangent kept, so the two sides meet at an angle); the border's outer line E1 is E0 moved out in the opening's plane by
-// the border's width (and back a little), and over A it is the peak. The back line C runs from inside the cowl behind
-// the neck up the back drape, over the crown, to the peak. Row k joins E1_k to C_k round the side of the head (on the
-// sphere about the head's centre O: the direction slerped, the radius blended and swelled by `bulge`), the lining's
-// row E0_k to C_k moved in by THICK; each point is then pushed out from O until it clears the head (the lining by IN,
-// the shell by IN + THICK). Rows 0 and 1 are not on the sphere: they lie inside the shawl's cowl, `gap` inside its rim
-// (the ring d), row 1 `lift` over the rim's height and row 0 `drop` under it. Columns at fractions TS of the way from
-// the frame to the back line; the seam between the side panel and the centre gusset at TS[SEAM].
+// The shape, in rows and columns. The opening's inner edge E0 (the frame's line, where the lining starts) runs from the
+// shawl's cowl beside the jaw, up past the cheek, to the apex A just over the brow and ahead of it (a pointed arch: the
+// curve's last tangent kept, so the two sides meet at an angle); the border's outer line E1 is E0 moved out in the
+// opening's plane by the border's width (and back a little), meeting over A at B. Above B the front line F runs up the
+// forehead, ahead of it, to the hood's small pointed tip T over the crown; the back line C runs from the cowl behind the
+// neck up the back, over the skull, to T. Row k joins its front point (E1_k up to the apex's row, then F_k) round the
+// side of the head to C_k: the azimuth about O's vertical from the front point's to the back's and the elevation each
+// blended, out to the design surface (at each height a superellipse across the half-width `width(y)` and from the back
+// line to the front), every point then pushed out from O until it clears the head by IN + THICK (the hood is snug: the
+// clearance is all its room). The lining is the shell moved in by THICK along its normal, its edge E0 at the frame.
+// Rows 0 to 2 lie on the cowl: 0 and 1 inside its rim (`gap`), 0 `drop` under it, 1 `lift` over it, 2 resting on the
+// upper roll (`flare` past its top, `rise` over it). Columns at fractions TS of the way from the front to the back; the
+// seam between the side panel and the centre gusset at TS[SEAM].
 // One closed surface: the shell, the lining, the border (E0 to E1), the hem (the shell to the lining at row 0).
-// Materials: fabric (the shell), trim (the border, its teeth and its line at the opening), pattern (the cream between
-// the teeth), inner (the lining).
+// Materials: fabric (the shell), trim (the border's band at the opening and its teeth), pattern (the cream between the
+// teeth), lining.
 import { offPlane, TOL, samplesOf, meshOf, orient, trisOf, atRY, dirOf, sub, add, mul, dot, cross, unit, lerp } from '../lowgarment.mjs';
 import { MATS as SHAWL_MATS } from './shawl.mjs';
 
@@ -36,36 +39,41 @@ export const MATS = { fabric: SHAWL_MATS.fabric, trim: SHAWL_MATS.trim, pattern:
 
 /**
  * The design per body (the body's units: y up, the chin's underside 0; z forward; x the body's left):
- *   O: the head's centre (the sphere the rows are laid on);
- *   frame: E0's control points up the left side, from the jaw to below the apex; apex: A (x 0); bottom: the azimuth
- *   (about the shawl's axis) where the frame enters the cowl; band: the border's width, and how far back its outer line
- *   lies; teeth: the rows (counted from the bottom) whose border carries a tooth;
- *   back: the back line's control points over the crown and down the back drape (x 0), from the peak's side;
- *   THICK, IN: the cloth's thickness and the lining's clearance from the head; gap, lift, drop: the hem in the cowl;
- *   bulge: how far the side panels swell out at their middle, per row (from row 2 up); K: rows (the peak row K);
- *   seam: how far in the seam's line is pressed (a fold between the side panel and the gusset).
+ *   O: the head's centre (the rows' azimuths and elevations about it; every front point ahead of it, every back one behind);
+ *   frame: E0's control points up the left side, from the cowl to below the apex; apex: A (x 0, over the brow); bottom:
+ *   the azimuth (about the shawl's axis) where the frame meets the cowl; band: the border's width and how far back its
+ *   outer line lies; line: the share of the border that is the band at the opening; teeth: the frame rows that carry a
+ *   tooth; cowlBand: the border's width on the cowl, as a share;
+ *   front: the front line's control points from B up to the tip; tip: T; back: the back line's, down from T to the cowl;
+ *   width: the half-width by height [[y, w]]; power: the cross-section's superellipse power;
+ *   THICK, IN: the cloth's thickness and the lining's clearance from the head; gap, lift, drop, flare, rise, over: the
+ *   hem in the cowl, the lower edge on its roll, the shell over it; step: each row at least this over the one under it;
+ *   Kf: the apex's row (rows 2 to Kf along the frame); K: the tip's row (Kf to K along the front line); seam: how far in
+ *   the seam's line is pressed.
  */
 export const DESIGN = {
   male: {
-    O: [0, 1.0, 0.6],
-    bottom: 66, frame: [[1.22, 0.85, 0.5], [1.2, 1.55, 0.82], [0.95, 2.55, 1.1]], apex: [0, 3.35, 1.18],
-    band: [0.42, 0.08], line: 0.32, cowlBand: 0.7, teeth: [3, 9],
-    back: [[0, 3.2, -0.5], [0, 2.4, -1.3], [0, 1.5, -1.6]],
-    width: [[0.5, 1.62], [1.2, 1.58], [2.0, 1.42], [2.7, 1.1], [3.3, 0.6], [3.77, 0.05]], power: 2.8,
-    THICK: 0.07, IN: 0.07, gap: 0.035, lift: 0.07, drop: 0.24, over: 0.06, flare: 0.4, rise: 0.14, step: 0.12, K: 9, seam: 0.04,
+    O: [0, 1.1, 0.1],
+    bottom: 66, frame: [[0.92, 0.55, 0.55], [0.84, 0.95, 0.82], [0.55, 1.2, 1.0]], apex: [0, 1.28, 1.04],
+    band: [0.3, 0.04], line: 0.32, cowlBand: 0.7, teeth: [3, 7],
+    front: [[0, 1.9, 0.86], [0, 2.2, 0.55]], tip: [0, 2.52, 0.14],
+    back: [[0, 2.2, -0.48], [0, 1.6, -0.95], [0, 1.15, -1.0]],
+    width: [[0.4, 1.12], [0.9, 1.0], [1.5, 0.95], [1.9, 0.8], [2.2, 0.5], [2.52, 0.04]], power: 2.4,
+    THICK: 0.06, IN: 0.05, gap: 0.035, lift: 0.07, drop: 0.24, over: 0.06, flare: -0.18, rise: 0.12, step: 0.1, Kf: 7, K: 10, seam: 0.03,
   },
   female: {
-    O: [0, 1.0, 0.55],
-    bottom: 72, frame: [[1.1, 0.8, 0.44], [1.08, 1.5, 0.74], [0.86, 2.45, 1.0]], apex: [0, 3.12, 1.08],
-    band: [0.38, 0.07], line: 0.32, cowlBand: 0.5, teeth: [3, 9],
-    back: [[0, 3.0, -0.45], [0, 2.3, -1.22], [0, 1.45, -1.5]],
-    width: [[0.4, 1.45], [1.1, 1.42], [1.9, 1.28], [2.6, 0.98], [3.1, 0.55], [3.5, 0.05]], power: 2.2,
-    THICK: 0.06, IN: 0.065, gap: 0.03, lift: 0.07, drop: 0.2, over: 0.06, flare: 0.33, rise: 0.12, step: 0.11, K: 9, seam: 0.04,
+    O: [0, 1.1, 0.05],
+    bottom: 72, frame: [[0.95, 0.5, 0.42], [0.84, 0.95, 0.74], [0.5, 1.25, 0.92]], apex: [0, 1.33, 0.96],
+    band: [0.28, 0.04], line: 0.32, cowlBand: 0.5, teeth: [3, 7],
+    front: [[0, 1.92, 0.8], [0, 2.2, 0.48]], tip: [0, 2.48, 0.06],
+    back: [[0, 2.15, -0.5], [0, 1.55, -1.02], [0, 1.1, -1.08]],
+    width: [[0.4, 1.0], [0.9, 0.92], [1.5, 0.88], [1.9, 0.74], [2.2, 0.46], [2.48, 0.04]], power: 2.2,
+    THICK: 0.055, IN: 0.05, gap: 0.03, lift: 0.07, drop: 0.2, over: 0.06, flare: -0.16, rise: 0.1, step: 0.09, Kf: 7, K: 10, seam: 0.03,
   },
 };
-/** The columns: fractions of the way round from the frame (0) to the back line (1); the seam at TS[SEAM]. */
-export const TS = [0, 0.3, 0.55, 0.8, 1];
-export const SEAM = 3;
+/** The columns: fractions of the way round from the front (0) to the back line (1); the seam at TS[SEAM]. */
+export const TS = [0, 0.14, 0.32, 0.56, 0.8, 1];
+export const SEAM = 4;
 
 /* ---- curves ------------------------------------------------------------------------------------------------------- */
 /** A Catmull-Rom spline through points, its ends' tangents given by phantom points; n samples per span. */
@@ -132,26 +140,24 @@ export function headReach(rig, O, half = 11, floor = -0.15) {
 
 /* ---- the hood ------------------------------------------------------------------------------------------------------- */
 export function buildHood(rig, shawl, design = DESIGN[rig.who], opts = {}) {
-  const D = design, O = D.O, z0 = shawl.design.z0, K = D.K;
+  const D = design, O = D.O, z0 = shawl.design.z0, K = D.K, Kf = D.Kf;
   const reach = headReach(rig, O);
   const [bandW, bandBack] = D.band;
-  // the hem's rows in the cowl: `gap` inside its rim, the shell's at r, the lining's THICK further in
   // the cowl's top (the shawl's rim d, the upper roll's top u1 and outside u2) at an azimuth about the shawl's axis
   const cowlTop = (deg) => ['d', 'u1', 'u2'].map((key) => ringAt(shawl, key, deg));
-  // the hem's rows in the cowl: `gap` inside its rim (the lining's THICK further in, and at row 1 higher, over the flare);
-  // row 0 `drop` under the rim, row 1 `lift` over the upper roll's top: a short upright wall through the cowl's opening; row 2 flared out over the roll's
-  // top, `flare` past it and `rise` over it: the hood's lower edge resting on the cowl
   const row1Y = (d) => d[1] + D.lift;
   // (row 2's height at radius r: `rise` over the roll's top, and high enough that the line up to it from row 1 passes
   // over the roll's top by `rise` too)
   const row2Y = (deg, r) => {
-    const [d, u1] = cowlTop(deg), r1 = d[0] - D.gap, y1 = row1Y(d, u1);
+    const [d, u1] = cowlTop(deg), r1 = d[0] - D.gap, y1 = row1Y(d);
     return Math.max(u1[1] + D.rise, y1 + (u1[1] + D.rise - y1) * (r - r1) / Math.max(0.05, u1[0] - r1));
   };
+  // the rows on the cowl: 0 and 1 `gap` inside its rim (the lining THICK further in, and at row 1 higher, over the flare),
+  // 2 resting on the upper roll
   const inCowl = (deg, row, layer) => {
     const [d, u1] = cowlTop(deg), lin = layer === 'in' ? D.THICK : 0;
     if (row === 2) return atRY(deg, u1[0] + D.flare - lin, row2Y(deg, u1[0] + D.flare) - lin * 0.5, z0);
-    return atRY(deg, d[0] - D.gap - lin, row === 1 ? row1Y(d, u1) + 1.3 * lin : d[1] - D.drop, z0);
+    return atRY(deg, d[0] - D.gap - lin, row === 1 ? row1Y(d) + 1.3 * lin : d[1] - D.drop, z0);
   };
   // a point kept over the cowl's top by `over`: pulled in toward the shawl's axis until it is
   const overCowl = (p) => {
@@ -161,33 +167,34 @@ export function buildHood(rig, shawl, design = DESIGN[rig.who], opts = {}) {
     while (r > T[0][0] - D.gap && p[1] < yAt(r) + D.over) r -= 0.01;
     return atRY(deg, r, p[1], z0);
   };
-  // the frame E0, from row 1 to the apex, evenly by arc length; the curve's ends kept on their tangents (pointed at A)
+  // the frame E0, from row 2 to the apex A (row Kf), evenly by arc length; the curve's ends kept on their tangents
   const E0_2 = inCowl(D.bottom, 2, 'in');
   const ctrl = [E0_2, ...D.frame, D.apex];
   const curve = spline(ctrl, add(E0_2, sub(E0_2, ctrl[1])), add(D.apex, sub(D.apex, ctrl[ctrl.length - 2])));
-  const E0 = [inCowl(D.bottom, 0, 'in'), inCowl(D.bottom, 1, 'in'), ...resample(curve, K - 2)];
-  // the border's outer line E1: E0 out in the opening's plane (the frame's tangent × z, away from the opening) by the
-  // band's width, and back by its depth; over the apex straight up: the peak
-  // (in the cowl and on its roll, rows 0 to 2, E1 round the cowl from E0 by `cowlBand` of the border's width)
+  const E0 = [inCowl(D.bottom, 0, 'in'), inCowl(D.bottom, 1, 'in'), ...resample(curve, Kf - 2)];
+  // the border's outer line E1: E0 out in the opening's plane by the band's width, and back by its depth; over the apex
+  // straight up: B. (On the cowl, rows 0 to 2, round the cowl from E0.)
   const aE1 = D.bottom + (D.cowlBand * bandW / (cowlTop(D.bottom)[1][0] + D.flare)) * 180 / Math.PI;
   const E1 = E0.map((p, k) => {
     if (k <= 2) return inCowl(aE1, k, 'out');
-    if (k === K) return add(p, [0, bandW, -bandBack]);
-    const T = unit(sub(E0[Math.min(K, k + 1)], E0[k - 1]));
+    if (k === Kf) return add(p, [0, bandW, -bandBack]);
+    const T = unit(sub(E0[Math.min(Kf, k + 1)], E0[k - 1]));
     const n = unit([T[1], -T[0], 0]);
     return overCowl(add(add(p, mul(n, bandW)), [0, 0, -bandBack]));
   });
-  const peak = E1[K];
-  // the back line, the shell's: from the cowl behind the neck up the drape, over the crown to the peak
+  const B = E1[Kf], tip = D.tip;
+  // the front line, from B up the forehead to the tip (rows Kf to K)
+  const fctrl = [B, ...D.front, tip];
+  const F = resample(spline(fctrl, add(B, sub(B, fctrl[1])), add(tip, sub(tip, fctrl[fctrl.length - 2]))), K - Kf);
+  // the back line, from the cowl behind the neck up the back and over the skull to the tip (rows 2 to K)
   const C2 = inCowl(180, 2, 'out');
-  const bctrl = [C2, ...[...D.back].reverse(), peak];
-  const bcurve = spline(bctrl, add(C2, [0.0, -0.3, 0.2]), add(peak, sub(peak, bctrl[bctrl.length - 2])));
-  const C = [inCowl(180, 0, 'out'), inCowl(180, 1, 'out'), ...resample(bcurve, K - 2)];
-  // the design surface the side panels lie on: at each height a superellipse (power `power`) across the body's half-width
-  // width(y) and from the back line's z to the border's outer line's (the profile); a ray from O meets it
-  const yTop = peak[1];
-  const byY = (L) => { const P = L.slice(2).map((p) => [p[1], p[2]]).sort((u, v) => u[0] - v[0]); return (y) => interp(P, y); };
-  const zFront = byY(E1), zBack = byY(C), half = (y) => interp(D.width, y);
+  const bctrl = [C2, ...[...D.back].reverse(), tip];
+  const C = [inCowl(180, 0, 'out'), inCowl(180, 1, 'out'), ...resample(spline(bctrl, add(C2, [0, -0.3, 0.1]), add(tip, sub(tip, bctrl[bctrl.length - 2]))), K - 2)];
+  // each row's front point: the border's outer line up to the apex's row, then the front line
+  const front = (k) => (k < Kf ? E1[k] : F[k - Kf]);
+  // the design surface
+  const byY = (P) => { const Q = P.map((p) => [p[1], p[2]]).sort((u, v) => u[0] - v[0]); return (y) => interp(Q, y); };
+  const zFront = byY([...E1.slice(3, Kf), ...F]), zBack = byY(C.slice(2)), half = (y) => interp(D.width, y), yTop = tip[1];
   const surface = (d) => {
     const g = (r) => {
       const p = add(O, mul(d, r)), y = p[1];
@@ -200,16 +207,14 @@ export function buildHood(rig, shawl, design = DESIGN[rig.who], opts = {}) {
     for (let it = 0; it < 40; it++) { const m = (lo + hi) / 2; if (g(m) < 0) lo = m; else hi = m; }
     return lo;
   };
-  // the shell's rows: rows 0 and 1 round the cowl's rim; the rest from E1 round the side to the back line (the azimuth
-  // about O's vertical from the frame's to the back's, 180, and the elevation, each blended), out to the design surface,
-  // clear of the head by IN + THICK and over the cowl
+  // the shell's rows
   const ae = (p) => { const v = sub(p, O); return [Math.atan2(v[0], v[2]), Math.atan2(v[1], Math.hypot(v[0], v[2]))]; };
   const out = [];
   for (let k = 0; k < K; k++) {
     if (k <= 2) { const a0 = aE1; out.push(TS.map((t, j) => (j === 0 ? E1[k] : inCowl(a0 + (180 - a0) * t, k, 'out')))); continue; }
-    const [a0, e0] = ae(E1[k]), [, e1] = ae(C[k]), a1 = Math.PI;
+    const [a0, e0] = ae(front(k)), [, e1] = ae(C[k]), a1 = Math.PI;
     out.push(TS.map((t, j) => {
-      if (j === 0) return E1[k];
+      if (j === 0) return front(k);
       if (j === TS.length - 1) return C[k];
       // (each row at least `step` over the one under it: the elevation raised until it is)
       const a = a0 + (a1 - a0) * t;
@@ -223,16 +228,15 @@ export function buildHood(rig, shawl, design = DESIGN[rig.who], opts = {}) {
     }));
   }
   // the lining: rows 0 and 1 the cowl's, THICK inside; the rest the shell moved in by THICK along its normal (the grid's
-  // two tangents' cross, turned toward O), E0 its edge at the frame, A its apex; where the head is nearer than IN, the
-  // shell and the lining both moved out
-  const at = (k, j) => (k >= K ? peak : j < 0 ? [-out[k][-j][0], out[k][-j][1], out[k][-j][2]] : out[k][Math.min(j, TS.length - 1)]);
+  // two tangents' cross, turned toward O), E0 its edge at the frame and A at the apex's row; where the head is nearer than
+  // IN, the shell and the lining both moved out
+  const at = (k, j) => (k >= K ? tip : j < 0 ? [-out[k][-j][0], out[k][-j][1], out[k][-j][2]] : out[k][Math.min(j, TS.length - 1)]);
   const inn = [];
   for (let k = 0; k < K; k++) {
-    // (the lining's columns at the shell's azimuths, but for its edge E0 at the frame's)
     if (k <= 1) { const a0 = aE1; inn.push(TS.map((t, j) => inCowl(j ? a0 + (180 - a0) * t : D.bottom, k, 'in'))); continue; }
     inn.push(TS.map((t, j) => {
-      if (j === 0) return E0[k];
-      const J = TS.length - 1, tj = sub(at(k, j === J ? J - 1 : j + 1), at(k, j === J ? -(J - 1) : j - 1)), tk = sub(at(k + 1, j), at(k - 1, j));
+      if (j === 0 && k <= Kf) return E0[k];
+      const J = TS.length - 1, tj = sub(at(k, j === J ? J - 1 : j + 1), at(k, j === J ? -(J - 1) : j === 0 ? -1 : j - 1)), tk = sub(at(k + 1, j), at(k - 1, j));
       let n = unit(cross(tj, tk));
       if (dot(n, sub(O, out[k][j])) < 0) n = mul(n, -1);
       let p = add(out[k][j], mul(n, D.THICK));
@@ -242,103 +246,106 @@ export function buildHood(rig, shawl, design = DESIGN[rig.who], opts = {}) {
     }));
   }
   // E0 cleared by IN, E1 by IN + THICK, along their direction from O
-  for (let k = 3; k < K; k++) for (const [L, c] of [[inn, D.IN], [out, D.IN + D.THICK]]) {
+  for (let k = 3; k < Kf; k++) for (const [L, c] of [[inn, D.IN], [out, D.IN + D.THICK]]) {
     const p = L[k][0], d = unit(sub(p, O)), r = Math.hypot(...sub(p, O)), need = reach(d) + c;
     if (r < need) L[k][0] = add(O, mul(d, need));
   }
-  const rows = { out, in: inn };
-  const G = meshOfHood(D, rows, peak, E0[K], opts);
-  G.design = D; G.frame = { E0, E1, C, peak, apex: E0[K] };
+  const tipIn = add(tip, [0, -1.6 * D.THICK, -0.3 * D.THICK]);
+  const G = meshOfHood(D, { out, in: inn }, tip, tipIn, opts);
+  G.design = D; G.frame = { E0, E1, F, C, B, tip, apex: E0[Kf] };
   return G;
 }
 
-function meshOfHood(D, rows, peak, apex, opts) {
-  const G = meshOf(), K = D.K, J = TS.length;
+function meshOfHood(D, rows, tip, tipIn, opts) {
+  const G = meshOf(), K = D.K, Kf = D.Kf, J = TS.length;
   const mono = !!opts.mono;
   const mat = (m) => (mono ? (m === 'lining' ? 'lining' : 'fabric') : m);
-  // vertices: per half (s = 1 the body's left, -1 its right), the centre column (j = J - 1) shared
+  // vertices: per half (s = 1 the body's left, -1 its right); the back column (j = J - 1) shared, and the front column
+  // from the apex's row up (x 0)
   const V = { out: [[], []], in: [[], []] };
   for (const layer of ['out', 'in']) for (let k = 0; k < K; k++) {
-    const center = G.vert(rows[layer][k][J - 1], layer === 'out' ? 'shell' : 'lining');
+    const part = layer === 'out' ? 'shell' : 'lining';
+    const back = G.vert(rows[layer][k][J - 1], part), front0 = k >= Kf ? G.vert(rows[layer][k][0], 'border') : null;
     for (const [h, s] of [[0, 1], [1, -1]]) {
-      V[layer][h][k] = rows[layer][k].map((p, j) => (j === J - 1 ? center : G.vert([p[0] * s, p[1], p[2]], layer === 'out' ? (j === 0 ? 'border' : 'shell') : (j === 0 ? 'border' : 'lining'))));
+      V[layer][h][k] = rows[layer][k].map((p, j) => (j === J - 1 ? back : j === 0 && front0 !== null ? front0 : G.vert([p[0] * s, p[1], p[2]], j === 0 ? 'border' : part)));
     }
   }
-  // (a quad of the shell or the lining as two triangles, always cut on the same diagonal, so the two layers stay apart
-  // when a pose shears them)
+  const T = G.vert(tip, 'shell'), Ti = G.vert(tipIn, 'lining');
+  const A = V.in[0][Kf][0], Bv = V.out[0][Kf][0], LA = G.vert(lerp(G.verts[A], G.verts[Bv], D.line), 'border'), Ln = [[], []], teeth = [];
+  // (a quad of the shell or the lining kept whole where flat and fanned from its first corner, else cut on that same
+  // diagonal: the two layers stay apart when a pose shears them)
   const quad = (a, b, c, d, m, part) => {
     if (offPlane(G.verts, [a, b, c, d]) <= TOL) { G.poly([a, b, c, d], m, part, true); G.polys[G.polys.length - 1].anchor = a; return; }
     G.poly([a, b, c], m, part); G.poly([a, c, d], m, part);
   };
-  const P = G.vert(peak, 'border'), A = G.vert(apex, 'border'), LA = G.vert(lerp(apex, peak, D.line), 'border'), Ln = [[], []];
   for (const h of [0, 1]) {
     const Vo = V.out[h], Vi = V.in[h];
-    // the shell and the lining
     G.tag = 'shell';
     for (let k = 0; k + 1 < K; k++) for (let j = 0; j + 1 < J; j++) quad(Vo[k][j], Vo[k][j + 1], Vo[k + 1][j + 1], Vo[k + 1][j], mat('fabric'), 'shell');
-    for (let j = 0; j + 1 < J; j++) G.poly([Vo[K - 1][j], Vo[K - 1][j + 1], P], mat('fabric'), 'shell');
+    for (let j = 0; j + 1 < J; j++) G.poly([Vo[K - 1][j], Vo[K - 1][j + 1], T], mat('fabric'), 'shell');
     G.tag = 'lining';
     for (let k = 0; k + 1 < K; k++) for (let j = 0; j + 1 < J; j++) quad(Vi[k][j], Vi[k][j + 1], Vi[k + 1][j + 1], Vi[k + 1][j], 'lining', 'lining');
-    for (let j = 0; j + 1 < J; j++) G.poly([Vi[K - 1][j], Vi[K - 1][j + 1], A], 'lining', 'lining');
-    // the border, E0 to E1, up to the apex and the peak: a band of trim along the opening (E0 to `line` of the way out),
-    // then over rows teeth[0] to teeth[1] the teeth, each two rows long: tan, its base the outer edge, its point on the
-    // band; cream between, their bases on the band
+    for (let j = 0; j + 1 < J; j++) G.poly([Vi[K - 1][j], Vi[K - 1][j + 1], Ti], 'lining', 'lining');
+    // the border, E0 to E1, up to the apex's row (A to B): a band of trim along the opening (E0 to `line` of the way
+    // out), then over rows teeth[0] to teeth[1] a tooth a row (tan, its base the outer edge, its point on the band) and
+    // the cream between, their bases on the band
     G.tag = 'border';
-    const e0 = (k) => (k === K ? A : Vi[k][0]), e1 = (k) => (k === K ? P : Vo[k][0]);
-    const lineOf = (k) => (k === K ? LA : (Ln[h][k] ??= G.vert(lerp(G.verts[e0(k)], G.verts[e1(k)], D.line), 'border')));
-    for (let k = 0; k < K; k++) {
+    const e0 = (k) => Vi[k][0], e1 = (k) => Vo[k][0];
+    const lineOf = (k) => (k === Kf ? LA : (Ln[h][k] ??= G.vert(lerp(G.verts[e0(k)], G.verts[e1(k)], D.line), 'border')));
+    for (let k = 0; k < Kf; k++) {
       if (mono) { G.poly([e0(k), e1(k), e1(k + 1), e0(k + 1)], 'fabric', 'border'); continue; }
-      G.poly([e0(k), lineOf(k), lineOf(k + 1), e0(k + 1)], 'trim', 'border');
-      const tooth = !opts.plain && k >= D.teeth[0] && k + 1 < D.teeth[1] + 1 && (k - D.teeth[0]) % 2 === 0 && k + 2 <= K;
-      const inTooth = !opts.plain && k > D.teeth[0] && k <= D.teeth[1] && (k - D.teeth[0]) % 2 === 1;
-      if (inTooth) continue;
-      if (!tooth) { G.poly([lineOf(k), e1(k), e1(k + 1), lineOf(k + 1)], 'trim', 'border'); continue; }
-      G.poly([lineOf(k + 1), e1(k), e1(k + 1)], 'trim', 'border');
-      G.poly([lineOf(k + 1), e1(k + 1), e1(k + 2)], 'trim', 'border');
-      G.poly([lineOf(k), lineOf(k + 1), e1(k)], 'pattern', 'border');
-      G.poly([lineOf(k + 1), lineOf(k + 2), e1(k + 2)], 'pattern', 'border');
+      const l0 = lineOf(k), l1 = lineOf(k + 1);
+      const tooth = !opts.plain && k >= D.teeth[0] && k < D.teeth[1];
+      if (!tooth) { G.poly([e0(k), l0, l1, e0(k + 1)], 'trim', 'border'); G.poly([l0, e1(k), e1(k + 1), l1], 'trim', 'border'); continue; }
+      const x = G.vert(lerp(G.verts[l0], G.verts[l1], 0.5), 'border');
+      teeth.push([x, h, k]);
+      G.poly([e0(k), l0, x], 'trim', 'border');
+      G.poly([e0(k), x, e0(k + 1)], 'trim', 'border');
+      G.poly([x, l1, e0(k + 1)], 'trim', 'border');
+      G.poly([e1(k), e1(k + 1), x], 'trim', 'border');
+      G.poly([l0, x, e1(k)], 'pattern', 'border');
+      G.poly([x, l1, e1(k + 1)], 'pattern', 'border');
     }
     // the hem: the shell's row 0 to the lining's
     G.tag = 'hem';
     for (let j = 0; j + 1 < J; j++) G.poly([Vo[0][j], Vo[0][j + 1], Vi[0][j + 1], Vi[0][j], ...(j === 0 && !mono ? [lineOf(0)] : [])], mat('fabric'), 'hem');
   }
   orient(G, (p) => sub(p, D.O));
-  // (a whole quad's fan from its anchor, whichever way round it was turned: the same diagonal as the layer under it)
   for (const q of G.polys) if (q.anchor !== undefined) { const i = q.v.indexOf(q.anchor); q.v = [...q.v.slice(i), ...q.v.slice(0, i)]; }
   G.tris = trisOf(G);
-  G.V = V; G.peak = P; G.apex = A; G.line = Ln; G.lineApex = LA;
+  G.V = V; G.tip = T; G.tipIn = Ti; G.line = Ln; G.lineApex = LA; G.teeth = teeth;
   return G;
 }
 
 /* ---- weights -------------------------------------------------------------------------------------------------------- */
 /**
- * The hood's weights: rows 0 and 1 (in the cowl) the shawl's cowl rim's (its ring d at the same azimuth, its two nearest
- * columns blended), so the hem moves with the cowl round it; the head's from `full` up; between, blended by row
- * (HEAD_SHARE). The lining and the border each take their row's.
+ * The hood's weights: rows 0 to 2 (on the cowl) the shawl's cowl rim's (its ring d at the same azimuth, its two nearest
+ * columns blended), so the hem moves with the cowl round it; above, the head's by height (HEAD_SHARE: none at `from`,
+ * all at `to`, the body's y; at most ROW_CAP by row), so the hood is snug on the head as it turns and nods. The lining and the border take the
+ * shell's beside them, so the cloth's thickness moves as one.
  */
-export const HEAD_SHARE = [0, 0, 0.15, 0.4, 0.7, 0.9, 1];
-/** And more of it toward the frame (by 1 - the column's TS), so the opening's lower sides go with the jaw. */
-export const FRONT_SHARE = [0, 0, 0, 0.15, 0.35, 0.15];
+export const HEAD_SHARE = { male: { from: 0.25, to: 0.85 }, female: { from: 0.15, to: 0.8 } };
+/** And at most this much by row (0 on the cowl), so the turn is shared over the rows over it. */
+export const ROW_CAP = [0, 0, 0, 0.4, 0.75, 1];
+/** And more toward the frame (by 1 - the column's TS), so the opening's lower sides go with the jaw. */
+export const FRONT_SHARE = [0, 0, 0, 0.4, 0.2];
 export function hoodWeights(rig, G, shawl) {
-  const head = rig.at.get('head'), z0 = shawl.design.z0, K = G.design.K;
+  const head = rig.at.get('head'), z0 = shawl.design.z0, K = G.design.K, Kf = G.design.Kf, HS = HEAD_SHARE[rig.who];
   const SC = shawl.cols, N = SC.length;
   const rimW = (p) => {
     const deg = ((Math.atan2(p[0], p[2] - z0) * 180 / Math.PI) + 360) % 360;
     const k = Math.floor(deg / (360 / N)) % N, t = (deg - SC[k].deg) / (360 / N);
     return mixW(shawl.vw[shawl.rings.d[k]], shawl.vw[shawl.rings.d[(k + 1) % N]], Math.min(1, Math.max(0, t)));
   };
-  // the shell's vertices: by row; the lining's and the border's take the shell's beside them, so the cloth's thickness
-  // moves as one
   const W = new Array(G.verts.length).fill(null);
-  const share = (k, j) => Math.min(1, HEAD_SHARE[Math.min(k, HEAD_SHARE.length - 1)] + (FRONT_SHARE[k] ?? 0) * (1 - TS[j]));
-  const shellW = (vi, k, j) => mixW(rimW(G.verts[vi]), [[head, 1]], share(k, j));
-  for (const h of [0, 1]) G.V.out[h].forEach((r, k) => r.forEach((vi, j) => { W[vi] ??= shellW(vi, k, j); }));
-  W[G.peak] = [[head, 1]]; W[G.apex] = [[head, 1]];
-  for (const h of [0, 1]) G.V.in[h].forEach((r, k) => r.forEach((vi, j) => { W[vi] = W[G.V.out[h][k][j]]; }));
-  // (the border's band line: as the shell's frame column beside it)
-  const col0 = (h, k) => (k >= K ? G.peak : G.V.out[h][k][0]);
+  const share = (k, y, j) => Math.min(1, Math.min(ROW_CAP[Math.min(k, ROW_CAP.length - 1)], Math.max(0, (y - HS.from) / (HS.to - HS.from))) + (FRONT_SHARE[k] ?? 0) * (1 - TS[j]));
+  for (const h of [0, 1]) G.V.out[h].forEach((r, k) => r.forEach((vi, j) => { W[vi] ??= mixW(rimW(G.verts[vi]), [[head, 1]], share(k, G.verts[vi][1], j)); }));
+  W[G.tip] = [[head, 1]]; W[G.tipIn] = [[head, 1]];
+  for (const h of [0, 1]) G.V.in[h].forEach((r, k) => r.forEach((vi, j) => { W[vi] ??= W[G.V.out[h][k][j]]; }));
+  const col0 = (h, k) => G.V.out[h][k][0];
   for (const h of [0, 1]) G.line[h].forEach((vi, k) => { if (vi !== undefined) W[vi] = W[col0(h, k)]; });
-  W[G.lineApex] = [[head, 1]];
+  W[G.lineApex] = W[col0(0, Kf)];
+  for (const [x, h, k] of G.teeth) W[x] = mixW(W[col0(h, k)], W[col0(h, k + 1)], 0.5);
   return W.map((w) => w ?? [[head, 1]]);
 }
 const mixW = (A, Bw, t) => { const o = new Map(); for (const [b, w] of A) o.set(b, (o.get(b) ?? 0) + w * (1 - t)); for (const [b, w] of Bw) o.set(b, (o.get(b) ?? 0) + w * t); const l = [...o].filter(([, w]) => w > 1e-6).sort((x, y) => y[1] - x[1]).slice(0, 4), s = l.reduce((a, [, w]) => a + w, 0); return l.map(([b, w]) => [b, w / s]); };

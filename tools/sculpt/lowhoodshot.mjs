@@ -45,8 +45,8 @@ for (const who of ['male', 'female']) {
 
 /* ---- checks ----------------------------------------------------------------------------------------------------------- */
 const headIdx = (rig) => new Set(rig.B.verts.map((_, i) => i).filter((i) => rig.B.part[i] === 'head' || rig.B.part[i] === 'neck'));
-/** The face's points: the head's vertices in front (eyes, brows, nose, mouth, chin, cheeks), by name. */
-const FACE = /^(pupil|lid|brow|tc|tb|k[0-3]|ch[01]|e[1-3]|bm|b[0-2]|b3|jl|gl|t0|t1|u[01])/;
+/** The face's points from the eyes down (eyes, lids, nose, mouth, chin, cheeks), by name: the hood hangs to the brow. */
+const FACE = /^(pupil|lid|tc|tb|k[0-3]|ch[01]|e[1-3]|jl|u[01])/;
 const faceIdx = (rig) => rig.B.names.map((n, i) => (FACE.test(n ?? '') ? i : -1)).filter((i) => i >= 0);
 /** Whether the ray from p along d meets triangle abc. */
 function rayHits(p, d, a, b, c) {
@@ -124,7 +124,7 @@ async function sheet(file, edges) {
     const d0 = { PB: at(d.PB), PG: at(d.PG), PS: at(d.PS) };
     VIEWS.forEach(([yaw, lab], i) => {
       imgs.push({ src: SHEET, size: [1448, 1086], crop: [SX[who][i] - 68, 112, 136, 206], box: [i * cw, top + r * 2 * (ch + 22), cw, ch] });
-      cells.push({ meshes: scene(who, d0, { edges }), cam: { yaw, pitch: 0, s: 50, c: [0, 0.95, 0] }, box: [i * cw, top + (r * 2 + 1) * (ch + 22) - 22 + 22, cw, ch], label: `${who} ${lab}` });
+      cells.push({ meshes: scene(who, d0, { edges }), cam: { yaw, pitch: 0, s: 74, c: [0, 0.55, 0] }, box: [i * cw, top + (r * 2 + 1) * (ch + 22) - 22 + 22, cw, ch], label: `${who} ${lab}` });
     });
     texts.push({ cls: 'lab', css: `left:${5 * cw + 10}px;top:${top + r * 2 * (ch + 22) + 10}px`, html: `${who}: the sheet ↑` });
     texts.push({ cls: 'lab', css: `left:${5 * cw + 10}px;top:${top + (r * 2 + 1) * (ch + 22) + 10}px`, html: `${who}: the model ↑<br>${M[who].G.tris.length} triangles` });
