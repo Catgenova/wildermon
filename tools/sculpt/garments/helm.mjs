@@ -28,13 +28,14 @@ import { meshOf, orient, trisOf, samplesOf, closestOnTri, sub, add, mul, dot, cr
 /**
  * The plate set's shared colours and names (red, green, blue nought to one; the same on every plate piece, so the game
  * shares their slots): plate, shade, gold (the raised trim, metal in both looks), core (the cores: the star and the
- * discs' bosses).
+ * discs' bosses), under (the dark under-layer: the brow's underside over the eye).
  */
 export const MATS = {
   plate: [0.84, 0.71, 0.63],
   shade: [0.72, 0.6, 0.53],
   gold: [0.96, 0.74, 0.4],
   core: [0.86, 0.62, 0.3],
+  under: [0.29, 0.22, 0.2],
 };
 /**
  * The two looks (lowgarment.mjs garmentAsset `looks`): plain, every material metal (kind 2, lit by the light's
@@ -75,14 +76,14 @@ export const DESIGN = {
     sec: [[-0.3, 0.82, 1.0, 0.8, 2.6], [0.4, 0.85, 1.0, 0.8, 2.6], [0.8, 0.9, 1.0, 0.82, 2.6], [1.1, 0.95, 0.98, 0.88, 2.6], [1.32, 0.97, 0.96, 0.97, 2.6], [1.56, 0.96, 0.94, 0.93, 2.5],
       [1.8, 0.94, 0.88, 0.9, 2.5], [1.92, 0.9, 0.8, 0.82, 2.5], [2.04, 0.85, 0.72, 0.74, 2.4], [2.16, 0.79, 0.64, 0.66, 2.3], [2.29, 0.65, 0.6, 0.58, 2.2], [2.42, 0.44, 0.44, 0.5, 2.1], [2.5, 0.2, 0.2, 0.24, 2.0]],
     top: [0, 2.5, -0.04], rings: [2.36, 2.2, 2.0], domeStep: 0.045,
-    band: { top: [[0, 1.82], [22, 1.72], [44, 1.6], [62, 1.55], [180, 1.58]], bot: [[0, 0.83], [22, 0.93], [44, 1.05], [62, 1.15], [82, 1.22], [126, 1.17], [180, 1.17]], out: [[0, 0.32], [22, 0.24], [44, 0.2], [62, 0.12], [82, 0.09], [102, 0.09], [126, 0.12], [180, 0.12]], rim: 0.07, rimOut: 0.035, topRim: [[0, 0.07, 0.035], [62, 0.07, 0.035], [82, 0, 0]] },
+    band: { top: [[0, 1.82], [22, 1.72], [44, 1.6], [62, 1.55], [180, 1.58]], bot: [[0, 0.83], [22, 1.0], [44, 1.14], [62, 1.2], [82, 1.22], [126, 1.17], [180, 1.17]], out: [[0, 0.32], [22, 0.24], [44, 0.2], [62, 0.12], [82, 0.09], [102, 0.09], [126, 0.12], [180, 0.12]], rim: 0.07, rimOut: 0.035, topRim: [[0, 0.07, 0.035], [62, 0.07, 0.035], [82, 0, 0]] },
     ledge: 0.03,
-    back: { out: [[0, 0], [76, 0], [82, 0.1], [180, 0.1]], p1: [[0, 0.6], [82, 1.0], [126, 0.95], [180, 0.93]], step: [[0, 0], [82, 0], [102, 0.04], [126, 0.05], [180, 0.06]], p3: [[0, 0.4], [82, 0.75], [126, 0.68], [180, 0.65]], step2: [[0, 0], [82, 0], [102, 0.04], [126, 0.05], [180, 0.06]], bot: [[0, -0.16], [22, 0.0], [44, 0.14], [62, 0.24], [82, 0.47], [102, 0.44], [126, 0.4], [180, 0.4]], flare: [[0, 0], [102, 0.0], [126, 0.04], [180, 0.05]] },
-    face: { yTop: 0.71, yBot: -0.16, zTop: 1.24, zBot: 1.16, ang: 40, xOutTop: 0.82, xOutBot: 0.68, eye: 0.12, botOut: 0.0, seam: 0.05, t: 0.07, vents: [[0.2, 0.3], [0.44, 0.54], [0.68, 0.78]], vt: [0.16, 0.66] },
-    gap: 0.01, thick: 0.07, skirtIn: 0.12, window: 82,
-    crest: { w: 0.48, wt: 0.4, h: 0.2 }, star: 0.38,
-    disc: { y: 1.17, r: 0.3, boss: 0.19, h: 0.05, bh: 0.06, off: 0.045 },
-    cheek: { az: [[70, 1.1, 0.07], [90, 1.1, -0.05], [86, 0.36, -0.05], [70, 0.26, 0.07]], t: 0.07 },
+    back: { out: [[0, 0], [76, 0], [82, 0.1], [180, 0.1]], p1: [[0, 0.6], [82, 1.0], [126, 0.95], [180, 0.93]], step: [[0, 0], [82, 0], [102, 0.04], [126, 0.05], [180, 0.06]], p3: [[0, 0.4], [82, 0.75], [126, 0.68], [180, 0.65]], step2: [[0, 0], [82, 0], [102, 0.04], [126, 0.05], [180, 0.06]], bot: [[0, -0.16], [22, 0.0], [44, 0.14], [62, 0.24], [82, 0.36], [102, 0.4], [126, 0.4], [180, 0.4]], flare: [[0, 0], [102, 0.0], [126, 0.04], [180, 0.05]] },
+    face: { yTop: 0.71, yBot: -0.16, zTop: 1.24, zBot: 1.16, ang: 40, xOutTop: 0.82, xOutBot: 0.68, eye: 0.17, botOut: 0.1, seam: 0.05, t: 0.07, vents: [[0.18, 0.27], [0.42, 0.51], [0.66, 0.75]], vt: [0.1, 0.78] },
+    gap: 0.01, thick: 0.07, skirtIn: 0.12, window: 82, panels: true,
+    crest: { w: 0.48, wt: 0.4, h: 0.26 }, badge: { az: 44, inset: 0.02, t: 0.05 }, star: 0.38,
+    disc: { y: 1.17, r: 0.3, boss: 0.18, h: 0.05, stem: 0.08, bh: 0.05, off: 0.045 },
+    cheek: { az: [[70, 1.1, 0.07], [90, 1.1, -0.05], [86, 0.4, -0.05], [70, 0.3, 0.07]], t: 0.07 },
   },
   // (hers: 47 px a unit, her faceplate's foot at -0.18, her profile's faceplate at z 1.07 at the cheek's height: her head
   // is longer from the nose back than the sheet's helm allows at his scale)
@@ -91,17 +92,19 @@ export const DESIGN = {
     sec: [[-0.3, 0.78, 0.95, 0.86, 2.3], [0.4, 0.82, 0.98, 0.86, 2.3], [0.8, 0.88, 0.98, 0.88, 2.3], [1.1, 0.93, 0.96, 0.9, 2.3], [1.37, 0.95, 0.94, 1.0, 2.3], [1.56, 0.94, 0.94, 0.99, 2.3],
       [1.82, 0.91, 0.9, 0.9, 2.3], [1.95, 0.88, 0.8, 0.82, 2.3], [2.08, 0.83, 0.72, 0.72, 2.3], [2.2, 0.76, 0.64, 0.64, 2.3], [2.33, 0.64, 0.58, 0.58, 2.2], [2.46, 0.45, 0.45, 0.5, 2.1], [2.56, 0.2, 0.2, 0.24, 2.0]],
     top: [0, 2.58, -0.06], rings: [2.44, 2.26, 2.06], domeStep: 0.04,
-    band: { top: [[0, 1.86], [22, 1.76], [44, 1.64], [62, 1.58], [180, 1.6]], bot: [[0, 0.88], [22, 0.98], [44, 1.1], [62, 1.2], [82, 1.28], [126, 1.22], [180, 1.22]], out: [[0, 0.28], [22, 0.21], [44, 0.17], [62, 0.1], [82, 0.08], [102, 0.08], [126, 0.1], [180, 0.1]], rim: 0.06, rimOut: 0.03, topRim: [[0, 0.06, 0.03], [62, 0.06, 0.03], [82, 0, 0]] },
+    band: { top: [[0, 1.86], [22, 1.76], [44, 1.64], [62, 1.58], [180, 1.6]], bot: [[0, 0.88], [22, 1.04], [44, 1.18], [62, 1.24], [82, 1.28], [126, 1.22], [180, 1.22]], out: [[0, 0.28], [22, 0.21], [44, 0.17], [62, 0.1], [82, 0.08], [102, 0.08], [126, 0.1], [180, 0.1]], rim: 0.06, rimOut: 0.03, topRim: [[0, 0.06, 0.03], [62, 0.06, 0.03], [82, 0, 0]] },
     ledge: 0.03,
-    back: { out: [[0, 0], [76, 0], [82, 0.09], [180, 0.09]], p1: [[0, 0.62], [82, 1.04], [126, 0.99], [180, 0.97]], step: [[0, 0], [82, 0], [102, 0.04], [126, 0.04], [180, 0.05]], p3: [[0, 0.42], [82, 0.79], [126, 0.72], [180, 0.69]], step2: [[0, 0], [82, 0], [102, 0.04], [126, 0.04], [180, 0.05]], bot: [[0, -0.14], [22, 0.02], [44, 0.16], [62, 0.26], [82, 0.5], [102, 0.48], [126, 0.44], [180, 0.44]], flare: [[0, 0], [102, 0.0], [126, 0.04], [180, 0.05]] },
-    face: { yTop: 0.76, yBot: -0.14, zTop: 1.15, zBot: 0.97, ang: 36, xOutTop: 0.76, xOutBot: 0.62, eye: 0.12, botOut: 0.0, seam: 0.045, t: 0.06, vents: [[0.2, 0.3], [0.44, 0.54], [0.68, 0.78]], vt: [0.16, 0.66] },
-    gap: 0.01, thick: 0.06, skirtIn: 0.1, window: 82,
-    crest: { w: 0.42, wt: 0.34, h: 0.18 }, star: 0.34,
-    disc: { y: 1.2, r: 0.28, boss: 0.18, h: 0.05, bh: 0.06, off: 0.04 },
-    cheek: { az: [[70, 1.16, 0.06], [90, 1.16, -0.05], [86, 0.4, -0.05], [70, 0.3, 0.06]], t: 0.06 },
+    back: { out: [[0, 0], [76, 0], [82, 0.09], [180, 0.09]], p1: [[0, 0.62], [82, 1.04], [126, 0.99], [180, 0.97]], step: [[0, 0], [82, 0], [102, 0.04], [126, 0.04], [180, 0.05]], p3: [[0, 0.42], [82, 0.79], [126, 0.72], [180, 0.69]], step2: [[0, 0], [82, 0], [102, 0.04], [126, 0.04], [180, 0.05]], bot: [[0, -0.14], [22, 0.02], [44, 0.16], [62, 0.26], [82, 0.4], [102, 0.44], [126, 0.44], [180, 0.44]], flare: [[0, 0], [102, 0.0], [126, 0.04], [180, 0.05]] },
+    face: { yTop: 0.76, yBot: -0.14, zTop: 1.15, zBot: 0.97, ang: 36, xOutTop: 0.76, xOutBot: 0.62, eye: 0.17, botOut: 0.1, seam: 0.045, t: 0.06, vents: [[0.18, 0.27], [0.42, 0.51], [0.66, 0.75]], vt: [0.1, 0.78] },
+    gap: 0.01, thick: 0.06, skirtIn: 0.1, window: 82, panels: true,
+    crest: { w: 0.42, wt: 0.34, h: 0.23 }, badge: { az: 44, inset: 0.02, t: 0.045 }, star: 0.34,
+    disc: { y: 1.3, r: 0.28, boss: 0.17, h: 0.05, stem: 0.07, bh: 0.05, off: 0.04 },
+    cheek: { az: [[70, 1.16, 0.06], [90, 1.16, -0.05], [86, 0.44, -0.05], [70, 0.34, 0.06]], t: 0.06 },
   },
 };
 /** The shell's columns: azimuths round the axis (degrees, 0 forward, +90 the body's left), in order round. */
+/** The dome's columns drawn a shade darker, between its lighter panels. */
+const PANEL = new Set([22, 62, 102, 152]);
 export const AZ = [0, 22, 44, 62, 82, 102, 126, 152, 180, -152, -126, -102, -82, -62, -44, -22];
 
 /** The dome's section at height y toward azimuth az: the superellipse's radius. */
@@ -181,8 +184,10 @@ export function buildHelm(rig, design = DESIGN[rig.who]) {
   const matOf = (k, az) => {
     const key = st[0][k][0];
     if (key === 'bt' || key === 'bto' || key === 'bt3') return 'gold'; // the band's top ledge, the badge's top rim
+    if (k < kBand && D.panels && PANEL.has(Math.abs(az))) return 'shade'; // the dome's panels
     if (key === 'brr' || key === 'brg') return 'gold'; // the rim's ledge and face
-    if (key === 'blo' || key === 'bli') return 'shade'; // the band's underside; the side and plate 1 under it
+    if (key === 'blo') return Math.abs(az) <= 62 ? 'under' : 'shade'; // the band's underside: over the eye, the dark under-layer
+    if (key === 'bli') return 'shade'; // the side and plate 1 under the band
     if (key === 'p1b' || key === 'p3b') return 'gold'; // the tiers' top ledges
     return 'plate';
   };
@@ -350,20 +355,37 @@ export function buildHelm(rig, design = DESIGN[rig.who]) {
     const outer = oct(C.r, 0), bossB = oct(C.boss, 0);
     // (a prism standing off the band's face, clear of its rims, over the dome above and the visor below)
     const { T } = plate(tag, outer, [], 'plate', 'shade', { foot: oct(C.r, -C.h), closed: true });
-    // (the face: the ring between the rim and the boss, then the boss, a low eight-sided dome)
-    const Bi = bossB.map((p) => G.vert(p, tag)), cT = G.vert(add(c0, mul(n, C.bh)), tag);
-    for (let k = 0; k < 8; k++) { const k1 = (k + 1) % 8; G.poly([T[k], T[k1], Bi[k1], Bi[k]], 'plate', 'helm'); G.poly([Bi[k], Bi[k1], cT], 'core', 'helm'); }
+    // (the face: the ring between the rim and the boss; the boss a short round knob standing off it, its side gold, its cap
+    // a low eight-sided dome, the core)
+    const Bi = bossB.map((p) => G.vert(p, tag)), Bt = oct(C.boss, C.stem).map((p) => G.vert(p, tag)), cT = G.vert(add(c0, mul(n, C.stem + C.bh)), tag);
+    for (let k = 0; k < 8; k++) { const k1 = (k + 1) % 8; G.poly([T[k], T[k1], Bi[k1], Bi[k]], 'plate', 'helm'); G.poly([Bi[k], Bi[k1], Bt[k1], Bt[k]], 'gold', 'helm'); G.poly([Bt[k], Bt[k1], cT], 'core', 'helm'); }
   }
 
-  /* ---- the star on the brow: a four-pointed star laid on the beak, seen from the front ---- */
+  /* ---- the brow's badge: a raised pentagon plate on the band's face between its rims, its edges gold ---- */
+  const BADGE = D.badge;
+  {
+    const cols = AZ.filter((a) => Math.abs(a) <= BADGE.az).sort((a, b) => a - b);
+    const KEY = st[0].map((x) => x[0]), onFace = (az, y) => { const j = AZ.indexOf(az), p = st[j]; const r0 = p[KEY.indexOf('bt4')], r1 = p[KEY.indexOf('brr')]; const t = (y - r1[1]) / (r0[1] - r1[1]); return at(az, r1[2] + (r0[2] - r1[2]) * t, y); };
+    // (each column's top and foot on the band's face, `inset` inside its rims)
+    const rows = cols.map((az) => { const j = AZ.indexOf(az), p = st[j]; const yt = p[KEY.indexOf('bt4')][1] - BADGE.inset, yb = p[KEY.indexOf('brr')][1] + BADGE.inset; return [onFace(az, yt), onFace(az, yb)]; });
+    const nOf = (az) => [Math.sin(az * Math.PI / 180), 0, Math.cos(az * Math.PI / 180)];
+    const out = rows.map(([a, b], i) => [add(a, mul(nOf(cols[i]), D.gap + BADGE.t)), add(b, mul(nOf(cols[i]), D.gap + BADGE.t))]);
+    const foot = rows.map(([a, b], i) => [add(a, mul(nOf(cols[i]), D.gap)), add(b, mul(nOf(cols[i]), D.gap))]);
+    const ring = [...out.map((r) => r[0]), ...out.map((r) => r[1]).reverse()], fring = [...foot.map((r) => r[0]), ...foot.map((r) => r[1]).reverse()];
+    const n = cols.length, faces = cols.slice(0, -1).map((_, i) => [i, i + 1, 2 * n - 2 - i, 2 * n - 1 - i]);
+    plate('badge', ring, faces, 'plate', 'gold', { foot: fring });
+    G.badgeT = D.gap + BADGE.t;
+  }
+
+  /* ---- the star on the brow: a four-pointed star laid on the badge, seen from the front ---- */
   {
     const yS = (byAz(B.bot, 0) + B.rim + byAz(B.top, 0)) / 2, R = D.star, r = R * 0.26;
     const hit = (x, y) => rayShell([x, y, 6], [0, 0, -1]);
     const pts = Array.from({ length: 8 }, (_, k) => { const a = k * Math.PI / 4, l = k % 2 ? r : R; return [Math.sin(a) * l * 0.78, yS + Math.cos(a) * l]; });
     G.tag = 'star';
-    const T = pts.map(([x, y]) => { const h = hit(x, y); return G.vert(add(h.q, mul(h.n, 4 * D.gap + 0.035)), "star"); });
-    const Fo = pts.map(([x, y]) => { const h = hit(x, y); return G.vert(add(h.q, mul(h.n, 4 * D.gap)), "star"); });
-    const h0 = hit(0, yS), cT = G.vert(add(h0.q, mul(h0.n, 4 * D.gap + 0.06)), "star");
+    const T = pts.map(([x, y]) => { const h = hit(x, y); return G.vert(add(h.q, mul(h.n, G.badgeT + 2 * D.gap + 0.035)), 'star'); });
+    const Fo = pts.map(([x, y]) => { const h = hit(x, y); return G.vert(add(h.q, mul(h.n, G.badgeT + 2 * D.gap)), 'star'); });
+    const h0 = hit(0, yS), cT = G.vert(add(h0.q, mul(h0.n, G.badgeT + 2 * D.gap + 0.06)), 'star');
     for (let k = 0; k < 8; k++) { const k1 = (k + 1) % 8; G.poly([cT, T[k], T[k1]], 'core', 'helm'); G.poly([Fo[k], Fo[k1], T[k1], T[k]], 'gold', 'helm'); }
   }
 
