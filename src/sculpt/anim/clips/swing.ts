@@ -35,38 +35,38 @@ export const TRUNK: Record<string, KeyPose> = {
   /** At rest after the blow: still bent over the blade, its point down on the ground ahead. */
   rest: {
     rot: {
-      pelvis: [10, -6, 0], spine_01: [15, 2, 0], spine_02: [17, 2, 0], spine_03: [14, 2, 0],
-      neck_01: [-20, 0, 0], neck_02: [-3, 0, 0], head: [-5, 0, 0],
+      pelvis: [7, -6, 0], spine_01: [10, 2, 0], spine_02: [11, 2, 0], spine_03: [9, 2, 0],
+      neck_01: [-16, 0, 0], neck_02: [-3, 0, 0], head: [-5, 0, 0],
       clavicle_l: [0, 0, -2], clavicle_r: [0, 0, 2],
     },
-    move: [0, -0.062, 0.004],
+    move: [0, -0.045, 0.004],
   },
   /** Gathered before the pull: sunk lower, turned a little the other way, the weight onto the left foot. */
   gather: {
     rot: {
-      pelvis: [11, -2, -2], spine_01: [14, 5, -2], spine_02: [15, 5, -2], spine_03: [12, 4, -1],
-      neck_01: [-18, -3, 0], neck_02: [-3, -1, 0], head: [-5, -2, 0],
+      pelvis: [9, -2, -2], spine_01: [11, 5, -2], spine_02: [11, 5, -2], spine_03: [9, 4, -1],
+      neck_01: [-16, -3, 0], neck_02: [-3, -1, 0], head: [-5, -2, 0],
       clavicle_l: [0, 0, -3], clavicle_r: [0, 0, 3],
     },
-    move: [0.008, -0.066, 0.004],
+    move: [0.008, -0.056, 0.004],
   },
   /** Pulling: turned to the right and leant into it, the weight going over onto the right foot, the hands out to the right. */
   drag: {
     rot: {
-      pelvis: [11, -12, 3], spine_01: [12, -8, 5], spine_02: [12, -8, 4], spine_03: [9, -6, 3],
-      neck_01: [-16, 4, 0], neck_02: [-3, 2, 0], head: [-4, 3, 0],
+      pelvis: [9, -12, 3], spine_01: [9, -8, 5], spine_02: [9, -8, 4], spine_03: [7, -6, 3],
+      neck_01: [-13, 4, 0], neck_02: [-3, 2, 0], head: [-4, 3, 0],
       clavicle_l: [0, 0, -2], clavicle_r: [0, 0, 4],
     },
-    move: [-0.018, -0.066, 0],
+    move: [-0.018, -0.056, 0],
   },
   /** Round to the right: turned furthest, the hands by the right hip, the blade out to the side on the ground. */
   around: {
     rot: {
-      pelvis: [9, -16, 3], spine_01: [10, -11, 5], spine_02: [9, -11, 4], spine_03: [7, -9, 3],
-      neck_01: [-13, 8, 0], neck_02: [-2, 3, 0], head: [-2, 6, 0],
+      pelvis: [7, -16, 3], spine_01: [8, -11, 5], spine_02: [7, -11, 4], spine_03: [5, -9, 3],
+      neck_01: [-10, 8, 0], neck_02: [-2, 3, 0], head: [-2, 6, 0],
       clavicle_l: [0, 0, 2], clavicle_r: [0, 0, -2],
     },
-    move: [-0.024, -0.062, -0.006],
+    move: [-0.024, -0.052, -0.006],
   },
   /** Coming up off the ground: the hands rising by the right hip, the blade swinging out and round behind. */
   up: {
@@ -135,13 +135,13 @@ export const TRUNK: Record<string, KeyPose> = {
 
 /** The right arm at each key, solved on him for `ARM_AT`; the left reached onto the grip. */
 export const ARMS: Record<string, Record<string, Euler>> = {
-  rest: { upperarm_r: [80, -18, 61], lowerarm_r: [5, 55, 0], hand_r: [33, 27, 66] },
-  gather: { upperarm_r: [74, 18, 50], lowerarm_r: [5, 34, 0], hand_r: [13, 13, 75] },
-  drag: { upperarm_r: [72, 13, 39], lowerarm_r: [5, 15, 0], hand_r: [1, 0, 82] },
-  around: { upperarm_r: [65, 23, 24], lowerarm_r: [5, 63, 0], hand_r: [10, 32, 71] },
-  up: { upperarm_r: [36, 35, 24], lowerarm_r: [41, 51, 0], hand_r: [53, 71, 47] },
-  heave: { upperarm_r: [70, -13, -57], lowerarm_r: [83, -49, 0], hand_r: [3, 30, -38] },
-  rise: { upperarm_r: [69, 25, -14], lowerarm_r: [80, 19, 0], hand_r: [-33, 56, -54] },
+  rest: { upperarm_r: [66, -47, 84], lowerarm_r: [19, 101, 0], hand_r: [25, 101, -20], lowerarm_l: [19, 13, 0] },
+  gather: { upperarm_r: [53, -38, 81], lowerarm_r: [48, 102, 0], hand_r: [27, 105, -30], lowerarm_l: [48, 101, 0] },
+  drag: { upperarm_r: [62, -64, 90], lowerarm_r: [18, 102, 0], hand_r: [16, 96, -22], lowerarm_l: [18, 55, 0] },
+  around: { upperarm_r: [55, 4, 87], lowerarm_r: [7, 64, 0], hand_r: [31, 73, -19], lowerarm_l: [7, 22, 0] },
+  up: { upperarm_r: [57, -28, -9], lowerarm_r: [57, -15, 0], hand_r: [14, -108, 56], lowerarm_l: [57, 0, 0] },
+  heave: { upperarm_r: [40, -14, 67], lowerarm_r: [35, 94, 0], hand_r: [-21, 72, -52], lowerarm_l: [35, -56, 0] },
+  rise: { upperarm_r: [86, -25, 10], lowerarm_r: [83, 54, 0], hand_r: [-47, 48, 8], lowerarm_l: [83, -43, 0] },
   top: { upperarm_r: [112, 47, -16], lowerarm_r: [76, 25, 0], hand_r: [14, 53, -7] },
   strike: { upperarm_r: [154, 1, 9], lowerarm_r: [5, 69, 0], hand_r: [-5, 34, 38] },
   smear: { upperarm_r: [117, 7, 4], lowerarm_r: [22, 77, 0], hand_r: [63, 33, 68] },
@@ -149,11 +149,11 @@ export const ARMS: Record<string, Record<string, Euler>> = {
 };
 /** Where the right fist is wanted at each key on him, body heights (across, up from the ground, forward), and the blade's way. */
 export const ARM_AT: Record<string, { at: [number, number, number]; way: [number, number, number] }> = {
-  rest: { at: [-0.03, 0.36, 0.25], way: [-0.15, -0.72, 0.68] },
-  gather: { at: [0, 0.36, 0.22], way: [-0.05, -0.7, 0.7] },
-  drag: { at: [-0.2, 0.37, 0.13], way: [-0.3, -0.7, 0.65] },
-  around: { at: [-0.25, 0.39, 0.08], way: [-0.8, -0.58, 0.15] },
-  up: { at: [-0.27, 0.52, 0.02], way: [-0.75, -0.45, -0.45] },
+  rest: { at: [-0.02, 0.56, 0.28], way: [-0.1, -0.82, 0.56] },
+  gather: { at: [0.02, 0.55, 0.28], way: [-0.05, -0.82, 0.57] },
+  drag: { at: [-0.12, 0.55, 0.26], way: [-0.45, -0.8, 0.38] },
+  around: { at: [-0.2, 0.55, 0.2], way: [-0.7, -0.7, -0.15] },
+  up: { at: [-0.3, 0.62, 0.06], way: [-0.65, -0.55, -0.5] },
   heave: { at: [-0.2, 0.74, 0.06], way: [-0.3, -0.62, -0.72] },
   rise: { at: [-0.08, 0.9, 0.02], way: [-0.1, -0.5, -0.86] },
   top: { at: [-0.05, 0.98, -0.06], way: [0.25, -0.45, -0.85] },
@@ -168,14 +168,13 @@ const mirrorArm = (a: Record<string, Euler>): Record<string, Euler> => Object.fr
  * the top, so her hands further back and her shoulders higher there): solved as his are, for her.
  */
 export const WOMAN: Record<string, Record<string, Euler>> = {
-  rise: { upperarm_r: [83, 9, 27], lowerarm_r: [72, 26, 0], hand_r: [-30, 75, -29] },
-  up: { upperarm_r: [60, 38, -5], lowerarm_r: [11, 22, 0], hand_r: [63, 120, 27] },
-  heave: { upperarm_r: [91, -45, -60], lowerarm_r: [48, -48, 0], hand_r: [22, 58, -35] },
-  // (bent and crouched further over the blade on the ground, her hands as low as his)
-  rest: { upperarm_r: [123, 34, 7], lowerarm_r: [4, 18, 0], hand_r: [50, 59, 65], pelvis: [13, -6, 0], spine_01: [19, 2, 0], spine_02: [22, 2, 0], spine_03: [18, 2, 0], neck_01: [-26, 0, 0], $move: [0, -0.078, 0.004] },
-  gather: { upperarm_r: [116, 42, 12], lowerarm_r: [12, 20, 0], hand_r: [44, 41, 74], pelvis: [14, -2, -2], spine_01: [19, 5, -2], spine_02: [21, 5, -2], spine_03: [17, 4, -1], neck_01: [-26, -3, 0], $move: [0.008, -0.084, 0.004] },
-  drag: { upperarm_r: [116, 27, -8], lowerarm_r: [5, 31, 0], hand_r: [-11, 23, 62], pelvis: [14, -12, 3], spine_01: [17, -8, 5], spine_02: [17, -8, 4], spine_03: [13, -6, 3], neck_01: [-24, 4, 0], $move: [-0.018, -0.084, 0] },
-  around: { upperarm_r: [80, 34, 14], lowerarm_r: [3, 10, 0], hand_r: [62, 74, 45], pelvis: [12, -16, 3], spine_01: [14, -11, 5], spine_02: [13, -11, 4], spine_03: [10, -9, 3], neck_01: [-20, 8, 0], $move: [-0.024, -0.078, -0.006] },
+  rise: { upperarm_r: [121, 80, -59], lowerarm_r: [72, 4, 0], hand_r: [-34, 101, 63], lowerarm_l: [72, -28, 0] },
+  up: { upperarm_r: [86, -90, 18], lowerarm_r: [28, -65, 0], hand_r: [51, 5, -12], lowerarm_l: [28, -6, 0] },
+  heave: { upperarm_r: [60, 35, 67], lowerarm_r: [-1, 85, 0], hand_r: [-3, 78, -43], lowerarm_l: [-1, 2, 0] },
+  rest: { upperarm_r: [75, -19, 84], lowerarm_r: [5, 87, 0], hand_r: [26, 106, 6], lowerarm_l: [5, -21, 0] },
+  gather: { upperarm_r: [87, -48, 82], lowerarm_r: [23, 100, 0], hand_r: [22, 112, 13], lowerarm_l: [23, -13, 0] },
+  drag: { upperarm_r: [119, 92, -66], lowerarm_r: [5, 98, 0], hand_r: [14, 107, -12], lowerarm_l: [5, -4, 0] },
+  around: { upperarm_r: [66, 8, 82], lowerarm_r: [2, 45, 0], hand_r: [23, 100, -11], lowerarm_l: [2, -9, 0] },
   // (her left elbow kept up and out, so the forearm goes over her head and not across her face)
   top: { upperarm_r: [123, 4, 25], lowerarm_r: [61, 49, 0], hand_r: [11, 47, 28], upperarm_l: [150, 0, 30], clavicle_l: [0, 0, 28], clavicle_r: [0, 0, -26] },
   strike: { upperarm_r: [154, 38, 20], lowerarm_r: [4, 31, 0], hand_r: [2, 48, 42], upperarm_l: [150, 0, 25], clavicle_l: [0, 0, 16], clavicle_r: [0, 0, -16] },
@@ -214,14 +213,69 @@ const toward = (a: KeyPose, b: KeyPose, w: number): KeyPose => past(b, a, -w);
 /** The arms' turns at a breakdown: the right upper arm's three, its forearm's bend and twist, its hand's three; the left forearm's twist. */
 type Arm = [number, number, number, number, number, number, number, number, number];
 /**
- * Breakdowns through the drag and the lift (generated, a frame apart: the fist put on a curve through the keys' fists,
- * eased as the keys are, the blade turned evenly between their ways, the right arm and the left forearm's twist solved
- * from the frame before for the wrists' bend and twist, the left fist on the grip, the forearms, the left arm and the
- * sword clear of the body, and the point on the ground through the drag): at `t`, `w` of the way from one key to the
- * next (the trunk, head and stance), the arms, his and hers. One at a key's own time puts its arms on that key. Between
- * them the beats are linear: the easing is in the breakdowns.
+ * Breakdowns through the drag and the lift, and back down from the blow to the rest (generated, a frame apart: the fist
+ * put on a curve through the keys' fists, eased as the keys are, the blade turned evenly between their ways, the right
+ * arm and the left forearm's twist solved from the frame before for the wrists' bend and twist, the left fist on the
+ * grip, the forearms, the left arm and the sword clear of the body, and the point on the ground through the drag): at
+ * `t`, `w` of the way from one of the plan's beats to the next (the trunk, head and stance), the arms, his and hers. One
+ * at a beat's own time puts its arms on that beat. Between them the beats are linear: the easing is in the breakdowns.
  */
-export const BETWEEN: Array<{ t: number; from: string; to: string; w: number; man: Arm; woman: Arm }> = [];
+export const BETWEEN: Array<{ t: number; from: string; to: string; w: number; man: Arm; woman: Arm }> = [
+  { t: 0, from: 'rest', to: 'gather', w: 0, man: [65, -43, 81, 21, 100, 26, 100, -18, 13], woman: [76, -17, 81, 4, 90, 27, 105, 7, -19] },
+  { t: 0.04, from: 'rest', to: 'gather', w: 0.198, man: [63, -41, 80, 25, 100, 27, 100, -18, 13], woman: [77, -17, 80, 5, 89, 27, 104, 7, -18] },
+  { t: 0.08, from: 'rest', to: 'gather', w: 0.606, man: [59, -42, 81, 33, 100, 27, 100, -19, 16], woman: [81, -19, 80, 8, 90, 27, 100, 12, -20] },
+  { t: 0.12, from: 'rest', to: 'gather', w: 0.945, man: [55, -38, 81, 43, 101, 28, 100, -21, 20], woman: [82, -22, 81, 15, 93, 26, 98, 13, -18] },
+  { t: 0.14, from: 'gather', to: 'drag', w: 0, man: [52, -36, 80, 49, 101, 29, 100, -22, 22], woman: [81, -24, 80, 23, 95, 23, 97, 13, -16] },
+  { t: 0.16, from: 'gather', to: 'drag', w: 0.008, man: [51, -35, 80, 51, 100, 29, 100, -21, 23], woman: [81, -26, 80, 24, 95, 24, 97, 17, -16] },
+  { t: 0.2, from: 'gather', to: 'drag', w: 0.067, man: [50, -36, 80, 50, 100, 29, 100, -20, 25], woman: [81, -27, 78, 25, 95, 24, 97, 21, -17] },
+  { t: 0.24, from: 'gather', to: 'drag', w: 0.171, man: [49, -37, 80, 48, 99, 28, 99, -19, 25], woman: [75, -27, 80, 15, 97, 22, 102, 15, -16] },
+  { t: 0.28, from: 'gather', to: 'drag', w: 0.307, man: [48, -36, 79, 46, 98, 26, 98, -19, 25], woman: [70, -21, 82, 18, 86, 23, 103, -2, -4] },
+  { t: 0.32, from: 'gather', to: 'drag', w: 0.461, man: [48, -36, 79, 44, 97, 25, 97, -19, 25], woman: [68, -28, 83, 21, 91, 23, 102, -2, -3] },
+  { t: 0.36, from: 'gather', to: 'drag', w: 0.617, man: [50, -36, 79, 42, 96, 24, 96, -18, 25], woman: [67, -35, 83, 24, 93, 22, 98, -4, -2] },
+  { t: 0.4, from: 'gather', to: 'drag', w: 0.764, man: [53, -37, 80, 38, 94, 23, 95, -16, 25], woman: [64, -44, 75, 27, 97, 25, 100, -1, 3] },
+  { t: 0.44, from: 'gather', to: 'drag', w: 0.886, man: [55, -40, 80, 35, 93, 22, 94, -13, 25], woman: [68, -48, 88, 24, 97, 17, 100, -9, 7] },
+  { t: 0.48, from: 'gather', to: 'drag', w: 0.969, man: [56, -43, 80, 33, 93, 21, 93, -9, 25], woman: [67, -53, 89, 24, 102, 18, 100, -10, 8] },
+  { t: 0.52, from: 'drag', to: 'around', w: 0, man: [55, -45, 80, 33, 93, 19, 92, -8, 25], woman: [63, -55, 83, 26, 101, 17, 103, -12, 15] },
+  { t: 0.56, from: 'drag', to: 'around', w: 0.043, man: [56, -45, 80, 33, 94, 18, 91, -8, 25], woman: [57, -54, 82, 29, 100, 16, 101, -10, 15] },
+  { t: 0.6, from: 'drag', to: 'around', w: 0.156, man: [56, -44, 80, 31, 95, 17, 91, -9, 25], woman: [56, -51, 81, 31, 99, 15, 101, -9, 16] },
+  { t: 0.64, from: 'drag', to: 'around', w: 0.316, man: [57, -42, 80, 28, 95, 16, 90, -11, 25], woman: [58, -51, 81, 33, 100, 14, 98, -10, 13] },
+  { t: 0.68, from: 'drag', to: 'around', w: 0.5, man: [57, -40, 80, 24, 94, 16, 88, -14, 24], woman: [62, -49, 68, 27, 105, 11, 104, -10, 18] },
+  { t: 0.72, from: 'drag', to: 'around', w: 0.684, man: [56, -37, 79, 21, 93, 15, 86, -16, 23], woman: [64, -39, 71, 20, 101, 6, 108, -16, 18] },
+  { t: 0.76, from: 'drag', to: 'around', w: 0.844, man: [55, -34, 78, 19, 93, 15, 85, -18, 23], woman: [66, -42, 74, 20, 97, 7, 104, -11, 20] },
+  { t: 0.8, from: 'drag', to: 'around', w: 0.957, man: [55, -32, 77, 18, 92, 15, 84, -20, 23], woman: [66, -39, 73, 17, 97, 6, 104, -14, 20] },
+  { t: 0.84, from: 'around', to: 'up', w: 0, man: [55, -31, 77, 18, 92, 16, 83, -21, 23], woman: [66, -39, 74, 16, 96, 8, 103, -10, 20] },
+  { t: 0.88, from: 'around', to: 'up', w: 0.095, man: [56, -29, 74, 17, 93, 17, 84, -21, 23], woman: [70, -34, 74, 13, 97, 0, 100, -9, 18] },
+  { t: 0.92, from: 'around', to: 'up', w: 0.379, man: [56, -19, 67, 19, 99, 17, 93, -26, 18], woman: [71, -31, 71, 12, 98, 6, 95, -12, 18] },
+  { t: 0.97, from: 'up', to: 'heave', w: 0, man: [54, -1, 53, 34, 99, 16, 90, -37, 18], woman: [81, -28, 70, 11, 98, -2, 90, -12, 13] },
+  { t: 1, from: 'up', to: 'heave', w: 0.135, man: [50, 4, 52, 38, 98, 16, 89, -41, 21], woman: [81, -27, 66, 7, 98, -6, 93, -15, 13] },
+  { t: 1.04, from: 'up', to: 'heave', w: 0.558, man: [44, 4, 59, 36, 98, 10, 82, -43, 21], woman: [74, -22, 68, 8, 99, -14, 94, -23, 15] },
+  { t: 1.08, from: 'up', to: 'heave', w: 0.936, man: [39, 2, 71, 35, 97, 4, 72, -48, 21], woman: [63, -11, 73, 13, 102, -27, 92, -30, 13] },
+  { t: 1.1, from: 'heave', to: 'rise', w: 0, man: [39, 2, 75, 33, 96, 4, 68, -51, 21], woman: [62, -12, 72, 9, 100, -26, 89, -36, 15] },
+  { t: 1.12, from: 'heave', to: 'rise', w: 0.421, man: [38, -7, 81, 58, 83, 14, 53, -62, 23], woman: [63, -11, 83, 27, 90, -23, 69, -40, 16] },
+  { t: 1.16, from: 'heave', to: 'rise', w: 0.875, man: [46, -37, 82, 81, 66, 13, 29, -40, 21], woman: [68, -33, 80, 67, 73, -3, 44, -38, 8] },
+  { t: 1.2, from: 'heave', to: 'rise', w: 0.995, man: [55, -51, 81, 85, 63, 6, 21, -22, 19], woman: [71, -43, 80, 79, 74, -2, 31, -29, 7] },
+  { t: 1.22, from: 'rise', to: 'top', w: 0, man: [59, -57, 81, 86, 63, 1, 18, -20, 18], woman: [75, -48, 80, 78, 76, -5, 27, -25, 7] },
+  { t: 1.24, from: 'rise', to: 'top', w: 0.618, man: [75, -67, 81, 93, 67, -12, 16, -3, 15], woman: [97, -48, 71, 84, 85, -9, 25, 3, 3] },
+  { t: 1.28, from: 'rise', to: 'top', w: 1.088, man: [85, -74, 81, 96, 71, -29, 16, 9, 12], woman: [111, -37, 58, 77, 94, -20, 22, 28, -8] },
+  { t: 1.32, from: 'rise', to: 'top', w: 1.035, man: [90, -76, 80, 97, 76, -41, 16, 14, 8], woman: [119, -35, 52, 73, 94, -32, 27, 39, -19] },
+  { t: 1.71, from: 'impact', to: 'follow-through', w: 0.271, man: [102, -48, -5, 18, 110, 11, 62, 61, -86], woman: [110, -31, 29, 14, 120, -5, 70, 35, -90] },
+  { t: 1.72, from: 'impact', to: 'follow-through', w: 0.488, man: [92, -56, 22, 26, 80, 21, 70, 54, -64], woman: [88, -39, 48, 36, 107, -6, 78, 31, -91] },
+  { t: 1.73, from: 'impact', to: 'follow-through', w: 0.657, man: [68, -21, 61, 25, 95, 20, 73, 33, -79], woman: [86, -46, 55, 33, 101, -1, 90, 14, -74] },
+  { t: 1.74, from: 'impact', to: 'follow-through', w: 0.784, man: [64, -19, 55, 26, 100, 39, 94, 5, -58], woman: [86, -53, 63, 30, 101, 1, 94, 2, -50] },
+  { t: 1.75, from: 'impact', to: 'follow-through', w: 0.875, man: [63, -21, 53, 26, 102, 38, 101, -5, -42], woman: [83, -55, 74, 25, 101, 14, 96, -17, -31] },
+  { t: 1.76, from: 'impact', to: 'follow-through', w: 0.936, man: [54, -31, 62, 40, 100, 36, 110, -22, -13], woman: [74, -62, 81, 34, 95, 19, 110, -39, -20] },
+  { t: 1.78, from: 'impact', to: 'follow-through', w: 0.992, man: [54, -33, 62, 40, 100, 35, 111, -24, -9], woman: [74, -63, 81, 34, 98, 20, 110, -41, -20] },
+  { t: 1.8, from: 'follow-through', to: 'settle', w: 0, man: [54, -34, 62, 40, 100, 34, 111, -25, -5], woman: [72, -66, 80, 29, 103, 21, 115, -40, -23] },
+  { t: 1.82, from: 'follow-through', to: 'settle', w: 0.104, man: [54, -33, 61, 38, 100, 33, 111, -27, -1], woman: [71, -53, 72, 30, 100, 26, 109, -35, -26] },
+  { t: 1.84, from: 'follow-through', to: 'settle', w: 0.352, man: [54, -31, 59, 35, 100, 33, 110, -28, 4], woman: [71, -40, 71, 23, 93, 30, 104, -27, -27] },
+  { t: 1.86, from: 'follow-through', to: 'settle', w: 0.648, man: [56, -29, 55, 31, 100, 31, 110, -28, 9], woman: [73, -30, 65, 19, 91, 31, 105, -20, -23] },
+  { t: 1.88, from: 'follow-through', to: 'settle', w: 0.896, man: [62, -33, 53, 30, 100, 28, 110, -23, 7], woman: [76, -30, 65, 15, 91, 32, 104, -10, -20] },
+  { t: 1.9, from: 'settle', to: 'rest', w: 0, man: [65, -37, 64, 29, 99, 28, 105, -15, 10], woman: [76, -29, 71, 14, 93, 35, 103, -3, -13] },
+  { t: 1.92, from: 'settle', to: 'rest', w: 0.104, man: [66, -46, 71, 28, 100, 27, 107, -16, 14], woman: [74, -25, 79, 14, 92, 36, 99, 1, -17] },
+  { t: 1.94, from: 'settle', to: 'rest', w: 0.352, man: [64, -45, 75, 29, 100, 27, 103, -18, 13], woman: [75, -21, 80, 12, 92, 35, 101, 4, -17] },
+  { t: 1.96, from: 'settle', to: 'rest', w: 0.648, man: [64, -44, 80, 25, 100, 28, 101, -18, 13], woman: [75, -19, 80, 8, 92, 34, 102, 4, -19] },
+  { t: 1.98, from: 'settle', to: 'rest', w: 0.896, man: [65, -43, 80, 22, 100, 27, 100, -18, 13], woman: [76, -17, 82, 4, 91, 30, 104, 6, -19] },
+];
 /** A breakdown's arms as turns: the left keyed as the right's mirror (the side its elbow is kept on), its forearm's twist its own. */
 const armOf = (x: Arm): Record<string, Euler> => ({
   upperarm_r: [x[0], x[1], x[2]], lowerarm_r: [x[3], x[4], 0], hand_r: [x[5], x[6], x[7]],
@@ -249,14 +303,15 @@ export function planOf(key: (k: string) => KeyPose): Beat[] {
     { t: 1.9, pose: toward(HIT, REST, 0.6), ease: 'inOut', name: 'settle' },
   ];
 }
-/** The beats for a body: its plan's, with the breakdowns put in among them (and the beats after them reached linearly). */
+/** The beats for a body: its plan's, with the breakdowns put in among them (between the plan's beats they name; the beats after them reached linearly). */
 function beatsOf(key: (k: string) => KeyPose, body: 'man' | 'woman'): Beat[] {
   const plan = planOf(key).map((b): Beat => {
     const at = BETWEEN.find((d) => Math.abs(d.t - b.t) < 1e-6);
     return at ? { ...b, pose: { ...b.pose, rot: { ...b.pose.rot, ...armOf(at[body]) } } } : b;
   });
+  const named = new Map(plan.map((b) => [b.name, b.pose]));
   const between: Beat[] = BETWEEN.filter((d) => !plan.some((b) => Math.abs(d.t - b.t) < 1e-6)).map((d) => {
-    const p = toward(key(d.from), key(d.to), d.w);
+    const p = toward(named.get(d.from) as KeyPose, named.get(d.to) as KeyPose, d.w);
     return { t: d.t, pose: { rot: { ...p.rot, ...armOf(d[body]) }, move: p.move }, ease: 'linear', stage: 'breakdown' };
   });
   const all = [...plan, ...between].sort((a, b) => a.t - b.t);
