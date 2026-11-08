@@ -2,7 +2,8 @@
 // tools/sculpt/ref/plate-lineup.png): a gold sole with a low blocky heel, a cream sabaton with a closed, rounded toe
 // cap, a raised ankle band (a wrap, chevroned front and back, gold-edged), the greave up the shin with a raised gold
 // centre rib, and the cuff under the knee: a second plate over the greave's top, gold along its chevroned foot, flared
-// to two wings at the sides, rising in front to the knee crest (a diamond, gold-framed, its inset glowing). His broader
+// to two wings at the sides, rising in front to the knee crest (a diamond, gold-framed, its inset an amber core that
+// glows when the boots are enchanted, as does the rib, an engraved line, like the long sword's). His broader
 // and heavier, hers fitted to the leg. Fitted to each low-poly body from one design (DESIGN, per body), skinned to its
 // rig's leg and foot bones (no bones of its own): the foot on the foot's bones, everything from the ankle band up rigid
 // on the shin (calf) bone.
@@ -13,7 +14,7 @@
 //   node tools/sculpt/garments/plateboots.mjs
 //     writes the game's copy beside each body: src/sculpt/assets/lowplateboots-male.json and lowplateboots-female.json
 //     (lowgarment.mjs garmentAsset, plus `hides`, the body's polygons the boots cover, and `soles`, the boots' sole
-//     vertices the body stands on; loaded by src/sculpt/lowpoly.ts; the material `glow` drawn emissive)
+//     vertices the body stands on; its looks plain and enchanted, LOOKS; loaded by src/sculpt/lowpoly.ts)
 //
 // The shape, per foot, in K = 10 columns round it, each a station on the foot's outline (f from the heel's back 0 to the
 // toe's front 1, v off the foot's middle line, + out) and an angle round the leg (0 the shin's front, + out), each a
@@ -42,17 +43,25 @@ import { footOf } from './boots.mjs';
 
 /**
  * The materials, shared by the plate set's pieces (the same names and colours: the game shares the slots): the plate's
- * cream and its darker shade, the gold trim, the glowing inset (emissive), the dark under-layer.
+ * stone-cream and its darker shade, the gold trim, the dark under-layer, the crest's core (an amber gem) and the rib's
+ * engraving (`rune`, gold).
  */
 export const MATS = {
-  plate: [0.82, 0.65, 0.54],
-  shade: [0.68, 0.51, 0.41],
+  plate: [0.7, 0.58, 0.52],
+  shade: [0.59, 0.49, 0.44],
   gold: [0.96, 0.74, 0.4],
-  glow: [1, 0.906, 0.651],
   under: [0.29, 0.22, 0.2],
+  core: [0.86, 0.62, 0.3],
+  rune: [0.96, 0.74, 0.4],
 };
-/** The materials drawn emissive (always lit, glowing in the bloom). */
-export const GLOW = ['glow'];
+/**
+ * The boots plain and enchanted (lowgarment.mjs garmentAsset `looks`): enchanted, the core glows (unlit, in the bloom)
+ * and the engraving is lit, as the long sword's; the raised trim stays gold.
+ */
+export const LOOKS = {
+  plain: {},
+  enchanted: { core: { c: [1, 0.906, 0.651], kind: 1 }, rune: { c: [1, 0.8, 0.45], kind: 1 } },
+};
 
 const ANG = [0, 36, 72, 108, 144, 180, -144, -108, -72, -36];
 /**
@@ -68,7 +77,7 @@ const ANG = [0, 36, 72, 108, 144, 180, -144, -108, -72, -36];
  *     strip's), out (its thickness);
  *   dome: per column r4 moved back along the foot from the outline (the toe cap's dome set back from its tip);
  *   cap: the toe cap's back edge (r5): on its columns du back along the foot, h over the floor, `in` from the outline;
- *     the others t of the way from r4 to the band's foot; the seam behind it (r6) `seam` of the way on from r5 to the
+ *     the others t of the way from r4 to the band's foot, raised and stood out by `lip` (the heel cup's edge); the seam behind it (r6) `seam` of the way on from r5 to the
  *     band's foot, sunk toward the leg by `sink`;
  *   mid: the greave's middle ring (share of ankle to knee);
  *   cuff: lo (its foot at the front and the back), rise (at the sides), gold (head heights), top (per column, share of
@@ -79,7 +88,7 @@ const ANG = [0, 36, 72, 108, 144, 180, -144, -108, -72, -36];
  */
 export const DESIGN = {
   male: {
-    H: 2.06, sole: 0.24, gap: 0.012, lip: 0.05, margin: { toe: 0.48, heel: 0.04 }, arch: 0.1, spring: [0.06, 0.03],
+    H: 2.06, sole: 0.24, gap: 0.012, lip: 0.05, margin: { toe: 0.04, heel: 0.04 }, arch: 0.1, spring: [0.06, 0.03],
     cols: [[1, 0], [0.9, 0.4], [0.62, 0.56], [0.3, 0.44], [0.06, 0.36], [0, 0], [0.06, -0.36], [0.3, -0.4], [0.62, -0.54], [0.9, -0.4]],
     wall: [0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22],
     lean: [0.03, 0.03, 0.03, 0.02, 0.02, 0.02, 0.02, 0.02, 0.03, 0.03],
@@ -88,7 +97,7 @@ export const DESIGN = {
     shrink: [0.08, 0.07, 0.05, 0.02, 0.02, 0.02, 0.02, 0.02, 0.05, 0.07],
     mix: [0, 0.05, 0.3, 0.8, 1, 1, 1, 0.8, 0.3, 0.05],
     clear: 0.12, win: 0.3, fill: [0.02, 0, 0, 0, 0.02, 0.03, 0.02, 0, 0, 0],
-    cap: { du: [0.6, 0.5, 0.12, null, null, null, null, null, 0.12, 0.5], h: [0.42, 0.41, 0.5, 0, 0, 0, 0, 0, 0.5, 0.41], in: [0.1, 0.08, 0.06, 0, 0, 0, 0, 0, 0.06, 0.08], t: 0.35, mid: [1, 9], seam: 0.12, sink: 0.05 },
+    cap: { du: [0.6, 0.5, 0.12, null, null, null, null, null, 0.12, 0.5], h: [0.42, 0.41, 0.5, 0, 0, 0, 0, 0, 0.5, 0.41], in: [0.1, 0.08, 0.06, 0, 0, 0, 0, 0, 0.06, 0.08], t: 0.35, lip: 0.03, mid: [1, 9], seam: 0.12, sink: 0.05 },
     band: { y: 0.56, rise: 0.12, w: 0.22, gold: 0.09, out: 0.11 },
     mid: 0.4,
     cuff: { lo: 0.46, rise: 0.22, gold: 0.09, out: 0.13, top: [0.96, 0.86, 0.84, 0.8, 0.8, 0.8, 0.8, 0.8, 0.84, 0.86], flare: [0.2, 0.24, 0.42, 0.24, 0.16, 0.14, 0.12, 0.1, 0.16, 0.18], rim: 0.07, lip: 0.12 },
@@ -96,7 +105,7 @@ export const DESIGN = {
     crest: { t: 0.52, w: 0.36, h: 0.56, inset: 0.68, lift: 0.045 },
   },
   female: {
-    H: 2.07, sole: 0.2, gap: 0.012, lip: 0.04, margin: { toe: 0.3, heel: 0.02 }, arch: 0.09, spring: [0.05, 0.025],
+    H: 2.07, sole: 0.2, gap: 0.012, lip: 0.04, margin: { toe: 0.09, heel: 0.02 }, arch: 0.09, spring: [0.05, 0.025],
     cols: [[1, 0], [0.9, 0.34], [0.62, 0.47], [0.3, 0.36], [0.06, 0.32], [0, 0], [0.06, -0.32], [0.3, -0.33], [0.62, -0.45], [0.9, -0.34]],
     wall: [0.18, 0.18, 0.18, 0.18, 0.18, 0.18, 0.18, 0.18, 0.18, 0.18],
     lean: [0.02, 0.02, 0.03, 0.02, 0.02, 0.02, 0.02, 0.02, 0.03, 0.02],
@@ -105,7 +114,7 @@ export const DESIGN = {
     shrink: [0.07, 0.06, 0.04, 0.02, 0.02, 0.02, 0.02, 0.02, 0.04, 0.06],
     mix: [0, 0.05, 0.3, 0.8, 1, 1, 1, 0.8, 0.3, 0.05],
     clear: 0.1, win: 0.3, fill: [0.01, 0, 0, 0, 0.01, 0.02, 0.01, 0, 0, 0],
-    cap: { du: [0.56, 0.46, 0.04, null, null, null, null, null, 0.04, 0.46], h: [0.36, 0.35, 0.42, 0, 0, 0, 0, 0, 0.42, 0.35], in: [0.09, 0.1, 0.1, 0, 0, 0, 0, 0, 0.1, 0.1], t: 0.35, mid: [1, 9], seam: 0.14, sink: 0.03 },
+    cap: { du: [0.56, 0.46, 0.04, null, null, null, null, null, 0.04, 0.46], h: [0.36, 0.35, 0.42, 0, 0, 0, 0, 0, 0.42, 0.35], in: [0.09, 0.1, 0.1, 0, 0, 0, 0, 0, 0.1, 0.1], t: 0.35, lip: 0.025, mid: [1, 9], seam: 0.14, sink: 0.03 },
     band: { y: 0.58, rise: 0.1, w: 0.19, gold: 0.08, out: 0.09 },
     mid: 0.4,
     cuff: { lo: 0.42, rise: 0.2, gold: 0.08, out: 0.11, top: [0.8, 0.72, 0.7, 0.68, 0.67, 0.67, 0.67, 0.68, 0.7, 0.72], flare: [0.16, 0.2, 0.34, 0.2, 0.12, 0.11, 0.06, 0.04, 0.06, 0.1], rim: 0.06, lip: 0.11 },
@@ -198,7 +207,7 @@ export function buildPlateBoots(rig, design = DESIGN[rig.who]) {
       return [c[0] - d[0] * sink, c[1] + up, c[2] - d[2] * sink];
     };
     // (the toe cap's columns: its edge on the foot, `du` back from the outline at height h; the rest on the way up)
-    put('r5', each((k) => (D.cap.du[k] != null ? lerp(onFoot(k, D.cap.du[k], F + D.cap.h[k], D.cap.in[k]), onShaft(k, F + D.cap.h[k]), D.mix[k]) : between(k, D.cap.t, 0, 0))));
+    put('r5', each((k) => (D.cap.du[k] != null ? lerp(onFoot(k, D.cap.du[k], F + D.cap.h[k], D.cap.in[k]), onShaft(k, F + D.cap.h[k]), D.mix[k]) : between(k, D.cap.t, D.cap.lip ?? 0, -(D.cap.lip ?? 0)))));
     // (the toe cap's corners' edge (cap.mid) half way between its neighbours', at its own height: the seam runs straight)
     for (const k of D.cap.mid ?? []) { const a = G.verts[R.r5[(k + K - 1) % K]], b = G.verts[R.r5[(k + 1) % K]]; G.verts[R.r5[k]] = [(a[0] + b[0]) / 2, F + D.cap.h[k], (a[2] + b[2]) / 2]; }
     put('r6', each((k) => { const c = lerp(G.verts[R.r5[k]], G.verts[R.a0[k]], D.cap.seam), a = axis(c[1]), d = unit([c[0] - a[0], 0, c[2] - a[2]]); const sk = D.cap.du[k] != null ? D.cap.sink : D.cap.sink * 0.3; return [c[0] - d[0] * sk, c[1], c[2] - d[2] * sk]; }));
@@ -282,7 +291,7 @@ function ribOf(G, D, side) {
     const l = add(lerp(P, Lq, w / Math.hypot(...sub(Lq, P))), mul(out, 0.008)), rr = add(lerp(P, Rq, w / Math.hypot(...sub(Rq, P))), mul(out, 0.008));
     return [decalVert(G, side, l), decalVert(G, side, add(P, mul(out, D.rib.h))), decalVert(G, side, rr)];
   });
-  for (let i = 0; i + 1 < rows.length; i++) for (let e = 0; e < 2; e++) facing(G, [rows[i][e], rows[i + 1][e], rows[i + 1][e + 1], rows[i][e + 1]], 'gold', out);
+  for (let i = 0; i + 1 < rows.length; i++) for (let e = 0; e < 2; e++) facing(G, [rows[i][e], rows[i + 1][e], rows[i + 1][e + 1], rows[i][e + 1]], 'rune', out);
 }
 
 /**
@@ -316,7 +325,7 @@ function crestOf(G, D, side) {
     facing(G, [foot[e], foot[f], frame[f], frame[e]], 'gold', out);
     facing(G, [frame[e], frame[f], inset[f], inset[e]], 'gold', out);
   }
-  facing(G, inset, 'glow', out);
+  facing(G, inset, 'core', out);
 }
 
 /**
@@ -365,7 +374,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const rig = buildRig(who), G = buildPlateBoots(rig);
     G.vw = plateBootWeights(rig, G);
     const file = new URL(`../../../src/sculpt/assets/lowplateboots-${who}.json`, import.meta.url);
-    const A = { built: 'node tools/sculpt/garments/plateboots.mjs (tools/sculpt/lowgarment.mjs garmentAsset)', ...garmentAsset(rig, G, MATS), glow: GLOW, hides: G.hides, soles: G.soles };
+    const A = { built: 'node tools/sculpt/garments/plateboots.mjs (tools/sculpt/lowgarment.mjs garmentAsset)', ...garmentAsset(rig, G, MATS, LOOKS), hides: G.hides, soles: G.soles };
     writeFileSync(file, JSON.stringify(A));
     console.log(who, `${G.verts.length} vertices, ${G.tris.length} triangles, ${A.base} + ${A.bones.length} bones, hides ${G.hides.length} body polygons: wrote`, file.pathname);
   }

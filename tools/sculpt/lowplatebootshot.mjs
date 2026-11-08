@@ -1,8 +1,8 @@
 // The plate boots (tools/sculpt/garments/plateboots.mjs) on the low-poly bodies, looked over against their sheet
 // (tools/sculpt/ref/plate-boots.png) and in the rig's poses:
 //
-//   node tools/sculpt/lowplatebootshot.mjs --out <dir> [--tag <name>] [--only sheet,wire,detail,feet,full,walk,metrics]
-//       [--design '{...}'] [--under <leggings module>]
+//   node tools/sculpt/lowplatebootshot.mjs --out <dir> [--tag <name>] [--only sheet,wire,detail,side,feet,full,walk,metrics]
+//       [--design '{...}'] [--enchanted]   (--enchanted: the sheet, the details and the side view plain and enchanted)
 //     plate-boots-<tag>-sheet.png: the sheet's five views (0, 45, 90, 135, 180) of both bodies' boots, each row of the
 //       sheet's own views above the model's (his row first, as the sheet), the legs below the knee;
 //     plate-boots-<tag>-wire.png: the same with the polygons' outlines and the triangle counts by part;
@@ -17,8 +17,8 @@ import { execFileSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { buildRig, posed, skin, fromGame, gameRig, armsOut, axisAngle, mm, tr } from './lowrig.mjs';
 import { skinGarment, checks, crossPairs } from './lowgarment.mjs';
-import { buildPlateBoots, plateBootWeights, MATS, GLOW, DESIGN } from './garments/plateboots.mjs';
-import { shoot, closeBrowser } from './lowgarmentshot.mjs';
+import { buildPlateBoots, plateBootWeights, MATS, LOOKS, DESIGN } from './garments/plateboots.mjs';
+import { shoot, closeBrowser, LOOKS as SHOWN, lookColour } from './lowgarmentshot.mjs';
 
 const args = process.argv.slice(2);
 const opt = (n, f) => { const i = args.indexOf(`--${n}`); return i < 0 ? f : args[i + 1]; };
@@ -31,8 +31,9 @@ const DIR = new URL('.', import.meta.url).pathname;
 const SHEET = join(DIR, 'ref/plate-boots.png');
 
 const SKIN = [0.68, 0.49, 0.41];
-// (a material drawn emissive: its colour plus 2, which lowgarmentshot.mjs draws unlit)
-const colOf = (mat) => (GLOW.includes(mat) ? MATS[mat].map((x) => x + 2) : MATS[mat]);
+// (a material in a look: plain, or enchanted (its unlit colours plus 2, which lowgarmentshot.mjs draws unlit); with
+// --enchanted the sheet, the details and the side view show both)
+const colOf = (mat, look = 'plain') => (LOOKS[look]?.[mat] ? lookColour(LOOKS[look][mat]) : MATS[mat]);
 const M = {};
 for (const who of ['male', 'female']) {
   const rig = buildRig(who), G = buildPlateBoots(rig, { ...DESIGN[who], ...(over[who] ?? over) });
@@ -46,7 +47,8 @@ const bodyMesh = (who, P, cut = Infinity) => {
   const keep = rig.B.polys.map((p, pi) => !hidden.has(pi) && p.v.every((i) => P[i][1] < cut));
   return { who, P, polys: rig.B.polys.map((p) => p.nv ?? p.v), tris: rig.B.tris.filter((t) => keep[t.poly]).map((t) => [...t.v, t.poly]), col: bodyCol(rig) };
 };
-const bootMesh = (who, P) => { const { G } = M[who]; return { who, P, polys: G.polys.map((p) => p.v), tris: G.tris.map((t) => [...t.v, t.poly]), col: G.polys.map((p) => colOf(p.mat)) }; };
+const bootMesh = (who, P, look = 'plain') => { const { G } = M[who]; return { who, P, polys: G.polys.map((p) => p.v), tris: G.tris.map((t) => [...t.v, t.poly]), col: G.polys.map((p) => colOf(p.mat, look)) }; };
+const NL = SHOWN.length;
 
 /* ---- poses ---------------------------------------------------------------------------------------------------------- */
 const X = [1, 0, 0], Y = [0, 1, 0], Z = [0, 0, 1];
@@ -98,18 +100,20 @@ async function sheet(file, wire) {
     const cut = rig.J.knee[1] + 0.5, ht = rig.J.knee[1] - G.ground;
     const s = 236 / (ht + 0.7), c = [0, G.ground + ht * 0.5 + 0.1, 0.1];
     VIEWS.forEach(([yaw, lab], i) => {
-      imgs.push({ src: SHEET, size: [1536, 1024], crop: CROPS[who][i], box: [i * cw, top + r * 2 * ch, cw, ch] });
-      const body = bodyMesh(who, PB, cut), boot = bootMesh(who, PG);
-      if (wire) { body.edges = false; boot.edges = true; boot.edgec = [0.25, 0.18, 0.1]; }
-      cells.push({ meshes: [body, boot], cam: { yaw, pitch: -10, s, c }, box: [i * cw, top + (r * 2 + 1) * ch, cw, ch], label: `${who} ${lab}` });
+      imgs.push({ src: SHEET, size: [1536, 1024], crop: CROPS[who][i], box: [i * cw, top + r * (1 + NL) * ch, cw, ch] });
+      SHOWN.forEach((look, j) => {
+        const body = bodyMesh(who, PB, cut), boot = bootMesh(who, PG, look);
+        if (wire) { body.edges = false; boot.edges = true; boot.edgec = [0.25, 0.18, 0.1]; }
+        cells.push({ meshes: [body, boot], cam: { yaw, pitch: -10, s, c }, box: [i * cw, top + (r * (1 + NL) + 1 + j) * ch, cw, ch], label: `${who} ${lab}${NL > 1 ? ` · ${look}` : ''}` });
+      });
     });
     const parts = {};
     for (const t of G.tris) { const p = G.polys[t.poly]; if (G.side[p.v[0]] === 'L') parts[p.tag] = (parts[p.tag] ?? 0) + 1; }
-    texts.push({ cls: 'lab', css: `left:${5 * cw + 10}px;top:${top + (r * 2 + (wire ? 1 : 0)) * ch - (wire ? 30 : -10)}px;width:260px;white-space:normal;font-size:12px;line-height:14px`, html: `<b>${who}</b><br>${G.tris.length} triangles (${G.tris.length / 2} a boot)<br>above: the sheet; below: the model` + (wire ? '<br><br>a boot, by part:<br>' + Object.entries(parts).map(([k, v]) => `${k} ${v}`).join('<br>') : '') });
+    texts.push({ cls: 'lab', css: `left:${5 * cw + 10}px;top:${top + (r * (1 + NL) + (wire ? 1 : 0)) * ch - (wire ? 30 : -10)}px;width:260px;white-space:normal;font-size:12px;line-height:14px`, html: `<b>${who}</b><br>${G.tris.length} triangles (${G.tris.length / 2} a boot)<br>above: the sheet; below: the model` + (wire ? '<br><br>a boot, by part:<br>' + Object.entries(parts).map(([k, v]) => `${k} ${v}`).join('<br>') : '') });
   });
   if (wire) imgs.push({ src: SHEET, size: [1536, 1024], crop: [585, 700, 230, 300], box: [5 * cw, top, 280, 240] });
   texts.push({ css: 'left:10px;top:6px', html: `Plate boots, ${tag}: the sheet (tools/sculpt/ref/plate-boots.png) above each body's row, the model below` });
-  await shoot(5 * cw + 280, top + 4 * ch, cells, file, { texts, imgs });
+  await shoot(5 * cw + 280, top + 2 * (1 + NL) * ch, cells, file, { texts, imgs });
 }
 if (only.includes('sheet')) await sheet(join(out, `plate-boots-${tag}-sheet.png`), false);
 if (only.includes('wire')) await sheet(join(out, `plate-boots-${tag}-wire.png`), true);
@@ -123,19 +127,19 @@ if (only.includes('detail')) {
     const { rig, G } = M[who], d = dress(who, {});
     const L = (i) => G.side[i] === 'L';
     const R = G.rings.L, at = (ring, k) => d.PG[R[ring][k]];
-    const crest = at('c3', 0), toe = lerpY(at('r4', 2), 0.1), heel = lerpY(at('r4', 5), -0.1);
+    const crest = at('c3', 0), toe = lerpY(at('r5', 0), -0.15), heel = lerpY(at('r4', 5), -0.15), back = lerpY(at('c0', 5), 0.25);
     const P = d.PG, PB = d.PB;
     const body = bodyMesh(who, PB, rig.J.knee[1] + 0.5);
-    const boot = bootMesh(who, P); boot.tris = boot.tris.filter((t) => L(t[0]));
+    const boots = SHOWN.map((look) => { const b = bootMesh(who, P, look); b.tris = b.tris.filter((t) => L(t[0])); return b; });
     const bodyL = { ...body, tris: body.tris.filter((t) => PB[t[0]][0] > 0) };
-    const views = [[0, -8, crest, 120, 'greave top'], [-150, -8, lerpY(at('c2', 5), 0.1), 110, 'plate layer (back)'], [-60, -16, toe, 110, 'toe cap'], [165, -10, heel, 110, 'heel / back']];
+    const views = [[0, -8, crest, 120, 'greave top'], [-160, -8, back, 110, 'plate layer (back)'], [-70, -16, toe, 120, 'toe cap'], [165, -10, heel, 120, 'heel / back']];
     views.forEach(([yaw, pitch, c, s, lab], i) => {
       if (r === 0) imgs.push({ src: SHEET, size: [1536, 1024], crop: D[i][0], box: [i * cw, top, cw, ch] });
-      cells.push({ meshes: [bodyL, boot], cam: { yaw, pitch, s, c: [c[0], c[1] - (i === 0 ? 0.25 : 0), c[2]] }, box: [i * cw, top + (r + 1) * ch, cw, ch], label: `${who} ${lab}` });
+      boots.forEach((boot, j) => cells.push({ meshes: [bodyL, boot], cam: { yaw, pitch, s, c: [c[0], c[1] - (i === 0 ? 0.25 : 0), c[2]] }, box: [i * cw, top + (1 + r * NL + j) * ch, cw, ch], label: `${who} ${lab}${NL > 1 ? ` · ${SHOWN[j]}` : ''}` }));
     });
   });
   function lerpY(p, dy) { return [p[0], p[1] + dy, p[2]]; }
-  await shoot(4 * cw, top + 3 * ch, cells, join(out, `plate-boots-${tag}-detail.png`), { texts: [{ css: 'left:10px;top:6px', html: `Plate boots, ${tag}: the sheet's key details (his, top row) and the model's left boot, his and hers` }], imgs });
+  await shoot(4 * cw, top + (1 + 2 * NL) * ch, cells, join(out, `plate-boots-${tag}-detail.png`), { texts: [{ css: 'left:10px;top:6px', html: `Plate boots, ${tag}: the sheet's key details (his, top row) and the model's left boot, his and hers` }], imgs });
 }
 
 /* ---- the side view large, against the sheet's ------------------------------------------------------------------------ */
@@ -147,17 +151,20 @@ if (only.includes('side')) {
     const { rig, G } = M[who], d = dress(who, {});
     const keepL = (m) => ({ ...m, tris: m.tris.filter((t) => m.P[t[0]][0] > 0) });
     const ht = rig.J.knee[1] - G.ground, s = 440 / (ht + 0.6);
-    imgs.push({ src: SHEET, size: [1536, 1024], crop: SIDE[who], box: [r * 2 * cw, top, cw, ch] });
-    const body = keepL(bodyMesh(who, d.PB, rig.J.knee[1] + 0.4)), boot = bootMesh(who, d.PG); boot.tris = boot.tris.filter((t) => G.side[t[0]] === 'L');
-    cells.push({ meshes: [body, boot], cam: { yaw: 90, pitch: -6, s, c: [1.2, G.ground + ht * 0.5 + 0.15, 0.3] }, box: [(r * 2 + 1) * cw, top, cw, ch], label: `${who} side (outer)` });
+    imgs.push({ src: SHEET, size: [1536, 1024], crop: SIDE[who], box: [r * (1 + NL) * cw, top, cw, ch] });
+    const body = keepL(bodyMesh(who, d.PB, rig.J.knee[1] + 0.4));
+    SHOWN.forEach((look, j) => {
+      const boot = bootMesh(who, d.PG, look); boot.tris = boot.tris.filter((t) => G.side[t[0]] === 'L');
+      cells.push({ meshes: [body, boot], cam: { yaw: 90, pitch: -6, s, c: [1.2, G.ground + ht * 0.5 + 0.15, 0.3] }, box: [(r * (1 + NL) + 1 + j) * cw, top, cw, ch], label: `${who} side (outer)${NL > 1 ? ` · ${look}` : ''}` });
+    });
     // its lengths: heel to toe, the shaft's width over the band, the sole to the cuff's top
     const R = G.rings.L, P = (ring, k) => G.verts[R[ring][k]];
     const len = Math.hypot(P('r1', 0)[0] - P('r1', 5)[0], P('r1', 0)[2] - P('r1', 5)[2]), tall = P('c3', 0)[1] - G.ground;
     const wid = Math.hypot(P('a4', 0)[0] - P('a4', 5)[0], P('a4', 0)[2] - P('a4', 5)[2]);
-    texts.push({ cls: 'lab', css: `left:${(r * 2 + 1) * cw + 8}px;top:${top + 22}px;white-space:normal;width:${cw - 16}px;font-size:13px`, html: `heel to toe ${(len / tall).toFixed(2)} of the height (sheet 0.48), ${(len / wid).toFixed(2)} of the shaft over the band (sheet 2.0); height ${(tall / G.design.H).toFixed(2)} H, foot ${(len / G.design.H).toFixed(2)} H` });
+    texts.push({ cls: 'lab', css: `left:${(r * (1 + NL) + 1) * cw + 8}px;top:${top + 22}px;white-space:normal;width:${cw - 16}px;font-size:13px`, html: `heel to toe ${(len / tall).toFixed(2)} of the height (sheet 0.48), ${(len / wid).toFixed(2)} of the shaft over the band (sheet 2.0); height ${(tall / G.design.H).toFixed(2)} H, foot ${(len / G.design.H).toFixed(2)} H` });
   });
   texts.push({ css: 'left:10px;top:6px', html: `Plate boots, ${tag}: the sheet's side view (his, hers) beside the model's left boot from the outside, the toe to the left` });
-  await shoot(4 * cw, top + ch, cells, join(out, `plate-boots-${tag}-side.png`), { texts, imgs });
+  await shoot(2 * (1 + NL) * cw, top + ch, cells, join(out, `plate-boots-${tag}-side.png`), { texts, imgs });
 }
 
 /* ---- metrics -------------------------------------------------------------------------------------------------------- */
