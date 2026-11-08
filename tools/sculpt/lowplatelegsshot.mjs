@@ -140,7 +140,7 @@ async function sheet(who, edges, file) {
   const looks = edges ? ['plain'] : LOOKS;
   VIEWS.forEach(([yaw, lab, x], i) => {
     imgs.push({ src: SHEET, size: [1536, 1024], crop: [x - 82, y0, 164, 250], box: [i * cw, top, cw, ch] });
-    looks.forEach((look, r) => cells.push({ meshes: scene(who, { PB: d.PB.map((p) => [p[0], p[1] - d.dy, p[2]]), PG: d.PG.map((p) => [p[0], p[1] - d.dy, p[2]]) }, { edges, look }), cam: { yaw, pitch: 0, s, c: [0, cy, 0] }, box: [i * cw, top + (ch + 24) * (r + 1), cw, ch], label: `${lab}${looks.length > 1 ? ', ' + look : ''}` }));
+    looks.forEach((look, r) => cells.push({ meshes: scene(who, { PB: d.PB.map((p) => [p[0], p[1] - d.dy, p[2]]), PG: d.PG.map((p) => [p[0], p[1] - d.dy, p[2]]), PN: d.PN.map((P) => P.map((p) => [p[0], p[1] - d.dy, p[2]])) }, { edges, look }), cam: { yaw, pitch: 0, s, c: [0, cy, 0] }, box: [i * cw, top + (ch + 24) * (r + 1), cw, ch], label: `${lab}${looks.length > 1 ? ', ' + look : ''}` }));
   });
   const c = restChecks(who);
   const texts = [{ css: 'left:10px;top:6px', html: `Plate leggings on the low-poly ${who}${tag ? ' — ' + tag : ''}: the sheet above, the model below; plates ${c.plateTris} triangles${edges ? ' (' + Object.entries(c.byTag).map(([k, v]) => `${k} ${v}`).join(', ') + ')' : ''}, base layer ${c.baseTris} (the body's own, hidden under it)` }];
@@ -158,7 +158,7 @@ if (only.includes('lineup')) {
     const d = dress(who, {}), k = sc[who];
     const S = (P) => P.map((p) => [p[0] * k, (p[1] - M[who].rig.J.floor) * k, p[2] * k]);
     const s = H / 15.4;
-    cells.push({ meshes: scene(who, { PB: S(d.PB), PG: S(d.PG) }, { look }), cam: { yaw, pitch: 0, s, c: [0, (H - 26) / 2 / s, 0] }, box: [i * cw, top + H + 20, cw, H], label: `${who} ${yaw ? '3/4' : 'front'}${LOOKS.length > 1 ? ', ' + look : ''}` });
+    cells.push({ meshes: scene(who, { PB: S(d.PB), PG: S(d.PG), PN: d.PN.map(S) }, { look }), cam: { yaw, pitch: 0, s, c: [0, (H - 26) / 2 / s, 0] }, box: [i * cw, top + H + 20, cw, H], label: `${who} ${yaw ? '3/4' : 'front'}${LOOKS.length > 1 ? ', ' + look : ''}` });
   });
   await shoot(4 * cw * LOOKS.length, top + 2 * H + 20, cells, join(out, 'platelegs-lineup.png'), { imgs, texts: [{ css: 'left:10px;top:6px', html: 'The plate leggings on both bodies at the game\'s heights (she is 0.85 of him), the reference lineup above' }] });
 }
@@ -179,7 +179,7 @@ if (only.includes('close')) {
     views(who).forEach(([lab, yaw, y, span], k) => {
       if (k < 6) imgs.push({ src: SHEET, size: [1536, 1024], crop: [det[who][k][0] - 62, det[who][k][1], 124, 94], box: [k * cw, 34 + r * blockH, cw, ch] });
       const cx = k >= 6 ? 0 : (yaw === 180 ? -x0 : x0);
-      LOOKS.forEach((look, j) => cells.push({ meshes: scene(who, { PB: d.PB.map((p) => [p[0], p[1] - d.dy, p[2]]), PG: d.PG.map((p) => [p[0], p[1] - d.dy, p[2]]) }, { look }), cam: { yaw, pitch: 4, s: ch / span, c: [yaw === -90 ? 0 : cx, y, 0] }, box: [k * cw, 34 + r * blockH + ch * (j + 1), cw, ch], label: `${who} ${lab}${LOOKS.length > 1 ? ', ' + look : ''}` }));
+      LOOKS.forEach((look, j) => cells.push({ meshes: scene(who, { PB: d.PB.map((p) => [p[0], p[1] - d.dy, p[2]]), PG: d.PG.map((p) => [p[0], p[1] - d.dy, p[2]]), PN: d.PN.map((P) => P.map((p) => [p[0], p[1] - d.dy, p[2]])) }, { look }), cam: { yaw, pitch: 4, s: ch / span, c: [yaw === -90 ? 0 : cx, y, 0] }, box: [k * cw, 34 + r * blockH + ch * (j + 1), cw, ch], label: `${who} ${lab}${LOOKS.length > 1 ? ', ' + look : ''}` }));
     });
   });
   await shoot(8 * cw, 34 + 2 * blockH, cells, join(out, 'platelegs-close.png'), { imgs, texts: [{ css: 'left:10px;top:6px', html: 'Close up: the sheet\'s key details above each body\'s, the model below (the left leg; the hip band front and back)' + (LOOKS.length > 1 ? ', plain then enchanted' : '') }] });
@@ -258,7 +258,7 @@ if (only.includes('walk')) {
     for (const [j, yaw] of [[0, 0], [1, -40], [2, -90]]) for (const [i, who] of [[0, 'male'], [1, 'female']]) {
       const g = await game(M[who].rig), d = dress(who, g.at(true, k / F)), sc = who === 'female' ? 0.85 : 1;
       const S = (P) => P.map((p) => [p[0] * sc, (p[1] - M[who].rig.J.floor) * sc, p[2] * sc]);
-      cells.push({ meshes: scene(who, { PB: S(d.PB), PG: S(d.PG) }), cam: { yaw, pitch: 6, s: 50, c: [0, 4.4, 0] }, box: [(j * 2 + i) * cw, 0, cw, ch] });
+      cells.push({ meshes: scene(who, { PB: S(d.PB), PG: S(d.PG), PN: d.PN.map(S) }), cam: { yaw, pitch: 6, s: 50, c: [0, 4.4, 0] }, box: [(j * 2 + i) * cw, 0, cw, ch] });
     }
     await shoot(cw * 6, ch, cells, join(frames, `f${String(k).padStart(2, '0')}.png`));
   }
