@@ -185,7 +185,7 @@ export function buildHair(rig, style = SWEPT, hull = null) {
   if (style.layers) layersOf(style, verts, polys, pieces, skull, C, k, roots);
   orientOut(verts, polys, pieces);
   // the outline onto the sheet's in its five views (outlineFit)
-  if (style.outline && hull) outlineFit(rig, style.outline, verts, polys, pieces, skull, C, k);
+  if (style.outline && hull && (style.outline.who ?? ['male']).includes(rig.who)) outlineFit(rig, style.outline, verts, polys, pieces, skull, C, k);
   // the buzz: the head's side faces forward of the shave as far as the sideburn's line, as patches just off them
   if (style.buzz) buzzOf(B, style, verts, polys, k);
   const tris = [];
@@ -423,7 +423,12 @@ function outlineFit(rig, o, verts, polys, pieces, skull, C, k) {
   SD ??= signedDist(M.raw, M.w, M.h);
   const N = verts.map(() => [0, 0, 0]);
   const fixed = new Set();
-  for (const pc of pieces) if (pc.mass) fixed.add(pc.verts[1] - 1);
+  // (a mass's centre, and its border's corners: where it meets the skin or the other mass, kept in their order)
+  for (const pc of pieces) if (pc.mass) {
+    fixed.add(pc.verts[1] - 1);
+    const { ids, rows, n } = pc.mass;
+    ids.forEach((row, i) => row.forEach((v, j) => { if (i === 0 || i === rows - 1 || j === 0 || j === n - 1) fixed.add(v); }));
+  }
   for (let r = 0; r < (o.rounds ?? 8); r++) {
     N.forEach((n) => n.fill(0));
     for (const p of polys) {
