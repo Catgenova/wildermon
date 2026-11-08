@@ -18,8 +18,8 @@ import { pathToFileURL } from 'node:url';
 import { build } from 'esbuild';
 import { buildRig, posed, skin, ground, armsOut, axisAngle, mm, tr } from './lowrig.mjs';
 import { skinGarment, checks, crossPairs } from './lowgarment.mjs';
-import { buildPlateChest, plateChestWeights, MATS, GLOW } from './garments/platechest.mjs';
-import { shoot, closeBrowser } from './lowgarmentshot.mjs';
+import { buildPlateChest, plateChestWeights, MATS, LOOKS } from './garments/platechest.mjs';
+import { shoot, closeBrowser, lookColour, LOOKS as SHOW } from './lowgarmentshot.mjs';
 
 const args = process.argv.slice(2);
 const opt = (n, f) => { const i = args.indexOf(`--${n}`); return i < 0 ? f : args[i + 1]; };
@@ -46,12 +46,15 @@ for (const who of ['male', 'female']) {
   M[who] = { rig, G, hidden, shown: rig.B.tris.filter((t) => !hidden.has(t.poly)), body: who === 'male' ? 'man' : 'woman' };
 }
 const glowCol = (c) => c.map((x) => x + 2);
-const colOf = (mat) => (GLOW.includes(mat) ? glowCol(MATS[mat]) : MATS[mat]);
+// (--mats '{"plate":[r,g,b],...}': colours tried over the shared ones, in the pictures only)
+const TRY = { ...MATS, ...JSON.parse(opt('mats', '{}')) };
+// (a material's colour in a look: plain, or enchanted, its unlit colours drawn as the renderer draws an emissive)
+const colOf = (mat, look = 'plain') => { const l = LOOKS[look][mat]; return Array.isArray(l) ? TRY[mat] : lookColour(l); };
 const bodyMesh = (who, P, keepPoly = () => true) => {
   const { rig, hidden } = M[who];
   return { who, P, polys: rig.B.polys.map((p) => p.nv ?? p.v), tris: rig.B.tris.filter((t) => !hidden.has(t.poly) && keepPoly(t.poly)).map((t) => [...t.v, t.poly]), col: rig.B.polys.map((p) => (p.mat === 'skin' ? SKIN : p.mat === 'pupil' ? [0.08, 0.06, 0.06] : [0.22, 0.15, 0.13])) };
 };
-const armourMesh = (who, P) => { const { G } = M[who]; return { who, P, polys: G.polys.map((p) => p.v), tris: G.tris.map((t) => [...t.v, t.poly]), col: G.polys.map((p) => colOf(p.mat)) }; };
+const armourMesh = (who, P, look = 'plain') => { const { G } = M[who]; return { who, P, polys: G.polys.map((p) => p.v), tris: G.tris.map((t) => [...t.v, t.poly]), col: G.polys.map((p) => colOf(p.mat, look)) }; };
 
 /* ---- poses ---------------------------------------------------------------------------------------------------------- */
 const X = [1, 0, 0], Y = [0, 1, 0], Z = [0, 0, 1];
@@ -201,11 +204,24 @@ fr[0].save(sys.argv[2], save_all=True, append_images=fr[1:], duration=80, loop=0
 /* ---- close up: one body large, the armour alone and over the body, its outlines ---------------------------------- */
 if (only.includes('close')) {
   const who = opt('who', 'male'), cw = 420, ch = 560, cells = [];
-  const d = dress(who, {}), c = [0, who === 'male' ? -2.6 : -2.3, 0];
+  const d = dress(who, {}), c = opt('c', null) ? JSON.parse(opt('c')) : [0, who === 'male' ? -2.6 : -2.3, 0], zs = +opt('s', '62');
   [[0, false], [-45, false], [-90, false], [180, false], [0, true], [-45, true], [-90, true], [180, true]].forEach(([yaw, alone], k) => {
     const arm = armourMesh(who, d.PG); arm.edges = true; arm.edgec = [0.25, 0.15, 0.1];
-    cells.push({ meshes: alone ? [arm] : [bodyMesh(who, d.PB), arm], cam: { yaw, pitch: -6, s: 62, c }, box: [(k % 4) * cw, Math.floor(k / 4) * ch, cw, ch], label: `${who} ${yaw}°${alone ? ' (armour alone)' : ''}` });
+    cells.push({ meshes: alone ? [arm] : [bodyMesh(who, d.PB), arm], cam: { yaw, pitch: -6, s: zs, c }, box: [(k % 4) * cw, Math.floor(k / 4) * ch, cw, ch], label: `${who} ${yaw}°${alone ? ' (armour alone)' : ''}` });
   });
   await shoot(4 * cw, 2 * ch, cells, join(out, `platechest-${tag}-close-${who}.png`));
+}
+/* ---- beside the tunic's fit (tools/sculpt/garments/tunic.mjs, the approved fit): front, three-quarter, side --------- */
+if (only.includes('tunic')) {
+  const { buildTunic, MATS: TM } = await import('./garments/tunic.mjs');
+  const who = opt('who', 'female'), { rig } = M[who], T = buildTunic(rig), cw = 360, ch = 470, cells = [];
+  const d = dress(who, {}), c = [0, who === 'male' ? -2.0 : -1.8, 0];
+  const tun = { who, P: T.verts, polys: T.polys.map((p) => p.v), tris: T.tris.map((t) => [...t.v, t.poly]), col: T.polys.map((p) => TM[p.mat]) };
+  const bare = { ...bodyMesh(who, rig.B.verts), tris: rig.B.tris.map((t) => [...t.v, t.poly]) };
+  [0, -45, -90].forEach((yaw, k) => {
+    cells.push({ meshes: [bare, tun], cam: { yaw, pitch: -4, s: 80, c }, box: [k * 2 * cw, 30, cw, ch], label: `${who} ${-yaw}°: the tunic` });
+    cells.push({ meshes: [bodyMesh(who, d.PB), armourMesh(who, d.PG)], cam: { yaw, pitch: -4, s: 80, c }, box: [(k * 2 + 1) * cw, 30, cw, ch], label: `${who} ${-yaw}°: the plate` });
+  });
+  await shoot(6 * cw, ch + 30, cells, join(out, `platechest-${tag}-vs-tunic-${who}.png`), { texts: [{ css: 'left:10px;top:4px', html: `Plate chest, ${tag}: the fit beside the tunic's (tools/sculpt/garments/tunic.mjs), close up` }] });
 }
 await closeBrowser();
