@@ -67,9 +67,9 @@ export const DESIGN = {
     sink: 0.035, clear: 0.015, gap: 0.012, t: 0.04, raise: 0.02, trim: 0.07, thigh: [0, 50, 91, 132, 180, 229, 271, 312],
     low: { clear: 0.012, gap: 0.01, t: 0.03, raise: 0.015, trim: 0.06 },
     band: { z0: -0.06, az: [0, 30, 70, 110, 150, 180], top: [-3.99, -3.97, -3.94, -3.94, -3.97, -3.99], bottom: [-5.45, -4.95, -4.6, -4.62, -4.74, -4.86] },
-    lame: { stops: 'skin', ease: [[0.55, 0.85, 'thigh'], [0.25, 0.05, 'pelvis']], az: [-40, 0, 50, 91, 132, 180, 216], rows: [{ y: tab([[0, -4.85], [91, -4.42], [180, -4.66], [229, -5.4], [271, -5.6], [320, -5.45]]), lvl: 0 }, { y: [-6.05, -5.95, -6.0, -6.1], lvl: 1 }] },
+    lame: { stops: 'skin', ease: [[0.55, 0.85, 'thigh'], [0.25, 0.05, 'pelvis']], az: [-40, 0, 50, 91, 132, 180, 216], rows: [{ y: tab([[0, -4.85], [91, -4.42], [180, -4.66], [229, -5.4], [271, -5.6], [320, -5.45]]), lvl: 0 }, { y: [-6.05, -5.95, -6.0, -6.1], lvl: 1.3 }] },
     cuisse: { rows: [{ y: [-5.75, -5.68, -5.75, -6.3], lvl: 0 }, { y: -6.62, lvl: 0 }, { y: [-7.3, -7.12, -6.95, -7.05], lvl: 0 }] },
-    knee: { top: -6.66, mid: -7.42, bottom: -8.12, wing: 84, lvl: 1, bulge: 0.14, inset: [14, 0.27], ringIn: [18, 0.34], ring: [25, 0.46] },
+    knee: { top: -6.66, mid: -7.42, bottom: -8.12, wing: 90, flare: 0.06, lvl: 1, bulge: 0.14, inset: [14, 0.27], ringIn: [18, 0.34], ring: [25, 0.46] },
     shinUp: { az: [-92, -48, -5, 5, 48, 92], rows: [{ y: [-7.72, -7.85, -7.85, -7.85], lvl: 0 }, { y: [-8.62, -8.58, -8.58, -8.58], lvl: 1 }] },
     shinLow: { az: [-92, -48, -5, 5, 48, 92], rows: [{ y: -8.4, lvl: 0 }, { y: -10.36, lvl: 0.4 }] },
     calf: { az: [98, 139, 180, 221, 262], segs: [[-8.05, -8.9], [-8.75, -9.6], [-9.45, -10.36]], chevron: 0.18 },
@@ -77,9 +77,9 @@ export const DESIGN = {
   female: {
     sink: 0.035, clear: 0.012, gap: 0.01, t: 0.036, raise: 0.018, trim: 0.06, thigh: [0, 38, 88, 143, 180, 218, 275, 325],
     low: { clear: 0.01, gap: 0.008, t: 0.026, raise: 0.012, trim: 0.05 },
-    band: { z0: -0.38, az: [0, 30, 70, 110, 150, 180], top: [-3.63, -3.61, -3.58, -3.58, -3.61, -3.64], bottom: [-4.32, -3.98, -3.9, -3.95, -4.06, -4.16], gap: 0.035 },
-    cuisse: { stops: 'skin', ease: [], rows: [{ y: tab([[0, -4.05], [88, -3.76], [180, -3.98], [218, -4.8], [275, -4.95], [325, -4.25]]), lvl: 0 }, { y: [-6.58, -6.45, -6.25, -6.35], lvl: 0 }] },
-    knee: { top: -6.02, mid: -6.74, bottom: -7.44, wing: 82, lvl: 1, bulge: 0.12, inset: [13, 0.26], ringIn: [17, 0.33], ring: [24, 0.44] },
+    band: { z0: -0.38, az: [0, 30, 70, 110, 150, 180], top: [-3.63, -3.61, -3.58, -3.58, -3.61, -3.64], bottom: [-4.24, -3.98, -3.9, -3.95, -4.06, -4.16], gap: 0.035, ease: [[0.7, 0.2, 'pelvis']] },
+    cuisse: { stops: 'skin', ease: [], rows: [{ y: tab([[0, -4.16], [50, -4.04], [88, -3.92], [180, -3.98], [218, -4.8], [275, -4.98], [325, -4.45]]), lvl: 0 }, { y: [-6.45, -6.45, -6.25, -6.35], lvl: 0 }] },
+    knee: { top: -6.02, mid: -6.74, bottom: -7.44, wing: 88, flare: 0.05, lvl: 1, bulge: 0.12, inset: [13, 0.26], ringIn: [17, 0.33], ring: [24, 0.44] },
     shinUp: { az: [-92, -48, -5, 5, 48, 92], rows: [{ y: [-7.02, -7.15, -7.15, -7.15], lvl: 0 }, { y: [-8.0, -7.95, -7.95, -7.95], lvl: 1 }] },
     shinLow: { az: [-92, -48, -5, 5, 48, 92], rows: [{ y: -7.8, lvl: 0 }, { y: -10.5, lvl: 0.4 }] },
     calf: { az: [98, 139, 180, 221, 262], segs: [[-7.4, -8.4], [-8.25, -9.4], [-9.25, -10.5]], chevron: 0.2 },
@@ -364,6 +364,8 @@ function kneeGuard(G, D, F) {
     });
     if (!moved) break;
   }
+  // (the wings stand out from the leg by `flare`)
+  if (K.flare) for (const k of [2, 6]) fl[k] += K.flare;
   const atO = (k, extra) => { const [az, y] = outline[k], r = fl[k] + extra; return [c[0] + Math.sin(rad(az)) * r, y, c[1] + Math.cos(rad(az)) * r]; };
   const lip = outline.map((_, k) => atO(k, 0)), rim = outline.map((_, k) => atO(k, D.t + D.raise));
   const rimIn = outline.map(([az, y]) => { const f = 0.16; return at(az * (1 - f), y + (K.mid - y) * f, D.t + D.raise + K.bulge * 0.1); });
@@ -439,7 +441,9 @@ function hipBand(G, D, B) {
   const P = shell(rows, az, (n) => pt({ y: n.y, az: n.az, r: n.off }), { t: D.t, raise: D.raise, trim: D.trim, closed: true, trimTop: true, trimBottom: true });
   for (const row of P.pts) row[0] = [0, row[0][1], row[0][2]];
   const ids = lay(G, P, 'band');
-  G.plates.push({ tag: 'band', bone: 'pelvis', ids, side: 'c' });
+  // (on the pelvis, or where `Bd.ease` says, the skin's weights under its foot eased onto the pelvis toward its top)
+  const uOf = P.nodes.map((row) => row.map((n) => { const k = az.indexOf(n.az); return (yTop[k] - n.y) / (yTop[k] - yBot[k]); }));
+  G.plates.push({ tag: 'band', bone: 'pelvis', ids, side: 'c', stops: Bd.ease ? 'skin' : null, ease: Bd.ease ?? null, uOf });
 }
 
 /**
