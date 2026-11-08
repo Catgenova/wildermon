@@ -7,7 +7,7 @@
  * `posed`, which drives them from the posed bones as it always has.
  */
 import { add, axisAngle, between, col, cross, dot, euler, I3, len, mm, mv, quat, qmat, scl, slerp, sub, tr, unit, type Euler, type M3, type Q, type V } from './math';
-import type { Foot, Grip } from './clip';
+import type { Foot, GripAt } from './clip';
 
 export interface AnimBone { name: string; p: number; kind: 'control' | 'helper'; head: V; R: M3 }
 export interface AnimAsset {
@@ -52,7 +52,7 @@ export interface Skeleton {
    * The procedural layer on a pose: arms kept out (by `armsOut` more than the body's own), or for both hands on one
    * handle (`grip`, `./clip.ts` Clip.grip) the left reached to the right's handle instead; feet planted; locals out.
    */
-  finish(pose: Pose, o?: { plant?: Plant; armsOut?: number; grip?: Grip; held?: Held }): { local: Array<M3 | undefined>; move: V };
+  finish(pose: Pose, o?: { plant?: Plant; armsOut?: number; grip?: GripAt; held?: Held }): { local: Array<M3 | undefined>; move: V };
   /** Where each fist closes on what is held (or a handle): its socket's place and frame, and the grip's way toward the thumb. */
   gripOf(F: Frame[], held?: Held): Array<{ at: V; R: M3; way: V }>;
   /** Where a pose stands its feet. */
@@ -74,6 +74,8 @@ const AIR = 0.01;
 const PALM = 0.012;
 /** The most of its length a reached arm is stretched to: the elbow never quite straight, so the side it bends to stays defined. */
 const REACH_ARM = 0.975;
+/** The most a held prop's far end is let down onto the ground by turning the right wrist down (`GripAt.rest`): degrees. */
+const DOWN = 40;
 /** Game units between the fists on a handle when nothing held says. */
 const GAP = 0.76;
 
@@ -82,7 +84,11 @@ const GAP = 0.76;
  * units and axes; R's columns x along the hand toward the knuckles, y along the grip toward the thumb), and along the
  * prop's own y (game units) the lead (right) fist's place, the other's and its point; game units to a mesh unit.
  */
-export interface Held { sockets: Record<'l' | 'r', { o: V; R: M3; curl?: Record<string, Euler> }>; lead: number; second: number; tip: number; scale: number }
+export interface Held {
+  sockets: Record<'l' | 'r', { o: V; R: M3; curl?: Record<string, Euler> }>; lead: number; second: number; tip: number; scale: number;
+  /** Its points near the far end (its own frame, game units: x across the edge, y along it), of which the lowest is kept off the ground; the point alone if not given. */
+  ends?: V[];
+}
 const smooth = (x: number): number => { const u = Math.min(1, Math.max(0, x)); return u * u * (3 - 2 * u); };
 
 /**
@@ -149,23 +155,43 @@ export function skeleton(A: AnimAsset, canon: AnimAsset, gameHeight = 0): Skelet
   }
   /**
    * Both hands on what is held (`Clip.grip`): first the right wrist turned up, about the level line square to the grip, as
-   * far as keeps the point `ground` off the ground; then the left hand put on the grip where its place is, closed on it as
-   * its socket says (the same frame as the right's), the elbow bent about its hinge to reach, the upper arm swung onto it
-   * and turned about the line from the shoulder so the elbow stays on the side it was keyed on.
+   * far as keeps the lowest of the prop's far end (`Held.ends`, or its point) `ground` off the ground, or turned down as
+   * far as lets it down onto the ground by `rest` of the way (`DOWN` at most); then the left hand
+   * put on the grip where its place is, closed on it as its socket says (the same frame as the right's), the elbow bent
+   * about its hinge to reach, the upper arm swung onto it and turned about the line from the shoulder so the elbow stays
+   * on the side it was keyed on.
    */
-  function twoHands(L: Array<M3 | undefined>, F: Frame[], move: V, grip: Grip, held: Held | undefined, floor: number): Frame[] {
+  function twoHands(L: Array<M3 | undefined>, F: Frame[], move: V, grip: GripAt, held: Held | undefined, floor: number): Frame[] {
     const [lh, rh] = HANDS, so = socketsOf(held), scale = held?.scale ?? (perGame ? 1 / perGame : 16.5 / height);
     // the fists closed on the grip as the prop's sockets say (turns in this body's own bone frames)
     if (held) for (const side of ['l', 'r'] as const) for (const [b, e] of Object.entries(held.sockets[side].curl ?? {})) { const i = at.get(`${b}_${side}`); if (i !== undefined) L[i] = euler(e); }
     F = fk(L, move);
-    if (held?.tip) for (let n = 0; n < 4; n++) {
-      const g = gripOf(F, held)[1], tip = (held.tip - held.lead) / scale, lo = floor + (grip.ground ?? 0) / scale;
-      const want = Math.max(-1, Math.min(1, (lo - g.at[1]) / tip));
-      if (g.way[1] >= want - 1e-4) break;
-      const ax = cross(g.way, [0, 1, 0]);
-      if (len(ax) < 1e-6) break;
-      L[rh.hand] = localFor(F, rh.hand, mm(axisAngle(ax, ((Math.asin(want) - Math.asin(Math.max(-1, g.way[1]))) * 180) / Math.PI), F[rh.hand].W));
-      F = fk(L, move);
+    // the lowest of its far end, and how fast a turn up about the level line square to the grip lifts it
+    const lowest = (): { low: number; rise: number; k: V } | undefined => {
+      const g = gripOf(F, held)[1], ax = cross(g.way, [0, 1, 0]);
+      if (len(ax) < 1e-6) return undefined;
+      const k = unit(ax);
+      let low = Infinity, rise = 0;
+      for (const p of held?.ends ?? [[0, held?.tip ?? 0, 0] as V]) {
+        const r = mv(g.R, scl(sub(p, [0, held?.lead ?? 0, 0]), 1 / scale)), y = g.at[1] + r[1];
+        if (y < low) { low = y; rise = cross(k, r)[1]; }
+      }
+      return { low, rise, k };
+    };
+    const first = held?.tip ? lowest() : undefined;
+    if (first) {
+      // kept off the ground; let down onto it as far as `rest` says, the wrist turned down by at most DOWN
+      const lo = floor + grip.ground / scale, want = first.low < lo ? lo : first.low + (lo - first.low) * Math.min(1, Math.max(0, grip.rest));
+      let turned = 0;
+      for (let n = 0; n < 6; n++) {
+        const m = lowest();
+        if (!m || Math.abs(m.low - want) < 1e-4 || m.rise <= 1e-6) break;
+        const deg = Math.max(-DOWN - turned, Math.min(30, (((want - m.low) / m.rise) * 180) / Math.PI));
+        if (Math.abs(deg) < 1e-3) break;
+        turned += deg;
+        L[rh.hand] = localFor(F, rh.hand, mm(axisAngle(m.k, deg), F[rh.hand].W));
+        F = fk(L, move);
+      }
     }
     const g = gripOf(F, held)[1], W = mm(g.R, tr(so[0].R));
     const want = sub(add(g.at, scl(g.way, -((held ? held.lead - held.second : GAP) / scale))), mv(W, so[0].o));
@@ -189,6 +215,11 @@ export function skeleton(A: AnimAsset, canon: AnimAsset, gameHeight = 0): Skelet
     let pole = off(E0b);
     if (len(pole) < 1e-6) pole = off(add(S, outW));
     pole = unit(pole);
+    // and drawn toward the side that lines the forearm up with the hand on the grip (the elbow away from where the hand
+    // points), as far as `lineUp` says, so the wrist is bent as little as the reach allows
+    const lineUp = scl(off(add(S, col(W, 1))), -1);
+    const k = Math.min(1, Math.max(0, grip.lineUp));
+    if (k > 0 && len(lineUp) > 1e-6) { const p2 = add(scl(pole, 1 - k), scl(unit(lineUp), k)); if (len(p2) > 1e-3) pole = unit(p2); }
     const K1 = F[lh.lower].P, W1 = F[lh.hand].P, la = len(sub(K1, S)), lb = len(sub(W1, K1)), lw = Math.max(1e-6, len(sub(W1, S)));
     const ca = Math.max(-1, Math.min(1, (la * la + lw * lw - lb * lb) / (2 * la * lw))), Ke = add(S, scl(add(scl(n, ca), scl(pole, Math.sqrt(1 - ca * ca))), la));
     const frame = (x: V, y: V): M3 => { const X = unit(x), Y = unit(sub(y, scl(X, dot(y, X)))), Z = cross(X, Y); return [X[0], Y[0], Z[0], X[1], Y[1], Z[1], X[2], Y[2], Z[2]]; };
@@ -208,7 +239,7 @@ export function skeleton(A: AnimAsset, canon: AnimAsset, gameHeight = 0): Skelet
     return { at: [F[LEG[0].foot].P, F[LEG[1].foot].P], W: [flat(LEG[0].foot), flat(LEG[1].foot)] };
   }
 
-  function finish(pose: Pose, o: { plant?: Plant; armsOut?: number; grip?: Grip; held?: Held } = {}): { local: Array<M3 | undefined>; move: V } {
+  function finish(pose: Pose, o: { plant?: Plant; armsOut?: number; grip?: GripAt; held?: Held } = {}): { local: Array<M3 | undefined>; move: V } {
     const L = toLocal(pose);
     let F = fk(L, pose.move);
     if (o.grip) {

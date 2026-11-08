@@ -2,7 +2,7 @@
 // "Sculpted figures" switch on, through the GPU skinning path), as tools/sculpt/lowwalk.mjs draws them, and measured.
 //
 //   node tools/sculpt/lowanim.mjs --clip idle --out <dir> [--zoom 5] [--close 11] [--fps 10] [--only gifs,keys,current,metrics]
-//     [--pass blocking|breakdowns|splined|polish]
+//     [--pass blocking|breakdowns|splined|polish] [--times t1,t2,...] [--name <file prefix>]
 //
 // A clip that keys its feet (a walk: src/sculpt/anim/clip.ts Clip.feet) is drawn moving, its time the game's walk phase
 // (src/sculpt/anim/index.ts clipFor), and has two more pictures (in --only by default for it):
@@ -22,6 +22,8 @@
 //   <clip>-both.gif     both bodies side by side, front, three-quarter and side, at game zoom
 //   <clip>-close.gif    both bodies front and three-quarter, close up
 //   <clip>-keys.png     the clip's key poses (Clip.poses), front, three-quarter and side, both bodies, game zoom and close
+//   <clip>-strike.png   for a clip with a blow (`strike` and `impact` events): frames of it every 0.02 s to the slash trail's
+//     fade, both bodies, front, three-quarter and side, at game zoom and close (`strike` in --only)
 //   <clip>-vs-current.gif  the figure's own pose for the state (left; the clips switched off) against the clip (right)
 //   <clip>-metrics.json and a metrics line per body on stdout: foot sliding, ground penetration, the faces newly passing
 //     through each other and the volume kept per joint region (tools/sculpt/lowrigshot.mjs makeMetrics), the loop's seam,
@@ -44,7 +46,7 @@ const clipName = opt('clip', 'idle');
 const out = resolve(opt('out', `tmp/lowanim/${clipName}`));
 const zoom = +opt('zoom', '5'), close = +opt('close', '11'), fps = +opt('fps', '10');
 let only = opt('only', '').split(',').filter(Boolean);
-const pass = opt('pass', 'polish'), ENCH = args.includes('--enchanted'), FILE = (pass === 'polish' ? clipName : `${clipName}-${pass}`) + (ENCH ? '-enchanted' : '');
+const pass = opt('pass', 'polish'), ENCH = args.includes('--enchanted'), FILE = opt('name', (pass === 'polish' ? clipName : `${clipName}-${pass}`) + (ENCH ? '-enchanted' : ''));
 // the clip as the pass has it, in the page and in node alike
 const PASS = `
 import * as CLIPMOD from './src/sculpt/anim/clips/${clipName}';
@@ -80,7 +82,9 @@ if (!only.length) only = ['gifs', 'keys', 'current', 'metrics', ...(MOVING ? ['s
 const N = Math.max(2, Math.round(clip.length * fps));
 const times = Array.from({ length: N }, (_, k) => (k / N) * clip.length);
 const keyTimes = AN.BEATS && pass === 'blocking' ? new Set(AN.BEATS.filter((b) => b.stage === 'key').map((b) => b.t)) : null;
-const keys = (clip.poses?.length ? clip.poses : [{ t: 0, name: 'start' }]).filter((k) => !keyTimes || keyTimes.has(k.t));
+// (--times t1,t2,...: the key sheet drawn at those times instead of the clip's key poses)
+const TIMES = opt('times', '');
+const keys = TIMES ? TIMES.split(',').map((t) => ({ t: +t, name: `t ${t}` })) : (clip.poses?.length ? clip.poses : [{ t: 0, name: 'start' }]).filter((k) => !keyTimes || keyTimes.has(k.t));
 
 /* ---- pictures --------------------------------------------------------------------------------------------------- */
 // (a clip that grips a sword: room for the blade over the head and out ahead)
@@ -92,7 +96,11 @@ const sideW = Math.round(112 + 3 * clip.length * SPEED * SIDE_PX * zoom);
 /** The transition: stood, walking from TR[0] to TR[1] seconds, stood again to TR[2]. */
 const TR = [0.6, 1.9, 2.8], trFps = 25, trN = Math.round(TR[2] * trFps);
 const trW = Math.round(112 + (TR[1] - TR[0]) * SPEED * SIDE_PX * zoom);
-if (only.some((o) => ['gifs', 'keys', 'current', 'side', 'transition'].includes(o))) {
+// the blow, for a clip with one (its `strike` and `impact` events): frames every 0.02 s from a little before it to the
+// slash trail's fade after it (src/sculpt/anim/trail.ts FADE)
+const STRIKE_T = clip.events?.find((e) => e.name === 'strike')?.t, IMPACT_T = clip.events?.find((e) => e.name === 'impact')?.t;
+const strikeTimes = STRIKE_T === undefined || IMPACT_T === undefined ? [] : Array.from({ length: Math.round((IMPACT_T + 0.2 - (STRIKE_T - 0.02)) / 0.02) + 1 }, (_, k) => +(STRIKE_T - 0.02 + k * 0.02).toFixed(3));
+if (only.some((o) => ['gifs', 'keys', 'current', 'side', 'transition', 'strike'].includes(o))) {
   const page = `${PASS}
 import { drawFigure, sculptedFigures } from './src/render/figure';
 import { DEFAULT_LOOK } from './src/game/look';
@@ -172,7 +180,7 @@ window.shot = (t, cells) => {
   const both = (fs, z, w, h, on = true) => ['man', 'woman'].flatMap((g) => fs.map((f) => [g, f, z, w, h, on]));
   if (only.includes('gifs')) for (let k = 0; k < N; k++) {
     await save(`game-${k}.png`, times[k], both([0, 1, 2], zoom, GW, GH));
-    if (close) await save(`close-${k}.png`, times[k], both([0, 1], close, CW, CH));
+    if (close) await save(`close-${k}.png`, times[k], both([0, 1, 2], close, CW, CH));
   }
   if (only.includes('current')) for (let k = 0; k < N; k++) await save(`cur-${k}.png`, times[k], [...both([0, 1], zoom, GW, GH, false), ...both([0, 1], zoom, GW, GH, true)]);
   const seq = async (file, ms, cells) => { const url = await p.evaluate(([m, cc]) => window.seq(m, cc), [ms, cells]); writeFileSync(join(dir, file), Buffer.from(url.split(',')[1], 'base64')); };
@@ -196,12 +204,16 @@ window.shot = (t, cells) => {
     await save(`kg-${k}.png`, keys[k].t + 1e-4, both([0, 1, 2], zoom, GW, CH));
     if (close) await save(`kc-${k}.png`, keys[k].t + 1e-4, both([0, 1, 2], close, CW, CH));
   }
+  if (only.includes('strike')) for (let k = 0; k < strikeTimes.length; k++) {
+    await save(`sg-${k}.png`, strikeTimes[k], both([0, 1, 2], zoom, GW, GH));
+    if (close) await save(`sc-${k}.png`, strikeTimes[k], both([0, 1, 2], close, CW, CH));
+  }
   await browser.close();
   execFileSync('python3', ['-c', String.raw`
 import sys, os, json
 from PIL import Image, ImageDraw
 d, out, name, N, fps, keys, only, close = sys.argv[1], sys.argv[2], sys.argv[3], int(sys.argv[4]), float(sys.argv[5]), json.loads(sys.argv[6]), sys.argv[7].split(','), float(sys.argv[8])
-sideN, trN, clipName = int(sys.argv[9]), int(sys.argv[10]), sys.argv[11]
+sideN, trN, clipName, strikeTimes = int(sys.argv[9]), int(sys.argv[10]), sys.argv[11], json.loads(sys.argv[12])
 def gif(prefix, file, label, scale=1, n=None, f=None):
   n = n or N; f = f or fps; ms = int(round(1000 / f))
   fr = []
@@ -213,7 +225,7 @@ def gif(prefix, file, label, scale=1, n=None, f=None):
   fr[0].save(f'{out}/{file}', save_all=True, append_images=fr[1:], duration=ms, loop=0, optimize=True)
 if 'gifs' in only:
   gif('game', f'{name}-both.gif', f'{name}: man | woman, front 3/4 side, zoom ${zoom}')
-  if close: gif('close', f'{name}-close.gif', f'{name}: man | woman, front 3/4, zoom ${close}', 0.75)
+  if close: gif('close', f'{name}-close.gif', f'{name}: man | woman, front 3/4 side, zoom ${close}', 0.6)
 if 'current' in only:
   gif('cur', f'{name}-vs-current.gif', f'left: today (figure.ts mapped) | right: the clip; man, woman front 3/4, zoom ${zoom}')
 if 'side' in only and sideN:
@@ -229,7 +241,17 @@ if 'keys' in only:
   sh = Image.new('RGB', (rows[0].width, sum(r.height for r in rows)), (47, 41, 43)); y = 0
   for r in rows: sh.paste(r, (0, y)); y += r.height
   sh.save(f'{out}/{name}-keys.png')
-`, dir, out, FILE, String(N), String(fps), JSON.stringify(keys), only.join(','), String(close), String(sideN), String(trN), clipName]);
+if 'strike' in only and strikeTimes:
+  rows = []
+  for k, st in enumerate(strikeTimes):
+    g = Image.open(f'{d}/sg-{k}.png').convert('RGB'); c = Image.open(f'{d}/sc-{k}.png').convert('RGB') if close else Image.new('RGB', (0, g.height))
+    if close: c = c.resize((int(c.width * 0.5), int(c.height * 0.5)), Image.LANCZOS)
+    r = Image.new('RGB', (g.width + c.width, max(g.height, c.height) + 20), (47, 41, 43)); r.paste(g, (0, 20)); r.paste(c, (g.width, 20))
+    ImageDraw.Draw(r).text((4, 4), f"t {st:.2f}s   game zoom ${zoom}: man F 3/4 S, woman F 3/4 S  |  zoom {close:g} (half size): man F 3/4 S, woman F 3/4 S", fill=(240, 230, 220)); rows.append(r)
+  sh = Image.new('RGB', (rows[0].width, sum(r.height for r in rows)), (47, 41, 43)); y = 0
+  for r in rows: sh.paste(r, (0, y)); y += r.height
+  sh.save(f'{out}/{name}-strike.png')
+`, dir, out, FILE, String(N), String(fps), JSON.stringify(keys), only.join(','), String(close), String(sideN), String(trN), clipName, JSON.stringify(strikeTimes)]);
   // the silhouette at game size: the front cells of the game zoom frames
   if (only.includes('gifs')) {
     const sil = JSON.parse(execFileSync('python3', ['-c', String.raw`
@@ -272,8 +294,10 @@ function swordOf() {
   // the blade from where it leaves the guard (tools/sculpt/gear/long_sword.mjs: 520 of the sheet's 1469 px up)
   const from = (520 / 1469) * A.length;
   const blade = T.filter((t) => t.v.every((i) => V[i][1] > from)), hilt = T.filter((t) => !t.v.every((i) => V[i][1] > from));
-  let tip = 0; V.forEach((p, i) => { if (p[1] > V[tip][1]) tip = i; });
-  return { A, V, blade, hilt, tip };
+  // (its point and lowest point among the faces drawn: the glow's own points reach past the point)
+  const solid = [...new Set(T.flatMap((t) => t.v))];
+  let tip = solid[0]; for (const i of solid) if (V[i][1] > V[tip][1]) tip = i;
+  return { A, V, blade, hilt, tip, solid };
 }
 let XP = null;
 if (only.includes('metrics')) {
@@ -343,7 +367,7 @@ if (only.includes('metrics')) {
         const b = XP(Q, SW.blade, P, tris).length, h = XP(Q, SW.hilt, P, notHandT).length;
         if (b + h > sw.blade + sw.hilt) sw.worstAt = +t.toFixed(3);
         sw.blade = Math.max(sw.blade, b); sw.hilt = Math.max(sw.hilt, h); if (b) sw.bladeFrames++;
-        const tipY = (Q[SW.tip][1] - floor) * held.scale, lowY = Math.min(...Q.map((q) => q[1])) - floor;
+        const tipY = (Q[SW.tip][1] - floor) * held.scale, lowY = Math.min(...SW.solid.map((i) => Q[i][1])) - floor;
         sw.tipMin = Math.min(sw.tipMin, tipY); sw.lowMin = Math.min(sw.lowMin, lowY * held.scale);
         const ah = XP(P, foreT, P, headT).length + XP(P, upperT, P, headT).length, ac = XP(P, foreT, P, chestT).length;
         sw.armsHead = Math.max(sw.armsHead, ah); sw.armsChest = Math.max(sw.armsChest, ac); if (ah) sw.armsHeadFrames++;

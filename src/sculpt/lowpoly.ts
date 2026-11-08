@@ -18,7 +18,8 @@
  * In both hands while a clip grips it (`./anim` Clip.grip, `heldIn`), the long sword (`assets/long_sword.json`,
  * `tools/sculpt/lowgear.mjs` gearAsset): laid at rest on the right hand's socket (its grip's lead point at the fist,
  * its axes the socket's) and skinned wholly to that hand, the left hand put on its grip by the clip player; lit by the
- * body's light in its own colours, its engraving lit when enchanted (its glow left to the renderer's bloom).
+ * body's light in its own colours, its engraving lit when enchanted (its glow left to the renderer's bloom). Over its
+ * clip's blow, the blade's slash trail (`./anim/trail.ts`), lit gold when it is enchanted.
  */
 import MALE_ASSET from './assets/lowmale.json';
 import FEMALE_ASSET from './assets/lowfemale.json';
@@ -33,9 +34,11 @@ import { STRIDE, type Baked } from './bake';
 import { M, bodyMaterials } from './models/body';
 import { bonesOf, FEMALE, heightOf, MALE, REST_EXTRAS, relaxedIdle, type Bones, type Proportions } from './rig';
 import { humanProportions } from './human';
-import { SH_TERMS, type LowLight, type SculptDraw } from './gl';
+import { SH_TERMS, type LowLight, type SculptDraw, type TrailDraw } from './gl';
 import type { Material } from './sdf';
-import { animate, heldIn } from './anim';
+import { animate, clipFor, heldIn } from './anim';
+import { wrap } from './anim/clip';
+import { slashTrail } from './anim/trail';
 import { skeleton, type AnimAsset, type Held, type Skeleton } from './anim/skeleton';
 
 type M3 = number[];
@@ -78,6 +81,13 @@ interface PropAsset {
   sockets: Record<'male' | 'female', Record<'l' | 'r', { bone: string; o: V; R: M3; curl?: Record<string, [number, number, number]> }>>; scale: Record<'male' | 'female', number>;
 }
 const SWORD = LONG_SWORD as unknown as PropAsset;
+/** The sword's points over the last quarter of its blade (its glow's left out), its own frame: what of it reaches lowest. */
+const ENDS: V[] = (() => {
+  const used = new Set<number>(), from = SWORD.grip.lead[1] + 0.75 * (SWORD.length - SWORD.grip.lead[1]), out: V[] = [];
+  for (let t = 0; t < SWORD.tris.length; t += 4) if (SWORD.tris[t + 3] < SWORD.glowFrom) for (let k = 0; k < 3; k++) used.add(SWORD.tris[t + k]);
+  for (const i of used) if (SWORD.verts[i * 3 + 1] > from) out.push([SWORD.verts[i * 3], SWORD.verts[i * 3 + 1], SWORD.verts[i * 3 + 2]]);
+  return out;
+})();
 
 /* ---- 3x3 rotations (row-major) and quaternions [w, x, y, z], as lowrig.mjs ------------------------------------- */
 const I3: M3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
@@ -193,7 +203,7 @@ const SWORD_MAT = GARMENT_MAT + (MALE_SHAWL as unknown as GarmentAsset).colours.
  * One body: its asset, the figure's proportions it is posed with, its height as a share of the base man's, and the
  * garment it can wear (its own bones posed with the body's always; drawn when the bake is asked for with it).
  */
-function lowBody(A: Asset, P: Proportions, share: number, garment: GarmentAsset): { baked: (dressed: boolean, sword?: 'plain' | 'enchanted') => Baked; bones: (pose: FigurePose) => Float32Array; skeleton: Skeleton; held: Held; figure: (pose: FigurePose) => Array<M3 | undefined> } {
+function lowBody(A: Asset, P: Proportions, share: number, garment: GarmentAsset): { baked: (dressed: boolean, sword?: 'plain' | 'enchanted') => Baked; bones: (pose: FigurePose) => Float32Array; trail: (pose: FigurePose, lit: boolean) => TrailDraw | undefined; skeleton: Skeleton; held: Held; figure: (pose: FigurePose) => Array<M3 | undefined> } {
   const BONES = A.bones;
   const AT = new Map(BONES.map((b, i) => [b.name, i]));
   if (garment.base !== BONES.length) throw new Error(`garment for ${garment.base} bones on a body of ${BONES.length}`);
@@ -226,7 +236,7 @@ function lowBody(A: Asset, P: Proportions, share: number, garment: GarmentAsset)
   const SK = skeleton(A as unknown as AnimAsset, MALE_ASSET as unknown as AnimAsset, heightOf(humanProportions(0)) * share);
   /** The sword as this body holds it: its sockets, its grip and its point along it, its scale. */
   const WHO = (A as unknown as { who?: string }).who === 'female' ? 'female' : 'male';
-  const HELD: Held = { sockets: SWORD.sockets[WHO], lead: SWORD.grip.lead[1], second: secondOn(SWORD, WHO), tip: SWORD.length, scale: SWORD.scale[WHO] };
+  const HELD: Held = { sockets: SWORD.sockets[WHO], lead: SWORD.grip.lead[1], second: secondOn(SWORD, WHO), tip: SWORD.length, ends: ENDS, scale: SWORD.scale[WHO] };
 
   /** Each bone's world rotation and head for a local pose (bone index -> 3x3), the helpers driven, as lowrig.mjs posed(). */
   function posed(local: Array<M3 | undefined>, move: V = [0, 0, 0]): Frame[] {
@@ -401,6 +411,20 @@ function lowBody(A: Asset, P: Proportions, share: number, garment: GarmentAsset)
     return idle ? relaxedIdle(figure, pose.phase / 6, pose.facing) : figure;
   }
 
+  /** How far the last pose drawn (`lowBones`) was lifted to stand on its lowest sole, mesh units. */
+  let DY = 0;
+  /**
+   * The slash trail of the sword in hand at the pose's moment of its clip (`./anim/trail.ts`), as drawn: in the figure's
+   * frame, stood as the body last drawn (`lowBones`) was; none out of the blow.
+   */
+  function lowTrail(pose: FigurePose, lit: boolean): TrailDraw | undefined {
+    const c = clipFor(pose, SK.body), pts = c?.clip.grip ? slashTrail(SK, c.clip, wrap(c.clip, c.t), HELD) : undefined;
+    if (!pts) return undefined;
+    const strip = new Float32Array(pts.length * 10), up: V = [0, DY, 0];
+    pts.forEach((q, k) => strip.set([...toGame(add(q.inner, up)), q.a, 0, ...toGame(add(q.tip, up)), q.a, 1], k * 10));
+    return { strip, n: pts.length * 2, lit };
+  }
+
   /** The skinning matrices for a pose (3x4 rows per bone, the figure's frame), the body stood on its lowest sole. */
   function lowBones(pose: FigurePose): Float32Array {
     // a clip where the state has one (./anim), else the figure's pose on the rig
@@ -418,6 +442,7 @@ function lowBody(A: Asset, P: Proportions, share: number, garment: GarmentAsset)
       low = Math.min(low, y);
     }
     const dy = A.floor - low, s = scale();
+    DY = dy;
     const out = new Float32Array(ALL.length * 12);
     ALL.forEach((_, i) => {
       const Ag = mm(T, mm(S[i], T));
@@ -427,7 +452,7 @@ function lowBody(A: Asset, P: Proportions, share: number, garment: GarmentAsset)
     return out;
   }
 
-  return { baked: lowBaked, bones: lowBones, skeleton: SK, held: HELD, figure: (pose) => fromGame(bonesOf(rigFor(pose), P, [], REST_EXTRAS), gameRest()) };
+  return { baked: lowBaked, bones: lowBones, trail: lowTrail, skeleton: SK, held: HELD, figure: (pose) => fromGame(bonesOf(rigFor(pose), P, [], REST_EXTRAS), gameRest()) };
 }
 
 const BODIES = {
@@ -494,5 +519,6 @@ export function lowScene(pose: FigurePose): SculptDraw {
   const who = look.gender === 'woman' ? 'woman' : 'man', body = BODIES[who];
   const materials = materialsOf(look), low: LowLight = { sh: SH[who], tone: toneOf(materials), fit: FIT_SKIN };
   const sword = heldIn(pose) === SWORD.id ? (pose.gear?.weapon?.enchanted ? 'enchanted' : 'plain') : undefined;
-  return { baked: body.baked(wearsShawl(pose), sword), bones: body.bones(pose), materials, view: viewOf(facing), blink: 0, low };
+  const bones = body.bones(pose), trail = sword ? body.trail(pose, sword === 'enchanted') : undefined;
+  return { baked: body.baked(wearsShawl(pose), sword), bones, materials, view: viewOf(facing), blink: 0, low, ...(trail ? { trail } : {}) };
 }

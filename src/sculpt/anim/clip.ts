@@ -53,7 +53,18 @@ export interface Correction {
 }
 
 /** Both hands on one handle: see `Clip.grip`. */
-export interface Grip { ground?: number }
+export interface Grip {
+  ground?: number;
+  /** How far the far end is let down onto the ground over time (0: as keyed; 1: resting on it, the wrist turned down to it). */
+  rest?: Array<Key<number>>;
+  /**
+   * How far the left elbow is put, over time, toward the side that lines its forearm up with its hand on the grip (so the
+   * wrist bends least), from the side it is keyed on (0, as when not given).
+   */
+  lineUp?: Array<Key<number>>;
+}
+/** A grip at a moment: how far off the ground the far end is kept, how far it is let down onto it, and how far the left elbow lines up. */
+export interface GripAt { ground: number; rest: number; lineUp: number }
 
 /** A foot's channels as a clip keys them (`Clip.feet`). */
 export type FootChannel = 'z' | 'lift' | 'pitch';
@@ -95,8 +106,9 @@ export interface Clip {
   /**
    * Both hands on what is held (`./skeleton.ts` finish, its `Held`: the sword's grip, or a handle when nothing says): the
    * right arm as keyed, its fist the lead (nearer the head or the guard), the left reached onto the grip below it (two-bone
-   * IK, its elbow kept on the side it is keyed on) and closed on it as its socket says. The point kept `ground` game units
-   * off the ground by turning the right wrist up.
+   * IK, its elbow kept on the side it is keyed on) and closed on it as its socket says. The lowest of its far end (the
+   * sword's point and the edges by it) kept `ground` game units off the ground by turning the right wrist up, and let
+   * down onto it as far as `rest` says by turning it down.
    */
   grip?: Grip;
   /**
@@ -263,6 +275,13 @@ export function fitTime(c: Clip, played: number, run: number): number {
 export function runsOf(c: Clip, seconds: number, most = Infinity): { runs: number; run: number } {
   const runs = c.loop ? Math.max(1, Math.min(most, Math.round(seconds / c.length))) : 1;
   return { runs, run: seconds / runs };
+}
+
+/** A clip's grip at time t (`Clip.grip`): none for a clip that does not grip. */
+export function gripAt(c: Clip, t: number): GripAt | undefined {
+  if (!c.grip) return undefined;
+  const at = (k?: Array<Key<number>>): number => (k ? sampleKey(k, wrap(c, t), c.length, c.loop) : 0);
+  return { ground: c.grip.ground ?? 0, rest: at(c.grip.rest), lineUp: at(c.grip.lineUp) };
 }
 
 /** The events a clip passes from time a to time b (b after a; a loop's wrap counted). */
