@@ -5,7 +5,7 @@
 // the outside, its low at the back of the inside, so it shows as one diagonal in front and one behind); a knee fold (a
 // crease above and below a pointed knee); a cuff at the ankle (a step out at its top, a lip in at its foot) that tucks
 // into the boots. Fitted to each low-poly body from one design (DESIGN, per body), skinned to its rig with no bones of
-// its own. No part glows: the enchanted reference shows the bands in the trim colour, unlit.
+// its own. Enchanted, the wrap bands' faces glow (the rune material).
 //
 //   buildLeatherLegs(rig) → { verts, polys: [{ v, mat, part, tag }], tris, part, rows, design }
 //   leatherLegsWeights(rig, G) → per vertex [[bone, weight], ...] (the body's bones only)
@@ -24,21 +24,26 @@
 // thickness): the waistband and the wrap bands as bevelled strips (a section of six points round, the inside face left
 // open against the cloth), the flaps as thick panels (an outer face with a raised trim rim, edges turned in, the
 // underside), the rivets as six-sided studs.
-import { samplesOf, meshOf, orient, trisOf, transferWeights, lerp, add, sub, mul, dot, cross } from '../lowgarment.mjs';
+import { samplesOf, meshOf, orient, trisOf, transferWeights, closestOnBody, lerp, add, sub, mul, dot, cross } from '../lowgarment.mjs';
 
-/** The set's swatches (sRGB 0..1): dark brown, leather, light leather, trim tan. Until the chest's measured values. */
-const sw = (r, g, b) => [r / 255, g / 255, b / 255];
+/**
+ * The set's shared materials (leatherchest.mjs MATS, by name and colour, so the slots dedupe): leather (the cloth), light
+ * (the flaps), trim (the waistband, the rims, the bands' edges, the rivets), rune (the bands' face: the trim's colour when
+ * plain, the glow when enchanted).
+ */
 export const MATS = {
-  leather: sw(112, 60, 43),
-  light: sw(148, 81, 54),
-  trim: sw(222, 132, 79),
+  leather: [0.416, 0.224, 0.176],
+  light: [0.533, 0.286, 0.22],
+  trim: [0.91, 0.518, 0.282],
+  rune: [0.91, 0.518, 0.282],
 };
-/** Lit as cloth (kind 0) until the chest's measurements say otherwise. */
-export const KIND = 0;
-/** Plain and enchanted the same: no part of the leggings glows (enchanted-glow-ref.png). */
+const GLOW = [0.996, 0.792, 0.427];
+/** How the set's leather is lit: 2, by the light's brightness only (as leatherchest.mjs). */
+export const KIND = +(process.env.LEATHER_KIND ?? 2);
+/** The two looks: plain, every material lit (KIND), the rune the trim's colour; enchanted, the rune unlit at the glow (kind 1). */
 export const LOOKS = {
   plain: Object.fromEntries(Object.entries(MATS).map(([k, c]) => [k, { c, kind: KIND }])),
-  enchanted: Object.fromEntries(Object.entries(MATS).map(([k, c]) => [k, { c, kind: KIND }])),
+  enchanted: { ...Object.fromEntries(Object.entries(MATS).map(([k, c]) => [k, { c, kind: KIND }])), rune: { c: GLOW, kind: 1 } },
 };
 
 /** The leg's columns: degrees round the leg from its front toward its outside (outside 90, back 180, inside 270). */
@@ -64,44 +69,44 @@ export const DESIGN = {
     hips: [-4.25, -5.0], hipEase: { W1: [0, 0.02, 0.03], H1: [0, 0.04, 0.06], H2: [0, 0.05, 0.1] },
     crotch: { y: -6.2, rise: 0.55, dip: 0.14, front: 0.5, back: 0.55, zf: 0.22, zb: -0.18, ease: [0.02, 0.06, 0.04, 0.06] },
     legs: [
-      { n: 'T1', y: -6.5, e: [0.08, 0.08, 0.06, 0.02], s: 0.5 },
-      { n: 'T2', y: -6.95, e: [0.08, 0.08, 0.06, 0.02], s: 0 },
-      { n: 'K1', y: -7.25, e: [0.0, 0.02, 0.02, 0.01], s: 0 },
-      { n: 'K', y: -7.52, e: [0.07, 0.07, 0.05, 0.03], s: 0.5, pt: 0.2 },
-      { n: 'K2', y: -7.82, e: [-0.01, 0.01, 0.01, 0.01], s: 0 },
-      { n: 'N1', y: -8.2, e: [0.08, 0.09, 0.09, 0.04], s: 0.5 },
-      { n: 'N2', y: -8.75, e: [0.07, 0.08, 0.08, 0.04], s: 0 },
+      { n: 'T1', y: -6.5, e: [0.24, 0.13, 0.22, 0.03], s: 0.5 },
+      { n: 'T2', y: -6.95, e: [0.3, 0.16, 0.26, 0.05], s: 0 },
+      { n: 'K1', y: -7.25, e: [0.16, 0.12, 0.14, 0.04], s: 0 },
+      { n: 'K', y: -7.52, e: [0.2, 0.25, 0.14, 0.1], s: 0.5, pt: 0.12 },
+      { n: 'K2', y: -7.82, e: [0.08, 0.13, 0.08, 0.06], s: 0 },
+      { n: 'N1', y: -8.2, e: [0.13, 0.2, 0.13, 0.09], s: 0.5 },
+      { n: 'N2', y: -8.75, e: [0.08, 0.12, 0.09, 0.06], s: 0 },
       { n: 'N3', y: -9.3, e: [0.02, 0.02, 0.02, 0.02], s: 0.5 },
     ],
     cuff: { top: -9.38, foot: -10.18, step: 0.05, lip: 0.1 },
-    band: { y: -6.82, amp: 0.48, phi: 58, w: 0.3, t: 0.045, bevel: 0.02 },
+    band: { y: -6.62, amp: 0.46, phi: 58, w: 0.36, t: 0.045, bevel: 0.02 },
     flaps: {
-      front: { az: [[12, 86], [40, 95]], foot: [-5.0, -5.6] },
-      back: { az: [[99, 168], [101, 140]], foot: [-5.6, -5.05] },
-      gap: [0.012, 0.06, 0.14], t: 0.045, rim: 0.07, raise: 0.014,
+      front: { az: [[14, 86], [34, 95]], foot: [-4.5, -4.95] },
+      back: { az: [[99, 166], [101, 144]], foot: [-4.95, -4.55] },
+      gap: [0.015, 0.16, 0.36], t: 0.075, rim: 0.07, raise: 0.016,
     },
   },
   female: {
-    z0: -0.38, clear: 0.035,
+    z0: -0.38, clear: 0.035, flat: ['H2'],
     waist: { top: -3.0, depth: 0.3, vf: 0.22, vb: 0.16, vw: 62, vt: 0.05, t: 0.075, bevel: 0.026 },
     hips: [-3.65, -4.15], hipEase: { W1: [0, 0.02, 0.03], H1: [0, 0.04, 0.06], H2: [0, 0.05, 0.09] },
     crotch: { y: -4.55, rise: 0.22, dip: 0.12, front: 0.42, back: 0.5, zf: 0.12, zb: -0.3, ease: [0.02, 0.05, 0.03, 0.05] },
     legs: [
-      { n: 'T1', y: -5.15, e: [0.05, 0.05, 0.04, 0.0], s: 0.5 },
-      { n: 'T2', y: -5.85, e: [0.05, 0.05, 0.04, 0.0], s: 0 },
-      { n: 'K1', y: -6.4, e: [0.0, 0.01, 0.01, 0.0], s: 0 },
-      { n: 'K', y: -6.72, e: [0.05, 0.05, 0.03, 0.02], s: 0.5, pt: 0.18 },
-      { n: 'K2', y: -7.05, e: [-0.01, 0.0, 0.01, 0.0], s: 0 },
-      { n: 'N1', y: -7.55, e: [0.07, 0.08, 0.08, 0.03], s: 0.5 },
-      { n: 'N2', y: -8.3, e: [0.06, 0.07, 0.07, 0.03], s: 0 },
+      { n: 'T1', y: -5.15, e: [0.14, 0.12, 0.06, 0.0], s: 0.5 },
+      { n: 'T2', y: -5.85, e: [0.2, 0.15, 0.14, 0.03], s: 0 },
+      { n: 'K1', y: -6.4, e: [0.12, 0.1, 0.1, 0.03], s: 0 },
+      { n: 'K', y: -6.72, e: [0.17, 0.21, 0.12, 0.08], s: 0.5, pt: 0.11 },
+      { n: 'K2', y: -7.05, e: [0.07, 0.11, 0.07, 0.05], s: 0 },
+      { n: 'N1', y: -7.55, e: [0.12, 0.17, 0.12, 0.08], s: 0.5 },
+      { n: 'N2', y: -8.3, e: [0.07, 0.1, 0.08, 0.05], s: 0 },
       { n: 'N3', y: -9.35, e: [0.02, 0.02, 0.02, 0.02], s: 0.5 },
     ],
     cuff: { top: -9.45, foot: -10.32, step: 0.045, lip: 0.1 },
-    band: { y: -5.85, amp: 0.62, phi: 58, w: 0.32, t: 0.04, bevel: 0.018 },
+    band: { y: -5.6, amp: 0.56, phi: 58, w: 0.36, t: 0.04, bevel: 0.018 },
     flaps: {
-      front: { az: [[14, 86], [40, 95]], foot: [-4.0, -4.55] },
-      back: { az: [[99, 166], [101, 140]], foot: [-4.55, -4.05] },
-      gap: [0.012, 0.05, 0.12], t: 0.04, rim: 0.065, raise: 0.012,
+      front: { az: [[16, 86], [34, 95]], foot: [-3.8, -4.2] },
+      back: { az: [[99, 164], [101, 144]], foot: [-4.2, -3.85] },
+      gap: [0.015, 0.14, 0.3], t: 0.065, rim: 0.065, raise: 0.014,
     },
   },
 };
@@ -237,11 +242,23 @@ export function buildLeatherLegs(rig, design = DESIGN[rig.who], { stage = 9 } = 
   // (the front, from the waist to the crotch, flat on the body: no padding over the abdomen)
   const frontZ = (x, y) => { let z = -Infinity; for (const p of S) if (Math.abs(p[0] - x) < 0.15 && Math.abs(p[1] - y) < 0.2) z = Math.max(z, p[2]); return z; };
   const flat = (p) => { if (Math.atan2(p[0], p[2] - D.z0) > rad(60)) return p; const z = frontZ(p[0], p[1]) + D.clear + 0.02; return z < p[2] ? [p[0], p[1], z] : p; };
-  for (const row of ['H1', 'H2']) if (hipV[row]) hipV[row] = hipV[row].map(flat);
+  for (const row of D.flat ?? ['H1', 'H2']) if (hipV[row]) hipV[row] = hipV[row].map(flat);
   for (const k of [0, 1]) C[k] = flat(C[k]);
+  // (a ring between the crotch row and the first thigh row, halfway, out by `t0` from the leg's axis on its outer six
+  // columns: smaller faces over the hip's crease, so the band and the flaps above follow the cloth through the walk)
+  if (stage > 1 && legV.T1) {
+    const cT = legC.T1, cC = legC.C;
+    legV.T0 = C.map((p, k) => {
+      const m = lerp(p, legV.T1[k], 0.5);
+      if (k >= 6) return m;
+      const c = lerp(cC, cT, 0.5), d = [m[0] - c[0], m[2] - c[1]], l = Math.hypot(...d), r = l + (D.t0 ?? 0.03);
+      return [c[0] + d[0] / l * r, m[1], c[1] + d[1] / l * r];
+    });
+    legC.T0 = lerp(cC, cT, 0.5);
+  }
 
   const G = meshOf();
-  const legRows = ['C', ...rows.map((r) => r.n)];
+  const legRows = ['C', ...(legV.T0 ? ['T0'] : []), ...rows.map((r) => r.n)];
   clothMesh(G, D, { legV, hipV, legRows, hipRows });
   G.legV = legV; G.legC = legC; G.hipV = hipV; G.design = D; G.stage = stage;
   // ---- the pieces on the cloth ----------------------------------------------------------------------------------------
@@ -250,7 +267,7 @@ export function buildLeatherLegs(rig, design = DESIGN[rig.who], { stage = 9 } = 
   /** The cloth's radius on the ray from the hip's axis at height y, azimuth a (degrees). */
   const hipR = (y, a) => { const o = [0, Math.min(y, D.waist.top - 0.02), D.z0], d = [Math.sin(rad(a)), 0, Math.cos(rad(a))]; return rayHit(a >= 0 ? leftT : clothT, o, d, true) ?? 0; };
   /** The leg's centre at height y (the rings' centres, straight between them) and the cloth's radius out from it at azimuth a. */
-  const legRowsY = legRows.map((n) => ({ y: n === 'C' ? cr.y : rows.find((r) => r.n === n).y, c: legC[n] })).sort((a, b) => b.y - a.y);
+  const legRowsY = legRows.map((n) => ({ y: n === 'C' ? cr.y : n === 'T0' ? (cr.y + rows[0].y) / 2 : rows.find((r) => r.n === n).y, c: legC[n] })).sort((a, b) => b.y - a.y);
   const legAxis = (y) => {
     if (y >= legRowsY[0].y) return legRowsY[0].c;
     for (let i = 0; i + 1 < legRowsY.length; i++) { const a = legRowsY[i], b = legRowsY[i + 1]; if (y <= a.y && y >= b.y) { const t = (a.y - y) / (a.y - b.y); return [a.c[0] + (b.c[0] - a.c[0]) * t, a.c[1] + (b.c[1] - a.c[1]) * t]; } }
@@ -335,10 +352,11 @@ function rivet(G, p, n, r, h, part, mat = 'trim') {
   const base = [], top = [];
   for (let k = 0; k < 6; k++) {
     const a = k * Math.PI / 3, d = add(mul(u, Math.cos(a)), mul(v, Math.sin(a)));
-    base.push(G.vert(add(add(p, mul(n, 0.003)), mul(d, r)), part));
+    base.push(G.vert(add(add(p, mul(n, 0.008)), mul(d, r)), part));
     top.push(G.vert(add(add(p, mul(n, h)), mul(d, r * 0.55)), part));
   }
   for (let k = 0; k < 6; k++) { const j = (k + 1) % 6; G.poly([base[k], base[j], top[j], top[k]], mat, part); }
+  (G.studs ??= []).push([...base, ...top]);
   G.poly([...top], mat, part, true);
 }
 
@@ -442,7 +460,7 @@ function flap(G, D, hipR, which, side, stage) {
       if (dot(n, [p[0], 0, p[2] - D.z0]) < 0) n = mul(n, -1);
       let lift = 0;
       for (const c of [V(i, k), V(i, k + 1), V(i + 1, k), V(i + 1, k + 1)]) { const d = sub(c, p), h = dot(d, n), t = Math.hypot(...sub(d, mul(n, h))); if (h > 0 && t > 1e-6) lift = Math.max(lift, h * Math.min(1, 0.04 / t)); }
-      lift += 0.007;
+      lift += 0.012;
       // (then onto the face as cut: the ray from the hip's axis through it, onto the cell's own triangles)
       const o = [0, p[1], D.z0], dir = (() => { const d = sub(p, o); return mul(d, 1 / Math.hypot(...d)); })();
       let best = null;
@@ -469,11 +487,15 @@ function band(G, D, legR, legAxis, side, stage) {
   for (let k = 0; k < N; k++) {
     const a = k * 360 / N, ym = Bd.y + Bd.amp * Math.cos(rad(a - Bd.phi)), yt = ym + Bd.w / 2, yb = ym - Bd.w / 2;
     const pt = (y, off, r0) => { const c = legAxis(y), aa = a; const r = r0 + off, p = [c[0] + Math.sin(rad(aa)) * r, y, c[1] + Math.cos(rad(aa)) * r]; return side > 0 ? p : [-p[0], p[1], p[2]]; };
+    // (thinner on the inside of the thigh, where the legs pass each other: a third of its thickness there)
+    const tk = Bd.t * (1 - 0.65 * Math.max(0, Math.cos(rad(a - 270))) ** 2);
     const h = 180 / N, rt = reach(legR, [yt, yt - 0.04], a, h), rb = reach(legR, [yb, yb + 0.04], a, h), r = Math.max(rt, rb, reach(legR, [yt, ym, yb], a, h));
-    P.push([pt(yt, IN, rt), pt(yt, r - rt + Bd.t - b, rt), pt(yt - b, r - rt + Bd.t, rt), pt(yb + b, r - rb + Bd.t, rb), pt(yb, r - rb + Bd.t - b, rb), pt(yb, IN, rb)]);
+    const bk = Math.min(b, tk * 0.45);
+    P.push([pt(yt, IN + 0.01, rt), pt(yt, r - rt + tk - bk, rt), pt(yt - bk, r - rt + tk, rt), pt(yb + bk, r - rb + tk, rb), pt(yb, r - rb + tk - bk, rb), pt(yb, IN + 0.01, rb)]);
   }
-  const M = stage >= 4 ? 'trim' : 'leather';
-  const ix = strip(G, side > 0 ? P : [...P].reverse(), [M, M, M, M, M], 'band', 'band', true);
+  // (its face and bevels the rune, glowing when enchanted; its edges standing off the cloth the trim)
+  const M = stage >= 4 ? 'trim' : 'leather', R = stage >= 4 ? 'rune' : 'leather';
+  const ix = strip(G, side > 0 ? P : [...P].reverse(), [M, R, R, R, M], 'band', 'band', true);
   void ix;
 }
 
@@ -481,8 +503,8 @@ function band(G, D, legR, legAxis, side, stage) {
 /**
  * The weights from the body's (lowgarment.mjs transferWeights; the feet's bones taken up to the calf, the spine's above
  * the pelvis to spine_01), smoothed along each piece; the crotch's centre line shared between the pelvis and both hips
- * (as trousers.mjs); the cuff on the calf; each flap hung from the pelvis, its foot taken a share along by the thigh's
- * half turn (the hip helper); each rivet the piece's under it.
+ * (as trousers.mjs); the cuff on the calf; each piece laid on the cloth (waistband, flaps, bands) the cloth's under it;
+ * each rivet the piece's under it.
  */
 export function leatherLegsWeights(rig, G, o = {}) {
   const parts = new Set(['torso', 'pelvis', 'legs']);
@@ -498,20 +520,24 @@ export function leatherLegsWeights(rig, G, o = {}) {
   const R = G.rows, ctr = R.leg.l.C.slice(6);
   for (const [i, [p, h]] of [[ctr[0], [0.6, 0.2]], [ctr[3], [0.6, 0.2]], [ctr[1], [0.4, 0.3]], [ctr[2], [0.4, 0.3]]]) set(i, [['pelvis', p], ['hip_l', h], ['hip_r', h]]);
   for (const s of ['l', 'r']) for (const row of ['U', 'Um', 'Uf', 'E', 'Ei']) for (const i of R.leg[s][row] ?? []) set(i, [[`calf_${s}`, 1]]);
-  // the flaps: by their height from the top (pelvis) to the foot (a share on the hip's helper)
-  const flapV = G.verts.map((_, i) => i).filter((i) => G.part[i] === 'flap');
-  const D = G.design, yTop = D.waist.top - D.waist.depth, yLow = Math.min(D.flaps.front.foot[1], D.flaps.back.foot[0]);
-  const share = o.flapHip ?? 0.45;
-  for (const i of flapV) {
-    const p = G.verts[i], s = p[0] >= 0 ? 'l' : 'r', v = Math.max(0, Math.min(1, (yTop - p[1]) / (yTop - yLow)));
-    set(i, [['pelvis', 1 - share * v], [`hip_${s}`, share * v]]);
+  // the pieces laid on the cloth (waistband, flaps, bands): each vertex the cloth's weights at the closest point of the
+  // cloth under it (its triangle's corners' blended), so a piece moves with the cloth it lies on and keeps its gap
+  const clothTris = G.tris.filter((t) => ['cloth', 'cuff'].includes(G.polys[t.poly].tag));
+  for (let i = 0; i < G.verts.length; i++) {
+    if (!['waistband', 'flap', 'band'].includes(G.part[i]) || G.rivetV?.has(i)) continue;
+    const c = closestOnBody(G.verts, clothTris, G.verts[i]), acc = new Map();
+    clothTris[c.tri].v.forEach((vi, k) => { for (const [bi, w] of vw[vi]) acc.set(bi, (acc.get(bi) ?? 0) + w * c.w[k]); });
+    const l = [...acc].filter(([, w]) => w > 1e-4).sort((x, y) => y[1] - x[1]).slice(0, 4), t = l.reduce((s2, [, w]) => s2 + w, 0);
+    vw[i] = l.map(([bi, w]) => [bi, w / t]);
   }
-  // the rivets: each vertex the weights of the nearest vertex of another piece
-  const host = G.verts.map((_, i) => i).filter((i) => !G.rivetV?.has(i));
-  for (const i of G.rivetV ?? []) {
-    let best = -1, bd = Infinity;
-    for (const j of host) { const d = Math.hypot(...sub(G.verts[i], G.verts[j])); if (d < bd) { bd = d; best = j; } }
-    vw[i] = vw[best].map(([b, w]) => [b, w]);
+  // the rivets: each stud rigid, all its vertices the weights of the piece it sits on at the closest point under its base
+  for (const ids of G.studs ?? []) {
+    const part = G.part[ids[0]], c0 = mul(ids.slice(0, 6).reduce((s2, i) => add(s2, G.verts[i]), [0, 0, 0]), 1 / 6);
+    const hostT = G.tris.filter((t) => G.polys[t.poly].tag !== 'rivet' && G.part[t.v[0]] === part);
+    const c = closestOnBody(G.verts, hostT, c0), acc = new Map();
+    hostT[c.tri].v.forEach((vi, q) => { for (const [bi, w] of vw[vi]) acc.set(bi, (acc.get(bi) ?? 0) + w * c.w[q]); });
+    const l = [...acc].filter(([, w]) => w > 1e-4).sort((x, y) => y[1] - x[1]).slice(0, 4), t = l.reduce((s2, [, w]) => s2 + w, 0);
+    for (const i of ids) vw[i] = l.map(([bi, w]) => [bi, w / t]);
   }
   return vw;
 }
