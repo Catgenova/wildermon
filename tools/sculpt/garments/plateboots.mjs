@@ -19,10 +19,12 @@
 // toe's front 1, v off the foot's middle line, + out) and an angle round the leg (0 the shin's front, + out), each a
 // polyline up from the ground, the rings joined round:
 //   the sole: r0 its underside (the arch's columns lifted: the heel's block), r1 its top edge, r2 the welt (in by `lip`);
-//   the foot: r3 the wall's top, r4 over the foot (the toe cap's top, the instep, the heel);
-//   the ankle band: a0 on the shaft, a1 out by its thickness, a2 the gold strip's top, a3 its top, a4 back on the shaft;
+//   the foot: r3 the wall's top, r4 over the foot (the toe cap's dome, the heel), r5 the toe cap's back edge (raised
+//   off the line from r4 to the band), r6 the seam behind it (sunk), then the instep up to the band;
+//   the ankle band: a0 on the shaft, a2 out by its thickness at the gold strip's top (a gold bevel), a3 its top, a4
+//   back on the shaft;
 //   the greave: g1 at mid-shin, then c0 under the cuff's foot;
-//   the cuff: c1 out by its thickness, c2 the gold strip's top, c3 its top (flared), c4 the rim's inside, c5 the lip
+//   the cuff: c2 out by its thickness at the gold strip's top (a gold bevel), c3 its top (flared), c4 the rim's inside, c5 the lip
 //   down inside it (the one open edge, round the leg).
 // The shaft's rings are round the leg's axis, each column out from the leg's reach that way (the body's skin, the
 // covered foot left out) by the clearance `clear` (room for the leggings), the reach the most over a window of heights
@@ -43,9 +45,9 @@ import { footOf } from './boots.mjs';
  * cream and its darker shade, the gold trim, the glowing inset (emissive), the dark under-layer.
  */
 export const MATS = {
-  plate: [0.91, 0.78, 0.74],
-  shade: [0.8, 0.67, 0.63],
-  gold: [0.851, 0.659, 0.353],
+  plate: [0.82, 0.65, 0.54],
+  shade: [0.68, 0.51, 0.41],
+  gold: [0.96, 0.74, 0.4],
   glow: [1, 0.906, 0.651],
   under: [0.29, 0.22, 0.2],
 };
@@ -56,12 +58,18 @@ const ANG = [0, 36, 72, 108, 144, 180, -144, -108, -72, -36];
 /**
  * The design per body. Lengths in the body's units; H the head's height.
  *   sole, gap, lip, margin: the sole's thickness, the gap under the body's sole, the welt, the outline past the body's
- *     foot at the toe and the heel; arch: the sole's underside lifted under the arch's columns (the heel's block);
+ *     foot at the toe and the heel (the sabaton runs well past the body's toes, as the sheet's side view: heel to toe
+ *     about 0.48 of the sole to the cuff's top); arch: the sole's underside lifted under the arch's columns (the heel's
+ *     block); spring: the toe's (front column, and the two beside it) lifted off the ground;
  *   cols: per column [f, v] on the foot; wall, top: r3's and r4's heights over the floor; lean, shrink: r3 and r4 in
  *     from the outline; mix: r4 the share of the way from the outline to the shaft;
  *   clear: the shaft off the leg; win: the window of heights its reach is taken over; fill: per column further out;
  *   band: { y, rise, w, gold } (head heights over the ground: the front's foot, the sides' rise, its height, the gold
  *     strip's), out (its thickness);
+ *   dome: per column r4 moved back along the foot from the outline (the toe cap's dome set back from its tip);
+ *   cap: the toe cap's back edge (r5): on its columns du back along the foot, h over the floor, `in` from the outline;
+ *     the others t of the way from r4 to the band's foot; the seam behind it (r6) `seam` of the way on from r5 to the
+ *     band's foot, sunk toward the leg by `sink`;
  *   mid: the greave's middle ring (share of ankle to knee);
  *   cuff: lo (its foot at the front and the back), rise (at the sides), gold (head heights), top (per column, share of
  *     ankle to knee), out (its thickness), flare (per column, out at the top), rim (the rim's inside off the leg), lip
@@ -71,34 +79,38 @@ const ANG = [0, 36, 72, 108, 144, 180, -144, -108, -72, -36];
  */
 export const DESIGN = {
   male: {
-    H: 2.06, sole: 0.15, gap: 0.012, lip: 0.05, margin: { toe: 0.06, heel: 0.03 }, arch: 0.06,
+    H: 2.06, sole: 0.24, gap: 0.012, lip: 0.05, margin: { toe: 0.48, heel: 0.04 }, arch: 0.1, spring: [0.06, 0.03],
     cols: [[1, 0], [0.9, 0.4], [0.62, 0.56], [0.3, 0.44], [0.06, 0.36], [0, 0], [0.06, -0.36], [0.3, -0.4], [0.62, -0.54], [0.9, -0.4]],
-    wall: [0.17, 0.18, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.18],
+    wall: [0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22],
     lean: [0.03, 0.03, 0.03, 0.02, 0.02, 0.02, 0.02, 0.02, 0.03, 0.03],
-    top: [0.34, 0.36, 0.48, 0.6, 0.62, 0.62, 0.62, 0.6, 0.48, 0.36],
-    shrink: [0.2, 0.12, 0.06, 0.02, 0.02, 0.02, 0.02, 0.02, 0.06, 0.12],
+    dome: [0.14, 0.1, 0.03, 0, 0, 0, 0, 0, 0.03, 0.1],
+    top: [0.38, 0.37, 0.42, 0.6, 0.62, 0.62, 0.62, 0.6, 0.42, 0.37],
+    shrink: [0.08, 0.07, 0.05, 0.02, 0.02, 0.02, 0.02, 0.02, 0.05, 0.07],
     mix: [0, 0.05, 0.3, 0.8, 1, 1, 1, 0.8, 0.3, 0.05],
     clear: 0.12, win: 0.3, fill: [0.02, 0, 0, 0, 0.02, 0.03, 0.02, 0, 0, 0],
-    band: { y: 0.6, rise: 0.12, w: 0.2, gold: 0.06, out: 0.06 },
+    cap: { du: [0.6, 0.5, 0.22, null, null, null, null, null, 0.22, 0.5], h: [0.42, 0.41, 0.46, 0, 0, 0, 0, 0, 0.46, 0.41], in: [0.1, 0.08, 0.06, 0, 0, 0, 0, 0, 0.06, 0.08], t: 0.35, seam: 0.12, sink: 0.05 },
+    band: { y: 0.56, rise: 0.12, w: 0.22, gold: 0.09, out: 0.11 },
     mid: 0.4,
-    cuff: { lo: 0.52, rise: 0.1, gold: 0.06, out: 0.07, top: [0.95, 0.84, 0.88, 0.8, 0.77, 0.76, 0.77, 0.8, 0.88, 0.84], flare: [0.06, 0.08, 0.2, 0.08, 0.04, 0.04, 0.04, 0.08, 0.2, 0.08], rim: 0.03, lip: 0.08 },
-    rib: { w: 0.14, h: 0.04 },
-    crest: { t: 0.48, w: 0.3, h: 0.44, inset: 0.52, lift: 0.03 },
+    cuff: { lo: 0.46, rise: 0.22, gold: 0.09, out: 0.13, top: [0.96, 0.86, 0.84, 0.8, 0.8, 0.8, 0.8, 0.8, 0.84, 0.86], flare: [0.2, 0.24, 0.42, 0.24, 0.16, 0.14, 0.16, 0.24, 0.42, 0.24], rim: 0.03, lip: 0.08 },
+    rib: { w: 0.18, h: 0.06 },
+    crest: { t: 0.52, w: 0.36, h: 0.56, inset: 0.68, lift: 0.045 },
   },
   female: {
-    H: 2.07, sole: 0.13, gap: 0.012, lip: 0.04, margin: { toe: -0.04, heel: 0.01 }, arch: 0.05,
+    H: 2.07, sole: 0.2, gap: 0.012, lip: 0.04, margin: { toe: 0.3, heel: 0.02 }, arch: 0.09, spring: [0.05, 0.025],
     cols: [[1, 0], [0.9, 0.34], [0.62, 0.47], [0.3, 0.36], [0.06, 0.32], [0, 0], [0.06, -0.32], [0.3, -0.33], [0.62, -0.45], [0.9, -0.34]],
-    wall: [0.14, 0.15, 0.16, 0.16, 0.16, 0.16, 0.16, 0.16, 0.16, 0.15],
+    wall: [0.18, 0.18, 0.18, 0.18, 0.18, 0.18, 0.18, 0.18, 0.18, 0.18],
     lean: [0.02, 0.02, 0.03, 0.02, 0.02, 0.02, 0.02, 0.02, 0.03, 0.02],
-    top: [0.3, 0.32, 0.44, 0.58, 0.6, 0.6, 0.6, 0.58, 0.44, 0.32],
-    shrink: [0.18, 0.1, 0.05, 0.02, 0.02, 0.02, 0.02, 0.02, 0.05, 0.1],
+    dome: [0.13, 0.09, 0.03, 0, 0, 0, 0, 0, 0.03, 0.09],
+    top: [0.32, 0.31, 0.36, 0.58, 0.6, 0.6, 0.6, 0.58, 0.36, 0.31],
+    shrink: [0.07, 0.06, 0.04, 0.02, 0.02, 0.02, 0.02, 0.02, 0.04, 0.06],
     mix: [0, 0.05, 0.3, 0.8, 1, 1, 1, 0.8, 0.3, 0.05],
     clear: 0.1, win: 0.3, fill: [0.01, 0, 0, 0, 0.01, 0.02, 0.01, 0, 0, 0],
-    band: { y: 0.62, rise: 0.1, w: 0.17, gold: 0.05, out: 0.05 },
+    cap: { du: [0.56, 0.46, 0.2, null, null, null, null, null, 0.2, 0.46], h: [0.36, 0.35, 0.4, 0, 0, 0, 0, 0, 0.4, 0.35], in: [0.09, 0.07, 0.05, 0, 0, 0, 0, 0, 0.05, 0.07], t: 0.35, seam: 0.12, sink: 0.045 },
+    band: { y: 0.58, rise: 0.1, w: 0.19, gold: 0.08, out: 0.09 },
     mid: 0.4,
-    cuff: { lo: 0.6, rise: 0.08, gold: 0.05, out: 0.06, top: [0.93, 0.84, 0.87, 0.81, 0.78, 0.77, 0.78, 0.81, 0.87, 0.84], flare: [0.05, 0.06, 0.15, 0.06, 0.03, 0.03, 0.03, 0.06, 0.15, 0.06], rim: 0.03, lip: 0.07 },
-    rib: { w: 0.12, h: 0.035 },
-    crest: { t: 0.48, w: 0.26, h: 0.4, inset: 0.52, lift: 0.026 },
+    cuff: { lo: 0.42, rise: 0.2, gold: 0.08, out: 0.11, top: [0.8, 0.72, 0.7, 0.68, 0.67, 0.67, 0.67, 0.68, 0.7, 0.72], flare: [0.16, 0.2, 0.34, 0.2, 0.12, 0.11, 0.12, 0.2, 0.34, 0.2], rim: 0.03, lip: 0.07 },
+    rib: { w: 0.15, h: 0.05 },
+    crest: { t: 0.52, w: 0.3, h: 0.48, inset: 0.68, lift: 0.038 },
   },
 };
 
@@ -153,28 +165,39 @@ export function buildPlateBoots(rig, design = DESIGN[rig.who]) {
       return r;
     };
     const onShaft = (k, y, extra = 0) => { const c = axis(y), r = reach(k, y) + D.clear + (D.fill?.[k] ?? 0) + extra; return [c[0] + ang[k][0] * r, y, c[2] + ang[k][2] * r]; };
-    const chev = (k) => 1 - Math.abs(Math.cos(ANG[k] * Math.PI / 180));
+    // (a chevron's rise round the leg: nought at the front and the back, one from 45 degrees off them on, straight between)
+    const chev = (k) => Math.min(1, Math.min(Math.abs(ANG[k]), 180 - Math.abs(ANG[k])) / 45);
     const R = {};
     const put = (key, pts) => { R[key] = pts.map((p) => { const i = G.vert(p, 'boot'); G.side[i] = side; return i; }); };
     const each = (f) => ANG.map((_, k) => f(k));
     // the sole and the foot
-    put('r0', each((k) => onOutline(k, ground + (Math.abs(ANG[k]) === 108 ? D.arch : 0), -D.lip)));
+    // (the arch's columns lifted: the heel's block; the toe's sprung up a little)
+    const lift0 = (k) => (Math.abs(ANG[k]) === 108 ? D.arch : ANG[k] === 0 ? D.spring?.[0] ?? 0 : Math.abs(ANG[k]) === 36 ? D.spring?.[1] ?? 0 : 0);
+    put('r0', each((k) => onOutline(k, ground + lift0(k), -D.lip)));
     put('r1', each((k) => onOutline(k, top, -D.lip)));
     put('r2', each((k) => onOutline(k, top)));
     put('r3', each((k) => onOutline(k, F + D.wall[k], D.lean[k])));
-    put('r4', each((k) => lerp(onOutline(k, F + D.top[k], D.shrink[k]), onShaft(k, F + D.top[k]), D.mix[k])));
+    // (a column's outline point moved back along the foot by du, at height y, `inset` in toward the foot's middle)
+    const onFoot = (k, du, y, inset) => { const q = onOutline(k, y, inset); return [q[0] - ft.a[0] * du, y, q[2] - ft.a[2] * du]; };
+    put('r4', each((k) => lerp(onFoot(k, D.dome[k], F + D.top[k], D.shrink[k]), onShaft(k, F + D.top[k]), D.mix[k])));
     // the ankle band
     const bandLo = (k) => ground + (D.band.y + D.band.rise * chev(k)) * H, bandHi = (k) => bandLo(k) + D.band.w * H;
     put('a0', each((k) => onShaft(k, bandLo(k))));
-    put('a1', each((k) => onShaft(k, bandLo(k) + 0.01, D.band.out)));
     put('a2', each((k) => onShaft(k, bandLo(k) + D.band.gold * H, D.band.out)));
     put('a3', each((k) => onShaft(k, bandHi(k), D.band.out)));
     put('a4', each((k) => onShaft(k, bandHi(k) + 0.01)));
+    // the toe cap's back edge and the seam: on the way from r4 to the band's foot, raised (`up`) or sunk toward the leg
+    const between = (k, t, up, sink) => {
+      const c = lerp(G.verts[R.r4[k]], G.verts[R.a0[k]], t), a = axis(c[1]), d = unit([c[0] - a[0], 0, c[2] - a[2]]);
+      return [c[0] - d[0] * sink, c[1] + up, c[2] - d[2] * sink];
+    };
+    // (the toe cap's columns: its edge on the foot, `du` back from the outline at height h; the rest on the way up)
+    put('r5', each((k) => (D.cap.du[k] != null ? onFoot(k, D.cap.du[k], F + D.cap.h[k], D.cap.in[k]) : between(k, D.cap.t, 0, 0))));
+    put('r6', each((k) => { const c = lerp(G.verts[R.r5[k]], G.verts[R.a0[k]], D.cap.seam), a = axis(c[1]), d = unit([c[0] - a[0], 0, c[2] - a[2]]); return [c[0] - d[0] * D.cap.sink, c[1], c[2] - d[2] * D.cap.sink]; }));
     // the greave and the cuff
     const cuffLo = (k) => leg(D.cuff.lo) + D.cuff.rise * chev(k) * H, cuffTop = (k) => leg(D.cuff.top[k]);
     put('g1', each((k) => onShaft(k, lerp([0, bandHi(k), 0], [0, cuffLo(k), 0], D.mid)[1])));
     put('c0', each((k) => onShaft(k, cuffLo(k))));
-    put('c1', each((k) => onShaft(k, cuffLo(k) + 0.01, D.cuff.out)));
     put('c2', each((k) => onShaft(k, cuffLo(k) + D.cuff.gold * H, D.cuff.out)));
     put('c3', each((k) => onShaft(k, cuffTop(k), D.cuff.out + D.cuff.flare[k])));
     put('c4', each((k) => onShaft(k, cuffTop(k), -D.clear + D.cuff.rim)));
@@ -191,15 +214,15 @@ export function buildPlateBoots(rig, design = DESIGN[rig.who]) {
     band(R.r1, R.r2, 'gold', 'welt');
     band(R.r2, R.r3, 'plate', 'wall');
     band(R.r3, R.r4, 'plate', 'over');
-    band(R.r4, R.a0, 'plate', 'instep');
-    band(R.a0, R.a1, 'gold', 'band foot');
-    band(R.a1, R.a2, 'gold', 'band gold');
+    band(R.r4, R.r5, 'plate', 'cap');
+    band(R.r5, R.r6, 'shade', 'seam');
+    band(R.r6, R.a0, 'plate', 'instep');
+    band(R.a0, R.a2, 'gold', 'band gold');
     band(R.a2, R.a3, 'plate', 'band');
     band(R.a3, R.a4, 'gold', 'band top');
     band(R.a4, R.g1, 'plate', 'greave');
     band(R.g1, R.c0, 'plate', 'greave top');
-    band(R.c0, R.c1, 'gold', 'cuff foot');
-    band(R.c1, R.c2, 'gold', 'cuff gold');
+    band(R.c0, R.c2, 'gold', 'cuff gold');
     band(R.c2, R.c3, 'plate', 'cuff');
     band(R.c3, R.c4, 'plate', 'rim');
     band(R.c4, R.c5, 'under', 'lip');
@@ -215,6 +238,14 @@ export function buildPlateBoots(rig, design = DESIGN[rig.who]) {
   return G;
 }
 
+/** Where the line p + t d meets triangle T (t, or null). */
+function rayTri(p, d, T) {
+  const e1 = sub(T[1], T[0]), e2 = sub(T[2], T[0]), h = cross(d, e2), a = dot(e1, h);
+  if (Math.abs(a) < 1e-12) return null;
+  const f = 1 / a, q = sub(p, T[0]), u = f * dot(q, h); if (u < -1e-6 || u > 1 + 1e-6) return null;
+  const r = cross(q, e1), v = f * dot(d, r); if (v < -1e-6 || u + v > 1 + 1e-6) return null;
+  return f * dot(e2, r);
+}
 /** A decal's vertex: on side `side`, riding the calf. */
 function decalVert(G, side, p) { const i = G.vert(p, 'boot'); G.side[i] = side; G.decal.add(i); return i; }
 /** A quad wound so its normal points along `out`. */
@@ -238,7 +269,7 @@ function ribOf(G, D, side) {
 /**
  * The knee crest: a diamond on the cuff's front, its middle `t` of the way up the front column from the gold strip's
  * top (c2) to the cuff's top (c3): its foot ring on the cuff, its frame stood off by `lift` (gold), the inset (the
- * frame's `inset` share) stood off twice as far, glowing.
+ * frame's `inset` share) sunk in it to 0.6 of that, glowing.
  */
 function crestOf(G, D, side) {
   const R = G.rings[side], K = ANG.length, C = D.crest, out = G.legOf[side].ang[0];
@@ -250,9 +281,17 @@ function crestOf(G, D, side) {
   };
   const h0 = Math.hypot(...sub(P('c3', 0), P('c2', 0))), wk = Math.hypot(...sub(P('c2', 1), P('c2', 0)));
   const ts = C.h / h0, ss = C.w / wk;
-  const ring = (k, lift) => [[0, C.t + ts * k], [ss * k, C.t], [0, C.t - ts * k], [-ss * k, C.t]].map(([s, t]) => decalVert(G, side, add(at(s, t), mul(out, lift))));
+  // (each point taken out along `out` to the cuff's outermost triangle there)
+  const cuffTris = trisOf(G).filter((t) => G.polys[t.poly].tag === 'cuff' && G.side[t.v[0]] === side).map((t) => t.v.map((i) => G.verts[i]));
+  const onCuff = (p) => { let best = -1; for (const T of cuffTris) { const t = rayTri(p, out, T); if (t !== null && t > best) best = t; } return add(p, mul(out, Math.max(best, 0))); };
+  // the frame and the inset flat, in the plane through the front column's ridge (the cuff's most forward line): its
+  // middle there, up along the ridge, across square to it
+  const mid = onCuff(at(0, C.t)), up = unit(sub(P('c3', 0), P('c2', 0))), nrm = unit(cross(up, cross(out, up))), across = unit(cross(up, nrm));
+  const sx = dot(across, sub(P('c2', 1), P('c2', 0))) >= 0 ? 1 : -1;
+  const flat = (k, lift) => [[0, C.h * k], [C.w * k, 0], [0, -C.h * k], [-C.w * k, 0]].map(([x, y]) => decalVert(G, side, add(add(mid, add(mul(across, x * sx), mul(up, y))), mul(nrm, lift))));
+  const onSurface = (k) => [[0, C.t + ts * k], [ss * k, C.t], [0, C.t - ts * k], [-ss * k, C.t]].map(([x, t]) => decalVert(G, side, add(onCuff(at(x, t)), mul(out, 0.004))));
   G.tag = 'crest';
-  const foot = ring(1.12, 0.004), frame = ring(1, C.lift), inset = ring(C.inset, C.lift * 1.6);
+  const foot = onSurface(1.1), frame = flat(1, C.lift), inset = flat(C.inset, C.lift * 0.6);
   for (let e = 0; e < 4; e++) {
     const f = (e + 1) % 4;
     facing(G, [foot[e], foot[f], frame[f], frame[e]], 'gold', out);
@@ -263,8 +302,8 @@ function crestOf(G, D, side) {
 
 /**
  * The boots' weights: the foot (the sole, the wall, over the foot) the body's at the closest point of the leg's skin
- * below the knee, the bones taken onto the calf, the foot, the toes and the ball of its own side; the instep's foot (r4)
- * a little toward the calf; the ankle band up (a0 on) and the decals rigid on the calf.
+ * below the knee, the bones taken onto the calf, the foot, the toes and the ball of its own side; the cap's edge and the
+ * seam (r5, r6) a little toward the calf; the ankle band up (a0 on) and the decals rigid on the calf.
  */
 export function plateBootWeights(rig, G, o = {}) {
   const { B } = rig, F = rig.J.floor;
@@ -272,7 +311,7 @@ export function plateBootWeights(rig, G, o = {}) {
   const map = (n) => { if (/^(calf|foot|toes|ball)_(l|r)$/.test(n)) return n; const s = n.match(/_(l|r)$/)?.[1] ?? 'l'; return /^ankle/.test(n) ? `foot_${s}` : `calf_${s}`; };
   const vw = transferWeights(rig, G, { map, smooth: o.smooth ?? 2, keep: (i) => near[i], only: (i) => !G.decal?.has(i) });
   const at = new Map(rig.bones.map((b, i) => [b.name, i]));
-  const rigid = o.rigid ?? { r4: 0.25, a0: 1, a1: 1, a2: 1, a3: 1, a4: 1, g1: 1, c0: 1, c1: 1, c2: 1, c3: 1, c4: 1, c5: 1 };
+  const rigid = o.rigid ?? { r5: 0.15, r6: 0.3, a0: 1, a2: 1, a3: 1, a4: 1, g1: 1, c0: 1, c2: 1, c3: 1, c4: 1, c5: 1 };
   for (const side of ['L', 'R']) {
     const R = G.rings[side], calf = at.get(`calf_${side === 'L' ? 'l' : 'r'}`);
     for (const [key, f] of Object.entries(rigid)) for (const i of R[key] ?? []) {

@@ -86,7 +86,8 @@ const CROPS = {
   male: [[30, 92, 190, 245], [212, 92, 160, 245], [355, 92, 140, 245], [490, 92, 190, 245], [648, 92, 190, 245]],
   female: [[32, 422, 190, 235], [222, 422, 155, 235], [362, 422, 125, 235], [490, 422, 175, 235], [648, 422, 190, 235]],
 };
-const VIEWS = [[0, 'Front (0°)'], [-45, 'Three-quarter (45°)'], [-90, 'Side (90°)'], [-135, 'Rear three-quarter (135°)'], [180, 'Back (180°)']];
+// (turned as the sheet turns them: the toes toward the left)
+const VIEWS = [[0, 'Front (0°)'], [45, 'Three-quarter (45°)'], [90, 'Side (90°)'], [135, 'Rear three-quarter (135°)'], [180, 'Back (180°)']];
 async function sheet(file, wire) {
   const cw = 250, ch = 300, top = 34, cells = [], imgs = [], texts = [];
   ['male', 'female'].forEach((who, r) => {
@@ -122,12 +123,12 @@ if (only.includes('detail')) {
     const { rig, G } = M[who], d = dress(who, {});
     const L = (i) => G.side[i] === 'L';
     const R = G.rings.L, at = (ring, k) => d.PG[R[ring][k]];
-    const crest = at('c3', 0), toe = at('r3', 0), heel = at('r3', 5), mid = at('g1', 0);
+    const crest = at('c3', 0), toe = lerpY(at('r4', 2), 0.1), heel = lerpY(at('r4', 5), -0.1);
     const P = d.PG, PB = d.PB;
     const body = bodyMesh(who, PB, rig.J.knee[1] + 0.5);
     const boot = bootMesh(who, P); boot.tris = boot.tris.filter((t) => L(t[0]));
     const bodyL = { ...body, tris: body.tris.filter((t) => PB[t[0]][0] > 0) };
-    const views = [[0, -8, crest, 120, 'greave top'], [-150, -8, lerpY(at('c1', 5), 0.1), 110, 'plate layer (back)'], [-55, -18, toe, 130, 'toe cap'], [160, -10, heel, 120, 'heel / back']];
+    const views = [[0, -8, crest, 120, 'greave top'], [-150, -8, lerpY(at('c2', 5), 0.1), 110, 'plate layer (back)'], [-60, -16, toe, 110, 'toe cap'], [165, -10, heel, 110, 'heel / back']];
     views.forEach(([yaw, pitch, c, s, lab], i) => {
       if (r === 0) imgs.push({ src: SHEET, size: [1536, 1024], crop: D[i][0], box: [i * cw, top, cw, ch] });
       cells.push({ meshes: [bodyL, boot], cam: { yaw, pitch, s, c: [c[0], c[1] - (i === 0 ? 0.25 : 0), c[2]] }, box: [i * cw, top + (r + 1) * ch, cw, ch], label: `${who} ${lab}` });
@@ -135,6 +136,28 @@ if (only.includes('detail')) {
   });
   function lerpY(p, dy) { return [p[0], p[1] + dy, p[2]]; }
   await shoot(4 * cw, top + 3 * ch, cells, join(out, `plate-boots-${tag}-detail.png`), { texts: [{ css: 'left:10px;top:6px', html: `Plate boots, ${tag}: the sheet's key details (his, top row) and the model's left boot, his and hers` }], imgs });
+}
+
+/* ---- the side view large, against the sheet's ------------------------------------------------------------------------ */
+if (only.includes('side')) {
+  const cw = 380, ch = 560, top = 34, cells = [], imgs = [], texts = [];
+  // the sheet's side views (his and hers), the toe to the left; the model's left boot from its outer side, the same way round
+  const SIDE = { male: [352, 92, 148, 245], female: [362, 422, 125, 235] };
+  ['male', 'female'].forEach((who, r) => {
+    const { rig, G } = M[who], d = dress(who, {});
+    const keepL = (m) => ({ ...m, tris: m.tris.filter((t) => m.P[t[0]][0] > 0) });
+    const ht = rig.J.knee[1] - G.ground, s = 440 / (ht + 0.6);
+    imgs.push({ src: SHEET, size: [1536, 1024], crop: SIDE[who], box: [r * 2 * cw, top, cw, ch] });
+    const body = keepL(bodyMesh(who, d.PB, rig.J.knee[1] + 0.4)), boot = bootMesh(who, d.PG); boot.tris = boot.tris.filter((t) => G.side[t[0]] === 'L');
+    cells.push({ meshes: [body, boot], cam: { yaw: 90, pitch: -6, s, c: [1.2, G.ground + ht * 0.5 + 0.15, 0.3] }, box: [(r * 2 + 1) * cw, top, cw, ch], label: `${who} side (outer)` });
+    // its lengths: heel to toe, the shaft's width over the band, the sole to the cuff's top
+    const R = G.rings.L, P = (ring, k) => G.verts[R[ring][k]];
+    const len = Math.hypot(P('r1', 0)[0] - P('r1', 5)[0], P('r1', 0)[2] - P('r1', 5)[2]), tall = P('c3', 0)[1] - G.ground;
+    const wid = Math.hypot(P('a4', 0)[0] - P('a4', 5)[0], P('a4', 0)[2] - P('a4', 5)[2]);
+    texts.push({ cls: 'lab', css: `left:${(r * 2 + 1) * cw + 8}px;top:${top + 22}px;white-space:normal;width:${cw - 16}px;font-size:13px`, html: `heel to toe ${(len / tall).toFixed(2)} of the height (sheet 0.48), ${(len / wid).toFixed(2)} of the shaft over the band (sheet 2.0); height ${(tall / G.design.H).toFixed(2)} H, foot ${(len / G.design.H).toFixed(2)} H` });
+  });
+  texts.push({ css: 'left:10px;top:6px', html: `Plate boots, ${tag}: the sheet's side view (his, hers) beside the model's left boot from the outside, the toe to the left` });
+  await shoot(4 * cw, top + ch, cells, join(out, `plate-boots-${tag}-side.png`), { texts, imgs });
 }
 
 /* ---- metrics -------------------------------------------------------------------------------------------------------- */
