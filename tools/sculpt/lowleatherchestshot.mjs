@@ -11,7 +11,7 @@
 //     leatherchest-<tag>-full.png: both bodies whole at the game's heights (she is 0.85 of him), front, three-quarter, back;
 //     leatherchest-<tag>-walk.gif: the walk clip, both bodies, front and three-quarter;
 //     leatherchest-metrics.json: the checks at rest and in every pose, each body.
-import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdirSync, writeFileSync, rmSync, readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -116,12 +116,15 @@ function crossings(who, d) {
 // the sheet's views (leather-chest.png, 1536 x 1024): his row at y 98, hers at 432; its side view the body's left side,
 // its rear three-quarter the left side and the back
 const CROPS = { male: [[18, 98, 210, 250], [222, 98, 165, 250], [388, 98, 102, 250], [488, 98, 166, 250], [654, 98, 175, 250]], female: [[18, 432, 210, 232], [222, 432, 165, 232], [388, 432, 102, 232], [488, 432, 166, 232], [654, 432, 175, 232]] };
+const VK = ['front', 'q3', 'side', 'r3', 'back'];
 const VIEWS = [[0, 'Front (0°)'], [-45, 'Three-quarter (45°)'], [90, 'Side (90°)'], [135, 'Rear three-quarter (135°)'], [180, 'Back (180°)']];
 async function sheet(file, wire, look = 'plain') {
   const cw = 230, ch = 280, top = 34, cells = [], imgs = [], texts = [];
   ['male', 'female'].forEach((who, r) => {
     const { G, rig } = M[who], d = dress(who, {});
-    const s = who === 'male' ? 42 : 43, c = [0, who === 'male' ? -2.7 : -2.48, 0];
+    // (each cell the sheet's registered camera for that view, tools/sculpt/lowleatherchestcams.json: its turn, scale and
+    // place, so the model stands where the sheet's figure does; our own body's proportions, without the sheet's body map)
+    const Cm = JSON.parse(readFileSync(join(DIR, 'lowleatherchestcams.json'), 'utf8'))[who];
     // (the body below the faulds' foot left out, as the sheet shows only the armour)
     const cut = who === 'male' ? -6.3 : -5.5;
     const keep = (pi) => rig.B.polys[pi].v.every((i) => d.PB[i][1] > cut);
@@ -129,7 +132,10 @@ async function sheet(file, wire, look = 'plain') {
       imgs.push({ src: SHEET, size: [1536, 1024], crop: CROPS[who][i], box: [i * cw, top + r * 2 * ch, cw, ch] });
       const body = bodyMesh(who, d.PB, keep), arm = armourMesh(who, d.PG, look);
       if (wire) { arm.edges = true; arm.edgec = [0.2, 0.12, 0.08]; }
-      cells.push({ meshes: [body, arm], cam: { yaw, pitch: -8, s, c }, box: [i * cw, top + (r * 2 + 1) * ch, cw, ch], label: `${who} ${lab}` });
+      const [x, y, w, h] = CROPS[who][i], k = Math.min(cw / w, ch / h), v = Cm.views[VK[i]], sy = v.yaw;
+      const dx = (x + w / 2 - v.cx) / Cm.s, dy = (Cm.cy - (y + h / 2)) / Cm.s, ca = Math.cos(sy * Math.PI / 180), sa = Math.sin(sy * Math.PI / 180);
+      // (the sheet's u = cx + s (cos·x + sin·z); the page's x = cos(-yaw)·x - sin(-yaw)·z: the page's yaw is minus the sheet's)
+      cells.push({ meshes: [body, arm], cam: { yaw: -sy, pitch: 0, s: Cm.s * k, c: [dx * ca, dy, dx * sa] }, box: [i * cw, top + (r * 2 + 1) * ch, cw, ch], label: `${who} ${lab}` });
     });
     const parts = {};
     for (const t of G.tris) { const p = G.polys[t.poly]; if (G.side[p.v[0]] === 'L' || !/pauldron|zigzag|bracer|rune|band$|sleeve/.test(p.tag)) parts[p.tag] = (parts[p.tag] ?? 0) + 1; }
