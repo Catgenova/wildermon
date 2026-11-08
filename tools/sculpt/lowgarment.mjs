@@ -397,12 +397,18 @@ export const MAX_BONES = 80;
  * vertices (the body's units and axes), the polygons (corners, material index into `mats`), the triangles, each
  * vertex's (bone, weight) list (bone indices: the body's, then the garment's own from `base` on), and its own bones as
  * the body's helpers are written (parent `p` and driver `from` the body's bone indices, rest head and frame R, `drive`
- * and its settings), so the game drives them from the body's pose as lowrig.mjs posed() drives its helpers.
+ * and its settings), so the game drives them from the body's pose as lowrig.mjs posed() drives its helpers. With
+ * `looks` ({ plain, enchanted: { name: [r, g, b] or { c: [r, g, b], kind } }, glowFrom }: a piece that can be enchanted,
+ * as the long sword), its materials plain and enchanted parallel to `mats` ({ c: '#rrggbb', kind: 0 lit, 1 unlit }, a
+ * material a look leaves out its colour, lit) and the polygons from `glowFrom` on drawn only enchanted.
  */
-export function garmentAsset(rig, G, mats) {
+export function garmentAsset(rig, G, mats, looks = null) {
   const r5 = (x) => +x.toFixed(5), names = Object.keys(mats), all = bonesWith(rig, G);
   if (all.length > MAX_BONES) throw new Error(`${all.length} bones: over the renderer's ${MAX_BONES}`);
+  const hex = (c) => `#${c.map((x) => Math.round(Math.max(0, Math.min(1, x)) * 255).toString(16).padStart(2, '0')).join('')}`;
+  const look = (L) => names.map((n) => { const m = L?.[n] ?? mats[n]; return Array.isArray(m) ? { c: hex(m), kind: 0 } : { c: hex(m.c), kind: m.kind ?? 0 }; });
   return {
+    ...(looks ? { plain: look(looks.plain), enchanted: look(looks.enchanted), ...(looks.glowFrom !== undefined ? { glowFrom: looks.glowFrom } : {}) } : {}),
     who: rig.who, base: rig.bones.length, mats: names, colours: names.map((n) => mats[n]),
     verts: G.verts.flat().map(r5),
     polys: G.polys.map((p) => [p.v, names.indexOf(p.mat)]),
