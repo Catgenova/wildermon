@@ -49,6 +49,8 @@ import FEMALE_PLATE_BOOTS from './assets/lowplateboots-female.json';
 import MALE_TUNIC from './assets/lowtunic-male.json';
 import FEMALE_TUNIC from './assets/lowtunic-female.json';
 import MALE_HOOD from './assets/lowhood-male.json';
+import MALE_PLATE_CHEST from './assets/lowplatechest-male.json';
+import FEMALE_PLATE_CHEST from './assets/lowplatechest-female.json';
 import FEMALE_HOOD from './assets/lowhood-female.json';
 import MALE_HELM from './assets/lowhelm-male.json';
 import FEMALE_HELM from './assets/lowhelm-female.json';
@@ -586,9 +588,9 @@ export const hairShown = (pose: FigurePose): boolean => !wearsHood(pose) && !wea
  * runes, the first outfit's (cloth...) trim lines and patterns lit, as the long sword's when it is; plain unless asked for.
  */
 export const enchantedOf = (piece: 'chest' | 'legs' | 'boots' | 'helm' | 'mantle' | 'leatherChest' | 'leatherLegs' | 'leatherBoots' | 'leatherShawl' | 'leatherHat' | 'clothShawl' | 'clothHood' | 'clothTunic' | 'clothTrousers' | 'clothBoots') => (pose: FigurePose): boolean => pose.outfit?.enchanted?.[piece] ?? false;
-
+/** Whether a figure wears the plate set's chest & arms (`tools/sculpt/garments/platechest.mjs`); off unless asked for. */
+const wearsPlateChest = (pose: FigurePose): boolean => pose.outfit?.plateChest ?? false;
 /**
-
  * The garments a low-poly body can wear, in the order they are laid over it: each its copy for the man and the woman, its
  * wear hook and, for one that can be enchanted, its enchantment's. (A garment's `drops`: whether its polygons from
  * `dropFrom` on are left out, e.g. the plate boots' knee crests while the plate leggings' knee guards are worn over the
@@ -600,15 +602,11 @@ const GARMENTS: ReadonlyArray<{ man: GarmentAsset; woman: GarmentAsset; wears: (
   { man: MALE_BOOTS as unknown as GarmentAsset, woman: FEMALE_BOOTS as unknown as GarmentAsset, wears: wearsBoots, enchanted: enchantedOf('clothBoots') },
   { man: MALE_TUNIC as unknown as GarmentAsset, woman: FEMALE_TUNIC as unknown as GarmentAsset, wears: wearsTunic, enchanted: enchantedOf('clothTunic') },
   { man: MALE_HOOD as unknown as GarmentAsset, woman: FEMALE_HOOD as unknown as GarmentAsset, wears: wearsHood, enchanted: enchantedOf('clothHood') },
-  { man: MALE_SHAWL as unknown as GarmentAsset, woman: FEMALE_SHAWL as unknown as GarmentAsset, wears: wearsShawl },
-  { man: MALE_TROUSERS as unknown as GarmentAsset, woman: FEMALE_TROUSERS as unknown as GarmentAsset, wears: wearsTrousers },
-  { man: MALE_BOOTS as unknown as GarmentAsset, woman: FEMALE_BOOTS as unknown as GarmentAsset, wears: wearsBoots },
-  { man: MALE_TUNIC as unknown as GarmentAsset, woman: FEMALE_TUNIC as unknown as GarmentAsset, wears: wearsTunic },
-  { man: MALE_HOOD as unknown as GarmentAsset, woman: FEMALE_HOOD as unknown as GarmentAsset, wears: wearsHood },
   { man: MALE_HELM as unknown as GarmentAsset, woman: FEMALE_HELM as unknown as GarmentAsset, wears: wearsHelm, enchanted: enchantedOf('helm') },
   // the plate set's leggings (`tools/sculpt/garments/platelegs.mjs`): off unless asked for; their base layer takes the place of the legs' skin
   { man: MALE_PLATE_LEGS as unknown as GarmentAsset, woman: FEMALE_PLATE_LEGS as unknown as GarmentAsset, wears: (p) => p.outfit?.plateLegs ?? false, enchanted: enchantedOf('legs') },
   { man: MALE_PLATE_BOOTS as unknown as GarmentAsset, woman: FEMALE_PLATE_BOOTS as unknown as GarmentAsset, wears: wearsPlateBoots, enchanted: enchantedOf('boots'), drops: (pose) => pose.outfit?.plateLegs ?? false },
+  { man: MALE_PLATE_CHEST as unknown as GarmentAsset, woman: FEMALE_PLATE_CHEST as unknown as GarmentAsset, wears: wearsPlateChest, enchanted: enchantedOf('chest') },
 ];
 
 const BODIES = {
