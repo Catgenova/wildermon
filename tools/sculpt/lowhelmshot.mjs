@@ -19,7 +19,7 @@ import { join, resolve } from 'node:path';
 import { buildRig, posed, skin, fromGame, gameRig, armsOut, axisAngle, mm, tr } from './lowrig.mjs';
 import { skinGarment, checks, crossPairs, garmentAsset, bonesWith } from './lowgarment.mjs';
 import { buildHelm, helmWeights, MATS, LOOKS } from './garments/helm.mjs';
-import { shoot, closeBrowser } from './lowgarmentshot.mjs';
+import { shoot, closeBrowser, LOOKS as LOOKS_SHOWN, lookColour } from './lowgarmentshot.mjs';
 
 const args = process.argv.slice(2);
 const opt = (n, f) => { const i = args.indexOf(`--${n}`); return i < 0 ? f : args[i + 1]; };
@@ -31,11 +31,10 @@ const SHEET = resolve(opt('sheet', '/tmp/claude-0/-home-user-Wurm/781c435a-4202-
 mkdirSync(out, { recursive: true });
 
 const SKIN = [0.68, 0.49, 0.41];
-// the two looks' colours by material (an unlit one handed to the review renderer as its colour + 2, which it draws as it is)
-const rgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
-const LOOK = Object.fromEntries(Object.entries(LOOKS).map(([look, L]) => [look, Object.fromEntries(Object.keys(MATS).map((k, i) => [k, rgb(L[i].c).map((x) => x + (L[i].kind === 1 ? 2 : 0))]))]));
-const ENCH = flag('enchanted');
-let COL = LOOK.plain;
+// the two looks' colours by material, as the page draws them (lowgarmentshot.mjs lookColour: an unlit one as its colour + 2)
+const LOOK = Object.fromEntries(['plain', 'enchanted'].map((look) => [look, Object.fromEntries(Object.entries(MATS).map(([k, c]) => [k, lookColour(LOOKS[look][k] ? (Array.isArray(LOOKS[look][k]) ? { c: LOOKS[look][k], kind: 0 } : LOOKS[look][k]) : { c, kind: 0 })]))]));
+const ENCH = LOOKS_SHOWN.length > 1;
+const COL = LOOK.plain;
 const bodyMesh = (rig, P, hide) => {
   const keep = rig.B.polys.map((_, pi) => !hide?.has(pi));
   return { who: rig.who, P, polys: rig.B.polys.map((p) => p.nv ?? p.v), tris: rig.B.tris.filter((t) => keep[t.poly]).map((t) => [...t.v, t.poly]), col: rig.B.polys.map((p) => (p.mat === 'skin' ? SKIN : p.mat === 'pupil' ? [0.08, 0.06, 0.06] : [0.22, 0.15, 0.13])) };
@@ -104,8 +103,6 @@ const VIEWS = [[0, 'Front (0°)'], [45, 'Three-quarter (45°)'], [90, 'Side (90�
 const SX = { male: [110, 276, 446, 606, 746], female: [945, 1082, 1265, 1425, 1580] };
 const SIZE = [1672, 941], CROP = [150, 200], CY = 98;
 const rest = (who) => { const d = dress(who, {}); return { PB: d.PB.map((p) => [p[0], p[1] - d.dy, p[2]]), PG: d.PG.map((p) => [p[0], p[1] - d.dy, p[2]]) }; };
-/** The looks a model cell is drawn in: plain, and with --enchanted the enchanted beside it. */
-const LOOKS_SHOWN = ENCH ? ['plain', 'enchanted'] : ['plain'];
 async function sheet(file, edges) {
   const cw = 250, ch = 330, top = 34, cells = [], imgs = [], texts = [], R = 1 + LOOKS_SHOWN.length;
   ['male', 'female'].forEach((who, r) => {
@@ -154,7 +151,7 @@ if (only.includes('metrics') || only.includes('poses')) {
     for (const e of list) { const d = dress(who, e.pose); metrics[who][e.id] = measure(who, d); }
     console.log(who, Object.entries(metrics[who]).map(([k, v]) => `${k}:${v.body}/${v.self}`).join(' '));
     metrics[who].bones = { body: rig.bones.length, garment: (G.bones ?? []).length, total: bonesWith(rig, G).length };
-    writeFileSync(join(out, `helm-${who}.json`), JSON.stringify(garmentAsset(rig, G, MATS)));
+    writeFileSync(join(out, `helm-${who}.json`), JSON.stringify(garmentAsset(rig, G, MATS, LOOKS)));
   }
   writeFileSync(join(out, 'helm-metrics.json'), JSON.stringify(metrics, null, 1));
 }

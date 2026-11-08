@@ -23,7 +23,9 @@
  * soles, `soles`, while they are worn), its tunic (`assets/lowtunic-<who>.json`, fitted over the trousers and under
  * the shawl by `tools/sculpt/garments/outfit1.mjs`, no bones of its own, `hides` too) and its hood
  * (`assets/lowhood-<who>.json` by `tools/sculpt/garments/hood.mjs`, no bones of its own, rising out of the shawl's cowl;
- * while it is up the hair is not drawn, `hairShown`). Garments share materials by colour.
+ * while it is up the hair is not drawn, `hairShown`), and the plate set's helm (`assets/lowhelm-<who>.json` by
+ * `tools/sculpt/garments/helm.mjs`: rigid on the head, the head's polygons it covers whole left out, the hair not drawn
+ * under it; off unless `outfit.plateHelm`). Garments share materials by colour.
  *
  * In both hands while a clip grips it (`./anim` Clip.grip, `heldIn`), the long sword (`assets/long_sword.json`,
  * `tools/sculpt/lowgear.mjs` gearAsset): laid at rest on the right hand's socket (its grip's lead point at the fist,
@@ -46,6 +48,8 @@ import MALE_TUNIC from './assets/lowtunic-male.json';
 import FEMALE_TUNIC from './assets/lowtunic-female.json';
 import MALE_HOOD from './assets/lowhood-male.json';
 import FEMALE_HOOD from './assets/lowhood-female.json';
+import MALE_HELM from './assets/lowhelm-male.json';
+import FEMALE_HELM from './assets/lowhelm-female.json';
 import LONG_SWORD from './assets/long_sword.json';
 import HAIR_ASSET from './assets/lowhair.json';
 import MALE_LIGHT from '../../tools/sculpt/lowlight-male.json';
@@ -556,9 +560,15 @@ const wearsTunic = (pose: FigurePose): boolean => pose.outfit?.tunic ?? true;
 const wearsHood = (pose: FigurePose): boolean => (pose.outfit?.hood ?? false) && wearsShawl(pose);
 /**
  * Whether a figure's hair is drawn over its low-poly head: not while the hood is up (the hood's shell is snug on the
- * skull, so any hairstyle would come through it). A hairstyle drawn with the body checks this before it is laid in.
+ * skull, so any hairstyle would come through it), nor under the plate helm. A hairstyle drawn with the body checks this
+ * before it is laid in.
  */
-export const hairShown = (pose: FigurePose): boolean => !wearsHood(pose);
+/**
+ * Whether a figure wears the plate set's helm (`assets/lowhelm-<who>.json` by `tools/sculpt/garments/helm.mjs`, rigid on
+ * the head, no bones of its own; the head's polygons it covers whole, `hides`, left out): off unless asked for.
+ */
+const wearsHelm = (pose: FigurePose): boolean => pose.outfit?.plateHelm ?? false;
+export const hairShown = (pose: FigurePose): boolean => !wearsHood(pose) && !wearsHelm(pose);
 
 /**
  * Whether a piece of the plate set is enchanted (`FigurePose.outfit.enchanted`): its cores and its engraving lit, as the
@@ -576,6 +586,7 @@ const GARMENTS: ReadonlyArray<{ man: GarmentAsset; woman: GarmentAsset; wears: (
   { man: MALE_BOOTS as unknown as GarmentAsset, woman: FEMALE_BOOTS as unknown as GarmentAsset, wears: wearsBoots },
   { man: MALE_TUNIC as unknown as GarmentAsset, woman: FEMALE_TUNIC as unknown as GarmentAsset, wears: wearsTunic },
   { man: MALE_HOOD as unknown as GarmentAsset, woman: FEMALE_HOOD as unknown as GarmentAsset, wears: wearsHood },
+  { man: MALE_HELM as unknown as GarmentAsset, woman: FEMALE_HELM as unknown as GarmentAsset, wears: wearsHelm, enchanted: enchantedOf('helm') },
 ];
 
 const BODIES = {

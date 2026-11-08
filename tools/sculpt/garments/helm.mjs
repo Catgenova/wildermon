@@ -36,17 +36,11 @@ export const MATS = {
   gold: [0.96, 0.74, 0.4],
   core: [0.86, 0.62, 0.3],
 };
-/** The enchanted cores' glow (#FFE7A6), drawn unlit. */
-export const GLOW = [1, 0.906, 0.651];
-const hex = (c) => `#${c.map((x) => Math.round(x * 255).toString(16).padStart(2, '0')).join('')}`;
 /**
- * The two looks, parallel to MATS (each { c, kind }: kind 0 lit by the body's light, 1 unlit): plain, every material
- * lit, the cores a gold-amber gem; enchanted, the cores glowing (the plate set's ENCHANT rule, as the long sword's).
+ * The two looks (lowgarment.mjs garmentAsset `looks`): plain, every material lit, the cores a gold-amber gem; enchanted,
+ * the cores glowing #FFE7A6, unlit (the plate set's ENCHANT rule, as the long sword's). The gold trim is metal in both.
  */
-export const LOOKS = {
-  plain: Object.values(MATS).map((c) => ({ c: hex(c), kind: 0 })),
-  enchanted: Object.entries(MATS).map(([k, c]) => (k === 'core' ? { c: hex(GLOW), kind: 1 } : { c: hex(c), kind: 0 })),
-};
+export const LOOKS = { plain: { core: MATS.core }, enchanted: { core: { c: [1, 0.906, 0.651], kind: 1 } } };
 
 /** Piecewise linear through [x, y] pairs (sorted by x), held at the ends. */
 const interp = (P, x) => {
@@ -405,7 +399,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const rig = buildRig(who), G = buildHelm(rig);
     G.vw = helmWeights(rig, G);
     const file = new URL(`../../../src/sculpt/assets/lowhelm-${who}.json`, import.meta.url);
-    const A = { built: 'node tools/sculpt/garments/helm.mjs (tools/sculpt/lowgarment.mjs garmentAsset)', ...garmentAsset(rig, G, MATS), hides: G.hides, ...LOOKS };
+    const A = { built: 'node tools/sculpt/garments/helm.mjs (tools/sculpt/lowgarment.mjs garmentAsset)', ...garmentAsset(rig, G, MATS, LOOKS), hides: G.hides };
     writeFileSync(file, JSON.stringify(A));
     console.log(who, `${G.verts.length} vertices, ${G.tris.length} triangles, ${A.base} + ${A.bones.length} bones, hides ${G.hides.length} body polygons: wrote`, file.pathname);
   }
