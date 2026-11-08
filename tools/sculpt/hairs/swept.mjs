@@ -23,17 +23,17 @@ const grooveAt = [0, 0.55, 1, 1, 0.9, 0.75, 0.55, 0.4, 0.3, 0.25, 0];
 
 /** Each tuft's section across: five rows between its creases, the middle at the hull's height and the others falling
  * away from it (a rounded top: under it by these, head units), the creases `groove` under it. */
-const TUFT = { tube: { smooth: 3, perRow: true, acrossRows: 1 }, endShade: [0.95, 0.6], endLow: [48, 72], band: [[0.16, 0.14], [0.5, 0], [0.84, 0.14]], groove: 0.42, grooveAt };
+const TUFT = { clearCap: 0.04, tube: { smooth: 3, perRow: true, acrossRows: 1 }, endShade: [0.95, 0.6], endLow: [48, 72], band: [[0.16, 0.14], [0.5, 0], [0.84, 0.14]], groove: 0.42, grooveAt };
 /** Where the two masses meet (the parting C over the top, the back's centre line): the left's edge at this share of
  * the hull's thickness, the right's a little over it (laid on the left's), in a crease. */
 const MEET = 0.5;
 
 export default {
-  jitter: 0,
+  jitter: 0, mapScale: { female: 1 },
   // the outline fitted onto the sheet's in its five views (tools/sculpt/lowhair.mjs outlineFit)
   // (on the man only: the woman's face is too far from the sheet's for her registration to place her outline, her
   // hair the hull's thickness on her own skull)
-  outline: { rounds: 10, step: 0.015, who: ['male'], tube: { rounds: 1, lo: 0.9, hi: 1.25 } },
+  outline: { rounds: 10, step: 0.015, who: ['male', 'female'], tube: { rounds: 6, lo: 0.6, hi: 1.25 } },
   // the right mass laid over the left where they meet (the parting, the back's centre line): a corner of the left still
   // showing through pressed under (tools/sculpt/lowhair.mjs layersOf)
   layers: [['right', 'left']], layerGap: 0.01, layerPress: 30, layerKeep: 0.6,

@@ -80,10 +80,10 @@ export function maskOf(style = 'swept', grow = 0) {
  * distance between the two outlines, in sheet pixels). tris: triangles as three points each; the hair counts only where
  * it stands in front of the male's head (body).
  */
-export function outlineDiff(tris, style = 'swept', body = bodyTris(buildRig('male').B)) {
+export function outlineDiff(tris, style = 'swept', body = bodyTris(buildRig('male').B), cams = CAMS) {
   const m = maskOf(style), out = {};
   for (const v of VIEWS) {
-    const c = CAMS[v], Z = new Float32Array(m.w * m.h).fill(-Infinity), cov = new Uint8Array(m.w * m.h);
+    const c = cams[v], Z = new Float32Array(m.w * m.h).fill(-Infinity), cov = new Uint8Array(m.w * m.h);
     // the hair where it is in front of the head
     raster(body, c, Z, m.w, m.h, cov, 0);
     raster(tris, c, Z, m.w, m.h, cov, 1);

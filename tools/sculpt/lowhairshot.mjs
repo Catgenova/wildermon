@@ -219,7 +219,7 @@ if (MAIN) {
 
   if (only.includes('views')) for (const who of Object.keys(RIGS)) {
     const rig = RIGS[who], hair = HAIRS[who];
-    const cw = 280, ch = 330, gap = 8, x0 = 10, y1 = 34, y2 = y1 + ch + 26, y3 = y2 + ch + 26, over = who === 'male';
+    const cw = 280, ch = 330, gap = 8, x0 = 10, y1 = 34, y2 = y1 + ch + 26, y3 = y2 + ch + 26, over = true;
     const cells = [], imgs = [], texts = [];
     VIEWS.forEach(([v, label], i) => {
       const c = CAMW[who][v], x = x0 + i * (cw + gap);

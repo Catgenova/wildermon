@@ -9,11 +9,11 @@
 // Coordinate descent from the last fit; the priors keep the correction small (roll 0, ax 1, sh 0). Prints each
 // landmark's residual (px) and the outline's mean distance (px).
 //
-//   node tools/sculpt/lowhairreg.mjs [--who male|female] [--rounds 7]
+//   node tools/sculpt/lowhairreg.mjs [--who male|female] [--rounds 7] [--skull]   # --skull: by the skull and the hair, not the face (skullCost)
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { buildRig } from './lowrig.mjs';
-import { project, raster, camsFile, camsFor } from './lowhairhull.mjs';
+import { project, raster, camsFile, camsFor, carve, hullSurface } from './lowhairhull.mjs';
 
 const DIR = new URL('.', import.meta.url).pathname;
 export const VIEWS = ['front', 'q3', 'profile', 'r3', 'back'];
@@ -91,12 +91,38 @@ export function camsOf(g) {
   return Object.fromEntries(VIEWS.map((v) => { const p = g[v]; return [v, { yaw: p.yaw, pitch: g.pitch, s: g.sv, cx: p.cx, cy: g.cy, roll: p.roll, ax: p.sx / g.sv, ay: 1, sh: p.sh }]; }));
 }
 
-function fit(rounds, who) {
+/**
+ * skull: the head registered by its skull and the hair only (for a body whose face is not the sheet's: hers), not by the
+ * face: the ears across; the head's sides in the rows from the hair's lower edge to the ears' middle (SKULL_ROWS); and
+ * above them the head with the hair's hull on it (the male's thickness on this skull, tools/sculpt/lowhairhull.mjs
+ * hullSurface) against the sheet's hair and skin together. The face's landmarks still reported.
+ */
+const SKULL_ROWS = { front: [95, 128], q3: [95, 128], profile: [95, 128], r3: [95, 132], back: [95, 132] };
+function skullCost(v, c, S, tris, hull) {
+  const [lo, hi] = SPAN[v], Z = new Float32Array(S.w * S.h).fill(-Infinity), cov = new Uint8Array(S.w * S.h);
+  raster(tris, c, Z, S.w, S.h, cov, 1); raster(hull, c, Z, S.w, S.h, cov, 1);
+  let miss = 0;
+  for (let y = 0; y < SKULL_ROWS[v][1]; y++) for (let x = lo; x < hi; x++) {
+    const i = y * S.w + x, inHair = S.Hm[i], f = S.F[i];
+    // (below the hair's top rows only the head's sides count: the face's own pixels are the sheet's face, not hers)
+    if (y >= SKULL_ROWS[v][0] && !inHair && f && cov[i]) continue;
+    if ((inHair || f) !== !!cov[i]) miss++;
+  }
+  return miss;
+}
+
+function fit(rounds, who, skull = false) {
   const rig = buildRig(who), B = rig.B, M = bodyMarks(B), tris = headTris(B), S = sheetOf();
+  const HS = skull ? hullSurface(carve('swept'), rig) : null, hull = HS ? HS.tris.map(([a, b, c]) => [HS.verts[a], HS.verts[b], HS.verts[c]]) : null;
   const old = camsFor(who);
   const g = { pitch: old.front.pitch, sv: old.front.s * (old.front.ay ?? 1), cy: old.front.cy };
   for (const v of VIEWS) g[v] = { yaw: old[v].yaw, cx: old[v].cx, sx: old[v].s * (old[v].ax ?? 1), roll: old[v].roll ?? 0, sh: old[v].sh ?? 0 };
   const viewCost = (v, c) => {
+    if (skull) {
+      let m = 0;
+      for (const [n, at, p] of pairsOf(v, c, S, M)) if (n === 'ear') { const q = project(p, c); m += MARK_W.ear[0] * (q[0] - at[0]) ** 2; }
+      return skullCost(v, c, S, tris, hull) + m + PRIOR.roll * c.roll ** 2 + PRIOR.ax * (c.ax - 1) ** 2 + PRIOR.sh * c.sh ** 2 + (v === 'back' ? BACK_YAW[1] * (c.yaw - BACK_YAW[0]) ** 2 : 0);
+    }
     const o = outlineOf(v, c, S, tris);
     let m = 0;
     for (const [n, at, p] of pairsOf(v, c, S, M)) { const q = project(p, c); m += MARK_W[n][0] * (q[0] - at[0]) ** 2 + MARK_W[n][1] * (q[1] - at[1]) ** 2; }
@@ -132,5 +158,5 @@ function fit(rounds, who) {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const args = process.argv.slice(2), opt = (n, f) => { const i = args.indexOf(`--${n}`); return i < 0 ? f : args[i + 1]; };
-  fit(+opt('rounds', 7), opt('who', 'male'));
+  fit(+opt('rounds', 7), opt('who', 'male'), args.includes('--skull'));
 }
