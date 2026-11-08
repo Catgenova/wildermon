@@ -2,9 +2,9 @@
 // the rig's poses:
 //
 //   node tools/sculpt/lowhelmshot.mjs --out <dir> [--only sheet,close,wire,poses,walk,metrics] [--sheet <helm sheet png>]
-//        [--tag <name>] [--title <text>] [--head] [--with <name>=<module>:<builder>,...]
+//        [--tag <name>] [--title <text>] [--head] [--enchanted]
 //     helm-sheet<tag>.png: the sheet's five views (0, 45, 90, 135, 180) of each body's helm beside the model's, his above
-//       hers (--head: the head drawn too, not hidden);
+//       hers (--head: the head drawn too, not hidden; --enchanted: the plain and the enchanted look side by side);
 //     helm-close<tag>.png: front, three-quarter and profile at twice the scale, the sheet's beside each (closeback:
 //       profile, rear three-quarter and back, helm-closeback<tag>.png);
 //     helm-wire<tag>.png: the sheet's views with every polygon's outline, and the triangle counts by piece;
@@ -18,7 +18,7 @@ import { execFileSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { buildRig, posed, skin, fromGame, gameRig, armsOut, axisAngle, mm, tr } from './lowrig.mjs';
 import { skinGarment, checks, crossPairs, garmentAsset, bonesWith } from './lowgarment.mjs';
-import { buildHelm, helmWeights, MATS, GLOW } from './garments/helm.mjs';
+import { buildHelm, helmWeights, MATS, LOOKS } from './garments/helm.mjs';
 import { shoot, closeBrowser } from './lowgarmentshot.mjs';
 
 const args = process.argv.slice(2);
@@ -31,8 +31,11 @@ const SHEET = resolve(opt('sheet', '/tmp/claude-0/-home-user-Wurm/781c435a-4202-
 mkdirSync(out, { recursive: true });
 
 const SKIN = [0.68, 0.49, 0.41];
-// (the glow is unlit: handed to the review renderer as its colour + 2, which it draws as it is)
-const COL = Object.fromEntries(Object.entries(MATS).map(([k, c]) => [k, GLOW.includes(k) ? c.map((x) => x + 2) : c]));
+// the two looks' colours by material (an unlit one handed to the review renderer as its colour + 2, which it draws as it is)
+const rgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
+const LOOK = Object.fromEntries(Object.entries(LOOKS).map(([look, L]) => [look, Object.fromEntries(Object.keys(MATS).map((k, i) => [k, rgb(L[i].c).map((x) => x + (L[i].kind === 1 ? 2 : 0))]))]));
+const ENCH = flag('enchanted');
+let COL = LOOK.plain;
 const bodyMesh = (rig, P, hide) => {
   const keep = rig.B.polys.map((_, pi) => !hide?.has(pi));
   return { who: rig.who, P, polys: rig.B.polys.map((p) => p.nv ?? p.v), tris: rig.B.tris.filter((t) => keep[t.poly]).map((t) => [...t.v, t.poly]), col: rig.B.polys.map((p) => (p.mat === 'skin' ? SKIN : p.mat === 'pupil' ? [0.08, 0.06, 0.06] : [0.22, 0.15, 0.13])) };
@@ -92,7 +95,7 @@ function dress(who, pose) {
 }
 const scene = (who, d, o = {}) => {
   const { rig, G, hide } = M[who];
-  return [bodyMesh(rig, d.PB, flag('head') ? null : hide), garMesh(rig, G, d.PG, COL, o.edges)];
+  return [bodyMesh(rig, d.PB, flag('head') ? null : hide), garMesh(rig, G, d.PG, o.look ? LOOK[o.look] : COL, o.edges)];
 };
 
 /* ---- the sheet: five views beside the sheet's ------------------------------------------------------------------------- */
@@ -101,35 +104,37 @@ const VIEWS = [[0, 'Front (0°)'], [45, 'Three-quarter (45°)'], [90, 'Side (90�
 const SX = { male: [110, 276, 446, 606, 746], female: [945, 1082, 1265, 1425, 1580] };
 const SIZE = [1672, 941], CROP = [150, 200], CY = 98;
 const rest = (who) => { const d = dress(who, {}); return { PB: d.PB.map((p) => [p[0], p[1] - d.dy, p[2]]), PG: d.PG.map((p) => [p[0], p[1] - d.dy, p[2]]) }; };
+/** The looks a model cell is drawn in: plain, and with --enchanted the enchanted beside it. */
+const LOOKS_SHOWN = ENCH ? ['plain', 'enchanted'] : ['plain'];
 async function sheet(file, edges) {
-  const cw = 250, ch = 330, top = 34, cells = [], imgs = [], texts = [];
+  const cw = 250, ch = 330, top = 34, cells = [], imgs = [], texts = [], R = 1 + LOOKS_SHOWN.length;
   ['male', 'female'].forEach((who, r) => {
     const d0 = rest(who);
     VIEWS.forEach(([yaw, lab], i) => {
-      imgs.push({ src: SHEET, size: SIZE, crop: [SX[who][i] - CROP[0] / 2, CY, ...CROP], box: [i * cw, top + r * 2 * ch, cw, ch] });
-      cells.push({ meshes: scene(who, d0, { edges }), cam: { yaw, pitch: 0, s: 66, c: [0, 0.5, 0] }, box: [i * cw, top + (r * 2 + 1) * ch, cw, ch], label: `${who} ${lab}` });
+      imgs.push({ src: SHEET, size: SIZE, crop: [SX[who][i] - CROP[0] / 2, CY, ...CROP], box: [i * cw, top + r * R * ch, cw, ch] });
+      LOOKS_SHOWN.forEach((look, l) => cells.push({ meshes: scene(who, d0, { edges, look }), cam: { yaw, pitch: 0, s: 66, c: [0, 0.5, 0] }, box: [i * cw, top + (r * R + 1 + l) * ch, cw, ch], label: `${who} ${lab}${ENCH ? ` · ${look}` : ''}` }));
     });
     const byTag = {};
     for (const t of M[who].G.tris) { const g = (M[who].G.polys[t.poly].tag ?? '?').replace(/ [LR]$/, ''); byTag[g] = (byTag[g] ?? 0) + 1; }
-    texts.push({ cls: 'lab', css: `left:${5 * cw + 10}px;top:${top + r * 2 * ch + 10}px`, html: `${who}: the sheet ↑` });
-    texts.push({ cls: 'lab', css: `left:${5 * cw + 10}px;top:${top + (r * 2 + 1) * ch + 10}px`, html: `${who}: the model ↑<br>${M[who].G.tris.length} triangles${edges ? '<br>' + Object.entries(byTag).map(([k, v]) => `${k} ${v}`).join('<br>') : ''}` });
+    texts.push({ cls: 'lab', css: `left:${5 * cw + 10}px;top:${top + r * R * ch + 10}px`, html: `${who}: the sheet ↑` });
+    texts.push({ cls: 'lab', css: `left:${5 * cw + 10}px;top:${top + (r * R + 1) * ch + 10}px`, html: `${who}: the model ↓${ENCH ? ' (plain, then enchanted)' : ''}<br>${M[who].G.tris.length} triangles${edges ? '<br>' + Object.entries(byTag).map(([k, v]) => `${k} ${v}`).join('<br>') : ''}` });
   });
   texts.push({ css: 'left:10px;top:6px', html: opt('title', 'The helm on both low-poly bodies: the sheet\'s five views above each body\'s') });
-  await shoot(5 * cw + 200, top + 4 * ch, cells, file, { texts, imgs });
+  await shoot(5 * cw + 220, top + 2 * R * ch, cells, file, { texts, imgs });
 }
-/** Close: each body's front, three-quarter and profile at twice the sheet's scale, the sheet's beside each. */
+/** Close: each body's front, three-quarter and profile at twice the sheet's scale, the sheet's beside each (with --enchanted, both looks). */
 async function close(file, edges, which = [0, 1, 2]) {
-  const cw = 400, ch = 520, top = 34, cells = [], imgs = [], texts = [];
+  const cw = 360, ch = 470, top = 34, cells = [], imgs = [], texts = [], K = 1 + LOOKS_SHOWN.length;
   ['male', 'female'].forEach((who, r) => {
     const d0 = rest(who);
     which.forEach((i, n) => {
       const [yaw, lab] = VIEWS[i];
-      imgs.push({ src: SHEET, size: SIZE, crop: [SX[who][i] - CROP[0] / 2, CY, ...CROP], box: [n * 2 * cw, top + r * ch, cw, ch] });
-      cells.push({ meshes: scene(who, d0, { edges }), cam: { yaw, pitch: 0, s: 128, c: [0, 0.75, 0] }, box: [(n * 2 + 1) * cw, top + r * ch, cw, ch], label: `${who} ${lab}` });
+      imgs.push({ src: SHEET, size: SIZE, crop: [SX[who][i] - CROP[0] / 2, CY, ...CROP], box: [n * K * cw, top + r * ch, cw, ch] });
+      LOOKS_SHOWN.forEach((look, l) => cells.push({ meshes: scene(who, d0, { edges, look }), cam: { yaw, pitch: 0, s: 116, c: [0, 0.75, 0] }, box: [(n * K + 1 + l) * cw, top + r * ch, cw, ch], label: `${who} ${lab}${ENCH ? ` · ${look}` : ''}` }));
     });
   });
   texts.push({ css: 'left:10px;top:6px', html: opt('title', `The helm close: the sheet's ${which.map((i) => VIEWS[i][1]).join(', ')} beside each body's`) });
-  await shoot(2 * which.length * cw, top + 2 * ch, cells, file, { texts, imgs });
+  await shoot(K * which.length * cw, top + 2 * ch, cells, file, { texts, imgs });
 }
 if (only.includes('close')) await close(join(out, `helm-close${tag}.png`), false);
 if (only.includes('closeback')) await close(join(out, `helm-closeback${tag}.png`), false, [2, 3, 4]);

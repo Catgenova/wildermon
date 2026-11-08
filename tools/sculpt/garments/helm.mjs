@@ -8,8 +8,8 @@
 //
 //   node tools/sculpt/garments/helm.mjs
 //     writes the game's copy beside each body: src/sculpt/assets/lowhelm-male.json and lowhelm-female.json
-//     (lowgarment.mjs garmentAsset, plus `hides`, the head's polygons inside the helm; `glow`, the materials drawn unlit;
-//     loaded by src/sculpt/lowpoly.ts)
+//     (lowgarment.mjs garmentAsset, plus `hides`, the head's polygons the helm covers whole; `plain` and `enchanted`, its
+//     two looks; loaded by src/sculpt/lowpoly.ts)
 //
 // The construction, in the body's units and axes (y up, the chin's underside 0, z forward, x the body's left), about a
 // vertical axis through (0, ·, z0); an azimuth 0 forward, +90 toward the body's left:
@@ -26,19 +26,27 @@
 import { meshOf, orient, trisOf, samplesOf, closestOnTri, sub, add, mul, dot, cross, unit, lerp } from '../lowgarment.mjs';
 
 /**
- * The plate set's shared colours (red, green, blue nought to one; the same values and names on every plate piece, so the
- * game shares their slots): plate (the sheet's beige-tan mid-tones under the review light), shade, gold, glow #FFE7A6
- * (emissive), under.
+ * The plate set's shared colours and names (red, green, blue nought to one; the same on every plate piece, so the game
+ * shares their slots): plate, shade, gold (the raised trim, metal in both looks), core (the cores: the star and the
+ * discs' bosses).
  */
 export const MATS = {
   plate: [0.7, 0.58, 0.52],
   shade: [0.59, 0.49, 0.44],
   gold: [0.96, 0.74, 0.4],
-  glow: [1, 0.906, 0.651],
-  under: [0.29, 0.22, 0.2],
+  core: [0.86, 0.62, 0.3],
 };
-/** The materials drawn unlit (emissive, always lit). */
-export const GLOW = ['glow'];
+/** The enchanted cores' glow (#FFE7A6), drawn unlit. */
+export const GLOW = [1, 0.906, 0.651];
+const hex = (c) => `#${c.map((x) => Math.round(x * 255).toString(16).padStart(2, '0')).join('')}`;
+/**
+ * The two looks, parallel to MATS (each { c, kind }: kind 0 lit by the body's light, 1 unlit): plain, every material
+ * lit, the cores a gold-amber gem; enchanted, the cores glowing (the plate set's ENCHANT rule, as the long sword's).
+ */
+export const LOOKS = {
+  plain: Object.values(MATS).map((c) => ({ c: hex(c), kind: 0 })),
+  enchanted: Object.entries(MATS).map(([k, c]) => (k === 'core' ? { c: hex(GLOW), kind: 1 } : { c: hex(c), kind: 0 })),
+};
 
 /** Piecewise linear through [x, y] pairs (sorted by x), held at the ends. */
 const interp = (P, x) => {
@@ -68,7 +76,7 @@ export const DESIGN = {
   male: {
     z0: 0.1,
     sec: [[-0.3, 0.74, 0.96, 0.82, 2.6], [0.3, 0.84, 1.04, 0.8, 2.6], [0.6, 0.92, 1.06, 0.84, 2.6], [0.9, 0.97, 1.06, 0.95, 2.6], [1.4, 0.97, 1.0, 1.0, 2.5], [1.8, 0.88, 0.88, 0.94, 2.3], [2.1, 0.64, 0.62, 0.72, 2.1], [2.26, 0.3, 0.28, 0.36, 2.0]],
-    top: [0, 2.31, -0.04], rings: [2.17, 1.98, 1.76], domeStep: 0.045,
+    top: [0, 2.31, -0.04], rings: [2.04, 1.76], domeStep: 0.045,
     band: { top: [[0, 1.68], [22, 1.56], [44, 1.44], [62, 1.42], [180, 1.42]], bot: [[0, 0.8], [22, 0.88], [44, 0.96], [62, 1.0], [180, 1.0]], out: [[0, 0.34], [22, 0.22], [44, 0.15], [62, 0.13], [100, 0.12], [180, 0.12]], rim: 0.07, rimOut: 0.035 },
     ledge: 0.03,
     back: { p1: [[0, 0.6], [82, 0.66], [102, 0.76], [180, 0.76]], step: [[0, 0], [102, 0], [126, 0.09], [180, 0.11]], bot: [[0, -0.16], [22, 0.0], [44, 0.14], [62, 0.2], [82, 0.24], [102, 0.24], [180, 0.12]], flare: [[0, 0], [102, 0.0], [126, 0.1], [180, 0.15]] },
@@ -76,13 +84,13 @@ export const DESIGN = {
     gap: 0.01, thick: 0.07, skirtIn: 0.12, window: 82,
     crest: { w: 0.38, wt: 0.3, h: 0.17 }, star: 0.34,
     disc: { r: 0.38, boss: 0.21, h: 0.08, bh: 0.08 },
-    cheek: { az: [[84, 0.9], [98, 0.9], [92, 0.32], [84, 0.3]], t: 0.07 },
+    cheek: { az: [[83, 0.9], [98, 0.9], [92, 0.32], [83, 0.3]], t: 0.07 },
     guard: { cz: -0.15, cols: 8, top: -0.06, ring: -0.24, bot: -0.36, clear: 0.08, t: 0.06, flare: 0.03 },
   },
   female: {
     z0: 0.05,
     sec: [[-0.3, 0.62, 0.86, 0.74, 2.3], [0.3, 0.74, 0.96, 0.72, 2.3], [0.6, 0.84, 0.98, 0.8, 2.3], [0.9, 0.89, 0.99, 0.96, 2.3], [1.4, 0.89, 0.95, 1.01, 2.25], [1.8, 0.8, 0.82, 0.92, 2.15], [2.1, 0.58, 0.56, 0.7, 2.0], [2.26, 0.26, 0.24, 0.32, 2.0]],
-    top: [0, 2.31, -0.06], rings: [2.17, 1.98, 1.76], domeStep: 0.04,
+    top: [0, 2.31, -0.06], rings: [2.04, 1.76], domeStep: 0.04,
     band: { top: [[0, 1.7], [22, 1.58], [44, 1.46], [62, 1.44], [180, 1.44]], bot: [[0, 0.84], [22, 0.92], [44, 0.99], [62, 1.02], [180, 1.02]], out: [[0, 0.3], [22, 0.19], [44, 0.12], [62, 0.1], [100, 0.09], [180, 0.09]], rim: 0.06, rimOut: 0.03 },
     ledge: 0.03,
     back: { p1: [[0, 0.62], [82, 0.68], [102, 0.78], [180, 0.78]], step: [[0, 0], [102, 0], [126, 0.08], [180, 0.09]], bot: [[0, -0.1], [22, 0.05], [44, 0.2], [62, 0.26], [82, 0.28], [102, 0.28], [180, 0.16]], flare: [[0, 0], [102, 0.0], [126, 0.09], [180, 0.12]] },
@@ -90,7 +98,7 @@ export const DESIGN = {
     gap: 0.01, thick: 0.06, skirtIn: 0.1, window: 82,
     crest: { w: 0.3, wt: 0.22, h: 0.15 }, star: 0.3,
     disc: { r: 0.34, boss: 0.19, h: 0.07, bh: 0.07 },
-    cheek: { az: [[84, 0.92], [98, 0.92], [92, 0.36], [84, 0.34]], t: 0.06 },
+    cheek: { az: [[83, 0.92], [98, 0.92], [92, 0.36], [83, 0.34]], t: 0.06 },
     guard: { cz: -0.11, cols: 8, top: -0.04, ring: -0.32, bot: -0.44, clear: 0.04, t: 0.05, flare: 0.03 },
   },
 };
@@ -234,7 +242,7 @@ export function buildHelm(rig, design = DESIGN[rig.who]) {
     const n = topPts.length;
     for (let i = 0; i < n; i++) { if (opts.open?.(i)) continue; const k = (i + 1) % n; G.poly([Fo[i], Fo[k], T[k], T[i]], typeof wallMat === 'function' ? wallMat(i) : wallMat, 'helm'); }
     // the underside (closed solid): a fan of the foot
-    if (opts.closed) G.poly([...Fo].reverse(), 'shade', 'helm');
+    if (opts.closed) for (const f of faces?.length ? faces : [topPts.map((_, i) => i)]) G.poly(f.map((i) => Fo[i]).reverse(), 'shade', 'helm');
     return { T, Fo };
   };
 
@@ -286,8 +294,8 @@ export function buildHelm(rig, design = DESIGN[rig.who]) {
         for (let e = 0; e < 4; e++) { const [a, b] = [c[e], c[(e + 1) % 4]]; G.poly([Tg[a[0]][a[1]], Tg[b[0]][b[1]], Bg[b[0]][b[1]], Bg[a[0]][a[1]]], 'shade', 'helm'); }
         continue;
       }
-      // (one face: drawn from both sides, its inside seen through the vents)
       G.poly([Tg[i][k], Tg[i + 1][k], Tg[i + 1][k + 1], Tg[i][k + 1]], 'plate', 'helm');
+      G.poly([Bg[i][k + 1], Bg[i + 1][k + 1], Bg[i + 1][k], Bg[i][k]], 'shade', 'helm');
     }
     // the outer walls round the frame
     const ring = [...SS.map((_, i) => [i, 0]), ...TT.slice(1).map((_, k) => [SS.length - 1, k + 1]), ...SS.slice(0, -1).map((_, i) => [SS.length - 2 - i, TT.length - 1]), ...TT.slice(1, -1).map((_, k) => [0, TT.length - 2 - k])];
@@ -303,12 +311,12 @@ export function buildHelm(rig, design = DESIGN[rig.who]) {
     // (its points on the shell straight in toward the axis: [middle top, back top, back bottom, middle bottom])
     const on = C.az.map(([az, y]) => { const d = [Math.sin(sg * az * Math.PI / 180), 0, Math.cos(az * Math.PI / 180)]; const o = add([0, y, z0], mul(d, 4)), h = rayShell(o, mul(d, -1)); return h && h.t < 4 ? h : onShell(o); });
     // (its foot a little further off the shell than a plate's: the shell folds under its rear edge)
-    const top = on.map((h) => add(h.q, mul(h.n, D.gap + C.t))), foot = on.map((h) => add(h.q, mul(h.n, 3 * D.gap)));
+    const top = on.map((h) => add(h.q, mul(h.n, D.gap + C.t))), foot = on.map((h) => add(h.q, mul(h.n, 4 * D.gap)));
     const pts = [Bt, ...top, Ct], feet = [Bb, ...foot, Cb];
     // (its front edge on the faceplate's, its foot there the faceplate's inner face, no wall; its rear edge gold; two
     // faces, front and back of the middle)
     const L = sg > 0, o = (l) => (L ? l : [...l].reverse()), m = (i) => (L ? i : 5 - i);
-    plate(`cheek ${L ? 'L' : 'R'}`, o(pts), [[0, 1, 4, 5], [1, 2, 3, 4]].map((f) => f.map(m)), 'plate', (i) => (i === (L ? 2 : 2) ? 'gold' : 'shade'), { open: (i) => i === 5, foot: o(feet) });
+    plate(`cheek ${L ? 'L' : 'R'}`, o(pts), [[0, 1, 4, 5], [1, 2, 3, 4]].map((f) => f.map(m)), 'plate', (i) => (i === (L ? 2 : 2) ? 'gold' : 'shade'), { open: (i) => i === 5, foot: o(feet), closed: true });
   }
 
   /* ---- the side discs: on the band at 90, a boss on each ---- */
@@ -323,7 +331,7 @@ export function buildHelm(rig, design = DESIGN[rig.who]) {
     const { T } = plate(tag, outer, [], 'plate', 'shade', { foot: oct(C.r, -C.h) });
     // (the face: the ring between the rim and the boss, then the boss, a low eight-sided dome)
     const Bi = bossB.map((p) => G.vert(p, tag)), cT = G.vert(add(c0, mul(n, C.bh)), tag);
-    for (let k = 0; k < 8; k++) { const k1 = (k + 1) % 8; G.poly([T[k], T[k1], Bi[k1], Bi[k]], 'plate', 'helm'); G.poly([Bi[k], Bi[k1], cT], 'gold', 'helm'); }
+    for (let k = 0; k < 8; k++) { const k1 = (k + 1) % 8; G.poly([T[k], T[k1], Bi[k1], Bi[k]], 'plate', 'helm'); G.poly([Bi[k], Bi[k1], cT], 'core', 'helm'); }
   }
 
   /* ---- the star on the brow: a four-pointed star laid on the beak, seen from the front ---- */
@@ -335,7 +343,7 @@ export function buildHelm(rig, design = DESIGN[rig.who]) {
     const T = pts.map(([x, y]) => { const h = hit(x, y); return G.vert(add(h.q, mul(h.n, D.gap + 0.035)), 'star'); });
     const Fo = pts.map(([x, y]) => { const h = hit(x, y); return G.vert(add(h.q, mul(h.n, D.gap)), 'star'); });
     const h0 = hit(0, yS), cT = G.vert(add(h0.q, mul(h0.n, D.gap + 0.06)), 'star');
-    for (let k = 0; k < 8; k++) { const k1 = (k + 1) % 8; G.poly([cT, T[k], T[k1]], 'glow', 'helm'); G.poly([Fo[k], Fo[k1], T[k1], T[k]], 'gold', 'helm'); }
+    for (let k = 0; k < 8; k++) { const k1 = (k + 1) % 8; G.poly([cT, T[k], T[k1]], 'core', 'helm'); G.poly([Fo[k], Fo[k1], T[k1], T[k]], 'gold', 'helm'); }
   }
 
   /* ---- the neck guard: dark round the neck from inside the bottom rim, a collar ring at its foot ---- */
@@ -422,7 +430,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const rig = buildRig(who), G = buildHelm(rig);
     G.vw = helmWeights(rig, G);
     const file = new URL(`../../../src/sculpt/assets/lowhelm-${who}.json`, import.meta.url);
-    const A = { built: 'node tools/sculpt/garments/helm.mjs (tools/sculpt/lowgarment.mjs garmentAsset)', ...garmentAsset(rig, G, MATS), hides: G.hides, glow: GLOW };
+    const A = { built: 'node tools/sculpt/garments/helm.mjs (tools/sculpt/lowgarment.mjs garmentAsset)', ...garmentAsset(rig, G, MATS), hides: G.hides, ...LOOKS };
     writeFileSync(file, JSON.stringify(A));
     console.log(who, `${G.verts.length} vertices, ${G.tris.length} triangles, ${A.base} + ${A.bones.length} bones, hides ${G.hides.length} body polygons: wrote`, file.pathname);
   }
