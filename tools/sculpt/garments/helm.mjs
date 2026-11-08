@@ -27,13 +27,13 @@ import { meshOf, orient, trisOf, samplesOf, closestOnTri, sub, add, mul, dot, cr
 
 /**
  * The plate set's shared colours (red, green, blue nought to one; the same values and names on every plate piece, so the
- * game shares their slots): plate #E8C7BD (the sheet's lit plate under the review light), shade, gold #D9A85A, glow
- * #FFE7A6 (emissive), under.
+ * game shares their slots): plate (the sheet's beige-tan mid-tones under the review light), shade, gold, glow #FFE7A6
+ * (emissive), under.
  */
 export const MATS = {
-  plate: [0.91, 0.78, 0.74],
-  shade: [0.8, 0.67, 0.63],
-  gold: [0.851, 0.659, 0.353],
+  plate: [0.82, 0.65, 0.54],
+  shade: [0.68, 0.51, 0.41],
+  gold: [0.96, 0.74, 0.4],
   glow: [1, 0.906, 0.651],
   under: [0.29, 0.22, 0.2],
 };
@@ -67,30 +67,30 @@ const byAz = (T, az) => interp(T, Math.abs(az));
 export const DESIGN = {
   male: {
     z0: 0.1,
-    sec: [[-0.3, 0.84, 1.0, 0.82, 2.6], [0.3, 0.88, 1.06, 0.8, 2.6], [0.6, 0.93, 1.06, 0.84, 2.6], [0.9, 0.97, 1.06, 0.95, 2.6], [1.4, 0.97, 1.0, 1.0, 2.5], [1.9, 0.86, 0.86, 0.92, 2.3], [2.2, 0.62, 0.6, 0.7, 2.1], [2.36, 0.3, 0.28, 0.36, 2.0]],
-    top: [0, 2.42, -0.04], rings: [2.26, 2.04, 1.74],
-    band: { top: [[0, 1.68], [22, 1.56], [44, 1.46], [62, 1.42], [180, 1.42]], bot: [[0, 0.82], [22, 0.88], [44, 0.94], [62, 0.97], [100, 0.98], [180, 0.98]], out: [[0, 0.34], [22, 0.22], [44, 0.15], [62, 0.13], [100, 0.12], [180, 0.12]], rim: 0.07, rimOut: 0.035 },
+    sec: [[-0.3, 0.74, 0.96, 0.82, 2.6], [0.3, 0.84, 1.04, 0.8, 2.6], [0.6, 0.92, 1.06, 0.84, 2.6], [0.9, 0.97, 1.06, 0.95, 2.6], [1.4, 0.97, 1.0, 1.0, 2.5], [1.8, 0.88, 0.88, 0.94, 2.3], [2.1, 0.64, 0.62, 0.72, 2.1], [2.26, 0.3, 0.28, 0.36, 2.0]],
+    top: [0, 2.31, -0.04], rings: [2.17, 1.98, 1.72],
+    band: { top: [[0, 1.68], [22, 1.56], [44, 1.44], [62, 1.42], [180, 1.42]], bot: [[0, 0.8], [22, 0.88], [44, 0.96], [62, 1.0], [180, 1.0]], out: [[0, 0.34], [22, 0.22], [44, 0.15], [62, 0.13], [100, 0.12], [180, 0.12]], rim: 0.07, rimOut: 0.035 },
     ledge: 0.03,
-    back: { p1: [[0, 0.6], [104, 0.6], [126, 0.5], [180, 0.48]], step: [[0, 0], [104, 0], [126, 0.08], [180, 0.1]], bot: [[0, -0.16], [22, 0.0], [44, 0.14], [62, 0.2], [82, 0.18], [126, 0.08], [180, 0.04]], flare: [[0, 0], [82, 0.0], [126, 0.1], [180, 0.14]] },
-    face: { yTop: 0.73, yBot: -0.16, zTop: 1.22, zBot: 1.13, ang: 40, xOutTop: 0.8, xOutBot: 0.64, eye: 0.08, botOut: 0.0, seam: 0.05, t: 0.07, vents: [[0.2, 0.3], [0.44, 0.54], [0.68, 0.78]], vt: [0.16, 0.66] },
+    back: { p1: [[0, 0.6], [104, 0.6], [126, 0.46], [180, 0.44]], step: [[0, 0], [104, 0], [126, 0.09], [180, 0.11]], bot: [[0, -0.16], [22, 0.0], [44, 0.14], [62, 0.2], [82, 0.18], [126, 0.08], [180, 0.04]], flare: [[0, 0], [82, 0.0], [126, 0.1], [180, 0.14]] },
+    face: { yTop: 0.72, yBot: -0.16, zTop: 1.24, zBot: 1.14, ang: 34, xOutTop: 0.86, xOutBot: 0.66, eye: 0.08, botOut: 0.0, seam: 0.05, t: 0.07, vents: [[0.2, 0.3], [0.44, 0.54], [0.68, 0.78]], vt: [0.16, 0.66] },
     gap: 0.01, thick: 0.07, lining: 0.55,
-    crest: { w: 0.38, wt: 0.3, h: 0.17 }, star: 0.3,
-    disc: { r: 0.34, boss: 0.19, h: 0.07, bh: 0.07 },
-    cheek: { az: [[64, 0.9], [100, 0.9], [96, 0.1], [62, 0.08]], t: 0.05 },
+    crest: { w: 0.38, wt: 0.3, h: 0.17 }, star: 0.38,
+    disc: { r: 0.31, boss: 0.17, h: 0.07, bh: 0.07 },
+    cheek: { az: [[64, 0.92], [104, 0.92], [94, 0.14], [62, 0.16]], t: 0.05 },
     guard: { cz: -0.15, cols: 10, top: 0.2, ring: -0.2, bot: -0.36, clear: 0.05, t: 0.06, flare: 0.03 },
   },
   female: {
     z0: 0.05,
-    sec: [[-0.3, 0.74, 0.92, 0.76, 2.4], [0.3, 0.8, 1.0, 0.74, 2.4], [0.6, 0.85, 1.0, 0.8, 2.4], [0.9, 0.9, 1.0, 0.98, 2.4], [1.4, 0.9, 0.96, 1.02, 2.3], [1.9, 0.8, 0.82, 0.94, 2.2], [2.2, 0.58, 0.56, 0.7, 2.0], [2.34, 0.28, 0.26, 0.34, 2.0]],
-    top: [0, 2.4, -0.06], rings: [2.24, 2.02, 1.74],
-    band: { top: [[0, 1.7], [22, 1.58], [44, 1.48], [62, 1.44], [180, 1.44]], bot: [[0, 0.86], [22, 0.92], [44, 0.98], [62, 1.0], [100, 1.01], [180, 1.01]], out: [[0, 0.3], [22, 0.19], [44, 0.13], [62, 0.11], [100, 0.1], [180, 0.1]], rim: 0.06, rimOut: 0.03 },
+    sec: [[-0.3, 0.62, 0.86, 0.74, 2.3], [0.3, 0.74, 0.96, 0.72, 2.3], [0.6, 0.84, 0.98, 0.8, 2.3], [0.9, 0.89, 0.99, 0.96, 2.3], [1.4, 0.89, 0.95, 1.01, 2.25], [1.8, 0.8, 0.82, 0.92, 2.15], [2.1, 0.58, 0.56, 0.7, 2.0], [2.26, 0.26, 0.24, 0.32, 2.0]],
+    top: [0, 2.31, -0.06], rings: [2.17, 1.98, 1.72],
+    band: { top: [[0, 1.7], [22, 1.58], [44, 1.46], [62, 1.44], [180, 1.44]], bot: [[0, 0.84], [22, 0.92], [44, 0.99], [62, 1.02], [180, 1.02]], out: [[0, 0.3], [22, 0.19], [44, 0.12], [62, 0.1], [100, 0.09], [180, 0.09]], rim: 0.06, rimOut: 0.03 },
     ledge: 0.03,
-    back: { p1: [[0, 0.62], [104, 0.62], [126, 0.52], [180, 0.5]], step: [[0, 0], [104, 0], [126, 0.05], [180, 0.07]], bot: [[0, -0.1], [22, 0.05], [44, 0.18], [62, 0.24], [82, 0.22], [126, 0.1], [180, 0.06]], flare: [[0, 0], [82, 0.0], [126, 0.07], [180, 0.1]] },
-    face: { yTop: 0.78, yBot: -0.1, zTop: 1.16, zBot: 1.04, ang: 42, xOutTop: 0.72, xOutBot: 0.54, eye: 0.08, botOut: 0.0, seam: 0.045, t: 0.06, vents: [[0.2, 0.3], [0.44, 0.54], [0.68, 0.78]], vt: [0.16, 0.66] },
+    back: { p1: [[0, 0.62], [104, 0.62], [126, 0.5], [180, 0.48]], step: [[0, 0], [104, 0], [126, 0.07], [180, 0.08]], bot: [[0, -0.1], [22, 0.05], [44, 0.2], [62, 0.26], [82, 0.24], [126, 0.12], [180, 0.08]], flare: [[0, 0], [82, 0.0], [126, 0.08], [180, 0.11]] },
+    face: { yTop: 0.76, yBot: -0.1, zTop: 1.17, zBot: 1.04, ang: 37, xOutTop: 0.78, xOutBot: 0.56, eye: 0.08, botOut: 0.0, seam: 0.045, t: 0.06, vents: [[0.2, 0.3], [0.44, 0.54], [0.68, 0.78]], vt: [0.16, 0.66] },
     gap: 0.01, thick: 0.06, lining: 0.5,
-    crest: { w: 0.32, wt: 0.25, h: 0.15 }, star: 0.27,
-    disc: { r: 0.3, boss: 0.17, h: 0.06, bh: 0.06 },
-    cheek: { az: [[64, 0.94], [100, 0.94], [96, 0.14], [62, 0.12]], t: 0.045 },
+    crest: { w: 0.3, wt: 0.22, h: 0.15 }, star: 0.34,
+    disc: { r: 0.28, boss: 0.15, h: 0.06, bh: 0.06 },
+    cheek: { az: [[64, 0.94], [102, 0.94], [92, 0.2], [62, 0.22]], t: 0.045 },
     guard: { cz: -0.11, cols: 10, top: 0.16, ring: -0.3, bot: -0.46, clear: 0.04, t: 0.05, flare: 0.03 },
   },
 };
@@ -167,7 +167,7 @@ export function buildHelm(rig, design = DESIGN[rig.who]) {
     if (key === 'bt') return 'gold';                 // the band's top ledge
     if (key === 'brr' || key === 'brg') return 'gold'; // the rim's ledge and face
     if (key === 'blo') return front(az) ? 'under' : 'shade'; // the band's underside
-    if (key === 'bli') return front(az) ? 'under' : 'plate'; // under the band: the face's dark at the front
+    if (key === 'bli') return front(az) ? 'under' : 'shade'; // under the band: the face's dark at the front, the side and plate 1 in shade
     if (key === 'p1b') return 'gold';                // plate 2's top ledge
     if (key === 'p2t') return front(az) ? 'under' : 'plate';
     return 'plate';
@@ -287,7 +287,9 @@ export function buildHelm(rig, design = DESIGN[rig.who]) {
   /* ---- the cheek plates ---- */
   for (const sg of [1, -1]) {
     const C = D.cheek, pts = C.az.map(([az, y]) => { const s = onShell(at(sg * az, secR(D, sg * az, y) + 0.3, y)); return add(s.q, mul(s.n, D.gap + C.t)); });
-    plate(`cheek ${sg > 0 ? 'L' : 'R'}`, sg > 0 ? pts : [...pts].reverse(), null, 'plate', 'shade');
+    // (its front and bottom edges gold)
+    const gold = sg > 0 ? [2, 3] : [0, 3];
+    plate(`cheek ${sg > 0 ? 'L' : 'R'}`, sg > 0 ? pts : [...pts].reverse(), null, 'plate', (i) => (gold.includes(i) ? 'gold' : 'shade'));
   }
 
   /* ---- the side discs: on the band at 90, a boss on each ---- */
@@ -310,7 +312,7 @@ export function buildHelm(rig, design = DESIGN[rig.who]) {
   {
     const yS = (byAz(B.bot, 0) + B.rim + byAz(B.top, 0)) / 2, R = D.star, r = R * 0.26;
     const hit = (x, y) => rayShell([x, y, 6], [0, 0, -1]);
-    const pts = Array.from({ length: 8 }, (_, k) => { const a = k * Math.PI / 4, l = k % 2 ? r : R; return [Math.sin(a) * l, yS + Math.cos(a) * l]; });
+    const pts = Array.from({ length: 8 }, (_, k) => { const a = k * Math.PI / 4, l = k % 2 ? r : R; return [Math.sin(a) * l, yS + Math.cos(a) * l * (k % 4 === 0 ? 1.1 : 1)]; });
     G.tag = 'star';
     const T = pts.map(([x, y]) => { const h = hit(x, y); return G.vert(add(h.q, mul(h.n, D.gap + 0.035)), 'star'); });
     const Fo = pts.map(([x, y]) => { const h = hit(x, y); return G.vert(add(h.q, mul(h.n, D.gap)), 'star'); });
