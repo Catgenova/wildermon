@@ -20,6 +20,8 @@
 //           stations.
 //     sec   its cross-section (or the name of one of the style's), [across (-0.5..0.5 of w), up (0..1 of h)] corners, the first and the last on the skin (sunk
 //           SINK into it so the root never shows a gap); the corners' order runs from the head's right to its left.
+//           Two corners side by side marked by a third value (1) are a groove's floor: the faces between them, the
+//           lock's length, its valley (polygon `valley`, drawn a tone darker).
 //   jitter: the corners above the roots moved by up to this much (head units, where the roll is 0.2 high; less where it
 //           is lower), each its own way (repeatably), so the rolls break into facets.
 //   buzz:  { lean, drop, ahead }: the side faces forward of the shave buzzed as far as a sideburn's line (buzzOf).
@@ -99,8 +101,6 @@ export function buildHair(rig, style = SWEPT, hull = null) {
   const k = (P('f3.L')[0] + P('t0')[2] - P('bk')[2]) / (0.73 + 0.739 + 0.79);
   const surf = (over, out) => { const d = dirOf(over, out), h = hit(skull, C, d); return { p: add(C, mul(d, h.t)), n: h.n, d }; };
   const verts = [], polys = [], pieces = [];
-  // the corners down in a groove between two locks (valleyOf)
-  const groove = new Set();
   // a point moved along its direction from the skull's centre to `b` of the hull's thickness off the skin there
   let cl = null;
   const onHull = (q, b) => {
@@ -108,7 +108,7 @@ export function buildHair(rig, style = SWEPT, hull = null) {
     return add(C, mul(dq, hq.t + Math.max(MIN_H * k, b * hull.thick.at(o, u) * k * (cl.scale ?? 1))));
   };
   for (cl of style.clumps) {
-    if (cl.mass) { massOf(cl, { skull, C, k, verts, polys, pieces, hull, groove, scalp: new Set(shaveOf(B, style.scalp ?? style.shave)) }); continue; }
+    if (cl.mass) { massOf(cl, { skull, C, k, verts, polys, pieces, hull, scalp: new Set(shaveOf(B, style.scalp ?? style.shave)) }); continue; }
     const n = cl.n ?? 9, sec = typeof cl.sec === 'string' ? style[cl.sec] : cl.sec ?? style.sec;
     const first = polys.length, base = verts.length;
     // the spine: each control point on the skin, stood off it by its lift along the skull's outward direction
@@ -121,6 +121,9 @@ export function buildHair(rig, style = SWEPT, hull = null) {
       return lerp(fine[j - 1], fine[j], (want - len[j - 1]) / Math.max(1e-9, len[j] - len[j - 1]));
     });
     const ring = [];
+    // each corner's key for its jitter: a groove's two corners (a valley's floor, marked by a third value) the one key,
+    // so they move as one
+    const key = []; sec.forEach((c, j) => key.push(j && c[2] && sec[j - 1][2] ? key[j - 1] : j ? key[j - 1] + 1 : 0));
     // the inner stations' share of the run, for the widths and heights (the tips have none)
     const ui = (i) => (i - 1) / Math.max(1, n - 3);
     for (let i = 0; i < n; i++) {
@@ -152,26 +155,26 @@ export function buildHair(rig, style = SWEPT, hull = null) {
         // (at a lip, the front ring's roots stand just off the skin: the lock's front edge overhangs the forehead)
         if (root) { const dq = unit(sub(q, C)), hq = hit(skull, C, dq); if (hq.t > 0) q = add(C, mul(dq, hq.t + ((cl.lip && i === 1) || cl.float ? LIP * k : -SINK * k))); }
         else if (hull) q = onHull(q, b);
-        if (!root && style.jitter) q = add(q, [0, 1, 2].map((c) => (hash(pieces.length * 101 + i * 7 + j, c) - 0.5) * 2 * style.jitter * Math.min(1, hh / (0.2 * k)) * k));
+        if (!root && style.jitter) q = add(q, [0, 1, 2].map((c) => (hash(pieces.length * 101 + i * 7 + key[j], c) - 0.5) * 2 * style.jitter * Math.min(1, hh / (0.2 * k)) * k));
         verts.push(q);
         r.push(verts.length - 1);
-        // a groove: a corner lower than both its neighbours across the section (not a root)
-        if (!root && b < sec[j - 1][1] && b < sec[j + 1][1]) groove.add(verts.length - 1);
       });
       ring.push(r);
     }
     // the faces: each band between two stations, a fan to each tip, outward
     const m = sec.length;
-    const quad = (a, b, c, d) => polys.push({ v: [a, b, c, d], piece: pieces.length });
-    for (let i = 1; i < n - 2; i++) for (let j = 0; j < m; j++) quad(ring[i][j], ring[i][(j + 1) % m], ring[i + 1][(j + 1) % m], ring[i + 1][j]);
+    // (a face between a groove's two corners is its valley, the whole length of the lock)
+    const vl = (j) => (sec[j][2] && sec[(j + 1) % m][2] ? { valley: true } : {});
+    const quad = (a, b, c, d, j) => polys.push({ v: [a, b, c, d], piece: pieces.length, ...vl(j) });
+    for (let i = 1; i < n - 2; i++) for (let j = 0; j < m; j++) quad(ring[i][j], ring[i][(j + 1) % m], ring[i + 1][(j + 1) % m], ring[i + 1][j], j);
     for (let j = 0; j < m; j++) {
-      polys.push({ v: [ring[0][0], ring[1][(j + 1) % m], ring[1][j]], piece: pieces.length });
-      polys.push({ v: [ring[n - 1][0], ring[n - 2][j], ring[n - 2][(j + 1) % m]], piece: pieces.length });
+      polys.push({ v: [ring[0][0], ring[1][(j + 1) % m], ring[1][j]], piece: pieces.length, ...vl(j) });
+      polys.push({ v: [ring[n - 1][0], ring[n - 2][j], ring[n - 2][(j + 1) % m]], piece: pieces.length, ...vl(j) });
     }
     pieces.push({ id: cl.id, polys: [first, polys.length], verts: [base, verts.length] });
   }
+  if (style.v) aboveV(style, verts, pieces, skull, C, k);
   orientOut(verts, polys, pieces);
-  valleyOf(verts, polys, pieces, groove);
   // the buzz: the head's side faces forward of the shave as far as the sideburn's line, as patches just off them
   if (style.buzz) buzzOf(B, style, verts, polys, k);
   const tris = [];
@@ -201,34 +204,46 @@ export function buildHair(rig, style = SWEPT, hull = null) {
  * solved one (cl.fit.t, per row and station, head units on the male, tools/sculpt/lowhairfront.mjs) or, unsolved, the
  * hull's. The border (the first and the last rows, the roots behind the hairline and at the crown) are sunk in the
  * skin, the undersides clear of the face; the piece closes in a fan from the skull's centre under them. The pieces'
- * record keeps each corner's ray, its drop and its role (sole, tip) for the solver.
+ * record keeps each corner's ray, its drop and its role (sole, tip) for the solver, and each row's line or band (src:
+ * a crease's two rows the one).
  */
-export function massOf(cl, { skull, C, k, verts, polys, pieces, hull, groove: low, scalp }) {
-  const n = cl.lines[0].length, band = cl.band ?? [[0.5, 0]], groove = cl.groove ?? 0.04, rows = [];
+export function massOf(cl, { skull, C, k, verts, polys, pieces, hull, scalp }) {
+  const n = cl.lines[0].length, band = cl.band ?? [[0.5, 0]], groove = cl.groove ?? 0.04, laid = [];
   cl.lines.forEach((cr, i) => {
     if (cr.length !== n) throw new Error(`${cl.id}: every line ${n} stations`);
-    rows.push({ dirs: cr, drop: i > 0 && i < cl.lines.length - 1 ? groove : 0 });
-    if (i < cl.lines.length - 1) for (const [f, drop] of band) rows.push({ dirs: cr.map((a, j) => [0, 1].map((c) => a[c] + (cl.lines[i + 1][j][c] - a[c]) * f)), drop });
+    laid.push({ dirs: cr, drop: i > 0 && i < cl.lines.length - 1 ? groove : 0, crease: i > 0 && i < cl.lines.length - 1 });
+    // (ridges: each tuft's one band row laid out on its own, rather than between its creases)
+    if (i < cl.lines.length - 1) for (const [f, drop] of band) laid.push({ dirs: cl.ridges ? cl.ridges[i] : cr.map((a, j) => [0, 1].map((c) => a[c] + (cl.lines[i + 1][j][c] - a[c]) * f)), drop });
+  });
+  // the valleys (strip: { from, to, w }): each crease from station `from` to `to` two rows, each `w` of the way toward
+  // the ridge beside it at the crease's own depth, the strip between them its valley; before and after, one row (the
+  // two share their corners)
+  const st = cl.strip, split = (j) => !!st && j >= st.from && j <= st.to, rows = [];
+  laid.forEach((row, i) => {
+    if (!st || !row.crease) { rows.push({ ...row, src: i }); return; }
+    for (const [side, nb] of [[0, laid[i - 1]], [1, laid[i + 1]]]) {
+      rows.push({ ...row, src: i, side, dirs: row.dirs.map((a, j) => (split(j) ? [0, 1].map((c) => a[c] + (nb.dirs[j][c] - a[c]) * st.w) : a)) });
+    }
   });
   const R = rows.length, first = polys.length, base = verts.length, rays = [];
   // the groove's share at each station (grooveAt: deep at the tips' notches, shallow over the top), 1 without
   const gAt = (j) => (cl.grooveAt ? cl.grooveAt[j] : 1);
   // (a solve for another layout of rows and stations is not this one's)
-  const fit = cl.fit && cl.fit.t.length === R && cl.fit.t[0].length === n ? cl.fit : null;
-  const ids = rows.map((row, i) => row.dirs.map(([o, u], j) => {
+  const fit = cl.fit && cl.fit.t.length === laid.length && cl.fit.t[0].length === n ? cl.fit : null;
+  const ids = [];
+  rows.forEach((row, i) => ids.push(row.dirs.map(([o, u], j) => {
     let d = dirOf(o, u), h = hit(skull, C, d);
     const border = i === 0 || i === R - 1 || j === 0 || j === n - 1;
     let t;
     if (border) t = -(cl.sink ?? SINK);
     else if ((j === 1 || j === 2) && cl.flush) t = cl.flush[j - 1];
-    else if (fit) t = fit.t[i][j];
-    else t = Math.max(MIN_H, (hull ? hull.thick.at(o, u) * (cl.scale ?? 1) : 0.12) - row.drop * gAt(j));
+    else if (fit) t = fit.t[row.src][j];
+    else t = Math.max(MIN_H, Math.max(cl.least ? cl.least[j] : 0, hull ? hull.thick.at(o, u) * (cl.scale ?? 1) : 0.12) - row.drop * gAt(j));
     rays.push({ i, j, d, r0: h.t, border, drop: row.drop * gAt(j), role: j === 1 ? 'sole' : j === 2 ? 'tip' : '' });
-    const id = verts.push(add(C, mul(d, h.t + t * k))) - 1;
-    // a crease's corner where it runs below the tufts' tops: a groove (valleyOf)
-    if (low && !border && j >= (cl.valleyFrom ?? 1) && row.drop * gAt(j) > 0) low.add(id);
-    return id;
-  }));
+    // (a crease's second row shares the first's corners where it is not split)
+    if (row.side === 1 && !split(j)) return ids[i - 1][j];
+    return verts.push(add(C, mul(d, h.t + t * k))) - 1;
+  })));
   // the tuft's underside clear of the face on any head: where a root's quads to the rows beside it (either way split)
   // pass through the face (a forehead that runs higher than the male's), that row's sole (and then its tip) raised off
   // the skin until they do not
@@ -245,37 +260,37 @@ export function massOf(cl, { skull, C, k, verts, polys, pieces, hull, groove: lo
     }
   }
   const centre = verts.push([...C]) - 1;
-  for (let i = 0; i + 1 < R; i++) for (let j = 0; j + 1 < n; j++) polys.push({ v: [ids[i][j], ids[i][j + 1], ids[i + 1][j + 1], ids[i + 1][j]], piece: pieces.length });
+  // (a face with corners shared, where a crease's two rows meet, a triangle or none)
+  const face = (v, extra) => { v = v.filter((a, m) => a !== v[(m + 1) % v.length]); if (v.length >= 3) polys.push({ v, piece: pieces.length, ...extra }); };
+  for (let i = 0; i + 1 < R; i++) for (let j = 0; j + 1 < n; j++) {
+    // a valley: between a crease's two rows, from where they part (not the front end) to the back
+    const valley = rows[i].side === 0 && rows[i + 1].side === 1 && split(j) && j >= st.from;
+    face([ids[i][j], ids[i][j + 1], ids[i + 1][j + 1], ids[i + 1][j]], valley ? { valley: true } : {});
+  }
   // the border, once round (the first row front to back, the back end across, the last row back to front, the front
   // end across), fanned to the centre
-  const ring = [...ids[0], ...ids.slice(1).map((r) => r[n - 1]), ...ids[R - 1].slice(0, -1).reverse(), ...ids.slice(1, -1).reverse().map((r) => r[0])];
+  const ring = [...ids[0], ...ids.slice(1).map((r) => r[n - 1]), ...ids[R - 1].slice(0, -1).reverse(), ...ids.slice(1, -1).reverse().map((r) => r[0])].filter((a, m, all) => a !== all[(m + 1) % all.length]);
   ring.forEach((a, m) => polys.push({ v: [centre, ring[(m + 1) % ring.length], a], piece: pieces.length }));
-  pieces.push({ id: cl.id, polys: [first, polys.length], verts: [base, verts.length], mass: { ids, rays, rows: R, n } });
+  pieces.push({ id: cl.id, polys: [first, polys.length], verts: [base, verts.length], mass: { ids, rays, rows: R, n, src: rows.map((r) => r.src) } });
 }
 
 /**
- * The valleys: every quad with two corners side by side in a groove (a crease between two tufts, a section's low
- * corner between two locks) split into its two triangles along its shorter diagonal (as it is drawn anyway), the one
- * along the groove marked `valley` (drawn a tone darker than the hair's main, HAIR_VALLEY in tools/sculpt/lowhairshot.mjs).
- * Each piece's polygon range follows.
+ * Every piece with `aboveV` kept above the style's V at the nape (style.v: { point, arm, rise }, the V's lower edge at
+ * over point - rise |out| / arm, for |out| up to arm) by that many degrees: a corner below that moved up to it along
+ * its own out, at its own height off the skin.
  */
-function valleyOf(verts, polys, pieces, groove) {
-  const out = [];
-  for (const pc of pieces) {
-    const first = out.length;
-    for (let i = pc.polys[0]; i < pc.polys[1]; i++) {
-      const p = polys[i], v = p.v;
-      const low = v.map((a) => groove.has(a));
-      const side = v.length === 4 && [0, 1, 2, 3].some((j) => low[j] && low[(j + 1) % 4]);
-      if (!side) { out.push(p); continue; }
-      const [a, b, c, d] = v, dac = Math.hypot(...sub(verts[a], verts[c])), dbd = Math.hypot(...sub(verts[b], verts[d]));
-      const two = dac <= dbd ? [[a, b, c], [a, c, d]] : [[a, b, d], [b, c, d]];
-      const n = two.map((t) => t.filter((x) => groove.has(x)).length);
-      two.forEach((t, m) => out.push({ v: t, piece: p.piece, ...(n[m] >= 2 && n[1 - m] < 2 ? { valley: true } : {}) }));
+function aboveV(style, verts, pieces, skull, C, k) {
+  const { point, arm, rise } = style.v;
+  style.clumps.forEach((cl, ci) => {
+    if (cl.aboveV === undefined) return;
+    const pc = pieces[ci];
+    for (let i = pc.verts[0]; i < pc.verts[1]; i++) {
+      const d = unit(sub(verts[i], C)), [o, u] = angOf(d), lim = point - (rise * Math.abs(u)) / arm - cl.aboveV;
+      if (Math.abs(u) > arm || o <= lim) continue;
+      const h = Math.hypot(...sub(verts[i], C)) - hit(skull, C, d).t, d2 = dirOf(lim, u);
+      verts[i] = add(C, mul(d2, hit(skull, C, d2).t + h));
     }
-    pc.polys = [first, out.length];
-  }
-  polys.splice(0, polys.length, ...out);
+  });
 }
 
 /**

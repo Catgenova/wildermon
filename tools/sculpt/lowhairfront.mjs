@@ -113,7 +113,9 @@ export function solve({ sweeps = 30, fresh = false, log = true } = {}) {
     if (!moved) { step /= 2; if (step < 0.004) break; }
   }
   if (log) console.log('end', best.toFixed(3), JSON.stringify(per()), 'crossings', crossN());
-  return { t: T.map((row, i) => row.map((x, j) => (x === null ? null : +x.toFixed(4)))) };
+  // (per line and band: a crease's two rows, where its valley parts them, the first's)
+  const src = pc.mass.src ?? T.map((_, i) => i);
+  return { t: T.filter((_, i) => src.indexOf(src[i]) === i).map((row) => row.map((x) => (x === null ? null : +x.toFixed(4)))) };
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

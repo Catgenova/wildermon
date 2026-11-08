@@ -3,7 +3,7 @@
 // camera-fixed light tools/sculpt/lowlight-<who>.json, as tools/sculpt/lowrigshot.mjs draws them), each polygon in its
 // own colour, reference crops laid beside. A polygon whose colour is negative is hair: drawn in three tones of that
 // colour (main, mid, highlight) by how much light its facet takes (HAIR_RAMP, against the skin's), as the game draws it;
-// one in a valley (its red under -VALLEY_MARK) a tone darker than the main (HAIR_VALLEY).
+// one in a valley (its red under -VALLEY_MARK) a tone darker than the main however lit (HAIR_VALLEY).
 //
 // shoot(w, h, cells, file, { texts, imgs }) — cells: { meshes: [{ who, P, polys, tris, col, edges?, edgec?, flat? }],
 // cam: { yaw, pitch, s, c }, box: [x, y, w, h], label, bg }; imgs: { src, size: [w, h], crop: [x, y, w, h], box }.
@@ -13,8 +13,9 @@
 export const HAIR_RAMP = [1.15, 1.4];
 /** The mid tone and the highlight: the hair's colour this far toward a warm light (#ffc8aa), from the sheet's palette. */
 export const HAIR_TONES = [0.22, 0.45];
-/** The valleys' tone (a groove between two tufts, tools/sculpt/lowhair.mjs valleyOf): the hair's colour times this, one
- * step under the main tone (the sheet's grooves, about 0.6 of its main brown). */
+/** The valleys' tone (the floor of a groove between two tufts, the whole length of it: tools/sculpt/lowhair.mjs, a
+ * mass's strip, a section's paired corners): the hair's colour times this, one step under the main tone however lit (the
+ * sheet's grooves, about 0.6 of its main brown). */
 export const HAIR_VALLEY = 0.62;
 const VALLEY_MARK = 10;
 import { chromium } from 'playwright-core';
@@ -70,8 +71,8 @@ const fs = 'precision highp float; varying vec3 vn; varying vec3 vm; uniform vec
   ' if (mode == 2) { gl_FragColor = vec4(abs(vm), ALPHA); return; }' +
   ' if (vm.x < 0.0) { vec3 hc = -vm; bool valley = hc.x > ${VALLEY_MARK / 2}.0; if (valley) hc.x -= ${VALLEY_MARK}.0;' +
   '   float l = dot(c, vec3(0.3,0.59,0.11)) / dot(vec3(0.68,0.49,0.41), vec3(0.3,0.59,0.11));' +
-  '   vec3 W = vec3(1.0,0.784,0.667); c = l < RAMP.x ? (valley ? hc * HAIR_VALLEY : hc) : (l < RAMP.y ? mix(hc, W, HAIR_MID) : mix(hc, W, HAIR_HI));' +
-  '   c *= 1.0 + RAMPK * (l - (l < RAMP.x ? RAMP.x - 0.2 : (l < RAMP.y ? 0.5 * (RAMP.x + RAMP.y) : RAMP.y + 0.1))); }' +
+  '   vec3 W = vec3(1.0,0.784,0.667); c = valley ? hc * HAIR_VALLEY : (l < RAMP.x ? hc : (l < RAMP.y ? mix(hc, W, HAIR_MID) : mix(hc, W, HAIR_HI)));' +
+  '   c *= 1.0 + RAMPK * (l - (valley || l < RAMP.x ? RAMP.x - 0.2 : (l < RAMP.y ? 0.5 * (RAMP.x + RAMP.y) : RAMP.y + 0.1))); }' +
   ' else c *= vm/vec3(0.68,0.49,0.41); gl_FragColor = vec4(min(c, vec3(1.0)), ALPHA); }';
 function sh(t, s) { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; }
 const pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(pr); gl.useProgram(pr);

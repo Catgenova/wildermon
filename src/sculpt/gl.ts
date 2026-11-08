@@ -120,11 +120,11 @@ void main() {
     if (ramp) {
       // Hair: its colour, a mid tone or a highlight (toward a warm light) by the facet's light over the review skin's
       // (tools/sculpt/lowhairshot.mjs HAIR_RAMP, HAIR_TONES), each lit a little within its step so two facets part; a
-      // facet in a valley a step under the main tone (HAIR_VALLEY) where it would take the main.
+      // facet in a valley a step under the main tone however lit (HAIR_VALLEY).
       float l = dot(lowLight(lv), vec3(0.3, 0.59, 0.11)) / 0.5382;
       vec3 W = vec3(1.0, 0.784, 0.667);
-      c = l < 1.15 ? (valley ? base * 0.62 : base) : (l < 1.4 ? mix(base, W, 0.22) : mix(base, W, 0.45));
-      c = min(c * (1.0 + 0.45 * (l - (l < 1.15 ? 0.95 : (l < 1.4 ? 1.275 : 1.5)))), 1.0);
+      c = valley ? base * 0.62 : (l < 1.15 ? base : (l < 1.4 ? mix(base, W, 0.22) : mix(base, W, 0.45)));
+      c = min(c * (1.0 + 0.45 * (l - (valley || l < 1.15 ? 0.95 : (l < 1.4 ? 1.275 : 1.5)))), 1.0);
     } else if (shave) {
       // The shaved scalp: the skin's light, its colour 0.65 of the way to the hair's (tools/sculpt/lowhairshot.mjs SHAVE).
       c = min(lowLight(lv) * uTone * mix(vec3(1.0), base / max(uMat[0].rgb, vec3(0.05)), 0.65), 1.0);
