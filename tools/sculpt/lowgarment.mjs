@@ -399,7 +399,7 @@ export const MAX_BONES = 80;
  * the body's helpers are written (parent `p` and driver `from` the body's bone indices, rest head and frame R, `drive`
  * and its settings), so the game drives them from the body's pose as lowrig.mjs posed() drives its helpers. With
  * `looks` ({ plain, enchanted: { name: [r, g, b] or { c: [r, g, b], kind } }, glowFrom }: a piece that can be enchanted,
- * as the long sword), its materials plain and enchanted parallel to `mats` ({ c: '#rrggbb', kind: 0 lit, 1 unlit }, a
+ * as the long sword), its materials plain and enchanted parallel to `mats` ({ c: '#rrggbb', kind: 0 lit, 1 unlit, 2 metal }, a
  * material a look leaves out its colour, lit) and the polygons from `glowFrom` on drawn only enchanted.
  */
 export function garmentAsset(rig, G, mats, looks = null) {
