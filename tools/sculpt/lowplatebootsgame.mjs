@@ -3,9 +3,9 @@
 // drawSculptGL, its bloom included), plain and enchanted side by side, as tools/sculpt/lowoutfitgame.mjs draws the outfit.
 //
 //   node tools/sculpt/lowplatebootsgame.mjs --out <dir> [--zoom 10] [--views front,q3,side,back,rq3] [--phase 1.5]
-//       [--name plate-boots-game] [--legs] [--bare] [--crop 0.45] [--gif side] [--fps 12]
-//     <dir>/<name>-z<zoom>.png: for him then her, each view plain then enchanted (outfit.enchanted.boots), stood in the
-//       idle; --crop k keeps the lowest k of each cell (the legs close up); --legs wears the plate leggings too
+//       [--name plate-boots-game] [--legs] [--bare] [--crop 0.45] [--width 30] [--gif side] [--fps 12]
+//     <dir>/<name>-z<zoom>.png: a row for him then her, each view plain then enchanted (outfit.enchanted.boots), stood in the
+//       idle; --crop k keeps the lowest k of each cell (the legs close up), --width w makes it w game units wide; --legs wears the plate leggings too
 //       (outfit.plateLegs); --bare takes the first outfit off (the shawl, the tunic, the trousers), the bare legs in the boots;
 //     with --gif <view>: <dir>/<name>-walk-z<zoom>-<view>.gif, one stride of the walk, both bodies plain and enchanted.
 //
@@ -27,12 +27,12 @@ const views = opt('views', 'front,q3,side,back').split(',').filter((v) => v in F
 const gifView = opt('gif', 'none');
 mkdirSync(out, { recursive: true });
 const ROOT = new URL('../..', import.meta.url).pathname;
-const P = { legs: flag('legs'), bare: flag('bare') };
+const P = { legs: flag('legs'), bare: flag('bare'), width: +opt('width', '30') };
 const entry = `
 import { drawFigure, sculptedFigures } from './src/render/figure';
 import { DEFAULT_LOOK } from './src/game/look';
 const P = ${JSON.stringify(P)};
-const size = (zoom) => [Math.ceil(30 * zoom) + 24, Math.ceil(48 * zoom) + 24];
+const size = (zoom) => [Math.ceil(P.width * zoom) + 24, Math.ceil(48 * zoom) + 24];
 window.cell = (zoom, gender, facing, phase, lit, moving, crop) => {
   const look = { ...DEFAULT_LOOK, gender, hair: 'swept', beard: 'none' };
   const [cw, ch] = size(zoom), cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
@@ -46,8 +46,8 @@ window.cell = (zoom, gender, facing, phase, lit, moving, crop) => {
   return c2;
 };
 window.ready = async () => { sculptedFigures(true); await import('./src/sculpt/sculpted'); await new Promise((r) => setTimeout(r, 50)); };
-window.show = (cells) => {
-  const root = document.getElementById('root'); root.innerHTML = '';
+window.show = (cells, perRow) => {
+  const root = document.getElementById('root'); root.innerHTML = ''; root.style.gridTemplateColumns = 'repeat(' + (perRow || cells.length) + ', auto)';
   for (const c of cells) root.appendChild(window.cell(...c));
 };`;
 const b = await build({ stdin: { contents: entry, resolveDir: ROOT, loader: 'ts' }, bundle: true, format: 'iife', write: false, logLevel: 'error', target: 'es2022', loader: { '.png': 'dataurl', '.svg': 'dataurl', '.webp': 'dataurl', '.wav': 'dataurl', '.ogg': 'dataurl', '.mp3': 'dataurl' }, define: { 'import.meta.env': '{}', __DEPLOY__: 'undefined' }, absWorkingDir: ROOT });
@@ -56,7 +56,7 @@ const browser = await chromium.launch({ ...(existsSync(kept) ? { executablePath:
 try {
   const p = await browser.newPage({ viewport: { width: 1200, height: 800 }, deviceScaleFactor: 1 });
   p.on('pageerror', (e) => console.log('ERR', e.message));
-  await p.setContent('<!doctype html><html><head><style>body{margin:0;background:#2f292b}#root{display:inline-flex;gap:4px;background:#2f292b}canvas{display:block}</style></head><body><div id=root></div></body></html>');
+  await p.setContent('<!doctype html><html><head><style>body{margin:0;background:#2f292b}#root{display:inline-grid;gap:4px;background:#2f292b}canvas{display:block}</style></head><body><div id=root></div></body></html>');
   await p.addScriptTag({ content: b.outputFiles[0].text });
   await p.evaluate(() => window.ready());
   const shot = async (path) => {
@@ -67,7 +67,7 @@ try {
   if (views.length) {
     const cells = [];
     for (const gender of ['man', 'woman']) for (const v of views) for (const lit of [false, true]) cells.push([zoom, gender, FACING[v], phase, lit, false, crop]);
-    await p.evaluate((c) => window.show(c), cells);
+    await p.evaluate(([c, n]) => window.show(c, n), [cells, views.length * 2]);
     const f = join(out, `${name}-z${zoom}.png`); await shot(f); console.log('wrote', f);
   }
   if (gifView in FACING) {
