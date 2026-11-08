@@ -72,6 +72,8 @@ const TOE_LET_GO: [number, number] = [0.004, 0.05];
 const AIR = 0.01;
 /** How far in from the roots of the fingers, on the palm's side, a fist closes round a handle: body heights. */
 const PALM = 0.012;
+/** The most of its length a reached arm is stretched to: the elbow never quite straight, so the side it bends to stays defined. */
+const REACH_ARM = 0.975;
 /** Game units between the fists on a handle when nothing held says. */
 const GAP = 0.76;
 
@@ -171,24 +173,27 @@ export function skeleton(A: AnimAsset, canon: AnimAsset, gameHeight = 0): Skelet
     // the elbow: bent about its hinge until the wrist is as far from the shoulder as the place wanted (or straight)
     const a = col(mm(F[lh.upper].W, REL[lh.lower]), 0), u = sub(F[lh.lower].P, S), v = sub(F[lh.hand].P, F[lh.lower].P);
     const vpar = dot(a, v), vperp = sub(v, scl(a, vpar)), A1 = dot(u, vperp), B1 = dot(u, cross(a, v)), M = Math.hypot(A1, B1);
-    const D = Math.min(Math.hypot(...sub(want, S)), 0.999 * Math.sqrt(dot(u, u) + dot(v, v) + 2 * (dot(u, a) * vpar + M)));
+    const D = Math.min(Math.hypot(...sub(want, S)), REACH_ARM * Math.sqrt(dot(u, u) + dot(v, v) + 2 * (dot(u, a) * vpar + M)));
     if (M > 1e-9) {
       const c = (D * D - dot(u, u) - dot(v, v)) / 2 - dot(u, a) * vpar, phi = Math.atan2(B1, A1), d = Math.acos(Math.max(-1, Math.min(1, c / M)));
       // straight at phi; bent the way the elbow bends (+x), never back past straight
       L[lh.lower] = mm(axisAngle([1, 0, 0], ((phi + d) * 180) / Math.PI), L[lh.lower] ?? I3);
       F = fk(L, move);
     }
-    // the upper arm swung so the wrist is on the line to the place, then turned about that line to put the elbow back
-    // on the side it was keyed on
-    L[lh.upper] = localFor(F, lh.upper, mm(between(sub(F[lh.hand].P, S), sub(want, S)), F[lh.upper].W));
-    F = fk(L, move);
+    // the whole arm then turned about the shoulder so the wrist is on the line to the place and the elbow on the side it
+    // was keyed on (leant out from the body by a quarter of the upper arm's length, so a keyed elbow passing near the line
+    // from the shoulder to the hand does not flip it round): the elbow put where it must be, the arm's frame (shoulder to
+    // wrist, shoulder to elbow) turned onto that one
+    const outW = mv(mm(F[CHEST].W, tr(bones[CHEST].R)), [1, 0, 0]), E0b = add(E0, scl(outW, 0.25 * len(u)));
     const n = unit(sub(want, S)), off = (p: V): V => { const r = sub(p, S); return sub(r, scl(n, dot(r, n))); };
-    const e1 = off(F[lh.lower].P), e0 = off(E0);
-    if (len(e1) > 1e-6 && len(e0) > 1e-6) {
-      const ang = (Math.atan2(dot(n, cross(e1, e0)), dot(e1, e0)) * 180) / Math.PI;
-      L[lh.upper] = localFor(F, lh.upper, mm(axisAngle(n, ang), F[lh.upper].W));
-      F = fk(L, move);
-    }
+    let pole = off(E0b);
+    if (len(pole) < 1e-6) pole = off(add(S, outW));
+    pole = unit(pole);
+    const K1 = F[lh.lower].P, W1 = F[lh.hand].P, la = len(sub(K1, S)), lb = len(sub(W1, K1)), lw = Math.max(1e-6, len(sub(W1, S)));
+    const ca = Math.max(-1, Math.min(1, (la * la + lw * lw - lb * lb) / (2 * la * lw))), Ke = add(S, scl(add(scl(n, ca), scl(pole, Math.sqrt(1 - ca * ca))), la));
+    const frame = (x: V, y: V): M3 => { const X = unit(x), Y = unit(sub(y, scl(X, dot(y, X)))), Z = cross(X, Y); return [X[0], Y[0], Z[0], X[1], Y[1], Z[1], X[2], Y[2], Z[2]]; };
+    L[lh.upper] = localFor(F, lh.upper, mm(mm(frame(n, sub(Ke, S)), tr(frame(sub(W1, S), sub(K1, S)))), F[lh.upper].W));
+    F = fk(L, move);
     L[lh.hand] = localFor(F, lh.hand, W);
     return fk(L, move);
   }

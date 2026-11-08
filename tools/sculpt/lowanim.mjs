@@ -306,7 +306,11 @@ if (only.includes('metrics')) {
     const held = clip.grip && !src ? AN.lowHeld(body) : null, SW = held ? swordOf() : null;
     const tris = rig.B.tris.map((t) => ({ v: t.v })), domTri = (t) => domOf(t.v[0]);
     const handT = tris.filter((t) => /^(hand|thumb|fingers|knuckles)/.test(domTri(t))), notHandT = tris.filter((t) => !/^(hand|thumb|fingers|knuckles)/.test(domTri(t)));
-    const armT = tris.filter((t) => t.v.every((i) => rig.B.names[i].startsWith('arm/'))), headT = tris.filter((t) => /^(head|jaw|neck)/.test(domTri(t)) && !t.v.some((i) => rig.B.names[i].startsWith('arm/'))), chestT = tris.filter((t) => /^(spine_03|clavicle)/.test(domTri(t)) && !t.v.some((i) => rig.B.names[i].startsWith('arm/')));
+    // (the forearms and hands against the head, neck and trunk; the upper arms against the head and neck only: against the chest and
+    // the shoulder's top they are the joint's own, scored by its region)
+    const armOnly = (t) => t.v.every((i) => rig.B.names[i].startsWith('arm/')), offArm = (t) => !t.v.some((i) => rig.B.names[i].startsWith('arm/'));
+    const foreT = tris.filter((t) => armOnly(t) && /^(elbow|lowerarm|wrist|hand|knuckles|thumb|fingers)/.test(domTri(t))), upperT = tris.filter((t) => armOnly(t) && /^(upperarm|shoulder)/.test(domTri(t)));
+    const headT = tris.filter((t) => offArm(t) && /^(head|jaw|neck)/.test(domTri(t))), chestT = tris.filter((t) => offArm(t) && /^(spine|pelvis|clavicle)/.test(domTri(t)));
     const sw = { blade: 0, bladeFrames: 0, hilt: 0, tipMin: Infinity, lowMin: Infinity, tipImpact: null, armsHead: 0, armsChest: 0, armsHeadFrames: 0, worstAt: null };
     const impactT = clip.events?.find((e) => e.name === 'impact')?.t;
     const ang = (a, b) => { if (!a || !b) return 0; const t = (a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3] + a[4] * b[4] + a[5] * b[5] + a[6] * b[6] + a[7] * b[7] + a[8] * b[8] - 1) / 2; return (Math.acos(Math.max(-1, Math.min(1, t))) * 180) / Math.PI; };
@@ -341,9 +345,7 @@ if (only.includes('metrics')) {
         sw.blade = Math.max(sw.blade, b); sw.hilt = Math.max(sw.hilt, h); if (b) sw.bladeFrames++;
         const tipY = (Q[SW.tip][1] - floor) * held.scale, lowY = Math.min(...Q.map((q) => q[1])) - floor;
         sw.tipMin = Math.min(sw.tipMin, tipY); sw.lowMin = Math.min(sw.lowMin, lowY * held.scale);
-        if (impactT !== undefined && Math.abs(t - impactT) < 0.5 / F) sw.tipImpact = +tipY.toFixed(2);
-        if (process.env.DBG) console.log(t.toFixed(3), "at", g.at.map((v) => v.toFixed(2)).join(), "tip", Q[SW.tip].map((v) => v.toFixed(2)).join(), "tipY", tipY.toFixed(2), "dy", dy.toFixed(3), "floor", floor, "b", b, "h", h);
-        const ah = XP(P, armT, P, headT).length, ac = XP(P, armT, P, chestT).length;
+        const ah = XP(P, foreT, P, headT).length + XP(P, upperT, P, headT).length, ac = XP(P, foreT, P, chestT).length;
         sw.armsHead = Math.max(sw.armsHead, ah); sw.armsChest = Math.max(sw.armsChest, ac); if (ah) sw.armsHeadFrames++;
       }
       if (k % 3 === 0) {
@@ -354,6 +356,13 @@ if (only.includes('metrics')) {
         worstX = Math.max(worstX, m.crossings); worstFold = Math.max(worstFold, m.flips);
         for (const [id, g] of Object.entries(m.region)) { const o = (regions[id] ??= { vol: 0, x: 0, folds: 0, score: 10 }); if (Math.abs(g.vol) > Math.abs(o.vol)) o.vol = g.vol; o.x = Math.max(o.x, g.x); o.folds = Math.max(o.folds, g.folds); o.score = Math.min(o.score, g.score); }
       }
+    }
+    if (SW && impactT !== undefined) {
+      // the point at the impact itself (a moment after it, so a stepped pass shows the impact's key)
+      const r = AN.clipLocal(sk, clip, impactT + 1e-4, held), pose = { $move: r.move };
+      r.local.forEach((m, i) => { if (m && rig.bones[i].kind === 'control') pose[rig.bones[i].name] = m; });
+      const P0 = LR.skin(rig, LR.posed(rig, pose)), dy = LR.ground(rig, P0)[0][1] - P0[0][1], g = sk.gripOf(sk.fk(r.local, r.move), held)[1];
+      sw.tipImpact = +((g.at[1] + ((SW.A.length - SW.A.grip.lead[1]) / held.scale) * g.way[1] + dy - rig.J.floor) * held.scale).toFixed(2);
     }
     const worst = Object.entries(regions).sort((a, b) => a[1].score - b[1].score).slice(0, 4).map(([id, g]) => `${id} ${g.score} (vol ${g.vol}%, x ${g.x}, folds ${g.folds})`);
     const key = src ? `${body} (${src})` : body;
@@ -366,7 +375,7 @@ if (only.includes('metrics')) {
       ...(MOVING ? { strideGame: +((gone / Math.max(1, goneN)) * M / sk.perGame).toFixed(2), strideWanted: +stride.toFixed(2), gameStride: +(AN.strideAt(0) * AN.UNITS_PER_TILE).toFixed(2), runSeconds: +(stride / (AN.BASE_SPEED * AN.UNITS_PER_TILE)).toFixed(3), strideCm: +((gone / Math.max(1, goneN)) * M * cm).toFixed(1) } : {}),
     };
     const s = report[key];
-    console.log(`${clipName} ${key}: slide ${s.slideCmPerFrame} cm/frame (${+F.toFixed(1)} fps${MOVING ? ', against the ground' : ''})${MOVING ? `, stride ${s.strideGame} game units (${s.strideCm} cm; keyed ${s.strideWanted}, the game's own walk ${s.gameStride}; a stride every ${s.runSeconds} s at the game's pace)` : ''}, hands to hips ≥${s.handsToHipsCm} cm (touching ${s.handsTouchShare}), sink ${s.sinkCm} cm, grounding moves ${s.groundingRangeCm} cm, new crossings ≤${s.newCrossingsMax}, folds ≤${s.foldsMax}, seam ${s.loopSeamDeg}° (largest step ${s.maxStepDeg}°), worst regions: ${worst.join('; ')}${s.sword ? `, sword: blade x ≤${s.sword.bladeCrossingsMax} (${s.sword.bladeCrossingFrames}/${M} frames), grip/pommel x ≤${s.sword.hiltCrossingsMax} (worst at ${s.sword.worstAt}s), point ≥${s.sword.tipMinGame} gu off the ground (at impact ${s.sword.tipAtImpactGame} gu, ${s.sword.tipAtImpactCm} cm), lowest ${s.sword.lowestGame} gu; arms x head ≤${s.armsHeadCrossingsMax} (${s.armsHeadFrames} frames), arms x chest ≤${s.armsChestCrossingsMax}` : ''}${s.silhouette ? `, silhouette ${s.silhouette.heightPx[0]}-${s.silhouette.heightPx[1]} px tall, arms clear ${s.silhouette.armsClear}, ≤${s.silhouette.pxMovedMax} px moved` : ''}`);
+    console.log(`${clipName} ${key}: slide ${s.slideCmPerFrame} cm/frame (${+F.toFixed(1)} fps${MOVING ? ', against the ground' : ''})${MOVING ? `, stride ${s.strideGame} game units (${s.strideCm} cm; keyed ${s.strideWanted}, the game's own walk ${s.gameStride}; a stride every ${s.runSeconds} s at the game's pace)` : ''}, hands to hips ≥${s.handsToHipsCm} cm (touching ${s.handsTouchShare}), sink ${s.sinkCm} cm, grounding moves ${s.groundingRangeCm} cm, new crossings ≤${s.newCrossingsMax}, folds ≤${s.foldsMax}, seam ${s.loopSeamDeg}° (largest step ${s.maxStepDeg}°), worst regions: ${worst.join('; ')}${s.sword ? `, sword: blade x ≤${s.sword.bladeCrossingsMax} (${s.sword.bladeCrossingFrames}/${M} frames), grip/pommel x ≤${s.sword.hiltCrossingsMax} (worst at ${s.sword.worstAt}s), point ≥${s.sword.tipMinGame} gu off the ground (at impact ${s.sword.tipAtImpactGame} gu, ${s.sword.tipAtImpactCm} cm), lowest ${s.sword.lowestGame} gu; arms x head ≤${s.armsHeadCrossingsMax} (${s.armsHeadFrames} frames), forearms x trunk ≤${s.armsChestCrossingsMax}` : ''}${s.silhouette ? `, silhouette ${s.silhouette.heightPx[0]}-${s.silhouette.heightPx[1]} px tall, arms clear ${s.silhouette.armsClear}, ≤${s.silhouette.pxMovedMax} px moved` : ''}`);
   }
   writeFileSync(join(out, `${FILE}-metrics.json`), JSON.stringify(report, null, 1));
   await RS.closeBrowser?.();

@@ -90,7 +90,7 @@ export const ARMS: Record<string, Record<string, Euler>> = {
   top: { upperarm_r: [112, 47, -16], lowerarm_r: [76, 25, 0], hand_r: [14, 53, -7] },
   strike: { upperarm_r: [154, 1, 9], lowerarm_r: [5, 69, 0], hand_r: [-5, 34, 38] },
   smear: { upperarm_r: [117, 7, 4], lowerarm_r: [22, 77, 0], hand_r: [63, 33, 68] },
-  impact: { upperarm_r: [104, -49, 5], lowerarm_r: [9, 109, 0], hand_r: [32, 26, 72] },
+  impact: { upperarm_r: [104, -49, 5], lowerarm_r: [9, 109, 0], hand_r: [40, 26, 76] },
 };
 /** Where the right fist is wanted at each key on him, body heights (across, up from the ground, forward), and the blade's way. */
 export const ARM_AT: Record<string, { at: [number, number, number]; way: [number, number, number] }> = {
@@ -109,12 +109,12 @@ const mirrorArm = (a: Record<string, Euler>): Record<string, Euler> => Object.fr
  */
 export const WOMAN: Record<string, Record<string, Euler>> = {
   ready: { upperarm_r: [106, 22, -38], lowerarm_r: [5, 23, 0], hand_r: [42, 106, 43] },
-  lift: { upperarm_r: [138, 77, -1], lowerarm_r: [5, -34, 0], hand_r: [7, 85, 29], clavicle_l: [0, 0, 14], clavicle_r: [0, 0, -14] },
+  lift: { upperarm_r: [138, 77, -1], lowerarm_r: [5, -34, 0], hand_r: [7, 85, 29], upperarm_l: [140, 0, 30], clavicle_l: [0, 0, 24], clavicle_r: [0, 0, -14] },
   // (her left elbow kept up and out, so the forearm goes over her head and not across her face)
   top: { upperarm_r: [123, 4, 25], lowerarm_r: [61, 49, 0], hand_r: [11, 47, 28], upperarm_l: [150, 0, 30], clavicle_l: [0, 0, 28], clavicle_r: [0, 0, -26] },
-  strike: { upperarm_r: [154, 38, 20], lowerarm_r: [4, 31, 0], hand_r: [2, 48, 42], clavicle_l: [0, 0, 16], clavicle_r: [0, 0, -16] },
+  strike: { upperarm_r: [154, 38, 20], lowerarm_r: [4, 31, 0], hand_r: [2, 48, 42], upperarm_l: [150, 0, 25], clavicle_l: [0, 0, 16], clavicle_r: [0, 0, -16] },
   // (the blow: her hips turned the other way so the pommel goes by her right hip, crouched lower and bent further)
-  smear: { upperarm_r: [136, 2, 18], lowerarm_r: [4, 76, 0], hand_r: [11, 46, 52], pelvis: [9, 10, 0], spine_01: [9, -4, 0], spine_02: [10, -4, 0], spine_03: [8, -3, 0], $move: [0, -0.05, 0.008] },
+  smear: { upperarm_r: [136, 2, 18], lowerarm_r: [4, 76, 0], hand_r: [11, 46, 52], upperarm_l: [134, 18, 4], pelvis: [9, 10, 0], spine_01: [9, -4, 0], spine_02: [10, -4, 0], spine_03: [8, -3, 0], $move: [0, -0.05, 0.008] },
   impact: {
     upperarm_r: [118, -35, 17], lowerarm_r: [4, 120, 0], hand_r: [20, 44, 63],
     pelvis: [13, 12, 0], spine_01: [20, -6, 0], spine_02: [23, -6, 0], spine_03: [19, -4, 0], neck_01: [-30, -6, 0], head: [-12, -4, 0], $move: [0, -0.075, 0.004],
@@ -171,7 +171,16 @@ const herTracks = (): Record<string, Array<Key<Euler>>> => {
     return { t: beat.t, v: [w[0] - m[0], w[1] - m[1], w[2] - m[2]], ...(beat.ease ? { ease: beat.ease } : {}) };
   })]));
 };
-const KEYS = poseToPose(BEATS, { length: LENGTH, loop: true });
+/** The head trailing the trunk and the neck between: seconds each bone's keys are late (the arms keep the beat: they hold the sword). */
+export const LAG = { head: 0.03, neck_02: 0.015 };
+const KEYS = poseToPose(BEATS, { length: LENGTH, loop: true, lag: LAG });
+/** The blow's jolt, on its own timing over the beats: the chest, neck and head thrown on and settled (the arms, on the sword, kept). */
+const J = IMPACT;
+const ACCENTS: Clip['accents'] = {
+  spine_03: [{ t: 0, v: [0, 0, 0] }, { t: J, v: [0, 0, 0] }, { t: J + 0.04, v: [1.2, 0, 0], ease: 'out' }, { t: J + 0.18, v: [0, 0, 0] }],
+  neck_01: [{ t: 0, v: [0, 0, 0] }, { t: J, v: [0, 0, 0] }, { t: J + 0.05, v: [2, 0, 0], ease: 'out' }, { t: J + 0.2, v: [0, 0, 0] }],
+  head: [{ t: 0, v: [0, 0, 0] }, { t: J + 0.01, v: [0, 0, 0] }, { t: J + 0.06, v: [4, 0, 0], ease: 'out' }, { t: J + 0.22, v: [0, 0, 0], ease: 'back', back: 0.25 }],
+};
 
 export const SWING: Clip = {
   name: 'swing',
@@ -181,9 +190,10 @@ export const SWING: Clip = {
   // braced: the feet apart and turned out, the left ahead
   plant: { rot: { thigh_l: [10, -6, 9], thigh_r: [-6, 6, -9] } },
   ...KEYS,
+  accents: ACCENTS,
   events: [{ t: IMPACT, name: 'impact' }],
   // the point stopped just off the ground (game units; its edges a little lower)
-  grip: { ground: 0.45 },
+  grip: { ground: 0.6 },
   stretch: [[0, 0.16], [0.56, 0.76]],
   bodies: { woman: { tracks: herTracks() } },
 };
