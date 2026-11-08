@@ -91,11 +91,11 @@ async function sheet(file, wire) {
   ['female', 'male'].forEach((who, r) => {
     const { rig, G } = M[who], d = dress(who, {});
     // the feet set closer, as the sheet sets them: each side moved in by `pull`
-    const pull = who === 'male' ? 0.75 : 0.85;
+    const pull = who === 'male' ? 0.55 : 0.7;
     const inn = (P, sideOf) => P.map((p, i) => [p[0] - Math.sign(sideOf(i, p)) * pull, p[1], p[2]]);
     const PB = inn(d.PB, (i) => rig.B.verts[i][0]), PG = inn(d.PG, (i) => (G.side[i] === 'L' ? 1 : -1));
-    const ground = G.ground, cut = ground + 3.2;
-    const s = 78, c = [0, ground + 1.1, 0.05];
+    const ground = G.ground, cut = G.yCuff[1] + 0.35;
+    const s = 88, c = [0, ground + 0.95, 0.05];
     VIEWS.forEach(([yaw, lab], i) => {
       imgs.push({ src: SHEET, size: [1536, 1024], crop: CROPS[who][i], box: [i * cw, top + r * 2 * ch, cw, ch] });
       const body = bodyMesh(who, PB, cut), boot = bootMesh(who, PG);
