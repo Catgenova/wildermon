@@ -46,6 +46,8 @@ import MALE_TUNIC from './assets/lowtunic-male.json';
 import FEMALE_TUNIC from './assets/lowtunic-female.json';
 import MALE_HOOD from './assets/lowhood-male.json';
 import FEMALE_HOOD from './assets/lowhood-female.json';
+import MALE_LEATHER_HAT from './assets/lowhat-male.json';
+import FEMALE_LEATHER_HAT from './assets/lowhat-female.json';
 import LONG_SWORD from './assets/long_sword.json';
 import HAIR_ASSET from './assets/lowhair.json';
 import MALE_LIGHT from '../../tools/sculpt/lowlight-male.json';
@@ -560,6 +562,12 @@ const wearsHood = (pose: FigurePose): boolean => (pose.outfit?.hood ?? false) &&
  * skull, so any hairstyle would come through it). A hairstyle drawn with the body checks this before it is laid in.
  */
 export const hairShown = (pose: FigurePose): boolean => !wearsHood(pose);
+/**
+ * Whether a figure wears the leather set's feathered cap (`assets/lowhat-<who>.json` by `tools/sculpt/garments/hat.mjs`:
+ * rigid on the head, no bones of its own, its crown clear of the swept-back hair, so the hair stays drawn under it):
+ * off unless `outfit.leatherHat`.
+ */
+const wearsLeatherHat = (pose: FigurePose): boolean => pose.outfit?.leatherHat ?? false;
 
 /**
  * Whether a piece of the plate set is enchanted (`FigurePose.outfit.enchanted`): its cores and its engraving lit, as the
@@ -577,6 +585,7 @@ const GARMENTS: ReadonlyArray<{ man: GarmentAsset; woman: GarmentAsset; wears: (
   { man: MALE_BOOTS as unknown as GarmentAsset, woman: FEMALE_BOOTS as unknown as GarmentAsset, wears: wearsBoots },
   { man: MALE_TUNIC as unknown as GarmentAsset, woman: FEMALE_TUNIC as unknown as GarmentAsset, wears: wearsTunic },
   { man: MALE_HOOD as unknown as GarmentAsset, woman: FEMALE_HOOD as unknown as GarmentAsset, wears: wearsHood },
+  { man: MALE_LEATHER_HAT as unknown as GarmentAsset, woman: FEMALE_LEATHER_HAT as unknown as GarmentAsset, wears: wearsLeatherHat, enchanted: enchantedOf('leatherHat') },
 ];
 
 const BODIES = {

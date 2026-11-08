@@ -7,7 +7,7 @@
 //       back, top) above each body's (--enchanted: the plain and the enchanted look, one row each);
 //     hat-wire<tag>.png: the same with every polygon's outline, and the triangle counts by piece;
 //     hat-close<tag>.png: each body's equipped view, front and side at twice the scale beside the sheet's;
-//     hat-poses<tag>.png: the test poses (arms out, forward, overhead, head turned and nodded, the walk, the idle's look),
+//     hat-poses-<who><tag>.png: the test poses (arms out, forward, overhead, head turned and nodded, the walk, the idle's look),
 //       each with the hat's triangles crossing the body's and the hair's;
 //     hat-walk<tag>.gif: the game's walk, both bodies, front, three-quarter, side, back;
 //     hat-metrics.json: the checks at rest and in every pose, each body.
@@ -250,23 +250,21 @@ if (only.includes('metrics') || only.includes('poses')) {
   writeFileSync(join(out, 'hat-metrics.json'), JSON.stringify(metrics, null, 1));
 }
 if (only.includes('poses')) {
-  const cells = [], cw = 230, ch = 300, perRow = 6;
-  const rows = [];
+  // (one sheet per body, to keep the page small)
+  const cw = 230, ch = 300, perRow = 6;
   for (const who of ['male', 'female']) {
-    const g = await game(M[who].rig);
-    rows.push([who, [{ id: 'rest', label: 'Rest', pose: {} }, ...testPoses(M[who].rig), { id: 'walk-2', label: 'Walk (3/8)', pose: g.at(true, 2 / 8) }, { id: 'idle-9', label: 'Idle look (t 9.5 s)', pose: g.at(false, 0, 9.5) }]]);
+    const g = await game(M[who].rig), cells = [];
+    const list = [{ id: 'rest', label: 'Rest', pose: {} }, ...testPoses(M[who].rig), { id: 'walk-2', label: 'Walk (3/8)', pose: g.at(true, 2 / 8) }, { id: 'idle-9', label: 'Idle look (t 9.5 s)', pose: g.at(false, 0, 9.5) }];
+    list.forEach((e, n) => {
+      const d = dress(who, e.pose), m = metrics[who]?.[e.id] ?? measure(who, d);
+      for (const [j, yaw] of [[0, 0], [1, 60]]) {
+        const k = n * 2 + j;
+        cells.push({ meshes: scene(who, d), cam: { yaw, pitch: -4, s: 36, c: [0, -0.8 + d.dy, 0] }, box: [(k % (perRow * 2)) * cw, 34 + Math.floor(k / (perRow * 2)) * ch, cw, ch], label: j ? `body ${m.body} hair ${m.hair} self ${m.self}` : `${who} ${e.label}` });
+      }
+    });
+    const nr = Math.ceil((list.length * 2) / (perRow * 2));
+    await shoot(perRow * 2 * cw, 34 + nr * ch, cells, join(out, `hat-poses-${who}${tag}.png`), { texts: [{ css: 'left:10px;top:6px', html: `${who}: test poses, front and 60°: the hat's triangles crossing the body's, the hair's, and its own` }] });
   }
-  let n = 0;
-  for (const [who, list] of rows) for (const e of list) {
-    const d = dress(who, e.pose), m = metrics[who]?.[e.id] ?? measure(who, d);
-    for (const [j, yaw] of [[0, 0], [1, 60]]) {
-      const k = n * 2 + j;
-      cells.push({ meshes: scene(who, d), cam: { yaw, pitch: 4, s: 36, c: [0, -0.8 + d.dy, 0] }, box: [(k % (perRow * 2)) * cw, 34 + Math.floor(k / (perRow * 2)) * ch, cw, ch], label: j ? `body ${m.body} hair ${m.hair} self ${m.self}` : `${who} ${e.label}` });
-    }
-    n++;
-  }
-  const nr = Math.ceil((n * 2) / (perRow * 2));
-  await shoot(perRow * 2 * cw, 34 + nr * ch, cells, join(out, `hat-poses${tag}.png`), { texts: [{ css: 'left:10px;top:6px', html: 'Test poses, front and 60°: the hat\'s triangles crossing the body\'s, the hair\'s, and its own' }] });
 }
 
 /* ---- the walk ----------------------------------------------------------------------------------------------------------- */
