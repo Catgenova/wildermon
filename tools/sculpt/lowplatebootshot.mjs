@@ -64,7 +64,8 @@ const bodyMesh = (who, P, cut = Infinity) => {
   const keep = rig.B.polys.map((p, pi) => !hidden.has(pi) && p.v.every((i) => P[i][1] < cut));
   return { who, P, polys: rig.B.polys.map((p) => p.nv ?? p.v), tris: rig.B.tris.filter((t) => keep[t.poly]).map((t) => [...t.v, t.poly]), col: bodyCol(rig) };
 };
-const bootMesh = (who, P, look = 'plain') => { const { G } = M[who]; return { who, P, polys: G.polys.map((p) => p.v), tris: G.tris.map((t) => [...t.v, t.poly]), col: G.polys.map((p) => colOf(p.mat, look)) }; };
+// (worn over the leggings, the boots' crests left out, as the game drops them: the leggings' knee guard is the diamond)
+const bootMesh = (who, P, look = 'plain') => { const { G } = M[who]; return { who, P, polys: G.polys.map((p) => p.v), tris: G.tris.filter((t) => !LEGS || t.poly < G.dropFrom).map((t) => [...t.v, t.poly]), col: G.polys.map((p) => colOf(p.mat, look)) }; };
 const NL = SHOWN.length;
 
 /* ---- poses ---------------------------------------------------------------------------------------------------------- */

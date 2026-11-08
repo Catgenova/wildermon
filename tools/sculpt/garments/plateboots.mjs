@@ -108,7 +108,8 @@ function upsample(D) {
  *   mid: the greave's middle ring (share of ankle to knee);
  *   cuff: lo (its foot at the front and the back), rise (at the sides), gold (head heights), top (per column, share of
  *     ankle to knee), out (its thickness), flare (per column, out at the top), rim (the rim's inside off the leg), lip
- *     (the lip down inside, head heights);
+ *     (the lip down inside, head heights), gap (the lip's foot off the leg, a share of `clear`), inner (the thickness
+ *     on the inner side, a share);
  *   rib: { w, h } the centre rib's width and height; crest: { t, w, h, inset, lift } the diamond on the cuff's front
  *     (its middle's share of the way up the cuff's front, its half width, its half height, the inset's share, the stand-off).
  */
@@ -126,7 +127,7 @@ export const DESIGN = {
     cap: { du: [0.6, 0.5, 0.12, null, null, null, null, null, 0.12, 0.5], h: [0.42, 0.41, 0.5, 0, 0, 0, 0, 0, 0.5, 0.41], in: [0.1, 0.08, 0.06, 0, 0, 0, 0, 0, 0.06, 0.08], t: 0.35, lip: 0.03, seam: 0.12, sink: 0.05 },
     band: { y: 0.56, rise: 0.12, w: 0.22, gold: 0.09, out: 0.11 },
     mid: 0.4,
-    cuff: { lo: 0.4, rise: 0.22, gold: 0.09, out: 0.13, top: [0.96, 0.88, 0.86, 0.8, 0.8, 0.8, 0.8, 0.8, 0.84, 0.88], flare: [0.08, 0.1, 0.36, 0.12, 0.08, 0.08, 0.06, 0.06, 0.14, 0.09], rim: 0.07, lip: 0.16, gap: 0.5 },
+    cuff: { lo: 0.4, rise: 0.22, gold: 0.09, out: 0.13, top: [0.96, 0.88, 0.86, 0.8, 0.8, 0.8, 0.8, 0.8, 0.84, 0.88], flare: [0.08, 0.1, 0.36, 0.12, 0.08, 0.08, 0.06, 0.06, 0.14, 0.09], rim: 0.07, lip: 0.16, gap: 0.5, inner: 0.6 },
     rib: { w: 0.18, h: 0.06 },
     crest: { t: 0.52, w: 0.36, h: 0.56, inset: 0.8, lift: 0.045 },
     plates: { ang: [72, 90, 108, 144], lo: 0.12, hi: 0.92, rows: [0, 0.5, 1], taper: 0.45, lift: 0.04 },
@@ -144,7 +145,7 @@ export const DESIGN = {
     cap: { du: [0.56, 0.46, 0.04, null, null, null, null, null, 0.04, 0.46], h: [0.36, 0.35, 0.42, 0, 0, 0, 0, 0, 0.42, 0.35], in: [0.09, 0.1, 0.1, 0, 0, 0, 0, 0, 0.1, 0.1], t: 0.35, lip: 0.025, seam: 0.14, sink: 0.03 },
     band: { y: 0.58, rise: 0.1, w: 0.19, gold: 0.08, out: 0.09 },
     mid: 0.4,
-    cuff: { lo: 0.36, rise: 0.2, gold: 0.08, out: 0.11, top: [0.8, 0.74, 0.72, 0.68, 0.67, 0.67, 0.67, 0.68, 0.7, 0.74], flare: [0.07, 0.08, 0.3, 0.1, 0.06, 0.06, 0.05, 0.04, 0.06, 0.07], rim: 0.06, lip: 0.15, gap: 0.5 },
+    cuff: { lo: 0.36, rise: 0.2, gold: 0.08, out: 0.11, top: [0.8, 0.74, 0.72, 0.68, 0.67, 0.67, 0.67, 0.68, 0.7, 0.74], flare: [0.07, 0.08, 0.3, 0.1, 0.06, 0.06, 0.05, 0.04, 0.06, 0.07], rim: 0.06, lip: 0.15, gap: 0.5, inner: 0.35 },
     rib: { w: 0.15, h: 0.05 },
     crest: { t: 0.52, w: 0.3, h: 0.48, inset: 0.8, lift: 0.038 },
     plates: { ang: [72, 90, 108, 144], lo: 0.12, hi: 0.92, rows: [0, 0.5, 1], taper: 0.45, lift: 0.035 },
@@ -251,10 +252,12 @@ export function buildPlateBoots(rig, design = DESIGN[rig.who], { under = [] } = 
     const cuffLo = (k) => leg(D.cuff.lo) + D.cuff.rise * chev(k) * H, cuffTop = (k) => leg(D.cuff.top[k]);
     put('g1', each((k) => onShaft(k, lerp([0, bandHi(k), 0], [0, cuffLo(k), 0], D.mid)[1])));
     put('c0', each((k) => onShaft(k, cuffLo(k))));
-    put('c2', each((k) => onShaft(k, cuffLo(k) + D.cuff.gold * H, D.cuff.out)));
-    put('c3', each((k) => onShaft(k, cuffTop(k), D.cuff.out + D.cuff.flare[k])));
+    // (the cuff's thickness, less on the inner side by `inner` where it would meet the other leg's)
+    const cOut = (k) => D.cuff.out * (1 - (1 - (D.cuff.inner ?? 1)) * Math.max(0, -Math.sin(ANG[k] * Math.PI / 180)));
+    put('c2', each((k) => onShaft(k, cuffLo(k) + D.cuff.gold * H, cOut(k))));
+    put('c3', each((k) => onShaft(k, cuffTop(k), cOut(k) + D.cuff.flare[k])));
     // (the rim: the flared plate's top edge, `rim` thick, a little lower inside; the lip down its inside toward the leg)
-    put('c4', each((k) => onShaft(k, cuffTop(k) - 0.02, D.cuff.out + D.cuff.flare[k] - D.cuff.rim)));
+    put('c4', each((k) => onShaft(k, cuffTop(k) - 0.02, cOut(k) + D.cuff.flare[k] - D.cuff.rim * Math.min(1, cOut(k) / D.cuff.out))));
     // (the lip goes in nearly to the leg, closing the gap between the cuff and the leg: what shows inside the cuff is
     // the lip's face, not the plates' backs)
     put('c5', each((k) => { const y = cuffTop(k) - D.cuff.lip * H, c = axis(y), r = Math.max(reach(k, y) + D.clear * (D.cuff.gap ?? 0.6), SU.length ? reach(k, y, SU) + D.over * 0.5 : 0); return [c[0] + ang[k][0] * r, y, c[2] + ang[k][2] * r]; }));
@@ -288,8 +291,11 @@ export function buildPlateBoots(rig, design = DESIGN[rig.who], { under = [] } = 
   orient(G, (c) => { const s = c[0] > 0 ? 'L' : 'R', R = G.rings[s], m = mul(R.r4.reduce((a, i) => add(a, G.verts[i]), [0, 0, 0]), 1 / K), a = G.legOf[s].axis(c[1]); return c[1] > m[1] + 0.3 ? [c[0] - a[0], 0, c[2] - a[2]] : [c[0] - m[0], (c[1] - m[1]) * 0.3, c[2] - m[2]]; });
   G.decal = new Set();
   if (D.rib) for (const side of ['L', 'R']) ribOf(G, D, side);
-  if (D.crest) for (const side of ['L', 'R']) crestOf(G, D, side);
   if (D.plates) for (const side of ['L', 'R']) for (const sg of [1, -1]) sidePlateOf(G, D, side, sg);
+  // the crests last: their polygons from `dropFrom` on, left out while the plate leggings are worn (their knee guard's
+  // diamond is then the one diamond at the knee, as the set's lineup draws it)
+  G.dropFrom = G.polys.length;
+  if (D.crest) for (const side of ['L', 'R']) crestOf(G, D, side);
   G.tris = trisOf(G);
   // where a decal still meets the plate under it, its corners there go out from the leg's axis a little at a time
   for (let it = 0; it < 30; it++) {
@@ -454,7 +460,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     G.vw = plateBootWeights(rig, G);
     console.log(who, under.length ? `over the leggings ${legs}` : 'over the bare legs');
     const file = new URL(`../../../src/sculpt/assets/lowplateboots-${who}.json`, import.meta.url);
-    const A = { built: 'node tools/sculpt/garments/plateboots.mjs (tools/sculpt/lowgarment.mjs garmentAsset)', ...garmentAsset(rig, G, MATS, LOOKS), hides: G.hides, soles: G.soles };
+    const A = { built: 'node tools/sculpt/garments/plateboots.mjs (tools/sculpt/lowgarment.mjs garmentAsset)', ...garmentAsset(rig, G, MATS, LOOKS), hides: G.hides, soles: G.soles, dropFrom: G.dropFrom };
     writeFileSync(file, JSON.stringify(A));
     console.log(who, `${G.verts.length} vertices, ${G.tris.length} triangles, ${A.base} + ${A.bones.length} bones, hides ${G.hides.length} body polygons: wrote`, file.pathname);
   }
