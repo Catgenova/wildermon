@@ -25,17 +25,19 @@
 // upper roll (`flare` past its top, `rise` over it). Columns at fractions TS of the way from the front to the back; the
 // seam between the side panel and the centre gusset at TS[SEAM].
 // One closed surface: the shell, the lining, the border (E0 to E1), the hem (the shell to the lining at row 0).
-// Materials: fabric (the shell), trim (the border's band at the opening and its teeth), pattern (the cream between the
-// teeth), lining.
+// Materials: fabric (the shell), trim (the border's band at the opening), rune (its teeth: trim's tan, lit when
+// enchanted), pattern (the cream between the teeth), lining.
 import { offPlane, TOL, samplesOf, meshOf, orient, trisOf, atRY, dirOf, sub, add, mul, dot, cross, unit, lerp, applyRefit } from '../lowgarment.mjs';
-import { MATS as SHAWL_MATS } from './shawl.mjs';
+import { MATS as SHAWL_MATS, clothLooks } from './shawl.mjs';
 
 /**
  * The materials: the shawl's own cream, tan and pattern (the hood is the same cloth, its border the same tan, its teeth the
  * shawl's teeth), and the lining, the one colour of its own: the sheet's #7A5E4A taken down about as the shawl's colours
  * were from their sheet's, a little further so it reads darker than the border inside the opening, as on the sheet.
  */
-export const MATS = { fabric: SHAWL_MATS.fabric, trim: SHAWL_MATS.trim, pattern: SHAWL_MATS.pattern, lining: [0.28, 0.19, 0.14] };
+export const MATS = { fabric: SHAWL_MATS.fabric, trim: SHAWL_MATS.trim, pattern: SHAWL_MATS.pattern, lining: [0.28, 0.19, 0.14], rune: SHAWL_MATS.rune };
+/** Plain, as lit; enchanted, the teeth round the opening (rune) unlit at the glow (garments/shawl.mjs clothLooks). */
+export const LOOKS = clothLooks(MATS);
 
 /**
  * The design per body (the body's units: y up, the chin's underside 0; z forward; x the body's left):
@@ -365,7 +367,7 @@ function meshOfHood(D, rows, tip, tipIn, opts) {
         const x = (Xt[k] = G.vert(lerp(G.verts[Vo[k][0]], G.verts[Vo[k + 1][0]], 0.5), 'border'));
         teeth.push([x, h, k]);
         G.tag = 'teeth';
-        G.poly([Vo[k][1], Vo[k + 1][1], x], 'trim', 'shell');
+        G.poly([Vo[k][1], Vo[k + 1][1], x], 'rune', 'shell');
         G.poly([Vo[k][0], x, Vo[k][1]], 'pattern', 'shell');
         G.poly([x, Vo[k + 1][0], Vo[k + 1][1]], 'pattern', 'shell');
         G.tag = 'shell';
@@ -423,7 +425,7 @@ function meshOfHood(D, rows, tip, tipIn, opts) {
       if (x !== null) {
         teeth.push([x, h, -1 - c]);
         G.tag = 'teeth';
-        G.poly(flip([Sv(1, c + 1), Sv(1, c), x]), 'trim', 'shell');
+        G.poly(flip([Sv(1, c + 1), Sv(1, c), x]), 'rune', 'shell');
         G.poly(flip([Sv(2, c), x, Sv(1, c)]), 'pattern', 'shell');
         G.poly(flip([x, Sv(2, c + 1), Sv(1, c + 1)]), 'pattern', 'shell');
       }
@@ -515,7 +517,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const G = buildHood(rig, S, undefined, { under: [O.tunic] });
     G.vw = hoodWeights(rig, G, S);
     const file = new URL(`../../../src/sculpt/assets/lowhood-${who}.json`, import.meta.url);
-    const A = { built: 'node tools/sculpt/garments/hood.mjs (tools/sculpt/lowgarment.mjs garmentAsset)', ...garmentAsset(rig, G, MATS) };
+    const A = { built: 'node tools/sculpt/garments/hood.mjs (tools/sculpt/lowgarment.mjs garmentAsset)', ...garmentAsset(rig, G, MATS, LOOKS) };
     writeFileSync(file, JSON.stringify(A));
     console.log(who, `${G.verts.length} vertices, ${G.tris.length} triangles, ${A.base} + ${A.bones.length} bones: wrote`, file.pathname);
   }
