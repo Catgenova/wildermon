@@ -43,27 +43,38 @@ const SINK = 0.04;
 /** A corner's least height off the skin (a lock never thinner), and the gap under a lip's front edge. */
 const MIN_H = 0.03, LIP = 0.015;
 
-/** The skull: the head's skin without the ears, as triangles, and its centre (level with the brow's outer end, midway
- * between the forehead and the back of the skull). */
+/** The skull: the head's skin without the ears, as triangles (each with its polygon, .poly), and its centre (level with
+ * the brow's outer end, midway between the forehead and the back of the skull). */
 export function skullOf(B) {
   const P = (n) => B.verts[B.index.get(n)];
-  const tris = B.tris.filter((t) => { const p = B.polys[t.poly]; return p.part === 'head' && p.mat === 'skin' && !p.ear; }).map((t) => t.v.map((i) => B.verts[i]));
+  const tris = B.tris.filter((t) => { const p = B.polys[t.poly]; return p.part === 'head' && p.mat === 'skin' && !p.ear; }).map((t) => Object.assign(t.v.map((i) => B.verts[i]), { poly: t.poly }));
   const centre = [0, P('b5.L')[1], (P('t0')[2] + P('bk')[2]) / 2];
   return { tris, centre };
 }
 
-/** Where a ray from o along unit d leaves the skull (its furthest crossing), and that triangle's outward normal. */
+/** Where a ray from o along unit d leaves the skull (its furthest crossing), that triangle's outward normal and its
+ * polygon. */
 function hit(tris, o, d) {
-  let best = -1, nrm = d;
-  for (const [a, b, c] of tris) {
+  let best = -1, nrm = d, poly = -1;
+  for (const tri of tris) {
+    const [a, b, c] = tri;
     const e1 = sub(b, a), e2 = sub(c, a), p = cross(d, e2), det = dot(e1, p);
     if (Math.abs(det) < 1e-12) continue;
     const s = sub(o, a), u = dot(s, p) / det; if (u < -1e-6 || u > 1 + 1e-6) continue;
     const q = cross(s, e1), v = dot(d, q) / det; if (v < -1e-6 || u + v > 1 + 1e-6) continue;
     const t = dot(e2, q) / det;
-    if (t > best) { best = t; nrm = unit(cross(e1, e2)); if (dot(nrm, d) < 0) nrm = mul(nrm, -1); }
+    if (t > best) { best = t; poly = tri.poly; nrm = unit(cross(e1, e2)); if (dot(nrm, d) < 0) nrm = mul(nrm, -1); }
   }
-  return { t: best, n: nrm };
+  return { t: best, n: nrm, poly };
+}
+
+/** Whether the segment p-q passes through the triangle. */
+function segTri(p, q, [a, b, c]) {
+  const d = sub(q, p), e1 = sub(b, a), e2 = sub(c, a), h = cross(d, e2), det = dot(e1, h);
+  if (Math.abs(det) < 1e-12) return false;
+  const s = sub(p, a), u = dot(s, h) / det; if (u < 0 || u > 1) return false;
+  const qq = cross(s, e1), v = dot(d, qq) / det; if (v < 0 || u + v > 1) return false;
+  const t = dot(e2, qq) / det; return t > 0 && t < 1;
 }
 
 const dirOf = (over, out) => { const a = (over * Math.PI) / 180, b = (out * Math.PI) / 180; return [Math.sin(b), Math.cos(b) * Math.sin(a), Math.cos(b) * Math.cos(a)]; };
@@ -95,7 +106,7 @@ export function buildHair(rig, style = SWEPT, hull = null) {
     return add(C, mul(dq, hq.t + Math.max(MIN_H * k, b * hull.thick.at(o, u) * k * (cl.scale ?? 1))));
   };
   for (cl of style.clumps) {
-    if (cl.mass) { massOf(cl, { skull, C, k, verts, polys, pieces, hull }); continue; }
+    if (cl.mass) { massOf(cl, { skull, C, k, verts, polys, pieces, hull, scalp: new Set(shaveOf(B, style.scalp ?? style.shave)) }); continue; }
     const n = cl.n ?? 9, sec = typeof cl.sec === 'string' ? style[cl.sec] : cl.sec ?? style.sec;
     const first = polys.length, base = verts.length;
     // the spine: each control point on the skin, stood off it by its lift along the skull's outward direction
@@ -174,50 +185,66 @@ export function buildHair(rig, style = SWEPT, hull = null) {
 }
 
 /**
- * A mass (the front of the hair as one piece): its locks' creases as lines over the skull, each from the piece's right
- * end to its left end ((over, out) control points, the lowest the roots along the hairline, the highest the back edge),
- * sampled at `n` stations; between two creases a ridge row (`ridge` of the way up). Every corner stands on the ray from
- * the skull's centre through it, off the skin by its thickness: the solved one (cl.fit.t, per row and station, head
- * units on the male, tools/sculpt/lowhairfront.mjs) or, unsolved, the hull's (less `groove` on a crease). The border
- * (the first and last rows and stations) are roots, sunk in the skin; the piece closes in a fan from the skull's centre
- * under them. Returns the rows' vertex indices and each corner's ray (for the solver).
+ * A mass (the front and top of the hair as one piece, its tufts combed straight back): the creases between its tufts as
+ * lines over the skull, his right to his left, the first and the last its borders; each line its stations front to
+ * back as (over, out) points: the root on the scalp at the hairline, the sole, the tuft's tip hanging over the
+ * forehead, the tuft's lifted front, on back to its end at the crown. Between two creases the band's rows (band:
+ * [share of the way across, drop under the envelope]; the creases `groove` under it, so the tips stand apart with
+ * notches between and the tufts' tops are ridges running back; grooveAt: the groove's share per station). Every corner stands on the ray from the skull's centre
+ * through it, off the skin by its thickness: the solved one (cl.fit.t, per row and station, head units on the male,
+ * tools/sculpt/lowhairfront.mjs) or, unsolved, the hull's. The border (the first and the last rows, the roots at the
+ * hairline and at the crown) are sunk in the skin, the hairline's clear of the face; the piece closes in a fan from the skull's centre under them. The pieces' record keeps
+ * each corner's ray, its drop and its role (sole, tip) for the solver.
  */
-export function massOf(cl, { skull, C, k, verts, polys, pieces, hull }) {
-  const lines = cl.lines, n = cl.n, rows = [];
-  // each crease line at the n stations (Catmull-Rom through its control points, evenly in the control points' run)
-  const line = (L) => {
-    const fine = Array.from({ length: 201 }, (_, i) => spline(L, i / 200)), len = [0];
-    for (let i = 1; i < fine.length; i++) len.push(len[i - 1] + Math.hypot(fine[i][0] - fine[i - 1][0], fine[i][1] - fine[i - 1][1]));
-    return Array.from({ length: n }, (_, j) => { const want = (len[200] * j) / (n - 1); let i = 1; while (i < 200 && len[i] < want) i++; const f = (want - len[i - 1]) / Math.max(1e-9, len[i] - len[i - 1]); return [0, 1].map((c) => fine[i - 1][c] + (fine[i][c] - fine[i - 1][c]) * f); });
-  };
-  const creases = lines.map(line);
-  // each row's drop under the envelope: a crease the groove's depth, the band's rows (cl.band: [share of the way to the
-  // next crease, drop]) their own
-  const band = cl.band ?? [[cl.ridge ?? 0.35, 0]], groove = cl.groove ?? 0.04;
-  creases.forEach((cr, i) => {
-    rows.push({ dirs: cr, drop: i >= (cl.edge ? 2 : 1) && i < creases.length - 1 ? groove : 0 });
-    // (between the roots and the front edge, its underside, one row over the forehead: `sole`)
-    if (cl.edge && i === 0) rows.push({ dirs: cr.map((a, j) => [0, 1].map((c) => a[c] + (creases[1][j][c] - a[c]) * 0.5)), drop: 0, sole: true });
-    else if (i < creases.length - 1) for (const [f, drop] of band) rows.push({ dirs: cr.map((a, j) => [0, 1].map((c) => a[c] + (creases[i + 1][j][c] - a[c]) * f)), drop });
+export function massOf(cl, { skull, C, k, verts, polys, pieces, hull, scalp }) {
+  const n = cl.lines[0].length, band = cl.band ?? [[0.5, 0]], groove = cl.groove ?? 0.04, rows = [];
+  cl.lines.forEach((cr, i) => {
+    if (cr.length !== n) throw new Error(`${cl.id}: every line ${n} stations`);
+    rows.push({ dirs: cr, drop: i > 0 && i < cl.lines.length - 1 ? groove : 0 });
+    if (i < cl.lines.length - 1) for (const [f, drop] of band) rows.push({ dirs: cr.map((a, j) => [0, 1].map((c) => a[c] + (cl.lines[i + 1][j][c] - a[c]) * f)), drop });
   });
   const R = rows.length, first = polys.length, base = verts.length, rays = [];
+  // the groove's share at each station (grooveAt: deep at the tips' notches, shallow over the top), 1 without
+  const gAt = (j) => (cl.grooveAt ? cl.grooveAt[j] : 1);
   // (a solve for another layout of rows and stations is not this one's)
   const fit = cl.fit && cl.fit.t.length === R && cl.fit.t[0].length === n ? cl.fit : null;
   const ids = rows.map((row, i) => row.dirs.map(([o, u], j) => {
-    const d = dirOf(o, u), h = hit(skull, C, d), border = i === 0 || i === R - 1 || j === 0 || j === n - 1;
+    let d = dirOf(o, u), h = hit(skull, C, d);
+    const border = i === 0 || i === R - 1 || j === 0 || j === n - 1;
     let t;
     if (border) t = -(cl.sink ?? SINK);
     else if (fit) t = fit.t[i][j];
-    else t = Math.max(MIN_H, (hull ? hull.thick.at(o, u) * (cl.scale ?? 1) : 0.12) - row.drop);
-    rays.push({ i, j, d, r0: h.t, border });
+    else t = Math.max(MIN_H, (hull ? hull.thick.at(o, u) * (cl.scale ?? 1) : 0.12) - row.drop * gAt(j));
+    rays.push({ i, j, d, r0: h.t, border, drop: row.drop * gAt(j), role: j === 1 ? 'sole' : j === 2 ? 'tip' : '' });
     return verts.push(add(C, mul(d, h.t + t * k))) - 1;
   }));
+  // each root at the hairline walked back up the skull until the tuft's underside from it (its quads to the rows beside
+  // it) clears the face (a head whose forehead runs higher than the male's)
+  if (scalp) {
+    const face = skull.filter((tri) => !scalp.has(tri.poly));
+    // the root's two quads to the rows beside it, as triangles, each tested against the face both ways
+    const cross2 = (A, T) => [0, 1, 2].some((e) => segTri(A[e], A[(e + 1) % 3], T) || segTri(T[e], T[(e + 1) % 3], A));
+    const clear = (i) => [i - 1, i + 1].filter((m) => m >= 0 && m < R).every((m) => {
+      const V = (r, j) => verts[ids[r][j]];
+      return ![[V(i, 0), V(i, 1), V(m, 1)], [V(i, 0), V(m, 1), V(m, 0)]].some((A) => face.some((T) => cross2(A, T)));
+    });
+    for (let i = 0; i < R; i++) {
+      let [o, u] = rows[i].dirs[0];
+      for (let up = 0; up < 12 && !clear(i); up++) {
+        o += 1.5;
+        const d = dirOf(o, u), h = hit(skull, C, d);
+        verts[ids[i][0]] = add(C, mul(d, h.t - (cl.sink ?? SINK) * k));
+        Object.assign(rays[i * n], { d, r0: h.t });
+      }
+    }
+  }
   const centre = verts.push([...C]) - 1;
   for (let i = 0; i + 1 < R; i++) for (let j = 0; j + 1 < n; j++) polys.push({ v: [ids[i][j], ids[i][j + 1], ids[i + 1][j + 1], ids[i + 1][j]], piece: pieces.length });
-  // the border, once round (row 0 right to left, the left end up, the last row back, the right end down), fanned to the centre
+  // the border, once round (the first row front to back, the back end across, the last row back to front, the front
+  // end across), fanned to the centre
   const ring = [...ids[0], ...ids.slice(1).map((r) => r[n - 1]), ...ids[R - 1].slice(0, -1).reverse(), ...ids.slice(1, -1).reverse().map((r) => r[0])];
   ring.forEach((a, m) => polys.push({ v: [centre, ring[(m + 1) % ring.length], a], piece: pieces.length }));
-  pieces.push({ id: cl.id, polys: [first, polys.length], verts: [base, verts.length], mass: { ids, rays, rows: R, n, drop: rows.map((r) => r.drop), sole: rows.map((r) => !!r.sole) } });
+  pieces.push({ id: cl.id, polys: [first, polys.length], verts: [base, verts.length], mass: { ids, rays, rows: R, n } });
 }
 
 /**

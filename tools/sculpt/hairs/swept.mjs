@@ -12,6 +12,32 @@ import { existsSync, readFileSync } from 'node:fs';
 const FIT = new URL('./swept-front.json', import.meta.url);
 const fit = existsSync(FIT) ? JSON.parse(readFileSync(FIT, 'utf8')) : null;
 
+/**
+ * The creases between the front's tufts, his right to his left: each from its root at the hairline (over, out), its
+ * tip `tip` degrees ahead of the root (hanging over the forehead; less at the sides, clear of the temples), back to its
+ * end at the crown. Stations: the root, the sole (halfway to the tip), the tip, the tuft's lifted front (just ahead of
+ * the root), then on back to the end.
+ */
+function tuftLines() {
+  const creases = [
+    // [root, end, tip]: the first and the last the piece's borders (roots all along)
+    [[60, -70], [168, -58], 0],
+    [[52, -58], [170, -46], 6],
+    [[44, -44], [165, -34], 14],
+    [[42, -22], [140, -18], 23],
+    [[42, -6], [128, -4], 24],
+    [[42, 10], [126, 10], 24],
+    [[43, 26], [124, 24], 22],
+    [[46, 42], [122, 38], 14],
+    [[58, 64], [112, 58], 0],
+  ];
+  const lerp = (a, b, f) => [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
+  return creases.map(([[o, u], e, tip]) => {
+    const back = [o + 16, u];
+    return [[o, u], [o - tip / 2, u], [o - tip, u], [o - 6, u], ...[0, 0.3, 0.58, 0.82].map((f) => lerp(back, e, f)), e];
+  });
+}
+
 export default {
   // the corners above the roots moved by up to this much (head units, where the lock is 0.2 high; less where lower)
   jitter: 0.006,
@@ -21,19 +47,9 @@ export default {
   sec3: [[-0.5, 0], [-0.47, 0.82], [-0.31, 1], [-0.15, 0.9], [0.02, 1], [0.18, 0.9], [0.33, 1], [0.47, 0.82], [0.5, 0]],
   sec1: [[-0.5, 0], [-0.3, 0.75], [0, 1], [0.3, 0.75], [0.5, 0]],
   clumps: [
-    // the front: one mass from the hairline over the forehead to the crown's front and back along his right side, its
-    // locks' creases (lowest first: the roots, the fringe's lower edge, three creases, the back edge's roots) from behind
-    // his right ear forward along the side, round the forehead's corner, across it rising to the quiff (just left of his
-    // middle) and down his left temple, as the sheet's; each lock a dark groove, the roll's front, its lit top
-    { id: 'front', mass: true, edge: true, n: 11, sink: 0.015, band: [[0.14, 0.02], [0.55, 0]], groove: 0.12, fit,
-      lines: [
-        [[168, -50], [140, -64], [105, -66], [72, -62], [50, -50], [44, -30], [43, -12], [42, 4], [44, 22], [48, 40], [64, 68]],
-        [[168, -55], [140, -69], [105, -71], [70, -67], [38, -52], [25, -32], [20, -12], [19, 4], [22, 22], [32, 42], [60, 68]],
-        [[171, -42], [140, -57], [105, -59], [72, -56], [48, -42], [40, -24], [40, -8], [46, 10], [58, 28], [74, 44], [90, 62]],
-        [[174, -32], [140, -45], [105, -47], [80, -45], [62, -36], [58, -20], [62, -6], [70, 10], [84, 24], [98, 36], [108, 54]],
-        [[177, -21], [140, -33], [108, -35], [92, -32], [78, -26], [76, -14], [82, -4], [94, 10], [106, 20], [116, 30], [122, 46]],
-        [[180, -10], [145, -20], [118, -23], [104, -22], [96, -16], [100, -8], [108, -2], [118, 10], [126, 18], [130, 26], [132, 40]],
-      ] },
+    // the front and the top: one mass of tufts combed straight back (tools/sculpt/lowhair.mjs massOf), the creases
+    // between them below
+    { id: 'front', mass: true, sink: 0.015, band: [[0.5, 0]], groove: 0.1, grooveAt: [0, 1, 1, 1, 0.6, 0.3, 0.3, 0.3, 0], fit, lines: tuftLines() },
     // the top: from under the front's back edge, back over the crown
     { id: 'top', sec: 'sec3', n: 6, scale: 0.825, path: [[92, -2, 0.06], [110, 3], [130, 3], [165, 2], [190, 0]], w: [0.8, 0.8, 0.6, 0.32], h: [0.1], ends: [0.15, 0.6], tipUp: [0.2, 0.2] },
     // his left: three locks from under the front's left end back down the side to the nape

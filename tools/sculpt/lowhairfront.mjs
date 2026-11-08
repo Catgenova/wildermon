@@ -18,19 +18,19 @@ const WEIGHT = { front: 1.6, q3: 1.6, profile: 1, r3: 1, back: 1.2 };
 const SPAN = { front: [40, 370], q3: [345, 660], profile: [650, 960], r3: [960, 1260], back: [1260, 1530] };
 /** The envelope's bend penalty (per head unit of second difference, squared) and a crossing's. */
 const SMOOTH = 40, CROSS = 3;
-/** The least thickness of a corner, of the front's lower edge and of the sole under it (so its underside clears the
+/** The least thickness of a corner, of a tuft's tip and of the sole behind it (so the tips' undersides clear the
  * forehead). */
-const MIN = 0.03, EDGE = 0.09, SOLE = 0.03;
+const MIN = 0.03, TIP = 0.09, SOLE = 0.08;
 
 export function solve({ sweeps = 30, fresh = false, log = true } = {}) {
   const H = carve('swept'), rig = buildRig('male'), B = rig.B;
   const cl = SWEPT.clumps.find((c) => c.mass), style = { ...SWEPT, clumps: SWEPT.clumps.map((c) => (c === cl && fresh ? { ...c, fit: null } : c)) };
   const hair = buildHair(rig, style, H), pc = hair.pieces.find((p) => p.mass), { ids, rays, rows: R, n } = pc.mass, k = hair.k;
-  const C = hair.centre, drop = pc.mass.drop, sole = pc.mass.sole, edgeRow = sole.indexOf(true) + 1;
+  const C = hair.centre, drop = (i, j) => rays[i * n + j].drop;
   // the free corners: every one off the border
   const T = ids.map((row, i) => row.map((v, j) => { const r = rays[i * n + j]; return r.border ? null : (Math.hypot(...hair.verts[v].map((x, c) => x - C[c])) - r.r0) / k; }));
-  for (let i = 1; i < R - 1; i++) for (let j = 1; j < n - 1; j++) T[i][j] = Math.max(least(i), T[i][j]);
-  function least(i) { return sole[i] ? SOLE : i === edgeRow && edgeRow > 0 ? EDGE : MIN + 0.01 - Math.min(0.01, drop[i]); }
+  for (let i = 1; i < R - 1; i++) for (let j = 1; j < n - 1; j++) T[i][j] = Math.max(least(i, j), T[i][j]);
+  function least(i, j) { const role = rays[i * n + j].role; return role === 'sole' ? SOLE : role === 'tip' ? TIP : MIN + 0.01 - Math.min(0.01, drop(i, j)); }
   const place = (i, j) => { const r = rays[i * n + j]; hair.verts[ids[i][j]] = add(C, mul(r.d, r.r0 + T[i][j] * k)); };
   for (let i = 1; i < R - 1; i++) for (let j = 1; j < n - 1; j++) place(i, j);
   const mine = (pi) => pi >= pc.polys[0] && pi < pc.polys[1];
@@ -81,10 +81,11 @@ export function solve({ sweeps = 30, fresh = false, log = true } = {}) {
   const face = B.tris.filter((t) => B.polys[t.poly].part === 'head' && !scalp.has(t.poly));
   const sub = { ...hair, tris: ftris };
   const crossN = () => crossings(rig, { ...sub, scalp: hair.scalp }, B.verts, hair.verts).n;
-  const env = (i, j) => T[i][j] + drop[i];
+  const env = (i, j) => T[i][j] + drop(i, j);
   const smooth = () => {
     let s = 0;
-    for (let i = 1; i < R - 1; i++) for (let j = 2; j < n - 2; j++) s += (env(i, j - 1) - 2 * env(i, j) + env(i, j + 1)) ** 2;
+    // (along a tuft from its lifted front back: the root, the sole and the tip fold under it)
+    for (let i = 1; i < R - 1; i++) for (let j = 4; j < n - 2; j++) s += (env(i, j - 1) - 2 * env(i, j) + env(i, j + 1)) ** 2;
     for (let j = 1; j < n - 1; j++) for (let i = 3; i < R - 2; i++) s += (env(i - 1, j) - 2 * env(i, j) + env(i + 1, j)) ** 2;
     return s * SMOOTH;
   };
@@ -97,7 +98,7 @@ export function solve({ sweeps = 30, fresh = false, log = true } = {}) {
     let moved = 0;
     for (let i = 1; i < R - 1; i++) for (let j = 1; j < n - 1; j++) {
       for (const dt of [step, -step]) {
-        const old = T[i][j], nt = Math.max(least(i), old + dt);
+        const old = T[i][j], nt = Math.max(least(i, j), old + dt);
         if (nt === old) continue;
         T[i][j] = nt; place(i, j);
         const c = cost();
