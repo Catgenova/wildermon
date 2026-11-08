@@ -143,6 +143,19 @@ for ys, xs in label(tone):
     buzz[ys[ok], xs[ok]] = True
 
 
+# ---- the creases: the dark grooves inside the hair (darker than their 7x7 box's mean by over CREASE_D), 2 px in from
+# its outline, each with its depth, for tools/sculpt/lowhairtrace.mjs to lift onto the hull
+CREASE_D = 6
+def box(a, r):
+    c = np.cumsum(np.cumsum(np.pad(a, ((r + 1, r), (r + 1, r)), mode='edge'), 0), 1)
+    return (c[2 * r + 1:, 2 * r + 1:] - c[:-2 * r - 1, 2 * r + 1:] - c[2 * r + 1:, :-2 * r - 1] + c[:-2 * r - 1, :-2 * r - 1]) / (2 * r + 1) ** 2
+valley = box(lum, 3) - lum
+inner = hair.copy()
+for k in (1, 2): inner &= np.roll(hair, k, 0) & np.roll(hair, -k, 0) & np.roll(hair, k, 1) & np.roll(hair, -k, 1)
+cr = inner & (valley > CREASE_D)
+creases = [[int(x), int(y), round(float(valley[y, x]), 1)] for y, x in zip(*np.nonzero(cr))]
+
+
 def runs(m):
     out = []
     for row in m:
@@ -151,7 +164,7 @@ def runs(m):
     return out
 
 
-json.dump({'w': W, 'h': H, 'fig': runs(fig), 'hair': runs(hair), 'buzz': runs(buzz), 'edge': edge, 'marks': marks}, open(os.path.join(D, 'hairs/swept-sheet.json'), 'w'), separators=(',', ':'))
+json.dump({'w': W, 'h': H, 'fig': runs(fig), 'hair': runs(hair), 'buzz': runs(buzz), 'edge': edge, 'marks': marks, 'creases': creases}, open(os.path.join(D, 'hairs/swept-sheet.json'), 'w'), separators=(',', ':'))
 json.dump({'w': W, 'h': H, 'runs': runs(hair)}, open(os.path.join(D, 'hairs/swept-mask.json'), 'w'), separators=(',', ':'))
 Image.fromarray((hair * 255).astype(np.uint8)).save(os.path.join(D, 'hairs/swept-mask.png'))
 print(json.dumps(marks))
@@ -161,10 +174,6 @@ print('hair pixels per view', {v: int(hair[:, a:b].sum()) for v, (a, b) in SPAN.
 # buzz (blue), the landmarks (yellow)
 if '--show' in sys.argv:
     from PIL import ImageDraw
-    def box(a, r):
-        c = np.cumsum(np.cumsum(np.pad(a, ((r + 1, r), (r + 1, r)), mode='edge'), 0), 1)
-        return (c[2 * r + 1:, 2 * r + 1:] - c[:-2 * r - 1, 2 * r + 1:] - c[2 * r + 1:, :-2 * r - 1] + c[:-2 * r - 1, :-2 * r - 1]) / (2 * r + 1) ** 2
-    cr = hair & ((box(lum, 3) - lum) > 6)
     o = im.copy(); o[buzz] = o[buzz] * 0.45 + np.array([70, 130, 255]) * 0.55; o[cr] = o[cr] * 0.3 + np.array([255, 40, 40]) * 0.7
     e = hair ^ (np.roll(hair, 1, 0) & np.roll(hair, -1, 0) & np.roll(hair, 1, 1) & np.roll(hair, -1, 1)); o[e] = [60, 255, 60]
     K, cw, ch, cells = 2, 300, 260, []

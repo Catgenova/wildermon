@@ -38,7 +38,7 @@
 import { writeFileSync } from 'node:fs';
 import { buildRig, posed, skin, add, sub, mul, dot, cross, unit, lerp } from './lowrig.mjs';
 import SWEPT from './hairs/swept.mjs';
-import { angOf, carve, outlineDiff } from './lowhairhull.mjs';
+import { angOf, carve, outlineDiff, camsFor, maskOf, project, raster, bodyTris, VIEWS } from './lowhairhull.mjs';
 
 export const STYLES = { swept: SWEPT };
 // (the game's 'undercut', "Shaved sides", may later take this style's shave with a top of its own)
@@ -46,6 +46,8 @@ export const STYLES = { swept: SWEPT };
 const SINK = 0.04;
 /** A corner's least height off the skin (a lock never thinner), and the gap under a lip's front edge. */
 const MIN_H = 0.03, LIP = 0.015;
+/** How far a mass's border over the face's skin (not the scalp) stands off it. */
+const FACE_LIP = 0.015;
 
 /** The skull: the head's skin without the ears, as triangles (each with its polygon, .poly), and its centre (level with
  * the brow's outer end, midway between the forehead and the back of the skull). */
@@ -182,6 +184,8 @@ export function buildHair(rig, style = SWEPT, hull = null) {
   const roots = new Set(verts.map((p, i) => i).filter((i) => { const r = sub(verts[i], C), l = Math.hypot(...r); return l <= hit(skull, C, mul(r, 1 / l)).t; }));
   if (style.layers) layersOf(style, verts, polys, pieces, skull, C, k, roots);
   orientOut(verts, polys, pieces);
+  // the outline onto the sheet's in its five views (outlineFit)
+  if (style.outline && hull) outlineFit(rig, style.outline, verts, polys, pieces, skull, C, k);
   // the buzz: the head's side faces forward of the shave as far as the sideburn's line, as patches just off them
   if (style.buzz) buzzOf(B, style, verts, polys, k);
   const tris = [];
@@ -233,8 +237,14 @@ export function buildHair(rig, style = SWEPT, hull = null) {
       verts[i] = add(C, mul(d, l - 0.006 * k));
     }
   }
-  const weights = weightsOf(rig, verts, style);
   const shave = shaveOf(B, style.shave), scalp = shaveOf(B, style.scalp ?? style.shave);
+  // a face still through the skin at rest (the face's, off the scalp): its corners stood off the skin a little at a time
+  for (let it = 0; it < 12; it++) {
+    const X = crossings(rig, { verts, polys, tris, scalp, pieces }, B.verts, verts);
+    if (!X.n) break;
+    for (const [pi] of X.hits) for (const i of polys[pi].v) { const r = sub(verts[i], C), l = Math.hypot(...r); verts[i] = add(C, mul(r, (l + 0.004 * k) / l)); }
+  }
+  const weights = weightsOf(rig, verts, style);
   return { verts, polys, tris, weights, pieces, shave, scalp, centre: C, k };
 }
 
@@ -247,7 +257,7 @@ export function buildHair(rig, style = SWEPT, hull = null) {
  * with notches between and their tops are ridges running back; grooveAt: the groove's share per station). Every
  * corner stands on the ray from the skull's centre through it, off the skin by its thickness: the sole's and the
  * tip's `flush` ([sole, tip]: the tip on the forehead at the hairline, nothing hanging over the brow), the rest the
- * solved one (cl.fit.t, per row and station, head units on the male, tools/sculpt/lowhairfront.mjs) or, unsolved, the
+ * solved one (cl.fit.t, per row and station, head units on the male, from a solver since retired) or, unsolved, the
  * hull's. The border (the first and the last rows, the roots behind the hairline and at the crown) are sunk in the
  * skin, the undersides clear of the face; the piece closes in a fan from the skull's centre under them. The pieces'
  * record keeps each corner's ray, its drop and its role (sole, tip) for the solver, and each row's line or band (src:
@@ -288,15 +298,23 @@ export function massOf(cl, { skull, C, k, verts, polys, pieces, hull, scalp }) {
     let d = dirOf(o, u), h = hit(skull, C, d);
     const border = i === 0 || i === R - 1 || j === 0 || j === n - 1;
     let t;
-    if (border) t = -(cl.sink ?? SINK);
+    // (a border that meets another mass rather than the skin: its first or last row (borderUp) or its last station
+    // (endUp) at that share of the hull's thickness, where the two masses meet in a crease, not sunk)
+    const up = j === 0 ? null : i === 0 ? cl.borderUp?.[0] : i === R - 1 ? cl.borderUp?.[1] : j === n - 1 ? cl.endUp : null;
+    const upEnd = j === n - 1 && cl.endUp != null && !(i === 0 && cl.borderUp?.[0] == null) && !(i === R - 1 && cl.borderUp?.[1] == null);
+    if (border && (up != null || upEnd)) t = Math.max(MIN_H, (hull ? hull.thick.at(o, u) * (cl.scale ?? 1) : 0.12) * Math.min(up ?? 1, upEnd ? cl.endUp : 1));
+    // (a border over the face's skin, not the scalp, stands on it rather than in it: the whorl on the forehead)
+    else if (border) t = scalp && !scalp.has(h.poly) ? FACE_LIP : -(cl.sink ?? SINK);
     else if ((j === 1 || j === 2) && cl.flush) t = cl.flush[j - 1];
     else if (fit) t = fit.t[row.src][j] + (row.drop - dropOf(row, j)) * gAt(j);
     else t = Math.max(MIN_H, Math.max(cl.least ? cl.least[j] : 0, hull ? hull.thick.at(o, u) * (cl.scale ?? 1) : 0.12) - dropOf(row, j) * gAt(j));
     // each tuft's lifted front (lift: one per tuft) raised or lowered by its share, half that a station behind
     if (cl.lift && row.tuft !== undefined && !border && (j === 3 || j === 4)) t *= 1 + (cl.lift[row.tuft] - 1) * (j === 3 ? 1 : 0.5);
     rays.push({ i, j, d, r0: h.t, border, drop: dropOf(row, j) * gAt(j), role: j === 1 ? 'sole' : j === 2 ? 'tip' : '' });
-    // (a crease's second row shares the first's corners where it is not split)
+    // (a crease's second row shares the first's corners where it is not split; with apex, every row's first corner is
+    // the one, the tufts' common root)
     if (row.side === 1 && !split(j, row.ci)) return ids[i - 1][j];
+    if (cl.apex && j === 0 && i > 0) return ids[0][0];
     return verts.push(add(C, mul(d, h.t + t * k))) - 1;
   })));
   // the tuft's underside clear of the face on any head: where a root's quads to the rows beside it (either way split)
@@ -312,6 +330,16 @@ export function massOf(cl, { skull, C, k, verts, polys, pieces, hull, scalp }) {
     for (let i = 1; i < R - 1; i++) for (let up = 0; up < 30 && !clear(i); up++) for (const j of up < 10 ? [1] : [1, 2]) {
       const r = rays[i * n + j];
       verts[ids[i][j]] = add(verts[ids[i][j]], mul(r.d, 0.01 * k));
+    }
+    // a border's corner whose faces pass through the face (sunk in the scalp at the face's edge) raised out of the skin
+    // a little at a time, with the row beside it, to stand on it
+    for (const i of [0, R - 1]) {
+      const m = i ? R - 2 : 1;
+      for (let j = 1; j < n - 1; j++) for (let up = 0; up < 8; up++) {
+        const quads = [j - 1, j].filter((q) => q >= 0 && q + 1 < n).flatMap((q) => [[V(i, q), V(i, q + 1), V(m, q + 1)], [V(i, q), V(m, q + 1), V(m, q)]]);
+        if (!quads.some((A) => face.some((T) => cross2(A, T)))) break;
+        for (const r of [i, m]) verts[ids[r][j]] = add(verts[ids[r][j]], mul(rays[r * n + j].d, 0.006 * k));
+      }
     }
   }
   const centre = verts.push([...C]) - 1;
@@ -364,6 +392,74 @@ function sideOf(side, verts, pieces, skull, C, k) {
       d2 = dirOf(o, hi);
     }
     verts[i] = add(C, mul(d2, hit(skull, C, d2).t + (h > 0 && lip ? lip * k : h)));
+  }
+}
+
+/** A signed distance (px) to a mask's edge over a W x H grid: negative inside, positive outside (chamfer, 3-4). */
+function signedDist(M, W, Hh) {
+  const pass = (on) => {
+    const D = new Float32Array(W * Hh).fill(1e6);
+    for (let i = 0; i < M.length; i++) if (!!M[i] === on) D[i] = 0;
+    const f = (i, j, w) => { if (D[j] + w < D[i]) D[i] = D[j] + w; };
+    for (let y = 0; y < Hh; y++) for (let x = 0; x < W; x++) { const i = y * W + x; if (x) f(i, i - 1, 1); if (y) { f(i, i - W, 1); if (x) f(i, i - W - 1, 1.4); if (x < W - 1) f(i, i - W + 1, 1.4); } }
+    for (let y = Hh - 1; y >= 0; y--) for (let x = W - 1; x >= 0; x--) { const i = y * W + x; if (x < W - 1) f(i, i + 1, 1); if (y < Hh - 1) { f(i, i + W, 1); if (x < W - 1) f(i, i + W + 1, 1.4); if (x) f(i, i + W - 1, 1.4); } }
+    return D;
+  };
+  const out = pass(true), inn = pass(false), S = new Float32Array(W * Hh);
+  for (let i = 0; i < S.length; i++) S[i] = M[i] ? -inn[i] + 0.5 : out[i] - 0.5;
+  return S;
+}
+let SD = null;
+const BODY = new Map();
+/**
+ * The hair's outline onto the sheet's (outline: { rounds, step }): in each of the five views (the body's own cameras,
+ * tools/sculpt/lowhairreg.mjs), every corner above the skin on the hair's outline there (seen, with a pixel within 2
+ * of it not the hair's: the background or the skin) stands where the sheet's silhouette is: moved along its ray from the skull's centre by the
+ * signed distance (px) from its projection to the sheet's hair's edge, over the pixels a head unit of that ray spans,
+ * at most `step` (head units) a round, the views' moves averaged.
+ */
+function outlineFit(rig, o, verts, polys, pieces, skull, C, k) {
+  const cams = camsFor(rig.who), M = maskOf('swept');
+  SD ??= signedDist(M.raw, M.w, M.h);
+  const N = verts.map(() => [0, 0, 0]);
+  const fixed = new Set();
+  for (const pc of pieces) if (pc.mass) fixed.add(pc.verts[1] - 1);
+  for (let r = 0; r < (o.rounds ?? 8); r++) {
+    N.forEach((n) => n.fill(0));
+    for (const p of polys) {
+      if (p.buzz) continue;
+      const v = p.v, nn = [0, 0, 0];
+      for (let i = 0; i < v.length; i++) { const a = verts[v[i]], b = verts[v[(i + 1) % v.length]]; nn[0] += (a[1] - b[1]) * (a[2] + b[2]); nn[1] += (a[2] - b[2]) * (a[0] + b[0]); nn[2] += (a[0] - b[0]) * (a[1] + b[1]); }
+      for (const i of v) for (let c = 0; c < 3; c++) N[i][c] += nn[c];
+    }
+    const moves = verts.map(() => [0, 0]);
+    const tris = [];
+    for (const p of polys) if (!p.buzz) for (let j = 1; j + 1 < p.v.length; j++) tris.push([verts[p.v[0]], verts[p.v[j]], verts[p.v[j + 1]]]);
+    for (const v of VIEWS) {
+      const c = cams[v], Z = new Float32Array(M.w * M.h).fill(-Infinity), id = new Uint8Array(M.w * M.h);
+      raster(BODY.get(rig.who) ?? BODY.set(rig.who, bodyTris(rig.B)).get(rig.who), c, Z, M.w, M.h, id, 2);
+      raster(tris, c, Z, M.w, M.h, id, 1);
+      verts.forEach((q, i) => {
+        if (fixed.has(i)) return;
+        const r0 = sub(q, C), l = Math.hypot(...r0), d = mul(r0, 1 / l), skin = hit(skull, C, d).t;
+        if (l - skin < 0.01 * k) return;
+        const s = project(q, c), X = Math.floor(s[0]), Y = Math.floor(s[1]);
+        if (X < 2 || Y < 2 || X >= M.w - 2 || Y >= M.h - 2 || s[2] < Z[Y * M.w + X] - 0.02) return;
+        // (on the hair's outline in this view: a pixel within 2 of it not the hair's)
+        let edge = false;
+        for (let dy = -2; dy <= 2 && !edge; dy++) for (let dx = -2; dx <= 2; dx++) if (id[(Y + dy) * M.w + X + dx] !== 1) { edge = true; break; }
+        if (!edge) return;
+        const s2 = project(add(q, mul(d, 0.05)), c), ppu = Math.hypot(s2[0] - s[0], s2[1] - s[1]) / 0.05;
+        if (ppu < 20) return;
+        moves[i][0] += -SD[Y * M.w + X] / ppu; moves[i][1]++;
+      });
+    }
+    verts.forEach((q, i) => {
+      if (!moves[i][1]) return;
+      const r0 = sub(q, C), l = Math.hypot(...r0), d = mul(r0, 1 / l), skin = hit(skull, C, d).t;
+      const m = Math.max(-(o.step ?? 0.02) * k, Math.min((o.step ?? 0.02) * k, moves[i][0] / moves[i][1]));
+      verts[i] = add(C, mul(d, Math.max(skin + MIN_H * k, l + m)));
+    });
   }
 }
 
@@ -620,8 +716,10 @@ export function crossings(rig, hair, P, H) {
   const bb = (pts) => [0, 1, 2].map((k) => [Math.min(...pts.map((p) => p[k])), Math.max(...pts.map((p) => p[k]))]);
   const tb = skinT.map((t) => bb(t.v.map((i) => P[i])));
   const hits = [];
+  // (a mass's underside, its fan to the skull's centre, is inside the head: left out)
+  const fanOf = (pi) => { const p = hair.polys[pi], pc = hair.pieces[p.piece]; return !!(pc && pc.mass && p.v.includes(pc.verts[1] - 1)); };
   for (const [a, b, c, pi] of hair.tris) {
-    if (hair.polys[pi].buzz) continue;
+    if (hair.polys[pi].buzz || fanOf(pi)) continue;
     const A = [H[a], H[b], H[c]], ab = bb(A);
     for (let s = 0; s < skinT.length; s++) {
       if (ab.some(([lo, hi], k) => hi < tb[s][k][0] || lo > tb[s][k][1])) continue;

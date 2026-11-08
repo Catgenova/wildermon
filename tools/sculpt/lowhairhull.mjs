@@ -1,4 +1,4 @@
-// The hair's volume carved from the reference sheet's five silhouettes (tools/sculpt/lowhairmask.py writes them to
+// The hair's volume carved from the reference sheet's five silhouettes (tools/sculpt/lowhairsheet.py writes them to
 // tools/sculpt/hairs/<style>-mask.json): a visual hull on the male's head, under the sheet's five cameras
 // (tools/sculpt/lowhaircams.json, fitted to the sheet's face, ears and neck; the back's scale and height its own, by
 // its ears against the front's: the sheet draws that view about 6% smaller), kept outside his skull. Read back as a
@@ -166,7 +166,7 @@ export function centreOf(B) { const P = (n) => B.verts[B.index.get(n)]; return [
  * pixels), outside the skull; the
  * thickness along a direction is how far past the skin the hull runs on without a break.
  */
-export function carve(style = 'swept', vox = 0.02, grow = 6, need = 5) {
+export function carve(style = 'swept', vox = 0.02, grow = 2, need = 5) {
   const rig = buildRig('male'), B = rig.B, C = centreOf(B), skull = skullTable(B, C);
   const inside = maskOf(style, grow);
   const cams = VIEWS.map((v) => CAMS[v]);
@@ -187,8 +187,10 @@ export function carve(style = 'swept', vox = 0.02, grow = 6, need = 5) {
   const thick = gridOf(2, (over, out) => {
     const d = dirOf(over, out), r0 = skull.at(over, out);
     if (!(r0 > 0)) return 0;
+    // (the outermost of the hull along the ray, gaps under it filled: a lock's lip overhangs the buzz, a voxel at the
+    // skin under it carved by the view that sees the buzz there)
     let t = 0;
-    while (t < 0.6 && inHull(add(C, mul(d, r0 + t + vox / 2)))) t += vox / 2;
+    for (let u = 0; u < 0.6; u += vox / 2) if (inHull(add(C, mul(d, r0 + u + vox / 2)))) t = u + vox / 2;
     return t;
   });
   return { C, skull, thick, inHull, rig };
@@ -215,7 +217,7 @@ export function hullSurface(H, rig, step = 3) {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const args = process.argv.slice(2), opt = (n, f) => { const i = args.indexOf(`--${n}`); return i < 0 ? f : args[i + 1]; };
-  const t0 = Date.now(), H = carve(opt('style', 'swept'), 0.02, +opt('grow', 6), +opt('need', 5));
+  const t0 = Date.now(), H = carve(opt('style', 'swept'), 0.02, +opt('grow', 2), +opt('need', 5));
   let n = 0, max = 0; for (const v of H.thick.T) { if (v > 0.01) n++; max = Math.max(max, v); }
   console.log('hull: directions covered', n, 'of', H.thick.T.length, 'thickest', max.toFixed(3), 'ms', Date.now() - t0);
   const S = hullSurface(H, H.rig, 2);

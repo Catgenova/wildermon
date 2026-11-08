@@ -1,0 +1,18 @@
+{
+ "comment": "The swept-back hair's creases traced on its sheet, each front to back: src, per view the points that view shows best (sheet pixels; a border's [view, 'edge', x from, x to], the hair's lower edge), lifted onto the hull by tools/sculpt/lowhairlines.mjs; all from the whorl on the forehead's hairline a little to his left (whorl, scalp-map degrees [east, north]) to the back's centre line at north `to`. group: his right side up to the parting C, or his left; border: the hair's edge on the skin. tufts: [crease, crease, name], his right's lowest first.",
+ "whorl": [-22, 50],
+ "lines": [
+  {"id": "r0", "group": "right", "border": true, "to": -78, "src": [["front", "edge", 236, 108], ["profile", "edge", 893, 698], ["back", "edge", 1470, 1380]]},
+  {"id": "r1", "group": "right", "to": -72, "src": [["front", [[207,116],[198,109],[182,103],[157,100],[130,101]]], ["profile", [[893,118],[888,107],[880,102],[860,101],[830,104],[800,111],[780,116]]], ["back", [[1472,119],[1450,128],[1425,137],[1405,142]]]]},
+  {"id": "r2", "group": "right", "to": -60, "src": [["front", [[225,112],[215,103],[200,93],[175,85],[145,80]]], ["profile", [[890,94],[880,85],[860,80],[830,80],[805,83],[780,90]]], ["back", [[1470,82],[1460,84],[1440,92],[1420,96],[1400,103],[1388,110]]]]},
+  {"id": "r3", "group": "right", "to": -48, "src": [["front", [[240,106],[225,86],[205,75],[180,68],[145,66]]], ["profile", [[890,77],[878,70],[855,68],[830,70],[805,73],[782,79]]], ["back", [[1465,68],[1447,69],[1425,73],[1402,78],[1390,88]]]]},
+  {"id": "r4", "group": "right", "to": -36, "src": [["front", [[253,95],[245,70],[230,55],[210,48],[180,45],[150,47]]], ["profile", [[872,49],[850,49],[820,50],[795,54],[770,62]]]]},
+  {"id": "r5", "group": "right", "to": -25, "src": [["front", [[248,58],[240,48],[223,38],[197,35]]], ["profile", [[840,38],[815,40],[790,44],[765,51]]]]},
+  {"id": "C", "group": "both", "to": -14, "src": [["front", [[258,108],[262,100],[266,82],[267,68],[265,54],[257,44]]]]},
+  {"id": "l1", "group": "left", "to": -40, "src": [["front", [[264,108],[270,98],[276,85],[278,72],[276,62],[272,48]]]]},
+  {"id": "l2", "group": "left", "to": -56, "src": [["front", [[264,110],[275,101],[286,92],[296,86]]], ["r3", [[1040,74],[1060,77],[1080,83],[1100,93]]], ["back", [[1287,90],[1300,86],[1318,80],[1335,82],[1350,87],[1366,98]]]]},
+  {"id": "l3", "group": "left", "to": -70, "src": [["front", [[266,113],[285,104],[302,102]]], ["r3", [[1010,111],[1040,112],[1060,118],[1090,128],[1110,134]]], ["back", [[1292,121],[1310,118],[1328,118],[1350,125],[1366,138]]]]},
+  {"id": "l0", "group": "left", "border": true, "to": -78, "src": [["front", "edge", 262, 305], ["r3", "edge", 1002, 1135], ["back", "edge", 1288, 1375]]}
+ ],
+ "tufts": [["r0","r1","B1"],["r1","r2","B2"],["r2","r3","B3"],["r3","r4","B4"],["r4","r5","B5"],["r5","C","B6"],["C","l1","Q1"],["l1","l2","Q2"],["l2","l3","Q3"],["l3","l0","Q4"]]
+}
