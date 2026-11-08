@@ -24,12 +24,12 @@
 // over a band `trim` wide (the gold rim). One open shell a plate, rigid on its bone: the band on the pelvis, his lame on
 // the hip helper (half the thigh's turn), the cuisse on the thigh, the knee guard on the knee helper (half the calf's
 // turn), the shin and calf plates on the calf.
-import { meshOf, orient, trisOf, samplesOf, lerp, sub, add, mul, unit, cross, dot } from '../lowgarment.mjs';
+import { meshOf, orient, trisOf, lerp, sub, add, mul, unit, cross, dot, newell, transferWeights } from '../lowgarment.mjs';
 
 /** The plate set's materials, shared by name and colour with the set's other pieces: plate, its darker shade, gold, the glow (emissive), the base layer. */
 export const MATS = {
-  plate: [0.82, 0.65, 0.54],
-  shade: [0.68, 0.51, 0.41],
+  plate: [0.7, 0.58, 0.52],
+  shade: [0.59, 0.49, 0.44],
   gold: [0.96, 0.74, 0.4],
   glow: [1, 0.906, 0.651],
   under: [0.29, 0.22, 0.2],
@@ -64,10 +64,10 @@ function tab(T) {
  */
 export const DESIGN = {
   male: {
-    clear: 0.04, gap: 0.02, t: 0.045, raise: 0.022, trim: 0.07, thigh: [0, 50, 91, 132, 180, 229, 271, 312],
-    low: { clear: 0.025, gap: 0.01, t: 0.03, raise: 0.015, trim: 0.06 },
+    sink: 0.035, clear: 0.015, gap: 0.012, t: 0.04, raise: 0.02, trim: 0.07, thigh: [0, 50, 91, 132, 180, 229, 271, 312],
+    low: { clear: 0.012, gap: 0.01, t: 0.03, raise: 0.015, trim: 0.06 },
     band: { z0: -0.06, az: [0, 30, 70, 110, 150, 180], top: [-3.99, -3.97, -3.94, -3.94, -3.97, -3.99], bottom: [-5.45, -4.95, -4.6, -4.62, -4.74, -4.86] },
-    lame: { az: [-40, 0, 50, 91, 132, 180, 216], rows: [{ y: tab([[0, -4.85], [91, -4.42], [180, -4.66], [229, -5.4], [271, -5.6], [320, -5.45]]), lvl: 0 }, { y: [-6.05, -5.95, -6.0, -6.1], lvl: 1 }] },
+    lame: { stops: 'skin', ease: [[0.55, 0.85, 'thigh'], [0.25, 0.05, 'pelvis']], az: [-40, 0, 50, 91, 132, 180, 216], rows: [{ y: tab([[0, -4.85], [91, -4.42], [180, -4.66], [229, -5.4], [271, -5.6], [320, -5.45]]), lvl: 0 }, { y: [-6.05, -5.95, -6.0, -6.1], lvl: 1 }] },
     cuisse: { rows: [{ y: [-5.75, -5.68, -5.75, -6.3], lvl: 0 }, { y: -6.62, lvl: 0 }, { y: [-7.3, -7.12, -6.95, -7.05], lvl: 0 }] },
     knee: { top: -6.66, mid: -7.42, bottom: -8.12, wing: 84, lvl: 1, bulge: 0.14, inset: [14, 0.27], ringIn: [18, 0.34], ring: [25, 0.46] },
     shinUp: { az: [-92, -48, -5, 5, 48, 92], rows: [{ y: [-7.72, -7.85, -7.85, -7.85], lvl: 0 }, { y: [-8.62, -8.58, -8.58, -8.58], lvl: 1 }] },
@@ -75,10 +75,10 @@ export const DESIGN = {
     calf: { az: [98, 139, 180, 221, 262], segs: [[-8.05, -8.9], [-8.75, -9.6], [-9.45, -10.36]], chevron: 0.18 },
   },
   female: {
-    clear: 0.035, gap: 0.018, t: 0.04, raise: 0.02, trim: 0.06, thigh: [0, 38, 88, 143, 180, 218, 275, 325],
-    low: { clear: 0.02, gap: 0.008, t: 0.026, raise: 0.012, trim: 0.05 },
-    band: { z0: -0.38, az: [0, 30, 70, 110, 150, 180], top: [-3.63, -3.61, -3.58, -3.58, -3.61, -3.64], bottom: [-4.32, -3.98, -3.9, -3.95, -4.06, -4.16] },
-    cuisse: { hip: 2, rows: [{ y: tab([[0, -3.95], [88, -3.76], [180, -3.98], [218, -4.6], [275, -4.75], [325, -4.45]]), lvl: 0 }, { y: [-6.58, -6.45, -6.25, -6.35], lvl: 0 }] },
+    sink: 0.035, clear: 0.012, gap: 0.01, t: 0.036, raise: 0.018, trim: 0.06, thigh: [0, 38, 88, 143, 180, 218, 275, 325],
+    low: { clear: 0.01, gap: 0.008, t: 0.026, raise: 0.012, trim: 0.05 },
+    band: { z0: -0.38, az: [0, 30, 70, 110, 150, 180], top: [-3.63, -3.61, -3.58, -3.58, -3.61, -3.64], bottom: [-4.32, -3.98, -3.9, -3.95, -4.06, -4.16], gap: 0.035 },
+    cuisse: { stops: 'skin', ease: [], rows: [{ y: tab([[0, -4.05], [88, -3.76], [180, -3.98], [218, -4.8], [275, -4.95], [325, -4.25]]), lvl: 0 }, { y: [-6.58, -6.45, -6.25, -6.35], lvl: 0 }] },
     knee: { top: -6.02, mid: -6.74, bottom: -7.44, wing: 82, lvl: 1, bulge: 0.12, inset: [13, 0.26], ringIn: [17, 0.33], ring: [24, 0.44] },
     shinUp: { az: [-92, -48, -5, 5, 48, 92], rows: [{ y: [-7.02, -7.15, -7.15, -7.15], lvl: 0 }, { y: [-8.0, -7.95, -7.95, -7.95], lvl: 1 }] },
     shinLow: { az: [-92, -48, -5, 5, 48, 92], rows: [{ y: -7.8, lvl: 0 }, { y: -10.5, lvl: 0.4 }] },
@@ -290,7 +290,11 @@ export function buildPlateLegs(rig, design = DESIGN[rig.who], { stage = 9 } = {}
     rows.forEach((r, i) => { r.off = r.y.map((y, k) => R[i][k] - F.reach(y, az[k])); });
     const P = shell(rows, az, (n) => F.at(n.y, n.az, n.off), { t: S.t, raise: S.raise, trim: S.trim, ...o });
     const ids = lay(G, P, tag);
-    G.plates.push({ tag, bone, ids, side: 'l', rowW: o.rowW ?? null, nodes: P.nodes });
+    // (where the plate bridges a joint, its share down it per column, u from its top row (0) to its foot (1): the
+    // weights' stops)
+    const top = rows[0].y, bot = rows[rows.length - 1].y;
+    const uOf = P.nodes.map((row) => row.map((n) => { const k = az.indexOf(n.az); return (top[k] - n.y) / (top[k] - bot[k]); }));
+    G.plates.push({ tag, bone, ids, side: 'l', stops: o.stops ?? null, ease: o.ease ?? null, uOf });
     return P;
   };
   const LOW = { ...D, ...D.low };
@@ -303,11 +307,11 @@ export function buildPlateLegs(rig, design = DESIGN[rig.who], { stage = 9 } = {}
     legPlate(tag, 'calf', d.rows, d.az, LOW, { lipTop: false, ridge: (k) => (k === c || k === c - 1 ? 0.015 : 0), inset: (i, k) => (k === c - 1 ? 'gold' : null) });
   }
   // ---- the cuisse round the thigh, his lame over its top --------------------------------------------------------------
-  legPlate('cuisse', 'thigh', D.cuisse.rows, D.thigh, D, { closed: true, lipTop: false });
+  legPlate('cuisse', 'thigh', D.cuisse.rows, D.thigh, D, { closed: true, lipTop: false, stops: D.cuisse.stops, ease: D.cuisse.ease });
   // ---- the knee guard ---------------------------------------------------------------------------------------------------
   kneeGuard(G, D, F);
   // (his lame open on the inside: the thighs nearly meet under the crotch)
-  if (D.lame) legPlate('lame', 'hip', D.lame.rows, D.lame.az, D, { trimSides: true });
+  if (D.lame) legPlate('lame', 'hip', D.lame.rows, D.lame.az, D, { trimSides: true, stops: D.lame.stops, ease: D.lame.ease });
   // ---- the right leg: the left's mirror ----------------------------------------------------------------------------
   const nL = G.verts.length, nP = G.polys.length;
   const mir = new Array(nL);
@@ -396,7 +400,7 @@ function kneeGuard(G, D, F) {
  * the body's front there, the clearance and the thickness).
  */
 function hipBand(G, D, B) {
-  const Bd = D.band, z0 = Bd.z0;
+  const Bd = D.band, z0 = Bd.z0, gapU = Bd.gap ?? D.gap;
   const az = [...Bd.az, ...Bd.az.slice(1, -1).map((a) => -a).reverse()];
   const body = bodyTris(B, new Set(['torso', 'pelvis', 'legs']));
   const plates = G.tris ? [] : trisOf(G).map((t) => t.v.map((i) => G.verts[i]));
@@ -413,8 +417,8 @@ function hipBand(G, D, B) {
     let rp = 0;
     const yHi = i > 0 ? (y + ys[i - 1][k]) / 2 : y + 0.04, yLo = i + 1 < ys.length ? ys[i + 1][k] : y - 0.12;
     for (let f = 0; f <= 1; f += 0.2) rp = Math.max(rp, reachP(yHi + (yLo - yHi) * f, az[k]));
-    over[i][k] = rp > 0 && rp + D.gap + D.t > rb ? 1 : 0;
-    return Math.max(rb, rp > 0 ? rp + D.gap + D.t : 0);
+    over[i][k] = rp > 0 && rp + gapU + D.t > rb ? 1 : 0;
+    return Math.max(rb, rp > 0 ? rp + gapU + D.t : 0);
   }));
   // (flat at the front: no further forward than the body's own front there, the clearance and the thickness)
   // (the body's front at (x, y): the furthest forward of its surface within 0.1 across, by rays from in front)
@@ -428,7 +432,7 @@ function hipBand(G, D, B) {
   // (the rows no tighter than the one below: the band stands as a band)
   for (let i = R.length - 2; i >= 0; i--) R[i] = R[i].map((r, k) => Math.max(r, R[i + 1][k] - 0.03));
   // (each cell of the band clear of the body and the plates under it, as the leg plates')
-  cellOut(ys, az, R, true, () => [0, z0], (y, a) => { const rb = reachB(y, a) + D.clear + D.t, rpp = reachP(y, a); return Math.max(rb, rpp > 0 ? rpp + D.gap + D.t : 0); });
+  cellOut(ys, az, R, true, () => [0, z0], (y, a) => { const rb = reachB(y, a) + D.clear + D.t, rpp = reachP(y, a); return Math.max(rb, rpp > 0 ? rpp + gapU + D.t : 0); });
   const pt = (n) => { const r = n.r; return [Math.sin(rad(n.az)) * r, n.y, z0 + Math.cos(rad(n.az)) * r]; };
   // (the shell's nodes as the band's: y, az, and the reach in `off`)
   const rows = ys.map((row, i) => ({ y: row, off: R[i] }));
@@ -464,6 +468,18 @@ export function buildWithBase(rig, design, o) {
     G.polys.push({ v, mat: 'under', part: 'base', tag: 'base' });
   }
   G.baseOf = map;
+  // (pulled in under the plates: each vertex off the layer's edge in along its normal by `sink`, so the plates hug the
+  // body's line while the body under them can swell a little as it bends; its edges, against the body, stay put)
+  const sink = (design ?? DESIGN[rig.who]).sink ?? 0;
+  if (sink > 0) {
+    const edge = new Map();
+    for (let q = nP; q < G.polys.length; q++) { const v = G.polys[q].v; v.forEach((a, k) => { const b = v[(k + 1) % v.length], key = a < b ? `${a},${b}` : `${b},${a}`; edge.set(key, (edge.get(key) ?? 0) + 1); }); }
+    const rim = new Set();
+    for (const [key, n] of edge) if (n === 1) for (const x of key.split(',')) rim.add(+x);
+    const nrm = new Map();
+    for (let q = nP; q < G.polys.length; q++) { const v = G.polys[q].v, n = newell(G.verts, v); for (const i of v) nrm.set(i, add(nrm.get(i) ?? [0, 0, 0], n)); }
+    for (const [i, n] of nrm) if (!rim.has(i)) G.verts[i] = sub(G.verts[i], mul(unit(n), sink));
+  }
   // (its triangles the body's own: a polygon off its plane cut as the body cuts it)
   const T = trisOf({ polys: G.polys.slice(0, nP) }), at = new Map(hides.map((k, n) => [k, nP + n]));
   for (const t of B.tris) if (at.has(t.poly)) T.push({ v: t.v.map((i) => map.get(i)), poly: at.get(t.poly) });
@@ -479,9 +495,43 @@ export function buildWithBase(rig, design, o) {
 export function plateLegsWeights(rig, G) {
   const vw = new Array(G.verts.length).fill(null);
   const at = (n) => rig.at.get(n);
+  // (a plate over a joint that follows the skin under it: the body's weights at the closest point of its pelvis and
+  // legs, smoothed along the plate, the two largest kept)
+  const skinned = new Set(G.plates.filter((p) => p.stops === 'skin').flatMap((p) => p.ids.flat()));
+  const parts = new Set(['pelvis', 'legs', 'torso']);
+  const skinW = skinned.size ? transferWeights(rig, G, { only: (i) => skinned.has(i), keep: (i) => parts.has(rig.B.part[i]), smooth: 2, map: (n) => (/^spine/.test(n) ? 'pelvis' : n) }).map((l) => {
+    if (!l) return l;
+    const two = [...l].sort((a, b) => b[1] - a[1]).slice(0, 2), t = two.reduce((a, [, w]) => a + w, 0);
+    return two.map(([b, w]) => [b, w / t]);
+  }) : [];
   for (const pl of G.plates) {
-    const bone = pl.side === 'c' ? pl.bone : `${pl.bone}_${pl.side}`;
-    for (const row of pl.ids) for (const i of row) vw[i] = [[at(bone), 1]];
+    const name = (b) => (pl.side === 'c' || b === 'pelvis' ? b : `${b}_${pl.side}`);
+    pl.ids.forEach((row, i) => row.forEach((v, k) => {
+      if (!pl.stops) { vw[v] = [[at(name(pl.bone)), 1]]; return; }
+      if (pl.stops === 'skin') {
+        // (the skin's weights, eased into one bone over a span of the plate's height where it lies under or over a
+        // rigid plate: `ease`, [[u0, u1, bone], ...]; the two largest kept)
+        const u = pl.uOf[i][k], m = new Map(skinW[v]);
+        for (const [u0, u1, bone] of pl.ease ?? []) {
+          const f = u0 < u1 ? Math.max(0, Math.min(1, (u - u0) / (u1 - u0))) : Math.max(0, Math.min(1, (u0 - u) / (u0 - u1)));
+          if (f <= 0) continue;
+          for (const [b, w] of m) m.set(b, w * (1 - f));
+          const bi = at(name(bone)); m.set(bi, (m.get(bi) ?? 0) + f);
+        }
+        const two = [...m].sort((a, b) => b[1] - a[1]).slice(0, 2), t = two.reduce((a, [, w]) => a + w, 0);
+        vw[v] = two.map(([b, w]) => [b, w / t]);
+        return;
+      }
+      // (between two stops, their bones blended by the share down: two bones at most)
+      const u = Math.max(0, Math.min(1, pl.uOf[i][k])), S = pl.stops;
+      let w = [[at(name(S[S.length - 1][1])), 1]];
+      for (let s = 0; s + 1 < S.length; s++) if (u >= S[s][0] && u <= S[s + 1][0]) {
+        const f = S[s + 1][0] > S[s][0] ? (u - S[s][0]) / (S[s + 1][0] - S[s][0]) : 1, a = at(name(S[s][1])), b = at(name(S[s + 1][1]));
+        w = a === b ? [[a, 1]] : [[a, 1 - f], [b, f]].filter(([, x]) => x > 1e-6);
+        break;
+      }
+      vw[v] = w;
+    }));
   }
   if (G.baseOf) for (const [b, g] of G.baseOf) vw[g] = rig.vw[b].map(([bi, w]) => [bi, w]);
   return vw.map((w) => w ?? [[at('pelvis'), 1]]);
