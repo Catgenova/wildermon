@@ -77,7 +77,7 @@ export const DESIGN = {
     crest: { w: 0.38, wt: 0.3, h: 0.17 }, star: 0.34,
     disc: { r: 0.38, boss: 0.21, h: 0.08, bh: 0.08 },
     cheek: { az: [[84, 0.9], [98, 0.9], [92, 0.32], [84, 0.3]], t: 0.07 },
-    guard: { cz: -0.15, cols: 8, top: -0.06, ring: -0.24, bot: -0.36, clear: 0.05, t: 0.06, flare: 0.03 },
+    guard: { cz: -0.15, cols: 8, top: -0.06, ring: -0.24, bot: -0.36, clear: 0.08, t: 0.06, flare: 0.03 },
   },
   female: {
     z0: 0.05,
@@ -286,8 +286,8 @@ export function buildHelm(rig, design = DESIGN[rig.who]) {
         for (let e = 0; e < 4; e++) { const [a, b] = [c[e], c[(e + 1) % 4]]; G.poly([Tg[a[0]][a[1]], Tg[b[0]][b[1]], Bg[b[0]][b[1]], Bg[a[0]][a[1]]], 'shade', 'helm'); }
         continue;
       }
+      // (one face: drawn from both sides, its inside seen through the vents)
       G.poly([Tg[i][k], Tg[i + 1][k], Tg[i + 1][k + 1], Tg[i][k + 1]], 'plate', 'helm');
-      G.poly([Bg[i][k + 1], Bg[i + 1][k + 1], Bg[i + 1][k], Bg[i][k]], 'shade', 'helm');
     }
     // the outer walls round the frame
     const ring = [...SS.map((_, i) => [i, 0]), ...TT.slice(1).map((_, k) => [SS.length - 1, k + 1]), ...SS.slice(0, -1).map((_, i) => [SS.length - 2 - i, TT.length - 1]), ...TT.slice(1, -1).map((_, k) => [0, TT.length - 2 - k])];
@@ -320,7 +320,7 @@ export function buildHelm(rig, design = DESIGN[rig.who]) {
     const tag = `disc ${sg > 0 ? 'L' : 'R'}`;
     const outer = oct(C.r, 0), bossB = oct(C.boss, 0);
     // (a prism: its foot clear of the band's rim, the visor's side tucked under it)
-    const { T } = plate(tag, outer, [], 'plate', 'shade', { foot: oct(C.r, -C.h), closed: true });
+    const { T } = plate(tag, outer, [], 'plate', 'shade', { foot: oct(C.r, -C.h) });
     // (the face: the ring between the rim and the boss, then the boss, a low eight-sided dome)
     const Bi = bossB.map((p) => G.vert(p, tag)), cT = G.vert(add(c0, mul(n, C.bh)), tag);
     for (let k = 0; k < 8; k++) { const k1 = (k + 1) % 8; G.poly([T[k], T[k1], Bi[k1], Bi[k]], 'plate', 'helm'); G.poly([Bi[k], Bi[k1], cT], 'gold', 'helm'); }
