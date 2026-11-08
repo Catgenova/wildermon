@@ -28,7 +28,7 @@
 //   the cloth's edges (the neckline, the cuffs, the hem) turned in by the cloth's thickness THICK and a band up inside.
 // Every vertex then pushed out until the body is at least THICK + CLEAR inside the outer surface (clearOut), and the
 // seams creased in (DESIGN.seams). Materials: linen, panel (linen's tone a step down, every other panel), trim, inner.
-import { meshOf, orient, trisOf, transferWeights, closestOnTri, sub, add, mul, dot, cross, unit, lerp } from '../lowgarment.mjs';
+import { meshOf, orient, trisOf, transferWeights, applyRefit, closestOnTri, sub, add, mul, dot, cross, unit, lerp } from '../lowgarment.mjs';
 import { TORSO_RING } from '../lowarm.mjs';
 import { MATS as SHAWL_MATS } from './shawl.mjs';
 
@@ -54,12 +54,13 @@ export const MATS = {
  *   arm: the armhole's clearance, how far its foot drops at most; sleeve: the arm's rings it goes round and their
  *   clearance, the cuff (at, a share of the forearm from the elbow to the wrist; bands down from the cuff's top; step, how
  *   far the cuff stands out from the sleeve); vsplit: the V's height; THICK, the cloth's thickness; CLEAR, the least gap
- *   left between the body and the cloth's inside.
+ *   left between the body and the cloth's inside; smooth: the passes the weights are smoothed along the cloth (0, each
+ *   vertex the skin's under it, as the game's clips need).
  */
 export const DESIGN = {
   male: {
     cols: [0, 9, 28, 48, 70, 90, 110, 132, 156, 180], vcol: 9, vwide: 17, notch: 15, arm: [70, 90, 110], wedge: 0.3,
-    THICK: 0.045, CLEAR: 0.012,
+    THICK: 0.045, CLEAR: 0.012, smooth: 0,
     neck: { c: 0.06, v: 0.4, lift: 0.02 },
     collar: { h: [0.5, 0.56, 0.56], linen: 0.4, c: 0.12 },
     armhole: { c: 0.04, drop: 0.7, room: 0.1, side: 0.6, below: 0.25, pit: 0.3, follow: [0.3, 0.6, 0.9] },
@@ -82,7 +83,7 @@ export const DESIGN = {
   },
   female: {
     cols: [0, 9, 26, 42, 72, 90, 108, 136, 158, 180], vcol: 9, vwide: 17, notch: 15, arm: [72, 90, 108],
-    THICK: 0.04, CLEAR: 0.012,
+    THICK: 0.04, CLEAR: 0.012, smooth: 0,
     neck: { c: 0.08, v: 0.34, lift: 0.02 },
     collar: { h: [0.42, 0.5, 0.55], linen: 0.4, c: 0.1 },
     armhole: { c: 0.035, drop: 0.7, room: 0.1, side: 0.6, below: 0.22, pit: 0.25, follow: [0.3, 0.6, 0.9] },
@@ -704,6 +705,41 @@ function meshOfTunic(rig, D, S) {
 }
 
 /**
+ * The neckline's, the collar's and the hem's vertices refitted to the game's idle and walk (lowgarment.mjs applyRefit): per
+ * body, the left side's by key (`row:azimuth`, as G.keys); the right side's mirrored. Found by tools/sculpt/lowrefit.mjs.
+ */
+export const REFIT = {
+  male: {
+    'N:9': [['spine_03', 0.47], ['neck_01', 0.41], ['neck_02', 0.09], ['spine_02', 0.04]],
+    'N:28': [['spine_02', 0.52], ['spine_03', 0.24], ['neck_01', 0.24]],
+    'N:48': [['neck_01', 0.36], ['spine_03', 0.26], ['clavicle_l', 0.25], ['neck_02', 0.12]],
+    'N:90': [['neck_01', 0.84], ['spine_03', 0.07], ['spine_02', 0.05], ['clavicle_l', 0.04]],
+    'N:110': [['neck_01', 0.84], ['spine_03', 0.11], ['spine_02', 0.02], ['clavicle_l', 0.02]],
+    'Y:90': [['clavicle_l', 0.77], ['spine_03', 0.1], ['spine_02', 0.07], ['neck_01', 0.05]],
+    'Y:110': [['clavicle_l', 0.77], ['spine_03', 0.15], ['neck_01', 0.08]],
+    'S:110': [['clavicle_l', 0.61], ['shoulder_l', 0.28], ['spine_03', 0.06], ['clavicle_r', 0.04]],
+    'K0:9': [['neck_01', 0.65], ['neck_02', 0.29], ['spine_03', 0.06]],
+    'K1:9': [['neck_02', 0.76], ['neck_01', 0.24]],
+    'K0:28': [['neck_02', 0.43], ['neck_01', 0.42], ['spine_02', 0.11], ['spine_03', 0.04]],
+    'K1:28': [['neck_02', 0.76], ['neck_01', 0.24]],
+    'K0:70': [['neck_02', 0.76], ['neck_01', 0.22]],
+    'K0:90': [['neck_01', 0.54], ['neck_02', 0.42], ['spine_03', 0.03], ['clavicle_l', 0.02]],
+    'K1:90': [['neck_02', 0.76], ['neck_01', 0.24]],
+    'K0:110': [['neck_02', 0.76], ['neck_01', 0.24]],
+    'K1:110': [['neck_02', 0.68], ['neck_01', 0.22], ['head', 0.1]],
+  },
+  female: {
+    'N:0': [['spine_03', 0.8], ['spine_02', 0.2]],
+    'N:9': [['neck_01', 0.68], ['spine_03', 0.25], ['neck_02', 0.04], ['clavicle_l', 0.03]],
+    'N:108': [['neck_01', 0.8], ['spine_03', 0.16], ['clavicle_l', 0.03], ['spine_02', 0.02]],
+    'Y:108': [['spine_03', 0.37], ['clavicle_l', 0.27], ['spine_02', 0.18], ['neck_01', 0.17]],
+    'K0:9': [['neck_01', 0.67], ['neck_02', 0.2], ['spine_03', 0.12]],
+    'K0:26': [['neck_01', 0.53], ['neck_02', 0.21], ['clavicle_l', 0.14], ['spine_03', 0.12]],
+    'K1:26': [['neck_01', 0.64], ['neck_02', 0.36]],
+  },
+};
+
+/**
  * The tunic's weights from the body: each vertex the body's at its closest point, the legs' bones taken half up to the
  * pelvis (the skirt swings with the thighs, not as far), the head's down to the neck; the cloth's turned-in edges the
  * weights of the outer edge they turn in from.
@@ -722,8 +758,8 @@ export function tunicWeights(rig, G, o = {}) {
   };
   // the torso's and the collar's from the body's torso, neck and legs; the sleeves' from the arm
   const armish = (i) => B.part[i] === 'arm' || B.part[i] === 'hand' || B.part[i] === 'joint';
-  const torso = transferWeights(rig, G, { map, smooth: o.smooth ?? 3, keep: (i) => !armish(i) && B.part[i] !== 'head', only: (i) => !G.part[i].startsWith('sleeve') });
-  const sleeve = transferWeights(rig, G, { map, smooth: o.smooth ?? 3, keep: (i) => armish(i), only: (i) => G.part[i].startsWith('sleeve') });
+  const torso = transferWeights(rig, G, { map, smooth: o.smooth ?? D.smooth ?? 3, keep: (i) => !armish(i) && B.part[i] !== 'head', only: (i) => !G.part[i].startsWith('sleeve') });
+  const sleeve = transferWeights(rig, G, { map, smooth: o.smooth ?? D.smooth ?? 3, keep: (i) => armish(i), only: (i) => G.part[i].startsWith('sleeve') });
   const vw = torso.map((w, i) => w ?? sleeve[i]);
   const norm = (m) => [...m].sort((a, b2) => b2[1] - a[1]).slice(0, 4).map(([bn, w], _, l) => [bn, w / l.reduce((a, [, x]) => a + x, 0)]);
   // the armhole: the body's own ring's weights (it is that ring, pushed out), its foot and corners (lowered below the
@@ -740,6 +776,8 @@ export function tunicWeights(rig, G, o = {}) {
   }
   // a sleeve ring on one of the arm's own rings skinned as that ring
   for (const [key, name] of G.ringFrom ?? []) vw[G.keys.get(key)] = rig.vw[B.index.get(name)].map(([bn, w]) => [bn, w]);
+  // the vertices refitted to the game's clips (REFIT; the right side's the left's mirrored)
+  applyRefit(rig, vw, o.refit ?? REFIT[rig.who], (key, mirror) => { const [r, az] = key.split(':'); return mirror && +az !== 0 && +az !== 180 ? G.keys.get(`${r}:${-az}`) : mirror ? undefined : G.keys.get(key); });
   // the turned-in edges as the outer edge they turn in from
   for (const [v, from] of G.copyOf ?? []) vw[v] = vw[from];
   return vw;

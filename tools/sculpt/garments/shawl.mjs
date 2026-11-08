@@ -26,7 +26,7 @@
 // nm0..nm5): down the chest in front, out over the shoulder at the side, down the back behind (DESIGN.roll), each
 // point then pushed out until it clears the body. 20 columns, 14 rings: 600 triangles. Materials: fabric, trim,
 // pattern (the cream between the teeth), inner (the underside and the cowl's inside).
-import { offPlane, TOL, samplesOf, envelope, drape, reachAt, atRY, dirOf, meshOf, orient, trisOf, transferWeights, garmentBone, sub, lerp } from '../lowgarment.mjs';
+import { offPlane, TOL, samplesOf, envelope, drape, reachAt, atRY, dirOf, meshOf, orient, trisOf, transferWeights, garmentBone, sub, lerp, applyRefit } from '../lowgarment.mjs';
 
 export const MATS = {
   fabric: [0.72, 0.62, 0.56],
@@ -312,6 +312,19 @@ function meshOfShawl(rig, D, cols, S) {
 }
 
 /**
+ * The cowl's vertices refitted to the game's idle and walk (lowgarment.mjs applyRefit): per body, the left side's by ring
+ * and column azimuth (`u1:18`, G.rings and G.cols); the right side's (360 less the azimuth) mirrored. Found by
+ * tools/sculpt/lowrefit.mjs.
+ */
+export const REFIT = {
+  male: {
+    'u1:18': [['neck_02', 0.41], ['spine_03', 0.24], ['spine_02', 0.24], ['clavicle_l', 0.11]],
+    'u1:36': [['neck_02', 0.39], ['spine_03', 0.23], ['spine_02', 0.23], ['clavicle_l', 0.15]],
+  },
+  female: {},
+};
+
+/**
  * The shawl's weights from the body: the cowl's from the neck and the chest's top (neck_01, neck_02, spine_03); the
  * cape's from the closest skin, its bones mapped to the torso (the clavicles, spine_03: the arms' and the lower spine's
  * taken up to them), then shared with the cape's own bones (DESIGN.lift) over the arms.
@@ -357,6 +370,12 @@ export function shawlWeights(rig, G, o = {}) {
     vw[R.T1[k]] = mix(vw[R.T1[k]], own, all);
     vw[R.T5[k]] = mix(vw[R.T5[k]], own, all);
   }
+  // the refitted vertices (REFIT), before the underside takes the outside's
+  const colAt = (deg) => G.cols.findIndex((c) => Math.abs(c.deg - deg) < 1e-6);
+  applyRefit(rig, vw, o.refit ?? REFIT[rig.who], (key, mirror) => {
+    const [ring, d] = key.split(':'), k = colAt(mirror ? (360 - +d) % 360 : +d);
+    return mirror && (+d === 0 || +d === 180) ? undefined : k < 0 ? undefined : R[ring]?.[k];
+  });
   for (let k = 0; k < N; k++) {
     vw[R.IT[k]] = vw[R.T0[k]]; vw[R.I1[k]] = vw[R.T1[k]]; vw[R.I5[k]] = vw[R.T5[k]];
     const L = len(R.T5[k], R.T1[k]);

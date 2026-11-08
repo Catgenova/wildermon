@@ -27,7 +27,7 @@
 // One closed surface: the shell, the lining, the border (E0 to E1), the hem (the shell to the lining at row 0).
 // Materials: fabric (the shell), trim (the border's band at the opening and its teeth), pattern (the cream between the
 // teeth), lining.
-import { offPlane, TOL, samplesOf, meshOf, orient, trisOf, atRY, dirOf, sub, add, mul, dot, cross, unit, lerp } from '../lowgarment.mjs';
+import { offPlane, TOL, samplesOf, meshOf, orient, trisOf, atRY, dirOf, sub, add, mul, dot, cross, unit, lerp, applyRefit } from '../lowgarment.mjs';
 import { MATS as SHAWL_MATS } from './shawl.mjs';
 
 /**
@@ -447,12 +447,22 @@ function meshOfHood(D, rows, tip, tipIn, opts) {
 export const HEAD_SHARE = { male: { from: 0.25, to: 0.85 }, female: { from: 0.15, to: 0.8 } };
 /** And at most this much by row (0 on the cowl), so the turn is shared over the rows over it. */
 export const ROW_CAP = [0, 0, 0, 0.4, 0.75, 1];
+const ROW_CAP0 = ROW_CAP;
 /** And more toward the frame (by 1 - the column's TS), so the opening's lower sides go with the jaw. */
 export const FRONT_SHARE = [0, 0, 0.1, 0.25, 0.2];
+const FRONT_SHARE0 = FRONT_SHARE;
 /** The head's share of the patch under the chin at the front (falling to the frame's foot's beside it). */
 export const CHIN_SHARE = { male: 0.25, female: 0.2 };
-export function hoodWeights(rig, G, shawl) {
-  const head = rig.at.get('head'), z0 = shawl.design.z0, K = G.design.K, Kf = G.design.Kf, HS = HEAD_SHARE[rig.who];
+/**
+ * The shell's vertices refitted to the game's idle and walk (lowgarment.mjs applyRefit): per body, the left half's by row
+ * and column (`out:3:2`, G.V.out[0]; the right half's, G.V.out[1], mirrored) and the chin patch's on the middle line
+ * (`S:0`, `L:0`, `R`, `lr`, G.frontC0, G.lr0) and the tip; the lining and the frame's line follow as before. Found by
+ * tools/sculpt/lowrefit.mjs.
+ */
+export const REFIT = { male: {}, female: {} };
+export function hoodWeights(rig, G, shawl, o = {}) {
+  const head = rig.at.get('head'), z0 = shawl.design.z0, K = G.design.K, Kf = G.design.Kf, HS = o.headShare ?? HEAD_SHARE[rig.who];
+  const ROW_CAP = o.rowCap ?? ROW_CAP0, FRONT_SHARE = o.frontShare ?? FRONT_SHARE0, CHIN = o.chinShare ?? CHIN_SHARE[rig.who];
   const SC = shawl.cols, N = SC.length;
   const rimW = (p) => {
     const deg = ((Math.atan2(p[0], p[2] - z0) * 180 / Math.PI) + 360) % 360;
@@ -466,7 +476,7 @@ export function hoodWeights(rig, G, shawl) {
   // (under the chin: the front patch's shell, lining and rim, the cowl rim's)
   // (the patch under the chin: the rim at the front and the shell under it CHIN_SHARE of the head, so they follow the
   // chin down as the head bows to look; toward the frame's foot its share by row, FRONT_SHARE)
-  const fm = G.design.chinCols.length - 1, ch = (key, k, c) => (FRONT_SHARE[key === 'R' || key === 'lr' ? 2 : k] ?? 0) * (c / fm) + (c < 1 && (key === 'R' || key === 'lr' || (key === 'S' && k === 2)) ? CHIN_SHARE[rig.who] * (1 - c) : 0);
+  const fm = G.design.chinCols.length - 1, ch = (key, k, c) => (FRONT_SHARE[key === 'R' || key === 'lr' ? 2 : k] ?? 0) * (c / fm) + (c < 1 && (key === 'R' || key === 'lr' || (key === 'S' && k === 2)) ? CHIN * (1 - c) : 0);
   const chinW = (vi, key, k, c) => mixW(rimW(G.verts[vi]), [[head, 1]], ch(key, k, c));
   G.frontC0.S.forEach((vi, k) => { W[vi] = chinW(vi, 'S', k, 0); });
   G.frontC0.L.forEach((vi, k) => { W[vi] = chinW(vi, 'L', k, 0); });
@@ -476,6 +486,14 @@ export function hoodWeights(rig, G, shawl) {
     const m = id.match(/^(lr)(\d+)$/) ?? id.match(/^([SLR])(\d+):(\d+)$/);
     W[vi] = m[1] === 'lr' ? chinW(vi, 'lr', 0, +m[2]) : chinW(vi, m[1], +m[2], +m[3]);
   }
+  // the refitted vertices (REFIT), before the lining and the frame's line take the shell's
+  applyRefit(rig, W, o.refit ?? REFIT[rig.who], (key, mirror) => {
+    const m = key.match(/^out:(\d+):(\d+)$/);
+    if (m) return G.V.out[mirror ? 1 : 0][+m[1]]?.[+m[2]];
+    if (mirror) return undefined;
+    const c = key.match(/^([SL]):(\d+)$/);
+    return c ? G.frontC0[c[1]][+c[2]] : key === 'R' ? G.frontC0.R : key === 'lr' ? G.lr0 ?? undefined : key === 'tip' ? G.tip : undefined;
+  });
   for (const h of [0, 1]) G.V.in[h].forEach((r, k) => r.forEach((vi, j) => { W[vi] ??= W[G.V.out[h][k][j]]; }));
   const col0 = (h, k) => G.V.out[h][k][0];
   for (const h of [0, 1]) G.line[h].forEach((vi, k) => { if (vi !== undefined) W[vi] = W[col0(h, k)]; });

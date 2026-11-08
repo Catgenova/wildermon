@@ -25,7 +25,7 @@
 // the gap to its neighbours, grown by 1/cos of that half) plus the clearance and the design's ease there. One surface,
 // open only at the two lips (inside the waistband and the cuffs, against the body). Materials: fabric (cream), trim (the
 // band, the stripes), inner (the cuffs' and the waistband's inside).
-import { samplesOf, meshOf, orient, trisOf, transferWeights, offPlane, TOL, lerp } from '../lowgarment.mjs';
+import { samplesOf, meshOf, orient, trisOf, transferWeights, applyRefit, offPlane, TOL, lerp } from '../lowgarment.mjs';
 
 /** The first outfit's colours (the shawl's: cream, tan, the darker tan of a cloth's inside). */
 export const MATS = {
@@ -314,10 +314,32 @@ function meshOfTrousers(rig, D, { legV, hipV, rows, hipRows, stage }) {
 }
 
 /**
+ * The thigh's vertices refitted to the game's idle and walk (lowgarment.mjs applyRefit): per body, the left leg's by
+ * row and column (`S1:2`, rows as G.rows.leg); the right leg's mirrored. Found by tools/sculpt/lowrefit.mjs.
+ */
+export const REFIT = {
+  male: {
+    'S1:1': [['thigh_l', 0.45], ['hip_l', 0.32], ['pelvis', 0.17], ['knee_l', 0.06]],
+    'S1:2': [['pelvis', 0.57], ['thigh_l', 0.24], ['hip_l', 0.18], ['knee_l', 0.01]],
+    'S1:5': [['thigh_l', 0.63], ['hip_l', 0.18], ['pelvis', 0.11], ['knee_l', 0.08]],
+    'S2:1': [['pelvis', 0.53], ['thigh_l', 0.31], ['hip_l', 0.1], ['knee_l', 0.06]],
+    'S2:2': [['pelvis', 0.55], ['thigh_l', 0.27], ['hip_l', 0.14], ['knee_l', 0.04]],
+    'S2:6': [['thigh_l', 0.44], ['knee_l', 0.42], ['calf_l', 0.13], ['hip_l', 0.02]],
+  },
+  female: {
+    'C:0': [['pelvis', 0.57], ['thigh_l', 0.19], ['hip_l', 0.17], ['knee_l', 0.08]],
+    'C:9': [['pelvis', 0.72], ['hip_l', 0.14], ['hip_r', 0.14]],
+    'S1:5': [['thigh_l', 0.61], ['pelvis', 0.22], ['hip_l', 0.11], ['knee_l', 0.06]],
+    'S2:5': [['thigh_l', 0.69], ['knee_l', 0.22], ['hip_l', 0.05], ['calf_l', 0.04]],
+  },
+};
+
+/**
  * The trousers' weights from the body's: each vertex the closest skin's (lowgarment.mjs transferWeights; the feet's bones
  * taken up to the calf, the spine's above the pelvis to spine_01), smoothed along the cloth; then the crotch's vertices
  * shared between the pelvis and both hips (the thighs' half turns), the waistband on the pelvis and spine_01 as the skin
- * under it, the blouse and the cuff on the calf with the knee's half turn over the blouse's top.
+ * under it, the blouse and the cuff on the calf with the knee's half turn over the blouse's top; then the thigh's
+ * refitted vertices (REFIT).
  */
 export function trousersWeights(rig, G, o = {}) {
   const parts = new Set(['torso', 'pelvis', 'legs']);
@@ -348,7 +370,8 @@ export function trousersWeights(rig, G, o = {}) {
     for (const i of [...(L.B2 ?? []), ...(L.Bu ?? [])]) set(i, [[`calf_${s}`, 1]]);
     for (const i of L.B1 ?? []) set(i, [[`calf_${s}`, 0.8], [`knee_${s}`, 0.2]]);
   }
-  return vw;
+  const refit = o.refit ?? REFIT[rig.who];
+  return applyRefit(rig, vw, refit, (key, mirror) => { const [row, k] = key.split(':'); return R.leg[mirror ? 'r' : 'l'][row]?.[+k]; });
 }
 
 /**
