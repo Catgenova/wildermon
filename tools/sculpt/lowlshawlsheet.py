@@ -289,6 +289,43 @@ def measure(M):
     return out
 
 
+
+def fitax(M, refdir, views_=None):
+    """Per view the 2D correction ax (screen x scaled about cx; the reference's figure narrower or shallower than the
+    body): the one that best lays our silhouette (body and shawl) on the reference's figure over the shawl's rows, from
+    its top to the hem's height at the sides (the tabs and arms below left out). Prints ax and the mean edge distance (px)
+    before and after."""
+    out = {}
+    for who in ['male', 'female']:
+        for v in views(who):
+            if views_ and f'{who}.{v}' not in views_:
+                continue
+            c = dict(CAMS[who][v]); c['ax'] = 1
+            box = c['box']
+            fig = figure(ref_of(refdir, c), box)
+            ours = np.asarray(render(M, who, c, box, 1))[..., 3] > 0
+            sh = np.asarray(render(M, who, c, box, 1, body=False))[..., 3] > 0
+            m = M[who]['shawl']
+            P = project(np.asarray(m['verts'], float)[m['rings']['H']], c)
+            rs = np.nonzero(sh.any(1))[0]
+            y0, y1 = rs.min() + 4, int(P[:, 1].min() - box[1]) - 2
+            L, F = [], []
+            for y in range(y0, y1):
+                o, f = np.nonzero(ours[y])[0], np.nonzero(fig[y])[0]
+                if len(o) and len(f):
+                    L.append((o.min() + box[0], o.max() + box[0])); F.append((f.min() + box[0], f.max() + box[0]))
+            L, F = np.array(L, float), np.array(F, float)
+            best = None
+            for ax in np.arange(0.7, 1.101, 0.01):
+                e = np.abs(c['cx'] + ax * (L - c['cx']) - F).mean()
+                if best is None or e < best[1]:
+                    best = (round(float(ax), 2), e)
+            e1 = np.abs(L - F).mean()
+            out[f'{who}.{v}'] = {'ax': best[0], 'before': round(float(e1), 1), 'after': round(float(best[1]), 1), 'rows': [int(y0 + box[1]), int(y1 + box[1])]}
+            print(who, v, out[f'{who}.{v}'])
+    return out
+
+
 if __name__ == '__main__':
     cmd = sys.argv[1]
     if cmd == 'reg':
@@ -299,6 +336,10 @@ if __name__ == '__main__':
         compare(json.load(open(sys.argv[2])), sys.argv[3], sys.argv[4], '--enchanted' in sys.argv, int(sys.argv[sys.argv.index('--k') + 1]) if '--k' in sys.argv else 2)
     elif cmd == 'measure':
         r = measure(json.load(open(sys.argv[2])))
+        if '--json' in sys.argv:
+            json.dump(r, open(sys.argv[sys.argv.index('--json') + 1], 'w'), indent=1)
+    elif cmd == 'fitax':
+        r = fitax(json.load(open(sys.argv[2])), sys.argv[3], ONLY)
         if '--json' in sys.argv:
             json.dump(r, open(sys.argv[sys.argv.index('--json') + 1], 'w'), indent=1)
     elif cmd == 'trace':

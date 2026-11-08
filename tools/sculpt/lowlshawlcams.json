@@ -1,5 +1,5 @@
 {
- "about": "The leather shawl's reference views registered to the low-poly bodies (tools/sculpt/lowlshawlsheet.py project): screen x = cx + s ax (cos yaw x + sin yaw z), screen y = cy + dy - s y, in the reference's pixels. s and cy from the head's top and the floor (the boot's sole), cx from the head; yaw fitted to the figure. ax, dy: per-view 2D corrections where the reference's proportions differ from the body's (review renders only). The glow reference shows only him: her back, side and rear views are his, fitted to her shoulders (ax, s), and marked so.",
+ "about": "The leather shawl's reference views registered to the low-poly bodies (tools/sculpt/lowlshawlsheet.py project): screen x = cx + s ax (cos yaw x + sin yaw z), screen y = cy + dy - s y, in the reference's pixels. s and cy from the head's top and the floor (the boot's sole), cx from the head; yaw fitted to the figure. ax, dy: per-view 2D corrections where the reference's proportions differ from the body's (review renders only). The glow reference shows only him: her back, side and rear views are his, fitted to her shoulders (ax, s), and marked so. ax fitted per view (lowlshawlsheet.py fitax) on the silhouette over the shawl's rows: the reference's figure narrower than the body (his front 0.85, his side 0.70: his upper back is deeper than the reference's); under 0.04 from 1 left at 1.",
  "refs": {
   "lineup": "lineup-shawl.png",
   "glow": "enchanted-glow-ref.png"
@@ -17,8 +17,16 @@
    "s": 68.44,
    "cx": 229.9,
    "cy": 188,
-   "ax": 1,
-   "dy": 0
+   "ax": 0.85,
+   "dy": 0,
+   "axFit": {
+    "before_px": 21.8,
+    "after_px": 7.2,
+    "rows": [
+     164,
+     318
+    ]
+   }
   },
   "q3": {
    "ref": "lineup",
@@ -32,8 +40,16 @@
    "s": 66.6,
    "cx": 971.7,
    "cy": 215.6,
-   "ax": 1,
-   "dy": 0
+   "ax": 0.84,
+   "dy": 0,
+   "axFit": {
+    "before_px": 21.4,
+    "after_px": 12.7,
+    "rows": [
+     192,
+     342
+    ]
+   }
   },
   "gfront": {
    "ref": "glow",
@@ -47,8 +63,16 @@
    "s": 54.54,
    "cx": 171.1,
    "cy": 165.3,
-   "ax": 1,
-   "dy": 0
+   "ax": 0.87,
+   "dy": 0,
+   "axFit": {
+    "before_px": 14.3,
+    "after_px": 6.9,
+    "rows": [
+     147,
+     268
+    ]
+   }
   },
   "gback": {
    "ref": "glow",
@@ -62,8 +86,16 @@
    "s": 53.75,
    "cx": 444.0,
    "cy": 163.7,
-   "ax": 1,
-   "dy": 0
+   "ax": 0.84,
+   "dy": 0,
+   "axFit": {
+    "before_px": 17.0,
+    "after_px": 8.2,
+    "rows": [
+     146,
+     265
+    ]
+   }
   },
   "gq3": {
    "ref": "glow",
@@ -77,8 +109,16 @@
    "s": 54.03,
    "cx": 680.5,
    "cy": 176.4,
-   "ax": 1,
-   "dy": 0
+   "ax": 0.81,
+   "dy": 0,
+   "axFit": {
+    "before_px": 17.6,
+    "after_px": 6.8,
+    "rows": [
+     158,
+     278
+    ]
+   }
   },
   "gq3b": {
    "ref": "glow",
@@ -92,8 +132,16 @@
    "s": 53.9,
    "cx": 897.1,
    "cy": 182.9,
-   "ax": 1,
-   "dy": 0
+   "ax": 0.77,
+   "dy": 0,
+   "axFit": {
+    "before_px": 17.9,
+    "after_px": 7.4,
+    "rows": [
+     165,
+     285
+    ]
+   }
   },
   "gside": {
    "ref": "glow",
@@ -107,8 +155,16 @@
    "s": 53.1,
    "cx": 1115.0,
    "cy": 194.4,
-   "ax": 1,
-   "dy": 0
+   "ax": 0.7,
+   "dy": 0,
+   "axFit": {
+    "before_px": 19.4,
+    "after_px": 9.1,
+    "rows": [
+     177,
+     294
+    ]
+   }
   }
  },
  "female": {
@@ -125,7 +181,15 @@
    "cx": 594.9,
    "cy": 305.8,
    "ax": 1,
-   "dy": 0
+   "dy": 0,
+   "axFit": {
+    "before_px": 6.4,
+    "after_px": 6.0,
+    "rows": [
+     291,
+     409
+    ]
+   }
   },
   "q3": {
    "ref": "lineup",
@@ -135,12 +199,20 @@
     245,
     420
    ],
-   "yaw": -40,
+   "yaw": -32,
    "s": 55.76,
    "cx": 1277.2,
    "cy": 330.4,
-   "ax": 1,
-   "dy": 0
+   "ax": 0.88,
+   "dy": 0,
+   "axFit": {
+    "before_px": 11.4,
+    "after_px": 6.8,
+    "rows": [
+     316,
+     431
+    ]
+   }
   }
  }
 }

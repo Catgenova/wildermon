@@ -64,19 +64,19 @@ export const LOOKS = { plain: lit, enchanted: { ...lit, rune: { c: MATS.glow, ki
 const LIFT = (side) => ({ side: { a: side, knee: 20, b: 1.3, max: 100, also: { axis: 'x', a: 0.3, max: 12 } }, front: { a: 0.3, knee: 40, b: 2.3, max: 100 }, back: { a: 0.4, knee: 30, b: 1.0, max: 60 }, frontAt: 60, backAt: 140, reach: [40, 40], from: 0.2, top: 0.2, roll: {} });
 export const DESIGN = {
   male: {
-    z0: -0.12, front: 6, back: 6, OUT: 0.15, THICK: 0.1, TIER: 0.07, RAISE: 0.035, bevel: 0.06,
+    z0: -0.12, front: 6, back: 6, OUT: [0.12, 0.15, 0.12], THICK: 0.1, TIER: 0.07, RAISE: 0.035, bevel: 0.06,
     collar: { rim: [-0.74, 0.0, 0.38], p: 1.8, IN: 0.16, wall: 0.18, lean: 0.35, low: 0.18 },
-    yoke: { at: [-1.62, -0.68, -1.62], p: 1.15, band: 0.28, line: 0.05 },
-    hem: { at: [-3.33, -1.95, -3.28], p: 1.0, flare: [0.04, 0.08, 0.04], soften: 0, band: 0.66, stripe: 0.075 },
+    yoke: { table: [[0, -1.62], [15, -1.42], [30, -1.2], [45, -0.98], [60, -0.86], [75, -0.86], [90, -0.9], [105, -0.88], [120, -0.9], [135, -1.02], [150, -1.22], [165, -1.44], [180, -1.62]], band: 0.28, line: 0.05 },
+    hem: { at: [-3.33, -2.1, -3.28], p: 1.0, flare: [0.04, 0.08, 0.04], soften: 0, band: 0.66, stripe: 0.075 },
     tri: { w: 0.36, gap: 0.16, raise: 0.03 }, ytri: { w: 0.2, gap: 0.14 },
     tabs: { gap: 0.31, w: 0.21, len: [0.3, 0.64], thick: 0.075, tilt: 9, seed: 7 },
     emblem: { ring: [0.3, 0.17], at: [-1.29, -1.33], stripes: [0.11, 0.07], raise: 0.03 },
     lift: LIFT(0.4),
   },
   female: {
-    z0: -0.14, front: 6, back: 6, OUT: 0.13, THICK: 0.09, TIER: 0.06, RAISE: 0.03, bevel: 0.05,
+    z0: -0.14, front: 6, back: 6, OUT: [0.11, 0.13, 0.11], THICK: 0.09, TIER: 0.06, RAISE: 0.03, bevel: 0.05,
     collar: { rim: [-0.7, -0.05, 0.3], p: 1.9, IN: 0.14, wall: 0.15, lean: 0.35, low: 0.16 },
-    yoke: { at: [-1.47, -0.7, -1.47], p: 1.2, band: 0.25, line: 0.045 },
+    yoke: { table: [[0, -1.47], [15, -1.3], [30, -1.12], [45, -0.94], [60, -0.84], [75, -0.84], [90, -0.88], [105, -0.86], [120, -0.88], [135, -0.98], [150, -1.14], [165, -1.32], [180, -1.47]], band: 0.25, line: 0.045 },
     hem: { at: [-2.95, -1.85, -2.9], p: 1.0, flare: [0.04, 0.07, 0.04], soften: 0, band: 0.6, stripe: 0.065 },
     tri: { w: 0.31, gap: 0.14, raise: 0.026 }, ytri: { w: 0.18, gap: 0.12 },
     tabs: { gap: 0.28, w: 0.18, len: [0.27, 0.5], thick: 0.06, tilt: 18, seed: 7 },
@@ -87,6 +87,8 @@ export const DESIGN = {
 
 /** A value round the azimuth from [front, side, back], by |sin|^p from the front and the back. */
 const vee = ([f, s, b], deg, p = 1) => { const a = Math.abs(((deg + 540) % 360) - 180), t = Math.pow(Math.abs(Math.sin(a * Math.PI / 180)), p); return a <= 90 ? f + (s - f) * t : b + (s - b) * t; };
+/** A value round the azimuth from a table [[degrees from the front, value], ...] (0 to 180, the same each side). */
+const table = (T, deg) => { const a = Math.abs(((deg + 540) % 360) - 180); for (let i = 0; i + 1 < T.length; i++) if (a <= T[i + 1][0]) return T[i][1] + (T[i + 1][1] - T[i][1]) * (a - T[i][0]) / (T[i + 1][0] - T[i][0]); return T[T.length - 1][1]; };
 const P2 = { add: (a, b) => [a[0] + b[0], a[1] + b[1]], sub: (a, b) => [a[0] - b[0], a[1] - b[1]], mul: (a, k) => [a[0] * k, a[1] * k], len: (a) => Math.hypot(a[0], a[1]) };
 const unit2 = (v) => { const l = Math.hypot(v[0], v[1]) || 1; return [v[0] / l, v[1] / l]; };
 /** The outward normal (away from the axis and up) of a segment a→b running downward in (r, y). */
@@ -156,7 +158,7 @@ export function buildLeatherShawl(rig, design = DESIGN[rig.who], { under = [] } 
   const cols = [];
   for (let k = 0; k < N; k++) {
     const deg = angles[k], half = Math.max(((angles[(k + 1) % N] - deg + 360) % 360), ((deg - angles[(k + N - 1) % N] + 360) % 360));
-    const F = neckFoot(B, z0, deg), yH = vee(D.hem.at, deg, D.hem.p), yY = vee(D.yoke.at, deg, D.yoke.p);
+    const F = neckFoot(B, z0, deg), yH = vee(D.hem.at, deg, D.hem.p), yY = D.yoke.table ? table(D.yoke.table, deg) : vee(D.yoke.at, deg, D.yoke.p);
     // the collar: its rim at rim (a V low in front), its foot `low` under the rim or under the neck's foot; its inside the
     // body's reach (and `under`'s) between foot and rim grown by IN, leaning out by `lean` per unit up
     const C = D.collar, rim = vee(C.rim, deg, C.p), foot = Math.min(F[1] - 0.04, rim - C.low);
@@ -171,7 +173,8 @@ export function buildLeatherShawl(rig, design = DESIGN[rig.who], { under = [] } 
     }
     const ci = [rIn, foot], d = [rIn + C.lean * (rim - foot), rim];
     // the base line: the drape over the body grown by OUT, from the collar's outer foot to the hem
-    const E = envelope(S, z0, deg, half, D.OUT, yH - 0.05, foot + 0.6);
+    const OUT = Array.isArray(D.OUT) ? vee(D.OUT, deg) : D.OUT;
+    const E = envelope(S, z0, deg, half, OUT, yH - 0.05, foot + 0.6);
     const A0 = [Math.max(ci[0] + C.wall, reachAt(E, foot, 0.05)), foot];
     const L = drape(E, A0, yH);
     const Hm = L[L.length - 1];
@@ -202,18 +205,21 @@ export function buildLeatherShawl(rig, design = DESIGN[rig.who], { under = [] } 
     if (ci[0] > q.IT[0] - 0.02) q.IT = [ci[0] + 0.02, q.IT[1]];
     cols.push({ deg, F, yH, yY, rim, Lb, sY, sB, sH, ci, d, u0, u, cm, T0: Lb[0], ...q });
   }
-  const G = meshOfLeather(rig, D, cols);
+  const G = meshOfLeather(rig, D, cols, S);
   G.bones = shawlBones(rig, D, cols);
   return G;
 }
 
+/** The distance from p to the nearest of the samples S (the body and what is worn under it). */
+const clearOfBody = (S, p) => { let d = Infinity; for (const q of S) { const dx = q[0] - p[0], dy = q[1] - p[1], dz = q[2] - p[2]; if (Math.abs(dy) > 0.5) continue; d = Math.min(d, Math.hypot(dx, dy, dz)); } return d; };
 /** A small deterministic pattern in [0, 1) (so the tabs vary without repeating evenly). */
 /** How far the laid pieces' bottoms stand off the shell: over its folds between columns (TOL) and the chords' sag. */
 const PLIFT = 0.036;
 const hash = (i, seed) => { const x = Math.sin(i * 127.1 + seed * 311.7) * 43758.5453; return x - Math.floor(x); };
 
-function meshOfLeather(rig, D, cols) {
+function meshOfLeather(rig, D, cols, S) {
   const N = cols.length, z0 = D.z0, G = meshOf();
+  G.S = S;
   const P3 = (c, key) => atRY(c.deg, c[key][0], c[key][1], z0);
   const ring = (key, part) => cols.map((c) => G.vert(P3(c, key), part));
   const R = {};
@@ -316,22 +322,30 @@ function laid(G, D, cols, R) {
   {
     const rb = ribbon(G, R.H, R.IH, z0), rd = ribbon(G, R.BT0, R.H, z0), L = rb.len(0.5), tot = L[L.length - 1], T = D.tabs;
     const n = Math.round(tot / T.gap), st = tot / n;
+    // (each tab's frame first: its top, out, its line down, its length; then how much further out each must tilt to clear
+    // the body, the most of it and its neighbours' taken, so tabs side by side lean alike and do not meet)
+    const tabs = [];
     for (let i = 0; i < n; i++) {
       const h1 = hash(i, T.seed), h2 = hash(i + 101, T.seed), h3 = hash(i + 211, T.seed);
       // (the lengths in a broken rhythm: long and short by turns, each pushed by the pattern)
       const len = T.len[0] + (T.len[1] - T.len[0]) * Math.min(1, Math.max(0, (i % 2 ? 0.25 : 0.7) + (h1 - 0.5) * 0.6));
       const w = T.w * (0.85 + 0.3 * h2) / 2, c = i * st + (h3 - 0.5) * 0.04;
       const a = rb.at(rb.uAt(L, c - w), 0.5), b = rb.at(rb.uAt(L, c + w), 0.5), a1 = rb.at(rb.uAt(L, c - w), 1), b1 = rb.at(rb.uAt(L, c + w), 1);
-      // (its top just under the lip's lowest edge, the underside's)
+      // (its top just under the lip's lowest edge, the underside's, and its middle under the lip's there)
       const top = [[a.p[0], a1.p[1] - 0.015, a.p[2]], [b.p[0], b1.p[1] - 0.015, b.p[2]]];
-      // (and its top's middle under the lip's there, where the hem bends between them)
       { const m1 = rb.at(rb.uAt(L, c), 1).p[1] - 0.015, dm = (top[0][1] + top[1][1]) / 2 - m1; if (dm > 0) for (const t of top) t[1] -= dm; }
-      // (out: the hem's outward normal level; down a little out by tilt, turned about the vertical by the pattern)
+      // (out: the hem's outward normal level; down: halfway between straight down and the cloth's own line over the
+      // band, then out by the tilt, a little each way by the pattern)
       const out = unit([a.n[0] + b.n[0], 0, a.n[2] + b.n[2]]), tl = (T.tilt + (h1 - 0.5) * 6) * Math.PI / 180;
-      // (down: halfway between straight down and the cloth's own line over the band, then out by the tilt)
       const cu = rb.uAt(L, c), cl = unit(sub(rd.at(cu, 1).p, rd.at(cu, 0).p)), dv = unit([cl[0] * 0.5, -1, cl[2] * 0.5]);
-      const down = unit(add(dv, mul(out, Math.tan(tl))));
-      const bot = top.map((p, k) => add(p, mul(down, len + (k ? 0.02 : -0.02) * (h2 - 0.5))));
+      const at = (extra) => { const down = unit(add(dv, mul(out, Math.tan(tl + extra * Math.PI / 180)))); return top.map((p, k) => add(p, mul(down, len + (k ? 0.02 : -0.02) * (h2 - 0.5)))); };
+      let need = 0;
+      for (; need < 30; need += 3) { const bot = at(need), inner = [0.5, 1].flatMap((f) => [0, 1].map((k) => sub(lerp(top[k], bot[k], f), mul(out, T.thick / 2)))); if (inner.every((p) => clearOfBody(G.S, p) > (T.clear ?? 0.1))) break; }
+      tabs.push({ a, b, top, out, at, need });
+    }
+    for (let i = 0; i < n; i++) {
+      const { a, b, top, out, at } = tabs[i], extra = Math.max(...[-2, -1, 0, 1, 2].map((d) => tabs[(i + d + n) % n].need * (1 - Math.abs(d) * 0.25)));
+      const bot = at(extra);
       const th = T.thick / 2, o = mul(out, th);
       const pts = [sub(top[0], o), sub(top[1], o), sub(bot[1], o), sub(bot[0], o)];
       const outs = [o, o, o, o].map(() => out);

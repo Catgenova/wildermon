@@ -103,8 +103,11 @@ if (only.includes('sheet')) for (const who of ['male', 'female']) {
     imgs.push({ src: ref, size: [SW, SH], crop: [bx, by, bw, bh], box: [x, 30, W, H] });
     const dd = (bx + bw / 2 - c.cx) / c.s, piv = [Math.cos(a) * dd, (c.cy - (by + bh / 2)) / c.s, Math.sin(a) * dd];
     const cam = { yaw: -c.yaw, pitch: 0, s: c.s * k, c: piv };
-    ['plain', 'enchanted'].forEach((look, j) => cells.push({ meshes: scene(who, rest, look), cam, box: [x, 30 + (j + 1) * (H + 6), W, H], label: j ? 'enchanted' : 'plain' }));
-    texts.push({ css: `left:${x + 4}px;top:34px`, html: `${v}${c.stand ? ' (his reference)' : ''}` });
+    // (the view's 2D correction ax: the meshes scaled along the screen's horizontal about the camera's axis)
+    const h = [Math.cos(a), 0, Math.sin(a)], ax = c.ax ?? 1, S = (P) => P.map((p) => { const t = (ax - 1) * (p[0] * h[0] + p[2] * h[2]); return [p[0] + t * h[0], p[1], p[2] + t * h[2]]; });
+    const view = { PB: S(rest.PB), PG: S(rest.PG), dy: 0 };
+    ['plain', 'enchanted'].forEach((look, j) => cells.push({ meshes: scene(who, view, look), cam, box: [x, 30 + (j + 1) * (H + 6), W, H], label: j ? 'enchanted' : 'plain' }));
+    texts.push({ css: `left:${x + 4}px;top:34px`, html: `${v}${c.stand ? ' (his reference)' : ''}${(c.ax ?? 1) !== 1 ? ` · ax ${c.ax}` : ''}` });
     x += W + 8;
   }
   texts.push({ css: 'left:8px;top:4px', html: `Leather shawl on the low-poly ${who}: the reference, the model plain, the model enchanted (${M[who].G.tris.length} triangles)` });
