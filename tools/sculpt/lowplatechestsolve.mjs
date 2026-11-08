@@ -34,11 +34,12 @@ function voter(rig, C) {
     const a = (C.views[v].yaw * Math.PI) / 180;
     V[v] = { S, Z, eye: [-Math.sin(a), 0, Math.cos(a)] };
   }
-  return (pts, onTrunk = true, tol = 0.12) => pts.map(({ q, n }) => {
+  // (only: the views to read, each piece's main ones; then points seen more obliquely count too)
+  return (pts, onTrunk = true, tol = 0.12, only = null) => pts.map(({ q, n }) => {
     const w = {};
-    for (const v of VIEWS) {
+    for (const v of only ?? VIEWS) {
       const { S, Z, eye } = V[v], f = dot(n, eye);
-      if (f < 0.25) continue;
+      if (f < (only ? 0.1 : 0.25)) continue;
       const p = proj(q, C, v), x = Math.floor(p[0] - S.x0), y = Math.floor(p[1] - S.y0);
       if (x < 0 || y < 0 || x >= S.W || y >= S.H) continue;
       if (p[2] < Z.z[y * S.W + x] - tol) continue;
@@ -52,7 +53,7 @@ function voter(rig, C) {
 const winner = (w) => { let b = -1, bw = 0.02; for (const [k, x] of Object.entries(w)) if (x > bw) { bw = x; b = +k; } return b; };
 
 /** A grid chart: at(y, az) the point; its normals by differences; returns cells [{ y, az, q, n, k (winner) }]. */
-function chart(vote, at, ys, azs, map, onTrunk = true) {
+function chart(vote, at, ys, azs, map, onTrunk = true, only = null) {
   const P = ys.map((y) => azs.map((a) => at(y, a)));
   const cells = [];
   ys.forEach((y, i) => azs.forEach((a, j) => {
@@ -62,7 +63,7 @@ function chart(vote, at, ys, azs, map, onTrunk = true) {
     if (dot(n, out) < 0) n = n.map((x) => -x);
     cells.push({ y, az: a, p, q: map(p), n: unit(map.normal(n, p)) });
   }));
-  const W = vote(cells, onTrunk);
+  const W = vote(cells, onTrunk, 0.12, only);
   cells.forEach((c, i) => { c.k = winner(W[i]); });
   return cells;
 }
@@ -103,8 +104,9 @@ export async function solve() {
     const { chest, fauldAt } = trunkCharts(D, S);
     const F = D.faulds, low = who === 'male' ? -6.8 : -5.8;
     const azs = range(-180, 177, 3);
-    const trunk = chart(vote, (y, a) => chest.at(y, a, 0.06), range(0.2, F.top - 0.6, -0.03), azs, tmap);
-    const fauld = chart(vote, (y, a) => fauldAt(y, a), range(F.top, low, -0.03), azs, tmap);
+    const MAIN = process.env.ALLVIEWS ? null : ['front', 'back'];
+    const trunk = chart(vote, (y, a) => chest.at(y, a, 0.06), range(0.2, F.top - 0.6, -0.03), azs, tmap, true, MAIN);
+    const fauld = chart(vote, (y, a) => fauldAt(y, a), range(F.top, low, -0.03), azs, tmap, true, MAIN);
     if (process.env.CHART) {
       const pic = (cells, ys) => { const R = canvas(azs.length * 3, ys.length * 3); cells.forEach((c, i) => { const x = i % azs.length, y = Math.floor(i / azs.length), h = c.k < 0 ? [0, 0, 0] : c.k === 0 ? [60, 60, 60] : [(c.k * 97) % 255, (c.k * 57 + 80) % 255, (c.k * 151 + 40) % 255]; for (let d = 0; d < 9; d++) R.c.set(h, ((y * 3 + Math.floor(d / 3)) * R.W + x * 3 + (d % 3)) * 3); }); return R; };
       const tx = []; for (const [cells, ys, y0] of [[trunk, range(0.2, F.top - 0.6, -0.03), 0]]) for (const k of new Set(cells.map((c) => c.k))) { if (k <= 0) continue; const cs = cells.map((c, i) => [c, i]).filter(([c]) => c.k === k); const m = cs[Math.floor(cs.length / 2)][1]; tx.push([(m % azs.length) * 3, 22 + 16 + Math.floor(m / azs.length) * 3, PIECES[k - 1], [255, 255, 255]]); }
@@ -141,7 +143,7 @@ export async function solve() {
       { const f = fill(cols.map((c) => c[1])); cols.forEach((c, i) => { c[1] = f[i]; }); }
       // (the top the design's, and under the armpit (the ring where the arm meets the torso) at the side columns)
       const pit = Math.min(...TORSO_RING.map((n) => rig.B.verts[rig.B.index.get(`${n}.L`)][1])) - 0.35;
-      out.breast = { az, top: az.map((a) => r3(a >= az[az.length - 1] - 7 ? Math.min(pit, interp(B.az, B.top, a)) : interp(B.az, B.top, a))), bottom: cols.map((c) => r3(c[1])), flat: az.reduce((b, a) => (Math.abs(a - B.flat) < Math.abs(b - B.flat) ? a : b), az[0]) };
+      out.breast = { az, top: az.map((a) => r3(a >= az[az.length - 1] - 7 ? Math.min(pit, interp(B.az, B.top, a)) : interp(B.az, B.top, a))), bottom: cols.map((c) => r3(c[1] + (process.env.ALLVIEWS ? 0 : D.rim.w))), flat: az.reduce((b, a) => (Math.abs(a - B.flat) < Math.abs(b - B.flat) ? a : b), az[0]) };
       out.breast.top[az.length - 1] = r3(Math.min(out.breast.top[az.length - 1], interp(B.az, B.top, Math.min(last, B.az[B.az.length - 1]))));
     }
     // the back plate: from the back (180) toward the side, where it stops
@@ -153,12 +155,12 @@ export async function solve() {
       { const f = fill(cols.map((c) => c[1])); cols.forEach((c, i) => { c[1] = f[i]; }); }
       const az = cols.map((c) => c[0]);
       const pit = Math.min(...TORSO_RING.map((n) => rig.B.verts[rig.B.index.get(`${n}.L`)][1])) - 0.35;
-      out.back = { az, top: az.map((a) => r3(a <= 116 ? Math.min(pit, interp(K2.az, K2.top, a)) : interp(K2.az, K2.top, a))), bottom: cols.map((c) => r3(c[1])) };
+      out.back = { az, top: az.map((a) => r3(a <= 116 ? Math.min(pit, interp(K2.az, K2.top, a)) : interp(K2.az, K2.top, a))), bottom: cols.map((c) => r3(c[1] + (process.env.ALLVIEWS ? 0 : D.rim.w))) };
     }
     // the lames and the belt: each one's foot per column, its top under the foot of the one above by the overlap
     {
       const az = range(0, 180, 15), over = 0.18;
-      const footOf = (piece) => fill(az.map((a) => footAt(trunk, piece, a, 7.5)));
+      const footOf = (piece) => fill(az.map((a) => footAt(trunk, piece, a, 7.5))).map((y) => (y == null ? y : y + (process.env.ALLVIEWS ? 0 : D.rim.w)));
       const plateFoot = az.map((a) => (a <= out.breast.az[out.breast.az.length - 1] ? interp(out.breast.az, out.breast.bottom, a) : a >= out.back.az[0] ? interp(out.back.az, out.back.bottom, a) : null));
       const above = [fill(plateFoot)];
       out.lames = D.lames.map((L, i) => {
@@ -194,9 +196,10 @@ export async function solve() {
         if (sym === 'mid') half = Math.min(half, sideLo + 8);
         if (sym === 'back') half = Math.min(half, 180 - sideHi + 8);
         const c0 = sym === 'side' ? mid : sym === 'back' ? 180 : 0;
-        const az = [-1, -0.5, 0, 0.5, 1].map((t) => r3(c0 + t * (half + 2)));
+        // (the outline is the rim's outer edge: the plate's own border in from it by the rim's width)
+        const az = [-1, -0.5, 0, 0.5, 1].map((t) => r3(c0 + t * (half + (process.env.ALLVIEWS ? 2 : -3))));
         const bottom = az.map((a) => { const ys = cells.filter((c, i) => Math.abs(A[i] - a) <= 4 || (sym !== 'side' && Math.abs((2 * c0 - A[i]) - a) <= 4)).map((c) => c.y); return ys.length ? r3(Math.min(...ys)) : null; });
-        plates.push({ az, bottom: fill(bottom).map(r3), sym });
+        plates.push({ az, bottom: fill(bottom).map((y) => r3(y + (process.env.ALLVIEWS ? 0 : D.rim.w))), sym });
       }
       const bySym = Object.fromEntries(plates.filter(Boolean).map((p) => [p.sym, p]));
       plates.splice(0, plates.length, bySym.mid ?? null, bySym.side ?? null, bySym.back ?? null);
@@ -249,7 +252,7 @@ export async function solve() {
     // the collar: its top per column and where the front flaps start and end, on its own cylinder round the neck
     {
       const Cd = D.collar, { nz, rTop } = collarFrame(D, S, rig.B), r = rTop + Cd.flare;
-      const cells = chart(vote, (y, a) => { const t = (a * Math.PI) / 180; return [Math.sin(t) * r, y, nz + Math.cos(t) * r]; }, range(0.6, -1.4, -0.03), azs, tmap);
+      const cells = chart(vote, (y, a) => { const t = (a * Math.PI) / 180; return [Math.sin(t) * r, y, nz + Math.cos(t) * r]; }, range(0.6, -1.4, -0.03), azs, tmap, true, MAIN);
       const isC = (k) => k === IDX['collar.l'] || k === IDX['collar.r'] || k === IDX['collar.back'], isF = (k) => k === IDX['collar.l'] || k === IDX['collar.r'];
       const az = range(0, 180, 15), top = [];
       for (const a of az) {
