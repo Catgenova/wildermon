@@ -102,10 +102,10 @@ export const DESIGN = {
       { n: 'N3', y: -9.35, e: [0.02, 0.02, 0.02, 0.02], s: 0.5 },
     ],
     cuff: { top: -9.45, foot: -10.32, step: 0.045, lip: 0.1 },
-    band: { y: -5.6, amp: 0.56, phi: 58, w: 0.36, t: 0.04, bevel: 0.018 },
+    band: { y: -5.6, amp: 0.56, phi: 58, w: 0.36, t: 0.04, bevel: 0.018, gap: [228, 332] },
     flaps: {
-      front: { az: [[16, 86], [34, 95]], foot: [-3.8, -4.2] },
-      back: { az: [[99, 164], [101, 144]], foot: [-4.2, -3.85] },
+      front: { az: [[16, 86], [34, 95]], foot: [-4.0, -4.5] },
+      back: { az: [[99, 164], [101, 144]], foot: [-4.5, -4.05] },
       gap: [0.015, 0.14, 0.3], t: 0.065, rim: 0.065, raise: 0.014,
     },
   },
@@ -277,6 +277,7 @@ export function buildLeatherLegs(rig, design = DESIGN[rig.who], { stage = 9 } = 
   G.hipR = hipR; G.legR = legR; G.legAxis = legAxis;
 
   waistband(G, D, hipR, stage);
+  if (stage >= 5) fly(G, D, hipR);
   for (const side of [1, -1]) {
     for (const which of ['front', 'back']) flap(G, D, hipR, which, side, stage);
     band(G, D, legR, legAxis, side, stage);
@@ -380,7 +381,7 @@ function waistband(G, D, hipR, stage) {
     const k = Math.floor((a + 180) / 360 * N) % N, s0 = P[k], s1 = P[(k + 1) % N], p = lerp(lerp(s0[2], s0[3], 0.5), lerp(s1[2], s1[3], 0.5), 0.5);
     let n = cross(sub(s1[2], s0[2]), sub(s0[3], s0[2])); n = mul(n, 1 / Math.hypot(...n));
     if (dot(n, [p[0], 0, p[2] - D.z0]) < 0) n = mul(n, -1);
-    rivet(G, p, n, 0.04, 0.03, 'waistband');
+    rivet(G, p, n, 0.05, 0.035, 'waistband');
   }
 }
 
@@ -474,7 +475,7 @@ function flap(G, D, hipR, which, side, stage) {
       if (best) { const q = add(o, mul(dir, best.t)); return { p: add(q, mul(best.nn, lift)), n: best.nn }; }
       return { p: add(p, mul(n, lift)), n };
     };
-    for (const [u, v] of [[0.3, 0.18], [0.7, 0.18], [0.16, 0.78], [0.84, 0.78]]) { const { p, n } = at(u, v); rivet(G, p, n, 0.035, 0.026, part); }
+    for (const [u, v] of [[0.3, 0.18], [0.7, 0.18], [0.16, 0.78], [0.84, 0.78]]) { const { p, n } = at(u, v); rivet(G, p, n, 0.045, 0.032, part); }
   }
 }
 
@@ -483,9 +484,12 @@ function flap(G, D, hipR, which, side, stage) {
  * raised t off the cloth (out along the ray from the leg's axis to the cloth at each column's height).
  */
 function band(G, D, legR, legAxis, side, stage) {
-  const Bd = D.band, N = 40, P = [], b = stage > 1 ? Bd.bevel : 0;
+  // (with `gap`, [from, to] degrees round the inside of the thigh, the band stops short there, its ends closed: it
+  // wraps into the inseam, clear of the other leg as they pass in the walk)
+  const Bd = D.band, gap = stage > 1 ? Bd.gap : null, N = gap ? 37 : 40, P = [], b = stage > 1 ? Bd.bevel : 0;
+  const span = gap ? 360 - (gap[1] - gap[0]) : 360, a0 = gap ? gap[1] : 0;
   for (let k = 0; k < N; k++) {
-    const a = k * 360 / N, ym = Bd.y + Bd.amp * Math.cos(rad(a - Bd.phi)), yt = ym + Bd.w / 2, yb = ym - Bd.w / 2;
+    const a = a0 + k * span / (gap ? N - 1 : N), ym = Bd.y + Bd.amp * Math.cos(rad(a - Bd.phi)), yt = ym + Bd.w / 2, yb = ym - Bd.w / 2;
     const pt = (y, off, r0) => { const c = legAxis(y), aa = a; const r = r0 + off, p = [c[0] + Math.sin(rad(aa)) * r, y, c[1] + Math.cos(rad(aa)) * r]; return side > 0 ? p : [-p[0], p[1], p[2]]; };
     // (thinner on the inside of the thigh, where the legs pass each other: a third of its thickness there)
     const tk = Bd.t * (1 - 0.65 * Math.max(0, Math.cos(rad(a - 270))) ** 2);
@@ -495,8 +499,36 @@ function band(G, D, legR, legAxis, side, stage) {
   }
   // (its face and bevels the rune, glowing when enchanted; its edges standing off the cloth the trim)
   const M = stage >= 4 ? 'trim' : 'leather', R = stage >= 4 ? 'rune' : 'leather';
-  const ix = strip(G, side > 0 ? P : [...P].reverse(), [M, R, R, R, M], 'band', 'band', true);
-  void ix;
+  strip(G, side > 0 ? P : [...P].reverse(), [M, R, R, R, M], 'band', 'band', !gap);
+  // the stitching: a dash on every other column near each edge of the band's face, light leather, just proud of it
+  if (stage >= 5) for (let k = 0; k < (gap ? N - 1 : N); k += 2) {
+    const a = P[k], c = P[(k + 1) % N], ax = legAxis(a[2][1]), out = [a[2][0] - side * ax[0], 0, a[2][2] - ax[1]];
+    for (const f of [0.2, 0.8]) {
+      const pa = lerp(a[2], a[3], f), pb = lerp(c[2], c[3], f), up = sub(a[2], a[3]), h = mul(up, 0.035 / Math.hypot(...up));
+      let n = cross(sub(pb, pa), up); n = mul(n, 1 / Math.hypot(...n)); if (dot(n, out) < 0) n = mul(n, -1);
+      const lift = mul(n, 0.004), q0 = add(lerp(pa, pb, 0.18), lift), q1 = add(lerp(pa, pb, 0.82), lift);
+      G.tag = 'stitch';
+      const v = [sub(q0, h), sub(q1, h), add(q1, h), add(q0, h)].map((x) => G.vert(x, 'band'));
+      G.poly(v, stage >= 4 ? 'light' : 'leather', 'band', true);
+    }
+  }
+}
+
+/**
+ * The fly: a raised placket down the centre front, from under the waistband's V to the crotch, a little to the body's
+ * left of the centre line, in the cloth's own leather (the sheet's two seam lines down the front).
+ */
+function fly(G, D, hipR) {
+  const W = D.waist, cr = D.crotch, y0 = W.top - W.depth - W.vf - 0.01, y1 = cr.y + cr.front + 0.12, M = 6, P = [];
+  for (let i = 0; i <= M; i++) {
+    const y = y0 + (y1 - y0) * i / M, sec = [];
+    for (const [a, off] of [[0.5, IN + 0.006], [1.5, 0.026], [5.5, 0.026], [6.5, IN + 0.006]]) {
+      const r = Math.max(hipR(y, a), hipR(y, 3.5), hipR(y, 0)) + off;
+      sec.push([Math.sin(rad(a)) * r, y, D.z0 + Math.cos(rad(a)) * r]);
+    }
+    P.push(sec);
+  }
+  strip(G, P, ['leather', 'leather', 'leather'], 'fly', 'fly', false);
 }
 
 /* ---- weights ------------------------------------------------------------------------------------------------------- */
@@ -524,7 +556,7 @@ export function leatherLegsWeights(rig, G, o = {}) {
   // cloth under it (its triangle's corners' blended), so a piece moves with the cloth it lies on and keeps its gap
   const clothTris = G.tris.filter((t) => ['cloth', 'cuff'].includes(G.polys[t.poly].tag));
   for (let i = 0; i < G.verts.length; i++) {
-    if (!['waistband', 'flap', 'band'].includes(G.part[i]) || G.rivetV?.has(i)) continue;
+    if (!['waistband', 'flap', 'band', 'fly'].includes(G.part[i]) || G.rivetV?.has(i)) continue;
     const c = closestOnBody(G.verts, clothTris, G.verts[i]), acc = new Map();
     clothTris[c.tri].v.forEach((vi, k) => { for (const [bi, w] of vw[vi]) acc.set(bi, (acc.get(bi) ?? 0) + w * c.w[k]); });
     const l = [...acc].filter(([, w]) => w > 1e-4).sort((x, y) => y[1] - x[1]).slice(0, 4), t = l.reduce((s2, [, w]) => s2 + w, 0);
