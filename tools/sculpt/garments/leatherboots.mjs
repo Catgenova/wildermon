@@ -122,11 +122,11 @@ export const DESIGN = {
     top: [0.5, 0.48, 0.5, 0.52, 0.46, 0.44, 0.46, 0.52, 0.5, 0.48],
     shrink: [0.08, 0.07, 0.05, 0.02, 0.02, 0.02, 0.02, 0.02, 0.05, 0.07],
     mix: [0, 0.05, 0.3, 0.8, 1, 1, 1, 0.8, 0.3, 0.05],
-    clear: 0.1, over: 0.035, win: 0.3, fill: [0.02, 0, 0, 0, 0.02, 0.03, 0.02, 0, 0, 0],
+    clear: 0.1, over: 0.035, win: 0.3, winU: 0.6, fill: [0.02, 0, 0, 0, 0.02, 0.03, 0.02, 0, 0, 0],
     cap: { du: [0.52, 0.44, 0.1, null, null, null, null, null, 0.1, 0.44], h: [0.53, 0.52, 0.54, 0, 0, 0, 0, 0, 0.54, 0.52], in: [0.1, 0.08, 0.06, 0, 0, 0, 0, 0, 0.06, 0.08], t: 0.3, lip: 0.03, seam: 0.12, sink: 0.04 },
-    tall: 2.0,
+    tall: 1.9,
     h: {
-      strap: [0.27, 0.265, 0.26, 0.26, 0.26, 0.26, 0.26, 0.26, 0.26, 0.265],
+      strap: [0.285, 0.28, 0.275, 0.275, 0.275, 0.275, 0.275, 0.275, 0.275, 0.28],
       band: [0.6, 0.63, 0.67, 0.68, 0.65, 0.61, 0.65, 0.68, 0.67, 0.63],
       bandTop: [0.8, 0.8, 0.78, 0.77, 0.74, 0.71, 0.74, 0.77, 0.78, 0.8],
       cuffLo: [0.67, 0.72, 0.77, 0.79, 0.81, 0.82, 0.81, 0.79, 0.77, 0.72],
@@ -135,9 +135,9 @@ export const DESIGN = {
     },
     strap: { w: 0.17, trim: 0.035, out: 0.08 },
     band: { out: 0.06, trim: 0.03 },
-    cuff: { out: 0.08, trim: 0.03, rim: 0.035, lip: 0.12, gap: 0.5 },
+    cuff: { out: 0.08, trim: 0.03, rim: 0.035, lip: 0.12, gap: 0.5, gapU: 1.5 },
     mid: 0.5,
-    lace: { a: 22, tongue: 0.6, rows: 4, lo: 0.39, hi: 0.575, w: 0.06, h: 0.025, base: 0.016, lift: 0.032 },
+    lace: { a: 22, tongue: 0.6, rows: 4, lo: 0.41, hi: 0.575, w: 0.06, h: 0.025, base: 0.016, lift: 0.032 },
     eyelet: { r: 0.045, h: 0.03 },
     rivet: { r: 0.04, h: 0.025 },
     vee: { a: 30, w: 0.05, h: 0.02, down: 0.18 },
@@ -153,7 +153,7 @@ export const DESIGN = {
     top: [0.44, 0.42, 0.44, 0.48, 0.42, 0.4, 0.42, 0.48, 0.44, 0.42],
     shrink: [0.07, 0.06, 0.04, 0.02, 0.02, 0.02, 0.02, 0.02, 0.04, 0.06],
     mix: [0, 0.05, 0.3, 0.8, 1, 1, 1, 0.8, 0.3, 0.05],
-    clear: 0.09, over: 0.03, win: 0.3, fill: [0.01, 0, 0, 0, 0.01, 0.02, 0.01, 0, 0, 0],
+    clear: 0.09, over: 0.03, innerFit: 0.5, win: 0.3, winU: 0.6, fill: [0.01, 0, 0, 0, 0.01, 0.02, 0.01, 0, 0, 0],
     cap: { du: [0.5, 0.42, 0.06, null, null, null, null, null, 0.06, 0.42], h: [0.47, 0.46, 0.48, 0, 0, 0, 0, 0, 0.48, 0.46], in: [0.09, 0.09, 0.08, 0, 0, 0, 0, 0, 0.08, 0.09], t: 0.3, lip: 0.025, seam: 0.14, sink: 0.03 },
     tall: 2.0,
     h: {
@@ -162,11 +162,11 @@ export const DESIGN = {
       bandTop: [0.8, 0.8, 0.78, 0.77, 0.74, 0.71, 0.74, 0.77, 0.78, 0.8],
       cuffLo: [0.67, 0.72, 0.77, 0.79, 0.81, 0.82, 0.81, 0.79, 0.77, 0.72],
       cuffTop: [0.91, 0.95, 0.96, 0.98, 1, 1.01, 1, 0.98, 0.96, 0.95],
-      flare: [0.21, 0.19, 0.2, 0.19, 0.17, 0.15, 0.06, 0.02, 0.04, 0.14],
+      flare: [0.21, 0.19, 0.2, 0.19, 0.17, 0.12, 0.03, 0, 0.02, 0.14],
     },
     strap: { w: 0.15, trim: 0.03, out: 0.065 },
     band: { out: 0.05, trim: 0.028 },
-    cuff: { out: 0.07, trim: 0.028, rim: 0.03, lip: 0.11, gap: 0.5, inner: 0.4 },
+    cuff: { out: 0.07, trim: 0.028, rim: 0.03, lip: 0.11, gap: 0.5, inner: 0.15 },
     mid: 0.5,
     lace: { a: 22, tongue: 0.6, rows: 4, lo: 0.39, hi: 0.575, w: 0.055, h: 0.022, base: 0.016, lift: 0.03 },
     eyelet: { r: 0.04, h: 0.026 },
@@ -241,10 +241,12 @@ export function buildLeatherBoots(rig, design = DESIGN[rig.who], { under = [], p
     const ang = ANG.map(dirOf);
     const half = 22, ch = Math.cos(half * Math.PI / 180);
     const SU = under.flatMap((m) => samplesOf(m, m.verts, 0.04)).filter((p) => p[1] < yKnee + 0.6 && Math.sign(p[0]) === ft.sg);
+    // (over what the boots are worn over, the window `winU`, wider: the leggings' cuff ends inside the shaft, between rings)
     const reach = (k, y, pts = S) => {
       let r = 0;
+      const win = pts === S ? D.win : D.winU ?? D.win;
       for (const p of pts) {
-        if (Math.abs(p[1] - y) > D.win) continue;
+        if (Math.abs(p[1] - y) > win) continue;
         const c = axis(p[1]), w = [p[0] - c[0], p[2] - c[2]], l = Math.hypot(w[0], w[1]);
         if (l < 1e-9) continue;
         const cs = (w[0] * ang[k][0] + w[1] * ang[k][2]) / l;
@@ -253,7 +255,9 @@ export function buildLeatherBoots(rig, design = DESIGN[rig.who], { under = [], p
       }
       return r;
     };
-    const base = (k, y) => Math.max(reach(k, y) + D.clear, SU.length ? reach(k, y, SU) + D.over : 0);
+    // (on the inner side `innerFit` of the clearance, where it passes the other leg's in a narrow walk)
+    const fit = (k) => 1 - (1 - (D.innerFit ?? 1)) * Math.max(0, -Math.sin(ANG[k] * Math.PI / 180));
+    const base = (k, y) => Math.max(reach(k, y) + D.clear * fit(k), SU.length ? reach(k, y, SU) + D.over * fit(k) : 0);
     const onShaft = (k, y, extra = 0) => { const c = axis(y), r = base(k, y) + (D.fill?.[k] ?? 0) + extra; return [c[0] + ang[k][0] * r, y, c[2] + ang[k][2] * r]; };
     const R = {};
     const put = (key, pts) => { R[key] = pts.map((p) => { const i = G.vert(p, 'boot'); G.side[i] = side; return i; }); };
@@ -339,7 +343,7 @@ export function buildLeatherBoots(rig, design = DESIGN[rig.who], { under = [], p
     put('c2', each((k) => onShaft(k, cTop(k) - D.cuff.rim * H, cIn(k) + D.cuff.out * inn(k) + D.h.flare[k] * 0.85)));
     put('c3', each((k) => onShaft(k, cTop(k), cIn(k) + D.cuff.out * inn(k) + D.h.flare[k])));
     put('c4', each((k) => onShaft(k, cTop(k) - 0.02, cIn(k) + D.h.flare[k] * 0.9)));
-    put('c5', each((k) => { const y = cTop(k) - D.cuff.lip * H, c = axis(y), r = Math.max(reach(k, y) + D.clear * D.cuff.gap, SU.length ? reach(k, y, SU) + D.over * 0.5 : 0); return [c[0] + ang[k][0] * r, y, c[2] + ang[k][2] * r]; }));
+    put('c5', each((k) => { const y = cTop(k) - D.cuff.lip * H, c = axis(y), r = Math.max(reach(k, y) + D.clear * D.cuff.gap, SU.length ? reach(k, y, SU) + D.over * (D.cuff.gapU ?? 0.5) : 0); return [c[0] + ang[k][0] * r, y, c[2] + ang[k][2] * r]; }));
     G.rings[side] = R; G.foot[side] = ft;
     G.legOf[side] = { axis, ang, dirOf, onShaft, onUpper, slopeT, sLo, sHi, bLo, bTop, cLo, cTop };
     // the polygons

@@ -94,7 +94,8 @@ for (const who of opt('who', 'male,female').split(',')) {
         LP.push(q);
       }
       const LT = []; for (let t = 0; t < LA.tris.length; t += 4) LT.push({ v: [LA.tris[t], LA.tris[t + 1], LA.tris[t + 2]] });
-      legs = crossPairs(P, tG, LP, LT).length;
+      const lp = crossPairs(P, tG, LP, LT); legs = lp.length;
+      if (!lit) for (const [i] of lp) { const a = G.polys[G.tris[i].poly], pk = `${cat} legs: ${G.side[a.v[0]]} ${a.tag}`; parts[pk] = (parts[pk] ?? 0) + 1; }
     }
     // (the boots' own crossings by part and side, from the tools' build: the bake keeps the asset's triangles in order)
     const self = crossPairs(P, tG);
