@@ -91,7 +91,7 @@ export const DESIGN = {
     legs: { top: -3.58, bottom: -4.16, c: [0.05, 0.1, 0.14, 0.18, 0.17, 0.16, 0.11] },
     wedge: 8, sideC: 0.06,
     collar: { cols: [[14, 66, 118], [128, 154, 180]], base: [-0.85, -0.78, -0.62], top: [-0.25, -0.1, 0.0], lipIn: 0.12, trim: 0.11, c: 0.28, flare: 0.04, wall: 0.06, spread: 0.1, sink: -0.05, open: 46, shrug: 0.35 },
-    breast: { az: [0, 18, 36, 56, 76, 96], top: [-0.7, -0.71, -0.74, -0.8, -0.95, -1.85], bottom: [-3.55, -3.4, -3.2, -3.0, -2.85, -2.75], rows: [0, 0.23, 0.44, 0.56, 0.78, 1], c: [0.04, 0.04, 0.04, 0.045, 0.05, 0.055], flat: 18, bridge: [3], core: { y: -1.6, r: 0.38, n: 8 } },
+    breast: { az: [0, 18, 36, 56, 76, 96], top: [-0.7, -0.71, -0.74, -0.8, -0.95, -1.85], bottom: [-3.55, -3.4, -3.2, -3.0, -2.85, -2.75], rows: [0, 0.18, 0.36, 0.5, 0.64, 0.82, 1], c: [0.04, 0.04, 0.04, 0.04, 0.045, 0.05, 0.055], bust: { y: -1.6, az: [48, 66] }, flat: 18, core: { y: -1.6, r: 0.38, n: 8 } },
     back: { az: [100, 118, 140, 160, 180], top: [-1.85, -0.9, -0.72, -0.64, -0.6], bottom: [-2.6, -2.8, -2.95, -3.05, -3.15], rows: [0, 0.45, 1], c: [0.04, 0.045, 0.05], ridge: 0.05, side: 0 },
     lames: [
       { piece: 'lame1', bone: { spine_01: 1 }, top: -2.5, bottom: -3.1, v: 0.1, c: [0.018, 0.05] },
@@ -99,7 +99,7 @@ export const DESIGN = {
     ],
     lameCols: 10,
     faulds: {
-      top: -3.6, c: 0.2, flare: 0.14,
+      top: -3.6, c: 0.2, flare: 0.14, sideTop: 0.05, sideDrop: 0.12,
       plates: [
         { az: [-22, 0, 22], bottom: [-4.7, -4.96, -4.7], bone: { pelvis: 0.2, thigh_l: 0.4, thigh_r: 0.4 } },
         { az: [30, 50, 70], bottom: [-4.8, -5.05, -4.7], bone: { pelvis: 0.1, thigh_l: 0.9 }, mirror: true },
@@ -107,6 +107,7 @@ export const DESIGN = {
       ],
     },
     pauldron: {
+      cap: { out: 0.3, rest: 0.14, push: 0.22 },
       lift: -0.06, inset: 0.0, pole: 0.5, near: 0.95, round: 0.2, inner: 0.3, cols: 8, phi0: 22, phi: [74, 86, 74, 46], rows: [0, 0.5, 1], c: [0.09, 0.19, 0.26], cone: 34,
       core: { psi: 55, f: 0.6, r: 0.25, n: 6 },
       lames: [{ t: [0.38, 0.85], c: [0.06, 0.1], th: [-35, 215] }],
@@ -432,6 +433,27 @@ function shingle(upper, lowers, axisAt, gap, drop) {
   });
 }
 
+/**
+ * A plate's grid over the bust: per column (az) the section hull's reach from the axis (0, y, zc) down from top to
+ * bottom every 0.04, its upper envelope in (y, reach) (the least concave profile over it), at each row's height out by
+ * the row's clearance and extra(r, k, az).
+ */
+function bustRows(P, zc, az, top, bottom, rows, c, extra) {
+  const hs = sectioner(P, { o: [0, 0, zc], a: [0, 1, 0], e1: [0, 0, 1], e2: [1, 0, 0], dt: 0.06 });
+  return rows.map((f, r) => az.map((a, k) => {
+    const n = Math.max(2, Math.ceil((top[k] - bottom[k]) / 0.04)), pts = [];
+    for (let i = 0; i <= n; i++) { const y = top[k] + ((bottom[k] - top[k]) * i) / n, q = hs.at(y, a, 0); pts.push([y, Math.hypot(q[0], q[2] - zc)]); }
+    // (the upper hull of the profile, y descending)
+    const H = [];
+    for (const q of pts) { while (H.length >= 2 && (H[H.length - 1][0] - H[H.length - 2][0]) * (q[1] - H[H.length - 2][1]) - (H[H.length - 1][1] - H[H.length - 2][1]) * (q[0] - H[H.length - 2][0]) <= 0) H.pop(); H.push(q); }
+    const y = top[k] + (bottom[k] - top[k]) * f;
+    let rr = H[H.length - 1][1];
+    for (let i = 0; i + 1 < H.length; i++) if (y <= H[i][0] && y >= H[i + 1][0]) { rr = H[i][1] + ((H[i + 1][1] - H[i][1]) * (y - H[i][0])) / (H[i + 1][0] - H[i][0]); break; }
+    const t = (a * Math.PI) / 180, R = rr + (Array.isArray(c) ? c[r] : c) + extra(r, k, a);
+    return [Math.sin(t) * R, y, zc + Math.cos(t) * R];
+  }));
+}
+
 function torsoPieces(G, rig, D, S) {
   const { B } = rig, rim = D.rim;
   // (one section of the trunk for every plate on it, so plates over one another are fitted to the same hull)
@@ -464,7 +486,17 @@ function torsoPieces(G, rig, D, S) {
   const sideOut = (a, a0 = 66, a1 = 90) => (D.sideC ?? 0) * Math.max(0, Math.min(1, (Math.abs(a) - a0) / (a1 - a0)));
   // (and over the upper chest toward the shoulder, `shrugC` from 35° to 60° on the top two rows, where the chest under
   // it moves with the clavicle)
-  const bRows = grid(chest, bAz, bTop, bBot, Bp.rows, Bp.c, (r, k, a) => sideOut(a) + (r <= 1 ? (D.shrugC ?? 0) * (r === 0 ? 1 : 0.6) * Math.max(0, Math.min(1, (Math.abs(a) - 35) / 25)) : 0));
+  const bExtra = (r, k, a) => sideOut(a) + (r <= 1 ? (D.shrugC ?? 0) * (r === 0 ? 1 : 0.6) * Math.max(0, Math.min(1, (Math.abs(a) - 35) / 25)) : 0);
+  // (`Bp.bust`, hers: each column's profile down the body the outer envelope of the trunk's section hull (straight across
+  // the cleavage) that way from a fixed axis through the bust, so the plate rounds over each breast and falls straight
+  // from it to the waist, with no fold under it)
+  // (the top row, and the sides from bust.az[0] to bust.az[1], eased back to the body's own reach, where the plate meets
+  // the collar, the trapezius and the armpit)
+  const bRows = grid(chest, bAz, bTop, bBot, Bp.rows, Bp.c, bExtra);
+  if (Bp.bust) {
+    const env = bustRows(parts(['torso', 'neck', 'pelvis']), chest.axisAt(Bp.bust.y)[2], bAz, bTop, bBot, Bp.rows, Bp.c, bExtra), [a0, a1] = Bp.bust.az;
+    bRows.forEach((row, r) => row.forEach((p, k) => { if (r > 0) row[k] = lerp(env[r][k], p, Math.max(0, Math.min(1, (Math.abs(bAz[k]) - a0) / (a1 - a0)))); }));
+  }
   // drawn straight across between the breasts (the columns within `flat` of the front on the line between the two at
   // `flat`), never further in than the body; the bridged rows no further in than the mean of the rows either side
   const rad = (p) => { const a = chest.axisAt(p[1]); return Math.hypot(p[0] - a[0], p[2] - a[2]); };
@@ -510,9 +542,11 @@ function torsoPieces(G, rig, D, S) {
     const bottom = s > 0 ? pl.bottom : pl.bottom.slice().reverse();
     const nRows = 2, rows = [];
     for (let r = 0; r < nRows; r++) rows.push(az.map((a, k) => {
-      const f = r / (nRows - 1), y = F.top + (bottom[k] - F.top) * f;
+      // (`sideDrop`: the side plates' top that much lower, still under the belt, clear of the waist as the thigh swings them)
+      const t0 = F.top - (pl.mirror ? F.sideDrop ?? 0 : 0), f = r / (nRows - 1), y = t0 + (bottom[k] - t0) * f;
       // (the reach here, and never further in than the row above, flaring out as it falls)
-      let p = fsec.at(y, a, F.c + F.flare * (F.top - y) / 2);
+      // (`sideTop`: the side plates' top row further out, clear of the hip as the thigh swings them)
+      let p = fsec.at(y, a, F.c + F.flare * (F.top - y) / 2 + (r === 0 && pl.mirror ? F.sideTop ?? 0 : 0));
       if (r > 0) {
         const prev = rows[r - 1][k], d = unit([Math.sin(a * Math.PI / 180), 0, Math.cos(a * Math.PI / 180)]);
         const rp = dot(sub(prev, [0, prev[1], fz]), d), rc = dot(sub(p, [0, p[1], fz]), d);
@@ -703,7 +737,10 @@ function armPieces(G, rig, D, S) {
     const H = Pd.hull;
     capRows = H.f.map((f, r) => H.psi.map((psi, k) => {
       const phi = Pd.phi0 + (H.phi[k] - Pd.phi0) * f, d = dirAt(psi * outSign, phi);
-      return add(centre, mul(d, Math.max(H.r[r][k], reach(d) + D.fit.arm + 0.02)));
+      // (`cap`: never further off the body than cap.out straight out from the arm, easing to cap.rest at its front, back
+      // and neck sides, so the shell lies against the shoulder there as the sheet draws it, with no wing)
+      const r0 = reach(d), cMax = Pd.cap ? Pd.cap.rest + (Pd.cap.out - Pd.cap.rest) * Math.max(0, Math.sin(psi * Math.PI / 180)) ** 2 : Infinity;
+      return add(centre, mul(d, Math.max(Math.min(H.r[r][k], r0 + cMax), r0 + D.fit.arm + 0.02)));
     }));
     // (smoothed round each row and down each column, never in from its own: one shell over the deltoid's bumps)
     for (let it = 0; it < 3; it++) {
@@ -819,7 +856,17 @@ function armPieces(G, rig, D, S) {
   }
   // (over the breast and back plates too, where its inside edge lies on them)
   const trunkSurf = surfOf(G, G.trunkStart, G.trunkEnd).filter((p) => p[0] > 0);
-  const cap = plateOf(G, capRows, { tag: 'pauldron', bone: { shoulder_l: 1 }, rim, out: (p) => sub(p, centre), ring: true, fit: { S: [[near, D.fit.arm], [trunkSurf, gap], ...underArm.slice(3)] }, border: { top: 'open', bottom: 'trim' } });
+  const capFit = [[near, D.fit.arm], [trunkSurf, gap], ...underArm.slice(3)];
+  // (with `cap`: fitted here, each point moved out by at most cap.push, then smoothed round each row, so a plate edge
+  // under it raises no spike; the plates under it are kept below it instead)
+  if (Pd.cap) {
+    const before = capRows.map((row) => row.map((p) => p.slice()));
+    fitOut(capRows, true, (p) => sub(p, centre), capFit, 0);
+    const r0 = before.map((row) => row.map((p) => Math.hypot(...sub(p, centre))));
+    const rr = capRows.map((row, r) => row.map((p, k) => Math.min(Math.hypot(...sub(p, centre)), r0[r][k] + Pd.cap.push)));
+    capRows = capRows.map((row, r) => row.map((p, k) => { const n = row.length, m = (rr[r][(k + n - 1) % n] + 2 * rr[r][k] + rr[r][(k + 1) % n]) / 4; return add(centre, mul(unit(sub(p, centre)), Math.max(m, r0[r][k]))); }));
+  }
+  const cap = plateOf(G, capRows, { tag: 'pauldron', bone: { shoulder_l: 1 }, rim, out: (p) => sub(p, centre), ring: true, fit: Pd.cap ? null : { S: capFit }, border: { top: 'open', bottom: 'trim' } });
   // (its top closed by one polygon)
   { const ids = capRows[0].map((p) => G.verts.findIndex((q) => q === p)); G.tag = 'pauldron'; G.poly(ids.slice().reverse(), 'plate', 'pauldron'); }
   // its core, on the outside
