@@ -20,8 +20,8 @@ export const CAMS = JSON.parse(readFileSync(join(DIR, 'lowmantlecams.json'), 'ut
 export const VIEWS = ['front', 'q3', 'side', 'back', 'r3'];
 /** Each view's box on the sheet (x, y, w, h), per body: the sheet's worn figures. */
 export const BOXES = {
-  male: { front: [20, 95, 195, 245], q3: [215, 95, 185, 245], side: [398, 95, 122, 245], back: [515, 95, 150, 245], r3: [660, 95, 155, 245] },
-  female: { front: [20, 438, 195, 225], q3: [215, 438, 185, 225], side: [395, 438, 122, 225], back: [515, 438, 150, 225], r3: [655, 438, 160, 225] },
+  male: { front: [20, 95, 195, 245], q3: [215, 95, 185, 245], side: [398, 95, 122, 245], back: [515, 95, 150, 245], r3: [668, 95, 147, 245] },
+  female: { front: [20, 438, 195, 225], q3: [215, 438, 185, 225], side: [395, 438, 122, 225], back: [515, 438, 150, 225], r3: [668, 438, 147, 225] },
 };
 export const LABELS = { body: 1, ring: 2, collar: 3, mid1: 4, mid2: 5, main: 6, clasp: 7 };
 
@@ -63,6 +63,7 @@ export function projectAll(who, G, rig) {
     for (const [l, tris] of Object.entries(byLabel)) raster(tris, c, box, Z, ids, +l);
     // each layer alone (its silhouette, whatever is in front of it)
     const alone = {};
+    { const Z2 = new Float32Array(n).fill(-Infinity), A = new Uint8Array(n); raster(bodyTris, c, box, Z2, A, 1); alone[LABELS.body] = rle(A, W, H); }
     for (const [l, tris] of Object.entries(byLabel)) { const Z2 = new Float32Array(n).fill(-Infinity), A = new Uint8Array(n); raster(tris, c, box, Z2, A, 1); alone[l] = rle(A, W, H); }
     // the body's and the mantle's edges of polygons facing the viewer
     const a = (c.yaw * Math.PI) / 180, view = [-Math.sin(a), 0, Math.cos(a)];
@@ -77,7 +78,11 @@ export function projectAll(who, G, rig) {
       }
       return seg;
     };
-    out[v] = { box, labels: rle(ids, W, H), alone, body: edges(B.verts, B.polys.map((p) => ({ v: p.nv ?? p.v }))), mantle: edges(G.verts, G.polys) };
+    // each clump on its own (front-most), id = layer label * 64 + clump + 1, for the per-clump overlays
+    const Zc = new Float32Array(n).fill(-Infinity), Cl = new Uint16Array(n);
+    raster(bodyTris, c, box, Zc, Cl, 1);
+    for (const t of G.tris) { const p = G.polys[t.poly], l = labelOf(p.part); raster([t.v.map((i) => G.verts[i])], c, box, Zc, Cl, p.clump == null ? l * 64 : l * 64 + p.clump + 1); }
+    out[v] = { box, labels: rle(ids, W, H), clumps: rle(Cl, W, H), alone, body: edges(B.verts, B.polys.map((p) => ({ v: p.nv ?? p.v }))), mantle: edges(G.verts, G.polys) };
   }
   return out;
 }

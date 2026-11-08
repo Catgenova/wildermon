@@ -1,17 +1,17 @@
 {
  "about": "The mantle sheet's ten worn views registered to the low-poly bodies (tools/sculpt/lowmantlereg.mjs project): screen x = cx + s ax (cos yaw x + sin yaw z), screen y = cy - s y, in the sheet's pixels (mantle-sheet.png, 1536 x 1024). s per row from the head's height and the chin (hers 0.85 of his, as the game draws her); cx, cy per view from the head's top and, where it shows, the chin (lowmantlesheet.py heads); ax, dy the per-view corrections fitted to the shoulders' outline (lowmantlereg.mjs).",
  "male": {
-  "front": { "yaw": 0, "s": 29, "cx": 118, "cy": 167.8, "ax": 1, "dy": 0 },
-  "q3": { "yaw": 45, "s": 29, "cx": 297.2, "cy": 171.7, "ax": 1, "dy": 0 },
-  "side": { "yaw": -90, "s": 29, "cx": 454.1, "cy": 169, "ax": 1, "dy": 0 },
-  "back": { "yaw": 180, "s": 29, "cx": 588.8, "cy": 172.7, "ax": 1, "dy": 0 },
-  "r3": { "yaw": -135, "s": 29, "cx": 744.8, "cy": 173.7, "ax": 1, "dy": 0 }
+  "front": { "yaw": 0, "s": 28.975, "cx": 118.25, "cy": 167.738, "ax": 0.993, "dy": 0 },
+  "q3": { "yaw": 44.125, "s": 29, "cx": 300.2, "cy": 171.95, "ax": 0.955, "dy": 0 },
+  "side": { "yaw": -87, "s": 28.8, "cx": 451.975, "cy": 171.875, "ax": 1.005, "dy": 0 },
+  "back": { "yaw": 180, "s": 29, "cx": 590.175, "cy": 172.45, "ax": 0.925, "dy": 0 },
+  "r3": { "yaw": -107.125, "s": 29, "cx": 744.8, "cy": 172.7, "ax": 0.897, "dy": 0 }
  },
  "female": {
-  "front": { "yaw": 0, "s": 24.6, "cx": 120, "cy": 493.7, "ax": 1, "dy": 0 },
-  "q3": { "yaw": 45, "s": 24.6, "cx": 298, "cy": 496.9, "ax": 1, "dy": 0 },
-  "side": { "yaw": -90, "s": 24.6, "cx": 445, "cy": 498.9, "ax": 1, "dy": 0 },
-  "back": { "yaw": 180, "s": 24.6, "cx": 590.7, "cy": 497.9, "ax": 1, "dy": 0 },
-  "r3": { "yaw": -135, "s": 24.6, "cx": 744.4, "cy": 498.9, "ax": 1, "dy": 0 }
+  "front": { "yaw": 0, "s": 24.6, "cx": 121, "cy": 495.2, "ax": 1.119, "dy": 0 },
+  "q3": { "yaw": 39, "s": 25, "cx": 299, "cy": 497.462, "ax": 1, "dy": 0 },
+  "side": { "yaw": -90, "s": 24.7, "cx": 444.75, "cy": 497.462, "ax": 1.014, "dy": 0 },
+  "back": { "yaw": 180, "s": 24.5, "cx": 591.7, "cy": 496.837, "ax": 1.059, "dy": 0 },
+  "r3": { "yaw": -104, "s": 24.5, "cx": 744.4, "cy": 497.462, "ax": 0.944, "dy": 0 }
  }
 }

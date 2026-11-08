@@ -78,7 +78,7 @@ export function misfit(who, rig, G) {
         let low = -1; for (let y = 0; y < H; y++) if (A[y * W + xx]) low = y;
         ds.push(low < 0 ? 30 : low + by - Y);
       }
-      r[lay] = ds; if (ds.length) loss += 0.8 * ds.reduce((a, b) => a + Math.abs(b), 0) / ds.length;
+      r[lay] = ds; if (ds.length) loss += HEMW * ds.reduce((a, b) => a + Math.abs(b), 0) / ds.length;
     }
     r.loss = +loss.toFixed(2); r.outline = +r.outline.toFixed(2); r.top = +r.top.toFixed(2);
     per[v] = r; total += loss;
@@ -91,6 +91,8 @@ export function misfit(who, rig, G) {
 const setAt = (o, path, val) => { const c = structuredClone(o); let t = c; for (const k of path.slice(0, -1)) t = t[k]; t[path[path.length - 1]] = val; return c; };
 const getAt = (o, path) => path.reduce((t, k) => t[k], o);
 const P0pin = new Set();
+/** The traced hems' weight (0 where the layers' hems come from the traced clumps, lowmantleclumps.mjs). */
+let HEMW = 0.8;
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const args = process.argv.slice(2), opt = (n, f) => { const i = args.indexOf(`--${n}`); return i < 0 ? f : args[i + 1]; };
@@ -98,7 +100,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const rig = buildRig(who);
   let D = structuredClone(opt('from', null) ? JSON.parse(readFileSync(opt('from'), 'utf8')).design : DESIGN[who]);
   if (opt('pin', null)) for (const pth of opt('pin').split(',')) P0pin.add(pth);
-  const P = [ [['dome', 'h', 1], 0.05], [['dome', 'h', 2], 0.05], [['dome', 'a', 1], 0.1], [['lean', 1], 0.04], [['raise', 1], 0.05], [['raise', 2], 0.05],
+  if (opt('hemw', null) != null) HEMW = +opt('hemw');
+  const P = opt('params', null) ? JSON.parse(opt('params')) : [ [['dome', 'h', 1], 0.05], [['dome', 'h', 2], 0.05], [['dome', 'a', 1], 0.1], [['lean', 1], 0.04], [['raise', 1], 0.05], [['raise', 2], 0.05],
     ...[1, 2, 3, 4, 5].map((i) => [['tiers', 0, 'hem', i, 1], 0.15]), ...[1, 2, 3, 4, 5].map((i) => [['tiers', 1, 'hem', i, 1], 0.12]), ...[1, 2, 3, 4].map((i) => [['tiers', 2, 'hem', i, 1], 0.1]),
     [['collar', 'len', 1, 1], 0.1], [['collar', 'len', 2, 1], 0.1], [['collar', 'lean', 1], 4], [['clasp', 'at'], 2], [['clasp', 's'], 0.06], [['clasp', 'r'], 0.03],
   ];

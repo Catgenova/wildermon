@@ -20,8 +20,8 @@ NAMES = {1: 'body', 2: 'ring', 3: 'collar', 4: 'mid1', 5: 'mid2', 6: 'main', 7: 
 COL = {1: (150, 110, 95), 2: (60, 40, 35), 3: (255, 120, 200), 4: (255, 220, 90), 5: (90, 220, 255), 6: (140, 255, 120), 7: (255, 160, 40)}
 
 
-def unrle(rows, w, h):
-    A = np.zeros((h, w), np.uint8)
+def unrle(rows, w, h, dt=np.uint8):
+    A = np.zeros((h, w), dt)
     for y, r in enumerate(rows):
         for k in range(0, len(r), 3):
             A[y, r[k]:r[k + 1]] = r[k + 2]
@@ -257,8 +257,8 @@ def masks(sheet, out):
     """The sheet's figure and head skin per view box (run-length rows of 0/1), and the traces, for lowmantlefit.mjs."""
     S = Image.open(sheet).convert('RGB')
     import importlib
-    boxes = {'male': {'front': [20, 95, 195, 245], 'q3': [215, 95, 185, 245], 'side': [398, 95, 122, 245], 'back': [515, 95, 150, 245], 'r3': [660, 95, 155, 245]},
-             'female': {'front': [20, 438, 195, 225], 'q3': [215, 438, 185, 225], 'side': [395, 438, 122, 225], 'back': [515, 438, 150, 225], 'r3': [655, 438, 160, 225]}}
+    boxes = {'male': {'front': [20, 95, 195, 245], 'q3': [215, 95, 185, 245], 'side': [398, 95, 122, 245], 'back': [515, 95, 150, 245], 'r3': [668, 95, 147, 245]},
+             'female': {'front': [20, 438, 195, 225], 'q3': [215, 438, 185, 225], 'side': [395, 438, 122, 225], 'back': [515, 438, 150, 225], 'r3': [668, 438, 147, 225]}}
     res = {'trace': TRACE, 'band': BAND, 'views': {}}
     for who, bs in boxes.items():
         res['views'][who] = {}
@@ -272,3 +272,72 @@ def masks(sheet, out):
 
 if __name__ == '__main__' and sys.argv[1] == 'masks':
     masks(sys.argv[3], sys.argv[4])
+
+
+def clumpColour(cid):
+    """A clump's own colour: its layer's hue band (main green, mid2 blue, mid1 yellow, collar pink), each clump a step round it."""
+    import colorsys
+    lab, q = cid // 64, cid % 64
+    base = {6: 0.33, 5: 0.55, 4: 0.14, 3: 0.88, 2: 0.0, 7: 0.08}.get(lab, 0.0)
+    h = (base + ((q * 0.37) % 1 - 0.5) * 0.16) % 1
+    r, g, b = colorsys.hsv_to_rgb(h, 0.55 + 0.45 * (q % 2), 1.0 - 0.25 * ((q // 2) % 2))
+    return (int(r * 255), int(g * 255), int(b * 255))
+
+
+def clumps(proj, sheet, out, trace=None, title='', views=VIEWS, whos=('male', 'female'), k=3):
+    """Per view: the sheet, ours with each clump in its own colour, and the sheet with each visible clump's outline in its
+    colour and the traced tips (circles) and notches (squares) of lowmantle-trace.json."""
+    S = Image.open(sheet).convert('RGB')
+    T = json.load(open(trace)) if trace else {}
+    tcol = {'collar': (255, 120, 200), 'mid1': (255, 220, 90), 'mid2': (90, 220, 255), 'main': (140, 255, 120)}
+    cells = []
+    for who in whos:
+        for v in views:
+            d = proj[who][v]
+            x, y, w, h = d['box']
+            Y0 = 35 if who == 'male' else 30
+            H = 160 if who == 'male' else 140
+            C = unrle(d['clumps'], w, h, np.uint16)[Y0:Y0 + H]
+            sh = S.crop((x, y + Y0, x + w, y + Y0 + H))
+            o = np.zeros((H, w, 3), np.uint8)
+            o[:] = (34, 26, 30)
+            o[C == 1] = COL[1]
+            ov = np.asarray(sh).copy()
+            for cid in np.unique(C):
+                if cid < 128:
+                    continue
+                M = C == cid
+                o[M] = clumpColour(int(cid))
+                ov[outline(M)] = clumpColour(int(cid))
+            trip = Image.new('RGB', (3 * w * k + 8, H * k), (20, 16, 18))
+            trip.paste(big(sh, k), (0, 0))
+            trip.paste(big(Image.fromarray(o), k), (w * k + 4, 0))
+            trip.paste(big(Image.fromarray(ov), k), (2 * w * k + 8, 0))
+            dr = ImageDraw.Draw(trip)
+            for lay, pts in T.get(who, {}).get(v, {}).items():
+                for t, X, Yp in pts:
+                    p = ((X - x) * k + 2 * w * k + 8, (Yp - y - Y0) * k)
+                    r = 4 if t == 't' else 3
+                    (dr.ellipse if t == 't' else dr.rectangle)([p[0] - r, p[1] - r, p[0] + r, p[1] + r], outline=tcol[lay], width=2)
+            dr.text((4, 4), f'{who} {v}: sheet / ours, a colour per clump / overlay', fill=(255, 255, 255))
+            cells.append(trip)
+    rows = [cells[i:i + 3] for i in range(0, len(cells), 3)]
+    W = max(sum(c.width for c in r) + 10 * (len(r) - 1) for r in rows)
+    Ht = sum(max(c.height for c in r) for r in rows) + 10 * len(rows) + 24
+    o = Image.new('RGB', (W, Ht), (30, 24, 26))
+    ImageDraw.Draw(o).text((6, 6), title or 'The fur mantle per clump against its sheet (circles: traced tips, squares: traced notches)', fill=(255, 255, 255))
+    yy = 24
+    for r in rows:
+        xx = 0
+        for c in r:
+            o.paste(c, (xx, yy))
+            xx += c.width + 10
+        yy += max(c.height for c in r) + 10
+    o.save(out)
+    print('wrote', out, o.size)
+
+
+if __name__ == '__main__' and sys.argv[1] == 'clumps':
+    a = sys.argv
+    opt = lambda n, f=None: a[a.index('--' + n) + 1] if '--' + n in a else f
+    clumps(json.load(open(a[2])), a[3], a[4], opt('trace'), opt('title', ''), opt('views', ','.join(VIEWS)).split(','), opt('who', 'male,female').split(','), int(opt('k', '3')))
