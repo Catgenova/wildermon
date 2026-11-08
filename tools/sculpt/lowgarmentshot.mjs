@@ -2,6 +2,8 @@
 // shading (one normal per polygon, the heads' camera-fixed light tools/sculpt/lowlight-<who>.json, as
 // tools/sculpt/lowrigshot.mjs draws them), each polygon in its material's colour, and reference images laid beside.
 //
+// A colour over 1.5 in red is drawn unlit at that colour less 2 (a glow: emissive in the game).
+//
 // shoot(w, h, cells, file, { texts, imgs }) — cells: { meshes: [{ P, polys, tris, col }], cam: { yaw, pitch, s, c },
 // box: [x, y, w, h], label, bg }; imgs: { src (a file), crop: [x, y, w, h], box: [x, y, w, h] }.
 import { chromium } from 'playwright-core';
@@ -50,7 +52,7 @@ const gl = cv.getContext('webgl', { antialias: true, preserveDrawingBuffer: true
 const vs = 'attribute vec3 p; attribute vec3 n; attribute vec3 m; uniform mat3 R; uniform vec3 piv; uniform float s; uniform vec2 asp; uniform float lift; varying vec3 vn; varying vec3 vm;' +
   'void main(){ vec3 q = R*(p - piv); vn = R*n; vm = m; gl_Position = vec4(q.x*s*asp.x, q.y*s*asp.y, -q.z/30.0 - lift, 1.0); }';
 const fs = 'precision highp float; varying vec3 vn; varying vec3 vm; uniform vec3 SHC[19]; uniform int mode; uniform vec3 linec;' +
-  'void main(){ if (mode == 1) { gl_FragColor = vec4(linec, 1.0); return; } vec3 nn = normalize(vn); if (!gl_FrontFacing) nn = -nn; float x = nn.x, y = nn.y, z = nn.z;' +
+  'void main(){ if (mode == 1) { gl_FragColor = vec4(linec, 1.0); return; } if (vm.r > 1.5) { gl_FragColor = vec4(vm - 2.0, 1.0); return; } vec3 nn = normalize(vn); if (!gl_FrontFacing) nn = -nn; float x = nn.x, y = nn.y, z = nn.z;' +
   ' vec3 c = SHC[0] + SHC[1]*x + SHC[2]*y + SHC[3]*z + SHC[4]*x*y + SHC[5]*y*z + SHC[6]*(3.0*z*z-1.0) + SHC[7]*x*z + SHC[8]*(x*x-y*y)' +
   '   + SHC[9]*y*(3.0*x*x-y*y) + SHC[10]*x*y*z + SHC[11]*y*(5.0*z*z-1.0) + SHC[12]*z*(5.0*z*z-3.0) + SHC[13]*x*(5.0*z*z-1.0) + SHC[14]*z*(x*x-y*y) + SHC[15]*x*(x*x-3.0*y*y)' +
   '   + SHC[16]*pow(max(dot(nn, normalize(vec3(-0.95,0.25,-0.2))),0.0),8.0) + SHC[17]*max(-x,0.0)*pow(1.0-max(z,0.0),3.0) + SHC[18]*max(x,0.0)*pow(1.0-max(z,0.0),3.0);' +
