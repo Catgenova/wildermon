@@ -263,6 +263,8 @@ export function buildLongSword({ enchanted = false, length } = {}) {
     grips: { main: [0, 372 * k, 0], off: [0, 292 * k, 0] },
     gripR: 21.5 * k,
     halfWidth: 86 * k,
+    // two-handed: carried on the back while it is not in hand (lowgear.mjs backSocketOf)
+    back: true,
   };
 }
 
