@@ -105,7 +105,7 @@ async function sheet(file, wire) {
     });
     const parts = {};
     for (const t of G.tris) { const p = G.polys[t.poly]; if (G.side[p.v[0]] === 'L') parts[p.tag] = (parts[p.tag] ?? 0) + 1; }
-    texts.push({ cls: 'lab', css: `left:${5 * cw + 10}px;top:${top + r * 2 * ch + (wire && r === 0 ? 250 : 10)}px;width:260px;white-space:normal`, html: `<b>${who}</b><br>${G.tris.length} triangles (${G.tris.length / 2} a boot)<br>above: the sheet; below: the model` + (wire ? '<br><br>a boot, by part:<br>' + Object.entries(parts).map(([k, v]) => `${k} ${v}`).join('<br>') : '') });
+    texts.push({ cls: 'lab', css: `left:${5 * cw + 10}px;top:${top + (r * 2 + (wire ? 1 : 0)) * ch - (wire ? 30 : -10)}px;width:260px;white-space:normal;font-size:12px;line-height:14px`, html: `<b>${who}</b><br>${G.tris.length} triangles (${G.tris.length / 2} a boot)<br>above: the sheet; below: the model` + (wire ? '<br><br>a boot, by part:<br>' + Object.entries(parts).map(([k, v]) => `${k} ${v}`).join('<br>') : '') });
   });
   if (wire) imgs.push({ src: SHEET, size: [1536, 1024], crop: [585, 700, 230, 300], box: [5 * cw, top, 280, 240] });
   texts.push({ css: 'left:10px;top:6px', html: `Plate boots, ${tag}: the sheet (tools/sculpt/ref/plate-boots.png) above each body's row, the model below` });
