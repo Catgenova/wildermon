@@ -3,9 +3,10 @@
 // draws them. Both bodies, idle and walking, front (facing 0) and three-quarter (facing 1), at each zoom asked; and the
 // walk as a looping GIF at one zoom.
 //
-//   node tools/sculpt/lowshawlgame.mjs --out <dir> [--zooms 1,5,10] [--gif 10] [--frames 12]
+//   node tools/sculpt/lowshawlgame.mjs --out <dir> [--zooms 1,5,10] [--gif 10] [--frames 12] [--name shawl]
 //     writes <dir>/shawl-game-z<zoom>.png for each zoom (zoom 1 also four times larger, pixel for pixel, beside it) and
-//     <dir>/shawl-game-walk-z<gif>.gif (the man and the woman, front and three-quarter)
+//     <dir>/shawl-game-walk-z<gif>.gif (the man and the woman, front and three-quarter); --name the files' and the
+//     title's garment (the game draws every garment worn: the shawl and the trousers)
 //
 // Playwright's Chromium (/opt/pw-browsers/chromium) with software GL, at one device pixel a canvas pixel; the GIF needs
 // Python's PIL.
@@ -19,10 +20,11 @@ const args = process.argv.slice(2);
 const opt = (n, f) => { const i = args.indexOf(`--${n}`); return i < 0 ? f : args[i + 1]; };
 const out = resolve(opt('out', 'tmp/lowshawlgame'));
 const zooms = opt('zooms', '1,5,10').split(',').map(Number).filter((z) => z > 0);
-const gifZoom = +opt('gif', '10'), F = +opt('frames', '12');
+const gifZoom = +opt('gif', '10'), F = +opt('frames', '12'), name = opt('name', 'shawl');
 mkdirSync(out, { recursive: true });
 const ROOT = new URL('../..', import.meta.url).pathname;
 const entry = `
+const NAME = ${JSON.stringify(name[0].toUpperCase() + name.slice(1) === 'Shawl' ? 'The shawl' : 'The ' + name)};
 import { drawFigure, sculptedFigures } from './src/render/figure';
 import { DEFAULT_LOOK } from './src/game/look';
 const look = (gender) => ({ ...DEFAULT_LOOK, gender, hair: 'bald', beard: 'none' });
@@ -38,7 +40,7 @@ window.ready = async () => { sculptedFigures(true); await import('./src/sculpt/s
 // one zoom's sheet: the man and the woman, each idle and walking, front and three-quarter
 window.sheet = (zoom) => {
   const root = document.getElementById('root'); root.innerHTML = '';
-  root.appendChild(lab('The shawl in the game\\'s renderer (drawFigure, Sculpted figures on): zoom ' + zoom + ', one device pixel a canvas pixel', 'h'));
+  root.appendChild(lab(NAME + ' in the game\\'s renderer (drawFigure, Sculpted figures on): zoom ' + zoom + ', one device pixel a canvas pixel', 'h'));
   const row = document.createElement('div'); row.className = 'row'; root.appendChild(row);
   const big = zoom <= 2 ? document.createElement('div') : null;
   if (big) { big.className = 'row'; root.appendChild(lab('the same, four times larger (nearest pixel)', 'h')); root.appendChild(big); }
@@ -72,7 +74,7 @@ try {
   await p.evaluate(() => window.ready());
   for (const z of zooms) {
     await p.evaluate((zz) => window.sheet(zz), z);
-    const file = join(out, `shawl-game-z${z}.png`);
+    const file = join(out, `${name}-game-z${z}.png`);
     await (await p.$('#root')).screenshot({ path: file });
     console.log('wrote', file);
   }
@@ -83,7 +85,7 @@ try {
       await p.evaluate(([zz, u]) => window.frame(zz, u), [gifZoom, k / F]);
       await (await p.$('#frame')).screenshot({ path: join(dir, `f${String(k).padStart(2, '0')}.png`) });
     }
-    const gif = join(out, `shawl-game-walk-z${gifZoom}.gif`);
+    const gif = join(out, `${name}-game-walk-z${gifZoom}.gif`);
     execFileSync('python3', ['-c', `
 import sys, glob
 from PIL import Image
