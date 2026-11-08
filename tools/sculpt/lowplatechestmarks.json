@@ -1,0 +1,17 @@
+{
+ "about": "Landmarks on the chest sheet (tools/sculpt/ref/plate-chest.png, 1536 x 1024 px), read off at 2x: per body and view, the elbows (the vambrace's top at the inner elbow's dark band) and wrists (the cuff's middle) as [x, y], the neck's middle across (the collar's middle, x only); 'l' and 'r' the figure's own left and right. Views are the sheet's turns: front 0, q3 45, side 90, r3 135, back 180.",
+ "male": {
+  "front": { "elbow": { "r": [52, 228], "l": [195, 228] }, "wrist": { "r": [42, 281], "l": [207, 281] }, "neck": 124 },
+  "q3": { "elbow": { "r": [256, 230], "l": [367, 228] }, "wrist": { "r": [265, 288], "l": [378, 281] }, "neck": 322 },
+  "side": { "elbow": { "r": [451, 228] }, "wrist": { "r": [452, 290] }, "neck": 450 },
+  "r3": { "elbow": { "r": [660, 230], "l": [545, 228] }, "wrist": { "r": [655, 286], "l": [530, 286] }, "neck": 590 },
+  "back": { "elbow": { "r": [825, 228], "l": [690, 228] }, "wrist": { "r": [835, 284], "l": [680, 284] }, "neck": 757 }
+ },
+ "female": {
+  "front": { "elbow": { "r": [57, 556], "l": [190, 556] }, "wrist": { "r": [40, 612], "l": [208, 612] }, "neck": 124 },
+  "q3": { "elbow": { "r": [256, 558], "l": [366, 554] }, "wrist": { "r": [262, 615], "l": [380, 610] }, "neck": 320 },
+  "side": { "elbow": { "r": [452, 556] }, "wrist": { "r": [452, 615] }, "neck": 451 },
+  "r3": { "elbow": { "r": [648, 554], "l": [530, 556] }, "wrist": { "r": [645, 615], "l": [515, 618] }, "neck": 598 },
+  "back": { "elbow": { "r": [825, 552], "l": [690, 552] }, "wrist": { "r": [835, 615], "l": [680, 615] }, "neck": 757 }
+ }
+}
