@@ -14,11 +14,13 @@
 //     mantle-metrics.json: the checks at rest and in every pose, each body.
 //   --tunic: worn over the first outfit's tunic (garments/outfit1.mjs), fitted over it, the tunic drawn;
 //   --plate: the torso and the arms drawn in the plate set's plate colour (the fur beside it).
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { build } from 'esbuild';
 import { buildRig, posed, skin, fromGame, gameRig, armsOut, axisAngle, mm, tr } from './lowrig.mjs';
 import { skinGarment, checks, crossPairs } from './lowgarment.mjs';
-import { buildMantle, mantleWeights, MATS, LOOKS as MANTLE_LOOKS, DESIGN } from './garments/mantle.mjs';
+import { buildMantle, mantleWeights, chestOf, MATS, LOOKS as MANTLE_LOOKS, DESIGN } from './garments/mantle.mjs';
 import { shoot, closeBrowser, lookColour } from './lowgarmentshot.mjs';
 
 const args = process.argv.slice(2);
@@ -39,7 +41,7 @@ for (const who of ['male', 'female']) {
   if (flag('tunic')) { const { buildOutfit } = await import('./garments/outfit1.mjs'); const O = buildOutfit(rig); tunic = O.tunic; under = [O.tunic]; tunic.hides = O.hides; }
   const G = buildMantle(rig, { ...DESIGN[who], ...over }, { under });
   G.vw = mantleWeights(rig, G);
-  M[who] = { rig, G, tunic };
+  M[who] = { rig, G, tunic, chest: chestOf(who) };
 }
 // (--plate: the torso and the arms in the plate set's plate colour, to see the fur beside it)
 const PLATE = [0.7, 0.58, 0.52], plated = new Set(['torso', 'joint', 'arm', 'pelvis']);
@@ -61,21 +63,41 @@ function testPoses(rig) {
   if (rig.who === 'female') for (const e of P) e.pose = armsOut(rig, e.pose);
   return P;
 }
-const games = {};
-async function game(rig) {
-  if (games[rig.who]) return games[rig.who];
-  const g = await gameRig(rig, join(out, 'game'));
-  const at = (moving, u) => fromGame(rig, g.bonesOf(g.sculptRig({ phase: u * Math.PI * 2, moving, facing: 0, swimming: false, working: false, look: g.look }).rig, g.PROPS, [], g.REST_EXTRAS), g.gRest);
-  return (games[rig.who] = { at });
+/* ---- the game's clips (src/sculpt/anim: idle, walk, the two-handed swing), bundled for node ------------------------- */
+const ROOT = new URL('../..', import.meta.url).pathname;
+const LOADERS = { '.png': 'dataurl', '.svg': 'dataurl', '.webp': 'dataurl', '.wav': 'dataurl', '.ogg': 'dataurl', '.mp3': 'dataurl' };
+const modFile = join(out, `.anim-${process.pid}.mjs`);
+writeFileSync(modFile, (await build({ stdin: { contents: `export { CLIPS } from './src/sculpt/anim'; export { clipLocal } from './src/sculpt/anim/player'; export { lowSkeleton, lowHeld } from './src/sculpt/lowpoly';`, resolveDir: ROOT, loader: 'ts' }, bundle: true, format: 'esm', platform: 'node', write: false, logLevel: 'error', target: 'es2022', loader: LOADERS, define: { 'import.meta.env': '{}', __DEPLOY__: 'undefined' }, absWorkingDir: ROOT })).outputFiles[0].text);
+const AN = await import(pathToFileURL(modFile).href);
+rmSync(modFile);
+/** A clip's pose at time t as the rig takes it (the clip player's local turns on the control bones). */
+function clipPose(who, name, t) {
+  const { rig } = M[who], clip = AN.CLIPS[name], body = who === 'male' ? 'man' : 'woman', sk = AN.lowSkeleton(body);
+  const r = AN.clipLocal(sk, clip, t, clip.grip ? AN.lowHeld(body) : undefined), pose = {};
+  r.local.forEach((m, i) => { if (m && rig.bones[i].kind === 'control') pose[rig.bones[i].name] = m; });
+  return pose;
+}
+const keyT = (name, key) => AN.CLIPS[name].poses.find((p) => p.name === key).t;
+/** The poses checked: the test poses, the walk (8 keys), the idle's whole loop (12), the swing's guard, top and impact. */
+function allPoses(who) {
+  const { rig } = M[who], walk = AN.CLIPS.walk, idle = AN.CLIPS.idle;
+  return [{ id: 'rest', label: 'Rest', pose: {} }, ...testPoses(rig),
+    ...Array.from({ length: 8 }, (_, k) => ({ id: `walk-${k}`, label: `Walk ${k + 1}/8`, pose: clipPose(who, 'walk', (k / 8) * walk.length) })),
+    ...Array.from({ length: 12 }, (_, k) => ({ id: `idle-${k}`, label: `Idle ${k + 1}/12`, pose: clipPose(who, 'idle', (k / 12) * idle.length) })),
+    ...[['rest', 'guard'], ['top', 'top'], ['impact', 'impact']].map(([n, l]) => ({ id: `swing-${l}`, label: `Swing ${l}`, pose: clipPose(who, 'swing', keyT('swing', n) + 1e-4) }))];
 }
 function dress(who, pose) {
   const { rig, G, tunic } = M[who];
   const f = posed(rig, pose);
-  return { PB: skin(rig, f), PG: skinGarment(rig, f, G), PT: tunic ? skinGarment(rig, f, tunic) : null };
+  const { chest } = M[who];
+  return { PB: skin(rig, f), PG: skinGarment(rig, f, G), PT: tunic ? skinGarment(rig, f, tunic) : null, PC: chest ? skinGarment(rig, f, chest, chest.vw) : null };
 }
 const scene = (who, d, o = {}) => {
   const { rig, G, tunic } = M[who];
-  const m = [bodyMesh(rig, d.PB, tunic ? new Set(tunic.hides.tunic) : new Set())];
+  const { chest } = M[who];
+  const m = [bodyMesh(rig, d.PB, new Set([...(tunic ? tunic.hides.tunic : []), ...(chest ? chest.hides : [])]))];
+  // (the plate chest piece, where it is here: its own look's colours, the metals as the shots draw metal)
+  if (chest) m.push({ who: rig.who, P: d.PC, polys: chest.polys.map((p) => p.v), tris: chest.tris.map((t) => [...t.v, t.poly]), col: chest.polys.map((p) => lookColour(chest.plain[chest.mats.indexOf(p.mat)])) });
   if (tunic) m.push(garMesh(rig, tunic, d.PT, { fabric: [0.72, 0.62, 0.56], trim: [0.603, 0.421, 0.294], inner: [0.51, 0.356, 0.268], pattern: [0.72, 0.62, 0.56] }));
   m.push(garMesh(rig, G, d.PG, MATS, o.edges, null, o.look ?? 'plain'));
   return m;
@@ -85,6 +107,7 @@ function measure(who, d) {
   const c = checks(G, d.PG, rig.B, d.PB);
   const r = { tris: c.tris, body: c.body, self: c.self, bodyParts: c.bodyParts, selfParts: c.selfParts, open: c.open, nonManifold: c.nonManifold, offPlane: c.offPlane };
   if (tunic) r.tunic = crossPairs(d.PG, G.tris, d.PT, tunic.tris).length;
+  if (d.PC) r.chest = crossPairs(d.PG, G.tris, d.PC, M[who].chest.tris).length;
   return r;
 }
 
@@ -148,29 +171,27 @@ if (only.includes('poses')) {
   const cw = 230, ch = 270, cells = [];
   let row = 0;
   for (const who of ['male', 'female']) {
-    const { rig } = M[who], g = await game(rig);
-    const list = [{ id: 'rest', label: 'Rest', pose: {} }, ...testPoses(rig), { id: 'walk', label: 'Walk 1/4', pose: g.at(true, 0.25) }, { id: 'walk2', label: 'Walk 3/4', pose: g.at(true, 0.75) }, { id: 'idle', label: 'Idle', pose: g.at(false, 0.3) }];
+    const list = allPoses(who).filter((e) => ['rest', 'tpose', 'forward', 'overhead', 'walk-2', 'walk-6', 'idle-4', 'swing-guard', 'swing-top', 'swing-impact'].includes(e.id));
     for (const [yi, yaw] of [[0, -30], [1, -150]]) {
       list.forEach((e, k) => {
         const d = dress(who, e.pose), m = measure(who, d);
-        cells.push({ meshes: scene(who, d), cam: { yaw, pitch: 8, s: 46, c: [0, e.id === 'overhead' ? -0.4 : -1.2, 0] }, box: [k * cw, 34 + row * ch, cw, ch], label: `${who} ${e.label} · body ${m.body} self ${m.self}${m.tunic != null ? ' tunic ' + m.tunic : ''}` });
+        cells.push({ meshes: scene(who, d), cam: { yaw, pitch: 8, s: 40, c: [0, /overhead|swing/.test(e.id) ? -0.6 : -1.2, 0] }, box: [k * cw, 34 + row * ch, cw, ch], label: `${who} ${e.label} · body ${m.body} self ${m.self}${m.tunic != null ? ' tunic ' + m.tunic : ''}${m.chest != null ? ' chest ' + m.chest : ''}` });
       });
       row++;
     }
   }
-  await shoot(7 * cw, 34 + row * ch, cells, join(out, `mantle-poses${tag}.png`), { texts: [{ css: 'left:10px;top:6px', html: `The fur mantle in poses ${tag}: the numbers, its triangles crossing the body's and its own` }] });
+  await shoot(10 * cw, 34 + row * ch, cells, join(out, `mantle-poses${tag}.png`), { texts: [{ css: 'left:10px;top:6px', html: `The fur mantle in poses ${tag}: the numbers, its triangles crossing the body's and its own` }] });
 }
 
 /* ---- metrics -------------------------------------------------------------------------------------------------------- */
 if (only.includes('metrics')) {
   const metrics = {};
   for (const who of ['male', 'female']) {
-    const { rig } = M[who], g = await game(rig);
-    const list = [{ id: 'rest', pose: {} }, ...testPoses(rig), ...Array.from({ length: 16 }, (_, k) => ({ id: `walk-${k}`, pose: g.at(true, k / 16) })), ...Array.from({ length: 12 }, (_, k) => ({ id: `idle-${k}`, pose: g.at(false, k / 12) }))];
+    const list = allPoses(who);
     metrics[who] = {};
     for (const e of list) metrics[who][e.id] = measure(who, dress(who, e.pose));
     const r = metrics[who].rest;
-    console.log(who, `tris ${r.tris} open ${r.open} nonManifold ${r.nonManifold} offPlane ${r.offPlane}`, Object.entries(metrics[who]).map(([k, v]) => `${k}:${v.body}/${v.self}${v.tunic != null ? '/' + v.tunic : ''}`).join(' '));
+    console.log(who, `tris ${r.tris} open ${r.open} nonManifold ${r.nonManifold} offPlane ${r.offPlane}`, Object.entries(metrics[who]).map(([k, v]) => `${k}:${v.body}/${v.self}${v.tunic != null ? '/t' + v.tunic : ''}${v.chest != null ? '/c' + v.chest : ''}`).join(' '));
   }
   writeFileSync(join(out, `mantle-metrics${tag}.json`), JSON.stringify(metrics, null, 1));
 }
