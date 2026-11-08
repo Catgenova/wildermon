@@ -592,7 +592,8 @@
   },
   "chestClear": 0.05,
   "gapArm": 0.06,
-  "smooth": 30
+  "smooth": 30,
+  "chestMargin": 0.07
  },
  "female": {
   "scale": 0.86,
@@ -1190,6 +1191,7 @@
    "mid1": 1.45
   },
   "chestClear": 0.05,
-  "gapArm": 0.06
+  "gapArm": 0.06,
+  "chestMargin": 0.02
  }
 }

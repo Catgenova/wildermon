@@ -429,10 +429,42 @@ export function buildMantle(rig, design = DESIGN[rig.who], { under = [], chest =
     const nrm = unit(cross(sub(w, c), sub(u, c))), n2 = dot(nrm, [Math.sin(deg * Math.PI / 180), 0, Math.cos(deg * Math.PI / 180)]) < 0 ? mul(nrm, -1) : nrm;
     return clasp(G, c, n2, Cl, k, side);
   });
+  // ---- local clearance: where the chest piece (grown by `chestMargin`) still passes through the fur, or one layer through
+  // another, the fur's vertices there pushed out from the axis a step at a time (a layer over another: the upper one's;
+  // a clasp: the whole disc), until nothing crosses: only those vertices move, the rest of the outline stays
   orient(G, (p) => [p[0], 0, p[2] - z0]);
+  G.cleared = clearLocally(G, chest, D, z0);
+  G.chest = chest;
   G.tris = trisOf(G);
   G.design = D; G.cols = cols;
   return G;
+}
+
+const RANK = { ring: 0, main: 1, mid2: 2, mid1: 3, collar: 4, clasp_l: 5, clasp_r: 5 };
+function clearLocally(G, chest, D, z0) {
+  const step = D.clearStep ?? 0.015, maxIt = D.clearIt ?? 80, moved = new Float32Array(G.verts.length);
+  const CV = chest ? grownOf(chest.verts, D.chestMargin ?? 0.02, z0) : null, CT = chest ? chest.tris : null;
+  const out = (i) => { const p = G.verts[i], r = Math.hypot(p[0], p[2] - z0) || 1; return [p[0] / r, 0, (p[2] - z0) / r]; };
+  const push = (i, k = 1) => { const d = out(i); G.verts[i] = add(G.verts[i], mul(d, step * k)); moved[i] += step * k; };
+  let it = 0, left = { chest: 0, self: 0 };
+  for (; it < maxIt; it++) {
+    const T = trisOf(G), bad = new Set(), discs = new Set();
+    const mark = (t) => { const part = G.polys[T[t].poly].part; if (part.startsWith('clasp')) discs.add(part); else for (const v of T[t].v) bad.add(v); };
+    const cp = CT ? [...crossPairs(G.verts, T, CV, CT), ...crossPairs(G.verts, T, chest.verts, CT)] : [];
+    for (const [a] of cp) mark(a);
+    const sp = crossPairs(G.verts, T);
+    for (const [a, b] of sp) {
+      const pa = G.polys[T[a].poly], pb = G.polys[T[b].poly], ra = RANK[pa.part] ?? 0, rb = RANK[pb.part] ?? 0;
+      if (ra !== rb) mark(ra > rb ? a : b); else mark(pa.mat === 'fur' ? a : pb.mat === 'fur' ? b : a);
+    }
+    left = { chest: cp.length, self: sp.length };
+    if (!cp.length && !sp.length) break;
+    for (const v of bad) push(v);
+    for (const part of discs) { const ids = G.verts.map((_, i) => i).filter((i) => G.part[i] === part), c = ids.reduce((m, i) => add(m, mul(G.verts[i], 1 / ids.length)), [0, 0, 0]), r = Math.hypot(c[0], c[2] - z0) || 1, d = [c[0] / r, 0, (c[2] - z0) / r]; for (const i of ids) { G.verts[i] = add(G.verts[i], mul(d, step)); moved[i] += step; } }
+  }
+  let most = 0, at = null;
+  moved.forEach((m, i) => { if (m > most) { most = m; at = i; } });
+  return { iterations: it, left, most: +most.toFixed(3), where: at == null ? null : { part: G.part[at], az: Math.round((Math.atan2(G.verts[at][0], G.verts[at][2] - z0) * 180) / Math.PI), y: +G.verts[at][1].toFixed(2) }, count: [...moved].filter((m) => m > 0).length };
 }
 
 /** Gt's vertices and polygons appended to G; the shell's vertex rows renumbered to G's. */
@@ -571,6 +603,32 @@ export function mantleWeights(rig, G, o = {}) {
     return l.map(([b, x]) => [b, x / t]);
   };
   const out = cur.map((w, i) => fin(w, i));
+  // (worn over the plate chest piece: near it, the fur takes the chest's own weights, all of them within `near` of its
+  // nearest vertex and less further out, so the fur and the plate under it move as one)
+  const C = o.chest ?? G.chest, near = o.chestNear ?? G.design?.chestNear ?? 0.6;
+  if (C) out.forEach((w, i) => {
+    if (/^clasp/.test(G.part[i])) return;
+    let bd = Infinity, bj = -1;
+    C.verts.forEach((q, j) => { const d = Math.hypot(...sub(P[i], q)); if (d < bd) { bd = d; bj = j; } });
+    const t = Math.min(1, Math.max(0, 1.5 * (1 - bd / near)));
+    if (t <= 0) return;
+    const m = {};
+    for (const [b, x] of w) m[b] = (m[b] ?? 0) + (1 - t) * x;
+    for (const [b, x] of C.vw[bj]) m[b] = (m[b] ?? 0) + t * x;
+    const l = Object.entries(m).map(([b, x]) => [+b, x]).filter(([, x]) => x > 1e-3).sort((a, b) => b[1] - a[1]).slice(0, 4), tt = l.reduce((a, [, x]) => a + x, 0);
+    out[i] = l.map(([b, x]) => [b, x / tt]);
+  });
+  if (C) for (let pass = 0; pass < (G.design?.chestSmooth ?? 4); pass++) {
+    const prev = out.map((l) => Object.fromEntries(l));
+    out.forEach((_, i) => {
+      if (/^clasp/.test(G.part[i]) || !nb[i].length) return;
+      const m = {};
+      for (const [b, x] of Object.entries(prev[i])) m[b] = (m[b] ?? 0) + 0.5 * x;
+      for (const j of nb[i]) for (const [b, x] of Object.entries(prev[j])) m[b] = (m[b] ?? 0) + (0.5 * x) / nb[i].length;
+      const l = Object.entries(m).map(([b, x]) => [+b, x]).filter(([, x]) => x > 1e-3).sort((a, b) => b[1] - a[1]).slice(0, 4), tt = l.reduce((a, [, x]) => a + x, 0);
+      out[i] = l.map(([b, x]) => [b, x / tt]);
+    });
+  }
   // the ring: spine_03 and the clavicles as the body under it has them
   G.verts.forEach((_, i) => { if (G.part[i] === 'ring') { const w = Object.fromEntries(out[i]); const o3 = {}; for (const [b, x] of Object.entries(w)) { const name = rig.bones[+b].name; const key = /^clavicle_/.test(name) ? +b : sp; o3[key] = (o3[key] ?? 0) + x; } out[i] = fin(o3); } });
   // each clasp rigid: the mean of its vertices'

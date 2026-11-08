@@ -110,6 +110,7 @@ function measure(who, d) {
   if (d.PC) r.chest = crossPairs(d.PG, G.tris, d.PC, M[who].chest.tris).length;
   // (DIAG=1: where the mantle crosses itself, each pair's parts, clumps and azimuth at rest)
   measure.n = (measure.n ?? 0) + 1;
+  if (process.env.DIAG && r.chest) { const ch = M[who].chest, c = {}; for (const [a, b] of crossPairs(d.PG, G.tris, d.PC, ch.tris)) { const pa = G.polys[G.tris[a].poly], v = G.verts[G.tris[a].v[0]], k = `${pa.part}×${ch.polys[ch.tris[b].poly].mat}@${Math.round(Math.atan2(v[0], v[2] + 0.12) * 180 / Math.PI / 30) * 30}`; c[k] = (c[k] ?? 0) + 1; } console.log(who, measure.n, 'chest', JSON.stringify(c)); }
   if (process.env.DIAG && r.self) console.log(who, measure.n, crossPairs(d.PG, G.tris).slice(0, 8).map(([a, b]) => { const pa = G.polys[G.tris[a].poly], pb = G.polys[G.tris[b].poly], v = G.verts[G.tris[a].v[0]]; return `${pa.part}#${pa.clump}/${pa.mat}×${pb.part}#${pb.clump}/${pb.mat}@${Math.round(Math.atan2(v[0], v[2] + 0.12) * 180 / Math.PI)},${v[1].toFixed(2)}`; }).join(' '));
   return r;
 }
