@@ -5,7 +5,8 @@
 //        [--tag <name>] [--title <text>] [--head] [--with <name>=<module>:<builder>,...]
 //     helm-sheet<tag>.png: the sheet's five views (0, 45, 90, 135, 180) of each body's helm beside the model's, his above
 //       hers (--head: the head drawn too, not hidden);
-//     helm-close<tag>.png: front, three-quarter and profile at twice the scale, the sheet's beside each;
+//     helm-close<tag>.png: front, three-quarter and profile at twice the scale, the sheet's beside each (closeback:
+//       profile, rear three-quarter and back, helm-closeback<tag>.png);
 //     helm-wire<tag>.png: the sheet's views with every polygon's outline, and the triangle counts by piece;
 //     helm-poses<tag>.png: the test poses (arms out, forward, overhead, head turned 40 and 70, nodded down and back, the
 //       game's walk and the idle's look), each with the helm's triangles crossing the body's;
@@ -117,20 +118,21 @@ async function sheet(file, edges) {
   await shoot(5 * cw + 200, top + 4 * ch, cells, file, { texts, imgs });
 }
 /** Close: each body's front, three-quarter and profile at twice the sheet's scale, the sheet's beside each. */
-async function close(file, edges) {
+async function close(file, edges, which = [0, 1, 2]) {
   const cw = 400, ch = 520, top = 34, cells = [], imgs = [], texts = [];
   ['male', 'female'].forEach((who, r) => {
     const d0 = rest(who);
-    [0, 1, 2].forEach((i, n) => {
+    which.forEach((i, n) => {
       const [yaw, lab] = VIEWS[i];
       imgs.push({ src: SHEET, size: SIZE, crop: [SX[who][i] - CROP[0] / 2, CY, ...CROP], box: [n * 2 * cw, top + r * ch, cw, ch] });
       cells.push({ meshes: scene(who, d0, { edges }), cam: { yaw, pitch: 0, s: 128, c: [0, 0.75, 0] }, box: [(n * 2 + 1) * cw, top + r * ch, cw, ch], label: `${who} ${lab}` });
     });
   });
-  texts.push({ css: 'left:10px;top:6px', html: opt('title', 'The helm close: the sheet\'s front, three-quarter and profile beside each body\'s') });
-  await shoot(6 * cw, top + 2 * ch, cells, file, { texts, imgs });
+  texts.push({ css: 'left:10px;top:6px', html: opt('title', `The helm close: the sheet's ${which.map((i) => VIEWS[i][1]).join(', ')} beside each body's`) });
+  await shoot(2 * which.length * cw, top + 2 * ch, cells, file, { texts, imgs });
 }
 if (only.includes('close')) await close(join(out, `helm-close${tag}.png`), false);
+if (only.includes('closeback')) await close(join(out, `helm-closeback${tag}.png`), false, [2, 3, 4]);
 if (only.includes('sheet')) await sheet(join(out, `helm-sheet${tag}.png`), false);
 if (only.includes('wire')) await sheet(join(out, `helm-wire${tag}.png`), true);
 
