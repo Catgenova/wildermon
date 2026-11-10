@@ -46,6 +46,10 @@ import MALE_BOOTS from './assets/lowboots-male.json';
 import FEMALE_BOOTS from './assets/lowboots-female.json';
 import MALE_PLATE_BOOTS from './assets/lowplateboots-male.json';
 import FEMALE_PLATE_BOOTS from './assets/lowplateboots-female.json';
+import MALE_LEATHER_LEGS from './assets/lowleatherlegs-male.json';
+import FEMALE_LEATHER_LEGS from './assets/lowleatherlegs-female.json';
+import MALE_LEATHER_LEGS_FLAPS from './assets/lowleatherlegsflaps-male.json';
+import FEMALE_LEATHER_LEGS_FLAPS from './assets/lowleatherlegsflaps-female.json';
 import MALE_LEATHER_BOOTS from './assets/lowleatherboots-male.json';
 import FEMALE_LEATHER_BOOTS from './assets/lowleatherboots-female.json';
 import MALE_TUNIC from './assets/lowtunic-male.json';
@@ -617,6 +621,9 @@ const GARMENTS: ReadonlyArray<{ man: GarmentAsset; woman: GarmentAsset; wears: (
   // for; enchanted, its clasps' cores glow
   { man: MALE_MANTLE as unknown as GarmentAsset, woman: FEMALE_MANTLE as unknown as GarmentAsset, wears: (p) => p.outfit?.plateMantle ?? false, enchanted: enchantedOf('mantle') },
   { man: MALE_LEATHER_BOOTS as unknown as GarmentAsset, woman: FEMALE_LEATHER_BOOTS as unknown as GarmentAsset, wears: wearsLeatherBoots, enchanted: enchantedOf('leatherBoots') },
+  { man: MALE_LEATHER_LEGS as unknown as GarmentAsset, woman: FEMALE_LEATHER_LEGS as unknown as GarmentAsset, wears: (p) => p.outfit?.leatherLegs ?? false, enchanted: enchantedOf('leatherLegs') },
+  // (their hip flaps, only without the leather chest: its skirt takes their place over the hip)
+  { man: MALE_LEATHER_LEGS_FLAPS as unknown as GarmentAsset, woman: FEMALE_LEATHER_LEGS_FLAPS as unknown as GarmentAsset, wears: (p) => (p.outfit?.leatherLegs ?? false) && !(p.outfit?.leatherChest ?? false), enchanted: enchantedOf('leatherLegs') },
 ];
 
 const BODIES = {
