@@ -66,6 +66,8 @@ import MALE_MANTLE from './assets/lowmantle-male.json';
 import FEMALE_MANTLE from './assets/lowmantle-female.json';
 import MALE_LEATHER_HAT from './assets/lowhat-male.json';
 import FEMALE_LEATHER_HAT from './assets/lowhat-female.json';
+import MALE_LEATHER_SHAWL from './assets/lowleathershawl-male.json';
+import FEMALE_LEATHER_SHAWL from './assets/lowleathershawl-female.json';
 import LONG_SWORD from './assets/long_sword.json';
 import HAIR_ASSET from './assets/lowhair.json';
 import MALE_LIGHT from '../../tools/sculpt/lowlight-male.json';
@@ -603,6 +605,8 @@ const wearsLeatherHat = (pose: FigurePose): boolean => pose.outfit?.leatherHat ?
 export const enchantedOf = (piece: 'chest' | 'legs' | 'boots' | 'helm' | 'mantle' | 'leatherChest' | 'leatherLegs' | 'leatherBoots' | 'leatherShawl' | 'leatherHat' | 'clothShawl' | 'clothHood' | 'clothTunic' | 'clothTrousers' | 'clothBoots') => (pose: FigurePose): boolean => pose.outfit?.enchanted?.[piece] ?? false;
 /** Whether a figure wears the plate set's chest & arms (`tools/sculpt/garments/platechest.mjs`); off unless asked for. */
 const wearsPlateChest = (pose: FigurePose): boolean => pose.outfit?.plateChest ?? false;
+/** Whether a figure wears the leather set's shawl (`tools/sculpt/garments/leathershawl.mjs`, over the chest armour); off unless asked for. */
+const wearsLeatherShawl = (pose: FigurePose): boolean => pose.outfit?.leatherShawl ?? false;
 /**
  * The garments a low-poly body can wear, in the order they are laid over it: each its copy for the man and the woman, its
  * wear hook and, for one that can be enchanted, its enchantment's. (A garment's `drops`: whether its polygons from
@@ -628,6 +632,7 @@ const GARMENTS: ReadonlyArray<{ man: GarmentAsset; woman: GarmentAsset; wears: (
   // (their hip flaps, only without the leather chest: its skirt takes their place over the hip)
   { man: MALE_LEATHER_LEGS_FLAPS as unknown as GarmentAsset, woman: FEMALE_LEATHER_LEGS_FLAPS as unknown as GarmentAsset, wears: (p) => (p.outfit?.leatherLegs ?? false) && !(p.outfit?.leatherChest ?? false), enchanted: enchantedOf('leatherLegs') },
   { man: MALE_LEATHER_HAT as unknown as GarmentAsset, woman: FEMALE_LEATHER_HAT as unknown as GarmentAsset, wears: wearsLeatherHat, enchanted: enchantedOf('leatherHat') },
+  { man: MALE_LEATHER_SHAWL as unknown as GarmentAsset, woman: FEMALE_LEATHER_SHAWL as unknown as GarmentAsset, wears: wearsLeatherShawl, enchanted: enchantedOf('leatherShawl') },
 ];
 
 const BODIES = {
