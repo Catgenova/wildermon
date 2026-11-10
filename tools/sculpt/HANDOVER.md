@@ -18,10 +18,7 @@ Kept in git so a new context can resume. Update it whenever a task moves. Branch
   Reference sheets kept only in the scratchpad are lost; the ones in `tools/sculpt/ref/` survive.
 
 ## Live game (main)
-- Telestone "Travel back" (main 61de1892): free return to where the last journey left from, once per journey.
-  - Live run dispatched about 22:09 UTC on 11-10; a check-in (send_later) fires about 22:55.
-  - If it failed, use the live-run-failure skill.
-  - Tests: supabase/test/telestone.ts 62/62, permissions 29/29.
+- Telestone "Travel back" (main 61de1892) is live: run 42911871000 succeeded 23:05 UTC 11-10.
 - catgenova was mended to (3558, 937) via mend.yml (run 42908830521, success).
 
 ## Queue (the user's order; leather chest last)
@@ -31,24 +28,23 @@ Kept in git so a new context can resume. Update it whenever a task moves. Branch
 2. DONE (accepted). His plate chest crossings.
    - The user accepted about 24 collar×trapezius crossings as invisible; the armpit under-layer is left as is.
    - Hiding the skin opened gaps, so that trial was reverted. Final is sculpt-plate-chest 67b9e816 (r5).
-3. IN PROGRESS. Fur mantle, sculpt-plate-mantle cca30c71.
-   - Refitted over chest r5.
-   - Her: 0 crossings everywhere (ring.in 0.13).
-   - His weights (0e2d6392, cca30c71): chestSurf "radial" (the chest's weights where a level line in to the axis meets
-     it), collarArm 0, chestMargin 0.14, chestSmooth 3 (the user's choice over 1). His walk now at most 36 self / 10 chest
-     (was 20 / 39), idle 0 (one key 4), overhead self 24, swing self 140/57/62.
-   - Tried and dropped: a blurred (azimuth, height) weight field; one weight set per clump (idle up to 97); a wider gap
-     or gapArm. One pass gives walk 24/6 but overhead self 694 and the swing doubled.
-   - Left in his walk: main×mid2 at ±80-90 (main#2×mid2#3) and ±150 (main#7×mid2#10/11, main#5×mid2#6).
-     `DIAG=1` and `DIAG2=<pose n>` on lowmantleshot list them (n: 1 rest, 2-4 test poses, 5-12 walk, 13-24 idle).
-   - Then his helm (origin/sculpt-plate-helm): the ring and collar hit the helm's lower edge on a nod (123), a look
-     up (74), a tilt (46) and 70° turns (25/37).
-   - Then zoom-10 game renders.
+3. IN PROGRESS. Fur mantle, sculpt-plate-mantle 2b106a91.
+   - Her: walk and idle 0 against body, chest, itself and the helm.
+   - His weights (cca30c71): chestSurf "radial", collarArm 0, chestMargin 0.14, chestSmooth 3 (user's choice over 1).
+   - His ring lowered at the back and sides, top 0.12/0.20/0.04 (user's choice), chestClear 0.07 (b7bed9da).
+   - Her collar opened at the front: from 44, len 0.4 at 34 / 0.7 at 66, front lean 60 (user's choice, 2b106a91).
+   - Now: his walk at most 24 self / 26 chest, his idle one key at 4 self; vs the helm (lowmantlehelm.mjs): both idles
+     and walks 0; swings him 85 (collar#0/#10 × visor), her 101 (collar#5 × helm back); nod 40 ring × visor ~110-120.
+   - Tried and dropped: a blurred weight field, one weight set per clump, a wider gap/gapArm, tier-follow weights.
    - Tools:
      - `node tools/sculpt/garments/mantle.mjs` rebuilds the mantle.
-     - `node tools/sculpt/lowmantleshot.mjs --out DIR --only metrics|poses --tag -x` measures and renders it.
-     - The design numbers are in tools/sculpt/lowmantle-design.json. Edit it textually and keep its layout.
-     - The mantle sheet was lost (`--sheet` needs a re-upload).
+     - `node tools/sculpt/lowmantleshot.mjs --out DIR --only metrics|poses --tag -x [--design '{...}']` (DIAG=1, DIAG2=<n>:
+       n 1 rest, 2-4 test poses, 5-12 walk, 13-24 idle).
+     - `node tools/sculpt/lowmantlehelm.mjs --helm <root> [--who male] [--design ...]` (CLUMP=1); the root from
+       `git archive origin/sculpt-plate-helm src tools package.json`, node_modules linked.
+     - Design numbers: tools/sculpt/lowmantle-design.json (edit textually, keep its layout; --design applies to both bodies).
+   - Next: the swing's collar crossings with the helm if wanted, then zoom-10 game renders.
+   - The mantle sheet was lost (`--sheet` needs a re-upload).
 4. TODO. Cloth hood refit, sculpt-outfit f637edca.
    - The hood still crosses the body and the tunic in the idle and walk.
    - His best REFIT table is parked: hood-body 0/36 and hood-tunic 90, but the hood crosses itself in 16 places.
@@ -96,7 +92,7 @@ Kept in git so a new context can resume. Update it whenever a task moves. Branch
 
 ## sculpt-all (integration)
 - Merges outfit, anim, hair, hair2, plate (helm, legs, boots, chest, mantle@2f4097e1) and leather (boots, legs@0bebaf2b, hat, shawl).
-  - Re-merge the later heads: mantle cca30c71, legs 28268e3f flaps.
+  - Re-merge the later heads: mantle 2b106a91, legs 28268e3f flaps.
 - 128 materials. The first outfit's pieces give way to the sets' (lowpoly.ts `o(pose)` hooks).
 - The leather chest isn't merged yet.
 - The merge resolver script for lowpoly/figure conflicts (keep ours, add theirs' GARMENTS entries, imports and wear
