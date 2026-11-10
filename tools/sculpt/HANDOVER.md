@@ -1,0 +1,106 @@
+# Sculpt work: task memory (read this first in a fresh context)
+
+Kept in git so a new context can resume. Update it whenever a task moves. Branch: `sculpt-all`.
+
+## Standing rules (user's)
+- Keep context under 200k. Work one task at a time in the main thread. No subagents unless the user asks for them.
+- Sculpt work stays on branches; nothing ships until the user says "ship it". (CLAUDE.md's main/deploy rule applies to
+  game code on main only.)
+- Show every stage: send PNGs/GIFs (under 8000 px) via SendUserFile. Judge joins and gaps by measurement, not small thumbnails.
+- Drawings over spec numbers. Close fit, no puffiness. Thick materials. Don't invent dark parts.
+- Triangles uncapped. No new bones (limit 80). Materials: MAX_MATS is now 128.
+- Never git stash or amend, never force-push. Commit explicit paths. End every commit with the Co-Authored-By and
+  Claude-Session trailers.
+- Python PIL is broken system-wide; use the venv at `$SCRATCH/venv/bin/python`. If it's gone after a reset, recreate it:
+  `python3 -m venv $SCRATCH/venv && $SCRATCH/venv/bin/pip install pillow`.
+- The scratchpad and the worktrees get wiped by container resets. Recreate a worktree with
+  `git worktree add .claude/worktrees/<b> -B <b> origin/<b>`, then `ln -s /home/user/Wurm/node_modules node_modules`.
+  Reference sheets kept only in the scratchpad are lost; the ones in `tools/sculpt/ref/` survive.
+
+## Live game (main)
+- Telestone "Travel back" (main 61de1892): free return to where the last journey left from, once per journey.
+  - Live run dispatched about 22:09 UTC on 11-10; a check-in (send_later) fires about 22:55.
+  - If it failed, use the live-run-failure skill.
+  - Tests: supabase/test/telestone.ts 62/62, permissions 29/29.
+- catgenova was mended to (3558, 937) via mend.yml (run 42908830521, success).
+
+## Queue (the user's order; leather chest last)
+1. DONE. Shawl corrective shapes ported to the many-garment bake.
+   - sculpt-all 13c93fd7: gl.ts shapes texture, lowpoly.ts poseIn/driveOf/shapeWeights, Baked.shapes.
+   - lowgarmentcheck passes.
+2. DONE (accepted). His plate chest crossings.
+   - The user accepted about 24 collar×trapezius crossings as invisible; the armpit under-layer is left as is.
+   - Hiding the skin opened gaps, so that trial was reverted. Final is sculpt-plate-chest 67b9e816 (r5).
+3. IN PROGRESS. Fur mantle, sculpt-plate-mantle 82e0514e.
+   - Refitted over chest r5.
+   - Her: 0 crossings everywhere (ring.in 0.13).
+   - His walk: main×mid2 self up to 20, and up to 39 against the chest; a wider gapArm or chestMargin made them worse.
+   - Next: match the fur's weights to the chest's per clump.
+   - Then his helm (origin/sculpt-plate-helm): the ring and collar hit the helm's lower edge on a nod (123), a look
+     up (74), a tilt (46) and 70° turns (25/37).
+   - Then zoom-10 game renders.
+   - Tools:
+     - `node tools/sculpt/garments/mantle.mjs` rebuilds the mantle.
+     - `node tools/sculpt/lowmantleshot.mjs --out DIR --only metrics|poses --tag -x` measures and renders it.
+     - The design numbers are in tools/sculpt/lowmantle-design.json. Edit it textually and keep its layout.
+     - The mantle sheet was lost (`--sheet` needs a re-upload).
+4. TODO. Cloth hood refit, sculpt-outfit f637edca.
+   - The hood still crosses the body and the tunic in the idle and walk.
+   - His best REFIT table is parked: hood-body 0/36 and hood-tunic 90, but the hood crosses itself in 16 places.
+     The chin teeth were then keyed.
+   - The head-turn collar/cowl "sandwich" is a known hard case.
+   - Then merge origin/sculpt-feet 07ebb07d, run lowgarmentcheck with the hood up and down, then lowbackcheck, then
+     the final renders.
+   - lowoutfitgame needs `moving: true` for walk renders.
+   - The cloth glow's hood (sculpt-cloth-glow 64dde598) must be re-merged afterwards.
+5. TODO. Leather shawl, sculpt-leather-shawl c88f1a80.
+   - Its look is approved.
+   - Author arm-driven corrective shapes like the cloth shawl's (tools/sculpt/garments/shawlshapes.mjs is the
+     pattern; the engine is now in sculpt-all).
+   - Swing crossings to clear: about 1000 (guard+top+impact), plus 243 for his overhead.
+   - Then stage 8 (tools/sculpt/lowleathershawlgame.mjs).
+   - Refit over the final leather chest later; --under widened its corners by 0.4, so show the user before and after.
+6. LAST. Leather chest & arms (target 10/10), sculpt-leather-chest 372a874d.
+   - The s3b shape round is built but not rendered. Scores were 3–4.
+   - Fit it over the leggings' cloth and waistband: sculpt-leather-legs 28268e3f. The flaps are a separate garment,
+     hidden under the chest (user-approved).
+   - Critique to address:
+     - render at the sheet's framing;
+     - colour split: leather on the sleeves, collar and base; light on the plates;
+     - separate thick plates with gaps;
+     - 2–3 pauldron lames;
+     - straight tassets with no flare;
+     - a belted waist;
+     - a taller collar;
+     - a close fit;
+     - her bust and side;
+     - slim sleeves.
+   - Hold at the shape stage until every view scores at least 7.
+   - Remaining crossings: walk 108 (him) / 74 (her), idle 86 / 57.
+
+## Done and approved (merged into sculpt-all unless noted)
+- Cloth outfit glow, sculpt-cloth-glow 64dde598: shawl teeth and emblem, tunic cuffs and collar, trouser stripes,
+  boot X straps, hood teeth. The user said: "Clothes look great".
+- Braid, sculpt-hair2 0e4e15d2: "Braid done". `tools/sculpt/lowbraidgaps.mjs` measures its joins.
+- Leather hat bc095232, boots a6c6a3a5, leggings 28268e3f; leather shawl look (not finished, see 5).
+- Plate helm, legs, boots, chest r5; the swing ba977eba (sculpt-anim).
+- Known limits the user accepted:
+  - the hat brim at the swing's top;
+  - her elbow in the swing's drag;
+  - his plate collar crossings.
+
+## sculpt-all (integration)
+- Merges outfit, anim, hair, hair2, plate (helm, legs, boots, chest, mantle@2f4097e1) and leather (boots, legs@0bebaf2b, hat, shawl).
+  - Re-merge the later heads: mantle 82e0514e, legs 28268e3f flaps.
+- 128 materials. The first outfit's pieces give way to the sets' (lowpoly.ts `o(pose)` hooks).
+- The leather chest isn't merged yet.
+- The merge resolver script for lowpoly/figure conflicts (keep ours, add theirs' GARMENTS entries, imports and wear
+  hooks) lived in the scratchpad as res.py; rewrite it if needed.
+
+## Settled leather colours (kind 2 unless noted)
+- dark [0.29,0.157,0.129]
+- leather [0.416,0.224,0.176]
+- light [0.533,0.286,0.22]
+- trim [0.91,0.518,0.282]
+- rune: plain = trim; enchanted = glow
+- glow [0.996,0.792,0.427] kind 1
