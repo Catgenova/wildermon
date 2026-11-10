@@ -593,7 +593,10 @@
   "chestClear": 0.05,
   "gapArm": 0.06,
   "smooth": 30,
-  "chestMargin": 0.07
+  "chestMargin": 0.14,
+  "chestSurf": "radial",
+  "chestSmooth": 1,
+  "collarArm": 0
  },
  "female": {
   "scale": 0.86,

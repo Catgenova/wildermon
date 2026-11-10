@@ -111,6 +111,17 @@ function measure(who, d) {
   // (DIAG=1: where the mantle crosses itself, each pair's parts, clumps and azimuth at rest)
   measure.n = (measure.n ?? 0) + 1;
   if (process.env.DIAG && r.chest) { const ch = M[who].chest, c = {}; for (const [a, b] of crossPairs(d.PG, G.tris, d.PC, ch.tris)) { const pa = G.polys[G.tris[a].poly], v = G.verts[G.tris[a].v[0]], k = `${pa.part}×${ch.polys[ch.tris[b].poly].mat}@${Math.round(Math.atan2(v[0], v[2] + 0.12) * 180 / Math.PI / 30) * 30}`; c[k] = (c[k] ?? 0) + 1; } console.log(who, measure.n, 'chest', JSON.stringify(c)); }
+  // (DIAG2=<n>: in the n-th pose measured, each crossing's mantle and chest triangle at rest, a corner and its weights)
+  if (+process.env.DIAG2 === measure.n) {
+    const ch = M[who].chest, wn = (l) => l.map(([b, x]) => `${rig.bones[b].name}:${x.toFixed(2)}`).join(','), at = (p) => p.map((x) => x.toFixed(2)).join(',');
+    const pr = [...crossPairs(d.PG, G.tris, d.PC, ch.tris).map((x) => ['c', ...x]), ...crossPairs(d.PG, G.tris).map((x) => ['s', ...x])];
+    for (const [k, a, b] of pr.slice(0, 40)) {
+      const ta = G.tris[a], pa = G.polys[ta.poly], va = ta.v[0];
+      const tb = k === 'c' ? ch.tris[b] : G.tris[b], vb = tb.v[0];
+      const nb = k === 'c' ? `chest/${ch.polys[tb.poly].mat}` : `${G.polys[tb.poly].part}#${G.polys[tb.poly].clump}`;
+      console.log(k, `${pa.part}#${pa.clump}/${pa.mat} [${at(G.verts[va])}] ${wn(G.vw[va])}  ×  ${nb} [${at(k === 'c' ? ch.verts[vb] : G.verts[vb])}] ${wn(k === 'c' ? ch.vw[vb] : G.vw[vb])}`);
+    }
+  }
   if (process.env.DIAG && r.self) console.log(who, measure.n, crossPairs(d.PG, G.tris).slice(0, 8).map(([a, b]) => { const pa = G.polys[G.tris[a].poly], pb = G.polys[G.tris[b].poly], v = G.verts[G.tris[a].v[0]]; return `${pa.part}#${pa.clump}/${pa.mat}×${pb.part}#${pb.clump}/${pb.mat}@${Math.round(Math.atan2(v[0], v[2] + 0.12) * 180 / Math.PI)},${v[1].toFixed(2)}`; }).join(' '));
   return r;
 }
