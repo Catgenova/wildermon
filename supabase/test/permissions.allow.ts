@@ -186,6 +186,7 @@ export const TABLES: Record<string, Read> = {
   spring: 'none',
   spring_tile: 'none',
   telestone_journey: 'none',
+  telestone_back: 'none',
   tile_wear: 'none',
   treasure: 'none',
   tree_notch: 'none',
