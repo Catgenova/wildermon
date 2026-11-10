@@ -595,7 +595,7 @@
   "smooth": 30,
   "chestMargin": 0.14,
   "chestSurf": "radial",
-  "chestSmooth": 1,
+  "chestSmooth": 3,
   "collarArm": 0
  },
  "female": {
