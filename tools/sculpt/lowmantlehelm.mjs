@@ -59,7 +59,7 @@ for (const who of (opt('who', 'male,female')).split(',')) {
     const f = posed(rig, pose), PM = skinGarment(rig, f, M), PH = skinGarment(rig, f, H);
     const x = crossPairs(PM, M.tris, PH, H.tris);
     total += x.length;
-    if (x.length) out.push([label, x.length, tally(x.map(([a, b]) => `${M.polys[M.tris[a].poly].part}×${H.polys[H.tris[b].poly].piece ?? H.polys[H.tris[b].poly].part ?? '?'}`))]);
+    if (x.length) out.push([label, x.length, tally(x.map(([a, b]) => `${M.polys[M.tris[a].poly].part}${process.env.CLUMP ? "#" + M.polys[M.tris[a].poly].clump : ""}×${H.polys[H.tris[b].poly].piece ?? H.polys[H.tris[b].poly].part ?? '?'}`))]);
   }
   console.log(who, 'total', total);
   // (per clip: its worst key and its sum by part pair; the head turns each)
