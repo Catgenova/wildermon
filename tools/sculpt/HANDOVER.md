@@ -31,11 +31,16 @@ Kept in git so a new context can resume. Update it whenever a task moves. Branch
 2. DONE (accepted). His plate chest crossings.
    - The user accepted about 24 collar×trapezius crossings as invisible; the armpit under-layer is left as is.
    - Hiding the skin opened gaps, so that trial was reverted. Final is sculpt-plate-chest 67b9e816 (r5).
-3. IN PROGRESS. Fur mantle, sculpt-plate-mantle 82e0514e.
+3. IN PROGRESS. Fur mantle, sculpt-plate-mantle cca30c71.
    - Refitted over chest r5.
    - Her: 0 crossings everywhere (ring.in 0.13).
-   - His walk: main×mid2 self up to 20, and up to 39 against the chest; a wider gapArm or chestMargin made them worse.
-   - Next: match the fur's weights to the chest's per clump.
+   - His weights (0e2d6392, cca30c71): chestSurf "radial" (the chest's weights where a level line in to the axis meets
+     it), collarArm 0, chestMargin 0.14, chestSmooth 3 (the user's choice over 1). His walk now at most 36 self / 10 chest
+     (was 20 / 39), idle 0 (one key 4), overhead self 24, swing self 140/57/62.
+   - Tried and dropped: a blurred (azimuth, height) weight field; one weight set per clump (idle up to 97); a wider gap
+     or gapArm. One pass gives walk 24/6 but overhead self 694 and the swing doubled.
+   - Left in his walk: main×mid2 at ±80-90 (main#2×mid2#3) and ±150 (main#7×mid2#10/11, main#5×mid2#6).
+     `DIAG=1` and `DIAG2=<pose n>` on lowmantleshot list them (n: 1 rest, 2-4 test poses, 5-12 walk, 13-24 idle).
    - Then his helm (origin/sculpt-plate-helm): the ring and collar hit the helm's lower edge on a nod (123), a look
      up (74), a tilt (46) and 70° turns (25/37).
    - Then zoom-10 game renders.
@@ -91,7 +96,7 @@ Kept in git so a new context can resume. Update it whenever a task moves. Branch
 
 ## sculpt-all (integration)
 - Merges outfit, anim, hair, hair2, plate (helm, legs, boots, chest, mantle@2f4097e1) and leather (boots, legs@0bebaf2b, hat, shawl).
-  - Re-merge the later heads: mantle 82e0514e, legs 28268e3f flaps.
+  - Re-merge the later heads: mantle cca30c71, legs 28268e3f flaps.
 - 128 materials. The first outfit's pieces give way to the sets' (lowpoly.ts `o(pose)` hooks).
 - The leather chest isn't merged yet.
 - The merge resolver script for lowpoly/figure conflicts (keep ours, add theirs' GARMENTS entries, imports and wear
