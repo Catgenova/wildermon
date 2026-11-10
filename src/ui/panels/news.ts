@@ -4253,6 +4253,13 @@ export const NEWS: News[] = [
     },
   },
   {
+    n: 519,
+    day: '2026-11-10',
+    lines: () => [
+      'New: Travel back on a Telestone in the pack: to the spot your last Telestone journey left from. Once a journey, no cooldown, any distance.',
+    ],
+  },
+  {
     n: 518,
     day: '2026-11-07',
     lines: () => [

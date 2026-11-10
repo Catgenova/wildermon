@@ -22,7 +22,7 @@ import { percent } from '../../game/words';
 import { ENCHANT_STATUE } from '../../game/relicuse';
 import { MOTE_ELEMENTS, STATUE_MOTES } from '../../game/motes';
 import { PATRONS, STATUETTE, statueName } from '../../game/patronlist';
-import { hasRunestones, RUNESTONES, stoneChoice, stoneDistance, TELESTONE, TELESTONE_SAID, telestoneRange, telestoneWait, timeLeftNote, TRAVEL } from '../../game/runestones';
+import { BACK, hasRunestones, RUNESTONES, stoneChoice, stoneDistance, TELESTONE, TELESTONE_SAID, telestoneRange, telestoneWait, timeLeftNote, TRAVEL } from '../../game/runestones';
 import { improvable, improveCeiling } from '../../game/improve';
 
 const CATEGORY_ORDER: Array<[ItemCategory, string]> = [
@@ -403,6 +403,10 @@ export class InventoryPanel {
           return { label: stoneChoice(s, d), hint: why ?? undefined, disabled: d > reach, onSelect: () => this.game.requestAction(travel, t) };
         }),
       });
+      // And back to where the last journey left from: once a journey, no wait and no reach.
+      const back = { kind: 'item' as const, uid: item.uid, stone: BACK };
+      const whyBack = travel.check?.(back, this.game) ?? null;
+      entries.push({ label: 'Travel back', note: 'to where your last journey left from', hint: whyBack ?? undefined, disabled: !!whyBack, onSelect: () => this.game.requestAction(travel, back) });
     }
     /*
      * A restored statuette is enchanted into the statue of a patron, one

@@ -243,6 +243,8 @@ interface HeardBody {
   level?: unknown;
   /** And after a journey by Telestone, the wall-clock second its traveller may make another (`perform_telestone`). */
   until?: unknown;
+  /** And where that journey left from, for the journey back (`{ x, y, level }`), or null once travelled back. */
+  back?: unknown;
 }
 
 /** The body of a Broadcast message, as `supabase-js` hands it over. */
@@ -1184,6 +1186,8 @@ export interface IslandHooks {
   moved?: (x: number, y: number, level: number, letGo?: boolean, resume?: boolean) => void;
   /** A journey by Telestone made, and the wall-clock second the traveller may make another (`runestones.ts`). */
   travelled?: (until: number) => void;
+  /** Where the last journey by Telestone left from, for the journey back; null once there is none. */
+  travelledBack?: (from: { x: number; y: number; level: number } | null) => void;
   /** A trade you are in changed, or was asked of you (`barter_send`, Broadcast `barter`): look again with `barter()`. */
   barter?: () => void;
   /**
@@ -3023,6 +3027,11 @@ export class Island {
     this.hooks.moved?.(x, y, lvl, true);
     // A Telestone's journey says when the next may be made.
     if (typeof body.until === 'number') this.hooks.travelled?.(body.until);
+    // And where it left from, for the journey back; null once travelled back.
+    if ('back' in body) {
+      const b = body.back as { x?: unknown; y?: unknown; level?: unknown } | null;
+      this.hooks.travelledBack?.(b && typeof b.x === 'number' && typeof b.y === 'number' ? { x: b.x, y: b.y, level: typeof b.level === 'number' ? b.level : 0 } : null);
+    }
     // What was in hand and what was queued are gone too, which the beat says.
     this.armBeat(0.5);
   }

@@ -246,6 +246,11 @@ export class Player {
   graceEnds: number | null = null;
   /** Game time each path ability was last called on. */
   usedAt: Record<string, number> = {};
+  /**
+   * Where the last journey by Telestone left from, for the journey back (`runestones.ts`): undefined while the
+   * island has not said (a refreshed page), null once there is none.
+   */
+  telestoneBack: { x: number; y: number; level: number } | null | undefined = undefined;
   /** Banked favour, and the hour you last had anything to say. */
   favour = 0;
   prayedAt = -1e9;

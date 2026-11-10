@@ -2377,6 +2377,7 @@ export function helpText(): string {
       <li>Cooldown: ${dur(TELE_SLOW)} at QL ${TELE_QL_LOW}, ${dur(TELE_FAST)} at QL ${TELE_QL_HIGH}, ${(TELE_REST_STEP / 60).toFixed(1)} minutes less per QL between
       (${[25, 50, 75].map((q) => `QL ${q}: ${Math.floor(telestoneRange(q) + 0.5)} tiles and ${timeWords(telestoneRest(q))}`).join('; ')}).
       Yours, set by the stone used: carrying several does not help. Not used up.</li>
+      <li><b>Travel back</b> on it in the pack: to the spot your last journey left from (or the nearest free tile if it cannot be stood on). Once a journey, no cooldown, any distance.</li>
       <li>Refused while: fighting or hunted; driving, pulling, riding or aboard anything; swimming; overloaded; a wildermon follows you; mid-action.</li>
     </ul>
     <h3>Enchanting</h3>

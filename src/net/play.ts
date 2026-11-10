@@ -440,6 +440,9 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
   island.hooks.travelled = (until) => {
     game.player.usedAt[TELESTONE_KEY] = until;
   };
+  island.hooks.travelledBack = (from) => {
+    game.player.telestoneBack = from;
+  };
   // And a map studied, which puts its square on your map (`cartography.ts`).
   island.hooks.charted = (x, y, r) => {
     learnChart(game, { x, y, r });

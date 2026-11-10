@@ -61,7 +61,7 @@ import { groundSays } from '../../src/game/wildflowers';
 import {
   companionSaid, farSaid, LANDING, landingTile, noRoomSaid, restSaid, RUNESTONE_BY_ID, runestoneAt, RUNESTONES, stoneCentre, stoneGroundSaid,
   LANDING_STAND, STONE_CHART, STONE_GUARDED, STONE_HALF, STONE_LEAST, STONE_SEED, stoneSays, stoneTiles, TELE_FAR, TELE_FAST, TELE_GRACE, TELE_NEAR, TELE_SLOW, TELESTONE, TELESTONE_KEY, TELESTONE_SAID, telestoneRange,
-  telestoneRest, travelledSays, TRAVEL, type Runestone,
+  telestoneRest, travelledSays, TRAVEL, type Runestone, BACK, TELESTONE_BACK_SAID,
 } from '../../src/game/runestones';
 import { timeWords } from '../../src/game/words';
 import { MAX_STAND } from '../../src/game/player';
@@ -333,6 +333,19 @@ begin
   perform act_perform(w, u, 'travel_runestone', ${travel('wardenfall')});
   insert into said select 'WENT100', p.x || ',' || p.y || '|' || (select extract(epoch from t.until - t.used_at) from telestone_journey t where t.world_id = w and t.uid = u)
     from player p where p.world_id = w and p.uid = u;
+  -- 6b. And back to where it left from: kept and said with the move, then travelled back once, with no wait spent.
+  insert into said select 'KEPT', b.x || ',' || b.y || ',' || b.level || '|'
+    || (select count(*) from realtime.messages r where r.topic = 'own:' || w || ':' || u
+          and (r.payload->'back'->>'x')::double precision = 5.5 and (r.payload->'back'->>'y')::double precision = 5.5)
+    from telestone_back b where b.world_id = w and b.uid = u;
+  insert into said values ('ASKBACK', coalesce(act_refusal(w, u, 'travel_runestone', ${travel('back')}), 'none'));
+  delete from realtime.messages;
+  perform act_perform(w, u, 'travel_runestone', ${travel('back')});
+  insert into said select 'BACK', p.x || ',' || p.y || ',' || p.level || '|' || (select e.text from event e where e.world_id = w and e.uid = u order by e.n desc limit 1)
+    || '|' || telestone_wait(w, u)::int
+    || '|' || (select count(*) from realtime.messages r where r.topic = 'own:' || w || ':' || u and r.payload ? 'back' and r.payload->'back' = 'null'::jsonb)
+    from player p where p.world_id = w and p.uid = u;
+  insert into said values ('BACKAGAIN', coalesce(act_refusal(w, u, 'travel_runestone', ${travel('back')}), 'none'));
   update telestone_journey set until = now() - interval '1 second' where world_id = w and uid = u;
 
   -- 7. Each refusal on its own, from 5, 5 with a QL 100 Telestone and no wait.
@@ -639,6 +652,22 @@ check(`at QL 1 inside its reach the journey is made, and the wait is ${timeWords
     && part('WENT1', 0) === `${crown.x + LANDING[0][0] + 0.5},${crown.y + LANDING[0][1] + 0.5}`, `${isle.get('ASK1')} ${isle.get('WENT1')}`);
 check(`at QL 100 any stone on the island is in reach, and the wait is ${timeWords(TELE_FAST)}`,
   isle.get('ASK100') === 'none' && Math.abs(Number(part('WENT100', 1)) - TELE_FAST) < 0.01, `${isle.get('ASK100')} ${isle.get('WENT100')}`);
+check('a journey keeps where it left from and tells the browser; travelling back puts the body there once, says so in the same words, spends no wait, and the browser is told there is no way back left',
+  part('KEPT', 0) === '5.5,5.5,0' && Number(part('KEPT', 1)) >= 1 && isle.get('ASKBACK') === 'none'
+    && part('BACK', 0) === '5.5,5.5,0' && part('BACK', 1) === TELESTONE_BACK_SAID.done && Number(part('BACK', 2)) > 0 && Number(part('BACK', 3)) === 1
+    && isle.get('BACKAGAIN') === TELESTONE_BACK_SAID.none,
+  `${isle.get('KEPT')} ${isle.get('ASKBACK')} ${isle.get('BACK')} ${isle.get('BACKAGAIN')}`);
+{
+  const it = g.gather(TELESTONE, { count: 1, ql: 100 });
+  const back = { kind: 'item', uid: it.uid, stone: BACK } as Target;
+  const travelDef = ACTION_BY_ID.get('travel_runestone') as ActionDef;
+  g.player.telestoneBack = null;
+  const noneHere = travelDef.check?.(back, g) ?? 'none';
+  g.player.telestoneBack = { x: 5.5, y: 5.5, level: 0 };
+  const okHere = travelDef.check?.(back, g) ?? 'none';
+  check('and the browser asks the same of a journey back: none once there is nowhere to go back to, allowed when there is',
+    !!it && noneHere === TELESTONE_BACK_SAID.none && okHere === 'none', `${noneHere} / ${okHere}`);
+}
 
 /* Each refusal, the browser's game set up the same way. */
 g.player.usedAt[TELESTONE_KEY] = 0;
