@@ -33,7 +33,7 @@ export interface DrawOpts {
 export const BOX = { left: -42, right: 42, top: -66, bottom: 14 };
 const MAX_BONES = 80;
 /** Materials a draw may use: a low-poly body's own (`bodyMaterials`), its garments' and its sword's (plain or enchanted) after them. */
-const MAX_MATS = 64;
+const MAX_MATS = 128;
 /** How far behind the body's surface (figure units, toward the viewer) the trail is still hidden by it: so the blade shows over its own trail. */
 const TRAIL_BEHIND = 0.6;
 /** The trail's opacity at its fullest, plain and lit, and the light a lit one adds over its opacity. */

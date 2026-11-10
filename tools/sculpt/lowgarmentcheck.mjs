@@ -186,7 +186,7 @@ for (const who of ['male', 'female']) {
   if (!HOOD) delete r.hood;
   if (s0.baked.nTris !== bodyTris + nShawlTris + r.trousers.tris + r.boots.tris + r.tunic.tris + (HOOD ? r.hood.tris : 0)) { console.log(who, 'the bake is not the body less the hidden, the shawl, the trousers, the boots, the tunic and the hood'); fail = true; }
   r.draw = { materials: s0.materials.length, bones: s0.bones.length / 12 };
-  if (r.draw.materials > 64 || r.draw.bones > 80) { console.log(who, 'over the renderer\'s limits'); fail = true; }
+  if (r.draw.materials > 128 || r.draw.bones > 80) { console.log(who, 'over the renderer\'s limits'); fail = true; }
   console.log(who, JSON.stringify(r));
 }
 console.log(fail ? 'FAIL' : 'ok');

@@ -573,8 +573,12 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
  * garment left out there at the game's default: the shawl, the trousers, the boots and the tunic worn, the hood down.
  * (What a figure has equipped would set `outfit`; for now nothing does, so every figure is drawn at the defaults.)
  */
-const wearsShawl = (pose: FigurePose): boolean => pose.outfit?.shawl ?? true;
-const wearsTrousers = (pose: FigurePose): boolean => pose.outfit?.trousers ?? true;
+/** A pose's outfit switches (none set: the first outfit, the defaults). The first outfit's pieces give way to a set's
+ * piece worn over the same place: the shawl to any chest armour, mantle or leather shawl, the trousers to plate or
+ * leather leggings, the tunic to plate or leather chest, the hood to the helm or the hat, the boots to plate or leather boots. */
+const o = (pose: FigurePose): NonNullable<FigurePose['outfit']> => pose.outfit ?? {};
+const wearsShawl = (pose: FigurePose): boolean => (pose.outfit?.shawl ?? true) && !(o(pose).plateChest || o(pose).plateMantle || o(pose).leatherChest || o(pose).leatherShawl);
+const wearsTrousers = (pose: FigurePose): boolean => (pose.outfit?.trousers ?? true) && !(o(pose).plateLegs || o(pose).leatherLegs);
 /** Whether a figure wears the plate set's boots (`tools/sculpt/garments/plateboots.mjs`; over the leggings, the body stood on their soles): off unless asked for. */
 const wearsPlateBoots = (pose: FigurePose): boolean => pose.outfit?.plateBoots ?? false;
 /** Whether a figure wears the boots (the body stands on their soles while it does): not under the plate or leather boots. */
@@ -582,9 +586,9 @@ const wearsPlateBoots = (pose: FigurePose): boolean => pose.outfit?.plateBoots ?
 const wearsLeatherBoots = (pose: FigurePose): boolean => pose.outfit?.leatherBoots ?? false;
 const wearsBoots = (pose: FigurePose): boolean => (pose.outfit?.boots ?? true) && !wearsPlateBoots(pose) && !wearsLeatherBoots(pose);
 /** Whether a figure wears the tunic (under the shawl, over the trousers). */
-const wearsTunic = (pose: FigurePose): boolean => pose.outfit?.tunic ?? true;
+const wearsTunic = (pose: FigurePose): boolean => (pose.outfit?.tunic ?? true) && !(o(pose).plateChest || o(pose).leatherChest);
 /** Whether a figure has the hood up: down unless asked for, and only with the shawl (it rises out of the shawl's cowl). */
-const wearsHood = (pose: FigurePose): boolean => (pose.outfit?.hood ?? false) && wearsShawl(pose);
+const wearsHood = (pose: FigurePose): boolean => (pose.outfit?.hood ?? false) && wearsShawl(pose) && !(o(pose).plateHelm || o(pose).leatherHat);
 /**
  * Whether a figure's hair is drawn over its low-poly head: not while the hood is up (the hood's shell is snug on the
  * skull, so any hairstyle would come through it), nor under the plate helm. A hairstyle drawn with the body checks this
