@@ -43,6 +43,10 @@ const TRAIL_RGB = { plain: { edge: '#f3ead8', mid: '#fffaf0' }, lit: { edge: '#f
 /** A low-poly body's hair in a valley (`Material.valley`, its step: the darkest first): its colour times this, however
  * lit (the numbers; `tools/sculpt/lowhairshot.mjs` reads them from here). */
 export const HAIR_VALLEYS = [0.62, 0.7, 0.78, 0.86];
+/** Corrective shapes a draw may weigh (`Baked.shapes`). */
+const MAX_SHAPES = 8;
+/** Texels a row of the shapes' texture (each vertex's shapes, two texels a shape, run on along the rows). */
+const SHAPE_ROW = 1024;
 /** Terms of the review renders' light (`LowLight.sh`). */
 export const SH_TERMS = 19;
 /** Degrees the whole-body review renders' camera looks down (their fitted cameras: the man's 8, the woman's 7.5). */
@@ -57,21 +61,37 @@ layout(location=0) in vec3 aPos; layout(location=1) in vec3 aNrm; layout(locatio
 layout(location=6) in vec4 aFaceBones; layout(location=7) in vec4 aFaceW;
 uniform vec4 uBones[${MAX_BONES * 3}];
 uniform vec2 uEx, uEy; uniform float uHS; uniform vec3 uT; uniform vec2 uHalf; uniform float uDepth; uniform vec2 uOff; uniform float uLow;
+uniform highp sampler2D uShapes; uniform int uShapeFrom, uShapeCount, uShapeK; uniform float uShapeW[${MAX_SHAPES}];
 out vec3 vNrm; out vec3 vPos; flat out float vMat; flat out float vBone; out float vDepth; flat out float vMatB; out float vStamp; flat out vec3 vFace;
 vec3 skinP(int b, vec3 p) { vec4 q = vec4(p, 1.0); return vec3(dot(uBones[b*3], q), dot(uBones[b*3+1], q), dot(uBones[b*3+2], q)); }
 vec3 skinN(int b, vec3 n) { return vec3(dot(uBones[b*3].xyz, n), dot(uBones[b*3+1].xyz, n), dot(uBones[b*3+2].xyz, n)); }
 void main() {
+  // A garment's corrective shapes, by their weights, at rest: its offset and its polygon's normal's.
+  vec3 rp = aPos, rn = aNrm;
+  int c = gl_VertexID - uShapeFrom;
+  if (c >= 0 && c < uShapeCount) {
+    bool moved = false;
+    for (int k = 0; k < ${MAX_SHAPES}; k++) {
+      if (k >= uShapeK) break;
+      float w = uShapeW[k]; if (w <= 0.0) continue;
+      int t = (c * uShapeK + k) * 2;
+      rp += w * texelFetch(uShapes, ivec2(t % ${SHAPE_ROW}, t / ${SHAPE_ROW}), 0).xyz;
+      rn += w * texelFetch(uShapes, ivec2((t + 1) % ${SHAPE_ROW}, (t + 1) / ${SHAPE_ROW}), 0).xyz;
+      moved = true;
+    }
+    if (moved) rn = normalize(rn);
+  }
   vec3 p = vec3(0.0), n = vec3(0.0);
   for (int i = 0; i < 4; i++) {
     float w = aW[i]; if (w <= 0.0) continue;
     int b = int(aBones[i] + 0.5);
-    p += w * skinP(b, aPos); n += w * skinN(b, aNrm);
+    p += w * skinP(b, rp); n += w * skinN(b, rn);
   }
   // A low-poly body's face normal: the polygon's own, turned by the polygon's weights (the same at all its corners).
   vec3 fn = vec3(0.0, 0.0, 1.0);
   if (uLow > 0.5) {
     fn = vec3(0.0);
-    for (int i = 0; i < 4; i++) { float w = aFaceW[i]; if (w > 0.0) fn += w * skinN(int(aFaceBones[i] + 0.5), aNrm); }
+    for (int i = 0; i < 4; i++) { float w = aFaceW[i]; if (w > 0.0) fn += w * skinN(int(aFaceBones[i] + 0.5), rn); }
     fn = normalize(fn);
   }
   vFace = fn;
@@ -312,7 +332,7 @@ export function glContext(): Ctx | null {
   const quad = gl.createBuffer()!;
   gl.bindBuffer(gl.ARRAY_BUFFER, quad);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
-  const names = ['uBones', 'uEx', 'uEy', 'uHS', 'uT', 'uHalf', 'uDepth', 'uOff', 'uMat', 'uL', 'uGrain', 'uNight', 'uMode', 'uFlat', 'uBlink', 'uLow', 'uSH', 'uTone', 'uFit', 'uXv', 'uYv', 'uZv'];
+  const names = ['uBones', 'uEx', 'uEy', 'uHS', 'uT', 'uHalf', 'uDepth', 'uOff', 'uMat', 'uL', 'uGrain', 'uNight', 'uMode', 'uFlat', 'uBlink', 'uLow', 'uSH', 'uTone', 'uFit', 'uXv', 'uYv', 'uZv', 'uShapes', 'uShapeFrom', 'uShapeCount', 'uShapeK', 'uShapeW'];
   const u = Object.fromEntries(names.map((n) => [n, gl.getUniformLocation(prog, n)]));
   const wu = Object.fromEntries(names.map((n) => [n, gl.getUniformLocation(wire, n)]));
   const eu = Object.fromEntries(['uCol', 'uNd', 'uId', 'uPx', 'uInk', 'uDepthStep', 'uShow', 'uNight', 'uInner'].map((n) => [n, gl.getUniformLocation(edge, n)]));
@@ -346,7 +366,7 @@ function size(C: Ctx, w: number, h: number): void {
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 }
 
-interface Buffers { vbo: WebGLBuffer; ibo: WebGLBuffer; lines: WebGLBuffer; nLines: number; face: WebGLBuffer | null }
+interface Buffers { vbo: WebGLBuffer; ibo: WebGLBuffer; lines: WebGLBuffer; nLines: number; face: WebGLBuffer | null; shapes: WebGLTexture | null }
 const BUFFERS = new WeakMap<Baked, Buffers>();
 function buffersOf(gl: WebGL2RenderingContext, b: Baked): Buffers {
   let bf = BUFFERS.get(b);
@@ -369,7 +389,19 @@ function buffersOf(gl: WebGL2RenderingContext, b: Baked): Buffers {
     gl.bindBuffer(gl.ARRAY_BUFFER, face);
     gl.bufferData(gl.ARRAY_BUFFER, b.faceSkin, gl.STATIC_DRAW);
   }
-  bf = { vbo, ibo, lines, nLines: ln.length, face };
+  let shapes: WebGLTexture | null = null;
+  if (b.shapes) {
+    // each vertex's shapes, two texels a shape, run on along rows of SHAPE_ROW
+    const n = b.shapes.count * b.shapes.shapes * 2, rows = Math.ceil(n / SHAPE_ROW), px = new Float32Array(rows * SHAPE_ROW * 4);
+    px.set(b.shapes.data.subarray(0, n * 4));
+    shapes = gl.createTexture()!;
+    gl.bindTexture(gl.TEXTURE_2D, shapes);
+    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA32F, SHAPE_ROW, rows);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, SHAPE_ROW, rows, gl.RGBA, gl.FLOAT, px);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  }
+  bf = { vbo, ibo, lines, nLines: ln.length, face, shapes };
   BUFFERS.set(b, bf);
   return bf;
 }
@@ -380,6 +412,7 @@ export function forgetBuffers(b: Baked): void {
   if (!bf || !CTX) return;
   CTX.gl.deleteBuffer(bf.vbo); CTX.gl.deleteBuffer(bf.ibo); CTX.gl.deleteBuffer(bf.lines);
   if (bf.face) CTX.gl.deleteBuffer(bf.face);
+  if (bf.shapes) CTX.gl.deleteTexture(bf.shapes);
   BUFFERS.delete(b);
 }
 
@@ -415,6 +448,8 @@ export interface SculptDraw {
   low?: LowLight;
   /** A slash trail over it (`./anim/trail.ts`). */
   trail?: TrailDraw;
+  /** The weight of each of the bake's corrective shapes (`Baked.shapes`) in this pose, nought to one. */
+  shapes?: ArrayLike<number>;
 }
 /**
  * A slash trail as drawn: a triangle strip, five numbers a point (x, y, z in the figure's frame as the body's skinned
@@ -463,6 +498,19 @@ export function drawSculptGL(ctx: CanvasRenderingContext2D, sx: number, sy: numb
     gl.uniform1f(u.uFlat, o.flat ? 1 : 0);
     gl.uniform1f(u.uBlink, d.blink ?? 0);
     gl.uniform1f(u.uLow, low ? 1 : 0);
+    // the garment's corrective shapes: only while one weighs anything (their sampler on a unit of its own always, never
+    // on one of the frame's own textures)
+    gl.uniform1i(u.uShapes, 3);
+    const sh = d.baked.shapes, sw = d.shapes, on = !!(sh && bf.shapes && sw && Array.prototype.some.call(sw, (x: number) => x > 0));
+    gl.uniform1i(u.uShapeFrom, on ? (sh as NonNullable<typeof sh>).from : 0);
+    gl.uniform1i(u.uShapeCount, on ? (sh as NonNullable<typeof sh>).count : 0);
+    gl.uniform1i(u.uShapeK, on ? Math.min(MAX_SHAPES, (sh as NonNullable<typeof sh>).shapes) : 0);
+    if (on) {
+      SHAPE_W.fill(0);
+      for (let k = 0; k < Math.min(MAX_SHAPES, sw!.length); k++) SHAPE_W[k] = sw![k];
+      gl.uniform1fv(u.uShapeW, SHAPE_W);
+      gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D, bf.shapes);
+    }
     if (low) {
       gl.uniform3fv(u.uSH, low.sh);
       gl.uniform3f(u.uTone, low.tone[0], low.tone[1], low.tone[2]);
@@ -562,6 +610,7 @@ function drawTrail(C: Ctx, d: SculptDraw, t: TrailDraw, w: number, h: number, ni
   gl.disable(gl.BLEND);
 }
 
+const SHAPE_W = new Float32Array(MAX_SHAPES);
 let PAD: Float32Array | null = null;
 function padded(b: Float32Array): Float32Array {
   if (!PAD) PAD = new Float32Array(MAX_BONES * 12);

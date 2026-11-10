@@ -33,7 +33,7 @@
 import { build } from 'esbuild';
 import { readFileSync } from 'node:fs';
 import { buildRig, posed, fromGame, gameRig, armsOut, axisAngle, mm, tr } from './lowrig.mjs';
-import { liftOf, garmentFrames, crossPairs, bonesWith } from './lowgarment.mjs';
+import { liftOf, garmentFrames, crossPairs, bonesWith, shapeWeights } from './lowgarment.mjs';
 import { buildOutfit } from './garments/outfit1.mjs';
 import { buildBoots, bootWeights } from './garments/boots.mjs';
 import { buildHood, hoodWeights } from './garments/hood.mjs';
@@ -41,7 +41,7 @@ import { buildHood, hoodWeights } from './garments/hood.mjs';
 const ROOT = new URL('../..', import.meta.url).pathname;
 const HOOD = (() => { const i = process.argv.indexOf('--hood'); return i < 0 || process.argv[i + 1] !== 'down'; })();
 const b = await build({
-  stdin: { contents: `export { liftOf, garmentFrames, lowScene } from './src/sculpt/lowpoly'; export { CLIPS } from './src/sculpt/anim';`, resolveDir: ROOT, loader: 'ts' },
+  stdin: { contents: `export { liftOf, garmentFrames, lowScene, shapeWeights, lowSkeleton, lowHeld } from './src/sculpt/lowpoly'; export { CLIPS } from './src/sculpt/anim'; export { clipLocal } from './src/sculpt/anim/player'; export { SWING } from './src/sculpt/anim/clips/swing';`, resolveDir: ROOT, loader: 'ts' },
   bundle: true, format: 'esm', platform: 'node', write: false, logLevel: 'error', target: 'es2022', absWorkingDir: ROOT,
   loader: { '.png': 'dataurl', '.svg': 'dataurl', '.webp': 'dataurl', '.wav': 'dataurl', '.ogg': 'dataurl', '.mp3': 'dataurl' },
   define: { 'import.meta.env': '{}', __DEPLOY__: 'undefined' },
@@ -101,7 +101,29 @@ for (const who of ['male', 'female']) {
   // (the asset's heads and frames are written to five decimals)
   if (dW > 1e-4 || dP > 1e-4) fail = true;
 
-  // 3. the game's own path: lowScene's bake and bones, skinned as the shader skins them
+  // 3. the corrective shapes: the asset's the garment's; their weights the same both ways; nought where they must be
+  const sk = TS.lowSkeleton(who === 'male' ? 'man' : 'woman'), held = TS.lowHeld(who === 'male' ? 'man' : 'woman');
+  const swing = Array.from({ length: 31 }, (_, k) => { const c = TS.clipLocal(sk, TS.SWING, k * 0.05, held), q = { $move: c.move }; c.local.forEach((m, i) => { if (m && rig.bones[i].kind === 'control') q[rig.bones[i].name] = m; }); return q; });
+  const shapes = G.shapes ?? [];
+  r.shapes = { names: shapes.map((x) => x.name).join(' '), offsets: 0, weights: 0, nought: 0, most: 0 };
+  if ((shawl.shapes ?? []).length !== shapes.length) { console.log(who, 'shapes differ'); fail = true; }
+  (shawl.shapes ?? []).forEach((x, k) => { const full = shapes[k].d.map(() => [0, 0, 0]); x.at.forEach((i, j) => { full[i] = x.d.slice(j * 3, j * 3 + 3); }); r.shapes.offsets = Math.max(r.shapes.offsets, md(full.flat(), shapes[k].d.flat())); });
+  // (written to four decimals)
+  if (r.shapes.offsets > 5e-5 + 1e-9) fail = true;
+  for (const q of [...poses, ...swing]) {
+    const F = posed(rig, q), mine = shapeWeights(rig, F, G), theirs = TS.shapeWeights(body.bones, shawl, F);
+    if (mine.length) r.shapes.weights = Math.max(r.shapes.weights, md(mine, theirs));
+    r.shapes.most = Math.max(r.shapes.most, ...mine, 0);
+  }
+  // (nought at rest, arms out and forward, the head turned and nodded, the game's walk and idle: all the poses but the
+  // overhead one and the random ones)
+  const still = [poses[0], poses[1], poses[2], ...poses.slice(16)];
+  const W0 = (who === 'female' ? (q) => armsOut(rig, q) : (q) => q);
+  for (const q of [...still, W0({ neck_01: [0, 16, 0], neck_02: [0, 16, 0], head: [0, 38, 0] }), W0({ neck_01: [12, 0, 0], neck_02: [14, 0, 0], head: [14, 0, 0] })]) r.shapes.nought = Math.max(r.shapes.nought, ...shapeWeights(rig, posed(rig, q), G), 0);
+  // (the asset's heads are written to five decimals)
+  if (r.shapes.weights > 1e-4 || r.shapes.nought > 0) fail = true;
+
+  // 4. the game's own path: lowScene's bake, bones and shapes' weights, skinned as the shader skins them
   const look = { gender: who === 'male' ? 'man' : 'woman', skin: 'light', hair: 'bald', hairColour: 'brown', eyes: 'brown', beard: 'none', shirt: 'unbleached', trousers: 'walnut' };
   const cross = { walk: 0, idle: 0, checked: 0 };
   // (the trousers: their asset against the tools', then their triangles in the same bake)
@@ -148,10 +170,15 @@ for (const who of ['male', 'female']) {
     // (the idle's loop: the idle clip's time is the phase over six, so its whole loop is six times its length)
     const phase = moving ? (k / n) * Math.PI * 2 : (k / n) * 6 * TS.CLIPS.idle.length;
     const s = TS.lowScene({ phase, moving, facing, swimming: false, working: false, look, outfit: { hood: HOOD } });
+    // (the shawl's corrective shapes weigh nothing in the walk or the idle)
+    if (s.shapes) { console.log(who, moving ? 'walk' : 'idle', 'shapes weighed', [...s.shapes].map((w) => w.toFixed(2)).join(' ')); fail = true; }
     s0 ??= s;
-    const V = s.baked.verts, Bn = s.bones, P = [];
+    const V = s.baked.verts, Bn = s.bones, P = [], SH = s.baked.shapes, sw = s.shapes;
     for (let i = 0; i < s.baked.nVerts; i++) {
       const o = i * 17, p = [V[o], V[o + 1], V[o + 2]], q = [0, 0, 0];
+      // (the shapes added at rest, as the shader adds them)
+      const c = SH && sw ? i - SH.from : -1;
+      if (c >= 0 && c < SH.count) sw.forEach((w, k) => { if (w > 0) for (let j = 0; j < 3; j++) p[j] += w * SH.data[(c * SH.shapes + k) * 8 + j]; });
       for (let j = 0; j < 4; j++) {
         const w = V[o + 11 + j]; if (w <= 0) continue;
         const m = V[o + 7 + j] * 12;

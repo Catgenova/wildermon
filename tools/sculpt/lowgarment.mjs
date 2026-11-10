@@ -319,11 +319,59 @@ export function garmentFrames(rig, G, frames) {
 /** All the bones a garment's weights index: the body's, then its own. */
 export const bonesWith = (rig, G) => [...rig.bones, ...(G.bones ?? [])];
 
-/** The garment's vertices in a pose (frames from lowrig.mjs posed(); its own bones driven from them), as skin() poses the body. */
-export function skinGarment(rig, frames, G, vw = G.vw) {
-  const bones = bonesWith(rig, G);
+/* ---- corrective shapes ------------------------------------------------------------------------------------------- */
+/** 0 below a, 1 past b (b may be below a: 1 below b), smoothstep between; exactly 0 and 1 outside. */
+export const ramp = (x, a, b) => { const u = Math.min(1, Math.max(0, (x - a) / (b - a))); return u * u * (3 - 2 * u); };
+/**
+ * The pose as a corrective shape's drive reads it: per arm (l, r), in the chest's frame (spine_03, its turn from bind taken
+ * off) and in upper arms' lengths L (shoulder to elbow, at bind) from the shoulder at bind: `raise` the elbow's height
+ * over the shoulder; `elbowFwd` the elbow ahead of it; `across` the hand's distance from the body's midline toward its
+ * own side (below 0 past the midline); `fwd` the hand ahead of the shoulder; `up` the hand's height over the shoulder;
+ * and the body's `bend`, degrees the chest leans forward of upright. `bones`: spine_03, then the left's upperarm,
+ * lowerarm and hand, then the right's; `heads` their heads at bind, `chestR` spine_03's frame at bind.
+ */
+export function poseIn(heads, chestR, frames, bones) {
+  const c = bones[0], F = frames[c], C = mm3(F.W, tr3(chestR));
+  const rel = (P) => mv(tr3(C), sub(P, F.P));
+  const arm = (k, s) => {
+    const S0 = sub(heads[k], heads[0]), L = Math.hypot(...sub(heads[k + 1], heads[k])), e = rel(frames[bones[k + 1]].P), hd = rel(frames[bones[k + 2]].P);
+    return { raise: (e[1] - S0[1]) / L, elbowFwd: (e[2] - S0[2]) / L, across: (s * hd[0]) / L, fwd: (hd[2] - S0[2]) / L, up: (hd[1] - S0[1]) / L };
+  };
+  return { l: arm(1, 1), r: arm(4, -1), bend: Math.atan2(C[7], C[4]) * 180 / Math.PI };
+}
+/**
+ * A corrective shape's weight from the pose (poseIn), its drive { side, ramps: [[feature, a, b], ...] }: on an arm the
+ * product of ramp(feature, a, b) (a feature of the arm's, or the body's bend); `side` 'l' or 'r' that arm, 'both' the
+ * two arms' product, 'either' the greater. Exactly 0 outside each ramp's first end.
+ */
+export function driveOf(f, d) {
+  const on = (s) => d.ramps.reduce((w, [k, a, b]) => w * ramp(k in f[s] ? f[s][k] : f[k], a, b), 1);
+  return d.side === 'both' ? on('l') * on('r') : d.side === 'either' ? Math.max(on('l'), on('r')) : on(d.side);
+}
+/** The bones a drive reads, by index: spine_03, the left's upperarm, lowerarm and hand, the right's. */
+export const driveBones = (rig) => ['spine_03', ...['l', 'r'].flatMap((s) => [`upperarm_${s}`, `lowerarm_${s}`, `hand_${s}`])].map((n) => rig.at.get(n));
+/** The pose as the drives read it, from lowrig.mjs posed() frames. */
+export const poseOf = (rig, frames) => { const bi = driveBones(rig); return poseIn(bi.map((i) => rig.bones[i].head), rig.bones[bi[0]].R, frames, bi); };
+/** Each of a garment's corrective shapes' weights (G.shapes: [{ name, drive, d }]) in a pose (lowrig.mjs posed() frames). */
+export function shapeWeights(rig, frames, G) {
+  if (!G.shapes?.length) return [];
+  const f = poseOf(rig, frames);
+  return G.shapes.map(({ drive }) => driveOf(f, drive));
+}
+/** The garment's vertices at bind with its corrective shapes added by weight (each d: per vertex an offset at bind). */
+export function shaped(G, w) {
+  if (!w || !w.some((x) => x > 0)) return G.verts;
+  return G.verts.map((v, i) => { const o = [...v]; G.shapes.forEach((sh, k) => { if (w[k] > 0) for (let j = 0; j < 3; j++) o[j] += w[k] * sh.d[i][j]; }); return o; });
+}
+
+/**
+ * The garment's vertices in a pose (frames from lowrig.mjs posed(); its own bones driven from them), as skin() poses the
+ * body; its corrective shapes (G.shapes) added at bind first, by their weights in the pose (or `w`).
+ */
+export function skinGarment(rig, frames, G, vw = G.vw, w = shapeWeights(rig, frames, G)) {
+  const bones = bonesWith(rig, G), V = shaped(G, w);
   frames = garmentFrames(rig, G, frames);
-  return G.verts.map((v, i) => {
+  return V.map((v, i) => {
     let x = 0, y = 0, z = 0;
     for (const [bi, w] of vw[i]) {
       const f = frames[bi], q = add(mv(f.S, sub(v, bones[bi].head)), f.P);
@@ -419,6 +467,8 @@ export const MAX_BONES = 80;
  * `looks` ({ plain, enchanted: { name: [r, g, b] or { c: [r, g, b], kind } }, glowFrom }: a piece that can be enchanted,
  * as the long sword), its materials plain and enchanted parallel to `mats` ({ c: '#rrggbb', kind: 0 lit, 1 unlit, 2 metal }, a
  * material a look leaves out its colour, lit) and the polygons from `glowFrom` on drawn only enchanted.
+ * Its corrective shapes too (G.shapes: each its drive and its offsets at bind, only the vertices it moves; `shapeBones`
+ * the body's bones the drives read, by index).
  */
 export function garmentAsset(rig, G, mats, looks = null) {
   const r5 = (x) => +x.toFixed(5), names = Object.keys(mats), all = bonesWith(rig, G);
@@ -436,5 +486,10 @@ export function garmentAsset(rig, G, mats, looks = null) {
       const { from, kind, ...set } = b.driver;
       return { name: b.name, p: rig.at.get(b.parent), kind: b.kind, head: b.head.map(r5), R: b.R.map(r5), from: rig.at.get(from), drive: kind, ...set };
     }),
+    ...(G.shapes ? {
+      shapeBones: driveBones(rig),
+      // (each shape's offsets only where it moves a vertex: the vertices `at`, three numbers each in `d`, to 1e-4)
+      shapes: G.shapes.map((sh) => { const r4 = (x) => +x.toFixed(4), at = sh.d.map((v, i) => (v.some((x) => Math.abs(x) >= 5e-5) ? i : -1)).filter((i) => i >= 0); return { name: sh.name, drive: sh.drive, at, d: at.flatMap((i) => sh.d[i].map(r4)) }; }),
+    } : {}),
   };
 }
