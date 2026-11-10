@@ -64,6 +64,8 @@ import MALE_PLATE_LEGS from './assets/lowplatelegs-male.json';
 import FEMALE_PLATE_LEGS from './assets/lowplatelegs-female.json';
 import MALE_MANTLE from './assets/lowmantle-male.json';
 import FEMALE_MANTLE from './assets/lowmantle-female.json';
+import MALE_LEATHER_HAT from './assets/lowhat-male.json';
+import FEMALE_LEATHER_HAT from './assets/lowhat-female.json';
 import LONG_SWORD from './assets/long_sword.json';
 import HAIR_ASSET from './assets/lowhair.json';
 import MALE_LIGHT from '../../tools/sculpt/lowlight-male.json';
@@ -592,6 +594,7 @@ const wearsHood = (pose: FigurePose): boolean => (pose.outfit?.hood ?? false) &&
  */
 const wearsHelm = (pose: FigurePose): boolean => pose.outfit?.plateHelm ?? false;
 export const hairShown = (pose: FigurePose): boolean => !wearsHood(pose) && !wearsHelm(pose);
+const wearsLeatherHat = (pose: FigurePose): boolean => pose.outfit?.leatherHat ?? false;
 
 /**
  * Whether a piece is enchanted (`FigurePose.outfit.enchanted`): the plate set's cores and engraving, the leather set's
@@ -624,6 +627,7 @@ const GARMENTS: ReadonlyArray<{ man: GarmentAsset; woman: GarmentAsset; wears: (
   { man: MALE_LEATHER_LEGS as unknown as GarmentAsset, woman: FEMALE_LEATHER_LEGS as unknown as GarmentAsset, wears: (p) => p.outfit?.leatherLegs ?? false, enchanted: enchantedOf('leatherLegs') },
   // (their hip flaps, only without the leather chest: its skirt takes their place over the hip)
   { man: MALE_LEATHER_LEGS_FLAPS as unknown as GarmentAsset, woman: FEMALE_LEATHER_LEGS_FLAPS as unknown as GarmentAsset, wears: (p) => (p.outfit?.leatherLegs ?? false) && !(p.outfit?.leatherChest ?? false), enchanted: enchantedOf('leatherLegs') },
+  { man: MALE_LEATHER_HAT as unknown as GarmentAsset, woman: FEMALE_LEATHER_HAT as unknown as GarmentAsset, wears: wearsLeatherHat, enchanted: enchantedOf('leatherHat') },
 ];
 
 const BODIES = {
