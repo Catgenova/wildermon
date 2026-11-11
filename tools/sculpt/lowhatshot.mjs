@@ -3,6 +3,8 @@
 //
 //   node tools/sculpt/lowhatshot.mjs --out <dir> [--only sheet,wire,close,poses,walk,metrics] [--sheet <hat sheet png>]
 //        [--tag <name>] [--title <text>] [--enchanted] [--bare]
+//     --sheet: a 1536 x 1024 hat sheet; by default the sheet's equipped view (the reference crop, 1.54 times the sheet's
+//       size: its silhouette over leather/hat-masks.json's eqm 92.5%) put back where SHEETV's eqm and eqf expect it;
 //     hat-sheet<tag>.png: the sheet's equipped view and its turnaround (front, three-quarter, side, rear three-quarter,
 //       back, top) above each body's (--enchanted: the plain and the enchanted look, one row each);
 //     hat-wire<tag>.png: the same with every polygon's outline, and the triangle counts by piece;
@@ -16,7 +18,7 @@ import { execFileSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { buildRig, posed, skin, fromGame, gameRig, armsOut, axisAngle, mm, tr } from './lowrig.mjs';
 import { skinGarment, checks, crossPairs, garmentAsset, bonesWith, trisOf } from './lowgarment.mjs';
-import { buildHat, hatWeights, hairMesh, MATS, LOOKS } from './garments/hat.mjs';
+import { buildHat, hatWeights, hatHair, MATS, LOOKS } from './garments/hat.mjs';
 import { shoot, closeBrowser, LOOKS as LOOKS_SHOWN, lookColour } from './lowgarmentshot.mjs';
 
 const args = process.argv.slice(2);
@@ -25,7 +27,7 @@ const flag = (n) => args.includes(`--${n}`);
 const out = resolve(opt('out', 'tmp/lowhat'));
 const only = opt('only', 'sheet,wire,close,poses,walk,metrics').split(',');
 const tag = opt('tag', '');
-const SHEET = resolve(opt('sheet', '/tmp/claude-0/-home-user-Wurm/781c435a-4202-5724-9056-b83f4c44c414/scratchpad/leather/hat/hat-sheet.png'));
+const SHEET = resolve(opt('sheet', '/tmp/claude-0/-home-user-Wurm/781c435a-4202-5724-9056-b83f4c44c414/scratchpad/hat2/ref-sheet.png'));
 mkdirSync(out, { recursive: true });
 
 const SKIN = [0.68, 0.49, 0.41];
@@ -40,7 +42,8 @@ const garMesh = (rig, G, P, mats, edges = false) => ({ who: rig.who, P, polys: G
 
 const M = {};
 for (const who of ['male', 'female']) {
-  const rig = buildRig(who), G = buildHat(rig), H = hairMesh(who);
+  // (the hair as the game draws it under the hat: pressed under the crown and the brim, garments/hat.mjs hatHair)
+  const rig = buildRig(who), G = buildHat(rig), H = hatHair(rig, G);
   G.vw = hatWeights(rig, G);
   M[who] = { rig, G, H, shave: new Set(H.shave) };
 }

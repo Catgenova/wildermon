@@ -1,31 +1,36 @@
-// The leather set's feathered cap (the hat sheet: a wide-brim adventurer's cap, a six-panel faceted crown of medium
-// height, a wrap band with a ring ornament, a wide angled brim with a raised trim edge that drops more at the sides than
-// at the front, two angled feathers in the trim colour; it sits above the brow), fitted to each low-poly body from the
-// one design (DESIGN, per body), over the approved swept-back hair (src/sculpt/assets/lowhair.json, its crown pushed out
-// until it clears the head and the hair). Rigid on the head bone; no bones of its own.
+// The leather set's feathered cap (the hat sheet's equipped view: a cavalier's hat, a six-panel faceted crown snug on
+// the head and a little wider than it, a wrap band with a ring ornament, a large asymmetric brim with a raised trim edge,
+// drooping past the eye line on the body's right and at the front, level with its tip swept up on the body's left under
+// the two angled feathers in the trim colour), fitted to each low-poly body from the one design (DESIGN, per body), its
+// crown sized to the skull (the head alone, by `clear`) and the approved swept-back hair (src/sculpt/assets/lowhair.json)
+// pressed under it (hatHair). Rigid on the head bone; no bones of its own.
 //
 //   buildHat(rig, design) → { verts, polys: [{ v, mat, part, tag, piece }], tris, part, design }
 //   hatWeights(rig, G) → per vertex [[bone, weight], ...] (the head only)
+//   hatHair(rig, G) → the swept-back hair pressed under the hat (the game's 'swept:hat')
 //
 //   node tools/sculpt/garments/hat.mjs
 //     writes the game's copy beside each body: src/sculpt/assets/lowhat-male.json and lowhat-female.json
-//     (lowgarment.mjs garmentAsset with its plain and enchanted looks; loaded by src/sculpt/lowpoly.ts)
+//     (lowgarment.mjs garmentAsset with its plain and enchanted looks, and `hair`: the swept-back hair pressed under it;
+//     loaded by src/sculpt/lowpoly.ts, which draws that hair in the hair's place while the hat is worn)
 //
 // The construction, in the hat's own frame: its origin C on the head (the crown's foot, the brim's root), y up the hat's
 // axis, the frame tipped back by `pitch` (degrees, the front up) about the body's x; azimuth 0 forward, +90 toward the
 // body's left. Columns every 15 degrees (AZ).
 //   the crown: stations up the axis (the band's foot, its edge strips, its top step, the wall, the shoulder, the apex),
 //   each a hexagonal section (`sec`: six flat panels, a panel's middle forward, their corners at ±30, ±90, ±150) scaled
-//   to an oval (`oval`), then pushed out along its column until it clears the head and the hair by `clear`;
+//   to an oval (`oval`), then pushed out along its column until it clears the head (and with `overHair` the hair) by
+//   `clear`; the rings from the wall's top up raised by `slant`, its top slanted;
 //   the brim: from the crown's foot out to the outer radius `R` (by azimuth), dropping by `drop` (by azimuth) along the
-//   power curve `curve`, its underside `T` under it; the trim: a raised bead round the outer edge (`trim`), over the edge
+//   power curve `curve` (a number, or by azimuth) and rising by `up` (by azimuth) along the cube, its tip swept up; the
+//   tables by azimuth signed (-180 to 180), its two sides apart; its underside `T` under it; the trim: a raised bead round the outer edge (`trim`), over the edge
 //   onto the underside; the sweatband: the underside's root up inside the crown (hidden, the hat's thickness shown at the
 //   foot);
 //   the ring: a bevelled washer on the band's face at azimuth `ring.az`;
 //   the feathers: thin vanes with a raised rib and notched edges, each with its quill, rising behind the ring.
 // Materials (the set's shared ones): leather (the crown, the band, the brim), dark (the inside: the sweatband), trim (the
 // brim's trim, the seams, the feathers), rune (the ring and the band's edge strips: trim plain, glowing enchanted).
-import { meshOf, orient, trisOf, samplesOf, sub, add, mul, dot, cross, unit, lerp } from '../lowgarment.mjs';
+import { meshOf, orient, trisOf, samplesOf, crossPairs, sub, add, mul, dot, cross, unit, lerp } from '../lowgarment.mjs';
 import { readFileSync } from 'node:fs';
 
 /**
@@ -58,43 +63,53 @@ const interp = (P, x) => {
   for (let i = 0; i + 1 < P.length; i++) if (x <= P[i + 1][0]) return P[i][1] + (P[i + 1][1] - P[i][1]) * (x - P[i][0]) / Math.max(1e-9, P[i + 1][0] - P[i][0]);
   return P[P.length - 1][1];
 };
-/** A table by azimuth: symmetric ([[|az|, v]]) or, with `left` and `right` keys, per side. */
-const byAz = (T, az) => interp(T, Math.abs(az));
+/**
+ * A table by azimuth: symmetric ([[|az|, v]], from 0) or signed ([[az, v]] from -180 to 180: +90 the body's left), the
+ * brim's two sides drawn apart.
+ */
+const byAz = (T, az) => (T[0][0] < 0 ? interp(T, az) : interp(T, Math.abs(az)));
 
 /**
  * The design per body (the body's units: y up, the chin's underside 0; z forward; x the body's left):
  *   C: the hat's origin (the crown's foot on the axis); pitch: the hat tipped back (degrees, the front up);
  *   sec: the crown's stations [h, apothem]: the foot, the band's top, the wall's top, and if given the shoulder and the
  *   top's ring (the sheet's crown: a wall, then six facets to the apex); apex:
- *   the apex's height (each pushed out, the apex raised, until the crown clears the head and the hair);
+ *   the apex's height (each pushed out, the apex raised, until the crown clears the head, and the hair with `overHair`:
+ *   off, the hair pressed under it, hatHair); slant: the top's rise [per unit across (x), per unit forward];
  *   oval: the section's scale across (x), forward and back; round: how far a panel bulges toward the circle (0 flat);
  *   band: its height, how far it stands out, its edge strips' height and how far they stand out again;
- *   brim: R (outer radius by azimuth), drop (by azimuth), curve (the drop's power along the brim), T (thickness),
- *   trim: [width, height, overhang];
+ *   brim: R (outer radius by azimuth), drop (by azimuth), curve (the drop's power along the brim, by azimuth), up (the
+ *   tip's rise by azimuth, along the cube), T (thickness), trim: [width, height, overhang]; each table by azimuth signed,
+ *   -180 to 180, +90 the body's left;
  *   ring: az (a flat panel's middle), height on the band (share), outer and inner radius, thickness;
  *   feathers: per feather its plane's offset out from the ring's back (within the ring's thickness), length, half-width, its spine's direction
  *   (the hat's frame), its bow (in its plane, a share of its length), its turn (degrees about its own spine), notches a side;
- *   clear: the crown's clearance outside the head and the hair.
+ *   clear: the crown's clearance outside the head (the pressed hair's room under it).
  */
 export const DESIGN = {
   male: {
-    C: [0, 1.5, -0.04], pitch: 4,
-    sec: [[0, 0.92], [0.3, 0.9], [0.94, 0.83]], apex: 1.16,
-    oval: [1, 0.98, 1.07], round: 0, panelAz: 30,
-    band: {h: 0.3, out: 0.04, edge: 0.045, edgeOut: 0.025},
-    brim: {R: [[0, 1.72], [45, 1.78], [75, 2.2], [105, 2.0], [135, 1.9], [180, 1.85]], drop: [[0, 0.37], [30, 0.45], [60, 1.1], [75, 0.9], [105, 0.75], [135, 0.55], [180, 0.6]], curve: 1.8, T: 0.06, trim: [0.09, 0.045, 0.02]},
-    ring: {az: 30, at: 1.02, ro: 0.29, ri: 0.12, t: 0.09},
+    C: [0, 1.3, 0.03], pitch: 0, overHair: false,
+    sec: [[0, 0.72], [0.24, 0.7], [0.58, 0.63], [0.84, 0.4]], apex: 0.93, slant: [0.08, -0.04],
+    oval: [0.88, 1, 0.94], round: 0, panelAz: 30,
+    band: {h: 0.24, out: 0.035, edge: 0.04, edgeOut: 0.022},
+    brim: {
+      R: [[-180, 1.9], [-135, 2.05], [-90, 2.3], [-60, 2.35], [-30, 2.1], [0, 1.95], [30, 2.0], [60, 2.2], [90, 2.35], [120, 2.4], [150, 2.1], [180, 1.9]],
+      drop: [[-180, 0.15], [-150, 0.24], [-120, 0.45], [-90, 0.75], [-60, 0.86], [-35, 0.8], [-15, 0.55], [0, 0.28], [20, 0.16], [45, 0.14], [75, 0.18], [105, 0.2], [135, 0.16], [165, 0.14], [180, 0.15]],
+      up: [[-180, 0], [-30, 0], [0, 0], [30, 0.06], [60, 0.18], [90, 0.24], [120, 0.2], [150, 0.06], [180, 0]],
+      curve: [[-180, 2], [-120, 1.6], [-70, 1.3], [-30, 1.3], [0, 1.8], [30, 2], [180, 2]], T: 0.06, trim: [0.09, 0.045, 0.02],
+    },
+    ring: {az: 30, at: 1.08, ro: 0.23, ri: 0.095, t: 0.08},
     feathers: [
-      {off: 0.06, len: 1.5, w: 0.28, dir: [0.85, 0.5, -0.35], bow: 0.1, turn: 0, notches: 3},
-      {off: 0.025, len: 1.12, w: 0.24, dir: [0.55, 0.78, -0.25], bow: 0.1, turn: 0, notches: 3},
+      {off: 0.05, len: 1.4, w: 0.26, dir: [0.85, 0.5, -0.35], bow: 0.1, turn: 0, notches: 3},
+      {off: 0.02, len: 1.05, w: 0.22, dir: [0.55, 0.78, -0.25], bow: 0.1, turn: 0, notches: 3},
     ],
-    clear: 0.04,
+    clear: 0.065,
   },
 };
 /**
- * Hers: the same design (the sheet: "same design for both genders") at 0.98 of his size (the sheet draws her hat as
- * large as his on a head 0.92 as wide: her equipped view's overlap best at 0.98, 77.3% to 76.3% at 0.94), on her head
- * where the sheet's equipped view puts it (C, pitch); the crown's clearance pushes it out where her head and hair need it.
+ * Hers: the same design (the sheet: "same design for both genders") at 0.98 of his size, on her head as his sits on his
+ * (C, pitch); her crown 0.015 more clearance (the pressed hair's room at her forehead's top, where it would otherwise
+ * sink into the scalp), its width then 1.01 of his (her skull longer front to back).
  */
 export function scaled(D, k, place) {
   const L = (x) => +(x * k).toFixed(4);
@@ -102,12 +117,12 @@ export function scaled(D, k, place) {
     ...structuredClone(D), ...place,
     sec: D.sec.map(([h, a]) => [L(h), L(a)]), apex: L(D.apex),
     band: { ...D.band, h: L(D.band.h), out: L(D.band.out), edge: L(D.band.edge), edgeOut: L(D.band.edgeOut) },
-    brim: { ...D.brim, R: D.brim.R.map(([a, r]) => [a, L(r)]), drop: D.brim.drop.map(([a, d]) => [a, L(d)]), T: L(D.brim.T), trim: D.brim.trim.map(L) },
+    brim: { ...D.brim, R: D.brim.R.map(([a, r]) => [a, L(r)]), drop: D.brim.drop.map(([a, d]) => [a, L(d)]), ...(D.brim.up ? { up: D.brim.up.map(([a, d]) => [a, L(d)]) } : {}), T: L(D.brim.T), trim: D.brim.trim.map(L) },
     ring: { ...D.ring, ro: L(D.ring.ro), ri: L(D.ring.ri), t: L(D.ring.t) },
     feathers: D.feathers.map((f) => ({ ...f, len: L(f.len), w: L(f.w), off: L(f.off) })),
   };
 }
-DESIGN.female = scaled(DESIGN.male, 0.98, { C: [0, 1.633, -0.06], pitch: 6 });
+DESIGN.female = scaled(DESIGN.male, 0.98, { C: [0, 1.36, 0], pitch: 2, clear: 0.08 });
 /** The columns: every 15 degrees, 0 forward, +90 the body's left, in order round. */
 export const AZ = Array.from({ length: 24 }, (_, k) => (k <= 12 ? k * 15 : (k - 24) * 15));
 /** The crown's panel corners (its seams) among the columns: the panels' middles at panelAz (30) and every 60 from it, a corner at the front and the back as on the sheet's back view. */
@@ -142,7 +157,9 @@ export function hairMesh(who, style = 'swept') {
 function obstacle(rig, D) {
   const F = frameOf(D), B = rig.B;
   const headTris = B.tris.filter((t) => t.v.every((i) => B.part[i] === 'head'));
-  const H = hairMesh(rig.who);
+  // (the head alone when the hair is pressed under the hat, `hatHair`: the crown sized to the skull, the hair's room the
+  // crown's clearance)
+  const H = D.overHair ? hairMesh(rig.who) : { tris: [], verts: [] };
   const S = [...samplesOf({ tris: headTris }, B.verts, 0.05), ...samplesOf({ tris: H.tris }, H.verts, 0.05)];
   return S.map((p) => F.toHat(p));
 }
@@ -153,7 +170,7 @@ function obstacle(rig, D) {
  */
 const REACH = new Map();
 function reachOf(rig, D, half = 9, dh = 0.06) {
-  const key = `${rig.who}|${D.C.join(',')}|${D.pitch}`;
+  const key = `${rig.who}|${D.C.join(',')}|${D.pitch}|${!!D.overHair}`;
   if (REACH.has(key)) return REACH.get(key);
   const O = obstacle(rig, D), NA = 120, H0 = -0.6, NH = 120, grid = new Float32Array(NA * NH), k = 1 / Math.cos(half * Math.PI / 180);
   for (const p of O) {
@@ -217,8 +234,13 @@ export function buildHat(rig, design = DESIGN[rig.who]) {
     const ok = AZ5.every((az) => { for (let q = 1; q < 10; q++) { const t = q / 10, h = hs0 + (apexH - hs0) * t; if (top(az) * (1 - t) < need(az, h)) return false; } return true; });
     if (ok) break; apexH += 0.02;
   }
-  G.apexH = apexH;
-  const crown = AZ.map((az, k) => ST.map(([, h], s) => V(P(az, crownR[k][s], h), 'crown')));
+  G.apexH = apexH; G.crownR = crownR; G.ST = ST;
+  if (process.env.HATDBG) for (const [n, h] of ST) { const f = AZ5.map((az) => [az, need(az, h) / secR(D, az, A(h))]).sort((a, b) => b[1] - a[1]); console.log(n, h.toFixed(2), f.slice(0, 3).map(([a, v]) => `${a}:${v.toFixed(3)}`).join(" "), "need0", need(0, h).toFixed(3), "need90", need(90, h).toFixed(3), "need180", need(180, h).toFixed(3)); }
+  // (the top slanted: from the wall's top up, each ring raised by `slant` [per unit across, per unit forward] of where
+  // it lies, the band and the apex as they are)
+  const iw = ST.findIndex(([n]) => n === 'wall'), [sx, sz] = D.slant ?? [0, 0];
+  const lift = (az, r, s) => (s >= iw ? (sx * Math.sin(az * Math.PI / 180) + sz * Math.cos(az * Math.PI / 180)) * r : 0);
+  const crown = AZ.map((az, k) => ST.map(([, h], s) => V(P(az, crownR[k][s], h + lift(az, crownR[k][s], s)), 'crown')));
   const apex = V([0, apexH, 0], 'crown');
   G.tag = 'crown';
   for (let k = 0; k < N; k++) {
@@ -279,10 +301,13 @@ export function buildHat(rig, design = DESIGN[rig.who]) {
   const TS = [0, 0.2, 0.42, 0.64, 0.84, 1];
   const [tw, th, tov] = BR.trim;
   const brim = AZ.map((az) => {
-    const r0 = crownR[AZ.indexOf(az)][0], R = byAz(BR.R, az), Dd = byAz(BR.drop, az);
-    const top = TS.map((t) => [r0 + (R - tw - r0) * t, -Dd * Math.pow((r0 + (R - tw - r0) * t - r0) / (R - r0), BR.curve)]);
+    const r0 = crownR[AZ.indexOf(az)][0], R = byAz(BR.R, az), Dd = byAz(BR.drop, az), Up = BR.up ? byAz(BR.up, az) : 0;
+    // (the brim's height at radius r: down by `drop` at the edge along the power `curve`, up by `up` at the edge along the
+    // cube: a tip that sweeps up)
+    const cv = typeof BR.curve === 'number' ? BR.curve : byAz(BR.curve, az), y = (r) => { const q = (r - r0) / (R - r0); return -Dd * Math.pow(q, cv) + Up * q * q * q; };
+    const top = TS.map((t) => { const r = r0 + (R - tw - r0) * t; return [r, y(r)]; });
     // the profile's tangent at the edge, and its normal (up)
-    const E = [R - tw, -Dd * Math.pow((R - tw - r0) / (R - r0), BR.curve)], E2 = [R, -Dd];
+    const E = [R - tw, y(R - tw)], E2 = [R, y(R)];
     const tau = (() => { const v = [E2[0] - E[0], E2[1] - E[1]], l = Math.hypot(...v); return [v[0] / l, v[1] / l]; })(), nu = [-tau[1], tau[0]];
     const at = (p, a, b) => [p[0] + tau[0] * a + nu[0] * b, p[1] + tau[1] * a + nu[1] * b];
     const T = BR.T;
@@ -387,6 +412,57 @@ export function buildHat(rig, design = DESIGN[rig.who]) {
   return G;
 }
 
+/**
+ * The hair pressed under the hat (the swept-back hair, src/sculpt/assets/lowhair.json, as the game draws it while the hat
+ * is worn): each of its vertices moved along the ray from the skull's middle (the middle of the head's box above the
+ * eyes) through it, its height over the scalp h on that ray, where the ray meets the hat (its crown, band and brim: the
+ * hat's inside) within `room` = the hat less `gap` less the scalp, pressed to room * tanh(h / room) (no higher than it
+ * was, the tufts' ridges and valleys kept in order, the hair out from under the brim as it was; where a pressed triangle
+ * would sink into the scalp that the hair's own does not, its corners let up again). Rigid on the head as
+ * the hat and the hair are, so pressed once for every pose. Its polygons, materials, triangles, weights and shave as
+ * the hair's: { verts, tris, polys, mat, shave, pressed: [vertex, moved by], room: [least, ...] }.
+ */
+export function hatHair(rig, G, { gap = 0.025, least = 0.02 } = {}) {
+  const H = hairMesh(rig.who), B = rig.B;
+  const headV = B.verts.filter((_, i) => B.part[i] === 'head' && B.verts[i][1] > 1.0);
+  const box = [0, 1, 2].map((c) => [Math.min(...headV.map((p) => p[c])), Math.max(...headV.map((p) => p[c]))]);
+  const O = box.map(([a, b]) => (a + b) / 2);
+  const headT = B.tris.filter((t) => t.v.every((i) => B.part[i] === 'head')).map((t) => t.v.map((i) => B.verts[i]));
+  const hatT = G.tris.filter((t) => !['feather', 'ring'].includes(G.polys[t.poly].piece)).map((t) => t.v.map((i) => G.verts[i]));
+  // (the nearest hit of the ray from O along d, over a list of triangles: Möller–Trumbore)
+  const hit = (d, T) => {
+    let best = Infinity;
+    for (const [a, b, c] of T) {
+      const e1 = sub(b, a), e2 = sub(c, a), p = cross(d, e2), det = dot(e1, p);
+      if (Math.abs(det) < 1e-12) continue;
+      const iv = 1 / det, s = sub(O, a), u = dot(s, p) * iv; if (u < 0 || u > 1) continue;
+      const q = cross(s, e1), v = dot(d, q) * iv; if (v < 0 || u + v > 1) continue;
+      const t = dot(e2, q) * iv; if (t > 1e-6 && t < best) best = t;
+    }
+    return best;
+  };
+  const rooms = [], ray = H.verts.map((p) => {
+    const w = sub(p, O), tv = Math.hypot(...w), d = mul(w, 1 / tv), ts = hit(d, headT), tc = hit(d, hatT), h = tv - ts;
+    if (!Number.isFinite(tc) || !Number.isFinite(ts) || h <= 0) return null;
+    const room = Math.max(least, tc - gap - ts); rooms.push(room);
+    return { d, ts, h, room, cap: Math.min(h, tc - gap / 5 - ts), h2: room * Math.tanh(h / room) };
+  });
+  const at = (i) => (ray[i] ? add(O, mul(ray[i].d, ray[i].ts + ray[i].h2)) : H.verts[i]);
+  let verts = H.verts.map((_, i) => at(i));
+  // (where a pressed triangle would sink into the scalp that the hair's own did not: its pressed corners let up 0.01 at
+  // a time, toward the hair's height and no nearer the hat than a fifth of the gap, until it clears)
+  const headTi = B.tris.filter((t) => t.v.every((i) => B.part[i] === 'head')), hatTi = G.tris.filter((t) => !['feather', 'ring'].includes(G.polys[t.poly].piece));
+  const was = new Set(crossPairs(H.verts, H.tris, B.verts, headTi).map(([i]) => i));
+  for (let it = 0; it < 40; it++) {
+    const sink = crossPairs(verts, H.tris, B.verts, headTi).map(([i]) => i).filter((i) => !was.has(i));
+    if (!sink.length) break;
+    for (const ti of new Set(sink)) for (const v of H.tris[ti].v) if (ray[v]) ray[v].h2 = Math.min(ray[v].cap, ray[v].h2 + 0.01);
+    verts = H.verts.map((_, i) => at(i));
+  }
+  const pressed = ray.map((r, i) => (r && r.h - r.h2 > 1e-4 ? [i, +(r.h - r.h2).toFixed(4)] : null)).filter(Boolean);
+  return { ...H, verts, pressed, room: rooms.length ? Math.min(...rooms) : null, O, hatCross: crossPairs(G.verts, hatTi, verts, H.tris).length };
+}
+
 export function hatWeights(rig, G) {
   const head = rig.at.get('head');
   return G.verts.map(() => [[head, 1]]);
@@ -401,8 +477,12 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const rig = buildRig(who), G = buildHat(rig);
     G.vw = hatWeights(rig, G);
     const file = new URL(`../../../src/sculpt/assets/lowhat-${who}.json`, import.meta.url);
-    const A = { built: 'node tools/sculpt/garments/hat.mjs (tools/sculpt/lowgarment.mjs garmentAsset)', ...garmentAsset(rig, G, MATS, LOOKS) };
+    // (the swept-back hair pressed under the hat, hatHair: the game draws it in the hair's place while the hat is worn,
+    // its polygons, materials, triangles, weights and shave the hair's own)
+    const H = hatHair(rig, G), H0 = HAIR[who].swept;
+    const hair = { swept: { ...H0, verts: H.verts.flat().map((x) => +x.toFixed(5)) } };
+    const A = { built: 'node tools/sculpt/garments/hat.mjs (tools/sculpt/lowgarment.mjs garmentAsset)', ...garmentAsset(rig, G, MATS, LOOKS), hair };
     writeFileSync(file, JSON.stringify(A));
-    console.log(who, `${G.verts.length} vertices, ${G.tris.length} triangles, ${A.base} + ${A.bones.length} bones: wrote`, file.pathname);
+    console.log(who, `${G.verts.length} vertices, ${G.tris.length} triangles, ${A.base} + ${A.bones.length} bones, the hair pressed under it (${H.pressed.length} of ${H.verts.length} vertices, its least room ${H.room.toFixed(3)}): wrote`, file.pathname);
   }
 }
