@@ -1,9 +1,9 @@
 # Sculpt work: task memory (read this first in a fresh context)
 
-Kept in git so a new context can resume. Update it whenever a task moves. Branch: `sculpt-all`.
+Branch: `sculpt-all`. Updated only when the user asks for a handover.
 
 ## Standing rules (user's)
-- Keep context under 200k. Work one task at a time in the main thread. No subagents unless the user asks for them.
+- Work one task at a time in the main thread. No subagents unless the user asks for them.
 - Sculpt work stays on branches; nothing ships until the user says "ship it". (CLAUDE.md's main/deploy rule applies to
   game code on main only.)
 - Show every stage: send PNGs/GIFs (under 8000 px) via SendUserFile. Judge joins and gaps by measurement, not small thumbnails.
