@@ -87,8 +87,11 @@ def resample(P):
         for k in range(m): out.append((a + (c - a) * k / m).tolist())
     return out
 LAYER = lambda k: k.endswith('.layer')
+PIECE = []; CUR = None
 for k, v in sorted(J['pieces'].items(), key=lambda kv: not LAYER(kv[0])):
+    PIECE.extend([CUR] * (len(faces) - len(PIECE)))
     if k in J.get('under', []): continue
+    CUR = k
     if isinstance(v, dict):
         cx, cy, rx, ry = v['ellipse']
         ring = lambda f: [[cx + rx * f * math.cos(2 * math.pi * i / RING_N), cy + ry * f * math.sin(2 * math.pi * i / RING_N)] for i in range(RING_N)]
@@ -125,13 +128,16 @@ for k, v in sorted(J['pieces'].items(), key=lambda kv: not LAYER(kv[0])):
     ring_out = [outer_of(p, I, v) for p in ring_in]
     for i in range(len(ring_in)): jn = (i + 1) % len(ring_in); faces.append(('lbevel' if LAYER(k) else 'bevel', [ring_out[i], ring_out[jn], ring_in[jn], ring_in[i]]))
 for k, v in J.get('lines', {}).items():
+    PIECE.extend([CUR] * (len(faces) - len(PIECE))); CUR = 'line:' + k
     w = 0.6 if 'lace' not in k else 0.8
     for a, c in zip(v, v[1:]):
         a, c = np.array(a), np.array(c); d = c - a; nrm = np.array([-d[1], d[0]]) / (np.linalg.norm(d) + 1e-9) * w
         faces.append(('trim', [(a + nrm).tolist(), (c + nrm).tolist(), (c - nrm).tolist(), (a - nrm).tolist()]))
+PIECE.extend([CUR] * (len(faces) - len(PIECE))); CUR = 'rivet'
 for x, y, r in J.get('dots', []):
     pts = [[x + r * math.cos(2 * math.pi * i / 6), y + r * math.sin(2 * math.pi * i / 6)] for i in range(6)]
     for i in range(6): faces.append(('rivet', [[x, y], pts[i], pts[(i + 1) % 6]]))
+PIECE.extend([CUR] * (len(faces) - len(PIECE)))
 ntri = sum(len(f) - 2 for _, f in faces)
 # (each plate's outline also gets its thickness in 3D: two triangles per outline edge)
 nedge = len([f for f in faces if f[0] in ('bevel', 'lbevel')])
@@ -144,5 +150,10 @@ for kind, f in faces: cv2.polylines(wire, [np.array([T(p) for p in f], np.int32)
 both = np.concatenate([src, np.full((src.shape[0], 8, 3), 30, np.uint8), wire], 1)
 cv2.putText(both, f"{J['view']}: {ntri} triangles on the faces seen (+{2 * nedge} for the plates' thickness)", (6, 16), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
 cv2.imwrite(out, both)
-if '--json' in sys.argv: json.dump([{'kind': k, 'p': f} for k, f in faces], open(sys.argv[sys.argv.index('--json') + 1], 'w'))
+if '--json' in sys.argv: SH = np.array(Image.open(SHEET).convert('RGB')).astype(float)
+def colAt(f):
+    m = np.zeros(SH.shape[:2], np.uint8); cv2.fillPoly(m, [np.array([[int(round(x)), int(round(y))] for x, y in f], np.int32)], 1)
+    if m.sum() < 1: c = np.mean(f, 0); return SH[int(round(c[1])), int(round(c[0]))].round().tolist()
+    return np.median(SH[m > 0], 0).round().tolist()
+json.dump([{'kind': k, 'p': f, 'piece': PIECE[i], 'col': colAt(f)} for i, (k, f) in enumerate(faces)], open(sys.argv[sys.argv.index('--json') + 1], 'w'))
 print('faces', len(faces), 'triangles', ntri, 'thickness', 2 * nedge)
