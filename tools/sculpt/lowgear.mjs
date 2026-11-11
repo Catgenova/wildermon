@@ -166,10 +166,11 @@ export function socketAt(rig, frames, s) { const f = frames[s.bone]; return { o:
  * The fist of one side fitted to a grip of radius r (mesh units): where along the hand (`back`, from the knuckle line
  * toward the wrist) and how far out from the palm (`lift`) the grip's axis sits, and how far the finger bones curl, so
  * that the palm under the knuckles, the fingers' undersides and their tips all lie on the grip's surface (no deeper than
- * `skinIn`, no further off than they must) and the tips come round past the grip's far side. Returns { socket, curl:
+ * `skinIn`, no further off than they must) and the tips come round past the grip's far side (o.backMax: the furthest back
+ * toward the wrist the grip is let sit, so a thick grip is not taken into the palm). Returns { socket, curl:
  * { fingers_01, fingers_02 }, err } (err: the worst gap or depth, mesh units, over those points).
  */
-export function fitFist(rig, side, r, skinIn = 0.01) {
+export function fitFist(rig, side, r, skinIn = 0.01, o = {}) {
   const { B } = rig, suf = side === 'l' ? '.L' : '.R';
   const group = (g) => B.names.map((n, i) => (n.startsWith('arm/') && n.endsWith(suf) && n.slice(4).replace(/\d+\.[LR]$/, '') === g ? i : -1)).filter((i) => i >= 0);
   const KP = group('kp'), MP = group('mp'), NP = group('np'), pts = [...KP, ...MP, ...NP];
@@ -181,7 +182,7 @@ export function fitFist(rig, side, r, skinIn = 0.01) {
   }
   const s0 = socketOf(rig, side, r), ax = colOf(s0.R, 1), toPalm = mul(s0.palm, -1);
   let best = null;
-  for (let back = 0.1; back <= 0.65; back += 0.05) for (let lift = 0; lift <= 0.6; lift += 0.01) {
+  for (let back = 0.1; back <= (o.backMax ?? 0.65) + 1e-9; back += 0.05) for (let lift = 0; lift <= 0.6; lift += 0.01) {
     const s = socketOf(rig, side, r, { back, lift });
     for (const c of curls) {
       let e = 0, worst = 0;
@@ -387,7 +388,7 @@ export async function gearAsset(id, plain, lit, rigs) {
     const sc = await gameScale(rig);
     scale[who] = r5(sc.scale);
     sockets[who] = Object.fromEntries(['r', 'l'].map((side) => {
-      const r = plain.grip.radius / sc.scale, f = fitFist(rig, side, r), s = f.socket;
+      const r = plain.grip.radius / sc.scale, f = fitFist(rig, side, r, 0.01, plain.fit ?? {}), s = f.socket;
       // the thumb closed over the grip (fistOn), the fingers as fitted: local turns [rx, ry, rz] in degrees (lowrig.mjs posed)
       const p = fistOn(rig, { [`fingers_01_${side}`]: [f.curl.fingers_01, 0, 0], [`fingers_02_${side}`]: [f.curl.fingers_02, 0, 0] }, s, 0, { thumbOnly: true });
       const curl = Object.fromEntries(['fingers_01', 'fingers_02', 'thumb_01', 'thumb_02', 'thumb_03'].map((n) => [n, p[`${n}_${side}`] ?? [0, 0, 0]]));

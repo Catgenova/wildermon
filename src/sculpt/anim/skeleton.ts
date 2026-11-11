@@ -93,6 +93,11 @@ export interface Held {
   sockets: Record<'l' | 'r', { o: V; R: M3; curl?: Record<string, Euler> }>; lead: number; second: number; tip: number; scale: number;
   /** Its points near the far end (its own frame, game units: x across the edge, y along it), of which the lowest is kept off the ground; the point alone if not given. */
   ends?: V[];
+  /**
+   * How far its far end is let down onto the ground where the clip lets it down (`GripAt.rest` times this; 1 when not
+   * given): the long sword's point rests on the ground at the swing's rest and drag; a pickaxe (0) keeps its head off it.
+   */
+  rest?: number;
 }
 const smooth = (x: number): number => { const u = Math.min(1, Math.max(0, x)); return u * u * (3 - 2 * u); };
 
@@ -186,7 +191,7 @@ export function skeleton(A: AnimAsset, canon: AnimAsset, gameHeight = 0): Skelet
     const first = held?.tip ? lowest() : undefined;
     if (first) {
       // kept off the ground; let down onto it as far as `rest` says, the wrist turned down by at most DOWN
-      const lo = floor + grip.ground / scale, want = first.low < lo ? lo : first.low + (lo - first.low) * Math.min(1, Math.max(0, grip.rest));
+      const lo = floor + grip.ground / scale, want = first.low < lo ? lo : first.low + (lo - first.low) * Math.min(1, Math.max(0, grip.rest * (held?.rest ?? 1)));
       let turned = 0;
       for (let n = 0; n < 6; n++) {
         const m = lowest();
