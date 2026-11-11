@@ -28,22 +28,28 @@ Kept in git so a new context can resume. Update it whenever a task moves. Branch
 2. DONE (accepted). His plate chest crossings.
    - The user accepted about 24 collar×trapezius crossings as invisible; the armpit under-layer is left as is.
    - Hiding the skin opened gaps, so that trial was reverted. Final is sculpt-plate-chest 67b9e816 (r5).
-3. IN PROGRESS. Fur mantle, sculpt-plate-mantle 2b106a91.
+3. IN PROGRESS. Fur mantle, sculpt-plate-mantle 29469556.
    - Her: walk and idle 0 against body, chest, itself and the helm.
    - His weights (cca30c71): chestSurf "radial", collarArm 0, chestMargin 0.14, chestSmooth 3 (user's choice over 1).
    - His ring lowered at the back and sides, top 0.12/0.20/0.04 (user's choice), chestClear 0.07 (b7bed9da).
    - Her collar opened at the front: from 44, len 0.4 at 34 / 0.7 at 66, front lean 60 (user's choice, 2b106a91).
-   - Now: his walk at most 24 self / 26 chest, his idle one key at 4 self; vs the helm (lowmantlehelm.mjs): both idles
-     and walks 0; swings him 85 (collar#0/#10 × visor), her 101 (collar#5 × helm back); nod 40 ring × visor ~110-120.
-   - Tried and dropped: a blurred weight field, one weight set per clump, a wider gap/gapArm, tier-follow weights.
+   - The swing vs the helm (user's choices, 29469556): his collar from 40, len 0.8 at 34, lean [30,77,60] (the back's
+     tufts lie lower); her back lean 65 and collarFollow {neck 1, p 0.6, az [150,180], fade 40} (mantleWeights: the
+     collar's tips onto neck_01 / off the clavicles, by height in the clump, within an azimuth window).
+   - Now vs the helm: him swing 12 (collar#4/#5 × back, 1.92), idle turnnod 8, nod40 ring × visor ~110-120 (test pose);
+     her swing 18 (1.83), head turns 6-30 (collar#0 × visor). Self/chest: his walk 0 self / 22 chest, idle one key at 4
+     self; her walk and idle 0. His swing's body crossings rose (top 446, impact 347) and its chest sum 2940 -> 3221.
+   - Tried and dropped: a blurred weight field, one weight set per clump, a wider gap/gapArm, tier-follow weights;
+     weights-only for his swing (collar front x mid1 crossings up), a neck share on his back.
    - Tools:
      - `node tools/sculpt/garments/mantle.mjs` rebuilds the mantle.
      - `node tools/sculpt/lowmantleshot.mjs --out DIR --only metrics|poses --tag -x [--design '{...}']` (DIAG=1, DIAG2=<n>:
        n 1 rest, 2-4 test poses, 5-12 walk, 13-24 idle).
      - `node tools/sculpt/lowmantlehelm.mjs --helm <root> [--who male] [--design ...]` (CLUMP=1); the root from
        `git archive origin/sculpt-plate-helm src tools package.json`, node_modules linked.
+     - `node tools/sculpt/lowmantlehelmshot.mjs <helm root> <out.png> [designs] [times]`: close-ups with the helm.
      - Design numbers: tools/sculpt/lowmantle-design.json (edit textually, keep its layout; --design applies to both bodies).
-   - Next: the swing's collar crossings with the helm if wanted, then zoom-10 game renders.
+   - Next: zoom-10 game renders.
    - The mantle sheet was lost (`--sheet` needs a re-upload).
 4. TODO. Cloth hood refit, sculpt-outfit f637edca.
    - The hood still crosses the body and the tunic in the idle and walk.
@@ -92,7 +98,7 @@ Kept in git so a new context can resume. Update it whenever a task moves. Branch
 
 ## sculpt-all (integration)
 - Merges outfit, anim, hair, hair2, plate (helm, legs, boots, chest, mantle@2f4097e1) and leather (boots, legs@0bebaf2b, hat, shawl).
-  - Re-merge the later heads: mantle 2b106a91, legs 28268e3f flaps.
+  - Re-merge the later heads: mantle 29469556, legs 28268e3f flaps.
 - 128 materials. The first outfit's pieces give way to the sets' (lowpoly.ts `o(pose)` hooks).
 - The leather chest isn't merged yet.
 - The merge resolver script for lowpoly/figure conflicts (keep ours, add theirs' GARMENTS entries, imports and wear
