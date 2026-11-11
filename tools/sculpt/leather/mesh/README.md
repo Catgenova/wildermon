@@ -9,3 +9,8 @@ polylines (trim lines, lacing), `dots` rivets ([x, y, r]).
   python3 regcheck.py view.json x0,y0,x1,y1 out.png [K]   the trace over the sheet's region, with the grid
   python3 overlay.py view.json out.png [K]      the view's pieces filled and named over the sheet
   python3 wire.py view.json out.png [K]         the sheet beside the trace as a wireframe
+  python3 facemesh.py view.json out.png [K] [--json faces.json]
+      the trace made into faces: four-cornered plates a quad grid, the rest quad strips across their long axis (a slice
+      through every corner), each with a bevel ring round its outline; rings 16-sided with their hole, trim lines and
+      lacing as strips, rivets as fans; the triangle count. GRID (10), EDGE (12), MAXA (60) in sheet px.
+      Needs numpy, opencv, pillow, shapely, triangle, mapbox_earcut.
