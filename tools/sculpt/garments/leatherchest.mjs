@@ -24,7 +24,7 @@
 // tucked under another plate. Decals (the emblem, the lacing, the rune band, the zig-zag, rivets) lie on the plates.
 //
 // Units and axes are the body's: y up (the chin's underside 0), z forward, x the body's left.
-import { meshOf, orient, trisOf, closestOnTri, sub, add, mul, dot, cross, unit, lerp } from '../lowgarment.mjs';
+import { meshOf, orient, trisOf, closestOnTri, sub, add, mul, dot, cross, unit, lerp, crossPairs } from '../lowgarment.mjs';
 import { TORSO_RING } from '../lowarm.mjs';
 import { existsSync, readFileSync } from 'node:fs';
 
@@ -1251,6 +1251,20 @@ export function buildLeatherChest(rig, design = designOf(rig.who)) {
   G.tris = trisOf(G);
   G.design = D;
   G.hides = hiddenPolys(rig, G);
+  // (and the neck's and the torso's polygons the collar's sunk foot passes through, at rest: under the collar and the
+  // plates' top edge, never seen; those in front of the throat, in the collar's notch, kept)
+  {
+    const { B } = rig, Cd = D.collar, { nz } = collarFrame(D, bodySamples(B));
+    const cT = G.tris.filter((t) => G.polys[t.poly].tag === 'collar');
+    const bT = B.tris.filter((t) => ['neck', 'torso'].includes(B.part[t.v[0]]));
+    const hid = new Set(G.hides);
+    for (const [, j] of crossPairs(G.verts, cT, B.verts, bT)) {
+      const t = bT[j], c = t.v.reduce((a, i) => add(a, B.verts[i]), [0, 0, 0]).map((x) => x / 3);
+      if (Math.abs(Math.atan2(c[0], c[2] - nz) / rad) < Cd.notch[0] + 6) continue;
+      hid.add(t.poly);
+    }
+    G.hides = [...hid].sort((a, b) => a - b);
+  }
   return G;
 }
 
