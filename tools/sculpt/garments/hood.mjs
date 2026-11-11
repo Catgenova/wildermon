@@ -59,7 +59,7 @@ export const DESIGN = {
   male: {
     O: [0, 1.1, 0.1],
     bottom: 95, frame: [[1.1, 0.85, 0.2], [1.08, 1.1, 0.74], [0.86, 1.3, 0.84]], apex: [0, 1.78, 1.0],
-    band: [0.1, 0.03], teethW: [0.06, 0.18, 0.26], teethBack: 0.18, line: 0.5, roll: 0.06, footRoll: 0, chinW: 0.1, chinRoll: 0.8, chinDrop: 0.05, chinHem: 0.08, chinSink: 0.2, chinGap: 0.1, chinIn: 0.25, chinFront: 0.3, chinCols: [0, 0.12, 0.4, 0.7, 1], teeth: [3, 6],
+    band: [0.1, 0.03], teethW: [0.06, 0.18, 0.26], teethBack: 0.18, line: 0.5, roll: 0.06, footRoll: 0, chinW: 0.1, chinRoll: 0.8, chinDrop: 0.05, chinHem: 0.08, chinSink: 0.2, chinGap: 0.1, chinIn: 0.25, chinFront: 0.2, chinCols: [0, 0.12, 0.4, 0.7, 1], teeth: [3, 6],
     front: [[0, 2.15, 0.78], [0, 2.36, 0.46]], tip: [0, 2.56, 0.12],
     back: [[0, 2.2, -0.48], [0, 1.6, -0.95], [0, 1.15, -1.0]],
     width: [[0.4, 1.12], [0.9, 1.0], [1.5, 0.95], [1.9, 0.8], [2.2, 0.5], [2.52, 0.04]], power: 2.4,
@@ -73,7 +73,7 @@ export const DESIGN = {
     front: [[0, 2.22, 0.72], [0, 2.4, 0.42]], tip: [0, 2.56, 0.06],
     back: [[0, 2.15, -0.56], [0, 1.55, -1.08], [0, 1.1, -1.12]],
     width: [[0.4, 1.08], [0.9, 1.1], [1.5, 0.95], [1.9, 0.76], [2.2, 0.46], [2.48, 0.04]], power: 2.2,
-    THICK: 0.08, hemThick: 0.06, IN: 0.05, gap: 0.035, lift: 0.07, drop: 0.2, over: 0.06, flare: -0.05, rise: 0.1, step: 0.09, Kf: 6, K: 9, seam: 0.03,
+    THICK: 0.08, hemThick: 0.06, IN: 0.05, gap: 0.035, lift: 0.07, drop: 0.14, over: 0.06, flare: -0.05, rise: 0.1, step: 0.09, Kf: 6, K: 9, seam: 0.03,
     underGap: 0.025, underHalf: 12, underDy: 0.08,
   },
 };
@@ -447,8 +447,9 @@ function meshOfHood(D, rows, tip, tipIn, opts) {
  * shell's beside them, so the cloth's thickness moves as one.
  */
 export const HEAD_SHARE = { male: { from: 0.25, to: 0.85 }, female: { from: 0.15, to: 0.8 } };
-/** And at most this much by row (0 on the cowl), so the turn is shared over the rows over it. */
-export const ROW_CAP = [0, 0, 0, 0.4, 0.75, 1];
+/** And at most this much by row (rows 0 and 1, in the cowl, none; row 2, on its roll, a little, so the jaw does not
+ * turn into it as the head looks round), so the turn is shared over the rows over it. */
+export const ROW_CAP = [0, 0, 0.2, 0.6, 0.85, 1];
 const ROW_CAP0 = ROW_CAP;
 /** And more toward the frame (by 1 - the column's TS), so the opening's lower sides go with the jaw. */
 export const FRONT_SHARE = [0, 0, 0.1, 0.25, 0.2];
@@ -462,7 +463,14 @@ export const CHIN_SHARE = { male: 0.25, female: 0.2 };
  * first beside the middle, the right half's mirrored); the lining and the frame's line follow as before. Found by
  * tools/sculpt/lowrefit.mjs.
  */
-export const REFIT = { male: {}, female: {} };
+export const REFIT = {
+  male: {},
+  female: {
+    'out:1:1': [['spine_03', 0.37], ['neck_01', 0.36], ['neck_02', 0.14], ['clavicle_l', 0.13]],
+    'out:1:2': [['spine_03', 0.59], ['neck_02', 0.28], ['neck_01', 0.09], ['clavicle_l', 0.03]],
+    'out:1:3': [['spine_03', 0.57], ['neck_02', 0.28], ['neck_01', 0.09], ['clavicle_l', 0.05]],
+  },
+};
 export function hoodWeights(rig, G, shawl, o = {}) {
   const head = rig.at.get('head'), z0 = shawl.design.z0, K = G.design.K, Kf = G.design.Kf, HS = o.headShare ?? HEAD_SHARE[rig.who];
   const ROW_CAP = o.rowCap ?? ROW_CAP0, FRONT_SHARE = o.frontShare ?? FRONT_SHARE0, CHIN = o.chinShare ?? CHIN_SHARE[rig.who];
