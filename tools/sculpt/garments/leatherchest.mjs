@@ -94,7 +94,7 @@ export const DESIGN = {
       lift: 0.1, inset: 0.1, pole: 0.2, near: 1.3, round: 0, inner: 1, cols: 12, phi0: 12, phi: [76, 125, 76, 30], footY: [-1.6, -1.6, -1.6], rows: [0, 0.5, 1], c: [0.05, 0.07, 0.09], cone: 34,
       roof: { from: [0.85, -0.65, -0.05], to: [2.0, -1.8, -0.05], rows: [0, 0.35, 0.7, 1], c: [0.06, 0.1, 0.16, 0.24], th: [-100, 100], cols: 10 },
       strap: { at: [0.22, 0.4], th: [-115, 115], c: 0.17, cols: 10 },
-      zig: { f: [0.15, 0.7], n: 3, psi: [-10, 200], cols: [0.0, 0.6] },
+      zig: { f: [0.15, 0.7], n: 3, psi: [-10, 200], cols: [0.0, 0.6], sub: 6 },
       lames: [{ t: [0.42, 0.95], c: [0.14, 0.22], th: [-45, 210] }, { t: [0.8, 1.32], c: [0.1, 0.17], th: [-50, 215] }],
     },
     undershirt: { top: -1.0, az: [0, 60, 120, 180], bottom: [-4.7, -4.7, -5.2, -5.5], belt: -3.7, rows: 9, c: 0.008 },
@@ -134,7 +134,7 @@ export const DESIGN = {
       lift: 0.08, inset: 0.08, pole: 0.2, near: 1.1, round: 0, inner: 1, cols: 12, phi0: 12, phi: [74, 120, 74, 30], footY: [-1.45, -1.45, -1.45], rows: [0, 0.5, 1], c: [0.04, 0.06, 0.08], cone: 34,
       roof: { from: [0.68, -0.7, -0.12], to: [1.6, -1.8, -0.15], rows: [0, 0.35, 0.7, 1], c: [0.05, 0.08, 0.13, 0.2], th: [-100, 100], cols: 10 },
       strap: { at: [0.22, 0.4], th: [-115, 115], c: 0.14, cols: 10 },
-      zig: { f: [0.15, 0.7], n: 3, psi: [-10, 200], cols: [0.0, 0.6] },
+      zig: { f: [0.15, 0.7], n: 3, psi: [-10, 200], cols: [0.0, 0.6], sub: 6 },
       lames: [{ t: [0.36, 0.8], c: [0.11, 0.18], th: [-45, 210] }, { t: [0.68, 1.12], c: [0.08, 0.14], th: [-50, 215] }],
     },
     undershirt: { top: -0.95, az: [0, 60, 120, 180], bottom: [-4.1, -4.1, -4.6, -4.9], belt: -3.2, rows: 9, c: 0.007 },
@@ -1180,11 +1180,20 @@ function armPieces(G, rig, D, S) {
   {
     const Z = Pd.zig, nR = capRows.length - 1, q0 = G.polys.length;
     const teeth = Z.n, ps0 = zigCols ? zigCols * Z.cols[0] : psiN * (Z.psi[0] / 360), ps1 = zigCols ? zigCols * Z.cols[1] : psiN * (Z.psi[1] / 360), dps = (ps1 - ps0) / teeth;
-    const at = (rf, cf) => { const h = gridAt(cap, rf * nR, cf); return add(h.q, mul(h.n, 0.022)); };
+    const at = (rf, cf) => { const h = gridAt(cap, rf * nR, cf); return add(h.q, mul(h.n, Z.lift ?? 0.022)); };
     const V = (p) => { const i = G.vert(p, 'zigzag'); G.wt[i] = cap.wt; return i; };
     G.tag = 'zigzag';
+    // (each tooth a grid laid on the cap: `sub` columns across it, its top edge rising from the band's top at its sides
+    // to its point, three rows down to the cap's foot, so it follows the cap's curve rather than cutting into it)
+    const sub = Z.sub ?? 1, nRow = sub > 1 ? (Z.rows ?? 3) : 1;
     for (let k = 0; k < teeth; k++) {
       const c0 = ps0 + k * dps, c1 = c0 + dps;
+      if (sub > 1) {
+        const top = (t) => Z.f[1] - (Z.f[1] - Z.f[0]) * (1 - Math.abs(2 * t - 1));
+        const ids = Array.from({ length: nRow + 1 }, (_, r) => Array.from({ length: sub + 1 }, (_, j) => { const t = j / sub, f = top(t) + ((0.97 - top(t)) * r) / nRow; return V(at(f, c0 + (c1 - c0) * t)); }));
+        for (let r = 0; r < nRow; r++) for (let j = 0; j < sub; j++) G.poly([ids[r + 1][j], ids[r][j], ids[r][j + 1], ids[r + 1][j + 1]], 'trim', 'zigzag');
+        continue;
+      }
       // (a tooth: a triangle up from the band, and the band under it down to the cap's foot)
       const b0 = V(at(Z.f[1], c0)), b1 = V(at(Z.f[1], c1));
       G.poly([b0, V(at(Z.f[0], (c0 + c1) / 2)), b1], 'trim', 'zigzag');
