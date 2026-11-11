@@ -41,7 +41,7 @@ const PY = process.env.PYTHON ?? 'python3';
 const L = await pickaxeLength();
 const plain = buildPickaxe({ length: L }), lit = buildPickaxe({ length: L, enchanted: true });
 const count = {}; for (const t of trisOf(plain.G)) { const m = plain.G.F[t.face].mat; count[m] = (count[m] ?? 0) + 1; }
-const GLOWMATS = ['rune', 'core', 'star', 'gem'];
+const GLOWMATS = ['rune', 'core', 'star', 'gem', 'panel'];
 const glowParts = GLOWMATS.reduce((n, m) => n + (count[m] ?? 0), 0);
 console.log(`pickaxe: ${L.toFixed(4)} game units; ${plain.tris} triangles (base ${plain.tris - glowParts}, the lit parts ${glowParts}: ${GLOWMATS.map((m) => `${m} ${count[m] ?? 0}`).join(', ')}); enchanted ${lit.all} with ${lit.all - plain.tris} of glow`);
 const BG = [0.51, 0.6, 0.533], SHEET_BG = [39 / 255, 21 / 255, 19 / 255];
@@ -78,10 +78,27 @@ if (only.includes('sheet')) {
   await shoot(3 * CW, 2 * CH, cells, `${out}/sheet-views.png`);
   // the front alone, no ink, for the outline's measure
   await shoot(CW, CH, [{ items: [pickD(plain)], cam: { yaw: 180, pitch: 0, s, c: cAt(180) }, box: [0, 0, CW, CH], bg: SHEET_BG }], `${out}/sheet-front-mask.png`);
+  // and inked as the sheet inks its drawing (a line a sheet px wide round it, three here)
+  await shoot(CW, CH, [{ items: [pickD(plain)], cam: { yaw: 180, pitch: 0, s, c: cAt(180) }, box: [0, 0, CW, CH], bg: SHEET_BG, ink: F3, inkc: [200, 200, 200] }], `${out}/sheet-front-inked.png`);
   // the hero: the sheet's three-quarter (its top left panel), the head up and to the right; the camera the best of a grid
   // of yaws, pitches and rolls by the outline's match (lowpicksheet.py's hero IoU)
   const hw = 740, hh = 680;
   await shoot(2 * hw, hh, [plain, lit].map((p, i) => ({ items: [pickD(p)], cam: { yaw: 210, pitch: 25, roll: -32, s: 600 / L, c: [L * 0.02, L * 0.5, 0] }, box: [i * hw, 0, hw, hh], bg: SHEET_BG, ink: 1.5, inkc: [20, 10, 9] })), `${out}/sheet-hero.png`);
+}
+
+/* ---- details: the sheet's close-ups (its Key Details panel), enchanted ------------------------------------------------- */
+// each a cell of 300 x 290: the hub, the pick's blade, the hammer's face, the shaft's channel, the pommel; at the sheet's
+// own px (k: game units a sheet px), its X to our -x
+if (only.includes('sheet') || only.includes('details')) {
+  const k = L / 240, at = (X, U) => [-X * k, U * k, 0], cw = 300, ch = 290;
+  const D = [
+    { cam: { yaw: 180, pitch: 0, s: 3.4 / k, c: at(0, 201) } },
+    { cam: { yaw: 174, pitch: 14, roll: -10, s: 2.7 / k, c: at(-76, 207) } },
+    { cam: { yaw: 240, pitch: 8, s: 4.6 / k, c: at(66, 203) } },
+    { cam: { yaw: 180, pitch: 0, roll: -38, s: 4.6 / k, c: at(0, 131) } },
+    { cam: { yaw: 196, pitch: 10, roll: -25, s: 5.2 / k, c: at(0, 13) } },
+  ];
+  await shoot(5 * cw, 2 * ch, [plain, lit].flatMap((p, r) => D.map((d, i) => ({ items: [pickD(p)], cam: d.cam, box: [i * cw, r * ch, cw, ch], bg: SHEET_BG, ink: 1.5, inkc: [20, 10, 9] }))), `${out}/sheet-details.png`);
 }
 
 /* ---- turn: six angles ------------------------------------------------------------------------------------------------ */
@@ -149,14 +166,18 @@ const HELDS = {};
 const KEYS = opt('times', '') ? opt('times').split(',').map((t) => [+t, `t ${t}`]) : [[0.84, 'Wind-up (around)'], [1.1, 'Heave'], [1.34, 'Top'], [1.62, 'Strike'], [1.7, 'Impact'], [1.8, 'Follow-through']];
 
 if (only.includes('held')) {
-  // the right fist and the left on the grip, at the top and at the impact, close: from the pick's side and from the back
-  const cells = [], cw = 300, ch = 300;
+  // both fists on the grip at the top and at the impact, in the grip's own frame (y up the haft toward the head, x toward
+  // the pick): only the body's triangles near the fists and the pickaxe's near the grip, seen down the haft from the head,
+  // from the pick's side and from the hammer's (as tools/sculpt/lowgearshot.mjs's held-fists)
+  const cells = [], cw = 280, ch = 300;
   let col = 0;
   for (const who of ['male', 'female']) for (const [t, lab] of [[1.34, 'top'], [1.7, 'impact']]) {
-    const h = swingAt(who, t), p = who === 'female' ? lit : plain;
-    const items = [bodyDrawable(rigs[who], toGame(who, h.P)), pickD(p, toGame(who, h.Q))];
-    const f = toGame(who, [mul(add(h.at, h.l), 0.5)])[0];
-    for (const [r, yaw, pitch] of [[0, -60, 10], [1, 120, 10], [2, 30, -20]]) cells.push({ items, cam: { yaw, pitch, s: 160, c: f }, box: [col * cw, r * ch, cw, ch], bg: BG, ink: 1, label: r === 0 ? `${who === 'male' ? 'Him' : 'Her'}: the fists, ${lab}` : '' });
+    const h = swingAt(who, t), p = who === 'female' ? lit : plain, Rt = [h.g.R[0], h.g.R[3], h.g.R[6], h.g.R[1], h.g.R[4], h.g.R[7], h.g.R[2], h.g.R[5], h.g.R[8]];
+    const mid = mul(add(h.at, h.l), 0.5), loc = (q) => mul(mv(Rt, sub(q, mid)), ASSET.scale[who]);
+    const near = (D, r) => { const o = []; for (let i = 0; i < D.length; i += 33) { let ok = true; for (let k = 0; k < 3; k++) if (Math.hypot(D[i + k * 11], D[i + k * 11 + 1], D[i + k * 11 + 2]) > r) ok = false; if (ok) for (let j = 0; j < 33; j++) o.push(D[i + j]); } return o; };
+    const items = [near(bodyDrawable(rigs[who], h.P.map(loc)), 1.3), near(pickD(p, h.Q.map(loc)), 1.5)];
+    const name = `${who === 'male' ? 'Him' : 'Her'}, ${lab}`;
+    [[0, 0, -90, 'down the haft'], [1, 90, 0, 'from the pick\'s side'], [2, -90, 0, 'from the hammer\'s side']].forEach(([r, yaw, pitch, v]) => cells.push({ items, cam: { yaw, pitch, s: 95, c: [0, 0, 0] }, box: [col * cw, r * ch, cw, ch], bg: BG, ink: 1, label: `${name}: ${v}` }));
     col++;
   }
   await shoot(col * cw, 3 * ch, cells, `${out}/held-fists.png`);

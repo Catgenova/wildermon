@@ -21,8 +21,13 @@
 // between; (3) the shaft: wood, its upper part with a recessed gold-framed channel down the front and a line inlay with
 // four diamonds, a gold band, its lower part the grip, wrapped (a two-tone lattice); (4) the lower collar; (5) the pommel,
 // an octagonal star cap with a gold-ringed star medallion on both faces; over the head, the haft's stub and a gold cap.
+// Where it leaves the sheet: the wrapped grip runs from U 27 to 104 (the sheet's 34 to 77, a hand's breadth) so that both
+// his fists close on it clear of the collars in the swing (the game spaces them 1.39 game units apart, his thumb along the
+// grip); the band over it and the channel's foot move up with it, the lower collar is thinner. Its length is the sheet's
+// numbers in the game's scale (3.4 of his head); its head's span is its drawings' (0.94 of its length), not the sheet's
+// "1.6 to 2.0 x head width", which none of its views draw.
 // Enchanted: the runes, the inlay, the hub's star and disc and the pommel's star and disc lit (unlit, full bright), and
-// glow added round the hub, the pommel, each rune, the hammer's diamond and the inlay.
+// glow added round the hub, the pommel, each rune, the hammer's diamond and the inlay; the channel's recess lit orange.
 
 import { meshOf, trisOf } from '../lowgear.mjs';
 import { buildRig } from '../lowrig.mjs';
@@ -59,10 +64,11 @@ export const MATS_PLAIN = {
 };
 export const MATS_ENCHANTED = {
   ...MATS_PLAIN,
-  rune: { c: '#ffb347', emit: true },
-  core: { c: '#ffb85a', emit: true },
+  rune: { c: '#ffa83a', emit: true },
+  core: { c: '#ff9f38', emit: true },
   star: { c: '#fff6d8', emit: true },
-  gem: { c: '#ffc46a', emit: true },
+  gem: { c: '#ffa847', emit: true },
+  panel: { c: '#ef8f45', emit: true },
 };
 
 export function buildPickaxe({ enchanted = false, length } = {}) {
@@ -88,8 +94,8 @@ export function buildPickaxe({ enchanted = false, length } = {}) {
   /* ---- the pick: a crescent from inside the centre block to the point ----------------------------------------------- */
   // stations (the sheet's front view, measured): X, the spine's top U, the underside's U; the half-thickness from the side
   // view and the top plan (13 px at the root to the point)
-  const PS = [[-12, 221, 183], [-30, 225, 188], [-44, 226.5, 191.5], [-58, 228, 193.5], [-72, 227.5, 194.5], [-86, 224.5, 194.5], [-100, 216, 193.5], [-113, 209.5, 191], [-125, 204, 188], [-135, 198, 185], [-142, 193, 182.5]];
-  const TIP = [-147, 186];
+  const PS = [[-12, 221, 182], [-30, 225, 187], [-44, 226.5, 190.4], [-58, 228, 192.4], [-72, 227.5, 193.4], [-86, 224.5, 193.4], [-100, 215.5, 192.4], [-113, 209.5, 189.8], [-125, 204, 186.8], [-135, 198.5, 183.8], [-142, 193.5, 181.2]];
+  const TIP = [-148, 184.5];
   const thick = (X) => { const s = Math.min(1, Math.max(0, (-X - 12) / (147 - 12))); return 13 * Math.pow(1 - s, 0.75) + 0.6 * (1 - s); };
   // a ring at a station: the spine (a narrow flat, ±te), the face's top and foot (±t), the underside (±te); the bevels a
   // share of the height
@@ -133,18 +139,18 @@ export function buildPickaxe({ enchanted = false, length } = {}) {
     }
   };
   // (an octagon's corners in order: 0, 7 the top's; 1, 2 the +Z side's; 3, 4 the foot's; 5, 6 the -Z side's)
-  const NECK = [[12, 202, 19, 12, 4], [24, 202, 16.5, 11, 4], [35, 202.5, 14.5, 10, 3.5], [46, 203, 15.5, 11, 3.5], [53, 203, 17, 12, 4]];
+  const NECK = [[12, 202, 19.5, 12, 4], [24, 202, 17, 11, 4], [35, 202.5, 15.2, 10, 3.5], [46, 203, 16.5, 11, 3.5], [53, 203, 18, 12, 4]];
   const nk = NECK.map(([X, uc, hu, hz, c]) => ring8(X, uc, hu, hz, c));
   tube(nk, (i, j) => (j === 3 ? 'bevel' : j === 7 ? 'stoneL' : 'stone'), NECK.map((n, i) => (n[0] + (NECK[i + 1] ?? n)[0]) / 2));
   // the hammer: its inner end bevelled from the neck, its sides, the gold bevel round its face, the face
-  const HU = 203, HH = 28, HZ = 20, HC = 7;
-  const hm = [ring8(51, HU, HH - 3, HZ - 3, HC - 1), ring8(54, HU, HH, HZ, HC), ring8(74, HU, HH, HZ, HC), ring8(79, HU, HH - 4, HZ - 4, HC - 2)];
+  const HU = 202.6, HH = 28.4, HZ = 20, HC = 7;
+  const hm = [ring8(51, HU, HH - 6, HZ - 4, HC - 2), ring8(56, HU, HH, HZ, HC), ring8(74.5, HU, HH, HZ, HC), ring8(79.6, HU, HH - 4, HZ - 4, HC - 2)];
   F([...hm[0]].reverse(), 'bevel', [-1, 0, 0]);
-  tube(hm, (i, j) => (i === 2 ? 'gold' : i === 0 ? 'bevel' : j === 7 ? 'stoneL' : j === 3 ? 'bevel' : j === 0 || j === 4 ? 'stoneB' : 'stone'), [52.5, 64, 76.5]);
+  tube(hm, (i, j) => (i === 2 ? 'gold' : i === 0 ? 'bevel' : j === 7 ? 'stoneL' : j === 3 ? 'bevel' : j === 0 || j === 4 ? 'stoneB' : 'stone'), [53.5, 65, 77]);
   F(hm[3], 'stone', [1, 0, 0]);
 
   /* ---- the hub: on both faces of the centre block, a gold ring round the disc and its star --------------------------- */
-  const HUB = [0, 201], NH = 10;
+  const HUB = [0, 201], NH = 14;
   const star8 = (cx, cu, z, rl, rs, ri, mat, out) => {
     // eight points, the long ones up, down and across, the short between; a fan from the centre
     const c = P(cx, cu, z + 0.25), pts = [];
@@ -238,11 +244,11 @@ export function buildPickaxe({ enchanted = false, length } = {}) {
       F([side[j][1], side[j1][1], face[-1][j1], face[-1][j]], j === 3 || j === 4 ? 'bevel' : 'stoneL', BACK);
     }
     F(face[1], 'stone', FRONT); F(face[-1], 'stone', BACK);
-    for (const sz of [1, -1]) medallion(0, PC, sz, 10, Math.min(10.4, PC - 0.4), Math.min(8, PC - 2.6), 13.4, 12.5, 10, 'gem', [6.6, 4.6, 2]);
+    for (const sz of [1, -1]) medallion(0, PC + 0.8, sz, 10, 9, 7, 13.4, 12.5, 12, 'gem', [6, 4.2, 1.9]);
   }
 
   /* ---- runes: the pick's faces, the hammer's face --------------------------------------------------------------------- */
-  const onPick = (X, sz) => { const f = faceAt(X); return { u: Math.min(f.ft - 6, Math.max(f.fb + 6, f.bot + 0.36 * (f.top - f.bot))), z: (f.z + 0.35) * sz }; };
+  const onPick = (X, sz) => { const f = faceAt(X); return { u: Math.min(f.ft - 5.5, Math.max(f.fb + 6, f.bot + 0.45 * (f.top - f.bot))), z: (f.z + 0.35) * sz }; };
   const outline = (pts, wd, z, mat, out) => {
     // a closed line of width wd round pts (X, U), mitred
     const n = pts.length, inner = [], outer = [];
@@ -277,7 +283,7 @@ export function buildPickaxe({ enchanted = false, length } = {}) {
   for (const sz of [1, -1]) for (const [X, fn, r] of RUNES[sz]) { const o = onPick(X, sz); fn(X, o.u, o.z, r, sz > 0 ? FRONT : BACK); }
   // the hammer's face: a diamond outline and its centre
   {
-    const X = 79.35, r = 9, out = [1, 0, 0];
+    const X = 79.95, r = 9, out = [1, 0, 0];
     const pts = [[r * 1.25, 0], [0, r * 0.8], [-r * 1.25, 0], [0, -r * 0.8]].map(([du, dz]) => [HU + du, dz]);
     const n = pts.length, inner = [], outer = [];
     for (let j = 0; j < n; j++) { const [u, z] = pts[j], s = 1 - 1.6 / r; inner.push(P(X, HU + (u - HU) * s, z * s)); outer.push(P(X, u, z)); }
@@ -299,12 +305,12 @@ export function buildPickaxe({ enchanted = false, length } = {}) {
   if (enchanted) {
     const disc = (cx, cu, z, r, a, n = 10) => { const c = P(cx, cu, z, a), rim = [...Array(n).keys()].map((j) => P(cx + r * Math.cos(j * 2 * Math.PI / n), cu + r * Math.sin(j * 2 * Math.PI / n), z, 0)); for (let j = 0; j < n; j++) F([c, rim[j], rim[(j + 1) % n]], 'glow', z >= 0 ? FRONT : BACK); };
     for (const sz of [1, -1]) {
-      disc(HUB[0], HUB[1], 21 * sz, 34, 0.6);
-      disc(0, PC, 14 * sz, 22, 0.55);
+      disc(HUB[0], HUB[1], 21 * sz, 34, 0.4);
+      disc(0, PC + 0.8, 14 * sz, 22, 0.4);
       for (const [X] of RUNES[sz]) { const o = onPick(X, sz); disc(X, o.u, o.z + 0.4 * sz, 10, 0.45, 8); }
     }
     // the hammer's face, out along it
-    { const c = P(79.8, HU, 0, 0.5), rim = [...Array(8).keys()].map((j) => P(79.8, HU + 15 * Math.cos(j * Math.PI / 4), 12 * Math.sin(j * Math.PI / 4), 0)); for (let j = 0; j < 8; j++) F([c, rim[j], rim[(j + 1) % 8]], 'glow', [1, 0, 0]); }
+    { const c = P(80.4, HU, 0, 0.5), rim = [...Array(8).keys()].map((j) => P(80.4, HU + 15 * Math.cos(j * Math.PI / 4), 12 * Math.sin(j * Math.PI / 4), 0)); for (let j = 0; j < 8; j++) F([c, rim[j], rim[(j + 1) % 8]], 'glow', [1, 0, 0]); }
     // the channel warmed by its line: a strip round it, bright at the line, nothing at its edges
     const z = zF + 0.7;
     const L0 = [P(-7.5, PB - 1, z, 0), P(-1, PB + 3, z, 0.35), P(-1, 145, z, 0.35), P(-7.5, 149, z, 0)], R0 = [P(7.5, PB - 1, z, 0), P(1, PB + 3, z, 0.35), P(1, 145, z, 0.35), P(7.5, 149, z, 0)];

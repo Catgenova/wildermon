@@ -38,6 +38,19 @@ g = ImageDraw.Draw(out)
 for x, yy, t in [(6, 8, 'Sheet: front (0°), side (90°), back (180°)'), (6, 30 + CH + 6, 'Ours, plain'), (6, 30 + 2 * CH + 6, 'Ours, enchanted'), (6, y - 22, 'Sheet: hero'), (746, y - 22, 'Ours, plain'), (1486, y - 22, 'Ours, enchanted')]:
     g.text((x, yy), t, fill=(250, 240, 230))
 out.save(d + '/pickaxe-sheet.png')
+# the close-ups: the sheet's Key Details (hub, blade, hammer face, channel, pommel) over ours enchanted and plain
+try:
+    det = Image.open(d + '/sheet-details.png').convert('RGB')
+    row2 = Image.new('RGB', (1500, 290), GROUND)
+    for i, (x0, x1) in enumerate([(779, 946), (955, 1111), (1119, 1247), (1256, 1386), (1393, 1526)]):
+        c = ref.crop((x0, 451, x1, 601)); f = min(300 / c.width, 290 / c.height); c = c.resize((round(c.width * f), round(c.height * f)), Image.LANCZOS)
+        row2.paste(c, (i * 300 + (300 - c.width) // 2, (290 - c.height) // 2))
+    dd = Image.new('RGB', (1500, 3 * 290 + 3 * 22), (30, 26, 28)); g2 = ImageDraw.Draw(dd)
+    for r, (im2, t) in enumerate([(row2, 'Sheet: Key Details (hub, pick blade, hammer face, shaft channel, pommel)'), (det.crop((0, 290, 1500, 580)), 'Ours, enchanted'), (det.crop((0, 0, 1500, 290)), 'Ours, plain')]):
+        dd.paste(im2, (0, 22 + r * 312)); g2.text((6, 5 + r * 312), t, fill=(250, 240, 230))
+    dd.save(d + '/pickaxe-details.png')
+except FileNotFoundError:
+    pass
 
 # the outlines: the sheet's front view (its own pixels, brighter than the ground) against ours (anything off the ground)
 a = np.asarray(crop(*VIEWS[0], CW, CH, F3)).astype(int).max(axis=2) > 45
@@ -69,6 +82,15 @@ def score(rows):
 # rows by U: the sheet's y = 223 + (row - CH/2) / F3; U = 343 - y
 U = 343 - (223 + (np.arange(CH) - CH / 2) / F3)
 res = {'whole': score(slice(None)), 'head (U 165-240)': score(U >= 165), 'haft (U 23-165)': score((U >= 23) & (U < 165)), 'pommel (U < 23)': score(U < 23)}
+# the same with ours inked as the sheet is (its drawing has a dark line round it, inside its outline)
+try:
+    bi = np.abs(np.asarray(Image.open(d + '/sheet-front-inked.png').convert('RGB')).astype(int) - np.array(GROUND)).sum(axis=2) > 30
+    bi[:, xs > 98] = False
+    b0, b = b, bi
+    res['inked'] = {'whole': score(slice(None)), 'head (U 165-240)': score(U >= 165), 'haft (U 23-165)': score((U >= 23) & (U < 165)), 'pommel (U < 23)': score(U < 23)}
+    b = b0
+except FileNotFoundError:
+    pass
 res['areaSheetPx'] = int(a.sum() / F3 ** 2); res['areaOursPx'] = int(b.sum() / F3 ** 2)
 # the hero: a three-quarter in the sheet's own perspective, ours orthographic; each outline cut to its bounds and both
 # set to 120 px square, then their IoU, and the bounds' aspects (width over height)
@@ -79,6 +101,22 @@ def bounds(m):
 hs, hsa = bounds(np.asarray(ref).astype(int)[66:390, 16:376].max(axis=2) > 70)
 ho, hoa = bounds(np.abs(np.asarray(hero.crop((0, 0, 740, hero.height))).astype(int) - np.array(GROUND)).sum(axis=2) > 30)
 res['hero'] = {'iou': round(float((hs & ho).sum() / (hs | ho).sum()), 4), 'aspectSheet': hsa, 'aspectOurs': hoa}
+# the glowing parts' places: where the sheet's front view is lit gold against ours enchanted (its front cell), the sheet's px
+# (each in a window round where the sheet draws it: the pick's three runes, the hub's star, the pommel's; the centre of
+# its lit pixels)
+WINDOWS = {'pick star': (-92, -68, 190, 225), 'pick diamond': (-68, -48, 190, 225), 'pick triangle': (-48, -27, 190, 225), 'hub star': (-14, 14, 186, 218), 'pommel star': (-11, 11, 0, 22)}
+def lit(img):
+    px = np.asarray(img).astype(int)
+    m = (px[:, :, 0] > 240) & (px[:, :, 1] > 140) & (px[:, :, 2] < 110)
+    ys, xs = np.nonzero(m)
+    return xs / F3 - CW / 2 / F3 - 34, 343 - (223 + (ys - CH / 2) / F3)
+SX, SU = lit(crop(*VIEWS[0], CW, CH, F3)); OX, OU = lit(views.crop((0, CH, CW, 2 * CH)))
+res['glows'] = {}
+for name, (x0, x1, u0, u1) in WINDOWS.items():
+    a_ = (SX >= x0) & (SX <= x1) & (SU >= u0) & (SU <= u1); b_ = (OX >= x0) & (OX <= x1) & (OU >= u0) & (OU <= u1)
+    if a_.sum() == 0 or b_.sum() == 0: res['glows'][name] = None; continue
+    sc_, oc = (float(SX[a_].mean()), float(SU[a_].mean())), (float(OX[b_].mean()), float(OU[b_].mean()))
+    res['glows'][name] = {'sheet': [round(sc_[0], 1), round(sc_[1], 1)], 'ours': [round(oc[0], 1), round(oc[1], 1)], 'offPx': round(((sc_[0] - oc[0]) ** 2 + (sc_[1] - oc[1]) ** 2) ** 0.5, 2)}
 json.dump(res, open(d + '/outline.json', 'w'), indent=1)
 print(json.dumps(res))
 ov = np.zeros((CH, CW, 3), np.uint8); ov[a & ~b] = (230, 60, 50); ov[b & ~a] = (60, 220, 230); ov[a & b] = (235, 235, 235)
