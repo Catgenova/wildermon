@@ -20,7 +20,7 @@ def inset(P, b):
     return out
 faces = []  # (kind, [points])
 from shapely.geometry import Polygon, LineString
-def strips(P):
+def strips(P, GRID=GRID):
     # (slices across the polygon's long axis through each corner and every GRID between; each slice cut into the same
     # number of points, quads between neighbours; None where a slice meets the outline other than in one segment)
     A = np.array(P); c = A.mean(0); w, V = np.linalg.eigh(np.cov((A - c).T)); ax = V[:, 1]; nx = V[:, 0]
@@ -85,7 +85,9 @@ def resample(P):
         a, c = np.array(P[i]), np.array(P[(i + 1) % len(P)]); m = max(1, int(math.ceil(np.linalg.norm(c - a) / EDGE)))
         for k in range(m): out.append((a + (c - a) * k / m).tolist())
     return out
-for k, v in J['pieces'].items():
+LAYER = lambda k: k.endswith('.layer')
+for k, v in sorted(J['pieces'].items(), key=lambda kv: not LAYER(kv[0])):
+    if k in J.get('under', []): continue
     if isinstance(v, dict):
         cx, cy, rx, ry = v['ellipse']
         ring = lambda f: [[cx + rx * f * math.cos(2 * math.pi * i / RING_N), cy + ry * f * math.sin(2 * math.pi * i / RING_N)] for i in range(RING_N)]
@@ -107,20 +109,20 @@ for k, v in J['pieces'].items():
         for (a, c), m in [((0, 1), nu), ((1, 2), nv), ((2, 3), nu), ((3, 0), nv)]:
             pa, pc = np.array(v[a]), np.array(v[c])
             for k in range(m): ring_out.append((pa + (pc - pa) * k / m).tolist())
-        for i in range(len(ring_in)): jn = (i + 1) % len(ring_in); faces.append(('bevel', [ring_out[i], ring_out[jn], ring_in[jn], ring_in[i]]))
+        for i in range(len(ring_in)): jn = (i + 1) % len(ring_in); faces.append(('lbevel' if LAYER(k) else 'bevel', [ring_out[i], ring_out[jn], ring_in[jn], ring_in[i]]))
         continue
     I = inset(v, b)
-    S = strips(I)
+    S = strips(I, GRID * 2 if LAYER(k) else GRID)
     if S is None:
         v = resample(v); I = inset(v, b)
         for i in range(len(v)): j = (i + 1) % len(v); faces.append(('bevel', [v[i], v[j], I[j], I[i]]))
         tri_fill(I, 'face'); continue
     quads, ring_in = S
-    faces.extend(('face', q) for q in quads)
+    faces.extend(('layer' if LAYER(k) else 'face', q) for q in quads)
     # (the bevel: the outline's points matched to the inset ring's, each inset point to the outline point it came from
     # or the outline's point at the same place along the edge)
     ring_out = [outer_of(p, I, v) for p in ring_in]
-    for i in range(len(ring_in)): jn = (i + 1) % len(ring_in); faces.append(('bevel', [ring_out[i], ring_out[jn], ring_in[jn], ring_in[i]]))
+    for i in range(len(ring_in)): jn = (i + 1) % len(ring_in); faces.append(('lbevel' if LAYER(k) else 'bevel', [ring_out[i], ring_out[jn], ring_in[jn], ring_in[i]]))
 for k, v in J.get('lines', {}).items():
     w = 0.6 if 'lace' not in k else 0.8
     for a, c in zip(v, v[1:]):
@@ -131,12 +133,12 @@ for x, y, r in J.get('dots', []):
     for i in range(6): faces.append(('rivet', [[x, y], pts[i], pts[(i + 1) % 6]]))
 ntri = sum(len(f) - 2 for _, f in faces)
 # (each plate's outline also gets its thickness in 3D: two triangles per outline edge)
-nedge = sum(len([f for f in faces if f[0] == 'bevel']) for _ in [0])
+nedge = len([f for f in faces if f[0] in ('bevel', 'lbevel')])
 x0, y0, x1, y1 = J['box']
 src = np.array(Image.open(SHEET).convert('RGB').crop((x0, y0, x1, y1)).resize(((x1 - x0) * K, (y1 - y0) * K), Image.LANCZOS))[..., ::-1].copy()
 wire = (src * 0.4).astype(np.uint8)
 T = lambda p: [int(round((p[0] - x0) * K)), int(round((p[1] - y0) * K))]
-COL = {'bevel': (170, 170, 170), 'face': (240, 240, 240), 'ring': (120, 200, 255), 'hole': (120, 200, 255), 'trim': (90, 170, 255), 'rivet': (90, 220, 255)}
+COL = {'layer': (60, 200, 90), 'lbevel': (60, 200, 90), 'bevel': (170, 170, 170), 'face': (240, 240, 240), 'ring': (120, 200, 255), 'hole': (120, 200, 255), 'trim': (90, 170, 255), 'rivet': (90, 220, 255)}
 for kind, f in faces: cv2.polylines(wire, [np.array([T(p) for p in f], np.int32)], True, COL[kind], 1, cv2.LINE_AA)
 both = np.concatenate([src, np.full((src.shape[0], 8, 3), 30, np.uint8), wire], 1)
 cv2.putText(both, f"{J['view']}: {ntri} triangles on the faces seen (+{2 * nedge} for the plates' thickness)", (6, 16), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
