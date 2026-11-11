@@ -9,8 +9,20 @@ import { drawPortrait } from '../render/sprites';
 const DRAG_STEP = 26;
 /** A slider's steps from one end to the other: a look keeps its numbers to three places. */
 const STEPS = 1000;
+type Outfit = NonNullable<FigurePose['outfit']>;
 /** Every piece of the first outfit off: the body in its painted undergarment. */
-const BARE: NonNullable<FigurePose['outfit']> = { shawl: false, trousers: false, boots: false, tunic: false, hood: false };
+const BARE: Outfit = { shawl: false, trousers: false, boots: false, tunic: false, hood: false };
+/**
+ * What the preview can show the body in, by the game's own outfit flags (`FigurePose.outfit`, as the review tools in
+ * `tools/sculpt/*game.mjs` set them): the undergarment alone (the first, what the preview opens on), and each set of
+ * clothes and armour whole. Another set is another row.
+ */
+const OUTFITS: ReadonlyArray<{ id: string; name: string; outfit: Outfit }> = [
+  { id: 'none', name: 'None', outfit: BARE },
+  { id: 'cloth', name: 'Cloth', outfit: { shawl: true, trousers: true, boots: true, tunic: true, hood: false } },
+  { id: 'leather', name: 'Leather', outfit: { ...BARE, leatherChest: true, leatherLegs: true, leatherBoots: true, leatherShawl: true, leatherHat: true } },
+  { id: 'plate', name: 'Plate', outfit: { ...BARE, plateHelm: true, plateMantle: true, plateChest: true, plateLegs: true, plateBoots: true } },
+];
 
 const button = (className: string, text: string, label?: string): HTMLButtonElement => {
   const b = document.createElement('button');
@@ -46,8 +58,8 @@ interface Slider {
  *
  * The mirror is the sculpted body the island draws (`drawPortrait`, with the
  * Sculpted figures path turned on for this page): the man's or the woman's,
- * standing in its idle, bare but for the painted undergarment unless the
- * first outfit is asked for, turned by its arrows, by dragging or by the arrow
+ * standing in its idle, in its painted undergarment or one of the sets of
+ * clothes and armour (`OUTFITS`), turned by its arrows, by dragging or by the arrow
  * keys. Under it, a button per body and a thumbnail per hairstyle there is a
  * mesh for (`HAIRSTYLES`), and sliders for the skin, the hair's colour and its
  * grey, each with the exact colour beside it. Every change is in the mirror on
@@ -64,14 +76,14 @@ export class Creator {
   private readonly mirror: HTMLCanvasElement;
   private readonly choices: HTMLDivElement;
   private readonly closeUp: HTMLButtonElement;
-  private readonly dressed: HTMLButtonElement;
+  private readonly dressed: HTMLButtonElement[] = [];
   private readonly thumbs: Array<{ canvas: HTMLCanvasElement; hair: string }> = [];
   private readonly marks: Array<{ kind: 'gender' | 'hair'; id: string; button: HTMLButtonElement; label: HTMLElement; name: string }> = [];
   private readonly sliders: Slider[] = [];
   private walking = 0;
   private facing = 1;
   private close = false;
-  private outfit = false;
+  private outfit: Outfit = OUTFITS[0].outfit;
   /** Whether the thumbnails were last drawn with the sculpted bodies loaded: they land after the page does. */
   private thumbsSculpted = false;
 
@@ -99,8 +111,6 @@ export class Creator {
     const left = button('', '◀', 'Turn left');
     this.closeUp = button('cr-close', 'Head', 'Zoom to head');
     this.closeUp.setAttribute('aria-pressed', 'false');
-    this.dressed = button('cr-close', 'Outfit', 'First outfit');
-    this.dressed.setAttribute('aria-pressed', 'false');
     const right = button('', '▶', 'Turn right');
     left.addEventListener('click', () => this.turn(-1));
     right.addEventListener('click', () => this.turn(1));
@@ -108,18 +118,31 @@ export class Creator {
       this.close = !this.close;
       this.closeUp.setAttribute('aria-pressed', String(this.close));
     });
-    this.dressed.addEventListener('click', () => {
-      this.outfit = !this.outfit;
-      this.dressed.setAttribute('aria-pressed', String(this.outfit));
-    });
-    turn.append(left, this.closeUp, this.dressed, right);
+    turn.append(left, this.closeUp, right);
+
+    // What the preview shows the body in: one of OUTFITS.
+    const wear = document.createElement('div');
+    wear.className = 'cr-turn cr-wear';
+    wear.setAttribute('role', 'group');
+    wear.setAttribute('aria-label', 'Outfit');
+    for (const o of OUTFITS) {
+      const b = button('', o.name);
+      b.dataset.outfit = o.id;
+      b.setAttribute('aria-pressed', String(o.outfit === this.outfit));
+      b.addEventListener('click', () => {
+        this.outfit = o.outfit;
+        for (const d of this.dressed) d.setAttribute('aria-pressed', String(d === b));
+      });
+      this.dressed.push(b);
+      wear.append(b);
+    }
 
     const roll = button('cr-roll', 'Random');
     roll.addEventListener('click', () => {
       this.look = randomLook();
     });
 
-    column.append(this.mirror, turn, roll);
+    column.append(this.mirror, turn, wear, roll);
 
     this.choices = document.createElement('div');
     this.choices.className = 'cr-choices';
@@ -306,7 +329,7 @@ export class Creator {
       ctx.clearRect(0, 0, this.mirror.width, this.mirror.height);
       const shown = this.preview ?? this.chosen;
       drawPortrait(ctx, 0, 0, this.mirror.width, this.mirror.height, shown, now / 1000, this.facing, 'idle',
-        { close: this.close, ...(this.outfit ? {} : { outfit: BARE }) });
+        { close: this.close, outfit: this.outfit });
     }
     // The thumbnails again once the sculpted bodies have landed.
     if (!this.thumbsSculpted && sculptedReady()) this.drawThumbs();

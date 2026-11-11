@@ -2166,8 +2166,8 @@ create table if not exists look_option (
 create table if not exists look_legacy (kind text not null, id text not null, becomes jsonb not null, primary key (kind, id));
 delete from look_option;
 delete from look_legacy;
-insert into look_option values ('gender', 'man', 0, 'Man', null, true);
-insert into look_option values ('gender', 'woman', 1, 'Woman', null, false);
+insert into look_option values ('gender', 'man', 0, 'Type 1', null, true);
+insert into look_option values ('gender', 'woman', 1, 'Type 2', null, false);
 insert into look_option values ('hair', 'bald', 0, 'Bald', null, false);
 insert into look_option values ('hair', 'swept', 1, 'Swept back', null, true);
 insert into look_option values ('hair', 'braid', 2, 'Braid', null, false);

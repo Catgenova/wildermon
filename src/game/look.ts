@@ -53,7 +53,8 @@ export interface Style {
 
 const y = (id: string, name: string): Style => ({ id, name });
 
-export const GENDERS: Style[] = [y('man', 'Man'), y('woman', 'Woman')];
+/** The two bodies, by the names the creator shows: Type 1 the man's, Type 2 the woman's. */
+export const GENDERS: Style[] = [y('man', 'Type 1'), y('woman', 'Type 2')];
 
 /** Bald, and every hairstyle there is a mesh for on both bodies. */
 export const HAIRSTYLES: Style[] = [y('bald', 'Bald'), ...HAIR_INDEX.styles.map((s) => y(s.id, s.name))];
