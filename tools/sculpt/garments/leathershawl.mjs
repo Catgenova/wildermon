@@ -216,14 +216,43 @@ export function buildLeatherShawl(rig, design = DESIGN[rig.who], { under = [], s
 /**
  * The corrective shapes (the cloth shawl's eight, garments/shawl.mjs SHAPES; sculpted by
  * tools/sculpt/garments/leathershawlshapes.mjs into leathershawlshapes-<who>.json, offsets at bind on the shell's
- * vertices): each on every vertex by shapesFrom, or none yet.
+ * vertices: its columns' numbers, columnOffsets, and free offsets): each on every vertex by shapesFrom, or none yet.
  */
 export function leatherShawlShapes(who, G) {
   const file = new URL(`./leathershawlshapes-${who}.json`, import.meta.url);
   if (!existsSync(file)) return undefined;
   const J = JSON.parse(readFileSync(file, 'utf8'));
   if (J.verts !== undefined && J.verts !== G.verts.length) throw new Error(`leathershawlshapes-${who}.json is for ${J.verts} vertices, the shawl has ${G.verts.length}: run tools/sculpt/garments/leathershawlshapes.mjs`);
-  return SHAPES.map((s) => { const r = G.verts.map(() => [0, 0, 0]), f = J.free?.[s.name]; if (f) f.at.forEach((i, k) => { r[i] = f.d.slice(k * 3, k * 3 + 3); }); return { ...s, d: shapesFrom(G, r) }; });
+  for (const q of Object.values(J.columns ?? {})) if (q.length !== G.cols.length) throw new Error(`leathershawlshapes-${who}.json is for ${q.length} columns, the shawl has ${G.cols.length}`);
+  return SHAPES.map((s) => {
+    const q = J.columns?.[s.name], r = q ? columnOffsets(G, q) : G.verts.map(() => [0, 0, 0]), f = J.free?.[s.name];
+    if (f) f.at.forEach((i, k) => { for (let j = 0; j < 3; j++) r[i][j] += f.d[k * 3 + j]; });
+    return { ...s, d: shapesFrom(G, r) };
+  });
+}
+/** The rings of a column's cape (turned about its top T0 in a shape) and of its collar; the cape's top rings only moved. */
+const CAPE_TURN = ['Ym', 'YB0', 'YB1', 'YL', 'Y1', 'Y1b', 'L1', 'L2', 'BT0', 'BT1', 'S1', 'S2', 'H', 'IH', 'IB', 'IY', 'IM'], CAPE_TOP = ['Y0', 'IT'], COLLAR_RINGS = ['ci', 'd', 'u0', 'u', 'cm'];
+/**
+ * A shape's offsets on the shell from its columns' numbers (q: per column [a, o, h, ow, hw]), as garments/shawl.mjs
+ * shapeOffsets: in each column's section the cape turned about T0 up and out by a degrees, then moved o out from the axis
+ * and h up; the collar moved ow out and hw up.
+ */
+export function columnOffsets(G, q) {
+  const z0 = G.design.z0, d = G.verts.map(() => [0, 0, 0]);
+  G.cols.forEach((c, k) => {
+    const [a, o, h, ow = o, hw = h] = q[k], t = a * Math.PI / 180, cs = Math.cos(t), sn = Math.sin(t);
+    const at = (p) => atRY(c.deg, p[0], p[1], z0);
+    for (const key of [...CAPE_TURN, ...CAPE_TOP, ...COLLAR_RINGS]) {
+      let p = c[key];
+      if (COLLAR_RINGS.includes(key)) p = [p[0] + ow, p[1] + hw];
+      else {
+        if (CAPE_TURN.includes(key)) { const r = p[0] - c.T0[0], y = p[1] - c.T0[1]; p = [c.T0[0] + r * cs - y * sn, c.T0[1] + r * sn + y * cs]; }
+        p = [p[0] + o, p[1] + h];
+      }
+      d[G.rings[key][k]] = sub(at(p), at(c[key]));
+    }
+  });
+  return d;
 }
 /** A shape's offsets on every vertex from the shell's (r: per vertex, only the shell's read): a piece's or a tab's the
  * shell vertices it was laid from, by their shares (G.src). */

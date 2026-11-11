@@ -6,18 +6,22 @@
 // the hem's lip move with the outside over them, the collar's inside with its outside; the pieces laid on the shell and
 // the tabs under its hem move with the shell vertices they were laid from (G.src, by their shares).
 //
-//   node tools/sculpt/garments/leathershawlshapes.mjs [--who male,female] [--again] [--free 30] [--json <file>]
-//     writes tools/sculpt/garments/leathershawlshapes-<who>.json ({ free: { name: { at, d } } }, shell vertices only)
+//   node tools/sculpt/garments/leathershawlshapes.mjs [--who male,female] [--again] [--rounds 3] [--free 30] [--json <file>]
+//     writes tools/sculpt/garments/leathershawlshapes-<who>.json ({ columns: { name: [[a, o, h, ow, hw], ...] }, free:
+//     { name: { at, d } } }, the free offsets on shell vertices only); --rounds: the columns' numbers first (leathershawl.mjs
+//     columnOffsets: the cape turned about its top and moved, the collar moved), a window of five columns round every
+//     other column a step either way (a, o, h), scored on the shell's own triangles, kept where the score drops; then
+//     the free offsets, scored on every triangle
 import { build } from 'esbuild';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { buildRig, posed, skin, armsOut } from '../lowrig.mjs';
 import { skinGarment, garmentFrames, crossPairs, triTri, shapeWeights, add, sub, mul, dot, cross, unit } from '../lowgarment.mjs';
 import { SHAPES } from './shawl.mjs';
-import { buildLeatherShawl, leatherShawlWeights, shapesFrom } from './leathershawl.mjs';
+import { buildLeatherShawl, leatherShawlWeights, shapesFrom, columnOffsets } from './leathershawl.mjs';
 
 const args = process.argv.slice(2);
 const opt = (n, f) => { const i = args.indexOf(`--${n}`); return i < 0 ? f : args[i + 1]; };
-const FREE = +opt('free', '30'), ONLY = opt('who', 'male,female').split(',');
+const ROUNDS = +opt('rounds', '3'), FREE = +opt('free', '30'), ONLY = opt('who', 'male,female').split(',');
 const ROOT = new URL('../../..', import.meta.url).pathname;
 const bundle = await build({
   stdin: { contents: `export { lowSkeleton, lowHeld } from './src/sculpt/lowpoly'; export { clipLocal } from './src/sculpt/anim/player'; export { SWING } from './src/sculpt/anim/clips/swing';`, resolveDir: ROOT, loader: 'ts' },
@@ -86,6 +90,15 @@ function bodyGrid(B) {
 const FRONT = 60, RIM = 0.1, FACE = 4;
 /** How far a free offset moves a triangle off a body triangle's plane; what the free offsets cost (per square unit). */
 const CLEAR = 0.04, FREE_COST = 0.5;
+/** How much a shape's numbers cost: their columns' unevenness and the move itself (a in degrees, o and h in body units). */
+const SCALE = [30, 0.3, 0.3, 0.3, 0.3], EVEN = 1.5, SMALL = 0.3;
+/** How far a column may go: a (degrees), o, h, ow, hw (body units). */
+const BOUNDS = [[-30, 75], [-0.15, 0.7], [-0.3, 0.3], [-0.15, 0.5], [-0.3, 0.3]];
+function shapeCost(q) {
+  const N = q.length; let c = 0;
+  for (let k = 0; k < N; k++) for (let j = 0; j < q[k].length; j++) { const x = q[k][j] / SCALE[j], dx = (q[k][j] - q[(k + 1) % N][j]) / SCALE[j]; c += EVEN * dx * dx + SMALL * Math.abs(x); }
+  return c;
+}
 /** The underside's rings and the outside's each moves with; the collar's inside with its outside. */
 const PAIR = { IH: 'H', IB: 'BT0', IY: 'Y1b', IM: 'Ym', IT: 'Y0', ci: 'cm', d: 'u0' };
 
@@ -99,8 +112,10 @@ export function sculpt(who, S0 = {}, o = {}, log = console.log) {
   const NV = G.verts.length, K = SHAPES.length, T = G.tris.map((t) => ({ v: t.v })), tris = rig.B.tris, Rg = G.rings;
   const shell = new Set(Object.values(Rg).flat());
   G.shapes = SHAPES.map((s) => ({ ...s }));
+  const NC = G.cols.length;
+  const Q = SHAPES.map((s) => (S0.columns?.[s.name] ?? G.cols.map(() => [0, 0, 0, 0, 0])).map((c) => [...c]));
   const R = SHAPES.map((s) => { const r = G.verts.map(() => [0, 0, 0]), f = S0.free?.[s.name]; if (f) f.at.forEach((i, k) => { r[i] = f.d.slice(k * 3, k * 3 + 3); }); return r; });
-  const D = (Rr = R) => Rr.map((r) => shapesFrom(G, r));
+  const D = (Rr = R) => Rr.map((r, k) => { const c = Q[k].some((x) => x.some((y) => y)) ? columnOffsets(G, Q[k]) : null; return shapesFrom(G, c ? r.map((v, i) => add(v, c[i])) : r); });
   const PS = poses(rig).map((e) => {
     const fr = posed(rig, e.pose), P = skin(rig, fr), w = shapeWeights(rig, fr, G);
     const X0 = skinGarment(rig, fr, G, G.vw, []), M = skinTurns(rig, fr, G);
@@ -108,17 +123,42 @@ export function sculpt(who, S0 = {}, o = {}, log = console.log) {
     const c = rig.at.get('spine_03'), C = mm3(fr[c].W, tr3(rig.bones[c].R));
     return { ...e, w, X0, M, Minv: M.map(inv3), body: bodyGrid(obstacles), self0: crossPairs(X0, T).length, upDir: [C[1], C[4], C[7]], up: (x) => mv(tr3(C), [x[0] - fr[c].P[0], x[1] - fr[c].P[1], x[2] - fr[c].P[2]])[1] };
   }).filter((e) => e.w.some((x) => x > 0));
-  for (const e of PS) e.body0 = e.body(e.X0, T);
+  // (the shell's own triangles: what the columns' rounds score, the pieces following the shell)
+  const TS = T.filter((t) => t.v.every((i) => shell.has(i)));
+  for (const e of PS) { e.body0 = e.body(e.X0, T); e.selfS0 = crossPairs(e.X0, TS).length; }
   const at = (e, d) => e.X0.map((x, i) => { let v = [0, 0, 0]; e.w.forEach((w, k) => { if (w > 0) v = add(v, [w * d[k][i][0], w * d[k][i][1], w * d[k][i][2]]); }); return add(x, mv(e.M[i], v)); });
   const chest = rig.bones[rig.at.get('spine_03')].head, front = new Set();
   G.cols.forEach((c, k) => { if (Math.abs(((c.deg + 540) % 360) - 180) <= FRONT) for (const key of Object.keys(Rg)) front.add(Rg[key][k]); });
   const cap = Math.max(...Rg.u0.map((i) => G.verts[i][1])) - chest[1] + RIM;
   const score = (e, d) => { const X = at(e, d); let face = 0; for (const i of front) if (e.up(X[i]) > cap) face++; return [e.body(X, T), crossPairs(X, T).length, face]; };
+  const partS = (e, d) => { const X = at(e, d); let face = 0; for (const i of front) if (e.up(X[i]) > cap) face++; return e.body(X, TS) + Math.max(0, crossPairs(X, TS).length - e.selfS0) + FACE * face; };
   const partOf = (e, d) => { const [xb, xs, face] = score(e, d); return xb + Math.max(0, xs - e.self0) + FACE * face; };
   const freeCost = (Rr) => Rr.reduce((a, r) => a + r.reduce((b, v) => b + dot(v, v), 0), 0) * FREE_COST;
   const report = (tag) => { const d = D(); let sb = 0, ss = 0; log(who, tag, PS.map((e) => { const [xb, xs, face] = score(e, d); sb += xb; ss += Math.max(0, xs - e.self0); return `${e.id} [${e.w.map((x) => +x.toFixed(2)).join(' ')}]: ${e.body0}/${e.self0}->${xb}/${xs}${face ? ` face ${face}` : ''}`; }).join(', ')); log(who, tag, 'body', sb, 'self past', ss); };
   report('start');
   const uses = SHAPES.map((_, k) => PS.map((e) => e.w[k] > 0)), part = PS.map(() => 0);
+
+  // the columns: a window of five columns round each, each number a step either way
+  const WIN = [0.3, 0.7, 1, 0.7, 0.3];
+  const cost = (only) => { const d = D(); PS.forEach((e, p) => { if (only >= 0 && !uses[only][p]) return; part[p] = partS(e, d); }); return part.reduce((a, x) => a + x, 0) + Q.reduce((a, q) => a + shapeCost(q), 0); };
+  let bestC = cost(-1), step = [32, 0.3, 0.3, 0.3, 0.3];
+  for (let round = 0; round < (o.rounds ?? 0); round++) {
+    let gained = 0;
+    for (let s = 0; s < K; s++) {
+      if (!uses[s].some(Boolean)) continue;
+      for (let k = 0; k < NC; k += 2) for (let j = 0; j < 3; j++) {
+        const was = WIN.map((_, m) => Q[s][(k + m - 2 + NC) % NC][j]);
+        const put = (dx) => WIN.forEach((f, m) => { Q[s][(k + m - 2 + NC) % NC][j] = Math.min(BOUNDS[j][1], Math.max(BOUNDS[j][0], was[m] + f * dx)); });
+        let pick = 0;
+        for (const m of [1, -1]) { put(m * step[j]); const c = cost(s); if (c < bestC - 1e-9) { bestC = c; pick = m * step[j]; } }
+        put(pick); cost(s);
+        if (pick) gained++;
+      }
+    }
+    log(who, `columns, round ${round + 1}: cost ${bestC.toFixed(1)}, ${gained} moved`);
+    step = step.map((x) => x / 2);
+  }
+  if (o.rounds) report('columns');
 
   // the free offsets, on the shell
   const nb = G.verts.map(() => new Set());
@@ -167,7 +207,7 @@ export function sculpt(who, S0 = {}, o = {}, log = console.log) {
       }
       took.push(pick);
     }
-    best = part.reduce((a, x) => a + x, 0) + freeCost(R);
+    best = part.reduce((a, x) => a + x, 0) + freeCost(R) + Q.reduce((a, q) => a + shapeCost(q), 0);
     log(who, `free, pass ${it + 1}: cost ${best.toFixed(1)}, steps ${took.join(' ')}`);
     if (!took.some((x) => x)) break;
   }
@@ -175,7 +215,8 @@ export function sculpt(who, S0 = {}, o = {}, log = console.log) {
   const d = D();
   G.shapes.forEach((sh, k) => { sh.d = d[k]; });
   const r4 = (x) => +x.toFixed(4);
-  const S = { free: Object.fromEntries(SHAPES.map((s, k) => { const at2 = R[k].map((v, i) => (shell.has(i) && v.some((x) => Math.abs(x) >= 5e-4) ? i : -1)).filter((i) => i >= 0); return [s.name, { at: at2, d: at2.flatMap((i) => R[k][i].map(r4)) }]; }).filter(([, f]) => f.at.length)) };
+  const r3 = (x) => +x.toFixed(3);
+  const S = { columns: Object.fromEntries(SHAPES.map((s, k) => [s.name, Q[k]]).filter(([, q]) => q.some((c) => c.some((x) => x))).map(([n, q]) => [n, q.map((c) => c.map(r3))])), free: Object.fromEntries(SHAPES.map((s, k) => { const at2 = R[k].map((v, i) => (shell.has(i) && v.some((x) => Math.abs(x) >= 5e-4) ? i : -1)).filter((i) => i >= 0); return [s.name, { at: at2, d: at2.flatMap((i) => R[k][i].map(r4)) }]; }).filter(([, f]) => f.at.length)) };
   return { rig, G, S };
 }
 
@@ -183,7 +224,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   for (const who of ONLY) {
     const here = new URL(`./leathershawlshapes-${who}.json`, import.meta.url);
     const S0 = args.includes('--again') && existsSync(here) ? JSON.parse(readFileSync(here, 'utf8')) : {};
-    const { S, G } = sculpt(who, S0, { free: FREE });
+    const { S, G } = sculpt(who, S0, { free: FREE, rounds: ROUNDS });
     const file = new URL(opt('json', `./leathershawlshapes-${who}.json`).replace('{who}', who), import.meta.url);
     writeFileSync(file, JSON.stringify({ built: 'node tools/sculpt/garments/leathershawlshapes.mjs', verts: G.verts.length, ...S }));
     console.log('wrote', file.pathname);
