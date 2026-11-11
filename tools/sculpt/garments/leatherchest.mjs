@@ -461,12 +461,17 @@ function onTop(plates, p, d) {
  * A grid laid over plates: each point moved out to the outermost of `plates` along the way in from it (out(p)), out by
  * `gap`, where that lies further out than the point; points over none of them, or already outside, kept.
  */
-function layOver(rows, plates, out, gap) {
-  rows.forEach((row) => row.forEach((p, k) => {
+function layOver(rows, plates, out, gap, smooth = 1) {
+  // (each point's lift out along its way out; then each the most of its neighbours' within `smooth` grid steps, so the
+  // grid rides over what is under it in one piece rather than stepping down between the plates' edges)
+  const lift = rows.map((row) => row.map((p) => {
     const o = unit(out(p)), h = onTop(plates, p, mul(o, -1));
-    if (!h) return;
-    const q = add(h.q, mul(h.n, gap));
-    if (dot(sub(q, p), o) > 0) row[k] = q;
+    return h ? Math.max(0, dot(sub(add(h.q, mul(h.n, gap)), p), o)) : 0;
+  }));
+  rows.forEach((row, r) => row.forEach((p, k) => {
+    let m = 0;
+    for (let i = Math.max(0, r - smooth); i <= Math.min(rows.length - 1, r + smooth); i++) for (let j = Math.max(0, k - smooth); j <= Math.min(row.length - 1, k + smooth); j++) m = Math.max(m, lift[i][j]);
+    if (m > 0) row[k] = add(p, mul(unit(out(p)), m));
   }));
 }
 /**
@@ -638,7 +643,7 @@ function torsoPieces(G, rig, D, S) {
   const Bt = D.belt, ringAz = Array.from({ length: 32 }, (_, k) => (k * 360) / 32);
   const beltRows = [0, 1].map((f) => ringAz.map((a) => { const t = tabAt(Bt, 'top', a), b = tabAt(Bt, 'bottom', a); return chest.at(t + (b - t) * f, a, Bt.c[f]); }));
   // (the points of the V on columns of their own: the front's and the back's)
-  layOver(beltRows, skirts, out, gap);
+  layOver(beltRows, skirts, out, gap, 0);
   fitOut(beltRows, true, out, [[trunk, D.fit.belt], ...under.slice(0, nLegs).map((P) => [P, gap])]);
   let p0 = G.polys.length;
   const belt = plateOf(G, beltRows, { tag: 'belt', mat: 'leather', bone: { spine_01: 0.5, pelvis: 0.5 }, rim, out, ring: true, border: { top: 'trim', bottom: 'trim' } });
@@ -705,7 +710,7 @@ function torsoPieces(G, rig, D, S) {
     const rr = cRows.map((row) => radOf(row[k])), top = rr.indexOf(Math.max(...rr)), R0 = cRows.length - 1;
     for (let r = top + 1; r < R0; r++) { const want = rr[top] + ((rr[R0] - rr[top]) * (r - top)) / (R0 - top); if (rr[r] < want) cRows[r][k] = setRad(cRows[r][k], want); }
   }
-  layOver(cRows, [belt, ...sides, ...skirts], out, gap);
+  layOver(cRows, [belt, ...sides, ...skirts], out, gap, 0);
   fitOut(cRows, false, out, [[trunk, D.fit.trunk], ...under.slice(0, nLegs).map((P) => [P, gap])]);
   p0 = G.polys.length;
   const coreTop = (r, c) => (Math.abs(cAz[c]) <= 40 && Math.abs(cAz[c + 1] ?? 999) <= 40 ? 'open' : 'bevel');
@@ -717,7 +722,7 @@ function torsoPieces(G, rig, D, S) {
     for (const s of [1, -1]) {
       const az = s > 0 ? wAz0 : wAz0.slice().reverse().map((a) => -a);
       const rows = grid(az, (a) => tabAt(wTab, 'top', a), (a) => tabAt(wTab, 'bottom', a), Cp.rows, Cp.c);
-      layOver(rows, [belt, ...sides], out, gap);
+      layOver(rows, [belt, ...sides], out, gap, 0);
       fitOut(rows, false, out, [[trunk, D.fit.trunk]]);
       wings.push(plateOf(G, rows, { tag: 'chest', mat: 'leather', boneAt: TW, rim, out, border: { top: 'bevel', bottom: 'bevel', left: 'edge', right: 'edge' } }));
     }
@@ -738,8 +743,7 @@ function torsoPieces(G, rig, D, S) {
     }));
     // (laid on what is under it: each point on the outermost of the chest's plates and the bands below along the way in
     // from it, out by the leather's thickness; then clear of the body)
-    const lower = [core, ...wings, ...bandPlates];
-    rows.forEach((row) => row.forEach((p, k) => { const h = onTop(lower, p, mul(unit(out(p)), -1)); if (h) row[k] = add(h.q, mul(h.n, gap)); }));
+    layOver(rows, [core, ...wings, ...sides, belt, ...bandPlates], out, gap);
     fitOut(rows, false, out, [[trunk, D.fit.trunk]]);
     const q0 = G.polys.length;
     bandPlates.push(plateOf(G, rows, { tag: `band ${bi + 1}`, boneAt: TW, rim, out, border: { top: bi === 0 ? 'trim' : 'bevel', bottom: 'bevel', left: 'edge', right: 'edge' } }));
