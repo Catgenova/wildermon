@@ -1104,7 +1104,15 @@ function armPieces(G, rig, D, S) {
   const Bd = D.band, wTh = Array.from({ length: Bd.cols }, (_, k) => (k * 360) / Bd.cols + 360 / Bd.cols / 2);
   const wsec = sectioner(armS.concat(S.filter((s) => s.part === 'hand' && s.p[0] > 0).map((s) => s.p)), { ...fo, o: J.wrist, dt: 0.1 });
   const wStart = G.polys.length;
-  plateOf(G, [0, 1].map((f) => wTh.map((a) => wsec.at(Bd.t[0] + (Bd.t[1] - Bd.t[0]) * f, a, Bd.c[f]))), { tag: 'band', bone: { wrist_l: 1 }, rim, out: outOf({ ...fo, o: J.wrist }), ring: true, border: { top: 'trim', bottom: 'trim' }, fit: { S: [[armS, D.fit.arm], [bracerS, gap]] } });
+  // (`rows`: its rows down it, so a taller band follows the wrist's swell to the hand; fitted clear of the hand's base too)
+  const handS = S.filter((s) => s.part === 'hand' && s.p[0] > 0).map((s) => s.p);
+  const wRows = (Bd.rows ?? [0, 1]).map((f) => wTh.map((a) => wsec.at(Bd.t[0] + (Bd.t[1] - Bd.t[0]) * f, a, Bd.c[0] + (Bd.c[1] - Bd.c[0]) * f)));
+  // (`straight`: straight down its side, each column at its widest row's reach from the forearm's line, not waisted over the wrist)
+  if (Bd.straight) {
+    const wo = outOf({ ...fo, o: J.wrist });
+    wTh.forEach((_, k) => { const R = Math.max(...wRows.map((row) => Math.hypot(...wo(row[k])))); wRows.forEach((row) => { const d = wo(row[k]), l = Math.hypot(...d); row[k] = add(row[k], mul(d, (R - l) / l)); }); });
+  }
+  plateOf(G, wRows, { tag: 'band', bone: { wrist_l: 1 }, rim, out: outOf({ ...fo, o: J.wrist }), ring: true, border: { top: 'trim', bottom: Bd.bottom ?? 'trim' }, fit: { S: [[Bd.rows ? armS.concat(handS) : armS, D.fit.arm], [bracerS, gap]] } });
   setPiece(wStart, 'band.l');
 
   // the pauldron's cap (on the shoulder helper: half the upper arm's turn): a dome over the shoulder round a pole up and
