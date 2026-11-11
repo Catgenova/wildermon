@@ -71,6 +71,8 @@ import MALE_LEATHER_HAT from './assets/lowhat-male.json';
 import FEMALE_LEATHER_HAT from './assets/lowhat-female.json';
 import MALE_LEATHER_SHAWL from './assets/lowleathershawl-male.json';
 import FEMALE_LEATHER_SHAWL from './assets/lowleathershawl-female.json';
+import MALE_LEATHER_SHAWL_OVER from './assets/lowleathershawlover-male.json';
+import FEMALE_LEATHER_SHAWL_OVER from './assets/lowleathershawlover-female.json';
 import MALE_LEATHER_CHEST from './assets/lowleatherchest-male.json';
 import FEMALE_LEATHER_CHEST from './assets/lowleatherchest-female.json';
 import LONG_SWORD from './assets/long_sword.json';
@@ -744,10 +746,13 @@ const GARMENTS: ReadonlyArray<{ man: GarmentAsset; woman: GarmentAsset; wears: (
   { man: MALE_LEATHER_LEGS as unknown as GarmentAsset, woman: FEMALE_LEATHER_LEGS as unknown as GarmentAsset, wears: (p) => p.outfit?.leatherLegs ?? false, enchanted: enchantedOf('leatherLegs'), drops: wearsLeatherChest },
   // (their hip flaps, only without the leather chest: its skirt takes their place over the hip)
   { man: MALE_LEATHER_LEGS_FLAPS as unknown as GarmentAsset, woman: FEMALE_LEATHER_LEGS_FLAPS as unknown as GarmentAsset, wears: (p) => (p.outfit?.leatherLegs ?? false) && !(p.outfit?.leatherChest ?? false), enchanted: enchantedOf('leatherLegs') },
-  // the leather set's chest & arms (`tools/sculpt/garments/leatherchest.mjs`): over the leggings, under the shawl
-  { man: MALE_LEATHER_CHEST as unknown as GarmentAsset, woman: FEMALE_LEATHER_CHEST as unknown as GarmentAsset, wears: wearsLeatherChest, enchanted: enchantedOf('leatherChest') },
+  // the leather set's chest & arms (`tools/sculpt/garments/leatherchest.mjs`): over the leggings, under the shawl (its
+  // polygons the shawl covers, from dropFrom on, left out under it)
+  { man: MALE_LEATHER_CHEST as unknown as GarmentAsset, woman: FEMALE_LEATHER_CHEST as unknown as GarmentAsset, wears: wearsLeatherChest, enchanted: enchantedOf('leatherChest'), drops: wearsLeatherShawl },
   { man: MALE_LEATHER_HAT as unknown as GarmentAsset, woman: FEMALE_LEATHER_HAT as unknown as GarmentAsset, wears: wearsLeatherHat, enchanted: enchantedOf('leatherHat') },
-  { man: MALE_LEATHER_SHAWL as unknown as GarmentAsset, woman: FEMALE_LEATHER_SHAWL as unknown as GarmentAsset, wears: wearsLeatherShawl, enchanted: enchantedOf('leatherShawl') },
+  // (the leather shawl: its own copy over the leather chest, fitted over its plates; the plain one without it)
+  { man: MALE_LEATHER_SHAWL as unknown as GarmentAsset, woman: FEMALE_LEATHER_SHAWL as unknown as GarmentAsset, wears: (p) => wearsLeatherShawl(p) && !wearsLeatherChest(p), enchanted: enchantedOf('leatherShawl') },
+  { man: MALE_LEATHER_SHAWL_OVER as unknown as GarmentAsset, woman: FEMALE_LEATHER_SHAWL_OVER as unknown as GarmentAsset, wears: (p) => wearsLeatherShawl(p) && wearsLeatherChest(p), enchanted: enchantedOf('leatherShawl') },
 ];
 
 const BODIES = {

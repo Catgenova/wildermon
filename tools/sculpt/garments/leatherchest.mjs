@@ -8,6 +8,7 @@
 //
 //   buildLeatherChest(rig, design?) → { verts, polys: [{ v, mat, part, tag, piece? }], tris, part, wt, design, hides }
 //   leatherChestWeights(rig, G) → per vertex [[bone, weight], ...] (the body's bones only: the armour has none of its own)
+//   underShawl(G, S) → the polygons the leather shawl worn over it covers (left out while it is worn: `dropFrom`)
 //
 //   node tools/sculpt/garments/leatherchest.mjs
 //     writes the game's copy beside each body: src/sculpt/assets/lowleatherchest-male.json and -female.json
@@ -1356,17 +1357,49 @@ export function hiddenPolys(rig, G, { reach = 0.6 } = {}) {
   return B.polys.map((p, k) => (p.v.every((i) => cov[i]) ? k : -1)).filter((k) => k >= 0);
 }
 
+/**
+ * The polygons the leather shawl worn over the chest (garments/leathershawl.mjs buildLeatherShawlOver, `S` at rest)
+ * covers: each corner's rays (out along its normal, tilted up toward the camera and down under the hem) all meet the
+ * shawl within `reach`; only the plates on the trunk, the collar, the straps and the pauldrons' caps (the arm's sleeve,
+ * lames and bracers move out from under it).
+ */
+export const UNDER_SHAWL = /^(chest|back|back panel|band 1|band 2|emblem|lacing|undershirt|side|collar|strap|pauldron|zigzag)$/;
+export function underShawl(G, S, { reach = 1.5, tilts = [0, 1, -0.6] } = {}) {
+  const N = G.verts.map(() => [0, 0, 0]);
+  for (const p of G.polys) { const n = newellOf(G, p.v); for (const i of p.v) N[i] = add(N[i], n); }
+  const T = S.tris.map((t) => t.v.map((i) => S.verts[i]));
+  const hit = (o, d) => {
+    for (const [a, b, c] of T) {
+      const e1 = sub(b, a), e2 = sub(c, a), h = cross(d, e2), det = dot(e1, h);
+      if (Math.abs(det) < 1e-12) continue;
+      const f = 1 / det, s = sub(o, a), u = f * dot(s, h); if (u < 0 || u > 1) continue;
+      const q = cross(s, e1), v = f * dot(d, q); if (v < 0 || u + v > 1) continue;
+      const t = f * dot(e2, q); if (t > 1e-4 && t < reach) return true;
+    }
+    return false;
+  };
+  const cov = new Map(), at = (i) => { if (!cov.has(i)) { const n = unit(N[i]); cov.set(i, tilts.every((up) => hit(G.verts[i], unit(add(n, [0, up, 0]))))); } return cov.get(i); };
+  // (a rivet goes with the plate it is on)
+  const ok = (p) => UNDER_SHAWL.test(p.tag) || (p.tag === 'rivet' && /^(strap|pauldron)/.test(p.piece ?? ''));
+  return G.polys.map((p, k) => (ok(p) && p.v.every(at) ? k : -1)).filter((k) => k >= 0);
+}
+
 /* ---- the game's copy ------------------------------------------------------------------------------------------------ */
+// (the polygons under the shawl last, from `dropFrom` on: left out while the leather shawl is worn over the chest)
 if (import.meta.url === `file://${process.argv[1]}`) {
   const { writeFileSync } = await import('node:fs');
   const { buildRig } = await import('../lowrig.mjs');
   const { garmentAsset } = await import('../lowgarment.mjs');
+  const { buildLeatherShawlOver, chestOf } = await import('./leathershawl.mjs');
   for (const who of ['male', 'female']) {
     const rig = buildRig(who), G = buildLeatherChest(rig);
     G.vw = leatherChestWeights(rig, G);
+    const S = await buildLeatherShawlOver(rig, undefined, { chest: chestOf(G), shapes: false });
+    const drop = new Set(underShawl(G, S)), order = [...G.polys.keys()].sort((a, b) => drop.has(a) - drop.has(b));
+    G.polys = order.map((k) => G.polys[k]); G.tris = trisOf(G); G.dropFrom = G.polys.length - drop.size;
     const file = new URL(`../../../src/sculpt/assets/lowleatherchest-${who}.json`, import.meta.url);
-    const A = { built: 'node tools/sculpt/garments/leatherchest.mjs (tools/sculpt/lowgarment.mjs garmentAsset)', ...garmentAsset(rig, G, MATS, LOOKS), hides: G.hides };
+    const A = { built: 'node tools/sculpt/garments/leatherchest.mjs (tools/sculpt/lowgarment.mjs garmentAsset)', ...garmentAsset(rig, G, MATS, LOOKS), hides: G.hides, dropFrom: G.dropFrom };
     writeFileSync(file, JSON.stringify(A));
-    console.log(who, `${G.verts.length} vertices, ${G.tris.length} triangles, ${A.base} + ${A.bones.length} bones, hides ${G.hides.length} body polygons: wrote`, file.pathname);
+    console.log(who, `${G.verts.length} vertices, ${G.tris.length} triangles, ${A.base} + ${A.bones.length} bones, hides ${G.hides.length} body polygons, ${drop.size} polygons under the shawl: wrote`, file.pathname);
   }
 }
