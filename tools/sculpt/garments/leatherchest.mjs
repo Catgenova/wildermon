@@ -1122,7 +1122,9 @@ function armPieces(G, rig, D, S) {
   for (const [li, L] of [...Pd.lames.entries()].reverse()) {
     const ths = [L.th[0], ...[1, 2, 3, 4, 5].map((k) => L.th[0] + ((L.th[1] - L.th[0]) * k) / 6), L.th[1]];
     const p0 = G.polys.length;
-    const rows = [0, 1].map((f) => ths.map((a) => upper.at(L.t[0] + (L.t[1] - L.t[0]) * f, a, L.c[f])));
+    // (`wide`: its clearance up by that share of it on the arm's outside (th 90), `deep` at its front and back (th 0, 180):
+    // the sheet's lames flare off the arm)
+    const rows = [0, 1].map((f) => ths.map((a) => upper.at(L.t[0] + (L.t[1] - L.t[0]) * f, a, L.c[f] * (1 + (L.wide ?? 0) * Math.max(0, Math.sin(a * rad)) + (L.deep ?? 0) * Math.abs(Math.cos(a * rad))))));
     const lb = li === 0 ? { shoulder_l: 0.5, upperarm_l: 0.5 } : { upperarm_l: 1 };
     const lp = plateOf(G, rows, { tag: `pauldron lame ${li + 1}`, bone: lb, rim, out: outOf(up), fit: { S: underArm }, border: { top: 'open', bottom: 'trim', left: 'bevel', right: 'bevel' } });
     rivetsOn(G, D, lp, [[0.55, 0.12], [0.55, 0.42], [0.55, 0.88]], lb);
