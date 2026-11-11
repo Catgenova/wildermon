@@ -15,7 +15,7 @@ const HALF = LENGTH / 2;
 /**
  * The left arm with its hand up and with its hand down, solved on him: the elbow out from the side (about a fifth of his
  * height from the pelvis across, a seventh up), the wrist ahead of it and out, the palm up and the hand along the forearm.
- * Up: the forearm lifted about 55 degrees from the elbow, the wrist turned back to keep the palm up.
+ * Up: the forearm lifted 44 degrees further from the elbow, the wrist turned back to keep the palm up.
  */
 const UP: Record<string, Euler> = { upperarm_l: [25, -59, 32], lowerarm_l: [93, 0, 0], hand_l: [48, 153, 22] };
 const DOWN: Record<string, Euler> = { upperarm_l: [26, -39, 24], lowerarm_l: [49, 0, 0], hand_l: [7, 173, 5] };
