@@ -1118,7 +1118,9 @@ function armPieces(G, rig, D, S) {
     const shS = S.filter((s2) => ['joint', 'arm', 'torso', 'neck'].includes(s2.part) && s2.p[0] > 0.3).map((s2) => s2.p);
     const sec = sectioner(shS, { o: Rf.from, a: ax, e1, e2: e2f, dt: 0.12 });
     const ths = Array.from({ length: Rf.cols + 1 }, (_, k) => Rf.th[0] + ((Rf.th[1] - Rf.th[0]) * k) / Rf.cols);
-    const roofRows = Rf.rows.map((f, r) => ths.map((th) => sec.at(len * f, -th, Rf.c[r])));
+    // (`dome`: each column's clearance up by that share of it at the top of the shoulder (th 0), none at the ends, so
+    // the cap rounds over the shoulder rather than lying on it)
+    const roofRows = Rf.rows.map((f, r) => ths.map((th) => sec.at(len * f, -th, Rf.c[r] * (1 + (Rf.dome ?? 0) * Math.cos(Math.min(90, Math.abs(th)) * rad)))));
     const axisPt = (p) => add(Rf.from, mul(ax, Math.max(0, Math.min(len, dot(sub(p, Rf.from), ax)))));
     capOut = (p) => sub(p, axisPt(p));
     cap = plateOf(G, roofRows, { tag: 'pauldron', bone: { shoulder_l: 1 }, rim, out: capOut, fit: { S: [[shS, D.fit.arm], ...underArm.slice(2)] }, border: { top: 'edge', bottom: 'trim', left: 'trim', right: 'trim' } });
