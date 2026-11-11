@@ -4253,6 +4253,11 @@ export const NEWS: News[] = [
     },
   },
   {
+    n: 520,
+    day: '2026-11-11',
+    lines: () => ['Fixed: top of a waterfall off a pond: water drawn only over the pond (was: up to 2 tiles along the dry edge either side of the lip).'],
+  },
+  {
     n: 519,
     day: '2026-11-10',
     lines: () => [

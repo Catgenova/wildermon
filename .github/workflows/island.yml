@@ -433,6 +433,18 @@ jobs:
           npx esbuild supabase/test/pools.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/pools.mjs --log-level=error
           node node_modules/.cache/pools.mjs
+      - name: The water drawn into a pond's lip runs out past its ends only where the pond does
+        if: matrix.shard == 1
+        run: |
+          # Reported: "water can appear clipped over terrain as in my cliff
+          # next to the waterfall". A pond going over one corner of a cliff
+          # edge, the edge beside it a little below its surface: the water
+          # drawn into the lip was carried two tiles along the dry edge both
+          # ways. It runs out past each end of the sill as far as the pond's
+          # shore does, and on along the lip only over the pond's own water.
+          npx esbuild supabase/test/fallsplay.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/fallsplay.mjs --log-level=error
+          node node_modules/.cache/fallsplay.mjs
       - name: Stones across the water, a fountain that is a well, and lilies that keep the year
         if: matrix.shard == 1
         run: |
