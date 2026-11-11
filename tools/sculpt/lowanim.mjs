@@ -11,7 +11,7 @@
 //
 // --pass shows a pose-to-pose clip (one whose module exports BEATS, src/sculpt/anim/author.ts passOf) as it stood at an
 // earlier pass: its key poses held, then every beat held, then eased; the files are then named <clip>-<pass>-*.
-// --close 0 leaves out the close-up GIF.
+// --close 0 leaves out the close-up GIF. --bare draws the bodies without the outfit.
 //
 // A clip that grips what is held in both hands (Clip.grip: the swing) is drawn at work, the long sword in hand
 // (--enchanted: lit), its time the go's (FigurePose.act); its metrics add the sword's faces crossing the body's (the blade
@@ -28,7 +28,8 @@
 //   <clip>-metrics.json and a metrics line per body on stdout: foot sliding, ground penetration, the faces newly passing
 //     through each other and the volume kept per joint region (tools/sculpt/lowrigshot.mjs makeMetrics), the loop's seam,
 //     and the silhouette at game size (height, the arms read clear of the trunk); the forearms' and hands' nearest to the
-//     hips and thighs; for a walk, the sliding measured against the ground going back under the body, and the ground a
+//     hips and thighs; the feet: a foot in the air, its toe's lowest off the ground; a planted foot, its sole's spread off flat;
+//     the feet's triangles crossing each other; for a walk, the sliding measured against the ground going back under the body, and the ground a
 //     planted foot goes back over in a stride against the game's
 //
 // Distances are given in centimetres of a 1.8 m man (the woman 0.85 of him, src/sculpt/lowpoly.ts WOMAN_OF_MAN).
@@ -102,6 +103,7 @@ const STRIKE_T = clip.events?.find((e) => e.name === 'strike')?.t, IMPACT_T = cl
 const strikeTimes = STRIKE_T === undefined || IMPACT_T === undefined ? [] : Array.from({ length: Math.round((IMPACT_T + 0.2 - (STRIKE_T - 0.02)) / 0.02) + 1 }, (_, k) => +(STRIKE_T - 0.02 + k * 0.02).toFixed(3));
 if (only.some((o) => ['gifs', 'keys', 'current', 'side', 'transition', 'strike'].includes(o))) {
   const page = `${PASS}
+const OUTFIT = ${JSON.stringify(args.includes('--bare') ? { shawl: false, trousers: false, boots: false, tunic: false, hood: false } : undefined)};
 import { drawFigure, sculptedFigures } from './src/render/figure';
 import { DEFAULT_LOOK } from './src/game/look';
 import { clipsOn } from './src/sculpt/anim';
@@ -143,7 +145,7 @@ window.seq = (ms, cells) => {
     const sx = x + w * x0, sy = h - 14;
     if (d !== null) marks(g, sx, sy, z, facing, w);
     const e = viewOf(facing).ey, dd = d ?? 0;
-    drawFigure(g, sx + e[0] * dd * z, sy + e[1] * dd * z, z, { id, phase, moving, gait: 0, facing, swimming: false, working: false, look: { ...DEFAULT_LOOK, gender, hair: 'bald', beard: 'none' } });
+    drawFigure(g, sx + e[0] * dd * z, sy + e[1] * dd * z, z, { id, phase, moving, gait: 0, facing, swimming: false, working: false, look: { ...DEFAULT_LOOK, gender, hair: 'bald', beard: 'none' }, outfit: OUTFIT });
     g.restore();
     x += w;
   }
@@ -159,7 +161,7 @@ window.shot = (t, cells) => {
   let x = 0;
   for (const [gender, facing, z, w, h, on] of cells) {
     clipsOn(on);
-    drawFigure(g, x + w / 2, h - 14, z, { phase: phaseAt(t, gender), moving: MOVING, gait: 0, facing, swimming: false, working: false, look: { ...DEFAULT_LOOK, gender, hair: 'bald', beard: 'none' }, ...work(t) });
+    drawFigure(g, x + w / 2, h - 14, z, { phase: phaseAt(t, gender), moving: MOVING, gait: 0, facing, swimming: false, working: false, look: { ...DEFAULT_LOOK, gender, hair: 'bald', beard: 'none' }, outfit: OUTFIT, ...work(t) });
     x += w;
   }
   clipsOn(true);
@@ -326,6 +328,12 @@ if (only.includes('metrics')) {
     const hips = rig.B.names.map((n, i) => (!n.startsWith('arm/') && rig.B.verts[i][1] < chestY && rig.B.verts[i][1] > kneeY ? i : -1)).filter((i) => i >= 0);
     let prev = null, slide = 0, sink = 0, dys = [], worstX = 0, worstFold = 0, regions = {}, seam = 0, step = 0, prevLocal = null, firstLocal = null;
     let gone = 0, goneN = 0, clear = Infinity, touching = 0, clearN = 0;
+    // the feet: each side's sole points, its toe's (the toe face's corners at the sole and the band), and its triangles
+    // below the ankle's collar (the ankle ring, the collar, the block, the ball's loop)
+    const sideOf = (re) => ['L', 'R'].map((sd) => rig.B.names.map((n, i) => (re.test(n) && n.endsWith(`.${sd}`) ? i : -1)).filter((i) => i >= 0));
+    const soles = sideOf(/^so\d\./), toes = sideOf(/^(so|ft)[01]\./), footV = sideOf(/^(an|fc|ft|so|fb)\d\./).map((l) => new Set(l));
+    const footT = footV.map((V) => rig.B.tris.filter((t) => t.v.every((i) => V.has(i))).map((t) => ({ v: t.v })));
+    const ft = { clear: [Infinity, Infinity], cross: 0, crossFrames: 0, spread: [0, 0], planted: [0, 0], airFrames: [0, 0] };
     // a clip that grips: the long sword in both hands, its blade and guard, its grip and pommel; the body's hands, head and chest
     const held = clip.grip && !src ? AN.lowHeld(body) : null, SW = held ? swordOf() : null;
     const tris = rig.B.tris.map((t) => ({ v: t.v })), domTri = (t) => domOf(t.v[0]);
@@ -360,6 +368,14 @@ if (only.includes('metrics')) {
         gone -= P[i][2] - prev[i][2]; goneN++;
       }
       prev = P;
+      // the feet: a foot in the air (all its sole off the ground) and its toe's lowest; a planted one (some of its sole
+      // on the ground) and how far its sole is from flat; the feet's triangles crossing each other
+      for (const s of [0, 1]) {
+        const hs = soles[s].map((i) => P[i][1] - floor), lo = Math.min(...hs), hi = Math.max(...hs);
+        if (lo > 0.02) { ft.airFrames[s]++; ft.clear[s] = Math.min(ft.clear[s], Math.min(...toes[s].map((i) => P[i][1] - floor))); }
+        else { ft.planted[s]++; ft.spread[s] = Math.max(ft.spread[s], hi - lo); }
+      }
+      { const x = XP(P, footT[0], P, footT[1]).length; ft.cross = Math.max(ft.cross, x); if (x) ft.crossFrames++; }
       if (SW) {
         // the sword where the right fist holds it, stood as the body is (the same shift onto the ground)
         const g = sk.gripOf(sk.fk(r.local, r.move), held)[1], lead = SW.A.grip.lead;
@@ -393,13 +409,14 @@ if (only.includes('metrics')) {
     report[key] = {
       slideCmPerFrame: +(slide * cm).toFixed(2), sinkCm: +(-sink * cm).toFixed(2), groundingRangeCm: +((Math.max(...dys) - Math.min(...dys)) * cm).toFixed(2),
       newCrossingsMax: worstX, foldsMax: worstFold, regionsWorst: worst, regions,
+      feet: { toeClearCm: ft.clear.map((c) => (c === Infinity ? null : +(c * cm).toFixed(1))), airFrames: ft.airFrames, soleSpreadCm: ft.spread.map((c) => +(c * cm).toFixed(2)), plantedFrames: ft.planted, feetCrossMax: ft.cross, feetCrossFrames: ft.crossFrames },
       loopSeamDeg: +seam.toFixed(2), maxStepDeg: +step.toFixed(2), silhouette: src ? undefined : sil[body],
       handsToHipsCm: +(clear * cm).toFixed(1), handsTouchShare: +(touching / clearN).toFixed(2),
       ...(SW ? { sword: { bladeCrossingsMax: sw.blade, bladeCrossingFrames: sw.bladeFrames, hiltCrossingsMax: sw.hilt, worstAt: sw.worstAt, frames: M, tipMinGame: +sw.tipMin.toFixed(2), lowestGame: +sw.lowMin.toFixed(2), tipAtImpactGame: sw.tipImpact, tipAtImpactCm: sw.tipImpact === null ? null : +((sw.tipImpact / held.scale) * cm).toFixed(1) }, armsHeadCrossingsMax: sw.armsHead, armsHeadFrames: sw.armsHeadFrames, armsChestCrossingsMax: sw.armsChest } : {}),
       ...(MOVING ? { strideGame: +((gone / Math.max(1, goneN)) * M / sk.perGame).toFixed(2), strideWanted: +stride.toFixed(2), gameStride: +(AN.strideAt(0) * AN.UNITS_PER_TILE).toFixed(2), runSeconds: +(stride / (AN.BASE_SPEED * AN.UNITS_PER_TILE)).toFixed(3), strideCm: +((gone / Math.max(1, goneN)) * M * cm).toFixed(1) } : {}),
     };
     const s = report[key];
-    console.log(`${clipName} ${key}: slide ${s.slideCmPerFrame} cm/frame (${+F.toFixed(1)} fps${MOVING ? ', against the ground' : ''})${MOVING ? `, stride ${s.strideGame} game units (${s.strideCm} cm; keyed ${s.strideWanted}, the game's own walk ${s.gameStride}; a stride every ${s.runSeconds} s at the game's pace)` : ''}, hands to hips ≥${s.handsToHipsCm} cm (touching ${s.handsTouchShare}), sink ${s.sinkCm} cm, grounding moves ${s.groundingRangeCm} cm, new crossings ≤${s.newCrossingsMax}, folds ≤${s.foldsMax}, seam ${s.loopSeamDeg}° (largest step ${s.maxStepDeg}°), worst regions: ${worst.join('; ')}${s.sword ? `, sword: blade x ≤${s.sword.bladeCrossingsMax} (${s.sword.bladeCrossingFrames}/${M} frames), grip/pommel x ≤${s.sword.hiltCrossingsMax} (worst at ${s.sword.worstAt}s), point ≥${s.sword.tipMinGame} gu off the ground (at impact ${s.sword.tipAtImpactGame} gu, ${s.sword.tipAtImpactCm} cm), lowest ${s.sword.lowestGame} gu; arms x head ≤${s.armsHeadCrossingsMax} (${s.armsHeadFrames} frames), forearms x trunk ≤${s.armsChestCrossingsMax}` : ''}${s.silhouette ? `, silhouette ${s.silhouette.heightPx[0]}-${s.silhouette.heightPx[1]} px tall, arms clear ${s.silhouette.armsClear}, ≤${s.silhouette.pxMovedMax} px moved` : ''}`);
+    console.log(`${clipName} ${key}: slide ${s.slideCmPerFrame} cm/frame (${+F.toFixed(1)} fps${MOVING ? ', against the ground' : ''})${MOVING ? `, stride ${s.strideGame} game units (${s.strideCm} cm; keyed ${s.strideWanted}, the game's own walk ${s.gameStride}; a stride every ${s.runSeconds} s at the game's pace)` : ''}, hands to hips ≥${s.handsToHipsCm} cm (touching ${s.handsTouchShare}), sink ${s.sinkCm} cm, feet: toe in the air ≥${s.feet.toeClearCm.join('/')} cm off the ground (L/R), planted sole ≤${s.feet.soleSpreadCm.join('/')} cm off flat, feet crossing ≤${s.feet.feetCrossMax} (${s.feet.feetCrossFrames} frames), grounding moves ${s.groundingRangeCm} cm, new crossings ≤${s.newCrossingsMax}, folds ≤${s.foldsMax}, seam ${s.loopSeamDeg}° (largest step ${s.maxStepDeg}°), worst regions: ${worst.join('; ')}${s.sword ? `, sword: blade x ≤${s.sword.bladeCrossingsMax} (${s.sword.bladeCrossingFrames}/${M} frames), grip/pommel x ≤${s.sword.hiltCrossingsMax} (worst at ${s.sword.worstAt}s), point ≥${s.sword.tipMinGame} gu off the ground (at impact ${s.sword.tipAtImpactGame} gu, ${s.sword.tipAtImpactCm} cm), lowest ${s.sword.lowestGame} gu; arms x head ≤${s.armsHeadCrossingsMax} (${s.armsHeadFrames} frames), forearms x trunk ≤${s.armsChestCrossingsMax}` : ''}${s.silhouette ? `, silhouette ${s.silhouette.heightPx[0]}-${s.silhouette.heightPx[1]} px tall, arms clear ${s.silhouette.armsClear}, ≤${s.silhouette.pxMovedMax} px moved` : ''}`);
   }
   writeFileSync(join(out, `${FILE}-metrics.json`), JSON.stringify(report, null, 1));
   await RS.closeBrowser?.();

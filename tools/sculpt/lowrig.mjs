@@ -349,6 +349,10 @@ export const TUNE = {
   MEND: true,
   // the height across its longest edge under which a triangle counts as a sliver to mend
   SLIVER: 0.045,
+  // his left sole cut into triangles as his right's (mirrorSide): ear-clipping fans it from the toe's corner (so0) across
+  // to the heel's, so the ball bent at the toe's lift-off creases it from toe to heel and his left ankle's region lost a
+  // sixth of its volume in the walk (the right's fan from so5 has the ball's edge, so2-so5)
+  MIRROR: [['^(so|ft)\\d$', '.R']],
   // where the measured pivots sit: the elbow from its ring's centre toward its back (el3), the knee's depth from the back,
   // the hip between the body row under the waist (0) and the thigh's top ring (1), and out from the thigh's centre
   PIV: { elbowBack: -0.15, kneeDepth: 0.3, hipDown: 0.3, hipOut: 0.15, hipFwd: 0.4, shoulder: [0.1, 0, 0.15], palm: 0.85, ballUp: 0.3 },

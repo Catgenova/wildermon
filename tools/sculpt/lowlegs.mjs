@@ -204,6 +204,10 @@ export const PRESETS = {
     // profile; the foot's block heights from the same panel; the toe's half-width off the full-body front's toe face;
     // the hip line's height at the side off the topology panels' front (the hip's outer corner, 12% down the leg)
     fixed: ['gl.0', 'gl.2', 'gl.3', 'foot.ht', 'foot.hh', 'foot.hc', 'foot.hcf', 'foot.wt'],
+    // the feet longer than the leg sheet draws them (the user: "they look like hooves"): heel to toe 1.0 H, 0.148 of his
+    // height, as the outfit lineups' three-quarter views stand them (it was 0.77 H, 0.115); the ball kept at 0.71 of the
+    // foot from the heel (lengthen; the fitter's foot numbers are before it)
+    long: { toe: 0.4, ball: 0.27, heel: 0.07, crease: 0.04 },
     split: ['kb0/', 'kb7'],
     merge: KNEECAP,
   },
@@ -227,6 +231,9 @@ export const PRESETS = {
     // full-body front draws it (no step above the knee)
     // the crotch under the loincloth, between the thighs' inner sides (the fit had pushed it out in front of the body)
     fixed: ['gl.0', 'gl.2', 'tm.0', 'cx.1', 'cx.2', 'foot.ht', 'foot.hh', 'foot.hc', 'foot.hcf', 'foot.wt'],
+    // her feet longer as his (it was 0.91 H, 0.133 of her height): heel to toe 1.02 H, 0.148 of her height; her heel
+    // already stands out behind the ankle, so all of it in front of the ankle, the ball kept at 0.70 of the foot
+    long: { toe: 0.22, ball: 0.14, heel: 0, crease: 0.03 },
     split: ['kb0/', 'kb7', 'gr0', 'gr1/'],
     merge: KNEECAP,
     // two more rings round the thigh: tg under the buttock (at the back the gluteal fold, th's back the buttock's round
@@ -272,6 +279,27 @@ for (const who of Object.keys(PRESETS)) {
   if (fit.V) PRESETS[who].V = fit.V;
 }
 
+/**
+ * The foot drawn out along its own line (the heel's middle, ft3 ft4, to the toe's, ft0 ft1, level), over the placed
+ * vertices: the toe's corners (ft0 ft1) forward by `toe`, the ball's (ft2 ft5) by `ball`, the heel's (ft3 ft4) back by
+ * `heel`, the instep's crease (fc0 fc1) forward by `crease`; the sole's points (so) with the band's above them. The ankle
+ * and the rest of the collar stay where they are.
+ */
+export function lengthen(V, long) {
+  if (!long) return V;
+  const mid = (a, b) => [(V[a][0] + V[b][0]) / 2, (V[a][2] + V[b][2]) / 2];
+  const h = mid('ft3', 'ft4'), t = mid('ft0', 'ft1'), l = Math.hypot(t[0] - h[0], t[1] - h[1]);
+  const a = [(t[0] - h[0]) / l, (t[1] - h[1]) / l];
+  const by = { ft0: long.toe, ft1: long.toe, ft2: long.ball, ft5: long.ball, ft3: -long.heel, ft4: -long.heel, fc0: long.crease ?? 0, fc1: long.crease ?? 0 };
+  const out = { ...V };
+  for (const [n, d] of Object.entries(by)) for (const m of n.startsWith('ft') ? [n, n.replace('ft', 'so')] : [n]) {
+    if (!d || !out[m]) continue;
+    const p = out[m];
+    out[m] = [+(p[0] + a[0] * d).toFixed(4), p[1], +(p[2] + a[1] * d).toFixed(4)];
+  }
+  return out;
+}
+
 /** The torso's hip cut ring, one half, as the torso has it now (its fitted vertices over its own). */
 export function waistRing(who) {
   const V = TORSOS[who].V;
@@ -282,7 +310,7 @@ export function waistRing(who) {
 export function buildLowLegs(who = 'male', preset = null) {
   const P = preset ?? PRESETS[who];
   if (!P) throw new Error(`no legs ${who}`);
-  const V = { ...ringVerts(P), ...(P.V ?? {}), ...waistRing(who) };
+  const V = lengthen({ ...ringVerts(P), ...(P.V ?? {}), ...waistRing(who) }, P.long);
   const faces = halfFaces(P);
   const used = new Set(faces.flatMap((f) => f.v));
   const verts = [], polys = [];
