@@ -1982,13 +1982,13 @@ import{$f as e,$g as t,$i as n,$n as r,$u as i,$v as a,$x as ee,$y as o,AS as te
     <h3>Improve and repair window</h3>
     <ul>
       <li>Opened by <b>Improve and repair…</b> on an item's menu, or the UI Menu. <b>Held equipment</b>: worn, or improvable, loose in the pack (not in a bag).</li>
-      <li><b>Repair</b>: each piece's QL, damage, and actions, time and QL cost to 0 damage (at repair ${q(`repair`)}: −${+xs(q(`repair`)).healed.toFixed(2)} damage an action,
+      <li><b>Repair</b>: each piece's QL, damage, and actions, time and QL cost of a full repair (at repair ${q(`repair`)}: −${+xs(q(`repair`)).healed.toFixed(2)} damage an action,
       QL −${+xs(q(`repair`)).cost.toFixed(4)} a damage point). <b>Repair all</b>: every damaged piece Repair takes, most damaged first, one after another.</li>
-      <li><b>${M(ri).name}</b>: 1 item, all damage off, QL kept, used up. <b>Hone all</b>: the most damaged pieces, 1 whetstone each, while whetstones are held.</li>
+      <li><b>${M(ri).name}</b>: an item each, all damage off, QL kept, used up. <b>Hone all</b>: the most damaged pieces, a whetstone each, while whetstones are held.</li>
       <li><b>Improve</b>, one item: QL and max QL, tools held, each stock kind (carried, in stores within reach), every pass the chosen kind allows (QL if passed, chance,
       stock left), time an action.</li>
-      <li><b>Cycles</b>: Improve × 1 to 100, held to one stock kind. Failed pass: +3 to 8 damage;
-      over 10: Repair to 0, then the rest. A repair is not a cycle. Stops at the first of: the count, out of the chosen kind (no other kind used),
+      <li><b>Cycles</b>: Improve × up to 100, held to one stock kind. Failed pass: +3 to 8 damage;
+      over 10: a full Repair, then the rest. A repair is not a cycle. Stops at the first of: the count, out of the chosen kind (no other kind used),
       the target QL, max QL.</li>
     </ul>
     <h3>Ashes, lye and tanning</h3>
