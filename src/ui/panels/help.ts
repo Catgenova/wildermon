@@ -145,7 +145,7 @@ import { BASE_SPEED, CARRY_CRAWL, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STE
 import { deckBill, metres, PIER_CLEAR, PIER_DROP, PIER_WALL_DROP, PIER_WATER } from '../../game/piers';
 import { POST_FOLLOW_REACH, POST_LIFE_MAX, POST_LIFE_MIN, postRadius } from '../../game/posts';
 import { AROUND_MOST, aroundStoreTrades } from '../../game/around';
-import { CRAFT_REACH, FERMENT_CELLAR_SAYS, lockedRecipes, needRecipeSays, RECIPE_BY_ID, RECIPES, recipeTitle, SEALED_ITEM, STATION_NAME, TRADE_BOOK_AT, TRADE_BOOK_SKILLS } from '../../game/recipes';
+import { CRAFT_REACH, FERMENT_CELLAR_SAYS, lockedRecipes, needRecipeSays, ranOutSaid, RECIPE_BY_ID, RECIPES, recipeTitle, SEALED_ITEM, STATION_NAME, TRADE_BOOK_AT, TRADE_BOOK_SKILLS } from '../../game/recipes';
 import { VESSEL_BACK_QL } from '../../game/ferment';
 import { SHARES_EACH } from '../../game/feast';
 import { BOOKS, bookDrops, RECIPE_DROP_ODDS, RECIPE_DROPPERS } from '../../game/recipebook';
@@ -1548,6 +1548,7 @@ export function helpText(): string {
     <h4>What is at hand</h4>
     <ul>
       <li>Crafts and station work that use materials take from: pack, then bags on your back, then your stores within <b>${CRAFT_REACH} tiles</b>, nearest first.</li>
+      <li>A run of goes started on a stack: the next stack of the same thing and wood or metal once it is used up; stops when none is left (${ranOutSaid(1, 'log', 'Pine')}), not on in another wood or metal.</li>
       <li>At stations: mould or anvil metal, smelter ore and scrap, kiln clay, fuel for a campfire, smelter, kiln or oven, casting or coin metal at an anvil,
       improving stock, brew ingredients. Stacks in a store are marked with the store's name on the station's menu.</li>
       <li>Tools must be carried (moulds, coin die, files and so on).</li>

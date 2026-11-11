@@ -126,7 +126,7 @@ import { ORDER_LIFE } from '../../game/orders';
 import { POST_LIFE_MIN } from '../../game/posts';
 import { ACTION_BY_ID, deedAcrossAt, DROP_RAISE, PACKED_FIRST, SPADEFUL, GLAZE_ASH, GRASS_PER_CUT, GRASS_PLANT, KIT_MEND, MOSS_PER_CUT, MOSS_PLANT, WATER_MOTE_USES, WEAR_PER_GO } from '../../game/actions';
 import { CIRCLET_SHARE, CIRCLET_STONES, GEMS } from '../../game/gems';
-import { CRAFT_REACH, lockedRecipes, RECIPE_BY_ID, RECIPES, recipeTitle, TRADE_BOOK_AT } from '../../game/recipes';
+import { CRAFT_REACH, lockedRecipes, ranOutSaid, RECIPE_BY_ID, RECIPES, recipeTitle, TRADE_BOOK_AT } from '../../game/recipes';
 import { BOOKS, bookDrops, RECIPE_DROP_ODDS, RECIPE_DROPPERS } from '../../game/recipebook';
 import { BOARD_TOP, RECORD_STATS } from '../../game/boards';
 import { BANNER_MS, LEAVING_MS } from '../deedbanner';
@@ -4252,6 +4252,11 @@ export const NEWS: News[] = [
       return [`Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats. Stage 3 skill: ${two.name} ${perkSays('leecha')}.`,
         'Each stage: own model, animations and voice.'];
     },
+  },
+  {
+    n: 523,
+    day: '2026-11-11',
+    lines: () => [`Fixed: a run of goes on a stack of one wood or metal (Saw into planks ×50 on pine logs): stops when that material runs out, "${ranOutSaid(1, 'log', 'Pine')}" (was: went on with another, e.g. oak logs within ${CRAFT_REACH} tiles).`],
   },
   {
     n: 522,
