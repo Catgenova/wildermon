@@ -71,7 +71,7 @@ export const DESIGN = {
     back: { az: [96, 112, 116, 130, 150, 165, 180], top: [-1.9, -1.0, -0.85, -0.7, -0.6, -0.56, -0.54], bottom: [-1.95, -1.95, -3.5, -3.55, -3.6, -3.62, -3.64], rows: [0, 0.2, 0.4, 0.6, 0.8, 1], c: 0.02, panel: { top: -0.9, bottom: -2.85, half: 34, tip: -3.15 } },
     side: { az: [38, 60, 80, 100, 120], top: [-1.75, -1.75, -1.8, -1.75, -1.75], bottom: [-3.62, -3.6, -3.58, -3.56, -3.55], rows: [0, 0.33, 0.67, 1], c: 0.018 },
     bands: [{ top: { y0: -1.57, k: 0.21 }, bottom: { y0: -2.13, k: 0.115 }, x: [-1.38, 1.02], lift: 2 }, { top: { y0: -2.13, k: 0.115 }, bottom: { y0: -2.98, k: 0.24 }, x: [-1.3, 0.56], lift: 1 }],
-    panels: [{ trace: 'core.low', tag: 'chest', tuck: 4 }, { trace: 'band2', tag: 'band 2', tuck: 4 }, { trace: 'band1', tag: 'band 1', top: 'trim' }],
+    panels: [{ trace: 'core.low', tag: 'chest', tuck: 4 }, { trace: 'band2', tag: 'band 2', tuck: 4 }, { trace: 'band1', tag: 'band 1', top: 'trim', lines: [0.3, 0.48] }],
     emblem: { x: 0.85, y: -1.86, r: 0.27, w: 0.13, stripes: [[-0.07, 0.07], [0.12, 0.2]], bottom: -3.05 },
     lacing: [{ az: -42, y: [-2.05, -3.5], n: 5, w: 0.2 }, { az: 42, y: [-3.05, -3.5], n: 2, w: 0.16 }],
     belt: { az: [0, 30, 60, 90, 120, 150, 180], top: [-3.62, -3.56, -3.5, -3.48, -3.48, -3.5, -3.52], bottom: [-4.26, -4.05, -3.95, -3.92, -3.88, -3.9, -3.98], c: [0.03, 0.04] },
@@ -112,7 +112,7 @@ export const DESIGN = {
     back: { az: [96, 112, 116, 130, 150, 165, 180], top: [-1.85, -1.0, -0.9, -0.75, -0.66, -0.62, -0.6], bottom: [-1.9, -1.9, -3.0, -3.05, -3.1, -3.12, -3.14], rows: [0, 0.2, 0.4, 0.6, 0.8, 1], c: 0.018, panel: { top: -0.95, bottom: -2.45, half: 34, tip: -2.7 } },
     side: { az: [34, 56, 78, 100, 120], top: [-1.75, -1.75, -1.8, -1.75, -1.75], bottom: [-3.1, -3.08, -3.06, -3.05, -3.04], rows: [0, 0.33, 0.67, 1], c: 0.016 },
     bands: [{ top: { y0: -1.3, k: 0.42 }, bottom: { y0: -1.95, k: 0.45 }, x: [-0.95, 1.15], lift: 2 }, { top: { y0: -1.7, k: 0.45 }, bottom: { y0: -2.7, k: 0.32 }, x: [-0.95, 1.25], lift: 1 }],
-    panels: [{ trace: 'core.low', tag: 'chest', tuck: 4 }, { trace: 'band2', tag: 'band 2', tuck: 4 }, { trace: 'band1', tag: 'band 1', top: 'trim' }],
+    panels: [{ trace: 'core.low', tag: 'chest', tuck: 4 }, { trace: 'band2', tag: 'band 2', tuck: 4 }, { trace: 'band1', tag: 'band 1', top: 'trim', lines: [0.3, 0.48] }],
     emblem: { x: 0.5, y: -1.55, r: 0.27, w: 0.07, stripes: [[-0.06, 0.06], [0.1, 0.17]], bottom: -2.6 },
     lacing: [{ az: -38, y: [-1.7, -3.0], n: 5, w: 0.17 }, { az: 38, y: [-2.6, -3.0], n: 2, w: 0.14 }],
     belt: { az: [0, 30, 60, 90, 120, 150, 180], top: [-3.12, -3.06, -3.0, -2.98, -2.98, -3.0, -3.02], bottom: [-3.78, -3.58, -3.48, -3.44, -3.42, -3.45, -3.52], c: [0.025, 0.035] },
@@ -824,7 +824,14 @@ function torsoPieces(G, rig, D, S) {
     }));
     layOver(rows, [core, ...wings, ...sides, belt, ...bandPlates], out, gap);
     fitOut(rows, false, out, [[trunk, D.fit.trunk]]);
-    bandPlates.push(plateOf(G, rows, { tag: Pn.tag, boneAt: TW, rim, out, border: { top: Pn.top ?? 'bevel', bottom: Pn.bottom ?? 'bevel', left: 'edge', right: 'edge' } }));
+    const pl = plateOf(G, rows, { tag: Pn.tag, boneAt: TW, rim, out, border: { top: Pn.top ?? 'bevel', bottom: Pn.bottom ?? 'bevel', left: 'edge', right: 'edge' } });
+    bandPlates.push(pl);
+    // (its tooled lines: thin strips in the trim's colour along it, at `lines` (fractions down it), short of its ends)
+    for (const lf of Pn.lines ?? []) {
+      const C = pl.rows[0].length - 1, R = pl.rows.length - 1;
+      const pts = span(0.05, 0.95, 14).map((cf) => gridAt(pl, lf * R, cf * C)).filter(Boolean);
+      if (pts.length > 1) stripOn(G, pts, D.toolW ?? 0.025, 'trim', Pn.tag, TW, { h: 0.012 });
+    }
   }
   for (const [bi, Bd] of (panels.length ? [] : [...D.bands.entries()].reverse())) {
     const yMid = (Bd.top.y0 + Bd.bottom.y0) / 2;
