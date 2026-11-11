@@ -1599,7 +1599,7 @@ export const NEWS: News[] = [
       'Changed: woman build: fuller chest visible side and three-quarter, narrower waist, wider hips; '
         + 'finer, higher-arched brows, lash lines, fuller lips. Neither build: 1/2 the body difference, none of the face\'s.',
       // (the odds as they were: beards went with the sculpted bodies)
-      `Changed: Roll me one beard odds: man ${percent(0.6)}, neither ${percent(0.2)}, `
+      'Changed: Roll me one beard odds: man 60%, neither 20%, '
         + 'woman never. Any build can still choose any beard.',
     ],
   },
