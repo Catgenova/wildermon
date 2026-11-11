@@ -4091,11 +4091,12 @@ const PORTRAIT_WAVE = 3;
 const PORTRAIT_HOP = 4;
 
 /**
- * The sculpted man's height standing, the figure's units (the woman is a little shorter), the room a portrait gives
- * him, and how much of him from the top of the head down a close portrait shows: the head and the shoulders.
+ * Each sculpted body's height standing, to the top of the head, the figure's units (hers 0.85 of his, `WOMAN_OF_MAN`
+ * in src/sculpt/lowpoly.ts); the room a portrait gives the taller, so both are drawn to the one scale; and how much
+ * from the top of the head down a close portrait shows: the head and the shoulders.
  */
-const PORTRAIT_TOP = 34;
-const PORTRAIT_ROOM = 38;
+const PORTRAIT_TOP: Record<string, number> = { man: 37.5, woman: 32 };
+const PORTRAIT_ROOM = 41;
 const PORTRAIT_CLOSE = 10;
 
 /** What the creator's mirror can show a body doing. */
@@ -4134,7 +4135,7 @@ export function drawPortrait(ctx: CanvasRenderingContext2D, x: number, y: number
   ctx.beginPath();
   ctx.rect(x, y, w, h);
   ctx.clip();
-  const fx = x + w / 2, fy = opts.close ? y + (PORTRAIT_TOP + 0.6) * zoom : y + h - h * 0.08;
+  const fx = x + w / 2, fy = opts.close ? y + ((PORTRAIT_TOP[look.gender] ?? PORTRAIT_TOP.man) + 0.6) * zoom : y + h - h * 0.05;
   if (!opts.close) footShade(ctx, fx, fy, zoom, pose);
   drawFigure(ctx, fx, fy, zoom, pose, { ink: 1.6 });
   ctx.restore();
