@@ -485,17 +485,21 @@ function onTop(plates, p, d) {
  * A grid laid over plates: each point moved out to the outermost of `plates` along the way in from it (out(p)), out by
  * `gap`, where that lies further out than the point; points over none of them, or already outside, kept.
  */
-function layOver(rows, plates, out, gap, smooth = 1) {
+function layOver(rows, plates, out, gap, smooth = 1, ride = 'max') {
   // (each point's lift out along its way out; then each the most of its neighbours' within `smooth` grid steps, so the
   // grid rides over what is under it in one piece rather than stepping down between the plates' edges)
+  // (ride a number: each the most of its neighbours' lifted surfaces (measured along its own way out) plus `ride`, no more
+  // than their lifts: a deep neighbour's large lift (the bridged cleavage) does not carry onto a point that already stands out)
   const lift = rows.map((row) => row.map((p) => {
     const o = unit(out(p)), h = onTop(plates, p, mul(o, -1));
     return h ? Math.max(0, dot(sub(add(h.q, mul(h.n, gap)), p), o)) : 0;
   }));
+  const lifted = rows.map((row, r) => row.map((p, k) => add(p, mul(unit(out(p)), lift[r][k]))));
   rows.forEach((row, r) => row.forEach((p, k) => {
     let m = 0;
-    for (let i = Math.max(0, r - smooth); i <= Math.min(rows.length - 1, r + smooth); i++) for (let j = Math.max(0, k - smooth); j <= Math.min(row.length - 1, k + smooth); j++) m = Math.max(m, lift[i][j]);
-    if (m > 0) row[k] = add(p, mul(unit(out(p)), m));
+    const o = unit(out(p));
+    for (let i = Math.max(0, r - smooth); i <= Math.min(rows.length - 1, r + smooth); i++) for (let j = Math.max(0, k - smooth); j <= Math.min(row.length - 1, k + smooth); j++) m = Math.max(m, typeof ride === 'number' ? Math.min(lift[i][j], dot(sub(lifted[i][j], p), o) + ride) : lift[i][j]);
+    if (m > 0) row[k] = add(p, mul(o, m));
   }));
 }
 /**
@@ -836,8 +840,10 @@ function torsoPieces(G, rig, D, S) {
       const y = cl.top + ((cl.bottom - cl.top) * r) / (nR - 1);
       return chest.at(y, Math.max(-lim, Math.min(lim, azOfX(chest, y, cl.x, Cp.c))), Cp.c);
     }));
-    layOver(rows, [core, ...wings, ...sides, belt, ...bandPlates], out, gap);
-    fitOut(rows, false, out, [[trunk, D.fit.trunk]]);
+    layOver(rows, [core, ...wings, ...sides, belt, ...bandPlates], out, gap, 1, D.bandRide ?? 'max');
+    // (riding close (bandRide a number): clear of the plates under it between its grid points too, by half the leather's
+    // thickness, so none shows through it)
+    fitOut(rows, false, out, typeof D.bandRide === 'number' ? [[trunk, D.fit.trunk], [lay(p0), gap * 0.5]] : [[trunk, D.fit.trunk]]);
     const pl = plateOf(G, rows, { tag: Pn.tag, boneAt: TW, rim, out, border: { top: Pn.top ?? 'bevel', bottom: Pn.bottom ?? 'bevel', left: 'edge', right: 'edge' } });
     bandPlates.push(pl);
     // (its tooled lines: thin strips in the trim's colour along it, at `lines` (fractions down it), short of its ends)
@@ -878,6 +884,8 @@ function torsoPieces(G, rig, D, S) {
       // (kept round: the sheet's body is narrower than ours, so its circle would come back wide; its height kept)
       if (R) { E.x = R.x; E.y = R.y; E.r = Hh ? (R.ry + Hh.ry) / 2 : R.ry - E.w / 2; if (Hh) E.w = R.ry - Hh.ry; }
       E.traced = ['stripe1', 'stripe2'].map((n) => tracedOutline(rig.who, n, { cols: 6, across: true })).filter(Boolean);
+      // (`traceStripes` false: the design's stripes, straight down from the ring, where the trace's are ragged)
+      if (E.traceStripes === false) E.traced = [];
       if (E.traced.length) E.stripes = [];
     }
     // (on the outermost plate there; through a seam, on the chest's own section out by two thicknesses)
@@ -902,9 +910,9 @@ function torsoPieces(G, rig, D, S) {
       if (pts.length > 1) stripOn(G, ride(pts, false), w, 'rune', 'emblem', TW, { h: 0.03 });
     }
     for (const [x0, x1] of E.stripes) {
-      const x = E.x + (x0 + x1) / 2, w = x1 - x0, ys = span(E.y - E.r - E.w * 0.6, E.bottom, 5);
+      const x = E.x + (x0 + x1) / 2, w = x1 - x0, ys = span(E.y - E.r - E.w * 0.6, E.bottom, 10);
       const pts = ys.map((y) => at(x, y)).filter(Boolean);
-      if (pts.length > 1) stripOn(G, pts, w, 'rune', 'emblem', TW, { h: 0.03 });
+      if (pts.length > 1) stripOn(G, ride(pts, false), w, 'rune', 'emblem', TW, { h: 0.03 });
     }
     for (let k = q0; k < G.polys.length; k++) G.polys[k].piece = 'chest';
   }

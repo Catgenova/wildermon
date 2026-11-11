@@ -239,7 +239,7 @@ if (only.includes('close')) {
   const who = opt('who', 'male'), cw = 420, ch = 560, cells = [];
   const d = dress(who, {}), c = opt('c', null) ? JSON.parse(opt('c')) : [0, who === 'male' ? -2.6 : -2.3, 0], zs = +opt('s', '62');
   [[0, false], [-45, false], [-90, false], [180, false], [0, true], [-45, true], [-90, true], [180, true]].forEach(([yaw, alone], k) => {
-    const arm = armourMesh(who, d.PG); arm.edges = true; arm.edgec = [0.25, 0.15, 0.1];
+    const arm = armourMesh(who, d.PG); if (!args.includes('--nowire')) { arm.edges = true; arm.edgec = [0.25, 0.15, 0.1]; }
     cells.push({ meshes: alone ? [arm] : [bodyMesh(who, d.PB), arm], cam: { yaw, pitch: -6, s: zs, c }, box: [(k % 4) * cw, Math.floor(k / 4) * ch, cw, ch], label: `${who} ${yaw}°${alone ? ' (armour alone)' : ''}` });
   });
   await shoot(4 * cw, 2 * ch, cells, join(out, `leatherchest-${tag}-close-${who}.png`));
