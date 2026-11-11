@@ -769,7 +769,15 @@ function torsoPieces(G, rig, D, S) {
   }
   // the strap across the back: off its traced outline in the back view, laid over the back and its panel
   if (Kp.strap) {
-    const cols = tracedOutline(rig.who, Kp.strap.trace ?? 'back.strap', { cols: Kp.strap.cols ?? 8, view: 'back' });
+    let cols = tracedOutline(rig.who, Kp.strap.trace ?? 'back.strap', { cols: Kp.strap.cols ?? 8, view: 'back' });
+    // (with `w`: straight and even, as drawn: its middle the least-squares line through the traced columns' middles, `w`
+    // wide, over the traced columns' span)
+    if (cols && Kp.strap.w) {
+      const n = cols.length, mid = cols.map((cl) => (cl.top + cl.bottom) / 2), mx = cols.reduce((a, cl) => a + cl.x, 0) / n, my = mid.reduce((a, y) => a + y, 0) / n;
+      const b = cols.reduce((a, cl, i) => a + (cl.x - mx) * (mid[i] - my), 0) / Math.max(1e-9, cols.reduce((a, cl) => a + (cl.x - mx) ** 2, 0));
+      const xs = span(cols[0].x, cols[n - 1].x, Math.max(8, n - 1));
+      cols = xs.map((x) => { const m = my + b * (x - mx); return { x, top: m + Kp.strap.w / 2, bottom: m - Kp.strap.w / 2 }; });
+    }
     if (cols) {
       // (the back's azimuth at x: x = r sin(a) falls from the left side (a 90) round the back to the right (a 270))
       const azBack = (y, x) => { let lo = 91, hi = 269; for (let k = 0; k < 30; k++) { const m = (lo + hi) / 2; if (chest.at(y, m, Kp.c)[0] > x) lo = m; else hi = m; } return (lo + hi) / 2; };
