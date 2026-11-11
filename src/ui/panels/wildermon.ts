@@ -661,7 +661,7 @@ export class WildermonPanel {
       else if (place === 'traces') parts.push(vehicle ? `In the traces of the ${furnitureDef(vehicle.kind).name.toLowerCase()}` : 'In the traces');
       else if (c.tacked) parts.push('Saddled and bridled');
       if (isShod(this.game.time, c)) parts.push(`Shod, ${Math.max(1, Math.ceil((SHOE_DAYS * DAY_SECONDS - (this.game.time - c.shodAt)) / DAY_SECONDS))} day${Math.ceil((SHOE_DAYS * DAY_SECONDS - (this.game.time - c.shodAt)) / DAY_SECONDS) === 1 ? '' : 's'} left`);
-      if (c.due > 0) parts.push(`In young, due in ${clockLeft(Math.max(0, c.due - this.game.time))}`);
+      if (c.due > 0) parts.push(`Pregnant, due in ${clockLeft(Math.max(0, c.due - this.game.time))}`);
       // A stance and a round of work are for one that is following you or
       // working, not one in the traces or under a rider.
       if (place === 'active') parts.push(`Stance: ${STANCE_NAMES[c.stance]}`);

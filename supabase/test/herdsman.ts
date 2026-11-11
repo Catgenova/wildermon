@@ -451,7 +451,7 @@ const studWant = ` Paired with Horn: success ${Math.round(breedChance(SKILL, car
   + `inherited ${Math.round(inheritChance(SKILL, care) * 100)}%, rarity-up `
   + `${Math.round(upgradeChance(SKILL, care) * 100)}%.`;
 check(`${P('Stud Book').name}: examining one of yours says the odds, in the browser's words, and nothing without it`,
-  studYes.endsWith(studWant) && !studNo.includes('Put to'), `${studYes.slice(-160)} // ${studWant}`);
+  studYes.endsWith(studWant) && !studNo.includes('Paired with'), `${studYes.slice(-160)} // ${studWant}`);
 check('and the Herdsman\'s tree is gone', say('NODES') === '0:0', say('NODES'));
 
 /* ---- the browser's half ------------------------------------------------------------------ */

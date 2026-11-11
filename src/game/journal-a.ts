@@ -151,7 +151,7 @@ export const WILDERMON_A: Goal[] = [
     id: 'mutation',
     text: 'Breed a mutation',
     get hint() { return late(() => `1 birth in ${MUTATION_ODDS}`); },
-    get how() { return late(() => `Breed wildermon: a grown male and female of one kind, tamed, fed and side by side, "Put it to <mate>". One young in ${MUTATION_ODDS} is born with a trait neither parent carries, one rarity above their best; the birth line names it. Born to a dam of yours.`); },
+    get how() { return late(() => `Breed wildermon: a grown male and female of one kind, tamed, fed and side by side, "Breed with <mate>". One young in ${MUTATION_ODDS} is born with a trait neither parent carries, one rarity above their best; the birth line names it. Born to a dam of yours.`); },
     met: did('mutated'),
   },
   {

@@ -4254,6 +4254,11 @@ export const NEWS: News[] = [
     },
   },
   {
+    n: 525,
+    day: '2026-11-11',
+    lines: () => ['Renamed: Put it to <mate> → Breed with <mate>.', 'Renamed: in young → pregnant.'],
+  },
+  {
     n: 524,
     day: '2026-11-11',
     lines: () => [

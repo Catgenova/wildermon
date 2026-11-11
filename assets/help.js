@@ -2664,7 +2664,7 @@ import{$f as e,$g as t,$i as n,$n as r,$u as i,$v as a,$x as ee,$y as o,AS as te
     </ul>
     <h4>Breeding</h4>
     <ul>
-      <li>A <b>male</b> and <b>female</b> of one sort within 4 tiles, both <b>grown</b> and <b>fed</b>, neither mated in the last ${F(Te)}: <b>Put it to a mate</b>.</li>
+      <li>A <b>male</b> and <b>female</b> of one sort within 4 tiles, both <b>grown</b> and <b>fed</b>, neither mated in the last ${F(Te)}: <b>Breed with a mate</b>.</li>
       <li>Taken: gestation ${F(Jr)}; the young's traits are fixed at mating (a sire sold, released or eaten meanwhile still counts).</li>
       <li>The young <b>follows you</b> if nothing does; else an <b>empty wildermon crate in your pack</b>; else an <b>empty crate of yours on your settlement</b>, nearest the mother;
       else the wild.</li>
@@ -2691,7 +2691,7 @@ import{$f as e,$g as t,$i as n,$n as r,$u as i,$v as a,$x as ee,$y as o,AS as te
       ${E(pa)} lightness, dark for the rest). Size form: 1 in 200, half each: ${Pa(h.rabba,`large`).toLowerCase()} (${rc(`large`)}),
       ${Pa(h.rabba,`small`).toLowerCase()} (${rc(`small`)}). Kept when tamed. Young: each form at ${E(zs)} per parent that has it.
       Card names it; the Field guide page marks each form seen and tamed.</li>
-      <li>Preview (<b>Put it to a mate</b>, before <b>Yes</b>), worked out exactly from the mating's own draw at your husbandry, care and perks: take chance; per trait, inheritance and rarity-up chance;
+      <li>Preview (<b>Breed with a mate</b>, before <b>Yes</b>), worked out exactly from the mating's own draw at your husbandry, care and perks: take chance; per trait, inheritance and rarity-up chance;
       chance of each parent trait; line depth and carry chance per thing; rarity odds.</li>
       <li>Preview odds by the husbandry to read a trait (above): under ${To} (${Zt[To]+1}), <b>likely</b> (${E(ho)}+) or <b>unlikely</b>;
       from ${To}, ${E(En)} bands; from ${ie} (${Zt[ie]+1}), to ${1/10}%, plus best-trait rarity odds and mutation chance and rarity. Reader's Knowledge: exact.</li>
@@ -2703,7 +2703,7 @@ import{$f as e,$g as t,$i as n,$n as r,$u as i,$v as a,$x as ee,$y as o,AS as te
       <li>Well Kept: fully brushed, works and learns ${E(Fh(`Well Kept`)[`kept:care_bonus`]??.25)} faster instead of ${E(kr)}.</li>
       <li>Light Eaters: hunger ${E(1-(Fh(`Light Eaters`)[`kept:hunger`]??1))} slower.</li>
       <li>Long-lived: old at ${F(Fh(`Long-lived`)[`kept:old_at`]??ao)} instead of ${F(ao)}.</li>
-      <li>Choose the Sex: <i>For a female young</i> / <i>For a male young</i> under <b>Put it to a mate</b>.</li>
+      <li>Choose the Sex: <i>For a female young</i> / <i>For a male young</i> under <b>Breed with a mate</b>.</li>
       <li>Twins: one in ${Math.round(1/(Fh(`Twins`)[`breed:twins`]??1))} pairings give a second young (into an empty wildermon crate once the first follows you).</li>
       <li>Stud Book: <b>Examine</b> on one of theirs with them: take chance with its would-be mate, and per-trait inheritance and rarity-up chances.</li>
     </ul>

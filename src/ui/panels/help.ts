@@ -3571,7 +3571,7 @@ export function helpText(): string {
     </ul>
     <h4>Breeding</h4>
     <ul>
-      <li>A <b>male</b> and <b>female</b> of one sort within ${PAIR_RANGE} tiles, both <b>grown</b> and <b>fed</b>, neither mated in the last ${dur(BREED_REST)}: <b>Put it to a mate</b>.</li>
+      <li>A <b>male</b> and <b>female</b> of one sort within ${PAIR_RANGE} tiles, both <b>grown</b> and <b>fed</b>, neither mated in the last ${dur(BREED_REST)}: <b>Breed with a mate</b>.</li>
       <li>Taken: gestation ${dur(GESTATION)}; the young's traits are fixed at mating (a sire sold, released or eaten meanwhile still counts).</li>
       <li>The young <b>follows you</b> if nothing does; else an <b>empty wildermon crate in your pack</b>; else an <b>empty crate of yours on your settlement</b>, nearest the mother;
       else the wild.</li>
@@ -3598,7 +3598,7 @@ export function helpText(): string {
       ${percent(PALE_AT)} lightness, dark for the rest). Size form: 1 in ${SIZE_FORM_ODDS}, half each: ${formName(SPECIES.rabba, 'large').toLowerCase()} (${formGives('large')}),
       ${formName(SPECIES.rabba, 'small').toLowerCase()} (${formGives('small')}). Kept when tamed. Young: each form at ${percent(FORM_PASS)} per parent that has it.
       Card names it; the Field guide page marks each form seen and tamed.</li>
-      <li>Preview (<b>Put it to a mate</b>, before <b>Yes</b>), worked out exactly from the mating's own draw at your husbandry, care and perks: take chance; per trait, inheritance and rarity-up chance;
+      <li>Preview (<b>Breed with a mate</b>, before <b>Yes</b>), worked out exactly from the mating's own draw at your husbandry, care and perks: take chance; per trait, inheritance and rarity-up chance;
       chance of each parent trait; line depth and carry chance per thing; rarity odds.</li>
       <li>Preview odds by the husbandry to read a trait (above): under ${ODDS_BANDS_AT} (${TIER_LEVEL[ODDS_BANDS_AT] + 1}), <b>likely</b> (${percent(ODDS_LIKELY)}+) or <b>unlikely</b>;
       from ${ODDS_BANDS_AT}, ${percent(ODDS_BAND)} bands; from ${ODDS_EXACT_AT} (${TIER_LEVEL[ODDS_EXACT_AT] + 1}), to ${1 / 10 ** ODDS_PLACES}%, plus best-trait rarity odds and mutation chance and rarity. Reader's Knowledge: exact.</li>
@@ -3610,7 +3610,7 @@ export function helpText(): string {
       <li>Well Kept: fully brushed, works and learns ${percent(herdsman('Well Kept')['kept:care_bonus'] ?? CARE_BONUS)} faster instead of ${percent(CARE_BONUS)}.</li>
       <li>Light Eaters: hunger ${percent(1 - (herdsman('Light Eaters')['kept:hunger'] ?? 1))} slower.</li>
       <li>Long-lived: old at ${dur(herdsman('Long-lived')['kept:old_at'] ?? OLD_AT)} instead of ${dur(OLD_AT)}.</li>
-      <li>Choose the Sex: <i>For a female young</i> / <i>For a male young</i> under <b>Put it to a mate</b>.</li>
+      <li>Choose the Sex: <i>For a female young</i> / <i>For a male young</i> under <b>Breed with a mate</b>.</li>
       <li>Twins: one in ${Math.round(1 / (herdsman('Twins')['breed:twins'] ?? 1))} pairings give a second young (into an empty wildermon crate once the first follows you).</li>
       <li>Stud Book: <b>Examine</b> on one of theirs with them: take chance with its would-be mate, and per-trait inheritance and rarity-up chances.</li>
     </ul>
