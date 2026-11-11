@@ -133,6 +133,13 @@ const ENDS: V[] = (() => {
  * polygons drawn shaved. */
 interface HairAsset { verts: number[]; polys: number[][]; mat: number[]; tris: number[]; weights: number[][]; shave: number[] }
 const HAIRS = HAIR_ASSET as unknown as Record<'male' | 'female', Record<string, HairAsset>>;
+/**
+ * The hairstyles pressed under the leather hat (`assets/lowhat-<who>.json` hair, `tools/sculpt/garments/hat.mjs` hatHair:
+ * each vertex moved toward the skull until it is inside the crown and under the brim, its topology the hairstyle's own),
+ * named `<style>:hat`, drawn in the style's place while the hat is worn (`hairStyle`).
+ */
+const UNDER_HAT = ':hat';
+const underHat = (hat: unknown): Record<string, HairAsset> => Object.fromEntries(Object.entries((hat as { hair?: Record<string, HairAsset> }).hair ?? {}).map(([k, h]) => [k + UNDER_HAT, h]));
 
 /* ---- 3x3 rotations (row-major) and quaternions [w, x, y, z], as lowrig.mjs ------------------------------------- */
 const I3: M3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
@@ -564,10 +571,16 @@ const wearsHood = (pose: FigurePose): boolean => (pose.outfit?.hood ?? false) &&
 export const hairShown = (pose: FigurePose): boolean => !wearsHood(pose);
 /**
  * Whether a figure wears the leather set's feathered cap (`assets/lowhat-<who>.json` by `tools/sculpt/garments/hat.mjs`:
- * rigid on the head, no bones of its own, its crown clear of the swept-back hair, so the hair stays drawn under it):
+ * rigid on the head, no bones of its own, its crown snug on the skull, the hair drawn pressed under it, `hairStyle`):
  * off unless `outfit.leatherHat`.
  */
 const wearsLeatherHat = (pose: FigurePose): boolean => pose.outfit?.leatherHat ?? false;
+/**
+ * The hairstyle a figure's hair is drawn in: none while the hood is up, the style pressed under the leather hat while
+ * that is worn (`<style>:hat`, when the hat has one for it), else the look's own.
+ */
+const HAT_HAIRS = new Set([...Object.keys(underHat(MALE_LEATHER_HAT)), ...Object.keys(underHat(FEMALE_LEATHER_HAT))]);
+const hairStyle = (pose: FigurePose, style: string): string => (!hairShown(pose) ? '' : wearsLeatherHat(pose) && HAT_HAIRS.has(style + UNDER_HAT) ? style + UNDER_HAT : style);
 
 /**
  * Whether a piece of the plate set is enchanted (`FigurePose.outfit.enchanted`): its cores and its engraving lit, as the
@@ -589,8 +602,8 @@ const GARMENTS: ReadonlyArray<{ man: GarmentAsset; woman: GarmentAsset; wears: (
 ];
 
 const BODIES = {
-  man: lowBody(MALE_ASSET as unknown as Asset, MALE, 1, GARMENTS.map((g) => g.man), HAIRS.male),
-  woman: lowBody(FEMALE_ASSET as unknown as Asset, FEMALE, WOMAN_OF_MAN, GARMENTS.map((g) => g.woman), HAIRS.female),
+  man: lowBody(MALE_ASSET as unknown as Asset, MALE, 1, GARMENTS.map((g) => g.man), { ...HAIRS.male, ...underHat(MALE_LEATHER_HAT) }),
+  woman: lowBody(FEMALE_ASSET as unknown as Asset, FEMALE, WOMAN_OF_MAN, GARMENTS.map((g) => g.woman), { ...HAIRS.female, ...underHat(FEMALE_LEATHER_HAT) }),
 };
 /** The garments' materials after the body's (each once, however many garments share it): lit by the body's light in their own colours, unlit (glowing in the bloom), or metal (lit by its brightness, as the sword). */
 const GARMENT_MATS: Material[] = GARMENT_COLOURS.map((m) => (m.kind === 1 ? { colour: m.c, emissive: true } : m.kind === 2 ? { colour: m.c, gear: true } : { colour: m.c, cloth: true }));
@@ -658,5 +671,5 @@ export function lowScene(pose: FigurePose): SculptDraw {
   const lit = weapon?.enchanted ? 'enchanted' : 'plain';
   const materials = materialsOf(look, lit), low: LowLight = { sh: SH[who], tone: toneOf(materials), fit: FIT_SKIN };
   const bones = body.bones(pose, worn), trail = inHand ? body.trail(pose, lit === 'enchanted') : undefined;
-  return { baked: body.baked(worn, sword, hairShown(pose) ? look.hair : '', enchanted), bones, materials, view: viewOf(facing), blink: 0, low, ...(trail ? { trail } : {}) };
+  return { baked: body.baked(worn, sword, hairStyle(pose, look.hair), enchanted), bones, materials, view: viewOf(facing), blink: 0, low, ...(trail ? { trail } : {}) };
 }

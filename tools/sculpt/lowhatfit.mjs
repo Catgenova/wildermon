@@ -16,7 +16,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { buildRig } from './lowrig.mjs';
-import { buildHat, hairMesh } from './garments/hat.mjs';
+import { buildHat, hatHair } from './garments/hat.mjs';
 
 const DIR = new URL('.', import.meta.url).pathname;
 const MASKS = JSON.parse(readFileSync(join(DIR, 'leather/hat-masks.json'), 'utf8'));
@@ -96,8 +96,8 @@ function search(score0, cam, steps, rounds = 5, bounds = null) {
 }
 
 /** The head's, neck's and hair's triangles (the occluders in the equipped views). */
-function occluders(rig) {
-  const B = rig.B, H = hairMesh(rig.who);
+function occluders(rig, G) {
+  const B = rig.B, H = hatHair(rig, G);
   return [{ P: B.verts, tris: B.tris.filter((t) => t.v.every((i) => B.verts[i][1] > -1.6)).map((t) => t.v) }, { P: H.verts, tris: H.tris.map((t) => t.v) }];
 }
 /**
@@ -105,7 +105,7 @@ function occluders(rig) {
  * keeps the cameras as they are (the review renders draw under the registration as it was searched).
  */
 export function fit(who, G, rig, { prev = null, fixed = false } = {}) {
-  const hat = { P: G.verts, tris: G.tris.map((t) => t.v) }, occ = occluders(rig), Fc = FACE[who];
+  const hat = { P: G.verts, tris: G.tris.map((t) => t.v) }, occ = occluders(rig, G), Fc = FACE[who];
   const out = {};
   // the turnaround's shared scale: searched with the front and side views, then held for all six
   let sT = prev?.front?.cam?.s ?? 34;
@@ -172,7 +172,7 @@ const SHEET_PX = (() => {
 /** Our piece masks: the front-most surface's piece per pixel (feathers, ring, or anything trim-coloured). */
 export function piecesFit(who, G, rig, R) {
   if (!SHEET_PX) return {};
-  const occ = occluders(rig), out = {};
+  const occ = occluders(rig, G), out = {};
   const ofTag = (pred) => ({ P: G.verts, tris: G.tris.filter((t) => pred(G.polys[t.poly])).map((t) => t.v) });
   const meshes = [ofTag((p) => p.piece === 'feather'), ofTag((p) => p.piece === 'ring'), ofTag((p) => p.mat === 'trim' || p.mat === 'rune'), ofTag((p) => p.piece !== 'feather' && p.piece !== 'ring' && p.mat !== 'trim' && p.mat !== 'rune')];
   for (const v of Object.keys(PIECES)) {

@@ -1,6 +1,7 @@
 // The leather set's feathered cap (src/sculpt/assets/lowhat-<who>.json, tools/sculpt/garments/hat.mjs) in the game's clips,
 // through the game's own figure path (src/sculpt/lowpoly.ts lowScene: the bake and the bones the GPU draws with, skinned
-// here as the shader skins them), both bodies, the swept-back hair drawn under it (look.hair 'swept'):
+// here as the shader skins them), both bodies, the swept-back hair drawn pressed under it (look.hair 'swept', the game's
+// 'swept:hat', garments/hat.mjs hatHair):
 //   the idle (its whole loop), the walk, the swing (src/sculpt/anim/clips: the two-handed swing with the long sword in
 //   hand, over its whole length and at its guard, top, strike and impact), each worn alone and over the first outfit:
 //   the hat's triangles crossing the body's, the hair's, the outfit's and the long sword's; its own (rigid on the head:
@@ -20,7 +21,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { buildRig, posed, skin, fromGame, gameRig, axisAngle, mm, tr, armsOut } from './lowrig.mjs';
 import { crossPairs, skinGarment } from './lowgarment.mjs';
-import { buildHat, hatWeights, hairMesh } from './garments/hat.mjs';
+import { buildHat, hatWeights, hatHair } from './garments/hat.mjs';
 
 const args = process.argv.slice(2), opt = (n, f) => { const i = args.indexOf(`--${n}`); return i < 0 ? f : args[i + 1]; };
 const ROOT = new URL('../..', import.meta.url).pathname;
@@ -119,7 +120,7 @@ for (const who of ['male', 'female']) {
   G.vw = hatWeights(rig, G);
   r.self = crossPairs(G.verts, G.tris).length;
   if (r.self) fail = true;
-  const H = hairMesh(who), head = rig.at.get('head'), hairG = { verts: H.verts, vw: H.verts.map(() => [[head, 1]]), bones: [] };
+  const H = hatHair(rig, G), head = rig.at.get('head'), hairG = { verts: H.verts, vw: H.verts.map(() => [[head, 1]]), bones: [] };
   const g = await gameRig(rig, join(ROOT, 'tmp/lowhatcheck'));
   const gameAt = (pose) => fromGame(rig, g.bonesOf(g.sculptRig({ facing: 0, swimming: false, moving: false, working: false, look: g.look, ...pose }).rig, g.PROPS, [], g.REST_EXTRAS), g.gRest);
   const W = (bone, axis, deg) => { const R = rig.bones[rig.at.get(bone)].R; return mm(tr(R), mm(axisAngle(axis, deg), R)); };
