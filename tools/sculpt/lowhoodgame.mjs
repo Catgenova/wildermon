@@ -32,7 +32,7 @@ const size = (zoom) => [Math.max(80, Math.ceil(30 * zoom) + 30), Math.ceil(44 * 
 function cell(zoom, gender, facing, moving, phase) {
   const [cw, ch] = size(zoom), cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
   const g = cv.getContext('2d'); g.fillStyle = '#7d9b5e'; g.fillRect(0, 0, cw, ch);
-  drawFigure(g, cw / 2, ch - 2 * zoom - 8, zoom, { phase, moving, facing, swimming: false, working: false, look: look(gender) });
+  drawFigure(g, cw / 2, ch - 2 * zoom - 8, zoom, { phase, moving, facing, swimming: false, working: false, look: look(gender), outfit: { hood: true } });
   return cv;
 }
 const lab = (t, cls = 'l') => { const d = document.createElement('div'); d.className = cls; d.textContent = t; return d; };
