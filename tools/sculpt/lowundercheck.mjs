@@ -24,6 +24,7 @@ const OUTFITS = {
   trousers: [{ shawl: false, tunic: false }, 'b'],
   tunic: [{ shawl: false, trousers: false }, 't'],
   leather: [{ ...NONE, leatherLegs: true, leatherBoots: true, leatherShawl: true, leatherHat: true }, 'b'],
+  leatherset: [{ ...NONE, leatherChest: true, leatherLegs: true, leatherBoots: true, leatherShawl: true, leatherHat: true }, 'bt'],
   plate: [{ ...NONE, plateChest: true, plateLegs: true, plateBoots: true, plateHelm: true }, 'bt'],
   mantle: [{ ...NONE, plateChest: true, plateLegs: true, plateBoots: true, plateMantle: true }, 'bt'],
 };

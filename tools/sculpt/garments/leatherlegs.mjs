@@ -17,7 +17,8 @@
 //     writes the game's copies beside each body (lowgarment.mjs garmentAsset; loaded by src/sculpt/lowpoly.ts behind the
 //     outfit switch `leatherLegs`): src/sculpt/assets/lowleatherlegs-<who>.json, all but the hip flaps, with `hides`;
 //     src/sculpt/assets/lowleatherlegsflaps-<who>.json, the four flaps with their rims and rivets, worn only without the
-//     leather chest (its skirt takes their place over the hip).
+//     leather chest (its skirt takes their place over the hip); the leggings' waist their last polygons, from `dropFrom`
+//     on (the waistband, and the cloth wholly above the chest's undershirt's foot), left out while the chest is worn.
 //
 // The cloth: rings of vertices, as trousers.mjs lays them: the hip's round a vertical axis through (0, ·, z0) (CF, six
 // columns a side, CB), each leg's round the leg's centre at that height (ten columns: six outside, four inside, the
@@ -585,27 +586,38 @@ export function leatherLegs(rig, o = {}) {
   return G;
 }
 
-/** The garment cut down to the polygons passing keep(poly): their vertices (and weights) renumbered, the rest left out. */
-export function piecesOf(G, keep) {
-  const polys = G.polys.filter(keep), old = [...new Set(polys.flatMap((p) => p.v))].sort((a, b) => a - b), at = new Map(old.map((v, i) => [v, i]));
+/**
+ * The garment cut down to the polygons passing keep(poly): their vertices (and weights) renumbered, the rest left out;
+ * with `last`, the polygons passing it after the others (in their order), from `dropFrom` on.
+ */
+export function piecesOf(G, keep, last = null) {
+  const kept = G.polys.filter(keep), polys = last ? [...kept.filter((p) => !last(p)), ...kept.filter(last)] : kept, old = [...new Set(polys.flatMap((p) => p.v))].sort((a, b) => a - b), at = new Map(old.map((v, i) => [v, i]));
   const H = { verts: old.map((v) => G.verts[v]), part: old.map((v) => G.part[v]), polys: polys.map((p) => ({ ...p, v: p.v.map((v) => at.get(v)) })), vw: old.map((v) => G.vw[v]) };
   H.tris = trisOf(H);
+  if (last) H.dropFrom = polys.length - kept.filter(last).length;
   return H;
 }
 /** Whether a polygon is one of the hip flaps' (their panels, rims and rivets). */
 export const isFlap = (G) => (p) => p.v.every((v) => G.part[v] === 'flap');
+/** Whether a polygon is the waistband's (its strip and rivets). */
+export const isWaistband = (G) => (p) => p.v.every((v) => G.part[v] === 'waistband');
 
 /* ---- the game's copies ---------------------------------------------------------------------------------------------- */
 if (import.meta.url === `file://${process.argv[1]}`) {
   const { writeFileSync } = await import('node:fs');
   const { buildRig } = await import('../lowrig.mjs');
   const { garmentAsset } = await import('../lowgarment.mjs');
+  const { designOf: chestDesign } = await import('./leatherchest.mjs');
   const built = 'node tools/sculpt/garments/leatherlegs.mjs (tools/sculpt/lowgarment.mjs garmentAsset)', looks = { plain: LOOKS.plain, enchanted: LOOKS.enchanted };
   for (const who of ['male', 'female']) {
-    const rig = buildRig(who), G = leatherLegs(rig), flap = isFlap(G);
-    const L = piecesOf(G, (p) => !flap(p)), F = piecesOf(G, flap);
+    const rig = buildRig(who), G = leatherLegs(rig), flap = isFlap(G), band = isWaistband(G);
+    // (the waist last, from `dropFrom` on, left out while the leather chest is worn: the waistband, and the cloth wholly
+    // above the chest's undershirt's foot, the undershirt the bottom layer there under its belt and skirt, as the chest
+    // was fitted: tools/sculpt/garments/leatherchest.mjs underPieces)
+    const cut = Math.max(...[chestDesign(who).undershirt.bottom].flat());
+    const L = piecesOf(G, (p) => !flap(p), (p) => band(p) || p.v.every((v) => G.verts[v][1] > cut)), F = piecesOf(G, flap);
     const file = (n) => new URL(`../../../src/sculpt/assets/${n}-${who}.json`, import.meta.url);
-    writeFileSync(file('lowleatherlegs'), JSON.stringify({ built, ...garmentAsset(rig, L, MATS, looks), hides: G.hides }));
+    writeFileSync(file('lowleatherlegs'), JSON.stringify({ built, ...garmentAsset(rig, L, MATS, looks), hides: G.hides, dropFrom: L.dropFrom }));
     writeFileSync(file('lowleatherlegsflaps'), JSON.stringify({ built, ...garmentAsset(rig, F, MATS, looks) }));
     console.log(who, `leggings ${L.verts.length} vertices, ${L.tris.length} triangles; flaps ${F.verts.length} vertices, ${F.tris.length} triangles; ${G.hides.length} body polygons hidden`);
   }
