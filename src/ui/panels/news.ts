@@ -14,7 +14,6 @@ import { BLOSSOM } from '../../audio/music/tracks/blossom';
 import { ALL_TRACKS, playlistSays } from '../../audio/music/playlist';
 import { CUT_POLL_MS, CUT_QUIET_MS, RECONNECT_RETRY_MOST_MS, RECONNECT_RETRY_MS, RECONNECTING } from '../phone';
 import { BOOT_PHASES, NEAR_REACH, TREE_WAIT_MS } from '../bootsteps';
-import { DYED_HAIR, HAIR_COLOURS } from '../../game/look';
 import { POST_FOLLOW_REACH } from '../../game/posts';
 import { AROUND_MOST, aroundStoreTrades } from '../../game/around';
 import { AUTO_EAT_AT } from '../../game/autoeat';
@@ -113,7 +112,6 @@ import { lifeSeasons } from '../../render/life';
 import { LAYERS, TRIAL_SECONDS } from '../../render/timings';
 import { SHORE_ROCK, SURGE_PERIOD, SURGE_UP, SWELL_RATE, WATER_STOPS, WET_ROCK, WET_SAND } from '../../render/water';
 import { WALK_FRAMES } from '../../render/figure';
-import { BEARD_ODDS } from '../../game/look';
 import { EMOTE_BY_ID } from '../../game/emotes';
 import { SPELL_VISUALS } from '../../render/spells';
 import { furnitureDef, liquidCapacity, POND_EVERY, STATION_REACH, type PlacedFurniture } from '../../game/furniture';
@@ -1598,8 +1596,9 @@ export const NEWS: News[] = [
     lines: () => [
       'Changed: woman build: fuller chest visible side and three-quarter, narrower waist, wider hips; '
         + 'finer, higher-arched brows, lash lines, fuller lips. Neither build: 1/2 the body difference, none of the face\'s.',
-      `Changed: Roll me one beard odds: man ${percent(BEARD_ODDS.man)}, neither ${percent(BEARD_ODDS.neither)}, `
-        + `woman ${BEARD_ODDS.woman ? percent(BEARD_ODDS.woman) : 'never'}. Any build can still choose any beard.`,
+      // (the odds as they were: beards went with the sculpted bodies)
+      `Changed: Roll me one beard odds: man ${percent(0.6)}, neither ${percent(0.2)}, `
+        + 'woman never. Any build can still choose any beard.',
     ],
   },
   {
@@ -3128,7 +3127,8 @@ export const NEWS: News[] = [
     n: 235,
     day: '2026-10-21',
     lines: () => [
-      `Added: dyed hair colours in the character creator: ${listed(HAIR_COLOURS.filter((c) => DYED_HAIR.has(c.id)).map((c) => c.name.toLowerCase()))}. Never rolled at random.`,
+      // (the colours as they were: the swatches went with the sculpted bodies' sliders)
+      `Added: dyed hair colours in the character creator: ${listed(['pastel blue', 'blue', 'teal', 'green', 'purple', 'lavender', 'pink', 'magenta', 'red'])}. Never rolled at random.`,
     ],
   },
   {

@@ -33,8 +33,8 @@ const mixHex = (a: string, b: string, t: number): string => { const A = hex(a), 
 const inkOf = (a: string): string => { const A = hex(a), m = hex(mixHex(a, '#281c1a', 0.62)); return toHex([Math.min(m[0], A[0] * 0.5), Math.min(m[1], A[1] * 0.5), Math.min(m[2], A[2] * 0.5)]); };
 
 export function bodyMaterials(look: Look): Material[] {
-  // A look may name a colour outright (the studio's sheet colours) rather than a swatch.
-  const skin = look.skin.startsWith('#') ? look.skin : skinColour(look), hair = look.hairColour.startsWith('#') ? look.hairColour : hairColour(look), eye = eyeColour(look);
+  // (a tool's look may name a colour outright, the studio's sheet colours: `skinColour` and `hairColour` give it back)
+  const skin = skinColour(look), hair = hairColour(look), eye = eyeColour(look);
   const out: Material[] = [];
   // Skin a touch warmer than the swatch, the pastel of the kit.
   out[M.skin] = { colour: mixHex(skin, '#f2b48c', 0.15), skin: true };

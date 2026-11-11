@@ -22,7 +22,7 @@ src/ui/panels/help.ts	setMarkup(holder, fixed(helpText()));
 
 # Settings: string literals written in settings.ts.
 src/ui/panels/settings.ts	fixed('Recolours meaningful colours only (Runecut, Classic, world). '
-src/ui/panels/settings.ts	setMarkup(text, fixed('<b>Appearance</b><small>Opens the character creator (build, skin, hair, hair colour, eyes, beard, shirt, trousers). <i>Step ashore</i>: apply and return. <i>On to the island</i>: no change.</small>'));
+src/ui/panels/settings.ts	setMarkup(text, fixed('<b>Appearance</b><small>Opens the character creator (body, hair, hair colour, grey, skin). <i>Step ashore</i>: apply and return. <i>On to the island</i>: no change.</small>'));
 src/ui/panels/settings.ts	setMarkup(lead, fixed(
 src/ui/panels/settings.ts	setMarkup(intro, fixed('<b>Window layouts</b><small>Stores each window&rsquo;s position, size, open, expanded and see-through state. <b>Keep</b>: save current. <b>Use</b> or the layout key: restore. Shift+key: save. Windows snap to screen and window edges; hold Alt while dragging to place freely.</small>'));
 src/ui/panels/settings.ts	setMarkup(seeHead, fixed('<b>See-through windows</b><small>Dimmed; clicks pass to the world. Title bar still drags and toggles it. Hold Alt to click or scroll inside. The title-bar ◐ is the same toggle.</small>'));

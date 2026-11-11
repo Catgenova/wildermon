@@ -36,7 +36,7 @@ let gen = 0;
 const queue: Array<{ e: Entry; band: Band }> = [];
 let pumping = false;
 
-const lookKey = (l: Look): string => `${l.gender}|${l.skin}|${l.hair}|${l.hairColour}|${l.eyes}|${l.beard}`;
+const lookKey = (l: Look): string => `${l.gender}|${l.skin}|${l.hair}|${l.hairColour}|${l.hairGrey}`;
 
 /** Steps whenever a bake lands or a look goes, so pictures kept of bodies know to be made again. */
 export const sculptGen = (): number => gen;

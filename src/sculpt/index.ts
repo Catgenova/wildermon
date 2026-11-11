@@ -38,7 +38,7 @@ export type Wear = 'base' | 'shorts' | 'prints';
 export interface Built { kind: Kind; fem: number; wear: Wear; hair: string | null; model: Model | null; materials: Material[]; rest: Bones; order: string[]; chains: Chain[]; bakes: Map<Band, Baked> }
 const BUILT = new Map<string, Built>();
 
-const lookKey = (l: Look): string => `${l.gender}|${l.skin}|${l.hair}|${l.hairColour}|${l.eyes}|${l.beard}`;
+const lookKey = (l: Look): string => `${l.gender}|${l.skin}|${l.hair}|${l.hairColour}|${l.hairGrey}`;
 
 /** The proportions a look stands at: the base's man, woman, or halfway between. */
 export const proportionsOf = (look: Look): Proportions => humanProportions(femOf(look));

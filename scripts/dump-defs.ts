@@ -133,7 +133,7 @@ import { LECTERN_GAIN, LECTERN_REACH, STUDY_WEAR, STUDY_WEAR_SPREAD } from '../s
 import { GLAZE_ASH, GLAZEABLE } from '../src/game/actions';
 import { TRADE_BOOK_AT } from '../src/game/recipes';
 import { TRAPS } from '../src/game/traps';
-import { DEFAULT_LOOK, DYED_HAIR, LOOK_TABLES } from '../src/game/look';
+import { DEFAULT_LOOK, LOOK_KINDS, LOOK_TABLES, LOOK_TONES, legacyLooks } from '../src/game/look';
 import { ACTION_FLOOR, ACTION_PACE, COTTON_SECONDS, COTTON_WEIGHT, MINING_SECONDS, MINING_WEIGHT, WORKER_WEIGHT, WORLD_PACE } from '../src/game/pace';
 import { DROWN_RATE, DROWN_WARN, EXHAUSTED, HEAL_FED, HEAL_RATE, HUNGER_RATE, SWIM_LEARN, SWIM_WIND, THIRST_RATE, STAMINA_BAR_PER_LEVEL, WIND_PER_LEVEL, WIND_REST, WIND_STARVING, WIND_WALK } from '../src/game/body';
 import { SAY_A_MINUTE, SAY_MAX } from '../src/game/chat';
@@ -1291,33 +1291,40 @@ out.push(emptied(['melt_def', 'wall_fitting', 'recipe', 'recipe_input', 'recipe_
 /*
  * Every choice the character creator offers.
  *
- * Ten skin tones, twenty haircuts, fourteen hair colours, eight eyes, seven
- * beards, sixteen cloths and three builds — all of it numbers, so all of it
- * lives in `src/game/look.ts` and arrives here rather than being written twice.
+ * The two bodies and the hairstyles there is a mesh for, as ids
+ * (`look_option`); the skin, the hair's colour and its grey are numbers from
+ * nought to one, which `look_clean()` clamps (`look_tones()`, each falling to
+ * `look_tone_defaults()`). All of it lives in `src/game/look.ts` and arrives
+ * here rather than being written twice, and so does what every id a look
+ * could hold before the sculpted bodies became (`look_legacy`).
  *
  * `fallback` is the row `look_clean()` falls to when a look asks for something
  * that is not in the table, and it is generated from `DEFAULT_LOOK` for the
  * same reason as the rest: a default hardcoded in SQL is a default that drifts
  * from the one the browser draws.
  *
- * The table itself is created in `20260915033000_looks.sql` as well as here,
- * because that one is stamped by hand and this one by the wall clock, and the
- * two clocks cross. Both say `if not exists`; neither cares which won.
+ * The tables and the three functions are created in the hand-written
+ * migrations as well as here (`20260915033000_looks.sql`,
+ * `20261120000001_looks_for_the_sculpted_bodies.sql`), because those are
+ * stamped by hand and this one by the wall clock, and the clocks cross. Both
+ * say `if not exists` or `create or replace`; neither cares which won.
  */
 out.push(`create table if not exists look_option (
   kind text not null, id text not null, ord int not null, name text not null,
   colour text, fallback boolean not null default false, primary key (kind, id)
 );`);
-out.push(emptied(['look_option']));
+out.push(`create table if not exists look_legacy (kind text not null, id text not null, becomes jsonb not null, primary key (kind, id));`);
+out.push(emptied(['look_option', 'look_legacy']));
 for (const [kind, table] of Object.entries(LOOK_TABLES)) {
   table.forEach((o, n) => {
-    const colour = (o as { colour?: string }).colour ?? null;
     const isDefault = DEFAULT_LOOK[kind as keyof typeof DEFAULT_LOOK] === o.id;
-    out.push(`insert into look_option values (${q(kind)}, ${q(o.id)}, ${n}, ${q(o.name)}, ${q(colour)}, ${q(isDefault)});`);
+    out.push(`insert into look_option values (${q(kind)}, ${q(o.id)}, ${n}, ${q(o.name)}, null, ${q(isDefault)});`);
   });
 }
-// The dyed hair colours, which a look rolled at random never comes with (`randomLook`, `look_random`).
-out.push(`create or replace function dyed_hair() returns text[] language sql immutable as $fn$ select array[${[...DYED_HAIR].map(q).join(', ')}]::text[] $fn$;`);
+for (const l of legacyLooks()) out.push(`insert into look_legacy values (${q(l.kind)}, ${q(l.id)}, ${q(JSON.stringify(l.becomes))});`);
+out.push(`create or replace function look_kinds() returns text[] language sql immutable as $fn$ select array[${LOOK_KINDS.map(q).join(', ')}]::text[] $fn$;`);
+out.push(`create or replace function look_tones() returns text[] language sql immutable as $fn$ select array[${LOOK_TONES.map(q).join(', ')}]::text[] $fn$;`);
+out.push(`create or replace function look_tone_defaults() returns jsonb language sql immutable as $fn$ select ${q(JSON.stringify(Object.fromEntries(LOOK_TONES.map((k) => [k, DEFAULT_LOOK[k]]))))}::jsonb $fn$;`);
 type S = Record<string, unknown>;
 for (const d of Object.values(SPECIES) as unknown as S[]) {
   out.push(`insert into species_def values (` + [

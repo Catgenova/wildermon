@@ -1,20 +1,16 @@
-import { LOOK_TABLES, cleanLook, randomLook, type Look } from '../game/look';
-import { drawHeadshot, drawPortrait, type PortraitMotion } from '../render/sprites';
-
-/** Hair that is tied back is chosen by what it is tied into, so its thumbnail shows the back of the head. */
-const FROM_BEHIND = new Set(['ponytail', 'bun', 'braid', 'locs']);
-
-const TITLES: Record<keyof Look, string> = {
-  gender: 'Build', skin: 'Skin', hair: 'Hair', hairColour: 'Hair colour',
-  eyes: 'Eyes', beard: 'Beard', shirt: 'Shirt', trousers: 'Trousers',
-};
-
-const MOTIONS: Array<[PortraitMotion, string]> = [
-  ['idle', 'Stand'], ['walk', 'Walk'], ['run', 'Run'], ['work', 'Work'], ['wave', 'Wave'], ['hop', 'Hop'],
-];
+import {
+  GENDERS, HAIRSTYLES, HAIR_RAMP, HAIR_WHITE, SKIN_RAMP, cleanLook, hairColour, randomLook, skinColour, toneOf,
+  type Look, type Ramp,
+} from '../game/look';
+import { sculptedFigures, sculptedReady, type FigurePose } from '../render/figure';
+import { drawPortrait } from '../render/sprites';
 
 /** Dragging across the mirror turns it an eighth for every so far dragged. */
 const DRAG_STEP = 26;
+/** A slider's steps from one end to the other: a look keeps its numbers to three places. */
+const STEPS = 1000;
+/** Every piece of the first outfit off: the body in its painted undergarment. */
+const BARE: NonNullable<FigurePose['outfit']> = { shawl: false, trousers: false, boots: false, tunic: false, hood: false };
 
 const button = (className: string, text: string, label?: string): HTMLButtonElement => {
   const b = document.createElement('button');
@@ -28,39 +24,61 @@ const button = (className: string, text: string, label?: string): HTMLButtonElem
   return b;
 };
 
+/** A ramp as a CSS gradient left to right: straight between the stops in sRGB, as `rampColour` mixes them, so the track is the colours. */
+const gradientOf = (r: Ramp): string => `linear-gradient(to right, ${r.colour.map((c, i) => `${c} ${(r.at[i] * 100).toFixed(1)}%`).join(', ')})`;
+
+interface Slider {
+  input: HTMLInputElement;
+  swatch: HTMLElement;
+  /** The colour the look comes to, for the swatch; and the track's background, for the look. */
+  colour: (l: Look) => string;
+  track: (l: Look) => string;
+  key: 'skin' | 'hairColour' | 'hairGrey';
+}
+
 /**
- * The character creator: a mirror, and a row of choices for every part of a
- * look.
+ * The character creator: a mirror, and the choices a look has.
  *
  * The account page shows it to a new account before it comes ashore, and to
  * anybody sent back to it from the game's Settings to change their look. It is
  * the one creator either way, so a second visit offers exactly what the first
  * did.
  *
+ * The mirror is the sculpted body the island draws (`drawPortrait`, with the
+ * Sculpted figures path turned on for this page): the man's or the woman's,
+ * standing in its idle, bare but for the painted undergarment unless the
+ * first outfit is asked for, turned by its arrows, by dragging or by the arrow
+ * keys. Under it, a button per body and a thumbnail per hairstyle there is a
+ * mesh for (`HAIRSTYLES`), and sliders for the skin, the hair's colour and its
+ * grey, each with the exact colour beside it. Every change is in the mirror on
+ * its next frame.
+ *
  * It keeps the look being chosen and nothing else. Keeping it anywhere is the
- * page's business, off a button of its own. Its rules are in `creator.css`,
- * which each page that shows it links.
+ * page's business, off a button of its own. Its rules are in `creator.css`.
  */
 export class Creator {
   readonly el: HTMLDivElement;
   private chosen: Look;
-  /** What the pointer is resting on or the keyboard is on, shown in the mirror until it moves off. */
+  /** A body or hairstyle the pointer rests on or the keyboard is on, shown in the mirror until it moves off. */
   private preview: Look | null = null;
   private readonly mirror: HTMLCanvasElement;
   private readonly choices: HTMLDivElement;
   private readonly closeUp: HTMLButtonElement;
-  private readonly motionButtons: HTMLButtonElement[] = [];
-  /** The thumbnails, so that changing skin or hair colour redraws all of them, and which way round each is shown. */
-  private readonly thumbs: Array<{ canvas: HTMLCanvasElement; of: (l: Look) => Look; facing: number }> = [];
-  /** Every row's buttons, so the selected one can be marked without rebuilding. */
-  private readonly marks: Array<{ kind: keyof Look; id: string; button: HTMLButtonElement; label: HTMLElement }> = [];
+  private readonly dressed: HTMLButtonElement;
+  private readonly thumbs: Array<{ canvas: HTMLCanvasElement; hair: string }> = [];
+  private readonly marks: Array<{ kind: 'gender' | 'hair'; id: string; button: HTMLButtonElement; label: HTMLElement; name: string }> = [];
+  private readonly sliders: Slider[] = [];
   private walking = 0;
   private facing = 1;
-  private motion: PortraitMotion = 'walk';
   private close = false;
+  private outfit = false;
+  /** Whether the thumbnails were last drawn with the sculpted bodies loaded: they land after the page does. */
+  private thumbsSculpted = false;
 
   /** `shown` says whether anybody can see it; the mirror stops moving while nobody can. */
   constructor(start: Look, private readonly shown: () => boolean) {
+    // The sculpted bodies, the island's own: the flat figure only until they have loaded, or with no WebGL2.
+    sculptedFigures(true, 'creator');
     this.chosen = cleanLook(start);
     this.el = document.createElement('div');
     this.el.className = 'cr';
@@ -76,22 +94,13 @@ export class Creator {
     this.mirror.tabIndex = 0;
     this.mirror.setAttribute('aria-label', 'Preview. Drag or arrow keys to turn.');
 
-    /*
-     * The mirror walks, and turns, and looks close.
-     *
-     * Standing still is easier to draw and worse to choose from: a walk is how
-     * you will actually see yourself, and it is the only way to find out that
-     * the ponytail moves and the long beard does not. It turns through the same
-     * eight ways the island draws you -- by its arrows, by dragging across it,
-     * or by the arrow keys -- because a haircut is chosen as much from behind
-     * as from the front, and the face button brings the head up to fill it.
-     */
     const turn = document.createElement('div');
     turn.className = 'cr-turn';
     const left = button('', '◀', 'Turn left');
-    this.closeUp = button('cr-close', 'Face');
-    this.closeUp.title = 'Zoom to head';
+    this.closeUp = button('cr-close', 'Head', 'Zoom to head');
     this.closeUp.setAttribute('aria-pressed', 'false');
+    this.dressed = button('cr-close', 'Outfit', 'First outfit');
+    this.dressed.setAttribute('aria-pressed', 'false');
     const right = button('', '▶', 'Turn right');
     left.addEventListener('click', () => this.turn(-1));
     right.addEventListener('click', () => this.turn(1));
@@ -99,34 +108,18 @@ export class Creator {
       this.close = !this.close;
       this.closeUp.setAttribute('aria-pressed', String(this.close));
     });
-    turn.append(left, this.closeUp, right);
-
-    const motions = document.createElement('div');
-    motions.className = 'cr-motions';
-    motions.setAttribute('role', 'group');
-    motions.setAttribute('aria-label', 'Preview animation');
-    for (const [id, label] of MOTIONS) {
-      const b = button('', label);
-      b.dataset.motion = id;
-      b.addEventListener('click', () => {
-        this.showMotion(id);
-        // Asking to see a move is asking to see the body do it.
-        if (this.close) {
-          this.close = false;
-          this.closeUp.setAttribute('aria-pressed', 'false');
-        }
-      });
-      this.motionButtons.push(b);
-      motions.append(b);
-    }
-    this.showMotion(this.motion);
+    this.dressed.addEventListener('click', () => {
+      this.outfit = !this.outfit;
+      this.dressed.setAttribute('aria-pressed', String(this.outfit));
+    });
+    turn.append(left, this.closeUp, this.dressed, right);
 
     const roll = button('cr-roll', 'Random');
     roll.addEventListener('click', () => {
       this.look = randomLook();
     });
 
-    column.append(this.mirror, turn, motions, roll);
+    column.append(this.mirror, turn, roll);
 
     this.choices = document.createElement('div');
     this.choices.className = 'cr-choices';
@@ -178,80 +171,121 @@ export class Creator {
     if (!this.walking) this.walking = requestAnimationFrame((now) => this.frame(now));
   }
 
-  /**
-   * Three kinds of button for three kinds of choice.
-   *
-   * A colour is shown as the colour — a name for it is a word you have to
-   * imagine. A shape (a haircut, a beard) is shown as a head wearing it, drawn
-   * with `drawHeadshot`, which is the same `head()` the island draws: a
-   * thumbnail that came from anywhere else is a thumbnail that can lie about
-   * what you are choosing. Only the build, which is neither a colour nor a
-   * silhouette you could tell at 46 pixels, is a word.
-   */
-  private buildChoices(): void {
-    for (const [key, table] of Object.entries(LOOK_TABLES) as Array<[keyof Look, Array<{ id: string; name: string; colour?: string }>]>) {
-      const block = document.createElement('div');
-      block.className = 'cr-choice';
-      const head = document.createElement('h2');
-      head.textContent = TITLES[key];
-      const chosen = document.createElement('span');
-      head.append(chosen);
-      const row = document.createElement('div');
-      row.className = 'cr-row';
-      block.append(head, row);
-      for (const option of table) {
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.title = option.name;
-        b.dataset.kind = key;
-        b.dataset.id = option.id;
-        if (option.colour) {
-          b.className = 'cr-pick cr-swatch';
-          b.style.background = option.colour;
-        } else if (key === 'hair' || key === 'beard') {
-          b.className = 'cr-pick cr-face';
-          const canvas = document.createElement('canvas');
-          // Drawn at the screen's own resolution, so a haircut is not chosen from a blur.
-          canvas.width = canvas.height = Math.round(52 * Math.min(3, window.devicePixelRatio || 1));
-          b.append(canvas);
-          this.thumbs.push({ canvas, of: (l) => ({ ...l, [key]: option.id, ...(key === 'hair' ? {} : { hair: 'crop' }) }), facing: key === 'hair' && FROM_BEHIND.has(option.id) ? 3 : 1 });
-        } else {
-          b.className = 'cr-pick cr-word';
-          b.textContent = option.name;
-        }
-        b.addEventListener('click', () => {
-          this.look = { ...this.chosen, [key]: option.id };
-        });
-        // Resting the pointer on a choice, or tabbing to it, tries it on in the mirror; moving off puts back what was chosen.
-        const tryOn = (): void => { this.preview = cleanLook({ ...this.chosen, [key]: option.id }); };
-        const takeOff = (): void => { this.preview = null; };
-        b.addEventListener('pointerenter', tryOn);
-        b.addEventListener('focus', tryOn);
-        b.addEventListener('pointerleave', takeOff);
-        b.addEventListener('blur', takeOff);
-        this.marks.push({ kind: key, id: option.id, button: b, label: chosen });
-        row.append(b);
-      }
-      this.choices.append(block);
-    }
+  /** A heading with the chosen thing's name beside it, and the row under it. */
+  private block(title: string): { row: HTMLDivElement; label: HTMLSpanElement } {
+    const block = document.createElement('div');
+    block.className = 'cr-choice';
+    const head = document.createElement('h2');
+    head.textContent = title;
+    const label = document.createElement('span');
+    head.append(label);
+    const row = document.createElement('div');
+    row.className = 'cr-row';
+    block.append(head, row);
+    this.choices.append(block);
+    return { row, label };
   }
 
-  /** The thumbnails and the ticks, from the one look. The mirror redraws itself every frame. */
+  /** A choice of id: put on when clicked, tried on in the mirror while the pointer or the keyboard rests on it. */
+  private pick(b: HTMLButtonElement, kind: 'gender' | 'hair', id: string, name: string, label: HTMLElement): void {
+    b.dataset.kind = kind;
+    b.dataset.id = id;
+    b.addEventListener('click', () => {
+      this.look = { ...this.chosen, [kind]: id };
+    });
+    const tryOn = (): void => { this.preview = cleanLook({ ...this.chosen, [kind]: id }); };
+    const takeOff = (): void => { this.preview = null; };
+    b.addEventListener('pointerenter', tryOn);
+    b.addEventListener('focus', tryOn);
+    b.addEventListener('pointerleave', takeOff);
+    b.addEventListener('blur', takeOff);
+    this.marks.push({ kind, id, button: b, label, name });
+  }
+
+  private slider(title: string, key: Slider['key'], colour: Slider['colour'], track: Slider['track']): void {
+    const { row } = this.block(title);
+    row.classList.add('cr-tone');
+    const input = document.createElement('input');
+    input.type = 'range';
+    input.min = '0';
+    input.max = String(STEPS);
+    input.step = '1';
+    input.className = 'cr-slide';
+    input.dataset.kind = key;
+    input.setAttribute('aria-label', title);
+    const swatch = document.createElement('span');
+    swatch.className = 'cr-dab';
+    swatch.dataset.kind = key;
+    swatch.setAttribute('aria-hidden', 'true');
+    input.addEventListener('input', () => {
+      this.look = { ...this.chosen, [key]: toneOf(Number(input.value) / STEPS) };
+    });
+    row.append(input, swatch);
+    this.sliders.push({ input, swatch, colour, track, key });
+  }
+
+  /**
+   * A word for each body; a head wearing it for each hairstyle, drawn by the
+   * same renderer as the mirror, so a thumbnail cannot promise what the body
+   * will not wear; and a slider for each colour, its track the colours along
+   * it and the exact colour chosen beside it.
+   */
+  private buildChoices(): void {
+    const body = this.block('Body');
+    for (const g of GENDERS) {
+      const b = button('cr-pick cr-word', g.name);
+      this.pick(b, 'gender', g.id, g.name, body.label);
+      body.row.append(b);
+    }
+    const hair = this.block('Hair');
+    for (const h of HAIRSTYLES) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'cr-pick cr-face';
+      b.title = h.name;
+      const canvas = document.createElement('canvas');
+      // Drawn at the screen's own resolution, so a haircut is not chosen from a blur.
+      canvas.width = canvas.height = Math.round(64 * Math.min(3, window.devicePixelRatio || 1));
+      const name = document.createElement('span');
+      name.textContent = h.name;
+      b.append(canvas, name);
+      this.thumbs.push({ canvas, hair: h.id });
+      this.pick(b, 'hair', h.id, h.name, hair.label);
+      hair.row.append(b);
+    }
+    this.slider('Hair colour', 'hairColour', hairColour, () => gradientOf(HAIR_RAMP));
+    // The grey's track runs from the hair's own colour to white, as the hair does.
+    this.slider('Grey', 'hairGrey', hairColour, (l) => `linear-gradient(to right, ${hairColour({ ...l, hairGrey: 0 })}, ${HAIR_WHITE})`);
+    this.slider('Skin', 'skin', skinColour, () => gradientOf(SKIN_RAMP));
+  }
+
+  /** The marks, the sliders and the thumbnails, from the one look. The mirror redraws itself every frame. */
   private redraw(): void {
     for (const m of this.marks) {
       const on = this.chosen[m.kind] === m.id;
       m.button.classList.toggle('on', on);
       m.button.setAttribute('aria-pressed', String(on));
-      if (on) {
-        const table = LOOK_TABLES[m.kind] as Array<{ id: string; name: string }>;
-        m.label.textContent = table.find((o) => o.id === m.id)?.name ?? '';
-      }
+      if (on) m.label.textContent = m.name;
     }
+    for (const s of this.sliders) {
+      const v = Math.round(this.chosen[s.key] * STEPS);
+      if (Number(s.input.value) !== v) s.input.value = String(v);
+      const c = s.colour(this.chosen);
+      s.swatch.style.background = c;
+      s.swatch.title = c;
+      s.input.style.setProperty('--cr-track', s.track(this.chosen));
+    }
+    this.drawThumbs();
+  }
+
+  /** Each hairstyle on the chosen body in the chosen colours, its head close. */
+  private drawThumbs(): void {
+    this.thumbsSculpted = sculptedReady();
     for (const t of this.thumbs) {
       const ctx = t.canvas.getContext('2d');
       if (!ctx) continue;
       ctx.clearRect(0, 0, t.canvas.width, t.canvas.height);
-      drawHeadshot(ctx, 0, 0, t.canvas.width, t.of(this.chosen), t.facing);
+      drawPortrait(ctx, 0, 0, t.canvas.width, t.canvas.height, { ...this.chosen, hair: t.hair }, 0, 1, 'idle', { close: true, outfit: BARE });
     }
   }
 
@@ -271,21 +305,16 @@ export class Creator {
       }
       ctx.clearRect(0, 0, this.mirror.width, this.mirror.height);
       const shown = this.preview ?? this.chosen;
-      if (this.close) {
-        drawHeadshot(ctx, 0, 0, this.mirror.width, shown, this.facing, now / 1000, this.mirror.height);
-      } else {
-        drawPortrait(ctx, 0, 0, this.mirror.width, this.mirror.height, shown, now / 1000, this.facing, this.motion);
-      }
+      drawPortrait(ctx, 0, 0, this.mirror.width, this.mirror.height, shown, now / 1000, this.facing, 'idle',
+        { close: this.close, ...(this.outfit ? {} : { outfit: BARE }) });
     }
+    // The thumbnails again once the sculpted bodies have landed.
+    if (!this.thumbsSculpted && sculptedReady()) this.drawThumbs();
     this.walking = requestAnimationFrame((t) => this.frame(t));
   }
 
   private turn(by: number): void {
     this.facing = (((this.facing + by) % 8) + 8) % 8;
   }
-
-  private showMotion(m: PortraitMotion): void {
-    this.motion = m;
-    for (const b of this.motionButtons) b.setAttribute('aria-pressed', String(b.dataset.motion === m));
-  }
 }
+

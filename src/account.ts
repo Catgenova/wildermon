@@ -287,7 +287,7 @@ const creator = new Creator(randomLook(), () => !maker.hidden);
 maker.prepend(creator.el);
 
 const LEDE_ACCOUNT = lede.textContent ?? '';
-const LEDE_MAKER = 'Skin, hair, eyes, build and what you washed ashore in. None of it is fixed — you can come back and change any of it whenever you like.';
+const LEDE_MAKER = 'Body, hair, hair colour, grey, skin. Changeable later: Settings, How you look.';
 
 function toMaker(start: Look): void {
   lede.textContent = LEDE_MAKER;
