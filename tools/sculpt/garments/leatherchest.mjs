@@ -68,7 +68,7 @@ export const DESIGN = {
     wedge: 8,
     collar: { reachY: [-0.3, -0.1, 0.05], notch: [12, 1.5], top: { az: [0, 30, 90, 180], top: [-0.16, -0.08, -0.04, 0.0] }, base: [-1.1, -1.0, -0.9], trim: 0.07, c: 0.06, flare: 0.02, wall: 0.06, spread: 0.45, sink: 0.3, shrug: 0.4 },
     core: { az: [0, 14, 28, 40, 43, 62, 80, 96], top: [-0.78, -0.8, -0.86, -0.92, -0.94, -0.95, -1.0, -1.9], bottom: [-3.78, -3.72, -3.64, -3.58, -2.0, -1.95, -1.95, -1.95], rows: [0.0,  0.0833,  0.1667,  0.25,  0.3333,  0.4167,  0.5,  0.5833,  0.6667,  0.75,  0.8333,  0.9167,  1.0], c: 0.02, flat: 14, drape: false },
-    back: { az: [96, 112, 116, 130, 150, 165, 180], top: [-1.9, -1.0, -0.85, -0.7, -0.6, -0.56, -0.54], bottom: [-1.95, -1.95, -3.5, -3.55, -3.6, -3.62, -3.64], rows: [0, 0.2, 0.4, 0.6, 0.8, 1], c: 0.02, panel: { top: -0.9, bottom: -2.85, half: 34, tip: -3.15 } },
+    back: { az: [96, 112, 116, 130, 150, 165, 180], top: [-1.9, -1.0, -0.85, -0.7, -0.6, -0.56, -0.54], bottom: [-1.95, -1.95, -3.5, -3.55, -3.6, -3.62, -3.64], rows: [0, 0.2, 0.4, 0.6, 0.8, 1], c: 0.02, panel: { top: -0.9, bottom: -2.85, half: 34, tip: -3.15 }, strap: { trace: 'back.strap' } },
     side: { az: [38, 60, 80, 100, 120], top: [-1.75, -1.75, -1.8, -1.75, -1.75], bottom: [-3.62, -3.6, -3.58, -3.56, -3.55], rows: [0, 0.33, 0.67, 1], c: 0.018 },
     bands: [{ top: { y0: -1.57, k: 0.21 }, bottom: { y0: -2.13, k: 0.115 }, x: [-1.38, 1.02], lift: 2 }, { top: { y0: -2.13, k: 0.115 }, bottom: { y0: -2.98, k: 0.24 }, x: [-1.3, 0.56], lift: 1 }],
     panels: [{ trace: 'core.low', tag: 'chest', tuck: 4 }, { trace: 'band2', tag: 'band 2', tuck: 4 }, { trace: 'band1', tag: 'band 1', top: 'trim', lines: [0.3, 0.48] }],
@@ -109,7 +109,7 @@ export const DESIGN = {
     wedge: 8,
     collar: { reachY: [-0.3, -0.1, 0.05], notch: [12, 1.5], top: { az: [0, 30, 90, 180], top: [-0.14, -0.07, -0.03, 0.0] }, base: [-1.05, -0.95, -0.85], trim: 0.06, c: 0.05, flare: 0.018, wall: 0.05, spread: 0.4, sink: 0.27, shrug: 0.35 },
     core: { az: [0, 12, 24, 36, 40, 58, 76, 96], top: [-0.8, -0.81, -0.84, -0.9, -0.92, -0.95, -1.0, -1.85], bottom: [-3.25, -3.2, -3.12, -3.06, -1.95, -1.9, -1.9, -1.9], rows: [0.0,  0.0833,  0.1667,  0.25,  0.3333,  0.4167,  0.5,  0.5833,  0.6667,  0.75,  0.8333,  0.9167,  1.0], c: 0.018, flat: 12, drape: false },
-    back: { az: [96, 112, 116, 130, 150, 165, 180], top: [-1.85, -1.0, -0.9, -0.75, -0.66, -0.62, -0.6], bottom: [-1.9, -1.9, -3.0, -3.05, -3.1, -3.12, -3.14], rows: [0, 0.2, 0.4, 0.6, 0.8, 1], c: 0.018, panel: { top: -0.95, bottom: -2.45, half: 34, tip: -2.7 } },
+    back: { az: [96, 112, 116, 130, 150, 165, 180], top: [-1.85, -1.0, -0.9, -0.75, -0.66, -0.62, -0.6], bottom: [-1.9, -1.9, -3.0, -3.05, -3.1, -3.12, -3.14], rows: [0, 0.2, 0.4, 0.6, 0.8, 1], c: 0.018, panel: { top: -0.95, bottom: -2.45, half: 34, tip: -2.7 }, strap: { trace: 'back.strap' } },
     side: { az: [34, 56, 78, 100, 120], top: [-1.75, -1.75, -1.8, -1.75, -1.75], bottom: [-3.1, -3.08, -3.06, -3.05, -3.04], rows: [0, 0.33, 0.67, 1], c: 0.016 },
     bands: [{ top: { y0: -1.3, k: 0.42 }, bottom: { y0: -1.95, k: 0.45 }, x: [-0.95, 1.15], lift: 2 }, { top: { y0: -1.7, k: 0.45 }, bottom: { y0: -2.7, k: 0.32 }, x: [-0.95, 1.25], lift: 1 }],
     panels: [{ trace: 'core.low', tag: 'chest', tuck: 4 }, { trace: 'band2', tag: 'band 2', tuck: 4 }, { trace: 'band1', tag: 'band 1', top: 'trim', lines: [0.3, 0.48] }],
@@ -568,9 +568,10 @@ export function tracedOutline(who, name, { cols = 10, tuck = 0, view = 'front', 
   const tf = new URL(`../leather/mesh/${who}-${view}.json`, import.meta.url), cf = new URL('../lowleatherchestcams.json', import.meta.url);
   if (!existsSync(tf) || !existsSync(cf)) return null;
   const P = JSON.parse(readFileSync(tf, 'utf8')).pieces[name], C = JSON.parse(readFileSync(cf, 'utf8'))[who], V = C?.views?.[view];
-  if (!Array.isArray(P) || !V || V.yaw !== 0) return null;
+  if (!Array.isArray(P) || !V || (V.yaw !== 0 && V.yaw !== 180)) return null;
+  const flip = V.yaw === 180 ? -1 : 1;
   const pw = (m, y) => { if (!m?.y?.length) return 1; const { y: Y, k } = m; if (y >= Y[0]) return k[0]; for (let i = 0; i + 1 < Y.length; i++) if (y >= Y[i + 1]) return k[i] + ((k[i + 1] - k[i]) * (y - Y[i])) / (Y[i + 1] - Y[i]); return k[k.length - 1]; };
-  const toBody = (u, v) => { const y = (C.cy - v) / C.s; return [(u - V.cx) / (C.s * pw(C.sx, y)), y]; };
+  const toBody = (u, v) => { const y = (C.cy - v) / C.s; return [(flip * (u - V.cx)) / (C.s * pw(C.sx, y)), y]; };
   if (across) {
     // (rows instead: for an upright piece, each horizontal line through it, its middle and width, { x, y, w })
     const vs = P.map((q) => q[1]), v0 = Math.min(...vs), v1 = Math.max(...vs), o = [];
@@ -739,7 +740,8 @@ function torsoPieces(G, rig, D, S) {
   fitOut(kRows, false, out, [[trunk, D.fit.trunk], ...under.slice(0, nLegs).map((P) => [P, gap])]);
   p0 = G.polys.length;
   const backTop = (r, c) => (Math.abs(180 - kAz[c]) <= 50 && Math.abs(180 - (kAz[c + 1] ?? 999)) <= 50 ? 'open' : 'bevel');
-  const back = plateOf(G, kRows, { tag: 'back', mat: 'leather', boneAt: TW, rim, out, border: { left: 'edge', right: 'edge', top: backTop, bottom: 'bevel' } });
+  const back = plateOf(G, kRows, { tag: 'back', mat: 'leather', boneAt: TW, rim, out, border: { left: 'edge', right: 'edge', top: backTop, bottom: 'bevel' } }), backWings = [];
+  let backPanel = null;
   if (kStep >= 0) {
     const lap = Kp.wingLap ?? 4, aEnd = Kp.az[kStep + 1] + lap;
     const wTab = { az: [...Kp.az.slice(0, kStep + 1), aEnd], top: [...Kp.top.slice(0, kStep + 1), tabAt(kTab, 'top', aEnd)], bottom: [...Kp.bottom.slice(0, kStep + 1), Kp.bottom[kStep]] };
@@ -749,7 +751,7 @@ function torsoPieces(G, rig, D, S) {
       const rows = grid(az, (a) => tabAt(wTab, 'top', a), (a) => tabAt(wTab, 'bottom', a), Kp.rows, Kp.c);
       layOver(rows, [back, belt, ...sides], out, gap, 0);
       fitOut(rows, false, out, [[trunk, D.fit.trunk]]);
-      plateOf(G, rows, { tag: 'back', mat: 'leather', boneAt: TW, rim, out, border: { left: 'edge', right: 'edge', top: 'bevel', bottom: 'bevel' } });
+      backWings.push(plateOf(G, rows, { tag: 'back', mat: 'leather', boneAt: TW, rim, out, border: { left: 'edge', right: 'edge', top: 'bevel', bottom: 'bevel' } }));
     }
   }
   // its raised panel: a pentagon on the upper back, pointed at its foot, laid on the back
@@ -759,7 +761,19 @@ function torsoPieces(G, rig, D, S) {
     const rows = [0, 0.25, 0.5, 0.75, 1].map((f) => az.map((a) => chest.at(P.top + (bot(a) - P.top) * f, a, Kp.c)));
     layOver(rows, [back], out, gap, 1);
     fitOut(rows, false, out, [[trunk, D.fit.trunk]]);
-    plateOf(G, rows, { tag: 'back panel', boneAt: TW, rim: { ...rim, w: rim.w * 0.6, t: rim.t * 0.5 }, out, border: { top: 'bevel', bottom: 'bevel', left: 'bevel', right: 'bevel' } });
+    backPanel = plateOf(G, rows, { tag: 'back panel', boneAt: TW, rim: { ...rim, w: rim.w * 0.6, t: rim.t * 0.5 }, out, border: { top: 'bevel', bottom: 'bevel', left: 'bevel', right: 'bevel' } });
+  }
+  // the strap across the back: off its traced outline in the back view, laid over the back and its panel
+  if (Kp.strap) {
+    const cols = tracedOutline(rig.who, Kp.strap.trace ?? 'back.strap', { cols: Kp.strap.cols ?? 8, view: 'back' });
+    if (cols) {
+      // (the back's azimuth at x: x = r sin(a) falls from the left side (a 90) round the back to the right (a 270))
+      const azBack = (y, x) => { let lo = 91, hi = 269; for (let k = 0; k < 30; k++) { const m = (lo + hi) / 2; if (chest.at(y, m, Kp.c)[0] > x) lo = m; else hi = m; } return (lo + hi) / 2; };
+      const nR = 4, rows = Array.from({ length: nR }, (_, r) => cols.map((cl) => { const y = cl.top + ((cl.bottom - cl.top) * r) / (nR - 1); return chest.at(y, azBack(y, cl.x), Kp.c); }));
+      layOver(rows, [back, ...backWings, backPanel].filter(Boolean), out, gap, 1);
+      fitOut(rows, false, out, [[trunk, D.fit.trunk]]);
+      plateOf(G, rows, { tag: 'back', mat: 'leather', boneAt: TW, rim: { ...rim, w: rim.w * 0.6 }, out, border: { top: 'bevel', bottom: 'bevel', left: 'edge', right: 'edge' } });
+    }
   }
   for (let k = p0; k < G.polys.length; k++) G.polys[k].piece = 'back';
   under.push(lay(p0));
