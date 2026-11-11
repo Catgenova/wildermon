@@ -36,6 +36,8 @@ markers[markers == ib] = 0; markers[(markers == isk) & ~skinm] = 0
 markers[~fig] = 0
 lbl = watershed(elev, markers, mask=fig)
 lbl[bgm] = ib; lbl[skinm] = isk
+# (`merge`: seed groups that are one piece: a plate split by a trim line along its middle seeded either side of it)
+for a, b in J.get('merge', {}).items(): lbl[lbl == names.index(a) + 1] = names.index(b) + 1
 # (`fillers`: the background left within a zone given to a piece: the armpits' shadow to the sleeve, the gaps between
 # the skirt plates to the undershirt; the plates as traced keep every pixel they have)
 for n, P in J.get('fillers', {}).items():
