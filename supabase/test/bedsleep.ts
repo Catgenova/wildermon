@@ -120,9 +120,9 @@ begin
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, level, made_by)
     values (w, 'furniture', 'chest', ${BED.x + 1}, ${BED.y}, 0, 0, ${BED.x + 1} + 0.25, ${BED.y} + 0.25, 50, 0, me) returning id into v_chest;
   -- A bed its owner named, far off: its name said as written.
-  insert into said values ('NAMED', (with b as (insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, level, made_by, name)
+  with b as (insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, level, made_by, name)
     values (w, 'furniture', 'bed', 100, 100, 0, 0, 100.375, 100.25, 50, 0, str, 'Stray''s miracle sleep') returning *)
-    select asleep_in(placed_name_in_line(b)) || '|' || sleep_not_yours(placed_name_in_line(b)) from b));
+  insert into said select 'NAMED', asleep_in(placed_name_in_line(b)) || '|' || sleep_not_yours(placed_name_in_line(b)) from b;
   update player set x = ${LIE.x}, y = ${LIE.y}, level = 0, stats = jsonb_set(stats, '{stamina}', '0.2'),
          rested = 0, sleep_on = false, body_at = now(), moved_at = now() where world_id = w and uid in (me, cit, str);
   update player set x = ${THEIRS.x} + 0.5, y = ${THEIRS.y} + 1.5 where world_id = w and uid = str;
@@ -240,7 +240,7 @@ begin
   insert into said values ('HM', sleep_hm(0) || ';' || sleep_hm(59) || ';' || sleep_hm(3600) || ';' || sleep_hm(7500) || ';' || sleep_hm(18000));
   insert into said values ('RATE', sleep_rate(${BED_FACTOR}, ${BED.ql}, 0)::text || '|' || sleep_rate(0.5, 100, 0.25)::text);
   insert into said values ('SAID', sleep_slept_said(${SIX}, 9000, 9000) || ';' || sleep_switch_said(true, 7500) || ';'
-    || sleep_switch_said(false, 59) || ';' || sleep_not_yours('Bed') || ';' || asleep_in('Bed'));
+    || sleep_switch_said(false, 59) || ';' || sleep_not_yours('bed') || ';' || asleep_in('bed'));
 end $t$;
 select k || '=' || v from said order by k;
 rollback;
@@ -316,7 +316,7 @@ check('the island says a stretch of time as the browser does',
   get('HM') === [0, 59, 3600, 7500, 18000].map(sleepHm).join(';'), get('HM'));
 const [rate1, rate2] = parts('RATE').map(Number);
 check('and works the rate the same', near(rate1, sleepRate(BED_FACTOR, BED.ql), 1e-12) && near(rate2, sleepRate(0.5, 100, 0.25), 1e-12), get('RATE'));
-check('and says the lines the same', get('SAID') === [sleptSaid(SIX, 9000, 9000), sleepSwitchSaid(true, 7500), sleepSwitchSaid(false, 59), sleepNotYours('bed'), asleepIn('Bed')].join(';'),
+check('and says the lines the same', get('SAID') === [sleptSaid(SIX, 9000, 9000), sleepSwitchSaid(true, 7500), sleepSwitchSaid(false, 59), sleepNotYours('bed'), asleepIn('bed')].join(';'),
   get('SAID'));
 
 /* ---- the browser, the same rules ------------------------------------------------------------------------------- */
