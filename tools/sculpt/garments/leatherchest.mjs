@@ -894,19 +894,31 @@ function torsoPieces(G, rig, D, S) {
       E.traced = ['stripe1', 'stripe2'].map((n) => tracedOutline(rig.who, n, { cols: 6, across: true })).filter(Boolean);
       // (`traceStripes` false: the design's stripes, straight down from the ring, where the trace's are ragged)
       if (E.traceStripes === false) E.traced = [];
+      // (`dx`: the whole emblem moved across, clear of our broader shoulder's cap;
+      // (`dy`: the ring down onto the band under it, the stripes' tops with it)
+      if (E.dx) { E.x += E.dx; E.traced = E.traced.map((T0) => T0.map((q) => ({ ...q, x: q.x + E.dx }))); }
+      if (E.dy) { E.y += E.dy; E.traced = E.traced.map((T0) => { const y0 = Math.max(...T0.map((q) => q.y)), y1 = Math.min(...T0.map((q) => q.y)); return T0.map((q) => ({ ...q, y: q.y + E.dy * (q.y - y1) / Math.max(1e-9, y0 - y1) })); }); }
       if (E.traced.length) E.stripes = [];
     }
     // (on the outermost plate there; through a seam, on the chest's own section out by two thicknesses)
     const at = (x, y) => onTop(front, [x, y, 0], FWD) ?? (() => { const q = chest.at(y, azOfX(chest, y, x, Cp.c), Cp.c + 2 * gap); return { q, n: unit(out(q)) }; })();
     // (riding over the plates' edges: each point forward to the most of its neighbours' within two, and over a step
     // between plates by the raised strip's height too, so no edge or rim cuts across it)
-    const ride = (pts, closed) => pts.map((p, i) => {
-      let m = p.q[2], lo = p.q[2];
-      for (let j = -2; j <= 2; j++) { const q = pts[closed ? (i + j + pts.length) % pts.length : Math.max(0, Math.min(pts.length - 1, i + j))]; m = Math.max(m, q.q[2]); lo = Math.min(lo, q.q[2]); }
-      return { q: [p.q[0], p.q[1], m + (m - lo > 0.02 ? rim.h : 0)], n: p.n };
-    });
+    const ride = (pts, closed, slope = 0.5) => {
+      const P = pts.map((p, i) => {
+        let m = p.q[2], lo = p.q[2];
+        for (let j = -2; j <= 2; j++) { const q = pts[closed ? (i + j + pts.length) % pts.length : Math.max(0, Math.min(pts.length - 1, i + j))]; m = Math.max(m, q.q[2]); lo = Math.min(lo, q.q[2]); }
+        // (its normal the mean of its neighbours' within three, so the strip does not lean off a rim's or an edge's face)
+        let nn = [0, 0, 0];
+        for (let j = -3; j <= 3; j++) nn = add(nn, pts[closed ? (i + j + pts.length) % pts.length : Math.max(0, Math.min(pts.length - 1, i + j))].n);
+        return { q: [p.q[0], p.q[1], m + (m - lo > 0.02 ? rim.h : 0)], n: unit(nn) };
+      });
+      // (its rises eased: each point no lower than any other's less half their distance apart, so a step up over an edge
+      // is a slope the strip's width stays level along rather than a riser it twists on)
+      return P.map((p) => { let z = p.q[2]; for (const q of P) z = Math.max(z, q.q[2] - slope * Math.hypot(p.q[0] - q.q[0], p.q[1] - q.q[1])); return { q: [p.q[0], p.q[1], z], n: p.n }; });
+    };
     const ring = Array.from({ length: 28 }, (_, k) => { const a = (k / 28) * 2 * Math.PI; return at(E.x + Math.cos(a) * E.r, E.y + Math.sin(a) * E.r); }).filter(Boolean);
-    if (ring.length === 28) stripOn(G, ride(ring, true), E.w, 'rune', 'emblem', TW, { closed: true, h: 0.03 });
+    if (ring.length === 28) stripOn(G, ride(ring, true, E.ringSlope ?? 0.5), E.w, 'rune', 'emblem', TW, { closed: true, h: 0.03 });
     for (const T0 of E.traced ?? []) {
       // (straight and even, as drawn: the line x = a + b y through the traced rows' middles, least squares, the rows'
       // median width, from the top row to the foot)
