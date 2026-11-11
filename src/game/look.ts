@@ -40,7 +40,7 @@ export interface Look {
   hair: string;
   /** The hair's hue round the colour wheel: nought red, through yellow, green, cyan, blue and magenta, to red again at one. */
   hairColour: number;
-  /** The hair's brightness: nought near black, one near white (`hairColourOf`). */
+  /** The hair's brightness: nought near black, one near white, greying over the top of it (`hairColourOf`). */
   hairBright: number;
   /** Along SKIN_RAMP: nought the palest, one the darkest. */
   skin: number;
@@ -130,6 +130,8 @@ export const SKIN_RAMP: Ramp = ramp(['#f5ddc6', '#ecc8a6', '#ddae85', '#c79a68',
 export const HAIR_SATURATION = 0.6;
 export const HAIR_DARKEST = 0.06;
 export const HAIR_LIGHTEST = 0.9;
+/** Over the top of the brightness this much of it, the hue fades out, to grey and at the top to near white. */
+export const HAIR_FADE = 0.3;
 
 /** An HSL colour (each nought to one) as sRGB. */
 function hslOf(h: number, s: number, l: number): RGB {
@@ -139,9 +141,14 @@ function hslOf(h: number, s: number, l: number): RGB {
   return [(r + m) * 255, (g + m) * 255, (b + m) * 255];
 }
 
-/** The hair's colour for a hue and a brightness: HSL(hue round the wheel, HAIR_SATURATION, HAIR_DARKEST to HAIR_LIGHTEST). */
-export const hairColourOf = (hue: number, bright: number): string =>
-  hexOf(hslOf(clamp01(hue) === 1 ? 0 : clamp01(hue), HAIR_SATURATION, HAIR_DARKEST + (HAIR_LIGHTEST - HAIR_DARKEST) * clamp01(bright)));
+/**
+ * The hair's colour for a hue and a brightness: HSL(hue round the wheel, HAIR_SATURATION, HAIR_DARKEST to
+ * HAIR_LIGHTEST), its saturation going to none over the top HAIR_FADE of the brightness.
+ */
+export const hairColourOf = (hue: number, bright: number): string => {
+  const b = clamp01(bright);
+  return hexOf(hslOf(clamp01(hue) === 1 ? 0 : clamp01(hue), HAIR_SATURATION * clamp01((1 - b) / HAIR_FADE), HAIR_DARKEST + (HAIR_LIGHTEST - HAIR_DARKEST) * b));
+};
 
 /* ---- looks from before ------------------------------------------------------------------------------- */
 

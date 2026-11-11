@@ -1,5 +1,5 @@
 import {
-  GENDERS, HAIRSTYLES, HAIR_DARKEST, HAIR_LIGHTEST, SKIN_RAMP, cleanLook, hairColour, hairColourOf, randomLook, skinColour, toneOf,
+  GENDERS, HAIRSTYLES, HAIR_DARKEST, HAIR_FADE, HAIR_LIGHTEST, SKIN_RAMP, cleanLook, hairColour, hairColourOf, randomLook, skinColour, toneOf,
   type Look, type Ramp,
 } from '../game/look';
 import { sculptedFigures, sculptedReady, type FigurePose } from '../render/figure';
@@ -47,7 +47,9 @@ const gradientOf = (r: Ramp): string => gradient(r.colour.map((c, i) => [r.at[i]
  */
 const hueTrack = (l: Look): string => gradient(Array.from({ length: 7 }, (_, i): [number, string] => [i / 6, hairColourOf(i / 6, l.hairBright)]));
 const HALF_LIGHT = (0.5 - HAIR_DARKEST) / (HAIR_LIGHTEST - HAIR_DARKEST);
-const brightTrack = (l: Look): string => gradient([0, HALF_LIGHT, 1].map((b): [number, string] => [b, hairColourOf(l.hairColour, b)]));
+/** (and over the fade, where the saturation and the lightness both move, a stop every twentieth, near enough the colours) */
+const brightTrack = (l: Look): string => gradient([0, HALF_LIGHT, ...Array.from({ length: 7 }, (_, i) => 1 - HAIR_FADE + (i * HAIR_FADE) / 6)]
+  .map((b): [number, string] => [b, hairColourOf(l.hairColour, b)]));
 
 interface Slider {
   input: HTMLInputElement;

@@ -79,6 +79,10 @@ check('hair colour: red, yellow, green, cyan, blue, magenta round the wheel, red
   [0, 1, 2, 3, 4, 5, 6].map((i) => hairColourOf(i / 6, 0.5)).join(' '));
 check('hair brightness: near black at nought, near white at one, for every hue',
   [0, 0.2, 0.4, 0.6, 0.8].every((h) => lab(hairColourOf(h, 0))[0] < 8 && lab(hairColourOf(h, 1))[0] > 80), `${hairColourOf(0.6, 0)} ${hairColourOf(0.6, 1)}`);
+check('the hue fades out over the top of the brightness: full at 0.7, half at 0.85, grey at one',
+  Math.abs(hsl(hairColourOf(0.6, 0.7))[1] - 0.6) < 0.02 && Math.abs(hsl(hairColourOf(0.6, 0.85))[1] - 0.3) < 0.02 && hsl(hairColourOf(0.6, 1))[1] === 0
+    && hairColourOf(0.1, 1) === hairColourOf(0.7, 1),
+  [0.7, 0.85, 1].map((b) => `${b} ${hairColourOf(0.6, b)}`).join(', '));
 check('at 60% saturation, lightness 6% to 90%', Math.abs(hsl(hairColourOf(0.3, 0.5))[1] - 0.6) < 0.02 && Math.abs(hsl(hairColourOf(0.3, 0.5))[2] - 0.48) < 0.01,
   hsl(hairColourOf(0.3, 0.5)).map((v) => v.toFixed(3)).join(' '));
 check('skin: porcelain at nought, ebony at one', rampColour(SKIN_RAMP, 0) === '#f5ddc6' && rampColour(SKIN_RAMP, 1) === '#3e2617');

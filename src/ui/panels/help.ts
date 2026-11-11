@@ -1,4 +1,4 @@
-import { GENDERS, HAIRSTYLES } from '../../game/look';
+import { GENDERS, HAIR_FADE, HAIRSTYLES } from '../../game/look';
 import { OUTFITS } from '../creator';
 import { MAP_LEGEND, MAP_ZOOM_MIN, MAP_ZOOM_STEP, SETTLEMENT_BORDER_PX } from './minimap';
 import { BAG_CARRY } from '../../game/gear';
@@ -1489,7 +1489,7 @@ export function helpText(): string {
     <ul>
       <li>Island: <i>Customize character</i> under <b>How you look</b> (Settings, <kbd>O</kbd>) opens the account page's character creator on your current look.
       <i>Step ashore</i> saves it to your account, applies it on every island you have a body on and returns you. Nothing changes before that.</li>
-      <li>Creator: <b>Body</b> ${GENDERS.map((g) => g.name).join(', ')}; <b>Hair</b> ${HAIRSTYLES.map((h) => h.name).join(', ')}; <b>Hair colour</b> (hue), <b>Hair brightness</b>, <b>Skin</b> sliders.
+      <li>Creator: <b>Body</b> ${GENDERS.map((g) => g.name).join(', ')}; <b>Hair</b> ${HAIRSTYLES.map((h) => h.name).join(', ')}; <b>Hair colour</b> (hue), <b>Hair brightness</b> (grey over its top ${Math.round(HAIR_FADE * 100)}%), <b>Skin</b> sliders.
       Preview: ◀ ▶ or drag to turn, <i>Head</i> close-up, outfit ${OUTFITS.map((o) => o.name).join(', ')}.</li>
     </ul>
     <h4>Two-step sign-in</h4>
