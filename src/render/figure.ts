@@ -345,9 +345,12 @@ export interface Frame {
   lod: number;
 }
 
+const BETWEEN = { shoulder: 1, waist: 0.92, hip: 1.03 };
+
 function frameOf(look: Look, lod = 1): Frame {
-  const b = BUILDS[look.gender] ?? BUILDS.man;
-  const fem = look.gender === 'woman' ? 1 : 0;
+  // (a body in between, the old 'neither': no look has it now, but the walk's pace was reckoned over all three, `paced.ts`)
+  const b = BUILDS[look.gender] ?? BETWEEN;
+  const fem = look.gender === 'woman' ? 1 : look.gender === 'man' ? 0 : 0.5;
   return { sh: b.shoulder, wa: b.waist, hi: b.hip, fem, tall: 1 - fem * 0.035, lod };
 }
 

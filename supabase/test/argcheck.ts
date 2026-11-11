@@ -115,7 +115,7 @@ const refused: Array<[string, string, string]> = [
   ['rpc_springs', `rpc_springs($1, 40, ${lit({ 1: 'v1' })})`, 'Bad request: rpc_springs p_known.1: want a number.'],
   ['rpc_put_land', `rpc_put_land($2, ${lit([{ heights: 'AA==' }])})`, 'Bad request: rpc_put_land p_rows[0].y: missing.'],
   ['rpc_move', `rpc_move($1, ${AT}.5, ${AT}.5, 0, ${lit([[AT, 'a']])})`, 'Bad request: rpc_move p_via[0][1]: want a number.'],
-  ['rpc_set_look', `rpc_set_look(${lit({ skin: 5 })})`, 'Bad request: rpc_set_look p_look.skin: want text.'],
+  ['rpc_set_look', `rpc_set_look(${lit({ skin: [5] })})`, 'Bad request: rpc_set_look p_look.skin: not text or num.'],
   ['rpc_settle', `rpc_settle(null, $1, null, false, ${lit(Array.from({ length: 501 }, (_, i) => `goal${i}`))})`, 'Bad request: rpc_settle p_ticked: too many.'],
   ['rpc_settle', `rpc_settle(null, $1, null, false, ${lit({ goal: true })})`, 'Bad request: rpc_settle p_ticked: want a list.'],
   ['rpc_join', `rpc_join($1, 'Arjen', 'atlantis')`, 'Bad request: rpc_join p_stone: not a Runestone.'],
