@@ -63,6 +63,8 @@ export interface Material {
   cloth?: boolean;
   /** Gear in hand on a low-poly body (a sword): lit by the body's light by its brightness only, in its own colour, as its review renders. */
   gear?: boolean;
+  /** Matte paint on a low-poly body (the undergarment): lit as gear, by the light's brightness only, but without its highlight lobe or rims. */
+  matte?: boolean;
 }
 
 /** Where a primitive hangs: one of the rig's bones (`./rig`), or a chain link of a sway chain. */
