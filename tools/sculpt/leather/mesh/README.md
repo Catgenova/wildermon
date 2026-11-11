@@ -14,3 +14,10 @@ polylines (trim lines, lacing), `dots` rivets ([x, y, r]).
       through every corner), each with a bevel ring round its outline; rings 16-sided with their hole, trim lines and
       lacing as strips, rivets as fans; the triangle count. GRID (10), EDGE (12), MAXA (60) in sheet px.
       Needs numpy, opencv, pillow, shapely, triangle, mapbox_earcut.
+
+## From the sheet, not by hand
+  python3 segment.py <view>-seeds.json out.png [<view>.json]
+      the view split into its pieces by a watershed on the sheet's own edges (its drawn dark lines weighted fully),
+      grown from a short seed stroke inside each plate; the background and skin cut out by colour first (background
+      only where it reaches the crop's edge). Each region smoothed and outlined with the fewest corners that still cover
+      93% of it; `fixed` ellipses (the rings, measured by hand at 8x) kept as given. Writes the pieces for facemesh.py.

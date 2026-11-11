@@ -4,7 +4,7 @@
 #   python3 facemesh.py view.json out.png [K] [--json faces.json]
 import os, sys, json, math, numpy as np, cv2, mapbox_earcut as earcut, triangle as tr
 from PIL import Image
-
+import os
 SHEET = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../ref/leather-chest.png')
 J = json.load(open(sys.argv[1])); out = sys.argv[2]; K = int(sys.argv[3]) if len(sys.argv) > 3 and not sys.argv[3].startswith('--') else 4
 RING_N = 16
@@ -65,7 +65,7 @@ def outer_of(p, I, v):
         if best is None or e < best[0]: best = (e, i, t)
     _, i, t = best; a, b2 = np.array(v[i]), np.array(v[(i + 1) % len(v)])
     return (a + (b2 - a) * t).tolist()
-MAXA = float(os.environ.get('MAXA', '60'))  # the largest face triangle (square sheet px)
+MAXA = float(os.environ.get('MAXA', '30'))  # the largest face triangle (square sheet px)
 def tri_fill(P, kind, quality=True):
     n = len(P)
     if quality:
@@ -77,8 +77,8 @@ def tri_fill(P, kind, quality=True):
         except Exception as e: pass
     idx = earcut.triangulate_float32(np.array(P, np.float32).reshape(-1, 2), np.array([len(P)], np.uint32))
     for i in range(0, len(idx), 3): faces.append((kind, [P[idx[i]], P[idx[i + 1]], P[idx[i + 2]]]))
-EDGE = float(os.environ.get('EDGE', '12'))
-GRID = float(os.environ.get('GRID', '10'))  # a quad grid's cell (sheet px)  # outline edges split to at most this (sheet px)
+EDGE = float(os.environ.get('EDGE', '6'))
+GRID = float(os.environ.get('GRID', '7'))  # a quad grid's cell (sheet px)  # outline edges split to at most this (sheet px)
 def resample(P):
     out = []
     for i in range(len(P)):
