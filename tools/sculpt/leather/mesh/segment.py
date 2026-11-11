@@ -15,6 +15,10 @@ g = sum(sobel(cv2.GaussianBlur(lab[..., c], (0, 0), 1.2)) * w for c, w in [(0, 1
 # (the drawn strokes: darker than their surroundings, ridges the regions should meet on)
 L = lab[..., 0]; dark = np.clip(cv2.GaussianBlur(L, (0, 0), 3) - L, 0, None)
 elev = g + float(os.environ.get('DW', '1.0')) * dark
+# (`cuts`: lines along a drawn edge too soft to stop the regions, made walls)
+for C in J.get('cuts', []):
+    cm = np.zeros(elev.shape, np.uint8); cv2.polylines(cm, [np.array([T(p) for p in C], np.int32)], False, 1, 2)
+    elev = np.where(cm > 0, elev.max() * 4, elev)
 names = list(J['seeds'].keys()); markers = np.zeros(L.shape, np.int32)
 for i, n in enumerate(names, 1):
     pts = J['seeds'][n]
@@ -28,6 +32,10 @@ n_, cc = cv2.connectedComponents(bgm.astype(np.uint8), connectivity=4)
 edge = set(np.unique(np.concatenate([cc[0], cc[-1], cc[:, 0], cc[:, -1]]))) - {0}
 bgm = np.isin(cc, list(edge))
 skinm = (R > 150) & (Gc > 0.58 * R) & (B > 0.42 * R)
+# (skin only where it is joined to a skin seed: a pale highlight on a plate is the plate's)
+_n, scc = cv2.connectedComponents(skinm.astype(np.uint8), connectivity=4)
+_keep = {scc[T(p)[1], T(p)[0]] for p in J['seeds'].get('skin', []) if 0 <= T(p)[1] < scc.shape[0] and 0 <= T(p)[0] < scc.shape[1]} - {0}
+skinm = np.isin(scc, list(_keep))
 fig = ~bgm & ~skinm
 fig = cv2.morphologyEx(fig.astype(np.uint8), cv2.MORPH_OPEN, np.ones((3, 3), np.uint8)) > 0
 ib, isk = names.index('bg') + 1, names.index('skin') + 1
@@ -45,6 +53,9 @@ for n, P in J.get('fillers', {}).items():
     lbl[(fm > 0) & (lbl == ib)] = len(names)
 if os.environ.get('RAWOUT'):
     r2 = np.random.default_rng(1).integers(40, 255, (len(names) + 2, 3)).astype(np.uint8); cv2.imwrite(os.environ['RAWOUT'], r2[lbl])
+if os.environ.get('PROBE'):
+    for q in json.loads(os.environ['PROBE']):
+        print(q, names[lbl[T(q)[1], T(q)[0]] - 1])
 # overlay
 vis = (rgb * 255).astype(np.uint8)[..., ::-1].copy(); over = vis.copy()
 rng = np.random.default_rng(7); outl = {}; vis_e = np.zeros_like(vis)
