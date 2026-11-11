@@ -870,8 +870,14 @@ function torsoPieces(G, rig, D, S) {
     });
     const ring = Array.from({ length: 28 }, (_, k) => { const a = (k / 28) * 2 * Math.PI; return at(E.x + Math.cos(a) * E.r, E.y + Math.sin(a) * E.r); }).filter(Boolean);
     if (ring.length === 28) stripOn(G, ride(ring, true), E.w, 'rune', 'emblem', TW, { closed: true, h: 0.03 });
-    for (const T of E.traced ?? []) {
-      const pts = T.map((q) => at(q.x, q.y)).filter(Boolean), w = T.reduce((a, q) => a + q.w, 0) / T.length;
+    for (const T0 of E.traced ?? []) {
+      // (straight and even, as drawn: the line x = a + b y through the traced rows' middles, least squares, the rows'
+      // median width, from the top row to the foot)
+      const n = T0.length, my = T0.reduce((s0, q) => s0 + q.y, 0) / n, mx = T0.reduce((s0, q) => s0 + q.x, 0) / n;
+      const b = T0.reduce((s0, q) => s0 + (q.y - my) * (q.x - mx), 0) / Math.max(1e-9, T0.reduce((s0, q) => s0 + (q.y - my) ** 2, 0));
+      const ws = T0.map((q) => q.w).sort((u, v) => u - v), w = ws[Math.floor(n / 2)], y0 = Math.max(...T0.map((q) => q.y)), y1 = Math.min(...T0.map((q) => q.y));
+      const T = span(y0, y1, 6).map((y) => ({ x: mx + b * (y - my), y }));
+      const pts = T.map((q) => at(q.x, q.y)).filter(Boolean);
       if (pts.length > 1) stripOn(G, ride(pts, false), w, 'rune', 'emblem', TW, { h: 0.03 });
     }
     for (const [x0, x1] of E.stripes) {
