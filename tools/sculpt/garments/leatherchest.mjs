@@ -70,6 +70,7 @@ export const DESIGN = {
     back: { az: [96, 112, 116, 130, 150, 165, 180], top: [-1.9, -1.0, -0.85, -0.7, -0.6, -0.56, -0.54], bottom: [-1.95, -1.95, -3.5, -3.55, -3.6, -3.62, -3.64], rows: [0, 0.2, 0.4, 0.6, 0.8, 1], c: 0.02, panel: { top: -0.9, bottom: -2.85, half: 34, tip: -3.15 } },
     side: { az: [38, 60, 80, 100, 120], top: [-1.75, -1.75, -1.8, -1.75, -1.75], bottom: [-3.62, -3.6, -3.58, -3.56, -3.55], rows: [0, 0.33, 0.67, 1], c: 0.018 },
     bands: [{ top: { y0: -1.57, k: 0.21 }, bottom: { y0: -2.13, k: 0.115 }, x: [-1.38, 1.02], lift: 2 }, { top: { y0: -2.13, k: 0.115 }, bottom: { y0: -2.98, k: 0.24 }, x: [-1.3, 0.56], lift: 1 }],
+    panels: [{ trace: 'core.low', tag: 'chest', tuck: 4 }, { trace: 'band2', tag: 'band 2', tuck: 4 }, { trace: 'band1', tag: 'band 1', top: 'trim' }],
     emblem: { x: 0.85, y: -1.86, r: 0.27, w: 0.13, stripes: [[-0.07, 0.07], [0.12, 0.2]], bottom: -3.05 },
     lacing: [{ az: -42, y: [-2.05, -3.5], n: 5, w: 0.2 }, { az: 42, y: [-3.05, -3.5], n: 2, w: 0.16 }],
     belt: { az: [0, 30, 60, 90, 120, 150, 180], top: [-3.62, -3.56, -3.5, -3.48, -3.48, -3.5, -3.52], bottom: [-4.26, -4.05, -3.95, -3.92, -3.88, -3.9, -3.98], c: [0.03, 0.04] },
@@ -109,6 +110,7 @@ export const DESIGN = {
     back: { az: [96, 112, 116, 130, 150, 165, 180], top: [-1.85, -1.0, -0.9, -0.75, -0.66, -0.62, -0.6], bottom: [-1.9, -1.9, -3.0, -3.05, -3.1, -3.12, -3.14], rows: [0, 0.2, 0.4, 0.6, 0.8, 1], c: 0.018, panel: { top: -0.95, bottom: -2.45, half: 34, tip: -2.7 } },
     side: { az: [34, 56, 78, 100, 120], top: [-1.75, -1.75, -1.8, -1.75, -1.75], bottom: [-3.1, -3.08, -3.06, -3.05, -3.04], rows: [0, 0.33, 0.67, 1], c: 0.016 },
     bands: [{ top: { y0: -1.3, k: 0.42 }, bottom: { y0: -1.95, k: 0.45 }, x: [-0.95, 1.15], lift: 2 }, { top: { y0: -1.7, k: 0.45 }, bottom: { y0: -2.7, k: 0.32 }, x: [-0.95, 1.25], lift: 1 }],
+    panels: [{ trace: 'core.low', tag: 'chest', tuck: 4 }, { trace: 'band2', tag: 'band 2', tuck: 4 }, { trace: 'band1', tag: 'band 1', top: 'trim' }],
     emblem: { x: 0.5, y: -1.55, r: 0.27, w: 0.07, stripes: [[-0.06, 0.06], [0.1, 0.17]], bottom: -2.6 },
     lacing: [{ az: -38, y: [-1.7, -3.0], n: 5, w: 0.17 }, { az: 38, y: [-2.6, -3.0], n: 2, w: 0.14 }],
     belt: { az: [0, 30, 60, 90, 120, 150, 180], top: [-3.12, -3.06, -3.0, -2.98, -2.98, -3.0, -3.02], bottom: [-3.78, -3.58, -3.48, -3.44, -3.42, -3.45, -3.52], c: [0.025, 0.035] },
@@ -532,6 +534,54 @@ export function underPieces(who, names = ['lowleatherlegs'], cut = null) {
   return out;
 }
 
+/* ---- the sheet's panels: outlines off the approved trace, back onto the body ---------------------------------------- */
+/**
+ * A traced piece's outline (tools/sculpt/leather/mesh/<who>-<view>.json, sheet pixels) as columns across it, in the
+ * body's x and y: the registered front camera (tools/sculpt/lowleatherchestcams.json: u = cx + s sx(y) x, v = cy - s y;
+ * the trunk is not posed for the sheet) undone. Each column { x, top, bottom }: where the vertical line through it
+ * crosses the outline highest and lowest, `tuck` sheet pixels added above (to reach under the panel over it).
+ * Returns null where there is no trace or camera.
+ */
+export function tracedOutline(who, name, { cols = 10, tuck = 0, view = 'front', across = false } = {}) {
+  const tf = new URL(`../leather/mesh/${who}-${view}.json`, import.meta.url), cf = new URL('../lowleatherchestcams.json', import.meta.url);
+  if (!existsSync(tf) || !existsSync(cf)) return null;
+  const P = JSON.parse(readFileSync(tf, 'utf8')).pieces[name], C = JSON.parse(readFileSync(cf, 'utf8'))[who], V = C?.views?.[view];
+  if (!Array.isArray(P) || !V || V.yaw !== 0) return null;
+  const pw = (m, y) => { if (!m?.y?.length) return 1; const { y: Y, k } = m; if (y >= Y[0]) return k[0]; for (let i = 0; i + 1 < Y.length; i++) if (y >= Y[i + 1]) return k[i] + ((k[i + 1] - k[i]) * (y - Y[i])) / (Y[i + 1] - Y[i]); return k[k.length - 1]; };
+  const toBody = (u, v) => { const y = (C.cy - v) / C.s; return [(u - V.cx) / (C.s * pw(C.sx, y)), y]; };
+  if (across) {
+    // (rows instead: for an upright piece, each horizontal line through it, its middle and width, { x, y, w })
+    const vs = P.map((q) => q[1]), v0 = Math.min(...vs), v1 = Math.max(...vs), o = [];
+    for (let r = 0; r <= cols; r++) {
+      const v = v0 + 0.6 + ((v1 - v0 - 1.2) * r) / cols, us = [];
+      for (let i = 0; i < P.length; i++) { const [a, b] = [P[i], P[(i + 1) % P.length]]; if ((a[1] - v) * (b[1] - v) <= 0 && a[1] !== b[1]) us.push(a[0] + ((b[0] - a[0]) * (v - a[1])) / (b[1] - a[1])); }
+      if (us.length < 2) continue;
+      const [xa, y] = toBody(Math.min(...us), v), [xb] = toBody(Math.max(...us), v);
+      o.push({ x: (xa + xb) / 2, y, w: xb - xa });
+    }
+    return o.length > 1 ? o : null;
+  }
+  const us = P.map((q) => q[0]), u0 = Math.min(...us), u1 = Math.max(...us), out = [];
+  for (let c = 0; c <= cols; c++) {
+    const u = u0 + 0.6 + ((u1 - u0 - 1.2) * c) / cols, vs = [];
+    for (let i = 0; i < P.length; i++) { const [a, b] = [P[i], P[(i + 1) % P.length]]; if ((a[0] - u) * (b[0] - u) <= 0 && a[0] !== b[0]) vs.push(a[1] + ((b[1] - a[1]) * (u - a[0])) / (b[0] - a[0])); }
+    if (vs.length < 2) continue;
+    const [x, top] = toBody(u, Math.min(...vs) - tuck), [, bottom] = toBody(u, Math.max(...vs));
+    out.push({ x, top, bottom });
+  }
+  return out.length > 1 ? out : null;
+}
+/** A traced ellipse's centre and radii (sheet pixels) in the body's x and y, as tracedOutline. */
+export function tracedEllipse(who, name, view = 'front') {
+  const tf = new URL(`../leather/mesh/${who}-${view}.json`, import.meta.url), cf = new URL('../lowleatherchestcams.json', import.meta.url);
+  if (!existsSync(tf) || !existsSync(cf)) return null;
+  const E = JSON.parse(readFileSync(tf, 'utf8')).pieces[name]?.ellipse, C = JSON.parse(readFileSync(cf, 'utf8'))[who], V = C?.views?.[view];
+  if (!E || !V) return null;
+  const pw = (m, y) => { if (!m?.y?.length) return 1; const { y: Y, k } = m; if (y >= Y[0]) return k[0]; for (let i = 0; i + 1 < Y.length; i++) if (y >= Y[i + 1]) return k[i] + ((k[i + 1] - k[i]) * (y - Y[i])) / (Y[i + 1] - Y[i]); return k[k.length - 1]; };
+  const y = (C.cy - E[1]) / C.s, sx = pw(C.sx, y);
+  return { x: (E[0] - V.cx) / (C.s * sx), y, rx: E[2] / (C.s * sx), ry: E[3] / C.s };
+}
+
 /* ---- the trunk ---------------------------------------------------------------------------------------------------------- */
 const rad = Math.PI / 180;
 /** The az at which the chest's section at height y (out by c) reaches x, between a0 and a1 (x monotone there). */
@@ -717,12 +767,13 @@ function torsoPieces(G, rig, D, S) {
   const core = plateOf(G, cRows, { tag: 'chest', mat: 'leather', boneAt: TW, rim, out, border: { top: coreTop, bottom: 'bevel', left: 'edge', right: 'edge' } });
   const wings = [];
   if (iStep >= 0) {
-    const wTab = { az: Cp.az.slice(iStep), top: Cp.top.slice(iStep), bottom: [Cp.bottom[iStep + 1], ...Cp.bottom.slice(iStep + 1)] };
+    // (from a little in front of the seam, over the front's edge, so no crack opens between them)
+    const wTab = { az: [Cp.az[iStep] - (Cp.wingLap ?? 4), ...Cp.az.slice(iStep + 1)], top: [tabAt(cTab, 'top', Cp.az[iStep] - (Cp.wingLap ?? 4)), ...Cp.top.slice(iStep + 1)], bottom: [Cp.bottom[iStep + 1], ...Cp.bottom.slice(iStep + 1)] };
     const wAz0 = refine(wTab.az, 7);
     for (const s of [1, -1]) {
       const az = s > 0 ? wAz0 : wAz0.slice().reverse().map((a) => -a);
       const rows = grid(az, (a) => tabAt(wTab, 'top', a), (a) => tabAt(wTab, 'bottom', a), Cp.rows, Cp.c);
-      layOver(rows, [belt, ...sides], out, gap, 0);
+      layOver(rows, [core, belt, ...sides], out, gap, 0);
       fitOut(rows, false, out, [[trunk, D.fit.trunk]]);
       wings.push(plateOf(G, rows, { tag: 'chest', mat: 'leather', boneAt: TW, rim, out, border: { top: 'bevel', bottom: 'bevel', left: 'edge', right: 'edge' } }));
     }
@@ -731,7 +782,20 @@ function torsoPieces(G, rig, D, S) {
   // the diagonal layered plates over it: each between two lines across the chest, the upper over the lower
   const bandPlates = [];
   let below = [[lay(p0), gap]];
-  for (const [bi, Bd] of [...D.bands.entries()].reverse()) {
+  // (the sheet's own panels, when the design names them: each traced outline back on the body, laid over the chest and
+  // the panels before it, in the order given, the last outermost)
+  const panels = (D.panels ?? []).map((Pn) => ({ Pn, cols: tracedOutline(rig.who, Pn.trace, { cols: Pn.cols ?? 10, tuck: Pn.tuck ?? 0 }) })).filter((q) => q.cols);
+  for (const { Pn, cols } of panels) {
+    const lim = D.bandReach ?? 70, nR = Pn.rows ?? 6;
+    const rows = Array.from({ length: nR }, (_, r) => cols.map((cl) => {
+      const y = cl.top + ((cl.bottom - cl.top) * r) / (nR - 1);
+      return chest.at(y, Math.max(-lim, Math.min(lim, azOfX(chest, y, cl.x, Cp.c))), Cp.c);
+    }));
+    layOver(rows, [core, ...wings, ...sides, belt, ...bandPlates], out, gap);
+    fitOut(rows, false, out, [[trunk, D.fit.trunk]]);
+    bandPlates.push(plateOf(G, rows, { tag: Pn.tag, boneAt: TW, rim, out, border: { top: Pn.top ?? 'bevel', bottom: Pn.bottom ?? 'bevel', left: 'edge', right: 'edge' } }));
+  }
+  for (const [bi, Bd] of (panels.length ? [] : [...D.bands.entries()].reverse())) {
     const yMid = (Bd.top.y0 + Bd.bottom.y0) / 2;
     // (its ends no further round than `reach` (degrees) either side, short of the armpit, where the chest turns into the side)
     const lim = D.bandReach ?? 70, a0 = Math.max(-lim, azOfX(chest, yMid, Bd.x[0], Cp.c)), a1 = Math.min(lim, azOfX(chest, yMid, Bd.x[1], Cp.c));
@@ -754,10 +818,31 @@ function torsoPieces(G, rig, D, S) {
 
   // the emblem on the left breast: a ring and two stripes down from it, on whatever plate is outermost there
   {
-    const E = D.emblem, FWD = [0, 0, -1], q0 = G.polys.length;
-    const at = (x, y) => onTop(front, [x, y, 0], FWD);
-    const ring = Array.from({ length: 14 }, (_, k) => { const a = (k / 14) * 2 * Math.PI; return at(E.x + Math.cos(a) * E.r, E.y + Math.sin(a) * E.r); }).filter(Boolean);
-    if (ring.length === 14) stripOn(G, ring, E.w, 'rune', 'emblem', TW, { closed: true, h: 0.03 });
+    const E = { ...D.emblem }, FWD = [0, 0, -1], q0 = G.polys.length;
+    if (panels.length) {
+      // (the ring off the traced ring and its hole; the stripes off the traced stripes: their middles and widths, the
+      // foot the lowest of them)
+      const R = tracedEllipse(rig.who, 'ring'), Hh = tracedEllipse(rig.who, 'ring.hole');
+      // (kept round: the sheet's body is narrower than ours, so its circle would come back wide; its height kept)
+      if (R) { E.x = R.x; E.y = R.y; E.r = Hh ? (R.ry + Hh.ry) / 2 : R.ry - E.w / 2; if (Hh) E.w = R.ry - Hh.ry; }
+      E.traced = ['stripe1', 'stripe2'].map((n) => tracedOutline(rig.who, n, { cols: 6, across: true })).filter(Boolean);
+      if (E.traced.length) E.stripes = [];
+    }
+    // (on the outermost plate there; through a seam, on the chest's own section out by two thicknesses)
+    const at = (x, y) => onTop(front, [x, y, 0], FWD) ?? (() => { const q = chest.at(y, azOfX(chest, y, x, Cp.c), Cp.c + 2 * gap); return { q, n: unit(out(q)) }; })();
+    // (riding over the plates' edges: each point forward to the most of its neighbours' within two, and over a step
+    // between plates by the raised strip's height too, so no edge or rim cuts across it)
+    const ride = (pts, closed) => pts.map((p, i) => {
+      let m = p.q[2], lo = p.q[2];
+      for (let j = -2; j <= 2; j++) { const q = pts[closed ? (i + j + pts.length) % pts.length : Math.max(0, Math.min(pts.length - 1, i + j))]; m = Math.max(m, q.q[2]); lo = Math.min(lo, q.q[2]); }
+      return { q: [p.q[0], p.q[1], m + (m - lo > 0.02 ? rim.h : 0)], n: p.n };
+    });
+    const ring = Array.from({ length: 28 }, (_, k) => { const a = (k / 28) * 2 * Math.PI; return at(E.x + Math.cos(a) * E.r, E.y + Math.sin(a) * E.r); }).filter(Boolean);
+    if (ring.length === 28) stripOn(G, ride(ring, true), E.w, 'rune', 'emblem', TW, { closed: true, h: 0.03 });
+    for (const T of E.traced ?? []) {
+      const pts = T.map((q) => at(q.x, q.y)).filter(Boolean), w = T.reduce((a, q) => a + q.w, 0) / T.length;
+      if (pts.length > 1) stripOn(G, ride(pts, false), w, 'rune', 'emblem', TW, { h: 0.03 });
+    }
     for (const [x0, x1] of E.stripes) {
       const x = E.x + (x0 + x1) / 2, w = x1 - x0, ys = span(E.y - E.r - E.w * 0.6, E.bottom, 5);
       const pts = ys.map((y) => at(x, y)).filter(Boolean);
