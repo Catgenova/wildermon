@@ -642,18 +642,6 @@ function torsoPieces(G, rig, D, S) {
   const refine = (A, step) => A.flatMap((a, i) => (i === 0 ? [a] : span(A[i - 1], a, Math.max(1, Math.ceil((a - A[i - 1]) / step))).slice(1)));
   const grid = (az, top, bottom, rows, c) => rows.map((f, r) => az.map((a, k) => chest.at(top(a, k) + (bottom(a, k) - top(a, k)) * f, a, Array.isArray(c) ? c[r] : c)));
 
-  /* the undershirt: the bottom layer, a closed shell from the collar's foot to below the groin (the trunk above
-   * `belt`, the hips and the legs together below it), just off the skin; every piece over it */
-  if (D.undershirt) {
-    const U = D.undershirt, uAz = Array.from({ length: 32 }, (_, k) => (k * 360) / 32);
-    const foot = (a) => tabAt({ az: U.az, v: U.bottom }, 'v', a);
-    const rows = Array.from({ length: U.rows }, (_, r) => uAz.map((a) => { const y = U.top + ((foot(a) - U.top) * r) / (U.rows - 1); return (y > U.belt ? chest : fsec).at(y, a, U.c); }));
-    fitOut(rows, true, (p) => [p[0], 0, p[2] - fz], [[parts(['torso', 'pelvis', 'legs']), U.c]]);
-    const u0 = G.polys.length;
-    plateOf(G, rows, { tag: 'undershirt', mat: 'dark', boneAt: TW, rim: { ...rim, w: 0, h: 0 }, out: (p) => [p[0], 0, p[2] - fz], ring: true, border: { top: 'open', bottom: 'open' } });
-    for (let k = u0; k < G.polys.length; k++) G.polys[k].piece = 'undershirt';
-  }
-
   /* the skirt: plates hanging from under the belt over the hips, out by the clearance and flaring as they fall */
   // (everything on the trunk laid over the leggings, the piece under it, where this branch has their asset:
   // tools/sculpt/leather/under/lowleatherlegs-<who>.json, their waistband and hip flaps cleared by the leather's thickness)
@@ -730,7 +718,8 @@ function torsoPieces(G, rig, D, S) {
   for (const s of [1, -1]) {
     const az = refine(Sd.az, 10).map((a) => s * a), top = (a) => tabAt({ az: Sd.az, v: Sd.top }, 'v', a), bot = (a) => tabAt({ az: Sd.az, v: Sd.bottom }, 'v', a);
     const rows = grid(s > 0 ? az : az.slice().reverse(), top, bot, Sd.rows, Sd.c);
-    fitOut(rows, false, out, [[trunk, D.fit.trunk], ...under.map((P) => [P, gap])]);
+    layOver(rows, [belt, ...skirts], out, gap, 0);
+    fitOut(rows, false, out, [[trunk, D.fit.trunk], ...under.slice(0, nLegs).map((P) => [P, gap])]);
     p0 = G.polys.length;
     sides.push(plateOf(G, rows, { tag: 'side', boneAt: TW, rim, out, mat: 'leather', border: { top: 'bevel', bottom: 'open', left: 'edge', right: 'edge' } }));
     for (let k = p0; k < G.polys.length; k++) G.polys[k].piece = `side.${s > 0 ? 'l' : 'r'}`;
@@ -739,19 +728,37 @@ function torsoPieces(G, rig, D, S) {
 
   /* the back core: round the back from one side panel to the other, over the shoulders to the collar's foot */
   const Kp = D.back;
-  const kAz0 = refine(Kp.az, 9), kAz = [...kAz0, ...kAz0.slice(0, -1).reverse().map((a) => 360 - a)];
+  // (as the chest: the main back down to the belt, and either side its wing round under the arm, ending above the side
+  // panel, lapping over the main's edge; the step in the foot a plate's edge rather than quads sheared across it)
+  const kStep = Kp.bottom.findIndex((b, i) => i + 1 < Kp.bottom.length && Math.abs(Kp.bottom[i + 1] - b) > 0.5);
   const kTab = { az: Kp.az, top: Kp.top, bottom: Kp.bottom };
+  const kMain = kStep >= 0 ? Kp.az.slice(kStep + 1) : Kp.az;
+  const kAz0 = refine(kMain, 9), kAz = [...kAz0, ...kAz0.slice(0, -1).reverse().map((a) => 360 - a)];
   const kRows = grid(kAz, (a) => tabAt(kTab, 'top', a), (a) => tabAt(kTab, 'bottom', a), Kp.rows, Kp.c);
-  fitOut(kRows, false, out, [[trunk, D.fit.trunk], ...under.map((P) => [P, gap])]);
+  layOver(kRows, [belt, ...sides, ...skirts], out, gap, 0);
+  fitOut(kRows, false, out, [[trunk, D.fit.trunk], ...under.slice(0, nLegs).map((P) => [P, gap])]);
   p0 = G.polys.length;
   const backTop = (r, c) => (Math.abs(180 - kAz[c]) <= 50 && Math.abs(180 - (kAz[c + 1] ?? 999)) <= 50 ? 'open' : 'bevel');
   const back = plateOf(G, kRows, { tag: 'back', mat: 'leather', boneAt: TW, rim, out, border: { left: 'edge', right: 'edge', top: backTop, bottom: 'bevel' } });
-  // its raised panel: a pentagon on the upper back, pointed at its foot
+  if (kStep >= 0) {
+    const lap = Kp.wingLap ?? 4, aEnd = Kp.az[kStep + 1] + lap;
+    const wTab = { az: [...Kp.az.slice(0, kStep + 1), aEnd], top: [...Kp.top.slice(0, kStep + 1), tabAt(kTab, 'top', aEnd)], bottom: [...Kp.bottom.slice(0, kStep + 1), Kp.bottom[kStep]] };
+    const wAz0 = refine(wTab.az, 9);
+    for (const sgn of [1, -1]) {
+      const az = sgn > 0 ? wAz0 : wAz0.slice().reverse().map((a) => 360 - a);
+      const rows = grid(az, (a) => tabAt(wTab, 'top', a), (a) => tabAt(wTab, 'bottom', a), Kp.rows, Kp.c);
+      layOver(rows, [back, belt, ...sides], out, gap, 0);
+      fitOut(rows, false, out, [[trunk, D.fit.trunk]]);
+      plateOf(G, rows, { tag: 'back', mat: 'leather', boneAt: TW, rim, out, border: { left: 'edge', right: 'edge', top: 'bevel', bottom: 'bevel' } });
+    }
+  }
+  // its raised panel: a pentagon on the upper back, pointed at its foot, laid on the back
   {
     const P = Kp.panel, az = span(180 - P.half, 180 + P.half, 6);
     const bot = (a) => P.bottom + (P.tip - P.bottom) * (1 - Math.abs(a - 180) / P.half);
-    const rows = [0, 0.5, 1].map((f) => az.map((a) => chest.at(P.top + (bot(a) - P.top) * f, a, Kp.c)));
-    fitOut(rows, false, out, [[trunk, D.fit.trunk], [lay(p0), gap - 0.03]]);
+    const rows = [0, 0.25, 0.5, 0.75, 1].map((f) => az.map((a) => chest.at(P.top + (bot(a) - P.top) * f, a, Kp.c)));
+    layOver(rows, [back], out, gap, 1);
+    fitOut(rows, false, out, [[trunk, D.fit.trunk]]);
     plateOf(G, rows, { tag: 'back panel', boneAt: TW, rim: { ...rim, w: rim.w * 0.6, t: rim.t * 0.5 }, out, border: { top: 'bevel', bottom: 'bevel', left: 'bevel', right: 'bevel' } });
   }
   for (let k = p0; k < G.polys.length; k++) G.polys[k].piece = 'back';
@@ -889,6 +896,35 @@ function torsoPieces(G, rig, D, S) {
       }
     }
     for (let k = q0; k < G.polys.length; k++) G.polys[k].piece = 'chest';
+  }
+
+  /* the undershirt: the bottom layer, a closed shell from the collar's foot to below the groin (the trunk above
+   * `belt`, the hips and the legs together below it), just off the skin; every piece over it */
+  if (D.undershirt) {
+    const U = D.undershirt, uAz = Array.from({ length: 32 }, (_, k) => (k * 360) / 32);
+    const foot = (a) => tabAt({ az: U.az, v: U.bottom }, 'v', a);
+    const rows = Array.from({ length: U.rows }, (_, r) => uAz.map((a) => { const y = U.top + ((foot(a) - U.top) * r) / (U.rows - 1); return (y > U.belt ? chest : fsec).at(y, a, U.c); }));
+    fitOut(rows, true, (p) => [p[0], 0, p[2] - fz], [[parts(['torso', 'pelvis', 'legs']), U.c]]);
+    // (above the skirt, tucked under every plate over it: no further out than the outermost plate's face less the
+    // leather's thickness and a gap, along the way in, so it shows only where the plates leave it bare)
+    const over = G.plates.slice(), uo = (p) => [p[0], 0, p[2] - fz];
+    // (the skin's reach by height and azimuth about the hips' axis: the furthest body sample in bins 0.06 tall, 4 degrees)
+    const reachBin = new Map(), bk = (y, a) => `${Math.round(y / 0.06)},${Math.round((((a % 360) + 360) % 360) / 4) % 90}`;
+    for (const q of parts(['torso', 'pelvis', 'legs'])) { const k = bk(q[1], Math.atan2(q[0], q[2] - fz) / rad); reachBin.set(k, Math.max(reachBin.get(k) ?? 0, Math.hypot(q[0], q[2] - fz))); }
+    const skinR = (y, a) => { let m = 0; for (const dy of [-0.06, 0, 0.06]) for (const da of [-4, 0, 4]) m = Math.max(m, reachBin.get(bk(y + dy, a + da)) ?? 0); return m; };
+    rows.forEach((row) => row.forEach((p, k) => {
+      if (p[1] < D.skirt.top) return;
+      const o = unit(uo(p)), h = onTop(over, p, mul(o, -1));
+      if (!h) return;
+      let lim = add(h.q, mul(o, -(rim.t + 2 * D.fit.gap)));
+      // (never in under the skin: no nearer the hips' axis than the body reaches there)
+      const r = Math.hypot(lim[0], lim[2] - fz), rs = skinR(p[1], uAz[k]) + 0.004;
+      if (r < rs) lim = [lim[0] * rs / r, lim[1], fz + (lim[2] - fz) * rs / r];
+      if (dot(sub(p, lim), o) > 0) row[k] = lim;
+    }));
+    const u0 = G.polys.length;
+    plateOf(G, rows, { tag: 'undershirt', mat: 'dark', boneAt: TW, rim: { ...rim, w: 0, h: 0 }, out: (p) => [p[0], 0, p[2] - fz], ring: true, border: { top: 'open', bottom: 'open' } });
+    for (let k = u0; k < G.polys.length; k++) G.polys[k].piece = 'undershirt';
   }
 
   /* the collar: a high stand round the neck, open at the throat in a V, its top trimmed, dark inside */
