@@ -1687,6 +1687,22 @@ jobs:
           npx esbuild supabase/test/trails.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/trails.mjs --log-level=error
           node node_modules/.cache/trails.mjs
+      - name: A trail is drawn under water
+        if: matrix.shard == 2
+        env:
+          # A check that cannot open a browser here fails rather than passes.
+          TRAILWATER_STRICT: '1'
+        run: |
+          # "trails do not appear to draw over tiles with water": the island
+          # wears trails into ground a pond or the sea covers, and the
+          # renderer left the path out on every wet tile. Drawn in Chrome, a
+          # trail through a pond and one down a beach into the sea, each tile
+          # worn against the same tile as grass: the path on a tile the
+          # pond's edge crosses and under its shallows, less of it under its
+          # deepest middle, up to the sea's edge and on the first tile under it.
+          npx esbuild supabase/test/trailwater.ts --bundle --platform=node --format=esm --packages=external \
+            --outfile=node_modules/.cache/trailwater.mjs --log-level=error
+          node node_modules/.cache/trailwater.mjs
 
       - name: Wildflowers bloom in the same places on both sides
         if: matrix.shard == 2

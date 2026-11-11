@@ -4253,6 +4253,11 @@ export const NEWS: News[] = [
     },
   },
   {
+    n: 521,
+    day: '2026-11-11',
+    lines: () => ['Fixed: trails on ground under a pond or the sea: drawn on the bed, under the water, as much as the water shows (was: not drawn on any tile with water).'],
+  },
+  {
     n: 520,
     day: '2026-11-11',
     lines: () => ['Fixed: top of a waterfall off a pond: water drawn only over the pond (was: up to 2 tiles along the dry edge either side of the lip).'],
