@@ -11,8 +11,8 @@
  * ## Ids and numbers, never colours
  *
  * A look is a body (an id), a hairstyle (an id) and three numbers from nought
- * to one: where the skin is along `SKIN_RAMP`, where the hair is along
- * `HAIR_RAMP`, and how far the hair has gone toward white. Nothing a person
+ * to one: where the skin is along `SKIN_RAMP`, and the hair's hue round the
+ * colour wheel and its brightness (`hairColourOf`). Nothing a person
  * types ever reaches a canvas: a `look` travels from a stranger's browser
  * through the database and into `ctx.fillStyle` on everybody else's machine,
  * so a field is either an id out of a table here or a number this file turns
@@ -24,9 +24,9 @@
  * Those were eight ids: twenty haircuts, three builds, ten skins and
  * twenty-three hair colours as swatches, eyes, beards and two cloths. The
  * sculpted bodies draw two builds and the hairstyles made for them, so an old
- * look is read through `LEGACY`: a build or haircut to the nearest there is
- * now, a skin or hair colour to the place on the ramps nearest the swatch it
- * was. Eyes, beards and cloth are not part of a look any more (the flat figure
+ * look is read through `legacyLooks()`: a build or haircut to the nearest
+ * there is now, a skin to the place on its ramp nearest the swatch it was, a
+ * hair colour to the hue and brightness nearest it. Eyes, beards and cloth are not part of a look any more (the flat figure
  * draws the defaults below). The island does the same (`look_clean`, from the
  * `look_legacy` rows the definitions write out of `legacyLooks()`).
  */
@@ -38,10 +38,10 @@ export interface Look {
   gender: Gender;
   /** 'bald', or a hairstyle made for the sculpted bodies: an id out of HAIRSTYLES. */
   hair: string;
-  /** Along HAIR_RAMP: nought black, one flax. */
+  /** The hair's hue round the colour wheel: nought red, through yellow, green, cyan, blue and magenta, to red again at one. */
   hairColour: number;
-  /** Toward HAIR_WHITE: nought none, one white. */
-  hairGrey: number;
+  /** The hair's brightness: nought near black, one near white (`hairColourOf`). */
+  hairBright: number;
   /** Along SKIN_RAMP: nought the palest, one the darkest. */
   skin: number;
 }
@@ -126,15 +126,22 @@ export const toneOf = (t: number): number => Math.round(clamp01(t) * 1000) / 100
  */
 export const SKIN_RAMP: Ramp = ramp(['#f5ddc6', '#ecc8a6', '#ddae85', '#c79a68', '#b5804f', '#9d6a3f', '#855634', '#6b4328', '#55341f', '#3e2617']);
 
-/** Hair, black through the browns, auburn and red to the blondes. */
-export const HAIR_RAMP: Ramp = ramp(['#1c1614', '#3b2a1c', '#5a3a1e', '#6f4423', '#7d3a1d', '#a5521f', '#b8672a', '#b98c3f', '#d8b76a', '#e6d3a1']);
+/** The hair's saturation, and its lightness at brightness nought and one (HSL, nought to one). */
+export const HAIR_SATURATION = 0.6;
+export const HAIR_DARKEST = 0.06;
+export const HAIR_LIGHTEST = 0.9;
 
-/** What hair goes to as it greys: `hairGrey` of the way from its colour to this. */
-export const HAIR_WHITE = '#ded9d0';
+/** An HSL colour (each nought to one) as sRGB. */
+function hslOf(h: number, s: number, l: number): RGB {
+  const c = (1 - Math.abs(2 * l - 1)) * s, x = c * (1 - Math.abs(((h * 6) % 2) - 1)), m = l - c / 2;
+  const k = Math.floor((((h % 1) + 1) % 1) * 6);
+  const [r, g, b] = [[c, x, 0], [x, c, 0], [0, c, x], [0, x, c], [x, 0, c], [c, 0, x]][k];
+  return [(r + m) * 255, (g + m) * 255, (b + m) * 255];
+}
 
-/** The hair's colour for a place on HAIR_RAMP and a share of grey. */
-export const hairColourAt = (colour: number, grey: number): string =>
-  hexOf(mixRGB(rgbOf(rampColour(HAIR_RAMP, colour)), rgbOf(HAIR_WHITE), clamp01(grey)));
+/** The hair's colour for a hue and a brightness: HSL(hue round the wheel, HAIR_SATURATION, HAIR_DARKEST to HAIR_LIGHTEST). */
+export const hairColourOf = (hue: number, bright: number): string =>
+  hexOf(hslOf(clamp01(hue) === 1 ? 0 : clamp01(hue), HAIR_SATURATION, HAIR_DARKEST + (HAIR_LIGHTEST - HAIR_DARKEST) * clamp01(bright)));
 
 /* ---- looks from before ------------------------------------------------------------------------------- */
 
@@ -170,32 +177,34 @@ const gapTo = (want: RGB): ((c: RGB) => number) => {
   return (c) => { const p = labOf(c); return Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]); };
 };
 
-/** The place along a ramp whose colour (greyed by `grey`) is nearest `hex`, to three places. */
-function nearestOn(r: Ramp, hex: string, grey = 0): number {
+/** The place along a ramp whose colour is nearest `hex`, to three places. */
+function nearestOn(r: Ramp, hex: string): number {
   // (a stop is its own place)
-  const stop = grey === 0 ? r.colour.indexOf(hex) : -1;
+  const stop = r.colour.indexOf(hex);
   if (stop >= 0) return r.at[stop];
-  const gap = gapTo(rgbOf(hex)), white = rgbOf(HAIR_WHITE);
+  const gap = gapTo(rgbOf(hex));
   let best = 0, least = Infinity;
   for (let k = 0; k <= 1000; k++) {
-    const g = gap(mixRGB(rgbOf(rampColour(r, k / 1000)), white, grey));
+    const g = gap(rgbOf(rampColour(r, k / 1000)));
     if (g < least) { least = g; best = k / 1000; }
   }
   return best;
 }
 
-/** The place and grey nearest a hair colour: the grey by hundredths, then the place by thousandths at it. */
-function nearestHair(hex: string): { hairColour: number; hairGrey: number } {
-  const gap = gapTo(rgbOf(hex)), white = rgbOf(HAIR_WHITE);
-  const along = Array.from({ length: 201 }, (_, k) => rgbOf(rampColour(HAIR_RAMP, k / 200)));
-  let grey = 0, least = Infinity;
-  for (let gi = 0; gi <= 100; gi++) {
-    for (const c of along) {
-      const g = gap(mixRGB(c, white, gi / 100));
-      if (g < least) { least = g; grey = gi / 100; }
-    }
+/** The hue and brightness whose colour is nearest a hair colour (Lab): by hundredths, then by thousandths round that. */
+function nearestHair(hex: string): { hairColour: number; hairBright: number } {
+  const gap = gapTo(rgbOf(hex));
+  let best = { hairColour: 0, hairBright: 0 }, least = Infinity;
+  const look = (h: number, b: number): void => {
+    const g = gap(rgbOf(hairColourOf(h, b)));
+    if (g < least) { least = g; best = { hairColour: h, hairBright: b }; }
+  };
+  for (let h = 0; h < 100; h++) for (let b = 0; b <= 100; b++) look(h / 100, b / 100);
+  const { hairColour: h0, hairBright: b0 } = best;
+  for (let dh = -10; dh <= 10; dh++) {
+    for (let db = -10; db <= 10; db++) look(toneOf((((h0 * 1000 + dh + 1000) % 1000)) / 1000), toneOf(b0 + db / 1000));
   }
-  return { hairColour: nearestOn(HAIR_RAMP, hex, grey), hairGrey: grey };
+  return best;
 }
 
 /** The build nearest an old one, by its shoulders, waist and hips. */
@@ -237,8 +246,8 @@ export function legacyLooks(): Legacy[] {
 /* ---- a look ------------------------------------------------------------------------------------------ */
 
 /** The fields of a look, in the order the island keeps them (`look_kinds()`), and those that are numbers (`look_tones()`). */
-export const LOOK_KINDS: Array<keyof Look> = ['gender', 'hair', 'skin', 'hairColour', 'hairGrey'];
-export const LOOK_TONES: Array<keyof Look> = ['skin', 'hairColour', 'hairGrey'];
+export const LOOK_KINDS: Array<keyof Look> = ['gender', 'hair', 'skin', 'hairColour', 'hairBright'];
+export const LOOK_TONES: Array<keyof Look> = ['skin', 'hairColour', 'hairBright'];
 
 /** The ids a look picks from, by the name the database and the creator both file them under. */
 export const LOOK_TABLES = {
@@ -250,8 +259,7 @@ export const DEFAULT_LOOK: Look = {
   gender: 'man',
   hair: HAIRSTYLES.some((h) => h.id === 'swept') ? 'swept' : 'bald',
   skin: nearestOn(SKIN_RAMP, OLD_SKINS.light),
-  hairColour: nearestOn(HAIR_RAMP, OLD_HAIR_COLOURS.brown),
-  hairGrey: 0,
+  ...nearestHair(OLD_HAIR_COLOURS.brown),
 };
 
 const pick = (table: Style[], id: unknown, fallback: string): string =>
@@ -280,7 +288,7 @@ export function cleanLook(raw: unknown): Look {
     hair: pick(HAIRSTYLES, o.hair, DEFAULT_LOOK.hair),
     skin: tone(o.skin, DEFAULT_LOOK.skin),
     hairColour: tone(o.hairColour, DEFAULT_LOOK.hairColour),
-    hairGrey: tone(o.hairGrey, DEFAULT_LOOK.hairGrey),
+    hairBright: tone(o.hairBright, DEFAULT_LOOK.hairBright),
   };
 }
 
@@ -296,8 +304,8 @@ export function skinColour(l: Look): string {
 }
 export function hairColour(l: Look): string {
   const v = l.hairColour as unknown;
-  if (typeof v === 'string') return v.startsWith('#') ? v : OLD_HAIR_COLOURS[v] ?? hairColourAt(DEFAULT_LOOK.hairColour, 0);
-  return hairColourAt(tone(v, DEFAULT_LOOK.hairColour), tone(l.hairGrey, 0));
+  if (typeof v === 'string') return v.startsWith('#') ? v : OLD_HAIR_COLOURS[v] ?? hairColourOf(DEFAULT_LOOK.hairColour, DEFAULT_LOOK.hairBright);
+  return hairColourOf(tone(v, DEFAULT_LOOK.hairColour), tone(l.hairBright, DEFAULT_LOOK.hairBright));
 }
 
 /** What the flat figure draws for what a look no longer says: brown eyes, an unbleached shirt, walnut trousers. */
@@ -315,7 +323,7 @@ export function darken(hex: string, by: number): string {
   return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
 }
 
-/** Somebody, at random: either body, any hairstyle, anywhere along both ramps, not grey. What the creator opens on. */
+/** Somebody, at random: either body, any hairstyle, any skin, any hair colour. What the creator opens on. */
 export function randomLook(roll: () => number = Math.random): Look {
   const any = <T extends { id: string }>(t: T[]): string => t[Math.min(t.length - 1, Math.floor(roll() * t.length))].id;
   return {
@@ -323,6 +331,6 @@ export function randomLook(roll: () => number = Math.random): Look {
     hair: any(HAIRSTYLES),
     skin: toneOf(roll()),
     hairColour: toneOf(roll()),
-    hairGrey: 0,
+    hairBright: toneOf(roll()),
   };
 }

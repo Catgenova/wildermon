@@ -32,8 +32,8 @@ const same = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.str
 /* The keeper: every call is written down, and `rpc_set_look` answers as the refusal or the cleaning says. */
 const calls: Array<{ url: string; body: unknown }> = [];
 let refuse: string | null = null;
-/** What the keeper does to a look on the way in: here, it has no grey past a half. */
-const keeperCleans = (l: Look): Look => ({ ...l, hairGrey: Math.min(0.5, l.hairGrey) });
+/** What the keeper does to a look on the way in: here, it has no hair brighter than a half. */
+const keeperCleans = (l: Look): Look => ({ ...l, hairBright: Math.min(0.5, l.hairBright) });
 const json = (body: unknown, status = 200): Response =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -48,7 +48,7 @@ globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
 }) as typeof fetch;
 
 /* An island joined as far as a body goes: a name, a look, somewhere to stand, and a channel that writes down what is sent on it. */
-const before: Look = cleanLook({ gender: 'woman', skin: 0.355, hair: 'braid', hairColour: 0.379, hairGrey: 0 });
+const before: Look = cleanLook({ gender: 'woman', skin: 0.355, hair: 'braid', hairColour: 0.048, hairBright: 0.295 });
 const isle = new Island({} as never);
 isle.info = { id: 'w', name: 'w', seed: 1, size: 64, spawn_x: 0, spawn_y: 0, ready: true, epoch: '2026-01-01T00:00:00Z' };
 isle.uid = 'u-alice';
@@ -65,12 +65,12 @@ check('a body on the island is shown as it is', sent.length === 1 && same(sent[0
 await isle.move(10.5, 10.5, 0, 101);
 check('and standing still, nothing more is sent', sent.length === 1, `${sent.length} sent`);
 
-const want: Look = cleanLook({ ...before, gender: 'man', hair: 'swept', hairColour: 0.05, hairGrey: 0.8, skin: 0.9 });
+const want: Look = cleanLook({ ...before, gender: 'man', hair: 'swept', hairColour: 0.6, hairBright: 0.8, skin: 0.9 });
 const kept = await isle.wearLook(want);
 const asked = calls.find((c) => c.url.endsWith('/rest/v1/rpc/rpc_set_look'));
 check('the look goes to rpc_set_look, whole', !!asked && same(asked.body, { p_look: want }), JSON.stringify(asked?.body ?? null));
 check('what is worn is what the keeper kept', same(kept, keeperCleans(want)) && same(isle.me?.look, kept),
-  `${kept.hairGrey} grey kept, ${String((isle.me?.look as Look | undefined)?.hairGrey)} worn`);
+  `${kept.hairBright} brightness kept, ${String((isle.me?.look as Look | undefined)?.hairBright)} worn`);
 
 await isle.move(10.5, 10.5, 0, 102);
 check('standing still, the next broadcast carries the new look', sent.length === 2 && same(sent[1]?.payload.look, kept),

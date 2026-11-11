@@ -1,5 +1,5 @@
 import {
-  GENDERS, HAIRSTYLES, HAIR_RAMP, HAIR_WHITE, SKIN_RAMP, cleanLook, hairColour, randomLook, skinColour, toneOf,
+  GENDERS, HAIRSTYLES, HAIR_DARKEST, HAIR_LIGHTEST, SKIN_RAMP, cleanLook, hairColour, hairColourOf, randomLook, skinColour, toneOf,
   type Look, type Ramp,
 } from '../game/look';
 import { sculptedFigures, sculptedReady, type FigurePose } from '../render/figure';
@@ -15,13 +15,14 @@ const BARE: Outfit = { shawl: false, trousers: false, boots: false, tunic: false
 /**
  * What the preview can show the body in, by the game's own outfit flags (`FigurePose.outfit`, as the review tools in
  * `tools/sculpt/*game.mjs` set them): the undergarment alone (the first, what the preview opens on), and each set of
- * clothes and armour whole. Another set is another row.
+ * clothes and armour, its hood, hat or helm off so the hair shows (the hood down, no leather hat, no plate helm).
+ * Another set is another row.
  */
-const OUTFITS: ReadonlyArray<{ id: string; name: string; outfit: Outfit }> = [
+export const OUTFITS: ReadonlyArray<{ id: string; name: string; outfit: Outfit }> = [
   { id: 'none', name: 'None', outfit: BARE },
   { id: 'cloth', name: 'Cloth', outfit: { shawl: true, trousers: true, boots: true, tunic: true, hood: false } },
-  { id: 'leather', name: 'Leather', outfit: { ...BARE, leatherChest: true, leatherLegs: true, leatherBoots: true, leatherShawl: true, leatherHat: true } },
-  { id: 'plate', name: 'Plate', outfit: { ...BARE, plateHelm: true, plateMantle: true, plateChest: true, plateLegs: true, plateBoots: true } },
+  { id: 'leather', name: 'Leather', outfit: { ...BARE, leatherChest: true, leatherLegs: true, leatherBoots: true, leatherShawl: true } },
+  { id: 'plate', name: 'Plate', outfit: { ...BARE, plateMantle: true, plateChest: true, plateLegs: true, plateBoots: true } },
 ];
 
 const button = (className: string, text: string, label?: string): HTMLButtonElement => {
@@ -36,8 +37,17 @@ const button = (className: string, text: string, label?: string): HTMLButtonElem
   return b;
 };
 
-/** A ramp as a CSS gradient left to right: straight between the stops in sRGB, as `rampColour` mixes them, so the track is the colours. */
-const gradientOf = (r: Ramp): string => `linear-gradient(to right, ${r.colour.map((c, i) => `${c} ${(r.at[i] * 100).toFixed(1)}%`).join(', ')})`;
+/** Colours at places along a track as a CSS gradient left to right, straight between them in sRGB. */
+const gradient = (stops: Array<[number, string]>): string => `linear-gradient(to right, ${stops.map(([t, c]) => `${c} ${(t * 100).toFixed(1)}%`).join(', ')})`;
+/** A ramp's track: its stops, between which `rampColour` mixes straight in sRGB as the gradient does, so the track is the colours. */
+const gradientOf = (r: Ramp): string => gradient(r.colour.map((c, i) => [r.at[i], c]));
+/**
+ * The hue's track at the look's brightness, and the brightness's at its hue: HSL is straight in sRGB between a
+ * sixth of the wheel and the next, and either side of half lightness, so stops there are the exact colours.
+ */
+const hueTrack = (l: Look): string => gradient(Array.from({ length: 7 }, (_, i): [number, string] => [i / 6, hairColourOf(i / 6, l.hairBright)]));
+const HALF_LIGHT = (0.5 - HAIR_DARKEST) / (HAIR_LIGHTEST - HAIR_DARKEST);
+const brightTrack = (l: Look): string => gradient([0, HALF_LIGHT, 1].map((b): [number, string] => [b, hairColourOf(l.hairColour, b)]));
 
 interface Slider {
   input: HTMLInputElement;
@@ -45,7 +55,7 @@ interface Slider {
   /** The colour the look comes to, for the swatch; and the track's background, for the look. */
   colour: (l: Look) => string;
   track: (l: Look) => string;
-  key: 'skin' | 'hairColour' | 'hairGrey';
+  key: 'skin' | 'hairColour' | 'hairBright';
 }
 
 /**
@@ -61,8 +71,8 @@ interface Slider {
  * standing in its idle, in its painted undergarment or one of the sets of
  * clothes and armour (`OUTFITS`), turned by its arrows, by dragging or by the arrow
  * keys. Under it, a button per body and a thumbnail per hairstyle there is a
- * mesh for (`HAIRSTYLES`), and sliders for the skin, the hair's colour and its
- * grey, each with the exact colour beside it. Every change is in the mirror on
+ * mesh for (`HAIRSTYLES`), and sliders for the hair's hue and brightness and
+ * the skin, each with the exact colour beside it. Every change is in the mirror on
  * its next frame.
  *
  * It keeps the look being chosen and nothing else. Keeping it anywhere is the
@@ -276,9 +286,8 @@ export class Creator {
       this.pick(b, 'hair', h.id, h.name, hair.label);
       hair.row.append(b);
     }
-    this.slider('Hair colour', 'hairColour', hairColour, () => gradientOf(HAIR_RAMP));
-    // The grey's track runs from the hair's own colour to white, as the hair does.
-    this.slider('Grey', 'hairGrey', hairColour, (l) => `linear-gradient(to right, ${hairColour({ ...l, hairGrey: 0 })}, ${HAIR_WHITE})`);
+    this.slider('Hair colour', 'hairColour', hairColour, hueTrack);
+    this.slider('Hair brightness', 'hairBright', hairColour, brightTrack);
     this.slider('Skin', 'skin', skinColour, () => gradientOf(SKIN_RAMP));
   }
 

@@ -4292,7 +4292,7 @@ reset role;
 update player set stats = jsonb_set(coalesce(stats, '{}'::jsonb), '{stamina}', '1'), body_at = now() \g /dev/null
 \echo '--- a face, and where it is kept'
 -- A body and a hairstyle out of a table, and three numbers from nought to
--- one (the skin, the hair's colour and its grey), chosen on the account page
+-- one (the skin, the hair's hue and its brightness), chosen on the account page
 -- between making an account and stepping ashore. What is measured here is that
 -- none of them can be anything but an entry in a table we wrote or a number in
 -- range: a look goes from a stranger's browser through this database into
@@ -4318,7 +4318,7 @@ select set_config('request.jwt.claims', json_build_object('sub', :'alice')::text
 select rpc_join(:'world', 'Alice') \g /dev/null
 select '562. alice comes ashore with no face chosen: ' || (select (look ->> 'hair') is not null
        from player where uid = :'alice') || ' — she has one anyway, because nobody is the default figure';
-select rpc_set_look('{"gender":"woman","skin":0.79,"hair":"braid","hairColour":0.05,"hairGrey":0}'::jsonb) \g /dev/null
+select rpc_set_look('{"gender":"woman","skin":0.79,"hair":"braid","hairColour":0.6,"hairBright":0.3}'::jsonb) \g /dev/null
 select '563. she chooses: ' || (select look ->> 'hair' from account where uid = :'alice')
      || ', skin ' || (select look ->> 'skin' from account where uid = :'alice')
      || ' — and the body already ashore has it too: '

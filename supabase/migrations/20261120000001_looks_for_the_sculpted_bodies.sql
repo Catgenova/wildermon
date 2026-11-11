@@ -1,17 +1,19 @@
--- Looks for the sculpted bodies: two bodies, the hairstyles there is a mesh for, and the skin, the hair's colour and
--- its grey as places along a slider.
+-- Looks for the sculpted bodies: two bodies, the hairstyles there is a mesh for, and the skin, the hair's hue and its
+-- brightness as places along a slider.
 --
 -- Asked for: "revamp the character customization screen for the new models. It will only have the 2 body types, 3
 -- hairstyles (2+bald). It needs sliders for hair color and skin tone."
 --
 -- A look was eight ids out of `look_option`. Now it is five fields (`look_kinds()`): `gender` and `hair` still ids
--- out of `look_option`, and `skin`, `hairColour` and `hairGrey` numbers from nought to one (`look_tones()`), each
--- turned into a colour by the browser's own ramp (`src/game/look.ts`), so a free-text colour still never reaches
+-- out of `look_option`, and `skin`, `hairColour` (the hair's hue) and `hairBright` numbers from nought to one
+-- (`look_tones()`), each turned into a colour by the browser (`src/game/look.ts`: the skin along its ramp, the hair
+-- HSL(hue, 60%, 6% to 90% by brightness)), so a free-text colour still never reaches
 -- anybody's canvas. `look_clean()` clamps a number to nought to one at three places, and anything that is not a
 -- number falls to the field's default (`look_tone_defaults()`).
 --
 -- A look from before is read through `look_legacy` (the definitions write it, from `legacyLooks()`): an old build or
--- haircut to the nearest there is now, an old skin or hair colour swatch to the place on the ramps nearest its colour.
+-- haircut to the nearest there is now, an old skin swatch to the place on its ramp nearest its colour, an old hair
+-- colour swatch to the hue and brightness nearest it.
 -- Eyes, beards and the two cloths are not part of a look any more, so `look_clean()` leaves them out. Every look kept
 -- is cleaned here once, so the rows say what they mean; `rpc_my_look()` and the join clean what they read as well.
 --
@@ -26,13 +28,13 @@ create table if not exists look_legacy (kind text not null, id text not null, be
 
 /** The fields a look has, in the order the creator asks them; those that are numbers; and each number's default. */
 create or replace function look_kinds() returns text[] language sql immutable as $fn$
-  select array['gender', 'hair', 'skin', 'hairColour', 'hairGrey']::text[]
+  select array['gender', 'hair', 'skin', 'hairColour', 'hairBright']::text[]
 $fn$;
 create or replace function look_tones() returns text[] language sql immutable as $fn$
-  select array['skin', 'hairColour', 'hairGrey']::text[]
+  select array['skin', 'hairColour', 'hairBright']::text[]
 $fn$;
 create or replace function look_tone_defaults() returns jsonb language sql immutable as $fn$
-  select '{"skin": 0.248, "hairColour": 0.224, "hairGrey": 0}'::jsonb
+  select '{"skin": 0.248, "hairColour": 0.083, "hairBright": 0.18}'::jsonb
 $fn$;
 
 /**
@@ -80,12 +82,11 @@ create or replace function look_clean(p_look jsonb) returns jsonb language sql s
 $fn$;
 
 /**
- * Somebody, at random: either body, any hairstyle, anywhere along the skin and hair ramps, not grey (the browser's
- * `randomLook`). From `gen_random_uuid()` rather than `random()`, which the suite seeds (`20260915033000_looks.sql`).
+ * Somebody, at random: either body, any hairstyle, any skin, any hair colour (the browser's `randomLook`). From
+ * `gen_random_uuid()` rather than `random()`, which the suite seeds (`20260915033000_looks.sql`).
  */
 create or replace function look_random() returns jsonb language sql volatile as $fn$
   select look_clean(coalesce(jsonb_object_agg(k, case
-    when k = 'hairGrey' then '0'::jsonb
     when k = any(look_tones()) then
       to_jsonb(round(('x' || lpad(substr(md5(gen_random_uuid()::text), 1, 8), 16, '0'))::bit(64)::bigint::numeric / 4294967295, 3))
     else to_jsonb((select o.id from look_option o where o.kind = k order by md5(gen_random_uuid()::text) limit 1))

@@ -142,6 +142,8 @@ import { ALIGNMENT_NAMES, BAR_SLOTS, FAITH_SPELLS, FAITH_TIER_AT, PATRON_AT, PAT
 import { NEED_KINDS, NEED_LABEL } from './care';
 import { HUNGRY_AT, HURT_AT } from './wildermon';
 import { CARE_WANTING as CARE_WANTING_317, COOKED_MEAT_TOO } from '../../game/creatures';
+import { GENDERS, HAIRSTYLES } from '../../game/look';
+import { OUTFITS } from '../creator';
 import { article, burnsFor, capital, finePercent, listed, listedOr, numberWord, percent, readyIn, timeWords } from '../../game/words';
 import { DEED_UPGRADES } from '../../game/deed';
 import { LYE_USE, SHORE_REACH } from '../../game/placeables';
@@ -4250,6 +4252,16 @@ export const NEWS: News[] = [
       return [`Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats. Stage 3 skill: ${two.name} ${perkSays('leecha')}.`,
         'Each stage: own model, animations and voice.'];
     },
+  },
+  {
+    n: 527,
+    day: '2026-11-20',
+    lines: () => [
+      `Changed: character creator for the sculpted bodies. Body: ${listedOr(GENDERS.map((g) => g.name))}. Hair: ${listedOr(HAIRSTYLES.map((h) => h.name))}.`,
+      'Added: sliders: Hair colour (hue, the whole colour wheel), Hair brightness (near black to near white), Skin (palest to darkest), each with its exact colour beside it.',
+      `Added: creator preview: the sculpted body, idle, turned by ◀ ▶ or dragging; Head close-up; outfit ${listedOr(OUTFITS.map((o) => o.name))}, head always bare.`,
+      'Removed: build Neither, eyes, beards, shirt and trousers colours, the swatch hair colours and the flat figure\'s other haircuts. Existing looks: each to the nearest there is now.',
+    ],
   },
   {
     n: 513,

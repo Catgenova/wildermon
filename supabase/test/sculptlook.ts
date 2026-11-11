@@ -6,13 +6,14 @@
  *
  *   * the choices are the two bodies and Bald with every hairstyle there is a mesh for on both bodies
  *     (`src/sculpt/assets/lowhair.json`), as the list the tool writes beside it says (`lowhair-styles.json`);
- *   * the ramps end where they say: black and flax, white at full grey, the palest and darkest skin; and the palest
+ *   * the hair goes round the whole colour wheel and from near black to near white, the brown it opens on the old
+ *     default's; the skin ramp ends where it says, the palest and darkest skin; and the palest
  *     skin is one the sculpted bodies' fitted light can shade, its red and green under full on the brightest facets
  *     (`tools/sculpt/lowlight-<who>.json`, lit as `lowLight` in `src/sculpt/gl.ts` lights a low-poly body's skin);
  *   * a number is kept to three places and to nought to one, anything else falls to the default;
  *   * every id a look could hold before maps to a look of now: a build to the nearest, every haircut to one there is
- *     a mesh for, an old skin or hair swatch to the very colour where it was a stop of the ramp, and near it where it
- *     was not; and a clean look is clean again unchanged, a rolled one too.
+ *     a mesh for, an old skin swatch to its very colour, an old hair colour to the hue and brightness nearest it
+ *     (the natural ones near); and a clean look is clean again unchanged, a rolled one too.
  *
  * On the island (skipped when there is no Postgres to reach):
  *
@@ -27,8 +28,8 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import {
-  DEFAULT_LOOK, GENDERS, HAIRSTYLES, HAIR_RAMP, HAIR_WHITE, LOOK_KINDS, LOOK_TABLES, LOOK_TONES, SKIN_RAMP, cleanLook,
-  hairColour, hairColourAt, legacyLooks, rampColour, randomLook, skinColour, type Look,
+  DEFAULT_LOOK, GENDERS, HAIRSTYLES, LOOK_KINDS, LOOK_TABLES, LOOK_TONES, SKIN_RAMP, cleanLook,
+  hairColour, hairColourOf, legacyLooks, rampColour, randomLook, skinColour, type Look, type Ramp,
 } from '../../src/game/look';
 import HAIR from '../../src/sculpt/assets/lowhair.json';
 import INDEX from '../../src/sculpt/assets/lowhair-styles.json';
@@ -68,13 +69,21 @@ check('the ids the island checks are the bodies and the hairstyles', same(Object
 
 /* ---- the ramps ------------------------------------------------------------------------------------- */
 console.log('--- the ramps');
-check('hair: black at nought, flax at one', hairColourAt(0, 0) === '#1c1614' && hairColourAt(1, 0) === '#e6d3a1', `${hairColourAt(0, 0)} ${hairColourAt(1, 0)}`);
-check('and white at full grey, wherever it is along', hairColourAt(0, 1) === HAIR_WHITE && hairColourAt(0.6, 1) === HAIR_WHITE);
-check('half grey on black is a mid grey', gap(hairColourAt(0, 0.5), '#7d7772') < 3, hairColourAt(0, 0.5));
+const hsl = (h: string): number[] => {
+  const [r, g, b] = rgb(h).map((v) => v / 255), mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn;
+  const hue = d === 0 ? 0 : mx === r ? ((g - b) / d + 6) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return [hue / 6, d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1)), l];
+};
+check('hair colour: red, yellow, green, cyan, blue, magenta round the wheel, red again at one',
+  [0, 1, 2, 3, 4, 5].every((i) => Math.abs(hsl(hairColourOf(i / 6, 0.5))[0] - i / 6) < 0.01) && hairColourOf(1, 0.5) === hairColourOf(0, 0.5),
+  [0, 1, 2, 3, 4, 5, 6].map((i) => hairColourOf(i / 6, 0.5)).join(' '));
+check('hair brightness: near black at nought, near white at one, for every hue',
+  [0, 0.2, 0.4, 0.6, 0.8].every((h) => lab(hairColourOf(h, 0))[0] < 8 && lab(hairColourOf(h, 1))[0] > 80), `${hairColourOf(0.6, 0)} ${hairColourOf(0.6, 1)}`);
+check('at 60% saturation, lightness 6% to 90%', Math.abs(hsl(hairColourOf(0.3, 0.5))[1] - 0.6) < 0.02 && Math.abs(hsl(hairColourOf(0.3, 0.5))[2] - 0.48) < 0.01,
+  hsl(hairColourOf(0.3, 0.5)).map((v) => v.toFixed(3)).join(' '));
 check('skin: porcelain at nought, ebony at one', rampColour(SKIN_RAMP, 0) === '#f5ddc6' && rampColour(SKIN_RAMP, 1) === '#3e2617');
-const steps = (r: typeof HAIR_RAMP): number[] => Array.from({ length: 100 }, (_, i) => gap(rampColour(r, i / 100), rampColour(r, (i + 1) / 100)));
-const even = (r: typeof HAIR_RAMP): number => { const s = steps(r); return Math.max(...s) / (s.reduce((a, b) => a + b, 0) / s.length); };
-check('the hair slider moves evenly: no step over three times the mean', even(HAIR_RAMP) < 3, even(HAIR_RAMP).toFixed(2));
+const steps = (r: Ramp): number[] => Array.from({ length: 100 }, (_, i) => gap(rampColour(r, i / 100), rampColour(r, (i + 1) / 100)));
+const even = (r: Ramp): number => { const s = steps(r); return Math.max(...s) / (s.reduce((a, b) => a + b, 0) / s.length); };
 check('the skin slider moves evenly: no step over three times the mean', even(SKIN_RAMP) < 3, even(SKIN_RAMP).toFixed(2));
 check('the skin gets darker all the way along', steps(SKIN_RAMP).every((_, i) => lab(rampColour(SKIN_RAMP, (i + 1) / 100))[0] <= lab(rampColour(SKIN_RAMP, i / 100))[0] + 1e-9));
 
@@ -108,23 +117,23 @@ for (const [who, fit] of [['his', MALE_LIGHT], ['her', FEMALE_LIGHT]] as const) 
 
 /* ---- a look ---------------------------------------------------------------------------------------- */
 console.log('--- a look');
-check('numbers kept to three places', same(cleanLook({ ...DEFAULT_LOOK, skin: 0.12345, hairColour: 0.5, hairGrey: 0.0004 }),
-  { ...DEFAULT_LOOK, skin: 0.123, hairColour: 0.5, hairGrey: 0 }));
-check('and to nought to one', same(cleanLook({ ...DEFAULT_LOOK, skin: -3, hairColour: 7, hairGrey: 1 }), { ...DEFAULT_LOOK, skin: 0, hairColour: 1, hairGrey: 1 }));
-check('anything else is the default', same(cleanLook({ gender: 'goblin', hair: 'mohawk', skin: '#ff0000', hairColour: null, hairGrey: [1] }), DEFAULT_LOOK),
-  JSON.stringify(cleanLook({ gender: 'goblin', hair: 'mohawk', skin: '#ff0000', hairColour: null, hairGrey: [1] })));
+check('numbers kept to three places', same(cleanLook({ ...DEFAULT_LOOK, skin: 0.12345, hairColour: 0.5, hairBright: 0.0004 }),
+  { ...DEFAULT_LOOK, skin: 0.123, hairColour: 0.5, hairBright: 0 }));
+check('and to nought to one', same(cleanLook({ ...DEFAULT_LOOK, skin: -3, hairColour: 7, hairBright: 1 }), { ...DEFAULT_LOOK, skin: 0, hairColour: 1, hairBright: 1 }));
+check('anything else is the default', same(cleanLook({ gender: 'goblin', hair: 'mohawk', skin: '#ff0000', hairColour: null, hairBright: [1] }), DEFAULT_LOOK),
+  JSON.stringify(cleanLook({ gender: 'goblin', hair: 'mohawk', skin: '#ff0000', hairColour: null, hairBright: [1] })));
 check('nothing at all is the default', same(cleanLook(null), DEFAULT_LOOK) && same(cleanLook([1, 2]), DEFAULT_LOOK) && same(cleanLook('woman'), DEFAULT_LOOK));
 check('eyes, beards and cloth are not kept', same(Object.keys(cleanLook({ ...DEFAULT_LOOK, eyes: 'green', beard: 'full', shirt: 'woad' })), LOOK_KINDS));
-check('the default is the old default\'s skin and hair colour exactly', skinColour(DEFAULT_LOOK) === '#ddae85' && hairColour(DEFAULT_LOOK) === '#5a3a1e');
+check('the default is the old default\'s skin exactly', skinColour(DEFAULT_LOOK) === '#ddae85');
 const rolled = Array.from({ length: 200 }, () => randomLook());
-check('a rolled look is clean, and never grey', rolled.every((l) => same(cleanLook(l), l) && l.hairGrey === 0));
+check('a rolled look is clean', rolled.every((l) => same(cleanLook(l), l)));
 check('and comes as either body and every hairstyle', GENDERS.every((g) => rolled.some((l) => l.gender === g.id)) && HAIRSTYLES.every((h) => rolled.some((l) => l.hair === h.id)));
 
 /* ---- looks from before ----------------------------------------------------------------------------- */
 console.log('--- looks from before');
 const old = { gender: 'neither', skin: 'olive', hair: 'long', hairColour: 'auburn', eyes: 'hazel', beard: 'none', shirt: 'madder', trousers: 'bark' };
 const now = cleanLook(old);
-check('an old look becomes one of now', now.gender === 'man' && now.hair === 'braid' && skinColour(now) === '#c79a68' && hairColour(now) === '#7d3a1d', JSON.stringify(now));
+check('an old look becomes one of now', now.gender === 'man' && now.hair === 'braid' && skinColour(now) === '#c79a68' && gap(hairColour(now), '#7d3a1d') < 6, JSON.stringify(now));
 check('neither: the build nearest it, the man\'s', cleanLook({ gender: 'neither' }).gender === 'man');
 const OLD_HAIR = ['bald', 'crop', 'short', 'bowl', 'side', 'swept', 'fringe', 'curls', 'afro', 'waves', 'long', 'ponytail', 'topknot', 'bun', 'braid', 'braids', 'locs', 'ridge', 'undercut', 'tonsure'];
 const hairNow = OLD_HAIR.map((h) => cleanLook({ hair: h }).hair);
@@ -136,15 +145,21 @@ check('every old skin is its very colour', Object.entries(SKINS).every(([id, c])
   Object.keys(SKINS).filter((id) => skinColour(cleanLook({ skin: id })) !== SKINS[id]).join());
 check('and they come in their order along the slider', Object.keys(SKINS).every((id, i, a) => i === 0 || cleanLook({ skin: id }).skin > cleanLook({ skin: a[i - 1] }).skin));
 const NATURAL: Record<string, string> = { black: '#1c1614', dark_brown: '#3b2a1c', brown: '#5a3a1e', chestnut: '#6f4423', auburn: '#7d3a1d', ginger: '#a5521f', copper: '#b8672a', honey: '#b98c3f', blond: '#d8b76a', flax: '#e6d3a1' };
-check('every old hair colour on the ramp is its very colour, ungreyed', Object.entries(NATURAL).every(([id, c]) => hairColour(cleanLook({ hairColour: id })) === c && cleanLook({ hairColour: id }).hairGrey === 0));
+const far = Object.entries(NATURAL).map(([id, c]) => [id, gap(hairColour(cleanLook({ hairColour: id })), c)] as const);
+check('every old natural hair colour to within a shade or two of what it was', far.every(([, d]) => d < 8), far.map(([id, d]) => `${id} ${d.toFixed(1)}`).join(', '));
+/** Nothing on the wheel nearer an old colour than what it became, by a coarse look over the whole of it. */
+const nearest = (id: string, c: string): boolean => {
+  const got = gap(hairColour(cleanLook({ hairColour: id })), c);
+  for (let h = 0; h < 1; h += 0.02) for (let b = 0; b <= 1; b += 0.02) if (gap(hairColourOf(h, b), c) < got - 0.5) return false;
+  return true;
+};
+check('the hair it opens on is the nearest to the old default brown, and near', gap(hairColour(DEFAULT_LOOK), '#5a3a1e') < 6 && nearest('brown', '#5a3a1e'), `${hairColour(DEFAULT_LOOK)}, ${gap(hairColour(DEFAULT_LOOK), '#5a3a1e').toFixed(1)} apart`);
 const GREYS: Record<string, string> = { soot: '#2a211c', ash: '#b9b0a3', grey: '#8e8b85', white: '#ded9d0' };
-for (const [id, c] of Object.entries(GREYS)) {
-  const l = cleanLook({ hairColour: id });
-  check(`${id} to within a shade of what it was`, gap(hairColour(l), c) < 4, `${hairColour(l)} for ${c}, ${gap(hairColour(l), c).toFixed(2)} apart`);
-}
-check('white is full grey', cleanLook({ hairColour: 'white' }).hairGrey === 1);
+check('soot, ash, grey and white to the nearest there is on the wheel', Object.entries(GREYS).every(([id, c]) => nearest(id, c)),
+  Object.keys(GREYS).map((id) => `${id}>${hairColour(cleanLook({ hairColour: id }))}`).join(' '));
 const DYED = ['pastel_blue', 'blue', 'teal', 'green', 'purple', 'lavender', 'pink', 'magenta', 'red'];
-check('a dyed colour to the nearest there is now', DYED.every((id) => { const l = cleanLook({ hairColour: id }); return same(cleanLook(l), l); }),
+const DYES: Record<string, string> = { pastel_blue: '#9cc3ec', blue: '#3462bf', teal: '#2b8f8c', green: '#4e9a48', purple: '#6c40a6', lavender: '#b69de2', pink: '#e690bd', magenta: '#b9367f', red: '#bb2b30' };
+check('a dyed colour to the nearest on the wheel, and close: the wheel has every hue', DYED.every((id) => gap(hairColour(cleanLook({ hairColour: id })), DYES[id]) < 12 && nearest(id, DYES[id])),
   DYED.map((id) => `${id}>${hairColour(cleanLook({ hairColour: id }))}`).join(' '));
 check('every id from before is in the table the island is given, and becomes a clean look',
   legacyLooks().length === 3 + OLD_HAIR.length + 10 + 23 && legacyLooks().every((l) => {
@@ -216,10 +231,10 @@ select land_blank('${ROCK}', 32) \\g /dev/null`);
   check('look_legacy is legacyLooks()', legacyLooks().every((l) => same(legacy[`${l.kind}|${l.id}`], l.becomes)) && Object.keys(legacy).length === legacyLooks().length);
 
   const LOOKS: unknown[] = [
-    old, DEFAULT_LOOK, { gender: 'woman', hair: 'braid', skin: 0.9, hairColour: 0.75, hairGrey: 0.25 },
+    old, DEFAULT_LOOK, { gender: 'woman', hair: 'braid', skin: 0.9, hairColour: 0.75, hairBright: 0.25 },
     { gender: 'woman', skin: 'ebony', hair: 'afro', hairColour: 'white', eyes: 'green' }, { hair: 'tonsure', hairColour: 'pink' },
-    { skin: 1.5, hairColour: -2, hairGrey: 0.33333 }, { skin: '0.5' }, { gender: 7, hair: null, skin: { a: 1 } }, {}, [], 'man',
-    { gender: 'neither', hair: 'braid', hairColour: 0.4 }, { hairColour: 'grey', hairGrey: 0.1 }, { hair: 'swept', skin: 0 },
+    { skin: 1.5, hairColour: -2, hairBright: 0.33333 }, { skin: '0.5' }, { gender: 7, hair: null, skin: { a: 1 } }, {}, [], 'man',
+    { gender: 'neither', hair: 'braid', hairColour: 0.4 }, { hairColour: 'grey', hairBright: 0.1 }, { hair: 'swept', skin: 0 },
     ...Object.keys(SKINS).map((skin) => ({ skin })), ...Object.keys({ ...NATURAL, ...GREYS }).map((hairColour) => ({ hairColour })),
     ...DYED.map((hairColour) => ({ hairColour })), ...OLD_HAIR.map((hair) => ({ hair })),
   ];
@@ -229,15 +244,15 @@ select land_blank('${ROCK}', 32) \\g /dev/null`);
   check('and keeps numbers as numbers', typeof (island[2] as Look).skin === 'number' && (island[2] as Look).skin === 0.9, JSON.stringify(island[2]));
 
   // The doors.
-  const mine = { gender: 'woman', hair: 'braid', skin: 0.731, hairColour: 0.412, hairGrey: 0.2 };
+  const mine = { gender: 'woman', hair: 'braid', skin: 0.731, hairColour: 0.412, hairBright: 0.2 };
   psql(`select set_config('request.jwt.claims', ${lit(JSON.stringify({ sub: ANNA }))}, false) \\g /dev/null\nselect rpc_join('${ROCK}', 'Anna') \\g /dev/null`);
   const set = as(ANNA, `select rpc_set_look(${lit(JSON.stringify(mine))}::jsonb);`);
   check('rpc_set_look keeps the numbers', !set.err && same(JSON.parse(set.out), mine), set.err || set.out);
   check('on the account and on the body ashore', same(j(`select look from account where uid = '${ANNA}';`), mine) && same(j(`select look from player where uid = '${ANNA}';`), mine));
   const read = as(ANNA, `select rpc_my_look();`);
   check('rpc_my_look reads it back', same(JSON.parse(read.out || 'null'), mine), read.err || read.out);
-  const clamped = as(ANNA, `select rpc_set_look('{"gender":"man","hair":"swept","skin":1.7,"hairColour":-0.2,"hairGrey":0.12345}'::jsonb);`);
-  check('a number out of range is kept at the end', same(JSON.parse(clamped.out || 'null'), { gender: 'man', hair: 'swept', skin: 1, hairColour: 0, hairGrey: 0.123 }), clamped.err || clamped.out);
+  const clamped = as(ANNA, `select rpc_set_look('{"gender":"man","hair":"swept","skin":1.7,"hairColour":-0.2,"hairBright":0.12345}'::jsonb);`);
+  check('a number out of range is kept at the end', same(JSON.parse(clamped.out || 'null'), { gender: 'man', hair: 'swept', skin: 1, hairColour: 0, hairBright: 0.123 }), clamped.err || clamped.out);
   for (const [what, look] of [['a list', '{"skin":[1]}'], ['an object', '{"skin":{"a":1}}'], ['a number past a thousand', '{"skin":5000}'], ['a key that is not a word', '{"sk in":0.5}']] as const) {
     const r = as(ANNA, `select rpc_set_look('${look}'::jsonb);`);
     check(`refused at the door: ${what}`, r.err.includes('Bad request: rpc_set_look p_look'), r.err.split('\n')[0] || r.out);
@@ -267,7 +282,7 @@ update player set look = ${lit(JSON.stringify({ ...old, hair: 'afro', hairColour
   check('a look of now is left as it is', same(j(`select look from account where uid = '${ANNA}';`), before));
 
   const random = j(`select jsonb_agg(look_random()) from generate_series(1, 60);`) as Look[];
-  check('look_random rolls clean looks, never grey', random.every((l) => same(cleanLook(l), l) && l.hairGrey === 0), JSON.stringify(random[0]));
+  check('look_random rolls clean looks', random.every((l) => same(cleanLook(l), l)), JSON.stringify(random[0]));
   check('anywhere along the skin', Math.min(...random.map((l) => l.skin)) < 0.3 && Math.max(...random.map((l) => l.skin)) > 0.7);
   psql(CLEAN);
 }
