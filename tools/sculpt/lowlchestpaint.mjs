@@ -10,6 +10,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { buildRig } from './lowrig.mjs';
 import { VIEWS, loadCams, reviewVerts, proj, DIR } from './lowleatherchestview.mjs';
+import { viewMapper } from './lowlchestenv.mjs';
 
 const args = process.argv.slice(2), opt = (n, f) => { const i = args.indexOf(`--${n}`); return i < 0 ? f : args[i + 1]; };
 const out = resolve(opt('out', 'tmp/lowlchestpaint')), SUB = +opt('sub', '2');
@@ -46,7 +47,10 @@ function pieceAt(T, view, x, y) {
 const rank = (k) => (/hole/.test(k) ? 0 : /ring|bring|stripe/.test(k) ? 1 : k === 'undershirt.layer' ? 9 : 5);
 
 for (const who of opt('who', 'male,female').split(',')) {
-  const rig = buildRig(who), C = loadCams()[who], B = rig.B;
+  const rig = buildRig(who), C = loadCams()[who];
+  // (--env <dir>: painted on the envelope, lowlchestenv.mjs, not the skin: the plates that stand off the body keep their area)
+  const ENV = opt('env', null) ? JSON.parse(readFileSync(join(opt('env'), `env-${who}.json`), 'utf8')) : null;
+  const B = ENV ? { verts: ENV.V, tris: ENV.T.map((v) => ({ v })) } : rig.B;
   // the small triangles: barycentric corners in each body triangle
   const bary = [];
   const n = 2 ** SUB;
@@ -62,7 +66,9 @@ for (const who of opt('who', 'male,female').split(',')) {
   const perView = {};
   for (const view of VIEWS) {
     const T = JSON.parse(readFileSync(join(DIR, `leather/mesh/${who}-${view}.json`), 'utf8'));
-    const { PB } = reviewVerts(rig, null, C, view), Q = PB.map((p) => proj(p, C, view));
+    let PB, Q;
+    if (ENV) { Q = viewMapper(rig, C, view)(ENV.V, ENV.W); PB = Q.map((q) => [q[0], -q[1], q[2]]); }
+    else { PB = reviewVerts(rig, null, C, view).PB; Q = PB.map((p) => proj(p, C, view)); }
     const [x0, y0, x1, y1] = T.box, Kz = 4, W = (x1 - x0) * Kz, H = (y1 - y0) * Kz, zb = new Float32Array(W * H).fill(-1e9);
     const tri3 = small.map(({ ti, q }) => q.map((w) => at(Q, B.tris[ti], w)));
     // (the depth buffer over the body's small triangles)
@@ -86,7 +92,7 @@ for (const who of opt('who', 'male,female').split(',')) {
       // (facing: the small triangle's normal in the review pose against the view's direction, from the posed body)
       const P3 = q.map((w) => at(PB, B.tris[ti], w)), e1 = P3[1].map((x, d) => x - P3[0][d]), e2 = P3[2].map((x, d) => x - P3[0][d]);
       const nn = [e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]], L = Math.hypot(...nn) || 1;
-      const face = (nn[0] * dirv[0] + nn[2] * dirv[2]) / L;
+      const face = ENV ? nn[2] / L : (nn[0] * dirv[0] + nn[2] * dirv[2]) / L;
       const px = Math.round((c[0] - x0) * Kz), py = Math.round((c[1] - y0) * Kz);
       if (px < 0 || py < 0 || px >= W || py >= H) return;
       const vis = c[2] >= zb[py * W + px] - 0.08;
