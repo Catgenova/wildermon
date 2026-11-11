@@ -29,7 +29,8 @@
 //   the hem's edge H; the hem's lip down to the underside IH (bevelled: lower than the outside's);
 //   the underside, THICK in from Lb: IB, IY, IM, IT; the collar's inside: ci (its foot), up to d.
 import { crossPairs, triTri, offPlane, TOL, samplesOf, envelope, drape, reachAt, atRY, dirOf, meshOf, orient, trisOf, transferWeights, sub, add, mul, lerp, unit, cross, dot } from '../lowgarment.mjs';
-import { shawlBones } from './shawl.mjs';
+import { shawlBones, SHAPES } from './shawl.mjs';
+import { existsSync, readFileSync } from 'node:fs';
 
 /** The palette's swatches (sRGB 0..1; enchanted-glow-ref.png): dark brown, leather, light leather, trim tan, glow. */
 export const SWATCH = { dark: [81, 47, 44], leather: [112, 60, 43], light: [148, 81, 54], trim: [222, 132, 79], glow: [254, 202, 109] };
@@ -147,7 +148,7 @@ export const OUTSIDE = ['Y0', 'Ym', 'YB0', 'YB1', 'YL', 'Y1', 'Y1b', 'L1', 'L2',
 export const UNDER = ['IH', 'IB', 'IY', 'IM', 'IT'];
 export const COLLAR = ['ci', 'd', 'u0', 'u', 'cm'];
 
-export function buildLeatherShawl(rig, design = DESIGN[rig.who], { under = [] } = {}) {
+export function buildLeatherShawl(rig, design = DESIGN[rig.who], { under = [], shapes = true } = {}) {
   const { B } = rig, D = design, z0 = D.z0;
   const angles = [];
   for (let k = 0; k < D.front; k++) angles.push((k * 90) / D.front);
@@ -208,7 +209,60 @@ export function buildLeatherShawl(rig, design = DESIGN[rig.who], { under = [] } 
   }
   const G = meshOfLeather(rig, D, cols, S);
   G.bones = shawlBones(rig, D, cols);
+  if (shapes) G.shapes = leatherShawlShapes(rig.who, G);
   return G;
+}
+
+/**
+ * The corrective shapes (the cloth shawl's eight, garments/shawl.mjs SHAPES; sculpted by
+ * tools/sculpt/garments/leathershawlshapes.mjs into leathershawlshapes-<who>.json, offsets at bind on the shell's
+ * vertices: its columns' numbers, columnOffsets, and free offsets): each on every vertex by shapesFrom, or none yet.
+ */
+export function leatherShawlShapes(who, G) {
+  const file = new URL(`./leathershawlshapes-${who}.json`, import.meta.url);
+  if (!existsSync(file)) return undefined;
+  const J = JSON.parse(readFileSync(file, 'utf8'));
+  if (J.verts !== undefined && J.verts !== G.verts.length) throw new Error(`leathershawlshapes-${who}.json is for ${J.verts} vertices, the shawl has ${G.verts.length}: run tools/sculpt/garments/leathershawlshapes.mjs`);
+  for (const q of Object.values(J.columns ?? {})) if (q.length !== G.cols.length) throw new Error(`leathershawlshapes-${who}.json is for ${q.length} columns, the shawl has ${G.cols.length}`);
+  return SHAPES.map((s) => {
+    const q = J.columns?.[s.name], r = q ? columnOffsets(G, q) : G.verts.map(() => [0, 0, 0]), f = J.free?.[s.name];
+    if (f) f.at.forEach((i, k) => { for (let j = 0; j < 3; j++) r[i][j] += f.d[k * 3 + j]; });
+    return { ...s, d: shapesFrom(G, r) };
+  });
+}
+/** The rings of a column's cape (turned about its top T0 in a shape) and of its collar; the cape's top rings only moved. */
+const CAPE_TURN = ['Ym', 'YB0', 'YB1', 'YL', 'Y1', 'Y1b', 'L1', 'L2', 'BT0', 'BT1', 'S1', 'S2', 'H', 'IH', 'IB', 'IY', 'IM'], CAPE_TOP = ['Y0', 'IT'], COLLAR_RINGS = ['ci', 'd', 'u0', 'u', 'cm'];
+/**
+ * A shape's offsets on the shell from its columns' numbers (q: per column [a, o, h, ow, hw]), as garments/shawl.mjs
+ * shapeOffsets: in each column's section the cape turned about T0 up and out by a degrees, then moved o out from the axis
+ * and h up; the collar moved ow out and hw up.
+ */
+export function columnOffsets(G, q) {
+  const z0 = G.design.z0, d = G.verts.map(() => [0, 0, 0]);
+  G.cols.forEach((c, k) => {
+    const [a, o, h, ow = o, hw = h] = q[k], t = a * Math.PI / 180, cs = Math.cos(t), sn = Math.sin(t);
+    const at = (p) => atRY(c.deg, p[0], p[1], z0);
+    for (const key of [...CAPE_TURN, ...CAPE_TOP, ...COLLAR_RINGS]) {
+      let p = c[key];
+      if (COLLAR_RINGS.includes(key)) p = [p[0] + ow, p[1] + hw];
+      else {
+        if (CAPE_TURN.includes(key)) { const r = p[0] - c.T0[0], y = p[1] - c.T0[1]; p = [c.T0[0] + r * cs - y * sn, c.T0[1] + r * sn + y * cs]; }
+        p = [p[0] + o, p[1] + h];
+      }
+      d[G.rings[key][k]] = sub(at(p), at(c[key]));
+    }
+  });
+  return d;
+}
+/** A shape's offsets on every vertex from the shell's (r: per vertex, only the shell's read): a piece's or a tab's the
+ * shell vertices it was laid from, by their shares (G.src). */
+export function shapesFrom(G, r) {
+  return G.verts.map((_, i) => {
+    if (!G.src?.[i]) return r[i];
+    const o = [0, 0, 0];
+    for (const [v, w] of G.src[i]) for (let j = 0; j < 3; j++) o[j] += w * r[v][j];
+    return o;
+  });
 }
 
 /** Whether a prism (as prism() would build it) crosses any of the shell's faces. */
