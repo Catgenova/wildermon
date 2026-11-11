@@ -4135,7 +4135,7 @@ export function drawPortrait(ctx: CanvasRenderingContext2D, x: number, y: number
   ctx.beginPath();
   ctx.rect(x, y, w, h);
   ctx.clip();
-  const fx = x + w / 2, fy = opts.close ? y + ((PORTRAIT_TOP[look.gender] ?? PORTRAIT_TOP.man) + 0.6) * zoom : y + h - h * 0.05;
+  const fx = x + w / 2, fy = opts.close ? y + ((PORTRAIT_TOP[look.gender] ?? PORTRAIT_TOP.man) + 1.8) * zoom : y + h - h * 0.05;
   if (!opts.close) footShade(ctx, fx, fy, zoom, pose);
   drawFigure(ctx, fx, fy, zoom, pose, { ink: 1.6 });
   ctx.restore();
