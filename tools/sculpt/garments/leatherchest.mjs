@@ -66,7 +66,7 @@ export const DESIGN = {
     fit: { trunk: 0.02, belt: 0.025, skirt: 0.05, arm: 0.02, gap: 0.008, stack: 0.03 },
     wedge: 8,
     collar: { reachY: [-0.3, -0.1, 0.05], notch: [12, 1.5], top: { az: [0, 30, 90, 180], top: [-0.16, -0.08, -0.04, 0.0] }, base: [-1.1, -1.0, -0.9], trim: 0.07, c: 0.06, flare: 0.02, wall: 0.06, spread: 0.45, sink: 0.3, shrug: 0.4 },
-    core: { az: [0, 14, 28, 40, 43, 62, 80, 96], top: [-0.78, -0.8, -0.86, -0.92, -0.94, -0.95, -1.0, -1.9], bottom: [-3.78, -3.72, -3.64, -3.58, -2.0, -1.95, -1.95, -1.95], rows: [0, 0.14, 0.28, 0.42, 0.56, 0.7, 0.85, 1], c: 0.02, flat: 14, drape: true },
+    core: { az: [0, 14, 28, 40, 43, 62, 80, 96], top: [-0.78, -0.8, -0.86, -0.92, -0.94, -0.95, -1.0, -1.9], bottom: [-3.78, -3.72, -3.64, -3.58, -2.0, -1.95, -1.95, -1.95], rows: [0.0,  0.0833,  0.1667,  0.25,  0.3333,  0.4167,  0.5,  0.5833,  0.6667,  0.75,  0.8333,  0.9167,  1.0], c: 0.02, flat: 14, drape: false },
     back: { az: [96, 112, 116, 130, 150, 165, 180], top: [-1.9, -1.0, -0.85, -0.7, -0.6, -0.56, -0.54], bottom: [-1.95, -1.95, -3.5, -3.55, -3.6, -3.62, -3.64], rows: [0, 0.2, 0.4, 0.6, 0.8, 1], c: 0.02, panel: { top: -0.9, bottom: -2.85, half: 34, tip: -3.15 } },
     side: { az: [38, 60, 80, 100, 120], top: [-1.75, -1.75, -1.8, -1.75, -1.75], bottom: [-3.62, -3.6, -3.58, -3.56, -3.55], rows: [0, 0.33, 0.67, 1], c: 0.018 },
     bands: [{ top: { y0: -1.57, k: 0.21 }, bottom: { y0: -2.13, k: 0.115 }, x: [-1.38, 1.02], lift: 2 }, { top: { y0: -2.13, k: 0.115 }, bottom: { y0: -2.98, k: 0.24 }, x: [-1.3, 0.56], lift: 1 }],
@@ -105,7 +105,7 @@ export const DESIGN = {
     fit: { trunk: 0.018, belt: 0.022, skirt: 0.045, arm: 0.018, gap: 0.007, stack: 0.027 },
     wedge: 8,
     collar: { reachY: [-0.3, -0.1, 0.05], notch: [12, 1.5], top: { az: [0, 30, 90, 180], top: [-0.14, -0.07, -0.03, 0.0] }, base: [-1.05, -0.95, -0.85], trim: 0.06, c: 0.05, flare: 0.018, wall: 0.05, spread: 0.4, sink: 0.27, shrug: 0.35 },
-    core: { az: [0, 12, 24, 36, 40, 58, 76, 96], top: [-0.8, -0.81, -0.84, -0.9, -0.92, -0.95, -1.0, -1.85], bottom: [-3.25, -3.2, -3.12, -3.06, -1.95, -1.9, -1.9, -1.9], rows: [0, 0.14, 0.28, 0.42, 0.56, 0.7, 0.85, 1], c: 0.018, flat: 12, drape: true },
+    core: { az: [0, 12, 24, 36, 40, 58, 76, 96], top: [-0.8, -0.81, -0.84, -0.9, -0.92, -0.95, -1.0, -1.85], bottom: [-3.25, -3.2, -3.12, -3.06, -1.95, -1.9, -1.9, -1.9], rows: [0.0,  0.0833,  0.1667,  0.25,  0.3333,  0.4167,  0.5,  0.5833,  0.6667,  0.75,  0.8333,  0.9167,  1.0], c: 0.018, flat: 12, drape: false },
     back: { az: [96, 112, 116, 130, 150, 165, 180], top: [-1.85, -1.0, -0.9, -0.75, -0.66, -0.62, -0.6], bottom: [-1.9, -1.9, -3.0, -3.05, -3.1, -3.12, -3.14], rows: [0, 0.2, 0.4, 0.6, 0.8, 1], c: 0.018, panel: { top: -0.95, bottom: -2.45, half: 34, tip: -2.7 } },
     side: { az: [34, 56, 78, 100, 120], top: [-1.75, -1.75, -1.8, -1.75, -1.75], bottom: [-3.1, -3.08, -3.06, -3.05, -3.04], rows: [0, 0.33, 0.67, 1], c: 0.016 },
     bands: [{ top: { y0: -1.3, k: 0.42 }, bottom: { y0: -1.95, k: 0.45 }, x: [-0.95, 1.15], lift: 2 }, { top: { y0: -1.7, k: 0.45 }, bottom: { y0: -2.7, k: 0.32 }, x: [-0.95, 1.25], lift: 1 }],
@@ -211,7 +211,9 @@ export function sectioner(S, { o, a, e1, e2, dt = 0.1, centred = false, wedge = 
  */
 function fitOut(rows, ring, out, S, c, passes = 4, reach = 0.3) {
   // (S may be layers [[points, clearance], ...]: the body's samples, and the surfaces of the pieces under this one)
-  if (S.length && Array.isArray(S[0]) && Array.isArray(S[0][0])) { for (let it = 0; it < passes; it++) for (const [P, cc] of S) fitOut(rows, ring, out, P, cc, 1); return; }
+  // (the pieces under, after the body: only what lies within `under` in front of a face lifts it, so a piece beside a
+  // steep face (a plate's seam over the next one's edge) does not shove the face out)
+  if (S.length && Array.isArray(S[0]) && Array.isArray(S[0][0])) { for (let it = 0; it < passes; it++) S.forEach(([P, cc], li) => fitOut(rows, ring, out, P, cc, 1, li === 0 ? reach : Math.min(reach, cc + 0.06))); return; }
   const R = rows.length - 1, n = rows[0].length, C = ring ? n : n - 1;
   // (only the samples near the grid: its bounding box grown by the reach and a margin for its moving out)
   { const all = rows.flat(), m = reach + 0.35, lo = [0, 1, 2].map((j) => Math.min(...all.map((p) => p[j])) - m), hi = [0, 1, 2].map((j) => Math.max(...all.map((p) => p[j])) + m);
@@ -456,6 +458,18 @@ function onTop(plates, p, d) {
   return h ? { q: add(o, mul(d, h.t)), n: h.n, pl: h.pl } : null;
 }
 /**
+ * A grid laid over plates: each point moved out to the outermost of `plates` along the way in from it (out(p)), out by
+ * `gap`, where that lies further out than the point; points over none of them, or already outside, kept.
+ */
+function layOver(rows, plates, out, gap) {
+  rows.forEach((row) => row.forEach((p, k) => {
+    const o = unit(out(p)), h = onTop(plates, p, mul(o, -1));
+    if (!h) return;
+    const q = add(h.q, mul(h.n, gap));
+    if (dot(sub(q, p), o) > 0) row[k] = q;
+  }));
+}
+/**
  * A raised strip along points (each { q, n } on a surface): its top `h` over the surface, `w` wide (a number or per
  * point), its sides down into the surface; `closed` round. Its vertices weighted `wt`. Returns nothing.
  */
@@ -484,7 +498,9 @@ function stripOn(G, pts, w, mat, tag, wt, { h = 0.025, closed = false, sink = 0.
  * Points on the leather set's pieces under the chest at rest (their assets beside this builder,
  * tools/sculpt/leather/under/<name>-<who>.json: the leggings, their flaps left out), each triangle sampled about 0.06 apart.
  */
-export function underPieces(who, names = ['lowleatherlegs']) {
+export function underPieces(who, names = ['lowleatherlegs'], cut = null) {
+  // (`cut`: the leggings' triangles wholly above it left out too: the waist under the undershirt, switched off with the
+  // flaps while the chest is worn, the undershirt the bottom layer there)
   // (the leggings' hip flaps, their `light` panels and the trim round them, left out: they are switched off while the chest is worn, the skirt
   // hanging where they would)
   const SKIP = { lowleatherlegs: ['light'] };
@@ -502,6 +518,7 @@ export function underPieces(who, names = ['lowleatherlegs']) {
       if ((SKIP[n] ?? []).includes(mat(i))) continue;
       const [a, b, c] = [A.tris[i], A.tris[i + 1], A.tris[i + 2]].map((k) => P[k]);
       if (mat(i) === 'trim' && [a, b, c].some((q) => on.has(key(q)))) continue;
+      if (cut !== null && n === 'lowleatherlegs' && Math.min(a[1], b[1], c[1]) > cut) continue;
       const m = Math.max(1, Math.ceil(Math.max(Math.hypot(...sub(b, a)), Math.hypot(...sub(c, b)), Math.hypot(...sub(a, c))) / 0.06));
       for (let u = 0; u <= m; u++) for (let v = 0; v <= m - u; v++) { const x = u / m, y = v / m, z = 1 - x - y; pts.push([a[0] * z + b[0] * x + c[0] * y, a[1] * z + b[1] * x + c[1] * y, a[2] * z + b[2] * x + c[2] * y]); }
     }
@@ -563,7 +580,7 @@ function torsoPieces(G, rig, D, S) {
   /* the skirt: plates hanging from under the belt over the hips, out by the clearance and flaring as they fall */
   // (everything on the trunk laid over the leggings, the piece under it, where this branch has their asset:
   // tools/sculpt/leather/under/lowleatherlegs-<who>.json, their waistband and hip flaps cleared by the leather's thickness)
-  const Sk = D.skirt, skirts = [], under = [...underPieces(rig.who)], nLegs = under.length;
+  const Sk = D.skirt, skirts = [], under = [...underPieces(rig.who, undefined, D.undershirt ? Math.max(...[D.undershirt.bottom].flat()) : null)], nLegs = under.length;
   // (over the leggings: the belt's top above their waistband's, so it covers it; the cores' and side panels' feet over
   // the belt, kept above the waistband's top so their backs do not reach into it as the spine bends)
   const legsTop = under.length ? Math.max(...under[0].map((p) => p[1])) : null;
@@ -575,8 +592,8 @@ function torsoPieces(G, rig, D, S) {
   }
   const skirtRows = (az, top, bottom) => {
     const rows = [];
-    for (let r = 0; r < 3; r++) rows.push(az.map((a, k) => {
-      const y = top + ((bottom[k] - top) * r) / 2;
+    for (let r = 0; r < 5; r++) rows.push(az.map((a, k) => {
+      const y = top + ((bottom[k] - top) * r) / 4;
       let p = fsec.at(y, a, Sk.c + Sk.flare * (top - y) / 2);
       if (r > 0) {
         const prev = rows[r - 1][k], d = [Math.sin(a * rad), 0, Math.cos(a * rad)];
@@ -621,7 +638,8 @@ function torsoPieces(G, rig, D, S) {
   const Bt = D.belt, ringAz = Array.from({ length: 32 }, (_, k) => (k * 360) / 32);
   const beltRows = [0, 1].map((f) => ringAz.map((a) => { const t = tabAt(Bt, 'top', a), b = tabAt(Bt, 'bottom', a); return chest.at(t + (b - t) * f, a, Bt.c[f]); }));
   // (the points of the V on columns of their own: the front's and the back's)
-  fitOut(beltRows, true, out, [[trunk, D.fit.belt], ...under.map((P) => [P, gap])]);
+  layOver(beltRows, skirts, out, gap);
+  fitOut(beltRows, true, out, [[trunk, D.fit.belt], ...under.slice(0, nLegs).map((P) => [P, gap])]);
   let p0 = G.polys.length;
   const belt = plateOf(G, beltRows, { tag: 'belt', mat: 'leather', bone: { spine_01: 0.5, pelvis: 0.5 }, rim, out, ring: true, border: { top: 'trim', bottom: 'trim' } });
   for (let k = p0; k < G.polys.length; k++) G.polys[k].piece = 'belt';
@@ -662,7 +680,11 @@ function torsoPieces(G, rig, D, S) {
 
   /* the chest core: from one side round the front to the other, over the shoulders, its foot over the belt */
   const Cp = D.core;
-  const cAz0 = refine(Cp.az, 7), cAz = [...cAz0.slice(1).reverse().map((a) => -a), ...cAz0];
+  // (two plates meeting at the lacing's seam: the front, down to the belt, and either side its wing round under the arm,
+  // ending above the side panel; the step in the foot between them a plate's edge rather than quads sheared across it)
+  const iStep = Cp.bottom.findIndex((b, i) => i + 1 < Cp.bottom.length && Cp.bottom[i + 1] - b > 0.5);
+  const aStep = iStep >= 0 ? Cp.az[iStep] : Cp.az[Cp.az.length - 1];
+  const cAz0 = refine(Cp.az.filter((a) => a <= aStep), 7), cAz = [...cAz0.slice(1).reverse().map((a) => -a), ...cAz0];
   const cTab = { az: Cp.az, top: Cp.top, bottom: Cp.bottom };
   const cRows = grid(cAz, (a) => tabAt(cTab, 'top', a), (a) => tabAt(cTab, 'bottom', a), Cp.rows, Cp.c);
   // (drawn straight across between the breasts: the columns within `flat` of the front on the line between the two at
@@ -683,30 +705,48 @@ function torsoPieces(G, rig, D, S) {
     const rr = cRows.map((row) => radOf(row[k])), top = rr.indexOf(Math.max(...rr)), R0 = cRows.length - 1;
     for (let r = top + 1; r < R0; r++) { const want = rr[top] + ((rr[R0] - rr[top]) * (r - top)) / (R0 - top); if (rr[r] < want) cRows[r][k] = setRad(cRows[r][k], want); }
   }
-  fitOut(cRows, false, out, [[trunk, D.fit.trunk], ...under.map((P) => [P, gap])]);
+  layOver(cRows, [belt, ...sides, ...skirts], out, gap);
+  fitOut(cRows, false, out, [[trunk, D.fit.trunk], ...under.slice(0, nLegs).map((P) => [P, gap])]);
   p0 = G.polys.length;
   const coreTop = (r, c) => (Math.abs(cAz[c]) <= 40 && Math.abs(cAz[c + 1] ?? 999) <= 40 ? 'open' : 'bevel');
   const core = plateOf(G, cRows, { tag: 'chest', mat: 'leather', boneAt: TW, rim, out, border: { top: coreTop, bottom: 'bevel', left: 'edge', right: 'edge' } });
+  const wings = [];
+  if (iStep >= 0) {
+    const wTab = { az: Cp.az.slice(iStep), top: Cp.top.slice(iStep), bottom: [Cp.bottom[iStep + 1], ...Cp.bottom.slice(iStep + 1)] };
+    const wAz0 = refine(wTab.az, 7);
+    for (const s of [1, -1]) {
+      const az = s > 0 ? wAz0 : wAz0.slice().reverse().map((a) => -a);
+      const rows = grid(az, (a) => tabAt(wTab, 'top', a), (a) => tabAt(wTab, 'bottom', a), Cp.rows, Cp.c);
+      layOver(rows, [belt, ...sides], out, gap);
+      fitOut(rows, false, out, [[trunk, D.fit.trunk]]);
+      wings.push(plateOf(G, rows, { tag: 'chest', mat: 'leather', boneAt: TW, rim, out, border: { top: 'bevel', bottom: 'bevel', left: 'edge', right: 'edge' } }));
+    }
+  }
 
   // the diagonal layered plates over it: each between two lines across the chest, the upper over the lower
   const bandPlates = [];
   let below = [[lay(p0), gap]];
   for (const [bi, Bd] of [...D.bands.entries()].reverse()) {
     const yMid = (Bd.top.y0 + Bd.bottom.y0) / 2;
-    const a0 = azOfX(chest, yMid, Bd.x[0], Cp.c), a1 = azOfX(chest, yMid, Bd.x[1], Cp.c);
+    // (its ends no further round than `reach` (degrees) either side, short of the armpit, where the chest turns into the side)
+    const lim = D.bandReach ?? 70, a0 = Math.max(-lim, azOfX(chest, yMid, Bd.x[0], Cp.c)), a1 = Math.min(lim, azOfX(chest, yMid, Bd.x[1], Cp.c));
     const az = span(a0, a1, Math.max(4, Math.round((a1 - a0) / 8)));
     const capTop = (a) => tabAt(cTab, 'top', a) - 0.06, capBot = (a) => tabAt(cTab, 'bottom', a) + 0.04;
-    const rows = [0, 0.5, 1].map((f) => az.map((a) => {
+    const rows = [0, 0.2, 0.4, 0.6, 0.8, 1].map((f) => az.map((a) => {
       const t = Math.min(capTop(a), onLine(chest, Bd.top, a, Cp.c)), b = Math.max(capBot(a), onLine(chest, Bd.bottom, a, Cp.c));
       return chest.at(t + (b - t) * f, a, Cp.c);
     }));
-    fitOut(rows, false, out, [[trunk, D.fit.trunk], ...below]);
+    // (laid on what is under it: each point on the outermost of the chest's plates and the bands below along the way in
+    // from it, out by the leather's thickness; then clear of the body)
+    const lower = [core, ...wings, ...bandPlates];
+    rows.forEach((row) => row.forEach((p, k) => { const h = onTop(lower, p, mul(unit(out(p)), -1)); if (h) row[k] = add(h.q, mul(h.n, gap)); }));
+    fitOut(rows, false, out, [[trunk, D.fit.trunk]]);
     const q0 = G.polys.length;
     bandPlates.push(plateOf(G, rows, { tag: `band ${bi + 1}`, boneAt: TW, rim, out, border: { top: bi === 0 ? 'trim' : 'bevel', bottom: 'bevel', left: 'edge', right: 'edge' } }));
     below = [...below, [lay(q0), gap]];
   }
   for (let k = p0; k < G.polys.length; k++) G.polys[k].piece = 'chest';
-  const front = [core, ...bandPlates];
+  const front = [core, ...wings, ...bandPlates];
 
   // the emblem on the left breast: a ring and two stripes down from it, on whatever plate is outermost there
   {
