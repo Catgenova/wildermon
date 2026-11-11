@@ -7,6 +7,8 @@ import { buildRig } from './lowrig.mjs';
 import { shoot, closeBrowser, SKIN } from './lowgarmentshot.mjs';
 const args = process.argv.slice(2), [dir, outp] = args, opt = (n, f) => { const i = args.indexOf(`--${n}`); return i < 0 ? f : args[i + 1]; };
 const who = opt('who', 'male'), rig = buildRig(who), L = JSON.parse(readFileSync(join(dir, `lift-${who}.json`), 'utf8'));
+// (--only <regex>: the pieces drawn)
+if (opt('only', null)) { const re = new RegExp(opt('only')); L.faces = L.faces.filter((f) => re.test(f.piece ?? '')); }
 const SHEET = new URL('./ref/leather-chest.png', import.meta.url).pathname;
 const CROPS = { male: [[18, 98, 210, 250], [222, 98, 166, 250], [388, 98, 102, 250], [488, 98, 168, 250], [654, 98, 176, 250]], female: [[18, 432, 210, 230], [222, 432, 166, 230], [388, 432, 102, 230], [488, 432, 168, 230], [654, 432, 176, 230]] };
 const YAW = [0, -40, -90, -140, 180], cw = 300, ch = 380, cells = [], imgs = [];
