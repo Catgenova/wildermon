@@ -20,7 +20,7 @@ SHEET = np.array(Image.open(os.path.join(D, 'ref/leather-chest.png')).convert('R
 TORSO = ['skirt.f', 'skirt.f2', 'skirt.b', 'skirtU.l', 'skirtU.r', 'skirtL.l', 'skirtL.r', 'collar', 'core', 'band1', 'band2', 'ring', 'ring.hole', 'stripe', 'belt', 'back.top', 'back.strap', 'back.panel', 'back.side', 'back.low', 'side', 'undershirt']
 LAYER = {'undershirt': 0.03, 'core': 0.06, 'back.top': 0.06, 'back.panel': 0.075, 'back.side': 0.06, 'back.low': 0.06, 'side': 0.06, 'back.strap': 0.09,
          'collar': 0.1, 'skirtL.l': 0.08, 'skirtL.r': 0.08, 'skirtU.l': 0.1, 'skirtU.r': 0.1, 'skirt.b': 0.11, 'skirt.f': 0.12, 'skirt.f2': 0.11, 'band1': 0.09, 'band2': 0.09, 'belt': 0.1, 'ring': 0.115, 'ring.hole': 0.118, 'stripe': 0.11}
-RISE, BEV, THICK, GRID = 0.014, 0.05, 0.035, 0.1
+RISE, BEV, THICK, GRID = 0.014, 0.05, 0.035, 0.14
 def canon(n):
     if n.startswith('stripe'): return 'stripe'
     if n.startswith('collar') or n == 'notch': return 'collar'
