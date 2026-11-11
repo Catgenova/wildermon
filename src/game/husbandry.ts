@@ -285,7 +285,7 @@ export const HUSBANDRY_ACTIONS: ActionDef[] = [
   {
     id: 'pair_creature',
     label: 'Breed with a mate',
-    verb: 'putting them together',
+    verb: 'breeding',
     skill: HUSBANDRY,
     stamina: 0.04,
     baseTime: 9,
