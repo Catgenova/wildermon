@@ -89,7 +89,8 @@ export const DESIGN = {
     },
     pauldron: {
       lift: 0.1, inset: 0.1, pole: 0.2, near: 1.3, round: 0, inner: 1, cols: 12, phi0: 12, phi: [76, 125, 76, 30], footY: [-1.6, -1.6, -1.6], rows: [0, 0.5, 1], c: [0.05, 0.07, 0.09], cone: 34,
-      zig: { f: [0.12, 0.72], n: 3, psi: [-10, 200] },
+      roof: { from: [0.85, -0.65, -0.05], to: [2.0, -1.8, -0.05], rows: [0, 0.35, 0.7, 1], c: [0.06, 0.1, 0.16, 0.24], th: [-100, 100], cols: 10 },
+      zig: { f: [0.15, 0.7], n: 3, psi: [-10, 200], cols: [0.0, 0.6] },
       lames: [{ t: [0.42, 0.95], c: [0.14, 0.22], th: [-45, 210] }, { t: [0.8, 1.32], c: [0.1, 0.17], th: [-50, 215] }],
     },
     sleeve: { rings: [['$torso', 0.02], ['ja', 0.025], ['jb', 0.028], ['ua', 0.028], ['uc', 0.028], ['ue', 0.028], ['el', 0.032], ['fa', 0.032]] },
@@ -123,7 +124,8 @@ export const DESIGN = {
     },
     pauldron: {
       lift: 0.08, inset: 0.08, pole: 0.2, near: 1.1, round: 0, inner: 1, cols: 12, phi0: 12, phi: [74, 120, 74, 30], footY: [-1.45, -1.45, -1.45], rows: [0, 0.5, 1], c: [0.04, 0.06, 0.08], cone: 34,
-      zig: { f: [0.12, 0.72], n: 3, psi: [-10, 200] },
+      roof: { from: [0.68, -0.7, -0.12], to: [1.6, -1.8, -0.15], rows: [0, 0.35, 0.7, 1], c: [0.05, 0.08, 0.13, 0.2], th: [-100, 100], cols: 10 },
+      zig: { f: [0.15, 0.7], n: 3, psi: [-10, 200], cols: [0.0, 0.6] },
       lames: [{ t: [0.36, 0.8], c: [0.11, 0.18], th: [-45, 210] }, { t: [0.68, 1.12], c: [0.08, 0.14], th: [-50, 215] }],
     },
     sleeve: { rings: [['$torso', 0.018], ['ja', 0.022], ['jb', 0.025], ['ua', 0.025], ['uc', 0.025], ['ue', 0.025], ['el', 0.028], ['fa', 0.028]] },
@@ -599,7 +601,7 @@ function torsoPieces(G, rig, D, S) {
   // (the points of the V on columns of their own: the front's and the back's)
   fitOut(beltRows, true, out, [[trunk, D.fit.belt], ...under.map((P) => [P, gap])]);
   let p0 = G.polys.length;
-  const belt = plateOf(G, beltRows, { tag: 'belt', bone: { spine_01: 0.5, pelvis: 0.5 }, rim, out, ring: true, border: { top: 'trim', bottom: 'trim' } });
+  const belt = plateOf(G, beltRows, { tag: 'belt', mat: 'leather', bone: { spine_01: 0.5, pelvis: 0.5 }, rim, out, ring: true, border: { top: 'trim', bottom: 'trim' } });
   for (let k = p0; k < G.polys.length; k++) G.polys[k].piece = 'belt';
   under.push(lay(p0));
 
@@ -624,7 +626,7 @@ function torsoPieces(G, rig, D, S) {
   fitOut(kRows, false, out, [[trunk, D.fit.trunk], ...under.map((P) => [P, gap])]);
   p0 = G.polys.length;
   const backTop = (r, c) => (Math.abs(180 - kAz[c]) <= 50 && Math.abs(180 - (kAz[c + 1] ?? 999)) <= 50 ? 'open' : 'bevel');
-  const back = plateOf(G, kRows, { tag: 'back', boneAt: TW, rim, out, border: { left: 'edge', right: 'edge', top: backTop, bottom: 'bevel' } });
+  const back = plateOf(G, kRows, { tag: 'back', mat: 'leather', boneAt: TW, rim, out, border: { left: 'edge', right: 'edge', top: backTop, bottom: 'bevel' } });
   // its raised panel: a pentagon on the upper back, pointed at its foot
   {
     const P = Kp.panel, az = span(180 - P.half, 180 + P.half, 6);
@@ -662,7 +664,7 @@ function torsoPieces(G, rig, D, S) {
   fitOut(cRows, false, out, [[trunk, D.fit.trunk], ...under.map((P) => [P, gap])]);
   p0 = G.polys.length;
   const coreTop = (r, c) => (Math.abs(cAz[c]) <= 40 && Math.abs(cAz[c + 1] ?? 999) <= 40 ? 'open' : 'bevel');
-  const core = plateOf(G, cRows, { tag: 'chest', boneAt: TW, rim, out, border: { top: coreTop, bottom: 'bevel', left: 'edge', right: 'edge' } });
+  const core = plateOf(G, cRows, { tag: 'chest', mat: 'leather', boneAt: TW, rim, out, border: { top: coreTop, bottom: 'bevel', left: 'edge', right: 'edge' } });
 
   // the diagonal layered plates over it: each between two lines across the chest, the upper over the lower
   const bandPlates = [];
@@ -887,12 +889,30 @@ function armPieces(G, rig, D, S) {
     underArm.push([lay(p0), gap]);
   }
   const cStart = G.polys.length;
-  const cap = plateOf(G, capRows, { tag: 'pauldron', bone: { shoulder_l: 1 }, rim, out: (p) => sub(p, centre), ring: true, fit: { S: [[near, D.fit.arm], ...underArm.slice(2)] }, border: { top: 'open', bottom: 'trim' } });
-  { const ids = capRows[0].map((p) => G.verts.findIndex((q) => q === p)); G.tag = 'pauldron'; G.poly(ids.slice().reverse(), 'light', 'pauldron'); }
+  let cap, capOut = (p) => sub(p, centre), zigCols = null;
+  if (Pd.roof) {
+    // (the cap as a roof: a plate laid along the shoulder's slope from `from` (by the collar's foot) to `to` (past the
+    // shoulder's corner), its rows down the slope, its columns over the shoulder from the front (th[0]) to the back
+    // (th[1]), each point the body's reach that way from the slope's line out by the row's clearance `c`)
+    const Rf = Pd.roof, ax = unit(sub(Rf.to, Rf.from)), len = Math.hypot(...sub(Rf.to, Rf.from));
+    const e1 = unit(sub(UP, mul(ax, dot(UP, ax)))), e2 = cross(ax, e1), e2f = dot(e2, FWD) >= 0 ? e2 : mul(e2, -1);
+    const shS = S.filter((s2) => ['joint', 'arm', 'torso', 'neck'].includes(s2.part) && s2.p[0] > 0.3).map((s2) => s2.p);
+    const sec = sectioner(shS, { o: Rf.from, a: ax, e1, e2: e2f, dt: 0.12 });
+    const ths = Array.from({ length: Rf.cols + 1 }, (_, k) => Rf.th[0] + ((Rf.th[1] - Rf.th[0]) * k) / Rf.cols);
+    const roofRows = Rf.rows.map((f, r) => ths.map((th) => sec.at(len * f, -th, Rf.c[r])));
+    const axisPt = (p) => add(Rf.from, mul(ax, Math.max(0, Math.min(len, dot(sub(p, Rf.from), ax)))));
+    capOut = (p) => sub(p, axisPt(p));
+    cap = plateOf(G, roofRows, { tag: 'pauldron', bone: { shoulder_l: 1 }, rim, out: capOut, fit: { S: [[shS, D.fit.arm], ...underArm.slice(2)] }, border: { top: 'edge', bottom: 'trim', left: 'trim', right: 'trim' } });
+    capRows = roofRows;
+    zigCols = Rf.cols;
+  } else {
+    cap = plateOf(G, capRows, { tag: 'pauldron', bone: { shoulder_l: 1 }, rim, out: (p) => sub(p, centre), ring: true, fit: { S: [[near, D.fit.arm], ...underArm.slice(2)] }, border: { top: 'open', bottom: 'trim' } });
+    { const ids = capRows[0].map((p) => G.verts.findIndex((q) => q === p)); G.tag = 'pauldron'; G.poly(ids.slice().reverse(), 'light', 'pauldron'); }
+  }
   // its zig-zag: trim teeth pointing up from the cap's foot, round its outside (front, out and back)
   {
     const Z = Pd.zig, nR = capRows.length - 1, q0 = G.polys.length;
-    const teeth = Z.n, ps0 = psiN * (Z.psi[0] / 360), ps1 = psiN * (Z.psi[1] / 360), dps = (ps1 - ps0) / teeth;
+    const teeth = Z.n, ps0 = zigCols ? zigCols * Z.cols[0] : psiN * (Z.psi[0] / 360), ps1 = zigCols ? zigCols * Z.cols[1] : psiN * (Z.psi[1] / 360), dps = (ps1 - ps0) / teeth;
     const at = (rf, cf) => { const h = gridAt(cap, rf * nR, cf); return add(h.q, mul(h.n, 0.022)); };
     const V = (p) => { const i = G.vert(p, 'zigzag'); G.wt[i] = cap.wt; return i; };
     G.tag = 'zigzag';
@@ -904,7 +924,7 @@ function armPieces(G, rig, D, S) {
       G.poly([V(at(0.97, c0)), V(at(Z.f[1], c0)), V(at(Z.f[1], c1)), V(at(0.97, c1))], 'trim', 'zigzag');
     }
     piece(G, q0, () => [0, 1, 0]);
-    for (let k = q0; k < G.polys.length; k++) { const p = G.polys[k]; const c = mul(p.v.reduce((s, i) => add(s, G.verts[i]), [0, 0, 0]), 1 / p.v.length); if (dot(newellOf(G, p.v), sub(c, centre)) < 0) p.v.reverse(); }
+    for (let k = q0; k < G.polys.length; k++) { const p = G.polys[k]; const c = mul(p.v.reduce((s, i) => add(s, G.verts[i]), [0, 0, 0]), 1 / p.v.length); if (dot(newellOf(G, p.v), capOut(c)) < 0) p.v.reverse(); }
   }
   setPiece(cStart, 'pauldron.l');
 }
