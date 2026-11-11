@@ -1,9 +1,9 @@
 """The built leather chest (tools/sculpt/lowlchestfit.mjs label buffers) measured against the approved trace
 (tools/sculpt/leather/mesh/<who>-<view>.json), piece by piece and view by view: the overlap (IoU) and the edge error
-(the mean distance, sheet pixels, between the built piece's outline and the traced one, both ways); an overlay per view
+(the mean distance, sheet pixels, between the built piece's outline and the traced one, both ways), and over the whole view the share of the labelled pixels where the two labels differ; an overlay per view
 (the sheet dimmed, the trace's outlines green, the build's red) and the table.
 
-  python3 tools/sculpt/lowlchestfit.py <fit-who.json> <out.png> [--only group,group]
+  python3 tools/sculpt/lowlchestfit.py <fit-who.json> <out.png> [--only group,group] [--confusion]
 """
 import sys, os, json, base64, re, numpy as np, cv2
 from PIL import Image
@@ -39,7 +39,8 @@ def group(n, view):
     if base == 'undershirt': return 'undershirt'
     return None
 rank = lambda k: 2 if re.match(r'(ring|stripe|bring)', k) else (0 if k == 'undershirt' else 1)
-rows, table = [], {}
+rows, table, whole = [], {}, {}
+ids = [gi for gi, g in enumerate(GR, 1) if g != 'body' and (not only or g in only)]
 for view in ['front', 'q3', 'side', 'r3', 'back']:
     V = J['views'][view]; K, W, H = V['K'], V['W'], V['H']; x0, y0, x1, y1 = V['box']
     built = np.frombuffer(base64.b64decode(V['lab']), np.uint8).reshape(H, W)
@@ -66,6 +67,13 @@ for view in ['front', 'q3', 'side', 'r3', 'back']:
         else: err = float('nan')
         table.setdefault(g, {})[view] = (round(float(iou), 2), round(float(err), 1), int(a.sum() // (K * K)), int(b.sum() // (K * K)))
         vis[eb > 0] = (60, 230, 60); vis[ea > 0] = (60, 60, 240)
+    # (the whole view: the share of the pixels either labels where the two labels differ)
+    sel = np.isin(built, ids) | np.isin(trace, ids)
+    if '--confusion' in sys.argv:
+        pr = (trace.astype(np.int32) * 256 + built)[((built != trace) & sel)]
+        u, n = np.unique(pr, return_counts=True); nm = lambda i: GR[i - 1] if i else '-'
+        print(f'  {view} confusions (traced -> built, sheet px):', ', '.join(f'{nm(a // 256)}->{nm(a % 256)} {c // (K * K)}' for a, c in sorted(zip(u, n), key=lambda t: -t[1])[:14]))
+    whole[view] = round(float(((built != trace) & sel).sum() / max(1, sel.sum())), 3)
     cv2.putText(vis, view, (6, 18), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1, cv2.LINE_AA)
     rows.append(np.concatenate([src, np.full((H, 4, 3), 30, np.uint8), vis], 1))
 Hm = max(r.shape[0] for r in rows); rows = [np.pad(r, ((0, Hm - r.shape[0]), (0, 0), (0, 0))) for r in rows]
@@ -73,4 +81,6 @@ img = np.concatenate([np.concatenate([r, np.full((Hm, 10, 3), 30, np.uint8)], 1)
 cv2.imwrite(out, img)
 print(f'{who}: piece  view: IoU / edge error (sheet px) / built px / traced px')
 for g, d in table.items(): print(f'  {g:11s}', '  '.join(f'{v}:{x[0]:.2f}/{x[1]:.1f}/{x[2]}/{x[3]}' for v, x in d.items()))
+print('  mismatch', '  '.join(f'{v}:{x:.3f}' for v, x in whole.items()), f'mean:{np.mean(list(whole.values())):.3f}')
+table['_mismatch'] = whole
 json.dump(table, open(out.replace('.png', '.json'), 'w'))
