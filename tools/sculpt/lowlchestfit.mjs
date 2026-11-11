@@ -3,7 +3,7 @@
 // would show of each piece), each pixel the group of the piece in front; written per view as a label buffer for
 // tools/sculpt/lowlchestfit.py to measure against the trace.
 //
-//   node tools/sculpt/lowlchestfit.mjs <out dir> [--who male] [--design '<json over the design>']
+//   node tools/sculpt/lowlchestfit.mjs <out dir> [--who male] [--design '<json over the design>'] [--cams '<json over the cameras>']
 import { writeFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { buildRig } from './lowrig.mjs';
@@ -29,6 +29,8 @@ export function groupOf(p) {
   return p.piece;
 }
 const who = opt('who', 'male'), rig = buildRig(who), C = loadCams()[who];
+// (--cams: JSON laid over the body's cameras, e.g. '{"pose":{"abd":3}}', objects merged, arrays replaced)
+if (opt('cams', null)) { const over = (a, b) => { for (const [k, v] of Object.entries(b)) a[k] = v && typeof v === 'object' && !Array.isArray(v) && a[k] && typeof a[k] === 'object' ? over(a[k], v) : v; return a; }; over(C, JSON.parse(opt('cams'))); }
 const D = designOf(who); if (opt('design', null)) { const over = (a, b) => { for (const [k, v] of Object.entries(b)) a[k] = v && typeof v === 'object' && !Array.isArray(v) && a[k] && typeof a[k] === 'object' ? over(a[k], v) : v; return a; }; over(D, JSON.parse(opt('design'))); }
 const G = buildLeatherChest(rig, D); G.vw = leatherChestWeights(rig, G);
 const gidx = G.polys.map((p) => GROUPS.indexOf(groupOf(p)) + 1 || 0), hidden = new Set(G.hides);
