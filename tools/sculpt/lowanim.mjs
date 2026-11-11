@@ -9,6 +9,9 @@
 //   <clip>-side.gif        side on, both bodies carried forward at the game's pace over marks on the ground (`side`)
 //   idle-<clip>-transition.gif  stood, set off, walked, stopped, as the game fades one clip into the next (`transition`)
 //
+// A stood clip that is not the idle's (no feet keyed, nothing gripped: the placeholder, src/sculpt/anim/index.ts PLACEHOLDER)
+// is drawn in the idle's place: a body stood doing nothing, its time the island's.
+//
 // --pass shows a pose-to-pose clip (one whose module exports BEATS, src/sculpt/anim/author.ts passOf) as it stood at an
 // earlier pass: its key poses held, then every beat held, then eased; the files are then named <clip>-<pass>-*.
 // --close 0 leaves out the close-up GIF. --bare draws the bodies without the outfit.
@@ -52,9 +55,11 @@ const pass = opt('pass', 'polish'), ENCH = args.includes('--enchanted'), FILE = 
 const PASS = `
 import * as CLIPMOD from './src/sculpt/anim/clips/${clipName}';
 import { passOf } from './src/sculpt/anim/author';
-import { CLIPS as ALL } from './src/sculpt/anim';
+import { CLIPS as ALL, CLIP_OF } from './src/sculpt/anim';
 const M = CLIPMOD;
 if (M.BEATS && ${JSON.stringify(pass)} !== 'polish') ALL[${JSON.stringify(clipName)}] = passOf(ALL[${JSON.stringify(clipName)}], M.BEATS, ${JSON.stringify(pass)});
+// a stood clip (no feet keyed, nothing gripped) that is not the idle's -- the placeholder, a work clip -- drawn in the idle's place
+{ const c = ALL[${JSON.stringify(clipName)}]; if (c && !c.feet && !c.grip) CLIP_OF.idle = ${JSON.stringify(clipName)}; }
 `;
 mkdirSync(out, { recursive: true });
 const ROOT = new URL('../..', import.meta.url).pathname;
