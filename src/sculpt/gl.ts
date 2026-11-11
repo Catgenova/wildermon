@@ -123,6 +123,15 @@ vec3 lowLight(vec3 v) {
   for (int k = 0; k < ${SH_TERMS}; k++) c += t[k] * uSH[k];
   return max(c, 0.0);
 }
+// The same light without its highlight lobe and its two rims (the last three terms): a matte surface's.
+vec3 lowLightMatte(vec3 v) {
+  float x = v.x, y = v.y, z = v.z;
+  float t[${SH_TERMS - 3}] = float[${SH_TERMS - 3}](1.0, x, y, z, x * y, y * z, 3.0 * z * z - 1.0, x * z, x * x - y * y, y * (3.0 * x * x - y * y), x * y * z,
+    y * (5.0 * z * z - 1.0), z * (5.0 * z * z - 3.0), x * (5.0 * z * z - 1.0), z * (x * x - y * y), x * (x * x - 3.0 * y * y));
+  vec3 c = vec3(0.0);
+  for (int k = 0; k < ${SH_TERMS - 3}; k++) c += t[k] * uSH[k];
+  return max(c, 0.0);
+}
 vec3 hashCol(float i){ return 0.35 + 0.6 * vec3(hash(vec2(i, 1.0)), hash(vec2(i, 7.0)), hash(vec2(i, 13.0))); }
 void main() {
   vec3 n = uLow > 0.5 ? vFace : normalize(vNrm);
@@ -135,7 +144,7 @@ void main() {
   int flags = int(uMat[mi].a + 0.5);
   // Lids shut: the eye's parts take the lid's colour, the first material's a shade darker, and shade as skin.
   if (uBlink > 0.5 && (flags & 8) != 0) { base = uMat[0].rgb * 0.94; flags = 2; }
-  bool emissive = (flags & 1) != 0, skin = (flags & 2) != 0, metal = (flags & 4) != 0, soft = (flags & 16) != 0, noInk = (flags & 32) != 0, noCrease = (flags & 64) != 0, thinInk = (flags & 128) != 0, cloth = (flags & 256) != 0, gear = (flags & 512) != 0, ramp = (flags & 1024) != 0, shave = (flags & 2048) != 0, valley = (flags & 4096) != 0;
+  bool emissive = (flags & 1) != 0, skin = (flags & 2) != 0, metal = (flags & 4) != 0, soft = (flags & 16) != 0, noInk = (flags & 32) != 0, noCrease = (flags & 64) != 0, thinInk = (flags & 128) != 0, cloth = (flags & 256) != 0, gear = (flags & 512) != 0, ramp = (flags & 1024) != 0, shave = (flags & 2048) != 0, valley = (flags & 4096) != 0, matte = (flags & 32768) != 0;
   int step = (flags >> 13) & 3;
   float dl = dot(n, uL);
   vec3 c = base;
@@ -164,7 +173,9 @@ void main() {
     } else {
       // and gear in hand (a sword) by its brightness only, as the gear's review renders light it
       const vec3 LUM = vec3(0.299, 0.587, 0.114);
-      c = skin ? min(lit * uTone, 1.0) : cloth ? min(lit * base / uFit, 1.0) : gear ? min(base * (0.18 + 0.82 * dot(lit, LUM) / dot(uFit, LUM)), 1.0) : base;
+      // and matte paint on the body (the undergarment) by the brightness of the light less its highlight and rims
+      if (matte) lit = lowLightMatte(lv);
+      c = matte ? min(base * (0.18 + 0.82 * dot(lit, LUM) / dot(uFit, LUM)), 1.0) : skin ? min(lit * uTone, 1.0) : cloth ? min(lit * base / uFit, 1.0) : gear ? min(base * (0.18 + 0.82 * dot(lit, LUM) / dot(uFit, LUM)), 1.0) : base;
     }
   } else if (uFlat > 0.5) {
     c = base;
@@ -425,7 +436,7 @@ function matsOf(ms: Material[]): Float32Array {
   ms.forEach((m, i) => {
     if (i >= MAX_MATS) return;
     const c = hexOf(m.colour);
-    f.set([c[0], c[1], c[2], (m.emissive ? 1 : 0) + (m.skin ? 2 : 0) + (m.metal ? 4 : 0) + (m.eye ? 8 : 0) + (m.soft ? 16 : 0) + (m.noInk ? 32 : 0) + (m.noCrease ? 64 : 0) + (m.thinInk ? 128 : 0) + (m.cloth ? 256 : 0) + (m.gear ? 512 : 0) + (m.ramp ? 1024 : 0) + (m.shave ? 2048 : 0) + (m.valley ? 4096 + (m.valley - 1) * 8192 : 0)], i * 4);
+    f.set([c[0], c[1], c[2], (m.emissive ? 1 : 0) + (m.skin ? 2 : 0) + (m.metal ? 4 : 0) + (m.eye ? 8 : 0) + (m.soft ? 16 : 0) + (m.noInk ? 32 : 0) + (m.noCrease ? 64 : 0) + (m.thinInk ? 128 : 0) + (m.cloth ? 256 : 0) + (m.gear ? 512 : 0) + (m.ramp ? 1024 : 0) + (m.shave ? 2048 : 0) + (m.valley ? 4096 + (m.valley - 1) * 8192 : 0) + (m.matte ? 32768 : 0)], i * 4);
   });
   MATS.set(ms, f);
   return f;

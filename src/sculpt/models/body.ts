@@ -21,7 +21,7 @@ import {
 } from '../sdf';
 
 /** The materials, by index. */
-export const M = { skin: 0, hair: 1, white: 2, iris: 3, pupil: 4, glint: 5, brow: 6, lip: 7, shirt: 8, trousers: 9, shoe: 10, sole: 11, mouth: 12, teeth: 13, trim: 14, lash: 15, shorts: 16, hairLight: 17, hairGlint: 18, crease: 19, face: 20, hand: 21, lid: 22, ear: 23, faceUnder: 24, poncho: 25, gold: 26, hairCut: 27, hairTop: 28, hairUnder: 29, hairValley: 30, hairValley2: 31, hairValley3: 32, hairValley4: 33 } as const;
+export const M = { skin: 0, hair: 1, white: 2, iris: 3, pupil: 4, glint: 5, brow: 6, lip: 7, shirt: 8, trousers: 9, shoe: 10, sole: 11, mouth: 12, teeth: 13, trim: 14, lash: 15, shorts: 16, hairLight: 17, hairGlint: 18, crease: 19, face: 20, hand: 21, lid: 22, ear: 23, faceUnder: 24, poncho: 25, gold: 26, hairCut: 27, hairTop: 28, hairUnder: 29, hairValley: 30, hairValley2: 31, hairValley3: 32, hairValley4: 33, under: 34 } as const;
 
 /** What the body wears: the game's undershirt and trousers, or the reference sheet's shorts over bare skin. */
 export type Wear = 'base' | 'shorts';
@@ -31,6 +31,9 @@ const toHex = (c: [number, number, number]): string => `#${c.map((v) => Math.max
 const mixHex = (a: string, b: string, t: number): string => { const A = hex(a), B = hex(b); return toHex([A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t]); };
 /** The renderer's ink of a colour: toward a warm dark, never lighter than half. */
 const inkOf = (a: string): string => { const A = hex(a), m = hex(mixHex(a, '#281c1a', 0.62)); return toHex([Math.min(m[0], A[0] * 0.5), Math.min(m[1], A[1] * 0.5), Math.min(m[2], A[2] * 0.5)]); };
+
+/** The undergarment's colour (the leather set's dark, [0.29, 0.157, 0.129], a touch deeper and less red). */
+export const UNDER = '#43261f';
 
 export function bodyMaterials(look: Look): Material[] {
   // A look may name a colour outright (the studio's sheet colours) rather than a swatch.
@@ -81,6 +84,9 @@ export function bodyMaterials(look: Look): Material[] {
   out[M.hand] = { ...out[M.skin], noInk: true, soft: true };
   // The eye's top edge, a lighter slate, so the rectangle reads set in.
   out[M.lid] = { colour: mixHex(out[M.pupil].colour, out[M.skin].colour, 0.45), eye: true, noCrease: true };
+  // The low-poly bodies' undergarment (tools/sculpt/lowunder.mjs), painted on the body's own polygons: a dark brown by the
+  // leather set's dark (tools/sculpt/garments/leatherlegs.mjs), lit by the body's light without its highlight or rims.
+  out[M.under] = { colour: UNDER, matte: true };
   return out;
 }
 

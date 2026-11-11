@@ -10,7 +10,10 @@
  * that body (`tools/sculpt/lowlight-<who>.json`, written by `tools/sculpt/lowlight.py`), in the look's skin. A hairstyle
  * made for the low-poly bodies (`tools/sculpt/lowhair.mjs`, `./assets/lowhair.json`: so far 'swept') is drawn with the
  * body, on the head bone, in three tones of the look's hair colour (its valleys a fourth, darker), the body's scalp
- * under it shaved; any other style draws no hair yet, and none is drawn while the hood is up (`hairShown`).
+ * under it shaved; any other style draws no hair yet, and none is drawn while the hood is up (`hairShown`). The
+ * undergarment (`tools/sculpt/lowunder.mjs`: his briefs; her briefs and band) is the body's own polygons painted, their
+ * material `M.under` (matte: lit by the light's brightness without its highlight or rims); a polygon split for its line
+ * is two, the piece after the body's polygons (`split`), left out with its parent under a garment that hides that.
  *
  * Over the body, a garment (`tools/sculpt/lowgarment.mjs` garmentAsset, written beside each body: the first outfit's
  * shawl, `assets/lowshawl-<who>.json` by `tools/sculpt/garments/shawl.mjs`): laid out flat with the body in one bake,
@@ -91,6 +94,8 @@ type Q = [number, number, number, number];
 interface Bone { name: string; p: number; kind: 'control' | 'helper'; head: V; R: M3; from?: number; drive?: 'half' | 'twist' | 'wrist' | 'untwist'; f?: number; game?: string }
 interface Asset {
   floor: number; T: M3; verts: number[]; polys: Array<[number[], number, number[]?]>; tris: number[]; weights: number[][]; soles: number[];
+  /** The polygons split off another for the undergarment's paint (`tools/sculpt/lowunder.mjs`): [the piece, its parent]. */
+  split?: Array<[number, number]>;
   bones: Bone[]; rest: Pick<Rig, 'arm' | 'elbow' | 'hand' | 'leg' | 'knee'>;
   game: { armIn: number; thumbCurl: number; armSwing?: [number, number]; armSwingAt?: number };
 }
@@ -515,13 +520,16 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
       for (let t = 0; t < T3.length; t += 4) { const pi = T3[t + 3]; if (hidden?.has(pi)) continue; tris.push(idx(T3[t], pi), idx(T3[t + 1], pi), idx(T3[t + 2], pi)); }
     };
     // the body and the hair as one mesh: its vertices, polygons ([corners, material, outline]), weights and triangles
-    const MATS = [M.skin, M.hair, M.pupil, M.hairUnder, M.hairCut, M.hairValley, M.hairValley2, M.hairValley3, M.hairValley4];
+    // (9: the undergarment painted on the body, tools/sculpt/lowunder.mjs)
+    const MATS = [M.skin, M.hair, M.pupil, M.hairUnder, M.hairCut, M.hairValley, M.hairValley2, M.hairValley3, M.hairValley4, M.under];
     const nBody = A.verts.length / 3, nPolys = A.polys.length, shaved = new Set(hair ? hair.shave : []);
     const allPolys: Array<[number[], number, number[]?]> = A.polys.map(([v, m, nv], pi) => [v, shaved.has(pi) ? 3 : m, nv]);
     if (hair) hair.polys.forEach((v, j) => allPolys.push([v.map((i) => i + nBody), hair.mat[j]]));
     const allVerts = hair ? A.verts.concat(hair.verts) : A.verts, allWeights = hair ? A.weights.concat(hair.weights) : A.weights;
     const allTris = hair ? A.tris.concat(hair.tris.map((x, k) => (k % 4 === 3 ? x + nPolys : x + nBody))) : A.tris;
     const hidden = new Set(garments.flatMap((g, k) => (worn[k] ? g.hides ?? [] : [])));
+    // (a piece split off a polygon a garment hides is hidden with it)
+    for (const [piece, parent] of A.split ?? []) if (hidden.has(parent)) hidden.add(piece);
     lay(allVerts, allPolys, allTris, allWeights, (pi) => MATS[allPolys[pi][1]] ?? M.skin, hidden);
     const shaped = shapedOf(garments, worn);
     let shapes: Baked['shapes'];
