@@ -4259,6 +4259,11 @@ export const NEWS: News[] = [
     lines: () => ['Renamed: Breed with <mate> while it runs (event log, over other players): putting them together → breeding.'],
   },
   {
+    n: 527,
+    day: '2026-11-11',
+    lines: () => ['Fixed: a bed its owner named, as written in "Asleep in …" and "Not yours: …" (was lower case).'],
+  },
+  {
     n: 525,
     day: '2026-11-11',
     lines: () => ['Renamed: Put it to <mate> → Breed with <mate>.', 'Renamed: in young → pregnant.'],

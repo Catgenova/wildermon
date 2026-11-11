@@ -30,7 +30,7 @@
 import { execFileSync } from 'node:child_process';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import { Game } from '../../src/game/game';
-import { furnitureDef } from '../../src/game/furniture';
+import { furnitureDef, furnitureNameInLine } from '../../src/game/furniture';
 import {
   asleepIn, SLEEP_BONUS_CAP, SLEEP_BONUS_MULT, SLEEP_SAID, sleepBanked, sleepHm, sleepNotYours, sleepRate,
   sleepSwitchSaid, sleptSaid,
@@ -119,6 +119,10 @@ begin
     values (w, 'furniture', 'bed', ${THEIRS.x}, ${THEIRS.y}, 0, 0, ${THEIRS.x} + 0.375, ${THEIRS.y} + 0.25, 50, 0, str) returning id into v_theirs;
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, level, made_by)
     values (w, 'furniture', 'chest', ${BED.x + 1}, ${BED.y}, 0, 0, ${BED.x + 1} + 0.25, ${BED.y} + 0.25, 50, 0, me) returning id into v_chest;
+  -- A bed its owner named, far off: its name said as written.
+  insert into said values ('NAMED', (with b as (insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, level, made_by, name)
+    values (w, 'furniture', 'bed', 100, 100, 0, 0, 100.375, 100.25, 50, 0, str, 'Stray''s miracle sleep') returning *)
+    select asleep_in(placed_name_in_line(b)) || '|' || sleep_not_yours(placed_name_in_line(b)) from b));
   update player set x = ${LIE.x}, y = ${LIE.y}, level = 0, stats = jsonb_set(stats, '{stamina}', '0.2'),
          rested = 0, sleep_on = false, body_at = now(), moved_at = now() where world_id = w and uid in (me, cit, str);
   update player set x = ${THEIRS.x} + 0.5, y = ${THEIRS.y} + 1.5 where world_id = w and uid = str;
@@ -255,10 +259,12 @@ console.log('--- the island');
 check('Sleep at noon in a bed of your own: allowed (night only is gone)', get('MINE') === 'ALLOWED', `${get('CLOCK')}: ${get('MINE')}`);
 check('not a bed', get('CHEST') === 'Not a bed.', get('CHEST'));
 check('out of reach', get('FAR') === 'Stand next to it.', get('FAR'));
-check("a stranger's bed off any settlement of yours: refused, named", get('THEIRS') === sleepNotYours('Bed'), get('THEIRS'));
+check("a stranger's bed off any settlement of yours: refused, named", get('THEIRS') === sleepNotYours('bed'), get('THEIRS'));
+check('a bed its owner named: its name as written', get('NAMED') === `${asleepIn("Stray's miracle sleep")}|${sleepNotYours("Stray's miracle sleep")}`
+  && get('NAMED') === "Asleep in Stray's miracle sleep|Not yours: Stray's miracle sleep.", get('NAMED'));
 check('and its maker may', get('THEIRS_OWN') === 'ALLOWED', get('THEIRS_OWN'));
 check('a citizen of the settlement it stands on may', get('CITIZEN') === 'ALLOWED', get('CITIZEN'));
-check('a stranger to that settlement may not', get('STRANGER') === sleepNotYours('Bed'), get('STRANGER'));
+check('a stranger to that settlement may not', get('STRANGER') === sleepNotYours('bed'), get('STRANGER'));
 check('with another job going: refused', get('BUSY') === SLEEP_SAID.busy, get('BUSY'));
 check('in a fight: refused', get('FIGHT') === SLEEP_SAID.fight, get('FIGHT'));
 check('mounted: refused', get('MOUNTED') === SLEEP_SAID.mounted, get('MOUNTED'));
@@ -266,10 +272,10 @@ check('mounted: refused', get('MOUNTED') === SLEEP_SAID.mounted, get('MOUNTED'))
 const [fellAway, fellWind, fellAt] = parts('FELL');
 check('asked through rpc_act and settled: logged off, wind full, where it lay down',
   get('ASK') === 'started' && fellAway === 'true' && Number(fellWind) === 1 && fellAt === `${LIE.x},${LIE.y}`, `${get('ASK')} ${get('FELL')}`);
-check('said: "Asleep in bed."', get('FELL_LINE') === `${asleepIn('Bed')}.`, get('FELL_LINE'));
+check('said: "Asleep in bed."', get('FELL_LINE') === `${asleepIn('bed')}.`, get('FELL_LINE'));
 const [recBed, recName, recRate] = parts('RECORD');
-check(`asleep in that bed, at its rate: ${RATE.toFixed(4)} a second`, !!recBed && recName === 'Bed' && near(Number(recRate), RATE, 1e-9), get('RECORD'));
-check('the beat says asleep, by the bed, and leaves the body logged off', get('BEAT') === 'Bed|true', get('BEAT'));
+check(`asleep in that bed, at its rate: ${RATE.toFixed(4)} a second`, !!recBed && recName === 'bed' && near(Number(recRate), RATE, 1e-9), get('RECORD'));
+check('the beat says asleep, by the bed, and leaves the body logged off', get('BEAT') === 'bed|true', get('BEAT'));
 check('asleep, nothing is asked of it', get('ASLEEP_ASK') === SLEEP_SAID.asleep, get('ASLEEP_ASK'));
 check('and the sleep bonus will not switch', get('ASLEEP_SWITCH') === SLEEP_SAID.asleep, get('ASLEEP_SWITCH'));
 
@@ -310,7 +316,7 @@ check('the island says a stretch of time as the browser does',
   get('HM') === [0, 59, 3600, 7500, 18000].map(sleepHm).join(';'), get('HM'));
 const [rate1, rate2] = parts('RATE').map(Number);
 check('and works the rate the same', near(rate1, sleepRate(BED_FACTOR, BED.ql), 1e-12) && near(rate2, sleepRate(0.5, 100, 0.25), 1e-12), get('RATE'));
-check('and says the lines the same', get('SAID') === [sleptSaid(SIX, 9000, 9000), sleepSwitchSaid(true, 7500), sleepSwitchSaid(false, 59), sleepNotYours('Bed'), asleepIn('Bed')].join(';'),
+check('and says the lines the same', get('SAID') === [sleptSaid(SIX, 9000, 9000), sleepSwitchSaid(true, 7500), sleepSwitchSaid(false, 59), sleepNotYours('bed'), asleepIn('Bed')].join(';'),
   get('SAID'));
 
 /* ---- the browser, the same rules ------------------------------------------------------------------------------- */
@@ -332,7 +338,7 @@ check('the action is "Sleep"', sleep?.label === 'Sleep', sleep?.label);
 check('a bed of yours: allowed, at any hour', ask(bed.id) === 'ALLOWED', ask(bed.id));
 check('not a bed', ask(chest.id) === 'Not a bed.', ask(chest.id));
 bed.mine = false;
-check("somebody else's bed off any settlement of yours: refused in the island's words", ask(bed.id) === sleepNotYours('Bed'), ask(bed.id));
+check("somebody else's bed off any settlement of yours: refused in the island's words", ask(bed.id) === sleepNotYours('bed'), ask(bed.id));
 g.deed = { name: 'Ashford', x: BED.x, y: BED.y, radius: 5, level: 1 } as never;
 check('on a settlement of yours: allowed', ask(bed.id) === 'ALLOWED', ask(bed.id));
 g.deed = null;
@@ -351,9 +357,11 @@ g.player.stats.stamina = 0.2;
 let fell = '';
 g.events.on('asleep', (what) => (fell = what));
 sleep?.perform({ kind: 'furniture', id: bed.id } as Target, g);
-check('done: wind full, asleep in the bed, and the page told', g.player.stats.stamina === 1 && g.asleep === 'Bed' && fell === 'Bed',
+check('done: wind full, asleep in the bed, and the page told', g.player.stats.stamina === 1 && g.asleep === 'bed' && fell === 'bed',
   `${g.player.stats.stamina} ${g.asleep} ${fell}`);
 check('the boot card says "Asleep in bed"', asleepIn(fell) === 'Asleep in bed', asleepIn(fell));
+const named = asleepIn(furnitureNameInLine({ ...bed, name: "Mearh's miracle sleep" }));
+check('a bed its owner named: "Asleep in" it as written', named === "Asleep in Mearh's miracle sleep", named);
 
 g.player.rested = 3000;
 g.player.sleepOn = false;
