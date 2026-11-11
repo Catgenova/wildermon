@@ -4254,6 +4254,15 @@ export const NEWS: News[] = [
     },
   },
   {
+    n: 524,
+    day: '2026-11-11',
+    lines: () => [
+      `Fixed: wildermon beds: only for settlement workers within ${HOME_SLACK} tiles past their range; on a post, working around you or further off: rests where it stands (was: walked to a bed on your settlement from anywhere, over water, and could not walk back).`,
+      'Fixed: settlement workers keep to their own settlement (the one you founded, else the oldest you are a citizen of): stores, ground items, stations, hearths, planned work and beds on it only; trees, ore, ground, crops, hives and planting on it or on no settlement (was: on every settlement you are a citizen of; gathering and planting on anybody\'s).',
+      'Fixed: workers stranded off their ground put back: at their post, beside you when working around you, else by the settlement token.',
+    ],
+  },
+  {
     n: 523,
     day: '2026-11-11',
     lines: () => [`Fixed: a run of goes on a stack of one wood or metal (Saw into planks ×50 on pine logs): stops when that material runs out, "${ranOutSaid(1, 'log', 'Pine')}" (was: went on with another, e.g. oak logs within ${CRAFT_REACH} tiles).`],

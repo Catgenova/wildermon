@@ -3328,6 +3328,8 @@ export function helpText(): string {
     <h4>Settlement workers</h4>
     <ul>
       <li><b>Food</b>: under ${frac(HUNGRY)} fed, a worker eats from any crate on the settlement holding its food, then returns to work.</li>
+      <li><b>Its settlement</b>: the one you founded, else the oldest you are a citizen of. Beds, stores, ground items, stations, hearths and planned work: on it only.
+      Trees, ore, ground, crops, hives, planting and post storage: on it or on no settlement. Never on another settlement, one you are a citizen of included.</li>
       <li><b>Range</b>: starts at ${WORK_RANGES[0]} to ${WORK_RANGES[WORK_RANGES.length - 1]} tiles from the totem by sort; +${RANGE_PER_STEP} tiles per ${SKILL_STEP} levels of its task skill
       (${RANGE_STEPS_SAID}). Its card shows current range and the skill for the next step.</li>
       <li><b>Idle reasons</b> (card and hover, until it next sets out): nothing of its task in range of the totem or post at its level
@@ -3375,7 +3377,8 @@ export function helpText(): string {
     <ul>
       <li>${TIRE_GOES} cycles at its task (one cycle = one gain) before it tires; extra loads cost nothing more.</li>
       <li>Tired, once its arms are empty (or between errand steps): rests ${dur(restFor(false))}, then full stamina. A rest is not a cycle in its ledger.</li>
-      <li><b>Wildermon bed</b> of its size, free on your settlement: it walks to the nearest and sleeps ${frac(BED_REST)} as long (${dur(restFor(true))}).</li>
+      <li><b>Wildermon bed</b> of its size, free on its settlement: it walks to the nearest and sleeps ${frac(BED_REST)} as long (${dur(restFor(true))}).
+      Settlement workers within ${HOME_SLACK} tiles past their range only; on a post, working around you or further off: rests where it stands.</li>
       <li>Sizes: small for first evolution stage (under level ${EVOLVE_AT[0]}), medium for second (to ${EVOLVE_AT[1] - 1}), large for third. Non-evolving kinds: small under ${DEN_HEALTH[0]} health,
       medium under ${DEN_HEALTH[1]}, large at ${DEN_HEALTH[1]} and over. Its own size only; one per bed.</li>
       <li>Card: stamina, and rest left while resting (&ldquo;${idleSays({ why: 'bed', n: restFor(true), bed: 'den_small' }, 'forage')}&rdquo;).</li>

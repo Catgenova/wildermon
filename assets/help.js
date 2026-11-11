@@ -2422,6 +2422,8 @@ import{$f as e,$g as t,$i as n,$n as r,$u as i,$v as a,$x as ee,$y as o,AS as te
     <h4>Settlement workers</h4>
     <ul>
       <li><b>Food</b>: under ${P(Ti)} fed, a worker eats from any crate on the settlement holding its food, then returns to work.</li>
+      <li><b>Its settlement</b>: the one you founded, else the oldest you are a citizen of. Beds, stores, ground items, stations, hearths and planned work: on it only.
+      Trees, ore, ground, crops, hives, planting and post storage: on it or on no settlement. Never on another settlement, one you are a citizen of included.</li>
       <li><b>Range</b>: starts at ${eh[0]} to ${eh[eh.length-1]} tiles from the totem by sort; +10 tiles per 10 levels of its task skill
       (${th}). Its card shows current range and the skill for the next step.</li>
       <li><b>Idle reasons</b> (card and hover, until it next sets out): nothing of its task in range of the totem or post at its level
@@ -2469,7 +2471,8 @@ import{$f as e,$g as t,$i as n,$n as r,$u as i,$v as a,$x as ee,$y as o,AS as te
     <ul>
       <li>30 cycles at its task (one cycle = one gain) before it tires; extra loads cost nothing more.</li>
       <li>Tired, once its arms are empty (or between errand steps): rests ${F(Hi(!1))}, then full stamina. A rest is not a cycle in its ledger.</li>
-      <li><b>Wildermon bed</b> of its size, free on your settlement: it walks to the nearest and sleeps ${P(Pc)} as long (${F(Hi(!0))}).</li>
+      <li><b>Wildermon bed</b> of its size, free on its settlement: it walks to the nearest and sleeps ${P(Pc)} as long (${F(Hi(!0))}).
+      Settlement workers within 8 tiles past their range only; on a post, working around you or further off: rests where it stands.</li>
       <li>Sizes: small for first evolution stage (under level ${gn[0]}), medium for second (to ${gn[1]-1}), large for third. Non-evolving kinds: small under ${an[0]} health,
       medium under ${an[1]}, large at ${an[1]} and over. Its own size only; one per bed.</li>
       <li>Card: stamina, and rest left while resting (&ldquo;${u({why:`bed`,n:Hi(!0),bed:`den_small`},`forage`)}&rdquo;).</li>

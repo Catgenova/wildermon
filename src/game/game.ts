@@ -2501,12 +2501,30 @@ export class Game {
   }
 
   /**
-   * Whether a piece of work is on a settlement of yours: a wall keyed by the line it stands on ('v' at x between tiles
+   * Whether a tile is on the settlement your workers work for: your home (`deed`, the island's `my_deed`), and no
+   * other settlement you are a citizen of. What a worker's beds, work, stores and pick-ups are read by. The island's
+   * `on_home_deed`.
+   */
+  onHomeDeed(x: number, y: number): boolean {
+    const d = this.deed;
+    return !!d && Math.abs(x - d.x) <= d.radius && Math.abs(y - d.y) <= d.radius;
+  }
+
+  /**
+   * Whether your workers may work a tile: off every settlement, or on their own (`onHomeDeed`). Never on another
+   * settlement, a citizen's or a stranger's. The island's `private.worker_ground`.
+   */
+  workerGround(x: number, y: number): boolean {
+    return this.onHomeDeed(x, y) || !this.deedAt(x, y);
+  }
+
+  /**
+   * Whether a piece of work is on your workers' settlement (`onHomeDeed`): a wall keyed by the line it stands on ('v' at x between tiles
    * x - 1 and x, 'h' at y between y - 1 and y: `borderOf`) when either tile it stands between is. The island's
    * `hod_work_mine`.
    */
   workOnDeed(x: number, y: number, dir?: string): boolean {
-    return this.onDeed(x, y) || (dir === 'v' && this.onDeed(x - 1, y)) || (dir === 'h' && this.onDeed(x, y - 1));
+    return this.onHomeDeed(x, y) || (dir === 'v' && this.onHomeDeed(x - 1, y)) || (dir === 'h' && this.onHomeDeed(x, y - 1));
   }
 
   /**
@@ -9908,9 +9926,12 @@ export class Game {
     const [cx, cy] = postCentre(p);
     const reach = postRadius(p.ql);
     const out: DeedStore[] = [];
-    this.placed.crates.around(cx, cy, reach, (crate) => out.push(this.crateStore(crate)));
+    // None on another settlement, a citizen's or a stranger's (`workerGround`; the island's `worker_may`).
+    this.placed.crates.around(cx, cy, reach, (crate) => {
+      if (this.workerGround(crate.x, crate.y)) out.push(this.crateStore(crate));
+    });
     this.placed.furniture.around(cx, cy, reach, (f) => {
-      const store = this.furnitureStore(f);
+      const store = this.workerGround(f.x, f.y) ? this.furnitureStore(f) : undefined;
       if (store) out.push(store);
     });
     return out;

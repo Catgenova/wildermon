@@ -72,8 +72,8 @@ ${before}
 do $p$
 declare v_fn text; v_def text; v_n int; r record;
   v_new text := $$and p.x between dd.x - work_range(c) and dd.x + work_range(c) and p.y between dd.y - work_range(c) and dd.y + work_range(c)
-     and greatest(abs(p.x - dd.x), abs(p.y - dd.y)) <= work_range(c) and on_my_deed$$;
-  v_old text := $$and greatest(abs(p.x - dd.x), abs(p.y - dd.y)) <= work_range(c) and on_my_deed$$;
+     and greatest(abs(p.x - dd.x), abs(p.y - dd.y)) <= work_range(c) and on_home_deed$$;
+  v_old text := $$and greatest(abs(p.x - dd.x), abs(p.y - dd.y)) <= work_range(c) and on_home_deed$$;
 begin
   foreach v_fn in array array['anvil_target', 'ash_target', 'brew_target', 'cook_target', 'furnace_target', 'glass_target',
                               'lamp_target', 'planter_target', 'press_target', 'station_target', 'vine_target'] loop

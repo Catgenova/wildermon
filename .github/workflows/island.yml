@@ -5620,6 +5620,20 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/rest.mjs --log-level=error
           node node_modules/.cache/rest.mjs
 
+      - name: A settlement's worker keeps to its own settlement, beds and all
+        if: matrix.shard == 6
+        run: |
+          # Asked: "wildermon beds will attract wildermon from across the map ...
+          # walk across oceans to go sleep and then they cant return", and
+          # "wildermon are still leaving settlement to go work on other
+          # settlements or steal their materials". A bed only for a worker of
+          # its settlement on its ground; a worker's work, pick-ups, stores and
+          # planting on its keeper's home settlement (or on none), not one its
+          # keeper is a citizen of or a stranger's; and the stranded put back.
+          npx esbuild supabase/test/ownground.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/ownground.mjs --log-level=error
+          node node_modules/.cache/ownground.mjs
+
       - name: A worker a day without a meal works at half its pace
         if: matrix.shard == 6
         run: |
