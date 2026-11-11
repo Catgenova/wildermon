@@ -7,6 +7,8 @@ import { drawPortrait } from '../render/sprites';
 
 /** Dragging across the mirror turns it an eighth for every so far dragged. */
 const DRAG_STEP = 26;
+/** The tallest the mirror's picture is drawn close to the head, pixels (the page scales it up to the mirror). */
+const CLOSE_PX = 300;
 /** A slider's steps from one end to the other: a look keeps its numbers to three places. */
 const STEPS = 1000;
 type Outfit = NonNullable<FigurePose['outfit']>;
@@ -330,8 +332,9 @@ export class Creator {
     }
     const ctx = this.mirror.getContext('2d');
     if (ctx) {
-      // The backing store follows the size the page gives the mirror, at the screen's own resolution.
-      const dpr = Math.min(3, window.devicePixelRatio || 1);
+      // The backing store follows the size the page gives the mirror, at the screen's own resolution; close, no more
+      // than CLOSE_PX tall, since the body is drawn whole at that zoom and only its head is shown.
+      const dpr = Math.min(3, window.devicePixelRatio || 1) * (this.close ? Math.min(1, CLOSE_PX / Math.max(1, this.mirror.clientHeight)) : 1);
       const w = Math.round(this.mirror.clientWidth * dpr), h = Math.round(this.mirror.clientHeight * dpr);
       if (w > 0 && h > 0 && (this.mirror.width !== w || this.mirror.height !== h)) {
         this.mirror.width = w;
