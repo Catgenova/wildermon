@@ -65,7 +65,7 @@ export const DESIGN = {
     rim: { w: 0.05, h: 0.035, t: 0.05, in: 0.35 },
     fit: { trunk: 0.02, belt: 0.025, skirt: 0.05, arm: 0.02, gap: 0.008 },
     wedge: 8,
-    collar: { notch: [12, 1.5], top: { az: [0, 30, 90, 180], top: [-0.34, -0.2, -0.16, -0.12] }, base: [-1.1, -1.0, -0.9], trim: 0.07, c: 0.06, flare: 0.02, wall: 0.06, spread: 0.03, sink: 0.02, shrug: 0.4 },
+    collar: { reachY: [-0.3, -0.1, 0.05], notch: [12, 1.5], top: { az: [0, 30, 90, 180], top: [-0.16, -0.08, -0.04, 0.0] }, base: [-1.1, -1.0, -0.9], trim: 0.07, c: 0.06, flare: 0.02, wall: 0.06, spread: 0.45, sink: 0.3, shrug: 0.4 },
     core: { az: [0, 14, 28, 40, 43, 62, 80, 96], top: [-0.78, -0.8, -0.86, -0.92, -0.94, -0.95, -1.0, -1.9], bottom: [-3.78, -3.72, -3.64, -3.58, -2.0, -1.95, -1.95, -1.95], rows: [0, 0.14, 0.28, 0.42, 0.56, 0.7, 0.85, 1], c: 0.02, flat: 14, drape: true },
     back: { az: [96, 112, 116, 130, 150, 165, 180], top: [-1.9, -1.0, -0.85, -0.7, -0.6, -0.56, -0.54], bottom: [-1.95, -1.95, -3.5, -3.55, -3.6, -3.62, -3.64], rows: [0, 0.2, 0.4, 0.6, 0.8, 1], c: 0.02, panel: { top: -0.9, bottom: -2.85, half: 34, tip: -3.15 } },
     side: { az: [38, 60, 80, 100, 120], top: [-1.75, -1.75, -1.8, -1.75, -1.75], bottom: [-3.62, -3.6, -3.58, -3.56, -3.55], rows: [0, 0.33, 0.67, 1], c: 0.018 },
@@ -88,8 +88,8 @@ export const DESIGN = {
       ],
     },
     pauldron: {
-      lift: 0.1, inset: 0.1, pole: 0.2, near: 1.3, round: 0.15, inner: 1, cols: 12, phi0: 12, phi: [76, 125, 76, 30], footY: [-1.72, -1.8, -1.68], rows: [0, 0.5, 1], c: [0.08, 0.15, 0.22], cone: 34,
-      zig: { f: [0.3, 0.8], n: 6, psi: [-40, 230] },
+      lift: 0.1, inset: 0.1, pole: 0.2, near: 1.3, round: 0, inner: 1, cols: 12, phi0: 12, phi: [76, 125, 76, 30], footY: [-1.6, -1.6, -1.6], rows: [0, 0.5, 1], c: [0.05, 0.07, 0.09], cone: 34,
+      zig: { f: [0.12, 0.72], n: 3, psi: [-10, 200] },
       lames: [{ t: [0.42, 0.95], c: [0.14, 0.22], th: [-45, 210] }, { t: [0.8, 1.32], c: [0.1, 0.17], th: [-50, 215] }],
     },
     sleeve: { rings: [['$torso', 0.02], ['ja', 0.025], ['jb', 0.028], ['ua', 0.028], ['uc', 0.028], ['ue', 0.028], ['el', 0.032], ['fa', 0.032]] },
@@ -100,7 +100,7 @@ export const DESIGN = {
     rim: { w: 0.045, h: 0.032, t: 0.045, in: 0.35 },
     fit: { trunk: 0.018, belt: 0.022, skirt: 0.045, arm: 0.018, gap: 0.007 },
     wedge: 8,
-    collar: { notch: [12, 1.5], top: { az: [0, 30, 90, 180], top: [-0.3, -0.18, -0.14, -0.1] }, base: [-1.05, -0.95, -0.85], trim: 0.06, c: 0.05, flare: 0.018, wall: 0.05, spread: 0.025, sink: 0.02, shrug: 0.35 },
+    collar: { reachY: [-0.3, -0.1, 0.05], notch: [12, 1.5], top: { az: [0, 30, 90, 180], top: [-0.14, -0.07, -0.03, 0.0] }, base: [-1.05, -0.95, -0.85], trim: 0.06, c: 0.05, flare: 0.018, wall: 0.05, spread: 0.4, sink: 0.27, shrug: 0.35 },
     core: { az: [0, 12, 24, 36, 40, 58, 76, 96], top: [-0.8, -0.81, -0.84, -0.9, -0.92, -0.95, -1.0, -1.85], bottom: [-3.25, -3.2, -3.12, -3.06, -1.95, -1.9, -1.9, -1.9], rows: [0, 0.14, 0.28, 0.42, 0.56, 0.7, 0.85, 1], c: 0.018, flat: 12, drape: true },
     back: { az: [96, 112, 116, 130, 150, 165, 180], top: [-1.85, -1.0, -0.9, -0.75, -0.66, -0.62, -0.6], bottom: [-1.9, -1.9, -3.0, -3.05, -3.1, -3.12, -3.14], rows: [0, 0.2, 0.4, 0.6, 0.8, 1], c: 0.018, panel: { top: -0.95, bottom: -2.45, half: 34, tip: -2.7 } },
     side: { az: [34, 56, 78, 100, 120], top: [-1.75, -1.75, -1.8, -1.75, -1.75], bottom: [-3.1, -3.08, -3.06, -3.05, -3.04], rows: [0, 0.33, 0.67, 1], c: 0.016 },
@@ -122,8 +122,8 @@ export const DESIGN = {
       ],
     },
     pauldron: {
-      lift: 0.08, inset: 0.08, pole: 0.2, near: 1.1, round: 0.15, inner: 1, cols: 12, phi0: 12, phi: [74, 120, 74, 30], footY: [-1.5, -1.58, -1.48], rows: [0, 0.5, 1], c: [0.06, 0.12, 0.18], cone: 34,
-      zig: { f: [0.3, 0.8], n: 6, psi: [-40, 230] },
+      lift: 0.08, inset: 0.08, pole: 0.2, near: 1.1, round: 0, inner: 1, cols: 12, phi0: 12, phi: [74, 120, 74, 30], footY: [-1.45, -1.45, -1.45], rows: [0, 0.5, 1], c: [0.04, 0.06, 0.08], cone: 34,
+      zig: { f: [0.12, 0.72], n: 3, psi: [-10, 200] },
       lames: [{ t: [0.36, 0.8], c: [0.11, 0.18], th: [-45, 210] }, { t: [0.68, 1.12], c: [0.08, 0.14], th: [-50, 215] }],
     },
     sleeve: { rings: [['$torso', 0.018], ['ja', 0.022], ['jb', 0.025], ['ua', 0.025], ['uc', 0.025], ['ue', 0.025], ['el', 0.028], ['fa', 0.028]] },
@@ -807,8 +807,8 @@ function armPieces(G, rig, D, S) {
   const lip = last.map((i) => { const v = G.vert(add(add(B.verts[i], mul(unit(VN[i]), 0.008)), mul(fo.a, -rim.t)), 'sleeve'); G.wt[v] = { $body: i }; return v; });
   G.tag = 'sleeve';
   const sStart = G.polys.length;
-  for (let r = 0; r + 1 < rings.length; r++) for (let k = 0; k < 8; k++) G.poly([rings[r][k], rings[r][(k + 1) % 8], rings[r + 1][(k + 1) % 8], rings[r + 1][k]], 'leather', 'sleeve');
-  for (let k = 0; k < 8; k++) G.poly([rings[rings.length - 1][k], rings[rings.length - 1][(k + 1) % 8], lip[(k + 1) % 8], lip[k]], 'leather', 'sleeve');
+  for (let r = 0; r + 1 < rings.length; r++) for (let k = 0; k < 8; k++) G.poly([rings[r][k], rings[r][(k + 1) % 8], rings[r + 1][(k + 1) % 8], rings[r + 1][k]], 'dark', 'sleeve');
+  for (let k = 0; k < 8; k++) G.poly([rings[rings.length - 1][k], rings[rings.length - 1][(k + 1) % 8], lip[(k + 1) % 8], lip[k]], 'dark', 'sleeve');
   piece(G, sStart, (c) => { const lines = [up, fo].map((fr) => { const d = sub(c, fr.o), t = Math.max(0, Math.min(fr.len, dot(d, fr.a))); return sub(d, mul(fr.a, t)); }); return Math.hypot(...lines[0]) < Math.hypot(...lines[1]) ? lines[0] : lines[1]; });
   setPiece(sStart, 'sleeve.l');
   const sleeveS = lay(sStart);
@@ -938,7 +938,7 @@ export function designOf(who) {
 /** The collar's frame: the neck's axis (its z) and reach (the furthest of the neck's samples round it). */
 export function collarFrame(D, S) {
   const neck = sectioner(S.filter((s) => s.part === 'neck').map((s) => s.p), { o: [0, 0, 0], a: [0, 1, 0], e1: [0, 0, 1], e2: [1, 0, 0], dt: 0.12, centred: true });
-  const nz = neck.axisAt(-0.45)[2], nr = (a) => Math.max(...[-0.5, -0.3, -0.1, 0.05].map((y) => { const p = neck.at(y, a, 0); return Math.hypot(p[0], p[2] - nz); }));
+  const nz = neck.axisAt(-0.45)[2], nr = (a) => Math.max(...(D.collar.reachY ?? [-0.5, -0.3, -0.1, 0.05]).map((y) => { const p = neck.at(y, a, 0); return Math.hypot(p[0], p[2] - nz); }));
   const r0n = Math.max(...[0, 30, 60, 90, 120, 150, 180].map(nr));
   return { nz, r0n, rTop: r0n + D.collar.c };
 }
