@@ -63,6 +63,7 @@ export const LOOKS = {
 export const DESIGN = {
   male: {
     rim: { w: 0.05, h: 0.035, t: 0.05, in: 0.35 },
+    rivet: { r: 0.045, h: 0.03 },
     fit: { trunk: 0.02, belt: 0.025, skirt: 0.05, arm: 0.02, gap: 0.008, stack: 0.03 },
     wedge: 8,
     collar: { reachY: [-0.3, -0.1, 0.05], notch: [12, 1.5], top: { az: [0, 30, 90, 180], top: [-0.16, -0.08, -0.04, 0.0] }, base: [-1.1, -1.0, -0.9], trim: 0.07, c: 0.06, flare: 0.02, wall: 0.06, spread: 0.45, sink: 0.3, shrug: 0.4 },
@@ -103,6 +104,7 @@ export const DESIGN = {
   },
   female: {
     rim: { w: 0.045, h: 0.032, t: 0.045, in: 0.35 },
+    rivet: { r: 0.04, h: 0.027 },
     fit: { trunk: 0.018, belt: 0.022, skirt: 0.045, arm: 0.018, gap: 0.007, stack: 0.027 },
     wedge: 8,
     collar: { reachY: [-0.3, -0.1, 0.05], notch: [12, 1.5], top: { az: [0, 30, 90, 180], top: [-0.14, -0.07, -0.03, 0.0] }, base: [-1.05, -0.95, -0.85], trim: 0.06, c: 0.05, flare: 0.018, wall: 0.05, spread: 0.4, sink: 0.27, shrug: 0.35 },
@@ -373,6 +375,26 @@ function gridAt(pl, rf, cf) {
   return onPlate(pl, p, nn);
 }
 
+/**
+ * Rivets on a plate: at each spot [rf, cf] (its rows and columns as fractions, 0 to 1), a stud in the trim's colour:
+ * six sides up from its foot (r across) to a flat top (half as wide) h over the face. Weighted wt (a bone share, or a
+ * function of the point). D.rivet { r, h } sets the size; none when D.rivet is off.
+ */
+function rivetsOn(G, D, pl, spots, wt) {
+  if (!D.rivet || !pl) return;
+  const { r, h } = D.rivet, R = pl.rows.length - 1, n = pl.rows[0].length, C = pl.ring ? n : n - 1;
+  for (const [rf, cf] of spots) {
+    const at = gridAt(pl, rf * R, cf * C);
+    if (!at) continue;
+    const nn = at.n, a = unit(cross(nn, Math.abs(nn[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0])), b = cross(nn, a), start = G.polys.length;
+    const ringAt = (rr, lift) => Array.from({ length: 6 }, (_, k) => { const t = (k / 6) * 2 * Math.PI; const q = add(add(at.q, mul(nn, lift)), add(mul(a, Math.cos(t) * rr), mul(b, Math.sin(t) * rr))); const i = G.vert(q, 'rivet'); G.wt[i] = typeof wt === 'function' ? wt(q) : wt; return i; });
+    const foot = ringAt(r, -0.004), top = ringAt(r * 0.55, h);
+    G.tag = 'rivet';
+    for (let k = 0; k < 6; k++) G.poly([foot[k], foot[(k + 1) % 6], top[(k + 1) % 6], top[k]], 'trim', 'rivet');
+    G.poly(top.slice(), 'trim', 'rivet');
+    piece(G, start, () => nn);
+  }
+}
 /** An inlay: a strip of width w along points on a plate (each { q, n } from gridAt / onPlate), lifted off its face. */
 function inlayOn(G, pl, pts, w, tag, mat = 'rune', lift = 0.022) {
   const V = (q) => { const i = G.vert(q, tag); G.wt[i] = pl.wt; return i; };
@@ -687,6 +709,7 @@ function torsoPieces(G, rig, D, S) {
     for (let k = p0; k < G.polys.length; k++) G.polys[k].piece = pieceName;
     skirts.push(pc);
     under.push(lay(p0));
+    { const q0 = G.polys.length; rivetsOn(G, D, pc, [[0.78, 0.5]], mix(0.8)); for (let k = q0; k < G.polys.length; k++) G.polys[k].piece = pieceName; }
   }
 
   /* the belt: a ring round the waist, pointed at the front and the back, trimmed top and foot, over the skirt's tops */
@@ -697,6 +720,7 @@ function torsoPieces(G, rig, D, S) {
   fitOut(beltRows, true, out, [[trunk, D.fit.belt], ...under.slice(0, nLegs).map((P) => [P, gap])]);
   let p0 = G.polys.length;
   const belt = plateOf(G, beltRows, { tag: 'belt', mat: 'leather', bone: { spine_01: 0.5, pelvis: 0.5 }, rim, out, ring: true, border: { top: 'trim', bottom: 'trim' } });
+  rivetsOn(G, D, belt, [2, 6, 10, 22, 26, 30].map((c) => [0.5, c / 32]), { spine_01: 0.5, pelvis: 0.5 });
   for (let k = p0; k < G.polys.length; k++) G.polys[k].piece = 'belt';
   under.push(lay(p0));
 
@@ -1035,7 +1059,9 @@ function armPieces(G, rig, D, S) {
     const ths = [L.th[0], ...[1, 2, 3, 4, 5].map((k) => L.th[0] + ((L.th[1] - L.th[0]) * k) / 6), L.th[1]];
     const p0 = G.polys.length;
     const rows = [0, 1].map((f) => ths.map((a) => upper.at(L.t[0] + (L.t[1] - L.t[0]) * f, a, L.c[f])));
-    plateOf(G, rows, { tag: `pauldron lame ${li + 1}`, bone: li === 0 ? { shoulder_l: 0.5, upperarm_l: 0.5 } : { upperarm_l: 1 }, rim, out: outOf(up), fit: { S: underArm }, border: { top: 'open', bottom: 'trim', left: 'bevel', right: 'bevel' } });
+    const lb = li === 0 ? { shoulder_l: 0.5, upperarm_l: 0.5 } : { upperarm_l: 1 };
+    const lp = plateOf(G, rows, { tag: `pauldron lame ${li + 1}`, bone: lb, rim, out: outOf(up), fit: { S: underArm }, border: { top: 'open', bottom: 'trim', left: 'bevel', right: 'bevel' } });
+    rivetsOn(G, D, lp, [[0.55, 0.12], [0.55, 0.42], [0.55, 0.88]], lb);
     setPiece(p0, `plame${li + 1}.l`);
     underArm.push([lay(p0), gap]);
   }
@@ -1086,7 +1112,8 @@ function armPieces(G, rig, D, S) {
   setPiece(cStart, 'pauldron.l');
   if (strap) {
     const s0 = G.polys.length;
-    plateOf(G, strap.rows, { tag: 'strap', mat: 'leather', bone: { clavicle_l: 1 }, rim, out: strap.out, fit: { S: [[strap.S, D.fit.arm], [lay(cStart), gap]] }, border: { top: 'bevel', bottom: 'bevel', left: 'bevel', right: 'bevel' } });
+    const sp = plateOf(G, strap.rows, { tag: 'strap', mat: 'leather', bone: { clavicle_l: 1 }, rim, out: strap.out, fit: { S: [[strap.S, D.fit.arm], [lay(cStart), gap]] }, border: { top: 'bevel', bottom: 'bevel', left: 'bevel', right: 'bevel' } });
+    rivetsOn(G, D, sp, [[0.5, 0.18], [0.5, 0.82]], { clavicle_l: 1 });
     setPiece(s0, 'strap.l');
   }
 }
