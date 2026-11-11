@@ -188,6 +188,21 @@ export type Target =
        * same words, so "take it to sixty" means the same thing on both sides.
        */
       upto?: number;
+      /**
+       * Improve and repair (`mending.ts`): a run of Improve that, when a failed pass leaves the piece over
+       * `IMPROVE_DAMAGE`, is followed by a Repair of it to nought and then the rest of the run. The island's
+       * `private.job_follow`.
+       */
+      mend?: boolean;
+      /** The one kind of stock a run of Improve may draw: that item (`StockLock`, `improve.ts`). */
+      stock?: string;
+      /** And what that stock is made of, or nothing for stock of no material. */
+      stockOf?: string;
+      /**
+       * Repair all, Hone all (`mending.ts`): this many held pieces in all, this one first and then the most
+       * damaged left that the job takes, one after another. The island's `private.job_follow`.
+       */
+      all?: number;
       /** The soul going into this thing, for `absorb_soul`: the thing is the target, and the soul this. */
       soul?: number;
       /** The Runestone a Telestone is to take you to, for `travel_runestone` (`runestones.ts`). */

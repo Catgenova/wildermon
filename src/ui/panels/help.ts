@@ -118,7 +118,8 @@ import {
   QL_TOP, deedLevel } from '../../game/game';
 import { ANCIENT_HELM, ANCIENT_HELM_SIGHT, ANCIENT_SWORD, ANCIENT_SWORD_SWING, ARMOUR, ARMOUR_CLASSES, BANE_BONUS, SLOTS, WEAPON_BY_ID, WEAPONS, type ArmourClass, type WeaponDef } from '../../game/gear';
 import { ODDS_BAND, ODDS_BANDS_AT, ODDS_EXACT_AT, ODDS_LIKELY, ODDS_PLACES, PAIR_RANGE, TIER_LEVEL } from '../../game/husbandry';
-import { IMPROVE_DAMAGE, IMPROVE_FLOOR } from '../../game/improve';
+import { IMPROVE_DAMAGE, IMPROVE_FAIL_LEAST, IMPROVE_FAIL_SPREAD, IMPROVE_FLOOR } from '../../game/improve';
+import { JOB_GOES_MOST } from '../../game/mending';
 import { billWords, countOf, DEED_DECAY, DRINK_LITRES, foodFill, HOARD_METALS, itemDef, ITEM_DEFS, LITRE_KG, RARITIES, RARITY_ROOM, rarityBands, rarityChance, roomFor, TAN_LYE, UNMENDABLE, unmendableSays } from '../../game/items';
 import { ALL_GOALS, JOURNAL, LEGEND_AT } from '../../game/journal';
 import { entryTameLevel, guideEntries, guidePages, keepable } from '../../game/guide';
@@ -2859,6 +2860,18 @@ export function helpText(): string {
       <li>Skill used: the one that makes it (blacksmithing for tools, weaponsmithing for weapons, chain and plate armoursmithing for their armour, bowyery for bows; tailoring,
       leatherworking, carpentry, fine carpentry, stonecutting for the rest).</li>
       <li><b>Max QL: that skill</b>, or ${IMPROVE_FLOOR} while the skill is lower. Improving trains the skill.</li>
+    </ul>
+    <h3>Improve and repair window</h3>
+    <ul>
+      <li>Opened by <b>Improve and repair…</b> on an item's menu, or the UI Menu. <b>Held equipment</b>: worn, or improvable, loose in the pack (not in a bag).</li>
+      <li><b>Repair</b>: each piece's QL, damage, and actions, time and QL cost to 0 damage (at repair ${startOf('repair')}: −${+repairGo(startOf('repair')).healed.toFixed(2)} damage an action,
+      QL −${+repairGo(startOf('repair')).cost.toFixed(4)} a damage point). <b>Repair all</b>: every damaged piece Repair takes, most damaged first, one after another.</li>
+      <li><b>${itemDef(WHETSTONE).name}</b>: 1 item, all damage off, QL kept, used up. <b>Hone all</b>: the most damaged pieces, 1 whetstone each, while whetstones are held.</li>
+      <li><b>Improve</b>, one item: QL and max QL, tools held, each stock kind (carried, in stores within reach), every pass the chosen kind allows (QL if passed, chance,
+      stock left), time an action.</li>
+      <li><b>Cycles</b>: Improve × 1 to ${JOB_GOES_MOST}, held to one stock kind. Failed pass: +${IMPROVE_FAIL_LEAST} to ${IMPROVE_FAIL_LEAST + IMPROVE_FAIL_SPREAD} damage;
+      over ${IMPROVE_DAMAGE}: Repair to 0, then the rest. A repair is not a cycle. Stops at the first of: the count, out of the chosen kind (no other kind used),
+      the target QL, max QL.</li>
     </ul>
     <h3>Ashes, lye and tanning</h3>
     <ul>

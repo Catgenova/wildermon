@@ -90,6 +90,7 @@ export const BINDS: BindDef[] = [
   // Every letter is spoken for, and no browser takes F2 for itself.
   { id: 'win_boards', label: 'Leaderboards', hint: 'Journal, Leaderboards tab: top skills, best-bred wildermon, biggest settlements.', group: 'Windows', keys: ['F2'] },
   { id: 'win_ledger', label: 'Ledger', hint: 'Journal, Ledger tab: everything you have made.', group: 'Windows', keys: [] },
+  { id: 'win_mend', label: 'Improve and repair', hint: 'Held equipment: damage, Repair all, Hone all; one item: stock per pass, passes ahead, improve-and-repair cycles.', group: 'Windows', keys: [] },
   { id: 'win_shopping', label: 'Shopping list', hint: 'Crafting List targets and all inputs down to raw materials, against your pack and nearby stores.', group: 'Windows', keys: [] },
   { id: 'win_stores', label: 'Stores', hint: 'Contents of every crate and cupboard on your settlement.', group: 'Windows', keys: ['KeyU'] },
   { id: 'win_journal', label: 'Journal', hint: 'Goals; tick themselves off.', group: 'Windows', keys: ['KeyJ'] },

@@ -171,7 +171,8 @@ import { ANCIENT_HELM, ANCIENT_HELM_SIGHT, ANCIENT_SWORD, ANCIENT_SWORD_SWING, A
 import { JEWEL_PIECES } from '../../game/gems';
 import { foodFill, itemDef, RARITIES, rarityBands, rarityChance, rareInputSaid, unmendableSays } from '../../game/items';
 import { SIGHT_FORM_AT, SIGHT_RARITY_AT } from '../../game/sighted';
-import { improvable } from '../../game/improve';
+import { improvable, IMPROVE_DAMAGE as MEND_DAMAGE, IMPROVE_FAIL_LEAST, IMPROVE_FAIL_SPREAD } from '../../game/improve';
+import { JOB_GOES_MOST } from '../../game/mending';
 import { weaponCarry } from '../../render/figure';
 import { TRY_LEARN } from '../../game/learn';
 import { BASE_SPEED, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER_LEVEL, MAX_STEP, strideAt } from '../../game/player';
@@ -4251,6 +4252,18 @@ export const NEWS: News[] = [
       return [`Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats. Stage 3 skill: ${two.name} ${perkSays('leecha')}.`,
         'Each stage: own model, animations and voice.'];
     },
+  },
+  {
+    n: 522,
+    day: '2026-11-11',
+    lines: () => [
+      'New: Improve and repair window: Improve and repair… on an item\'s menu, or the UI Menu. Held equipment: worn, or improvable, loose in the pack (not in a bag).',
+      'New: Repair section: each piece\'s QL, damage, and actions, time and QL cost to 0 damage; Repair and Hone on each row. Repair all: every damaged piece Repair takes, most damaged first, one after another (not held to the queue limit).',
+      `New: Hone all: the most damaged pieces, 1 ${itemDef(WHETSTONE).name.toLowerCase()} each (all damage off, QL kept), while whetstones are held.`,
+      'New: Improve section, one item: QL and max QL, tools held, each stock kind carried and in reach, every pass the chosen kind allows (QL if passed, chance, stock left), time an action.',
+      `New: Improve and repair cycles: Improve × 1 to ${JOB_GOES_MOST} held to one stock kind; failed pass +${IMPROVE_FAIL_LEAST} to ${IMPROVE_FAIL_LEAST + IMPROVE_FAIL_SPREAD} damage; over ${MEND_DAMAGE}: Repair to 0, then the rest. `
+        + 'Stops at the first of: count, out of the chosen kind, target QL, max QL. Never draws another kind (another metal, wood, or an ingot for a lump).',
+    ],
   },
   {
     n: 521,

@@ -1281,9 +1281,24 @@ export class Game {
   knowsRecipe(id: string): boolean {
     return this.knownRecipes.has(id);
   }
+  /**
+   * Your trade's channels as the island folded them (`player.class_mul`): a multiplier for each channel, on
+   * the skills of the trade (`skills`), and a rite's on top while it holds. Read through `classChannel`.
+   */
+  classMul: { skills?: string[]; rite?: { until?: string; muls?: Record<string, number> } } & Record<string, unknown> = {};
+  /** One channel's multiplier on a skill, as the island's `class_mul` has it: 1 off the trade's skills. */
+  classChannel(channel: string, skill: string | undefined): number {
+    const m = this.classMul;
+    if (!skill || !Array.isArray(m.skills) || !m.skills.includes(skill)) return 1;
+    const own = typeof m[channel] === 'number' ? (m[channel] as number) : 1;
+    const until = m.rite?.until ? Date.parse(m.rite.until) : NaN;
+    const rite = until > Date.now() ? (m.rite?.muls?.[channel] ?? 1) : 1;
+    return own * rite;
+  }
   /** Take the island's fold of your perks, and hand what it says on to the body and the pack. */
-  setPerks(fx: Record<string, number> | null | undefined): void {
+  setPerks(fx: Record<string, number> | null | undefined, mul?: unknown): void {
     this.perkFx = { ...(fx ?? {}) };
+    if (mul && typeof mul === 'object') this.classMul = mul as Game['classMul'];
     this.player.roadPace = this.perk('walk:road', 1);
     // And through brush, for a Forester's Woodsman's Stride: each tile that has a pace in the perks.
     this.player.tilePace = Object.fromEntries(Object.keys(TILE_DEFS).map(Number)

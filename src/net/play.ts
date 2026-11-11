@@ -284,7 +284,7 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
    * pack weighs, what your back takes, and which jobs a menu offers. The
    * Trades window hands on a fresh fold whenever it asks the island.
    */
-  game.setPerks(((me.class_mul as { fx?: Record<string, number> } | null) ?? {}).fx);
+  game.setPerks(((me.class_mul as { fx?: Record<string, number> } | null) ?? {}).fx, me.class_mul);
 
   /** What was last asked about, so the bar has something to point at. */
   let lastTarget: Target | null = null;

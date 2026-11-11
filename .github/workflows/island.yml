@@ -5106,6 +5106,18 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/packimprove.mjs --log-level=error
           node node_modules/.cache/packimprove.mjs
 
+      - name: Improve and repair, one window
+        if: matrix.shard == 5
+        run: |
+          # Held equipment, Repair all and Hone all the most damaged first; a run
+          # of Improve held to one kind of stock uses that kind and no other and
+          # stops "Out of iron lump."; a run of cycles uses its count of stock
+          # exactly, repaired between whenever a failed pass leaves it over 10.
+          # Both sides, in the same words and numbers.
+          npx esbuild supabase/test/mending.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/mending.mjs --log-level=error
+          node node_modules/.cache/mending.mjs
+
       - name: One device at a time on an account
         if: matrix.shard == 5
         run: |

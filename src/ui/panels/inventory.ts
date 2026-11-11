@@ -23,7 +23,7 @@ import { ENCHANT_STATUE } from '../../game/relicuse';
 import { MOTE_ELEMENTS, STATUE_MOTES } from '../../game/motes';
 import { PATRONS, STATUETTE, statueName } from '../../game/patronlist';
 import { BACK, hasRunestones, RUNESTONES, stoneChoice, stoneDistance, TELESTONE, TELESTONE_SAID, telestoneRange, telestoneWait, timeLeftNote, TRAVEL } from '../../game/runestones';
-import { improvable, improveCeiling } from '../../game/improve';
+import { canImprove, improvable, improveCeiling } from '../../game/improve';
 
 const CATEGORY_ORDER: Array<[ItemCategory, string]> = [
   ['tool', 'Tools'],
@@ -48,6 +48,8 @@ export class InventoryPanel {
   private pickBar: HTMLDivElement;
   /** The rows' uids in the order they are drawn, for a Shift-click's run. */
   private order: number[] = [];
+  /** Opens the Improve and repair window on a thing (`MendPanel.show`). */
+  openMend?: (uid: number) => void;
   /** The pack changed while the window was shut: drawn when it opens. */
   private stale = false;
 
@@ -450,6 +452,11 @@ export class InventoryPanel {
           if (spot) this.game.requestAction(place, spot);
         },
       });
+    }
+    // Improve and repair, one window for both, on anything Improve works on or Repair takes (`mending.ts`).
+    if (this.openMend && (canImprove(item.id) || item.dmg > 0)) {
+      const open = this.openMend;
+      entries.push({ label: 'Improve and repair…', note: `QL ${item.ql.toFixed(1)}, damage ${item.dmg.toFixed(1)}`, onSelect: () => open(item.uid) });
     }
     entries.push(...this.game.actionsFor(target).map(({ def, reason }) => {
       const all = def.maxRepeat ? def.maxRepeat(target, this.game) : item.count;

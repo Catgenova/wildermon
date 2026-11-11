@@ -112,6 +112,7 @@ import { JOURNAL_TAB_BIND, JOURNAL_TABS, JournalPanel, type JournalTab } from '.
 import { ContextMenu, type MenuItem } from './contextmenu';
 import { AutoEat } from '../game/autoeat';
 import { ShoppingPanel } from './panels/shopping';
+import { MendPanel } from './panels/mend';
 import { rotLine, rotSaid, rotSeconds } from '../game/rot';
 import { changeWallRows, frameFootprintEntries, frameHoverLines, frameJettyEntries, frameRoofEntries } from './frameMenu';
 import { storeyHost, wallAcross } from '../game/storeyview';
@@ -365,6 +366,7 @@ export class UI {
   private readonly health: HealthPanel;
   private readonly equipment: EquipmentPanel;
   private readonly shopping: ShoppingPanel;
+  private readonly mend: MendPanel;
   private readonly spellBar: SpellBar;
   private readonly deedPanel: DeedPanel;
   private readonly tilePanel: TilePanel;
@@ -481,7 +483,7 @@ export class UI {
       if (!folded && list) list.scrollTop = list.scrollHeight;
     };
     const inventory = this.windows.create({ id: 'inventory', title: 'Inventory', x: 12, y: 56, width: 340, height: 396, anchor: 'tr' });
-    new InventoryPanel(inventory, game, this.menu, (p) => this.moveDragged(p, 'inventory'), (uid) => this.cratePanel.openBag(uid), (uid) => this.hoard.openOn(uid),
+    const invPanel = new InventoryPanel(inventory, game, this.menu, (p) => this.moveDragged(p, 'inventory'), (uid) => this.cratePanel.openBag(uid), (uid) => this.hoard.openOn(uid),
       (uid) => this.spellBar?.entriesFor({ kind: 'item', id: uid }) ?? [],
       (item) => {
         const e = this.cratePanel?.putKindEntry(item);
@@ -507,6 +509,10 @@ export class UI {
     const shopWin = this.windows.create({ id: 'shopping', title: 'Shopping list', x: 364, y: 430, width: 340, height: 360, anchor: 'tr', open: false });
     this.shopping = new ShoppingPanel(shopWin, game);
     this.craftPanel.onList = (recipe, count) => this.shopping.add(recipe, count);
+    // Improve and repair, one window for both (`mend.ts`): off an item's menu, or the window list.
+    const mendWin = this.windows.create({ id: 'mend', title: 'Improve and repair', x: 364, y: 56, width: 560, height: 620, anchor: 'tr', open: false });
+    this.mend = new MendPanel(mendWin, game);
+    invPanel.openMend = (uid) => this.mend.show(uid);
     const tileWin = this.windows.create({ id: 'tile', title: 'Tile', x: 12, y: 200, width: 300, height: 320, open: false });
     this.tilePanel = new TilePanel(tileWin, game, (pick) => this.menuFor(pick, (ground) => this.selectTile(ground)), this.tooltip);
     const map = this.windows.create({ id: 'map', title: 'Map', x: 12, y: 370, width: 236, height: 358, anchor: 'tr', open: false, seeThrough: true });
@@ -1098,6 +1104,7 @@ export class UI {
     this.health.update(performance.now());
     this.equipment.update(performance.now());
     this.shopping.update(performance.now());
+    this.mend.update(performance.now());
     this.spellBar.update();
   }
 

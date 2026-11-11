@@ -9713,6 +9713,110 @@ img:is(.rc-plate, .rc-niche, .ui-frame, .ui-frame-edge):not([src]) {
   background: var(--t-good, #8fb86a);
 }
 
+/* ---- Improve and repair (src/ui/panels/mend.ts) ---- */
+.mend {
+  display: grid;
+  gap: 10px;
+  padding: 4px 2px;
+  font-size: 12px;
+}
+
+.mend-section {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.mend-sub {
+  margin-top: 4px;
+  color: var(--ui-accent);
+  font-weight: 600;
+}
+
+.mend-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 1px 4px;
+}
+
+.mend-dim { color: var(--ui-dim); font-size: 11px; }
+.mend-bad { color: var(--t-bad, #d9785a); }
+.mend-now { font-weight: 600; }
+
+.mend-sum {
+  padding: 4px;
+  border-top: 1px solid color-mix(in srgb, var(--ui-border) 70%, transparent);
+  font-variant-numeric: tabular-nums;
+}
+
+.mend-sum .mend-go,
+.mend-row .mend-go {
+  margin-left: auto;
+}
+
+.mend-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.mend-table th {
+  color: var(--ui-dim);
+  font-weight: normal;
+  font-size: 11px;
+  text-align: left;
+  padding: 1px 4px;
+}
+
+.mend-table td {
+  padding: 2px 4px;
+  border-top: 1px solid color-mix(in srgb, var(--ui-border) 40%, transparent);
+  white-space: nowrap;
+}
+
+.mend-table td.mend-name {
+  white-space: normal;
+  width: 100%;
+}
+
+.mend-num { text-align: right; }
+.mend-pick { cursor: pointer; text-decoration: underline dotted; }
+.mend-chosen td { background: color-mix(in srgb, var(--ui-accent) 14%, transparent); }
+
+.mend-passes {
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.mend-facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 2px 10px;
+  margin: 0;
+  padding: 0 4px;
+}
+
+.mend-facts dt { color: var(--ui-dim); }
+.mend-facts dd { margin: 0; }
+
+.mend-select { max-width: 100%; }
+.mend-field { display: inline-flex; align-items: center; gap: 6px; }
+.mend-input { width: 64px; }
+
+.mend-stops {
+  margin: 0;
+  padding: 0 4px 0 22px;
+}
+
+.mend-first { color: var(--ui-accent); font-weight: 600; }
+
+/* A phone: the table scrolls sideways inside the window, never the page. */
+@media (max-width: 520px) {
+  .mend-repair { overflow-x: auto; }
+}
+
 /* ---- A phone ------------------------------------------------------------- */
 
 /* The box the screen's safe-area insets are read off (`insets`, src/ui/screen.ts). */
