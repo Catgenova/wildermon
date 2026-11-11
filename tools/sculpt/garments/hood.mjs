@@ -71,7 +71,7 @@ export const DESIGN = {
     front: [[0, 2.22, 0.72], [0, 2.4, 0.42]], tip: [0, 2.56, 0.06],
     back: [[0, 2.15, -0.56], [0, 1.55, -1.08], [0, 1.1, -1.12]],
     width: [[0.4, 1.08], [0.9, 1.1], [1.5, 0.95], [1.9, 0.76], [2.2, 0.46], [2.48, 0.04]], power: 2.2,
-    THICK: 0.08, hemThick: 0.06, IN: 0.05, gap: 0.035, lift: 0.07, drop: 0.2, over: 0.06, flare: -0.05, rise: 0.1, step: 0.09, Kf: 6, K: 9, seam: 0.03,
+    THICK: 0.08, hemThick: 0.06, IN: 0.05, gap: 0.035, lift: 0.07, drop: 0.14, over: 0.06, flare: -0.05, rise: 0.1, step: 0.09, Kf: 6, K: 9, seam: 0.03,
     underGap: 0.025, underHalf: 12, underDy: 0.08,
   },
 };
@@ -461,7 +461,14 @@ export const CHIN_SHARE = { male: 0.25, female: 0.2 };
  * first beside the middle, the right half's mirrored); the lining and the frame's line follow as before. Found by
  * tools/sculpt/lowrefit.mjs.
  */
-export const REFIT = { male: {}, female: {} };
+export const REFIT = {
+  male: {},
+  female: {
+    'out:1:1': [['spine_03', 0.37], ['neck_01', 0.36], ['neck_02', 0.14], ['clavicle_l', 0.13]],
+    'out:1:2': [['spine_03', 0.53], ['neck_02', 0.28], ['clavicle_l', 0.09], ['neck_01', 0.09]],
+    'out:1:3': [['spine_03', 0.53], ['neck_02', 0.28], ['clavicle_l', 0.09], ['neck_01', 0.09]],
+  },
+};
 export function hoodWeights(rig, G, shawl, o = {}) {
   const head = rig.at.get('head'), z0 = shawl.design.z0, K = G.design.K, Kf = G.design.Kf, HS = o.headShare ?? HEAD_SHARE[rig.who];
   const ROW_CAP = o.rowCap ?? ROW_CAP0, FRONT_SHARE = o.frontShare ?? FRONT_SHARE0, CHIN = o.chinShare ?? CHIN_SHARE[rig.who];
