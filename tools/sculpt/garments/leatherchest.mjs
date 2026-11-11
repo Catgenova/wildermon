@@ -1041,7 +1041,8 @@ function armPieces(G, rig, D, S) {
   {
     const cOut = bTh.reduce((best, a, k) => (Math.sin(a * Math.PI / 180) > Math.sin(bTh[best] * Math.PI / 180) ? k : best), 0);
     const R = Br.rune, L = Br.t[1] - Br.t[0], rf = (t) => ((t - Br.t[0]) / L) * 2;
-    const h0 = gridAt(bracer, rf(R.t), cOut + 0.5), along = unit(fo.a), side = unit(cross(h0.n, along));
+    // (`turn`: columns round the bracer from its outside, + toward its front, as the sheet shows it from the front)
+    const h0 = gridAt(bracer, rf(R.t), cOut + 0.5 + (R.turn ?? 0) / (360 / bTh.length)), along = unit(fo.a), side = unit(cross(h0.n, along));
     const at = (u, v) => { const p = add(add(h0.q, mul(along, v)), mul(side, u)); const h = onPlate(bracer, p, h0.n); return { q: h.q, n: h.n }; };
     stripOn(G, Array.from({ length: 12 }, (_, k) => { const a = (k / 12) * 2 * Math.PI; return at(Math.cos(a) * R.r, Math.sin(a) * R.r * 1.15); }), R.w, 'rune', 'rune band', bracer.wt, { closed: true, h: 0.022 });
     const t0 = R.bar[0] - R.t, t1 = R.bar[1] - R.t;
