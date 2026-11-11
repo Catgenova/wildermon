@@ -20,7 +20,8 @@ def inset(P, b):
     return out
 faces = []  # (kind, [points])
 from shapely.geometry import Polygon, LineString
-def strips(P, GRID=GRID):
+def strips(P, GRID=None):
+    GRID = GRID or globals()["GRID"]
     # (slices across the polygon's long axis through each corner and every GRID between; each slice cut into the same
     # number of points, quads between neighbours; None where a slice meets the outline other than in one segment)
     A = np.array(P); c = A.mean(0); w, V = np.linalg.eigh(np.cov((A - c).T)); ax = V[:, 1]; nx = V[:, 0]
