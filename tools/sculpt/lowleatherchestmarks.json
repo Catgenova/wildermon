@@ -1,0 +1,17 @@
+{
+ "about": "Landmarks on the leather chest sheet (tools/sculpt/ref/leather-chest.png, 1536 x 1024 px), read off at 3x: per body and view, the elbows (the arm's middle where the base sleeve ends, just under the elbow's bend) and wrists (the wrist band's middle) as [x, y], the neck's middle across (the collar's middle, x only); 'l' and 'r' the figure's own left and right. Views are the sheet's turns: front 0, q3 45 (the right side toward us), side 270 (the left side), r3 225 (the left side and the back), back 180.",
+ "male": {
+  "front": { "elbow": { "r": [50, 243], "l": [200, 243] }, "wrist": { "r": [40, 303], "l": [208, 303] }, "neck": 123.5 },
+  "q3": { "elbow": { "r": [245, 252], "l": [358, 248] }, "wrist": { "r": [250, 305], "l": [365, 300] }, "neck": 300 },
+  "side": { "elbow": { "l": [453, 248] }, "wrist": { "l": [453, 303] }, "neck": 450 },
+  "r3": { "elbow": { "l": [523, 252], "r": [630, 250] }, "wrist": { "l": [508, 300], "r": [635, 302] }, "neck": 582 },
+  "back": { "elbow": { "l": [667, 245], "r": [808, 245] }, "wrist": { "l": [670, 295], "r": [807, 295] }, "neck": 740 }
+ },
+ "female": {
+  "front": { "elbow": { "r": [56, 562], "l": [187, 562] }, "wrist": { "r": [44, 613], "l": [198, 613] }, "neck": 120 },
+  "q3": { "elbow": { "r": [240, 562], "l": [347, 562] }, "wrist": { "r": [236, 613], "l": [360, 612] }, "neck": 292 },
+  "side": { "elbow": { "l": [447, 563] }, "wrist": { "l": [447, 615] }, "neck": 442 },
+  "r3": { "elbow": { "l": [532, 563], "r": [630, 567] }, "wrist": { "l": [514, 612], "r": [642, 613] }, "neck": 585 },
+  "back": { "elbow": { "l": [688, 562], "r": [806, 562] }, "wrist": { "l": [680, 612], "r": [813, 612] }, "neck": 745 }
+ }
+}
