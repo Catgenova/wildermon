@@ -1210,7 +1210,10 @@ export function designOf(who) {
   if (!existsSync(f)) return D;
   const F = JSON.parse(readFileSync(f, 'utf8'))[who] ?? {};
   const over = (a, b) => { for (const [k, v] of Object.entries(b)) a[k] = v && typeof v === 'object' && !Array.isArray(v) && a[k] && typeof a[k] === 'object' && !Array.isArray(a[k]) ? over(a[k], v) : v; return a; };
-  return over(D, F);
+  over(D, F);
+  // (LCHEST_OVER: JSON { male: {...}, female: {...} } laid over the design last, for trying a change in the shot tools)
+  if (typeof process !== 'undefined' && process.env?.LCHEST_OVER) over(D, JSON.parse(process.env.LCHEST_OVER)[who] ?? {});
+  return D;
 }
 /** The collar's frame: the neck's axis (its z) and reach (the furthest of the neck's samples round it). */
 export function collarFrame(D, S) {
