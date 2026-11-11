@@ -93,7 +93,7 @@ function dress(who, pose) {
   const { rig, G } = M[who];
   const f = posed(rig, pose), P0 = skin(rig, f), PB = ground(rig, P0), dy = PB[0][1] - P0[0][1];
   const PG = skinGarment(rig, f, G).map((p) => [p[0], p[1] + dy, p[2]]);
-  return { PB, PG };
+  return { PB, PG, dy };
 }
 /** Which piece a triangle is of (the plate's tag, decals with their plate), and which bones move it. */
 const pieceOf = (G, t) => G.polys[G.tris[t].poly].tag;
@@ -141,7 +141,7 @@ async function sheet(file, wire, look = 'plain') {
       const sF = (F.wrist - F.chin) / (0 - J.wrist[1]);
       const dx = (x + w / 2 - v.cx) / sF, dy = -(y + h / 2 - F.chin) / sF, ca = Math.cos(sy * Math.PI / 180), sa = Math.sin(sy * Math.PI / 180);
       // (the sheet's u = cx + s (cos·x + sin·z); the page's x = cos(-yaw)·x - sin(-yaw)·z: the page's yaw is minus the sheet's)
-      cells.push({ meshes: [body, arm], cam: { yaw: -sy, pitch: 0, s: sF * k, c: [dx * ca, dy, dx * sa] }, box: [i * cw, top + (r * 2 + 1) * ch, cw, ch], label: `${who} ${lab}` });
+      cells.push({ meshes: [body, arm], cam: { yaw: -sy, pitch: 0, s: sF * k, c: [dx * ca, dy + d.dy, dx * sa] }, box: [i * cw, top + (r * 2 + 1) * ch, cw, ch], label: `${who} ${lab}` });
     });
     const parts = {};
     for (const t of G.tris) { const p = G.polys[t.poly]; if (G.side[p.v[0]] === 'L' || !/pauldron|zigzag|bracer|rune|band$|sleeve/.test(p.tag)) parts[p.tag] = (parts[p.tag] ?? 0) + 1; }
@@ -160,7 +160,7 @@ async function pair(file, view = 'front') {
     const sF = (F.wrist - F.chin) / (0 - J.wrist[1]);
     const dx = (x + w / 2 - v.cx) / sF, dy = -(y + h / 2 - F.chin) / sF, ca = Math.cos(sy * Math.PI / 180), sa = Math.sin(sy * Math.PI / 180);
     imgs.push({ src: SHEET, size: [1536, 1024], crop: CROPS[who][i], box: [r * 3 * cw, top, cw, ch] });
-    SHOW.forEach((look, l) => cells.push({ meshes: [bodyMesh(who, d.PB, keep), armourMesh(who, d.PG, look)], cam: { yaw: -sy, pitch: 0, s: sF * k, c: [dx * ca, dy, dx * sa] }, box: [(r * 3 + 1 + l) * cw, top, cw, ch], label: `${who} ${view}${look === 'plain' ? '' : ' (enchanted)'}` }));
+    SHOW.forEach((look, l) => cells.push({ meshes: [bodyMesh(who, d.PB, keep), armourMesh(who, d.PG, look)], cam: { yaw: -sy, pitch: 0, s: sF * k, c: [dx * ca, dy + d.dy, dx * sa] }, box: [(r * 3 + 1 + l) * cw, top, cw, ch], label: `${who} ${view}${look === 'plain' ? '' : ' (enchanted)'}` }));
   });
   await shoot(6 * cw, top + ch, cells, file, { imgs, texts: [{ css: 'left:10px;top:6px', html: `Leather chest & arms, ${tag}: the sheet's ${view} view and the model at the sheet's framing (chin and wrists on the sheet's rows)` }] });
 }
