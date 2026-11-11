@@ -33,6 +33,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { buildArmBody } from './lowarm.mjs';
+import { paintUnder } from './lowunder.mjs';
 import { nameVerts, loopSpecs as hisLoops } from './lowloops.mjs';
 import { loopSpecs as herLoops } from './lowloops-female.mjs';
 
@@ -860,13 +861,16 @@ export function rigData(rig) {
 export function gameAsset(rig, rest) {
   const { B, bones } = rig;
   const r5 = (x) => +x.toFixed(5);
-  const MAT = { skin: 0, brow: 1, lid: 1, pupil: 2 };
+  // (9 the undergarment, painted on the body's own polygons by tools/sculpt/lowunder.mjs: some split, their pieces after
+  // the body's, `split`)
+  const MAT = { skin: 0, brow: 1, lid: 1, pupil: 2 }, UNDER = 9, U = paintUnder(B, rig.who);
   return {
     built: 'node tools/sculpt/lowrig.mjs (tools/sculpt/lowrig.mjs gameAsset)',
     who: rig.who, floor: rig.J.floor, T,
     verts: B.verts.flat().map(r5),
-    polys: B.polys.map((p) => (p.nv ? [p.v, MAT[p.mat] ?? 0, p.nv] : [p.v, MAT[p.mat] ?? 0])),
-    tris: B.tris.flatMap((t) => [...t.v, t.poly]),
+    polys: U.polys.map((p, i) => { const m = U.paint.has(i) ? UNDER : MAT[p.mat] ?? 0; return p.nv ? [p.v, m, p.nv] : [p.v, m]; }),
+    tris: U.tris.flatMap((t) => [...t.v, t.poly]),
+    ...(U.from.length ? { split: U.from } : {}),
     weights: rig.vw.map((l) => l.flatMap(([b, w]) => [b, w])),
     soles: B.names.map((n, i) => (/^so\d\.[LR]$/.test(n) ? i : -1)).filter((i) => i >= 0),
     bones: bones.map((b) => ({ name: b.name, p: b.p, kind: b.kind, head: b.head.map(r5), R: b.R.map(r5), ...(b.driver ? { from: b.from, drive: b.driver.kind, f: b.driver.f } : {}), ...(b.game ? { game: b.game } : {}) })),
