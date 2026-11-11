@@ -465,8 +465,8 @@ export const REFIT = {
   male: {},
   female: {
     'out:1:1': [['spine_03', 0.37], ['neck_01', 0.36], ['neck_02', 0.14], ['clavicle_l', 0.13]],
-    'out:1:2': [['spine_03', 0.53], ['neck_02', 0.28], ['clavicle_l', 0.09], ['neck_01', 0.09]],
-    'out:1:3': [['spine_03', 0.53], ['neck_02', 0.28], ['clavicle_l', 0.09], ['neck_01', 0.09]],
+    'out:1:2': [['spine_03', 0.59], ['neck_02', 0.28], ['neck_01', 0.09], ['clavicle_l', 0.03]],
+    'out:1:3': [['spine_03', 0.57], ['neck_02', 0.28], ['neck_01', 0.09], ['clavicle_l', 0.05]],
   },
 };
 export function hoodWeights(rig, G, shawl, o = {}) {
