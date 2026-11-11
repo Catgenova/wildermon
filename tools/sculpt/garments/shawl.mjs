@@ -1,6 +1,7 @@
 // The shawl of the first outfit (tools/sculpt/ref/outfit1-shawl.png, worn in tools/sculpt/ref/outfit1-lineup.png): a
 // layered cowl round the neck over a short poncho cape, its hem a deep V in front and a shallower one behind, a tan
-// border with a row of tan teeth along the hem. (The sheet's emblem and its shirt's split collar are not part of it.)
+// border with a row of tan teeth along the hem, and the sheet's emblem (a ring and three stripes, raised) on the chest.
+// (The sheet's shirt's split collar is the tunic's.)
 // Fitted to each low-poly body from the one design (DESIGN, per body), skinned to its rig.
 //
 //   buildShawl(rig) → { verts, polys: [{ v, mat, part, tag }], tris, part, cols, rings, apex, design }
@@ -24,16 +25,33 @@
 // clearance OUT; the underside is the outside moved in by THICK, so the body is at least OUT - THICK under it. The
 // cowl is two rolls (ellipses in the section) lying on the body's own line down from the neck's foot (the ring
 // nm0..nm5): down the chest in front, out over the shoulder at the side, down the back behind (DESIGN.roll), each
-// point then pushed out until it clears the body. 20 columns, 14 rings: 600 triangles. Materials: fabric, trim,
-// pattern (the cream between the teeth), inner (the underside and the cowl's inside).
-import { offPlane, TOL, samplesOf, envelope, drape, reachAt, atRY, dirOf, meshOf, orient, trisOf, transferWeights, garmentBone, sub, lerp, applyRefit } from '../lowgarment.mjs';
+// point then pushed out until it clears the body. 20 columns, 14 rings: 600 triangles; the emblem (emblemOn) on them.
+// Materials: fabric, trim, pattern (the cream between the teeth), inner (the underside and the cowl's inside), rune (the
+// teeth, the line over them and the emblem: the trim's colour plain, glowing enchanted).
+import { offPlane, TOL, samplesOf, envelope, drape, reachAt, atRY, dirOf, meshOf, orient, trisOf, transferWeights, garmentBone, skinGarment, garmentFrames, sub, add, mul, dot, cross, unit, lerp, applyRefit } from '../lowgarment.mjs';
+import { posed, armsOut, axisAngle, mm, tr } from '../lowrig.mjs';
 
 export const MATS = {
   fabric: [0.72, 0.62, 0.56],
   trim: [0.603, 0.421, 0.294],
   pattern: [0.72, 0.62, 0.56],
   inner: [0.51, 0.356, 0.268],
+  rune: [0.603, 0.421, 0.294],
 };
+
+/** The glow of an enchanted piece: the leather set's (garments/leatherchest.mjs MATS.glow), so the game gives both one slot. */
+export const GLOW = [0.996, 0.792, 0.427];
+/**
+ * A piece of the first outfit plain and enchanted (lowgarment.mjs garmentAsset `looks`): plain, every material its colour,
+ * lit; enchanted, the materials named rune... (the trim lines and patterns: rune the trim's tan, runeStrap the boots'
+ * cream straps) unlit at GLOW, the rest as plain.
+ */
+export const clothLooks = (mats) => ({
+  plain: Object.fromEntries(Object.entries(mats).map(([n, c]) => [n, { c, kind: 0 }])),
+  enchanted: Object.fromEntries(Object.entries(mats).map(([n, c]) => [n, /^rune/.test(n) ? { c: GLOW, kind: 1 } : { c, kind: 0 }])),
+});
+/** Plain and enchanted: the teeth, the line over them and the emblem glowing enchanted. */
+export const LOOKS = clothLooks(MATS);
 
 /**
  * The design per body: values [front, side, back] blend round the azimuth; heights are the body's y, lengths its units.
@@ -69,6 +87,7 @@ export const DESIGN = {
     dip: 0.12,
     roll: { lean: [0.3, 0.2, 0.3], flat: [0.75, 0.95, 1.1], at: [0.6, 0.45, -0.15], drop: [0.1, 0, 0.3], ru: [0.4, 0.27, 0.5], rl: [0.4, 0.2, 0.4], gap: 1.05, crease: 0.45 },
     turns: { d: 165, u1: 95, u2: 15, l1: 50, l2: -25, T0: -115 },
+    emblem: { side: 1, az: 23, y: -1.92, r: 0.32, w: 0.155, seg: 14, h: 0.04, lift: 0.015, step: 0.18, stripes: { w: 0.105, gap: 0.25, lean: 10 }, up: { w: 0.105, from: 55, to: 80, len: 1.2, clear: 0.08 } },
   },
   female: {
     z0: -0.14, front: 5, back: 5, OUT: 0.14, IN: 0.045, THICK: 0.095, bevel: 0.08, flare: [0.4, 0.15, 0.4], soften: 0.85,
@@ -78,6 +97,7 @@ export const DESIGN = {
     dip: 0.1,
     roll: { lean: [0.3, 0.2, 0.3], flat: [0.75, 1.0, 1.1], at: [0.5, 0.25, -0.12], drop: [0.08, 0, 0.25], ru: [0.36, 0.23, 0.42], rl: [0.34, 0.17, 0.34], gap: 1.05, crease: 0.45 },
     turns: { d: 165, u1: 95, u2: 15, l1: 50, l2: -25, T0: -115 },
+    emblem: { side: 1, az: 24, y: -1.74, r: 0.25, w: 0.125, seg: 14, h: 0.035, lift: 0.015, step: 0.15, stripes: { w: 0.085, gap: 0.2, lean: 10 }, up: { w: 0.085, from: 55, to: 80, len: 1.0, clear: 0.08 } },
   },
 };
 
@@ -291,12 +311,12 @@ function meshOfShawl(rig, D, cols, S) {
   G.tag = 'teeth';
   for (let k = 0; k < N; k++) {
     const j = (k + 1) % N, A = R.T3, H = R.T5, x = apex[k];
-    G.poly([A[k], A[j], x], 'trim', 'cape');
+    G.poly([A[k], A[j], x], 'rune', 'cape');
     G.poly([A[k], x, H[k]], 'pattern', 'cape');
     G.poly([x, H[j], H[k]], 'pattern', 'cape');
     G.poly([x, A[j], H[j]], 'pattern', 'cape');
   }
-  band(R.T3, R.T2, 'trim', 'cape', 'T3-T2');
+  band(R.T3, R.T2, 'rune', 'cape', 'T3-T2');
   band(R.T2, R.T1, 'fabric', 'cape', 'T2-T1');
   band(R.T1, R.T0, 'fabric', 'cape', 'T1-T0');
   [['T0', ...COWL, 'd']].forEach((L) => L.slice(1).forEach((key, i) => band(R[L[i]], R[key], 'fabric', 'cowl', `${L[i]}-${key}`)));
@@ -304,11 +324,149 @@ function meshOfShawl(rig, D, cols, S) {
   band(R.IT, R.I1, 'inner', 'cape', 'IT-I1', -1);
   band(R.I1, R.I5, 'inner', 'cape', 'I1-I5', -1);
   band(R.I5, R.T5, 'trim', 'cape', 'lip');
+  if (D.emblem) emblemOn(G, D);
   const axisOut = (p) => [p[0], 0, p[2] - z0];
   orient(G, axisOut);
   G.tris = trisOf(G);
   G.cols = cols; G.design = D; G.rings = R; G.apex = apex;
   return G;
+}
+
+/* ---- the emblem ------------------------------------------------------------------------------------------------------ */
+/** Where the ray o + t d (t > 0) first meets triangle abc: [t, [wa, wb, wc]], or null (Möller–Trumbore). */
+function rayTri(o, d, a, b, c) {
+  const e1 = sub(b, a), e2 = sub(c, a), h = cross(d, e2), det = dot(e1, h);
+  if (Math.abs(det) < 1e-12) return null;
+  const f = 1 / det, s = sub(o, a), u = f * dot(s, h);
+  if (u < -1e-9 || u > 1 + 1e-9) return null;
+  const q = cross(s, e1), v = f * dot(d, q);
+  if (v < -1e-9 || u + v > 1 + 1e-9) return null;
+  const t = f * dot(e2, q);
+  return t > 1e-9 ? [t, [1 - u - v, u, v]] : null;
+}
+/** The cape's outside (the emblem lies on it), the rows below the border's line, and those it may run up into. */
+const CAPE_OUT = new Set(['teeth', 'T3-T2', 'T2-T1', 'T1-T0']), BELOW = new Set(['teeth', 'T3-T2']), UP_ON = new Set(['T2-T1', 'T1-T0']);
+
+/**
+ * The emblem (DESIGN.emblem) on the cape's outside: a ring and three stripes, each a raised strip (its top and its two
+ * walls, open underneath against the cloth) of material rune, tagged 'emblem'. Laid out flat in the plane touching the
+ * cape at the ring's centre (u across toward the side, v up), each corner cast onto the cape along that plane's normal and
+ * stood `lift` off it along its triangle's normal, the strip's top `h` over that (along the section's normal smoothed
+ * along the strip); more sections where a wall would sag into a fold of the cloth, and a foot raised further where an
+ * edge still would, so no edge of it dips into the cloth; it stays off the cowl by `up.clear`. The two stripes down end on the border's line (T2), each
+ * wall where it meets it; the one up where the cloth goes under the cowl (`clear` short of it) or at its length. Each
+ * vertex keeps the cape triangle under it and its place there (G.anchor), for its weights (shawlWeights).
+ */
+export function emblemOn(G, D) {
+  const E = D.emblem, z0 = D.z0, sd = E.side ?? 1, Y = [0, 1, 0];
+  const fan = (pi) => { const p = G.polys[pi], o = []; for (let k = 1; k + 1 < p.v.length; k++) o.push({ v: [p.v[0], p.v[k], p.v[k + 1]], tag: p.tag }); return o; };
+  const cape = [], cowl = [];
+  G.polys.forEach((p, pi) => { if (CAPE_OUT.has(p.tag)) cape.push(...fan(pi)); else if (p.part === 'cowl' && p.tag !== 'd-IT') cowl.push(...fan(pi)); });
+  for (const t of cape) {
+    const [a, b, c] = t.v.map((i) => G.verts[i]), m = mul(add(add(a, b), c), 1 / 3);
+    let n = unit(cross(sub(b, a), sub(c, a)));
+    if (dot(n, [m[0], 0, m[2] - z0]) < 0) n = mul(n, -1);
+    t.n = n;
+  }
+  // (the first triangle of a set the ray from o along d meets)
+  const cast = (set, o, d) => {
+    let best = null;
+    for (const t of set) { const h = rayTri(o, d, ...t.v.map((i) => G.verts[i])); if (h && (!best || h[0] < best.t)) best = { t: h[0], w: h[1], tri: t }; }
+    return best;
+  };
+  // (the cape under a point: where the line through it along n meets the cape nearest it, within 1 either way: the point
+  // there, its triangle's normal, its tag, its corners' places)
+  const under = (p, n) => {
+    let h = null;
+    for (const t of cape) { const x = rayTri(add(p, mul(n, 1)), mul(n, -1), ...t.v.map((i) => G.verts[i])); if (x && x[0] < 2 && (!h || Math.abs(x[0] - 1) < Math.abs(h.t - 1))) h = { t: x[0], w: x[1], tri: t }; }
+    return h && { q: add(p, mul(n, 1 - h.t)), n: h.tri.n, tag: h.tri.tag, v: h.tri.v, w: h.w };
+  };
+  const toCowl = (q, n) => cast(cowl, q, n)?.t ?? Infinity;
+  // the plane at the ring's centre
+  const C0 = cast(cape, atRY(E.az * sd, 8, E.y, z0), mul(dirOf(E.az * sd), -1));
+  if (!C0) throw new Error('emblem: no cape at the ring\'s centre');
+  const O = add(atRY(E.az * sd, 8, E.y, z0), mul(dirOf(E.az * sd), -C0.t)), N0 = C0.tri.n;
+  const e1 = mul(unit(cross(Y, N0)), sd), e2 = unit(cross(N0, unit(cross(Y, N0))));
+  const at = ([u, v]) => under(add(O, add(mul(e1, u), mul(e2, v))), N0);
+  const rep = (G.emblem = { at: O, az: E.az * sd, pieces: [], cowl: Infinity, missing: 0 });
+  const need = E.lift + E.h + (E.up?.clear ?? 0.03);
+  // (a corner: its cast, the foot's lift above it)
+  const corner = (uv) => { const c = at(uv); if (!c) { rep.missing++; return null; } c.up = E.lift; rep.cowl = Math.min(rep.cowl, toCowl(c.q, c.n)); return c; };
+  G.anchor ??= new Map();
+  // a strip through its sections [[left uv, right uv], ...], closed (the ring) or capped at both ends
+  // (the sag under a wall from a to b, each `lift` off the cloth: how far below `lift` its middle comes, at most)
+  const sag = (a, b) => Math.max(0, ...[0.25, 0.5, 0.75].map((t) => { const n = unit(lerp(a.n, b.n, t)), m = lerp(add(a.q, mul(a.n, E.lift)), add(b.q, mul(b.n, E.lift)), t), h = under(m, n); return h ? E.lift - dot(sub(m, h.q), n) : 0; }));
+  // a strip through its sections sec(t) = [left uv, right uv], t from 0 to 1 (the ring closed: 1 is 0 again; the stripes
+  // capped at both ends), n of them, and one more halfway along where a wall would sag into the cloth between two
+  const strip = (sec, n, closed, name) => {
+    let ts = Array.from({ length: n + 1 }, (_, k) => k / n);
+    for (let it = 0; it < 3; it++) {
+      const more = [];
+      for (let k = 0; k + 1 < ts.length; k++) {
+        const A = sec(ts[k]).map(at), B = sec(ts[k + 1]).map(at);
+        const long = Math.hypot(...sec(ts[k])[0].map((x, j) => x - sec(ts[k + 1])[0][j])) > 2 * E.lift + 0.05;
+        if (long && A.every(Boolean) && B.every(Boolean) && Math.max(sag(A[0], B[0]), sag(A[1], B[1])) > E.lift / 4) more.push((ts[k] + ts[k + 1]) / 2);
+      }
+      if (!more.length) break;
+      ts = [...ts, ...more].sort((a, b) => a - b);
+    }
+    if (closed) ts.pop();
+    const S = ts.map(sec).map(([l, r]) => [corner(l), corner(r)]);
+    if (S.some(([l, r]) => !l || !r)) throw new Error(`emblem: ${name} off the cape`);
+    // (and clear of the cowl over it)
+    if (S.some((sc) => sc.some((c) => toCowl(c.q, c.n) <= need))) throw new Error(`emblem: ${name} under the cowl`);
+    // (the foot raised where the cloth folds outward under an edge: across each section and along each wall)
+    const edges = [];
+    S.forEach(([l, r], k) => { edges.push([l, r]); if (closed || k + 1 < S.length) { const [l2, r2] = S[(k + 1) % S.length]; edges.push([l, l2], [r, r2]); } });
+    for (let it = 0; it < 4; it++) for (const [a, b] of edges) for (const t of [0.2, 0.4, 0.6, 0.8]) {
+      const n = unit(lerp(a.n, b.n, t)), m = lerp(add(a.q, mul(a.n, a.up)), add(b.q, mul(b.n, b.up)), t), h = under(m, n);
+      if (!h) continue;
+      const gap = dot(sub(m, h.q), n);
+      if (gap < E.lift - 1e-4) { a.up += E.lift - gap; b.up += E.lift - gap; }
+    }
+    // the vertices: the foot and the top of each corner, each anchored on its triangle; the top over the foot along the
+    // section's normal smoothed along the strip (no kink in its top where the cloth folds under it)
+    const v0 = G.verts.length, ns = S.map(([l, r]) => unit(add(l.n, r.n)));
+    const nsm = ns.map((n, k) => { const a = ns[closed ? (k + ns.length - 1) % ns.length : Math.max(0, k - 1)], b = ns[closed ? (k + 1) % ns.length : Math.min(ns.length - 1, k + 1)]; return unit(add(add(a, b), mul(n, 2))); });
+    const V = S.map((sc, k) => sc.map((c) => { const f = add(c.q, mul(c.n, c.up)); return [f, add(f, mul(nsm[k], E.h))].map((p) => { const i = G.vert(p, 'emblem'); G.anchor.set(i, { v: c.v, w: c.w }); return i; }); }));
+    G.tag = 'emblem';
+    const nv = V.length;
+    for (let k = 0; k < (closed ? nv : nv - 1); k++) {
+      const [[lf, lt], [rf, rt]] = V[k], [[lf2, lt2], [rf2, rt2]] = V[(k + 1) % nv];
+      G.poly([lt, rt, rt2, lt2], 'rune', 'emblem');
+      G.poly([lf, lt, lt2, lf2], 'rune', 'emblem');
+      G.poly([rt, rf, rf2, rt2], 'rune', 'emblem');
+    }
+    if (!closed) for (const [[lf, lt], [rf, rt]] of [V[0], V[nv - 1]]) G.poly([lf, rf, rt, lt], 'rune', 'emblem');
+    rep.pieces.push({ name, verts: [v0, G.verts.length], sections: nv, foot: +Math.max(...S.flat().map((c) => c.up)).toFixed(4) });
+  };
+  const P = (u, v) => [u, v], dir = (deg) => [Math.cos(deg * Math.PI / 180), Math.sin(deg * Math.PI / 180)];
+  const add2 = (a, b) => [a[0] + b[0], a[1] + b[1]], mul2 = (a, k) => [a[0] * k, a[1] * k];
+  // (the last t from t0 a test holds, in steps then halved)
+  const reach = (ok, t0, t1, dt = 0.01) => { let t = t0; while (t + dt <= t1 && ok(t + dt)) t += dt; let lo = t, hi = Math.min(t1, t + dt); for (let k = 0; k < 12 && hi > lo; k++) { const m = (lo + hi) / 2; if (ok(m)) lo = m; else hi = m; } return lo; };
+  // the ring
+  const rIn = E.r - E.w / 2, rOut = E.r + E.w / 2, eps = 0.012;
+  strip((t) => { const a = dir((t + 0.5 / E.seg) * 360); return [mul2(a, rIn), mul2(a, rOut)]; }, E.seg, true, 'ring');
+  // the two stripes down to the border's line
+  const St = E.stripes, phi = -90 - St.lean, d2 = dir(phi), p2 = dir(phi + 90);
+  for (const o of [-St.gap / 2, St.gap / 2]) {
+    const offs = [o - St.w / 2, o + St.w / 2], m = Math.min(...offs.map(Math.abs));
+    const t0 = (offs[0] < 0 && offs[1] > 0 ? rOut : Math.sqrt(Math.max(0, rOut * rOut - m * m))) + eps;
+    const line = (off) => (t) => add2(mul2(d2, t), mul2(p2, off));
+    const ends = offs.map((off) => reach((t) => { const c = at(line(off)(t)); return !!c && !BELOW.has(c.tag); }, t0, 4));
+    const n = Math.max(1, Math.ceil(((ends[0] + ends[1]) / 2 - t0) / E.step));
+    strip((t) => offs.map((off, j) => line(off)(t0 + (ends[j] - t0) * t)), n, false, `stripe ${o < 0 ? 'in' : 'out'}`);
+  }
+  // the one up toward the shoulder: its middle line from the ring's edge, turning from `from` to `to`
+  const U = E.up, ds = 0.01, mid = [mul2(dir(U.from), rOut + eps)], ang = [U.from];
+  for (let s = ds; s <= U.len + 1e-9; s += ds) { const a = U.from + (U.to - U.from) * Math.min(1, s / U.len); ang.push(a); mid.push(add2(mid[mid.length - 1], mul2(dir(a), ds))); }
+  const side = (off) => (s) => { const k = Math.min(mid.length - 1, Math.round(s / ds)); return add2(mid[k], mul2(dir(ang[k] + 90), off)); };
+  const okUp = (off) => (s) => { const c = at(side(off)(s)); return !!c && UP_ON.has(c.tag) && toCowl(c.q, c.n) > need; };
+  const ends = [U.w / 2, -U.w / 2].map((off) => reach(okUp(off), 0, U.len));
+  const n = Math.max(1, Math.ceil((ends[0] + ends[1]) / 2 / E.step));
+  strip((t) => [U.w / 2, -U.w / 2].map((off, j) => side(off)(ends[j] * t)), n, false, 'stripe up');
+  rep.cowl = +rep.cowl.toFixed(3);
+  G.tag = undefined;
 }
 
 /**
@@ -382,8 +540,75 @@ export function shawlWeights(rig, G, o = {}) {
     for (const key of ['T2', 'T3']) vw[R[key][k]] = mix(vw[R.T5[k]], vw[R.T1[k]], len(R.T5[k], R[key][k]) / L);
   }
   for (let k = 0; k < N; k++) vw[G.apex[k]] = mix(vw[R.T5[k]], vw[R.T5[(k + 1) % N]], 0.5);
+  if (G.anchor) emblemWeights(rig, G, vw);
   return vw;
 }
+
+/**
+ * The poses the emblem's weights are fitted over (emblemWeights): both arms forward, back and out by steps, swung
+ * opposite as in a walk with the chest turned, raised forward and out together; the chest bent and leaned, the
+ * shoulders raised; hers as the game holds her arms (lowrig.mjs armsOut).
+ */
+export function fitPoses(rig) {
+  const I = [1, 0, 0, 0, 1, 0, 0, 0, 1], X = [1, 0, 0], Y = [0, 1, 0], Z = [0, 0, 1];
+  const turn = (bone, axis, deg) => { const R = rig.bones[rig.at.get(bone)].R; return mm(tr(R), mm(axisAngle(axis, deg), R)); };
+  const arm = (p, s, bone, axis, deg) => { const n = `${bone}_${s}`; p[n] = mm(s === 'l' ? turn(n, axis, deg) : turn(n, [-axis[0], axis[1], axis[2]], -deg), p[n] ?? I); return p; };
+  const both = (p, bone, axis, deg) => arm(arm(p, 'l', bone, axis, deg), 'r', bone, axis, deg);
+  const list = [];
+  for (const d of [-84, -60, -40, -20, 20, 35]) list.push(both({}, 'upperarm', X, d));
+  for (const d of [20, 45, 74]) list.push(both({}, 'upperarm', Z, d));
+  for (const d of [15, 30]) for (const t of [-8, 8]) list.push(arm(arm({ spine_03: turn('spine_03', Y, t) }, 'l', 'upperarm', X, d), 'r', 'upperarm', X, -d), arm(arm({ spine_03: turn('spine_03', Y, t) }, 'l', 'upperarm', X, -d), 'r', 'upperarm', X, d));
+  list.push(both(both({}, 'upperarm', X, -50), 'upperarm', Z, 30), both(both(both({}, 'clavicle', Y, -14), 'upperarm', X, -84), 'upperarm', Y, -2));
+  // (and the chest bent and the shoulders raised, as the idle breathes and sways)
+  for (const d of [-6, 6]) list.push({ spine_02: turn('spine_02', X, d), spine_03: turn('spine_03', X, d) }, { spine_03: turn('spine_03', Z, d) }, both({}, 'clavicle', Z, d * 1.5));
+  return rig.who === 'female' ? list.map((p) => armsOut(rig, p)) : list;
+}
+/**
+ * The emblem's weights: each vertex's those that keep it where it lies on the cape (its point on the triangle under it,
+ * as far off it along the triangle's normal as at rest) over the arm poses (fitPoses), least squares, among the bones of
+ * that triangle's corners, at most four; drawn toward the corners' weights blended by its place there (which a weight
+ * the poses leave free keeps). Blended weights alone let it sink into the cloth as the cape's bones turn under it.
+ */
+export function emblemWeights(rig, G, vw, { lambda = 0.005, iters = 6000, normal = 25 } = {}) {
+  const blend = (a) => { const o = new Map(); a.v.forEach((j, k) => { for (const [b, w] of vw[j]) o.set(b, (o.get(b) ?? 0) + w * a.w[k]); }); return o; };
+  const poses = fitPoses(rig).map((p) => {
+    const F = posed(rig, p);
+    return { P: skinGarment(rig, F, G, vw), F: garmentFrames(rig, G, F) };
+  });
+  const bones = [...rig.bones, ...(G.bones ?? [])];
+  // (w on the simplex: Duchi's projection)
+  const simplex = (w) => { const u = [...w].sort((a, b) => b - a); let c = 0, th = 0; for (let k = 0; k < u.length; k++) { c += u[k]; const t = (c - 1) / (k + 1); if (u[k] - t > 0) th = t; } return w.map((x) => Math.max(0, x - th)); };
+  for (const [i, a] of G.anchor) {
+    const w0m = blend(a), cand = [...w0m.keys()], p = G.verts[i];
+    // (at rest: its height over the triangle; in each pose its place there, and each candidate bone's carry of it)
+    const [A0, B0, C0] = a.v.map((j) => G.verts[j]), n0 = unit(cross(sub(B0, A0), sub(C0, A0))), h = dot(n0, sub(p, add(add(mul(A0, a.w[0]), mul(B0, a.w[1])), mul(C0, a.w[2]))));
+    const rows = [], rhs = [];
+    for (const { P, F } of poses) {
+      const [A, B, C] = a.v.map((j) => P[j]), n = unit(cross(sub(B, A), sub(C, A))), x = add(add(add(mul(A, a.w[0]), mul(B, a.w[1])), mul(C, a.w[2])), mul(n, h));
+      const Y = cand.map((b) => add(mv3(F[b].S, sub(p, bones[b].head)), F[b].P));
+      // (along the triangle's normal `normal` times as much as across it: sinking matters, sliding less)
+      const t1 = unit(sub(B, A)), t2 = cross(n, t1);
+      for (const [d, k] of [[n, normal], [t1, 1], [t2, 1]]) { rows.push(Y.map((y) => k * dot(y, d))); rhs.push(k * dot(x, d)); }
+    }
+    const fit = (keep) => {
+      const ix = cand.map((_, k) => k).filter((k) => keep.includes(k)), w0 = ix.map((k) => w0m.get(cand[k]));
+      let w = simplex(w0.map((x) => x));
+      const L = rows.reduce((s2, r) => s2 + ix.reduce((s3, k) => s3 + r[k] * r[k], 0), 0) + lambda * rhs.length;
+      for (let it = 0; it < iters; it++) {
+        const g = ix.map((_, m) => lambda * rhs.length * (w[m] - w0[m]));
+        rows.forEach((r, q) => { const e = ix.reduce((s2, k, m) => s2 + r[k] * w[m], 0) - rhs[q]; ix.forEach((k, m) => { g[m] += r[k] * e; }); });
+        w = simplex(w.map((x, m) => x - g[m] / L));
+      }
+      return ix.map((k, m) => [k, w[m]]);
+    };
+    let w = fit(cand.map((_, k) => k));
+    if (w.filter(([, x]) => x > 1e-4).length > 4) w = fit(w.sort((x, y) => y[1] - x[1]).slice(0, 4).map(([k]) => k));
+    const l = w.filter(([, x]) => x > 1e-4), t = l.reduce((s2, [, x]) => s2 + x, 0);
+    vw[i] = l.sort((x, y) => y[1] - x[1]).map(([k, x]) => [cand[k], x / t]);
+  }
+  return vw;
+}
+const mv3 = (m, v) => [m[0] * v[0] + m[1] * v[1] + m[2] * v[2], m[3] * v[0] + m[4] * v[1] + m[5] * v[2], m[6] * v[0] + m[7] * v[1] + m[8] * v[2]];
 
 /* ---- the game's copy ------------------------------------------------------------------------------------------------ */
 // (worn over the tunic: its copy is fitted over it and written by garments/outfit1.mjs)

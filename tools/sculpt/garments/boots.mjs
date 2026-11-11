@@ -32,14 +32,19 @@
 // outside is at most `clear + step` off the leg; a trouser cuff ending at or just above the cuff's top (rig.J.floor -
 // sole - gap + cuff[1] H), or over it at a reach of `clear + step` + 0.03 or more off the leg, does not meet it.
 import { meshOf, orient, trisOf, transferWeights, samplesOf, closestOnTri, crossPairs, sub, add, mul, dot, cross, unit, lerp } from '../lowgarment.mjs';
+import { clothLooks } from './shawl.mjs';
 
 export const MATS = {
-  // the cuff and the shaft: tan-brown leather; the foot (toe and heel): a lighter tan; the straps: cream; the sole: dark brown
+  // the cuff and the shaft: tan-brown leather; the foot (toe and heel): a lighter tan; the straps: cream (the forefoot
+  // band strap, the X over the shaft runeStrap: cream plain, glowing enchanted); the sole: dark brown
   leather: [0.66, 0.42, 0.28],
   tan: [0.77, 0.51, 0.35],
   strap: [0.88, 0.79, 0.7],
   sole: [0.46, 0.29, 0.2],
+  runeStrap: [0.88, 0.79, 0.7],
 };
+/** Plain and enchanted (garments/shawl.mjs clothLooks): the X straps glowing enchanted. */
+export const LOOKS = clothLooks(MATS);
 
 /**
  * The design per body (heights above the body's floor unless said; lengths in the body's units):
@@ -169,7 +174,7 @@ function strapsOf(G, D, side) {
     return { i, n: h.n };
   };
   // a strip along a centreline (points), each point's two edges `across` it by ±w/2
-  const strip = (C, across, w, lift, tag, closed, edges = null) => {
+  const strip = (C, across, w, lift, tag, closed, edges = null, mat = 'strap') => {
     // (rows across it: its two edges, or with `edges` the given points across, its middle among them so it bends over a
     // corner of the upper)
     const E = C.map((c, k) => (edges ? edges[k] : [add(c, mul(across[k], -w / 2)), add(c, mul(across[k], w / 2))]).map((p) => put(p, lift)));
@@ -190,7 +195,7 @@ function strapsOf(G, D, side) {
       const j = (k + 1) % E.length, q = [E[k][e].i, E[j][e].i, E[j][e + 1].i, E[k][e + 1].i];
       // (wound so its normal leaves the upper)
       const nn = cross(sub(G.verts[q[1]], G.verts[q[0]]), sub(G.verts[q[3]], G.verts[q[0]]));
-      G.poly(dot(nn, add(E[k][e].n, E[j][e].n)) >= 0 ? q : [...q].reverse(), 'strap', 'boot', true);
+      G.poly(dot(nn, add(E[k][e].n, E[j][e].n)) >= 0 ? q : [...q].reverse(), mat, 'boot', true);
     }
   };
   // a column's polyline up the upper (r3, r4, r5, r6): the point at arc length s along it, and the arc length where it
@@ -202,7 +207,7 @@ function strapsOf(G, D, side) {
     const w = S.w * D.H, sc = cols.map(([, , g], k) => sOfY(k, G.ground + (S.c + S.amp * Math.cos((g - peak) * Math.PI / 180)) * D.H));
     const C = sc.map((s0, k) => atS(k, s0)), across = sc.map((s0, k) => unit(sub(atS(k, s0 + w / 2), atS(k, s0 - w / 2))));
     // (the edges along the column, by arc length)
-    strip(C, across, w, lift, `strap ${n + 1}`, true, sc.map((s0, k) => (S.mid ? [atS(k, s0 - w / 2), atS(k, s0), atS(k, s0 + w / 2)] : [atS(k, s0 - w / 2), atS(k, s0 + w / 2)])));
+    strip(C, across, w, lift, `strap ${n + 1}`, true, sc.map((s0, k) => (S.mid ? [atS(k, s0 - w / 2), atS(k, s0), atS(k, s0 + w / 2)] : [atS(k, s0 - w / 2), atS(k, s0 + w / 2)])), 'runeStrap');
   });
   // the forefoot band: on the toes' line, its front edge along r4 over the front columns and down the ball's columns to
   // the welt (r3, r2), its back edge `w` behind: up each front column from r4, and along the wall and the over-band toward
@@ -367,7 +372,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const rig = buildRig(who), G = buildBoots(rig);
     G.vw = bootWeights(rig, G);
     const file = new URL(`../../../src/sculpt/assets/lowboots-${who}.json`, import.meta.url);
-    const A = { built: 'node tools/sculpt/garments/boots.mjs (tools/sculpt/lowgarment.mjs garmentAsset)', ...garmentAsset(rig, G, MATS), hides: G.hides, soles: G.soles };
+    const A = { built: 'node tools/sculpt/garments/boots.mjs (tools/sculpt/lowgarment.mjs garmentAsset)', ...garmentAsset(rig, G, MATS, LOOKS), hides: G.hides, soles: G.soles };
     writeFileSync(file, JSON.stringify(A));
     console.log(who, `${G.verts.length} vertices, ${G.tris.length} triangles, ${A.base} + ${A.bones.length} bones, hides ${G.hides.length} body polygons: wrote`, file.pathname);
   }
