@@ -109,7 +109,7 @@ for k, v in sorted(J['pieces'].items(), key=lambda kv: not LAYER(kv[0])):
         ring_out = []
         for (a, c), m in [((0, 1), nu), ((1, 2), nv), ((2, 3), nu), ((3, 0), nv)]:
             pa, pc = np.array(v[a]), np.array(v[c])
-            for k in range(m): ring_out.append((pa + (pc - pa) * k / m).tolist())
+            for kk in range(m): ring_out.append((pa + (pc - pa) * kk / m).tolist())
         for i in range(len(ring_in)): jn = (i + 1) % len(ring_in); faces.append(('lbevel' if LAYER(k) else 'bevel', [ring_out[i], ring_out[jn], ring_in[jn], ring_in[i]]))
         continue
     I = inset(v, b)
