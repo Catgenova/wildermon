@@ -28,7 +28,7 @@
 // shoulders grown by `room.pauldron` round the shoulder joint, a stand-up collar `room.collar` off the neck's foot.
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { samplesOf, envelope, drape, reachAt, atRY, dirOf, meshOf, orient, trisOf, transferWeights, crossPairs, sub, add, mul, unit, cross, dot, lerp } from '../lowgarment.mjs';
+import { samplesOf, envelope, drape, reachAt, atRY, dirOf, meshOf, orient, trisOf, transferWeights, crossPairs, closestOnBody, sub, add, mul, unit, cross, dot, lerp } from '../lowgarment.mjs';
 
 /** The mantle's colours: the fur's cream, its underside a shade darker, the groove between clumps darker again, the neck's lining (the set's dark under-layer), gold, the clasps' gem cores (plain). */
 export const MATS = {
@@ -560,6 +560,26 @@ function clasp(G, c, n, C, k, side) {
   return { c, n, part };
 }
 
+/** Where the level line through p and the body's axis (x 0, z z0) meets the mesh C outermost: { d, tri, w } or null. */
+function radialHit(C, p, z0) {
+  const o = [0, p[1], z0], dir = unit(sub(p, o));
+  let best = null;
+  for (let k = 0; k < C.tris.length; k++) {
+    const [a, b, c] = C.tris[k].v.map((i) => C.verts[i]);
+    const e1 = sub(b, a), e2 = sub(c, a), h = cross(dir, e2), det = dot(e1, h);
+    if (Math.abs(det) < 1e-12) continue;
+    const f = 1 / det, s = sub(o, a), u = f * dot(s, h);
+    if (u < 0 || u > 1) continue;
+    const q = cross(s, e1), v = f * dot(dir, q);
+    if (v < 0 || u + v > 1) continue;
+    const t = f * dot(e2, q);
+    if (t <= 0) continue;
+    if (!best || t > best.t) best = { t, tri: k, w: [1 - u - v, u, v] };
+  }
+  if (!best) return null;
+  return { d: Math.abs(Math.hypot(p[0] - o[0], p[2] - o[2]) - best.t), tri: best.tri, w: best.w };
+}
+
 /* ---- weights ---------------------------------------------------------------------------------------------------------- */
 /**
  * The mantle's weights: each vertex the body's at the closest point of its skin, taken onto the mantle's few bones
@@ -603,18 +623,38 @@ export function mantleWeights(rig, G, o = {}) {
     return l.map(([b, x]) => [b, x / t]);
   };
   const out = cur.map((w, i) => fin(w, i));
+  // (collarArm: the collar's share of the arms, shoulder and upper arm, at most this; the rest to its clavicle, as the
+  // chest's gorget under it has none)
+  const collarArm = o.collarArm ?? G.design?.collarArm;
+  if (collarArm != null) out.forEach((l, i) => {
+    if (G.part[i] !== 'collar') return;
+    const w = Object.fromEntries(l);
+    for (const s of ['l', 'r']) { const c = at.get(`clavicle_${s}`); let t = 0; for (const n of [`upperarm_${s}`, `shoulder_${s}`]) { const b = at.get(n); if (b != null && (w[b] ?? 0) > 0) { t += w[b]; w[b] = 0; } } const keep = Math.min(t, collarArm); if (t > 0) { w[at.get(`upperarm_${s}`)] = keep; w[c] = (w[c] ?? 0) + t - keep; } }
+    out[i] = fin(w);
+  });
   // (worn over the plate chest piece: near it, the fur takes the chest's own weights, all of them within `near` of its
   // nearest vertex and less further out, so the fur and the plate under it move as one)
-  const C = o.chest ?? G.chest, near = o.chestNear ?? G.design?.chestNear ?? 0.6;
+  const C = o.chest ?? G.chest, near = o.chestNear ?? G.design?.chestNear ?? 0.6, surf = o.chestSurf ?? G.design?.chestSurf ?? false;
   if (C) out.forEach((w, i) => {
     if (/^clasp/.test(G.part[i])) return;
-    let bd = Infinity, bj = -1;
-    C.verts.forEach((q, j) => { const d = Math.hypot(...sub(P[i], q)); if (d < bd) { bd = d; bj = j; } });
+    let bd = Infinity, bj = -1, cw = null;
+    if (surf) {
+      // (the chest's weights at the closest point of its surface, its triangle's corners' blended; surf 'radial': where
+      // the line in from the vertex to the body's axis, level, meets the chest's outermost, so the layers stacked over
+      // one point all take its weights)
+      const h = (surf === 'radial' && radialHit(C, P[i], z0)) || closestOnBody(C.verts, C.tris, P[i]);
+      bd = h.d; cw = {};
+      C.tris[h.tri].v.forEach((j, k) => { for (const [b, x] of C.vw[j]) cw[b] = (cw[b] ?? 0) + h.w[k] * x; });
+      cw = Object.entries(cw).map(([b, x]) => [+b, x]);
+    } else {
+      C.verts.forEach((q, j) => { const d = Math.hypot(...sub(P[i], q)); if (d < bd) { bd = d; bj = j; } });
+      cw = C.vw[bj];
+    }
     const t = Math.min(1, Math.max(0, 1.5 * (1 - bd / near)));
     if (t <= 0) return;
     const m = {};
     for (const [b, x] of w) m[b] = (m[b] ?? 0) + (1 - t) * x;
-    for (const [b, x] of C.vw[bj]) m[b] = (m[b] ?? 0) + t * x;
+    for (const [b, x] of cw) m[b] = (m[b] ?? 0) + t * x;
     const l = Object.entries(m).map(([b, x]) => [+b, x]).filter(([, x]) => x > 1e-3).sort((a, b) => b[1] - a[1]).slice(0, 4), tt = l.reduce((a, [, x]) => a + x, 0);
     out[i] = l.map(([b, x]) => [b, x / tt]);
   });
@@ -628,6 +668,28 @@ export function mantleWeights(rig, G, o = {}) {
       const l = Object.entries(m).map(([b, x]) => [+b, x]).filter(([, x]) => x > 1e-3).sort((a, b) => b[1] - a[1]).slice(0, 4), tt = l.reduce((a, [, x]) => a + x, 0);
       out[i] = l.map(([b, x]) => [b, x / tt]);
     });
+  }
+  // (collarFollow { off, neck, p, az, fade }: up the collar, by its height within its clump to the power p, the share
+  // `off` of its clavicles', shoulders' and upper arms' weight moved to spine_03, then the share `neck` of everything to
+  // neck_01, within `az` [from, to] degrees from the front, fading over `fade` (15) degrees past them: the root stays with
+  // the chest's gorget, the tips keep clear of the helm as the arms lift and the head tips)
+  const CF = o.collarFollow ?? G.design?.collarFollow;
+  if (CF) {
+    const clumpOf = new Map(), nk = at.get('neck_01');
+    G.polys.forEach((p) => { if (p.part === 'collar') for (const v of p.v) if (!clumpOf.has(v)) clumpOf.set(v, p.clump); });
+    const span = new Map();
+    for (const [v, c] of clumpOf) { const e = span.get(c) ?? [Infinity, -Infinity]; span.set(c, [Math.min(e[0], P[v][1]), Math.max(e[1], P[v][1])]); }
+    for (const [v, c] of clumpOf) {
+      const [y0, y1] = span.get(c), a = Math.abs(Math.atan2(P[v][0], P[v][2] - z0)) * 180 / Math.PI, [a0, a1] = CF.az ?? [0, 180];
+      const s = Math.pow(Math.min(1, Math.max(0, (P[v][1] - y0) / Math.max(1e-6, y1 - y0))), CF.p ?? 1) * Math.min(1, Math.max(0, 1 - Math.max(a0 - a, a - a1, 0) / (CF.fade ?? 15)));
+      const w = Object.fromEntries(out[v]);
+      let moved = 0;
+      for (const b of Object.keys(w)) if (/^(clavicle|shoulder|upperarm)_/.test(rig.bones[+b].name)) { const d = w[b] * (CF.off ?? 0) * s; w[b] -= d; moved += d; }
+      w[sp] = (w[sp] ?? 0) + moved;
+      const n = (CF.neck ?? 0) * s;
+      if (n > 0) { for (const b of Object.keys(w)) w[b] *= 1 - n; w[nk] = (w[nk] ?? 0) + n; }
+      out[v] = fin(w);
+    }
   }
   // the ring: spine_03 and the clavicles as the body under it has them
   G.verts.forEach((_, i) => { if (G.part[i] === 'ring') { const w = Object.fromEntries(out[i]); const o3 = {}; for (const [b, x] of Object.entries(w)) { const name = rig.bones[+b].name; const key = /^clavicle_/.test(name) ? +b : sp; o3[key] = (o3[key] ?? 0) + x; } out[i] = fin(o3); } });
