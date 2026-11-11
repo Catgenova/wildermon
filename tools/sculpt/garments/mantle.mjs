@@ -669,6 +669,28 @@ export function mantleWeights(rig, G, o = {}) {
       out[i] = l.map(([b, x]) => [b, x / tt]);
     });
   }
+  // (collarFollow { off, neck, p, az, fade }: up the collar, by its height within its clump to the power p, the share
+  // `off` of its clavicles', shoulders' and upper arms' weight moved to spine_03, then the share `neck` of everything to
+  // neck_01, within `az` [from, to] degrees from the front, fading over `fade` (15) degrees past them: the root stays with
+  // the chest's gorget, the tips keep clear of the helm as the arms lift and the head tips)
+  const CF = o.collarFollow ?? G.design?.collarFollow;
+  if (CF) {
+    const clumpOf = new Map(), nk = at.get('neck_01');
+    G.polys.forEach((p) => { if (p.part === 'collar') for (const v of p.v) if (!clumpOf.has(v)) clumpOf.set(v, p.clump); });
+    const span = new Map();
+    for (const [v, c] of clumpOf) { const e = span.get(c) ?? [Infinity, -Infinity]; span.set(c, [Math.min(e[0], P[v][1]), Math.max(e[1], P[v][1])]); }
+    for (const [v, c] of clumpOf) {
+      const [y0, y1] = span.get(c), a = Math.abs(Math.atan2(P[v][0], P[v][2] - z0)) * 180 / Math.PI, [a0, a1] = CF.az ?? [0, 180];
+      const s = Math.pow(Math.min(1, Math.max(0, (P[v][1] - y0) / Math.max(1e-6, y1 - y0))), CF.p ?? 1) * Math.min(1, Math.max(0, 1 - Math.max(a0 - a, a - a1, 0) / (CF.fade ?? 15)));
+      const w = Object.fromEntries(out[v]);
+      let moved = 0;
+      for (const b of Object.keys(w)) if (/^(clavicle|shoulder|upperarm)_/.test(rig.bones[+b].name)) { const d = w[b] * (CF.off ?? 0) * s; w[b] -= d; moved += d; }
+      w[sp] = (w[sp] ?? 0) + moved;
+      const n = (CF.neck ?? 0) * s;
+      if (n > 0) { for (const b of Object.keys(w)) w[b] *= 1 - n; w[nk] = (w[nk] ?? 0) + n; }
+      out[v] = fin(w);
+    }
+  }
   // the ring: spine_03 and the clavicles as the body under it has them
   G.verts.forEach((_, i) => { if (G.part[i] === 'ring') { const w = Object.fromEntries(out[i]); const o3 = {}; for (const [b, x] of Object.entries(w)) { const name = rig.bones[+b].name; const key = /^clavicle_/.test(name) ? +b : sp; o3[key] = (o3[key] ?? 0) + x; } out[i] = fin(o3); } });
   // each clasp rigid: the mean of its vertices'
