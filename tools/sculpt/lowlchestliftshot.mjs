@@ -13,7 +13,7 @@ const SHEET = new URL('./ref/leather-chest.png', import.meta.url).pathname;
 const CROPS = { male: [[18, 98, 210, 250], [222, 98, 166, 250], [388, 98, 102, 250], [488, 98, 168, 250], [654, 98, 176, 250]], female: [[18, 432, 210, 230], [222, 432, 166, 230], [388, 432, 102, 230], [488, 432, 168, 230], [654, 432, 176, 230]] };
 const YAW = [0, -40, -90, -140, 180], cw = 300, ch = 380, cells = [], imgs = [];
 const body = { who, P: rig.B.verts, polys: rig.B.polys.map((p) => p.nv ?? p.v), tris: rig.B.tris.map((t) => [...t.v, t.poly]), col: rig.B.polys.map((p) => (p.mat === 'skin' ? SKIN : [0.22, 0.15, 0.13])) };
-const arm = { who, P: L.verts, polys: L.faces.map((f) => f.v), tris: L.faces.flatMap((f, i) => f.v.slice(1, -1).map((_, k) => [f.v[0], f.v[k + 1], f.v[k + 2], i])), col: L.faces.map((f) => f.col.map((x) => x / 255)), edges: args.includes('--edges'), edgec: [0.1, 0.06, 0.05] };
+const arm = { who, P: L.verts, polys: L.faces.map((f) => f.v), tris: L.faces.flatMap((f, i) => f.v.slice(1, -1).map((_, k) => [f.v[0], f.v[k + 1], f.v[k + 2], i])), col: L.faces.map((f) => (args.includes('--debug') ? (() => { let h = 0; for (const ch of (f.piece ?? '')) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return [((h & 255) / 255) * 0.8 + 0.2, (((h >> 8) & 255) / 255) * 0.8 + 0.2, (((h >> 16) & 255) / 255) * 0.8 + 0.2].map((x, i) => x * (f.col[0] < 60 ? 0.5 : 1)); })() : f.col.map((x) => x / 255))), edges: args.includes('--edges'), edgec: [0.1, 0.06, 0.05] };
 const cy = who === 'male' ? -2.6 : -2.3;
 YAW.forEach((yaw, i) => {
   const [x, y, w, h] = CROPS[who][i];
