@@ -66,19 +66,19 @@ const DRAWN: KeyPose = merge(KNELT, { rot: { ...ARMS_DRAW, spine_02: [12, 4, 0],
  * the ground, her neck raised to keep her head as far over her shoulders as his; and her arms solved on her.
  */
 const HER_REACH: Record<string, Euler> = {
-  pelvis: [8, 0, 0], spine_02: [3, 0, 0], clavicle_l: [16, 0, 0], clavicle_r: [16, 0, 0], neck_01: [-18, 0, 0], neck_02: [-6, 0, 0],
-  upperarm_r: [-23.8, 8.6, -15.6], lowerarm_r: [20.4, -3.1, 0], hand_r: [6.9, 7.6, -9.1],
-  upperarm_l: [-26.4, 7.7, 21.8], lowerarm_l: [36.9, -7.6, 0], hand_l: [15, -1.9, 0],
+  pelvis: [11, 0, 0], spine_02: [3, 0, 0], clavicle_l: [8, 0, 0], clavicle_r: [8, 0, 0], neck_01: [-20, 0, 0], neck_02: [-6, 0, 0],
+  upperarm_r: [-11.9, 13.4, -14.8], lowerarm_r: [21.4, -5.1, 0], hand_r: [9.3, 6.6, -10.5],
+  upperarm_l: [-14.8, 3.7, 21.7], lowerarm_l: [36.6, -4.7, 0], hand_l: [17.7, -1.2, 0.2],
 };
 const HER_DIG: Record<string, Euler> = {
-  pelvis: [8, 0, 0], spine_02: [3, 0, 0], clavicle_l: [16, 0, 0], clavicle_r: [16, 0, 0], neck_01: [-18, 0, 0], neck_02: [-6, 0, 0],
-  upperarm_r: [-19.8, -4.1, -21.3], lowerarm_r: [18.1, 7.4, 0], hand_r: [9.6, 9, -7.7],
-  upperarm_l: [-31.3, 4.7, 23.7], lowerarm_l: [32.7, -2.4, 0], hand_l: [13.6, -5.4, -0.1],
+  pelvis: [11, 0, 0], spine_02: [3, 0, 0], clavicle_l: [8, 0, 0], clavicle_r: [8, 0, 0], neck_01: [-20, 0, 0], neck_02: [-6, 0, 0],
+  upperarm_r: [-8.5, 1.9, -23.4], lowerarm_r: [17.4, 5.9, 0], hand_r: [11.6, 8.3, -8.6],
+  upperarm_l: [-19.2, 0.7, 22.9], lowerarm_l: [32.3, 0.2, 0], hand_l: [17, -5.3, 0.9],
 };
 const HER_DRAW: Record<string, Euler> = {
-  pelvis: [8, 0, 0], spine_02: [3, 0, 0], clavicle_l: [16, 0, 0], clavicle_r: [16, 0, 0], neck_01: [-18, 0, 0], neck_02: [-6, 0, 0],
-  upperarm_r: [-25, -7.4, -20.8], lowerarm_r: [30, 9.1, 0], hand_r: [11.8, 4.4, -1.9],
-  upperarm_l: [-28.1, 3.9, 28.7], lowerarm_l: [32.4, -5.7, 0], hand_l: [14.7, -10.4, -1],
+  pelvis: [11, 0, 0], spine_02: [3, 0, 0], clavicle_l: [8, 0, 0], clavicle_r: [8, 0, 0], neck_01: [-20, 0, 0], neck_02: [-6, 0, 0],
+  upperarm_r: [-13.5, -2.2, -21.9], lowerarm_r: [29.5, 7.1, 0], hand_r: [13.8, 3.5, -2.9],
+  upperarm_l: [-16.5, -1.4, 29.2], lowerarm_l: [31.4, -3.7, 0], hand_l: [17.7, -10.5, 0],
 };
 
 /** The trunk and the head eased into the dig as into any key, so only the arms land on it. */
@@ -114,6 +114,6 @@ export const GROUND: Clip = {
     // (the arms kept off the body by the clip's own turns)
     man: { armsOut: -3 },
     // her shins longer for her height: further down and forward to put her knees on the ground; her feet closer together, as the idle stands them
-    woman: { armsOut: -3, add: { thigh_l: [0, 0, -6], thigh_r: [0, 0, 6] }, move: [1, 1.2414, 1.2994], tracks: HER },
+    woman: { armsOut: -3, add: { thigh_l: [0, 0, -6], thigh_r: [0, 0, 6] }, move: [1, 1.2421, 1.3066], tracks: HER },
   },
 };
