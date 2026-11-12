@@ -118,7 +118,7 @@ export const ARM_AT: Record<string, { fist?: Euler; contact?: Euler; face: Euler
 };
 /** Hers where they differ (her arms are shorter for her height, her work nearer): the downswing kept further from her face. */
 export const ARM_AT_WOMAN: Record<string, { fist?: Euler; contact?: Euler; face: Euler; way: Euler; pole: Euler }> = {
-  over: { fist: [-0.23, 0.69, 0.24], face: [0, -0.7, 0.7], way: [0.5, 0.6, 0.6], pole: [-0.9, -0.4, -0.1] },
+  over: { fist: [-0.2, 0.71, 0.2], face: [0, -0.7, 0.7], way: [0.5, 0.6, 0.6], pole: [-0.9, -0.4, -0.1] },
   smear: { contact: [-0.06, 0.08, 0.04], face: [0.2, -0.8, 0.55], way: [0.85, 0.3, 0.45], pole: [-0.9, -0.5, 0] },
   impact: { contact: [0, 0, 0], face: [0.12, -0.97, 0.2], way: [0.95, 0.05, 0.3], pole: [-1, -0.6, 0] },
 };
@@ -139,7 +139,7 @@ export const WOMAN: Record<string, Record<string, Euler>> = {
   rise: { upperarm_r: [36, 38, -26], lowerarm_r: [86, 0, 0], hand_r: [-4, 114, 8] },
   top: { upperarm_r: [27, 90, -77], lowerarm_r: [80, 0, 0], hand_r: [-4, 112, 28] },
   strike: { upperarm_r: [23, 70, -72], lowerarm_r: [96, 0, 0], hand_r: [12, 144, -5] },
-  over: { upperarm_r: [47, 24, -75], lowerarm_r: [48, 0, 0], hand_r: [16, 131, 15] },
+  over: { upperarm_r: [32, 24, -66], lowerarm_r: [77, 0, 0], hand_r: [8, 131, 2] },
   smear: { upperarm_r: [6, -10, -48], lowerarm_r: [108, 0, 0], hand_r: [-12, 94, -18] },
 };
 
@@ -169,11 +169,14 @@ export function planOf(key: (k: string) => KeyPose): Beat[] {
   const REST = key('rest'), RISE = key('rise'), TOP = key('top'), STR = key('strike'), OVER = key('over'), SMEAR = key('smear'), HIT = key('impact');
   return [
     { t: 0, pose: REST, ease: 'inOut', stage: 'key', name: 'rest' },
-    { t: 0.22, pose: RISE, ease: 'inOut', stage: 'key', name: 'rise' },
-    { t: 0.38, pose: TOP, ease: 'back', back: 0.12, stage: 'key', name: 'top' },
-    { t: STRIKE, pose: past(RISE, TOP, 0.05), ease: 'inOut', name: 'held' },
+    // gathering speed up to the rise, slowing into the top and held there dead still (nothing overshoots or drifts, so
+    // nothing turns back on itself however long the hold is stretched), then gathering speed again into the blow, its
+    // breakdowns passed through at speed
+    { t: 0.22, pose: RISE, ease: 'in', stage: 'key', name: 'rise' },
+    { t: 0.38, pose: TOP, ease: 'out', stage: 'key', name: 'top' },
+    { t: STRIKE, pose: TOP, ease: 'linear', name: 'held' },
     { t: 0.66, pose: STR, ease: 'in', stage: 'key', name: 'strike' },
-    { t: 0.71, pose: OVER, ease: 'in', name: 'over' },
+    { t: 0.71, pose: OVER, ease: 'linear', name: 'over' },
     { t: 0.75, pose: SMEAR, ease: 'linear', name: 'down' },
     { t: IMPACT, pose: HIT, ease: 'linear', stage: 'key', name: 'impact' },
     { t: 0.82, pose: HIT, ease: 'linear', name: 'stuck' },
