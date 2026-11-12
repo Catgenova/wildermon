@@ -11370,7 +11370,7 @@ export function sculptedFigures(want: boolean, by: 'island' | 'creator' = 'islan
  * the GL (about 9 ms a body on a processor-drawn GL, `glSoftware`). Past it a body is put down from the picture it last
  * had, and drawn again in a later frame. Your own body and a body never drawn yet are drawn whatever is left.
  */
-const SCULPT_REDRAWS = 4, SCULPT_REDRAWS_SOFT = 1;
+export const SCULPT_REDRAWS = 4, SCULPT_REDRAWS_SOFT = 1;
 const sculptLeft = { left: SCULPT_REDRAWS };
 /** Whether a sculpted redraw of body `id` may be made now (and counts it), or the last picture must stand. */
 const sculptMay = (id?: string): boolean => {

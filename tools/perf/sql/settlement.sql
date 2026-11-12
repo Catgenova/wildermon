@@ -104,6 +104,8 @@ begin
     values (w, nid, (array['roxxen','seavic','woola','quarra','orse'])[1 + i % 5], 'Follower ' || nid, 'active', 128.5 + cos(i), 128.5 + sin(i), 128.5 + cos(i), 128.5 + sin(i), 1, 'male', me, '{"haul": 30}');
     nid := nid + 1;
   end loop;
+  -- At heel and well, as companions mostly are.
+  update creature fc set health = max_health(fc) where fc.world_id = w and fc.mode = 'active';
 end $$;
 analyze;
 select (select count(*) from placed) placed, (select count(*) from crate) crates, (select count(*) from item where holder in ('furniture','crate','ground')) items,

@@ -245,7 +245,7 @@ const held = new GroundHeld();
 const first = ask(`, false, ''`);
 const firstLaid = held.take(first);
 check('the first answer is the whole one, with a cursor', first.full === true && firstLaid !== null
-  && /^g1:[\d.e+-]+:[\d.e+-]+:[\d.e+-]+:\d+:v1:\d+:\d+:\d+:[\d,]*$/.test(String(first.at)), String(first.at));
+  && /^c[0-9a-f]{8}:g1:[\d.e+-]+:[\d.e+-]+:[\d.e+-]+:\d+:v1:\d+:\d+:\d+:[\d,]*$/.test(String(first.at)), String(first.at));
 const idsIn = (rows: unknown): number[] => (rows as Array<{ id: number }>).map((r) => r.id).sort((a, b) => a - b);
 const has = (rows: unknown, k: string): boolean => idsIn(rows).includes(ID[k]);
 check('it holds everything in range, and nothing past it',
@@ -280,7 +280,7 @@ const differs = (mine: Record<string, unknown>, whole: Record<string, unknown>):
 };
 
 /** One step: what happens between two asks (its own transaction), then the delta laid and held against the whole answer. */
-const step = (what: string, change: string): { sent: Record<string, number[]>; ids: Record<string, number[]>; worst: string | null } => {
+const step = (what: string, change: string): { sent: Record<string, number[]>; ids: Record<string, number[]>; crates: unknown; worst: string | null } => {
   if (change) psql(change);
   const { delta, whole } = both(held.at!);
   const laid = held.take(delta);
@@ -289,7 +289,7 @@ const step = (what: string, change: string): { sent: Record<string, number[]>; i
   let worst = delta.full === false ? null : `answered whole (${what})`;
   if (!laid) worst ||= `not laid (${what})`;
   else worst ||= differs(laid, whole);
-  return { sent, ids, worst };
+  return { sent, ids, crates: delta.crates, worst };
 };
 const same = (a: number[], b: number[]): boolean => a.length === b.length && a.every((x, i) => x === b[i]);
 const sorted = (...ks: string[]): number[] => ks.map((k) => ID[k]).sort((a, b) => a - b);
@@ -302,6 +302,8 @@ check('asked again with nothing written, only those whose answer moves without t
 check('and the ids of everything in range', same(s0.ids.placed ?? [], idsIn(first.placed)) && same(s0.ids.lying ?? [], idsIn(first.lying)),
   JSON.stringify(s0.ids));
 check('and the browser laying it holds what the whole answer says', s0.worst === null, s0.worst ?? '');
+check('the crates as the cursor had them are left out, and the browser lays the ones it holds',
+  s0.crates === undefined && s0.worst === null, String(s0.crates));
 
 const s1 = step('a chest renamed, a thing put in one past reach', `
 update placed set name = 'Spare' where world_id = ${W} and id = ${ID.FAR};
@@ -318,6 +320,10 @@ check('and what is held is what the whole answer says (it is gone from the chest
 const s3 = step('a thing put in the chest within reach', `insert into item (world_id, holder, placed, def, ql, count) values (${W}, 'furniture', ${ID.NEAR}, 'nail', 10, 9);`);
 check('a thing put in a chest within reach sends it again', s3.sent.placed.includes(ID.NEAR), JSON.stringify(s3.sent.placed));
 check('and what is held is what the whole answer says (it is in the chest)', s3.worst === null, s3.worst ?? '');
+
+const s3c = step('a log taken out of a crate', `update item set count = count - 1 where world_id = ${W} and holder = 'crate' and crate = 2;`);
+check('a crate changed: the crates are sent again', Array.isArray(s3c.crates), String(s3c.crates));
+check('and what is held is what the whole answer says (one fewer in the crate)', s3c.worst === null, s3c.worst ?? '');
 
 const s4 = step('a piece taken up, one set down, a thing dropped, one picked up, a cellar floor swept', `
 delete from placed where world_id = ${W} and id = ${ID.TABLE};
@@ -406,7 +412,7 @@ const oldAt = at.replace(/:v1:\d+:/, `:v1:${Date.now() - 1000 * 1000}:`);
 const fullFor = (args: string): unknown => ask(args).full;
 check('an unreadable cursor is answered whole', fullFor(`, false, 'g1:nonsense'`) === true);
 check('and one too old', fullFor(`, false, '${oldAt}'`) === true, oldAt);
-check('and one read over another range', fullFor(`, false, '${at.replace(/^(g1:[^:]+:[^:]+:)40:/, '$130:')}'`) === true);
+check('and one read over another range', fullFor(`, false, '${at.replace(/^(c[0-9a-f]{8}:g1:[^:]+:[^:]+:)40:/, '$130:')}'`) === true);
 check('and a good one is not', fullFor(`, false, '${at}'`) === false);
 
 const most = Number(psql('select private.since_most()'));

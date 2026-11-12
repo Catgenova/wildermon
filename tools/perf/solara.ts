@@ -10,7 +10,7 @@ import { chromium } from 'playwright-core';
 import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
 
-interface Run { shot?: string; proto?: Record<string, boolean>; name: string; scene: Record<string, unknown>; dpr?: number; zoom?: number; hour?: number; frames?: number; step?: number; warm?: number; throttle?: number; profile?: boolean; pan?: number; groundEvery?: number; width?: number; height?: number; near?: string }
+interface Run { shot?: string; name: string; scene: Record<string, unknown>; dpr?: number; zoom?: number; hour?: number; frames?: number; step?: number; warm?: number; throttle?: number; profile?: boolean; pan?: number; groundEvery?: number; width?: number; height?: number; near?: string }
 const arg = process.argv[2] ?? '{}';
 const cfg = JSON.parse(arg.startsWith('@') ? readFileSync(arg.slice(1), 'utf8') : arg) as { runs: Run[] };
 
@@ -44,7 +44,6 @@ try {
       document.createElement = (name, o) => { if (String(name).toLowerCase() === 'canvas') made++; return make(name, o); };
       window.driven = { tick: (ms) => { t = Math.max(t + ms, last); mark = real(); }, realNow: real, canvases: () => made };
     })();` });
-    if (r.proto) await tab.addScriptTag({ content: `globalThis.__proto = ${JSON.stringify(r.proto)};` });
     await tab.addScriptTag({ content: `window.solaraScene = ${JSON.stringify(r.scene)};` });
     const tLoad = Date.now();
     await tab.addScriptTag({ content: page });

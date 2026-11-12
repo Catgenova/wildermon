@@ -2452,6 +2452,7 @@ import{$ as e,$g as t,$l as n,$m as r,$o as i,$s as a,$t as ee,$v as o,A as te,A
       time working, idle (with the reason idle longest) and resting. Island: time past its turn by over 30 s while the clock does not settle it counts as idle.</li>
       <li>A tamed wildermon: <b>travels with you</b> (one at a time; stance Passive, Defensive or Aggressive), <b>assigned to your settlement</b> (a Snufflet forages and drops finds in storage),
       or in a <b>wildermon crate</b>. Feed from your pack; settlement workers feed from storage.</li>
+      <li>In a <b>wildermon crate</b>: hunger, health, care, fleece, lessons, pregnancy, meal bonus and bleeding paused; age counts on.</li>
       <li><b>Wildermon</b> window (<kbd>P</kbd>): condition, level and skills of every one you own (not wild ones).</li>
       <li><b>Level</b> and <b>evolution stage</b>: its level skill only: its task's, its own (no task), or climbing for a draught kind or mount with neither. Other skills
       (climbing in the traces, fighting): no level, no evolution. A kind with no level skill: its highest skill.</li>

@@ -306,7 +306,7 @@ const api = { drawImageGL: 0, drawImageGLms: 0, drawImage: 0, fillText: 0, glDra
 
 export interface Measured {
   frame: number; median: number; p90: number; worst: number; update: number; canvases: number; frames: number;
-  own: Record<string, number>; api: typeof api; beasts: unknown; baked: Record<string, unknown>; imgs: Record<string, { n: number; ms: number; kpx: number; off: number }>; beat: { creatures: number; peers: number; ground: number; n: number };
+  own: Record<string, number>; api: typeof api; baked: Record<string, unknown>; imgs: Record<string, { n: number; ms: number; kpx: number; off: number }>; beat: { creatures: number; peers: number; ground: number; n: number };
 }
 
 let lastCreatureBeat = -1, lastPeerBeat = -1;
@@ -325,8 +325,6 @@ function frames(n: number, step: number, zoom: number, at: number, move: { pan?:
   bakedBy.clear();
   for (const k of Object.keys(api) as Array<keyof typeof api>) api[k] = 0;
   beatMs.creatures = beatMs.peers = beatMs.ground = beatMs.n = 0;
-  const B = (globalThis as unknown as { __beasts?: Record<string, number> }).__beasts;
-  if (B) for (const k of Object.keys(B)) B[k] = 0;
   const each: number[] = [];
   let update = 0, ox = 0;
   for (let i = 0; i < n; i++) {
@@ -368,7 +366,7 @@ function frames(n: number, step: number, zoom: number, at: number, move: { pan?:
   for (const [k, v] of own) o[k] = v / n;
   return {
     frame: each.reduce((s, x) => s + x, 0) / n, median: sorted[n >> 1], p90: sorted[Math.floor(n * 0.9)], worst: sorted[n - 1], update: update / n,
-    canvases: driven.canvases() - made, frames: n, own: o, api: { ...api }, beasts: B ? Object.fromEntries(Object.entries(B).map(([k, v]) => [k, +(v / n).toFixed(2)])) : null,
+    canvases: driven.canvases() - made, frames: n, own: o, api: { ...api },
     baked: Object.fromEntries([...bakedBy].map(([k, v]) => [k, { n: +(v.n / n).toFixed(1), kpx: Math.round(v.px / n / 1000) }])),
     imgs: Object.fromEntries([...imgs].map(([k, v]) => [k, { n: +(v.n / n).toFixed(1), ms: +(v.ms / n).toFixed(2), kpx: Math.round(v.px / n / 1000), off: +(v.off / n).toFixed(1) }])), beat: { ...beatMs },
   };

@@ -51,5 +51,9 @@ select json_build_object('whole_ms', round(:'whole_ms'::numeric, 1), 'whole_kb',
   'delta_crates_kb', round(length((:'d'::jsonb->'ground'->'crates')::text) / 1024.0, 1),
   'delta_ids_kb', round(length((:'d'::jsonb->'ground'->'ids')::text) / 1024.0, 1),
   'delta_cre_rows', jsonb_array_length(:'d'::jsonb->'creatures'->'rows'),
+  -- Companions sent again, but for those with panniers, which always are (`rpc_creatures`).
+  'delta_active', (select count(*) from jsonb_array_elements(:'d'::jsonb->'creatures'->'rows') r
+                    where r->>4 = 'active' and r->>1 not in (select id from species_def where panniers is not null)),
+  'lying_n', jsonb_array_length(:'j'::jsonb->'ground'->'lying'),
   'settle_ms', round(:'settle_ms'::numeric, 1), 'settle_kb', round(length(:'s') / 1024.0, 1),
   'tick_ms', round(:'tick_ms'::numeric, 1), 'tick', :'t2'::jsonb->'stages');

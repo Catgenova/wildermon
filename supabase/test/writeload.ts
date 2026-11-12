@@ -83,17 +83,18 @@ const GUARDS: [string, string, string][] = [
                c.idle_since, c.idle_why, c.idle_what, c.idle_n, c.ledger, c.worn, c.gear, c.bed, c.enemy, c.spar_with, c.spar_at,
                c.storey, c.storey_from, c.way, now()));
   if v_did is not null and c.keeper is not null then`],
+  // Its body's clock (`settled_at`) is `creature_settle`'s since 20261120000004, both ways.
   ['companion_settle',
-    `      enemy = c.enemy, settled_at = now()
+    `      enemy = c.enemy
     where world_id = p_world and id = p_id;
   return done;`,
-    `      enemy = c.enemy, settled_at = now()
+    `      enemy = c.enemy
     where world_id = p_world and id = p_id
       -- Only when it changes the row (\`creature_storey\` asked of one upstairs or on a staircase, which may).
       and (coalesce(storey <> 0 or storey_from <> 0 or way is not null, false)
-           or (from_x, from_y, to_x, to_y, leg_at, leg_ends, until, phase, enemy, settled_at)
+           or (from_x, from_y, to_x, to_y, leg_at, leg_ends, until, phase, enemy)
               is distinct from
-              (c.from_x, c.from_y, c.to_x, c.to_y, c.leg_at, c.leg_ends, c.until, c.phase, c.enemy, now()));
+              (c.from_x, c.from_y, c.to_x, c.to_y, c.leg_at, c.leg_ends, c.until, c.phase, c.enemy));
   return done;`],
 ];
 const dq = (s: string): string => `$q$${s}$q$`;

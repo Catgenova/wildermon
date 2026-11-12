@@ -5,9 +5,10 @@
  * carry only the rows sent again (written since, come into range or into reach, or ones whose answer moves without
  * their row being written: one burning, a well, a grave), and `ids`, every id in each list now. This keeps every row
  * as it came, lets go of the ones no longer listed, and lays each list again whole, in the island's order (by id),
- * so what the game is handed is what the whole answer says. `crates` and the slow half come whole on every answer
- * that has them, and pass through as they came. The whole answer is asked for with every slow half
- * (`RECONCILE_EVERY` seconds, and after anything we do).
+ * so what the game is handed is what the whole answer says. `crates` come whole, or are left out of an answer that
+ * is not whole when they are as the cursor had them (its `c<hash>:`), and then are the ones held. The slow half
+ * comes whole on every answer that has it, and passes through as it came. The whole answer is asked for with every
+ * slow half (`RECONCILE_EVERY` seconds, and after anything we do).
  */
 
 /** The lists the island sends only what changed of, as the answer names them. */
@@ -32,10 +33,13 @@ export class GroundHeld {
   /** The cursor the last answer laid carried, to hand back; null until there is one. */
   at: string | null = null;
   private held: Record<List, Map<number, Row>> = { placed: new Map(), lying: new Map(), cellarLying: new Map() };
+  /** The crates of the last answer that had them, for one that leaves them out. */
+  private crates: unknown[] | null = null;
 
   /** Nothing held: the next answer asked for is the whole one. */
   clear(): void {
     this.at = null;
+    this.crates = null;
     for (const k of GROUND_LISTS) this.held[k].clear();
   }
 
@@ -55,6 +59,9 @@ export class GroundHeld {
       sent[k] = rows;
       if (!full && (!ids || !Array.isArray(ids[k]))) return null;
     }
+    // Crates left out are the ones held; with none held, this side has lost step.
+    const crates = Array.isArray(said.crates) ? said.crates : null;
+    if (!crates && (full || said.crates !== undefined || !this.crates)) return this.lost();
     // Every id the island lists must be held after this answer: a row it did not send again is one already here.
     if (!full) {
       for (const k of GROUND_LISTS) {
@@ -71,7 +78,8 @@ export class GroundHeld {
       for (const r of sent[k]) held.set(r.id, r);
     }
     this.at = said.at;
-    const out: Record<string, unknown> = { ...said };
+    if (crates) this.crates = crates;
+    const out: Record<string, unknown> = { ...said, crates: this.crates };
     delete out.at;
     delete out.full;
     delete out.ids;

@@ -4556,6 +4556,43 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/provenance.mjs --log-level=error
           node node_modules/.cache/provenance.mjs
 
+      - name: A settlement grown to Solara's size sends less
+        if: matrix.shard == 4
+        run: |
+          # Counted, not timed, on a copy of the island filled to Solara's
+          # counts (tools/perf/sql): a thing lying about is sent in at most 110
+          # bytes; asked again with nothing written, the crates are left out
+          # and no companion at heel is sent again, in at most 10 kB.
+          npx esbuild supabase/test/solaragate.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/solaragate.mjs --log-level=error
+          node node_modules/.cache/solaragate.mjs
+
+      - name: A wildermon in a crate keeps, and one at heel is not written again
+        if: matrix.shard == 4
+        run: |
+          # Asked for: "When crated, everything except ages should freeze, and
+          # age only ticks once daily." Crated: hunger, health, care, fleece
+          # and age stage held over an island day and a half, settled once an
+          # island day, not born in the crate; let out after an hour, its
+          # pregnancy, meal bonus and bleed an hour later and its body from
+          # then. At heel with nothing changed: no row written.
+          npx esbuild supabase/test/cratedkeeps.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/cratedkeeps.mjs --log-level=error
+          node node_modules/.cache/cratedkeeps.mjs
+
+      - name: A settlement grown to Solara's size draws less a frame
+        if: matrix.shard == 4
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+        run: |
+          # Counted, not timed, in Chrome on the page's own clock, with 30
+          # other players in view: the buildings' kept pictures put down at
+          # most four screens of pixels a frame, and the sculpted bodies are
+          # drawn again at most four a frame, and your own.
+          npx esbuild supabase/test/solaradraw.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/solaradraw.mjs --log-level=error
+          node node_modules/.cache/solaradraw.mjs
+
       - name: The Bauble of Regret, and a trade undone
         if: matrix.shard == 5
         run: |

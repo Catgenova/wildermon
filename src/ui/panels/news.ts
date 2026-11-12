@@ -176,7 +176,7 @@ import { foodFill, itemDef, RARITIES, rarityBands, rarityChance, rareInputSaid, 
 import { SIGHT_FORM_AT, SIGHT_RARITY_AT } from '../../game/sighted';
 import { improvable, IMPROVE_DAMAGE as MEND_DAMAGE, IMPROVE_FAIL_LEAST, IMPROVE_FAIL_SPREAD } from '../../game/improve';
 import { JOB_GOES_MOST } from '../../game/mending';
-import { weaponCarry } from '../../render/figure';
+import { SCULPT_REDRAWS, SCULPT_REDRAWS_SOFT, weaponCarry } from '../../render/figure';
 import { TRY_LEARN } from '../../game/learn';
 import { BASE_SPEED, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER_LEVEL, MAX_STEP, strideAt } from '../../game/player';
 import { staminaBarAbove, SWIM_LEARN } from '../../game/body';
@@ -4314,6 +4314,17 @@ export const NEWS: News[] = [
       const jobs = [...ACTION_BY_ID.keys()].filter((id) => clipOfJob(id) === 'ground').length;
       return [`New: animation kneeling at the ground, both hands, no tool: ${jobs} jobs (planting, sowing, foraging, picking up, traps, panning, drinking, tending a campfire).`];
     },
+  },
+  {
+    n: 541,
+    day: '2026-11-12',
+    lines: () => [
+      `Faster frames: other players' bodies redrawn at most ${SCULPT_REDRAWS} a frame (${SCULPT_REDRAWS_SOFT} without a graphics card); yours every frame.`,
+      'Faster frames: buildings: pictures cut to what is drawn; off screen: skipped.',
+      'Faster island reads: crates: sent when changed; companions at heel: not sent again; things on the ground: only their set fields.',
+      'Faster: workers storing a load: stores checked nearest first, first with room taken; recipes from the stores: stock counted from four columns.',
+      'Changed: wildermon in a crate: hunger, health, care, fleece, lessons, pregnancy, meal bonus and bleeding paused; age counts on; checked once an island day (was: every 10 s).',
+    ],
   },
   {
     n: 529,
