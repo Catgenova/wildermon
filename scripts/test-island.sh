@@ -39,11 +39,18 @@ fi
 export PGHOST=$SOCK PGPORT=$PORT PGUSER=wildermon
 PSQL="psql -v ON_ERROR_STOP=1 -X -q -At"
 has() { [ -n "$($PSQL -d "$1" -c "$2")" ]; }
+# Note names in local_meta.applied, one statement for all of them.
+record() {
+  [ $# -gt 0 ] || return 0
+  local values
+  values=$(printf "('%s')," "$@")
+  $PSQL -d ci_t -c "insert into local_meta.applied values ${values%,} on conflict do nothing" >/dev/null
+}
 mark_all() {
   $PSQL -d ci_t -c "create schema if not exists local_meta; create table if not exists local_meta.applied (name text primary key);" >/dev/null
-  for m in supabase/migrations/*.sql; do
-    $PSQL -d ci_t -c "insert into local_meta.applied values ('$(basename "$m")') on conflict do nothing" >/dev/null
-  done
+  local names=()
+  for m in supabase/migrations/*.sql; do names+=("${m##*/}"); done
+  record "${names[@]}"
 }
 
 if ! has postgres "select 1 from pg_database where datname = 'ci_t'"; then
@@ -55,16 +62,23 @@ elif ! has ci_t "select 1 from information_schema.tables where table_schema = 'l
   # A ci_t from before this script, kept up to date by hand: taken as current.
   mark_all
 else
+  # The applied list read once, not one psql per migration.
+  applied=$($PSQL -d ci_t -c "select name from local_meta.applied")
+  declare -A seen=()
+  while IFS= read -r n; do if [ -n "$n" ]; then seen[$n]=1; fi; done <<< "$applied"
+  fresh=()
   for m in supabase/migrations/*.sql; do
-    n=$(basename "$m")
-    has ci_t "select 1 from local_meta.applied where name = '$n'" && continue
+    n=${m##*/}
+    [ -n "${seen[$n]:-}" ] && continue
     if $PSQL -d ci_t -f "$m" >/dev/null 2>&1; then
-      $PSQL -d ci_t -c "insert into local_meta.applied values ('$n')" >/dev/null
+      fresh+=("$n")
       echo "test-island: applied $n" >&2
     else
+      record "${fresh[@]}"
       echo "test-island: $n will not apply to ci_t; drop it (dropdb -h $SOCK -p $PORT -U wildermon ci_t) and run this again to rebuild" >&2
       exit 1
     fi
   done
+  record "${fresh[@]}"
 fi
 echo "test-island: up, ci_t on port $PORT." >&2

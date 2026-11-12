@@ -13,7 +13,7 @@
  * of them to arrive at the last one. The snapshot lives once now, in
  * `supabase/defs-state.sql`, which is outside `migrations/` and so may be
  * rewritten; the migration carries what changed. `scripts/defs-delta.mjs` says
- * when that is safe and when the whole thing has to go in again.
+ * which tables have to be reloaded for that.
  */
 import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -101,6 +101,6 @@ const doors = /\bcreate\s+(or\s+replace\s+)?function\b/i.test(body)
   : body;
 writeFileSync(join(DIR, name), doors);
 writeFileSync(STATE, sql);
-console.log(made.whole
-  ? `definitions changed: the rulebook itself moved, so ${name} is the whole snapshot (${made.sql.split('\n').length} lines)`
+console.log(made.tables.length
+  ? `definitions changed: ${name} reloads ${made.whole ? 'every table' : made.tables.join(', ')} (${made.sql.split('\n').length} lines of the ${sql.split('\n').length}-line snapshot)`
   : `definitions changed: ${name} carries ${made.count} statement${made.count === 1 ? '' : 's'}, not the whole ${sql.split('\n').length}-line snapshot`);

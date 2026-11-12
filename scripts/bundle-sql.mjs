@@ -7,8 +7,8 @@
  * single copy and a single Run.
  *
  * Generated, and not committed: every migration together is past the hundred
- * megabytes GitHub keeps in one file. `npm run build` and `npm run db:bundle`
- * write it; the migrations are what is committed.
+ * megabytes GitHub keeps in one file. `npm run db:bundle` writes it (`npm run
+ * build` does not); the migrations are what is committed.
  */
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
