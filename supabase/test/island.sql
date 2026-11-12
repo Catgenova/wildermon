@@ -9660,7 +9660,7 @@ select furnace_sweep(:'world2') as swept_2 \gset
 select '984. two iron ore in a lit smelter: ' || :jobs_in || ' jobs of ' || :secs_each || ' s each; half a charge''s heat later the clock''s sweep alone brings the first to ' || :left_half || ' s left'
      || '; a log fed mid-job (' || :'fuel_door' || ') leaves it at ' || :left_fuelled || ' s, nothing lost'
      || '; two charges'' heat later the sweep finishes ' || :swept_2 || ' with nobody asking: ' || jsonb_array_length(state->'jobs') || ' jobs left and '
-     || (select coalesce(sum((o->>'count')::int), 0) from jsonb_array_elements(state->'output') o) || ' lumps waiting, told "' || coalesce((select text from event where uid = :'ivar' and text like 'The smelter finishes%' order by n desc limit 1), 'nothing') || '"'
+     || (select coalesce(sum((o->>'count')::int), 0) from jsonb_array_elements(state->'output') o) || ' lumps waiting, told "' || coalesce((select text from event where uid = :'ivar' and text like 'Smelter made:%' order by n desc limit 1), 'nothing') || '"'
   from placed where id = :oven2;
 
 /*

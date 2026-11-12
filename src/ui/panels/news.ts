@@ -120,7 +120,8 @@ import { furnitureDef, liquidCapacity, POND_EVERY, STATION_REACH, WATER_AT_HAND,
 import { billWords, countOf, DRINK_LITRES, LIQUID_NAME, LITRE_KG, lyeAshFor, LYE_ASH_PER_LITRE, TAN_LYE, type Item } from '../../game/items';
 import { RUNE_GATE, RUNE_GATE_FADE, RUNE_GATE_GLOW_REACH, RUNE_GATE_REACH, RUNE_GATE_RISE, runeGateName } from '../../game/runegate';
 import { COIN_METALS, coinPurity, INGOT_LUMPS, INGOT_WEIGHT, MOULD_BY_ID, MOULD_SKILL, SMITH_TOOL } from '../../game/metal';
-import { meltLumps } from '../../game/melt';
+import { meltFits, meltLumps, meltQl } from '../../game/melt';
+import { furnaceMadeSaid, meltingSaid, SMELTER_CAPACITY } from '../../game/smelter';
 import { TOOL_JOBS } from '../../game/jobtools';
 import { ORDER_LIFE } from '../../game/orders';
 import { POST_LIFE_MIN } from '../../game/posts';
@@ -4293,6 +4294,24 @@ export const NEWS: News[] = [
     n: 532,
     day: '2026-11-12',
     lines: () => ['Changed: armour and shield burden: on foot only. Mount, cart, wagon and boat speed: no armour slowdown; load past the limit still slows them.'],
+  },
+  {
+    n: 533,
+    day: '2026-11-12',
+    lines: () => {
+      const all = 300;
+      const nails = { uid: 0, id: 'nail', ql: 40, dmg: 0, count: all, extra: 'Iron' } as Item;
+      const mail = { uid: 0, id: 'chain_hauberk', ql: 50, dmg: 0, count: 1, extra: 'Iron' } as Item;
+      const fit = meltFits(nails, all, SMELTER_CAPACITY);
+      const a = meltLumps(nails, fit);
+      const b = meltLumps(mail, 1);
+      return [
+        `Fixed: Melt down, All: a stack past the smelter's room (${SMELTER_CAPACITY} lumps) melts what fits; the rest stays in the pack (was: refused whole, "Smelter full."). `
+          + `${all} nails: "${meltingSaid(fit, 'Nails', a, 'Iron', meltQl(nails), all - fit)}"`,
+        `Fixed: smelter and kiln work done: told to whoever put it in, count and QL per kind, 1 line (was: told to the builder only, no count or QL). `
+          + `${fit} nails and a chain hauberk: "${furnaceMadeSaid('smelter', [{ count: a + b, name: 'Iron lump', ql: (meltQl(nails) * a + meltQl(mail) * b) / (a + b) }])}"`,
+      ];
+    },
   },
   {
     n: 525,

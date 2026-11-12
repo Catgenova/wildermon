@@ -28,7 +28,7 @@ import { UNDONE_PLANS, type PlanAnswer } from './planarea';
 import { CRATE_DEFS, crateCentre, crateName, crateCapacity, crateShut, crateUnits, STORE_REACH, SUBTILES, subtileOf, type CrateKind, type PlacedCrate } from './crates';
 import { anvilAnchor, anvilCentre, anvilCovers, anvilName, ANVIL_SUBTILES, type PlacedAnvil } from './anvil';
 import { fireAnchor, fireCentre, fireCovers, FIRE_SUBTILES, type PlacedCampfire } from './campfire';
-import { smelterAnchor, smelterCentre, smelterCovers, smelterName, SMELTER_H, SMELTER_PLUME, SMELTER_PLUME_WORKING, SMELTER_STACK_BACK, SMELTER_STACK_UP, SMELTER_W, type PlacedSmelter, type Plume, type SmeltJob } from './smelter';
+import { furnaceMadeSaid, smelterAnchor, smelterCentre, smelterCovers, smelterName, SMELTER_H, SMELTER_PLUME, SMELTER_PLUME_WORKING, SMELTER_STACK_BACK, SMELTER_STACK_UP, SMELTER_W, type PlacedSmelter, type Plume, type SmeltJob } from './smelter';
 import { kilnAnchor, kilnCentre, kilnCovers, kilnName, KILN_GLOW, KILN_GLOW_FIRING, KILN_PLUME, KILN_PLUME_FIRING, KILN_SUBTILES, KILN_VENT_BACK, KILN_VENT_UP, type PlacedKiln } from './kiln';
 import { WELL_TRICKLE, WELL_TRICKLE_AT, WELL_TRICKLE_QL, ACROSS_OF, DEED_PLACE, FURNITURE, ONE_ALTAR, deckSpot, isPlanter, furnitureAnchor, furnitureCapacity, furnitureCentre, furnitureCovers, furnitureDef, furnitureHeft, furnitureHolds, furnitureKg, furnitureRefuses, furnitureRoom, furnitureUnits, hiveRoom, POND_EVERY, rackDeck, rackSpots, teamOf, vehicleOf, type LiquidKind, type PlacedFurniture, furnitureName, facingOf, LIQUID_NAME, isBoat, furnitureFootprint, holdsLiquid, WATER_AT_HAND, STATION_REACH, type BoatDef, pieceShut } from './furniture';
 import { hiveTakes } from './bees';
@@ -10210,7 +10210,7 @@ export class Game {
           ? { uid: this.inventory.nextUid++, id: 'anvil', ql: job.ql, dmg: 0, count: 1, extra: job.item.id.replace('_lump', '') }
           : { uid: this.inventory.nextUid++, id: job.makes, ql: job.ql, dmg: 0, count: 1, extra: job.extra, piece: job.piece };
       furnaceOut(s.output, made);
-      this.logMsg(`Smelter made: ${itemName(made).toLowerCase()}, QL ${made.ql.toFixed(1)}.`, 'event');
+      this.logMsg(furnaceMadeSaid('smelter', [{ count: 1, name: itemName(made), ql: made.ql }]), 'event');
       this.events.emit('smelter');
     }
   }
@@ -10240,7 +10240,7 @@ export class Game {
       // With its shaper's mark, which a pot, a bowl or a jar carries through the fire (an Artisan's Deep Pot and Sealed Jar).
       const made: Item = { uid: this.inventory.nextUid++, id: job.makes, ql: job.ql, dmg: 0, count: 1, ...(job.item.mark ? { mark: { ...job.item.mark } } : {}) };
       furnaceOut(k.output, made);
-      this.logMsg(`Kiln fired: ${ITEM_DEFS[made.id]?.name.toLowerCase() ?? made.id}, QL ${made.ql.toFixed(1)}.`, 'event');
+      this.logMsg(furnaceMadeSaid('kiln', [{ count: 1, name: ITEM_DEFS[made.id]?.name ?? made.id, ql: made.ql }]), 'event');
       this.events.emit('smelter');
     }
   }
