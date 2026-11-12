@@ -6723,7 +6723,7 @@ export class Renderer {
 
   /**
    * Play a spell's drawing from you, with no island and nothing done: for
-   * checking how a spell looks (`wurm.spell` in the console). At what is
+   * checking how a spell looks (`wildermon.spell` in the console). At what is
    * under the cursor -- a creature, somebody, the ground -- unless told, or
    * at yourself for a spell cast only on yourself. Nothing is sent to anybody.
    * `from` plays it as though the island had just moved you there from that

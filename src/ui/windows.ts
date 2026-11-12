@@ -56,8 +56,8 @@ export interface Layout {
   windows: Record<string, SavedState>;
 }
 
-const STORAGE_KEY = 'wurm-iso-windows';
-const LAYOUT_KEY = 'wurm-iso-layouts';
+const STORAGE_KEY = 'wildermon-iso-windows';
+const LAYOUT_KEY = 'wildermon-iso-layouts';
 const EXPAND_ICON = '⤢';
 const UNFOLD_ICON = '▴';
 const FOLD_ICON = '▾';
@@ -109,7 +109,7 @@ interface Piece {
   least(): { w: number; h: number };
 }
 
-/** A draggable, resizable overlay window in the Wurm style. */
+/** A draggable, resizable overlay window. */
 export class UIWindow implements Piece {
   readonly fixed = false;
   readonly el: HTMLDivElement;

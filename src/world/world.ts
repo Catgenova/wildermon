@@ -30,7 +30,7 @@ export type LandSource = (x0: number, y0: number, w: number, h: number) => LandW
 
 /**
  * The terrain: a grid of tiles plus a (w+1) x (h+1) grid of corner heights,
- * exactly like Wurm's surface. Water sits at height 0.
+ * each tile bounded by its four corners. Water sits at height 0.
  */
 export class World {
   readonly w: number;

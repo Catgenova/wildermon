@@ -17,7 +17,7 @@
 process.env.MOVE_GROUND_TEST = '1';
 process.env.PGHOST ??= '/var/run/postgresql';
 process.env.PGPORT ??= '5433';
-process.env.PGUSER ??= 'wurm';
+process.env.PGUSER ??= 'wildermon';
 
 import { generateAtlasWindow, regionAt } from '../../src/world/atlas-world';
 import { REGIONS } from '../../src/world/regions';

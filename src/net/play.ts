@@ -366,7 +366,7 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
    * never saves, and the island holds no pins. Kept in this browser, one set
    * for each island and each person on it, and taken back as the game starts.
    */
-  const marksKey = `wurm.marks.${info.id}.${island.uid}`;
+  const marksKey = `wildermon.marks.${info.id}.${island.uid}`;
   try {
     const kept = JSON.parse(localStorage.getItem(marksKey) ?? '[]') as unknown;
     if (Array.isArray(kept)) game.takeMarks(kept.filter((m): m is Marker => !!m && typeof m === 'object'

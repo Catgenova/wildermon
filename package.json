@@ -1,8 +1,8 @@
 {
-  "name": "wurm-iso",
+  "name": "wildermon",
   "private": true,
   "version": "0.1.0",
-  "description": "A browser remake of Wurm Online as a 2.5D isometric game. Full-page canvas with HTML UI overlays.",
+  "description": "Wildermon: a multiplayer 2.5D isometric island game in the browser. Full-page canvas with HTML UI overlays.",
   "type": "module",
   "scripts": {
     "dev": "vite",

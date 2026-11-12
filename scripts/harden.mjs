@@ -223,7 +223,7 @@ export function harden({ log = console.log, rename = true, obfuscation = true } 
   let named = 0;
   const net = { modules: 0, before: 0, after: 0, ms: 0 };
   return {
-    name: 'wurm-harden',
+    name: 'wildermon-harden',
     apply: 'build',
     enforce: 'post',
     config: () => ({ define: { __BUILD__: JSON.stringify(BUILD_PLACEHOLDER) } }),

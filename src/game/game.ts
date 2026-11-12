@@ -6526,7 +6526,7 @@ export class Game {
     this.events.emit('inventory');
   }
 
-  /** Wurm-flavoured success roll: better skill and tools help, difficulty hurts. */
+  /** Success roll: better skill and tools help, difficulty hurts. */
   /**
    * A skill check at a job that a perk may make surer (`fail:` and the job, a
    * Mason's Sure Chisel, a Miner's Sure Pick, a Tailor's Sure Needle): a
@@ -9894,7 +9894,7 @@ export class Game {
   }
 
   deedStores(): DeedStore[] {
-    // Round its keeper, a worker's stores are the storage in reach of them while it steps (the island's `wurm.around`).
+    // Round its keeper, a worker's stores are the storage in reach of them while it steps (the island's `wildermon.around`).
     if (this.storeScope) return this.aroundStores(this.storeScope);
     // A field worker asks this for every tile it looks at, so build the list
     // once a tick. The entries hold the crates and pieces themselves, so what

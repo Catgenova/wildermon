@@ -3,7 +3,7 @@
  *
  * World space: tiles are addressed by (x, y). Corners of the height map sit on
  * integer coordinates; tile (x, y) is bounded by corners (x,y) (x+1,y) (x+1,y+1) (x,y+1).
- * Heights are integers in "dirt" units, like Wurm: one dig = one unit = 10 cm,
+ * Heights are integers in "dirt" units: one dig = one unit = 10 cm,
  * a tile is 4 m across.
  *
  * Iso space: a 2:1 diamond projection. Height lifts a point straight up on screen.

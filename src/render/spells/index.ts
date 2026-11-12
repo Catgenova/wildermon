@@ -93,16 +93,16 @@
  *
  * ## Seeing one
  *
- *     node /home/user/Wurm/node_modules/.cache/anim/spell.mjs --root <worktree> --spell blade_lunge \
+ *     node <checkout>/node_modules/.cache/anim/spell.mjs --root <worktree> --spell blade_lunge \
  *       --facing 1 --frames 10 --zoom 4 --target creature --out /path/sheet.png
  *
  * draws a sheet of frames through the cast -- the caster, a stand-in target at
  * the right distance, every effect -- on a patch of ground (`--target`
  * creature | player | tile | self; `--night 1` for the dark, `--fast 1` for
  * fast graphics, `--secs` to run on past the cast for what lingers). In the
- * game, `wurm.spell('blade_lunge')` in the console plays it from you at
+ * game, `wildermon.spell('blade_lunge')` in the console plays it from you at
  * whatever is under the cursor, drawn in this browser only, and
- * `wurm.spells` lists every id.
+ * `wildermon.spells` lists every id.
  *
  * SPELLS.md, in this folder, is the long form of all of this for
  * whoever draws the spells: the palettes, the conventions, the budgets.

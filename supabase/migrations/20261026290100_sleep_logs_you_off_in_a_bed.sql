@@ -1,9 +1,9 @@
 /*
  * Sleep logs you off in a bed, and the sleep bonus.
  *
- * Asked for: "beds say 'sleep over the night' when they should operate like
- * wurm beds, logging the player off and beginning the stage of sleep bonus
- * gain while the player is offline".
+ * Asked for: beds that log the player off, in place of "sleep over the
+ * night", and begin the stage of sleep bonus gain while the player is
+ * offline.
  *
  * Sleep (`last_refusal`, `perform_last`, `sleep_fall`), any hour of the day:
  *

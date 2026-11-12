@@ -32,7 +32,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -65,7 +65,7 @@ const NEED = (n: number): string => `'{"log": 0, "${TINTED_PANE}": ${n}}'::jsonb
 const MIRA = 'e1c4a170-0000-4000-8000-0000000000c1';
 const T = (x: number, side: Side): string => `'{"x":${x},"y":30,"side":"${side}"}'::jsonb`;
 const out = psql(`
-set wurm.season = '';
+set wildermon.season = '';
 discard temp;
 begin;
 create temp table said (k text, v text);

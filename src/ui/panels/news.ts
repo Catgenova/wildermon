@@ -4254,6 +4254,14 @@ export const NEWS: News[] = [
     },
   },
   {
+    n: 529,
+    day: '2026-11-12',
+    lines: () => [
+      'Reset once, in this browser: settings, keybinds, window places, window layouts, tracker, shopping list, pinned and recent recipes, craft queue folded or open, map pins.',
+      'Sign in again, once.',
+    ],
+  },
+  {
     n: 526,
     day: '2026-11-11',
     lines: () => ['Renamed: Breed with <mate> while it runs (event log, over other players): putting them together → breeding.'],
@@ -4269,7 +4277,7 @@ export const NEWS: News[] = [
     lines: () => ['Fixed: Improve and repair, Shopping list: scroll bar when the window is shorter than its contents.'],
   },
   {
-    n: 529,
+    n: 530,
     day: '2026-11-12',
     lines: () => ['Fixed: top of a waterfall off a pond behind a raised cliff edge: water drawn only over the pond, behind the rim (was: over the rim and its moss beside the fall, up to 2 tiles along).'],
   },
@@ -5511,7 +5519,7 @@ const RETRADED: ReadonlyArray<readonly [string, string]> = [
 ];
 
 /** The highest entry this browser has shown. */
-const SEEN = 'wurm.news.seen';
+const SEEN = 'wildermon.news.seen';
 
 /**
  * Whether this browser has been played in before this page was opened: a
@@ -5521,7 +5529,7 @@ const SEEN = 'wurm.news.seen';
  */
 const PLAYED_HERE = ((): boolean => {
   try {
-    return localStorage.getItem('wurm-iso-windows') !== null || localStorage.getItem(SEEN) !== null;
+    return localStorage.getItem('wildermon-iso-windows') !== null || localStorage.getItem(SEEN) !== null;
   } catch {
     return false;
   }

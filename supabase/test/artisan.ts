@@ -50,7 +50,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -105,9 +105,9 @@ const skillAt = (id: string, v: number): string =>
 const skillOf = (id: string): string =>
   `(select value from skill where world_id = w and uid = u and id = '${id}')`;
 /** The go's perks, as the clock sets them for a go of `act`: what `pkx` reads. */
-const goContext = (act: string): string => `perform set_config('wurm.pk', coalesce((select pl.class_mul->'fx' from player pl
+const goContext = (act: string): string => `perform set_config('wildermon.pk', coalesce((select pl.class_mul->'fx' from player pl
     where pl.world_id = w and pl.uid = u), '{}'::jsonb)::text, true);
-  perform set_config('wurm.pk_act', '${act}', true)`;
+  perform set_config('wildermon.pk_act', '${act}', true)`;
 
 const HANDS = 40;
 const SKILL = 70;
@@ -158,16 +158,16 @@ begin
 end $f$;
 create schema dice;
 create function dice.random() returns double precision language plpgsql volatile as $f$
-declare xs text[] := string_to_array(current_setting('wurm.dice'), ',');
-        n int := coalesce(nullif(current_setting('wurm.dice_n', true), ''), '0')::int;
+declare xs text[] := string_to_array(current_setting('wildermon.dice'), ',');
+        n int := coalesce(nullif(current_setting('wildermon.dice_n', true), ''), '0')::int;
 begin
-  perform set_config('wurm.dice_n', (n + 1)::text, true);
+  perform set_config('wildermon.dice_n', (n + 1)::text, true);
   return xs[1 + n % array_length(xs, 1)]::double precision;
 end $f$;
 create function pg_temp.dice(v text) returns void language plpgsql as $f$
 begin
-  perform set_config('wurm.dice', v, true);
-  perform set_config('wurm.dice_n', '0', true);
+  perform set_config('wildermon.dice', v, true);
+  perform set_config('wildermon.dice_n', '0', true);
   perform set_config('search_path', 'dice, public, pg_catalog', true);
 end $f$;
 create function pg_temp.nodice() returns void language plpgsql as $f$
@@ -342,8 +342,8 @@ begin
   ${dice(LAST_STONE)};
   v_t := v_t || '|' || roll_gem() || '|' || roll_gem(true);
   ${nodice};
-  perform set_config('wurm.pk', '', true);
-  perform set_config('wurm.pk_act', '', true);
+  perform set_config('wildermon.pk', '', true);
+  perform set_config('wildermon.pk_act', '', true);
   insert into said values ('GEMS', v_t);
   ${clearAll};
 

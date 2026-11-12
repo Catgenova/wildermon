@@ -3,8 +3,8 @@
  * gathering, crafting or looting came due faster than any go can.
  *
  * The ledger's new rows (`private.watch_made_new`) now say whose go made a
- * thing (`uid`, from `wurm.uid`, `watch_go_uid`) and when that go was due (`go_at`, from
- * `wurm.go_at`), both of which `settle` sets for the length of each go. Two
+ * thing (`uid`, from `wildermon.uid`, `watch_go_uid`) and when that go was due (`go_at`, from
+ * `wildermon.go_at`), both of which `settle` sets for the length of each go. Two
  * columns on a row the ledger writes anyway: no other write, no round trip.
  *
  * Every five minutes, before the sweep folds those rows into the day's totals
@@ -39,9 +39,9 @@ language sql stable set search_path = public as $fn$
               else action_floor() end
 $fn$;
 
-/* Whose go is being settled, or null outside a go: `wurm.uid`, which `settle` sets. Inlines. */
+/* Whose go is being settled, or null outside a go: `wildermon.uid`, which `settle` sets. Inlines. */
 create or replace function private.watch_go_uid() returns uuid
-language sql stable as $fn$ select nullif(pg_catalog.current_setting('wurm.uid', true), '')::uuid $fn$;
+language sql stable as $fn$ select nullif(pg_catalog.current_setting('wildermon.uid', true), '')::uuid $fn$;
 revoke all on function private.watch_go_uid() from public, anon, authenticated;
 
 select private.shut('alter table private.watch_made_new add column if not exists uid uuid');

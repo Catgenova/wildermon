@@ -13,7 +13,7 @@ import { Repaint } from '../repaint';
 import { uiPoint } from '../screen';
 
 /** Where the list is kept folded or open, in this browser. */
-const FOLD_KEY = 'wurm-iso-queue-folded';
+const FOLD_KEY = 'wildermon-iso-queue-folded';
 const reduced = lessMotion;
 
 /** Seconds as the crafting window says a job's time: "40 s", "3 min 20 s", "1 h 5 min". */

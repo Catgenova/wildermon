@@ -42,7 +42,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -105,7 +105,7 @@ insert into grid values ${grid.map(([l, b, d, r], n) => `(${n}, ${l}, ${b}, ${d}
 create schema dice;
 create function dice.random() returns double precision language plpgsql volatile as $f$
 begin
-  return current_setting('wurm.dice')::double precision;
+  return current_setting('wildermon.dice')::double precision;
 end $f$;
 do $t$
 declare w uuid; u uuid := '${U}'; v_kept int; v_other int; v_a int; v_b int; v_c int; v_n bigint; v_was double precision; j jsonb;
@@ -143,7 +143,7 @@ begin
 
   perform set_config('search_path', 'dice, public, pg_catalog', true);
 ${GOES.map((g) => `
-  perform set_config('wurm.dice', '${g.roll}', true);
+  perform set_config('wildermon.dice', '${g.roll}', true);
   insert into skill (world_id, uid, id, value) values (w, u, tracking_skill(), ${g.skill})
     on conflict (world_id, uid, id) do update set value = excluded.value;
   update creature set mode = case when id = any(array[${g.wild.map((k) => `v_${k.toLowerCase()}`).join(', ')}]::int[]) then 'wild' else 'deed' end,
@@ -156,7 +156,7 @@ ${GOES.map((g) => `
   insert into said values ('ARROW_${g.name}', coalesce((select text from event where world_id = w and uid = u and n > v_n and kind = 'tracked'), '-'));`).join('\n')}
 
   -- What a go teaches, the luck forced the same: a full go found, try_learn of one not.
-  perform set_config('wurm.dice', '0.5', true);
+  perform set_config('wildermon.dice', '0.5', true);
   update creature set mode = 'deed' where world_id = w and id in (v_a, v_b, v_c);
   update skill set value = 10.5 where world_id = w and uid = u and id = tracking_skill();
   perform perform_track(w, u, '${TRACK}', jsonb_build_object('kind', 'tile', 'species', '${KIND}'));

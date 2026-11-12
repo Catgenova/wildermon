@@ -15,7 +15,7 @@
 -- here and there is not going to be one, so the username *becomes* the
 -- address:
 --
---     alice  ->  alice@players.wurm.invalid
+--     alice  ->  alice@players.wildermon.invalid
 --
 -- `.invalid` is reserved by RFC 2606 and can never be delegated to anybody, so
 -- that address is guaranteed to reach no one, forever. Two things fall out of
@@ -57,7 +57,7 @@
 
 /** The suffix every username wears so that Auth has an address to sign in. */
 create or replace function name_domain() returns text language sql immutable as $$
-  select '@players.wurm.invalid'
+  select '@players.wildermon.invalid'
 $$;
 
 /**

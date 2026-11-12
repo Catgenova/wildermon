@@ -34,6 +34,19 @@ alter table auth.users add column if not exists email text;
 alter table auth.users add column if not exists raw_user_meta_data jsonb;
 create unique index if not exists users_email_key on auth.users (lower(email));
 
+-- And Auth's identities, the way it keeps one for an account made with an
+-- address: the address again in `identity_data`, and `email` worked out from
+-- it. Enough for a migration that moves addresses to be tested moving both.
+create table if not exists auth.identities (
+  id uuid primary key default gen_random_uuid(),
+  provider_id text not null,
+  user_id uuid not null references auth.users (id) on delete cascade,
+  identity_data jsonb not null,
+  provider text not null,
+  email text generated always as (lower(identity_data ->> 'email')) stored,
+  unique (provider_id, provider)
+);
+
 /**
  * What Supabase grants on the auth schema, granted here too.
  *

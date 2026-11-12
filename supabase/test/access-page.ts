@@ -183,7 +183,7 @@ export interface Rules {
   Object.defineProperty(window, 'localStorage', { value: store, configurable: true });
   const before: Record<string, string[]> = {};
   for (const b of BINDS) before[b.id] = b.id === 'win_market' ? ['KeyU'] : b.keys.slice();
-  kept.set('wurm-iso-keys', JSON.stringify(before));
+  kept.set('wildermon-iso-keys', JSON.stringify(before));
   const old = new Keybinds();
   if (was) Object.defineProperty(window, 'localStorage', was);
   const presets: Rules['presets'] = [];

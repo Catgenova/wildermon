@@ -346,14 +346,14 @@ begin
    * the clock sets them for a go: so a Smith's Forge Reach reaches the same
    * stores for the refusal as for the go. Put back as they were after.
    */
-  was_pk := current_setting('wurm.pk', true);
-  was_act := current_setting('wurm.pk_act', true);
-  perform set_config('wurm.pk', coalesce((select pl.class_mul->'fx' from player pl
+  was_pk := current_setting('wildermon.pk', true);
+  was_act := current_setting('wildermon.pk_act', true);
+  perform set_config('wildermon.pk', coalesce((select pl.class_mul->'fx' from player pl
                                            where pl.world_id = p_world and pl.uid = p_uid), '{}'::jsonb)::text, true);
-  perform set_config('wurm.pk_act', coalesce(p_action, ''), true);
+  perform set_config('wildermon.pk_act', coalesce(p_action, ''), true);
   why := act_refusal_rules(p_world, p_uid, p_action, p_target);
-  perform set_config('wurm.pk', coalesce(was_pk, ''), true);
-  perform set_config('wurm.pk_act', coalesce(was_act, ''), true);
+  perform set_config('wildermon.pk', coalesce(was_pk, ''), true);
+  perform set_config('wildermon.pk_act', coalesce(was_act, ''), true);
   return why;
 end $function$;
 

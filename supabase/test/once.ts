@@ -1,7 +1,7 @@
 /**
  * An action taken once, however many times it is sent.
  *
- * Every call the browser makes to a door carries a key in `x-wurm-once` (`watchedFetch`), the same key
+ * Every call the browser makes to a door carries a key in `x-wildermon-once` (`watchedFetch`), the same key
  * again when it is tried again, and the island takes a key once (`private.once`). What this asks:
  *
  * The browser, with a stand-in network:
@@ -31,7 +31,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -145,8 +145,8 @@ create temp table said (k text, v text);
 create function pg_temp.req(p_key text) returns void language plpgsql as $f$
 begin
   perform set_config('request.headers', case when p_key is null then '{"x-forwarded-for": "203.0.113.9"}'
-                                             else json_build_object('x-wurm-once', p_key)::text end, true);
-  perform set_config('wurm.once', '', true);
+                                             else json_build_object('x-wildermon-once', p_key)::text end, true);
+  perform set_config('wildermon.once', '', true);
 end $f$;
 do $t$
 declare w uuid; me uuid := '${ME}'; v_err text; v_n int;
@@ -299,7 +299,7 @@ check('a key past the window is taken afresh', said.get('LAPSED') === 'went thro
 check('a door run from inside another takes its call\'s key once', said.get('NESTED') === 'Twice?', said.get('NESTED'));
 check('a door that only reads keeps no key', said.get('LOOK') === 'answered', said.get('LOOK'));
 check('a call with no key is not counted', said.get('NOKEY') === '0', said.get('NOKEY'));
-check('a key that is not one is a bad request', (said.get('NOTAKEY') ?? '').startsWith('22023 Bad request: x-wurm-once'), said.get('NOTAKEY'));
+check('a key that is not one is a bad request', (said.get('NOTAKEY') ?? '').startsWith('22023 Bad request: x-wildermon-once'), said.get('NOTAKEY'));
 check('the sweep lets go of a key past the window and keeps the rest', said.get('SWEPT') === K3, said.get('SWEPT'));
 {
   const [keyed, unkeyed] = (said.get('KEYED') ?? '0|0').split('|');

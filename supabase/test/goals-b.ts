@@ -52,7 +52,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -104,7 +104,7 @@ if (!FLEECED) throw new Error('nothing grows a fleece');
 const METAL_PIECE = ARMOUR.find((a) => MOULD_BY_MAKES.has(a.id))!.id;
 
 const out = psql(`
-set wurm.season = '';
+set wildermon.season = '';
 discard temp;
 begin;
 create temp table said (k text, v text);

@@ -20,7 +20,7 @@
  *     sees it; `cellar_sweep` rots it at `cellar_decay()` of the outdoor rate.
  *   * Every rule that asks what is within a body's reach asks it on the body's
  *     own side of the ground floor (`same_floor`): `act_refusal` and `settle`
- *     set `wurm.floor` from the body's row for the refusal and the go, as they
+ *     set `wildermon.floor` from the body's row for the refusal and the go, as they
  *     set the perks -- its storey, and down in a cellar whose cellar it is. A
  *     thing down in the cellar is reached from down there, a thing up top from
  *     up top, and from down in one cellar nothing in the cellar of the
@@ -66,15 +66,15 @@ create index if not exists item_cellar_gone on item (world_id) where holder = 'c
 
 /* ---- Which storey a thing and a body are on ----------------------------------------------------------- */
 
--- The storey the rules are being asked from: the refusal or the go in hand (`wurm.floor`, `<storey>:<building>`),
+-- The storey the rules are being asked from: the refusal or the go in hand (`wildermon.floor`, `<storey>:<building>`),
 -- or the ground when nobody is asking -- a worker, a beast, the tick.
 create or replace function actor_floor() returns int language sql stable as $$
-  select coalesce(nullif(split_part(current_setting('wurm.floor', true), ':', 1), '')::int, 0)
+  select coalesce(nullif(split_part(current_setting('wildermon.floor', true), ':', 1), '')::int, 0)
 $$;
 
 -- And down in a cellar, the building whose cellar it is (`Game.myCellar`).
 create or replace function actor_cellar() returns int language sql stable as $$
-  select nullif(split_part(current_setting('wurm.floor', true), ':', 2), '')::int
+  select nullif(split_part(current_setting('wildermon.floor', true), ':', 2), '')::int
 $$;
 
 -- The storey a thing or a body counts as for reach: the cellar (-1), or the ground and everything over it (0).
@@ -87,7 +87,7 @@ create or replace function cellar_at(p_world uuid, p_x int, p_y int) returns cel
   select * from cellar_tile where world_id = p_world and x = p_x and y = p_y
 $$;
 
--- What `wurm.floor` says of a body at a storey and a spot: the storey, and down in a cellar whose cellar it is.
+-- What `wildermon.floor` says of a body at a storey and a spot: the storey, and down in a cellar whose cellar it is.
 create or replace function floor_said(p_world uuid, p_level int, p_x double precision, p_y double precision) returns text
   language sql stable as $$
   select floor_of(p_level) || ':'
@@ -653,7 +653,7 @@ end $$;
 -- What is set down in a go taken in a cellar is down there: a crate or a piece placed from down there.
 create or replace function cellar_set_down() returns trigger language plpgsql as $$
 begin
-  if actor_floor() < 0 and coalesce(current_setting('wurm.pk_act', true), '') in ('place_crate', 'place_furniture') then
+  if actor_floor() < 0 and coalesce(current_setting('wildermon.pk_act', true), '') in ('place_crate', 'place_furniture') then
     new.level := -1;
   end if;
   return new;
@@ -802,17 +802,17 @@ begin
    * the clock sets them for a go: so a Smith's Forge Reach reaches the same
    * stores for the refusal as for the go. Put back as they were after.
    */
-  was_pk := current_setting('wurm.pk', true);
-  was_act := current_setting('wurm.pk_act', true);
-  perform set_config('wurm.pk', coalesce(v_fx, '{}'::jsonb)::text, true); -- cellar: read above, with the storey
-  perform set_config('wurm.pk_act', coalesce(p_action, ''), true);
+  was_pk := current_setting('wildermon.pk', true);
+  was_act := current_setting('wildermon.pk_act', true);
+  perform set_config('wildermon.pk', coalesce(v_fx, '{}'::jsonb)::text, true); -- cellar: read above, with the storey
+  perform set_config('wildermon.pk_act', coalesce(p_action, ''), true);
   -- cellar: and the side of the ground floor it is asked from (`actor_floor`, `actor_cellar`), put back after.
-  was_floor := current_setting('wurm.floor', true); -- cellar
-  perform set_config('wurm.floor', v_floor || ':' || coalesce(v_cellar::text, ''), true); -- cellar
+  was_floor := current_setting('wildermon.floor', true); -- cellar
+  perform set_config('wildermon.floor', v_floor || ':' || coalesce(v_cellar::text, ''), true); -- cellar
   why := act_refusal_rules(p_world, p_uid, p_action, p_target);
-  perform set_config('wurm.floor', coalesce(was_floor, ''), true); -- cellar
-  perform set_config('wurm.pk', coalesce(was_pk, ''), true);
-  perform set_config('wurm.pk_act', coalesce(was_act, ''), true);
+  perform set_config('wildermon.floor', coalesce(was_floor, ''), true); -- cellar
+  perform set_config('wildermon.pk', coalesce(was_pk, ''), true);
+  perform set_config('wildermon.pk_act', coalesce(was_act, ''), true);
   return why;
 end $function$;
 
@@ -864,17 +864,17 @@ begin
       guard := guard + 1;
       -- A go, for what the baubles make of its yield (`bauble_yield`), and
       -- what they made of it said after the go has said its own piece.
-      perform set_config('wurm.bauble_go', 'go', true);
-      perform set_config('wurm.bauble_made', '', true);
+      perform set_config('wildermon.bauble_go', 'go', true);
+      perform set_config('wildermon.bauble_made', '', true);
       -- And the perks, for the rules too deep to be handed the body: for
       -- this go and no other (`pkx`), cleared the moment it is done.
-      perform set_config('wurm.pk', coalesce(p.class_mul->'fx', '{}'::jsonb)::text, true);
-      perform set_config('wurm.pk_act', p.act, true);
-      perform set_config('wurm.floor', floor_said(p_world, p.level, p.x, p.y), true); -- cellar: the side the go is taken on
+      perform set_config('wildermon.pk', coalesce(p.class_mul->'fx', '{}'::jsonb)::text, true);
+      perform set_config('wildermon.pk_act', p.act, true);
+      perform set_config('wildermon.floor', floor_said(p_world, p.level, p.x, p.y), true); -- cellar: the side the go is taken on
       perform act_perform(p_world, p_uid, p.act, p.act_target);
-      perform set_config('wurm.pk', '', true);
-      perform set_config('wurm.pk_act', '', true);
-      perform set_config('wurm.floor', '', true); -- cellar
+      perform set_config('wildermon.pk', '', true);
+      perform set_config('wildermon.pk_act', '', true);
+      perform set_config('wildermon.floor', '', true); -- cellar
       perform bauble_said(p_world, p_uid);
       -- And what the go took out of you, which nothing over here had ever
       -- charged: `action_def.stamina` was a column no function read.

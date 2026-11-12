@@ -1,8 +1,8 @@
 #!/bin/bash
 # The test island, up and current: a local Postgres 16 on port 5433 (socket
-# /var/run/postgresql, superuser wurm) holding ci_t, the database the suite
+# /var/run/postgresql, superuser wildermon) holding ci_t, the database the suite
 # leaves behind (supabase/test/run.sh), that tests are run against as
-#   PGHOST=/var/run/postgresql PGPORT=5433 PGUSER=wurm PGDATABASE=ci_t
+#   PGHOST=/var/run/postgresql PGPORT=5433 PGUSER=wildermon PGDATABASE=ci_t
 #
 # It has been found down at the start of a session with a postmaster.pid left
 # by a container that went away; that lock is cleared only when no process
@@ -16,7 +16,7 @@ cd "$(dirname "$0")/.."
 [ -d node_modules ] || npm install --no-audit --no-fund >/dev/null
 
 BIN=/usr/lib/postgresql/16/bin
-ROOT=/var/lib/postgresql/wurmtest
+ROOT=/var/lib/postgresql/wildermontest
 DATA=$ROOT/data
 SOCK=/var/run/postgresql
 PORT=5433
@@ -28,7 +28,7 @@ fi
 mkdir -p "$SOCK" && chown postgres:postgres "$SOCK"
 if [ ! -f "$DATA/PG_VERSION" ]; then
   mkdir -p "$ROOT" && chown postgres:postgres "$ROOT"
-  su postgres -c "$BIN/initdb -D $DATA -A trust -U wurm" >/dev/null
+  su postgres -c "$BIN/initdb -D $DATA -A trust -U wildermon" >/dev/null
 fi
 if ! "$BIN/pg_isready" -q -h "$SOCK" -p "$PORT"; then
   pid=$(head -1 "$DATA/postmaster.pid" 2>/dev/null || true)
@@ -36,7 +36,7 @@ if ! "$BIN/pg_isready" -q -h "$SOCK" -p "$PORT"; then
   su postgres -c "$BIN/pg_ctl -D $DATA -l $ROOT/log -o '-p $PORT -k $SOCK' -w start" >/dev/null
 fi
 
-export PGHOST=$SOCK PGPORT=$PORT PGUSER=wurm
+export PGHOST=$SOCK PGPORT=$PORT PGUSER=wildermon
 PSQL="psql -v ON_ERROR_STOP=1 -X -q -At"
 has() { [ -n "$($PSQL -d "$1" -c "$2")" ]; }
 mark_all() {
@@ -62,7 +62,7 @@ else
       $PSQL -d ci_t -c "insert into local_meta.applied values ('$n')" >/dev/null
       echo "test-island: applied $n" >&2
     else
-      echo "test-island: $n will not apply to ci_t; drop it (dropdb -h $SOCK -p $PORT -U wurm ci_t) and run this again to rebuild" >&2
+      echo "test-island: $n will not apply to ci_t; drop it (dropdb -h $SOCK -p $PORT -U wildermon ci_t) and run this again to rebuild" >&2
       exit 1
     fi
   done

@@ -272,7 +272,7 @@ And what fires after a cast, on its own (a Ward Link laying a skin back over som
 browser, which passes it on; the stage hands it to that cast as `k.fired`, `[{ on, age, size }]`: on whom (where they
 are now), seconds since, and how large.
 
-Where there is no island to ask (`wurm.spell` in the console, the preview), `guessTold` (`guess.ts`) works the same
+Where there is no island to ask (`wildermon.spell` in the console, the preview), `guessTold` (`guess.ts`) works the same
 fields out by the island's rules from who stands where: whom an area reaches, a monster's share of a hold, a Panic's
 monsters for their own seconds, a Fright on a monster refused (and so not drawn). `supabase/test/did.ts` holds it to what
 the island says.
@@ -500,7 +500,7 @@ Colours are '#rrggbb' everywhere (the kit parses them; no `rgb()` strings in a p
 
 Preview sheet (bundles your worktree fresh each run):
 
-    node /home/user/Wurm/node_modules/.cache/anim/spell.mjs --root <your worktree> --spell kindler_scorch \
+    node <checkout>/node_modules/.cache/anim/spell.mjs --root <your worktree> --spell kindler_scorch \
       --facing 1 --frames 10 --zoom 4 --target creature --out <png>
 
 `--target creature|player|tile|self` (default: the spell's own first kind), `--dist` tiles along the ground (default:
@@ -535,10 +535,10 @@ thing drawn in any of them, so a tall effect over a big creature is not cut off.
 `/tmp/spell-*` bundle when done (and any other over an hour old). Write images under the scratchpad
 `anim/<your-name>/`.
 
-In the game, in the console, `wurm.spell('kindler_scorch')` plays it from you at whatever is
-under the cursor (a creature, a person, the ground), drawn in this browser only; `wurm.spell(id, { kind: 'creature', id })`,
+In the game, in the console, `wildermon.spell('kindler_scorch')` plays it from you at whatever is
+under the cursor (a creature, a person, the ground), drawn in this browser only; `wildermon.spell(id, { kind: 'creature', id })`,
 `{ kind: 'spot', x, y }`, `{ kind: 'self' }` aim it; a third argument `{ from: { x, y }, companion: creatureId }` plays
-it as though the island had moved you from there, or with that creature as your companion; `wurm.spells` lists every
+it as though the island had moved you from there, or with that creature as your companion; `wildermon.spells` lists every
 id.
 
 What it costs: `scratchpad/anim/spells/perf.mjs` times the renderer with spells going (see its header; same scratch
