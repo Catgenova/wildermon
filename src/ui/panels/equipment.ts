@@ -64,6 +64,12 @@ const WIDE_SHARE = 1.45;
 const FEET_UP = 30;
 /** The most frames a second the figure is drawn at. */
 const FIGURE_FPS = 30;
+/**
+ * And the most of the page's time it takes: the next frame waits this many times as long as the last took to draw. A
+ * sculpted body drawn window-sized costs a graphics chip a millisecond or two, so 30 a second; with WebGL in software
+ * it costs tens, and a figure at 30 a second would leave the page no time for anything else.
+ */
+const FIGURE_SHARE = 10;
 /** How long the hop and a socket's seating take when something goes on, seconds. */
 const SEAT_SECS = 0.9;
 /** At or under this width (CSS px) the tabs go under the figure and the shelf under them. */
@@ -144,6 +150,8 @@ export class EquipmentPanel {
   private seatAt = -Infinity;
   private frame = 0;
   private lastFigure = 0;
+  /** How long the figure last took to draw, ms. */
+  private figureCost = 0;
   private drawn = '';
   /** Whether the last draw was made with the window open: only a change seen while it is open is played out. */
   private seen = false;
@@ -670,9 +678,11 @@ export class EquipmentPanel {
     cancelAnimationFrame(this.frame);
     const step = (ms: number): void => {
       if (!this.win.isOpen) return;
-      if (ms - this.lastFigure >= 1000 / FIGURE_FPS) {
+      if (ms - this.lastFigure >= Math.max(1000 / FIGURE_FPS, this.figureCost * FIGURE_SHARE)) {
         this.lastFigure = ms;
+        const t0 = performance.now();
         this.drawStage(ms / 1000);
+        this.figureCost = performance.now() - t0;
       }
       this.frame = requestAnimationFrame(step);
     };
