@@ -35,3 +35,5 @@ end $do$;
 
 -- Bodies asleep now: their bed's name as the boot card will say it.
 update private.asleep a set name = placed_name_in_line(pc) from placed pc where pc.id = a.bed and pc.world_id = a.world_id;
+
+select private.lock_doors();
