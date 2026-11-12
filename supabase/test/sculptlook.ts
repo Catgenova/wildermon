@@ -64,7 +64,7 @@ check('every hairstyle in the list has a mesh on both bodies',
 check('and every mesh is in the list', meshed('male').every((id) => INDEX.styles.some((s) => s.id === id)), meshed('male').join());
 check('the creator offers Bald and every one of them, by name', same(HAIRSTYLES, [{ id: 'bald', name: 'Bald' }, ...INDEX.styles]),
   HAIRSTYLES.map((h) => h.name).join(', '));
-check('two hairstyles and bald, so far', HAIRSTYLES.length === 3, HAIRSTYLES.map((h) => h.id).join());
+check('three hairstyles and bald, so far', HAIRSTYLES.length === 4, HAIRSTYLES.map((h) => h.id).join());
 check('the ids the island checks are the bodies and the hairstyles', same(Object.keys(LOOK_TABLES), ['gender', 'hair']));
 
 /* ---- the ramps ------------------------------------------------------------------------------------- */
@@ -144,6 +144,7 @@ const hairNow = OLD_HAIR.map((h) => cleanLook({ hair: h }).hair);
 check('every old haircut to one there is a mesh for', hairNow.every((h) => HAIRSTYLES.some((s) => s.id === h)), OLD_HAIR.map((h, i) => `${h}>${hairNow[i]}`).join(' '));
 check('short to the swept back, long to the braid, bald and the tonsure to bald',
   cleanLook({ hair: 'crop' }).hair === 'swept' && cleanLook({ hair: 'ponytail' }).hair === 'braid' && cleanLook({ hair: 'tonsure' }).hair === 'bald');
+check('a bowl cut and a fringe to the bob', cleanLook({ hair: 'bowl' }).hair === 'bob' && cleanLook({ hair: 'fringe' }).hair === 'bob');
 const SKINS: Record<string, string> = { porcelain: '#f5ddc6', fair: '#ecc8a6', light: '#ddae85', olive: '#c79a68', tan: '#b5804f', bronze: '#9d6a3f', umber: '#855634', deep: '#6b4328', dark: '#55341f', ebony: '#3e2617' };
 check('every old skin is its very colour', Object.entries(SKINS).every(([id, c]) => skinColour(cleanLook({ skin: id })) === c),
   Object.keys(SKINS).filter((id) => skinColour(cleanLook({ skin: id })) !== SKINS[id]).join());

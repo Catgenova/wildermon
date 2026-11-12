@@ -2,12 +2,12 @@
 // the head and a little wider than it, a wrap band with a ring ornament, a large asymmetric brim with a raised trim edge,
 // drooping past the eye line on the body's right and at the front, level with its tip swept up on the body's left under
 // the two angled feathers in the trim colour), fitted to each low-poly body from the one design (DESIGN, per body), its
-// crown sized to the skull (the head alone, by `clear`) and the approved swept-back hair (src/sculpt/assets/lowhair.json)
-// pressed under it (hatHair). Rigid on the head bone; no bones of its own.
+// crown sized to the skull (the head alone, by `clear`) and the swept-back hair and the bob (src/sculpt/assets/lowhair.json,
+// PRESSED) pressed under it (hatHair). Rigid on the head bone; no bones of its own.
 //
 //   buildHat(rig, design) → { verts, polys: [{ v, mat, part, tag, piece }], tris, part, design }
 //   hatWeights(rig, G) → per vertex [[bone, weight], ...] (the head only)
-//   hatHair(rig, G) → the swept-back hair pressed under the hat (the game's 'swept:hat')
+//   hatHair(rig, G, { style }) → a hairstyle pressed under the hat (the game's '<style>:hat', 'swept:hat', 'bob:hat')
 //
 //   node tools/sculpt/garments/hat.mjs
 //     writes the game's copy beside each body: src/sculpt/assets/lowhat-male.json and lowhat-female.json
@@ -146,6 +146,8 @@ function secR(D, az, a) {
   return r * Math.hypot(sx * ox, cz * oz);
 }
 
+/** The hairstyles drawn pressed under the hat (the game's '<style>:hat'); the others are drawn as they are. */
+const PRESSED = ['swept', 'bob'];
 /** The head's and the hair's points in the hat's frame (the body's head samples, the hair's vertices and samples). */
 const HAIR = JSON.parse(readFileSync(new URL('../../../src/sculpt/assets/lowhair.json', import.meta.url), 'utf8'));
 export function hairMesh(who, style = 'swept') {
@@ -422,8 +424,8 @@ export function buildHat(rig, design = DESIGN[rig.who]) {
  * the hat and the hair are, so pressed once for every pose. Its polygons, materials, triangles, weights and shave as
  * the hair's: { verts, tris, polys, mat, shave, pressed: [vertex, moved by], room: [least, ...] }.
  */
-export function hatHair(rig, G, { gap = 0.025, least = 0.02 } = {}) {
-  const H = hairMesh(rig.who), B = rig.B;
+export function hatHair(rig, G, { gap = 0.025, least = 0.02, style = 'swept', pull = 0.008 } = {}) {
+  const H = hairMesh(rig.who, style), B = rig.B;
   const headV = B.verts.filter((_, i) => B.part[i] === 'head' && B.verts[i][1] > 1.0);
   const box = [0, 1, 2].map((c) => [Math.min(...headV.map((p) => p[c])), Math.max(...headV.map((p) => p[c]))]);
   const O = box.map(([a, b]) => (a + b) / 2);
@@ -459,6 +461,19 @@ export function hatHair(rig, G, { gap = 0.025, least = 0.02 } = {}) {
     for (const ti of new Set(sink)) for (const v of H.tris[ti].v) if (ray[v]) ray[v].h2 = Math.min(ray[v].cap, ray[v].h2 + 0.01);
     verts = H.verts.map((_, i) => at(i));
   }
+  // (a hairstyle that hangs below the hat, the bob: a triangle of it still through the hat drawn in under the band, its
+  // corners moved level toward the head's upright axis `pull` at a time; a corner that would sink a triangle into the
+  // head held where it was)
+  for (let it = 0; it < 120; it++) {
+    const hits = crossPairs(G.verts, hatTi, verts, H.tris).map(([, j]) => j);
+    if (!hits.length) break;
+    const before = verts.map((p) => p);
+    for (const v of new Set(hits.flatMap((j) => H.tris[j].v))) {
+      const d = [verts[v][0] - O[0], 0, verts[v][2] - O[2]], l = Math.hypot(...d);
+      if (l > 0.05) verts[v] = add(verts[v], mul(d, -pull / l));
+    }
+    for (const ti of new Set(crossPairs(verts, H.tris, B.verts, headTi).map(([i]) => i).filter((i) => !was.has(i)))) for (const v of H.tris[ti].v) verts[v] = before[v];
+  }
   const pressed = ray.map((r, i) => (r && r.h - r.h2 > 1e-4 ? [i, +(r.h - r.h2).toFixed(4)] : null)).filter(Boolean);
   return { ...H, verts, pressed, room: rooms.length ? Math.min(...rooms) : null, O, hatCross: crossPairs(G.verts, hatTi, verts, H.tris).length };
 }
@@ -479,10 +494,14 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const file = new URL(`../../../src/sculpt/assets/lowhat-${who}.json`, import.meta.url);
     // (the swept-back hair pressed under the hat, hatHair: the game draws it in the hair's place while the hat is worn,
     // its polygons, materials, triangles, weights and shave the hair's own)
-    const H = hatHair(rig, G), H0 = HAIR[who].swept;
-    const hair = { swept: { ...H0, verts: H.verts.flat().map((x) => +x.toFixed(5)) } };
+    const hair = {}, said = [];
+    for (const style of PRESSED) {
+      const H = hatHair(rig, G, { style }), H0 = HAIR[who][style];
+      hair[style] = { ...H0, verts: H.verts.flat().map((x) => +x.toFixed(5)) };
+      said.push(`${style} ${H.pressed.length} of ${H.verts.length} vertices pressed, least room ${H.room.toFixed(3)}, ${H.hatCross} crossing the hat`);
+    }
     const A = { built: 'node tools/sculpt/garments/hat.mjs (tools/sculpt/lowgarment.mjs garmentAsset)', ...garmentAsset(rig, G, MATS, LOOKS), hair };
     writeFileSync(file, JSON.stringify(A));
-    console.log(who, `${G.verts.length} vertices, ${G.tris.length} triangles, ${A.base} + ${A.bones.length} bones, the hair pressed under it (${H.pressed.length} of ${H.verts.length} vertices, its least room ${H.room.toFixed(3)}): wrote`, file.pathname);
+    console.log(who, `${G.verts.length} vertices, ${G.tris.length} triangles, ${A.base} + ${A.bones.length} bones, the hair pressed under it (${said.join('; ')}): wrote`, file.pathname);
   }
 }
