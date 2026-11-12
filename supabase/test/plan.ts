@@ -2,8 +2,8 @@
  * A plan that looks like a plan.
  *
  * Reported, with a picture of a tile whose tooltip read `Part of Oceanport ·
- * House · one storey`: "create a scaffold model for planned buildings like in
- * wurm. there's currently nothing at all to show it's a plan."
+ * House · one storey`: "create a scaffold model for planned buildings. there's
+ * currently nothing at all to show it's a plan."
  *
  * There was not. Everything drawn for a building hangs off a wall or a floor
  * — a planned wall is a dashed quad, a planned floor a dashed lozenge — and a

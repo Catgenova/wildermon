@@ -44,7 +44,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -113,7 +113,7 @@ const out = psql(`
 begin;
 -- Out of winter, whatever the season is: in winter a carcass gives more fur (winter_fur), and the knife's counts are of
 -- the plain share.
-set local wurm.season = 'spring';
+set local wildermon.season = 'spring';
 -- Nothing made or restored here comes up rare at the plain odds, one in a hundred, which is
 -- what a craft or a restoring rolls with no perk to set them: a rare one is a pile of its own
 -- and holds, wears and is marked otherwise, so a check that was not asking about it failed a
@@ -382,13 +382,13 @@ begin
   v_t := coalesce(act_refusal(w, u, 'make_stew', jsonb_build_object('kind', 'item', 'uid', null)), 'ALLOWED');
   ${hold('Pantry Reach')};
   v_t := v_t || '#' || coalesce(act_refusal(w, u, 'make_stew', jsonb_build_object('kind', 'item', 'uid', null)), 'ALLOWED');
-  perform set_config('wurm.pk', (select (class_mul->'fx')::text from player where world_id = w and uid = u), true);
-  perform set_config('wurm.pk_act', 'make_stew', true);
+  perform set_config('wildermon.pk', (select (class_mul->'fx')::text from player where world_id = w and uid = u), true);
+  perform set_config('wildermon.pk_act', 'make_stew', true);
   v_t := v_t || '|' || craft_reach();
-  perform set_config('wurm.pk_act', 'make_planks', true);
+  perform set_config('wildermon.pk_act', 'make_planks', true);
   v_t := v_t || ':' || craft_reach();
-  perform set_config('wurm.pk', '', true);
-  perform set_config('wurm.pk_act', '', true);
+  perform set_config('wildermon.pk', '', true);
+  perform set_config('wildermon.pk_act', '', true);
   insert into said values ('PANTRY', v_t);
   delete from item where placed = v_chest;
   delete from placed where id = v_chest;

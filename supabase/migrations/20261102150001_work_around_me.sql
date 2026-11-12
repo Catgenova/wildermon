@@ -20,7 +20,7 @@
 --     with room (`worker_store`); with no room it holds the load, idle `full`, as any worker does.
 --   * Trades (`around_trade`): every trade that walks out to the ground and carries its loads home, as at a post; and of
 --     the errands, the thirteen worked at the stores (tanning to pressing cheese), their makings out of storage in
---     reach (`deed_store_items`, scoped by `wurm.around` while it settles) and only with room there for what they make.
+--     reach (`deed_store_items`, scoped by `wildermon.around` while it settles) and only with room there for what they make.
 --     Guarding, sparring and every errand tied to the settlement's own buildings, stations or creatures are refused:
 --     those find their work through the settlement (`errand_step`'s `my_deed`, `on_my_deed`), at a post too.
 --   * It ends at Stop (`stop_work_around`), or when its keeper is offline (away, or not seen for `idle_logout`): in the
@@ -131,9 +131,9 @@ create or replace function around_stores(p_world uuid, p_uid uuid, p_x integer, 
      and store_shut_piece(p_world, p_uid, b.p) is null
 $$;
 
-/** The scope of the stores a worker round its keeper reads while it settles (`wurm.around`): its keeper's, or null. */
+/** The scope of the stores a worker round its keeper reads while it settles (`wildermon.around`): its keeper's, or null. */
 create or replace function around_scope(p_uid uuid) returns jsonb language sql stable as $$
-  select q.s from (select nullif(current_setting('wurm.around', true), '')::jsonb as s) q where q.s->>'uid' = p_uid::text
+  select q.s from (select nullif(current_setting('wildermon.around', true), '')::jsonb as s) q where q.s->>'uid' = p_uid::text
 $$;
 
 /** Room in storage in reach of a worker round its keeper for what this recipe makes. */
@@ -233,7 +233,7 @@ select pg_temp.patch_fn('worker_settle(uuid, integer)',
 $o$  if not found or c.mode <> 'deed' then return 0; end if;
 $o$,
 $o$  if not found or c.mode <> 'deed' then return 0; end if;
-  perform set_config('wurm.around', '', true);
+  perform set_config('wildermon.around', '', true);
   -- Round a keeper who is offline: back where it came from (`around_end`).
   if c.around is not null and not keeper_awake(p_world, c.keeper) then
     perform around_end(p_world, p_id, 'Work around me stopped (offline)');
@@ -245,13 +245,13 @@ $o$  select * into v_site from work_site(p_world, c);
 $o$,
 $o$  select * into v_site from work_site(p_world, c);
   if c.around is not null and v_site.x is not null then
-    perform set_config('wurm.around', jsonb_build_object('uid', c.keeper, 'x', v_site.x, 'y', v_site.y, 'r', v_site.radius)::text, true);
+    perform set_config('wildermon.around', jsonb_build_object('uid', c.keeper, 'x', v_site.x, 'y', v_site.y, 'r', v_site.radius)::text, true);
   end if;
 $o$);
 select pg_temp.patch_fn('worker_settle(uuid, integer)',
 $o$  return done;
 end$o$,
-$o$  perform set_config('wurm.around', '', true);
+$o$  perform set_config('wildermon.around', '', true);
   return done;
 end$o$);
 -- No storage in reach: it does not set out.

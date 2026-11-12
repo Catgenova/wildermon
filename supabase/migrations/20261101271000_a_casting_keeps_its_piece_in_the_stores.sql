@@ -61,8 +61,8 @@ returns void language plpgsql as $function$
 declare v_at record; v_in boolean := false;
 begin
   -- An errand's go being counted (`private.errand_go_made`): this put is what it made (made log).
-  if coalesce(current_setting('wurm.made', true), '') <> '' then
-    perform set_config('wurm.made', (current_setting('wurm.made')::jsonb || jsonb_build_array(jsonb_build_array(p_def, p_count)))::text, true);
+  if coalesce(current_setting('wildermon.made', true), '') <> '' then
+    perform set_config('wildermon.made', (current_setting('wildermon.made')::jsonb || jsonb_build_array(jsonb_build_array(p_def, p_count)))::text, true);
   end if;
   for v_at in
     select 'crate'::text as kind, cr.id::bigint as id from crate cr

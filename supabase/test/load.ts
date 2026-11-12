@@ -34,12 +34,13 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).replace(/\n$/, '');
 
 let bad = 0;
+const near = (a: number, b: number, rel: number): boolean => Math.abs(a - b) <= rel * Math.abs(b);
 const say = (ok: boolean, line: string): void => {
   if (!ok) bad++;
   console.log(`${ok ? '  ' : 'X '}${line}`);
@@ -141,6 +142,46 @@ game.player.walkTo(w, game.player.tileX + 2, game.player.tileY);
 for (let i = 0; i < 40; i++) game.player.update(0.1, w);
 const moved = Math.hypot(game.player.x - before.x, game.player.y - before.y);
 say(!game.stalled() && moved > 0.5, `put down to ${(light * 100).toFixed(0)}% it walks again: ${moved.toFixed(2)} tiles in four seconds`);
+
+/* ---- armour slows your own feet, not a mount, a team or a boat ---------- */
+/*
+ * Asked for: armour should not change wagon or mounted speed. On foot, everything worn and carried divides the pace
+ * (`burden`); carried -- a mount's, a team's or a hull's pace in `speedMul` -- only the load past the limit does
+ * (`loadBurden`). The island's `travel_speed` counts no burden at all, so the browser is held to the slower of the two.
+ */
+loadTo(0.3);
+for (const [slot, id] of [['head', 'helm'], ['chest', 'plate_breastplate'], ['arms', 'plate_arms'], ['legs', 'plate_legs'], ['feet', 'plate_boots']] as const) {
+  const it = game.inventory.add(id, { ql: 50, extra: 'Iron' });
+  if (it) game.equip(slot, it.uid);
+}
+const suit = game.burden(), suitLoad = game.loadBurden();
+say(suit > 0.2 && suitLoad === 0, `a suit of iron plate under the limit: burden ${suit.toFixed(3)} on foot, ${suitLoad} in a saddle, on a seat or aboard`);
+/** Tiles covered in four seconds on the flat at this pace multiplier (1 on foot), the body's burden as the game sets it. */
+const pace = (mul: number): number => {
+  const p = game.player;
+  p.stalled = false;
+  p.burden = game.burden();
+  p.loadBurden = game.loadBurden();
+  p.speedMul = mul;
+  p.stats.stamina = 1;
+  const at = { x: p.x, y: p.y };
+  p.walkTo(w, p.tileX + 30, p.tileY);
+  for (let i = 0; i < 40; i++) { p.stats.stamina = 1; p.update(0.1, w); }
+  const d = Math.hypot(p.x - at.x, p.y - at.y);
+  p.path = null;
+  p.x = at.x; p.y = at.y;
+  return d;
+};
+for (let cy = game.player.tileY - 2; cy <= game.player.tileY + 2; cy++) {
+  for (let cx = game.player.tileX - 2; cx <= game.player.tileX + 34; cx++) w.setHeight(cx, cy, 40);
+}
+const foot = pace(1), ridden = pace(1.5);
+say(near(ridden / foot, 1.5 * (1 + suit), 0.03),
+  `in that plate, 1.5× a walk under you covers ${(ridden / foot).toFixed(3)}× what your own feet do (no armour slowing it: ${(1.5 * (1 + suit)).toFixed(3)})`);
+loadTo(1.4);
+for (const s of ['head', 'chest', 'arms', 'legs', 'feet'] as const) game.equip(s, null);
+const load = game.loadBurden();
+say(load > 0 && near(load, game.burden(), 1e-9), `a load past the limit still slows a mount, a team or a boat: ${load.toFixed(3)} of burden, all of it load`);
 
 if (bad) {
   console.error(`${bad} of them are not what they should be`);

@@ -46,7 +46,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -149,6 +149,10 @@ const wallRow = ([b, x, y, side]: [number, number, number, Side]): string => {
   return `(w, 0, '${dir}', ${bx}, ${by}, ${b}, 'solid', 'log', '{"log": 0}', '{"log": 4}')`;
 };
 island(`
+  -- The ground is nobody's settlement: island.sql stakes 'Latecomer' over a hoard buried at random on this island,
+  -- and a deed over these tiles makes the island keep things at a tenth of the rate the browser's ground does.
+  delete from deed where world_id = w
+     and x + radius >= 18 and x - radius <= 40 and y + radius >= 42 and y - radius <= 48;
   delete from cellar_tile where world_id = w;
   delete from wall where world_id = w;
   delete from floor_tile where world_id = w;
@@ -590,7 +594,7 @@ same('from the cellar beside it, nothing lying in the cellar next door is picked
 same('nor swept up with what lies in this one', 'pick_up_all', tile(23, 44), 'Nothing here to pick up.');
 same('nor is a tile of it dug out from this one', 'dig_cellar', tile(23, 44), 'Stand inside that building: ground floor or cellar.');
 const sideMine = [game.onMySide(CELLAR_LEVEL, 23, 44), game.onMySide(CELLAR_LEVEL, 22, 44)].join(',');
-const sideTheirs = psql(`select set_config('wurm.floor', floor_said(${W}, -1, 22.5, 44.5), false) \\g /dev/null
+const sideTheirs = psql(`select set_config('wildermon.floor', floor_said(${W}, -1, 22.5, 44.5), false) \\g /dev/null
   select same_floor(-1, ${W}, 23, 44)::text || ',' || same_floor(-1, ${W}, 22, 44)::text;`).split('\n').pop();
 check('and what stands in it is out of reach of this one: a store there is not on your side of the ground, on both sides',
   sideMine === 'false,true' && sideTheirs === 'false,true', `browser ${sideMine}, island ${sideTheirs}`);
@@ -683,7 +687,7 @@ check('a browser told about the island hears of the cellar and what lies in it',
 game.log.length = 0;
 ACTION_BY_ID.get('examine')?.perform(tile(21, 44) as never, game);
 const mineBelow = game.log.map((l) => l.text).find((t) => t.startsWith('Cellar floor ')) ?? '';
-const theirBelow = psql(`select set_config('wurm.floor', floor_said(${W}, -1, 21.5, 44.5), false) \\g /dev/null
+const theirBelow = psql(`select set_config('wildermon.floor', floor_said(${W}, -1, 21.5, 44.5), false) \\g /dev/null
   select examine_tile_text(${W}, 21, 44, ${DANE});`).split('\n').pop() ?? '';
 check('an examine from down in the cellar says its floor, in the same words',
   mineBelow === theirBelow && mineBelow === `Cellar floor under Cellar house at (21, 44): rock, ${metres(CELLAR_DEPTH)} m under the ground floor, height ${metres(H - CELLAR_DEPTH)} m. Items on it: 2.`,

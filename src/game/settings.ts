@@ -27,7 +27,7 @@
 
 import { MOTIONS, type Motion } from '../engine/motion';
 
-const KEY = 'wurm.settings.v1';
+const KEY = 'wildermon.settings.v1';
 
 /** The frame-rate limits on offer, 0 for every refresh of the screen. */
 export const FRAME_CAPS = [0, 60, 30] as const;

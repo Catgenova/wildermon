@@ -16,7 +16,7 @@
  *     turns of the year, and before the first spring there is none and
  *     everything fruits on both sides, as it does under glass;
  *   * in each of the four seasons -- held on the island for a transaction
- *     that is rolled back (`wurm.season`), the clock stood still at a moment
+ *     that is rolled back (`wildermon.season`), the clock stood still at a moment
  *     of it in the browser -- four trees picked and two bushes cut on both
  *     sides: refused out of season in the same words, and in season the same
  *     fruit, said the same way, and Examine saying the same of each;
@@ -46,7 +46,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -139,7 +139,7 @@ const shape = (s: string): string => s.replace(/\d+(\.\d+)?/g, 'N');
 for (const season of SEASONS) {
   const at = momentIn(season);
   const sql = [`begin;`,
-    `select set_config('wurm.season', ${q(season)}, true);`,
+    `select set_config('wildermon.season', ${q(season)}, true);`,
     `select give(${W}, ${IVAR}, 'sickle', 1, 40);`,
     `insert into skill (world_id, uid, id, value) values (${W}, ${IVAR}, 'forestry', 30) on conflict (world_id, uid, id) do update set value = 30;`,
     `delete from building_tile where world_id = ${W} and y between ${ROW} and ${ROW + 1} and x between ${FROM_X} and ${FROM_X + SUBJECTS.length};`,
@@ -209,7 +209,7 @@ for (const season of SEASONS) {
   const at = momentIn(season);
   const tables: Array<[string, Array<[string, number]>]> = [['forage', FORAGE_TABLE], ['botanize', BOTANIZE_TABLE], ['botanize_water', BOTANIZE_WATER_TABLE]];
   const theirs = lines(psql(`begin;
-select set_config('wurm.season', ${q(season)}, true);
+select set_config('wildermon.season', ${q(season)}, true);
 ${tables.map(([id]) => `select '${id}|' || string_agg(distinct roll_table(${q(id)}, (r + 0.5) / ${STEPS}), ',' order by roll_table(${q(id)}, (r + 0.5) / ${STEPS})) from generate_series(0, ${STEPS - 1}) r;`).join('\n')}
 rollback;`));
   for (const [id, table] of tables) {
@@ -226,7 +226,7 @@ rollback;`));
     const x = FROM_X;
     const y = ROW + 3;
     const out = psql(`begin;
-select set_config('wurm.season', ${q(season)}, true);
+select set_config('wildermon.season', ${q(season)}, true);
 insert into skill (world_id, uid, id, value) values (${W}, ${IVAR}, 'foraging', 90) on conflict (world_id, uid, id) do update set value = 90;
 delete from building_tile where world_id = ${W} and x = ${x} and y = ${y};
 select land_set_tile(${W}, ${x}, ${y}, tile_id('Grass')); select land_set_data(${W}, ${x}, ${y}, 0);
@@ -267,7 +267,7 @@ select land_set_tile(${W}, ${x}, ${ROW + 1}, tile_id('Grass')); select land_set_
 delete from building_tile where world_id = ${W} and x = ${x} and y between ${ROW} and ${ROW + 1};
 delete from foraged where world_id = ${W} and x = ${x} and y = ${ROW};
 select creature_spawn(${W}, 'plucka', ${x + 0.5}, ${ROW + 1.5}, 'stored', now() - interval '10 days', ${IVAR}) as picker \\gset
-${SEASONS.map((s) => `select set_config('wurm.season', ${q(s)}, true);
+${SEASONS.map((s) => `select set_config('wildermon.season', ${q(s)}, true);
 select '${s}|' || worker_gatherable(${W}, ${x}, ${ROW}, 'fruit', (select c from creature c where c.world_id = ${W} and c.id = :'picker'));`).join('\n')}
 rollback;`));
   const climbs = SEASONS.map((s) => `${s}:${out.get(s)}`).join(' ');

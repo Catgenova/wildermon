@@ -42,7 +42,7 @@
  *
  * ## A season held still, for a test
  *
- * `set wurm.season = 'spring'` holds every moment in spring to a field, for
+ * `set wildermon.season = 'spring'` holds every moment in spring to a field, for
  * that session: the suite's farming runs the same whatever day it is run on.
  * Nothing on the island sets it.
  *
@@ -67,9 +67,9 @@ set local lock_timeout = '3s';
 
 /* ---- The field clock ---------------------------------------------------------------------- */
 
-/* The season a test holds the fields in (`wurm.season`), or null: nothing on the island sets it. */
+/* The season a test holds the fields in (`wildermon.season`), or null: nothing on the island sets it. */
 create or replace function season_pinned() returns text language plpgsql stable as $fn$
-declare v text := nullif(current_setting('wurm.season', true), '');
+declare v text := nullif(current_setting('wildermon.season', true), '');
 begin
   return case when v = any(seasons()) then v end;
 end $fn$;

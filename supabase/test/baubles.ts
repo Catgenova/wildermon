@@ -51,7 +51,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -360,12 +360,12 @@ begin
 
   -- What a go yields: nothing outside one; inside one, the job's own and then, the go it comes up, twice as many.
   update player set act = 'cut_down' where world_id = w and uid = u;
-  perform set_config('wurm.bauble_go', '', true);
+  perform set_config('wildermon.bauble_go', '', true);
   insert into said values ('OUTSIDE', bauble_yield(w, u, 'log', 3)::text);
-  perform set_config('wurm.bauble_go', 'go', true);
-  perform set_config('wurm.bauble_made', '', true);
+  perform set_config('wildermon.bauble_go', 'go', true);
+  perform set_config('wildermon.bauble_made', '', true);
   v_n := bauble_yield(w, u, 'log', 3);
-  perform set_config('wurm.bauble_go', 'twice', true);
+  perform set_config('wildermon.bauble_go', 'twice', true);
   insert into said values ('INSIDE', v_n || '|' || bauble_yield(w, u, 'log', 3));
   perform bauble_said(w, u);
   insert into said select 'YIELDSAID', e.text from event e where e.world_id = w and e.uid = u order by e.n desc limit 1;
@@ -387,7 +387,7 @@ begin
   insert into said select 'DUG', coalesce(sum(count), 0)::text from item where world_id = w and holder = 'player' and holder_uid = u and def = 'dirt';
   insert into said select 'DUGSAID', string_agg(e.text, ' / ' order by e.n) from (
     select * from event e where e.world_id = w and e.uid = u and e.kind = 'event' order by e.n desc limit 2) e;
-  insert into said values ('FOREIGN', coalesce(nullif(current_setting('wurm.bauble_go', true), ''), 'clear'));
+  insert into said values ('FOREIGN', coalesce(nullif(current_setting('wildermon.bauble_go', true), ''), 'clear'));
   delete from item where world_id = w and holder = 'player' and holder_uid = u and def = 'dirt';
   insert into deed_bauble (world_id, founder, tier, slot, kind, key, amount) values (w, u, 'minor', 3, 'time', 'digging', 10);
   update skill set value = 50 where world_id = w and uid = u and id = 'digging';

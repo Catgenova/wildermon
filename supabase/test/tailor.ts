@@ -47,7 +47,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -178,16 +178,16 @@ end $f$;
  */
 create schema dice;
 create function dice.random() returns double precision language plpgsql volatile as $f$
-declare xs text[] := string_to_array(current_setting('wurm.dice'), ',');
-        n int := coalesce(nullif(current_setting('wurm.dice_n', true), ''), '0')::int;
+declare xs text[] := string_to_array(current_setting('wildermon.dice'), ',');
+        n int := coalesce(nullif(current_setting('wildermon.dice_n', true), ''), '0')::int;
 begin
-  perform set_config('wurm.dice_n', (n + 1)::text, true);
+  perform set_config('wildermon.dice_n', (n + 1)::text, true);
   return xs[1 + n % array_length(xs, 1)]::double precision;
 end $f$;
 create function pg_temp.dice(v text) returns void language plpgsql as $f$
 begin
-  perform set_config('wurm.dice', v, true);
-  perform set_config('wurm.dice_n', '0', true);
+  perform set_config('wildermon.dice', v, true);
+  perform set_config('wildermon.dice_n', '0', true);
   perform set_config('search_path', 'dice, public, pg_catalog', true);
 end $f$;
 create function pg_temp.nodice() returns void language plpgsql as $f$
@@ -513,13 +513,13 @@ ${NET_DICE.map((r, i) => `
   v_t := ${refused('make_sack')};
   ${hold('Workshop Reach')};
   v_t := v_t || '#' || ${refused('make_sack')};
-  perform set_config('wurm.pk', (select (class_mul->'fx')::text from player where world_id = w and uid = u), true);
-  perform set_config('wurm.pk_act', 'make_sack', true);
+  perform set_config('wildermon.pk', (select (class_mul->'fx')::text from player where world_id = w and uid = u), true);
+  perform set_config('wildermon.pk_act', 'make_sack', true);
   v_t := v_t || '|' || craft_reach();
-  perform set_config('wurm.pk_act', 'make_planks', true);
+  perform set_config('wildermon.pk_act', 'make_planks', true);
   v_t := v_t || ':' || craft_reach();
-  perform set_config('wurm.pk', '', true);
-  perform set_config('wurm.pk_act', '', true);
+  perform set_config('wildermon.pk', '', true);
+  perform set_config('wildermon.pk_act', '', true);
   insert into said values ('REACH', v_t);
   delete from item where placed = v_chest;
   delete from placed where id = v_chest;

@@ -7,7 +7,7 @@ import { Repaint } from '../repaint';
 import type { UIWindow } from '../windows';
 
 /** Where the list is kept: in this browser, like the pinned recipes, since it is about whoever sits here. */
-const KEY = 'wurm-iso-shopping';
+const KEY = 'wildermon-iso-shopping';
 
 const lower = (id: string): string => itemDef(id).name.toLowerCase();
 

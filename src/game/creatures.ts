@@ -1764,9 +1764,9 @@ export const SPECIES: Record<string, SpeciesDef> = {
   embra: {
     id: 'embra',
     wound: 'burn',
-    name: 'Sluglow',
-    was: ['Embra'],
-    // Asked for: "Embra > sluglow slugember slugferno". Its words, and each stage's, are written once every number is here
+    name: 'Snailglow',
+    was: ['Embra', 'Sluglow'],
+    // Asked for: "Embra > sluglow slugember slugferno", then "sluglow to snailglow". Its words, and each stage's, are written once every number is here
     // (`sayLine`).
     description: '',
     stages: [
@@ -10522,14 +10522,14 @@ export class Creatures {
 
   /**
    * What an errand's step put into the stores as its work (`intoStores`), while one is being stepped, for its go to
-   * count to its ledger; null otherwise. The island's `wurm.made` (`worker_made_take`).
+   * count to its ledger; null otherwise. The island's `wildermon.made` (`worker_made_take`).
    */
   private making: Array<[string, number]> | null = null;
 
   private updateWorker(c: Creature, dt: number, game: Game): void {
     // The time onto its lifetime, by why it stood about for it, or at work for nothing (`workTime`).
     if (c.mode === 'deed') c.work = workTime(c.work, dt, c.idle?.why);
-    // Round its keeper, the stores it reads are the storage in reach of them while it steps (the island's `wurm.around`).
+    // Round its keeper, the stores it reads are the storage in reach of them while it steps (the island's `wildermon.around`).
     game.storeScope = c.around ? game.workSite(c) : null;
     try {
       this.workerStep(c, dt, game);

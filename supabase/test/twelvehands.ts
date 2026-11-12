@@ -4,7 +4,7 @@
  * Asked for off a second list of work only a player did. This asks, of both
  * sides, that each of the twelve is a species with its trade, may be set to
  * work a settlement and says what it does in the island's words; and that
- * set to work it does it: the smelter (a Sluglow's work since the forga went,
+ * set to work it does it: the smelter (a Snailglow's work since the forga went,
  * `REMOVED_KINDS`) and the kiln emptied and charged, the
  * ashes raked and leached, a brew set going, supper cooked, a relic restored,
  * a planter sown, tended and harvested, and worms, a sprout, tar, wildflowers
@@ -39,7 +39,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -91,7 +91,7 @@ begin
   insert into said values ('COOKS', array_to_string(tend_recipes('cook'), ','));
   insert into said values ('BREWS', array_to_string(brew_order(), ','));
 
-  -- The smelters (a Sluglow's since the forga went): a smelter with two lumps made and room, three ore in the crate.
+  -- The smelters (a Snailglow's since the forga went): a smelter with two lumps made and room, three ore in the crate.
   insert into placed (world_id, kind, x, y, sx, sy, cx, cy, ql, fuel, lit, since, state, made_by)
     values (w, 'smelter', 19, 16, 0, 0, 19.75, 16.5, 50, 0, false, now(),
             jsonb_build_object('jobs', '[]'::jsonb, 'output', jsonb_build_array(jsonb_build_object('def', 'copper_lump', 'count', 2, 'ql', 30))), u)

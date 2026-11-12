@@ -3362,6 +3362,15 @@ export class Game {
   }
 
   /**
+   * The share of `burden` that is the load past your limit and not what you wear: all of it that slows a mount, a
+   * team or a boat under you. Armour and a shield slow your own feet only (asked for: armour should not change wagon
+   * or mounted speed).
+   */
+  loadBurden(): number {
+    return overDrag(this.overloaded(), this.carryLimit()) * this.pathFx('burden', 1);
+  }
+
+  /**
    * Take a blow. The hit lands somewhere, whatever is worn there turns some of
    * it aside and wears a little for doing so, and the armour learns from it.
    * A shield in the off hand may stop the whole thing first.
@@ -4911,6 +4920,7 @@ export class Game {
 
     // What climbing and swimming have earned, and what the armour costs, before the next step.
     p.burden = this.burden();
+    p.loadBurden = this.loadBurden();
     /*
      * And whether there is going to be a next step at all. Said once, when it
      * happens: a line a frame while somebody shuffles about under a hill of
@@ -6546,7 +6556,7 @@ export class Game {
     this.events.emit('inventory');
   }
 
-  /** Wurm-flavoured success roll: better skill and tools help, difficulty hurts. */
+  /** Success roll: better skill and tools help, difficulty hurts. */
   /**
    * A skill check at a job that a perk may make surer (`fail:` and the job, a
    * Mason's Sure Chisel, a Miner's Sure Pick, a Tailor's Sure Needle): a
@@ -9914,7 +9924,7 @@ export class Game {
   }
 
   deedStores(): DeedStore[] {
-    // Round its keeper, a worker's stores are the storage in reach of them while it steps (the island's `wurm.around`).
+    // Round its keeper, a worker's stores are the storage in reach of them while it steps (the island's `wildermon.around`).
     if (this.storeScope) return this.aroundStores(this.storeScope);
     // A field worker asks this for every tile it looks at, so build the list
     // once a tick. The entries hold the crates and pieces themselves, so what

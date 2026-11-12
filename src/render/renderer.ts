@@ -113,7 +113,7 @@ import { WaterTint } from './watertint';
 import { SeaReach, type ReachBox } from './seareach';
 import { ShoreField, ShorePainter } from './shore';
 import { Wakes } from './wake';
-import { foamTexture, SpringWater } from './ponds';
+import { foamTexture, pondWaterOn, SpringWater, WATER_ON } from './ponds';
 import { drawFountain } from './fountain';
 import { fallView } from './falls';
 import { AqueductPainter, hullOf, type AqueductPart, type AqueductShape } from './aqueducts';
@@ -6723,7 +6723,7 @@ export class Renderer {
 
   /**
    * Play a spell's drawing from you, with no island and nothing done: for
-   * checking how a spell looks (`wurm.spell` in the console). At what is
+   * checking how a spell looks (`wildermon.spell` in the console). At what is
    * under the cursor -- a creature, somebody, the ground -- unless told, or
    * at yourself for a spell cast only on yourself. Nothing is sent to anybody.
    * `from` plays it as though the island had just moved you there from that
@@ -17210,31 +17210,11 @@ export class Renderer {
     const bare = this.shoreBare(x, y);
     for (let q = 0; q < this.pondsHereN; q++) {
       const level = this.pondsHereLevel[q];
-      const mask = this.pondsHereMask[q];
-      let n = 0;
-      // A corner lower than the surface but not in the pond is past its lip: no shore is drawn there.
-      let lip = false;
-      for (let i = 0; i < 4; i++) {
-        const j = (i + 1) & 3;
-        const ha = c[i];
-        const hb = c[j];
-        const wa = (mask >> i) & 1;
-        const wb = (mask >> j) & 1;
-        const ax = x + cs[i][0];
-        const ay = y + cs[i][1];
-        if (!wa && ha < level) lip = true;
-        if (wa) {
-          poly[n++] = ax;
-          poly[n++] = ay;
-        }
-        if (wa !== wb) {
-          const shore = (wa ? hb : ha) >= level;
-          const t = shore ? (level - ha) / (hb - ha) : 0.5;
-          poly[n++] = ax + (x + cs[j][0] - ax) * t;
-          poly[n++] = ay + (y + cs[j][1] - ay) * t;
-        }
-      }
+      const n = pondWaterOn(x, y, c, this.pondsHereMask[q], level, cs, poly);
       if (n < 6) continue;
+      // A corner lower than the surface but not in the pond is past its lip: no shore is drawn there.
+      const lip = WATER_ON.lip;
+      const mask = this.pondsHereMask[q];
       // Where its bank comes into the tile, the still water's edge (`shore.ts`).
       const banked = lit && !lip && !bare && !this.fast && mask !== 15;
       // Coloured a corner at a time by its depth under the pond's own surface (`watertint.ts`).
@@ -17258,6 +17238,8 @@ export class Renderer {
       wakes?.closePath();
       ctx.fill();
       if (banked) this.shore.calm(ctx, x, y, cs, c, level);
+      // The water drawn into a lip it goes over, on this tile's water and laid with it (`SpringWater.tongue`).
+      if (this.springWater.tongued(x, y)) this.springWater.tongue(ctx, x, y, level, poly, n);
     }
   }
 

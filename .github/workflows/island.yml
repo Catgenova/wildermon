@@ -101,8 +101,8 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_USER: wurm
-          POSTGRES_PASSWORD: wurm
+          POSTGRES_USER: wildermon
+          POSTGRES_PASSWORD: wildermon
           POSTGRES_DB: postgres
         ports: ['5432:5432']
         options: >-
@@ -110,8 +110,8 @@ jobs:
     env:
       PGHOST: localhost
       PGPORT: '5432'
-      PGUSER: wurm
-      PGPASSWORD: wurm
+      PGUSER: wildermon
+      PGPASSWORD: wildermon
       PGDATABASE: postgres
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -433,7 +433,7 @@ jobs:
           npx esbuild supabase/test/pools.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/pools.mjs --log-level=error
           node node_modules/.cache/pools.mjs
-      - name: The water drawn into a pond's lip runs out past its ends only where the pond does
+      - name: The water drawn into a pond's lip lies only on the pond's water, laid with it
         if: matrix.shard == 1
         run: |
           # Reported: "water can appear clipped over terrain as in my cliff
@@ -442,6 +442,10 @@ jobs:
           # drawn into the lip was carried two tiles along the dry edge both
           # ways. It runs out past each end of the sill as far as the pond's
           # shore does, and on along the lip only over the pond's own water.
+          # Reported again with the cliff edge raised above the pond: the same
+          # water was laid over the rim and its moss in front of the pond. It
+          # is laid with the pond's water, tile by tile and only over it; the
+          # lip lays only its mouth.
           npx esbuild supabase/test/fallsplay.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/fallsplay.mjs --log-level=error
           node node_modules/.cache/fallsplay.mjs
@@ -3981,9 +3985,8 @@ jobs:
       - name: Sleep logs you off in a bed, and the sleep bonus, the same on both sides
         if: matrix.shard == 4
         run: |
-          # "beds ... should operate like wurm beds, logging the player off and
-          # beginning the stage of sleep bonus gain while the player is
-          # offline". Sleep at any hour in a bed of yours or on a settlement of
+          # Beds that log the player off and begin the stage of sleep bonus
+          # gain while the player is offline. Sleep at any hour in a bed of yours or on a settlement of
           # yours; refused on a stranger's, with a job going, in a fight and
           # mounted. Done through rpc_act: logged off, asleep, the beat says so
           # and nothing is asked of it. The next join wakes it beside the bed
@@ -5382,7 +5385,7 @@ jobs:
       - name: Twelve more hands on a settlement
         if: matrix.shard == 6
         run: |
-          # A Sluglow and a potta empty and charge the smelters and the kilns, a
+          # A Snailglow and a potta empty and charge the smelters and the kilns, a
           # cindra rakes ashes and leaches lye, a hoppa brews, a simma cooks, a
           # relka restores, a bedda keeps the planters, and a wurla, a sprigga,
           # an ambra, a petta and a scurra work worms, sprouts, tar, flowers and
@@ -5956,6 +5959,20 @@ jobs:
           npx esbuild supabase/test/patronstatue.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/patronstatue.mjs --log-level=error
           node node_modules/.cache/patronstatue.mjs
+
+      - name: Wildermon by name on the island, and accounts under the old suffix moved
+        if: matrix.shard == 6
+        run: |
+          # 20261111235900 over the earlier shapes, planted in a transaction it
+          # rolls back: an account under the old .invalid suffix at
+          # @catgenova.github.io in auth.users and auth.identities, the same
+          # uid and the same name; settings, headers, a view, a default, a
+          # check, a policy, a trigger, comments, a role setting and rows
+          # renamed, case kept; nothing left holding the word; a second run
+          # renames nothing; an account named with the word stops it.
+          npx esbuild supabase/test/oldname.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/oldname.mjs --log-level=error
+          node node_modules/.cache/oldname.mjs
 
   migrate:
     name: Push the migrations to the project

@@ -2115,7 +2115,7 @@ import{$f as e,$g as t,$i as n,$n as r,$u as i,$v as a,$x as ee,$y as o,AS as te
       <b>cloth</b> (tailoring) ${E(g.cloth.soak)}; <b>leather</b> (tanned hide, knife, leatherworking) ${E(g.leather.soak)};
       <b>chain</b> (moulds, riveted at an anvil, chain armoursmithing) ${E(g.chain.soak)}; <b>plate</b> (beaten whole, plate armoursmithing) ${E(g.plate.soak)}.</li>
       <li>QL and skill raise it; damage lowers it. Wears where struck; a piece at full damage falls off.</li>
-      <li>Burden (slowdown from weight carried): a full suit of iron plate: ${E(fm/(1+fm))} slower, +${E(fm)} wind per action (cloth: ${E(g.cloth.burden)}).</li>
+      <li>Burden (slowdown on foot from armour, shield and load): a full suit of iron plate: ${E(fm/(1+fm))} slower, +${E(fm)} wind per action (cloth: ${E(g.cloth.burden)}). Mounted, driving or aboard: load past the limit only.</li>
       <li><b>Shield</b> (off hand): blocks a whole blow. ${Yc()} No hand free for it with a two-handed weapon. Hover one in the pack for your current chance and its breakdown.</li>
     </ul>
     <h3>Weapons and the bow</h3>

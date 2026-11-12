@@ -1315,7 +1315,7 @@ async function main(): Promise<void> {
       const suffix = nameEmail(name).slice(name.length);
       await supabase().auth.signOut();
       try {
-        const made = await createAccount(name, `wurm-smoke-${crypto.randomUUID()}`);
+        const made = await createAccount(name, `wildermon-smoke-${crypto.randomUUID()}`);
         const { data: called } = await supabase().rpc('rpc_my_name');
         check(`Auth takes an address at ${suffix}, and the name comes back out of it`,
           !made.unconfirmed && called === name, `${String(called)}`);

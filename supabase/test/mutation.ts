@@ -46,7 +46,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -173,7 +173,7 @@ create temp table said (k text, v text);
 create schema dice;
 create function dice.random() returns double precision language plpgsql volatile as $f$
 begin
-  return current_setting('wurm.dice')::double precision;
+  return current_setting('wildermon.dice')::double precision;
 end $f$;
 do $t$
 declare w uuid; u uuid := '${U}'; px double precision; py double precision; v_dam int; v_sire int; v_young int; v_n bigint;
@@ -191,9 +191,9 @@ begin
 
   perform set_config('search_path', 'dice, public, pg_catalog', true);
 ${Object.entries(PAIRS).map(([name, pair]) => `
-  perform set_config('wurm.dice', '${OVER}', true);
+  perform set_config('wildermon.dice', '${OVER}', true);
   insert into said values ('PLAIN:${name}', breed_traits(${arr(pair.sire)}, ${arr(pair.dam)}, 0, 0)::text);
-  perform set_config('wurm.dice', '${UNDER}', true);
+  perform set_config('wildermon.dice', '${UNDER}', true);
   insert into said values ('MUTATED:${name}', breed_traits(${arr(pair.sire)}, ${arr(pair.dam)}, 0, 0)::text);`).join('\n')}
 
   -- A birth that mutated, through the covering and the hour.
@@ -201,7 +201,7 @@ ${Object.entries(PAIRS).map(([name, pair]) => `
   v_sire := creature_spawn(w, 'rabba', px - 0.5, py, 'deed', now() - interval '10 days', u);
   update creature set sex = 'female', name = 'Snow', traits = ${arr(PAIRS.supreme.dam)}, hunger = 1 where world_id = w and id = v_dam;
   update creature set sex = 'male', name = 'Horn', traits = ${arr(PAIRS.supreme.sire)}, hunger = 1 where world_id = w and id = v_sire;
-  perform set_config('wurm.dice', '${UNDER}', true);
+  perform set_config('wildermon.dice', '${UNDER}', true);
   perform pair_them(w, v_dam, v_sire, 0, u);
   perform set_config('search_path', '"$user", public', true);
   update creature set due = now() - interval '1 second' where world_id = w and id = v_dam;
