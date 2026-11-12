@@ -7,8 +7,8 @@
  * that is slow says which one to go after, where a guess from somewhere else
  * does not.
  *
- * Each layer is a handful of the renderer's own methods, timed by wrapping
- * them on the instance, so with the line switched off nothing is wrapped and
+ * Each layer is a handful of the renderer's own methods and its painters'
+ * (`waterdraw.ts`), timed by wrapping them on the instance, so with the line switched off nothing is wrapped and
  * nothing is timed. The time is the layer's own: a wall drawn inside a
  * building's pass counts to the buildings once, not to the buildings and again
  * to whatever called them. What no layer claims is the ground and everything
@@ -74,12 +74,12 @@ export class Timings {
   /** The frame rate with each layer left out, written out, once `measure` has run. */
   measured = '';
   private on = false;
-  private target: object | null = null;
+  private targets: readonly object[] = [];
   private trial: Trial | null = null;
 
-  /** Time the layers or not, on `target`. */
-  set(target: object, on: boolean): void {
-    this.target = target;
+  /** Time the layers or not, on `targets`: each method on whichever of them has it. */
+  set(targets: readonly object[], on: boolean): void {
+    this.targets = targets;
     if (on === this.on) return;
     this.on = on;
     this.apply();
@@ -104,17 +104,17 @@ export class Timings {
 
   /** Each method as it is: timed, left out for a trial, or the plain one. */
   private apply(): void {
-    const target = this.target;
-    if (!target) return;
-    const own = target as Record<string, unknown>;
     const out = this.trial ? this.trial.order[this.trial.i] : null;
-    for (const layer of NAMES) {
-      for (const name of LAYERS[layer]) {
-        if (layer === out) own[name] = (): void => {};
-        else if (!this.on) delete own[name];
-        else {
-          const fn = (Object.getPrototypeOf(target) as Record<string, unknown>)[name];
-          if (typeof fn === 'function') own[name] = this.wrap(layer, fn as (...a: unknown[]) => unknown);
+    for (const target of this.targets) {
+      const own = target as Record<string, unknown>;
+      const proto = Object.getPrototypeOf(target) as Record<string, unknown>;
+      for (const layer of NAMES) {
+        for (const name of LAYERS[layer]) {
+          const fn = proto[name];
+          if (typeof fn !== 'function') continue;
+          if (layer === out) own[name] = (): void => {};
+          else if (!this.on) delete own[name];
+          else own[name] = this.wrap(layer, fn as (...a: unknown[]) => unknown);
         }
       }
     }

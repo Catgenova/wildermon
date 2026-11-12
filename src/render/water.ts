@@ -8,12 +8,12 @@
  * across the bay and a flat calm barely moves at all.
  *
  * Nothing here is stored: the swell is a function of the clock and the wind,
- * laid over the sea as two gradients (`Renderer.swellBand`).
+ * laid over the sea as two gradients (`WaterPainter.swellBand`).
  */
 
 /**
  * How many times a second the sea's picture -- its colour, its swell and the
- * lace along its shores -- is painted afresh (`Renderer.drawSea`); it is
+ * lace along its shores -- is painted afresh (`WaterPainter.drawSea`); it is
  * copied on, moved with the view, in between. The swell and the foam both
  * move a tile in seconds, which ten steps a second keep smooth.
  */

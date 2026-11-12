@@ -3,7 +3,7 @@
  * under the water, to the open sea round the island. A pool dug in the sand
  * fills to the sea's level but is not the sea, and nothing breaks on it: the
  * sea's shore -- its wet band, its foam, its swell -- is drawn only on water
- * this says is the sea's (`shore.ts`, `Renderer.drawSea`).
+ * this says is the sea's (`shore.ts`, `WaterPainter.drawSea`).
  *
  * The water is followed a body at a time, the first time a corner of it is
  * asked about, out from that corner over every corner under the water beside
