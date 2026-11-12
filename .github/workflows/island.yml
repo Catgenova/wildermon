@@ -5129,6 +5129,9 @@ jobs:
           # of Improve held to one kind of stock uses that kind and no other and
           # stops "Out of iron lump."; a run of cycles uses its count of stock
           # exactly, repaired between whenever a failed pass leaves it over 10.
+          # Several pieces in turn, one job each in the queue: a piece over 10
+          # asked as its Repair carrying the run (cycles), which goes in front
+          # when the Repair ends; a fourth job refused by a queue of three.
           # Both sides, in the same words and numbers.
           npx esbuild supabase/test/mending.ts --bundle --platform=node --format=esm \
             --external:typescript --outfile=node_modules/.cache/mending.mjs --log-level=error

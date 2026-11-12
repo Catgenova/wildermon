@@ -19,7 +19,7 @@ import { POST_FOLLOW_REACH } from '../../game/posts';
 import { AROUND_MOST, aroundStoreTrades } from '../../game/around';
 import { AUTO_EAT_AT } from '../../game/autoeat';
 import { CRATE_KINDS_SAID, rackPutLine, STORE_REACH } from '../../game/crates';
-import { DEED_GAP, DEED_SPACING, DEED_STONE_GAP, DAMAGE_WARN, FORAGE_COOLDOWN, KIT_LEFT_OUT, KIT_QL, SPROUT_COOLDOWN, STARTER_FOOD, STARTER_FOOD_COUNT, STARTER_KIT, TRAVEL_LEG, deedLevel } from '../../game/game';
+import { BASE_QUEUE, DEED_GAP, DEED_SPACING, DEED_STONE_GAP, DAMAGE_WARN, QUEUE_PER_MIND, FORAGE_COOLDOWN, KIT_LEFT_OUT, KIT_QL, SPROUT_COOLDOWN, STARTER_FOOD, STARTER_FOOD_COUNT, STARTER_KIT, TRAVEL_LEG, deedLevel } from '../../game/game';
 import { ROT_SOON } from '../../game/rot';
 import {
   BODKIN_HIDE, BURN_WEAR, CONSIDER_EASY, CONSIDER_HARD, CRIT_BASE, CRIT_HIT, CRIT_KNIFE, CRIT_PER_SKILL, DODGE_FROM, DODGE_PER_CONTROL, DODGE_PER_KG, KNIFE_BLEED,
@@ -4297,6 +4297,15 @@ export const NEWS: News[] = [
   },
   {
     n: 533,
+    day: '2026-11-12',
+    lines: () => [
+      `New: Improve and repair: Improve on each row (one pass, as on the item's menu; greyed with Improve's refusal); Ctrl/⌘-click, Shift-click or ✓ to choose several; Improve and Cycles cover every chosen piece, `
+        + `in the rows' order, each held to its material's chosen stock kind; totals for the run (actions, stock used, time) and the first stop per piece; pieces past the action queue's room (${BASE_QUEUE}, one more per ${QUEUE_PER_MIND} mind logic) not queued.`,
+      `Fixed: Improve and repair cycles on a piece over ${MEND_DAMAGE} damage: a full Repair, then the run, as one job in the action queue (was: the run refused "Damage over ${MEND_DAMAGE}: repair it first.").`,
+    ],
+  },
+  {
+    n: 534,
     day: '2026-11-12',
     lines: () => {
       const all = 300;

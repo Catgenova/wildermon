@@ -1,4 +1,4 @@
-import { ACTION_BY_ID, REPAIR_FLOOR, repairGo } from './actions';
+import { ACTION_BY_ID, REPAIR_FLOOR, repairGo, type Target } from './actions';
 import type { Game } from './game';
 import {
   canImprove, IMPROVE_DAMAGE, IMPROVE_FAIL_LEAST, IMPROVE_FAIL_SPREAD, improvable, improveCeiling, improveStep, lockTakes, stockKinds,
@@ -161,12 +161,12 @@ export const FAIL_DAMAGE_MEAN = IMPROVE_FAIL_LEAST + IMPROVE_FAIL_SPREAD / 2;
  * Each cycle is a pass of Improve: one of the stock, the step on the piece if it comes off (`passChance`),
  * and damage if it fails. When the damage is over `IMPROVE_DAMAGE` the piece is repaired to nought before
  * the next pass, and after the last (`private.job_follow`). On the average, so the passes to a QL and the
- * repairs are expected numbers; the count and the stock are exact.
+ * repairs are expected numbers; the count and the stock are exact. `stock` is what of the kind is at hand when
+ * the run starts: all of it, or what the pieces before it in a run over several leave.
  */
-export function cyclePlan(g: Game, it: Item, lock: StockLock, count: number, upto?: number): CyclePlan {
+export function cyclePlan(g: Game, it: Item, lock: StockLock, count: number, upto?: number, stock = lockAtHand(g, lock)): CyclePlan {
   const what = improvable(it.id);
   const top = improveTop(g, it);
-  const stock = lockAtHand(g, lock);
   const healed = repairHealed(g);
   const perPoint = repairQlPerPoint(g);
   /** The run on the average from where the piece is, pass by pass, until `done` says it is over or the piece is at its top. */
@@ -216,4 +216,97 @@ export function cyclePlan(g: Game, it: Item, lock: StockLock, count: number, upt
     endQl: done.ql,
     secs: passes * goSecs(g, 'improve_item') + done.repairs * goSecs(g, 'repair_item'),
   };
+}
+
+/* ---- a run over several pieces ------------------------------------------------------------------------ */
+
+/** A key for a kind of stock, the same for the same kind. */
+export const lockKey = (l: StockLock): string => `${l.stock}|${l.stockOf ?? ''}`;
+
+/** The target a run of cycles on this piece asks for: `mend`, held to its kind, to the QL asked for if any. */
+export const cycleTarget = (it: Item, lock: StockLock | null, upto?: number): Target => ({
+  kind: 'item', uid: it.uid, mend: true,
+  ...(lock ? { stock: lock.stock, ...(lock.stockOf ? { stockOf: lock.stockOf } : {}) } : {}),
+  ...(upto !== undefined ? { upto } : {}),
+} as Target);
+
+/** The Repair to nought a run starts with, as its own job: over `IMPROVE_DAMAGE`, where Repair takes it; else null. */
+export const cycleFirst = (g: Game, it: Item): { goes: number; secs: number; ql: number } | null =>
+  it.dmg > IMPROVE_DAMAGE && !repairRefusal(g, it) ? repairCost(g, it) : null;
+
+/**
+ * Why a run of cycles will not start on this piece, in Improve's own words, or null. Asked as Improve will be
+ * after the Repair the run starts with (`cycleFirst`), the piece at nought, so it says why not only for what a
+ * Repair would not mend.
+ */
+export function cycleRefusal(g: Game, it: Item, t: Target): string | null {
+  const had = it.dmg;
+  if (cycleFirst(g, it)) it.dmg = 0;
+  try {
+    return ACTION_BY_ID.get('improve_item')?.check?.(t, g) ?? null;
+  } finally {
+    it.dmg = had;
+  }
+}
+
+/** One piece of a run over several, in its turn. */
+export interface PiecePlan {
+  it: Item;
+  /** The kind of stock it is held to; null when none at hand takes it. */
+  lock: StockLock | null;
+  /** Stock of that kind at hand when its turn comes: what is at hand, less what the pieces before it are expected to use. */
+  atHand: number;
+  /** Its run, or null when Improve refuses it (`why`). */
+  plan: CyclePlan | null;
+  /** The Repair to nought it starts with (`cycleFirst`), a job of its own. */
+  first: { goes: number; secs: number; ql: number } | null;
+  why: string | null;
+  /** Jobs it is asked as (`pieceJob`): one, or none when refused or with no pass to make. */
+  jobs: number;
+}
+
+/**
+ * A run of `count` cycles on each piece in turn, in the order given, each held to its kind (`lockOf`). Pieces
+ * held to the same kind share it: each has what the ones before it are expected to leave (`cyclePlan`).
+ */
+export function piecePlans(g: Game, pieces: Item[], lockOf: (it: Item) => StockLock | null, count: number, upto?: number): PiecePlan[] {
+  const used = new Map<string, number>();
+  return pieces.map((it) => {
+    const lock = lockOf(it);
+    const first = cycleFirst(g, it);
+    const why = cycleRefusal(g, it, cycleTarget(it, lock, upto));
+    if (!lock || why) return { it, lock, atHand: lock ? lockAtHand(g, lock) : 0, plan: null, first, why: why ?? 'No stock.', jobs: 0 };
+    const key = lockKey(lock);
+    const atHand = Math.max(0, lockAtHand(g, lock) - (used.get(key) ?? 0));
+    const plan = cyclePlan(g, it, lock, count, upto, atHand);
+    used.set(key, (used.get(key) ?? 0) + plan.passes);
+    return { it, lock, atHand, plan, first, why: null, jobs: plan.passes > 0 ? 1 : 0 };
+  });
+}
+
+/**
+ * The one job a piece's run is asked as: the run of Improve itself, or, over `IMPROVE_DAMAGE`, the Repair to
+ * nought it starts with carrying the run (`cycles`), which the island puts in front of the line when the Repair
+ * ends (`private.job_follow`). One place in the queue either way; and an Improve is never asked of a piece over
+ * the damage it takes, which the island refuses as it is asked, queued or not.
+ */
+export function pieceJob(p: PiecePlan, count: number, upto?: number): { action: 'improve_item' | 'repair_item'; target: Target; goes: number } {
+  const run = cycleTarget(p.it, p.lock, upto);
+  if (!p.first) return { action: 'improve_item', target: run, goes: count };
+  return { action: 'repair_item', target: { ...run, cycles: count } as Target, goes: p.first.goes };
+}
+
+/**
+ * Jobs that may still be asked for now: the action queue (`Game.queueCapacity`, the island's `queue_capacity`),
+ * less the job in hand and those lined up behind it. As `rpc_act` counts it.
+ */
+export const queueRoom = (g: Game): number => Math.max(0, g.queueCapacity() - (g.action ? 1 + g.queue.length : 0));
+
+/** Of the pieces with jobs, in turn, those whose jobs all fit in `room`; the first that does not, and every one after it, is left. */
+export function piecesThatFit(plans: PiecePlan[], room: number): { fit: PiecePlan[]; left: PiecePlan[] } {
+  const asked = plans.filter((p) => p.jobs > 0);
+  let n = 0;
+  let i = 0;
+  for (; i < asked.length && n + asked[i].jobs <= room; i++) n += asked[i].jobs;
+  return { fit: asked.slice(0, i), left: asked.slice(i) };
 }

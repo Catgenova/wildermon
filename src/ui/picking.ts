@@ -53,6 +53,13 @@ export class Picking {
     this.uids.clear();
   }
 
+  /** This row and no other, and the row a Shift-click runs from. */
+  only(uid: number): void {
+    this.uids.clear();
+    this.uids.add(uid);
+    this.anchor = uid;
+  }
+
   get size(): number {
     return this.uids.size;
   }

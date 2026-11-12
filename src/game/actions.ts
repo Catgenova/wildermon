@@ -199,6 +199,12 @@ export type Target =
       /** And what that stock is made of, or nothing for stock of no material. */
       stockOf?: string;
       /**
+       * A Repair to nought that starts a run of Improve and repair (`mending.ts`): when it ends, that run
+       * goes in front of the line, this many passes on the same piece, with this target's `stock`, `stockOf`
+       * and `upto`. One job in the queue rather than two. The island's `private.job_follow`.
+       */
+      cycles?: number;
+      /**
        * Repair all, Hone all (`mending.ts`): this many held pieces in all, this one first and then the most
        * damaged left that the job takes, one after another. The island's `private.job_follow`.
        */
