@@ -141,6 +141,11 @@ export interface Clip {
   hands?: Partial<Record<Side, HandReach>>;
   /** The tool drawn in each hand while the clip plays, by its asset's id (`../lowpoly.ts`), its fist closed on it. */
   tools?: Partial<Record<Side, string>>;
+  /**
+   * The hand that strikes with its tool (`tools`) and when its tool meets the work: a job's own tool that reaches less far
+   * than the clip's has the work brought to it (`../index.ts`).
+   */
+  strike?: { side: Side; t: number };
 }
 
 /** The bones a clip masked `upper` moves: the spine above the waist, the neck, the head and the arms. */
@@ -310,12 +315,12 @@ export function gripAt(c: Clip, t: number): GripAt | undefined {
 }
 
 /** A clip's reached hands at time t (`Clip.hands`): none for a clip that reaches none. */
-export function handsAt(c: Clip, t: number, body?: 'man' | 'woman'): Partial<Record<Side, HandAt>> | undefined {
+export function handsAt(c: Clip, t: number, body?: 'man' | 'woman', shift: Partial<Record<Side, Euler>> = {}): Partial<Record<Side, HandAt>> | undefined {
   if (!c.hands) return undefined;
   const out: Partial<Record<Side, HandAt>> = {};
   for (const [s, h] of Object.entries(c.hands) as Array<[Side, HandReach]>) {
-    const at = sampleKeys(h.at, wrap(c, t), c.length, c.loop), d = (body && c.bodies?.[body]?.hands?.[s]) || [0, 0, 0];
-    out[s] = { at: [at[0] + d[0], at[1] + d[1], at[2] + d[2]], way: h.way };
+    const at = sampleKeys(h.at, wrap(c, t), c.length, c.loop), d = (body && c.bodies?.[body]?.hands?.[s]) || [0, 0, 0], e = shift[s] ?? [0, 0, 0];
+    out[s] = { at: [at[0] + d[0] + e[0], at[1] + d[1] + e[1], at[2] + d[2] + e[2]], way: h.way };
   }
   return out;
 }

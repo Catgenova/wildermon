@@ -308,10 +308,13 @@ export const BACK = {
   male: { lean: 34, guard: [-0.7, -1.15], gap: 0.4, tilts: [-14, 14], wide: 0.12 },
   female: { lean: 34, guard: [-0.6, -1.2], gap: 0.3, tilts: [-14, 4], wide: 0.12 },
 };
-/** The game's copies of what a body wears at rest (src/sculpt/assets): the body, the outfit (no hood) and the swept hair. */
-function wornAtRest(who) {
+/**
+ * The game's copies of what a body wears at rest (src/sculpt/assets): the body, the garments named (the first outfit's,
+ * no hood, where none are named) and the swept hair.
+ */
+function wornAtRest(who, garments = ['shawl', 'tunic', 'trousers', 'boots']) {
   const at = (f) => JSON.parse(readFileSync(join(REPO, 'src/sculpt/assets', f), 'utf8'));
-  const meshes = [at(`low${who}.json`), ...['shawl', 'tunic', 'trousers', 'boots'].map((g) => at(`low${g}-${who}.json`)), at('lowhair.json')[who].swept];
+  const meshes = [at(`low${who}.json`), ...garments.map((g) => at(`low${g}-${who}.json`)), at('lowhair.json')[who].swept];
   const pts = [];
   for (const m of meshes) {
     const V = m.verts, T = m.tris, P = (i) => [V[i * 3], V[i * 3 + 1], V[i * 3 + 2]];
@@ -330,9 +333,15 @@ function wornAtRest(who) {
  * from the guard at `lean` toward the body's left, its flat to the back (its edges across the back, its engraved face out
  * of it), tilted so it lies closest along the back, and set back until every point of it is `gap` behind the backmost
  * surface worn over it (BACK; the body, the shawl, the tunic, the trousers, the boots, the swept hair).
+ *
+ * A design may also say: `up`, the prop carried the other way up (its far end rising behind the right shoulder, its foot
+ * toward the left hip); `anchor`, the point along it (its own y, game units) put at `guard` (the grip's top where not
+ * given); `flip`, its z turned into the back (its x reversed with it: the face its z looks away from shows); `garments`,
+ * the garments (src/sculpt/assets low<name>-<who>.json) it is held clear of; `blade`, from where along it (its own y) the
+ * lie is measured (the grip's top where not given).
  */
 export function backSocketOf(who, prop, scale, design = BACK[who]) {
-  const D = design, pts = wornAtRest(who), k = 1 / scale, lead = prop.grip.lead, foot = prop.grip.to ?? lead[1];
+  const D = design, pts = wornAtRest(who, D.garments), k = 1 / scale, lead = prop.grip.lead, foot = D.anchor ?? prop.grip.to ?? lead[1], from = D.blade ?? prop.grip.to ?? lead[1];
   // the surfaces' backmost z by cell, `wide` square in x and y
   const cell = D.wide, back = new Map();
   for (const p of pts) { const key = `${Math.floor(p[0] / cell)},${Math.floor(p[1] / cell)}`; back.set(key, Math.min(back.get(key) ?? Infinity, p[2])); }
@@ -342,15 +351,15 @@ export function backSocketOf(who, prop, scale, design = BACK[who]) {
   for (let tilt = D.tilts[0]; tilt <= D.tilts[1]; tilt += 1) {
     const t = tilt * Math.PI / 180;
     // the blade down and to the left, its point `tilt` toward the back; the face out of the back; the edges across
-    const y = unit([Math.sin(r) * Math.cos(t), -Math.cos(r) * Math.cos(t), Math.sin(t)]);
-    const x = unit(cross(y, [0, 0, -1])), z = cross(x, y), R = cols(x, y, z);
+    const u = D.up ? -1 : 1, y = unit([u * Math.sin(r) * Math.cos(t), -u * Math.cos(r) * Math.cos(t), Math.sin(t)]);
+    const x = mul(unit(cross(y, [0, 0, -1])), D.flip ? -1 : 1), z = cross(x, y), R = cols(x, y, z);
     const o0 = sub([D.guard[0], D.guard[1], 0], mul(y, (foot - lead[1]) * k));
     const P = [];
     for (let i = 0; i < prop.verts.length; i += 3) P.push(add(o0, mv(R, [(prop.verts[i] - lead[0]) * k, (prop.verts[i + 1] - lead[1]) * k, (prop.verts[i + 2] - lead[2]) * k])));
     // set back until the nearest point is `gap` behind what is over it
     let dz = Infinity;
     for (const p of P) { const b = behind(p[0], p[1]); if (b < Infinity) dz = Math.min(dz, b - D.gap - p[2]); }
-    const blade = P.filter((_, i) => prop.verts[i * 3 + 1] > foot), g = blade.map((p) => behind(p[0], p[1]) - (p[2] + dz)).filter((v) => v < Infinity);
+    const blade = P.filter((_, i) => prop.verts[i * 3 + 1] > from), g = blade.map((p) => behind(p[0], p[1]) - (p[2] + dz)).filter((v) => v < Infinity);
     const mean = g.reduce((s, v) => s + v, 0) / Math.max(1, g.length);
     if (!best || mean < best.mean) best = { tilt, R, o: add(o0, [0, 0, dz]), mean, near: Math.min(...g) };
   }
@@ -406,8 +415,8 @@ export async function gearAsset(id, plain, lit, rigs) {
     verts: G.V.flat().map(r5), alpha: G.V.map((_, i) => r5(G.A?.[i] ?? 1)),
     polys, tris, glowFrom,
     mats: names,
-    plain: names.map((n) => ({ c: plain.MATS[n].c, kind: kind(plain.MATS[n]) })),
-    enchanted: names.map((n) => ({ c: lit.MATS[n].c, kind: kind(lit.MATS[n]) })),
+    plain: names.map((n) => ({ c: plain.MATS[n].c, kind: kind(plain.MATS[n]), ...(plain.MATS[n].metal ? { metal: plain.MATS[n].metal } : {}) })),
+    enchanted: names.map((n) => ({ c: lit.MATS[n].c, kind: kind(lit.MATS[n]), ...(lit.MATS[n].metal ? { metal: lit.MATS[n].metal } : {}) })),
     grip: Object.fromEntries(Object.entries(plain.grip).map(([k, v]) => [k, Array.isArray(v) ? v.map(r5) : r5(v)])),
     sockets, scale,
     socket: 'curl: the fist\'s finger and thumb bones\' local turns [rx, ry, rz] degrees closed on the grip (lowrig.mjs posed). o: the grip\'s axis at the fist\'s middle, in the body\'s rest (mesh units and axes); R (row-major, columns x y z): x along the hand toward the knuckles, y along the grip toward the thumb, z = x × y. The prop\'s x, y, z go to R\'s columns, its grip.lead (or grip.second, for the other hand) to o. back: carried on the back, rigid on spine_03 (lowgear.mjs backSocketOf), its o and R as a hand\'s, the blade slanting down from behind the right shoulder toward the left hip, its flat to the back.',
@@ -416,6 +425,20 @@ export async function gearAsset(id, plain, lit, rigs) {
 }
 
 /* ---- materials ------------------------------------------------------------------------------------------------- */
+/**
+ * The metal a head or a blade is smithed from (src/sculpt/lowpoly.ts metalTint): the faces of `G` in each of `ranges`
+ * ([from, to) face indices) whose material is one of `names` take that material's metal copy, `<name>M` (`metalMats`), which
+ * gearAsset writes with its `metal` role and the game draws in the item's metal; the rest of the prop keeps its own colours.
+ */
+export function metalFaces(G, ranges, names) {
+  for (const [from, to] of ranges) for (let i = from; i < to; i++) if (names.includes(G.F[i].mat)) G.F[i].mat += 'M';
+}
+/**
+ * The metal copies of `names` in a material table (`metalFaces`): each its own colour (the prop's look where no metal is
+ * given) and a role, `edge` for the bevel (drawn the metal's lit edge), `face` for the rest (the metal's colour, as much
+ * lighter or darker than the head's `stone` as its own colour is).
+ */
+export const metalMats = (mats, names) => Object.fromEntries(names.map((n) => [`${n}M`, { ...mats[n], metal: n === 'bevel' ? 'edge' : 'face' }]));
 const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
 /**
  * A material table: name -> { c: '#rrggbb', emit?: true (unlit), glow?: alpha (added over the rest, unlit, its corners'

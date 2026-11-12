@@ -7,7 +7,7 @@
  * `poseAt` samples one clip at a time with nothing kept between frames, which is all a loop such as the idle needs; a
  * `ClipPlayer` keeps the layers and their fades for a body drawn frame after frame.
  */
-import { UPPER, eventsBetween, fitTime, gripAt, handsAt, runsOf, sampleClip, sampleFeet, stanceOf, strideOf, wrap, type Clip } from './clip';
+import { UPPER, eventsBetween, fitTime, gripAt, handsAt, runsOf, type Side, sampleClip, sampleFeet, stanceOf, strideOf, wrap, type Clip } from './clip';
 import { QI, add, qmat, qmul, quat, scl, slerp, type M3, type Q, type V } from './math';
 import type { Held, Plant, Pose, Skeleton } from './skeleton';
 
@@ -47,10 +47,15 @@ export function plantAt(sk: Skeleton, c: Clip, t: number): Plant | undefined {
   return sk.step(base, feet, strideOf(c, sk.body), c.bodies?.[sk.body]?.feet?.in);
 }
 
-/** A clip at time t on a body, finished: the local turns its draw wants and the body's shift; `held`, what is in both hands. */
-export function clipLocal(sk: Skeleton, c: Clip, t: number, held?: Held, tools?: (id: string) => Held | undefined): { local: Array<M3 | undefined>; move: V } {
-  const inHand = c.tools && tools ? Object.fromEntries(Object.entries(c.tools).map(([s, id]) => [s, id ? tools(id) : undefined])) : undefined;
-  return sk.finish(poseAt(sk, c, t), { plant: plantAt(sk, c, t), armsOut: c.bodies?.[sk.body]?.armsOut, grip: gripAt(c, t), held, free: c.armsFree, hands: handsAt(c, t, sk.body), tools: inHand });
+/**
+ * A clip at time t on a body, finished: the local turns its draw wants and the body's shift; `held`, what is in both
+ * hands; `tools`, a hand tool by its id as the body holds it, for the tools in its hands (`Clip.tools`, or `o.ids` in
+ * their place: a job's own); `o.shift`, the reached hands' places moved (body heights: the work brought to a tool that
+ * reaches less far than the clip's own, `../index.ts`).
+ */
+export function clipLocal(sk: Skeleton, c: Clip, t: number, held?: Held, tools?: (id: string) => Held | undefined, o: { ids?: Partial<Record<Side, string>>; shift?: Partial<Record<Side, [number, number, number]>> } = {}): { local: Array<M3 | undefined>; move: V } {
+  const ids = o.ids ?? c.tools, inHand = ids && tools ? Object.fromEntries(Object.entries(ids).map(([s, id]) => [s, id ? tools(id) : undefined])) : undefined;
+  return sk.finish(poseAt(sk, c, t), { plant: plantAt(sk, c, t), armsOut: c.bodies?.[sk.body]?.armsOut, grip: gripAt(c, t), held, free: c.armsFree, hands: handsAt(c, t, sk.body, o.shift), tools: inHand });
 }
 
 /**

@@ -210,6 +210,7 @@ export const WORK: Clip = {
     l: { at: [{ t: 0, v: HOLD }, { t: IMPACT, v: HOLD }, { t: IMPACT + 0.03, v: [HOLD[0], HOLD[1] - JOLT, HOLD[2]], ease: 'out' }, { t: IMPACT + 0.15, v: HOLD, ease: 'inOut' }], way: UPRIGHT },
   },
   tools: { r: 'mallet', l: 'chisel' },
+  strike: { side: 'r', t: IMPACT },
   events: [{ t: STRIKE, name: 'strike' }, { t: IMPACT, name: 'impact' }],
   stretch: [[0, 0.22], [0.38, STRIKE]],
   // her arms shorter for her height: the chisel held nearer

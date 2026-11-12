@@ -99,11 +99,15 @@ export interface Held {
   sockets: Record<'l' | 'r', { o: V; R: M3; curl?: Record<string, Euler> }>; lead: number; second: number; tip: number; scale: number;
   /** Its points near the far end (its own frame, game units: x across the edge, y along it), of which the lowest is kept off the ground; the point alone if not given. */
   ends?: V[];
+  /** A hand tool's point that meets the work (its own frame, game units): what the work clip strikes with or holds to it. */
+  contact?: V;
   /**
    * How far its far end is let down onto the ground where the clip lets it down (`GripAt.rest` times this; 1 when not
    * given): the long sword's point rests on the ground at the swing's rest and drag; a pickaxe (0) keeps its head off it.
    */
   rest?: number;
+  /** Where along it (its own y) the slash trail's inner edge is at the blade (`./trail.ts`); a share of the way from the lead fist to the far end where not given. */
+  inner?: number;
 }
 const smooth = (x: number): number => { const u = Math.min(1, Math.max(0, x)); return u * u * (3 - 2 * u); };
 

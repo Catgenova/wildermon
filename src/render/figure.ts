@@ -2369,6 +2369,11 @@ export interface FigurePose {
   /** What is worn and held, each piece drawn on the body in its own material, dye and rarity. */
   gear?: GearLook;
   /**
+   * The tool the job in hand is done with, when it is one a sculpted figure holds (mining's pickaxe): the one the job
+   * uses, in its own metal, lit when enchanted. Left out, a sculpted figure at that job holds one of no metal (iron's).
+   */
+  tool?: GearPiece;
+  /**
    * Which garments a low-poly body has on (Sculpted figures, `../sculpt/lowpoly`): each left out at the game's default,
    * the shawl, the trousers, the boots and the tunic worn and the hood down; the hood is up only with the shawl, and the
    * hair is not drawn under it. The plate set's pieces are off unless asked for, each plain unless `enchanted` says so.
@@ -6447,6 +6452,22 @@ function weatheredOf(P: Palette): Palette {
   if (!w) weathered.set(P, (w = { ...P, wood: mixRGB(P.wood, CHALK, 0.4), woodDark: mixRGB(P.woodDark, COOL_SHADOW, 0.18) }));
   return w;
 }
+/**
+ * A metal as gear is forged of it (`METAL_TONE`, iron where the material is not a metal): its colour, its shadow, its lit
+ * edge and a blade's face, each along its own ramp. The sculpted figures' heads and blades take theirs from here too
+ * (`src/sculpt/lowpoly.ts` metalTint).
+ */
+export function metalShades(material?: string): { metal: RGB; dark: RGB; lit: RGB; blade: RGB } {
+  const metal = METAL_TONE[(material ?? '').toLowerCase()] ?? METAL_TONE.iron;
+  return {
+    metal,
+    // The metal's own colour, lighter and darker along its own ramp: a lit edge that is still steel, a shadow that is still iron.
+    dark: mixRGB(metal, COOL_SHADOW, 0.25),
+    // Copper's lit edge further toward the light's own colour, a pale peach, where a lift of its own colour is a hotter pink.
+    lit: mixRGB(lift(metal, 1.16), WARM_LIGHT, metal === METAL_TONE.copper ? 0.34 : 0.1),
+    blade: mixRGB(lift(metal, 1.1), WARM_LIGHT, 0.12),
+  };
+}
 /** The metals that are fittings in their own right, gilt rather than iron. */
 const YELLOW_METAL = new Set(['gold', 'brass', 'bronze', 'electrum', 'seryll']);
 
@@ -6467,7 +6488,7 @@ function gearPalette(base: Palette, p: GearPiece, step = 0): Palette {
   let pal = gearPals.get(key);
   if (pal) return pal;
   const mat = (p.material ?? '').toLowerCase();
-  const metal = METAL_TONE[mat] ?? METAL_TONE.iron;
+  const { metal, dark: metalDark, lit: metalLit, blade } = metalShades(mat);
   // A wood worked into a haft or a board is the furniture's wood, chalked a little further: a club is not the loudest thing on a body.
   const wood = mixRGB(WOOD_GEAR[mat] ?? WOOD_GEAR.oak, CHALK, 0.3);
   // A dye as the island's chalky range has it: a third of the way to its grey.
@@ -6484,13 +6505,12 @@ function gearPalette(base: Palette, p: GearPiece, step = 0): Palette {
   pal = {
     ...base,
     metal,
-    // The metal's own colour, lighter and darker along its own ramp: a lit edge that is still steel, a shadow that is still iron.
-    metalDark: mixRGB(metal, COOL_SHADOW, 0.25),
-    // Copper's lit edge further toward the light's own colour, a pale peach, where a lift of its own colour is a hotter pink.
-    metalLit: mixRGB(lift(metal, 1.16), WARM_LIGHT, metal === METAL_TONE.copper ? 0.34 : 0.1),
+    // its shadow, lit edge and blade along its own ramp (`metalShades`)
+    metalDark,
+    metalLit,
     mail: mixRGB(metal, COOL_SHADOW, 0.16),
     rivet: mixRGB(metal, WARM_LIGHT, 0.5),
-    blade: mixRGB(lift(metal, 1.1), WARM_LIGHT, 0.12),
+    blade,
     fitting: YELLOW_METAL.has(mat) ? mixRGB(mixRGB(metal, CHALK, 0.22), WARM_LIGHT, 0.12) : GEAR_BASE.fitting,
     scale: DRAGON,
     scaleDark: mixRGB(DRAGON, COOL_SHADOW, 0.2),

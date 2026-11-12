@@ -145,22 +145,64 @@ export function clipFor(pose: FigurePose, body: 'man' | 'woman' = pose.look?.gen
   return { clip, t: pose.phase / 6 + offsetOf(pose.id) * clip.length };
 }
 
+/** What the jobs swung overhead are done with (`SWING_JOBS`): drawn in both hands as they are. */
+export const SWING_TOOL = 'pickaxe';
 /**
- * What a pose holds in both hands as its clip plays (`Clip.grip`), by its id: the weapon in hand in a fight; nothing at
- * work (mining's pickaxe is not drawn yet, so the hands close on a handle of their own).
+ * What a pose holds in both hands as its clip plays (`Clip.grip`), by its id: the weapon in hand in a fight; the pickaxe
+ * at a job swung overhead (`SWING_JOBS`, `SWING_TOOL`); nothing at any other work.
  */
 export function heldIn(pose: FigurePose): string | undefined {
   const c = clipFor(pose);
-  return c?.clip.grip && pose.job === FIGHT ? pose.gear?.weapon?.id : undefined;
+  if (!c?.clip.grip) return undefined;
+  return pose.job === FIGHT ? pose.gear?.weapon?.id : SWING_JOBS.has(pose.job ?? '') ? SWING_TOOL : undefined;
 }
 
 /**
- * The tools a pose's clip draws in its hands (`Clip.tools`), by the side, and how far up its handle each is held on the
- * body (`Correction.grip`): none for a clip that holds none.
+ * The tools a job at the work clip holds, by the tool it is done with: the struck tools with the chisel in the other
+ * hand (and the chisel's own jobs with the mallet striking it); every other tool alone in the striking hand, the other
+ * hand closed on the work. A tool not listed (or none) holds the clip's own (`Clip.tools`).
+ */
+export const TOOLS_OF: Readonly<Record<string, { strike: string; hold?: string }>> = {
+  hammer: { strike: 'hammer', hold: 'chisel' }, mallet: { strike: 'mallet', hold: 'chisel' }, chisel: { strike: 'mallet', hold: 'chisel' },
+  hatchet: { strike: 'hatchet' }, butchering_knife: { strike: 'butchering_knife' }, awl: { strike: 'awl' }, carving_knife: { strike: 'carving_knife' },
+  trowel: { strike: 'trowel' }, file: { strike: 'file' }, whetstone: { strike: 'whetstone' },
+};
+/** The long tools a body's shorter grip (`Correction.grip`) is for: those that reach as far as the clip's own. */
+const LONG = new Set(['hammer', 'mallet', 'hatchet', 'butchering_knife']);
+/** The tool a pose works with: the piece in hand (`FigurePose.tool`), else its job's (`ActionDef.tool`). */
+const toolOfPose = (pose: FigurePose): string | undefined => pose.tool?.id ?? (pose.job ? ACTION_BY_ID.get(pose.job)?.tool : undefined);
+
+/**
+ * The tools a pose's clip draws in its hands (`Clip.tools`, or its job's own: `TOOLS_OF`), by the side, and how far up
+ * its handle each is held on the body (`Correction.grip`, the long tools'): none for a clip that holds none.
  */
 export function toolsIn(pose: FigurePose, body: 'man' | 'woman' = pose.look?.gender === 'woman' ? 'woman' : 'man'): { tools: NonNullable<Clip['tools']>; up: Partial<Record<'l' | 'r', number>> } | undefined {
   const c = clipFor(pose, body)?.clip;
-  return c?.tools ? { tools: c.tools, up: c.bodies?.[body]?.grip ?? {} } : undefined;
+  if (!c?.tools) return undefined;
+  const side = c.strike?.side ?? 'r', other = side === 'r' ? 'l' : 'r', own = TOOLS_OF[toolOfPose(pose) ?? ''];
+  const tools = own ? { [side]: own.strike, ...(own.hold ? { [other]: own.hold } : {}) } : c.tools;
+  const grip = c.bodies?.[body]?.grip ?? {}, up = Object.fromEntries(Object.entries(grip).filter(([s]) => LONG.has(tools[s as 'l' | 'r'] ?? '')));
+  return { tools, up };
+}
+
+/**
+ * How far the work is brought to a tool that reaches less far than the clip's own (`Clip.strike`), body heights: the
+ * difference of the two tools' reaches (`Held.contact` from the fist), turned as the striking fist is at the blow; kept
+ * per body, clip and tool.
+ */
+const SHIFTS = new Map<string, [number, number, number]>();
+function shiftOf(sk: Skeleton, c: Clip, tool: Held | undefined, own: Held | undefined, id: string): [number, number, number] | undefined {
+  if (!c.strike || !tool?.contact || !own?.contact) return undefined;
+  const key = `${sk.body}|${c.name}|${id}`;
+  let d = SHIFTS.get(key);
+  if (!d) {
+    const s = c.strike.side, r = clipLocal(sk, c, c.strike.t, undefined, () => own), g = sk.gripOf(sk.fk(r.local, r.move), own)[s === 'r' ? 1 : 0];
+    const reach = (h: Held): [number, number, number] => [(h.contact as V)[0] / h.scale, ((h.contact as V)[1] - h.lead) / h.scale, (h.contact as V)[2] / h.scale];
+    const a = reach(tool), b = reach(own), dd: V = [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+    const w = [0, 1, 2].map((i) => (g.R[i * 3] * dd[0] + g.R[i * 3 + 1] * dd[1] + g.R[i * 3 + 2] * dd[2]) / sk.height) as [number, number, number];
+    SHIFTS.set(key, (d = w));
+  }
+  return d;
 }
 
 /** A share of a loop for a body, from its id, so bodies stood together do not breathe as one. */
@@ -182,7 +224,15 @@ const MAX_KEPT = 256;
  */
 export function animate(sk: Skeleton, pose: FigurePose, figure: () => Array<M3 | undefined>, held?: Held, tools?: (id: string) => Held | undefined): Local {
   const c = clipFor(pose, sk.body);
-  const now: Local = c ? clipLocal(sk, c.clip, c.t, c.clip.grip ? held : undefined, tools) : { local: figure(), move: [0, 0, 0] };
+  let now: Local;
+  if (!c) now = { local: figure(), move: [0, 0, 0] };
+  else {
+    // a clip holding hand tools holds the job's own, the work brought to the striking one where it reaches less far
+    const hold = c.clip.tools ? toolsIn(pose, sk.body) : undefined, side = c.clip.strike?.side ?? 'r', other = side === 'r' ? 'l' : 'r';
+    const id = hold?.tools[side], ref = c.clip.tools?.[side];
+    const d = tools && id && ref && id !== ref ? shiftOf(sk, c.clip, tools(id), tools(ref), id) : undefined;
+    now = clipLocal(sk, c.clip, c.t, c.clip.grip ? held : undefined, tools, { ids: hold?.tools, ...(d ? { shift: { [other]: d } } : {}) });
+  }
   if (!pose.id) return now;
   const key = `${sk.body}|${pose.id}`, source = c ? c.clip.name : 'figure', ms = performance.now();
   let k = KEPT.get(key);
