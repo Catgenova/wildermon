@@ -4,7 +4,7 @@
 //
 //   node tools/sculpt/lowplacegame.mjs --out <dir> [--name sixseven-game] [--sets outfit1,hood,plate,leather,bare]
 //       [--views front,q3,side] [--zoom 10] [--fps 20] [--seconds 1.2] [--crop 0.62] [--width 26] [--state emote|work|idle] [--job chop]
-//       [--from <seconds>] [--keys t1,t2,...] [--bodies man,woman]
+//       [--from <seconds>] [--keys t1,t2,...] [--bodies man,woman] [--tool <id>[:<material>[:enchanted]]]
 //     <dir>/<name>.gif: rows the outfits, columns him then her in each view, played in real time: each body its own id, its
 //       phase the island's (six a second stood) and the clock (performance.now, which the game fades clips over) the
 //       frame's, so a body goes from one clip into the next as it does in the game; each frame taken from the page's
@@ -13,6 +13,7 @@
 //       go's time `act`), `idle` (stood doing nothing; the idle clip), or `idle-work` (stood, then set to --job at --from
 //       seconds: the fade from the idle into what the job plays).
 //     --keys: also <dir>/<name>-keys.png, the frames at those clip times, stood still (no fades).
+//     --tool: the piece the job is done with (FigurePose.tool: drawn in its metal, lit when enchanted), e.g. hammer:gold:enchanted.
 //     --bodies: which bodies are drawn (him, her or both: one at a time plays each body on its own clock).
 //     --crop k keeps the top k of each cell (the arms and the trunk close up); --width w makes each cell w game units wide.
 //
@@ -32,7 +33,7 @@ const out = resolve(opt('out', 'tmp/lowplacegame')), name = opt('name', 'sixseve
 const sets = opt('sets', 'outfit1,hood,plate,leather,bare').split(','), VIEWS = { front: 0, q3: 1, side: 2, rq3: 3, back: 4 };
 const views = opt('views', 'front,q3,side').split(',').map((v) => VIEWS[v]);
 const zoom = +opt('zoom', '10'), width = +opt('width', '26'), fps = +opt('fps', '20'), seconds = +opt('seconds', '1.2'), crop = +opt('crop', '0.62');
-const bodies = opt('bodies', 'man,woman').split(','), state = opt('state', 'emote'), job = opt('job', 'chop'), from = +opt('from', '0.6'), keys = opt('keys', '').split(',').filter(Boolean).map(Number);
+const tool = opt('tool', ''), bodies = opt('bodies', 'man,woman').split(','), state = opt('state', 'emote'), job = opt('job', 'chop'), from = +opt('from', '0.6'), keys = opt('keys', '').split(',').filter(Boolean).map(Number);
 mkdirSync(out, { recursive: true });
 const ROOT = new URL('../..', import.meta.url).pathname;
 const OUTFITS = {
@@ -54,7 +55,7 @@ window.ready = async () => { sculptedFigures(true); await import('./src/sculpt/s
 /** What a body is doing at s seconds in. */
 const doing = (s, st) => {
   const working = st === 'work' || (st === 'idle-work' && s >= ${from});
-  if (working) return { working: true, job: ${JSON.stringify(job)}, act: { t: st === 'work' ? s : s - ${from}, length: 3 } };
+  if (working) return { working: true, job: ${JSON.stringify(job)}, ${tool ? `tool: ${JSON.stringify({ id: tool.split(':')[0], material: tool.split(':')[1] || undefined, enchanted: tool.split(':')[2] === 'enchanted' })},` : ''} act: { t: st === 'work' ? s : s - ${from}, length: 3 } };
   return st === 'emote' ? { working: false, emote: 'wave', emoteT: s } : { working: false };
 };
 // rows of cells [set, gender, facing]; at s seconds (the clock and the phase), each body its own id unless still

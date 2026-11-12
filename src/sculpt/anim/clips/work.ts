@@ -124,23 +124,23 @@ export const ARM_AT_WOMAN: Record<string, { fist?: Euler; contact?: Euler; face:
 };
 /** The right arm at each key, solved on him for `ARM_AT` (`tools/sculpt/lowworksolve.mjs`). */
 export const ARMS: Record<string, Record<string, Euler>> = {
-  impact: { upperarm_r: [38, -28, -30], lowerarm_r: [81, 0, 0], hand_r: [10, 92, -17] },
-  rest: { upperarm_r: [39, -21, -15], lowerarm_r: [88, 0, 0], hand_r: [11, 87, 1] },
-  rise: { upperarm_r: [37, 24, -17], lowerarm_r: [93, 0, 0], hand_r: [-3, 105, 4] },
-  top: { upperarm_r: [41, 77, -66], lowerarm_r: [97, 0, 0], hand_r: [-8, 110, 21] },
-  strike: { upperarm_r: [31, 62, -70], lowerarm_r: [103, 0, 0], hand_r: [11, 134, -2] },
-  over: { upperarm_r: [37, 33, -78], lowerarm_r: [84, 0, 0], hand_r: [12, 135, 1] },
-  smear: { upperarm_r: [37, -14, -44], lowerarm_r: [107, 0, 0], hand_r: [12, 116, -11] },
+  impact: { upperarm_r: [36, -28, -27], lowerarm_r: [81, 0, 0], hand_r: [9, 91, -17] },
+  rest: { upperarm_r: [39, -19, -17], lowerarm_r: [90, 0, 0], hand_r: [14, 86, -2] },
+  rise: { upperarm_r: [36, 24, -16], lowerarm_r: [93, 0, 0], hand_r: [-3, 106, 4] },
+  top: { upperarm_r: [41, 77, -64], lowerarm_r: [98, 0, 0], hand_r: [-8, 109, 20] },
+  strike: { upperarm_r: [30, 62, -69], lowerarm_r: [103, 0, 0], hand_r: [10, 134, -3] },
+  over: { upperarm_r: [36, 34, -76], lowerarm_r: [84, 0, 0], hand_r: [11, 135, 0] },
+  smear: { upperarm_r: [36, -9, -48], lowerarm_r: [108, 0, 0], hand_r: [13, 115, -11] },
 };
 /** Her right arm where his does not fit her, solved as his is. */
 export const WOMAN: Record<string, Record<string, Euler>> = {
-  impact: { upperarm_r: [32, -37, -19], lowerarm_r: [85, 0, 0], hand_r: [-3, 85, -25] },
-  rest: { upperarm_r: [36, -23, -24], lowerarm_r: [91, 0, 0], hand_r: [9, 85, 1] },
-  rise: { upperarm_r: [37, 38, -24], lowerarm_r: [86, 0, 0], hand_r: [-5, 114, 7] },
-  top: { upperarm_r: [28, 90, -76], lowerarm_r: [81, 0, 0], hand_r: [-5, 113, 27] },
-  strike: { upperarm_r: [21, 67, -71], lowerarm_r: [99, 0, 0], hand_r: [13, 145, -2] },
-  over: { upperarm_r: [46, 24, -75], lowerarm_r: [49, 0, 0], hand_r: [15, 132, 15] },
-  smear: { upperarm_r: [30, -15, -44], lowerarm_r: [107, 0, 0], hand_r: [-1, 105, -11] },
+  impact: { upperarm_r: [20, -31, -36], lowerarm_r: [84, 0, 0], hand_r: [-14, 87, -29] },
+  rest: { upperarm_r: [37, -23, -23], lowerarm_r: [90, 0, 0], hand_r: [11, 84, 0] },
+  rise: { upperarm_r: [36, 38, -26], lowerarm_r: [86, 0, 0], hand_r: [-4, 114, 8] },
+  top: { upperarm_r: [27, 90, -77], lowerarm_r: [80, 0, 0], hand_r: [-4, 112, 28] },
+  strike: { upperarm_r: [23, 70, -72], lowerarm_r: [96, 0, 0], hand_r: [12, 144, -5] },
+  over: { upperarm_r: [47, 24, -75], lowerarm_r: [48, 0, 0], hand_r: [16, 131, 15] },
+  smear: { upperarm_r: [6, -10, -48], lowerarm_r: [108, 0, 0], hand_r: [-12, 94, -18] },
 };
 
 /** The left arm as keyed before it is reached to the chisel: the elbow out and down, which side the reach keeps it on. */
@@ -214,5 +214,5 @@ export const WORK: Clip = {
   events: [{ t: STRIKE, name: 'strike' }, { t: IMPACT, name: 'impact' }],
   stretch: [[0, 0.22], [0.38, STRIKE]],
   // her arms shorter for her height: the chisel held nearer
-  bodies: { woman: { tracks: { ...herTracks(), $move: [{ t: 0, v: HER_LEAN }] }, hands: { l: [0.0, 0.02, -0.05] }, grip: { r: 0.8 } } },
+  bodies: { woman: { tracks: { ...herTracks(), $move: [{ t: 0, v: HER_LEAN }] }, hands: { l: [0.0, 0.02, -0.05] } } },
 };
