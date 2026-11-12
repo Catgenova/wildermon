@@ -94,7 +94,7 @@ select 'default=' || pg_get_expr(d.adbin, d.adrelid) from pg_attrdef d where d.a
 select 'check=' || pg_get_constraintdef(c.oid) from pg_constraint c where c.conrelid = 'public.oldname_t'::regclass and c.contype = 'c';
 select 'policy=' || pg_get_expr(polqual, polrelid) from pg_policy where polname = 'oldname_p';
 select 'trigger=' || pg_get_triggerdef(oid) from pg_trigger where tgname = 'oldname_w';
-select 'comment=' || obj_description('public.oldname_t'::regclass, 'pg_class') || ' / ' || col_description('public.oldname_t'::regclass, 3);
+select 'comment=' || obj_description('public.oldname_t'::regclass, 'pg_class') || ' / ' || col_description('public.oldname_t'::regclass, 2);
 select 'row=' || note || ' ' || meta::text || ' ' || tags::text from public.oldname_t where id = 1;
 select 'setting=' || array_to_string(setconfig, ',') from pg_db_role_setting
  where setrole = current_user::regrole and setdatabase = (select oid from pg_database where datname = current_database());
@@ -139,7 +139,7 @@ check('and says nothing is left', run.err.includes('Nothing on the island holds 
 
 const named = psql(`begin;
 reset role;
-insert into auth.users (id, email) values ('7b7b7b7b-7b7b-7b7b-7b7b-7b7b7b7b7b7b', ${lit(`my${OLD}fan@catgenova.github.io`)});
+insert into auth.users (id, email) values ('7c7c7c7c-7c7c-7c7c-7c7c-7c7c7c7c7c7c', ${lit(`my${OLD}fan@catgenova.github.io`)});
 create function public.oldname_probe() returns text language sql as $f$ select ${lit(`${OLD}.x`)} $f$;
 \\i ${MIGRATION}
 rollback;
