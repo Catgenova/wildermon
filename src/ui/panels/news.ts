@@ -4290,6 +4290,11 @@ export const NEWS: News[] = [
     },
   },
   {
+    n: 532,
+    day: '2026-11-12',
+    lines: () => ['Changed: armour and shield burden: on foot only. Mount, cart, wagon and boat speed: no armour slowdown; load past the limit still slows them.'],
+  },
+  {
     n: 525,
     day: '2026-11-11',
     lines: () => ['Renamed: Put it to <mate> → Breed with <mate>.', 'Renamed: in young → pregnant.'],
