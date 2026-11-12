@@ -1,5 +1,5 @@
 import type { PlacedAnvil } from '../game/anvil';
-import type { Side, StairHand } from '../game/building';
+import type { Side, StairHand, Border } from '../game/building';
 import type { PlacedCampfire } from '../game/campfire';
 import type { Creature } from '../game/creatures';
 import type { PlacedFurniture } from '../game/furniture';
@@ -129,3 +129,49 @@ export const rgb = (c: readonly [number, number, number], k: number, a = 1): str
 export type Ghost =
   | { kind: 'furniture'; piece: string; material?: string; x: number; y: number; sx: number; sy: number; facing: Side; ok: boolean; level?: number }
   | { kind: 'stairs'; x: number; y: number; level: number; material: string; floorKind: 'stairs' | 'ladder'; side: Side; hand?: StairHand; ok: boolean; buildingId?: number };
+
+/**
+ * What a picture made by `baked` reads besides what is in its key: whether it
+ * is kept off a runestone's runes drawn behind it (`occludes`), and whether it
+ * is drawn in the sun's light, and so made again when that moves on (`lit`).
+ */
+export interface BakeAs { occludes?: boolean; lit?: boolean }
+/** How dark it is when a lamp inside starts to show through a wall or a roof (`lampBehind`), and pictures stop being kept. */
+export const LAMP_DARK = 0.2;
+
+/**
+ * Which of `n` pictures a section of a run takes, by a hash of where it is,
+ * for a masonry that takes them so: in no order a street shows, never the
+ * same as the section either side of it along the run, and never the same
+ * as the section under it, so no picture stands twice in a row either way.
+ *
+ * Along the run every fourth section takes its picture by the hash alone,
+ * and each of the three after it one of the others -- not the one the
+ * section before took, and the third not the one the next fourth takes
+ * either -- so no section has to know more of the run than the three before
+ * it. Bumping a picture that matched the one before it, as this did, only
+ * moved the match on: three sections running took the same picture. Up the
+ * wall each storey is the one under it turned on by the same step, a step
+ * the run keeps, so the storeys differ and the run still does.
+ */
+export function scatterOf(b: Border, level: number, n: number): number {
+  const along = b.dir === 'h' ? b.x : b.y, run = b.dir === 'h' ? b.y : b.x;
+  const hash = (i: number, salt: number): number => {
+    let k = (i * 374761393 + run * 668265263 + salt * 1442695041 + (b.dir === 'h' ? 0 : 97)) | 0;
+    k = Math.imul(k ^ (k >>> 13), 1274126177);
+    return (k ^ (k >>> 16)) >>> 0;
+  };
+  if (n < 3) return (hash(along, 0) + level) % n;
+  /** By a hash, one of the `n` that is none of `not`. */
+  const other = (not: number[], h: number): number => {
+    const free: number[] = [];
+    for (let j = 0; j < n; j++) if (!not.includes(j)) free.push(j);
+    return free[h % free.length];
+  };
+  const first = Math.floor(along / 4) * 4;
+  let v = hash(first, 1) % n;
+  for (let i = first + 1; i <= along; i++) {
+    v = other(i - first === 3 ? [v, hash(first + 4, 1) % n] : [v], hash(i, 2));
+  }
+  return (v + level * (1 + (hash(0, 3) % (n - 1)))) % n;
+}

@@ -8,8 +8,8 @@
  * does not.
  *
  * Each layer is a handful of the renderer's own methods and its painters'
- * (`waterdraw.ts`), timed by wrapping them on the instance, so with the line switched off nothing is wrapped and
- * nothing is timed. The time is the layer's own: a wall drawn inside a
+ * (`waterdraw.ts`, `roofdraw.ts`), timed by wrapping them on the instance,
+ * so with the line switched off nothing is wrapped and nothing is timed. The time is the layer's own: a wall drawn inside a
  * building's pass counts to the buildings once, not to the buildings and again
  * to whatever called them. What no layer claims is the ground and everything
  * else, worked out as the whole frame less the layers.
