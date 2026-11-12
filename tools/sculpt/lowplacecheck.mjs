@@ -12,7 +12,8 @@
 //       nothing else of the figure, as tools/sculpt/lowleathersetcross.mjs --visible counts them), most a frame by region:
 //       the head (a pair with the head, the jaw or the neck in it), the legs (the pelvis, a thigh or a calf: a skirt through
 //       a thigh), the arms (an arm's bone from the shoulder down), the trunk (the rest).
-//     per body and outfit, for the idle and the clip: the most triangle pairs crossing in a frame, and the frames with any.
+//     per body and outfit, for the idle and the clip: the most triangle pairs crossing in a frame, and the frames with any;
+//     and the most in a frame of the whole arm's (the shoulder down) against everything not on that arm (`whole arm`).
 //     A pair: a triangle of a forearm or hand (every corner most weighted to the lower arm, its twists, the wrist, the hand,
 //     the knuckles, the thumb or the fingers), and one of anything else but that arm (no corner most weighted to its upper
 //     arm, shoulder, elbow or below): the body, the garments, the other arm.
@@ -66,13 +67,15 @@ function crossings(pose) {
     P.push(q); dom.push(names[best] ?? '');
   }
   const T = Array.from({ length: s.baked.nTris }, (_, t) => ({ v: [s.baked.tris[t * 3], s.baked.tris[t * 3 + 1], s.baked.tris[t * 3 + 2]] }));
-  let n = 0;
+  let n = 0, arm = 0;
   for (const side of ['l', 'r']) {
+    // (and the whole arm, the shoulder down, against everything not on it: the measure the approved clips are held to)
+    arm += crossPairs(P, T.filter((t) => t.v.every((i) => ARM.exec(dom[i])?.[2] === side)), P, T.filter((t) => !t.v.some((i) => ARM.exec(dom[i])?.[2] === side))).length;
     const fore = T.filter((t) => t.v.every((i) => FORE.exec(dom[i])?.[2] === side));
     const rest = T.filter((t) => !t.v.some((i) => ARM.exec(dom[i])?.[2] === side));
     n += crossPairs(P, fore, P, rest).length;
   }
-  return ALL ? { n, P, T, all: crossPairs(P, T).map(([i, j]) => ({ i, j, key: i * 1e6 + j, bones: [i, j].map((t) => dom[T[t].v[0]]) })) } : { n, all: [] };
+  return ALL ? { n, arm, P, T, all: crossPairs(P, T).map(([i, j]) => ({ i, j, key: i * 1e6 + j, bones: [i, j].map((t) => dom[T[t].v[0]]) })) } : { n, arm, all: [] };
 }
 
 /** How far the game's camera looks down (src/render/figure.ts viewOf), in degrees, and its eight eyes (as lowleathersetcross.mjs). */
@@ -127,17 +130,19 @@ let fail = false;
 const report = {};
 for (const set of sets) for (const gender of ['man', 'woman']) {
   const look = { ...TS.DEFAULT_LOOK, gender, hair: 'swept', beard: 'none' }, base = { moving: false, facing: 0, swimming: false, working: false, look, outfit: OUTFITS[set] };
-  const r = { idle: { most: 0, frames: 0 }, [clipName]: { most: 0, frames: 0, worstAt: null, new: 0, newAt: null, newFrames: 0, newBones: {}, seen: 0, seenAt: null, seenFrames: 0, seenBones: {}, region: { head: 0, legs: 0, arms: 0, trunk: 0 } } };
+  const r = { idle: { most: 0, frames: 0, arm: 0 }, [clipName]: { most: 0, frames: 0, worstAt: null, new: 0, newAt: null, newFrames: 0, newBones: {}, seen: 0, seenAt: null, seenFrames: 0, seenBones: {}, region: { head: 0, legs: 0, arms: 0, trunk: 0 }, arm: 0 } };
   const idleAll = new Set();
   for (let k = 0; k < N; k++) {
-    const { n: x, all } = crossings({ ...base, phase: (k / N) * 6 * TS.CLIPS.idle.length });
+    const { n: x, all, arm } = crossings({ ...base, phase: (k / N) * 6 * TS.CLIPS.idle.length });
+    r.idle.arm = Math.max(r.idle.arm, arm);
     r.idle.most = Math.max(r.idle.most, x); if (x) r.idle.frames++;
     for (const x of all) idleAll.add(x.key);
   }
   for (let k = 0; k < N; k++) {
     const t = (k / N) * clip.length, doing = job ? { working: true, job, act: { t, length: clip.length } } : { emote: 'wave' };
-    const { n: x, all, P, T } = crossings({ ...base, phase: t * 6, ...doing });
+    const { n: x, all, P, T, arm } = crossings({ ...base, phase: t * 6, ...doing });
     const c = r[clipName];
+    c.arm = Math.max(c.arm, arm);
     if (x > c.most) c.worstAt = +t.toFixed(3);
     c.most = Math.max(c.most, x); if (x) c.frames++;
     const fresh = all.filter((p) => !idleAll.has(p.key));
@@ -158,7 +163,7 @@ for (const set of sets) for (const gender of ['man', 'woman']) {
   const c = r[clipName];
   if (c.most > r.idle.most || c.frames / N > r.idle.frames / N || c.seen > 0) fail = true;
   report[`${set} ${gender}`] = r;
-  console.log(`${set.padEnd(8)} ${gender.padEnd(6)} idle: ≤${r.idle.most} a frame (${r.idle.frames}/${N} frames)   ${clipName}: ≤${c.most} a frame (${c.frames}/${N} frames${c.worstAt !== null ? `, worst at ${c.worstAt}s` : ''})${ALL ? `   new in the figure: ≤${c.new} a frame (${c.newFrames}/${N} frames${c.newAt !== null ? `, worst at ${c.newAt}s` : ''})${c.new ? ' ' + Object.entries(c.newBones).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k, v]) => `${k} ${v}`).join(', ') : ''}; seen ≤${c.seen} (head ${c.region.head}, legs ${c.region.legs}, arms ${c.region.arms}, trunk ${c.region.trunk}; ${c.seenFrames}/${N} frames${c.seenAt !== null ? `, worst at ${c.seenAt}s` : ''})${c.seen ? ' ' + Object.entries(c.seenBones).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k, v]) => `${k} ${v}`).join(', ') : ''}` : ''}`);
+  console.log(`${set.padEnd(8)} ${gender.padEnd(6)} idle: ≤${r.idle.most} a frame (${r.idle.frames}/${N} frames; whole arm ≤${r.idle.arm})   ${clipName}: ≤${c.most} a frame (${c.frames}/${N} frames${c.worstAt !== null ? `, worst at ${c.worstAt}s` : ''}; whole arm ≤${c.arm})${ALL ? `   new in the figure: ≤${c.new} a frame (${c.newFrames}/${N} frames${c.newAt !== null ? `, worst at ${c.newAt}s` : ''})${c.new ? ' ' + Object.entries(c.newBones).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k, v]) => `${k} ${v}`).join(', ') : ''}; seen ≤${c.seen} (head ${c.region.head}, legs ${c.region.legs}, arms ${c.region.arms}, trunk ${c.region.trunk}; ${c.seenFrames}/${N} frames${c.seenAt !== null ? `, worst at ${c.seenAt}s` : ''})${c.seen ? ' ' + Object.entries(c.seenBones).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k, v]) => `${k} ${v}`).join(', ') : ''}` : ''}`);
 }
 console.log(fail ? 'FAIL' : 'ok');
 process.exit(fail ? 1 : 0);
