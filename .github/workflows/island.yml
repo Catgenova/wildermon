@@ -1,9 +1,9 @@
 # The island, checked three ways.
 #
 # `rules` needs nothing and runs on every push: a Postgres of its own, built
-# from the migrations in this repo, with the whole suite over it, in six shards
-# side by side. That is the one that catches things, and it costs no secrets
-# and no project. A live run skips it when the same code has passed it already
+# from the migrations in this repo once (`db`), with the whole suite over it,
+# in six shards side by side. That is the one that catches things, and it
+# costs no secrets and no project. A live run skips it when the same code has passed it already
 # (`already`).
 #
 # `migrate` and `smoke` touch the real project and so need credentials. They
@@ -84,15 +84,66 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: bash scripts/ci-tested.sh
 
-  # Asked for: the suite in a quarter of the time. It runs as six shards side by side, each with a Postgres of its
-  # own built the same way (`run.sh`). The tests are in supabase/test/manifest.json, each naming its shard, and one
-  # step a shard runs them all (`run-all.mjs`): bundled in one esbuild build, run in order, a failure not stopping
-  # the rest, a table at the end, and each test's seconds uploaded (`test-durations-N`) for
+  # Asked for: the database built once a run, not once a shard. `run.sh` applies every migration and island.sql's
+  # checks to a Postgres of its own; the database is dumped (by the service's own pg_dump, so the dump is the
+  # server's version) and handed to the six shards, which restore it into a Postgres of their own: island.sql's
+  # checks run here once, and each shard starts from the database they left. Its name starts "The rules" so that
+  # `scripts/ci-tested.sh` counts it.
+  db:
+    name: The rules' database, built once
+    needs: already
+    if: ${{ !cancelled() && needs.already.outputs.tested != 'true' }}
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: wildermon
+          POSTGRES_PASSWORD: wildermon
+          POSTGRES_DB: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: '5432'
+      PGUSER: wildermon
+      PGPASSWORD: wildermon
+      PGDATABASE: postgres
+    outputs:
+      built: ${{ steps.built.outputs.built }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - name: Joining, refusing, digging, settling and who may write what
+        run: supabase/test/run.sh
+      - name: The database, dumped for the shards
+        run: |
+          docker exec ${{ job.services.postgres.id }} pg_dump -U wildermon -d postgres -Fc -f /tmp/island.dump
+          docker cp ${{ job.services.postgres.id }}:/tmp/island.dump island.dump
+          ls -l island.dump
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: island-db
+          path: island.dump
+          retention-days: 1
+          compression-level: 0
+          if-no-files-found: error
+      - name: Handed over
+        id: built
+        run: echo "built=true" >> "$GITHUB_OUTPUT"
+
+  # Asked for: the suite in a quarter of the time. It runs as six shards side by side, each restoring the database
+  # `db` built into a Postgres of its own. The tests are in supabase/test/manifest.json, each naming its shard, and
+  # one step a shard runs them all (`run-all.mjs`): bundled in one esbuild build, run in order, a failure not
+  # stopping the rest, a table at the end, and each test's seconds uploaded (`test-durations-N`) for
   # `run-all.mjs --rebalance`. A new test is a manifest entry; the steps here are the checks that are not one test.
   rules:
     name: The rules, against a Postgres of our own (${{ matrix.shard }} of 6)
-    needs: already
-    if: ${{ !cancelled() && needs.already.outputs.tested != 'true' }}
+    needs: [already, db]
+    if: ${{ !cancelled() && needs.already.outputs.tested != 'true' && needs.db.outputs.built == 'true' }}
     strategy:
       fail-fast: false
       matrix:
@@ -311,13 +362,26 @@ jobs:
       - name: The tests and tools that run outside a browser still compile
         if: matrix.shard == 1
         run: npx tsc --noEmit -p tsconfig.node.json
-      - name: Joining, refusing, digging, settling and who may write what
-        id: db
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         if: ${{ !cancelled() }}
-        run: supabase/test/run.sh
+        with:
+          name: island-db
+      - name: The database `db` built, restored here
+        id: restore
+        if: ${{ !cancelled() }}
+        run: |
+          # Roles are the cluster's, not the database's, so not in the dump: the three 00_shim.sql makes.
+          # Into the service's fresh database: the dump takes over its empty public schema.
+          psql -v ON_ERROR_STOP=1 -q -X -c "do \$\$ begin
+            if not exists (select from pg_roles where rolname = 'anon') then create role anon nologin; end if;
+            if not exists (select from pg_roles where rolname = 'authenticated') then create role authenticated nologin; end if;
+            if not exists (select from pg_roles where rolname = 'service_role') then create role service_role nologin bypassrls; end if;
+          end \$\$;"
+          docker cp island.dump ${{ job.services.postgres.id }}:/tmp/island.dump
+          docker exec ${{ job.services.postgres.id }} pg_restore -U wildermon -d postgres --exit-on-error -j 4 /tmp/island.dump
       - name: The suite, shard ${{ matrix.shard }} of 6
         id: suite
-        if: ${{ !cancelled() && steps.db.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.restore.outcome == 'success' }}
         run: node supabase/test/run-all.mjs --shard ${{ matrix.shard }}/6 --durations test-durations/shard-${{ matrix.shard }}.json
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: ${{ !cancelled() }}
@@ -326,7 +390,7 @@ jobs:
           path: test-durations/
           if-no-files-found: ignore
       - name: The builds the island takes, input timing on the watch, and the doors around them
-        if: ${{ !cancelled() && steps.db.outcome == 'success' && matrix.shard == 3 }}
+        if: ${{ !cancelled() && steps.restore.outcome == 'success' && matrix.shard == 3 }}
         env:
           # A check that cannot open a browser here fails rather than passes.
           BOOT_CHECK_STRICT: '1'
@@ -364,8 +428,8 @@ jobs:
   migrate:
     name: Push the migrations to the project
     # On the rules having passed here, or over the same code already (`already`).
-    if: ${{ !cancelled() && github.event_name == 'workflow_dispatch' && inputs.live && (needs.already.outputs.tested == 'true' || needs.rules.result == 'success') }}
-    needs: [already, rules]
+    if: ${{ !cancelled() && github.event_name == 'workflow_dispatch' && inputs.live && (needs.already.outputs.tested == 'true' || (needs.db.result == 'success' && needs.rules.result == 'success')) }}
+    needs: [already, db, rules]
     runs-on: ubuntu-latest
     environment: AI
     steps:
