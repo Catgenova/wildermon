@@ -1495,6 +1495,8 @@ export function putMark(game: { time: number }, c: Creature, kind: MarkKind, val
 export const SPAR_SLACK = 0.5;
 /** The health a sparring partner yields at. */
 export const sparFloor = (c: Creature): number => maxHealth(c, SPECIES[c.species]) * SPAR_YIELD;
+/** Whether it is out in the world and drawn there: not shut in a wildermon crate (`shutIn`), carried, standing or stored. What it lights goes with it (`Game.lights`). */
+export const inWorld = (c: Creature): boolean => c.mode !== 'stored';
 /** Whether it is a sparring partner of yours, out and about, and so may be attacked. */
 export const sparring = (c: Creature | undefined): boolean => !!c && c.mode !== 'wild' && c.mode !== 'stored' && SPECIES[c.species]?.style === 'spar';
 /** Whether a sparring partner has yielded. */

@@ -4323,6 +4323,14 @@ export const NEWS: News[] = [
     },
   },
   {
+    n: 535,
+    day: '2026-11-12',
+    lines: () => [
+      `Fixed: night light of the ${SPECIES.wicka.name} line and the ${Object.values(SPECIES).filter((d) => d.glow).map((d) => d.name).join(' and ')}: none while in a wildermon crate, carried, set down or stored `
+        + `(was: a pool of light following you after crating one, then left where the crate was stored).`,
+    ],
+  },
+  {
     n: 525,
     day: '2026-11-11',
     lines: () => ['Renamed: Put it to <mate> → Breed with <mate>.', 'Renamed: in young → pregnant.'],

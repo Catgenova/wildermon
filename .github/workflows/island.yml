@@ -2360,6 +2360,16 @@ jobs:
           npx esbuild supabase/test/crateoccupant.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/crateoccupant.mjs --log-level=error
           node node_modules/.cache/crateoccupant.mjs
+      - name: A wildermon's light goes where it goes, and not into a crate
+        if: matrix.shard == 2
+        run: |
+          # Reported as a glimmoth's glow following a player a poll behind
+          # after crating it, and left on a hillside once the crate was stored
+          # in a stall. The night's lights gave every creature in the list its
+          # light, one shut in a crate too. Lit only while out in the world.
+          npx esbuild supabase/test/creaturelight.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/creaturelight.mjs --log-level=error
+          node node_modules/.cache/creaturelight.mjs
       - name: A wildermon past the first goes into a creature crate, and out of it again
         if: matrix.shard == 2
         run: |
