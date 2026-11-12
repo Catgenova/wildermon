@@ -1,1 +1,0 @@
-var e=[`auto`,`less`,`full`],t=`auto`,n;function r(){try{return n===void 0&&(n=typeof window<`u`?window.matchMedia?.(`(prefers-reduced-motion: reduce)`)??null:null),n?.matches??!1}catch{return!1}}function i(e){t=e}var a=()=>t===`less`||t===`auto`&&r();export{a as n,i as r,e as t};
