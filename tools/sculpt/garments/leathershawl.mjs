@@ -7,7 +7,7 @@
 // the band) front and back. The stripes, the triangles, the ring and the emblem's stripes are the runes: trim tan plain,
 // glowing enchanted.
 //
-//   buildLeatherShawl(rig, design, { under }) → { verts, polys: [{ v, mat, part, tag }], tris, part, cols, rings,
+//   buildLeatherShawl(rig, design, { under, stand }) → { verts, polys: [{ v, mat, part, tag }], tris, part, cols, rings,
 //     design, bones }: one closed shell (the shawl) and closed pieces laid on it (triangles, ring, stripes) or hung under
 //     it (tabs), each a prism with its own thickness
 //   leatherShawlWeights(rig, G) → per vertex [[bone, weight], ...] (the cape's six bones after the body's: shawl.mjs
@@ -52,7 +52,8 @@ export const LOOKS = { plain: lit, enchanted: { ...lit, rune: { c: MATS.glow, ki
  *   the bands stand out; bevel how much lower the underside's hem is than the outside's;
  *   collar: rim the rim's height [front, side, back] (p: the V's shape, |sin|^p), IN the inside's clearance from the
  *   neck (room for the chest's stand collar), wall its thickness, lean how far out the rim is per unit of height, low the
- *   foot's depth below the rim where the rim is under the neck's foot;
+ *   foot's depth below the rim where the rim is under the neck's foot, enclose (optional) [reach, depth]: the foot
+ *   `depth` under the top of the stand collar worn under it (`stand`) within `reach` of the neck's foot;
  *   yoke: its hem's height [front, side, back] (p), band its band's length along the cloth, line the stripe's;
  *   hem: the lower tier's hem [front, corner, back] (p), flare, soften (as shawl.mjs), band the border's length along the
  *   cloth, stripe each stripe's;
@@ -60,7 +61,8 @@ export const LOOKS = { plain: lit, enchanted: { ...lit, rune: { c: MATS.glow, ki
  *   tabs: gap (centre to centre along the hem), w, len [shortest, longest], thick, tilt (degrees out), the pattern's seed;
  *   emblem: ring [outer, inner] radii, at (the ring's centre height, front and back), stripes (x of each from the centre
  *   line, width), raise;
- *   lift: the cape's bones (shawl.mjs DESIGN.lift).
+ *   lift: the cape's bones (shawl.mjs DESIGN.lift);
+ *   round (optional): knees more in the base line over the shoulder (none: the collar's foot, T1 and the hem).
  */
 const LIFT = (side) => ({ side: { a: side, knee: 20, b: 1.3, max: 100, also: { axis: 'x', a: 0.3, max: 12 } }, front: { a: 0.3, knee: 40, b: 2.3, max: 100 }, back: { a: 0.4, knee: 30, b: 1.0, max: 60 }, frontAt: 60, backAt: 140, reach: [40, 40], from: 0.2, top: 0.2, roll: {} });
 export const DESIGN = {
@@ -148,21 +150,33 @@ export const OUTSIDE = ['Y0', 'Ym', 'YB0', 'YB1', 'YL', 'Y1', 'Y1b', 'L1', 'L2',
 export const UNDER = ['IH', 'IB', 'IY', 'IM', 'IT'];
 export const COLLAR = ['ci', 'd', 'u0', 'u', 'cm'];
 
-export function buildLeatherShawl(rig, design = DESIGN[rig.who], { under = [], shapes = true } = {}) {
+export function buildLeatherShawl(rig, design = DESIGN[rig.who], { under = [], shapes = true, stand = [] } = {}) {
   const { B } = rig, D = design, z0 = D.z0;
   const angles = [];
   for (let k = 0; k < D.front; k++) angles.push((k * 90) / D.front);
   for (let k = 0; k < 2 * D.back; k++) angles.push(90 + (k * 90) / D.back);
   for (let k = D.front; k > 0; k--) angles.push(360 - (k * 90) / D.front);
   const N = angles.length;
-  const S = [...samplesOf(B), ...under.flatMap((m) => samplesOf(m))];
+  const S = [...samplesOf(B), ...under.flatMap((m) => samplesOf(m))], SC = stand.flatMap((m) => samplesOf(m));
   const cols = [];
   for (let k = 0; k < N; k++) {
     const deg = angles[k], half = Math.max(((angles[(k + 1) % N] - deg + 360) % 360), ((deg - angles[(k + N - 1) % N] + 360) % 360));
     const F = neckFoot(B, z0, deg), yH = vee(D.hem.at, deg, D.hem.p), yY = D.yoke.table ? table(D.yoke.table, deg) : vee(D.yoke.at, deg, D.yoke.p);
     // the collar: its rim at rim (a V low in front), its foot `low` under the rim or under the neck's foot; its inside the
     // body's reach (and `under`'s) between foot and rim grown by IN, leaning out by `lean` per unit up
-    const C = D.collar, rim = vee(C.rim, deg, C.p), foot = Math.min(F[1] - 0.04, rim - C.low);
+    const C = D.collar, rim = vee(C.rim, deg, C.p);
+    let foot = Math.min(F[1] - 0.04, rim - C.low);
+    // (enclose: the foot `depth` under the top of a stand collar worn under it (`stand`) within `reach` of the neck's
+    // foot: round it, not across its top)
+    if (C.enclose) {
+      let top = -Infinity;
+      for (const p of SC) {
+        if (p[1] > rim || Math.hypot(p[0], p[2] - z0) > F[0] + C.enclose[0]) continue;
+        if (Math.abs(((Math.atan2(p[0], p[2] - z0) * 180 / Math.PI - deg + 540) % 360) - 180) > half) continue;
+        top = Math.max(top, p[1]);
+      }
+      if (top > -Infinity) foot = Math.min(foot, top - C.enclose[1]);
+    }
     // (the samples themselves between foot and rim, within the column's wedge, each grown by IN: no half-disc, so the
     // shoulder below the foot does not push the collar out)
     let rIn = F[0] + C.IN;
@@ -185,7 +199,21 @@ export function buildLeatherShawl(rig, design = DESIGN[rig.who], { under = [], s
     let T5 = [Hm[0] + vee(D.hem.flare, deg) * (T1[1] - yH), yH];
     const mid = P2.add(A0, P2.mul(P2.sub(T5, A0), (A0[1] - T1[1]) / Math.max(1e-6, A0[1] - T5[1])));
     T1 = P2.add(T1, P2.mul(P2.sub(mid, T1), D.hem.soften ?? 0));
-    const Lb = clearOf([A0, T1, T5], E.filter(([, y]) => y <= A0[1]));
+    // (round: that many more knees between the collar's foot and T1, each the drape's point furthest out of the line so
+    // far, so the line follows what is under it over the shoulder rather than its chord)
+    const knots = [A0, T1, T5];
+    for (let k = 0; k < (D.round ?? 0); k++) {
+      let far = 0.015, at = -1, pick = null;
+      for (const p of L) for (let i = 0; i + 2 < knots.length; i++) {
+        const a = knots[i], b = knots[i + 1];
+        if (!(p[1] < a[1] - 0.05 && p[1] > b[1] + 0.05)) continue;
+        const h = ((p[0] - a[0]) * (b[1] - a[1]) - (p[1] - a[1]) * (b[0] - a[0])) / (P2.len(P2.sub(b, a)) || 1);
+        if (Math.abs(h) > far) { far = Math.abs(h); at = i + 1; pick = p; }
+      }
+      if (!pick) break;
+      knots.splice(at, 0, pick);
+    }
+    const Lb = clearOf(knots, E.filter(([, y]) => y <= A0[1]));
     const pl = polyOf(Lb);
     // the rows along the base line: the yoke's hem at its height (at least 0.3 below the collar's foot, 0.5 above the band)
     const sH = pl.tot, sB = sH - D.hem.band, sY = Math.max(0.3, Math.min(pl.sAtY(yY), sB - 0.5)), sYB = sY - D.yoke.band;
@@ -545,7 +573,15 @@ export function leatherShawlWeights(rig, G, o = {}) {
   };
   const shell = new Set([...Object.values(G.rings).flat()]);
   const map = (n, i) => (G.part[i] === 'collar' ? neck[n] ?? 'spine_03' : capeMap(n));
-  const vw = transferWeights(rig, G, { map, smooth: o.smooth ?? 24, only: (i) => shell.has(i) });
+  // (over the chest: the cape's from the closest of the body's and the chest's surfaces, so where it lies over the chest
+  // it moves as the chest's plates do; the collar's from the chest's stand collar alone, which it stands round)
+  let vw;
+  if (!G.over) vw = transferWeights(rig, G, { map, smooth: o.smooth ?? 24, only: (i) => shell.has(i) });
+  else {
+    const C = G.over.chest, cape = transferWeights(overRig(rig, C), G, { map: capeMap, smooth: o.smooth ?? 24, only: (i) => shell.has(i) && G.part[i] !== 'collar' });
+    const collar = transferWeights(overRig(rig, C, (p) => p.tag === 'collar', false), G, { smooth: o.smooth ?? 24, only: (i) => shell.has(i) && G.part[i] === 'collar' });
+    vw = cape.map((w, i) => w ?? collar[i]);
+  }
   const R = G.rings, N = R.Y0.length, Ld = G.design.lift, nb = rig.bones.length;
   const mix = (A, Bw, t) => { const o2 = new Map(); for (const [b, w] of A) o2.set(b, (o2.get(b) ?? 0) + w * (1 - t)); for (const [b, w] of Bw) o2.set(b, (o2.get(b) ?? 0) + w * t); return [...o2].filter(([, w]) => w > 1e-6).sort((x, y) => y[1] - x[1]).slice(0, 4).map(([b, w], _, l) => [b, w / l.reduce((s2, [, x]) => s2 + x, 0)]); };
   const blendW = (list) => { const o2 = new Map(); for (const [i, t] of list) if (t > 0) for (const [b, w] of vw[i]) o2.set(b, (o2.get(b) ?? 0) + w * t); return [...o2].sort((x, y) => y[1] - x[1]).slice(0, 4).map(([b, w], _, l) => [b, w / l.reduce((s2, [, x]) => s2 + x, 0)]); };
@@ -564,7 +600,9 @@ export function leatherShawlWeights(rig, G, o = {}) {
   for (let k = 0; k < N; k++) for (const [u, o2] of Object.entries(pair)) vw[R[u][k]] = vw[R[o2][k]];
   // (the underside under the collar's foot the collar's own, the cape's lift not taking it into the neck and the
   // trapezius)
-  for (let k = 0; k < N; k++) vw[R.IT[k]] = vw[R.ci[k]];
+  // (over the chest the cape's own, as the outside over it: the pauldrons and their straps rise under it with the
+  // shoulders)
+  if (!G.over) for (let k = 0; k < N; k++) vw[R.IT[k]] = vw[R.ci[k]];
   // the pieces: their shell corners'
   for (let i = 0; i < G.verts.length; i++) if (!shell.has(i)) vw[i] = blendW(G.src[i]);
   // the tabs' feet: half their hem's weights, half the body's closest to them (the arm swinging under them, the belly and
@@ -572,24 +610,73 @@ export function leatherShawlWeights(rig, G, o = {}) {
   const feet = G.tabFoot ?? new Set();
   if (feet.size) {
     // (the arm's below the shoulder taken as the upper arm's: the tab rides on the arm's swing, not the forearm's bend)
-    const bw = transferWeights(rig, G, { smooth: 0, only: (i) => feet.has(i), map: (n) => { const m = n.match(/^(lowerarm|hand|thumb|fingers|elbow|wrist|knuckles)\w*_(l|r)$/); return m ? `upperarm_${m[2]}` : n; } });
+    const bw = transferWeights(G.over ? overRig(rig, G.over.chest) : rig, G, { smooth: 0, only: (i) => feet.has(i), map: (n) => { const m = n.match(/^(lowerarm|hand|thumb|fingers|elbow|wrist|knuckles)\w*_(l|r)$/); return m ? `upperarm_${m[2]}` : n; } });
     for (const i of feet) vw[i] = mix(vw[i], bw[i], o.foot ?? G.design.tabs.foot ?? 0.5);
   }
   return vw;
 }
 
+/**
+ * The rig with the chest's surface beside the body's (its vertices and weights after the body's; only its polygons
+ * passing `keep`; the body's left out with `body` false), for transferWeights.
+ */
+function overRig(rig, C, keep = () => true, body = true) {
+  const n = rig.B.verts.length, T = C.tris.filter((t) => keep(C.polys[t.poly])).map((t) => ({ ...t, v: t.v.map((i) => i + n) }));
+  return { ...rig, B: { ...rig.B, verts: [...rig.B.verts, ...C.verts], tris: body ? [...rig.B.tris, ...T] : T }, vw: [...rig.vw, ...C.vw] };
+}
+
+/* ---- worn over the leather chest ------------------------------------------------------------------------------------ */
+/**
+ * The shawl worn over the leather chest (garments/leatherchest.mjs) is its own copy, built over the chest at rest: the
+ * chest (`under`: the collar's inside clears the chest's stand collar by OVER's IN instead of the neck by the room left
+ * for it) and OVER's changes to the design; without the chest the shawl is the one above, unchanged.
+ */
+export const OVER = {
+  male: { collar: { IN: 0.06, enclose: [0.9, 0.08] }, round: 2 },
+  female: { collar: { IN: 0.06, enclose: [0.9, 0.08] }, round: 2 },
+};
+const deepOver = (a, b) => { for (const [k, v] of Object.entries(b)) a[k] = v && typeof v === 'object' && !Array.isArray(v) && a[k] && typeof a[k] === 'object' && !Array.isArray(a[k]) ? deepOver(a[k], v) : v; return a; };
+/** The design worn over the chest: DESIGN's with OVER's (and SHAWL_OVER's, JSON { male, female }, for trying a change). */
+export function designOver(who) {
+  const D = deepOver(structuredClone(DESIGN[who]), OVER[who] ?? {});
+  if (typeof process !== 'undefined' && process.env?.SHAWL_OVER) deepOver(D, JSON.parse(process.env.SHAWL_OVER)[who] ?? {});
+  return D;
+}
+/** The chest's polygons the shawl is fitted over (at rest), as a mesh of their own: { verts, tris }. */
+export async function chestUnder(rig) {
+  const { buildLeatherChest, leatherChestWeights } = await import('./leatherchest.mjs');
+  const C = buildLeatherChest(rig);
+  C.vw = leatherChestWeights(rig, C);
+  return chestOf(C);
+}
+/** A built chest (with its weights, `vw`) as `under`: its vertices and triangles, and the chest itself. */
+export const chestOf = (C) => ({ verts: C.verts, tris: C.tris, chest: C });
+/** The shawl as worn over the chest. */
+export async function buildLeatherShawlOver(rig, design = designOver(rig.who), o = {}) {
+  const U = o.chest ?? await chestUnder(rig), C = U.chest;
+  const G = buildLeatherShawl(rig, design, { ...o, under: [U], stand: [{ verts: C.verts, tris: C.tris.filter((t) => C.polys[t.poly].tag === 'collar') }] });
+  G.over = U;
+  return G;
+}
+
 /* ---- the game's copy ------------------------------------------------------------------------------------------------ */
+// (ONLY=plain or ONLY=over: only that copy written)
 export async function writeAssets() {
   const { writeFileSync } = await import('node:fs');
   const { buildRig } = await import('../lowrig.mjs');
   const { garmentAsset } = await import('../lowgarment.mjs');
+  const only = typeof process !== 'undefined' ? process.env?.ONLY : undefined;
   for (const who of ['male', 'female']) {
-    const rig = buildRig(who), G = buildLeatherShawl(rig);
-    G.vw = leatherShawlWeights(rig, G);
-    const file = new URL(`../../../src/sculpt/assets/lowleathershawl-${who}.json`, import.meta.url);
-    const A = { built: 'node tools/sculpt/garments/leathershawl.mjs (tools/sculpt/lowgarment.mjs garmentAsset)', ...garmentAsset(rig, G, MATS, LOOKS) };
-    writeFileSync(file, JSON.stringify(A));
-    console.log(who, `${G.verts.length} vertices, ${G.tris.length} triangles, ${A.base} + ${A.bones.length} bones: wrote`, file.pathname);
+    const rig = buildRig(who);
+    for (const [name, make] of [['lowleathershawl', async () => buildLeatherShawl(rig)], ['lowleathershawlover', async () => buildLeatherShawlOver(rig)]]) {
+      if (only && name !== { plain: 'lowleathershawl', over: 'lowleathershawlover' }[only]) continue;
+      const G = await make();
+      G.vw = leatherShawlWeights(rig, G);
+      const file = new URL(`../../../src/sculpt/assets/${name}-${who}.json`, import.meta.url);
+      const A = { built: 'node tools/sculpt/garments/leathershawl.mjs (tools/sculpt/lowgarment.mjs garmentAsset)', ...garmentAsset(rig, G, MATS, LOOKS) };
+      writeFileSync(file, JSON.stringify(A));
+      console.log(who, name, `${G.verts.length} vertices, ${G.tris.length} triangles, ${A.base} + ${A.bones.length} bones: wrote`, file.pathname);
+    }
   }
 }
 if (import.meta.url === `file://${process.argv[1]}`) await writeAssets();

@@ -3,7 +3,11 @@
 // enchanted (every piece's outfit.enchanted), the long sword wielded.
 //
 //   node tools/sculpt/lowleathersetgame.mjs --out <dir> [--tag set] [--zooms 5,10] [--gif 8] [--views 0,1,2,4] [--fps 12]
-//       [--looks plain,enchanted] [--still-only] [--gif-only]
+//       [--looks plain,enchanted] [--still-only] [--gif-only] [--pieces leatherChest,leatherShawl,...]
+//       [--stills 0,1,2,3,4] [--bodies man,woman] [--clips idle,walk,swing] [--pose walk:<phase>]
+//     (--pieces: the set's pieces worn, by their outfit keys; all five by default; --stills the facings of the stills;
+//     --bodies the bodies drawn; --clips the clips played; --pose the stills in a clip at a phase (the walk's phase, the
+//     idle's or the swing's time), held a second first)
 //     <tag>-<look>-z<zoom>.png: both bodies front, three-quarter, side, rear three-quarter and back;
 //     <tag>-<look>-<idle|walk|swing>-z<zoom>.gif: the idle, the walk and the two-handed swing (at work on a creature with
 //       the long sword), both bodies from each of --views, each body and view played on its own in real time, frame by
@@ -24,10 +28,13 @@ const out = resolve(opt('out', 'tmp/lowleathersetgame')), tag = opt('tag', 'set'
 const zooms = opt('zooms', '5,10').split(',').map(Number).filter((z) => z > 0);
 const gifZoom = +opt('gif', '8'), views = opt('views', '0,1,2,4').split(',').map(Number), fps = +opt('fps', '12');
 const looks = opt('looks', 'plain,enchanted').split(',');
+const clips = opt('clips', 'idle,walk,swing').split(',');
+const [poseClip, posePh] = opt('pose', 'still:1.5').split(':'), stillPh = +posePh;
+const stills = opt('stills', '0,1,2,3,4').split(',').map(Number), bodies = opt('bodies', 'man,woman').split(',');
 const PY = process.env.PY ?? 'python3';
 mkdirSync(out, { recursive: true });
 const ROOT = new URL('../..', import.meta.url).pathname;
-const PIECES = ['leatherChest', 'leatherLegs', 'leatherBoots', 'leatherShawl', 'leatherHat'];
+const PIECES = opt('pieces', 'leatherChest,leatherLegs,leatherBoots,leatherShawl,leatherHat').split(',').filter(Boolean);
 const entry = `
 import { drawFigure, sculptedFigures } from './src/render/figure';
 import { DEFAULT_LOOK } from './src/game/look';
@@ -86,22 +93,22 @@ try {
     const en = lk === 'enchanted';
     if (!flag('gif-only')) for (const z of zooms) {
       const rows = [];
-      for (const g of ['man', 'woman']) {
+      for (const g of bodies) {
         const row = [];
-        for (const f of [0, 1, 2, 3, 4]) {
+        for (const f of stills) {
           const path = join(tmp, `s-${lk}-${z}-${g}-${f}.png`);
           // (held a moment so the animator settles on the facing)
-          for (let k = 0; k < 6; k++) { await p.evaluate((a) => window.cell(...a), [z, g, f, 'still', 1.5, en]); await p.waitForTimeout(60); }
-          save(await p.evaluate((a) => window.cell(...a), [z, g, f, 'still', 1.5, en]), path); row.push(path);
+          for (let k = 0; k < (poseClip === 'still' ? 6 : 16); k++) { await p.evaluate((a) => window.cell(...a), [z, g, f, poseClip, stillPh, en]); await p.waitForTimeout(60); }
+          save(await p.evaluate((a) => window.cell(...a), [z, g, f, poseClip, stillPh, en]), path); row.push(path);
         }
         rows.push(row);
       }
       const path = join(out, `${tag}-${lk}-z${z}.png`); sheet(rows, path); console.log('wrote', path);
     }
-    if (!flag('still-only')) for (const clip of ['idle', 'walk', 'swing']) {
+    if (!flag('still-only')) for (const clip of clips) {
       // one loop: the walk's stride (the phase once round), the idle's clip (its time the phase over six), the swing's clip
       const n = clip === 'walk' ? 16 : Math.round((clip === 'idle' ? L.idle : L.swing) * fps), ms = clip === 'walk' ? 70 : Math.round(1000 / fps), cells = {};
-      for (const g of ['man', 'woman']) for (const f of views) {
+      for (const g of bodies) for (const f of views) {
         cells[`${g}${f}`] = [];
         // (a lead-in so the animator has faded into the clip before the frames kept)
         for (let k = 0; k < 8; k++) { await p.evaluate((a) => window.cell(...a), [gifZoom, g, f, clip, 0, en]); await p.waitForTimeout(ms); }
@@ -112,12 +119,12 @@ try {
           await p.waitForTimeout(ms);
         }
       }
-      const frames = Array.from({ length: n }, (_, k) => ['man', 'woman'].map((g) => views.map((f) => cells[`${g}${f}`][k])));
+      const frames = Array.from({ length: n }, (_, k) => bodies.map((g) => views.map((f) => cells[`${g}${f}`][k])));
       const path = join(out, `${tag}-${lk}-${clip}-z${gifZoom}.gif`); gif(frames, path, ms); console.log('wrote', path);
       // (a sheet of four frames spread over the loop, each body and view)
       const pick = [0, 1, 2, 3].map((i) => Math.floor((i * n) / 4));
       const sp = join(out, `${tag}-${lk}-${clip}-z${gifZoom}-sheet.png`);
-      sheet(['man', 'woman'].flatMap((g) => pick.map((k) => views.map((f) => cells[`${g}${f}`][k]))), sp); console.log('wrote', sp);
+      sheet(bodies.flatMap((g) => pick.map((k) => views.map((f) => cells[`${g}${f}`][k]))), sp); console.log('wrote', sp);
     }
   }
   rmSync(tmp, { recursive: true, force: true });
