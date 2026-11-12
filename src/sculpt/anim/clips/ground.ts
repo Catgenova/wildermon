@@ -27,15 +27,15 @@ const TOES = 70;
  */
 const ARMS_REACH: Record<string, Euler> = {
   upperarm_r: [12.7, -5.6, -28.7], lowerarm_r: [60.7, -13.4, 0], hand_r: [11.3, -43.5, 25.5],
-  upperarm_l: [17.3, 11.8, 17.9], lowerarm_l: [31.9, 14.3, 0], hand_l: [-13.5, 40, -36],
+  upperarm_l: [16.9, 11.4, 17.8], lowerarm_l: [32.5, 14.4, 0], hand_l: [-13.1, 39.9, -36],
 };
 const ARMS_DIG: Record<string, Euler> = {
   upperarm_r: [19.6, -2.3, -34.7], lowerarm_r: [33.1, -9.8, 0], hand_r: [8.8, -39, 23.9],
-  upperarm_l: [7.2, 14.2, 20.8], lowerarm_l: [71.8, 16, 0], hand_l: [-3.9, 47.1, -34.6],
+  upperarm_l: [7.1, 14, 20.7], lowerarm_l: [72, 16.2, 0], hand_l: [-3.5, 47.1, -34.4],
 };
 const ARMS_DRAW: Record<string, Euler> = {
-  upperarm_r: [22.2, -11.1, -24.6], lowerarm_r: [22.8, -11.7, 0], hand_r: [-2.9, -36.1, 31.7],
-  upperarm_l: [15.7, 8.8, 26.9], lowerarm_l: [62, 11.6, 0], hand_l: [9.3, 48.7, -29.3],
+  upperarm_r: [18, -9.3, -28.2], lowerarm_r: [26.2, -11, 0], hand_r: [-2.8, -35.3, 33.6],
+  upperarm_l: [22, 8.9, 25.8], lowerarm_l: [60.3, 12.3, 0], hand_l: [10, 49.2, -28.3],
 };
 
 /** Knelt: the thighs a little forward of upright, bowed from the hips and the spine, the shoulders let down, the head down on the ground ahead. */
@@ -53,20 +53,22 @@ const REACH: KeyPose = merge(KNELT, { rot: { ...ARMS_REACH,  } });
 /** The right hand's dig: the shoulders rolled down after it, the head turned to it. */
 const DUG: KeyPose = merge(KNELT, { rot: { ...ARMS_DIG, spine_02: [12, 4, 0], spine_03: [10, 4, 0], head: [14, -10, 0] } });
 /** The dig drawn back toward the knees. */
-const DRAWN: KeyPose = merge(KNELT, { rot: { ...ARMS_DRAW, spine_02: [11, 2, 0], spine_03: [9, 2, 0], head: [14, -6, 0] } });
+const DRAWN: KeyPose = merge(KNELT, { rot: { ...ARMS_DRAW, spine_02: [12, 4, 0], spine_03: [10, 4, 0], head: [14, -10, 0] } });
 
 /** Her arms as turns added to his (`Clip.bodies.woman.tracks`), at the same beats. */
-const HER_REACH: Record<string, Euler> = {"pelvis":[13,0,0],"spine_02":[3,0,0],"neck_01":[-12,0,0],"neck_02":[-4,0,0],"upperarm_r":[0.4,15.5,-15.4],"lowerarm_r":[19.4,-5.7,0],"hand_r":[10.3,5.9,-10.7],"upperarm_l":[-2.3,1.3,22],"lowerarm_l":[33.6,-3,0],"hand_l":[20.2,-1.4,0.4]};
-const HER_DIG: Record<string, Euler> = {"pelvis":[13,0,0],"spine_02":[3,0,0],"neck_01":[-12,0,0],"neck_02":[-4,0,0],"upperarm_r":[-3.1,8,-23.2],"lowerarm_r":[25,2,0],"hand_r":[14.7,7,-9.2],"upperarm_l":[-5.9,-2.1,22.8],"lowerarm_l":[29.1,2,0],"hand_l":[19.6,-6.1,1.4]};
-const HER_DRAW: Record<string, Euler> = {"pelvis":[13,0,0],"spine_02":[3,0,0],"neck_01":[-12,0,0],"neck_02":[-4,0,0],"upperarm_r":[-0.7,2.1,-23.5],"lowerarm_r":[29,6.3,0],"hand_r":[16.8,3,-3.3],"upperarm_l":[-4,-4.8,27.8],"lowerarm_l":[27.2,-1,0],"hand_l":[19.4,-10.8,1.7]};
+const HER_REACH: Record<string, Euler> = {"pelvis":[13,0,0],"spine_02":[3,0,0],"neck_01":[-12,0,0],"neck_02":[-4,0,0],"upperarm_r":[0.4,15.5,-15.4],"lowerarm_r":[19.4,-5.7,0],"hand_r":[10.3,5.9,-10.7],"upperarm_l":[-2.4,1.5,22],"lowerarm_l":[33.7,-2.6,0],"hand_l":[20.3,-1.5,0.4]};
+const HER_DIG: Record<string, Euler> = {"pelvis":[13,0,0],"spine_02":[3,0,0],"neck_01":[-12,0,0],"neck_02":[-4,0,0],"upperarm_r":[-3.1,8,-23.2],"lowerarm_r":[25,2,0],"hand_r":[14.7,7,-9.2],"upperarm_l":[-6,-2,22.7],"lowerarm_l":[29,2.3,0],"hand_l":[19.6,-6.3,1.4]};
+const HER_DRAW: Record<string, Euler> = {"pelvis":[13,0,0],"spine_02":[3,0,0],"neck_01":[-12,0,0],"neck_02":[-4,0,0],"upperarm_r":[-2.4,2.7,-22.4],"lowerarm_r":[28.8,4.6,0],"hand_r":[16.9,2.7,-4.3],"upperarm_l":[-4,-6,29.7],"lowerarm_l":[27.2,-1.5,0],"hand_l":[19.2,-11.5,1]};
 
+/** The trunk and the head eased into the dig as into any key, so only the arms land on it. */
+const SOFT: Beat['per'] = Object.fromEntries(['pelvis', 'spine_01', 'spine_02', 'spine_03', 'clavicle_l', 'clavicle_r', 'neck_01', 'neck_02', 'head'].map((b) => [b, { ease: 'inOut' as const }]));
 /** The beats: each hand's reach and dig the key poses, the draw a breakdown. */
 const beats = (reach: KeyPose, dug: KeyPose, drawn: KeyPose): Beat[] => [
   { t: 0, pose: reach, ease: 'inOut', stage: 'key', name: 'over the spot, right' },
-  { t: DIG, pose: dug, ease: 'in', stage: 'key', name: 'dig right' },
+  { t: DIG, pose: dug, ease: 'in', per: SOFT, stage: 'key', name: 'dig right' },
   { t: DRAW, pose: drawn, ease: 'out', name: 'drawn back, right' },
   { t: HALF, pose: mirror(reach), ease: 'inOut', stage: 'key', name: 'over the spot, left' },
-  { t: HALF + DIG, pose: mirror(dug), ease: 'in', stage: 'key', name: 'dig left' },
+  { t: HALF + DIG, pose: mirror(dug), ease: 'in', per: SOFT, stage: 'key', name: 'dig left' },
   { t: HALF + DRAW, pose: mirror(drawn), ease: 'out', name: 'drawn back, left' },
 ];
 export const BEATS: Beat[] = beats(REACH, DUG, DRAWN);

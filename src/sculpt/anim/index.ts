@@ -119,6 +119,10 @@ const FADE = 0.2;
  * the two clips stand them (\`plantBetween\`): getting down onto the knees at the ground and up off them.
  */
 const SETTLE: Readonly<Record<string, number>> = { ground: 0.55 };
+/** The legs' bones, which a long fade keeps on its own pace (the root's too); the rest lead or trail them. */
+const LEGS = /^(thigh|calf|foot|ball)_[lr]$/;
+/** Smoothstep, clamped. */
+const smooth = (u: number): number => { const x = Math.min(1, Math.max(0, u)); return x * x * (3 - 2 * x); };
 
 /** The state a pose is in, of those a clip can play. */
 export function stateOf(pose: FigurePose): State | undefined {
@@ -200,13 +204,19 @@ export function animate(sk: Skeleton, pose: FigurePose, figure: () => Array<M3 |
   if (KEPT.size > MAX_KEPT) KEPT.delete(KEPT.keys().next().value as string);
   let out = now;
   if (k.from) {
-    const u = (ms - k.at) / 1000 / (k.span ?? FADE), w = u * u * (3 - 2 * u);
+    const u = (ms - k.at) / 1000 / (k.span ?? FADE), w = smooth(u);
     if (u >= 1) k.from = null;
     else {
       out = blendLocal(k.from, now, w);
-      // a long fade (getting down or up): the feet kept where the two clips stand them, the legs bent to reach
+      // a long fade (getting down or up): the trunk, the head and the arms ahead of the legs going down (bowed to the
+      // ground as the knees bend) and behind them coming up (the legs straightened under the bowed trunk first); the feet
+      // kept where the two clips stand them, the legs bent to reach
       const plant = (k.span ?? FADE) > FADE && k.was && c ? plantBetween(sk, k.was, c, w) : undefined;
-      if (plant) out = sk.finish({ q: out.local.map((m) => m && quat(m)), move: out.move }, { plant, armsOut: -3 });
+      if (plant) {
+        const top = blendLocal(k.from, now, k.source in SETTLE ? smooth(u * 1.5) : smooth(u * 1.5 - 0.5));
+        const local = out.local.map((m, i) => (LEGS.test(sk.bones[i]?.name ?? '') ? m : top.local[i]));
+        out = sk.finish({ q: local.map((m) => m && quat(m)), move: out.move }, { plant, armsOut: -3 });
+      }
     }
   }
   k.out = out;
