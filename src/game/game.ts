@@ -30,7 +30,7 @@ import { anvilAnchor, anvilCentre, anvilCovers, anvilName, ANVIL_SUBTILES, type 
 import { fireAnchor, fireCentre, fireCovers, FIRE_SUBTILES, type PlacedCampfire } from './campfire';
 import { smelterAnchor, smelterCentre, smelterCovers, smelterName, SMELTER_H, SMELTER_PLUME, SMELTER_PLUME_WORKING, SMELTER_STACK_BACK, SMELTER_STACK_UP, SMELTER_W, type PlacedSmelter, type Plume, type SmeltJob } from './smelter';
 import { kilnAnchor, kilnCentre, kilnCovers, kilnName, KILN_GLOW, KILN_GLOW_FIRING, KILN_PLUME, KILN_PLUME_FIRING, KILN_SUBTILES, KILN_VENT_BACK, KILN_VENT_UP, type PlacedKiln } from './kiln';
-import { WELL_TRICKLE, WELL_TRICKLE_AT, WELL_TRICKLE_QL, ACROSS_OF, DEED_PLACE, FURNITURE, ONE_ALTAR, deckSpot, isPlanter, furnitureAnchor, furnitureCapacity, furnitureCentre, furnitureCovers, furnitureDef, furnitureHeft, furnitureHolds, furnitureKg, furnitureRefuses, furnitureRoom, furnitureUnits, hiveRoom, POND_EVERY, rackDeck, rackSpots, teamOf, vehicleOf, type LiquidKind, type PlacedFurniture, furnitureName, facingOf, LIQUID_NAME, isBoat, furnitureFootprint, holdsLiquid, STATION_REACH, type BoatDef, pieceShut } from './furniture';
+import { WELL_TRICKLE, WELL_TRICKLE_AT, WELL_TRICKLE_QL, ACROSS_OF, DEED_PLACE, FURNITURE, ONE_ALTAR, deckSpot, isPlanter, furnitureAnchor, furnitureCapacity, furnitureCentre, furnitureCovers, furnitureDef, furnitureHeft, furnitureHolds, furnitureKg, furnitureRefuses, furnitureRoom, furnitureUnits, hiveRoom, POND_EVERY, rackDeck, rackSpots, teamOf, vehicleOf, type LiquidKind, type PlacedFurniture, furnitureName, facingOf, LIQUID_NAME, isBoat, furnitureFootprint, holdsLiquid, WATER_AT_HAND, STATION_REACH, type BoatDef, pieceShut } from './furniture';
 import { hiveTakes } from './bees';
 import { crateTheRest, CREATURE_CRATE, emptyCrate, occupiedRefusal, shutIn, teamOut, teamOutRefusal } from './creaturecrate';
 import { bury, crumble, graveAt, graveRefusal, graveSays, GRAVE_MARK } from './graves';
@@ -38,7 +38,7 @@ import { cropStageSeconds, RIPE, settleCrop, type Crop } from './farming';
 import { fieldClock, fieldRate, GLASSHOUSE_GROWTH, handClock, handRate, PLANTER_GROWTH, STILL_CLOCK } from './growth';
 import { glassResync, underGlass } from './glasshouse';
 import { pannierName, pannierRefusal, panniersOffered, pannierTake } from './panniers';
-import { ageDef, kindName, stageOf, bridleTeam, harnessTeam, tameNeeds, attackOf, bloodMul, BLOW_SHARE, markOn, CALL_WINDOW, Creatures, setLocalKept, FIGHT_BACK_GOES, footing, HAUL_SKILL, haulLearn, MAX_MOUNT_SPEED, MOUNT_STAIRS_SAID, isBaitFor, tracesSkill, isShod, landRidden, maxHealth, PLAYER_ATTACKER, PULL_DEFAULT, SHOE_PACE, SHOE_STEP, tackSpeed, type Creature, type CreatureJSON, type WorkSite } from './creatures';
+import { ageDef, kindName, stageOf, bridleTeam, harnessTeam, tameNeeds, attackOf, bloodMul, BLOW_SHARE, markOn, CALL_WINDOW, Creatures, setLocalKept, FIGHT_BACK_GOES, footing, HAUL_SKILL, haulLearn, MAX_MOUNT_SPEED, MOUNT_STAIRS_SAID, isBaitFor, tracesSkill, isShod, landRidden, maxHealth, PLAYER_ATTACKER, PULL_DEFAULT, SHOE_PACE, SHOE_STEP, shoeTeam, shoeTeamStep, tackSpeed, type Creature, type CreatureJSON, type WorkSite } from './creatures';
 import { CRAFT_REACH, type CraftStock, type Station } from './recipes';
 import { Actor, type ActiveAction, type GuestSave } from './actor';
 import { HOST_ID, type PeerId } from '../net/protocol';
@@ -1281,9 +1281,24 @@ export class Game {
   knowsRecipe(id: string): boolean {
     return this.knownRecipes.has(id);
   }
+  /**
+   * Your trade's channels as the island folded them (`player.class_mul`): a multiplier for each channel, on
+   * the skills of the trade (`skills`), and a rite's on top while it holds. Read through `classChannel`.
+   */
+  classMul: { skills?: string[]; rite?: { until?: string; muls?: Record<string, number> } } & Record<string, unknown> = {};
+  /** One channel's multiplier on a skill, as the island's `class_mul` has it: 1 off the trade's skills. */
+  classChannel(channel: string, skill: string | undefined): number {
+    const m = this.classMul;
+    if (!skill || !Array.isArray(m.skills) || !m.skills.includes(skill)) return 1;
+    const own = typeof m[channel] === 'number' ? (m[channel] as number) : 1;
+    const until = m.rite?.until ? Date.parse(m.rite.until) : NaN;
+    const rite = until > Date.now() ? (m.rite?.muls?.[channel] ?? 1) : 1;
+    return own * rite;
+  }
   /** Take the island's fold of your perks, and hand what it says on to the body and the pack. */
-  setPerks(fx: Record<string, number> | null | undefined): void {
+  setPerks(fx: Record<string, number> | null | undefined, mul?: unknown): void {
     this.perkFx = { ...(fx ?? {}) };
+    if (mul && typeof mul === 'object') this.classMul = mul as Game['classMul'];
     this.player.roadPace = this.perk('walk:road', 1);
     // And through brush, for a Forester's Woodsman's Stride: each tile that has a pace in the perks.
     this.player.tilePace = Object.fromEntries(Object.keys(TILE_DEFS).map(Number)
@@ -2486,12 +2501,30 @@ export class Game {
   }
 
   /**
-   * Whether a piece of work is on a settlement of yours: a wall keyed by the line it stands on ('v' at x between tiles
+   * Whether a tile is on the settlement your workers work for: your home (`deed`, the island's `my_deed`), and no
+   * other settlement you are a citizen of. What a worker's beds, work, stores and pick-ups are read by. The island's
+   * `on_home_deed`.
+   */
+  onHomeDeed(x: number, y: number): boolean {
+    const d = this.deed;
+    return !!d && Math.abs(x - d.x) <= d.radius && Math.abs(y - d.y) <= d.radius;
+  }
+
+  /**
+   * Whether your workers may work a tile: off every settlement, or on their own (`onHomeDeed`). Never on another
+   * settlement, a citizen's or a stranger's. The island's `private.worker_ground`.
+   */
+  workerGround(x: number, y: number): boolean {
+    return this.onHomeDeed(x, y) || !this.deedAt(x, y);
+  }
+
+  /**
+   * Whether a piece of work is on your workers' settlement (`onHomeDeed`): a wall keyed by the line it stands on ('v' at x between tiles
    * x - 1 and x, 'h' at y between y - 1 and y: `borderOf`) when either tile it stands between is. The island's
    * `hod_work_mine`.
    */
   workOnDeed(x: number, y: number, dir?: string): boolean {
-    return this.onDeed(x, y) || (dir === 'v' && this.onDeed(x - 1, y)) || (dir === 'h' && this.onDeed(x, y - 1));
+    return this.onHomeDeed(x, y) || (dir === 'v' && this.onHomeDeed(x - 1, y)) || (dir === 'h' && this.onHomeDeed(x, y - 1));
   }
 
   /**
@@ -6493,7 +6526,7 @@ export class Game {
     this.events.emit('inventory');
   }
 
-  /** Wurm-flavoured success roll: better skill and tools help, difficulty hurts. */
+  /** Success roll: better skill and tools help, difficulty hurts. */
   /**
    * A skill check at a job that a perk may make surer (`fail:` and the job, a
    * Mason's Sure Chisel, a Miner's Sure Pick, a Tailor's Sure Needle): a
@@ -6584,8 +6617,8 @@ export class Game {
     if (this.player.level < 0) return false;
     const px = this.player.tileX;
     const py = this.player.tileY;
-    for (let y = py - 1; y <= py + 1; y++) {
-      for (let x = px - 1; x <= px + 1; x++) {
+    for (let y = py - WATER_AT_HAND; y <= py + WATER_AT_HAND; y++) {
+      for (let x = px - WATER_AT_HAND; x <= px + WATER_AT_HAND; x++) {
         if (this.world.inBounds(x, y) && this.world.hasWater(x, y)) return true;
       }
     }
@@ -8195,7 +8228,9 @@ export class Game {
     // Carpenter's Smooth Axle is its whole share at the top of the range too;
     // and so does the driver's hand on the reins (`drivingPace`), and how well the thing was built (`vehicleQlPace`).
     // And the team's ancient bridles (`bridleTeam`), past the cap as tack is, and its wildermon harnesses (`harnessTeam`).
-    return Math.min(MAX_VEHICLE_SPEED, mean * pull * worst * footing(this.teamClimb(f)) * rollEase(f.material)) * markOf(f, 'speed')
+    // And its shod beasts, on laid stone, at half a mount's shoes (`shoeTeam`), under the cap as a mount's shoes are.
+    const shod = shoeTeam(this.time, team, !!TILE_DEFS[this.world.getTile(f.x, f.y)]?.paved);
+    return Math.min(MAX_VEHICLE_SPEED, mean * pull * worst * footing(this.teamClimb(f)) * rollEase(f.material) * shod) * markOf(f, 'speed')
       * drivingPace(this.skills.get(DRIVING)) * vehicleQlPace(f.ql) * bridleTeam(team) * harnessTeam(team);
   }
 
@@ -8225,7 +8260,8 @@ export class Game {
    * beast learns in the traces is which lines it can hold.
    */
   vehicleStep(f: PlacedFurniture | undefined): number {
-    return VEHICLE_STEP + (f ? this.teamClimb(f) * CLIMB_PITCH : 0);
+    // And its shod beasts' shoes, at half a mount's (`shoeTeamStep`).
+    return VEHICLE_STEP + (f ? this.teamClimb(f) * CLIMB_PITCH + shoeTeamStep(this.time, this.team(f)) : 0);
   }
 
   /**
@@ -9858,7 +9894,7 @@ export class Game {
   }
 
   deedStores(): DeedStore[] {
-    // Round its keeper, a worker's stores are the storage in reach of them while it steps (the island's `wurm.around`).
+    // Round its keeper, a worker's stores are the storage in reach of them while it steps (the island's `wildermon.around`).
     if (this.storeScope) return this.aroundStores(this.storeScope);
     // A field worker asks this for every tile it looks at, so build the list
     // once a tick. The entries hold the crates and pieces themselves, so what
@@ -9890,9 +9926,12 @@ export class Game {
     const [cx, cy] = postCentre(p);
     const reach = postRadius(p.ql);
     const out: DeedStore[] = [];
-    this.placed.crates.around(cx, cy, reach, (crate) => out.push(this.crateStore(crate)));
+    // None on another settlement, a citizen's or a stranger's (`workerGround`; the island's `worker_may`).
+    this.placed.crates.around(cx, cy, reach, (crate) => {
+      if (this.workerGround(crate.x, crate.y)) out.push(this.crateStore(crate));
+    });
     this.placed.furniture.around(cx, cy, reach, (f) => {
-      const store = this.furnitureStore(f);
+      const store = this.workerGround(f.x, f.y) ? this.furnitureStore(f) : undefined;
       if (store) out.push(store);
     });
     return out;
@@ -9906,15 +9945,18 @@ export class Game {
   /**
    * Storage within a worker's range of you that you may put into, the island's `around_stores`: crates you may put
    * into (`crateShut`) and furniture that holds things you may open (`pieceShut`), carts, wagons and boats among it,
-   * within `site.radius` tiles of your tile (a square, from its middle); and the cart you pull, what you drive and the
-   * boat you ride in wherever they are. Not a stall, a trash crate, a mailbox, a hive, a pond or a barrel.
+   * within `site.radius` tiles of your tile (a square, from its middle), none of it on any settlement (`deedAt`); and
+   * the cart you pull, what you drive and the boat you ride in wherever they are, on a settlement or off. Not a
+   * stall, a trash crate, a mailbox, a hive, a pond or a barrel. Asked for: "a Work Around Me wildermon will not
+   * store into containers on a settlement".
    */
   aroundStores(site: WorkSite): DeedStore[] {
     const within = ([cx, cy]: [number, number]): boolean => Math.max(Math.abs(cx - (site.x + 0.5)), Math.abs(cy - (site.y + 0.5))) <= site.radius;
     const out: DeedStore[] = [];
     for (const cr of this.crates.values()) {
-      // Only its keeper's to fill (`workerMay`), as at a post: the island's `around_stores` by `worker_crate_ok`.
-      if (within(crateCentre(cr)) && !crateShut(this, cr, ', nothing goes in')) {
+      // Only its keeper's to fill (`workerMay`), as at a post, and off every settlement: the island's `around_stores`
+      // by `worker_crate_ok` and `deed_covers`.
+      if (within(crateCentre(cr)) && !this.deedAt(cr.x, cr.y) && !crateShut(this, cr, ', nothing goes in')) {
         const store = this.crateStore(cr);
         if (store.workerMay) out.push(store);
       }
@@ -9927,8 +9969,9 @@ export class Game {
       if (!held.has(f.id) && !within(furnitureCentre(f))) continue;
       if (def.stall || f.kind === 'mailbox' || def.hive || def.pond || holdsLiquid(f) || pieceShut(this, f)) continue;
       const store = this.furnitureStore(f);
-      // What you pull, drive or are aboard; otherwise only your own to fill (`workerMay`, `worker_piece_ok`).
-      if (store && (held.has(f.id) || store.workerMay)) out.push(store);
+      // What you pull, drive or are aboard; otherwise only your own to fill (`workerMay`, `worker_piece_ok`), and
+      // not on any settlement (`deed_covers`).
+      if (store && (held.has(f.id) || (store.workerMay && !this.deedAt(f.x, f.y)))) out.push(store);
     }
     return out;
   }

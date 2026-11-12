@@ -10,7 +10,7 @@
  * and the potatoes, onions and seeds the ground gives up, are not in it.
  *
  *   * `fruit_season(at)`: the season fruiting goes by -- the one a test holds
- *     the island in (`wurm.season`) if any, none before the first spring,
+ *     the island in (`wildermon.season`) if any, none before the first spring,
  *     and otherwise `season_at`. The browser's `fruitSeason`.
  *   * `fruits_now(item, at, glass)`: whether a thing is had: always under
  *     glass, always before the first spring, always for a thing not in the

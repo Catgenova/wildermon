@@ -10,7 +10,7 @@
  * Now what a go puts into the stores as its work is counted with it, onto the day's ledger (`ledger_add`, so its
  * lifetime with it, `work_stats_keep`) and the line to its keeper as stored (`did_add`):
  *
- *   * `private.errand_go_made` is `errand_go` with `wurm.made` set to an empty list for the go, transaction-local;
+ *   * `private.errand_go_made` is `errand_go` with `wildermon.made` set to an empty list for the go, transaction-local;
  *   * `worker_put` notes the thing and its count on that list while it is set, and does nothing more otherwise;
  *   * `private.worker_made_take` reads the list and clears it, for `worker_settle` to count;
  *   * and what is put back rather than made is not noted (`private.worker_put_back`): a load carried back into the
@@ -22,9 +22,9 @@ set local lock_timeout = '3s';
 
 /** Read what the go being counted put into the stores as its work, as [[def, count], ...], and stop noting. */
 create or replace function private.worker_made_take() returns jsonb language plpgsql as $fn$
-declare v jsonb := coalesce(nullif(current_setting('wurm.made', true), '')::jsonb, '[]'::jsonb);
+declare v jsonb := coalesce(nullif(current_setting('wildermon.made', true), '')::jsonb, '[]'::jsonb);
 begin
-  perform set_config('wurm.made', '', true);
+  perform set_config('wildermon.made', '', true);
   return v;
 end $fn$;
 
@@ -32,20 +32,20 @@ end $fn$;
 create or replace function private.errand_go_made(p_world uuid, p_id int) returns boolean language plpgsql as $fn$
 declare v boolean;
 begin
-  perform set_config('wurm.made', '[]', true);
+  perform set_config('wildermon.made', '[]', true);
   v := errand_go(p_world, p_id);
-  if not v then perform set_config('wurm.made', '', true); end if;
+  if not v then perform set_config('wildermon.made', '', true); end if;
   return v;
 end $fn$;
 
 /** `worker_put` for what is put back rather than made: a load carried back, what a recipe hands back. Not noted. */
 create or replace function private.worker_put_back(p_world uuid, c creature, p_def text, p_count int, p_ql double precision,
                                                    p_x int, p_y int, p_extra text default null) returns void language plpgsql as $fn$
-declare v text := coalesce(current_setting('wurm.made', true), '');
+declare v text := coalesce(current_setting('wildermon.made', true), '');
 begin
-  if v <> '' then perform set_config('wurm.made', '', true); end if;
+  if v <> '' then perform set_config('wildermon.made', '', true); end if;
   perform worker_put(p_world, c, p_def, p_count, p_ql, p_x, p_y, p_extra);
-  if v <> '' then perform set_config('wurm.made', v, true); end if;
+  if v <> '' then perform set_config('wildermon.made', v, true); end if;
 end $fn$;
 
 /** Each [def, count] onto a day's ledger (`ledger_add`), no goes. */
@@ -82,8 +82,8 @@ begin
   for v_at in$$,
      $$begin
   -- An errand's go being counted (`private.errand_go_made`): this put is what it made (made log).
-  if coalesce(current_setting('wurm.made', true), '') <> '' then
-    perform set_config('wurm.made', (current_setting('wurm.made')::jsonb || jsonb_build_array(jsonb_build_array(p_def, p_count)))::text, true);
+  if coalesce(current_setting('wildermon.made', true), '') <> '' then
+    perform set_config('wildermon.made', (current_setting('wildermon.made')::jsonb || jsonb_build_array(jsonb_build_array(p_def, p_count)))::text, true);
   end if;
   for v_at in$$),
     -- A load carried back into the stores: counted as what left its arms, not as made.

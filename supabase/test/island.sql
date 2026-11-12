@@ -6,7 +6,7 @@ set client_min_messages = notice;
 -- Every field in here grows in spring, whatever day of the year the suite is run on: the stages
 -- below are counted off the clock at a crop's own pace, which a summer would hurry, an autumn
 -- slow and a winter stop. `seasons.ts` is where the year itself is measured. For this session only.
-set wurm.season = 'spring';
+set wildermon.season = 'spring';
 -- A fixed seed, so a run that reads differently from the last one is a change
 -- in the rules rather than the luck of the draw. The rolls are still rolls:
 -- this only makes them the same rolls every time.
@@ -2441,7 +2441,7 @@ select act_perform(:'world2', :'ivar', 'cut_reeds', '{"kind":"tile","x":8,"y":9}
 select '336. ' || (select text from event where uid = :'ivar' and kind = 'event' order by n desc limit 1);
 
 -- Apples, pears and figs bear in autumn (`fruiting.ts`): held there for the picking, and back to spring after.
-set wurm.season = 'autumn';
+set wildermon.season = 'autumn';
 -- An apple tree, young and then old, which is the whole of what bearing means.
 select land_set_tile(:'world2', 10, 10, 16), land_set_data(:'world2', 10, 10, 6) \g /dev/null
 update player set x = 10.5, y = 9.5 where world_id = :'world2' and uid = :'ivar';
@@ -2453,7 +2453,7 @@ select act_perform(:'world2', :'ivar', 'pick_fruit', '{"kind":"tile","x":10,"y":
 select '338. an old one: ' || (select text from event where uid = :'ivar' and kind = 'event' order by n desc limit 1)
      || ' — and again straight away: ' || coalesce(act_refusal(:'world2', :'ivar', 'pick_fruit',
         '{"kind":"tile","x":10,"y":10}'::jsonb), 'allowed');
-set wurm.season = 'spring';
+set wildermon.season = 'spring';
 
 -- A sprout off it, planted somewhere else, which is how an orchard happens.
 insert into skill (world_id, uid, id, value) values (:'world2', :'ivar', 'forestry', 60)
@@ -3748,8 +3748,6 @@ update player set x = 5.5, y = 7.5, favour = 0, favour_at = now(), prayed_at = n
     sat_at = null, way = null, used_at = '{}'::jsonb, wounds = '[]'::jsonb
   where world_id = :'world2' and uid = :'ivar';
 delete from skill where world_id = :'world2' and uid = :'ivar' and id in ('prayer', 'meditation');
-select '486. what a prayer buys: ' || (select string_agg(name || ' (' || cost || ' favour at prayer '
-       || level || ', on ' || on_what || ')', ', ' order by level) from cast_def);
 -- Every path on tiers now: what each offers at its first, a technique and two disciplines.
 select '487. and the three ways: ' || (select string_agg(d.name || ' — ' ||
        (select string_agg(k.name, ', ' order by k.num) from path_pick k where k.path = d.id and k.tier = 1),
@@ -3793,31 +3791,6 @@ select '492. four favour and an hour nobody looked: ' || round(favour_settle(:'w
      || ' — it fills at ' || favour_trickle() || ' a second up to '
      || round(favour_cap(skill_of(:'world2', :'ivar', 'prayer'))::numeric, 1)
      || ', which is what this much faith carries';
-select '493. calling for something beyond us: ' || coalesce(act_refusal(:'world2', :'ivar', 'cast',
-       '{"kind":"item","spell":"bounty"}'::jsonb), 'allowed');
-insert into skill (world_id, uid, id, value) values (:'world2', :'ivar', 'prayer', 40)
-  on conflict (world_id, uid, id) do update set value = 40;
-update player set favour = 100, favour_at = now() where world_id = :'world2' and uid = :'ivar';
--- The first by id, which is the hatchet: without the order this picked whatever the index
--- handed over first, and read one way in three runs of thirty-five and the other in the rest.
-select id as issued from item where world_id = :'world2' and holder_uid = :'ivar' and issued order by id limit 1 \gset
-select '494. the circle on something we washed ashore with: ' || coalesce(act_refusal(:'world2', :'ivar',
-       'cast', ('{"kind":"item","spell":"cunning","uid":' || :'issued' || '}')::jsonb), 'allowed');
-select give(:'world2', :'ivar', 'hatchet', 1, 50, 'Steel') as made \gset
-delete from event where uid = :'ivar';
-select act_perform(:'world2', :'ivar', 'cast',
-  ('{"kind":"item","spell":"cunning","uid":' || :'made' || '}')::jsonb) \g /dev/null
-select '495. ' || (select text from event where uid = :'ivar' and kind = 'event' order by n desc limit 1)
-     || ' — a steel hatchet at QL 50 was worth ' || round(tool_worth(50, 0, 'Steel', null, 0)::numeric, 1)
-     || ' to work with and is now worth ' || round(tool_worth(50, 0, 'Steel', null, 1)::numeric, 1);
-update item set bless = 3 where id = :'made';
-update player set favour = 100, favour_at = now() where world_id = :'world2' and uid = :'ivar';
-select '496. and a fourth time: ' || coalesce(act_refusal(:'world2', :'ivar', 'cast',
-       ('{"kind":"item","spell":"cunning","uid":' || :'made' || '}')::jsonb), 'allowed')
-     || ' — mending a thing with nothing wrong with it: '
-     || coalesce(act_refusal(:'world2', :'ivar', 'cast',
-        ('{"kind":"item","spell":"mend","uid":' || :'made' || '}')::jsonb), 'allowed');
-
 -- The rug, and what comes of sitting on it.
 select '497. sitting with nothing to sit on: ' || coalesce(act_refusal(:'world2', :'ivar', 'meditate',
        '{"kind":"tile","x":5,"y":7}'::jsonb), 'allowed');
@@ -4185,7 +4158,7 @@ update player set stats = jsonb_set(coalesce(stats, '{}'::jsonb), '{stamina}', '
 reset role;
 -- Auth's own table, written here the way Auth writes it: an address for an
 -- account that has one, and nothing at all for an anonymous one.
-insert into auth.users (id, email) values (:'alice', 'alice@players.wurm.invalid'), (:'ghost', null);
+insert into auth.users (id, email) values (:'alice', 'alice@catgenova.github.io'), (:'ghost', null);
 
 select '542. what counts as a username: ' || string_agg(
          quote_literal(n) || ' ' || case when name_ok(n) then 'yes' else 'no' end, ', ' order by ord)
@@ -4193,7 +4166,7 @@ select '542. what counts as a username: ' || string_agg(
                ('alice smith', 5), ('alice@home', 6), ('averyverylongnameindeedx', 7)) v(n, ord);
 
 select '543. a name goes out as ' || name_email('Alice') || ' and comes back as '
-     || coalesce(email_name('ALICE@players.wurm.invalid'), 'nothing')
+     || coalesce(email_name('ALICE@catgenova.github.io'), 'nothing')
      || ' — and an address that is not ours comes back as '
      || coalesce(email_name('alice@example.com'), 'nothing');
 
@@ -4214,12 +4187,12 @@ select '546. she asks her name three times: ' || coalesce(rpc_my_name(), 'none')
 
 -- Signing up is the reservation, and this is the index that does it.
 do $$ begin
-  insert into auth.users (id, email) values ('66666666-6666-6666-6666-666666666666', 'ALICE@players.wurm.invalid');
+  insert into auth.users (id, email) values ('66666666-6666-6666-6666-666666666666', 'ALICE@catgenova.github.io');
   raise notice '547. a second alice signs up:      ALLOWED';
 exception when others then raise notice '547. a second alice signs up:      refused — %', sqlerrm; end $$;
 
 -- The name follows the address, so there is no argument for a client to lie in.
-insert into auth.users (id, email) values (:'bob', 'bob@players.wurm.invalid');
+insert into auth.users (id, email) values (:'bob', 'bob@catgenova.github.io');
 select set_config('request.jwt.claims', json_build_object('sub', :'bob')::text, false) \g /dev/null
 select '548. bob asks his own name: ' || coalesce(rpc_my_name(), 'none')
      || ' — and what alice is called is still ' || coalesce(account_name(:'alice'), 'nothing');
@@ -5115,10 +5088,10 @@ select '659. and a campfire comes with what is true of it now: '
  * touched it. A browser cannot correct for that — it does not know the rate —
  * which is the whole reason this is a function and not a subscription.
  */
-select set_config('wurm.w', :'world2', false) \g /dev/null
+select set_config('wildermon.w', :'world2', false) \g /dev/null
 do $$
 declare v_id bigint; v_said double precision; v_row double precision;
-        w uuid := current_setting('wurm.w')::uuid;
+        w uuid := current_setting('wildermon.w')::uuid;
 begin
   update placed set fuel = 600, lit = true, since = now() - interval '200 seconds'
     where world_id = w and kind = 'campfire'
@@ -5453,36 +5426,29 @@ select '690. and not a word about when: '
              then 'no instants travel at all' else 'IT STILL SENDS INSTANTS' end;
 
 \echo '--- the address a name wears'
--- The suffix was `@players.wurm.invalid`, chosen because RFC 2606 guarantees
+-- The suffix was a `.invalid` one, chosen because RFC 2606 guarantees
 -- `.invalid` reaches nobody. Auth agrees so thoroughly that it refuses the
 -- address outright, from a list of barred host suffixes in its own source that
 -- no project setting can reach — so every account made under it failed, and
--- one migration earlier the landing page became the only way ashore.
-\set oldtimer '7a7a7a7a-7a7a-7a7a-7a7a-7a7a7a7a7a7a'
+-- one migration earlier the landing page became the only way ashore. Accounts
+-- still under it were moved onto the current suffix (20261111235900, tested in
+-- supabase/test/oldname.ts), and the island answers to the current one alone.
 \set newcomer '7b7b7b7b-7b7b-7b7b-7b7b-7b7b7b7b7b7b'
 reset role;
 insert into auth.users (id, email) values
-  (:'oldtimer', 'oldtimer@players.wurm.invalid'),
   (:'newcomer', 'newcomer@catgenova.github.io');
 
 select '691. a name goes out as ' || name_email('Newcomer')
      || ' — at a host that resolves and keeps no mailbox, rather than one the internet forbids';
 
--- Both suffixes are read; only the first is ever handed out.
-select '692. and comes back from ' || (select count(*) from unnest(name_domains())) || ' suffixes: '
+select '692. and comes back from ' || (select count(*) from unnest(name_domains())) || ' suffix: '
      || coalesce(email_name('NEWCOMER@catgenova.github.io'), 'nothing')
-     || ', ' || coalesce(email_name('oldtimer@players.wurm.invalid'), 'nothing')
-     || ' — and from a stranger''s: ' || coalesce(email_name('someone@example.com'), 'nothing');
+     || ' — and from a stranger''s: ' || coalesce(email_name('someone@example.com'), 'nothing')
+     || ' — and from the old .invalid one: ' || coalesce(email_name('newcomer@players.wildermon.invalid'), 'nothing');
 
--- The bug this half exists to prevent: read only the current suffix and a name
--- somebody already holds reads as free, and the next person to ask gets it.
-select '693. is oldtimer free? ' || rpc_name_free('oldtimer')::text
-     || ' — is newcomer? ' || rpc_name_free('newcomer')::text
+select '693. is newcomer free? ' || rpc_name_free('newcomer')::text
      || ' — is nobodyatall? ' || rpc_name_free('nobodyatall')::text;
 
-select set_config('request.jwt.claims', json_build_object('sub', :'oldtimer')::text, false) \g /dev/null
-select '694. somebody who came ashore before the suffix moved is still '
-     || coalesce(rpc_my_name(), 'NAMELESS');
 select set_config('request.jwt.claims', json_build_object('sub', :'newcomer')::text, false) \g /dev/null
 select '695. and somebody who comes ashore today is '
      || coalesce(rpc_my_name(), 'NAMELESS');
@@ -7955,8 +7921,6 @@ select '873. and breeding: "'
      || coalesce(last_refusal(:'world2', :'hild', 'pair_creature', ('{"id":' || :'cit_doe' || '}')::jsonb), 'ALLOWED')
      || '" against "'
      || coalesce(last_refusal(:'world2', :'alice', 'pair_creature', ('{"id":' || :'out_doe' || '}')::jsonb), 'ALLOWED')
-     || '"; the harvest: "' || coalesce(cast_reason(:'world2', :'hild', 'bounty', null), 'ALLOWED')
-     || '" against "' || coalesce(cast_reason(:'world2', :'alice', 'bounty', null), 'ALLOWED')
      || '"; and the walk home: "' || work_ability(:'world2', :'hild', 'recall')
      || '" against "' || work_ability(:'world2', :'alice', 'recall') || '"';
 select '874. and the hands she may set to it: ' || worker_cap(:'world2', :'hild') || ' against '
@@ -8649,7 +8613,7 @@ select '916. a shrivelled oak: pruning "'
      || coalesce(act_refusal(:'world6', '77777777-7777-7777-7777-777777777777', 'cut_down', '{"kind":"tile","x":52,"y":54}'::jsonb), 'ALLOWED')
      || '"';
 -- Apples, pears and figs bear in autumn (`fruiting.ts`): held there for the picking, and back to spring after.
-set wurm.season = 'autumn';
+set wildermon.season = 'autumn';
 update player set x = 53.5, y = 53.5 where world_id = :'world6' and uid = '77777777-7777-7777-7777-777777777777' \g /dev/null
 select coalesce(act_refusal(:'world6', '77777777-7777-7777-7777-777777777777', 'pick_fruit', '{"kind":"tile","x":53,"y":54}'::jsonb), 'ALLOWED') as dead_fruit \gset
 update player set x = 54.5, y = 53.5 where world_id = :'world6' and uid = '77777777-7777-7777-7777-777777777777' \g /dev/null
@@ -8657,7 +8621,7 @@ select '917. and a shrivelled apple beside a very old one: fruit off the dead on
      || '", and off the very old one "'
      || coalesce(act_refusal(:'world6', '77777777-7777-7777-7777-777777777777', 'pick_fruit', '{"kind":"tile","x":54,"y":54}'::jsonb), 'ALLOWED')
      || '"';
-set wurm.season = 'spring';
+set wildermon.season = 'spring';
 -- Felling the dead oak: dead wood, still timber.
 do $$
 declare w uuid; me uuid := '77777777-7777-7777-7777-777777777777'; i int;
@@ -9881,7 +9845,7 @@ select '995. the plucka: ' || (select name || ' gathers ' || gathers || ', near 
      || ' — and it eats ' || (select count(*) from species_diet where species = 'plucka') || ' things, every fruit among them: '
      || (select bool_and(exists (select 1 from species_diet sd where sd.species = 'plucka' and sd.item = t.fruit)) from tree_def t where t.fruit is not null);
 -- Apples, pears and figs bear in autumn (`fruiting.ts`): held there for the picking, and back to spring after.
-set wurm.season = 'autumn';
+set wildermon.season = 'autumn';
 -- Room on the deed, and a pear and a fig in bearing beside the token where the snedda's oaks stood.
 update creature set mode = 'stored', job = null where world_id = :'world2' and keeper = :'ivar' and mode = 'deed' \g /dev/null
 select x as tok_x, y as tok_y from deed where world_id = :'world2' and founded_by = :'ivar' \gset
@@ -9909,7 +9873,7 @@ select '996. ' || :'stand' || ' beside the token: setting the plucka to fruit ('
      || ', the pear tree picked for the day: ' || is_foraged(:'world2', :tok_x + 3, :tok_y, 'forage') || ' and still a ' || lower((select name from tree_def where id = tree_species(land_data(:'world2', :tok_x + 3, :tok_y))))
      || ', and the plucka told of nothing but its work: ' || coalesce((select string_agg(distinct left(text, 40), ' | ') from event where uid = :'ivar' and text ilike '%plucka%'), 'nothing');
 update creature set mode = 'stored', job = null where world_id = :'world2' and id = :'picker' \g /dev/null
-set wurm.season = 'spring';
+set wildermon.season = 'spring';
 
 /*
  * A quern presses fruit into juice and cider.

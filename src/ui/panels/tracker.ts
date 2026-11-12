@@ -13,7 +13,7 @@ import type { MenuItem } from '../contextmenu';
  */
 export const TRACKED_MAX = 5;
 
-const STORAGE_KEY = 'wurm.tracked';
+const STORAGE_KEY = 'wildermon.tracked';
 
 /**
  * Which trades this browser is watching.

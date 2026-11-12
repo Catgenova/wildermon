@@ -1,11 +1,11 @@
 -- Concrete foundations: level ground poured into a slope, leaving the slope alone.
 --
--- Asked for out of a conversation about the thing Wurm never had: "some sort of
--- foundation piece, something material-intensive that fills in the terrain of
--- the tile and has perfectly vertical edges — could base the maximum slope you
--- can build them on skill", and then "specifically featuring vertical edges
--- that are easy to attach other building components to; in wurm i'd often run
--- into awkward building situations next to slopes."
+-- Asked for: "some sort of foundation piece, something material-intensive
+-- that fills in the terrain of the tile and has perfectly vertical edges —
+-- could base the maximum slope you can build them on skill", and then
+-- "specifically featuring vertical edges that are easy to attach other
+-- building components to", against awkward building situations next to
+-- slopes.
 --
 -- Every other answer to a slope in this game moves the ground, and the corners
 -- it moves are shared with four tiles, so levelling one tile pulls its

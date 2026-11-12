@@ -26,7 +26,9 @@ import { flowerSeason, flowersOn } from '../../src/world/flowers';
 import { flowersHere } from '../../src/game/wildflowers';
 import { SKEP, SKEP_REACH } from '../../src/game/bees';
 import { POTTERY } from '../../src/game/kiln';
-import { itemDef } from '../../src/game/items';
+import { BUCKET_LITRES, itemDef, lyeAshFor } from '../../src/game/items';
+// A bucket's worth of whole ashes and half an ash over, which stays in the fire: one ash a litre of the bucket (`lyeAshFor`).
+const FIRE_ASH = lyeAshFor(BUCKET_LITRES) + 0.5;
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -37,7 +39,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -138,7 +140,7 @@ begin
 
   -- Cindra: a cold campfire with two and a half ashes in it, and a bucket of water in the crate.
   insert into placed (world_id, kind, x, y, sx, sy, cx, cy, ql, fuel, ash, lit, since, made_by)
-    values (w, 'campfire', 19, 16, 0, 0, 19.25, 16.25, 30, 0, 2.5, false, now(), u) returning id into v_p;
+    values (w, 'campfire', 19, 16, 0, 0, 19.25, 16.25, 30, 0, ${FIRE_ASH}, false, now(), u) returning id into v_p;
   insert into item (world_id, holder, crate, def, ql, count) values (w, 'crate', 7201, 'water_bucket', 30, 1);
   select id into v_id from hand where species = 'cindra';
   update creature set mode = 'deed', until = now() - interval '600 seconds', settled_at = now() - interval '600 seconds', phase = 'idle' where world_id = w and id = v_id;
@@ -276,7 +278,7 @@ check('a potta loads every piece of unfired clay a kiln fires, clay bricks among
 check('and its words name each one', POTTERY.every((p) => SPECIES.potta.description.includes(itemDef(p.unfired).name.toLowerCase()) && GATHER_DO.kiln.includes(itemDef(p.unfired).name.toLowerCase())),
   `${SPECIES.potta.description} / ${GATHER_DO.kiln}`);
 const [ashStores, ashLeft] = at('ASH').split('|');
-check('a cindra rakes the two whole ashes out of a campfire and leaches them with the bucket of water into lye', ashStores === 'lye_bucket 1' && ashLeft === '0.50', at('ASH'));
+check(`a cindra rakes the ${lyeAshFor(BUCKET_LITRES)} whole ashes out of a campfire and leaches them with the bucket of water into lye`, ashStores === 'lye_bucket 1' && ashLeft === '0.50', at('ASH'));
 const [brewLiquid, brewLitres, brewWorking, wheatLeft] = at('BREW').split('|');
 check('a hoppa sets ale going in a barrel of water with the wheat from the stores', brewLiquid === 'ale' && Number(brewLitres) === 15 && brewWorking === 'true' && wheatLeft === '0', at('BREW'));
 check('a simma cooks the meat at a lit campfire and puts it back in the stores', at('COOK') === 'cooked_meat 1', at('COOK'));
@@ -359,10 +361,10 @@ const held = (crate: ReturnType<Game['addCrate']>): string => crate.items.map((i
   const g = body();
   const crate = stock(g, [['water_bucket', 1]]);
   const f = g.addCampfire(23, 21, 0, 0, 0, false);
-  f.ash = 2.5;
+  f.ash = FIRE_ASH;
   worker(g, 'cindra');
   run(g, 90);
-  check('a cindra rakes the two whole ashes out of a campfire and leaches them with the bucket of water into lye', held(crate) === 'lye_bucket 1' && Math.abs((f.ash ?? 0) - 0.5) < 1e-9, `${held(crate)} ${f.ash}`);
+  check(`a cindra rakes the ${lyeAshFor(BUCKET_LITRES)} whole ashes out of a campfire and leaches them with the bucket of water into lye`, held(crate) === 'lye_bucket 1' && Math.abs((f.ash ?? 0) - 0.5) < 1e-9, `${held(crate)} ${f.ash}`);
 }
 {
   const g = body();

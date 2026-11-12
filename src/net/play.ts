@@ -9,7 +9,8 @@ import { whoAmI } from './accounts';
 import { supabase } from './supabase';
 import { toldOf, toldWire } from './told';
 import { PRESENCE_FRESH_MS } from './presence';
-import { ACT_MANY_JOBS, Island, type CastMore, type CastWire, type HeldSaid, type ItemRow, type PlayerRow, type SkinSaid } from './island';
+import { ACT_MANY_JOBS, Island, rowSaid, type CastMore, type CastWire, type HeldSaid, type ItemRow, type PlayerRow, type SkinSaid } from './island';
+import { nutritionSaid } from '../game/nutrition';
 import { heldFrom } from '../ui/effects';
 import { isSpell } from '../render/spells/info';
 import type { CastAt } from '../game/events';
@@ -283,7 +284,7 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
    * pack weighs, what your back takes, and which jobs a menu offers. The
    * Trades window hands on a fresh fold whenever it asks the island.
    */
-  game.setPerks(((me.class_mul as { fx?: Record<string, number> } | null) ?? {}).fx);
+  game.setPerks(((me.class_mul as { fx?: Record<string, number> } | null) ?? {}).fx, me.class_mul);
 
   /** What was last asked about, so the bar has something to point at. */
   let lastTarget: Target | null = null;
@@ -365,7 +366,7 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
    * never saves, and the island holds no pins. Kept in this browser, one set
    * for each island and each person on it, and taken back as the game starts.
    */
-  const marksKey = `wurm.marks.${info.id}.${island.uid}`;
+  const marksKey = `wildermon.marks.${info.id}.${island.uid}`;
   try {
     const kept = JSON.parse(localStorage.getItem(marksKey) ?? '[]') as unknown;
     if (Array.isArray(kept)) game.takeMarks(kept.filter((m): m is Marker => !!m && typeof m === 'object'
@@ -438,6 +439,9 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
   // And a journey by Telestone, which says when the next may be made (`runestones.ts`).
   island.hooks.travelled = (until) => {
     game.player.usedAt[TELESTONE_KEY] = until;
+  };
+  island.hooks.travelledBack = (from) => {
+    game.player.telestoneBack = from;
   };
   // And a map studied, which puts its square on your map (`cartography.ts`).
   island.hooks.charted = (x, y, r) => {
@@ -612,10 +616,8 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
     // And the shut recipes you have read, which the crafting window opens (`recipebook.ts`).
     if (what.recipes) game.knownRecipes = new Set(what.recipes);
     if (what.title !== undefined) game.player.title = what.title;
-    if (what.nutrition) {
-      const n = game.player.nutrition as unknown as Record<string, number>;
-      for (const [k, v] of Object.entries(what.nutrition)) if (typeof v === 'number') n[k] = v;
-    }
+    // The island's four, wholesale: one it does not name is nought there too (`nutritionSaid`).
+    if (what.nutrition) Object.assign(game.player.nutrition, nutritionSaid(what.nutrition));
     if (what.marks !== undefined) game.showProspected(what.marks?.tiles ?? [], what.marks?.secs ?? 0);
     // And your path, which sight, the map and a wildermon's blood are worked out from here (`setPath`).
     if (what.path) game.setPath(what.path);
@@ -646,6 +648,8 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
     }
     if (what.ticked) game.heardTicked(what.ticked);
   };
+  // And the same off the join's row, so a refreshed page holds them from the first frame, not the first beat (`rowSaid`).
+  island.hooks.mine(rowSaid(me));
 
   island.hooks.doing = (what) => {
     if (!what.act) {

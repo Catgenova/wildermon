@@ -19,13 +19,13 @@ import { nameRefusal } from '../game/playertext';
  * satisfied by it; it publishes no MX record, so mail addressed there is
  * refused by the internet rather than delivered to somebody.
  *
- * The suffix used to be `@players.wurm.invalid`, on the grounds that RFC 2606
+ * The suffix used to be a `.invalid` one, on the grounds that RFC 2606
  * reserves `.invalid` so that it can never reach anybody — which was true, and
  * which Auth refuses outright. Its list of barred host suffixes lives in
  * GoTrue's own source rather than in a project's settings, so there was
  * nothing anybody could turn off: every account made under it failed with
- * "Email address is invalid". The old suffix is still recognised on the way
- * in. It is never handed out again.
+ * "Email address is invalid". Any account still under it was moved onto this
+ * one (`20261111235900_wildermon_by_name.sql`), and only this one is read.
  *
  * What the trick buys, either way, is that signing up **is** the reservation:
  * the unique index Auth already keeps over its own addresses is the index that
@@ -52,15 +52,8 @@ import { nameRefusal } from '../game/playertext';
  *     `supabase/migrations/20260915025000_accounts.sql` names them.
  */
 
-/** The suffix a username wears so that Auth has an address to sign in. */
+/** The suffix a username wears so that Auth has an address to sign in. The island's `name_domains()`. */
 const DOMAIN = '@catgenova.github.io';
-/**
- * And the suffixes it used to wear. Tried on the way in, never handed out, so
- * that an account made before the suffix moved still opens. The island keeps
- * the same list in `name_domains()`, which is what stops it handing somebody
- * else a name that is already spoken for under the old one.
- */
-const OLD_DOMAINS = ['@players.wurm.invalid'];
 /** Three to twenty, a letter first. The same expression as `name_ok()` in SQL. */
 const SHAPE = /^[a-z][a-z0-9_-]{2,19}$/;
 /** Eight, as asked. */
@@ -93,10 +86,6 @@ const WRITTEN = /^[A-Za-z][A-Za-z0-9_-]{2,19}$/;
 
 /** The address a username signs in with. */
 export const nameEmail = (name: string): string => foldName(name) + DOMAIN;
-
-/** Every address this name might already be signed up under, the current one first. */
-const everyEmail = (name: string): string[] =>
-  [DOMAIN, ...OLD_DOMAINS].map((suffix) => foldName(name) + suffix);
 
 /** What is wrong with this name, in a sentence, or null if nothing is. */
 export function nameTrouble(raw: string): string | null {
@@ -337,39 +326,21 @@ export async function createAccount(rawName: string, password: string): Promise<
 export async function signInAs(rawName: string, password: string): Promise<string> {
   const name = foldName(rawName);
   const sb = supabase();
+  const email = nameEmail(name);
+  const { error } = await sb.auth.signInWithPassword({ email, password, options: await captchaOptions() });
+  if (error) throw new Error(inOurWords(error.message, email));
   /*
-   * Every address this name could be under, in turn.
-   *
-   * Normally that is one address and one request. It is a list because the
-   * suffix moved once, and somebody who got an account before it moved should
-   * not be locked out by a change they never saw. Only a refusal that means
-   * "no such account or wrong password" is worth trying the next suffix for;
-   * anything else — rate limits, an Auth that is down — is the real answer and
-   * asking again would only make it worse. The message kept is the first one,
-   * so what the player reads is about the address they would have today.
+   * Signed in as the capitals you typed: they are your name from here on,
+   * on every island (`rpc_name_case`). Whoever got in with the password
+   * owns the account, and only its capitals can change.
    */
-  let refusal = '';
-  for (const email of everyEmail(name)) {
-    // A CAPTCHA token is good for one request: a fresh one for every address tried.
-    const { error } = await sb.auth.signInWithPassword({ email, password, options: await captchaOptions() });
-    if (!error) {
-      /*
-       * Signed in as the capitals you typed: they are your name from here on,
-       * on every island (`rpc_name_case`). Whoever got in with the password
-       * owns the account, and only its capitals can change.
-       */
-      const { data: called } = await sb.rpc('rpc_my_name');
-      const shown = writtenName(rawName);
-      if (typeof called === 'string' && called !== shown) {
-        const { data: cased, error: refused } = await sb.rpc('rpc_name_case', { p_display: shown });
-        if (!refused && typeof cased === 'string') return cased;
-      }
-      return typeof called === 'string' && called ? called : shown;
-    }
-    if (!refusal) refusal = inOurWords(error.message, email);
-    if (!/invalid login credentials/i.test(error.message)) break;
+  const { data: called } = await sb.rpc('rpc_my_name');
+  const shown = writtenName(rawName);
+  if (typeof called === 'string' && called !== shown) {
+    const { data: cased, error: refused } = await sb.rpc('rpc_name_case', { p_display: shown });
+    if (!refused && typeof cased === 'string') return cased;
   }
-  throw new Error(refusal);
+  return typeof called === 'string' && called ? called : shown;
 }
 
 /**
@@ -380,10 +351,7 @@ export async function signInAs(rawName: string, password: string): Promise<strin
  */
 const emailName = (email: string): string => {
   const at = foldName(email);
-  for (const suffix of [DOMAIN, ...OLD_DOMAINS]) {
-    if (at.endsWith(suffix)) return at.slice(0, -suffix.length);
-  }
-  return '';
+  return at.endsWith(DOMAIN) ? at.slice(0, -DOMAIN.length) : '';
 };
 
 /**

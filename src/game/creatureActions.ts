@@ -4,7 +4,7 @@ import { ENCHANT_BURN, enchantRoll, enchantWorks, shotRoll } from './enchanting'
 import { swingEnchant, type Enchant } from './enchant';
 import type { ActionDef, Target } from './actions';
 import { perkN } from './creatures';
-import { fedOn, tameLearn, tameNeeds, BASE_STATS, BRACE_MOST, BRACE_STEP, bracePoints, BRIDLE_PACE, COLLAR_CUT, fitted, mirrored, mirrorNames, combedBorn, FILE_RARITY_ODDS, POT_MOST, POT_STEP, potPoints, potRoom, type BaseStat, kindDescription, kindName, markOn, sparFloor, sparring, sparSaid, yielded, isShod, SHOE_DAYS, SHOES_PER_MOUNT, TACK, AGES, ageDef, ageOf, attackOf, bloodMul, careWord, PLAYER_ATTACKER, coaxBonus, COAX_STEP, creatureLevel, GRAZE_FILL, forgetCoaxing, isBaitFor, maxHealth, raritySays, SEX_NAMES, SPECIES, STANCE_NAMES, COMPANION_LEASH, MOUNT_STOREY_SAID, mountGroundSaid, workRangeOf, type Creature, type SpeciesDef, type Stance, type GatherKind, takeArms } from './creatures';
+import { fedOn, tameLearn, tameNeeds, BASE_STATS, BRACE_MOST, BRACE_STEP, bracePoints, BRIDLE_PACE, COLLAR_CUT, fitted, mirrored, mirrorNames, combedBorn, FILE_RARITY_ODDS, POT_MOST, POT_STEP, potPoints, potRoom, type BaseStat, kindDescription, kindName, markOn, sparFloor, sparring, sparSaid, yielded, isShod, shoeable, SHOE_DAYS, SHOES_PER_MOUNT, TACK, AGES, ageDef, ageOf, attackOf, bloodMul, careWord, PLAYER_ATTACKER, coaxBonus, COAX_STEP, creatureLevel, GRAZE_FILL, forgetCoaxing, isBaitFor, maxHealth, raritySays, SEX_NAMES, SPECIES, STANCE_NAMES, COMPANION_LEASH, MOUNT_STOREY_SAID, mountGroundSaid, workRangeOf, type Creature, type SpeciesDef, type Stance, type GatherKind, takeArms } from './creatures';
 import { studBook } from './husbandry';
 import { article, capital, percent } from './words';
 import { bestTier, LAMP_TIER_ODDS, mirrorTrait, nextTier, pct, rekindle, traitList, traitName, traitOf, traitSays, traitTier, type Rekindled } from './traits';
@@ -1076,12 +1076,12 @@ export const CREATURE_ACTIONS: ActionDef[] = [
     baseTime: 6,
     applies: (t, g) => {
       const c = creatureOf(g, t);
-      return !!c && !!SPECIES[c.species].mount && c.mode !== 'wild' && c.mode !== 'stored' && !isShod(g.time, c);
+      return !!c && shoeable(SPECIES[c.species]) && c.mode !== 'wild' && c.mode !== 'stored' && !isShod(g.time, c);
     },
     check: (t, g) => {
       const c = creatureOf(g, t);
       if (!c) return 'Gone.';
-      if (!SPECIES[c.species].mount) return 'Mounts only.';
+      if (!shoeable(SPECIES[c.species])) return 'Mounts and draught beasts only.';
       if (!nearPlayer(g, c)) return `Stand next to ${c.name}.`;
       if (!ageDef(c, g.time).works) return `${c.name} is not grown.`;
       if (g.inventory.count('horseshoe') < SHOES_PER_MOUNT || !g.inventory.has('mallet')) return `Need ${SHOES_PER_MOUNT} horseshoes and a mallet.`;

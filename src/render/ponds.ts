@@ -1607,7 +1607,7 @@ export class SpringWater {
  * crosses its far side; less than nought where the corner behind the end is
  * not under water, so the shore comes in.
  */
-function splayOf(world: World, pond: PondWater, c: number, ax: number, ay: number, ex: number, ey: number, dx: number, dy: number, side: number): number {
+export function splayOf(world: World, pond: PondWater, c: number, ax: number, ay: number, ex: number, ey: number, dx: number, dy: number, side: number): number {
   const cw = world.w + 1;
   const ix = ex ? c : ax;
   const iy = ey ? c : ay;
@@ -1619,8 +1619,13 @@ function splayOf(world: World, pond: PondWater, c: number, ax: number, ay: numbe
   const hb = world.getHeight(bx, by);
   const hc = world.getHeight(ix - dx, iy - dy);
   const hd = world.getHeight(bx - dx, by - dy);
-  // Water on along the lip's own line past the end: as far out as it is drawn in at all.
-  if (hb <= L) return 2;
+  /*
+   * Water on along the lip's own line past the end: as far out as it is drawn
+   * in at all. Under the pond, not just lower than its surface: ground beside
+   * a lip that falls away below it is dry, past the lip, and water drawn out
+   * over it lay on the rim beside the fall.
+   */
+  if (wet(bx, by)) return 2;
   // Under water past the end and behind it too: the shore crosses the side out past the end, that far back from the lip.
   if (wet(bx - dx, by - dy)) return hb > hd ? Math.min(2, (hb - hd) / Math.max(0.01, hb - L)) : 2;
   // Otherwise it crosses the far side of the tile, that far out past the end.

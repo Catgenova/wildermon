@@ -14,7 +14,7 @@ Branch: `sculpt-all`. Updated only when the user asks for a handover.
 - Python PIL is broken system-wide; use the venv at `$SCRATCH/venv/bin/python`. If it's gone after a reset, recreate it:
   `python3 -m venv $SCRATCH/venv && $SCRATCH/venv/bin/pip install pillow`.
 - The scratchpad and the worktrees get wiped by container resets. Recreate a worktree with
-  `git worktree add .claude/worktrees/<b> -B <b> origin/<b>`, then `ln -s /home/user/Wurm/node_modules node_modules`.
+  `git worktree add .claude/worktrees/<b> -B <b> origin/<b>`, then `ln -s <checkout>/node_modules node_modules`.
   Reference sheets kept only in the scratchpad are lost; the ones in `tools/sculpt/ref/` survive.
 
 ## Live game (main)

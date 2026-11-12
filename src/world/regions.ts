@@ -224,6 +224,9 @@ export function rockKindFor(seed: number, region: number, x: number, y: number, 
   return own && own !== 'rock_shards' ? kindOf(own) : PLAIN_ROCK;
 }
 
+/** Of the wild fruit trees on an island with fruit of its own (`Region.trees`), the share that is its own. */
+export const OWN_FRUIT_SHARE = 0.5;
+
 /**
  * The species that actually grows, given the one the climate asked for.
  * Willow and cherry are held to their islands; a cherry rolled anywhere else
@@ -243,7 +246,7 @@ export function speciesFor(region: number, base: number, avg: number, r: number)
     // The roll that chose a fruit tree is spent above 0.978; what is left of
     // it under the hundredths is as good as a second roll.
     const f = (r * 997) % 1;
-    if (f < 0.5) return own[Math.floor(f * 2 * own.length)] as number;
+    if (f < OWN_FRUIT_SHARE) return own[Math.floor((f / OWN_FRUIT_SHARE) * own.length)] as number;
   }
   // On its own island a cherry is worth the crossing, so it grows past the one
   // tree in fifty that the fruit trees manage elsewhere. Asked after the

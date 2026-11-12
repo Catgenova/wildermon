@@ -69,11 +69,10 @@ import { BRIDGES, bridgeDef, bridgeDone, bridgeName, bridgeState, isMaterialBrid
 import { aqueductEntries, aqueductMenu } from './aqueducts';
 import { drawbridgeState, fitsMaterial, gateHoverLine, gatePlanRefusal, hiddenDoorIronWords, hiddenDoorWants, isDrawbridge, planHiddenDoor, portcullisAt, portcullisState } from '../game/gates';
 import { foundationState } from '../game/foundations';
-import { BLESS_CAP, CASTS, FAITH, favourCap } from '../game/faith';
+import { FAITH, favourCap } from '../game/faith';
 import { BAUBLE_SAID, BAUBLE_TIER_BY_ID, BAUBLE_TIERS, readBauble, socketsOf, socketText, TARNISHED } from '../game/baubles';
 import { FED_SAID, SACRIFICE_SAID, sacrificeable } from '../game/sacrifice';
 import { abilitiesOf, CHOOSE_AT, MEDITATION, nextStep, PATH_PICK_BY_ID, PATH_TIER_AT, PATHS, PATH_LIST, picksOf, sittingWorth } from '../game/meditation';
-import { canImprove } from '../game/improve';
 import { brewTime, BREWS } from '../game/brewing';
 import { fireAnchor, fireState, FIRE_COST, isFuel, type PlacedCampfire } from '../game/campfire';
 import { COIN_METALS, COIN_REFUSAL, DIE_WEAR, INGOT_LUMPS, MOULD_BY_ID, MOULD_BY_MAKES, isCasting, isIngot, isLump, isMetalStock, isMould, isOreItem, lumpsIn, metalOfBar, mouldLumps, mouldUsesLeft } from '../game/metal';
@@ -92,7 +91,7 @@ import { cornerReading, groundReading, yieldLines } from './tileinfo';
 import { deedWorkersAt, MAX_DEED_LEVEL, type Deed } from '../game/game';
 import { isFounder, lacks } from '../game/ranks';
 import { pannierRefusal, panniersOffered } from '../game/panniers';
-import { CRAFT_REACH, reachFor, RECIPE_BY_ID, recipeNeeds, recipeReason, recipeStatus, RECIPES, skillName, type CraftStock, type Recipe } from '../game/recipes';
+import { CRAFT_REACH, reachFor, RECIPE_BY_ID, recipeNeeds, recipeReason, recipeStatus, RECIPES, type CraftStock, type Recipe } from '../game/recipes';
 import { CraftPanel } from './panels/craft';
 import { unseenNews } from './panels/news';
 import { CratePanel } from './panels/crate';
@@ -113,6 +112,7 @@ import { JOURNAL_TAB_BIND, JOURNAL_TABS, JournalPanel, type JournalTab } from '.
 import { ContextMenu, type MenuItem } from './contextmenu';
 import { AutoEat } from '../game/autoeat';
 import { ShoppingPanel } from './panels/shopping';
+import { MendPanel } from './panels/mend';
 import { rotLine, rotSaid, rotSeconds } from '../game/rot';
 import { changeWallRows, frameFootprintEntries, frameHoverLines, frameJettyEntries, frameRoofEntries } from './frameMenu';
 import { storeyHost, wallAcross } from '../game/storeyview';
@@ -366,6 +366,7 @@ export class UI {
   private readonly health: HealthPanel;
   private readonly equipment: EquipmentPanel;
   private readonly shopping: ShoppingPanel;
+  private readonly mend: MendPanel;
   private readonly spellBar: SpellBar;
   private readonly deedPanel: DeedPanel;
   private readonly tilePanel: TilePanel;
@@ -482,7 +483,7 @@ export class UI {
       if (!folded && list) list.scrollTop = list.scrollHeight;
     };
     const inventory = this.windows.create({ id: 'inventory', title: 'Inventory', x: 12, y: 56, width: 340, height: 396, anchor: 'tr' });
-    new InventoryPanel(inventory, game, this.menu, (p) => this.moveDragged(p, 'inventory'), (uid) => this.cratePanel.openBag(uid), (uid) => this.hoard.openOn(uid),
+    const invPanel = new InventoryPanel(inventory, game, this.menu, (p) => this.moveDragged(p, 'inventory'), (uid) => this.cratePanel.openBag(uid), (uid) => this.hoard.openOn(uid),
       (uid) => this.spellBar?.entriesFor({ kind: 'item', id: uid }) ?? [],
       (item) => {
         const e = this.cratePanel?.putKindEntry(item);
@@ -508,6 +509,10 @@ export class UI {
     const shopWin = this.windows.create({ id: 'shopping', title: 'Shopping list', x: 364, y: 430, width: 340, height: 360, anchor: 'tr', open: false });
     this.shopping = new ShoppingPanel(shopWin, game);
     this.craftPanel.onList = (recipe, count) => this.shopping.add(recipe, count);
+    // Improve and repair, one window for both (`mend.ts`): off an item's menu, or the window list.
+    const mendWin = this.windows.create({ id: 'mend', title: 'Improve and repair', x: 364, y: 56, width: 560, height: 620, anchor: 'tr', open: false });
+    this.mend = new MendPanel(mendWin, game);
+    invPanel.openMend = (uid) => this.mend.show(uid);
     const tileWin = this.windows.create({ id: 'tile', title: 'Tile', x: 12, y: 200, width: 300, height: 320, open: false });
     this.tilePanel = new TilePanel(tileWin, game, (pick) => this.menuFor(pick, (ground) => this.selectTile(ground)), this.tooltip);
     const map = this.windows.create({ id: 'map', title: 'Map', x: 12, y: 370, width: 236, height: 358, anchor: 'tr', open: false, seeThrough: true });
@@ -1099,6 +1104,7 @@ export class UI {
     this.health.update(performance.now());
     this.equipment.update(performance.now());
     this.shopping.update(performance.now());
+    this.mend.update(performance.now());
     this.spellBar.update();
   }
 
@@ -2795,39 +2801,6 @@ export class UI {
         const why = pray.check?.(ft, g) ?? null;
         entries.push({ label: 'Pray', hint: why ?? undefined, disabled: !!why, onSelect: () => g.requestAction(pray, ft) });
       }
-      const cast = ACTION_BY_ID.get('cast');
-      if (cast) {
-        entries.push({
-          label: 'Call on it',
-          children: CASTS.map((c) => {
-            const wantsItem = c.on === 'item';
-            const targets = wantsItem ? g.inventory.items.filter((it) => canImprove(it.id) || it.dmg > 0) : [];
-            // Called on where you stand: the call needs the altar's menu, not a walk to its corner tile (a big altar's far side was out of reach).
-            const plain: Target = { kind: 'tile', x: g.player.tileX, y: g.player.tileY, cx: 0, cy: 0, spell: c.id };
-            const why = cast.check?.(wantsItem ? { kind: 'item', uid: targets[0]?.uid ?? -1, spell: c.id } : plain, g) ?? null;
-            return {
-              label: c.name,
-              note: `${c.cost} favour · ${skillName(FAITH).toLowerCase()} ${c.level}`,
-              hint: why ?? c.note,
-              disabled: !!why && !wantsItem,
-              children: wantsItem
-                ? targets.slice(0, 20).map((it) => {
-                    const t: Target = { kind: 'item', uid: it.uid, spell: c.id };
-                    const reason = cast.check?.(t, g) ?? null;
-                    return {
-                      label: itemName(it),
-                      note: it.bless ? `already ${it.bless} of ${BLESS_CAP}` : it.dmg > 0 ? `damage ${it.dmg.toFixed(1)}` : undefined,
-                      hint: reason ?? undefined,
-                      disabled: !!reason,
-                      onSelect: () => g.requestAction(cast, t),
-                    };
-                  })
-                : undefined,
-              onSelect: wantsItem ? undefined : () => g.requestAction(cast, plain),
-            };
-          }),
-        });
-      }
       entries.push(this.sacrificeEntry(f));
       entries.push(this.baubleEntry(f));
     }
@@ -2955,7 +2928,7 @@ export class UI {
     }
     // A lantern post: its lantern, its candle and its light.
     entries.push(...lampEntries(g, f));
-    for (const id of ['light_oven', 'put_out_oven', 'take_ashes_oven', 'sleep', 'set_home', 'pull_cart', 'drop_cart', 'board_vehicle', 'board_passenger', 'leave_vehicle', 'leave_passenger', 'unhitch_team', 'examine_vessel', 'drink_from_vessel', 'empty_vessel', 'furniture_take_all', 'crate_follow', 'crate_work', 'scrub_moss', 'scrub_dye', 'pick_up_furniture']) {
+    for (const id of ['light_oven', 'put_out_oven', 'take_ashes_oven', 'sleep', 'set_home', 'pull_cart', 'drop_cart', 'board_vehicle', 'board_passenger', 'leave_vehicle', 'leave_passenger', 'unhitch_team', 'examine_vessel', 'drink_from_vessel', 'fill_barrel', 'leach_lye', 'empty_vessel', 'furniture_take_all', 'crate_follow', 'crate_work', 'scrub_moss', 'scrub_dye', 'pick_up_furniture']) {
       const def = ACTION_BY_ID.get(id);
       if (!def || !def.applies(ft, g)) continue;
       const reason = def.check?.(ft, g) ?? null;
@@ -3435,6 +3408,8 @@ export class UI {
     push(item('shear'));
     push(item('milk_creature'));
     push(item('tack_creature'));
+    // Shoeing a mount or a draught beast: on its menu, refused in its own words without the shoes or the mallet.
+    push(item('shoe_creature'));
     push(item('mount_creature'));
     push(item('dismount_creature'));
     push(item('untack_creature'));

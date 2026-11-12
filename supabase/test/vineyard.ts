@@ -54,7 +54,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -174,7 +174,7 @@ const lastSaid = `(select e.text from event e where e.world_id = w and e.uid = u
 const count = (def: string): string => `coalesce((select sum(count) from item where world_id = w and holder_uid = u and holder = 'player' and def = '${def}'), 0)`;
 const askIsle = (key: string, action: string, target: string): string =>
   `insert into said values ('${key}', coalesce(act_refusal(w, u, '${action}', ${target}), 'none'));`;
-const at = (t: number): string => `perform set_config('wurm.vine_now', '${t}', true);`;
+const at = (t: number): string => `perform set_config('wildermon.vine_now', '${t}', true);`;
 const THORN = BUSH_DEFS.findIndex((b) => b.name === WILD_VINE);
 const ROSE = BUSH_DEFS.findIndex((b) => b.name !== WILD_VINE);
 const BASE = 40.5;
@@ -247,22 +247,22 @@ const ASKS: Array<{ k: string; x: number; y: number; f: Side; level?: number; wa
 ];
 
 const out = psql(`
-set wurm.season = '';
+set wildermon.season = '';
 discard temp;
 begin;
 create temp table said (k text, v text);
 create schema dice;
 create function dice.random() returns double precision language plpgsql volatile as $f$
-declare xs text[] := string_to_array(current_setting('wurm.dice'), ',');
-        n int := coalesce(nullif(current_setting('wurm.dice_n', true), ''), '0')::int;
+declare xs text[] := string_to_array(current_setting('wildermon.dice'), ',');
+        n int := coalesce(nullif(current_setting('wildermon.dice_n', true), ''), '0')::int;
 begin
-  perform set_config('wurm.dice_n', (n + 1)::text, true);
+  perform set_config('wildermon.dice_n', (n + 1)::text, true);
   return xs[1 + n % array_length(xs, 1)]::double precision;
 end $f$;
 create function pg_temp.dice(v text) returns void language plpgsql as $f$
 begin
-  perform set_config('wurm.dice', v, true);
-  perform set_config('wurm.dice_n', '0', true);
+  perform set_config('wildermon.dice', v, true);
+  perform set_config('wildermon.dice_n', '0', true);
   perform set_config('search_path', 'dice, public, pg_catalog', true);
 end $f$;
 create function pg_temp.nodice() returns void language plpgsql as $f$
@@ -368,7 +368,7 @@ begin
   perform act_perform(w, u, '${PICK_GRAPES}', ${T('v_tr')});
   perform pg_temp.nodice();
   insert into said values ('G:twice', ${count(GRAPE)}::text);
-  perform set_config('wurm.vine_now', '', true);
+  perform set_config('wildermon.vine_now', '', true);
 
   -- 5. Grape wine: refused a grape short, set going, and its ageing stamped.
   v_it := give(w, u, 'barrel', 1, 30);

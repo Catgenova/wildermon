@@ -46,7 +46,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -149,16 +149,16 @@ begin
 end $f$;
 create schema dice;
 create function dice.random() returns double precision language plpgsql volatile as $f$
-declare xs text[] := string_to_array(current_setting('wurm.dice'), ',');
-        n int := coalesce(nullif(current_setting('wurm.dice_n', true), ''), '0')::int;
+declare xs text[] := string_to_array(current_setting('wildermon.dice'), ',');
+        n int := coalesce(nullif(current_setting('wildermon.dice_n', true), ''), '0')::int;
 begin
-  perform set_config('wurm.dice_n', (n + 1)::text, true);
+  perform set_config('wildermon.dice_n', (n + 1)::text, true);
   return xs[1 + n % array_length(xs, 1)]::double precision;
 end $f$;
 create function pg_temp.dice(v text) returns void language plpgsql as $f$
 begin
-  perform set_config('wurm.dice', v, true);
-  perform set_config('wurm.dice_n', '0', true);
+  perform set_config('wildermon.dice', v, true);
+  perform set_config('wildermon.dice_n', '0', true);
   perform set_config('search_path', 'dice, public, pg_catalog', true);
 end $f$;
 create function pg_temp.nodice() returns void language plpgsql as $f$
@@ -398,7 +398,7 @@ begin
   v_t := coalesce(act_refusal(w, u, 'bind_wound', ${person}), 'ALLOWED');
   v_n := ${count('bandage')};
   -- The hand as it is now, put back before the second, so the first's practice does not count in it.
-  perform set_config('wurm.first_aid', skill_of(w, u, 'first_aid')::text, true);
+  perform set_config('wildermon.first_aid', skill_of(w, u, 'first_aid')::text, true);
   perform act_perform(w, u, 'bind_wound', ${person});
   v_t := v_t || '#' || (v_n - ${count('bandage')}) || ':'
     || coalesce((select w0->>'dressing' || '/' || (w0->>'bleeding') from player, jsonb_array_elements(wounds) w0 where world_id = w and uid = v_other), 'none')
@@ -409,7 +409,7 @@ begin
   update player set wounds = jsonb_build_array(${jsonSql(CUT)}), stats = stats || jsonb_build_object('health', 0.5, 'hurtSettled', now())
    where world_id = w and uid = v_other;
   ${hold('Field Medic')};
-  update skill set value = current_setting('wurm.first_aid')::double precision where world_id = w and uid = u and id = 'first_aid';
+  update skill set value = current_setting('wildermon.first_aid')::double precision where world_id = w and uid = u and id = 'first_aid';
   perform act_perform(w, u, 'bind_wound', ${person});
   v_t := v_t || '#' || v_u || '|' || ((select (stats->>'health')::double precision from player where world_id = w and uid = v_other) - 0.5);
   update player set body_at = now(), x = 15.5, y = 15.5 where world_id = w and uid = v_other;

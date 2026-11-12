@@ -252,10 +252,6 @@ create table if not exists dyeable_item (id text primary key);
 create table if not exists dyeable_class (cls text primary key);
 alter table tier_odds add column if not exists level real not null default 0;
 alter table trait_def add column if not exists family text;
-create table if not exists cast_def (
-  id text primary key, name text not null, cost real not null, level real not null,
-  on_what text not null, note text not null
-);
 create table if not exists class_def (
   id text primary key, kind text not null, name text not null, note text not null,
   main text not null, lever text not null
@@ -1489,7 +1485,7 @@ insert into action_def (id, label, verb, skill, tool, corner, range, stamina, ba
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('crate_follow', 'Let it out to follow you', 'opening the crate', null, null, false, null, 0, 0, null, true, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('crate_work', 'Set it to work the settlement', 'opening the crate', null, null, false, null, 0, 0, null, true, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('groom', 'Brush it down', 'brushing it down', 'animal_husbandry', 'brush', false, null, 0.03, 7, null, false, true);
-insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('pair_creature', 'Put it to a mate', 'putting them together', 'animal_husbandry', null, false, null, 0.04, 9, null, false, false);
+insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('pair_creature', 'Breed with a mate', 'breeding', 'animal_husbandry', null, false, null, 0.04, 9, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('read_blood', 'Look it over', 'looking it over', null, null, false, null, 0, 0, null, true, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('dye_item', 'Dye it', 'dyeing', 'alchemy', null, false, null, 0.02, 8, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('make_dye_recipe', 'Make a recipe', 'writing a dye recipe', null, null, false, null, 0.01, 6, null, false, false);
@@ -1539,7 +1535,6 @@ insert into action_def (id, label, verb, skill, tool, corner, range, stamina, ba
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('lay_steps', 'Lay stone steps', 'laying steps', 'masonry', 'trowel', false, null, 0.06, 20, 15, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('lay_timber_steps', 'Lay timber steps', 'laying steps', 'carpentry', 'mallet', false, null, 0.05, 16, 12, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('take_up_steps', 'Take up the steps', 'taking up the steps', 'paving', 'pickaxe', false, null, 0.05, 10, null, false, false);
-insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('cast', 'Call on it', 'calling on it', 'prayer', null, false, null, 0.03, 6, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('pray', 'Pray', 'praying', 'praying', null, false, null, 0.02, 14, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('pray_statue', 'Pray', 'praying', 'praying', null, false, null, 0.02, 14, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('set_bauble', 'Set into the altar', 'setting a bauble', null, null, false, null, 0.01, 4, null, false, false);
@@ -1602,6 +1597,8 @@ insert into action_def (id, label, verb, skill, tool, corner, range, stamina, ba
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('drink_from_vessel', 'Drink', 'drinking', null, null, false, null, 0, 2, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('examine_vessel', 'Examine', 'examining', null, null, false, null, 0, 0, null, true, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('empty_vessel', 'Empty it out', 'emptying it', null, null, false, null, 0.02, 3, null, false, false);
+insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('leach_lye', 'Leach into lye', 'making lye', 'alchemy', null, false, null, 0.03, 12, null, false, false);
+insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('fill_barrel', 'Fill with water', 'filling it', null, null, false, null, 0.03, 6, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('pour_into_barrel', 'Pour into the barrel', 'pouring it in', null, null, false, null, 0.01, 2, null, false, true);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('throw_away', 'Trash', 'throwing it out', null, null, false, null, 0, 0, null, true, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('sleep', 'Sleep', 'lying down', null, null, false, null, 0, 4, null, false, false);
@@ -2124,7 +2121,6 @@ delete from category_decay;
 delete from vehicle_def;
 delete from boat_def;
 delete from tack_def;
-delete from cast_def;
 delete from path_def;
 delete from path_step;
 delete from path_tier;
@@ -2356,7 +2352,7 @@ update species_def set was = array['Seavic']::text[] where id = 'seavic';
 insert into species_diet values ('seavic', 'acorn');
 insert into species_diet values ('seavic', 'nuts');
 update species_def set favourite = 'acorn' where id = 'seavic';
-insert into species_def values ('roxxen', 'Cartling', 'No settlement task. Traces of a large cart or wagon: team pace +30% (wildermon not bred for it: +25%); its driving counts as climbing for team pace and the steepest step the wheels take. Level: driving, learned per tile driven in the traces of a large cart or wagon, 162% of what the tile teaches you at the reins. Evolves at level 25: Wagonox.', 80, 11, 1.1, 25, 0.07, 'grass or grain', false, null, 6, 4, false, false, false, false, false, false, false, false, false, false, true, false, null, null, null, null, 'crush', null, null);
+insert into species_def values ('roxxen', 'Cartling', 'No settlement task. Traces of a large cart or wagon: team pace +30% (wildermon not bred for it: +25%); its driving counts as climbing for team pace and the steepest step the wheels take. Level: driving, learned per tile driven in the traces of a large cart or wagon, 486% of what the tile teaches you at the reins. Evolves at level 25: Wagonox.', 80, 11, 1.1, 25, 0.07, 'grass or grain', false, null, 6, 4, false, false, false, false, false, false, false, false, false, false, true, false, null, null, null, null, 'crush', null, null);
 update species_def set pull = 0.3 where id = 'roxxen';
 update species_def set draught = true where id = 'roxxen';
 update species_def set hide = 'thick' where id = 'roxxen';
@@ -3280,7 +3276,7 @@ update item_def set description = 'Spells are cast from it. Each cast wears it; 
 update item_def set description = 'Worn: 10% more skill per action in its gem''s skill.' where id = 'jewelled_ring';
 update item_def set description = 'Worn: 10% more skill per action in its gem''s skill.' where id = 'jewelled_pendant';
 update item_def set description = 'Head slot, in place of a helm. Up to 3 gems, each set from the gem''s menu. Worn: each gives 50% of a ring''s bonus, 5% more skill per action in its skill.' where id = 'circlet';
-update item_def set description = '4 per lump; 4 per mount, nailed on by a farrier with a mallet. Lasts 7 days. Mount speed on laid stone: +15%. Climbs a step 0.8 m steeper.' where id = 'horseshoe';
+update item_def set description = '4 per lump; 4 per mount or draught beast, nailed on by a farrier with a mallet. Lasts 7 days. Mount speed on laid stone: +15%. Climbs a step 0.8 m steeper. Draught beast in the traces, at its share of the team: speed on laid stone +7.5%; step 0.4 m steeper.' where id = 'horseshoe';
 update item_def set description = '4 horseshoes per filling. Wears each filling; cannot be mended.' where id = 'horseshoe_mould';
 update item_def set description = 'Strike a gold lump at an anvil: 20 coins. Wears each strike.' where id = 'coin_die';
 update item_def set description = 'Wears each filling; cannot be mended.' where id = 'coin_die_mould';
@@ -3736,8 +3732,8 @@ update item_def set description = 'Fires clay. Set down on dry, flat ground. Tak
 update item_def set description = 'Fuel with wood, light, cook as at a fire: food does not burn.' where id = 'oven';
 update item_def set description = 'Draws its own water, faster by QL. Holds 200 litres.' where id = 'well';
 update item_def set description = 'A well: draws 0.7 litres a minute at the least, 4.0 at QL 100; holds 50 litres. Fill a bucket or waterskin at it, or drink from it.' where id = 'fountain';
-update item_def set description = 'Raw materials only (ore, logs, dirt, shards, hides). Holds 400.' where id = 'bulk_bin';
-update item_def set description = 'Worked materials only (planks, nails, ribbons, hinges, lumps, bricks). Holds 2500 kg, by weight.' where id = 'craft_bin';
+update item_def set description = 'Raw materials only (ore, logs, dirt, shards, hides). Holds 2500.' where id = 'bulk_bin';
+update item_def set description = 'Worked materials only (planks, nails, ribbons, hinges, lumps, bricks). Holds 10000 kg, by weight.' where id = 'craft_bin';
 update item_def set description = 'Seeds. Holds 100 kg, by weight: 5000 wheat seeds or 1000 seed potatoes.' where id = 'seed_bin';
 update item_def set description = 'Sprouts. Holds 100 kg, by weight: 1000 sprouts.' where id = 'sprout_bin';
 update item_def set description = 'Set down on your settlement; one per settlement.' where id = 'altar';
@@ -4825,7 +4821,7 @@ insert into learn_pace_def values ('out', 1);
 insert into learn_pace_def values ('dark', 3.86);
 insert into learn_pace_def values ('tended', 4);
 insert into learn_pace_def values ('spar', 0.27);
-insert into learn_pace_def values ('pull', 1.62);
+insert into learn_pace_def values ('pull', 4.86);
 insert into learn_pace_def values ('bout', 4);
 insert into melt_def values ('anvil', 40);
 insert into melt_def values ('arrow_head', 0.04);
@@ -5756,6 +5752,8 @@ create or replace function shoes_per_mount() returns double precision language s
 create or replace function shoe_days() returns double precision language sql immutable as $fn$ select 7::double precision $fn$;
 create or replace function shoe_pace() returns double precision language sql immutable as $fn$ select 1.15::double precision $fn$;
 create or replace function shoe_step() returns double precision language sql immutable as $fn$ select 8::double precision $fn$;
+create or replace function haul_shoe_share() returns double precision language sql immutable as $fn$ select 0.5::double precision $fn$;
+create or replace function lye_ash_per_litre() returns double precision language sql immutable as $fn$ select 1::double precision $fn$;
 create or replace function tree_dawn_utc() returns double precision language sql immutable as $fn$ select 13::double precision $fn$;
 create or replace function tree_seeds() returns double precision language sql immutable as $fn$ select 2::double precision $fn$;
 create or replace function tree_seed_reach() returns double precision language sql immutable as $fn$ select 2::double precision $fn$;
@@ -6578,11 +6576,11 @@ insert into furniture_def values ('well', 'Well', 2, 2, null, false, false);
 update furniture_def set well = 200 where id = 'well';
 insert into furniture_def values ('fountain', 'Tiered fountain', 3, 3, null, false, false);
 update furniture_def set well = 50 where id = 'fountain';
-insert into furniture_def values ('bulk_bin', 'Raw material bin', 2, 2, 400, false, false);
+insert into furniture_def values ('bulk_bin', 'Raw material bin', 2, 2, 2500, false, false);
 update furniture_def set takes = 'raw' where id = 'bulk_bin';
 insert into furniture_def values ('craft_bin', 'Craft material bin', 2, 2, null, false, false);
 update furniture_def set takes = 'worked' where id = 'craft_bin';
-update furniture_def set heft = 2500 where id = 'craft_bin';
+update furniture_def set heft = 10000 where id = 'craft_bin';
 insert into furniture_def values ('seed_bin', 'Seed bin', 1, 1, null, false, false);
 update furniture_def set takes = 'seed' where id = 'seed_bin';
 update furniture_def set heft = 100 where id = 'seed_bin';
@@ -6612,12 +6610,6 @@ insert into furniture_def values ('great_sign', 'Signboard', 2, 1, null, false, 
 insert into furniture_def values ('grave', 'Grave', 1, 2, null, false, false);
 insert into tack_def values (0, 'saddle');
 insert into tack_def values (1, 'bridle');
-insert into cast_def values ('call', 'Call', 12, 3, 'self', 'Your active companion teleports to you.');
-insert into cast_def values ('mend', 'Mend', 18, 8, 'item', 'Removes all damage from an item.');
-insert into cast_def values ('dawnlight', 'Light of the dawn', 26, 16, 'self', 'Heals all your wounds; cures infection.');
-insert into cast_def values ('cunning', 'Circle of cunning', 34, 24, 'item', 'Tool works +9% better, permanently. Max 3 casts per tool.');
-insert into cast_def values ('fairwind', 'Fair wind', 30, 30, 'self', 'Wind turns to blow from behind you and holds 6 min.');
-insert into cast_def values ('bounty', 'Bounty', 44, 40, 'self', 'Every crop on your settlement grows one growth stage.');
 insert into bridge_def values ('rope', 'Rope bridge', 14, 'mallet', 'carpentry', 18, false, 'Longest span: 14 tiles. Foot traffic only.');
 insert into bridge_bill values ('rope', 'thick_rope', 60);
 insert into bridge_bill values ('rope', 'plank', 120);
@@ -7970,7 +7962,7 @@ insert into recipe_input (recipe, ord, item, count, litres) values ('make_blunt_
 insert into recipe_input (recipe, ord, item, count, litres) values ('make_blunt_arrows', 1, 'feather', 3, null);
 insert into recipe (id, result, count, tool, station, skill, label, verb, base_time, stamina, difficulty, ql_from_inputs, material, wood, extra, done, fail) values ('make_lye', 'lye_bucket', 1, null, null, 'alchemy', 'Leach into lye', 'making lye', 12, 0.03, 14, false, null, null, null, '', 'Failed: bucket of lye.');
 insert into recipe_input (recipe, ord, item, count, litres) values ('make_lye', 0, 'water_bucket', 1, null);
-insert into recipe_input (recipe, ord, item, count, litres) values ('make_lye', 1, 'ash', 2, null);
+insert into recipe_input (recipe, ord, item, count, litres) values ('make_lye', 1, 'ash', 5, null);
 insert into recipe (id, result, count, tool, station, skill, label, verb, base_time, stamina, difficulty, ql_from_inputs, material, wood, extra, done, fail) values ('tan_hide', 'leather', 1, 'carving_knife', null, 'leatherworking', 'Tan in lye', 'tanning a hide', 14, 0.05, 16, false, null, null, null, '', 'Failed: leather.');
 insert into recipe_input (recipe, ord, item, count, litres) values ('tan_hide', 0, 'hide', 1, null);
 insert into recipe_input (recipe, ord, item, count, litres) values ('tan_hide', 1, 'lye_bucket', 1, 1);
@@ -8894,7 +8886,6 @@ insert into bauble_skill values ('taming', true, false);
 insert into bauble_skill values ('animal_husbandry', true, true);
 insert into bauble_skill values ('butchering', true, true);
 insert into bauble_skill values ('alchemy', true, true);
-insert into bauble_skill values ('prayer', true, false);
 insert into bauble_skill values ('meditation', true, false);
 insert into bauble_skill values ('repair', true, true);
 insert into bauble_skill values ('first_aid', true, true);

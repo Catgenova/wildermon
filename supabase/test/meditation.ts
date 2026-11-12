@@ -64,7 +64,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -490,7 +490,7 @@ begin
     create or replace function perform_swirl(p_world uuid, p_uid uuid, p_action text, p_target jsonb) returns void
      language plpgsql as $f$
      begin
-       insert into rolled (ok, fore) values (skill_check(1, 1000) and skill_check(1, 1000), coalesce(current_setting('wurm.foreknow', true), ''));
+       insert into rolled (ok, fore) values (skill_check(1, 1000) and skill_check(1, 1000), coalesce(current_setting('wildermon.foreknow', true), ''));
      end $f$
   $x$;
   update player set foreknow = ${P('foreknow').fx.goes} where world_id = w.world_id and uid = u;
@@ -505,7 +505,7 @@ begin
   end loop;
   insert into said select 'FOREGO', string_agg(fore || ':' || case when fore = 'on' then ok::text else '-' end, ',' order by n)
     || '|' || (select foreknow from player where world_id = w.world_id and uid = u) from rolled;
-  insert into said values ('FORESET', coalesce(current_setting('wurm.foreknow', true), '') || '|' || coalesce(current_setting('wurm.foreknown', true), ''));
+  insert into said values ('FORESET', coalesce(current_setting('wildermon.foreknow', true), '') || '|' || coalesce(current_setting('wildermon.foreknown', true), ''));
 
   -- No path keeps a step or an old ability: Love and Power moved as Knowledge did.
   update player set way = 'love' where world_id = w.world_id and uid = u;

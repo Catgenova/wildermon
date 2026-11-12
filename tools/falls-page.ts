@@ -13,7 +13,9 @@
  *     hollow it fills (`spout`, its lip, closer);
  *   * `cliff`: a pond going over five corners of its rim, down a dark rock
  *     face 68 tall into a pond below (`brink`, its lip, closer);
- *   * `pool`: a pool three tiles wide going over its edge into a pool below.
+ *   * `pool`: a pool three tiles wide going over its edge into a pool below;
+ *   * `edge`: a pond going over one corner of a cliff edge, the edge either
+ *     side a little below its surface and dry, into a pond below.
  *
  * Driven through `window.falls`: `shot({ scene, zoom, turn, hour, t })` puts
  * the camera there and draws one frame at drawing clock `t`, for the script
@@ -95,6 +97,17 @@ function height(x: number, y: number): number {
     return Math.max(-8, 52 - 3 * (y - 14));
   }
   if (x >= 30 && x <= 54 && y >= 36) return aqueductHeight(x - 24, y - 6);
+  // The edge: a pond on a plateau at 120 going over one corner of a cliff edge at 112, the edge either side of it at 110, into a pond below.
+  if (x >= 56 && y >= 36 && y <= 56) {
+    if (y <= 43) {
+      if (x >= 58 && x <= 61 && y >= 39 && y <= 41) return x === 59 && y === 40 ? 100 : 106;
+      if (x === 60 && y === 42) return 106;
+      if (y === 43) return x === 60 ? 112 : 110;
+      return 120;
+    }
+    if (x >= 57 && x <= 62 && y >= 44 && y <= 49) return 28;
+    return 46 - 2 * (y - 45);
+  }
   // The cliff: a pond on a plateau at 112 going over five corners of its rim, a dark rock face 68 tall, into a pond below.
   if (x >= 16 && x <= 28 && y >= 36 && y <= 56) {
     if (y <= 44) {
@@ -120,6 +133,7 @@ const SCENES: Record<string, [number, number, number]> = {
   cliff: [22.5, 45, 80],
   brink: [22.5, 44, 112],
   pool: [5.5, 39, 50],
+  edge: [60, 44, 80],
 };
 
 const params = new URLSearchParams(location.search);
@@ -182,6 +196,7 @@ try {
   game.springs.dig(37, 46, null, ago);
   game.springs.dig(22, 41, null, ago);
   game.springs.dig(5, 38, null, ago);
+  game.springs.dig(59, 40, null, ago);
   const fountain = game.addFurniture('fountain', 10, 46, 0, 0, 80);
   fountain.litres = 50;
   game.update(0.01);

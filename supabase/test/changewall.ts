@@ -46,7 +46,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -305,8 +305,8 @@ same('with it to hand it is built', 'build_wall', T, 'ALLOWED');
         perform perform_building(w, u, 'build_wall', '${JSON.stringify({ kind: 'tile', cx: 20, cy: 26, ...T })}'::jsonb);
         n := n + 1;
       end loop;
-      perform set_config('wurm.goes', n::text, false);
-    end $$; select current_setting('wurm.goes');`).split('\n').pop());
+      perform set_config('wildermon.goes', n::text, false);
+    end $$; select current_setting('wildermon.goes');`).split('\n').pop());
   const theirSaid = psql(`select text from event where world_id = ${W} and uid = ${DANE} order by n desc limit 1;`);
   check(`built a unit a go, ${units} goes on both sides`, mineGoes === units && theirGoes === units, `browser ${mineGoes}, island ${theirGoes}`);
   check('the last go says the wall is built, in the same words', mineSaid === 'Built: marble wall.' && theirSaid === mineSaid,

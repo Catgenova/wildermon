@@ -10,6 +10,7 @@ import {
   furnitureCentre,
   furnitureDef,
   furnitureName,
+  furnitureNameInLine,
   hearthCapacity,
   hearthLeft,
   tracesStoreyRefusal,
@@ -30,7 +31,9 @@ import {
   type PlacedFurniture,
 } from './furniture';
 import type { Game } from './game';
-import { describeWith, itemDef, litresOf, markOf, type Item } from './items';
+import { describeWith, itemDef, litresOf, lyeAshFor, LYE_DIFFICULTY, markOf, type Item } from './items';
+import { damageDrawn, failDamagedSaid } from './faildamage';
+import { tryGain } from './learn';
 import type { CraftStock } from './recipes';
 import { bedRest, SLEEP_SAID, sleepNotYours } from './sleep';
 import { DYE_BUCKET, dyeIn, dyeSays, dyeText, mixDye, readDye, type DyeLiquid } from './dyestuffs';
@@ -53,6 +56,33 @@ const nearPiece = (g: Game, f: PlacedFurniture, range = 2.4): boolean => {
   const [cx, cy] = furnitureCentre(f);
   return Math.hypot(cx - g.player.x, cy - g.player.y) <= range;
 };
+
+/** Why the water in this barrel cannot be leached into lye, or null. The island's `liquid_refusal` on `leach_lye`, word for word. */
+export function leachLyeReason(g: Game, f: PlacedFurniture | undefined): string | null {
+  if (!f) return 'It is gone.';
+  if (!nearPiece(g, f)) return 'Stand next to it.';
+  if (!holdsLiquid(f) || isWell(f)) return 'Not a barrel.';
+  if (isWorking(f)) return 'Still fermenting.';
+  if (f.liquid !== 'water' || litresIn(f) <= 0) return 'Needs water.';
+  const need = lyeAshFor(litresIn(f));
+  const have = g.stockCount('ash');
+  if (have < need) return `Need ${need} × ashes; have ${have}.`;
+  return null;
+}
+/** The well a barrel is filled from when there is no shore beside you: the fullest within reach with water in it. The island's `fill_barrel`. */
+const wellFor = (g: Game): PlacedFurniture | undefined => vesselsNear(g, 'water').find((v) => isWell(v));
+
+/** Why this barrel cannot be filled with water, or null. The island's `liquid_refusal` on `fill_barrel`, word for word. */
+export function fillBarrelReason(g: Game, f: PlacedFurniture | undefined): string | null {
+  if (!f) return 'It is gone.';
+  if (!nearPiece(g, f)) return 'Stand next to it.';
+  if (!holdsLiquid(f) || isWell(f)) return 'Not a barrel.';
+  if (isWorking(f)) return 'Still fermenting.';
+  if (litresIn(f) > 0 && f.liquid && f.liquid !== 'water') return `Holds ${LIQUID_NAME[f.liquid]}: empty it first.`;
+  if (liquidCapacity(f) - litresIn(f) < 1) return 'Already full.';
+  if (!g.nearWater() && !wellFor(g)) return 'Need water: shore or well.';
+  return null;
+}
 const isOven = (f: PlacedFurniture): boolean => !!furnitureDef(f.kind).hearth;
 const isBed = (f: PlacedFurniture): boolean => (furnitureDef(f.kind).bed ?? 0) > 0;
 
@@ -751,6 +781,86 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
     },
   },
   {
+    /*
+     * Lye leached in the barrel itself: every litre of water in it, one ash a litre (`lyeAshFor`), out of the pack, a bag
+     * or a store within reach, at the bucket's difficulty. Asked for: "Allow lye to be made in barrels as well as
+     * buckets". Not in a well or a fountain. The island's `leach_lye` in `liquid_refusal` and `perform_liquid`.
+     */
+    id: 'leach_lye',
+    label: 'Leach into lye',
+    verb: 'making lye',
+    skill: 'alchemy',
+    stamina: 0.03,
+    baseTime: 12,
+    applies: (t, g) => {
+      const f = pieceOf(g, t);
+      return !!f && holdsLiquid(f) && !isWell(f) && f.liquid === 'water' && litresIn(f) > 0;
+    },
+    check: (t, g) => leachLyeReason(g, pieceOf(g, t)),
+    perform: (t, g) => {
+      const f = pieceOf(g, t);
+      if (!f || leachLyeReason(g, f)) return;
+      const litres = litresIn(f);
+      const ash = lyeAshFor(litres);
+      const ashQl = g.stockOf((it) => it.id === 'ash')[0]?.item.ql ?? 20;
+      // Failed: the ashes drawn are damaged by their QL (`faildamage.ts`), and the water stays water.
+      if (!g.skillCheck('alchemy', LYE_DIFFICULTY, 0, g.mindEase())) {
+        const hurt = damageDrawn(g.stockOf((it) => it.id === 'ash'), ash);
+        g.gainSkill('alchemy', tryGain(false));
+        g.logMsg(failDamagedSaid('Failed: lye.', hurt), 'event');
+        g.events.emit('crate');
+        g.events.emit('inventory');
+        return;
+      }
+      if (!g.spendStock('ash', ash)) return;
+      f.liquid = 'lye';
+      f.ql = Math.max(1, Math.min(100, (ashQl + g.skills.get('alchemy')) / 2));
+      delete f.knack;
+      delete f.agedFrom;
+      g.gainSkill('alchemy', tryGain(true));
+      g.events.emit('crate');
+      g.events.emit('world', f.x, f.y);
+      g.logMsg(`Lye: ${Number(litres.toFixed(1))} L in the ${furnitureName(f).toLowerCase()}. Ashes: ${ash}.`, 'event');
+    },
+  },
+  {
+    /*
+     * A barrel filled with water where it stands: to the brim from a shore within a tile of you, or else as much as the
+     * fullest well or fountain within reach has (`wellFor`). Asked for: "No logical way to fill a barrel. Allow it to be
+     * filled at a well or water". Not a well, not while it ferments, not over another liquid. The island's `fill_barrel`
+     * in `liquid_refusal` and `perform_liquid`.
+     */
+    id: 'fill_barrel',
+    label: 'Fill with water',
+    verb: 'filling it',
+    stamina: 0.03,
+    baseTime: 6,
+    applies: (t, g) => {
+      const f = pieceOf(g, t);
+      return !!f && holdsLiquid(f) && !isWell(f) && !isWorking(f) && (litresIn(f) <= 0 || f.liquid === 'water')
+        && liquidCapacity(f) - litresIn(f) >= 1;
+    },
+    check: (t, g) => fillBarrelReason(g, pieceOf(g, t)),
+    perform: (t, g) => {
+      const f = pieceOf(g, t);
+      if (!f || fillBarrelReason(g, f)) return;
+      const well = g.nearWater() ? undefined : wellFor(g);
+      const had = litresIn(f);
+      const room = Math.floor(liquidCapacity(f) - had);
+      const n = well ? Math.min(room, Math.floor(litresIn(well))) : room;
+      if (n <= 0 || (well && !drawFrom(g, well, n))) return;
+      f.litres = had + n;
+      f.liquid = 'water';
+      delete f.knack;
+      delete f.dye;
+      delete f.agedFrom;
+      g.events.emit('crate');
+      g.events.emit('world', f.x, f.y);
+      g.logMsg(`Filled: ${n} L water into the ${furnitureName(f).toLowerCase()}, from the ${well ? furnitureName(well).toLowerCase() : 'shore'}. `
+        + `${Math.round(had + n)}/${Math.round(liquidCapacity(f))}.`, 'event');
+    },
+  },
+  {
     id: 'pour_into_barrel',
     label: 'Pour into the barrel',
     verb: 'pouring it in',
@@ -896,7 +1006,7 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       const f = pieceOf(g, t);
       if (!f || !isBed(f)) return 'Not a bed.';
       if (!nearPiece(g, f)) return 'Stand next to it.';
-      if (f.mine === false && !g.deedOfMineAt(Math.floor(f.x), Math.floor(f.y))) return sleepNotYours(furnitureName(f));
+      if (f.mine === false && !g.deedOfMineAt(Math.floor(f.x), Math.floor(f.y))) return sleepNotYours(furnitureNameInLine(f));
       if (g.action && g.action.def.id !== 'sleep') return SLEEP_SAID.busy;
       if (g.inAFight()) return SLEEP_SAID.fight;
       if (g.mounted()) return SLEEP_SAID.mounted;
@@ -912,7 +1022,7 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       g.note('slept');
       // In a bed of your own making, for the journal (the island's `perform_last` asks who made it).
       if (f.mine !== false) g.note('slept:own');
-      g.fallAsleep(rest, furnitureName(f));
+      g.fallAsleep(rest, furnitureNameInLine(f));
     },
   },
   {

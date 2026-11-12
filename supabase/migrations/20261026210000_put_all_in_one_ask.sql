@@ -43,7 +43,7 @@
  *
  * And a go done by `rpc_act` on the spot (an instant job) is not asked its
  * refusal a second time by the `settle` that does it: `rpc_act` asked it a
- * moment before, under the body's row (`wurm.asked`). That second asking came
+ * moment before, under the body's row (`wildermon.asked`). That second asking came
  * with 20261026180100 and was a sixth of the cost of a put. And `room_mul`,
  * asked six times a thing put in, no longer plans its query over the list of
  * every enchantment each time it is asked.
@@ -63,12 +63,12 @@ create or replace function private.tick_lock_wait() returns text language sql im
 
 /**
  * Whether the go `settle` is about to do was asked its refusal a moment ago, by the `rpc_act` that does it on the
- * spot (`wurm.asked`): read once, by the first `settle` after it was said, and gone, so no other body's go is let off.
+ * spot (`wildermon.asked`): read once, by the first `settle` after it was said, and gone, so no other body's go is let off.
  */
 create or replace function private.asked_take() returns boolean language plpgsql as $fn$
-declare v boolean := coalesce(current_setting('wurm.asked', true), '') = 'on';
+declare v boolean := coalesce(current_setting('wildermon.asked', true), '') = 'on';
 begin
-  if v then perform set_config('wurm.asked', '', true); end if;
+  if v then perform set_config('wildermon.asked', '', true); end if;
   return v;
 end $fn$;
 
@@ -114,7 +114,7 @@ begin
   end if;
   update player set seen_at = now(), away = false where world_id = p_world and uid = me;
   select * into d from action_def where id = p_action;
-  v_was_hush := coalesce(current_setting('wurm.hush', true), '');
+  v_was_hush := coalesce(current_setting('wildermon.hush', true), '');
   for t in select e from jsonb_array_elements(p_targets) e loop
     why := act_refusal(p_world, me, p_action, t);
     if why is not null then
@@ -124,9 +124,9 @@ begin
     end if;
     select * into v_it from item where world_id = p_world and id = target_item(t);
     v_want := greatest(1, least(coalesce(v_it.count, 1), coalesce((t->>'count')::int, 1)));
-    perform set_config('wurm.hush', 'on', true);
+    perform set_config('wildermon.hush', 'on', true);
     perform private.area_go(p_world, me, p_action, t);
-    perform set_config('wurm.hush', v_was_hush, true);
+    perform set_config('wildermon.hush', v_was_hush, true);
     perform spend_wind(p_world, me, p_action);
     -- What is left of it where it was: the rest went.
     select q.count into v_after from item q
@@ -205,9 +205,9 @@ $$),
      $$  if d.instant then
     perform settle(p_world, me);
 $$, $$  if d.instant then
-    perform set_config('wurm.asked', 'on', true); -- put all in: asked just now, under the body's row
+    perform set_config('wildermon.asked', 'on', true); -- put all in: asked just now, under the body's row
     perform settle(p_world, me);
-    perform set_config('wurm.asked', '', true);
+    perform set_config('wildermon.asked', '', true);
 $$),
     (3, 'settle(uuid,uuid)'::regprocedure, 1,
      $$        v_stop text; v_asked boolean := false; -- every go asked again$$,

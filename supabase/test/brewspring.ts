@@ -22,7 +22,8 @@ import { Game } from '../../src/game/game';
 import { ACTION_BY_ID, WATER_MOTE_USES, type ActionDef, type Target } from '../../src/game/actions';
 import { BREW_BY_ID, BREW_SPRING, BREW_SPRING_ALREADY, BREW_SPRING_MUL, brewTime, BREWS, isWorking } from '../../src/game/brewing';
 import { furnitureState, type LiquidKind, type PlacedFurniture } from '../../src/game/furniture';
-import { ITEM_DEFS, type Item } from '../../src/game/items';
+import { BUCKET_LITRES, ITEM_DEFS, type Item } from '../../src/game/items';
+import { RECIPE_BY_ID } from '../../src/game/recipes';
 import { WATER_MOTE, WATER_MOTE_NEED } from '../../src/game/motes';
 import { vesselSays } from '../../src/game/placeables';
 import { TileType } from '../../src/world/tiles';
@@ -36,7 +37,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -86,22 +87,22 @@ const brew = (id: LiquidKind, n: number): string => `
   perform pg_temp.nodice();`;
 
 const out = psql(`
-set wurm.season = '';
+set wildermon.season = '';
 discard temp;
 begin;
 create temp table said (k text, v text);
 create schema dice;
 create function dice.random() returns double precision language plpgsql volatile as $f$
-declare xs text[] := string_to_array(current_setting('wurm.dice'), ',');
-        n int := coalesce(nullif(current_setting('wurm.dice_n', true), ''), '0')::int;
+declare xs text[] := string_to_array(current_setting('wildermon.dice'), ',');
+        n int := coalesce(nullif(current_setting('wildermon.dice_n', true), ''), '0')::int;
 begin
-  perform set_config('wurm.dice_n', (n + 1)::text, true);
+  perform set_config('wildermon.dice_n', (n + 1)::text, true);
   return xs[1 + n % array_length(xs, 1)]::double precision;
 end $f$;
 create function pg_temp.dice(v text) returns void language plpgsql as $f$
 begin
-  perform set_config('wurm.dice', v, true);
-  perform set_config('wurm.dice_n', '0', true);
+  perform set_config('wildermon.dice', v, true);
+  perform set_config('wildermon.dice_n', '0', true);
   perform set_config('search_path', 'dice, public, pg_catalog', true);
 end $f$;
 create function pg_temp.nodice() returns void language plpgsql as $f$
@@ -143,6 +144,9 @@ begin
   ${refusal('R:none')}
   ${refusal('R:well', 'v_well')}
   ${refusal('R:gone', '-1')}
+  -- And no brew set going in the well itself (asked for: "Brewing should not be an option directly in wells").
+  insert into said values ('B:well', coalesce(act_refusal(w, u, 'start_brew',
+    jsonb_build_object('kind', 'furniture', 'id', v_well, 'brew', 'ale')), '-'));
 
   -- 3. Ale in the barrel as it is: its seconds, what is said, and whether it works so long after.
   ${brew('ale', ALE.count)}
@@ -181,6 +185,42 @@ begin
   -- 6. Mead in it: its ageing stamped at the moment it stops.
   ${brew('mead', MEAD.count)}
   insert into said select 'A:set', pl.liquid || '|' || pl.ferment || '|' || (pl.aged_from = v_now + pl.ferment)::text from placed pl where pl.id = v_bar;
+
+  -- 7. Lye in the barrel: one ash a litre, a part litre a whole ash; refused short, and in the well.
+  update placed set liquid = 'water', litres = 12.5, ql = 40, ferment = 0, knack = null, since = now() where id = v_bar;
+  delete from item where world_id = w and holder = 'player' and def = 'ash';
+  perform give(w, u, 'ash', 12, 30);
+  insert into said values ('L:short', coalesce(act_refusal(w, u, 'leach_lye', ${furn('v_bar')}), '-'));
+  update player set x = 15.5, y = 15.5 where world_id = w and uid = u;
+  insert into said values ('L:well', coalesce(act_refusal(w, u, 'leach_lye', ${furn('v_well')}), '-'));
+  update player set x = 10.5, y = 10.5 where world_id = w and uid = u;
+  perform give(w, u, 'ash', 3, 30);
+  perform pg_temp.dice('0.01');
+  perform act_perform(w, u, 'leach_lye', ${furn('v_bar')});
+  perform pg_temp.nodice();
+  insert into said select 'L:done', pl.liquid || '|' || pl.litres || '|'
+    || (select coalesce(sum(count), 0) from item where world_id = w and holder = 'player' and holder_uid = u and def = 'ash')
+    || '|' || ${lastSaid} from placed pl where pl.id = v_bar;
+  insert into said select 'L:bucket', count from recipe_input where recipe = 'make_lye' and item = 'ash';
+
+  -- 8. Filled with water: refused over lye and with no water at hand; to the brim at a shore; then from a well.
+  insert into said values ('F:lye', coalesce(act_refusal(w, u, 'fill_barrel', ${furn('v_bar')}), '-'));
+  update placed set liquid = null, litres = 0, since = now() where id = v_bar;
+  insert into said values ('F:dry', coalesce(act_refusal(w, u, 'fill_barrel', ${furn('v_bar')}), '-'));
+  perform land_set_height(w, 12, 12, -5);
+  perform act_perform(w, u, 'fill_barrel', ${furn('v_bar')});
+  insert into said select 'F:shore', pl.liquid || '|' || pl.litres || '|' || ${lastSaid} from placed pl where pl.id = v_bar;
+  insert into said values ('F:full', coalesce(act_refusal(w, u, 'fill_barrel', ${furn('v_bar')}), '-'));
+  v_b := give(w, u, 'barrel', 1, 40);
+  perform act_perform(w, u, 'place_furniture', jsonb_build_object('kind', 'tile', 'itemUid', v_b, 'x', 12, 'y', 15, 'sx', 1, 'sy', 1, 'facing', 's'));
+  select id into v_b from placed where world_id = w and kind = 'furniture' and sub = 'barrel' and id <> v_bar;
+  update placed set litres = 30, since = now() where id = v_well;
+  update player set x = 13.5, y = 15.5 where world_id = w and uid = u;
+  perform act_perform(w, u, 'fill_barrel', ${furn('v_b')});
+  insert into said select 'F:well', pl.liquid || '|' || pl.litres || '|' || (select placed_litres(wl) from placed wl where wl.id = v_well)
+    || '|' || ${lastSaid} from placed pl where pl.id = v_b;
+  insert into said values ('F:wellnot', coalesce(act_refusal(w, u, 'fill_barrel', ${furn('v_well')}), '-'));
+  insert into said values ('F:dried', coalesce(act_refusal(w, u, 'fill_barrel', ${furn('v_b')}), '-'));
 end $t$;
 select k || '=' || v from said order by k;
 rollback;`);
@@ -255,6 +295,10 @@ check(`which is the mote's own refusal: “${WATER_MOTE_NEED}”`, refusalHere()
 same('R:well', refusalHere({ kind: 'furniture', id: well.id } as Target), 'on a well');
 same('R:gone', refusalHere({ kind: 'furniture', id: -1 } as Target), 'on nothing');
 check('and the menu offers it on the barrel, and not on the well', act('set_brew_spring').applies(at, g) && !act('set_brew_spring').applies({ kind: 'furniture', id: well.id } as Target, g));
+// No brew in the well itself, on either side: not offered, and refused in the island's words if asked.
+const wellBrew = { kind: 'furniture', id: well.id, brew: 'ale' } as Target;
+same('B:well', act('start_brew').check?.(wellBrew, g) ?? '-', 'a brew in a well');
+check('and a brew is offered on the barrel, and not on the well', act('start_brew').applies(at, g) && !act('start_brew').applies(wellBrew, g));
 
 /* 3. Ale in the plain barrel. */
 brewHere('ale');
@@ -296,6 +340,42 @@ brewHere('mead');
 check(`mead in the spring works ${MEAD.time * BREW_SPRING_MUL} s and stamps its ageing at the moment it stops, on both sides`,
   isle.get('A:set') === `mead|${MEAD.time * BREW_SPRING_MUL}|true` && bar.ferment === MEAD.time * BREW_SPRING_MUL && bar.agedFrom === NOW + MEAD.time * BREW_SPRING_MUL,
   `${isle.get('A:set')} / ${bar.ferment} ${bar.agedFrom}`);
+
+/* 7. Lye in the barrel (asked for: "Making lye requires 1 unit of ash per L. Allow lye to be made in barrels as well as buckets"). */
+Object.assign(bar, { liquid: 'water', litres: 12.5, ql: 40, ferment: 0 });
+delete bar.knack;
+for (let i = g.inventory.items.length - 1; i >= 0; i--) if (g.inventory.items[i].id === 'ash') g.inventory.items.splice(i, 1);
+thing('ash', 30, 12);
+same('L:short', act('leach_lye').check?.(at, g) ?? '-', '12.5 litres of water want 13 ashes; 12 are refused');
+g.putBody(15.5, 15.5, 0);
+same('L:well', act('leach_lye').check?.({ kind: 'furniture', id: well.id } as Target, g) ?? '-', 'and no lye in a well');
+g.putBody(10.5, 10.5, 0);
+thing('ash', 30, 3);
+dice(0.01);
+act('leach_lye').perform(at, g);
+same('L:done', `${bar.liquid}|${bar.litres}|${g.inventory.count('ash')}|${lastHere()}`, 'with 15: the barrel is lye, 13 ashes gone, 2 left');
+same('L:bucket', String(RECIPE_BY_ID.get('make_lye')?.inputs.find((i) => i.item === 'ash')?.count), `a bucket of ${BUCKET_LITRES} litres takes ${BUCKET_LITRES} ashes`);
+
+/* 8. Filled with water (asked for: "No logical way to fill a barrel. Allow it to be filled at a well or water"). */
+same('F:lye', act('fill_barrel').check?.(at, g) ?? '-', 'a barrel of lye');
+check('and the menu does not offer it on lye', !act('fill_barrel').applies(at, g));
+Object.assign(bar, { liquid: undefined, litres: 0 });
+same('F:dry', act('fill_barrel').check?.(at, g) ?? '-', 'an empty barrel with no shore or well beside you');
+w.setHeight(12, 12, -5);
+act('fill_barrel').perform(at, g);
+same('F:shore', `${bar.liquid}|${bar.litres}|${lastHere()}`, 'at a shore: to the brim');
+same('F:full', act('fill_barrel').check?.(at, g) ?? '-', 'a full one');
+const barrel2 = thing('barrel', 40);
+act('place_furniture').perform({ kind: 'tile', x: 12, y: 15, sx: 1, sy: 1, itemUid: barrel2.uid, facing: 's' } as Target, g);
+const bar2 = [...g.furniture.values()].find((p) => p.kind === 'barrel' && p !== bar) as PlacedFurniture;
+well.litres = 30;
+g.putBody(13.5, 15.5, 0);
+const at2 = { kind: 'furniture', id: bar2.id } as Target;
+check('the menu offers it on an empty barrel', act('fill_barrel').applies(at2, g));
+act('fill_barrel').perform(at2, g);
+same('F:well', `${bar2.liquid}|${bar2.litres}|${well.litres}|${lastHere()}`, 'at a well: what the well has, the well drawn dry');
+same('F:wellnot', act('fill_barrel').check?.({ kind: 'furniture', id: well.id } as Target, g) ?? '-', 'a well');
+same('F:dried', act('fill_barrel').check?.(at2, g) ?? '-', 'and with the well dry');
 
 /* ---- what was found ------------------------------------------------------------------------------- */
 
