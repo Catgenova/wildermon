@@ -1,6 +1,6 @@
 ---
 name: compose-track
-description: Write, check, render and wire in a soundtrack track for Wurm's generated piano music (src/audio/music). Use when asked for a new music track, a change to a track, or music for a new part of the day, season or page.
+description: Write, check, render and wire in a soundtrack track for Wildermon's generated piano music (src/audio/music). Use when asked for a new music track, a change to a track, or music for a new part of the day, season or page.
 ---
 
 # A soundtrack track

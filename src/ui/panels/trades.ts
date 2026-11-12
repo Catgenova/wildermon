@@ -150,7 +150,7 @@ export class TradesPanel {
       this.said = said;
       this.tree = tree;
       // The fold, fresh: the perks it holds are also this browser's to draw by.
-      if (tree?.mul) this.game.setPerks((tree.mul as { fx?: Record<string, number> }).fx);
+      if (tree?.mul) this.game.setPerks((tree.mul as { fx?: Record<string, number> }).fx, tree.mul);
       const seen = JSON.stringify([said, tree]);
       if (seen !== this.seen) changed = true;
       this.seen = seen;

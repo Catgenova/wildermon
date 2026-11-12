@@ -287,7 +287,7 @@ const creator = new Creator(randomLook(), () => !maker.hidden);
 maker.prepend(creator.el);
 
 const LEDE_ACCOUNT = lede.textContent ?? '';
-const LEDE_MAKER = 'Body, hair, hair colour, grey, skin. Changeable later: Settings, How you look.';
+const LEDE_MAKER = 'Body, hair, hair colour, hair brightness, skin. Changeable later: Settings, How you look.';
 
 function toMaker(start: Look): void {
   lede.textContent = LEDE_MAKER;
@@ -585,7 +585,7 @@ void onArrival();
 declare global {
   interface Window {
     /** Console handle, and what the browser tests drive the rules through. */
-    wurmAccount: {
+    wildermonAccount: {
       nameTrouble: typeof nameTrouble;
       passwordTrouble: typeof passwordTrouble;
       passwordVerdict: typeof passwordVerdict;
@@ -604,7 +604,7 @@ declare global {
     };
   }
 }
-window.wurmAccount = {
+window.wildermonAccount = {
   nameTrouble, passwordTrouble, passwordVerdict, breachCount, breachWord, nameEmail, foldName, Unchecked, LOOK_TABLES, cleanLook, randomLook,
   look: () => creator.look,
   openMaker: (start) => toMaker(start ?? randomLook()),

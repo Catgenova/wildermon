@@ -170,6 +170,8 @@ export const POST_ACTIONS: ActionDef[] = [
       }
       c.post = p.id;
       c.mode = 'deed';
+      // Round nobody now: out of a crate it went into from Work around me, it still said so (the island's `assign_post`).
+      c.around = null;
       c.enemy = null;
       c.state = 'idle';
       c.until = g.time;

@@ -33,7 +33,7 @@ import { existsSync, readFileSync } from 'node:fs';
  * The leather set's shared materials (every piece of the set uses these names and values, so the game gives each one
  * slot): dark (the darkest leather: the collar's inside), leather (the base sleeves and the collar), light (the plates),
  * trim (the raised trim, the lacing, the rivets), rune (the emblem and the bracers' rune band: the trim's colour plain,
- * glowing enchanted), glow (the glow itself). MATS: each one's colour as the shot tools draw it plain. Read off the
+ * glowing enchanted), glow (the glow itself); and the chest's own edge (its plates' bevelled strips). MATS: each one's colour as the shot tools draw it plain. Read off the
  * chest sheet under the game's light (tools/sculpt/lowleatherchestshot.mjs --only palette).
  */
 export const MATS = {
@@ -43,7 +43,11 @@ export const MATS = {
   trim: [0.91, 0.518, 0.282],
   rune: [0.91, 0.518, 0.282],
   glow: [0.996, 0.792, 0.427],
+  // (the chest's own: its plates' bevelled edges, lighter than the plates; the set's other pieces do not use it)
+  edge: [0.64, 0.36, 0.27],
 };
+/** The plates' bevelled strips in `edge` (LCHEST_EDGE=0: in the plate's own colour, for comparing). */
+const EDGE = (typeof process === 'undefined' || process.env?.LCHEST_EDGE !== '0') ? 'edge' : null;
 /** How the set's leather is lit: 2, by the light's brightness only (kind 0, cloth, turned its shadows red-black in the game). */
 export const KIND = +(process.env.LEATHER_KIND ?? 2);
 /**
@@ -59,13 +63,14 @@ export const LOOKS = {
  * The design per body. Heights are the body's y; az, azimuth round the torso (0 the front, 90 the body's left); θ round a
  * limb (0 forward, 90 out, 180 back); t along a limb's bone from its head. Tables { az, ...lists } are over |az| from the
  * front (0) to the back (180), the piece mirrored. `c` clearances off the body; rim { w, h, t }: the raised strip's width
- * and rise, the leather's thickness. Lines { y0, k } are y = y0 + k x across the chest (x the body's left).
+ * and rise, the leather's thickness. Lines { y0, k } are y = y0 + k x across the chest (x the body's left). fit.legs:
+ * the skirt plates' clearance off the leggings by name, past the leather's thickness and its gap (else 0.02).
  */
 export const DESIGN = {
   male: {
     rim: { w: 0.05, h: 0.035, t: 0.05, in: 0.35 },
     rivet: { r: 0.045, h: 0.03 },
-    fit: { trunk: 0.02, belt: 0.025, skirt: 0.05, arm: 0.02, gap: 0.008, stack: 0.03 },
+    fit: { trunk: 0.02, belt: 0.025, skirt: 0.05, arm: 0.02, gap: 0.008, stack: 0.03, legs: { 'skirt.f': 0.05, 'skirt.f2': 0.05, skirtU: 0.05 } },
     wedge: 8,
     collar: { reachY: [-0.3, -0.1, 0.05], notch: [12, 1.5], top: { az: [0, 30, 90, 180], top: [-0.16, -0.08, -0.04, 0.0] }, base: [-1.1, -1.0, -0.9], trim: 0.07, c: 0.06, flare: 0.02, wall: 0.06, spread: 0.45, sink: 0.3, shrug: 0.4 },
     core: { az: [0, 14, 28, 40, 43, 62, 80, 96], top: [-0.78, -0.8, -0.86, -0.92, -0.94, -0.95, -1.0, -1.9], bottom: [-3.78, -3.72, -3.64, -3.58, -2.0, -1.95, -1.95, -1.95], rows: [0.0,  0.0833,  0.1667,  0.25,  0.3333,  0.4167,  0.5,  0.5833,  0.6667,  0.75,  0.8333,  0.9167,  1.0], c: 0.02, flat: 14, drape: false },
@@ -106,7 +111,7 @@ export const DESIGN = {
   female: {
     rim: { w: 0.045, h: 0.032, t: 0.045, in: 0.35 },
     rivet: { r: 0.04, h: 0.027 },
-    fit: { trunk: 0.018, belt: 0.022, skirt: 0.045, arm: 0.018, gap: 0.007, stack: 0.027 },
+    fit: { trunk: 0.018, belt: 0.022, skirt: 0.045, arm: 0.018, gap: 0.007, stack: 0.027, legs: { 'skirt.f': 0.05, 'skirt.f2': 0.05, skirtU: 0.05 } },
     wedge: 8,
     collar: { reachY: [-0.3, -0.1, 0.05], notch: [12, 1.5], top: { az: [0, 30, 90, 180], top: [-0.14, -0.07, -0.03, 0.0] }, base: [-1.05, -0.95, -0.85], trim: 0.06, c: 0.05, flare: 0.018, wall: 0.05, spread: 0.4, sink: 0.27, shrug: 0.35 },
     core: { az: [0, 12, 24, 36, 40, 58, 76, 96], top: [-0.8, -0.81, -0.84, -0.9, -0.92, -0.95, -1.0, -1.85], bottom: [-3.25, -3.2, -3.12, -3.06, -1.95, -1.9, -1.9, -1.9], rows: [0.0,  0.0833,  0.1667,  0.25,  0.3333,  0.4167,  0.5,  0.5833,  0.6667,  0.75,  0.8333,  0.9167,  1.0], c: 0.018, flat: 12, drape: false },
@@ -218,7 +223,8 @@ function fitOut(rows, ring, out, S, c, passes = 4, reach = 0.3) {
   // (S may be layers [[points, clearance], ...]: the body's samples, and the surfaces of the pieces under this one)
   // (the pieces under, after the body: only what lies within `under` in front of a face lifts it, so a piece beside a
   // steep face (a plate's seam over the next one's edge) does not shove the face out)
-  if (S.length && Array.isArray(S[0]) && Array.isArray(S[0][0])) { for (let it = 0; it < passes; it++) S.forEach(([P, cc], li) => fitOut(rows, ring, out, P, cc, 1, li === 0 ? reach : Math.min(reach, cc + 0.06))); return; }
+  // (a layer [points, clearance, reach] looks that far in front of a face instead)
+  if (S.length && Array.isArray(S[0]) && Array.isArray(S[0][0])) { for (let it = 0; it < passes; it++) S.forEach(([P, cc, rr], li) => fitOut(rows, ring, out, P, cc, 1, rr ?? (li === 0 ? reach : Math.min(reach, cc + 0.06)))); return; }
   const R = rows.length - 1, n = rows[0].length, C = ring ? n : n - 1;
   // (only the samples near the grid: its bounding box grown by the reach and a margin for its moving out)
   { const all = rows.flat(), m = reach + 0.35, lo = [0, 1, 2].map((j) => Math.min(...all.map((p) => p[j])) - m), hi = [0, 1, 2].map((j) => Math.max(...all.map((p) => p[j])) + m);
@@ -261,7 +267,7 @@ function fitOut(rows, ring, out, S, c, passes = 4, reach = 0.3) {
 /* ---- the plate builder ----------------------------------------------------------------------------------------------- */
 /**
  * A plate on G from a grid of points `rows` (R + 1 rows of C + 1 points; `ring`: C points, closed round). Its face the
- * grid's quads (mat(r, c), else `mat`), its border by side (top, bottom, left, right) 'trim' (a raised strip in the trim colour), 'bevel' (in the plate's own colour; either with the
+ * grid's quads (mat(r, c), else `mat`), its border by side (top, bottom, left, right) 'trim' (a raised strip in the trim colour), 'bevel' (in the lighter edge colour; either with the
  * edge behind it), 'edge' (the edge alone) or 'open'; every vertex weighted `bone` ({ name: share }). out(p): the way out
  * from the body at p. Returns { faces (its face triangles' points, for laying decals on), N (normals by grid point) }.
  */
@@ -325,7 +331,7 @@ function plateOf(G, rows, o) {
       // (the edge under a plate's foot in the dark leather: the shadow line the sheet draws under each plate)
       const fm = faceMat(L[k].r - (L[k].seg === 'bottom' ? 1 : 0), L[k].c - (L[k].seg === 'right' ? 1 : 0)), em = o.edgeMat ?? (L[k].seg === (o.footSide ?? 'bottom') && o.shadow !== false ? 'dark' : fm);
       if (kind === 'trim' || kind === 'bevel') {
-        G.poly([pts[k].b, pts[j].b, lazy(j, 'T'), lazy(k, 'T')], kind === 'trim' ? (o.rimMat ?? 'trim') : fm, tag);
+        G.poly([pts[k].b, pts[j].b, lazy(j, 'T'), lazy(k, 'T')], kind === 'trim' ? (o.rimMat ?? 'trim') : (EDGE ?? fm), tag);
         G.poly([lazy(k, 'T'), lazy(j, 'T'), lazy(j, 'E'), lazy(k, 'E')], em, tag);
       } else {
         G.poly([pts[k].b, pts[j].b, lazy(j, 'E'), lazy(k, 'E')], em, tag);
@@ -693,7 +699,11 @@ function torsoPieces(G, rig, D, S) {
     const az0 = s > 0 ? pl.az : pl.az.slice().reverse().map((a) => -a), bottom0 = s > 0 ? pl.bottom : pl.bottom.slice().reverse();
     const az = refine(az0.map((a, i) => a), 12), bottom = az.map((a) => { for (let i = 0; i + 1 < az0.length; i++) if ((a - az0[i]) * (a - az0[i + 1]) <= 0) { const t = (a - az0[i]) / (az0[i + 1] - az0[i] || 1); return bottom0[i] + (bottom0[i + 1] - bottom0[i]) * t; } return bottom0[0]; });
     const rows = skirtRows(az, pl.top ?? Sk.top, bottom);
-    fitOut(rows, false, hipOut, [[hipS, D.fit.skirt], ...under.map((P, i) => [P, i < nLegs ? gap + 0.02 : D.fit.stack ?? gap])]);
+    // (the leggings looked for deeper in front of it: where they stand well off the hips the plate starts inside them;
+    // fitted with a row more below its foot, along its slope by the bevel's width, so the bevel and the edge behind it
+    // clear the hip widening under it too)
+    const foot = rows[rows.length - 1].map((p, k) => add(p, mul(unit(sub(p, rows[rows.length - 2][k])), rim.w + 0.01)));
+    fitOut([...rows, foot], false, hipOut, [[hipS, D.fit.skirt], ...under.map((P, i) => (i < nLegs ? [P, gap + (D.fit.legs?.[name] ?? 0.02), 0.2] : [P, D.fit.stack ?? gap]))]);
     const bone = s > 0 ? pl.bone : Object.fromEntries(Object.entries(pl.bone).map(([b, w]) => [b.replace(/_l$/, '_x').replace(/_r$/, '_l').replace(/_x$/, '_r'), w]));
     const p0 = G.polys.length;
     // (its top with the pelvis, under the belt; its foot with the plate's own shares of the pelvis and the thigh)

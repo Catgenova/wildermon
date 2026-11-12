@@ -16,6 +16,7 @@
 //   --plate: the torso and the arms drawn in the plate set's plate colour (the fur beside it).
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
 import { pathToFileURL } from 'node:url';
 import { build } from 'esbuild';
 import { buildRig, posed, skin, fromGame, gameRig, armsOut, axisAngle, mm, tr } from './lowrig.mjs';
@@ -29,7 +30,7 @@ const flag = (n) => args.includes(`--${n}`);
 const out = resolve(opt('out', 'tmp/lowmantle'));
 const only = opt('only', 'sheet,wire,metrics').split(',');
 const tag = opt('tag', '');
-const SHEET = resolve(opt('sheet', '/tmp/claude-0/-home-user-Wurm/781c435a-4202-5724-9056-b83f4c44c414/scratchpad/plate/mantle/mantle-sheet.png'));
+const SHEET = resolve(opt('sheet', join(tmpdir(), 'plate/mantle/mantle-sheet.png')));
 const over = JSON.parse(opt('design', '{}'));
 mkdirSync(out, { recursive: true });
 

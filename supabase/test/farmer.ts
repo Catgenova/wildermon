@@ -43,7 +43,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -105,7 +105,7 @@ begin;
 create or replace function harvest_seeds(p_chance double precision default seed_chance()) returns integer language sql volatile as $pin$ select (crop_yield(0))[1] $pin$;
 -- Every field here grows in spring, whatever day of the year the suite is run on: a crop's pace is
 -- what is measured below, and a summer would bring the plain one on too and a winter neither.
-set local wurm.season = 'spring';
+set local wildermon.season = 'spring';
 -- Nothing made or restored here comes up rare at the plain odds, one in a hundred, which is
 -- what a craft or a restoring rolls with no perk to set them: a rare one is a pile of its own
 -- and holds, wears and is marked otherwise, so a check that was not asking about it failed a

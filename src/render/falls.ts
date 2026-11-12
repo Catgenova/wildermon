@@ -136,6 +136,14 @@ export interface Sheet {
   /** How far back from the lip the water drawn into it begins, in tiles, where that is not `TONGUE`: a basin's rim, a hand's width in from its edge; nought for a stream, which runs to the lip in its own colours. */
   back?: number;
   /**
+   * A pond's sill: the water drawn into the lip over the pond's surface is
+   * laid with the pond's own water, a tile at a time and only where that
+   * water is (`tongueOutline`, `tongueFill`), so ground standing in front of
+   * the pond stands in front of it too. The lip lays only its mouth, out to
+   * `MOUTH_BACK` behind the edge.
+   */
+  pond?: boolean;
+  /**
    * How much water goes over, as a share of what a stream or a pond sends
    * over a lip, where it is less: a fountain's rim. The foam, rings and spray
    * where it lands are that much smaller; one if left out.
@@ -199,6 +207,8 @@ const TONGUE = 0.16;
 const TONGUE_OVER = 0.03;
 /** How far short of a pond's shore the water drawn into a lip stops where the shore runs on past its end, in tiles (`Sheet.splay`). */
 const SHORE_CLEAR = 0.06;
+/** How far back from a pond's lip the lip itself lays the water drawn into it, in tiles: its mouth, where the pond's own water narrows to the corner it goes over (`Sheet.pond`). */
+export const MOUTH_BACK = 0.12;
 /**
  * How far down a sheet leaving a lip narrower than itself has spread to its
  * own width, as a share of its fall (`Sheet.feed`); and how far down the
@@ -891,6 +901,100 @@ function strand(ctx: CanvasRenderingContext2D, p: Placed, u: number, f0: number,
 
 /* ---- The lip ---------------------------------------------------------------- */
 
+/** Where the water leaves the lip, in from the end at `from`: as `fray` has it at the edge. */
+const mouthIn = (s: Sheet): number => (s.feed === undefined ? s.half * 0.05 : Math.max(0, s.half - s.feed));
+
+/** How far back from the lip at `u` the water drawn into it reaches, in tiles: less toward each end the shore does not run on past (`Sheet.splay`). */
+function tongueBack(s: Sheet, tongue: number, m0: number, m1: number, u: number): number {
+  const sp0 = s.splay?.[0] ?? -1;
+  const sp1 = s.splay?.[1] ?? -1;
+  return Math.min(tongue, sp0 >= 0 ? tongue : 0.04 + u - m0, sp1 >= 0 ? tongue : 0.04 + m1 - u);
+}
+
+/** How far the water drawn in is taken out past the end at `from` (0) or `to` (1) at its back, in tiles: as far as the shore runs, short of it. */
+function tongueOut(s: Sheet, end: 0 | 1, tongue: number): number {
+  const sp = s.splay?.[end] ?? -1;
+  return sp > 0 ? Math.max(0, sp * tongue - SHORE_CLEAR) : 0;
+}
+
+/**
+ * Where a pond's shore leaves the end of its sill at `from` (0) or `to` (1),
+ * along the lip, `MOUTH_BACK` behind it: as far out as it runs that far back
+ * (`Sheet.splay`), and no further out than the mouth, `m0` to `m1`.
+ */
+function mouthEnd(s: Sheet, end: 0 | 1, m0: number, m1: number): number {
+  const sp = Math.max(0, s.splay?.[end] ?? 0);
+  return end === 0 ? Math.max(m0, s.from - sp * MOUTH_BACK) : Math.min(m1, s.to + sp * MOUTH_BACK);
+}
+
+/**
+ * How far back from a pond's lip at `u` the lip lays the water drawn into it
+ * (`Sheet.pond`): `MOUTH_BACK` over the sill, coming in from there to nought
+ * at each end of the mouth, `m0` and `m1`, where the shore leaves it, so the
+ * mouth narrows into the pond's water and is not laid over the dry ground
+ * beside it.
+ */
+export function mouthBack(s: Sheet, m0: number, m1: number, u: number): number {
+  const c0 = mouthEnd(s, 0, m0, m1);
+  const c1 = mouthEnd(s, 1, m0, m1);
+  let f = 1;
+  if (u < c0) f = Math.min(f, (u - m0) / (c0 - m0));
+  if (u > c1) f = Math.min(f, (m1 - u) / (m1 - c1));
+  return MOUTH_BACK * Math.max(0, f);
+}
+
+/** Where the water leaves a straight lip, from `m0` to `m1` along it: in from each end of the sheet as `fray` has it at the edge. */
+export function mouthOf(s: Sheet): [number, number] {
+  return [s.from - s.half + mouthIn(s), s.to + s.half - mouthIn(s)];
+}
+
+/**
+ * The water drawn into a straight lip, as the world has it: its outline on
+ * the plane of the lip's top, as `u` along the lip and how far back from it,
+ * in tiles, pairs in order round it into `out`, from the back out past the
+ * end at `from`, along the back, and in to the edge. Convex. The count of
+ * numbers written; none for a ring or a lip that draws none in.
+ */
+export function tongueOutline(s: Sheet, out: number[]): number {
+  out.length = 0;
+  const tongue = s.back ?? TONGUE;
+  if (s.ring || tongue <= 0) return 0;
+  const [m0, m1] = mouthOf(s);
+  if (m1 <= m0) return 0;
+  const steps = Math.max(1, Math.ceil((m1 - m0) / 0.25));
+  for (let q = 0; q <= steps; q++) {
+    const u = m0 + ((m1 - m0) * q) / steps;
+    out.push(u - (q === 0 ? tongueOut(s, 0, tongue) : 0) + (q === steps ? tongueOut(s, 1, tongue) : 0), tongueBack(s, tongue, m0, m1, u));
+  }
+  out.push(m1, 0, m0, 0);
+  return out.length;
+}
+
+/**
+ * What the water drawn into a lip is filled with: from clear at its back to
+ * the colour it goes over in at the edge, shaded square to the lip at `um`,
+ * so every piece of it, the lip's and the pond's, matches.
+ */
+export function tongueFill(ctx: CanvasRenderingContext2D, p: Placed, um: number): CanvasGradient | string {
+  const tongue = p.sheet.back ?? TONGUE;
+  alongAt(p, um);
+  const el = Math.hypot(LIP[4], LIP[5]) || 1;
+  let nx = -LIP[5] / el;
+  let ny = LIP[4] / el;
+  atSlice(p, um, 0, PT, 0);
+  at(p, um, 0, -tongue, PT, 2);
+  let depth = (PT[0] - PT[2]) * nx + (PT[1] - PT[3]) * ny;
+  if (depth < 0) {
+    nx = -nx;
+    ny = -ny;
+    depth = -depth;
+  }
+  if (depth <= 0.5) return p.source;
+  const g = ctx.createLinearGradient(PT[0] - nx * depth, PT[1] - ny * depth, PT[0], PT[1]);
+  for (let k = 0; k < TONGUE_STOPS.length; k++) g.addColorStop(TONGUE_STOPS[k], rgba(p.sourceRgb, TONGUE_ALPHA[k]));
+  return g;
+}
+
 /**
  * Where the water goes over, from `u0` to `u1` along the lip: the water
  * coming to it, on its surface, taken into the colour it goes over in, with
@@ -916,41 +1020,31 @@ export function drawLip(ctx: CanvasRenderingContext2D, v: FallView, p: Placed, u
   const mb = Math.min(m1, b < hi - 1e-6 ? b + hair : b);
   if (mb <= ma) return;
   const tongue = s.back ?? TONGUE;
-  // How far back the water drawn in reaches: the whole way round a ring; along a lip, less toward each end the shore does not run on past.
-  const sp0 = s.splay?.[0] ?? -1;
-  const sp1 = s.splay?.[1] ?? -1;
-  const reachBack = (u: number): number =>
-    p.ring ? tongue : Math.min(tongue, sp0 >= 0 ? tongue : 0.04 + u - m0, sp1 >= 0 ? tongue : 0.04 + m1 - u);
-  // And out past each end, short of the shore, so its edge still shows.
-  const out0 = !p.ring && sp0 > 0 && ma <= m0 + 1e-6 ? Math.max(0, sp0 * tongue - SHORE_CLEAR) : 0;
-  const out1 = !p.ring && sp1 > 0 && mb >= m1 - 1e-6 ? Math.max(0, sp1 * tongue - SHORE_CLEAR) : 0;
+  const reachBack = (u: number): number => (p.ring ? tongue : tongueBack(s, tongue, m0, m1, u));
+  // And out past each end, short of the shore, so its edge still shows: where the pond lays it, not here.
+  const out0 = !p.ring && !s.pond && ma <= m0 + 1e-6 ? tongueOut(s, 0, tongue) : 0;
+  const out1 = !p.ring && !s.pond && mb >= m1 - 1e-6 ? tongueOut(s, 1, tongue) : 0;
   const steps = Math.max(1, Math.ceil((mb - ma) / 0.25));
   if (tongue > 0) {
     // The water drawn in, from clear to the colour it goes over in at the edge: shaded square to the lip, so every piece matches.
-    const um = p.ring ? (a + b) / 2 : s.from;
-    alongAt(p, um);
-    const el = Math.hypot(LIP[4], LIP[5]) || 1;
-    let nx = -LIP[5] / el;
-    let ny = LIP[4] / el;
-    atSlice(p, um, 0, PT, 0);
-    at(p, um, 0, -tongue, PT, 2);
-    let depth = (PT[0] - PT[2]) * nx + (PT[1] - PT[3]) * ny;
-    if (depth < 0) {
-      nx = -nx;
-      ny = -ny;
-      depth = -depth;
-    }
-    if (depth > 0.5) {
-      const g = ctx.createLinearGradient(PT[0] - nx * depth, PT[1] - ny * depth, PT[0], PT[1]);
-      for (let k = 0; k < TONGUE_STOPS.length; k++) g.addColorStop(TONGUE_STOPS[k], rgba(p.sourceRgb, TONGUE_ALPHA[k]));
-      ctx.fillStyle = g;
-    } else ctx.fillStyle = p.source;
+    ctx.fillStyle = tongueFill(ctx, p, p.ring ? (a + b) / 2 : s.from);
     ctx.beginPath();
-    for (let q = 0; q <= steps; q++) {
-      const u = ma + ((mb - ma) * q) / steps;
-      at(p, u - (q === 0 ? out0 : 0) + (q === steps ? out1 : 0), 0, -reachBack(u), PT, 0);
-      if (q === 0) ctx.moveTo(PT[0], PT[1]);
-      else ctx.lineTo(PT[0], PT[1]);
+    if (s.pond) {
+      // Over a pond's sill, only its mouth: in to the pond's own water at each end, where its shore leaves the sill (`mouthBack`).
+      const c0 = Math.max(ma, Math.min(mb, mouthEnd(s, 0, m0, m1)));
+      const c1 = Math.max(c0, Math.min(mb, mouthEnd(s, 1, m0, m1)));
+      for (const [q, u] of [ma, c0, c1, mb].entries()) {
+        at(p, u, 0, -Math.min(reachBack(u), mouthBack(s, m0, m1, u)), PT, 0);
+        if (q === 0) ctx.moveTo(PT[0], PT[1]);
+        else ctx.lineTo(PT[0], PT[1]);
+      }
+    } else {
+      for (let q = 0; q <= steps; q++) {
+        const u = ma + ((mb - ma) * q) / steps;
+        at(p, u - (q === 0 ? out0 : 0) + (q === steps ? out1 : 0), 0, -reachBack(u), PT, 0);
+        if (q === 0) ctx.moveTo(PT[0], PT[1]);
+        else ctx.lineTo(PT[0], PT[1]);
+      }
     }
     // A little way over the edge, onto the top of the sheet, which is the same colour there, so no line of the rock shows between them.
     for (let q = steps; q >= 0; q--) {

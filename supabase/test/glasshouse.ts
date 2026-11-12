@@ -65,7 +65,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -196,12 +196,12 @@ do $$
 declare v_s text; v_o int; v_now timestamptz := date_trunc('second', now());
 begin
   for v_s, v_o in select u.s, u.o from unnest(seasons()) with ordinality u(s, o) loop
-    perform set_config('wurm.season', v_s, true);
+    perform set_config('wildermon.season', v_s, true);
     insert into held values (v_s, v_o, (crop_clock_on('glass', v_now) - crop_clock_on('glass', v_now - interval '1 hour'))
       || '/' || (crop_settled_on(0, v_now - interval '1 hour', 1700, 'glass', v_now)).o_steps
       || '/' || (crop_settled_on(0, v_now - interval '1 hour', 1700, 'field', v_now)).o_steps);
   end loop;
-  perform set_config('wurm.season', '', true);
+  perform set_config('wildermon.season', '', true);
 end $$;
 select string_agg(s || ':' || v, ',' order by o) from held;
 commit;`);
@@ -435,12 +435,12 @@ begin
   perform land_set_tile(w, ${OPEN[0]}, ${OPEN[1]}, tile_id('Field'));
   insert into crop (world_id, x, y, id, stage, stage_at, ql) values (w, ${OPEN[0]}, ${OPEN[1]}, 'wheat', 0, now() - make_interval(secs => v_per + 1), 40);
   update crop set stage_at = now() - make_interval(secs => v_per / glasshouse_growth() + 1) where world_id = w and x = 20 and y = 26;
-  perform set_config('wurm.season', 'winter', true);
+  perform set_config('wildermon.season', 'winter', true);
   perform crops_settle(w, 21.5, 26.5, 4);
   insert into said values ('WINTER', (select stage || ':' || glass || ':' || tended_now from crop where world_id = w and x = 20 and y = 26)
       || '|' || (select stage || ':' || glass from crop where world_id = w and x = ${OPEN[0]} and y = ${OPEN[1]})
       || '|' || coalesce(act_refusal(w, u, 'tend_crop', ${tileT(20, 26)}), 'ALLOWED'));
-  perform set_config('wurm.season', 'spring', true);
+  perform set_config('wildermon.season', 'spring', true);
 
   -- A roof tile taken off: onto the field clock, as far into its stage as it had grown; laid again: back.
   update crop set stage_at = now() - interval '100 seconds' where world_id = w and x = 20 and y = 26;
@@ -511,12 +511,12 @@ begin
   insert into said values ('BOUNTY', v_n || '|' || (select stage || ':' || (stage_at = now()) || ':' || tended_now from crop where world_id = w and x = 20 and y = 26));
 
   -- A night slept in autumn: the glasshouse the whole of it, the field in the open half of it.
-  perform set_config('wurm.season', 'autumn', true);
+  perform set_config('wildermon.season', 'autumn', true);
   update crop set stage = 0, stage_at = now() where world_id = w and x in (20, ${OPEN[0]}) and y = 26;
   perform sleep_forward(w, u, 600);
   insert into said values ('SLEPT', (select round((crop_clock_on('glass', now()) - crop_clock_on('glass', stage_at))::numeric, 3) from crop where world_id = w and x = 20 and y = 26)
       || ':' || (select round((field_clock(now()) - field_clock(stage_at))::numeric, 3) from crop where world_id = w and x = ${OPEN[0]} and y = ${OPEN[1]}));
-  perform set_config('wurm.season', '', true);
+  perform set_config('wildermon.season', '', true);
 
   -- Ripe by the glass clock alone, and harvested as a field is.
   update crop set stage = 0, tended = 1, tended_now = false, stage_at = now() - make_interval(secs => 3 * v_per / glasshouse_growth() + 1)

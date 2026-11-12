@@ -27,7 +27,7 @@
 
 import { MOTIONS, type Motion } from '../engine/motion';
 
-const KEY = 'wurm.settings.v1';
+const KEY = 'wildermon.settings.v1';
 
 /** The frame-rate limits on offer, 0 for every refresh of the screen. */
 export const FRAME_CAPS = [0, 60, 30] as const;
@@ -118,8 +118,6 @@ export const SETTING_DEFAULTS = {
    * no wakes or dust.
    */
   graphics: 'full' as Graphics,
-  /** Bodies drawn from the sculpted base by WebGL2 (`src/sculpt/sculpted.ts`) in place of the flat figure. Off unless chosen. */
-  sculpted: false,
   /**
    * Motion (`src/engine/motion.ts`): as the system asks (`prefers-reduced-motion`),
    * always less, or always full. Less: no sway in trees, bushes and flowers,

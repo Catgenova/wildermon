@@ -22,6 +22,9 @@
  *     first, and the put-by stack never;
  *   * a run of goes started on the pack's two logs carries on into the
  *     satchel and the stores, rather than stopping when that stack is gone;
+ *   * and stops when the last of its wood is gone, rather than going on in
+ *     another: two pine clicked with oak in the chest is two goes, and
+ *     "Need 1 log of pine." (reported off a run of fifty on thirty-six pine);
  *   * and the wood the crafting window says it will make a thing of is the
  *     wood that comes out, when the only oak is in the chest.
  *
@@ -31,7 +34,7 @@ import { execFileSync } from 'node:child_process';
 import { ACTION_BY_ID } from '../../src/game/actions';
 import { Game } from '../../src/game/game';
 import type { Item } from '../../src/game/items';
-import { CRAFT_REACH, chooseMaterial, recipeStatus, RECIPE_BY_ID } from '../../src/game/recipes';
+import { CRAFT_REACH, chooseMaterial, ranOutSaid, recipeStatus, RECIPE_BY_ID } from '../../src/game/recipes';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -41,7 +44,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -169,6 +172,19 @@ run(1, oak.uid);
 check('and three oak planks come off the chest\'s oak, the pack\'s pine untouched',
   oakPlanks() - before === 3 && count(chest.items) === 2 && pine() === 2,
   `${oakPlanks() - before} oak planks, ${count(chest.items)} oak left in the chest, ${pine()} pine in the pack`);
+
+console.log('--- a run that runs out of its wood');
+// Reported: "i clicked 36 pine logs and set it to craft 50 and after making 36
+// pine logs it kept working but with nearby oak logs". The pack's two pine
+// clicked and five goes asked for, with oak in the chest: two goes, then
+// stopped for want of pine, the oak untouched.
+const oakLeft = count(chest.items), oakMade = oakPlanks();
+run(5, pack.items.find((it) => it.id === 'log' && it.extra === 'Pine')?.uid ?? -1);
+check('five goes off two pine logs stop at two, the chest\'s oak untouched',
+  pine() === 0 && count(chest.items) === oakLeft && oakPlanks() === oakMade,
+  `${pine()} pine left, ${count(chest.items)} oak in the chest of ${oakLeft}, ${oakPlanks() - oakMade} oak planks made`);
+const ranOutLine = game.log[game.log.length - 1]?.text ?? '';
+check('and say why, in the island\'s words', ranOutLine === `${ranOutSaid(1, 'log', 'Pine')} Done: 2/5.`, ranOutLine);
 
 console.log('--- out of reach, not yours, and locked');
 const oakAtHand = (): number => game.craftStock()
@@ -329,6 +345,30 @@ begin
     (select coalesce(sum(count), 0) from item where world_id = w and holder = 'furniture' and placed = p_chest),
     (select coalesce(sum(count), 0) from item where world_id = w and holder = 'player' and holder_uid = me and def = 'plank'),
     coalesce((select act from player where world_id = w and uid = me), 'idle')));
+
+  -- A run that runs out of its wood: two pine in the pack clicked, three oak in
+  -- the chest, five goes asked for. Two goes, then stopped for want of pine.
+  delete from item where world_id = w and holder = 'player' and holder_uid = me and def in ('log', 'plank');
+  delete from item where world_id = w and holder = 'furniture' and placed = p_chest;
+  insert into item (world_id, holder, placed, def, ql, count, extra) values (w, 'furniture', p_chest, 'log', 33, 3, 'Oak');
+  insert into item (world_id, holder, holder_uid, def, ql, count, extra) values (w, 'player', me, 'log', 30, 2, 'Pine')
+    returning id into first;
+  update player set act = null, act_target = null, act_queue = '[]'::jsonb,
+         stats = jsonb_set(coalesce(stats, '{}'::jsonb), '{stamina}', '1'), body_at = now()
+   where world_id = w and uid = me;
+  insert into said values ('PINEASK|' || (rpc_act(w, 'make_planks', jsonb_build_object('kind', 'item', 'uid', first), 5)->>'started'));
+  for g in 1..10 loop
+    exit when (select act from player where world_id = w and uid = me) is distinct from 'make_planks';
+    update player set act_ends = now() - interval '1 hour' where world_id = w and uid = me;
+    perform settle(w, me);
+  end loop;
+  insert into said values ('PINE|' || concat_ws(',',
+    (select coalesce(sum(count), 0) from item where world_id = w and holder = 'player' and holder_uid = me and def = 'plank' and extra = 'Pine'),
+    (select coalesce(sum(count), 0) from item where world_id = w and holder = 'player' and holder_uid = me and def = 'plank' and extra = 'Oak'),
+    (select coalesce(sum(count), 0) from item where world_id = w and holder = 'furniture' and placed = p_chest),
+    coalesce((select act from player where world_id = w and uid = me), 'idle')));
+  insert into said values ('PINESAID|' || coalesce((select e.text from event e where e.world_id = w and e.uid = me
+    and e.text like '% Left: %' order by e.n desc limit 1), 'nothing'));
 end $$;
 select * from said;
 rollback;
@@ -353,6 +393,11 @@ check('aimed at a log in the chest, the island takes the ask', said('AIMED') ===
 check('asked for three goes through rpc_act', said('ASK') === 'true', said('ASK'));
 check('and settled, the pack\'s log and the chest\'s two make nine planks, and the job is done',
   said('DOOR') === '0,0,9,idle', said('DOOR'));
+check('five goes asked for off two pine logs, with oak in the chest', said('PINEASK') === 'true', said('PINEASK'));
+check('make six pine planks and stop, the chest\'s three oak untouched', said('PINE') === '6,0,3,idle', said('PINE'));
+const sawLabel = ACTION_BY_ID.get('make_planks')?.label ?? '';
+check('and say why, in the browser\'s words', said('PINESAID').startsWith(`${sawLabel}: ${ranOutSaid(1, 'log', 'Pine')} Left: `),
+  said('PINESAID'));
 
 for (const line of [...ok, ...bad]) console.log(line);
 console.log(bad.length ? `\n${bad.length} of ${ok.length + bad.length} wrong` : `\nall ${ok.length} right`);

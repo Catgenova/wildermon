@@ -46,7 +46,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -93,7 +93,7 @@ const hunger = "(select round(hunger::numeric, 6)::text from creature where worl
 const packSql = `${count('bucket')} || '|' || ${count(WHEY_BUCKET)} || '|' || ${count(DIET)}`;
 
 const out = psql(`
-set wurm.season = '';
+set wildermon.season = '';
 discard temp;
 begin;
 create temp table said (k text, v text);

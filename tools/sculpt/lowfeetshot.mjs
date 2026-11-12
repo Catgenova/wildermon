@@ -13,6 +13,7 @@
 // The renderer is tools/sculpt/lowgarmentshot.mjs's (the bodies' flat shading and camera-fixed light).
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
 import { buildRig } from './lowrig.mjs';
 import { shoot, closeBrowser, SKIN } from './lowgarmentshot.mjs';
 
@@ -73,7 +74,7 @@ const VIEWS = [[0, 'Front (0°)'], [-45, 'Three-quarter (45°)'], [-90, 'Profile
 /* ---- the numbers and the feet side on --------------------------------------------------------------------------- */
 if (only.includes('measure')) {
   const cw = 260, ch = 230, top = 40, cells = [], imgs = [], texts = [];
-  const LINEUP = join(DIR, 'ref/outfit1-lineup.png'), PLATE = opt('plate', '/tmp/claude-0/-home-user-Wurm/781c435a-4202-5724-9056-b83f4c44c414/scratchpad/plate/plate-lineup.png');
+  const LINEUP = join(DIR, 'ref/outfit1-lineup.png'), PLATE = opt('plate', join(tmpdir(), 'plate/plate-lineup.png'));
   const nm = BEFORE ? 2 : 1, W = (4 + 2 * nm) * cw;
   ['male', 'female'].forEach((who, r) => {
     const y0 = top + r * (ch + 110);

@@ -71,6 +71,68 @@ jobs:
           logs "Postgres errors" "select timestamp, event_message as msg from postgres_logs cross join unnest(metadata) m cross join unnest(m.parsed) p where p.error_severity in ('ERROR', 'FATAL', 'PANIC') order by timestamp desc limit 60"
           logs "the edge: status counts by minute" "select timestamp_trunc(timestamp, minute) as timestamp, concat(cast(r.status_code as string), ' x', cast(count(*) as string)) as msg from edge_logs cross join unnest(metadata) m cross join unnest(m.response) r group by 1, r.status_code order by 1 desc limit 60"
 
+      - name: The supreme Sapgnaw
+        # Asked about: "My supreme Sapgnaw reset from level 26ish to level 1?" Every supreme of the Sapgnaw line (species
+        # bevere, any stage) on the live island: its level skill (woodcutting) and its level and stage as the island works
+        # them out, its xp (every skill gain it ever made, added up by `worker_learn`), its ledger, the rest of its row;
+        # every other of the line its keepers hold; its keepers' messages and the faults of the last 2 days; any kept
+        # wildermon whose level skill is under 2 with 20 or more xp (a reset's mark); and every live function that writes
+        # a creature's skills. Reads only.
+        continue-on-error: true
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF || 'glebtboagnafcgwjjvfy' }}
+        run: |
+          supabase link --project-ref "$PROJECT_REF"
+          ask() { echo "== $1"; supabase db query --linked "$2" || echo "::warning::could not read: $1"; }
+          ask "sapgnaw: every supreme of the line, its level and what it is made of" "select c.id, kp.name as keeper, c.name, c.species, stage_of(c) as stage,
+                 creature_level(c.skills, c.species) as level, level_skill(c.species) as level_skill,
+                 c.skills->>level_skill(c.species) as level_skill_value, round(c.xp::numeric, 2) as xp, c.skills::text as skills,
+                 c.rare, c.mode, c.phase, c.job, c.post, to_char(c.born, 'MM-DD HH24:MI') as born, c.form_size, c.form_colour,
+                 c.boosts::text as boosts, array_to_string(c.traits, ',') as traits, c.kept::text as kept
+             from creature c left join player kp on kp.world_id = c.world_id and kp.uid = c.keeper
+            where c.world_id::text like 'f3a88670%' and c.species = 'bevere' and c.rare = 'supreme' order by c.id"
+          ask "sapgnaw: each one's ledger, lifetime at work and pedigree" "select c.id, c.ledger::text as ledger, c.work_stats::text as work, left(c.pedigree::text, 400) as pedigree
+             from creature c where c.world_id::text like 'f3a88670%' and c.species = 'bevere' and c.rare = 'supreme' order by c.id"
+          ask "sapgnaw: the rest of each row" "select c.id, left((to_jsonb(c) - 'skills' - 'ledger' - 'pedigree' - 'work_stats' - 'way')::text, 1500) as row
+             from creature c where c.world_id::text like 'f3a88670%' and c.species = 'bevere' and c.rare = 'supreme' order by c.id"
+          ask "sapgnaw: every one of the line its keepers hold, any rarity" "select c.id, kp.name as keeper, c.name, c.rare, c.mode, stage_of(c) as stage,
+                 creature_level(c.skills, c.species) as level, round(c.xp::numeric, 2) as xp, to_char(c.born, 'MM-DD HH24:MI') as born
+             from creature c join player kp on kp.world_id = c.world_id and kp.uid = c.keeper
+            where c.world_id::text like 'f3a88670%' and c.species = 'bevere'
+              and c.keeper in (select s.keeper from creature s where s.world_id = c.world_id and s.species = 'bevere' and s.rare = 'supreme')
+            order by kp.name, c.id"
+          ask "sapgnaw: its keepers' messages about it, last 2 days" "select to_char(e.at, 'MM-DD HH24:MI:SS') as at, p.name as keeper, e.kind, left(e.text, 220) as text
+             from event e join player p on p.world_id = e.world_id and p.uid = e.uid
+            where e.world_id::text like 'f3a88670%' and e.at > now() - interval '2 days'
+              and e.uid in (select s.keeper from creature s where s.world_id = e.world_id and s.species = 'bevere' and s.rare = 'supreme')
+              and (e.text ~* '(sapgnaw|logchewer|timberlord|supreme|level|evolv|died|released|woodcutting)'
+                   or exists (select 1 from creature s where s.world_id = e.world_id and s.keeper = e.uid and s.species = 'bevere'
+                                and s.rare = 'supreme' and position(s.name in e.text) > 0))
+            order by e.n desc limit 80"
+          ask "sapgnaw: faults, last 2 days, of its keepers or about skills" "select to_char(f.at, 'MM-DD HH24:MI') as first, to_char(f.last_at, 'MM-DD HH24:MI') as last, f.times,
+                 f.stage, coalesce(f.job, '') as job, left(f.error, 140) as error, left(coalesce(f.state, ''), 160) as state,
+                 left(regexp_replace(coalesce(f.context, ''), '\s+', ' ', 'g'), 200) as at_line
+             from private.tick_fault f
+            where f.last_at > now() - interval '2 days'
+              and (f.uid in (select s.keeper from creature s where s.species = 'bevere' and s.rare = 'supreme')
+                   or concat_ws(' ', f.error, f.state, f.context) ~* '(bevere|skills|worker_learn|creature_level|stage_of)')
+            order by f.last_at desc limit 40"
+          ask "any kept wildermon with its level skill under 2 and 20 or more xp, or no skills at all" "select c.id, kp.name as keeper, c.species, c.name, c.rare, c.mode,
+                 level_skill(c.species) as level_skill, c.skills->>level_skill(c.species) as value, round(c.xp::numeric, 2) as xp,
+                 left(c.skills::text, 160) as skills, to_char(c.born, 'MM-DD HH24:MI') as born
+             from creature c left join player kp on kp.world_id = c.world_id and kp.uid = c.keeper
+            where c.world_id::text like 'f3a88670%' and c.keeper is not null
+              and (c.skills = '{}'::jsonb
+                   or (level_skill(c.species) is not null and coalesce((c.skills->>level_skill(c.species))::numeric, 0) < 2 and c.xp >= 20))
+            order by c.xp desc limit 40"
+          ask "the Sapgnaw line's best bred" "select r.stat, round(r.value::numeric, 3) as value, r.creature_id, r.name, to_char(r.born_at, 'MM-DD HH24:MI') as born
+             from bred_record r where r.world_id::text like 'f3a88670%' and r.species = 'bevere' order by r.stat"
+          ask "every live function that writes a creature's skills" "select n.nspname, p.proname
+             from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+            where n.nspname in ('public', 'private') and p.prosrc ~* 'update\s+creature\M[^;]*\mskills\s*=' order by 1, 2"
+
       - name: Look
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}

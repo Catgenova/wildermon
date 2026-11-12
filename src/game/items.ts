@@ -163,7 +163,7 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   jewelled_pendant: { name: 'Jewelled pendant', category: 'misc', weight: 0.12, decay: 1, description: 'Worn: {bonus:pct} more skill per action in its gem\'s skill.' },
   // An Artisan's Circlet.
   circlet: { name: 'Circlet', category: 'misc', weight: 0.2, decay: 1, description: 'Head slot, in place of a helm. Up to {stones} gems, each set from the gem\'s menu. Worn: each gives {share:pct} of a ring\'s bonus, {each:pct} more skill per action in its skill.' },
-  horseshoe: { name: 'Horseshoes', category: 'material', weight: 0.25, stackable: true, decay: 1, description: '{per} per lump; {shoes.perMount} per mount, nailed on by a farrier with a mallet. Lasts {shoes.days} days. Mount speed on laid stone: +{shoes.quicker:pct}. Climbs a step {shoes.step:m} steeper.' },
+  horseshoe: { name: 'Horseshoes', category: 'material', weight: 0.25, stackable: true, decay: 1, description: '{per} per lump; {shoes.perMount} per mount or draught beast, nailed on by a farrier with a mallet. Lasts {shoes.days} days. Mount speed on laid stone: +{shoes.quicker:pct}. Climbs a step {shoes.step:m} steeper. Draught beast in the traces, at its share of the team: speed on laid stone +{shoes.haulQuicker:pct}; step {shoes.haulStep:m} steeper.' },
   horseshoe_mould: { name: 'Horseshoe mould', category: 'tool', weight: 1.2, decay: 1 },
   coin_die: { name: 'Coin die', category: 'tool', weight: 1.5, description: 'Strike a gold lump at an anvil: {coinsPerLump} coins. Wears each strike.' },
   coin_die_mould: { name: 'Coin die mould', category: 'tool', weight: 1.2, decay: 1 },
@@ -1361,6 +1361,15 @@ export type LiquidKind = 'water' | 'lye' | 'milk' | 'ale' | 'cider' | 'mead' | '
 export const LIQUID_NAME: Record<LiquidKind, string> = { water: 'water', lye: 'lye', milk: 'milk', ale: 'ale', cider: 'cider', mead: 'mead', wine: 'wine', grape_wine: 'grape wine', juice: 'juice', spirit: 'spirit', dye: 'dye', whey: 'whey' };
 /** A bucket holds five litres, whichever way it is going. */
 export const BUCKET_LITRES = 5;
+/**
+ * Ashes leached per litre of water into lye, in a bucket (`make_lye`) or a barrel (`leach_lye`). Asked for: "Making lye
+ * requires 1 unit of ash per L. Allow lye to be made in barrels as well as buckets". The island's `lye_ash_per_litre`.
+ */
+export const LYE_ASH_PER_LITRE = 1;
+/** How hard leaching is, in a bucket or a barrel alike. */
+export const LYE_DIFFICULTY = 14;
+/** Ashes it takes to turn so many litres of water into lye: one a litre, a part litre a whole ash. The island's `private.lye_ash_for`. */
+export const lyeAshFor = (litres: number): number => Math.ceil(litres * LYE_ASH_PER_LITRE - 1e-9);
 /** Which liquid a full vessel is carrying, and which empty vessel it leaves. */
 export const VESSELS: Record<string, { liquid: LiquidKind; empty: string }> = {
   water_bucket: { liquid: 'water', empty: 'bucket' },

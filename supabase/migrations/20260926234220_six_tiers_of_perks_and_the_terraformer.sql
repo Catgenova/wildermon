@@ -29,8 +29,8 @@
  *
  * Deep in the rules, where a function is handed neither the body nor the job
  * (`gather`, `maybe_map`), the fold is read from the job's own context
- * instead: `settle` sets `wurm.pk` and `wurm.pk_act` around each go, the way
- * it already sets `wurm.bauble_go`, and clears them after it, so nothing done
+ * instead: `settle` sets `wildermon.pk` and `wildermon.pk_act` around each go, the way
+ * it already sets `wildermon.bauble_go`, and clears them after it, so nothing done
  * outside a go -- a creature's work, somebody else's go -- ever sees them.
  *
  * ## The trees that were
@@ -68,17 +68,17 @@ $fn$;
 
 /*
  * And off the go in hand, for the rules deep enough to be handed neither the
- * body nor the job: `settle` sets `wurm.pk` to the fold's perks for the length
+ * body nor the job: `settle` sets `wildermon.pk` to the fold's perks for the length
  * of a go and nothing else ever does, so outside one this is the default.
  */
 create or replace function pkx(p_key text, p_else double precision)
  returns double precision language sql stable as $fn$
-  select coalesce((nullif(current_setting('wurm.pk', true), '')::jsonb ->> p_key)::double precision, p_else)
+  select coalesce((nullif(current_setting('wildermon.pk', true), '')::jsonb ->> p_key)::double precision, p_else)
 $fn$;
 
 /* The job whose go this is, or nothing outside one. */
 create or replace function pkx_act() returns text language sql stable as $fn$
-  select nullif(current_setting('wurm.pk_act', true), '')
+  select nullif(current_setting('wildermon.pk_act', true), '')
 $fn$;
 
 /*
@@ -532,15 +532,15 @@ begin
       guard := guard + 1;
       -- A go, for what the baubles make of its yield (`bauble_yield`), and
       -- what they made of it said after the go has said its own piece.
-      perform set_config('wurm.bauble_go', 'go', true);
-      perform set_config('wurm.bauble_made', '', true);
+      perform set_config('wildermon.bauble_go', 'go', true);
+      perform set_config('wildermon.bauble_made', '', true);
       -- And the perks, for the rules too deep to be handed the body: for
       -- this go and no other (`pkx`), cleared the moment it is done.
-      perform set_config('wurm.pk', coalesce(p.class_mul->'fx', '{}'::jsonb)::text, true);
-      perform set_config('wurm.pk_act', p.act, true);
+      perform set_config('wildermon.pk', coalesce(p.class_mul->'fx', '{}'::jsonb)::text, true);
+      perform set_config('wildermon.pk_act', p.act, true);
       perform act_perform(p_world, p_uid, p.act, p.act_target);
-      perform set_config('wurm.pk', '', true);
-      perform set_config('wurm.pk_act', '', true);
+      perform set_config('wildermon.pk', '', true);
+      perform set_config('wildermon.pk_act', '', true);
       perform bauble_said(p_world, p_uid);
       -- And what the go took out of you, which nothing over here had ever
       -- charged: `action_def.stamina` was a column no function read.

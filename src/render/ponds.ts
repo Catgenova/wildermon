@@ -27,7 +27,7 @@ import type { Camera } from '../engine/camera';
 import { hash2 } from '../world/noise';
 import { FALL_DROP, pondLevelAt, RUN_RATE, type PondWater, type StreamWater, type WaterField } from '../world/springs';
 import type { World } from '../world/world';
-import { DETAIL_FROM, drawFoot, drawLip, drawMist, drawSheet, footPoint, place, type FallView, type Placed, type Sheet } from './falls';
+import { DETAIL_FROM, drawFoot, drawLip, drawMist, drawSheet, footPoint, place, tongueFill, tongueOutline, type FallView, type Placed, type Sheet } from './falls';
 import { HALF_H, HALF_W, HEIGHT_SCALE } from './iso';
 import { paintPads } from './pads';
 import { depthOf, type View } from './view';
@@ -211,6 +211,8 @@ interface Fall {
   /** The sheet it is drawn as, from the lip along the stretch it goes over; and the corner each corner of that lands on, as x, y pairs. */
   sheet: Sheet;
   feet: Int32Array;
+  /** The pond it goes over out of, if it goes straight out of one: whose water the water drawn into its lip is laid with (`tongue`). */
+  pond: PondWater | null;
   /**
    * Where along the lip it is cut into pieces, a tile of width to a piece
    * with the water carried past each end of the lip on the piece beside it;
@@ -315,6 +317,9 @@ export class SpringWater {
   private falls: Fall[] = [];
   private wells: WellDraw[] = [];
   private cascades: Cascade[] = [];
+  /** The falls whose water drawn into the lip may lie on each tile with its pond's water, by `y * width + x` (`tongue`). */
+  private tongues = new Map<number, number[]>();
+  private tongueW = 0;
   /** Counted up each frame, so a run can say whether it was put on screen in this one. */
   private frameNo = 0;
   /** When each stream was first seen running and each pond rising, so settling the ground again does not start either over. */
@@ -375,6 +380,67 @@ export class SpringWater {
   levelOf(p: PondWater): number {
     const i = this.pondAt.get(p);
     return i === undefined ? p.level : this.levels[i];
+  }
+
+  /** Whether the water drawn into a pond's lip may lie on a tile (`tongue`). */
+  tongued(x: number, y: number): boolean {
+    return this.tongues.size > 0 && this.tongues.has(y * this.tongueW + x);
+  }
+
+  /** The sheet of fall `i` (by its place, `tonguesOn`), as it is laid out. */
+  sheetOf(i: number): Sheet | null {
+    return this.falls[i]?.sheet ?? null;
+  }
+
+  /** The falls whose water drawn into the lip may lie on a tile, by their place (`tongueOn`). */
+  tonguesOn(x: number, y: number): readonly number[] {
+    return this.tongues.get(y * this.tongueW + x) ?? [];
+  }
+
+  /**
+   * The water drawn into each pond's lip that lies on a tile, laid with the
+   * pond's water there, at `level`, and only over it: `water` is that water's
+   * outline on the tile as `pondWaterOn` has it, `n` numbers long. Laid when
+   * the tile's water is, ground standing in front of the pond is laid over
+   * it as it is over the pond; the lip itself lays only its mouth.
+   */
+  tongue(ctx: CanvasRenderingContext2D, x: number, y: number, level: number, water: ArrayLike<number>, n: number): void {
+    const list = this.tongues.get(y * this.tongueW + x);
+    if (!list) return;
+    for (const i of list) {
+      const fall = this.falls[i];
+      const p = fall.placed;
+      if (!p || !fall.pond || this.levelOf(fall.pond) !== level) continue;
+      const m = this.tongueOn(i, water, n, PIECE);
+      if (m < 6) continue;
+      ctx.fillStyle = tongueFill(ctx, p, fall.sheet.from);
+      ctx.beginPath();
+      for (let k = 0; k < m; k += 2) {
+        const sx = this.ox + this.xx * PIECE[k] + this.xy * PIECE[k + 1];
+        const sy = this.oy + this.yx * PIECE[k] + this.yy * PIECE[k + 1] - level * this.hs;
+        if (k === 0) ctx.moveTo(sx, sy);
+        else ctx.lineTo(sx, sy);
+      }
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  /**
+   * The water drawn into the lip of fall `i` (by its place, `tonguesOn`) on
+   * the plane of the pond's surface, as world x, y pairs into `out`, cut to
+   * the pond's water on a tile, `water` as `pondWaterOn` has it, `n` numbers
+   * long. The count of numbers written, under six for none.
+   */
+  tongueOn(i: number, water: ArrayLike<number>, n: number, out: number[]): number {
+    const s = this.falls[i]?.sheet;
+    if (!s || !tongueOutline(s, OUTLINE)) return (out.length = 0);
+    TONGUE_WORLD.length = 0;
+    for (let k = 0; k < OUTLINE.length; k += 2) {
+      const across = s.line - s.way * OUTLINE[k + 1];
+      TONGUE_WORLD.push(s.axis === 1 ? across : OUTLINE[k], s.axis === 1 ? OUTLINE[k] : across);
+    }
+    return clipConvex(TONGUE_WORLD, TONGUE_WORLD.length, water, n, out);
   }
 
   /** Once a frame, before the ground: where everything stands and runs, and which line of the ground each piece of it goes after. */
@@ -602,6 +668,30 @@ export class SpringWater {
     this.runs = [];
     this.falls = [];
     this.streams.forEach((st, i) => this.lines(st, i, world));
+    // The tiles the water drawn into each pond's lip may lie on: the line of them behind it and the line under its edge, as far along as it is taken.
+    this.tongues.clear();
+    this.tongueW = world.w;
+    this.falls.forEach((fall, i) => {
+      const s = fall.sheet;
+      if (!s.pond || !tongueOutline(s, OUTLINE)) return;
+      let lo = Infinity;
+      let hi = -Infinity;
+      for (let k = 0; k < OUTLINE.length; k += 2) {
+        lo = Math.min(lo, OUTLINE[k]);
+        hi = Math.max(hi, OUTLINE[k]);
+      }
+      for (let c = Math.floor(lo); c < Math.ceil(hi); c++) {
+        for (const across of [s.line - 1, s.line]) {
+          const x = s.axis === 1 ? across : c;
+          const y = s.axis === 1 ? c : across;
+          if (x < 0 || y < 0 || x >= world.w || y >= world.h) continue;
+          const key = y * world.w + x;
+          const list = this.tongues.get(key);
+          if (list) list.push(i);
+          else this.tongues.set(key, [i]);
+        }
+      }
+    });
     this.wells = [];
     for (const d of this.ponds) {
       // A pool poured into a slab has no corners of its own under water, and is drawn with the slab.
@@ -731,9 +821,10 @@ export class SpringWater {
       bands: pond ? undefined : STREAM_MIDDLE,
       back: pond ? POND_TONGUE : k === st.lead ? undefined : 0,
       splay: pond ? [splayOf(world, pond, from, ax, ay, ex, ey, dx, dy, -1), splayOf(world, pond, to, ax, ay, ex, ey, dx, dy, 1)] : undefined,
+      ...(pond ? { pond: true } : {}),
     };
     return {
-      stream, at: k, ax, ay, top: st.ph[k], bx, by, foot: st.ph[k + 1], dx, dy, spill: k === st.lead, sheet, feet,
+      stream, at: k, ax, ay, top: st.ph[k], bx, by, foot: st.ph[k + 1], dx, dy, spill: k === st.lead, sheet, feet, pond,
       cuts: Float64Array.from(cuts), sheetRows: new Int32Array(cuts.length - 1), lipRows: new Int32Array(cuts.length - 1), rowsFor: -1,
       reach: 0, wet: false, placed: null,
     };
@@ -1607,7 +1698,7 @@ export class SpringWater {
  * crosses its far side; less than nought where the corner behind the end is
  * not under water, so the shore comes in.
  */
-function splayOf(world: World, pond: PondWater, c: number, ax: number, ay: number, ex: number, ey: number, dx: number, dy: number, side: number): number {
+export function splayOf(world: World, pond: PondWater, c: number, ax: number, ay: number, ex: number, ey: number, dx: number, dy: number, side: number): number {
   const cw = world.w + 1;
   const ix = ex ? c : ax;
   const iy = ey ? c : ay;
@@ -1619,12 +1710,120 @@ function splayOf(world: World, pond: PondWater, c: number, ax: number, ay: numbe
   const hb = world.getHeight(bx, by);
   const hc = world.getHeight(ix - dx, iy - dy);
   const hd = world.getHeight(bx - dx, by - dy);
-  // Water on along the lip's own line past the end: as far out as it is drawn in at all.
-  if (hb <= L) return 2;
+  /*
+   * Water on along the lip's own line past the end: as far out as it is drawn
+   * in at all. Under the pond, not just lower than its surface: ground beside
+   * a lip that falls away below it is dry, past the lip, and water drawn out
+   * over it lay on the rim beside the fall.
+   */
+  if (wet(bx, by)) return 2;
   // Under water past the end and behind it too: the shore crosses the side out past the end, that far back from the lip.
   if (wet(bx - dx, by - dy)) return hb > hd ? Math.min(2, (hb - hd) / Math.max(0.01, hb - L)) : 2;
   // Otherwise it crosses the far side of the tile, that far out past the end.
   return hd > hc ? Math.max(0, Math.min(1, (L - hc) / (hd - hc))) : 0;
+}
+
+/** Scratch for the water drawn into a lip: its outline along and back from the lip, in the world, and cut to a tile's water. */
+const OUTLINE: number[] = [];
+const TONGUE_WORLD: number[] = [];
+const PIECE: number[] = [];
+const CLIP_A: number[] = [];
+
+/**
+ * A pond's water on tile `x`, `y`, as `Renderer.drawPonds` lays it: world
+ * x, y pairs into `out`, walked round the tile's corners in the order `cs`
+ * gives them, `c` the ground at each. Over the corners it covers (`mask`, a
+ * bit for each of `cs`); cut where the ground comes up through its surface
+ * at `level`, which is its shore; and halfway along a side running from its
+ * water to a corner lower than the surface but not in the pond, which is the
+ * far side of its lip. Convex. The count of numbers written, under six for
+ * none; and whether a corner of the tile is past a lip, in `WATER_ON.lip`.
+ */
+export function pondWaterOn(
+  x: number, y: number, c: ArrayLike<number>, mask: number, level: number, cs: ReadonlyArray<readonly [number, number]>,
+  out: { [k: number]: number },
+): number {
+  let n = 0;
+  WATER_ON.lip = false;
+  for (let i = 0; i < 4; i++) {
+    const j = (i + 1) & 3;
+    const ha = c[i];
+    const hb = c[j];
+    const wa = (mask >> i) & 1;
+    const wb = (mask >> j) & 1;
+    const ax = x + cs[i][0];
+    const ay = y + cs[i][1];
+    if (!wa && ha < level) WATER_ON.lip = true;
+    if (wa) {
+      out[n++] = ax;
+      out[n++] = ay;
+    }
+    if (wa !== wb) {
+      const shore = (wa ? hb : ha) >= level;
+      const t = shore ? (level - ha) / (hb - ha) : 0.5;
+      out[n++] = ax + (x + cs[j][0] - ax) * t;
+      out[n++] = ay + (y + cs[j][1] - ay) * t;
+    }
+  }
+  return n;
+}
+/** Whether the tile `pondWaterOn` last walked has a corner past a pond's lip. */
+export const WATER_ON = { lip: false };
+
+/**
+ * A polygon cut to a convex one: `subject` (any simple polygon, `sn` numbers
+ * of x, y pairs) to `clip` (convex, either way round, `cn` numbers), into
+ * `out`. The count of numbers written, under six for nothing left.
+ */
+export function clipConvex(subject: ArrayLike<number>, sn: number, clip: ArrayLike<number>, cn: number, out: number[]): number {
+  out.length = 0;
+  if (sn < 6 || cn < 6) return 0;
+  let area = 0;
+  for (let i = 0; i < cn; i += 2) {
+    const j = (i + 2) % cn;
+    area += clip[i] * clip[j + 1] - clip[j] * clip[i + 1];
+  }
+  if (Math.abs(area) < 1e-12) return 0;
+  const way = area > 0 ? 1 : -1;
+  let from: number[] = CLIP_A;
+  from.length = 0;
+  for (let i = 0; i < sn; i++) from.push(subject[i]);
+  let to: number[] = out;
+  for (let e = 0; e < cn; e += 2) {
+    const ax = clip[e];
+    const ay = clip[e + 1];
+    const ex = clip[(e + 2) % cn] - ax;
+    const ey = clip[(e + 3) % cn] - ay;
+    const side = (px: number, py: number): number => way * (ex * (py - ay) - ey * (px - ax));
+    to.length = 0;
+    const m = from.length;
+    for (let k = 0; k < m; k += 2) {
+      const px = from[k];
+      const py = from[k + 1];
+      const qx = from[(k + 2) % m];
+      const qy = from[(k + 3) % m];
+      const sp = side(px, py);
+      const sq = side(qx, qy);
+      if (sp >= 0) to.push(px, py);
+      if ((sp >= 0) !== (sq >= 0)) {
+        const t = sp / (sp - sq);
+        to.push(px + (qx - px) * t, py + (qy - py) * t);
+      }
+    }
+    if (to.length < 6) {
+      out.length = 0;
+      return 0;
+    }
+    const was = from;
+    from = to;
+    to = was;
+  }
+  // An even number of edges leaves the result where it started.
+  if (from !== out) {
+    out.length = 0;
+    for (let k = 0; k < from.length; k++) out.push(from[k]);
+  }
+  return out.length;
 }
 
 /** A colour from one to another, `t` of the way. */

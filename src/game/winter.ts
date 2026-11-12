@@ -7,7 +7,7 @@
  * winter activity".
  *
  * The season is the island's (`fruitSeason`, the island's `fruit_season`,
- * which a test may pin with `wurm.season`).
+ * which a test may pin with `wildermon.season`).
  *
  * Winter fur: in winter a carcass gives `WINTER_FUR` times the fur it would
  * (the island's `winter_fur`, in the butcher branch of `perform_fight`).

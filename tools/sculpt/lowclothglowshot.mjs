@@ -14,6 +14,7 @@
 // (--tunic-sheet <dir> with ref-male-views.png and ref-female-views.png, --hood-sheet <file>) where given.
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
 import { buildRig } from './lowrig.mjs';
 import { shoot, closeBrowser, lookColour } from './lowgarmentshot.mjs';
 
@@ -24,8 +25,8 @@ const out = resolve(opt('out', 'tmp/lowclothglow')), name = opt('name', 'clothgl
 const pieces = opt('pieces', 'shawl,tunic,trousers,boots,hood').split(',');
 mkdirSync(out, { recursive: true });
 const DIR = new URL('.', import.meta.url).pathname, REF = (f) => join(DIR, 'ref', f);
-const TUNIC_SHEETS = opt('tunic-sheet', '/tmp/claude-0/-home-user-Wurm/781c435a-4202-5724-9056-b83f4c44c414/scratchpad/tunic');
-const HOOD_SHEET = opt('hood-sheet', '/tmp/claude-0/-home-user-Wurm/781c435a-4202-5724-9056-b83f4c44c414/scratchpad/hood/hood-sheet.png');
+const TUNIC_SHEETS = opt('tunic-sheet', join(tmpdir(), 'tunic'));
+const HOOD_SHEET = opt('hood-sheet', join(tmpdir(), 'hood/hood-sheet.png'));
 
 /* ---- the pieces, built as the game's copies are --------------------------------------------------------------------- */
 const need = new Set(pieces.flatMap((p) => (p === 'outfit' ? ['shawl', 'tunic', 'trousers', 'boots', 'hood'] : [p])));

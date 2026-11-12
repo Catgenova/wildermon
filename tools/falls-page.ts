@@ -13,7 +13,11 @@
  *     hollow it fills (`spout`, its lip, closer);
  *   * `cliff`: a pond going over five corners of its rim, down a dark rock
  *     face 68 tall into a pond below (`brink`, its lip, closer);
- *   * `pool`: a pool three tiles wide going over its edge into a pool below.
+ *   * `pool`: a pool three tiles wide going over its edge into a pool below;
+ *   * `edge`: a pond going over one corner of a cliff edge, the edge either
+ *     side a little below its surface and dry, into a pond below;
+ *   * `rim`: a pond behind a cliff edge raised above its surface, going over
+ *     the one notch in it into a pond below (`rimlip`, its lip, closer).
  *
  * Driven through `window.falls`: `shot({ scene, zoom, turn, hour, t })` puts
  * the camera there and draws one frame at drawing clock `t`, for the script
@@ -56,7 +60,7 @@ const page: FallsPage = {
 
 /* ---- The island --------------------------------------------------------------------------- */
 
-const SIZE = 64;
+const SIZE = 80;
 
 /** The aqueduct scene, as `supabase/test/aqueduct.ts` builds it, moved 24 east and 6 south. */
 function aqueductHeight(x: number, y: number): number {
@@ -69,6 +73,25 @@ function aqueductHeight(x: number, y: number): number {
   if (x >= 18 && x <= 20 && y >= 45 && y <= 47) return 20;
   if (x >= 23 && x <= 25 && y >= 39 && y <= 41) return x === 24 && y === 40 ? 40 : 46;
   return 60 - Math.max(0, y - 36) * 2;
+}
+
+/** The rim scene's cliff edge, west to east from 65: raised above the pond's surface but for a notch at 112, its lip. */
+const RIM = [124, 122, 121, 123, 122, 120, 118, 112, 117, 122];
+
+/**
+ * The rim scene, from 64 east: a pond on a plateau at 120 behind a raised
+ * cliff edge, going over the one notch in it into a pond below.
+ */
+function rimHeight(x: number, y: number): number {
+  if (y >= 58) return -8;
+  if (y < 34) return 30;
+  if (y <= 43) {
+    if (x >= 2 && x <= 9 && y >= 38 && y <= 42) return x === 5 && y === 40 ? 100 : 106;
+    if (y === 43 && x >= 1 && x <= 10) return RIM[x - 1];
+    return 120;
+  }
+  if (x >= 2 && x <= 10 && y >= 45 && y <= 50) return 28;
+  return 46 - 2 * (y - 45);
 }
 
 function height(x: number, y: number): number {
@@ -95,6 +118,18 @@ function height(x: number, y: number): number {
     return Math.max(-8, 52 - 3 * (y - 14));
   }
   if (x >= 30 && x <= 54 && y >= 36) return aqueductHeight(x - 24, y - 6);
+  if (x >= 64) return rimHeight(x - 64, y);
+  // The edge: a pond on a plateau at 120 going over one corner of a cliff edge at 112, the edge either side of it at 110, into a pond below.
+  if (x >= 56 && y >= 36 && y <= 56) {
+    if (y <= 43) {
+      if (x >= 58 && x <= 61 && y >= 39 && y <= 41) return x === 59 && y === 40 ? 100 : 106;
+      if (x === 60 && y === 42) return 106;
+      if (y === 43) return x === 60 ? 112 : 110;
+      return 120;
+    }
+    if (x >= 57 && x <= 62 && y >= 44 && y <= 49) return 28;
+    return 46 - 2 * (y - 45);
+  }
   // The cliff: a pond on a plateau at 112 going over five corners of its rim, a dark rock face 68 tall, into a pond below.
   if (x >= 16 && x <= 28 && y >= 36 && y <= 56) {
     if (y <= 44) {
@@ -120,6 +155,9 @@ const SCENES: Record<string, [number, number, number]> = {
   cliff: [22.5, 45, 80],
   brink: [22.5, 44, 112],
   pool: [5.5, 39, 50],
+  edge: [60, 44, 80],
+  rim: [70, 44, 90],
+  rimlip: [71.5, 42.8, 112],
 };
 
 const params = new URLSearchParams(location.search);
@@ -182,6 +220,8 @@ try {
   game.springs.dig(37, 46, null, ago);
   game.springs.dig(22, 41, null, ago);
   game.springs.dig(5, 38, null, ago);
+  game.springs.dig(59, 40, null, ago);
+  game.springs.dig(69, 40, null, ago);
   const fountain = game.addFurniture('fountain', 10, 46, 0, 0, 80);
   fountain.litres = 50;
   game.update(0.01);
@@ -193,7 +233,7 @@ try {
     hour = s.hour;
     cam.zoom = s.zoom;
     cam.rotation = s.turn;
-    game.player.x = 62.5;
+    game.player.x = 78.5;
     game.player.y = 62.5;
     cam.focus(x, y, h, null);
   };

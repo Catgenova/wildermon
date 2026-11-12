@@ -136,7 +136,7 @@ export const HUSHED: ReadonlySet<string> = new Set([
   'eat', 'drink', 'drink_skin', 'drink_from_vessel', 'sleep', 'study_book', 'study_map', 'read_recipe', 'read_formula', 'open_ferment', 'serve_dish', 'drink_tea',
   // Faith and the paths, which are the two things on this island done by
   // sitting still; and what is given up at the altar, and what it gives back.
-  'pray', 'cast', 'meditate', 'sacrifice', 'absorb_soul',
+  'pray', 'meditate', 'sacrifice', 'absorb_soul',
   // And a prayer said over a patron's statue in the pack, as at an altar (`faith.ts`).
   'pray_statue',
   // Getting on and off things, and being pulled along by one.
@@ -194,7 +194,7 @@ export const STROKE_BY_ID: Record<string, Stroke> = {
   raise_portcullis: 'metal', lower_portcullis: 'metal', raise_drawbridge: 'metal', lower_drawbridge: 'metal',
   // Water, poured or drawn.
   fish: 'water', fill_bucket: 'water', fill_skin: 'water',
-  empty_vessel: 'water', pour_into_barrel: 'water', empty_creel: 'water',
+  empty_vessel: 'water', pour_into_barrel: 'water', leach_lye: 'water', fill_barrel: 'water', empty_creel: 'water',
   // A water mote set in a barrel (a brewer's spring) or in an aqueduct's head: water, as poured.
   set_brew_spring: 'water', set_aqueduct_mote: 'water',
   damp_smelter: 'water', damp_kiln: 'water', put_out_oven: 'water', put_out_campfire: 'water',

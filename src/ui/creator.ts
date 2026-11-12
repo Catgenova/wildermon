@@ -71,7 +71,7 @@ interface Slider {
  * did.
  *
  * The mirror is the sculpted body the island draws (`drawPortrait`, with the
- * Sculpted figures path turned on for this page): the man's or the woman's,
+ * sculpted bodies asked for on this page): the man's or the woman's,
  * standing in its idle, in its painted undergarment or one of the sets of
  * clothes and armour (`OUTFITS`), turned by its arrows, by dragging or by the arrow
  * keys. Under it, a button per body and a thumbnail per hairstyle there is a

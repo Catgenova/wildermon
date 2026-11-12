@@ -18,7 +18,7 @@ import { POST_FOLLOW_REACH } from '../../game/posts';
 import { AROUND_MOST, aroundStoreTrades } from '../../game/around';
 import { AUTO_EAT_AT } from '../../game/autoeat';
 import { CRATE_KINDS_SAID, rackPutLine, STORE_REACH } from '../../game/crates';
-import { DEED_GAP, DEED_SPACING, DEED_STONE_GAP, DAMAGE_WARN, FORAGE_COOLDOWN, KIT_LEFT_OUT, KIT_QL, SPROUT_COOLDOWN, STARTER_FOOD, STARTER_FOOD_COUNT, STARTER_KIT, TRAVEL_LEG, deedLevel } from '../../game/game';
+import { BASE_QUEUE, DEED_GAP, DEED_SPACING, DEED_STONE_GAP, DAMAGE_WARN, QUEUE_PER_MIND, FORAGE_COOLDOWN, KIT_LEFT_OUT, KIT_QL, SPROUT_COOLDOWN, STARTER_FOOD, STARTER_FOOD_COUNT, STARTER_KIT, TRAVEL_LEG, deedLevel } from '../../game/game';
 import { ROT_SOON } from '../../game/rot';
 import {
   BODKIN_HIDE, BURN_WEAR, CONSIDER_EASY, CONSIDER_HARD, CRIT_BASE, CRIT_HIT, CRIT_KNIFE, CRIT_PER_SKILL, DODGE_FROM, DODGE_PER_CONTROL, DODGE_PER_KG, KNIFE_BLEED,
@@ -65,8 +65,8 @@ import { tryGain } from '../../game/learn';
 import { DRIVING_LEARN, DRIVING_TOP, drivingPace, SAILING_LEARN, SAILING_TOP, sailingPace, TRAVEL_TOP_AT, VEHICLE_QL_TOP, vehicleQlPace } from '../../game/travel';
 import { deckBill, metres, PIER_CLEAR, PIER_DROP, PIER_WALL_DROP, PIER_WATER } from '../../game/piers';
 import { COIN_FIND_ONE_IN, COIN_FINDS_A_DAY } from '../../game/forage';
-import { BURYABLE, BUSH_DEFS, ROCK_VARIANTS, TILE_DEFS, TileType, TREE_AGES, TREE_DAWN_UTC, TREE_DEFS } from '../../world/tiles';
-import { REGIONS } from '../../world/regions';
+import { BURYABLE, BUSH_DEFS, ISLAND_FRUIT, ROCK_VARIANTS, TILE_DEFS, TileType, TREE_AGES, TREE_DAWN_UTC, TREE_DEFS } from '../../world/tiles';
+import { OWN_FRUIT_SHARE, REGIONS } from '../../world/regions';
 import { TREASURE_TIERS } from '../../game/treasure';
 import { ISLAND_ELEMENT, MOTES_LEAST, MOTES_MOST, MOTES_MOST_AT, MOTES_STEP, SEASON_ELEMENT, SWIRL_DARK, SWIRL_LIGHT, SWIRL_SEASON, SWIRLS_A_DAY } from '../../game/motes';
 import { HEMS_A_FRAME, LIGHT_RES, RING_REACH, THREAT_SHADE, THREAT_SHADE_HUNTING } from '../../render/renderer';
@@ -96,7 +96,7 @@ import { BREW_SPRING, BREW_SPRING_ALREADY, BREW_SPRING_MUL, BREWING_ACTION_BY_ID
 import { CHART_LEAST, CHART_QL_PER_TILE, CHART_SHEET } from '../../game/cartography';
 import { MEAD_AGE_CAP, MEAD_AGE_RATE } from '../../game/ageing';
 import { WHEY_FEED } from '../../game/dairy';
-import { GATHER_SKILL, LEARN_PACE as PACE_258, sparTaskSays } from '../../game/creatures';
+import { GATHER_SKILL, LEARN_PACE as PACE_258, LEARN_PACE, PULL_PACE_TIMES, sparTaskSays } from '../../game/creatures';
 import { BED_REST, DEN_HEALTH, restFor, SPECIALTY_AT, SPECIALTY_BONUS, STANCE_NAMES, TIRE_GOES, UNFED_PACE, UPKEEP_FOR, workDuration } from '../../game/creatures';
 import { BARDING_CUT, GEAR_FLOOR, GEAR_QL_LEAST, GEAR_SIZES, HARNESS_PACE, PACK_LOADS } from '../../game/wildgear';
 import { favouriteOf, fedBonus, FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, levelSkill, stageLevels, TAME_HARD, tameLearn, tameNeeds, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME } from '../../game/creatures';
@@ -114,17 +114,18 @@ import { SHORE_ROCK, SURGE_PERIOD, SURGE_UP, SWELL_RATE, WATER_STOPS, WET_ROCK, 
 import { WALK_FRAMES } from '../../render/figure';
 import { EMOTE_BY_ID } from '../../game/emotes';
 import { SPELL_VISUALS } from '../../render/spells';
-import { furnitureDef, liquidCapacity, POND_EVERY, STATION_REACH, type PlacedFurniture } from '../../game/furniture';
-import { billWords, countOf, DRINK_LITRES, LIQUID_NAME, LITRE_KG, TAN_LYE, type Item } from '../../game/items';
+import { furnitureDef, liquidCapacity, POND_EVERY, STATION_REACH, WATER_AT_HAND, type PlacedFurniture } from '../../game/furniture';
+import { billWords, countOf, DRINK_LITRES, LIQUID_NAME, LITRE_KG, lyeAshFor, LYE_ASH_PER_LITRE, TAN_LYE, type Item } from '../../game/items';
 import { RUNE_GATE, RUNE_GATE_FADE, RUNE_GATE_GLOW_REACH, RUNE_GATE_REACH, RUNE_GATE_RISE, runeGateName } from '../../game/runegate';
 import { COIN_METALS, coinPurity, INGOT_LUMPS, INGOT_WEIGHT, MOULD_BY_ID, MOULD_SKILL, SMITH_TOOL } from '../../game/metal';
-import { meltLumps } from '../../game/melt';
+import { meltFits, meltLumps, meltQl } from '../../game/melt';
+import { furnaceMadeSaid, meltingSaid, SMELTER_CAPACITY } from '../../game/smelter';
 import { TOOL_JOBS } from '../../game/jobtools';
 import { ORDER_LIFE } from '../../game/orders';
 import { POST_LIFE_MIN } from '../../game/posts';
 import { ACTION_BY_ID, deedAcrossAt, DROP_RAISE, PACKED_FIRST, SPADEFUL, GLAZE_ASH, GRASS_PER_CUT, GRASS_PLANT, KIT_MEND, MOSS_PER_CUT, MOSS_PLANT, WATER_MOTE_USES, WEAR_PER_GO } from '../../game/actions';
 import { CIRCLET_SHARE, CIRCLET_STONES, GEMS } from '../../game/gems';
-import { CRAFT_REACH, lockedRecipes, RECIPE_BY_ID, RECIPES, recipeTitle, TRADE_BOOK_AT } from '../../game/recipes';
+import { CRAFT_REACH, lockedRecipes, ranOutSaid, RECIPE_BY_ID, RECIPES, recipeTitle, TRADE_BOOK_AT } from '../../game/recipes';
 import { BOOKS, bookDrops, RECIPE_DROP_ODDS, RECIPE_DROPPERS } from '../../game/recipebook';
 import { BOARD_TOP, RECORD_STATS } from '../../game/boards';
 import { BANNER_MS, LEAVING_MS } from '../deedbanner';
@@ -133,7 +134,7 @@ import { RELICS } from '../../game/archaeology';
 import { BRACE_MOST, BRACE_STEP, BRIDLE_PACE, COLLAR_CUT } from '../../game/creatures';
 import { cropYield, RIPE, seedSays } from '../../game/farming';
 import { SEAT_ELSEWHERE, SEAT_STALE_S } from '../../net/supabase';
-import { HEARTBEAT, IDLE_LOGOUT, RECONCILE_EVERY, WORKER_REST_EVERY, WORKER_REST_FIRST, WORKER_REST_MOST, UNSTICK_REACH, UNSTICK_SEARCH } from '../../game/keep';
+import { HEARTBEAT, IDLE_LOGOUT, LAND_STEP, LAND_UNFOGGED_EVERY, RECONCILE_EVERY, WORKER_REST_EVERY, WORKER_REST_FIRST, WORKER_REST_MOST, UNSTICK_REACH, UNSTICK_SEARCH } from '../../game/keep';
 import { REPORTS_A_SESSION } from '../../net/errors';
 import { ACT_MANY_MOST, VIA_MAX } from '../../net/island';
 import { SAID_LAG_MS } from '../../net/heardlines';
@@ -144,6 +145,7 @@ import { HUNGRY_AT, HURT_AT } from './wildermon';
 import { CARE_WANTING as CARE_WANTING_317, COOKED_MEAT_TOO } from '../../game/creatures';
 import { GENDERS, HAIR_FADE, HAIRSTYLES } from '../../game/look';
 import { OUTFITS } from '../creator';
+import { MAX_ZOOM, SCULPTED_MAX_ZOOM } from '../../engine/camera';
 import { article, burnsFor, capital, finePercent, listed, listedOr, numberWord, percent, readyIn, timeWords } from '../../game/words';
 import { DEED_UPGRADES } from '../../game/deed';
 import { LYE_USE, SHORE_REACH } from '../../game/placeables';
@@ -171,7 +173,8 @@ import { ANCIENT_HELM, ANCIENT_HELM_SIGHT, ANCIENT_SWORD, ANCIENT_SWORD_SWING, A
 import { JEWEL_PIECES } from '../../game/gems';
 import { foodFill, itemDef, RARITIES, rarityBands, rarityChance, rareInputSaid, unmendableSays } from '../../game/items';
 import { SIGHT_FORM_AT, SIGHT_RARITY_AT } from '../../game/sighted';
-import { improvable } from '../../game/improve';
+import { improvable, IMPROVE_DAMAGE as MEND_DAMAGE, IMPROVE_FAIL_LEAST, IMPROVE_FAIL_SPREAD } from '../../game/improve';
+import { JOB_GOES_MOST } from '../../game/mending';
 import { weaponCarry } from '../../render/figure';
 import { TRY_LEARN } from '../../game/learn';
 import { BASE_SPEED, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER_LEVEL, MAX_STEP, strideAt } from '../../game/player';
@@ -193,6 +196,7 @@ import { SLOTS_PER_STAGE, stageSlots } from '../../game/traits';
 import { CHANNELS, FIGHTING, gradeId, traitOf, traitSays, type TraitDef } from '../../game/traits';
 import { footing, PERK_STAGE, perkSays, STAGE_PERKS, WATER_RANGE } from '../../game/creatures';
 import { STOKE_SAYS, STOKE_SMELT_SAYS } from '../../game/creatures';
+import { HAUL_SHOE_SHARE, SHOE_PACE, SHOE_STEP } from '../../game/creatures';
 import { POTTERY } from '../../game/kiln';
 import { FIRE_CAPACITY as FIRE_CAPACITY_338, FUEL_VALUES as FUEL_VALUES_337 } from '../../game/campfire';
 import { CHAIN_MOST, FALL_DROP, FILL_RATE, POOL_DEPTH, POOL_LIP, RUN_RATE, SPRING_DEPTH, SPRINGS_EACH } from '../../world/springs';
@@ -4254,13 +4258,190 @@ export const NEWS: News[] = [
     },
   },
   {
-    n: 527,
-    day: '2026-11-20',
+    n: 536,
+    day: '2026-11-12',
     lines: () => [
-      `Changed: character creator for the sculpted bodies. Body: ${listedOr(GENDERS.map((g) => g.name))}. Hair: ${listedOr(HAIRSTYLES.map((h) => h.name))}.`,
-      `Added: sliders: Hair colour (hue, the whole colour wheel), Hair brightness (near black to near white, the hue fading to grey over its top ${percent(HAIR_FADE)}), Skin (palest to darkest), each with its exact colour beside it.`,
-      `Added: creator preview: the sculpted body, idle, turned by ◀ ▶ or dragging; Head close-up; outfit ${listedOr(OUTFITS.map((o) => o.name))}, head always bare.`,
-      'Removed: build Neither, eyes, beards, shirt and trousers colours, the swatch hair colours and the flat figure\'s other haircuts. Existing looks: each to the nearest there is now.',
+      `New: sculpted bodies, every player: ${listed(GENDERS.map((g) => g.name))}. Flat figure: swimming, driving, seated, no WebGL2, until the bodies load. Max zoom ${SCULPTED_MAX_ZOOM}× (was ${MAX_ZOOM}×).`,
+      'New: sculpted outfits: cloth (hood, shawl, tunic, trousers, boots), leather (hat, shawl, chest and arms, leggings, boots), plate (helm, mantle, chest, leggings, boots), undergarment. Enchanted pieces glow.',
+      `New: animations: idle; walk; overhead swing (mining; a fight with ${listedOr(WEAPONS.filter((w) => w.twoHanded && !w.ammo).map((w) => itemDef(w.id).name.toLowerCase()))}). Other jobs, fights, meditating, emotes, casting: one placeholder gesture.`,
+      `New: ${itemDef('maul').name.toLowerCase()} drawn as the Runestone Warhammer, both hands, overhead swing. ${itemDef('long_sword').name}: both hands in a fight, slash trail; on the back when wielded.`,
+      `Changed: character creator. Body: ${listedOr(GENDERS.map((g) => g.name))}. Hair: ${listedOr(HAIRSTYLES.map((h) => h.name))}. Hair colour: hue, the whole colour wheel. Hair brightness: near black to near white, grey over its top ${percent(HAIR_FADE)}. Skin: palest to darkest.`,
+      `Changed: creator preview: the sculpted body, idle, turned by ◀ ▶ or dragging; Head close-up; outfit ${listedOr(OUTFITS.map((o) => o.name))}, head bare.`,
+      'Removed: build Neither, eyes, beards, shirt and trousers colours, swatch hair colours, other haircuts. Existing looks: the nearest body, hairstyle, hair colour and skin.',
+      'Removed: Sculpted figures setting (always on).',
+    ],
+  },
+  {
+    n: 529,
+    day: '2026-11-12',
+    lines: () => [
+      'Reset once, in this browser: settings, keybinds, window places, window layouts, tracker, shopping list, pinned and recent recipes, craft queue folded or open, map pins.',
+      'Sign in again, once.',
+    ],
+  },
+  {
+    n: 526,
+    day: '2026-11-11',
+    lines: () => ['Renamed: Breed with <mate> while it runs (event log, over other players): putting them together → breeding.'],
+  },
+  {
+    n: 527,
+    day: '2026-11-11',
+    lines: () => ['Fixed: a bed its owner named, as written in "Asleep in …" and "Not yours: …" (was lower case).'],
+  },
+  {
+    n: 528,
+    day: '2026-11-12',
+    lines: () => ['Fixed: Improve and repair, Shopping list: scroll bar when the window is shorter than its contents.'],
+  },
+  {
+    n: 530,
+    day: '2026-11-12',
+    lines: () => ['Fixed: top of a waterfall off a pond behind a raised cliff edge: water drawn only over the pond, behind the rim (was: over the rim and its moss beside the fall, up to 2 tiles along).'],
+  },
+  {
+    n: 531,
+    day: '2026-11-12',
+    lines: () => {
+      const d = SPECIES.embra;
+      return [`Renamed: ${d.was![d.was!.length - 1]} → ${d.name}; unnamed ones, carcasses and stud book records too.`];
+    },
+  },
+  {
+    n: 532,
+    day: '2026-11-12',
+    lines: () => ['Changed: armour and shield burden: on foot only. Mount, cart, wagon and boat speed: no armour slowdown; load past the limit still slows them.'],
+  },
+  {
+    n: 533,
+    day: '2026-11-12',
+    lines: () => [
+      `New: Improve and repair: Improve on each row (one pass, as on the item's menu; greyed with Improve's refusal); Ctrl/⌘-click, Shift-click or ✓ to choose several; Improve and Cycles cover every chosen piece, `
+        + `in the rows' order, each held to its material's chosen stock kind; totals for the run (actions, stock used, time) and the first stop per piece; pieces past the action queue's room (${BASE_QUEUE}, one more per ${QUEUE_PER_MIND} mind logic) not queued.`,
+      `Fixed: Improve and repair cycles on a piece over ${MEND_DAMAGE} damage: a full Repair, then the run, as one job in the action queue (was: the run refused "Damage over ${MEND_DAMAGE}: repair it first.").`,
+    ],
+  },
+  {
+    n: 534,
+    day: '2026-11-12',
+    lines: () => {
+      const all = 300;
+      const nails = { uid: 0, id: 'nail', ql: 40, dmg: 0, count: all, extra: 'Iron' } as Item;
+      const mail = { uid: 0, id: 'chain_hauberk', ql: 50, dmg: 0, count: 1, extra: 'Iron' } as Item;
+      const fit = meltFits(nails, all, SMELTER_CAPACITY);
+      const a = meltLumps(nails, fit);
+      const b = meltLumps(mail, 1);
+      return [
+        `Fixed: Melt down, All: a stack past the smelter's room (${SMELTER_CAPACITY} lumps) melts what fits; the rest stays in the pack (was: refused whole, "Smelter full."). `
+          + `${all} nails: "${meltingSaid(fit, 'Nails', a, 'Iron', meltQl(nails), all - fit)}"`,
+        `Fixed: smelter and kiln work done: told to whoever put it in, count and QL per kind, 1 line (was: told to the builder only, no count or QL). `
+          + `${fit} nails and a chain hauberk: "${furnaceMadeSaid('smelter', [{ count: a + b, name: 'Iron lump', ql: (meltQl(nails) * a + meltQl(mail) * b) / (a + b) }])}"`,
+      ];
+    },
+  },
+  {
+    n: 535,
+    day: '2026-11-12',
+    lines: () => [
+      `Fixed: night light of the ${SPECIES.wicka.name} line and the ${Object.values(SPECIES).filter((d) => d.glow).map((d) => d.name).join(' and ')}: none while in a wildermon crate, carried, set down or stored `
+        + `(was: a pool of light following you after crating one, then left where the crate was stored).`,
+    ],
+  },
+  {
+    n: 525,
+    day: '2026-11-11',
+    lines: () => ['Renamed: Put it to <mate> → Breed with <mate>.', 'Renamed: in young → pregnant.'],
+  },
+  {
+    n: 524,
+    day: '2026-11-11',
+    lines: () => [
+      `Fixed: wildermon beds: only for settlement workers within ${HOME_SLACK} tiles past their range; on a post, working around you or further off: rests where it stands (was: walked to a bed on your settlement from anywhere, over water, and could not walk back).`,
+      'Fixed: settlement workers keep to their own settlement (the one you founded, else the oldest you are a citizen of): stores, ground items, stations, hearths, planned work and beds on it only; trees, ore, ground, crops, hives and planting on it or on no settlement (was: on every settlement you are a citizen of; gathering and planting on anybody\'s).',
+      'Fixed: workers stranded off their ground put back: at their post, beside you when working around you, else by the settlement token.',
+    ],
+  },
+  {
+    n: 523,
+    day: '2026-11-11',
+    lines: () => [`Fixed: a run of goes on a stack of one wood or metal (Saw into planks ×50 on pine logs): stops when that material runs out, "${ranOutSaid(1, 'log', 'Pine')}" (was: went on with another, e.g. oak logs within ${CRAFT_REACH} tiles).`],
+  },
+  {
+    n: 522,
+    day: '2026-11-11',
+    lines: () => [
+      'New: Improve and repair window: Improve and repair… on an item\'s menu, or the UI Menu. Held equipment: worn, or improvable, loose in the pack (not in a bag).',
+      'New: Repair section: each piece\'s QL, damage, and actions, time and QL cost to 0 damage; Repair and Hone on each row. Repair all: every damaged piece Repair takes, most damaged first, one after another (not held to the queue limit).',
+      `New: Hone all: the most damaged pieces, 1 ${itemDef(WHETSTONE).name.toLowerCase()} each (all damage off, QL kept), while whetstones are held.`,
+      'New: Improve section, one item: QL and max QL, tools held, each stock kind carried and in reach, every pass the chosen kind allows (QL if passed, chance, stock left), time an action.',
+      `New: Improve and repair cycles: Improve × 1 to ${JOB_GOES_MOST} held to one stock kind; failed pass +${IMPROVE_FAIL_LEAST} to ${IMPROVE_FAIL_LEAST + IMPROVE_FAIL_SPREAD} damage; over ${MEND_DAMAGE}: Repair to 0, then the rest. `
+        + 'Stops at the first of: count, out of the chosen kind, target QL, max QL. Never draws another kind (another metal, wood, or an ingot for a lump).',
+    ],
+  },
+  {
+    n: 521,
+    day: '2026-11-11',
+    lines: () => ['Fixed: trails on ground under a pond or the sea: drawn on the bed, under the water, as much as the water shows (was: not drawn on any tile with water).'],
+  },
+  {
+    n: 520,
+    day: '2026-11-11',
+    lines: () => ['Fixed: top of a waterfall off a pond: water drawn only over the pond (was: up to 2 tiles along the dry edge either side of the lip).'],
+  },
+  {
+    n: 519,
+    day: '2026-11-10',
+    lines: () => [
+      'New: Travel back on a Telestone in the pack: to the spot your last Telestone journey left from. Once a journey, no cooldown, any distance.',
+    ],
+  },
+  {
+    n: 518,
+    day: '2026-11-07',
+    lines: () => [
+      'Changed: brewing is in a barrel only; Start a brew is no longer on wells and fountains.',
+      `Changed: lye takes ${LYE_ASH_PER_LITRE} ash a litre of water: a bucket (${BUCKET_LITRES} L) ${lyeAshFor(BUCKET_LITRES)} ashes (was 2).`,
+      'New: Leach into lye on a barrel of water: every litre in it, one ash a litre, from the pack or stores within reach. Not on wells.',
+      `New: Fill with water on a barrel: to the brim at a shore (within ${WATER_AT_HAND} tile), or what the fullest well or fountain within reach holds. Not over another liquid.`,
+      'Fixed: Shoe it is on a mount\'s and a draught beast\'s menu (it was on no menu). Leach into lye is on a barrel\'s menu.',
+      `Fixed: wild fruit trees on their islands, ${percent(OWN_FRUIT_SHARE)} of each island's wild fruit trees: ${REGIONS.map((R) => [R, R.trees.filter((t) => ISLAND_FRUIT.includes(t))] as const)
+        .filter(([, own]) => own.length).map(([R, own]) => `${listed(own.map((t) => TREE_DEFS[t].name.toLowerCase()))} on ${R.name}`).join('; ')}. `
+        + `${percent(OWN_FRUIT_SHARE)} of the wild apple and olive trees off settlements on those islands, at their own age (was: only on the map with the fog off).`,
+      `Fixed: with the fog off, the map and the world show only land read from the island; the rest is dark until read, ${LAND_STEP} × ${LAND_STEP} tiles `
+        + `every ${LAND_UNFOGGED_EVERY} s, nearest first (was: drawn from the seed, without anybody's changes).`,
+      `Fixed: nutrition, sleep bonus, meal boosts, knacks, titles and wounds shown from the moment a page opens (was: empty for up to ${HEARTBEAT} s after a refresh).`,
+    ],
+  },
+  {
+    n: 517,
+    day: '2026-11-06',
+    lines: () => ['Fixed: a repeated mould pour takes the same metal from the same place as the first pour (was: queued, the pack\'s stack of that metal in place of a store\'s).'],
+  },
+  {
+    n: 516,
+    day: '2026-11-06',
+    lines: () => [
+      'Removed: the altar\'s Call on it casts (Call, Mend, Light of the dawn, Circle of cunning, Fair wind, Bounty), and the two journal goals for Circle of cunning. Blessings already on a tool stay. Praying, favour and patron spells unchanged.',
+      'Removed: Prayer from the minor bauble skills (no action is done with it now); a Prayer bauble already made has no effect.',
+    ],
+  },
+  {
+    n: 515,
+    day: '2026-11-06',
+    lines: () => [
+      `New: horseshoes on draught beasts (${SPECIES.roxxen.name} line). In the traces, at the shod share of the team: speed on laid stone +${percent((SHOE_PACE - 1) * HAUL_SHOE_SHARE)}; step ${metres(SHOE_STEP * HAUL_SHOE_SHARE)} m steeper.`,
+    ],
+  },
+  {
+    n: 514,
+    day: '2026-11-06',
+    lines: () => [
+      `Changed: ${SPECIES.roxxen.name} line driving learned ${LEARNS_SAYS.pull} (was ${percent(LEARN_PACE.pull / PULL_PACE_TIMES)}): ${PULL_PACE_TIMES}× the rate.`,
+      'Changed: Work around me storage: no crate or storage furniture on any settlement; the cart you pull, what you drive and the boat you are in still count.',
+      'Fixed: dragging a thing between windows or onto a crate dropped the frame rate to a few a second while the button was down. Escape lets go of what is carried.',
+      'Fixed: the frame rate at sea fell the longer you sailed, as the remembered sea round you grew; the sea picture now clips it by rows, not by tiles.',
+      `Changed: ${itemDef('bulk_bin').name} holds ${furnitureDef('bulk_bin').capacity} (was 400); ${itemDef('craft_bin').name} holds ${furnitureDef('craft_bin').heft} kg (was 2500). Every bin standing, before wood, perk and rarity.`,
+      'Fixed: a wildermon shut into its crate from Work around me still counted as working round you, and one set to a post out of that crate was on the post and round you at once. A crated wildermon holds no post and works round nobody, whatever put it in its crate; every one left that way is put right.',
     ],
   },
   {
@@ -5404,7 +5585,7 @@ const RETRADED: ReadonlyArray<readonly [string, string]> = [
 ];
 
 /** The highest entry this browser has shown. */
-const SEEN = 'wurm.news.seen';
+const SEEN = 'wildermon.news.seen';
 
 /**
  * Whether this browser has been played in before this page was opened: a
@@ -5414,7 +5595,7 @@ const SEEN = 'wurm.news.seen';
  */
 const PLAYED_HERE = ((): boolean => {
   try {
-    return localStorage.getItem('wurm-iso-windows') !== null || localStorage.getItem(SEEN) !== null;
+    return localStorage.getItem('wildermon-iso-windows') !== null || localStorage.getItem(SEEN) !== null;
   } catch {
     return false;
   }

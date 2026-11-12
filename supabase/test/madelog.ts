@@ -28,7 +28,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -128,9 +128,9 @@ ${CASES.map(({ id, items, at }) => `
   insert into said select 'FILLSTORES', coalesce((select sum(count)::text from item where world_id = w and holder = 'crate' and crate = 7402 and def = 'water_bucket'), '0');${done}
 
   -- Nothing noted once the go is counted, and a put outside one notes nothing.
-  insert into said select 'OFF', '[' || coalesce(current_setting('wurm.made', true), '') || ']';
+  insert into said select 'OFF', '[' || coalesce(current_setting('wildermon.made', true), '') || ']';
   perform worker_put(w, (select c2 from creature c2 where c2.world_id = w and c2.id = v_id), 'plank', 1, 30, 17, 16);
-  insert into said select 'OFFPUT', '[' || coalesce(current_setting('wurm.made', true), '') || ']';
+  insert into said select 'OFFPUT', '[' || coalesce(current_setting('wildermon.made', true), '') || ']';
 end $t$;
 select k || '=' || v from said order by k;
 rollback;`);

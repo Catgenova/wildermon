@@ -32,7 +32,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -76,6 +76,8 @@ check(`every ore (${ores.length}) and every shard (${shards.length}) among them`
  *
  * Asked for: "a bin that can hold infinite item count, instead limited by KG.
  * 2500kg worth of crafted items, same material cost as raw material bin." So
+ * it began; the heft was raised to ten tonnes on 2026-11-06, and the raw
+ * bin from four hundred things to twenty-five hundred. The bill still is
  * it is the raw bin's bill to the nail, and the opposite door: the exact
  * complement of `raw` inside the material category, which is what makes the
  * pair a partition rather than two overlapping boxes.
@@ -91,10 +93,10 @@ check('the two bins come off the same bill, to the nail',
     && craftDef.w === rawDef.w && craftDef.h === rawDef.h,
   `${craftDef.bill.map(([i, n]) => `${n} ${i}`).join(', ')} · difficulty ${craftDef.difficulty} · ${craftDef.time}s`);
 check('and it is counted in kilograms rather than in things',
-  craftDef.heft === 2500 && craftDef.capacity === undefined,
+  craftDef.heft === 10000 && craftDef.capacity === undefined,
   `heft ${craftDef.heft} kg, capacity ${craftDef.capacity ?? 'none'}`);
 check('which still makes it a thing that holds things',
-  furnitureHolds(cbin) && furnitureHeft(cbin) === 2500, `holds ${furnitureHolds(cbin)}, ${furnitureHeft(cbin)} kg`);
+  furnitureHolds(cbin) && furnitureHeft(cbin) === 10000, `holds ${furnitureHolds(cbin)}, ${furnitureHeft(cbin)} kg`);
 
 const worked = ['plank', 'nail', 'ribbon', 'hinge', 'iron_lump', 'stone_brick', 'cloth', 'arrow', 'ash'];
 check('planks, nails, ribbons, hinges, a lump, a brick, cloth, an arrow and ash go in',
@@ -122,24 +124,24 @@ check('which is the forty-five raw and the rest worked',
   `${mats.filter((id) => said(id) === 'taken').length} raw, ${mats.filter((id) => csaid(id) === 'taken').length} worked`);
 
 /*
- * And the room it has, which is the whole point: the same bin is a quarter of
- * a million nails or twelve hundred planks, because what fills it is weight.
+ * And the room it has, which is the whole point: the same bin is a million
+ * nails or five thousand planks, because what fills it is weight.
  */
 const room = (id: string): number => furnitureRoom(cbin, { id });
-check('a quarter of a million nails, or twelve hundred planks, in the same bin',
-  room('nail') === 250000 && room('plank') === 1250 && room('timber') === 416,
+check('a million nails, or five thousand planks, in the same bin',
+  room('nail') === 1000000 && room('plank') === 5000 && room('timber') === 1666,
   `nail ${room('nail')} · plank ${room('plank')} · timber ${room('timber')}`);
 const part = { ...cbin, items: [{ uid: 9, id: 'plank', ql: 50, dmg: 0, count: 500 }] } as unknown as PlacedFurniture;
-check('and a thousand kilos of planks in it leaves room for seven hundred and fifty more',
-  furnitureKg(part) === 1000 && furnitureRoom(part, { id: 'plank' }) === 750,
+check('and a thousand kilos of planks in it leaves room for four thousand five hundred more',
+  furnitureKg(part) === 1000 && furnitureRoom(part, { id: 'plank' }) === 4500,
   `${furnitureKg(part)} kg in it, ${furnitureRoom(part, { id: 'plank' })} planks to go`);
-const full = { ...cbin, items: [{ uid: 9, id: 'plank', ql: 50, dmg: 0, count: 1250 }] } as unknown as PlacedFurniture;
+const full = { ...cbin, items: [{ uid: 9, id: 'plank', ql: 50, dmg: 0, count: 5000 }] } as unknown as PlacedFurniture;
 check('and a full one says so, in the words a full chest says',
   furnitureRoom(full, { id: 'plank' }) === 0 && furnitureRefuses(full, thing('plank')) === null,
   `${furnitureKg(full)} / ${furnitureHeft(full)} kg, room for ${furnitureRoom(full, { id: 'plank' })}`);
 check('while a counting piece answers the same question the same way it always did',
-  furnitureRoom(bin, thing('log')) === 400 && furnitureRoom({ ...bin, items: [{ uid: 9, id: 'log', ql: 50, dmg: 0, count: 90 }] } as unknown as PlacedFurniture, thing('log')) === 310,
-  `${furnitureRoom(bin, thing('log'))} empty, 310 with ninety in it`);
+  furnitureRoom(bin, thing('log')) === 2500 && furnitureRoom({ ...bin, items: [{ uid: 9, id: 'log', ql: 50, dmg: 0, count: 90 }] } as unknown as PlacedFurniture, thing('log')) === 2410,
+  `${furnitureRoom(bin, thing('log'))} empty, 2410 with ninety in it`);
 
 /*
  * The other three restricted stores, added when the two became five.
@@ -370,7 +372,7 @@ const say = (key: string): string =>
   out.split('\n').find((l) => l.startsWith(`${key}|`))?.slice(key.length + 1) ?? 'MISSING';
 
 check('the island stands one up and calls it a store, measured in kilograms',
-  say('HOLDS') === 'true|2500|0', say('HOLDS'));
+  say('HOLDS') === 'true|10000|0', say('HOLDS'));
 check('and takes the same nine worked things the browser takes',
   say('TAKEN') === worked.map((id) => `${id}:taken`).sort().join(' | '), say('TAKEN'));
 check('and refuses the same eight, in the browser’s words',
@@ -392,10 +394,10 @@ check('word for word, both ways round',
  * it was written from, so both sides now divide the same two numbers.
  */
 check('and counts out the same room as the browser does, 0.1 kg included',
-  say('ROOM') === `${room('nail')}|${room('plank')}|${room('timber')}|400|${room('sprout')}`
-    && room('sprout') === 25000,
+  say('ROOM') === `${room('nail')}|${room('plank')}|${room('timber')}|2500|${room('sprout')}`
+    && room('sprout') === 100000,
   `${say('ROOM')} · browser ${room('sprout')} for a sprout`);
-check('five hundred planks in leaves the same seven hundred and fifty',
+check('five hundred planks in leaves the same four thousand five hundred',
   say('PART') === `${furnitureKg(part)}|${furnitureRoom(part, { id: 'plank' })}`, say('PART'));
 check('and the island splits the materials the way the browser does',
   say('SPLIT') === `45|${mats.length - 45}|0`, `${say('SPLIT')} raw | worked | both`);

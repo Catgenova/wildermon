@@ -188,6 +188,27 @@ export type Target =
        * same words, so "take it to sixty" means the same thing on both sides.
        */
       upto?: number;
+      /**
+       * Improve and repair (`mending.ts`): a run of Improve that, when a failed pass leaves the piece over
+       * `IMPROVE_DAMAGE`, is followed by a Repair of it to nought and then the rest of the run. The island's
+       * `private.job_follow`.
+       */
+      mend?: boolean;
+      /** The one kind of stock a run of Improve may draw: that item (`StockLock`, `improve.ts`). */
+      stock?: string;
+      /** And what that stock is made of, or nothing for stock of no material. */
+      stockOf?: string;
+      /**
+       * A Repair to nought that starts a run of Improve and repair (`mending.ts`): when it ends, that run
+       * goes in front of the line, this many passes on the same piece, with this target's `stock`, `stockOf`
+       * and `upto`. One job in the queue rather than two. The island's `private.job_follow`.
+       */
+      cycles?: number;
+      /**
+       * Repair all, Hone all (`mending.ts`): this many held pieces in all, this one first and then the most
+       * damaged left that the job takes, one after another. The island's `private.job_follow`.
+       */
+      all?: number;
       /** The soul going into this thing, for `absorb_soul`: the thing is the target, and the soul this. */
       soul?: number;
       /** The Runestone a Telestone is to take you to, for `travel_runestone` (`runestones.ts`). */
@@ -340,7 +361,7 @@ export const TEACHES_NOTHING = new Set<string>([
   'kiln_take_all', 'smelter_take_all', 'store_in_crate', 'store_in_furniture', 'rack_put',
   'take_from_store', 'stow_item', 'empty_bag', 'throw_away', 'equip', 'unequip', 'store_in_pannier',
   // And pouring, which is carrying by another name.
-  'fill_bucket', 'fill_skin', 'empty_bucket', 'empty_vessel', 'pour_into_barrel',
+  'fill_bucket', 'fill_skin', 'empty_bucket', 'empty_vessel', 'pour_into_barrel', 'fill_barrel',
 ]);
 
 /** The order a spadeful is looked for in, which is the order it was written in. */
