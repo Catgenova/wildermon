@@ -138,8 +138,18 @@ check('a craft: what it makes is craft, under the action, and the crafter\'s',
   planks.length > 0 && planks.every((p) => p === `craft|act:make_planks|${INES}`), planks.join(' '));
 
 at = top();
-psql(`update player set body_at = now(), x = 9.5, y = 9.5 where world_id = ${W_} and uid = '${INES}';
-${go(INES, 'forage', `'{"kind":"tile","x":9,"y":9}'`)}`);
+/*
+ * A forage can find nothing: each pass is empty one time in five (`forage_empty`) and asks a skill roll, and a live run
+ * came up with nothing found. So this go is one that cannot: a Naturalist's Sure Find (no pass empty by chance) and a
+ * Foreknow's go (no roll in it fails; `settle` spends it), both put back after.
+ */
+const lit = (s: string): string => (s === '' ? 'null' : `'${s.replace(/'/g, "''")}'`);
+const [mulWas, foreWas] = psql(`select coalesce(class_mul::text, '') || '|' || foreknow from player where world_id = ${W_} and uid = '${INES}';`).split('|');
+psql(`update player set body_at = now(), x = 9.5, y = 9.5, foreknow = 1,
+         class_mul = jsonb_set(coalesce(class_mul, '{}'::jsonb), '{fx}', coalesce(class_mul->'fx', '{}'::jsonb) || '{"empty:forage": 0}')
+ where world_id = ${W_} and uid = '${INES}';
+${go(INES, 'forage', `'{"kind":"tile","x":9,"y":9}'`)}
+update player set foreknow = ${foreWas}, class_mul = ${lit(mulWas)}::jsonb where world_id = ${W_} and uid = '${INES}';`);
 const foraged = origins('true', at);
 check('a forage: what it finds is gather, under the action, and the forager\'s',
   foraged.length > 0 && foraged.every((p) => p === `gather|act:forage|${INES}`), foraged.join(' '));
