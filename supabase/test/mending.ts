@@ -28,10 +28,10 @@
  *     --external:typescript --outfile=node_modules/.cache/mending.mjs && node node_modules/.cache/mending.mjs
  */
 import { execFileSync } from 'node:child_process';
-import { Game } from '../../src/game/game';
+import { BASE_QUEUE, Game } from '../../src/game/game';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import { IMPROVE_DAMAGE, improvable, lockFor, lockTakes, outOfSaid, stockFor, stockKinds } from '../../src/game/improve';
-import { cyclePlan, heldEquipment, honeQueue, passesAhead, repairGoes, repairQueue } from '../../src/game/mending';
+import { cyclePlan, cycleTarget, heldEquipment, honeQueue, passesAhead, pieceJob, piecePlans, piecesThatFit, queueRoom, repairGoes, repairQueue } from '../../src/game/mending';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -116,6 +116,42 @@ check('Hone all with none held: nothing', honeQueue(g2).length === 0);
 g2.inventory.add('ancient_whetstone', { count: 2 });
 check('Hone all with 2 whetstones: the 2 most damaged', honeQueue(g2).map((it) => it.id).join(',') === 'leather_cap,pickaxe', honeQueue(g2).map((it) => it.id).join(','));
 
+// Several pieces, in turn: a hatchet and a long sword held to the same iron, the sword over 10 and so repaired first.
+const g3 = Game.create(4245, 64);
+g3.inventory.items.length = 0;
+g3.skills.values.set('blacksmithing', 30);
+g3.skills.values.set('weaponsmithing', 40);
+g3.skills.values.set('repair', 30);
+const h3 = g3.inventory.add('hatchet', { ql: 20 });
+const s3 = g3.inventory.add('long_sword', { ql: 20 });
+g3.inventory.add('file', { ql: 50 });
+g3.inventory.add('whetstone', { ql: 50 });
+const iron3 = g3.inventory.add('iron_lump', { ql: 20, count: 5 });
+s3.dmg = 14;
+const lock3 = lockFor(iron3);
+const plans3 = piecePlans(g3, [h3, s3], () => lock3, 4);
+check('several: the first piece has all the iron, and uses 4 (the count)',
+  plans3[0].atHand === 5 && plans3[0].plan?.passes === 4 && plans3[0].plan?.stop === 'count', JSON.stringify(plans3.map((p) => [p.atHand, p.plan?.passes, p.plan?.stop])));
+check('several: the next held to the same iron has what is left, and stops out of it',
+  plans3[1].atHand === 1 && plans3[1].plan?.passes === 1 && plans3[1].plan?.stop === 'stock', JSON.stringify([plans3[1].atHand, plans3[1].plan?.passes, plans3[1].plan?.stop]));
+check('several: the sword over 10 starts with a Repair to 0; one job each',
+  plans3[0].jobs === 1 && plans3[1].jobs === 1 && plans3[1].first?.goes === repairGoes(g3, 14) && plans3[1].why === null, JSON.stringify(plans3.map((p) => [p.jobs, p.first?.goes ?? 0, p.why])));
+const job3 = pieceJob(plans3[1], 4, 60);
+check('the sword over 10 is asked as one job: the Repair to 0, carrying its run (cycles, kind, QL)',
+  job3.action === 'repair_item' && job3.goes === repairGoes(g3, 14) && JSON.stringify(job3.target) === JSON.stringify({ kind: 'item', uid: s3.uid, mend: true, stock: 'iron_lump', stockOf: 'Iron', upto: 60, cycles: 4 })
+  && pieceJob(plans3[0], 4).action === 'improve_item', JSON.stringify(job3));
+check('the Repair is taken with its run on it, by the browser\'s own Repair', (ACTION_BY_ID.get('repair_item')?.check?.(job3.target, g3) ?? null) === null);
+const t3 = cycleTarget(s3, lock3, 60);
+check('a piece\'s target: mend, its kind, its QL', JSON.stringify(t3) === JSON.stringify({ kind: 'item', uid: s3.uid, mend: true, stock: 'iron_lump', stockOf: 'Iron', upto: 60 }), JSON.stringify(t3));
+check('the action queue with nothing in hand: all of it', queueRoom(g3) === g3.queueCapacity() && g3.queueCapacity() === BASE_QUEUE, `${queueRoom(g3)} of ${g3.queueCapacity()}`);
+check('room for 1 job: the hatchet goes, the sword is left; room for 2: both',
+  piecesThatFit(plans3, 1).fit.length === 1 && piecesThatFit(plans3, 1).left[0]?.it === s3 && piecesThatFit(plans3, 2).fit.length === 2);
+// A piece Improve refuses (no needle, awl or leather) is said and asked for nothing; the rest go on.
+const cap3 = g3.inventory.add('leather_cap', { ql: 20 });
+const withCap = piecePlans(g3, [cap3, h3], () => lock3, 4);
+check('several: a piece refused is said in Improve\'s words, no job; the next is planned',
+  withCap[0].jobs === 0 && withCap[0].why === 'Need awl and needle for leather.' && withCap[1].plan?.passes === 4, JSON.stringify(withCap.map((p) => [p.jobs, p.why])));
+
 /* ---- the island ------------------------------------------------------------------------------------ */
 
 const U = 'a9c1e000-0000-4000-8000-0000000000d4';
@@ -140,7 +176,7 @@ begin
 end $r$;
 do $t$
 declare w uuid; u uuid := '${U}'; axe bigint; sword bigint; cap bigint; pick bigint; shovel bigint; lump bigint; bag bigint; saw bigint;
-        m0 bigint; seen text;
+        m0 bigint; seen text; h2 bigint; s2 bigint;
 begin
   insert into world (name, seed, size, spawn_x, spawn_y, ready) values ('Mending', 979, 40, 16, 16, true) returning id into w;
   perform land_blank(w, 40);
@@ -222,13 +258,49 @@ begin
   insert into said select 'D_DMG', string_agg(def || ':' || round(dmg::numeric, 1), ',' order by id) from item where id in (cap, pick, shovel);
   insert into said select 'D_LEFT', coalesce(sum(count), 0)::text from item where world_id = w and holder = 'player' and holder_uid = u and def = 'ancient_whetstone';
 
+  -- Several pieces in turn, as the window asks them (pieceJob): a hatchet held to iron; a long sword over 10 held to
+  -- tin, asked as the Repair to 0 carrying its run (cycles); and one pass on the hatchet held to copper. The three
+  -- take the queue's three places, a fourth is refused, and the sword's run goes in front of the third job.
+  insert into said select 'E_IDLE0', coalesce((select act from player where world_id = w and uid = u), 'idle');
+  delete from item where world_id = w and holder = 'player' and holder_uid = u and def in ('iron_lump', 'tin_lump', 'copper_lump');
+  update item set ql = 50, dmg = 0 where world_id = w and holder_uid = u and def in ('file', 'whetstone');
+  h2 := give(w, u, 'hatchet', 1, 20);
+  s2 := give(w, u, 'long_sword', 1, 20);
+  update item set dmg = 14 where id = s2;
+  perform give(w, u, 'iron_lump', 3, 20);
+  perform give(w, u, 'tin_lump', 3, 20);
+  perform give(w, u, 'copper_lump', 1, 20);
+  m0 := coalesce((select max(n) from event where world_id = w), 0);
+  insert into said values ('E_CAP', queue_capacity(w, u)::text);
+  insert into said values ('E_ASK1', coalesce((rpc_act(w, 'improve_item', jsonb_build_object('kind', 'item', 'uid', h2, 'mend', true,
+    'stock', 'iron_lump', 'stockOf', 'Iron'), 3))->>'started', 'null'));
+  insert into said values ('E_ASK2', coalesce((rpc_act(w, 'repair_item', jsonb_build_object('kind', 'item', 'uid', s2, 'mend', true,
+    'stock', 'tin_lump', 'stockOf', 'Tin', 'cycles', 3), private.repair_goes(w, u, 14)))->>'queued', 'null'));
+  insert into said values ('E_ASK3', coalesce((rpc_act(w, 'improve_item', jsonb_build_object('kind', 'item', 'uid', h2, 'mend', true,
+    'stock', 'copper_lump', 'stockOf', 'Copper'), 1))->>'queued', 'null'));
+  insert into said values ('E_ASK4', coalesce((rpc_act(w, 'improve_item', jsonb_build_object('kind', 'item', 'uid', h2), 1))->>'why', 'taken'));
+  insert into said values ('E_RUN', pg_temp.run(w, u, 400)::text);
+  insert into said select 'E_IRON', coalesce(sum(count), 0)::text from item where world_id = w and holder = 'player' and holder_uid = u and def = 'iron_lump';
+  insert into said select 'E_TIN', coalesce(sum(count), 0)::text from item where world_id = w and holder = 'player' and holder_uid = u and def = 'tin_lump';
+  insert into said select 'E_COPPER', coalesce(sum(count), 0)::text from item where world_id = w and holder = 'player' and holder_uid = u and def = 'copper_lump';
+  -- Who each pass and repair was on, in the order done: every hatchet line before the first long sword line.
+  insert into said select 'E_ORDER', coalesce(string_agg(substring(text from '^(?:Improved|Improve failed|Fully repaired): ([a-z ]+),'), ',' order by n), '')
+    from event where world_id = w and uid = u and n > m0 and text ~ '^(Improved|Improve failed|Fully repaired): ';
+  insert into said select 'E_SWORD1', coalesce((select text from event where world_id = w and uid = u and n > m0
+    and text ~ '^(Improved|Improve failed|Fully repaired): long sword' order by n limit 1), '');
+  insert into said select 'E_DMG', round(dmg::numeric, 1)::text from item where id = s2;
+  insert into said values ('E_IDLE', coalesce((select act from player where world_id = w and uid = u), 'idle'));
+
   -- Both sides' words and numbers.
+  insert into said values ('FOLLOW', private.job_follow(w, u, 'repair_item', jsonb_build_object('kind', 'item', 'uid', s2, 'mend', true,
+    'stock', 'tin_lump', 'stockOf', 'Tin', 'upto', 60, 'cycles', 5), 0)::text);
   insert into said values ('OUT_IRON', private.out_of_said('{"stock": "iron_lump", "stockOf": "Iron"}'));
   insert into said values ('OUT_OAK', private.out_of_said('{"stock": "plank", "stockOf": "Oak"}'));
   insert into said select 'GOES', string_agg(private.repair_goes(w, u, d)::text, ',' order by o)
     from unnest(array[${dmgs.join(', ')}]::double precision[]) with ordinality t(d, o);
   insert into said values ('DOOR', coalesce(private.arg_why('{"kind": "item", "uid": 3, "mend": true, "stock": "iron_lump", "stockOf": "Iron", "upto": 60}'::jsonb,
-    private.spec_target(), 'p_target'), 'taken') || ' / ' || coalesce(private.arg_why('{"kind": "item", "uid": 3, "all": 4}'::jsonb, private.spec_target(), 'p_target'), 'taken'));
+    private.spec_target(), 'p_target'), 'taken') || ' / ' || coalesce(private.arg_why('{"kind": "item", "uid": 3, "all": 4}'::jsonb, private.spec_target(), 'p_target'), 'taken')
+    || ' / ' || coalesce(private.arg_why('{"kind": "item", "uid": 3, "mend": true, "stock": "tin_lump", "stockOf": "Tin", "upto": 60, "cycles": 100}'::jsonb, private.spec_target(), 'p_target'), 'taken'));
 end $t$;
 select k || '=' || v from said;
 rollback;`);
@@ -256,13 +328,40 @@ check('island: in the order the browser shows', at('C_ORDER') === 'leather cap,p
 check('island: Hone all with 2 whetstones hones the 2 most damaged, and uses both',
   at('D_DMG') === 'leather_cap:0.0,pickaxe:0.0,shovel:5.0' && at('D_LEFT') === '0', `${at('D_DMG')}, left ${at('D_LEFT')}`);
 
+const order = at('E_ORDER').split(',').filter(Boolean);
+const firstSword = order.indexOf('long sword');
+check('island: several pieces, three jobs in a queue of three, each taken', at('E_CAP') === String(BASE_QUEUE) && at('E_ASK1') === 'true' && at('E_ASK2') === 'true' && at('E_ASK3') === 'true',
+  `cap ${at('E_CAP')}, asks ${at('E_ASK1')} ${at('E_ASK2')} ${at('E_ASK3')}, idle before ${at('E_IDLE0')}`);
+const full = Game.create(4246, 64);
+full.action = { def: ACTION_BY_ID.get('improve_item'), target: { kind: 'item', uid: 1 }, state: 'working', elapsed: 0, duration: 1 } as never;
+for (let i = 0; i < BASE_QUEUE - 1; i++) full.queue.push({ def: ACTION_BY_ID.get('repair_item'), target: { kind: 'item', uid: 1 } } as never);
+check('island: a fourth refused, as the browser says it, and the browser\'s room is none',
+  at('E_ASK4') === full.queueRefusal() && queueRoom(full) === 0, `island "${at('E_ASK4')}", browser "${full.queueRefusal()}", room ${queueRoom(full)}`);
+const lastSword = order.lastIndexOf('long sword');
+check('island: the pieces in turn: the hatchet\'s run, the sword\'s Repair and its run in front of the third job, then that job',
+  firstSword > 0 && order.slice(0, firstSword).every((n) => n === 'hatchet') && order.slice(firstSword, lastSword + 1).every((n) => n === 'long sword')
+  && lastSword < order.length - 1 && order.slice(lastSword + 1).every((n) => n === 'hatchet'), at('E_ORDER'));
+check('island: the sword repaired first, then its 3 passes held to tin; each piece to its own kind, all of it used',
+  at('E_SWORD1').startsWith('Fully repaired: long sword') && at('E_IRON') === '0' && at('E_TIN') === '0' && at('E_COPPER') === '0'
+  && Number(at('E_DMG')) <= IMPROVE_DAMAGE && at('E_IDLE') === 'idle', `first "${at('E_SWORD1')}", iron ${at('E_IRON')}, tin ${at('E_TIN')}, copper ${at('E_COPPER')}, sword damage ${at('E_DMG')}, ${at('E_IDLE')}`);
+
+// The run a Repair carries, as the island puts it in front and as the browser asks it of a piece at nought.
+const follow = (JSON.parse(at('FOLLOW')) as Array<{ action: string; target: Record<string, unknown>; goes: number }>)[0];
+const tinLock = { stock: 'tin_lump', stockOf: 'Tin' };
+const asked3 = pieceJob({ ...plans3[0], it: { ...s3, dmg: 0 }, lock: tinLock, first: null }, 5, 60);
+const sameKeys = (a: Record<string, unknown>, b: Record<string, unknown>): string =>
+  JSON.stringify(Object.keys(a).filter((k) => k !== 'uid').sort().map((k) => [k, a[k]])) + ' / ' + JSON.stringify(Object.keys(b).filter((k) => k !== 'uid').sort().map((k) => [k, b[k]]));
+const [fa, fb] = follow ? sameKeys(follow.target, asked3.target as unknown as Record<string, unknown>).split(' / ') : ['none', ''];
+check('both sides: the run a Repair carries is the run the browser asks of a piece at nought',
+  !!follow && follow.action === asked3.action && follow.goes === asked3.goes && fa === fb, `island ${at('FOLLOW')}, browser ${JSON.stringify(asked3)}`);
+
 check('both sides: "Out of iron lump."', at('OUT_IRON') === outOfSaid({ stock: 'iron_lump', stockOf: 'Iron' }), at('OUT_IRON'));
 check('both sides: "Out of plank (oak)."', at('OUT_OAK') === outOfSaid({ stock: 'plank', stockOf: 'Oak' }), `${at('OUT_OAK')} / ${outOfSaid({ stock: 'plank', stockOf: 'Oak' })}`);
 const gr = Game.create(4244, 64);
 gr.skills.values.set('repair', 30);
 const tsGoes = dmgs.map((d) => repairGoes(gr, d)).join(',');
 check('both sides: the goes a repair takes', at('GOES') === tsGoes, `island ${at('GOES')}, browser ${tsGoes}`);
-check('the door takes mend, stock, stockOf and all', at('DOOR') === 'taken / taken', at('DOOR'));
+check('the door takes mend, stock, stockOf, all and cycles', at('DOOR') === 'taken / taken / taken', at('DOOR'));
 
 for (const line of [...ok, ...bad]) console.log(line);
 console.log(`\nimprove and repair — ${ok.length} of ${ok.length + bad.length}`);

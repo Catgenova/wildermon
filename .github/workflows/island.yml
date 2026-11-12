@@ -2360,6 +2360,16 @@ jobs:
           npx esbuild supabase/test/crateoccupant.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/crateoccupant.mjs --log-level=error
           node node_modules/.cache/crateoccupant.mjs
+      - name: A wildermon's light goes where it goes, and not into a crate
+        if: matrix.shard == 2
+        run: |
+          # Reported as a glimmoth's glow following a player a poll behind
+          # after crating it, and left on a hillside once the crate was stored
+          # in a stall. The night's lights gave every creature in the list its
+          # light, one shut in a crate too. Lit only while out in the world.
+          npx esbuild supabase/test/creaturelight.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/creaturelight.mjs --log-level=error
+          node node_modules/.cache/creaturelight.mjs
       - name: A wildermon past the first goes into a creature crate, and out of it again
         if: matrix.shard == 2
         run: |
@@ -4662,6 +4672,18 @@ jobs:
             --outfile=node_modules/.cache/smith.mjs --log-level=error
           node node_modules/.cache/smith.mjs
 
+      - name: Melt down all, and what comes back said
+        if: matrix.shard == 5
+        run: |
+          # All of a stack too big for one furnaceful: what fits goes in, the
+          # rest stays in the pack and the line says how many did not fit;
+          # several things melted, and what came out told to whoever melted it
+          # in one line, not to the maker; drawn off; the same words in the
+          # browser, off the shared phrasing.
+          npx esbuild supabase/test/meltall.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/meltall.mjs --log-level=error
+          node node_modules/.cache/meltall.mjs
+
       - name: The Forester's perks, each where its rule is
         if: matrix.shard == 5
         run: |
@@ -5130,6 +5152,9 @@ jobs:
           # of Improve held to one kind of stock uses that kind and no other and
           # stops "Out of iron lump."; a run of cycles uses its count of stock
           # exactly, repaired between whenever a failed pass leaves it over 10.
+          # Several pieces in turn, one job each in the queue: a piece over 10
+          # asked as its Repair carrying the run (cycles), which goes in front
+          # when the Repair ends; a fourth job refused by a queue of three.
           # Both sides, in the same words and numbers.
           npx esbuild supabase/test/mending.ts --bundle --platform=node --format=esm \
             --external:typescript --outfile=node_modules/.cache/mending.mjs --log-level=error

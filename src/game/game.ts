@@ -28,7 +28,7 @@ import { UNDONE_PLANS, type PlanAnswer } from './planarea';
 import { CRATE_DEFS, crateCentre, crateName, crateCapacity, crateShut, crateUnits, STORE_REACH, SUBTILES, subtileOf, type CrateKind, type PlacedCrate } from './crates';
 import { anvilAnchor, anvilCentre, anvilCovers, anvilName, ANVIL_SUBTILES, type PlacedAnvil } from './anvil';
 import { fireAnchor, fireCentre, fireCovers, FIRE_SUBTILES, type PlacedCampfire } from './campfire';
-import { smelterAnchor, smelterCentre, smelterCovers, smelterName, SMELTER_H, SMELTER_PLUME, SMELTER_PLUME_WORKING, SMELTER_STACK_BACK, SMELTER_STACK_UP, SMELTER_W, type PlacedSmelter, type Plume, type SmeltJob } from './smelter';
+import { furnaceMadeSaid, smelterAnchor, smelterCentre, smelterCovers, smelterName, SMELTER_H, SMELTER_PLUME, SMELTER_PLUME_WORKING, SMELTER_STACK_BACK, SMELTER_STACK_UP, SMELTER_W, type PlacedSmelter, type Plume, type SmeltJob } from './smelter';
 import { kilnAnchor, kilnCentre, kilnCovers, kilnName, KILN_GLOW, KILN_GLOW_FIRING, KILN_PLUME, KILN_PLUME_FIRING, KILN_SUBTILES, KILN_VENT_BACK, KILN_VENT_UP, type PlacedKiln } from './kiln';
 import { WELL_TRICKLE, WELL_TRICKLE_AT, WELL_TRICKLE_QL, ACROSS_OF, DEED_PLACE, FURNITURE, ONE_ALTAR, deckSpot, isPlanter, furnitureAnchor, furnitureCapacity, furnitureCentre, furnitureCovers, furnitureDef, furnitureHeft, furnitureHolds, furnitureKg, furnitureRefuses, furnitureRoom, furnitureUnits, hiveRoom, POND_EVERY, rackDeck, rackSpots, teamOf, vehicleOf, type LiquidKind, type PlacedFurniture, furnitureName, facingOf, LIQUID_NAME, isBoat, furnitureFootprint, holdsLiquid, WATER_AT_HAND, STATION_REACH, type BoatDef, pieceShut } from './furniture';
 import { hiveTakes } from './bees';
@@ -38,7 +38,7 @@ import { cropStageSeconds, RIPE, settleCrop, type Crop } from './farming';
 import { fieldClock, fieldRate, GLASSHOUSE_GROWTH, handClock, handRate, PLANTER_GROWTH, STILL_CLOCK } from './growth';
 import { glassResync, underGlass } from './glasshouse';
 import { pannierName, pannierRefusal, panniersOffered, pannierTake } from './panniers';
-import { ageDef, kindName, stageOf, bridleTeam, harnessTeam, tameNeeds, attackOf, bloodMul, BLOW_SHARE, markOn, CALL_WINDOW, Creatures, setLocalKept, FIGHT_BACK_GOES, footing, HAUL_SKILL, haulLearn, MAX_MOUNT_SPEED, MOUNT_STAIRS_SAID, isBaitFor, tracesSkill, isShod, landRidden, maxHealth, PLAYER_ATTACKER, PULL_DEFAULT, SHOE_PACE, SHOE_STEP, shoeTeam, shoeTeamStep, tackSpeed, type Creature, type CreatureJSON, type WorkSite } from './creatures';
+import { ageDef, inWorld, kindName, stageOf, bridleTeam, harnessTeam, tameNeeds, attackOf, bloodMul, BLOW_SHARE, markOn, CALL_WINDOW, Creatures, setLocalKept, FIGHT_BACK_GOES, footing, HAUL_SKILL, haulLearn, MAX_MOUNT_SPEED, MOUNT_STAIRS_SAID, isBaitFor, tracesSkill, isShod, landRidden, maxHealth, PLAYER_ATTACKER, PULL_DEFAULT, SHOE_PACE, SHOE_STEP, shoeTeam, shoeTeamStep, tackSpeed, type Creature, type CreatureJSON, type WorkSite } from './creatures';
 import { CRAFT_REACH, type CraftStock, type Station } from './recipes';
 import { Actor, type ActiveAction, type GuestSave } from './actor';
 import { HOST_ID, type PeerId } from '../net/protocol';
@@ -4022,6 +4022,8 @@ export class Game {
     }
     // The two that carry a light of their own.
     for (const c of this.creatures.list.values()) {
+      // Only one out in the world: one in a crate, carried, standing or stored, lights nothing (`inWorld`).
+      if (!inWorld(c)) continue;
       const glow = this.creatures.species(c).glow;
       if (glow && near(c.x, c.y)) out.push({ x: c.x, y: c.y, radius: glow, strength: 0.7, steady: true });
       // The Glimmoth line's lantern belly: a light to see it by, and nothing else (`glow` is silver's bane on the island).
@@ -5519,7 +5521,9 @@ export class Game {
    * the game from a thing that does into a thing that asks — one seam rather
    * than a second copy of every action.
    */
-  ask: ((def: ActionDef, target: Target, goes?: number) => void) | null = null;
+  ask: ((def: ActionDef, target: Target, goes?: number) => void | Promise<unknown>) | null = null;
+  /** The answer to the last ask sent by `ask`, while `requestInTurn` waits on it. */
+  private askSent: Promise<unknown> | null = null;
   /**
    * Many things put in a store or taken out of one, asked of the island in one ask a few dozen at a time
    * (`rpc_act_many`); set by `play.ts`. False when the job is not one it takes: asked one at a time, as ever.
@@ -5782,7 +5786,7 @@ export class Game {
         this.events.emit('action');
         return;
       }
-      this.ask(def, target, goes);
+      this.askSent = this.ask(def, target, goes) ?? null;
       return;
     }
     /*
@@ -5853,6 +5857,24 @@ export class Game {
       return;
     }
     this.startAction(def, target, goes);
+  }
+
+  /**
+   * Several jobs asked for in turn, each once the island has answered the one
+   * before (`ask`), so they line up in the order given rather than the order
+   * their calls happen to land in. Stops at the first refused: refused here,
+   * or neither started nor queued by the island.
+   */
+  async requestInTurn(asks: ReadonlyArray<{ def: ActionDef; target: Target; goes?: number }>): Promise<void> {
+    for (const { def, target, goes } of asks) {
+      this.askSent = null;
+      this.requestAction(def, target, goes);
+      const sent = this.askSent;
+      this.askSent = null;
+      if (!sent) return;
+      const said = (await sent) as { started?: boolean; queued?: boolean } | undefined;
+      if (said && typeof said === 'object' && !said.started && !said.queued) return;
+    }
   }
 
   /**
@@ -10210,7 +10232,7 @@ export class Game {
           ? { uid: this.inventory.nextUid++, id: 'anvil', ql: job.ql, dmg: 0, count: 1, extra: job.item.id.replace('_lump', '') }
           : { uid: this.inventory.nextUid++, id: job.makes, ql: job.ql, dmg: 0, count: 1, extra: job.extra, piece: job.piece };
       furnaceOut(s.output, made);
-      this.logMsg(`Smelter made: ${itemName(made).toLowerCase()}, QL ${made.ql.toFixed(1)}.`, 'event');
+      this.logMsg(furnaceMadeSaid('smelter', [{ count: 1, name: itemName(made), ql: made.ql }]), 'event');
       this.events.emit('smelter');
     }
   }
@@ -10240,7 +10262,7 @@ export class Game {
       // With its shaper's mark, which a pot, a bowl or a jar carries through the fire (an Artisan's Deep Pot and Sealed Jar).
       const made: Item = { uid: this.inventory.nextUid++, id: job.makes, ql: job.ql, dmg: 0, count: 1, ...(job.item.mark ? { mark: { ...job.item.mark } } : {}) };
       furnaceOut(k.output, made);
-      this.logMsg(`Kiln fired: ${ITEM_DEFS[made.id]?.name.toLowerCase() ?? made.id}, QL ${made.ql.toFixed(1)}.`, 'event');
+      this.logMsg(furnaceMadeSaid('kiln', [{ count: 1, name: ITEM_DEFS[made.id]?.name ?? made.id, ql: made.ql }]), 'event');
       this.events.emit('smelter');
     }
   }

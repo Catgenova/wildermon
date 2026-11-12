@@ -103,7 +103,7 @@ import { COUNTER_HOLDS, counterHeld, counterSeat, streetOf } from '../game/count
 import { counterHole, counterWares, drawCounterDaylight, drawCounterFrontKept, drawCounterInside, drawCounterReveal, stripeOf, type CounterLook } from './counter';
 import { cropDef, type Crop, type CropLook } from '../game/farming';
 import { crateCentre, crateKindOfItem, subtileOf, SUBTILES } from '../game/crates';
-import { HUNT_SIGHT, maxHealth, PLAYER_ATTACKER, SPECIES, threatens, type Creature } from '../game/creatures';
+import { HUNT_SIGHT, inWorld, maxHealth, PLAYER_ATTACKER, SPECIES, threatens, type Creature } from '../game/creatures';
 import { rarityOf } from '../game/items';
 import { coatOf, formScale } from '../game/wildforms';
 /** How big a creature is drawn for how rare it is and its size form (`formScale`). */
@@ -5122,7 +5122,7 @@ export class Renderer {
           const deckHere = this.game.laidOver(x, y);
           for (const cr of this.game.creatures.atTile(x, y)) {
             // One shut in a crate is drawn in the crate, by the crate.
-            if (cr.mode === 'stored') continue;
+            if (!inWorld(cr)) continue;
             // One in the traces of a wagon a storey up is up there with it (`driveStorey`), a mount ridden up a wide staircase (`rideRule`),
             // and a worker gone up a building's staircases to its work (`creature_way`).
             const up = this.game.creatureStorey(cr);
@@ -6676,7 +6676,7 @@ export class Renderer {
       });
     }
     const cr = game.creatures.get(w.id);
-    if (!cr || cr.health <= 0 || cr.mode === 'stored') return null;
+    if (!cr || cr.health <= 0 || !inWorld(cr)) return null;
     const def = SPECIES[cr.species] ?? SPECIES.rabba;
     const big = ageDef(cr, game.time).scale * bodySize(cr);
     const tall = Math.max(22 * bodySize(cr), (wildermonTop(def.id) ?? 0) * big) / HEIGHT_SCALE;

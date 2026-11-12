@@ -154,7 +154,8 @@ import { BOOKS, bookDrops, RECIPE_DROP_ODDS, RECIPE_DROPPERS } from '../../game/
 import { FAIL_DAMAGE_SAID } from '../../game/faildamage';
 import { TREE_DEPTH } from '../recipetree';
 import { EARLY_SKILL_BELOW, EARLY_SKILL_MUL, GAIN_RATE, MIN_GAIN, playerGain, SKILL_BY_ID } from '../../game/skills';
-import { SMELTER_H, SMELTER_W } from '../../game/smelter';
+import { SMELTER_CAPACITY, SMELTER_H, SMELTER_W } from '../../game/smelter';
+import { MELT_HEAT, MELT_KEEP, MELT_SHARE, meltLumps } from '../../game/melt';
 import { KNACK_BONUS, KNACK_CAP, KNACK_GO, KNACK_HOME, KNACK_ODDS, TITLE_STEPS, titlesFor } from '../../game/titles';
 import { CATCH_MOST, CHECK_EVERY, CREEL_BAIT_LOSS, creelOdds, HUNTER_TRAPPED, TIMID_TRAPPED, TRAPS } from '../../game/traps';
 import {
@@ -1789,6 +1790,9 @@ export function helpText(): string {
       <li>Fuel as a campfire (coal burns longest); light; charge with ore. Smelt time per piece: longer for fine ore and harder metal, shorter in a better smelter.
       Draw the lumps off when done.</li>
       <li>Lumps of one metal merge into one lump; quality (QL) = average weighted by size.</li>
+      <li><b>Melt down</b> (lit smelter): anything cast from metal or hafted to a cast head. Lumps back: ${frac(MELT_SHARE)} of its metal, at least ${meltLumps({ uid: 0, id: 'coin', ql: 1, dmg: 0, count: 1, extra: 'Iron' }, 1)}.
+      QL: ${frac(MELT_KEEP)} of its QL, less its damage. Heat: ${frac(MELT_HEAT)} of ore's. All of a stack: what fits in the smelter (${SMELTER_CAPACITY} lumps); the rest stays in the pack.
+      Work done: told to whoever put it in, count and QL per kind.</li>
       <li><b>Alloys</b> at a hot smelter: bronze, brass, pewter, electrum, <b>steel</b> (${bill('make_steel')}). QL from the input metal; skill only sets how little is lost.</li>
     </ul>
     <h4>Moulds and castings</h4>
@@ -2871,12 +2875,16 @@ export function helpText(): string {
       <li>Opened by <b>Improve and repair…</b> on an item's menu, or the UI Menu. <b>Held equipment</b>: worn, or improvable, loose in the pack (not in a bag).</li>
       <li><b>Repair</b>: each piece's QL, damage, and actions, time and QL cost of a full repair (at repair ${startOf('repair')}: −${+repairGo(startOf('repair')).healed.toFixed(2)} damage an action,
       QL −${+repairGo(startOf('repair')).cost.toFixed(4)} a damage point). <b>Repair all</b>: every damaged piece Repair takes, most damaged first, one after another.</li>
+      <li><b>Each row</b>: Repair, Hone, <b>Improve</b> (one pass, as on the item's menu; greyed with Improve's refusal). Improve also chooses the row.</li>
+      <li><b>Choose several</b>: Ctrl/⌘-click a name (add or take off), Shift-click (a run of rows), or ✓ on the row; Enter or Space on a name. Improve and Cycles then cover every chosen piece.</li>
       <li><b>${itemDef(WHETSTONE).name}</b>: an item each, all damage off, QL kept, used up. <b>Hone all</b>: the most damaged pieces, a whetstone each, while whetstones are held.</li>
       <li><b>Improve</b>, one item: QL and max QL, tools held, each stock kind (carried, in stores within reach), every pass the chosen kind allows (QL if passed, chance,
       stock left), time an action.</li>
       <li><b>Cycles</b>: Improve × up to ${JOB_GOES_MOST}, held to one stock kind. Failed pass: +${IMPROVE_FAIL_LEAST} to ${IMPROVE_FAIL_LEAST + IMPROVE_FAIL_SPREAD} damage;
       over ${IMPROVE_DAMAGE}: a full Repair, then the rest. A repair is not a cycle. Stops at the first of: the count, out of the chosen kind (no other kind used),
       the target QL, max QL.</li>
+      <li><b>Cycles, several pieces</b>: in the rows' order, each held to the kind chosen for its material where it takes it (else its first kind), sharing stock;
+      one job in the action queue a piece (over ${IMPROVE_DAMAGE} damage: a full Repair, then the run). Pieces past the action queue's room (${BASE_QUEUE}, one more per ${QUEUE_PER_MIND} mind logic) are not queued.</li>
     </ul>
     <h3>Ashes, lye and tanning</h3>
     <ul>

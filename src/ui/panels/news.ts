@@ -18,7 +18,7 @@ import { POST_FOLLOW_REACH } from '../../game/posts';
 import { AROUND_MOST, aroundStoreTrades } from '../../game/around';
 import { AUTO_EAT_AT } from '../../game/autoeat';
 import { CRATE_KINDS_SAID, rackPutLine, STORE_REACH } from '../../game/crates';
-import { DEED_GAP, DEED_SPACING, DEED_STONE_GAP, DAMAGE_WARN, FORAGE_COOLDOWN, KIT_LEFT_OUT, KIT_QL, SPROUT_COOLDOWN, STARTER_FOOD, STARTER_FOOD_COUNT, STARTER_KIT, TRAVEL_LEG, deedLevel } from '../../game/game';
+import { BASE_QUEUE, DEED_GAP, DEED_SPACING, DEED_STONE_GAP, DAMAGE_WARN, QUEUE_PER_MIND, FORAGE_COOLDOWN, KIT_LEFT_OUT, KIT_QL, SPROUT_COOLDOWN, STARTER_FOOD, STARTER_FOOD_COUNT, STARTER_KIT, TRAVEL_LEG, deedLevel } from '../../game/game';
 import { ROT_SOON } from '../../game/rot';
 import {
   BODKIN_HIDE, BURN_WEAR, CONSIDER_EASY, CONSIDER_HARD, CRIT_BASE, CRIT_HIT, CRIT_KNIFE, CRIT_PER_SKILL, DODGE_FROM, DODGE_PER_CONTROL, DODGE_PER_KG, KNIFE_BLEED,
@@ -118,7 +118,8 @@ import { furnitureDef, liquidCapacity, POND_EVERY, STATION_REACH, WATER_AT_HAND,
 import { billWords, countOf, DRINK_LITRES, LIQUID_NAME, LITRE_KG, lyeAshFor, LYE_ASH_PER_LITRE, TAN_LYE, type Item } from '../../game/items';
 import { RUNE_GATE, RUNE_GATE_FADE, RUNE_GATE_GLOW_REACH, RUNE_GATE_REACH, RUNE_GATE_RISE, runeGateName } from '../../game/runegate';
 import { COIN_METALS, coinPurity, INGOT_LUMPS, INGOT_WEIGHT, MOULD_BY_ID, MOULD_SKILL, SMITH_TOOL } from '../../game/metal';
-import { meltLumps } from '../../game/melt';
+import { meltFits, meltLumps, meltQl } from '../../game/melt';
+import { furnaceMadeSaid, meltingSaid, SMELTER_CAPACITY } from '../../game/smelter';
 import { TOOL_JOBS } from '../../game/jobtools';
 import { ORDER_LIFE } from '../../game/orders';
 import { POST_LIFE_MIN } from '../../game/posts';
@@ -4257,7 +4258,7 @@ export const NEWS: News[] = [
     },
   },
   {
-    n: 533,
+    n: 536,
     day: '2026-11-12',
     lines: () => [
       `New: sculpted bodies, every player: ${listed(GENDERS.map((g) => g.name))}. Flat figure: swimming, driving, seated, no WebGL2, until the bodies load. Max zoom ${SCULPTED_MAX_ZOOM}× (was ${MAX_ZOOM}×).`,
@@ -4310,6 +4311,41 @@ export const NEWS: News[] = [
     n: 532,
     day: '2026-11-12',
     lines: () => ['Changed: armour and shield burden: on foot only. Mount, cart, wagon and boat speed: no armour slowdown; load past the limit still slows them.'],
+  },
+  {
+    n: 533,
+    day: '2026-11-12',
+    lines: () => [
+      `New: Improve and repair: Improve on each row (one pass, as on the item's menu; greyed with Improve's refusal); Ctrl/⌘-click, Shift-click or ✓ to choose several; Improve and Cycles cover every chosen piece, `
+        + `in the rows' order, each held to its material's chosen stock kind; totals for the run (actions, stock used, time) and the first stop per piece; pieces past the action queue's room (${BASE_QUEUE}, one more per ${QUEUE_PER_MIND} mind logic) not queued.`,
+      `Fixed: Improve and repair cycles on a piece over ${MEND_DAMAGE} damage: a full Repair, then the run, as one job in the action queue (was: the run refused "Damage over ${MEND_DAMAGE}: repair it first.").`,
+    ],
+  },
+  {
+    n: 534,
+    day: '2026-11-12',
+    lines: () => {
+      const all = 300;
+      const nails = { uid: 0, id: 'nail', ql: 40, dmg: 0, count: all, extra: 'Iron' } as Item;
+      const mail = { uid: 0, id: 'chain_hauberk', ql: 50, dmg: 0, count: 1, extra: 'Iron' } as Item;
+      const fit = meltFits(nails, all, SMELTER_CAPACITY);
+      const a = meltLumps(nails, fit);
+      const b = meltLumps(mail, 1);
+      return [
+        `Fixed: Melt down, All: a stack past the smelter's room (${SMELTER_CAPACITY} lumps) melts what fits; the rest stays in the pack (was: refused whole, "Smelter full."). `
+          + `${all} nails: "${meltingSaid(fit, 'Nails', a, 'Iron', meltQl(nails), all - fit)}"`,
+        `Fixed: smelter and kiln work done: told to whoever put it in, count and QL per kind, 1 line (was: told to the builder only, no count or QL). `
+          + `${fit} nails and a chain hauberk: "${furnaceMadeSaid('smelter', [{ count: a + b, name: 'Iron lump', ql: (meltQl(nails) * a + meltQl(mail) * b) / (a + b) }])}"`,
+      ];
+    },
+  },
+  {
+    n: 535,
+    day: '2026-11-12',
+    lines: () => [
+      `Fixed: night light of the ${SPECIES.wicka.name} line and the ${Object.values(SPECIES).filter((d) => d.glow).map((d) => d.name).join(' and ')}: none while in a wildermon crate, carried, set down or stored `
+        + `(was: a pool of light following you after crating one, then left where the crate was stored).`,
+    ],
   },
   {
     n: 525,
