@@ -1,9 +1,10 @@
 import {
-  add, beat, bipedBones, clamp, coatPalette, cross, curve, cyc, darker, disc, dot, eyes, frac, lerp, lighter, merge, mirrored, mix, orb, orbAlong,
-  paint, pastel, scale, smooth, sub, taper, TAU, tube, unit, type Anim, type BipedPose, type Bones, type Disc, type Kind, type Piece,
+  add, beat, bipedBones, clamp, coatPalette, cross, curve, cyc, darker, disc, dot, eyes, lerp, lighter, merge, mirrored, mix, orb,
+  orbAlong, paint, pastel, scale, smooth, sub, taper, TAU, tube, unit, type Anim, type BipedPose, type Bones, type Disc, type Kind,
+  type Piece,
 } from './beasts';
 import { joint, mesh, onScreen, place, ROOT, type Face, type Mat, type Mesh, type RGB, type V3, type View, type Xf } from './figure';
-import { cut } from './beastkit';
+import { cut, jitter, ramp } from './beastkit';
 import { GLYPHS } from './runestone';
 import { glower, MONSTER_GROWTH, OGRE_SPEC } from './wild-upright';
 
@@ -32,9 +33,6 @@ const OGRE_SHAPE = { shadow: [2.1, 1.7] as [number, number], stride: 1.3, size: 
 
 /* ---- small sums -------------------------------------------------------------------- */
 
-const jitter = (i: number): number => frac(Math.sin(i * 12.9898 + 4.1) * 43758.5453);
-/** A rise from nought to one between `a` and `b`, eased. */
-const ramp = (t: number, a: number, b: number): number => smooth((t - a) / (b - a));
 /** The corners of a flat shape, in the order that makes it face out along `n`. */
 function outward(v: V3[], n: V3): V3[] {
   let nx = 0, ny = 0, nz = 0;

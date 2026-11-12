@@ -3,7 +3,7 @@ import {
   quadBones, quadPose, scale, shadowOf, smooth, sub, TAU, tube, unit, type Anim, type Bones, type Disc, type Kind, type Piece,
   type QuadPose, type QuadSpec,
 } from './beasts';
-import { cut, quadPieces, under } from './beastkit';
+import { cut, hump, jitter, mixV, nearSide, quadPieces, ramp, under } from './beastkit';
 import { joint, mesh, onScreen, place, type Face, type Mat, type Mesh, type RGB, type V3, type View, type Xf } from './figure';
 
 /**
@@ -182,13 +182,6 @@ const TIMBERLORD_LOOK: Gnaw = {
   size: 2.7,
 };
 
-/** A number of its own for each thing, nought to one, so a pattern is not a pattern. */
-const jitter = (i: number): number => frac(Math.sin(i * 12.9898 + 4.1) * 43758.5453);
-/** A rise from nought to one between `a` and `b`, eased. */
-const ramp = (t: number, a: number, b: number): number => smooth((t - a) / (b - a));
-/** A bump from nought up to one at `c` and back, `r` either side of it, eased. */
-const hump = (t: number, c: number, r: number): number => smooth(1 - Math.abs(t - c) / r);
-const mixV = (a: V3, b: V3, k: number): V3 => [lerp(a[0], b[0], k), lerp(a[1], b[1], k), lerp(a[2], b[2], k)];
 
 /** Where a point on a body of rings is, `y` along it and `th` round it from its right side (up positive), and the way out of it there. */
 function onRings(R: Rings, y: number, th: number): { p: V3; n: V3 } {
@@ -1502,8 +1495,6 @@ const css = (c: RGB): string => `rgb(${c[0] | 0},${c[1] | 0},${c[2] | 0})`;
 
 /** Where something thrown from `p` with velocity `v` is `s` seconds on, falling; it lies where it lands. */
 const thrown = (p: V3, v: V3, s: number, fall = 9): V3 => [p[0] + v[0] * s, p[1] + v[1] * s, Math.max(0.02, p[2] + v[2] * s - 0.5 * fall * s * s)];
-/** Whether a point is on the viewer's side of a body whose middle is at `c`: drawn over the body if so, under it if not. */
-const nearSide = (p: V3, c: V3, view: View): boolean => dot(sub(p, c), view.T) > 0;
 /** How big a stage's things in the air are drawn, against the Logchewer's: less than in proportion on the small one, so they still read. */
 const bigness = (s: Gnaw): number => 0.45 + 0.55 * (s.len / 1.3);
 

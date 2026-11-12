@@ -2,7 +2,7 @@ import {
   ACT_SECS, add, beat, clamp, coatPalette, cross, curve, cyc, DEG, disc, dot, drift, frac, lerp, merge, mix, onEgg, orb, paint,
   pastel, scale, shadowOf, smooth, sub, TAU, trunkOf, tube, unit, type Anim, type Bones, type Disc, type Kind, type MatOf, type Piece,
 } from './beasts';
-import { cut } from './beastkit';
+import { css, cut, hump, jitter, mixV, nearSide, ramp } from './beastkit';
 import { joint, mesh, onScreen, place, ROOT, type Face, type Mat, type Mesh, type RGB, type V3, type View, type Xf } from './figure';
 
 /**
@@ -138,15 +138,8 @@ const AQUAVOYAGER_LOOK: Frog = {
 
 /* ---- helpers ------------------------------------------------------------------------- */
 
-/** A number of its own for each thing, nought to one. */
-const jitter = (i: number): number => frac(Math.sin(i * 12.9898 + 4.1) * 43758.5453);
-/** A rise from nought to one between `a` and `b`, eased. */
-const ramp = (t: number, a: number, b: number): number => smooth((t - a) / (b - a));
-/** A bump from nought up to one at `c` and back, `r` either side of it, eased. */
-const hump = (t: number, c: number, r: number): number => smooth(1 - Math.abs(t - c) / r);
 /** A ring dying away: `since` seconds after a knock, `k` at most, `f` times a second. */
 const ringOut = (since: number, k: number, f = 2.6, damp = 3): number => (since < 0 ? 0 : k * Math.exp(-since * damp) * Math.sin(since * TAU * f));
-const mixV = (a: V3, b: V3, k: number): V3 => [lerp(a[0], b[0], k), lerp(a[1], b[1], k), lerp(a[2], b[2], k)];
 const SIDE = [-1, 1, -1, 1];
 const LEGS4 = ['fl', 'fr', 'hl', 'hr'];
 const len3 = (v: V3): number => Math.hypot(v[0], v[1], v[2]);
@@ -1650,14 +1643,12 @@ const mirroredMesh = (m: Mesh): Mesh => mesh(m.v.map((p) => [-p[0], p[1], p[2]] 
 
 /* ---- what it throws about --------------------------------------------------------------- */
 
-const css = (c: RGB, al: number): string => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${clamp(al).toFixed(3)})`;
 const WATER_RGB: RGB = [112, 184, 230], WATER_DEEP: RGB = [52, 104, 170], WATER_LIGHT: RGB = [214, 240, 252], WATER_INK: RGB = [36, 62, 104];
 const DUST: RGB = [204, 186, 156];
 const LEAF_RGB: readonly RGB[] = [[132, 172, 80], [178, 204, 112], [96, 138, 64]];
 
 /** Where something thrown from `p` with velocity `v` is `t` seconds on; it lies where it lands. */
 const thrown = (p: V3, v: V3, t: number, fall = 9): V3 => [p[0] + v[0] * t, p[1] + v[1] * t, Math.max(0.02, p[2] + v[2] * t - 0.5 * fall * t * t)];
-const nearSide = (p: V3, c: V3, view: View): boolean => dot(sub(p, c), view.T) > 0;
 /** How fast water leaves a stage's spout, in its units a second. */
 const streamSpeed = (s: Frog): number => [1.3, 2.3, 1.9][s.stage];
 const GRAVITY = 9;

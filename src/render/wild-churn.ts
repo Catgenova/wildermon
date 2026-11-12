@@ -2,7 +2,7 @@ import {
   ACT_SECS, add, clamp, coatPalette, cross, cyc, disc, dot, drift, frac, lerp, merge, mix, onEgg, orb, orbAlong, paint, scale, smile,
   smooth, sub, TAU, tube, unit, type Anim, type Bones, type Disc, type Kind, type Piece,
 } from './beasts';
-import { cut } from './beastkit';
+import { cut, hump, jitter, nearSide, ramp } from './beastkit';
 import { joint, mesh, onScreen, place, ROOT, type Face, type Mat, type Mesh, type RGB, type V3, type View, type Xf } from './figure';
 
 /**
@@ -116,12 +116,6 @@ const BUTTERWHORL_LOOK: Churn = {
   size: 1.85,
 };
 
-/** A number of its own for each thing, nought to one, so a scatter is not a pattern. */
-const jitter = (i: number): number => frac(Math.sin(i * 12.9898 + 4.1) * 43758.5453);
-/** A rise from nought to one between `a` and `b`, eased. */
-const ramp = (t: number, a: number, b: number): number => smooth((t - a) / (b - a));
-/** A bump from nought up to one at `c` and back, `r` either side of it, eased. */
-const hump = (t: number, c: number, r: number): number => smooth(1 - Math.abs(t - c) / r);
 
 /* ---- the strike and the task, in time ---------------------------------------------------- */
 
@@ -834,7 +828,6 @@ const CREAM_DARK: RGB = [226, 210, 168];
 const BUTTER: RGB = [250, 222, 112];
 const BUTTER_DARK: RGB = [222, 184, 74];
 const bigness = (s: Churn): number => [1, 1.25, 1.6][s.stage];
-const nearSide = (p: V3, c: V3, view: View): boolean => dot(sub(p, c), view.T) > 0;
 const midOf = (s: Churn, b: Bones): V3 => [0, (b.shell.t[1] + b.ring2.t[1]) / 2, s.shell.drums[0].R * 0.6];
 const thrown = (p: V3, v: V3, t: number, fall = 9): V3 => [p[0] + v[0] * t, p[1] + v[1] * t, Math.max(0.03, p[2] + v[2] * t - 0.5 * fall * t * t)];
 const mouthOf = (s: Churn, b: Bones): V3 => place(b.head, [0, s.head.r[1] * 0.92, -s.head.r[2] * 0.45]);

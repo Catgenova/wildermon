@@ -3,7 +3,7 @@ import {
   paint, pastel, quadBonesOf, scale, smooth, step, sub, TAU, tube, unit, type Anim, type Bones, type Disc, type Kind, type Piece, type QuadPose,
   type QuadSpec,
 } from './beasts';
-import { cut, under } from './beastkit';
+import { css, cut, hump, jitter, nearSide, ramp, under } from './beastkit';
 import { joint, mesh, onScreen, place, type Face, type Mat, type Mesh, type RGB, type V3, type View } from './figure';
 
 /**
@@ -165,12 +165,6 @@ const SKYRANGE_LOOK: Sky = {
 
 /* ---- shapes ----------------------------------------------------------------------------- */
 
-/** A number of its own for each feather and leaf, nought to one, so a crest is not a pattern. */
-const jitter = (i: number): number => frac(Math.sin(i * 12.9898 + 4.1) * 43758.5453);
-/** A rise from nought to one between `a` and `b`, eased. */
-const ramp = (t: number, a: number, b: number): number => smooth((t - a) / (b - a));
-/** A bump from nought up to one at `c` and back, `r` either side of it, eased. */
-const hump = (t: number, c: number, r: number): number => smooth(1 - Math.abs(t - c) / r);
 
 /** Where a point on a body of rings is, `y` along it and `th` round it from its right side (up positive), and the way out of it there. */
 function onRings(R: Rings, y: number, th: number): { p: V3; n: V3 } {
@@ -1174,7 +1168,6 @@ const FEATHER_BLUE: RGB = [98, 146, 206];
 const FEATHER_TIP: RGB = [44, 62, 104];
 const FEATHER_FAWN: RGB = [214, 168, 116];
 const LEAF: RGB = [138, 172, 96];
-const css = (c: RGB, al: number): string => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${clamp(al).toFixed(3)})`;
 
 /** A feather in the air, `len` long, turned `ang`: a long vane with a dark tip and a pale quill down it. */
 function flyingFeather(g: CanvasRenderingContext2D, x: number, y: number, len: number, ang: number, c: RGB, al: number): void {
@@ -1285,8 +1278,6 @@ function puff(g: CanvasRenderingContext2D, x: number, y: number, r: number, c: R
 
 /** Where something thrown from `p` with velocity `v` is `s` seconds on, falling slowly as a feather does; it lies where it lands. */
 const thrown = (p: V3, v: V3, s: number, fall = 3): V3 => [p[0] + v[0] * s, p[1] + v[1] * s, Math.max(0.03, p[2] + v[2] * s - 0.5 * fall * s * s)];
-/** Whether a point is on the viewer's side of a body whose middle is at `c`: drawn over the body if so, under it if not. */
-const nearSide = (p: V3, c: V3, view: View): boolean => dot(sub(p, c), view.T) > 0;
 /** How big a stage's things in the air are drawn, against the Skywarden's. */
 const bigness = (s: Sky): number => [0.9, 1, 1.25][s.stage];
 /** The middle of the body, for what is in front of it and what behind. */

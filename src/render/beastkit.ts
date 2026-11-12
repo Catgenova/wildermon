@@ -1,5 +1,7 @@
-import { blush, clamp, curve, disc, eyes, merge, mirrored, moved, orb, orbAlong, paint, smooth, tube, type Piece } from './beasts';
-import { mesh, type Face, type Mat, type Mesh, type V3 } from './figure';
+import {
+  blush, clamp, curve, disc, dot, eyes, frac, lerp, merge, mirrored, moved, orb, orbAlong, paint, smooth, sub, tube, type Piece,
+} from './beasts';
+import { mesh, type Face, type Mat, type Mesh, type RGB, type V3, type View } from './figure';
 
 /**
  * What the wildermon (`./wildermon`) are built from, over and above the
@@ -22,6 +24,21 @@ export const under = (n: number, j: number, spread = 0.95): boolean => Math.abs(
 
 export const clamp01 = (x: number): number => clamp(x);
 export const smooth01 = (x: number): number => smooth(x);
+
+/* ---- numbers, points and colours every line reads -------------------------------------------------------------- */
+
+/** A number of its own for each thing, nought to one. */
+export const jitter = (i: number): number => frac(Math.sin(i * 12.9898 + 4.1) * 43758.5453);
+/** A rise from nought to one between `a` and `b`, eased. */
+export const ramp = (t: number, a: number, b: number): number => smooth((t - a) / (b - a));
+/** A bump from nought up to one at `c` and back, `r` either side of it, eased. */
+export const hump = (t: number, c: number, r: number): number => smooth(1 - Math.abs(t - c) / r);
+/** So much of the way from `a` to `b`. */
+export const mixV = (a: V3, b: V3, k: number): V3 => [lerp(a[0], b[0], k), lerp(a[1], b[1], k), lerp(a[2], b[2], k)];
+/** Whether `p` is on the side of `c` nearer the eye. */
+export const nearSide = (p: V3, c: V3, view: View): boolean => dot(sub(p, c), view.T) > 0;
+/** A colour at an opacity, for a canvas: its channels cut to whole numbers, the opacity held to nought to one. */
+export const css = (c: RGB, al: number): string => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${clamp(al).toFixed(3)})`;
 
 /**
  * A leg's pieces on its three bones: the upper and the lower as tubes down

@@ -2,7 +2,7 @@ import {
   ACT_SECS, add, beat, clamp, coatPalette, cross, cyc, disc, dot, drift, frac, lerp, merge, mix, onEgg, orb, paint,
   pastel, scale, shadowOf, smile, smooth, sub, TAU, taper, trunkOf, tube, unit, type Anim, type Bones, type Disc, type Kind, type Piece,
 } from './beasts';
-import { cut } from './beastkit';
+import { css, cut, hump, jitter, mixV, nearSide, ramp } from './beastkit';
 import { joint, mesh, onScreen, place, ROOT, type Mat, type Mesh, type RGB, type V3, type View, type Xf } from './figure';
 
 /**
@@ -151,13 +151,6 @@ const WHEATCHEEKS_LOOK: Ham = {
 
 /* ---- helpers ------------------------------------------------------------------------- */
 
-/** A number of its own for each thing, nought to one. */
-const jitter = (i: number): number => frac(Math.sin(i * 12.9898 + 4.1) * 43758.5453);
-/** A rise from nought to one between `a` and `b`, eased. */
-const ramp = (t: number, a: number, b: number): number => smooth((t - a) / (b - a));
-/** A bump from nought up to one at `c` and back, `r` either side of it, eased. */
-const hump = (t: number, c: number, r: number): number => smooth(1 - Math.abs(t - c) / r);
-const mixV = (a: V3, b: V3, k: number): V3 => [lerp(a[0], b[0], k), lerp(a[1], b[1], k), lerp(a[2], b[2], k)];
 const len3 = (v: V3): number => Math.hypot(v[0], v[1], v[2]);
 
 /** A frame standing along `up` with its front along `fwd`: across, forward and up. */
@@ -984,9 +977,6 @@ function hamBuild(s: Ham, lod: number): Piece[] {
 
 /* ---- what it throws about ------------------------------------------------------------------- */
 
-const css = (c: RGB, al: number): string => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${clamp(al).toFixed(3)})`;
-/** Whether a point is on the viewer's side of a body whose middle is at `c`. */
-const nearSide = (p: V3, c: V3, view: View): boolean => dot(sub(p, c), view.T) > 0;
 const FLOUR: RGB = [250, 246, 236];
 const GRAIN: RGB = [232, 178, 82];
 const GRIT: RGB = [168, 162, 152];

@@ -2,7 +2,7 @@ import {
   ACT_SECS, add, beat, clamp, coatPalette, cross, cyc, DEG, disc, dot, drift, frac, lerp, merge, mix, onEgg, orb, orbAlong, paint,
   pastel, scale, shadowOf, smooth, sub, TAU, taper, trunkOf, tube, unit, type Anim, type Bones, type Disc, type Kind, type Piece,
 } from './beasts';
-import { cut, under } from './beastkit';
+import { css, cut, hump, jitter, mixV, nearSide, ramp, under } from './beastkit';
 import { joint, mesh, onScreen, place, ROOT, type Face, type Mat, type Mesh, type RGB, type V3, type View, type Xf } from './figure';
 
 /**
@@ -166,15 +166,8 @@ const CRAGJAWS_LOOK: Crag = {
 
 /* ---- helpers ------------------------------------------------------------------------- */
 
-/** A number of its own for each thing, nought to one, so a back of stones is not a pattern. */
-const jitter = (i: number): number => frac(Math.sin(i * 12.9898 + 4.1) * 43758.5453);
-/** A rise from nought to one between `a` and `b`, eased. */
-const ramp = (t: number, a: number, b: number): number => smooth((t - a) / (b - a));
-/** A bump from nought up to one at `c` and back, `r` either side of it, eased. */
-const hump = (t: number, c: number, r: number): number => smooth(1 - Math.abs(t - c) / r);
 /** A shake dying away after a blow, `since` seconds after it, `k` at most. */
 const ringOut = (since: number, k: number, f = 7, damp = 7): number => (since < 0 ? 0 : k * Math.exp(-since * damp) * Math.sin(since * TAU * f));
-const mixV = (a: V3, b: V3, k: number): V3 => [lerp(a[0], b[0], k), lerp(a[1], b[1], k), lerp(a[2], b[2], k)];
 const SIDE = [-1, 1, -1, 1];
 const LEGS4 = ['fl', 'fr', 'hl', 'hr'];
 
@@ -1085,7 +1078,6 @@ function tongueShown(s: Crag, a: Anim): boolean {
 
 /* ---- what it throws about --------------------------------------------------------------- */
 
-const css = (c: RGB, al: number): string => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${clamp(al).toFixed(3)})`;
 /** The dust it raises, and the colours of the chips of stone that fly off it and off the ground, the same on every variant. */
 const DUST: RGB = [196, 184, 166];
 const CHIP_RGB: readonly RGB[] = [[168, 162, 152], [124, 120, 116], [136, 150, 164]];
@@ -1094,8 +1086,6 @@ const SHOCK: RGB = [250, 240, 206];
 
 /** Where something thrown from `p` with velocity `v` is `s` seconds on, falling; it lies where it lands. */
 const thrown = (p: V3, v: V3, s: number, fall = 9): V3 => [p[0] + v[0] * s, p[1] + v[1] * s, Math.max(0.03, p[2] + v[2] * s - 0.5 * fall * s * s)];
-/** Whether a point is on the viewer's side of a body whose middle is at `c`: drawn over the body if so, under it if not. */
-const nearSide = (p: V3, c: V3, view: View): boolean => dot(sub(p, c), view.T) > 0;
 /** How big a stage's things in the air are drawn: less than in proportion on the small one, so they still read. */
 const bigness = (s: Crag): number => 0.45 + 0.55 * (s.len / 1.6);
 

@@ -3,7 +3,7 @@ import {
   onEgg, orb, orbAlong, paint, scale, smooth, sub, taper, TAU, tube, unit, type Anim, type BipedPose, type BipedSpec, type Bones,
   type Disc, type Kind, type Piece,
 } from './beasts';
-import { cut } from './beastkit';
+import { css, cut, hump, jitter, ramp } from './beastkit';
 import { joint, mesh, onScreen, place, type Face, type Mat, type Mesh, type RGB, type V3, type View } from './figure';
 
 /**
@@ -127,10 +127,6 @@ const YULEHEART_LOOK: Ginger = {
   size: 4.8,
 };
 
-/** A number of its own for each drip, bauble or dot, nought to one, so a row is not a pattern. */
-const jitter = (i: number): number => frac(Math.sin(i * 12.9898 + 4.1) * 43758.5453);
-const ramp = (t: number, a: number, b: number): number => smooth((t - a) / (b - a));
-const hump = (t: number, c: number, r: number): number => smooth(1 - Math.abs(t - c) / r);
 const toward = (a: readonly number[], b: readonly number[], k: number): [number, number, number, number] =>
   [0, 1, 2, 3].map((q) => lerp(a[q], b[q], k)) as [number, number, number, number];
 
@@ -817,7 +813,6 @@ function gingerBuild(s: Ginger, lod: number): Piece[] {
 
 /* ---- the ring it sends out ------------------------------------------------------------------- */
 
-const css = (c: RGB, al: number): string => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${clamp(al).toFixed(3)})`;
 
 /**
  * Its Taunt seen: at each thump a ring of gold goes out over the ground from its feet, widening and fading, a white one inside

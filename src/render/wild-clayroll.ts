@@ -2,7 +2,7 @@ import {
   ACT_SECS, add, beat, clamp, coatPalette, cross, DEG, disc, dot, drift, frac, lerp, merge, mix, onEgg, orb, paint,
   scale, shadowOf, smooth, sub, TAU, tube, unit, type Anim, type Bones, type Disc, type Kind, type Piece,
 } from './beasts';
-import { cut } from './beastkit';
+import { css, cut, hump, jitter, mixV, nearSide, ramp } from './beastkit';
 import { joint, mesh, onScreen, place, ROOT, type Face, type Mat, type Mesh, type RGB, type V3, type View, type Xf } from './figure';
 
 /**
@@ -145,13 +145,6 @@ const ROLLTERRA_LOOK: Roll = {
 
 /* ---- helpers ------------------------------------------------------------------------- */
 
-/** A number of its own for each thing, nought to one. */
-const jitter = (i: number): number => frac(Math.sin(i * 12.9898 + 4.1) * 43758.5453);
-/** A rise from nought to one between `a` and `b`, eased. */
-const ramp = (t: number, a: number, b: number): number => smooth((t - a) / (b - a));
-/** A bump from nought up to one at `c` and back, `r` either side of it, eased. */
-const hump = (t: number, c: number, r: number): number => smooth(1 - Math.abs(t - c) / r);
-const mixV = (a: V3, b: V3, k: number): V3 => [lerp(a[0], b[0], k), lerp(a[1], b[1], k), lerp(a[2], b[2], k)];
 const SIDE = [-1, 1, -1, 1];
 const LEGS4 = ['fl', 'fr', 'hl', 'hr'];
 const len3 = (v: V3): number => Math.hypot(v[0], v[1], v[2]);
@@ -1294,12 +1287,10 @@ function rollBuild(s: Roll, lod: number): Piece[] {
 
 /* ---- what it throws about --------------------------------------------------------------- */
 
-const css = (c: RGB, al: number): string => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${clamp(al).toFixed(3)})`;
 const CLAY: RGB = [196, 116, 76], CLAY_DARK: RGB = [150, 84, 56], INK: RGB = [62, 36, 30];
 const DUST: RGB = [204, 170, 136];
 
 const thrown = (p: V3, v: V3, t: number, fall = 9): V3 => [p[0] + v[0] * t, p[1] + v[1] * t, Math.max(0.02, p[2] + v[2] * t - 0.5 * fall * t * t)];
-const nearSide = (p: V3, c: V3, view: View): boolean => dot(sub(p, c), view.T) > 0;
 const pxOf = (g: CanvasRenderingContext2D): number => { const tr = g.getTransform(); return 1 / (Math.hypot(tr.a, tr.b) || 1); };
 /** How much a stage's thrown things are scaled, against the Sliplet's. */
 const bigOf = (s: Roll): number => s.shell.R / 0.47;

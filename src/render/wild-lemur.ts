@@ -3,7 +3,7 @@ import {
   quadBones, quadPose, scale, smooth, sub, TAU, taper, tube, unit, type Anim, type Bones, type Disc, type Kind, type Piece,
   type QuadPose, type QuadSpec,
 } from './beasts';
-import { cut, quadPieces } from './beastkit';
+import { css, cut, hump, jitter, nearSide, quadPieces, ramp } from './beastkit';
 import { joint, mesh, onScreen, place, type Face, type Mat, type Mesh, type RGB, type V3, type View } from './figure';
 
 /**
@@ -139,12 +139,6 @@ const LEMORIAN_LOOK: Lemur = {
 
 /* ---- helpers ------------------------------------------------------------------------- */
 
-/** A number of its own for each thing, nought to one. */
-const jitter = (i: number): number => frac(Math.sin(i * 12.9898 + 4.1) * 43758.5453);
-/** A rise from nought to one between `a` and `b`, eased. */
-const ramp = (t: number, a: number, b: number): number => smooth((t - a) / (b - a));
-/** A bump from nought up to one at `c` and back, `r` either side of it, eased. */
-const hump = (t: number, c: number, r: number): number => smooth(1 - Math.abs(t - c) / r);
 const len3 = (v: V3): number => Math.hypot(v[0], v[1], v[2]);
 
 /** A frame standing along `up` with its front along `fwd`: across, forward and up. */
@@ -963,7 +957,6 @@ function lemurBuild(s: Lemur, lod: number): Piece[] {
 
 const LEAF: RGB = [104, 146, 44];
 const LEAF_YOUNG: RGB = [158, 176, 52];
-const css = (c: RGB, al: number): string => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${clamp(al).toFixed(3)})`;
 
 /** A leaf in the air, `len` long, turned `ang`: two-tone down its middle with a soft edge in a darker shade of itself. */
 function flyingLeaf(g: CanvasRenderingContext2D, x: number, y: number, len: number, ang: number, c: RGB, al: number): void {
@@ -982,8 +975,6 @@ function flyingLeaf(g: CanvasRenderingContext2D, x: number, y: number, len: numb
   g.restore();
 }
 
-/** Whether a point is on the viewer's side of a body whose middle is at `c`: drawn over the body if so, under it if not. */
-const nearSide = (p: V3, c: V3, view: View): boolean => dot(sub(p, c), view.T) > 0;
 /** Where something let fall from `p` drifts to `s` seconds on, fluttering down. */
 const drifting = (p: V3, s: number, id: number): V3 => [p[0] + 0.5 * Math.sin(s * 5 + id), p[1] + 0.3 * s * (jitter(id) - 0.3), Math.max(0.02, p[2] - 1.6 * s)];
 

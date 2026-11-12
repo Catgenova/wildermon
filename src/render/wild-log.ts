@@ -2,11 +2,10 @@ import {
   ACT_SECS, add, beat, clamp, coatPalette, cross, curve, cyc, DEG, disc, drift, frac, lerp, merge, mix, onEgg, orb, orbAlong, paint,
   scale, shadowOf, smooth, sub, TAU, tube, unit, type Anim, type Bones, type Disc, type Kind, type Piece,
 } from './beasts';
-import { cut } from './beastkit';
+import { css, cut, hump, jitter, mixV, nearSide, ramp } from './beastkit';
 import { joint, mesh, onScreen, place, ROOT, type Face, type Mat, type Mesh, type RGB, type V3, type View, type Xf } from './figure';
 import {
-  css, domeOf, eyeOf, facing, hump, inPlane, jitter, kneeOf, len3, mirroredMesh, mixV, nearSide, onShell, pxOf, ramp, strip, swirlOn,
-  thrown, wound, type Shell,
+  domeOf, eyeOf, facing, inPlane, kneeOf, len3, mirroredMesh, onShell, pxOf, strip, swirlOn, thrown, wound, type Shell,
 } from './wild-moss';
 
 /**

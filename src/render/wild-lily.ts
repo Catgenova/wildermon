@@ -2,7 +2,7 @@ import {
   ACT_SECS, add, beat, clamp, coatPalette, cross, curve, cyc, DEG, disc, dot, drift, frac, lerp, merge, mix, onEgg, orb, orbAlong, paint,
   scale, shadowOf, smooth, sub, TAU, trunkOf, tube, unit, type Anim, type Bones, type Disc, type Kind, type Piece,
 } from './beasts';
-import { cut } from './beastkit';
+import { css, cut, hump, jitter, mixV, nearSide, ramp } from './beastkit';
 import { joint, mesh, onScreen, place, ROOT, type Face, type Mat, type Mesh, type RGB, type V3, type View, type Xf } from './figure';
 
 /**
@@ -183,10 +183,6 @@ const LOTUSHELL_LOOK: Lily = {
 
 /* ---- helpers ------------------------------------------------------------------------- */
 
-const jitter = (i: number): number => frac(Math.sin(i * 12.9898 + 4.1) * 43758.5453);
-const ramp = (t: number, a: number, b: number): number => smooth((t - a) / (b - a));
-const hump = (t: number, c: number, r: number): number => smooth(1 - Math.abs(t - c) / r);
-const mixV = (a: V3, b: V3, k: number): V3 => [lerp(a[0], b[0], k), lerp(a[1], b[1], k), lerp(a[2], b[2], k)];
 const SIDE = [-1, 1, -1, 1];
 const LEGS4 = ['fl', 'fr', 'hl', 'hr'];
 const len3 = (v: V3): number => Math.hypot(v[0], v[1], v[2]);
@@ -1395,14 +1391,12 @@ function lilyBuild(s: Lily, lod: number): Piece[] {
 
 /* ---- what it throws about --------------------------------------------------------------- */
 
-const css = (c: RGB, al: number): string => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${clamp(al).toFixed(3)})`;
 const DUST: RGB = [196, 180, 152];
 const WATER: RGB = [120, 196, 196];
 const FOAM: RGB = [246, 252, 250];
 const PAD: RGB = [150, 190, 84];
 const PAD_INK: RGB = [62, 92, 40];
 const PETAL: RGB = [248, 186, 204];
-const nearSide = (p: V3, c: V3, view: View): boolean => dot(sub(p, c), view.T) > 0;
 const pxOf = (g: CanvasRenderingContext2D): number => { const tr = g.getTransform(); return 1 / (Math.hypot(tr.a, tr.b) || 1); };
 
 function puff(g: CanvasRenderingContext2D, view: View, at: V3, r: number, age: number, id = 0): void {

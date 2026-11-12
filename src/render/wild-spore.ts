@@ -3,7 +3,7 @@ import {
   orbAlong, paint, scale, smile, smooth, sub, taper, TAU, tube, unit, type Anim, type BipedPose, type BipedSpec, type Bones, type Disc, type Kind,
   type Piece,
 } from './beasts';
-import { cut, earMesh } from './beastkit';
+import { css, cut, earMesh, hump, jitter, nearSide, ramp } from './beastkit';
 import { joint, mesh, onScreen, place, type Face, type Mat, type Mesh, type RGB, type V3, type View, type Xf } from './figure';
 
 /**
@@ -124,12 +124,6 @@ const SPORELORD_LOOK: Spore = {
   size: 1.72,
 };
 
-/** A number of its own for each leaf, nought to one, so a mantle is not a pattern. */
-const jitter = (i: number): number => frac(Math.sin(i * 12.9898 + 4.1) * 43758.5453);
-/** A rise from nought to one between `a` and `b`, eased. */
-const ramp = (t: number, a: number, b: number): number => smooth((t - a) / (b - a));
-/** A bump from nought up to one at `c` and back, `r` either side of it, eased. */
-const hump = (t: number, c: number, r: number): number => smooth(1 - Math.abs(t - c) / r);
 
 /**
  * A value through a loop of a go, by keys of [where in the go, what], the first at nought: eased from each to the next, and
@@ -1349,7 +1343,6 @@ const LEAF: RGB = [132, 178, 98];
 const LEAF_PINK: RGB = [236, 178, 176];
 const PETAL: RGB = [255, 252, 246];
 const BERRY: RGB = [214, 56, 60];
-const css = (c: RGB, al: number): string => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${clamp(al).toFixed(3)})`;
 
 /** A leaf in the air, `len` long, turned `ang`: two-tone down its middle with a soft darker edge. */
 function flyingLeaf(g: CanvasRenderingContext2D, x: number, y: number, len: number, ang: number, c: RGB, al: number): void {
@@ -1469,8 +1462,6 @@ function groundRing(g: CanvasRenderingContext2D, view: View, at: V3, r: number, 
 
 /** Where something thrown from `p` with velocity `v` is `s` seconds on, falling slowly, as spores and leaves do; it lies where it lands. */
 const thrown = (p: V3, v: V3, s: number, fall = 9): V3 => [p[0] + v[0] * s, p[1] + v[1] * s, Math.max(0.03, p[2] + v[2] * s - 0.5 * fall * s * s)];
-/** Whether a point is on the viewer's side of a body whose middle is at `c`: drawn over the body if so, under it if not. */
-const nearSide = (p: V3, c: V3, view: View): boolean => dot(sub(p, c), view.T) > 0;
 /** How big a stage's things in the air are drawn, against the Sporekin's. */
 const bigness = (s: Spore): number => [0.8, 1, 1.25][s.stage];
 /** The middle of the body, over the ground: what the near and far sides of it are sides of. */

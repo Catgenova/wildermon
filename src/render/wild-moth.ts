@@ -1,8 +1,9 @@
 import {
-  ACT_SECS, add, beat, clamp, coatPalette, curve, cyc, darker, DEG, dot, drift, eyes, frac, lerp, lighter, LOOP, merge, mirrored, mix, moved, onEgg, orb,
-  orbAlong, paint, pastel, scale, smile, smooth, sub, TAU, taper, tube, unit, type Anim, type Bones, type Disc, type Kind, type Piece,
+  ACT_SECS, add, beat, clamp, coatPalette, curve, cyc, darker, DEG, drift, eyes, frac, lerp, lighter, LOOP, merge, mirrored, mix,
+  moved, onEgg, orb, orbAlong, paint, pastel, scale, smile, smooth, sub, TAU, taper, tube, unit, type Anim, type Bones, type Disc,
+  type Kind, type Piece,
 } from './beasts';
-import { blade, cut } from './beastkit';
+import { blade, css, cut, jitter, nearSide, ramp } from './beastkit';
 import { joint, mesh, onScreen, place, ROOT, type Face, type Mat, type Mesh, type RGB, type V3, type View, type Xf } from './figure';
 
 /**
@@ -141,10 +142,6 @@ export const MOTH_WORK = { take: 0.06, curl: 0.18, catch: 0.4, lift: 0.5, place:
 
 /* ---- small things -------------------------------------------------------------------- */
 
-/** A number of its own for each thing, nought to one, so a fringe is not a pattern. */
-const jitter = (i: number): number => frac(Math.sin(i * 12.9898 + 4.1) * 43758.5453);
-/** A rise from nought to one between `a` and `b`, eased. */
-const ramp = (t: number, a: number, b: number): number => smooth((t - a) / (b - a));
 /** A smooth run through keys (time, value), times nought to one in order, held at either end. */
 function keysAt(keys: ReadonlyArray<readonly [number, number]>, u: number): number {
   if (u <= keys[0][0]) return keys[0][1];
@@ -154,10 +151,7 @@ function keysAt(keys: ReadonlyArray<readonly [number, number]>, u: number): numb
   }
   return keys[keys.length - 1][1];
 }
-const css = (c: RGB, al: number): string => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${clamp(al).toFixed(3)})`;
 const pxOf = (g: CanvasRenderingContext2D): number => { const tr = g.getTransform(); return 1 / (Math.hypot(tr.a, tr.b) || 1); };
-/** Whether a point is on the viewer's side of a body whose middle is at `c`. */
-const nearSide = (p: V3, c: V3, view: View): boolean => dot(sub(p, c), view.T) > 0;
 
 /** Faces wound so each looks the way it should, whichever way round its corners were listed. */
 function woundTo(v: readonly V3[], f: Face[], want: readonly V3[]): Face[] {

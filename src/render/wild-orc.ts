@@ -1,9 +1,10 @@
 import {
-  add, beat, bipedBones, clamp, coatPalette, cross, curve, cyc, darker, disc, dot, eyes, lerp, lighter, merge, mirrored, mix, onEgg, orb, orbAlong,
-  paint, pastel, scale, smooth, sub, taper, TAU, tube, unit, type Anim, type BipedPose, type BipedSpec, type Bones, type Disc, type Kind, type Piece,
+  add, beat, bipedBones, clamp, coatPalette, cross, curve, cyc, darker, disc, dot, eyes, lerp, lighter, merge, mirrored, mix, onEgg,
+  orb, orbAlong, paint, pastel, scale, sub, taper, TAU, tube, unit, type Anim, type BipedPose, type BipedSpec, type Bones,
+  type Disc, type Kind, type Piece,
 } from './beasts';
 import { mesh, onScreen, place, type Mat, type Mesh, type Palette, type V3, type View, type Xf } from './figure';
-import { blade, cut } from './beastkit';
+import { blade, cut, hump, ramp } from './beastkit';
 import { GLYPHS } from './runestone';
 import { MONSTER_GROWTH } from './monster-size';
 import { glower } from './wild-upright';
@@ -278,8 +279,6 @@ interface Limbs { arm: [number, number]; armW: [number, number]; leg: [number, n
 
 /** One arm's pose moved toward another by `k`. */
 const toward = (a: readonly number[], b: readonly number[], k: number): [number, number, number] => [lerp(a[0], b[0], k), lerp(a[1], b[1], k), lerp(a[2], b[2], k)];
-const ramp = (t: number, a: number, b: number): number => smooth((t - a) / (b - a));
-const hump = (t: number, c: number, r: number): number => smooth(1 - Math.abs(t - c) / r);
 const STILL: Anim = { t: 0, u: 0, go: 0, gait: 0, graze: 0, blink: false, breath: 0.5, fleece: 1, seed: 0 };
 
 /** A way in a bone's frame, from the body's. */
