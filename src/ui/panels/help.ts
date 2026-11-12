@@ -153,7 +153,7 @@ import { FAIL_DAMAGE_SAID } from '../../game/faildamage';
 import { TREE_DEPTH } from '../recipetree';
 import { EARLY_SKILL_BELOW, EARLY_SKILL_MUL, GAIN_RATE, MIN_GAIN, playerGain, SKILL_BY_ID } from '../../game/skills';
 import { SMELTER_CAPACITY, SMELTER_H, SMELTER_W } from '../../game/smelter';
-import { MELT_HEAT, MELT_KEEP, MELT_SHARE } from '../../game/melt';
+import { MELT_HEAT, MELT_KEEP, MELT_SHARE, meltLumps } from '../../game/melt';
 import { KNACK_BONUS, KNACK_CAP, KNACK_GO, KNACK_HOME, KNACK_ODDS, TITLE_STEPS, titlesFor } from '../../game/titles';
 import { CATCH_MOST, CHECK_EVERY, CREEL_BAIT_LOSS, creelOdds, HUNTER_TRAPPED, TIMID_TRAPPED, TRAPS } from '../../game/traps';
 import {
@@ -1786,7 +1786,7 @@ export function helpText(): string {
       <li>Fuel as a campfire (coal burns longest); light; charge with ore. Smelt time per piece: longer for fine ore and harder metal, shorter in a better smelter.
       Draw the lumps off when done.</li>
       <li>Lumps of one metal merge into one lump; quality (QL) = average weighted by size.</li>
-      <li><b>Melt down</b> (lit smelter): anything cast from metal or hafted to a cast head. Lumps back: ${frac(MELT_SHARE)} of its metal, at least 1.
+      <li><b>Melt down</b> (lit smelter): anything cast from metal or hafted to a cast head. Lumps back: ${frac(MELT_SHARE)} of its metal, at least ${meltLumps({ uid: 0, id: 'coin', ql: 1, dmg: 0, count: 1, extra: 'Iron' }, 1)}.
       QL: ${frac(MELT_KEEP)} of its QL, less its damage. Heat: ${frac(MELT_HEAT)} of ore's. All of a stack: what fits in the smelter (${SMELTER_CAPACITY} lumps); the rest stays in the pack.
       Work done: told to whoever put it in, count and QL per kind.</li>
       <li><b>Alloys</b> at a hot smelter: bronze, brass, pewter, electrum, <b>steel</b> (${bill('make_steel')}). QL from the input metal; skill only sets how little is lost.</li>
