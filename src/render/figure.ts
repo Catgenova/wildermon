@@ -2373,7 +2373,7 @@ export interface FigurePose {
   /** What is worn and held, each piece drawn on the body in its own material, dye and rarity. */
   gear?: GearLook;
   /**
-   * The tool the job in hand is done with, when it is one a sculpted figure holds (mining's pickaxe): the one the job
+   * The tool the job in hand is done with, when it is one a sculpted figure holds (mining's pickaxe, a bench tool: `../sculpt/anim/routes.ts` CLIP_OF_TOOL): the one the job
    * uses, in its own metal, lit when enchanted. Left out, a sculpted figure at that job holds one of no metal (iron's).
    */
   tool?: GearPiece;

@@ -121,6 +121,7 @@ import { COIN_METALS, METALS, coinPurity, INGOT_LUMPS, INGOT_WEIGHT, MOULD_BY_ID
 import { meltFits, meltLumps, meltQl } from '../../game/melt';
 import { furnaceMadeSaid, meltingSaid, SMELTER_CAPACITY } from '../../game/smelter';
 import { TOOL_JOBS } from '../../game/jobtools';
+import { CLIP_OF_TOOL, clipOfJob } from '../../sculpt/anim/routes';
 import { ORDER_LIFE } from '../../game/orders';
 import { POST_LIFE_MIN } from '../../game/posts';
 import { ACTION_BY_ID, deedAcrossAt, DROP_RAISE, PACKED_FIRST, SPADEFUL, GLAZE_ASH, GRASS_PER_CUT, GRASS_PLANT, KIT_MEND, MOSS_PER_CUT, MOSS_PLANT, WATER_MOTE_USES, WEAR_PER_GO } from '../../game/actions';
@@ -4281,6 +4282,21 @@ export const NEWS: News[] = [
         `New: ${listed(swing)}: ${itemDef('pickaxe').name.toLowerCase()} in both hands, overhead swing, in the metal of the best ${itemDef('pickaxe').name.toLowerCase()} in the pack; enchanted: glows.`,
         `New: other players at ${listedOr(swing)}: their own ${itemDef('pickaxe').name.toLowerCase()}'s metal and enchantment (was: iron).`,
         `New: ${itemDef('maul').name.toLowerCase()} on the back when wielded, head up; slash trail in a fight.`,
+      ];
+    },
+  },
+  {
+    n: 538,
+    day: '2026-11-12',
+    lines: () => {
+      const tools = Object.keys(CLIP_OF_TOOL).map((id) => itemDef(id).name.toLowerCase());
+      // the models with a head or blade tinted to its metal (src/sculpt/assets/<id>.json, `metal` materials)
+      const metal = ['hammer', 'chisel', 'hatchet', 'butchering_knife', 'carving_knife', 'trowel', 'file'].map((id) => itemDef(id).name.toLowerCase());
+      const jobs = (clip: string): number => [...ACTION_BY_ID.keys()].filter((id) => clipOfJob(id) === clip).length;
+      return [
+        `New: animation at work, one-handed strike at the bench: ${jobs('work')} jobs (${listedOr(tools)}; planning, building, improving).`,
+        `New: animation at work, both hands at the bench, no tool: ${jobs('hands')} jobs.`,
+        `New: ${listed(tools)} drawn in hand: the best one in the pack; enchanted: glows. Head or blade in its metal: ${listed(metal)}; no metal: iron. Other players: their own tool's metal and enchantment.`,
       ];
     },
   },
