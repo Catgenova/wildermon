@@ -2380,11 +2380,11 @@ export interface FigurePose {
   /**
    * Which garments a low-poly body has on (the sculpted bodies, `../sculpt/lowpoly`): each left out at the game's default,
    * the shawl, the trousers, the boots and the tunic worn and the hood down; the hood is up only with the shawl, and the
-   * hair is not drawn under it. The plate set's pieces are off unless asked for, each plain unless `enchanted` says so.
+   * hair is not drawn under it. The plate, leather and chain sets' pieces are off unless asked for, each plain unless `enchanted` says so.
    */
-  outfit?: Partial<Record<'shawl' | 'trousers' | 'boots' | 'tunic' | 'hood' | 'plateChest' | 'plateLegs' | 'plateBoots' | 'plateHelm' | 'plateMantle' | 'leatherChest' | 'leatherLegs' | 'leatherBoots' | 'leatherShawl' | 'leatherHat', boolean>> & {
-    enchanted?: Partial<Record<'chest' | 'legs' | 'boots' | 'helm' | 'mantle' | 'leatherChest' | 'leatherLegs' | 'leatherBoots' | 'leatherShawl' | 'leatherHat' | 'clothShawl' | 'clothHood' | 'clothTunic' | 'clothTrousers' | 'clothBoots', boolean>>;
-    /** The metal each plate piece is smithed from (`GearPiece.material`): its plates drawn in it (`src/sculpt/lowpoly.ts` plateMats); none, its own colours. */
+  outfit?: Partial<Record<'shawl' | 'trousers' | 'boots' | 'tunic' | 'hood' | 'plateChest' | 'plateLegs' | 'plateBoots' | 'plateHelm' | 'plateMantle' | 'leatherChest' | 'leatherLegs' | 'leatherBoots' | 'leatherShawl' | 'leatherHat' | ChainPiece, boolean>> & {
+    enchanted?: Partial<Record<'chest' | 'legs' | 'boots' | 'helm' | 'mantle' | 'leatherChest' | 'leatherLegs' | 'leatherBoots' | 'leatherShawl' | 'leatherHat' | 'clothShawl' | 'clothHood' | 'clothTunic' | 'clothTrousers' | 'clothBoots' | ChainPiece, boolean>>;
+    /** The metal each plate or chain piece is smithed from (`GearPiece.material`): its plates or its mail drawn in it (`src/sculpt/lowpoly.ts` plateMat); none, its own colours. */
     metal?: Partial<Record<PlatePiece, string>>;
     /** The dye each cloth or leather piece is dyed (`GearPiece.dye`, `#rrggbb`): its fabric or leather drawn in it (`src/sculpt/lowpoly.ts` dyeMat). */
     dye?: Partial<Record<DyedPiece, string>>;
@@ -6406,8 +6406,10 @@ export interface GearPiece {
   /** Enchanted: a sculpted figure's sword drawn with its engraving lit. */
   enchanted?: boolean;
 }
-/** The plate set's sculpted pieces, each in its own metal (`FigurePose.outfit.metal`). */
-export type PlatePiece = 'chest' | 'legs' | 'boots' | 'helm';
+/** The chain set's sculpted pieces (`src/sculpt/lowpoly.ts`: the coif, the hauberk and sleeves, the leggings, the boots). */
+export type ChainPiece = 'chainCoif' | 'chainChest' | 'chainLegs' | 'chainBoots';
+/** The plate and chain sets' sculpted pieces, each in its own metal (`FigurePose.outfit.metal`). */
+export type PlatePiece = 'chest' | 'legs' | 'boots' | 'helm' | ChainPiece;
 /** The cloth and leather sculpted pieces a dye colours (`FigurePose.outfit.dye`). */
 export type DyedPiece = 'hood' | 'tunic' | 'trousers' | 'boots' | 'leatherChest' | 'leatherLegs' | 'leatherBoots' | 'leatherHat';
 export type GearSlot = 'head' | 'chest' | 'arms' | 'legs' | 'feet' | 'weapon' | 'offhand' | 'belt' | 'jewel';
