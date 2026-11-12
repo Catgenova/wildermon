@@ -87,7 +87,9 @@ jobs:
   # Asked for: the database built once a run, not once a shard. `run.sh` applies every migration and island.sql's
   # checks to a Postgres of its own; the database is dumped (by the service's own pg_dump, so the dump is the
   # server's version) and handed to the six shards, which restore it into a Postgres of their own: island.sql's
-  # checks run here once, and each shard starts from the database they left. Its name starts "The rules" so that
+  # checks run here once, and each shard starts from the database they left. Then the function snapshots in
+  # supabase/functions are made again from it and must be what is committed; after the dump is out, so a stale
+  # snapshot fails the run without holding up the shards. Its name starts "The rules" so that
   # `scripts/ci-tested.sh` counts it.
   db:
     name: The rules' database, built once
@@ -134,6 +136,14 @@ jobs:
       - name: Handed over
         id: built
         run: echo "built=true" >> "$GITHUB_OUTPUT"
+      - name: Function snapshots are the functions the migrations make
+        run: |
+          node scripts/snapshot-functions.mjs
+          git add --intent-to-add supabase/functions
+          if ! git diff --exit-code --stat supabase/functions; then
+            echo "::error::supabase/functions is not what the migrations make. Run 'node scripts/snapshot-functions.mjs' against a database built by supabase/test/run.sh and commit supabase/functions."
+            exit 1
+          fi
 
   # Asked for: the suite in a quarter of the time. It runs as six shards side by side, each restoring the database
   # `db` built into a Postgres of its own. The tests are in supabase/test/manifest.json, each naming its shard, and
