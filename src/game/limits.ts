@@ -33,6 +33,12 @@ export const BLOW_SHARE = 0.012;
  */
 export const PLACED_REACH = 2.4;
 
+/** The places a tile is cut into each way, for what stands on part of one (`crates.ts`, `furniture.ts`). */
+export const SUBTILES = 4;
+
+/** How far from a store's centre you can stand and still put things in or take them out, in tiles. */
+export const STORE_REACH = 2.4;
+
 /** Bundles of mixed grass a cut gives. */
 export const GRASS_PER_CUT = 2;
 /**
@@ -51,3 +57,34 @@ export const SHEAR_FEATHERS = 6;
 export const COMPANION_SIGHT = 7;
 /** How much of your sight the dark takes: three quarters of it. A kept creature's eyes lose half of that. */
 export const NIGHT_LOSS = 0.75;
+
+/** Where every characteristic starts, and so what counts as a point gained. */
+export const CHAR_START = 20;
+/** One level less animal husbandry to read a trait per this many levels of awareness over the starting mark (`aware_trait_step`). */
+export const AWARE_TRAIT_STEP = 10;
+/** Levels of animal husbandry an awareness takes off reading a trait (`aware_trait_ease`). */
+export const awareTraitEase = (aware: number): number => Math.max(0, Math.floor((aware - CHAR_START) / AWARE_TRAIT_STEP));
+
+/** How long ore stays lit after prospecting. */
+export const PROSPECT_MARK_TIME = 120;
+
+/**
+ * How far a go's quality is spread when it is not simply your skill: from
+ * `QL_LOW` times what it is spread from, up by as much as `QL_SPAN` more --
+ * 0.6 to 1.4 times. Bare hands spread your skill (and add one); a tool that
+ * misses spreads its own quality, never above your skill. See `productQl`.
+ */
+export const QL_LOW = 0.6;
+export const QL_SPAN = 0.8;
+/** And what bare hands add on top of it, so a first go at anything is never nothing. */
+export const QL_BARE = 1;
+
+/**
+ * The lowest and highest quality `productQl` can give at a skill, with a tool
+ * of this quality or none (0), for anything that says so before the go.
+ */
+export function productQlRange(skill: number, toolQl = 0): [number, number] {
+  const s = Math.min(100, Math.max(1, skill));
+  if (toolQl <= 0) return [Math.min(100, s * QL_LOW + QL_BARE), Math.min(100, s * (QL_LOW + QL_SPAN) + QL_BARE)];
+  return [Math.min(s, Math.max(1, toolQl * QL_LOW)), s];
+}

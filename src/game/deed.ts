@@ -1,5 +1,6 @@
 import type { ActionDef } from './actions';
-import { deedLevel, deedRadiusAt, deedWorkersAt, MAX_DEED_LEVEL, type Deed, type Game } from './game';
+import type { Deed, Game } from './game';
+import { deedLevel, deedRadiusAt, deedWorkersAt, MAX_DEED_LEVEL } from './deedsize';
 import { isFounder, lacks, permsHeld, rankMay, rankName } from './ranks';
 
 /**

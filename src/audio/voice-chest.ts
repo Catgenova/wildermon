@@ -1,4 +1,4 @@
-import { ACT_SECS } from '../render/beasts';
+import { ACT_SECS } from '../render/beat-times';
 import { CHEST_HITS, CHEST_STRIKE, CHEST_WORK } from '../render/wild-chest';
 import { burst, ring } from './kit';
 import type { Voice } from './voices';

@@ -1,4 +1,4 @@
-import { ACT_SECS } from '../render/beasts';
+import { ACT_SECS } from '../render/beat-times';
 import { COW_HITS } from '../render/wild-cow';
 import { noiseBuffer, type Burst, type Ring } from './kit';
 import type { Voice } from './voices';

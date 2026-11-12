@@ -14,7 +14,7 @@ import { fitGearId } from '../../game/wildgearActions';
 import { idleSays, type IdleWhy } from '../../game/workerlog';
 import { percent, timeWords } from '../../game/words';
 import type { MenuItem } from '../contextmenu';
-import { DUE_SOON, HUNGRY_AT, HURT_AT } from './wildermon';
+import { DUE_SOON, HUNGRY_AT, HURT_AT } from './attention';
 
 /**
  * The Wildermon window's Care tab: everything one of yours wants doing, worst

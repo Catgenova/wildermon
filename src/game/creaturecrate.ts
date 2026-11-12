@@ -1,6 +1,7 @@
 import type { ActionDef, Target } from './actions';
 import { STORE_REACH, SUBTILES } from './crates';
-import { ageDef, GATHER_DO, SPECIES, takeArms, TEND_JOBS, workRangeOf, type Creature } from './creatures';
+import { ageDef, GATHER_DO, SPECIES, TEND_JOBS, workRangeOf, type Creature } from './creatures';
+import { CREATURE_CRATE, emptyCrate, shutIn } from './crating';
 import { facingOf, furnitureCentre, furnitureDef, type PlacedFurniture } from './furniture';
 import type { Side } from './building';
 import type { Game } from './game';
@@ -25,7 +26,8 @@ import { pannierExitRefusal } from './panniers';
  * own mode is `stored`, which has always meant put away -- not moving, not
  * eating, not drawn in the world -- and now means put away in a crate.
  */
-export const CREATURE_CRATE = 'creature_crate';
+// Shutting one in and finding an empty crate live in the leaf (`crating.ts`), for a birth and a trap to use as well.
+export { CREATURE_CRATE, emptyCrate, shutIn, standingCrate } from './crating';
 
 /** The name of the wildermon in a crate, carried or standing, for the lists that show one; undefined when it is empty. */
 export const occupantOf = (g: Game, crate: { creature?: number; occupant?: string }): string | undefined =>
@@ -42,26 +44,6 @@ export function crateLine(g: Game, crate: { creature?: number }): string {
   return `${c.name}, ${ageOfWord(c, g.time)}${SPECIES[c.species].name.toLowerCase()}, inside`;
 }
 const ageOfWord = (c: Creature, now: number): string => (ageDef(c, now).name === 'grown' ? '' : `${ageDef(c, now).name} `);
-
-/** An empty wildermon crate in the pack, the first there is. */
-export const emptyCrate = (g: Game): Item | undefined =>
-  g.inventory.items.find((it) => it.id === CREATURE_CRATE && it.creature === undefined);
-
-/** An empty wildermon crate of yours standing on your settlement, the nearest to (x, y) there is. */
-export function standingCrate(g: Game, x: number, y: number): PlacedFurniture | undefined {
-  let best: PlacedFurniture | undefined;
-  let bestD = Infinity;
-  for (const f of g.furniture.values()) {
-    if (f.kind !== CREATURE_CRATE || f.creature !== undefined || f.mine === false || !g.onDeed(f.x, f.y)) continue;
-    const [cx, cy] = furnitureCentre(f);
-    const d = Math.hypot(cx - x, cy - y);
-    if (d < bestD) {
-      bestD = d;
-      best = f;
-    }
-  }
-  return best;
-}
 
 /**
  * What may be done with a crate that has a wildermon in it: carry it, set it
@@ -178,34 +160,6 @@ function doorOf(g: Game, h: Holding): [number, number] {
     return [cx + dx * DOOR_STEP, cy + dy * DOOR_STEP];
   }
   return [g.player.x, g.player.y];
-}
-
-/**
- * Shut a wildermon in a crate. Whatever it was carrying is put down where it
- * stood, and a post it was at is let go. It stops where it is, and it does
- * not get hungry while it is in there.
- */
-export function shutIn(g: Game, c: Creature, crate: Item | PlacedFurniture): void {
-  g.clearPost(c);
-  // Every load of a trip in its arms, not only the last.
-  for (const it of takeArms(c)) g.dropOnGround(Math.floor(c.x), Math.floor(c.y), it);
-  c.mode = 'stored';
-  c.around = null;
-  c.enemy = null;
-  c.state = 'idle';
-  c.moving = false;
-  c.until = g.time;
-  crate.creature = c.id;
-  if ('kind' in crate) {
-    const [cx, cy] = furnitureCentre(crate);
-    c.x = cx;
-    c.y = cy;
-    g.events.emit('world', crate.x, crate.y);
-  } else {
-    c.x = g.player.x;
-    c.y = g.player.y;
-  }
-  g.events.emit('creature');
 }
 
 /** Let a wildermon out of whatever crate holds it: the crate forgets it, and it stands at the crate's door. */

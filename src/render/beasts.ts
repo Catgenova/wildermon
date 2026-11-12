@@ -4,6 +4,7 @@ import {
 } from './figure';
 import { HEIGHT_SCALE, UNITS_PER_TILE } from './iso';
 import type { BeastAct } from '../game/events';
+import { ACT_SECS } from './beat-times';
 
 /**
  * Wildermon, as low-poly bodies.
@@ -407,8 +408,8 @@ export interface Anim {
   act?: { kind: BeastAct; t: number };
 }
 
-/** How long each act takes to play through, in seconds. */
-export const ACT_SECS: Record<BeastAct, number> = { strike: 0.55, work: 1.1, cast: 0.9, evolve: 1.8 };
+// How long each act takes lives in the leaf (`beat-times.ts`), for the voices to time their sounds by as well.
+export { ACT_SECS } from './beat-times';
 
 /**
  * What a creature is doing this moment and how far through it: the last thing it did while that plays, or else, while

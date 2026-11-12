@@ -2,7 +2,7 @@ import type { ActionDef, Target } from './actions';
 import { isDone, progressOf, type Bill } from './building';
 import { takeUnit, toHand } from './buildstock';
 import type { Game } from './game';
-import { greenNow } from './greening';
+import { greenNow } from './pace';
 import { lacks } from './ranks';
 import { itemDef } from './items';
 import { fill } from './words';

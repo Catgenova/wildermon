@@ -1,4 +1,4 @@
-import { ACT_SECS } from '../render/beasts';
+import { ACT_SECS } from '../render/beat-times';
 import { DUMMY_GATHER, DUMMY_HITS } from '../render/wild-dummy';
 import { burst, ring } from './kit';
 import type { Voice } from './voices';

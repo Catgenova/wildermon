@@ -107,3 +107,6 @@ export const worldRate = (perSecond: number): number => perSecond / WORLD_PACE;
  * its days in it (`../world/calendar`).
  */
 export const DAY_SECONDS = world(1440);
+
+/** Now, on the clock stone greens over by (`greening.ts`, its `greenSince`): real seconds. */
+export const greenNow = (): number => Date.now() / 1000;

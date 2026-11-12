@@ -1,4 +1,4 @@
-import { ACT_SECS } from '../render/beasts';
+import { ACT_SECS } from '../render/beat-times';
 import { BADGER_HITS } from '../render/wild-badger';
 import { PESTLET_WORK } from '../render/wild-pestlet';
 import { burst, ring } from './kit';

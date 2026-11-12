@@ -1,4 +1,4 @@
-import { ACT_SECS } from '../render/beasts';
+import { ACT_SECS } from '../render/beat-times';
 import { GHOST_FEAR, GHOST_HITS } from '../render/wild-ghost';
 import { noiseBuffer } from './kit';
 import type { Voice } from './voices';

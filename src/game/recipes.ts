@@ -23,7 +23,7 @@ import { FISH } from './fishing';
 import { BOIL_IN, boilCount, boilCountPlain, boiledDye, boilRefusal, BOIL_LITRES, DYE_BOIL_TIME, DYE_BOIL_WIND, DYE_SKILL, isBoilStuff } from './dyes';
 import { DYE_BUCKET, DYESTUFFS, dyeRecipeId } from './dyestuffs';
 import { HERBS, WOUND_KINDS } from './wounds';
-import { TRAPS } from './traps';
+import { TRAPS } from './trapdefs';
 import { BREWS } from './brewing';
 import { isMaterialKind, matOf, type MaterialKind } from './materials';
 import { TREE_DEFS } from '../world/tiles';

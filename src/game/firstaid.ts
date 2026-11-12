@@ -1,3 +1,4 @@
+import { healAmount } from './carerates';
 import { litresAtHand, lyeCarried, lyeVessel, LYE_USE, NEED_LYE, takeLitres } from './placeables';
 import { tryGain } from './learn';
 import type { ActionDef, Target } from './actions';
@@ -21,8 +22,8 @@ export const CLEAN_GAIN = 0.8;
  * much for a hurt wildermon as for their owner.
  */
 
-/** Fraction of a life a single dressing puts back, by the hand and the cloth. */
-export const healAmount = (skill: number, ql: number): number => 0.06 + (skill / 100) * 0.24 + (ql / 100) * 0.1;
+// What a dressing puts back lives in the leaf (`carerates.ts`), for a worker that dresses wounds to ask as well.
+export { healAmount } from './carerates';
 /** What a dressing puts back is multiplied by this under the herb that suits the wound, and by this under any other. */
 export const SUITS_HEAL = 1.5;
 export const HERB_HEAL = 1.1;

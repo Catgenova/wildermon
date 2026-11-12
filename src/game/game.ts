@@ -1,5 +1,6 @@
 import { Springs, type SpringSave } from './springs';
-import { DAMAGE_MAX, PLACED_REACH, QL_TOP, wearPerUse, wornShare } from './limits';
+import { CHAR_START, DAMAGE_MAX, PLACED_REACH, PROSPECT_MARK_TIME, QL_BARE, QL_LOW, QL_SPAN, QL_TOP, wearPerUse, wornShare } from './limits';
+import { DEED_RADIUS, deedLevel, deedWorkersAt, MAX_DEED_LEVEL } from './deedsize';
 import { generateWorld } from '../world/generate';
 import { EMOTES, EMOTE_BY_ID } from './emotes';
 import { deedMay, lacks, type DeedRole } from './ranks';
@@ -110,7 +111,7 @@ import { burnLamps, isLampPiece, lampArmRefusal, lampBurning, lampFrom, lampLigh
 import { settleTrellises, trellisShares, trellisTurnsTo, trellisWallRefusal, VINE_SAID } from './vineyard';
 import { isRuneLantern, runeLanternLight } from './runelantern';
 import { helpingOf, NUTRIENTS, NUTRIENT_DECAY, NUTRIENT_NAMES, TABLE_BEST, tableMul, upkeepMul, type Nutrient } from './nutrition';
-import { strokeOf } from '../audio/sound';
+import { strokeOf } from '../audio/strokes';
 import { lockRefusal, type Lockable } from './locks';
 import { REACH_FORCE, sailFactor, sailWord, windAt, windFrom, windWord, type Wind } from './wind';
 import { festerChance, PART_NAMES, woundClose, woundDrain, WOUND_KINDS, woundText, type Wound, type WoundKind } from './wounds';
@@ -229,34 +230,16 @@ export interface Deed {
 // The ranks live in `ranks.ts`, which imports nothing; see there for why.
 export { deedMay, type DeedRole } from './ranks';
 
-/**
- * How far a go's quality is spread when it is not simply your skill: from
- * `QL_LOW` times what it is spread from, up by as much as `QL_SPAN` more --
- * 0.6 to 1.4 times. Bare hands spread your skill (and add one); a tool that
- * misses spreads its own quality, never above your skill. See `productQl`.
- */
-export const QL_LOW = 0.6;
-export const QL_SPAN = 0.8;
-/** And what bare hands add on top of it, so a first go at anything is never nothing. */
-export const QL_BARE = 1;
+// How far a go's quality is spread, and the range it gives, live in the leaf (`limits.ts`).
+export { productQlRange, QL_BARE, QL_LOW, QL_SPAN } from './limits';
 
-/**
- * The lowest and highest quality `productQl` can give at a skill, with a tool
- * of this quality or none (0), for anything that says so before the go.
- */
-export function productQlRange(skill: number, toolQl = 0): [number, number] {
-  const s = Math.min(100, Math.max(1, skill));
-  if (toolQl <= 0) return [Math.min(100, s * QL_LOW + QL_BARE), Math.min(100, s * (QL_LOW + QL_SPAN) + QL_BARE)];
-  return [Math.min(s, Math.max(1, toolQl * QL_LOW)), s];
-}
-
-export const DEED_RADIUS = 5;
+// How big a settlement is at each level and how far apart they stand live in the leaf (`deedsize.ts`).
+export {
+  DEED_GAP, DEED_RADIUS, DEED_RADIUS_PER_LEVEL, DEED_SPACING, DEED_STONE_GAP, DEED_WORKERS_AT_LEVEL_ONE, deedLevel, deedNearStone,
+  deedRadiusAt, deedTooClose, deedWorkersAt, MAX_DEED_LEVEL,
+} from './deedsize';
 // A deed stake says how much land it claims: the token and this far each way.
 describeWith({ deedAcross: DEED_RADIUS * 2 + 1 });
-/** Every upgrade pushes the border out this far and takes on one more worker. */
-export const DEED_RADIUS_PER_LEVEL = 2;
-export const DEED_WORKERS_AT_LEVEL_ONE = 1;
-export const MAX_DEED_LEVEL = 5;
 /**
  * How many settlements you may be a citizen of, besides the one you founded.
  *
@@ -314,28 +297,6 @@ export const FOLLOW_LOSE = 40;
  */
 export const BROWSER_TALLY: ReadonlySet<string> = new Set(['reach', 'laden']);
 
-export const deedLevel = (d: Deed | null): number => Math.max(1, Math.min(MAX_DEED_LEVEL, d?.level ?? 1));
-export const deedRadiusAt = (level: number): number => DEED_RADIUS + (level - 1) * DEED_RADIUS_PER_LEVEL;
-export const deedWorkersAt = (level: number): number => DEED_WORKERS_AT_LEVEL_ONE + (level - 1);
-/**
- * Asked for: "when forming a new settlement, it must be at least far enough away that the border between that
- * settlement at maximum size and other nearby settlements at max size would be 5 tiles apart". The tiles between two
- * borders at the last level, and the least a new token may stand from another, on one axis or the other: both borders
- * at the last level, the token's own tile and the gap. The island's `deed_gap` and `deed_spacing`.
- */
-export const DEED_GAP = 5;
-export const DEED_SPACING = 2 * deedRadiusAt(MAX_DEED_LEVEL) + 1 + DEED_GAP;
-/**
- * Asked for: "Don't allow new settlements within 100 tiles of a runestone". The least gap between a new token and a
- * runestone, in tiles, from the stone's nearest tile (`stoneGap`). The island's `deed_stone_gap`.
- */
-export const DEED_STONE_GAP = 100;
-/** The refusal for a token too near a runestone, in the island's words (`deed_refusal`). */
-export const deedNearStone = (name: string, gap: number): string =>
-  `Too close to ${name}: ${Math.floor(gap)} tiles; ${DEED_STONE_GAP} needed.`;
-/** The refusal for a token too near another settlement's, in the island's words (`deed_refusal`). */
-export const deedTooClose = (name: string, apart: number): string =>
-  `Too close to ${name}: ${apart} tiles token to token; ${DEED_SPACING} needed (borders at level ${MAX_DEED_LEVEL} ${DEED_GAP} tiles apart).`;
 // The journal's goals of the wildermon and of a settlement read these, handed over now the game is running (`journal-a.ts`).
 journalRulesA(creatureRules, guideRules, { most: MAX_DEED_LEVEL, workersAt: deedWorkersAt }, aroundRules, postRules);
 
@@ -429,8 +390,8 @@ export interface GameInit {
 
 /** Actions you can hold in your head before any mind logic is earned. */
 export const BASE_QUEUE = 3;
-/** Where every characteristic starts, and so what counts as a point gained. */
-export const CHAR_START = 20;
+// Where every characteristic starts lives in the leaf (`limits.ts`).
+export { CHAR_START } from './limits';
 /** And one job more for every this much mind logic past it. */
 export const QUEUE_PER_MIND = 10;
 /**
@@ -562,8 +523,8 @@ export const forageCooldown = (kind: string): number => (kind === 'sprout' ? SPR
  * cooldown: picking berries does not stop you cutting the grass.
  */
 const FORAGE_KINDS = ['forage', 'botanize', 'grass', 'reed', 'dig', 'moss', 'worm', 'sprout', 'vine'];
-/** How long ore stays lit after prospecting. */
-export const PROSPECT_MARK_TIME = 120;
+// How long ore stays lit after prospecting lives in the leaf (`limits.ts`).
+export { PROSPECT_MARK_TIME } from './limits';
 /** Lines of the log kept of everything but talk. */
 const MAX_LOG = 400;
 
@@ -635,10 +596,8 @@ export const windRegenAbove = (above: number): number => 1 + Math.max(0, above) 
 export const AWARE_PER_LEVEL = 0.00125;
 /** That share, this many levels of awareness over the starting mark (`aware_share`). */
 export const awareShareAbove = (above: number): number => Math.max(0, above) * AWARE_PER_LEVEL;
-/** One level less animal husbandry to read a trait per this many levels of awareness over the starting mark (`aware_trait_step`). */
-export const AWARE_TRAIT_STEP = 10;
-/** Levels of animal husbandry an awareness takes off reading a trait (`aware_trait_ease`). */
-export const awareTraitEase = (aware: number): number => Math.max(0, Math.floor((aware - CHAR_START) / AWARE_TRAIT_STEP));
+// What awareness takes off reading a trait lives in the leaf (`limits.ts`).
+export { AWARE_TRAIT_STEP, awareTraitEase } from './limits';
 /** Soul strength's points of tame chance per level over the starting mark (`tame_chance`). */
 export const SOUL_TAME_PER_LEVEL = 0.002;
 export const soulTameAbove = (above: number): number => Math.max(0, above) * SOUL_TAME_PER_LEVEL;

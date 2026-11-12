@@ -1,4 +1,4 @@
-import { ACT_SECS } from '../render/beasts';
+import { ACT_SECS } from '../render/beat-times';
 import { SLUG_FLAME, SLUG_HITS, SLUG_WORK } from '../render/wild-slug';
 import { noiseBuffer } from './kit';
 import type { Voice } from './voices';

@@ -7,9 +7,8 @@ import { fruitsAt, inSeason } from './fruiting';
 import type { DeedStore, Game } from './game';
 import { DAY_SECONDS } from './pace';
 import { CROP_BY_SEED, cropDef, cropReady, cropYield, harvestSeeds } from './farming';
-import { MINE_COLLAPSE, MINE_DEPTH } from './actions';
-import { groomGain, GROOM_HEAL } from './husbandry';
-import { healAmount } from './firstaid';
+import { MINE_COLLAPSE, MINE_DEPTH } from './worksites';
+import { groomGain, GROOM_HEAL, healAmount } from './carerates';
 import { CRAFT_REACH, RECIPE_BY_ID, RECIPE_PERK_SAYS, RECIPES, type Recipe } from './recipes';
 import { anvilCentre, type PlacedAnvil } from './anvil';
 import { isOreItem, METAL_BY_ID, METAL_BY_LUMP, METAL_BY_ORE, METALS, MOULD_BY_ID, RARE_METALS, smeltSeconds } from './metal';
@@ -28,7 +27,7 @@ import { isLampPiece } from './lamps';
 import { GRAPE, GRAPE_CUTTING, grapesFor, isTrellis, VINE_SOIL, vineSoilWords, vineStage } from './vineyard';
 import { WATER_PLANT_DEEPEST, WATER_PLANT_FROM, WATER_PLANT_SHALLOWEST, WATER_PLANTS } from '../world/waterplants';
 import { BUSH_DEFS, bushSpecies, FLOWERS_PICKED, mownDays, MOWN_TODAY } from '../world/tiles';
-import { besideWater, CUT_GRASS, PAN_ORES, RESIN_TREE, RICH_WORMS, tappable, WORMY } from './actions';
+import { besideWater, CUT_GRASS, PAN_ORES, RESIN_TREE, RICH_WORMS, tappable, WORMY } from './worksites';
 import { flowersHere } from './wildflowers';
 import { plantRefusal } from './watergarden';
 import { SKEP, SKEP_CLUMP_HOURS, SKEP_IDLE, SKEP_REACH, SKEP_WAX_EVERY, skepFlowers, VESP_REST, vespHoney, vespTrip } from './bees';
@@ -60,8 +59,8 @@ import { WORKER_REST_FIRST } from './keep';
 import { auraMul, BLOOD_CHANNELS, bredLine, breedTraits, channelOf, LAMP_TIER_ODDS, lineMul, lineSaid, mirrorTrait, mutationOf, pct, rollTraits, slotDraw, SLOTS_PER_STAGE, stageSlots, TIERS, traitList, traitMul, traitName, traitAdd, traitSays, traitOf, traitTier, TRAIT_SLOTS, type Line, type PairBlood, type TraitChannel, type TraitSource } from './traits';
 import { ACTION_FLOOR, ACTION_PACE, WORKER_WEIGHT } from './pace';
 import { world } from './pace';
-import { emptyCrate, shutIn, standingCrate } from './creaturecrate';
-import { IDLE_WANTS, IDLE_WHYS, ledgerAdd, ledgerRoll, type Idle, type IdleWhy, type WorkLedger } from './workerlog';
+import { emptyCrate, shutIn, standingCrate } from './crating';
+import { IDLE_WANTS, IDLE_WHYS, ledgerAdd, ledgerRoll, type Idle, type IdleWhy, type WorkLedger } from './workerledger';
 import { kindNames } from './journal-b';
 import { workFromLedger, workTime, type WorkStats } from './workstats';
 import { bredForm, formMul, wildFormRoll, type SizeForm } from './wildforms';
@@ -1120,14 +1119,8 @@ export function stageWorkSays(kind: GatherKind | null | undefined, n: number): [
   if (LOAD_TRADES.has(kind)) return ['carries', `${n} ${n === 1 ? 'load' : 'loads'} a trip`];
   return null;
 }
-/** Everything in its arms, and its arms emptied: what it puts down when it stops working, the loads of a trip and all. */
-export function takeArms(c: Pick<Creature, 'carrying' | 'laden' | 'homeward'>): Item[] {
-  const all = [...(c.carrying ? [c.carrying] : []), ...(c.laden ?? [])];
-  c.carrying = null;
-  c.laden = undefined;
-  c.homeward = false;
-  return all;
-}
+// What a worker puts down when it stops lives in the leaf (`crating.ts`), for a crate to use as well.
+export { takeArms } from './crating';
 /** What it is called at the stage it is at, or, for a kind of subspecies, what its subspecies is called (`subspeciesName`). */
 export function kindName(c: Pick<Creature, 'species' | 'skills'> & { variant?: number }): string {
   const def = SPECIES[c.species];

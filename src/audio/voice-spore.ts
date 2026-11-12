@@ -1,4 +1,4 @@
-import { ACT_SECS } from '../render/beasts';
+import { ACT_SECS } from '../render/beat-times';
 import { BERRY_FLIGHT, berryLand, SPORE_HITS, SPORE_WORK } from '../render/wild-spore';
 import { burst, ring } from './kit';
 import type { Voice } from './voices';

@@ -1,4 +1,4 @@
-import { ACT_SECS } from '../render/beasts';
+import { ACT_SECS } from '../render/beat-times';
 import { biteTimes, GNAW_GO, GNAW_HITS } from '../render/wild-gnaw';
 import { noiseBuffer, type Burst, type Ring } from './kit';
 import type { Voice } from './voices';

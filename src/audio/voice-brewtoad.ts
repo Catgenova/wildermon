@@ -1,4 +1,4 @@
-import { ACT_SECS } from '../render/beasts';
+import { ACT_SECS } from '../render/beat-times';
 import { BREW_HITS, BREW_STRIKE, BREW_WORK } from '../render/wild-brewtoad';
 import { burst, ring } from './kit';
 import type { Voice } from './voices';

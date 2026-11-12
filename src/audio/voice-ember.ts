@@ -1,4 +1,4 @@
-import { ACT_SECS } from '../render/beasts';
+import { ACT_SECS } from '../render/beat-times';
 import { EMBER_DRAG, EMBER_HITS, EMBER_WORK } from '../render/wild-ember';
 import { burst, ring } from './kit';
 import type { Voice } from './voices';

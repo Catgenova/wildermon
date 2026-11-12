@@ -1,4 +1,4 @@
-import { ACT_SECS } from '../render/beasts';
+import { ACT_SECS } from '../render/beat-times';
 import { MORTOISE_HITS, MORTOISE_WORK } from '../render/wild-mortoise';
 import { burst, ring } from './kit';
 import type { Voice } from './voices';

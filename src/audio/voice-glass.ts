@@ -1,4 +1,4 @@
-import { ACT_SECS } from '../render/beasts';
+import { ACT_SECS } from '../render/beat-times';
 import { GLASS_HITS, GLASS_WORK, PRISMETAIL_SLAM } from '../render/wild-glass';
 import { burst, ring } from './kit';
 import type { Voice } from './voices';

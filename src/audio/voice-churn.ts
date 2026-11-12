@@ -1,4 +1,4 @@
-import { ACT_SECS } from '../render/beasts';
+import { ACT_SECS } from '../render/beat-times';
 import { CHURN_HITS, CHURN_STROKES, CHURN_WORK, strokeTimes } from '../render/wild-churn';
 import { burst, ring } from './kit';
 import type { Voice } from './voices';

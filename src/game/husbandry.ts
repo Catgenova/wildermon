@@ -1,3 +1,4 @@
+import { GROOM_HEAL, groomGain } from './carerates';
 import { tryGain } from './learn';
 import type { ActionDef, Target } from './actions';
 import {
@@ -15,7 +16,8 @@ import {
   SPECIES,
   type Creature,
 } from './creatures';
-import { awareTraitEase, type Game } from './game';
+import type { Game } from './game';
+import { awareTraitEase } from './limits';
 import { clockLeft } from './boons';
 import { itemName, RARITIES, RARITY_ODDS } from './items';
 import { workingQl } from './materials';
@@ -52,15 +54,8 @@ export const PAIR_RANGE = 4;
 /** Care will not be brushed past this in one go; it takes a while to get one up. */
 export const GROOM_CAP = 1;
 
-/**
- * What one brushing is worth. A poor brush in an unpractised hand puts a
- * little in; a good brush and a hundred in the skill puts most of a full
- * grooming in at once.
- */
-export const groomGain = (skill: number, ql: number): number => 0.18 + (skill / 100) * 0.34 + (Math.min(100, ql) / 100) * 0.22;
-
-/** How much of its health a brushing sees to. */
-export const GROOM_HEAL = 0.06;
+// What a brushing is worth lives in the leaf (`carerates.ts`), for a worker that brushes to ask as well.
+export { GROOM_HEAL, groomGain } from './carerates';
 
 /** The odds a pairing takes. */
 export const breedChance = (skill: number, care: number): number =>

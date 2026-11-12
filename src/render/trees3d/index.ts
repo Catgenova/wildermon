@@ -63,7 +63,7 @@ import { rose } from './species/rose';
 import { thorn } from './species/thorn';
 import { willow } from './species/willow';
 import { logsOf, paintLogs3d, paintStump3d, STUMP_SHAPES, stumpOf, thrown, woodOf, woodSpec, type StumpModel, type StumpShape } from './stump';
-import type { Build, Bush3D, Dress, Skeleton, Species3D, V3 } from './types';
+import { SWAY_FRAMES, type Build, type Bush3D, type Dress, type Skeleton, type Species3D, type V3 } from './types';
 
 export { nextSunStep, sunStepOf, SUN_STEPS } from './light';
 
@@ -104,8 +104,8 @@ export const BUSH3D_SPECIES: Set<number> = new Set(BUSH3D.keys());
 
 /** How many shapes each species grows at each age; a tile wears one of them. */
 export const FORMS = 3;
-/** Frames of the wind, gone round one after another, `SWAY_MS` each. */
-export const SWAY_FRAMES = 4;
+// The frames of the wind live in the leaf (`types.ts`), for a species that sways on its own (lavender) to read as well.
+export { SWAY_FRAMES } from './types';
 export const SWAY_MS = 1040;
 /**
  * How long a frame may spend making bakes, and shades, while it draws. A bake
