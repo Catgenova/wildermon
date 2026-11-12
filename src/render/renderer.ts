@@ -474,10 +474,6 @@ const REIN_LINE = 'rgba(46, 30, 22, 0.85)';
 const DRAUGHT_ORSE_TOP = 31.4;
 const TRACES_SCALE = Math.max(1, (1.25 * FIGURE_TOP) / DRAUGHT_ORSE_TOP);
 import { cellarFloorHeight } from './cellar';
-// After the rest: the game's tables are read as these load (`plinth.ts`).
-import { drawPlinthRunes, plinthNight } from './plinth';
-import { plinthBusy } from '../game/plinth';
-import { ENCHANTERS_PLINTH } from '../game/enchant';
 import { FOG_ALPHA, FOG_COLOR, FOG_INK } from './fog';
 import { Picker, type PickHost, type Pick, type HitRect, type HitShape } from './picking';
 import { WaterPainter, type WaterHost } from './waterdraw';
@@ -488,6 +484,10 @@ import { RoofPainter, type RoofHost } from './roofdraw';
 import { WallPainter, type WallHost } from './walldraw';
 export { type Ghost } from './drawshared';
 export { type Pick } from './picking';
+// After the rest: the game's tables are read as these load (`plinth.ts`).
+import { drawPlinthRunes, plinthNight } from './plinth';
+import { plinthBusy } from '../game/plinth';
+import { ENCHANTERS_PLINTH } from '../game/enchant';
 
 /**
  * One piece of a plan over an area, drawn before it is asked for
