@@ -188,13 +188,13 @@ $fn$;
  * Whether it came up is asked once a go, at its first yield, so a go comes
  * out multiplied or not as a whole.
  *
- * A go is what `settle` says it is: it sets `wurm.bauble_go` for each one it
+ * A go is what `settle` says it is: it sets `wildermon.bauble_go` for each one it
  * performs, and says what the baubles made of it once the go has said its own
  * piece (`bauble_said`). Anything gathered outside a go is left as it was.
  */
 create or replace function bauble_yield(p_world uuid, p_uid uuid, p_item text, p_n int) returns int
   language plpgsql volatile as $fn$
-declare v_go text := coalesce(current_setting('wurm.bauble_go', true), ''); v_act text; v_skill text; v_n int;
+declare v_go text := coalesce(current_setting('wildermon.bauble_go', true), ''); v_act text; v_skill text; v_n int;
 begin
   if v_go = '' or p_n is null or p_n <= 0 then return p_n; end if;
   select p.act, d.skill into v_act, v_skill
@@ -204,12 +204,12 @@ begin
   v_n := p_n + bauble_plus(p_world, p_uid, v_act);
   if v_go = 'go' then
     v_go := case when bauble_twice(p_world, p_uid, v_skill) then 'twice' else 'once' end;
-    perform set_config('wurm.bauble_go', v_go, true);
+    perform set_config('wildermon.bauble_go', v_go, true);
   end if;
   if v_go = 'twice' then v_n := round(v_n * bauble_yield_times())::int; end if;
   if v_n <> p_n then
-    perform set_config('wurm.bauble_made',
-      concat_ws('|', nullif(current_setting('wurm.bauble_made', true), ''),
+    perform set_config('wildermon.bauble_made',
+      concat_ws('|', nullif(current_setting('wildermon.bauble_made', true), ''),
                 v_n || ' × ' || lower(coalesce((select d.name from item_def d where d.id = p_item), p_item))), true);
   end if;
   return v_n;
@@ -217,10 +217,10 @@ end $fn$;
 
 /** After the go's own words, what the baubles made of its yield, in so many (`Game.sayBaubleGo`). */
 create or replace function bauble_said(p_world uuid, p_uid uuid) returns void language plpgsql as $fn$
-declare v_made text[] := string_to_array(nullif(current_setting('wurm.bauble_made', true), ''), '|'); v_n int;
+declare v_made text[] := string_to_array(nullif(current_setting('wildermon.bauble_made', true), ''), '|'); v_n int;
 begin
-  perform set_config('wurm.bauble_go', '', true);
-  perform set_config('wurm.bauble_made', '', true);
+  perform set_config('wildermon.bauble_go', '', true);
+  perform set_config('wildermon.bauble_made', '', true);
   v_n := coalesce(array_length(v_made, 1), 0);
   if v_n = 0 then return; end if;
   perform tell(p_world, p_uid, 'The baubles in the altar make that '
@@ -427,8 +427,8 @@ begin
       guard := guard + 1;
       -- A go, for what the baubles make of its yield (`bauble_yield`), and
       -- what they made of it said after the go has said its own piece.
-      perform set_config('wurm.bauble_go', 'go', true);
-      perform set_config('wurm.bauble_made', '', true);
+      perform set_config('wildermon.bauble_go', 'go', true);
+      perform set_config('wildermon.bauble_made', '', true);
       perform act_perform(p_world, p_uid, p.act, p.act_target);
       perform bauble_said(p_world, p_uid);
       -- And what the go took out of you, which nothing over here had ever

@@ -59,7 +59,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -414,8 +414,8 @@ begin
   ${until(dig(9, 4), `pack_count(w, u, 'dirt') > 0`)}
   insert into said values ('MAP', n || '|' || pack_count(w, u, 'treasure_map'));
   delete from item where world_id = w and holder = 'player' and holder_uid = u and def in ('dirt', 'treasure_map');
-  insert into said values ('CONTEXT', coalesce(nullif(current_setting('wurm.pk', true), ''), 'clear')
-    || '|' || coalesce(nullif(current_setting('wurm.pk_act', true), ''), 'clear'));
+  insert into said values ('CONTEXT', coalesce(nullif(current_setting('wildermon.pk', true), ''), 'clear')
+    || '|' || coalesce(nullif(current_setting('wildermon.pk_act', true), ''), 'clear'));
 
   /* ---- 17. Long Reach: a cart four tiles off, to take soil from and to dig into. ---- */
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, material, made_by)

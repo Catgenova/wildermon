@@ -56,11 +56,11 @@ alter table placed add column if not exists picked_at double precision;
 
 /**
  * The moment vines are read at, in epoch seconds: now, or the moment a test
- * holds them at (`wurm.vine_now`). Nothing on the island sets it.
+ * holds them at (`wildermon.vine_now`). Nothing on the island sets it.
  */
 create or replace function vine_now() returns double precision language plpgsql stable as $fn$
 begin
-  return coalesce(nullif(current_setting('wurm.vine_now', true), '')::double precision,
+  return coalesce(nullif(current_setting('wildermon.vine_now', true), '')::double precision,
                   extract(epoch from now())::double precision);
 end $fn$;
 

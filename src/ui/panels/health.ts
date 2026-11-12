@@ -56,6 +56,12 @@ const STAGE_MIN = 292, STAGE_MAX = 560;
 const FEET_UP = 22;
 /** The most frames a second the figure is drawn at. */
 const FIGURE_FPS = 30;
+/**
+ * And the most of the page's time it takes: the next frame waits this many times as long as the last took to draw. A
+ * sculpted body drawn window-sized costs a graphics chip a millisecond or two, so 30 a second; with WebGL in software
+ * it costs tens, and a figure at 30 a second would leave the page no time for anything else.
+ */
+const FIGURE_SHARE = 10;
 
 type Tab = 'wounds' | 'conditions' | 'food';
 
@@ -174,6 +180,8 @@ export class HealthPanel {
   private next = 0;
   private frame = 0;
   private lastFigure = 0;
+  /** How long the figure last took to draw, ms. */
+  private figureCost = 0;
   private motes: Mote[] = [];
   /** Where each wound's pin is on the stage, CSS px, as last drawn. */
   private pinAt = new Map<string, [number, number]>();
@@ -509,9 +517,11 @@ export class HealthPanel {
     const step = (ms: number): void => {
       this.frame = 0;
       if (!this.win.isOpen) return;
-      if (ms - this.lastFigure >= 1000 / FIGURE_FPS) {
+      if (ms - this.lastFigure >= Math.max(1000 / FIGURE_FPS, this.figureCost * FIGURE_SHARE)) {
         this.lastFigure = ms;
+        const t0 = performance.now();
         this.drawStage(ms / 1000);
+        this.figureCost = performance.now() - t0;
       }
       if (!this.still) this.frame = requestAnimationFrame(step);
     };

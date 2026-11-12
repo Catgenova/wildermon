@@ -37,7 +37,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -98,7 +98,7 @@ create temp table lit (run text, i int, before text, after text, told text, lamp
 create schema dice;
 create function dice.random() returns double precision language plpgsql volatile as $f$
 begin
-  return current_setting('wurm.dice')::double precision;
+  return current_setting('wildermon.dice')::double precision;
 end $f$;
 do $t$
 declare w uuid; u uuid := '${U}'; a int; v_wild int; v_theirs int; px double precision; py double precision; i int; v_n bigint; v_left int;
@@ -142,7 +142,7 @@ begin
   perform consume(w, u, 'ancient_lamp', 1);
 
 ${RUNS.map(([run, set, n, d]) => `
-  ${d === null ? `perform set_config('search_path', '"$user", public', true);` : `perform set_config('wurm.dice', '${d}', true); perform set_config('search_path', 'dice, public, pg_catalog', true);`}
+  ${d === null ? `perform set_config('search_path', '"$user", public', true);` : `perform set_config('wildermon.dice', '${d}', true); perform set_config('search_path', 'dice, public, pg_catalog', true);`}
   perform give(w, u, 'ancient_lamp', ${n}, 30);
   for i in 1..${n} loop
     update creature set traits = ${arr(SETS[set])} where world_id = w and id = a;

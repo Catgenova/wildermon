@@ -345,8 +345,11 @@ export interface Frame {
   lod: number;
 }
 
+const BETWEEN = { shoulder: 1, waist: 0.92, hip: 1.03 };
+
 function frameOf(look: Look, lod = 1): Frame {
-  const b = BUILDS[look.gender] ?? BUILDS.neither;
+  // (a body in between, the old 'neither': no look has it now, but the walk's pace was reckoned over all three, `paced.ts`)
+  const b = BUILDS[look.gender] ?? BETWEEN;
   const fem = look.gender === 'woman' ? 1 : look.gender === 'man' ? 0 : 0.5;
   return { sh: b.shoulder, wa: b.waist, hi: b.hip, fem, tall: 1 - fem * 0.035, lod };
 }
@@ -1964,7 +1967,8 @@ function bodyBoot(fr: Frame): Mesh {
 
 function kitOf(look: Look, lod: number): Kit {
   const fr = frameOf(look, lod);
-  const beard = beardOf(fr, look.beard);
+  // (a look no longer chooses a beard: the sculpted bodies have none)
+  const beard = beardOf(fr, 'none');
   const sw = (fr.sh + fr.wa) / 2;
   const chest = rings([
     [-0.1, 1.58 * sw, 1.22, 0, 0], bustRing(fr, 1), [1.7, 2.06 * fr.sh, 1.22, 0, -0.04], [2.24, 1.3 * fr.sh, 0.74, 0, -0.08],
@@ -2040,7 +2044,7 @@ function kitOf(look: Look, lod: number): Kit {
 
 const kits = new Map<string, Kit>();
 function kitFor(look: Look, lod = 1): Kit {
-  const key = `${look.gender}|${look.hair}|${look.beard}|${lod}`;
+  const key = `${look.gender}|${look.hair}|${lod}`;
   let k = kits.get(key);
   if (!k) {
     k = kitOf(look, lod);
@@ -2374,7 +2378,7 @@ export interface FigurePose {
    */
   tool?: GearPiece;
   /**
-   * Which garments a low-poly body has on (Sculpted figures, `../sculpt/lowpoly`): each left out at the game's default,
+   * Which garments a low-poly body has on (the sculpted bodies, `../sculpt/lowpoly`): each left out at the game's default,
    * the shawl, the trousers, the boots and the tunic worn and the hood down; the hood is up only with the shawl, and the
    * hair is not drawn under it. The plate set's pieces are off unless asked for, each plain unless `enchanted` says so.
    */
@@ -11337,13 +11341,20 @@ export function sculptRig(pose: FigurePose): { rig: Rig; rest: Rig } {
 const gearLod = (zoom: number): number => (zoom < 1.5 ? 0.5 : zoom < STILL_BELOW ? 0.75 : 1);
 
 /**
- * The sculpted bodies (`src/sculpt/sculpted.ts`), behind the "Sculpted figures" setting: loaded as a chunk of their own
- * the first time it is on, and from then drawn in place of the flat figure wherever a body is drawn (`drawLive`), once a
- * look's bake has landed. Off, nothing here is loaded and the figure is drawn as it always was.
+ * The sculpted bodies (`src/sculpt/sculpted.ts`), every body the island draws: loaded as a chunk of their own the first
+ * time they are asked for (the renderer, every frame; the character creator), and from then drawn in place of the flat
+ * figure wherever a body is drawn (`drawLive`). The flat figure is drawn where they cannot be: before the chunk has
+ * loaded, with no WebGL2 (`glContext`), and swimming, driving or seated (`drawSculpted`).
  */
-const SCULPT: { on: boolean; flips: number; loading: boolean; draw: ((ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose) => boolean) | null; gen: () => number } =
-  { on: false, flips: 0, loading: false, draw: null, gen: () => 0 };
-export function sculptedFigures(on: boolean): void {
+const SCULPT: { on: boolean; flips: number; loading: boolean; draw: ((ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose) => boolean) | null; gen: () => number; asked: Set<string> } =
+  { on: false, flips: 0, loading: false, draw: null, gen: () => 0, asked: new Set() };
+/**
+ * On or off, as asked by `by`: the island's renderer (every frame) or the character creator. On while anybody asks.
+ */
+export function sculptedFigures(want: boolean, by: 'island' | 'creator' = 'island'): void {
+  if (want) SCULPT.asked.add(by);
+  else SCULPT.asked.delete(by);
+  const on = SCULPT.asked.size > 0;
   if (on === SCULPT.on) return;
   SCULPT.on = on;
   SCULPT.flips++;
@@ -11352,6 +11363,8 @@ export function sculptedFigures(on: boolean): void {
     import('../sculpt/sculpted').then((m) => { SCULPT.draw = m.drawSculptLive; SCULPT.gen = m.sculptGen; SCULPT.flips++; }).catch(() => { SCULPT.loading = false; });
   }
 }
+/** Whether the sculpted bodies are on and loaded, so a figure drawn now is drawn sculpted where it can be. */
+export const sculptedReady = (): boolean => SCULPT.on && !!SCULPT.draw;
 /** What of the sculpted bodies a kept picture depends on: whether they are on, and which bakes have landed. */
 const sculptKey = (): string => (SCULPT.on ? `s${SCULPT.flips}.${SCULPT.gen()}` : '');
 /** The sculpted body in the figure's place, where it is on, can be, and is baked. */
@@ -12377,7 +12390,7 @@ function drawStill(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: 
   const seen = Math.sqrt(Math.abs(t.a * t.d - t.b * t.c)) || 1, was = stills.get(id)?.dev;
   const dev = was !== undefined && Math.abs(seen - was) < 0.05 * was ? was : Math.max(1, Math.round(seen * 16)) / 16;
   const look = pose.look ?? DEFAULT_LOOK;
-  const key = [look.gender, look.skin, look.hair, look.hairColour, look.eyes, look.beard, look.shirt, look.trousers, pose.tunic, pose.trousers,
+  const key = [look.gender, look.skin, look.hair, look.hairColour, look.hairBright, pose.tunic, pose.trousers,
     Math.round(facing * 100), zoom.toFixed(3), dev, doing(pose), pose.emote ?? '', gearKey(pose.gear), sculptKey()].join('|');
   if (stride(ctx, sx, sy, zoom, pose, kit, facing, changing, ink, key, dev)) return;
   let st = stills.get(id);

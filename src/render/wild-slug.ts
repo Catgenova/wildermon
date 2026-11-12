@@ -6,7 +6,7 @@ import { cut } from './beastkit';
 import { joint, mesh, onScreen, place, ROOT, type Face, type Mat, type Mesh, type RGB, type V3, type View, type Xf } from './figure';
 
 /**
- * The slug line: the Sluglow, a small cream snail with a spiral shell flecked
+ * The slug line: the Snailglow, a small cream snail with a spiral shell flecked
  * with embers; the Slugember, bigger, the cracks along its shell's bands
  * glowing and its sides hung with two egg sacs a side; and the Slugferno, a
  * great heavy snail under a huge pocked shell with a molten core showing
@@ -60,8 +60,8 @@ interface Slug {
   size: number;
 }
 
-/** A Sluglow: small and round, a modest shell with a few glowing flecks, small sacs and short stalks. */
-const SLUGLOW_LOOK: Slug = {
+/** A Snailglow: small and round, a modest shell with a few glowing flecks, small sacs and short stalks. */
+const SNAILGLOW_LOOK: Slug = {
   stage: 0,
   foot: { tail: 2.0, w: 0.62, h: 0.46 },
   neck: { y: 0.6, tall: 1.7, w: [0.66, 0.44], d: [0.62, 0.4], lean: 0.14 },
@@ -129,7 +129,7 @@ function keyed(t: number, keys: ReadonlyArray<readonly [number, number]>): numbe
 /* ---- the strike and the task, in time ---------------------------------------------------- */
 
 /**
- * When each stage's blow lands, as a share of its strike: the Sluglow's head on what it butts, the Slugember's front on the ground,
+ * When each stage's blow lands, as a share of its strike: the Snailglow's head on what it butts, the Slugember's front on the ground,
  * the Slugferno's after its flame. The voice lands on these (`../audio/voice-slug`).
  */
 export const SLUG_HITS: readonly number[] = [0.5, 0.46, 0.62];
@@ -1321,7 +1321,7 @@ function burst(g: CanvasRenderingContext2D, view: View, s: Slug, b: Bones, clear
 }
 
 /**
- * The strike. The Sluglow's head pops into what it butts in a puff of sparks. The Slugember comes down in a burst of embers off the
+ * The strike. The Snailglow's head pops into what it butts in a puff of sparks. The Slugember comes down in a burst of embers off the
  * ground before it and a ring of light over it. The Slugferno throws a gout of flame out ahead of it before it comes down, and the
  * ground flashes bright where it lands. Embers go up off every shell as it strikes, which is what is seen of it from behind.
  */
@@ -1688,6 +1688,6 @@ function slugKind(s: Slug): Kind {
   };
 }
 
-export const SLUGLOW = slugKind(SLUGLOW_LOOK);
+export const SNAILGLOW = slugKind(SNAILGLOW_LOOK);
 export const SLUGEMBER = slugKind(SLUGEMBER_LOOK);
 export const SLUGFERNO = slugKind(SLUGFERNO_LOOK);

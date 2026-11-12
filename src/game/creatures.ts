@@ -1306,6 +1306,12 @@ export const LEARN_PACE_MOST = 4;
  * go of its that comes round at a rate. A hunt is 1: what it learns by is what wild things come onto the deed, which
  * no deed sets. The island's `learn_pace`, off `learn_pace_def`.
  */
+/**
+ * Asked for, on top of the evening out: "Increase the rate the Cartling line gains experience by 3". Its driving's
+ * factor is this many times what the model makes of it (`supabase/test/learnrate.ts` holds it there), so a Wagonox
+ * in the traces levels three times as fast as the median trade, past `LEARN_PACE_MOST`, which bounds only the model.
+ */
+export const PULL_PACE_TIMES = 3;
 export const LEARN_PACE: Record<GatherKind | LearnsBy, number> = {
   // Out to the ground and home with a load.
   forage: 0.99, botanize: 1, woodcut: 0.97, farm: 0.96, mine: 1.07, quarry: 1.1, sand: 1.05, clay: 1.07, peat: 1.04,
@@ -1322,7 +1328,7 @@ export const LEARN_PACE: Record<GatherKind | LearnsBy, number> = {
   // A spar with a Sparra on the settlement; and what wild things come onto the deed.
   guard: 2.02, hunt: 1,
   // A kind with no trade.
-  out: 1, dark: 3.86, tended: LEARN_PACE_MOST, spar: 0.27, pull: 1.62,
+  out: 1, dark: 3.86, tended: LEARN_PACE_MOST, spar: 0.27, pull: 1.62 * PULL_PACE_TIMES,
   // A Sparra's spar with a guard on a settlement.
   bout: LEARN_PACE_MOST,
 };
@@ -1489,6 +1495,8 @@ export function putMark(game: { time: number }, c: Creature, kind: MarkKind, val
 export const SPAR_SLACK = 0.5;
 /** The health a sparring partner yields at. */
 export const sparFloor = (c: Creature): number => maxHealth(c, SPECIES[c.species]) * SPAR_YIELD;
+/** Whether it is out in the world and drawn there: not shut in a wildermon crate (`shutIn`), carried, standing or stored. What it lights goes with it (`Game.lights`). */
+export const inWorld = (c: Creature): boolean => c.mode !== 'stored';
 /** Whether it is a sparring partner of yours, out and about, and so may be attacked. */
 export const sparring = (c: Creature | undefined): boolean => !!c && c.mode !== 'wild' && c.mode !== 'stored' && SPECIES[c.species]?.style === 'spar';
 /** Whether a sparring partner has yielded. */
@@ -1758,9 +1766,9 @@ export const SPECIES: Record<string, SpeciesDef> = {
   embra: {
     id: 'embra',
     wound: 'burn',
-    name: 'Sluglow',
-    was: ['Embra'],
-    // Asked for: "Embra > sluglow slugember slugferno". Its words, and each stage's, are written once every number is here
+    name: 'Snailglow',
+    was: ['Embra', 'Sluglow'],
+    // Asked for: "Embra > sluglow slugember slugferno", then "sluglow to snailglow". Its words, and each stage's, are written once every number is here
     // (`sayLine`).
     description: '',
     stages: [
@@ -5697,7 +5705,14 @@ export const SHOES_PER_MOUNT = 4;
 export const SHOE_DAYS = 7;
 export const SHOE_PACE = 1.15;
 export const SHOE_STEP = 8;
-describeWith({ shoes: { perMount: SHOES_PER_MOUNT, days: SHOE_DAYS, quicker: SHOE_PACE - 1, step: SHOE_STEP } });
+/**
+ * Asked for: "Allow shoeing haulers at half bonus". A draught beast takes shoes as a mount does, and in the traces a
+ * shod one is worth this share of a mount's shoes: that share of `SHOE_PACE`'s gain on laid stone and of `SHOE_STEP`,
+ * at its share of the team (`shoeTeam`, `shoeTeamStep`). The island's `haul_shoe_share`.
+ */
+export const HAUL_SHOE_SHARE = 0.5;
+describeWith({ shoes: { perMount: SHOES_PER_MOUNT, days: SHOE_DAYS, quicker: SHOE_PACE - 1, step: SHOE_STEP,
+  haulQuicker: (SHOE_PACE - 1) * HAUL_SHOE_SHARE, haulStep: SHOE_STEP * HAUL_SHOE_SHARE } });
 /** Whether the shoes are still on: a week from the fitting, in the clock that fitted them. */
 
 /** What a mount wears to be ridden: a saddle and a bridle. */
@@ -5718,6 +5733,17 @@ export const tackEnchant = (c: { tackEnchant?: Record<string, Enchant> }, effect
   Math.max(0, ...TACK.map((id) => swingEnchant({ enchant: c.tackEnchant?.[id] }, effect)));
 
 export const isShod = (now: number, c: { shodAt: number }): boolean => now - c.shodAt < SHOE_DAYS * DAY_SECONDS;
+/** Whether a kind takes shoes: a mount, or a draught beast. The island's `ride_refusal` on `shoe_creature`. */
+export const shoeable = (def: Pick<SpeciesDef, 'mount' | 'draught'>): boolean => !!def.mount || !!def.draught;
+/** How much of a team in the traces is shod, 0 to 1. The island's `shod_share`. */
+export const shodShare = (now: number, team: ReadonlyArray<{ shodAt: number }>): number =>
+  team.length ? team.filter((c) => isShod(now, c)).length / team.length : 0;
+/** A team's shoes on its pace, on laid stone only: `HAUL_SHOE_SHARE` of a mount's, at the shod share of the team. */
+export const shoeTeam = (now: number, team: ReadonlyArray<{ shodAt: number }>, paved: boolean): number =>
+  paved ? 1 + (SHOE_PACE - 1) * HAUL_SHOE_SHARE * shodShare(now, team) : 1;
+/** A team's shoes on the step its vehicle takes: `HAUL_SHOE_SHARE` of `SHOE_STEP`, at the shod share of the team. */
+export const shoeTeamStep = (now: number, team: ReadonlyArray<{ shodAt: number }>): number =>
+  SHOE_STEP * HAUL_SHOE_SHARE * shodShare(now, team);
 /** How close it comes before standing still, well inside arm's reach. */
 const CALL_DISTANCE = 0.9;
 
@@ -7310,6 +7336,8 @@ export class Creatures {
    * the same reason.
    */
   gatherable(game: Game, x: number, y: number, kind: GatherKind, c?: Creature): boolean {
+    // A worker never works another settlement's ground, a citizen's or a stranger's (`workerGround`; the island's `worker_gatherable`).
+    if (c?.mode === 'deed' && !game.workerGround(x, y)) return false;
     if (kind === 'mine') {
       // One seam to a miner, and only metal its skill can work.
       const ore = oreAt(game.world, x, y);
@@ -7400,12 +7428,12 @@ export class Creatures {
     }
     if (kind === 'fetch') {
       // Anything lying on the deed that is not already somebody's errand.
-      if (!game.onDeed(x, y) || !game.groundAt(x, y).length) return false;
+      if (!game.onHomeDeed(x, y) || !game.groundAt(x, y).length) return false;
       return this.tileOk(game, x, y) && !this.claimed(x, y, c);
     }
     if (kind === 'compost') {
       // A carcass, or anything knocked about past saving, lying on the deed (`isRotting`): the island's `worker_gatherable`.
-      if (!game.onDeed(x, y) || !game.groundAt(x, y).some((it) => isRotting(it))) return false;
+      if (!game.onHomeDeed(x, y) || !game.groundAt(x, y).some((it) => isRotting(it))) return false;
       return this.tileOk(game, x, y) && !this.claimed(x, y, c);
     }
     if (kind === 'farm') return !!c && this.farmJobAt(game, c, x, y) !== null;
@@ -7961,7 +7989,7 @@ export class Creatures {
       if (now >= HEARTH_FULL) return;
       if (Math.max(Math.abs(x - deed.x), Math.abs(y - deed.y)) > range) return;
       // On its keeper's settlement only: its reach runs onto the next one's (the island's `on_my_deed`).
-      if (!game.onDeed(x, y)) return;
+      if (!game.onHomeDeed(x, y)) return;
       if (fuel !== null && cap - now < (FUEL_VALUES[fuel] ?? Infinity)) return;
       const d = Math.hypot(x + 0.5 - c.x, y + 0.5 - c.y);
       if (d < bestD && !busy(x, y)) {
@@ -8090,7 +8118,7 @@ export class Creatures {
     type Furnace = { f: PlacedSmelter | PlacedKiln; at: [number, number]; room: number };
     const all: Furnace[] = [];
     for (const f of smelt ? game.smelters.values() : game.kilns.values()) {
-      if (!near(f.x, f.y) || !game.onDeed(f.x, f.y)) continue;
+      if (!near(f.x, f.y) || !game.onHomeDeed(f.x, f.y)) continue;
       const cap = smelt ? smelterCapacity(f) : kilnCapacity(f);
       all.push({ f, at: smelt ? smelterCentre(f as PlacedSmelter) : kilnCentre(f as PlacedKiln), room: cap - f.jobs.length });
     }
@@ -8146,7 +8174,7 @@ export class Creatures {
     let best: { h: { ash?: number }; at: [number, number]; x: number; y: number } | undefined;
     let bestD = Infinity;
     const look = (h: { ash?: number }, at: [number, number], x: number, y: number): void => {
-      if (Math.floor(h.ash ?? 0) < 1 || !near(x, y) || !game.onDeed(x, y)) return;
+      if (Math.floor(h.ash ?? 0) < 1 || !near(x, y) || !game.onHomeDeed(x, y)) return;
       const d = Math.hypot(at[0] - c.x, at[1] - c.y);
       if (d < bestD) {
         bestD = d;
@@ -8187,7 +8215,7 @@ export class Creatures {
     let f: PlacedFurniture | undefined;
     let bestD = Infinity;
     for (const x of game.furniture.values()) {
-      if (!holdsLiquid(x) || isWell(x) || isWorking(x) || x.liquid !== 'water' || litresIn(x) < brew.litres || !near(x.x, x.y) || !game.onDeed(x.x, x.y)) continue;
+      if (!holdsLiquid(x) || isWell(x) || isWorking(x) || x.liquid !== 'water' || litresIn(x) < brew.litres || !near(x.x, x.y) || !game.onHomeDeed(x.x, x.y)) continue;
       const [fx, fy] = furnitureCentre(x);
       const d = Math.hypot(fx - c.x, fy - c.y);
       if (d < bestD) {
@@ -8229,7 +8257,7 @@ export class Creatures {
     let bestD = Infinity;
     const look = (p: [number, number]): void => {
       const [x, y] = [Math.floor(p[0]), Math.floor(p[1])];
-      if (!near(x, y) || !game.onDeed(x, y)) return;
+      if (!near(x, y) || !game.onHomeDeed(x, y)) return;
       const d = Math.hypot(p[0] - c.x, p[1] - c.y);
       if (d < bestD) {
         bestD = d;
@@ -8260,7 +8288,7 @@ export class Creatures {
     let at: [number, number] | undefined;
     let bestD = Infinity;
     for (const f of game.furniture.values()) {
-      if (f.kind !== piece || !near(f.x, f.y) || !game.onDeed(f.x, f.y)) continue;
+      if (f.kind !== piece || !near(f.x, f.y) || !game.onHomeDeed(f.x, f.y)) continue;
       const p = furnitureCentre(f);
       const d = Math.hypot(p[0] - c.x, p[1] - c.y);
       if (d < bestD) {
@@ -8292,7 +8320,7 @@ export class Creatures {
     let at: [number, number] | undefined;
     let bestD = Infinity;
     for (const sm of game.smelters.values()) {
-      if (!sm.lit || sm.fuel <= 0 || !near(sm.x, sm.y) || !game.onDeed(sm.x, sm.y)) continue;
+      if (!sm.lit || sm.fuel <= 0 || !near(sm.x, sm.y) || !game.onHomeDeed(sm.x, sm.y)) continue;
       const p = smelterCentre(sm);
       const d = Math.hypot(p[0] - c.x, p[1] - c.y);
       if (d < bestD) {
@@ -8322,7 +8350,7 @@ export class Creatures {
     let at: PlacedAnvil | undefined;
     let bestD = Infinity;
     for (const a of game.anvils.values()) {
-      if (!near(a.x, a.y) || !game.onDeed(a.x, a.y)) continue;
+      if (!near(a.x, a.y) || !game.onHomeDeed(a.x, a.y)) continue;
       const p = anvilCentre(a);
       const d = Math.hypot(p[0] - c.x, p[1] - c.y);
       if (d < bestD) {
@@ -8384,7 +8412,7 @@ export class Creatures {
     let bestD = Infinity;
     for (const x of game.furniture.values()) {
       if (!isTrellis(x) || x.vineAt !== undefined || (x.level ?? 0) !== 0 || !VINE_SOIL.includes(game.world.getTile(x.x, x.y) as TileType)) continue;
-      if (!near(x.x, x.y) || !game.onDeed(x.x, x.y)) continue;
+      if (!near(x.x, x.y) || !game.onHomeDeed(x.x, x.y)) continue;
       const [fx, fy] = furnitureCentre(x);
       const d = Math.hypot(fx - c.x, fy - c.y);
       if (d < bestD) {
@@ -8426,7 +8454,7 @@ export class Creatures {
           if (Math.max(Math.abs(dx), Math.abs(dy)) !== ring) continue;
           const x = deed.x + dx;
           const y = deed.y + dy;
-          if (!game.world.inBounds(x, y) || !game.world.hasWater(x, y) || !game.onDeed(x, y) || plantRefusal(game, def, x, y)) continue;
+          if (!game.world.inBounds(x, y) || !game.world.hasWater(x, y) || !game.onHomeDeed(x, y) || plantRefusal(game, def, x, y)) continue;
           const at = this.beside(game, x, y);
           if (at) return { x, y, at };
         }
@@ -8589,7 +8617,7 @@ export class Creatures {
     let f: PlacedFurniture | undefined;
     let bestD = Infinity;
     for (const x of game.furniture.values()) {
-      if (!isPlanter(x) || !near(x.x, x.y) || !game.onDeed(x.x, x.y)) continue;
+      if (!isPlanter(x) || !near(x.x, x.y) || !game.onHomeDeed(x.x, x.y)) continue;
       const crop = game.planted.get(x.id);
       const wants = crop ? cropReady(crop) || !crop.tendedNow : seedToHave;
       if (!wants) continue;
@@ -8986,7 +9014,7 @@ export class Creatures {
     let f: PlacedFurniture | undefined;
     let bestD = Infinity;
     for (const x of game.furniture.values()) {
-      if (!near(x.x, x.y) || !game.onDeed(x.x, x.y)) continue;
+      if (!near(x.x, x.y) || !game.onHomeDeed(x.x, x.y)) continue;
       const want = this.lampWants(game, x);
       if (!want || (want === 'candle' && !candles)) continue;
       const [fx, fy] = furnitureCentre(x);
@@ -9175,7 +9203,7 @@ export class Creatures {
     }
     if (c.carrying.id !== 'sprout') return false;
     if (c.workX < 0 || !game.plantableTile(c.workX, c.workY)) {
-      const spot = game.plantingSpot(deed.x, deed.y, range, near, c.x, c.y);
+      const spot = game.plantingSpot(deed.x, deed.y, range, (x, y) => near(x, y) && game.workerGround(x, y), c.x, c.y);
       if (!spot) return this.why(c, 'range', range);
       c.workX = spot.x;
       c.workY = spot.y;
@@ -10397,14 +10425,18 @@ export class Creatures {
 
   /**
    * The nearest wildermon bed on its settlement that is free and of its own class (`denClass`, `fitsDen`), or none.
-   * The island's `free_bed`.
+   * Only for a worker of the settlement on its ground: none for one on a post or round its keeper, or one off its ground
+   * (past its range and `HOME_SLACK`). The island's `free_bed`.
    */
   freeBed(game: Game, c: Creature): PlacedFurniture | undefined {
+    if (c.post !== null || c.around) return undefined;
+    const site = game.workSite(c);
+    if (!site || Math.max(Math.abs(site.x + 0.5 - c.x), Math.abs(site.y + 0.5 - c.y)) > siteRange(c, this.species(c), site) + HOME_SLACK) return undefined;
     const cls = denClass(c);
     let best: PlacedFurniture | undefined;
     let bestD = Infinity;
     for (const f of game.furniture.values()) {
-      if (!fitsDen(f.kind, cls) || !game.onDeed(f.x, f.y) || !this.bedFree(f, c)) continue;
+      if (!fitsDen(f.kind, cls) || !game.onHomeDeed(f.x, f.y) || !this.bedFree(f, c)) continue;
       const [fx, fy] = furnitureCentre(f);
       const d = Math.hypot(fx - c.x, fy - c.y);
       if (d < bestD) {
@@ -10426,8 +10458,8 @@ export class Creatures {
     const post = c.post !== null;
     if (c.state === 'toBed') {
       const f = c.bed !== undefined ? game.furniture.get(c.bed) : undefined;
-      if (!f || !this.bedFree(f, c) || !fitsDen(f.kind, denClass(c))) {
-        // Gone, or taken by another on the way: it looks again.
+      if (!f || !this.bedFree(f, c) || !fitsDen(f.kind, denClass(c)) || !game.onHomeDeed(f.x, f.y)) {
+        // Gone, taken by another on the way, or not on its settlement: it looks again.
         c.bed = undefined;
         c.state = 'idle';
       } else {
@@ -10492,14 +10524,14 @@ export class Creatures {
 
   /**
    * What an errand's step put into the stores as its work (`intoStores`), while one is being stepped, for its go to
-   * count to its ledger; null otherwise. The island's `wurm.made` (`worker_made_take`).
+   * count to its ledger; null otherwise. The island's `wildermon.made` (`worker_made_take`).
    */
   private making: Array<[string, number]> | null = null;
 
   private updateWorker(c: Creature, dt: number, game: Game): void {
     // The time onto its lifetime, by why it stood about for it, or at work for nothing (`workTime`).
     if (c.mode === 'deed') c.work = workTime(c.work, dt, c.idle?.why);
-    // Round its keeper, the stores it reads are the storage in reach of them while it steps (the island's `wurm.around`).
+    // Round its keeper, the stores it reads are the storage in reach of them while it steps (the island's `wildermon.around`).
     game.storeScope = c.around ? game.workSite(c) : null;
     try {
       this.workerStep(c, dt, game);
@@ -10903,7 +10935,7 @@ export class Creatures {
     const bins: PlacedFurniture[] = [];
     for (const f of game.furniture.values()) {
       const takes = furnitureDef(f.kind).takes;
-      if ((takes === 'raw' || takes === 'worked') && game.onDeed(f.x, f.y)) bins.push(f);
+      if ((takes === 'raw' || takes === 'worked') && game.onHomeDeed(f.x, f.y)) bins.push(f);
     }
     if (!bins.length) return null;
     const rooms = new Map<string, number>();
@@ -10922,13 +10954,13 @@ export class Creatures {
     const storeAt = (x: number, y: number, items: Item[]): DeedStore | undefined => stores.find((s) => s.x === x && s.y === y && s.items === items);
     const at = (x: number, y: number): boolean => atX === undefined || (x === atX && y === atY);
     for (const cr of game.crates.values()) {
-      if (cr.lock || cr.storeOf || !at(cr.x, cr.y) || !game.onDeed(cr.x, cr.y)) continue;
+      if (cr.lock || cr.storeOf || !at(cr.x, cr.y) || !game.onHomeDeed(cr.x, cr.y)) continue;
       const store = storeAt(cr.x, cr.y, cr.items);
       if (store) sources.push({ kind: 0, id: cr.id, x: cr.x, y: cr.y, centre: crateCentre(cr), store });
     }
     for (const f of game.furniture.values()) {
       const def = furnitureDef(f.kind);
-      if (def.takes || f.lock || f.storeOf || !storeMarkable(f.kind, def) || !at(f.x, f.y) || !game.onDeed(f.x, f.y)) continue;
+      if (def.takes || f.lock || f.storeOf || !storeMarkable(f.kind, def) || !at(f.x, f.y) || !game.onHomeDeed(f.x, f.y)) continue;
       const store = storeAt(f.x, f.y, f.items);
       if (store) sources.push({ kind: 1, id: f.id, x: f.x, y: f.y, centre: furnitureCentre(f), store });
     }

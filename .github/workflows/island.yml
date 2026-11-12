@@ -101,8 +101,8 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_USER: wurm
-          POSTGRES_PASSWORD: wurm
+          POSTGRES_USER: wildermon
+          POSTGRES_PASSWORD: wildermon
           POSTGRES_DB: postgres
         ports: ['5432:5432']
         options: >-
@@ -110,8 +110,8 @@ jobs:
     env:
       PGHOST: localhost
       PGPORT: '5432'
-      PGUSER: wurm
-      PGPASSWORD: wurm
+      PGUSER: wildermon
+      PGPASSWORD: wildermon
       PGDATABASE: postgres
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -433,6 +433,22 @@ jobs:
           npx esbuild supabase/test/pools.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/pools.mjs --log-level=error
           node node_modules/.cache/pools.mjs
+      - name: The water drawn into a pond's lip lies only on the pond's water, laid with it
+        if: matrix.shard == 1
+        run: |
+          # Reported: "water can appear clipped over terrain as in my cliff
+          # next to the waterfall". A pond going over one corner of a cliff
+          # edge, the edge beside it a little below its surface: the water
+          # drawn into the lip was carried two tiles along the dry edge both
+          # ways. It runs out past each end of the sill as far as the pond's
+          # shore does, and on along the lip only over the pond's own water.
+          # Reported again with the cliff edge raised above the pond: the same
+          # water was laid over the rim and its moss in front of the pond. It
+          # is laid with the pond's water, tile by tile and only over it; the
+          # lip lays only its mouth.
+          npx esbuild supabase/test/fallsplay.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/fallsplay.mjs --log-level=error
+          node node_modules/.cache/fallsplay.mjs
       - name: Stones across the water, a fountain that is a well, and lilies that keep the year
         if: matrix.shard == 1
         run: |
@@ -1417,9 +1433,10 @@ jobs:
           # Asked for: "When crafting, allow the ingredients to be used from any
           # container within 3 tiles." A pack, a satchel and a spread of stores
           # round the body, put to both sides: what is at hand, the order it is
-          # spent in, a run that carries on past the stack it started on, the
-          # wood the window says, and nothing out of reach, locked, thrown away,
-          # for sale, put by or somebody else's.
+          # spent in, a run that carries on past the stack it started on and
+          # stops when its wood runs out (not on in another), the wood the
+          # window says, and nothing out of reach, locked, thrown away, for
+          # sale, put by or somebody else's.
           npx esbuild supabase/test/near.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/near.mjs --log-level=error
           node node_modules/.cache/near.mjs
@@ -1675,6 +1692,22 @@ jobs:
           npx esbuild supabase/test/trails.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/trails.mjs --log-level=error
           node node_modules/.cache/trails.mjs
+      - name: A trail is drawn under water
+        if: matrix.shard == 2
+        env:
+          # A check that cannot open a browser here fails rather than passes.
+          TRAILWATER_STRICT: '1'
+        run: |
+          # "trails do not appear to draw over tiles with water": the island
+          # wears trails into ground a pond or the sea covers, and the
+          # renderer left the path out on every wet tile. Drawn in Chrome, a
+          # trail through a pond and one down a beach into the sea, each tile
+          # worn against the same tile as grass: the path on a tile the
+          # pond's edge crosses and under its shallows, less of it under its
+          # deepest middle, up to the sea's edge and on the first tile under it.
+          npx esbuild supabase/test/trailwater.ts --bundle --platform=node --format=esm --packages=external \
+            --outfile=node_modules/.cache/trailwater.mjs --log-level=error
+          node node_modules/.cache/trailwater.mjs
 
       - name: Wildflowers bloom in the same places on both sides
         if: matrix.shard == 2
@@ -2327,6 +2360,16 @@ jobs:
           npx esbuild supabase/test/crateoccupant.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/crateoccupant.mjs --log-level=error
           node node_modules/.cache/crateoccupant.mjs
+      - name: A wildermon's light goes where it goes, and not into a crate
+        if: matrix.shard == 2
+        run: |
+          # Reported as a glimmoth's glow following a player a poll behind
+          # after crating it, and left on a hillside once the crate was stored
+          # in a stall. The night's lights gave every creature in the list its
+          # light, one shut in a crate too. Lit only while out in the world.
+          npx esbuild supabase/test/creaturelight.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/creaturelight.mjs --log-level=error
+          node node_modules/.cache/creaturelight.mjs
       - name: A wildermon past the first goes into a creature crate, and out of it again
         if: matrix.shard == 2
         run: |
@@ -2360,6 +2403,19 @@ jobs:
           npx esbuild supabase/test/mirror.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/mirror.mjs --log-level=error
           node node_modules/.cache/mirror.mjs
+
+      - name: Looks for the sculpted bodies, the same on both sides
+        if: matrix.shard == 2
+        run: |
+          # "revamp the character customization screen for the new models. It
+          # will only have the 2 body types, 3 hairstyles (2+bald). It needs
+          # sliders for hair color and skin tone." The bodies and the
+          # hairstyles there is a mesh for; the skin, hair colour and grey as
+          # numbers clamped to nought to one; every old id to the nearest of
+          # now; look_clean as cleanLook; the doors, the old rows rewritten.
+          npx esbuild supabase/test/sculptlook.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/sculptlook.mjs --log-level=error
+          node node_modules/.cache/sculptlook.mjs
 
       - name: Bodies go to the blocks round you, not to the whole island
         if: matrix.shard == 2
@@ -3952,9 +4008,8 @@ jobs:
       - name: Sleep logs you off in a bed, and the sleep bonus, the same on both sides
         if: matrix.shard == 4
         run: |
-          # "beds ... should operate like wurm beds, logging the player off and
-          # beginning the stage of sleep bonus gain while the player is
-          # offline". Sleep at any hour in a bed of yours or on a settlement of
+          # Beds that log the player off and begin the stage of sleep bonus
+          # gain while the player is offline. Sleep at any hour in a bed of yours or on a settlement of
           # yours; refused on a stranger's, with a job going, in a fight and
           # mounted. Done through rpc_act: logged off, asleep, the beat says so
           # and nothing is asked of it. The next join wakes it beside the bed
@@ -4122,6 +4177,45 @@ jobs:
           npx esbuild supabase/test/dragonisle.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/dragonisle.mjs --log-level=error
           node node_modules/.cache/dragonisle.mjs
+
+      - name: Each island's own fruit trees, carried onto an island founded before them
+        if: matrix.shard == 6
+        run: |
+          # Reported: with the fog off the map drew lemons on Volcano Isle, and
+          # walking there found none. The live island's land is from 15 September
+          # and the fruit trees were held to their islands on the 18th; the move
+          # tool's fruit move (tools/move-ground.ts `fruitHome`) grows them there.
+          # Lemons on Volcano Isle only, ages kept, a tile in tile_change and a
+          # planted oak left alone, written down once, a second run a no-op.
+          npx esbuild supabase/test/fruithome.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/fruithome.mjs --log-level=error
+          node --max-old-space-size=4096 node_modules/.cache/fruithome.mjs
+
+      - name: Each island's own fruit trees, by kind, on woods that have turned over
+        if: matrix.shard == 6
+        run: |
+          # The fruit move by tile found 28 trees on the live island: a tree
+          # lives six days and seeds its own kind round it, so after fifty days
+          # nothing stands where founding day put it. The move by kind
+          # (tools/move-ground.ts `fruitByKind`) takes the apples and olives as
+          # they stand: OWN_FRUIT_SHARE of them off settlements become the
+          # island's own fruit at their own age, lemons on Volcano Isle only,
+          # nothing else changed, written down once, a second run a no-op.
+          npx esbuild supabase/test/fruitkind.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/fruitkind.mjs --log-level=error
+          node --max-old-space-size=4096 node_modules/.cache/fruitkind.mjs
+
+      - name: With the fog off, the map and the world show the island and not the seed
+        if: matrix.shard == 6
+        run: |
+          # The same report: the fog-off map drew every square from the seed,
+          # read from the island or not. A square not read is unseen with the
+          # fog off and asked for once; the asks are read a LAND_STEP square at
+          # a time, nearest the body first, LAND_UNFOGGED_EVERY apart, and each
+          # is drawn afresh; read, it shows the island's tree, not the seed's.
+          npx esbuild supabase/test/unfogged.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/unfogged.mjs --log-level=error
+          node --max-old-space-size=4096 node_modules/.cache/unfogged.mjs
 
       - name: A hod carrier brings a wall what the stores hold
         if: matrix.shard == 4
@@ -4384,6 +4478,28 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/haulclimb.mjs --log-level=error
           node node_modules/.cache/haulclimb.mjs
 
+      - name: Haulers take shoes, at half a mount's
+        if: matrix.shard == 4
+        run: |
+          # Asked for: "Allow shoeing haulers at half bonus". A draught beast
+          # takes shoes as a mount does; in a vehicle's traces a shod one is
+          # worth `haul_shoe_share` of a mount's shoes at its share of the team,
+          # on the pace on laid stone and on the step, on both sides.
+          npx esbuild supabase/test/haulshoes.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/haulshoes.mjs --log-level=error
+          node node_modules/.cache/haulshoes.mjs
+
+      - name: A repeated mould pour takes the first pour's metal
+        if: matrix.shard == 4
+        run: |
+          # Reported: a pour from lower QL mithril in a wagon, repeated, took
+          # the pack's higher QL mithril. A repeat queued behind the pour names
+          # the wagon's stack, and is poured from it or refused: never a stand-in
+          # from the pack for a stack in a store, on both sides.
+          npx esbuild supabase/test/repour.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/repour.mjs --log-level=error
+          node node_modules/.cache/repour.mjs
+
       - name: Climbing in the traces at a Wagonox's rate, level off the level skill
         if: matrix.shard == 4
         run: |
@@ -4570,6 +4686,18 @@ jobs:
           npx esbuild supabase/test/smith.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/smith.mjs --log-level=error
           node node_modules/.cache/smith.mjs
+
+      - name: Melt down all, and what comes back said
+        if: matrix.shard == 5
+        run: |
+          # All of a stack too big for one furnaceful: what fits goes in, the
+          # rest stays in the pack and the line says how many did not fit;
+          # several things melted, and what came out told to whoever melted it
+          # in one line, not to the maker; drawn off; the same words in the
+          # browser, off the shared phrasing.
+          npx esbuild supabase/test/meltall.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/meltall.mjs --log-level=error
+          node node_modules/.cache/meltall.mjs
 
       - name: The Forester's perks, each where its rule is
         if: matrix.shard == 5
@@ -4917,6 +5045,17 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/favour.mjs --log-level=error
           node node_modules/.cache/favour.mjs
 
+      - name: What is on your table is the island's, through a refresh
+        if: matrix.shard == 5
+        run: |
+          # The page read nutrition off the beat only, and the first beat goes a
+          # minute after the join, so a refresh showed all four at nought. This
+          # asks that what was eaten is on the row, the join and the first beat,
+          # that the browser reads the join's row, and the beat wholesale.
+          npx esbuild supabase/test/nutritionrefresh.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/nutritionrefresh.mjs --log-level=error
+          node node_modules/.cache/nutritionrefresh.mjs
+
       - name: A corner the island moves is said to the browsers watching
         if: matrix.shard == 5
         run: |
@@ -5020,6 +5159,21 @@ jobs:
           npx esbuild supabase/test/packimprove.ts --bundle --platform=node --format=esm \
             --external:typescript --outfile=node_modules/.cache/packimprove.mjs --log-level=error
           node node_modules/.cache/packimprove.mjs
+
+      - name: Improve and repair, one window
+        if: matrix.shard == 5
+        run: |
+          # Held equipment, Repair all and Hone all the most damaged first; a run
+          # of Improve held to one kind of stock uses that kind and no other and
+          # stops "Out of iron lump."; a run of cycles uses its count of stock
+          # exactly, repaired between whenever a failed pass leaves it over 10.
+          # Several pieces in turn, one job each in the queue: a piece over 10
+          # asked as its Repair carrying the run (cycles), which goes in front
+          # when the Repair ends; a fourth job refused by a queue of three.
+          # Both sides, in the same words and numbers.
+          npx esbuild supabase/test/mending.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/mending.mjs --log-level=error
+          node node_modules/.cache/mending.mjs
 
       - name: One device at a time on an account
         if: matrix.shard == 5
@@ -5281,7 +5435,7 @@ jobs:
       - name: Twelve more hands on a settlement
         if: matrix.shard == 6
         run: |
-          # A Sluglow and a potta empty and charge the smelters and the kilns, a
+          # A Snailglow and a potta empty and charge the smelters and the kilns, a
           # cindra rakes ashes and leaches lye, a hoppa brews, a simma cooks, a
           # relka restores, a bedda keeps the planters, and a wurla, a sprigga,
           # an ambra, a petta and a scurra work worms, sprouts, tar, flowers and
@@ -5521,6 +5675,20 @@ jobs:
           npx esbuild supabase/test/rest.ts --bundle --platform=node --format=esm \
             --external:typescript --outfile=node_modules/.cache/rest.mjs --log-level=error
           node node_modules/.cache/rest.mjs
+
+      - name: A settlement's worker keeps to its own settlement, beds and all
+        if: matrix.shard == 6
+        run: |
+          # Asked: "wildermon beds will attract wildermon from across the map ...
+          # walk across oceans to go sleep and then they cant return", and
+          # "wildermon are still leaving settlement to go work on other
+          # settlements or steal their materials". A bed only for a worker of
+          # its settlement on its ground; a worker's work, pick-ups, stores and
+          # planting on its keeper's home settlement (or on none), not one its
+          # keeper is a citizen of or a stranger's; and the stranded put back.
+          npx esbuild supabase/test/ownground.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/ownground.mjs --log-level=error
+          node node_modules/.cache/ownground.mjs
 
       - name: A worker a day without a meal works at half its pace
         if: matrix.shard == 6
@@ -5841,6 +6009,20 @@ jobs:
           npx esbuild supabase/test/patronstatue.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/patronstatue.mjs --log-level=error
           node node_modules/.cache/patronstatue.mjs
+
+      - name: Wildermon by name on the island, and accounts under the old suffix moved
+        if: matrix.shard == 6
+        run: |
+          # 20261111235900 over the earlier shapes, planted in a transaction it
+          # rolls back: an account under the old .invalid suffix at
+          # @catgenova.github.io in auth.users and auth.identities, the same
+          # uid and the same name; settings, headers, a view, a default, a
+          # check, a policy, a trigger, comments, a role setting and rows
+          # renamed, case kept; nothing left holding the word; a second run
+          # renames nothing; an account named with the word stops it.
+          npx esbuild supabase/test/oldname.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/oldname.mjs --log-level=error
+          node node_modules/.cache/oldname.mjs
 
   migrate:
     name: Push the migrations to the project

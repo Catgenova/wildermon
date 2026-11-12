@@ -82,12 +82,12 @@ declare v_tool text;
 begin
   -- Asked before the go changes what it is asked of: a wall's material, as the wall is finished.
   v_tool := private.job_tool(p_world, p_uid, p_action, p_target);
-  perform set_config('wurm.worn', '', true);
+  perform set_config('wildermon.worn', '', true);
   perform act_perform(p_world, p_uid, p_action, p_target);
-  if v_tool is not null and position(',' || v_tool || ',' in ',' || coalesce(current_setting('wurm.worn', true), '')) = 0 then
+  if v_tool is not null and position(',' || v_tool || ',' in ',' || coalesce(current_setting('wildermon.worn', true), '')) = 0 then
     perform wear_tool(held_tool(p_world, p_uid, v_tool), private.job_wear(p_action));
   end if;
-  perform set_config('wurm.worn', '', true);
+  perform set_config('wildermon.worn', '', true);
 end $fn$;
 
 do $do$
@@ -101,7 +101,7 @@ begin
   if not found then return; end if;$$,
      $$  select * into it from item where id = p_item;
   if not found then return; end if;
-  perform set_config('wurm.worn', coalesce(current_setting('wurm.worn', true), '') || it.def || ',', true);$$),
+  perform set_config('wildermon.worn', coalesce(current_setting('wildermon.worn', true), '') || it.def || ',', true);$$),
     -- Every go of a job, and every piece of a plan laid out over an area, through `private.act_go`.
     ('public', 'settle',
      $$      perform act_perform(p_world, p_uid, p.act, p.act_target);$$,

@@ -49,7 +49,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -169,16 +169,16 @@ begin
 end $f$;
 create schema dice;
 create function dice.random() returns double precision language plpgsql volatile as $f$
-declare xs text[] := string_to_array(current_setting('wurm.dice'), ',');
-        n int := coalesce(nullif(current_setting('wurm.dice_n', true), ''), '0')::int;
+declare xs text[] := string_to_array(current_setting('wildermon.dice'), ',');
+        n int := coalesce(nullif(current_setting('wildermon.dice_n', true), ''), '0')::int;
 begin
-  perform set_config('wurm.dice_n', (n + 1)::text, true);
+  perform set_config('wildermon.dice_n', (n + 1)::text, true);
   return xs[1 + n % array_length(xs, 1)]::double precision;
 end $f$;
 create function pg_temp.dice(v text) returns void language plpgsql as $f$
 begin
-  perform set_config('wurm.dice', v, true);
-  perform set_config('wurm.dice_n', '0', true);
+  perform set_config('wildermon.dice', v, true);
+  perform set_config('wildermon.dice_n', '0', true);
   perform set_config('search_path', 'dice, public, pg_catalog', true);
 end $f$;
 create function pg_temp.nodice() returns void language plpgsql as $f$
@@ -192,10 +192,10 @@ create or replace function product_ql(p_skill double precision, p_tool_ql double
  * Second Look is seen keeping the better of two it was given.
  */
 create or replace function bauble_roll(p_tier text, p_rare text) returns text language plpgsql as $f$
-declare xs text[] := string_to_array(coalesce(nullif(current_setting('wurm.rolls', true), ''), '${ROLLS[0]}'), ',');
-        n int := coalesce(nullif(current_setting('wurm.rolls_n', true), ''), '0')::int;
+declare xs text[] := string_to_array(coalesce(nullif(current_setting('wildermon.rolls', true), ''), '${ROLLS[0]}'), ',');
+        n int := coalesce(nullif(current_setting('wildermon.rolls_n', true), ''), '0')::int;
 begin
-  perform set_config('wurm.rolls_n', (n + 1)::text, true);
+  perform set_config('wildermon.rolls_n', (n + 1)::text, true);
   return bauble_text('time', '${MINOR_SKILLS[0]}', xs[1 + n % array_length(xs, 1)]::double precision);
 end $f$;
 
@@ -390,13 +390,13 @@ begin
   v_t := '';
   foreach v_t in array array['', ${q(P('Second Look').id)}] loop
     perform pg_temp.hold(w, u, case when v_t = '' then '{}'::text[] else array[v_t] end);
-    perform set_config('wurm.rolls', '${ROLLS.join(',')}', true);
-    perform set_config('wurm.rolls_n', '0', true);
+    perform set_config('wildermon.rolls', '${ROLLS.join(',')}', true);
+    perform set_config('wildermon.rolls_n', '0', true);
     v_b := ${thing('tarnished_bauble', BAUBLE_QL, BAUBLE_DMG, "'minor'")};
     ${dice(PLAIN_ROLL)};
     perform restore_bauble(w, u, ${row('v_b')});
-    perform set_config('wurm.rolls', '${[...ROLLS].reverse().join(',')}', true);
-    perform set_config('wurm.rolls_n', '0', true);
+    perform set_config('wildermon.rolls', '${[...ROLLS].reverse().join(',')}', true);
+    perform set_config('wildermon.rolls_n', '0', true);
     v_b := ${thing('tarnished_bauble', BAUBLE_QL, BAUBLE_DMG, "'minor'")};
     perform restore_bauble(w, u, ${row('v_b')});
     ${nodice};
@@ -404,7 +404,7 @@ begin
       from item where world_id = w and holder = 'player' and holder_uid = u and def = 'bauble_minor';
     ${clearAll};
   end loop;
-  perform set_config('wurm.rolls', '', true);
+  perform set_config('wildermon.rolls', '', true);
 
   /* ---- A relic: Gentle Hands on a failure, and Sure Restore, Fine Restore and Age Undone on a success. ---- */
   ${checks(false)};

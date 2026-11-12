@@ -9,7 +9,7 @@
  *   * that the relics 'ancient helm' and 'old blade' restore into an ancient
  *     helm and an ancient short sword, worn and wielded as a helm and a short
  *     sword are, at the same armour, damage and reach;
- *   * that Improve, Repair, a repair kit, Mend and an ancient whetstone refuse
+ *   * that Improve, Repair, a repair kit and an ancient whetstone refuse
  *     either ("Ancient helm: cannot be improved or repaired."), none of them
  *     offered on one in the browser, and the thing as it was after; that a
  *     worker mending the stores passes them by; and that a plain helm and short
@@ -26,7 +26,6 @@ import { execFileSync } from 'node:child_process';
 import { Game, type DeedStore } from '../../src/game/game';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import { RELICS } from '../../src/game/archaeology';
-import { CAST_BY_ID, castReason } from '../../src/game/faith';
 import { fightBase } from '../../src/game/fight';
 import { ANCIENT_HELM, ANCIENT_HELM_SIGHT, ANCIENT_SWORD, ANCIENT_SWORD_SWING, ARMOUR_BY_ID, reachOf, WEAPON_BY_ID } from '../../src/game/gear';
 import { canImprove } from '../../src/game/improve';
@@ -41,7 +40,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -126,9 +125,6 @@ begin
     insert into said values ('NO:' || r.a || ':' || r.d,
       coalesce(act_refusal(w, u, r.a, jsonb_build_object('kind', 'item', 'uid', (ids->>r.d)::bigint)), 'ALLOWED'));
   end loop;
-  for r in select d from unnest(array['ancient_helm', 'ancient_short_sword', 'helm', 'short_sword']) d loop
-    insert into said values ('NO:mend:' || r.d, coalesce(cast_reason(w, u, 'mend', (ids->>r.d)::bigint), 'ALLOWED'));
-  end loop;
 
   -- Asked through the door every browser asks by, and the whetstone done, which asks again: refused, and as it was.
   for r in select d, a from unnest(array['ancient_helm', 'ancient_short_sword']) d,
@@ -188,7 +184,6 @@ g.skills.values.set('weaponsmithing', 60);
 g.player.favour = 120;
 const on = (it: Item): Target => ({ kind: 'item', uid: it.uid });
 const restore = ACTION_BY_ID.get('restore_relic')!;
-const mend = CAST_BY_ID.get('mend')!;
 
 /* ---- both ---------------------------------------------------------------------------- */
 
@@ -251,11 +246,6 @@ for (const [act, what] of ACTS) {
       (def.check?.(on(pieces[plain]), g) ?? null) === null && at(`NO:${act}:${plain}`) === 'ALLOWED' && def.applies(on(pieces[plain]), g),
       `${def.check?.(on(pieces[plain]), g)} | ${at(`NO:${act}:${plain}`)}`);
   }
-}
-for (const { id, plain } of GEAR) {
-  check(`Mend refuses ${itemDef(id).name.toLowerCase()} on both sides, in the same words`,
-    castReason(g, mend, pieces[id]) === unmendableSays({ id }) && at(`NO:mend:${id}`) === unmendableSays({ id }), at(`NO:mend:${id}`));
-  check(`and goes on a plain ${itemDef(plain).name.toLowerCase()}`, castReason(g, mend, pieces[plain]) === null && at(`NO:mend:${plain}`) === 'ALLOWED', at(`NO:mend:${plain}`));
 }
 check('neither is improvable in the browser, and the plain ones are',
   !canImprove(ANCIENT_HELM) && !canImprove(ANCIENT_SWORD) && canImprove('helm') && canImprove('short_sword'));

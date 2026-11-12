@@ -8,11 +8,11 @@
  *                 keeper                              a keeper's door (`rpc_owner_*`);
  *                 door                                any other `rpc_*` door;
  *                 clock                               a job of the clock (`world_tick`, ...);
- *                 migration                           a migration that sets `wurm.source` to 'migration';
+ *                 migration                           a migration that sets `wildermon.source` to 'migration';
  *                 none                                no door: a statement written straight against the table;
  *                 before                              every row there was before this migration.
  *   origin_fn   the door itself, as the watch names it (`private.watch_source`): `act:forage`, `rpc_deal_answer`, ...
- *   origin_uid  whose go or whose door it was: the body a go was settled for (`wurm.uid`, set by
+ *   origin_uid  whose go or whose door it was: the body a go was settled for (`wildermon.uid`, set by
  *               `settle`), else the caller (`auth.uid()`), else nobody.
  *
  * Written by one BEFORE INSERT trigger from what the session already holds:
@@ -27,7 +27,7 @@
  * column is added with that default, which Postgres keeps as the value of
  * every older row, and the default is then dropped.
  *
- * `settle` also says when each go was due (`wurm.go_at`), which the ledger's
+ * `settle` also says when each go was due (`wildermon.go_at`), which the ledger's
  * rate check reads (`20261026130200_work_faster_than_its_pace.sql`).
  */
 set local lock_timeout = '3s';
@@ -42,13 +42,13 @@ select private.shut('alter table public.item add column if not exists origin_uid
 /* Whose go or door this is: the body `settle` is working for, else the caller. No `search_path` of its own, so it inlines. */
 create or replace function private.watch_uid() returns uuid
 language sql stable as $fn$
-  select coalesce(nullif(pg_catalog.current_setting('wurm.uid', true), '')::uuid, auth.uid())
+  select coalesce(nullif(pg_catalog.current_setting('wildermon.uid', true), '')::uuid, auth.uid())
 $fn$;
 
 /* When the go being settled was due, or null outside a go. Inlines, as `watch_uid` does. */
 create or replace function private.watch_go_at() returns timestamptz
 language sql stable as $fn$
-  select pg_catalog.to_timestamp(nullif(pg_catalog.current_setting('wurm.go_at', true), '')::double precision)
+  select pg_catalog.to_timestamp(nullif(pg_catalog.current_setting('wildermon.go_at', true), '')::double precision)
 $fn$;
 
 -- ------------------------------------------------------------------ the kinds
@@ -130,17 +130,17 @@ begin
   for r in select * from (values
     -- Whose go, and when it was due, for as long as the go runs.
     (1, 'public.settle(uuid, uuid)'::regprocedure,
-     $$      perform set_config('wurm.source', 'act:' || p.act, true);
+     $$      perform set_config('wildermon.source', 'act:' || p.act, true);
       perform act_perform(p_world, p_uid, p.act, p.act_target);
-      perform set_config('wurm.source', '', true);
-$$, $$      perform set_config('wurm.source', 'act:' || p.act, true);
+      perform set_config('wildermon.source', '', true);
+$$, $$      perform set_config('wildermon.source', 'act:' || p.act, true);
       -- Whose go, and when it was due: on what it makes (`item.origin_uid`) and in the ledger (`watch_rates`).
-      perform set_config('wurm.uid', p_uid::text, true);
-      perform set_config('wurm.go_at', extract(epoch from p.act_ends)::text, true);
+      perform set_config('wildermon.uid', p_uid::text, true);
+      perform set_config('wildermon.go_at', extract(epoch from p.act_ends)::text, true);
       perform act_perform(p_world, p_uid, p.act, p.act_target);
-      perform set_config('wurm.source', '', true);
-      perform set_config('wurm.uid', '', true);
-      perform set_config('wurm.go_at', '', true);
+      perform set_config('wildermon.source', '', true);
+      perform set_config('wildermon.uid', '', true);
+      perform set_config('wildermon.go_at', '', true);
 $$),
     -- A part of a stack is the stack's.
     (2, 'public.move_part(bigint, integer, text, uuid, bigint, bigint)'::regprocedure,

@@ -34,7 +34,7 @@ import { DAILY_RESET, packTreeData, TILE_DEFS, TileType, TREE_AGES, TREE_DEFS } 
 import { FRUITING } from '../../src/game/fruiting';
 
 /** Hold the island in a season the thing is picked in for the rest of the transaction (`fruiting.ts`), whatever day it is run on. */
-const inSeasonFor = (item: string): string => `perform set_config('wurm.season', '${FRUITING[item]?.[0] ?? ''}', true)`;
+const inSeasonFor = (item: string): string => `perform set_config('wildermon.season', '${FRUITING[item]?.[0] ?? ''}', true)`;
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -45,7 +45,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -295,7 +295,7 @@ begin
   perform setseed(0.25);
   ${act('harvest_bush', 10, 9)};
   insert into said values ('HEDGE', v_t || '|' || ${count('rose_petals')});
-  perform set_config('wurm.season', '', true);
+  perform set_config('wildermon.season', '', true);
 
   /* ---- Coppice: every refusal, and a mature pine back to young for its logs, standing. ---- */
   perform pg_temp.hold(w, u, '{}');

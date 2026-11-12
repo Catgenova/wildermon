@@ -22,7 +22,7 @@ let client: SupabaseClient | null = null;
 export function supabase(): SupabaseClient {
   if (!client) {
     client = createClient(PROJECT.url, PROJECT.key, {
-      auth: { persistSession: true, autoRefreshToken: true, storageKey: 'wurm.auth' },
+      auth: { persistSession: true, autoRefreshToken: true, storageKey: 'wildermon.auth' },
       // Twice a second is plenty for other people's bodies and far more than
       // the ground needs; the default of ten is a lot of wake-ups for nothing.
       realtime: { params: { eventsPerSecond: 5 } },
@@ -66,7 +66,7 @@ export function onSaving(watch: (saving: boolean) => void): () => void {
  * already taken. A call sent again after a network error carries the key it was first sent with, so the
  * island does what it asks once.
  */
-export const ONCE_HEADER = 'x-wurm-once';
+export const ONCE_HEADER = 'x-wildermon-once';
 export const ONCE_TAKEN = 'WK409';
 /** Waits before each try again of a call the network dropped, in milliseconds. */
 export const ONCE_RETRIES = [300, 1200] as const;
@@ -83,11 +83,11 @@ const newKey = (): string => crypto.randomUUID();
  * account page, the stud book -- send none and are not asked. A call refused for another device's seat says
  * `SEAT_ELSEWHERE`, and whoever is watching (`onElsewhere`) is told; `takeSeat` is Play here.
  */
-export const SEAT_HEADER = 'x-wurm-seat';
+export const SEAT_HEADER = 'x-wildermon-seat';
 export const SEAT_ELSEWHERE = 'Playing on another device.';
 /** Seconds a seat goes unheard before another device may take it by calling: the island's `seat_stale`. */
 export const SEAT_STALE_S = 45;
-const SEAT_KEY = 'wurm.seat';
+const SEAT_KEY = 'wildermon.seat';
 let seat: string | null = null;
 const elsewhereWatchers = new Set<() => void>();
 

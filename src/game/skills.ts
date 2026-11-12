@@ -244,7 +244,7 @@ export class Skills {
   /**
    * Raise a skill. What a gain is worth shrinks with the level it is being
    * added to, sharply: the early levels come in a handful of goes and the last
-   * one hardly comes at all, as in Wurm.
+   * one hardly comes at all.
    */
   gain(id: string, base: number, rand: () => number = Math.random): number {
     const v = this.standing(id);

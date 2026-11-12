@@ -76,6 +76,7 @@ export const WINDOWS: Array<{ label: string; bind: string; id: string }> = [
   { label: 'Journal', bind: 'win_journal', id: 'journal' },
   { label: 'Stores', bind: 'win_stores', id: 'stores' },
   { label: 'Shopping list', bind: 'win_shopping', id: 'shopping' },
+  { label: 'Improve and repair', bind: 'win_mend', id: 'mend' },
   { label: 'Settlement', bind: 'win_deed', id: 'deed' },
   { label: 'Social', bind: 'win_social', id: 'social' },
   // Made, and so listed, only for somebody the island says keeps it.

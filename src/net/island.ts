@@ -24,7 +24,7 @@ import type { StoreLogEntry } from '../game/stores';
 import type { DeedWatch } from '../game/visitors';
 import type { Mark } from '../game/items';
 import type { PathBeat, PathSaid } from '../game/meditation';
-import { AWAY_SLOWER, BODY_EVERY, BODY_FRESH, FORAGED_EVERY, SPRINGS_EVERY, SWIRLS_EVERY, GATE_FOLK_EVERY, CHANGE_PAGE, FOG_EVERY, FOUND_MAX, GROUND_EVERY, GROUND_IDLE, GROUND_RANGE, GUIDE_BATCH, GUIDE_EVERY, HEARTBEAT, LAND_ASK, LAND_NEAR, MOBS_EVERY, MOBS_RANGE, NEAR_WHOLE_EVERY, RECONCILE_EVERY, REGION, SNAP_GAP } from '../game/keep';
+import { AWAY_SLOWER, BODY_EVERY, BODY_FRESH, FORAGED_EVERY, SPRINGS_EVERY, SWIRLS_EVERY, GATE_FOLK_EVERY, CHANGE_PAGE, FOG_EVERY, FOUND_MAX, GROUND_EVERY, GROUND_IDLE, GROUND_RANGE, GUIDE_BATCH, GUIDE_EVERY, HEARTBEAT, LAND_NEAR, LAND_STEP, LAND_UNFOGGED_EVERY, MOBS_EVERY, MOBS_RANGE, NEAR_WHOLE_EVERY, RECONCILE_EVERY, REGION, SNAP_GAP } from '../game/keep';
 import type { GuideBook } from '../game/guide';
 import { packFog, unpackFog } from './fogpack';
 import { chartedSquare } from '../game/cartography';
@@ -243,6 +243,8 @@ interface HeardBody {
   level?: unknown;
   /** And after a journey by Telestone, the wall-clock second its traveller may make another (`perform_telestone`). */
   until?: unknown;
+  /** And where that journey left from, for the journey back (`{ x, y, level }`), or null once travelled back. */
+  back?: unknown;
 }
 
 /** The body of a Broadcast message, as `supabase-js` hands it over. */
@@ -420,6 +422,29 @@ export interface PlayerRow {
   /** The tool the job in hand is done with, as the island took it from their pack: see `toolFrom`. */
   act_tool?: unknown;
   [key: string]: unknown;
+}
+
+/** What a beat says about you (`IslandHooks.mine`). */
+export type MineSaid = Parameters<NonNullable<IslandHooks['mine']>>[0];
+
+/**
+ * The join's row in the beat's words: the columns of you that only the beat said (`rpc_settle`), read off the row
+ * `rpc_join` hands over. The first beat is a `HEARTBEAT` after the join, so until then a refreshed page drew these
+ * from nothing: "browser refresh seems to reset nutritions". Not `equipped`: it names items of the pack, which lands
+ * after the join.
+ */
+export function rowSaid(me: PlayerRow): MineSaid {
+  const record = (v: unknown): v is Record<string, number> => !!v && typeof v === 'object' && !Array.isArray(v);
+  const said: MineSaid = {};
+  if (record(me.nutrition)) said.nutrition = me.nutrition;
+  if (typeof me.rested === 'number') said.rested = me.rested;
+  if (typeof me.sleep_on === 'boolean') said.sleepOn = me.sleep_on;
+  if (Array.isArray(me.boons)) said.boons = me.boons;
+  if (record(me.knacks)) said.knacks = me.knacks;
+  if (Array.isArray(me.titles)) said.titles = me.titles.filter((t): t is string => typeof t === 'string');
+  if (typeof me.title === 'string' || me.title === null) said.title = me.title;
+  if (Array.isArray(me.wounds)) said.wounds = me.wounds;
+  return said;
 }
 
 /**
@@ -1163,6 +1188,8 @@ export interface IslandHooks {
   moved?: (x: number, y: number, level: number, letGo?: boolean, resume?: boolean) => void;
   /** A journey by Telestone made, and the wall-clock second the traveller may make another (`runestones.ts`). */
   travelled?: (until: number) => void;
+  /** Where the last journey by Telestone left from, for the journey back; null once there is none. */
+  travelledBack?: (from: { x: number; y: number; level: number } | null) => void;
   /** A trade you are in changed, or was asked of you (`barter_send`, Broadcast `barter`): look again with `barter()`. */
   barter?: () => void;
   /**
@@ -1749,6 +1776,8 @@ export class Island {
      */
     const you = this.me;
     let read = false;
+    // Which squares hold the island's own land, from the first read on: with the fog off, only those are shown.
+    world.trackRead();
     if (you) {
       this.hooks.progress?.(0, 2, 'near', 'land');
       const [bx0, by0, bx1, by1] = this.nearBox(you.x, you.y);
@@ -1769,6 +1798,8 @@ export class Island {
         }
       }
     }
+    // Ground that came by the old road is the island's as it stands, every square of it.
+    if (!read) world.untrackRead();
     // Whatever has happened since the island read that land — and everything
     // ever, when there was no land to read.
     this.hooks.progress?.(1, 2, read ? 'since' : 'changes', 'land');
@@ -2065,6 +2096,7 @@ export class Island {
     for (let cy = Math.ceil(y0 / CHUNK); cy <= Math.floor((y1 + 1) / CHUNK) - 1; cy++) {
       for (let cx = Math.ceil(x0 / CHUNK); cx <= Math.floor((x1 + 1) / CHUNK) - 1; cx++) {
         this.landCells.add(cy * 1024 + cx);
+        this.world?.markRead(cx, cy);
       }
     }
   }
@@ -2116,6 +2148,7 @@ export class Island {
     const you = this.me;
     if (!you) return;
     this.landCells.clear();
+    this.world?.forgetRead();
     const [bx0, by0, bx1, by1] = this.nearBox(you.x, you.y);
     this.seenChange = await this.readLand(bx0, by0, bx1, by1);
     this.hooks.ground(Math.floor(you.x), Math.floor(you.y));
@@ -2149,7 +2182,7 @@ export class Island {
     if (!w) return;
     const b = w.knownBox;
     if (b.x1 < b.x0 || b.y1 < b.y0) return;
-    const step = Math.floor(LAND_ASK / CHUNK) * CHUNK;
+    const step = LAND_STEP;
     const here = this.me ?? { x: 0, y: 0 };
     const boxes: Array<{ x0: number; y0: number; away: number }> = [];
     for (let y0 = Math.floor(b.y0 / step) * step; y0 <= b.y1; y0 += step) {
@@ -2184,6 +2217,41 @@ export class Island {
         return;
       }
       this.hooks.ground(box.x0, box.y0);
+    }
+  }
+
+  /** When the last square asked for with the fog off was read (`readUnfogged`), in the clock `move` is given. */
+  private lastUnfogged = -Infinity;
+
+  /**
+   * One square of the land the fog-off map and world have asked for (`World.askRead`), every `LAND_UNFOGGED_EVERY`:
+   * the `LAND_STEP` square on `fillLand`'s grid holding the wanted square nearest the body. Until it comes, that ground
+   * is dark rather than the generator's guess at it.
+   */
+  private async readUnfogged(now: number): Promise<void> {
+    const w = this.world;
+    if (!w || !w.readWanted.size || this.reading || now - this.lastUnfogged < LAND_UNFOGGED_EVERY) return;
+    this.lastUnfogged = now;
+    const across = Math.ceil(w.w / CHUNK);
+    const here = this.me ?? { x: 0, y: 0 };
+    let best = -1;
+    let away = Infinity;
+    for (const c of w.readWanted) {
+      const d = Math.hypot((c % across + 0.5) * CHUNK - here.x, (Math.floor(c / across) + 0.5) * CHUNK - here.y);
+      if (d < away) { away = d; best = c; }
+    }
+    if (best < 0) return;
+    const step = LAND_STEP;
+    const x0 = Math.floor(((best % across) * CHUNK) / step) * step;
+    const y0 = Math.floor((Math.floor(best / across) * CHUNK) / step) * step;
+    this.reading = true;
+    try {
+      await this.readLand(x0, y0, Math.min(w.w - 1, x0 + step - 1), Math.min(w.h - 1, y0 + step - 1));
+      this.hooks.ground(x0, y0);
+    } catch {
+      // Not come: still wanted, and asked again in its turn.
+    } finally {
+      this.reading = false;
     }
   }
 
@@ -2964,6 +3032,11 @@ export class Island {
     this.hooks.moved?.(x, y, lvl, true);
     // A Telestone's journey says when the next may be made.
     if (typeof body.until === 'number') this.hooks.travelled?.(body.until);
+    // And where it left from, for the journey back; null once travelled back.
+    if ('back' in body) {
+      const b = body.back as { x?: unknown; y?: unknown; level?: unknown } | null;
+      this.hooks.travelledBack?.(b && typeof b.x === 'number' && typeof b.y === 'number' ? { x: b.x, y: b.y, level: typeof b.level === 'number' ? b.level : 0 } : null);
+    }
     // What was in hand and what was queued are gone too, which the beat says.
     this.armBeat(0.5);
   }
@@ -3458,6 +3531,7 @@ export class Island {
     void this.refreshSwirls(now);
     void this.refreshGateFolk(now);
     void this.keepFog(now);
+    void this.readUnfogged(now);
     void this.keepGuide(now);
     const said = `${x.toFixed(2)},${y.toFixed(2)},${level}`;
 

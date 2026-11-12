@@ -180,7 +180,7 @@ export const MINOR_SKILLS: string[] = [
   'digging', 'mining', 'prospecting', 'woodcutting', 'forestry', 'foraging', 'botanizing', 'fishing', 'brewing', 'paving',
   'masonry', 'stonecutting', 'carpentry', 'fine_carpentry', 'pottery', 'tailoring', 'ropemaking', 'cooking', 'milling',
   'smelting', 'blacksmithing', 'weaponsmithing', 'armorsmithing', 'farming', 'taming', 'animal_husbandry', 'butchering',
-  'alchemy', 'prayer', 'meditation', 'repair', 'first_aid', 'chirurgy', 'papyrusmaking', 'archaeology', 'restoration',
+  'alchemy', 'meditation', 'repair', 'first_aid', 'chirurgy', 'papyrusmaking', 'archaeology', 'restoration',
   'leatherworking', 'chainsmithing', 'platesmithing', 'jewellery', 'bowyery', 'fletching', 'glassblowing', 'praying',
   'elementalism', 'enchanting',
   // Track, from the field guide (`tracking.ts`).

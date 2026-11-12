@@ -37,7 +37,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -101,7 +101,7 @@ begin
   insert into said select 'THISTLEKIT', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Orse')).id from species_def where id = 'orse';
   insert into said select 'STITCHKIT', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Tinka')).id from species_def where id = 'tinka';
   insert into said select 'CARTLING', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Roxxen')).id from species_def where id = 'roxxen';
-  insert into said select 'SLUGLOW', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Embra')).id from species_def where id = 'embra';
+  insert into said select 'SNAILGLOW', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Embra')).id || '|' || (corpse_species('Sluglow')).id from species_def where id = 'embra';
   insert into said select 'MUDLET', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Noot')).id from species_def where id = 'noot';
   insert into said select 'SANDPIP', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Crawler')).id from species_def where id = 'crawler';
   insert into said select 'SKYLOOK', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Warda')).id from species_def where id = 'warda';
@@ -200,9 +200,9 @@ check('the Bevere is the Sapgnaw now, a Logchewer and a Timberlord after, and an
   gnaw.name === 'Sapgnaw' && gnaw.stages?.map((x) => x.name).join(',') === 'Logchewer,Timberlord'
     && at('SAPGNAW') === 'Sapgnaw|Logchewer,Timberlord|Bevere|bevere', at('SAPGNAW'));
 const slug = SPECIES.embra;
-check('the Embra is the Sluglow now, a Slugember and a Slugferno after, and an old Embra carcass is still one, on both sides',
-  slug.name === 'Sluglow' && slug.stages?.map((x) => x.name).join(',') === 'Slugember,Slugferno'
-    && at('SLUGLOW') === 'Sluglow|Slugember,Slugferno|Embra|embra', at('SLUGLOW'));
+check('the Embra is the Snailglow now (a Sluglow before), a Slugember and a Slugferno after, and an old Embra or Sluglow carcass is still one, on both sides',
+  slug.name === 'Snailglow' && slug.stages?.map((x) => x.name).join(',') === 'Slugember,Slugferno'
+    && at('SNAILGLOW') === 'Snailglow|Slugember,Slugferno|Embra,Sluglow|embra|embra', at('SNAILGLOW'));
 const brick = SPECIES.cobbe;
 check('the Cobbe is the Brickling now, a Mortarback and a Bastiondrake after, and an old Cobbe carcass is still one, on both sides',
   brick.name === 'Brickling' && brick.stages?.map((x) => x.name).join(',') === 'Mortarback,Bastiondrake'

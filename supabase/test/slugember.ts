@@ -16,7 +16,7 @@
  *     takes what is left back to the stores;
  *   * a hearth another worker is carrying fuel to is left alone;
  *   * it fuels ovens, lit, and braziers, left to light themselves;
- *   * a Sluglow and a Slugember empty it into the stores and charge it with the ore, also when a hearth wants fuel and
+ *   * a Snailglow and a Slugember empty it into the stores and charge it with the ore, also when a hearth wants fuel and
  *     there is none;
  *   * and says why it stands about;
  *   * and leaves a hearth past its settlement's edge alone, though within its reach ("my slugferno is lighting campfires
@@ -40,7 +40,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -51,7 +51,7 @@ const check = (what: string, passed: boolean, detail = ''): void => {
   (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
 };
 
-/** A Sluglow, a Slugember and a Slugferno: their smelting at the level each stage comes in at. */
+/** A Snailglow, a Slugember and a Slugferno: their smelting at the level each stage comes in at. */
 const LOW = 1;
 const EMBER = EVOLVE_AT[0];
 const FERNO = EVOLVE_AT[1];
@@ -131,7 +131,7 @@ begin
   select * into c from creature where world_id = w and id = v_id;
   insert into said select 'FITS', string_agg(coalesce((select f.def from stoke_fuel(w, c, r, 16.6, 16.6) f), '-'), ',' order by r desc) from unnest(array[250, 100, 50]) r;${done}
 
-  -- A Sluglow with a piece of tar and a cold campfire: fed it and lit it, then nothing in stock.
+  -- A Snailglow with a piece of tar and a cold campfire: fed it and lit it, then nothing in stock.
   ${put(7501, [['tar', 1]])}
   ${fire(0)}${stoker(LOW)}${settle}
   insert into said select 'TAR', ${held(7501)} || '|' || placed_fuel(p) || '|' || p.lit || '|' || ${why} from placed p where p.id = v_p;${done}
@@ -171,7 +171,7 @@ begin
   ${piece('brazier')}${stoker(LOW)}${settle}
   insert into said select 'BRAZIER', ${held(7501)} || '|' || placed_fuel(p) || '|' || p.lit || '|' || (stoke_room(p) = brazier_capacity()) from placed p where p.id = v_p;${done}
 
-  -- A smelter with two lumps made, fuel enough, and three ore in the stores: a Sluglow, then a Slugember.
+  -- A smelter with two lumps made, fuel enough, and three ore in the stores: a Snailglow, then a Slugember.
   ${put(7501, [['copper_ore', 3]])}
   ${smelter}${stoker(LOW)}${settle}
   insert into said select 'SMELT:low', ${held(7501)} || '|' || jsonb_array_length(furnace_jobs(p)) || '|' || jsonb_array_length(furnace_output(p)) || '|' || ${why}
@@ -191,7 +191,7 @@ begin
   insert into said select 'SMELT:nofuel', ${held(7501)} || '|' || jsonb_array_length(furnace_jobs(p)) || '|' || jsonb_array_length(furnace_output(p))
     from placed p where p.id = v_q;${done}
 
-  -- Why it stands about: a Sluglow with a cold campfire and no fuel; a Slugember with nothing to fuel and no smelter.
+  -- Why it stands about: a Snailglow with a cold campfire and no fuel; a Slugember with nothing to fuel and no smelter.
   ${fire(0)}${stoker(LOW)}${settle}
   insert into said values ('WHY:stock', ${why});${done}
   ${stoker(EMBER)}${settle}
@@ -217,7 +217,7 @@ const order = [...STOKE_FIRST, 'log'];
 check(`tar is a fuel, ${FUEL_VALUES.tar} seconds a piece, between peat and coal; the fuel order and the smelter stage are the island's`,
   FUEL_VALUES.tar > FUEL_VALUES.peat && FUEL_VALUES.tar < FUEL_VALUES.coal
   && at('DEFS') === `${FUEL_VALUES.tar}|${order.join(',')}|${STOKE_FIRST.length}|${STOKE_SMELTS_AT}|${FUEL_SAID}`, at('DEFS'));
-check('the smelter work comes in at the first stage, a Sluglow\'s', STOKE_SMELTS_AT === 0 && SPECIES.embra.name === 'Sluglow');
+check('the smelter work comes in at the first stage, a Snailglow\'s', STOKE_SMELTS_AT === 0 && SPECIES.embra.name === 'Snailglow');
 check('every stage says it works the smelters, the first too',
   [SPECIES.embra.description, ...SPECIES.embra.stages!.map((s) => s.description)].every((d) => /empties your smelters/.test(d) && /Fuel order: tar, peat, coal/.test(d)),
   SPECIES.embra.description);
@@ -228,7 +228,7 @@ check('on the island, a stoker fetches tar from the far store before the logs an
 check('on the island, peat before logs', at('ORDER:peat') === 'peat|17|-', at('ORDER:peat'));
 check('on the island, coal before logs', at('ORDER:coal') === 'coal|17|-', at('ORDER:coal'));
 check('on the island, only a fuel a whole piece of fits: peat in 250 seconds of room, thatch in 100, none in 50', at('FITS') === 'peat,thatch,-', at('FITS'));
-check(`on the island, a Sluglow feeds a cold campfire a piece of tar, ${FUEL_VALUES.tar} seconds, and lights it; then has no fuel`,
+check(`on the island, a Snailglow feeds a cold campfire a piece of tar, ${FUEL_VALUES.tar} seconds, and lights it; then has no fuel`,
   at('TAR') === `-|${FUEL_VALUES.tar}|true|stock`, at('TAR'));
 {
   const n = Math.min(Number(at('LOADS')), COAL_FITS);
@@ -241,13 +241,13 @@ check('on the island, and takes that one back to the stores', at('BACK') === 'co
 check('on the island, a campfire another worker is carrying fuel to is left to it', at('CLAIMED') === '-|-|range', at('CLAIMED'));
 check('on the island, an oven is fed a log and lit, to its own capacity', at('OVEN') === `-|${FUEL_VALUES.log}|true|true`, at('OVEN'));
 check('on the island, a brazier is fed a log and left to light itself after dark, to its own capacity', at('BRAZIER') === `-|${FUEL_VALUES.log}|false|true`, at('BRAZIER'));
-check('on the island, a Sluglow takes the lumps out of a smelter into the stores and charges it with the ore', at('SMELT:low').startsWith('copper_lump 2|3|0|'), at('SMELT:low'));
+check('on the island, a Snailglow takes the lumps out of a smelter into the stores and charges it with the ore', at('SMELT:low').startsWith('copper_lump 2|3|0|'), at('SMELT:low'));
 check('on the island, a Slugember takes the lumps out of a smelter into the stores and charges it with the ore', at('SMELT:ember') === 'copper_lump 2|3|0', at('SMELT:ember'));
 check('on the island, a Slugember takes a poured mould\'s castings into the stores as castings of their piece', at('CASTING') === 'casting 2 Bronze shovel_head', at('CASTING'));
 check('on the island, and so with a cold campfire and no fuel for it', at('SMELT:nofuel') === 'copper_lump 2|3|0', at('SMELT:nofuel'));
 check('on the island, a campfire a tile past the settlement\'s edge, within its reach, is left alone: nothing in range, nothing fed',
   at('OFFDEED') === '-|-|range' && at('OFFDEED:fuel') === '0', `${at('OFFDEED')} ${at('OFFDEED:fuel')}`);
-check('on the island, a Sluglow with a cold campfire and no fuel says the stores hold none; a Slugember with nothing to do, nothing in range',
+check('on the island, a Snailglow with a cold campfire and no fuel says the stores hold none; a Slugember with nothing to do, nothing in range',
   at('WHY:stock') === 'stock' && at('WHY:range') === 'range', `${at('WHY:stock')} ${at('WHY:range')}`);
 
 /* ---- in the browser ----------------------------------------------------------------- */
@@ -329,7 +329,7 @@ for (const [want, near, far] of [
   const f = g.addCampfire(23, 20, 0, 0, 0, false);
   const c = worker(g, LOW);
   run(g, 60);
-  check(`in the browser, a Sluglow feeds a cold campfire a piece of tar, ${FUEL_VALUES.tar} seconds, and lights it; then has no fuel`,
+  check(`in the browser, a Snailglow feeds a cold campfire a piece of tar, ${FUEL_VALUES.tar} seconds, and lights it; then has no fuel`,
     inCrate(crate) === '-' && f.fuel === FUEL_VALUES.tar && f.lit && c.idle?.why === 'stock', `${inCrate(crate)} ${f.fuel} ${f.lit} ${c.idle?.why}`);
 }
 {
@@ -398,7 +398,7 @@ for (const [level, name, campfire] of [[LOW, 'low', false], [EMBER, 'ember', fal
   const c = worker(g, level);
   run(g, 120);
   const got = `${inCrate(crate)}|${s.jobs.length}|${s.output.length}${name === 'low' ? `|${c.idle?.why}` : ''}`;
-  check(`in the browser, ${name === 'low' ? 'a Sluglow empties a smelter into the stores and charges it with the ore' : name === 'ember' ? 'a Slugember empties a smelter into the stores and charges it with the ore'
+  check(`in the browser, ${name === 'low' ? 'a Snailglow empties a smelter into the stores and charges it with the ore' : name === 'ember' ? 'a Slugember empties a smelter into the stores and charges it with the ore'
     : 'and so with a cold campfire and no fuel for it'}, as on the island`, got === at(`SMELT:${name}`), got);
 }
 {
@@ -411,7 +411,7 @@ for (const [level, name, campfire] of [[LOW, 'low', false], [EMBER, 'ember', fal
   stock(g2, 21, []);
   const ember = worker(g2, EMBER);
   run(g2, 10);
-  check('in the browser, a Sluglow with a cold campfire and no fuel says the stores hold none; a Slugember with nothing to do, nothing in range',
+  check('in the browser, a Snailglow with a cold campfire and no fuel says the stores hold none; a Slugember with nothing to do, nothing in range',
     low.idle?.why === 'stock' && ember.idle?.why === 'range', `${low.idle?.why} ${ember.idle?.why}`);
 }
 

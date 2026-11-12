@@ -17,6 +17,41 @@ export const IMPROVE_FLOOR = 10;
 export const IMPROVE_DAMAGE = 10;
 /** The QL a pass of yours takes a thing past that the journal counts, once a thing (`improved70`; the island's `perform_item`). */
 export const IMPROVED_TO = 70;
+/** Damage a failed pass puts on the piece: this much, and up to `IMPROVE_FAIL_SPREAD` more at random (the island's `perform_item`). */
+export const IMPROVE_FAIL_LEAST = 3;
+export const IMPROVE_FAIL_SPREAD = 5;
+
+/**
+ * The one kind of stock a run of passes may draw (`stock` and `stockOf` on its target): that item, of that
+ * material or of none, and nothing else -- not another wood, another metal, nor an ingot for a lump. A run
+ * asked for with one stops when that kind is gone rather than going on with the next kind at hand. The
+ * island's `private.improve_stock`.
+ */
+export interface StockLock {
+  stock: string;
+  stockOf?: string;
+}
+
+/** The lock a target names, if it names one. */
+export const lockOf = (t: { stock?: string; stockOf?: string }): StockLock | undefined =>
+  typeof t.stock === 'string' ? { stock: t.stock, stockOf: typeof t.stockOf === 'string' ? t.stockOf : undefined } : undefined;
+
+/** The lock that holds a run to this stock: its item and what it is made of. */
+export const lockFor = (it: { id: string; extra?: string }): StockLock => {
+  const of = materialOfItem(it)?.name;
+  return of ? { stock: it.id, stockOf: of } : { stock: it.id };
+};
+
+/** Whether a stack is of the kind a lock names. */
+export const lockTakes = (lock: StockLock, it: { id: string; extra?: string }): boolean =>
+  it.id === lock.stock && (materialOfItem(it)?.name ?? '').toLowerCase() === (lock.stockOf ?? '').toLowerCase();
+
+/** A lock by name, as a refusal and the window say it: "iron lump", "plank (oak)". */
+export const lockSaid = (lock: StockLock): string =>
+  `${itemDef(lock.stock).name.toLowerCase()}${lock.stockOf && !itemDef(lock.stock).name.toLowerCase().includes(lock.stockOf.toLowerCase()) ? ` (${lock.stockOf.toLowerCase()})` : ''}`;
+
+/** Why a run held to a kind of stock stops when it is gone. The island's `item_refusal`, word for word. */
+export const outOfSaid = (lock: StockLock): string => `Out of ${lockSaid(lock)}.`;
 
 /**
  * Improving: taking a finished thing and making it better than it was made.
@@ -124,13 +159,13 @@ export const improveCeiling = (g: Game, skill: string, item?: Item): number =>
 export const improveStepAt = (level: number, ql: number): number => Math.max(0.08, Math.max(0, 100 - ql) * 0.05 * (0.35 + level / 130));
 
 /**
- * How much a successful pass adds in these hands, and more for a perk on what
- * the thing is made of (a Smith's Metal Polisher), as `improve:` has it on the
- * island.
+ * How much a successful pass adds in these hands, more for the trade's Fineness
+ * on the skill (`class_mul`'s `fine`), and more for a perk on what the thing is
+ * made of (a Smith's Metal Polisher), as `perform_item` has it on the island.
  */
-export function improveStep(g: Game, item: Item, skill: string): number {
+export function improveStep(g: Game, item: Item, skill: string, ql = item.ql): number {
   const what = improvable(item.id);
-  return improveStepAt(g.skills.get(skill), item.ql) * (what ? g.perk(`improve:${what.material.id}`, 1) : 1);
+  return improveStepAt(g.skills.get(skill), ql) * g.classChannel('fine', skill) * (what ? g.perk(`improve:${what.material.id}`, 1) : 1);
 }
 
 /** The first of a material's tools that is missing, or null when all are in hand. */
@@ -151,9 +186,9 @@ function missingTool(g: Game, def: MaterialDef): string | null {
  * same: you do not patch an oak chest with pine, and a copper blade will not
  * take bronze.
  */
-function stockFor(g: Game, def: MaterialDef, made: string | undefined): CraftStock | undefined {
+export function stockFor(g: Game, def: MaterialDef, made: string | undefined, lock?: StockLock): CraftStock | undefined {
   let worst: CraftStock | undefined;
-  for (const s of g.stockOf((it) => def.stock.includes(it.id))) {
+  for (const s of g.stockOf((it) => def.stock.includes(it.id) && (!lock || lockTakes(lock, it)))) {
     /*
      * Stock that says what it is made of has to say the right thing; stock
      * that says nothing — an unmarked plank, a shaft off an old save — is
@@ -168,7 +203,31 @@ function stockFor(g: Game, def: MaterialDef, made: string | undefined): CraftSto
 }
 
 /** What a thing is made of, when that is a thing it can be made of. */
-const madeOf = (item: Item): string | undefined => materialOfItem(item)?.name;
+export const madeOf = (item: Item): string | undefined => materialOfItem(item)?.name;
+
+/**
+ * Every kind of stock a pass on this thing could draw, each with how many are carried and how many lie in the
+ * stores within reach (`Game.stockOf`, where a pass draws from), in the order a pass would draw them: the
+ * carried first, the poorest first. A kind is its item and what it is made of (`lockFor`).
+ */
+export function stockKinds(g: Game, item: Item): Array<{ lock: StockLock; carried: number; stored: number; ql: number }> {
+  const what = improvable(item.id);
+  if (!what) return [];
+  const made = madeOf(item);
+  const kinds = new Map<string, { lock: StockLock; carried: number; stored: number; ql: number }>();
+  for (const s of g.stockOf((it) => what.material.stock.includes(it.id))) {
+    const its = materialOfItem(s.item)?.name;
+    if (made && its && its !== made) continue;
+    const lock = lockFor(s.item);
+    const key = `${lock.stock}|${lock.stockOf ?? ''}`;
+    const k = kinds.get(key) ?? { lock, carried: 0, stored: 0, ql: s.item.ql };
+    if (s.carried) k.carried += s.item.count;
+    else k.stored += s.item.count;
+    k.ql = Math.min(k.ql, s.item.ql);
+    kinds.set(key, k);
+  }
+  return [...kinds.values()].sort((a, b) => Number(b.carried > 0) - Number(a.carried > 0) || a.ql - b.ql);
+}
 
 export const IMPROVE_ACTIONS: ActionDef[] = [
   {
@@ -195,6 +254,9 @@ export const IMPROVE_ACTIONS: ActionDef[] = [
       const missing = missingTool(g, what.material);
       if (missing) return `Need ${what.material.tools.map((id) => itemDef(id).name.toLowerCase()).join(' and ')} for ${what.material.name}.`;
       const made = madeOf(item);
+      // Held to one kind of stock (`StockLock`): that kind gone is the end of the run, whatever else is at hand.
+      const lock = lockOf(t);
+      if (lock && !stockFor(g, what.material, made, lock)) return outOfSaid(lock);
       if (!stockFor(g, what.material, made)) return `Need ${made ? made.toLowerCase() : what.material.name} to work into it.`;
       const ceiling = improveCeiling(g, what.skill, item);
       if (item.ql >= ceiling) return `QL capped by your ${what.skill.replace(/_/g, ' ')}.`;
@@ -224,7 +286,8 @@ export const IMPROVE_ACTIONS: ActionDef[] = [
       const what = item && improvable(item.id);
       if (!item || !what) return;
       const made = madeOf(item);
-      const stock = stockFor(g, what.material, made);
+      const lock = lockOf(t);
+      const stock = stockFor(g, what.material, made, lock);
       if (!stock || !stock.spend(1)) return;
       // Every tool the material asks for wears a go's worth (`missingTool`), as the island's `perform_item` has it.
       for (const id of what.material.tools) g.wearTool(id);
@@ -236,7 +299,7 @@ export const IMPROVE_ACTIONS: ActionDef[] = [
       const ok = g.skillCheck(what.skill, 12 + item.ql / 3 + matOf(item.extra).difficulty, toolQl, g.mindEase());
       g.gainSkill(what.skill, tryGain(ok, IMPROVE_GAIN));
       if (!ok) {
-        g.damageItem(item, 3 + g.rand() * 5);
+        g.damageItem(item, IMPROVE_FAIL_LEAST + g.rand() * IMPROVE_FAIL_SPREAD);
         g.logMsg(`Improve failed: ${itemName(item).toLowerCase()}, ${item.dmg.toFixed(1)} damage.`, 'event');
         return item.dmg <= 10;
       }
@@ -270,7 +333,7 @@ export const IMPROVE_ACTIONS: ActionDef[] = [
       g.events.emit('inventory');
       g.logMsg(`Improved: ${itemName(item).toLowerCase()}, QL ${item.ql.toFixed(1)}.`, 'event');
       // Keep at it while there is room and stock of the right stuff left.
-      return item.ql < ceiling && !!stockFor(g, what.material, made);
+      return item.ql < ceiling && !!stockFor(g, what.material, made, lock);
     },
   },
   {

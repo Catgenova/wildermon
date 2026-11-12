@@ -5,7 +5,7 @@ import { TREE_DEFS } from '../world/tiles';
 /**
  * What a thing is made of, and what that is worth.
  *
- * Wurm's rule is that the same bill of materials in two different woods, or
+ * The rule is that the same bill of materials in two different woods, or
  * two different metals, makes two different things. An oak chest outlasts a
  * pine one and is harder work to build; a cedar barrel is still sound when
  * the birch one beside it has gone; a lead sword is a joke and an adamantine

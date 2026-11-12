@@ -6,7 +6,8 @@ import { DEED_PLACE } from './furniture';
 import { SUBTILES } from './crates';
 import type { Game } from './game';
 import { itemDef, itemName, markOf, rarityOf, roomFor, type Item } from './items';
-import { MELT_HEAT, MELT_KEEP, MELT_SHARE, meltLumps, meltQl, meltRefusal, metalOfItem } from './melt';
+import { MELT_HEAT, MELT_KEEP, MELT_SHARE, meltFits, meltLumps, meltQl, meltRefusal, metalOfItem } from './melt';
+import { fixedTo } from './ageing';
 import { matOf } from './materials';
 import {
   castSeconds, castWhole, INGOT_LUMPS, ingotOf, isMetalStock, isOreItem, lumpsIn, METAL_BY_LUMP, METAL_BY_ORE, metalOfBar, MOULD_BY_ID,
@@ -59,6 +60,22 @@ export interface PlacedSmelter {
   /** Ashes waiting to be raked out. */
   ash?: number;
 }
+
+/**
+ * What a melt says: what went in, the lumps and their QL, and how many of the
+ * stack stayed in the pack for want of room. The island's `melting_said`.
+ */
+export const meltingSaid = (n: number, what: string, lumps: number, metal: string, ql: number, left: number): string =>
+  `Melting: ${n > 1 ? `${n} × ` : ''}${what.toLowerCase()}. Gives ${lumps} × ${metal.toLowerCase()} lump, QL ${fixedTo(ql, 1)}.`
+  + (left > 0 ? ` ${left} did not fit.` : '');
+
+/**
+ * What a furnace says when work comes out, to whoever put it in: each kind
+ * with its count and QL. The island's `furnace_made_said`.
+ */
+export const furnaceMadeSaid = (kind: string, made: ReadonlyArray<{ count: number; name: string; ql: number }>): string =>
+  `${kind === 'kiln' ? 'Kiln fired' : 'Smelter made'}: `
+  + made.map((m) => `${m.count > 1 ? `${m.count} × ` : ''}${m.name.toLowerCase()}, QL ${fixedTo(m.ql, 1)}`).join('; ') + '.';
 
 /** A smelter is three subtiles one way and two the other: six in all. */
 export const SMELTER_W = 3;
@@ -324,8 +341,9 @@ export const SMELTER_ACTIONS: ActionDef[] = [
       if (!item) return 'Choose something to melt down.';
       const why = meltRefusal(item);
       if (why) return why;
+      // "All" melts what fits; full is when not one of it does.
       const n = Math.min(Math.max(1, (t.kind === 'smelter' ? t.count : undefined) ?? 1), item.count);
-      if (s.jobs.length + meltLumps(item, n, g.perk('melt:share', MELT_SHARE)) > smelterCapacity(s)) return 'Smelter full.';
+      if (!meltFits(item, n, smelterCapacity(s) - s.jobs.length, g.perk('melt:share', MELT_SHARE))) return 'Smelter full.';
       return null;
     },
     perform: (t, g) => {
@@ -335,10 +353,12 @@ export const SMELTER_ACTIONS: ActionDef[] = [
       const item = stack?.item;
       const metal = item && metalOfItem(item);
       if (!stack || !item || !metal || meltRefusal(item)) return;
-      const n = Math.min(Math.max(1, t.count ?? 1), item.count);
+      const want = Math.min(Math.max(1, t.count ?? 1), item.count);
       // More of it, and better, for a Smith's Reclaimer.
-      const lumps = meltLumps(item, n, g.perk('melt:share', MELT_SHARE));
-      if (s.jobs.length + lumps > smelterCapacity(s)) return;
+      const share = g.perk('melt:share', MELT_SHARE);
+      const n = meltFits(item, want, smelterCapacity(s) - s.jobs.length, share);
+      if (n < 1) return;
+      const lumps = meltLumps(item, n, share);
       const ql = meltQl(item, g.perk('melt:keep', MELT_KEEP));
       const taken: Item = { ...item, count: n };
       if (!stack.spend(n)) return;
@@ -349,8 +369,9 @@ export const SMELTER_ACTIONS: ActionDef[] = [
       }
       g.note('melted');
       g.events.emit('smelter');
-      g.logMsg(`Melting: ${n > 1 ? `${n} × ` : ''}${itemDef(item.id).name.toLowerCase()}.`
-        + ` Gives ${lumps} × ${metal.name.toLowerCase()} lump, about QL ${Math.round(ql)}.`, 'event');
+      // Named as the island's `made_name` names it: the thing, or the piece a casting is of.
+      const what = item.piece ? `${itemDef(item.piece).name} casting` : itemDef(item.id).name;
+      g.logMsg(meltingSaid(n, what, lumps, metal.name, ql, want - n), 'event');
     },
   },
   {

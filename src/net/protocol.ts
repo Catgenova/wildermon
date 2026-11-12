@@ -243,7 +243,7 @@ export const cleanWho = (raw: string): string => raw.replace(STRIP, '').replace(
  * arriving.
  */
 export function myWho(): string {
-  const KEY = 'wurm.who';
+  const KEY = 'wildermon.who';
   try {
     const had = localStorage.getItem(KEY);
     if (had) return cleanWho(had);

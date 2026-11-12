@@ -1,5 +1,5 @@
 /**
- * Sleep, as Wurm has it: Sleep in a bed you may use and you log off; while you
+ * Sleep: Sleep in a bed you may use and you log off; while you
  * are logged off in it you gain sleep bonus, and sleep bonus switched on
  * doubles skill gain while it drains.
  *
@@ -74,7 +74,7 @@ export const SLEEP_SAID = {
 } as const;
 
 /** Refused on a bed that is neither yours nor on a settlement of yours: "Not yours: bed." */
-export const sleepNotYours = (name: string): string => `Not yours: ${name.toLowerCase()}.`;
+export const sleepNotYours = (name: string): string => `Not yours: ${name}.`;
 
 /** The line told on waking. The island's `sleep_slept_said`. */
 export const sleptSaid = (asleep: number, gained: number, stored: number): string =>
@@ -90,5 +90,5 @@ export const sleepSwitchSaid = (on: boolean, left: number): string =>
     ? `Sleep bonus: on. Skill gain ×${SLEEP_BONUS_MULT}; ${sleepHm(left)} left.`
     : `Sleep bonus: off. ${sleepHm(left)} stored.`;
 
-/** What the boot card says of a body logged off asleep. */
-export const asleepIn = (name: string): string => `Asleep in ${name.toLowerCase()}`;
+/** What the boot card says of a body logged off asleep. The name as `furnitureNameInLine` gives it. */
+export const asleepIn = (name: string): string => `Asleep in ${name}`;

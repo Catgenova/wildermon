@@ -17,7 +17,6 @@ import { fixed, html, setMarkup, type Markup } from '../html';
 import { setUiSize, UI_SIZE_MAX, UI_SIZE_MIN, UI_SIZE_PRESETS, uiSizeShown } from '../screen';
 import { FAST_DPR, FRAME_CAPS, FULL_DPR, LOW_POWER_FPS, type Graphics, type UiColours, type UiFrames, type UiLight, type UiStyle } from '../../game/settings';
 import type { Motion } from '../../engine/motion';
-import { MAX_ZOOM, SCULPTED_MAX_ZOOM } from '../../engine/camera';
 import { BUSH3D_SPECIES, STUMP3D_SPECIES, TREE3D_SPECIES } from '../../render/trees3d';
 import { FRAME_REACH, FRAME_REACHES, FRAME_RIM, FRAMES, frameLabel, frameOddities, RIM, RIMS } from '../runecut-art';
 import { lifeWords } from '../runecut-life';
@@ -445,14 +444,6 @@ export class SettingsPanel {
         game.graphicsChanged?.();
       },
     );
-    add(
-      'Sculpted figures',
-      'Bodies from the sculpted base, drawn by the graphics chip, in place of the flat figure. New look: the flat figure until '
-        + 'its bake is made, in idle time. Not sculpted yet: held gear, swimming, seats, veils. No WebGL: the flat figure. '
-        + `Max zoom ${SCULPTED_MAX_ZOOM}× (off: ${MAX_ZOOM}×).`,
-      () => game.settings.sculpted,
-      (v) => (game.settings.sculpted = v),
-    );
     choose<number>(
       'Frame rate limit',
       `Max frames per second. No limit: one frame per screen refresh, even above ${FRAME_CAPS[1]} Hz (more cost, same look).`,
@@ -673,7 +664,7 @@ export class SettingsPanel {
       const row = document.createElement('div');
       row.className = 'setting-row setting-look';
       const text = document.createElement('span');
-      setMarkup(text, fixed('<b>Appearance</b><small>Opens the character creator (build, skin, hair, hair colour, eyes, beard, shirt, trousers). <i>Step ashore</i>: apply and return. <i>On to the island</i>: no change.</small>'));
+      setMarkup(text, fixed('<b>Appearance</b><small>Opens the character creator (body, hair, hair colour, hair brightness, skin). <i>Step ashore</i>: apply and return. <i>On to the island</i>: no change.</small>'));
       const open = document.createElement('button');
       open.type = 'button';
       open.className = 'tb-btn tb-small';

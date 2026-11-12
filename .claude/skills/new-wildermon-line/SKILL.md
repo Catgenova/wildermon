@@ -1,6 +1,6 @@
 ---
 name: new-wildermon-line
-description: Add or replace a wildermon line (three evolution stages, a settlement trade) in Wurm, on both the island (Postgres) and the browser, with models, voice, tests, help and What's new. Use when asked for a new wildermon line, a replacement line for an existing kind, or a new worker trade.
+description: Add or replace a wildermon line (three evolution stages, a settlement trade) in Wildermon, on both the island (Postgres) and the browser, with models, voice, tests, help and What's new. Use when asked for a new wildermon line, a replacement line for an existing kind, or a new worker trade.
 ---
 
 # A new wildermon line
@@ -37,7 +37,7 @@ The island and the browser must agree: every rule lives on both sides, and tests
 ## Tests (local DB: run `scripts/test-island.sh` first)
 - Write a new test for the trade on both sides, in the style of `supabase/test/glassblower.ts`, and add a CI step to `.github/workflows/island.yml` in the right shard.
 - Update every test that lists trades or species: `learnrate.ts`, `madelog.ts`, the hands tests, `magsort`, the wild-table tests and `permissions`.
-- Run each with `npx esbuild supabase/test/X.ts --bundle --platform=node --format=esm --packages=external --outfile=node_modules/.cache/X.mjs && PGHOST=/var/run/postgresql PGPORT=5433 PGUSER=wurm PGDATABASE=ci_t node node_modules/.cache/X.mjs`.
+- Run each with `npx esbuild supabase/test/X.ts --bundle --platform=node --format=esm --packages=external --outfile=node_modules/.cache/X.mjs && PGHOST=/var/run/postgresql PGPORT=5433 PGUSER=wildermon PGDATABASE=ci_t node node_modules/.cache/X.mjs`.
 - `npm run build` must exit 0. Check `$?`; don't grep the output.
 
 ## Ship

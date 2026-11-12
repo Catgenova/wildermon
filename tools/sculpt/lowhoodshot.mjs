@@ -14,6 +14,7 @@
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
 import { buildRig, posed, skin, fromGame, gameRig, armsOut, axisAngle, mm, tr, mv } from './lowrig.mjs';
 import { skinGarment, checks, crossPairs, garmentAsset, bonesWith, sub, dot, cross } from './lowgarment.mjs';
 import { MATS as SHAWL_MATS } from './garments/shawl.mjs';
@@ -27,7 +28,7 @@ const flag = (n) => args.includes(`--${n}`);
 const out = resolve(opt('out', 'tmp/lowhood'));
 const only = opt('only', 'sheet,wire,poses,walk,metrics').split(',');
 const tag = opt('tag', '');
-const SHEET = resolve(opt('sheet', '/tmp/claude-0/-home-user-Wurm/781c435a-4202-5724-9056-b83f4c44c414/scratchpad/hood/hood-sheet.png'));
+const SHEET = resolve(opt('sheet', join(tmpdir(), 'hood/hood-sheet.png')));
 const withShawl = flag('shawl');
 mkdirSync(out, { recursive: true });
 

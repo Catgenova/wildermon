@@ -34,7 +34,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -63,7 +63,7 @@ const OUT = Date.parse('2026-11-16T00:00:00Z') / 1000;
 /* ---- on the island ----------------------------------------------------------------- */
 
 const MIRA = '7e5b0000-0000-4000-8000-0000000000f9';
-const pin = (secs: number): string => `perform set_config('wurm.wild_now', '${secs}', true);`;
+const pin = (secs: number): string => `perform set_config('wildermon.wild_now', '${secs}', true);`;
 const mark = (key: string, kind: string, on: string): string =>
   `insert into said select '${key}', coalesce((select round(val::numeric, 2) || '|' || round(extract(epoch from until - now())::numeric) from class_mark where world_id = w and creature_id = ${on} and kind = '${kind}' and until > now()), '-');`;
 

@@ -51,7 +51,7 @@ const PG_ENV = {
   ...process.env,
   PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
   PGPORT: process.env.PGPORT ?? '5433',
-  PGUSER: process.env.PGUSER ?? 'wurm',
+  PGUSER: process.env.PGUSER ?? 'wildermon',
   PGDATABASE: process.env.PGDATABASE ?? 'postgres',
 };
 const PSQL_ARGS = ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'];

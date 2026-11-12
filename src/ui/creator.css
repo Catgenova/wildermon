@@ -55,18 +55,16 @@
 .cr-me:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 2px; }
 
 /*
- * Under the mirror: turn it, look close, and see yourself doing things. The
- * same eight ways round the island draws you, and the same moves.
+ * Under the mirror: turn it, look close, and the first outfit on or off. The
+ * same eight ways round the island draws you.
  */
-.cr-turn, .cr-motions {
+.cr-turn {
   display: flex;
   width: 100%;
   gap: 4px;
 }
 
-.cr-motions { flex-wrap: wrap; }
-
-.cr-turn button, .cr-motions button {
+.cr-turn button {
   flex: 1 1 0;
   padding: 5px 0;
   border: 1px solid var(--ui-border);
@@ -79,16 +77,15 @@
   cursor: pointer;
 }
 
-.cr-motions button { flex-basis: calc((100% - 20px) / 6); }
 .cr-turn .cr-close { flex-grow: 2; }
 
-.cr-turn button:hover, .cr-motions button:hover { border-color: var(--ui-border-light); }
-.cr-turn button[aria-pressed='true'], .cr-motions button[aria-pressed='true'] {
+.cr-turn button:hover { border-color: var(--ui-border-light); }
+.cr-turn button[aria-pressed='true'] {
   border-color: var(--ui-accent);
   box-shadow: 0 0 0 1px var(--ui-accent);
   color: var(--t-strong, #fff);
 }
-.cr-turn button:focus-visible, .cr-motions button:focus-visible, .cr-roll:focus-visible, .cr-pick:focus-visible {
+.cr-turn button:focus-visible, .cr-roll:focus-visible, .cr-pick:focus-visible, .cr-slide:focus-visible {
   outline: 2px solid var(--ui-accent);
   outline-offset: 1px;
 }
@@ -145,10 +142,77 @@
 .cr-pick:hover { border-color: var(--ui-border-light); }
 .cr-pick.on { border-color: var(--ui-accent); box-shadow: 0 0 0 1px var(--ui-accent); }
 
-.cr-swatch { width: 30px; height: 30px; }
-.cr-face { width: 54px; height: 54px; }
-.cr-face canvas { width: 52px; height: 52px; }
+/* A hairstyle: its head over its name. */
+.cr-face {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 74px;
+  padding: 2px 2px 4px;
+  line-height: 1.2;
+  background: linear-gradient(#1b2f22, #2c3c26);
+}
+.cr-face canvas { width: 64px; height: 64px; }
+.cr-face span { font-size: 11px; color: #efe6d2; }
 .cr-word { padding: 6px 12px; line-height: 1.2; }
+
+/*
+ * A colour: a slider whose track is the colours along it, and the exact colour
+ * chosen in the dab beside it. The track comes from the creator (--cr-track),
+ * from the same ramp the colour does.
+ */
+.cr-tone { flex-wrap: nowrap; align-items: center; gap: 10px; }
+
+.cr-slide {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 22px;
+  margin: 0;
+  background: transparent;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+.cr-slide::-webkit-slider-runnable-track {
+  height: 14px;
+  border: 1px solid var(--ui-border);
+  border-radius: 7px;
+  background: var(--cr-track);
+}
+.cr-slide::-moz-range-track {
+  height: 14px;
+  border: 1px solid var(--ui-border);
+  border-radius: 7px;
+  background: var(--cr-track);
+}
+.cr-slide::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 22px;
+  margin-top: -5px;
+  border: 2px solid #fff;
+  border-radius: 3px;
+  background: transparent;
+  box-shadow: 0 0 0 1px #000, inset 0 0 0 1px #000;
+}
+.cr-slide::-moz-range-thumb {
+  width: 8px;
+  height: 18px;
+  border: 2px solid #fff;
+  border-radius: 3px;
+  background: transparent;
+  box-shadow: 0 0 0 1px #000, inset 0 0 0 1px #000;
+}
+
+.cr-dab {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--ui-border);
+  border-radius: 3px;
+}
 
 @container (max-width: 560px) {
   .cr-in { flex-direction: column; align-items: stretch; }

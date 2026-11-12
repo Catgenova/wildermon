@@ -175,7 +175,7 @@ function buildMenuRow(item: MenuItem, depth: number, hooks: RowHooks, path: stri
   return [row];
 }
 
-/** Wurm-style right-click menu. */
+/** Right-click menu: the actions on what was clicked. */
 export class ContextMenu {
   readonly el: HTMLDivElement;
   private swallow = false;

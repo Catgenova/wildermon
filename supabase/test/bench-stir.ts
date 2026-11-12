@@ -40,7 +40,7 @@ const psql = (sql: string, who = OWNER): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
     },
     input: `select set_config('request.jwt.claims', '{"sub":"${who}"}', false) \\g /dev/null\n${sql}\n`,
     encoding: 'utf8',
