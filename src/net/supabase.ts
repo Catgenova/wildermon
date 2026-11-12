@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { captchaOptions } from './captcha';
 import { queueReport } from './errors';
+import type { Rpc } from './rpc.gen';
 
 /**
  * Which island keeper to talk to.
@@ -126,7 +127,8 @@ export function seatLost(): void {
 /** Play here: the seat to this tab, and the other device told (`rpc_take_seat`). Null when done, else why not. */
 export async function takeSeat(): Promise<string | null> {
   holdSeat();
-  const { data, error } = await supabase().rpc('rpc_take_seat');
+  // Not through `rpc.ts`, which takes the client from here; checked against the island's doors all the same.
+  const { data, error } = await supabase().rpc('rpc_take_seat' satisfies keyof Rpc);
   if (error) return error.message;
   return (data as { why?: string } | null)?.why ?? null;
 }
