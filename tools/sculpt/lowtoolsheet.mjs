@@ -76,19 +76,19 @@ if (only.includes('block')) {
 }
 
 if (only.includes('views')) for (const t of built) {
-  const cw = 300, ch = 380, s = 105, c = [0.05, t.plain.L / 2, 0], cells = [];
+  const cw = 300, ch = 400, s = 80, c = [0.05, t.plain.L / 2, 0], cells = [];
   [t.plain, t.lit].forEach((p, r) => [0, 45, 90, 135, 180, 270].forEach((d, i) => cells.push({ items: [D(p)], cam: { yaw: t.front + d, pitch: 14, s, c }, box: [i * cw, r * ch, cw, ch], bg: r ? DARK : BG, ink: 1, label: `${t.name} ${r ? 'enchanted' : 'plain'} ${d}°` })));
   await shoot(6 * cw, 2 * ch, cells, join(out, `views-${t.id}.png`));
 }
 
 if (only.includes('wire')) {
-  const cw = 300, ch = 420, s = 110;
+  const cw = 300, ch = 420, s = 82;
   const cells = built.flatMap((t, k) => [0, 90].map((d, j) => ({ items: [D(t.plain)], cam: { yaw: t.front + d, pitch: 10, s, c: [0.05, t.plain.L / 2, 0] }, box: [(k * 2 + j) * cw, 0, cw, ch], bg: BG, label: j ? '' : `${t.name}: ${t.plain.tris} tris (+${t.lit.all - t.plain.tris} glow)`, edges: [{ lines: triEdgesOf(t.plain.G, t.plain.G.V), c: [0.15, 0.1, 0.1] }] })));
   await shoot(built.length * 2 * cw, ch, cells, join(out, 'wire.png'));
 }
 
 if (only.includes('grip')) {
-  const cw = 320, ch = 420, s = 110;
+  const cw = 320, ch = 420, s = 82;
   const mark = (p, c, r = 0.05) => ({ lines: [[-r, 0, 0], [r, 0, 0], [0, -r, 0], [0, r, 0], [0, 0, -r], [0, 0, r]].flatMap((d, i) => (i % 2 ? [] : [p[0] + d[0], p[1] + d[1], p[2] + d[2], p[0] - d[0], p[1] - d[1], p[2] - d[2]])), c, over: true });
   const cells = built.map((t, k) => {
     const p = t.plain, lead = p.grip.lead;

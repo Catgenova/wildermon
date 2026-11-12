@@ -30,7 +30,7 @@ export function buildHammer({ enchanted = false } = {}) {
   /* ---- the head (its metal) ------------------------------------------------------------------------------------- */
   const headFrom = G.F.length;
   // the hub round the haft: an eight-sided post, y HY ± 0.25
-  const HB = 0.2, HZ = 0.175, HH = 0.29;
+  const HB = 0.22, HZ = 0.195, HH = 0.31;
   const hub0 = oct([0, HY - HH, 0], X, Z, HB, HZ, 0.05), hub1 = oct([0, HY + HH, 0], X, Z, HB, HZ, 0.05);
   tube([hub0, hub1], (i, j) => (j === 3 || j === 7 ? 'stone' : j === 1 || j === 5 ? 'stoneL' : 'stoneB'));
   cap(hub1, 'stoneL', Y); cap(hub0, 'bevel', [0, -1, 0]);
@@ -38,12 +38,12 @@ export function buildHammer({ enchanted = false } = {}) {
   const blk = (x, a, b, k) => oct([x, HY, 0], Y, Z, a, b, k);
   // (a section's sides: 1 the top, 5 the foot, 3 and 7 the back and front, the rest its chamfers, the upper two lit)
   const facet = (j) => (j === 1 || j === 0 || j === 2 ? 'stoneL' : j === 5 ? 'stoneB' : j === 4 || j === 6 ? 'bevel' : 'stone');
-  const S = [blk(HB - 0.01, 0.15, 0.13, 0.045), blk(0.28, 0.2, 0.165, 0.06), blk(0.465, 0.2, 0.165, 0.06), blk(0.47, 0.214, 0.178, 0.065), blk(0.535, 0.214, 0.178, 0.065), blk(H.face[0], 0.17, 0.14, 0.05)];
+  const S = [blk(HB - 0.01, 0.17, 0.15, 0.05), blk(0.29, 0.235, 0.19, 0.07), blk(0.465, 0.235, 0.19, 0.07), blk(0.47, 0.25, 0.204, 0.075), blk(0.535, 0.25, 0.204, 0.075), blk(H.face[0], 0.2, 0.16, 0.06)];
   tube(S, (i, j) => (i === 0 ? 'bevel' : i === 2 ? 'goldD' : i === 3 ? 'gold' : i === 4 ? 'bevel' : facet(j)));
   cap(S[S.length - 1], 'stone', X);
   // the cross peen on -x: from the hub to a thin edge across z
   const pe = (x, a, b, k) => oct([x, HY, 0], Y, Z, a, b, k);
-  const PN = [pe(-HB + 0.01, 0.15, 0.13, 0.045), pe(-0.28, 0.18, 0.155, 0.05), pe(-0.49, 0.025, 0.13, 0.012)];
+  const PN = [pe(-HB + 0.01, 0.17, 0.15, 0.05), pe(-0.3, 0.21, 0.175, 0.055), pe(-0.53, 0.028, 0.15, 0.014)];
   tube(PN, (i, j) => (i === 1 && (j === 5 || j === 4 || j === 6) ? 'bevel' : facet(j)));
   cap(PN[PN.length - 1], 'bevel', [-1, 0, 0]);
   const headTo = G.F.length;
@@ -54,21 +54,21 @@ export function buildHammer({ enchanted = false } = {}) {
   const stub = haftOf(parts, [[HY + HH, 0.14, 'gold'], [HY + HH + 0.07, 0.15, 'gold'], [HY + HH + 0.1, 0.1]], { top: 'gold' });
 
   /* ---- the hub's medallions, the face's diamond -------------------------------------------------------------------- */
-  for (const sz of [1, -1]) medal([0, HY, sz * HZ], [sz, 0, 0], [0, 0, sz], 0.145, 0.105);
-  diamond([H.face[0] + 0.003, HY, 0], Z, Y, X, 0.085, 0.11, 0.024);
+  for (const sz of [1, -1]) medal([0, HY, sz * HZ], [sz, 0, 0], [0, 0, sz], 0.16, 0.115);
+  diamond([H.face[0] + 0.003, HY, 0], Z, Y, X, 0.095, 0.13, 0.026);
 
   /* ---- veins over the stone ------------------------------------------------------------------------------------------ */
   const veinsFrom = G.F.length;
   for (const sz of [1, -1]) {
-    crack([0, 0, sz * 0.166], X, Y, [0, 0, sz], [[0.31, HY + 0.13], [0.37, HY + 0.04], [0.34, HY - 0.06], [0.42, HY - 0.13]]);
-    crack([0, 0, sz * 0.152], X, Y, [0, 0, sz], [[-0.23, HY + 0.11], [-0.3, HY + 0.04], [-0.36, HY + 0.02]]);
+    crack([0, 0, sz * 0.192], X, Y, [0, 0, sz], [[0.31, HY + 0.13], [0.37, HY + 0.04], [0.34, HY - 0.06], [0.42, HY - 0.13]]);
+    crack([0, 0, sz * 0.172], X, Y, [0, 0, sz], [[-0.23, HY + 0.11], [-0.3, HY + 0.04], [-0.36, HY + 0.02]]);
   }
   metalFaces(G, [[headFrom, headTo], [veinsFrom, G.F.length]], METAL);
 
   const tris = trisOf(G).length;
   if (enchanted) {
     for (const sz of [1, -1]) glowDisc([0, HY, sz * (HZ + 0.03)], X, Y, [0, 0, sz], 0.27, 0.27, 0.42);
-    glowDisc([H.face[0] + 0.01, HY, 0], Z, Y, X, 0.2, 0.22, 0.4, 8);
+    glowDisc([H.face[0] + 0.01, HY, 0], Z, Y, X, 0.22, 0.26, 0.4, 8);
     pm.glow();
   }
   for (let i = 0; i < G.V.length; i++) if (G.A[i] === undefined) G.A[i] = 1;
