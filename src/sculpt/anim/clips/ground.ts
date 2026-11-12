@@ -4,7 +4,7 @@
  * lifts and comes forward over the spot, then the other's dig. The shoulders roll down after the digging hand, the head
  * turned after it. The knees and the balls of the feet planted throughout. The jobs done with no tool at the ground play
  * it (`../index.ts` CLIP_OF_JOB): planting and sowing, foraging and searching, the traps, picking up, at the water's
- * edge, at a campfire.
+ * edge, tending a campfire.
  *
  * The idle stands the feet where this does (`plant`), so the fade in and out of it (`../index.ts` SETTLE) is the
  * getting down and up: the heels rolled up off the ground about the balls of the feet as the knees come down.
@@ -26,39 +26,39 @@ const TOES = 70;
  * spot (the left lifted from its dig), dug in (the left at the top of its lift), drawn back (the left over its spot).
  */
 const ARMS_REACH: Record<string, Euler> = {
-  upperarm_r: [43.8, 3.8, -13.7], lowerarm_r: [96.4, -21.1, 0], hand_r: [18.4, -53.3, 17.4],
-  upperarm_l: [37, 6, 8.4], lowerarm_l: [77, 34.1, 0], hand_l: [6, 59.9, -29.4],
+  upperarm_r: [12.7, -5.6, -28.7], lowerarm_r: [60.7, -13.4, 0], hand_r: [11.3, -43.5, 25.5],
+  upperarm_l: [17.3, 11.8, 17.9], lowerarm_l: [31.9, 14.3, 0], hand_l: [-13.5, 40, -36],
 };
 const ARMS_DIG: Record<string, Euler> = {
-  upperarm_r: [47.6, 22.3, -21.5], lowerarm_r: [82.2, -26.2, 0], hand_r: [25, -59.8, 16],
-  upperarm_l: [34.3, 15.4, 6.1], lowerarm_l: [100.4, 33.9, 0], hand_l: [11.8, 62.3, -27.8],
+  upperarm_r: [19.6, -2.3, -34.7], lowerarm_r: [33.1, -9.8, 0], hand_r: [8.8, -39, 23.9],
+  upperarm_l: [7.2, 14.2, 20.8], lowerarm_l: [71.8, 16, 0], hand_l: [-3.9, 47.1, -34.6],
 };
 const ARMS_DRAW: Record<string, Euler> = {
-  upperarm_r: [43.8, 8, -15.9], lowerarm_r: [68.7, -31.5, 0], hand_r: [11.1, -59.5, 24.1],
-  upperarm_l: [45.3, 4.8, 6], lowerarm_l: [99.8, 31.4, 0], hand_l: [26.7, 66.2, -22.5],
+  upperarm_r: [22.2, -11.1, -24.6], lowerarm_r: [22.8, -11.7, 0], hand_r: [-2.9, -36.1, 31.7],
+  upperarm_l: [15.7, 8.8, 26.9], lowerarm_l: [62, 11.6, 0], hand_l: [9.3, 48.7, -29.3],
 };
 
 /** Knelt: the thighs a little forward of upright, bowed from the hips and the spine, the shoulders let down, the head down on the ground ahead. */
 const KNELT: KeyPose = {
   rot: {
-    pelvis: [55, 0, 0], spine_01: [20, 0, 0], spine_02: [16, 0, 0], spine_03: [12, 0, 0], clavicle_l: [12, 0, 0], clavicle_r: [12, 0, 0], neck_01: [12, 0, 0], neck_02: [6, 0, 0], head: [18, 0, 0],
-    thigh_l: [30, 0, -4], thigh_r: [30, 0, 4], calf_l: [-90, 0, 0], calf_r: [-90, 0, 0],
+    pelvis: [40, 0, 0], spine_01: [13, 0, 0], spine_02: [11, 0, 0], spine_03: [9, 0, 0], clavicle_l: [28, 0, 0], clavicle_r: [28, 0, 0], neck_01: [-32, 0, 0], neck_02: [-14, 0, 0], head: [14, 0, 0],
+    thigh_l: [30, 0, -10], thigh_r: [30, 0, 10], calf_l: [-90, 0, 0], calf_r: [-90, 0, 0],
     fingers_01_l: [20, 0, 0], fingers_02_l: [30, 0, 0], fingers_01_r: [20, 0, 0], fingers_02_r: [30, 0, 0],
   },
-  move: [0, -0.2786, 0.2303],
+  move: [0, -0.2544, 0.3203],
   feet: { l: { z: 0, lift: 0, pitch: -TOES }, r: { z: 0, lift: 0, pitch: -TOES } },
 };
 /** The right hand over its spot. */
 const REACH: KeyPose = merge(KNELT, { rot: { ...ARMS_REACH,  } });
 /** The right hand's dig: the shoulders rolled down after it, the head turned to it. */
-const DUG: KeyPose = merge(KNELT, { rot: { ...ARMS_DIG, spine_02: [17, 4, 0], spine_03: [13, 4, 0], head: [18, -6, 0] } });
+const DUG: KeyPose = merge(KNELT, { rot: { ...ARMS_DIG, spine_02: [12, 4, 0], spine_03: [10, 4, 0], head: [14, -10, 0] } });
 /** The dig drawn back toward the knees. */
-const DRAWN: KeyPose = merge(KNELT, { rot: { ...ARMS_DRAW, spine_02: [16, 2, 0], spine_03: [12, 2, 0], head: [18, -4, 0] } });
+const DRAWN: KeyPose = merge(KNELT, { rot: { ...ARMS_DRAW, spine_02: [11, 2, 0], spine_03: [9, 2, 0], head: [14, -6, 0] } });
 
 /** Her arms as turns added to his (`Clip.bodies.woman.tracks`), at the same beats. */
-const HER_REACH: Record<string, Euler> = {"upperarm_r":[36,8.6,11.9],"lowerarm_r":[-16.9,-14.2,0],"hand_r":[14.1,-0.6,-10.8],"upperarm_l":[32.6,-24,-6.1],"lowerarm_l":[-14.9,6.2,0],"hand_l":[12.6,8.7,29.1]};
-const HER_DIG: Record<string, Euler> = {"upperarm_r":[43.8,12.5,20.7],"lowerarm_r":[-19.4,-18.8,0],"hand_r":[15,-6.5,-16.2],"upperarm_l":[31.9,-20.7,-1.1],"lowerarm_l":[-10.5,7.6,0],"hand_l":[17.7,-0.9,30.7]};
-const HER_DRAW: Record<string, Euler> = {"upperarm_r":[37.4,27.1,13.8],"lowerarm_r":[-17.5,-11.4,0],"hand_r":[12.8,-11.5,-23.6],"upperarm_l":[37,-16.4,-4.1],"lowerarm_l":[-19.3,9.6,0],"hand_l":[17.9,-5.9,30.5]};
+const HER_REACH: Record<string, Euler> = {"pelvis":[13,0,0],"spine_02":[3,0,0],"neck_01":[-12,0,0],"neck_02":[-4,0,0],"upperarm_r":[0.4,15.5,-15.4],"lowerarm_r":[19.4,-5.7,0],"hand_r":[10.3,5.9,-10.7],"upperarm_l":[-2.3,1.3,22],"lowerarm_l":[33.6,-3,0],"hand_l":[20.2,-1.4,0.4]};
+const HER_DIG: Record<string, Euler> = {"pelvis":[13,0,0],"spine_02":[3,0,0],"neck_01":[-12,0,0],"neck_02":[-4,0,0],"upperarm_r":[-3.1,8,-23.2],"lowerarm_r":[25,2,0],"hand_r":[14.7,7,-9.2],"upperarm_l":[-5.9,-2.1,22.8],"lowerarm_l":[29.1,2,0],"hand_l":[19.6,-6.1,1.4]};
+const HER_DRAW: Record<string, Euler> = {"pelvis":[13,0,0],"spine_02":[3,0,0],"neck_01":[-12,0,0],"neck_02":[-4,0,0],"upperarm_r":[-0.7,2.1,-23.5],"lowerarm_r":[29,6.3,0],"hand_r":[16.8,3,-3.3],"upperarm_l":[-4,-4.8,27.8],"lowerarm_l":[27.2,-1,0],"hand_l":[19.4,-10.8,1.7]};
 
 /** The beats: each hand's reach and dig the key poses, the draw a breakdown. */
 const beats = (reach: KeyPose, dug: KeyPose, drawn: KeyPose): Beat[] => [
@@ -91,6 +91,6 @@ export const GROUND: Clip = {
     // (the arms kept off the body by the clip's own turns)
     man: { armsOut: -3 },
     // her shins longer for her height: further down and forward to put her knees on the ground; her feet closer together, as the idle stands them
-    woman: { armsOut: -3, add: { thigh_l: [0, 0, -6], thigh_r: [0, 0, 6] }, move: [1, 1.2042, 1.3574], tracks: HER },
+    woman: { armsOut: -3, add: { thigh_l: [0, 0, -6], thigh_r: [0, 0, 6] }, move: [1, 1.2433, 1.3113], tracks: HER },
   },
 };

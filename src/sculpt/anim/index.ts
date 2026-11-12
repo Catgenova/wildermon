@@ -8,8 +8,8 @@
  */
 import type { FigurePose } from '../../render/figure';
 import { fitTime, runsOf, strideOf, type Clip } from './clip';
-import type { M3, V } from './math';
-import { blendLocal, clipLocal } from './player';
+import { quat, type M3, type V } from './math';
+import { blendLocal, clipLocal, plantBetween } from './player';
 import type { Held, Skeleton } from './skeleton';
 import { IDLE } from './clips/idle';
 import { WALK } from './clips/walk';
@@ -52,7 +52,8 @@ export const CLIP_OF: Record<State, string> = {
 };
 /**
  * The jobs done knelt at the ground with no tool (`ground`): planting and sowing, foraging and searching, the traps, picking
- * up, at the water's edge, at a campfire or an ash pit. (Driving a post in and pulling it up are lifts, not ground work.)
+ * up, at the water's edge, tending a campfire or an ash pit. (Driving a post in and pulling it up are lifts, not ground
+ * work; cooking at a campfire keeps the state's own until a clip of its own.)
  */
 const GROUND_JOBS = [
   // a tile or a plant
@@ -86,15 +87,10 @@ const handsRecipe = (job: string): boolean => {
   const r = RECIPE_BY_ID.get(job);
   return !!r && !r.tool && !ACTION_BY_ID.get(job)?.tool && r.station !== 'campfire';
 };
-/** Whether a job is a recipe cooked at a campfire with no tool: done knelt at the fire (`ground`). */
-const groundRecipe = (job: string): boolean => {
-  const r = RECIPE_BY_ID.get(job);
-  return !!r && !r.tool && !ACTION_BY_ID.get(job)?.tool && r.station === 'campfire';
-};
-/** The clip a job in the `work` state plays (`CLIP_OF_JOB`, then `handsRecipe` and `groundRecipe`, then the state's own). */
+/** The clip a job in the `work` state plays (`CLIP_OF_JOB`, then `handsRecipe`, then the state's own). */
 export function workClipOf(job: string | undefined): string {
   if (!job) return CLIP_OF.work;
-  return CLIP_OF_JOB[job] ?? (handsRecipe(job) ? 'hands' : groundRecipe(job) ? 'ground' : CLIP_OF.work);
+  return CLIP_OF_JOB[job] ?? (handsRecipe(job) ? 'hands' : CLIP_OF.work);
 }
 /** The jobs done with the overhead swing whatever is in hand: the pickaxe's. */
 const SWING_JOBS = new Set(['mine', 'chip_corner', 'mine_cellar']);
@@ -118,6 +114,11 @@ export function clipsOn(on: boolean): void { ON = on; }
 
 /** Seconds a body takes to fade from one source of its pose to the next. */
 const FADE = 0.2;
+/**
+ * Seconds a fade into or out of a clip takes where that is longer than \`FADE\`, its feet kept planted throughout where
+ * the two clips stand them (\`plantBetween\`): getting down onto the knees at the ground and up off them.
+ */
+const SETTLE: Readonly<Record<string, number>> = { ground: 0.55 };
 
 /** The state a pose is in, of those a clip can play. */
 export function stateOf(pose: FigurePose): State | undefined {
@@ -176,7 +177,8 @@ function offsetOf(id: string | undefined): number {
 }
 
 type Local = { local: Array<M3 | undefined>; move: V };
-interface Kept { source: string; out: Local; from: Local | null; at: number }
+/** What a body was drawn with last (its clip and time, when one), and at the change, what it came from. */
+interface Kept { source: string; out: Local; from: Local | null; at: number; was?: { clip: Clip; t: number }; cur?: { clip: Clip; t: number }; span?: number }
 const KEPT = new Map<string, Kept>();
 const MAX_KEPT = 256;
 
@@ -192,14 +194,20 @@ export function animate(sk: Skeleton, pose: FigurePose, figure: () => Array<M3 |
   let k = KEPT.get(key);
   if (k) KEPT.delete(key);
   if (!k) k = { source, out: now, from: null, at: ms };
-  else if (k.source !== source) { k.from = k.out; k.source = source; k.at = ms; }
+  else if (k.source !== source) { k.span = Math.max(SETTLE[k.source] ?? FADE, SETTLE[source] ?? FADE); k.from = k.out; k.was = k.cur; k.source = source; k.at = ms; }
+  k.cur = c ? { clip: c.clip, t: c.t } : undefined;
   KEPT.set(key, k);
   if (KEPT.size > MAX_KEPT) KEPT.delete(KEPT.keys().next().value as string);
   let out = now;
   if (k.from) {
-    const u = (ms - k.at) / 1000 / FADE;
+    const u = (ms - k.at) / 1000 / (k.span ?? FADE), w = u * u * (3 - 2 * u);
     if (u >= 1) k.from = null;
-    else out = blendLocal(k.from, now, u * u * (3 - 2 * u));
+    else {
+      out = blendLocal(k.from, now, w);
+      // a long fade (getting down or up): the feet kept where the two clips stand them, the legs bent to reach
+      const plant = (k.span ?? FADE) > FADE && k.was && c ? plantBetween(sk, k.was, c, w) : undefined;
+      if (plant) out = sk.finish({ q: out.local.map((m) => m && quat(m)), move: out.move }, { plant, armsOut: -3 });
+    }
   }
   k.out = out;
   return out;

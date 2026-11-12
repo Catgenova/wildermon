@@ -11,7 +11,9 @@
 //       canvas (toDataURL), not a screenshot.
 //     --state: what the bodies are doing: `emote` (an emote, the default), `work` (at work on --job, not a swing job, its
 //       go's time `act`), `idle` (stood doing nothing; the idle clip), or `idle-work` (stood, then set to --job at --from
-//       seconds: the fade from the idle into what the job plays).
+//       seconds: the fade from the idle into what the job plays; with --back, stood again from that many seconds).
+//     --ahead u: each body drawn u game units back from the way it faces, across the screen (a body knelt forward at the
+//       ground kept in its cell).
 //     --keys: also <dir>/<name>-keys.png, the frames at those clip times, stood still (no fades).
 //     --genders: the bodies drawn (both by default); --act: a go's length at work (3 s by default; a clip's own length
 //       plays it at its own times, so --keys are its times).
@@ -36,7 +38,7 @@ const sets = opt('sets', 'outfit1,hood,plate,leather,bare').split(','), VIEWS = 
 const views = opt('views', 'front,q3,side').split(',').map((v) => VIEWS[v]);
 const zoom = +opt('zoom', '10'), width = +opt('width', '26'), fps = +opt('fps', '20'), seconds = +opt('seconds', '1.2'), crop = +opt('crop', '0.62');
 const genders = opt('genders', 'man,woman').split(','), act = +opt('act', '3');
-const low = args.includes('--low');
+const low = args.includes('--low'), back = +opt('back', 'Infinity'), ahead = +opt('ahead', '0');
 const state = opt('state', 'emote'), job = opt('job', 'chop'), from = +opt('from', '0.6'), keys = opt('keys', '').split(',').filter(Boolean).map(Number);
 mkdirSync(out, { recursive: true });
 const ROOT = new URL('../..', import.meta.url).pathname;
@@ -59,7 +61,7 @@ performance.now = () => CLOCK ?? realNow();
 window.ready = async () => { sculptedFigures(true); await import('./src/sculpt/sculpted'); await new Promise((r) => setTimeout(r, 50)); };
 /** What a body is doing at s seconds in. */
 const doing = (s, st) => {
-  const working = st === 'work' || (st === 'idle-work' && s >= ${from});
+  const working = st === 'work' || (st === 'idle-work' && s >= ${from} && s < ${back});
   if (working) return { working: true, job: ${JSON.stringify(job)}, act: { t: st === 'work' ? s : s - ${from}, length: ${act} } };
   return st === 'emote' ? { working: false, emote: 'wave', emoteT: s } : { working: false };
 };
@@ -71,7 +73,7 @@ window.frame = (s, rows, still, st) => {
   CLOCK = s * 1000;
   rows.forEach((row, j) => row.forEach(([set, gender, facing], i) => {
     g.save(); g.beginPath(); g.rect(i * w, j * h, w, h); g.clip();
-    drawFigure(g, i * w + w / 2, j * h + (${low} ? h : full) - 2 * ${zoom} - 8, ${zoom}, { id: still ? undefined : set + '-' + gender + '-' + facing, phase: s * 6, moving: false, facing, swimming: false, look: look(gender), outfit: OUTFITS[set], ...doing(s, st) });
+    drawFigure(g, i * w + w / 2 - ${ahead * zoom} * Math.sin((facing * Math.PI) / 4), j * h + (${low} ? h : full) - 2 * ${zoom} - 8, ${zoom}, { id: still ? undefined : set + '-' + gender + '-' + facing, phase: s * 6, moving: false, facing, swimming: false, look: look(gender), outfit: OUTFITS[set], ...doing(s, st) });
     g.restore();
     g.fillStyle = '#2f292b'; g.fillRect(i * w, j * h, 1, h);
   }));
