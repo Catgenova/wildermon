@@ -2,7 +2,7 @@
  * One device at a time on an account.
  *
  * Asked for: "Implement sign in gates to prevent signing into one account from two devices simultaneously". A game
- * tab sends its seat with every call (`x-wurm-seat`); every door starts with `private.pace`, and there
+ * tab sends its seat with every call (`x-wildermon-seat`); every door starts with `private.pace`, and there
  * `private.seat_check` lets the seat's holder through and refuses another, "Playing on another device.", until the
  * seat goes unheard for `seat_stale` or Play here (`rpc_take_seat`) takes it.
  *
@@ -25,7 +25,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -46,7 +46,7 @@ create temp table said (k text, v text);
 create function pg_temp.walk(w uuid, k text, seat text) returns void language plpgsql as $f$
 declare r jsonb;
 begin
-  perform set_config('request.headers', case when seat is null then '{}' else json_build_object('x-wurm-seat', seat)::text end, true);
+  perform set_config('request.headers', case when seat is null then '{}' else json_build_object('x-wildermon-seat', seat)::text end, true);
   begin
     r := rpc_move(w, 10.5, 10.5, 0);
     insert into pg_temp.said values (k, 'ok');
@@ -70,7 +70,7 @@ begin
   perform pg_temp.walk(w, 'NONE', null);
 
   -- Play here, from B.
-  perform set_config('request.headers', json_build_object('x-wurm-seat', '${B}')::text, true);
+  perform set_config('request.headers', json_build_object('x-wildermon-seat', '${B}')::text, true);
   insert into said values ('TAKE', rpc_take_seat()::text);
   insert into said select 'HELD_B', seat::text from private.play_seat where uid = u;
   perform pg_temp.walk(w, 'A_AFTER', '${A}');
@@ -108,7 +108,7 @@ const store = new Map<string, string>();
 } as Storage;
 const sent: Array<string | null> = [];
 (globalThis as unknown as { fetch: typeof fetch }).fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
-  sent.push(new Headers(init?.headers).get('x-wurm-seat'));
+  sent.push(new Headers(init?.headers).get('x-wildermon-seat'));
   return new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } });
 }) as typeof fetch;
 const net = await import('../../src/net/supabase');
@@ -119,7 +119,7 @@ await net.watchedFetch('https://island.example/rest/v1/rpc/rpc_move', { method: 
 await net.watchedFetch('https://island.example/rest/v1/rpc/rpc_act', { method: 'POST', headers: { 'content-type': 'application/json' } });
 check('browser: no seat sent before the tab holds one (the account page)', sent[0] === null, String(sent[0]));
 check('browser: once held, every call to a door carries it', !!mine && sent[1] === mine && sent[2] === mine, `${mine} / ${sent.slice(1).join(', ')}`);
-check('browser: kept for the tab, so a reload holds the same seat', store.get('wurm.seat') === mine, String(store.get('wurm.seat')));
+check('browser: kept for the tab, so a reload holds the same seat', store.get('wildermon.seat') === mine, String(store.get('wildermon.seat')));
 let told = 0;
 net.onElsewhere(() => { told++; });
 (globalThis as unknown as { fetch: typeof fetch }).fetch = (async () =>

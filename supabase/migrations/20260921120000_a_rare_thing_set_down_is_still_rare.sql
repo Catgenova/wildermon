@@ -1,7 +1,7 @@
 -- A rare thing set down is still a rare thing
 --
 -- Asked for: *"rare items placeable items should have a shine to them when on
--- the ground, similar to wurm. different shine for each rarity."*
+-- the ground. different shine for each rarity."*
 --
 -- The shine is the browser's half. This is what gives it something to shine
 -- at, because on an island there was nothing rare standing anywhere: a piece

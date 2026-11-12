@@ -132,9 +132,11 @@ try {
   game.ask = () => {};
   const world = game.world;
 
-  // The row with the most trees within three tiles of it, `SECONDS * SPEED` long, across x; with `open`, the fewest, on dry land.
+  // The row with the most trees within three tiles of it, `SECONDS * SPEED` long, across x; with `open`, the fewest, on dry land;
+  // with `sea`, the row with the most water within eight tiles of it: a sail over the open sea.
   const len = Math.ceil(SECONDS * SPEED);
   const open = params.has('open');
+  const sea = params.has('sea');
   const isTree = (x: number, y: number): number => (world.inBounds(x, y) && world.getTile(x, y) === TileType.Tree ? 1 : 0);
   const wet = (x: number, y: number): boolean => world.getHeight(x, y) <= 0 || world.hasWater(x, y);
   let best = { n: open ? Infinity : -1, x: 0, y: 0 };
@@ -142,9 +144,10 @@ try {
     for (let x = 8; x + len < world.w - 8; x += 4) {
       let n = 0;
       let dry = true;
+      const reach = sea ? 8 : 3;
       for (let i = 0; i <= len; i++) {
-        for (let d = -3; d <= 3; d++) {
-          n += isTree(x + i, y + d);
+        for (let d = -reach; d <= reach; d++) {
+          n += sea ? (world.inBounds(x + i, y + d) && wet(x + i, y + d) ? 1 : 0) : isTree(x + i, y + d);
           if (open && wet(x + i, y + d)) dry = false;
         }
       }

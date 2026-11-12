@@ -104,7 +104,7 @@ import { COUNTER_HOLDS, counterHeld, counterSeat, streetOf } from '../game/count
 import { counterHole, counterWares, drawCounterDaylight, drawCounterFrontKept, drawCounterInside, drawCounterReveal, stripeOf, type CounterLook } from './counter';
 import { cropDef, type Crop, type CropLook } from '../game/farming';
 import { crateCentre, crateKindOfItem, subtileOf, SUBTILES } from '../game/crates';
-import { HUNT_SIGHT, maxHealth, PLAYER_ATTACKER, SPECIES, threatens, type Creature } from '../game/creatures';
+import { HUNT_SIGHT, inWorld, maxHealth, PLAYER_ATTACKER, SPECIES, threatens, type Creature } from '../game/creatures';
 import { rarityOf } from '../game/items';
 import { coatOf, formScale } from '../game/wildforms';
 /** How big a creature is drawn for how rare it is and its size form (`formScale`). */
@@ -114,7 +114,7 @@ import { WaterTint } from './watertint';
 import { SeaReach, type ReachBox } from './seareach';
 import { ShoreField, ShorePainter } from './shore';
 import { Wakes } from './wake';
-import { foamTexture, SpringWater } from './ponds';
+import { foamTexture, pondWaterOn, SpringWater, WATER_ON } from './ponds';
 import { drawFountain } from './fountain';
 import { fallView } from './falls';
 import { AqueductPainter, hullOf, type AqueductPart, type AqueductShape } from './aqueducts';
@@ -481,7 +481,7 @@ import type { Body as SpellBody, WorldRec as SpellRec } from './spells/kit';
 import type { CastAt, CastTold } from '../game/events';
 import { lookStep, nextLookAt, yearAt } from './foliage';
 import { DAY_SECONDS } from '../game/pace';
-import { cartSway, FIGURE_TOP, figurePicture, sculptedFigures, type GearLook, type GearPiece, type Seat } from './figure';
+import { cartSway, FIGURE_TOP, figurePicture, sculptedFigures, sculptedReady, type GearLook, type GearPiece, type Seat } from './figure';
 /**
  * How much larger a beast in the traces is drawn than one loose: enough that
  * a grown orse, the draught beast, stands a quarter again as tall as a body
@@ -4049,8 +4049,8 @@ export class Renderer {
    */
   render(dt: number): void {
     const cam = this.camera;
-    // Closer with the sculpted bodies on; turned off, the zoom is brought back under the ceiling without them.
-    cam.closest(this.game.settings.sculpted ? SCULPTED_MAX_ZOOM : MAX_ZOOM);
+    // Closer once the sculpted bodies have loaded; until then, the flat figure's ceiling.
+    cam.closest(sculptedReady() ? SCULPTED_MAX_ZOOM : MAX_ZOOM);
     const cx = cam.cx, cy = cam.cy;
     const unit = cam.zoom * this.canvas.dpr;
     cam.cx = Math.round(cx * unit) / unit;
@@ -4081,7 +4081,7 @@ export class Renderer {
       this.forgetHems();
     }
     this.timings.set(this, this.game.settings.timings);
-    sculptedFigures(this.game.settings.sculpted);
+    sculptedFigures(true);
     this.timings.begin();
     try {
       this.renderFrame(dt);
@@ -4687,8 +4687,25 @@ export class Renderer {
           ctx.lineTo(pts[6], pts[7]);
           ctx.closePath();
         }
-        if (seaFloor) this.seaLand(ctx, V, x, y, c, color);
-        else if (!run) {
+        /*
+         * A path worn down into the sea: over the sea laid under it, as much as
+         * the water over it lets show, and then whole again on the ground above
+         * the water, cut to it (`seaLand`).
+         */
+        const seaTrail = seaFloor && !run ? this.trailMaskAt(x, y, lit) : 0;
+        if (seaTrail) {
+          ctx.globalAlpha = 1 - waterVeil(Math.max(0, -(c[0] + c[1] + c[2] + c[3]) / 4));
+          this.drawTrail(ctx, x, y, seaTrail, pts, lit, zoom);
+          ctx.globalAlpha = 1;
+        }
+        if (seaFloor) {
+          if (this.seaLand(ctx, V, x, y, c, color) && seaTrail) {
+            ctx.save();
+            ctx.clip();
+            this.drawTrail(ctx, x, y, seaTrail, pts, lit, zoom);
+            ctx.restore();
+          }
+        } else if (!run) {
           ctx.fillStyle = color;
           ctx.fill();
         }
@@ -4745,9 +4762,19 @@ export class Renderer {
           ctx.globalAlpha = 1;
         }
         // The sea's outline, for a wake and remembered ground's wash; and its shore's wet band and the land's side of its foam (`shore.ts`).
-        if (sea) this.drawWater(V, x, y, c, fogged && !lit ? lineFog : undefined);
+        // A remembered tile all under the sea has its wash in the sea's picture already (`seaStill`).
+        const seaWashed = this.seaUnder && c[0] < 0 && c[1] < 0 && c[2] < 0 && c[3] < 0 && world.hasSea(x, y);
+        if (sea) this.drawWater(V, x, y, c, fogged && !lit && !seaWashed ? lineFog : undefined);
         if ((sea || (c[0] < SHORE_HIGH && c[1] < SHORE_HIGH && c[2] < SHORE_HIGH && c[3] < SHORE_HIGH)) && !this.fast) this.seaShore(V, x, y, c, !run, lit);
-        if (pond) this.drawPonds(V, x, y, c, lit, fogged && !lit ? lineFog : undefined);
+        if (pond) {
+          this.pondBanks(V, x, y, c, lit);
+          // A path worn down into a pond: on its bed, under its water, as much as the water lets show.
+          if (!seaFloor && !run) {
+            const tm = this.trailMaskAt(x, y, lit);
+            if (tm) this.drawTrail(ctx, x, y, tm, pts, lit, zoom);
+          }
+          this.drawPonds(V, x, y, c, lit, fogged && !lit ? lineFog : undefined);
+        }
         // The water lapping round the feet of piers this tile is in front of, now its water is down (`piers.ts`).
         if (wet && this.game.buildings.pierTiles.size && this.game.buildings.onPiers(x, y)) this.pierFeetHere(x, y, V);
         if (this.pierFeet.size) {
@@ -4800,7 +4827,8 @@ export class Renderer {
         /*
          * And a path worn across it: the path itself on a trail, or the wedge
          * of one that crosses a corner of this tile on the diagonal. Asked of
-         * every tile, off a mask kept beside the colour.
+         * every tile, off a mask kept beside the colour. Under water it went
+         * down already, before the water (`seaTrail`, and before `drawPonds`).
          */
         if (!wet && !run) {
           const tm = this.trailMaskAt(x, y, lit);
@@ -5102,7 +5130,7 @@ export class Renderer {
           const deckHere = this.game.laidOver(x, y);
           for (const cr of this.game.creatures.atTile(x, y)) {
             // One shut in a crate is drawn in the crate, by the crate.
-            if (cr.mode === 'stored') continue;
+            if (!inWorld(cr)) continue;
             // One in the traces of a wagon a storey up is up there with it (`driveStorey`), a mount ridden up a wide staircase (`rideRule`),
             // and a worker gone up a building's staircases to its work (`creature_way`).
             const up = this.game.creatureStorey(cr);
@@ -6656,7 +6684,7 @@ export class Renderer {
       });
     }
     const cr = game.creatures.get(w.id);
-    if (!cr || cr.health <= 0 || cr.mode === 'stored') return null;
+    if (!cr || cr.health <= 0 || !inWorld(cr)) return null;
     const def = SPECIES[cr.species] ?? SPECIES.rabba;
     const big = ageDef(cr, game.time).scale * bodySize(cr);
     const tall = Math.max(22 * bodySize(cr), (wildermonTop(def.id) ?? 0) * big) / HEIGHT_SCALE;
@@ -6711,7 +6739,7 @@ export class Renderer {
 
   /**
    * Play a spell's drawing from you, with no island and nothing done: for
-   * checking how a spell looks (`wurm.spell` in the console). At what is
+   * checking how a spell looks (`wildermon.spell` in the console). At what is
    * under the cursor -- a creature, somebody, the ground -- unless told, or
    * at yourself for a spell cast only on yourself. Nothing is sent to anybody.
    * `from` plays it as though the island had just moved you there from that
@@ -6902,6 +6930,8 @@ export class Renderer {
             trousers: peer.trousers,
             look: peer.look,
             gear: peer.gear,
+            // The tool their job in hand uses, in its own metal, as the island took it from their pack (`toolFrom`).
+            tool: peer.working ? peer.tool : undefined,
             emote: peer.emote,
             emoteT: emoteAt(peer.emote, peer.emoteAt, performance.now() / 1000) ?? undefined,
             cast: this.spells.poseOf({ kind: 'peer', id: peer.id }),
@@ -16764,10 +16794,51 @@ export class Renderer {
       path.closePath();
     });
     let mem: Path2D | null = null;
+    let memFog: Path2D | null = null;
     if (fog) {
+      /*
+       * The sea only remembered, a run of tiles along a row at a time: one
+       * piece of the path for each run rather than one for each tile.
+       * Reported: "frame rate in the ocean while sailing has plummeted ...
+       * better on refresh, may have been a leak". It was the remembered sea:
+       * every tile of it in the picture's reach was its own square in this
+       * path, thousands of them once the sea round a long sail was all
+       * remembered, and the picture clipped to all of them and painted again
+       * each time it was made -- 3 ms grown to 30 on a sail of a minute. Runs
+       * cut the path to a few dozen pieces.
+       */
       const vision = game.vision;
+      const run = (y: number, xa: number, xb: number, into: 'mem' | 'fog'): void => {
+        const path = into === 'mem' ? (mem ??= new Path2D()) : (memFog ??= new Path2D());
+        path.moveTo(cam.worldToScreenX(xa, y), cam.worldToScreenY(xa, y, 0));
+        path.lineTo(cam.worldToScreenX(xb + 1, y), cam.worldToScreenY(xb + 1, y, 0));
+        path.lineTo(cam.worldToScreenX(xb + 1, y + 1), cam.worldToScreenY(xb + 1, y + 1, 0));
+        path.lineTo(cam.worldToScreenX(xa, y + 1), cam.worldToScreenY(xa, y + 1, 0));
+        path.closePath();
+      };
+      /*
+       * And the wash over the remembered sea where the tile is all under water,
+       * laid here in the picture rather than gathered a tile at a time with
+       * the ground (`drawWater`'s `fogInto`), which was the other half of that
+       * cost. A tile the shore crosses keeps its own outline there, so the
+       * wash meets the land's where the water does.
+       */
       for (let y = y0; y <= y1; y++) {
-        for (let x = x0; x <= x1; x++) if (vision.state(x, y) === KNOWN && world.hasSea(x, y)) tile((mem ??= new Path2D()), x, y);
+        let from = -1, fogFrom = -1;
+        for (let x = x0; x <= x1 + 1; x++) {
+          const on = x <= x1 && vision.state(x, y) === KNOWN && world.hasSea(x, y);
+          const under = on && world.getHeight(x, y) < 0 && world.getHeight(x + 1, y) < 0 && world.getHeight(x + 1, y + 1) < 0 && world.getHeight(x, y + 1) < 0;
+          if (on && from < 0) from = x;
+          else if (!on && from >= 0) {
+            run(y, from, x - 1, 'mem');
+            from = -1;
+          }
+          if (under && fogFrom < 0) fogFrom = x;
+          else if (!under && fogFrom >= 0) {
+            run(y, fogFrom, x - 1, 'fog');
+            fogFrom = -1;
+          }
+        }
       }
     }
     for (const path of [calm, mem]) {
@@ -16780,6 +16851,12 @@ export class Renderer {
         h.fillStyle = `rgba(128,128,128,${(1 - MEMORY_SEA).toFixed(3)})`;
         h.fillRect(sx0, sy0, sx1 - sx0, sy1 - sy0);
       }
+      h.restore();
+    }
+    if (memFog) {
+      h.save();
+      h.fillStyle = FOG_COLOR;
+      h.fill(memFog);
       h.restore();
     }
   }
@@ -17058,10 +17135,11 @@ export class Renderer {
    * The part of a tile the shore crosses that is above the sea, in its own
    * colour and edged in it, which is all of the tile drawn over the sea laid
    * under it (`drawSea`): the ground where it crosses nought, walked round the
-   * other way from the water's.
+   * other way from the water's. Whether there was any, its outline left as
+   * the path for a path worn across it to be cut to.
    */
-  private seaLand(ctx: CanvasRenderingContext2D, V: View, x: number, y: number, c: readonly number[], color: string): void {
-    if (c[0] < 0 && c[1] < 0 && c[2] < 0 && c[3] < 0) return;
+  private seaLand(ctx: CanvasRenderingContext2D, V: View, x: number, y: number, c: readonly number[], color: string): boolean {
+    if (c[0] < 0 && c[1] < 0 && c[2] < 0 && c[3] < 0) return false;
     const cs = V.corners;
     const cam = this.camera;
     let n = 0;
@@ -17083,12 +17161,13 @@ export class Renderer {
         else ctx.lineTo(sx, sy);
       }
     }
-    if (n < 3) return;
+    if (n < 3) return false;
     ctx.closePath();
     ctx.fillStyle = color;
     ctx.fill();
     ctx.strokeStyle = color;
     ctx.stroke();
+    return true;
   }
 
 
@@ -17124,6 +17203,16 @@ export class Renderer {
   }
 
   /**
+   * The ground each pond's water on a tile leaves, laid before its water
+   * (`pondBank`), so none of it is laid over another pond's water, and a path
+   * on the tile goes down between the two (`drawTrail`).
+   */
+  private pondBanks(V: View, x: number, y: number, c: number[], lit: boolean): void {
+    this.bankLevel = -Infinity;
+    for (let q = 0; q < this.pondsHereN; q++) this.pondBank(V, x, y, c, q, lit);
+  }
+
+  /**
    * A pond's water on a tile, the way the sea's is drawn but at the pond's own
    * surface, and only over the corners it covers: cut where the ground comes
    * up through the surface, which is its shore, and halfway along an edge that
@@ -17141,36 +17230,13 @@ export class Renderer {
     // The water under a deck on piers is in its shade, and no wake runs there (`layWater`).
     const wakes = this.pondPath && this.wetPierLines && this.game.buildings.onPiers(x, y) ? null : this.pondPath;
     const bare = this.shoreBare(x, y);
-    // The ground each pond's water leaves first, so none of it is laid over another pond's water.
-    this.bankLevel = -Infinity;
-    for (let q = 0; q < this.pondsHereN; q++) this.pondBank(V, x, y, c, q, lit);
     for (let q = 0; q < this.pondsHereN; q++) {
       const level = this.pondsHereLevel[q];
-      const mask = this.pondsHereMask[q];
-      let n = 0;
-      // A corner lower than the surface but not in the pond is past its lip: no shore is drawn there.
-      let lip = false;
-      for (let i = 0; i < 4; i++) {
-        const j = (i + 1) & 3;
-        const ha = c[i];
-        const hb = c[j];
-        const wa = (mask >> i) & 1;
-        const wb = (mask >> j) & 1;
-        const ax = x + cs[i][0];
-        const ay = y + cs[i][1];
-        if (!wa && ha < level) lip = true;
-        if (wa) {
-          poly[n++] = ax;
-          poly[n++] = ay;
-        }
-        if (wa !== wb) {
-          const shore = (wa ? hb : ha) >= level;
-          const t = shore ? (level - ha) / (hb - ha) : 0.5;
-          poly[n++] = ax + (x + cs[j][0] - ax) * t;
-          poly[n++] = ay + (y + cs[j][1] - ay) * t;
-        }
-      }
+      const n = pondWaterOn(x, y, c, this.pondsHereMask[q], level, cs, poly);
       if (n < 6) continue;
+      // A corner lower than the surface but not in the pond is past its lip: no shore is drawn there.
+      const lip = WATER_ON.lip;
+      const mask = this.pondsHereMask[q];
       // Where its bank comes into the tile, the still water's edge (`shore.ts`).
       const banked = lit && !lip && !bare && !this.fast && mask !== 15;
       // Coloured a corner at a time by its depth under the pond's own surface (`watertint.ts`).
@@ -17194,6 +17260,8 @@ export class Renderer {
       wakes?.closePath();
       ctx.fill();
       if (banked) this.shore.calm(ctx, x, y, cs, c, level);
+      // The water drawn into a lip it goes over, on this tile's water and laid with it (`SpringWater.tongue`).
+      if (this.springWater.tongued(x, y)) this.springWater.tongue(ctx, x, y, level, poly, n);
     }
   }
 

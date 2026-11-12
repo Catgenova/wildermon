@@ -30,7 +30,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -85,6 +85,8 @@ begin
 
   v_pet := creature_spawn(w, 'ambra', 100.5, 101, 'active', now() - interval '60 days', a);
   v_crated := creature_spawn(w, 'ambra', 100.5, 100.5, 'stored', now() - interval '60 days', a);
+  -- Shut in from Work around me, as a crate once left it: still said to work round its keeper.
+  update creature set around = '{"was": "follow"}' where world_id = w and id = v_crated;
   perform give(w, a, 'creature_crate', 1, 40, null);
   select id into v_crate from item where world_id = w and holder = 'player' and holder_uid = a and def = 'creature_crate'
     order by id desc limit 1;
@@ -93,6 +95,9 @@ begin
   v_worker := creature_spawn(w, 'ambra', 100.5, 101, 'deed', now() - interval '60 days', a);
   v_far := creature_spawn(w, 'ambra', 100.5 + ${POST_FOLLOW_REACH + 1}, 100.5, 'active', now() - interval '60 days', a);
   v_lost := creature_spawn(w, 'ambra', 100.5, 100.5, 'stored', now() - interval '60 days', a);
+  -- A stored wildermon holds no post, whatever writes one onto its row (creature_stored_rests).
+  update creature set post = v_post2, around = '{"was": "follow"}' where world_id = w and id = v_lost;
+  insert into said select 'stored-rests', coalesce(post::text, 'none') || ',' || coalesce(around::text, 'none') from creature where world_id = w and id = v_lost;
   update creature set name = 'Pip' where world_id = w and id in (v_pet, v_crated, v_theirs, v_worker, v_far, v_lost);
 
   insert into said values ('stranger', coalesce(act_refusal(w, a, 'assign_post', jsonb_build_object('kind', 'post', 'id', v_post, 'creature', v_theirs)), 'none'));
@@ -108,7 +113,7 @@ begin
   insert into said values ('crated', coalesce(act_refusal(w, a, 'assign_post', jsonb_build_object('kind', 'post', 'id', v_post2, 'creature', v_crated)), 'none'));
   perform act_perform(w, a, 'assign_post', jsonb_build_object('kind', 'post', 'id', v_post2, 'creature', v_crated));
   select * into c from creature where world_id = w and id = v_crated;
-  insert into said values ('crated-after', c.mode || ',' || coalesce(c.post = v_post2, false) || ',' || round(c.to_x::numeric, 1) || ',' || round(c.to_y::numeric, 1));
+  insert into said values ('crated-after', c.mode || ',' || coalesce(c.post = v_post2, false) || ',' || round(c.to_x::numeric, 1) || ',' || round(c.to_y::numeric, 1) || ',' || coalesce(c.around::text, 'none'));
   insert into said values ('crate-empty', (select (creature is null)::text from item where id = v_crate));
 
   -- The post pulled up, with the crate in your pack empty again: the one on it goes into it, first of all.
@@ -132,8 +137,9 @@ const island = new Map(out.split('\n').filter((l) => l.includes('=')).map((l) =>
 
 check('the island lets one following you, near, go to the post', island.get('near') === 'none', island.get('near'));
 check('and it works out of the post', island.get('near-after') === 'deed,true', island.get('near-after'));
+check('a stored wildermon holds no post and works round nobody, whatever is written onto its row', island.get('stored-rests') === 'none,none', island.get('stored-rests'));
 check('the island lets one in a crate in your pack go to the post', island.get('crated') === 'none', island.get('crated'));
-check('and it comes out of the crate at the post and works out of it', island.get('crated-after') === 'deed,true,101.4,101.0', island.get('crated-after'));
+check('and it comes out of the crate at the post and works out of it, round nobody', island.get('crated-after') === 'deed,true,101.4,101.0,none', island.get('crated-after'));
 check('and the crate in the pack is empty', island.get('crate-empty') === 'true', island.get('crate-empty'));
 check('pulled up, the one on it goes into the empty crate in your pack first, not lost', island.get('pulled') === 'stored,none,11111111-1111-1111-1111-111111111111', island.get('pulled'));
 check('and says so, in the browser\'s words', island.get('pulled-said') === 'Post pulled up: Pip into the wildermon crate in your pack.', island.get('pulled-said'));

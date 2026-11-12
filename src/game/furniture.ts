@@ -513,7 +513,7 @@ export const FURNITURE: FurnitureDef[] = [
    */
   piece('fountain', 'Tiered fountain', 3, 3, [['stone_brick', 32], ['stone_slab', 3], ['mortar', 16], [WATER_MOTE, WATER_MOTES_EACH]], 32, 26, '', undefined, { skill: 'masonry', tool: 'trowel', well: FOUNTAIN_HOLDS }),
   // Storage of a different sort: raw materials, rubbish, and something to pull it in.
-  piece('bulk_bin', 'Raw material bin', 2, 2, [['plank', 48], ['timber', 16], ['nail', 48]], 20, 16, '', 400, { takes: 'raw' }),
+  piece('bulk_bin', 'Raw material bin', 2, 2, [['plank', 48], ['timber', 16], ['nail', 48]], 20, 16, '', 2500, { takes: 'raw' }),
   /*
    * Its opposite number, off the same bill of materials.
    *
@@ -523,11 +523,12 @@ export const FURNITURE: FurnitureDef[] = [
    * afternoon because a chest counts things.
    *
    * Counting is the wrong unit for them. This one is measured in kilograms
-   * instead: two and a half tonnes of whatever a bench has touched, which is
-   * two hundred and fifty thousand nails or twelve hundred planks. There is
-   * no count limit on it at all.
+   * instead: ten tonnes of whatever a bench has touched, which is a million
+   * nails or five thousand planks. There is no count limit on it at all.
+   * (It began at two and a half tonnes, and the raw bin at four hundred
+   * things; both were raised fourfold and more on 2026-11-06.)
    */
-  piece('craft_bin', 'Craft material bin', 2, 2, [['plank', 48], ['timber', 16], ['nail', 48]], 20, 16, '', undefined, { heft: 2500, takes: 'worked' }),
+  piece('craft_bin', 'Craft material bin', 2, 2, [['plank', 48], ['timber', 16], ['nail', 48]], 20, 16, '', undefined, { heft: 10000, takes: 'worked' }),
   /*
    * And the two small ones, for the two things a farmer and a forester carry
    * home by the handful.
@@ -844,6 +845,8 @@ export const furnitureName = (f: PlacedFurniture): string => {
   const rare = rarityOf(f).name;
   return rare ? `${rare.charAt(0).toUpperCase()}${rare.slice(1)} ${plain.toLowerCase()}` : plain;
 };
+/** The name inside a line: a name its owner gave as written, the game's own in lower case. The island's `placed_name_in_line`. */
+export const furnitureNameInLine = (f: PlacedFurniture): string => f.name || furnitureName(f).toLowerCase();
 export const furnitureUnits = (f: PlacedFurniture): number => f.items.reduce((n, it) => n + it.count, 0);
 /** How much more a counting piece will take. `furnitureRoom` is the general one. */
 export const furnitureSpare = (f: PlacedFurniture): number => Math.max(0, furnitureCapacity(f) - furnitureUnits(f));
@@ -989,6 +992,8 @@ export const liquidCapacity = (f: PlacedFurniture): number => {
 };
 export const holdsLiquid = (f: PlacedFurniture): boolean => liquidCapacity(f) > 0;
 export const litresIn = (f: PlacedFurniture): number => f.litres ?? 0;
+/** Tiles from where you stand that water counts as at hand: a shore or pond to draw from (`Game.nearWater`, the island's `near_water`). */
+export const WATER_AT_HAND = 1;
 /** A well draws its own water; a barrel only holds what is poured into it. */
 export const isWell = (f: PlacedFurniture): boolean => (furnitureDef(f.kind).well ?? 0) > 0;
 /** Room left in a hive, which takes nothing from anyone's hands: its Vesps fill it (`hiveTakes`). */

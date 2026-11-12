@@ -17,7 +17,7 @@
  *     same words both sides;
  *   * after winter the cache left is gone, and a dig refused in the browser's words.
  *
- * The season is pinned on each side (`wurm.season`, `wallClock`), so it holds in every real season. Runs against
+ * The season is pinned on each side (`wildermon.season`, `wallClock`), so it holds in every real season. Runs against
  * the database the suite leaves behind, in one transaction that is rolled back.
  */
 import { execFileSync } from 'node:child_process';
@@ -43,7 +43,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -129,22 +129,22 @@ begin
   /* Winter fur: the same carcass in spring and in winter, a knife of 100 and Butchering 100, all of it kept. */
   perform give(w, u, 'butchering_knife', 1, 100);
   ${at('u', 9.5, 9.5)}
-  perform set_config('wurm.season', 'spring', true);
+  perform set_config('wildermon.season', 'spring', true);
   perform drop_on_ground(w, 9, 9, 'corpse', 40, ${q(FURRED.name)});
   perform act_perform(w, u, 'butcher', jsonb_build_object('kind', 'ground', 'x', 9, 'y', 9));
   insert into said select 'FUR_SPRING', ${sumOf('u', "'fur'")}::text;
   delete from item where world_id = w and holder = 'player' and holder_uid = u and def <> 'butchering_knife';
-  perform set_config('wurm.season', 'winter', true);
+  perform set_config('wildermon.season', 'winter', true);
   perform drop_on_ground(w, 9, 9, 'corpse', 40, ${q(FURRED.name)});
   perform act_perform(w, u, 'butcher', jsonb_build_object('kind', 'ground', 'x', 9, 'y', 9));
   insert into said select 'FUR_WINTER', ${sumOf('u', "'fur'")}::text;
   delete from item where world_id = w and holder = 'player' and holder_uid = u;
 
   /* Only in winter. */
-  perform set_config('wurm.season', 'spring', true);
+  perform set_config('wildermon.season', 'spring', true);
   insert into said values ('LAID_SPRING', caches_owed(w)::text || ':' || (select count(*) from critter_cache where world_id = w));
   insert into said values ('SEARCH_SPRING', coalesce(act_refusal(w, u, cache_search_action(), ${tile(9, 9)}), 'none'));
-  perform set_config('wurm.season', 'winter', true);
+  perform set_config('wildermon.season', 'winter', true);
   insert into said values ('LAID_WINTER', caches_owed(w)::text);
   update said s set v = s.v || ':' || (select count(*) from critter_cache where world_id = w)
     || ':' || (select count(*) from critter_cache c join land_tile t on t.world_id = c.world_id and t.y = c.y
@@ -192,12 +192,12 @@ begin
   insert into said values ('AGAIN_THEM', coalesce(act_refusal(w, v, cache_dig_action(), ${tile(NEAR.x, NEAR.y)}), 'none'));
 
   /* After winter: the far one gone, and a dig at it refused. */
-  perform set_config('wurm.season', 'spring', true);
+  perform set_config('wildermon.season', 'spring', true);
   ${at('u', FAR.x + 0.5, FAR.y + 0.5)}
   insert into said values ('AFTER_ASK', coalesce(act_refusal(w, u, cache_dig_action(), ${tile(FAR.x, FAR.y)}), 'none'));
   perform caches_owed(w);
   insert into said values ('AFTER', (select count(*) from critter_cache where world_id = w)::text);
-  perform set_config('wurm.season', 'winter', true);
+  perform set_config('wildermon.season', 'winter', true);
   insert into said values ('AFTER_WINTER_ASK', coalesce(act_refusal(w, u, cache_dig_action(), ${tile(FAR.x, FAR.y)}), 'none'));
 end $t$;
 select k || '=' || v from said;

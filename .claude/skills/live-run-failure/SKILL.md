@@ -1,6 +1,6 @@
 ---
 name: live-run-failure
-description: Diagnose and fix a failed live Island run (island.yml dispatched with live true) in Wurm, then dispatch again. Use when a live run fails, a scheduled check-in finds one red, or the user reports the deploy failed.
+description: Diagnose and fix a failed live Island run (island.yml dispatched with live true) in Wildermon, then dispatch again. Use when a live run fails, a scheduled check-in finds one red, or the user reports the deploy failed.
 ---
 
 # A failed live run

@@ -26,7 +26,7 @@ simplification rather than a problem:
   *settled* later: every entry point calls `settle()` first, so anything that
   reads a player reads them up to date. `rpc_sweep()` does the same for people
   who walked away mid-dig, and is the one thing that wants a schedule
-  (`select cron.schedule('wurm-sweep', '10 seconds', 'select rpc_sweep()')`).
+  (`select cron.schedule('wildermon-sweep', '10 seconds', 'select rpc_sweep()')`).
 
 ## How much of the game is here
 
@@ -1003,7 +1003,7 @@ door checks `auth.uid()`, and without it nobody can get through any of them.
 **Schedule the sweep**, which is the one thing that wants a timer:
 
 ```sql
-select cron.schedule('wurm-sweep', '10 seconds', 'select rpc_sweep()');
+select cron.schedule('wildermon-sweep', '10 seconds', 'select rpc_sweep()');
 ```
 
 `local/00_shim.sql` is **not** part of that. It is the handful of things a real
@@ -1048,17 +1048,17 @@ it resolves, which satisfies an Auth that wants to know whether a domain
 exists; it publishes no MX record, so mail addressed there is refused by the
 internet rather than delivered to somebody.
 
-The suffix was `@players.wurm.invalid` to begin with, on the sound-looking
-grounds that RFC 2606 reserves `.invalid` and the address can therefore never
-reach anybody. It reaches nobody so thoroughly that Auth will not take it:
-GoTrue keeps a list of barred host suffixes — `.invalid`, `.test`, `.local`,
+The suffix was a `.invalid` one to begin with, on the sound-looking grounds
+that RFC 2606 reserves `.invalid` and the address can therefore never reach
+anybody. It reaches nobody so thoroughly that Auth will not take it: GoTrue
+keeps a list of barred host suffixes — `.invalid`, `.test`, `.local`,
 `.localhost`, `.example` — in its own source rather than in any project's
 settings, so every account made under it failed with "Email address is
-invalid" and there was no switch anybody could throw. `name_domains()` holds
-both suffixes now, the current one first: that first is the only one ever
-handed out, and the whole list is read, so an account made under the old one
-still opens and a name held under it does not read as free.
-`20260915200000_names.sql` is the change, and the live smoke test grows an
+invalid" and there was no switch anybody could throw.
+`20260915200000_names.sql` moved to the current suffix and kept the old one
+in `name_domains()` for signing in; `20261111235900_wildermon_by_name.sql`
+moved every account still under the old one onto the current one and left
+`name_domains()` with the current suffix alone. The live smoke test grows an
 anonymous body into a named account so that a suffix Auth refuses fails in CI
 rather than on somebody's phone.
 

@@ -16,6 +16,7 @@
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
 import { buildRig, posed, skin, fromGame, gameRig, armsOut, axisAngle, mm, tr } from './lowrig.mjs';
 import { skinGarment, checks, crossPairs, garmentAsset, bonesWith, trisOf } from './lowgarment.mjs';
 import { buildHat, hatWeights, hatHair, MATS, LOOKS } from './garments/hat.mjs';
@@ -27,7 +28,7 @@ const flag = (n) => args.includes(`--${n}`);
 const out = resolve(opt('out', 'tmp/lowhat'));
 const only = opt('only', 'sheet,wire,close,poses,walk,metrics').split(',');
 const tag = opt('tag', '');
-const SHEET = resolve(opt('sheet', '/tmp/claude-0/-home-user-Wurm/781c435a-4202-5724-9056-b83f4c44c414/scratchpad/hat2/ref-sheet.png'));
+const SHEET = resolve(opt('sheet', join(tmpdir(), 'hat2/ref-sheet.png')));
 mkdirSync(out, { recursive: true });
 
 const SKIN = [0.68, 0.49, 0.41];

@@ -58,3 +58,17 @@ export const meltLumps = (item: Item, count: number, share = MELT_SHARE): number
 
 /** The quality of what comes back: seven tenths, less the damage the thing carried; `keep` more for a Smith's Reclaimer. */
 export const meltQl = (item: Item, keep = MELT_KEEP): number => Math.max(1, item.ql * keep * (1 - item.dmg / 100));
+
+/**
+ * How many of `count` go in when `room` jobs are left in the furnace: the most
+ * whose lumps fit, and 0 when not even one does. "All" of a stack melts what
+ * fits and leaves the rest in the pack. The island's `melt_fits`.
+ */
+export function meltFits(item: Item, count: number, room: number, share = MELT_SHARE): number {
+  const per = (metalContent(item) ?? 0) * share;
+  if (count < 1 || room < 1) return 0;
+  let n = per > 0 ? Math.min(count, Math.max(0, Math.ceil((room + 0.5) / per) - 1)) : count;
+  while (n > 0 && meltLumps(item, n, share) > room) n--;
+  while (n < count && meltLumps(item, n + 1, share) <= room) n++;
+  return n;
+}

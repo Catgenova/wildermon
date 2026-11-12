@@ -1,3 +1,5 @@
+import { GENDERS, HAIR_FADE, HAIRSTYLES } from '../../game/look';
+import { OUTFITS } from '../creator';
 import { MAP_LEGEND, MAP_ZOOM_MIN, MAP_ZOOM_STEP, SETTLEMENT_BORDER_PX } from './minimap';
 import { BAG_CARRY } from '../../game/gear';
 import { BUILD_COUNTS, MOST_GOES } from '../buildCounts';
@@ -63,7 +65,7 @@ import { CREATURE_CRATE } from '../../game/creaturecrate';
 import { BARDING_CUT, gearBill, gearSays, GEAR_FLOOR, GEAR_QL_LEAST, GEAR_SIZE_BILL, GEAR_SIZES, GEAR_SLOTS, HARNESS_PACE, PACK_LOADS } from '../../game/wildgear';
 import { WORN_FLOOR, WORN_SPAN } from '../../game/limits';
 import { CRATE_DEFS, SUBTILES } from '../../game/crates';
-import { HAUL_LEARN, HAUL_LEARN_RISE, HAUL_LEARN_STEEP, HAUL_SKILL } from '../../game/creatures';
+import { HAUL_LEARN, HAUL_LEARN_RISE, HAUL_LEARN_STEEP, HAUL_SHOE_SHARE, HAUL_SKILL, SHOE_DAYS, SHOE_PACE, SHOE_STEP, SHOES_PER_MOUNT } from '../../game/creatures';
 import { PERK_STAGE, perkLine, perkSays, ringKeepsOut, STAGE_PERKS } from '../../game/creatures';
 import {
   ALLOY_QL, AGES, BLOW_SHARE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, cookRecipes, restoredMul, STYLE_SAYS, sparTaskSays, SPAR_SLACK, SPAR_YIELD, abilityName, abilitySays, GATHER_DO, GATHER_SKILL, GATHER_VERB, workerSkipsTools, REED_LEVELS, RESIN_TAPPED, SKILL_TOP, TEND_JOBS, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
@@ -91,7 +93,7 @@ import {
 import { SIGN_MAX, SIGN_QL } from '../../game/signing';
 import { CROP_BY_SEED, CROP_LIST, CROPS, cropYield, seedSays, growthWords, PATCH_TIME, RIPE, STAGE_NAMES } from '../../game/farming';
 import { GLASSHOUSE_GROWTH, PLANTER_GROWTH, SEASON_GROWTH, SEASON_SECONDS, YEAR_SECONDS, YEARLESS_GROWTH } from '../../game/growth';
-import { CASTS, FAVOUR_TRICKLE, favourCap, PRAYER_BASE, PRAYER_GAIN, PRAYER_LIFT, PRAYER_PEAKS, PRAYER_REST, PRAYER_TAPER, prayerWorth } from '../../game/faith';
+import { FAVOUR_TRICKLE, favourCap, PRAYER_BASE, PRAYER_GAIN, PRAYER_LIFT, PRAYER_PEAKS, PRAYER_REST, PRAYER_TAPER, prayerWorth } from '../../game/faith';
 import { tryGain } from '../../game/learn';
 import { DRIVING_LEARN, DRIVING_TOP, drivingPace, SAILING_LEARN, SAILING_TOP, sailingPace, TRAVEL_TOP_AT, VEHICLE_QL_TOP, vehicleQlPace } from '../../game/travel';
 import { ANCIENT_EFFECTS, ANCIENT_PLUS, BAUBLE_HIGH, BAUBLE_KINDS, BAUBLE_LOW, BAUBLE_SHARE, BAUBLE_TIERS, baubleTimes, MAJOR_SKILLS, MINOR_SKILLS, REGRET_SHARE, YIELD_TIMES } from '../../game/baubles';
@@ -104,7 +106,7 @@ import { JAR_SEEDS, SEED_JAR, STAMP, STAMP_GOES, STAMP_RARE, TABLET, TABLET_BELO
 import { BAIT_BY_ID, biteShare, FISH, LINE_REACH } from '../../game/fishing';
 import { BOTANIZE_WATER_TABLE, COIN_FIND_ONE_IN, COIN_FINDS_A_DAY, FORAGE_TABLE, PER_ROLL, rollsAt, watersideOdds } from '../../game/forage';
 import { FRUITING, fruitingSeasons, fruitsIn } from '../../game/fruiting';
-import { BUCKET_LITRES, FURNITURE, furnitureDef, LIQUID_NAME, type LiquidKind, VESSELS, POND_EVERY, STATION_REACH, teamSaid, WELL_TRICKLE, WELL_TRICKLE_QL } from '../../game/furniture';
+import { BUCKET_LITRES, FURNITURE, furnitureDef, LIQUID_NAME, type LiquidKind, VESSELS, POND_EVERY, STATION_REACH, WATER_AT_HAND, teamSaid, WELL_TRICKLE, WELL_TRICKLE_QL } from '../../game/furniture';
 import { BUTTER_CHURN, CHURN_BUTTER, MILK_READY, milkLitres, WHEY_FEED } from '../../game/dairy';
 import { STONES_DEPTH, STONES_DIFFICULTY, STONES_SLABS, WATER_GARDEN_ACTIONS, yearSays } from '../../game/watergarden';
 import { WATER_PLANT_BY_ID, WATER_PLANT_DEEPEST, WATER_PLANT_SHALLOWEST, WATER_ROOTING, type WaterPlantDef } from '../../world/waterplants';
@@ -118,7 +120,8 @@ import {
   QL_TOP, deedLevel } from '../../game/game';
 import { ANCIENT_HELM, ANCIENT_HELM_SIGHT, ANCIENT_SWORD, ANCIENT_SWORD_SWING, ARMOUR, ARMOUR_CLASSES, BANE_BONUS, SLOTS, WEAPON_BY_ID, WEAPONS, type ArmourClass, type WeaponDef } from '../../game/gear';
 import { ODDS_BAND, ODDS_BANDS_AT, ODDS_EXACT_AT, ODDS_LIKELY, ODDS_PLACES, PAIR_RANGE, TIER_LEVEL } from '../../game/husbandry';
-import { IMPROVE_DAMAGE, IMPROVE_FLOOR } from '../../game/improve';
+import { IMPROVE_DAMAGE, IMPROVE_FAIL_LEAST, IMPROVE_FAIL_SPREAD, IMPROVE_FLOOR } from '../../game/improve';
+import { JOB_GOES_MOST } from '../../game/mending';
 import { billWords, countOf, DEED_DECAY, DRINK_LITRES, foodFill, HOARD_METALS, itemDef, ITEM_DEFS, LITRE_KG, RARITIES, RARITY_ROOM, rarityBands, rarityChance, roomFor, TAN_LYE, UNMENDABLE, unmendableSays } from '../../game/items';
 import { ALL_GOALS, JOURNAL, LEGEND_AT } from '../../game/journal';
 import { entryTameLevel, guideEntries, guidePages, keepable } from '../../game/guide';
@@ -144,14 +147,15 @@ import { BASE_SPEED, CARRY_CRAWL, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STE
 import { deckBill, metres, PIER_CLEAR, PIER_DROP, PIER_WALL_DROP, PIER_WATER } from '../../game/piers';
 import { POST_FOLLOW_REACH, POST_LIFE_MAX, POST_LIFE_MIN, postRadius } from '../../game/posts';
 import { AROUND_MOST, aroundStoreTrades } from '../../game/around';
-import { CRAFT_REACH, FERMENT_CELLAR_SAYS, lockedRecipes, needRecipeSays, RECIPE_BY_ID, RECIPES, recipeTitle, SEALED_ITEM, STATION_NAME, TRADE_BOOK_AT, TRADE_BOOK_SKILLS } from '../../game/recipes';
+import { CRAFT_REACH, FERMENT_CELLAR_SAYS, lockedRecipes, needRecipeSays, ranOutSaid, RECIPE_BY_ID, RECIPES, recipeTitle, SEALED_ITEM, STATION_NAME, TRADE_BOOK_AT, TRADE_BOOK_SKILLS } from '../../game/recipes';
 import { VESSEL_BACK_QL } from '../../game/ferment';
 import { SHARES_EACH } from '../../game/feast';
 import { BOOKS, bookDrops, RECIPE_DROP_ODDS, RECIPE_DROPPERS } from '../../game/recipebook';
 import { FAIL_DAMAGE_SAID } from '../../game/faildamage';
 import { TREE_DEPTH } from '../recipetree';
 import { EARLY_SKILL_BELOW, EARLY_SKILL_MUL, GAIN_RATE, MIN_GAIN, playerGain, SKILL_BY_ID } from '../../game/skills';
-import { SMELTER_H, SMELTER_W } from '../../game/smelter';
+import { SMELTER_CAPACITY, SMELTER_H, SMELTER_W } from '../../game/smelter';
+import { MELT_HEAT, MELT_KEEP, MELT_SHARE, meltLumps } from '../../game/melt';
 import { KNACK_BONUS, KNACK_CAP, KNACK_GO, KNACK_HOME, KNACK_ODDS, TITLE_STEPS, titlesFor } from '../../game/titles';
 import { CATCH_MOST, CHECK_EVERY, CREEL_BAIT_LOSS, creelOdds, HUNTER_TRAPPED, TIMID_TRAPPED, TRAPS } from '../../game/traps';
 import {
@@ -1031,7 +1035,7 @@ function artifactHelp(): string {
     <ul>
       <li>${fromRelic(ANCIENT_HELM)}: head slot, plate. Worn: sight radius +${ANCIENT_HELM_SIGHT} tiles.</li>
       <li>${fromRelic(ANCIENT_SWORD)}: swing time ×${ANCIENT_SWORD_SWING} a ${lowName(SWORD_PLAIN.id)}'s: ${SWORD_ANCIENT.swing} seconds against ${SWORD_PLAIN.swing}, before skill.</li>
-      <li>Neither: Improve, Repair, repair kit, Mend, ancient whetstone, a mender in the stores. Refused: <i>${unmendableSays({ id: ANCIENT_HELM })}</i></li>
+      <li>Neither: Improve, Repair, repair kit, ancient whetstone, a mender in the stores. Refused: <i>${unmendableSays({ id: ANCIENT_HELM })}</i></li>
     </ul>
     <p>Helms and short swords restored before these existed stay a plain helm and short sword.</p>`;
 }
@@ -1487,6 +1491,8 @@ export function helpText(): string {
     <ul>
       <li>Island: <i>Customize character</i> under <b>How you look</b> (Settings, <kbd>O</kbd>) opens the account page's character creator on your current look.
       <i>Step ashore</i> saves it to your account, applies it on every island you have a body on and returns you. Nothing changes before that.</li>
+      <li>Creator: <b>Body</b> ${GENDERS.map((g) => g.name).join(', ')}; <b>Hair</b> ${HAIRSTYLES.map((h) => h.name).join(', ')}; <b>Hair colour</b> (hue), <b>Hair brightness</b> (grey over its top ${Math.round(HAIR_FADE * 100)}%), <b>Skin</b> sliders.
+      Preview: ◀ ▶ or drag to turn, <i>Head</i> close-up, outfit ${OUTFITS.map((o) => o.name).join(', ')}.</li>
     </ul>
     <h4>Two-step sign-in</h4>
     <ul>
@@ -1547,6 +1553,7 @@ export function helpText(): string {
     <h4>What is at hand</h4>
     <ul>
       <li>Crafts and station work that use materials take from: pack, then bags on your back, then your stores within <b>${CRAFT_REACH} tiles</b>, nearest first.</li>
+      <li>A run of goes started on a stack: the next stack of the same thing and wood or metal once it is used up; stops when none is left (${ranOutSaid(1, 'log', 'Pine')}), not on in another wood or metal.</li>
       <li>At stations: mould or anvil metal, smelter ore and scrap, kiln clay, fuel for a campfire, smelter, kiln or oven, casting or coin metal at an anvil,
       improving stock, brew ingredients. Stacks in a store are marked with the store's name on the station's menu.</li>
       <li>Tools must be carried (moulds, coin die, files and so on).</li>
@@ -1588,7 +1595,7 @@ export function helpText(): string {
     </ul>
     <h3>Brewing</h3>
     <ul>
-      <li>Fill a barrel from a well or the shore, stand at it, <b>set a brew going</b>. ${BREWS.length} brews:
+      <li>Fill a barrel (right-click it: <b>Fill with water</b>): to the brim at a shore within ${WATER_AT_HAND} tile; from a well or fountain within reach, what it holds. Stand at it, <b>set a brew going</b>. ${BREWS.length} brews:
       ${listed(BREWS.map((b) => `<b>${b.name.toLowerCase()}</b>: ${countIn(b.input, b.count)} + ${b.litres} litres of water, ${dur(b.time)}`))}.</li>
       <li>Yield: litres of drink = litres of water.</li>
       <li>While working: cannot be drawn off; cannot be hurried. Then draw into a bucket and drink from that.</li>
@@ -1738,7 +1745,7 @@ export function helpText(): string {
       <li>Sow, tend and harvest from its menu: the field's seeds, growth stages and yields. <b>Pull it up</b>: what grows goes back into the soil.</li>
       <li>Farmer perks that work on it: ${listed(planterPerks().map((p) => p.name))}; ${farmerPerk('rotate:plant_seed')} reads the planter's own last crop.
       Fields only: ${listed(['sow_patch', 'tend_patch', 'harvest_patch'].map(farmerPerk))}.</li>
-      <li>Cannot be picked up while growing. Bounty covers planters on your settlement along with its fields.</li>
+      <li>Cannot be picked up while growing.</li>
     </ul>
     <h3>Campfires and cooking</h3>
     <ul>
@@ -1783,6 +1790,9 @@ export function helpText(): string {
       <li>Fuel as a campfire (coal burns longest); light; charge with ore. Smelt time per piece: longer for fine ore and harder metal, shorter in a better smelter.
       Draw the lumps off when done.</li>
       <li>Lumps of one metal merge into one lump; quality (QL) = average weighted by size.</li>
+      <li><b>Melt down</b> (lit smelter): anything cast from metal or hafted to a cast head. Lumps back: ${frac(MELT_SHARE)} of its metal, at least ${meltLumps({ uid: 0, id: 'coin', ql: 1, dmg: 0, count: 1, extra: 'Iron' }, 1)}.
+      QL: ${frac(MELT_KEEP)} of its QL, less its damage. Heat: ${frac(MELT_HEAT)} of ore's. All of a stack: what fits in the smelter (${SMELTER_CAPACITY} lumps); the rest stays in the pack.
+      Work done: told to whoever put it in, count and QL per kind.</li>
       <li><b>Alloys</b> at a hot smelter: bronze, brass, pewter, electrum, <b>steel</b> (${bill('make_steel')}). QL from the input metal; skill only sets how little is lost.</li>
     </ul>
     <h4>Moulds and castings</h4>
@@ -1897,7 +1907,7 @@ export function helpText(): string {
       <li><b>Plan wall</b>, <b>Solid</b> offers <b>glass</b>: ${glassWall()} a wall; mallet; trains carpentry. Seen through. ${onlySaid(GLASS_ROOF)}</li>
       <li><b>Glasshouse</b>: one storey, <b>walled all round to full height</b> (door, window, arch, glass ${glassWallTypes()} count; ${lowWalls()} too low), every footprint tile under finished glass.
       Its menu lists what is missing.</li>
-      <li>Ground-floor tiles with no floor planned and no slab poured: <b>Till</b> with a rake into fields (all field rules, Farmer patches, perks and Bounty included).</li>
+      <li>Ground-floor tiles with no floor planned and no slab poured: <b>Till</b> with a rake into fields (all field rules, Farmer patches and perks included).</li>
       <li>With a field inside: no floor over the field, no roof but glass, no storey above. <b>Clear the field</b> packs it flat again.</li>
       <li>Growth: <b>${growthWords(GLASSHOUSE_GROWTH)} in every season</b>, winter included (open field: ${listed(SEASONS.map((s) => `${growthWords(SEASON_GROWTH[s])} in ${s}`))}).
       Cotton growth stage: ${dur(CROPS.cotton.stageSeconds / GLASSHOUSE_GROWTH)} all year.</li>
@@ -1908,7 +1918,7 @@ export function helpText(): string {
     <ul>
       <li><b>Plan floor</b> offers <b>${GARDEN_BED.name.toLowerCase()}</b>, any storey: ${bedTile()} per tile; mallet; trains carpentry. ${onlySaid(GARDEN_BED)}</li>
       <li>Ribbons: ${bedMake()} only. Hod carriers: timber and dirt only.</li>
-      <li>Finished: a field, no tilling. Sow, tend, harvest and patches from the storey you stand on (all field rules, Farmer perks and Bounty included).</li>
+      <li>Finished: a field, no tilling. Sow, tend, harvest and patches from the storey you stand on (all field rules and Farmer perks included).</li>
       <li>Growth: <b>${growthWords(GLASSHOUSE_GROWTH)} in every season</b>, winter included, while open: nothing finished above it, or the nearest finished thing above a glass roof.</li>
       <li>Covered (floor, staircase or roof not of glass above): "${BED_COVERED}" Growing crop: holds its progress until uncovered.</li>
       <li>One crop per tile, any storey: "${BED_ONE_CROP}"</li>
@@ -2140,7 +2150,7 @@ export function helpText(): string {
     <ul>
       <li><b>Work around me</b> (a wildermon's menu, or its row in the Wildermon window): the wildermon <b>following you</b>, within ${POST_FOLLOW_REACH} tiles; <b>${AROUND_MOST}</b> at a time. Not one in a crate.
       Works its task within <b>its own work range of you</b>, measured from the tile you stand on as you move.</li>
-      <li>Storage: crates and storage furniture you may put into, carts, wagons and boats included, within that range; the cart you pull, what you drive and the boat you are in, wherever they are. Not stalls, trash crates, mailboxes, hives, ponds or barrels.</li>
+      <li>Storage: crates and storage furniture you may put into, carts, wagons and boats included, within that range and <b>not on any settlement</b>; the cart you pull, what you drive and the boat you are in, wherever they are. Not stalls, trash crates, mailboxes, hives, ponds or barrels.</li>
       <li>Loads: the bin that takes them first, then the nearest store with room. No storage in reach: &ldquo;${idleSays({ why: 'nostore', n: SPECIES.rabba.workRange, around: true }, 'forage')}&rdquo; Full: &ldquo;${idleSays({ why: 'full', n: 0, around: true }, 'forage')}&rdquo; Nothing is dropped.</li>
       <li>Tasks: every gathering task, as on a post; and at the stores ${listed(aroundStoreTrades())}, makings out of storage in reach. Settlement only: guarding, stoking, sparring and every task at settlement stations, buildings or wildermon.</li>
       <li><b>Stop</b> (status panel, or <b>Stop work around me</b> on its menu): back to following you; with another following you by then, as a post's worker goes. On the island it also stops when you go offline.</li>
@@ -2377,6 +2387,7 @@ export function helpText(): string {
       <li>Cooldown: ${dur(TELE_SLOW)} at QL ${TELE_QL_LOW}, ${dur(TELE_FAST)} at QL ${TELE_QL_HIGH}, ${(TELE_REST_STEP / 60).toFixed(1)} minutes less per QL between
       (${[25, 50, 75].map((q) => `QL ${q}: ${Math.floor(telestoneRange(q) + 0.5)} tiles and ${timeWords(telestoneRest(q))}`).join('; ')}).
       Yours, set by the stone used: carrying several does not help. Not used up.</li>
+      <li><b>Travel back</b> on it in the pack: to the spot your last journey left from (or the nearest free tile if it cannot be stood on). Once a journey, no cooldown, any distance.</li>
       <li>Refused while: fighting or hunted; driving, pulling, riding or aboard anything; swimming; overloaded; a wildermon follows you; mid-action.</li>
     </ul>
     <h3>Enchanting</h3>
@@ -2397,6 +2408,9 @@ export function helpText(): string {
       ${CART.vehicle?.needs ?? 0} wildermon move it, ${CART.vehicle?.yokes ?? 0} faster.</li>
       <li><b>Wagon</b>: ${bill('make_wagon', true)}. Holds <b>${WAGON.capacity} things</b>; needs <b>${WAGON.vehicle ? teamSaid(WAGON.vehicle) : ''} yokes</b> filled to move.</li>
       <li><b>Hitch</b> (from its menu, beside it): a tamed wildermon with you or a settlement worker; one in a wildermon crate is let out first. Then <b>take the reins</b>.</li>
+      <li><b>Shoe it</b> (from a mount's or draught beast's menu, beside it, grown): ${SHOES_PER_MOUNT} horseshoes and a mallet in the pack; lasts ${SHOE_DAYS} days.
+      Mount: speed on laid stone +${percent(SHOE_PACE - 1)}, step ${metresFine(SHOE_STEP)} m steeper. Draught beast in the traces, at its share of the team:
+      speed on laid stone +${percent((SHOE_PACE - 1) * HAUL_SHOE_SHARE)}, step ${metresFine(SHOE_STEP * HAUL_SHOE_SHARE)} m steeper.</li>
       <li>Pace (speed multiplier): the team's speed and number, and hunger (a hungry one is slower).</li>
       <li><b>Driving</b> (the driver): team pace +${percent(drivingPace(TRAVEL_TOP_AT / 2) - 1)} at ${TRAVEL_TOP_AT / 2}, +${percent(DRIVING_TOP)} at ${TRAVEL_TOP_AT}; trained per tile entered
       on the seat. A ${SPECIES.seavic.name} pair outruns walking; ${WAGON.vehicle?.needs ?? 0} ${SPECIES.quarra.name}s do not, but shift ${WAGON.capacity ?? 0} bricks.</li>
@@ -2856,6 +2870,22 @@ export function helpText(): string {
       leatherworking, carpentry, fine carpentry, stonecutting for the rest).</li>
       <li><b>Max QL: that skill</b>, or ${IMPROVE_FLOOR} while the skill is lower. Improving trains the skill.</li>
     </ul>
+    <h3>Improve and repair window</h3>
+    <ul>
+      <li>Opened by <b>Improve and repair…</b> on an item's menu, or the UI Menu. <b>Held equipment</b>: worn, or improvable, loose in the pack (not in a bag).</li>
+      <li><b>Repair</b>: each piece's QL, damage, and actions, time and QL cost of a full repair (at repair ${startOf('repair')}: −${+repairGo(startOf('repair')).healed.toFixed(2)} damage an action,
+      QL −${+repairGo(startOf('repair')).cost.toFixed(4)} a damage point). <b>Repair all</b>: every damaged piece Repair takes, most damaged first, one after another.</li>
+      <li><b>Each row</b>: Repair, Hone, <b>Improve</b> (one pass, as on the item's menu; greyed with Improve's refusal). Improve also chooses the row.</li>
+      <li><b>Choose several</b>: Ctrl/⌘-click a name (add or take off), Shift-click (a run of rows), or ✓ on the row; Enter or Space on a name. Improve and Cycles then cover every chosen piece.</li>
+      <li><b>${itemDef(WHETSTONE).name}</b>: an item each, all damage off, QL kept, used up. <b>Hone all</b>: the most damaged pieces, a whetstone each, while whetstones are held.</li>
+      <li><b>Improve</b>, one item: QL and max QL, tools held, each stock kind (carried, in stores within reach), every pass the chosen kind allows (QL if passed, chance,
+      stock left), time an action.</li>
+      <li><b>Cycles</b>: Improve × up to ${JOB_GOES_MOST}, held to one stock kind. Failed pass: +${IMPROVE_FAIL_LEAST} to ${IMPROVE_FAIL_LEAST + IMPROVE_FAIL_SPREAD} damage;
+      over ${IMPROVE_DAMAGE}: a full Repair, then the rest. A repair is not a cycle. Stops at the first of: the count, out of the chosen kind (no other kind used),
+      the target QL, max QL.</li>
+      <li><b>Cycles, several pieces</b>: in the rows' order, each held to the kind chosen for its material where it takes it (else its first kind), sharing stock;
+      one job in the action queue a piece (over ${IMPROVE_DAMAGE} damage: a full Repair, then the run). Pieces past the action queue's room (${BASE_QUEUE}, one more per ${QUEUE_PER_MIND} mind logic) are not queued.</li>
+    </ul>
     <h3>Ashes, lye and tanning</h3>
     <ul>
       <li><b>Ashes</b>: a <b>campfire</b>, <b>smelter</b> or <b>kiln</b> leaves one lot per ${dur(1 / ASH_RATE)} of burning. <b>Take ashes</b>, lit or cold; they accumulate.</li>
@@ -2982,7 +3012,7 @@ export function helpText(): string {
       <b>cloth</b> (tailoring) ${percent(ARMOUR_CLASSES.cloth.soak)}; <b>leather</b> (tanned hide, knife, leatherworking) ${percent(ARMOUR_CLASSES.leather.soak)};
       <b>chain</b> (moulds, riveted at an anvil, chain armoursmithing) ${percent(ARMOUR_CLASSES.chain.soak)}; <b>plate</b> (beaten whole, plate armoursmithing) ${percent(ARMOUR_CLASSES.plate.soak)}.</li>
       <li>QL and skill raise it; damage lowers it. Wears where struck; a piece at full damage falls off.</li>
-      <li>Burden (slowdown from weight carried): a full suit of iron plate: ${percent(PLATE_SUIT / (1 + PLATE_SUIT))} slower, +${percent(PLATE_SUIT)} wind per action (cloth: ${percent(ARMOUR_CLASSES.cloth.burden)}).</li>
+      <li>Burden (slowdown on foot from armour, shield and load): a full suit of iron plate: ${percent(PLATE_SUIT / (1 + PLATE_SUIT))} slower, +${percent(PLATE_SUIT)} wind per action (cloth: ${percent(ARMOUR_CLASSES.cloth.burden)}). Mounted, driving or aboard: load past the limit only.</li>
       <li><b>Shield</b> (off hand): blocks a whole blow. ${blockSays()} No hand free for it with a two-handed weapon. Hover one in the pack for your current chance and its breakdown.</li>
     </ul>
     <h3>Weapons and the bow</h3>
@@ -3123,7 +3153,7 @@ export function helpText(): string {
     <ul>
       <li><b>Investigate</b> (right-click soil, sand or a trail): <b>trowel</b>, <b>Archaeology</b>; sometimes a <b>fragment</b>. A searched tile is empty for a while.</li>
       <li>A fragment names its relic and piece (<i>${LAST_RELIC.name} ${LAST_RELIC.parts - 1}/${LAST_RELIC.parts}</i>); found at ${FIND_DAMAGE} to ${FIND_DAMAGE + FIND_DAMAGE_SPREAD} damage.</li>
-      <li><b>Fragments and tarnished baubles cannot be repaired until restored</b> (no Repair, repair kit, Mend or worker mending). Damage only rises (failed restoring, weather);
+      <li><b>Fragments and tarnished baubles cannot be repaired until restored</b> (no Repair, repair kit or worker mending). Damage only rises (failed restoring, weather);
       at ${DAMAGE_MAX} it breaks. Restored, it mends like anything else, but for ${unmendableSaid()}.</li>
       <li>${RELICS.length} relics, from ${article(RELICS[0].name)} <b>${RELICS[0].name}</b> in ${RELICS[0].parts} pieces to ${article(LAST_RELIC.name)} <b>${LAST_RELIC.name}</b> in ${LAST_RELIC.parts};
       each recognised only at enough archaeology. Common ones turn up far more often; pieces you lack are favoured.</li>
@@ -3310,6 +3340,8 @@ export function helpText(): string {
     <h4>Settlement workers</h4>
     <ul>
       <li><b>Food</b>: under ${frac(HUNGRY)} fed, a worker eats from any crate on the settlement holding its food, then returns to work.</li>
+      <li><b>Its settlement</b>: the one you founded, else the oldest you are a citizen of. Beds, stores, ground items, stations, hearths and planned work: on it only.
+      Trees, ore, ground, crops, hives, planting and post storage: on it or on no settlement. Never on another settlement, one you are a citizen of included.</li>
       <li><b>Range</b>: starts at ${WORK_RANGES[0]} to ${WORK_RANGES[WORK_RANGES.length - 1]} tiles from the totem by sort; +${RANGE_PER_STEP} tiles per ${SKILL_STEP} levels of its task skill
       (${RANGE_STEPS_SAID}). Its card shows current range and the skill for the next step.</li>
       <li><b>Idle reasons</b> (card and hover, until it next sets out): nothing of its task in range of the totem or post at its level
@@ -3357,7 +3389,8 @@ export function helpText(): string {
     <ul>
       <li>${TIRE_GOES} cycles at its task (one cycle = one gain) before it tires; extra loads cost nothing more.</li>
       <li>Tired, once its arms are empty (or between errand steps): rests ${dur(restFor(false))}, then full stamina. A rest is not a cycle in its ledger.</li>
-      <li><b>Wildermon bed</b> of its size, free on your settlement: it walks to the nearest and sleeps ${frac(BED_REST)} as long (${dur(restFor(true))}).</li>
+      <li><b>Wildermon bed</b> of its size, free on its settlement: it walks to the nearest and sleeps ${frac(BED_REST)} as long (${dur(restFor(true))}).
+      Settlement workers within ${HOME_SLACK} tiles past their range only; on a post, working around you or further off: rests where it stands.</li>
       <li>Sizes: small for first evolution stage (under level ${EVOLVE_AT[0]}), medium for second (to ${EVOLVE_AT[1] - 1}), large for third. Non-evolving kinds: small under ${DEN_HEALTH[0]} health,
       medium under ${DEN_HEALTH[1]}, large at ${DEN_HEALTH[1]} and over. Its own size only; one per bed.</li>
       <li>Card: stamina, and rest left while resting (&ldquo;${idleSays({ why: 'bed', n: restFor(true), bed: 'den_small' }, 'forage')}&rdquo;).</li>
@@ -3452,10 +3485,6 @@ export function helpText(): string {
       <li>${percent(SOUL_CHANCE)} of sacrifices leave a <b>soul</b> of the item's rarity. <b>Absorb into</b> (on the soul) an ordinary pack item (one of a stack): it takes that rarity.</li>
       <li>Not sacrificable: locked or worn items, bags with contents, occupied wildermon crates. Baubles take no soul (rarity drawn on restoring).</li>
     </ul>
-    <p>${CASTS.length} favour casts, found nowhere else:</p>
-    <table>
-      ${CASTS.map((c) => `<tr><td><b>${c.name}</b></td><td>${c.cost} favour, ${SKILL_NAME('prayer')} ${c.level}. ${c.note}</td></tr>`).join('\n      ')}
-    </table>
     <h3>Patrons and the spell bar</h3>
     <ul>
       <li>At <b>${PATRON_AT} ${SKILL_NAME('prayer')}</b>: take a <b>patron</b> in the <b>Faith</b> window: ${listed(PATRONS.map((p) => `<b>${p.name}</b> (${ALIGNMENT_NAMES[p.alignment].toLowerCase()})`))}.</li>
@@ -3554,7 +3583,7 @@ export function helpText(): string {
     </ul>
     <h4>Breeding</h4>
     <ul>
-      <li>A <b>male</b> and <b>female</b> of one sort within ${PAIR_RANGE} tiles, both <b>grown</b> and <b>fed</b>, neither mated in the last ${dur(BREED_REST)}: <b>Put it to a mate</b>.</li>
+      <li>A <b>male</b> and <b>female</b> of one sort within ${PAIR_RANGE} tiles, both <b>grown</b> and <b>fed</b>, neither mated in the last ${dur(BREED_REST)}: <b>Breed with a mate</b>.</li>
       <li>Taken: gestation ${dur(GESTATION)}; the young's traits are fixed at mating (a sire sold, released or eaten meanwhile still counts).</li>
       <li>The young <b>follows you</b> if nothing does; else an <b>empty wildermon crate in your pack</b>; else an <b>empty crate of yours on your settlement</b>, nearest the mother;
       else the wild.</li>
@@ -3581,7 +3610,7 @@ export function helpText(): string {
       ${percent(PALE_AT)} lightness, dark for the rest). Size form: 1 in ${SIZE_FORM_ODDS}, half each: ${formName(SPECIES.rabba, 'large').toLowerCase()} (${formGives('large')}),
       ${formName(SPECIES.rabba, 'small').toLowerCase()} (${formGives('small')}). Kept when tamed. Young: each form at ${percent(FORM_PASS)} per parent that has it.
       Card names it; the Field guide page marks each form seen and tamed.</li>
-      <li>Preview (<b>Put it to a mate</b>, before <b>Yes</b>), worked out exactly from the mating's own draw at your husbandry, care and perks: take chance; per trait, inheritance and rarity-up chance;
+      <li>Preview (<b>Breed with a mate</b>, before <b>Yes</b>), worked out exactly from the mating's own draw at your husbandry, care and perks: take chance; per trait, inheritance and rarity-up chance;
       chance of each parent trait; line depth and carry chance per thing; rarity odds.</li>
       <li>Preview odds by the husbandry to read a trait (above): under ${ODDS_BANDS_AT} (${TIER_LEVEL[ODDS_BANDS_AT] + 1}), <b>likely</b> (${percent(ODDS_LIKELY)}+) or <b>unlikely</b>;
       from ${ODDS_BANDS_AT}, ${percent(ODDS_BAND)} bands; from ${ODDS_EXACT_AT} (${TIER_LEVEL[ODDS_EXACT_AT] + 1}), to ${1 / 10 ** ODDS_PLACES}%, plus best-trait rarity odds and mutation chance and rarity. Reader's Knowledge: exact.</li>
@@ -3593,7 +3622,7 @@ export function helpText(): string {
       <li>Well Kept: fully brushed, works and learns ${percent(herdsman('Well Kept')['kept:care_bonus'] ?? CARE_BONUS)} faster instead of ${percent(CARE_BONUS)}.</li>
       <li>Light Eaters: hunger ${percent(1 - (herdsman('Light Eaters')['kept:hunger'] ?? 1))} slower.</li>
       <li>Long-lived: old at ${dur(herdsman('Long-lived')['kept:old_at'] ?? OLD_AT)} instead of ${dur(OLD_AT)}.</li>
-      <li>Choose the Sex: <i>For a female young</i> / <i>For a male young</i> under <b>Put it to a mate</b>.</li>
+      <li>Choose the Sex: <i>For a female young</i> / <i>For a male young</i> under <b>Breed with a mate</b>.</li>
       <li>Twins: one in ${Math.round(1 / (herdsman('Twins')['breed:twins'] ?? 1))} pairings give a second young (into an empty wildermon crate once the first follows you).</li>
       <li>Stud Book: <b>Examine</b> on one of theirs with them: take chance with its would-be mate, and per-trait inheritance and rarity-up chances.</li>
     </ul>

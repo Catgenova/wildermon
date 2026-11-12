@@ -106,7 +106,7 @@ end $fn$;
 /** Note the colour of the pane just taken, or that it was clear, for the window it goes into (`wall_glass_tint`). */
 create or replace function pane_taken(p_dye text) returns void language plpgsql as $fn$
 begin
-  perform set_config('wurm.pane', coalesce(p_dye, ''), true);
+  perform set_config('wildermon.pane', coalesce(p_dye, ''), true);
 end $fn$;
 
 /**
@@ -116,7 +116,7 @@ end $fn$;
  */
 create or replace function wall_glass_tint() returns trigger language plpgsql as $fn$
 begin
-  new.glass := nullif(current_setting('wurm.pane', true), '');
+  new.glass := nullif(current_setting('wildermon.pane', true), '');
   return new;
 end $fn$;
 

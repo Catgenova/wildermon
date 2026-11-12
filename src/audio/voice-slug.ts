@@ -4,11 +4,11 @@ import { noiseBuffer } from './kit';
 import type { Voice } from './voices';
 
 /**
- * The Sluglow's voice, and its stages' (the species is `embra`): a snail
+ * The Snailglow's voice, and its stages' (the species is `embra`): a snail
  * with a fire in it. Every call is one family -- a round voiced tone that
  * bubbles (its loudness fluttering, as a thing talking through something
  * wet), with a soft breath of fire under it -- and only gets bigger: the
- * Sluglow's a soft bubbly chirp-coo, the Slugember's a warmer, rounder
+ * Snailglow's a soft bubbly chirp-coo, the Slugember's a warmer, rounder
  * burbling hum, the Slugferno's a deep rumbling roar-hum with a whoosh of
  * flame under it, each lower and slower than the last. Its body is wet: a
  * blow is a squelching thump. Its fire is noise, kept under a lowpass so it
@@ -134,7 +134,7 @@ function voiced(ctx: BaseAudioContext, dest: AudioNode, at: number, o: { f: read
 /* ---- its voices -------------------------------------------------------------------------- */
 
 /**
- * Its own call, by stage, one family: a bubbling voice rising and settling, a breath of fire under it. The Sluglow's a soft bubbly
+ * Its own call, by stage, one family: a bubbling voice rising and settling, a breath of fire under it. The Snailglow's a soft bubbly
  * chirp-coo, up and down; the Slugember's a warm round burbling hum, slower and lower; the Slugferno's a deep rumbling roar-hum,
  * an octave of growl under it, and a whoosh of flame under that.
  */
@@ -165,7 +165,7 @@ function squelch(ctx: BaseAudioContext, dest: AudioNode, at: number, stage: numb
   const b = bodyOf(stage, 0.5), f = 520 * (0.55 + 0.45 * b.pitch);
   noise(ctx, dest, at, { dur: 0.09 * b.long, f, to: f * 2.2, q: 4, cut: 2400, gain: 0.5 * k });
   noise(ctx, dest, at + 0.05 * b.long, { dur: 0.1 * b.long, f: f * 1.8, to: f * 0.8, q: 3.5, cut: 2000, gain: 0.34 * k, rise: 0.02 });
-  // The thud under it: high and light on the Sluglow, so the blow is a wet pop and not a boom.
+  // The thud under it: high and light on the Snailglow, so the blow is a wet pop and not a boom.
   tone(ctx, dest, at, b.s === 0 ? { f: 260, to: 120, dur: 0.12, gain: 0.08 * k } : { f: 190 - 40 * b.s, to: 70 - 15 * b.s, dur: 0.16 * b.long, gain: 0.2 * k * b.weight });
 }
 
@@ -226,7 +226,7 @@ const work = (ctx: BaseAudioContext, dest: AudioNode, at: number, stage: number,
   // The scrape of the fuel along the ground.
   const push = at + W.down * T, len = (W.push - W.down) * T;
   if (s === 0) {
-    // The Sluglow's: a short bright scrape of a small piece.
+    // The Snailglow's: a short bright scrape of a small piece.
     noise(ctx, out, push + len * 0.15, { dur: len * 0.7, f: 900, to: 650, q: 1.6, cut: 2400, gain: 0.18, rise: 0.03, hold: len * 0.4 });
   } else {
     if (s === 1) {

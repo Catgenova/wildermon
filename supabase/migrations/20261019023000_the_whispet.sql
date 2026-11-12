@@ -24,7 +24,7 @@ create or replace function fear_rest() returns double precision language sql imm
 
 -- The moment the wild's seasons are read at: now, or the one a test pins (epoch seconds), as `vine_now` is pinned.
 create or replace function wild_now() returns timestamptz language sql stable as $fn$
-  select coalesce(to_timestamp(nullif(current_setting('wurm.wild_now', true), '')::double precision), now())
+  select coalesce(to_timestamp(nullif(current_setting('wildermon.wild_now', true), '')::double precision), now())
 $fn$;
 
 -- Whether a season holds at a moment: the day it falls on in UTC is one of its days, both ends in; always, for none.

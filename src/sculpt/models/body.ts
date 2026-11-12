@@ -36,8 +36,8 @@ const inkOf = (a: string): string => { const A = hex(a), m = hex(mixHex(a, '#281
 export const UNDER = '#43261f';
 
 export function bodyMaterials(look: Look): Material[] {
-  // A look may name a colour outright (the studio's sheet colours) rather than a swatch.
-  const skin = look.skin.startsWith('#') ? look.skin : skinColour(look), hair = look.hairColour.startsWith('#') ? look.hairColour : hairColour(look), eye = eyeColour(look);
+  // (a tool's look may name a colour outright, the studio's sheet colours: `skinColour` and `hairColour` give it back)
+  const skin = skinColour(look), hair = hairColour(look), eye = eyeColour(look);
   const out: Material[] = [];
   // Skin a touch warmer than the swatch, the pastel of the kit.
   out[M.skin] = { colour: mixHex(skin, '#f2b48c', 0.15), skin: true };

@@ -3168,6 +3168,24 @@ button.goal-row:focus-visible {
   opacity: 0.45;
 }
 
+/* A thing carried between windows (src/ui/dragdrop.ts): its name beside the cursor, the cursor a hand, a bar where it will not go. */
+.drag-ghost {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 20001;
+  pointer-events: none !important;
+  padding: 3px 8px;
+  background: var(--ui-bg-2);
+  border: 1px solid var(--ui-accent);
+  border-radius: 4px;
+  font-size: 12.5px;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+body.dragging, body.dragging * { cursor: grabbing !important; user-select: none; }
+body.dragging.drag-no, body.dragging.drag-no * { cursor: no-drop !important; }
+
 .inv-list.drop-target {
   background: var(--t-wash-soft, rgba(227, 182, 87, 0.1));
   box-shadow: inset 0 0 0 1px var(--ui-accent);
@@ -9631,10 +9649,17 @@ img:is(.rc-plate, .rc-niche, .ui-frame, .ui-frame-edge):not([src]) {
 .eq-card-trade { background: var(--eq-iron-lit); color: var(--eq-ink); font-size: 8px; }
 
 /* ---- The shopping list (src/ui/panels/shopping.ts) ---- */
+/* Scrolls inside the window as `.settings-page` does: the window body (`settings-body`) does not. */
 .shop {
   display: grid;
+  align-content: start;
   gap: 6px;
-  padding: 4px 2px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 8px 4px 2px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--t-thumb, #5a4a30) transparent;
 }
 
 .shop-section {
@@ -9693,6 +9718,136 @@ img:is(.rc-plate, .rc-niche, .ui-frame, .ui-frame-edge):not([src]) {
 
 .shop-done .shop-bar > span {
   background: var(--t-good, #8fb86a);
+}
+
+/* ---- Improve and repair (src/ui/panels/mend.ts) ---- */
+/* Scrolls inside the window as `.settings-page` does: the window body (`settings-body`) does not. */
+.mend {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 8px 4px 2px;
+  font-size: 12px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--t-thumb, #5a4a30) transparent;
+}
+
+.mend-section {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.mend-sub {
+  margin-top: 4px;
+  color: var(--ui-accent);
+  font-weight: 600;
+}
+
+.mend-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 1px 4px;
+}
+
+.mend-dim { color: var(--ui-dim); font-size: 11px; }
+.mend-bad { color: var(--t-bad, #d9785a); }
+.mend-now { font-weight: 600; }
+
+.mend-sum {
+  padding: 4px;
+  border-top: 1px solid color-mix(in srgb, var(--ui-border) 70%, transparent);
+  font-variant-numeric: tabular-nums;
+}
+
+.mend-sum .mend-go,
+.mend-row .mend-go {
+  margin-left: auto;
+}
+
+.mend-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.mend-table th {
+  color: var(--ui-dim);
+  font-weight: normal;
+  font-size: 11px;
+  text-align: left;
+  padding: 1px 4px;
+}
+
+.mend-table td {
+  padding: 2px 4px;
+  border-top: 1px solid color-mix(in srgb, var(--ui-border) 40%, transparent);
+  white-space: nowrap;
+}
+
+.mend-table td.mend-name {
+  white-space: normal;
+  width: 100%;
+}
+
+.mend-num { text-align: right; }
+.mend-pick { cursor: pointer; text-decoration: underline dotted; }
+.mend-pick:focus-visible { outline: 1px solid var(--ui-accent); outline-offset: -1px; }
+.mend-chosen td { background: color-mix(in srgb, var(--ui-accent) 14%, transparent); }
+.mend-chosen td.mend-name { font-weight: 600; }
+/* The box a row is chosen by: a thumb's Ctrl-click. */
+.mend-table td.mend-tick { width: 1px; padding: 0 2px 0 4px; }
+.mend-tick input { margin: 0; width: 16px; height: 16px; vertical-align: middle; cursor: pointer; }
+.mend-count { font-weight: 600; }
+.mend-count .mend-row { font-weight: normal; padding: 0; }
+/* A piece the action queue has no room for. */
+.mend-left td { opacity: 0.55; }
+/* A narrow window: the cost and the row's buttons wrap rather than run off its side. */
+.mend-table td.mend-cost { white-space: normal; min-width: 5em; }
+.mend-table td.mend-acts { white-space: normal; min-width: 7.5em; text-align: right; line-height: 1.9; }
+.mend-part { white-space: nowrap; }
+/* A table of the pieces chosen: its words wrap in a narrow window. */
+.mend-each td { white-space: normal; }
+.mend-each td.mend-num { white-space: nowrap; }
+.mend-each td.mend-name { width: auto; min-width: 5em; }
+.mend-acts .tb-btn { margin: 0 0 0 3px; padding-left: 6px; padding-right: 6px; }
+.mend-wide { overflow-x: auto; min-width: 0; }
+
+.mend-passes {
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.mend-facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 2px 10px;
+  margin: 0;
+  padding: 0 4px;
+}
+
+.mend-facts dt { color: var(--ui-dim); }
+.mend-facts dd { margin: 0; }
+
+.mend-select { max-width: 100%; }
+.mend-field { display: inline-flex; align-items: center; gap: 6px; }
+.mend-input { width: 64px; }
+
+.mend-stops {
+  margin: 0;
+  padding: 0 4px 0 22px;
+}
+
+.mend-first { color: var(--ui-accent); font-weight: 600; }
+
+/* A phone: the table scrolls sideways inside the window, never the page. */
+@media (max-width: 520px) {
+  .mend-tick input { width: 22px; height: 22px; }
 }
 
 /* ---- A phone ------------------------------------------------------------- */

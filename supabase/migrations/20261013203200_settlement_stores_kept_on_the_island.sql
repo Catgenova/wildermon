@@ -800,17 +800,17 @@ begin
    * the clock sets them for a go: so a Smith's Forge Reach reaches the same
    * stores for the refusal as for the go. Put back as they were after.
    */
-  was_pk := current_setting('wurm.pk', true);
-  was_act := current_setting('wurm.pk_act', true);
-  perform set_config('wurm.pk', coalesce(v_fx, '{}'::jsonb)::text, true); -- cellar: read above, with the storey
-  perform set_config('wurm.pk_act', coalesce(p_action, ''), true);
+  was_pk := current_setting('wildermon.pk', true);
+  was_act := current_setting('wildermon.pk_act', true);
+  perform set_config('wildermon.pk', coalesce(v_fx, '{}'::jsonb)::text, true); -- cellar: read above, with the storey
+  perform set_config('wildermon.pk_act', coalesce(p_action, ''), true);
   -- cellar: and the side of the ground floor it is asked from (`actor_floor`, `actor_cellar`), put back after.
-  was_floor := current_setting('wurm.floor', true); -- cellar
-  perform set_config('wurm.floor', v_floor || ':' || coalesce(v_cellar::text, ''), true); -- cellar
+  was_floor := current_setting('wildermon.floor', true); -- cellar
+  perform set_config('wildermon.floor', v_floor || ':' || coalesce(v_cellar::text, ''), true); -- cellar
   why := act_refusal_rules(p_world, p_uid, p_action, p_target);
-  perform set_config('wurm.floor', coalesce(was_floor, ''), true); -- cellar
-  perform set_config('wurm.pk', coalesce(was_pk, ''), true);
-  perform set_config('wurm.pk_act', coalesce(was_act, ''), true);
+  perform set_config('wildermon.floor', coalesce(was_floor, ''), true); -- cellar
+  perform set_config('wildermon.pk', coalesce(was_pk, ''), true);
+  perform set_config('wildermon.pk_act', coalesce(was_act, ''), true);
   return why;
 end $function$;
 

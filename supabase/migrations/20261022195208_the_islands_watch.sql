@@ -175,14 +175,14 @@ end $do$;
 -- ------------------------------------------------------------------ the source
 
 /*
- * Who is making or unmaking things: `wurm.source` if something set it (a go
+ * Who is making or unmaking things: `wildermon.source` if something set it (a go
  * of an action, from `settle`), else the door in the statement the session
  * is running -- the first `rpc_` name in it, or the function a bare `select`
  * calls (the clock's jobs) -- else `sql`.
  */
 create or replace function private.watch_source() returns text
 language plpgsql stable set search_path = public as $fn$
-declare v text := current_setting('wurm.source', true); q text; m text[];
+declare v text := current_setting('wildermon.source', true); q text; m text[];
 begin
   if v is not null and v <> '' then return v; end if;
   q := current_query();
@@ -559,9 +559,9 @@ begin
   for r in select * from (values
     -- A go of an action is named for the action, whichever call settles it.
     (1, 'settle', $$      perform act_perform(p_world, p_uid, p.act, p.act_target);
-$$, $$      perform set_config('wurm.source', 'act:' || p.act, true);
+$$, $$      perform set_config('wildermon.source', 'act:' || p.act, true);
       perform act_perform(p_world, p_uid, p.act, p.act_target);
-      perform set_config('wurm.source', '', true);
+      perform set_config('wildermon.source', '', true);
 $$),
     -- Silver across a trade, each way.
     (2, 'rpc_barter_accept', $$        perform give_coins(p_world, b.other, b.asker_coins);

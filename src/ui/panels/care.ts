@@ -199,11 +199,11 @@ export function careNeeds(g: Game): Need[] {
   return all.filter((n) => !dropped.has(n)).sort((a, b) => b.urgency - a.urgency || level(b.id) - level(a.id) || a.name.localeCompare(b.name));
 }
 
-/** The wildermon beds of each size on your settlement, how many are free, and your workers that sleep in that size. */
+/** The wildermon beds of each size on your workers' settlement (`onHomeDeed`), how many are free, and your workers that sleep in that size. */
 export function bedCounts(g: Game): Array<{ size: number; beds: number; free: number; workers: number }> {
   return GEAR_SIZES.map((_, size) => {
     const kind = bedKind(size);
-    const beds = [...g.furniture.values()].filter((f) => f.kind === kind && g.onDeed(f.x, f.y));
+    const beds = [...g.furniture.values()].filter((f) => f.kind === kind && g.onHomeDeed(f.x, f.y));
     return {
       size,
       beds: beds.length,

@@ -86,7 +86,8 @@ function row(cells: Array<{ cv: HTMLCanvasElement; label: string }>): void {
 
 type Who = 'male' | 'female' | 'neither' | 'seven' | 'five' | 'figure';
 /** The studio's look in the body's own gender. */
-const lookOf = (who: Who): Look => ({ ...LOOK, gender: who === 'female' ? 'woman' : who === 'neither' ? 'neither' : 'man' });
+/** (the old sculpted base's body in between is no look's any more: 'neither' reaches it only from here) */
+const lookOf = (who: Who): Look => ({ ...LOOK, gender: (who === 'female' ? 'woman' : who === 'neither' ? 'neither' : 'man') as Look['gender'] });
 /** The look bald, for the sheets held against the reference pictures, which are. */
 const bareLook = (who: Who): Look => ({ ...lookOf(who), hair: 'bald' });
 function drawOne(c: Cell, zoom: number, who: Who, pose: FigurePose, o: { night?: number; debug?: Debug; flat?: boolean; wear?: Wear; stance?: 'ref' | 'straight' | 'tpose'; view?: View; hands?: HandShape; hair?: string } = {}): void {

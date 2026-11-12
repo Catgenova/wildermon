@@ -45,7 +45,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -281,7 +281,7 @@ rollback;
     setItem: (k: string, v: string) => void kept.set(k, v),
     removeItem: (k: string) => void kept.delete(k),
   };
-  const KEY = 'wurm.settings.v1';
+  const KEY = 'wildermon.settings.v1';
   const edge = (stored: Record<string, unknown> | null): boolean => {
     kept.clear();
     if (stored) kept.set(KEY, JSON.stringify(stored));
