@@ -154,6 +154,10 @@ const py = g.player.y;
 const mine = (id: string, dx = 1, dy = 0): Creature => {
   const c = g.creatures.spawn(id, px + dx, py + dy, 'active', g.rand, g.time - 3600 * 24 * 30);
   c.stance = 'passive';
+  // Its blood rolled at birth could give it a chance to rip (a bleed, as a knife opens it) or to land heavy, which is
+  // not its fighting style: none, so what a blow leaves is the style's alone, as the wild one's is.
+  c.traits = [];
+  c.rare = 0;
   return c;
 };
 const wild = (id: string, dx = 1.5, dy = 0, health = 500): Creature => {
