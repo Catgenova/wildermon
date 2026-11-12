@@ -7,6 +7,7 @@ import type { Game } from './game';
 import { itemDef } from './items';
 import { lacks } from './ranks';
 import { PAVED } from '../world/tiles';
+import { greenNow } from './pace';
 
 /**
  * Stone that ages.
@@ -41,8 +42,8 @@ export const GREEN_DAYS = 14;
 /** A day on the woods' clock, in real seconds. */
 export const GREEN_DAY = 24 * 60 * 60;
 
-/** Now, on the clock `greenSince` is kept in: real seconds. */
-export const greenNow = (): number => Date.now() / 1000;
+// Now on the clock `greenSince` is kept in lives in the leaf (`pace.ts`), for what is built to start its clock by.
+export { greenNow } from './pace';
 
 /**
  * Whole days a thing has been greening, from nought, bare, to `GREEN_DAYS`,

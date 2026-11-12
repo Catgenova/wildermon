@@ -1,4 +1,4 @@
-import { ACT_SECS } from '../render/beasts';
+import { ACT_SECS } from '../render/beat-times';
 import { GOLEM_HITS, GOLEM_TAPS } from '../render/wild-golem';
 import { burst, ring } from './kit';
 import type { Voice } from './voices';

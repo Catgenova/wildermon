@@ -1,4 +1,4 @@
-import { ACT_SECS } from '../render/beasts';
+import { ACT_SECS } from '../render/beat-times';
 import { NAIL_HITS, NAIL_WORK } from '../render/wild-nail';
 import { burst, ring } from './kit';
 import type { Voice } from './voices';

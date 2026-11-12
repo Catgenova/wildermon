@@ -1,6 +1,7 @@
 import type { ActionDef, Target } from './actions';
 import { REMOVED_KINDS, SPECIES, type ButcherPart } from './creatures';
-import { productQlRange, type Game } from './game';
+import type { Game } from './game';
+import { productQlRange } from './limits';
 import { HOARD_METALS, itemDef, itemName, type Item } from './items';
 import { WINTER_FUR, WINTER_FUR_PART, winterFurSays, winterNow } from './winter';
 import { dropRecipe } from './recipebook';

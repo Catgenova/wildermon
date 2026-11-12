@@ -1,4 +1,4 @@
-import { ACT_SECS } from '../render/beasts';
+import { ACT_SECS } from '../render/beat-times';
 import { MANTIS_HITS, MANTIS_WORK } from '../render/wild-mantis';
 import { burst, ring } from './kit';
 import type { Voice } from './voices';

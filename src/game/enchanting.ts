@@ -13,11 +13,12 @@
  */
 import type { ActionDef, Target } from './actions';
 import { maxHealth, SPECIES, type Creature } from './creatures';
-import { QL_BARE, QL_LOW, QL_SPAN, type Game, type PlacedEnchantable } from './game';
+import type { Game, PlacedEnchantable } from './game';
+import { QL_BARE, QL_LOW, QL_SPAN } from './limits';
 import { describeWith, ITEM_DEFS, itemDef, itemName, type Item } from './items';
 import { FURNITURE } from './furniture';
 import { CRATE_DEFS } from './crates';
-import { CATCH_MOST, TRAPS } from './traps';
+import { CATCH_MOST, TRAPS } from './trapdefs';
 import { ARMOUR, ARMOUR_BY_ID, isArmour, isShield, SHIELDS, WEAPON_BY_ID, WEAPONS } from './gear';
 import { CLASS_SPELLS } from './talents';
 import { blowEvery, KNIFE_BLEED, KNIFE_BLEED_SECS, STUN_SECS, VENOM_DRAIN, VENOM_SECS } from './fight';

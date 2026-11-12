@@ -1,4 +1,4 @@
-import { ACT_SECS } from '../render/beasts';
+import { ACT_SECS } from '../render/beat-times';
 import { PENG_HITS, PENG_WORK } from '../render/wild-penguin';
 import { burst, ring } from './kit';
 import type { Voice } from './voices';

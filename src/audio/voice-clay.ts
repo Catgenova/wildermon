@@ -1,4 +1,4 @@
-import { ACT_SECS } from '../render/beasts';
+import { ACT_SECS } from '../render/beat-times';
 import { CLAY_DIGS, CLAY_HITS, CLAY_WORK, DIG_STROKE, WORK_LAND } from '../render/wild-clay';
 import { noiseBuffer, type Burst, type Ring } from './kit';
 import type { Voice } from './voices';

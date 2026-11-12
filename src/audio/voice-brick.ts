@@ -1,4 +1,4 @@
-import { ACT_SECS } from '../render/beasts';
+import { ACT_SECS } from '../render/beat-times';
 import { BASTION_SLAM, BRICK_HITS, BRICK_WORK } from '../render/wild-brick';
 import { burst, ring } from './kit';
 import type { Voice } from './voices';

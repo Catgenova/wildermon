@@ -3,6 +3,7 @@ import type { Game } from './game';
 import { roomMul, type Enchant } from './enchant';
 import { describeFrom, foldInto, itemDef, itemName, rarityOf, roomFor, sameStack, storedLine, type Item } from './items';
 import { matOf } from './materials';
+import { STORE_REACH, SUBTILES } from './limits';
 import { furnitureCentre, furnitureDef, furnitureName, pieceShut, rackDeck, rackSpots, type PlacedFurniture } from './furniture';
 import { CELLAR_FLOOR, floorOf } from './building';
 import { lacks } from './ranks';
@@ -102,10 +103,8 @@ export const CRATE_DEFS: Record<CrateKind, CrateDef> = {
 // What a crate holds is said off the crate: `{capacity}` in its item's text.
 for (const c of Object.values(CRATE_DEFS)) describeFrom(c.item, c);
 
-export const SUBTILES = 4;
-
-/** How far from a store's centre you can stand and still put things in or take them out, in tiles. */
-export const STORE_REACH = 2.4;
+// The subtiles of a tile and a store's reach live in the leaf (`limits.ts`), for the furniture to read as well.
+export { STORE_REACH, SUBTILES } from './limits';
 
 export const crateKindOfItem = (itemId: string): CrateKind | null => (itemId === 'crate_log' ? 'log' : itemId === 'crate_plank' ? 'plank' : null);
 /**

@@ -1,4 +1,4 @@
-import { ACT_SECS } from '../render/beasts';
+import { ACT_SECS } from '../render/beat-times';
 import { CRAG_CAST, CRAG_STRIKE, CRAG_WORK } from '../render/wild-crag';
 import { burst, ring } from './kit';
 import type { Voice } from './voices';

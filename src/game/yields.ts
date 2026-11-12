@@ -11,7 +11,6 @@
 import type { Game } from './game';
 import { EMPTY_CHANCE, FIND_CHECK, rollsAt } from './forage';
 import { fruitingSeasons, fruitSeason } from './fruiting';
-import { FISH, baitFor, fishHere, staysOn, type FishDef } from './fishing';
 import { SEASONS, SEASON_DAYS, seasonBegan } from '../world/calendar';
 import { DAY_SECONDS } from './pace';
 import { readyIn, timeWords, waitWords } from './words';
@@ -83,24 +82,4 @@ export function seasonWindow(id: string, now: number): string | null {
   while (!fruits(k)) k++;
   return `out of season until ${SEASONS[(at + k) % SEASONS.length]}, in ${timeWords(next + (k - 1) * len - now)}`;
 }
-
-/** What a line in water of this depth can bring up for this fisher, and the fish that want more skill for it. */
-export function fishFor(g: Game, depth: number): { pool: FishDef[]; later: FishDef[] } {
-  const skill = g.skills.get('fishing');
-  return { pool: fishHere(depth, skill), later: FISH.filter((f) => depth >= f.depth && skill < f.level) };
-}
-
-/**
- * A cast here, as its menu label says it: the chance a bite stays on with the
- * rod carried and the bait that would go on (`staysOn`), and the most quality
- * a fish comes up at (`productQl` with the rod). The island's `perform_fish`.
- */
-export const castOdds = (g: Game, depth: number): string[] => {
-  const bait = baitFor(g, depth);
-  const on = staysOn(g.skills.get('fishing'), g.toolQl('fishing_rod'), !!bait, g.perk('hook:fish', 0));
-  return [`stay on ${pct(on)}`, qlTag(g.qlCeiling('fishing', g.toolQl('fishing_rod')))];
-};
-
-/** "trout at 15, pike at 35": fish this water holds that want more fishing. */
-export const laterSaid = (later: FishDef[]): string => later.map((f) => `${f.name.toLowerCase()} at ${f.level}`).join(', ');
 

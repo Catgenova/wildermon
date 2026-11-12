@@ -3,7 +3,7 @@ import { HEIGHT_SCALE } from '../../iso';
 import { KIT_INK, KIT_INK_W } from '../../kit/core';
 import { proj, type Eye } from '../../runestone';
 import { mix, tone } from '../../trees/kit';
-import { SWAY_FRAMES } from '../index';
+import { SWAY_FRAMES } from '../types';
 import { ACROSS, paintTree3d } from '../paint';
 import { WIND } from '../skeleton';
 import type { Build, Bush3D, BushJob, Clump, Envelope, Limb, Ramp, Skeleton, Species3D, V3 } from '../types';

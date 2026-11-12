@@ -1,4 +1,4 @@
-import { ACT_SECS } from '../render/beasts';
+import { ACT_SECS } from '../render/beat-times';
 import { SNAIL_HITS, SNAIL_ROCKS, SNAIL_WORK } from '../render/wild-snail';
 import { burst, ring } from './kit';
 import type { Voice } from './voices';

@@ -1,4 +1,4 @@
-import { ACT_SECS } from '../render/beasts';
+import { ACT_SECS } from '../render/beat-times';
 import { HAUL_HITS, HAUL_STAMP, HAUL_WORK } from '../render/wild-haul';
 import { noiseBuffer, type Burst, type Ring } from './kit';
 import type { Voice } from './voices';

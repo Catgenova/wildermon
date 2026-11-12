@@ -3,7 +3,7 @@ import type { Game } from './game';
 import { isDone, progressOf, type Bill } from './building';
 import { metres, TileType } from '../world/tiles';
 import { POOL_DEPTH, POOL_LIP, poolFloor, poolLevel } from '../world/springs';
-import { greenNow } from './greening';
+import { greenNow } from './pace';
 import { WATER_MOTE, WATER_MOTE_NEED, WATER_MOTES_EACH } from './motes';
 
 /**

@@ -1,4 +1,4 @@
-import { ACT_SECS } from '../render/beasts';
+import { ACT_SECS } from '../render/beat-times';
 import { BADGER_DIGS, BADGER_HITS, BADGER_WORK, DIG_STROKE } from '../render/wild-badger';
 import { noiseBuffer, type Burst, type Ring } from './kit';
 import type { Voice } from './voices';

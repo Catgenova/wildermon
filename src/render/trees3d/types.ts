@@ -404,3 +404,6 @@ export interface Bush3D {
   /** The bush in pixels at zoom one, its foot at the origin, inked round. */
   paint(g: CanvasRenderingContext2D, job: BushJob): void;
 }
+
+/** Frames of the wind, gone round one after another, `SWAY_MS` each (`index.ts`). */
+export const SWAY_FRAMES = 4;

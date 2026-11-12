@@ -1,4 +1,4 @@
-import { ACT_SECS } from '../render/beasts';
+import { ACT_SECS } from '../render/beat-times';
 import { VANARI_PICK, VANARI_THROW } from '../render/wild-vanari';
 import { burst, ring } from './kit';
 import type { Voice } from './voices';

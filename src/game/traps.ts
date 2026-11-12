@@ -9,7 +9,7 @@ import { tameRoomRefusal } from './creatureActions';
 import { itemDef, itemName, markOf, type Item, type Mark } from './items';
 import { BAIT_BY_ID, isBait, isFood } from './fishing';
 import { matOf } from './materials';
-import { world } from './pace';
+import { CATCH_MOST, TRAPS, type TrapDef, type TrapKind } from './trapdefs';
 
 /** What getting something out of a trap teaches, bitten or not. */
 export const FREE_GAIN = 1.1;
@@ -30,74 +30,9 @@ export const FREE_GAIN = 1.1;
  * hold most of what walks, and it is a great deal more work to build.
  */
 
-export type TrapKind = 'snare' | 'deadfall' | 'creel';
-
-export interface TrapDef {
-  id: TrapKind;
-  name: string;
-  /** What it is built from. */
-  bill: Array<[string, number]>;
-  difficulty: number;
-  time: number;
-  /** The stiffest taming level it will hold. Anything warier walks off with it. */
-  holds: number;
-  /** How far from it the bait carries, in tiles. */
-  reach: number;
-  /** Base chance per check that something in reach comes to it. */
-  odds: number;
-  /** Seconds it stands out in the weather at quality one and at a hundred. */
-  lifeMin: number;
-  lifeMax: number;
-  /** Goes in the water and takes fish rather than standing on land and taking beasts. */
-  water?: boolean;
-  /** The most fish one of these holds before it stops taking any. */
-  hold?: number;
-  note: string;
-}
-
-export const TRAPS: Record<TrapKind, TrapDef> = {
-  snare: {
-    id: 'snare',
-    name: 'Snare',
-    bill: [['rope', 4], ['shaft', 8]],
-    difficulty: 8,
-    time: 6,
-    holds: 20,
-    reach: 7,
-    odds: 0.3,
-    lifeMin: world(20 * 60),
-    lifeMax: world(90 * 60),
-    note: 'A noose of rope on a bent shaft. It takes the small and the trusting; anything with weight in it walks off wearing the rope.',
-  },
-  creel: {
-    id: 'creel',
-    name: 'Creel',
-    bill: [['reed', 56], ['rope', 4]],
-    difficulty: 16,
-    time: 16,
-    holds: 0,
-    reach: 0,
-    odds: 0.34,
-    lifeMin: world(40 * 60),
-    lifeMax: world(3 * 60 * 60),
-    water: true,
-    hold: 8,
-    note: 'A woven basket with a throat turned inward, so what swims in stays in. It sits in the water and works while you are elsewhere.',
-  },
-  deadfall: {
-    id: 'deadfall',
-    name: 'Deadfall',
-    bill: [['plank', 12], ['shaft', 8], ['rope', 8], ['nail', 12]],
-    difficulty: 26,
-    time: 14,
-    holds: 60,
-    reach: 10,
-    odds: 0.22,
-    lifeMin: world(45 * 60),
-    lifeMax: world(4 * 60 * 60),
-    note: 'A weighted board on a trigger, propped over the bait. It will hold very nearly anything that walks, and it is a day’s work to build one.',
-  },
-};
+// The traps as made live in the leaf (`trapdefs.ts`), for the recipes and the enchantments to read as well.
+export { CATCH_MOST, TRAPS } from './trapdefs';
+export type { TrapDef, TrapKind } from './trapdefs';
 
 export interface PlacedTrap {
   id: number;
@@ -170,8 +105,6 @@ export const creelHold = (t: PlacedTrap): number => Math.round((trapDef(t).hold 
 /** What a timid thing's chance of walking into a trap is multiplied by, and a hunter's. */
 export const TIMID_TRAPPED = 1.5;
 export const HUNTER_TRAPPED = 0.6;
-/** The best a trap's chance of taking a creature ever comes to. */
-export const CATCH_MOST = 0.9;
 
 export function catchChance(t: PlacedTrap, c: Creature): number {
   const def = TRAPS[t.kind] ?? TRAPS.snare;

@@ -1,4 +1,4 @@
-import { ACT_SECS } from '../render/beasts';
+import { ACT_SECS } from '../render/beat-times';
 import { PETAL_DIGS, PETAL_HITS, PETAL_WORK, RAKE_STROKE } from '../render/wild-petal';
 import { burst, ring } from './kit';
 import type { Voice } from './voices';

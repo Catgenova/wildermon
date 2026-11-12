@@ -2,7 +2,8 @@ import { clockLeft } from '../../game/boons';
 import { gearTags } from '../../game/wildgearActions';
 import { DAY_SECONDS } from '../../game/game';
 import { OLD_FOR, perkLine, stagePerk } from '../../game/creatures';
-import { ageDef, BASE_STATS, BRACE_MOST, BRACE_STEP, bracePoints, BRIDLE_PACE, COLLAR_CUT, fitted, mirrored, mirrorNames, POT_MOST, POT_STEP, potMul, potPoints, type BaseStat, CARE_WANTING, GESTATION, isShod, SHOE_DAYS, ageOf, attackOf, bloodMul, CARE_BONUS, careMul, careWord, favouriteSays, fedNow, wellFedSays, growsAt, creatureLevel, kindName, GATHER_VERB, maxHealth, pedigreeLine, RANGE_PER_STEP, rarityLine, rarityMul, SEX_MARK, SEX_NAMES, SKILL_STEP, SPECIES, STANCE_NAMES, taskSkill, workRangeOf, type Creature, lineLines } from '../../game/creatures';
+import { ageDef, BASE_STATS, BRACE_MOST, BRACE_STEP, bracePoints, BRIDLE_PACE, COLLAR_CUT, fitted, mirrored, mirrorNames, POT_MOST, POT_STEP, potMul, potPoints, type BaseStat, CARE_WANTING, isShod, SHOE_DAYS, ageOf, attackOf, bloodMul, CARE_BONUS, careMul, careWord, favouriteSays, fedNow, wellFedSays, growsAt, creatureLevel, kindName, GATHER_VERB, maxHealth, pedigreeLine, RANGE_PER_STEP, rarityLine, rarityMul, SEX_MARK, SEX_NAMES, SKILL_STEP, SPECIES, STANCE_NAMES, taskSkill, workRangeOf, type Creature, lineLines } from '../../game/creatures';
+import { DUE_SOON, HUNGRY_AT, HURT_AT } from './attention';
 import { CHANNELS, figSays, isGain, mirrorTrait, pct, TIER_CSS, TRAIT_SOURCES, traitAdd, traitMul, traitOf, type TraitChannel, lineMul } from '../../game/traits';
 import { readsTrait, TIER_LEVEL, traitReadNeeds } from '../../game/husbandry';
 
@@ -54,15 +55,8 @@ const SORTS: Array<[SortKey, string]> = [
   ['traits', 'Best trait'],
 ];
 
-/**
- * What counts as wanting attention. The footer has always counted these and
- * the cards never said which ones they were, so the count sent you looking
- * through the herd by eye. One definition, read by both, so they cannot drift.
- */
-export const HURT_AT = 0.6;
-export const HUNGRY_AT = 0.3;
-/** A dam due within this many seconds wants attention too: a quarter of her carrying. */
-export const DUE_SOON = GESTATION / 4;
+// What counts as wanting attention lives in the leaf (`attention.ts`), for the Care panel to read as well.
+export { DUE_SOON, HUNGRY_AT, HURT_AT } from './attention';
 
 /**
  * Its four base stats as the rules read them now (`BASE_STATS`), each with

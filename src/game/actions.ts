@@ -76,7 +76,10 @@ import { SPECIES, type Stance, takeArms } from './creatures';
 import { BOTANIZE_TABLE, BOTANIZE_WATER_TABLE, COIN_FIND_ONE_IN, COIN_FINDS_A_DAY, EMPTY_CHANCE, FIND_CHECK, FORAGE_TABLE, listOf, rollTable } from './forage';
 import { atWaterEdge, WATER_GARDEN_ACTIONS } from './watergarden';
 import { CELLAR_DEPTH, CELLAR_LEVEL, floorOf, type FloorKind, type RoofShape, type Side, type StairHand, type WallType } from './building';
-import { DEED_RADIUS, DEED_SPACING, DEED_STONE_GAP, deedNearStone, deedRadiusAt, deedTooClose, MAX_DEED_LEVEL, PROSPECT_MARK_TIME, type Game } from './game';
+import type { Game } from './game';
+import { DEED_RADIUS, DEED_SPACING, DEED_STONE_GAP, deedNearStone, deedRadiusAt, deedTooClose, MAX_DEED_LEVEL } from './deedsize';
+import { PROSPECT_MARK_TIME } from './limits';
+import { besideWater, CUT_GRASS, MINE_COLLAPSE, MINE_DEPTH, PAN_ORES, RESIN_TREE, RICH_WORMS, tappable, tileCorners, WORMY } from './worksites';
 import { isFounder, lacks } from './ranks';
 import { materialOfItem } from './materials';
 import { boonTime, clockLeft, knackSays } from './boons';
@@ -422,11 +425,8 @@ export const plantedAge = (steps: number): number => {
  * and living -- back to where a planted one starts, for its logs.
  */
 export const coppiceable = (data: number): boolean => treeAge(data).alive && treeAge(data).bears;
-/** The one tree a Forester's Tap Resin taps. */
-export const RESIN_TREE = TREE_DEFS.findIndex((d) => d.name === 'Pine');
-/** A living pine with timber in it: not a sapling, and not one clipped to a shrub. */
-export const tappable = (data: number): boolean =>
-  treeSpecies(data) === RESIN_TREE && treeAge(data).alive && treeAge(data).logs > 0;
+// What ground and trees a job can be done on lives in the leaf (`worksites.ts`), for the wildermon to ask as well.
+export { besideWater, CUT_GRASS, MINE_COLLAPSE, MINE_DEPTH, PAN_ORES, RESIN_TREE, RICH_WORMS, tappable, tileCorners, WORMY } from './worksites';
 /**
  * What a Forester's Clear Brush clears, and what it leaves: grass where a bush
  * stood, bare dirt where the reeds were.
@@ -488,15 +488,6 @@ export function changeSpoil(g: Game, x: number, y: number, uid?: number): { id: 
  * wherever you are standing for a tile -- a cellar's floor from down there.
  */
 const sweepFloor = (g: Game, t: Target): number => (t.kind === 'ground' ? (t.down ? CELLAR_LEVEL : 0) : floorOf(g.player.level));
-
-/** The four corners of a tile, north-west first and going clockwise. */
-export const tileCorners = (x: number, y: number): Array<[number, number]> => [
-  [x, y],
-  [x + 1, y],
-  [x + 1, y + 1],
-  [x, y + 1],
-];
-
 /**
  * The height flattening works towards: the ground the player is standing on,
  * so a terrace can be carried outwards tile by tile. Standing on the tile
@@ -585,23 +576,7 @@ export function needsFlattening(g: Game, x: number, y: number): boolean {
 }
 
 /** The chance a swing cuts the rock face back, from skill and the pick. */
-/**
- * How often working a face for its metal happens to bring a slab of it down.
- *
- * One swing in thirty. It was one in a hundred, which is hardly ever enough to
- * be a thing that happens: a seam worked for an afternoon sank a step or two
- * and the whole business read as a fixed wall you chipped at. A thirtieth is
- * still nobody's plan for moving rock -- `chip_corner` is the job for that,
- * and it comes off three swings in four -- but it is often enough that a face
- * you have been at all day is visibly lower than it was.
- *
- * The island holds the same number in `mine_collapse()`, and the browser's
- * miner, the browser's Mola and the island's all ask their own side for it.
- */
-export const MINE_COLLAPSE = 1 / 30;
 
-/** The ground a cut of grass is taken off: a grazza's as well as yours. */
-export const CUT_GRASS = new Set<number>([TileType.Grass, TileType.Steppe, TileType.Lawn, TileType.Tundra]);
 // What a cut of grass and of moss gives lives in the leaf (`limits.ts`), so a grazza's words can say it.
 export { GRASS_PER_CUT, MOSS_PER_CUT } from './limits';
 /** Reeds a cut gives, and the foraging at which a third is certain (a third one in this many points of it). */
@@ -650,32 +625,6 @@ export const repairGo = (skill: number): { healed: number; cost: number } => ({
 /** Fruit a picking takes off a tree in bearing and off an old one, at middling forestry. */
 export const FRUIT_MATURE = 3;
 export const FRUIT_OLD = 5;
-
-/**
- * How deep the water over a face may be and still be worked, in height units.
- *
- * Reported from the island: a copper vein that would not be mined, with "You
- * cannot mine below the water level." and no water anywhere on the tile. Two
- * things were wrong in one line, `rockHeight(corner) <= 0`.
- *
- * It asked the wrong corner height. `rockHeight` is the surface less the soil
- * over it, so a corner shared with a meadow refuses a face standing fifty
- * units above the sea, on the grounds that the bedrock buried under the grass
- * beside it is below sea level. Water is a question about the surface, and the
- * surface is what `hasWater` reads and what the renderer draws.
- *
- * And it was a height out even where the two agree: `<= 0` refuses a face
- * standing *at* the waterline, and water is only drawn below it — so nought is
- * the one height that refuses and shows nothing, which is exactly where a
- * shore face sits.
- *
- * So: the corner's own height, and ten units of water allowed over it. That is
- * about waist deep at the tide line and you work standing in it, which is what
- * a shore quarry looks like. Past that you are swimming, and nobody swings a
- * pick while swimming.
- */
-export const MINE_DEPTH = 10;
-
 /** How far a spade reaches down through water, for this body: a Wader works deeper. */
 export const digDepth = (g: Game): number => g.perk('depth:dig', MINE_DEPTH);
 
@@ -700,11 +649,6 @@ export const DIG_TILE_TIME = 16;
  * Reach takes it further (`reach:soil`).
  */
 export const SPOIL_REACH = 2.5;
-
-/** Ground with anything living in it, and the damp ground that is full of them. */
-export const WORMY = new Set<TileType>([TileType.Grass, TileType.Dirt, TileType.PackedDirt, TileType.Marsh, TileType.Moss]);
-export const RICH_WORMS = new Set<TileType>([TileType.Marsh, TileType.Moss]);
-
 /** How often a deliberate chip at a corner actually takes it down: one in four. */
 export const CHIP_CHANCE = 0.25;
 
@@ -723,14 +667,9 @@ export const mineDepth = (g: Game): number => g.perk('depth:mine', MINE_DEPTH);
 export const oreNeeds = (g: Game, level: number): number => Math.max(0, level - g.perk('ore:below', 0));
 
 /**
- * A Miner's Pan: sand with water at a corner, washed in a pan. What comes out
- * of it when anything does, each as likely, and how long a go takes.
+ * A Miner's Pan: how long a go takes. What it brings up is `PAN_ORES` (`worksites.ts`).
  */
-export const PAN_ORES = ['copper_ore', 'tin_ore', 'silver_ore'];
 export const PAN_TIME = 8;
-/** Whether a tile has water at one of its corners, which panning wants. */
-export const besideWater = (g: Game, x: number, y: number): boolean =>
-  tileCorners(x, y).some(([cx, cy]) => g.world.getHeight(cx, cy) < 0);
 
 /**
  * The steepest slope a spade or a trowel may leave: this many times the skill,

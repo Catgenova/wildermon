@@ -1,4 +1,4 @@
-import { ACT_SECS } from '../render/beasts';
+import { ACT_SECS } from '../render/beat-times';
 import { BILL_HITS, BILL_WORK } from '../render/wild-curlew';
 import { burst, ring } from './kit';
 import type { Voice } from './voices';

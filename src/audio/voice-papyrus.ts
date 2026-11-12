@@ -1,4 +1,4 @@
-import { ACT_SECS } from '../render/beasts';
+import { ACT_SECS } from '../render/beat-times';
 import { PAPER_HITS, PAPER_WORK } from '../render/wild-papyrus';
 import { burst, ring } from './kit';
 import type { Voice } from './voices';

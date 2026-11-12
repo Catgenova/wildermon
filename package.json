@@ -9,7 +9,7 @@
     "build": "npm run typecheck && node scripts/emit-icons.mjs && vite build && node scripts/copy-site.mjs && node scripts/sri.mjs && node scripts/emit-wildermon.mjs && node scripts/boot-check.mjs",
     "check:boot": "node scripts/boot-check.mjs",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.node.json && node scripts/html-sinks.mjs",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.node.json && node scripts/html-sinks.mjs && node scripts/cycles.mjs",
     "defs": "node scripts/emit-defs.mjs",
     "wildermon": "node scripts/emit-wildermon.mjs",
     "db:test": "supabase/test/run.sh",

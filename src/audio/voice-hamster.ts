@@ -1,4 +1,4 @@
-import { ACT_SECS } from '../render/beasts';
+import { ACT_SECS } from '../render/beat-times';
 import { HAM_HITS, HAM_WORK } from '../render/wild-hamster';
 import { burst, ring } from './kit';
 import type { Voice } from './voices';

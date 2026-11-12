@@ -1,7 +1,7 @@
 import type { ActionDef, Target } from './actions';
 import { enchantTail, roomMul, type Enchant } from './enchant';
 import { SIDE_NAMES, type Side } from './building';
-import { STORE_REACH, SUBTILES } from './crates';
+import { STORE_REACH, SUBTILES } from './limits';
 import { CROP_BY_SEED } from './farming';
 import type { Game } from './game';
 import { describeFrom, describeWith, isWorked, ITEM_DEFS, itemDef, itemName, markOf, rarityOf, roomFor, storedLine, type Item, type Mark } from './items';

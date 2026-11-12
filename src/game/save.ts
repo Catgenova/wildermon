@@ -1,5 +1,4 @@
 import { TileType, TREE_DATA_LAYOUT } from '../world/tiles';
-import type { LandBlob } from '../net/protocol';
 import { World } from '../world/world';
 import { settingsStored } from './settings';
 import { CELLAR_LEVEL, type BuildingsJSON } from './building';
@@ -36,11 +35,22 @@ import { chartRegion } from '../world/chart';
 import { lairOf, REGIONS } from '../world/regions';
 import type { Item } from './items';
 import { Game, type Deed } from './game';
-import type { GuestSave } from './actor';
+
 import type { Stats } from './player';
 import { crateTheKept } from './creaturecrate';
 
 const VERSION = 1;
+
+/** The land packed (`packLand`): each layer base64, gzipped first where the browser can (`zip`). */
+export interface LandBlob {
+  size: number;
+  zip: boolean;
+  heights: string;
+  tiles: string;
+  data: string;
+  dirt: string;
+  rock: string;
+}
 
 /** The shape of the land. */
 interface GroundBlob {
@@ -135,15 +145,6 @@ interface SaveData {
   /** What is set out on each shop counter. A save from before counters has none. */
   counters?: CountersJSON;
   crate?: { x: number; y: number; items: Item[] } | null;
-  /**
-   * Everybody who has ever visited, and what they had when they left.
-   *
-   * A host's save is the island's memory, and its guests are part of the
-   * island. Without this, somebody who spent an evening here came back the
-   * next night to empty hands and no skills, because the only place their
-   * evening was written down was a map in the tab that had since been closed.
-   */
-  guests?: GuestSave[];
 }
 
 function toBase64(bytes: Uint8Array): string {
@@ -228,7 +229,6 @@ function meta(game: Game): SaveMeta {
     swirls: game.swirlDawn === null ? undefined : [...game.swirls.values()],
     swirlDawn: game.swirlDawn ?? undefined,
     counters: game.counters.toJSON(),
-    guests: game.guestRecords(),
   };
 }
 
@@ -305,7 +305,6 @@ function finish(world: World, m: SaveMeta): Game {
     marks: m.marks,
     hoards: m.hoards,
     crate: m.crate ?? null,
-    guests: m.guests,
   });
   // Aboard as a passenger when it was saved: the hull's list of who is aboard
   // is what was kept, so the body's place is read back off it.
@@ -425,11 +424,8 @@ function finish(world: World, m: SaveMeta): Game {
  * one person has walked is theirs, and a newcomer should arrive to a dark map
  * and light it themselves.
  *
- * The world half still carries the host's own body and pack, since it is the
- * save's own metadata and that is what a save writes down. A guest does not
- * keep them: the moment they say who they are, their real pack is sent after
- * the welcome and lands on top. What does not go at all is the guest book —
- * everybody else's belongings are nobody's business but the island's.
+ * The world half carries the body and the pack, since they are the save's own
+ * metadata and that is what a save writes down.
  */
 export async function packLand(game: Game): Promise<LandBlob> {
   const g = ground(game);
@@ -456,18 +452,9 @@ async function swell(s: string, zipped: boolean): Promise<Uint8Array> {
   return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
-/**
- * Everything about the island except the land itself and who has seen what.
- *
- * The guest book stays behind. It is the host's record of other people's
- * packs, it grows with every visitor the island ever has, and nobody arriving
- * needs to turn up holding everyone else's belongings. What a guest is owed of
- * it comes back to them alone, in their own pack, once they have said who they
- * are.
- */
+/** Everything about the island except the land itself and who has seen what. */
 export function packWorld(game: Game): unknown {
-  const { guests: _guests, ...rest } = meta(game);
-  return rest;
+  return meta(game);
 }
 
 /**

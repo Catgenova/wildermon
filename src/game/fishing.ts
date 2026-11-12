@@ -3,7 +3,7 @@ import type { ActionDef } from './actions';
 import type { Game } from './game';
 import { ITEM_DEFS, itemDef, markOf, RARITIES, RARITY_WORD, rollRarity } from './items';
 import { swingEnchant } from './enchant';
-import { castOdds, qlTag, taggedWith } from './yields';
+import { pct, qlTag, taggedWith } from './yields';
 
 /** What one cast and one sweep of the net teach, fish or no fish. */
 export const ROD_GAIN = 0.4;
@@ -429,3 +429,23 @@ export const FISHING_ACTIONS: ActionDef[] = [
 ];
 
 export const FISHING_ACTION_BY_ID = new Map(FISHING_ACTIONS.map((a) => [a.id, a]));
+
+/** What a line in water of this depth can bring up for this fisher, and the fish that want more skill for it. */
+export function fishFor(g: Game, depth: number): { pool: FishDef[]; later: FishDef[] } {
+  const skill = g.skills.get('fishing');
+  return { pool: fishHere(depth, skill), later: FISH.filter((f) => depth >= f.depth && skill < f.level) };
+}
+
+/**
+ * A cast here, as its menu label says it: the chance a bite stays on with the
+ * rod carried and the bait that would go on (`staysOn`), and the most quality
+ * a fish comes up at (`productQl` with the rod). The island's `perform_fish`.
+ */
+export const castOdds = (g: Game, depth: number): string[] => {
+  const bait = baitFor(g, depth);
+  const on = staysOn(g.skills.get('fishing'), g.toolQl('fishing_rod'), !!bait, g.perk('hook:fish', 0));
+  return [`stay on ${pct(on)}`, qlTag(g.qlCeiling('fishing', g.toolQl('fishing_rod')))];
+};
+
+/** "trout at 15, pike at 35": fish this water holds that want more fishing. */
+export const laterSaid = (later: FishDef[]): string => later.map((f) => `${f.name.toLowerCase()} at ${f.level}`).join(', ');
