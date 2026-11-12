@@ -15,6 +15,9 @@ import { IDLE } from './clips/idle';
 import { WALK } from './clips/walk';
 import { SWING } from './clips/swing';
 import { SIXSEVEN } from './clips/sixseven';
+import { WORK } from './clips/work';
+import { mirrorClip } from './author';
+import { ACTION_BY_ID } from '../../game/actions';
 import { strideAt } from '../../game/player';
 import { WEAPON_BY_ID } from '../../game/gear';
 import { UNITS_PER_TILE } from '../../render/iso';
@@ -27,12 +30,13 @@ import { UNITS_PER_TILE } from '../../render/iso';
  */
 export type State = 'idle' | 'walk' | 'swing' | 'work' | 'fight' | 'meditate' | 'emote' | 'cast';
 /** Every clip, by name (the authoring tools find a clip here, `tools/sculpt/lowanim.mjs --clip <name>`). */
-export const CLIPS: Record<string, Clip> = { idle: IDLE, walk: WALK, swing: SWING, sixseven: SIXSEVEN };
+export const CLIPS: Record<string, Clip> = { idle: IDLE, walk: WALK, swing: SWING, sixseven: SIXSEVEN, work: WORK, 'work-left': mirrorClip(WORK, 'work-left') };
 /** The clip a state plays until its own is approved: the 6 7 gesture. */
 export const PLACEHOLDER = 'sixseven';
 /**
  * The clip each state plays, by name: its own where approved, the placeholder where not. Each placeholder is replaced
- * here when the state's own clip lands. (Running, and walking or running while casting, emoting or at work, keep the
+ * here when the state's own clip lands; a job at `work` plays its tool's clip where it has one (`workClipOf`), the
+ * state's otherwise. (Running, and walking or running while casting, emoting or at work, keep the
  * figure's pose: a stood clip would slide its planted feet over the ground. Swimming and driving are drawn by the flat
  * figure.)
  */
@@ -46,6 +50,38 @@ export const CLIP_OF: Record<State, string> = {
   emote: PLACEHOLDER,
   cast: PLACEHOLDER,
 };
+/**
+ * The clip a job in the `work` state plays, by the tool it is done with (its action's `tool`, `../../game/actions.ts`):
+ * the strike at the bench (`work`) for the tools struck with or held to the work in one hand; any other tool, or none,
+ * the state's own (`CLIP_OF.work`). A later clip for a family of tools adds its rows.
+ */
+export const CLIP_OF_TOOL: Readonly<Record<string, string>> = {
+  hammer: 'work', mallet: 'work', chisel: 'work', hatchet: 'work', butchering_knife: 'work',
+  awl: 'work', carving_knife: 'work', trowel: 'work', file: 'work', whetstone: 'work',
+};
+/**
+ * The same by the job, for a job whose tool is chosen each go (`ActionDef.toolFor`) or is a list (improving: the
+ * material's tools): planning (the mallet), building a wall, a floor or a column (the mallet or the trowel, by material),
+ * and improving (a file, a whetstone, a carving knife, an awl, a chisel or a needle).
+ */
+export const CLIP_OF_JOB: Readonly<Record<string, string>> = Object.fromEntries([
+  'plan_building', 'add_to_building', 'plan_wall', 'plan_fence', 'plan_floor', 'plan_column',
+  'build_wall', 'change_wall', 'add_floor', 'build_floor', 'build_column', 'improve_item',
+].map((job) => [job, 'work']));
+/** The clip a job in the `work` state plays (`CLIP_OF_JOB`, then `CLIP_OF_TOOL`, then the state's own). */
+export function workClipOf(job: string | undefined): string {
+  if (!job) return CLIP_OF.work;
+  const tool = ACTION_BY_ID.get(job)?.tool;
+  return CLIP_OF_JOB[job] ?? (tool !== undefined ? CLIP_OF_TOOL[tool] : undefined) ?? CLIP_OF.work;
+}
+/**
+ * The clips played left-handed (`lefty`), by the right-handed clip's name: its mirror. The flat figure works left-handed
+ * from the two facings where its right hand's blow would cross the face (`../../render/figure.ts` lefty); so does this.
+ */
+const LEFT_OF: Readonly<Record<string, string>> = { work: 'work-left' };
+/** Whether work is done left-handed from where it is seen: as the flat figure (facings three and seven). */
+const lefty = (facing: number): boolean => { const f = ((Math.round(facing) % 8) + 8) % 8; return f === 3 || f === 7; };
+
 /** The jobs done with the overhead swing whatever is in hand: the pickaxe's. */
 const SWING_JOBS = new Set(['mine', 'chip_corner', 'mine_cellar']);
 /** Meditating's job. */
@@ -95,7 +131,8 @@ export const walkPhase = (c: Clip, t: number, body: 'man' | 'woman', gait = 0): 
  * the game carries the body over (`walkTime`).
  */
 export function clipFor(pose: FigurePose, body: 'man' | 'woman' = pose.look?.gender === 'woman' ? 'woman' : 'man'): { clip: Clip; t: number } | undefined {
-  const s = ON ? stateOf(pose) : undefined, clip = s && CLIPS[CLIP_OF[s]];
+  const s = ON ? stateOf(pose) : undefined, name = s === 'work' ? workClipOf(pose.job) : s && CLIP_OF[s];
+  const clip = name ? CLIPS[(lefty(pose.facing) && LEFT_OF[name]) || name] : undefined;
   if (!clip) return undefined;
   if (s === 'walk') return { clip, t: walkTime(clip, pose.phase, body, pose.gait ?? 0) };
   // a go of a timed job: fitted to its length (the holds stretched, the blow kept: `fitTime`), a fight's swing one blow
@@ -117,6 +154,11 @@ export function heldIn(pose: FigurePose): string | undefined {
   return c?.clip.grip && pose.job === FIGHT ? pose.gear?.weapon?.id : undefined;
 }
 
+/** The tools a pose's clip draws in its hands (`Clip.tools`), by the side: none for a clip that holds none. */
+export function toolsIn(pose: FigurePose): Clip['tools'] {
+  return clipFor(pose)?.clip.tools;
+}
+
 /** A share of a loop for a body, from its id, so bodies stood together do not breathe as one. */
 function offsetOf(id: string | undefined): number {
   if (!id) return 0;
@@ -134,9 +176,9 @@ const MAX_KEPT = 256;
  * The local turns and shift a body is drawn with for a pose: its clip's if it has one, else `figure()` (the figure's pose
  * on the rig); faded from what it was drawn with when that changes.
  */
-export function animate(sk: Skeleton, pose: FigurePose, figure: () => Array<M3 | undefined>, held?: Held): Local {
+export function animate(sk: Skeleton, pose: FigurePose, figure: () => Array<M3 | undefined>, held?: Held, tools?: (id: string) => Held | undefined): Local {
   const c = clipFor(pose, sk.body);
-  const now: Local = c ? clipLocal(sk, c.clip, c.t, c.clip.grip ? held : undefined) : { local: figure(), move: [0, 0, 0] };
+  const now: Local = c ? clipLocal(sk, c.clip, c.t, c.clip.grip ? held : undefined, tools) : { local: figure(), move: [0, 0, 0] };
   if (!pose.id) return now;
   const key = `${sk.body}|${pose.id}`, source = c ? c.clip.name : 'figure', ms = performance.now();
   let k = KEPT.get(key);

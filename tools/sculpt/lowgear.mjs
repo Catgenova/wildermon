@@ -167,7 +167,8 @@ export function socketAt(rig, frames, s) { const f = frames[s.bone]; return { o:
  * toward the wrist) and how far out from the palm (`lift`) the grip's axis sits, and how far the finger bones curl, so
  * that the palm under the knuckles, the fingers' undersides and their tips all lie on the grip's surface (no deeper than
  * `skinIn`, no further off than they must) and the tips come round past the grip's far side (o.backMax: the furthest back
- * toward the wrist the grip is let sit, so a thick grip is not taken into the palm). Returns { socket, curl:
+ * toward the wrist the grip is let sit, so a thick grip is not taken into the palm; o.tilt: the grip slanted across the
+ * palm by that many degrees, its thumb end toward the knuckles, as a hammer's haft lies). Returns { socket, curl:
  * { fingers_01, fingers_02 }, err } (err: the worst gap or depth, mesh units, over those points).
  */
 export function fitFist(rig, side, r, skinIn = 0.01, o = {}) {
@@ -180,10 +181,10 @@ export function fitFist(rig, side, r, skinIn = 0.01, o = {}) {
     const F = posed(rig, { [`fingers_01_${side}`]: [a, 0, 0], [`fingers_02_${side}`]: [b, 0, 0] });
     curls.push({ a, b, P: pts.map((i) => skinAt(F, i)) });
   }
-  const s0 = socketOf(rig, side, r), ax = colOf(s0.R, 1), toPalm = mul(s0.palm, -1);
+  const s0 = socketOf(rig, side, r, { tilt: o.tilt }), ax = colOf(s0.R, 1), toPalm = mul(s0.palm, -1);
   let best = null;
   for (let back = 0.1; back <= (o.backMax ?? 0.65) + 1e-9; back += 0.05) for (let lift = 0; lift <= 0.6; lift += 0.01) {
-    const s = socketOf(rig, side, r, { back, lift });
+    const s = socketOf(rig, side, r, { back, lift, tilt: o.tilt });
     for (const c of curls) {
       let e = 0, worst = 0;
       c.P.forEach((q, j) => {
@@ -197,7 +198,7 @@ export function fitFist(rig, side, r, skinIn = 0.01, o = {}) {
       if (!best || e < best.e) best = { e, worst, back, lift, a: c.a, b: c.b };
     }
   }
-  return { socket: socketOf(rig, side, r, { back: best.back, lift: best.lift }), curl: { fingers_01: best.a, fingers_02: best.b }, err: best.worst, back: best.back, lift: best.lift };
+  return { socket: socketOf(rig, side, r, { back: best.back, lift: best.lift, tilt: o.tilt }), curl: { fingers_01: best.a, fingers_02: best.b }, err: best.worst, back: best.back, lift: best.lift };
 }
 
 /**
