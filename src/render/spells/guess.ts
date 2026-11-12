@@ -1,7 +1,7 @@
 /**
  * What the island would say a cast did (`Told`), worked out in the browser
  * from the same rules and numbers, for a cast drawn with no island to ask: a
- * spell played from the console (`wurm.spell`) and the preview sheet. So the
+ * spell played from the console (`wildermon.spell`) and the preview sheet. So the
  * effects follow the island's rules there too -- a monster held for its own
  * share of a hold, a Panic's monsters fleeing for its three seconds, a Fright
  * on a monster refused, an area reaching the wild things within it and no

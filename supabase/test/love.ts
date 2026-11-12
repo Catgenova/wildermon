@@ -50,7 +50,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -331,7 +331,7 @@ begin
   perform land_set_data(w, tx + 1, ty, ${packTreeData(FRUIT_TREE, 2)});
   v_a := 0; v_b := 0;
   -- In a season the tree bears in, whatever day this is run on (fruiting.ts).
-  perform set_config('wurm.season', ${q(FRUITING[TREE_DEFS[FRUIT_TREE].fruit ?? '']?.[0] ?? '')}, true);
+  perform set_config('wildermon.season', ${q(FRUITING[TREE_DEFS[FRUIT_TREE].fruit ?? '']?.[0] ?? '')}, true);
   for i in 1..20 loop
     perform pg_temp.hold(w, u, '{}');
     perform setseed(0.001 * i);
@@ -347,7 +347,7 @@ begin
     delete from item where world_id = w and holder = 'player' and holder_uid = u;
   end loop;
   insert into said values ('FRUIT', v_a || '|' || v_b);
-  perform set_config('wurm.season', '', true);
+  perform set_config('wildermon.season', '', true);
   perform land_set_tile(w, tx + 1, ty, tile_id('Grass')); perform land_set_data(w, tx + 1, ty, 0);
 
   -- Steady Herd: a fight far past the leash, given up without it and kept with it.
@@ -398,7 +398,7 @@ begin
   delete from creature where world_id = w and id in (c2, c3);
 
   -- Season's Hand: stamped at sowing; and in winter its field grows, where another stands still.
-  perform set_config('wurm.season', 'winter', true);
+  perform set_config('wildermon.season', 'winter', true);
   perform pg_temp.hold(w, u, '{}');
   insert into crop (world_id, x, y, id, sown_by) values (w, tx + 2, ty + 2, 'wheat', u);
   perform pg_temp.hold(w, u, array[${q(P('seasons_hand').id)}]);
@@ -420,7 +420,7 @@ begin
     (select id from item where world_id = w and holder_uid = u and def = 'wheat_seed' order by id desc limit 1)));
   insert into said values ('SOWN', coalesce((select hand::text from crop where world_id = w and x = tx + 4 and y = ty + 2), 'not sown') || '|'
     || coalesce((select text from event where uid = u and text like 'Sown:%' order by n desc limit 1), 'nothing said'));
-  perform set_config('wurm.season', '', true);
+  perform set_config('wildermon.season', '', true);
   delete from crop where world_id = w and x between tx - 12 and tx + 45 and y between ty - 12 and ty + 45;
   delete from item where world_id = w and holder = 'player' and holder_uid = u;
 

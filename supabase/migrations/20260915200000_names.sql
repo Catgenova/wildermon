@@ -41,7 +41,7 @@
 
 /** Every suffix this island answers to. The first is the one it hands out. */
 create or replace function name_domains() returns text[] language sql immutable as $$
-  select array['@catgenova.github.io', '@players.wurm.invalid']
+  select array['@catgenova.github.io', '@players.wildermon.invalid']
 $$;
 
 /** The suffix a new username wears. */

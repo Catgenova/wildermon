@@ -1,5 +1,5 @@
 /**
- * Sleep, as Wurm has it: Sleep in a bed you may use and you log off; while you
+ * Sleep: Sleep in a bed you may use and you log off; while you
  * are logged off in it you gain sleep bonus, and sleep bonus switched on
  * doubles skill gain while it drains.
  *

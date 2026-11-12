@@ -437,14 +437,14 @@ end $$;
 
 /**
  * A skill check, which a Foreknow's goes cannot fail: `settle` says whose go
- * this is (`wurm.foreknow`), and spends a go of it once the go is done if a
- * roll was taken (`wurm.foreknown`). The browser's `skillCheck`.
+ * this is (`wildermon.foreknow`), and spends a go of it once the go is done if a
+ * roll was taken (`wildermon.foreknown`). The browser's `skillCheck`.
  */
 create or replace function skill_check(p_skill double precision, p_difficulty double precision, p_tool_ql double precision default 0, p_ease double precision default 0)
   returns boolean language plpgsql as $$
 begin
-  if coalesce(current_setting('wurm.foreknow', true), '') = 'on' then
-    perform set_config('wurm.foreknown', 'on', true);
+  if coalesce(current_setting('wildermon.foreknow', true), '') = 'on' then
+    perform set_config('wildermon.foreknown', 'on', true);
     return true;
   end if;
   return random() < least(0.98, greatest(0.3,
@@ -1296,26 +1296,26 @@ begin
       guard := guard + 1;
       -- A go, for what the baubles make of its yield (`bauble_yield`), and
       -- what they made of it said after the go has said its own piece.
-      perform set_config('wurm.bauble_go', 'go', true);
-      perform set_config('wurm.bauble_made', '', true);
+      perform set_config('wildermon.bauble_go', 'go', true);
+      perform set_config('wildermon.bauble_made', '', true);
       -- And the perks, for the rules too deep to be handed the body: for
       -- this go and no other (`pkx`), cleared the moment it is done.
-      perform set_config('wurm.pk', coalesce(p.class_mul->'fx', '{}'::jsonb)::text, true);
-      perform set_config('wurm.pk_act', p.act, true);
-      perform set_config('wurm.floor', floor_said(p_world, p.level, p.x, p.y), true); -- cellar: the side the go is taken on
+      perform set_config('wildermon.pk', coalesce(p.class_mul->'fx', '{}'::jsonb)::text, true);
+      perform set_config('wildermon.pk_act', p.act, true);
+      perform set_config('wildermon.floor', floor_said(p_world, p.level, p.x, p.y), true); -- cellar: the side the go is taken on
       -- And a Foreknow's goes, which no roll in this go can fail (`skill_check`); one is spent if a roll was taken.
-      perform set_config('wurm.foreknow', case when coalesce((select foreknow from player
+      perform set_config('wildermon.foreknow', case when coalesce((select foreknow from player
         where world_id = p_world and uid = p_uid), 0) > 0 then 'on' else '' end, true);
-      perform set_config('wurm.foreknown', '', true);
+      perform set_config('wildermon.foreknown', '', true);
       perform act_perform(p_world, p_uid, p.act, p.act_target);
-      if current_setting('wurm.foreknown', true) = 'on' then
+      if current_setting('wildermon.foreknown', true) = 'on' then
         update player set foreknow = greatest(0, foreknow - 1) where world_id = p_world and uid = p_uid;
       end if;
-      perform set_config('wurm.foreknow', '', true);
-      perform set_config('wurm.foreknown', '', true);
-      perform set_config('wurm.pk', '', true);
-      perform set_config('wurm.pk_act', '', true);
-      perform set_config('wurm.floor', '', true); -- cellar
+      perform set_config('wildermon.foreknow', '', true);
+      perform set_config('wildermon.foreknown', '', true);
+      perform set_config('wildermon.pk', '', true);
+      perform set_config('wildermon.pk_act', '', true);
+      perform set_config('wildermon.floor', '', true); -- cellar
       perform bauble_said(p_world, p_uid);
       -- And what the go took out of you, which nothing over here had ever
       -- charged: `action_def.stamina` was a column no function read.

@@ -2,8 +2,8 @@
  * Sleep logs you off in a bed, and the sleep bonus (`src/game/sleep.ts`; `last_refusal`, `sleep_fall`,
  * `private.sleep_wake`, `rpc_sleep_bonus`, `body_settle`, `skill_mult` and the beat on the island).
  *
- * Asked for: "beds say 'sleep over the night' when they should operate like wurm beds, logging the player off
- * and beginning the stage of sleep bonus gain while the player is offline". So this asks, of the island:
+ * Asked for: beds that log the player off, in place of "sleep over the night", and begin the stage of sleep
+ * bonus gain while the player is offline. So this asks, of the island:
  *
  *   * Sleep at noon on a bed of yours is allowed; refused on what is not a bed, out of reach, on a stranger's
  *     bed off any settlement of yours, with another job going, in a fight (something wild hunting you) and
@@ -46,7 +46,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();

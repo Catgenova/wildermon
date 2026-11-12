@@ -9,7 +9,7 @@
 -- something to fight that it looked for a moment before. On an island built like the live one
 -- (supabase/test/bench-stir.ts) that was half of everything the companions cost.
 --
--- In the clock's round (`world_tick` says so in `wurm.stir_round`, for the round's own transaction), a person's sweep
+-- In the clock's round (`world_tick` says so in `wildermon.stir_round`, for the round's own transaction), a person's sweep
 -- now passes over what the round has settled already. Called anywhere else, a sweep is as it was.
 
 set local lock_timeout = '3s';
@@ -21,7 +21,7 @@ create or replace function public.creature_sweep(p_world uuid, p_x double precis
  language plpgsql
 as $function$
 declare r record; n int := 0; v_reach double precision := p_range + coalesce(p_slack, leg_slack());
-        v_round boolean := coalesce(current_setting('wurm.stir_round', true), '') = 'on';
+        v_round boolean := coalesce(current_setting('wildermon.stir_round', true), '') = 'on';
 begin
   for r in select id from creature
     where world_id = p_world
@@ -49,13 +49,13 @@ begin
 $$,
      $$    v_coarse := floor(extract(epoch from v_t0))::bigint % stir_coarse_every()::bigint = 0;
     -- What this round settles, its people's sweeps pass over (`creature_sweep`).
-    perform set_config('wurm.stir_round', 'on', true);
+    perform set_config('wildermon.stir_round', 'on', true);
 $$),
     ('public', 'world_tick',
      $$    v_stir_ms := v_stir_ms + ms_since(v_mark);
 $$,
      $$    v_stir_ms := v_stir_ms + ms_since(v_mark);
-    perform set_config('wurm.stir_round', '', true);
+    perform set_config('wildermon.stir_round', '', true);
 $$)
   ) as t(sch, fn, old, new) loop
     select pg_get_functiondef(p.oid) into v_def from pg_proc p join pg_namespace s on s.oid = p.pronamespace

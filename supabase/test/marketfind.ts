@@ -63,7 +63,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -186,7 +186,7 @@ try {
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
     encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'],
     env: { ...process.env, PGHOST: process.env.PGHOST ?? '/var/run/postgresql', PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm', PGDATABASE: process.env.PGDATABASE ?? 'postgres' },
+      PGUSER: process.env.PGUSER ?? 'wildermon', PGDATABASE: process.env.PGDATABASE ?? 'postgres' },
     input: `begin; select set_config('request.jwt.claims', json_build_object('sub', '${STRAY}')::text, true);
     select rpc_sales((select id from world where name = 'Hoarding'), 'iron_ore'); rollback;`,
   });

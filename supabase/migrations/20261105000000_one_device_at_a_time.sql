@@ -5,7 +5,7 @@
 -- body and the same pack.
 --
 -- So an account has one seat (`private.play_seat`), held by one game tab: the tab sends its seat with every call
--- (`x-wurm-seat`, `private.seat_header`; a fresh one for each tab, kept while the tab is open, so a reload keeps
+-- (`x-wildermon-seat`, `private.seat_header`; a fresh one for each tab, kept while the tab is open, so a reload keeps
 -- it). Every door the game uses starts with `private.pace`, and there `private.seat_check` asks it: no seat yet,
 -- the seat is this one's; this one's, heard from; somebody else's not heard from in `seat_stale`, this one's now;
 -- otherwise refused, "Playing on another device." (WK423). A call without the header -- the account page, the stud
@@ -21,7 +21,7 @@ create table if not exists private.play_seat (
 );
 revoke all on private.play_seat from public, anon, authenticated;
 
-create or replace function private.seat_header() returns text language sql immutable as $$ select 'x-wurm-seat'::text $$;
+create or replace function private.seat_header() returns text language sql immutable as $$ select 'x-wildermon-seat'::text $$;
 create or replace function private.seat_stale() returns interval language sql immutable as $$ select interval '45 seconds' $$;
 create or replace function private.seat_elsewhere_said() returns text language sql immutable as $$ select 'Playing on another device.'::text $$;
 
@@ -45,7 +45,7 @@ create or replace function private.seat_check(p_uid uuid) returns void
 language plpgsql as $f$
 declare v_seat uuid; s private.play_seat;
 begin
-  if p_uid is null or current_setting('wurm.seat_take', true) = '1' then return; end if;
+  if p_uid is null or current_setting('wildermon.seat_take', true) = '1' then return; end if;
   v_seat := private.seat_sent();
   if v_seat is null then return; end if;
   select * into s from private.play_seat where uid = p_uid;
@@ -95,7 +95,7 @@ language plpgsql security definer set search_path to 'public' as $f$
 declare me uuid := auth.uid(); v_seat uuid; v_was uuid; r record;
 begin
   if me is null then raise exception 'not signed in'; end if;
-  perform set_config('wurm.seat_take', '1', true);
+  perform set_config('wildermon.seat_take', '1', true);
   perform private.pace(me, 'act');
   v_seat := private.seat_sent();
   if v_seat is null then return jsonb_build_object('why', 'No seat sent.'); end if;
@@ -108,7 +108,7 @@ begin
       perform private.send('own:' || r.world_id || ':' || me, 'elsewhere', jsonb_build_object('seat', v_seat));
     end loop;
   end if;
-  perform set_config('wurm.seat_take', '', true);
+  perform set_config('wildermon.seat_take', '', true);
   return '{}'::jsonb;
 end $f$;
 revoke execute on function public.rpc_take_seat() from public, anon;

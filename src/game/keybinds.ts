@@ -148,7 +148,7 @@ export const boundKey = (id: string): string => {
 /** The most keys any one thing answers to. */
 export const MAX_KEYS = 2;
 
-const STORAGE_KEY = 'wurm-iso-keys';
+const STORAGE_KEY = 'wildermon-iso-keys';
 
 /**
  * How a key code reads on a key.

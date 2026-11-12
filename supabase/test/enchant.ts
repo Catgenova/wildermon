@@ -53,7 +53,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -140,16 +140,16 @@ begin;
 create temp table said (k text, v text);
 create schema dice;
 create function dice.random() returns double precision language plpgsql volatile as $f$
-declare xs text[] := string_to_array(current_setting('wurm.dice'), ',');
-        n int := coalesce(nullif(current_setting('wurm.dice_n', true), ''), '0')::int;
+declare xs text[] := string_to_array(current_setting('wildermon.dice'), ',');
+        n int := coalesce(nullif(current_setting('wildermon.dice_n', true), ''), '0')::int;
 begin
-  perform set_config('wurm.dice_n', (n + 1)::text, true);
+  perform set_config('wildermon.dice_n', (n + 1)::text, true);
   return xs[1 + n % array_length(xs, 1)]::double precision;
 end $f$;
 create function pg_temp.dice(v text) returns void language plpgsql as $f$
 begin
-  perform set_config('wurm.dice', v, true);
-  perform set_config('wurm.dice_n', '0', true);
+  perform set_config('wildermon.dice', v, true);
+  perform set_config('wildermon.dice_n', '0', true);
   perform set_config('search_path', 'dice, public, pg_catalog', true);
 end $f$;
 create function pg_temp.nodice() returns void language plpgsql as $f$
@@ -479,15 +479,15 @@ begin
   update player set act = 'make_firebrand_scroll',
          act_queue = '[{"action": "make_firebrand_scroll", "target": {}, "goes": 2}, {"action": "make_papyrus", "target": {}, "goes": 1}]'::jsonb
    where world_id = w and uid = u;
-  perform set_config('wurm.renamed', v_x::text, true);
-  perform set_config('wurm.world', w::text, true);
+  perform set_config('wildermon.renamed', v_x::text, true);
+  perform set_config('wildermon.world', w::text, true);
 end $t$;
 ${RENAME}
-insert into said select 'RENAMED', (select i.enchant::text from item i where i.id = current_setting('wurm.renamed')::bigint)
+insert into said select 'RENAMED', (select i.enchant::text from item i where i.id = current_setting('wildermon.renamed')::bigint)
   || '|' || (select string_agg(i.def || ':' || i.count, ',' order by i.def) from item i
-              where i.world_id = current_setting('wurm.world')::uuid and i.def like '%brand_scroll')
-  || '|' || (select string_agg(b.def, ',') from buy_order b where b.world_id = current_setting('wurm.world')::uuid)
-  || '|' || (select p.act || ':' || p.act_queue::text from player p where p.world_id = current_setting('wurm.world')::uuid);
+              where i.world_id = current_setting('wildermon.world')::uuid and i.def like '%brand_scroll')
+  || '|' || (select string_agg(b.def, ',') from buy_order b where b.world_id = current_setting('wildermon.world')::uuid)
+  || '|' || (select p.act || ':' || p.act_queue::text from player p where p.world_id = current_setting('wildermon.world')::uuid);
 select k || '=' || v from said order by k;
 rollback;`);
 const isle = new Map(out.split('\n').filter((l) => l.includes('=')).map((l) => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1)] as [string, string]));

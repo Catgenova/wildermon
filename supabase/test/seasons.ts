@@ -18,7 +18,7 @@
  *     same stage and the same stage start to the microsecond, in a field and
  *     in a planter;
  *   * the words a wait is said in, which the sowing line carries on both;
- *   * a season held still for a test (`wurm.season`);
+ *   * a season held still for a test (`wildermon.season`);
  *   * a planter sown, tended, harvested and pulled up through the doors on
  *     both sides, refused in the same words, with the Farmer's pace and Crop
  *     Rotation keyed to it, Bounty bringing it on and a night's sleep moving
@@ -52,7 +52,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -287,7 +287,7 @@ select sown_said('Wheat', false, 'waiting for spring, in 2 days, then sprouting 
 /* ---- a season held still, for a test ------------------------------------------------------------ */
 
 /*
- * `wurm.season` holds every moment in one season to a field, for the session
+ * `wildermon.season` holds every moment in one season to a field, for the session
  * that sets it: what the suite's farming runs under, so that it reads the
  * same whatever day it is run on. A planter pays it no mind.
  */
@@ -298,12 +298,12 @@ do $$
 declare v_s text; v_o int; v_now timestamptz := date_trunc('second', now());
 begin
   for v_s, v_o in select u.s, u.o from unnest(seasons()) with ordinality u(s, o) loop
-    perform set_config('wurm.season', v_s, true);
+    perform set_config('wildermon.season', v_s, true);
     insert into held values (v_s, v_o, field_rate(v_now) || '/' || (field_clock(v_now) - field_clock(v_now - interval '1 hour'))
       || '/' || (crop_settled(0, v_now - interval '1 hour', 1700, false, v_now)).o_steps
       || '/' || (crop_settled(0, v_now - interval '1 hour', 3400 * ${PLANTER_GROWTH}, true, v_now)).o_steps);
   end loop;
-  perform set_config('wurm.season', '', true);
+  perform set_config('wildermon.season', '', true);
 end $$;
 select string_agg(s || ':' || v, ',' order by o) from held;
 select coalesce(season_pinned(), 'none');

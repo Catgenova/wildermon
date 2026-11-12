@@ -37,7 +37,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -75,7 +75,7 @@ create temp table said (k text, v text);
 create schema dice;
 create function dice.random() returns double precision language plpgsql volatile as $f$
 begin
-  return coalesce(nullif(current_setting('wurm.dice', true), '')::double precision, pg_catalog.random());
+  return coalesce(nullif(current_setting('wildermon.dice', true), '')::double precision, pg_catalog.random());
 end $f$;
 do $t$
 declare w uuid; u uuid := '${U}'; px double precision; py double precision; v_snow int; v_horn int; v_ash int; v_n bigint;
@@ -96,15 +96,15 @@ begin
 
   -- The draw with copies, the rolls pinned: kept to the pair, and just under a mutation.
   perform set_config('search_path', 'dice, public, pg_catalog', true);
-  perform set_config('wurm.dice', '${KEEP}', true);
+  perform set_config('wildermon.dice', '${KEEP}', true);
   insert into said values ('DRAW:DAM', breed_traits(${arr(HORN)}, ${arr(SNOW)}, 0, 0, 0, 0, array['diligent'])::text);
   insert into said values ('DRAW:BOTH', breed_traits(${arr(HORN)}, ${arr(SNOW)}, 0, 0, 0, 0, array['diligent', 'fanged_supreme'])::text);
   insert into said values ('DRAW:ONCE', breed_traits(${arr(['fanged'])}, ${arr(['fanged_rare'])}, 0, 0, 0, 0, array['fanged_rare', 'fanged'])::text);
   insert into said values ('DRAW:NONE', breed_traits(${arr(HORN)}, ${arr(SNOW)}, 0, 0)::text);
-  perform set_config('wurm.dice', '${UNDER}', true);
+  perform set_config('wildermon.dice', '${UNDER}', true);
   insert into said values ('DRAW:MUTATED', breed_traits(${arr(HORN)}, ${arr(PLAIN)}, 0, 0, 0, 0, array['willing'])::text);
   -- And unpinned, many times: every young carries both copies.
-  perform set_config('wurm.dice', '', true);
+  perform set_config('wildermon.dice', '', true);
   for v_i in 1 .. ${DRAWS} loop
     v_b := breed_traits(${arr(HORN)}, ${arr(PLAIN)}, 60, 0.8, 0, 0, array['willing', 'fanged_supreme']);
     if not (v_b->'traits' ? 'willing' and v_b->'traits' ? 'fanged_supreme') or jsonb_array_length(v_b->'traits') <> ${TRAIT_SLOTS} then
@@ -136,7 +136,7 @@ begin
   -- The covering, pinned to keep to the pair, and the birth.
   select coalesce(max(n), 0) into v_n from event where world_id = w and uid = u;
   perform set_config('search_path', 'dice, public, pg_catalog', true);
-  perform set_config('wurm.dice', '${KEEP}', true);
+  perform set_config('wildermon.dice', '${KEEP}', true);
   perform pair_them(w, v_snow, v_horn, 0, u);
   perform set_config('search_path', '"$user", public', true);
   insert into said values ('PAIRED', (select string_agg(text, ' / ' order by n) from event where world_id = w and uid = u and n > v_n));
