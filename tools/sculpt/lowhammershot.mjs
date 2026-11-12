@@ -217,7 +217,7 @@ if (only.includes('metrics') || only.includes('swing')) {
       if (a > m.headX) { m.headX = a; m.headXAt = +t.toFixed(2); }
       m.headXHead = Math.max(m.headXHead, a2);
       if (b > m.haftX) { m.haftX = b; m.haftXAt = +t.toFixed(2); }
-      if (b > 0) { m.haftXFrames = (m.haftXFrames ?? 0) + 1; (m.haftXTimes ??= []).push(+t.toFixed(2)); if (process.env.HAM_DEBUG) console.log(who, t.toFixed(2), b, JSON.stringify(by(bp, notHandT))); }
+      if (b > 0) { m.haftXFrames = (m.haftXFrames ?? 0) + 1; (m.haftXTimes ??= []).push(+t.toFixed(2)); if (process.env.HAM_DEBUG) { const us = bp.map(([i]) => Math.min(...haft[i].v.map(U))); console.log(who, t.toFixed(2), b, JSON.stringify(by(bp, notHandT)), 'U', Math.round(Math.min(...us)), Math.round(Math.max(...us))); } }
       m.gripFingersX = Math.max(m.gripFingersX, c);
       // the warhammer's head off the body's head (nearest points, cm of a 1.8 m man)
       { let best = Infinity; for (const i of HV) for (let j = 0; j < h.P.length; j += 3) if (isHead[j]) best = Math.min(best, Math.hypot(...sub(h.Q[i], h.P[j]))); const cm = best * s * 180 / 16.5; if (cm < m.headClearCm) { m.headClearCm = +cm.toFixed(1); m.headClearAt = +t.toFixed(2); } }

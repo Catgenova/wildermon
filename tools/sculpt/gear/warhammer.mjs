@@ -21,7 +21,9 @@
 // a gold-framed rune inlay on its front and back; the middle collar; (3) the wooden haft, straight grained; (4) the lower
 // collar; (5) the pommel, a faceted stone with a gold-ringed star medallion on both faces; (6) the pommel ring over it.
 // Its length is about a body's height (0.91 of his, 1.07 of hers), as the sheet's scale figure stands it; its head's span
-// is the views' (0.42 of its length).
+// is the views' (0.42 of its length). Where it leaves the sheet: under the wood, the pommel is 0.9 of its height and the
+// lower collar shorter (33 px under the wood, the sheet's 40), so both fists close on bare wood with the pommel out of
+// the jaw and the hips in the swing; the haft is turned 10° in the hands (GRIP_TILT).
 // Enchanted: the face stars, the emblem's disc and star, the pommel's discs and stars and the panels' runes lit (unlit,
 // full bright), and glow added round them.
 
@@ -30,6 +32,8 @@ import { buildRig } from '../lowrig.mjs';
 
 /** The sheet's front view, px: the pommel's foot to the finial's top. */
 const SHEET_L = 269;
+/** Degrees the haft is turned in the hands about the sockets' z (lowgear.mjs socketOf), the head toward the knuckles. */
+export const GRIP_TILT = 10;
 /** Its length, a share of the man's height (sole to crown, 16.5 game units): about a body's height, one size for both. */
 export const OF_HEIGHT = 0.91;
 export async function warhammerLength() {
@@ -78,10 +82,12 @@ export function buildWarhammer({ enchanted = false, length } = {}) {
   };
   const FRONT = [0, 0, 1], BACK = [0, 0, -1];
   const DEG = Math.PI / 180;
-  // where the fists close: the second (left) at the wood's foot, its little finger on the lower collar, the lead (right)
-  // a fist's breadth over it (src/sculpt/lowpoly.ts secondOn keeps them apart): held by the end, so the pommel stands out
-  // of the hands as little as it can (higher, it swings into his jaw at the swing's rest and into the hips at the impact)
-  const LEAD = 62, SECOND = 38;
+  // where the fists close: the second (left) on the bare wood just over the lower collar, the lead (right) a fist's
+  // breadth over it (src/sculpt/lowpoly.ts secondOn keeps them apart): held by the end, so the pommel stands out of the
+  // hands as little as it can (higher, it swings into his jaw at the swing's rest and into the hips at the impact). For
+  // that the pommel is 0.9 of the sheet's height (U 0 to 25.7) and the lower collar under the wood 0.64 of it (to U 33,
+  // where the wood begins): the sheet's 40 px under the wood is 33 here
+  const LEAD = 66, SECOND = 42, PSC = 0.9, PTOP = 28.6 * PSC, W0 = 33, CU = (u) => PTOP + (u - 28.6) * (W0 - PTOP) / (40 - 28.6);
 
   /* ---- shapes ---------------------------------------------------------------------------------------------------- */
   /** An octagon round (a, b) of half sizes ha, hb, its corners cut ca along a and cb along b; corners from (+a, +b) round. */
@@ -106,7 +112,8 @@ export function buildWarhammer({ enchanted = false, length } = {}) {
   const BH = 29.5, BZ = 23, BCU = 12, BCUB = 17, BCZ = 12, FH = 17.5, FZ = 13.5, FCU = 7, FCUB = 9.5, FCZ = 6.5;
   const faces = {};
   // the necks' corners nudged off true, as the sheet's chipped stone (deterministic)
-  const jitOf = (seed) => [...Array(8).keys()].map((j) => { const h = Math.sin(seed * 12.9898 + j * 78.233) * 43758.5453; const f = h - Math.floor(h); return [(f - 0.5) * 2.4, (((h * 7) % 1 + 1) % 1 - 0.5) * 1.6]; });
+  // (the top's and foot's corners up and down, the sides' in and out)
+  const jitOf = (seed) => [...Array(8).keys()].map((j) => { const h = Math.sin(seed * 12.9898 + j * 78.233) * 43758.5453, f = h - Math.floor(h), g = ((h * 7) % 1 + 1) % 1; const tb = j === 0 || j === 7 || j === 3 || j === 4; return [(f - 0.5) * (tb ? 4.4 : 1.6), (g - 0.5) * (tb ? 1.2 : 2.8)]; });
   for (const s of [1, -1]) {
     const X = (x) => s * x;
     const band = [hring(X(BAND[0]), BH + 0.8, BZ + 0.4, BCU + 0.3, BCZ + 0.1, UC, null, BCUB + 0.3), hring(X(BAND[1]), BH + 0.8, BZ + 0.4, BCU + 0.3, BCZ + 0.1, UC, null, BCUB + 0.3)];
@@ -123,11 +130,12 @@ export function buildWarhammer({ enchanted = false, length } = {}) {
     F(f1, 'stone', [s, 0, 0]);
     faces[s] = [...f0, ...band[1], ...b1];
     // the neck: from the band's inner face to the hub, waisted, its corners chipped; a gold ring where it meets the hub
-    const NK = [[29.5, 22, 17, 6, 5], [24, 20.5, 15.5, 5.5, 4.5], [17.5, 21.5, 16.5, 6, 5], [13.5, 22.5, 17, 6, 5]];
-    const nk = NK.map(([x, hu, hz, cu, cz], i) => hring(X(x), hu, hz, cu, cz, UC - 0.5, i === 0 || i === 3 ? null : jitOf(i + (s > 0 ? 0 : 5))));
-    tube(nk, (i, j) => SIDE_M[j], NK.map((n) => X(n[0])));
+    const NK = [[29.5, 22, 17, 6, 5], [25.5, 20.5, 15.8, 5.5, 4.5], [21, 21, 15.5, 5.5, 4.5], [17, 21.8, 16.4, 6, 5], [13.5, 22.5, 17, 6, 5]];
+    const nk = NK.map(([x, hu, hz, cu, cz], i) => hring(X(x), hu, hz, cu, cz, UC - 0.5, i === 0 || i === NK.length - 1 ? null : jitOf(i + (s > 0 ? 0 : 5))));
+    // (a facet here and there in shadow: the chipped stone)
+    tube(nk, (i, j) => ((i * 3 + j + (s > 0 ? 0 : 1)) % 5 === 0 ? 'bevel' : SIDE_M[j]), NK.map((n) => X(n[0])));
     const g0 = hring(X(13.5), 23.5, 18, 6.3, 5.3, UC - 0.5), g1 = hring(X(10.5), 23.5, 18, 6.3, 5.3, UC - 0.5);
-    for (let j = 0; j < 8; j++) F([nk[3][j], nk[3][(j + 1) % 8], g0[(j + 1) % 8], g0[j]], 'gold', [s, 0, 0]);
+    for (let j = 0; j < 8; j++) F([nk[4][j], nk[4][(j + 1) % 8], g0[(j + 1) % 8], g0[j]], 'gold', [s, 0, 0]);
     tube([g0, g1], (i, j) => (j === 3 ? 'goldD' : 'gold'), [X(13.5), X(10.5)]);
   }
 
@@ -145,7 +153,7 @@ export function buildWarhammer({ enchanted = false, length } = {}) {
   };
   // the wood: straight grained, its facets two tones, from the lower collar to the middle collar
   // (round in section: as deep as it is wide, the sheet's 13 px in every view)
-  const WS = 6.6, W0 = 40, W1 = 161, WC = WS * 0.586;
+  const WS = 6.6, W1 = 161, WC = WS * 0.586;
   const wood = [R(W0, WS, WC, undefined, 1), R(W1, WS, WC, undefined, 1)];
   loft(wood, (i, j) => (j % 2 ? 'wood2' : 'wood'));
   // its grain: thin lines down the front, back and sides
@@ -156,7 +164,7 @@ export function buildWarhammer({ enchanted = false, length } = {}) {
     F([at(o - w, u0), at(o + w, u0), at(o + w * 0.6, u1), at(o - w * 0.6, u1)], 'grain', ax === 'z' ? [0, 0, sd] : [sd, 0, 0]);
   }
   // the lower collar and, under it, the pommel ring (its cap)
-  const lower = [R(W0, WS, WC, 'gold', 1), R(W0, 9.6, 3.3, 'gold'), R(39.2, 10.5, 3.7, 'gold'), R(34, 10.3, 3.6, 'gold'), R(33.4, 9.7, 3.4, 'goldD'), R(32.6, 9.7, 3.4, 'gold'), R(32.6, 10.1, 3.5, 'gold'), R(29.6, 9.8, 3.4, 'gold'), R(28.6, 9, 3.1)];
+  const lower = [R(W0, WS, WC, 'gold', 1), R(W0, 9.6, 3.3, 'gold'), R(CU(39.2), 10.5, 3.7, 'gold'), R(CU(34), 10.3, 3.6, 'gold'), R(CU(33.4), 9.7, 3.4, 'goldD'), R(CU(32.6), 9.7, 3.4, 'gold'), R(CU(32.6), 10.1, 3.5, 'gold'), R(CU(29.6), 9.8, 3.4, 'gold'), R(PTOP, 9, 3.1)];
   loft(lower);
   // the middle collar, the panel, the upper collar
   const PS = 7, PCc = 2.2;
@@ -211,9 +219,9 @@ export function buildWarhammer({ enchanted = false, length } = {}) {
   medallion(HUB[0], HUB[1], -1, 12, 14.8, 9.8, 20.4, 18.6, 12, 'stoneL', null);
 
   /* ---- the pommel: an eight-sided faceted stone under the ring, its point down; a medallion on each face ---------- */
-  const PM = 18.4;
+  const PM = 18.4 * PSC;
   {
-    const PR = [[28.6, 9], [25, 11.6], [20.5, 13.3], [15, 13.5], [11, 11.4], [5, 6.6], [0, 2.6]];
+    const PR = [[28.6, 9], [25, 11.6], [20.5, 13.3], [15, 13.5], [11, 11.4], [5, 6.6], [0, 2.6]].map(([U, w]) => [U * PSC, w]);
     const rs = PR.map(([U, s]) => { PROFILE.push([U, s, s * 0.3]); return { U, s, r: ring(U, s, s * 0.3, 0.97) }; });
     loft(rs, (i, j) => (i >= 4 ? (j % 2 ? 'bevel' : 'stoneB') : i === 0 ? (j % 2 ? 'stoneL' : 'stone') : (j % 2 ? 'stone' : 'stoneL')));
     F(rs[rs.length - 1].r, 'bevel', [0, -1, 0]);
@@ -324,6 +332,15 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const L = await warhammerLength();
   const plain = buildWarhammer({ length: L }), lit = buildWarhammer({ length: L, enchanted: true });
   const asset = await gearAsset('warhammer', plain, lit, { male: buildRig('male'), female: buildRig('female') });
+  // the haft laid a little across the palms (GRIP_TILT, about the sockets' z: the head toward the knuckles), so the
+  // pommel swings wide of the hips and the left forearm after the impact
+  {
+    const tz = GRIP_TILT * Math.PI / 180, c = Math.cos(tz), s = Math.sin(tz);
+    for (const who of ['male', 'female']) for (const sd of ['l', 'r']) {
+      const R = asset.sockets[who][sd].R;
+      asset.sockets[who][sd].R = [0, 1, 2].flatMap((i) => [R[i * 3] * c + R[i * 3 + 1] * s, -R[i * 3] * s + R[i * 3 + 1] * c, R[i * 3 + 2]]).map((x) => +x.toFixed(5));
+    }
+  }
   // its striking ends (both faces), kept off the ground in the swing (src/sculpt/anim/skeleton.ts Held.ends)
   asset.ends = plain.ends.map((p) => p.map((x) => +x.toFixed(5)));
   // never let down onto the ground where the swing lets a blade's point down (src/sculpt/anim/skeleton.ts Held.rest)
