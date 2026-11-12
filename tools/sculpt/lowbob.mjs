@@ -249,7 +249,9 @@ export function buildBob(rig, style = BOB, { adjust = null, clear = true, temple
   const rOut = (c, ph) => { if (!c.fringe) return R.out(c.th, ph); let m = 0; for (let d = -S.fringeFill; d <= S.fringeFill; d += 2) m = Math.max(m, R.out(c.th + d, ph)); return m; };
   const yOf = (th, ph, c = { th }) => C[1] + rOut(c, ph) * Math.sin((ph * Math.PI) / 180);
   const mids = cols.filter((c) => c.fringe && Math.abs(c.th) < S.fringeMid);
-  const Yf = mids.reduce((a, c) => a + yOf(c.th, c.hem0), 0) / mids.length + (S.fringeShift ?? 0);
+  // (and never lower than the brows' top less `browCover`: the fringe is cut just above the brows, the eyes clear)
+  const browTop = Math.max(...rig.B.polys.filter((p) => p.mat === 'brow').flatMap((p) => p.v).map((i) => rig.B.verts[i][1]));
+  const Yf = Math.max(mids.reduce((a, c) => a + yOf(c.th, c.hem0), 0) / mids.length + (S.fringeShift ?? 0), browTop - S.browCover);
   // the rows: from the crown to the fringe's cut (S.rowsTop, the same in every column, so the rows run level round the
   // head), then on the sides and the back on down to the hem (S.rowsLow): a side column's rows past the fringe's are the
   // curtain's front edge where it meets the fringe at the temple
@@ -302,7 +304,11 @@ export function buildBob(rig, style = BOB, { adjust = null, clear = true, temple
       rr = Math.max(rr, rb + S.minThick);
       // the curl: the last rows turned in toward the head's upright axis (counted from the hem)
       const cu = c.fringe ? 0 : S.curl[S.curl.length - 1 - (last - i)] ?? 0, d0 = dirOf(c.th, 0);
-      o.push(add(P(c.th, ph, rr), mul(d0, -cu)));
+      let po = add(P(c.th, ph, rr), mul(d0, -cu));
+      // (the fringe's cut level at Yf: a strand's middle `fringeTipY` lower, the parting `partRiseY` higher)
+      const yCut = Yf - (c.ridge ? S.fringeTipY : 0) + (c.th === 0 ? S.partRiseY : 0);
+      if (c.fringe && i === last) po = [po[0], yCut, po[2]];
+      o.push(po);
       // the inside: sunk into the scalp where the hair lies on it; a thickness in from the outside where it hangs free,
       // clear of the skin (over the face and the nape the skin is not the scalp: the inside stays off it there)
       const free = rr - rb > S.thick + S.clear, f = faceShare(P(c.th, ph, rb));
@@ -312,7 +318,9 @@ export function buildBob(rig, style = BOB, { adjust = null, clear = true, temple
       if (i === last || (!c.fringe && i >= KT - 1)) ri = Math.max(ri, Math.min(rr - S.minThick, rb + S.lip));
       // (the fringe a thin sheet over the forehead: below the hairline its inside a sheet's thickness in from its outside)
       if (c.fringe && f > 0) ri = Math.max(ri, rr - S.fringeSheet - (1 - f) * (rr - ri));
-      n.push(add(P(c.th, ph, Math.min(ri, rr - S.minThick * 0.5)), mul(d0, -cu)));
+      let pi = add(P(c.th, ph, Math.min(ri, rr - S.minThick * 0.5)), mul(d0, -cu));
+      if (c.fringe && i === last) pi = [pi[0], yCut, pi[2]];
+      n.push(pi);
     });
     outer.push(o); inner.push(n);
   }

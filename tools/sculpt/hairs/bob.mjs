@@ -28,9 +28,10 @@ export default {
   rowsTop: [0, 0.3, 0.6, 0.85, 1],
   rowsLow: [0.4, 0.75, 1],
   // a lock's tip: its ridge's hem this many degrees lower than its borders' (the fringe's nearly straight)
-  tip: 0, fringeTip: 1.5,
-  // the fringe's middle border (its parting) this many degrees higher: a narrow split showing the forehead
-  partRise: 2.5,
+  tip: 0, fringeTip: 0, partRise: 0,
+  // the fringe's cut: each strand's middle this much lower than its borders (separate blunt strands), the parting this
+  // much higher (a narrow split showing the forehead); never lower than the brows' top less browCover
+  fringeTipY: 0.018, partRiseY: 0.035, browCover: 0.005,
   // the sides' and the back's hem this far under the hull's (the hull's lower edge is the highest of the views' lock
   // tips), carried straight down
   hemDrop: 0.03,
