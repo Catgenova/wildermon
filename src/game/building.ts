@@ -1,5 +1,5 @@
 /**
- * Buildings, Wurm style: a footprint of flat packed-dirt tiles on a deed,
+ * Buildings: a footprint of flat packed-dirt tiles on a deed,
  * walls that sit on tile borders, and stacked floors. Walls and floors are
  * planned first, then built by feeding them materials one unit at a time.
  */

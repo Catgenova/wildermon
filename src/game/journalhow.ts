@@ -1,7 +1,6 @@
 import { lairOf } from '../world/regions';
 import { storeySkill } from './building';
 import { WIDEST } from './bridges';
-import { BLESS_CAP } from './faith';
 import { BOOKS, bookDrops } from './bookdrops';
 import { rarityChance } from './items';
 import { CHOOSE_AT, PATH_TIER_AT } from './meditation';
@@ -62,8 +61,6 @@ export const GOAL_HOW: Readonly<Record<string, string>> = {
   tiered: `At each path tier (meditation ${PATH_TIER_AT.join(', ')}): Faith window, Path tab, "Take" one technique or discipline of that path tier and confirm. 1 pick per path tier; the others at that path tier close.`,
   altar: 'Standing on a settlement of yours, make "Build altar" in Crafting (R) ({recipe.make_altar.stone_brick} stone bricks, {recipe.make_altar.mortar} mortar, {recipe.make_altar.stone_slab} stone slabs, a trowel), then set it down on the settlement with "Set furniture down". A settlement takes one altar.',
   prayed: 'Stand by an altar, right-click it and choose "Pray". The menu says when you may pray again; prayers at its best hours give more favour.',
-  cunning: 'Pray until you have the faith and favour the menu shows for it, then right-click an altar, choose "Call on it", "Circle of cunning" and a tool from your pack. The tools you came ashore with are refused, and the tool must be in your pack when the journal looks.',
-  thrice: `Altar, "Call on it": "Circle of cunning" on the same tool ${BLESS_CAP} times. The tool must be in your pack when the journal checks.`,
   enchanted: `Read its Formula first ("${BOOKS.formula.label}" on it in the pack; per butchering: ${bookDrops('formula').map((d) => `${d.kind} ${percent(d.odds)}`).join(', ')}). ` + 'Write a scroll for a melee weapon in Crafting (R), such as "Write an Emberbrand scroll" ({recipe.make_emberbrand_scroll.papyrus} papyrus and {recipe.make_emberbrand_scroll.fire_mote} fire motes); papyrus is "Press into papyrus" at a paper press, motes are "Collect motes" at a mote swirl. At an enchanter\'s plinth right-click the scroll, choose "Enchant" and the weapon, and keep it in your pack. A bow, a thrown weapon or anything else does not count.',
   goblin: 'Find a goblin out in the country, away from any settlement totem, and "Attack" it (its right-click menu, or Space). The blow or shot that kills it must be yours: a kill by your companion or your settlement\'s wildermon does not count.',
   orc: 'Orcs keep away from settlement totems; attack one and land the killing blow or shot yourself. A kill by a wildermon does not count.',
@@ -82,10 +79,10 @@ export const GOAL_HOW: Readonly<Record<string, string>> = {
   trapped: 'Stand at a trap with something in it, right-click it and choose "Take the <species> out"; you need the taming that kind asks for, and an empty wildermon crate in your pack if something already follows you. It can thrash free; try again.',
   groom: 'Make "Set a brush" in Crafting (R): {recipe.make_brush.plank} plank and {recipe.make_brush.nail} nails, with a carving knife. Stand next to a tamed wildermon, right-click it and choose "Brush it down".',
   groomfull: 'Keep choosing "Brush it down" on one wildermon until it is brushed to a shine; it is refused once its care is full. More animal husbandry and a better brush fill it in fewer brushings.',
-  bred: 'On your settlement, bring a grown male and female of one kind, both tamed and following you or working the settlement, fed and rested, near each other; right-click one and choose "Put it to <mate>". The goal ticks when the young one is born, some while later; a pairing that does not take does not count.',
+  bred: 'On your settlement, bring a grown male and female of one kind, both tamed and following you or working the settlement, fed and rested, near each other; right-click one and choose "Breed with <mate>". The goal ticks when the young one is born, some while later; a pairing that does not take does not count.',
   goodblood: 'Breed as for "Breed two wildermon", from parents that carry rare or supreme traits ("Look it over" shows them). Each of the young one\'s traits is drawn from its parents\' and can come out one rarity higher; more animal husbandry and well-brushed parents raise both chances.',
   fantastic_blood: 'Breed as for a supreme trait, from parents that carry supreme or fantastic traits: a trait one rarity higher than a parent\'s can reach fantastic. Only a young one born to a dam of yours counts, not one bought or traded.',
-  husbandry: 'Animal husbandry rises from brushing ("Brush it down"), pairing ("Put it to <mate>"), making a brush and taking honey from a skep. Brushing is the one you can repeat at will, until a wildermon\'s care is full.',
+  husbandry: 'Animal husbandry rises from brushing ("Brush it down"), pairing ("Breed with <mate>"), making a brush and taking honey from a skep. Brushing is the one you can repeat at will, until a wildermon\'s care is full.',
   house: 'On your settlement "Pack" a dirt tile with a shovel, right-click it and choose "Plan building" (a mallet), then right-click each side and choose "Plan wall (<side>)", a wall type and a material. Choose "Build wall (<side>)" until each is finished. Four finished walls of yours count; fences, gates, half walls and railings do not.',
   storey: `When every wall of a building's ground floor is up and it has no roof, right-click inside it and choose "Plan another storey" (${storeySkill(1)} in the skill of the walls below). Then on storey 2 (PageUp, or "Work on storey 2") choose "Plan floor" and a material, and "Build floor" until one is finished. Stairs, ladders and roofs do not count.`,
   deed3: 'On a settlement you founded, have a crate and a campfire standing inside its border, then right-click any tile of it and choose "<name> · level 1", "Upgrade to level 2" (or Upgrade in the Settlement window, N). For level 3 a smelter must stand on it; upgrade again. Only a settlement you founded counts.',

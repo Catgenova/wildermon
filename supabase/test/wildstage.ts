@@ -49,7 +49,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -108,7 +108,7 @@ create temp table said (k text, v text);
 create schema dice;
 create function dice.random() returns double precision language plpgsql volatile as $f$
 begin
-  return current_setting('wurm.dice')::double precision;
+  return current_setting('wildermon.dice')::double precision;
 end $f$;
 do $t$
 declare w uuid; u uuid := '${U}'; c creature; a int; s int; i int; n int[] := array[0, 0, 0]; v_lv double precision; v_bad int := 0;
@@ -132,7 +132,7 @@ ${DICE.map(([d], k) => `
   a := creature_spawn(w, '${KIND}', px + 3, py + 3, 'wild', now() - interval '10 days', null);
   update creature set traits = '{}', rare = null where world_id = w and id = a returning * into c;
   update creature set health = max_health(c) where world_id = w and id = a;
-  perform set_config('wurm.dice', '${d}', true); perform set_config('search_path', 'dice, public, pg_catalog', true);
+  perform set_config('wildermon.dice', '${d}', true); perform set_config('search_path', 'dice, public, pg_catalog', true);
   perform wild_stage_put(w, a);
   perform set_config('search_path', '"$user", public', true);
   select * into c from creature where world_id = w and id = a;
@@ -140,7 +140,7 @@ ${DICE.map(([d], k) => `
     || '|' || (tame_needs(c)).level || '|' || (tame_needs(c)).chance);`).join('')}
   -- Never a kind that does not evolve, nor one that is somebody's.
   a := creature_spawn(w, '${STILL}', px + 3, py + 4, 'wild', now() - interval '10 days', null);
-  perform set_config('wurm.dice', '0.001', true); perform set_config('search_path', 'dice, public, pg_catalog', true);
+  perform set_config('wildermon.dice', '0.001', true); perform set_config('search_path', 'dice, public, pg_catalog', true);
   perform wild_stage_put(w, a);
   s := creature_spawn(w, '${KIND}', px + 4, py + 4, 'active', now() - interval '10 days', u);
   perform wild_stage_put(w, s);
@@ -197,7 +197,7 @@ ${DICE.map(([d], k) => `
   -- And a browser is told a wild one's skills.
   delete from creature where world_id = w;
   a := creature_spawn(w, '${KIND}', px + 2, py, 'wild', now() - interval '10 days', null);
-  perform set_config('wurm.dice', '0.03', true); perform set_config('search_path', 'dice, public, pg_catalog', true);
+  perform set_config('wildermon.dice', '0.03', true); perform set_config('search_path', 'dice, public, pg_catalog', true);
   perform wild_stage_put(w, a);
   perform set_config('search_path', '"$user", public', true);
   select e into v_got from jsonb_array_elements(rpc_creatures(w)) e where (e->>'id')::int = a;

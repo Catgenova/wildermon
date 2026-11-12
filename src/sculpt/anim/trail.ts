@@ -16,7 +16,7 @@ export const FADE = 0.16;
 const STEP = 1 / 200;
 /** Points along the ribbon from its tail to the blade. */
 const SEGMENTS = 20;
-/** How far along the blade, from the lead fist to the point, the ribbon's inner edge is at the blade. */
+/** How far along the blade, from the lead fist to the point, the ribbon's inner edge is at the blade (where the prop does not say, `Held.inner`). */
 const INNER = 0.3;
 
 /** The blade at a moment: its point and the ribbon's inner edge, the mesh's units and axes. */
@@ -38,7 +38,7 @@ function pathOf(sk: Skeleton, c: Clip, held: Held): Path | null {
   for (let k = 0; k <= n; k++) {
     const r = clipLocal(sk, c, from + ((to - from) * k) / n, held), g = sk.gripOf(sk.fk(r.local, r.move), held)[1];
     const along = (y: number): V => add(g.at, scl(g.way, (y - held.lead) / held.scale));
-    samples.push({ inner: along(held.lead + INNER * (held.tip - held.lead)), tip: along(held.tip) });
+    samples.push({ inner: along(held.inner ?? held.lead + INNER * (held.tip - held.lead)), tip: along(held.tip) });
   }
   byHeld.set(held, (p = { from, to, samples }));
   return p;

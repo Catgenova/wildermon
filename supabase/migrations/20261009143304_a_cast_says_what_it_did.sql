@@ -36,12 +36,12 @@
 
 /* Whether a cast is being told what it does (`fx_open`). */
 create or replace function fx_heard() returns boolean language sql stable as $$
-  select coalesce(current_setting('wurm.fx', true), '') <> ''
+  select coalesce(current_setting('wildermon.fx', true), '') <> ''
 $$;
 
 /* Start telling a cast what it does: everything said from now until `fx_told`, in this transaction. */
 create or replace function fx_open() returns void language sql as $$
-  select set_config('wurm.fx', '{"t":[]}', true)
+  select set_config('wildermon.fx', '{"t":[]}', true)
 $$;
 
 /* One thing it did to somebody: who (a creature's id or a person's uid), the seconds it lasts, and what it is. */
@@ -49,10 +49,10 @@ create or replace function fx_note(p_who jsonb, p_secs double precision, p_kind 
 declare v jsonb;
 begin
   if not fx_heard() or p_who is null or p_who = 'null'::jsonb then return; end if;
-  v := current_setting('wurm.fx', true)::jsonb;
+  v := current_setting('wildermon.fx', true)::jsonb;
   v := jsonb_set(v, '{t}', coalesce(v->'t', '[]'::jsonb)
          || jsonb_build_array(jsonb_build_array(p_who, case when p_secs > 0 then round(p_secs::numeric, 2) end, p_kind)));
-  perform set_config('wurm.fx', v::text, true);
+  perform set_config('wildermon.fx', v::text, true);
 end $$;
 
 /* What it did to a creature. */
@@ -71,14 +71,14 @@ $$;
 create or replace function fx_set(p_key text, p_val jsonb) returns void language plpgsql as $$
 begin
   if not fx_heard() then return; end if;
-  perform set_config('wurm.fx', (current_setting('wurm.fx', true)::jsonb || jsonb_build_object(p_key, p_val))::text, true);
+  perform set_config('wildermon.fx', (current_setting('wildermon.fx', true)::jsonb || jsonb_build_object(p_key, p_val))::text, true);
 end $$;
 
 /* A skin laid or broken: the largest of the cast's. */
 create or replace function fx_size(p_size double precision) returns void language plpgsql as $$
 begin
   if not fx_heard() or p_size is null then return; end if;
-  if p_size > coalesce((current_setting('wurm.fx', true)::jsonb->>'size')::double precision, 0) then
+  if p_size > coalesce((current_setting('wildermon.fx', true)::jsonb->>'size')::double precision, 0) then
     perform fx_set('size', to_jsonb(round(p_size::numeric, 4)));
   end if;
 end $$;
@@ -89,9 +89,9 @@ end $$;
  * that was waiting then and is gone now was spent by it.
  */
 create or replace function fx_told(p_world uuid, p_uid uuid, p_was jsonb) returns jsonb language plpgsql as $$
-declare v jsonb := nullif(current_setting('wurm.fx', true), '')::jsonb; v_now jsonb; v_out jsonb; v_used jsonb;
+declare v jsonb := nullif(current_setting('wildermon.fx', true), '')::jsonb; v_now jsonb; v_out jsonb; v_used jsonb;
 begin
-  perform set_config('wurm.fx', '', true);
+  perform set_config('wildermon.fx', '', true);
   if v is null then return '{}'::jsonb; end if;
   with t as (select e.value->0 as who, (e.value->>1)::double precision as secs, e.value->>2 as kind, e.ordinality as n
                from jsonb_array_elements(coalesce(v->'t', '[]'::jsonb)) with ordinality e),

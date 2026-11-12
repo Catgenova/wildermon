@@ -7,7 +7,7 @@ import { ACTION_BY_ID, type ActionDef, type Target } from '../../game/actions';
 import type { Game } from '../../game/game';
 import { bagAdd, bagRefuses, bagRoom, bagSpare, bagTake, itemDef, type Item, itemName } from '../../game/items';
 import type { MenuItem } from '../contextmenu';
-import { makeDraggable, makeDropZone, type DragPayload } from '../dragdrop';
+import { dragging, makeDraggable, makeDropZone, type DragPayload } from '../dragdrop';
 import { Picking } from '../picking';
 import type { UIWindow } from '../windows';
 import { orderBy, sortSelect, type SortKey } from '../sorting';
@@ -852,7 +852,7 @@ export class CratePanel {
         });
       }
       if (this.hover) {
-        row.addEventListener('mousemove', (e) => this.hover?.(item, e.clientX, e.clientY));
+        row.addEventListener('mousemove', (e) => { if (!dragging()) this.hover?.(item, e.clientX, e.clientY); });
         row.addEventListener('mouseleave', () => this.hover?.(null, 0, 0));
       }
       makeDraggable(row, () => ({ uid: item.uid, from: 'store', name: itemName(item), uids: this.picking.carried(item.uid) }));

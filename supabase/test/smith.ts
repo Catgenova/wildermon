@@ -45,7 +45,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -389,6 +389,9 @@ begin
   v_t := ${count('coin')} || ':' || ${count('gold_lump')};
   ${clear('coin')};
   perform give(w, u, 'gold_lump', 60, 0);
+  -- The dice seeded for the 60: a share of 60 strikes falls outside the band about one run in five hundred by chance,
+  -- as a live run's 44 of 60 did; seeded, it is the same 60 strikes every run (as archer.ts seeds its rolls).
+  perform setseed(0.25);
   perform act_perform(w, u, 'strike_coins', ${atAnvil(newest('gold_lump'))}) from generate_series(1, 60);
   insert into said values ('PURE', v_t || '|' || ${count('coin')} || ':' || ${count('gold_lump')} || '|' || coalesce(${last('Failed: coins, gold too poor%')}, 'unsaid'));
   ${clear('coin', 'gold_lump', 'coin_die')};

@@ -4,7 +4,7 @@
  * looking down at the hands; one hand dug in and drawn back toward the knees as the other lifts and comes forward over
  * the spot, then the other's dig, the elbows turned out. The shoulders roll down after the digging hand, the head
  * turned after it. The knees and the balls of the feet planted throughout. The jobs done with no tool at the ground play
- * it (`../index.ts` CLIP_OF_JOB): planting and sowing, foraging and searching, the traps, picking up, at the water's
+ * it (`../routes.ts` CLIP_OF_JOB): planting and sowing, foraging and searching, the traps, picking up, at the water's
  * edge, tending a campfire.
  *
  * The idle stands the feet where this does (`plant`), so the fade in and out of it (`../index.ts` SETTLE) is the

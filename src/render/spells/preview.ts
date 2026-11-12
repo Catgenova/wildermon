@@ -240,7 +240,7 @@ export function spellSheet(o: SheetOpts): HTMLCanvasElement {
   const gait = Math.max(0, Math.min(1, o.walk ?? 0));
   const casterPose = (): FigurePose => ({ phase, moving: walking, gait, facing: cf, swimming: false, working: false, look, gear });
   const tgear: GearLook = o.targetWeapon && o.targetWeapon !== 'none' ? { weapon: { id: o.targetWeapon, material: 'iron' } } : {};
-  const targetPose: FigurePose = { phase: 0, moving: false, facing: tFacing, swimming: false, working: false, look: { ...DEFAULT_LOOK, gender: 'man', shirt: 'woad' }, gear: tgear };
+  const targetPose: FigurePose = { phase: 0, moving: false, facing: tFacing, swimming: false, working: false, look: { ...DEFAULT_LOOK, gender: 'man' }, tunic: '#3d5f9c', gear: tgear };
   // Others standing about, in reach of where the spell lands: round the target, or round the caster for a spell on oneself.
   const crowd: Array<{ x: number; y: number; f: number }> = [];
   const ox = want === 'self' ? cx : tx, oy = want === 'self' ? cy : ty;
@@ -251,11 +251,12 @@ export function spellSheet(o: SheetOpts): HTMLCanvasElement {
   }
   // And people standing about, in reach of it, half a turn round from the crowd so the two do not stand in each other.
   const peers: Array<{ x: number; y: number; f: number; pose: FigurePose }> = [];
-  const shirts = ['woad', 'weld', 'unbleached', 'madder'];
+  // (the cloths woad, weld, unbleached and madder)
+  const shirts = ['#3d5f9c', '#c9a83c', '#d9cbae', '#a63f36'];
   for (let i = 0; i < (o.peers ?? 0); i++) {
     const a = 0.6 + Math.PI / Math.max(3, o.peers ?? 0) + (i * 2 * Math.PI) / Math.max(3, o.peers ?? 0), d = ring * (0.8 + 0.2 * ((i * 5) % 3) / 2);
     const f = (i * 3 + 2) % 8;
-    peers.push({ x: ox + Math.cos(a) * d, y: oy + Math.sin(a) * d, f, pose: { phase: 0, moving: false, facing: f, swimming: false, working: false, look: { ...DEFAULT_LOOK, gender: i % 2 ? 'man' : 'woman', shirt: shirts[i % 4] }, gear: { weapon: { id: 'sword', material: 'iron' } } } });
+    peers.push({ x: ox + Math.cos(a) * d, y: oy + Math.sin(a) * d, f, pose: { phase: 0, moving: false, facing: f, swimming: false, working: false, look: { ...DEFAULT_LOOK, gender: i % 2 ? 'man' : 'woman' }, tunic: shirts[i % 4], gear: { weapon: { id: 'sword', material: 'iron' } } } });
   }
   const sp = SPECIES[species] ?? Object.values(SPECIES)[0];
   const csp = (o.crowdSpecies ? SPECIES[o.crowdSpecies] : undefined) ?? sp;

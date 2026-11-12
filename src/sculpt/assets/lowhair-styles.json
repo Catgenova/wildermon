@@ -1,0 +1,17 @@
+{
+ "built": "node tools/sculpt/lowhair.mjs --asset",
+ "styles": [
+  {
+   "id": "swept",
+   "name": "Swept back"
+  },
+  {
+   "id": "braid",
+   "name": "Braid"
+  },
+  {
+   "id": "bob",
+   "name": "Bob"
+  }
+ ]
+}

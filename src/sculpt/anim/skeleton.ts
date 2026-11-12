@@ -7,7 +7,7 @@
  * `posed`, which drives them from the posed bones as it always has.
  */
 import { add, axisAngle, between, col, cross, dot, euler, I3, len, mm, mv, quat, qmat, scl, slerp, sub, tr, unit, type Euler, type M3, type Q, type V } from './math';
-import type { Foot, GripAt } from './clip';
+import type { Foot, GripAt, HandAt, Side } from './clip';
 
 export interface AnimBone { name: string; p: number; kind: 'control' | 'helper'; head: V; R: M3 }
 export interface AnimAsset {
@@ -17,6 +17,12 @@ export interface AnimAsset {
   game: { armIn: number; armSwing?: [number, number]; armSwingAt?: number };
 }
 export type Body = 'man' | 'woman';
+/**
+ * The procedural layer's inputs (`Skeleton.finish`): where the feet are planted; how much further out the arms are kept;
+ * both hands on one handle (`grip`, with what is `held`); or the arms as keyed (`free`), the hands in `hands` reached to
+ * their places, each fist closed on the tool in it (`tools`).
+ */
+export interface FinishOptions { plant?: Plant; armsOut?: number; grip?: GripAt; held?: Held; free?: boolean; hands?: Partial<Record<Side, HandAt>>; tools?: Partial<Record<Side, Held>> }
 /** The most of its length a planted leg is stretched to (bone-straight, its knee is the rig's straightest): nearly locked. */
 const REACH = 0.998;
 /** The share of its reach over which a leg in the air straightens softly toward its foot's place (`finish`). */
@@ -52,7 +58,7 @@ export interface Skeleton {
    * The procedural layer on a pose: arms kept out (by `armsOut` more than the body's own), or for both hands on one
    * handle (`grip`, `./clip.ts` Clip.grip) the left reached to the right's handle instead; feet planted; locals out.
    */
-  finish(pose: Pose, o?: { plant?: Plant; armsOut?: number; grip?: GripAt; held?: Held }): { local: Array<M3 | undefined>; move: V };
+  finish(pose: Pose, o?: FinishOptions): { local: Array<M3 | undefined>; move: V };
   /** Where each fist closes on what is held (or a handle): its socket's place and frame, and the grip's way toward the thumb. */
   gripOf(F: Frame[], held?: Held): Array<{ at: V; R: M3; way: V }>;
   /** Where a pose stands its feet. */
@@ -93,11 +99,15 @@ export interface Held {
   sockets: Record<'l' | 'r', { o: V; R: M3; curl?: Record<string, Euler> }>; lead: number; second: number; tip: number; scale: number;
   /** Its points near the far end (its own frame, game units: x across the edge, y along it), of which the lowest is kept off the ground; the point alone if not given. */
   ends?: V[];
+  /** A hand tool's point that meets the work (its own frame, game units): what the work clip strikes with or holds to it. */
+  contact?: V;
   /**
    * How far its far end is let down onto the ground where the clip lets it down (`GripAt.rest` times this; 1 when not
    * given): the long sword's point rests on the ground at the swing's rest and drag; a pickaxe (0) keeps its head off it.
    */
   rest?: number;
+  /** Where along it (its own y) the slash trail's inner edge is at the blade (`./trail.ts`); a share of the way from the lead fist to the far end where not given. */
+  inner?: number;
 }
 const smooth = (x: number): number => { const u = Math.min(1, Math.max(0, x)); return u * u * (3 - 2 * u); };
 
@@ -246,6 +256,44 @@ export function skeleton(A: AnimAsset, canon: AnimAsset, gameHeight = 0): Skelet
     return fk(L, move);
   }
 
+  /**
+   * One hand reached to a place (`Clip.hands`): its fist's socket (the tool's in it, or the default) put at `at` (mesh
+   * units), its grip along `way`, its knuckles as near the forearm's way as that allows (the wrist bent least); the elbow
+   * bent about its hinge to reach, the upper arm swung onto the line and turned about it so the elbow stays on the side it
+   * was keyed on (as `twoHands` reaches the left). Twice over, the second time from the forearm the first put.
+   */
+  function reachTo(L: Array<M3 | undefined>, F: Frame[], move: V, s: 0 | 1, at: V, way: V, held?: Held): Frame[] {
+    const h = HANDS[s], so = socketsOf(held)[s], y = unit(way);
+    const frame = (x: V, yy: V): M3 => { const X = unit(x), Y = unit(sub(yy, scl(X, dot(yy, X)))), Z = cross(X, Y); return [X[0], Y[0], Z[0], X[1], Y[1], Z[1], X[2], Y[2], Z[2]]; };
+    for (let n = 0; n < 2; n++) {
+      const fore = unit(sub(F[h.hand].P, F[h.lower].P)), x = sub(fore, scl(y, dot(fore, y)));
+      const X = len(x) > 1e-6 ? unit(x) : unit(cross(y, [0, 0, 1])), Z = cross(X, y);
+      const G: M3 = [X[0], y[0], Z[0], X[1], y[1], Z[1], X[2], y[2], Z[2]], W = mm(G, tr(so.R));
+      const want = sub(at, mv(W, so.o));
+      const S = F[h.upper].P, E0 = F[h.lower].P;
+      const a = col(mm(F[h.upper].W, REL[h.lower]), 0), u = sub(F[h.lower].P, S), v = sub(F[h.hand].P, F[h.lower].P);
+      const vpar = dot(a, v), vperp = sub(v, scl(a, vpar)), A1 = dot(u, vperp), B1 = dot(u, cross(a, v)), M = Math.hypot(A1, B1);
+      const D = Math.min(Math.hypot(...sub(want, S)), REACH_ARM * Math.sqrt(dot(u, u) + dot(v, v) + 2 * (dot(u, a) * vpar + M)));
+      if (M > 1e-9) {
+        const c = (D * D - dot(u, u) - dot(v, v)) / 2 - dot(u, a) * vpar, phi = Math.atan2(B1, A1), d = Math.acos(Math.max(-1, Math.min(1, c / M)));
+        L[h.lower] = mm(axisAngle([1, 0, 0], ((phi + d) * 180) / Math.PI), L[h.lower] ?? I3);
+        F = fk(L, move);
+      }
+      const outW = scl(mv(mm(F[CHEST].W, tr(bones[CHEST].R)), [1, 0, 0]), s === 0 ? 1 : -1), E0b = add(E0, scl(outW, 0.25 * len(u)));
+      const nn = unit(sub(want, S)), off = (p: V): V => { const r = sub(p, S); return sub(r, scl(nn, dot(r, nn))); };
+      let pole = off(E0b);
+      if (len(pole) < 1e-6) pole = off(add(S, outW));
+      pole = unit(pole);
+      const K1 = F[h.lower].P, W1 = F[h.hand].P, la = len(sub(K1, S)), lb = len(sub(W1, K1)), lw = Math.max(1e-6, len(sub(W1, S)));
+      const ca = Math.max(-1, Math.min(1, (la * la + lw * lw - lb * lb) / (2 * la * lw))), Ke = add(S, scl(add(scl(nn, ca), scl(pole, Math.sqrt(1 - ca * ca))), la));
+      L[h.upper] = localFor(F, h.upper, mm(mm(frame(nn, sub(Ke, S)), tr(frame(sub(W1, S), sub(K1, S)))), F[h.upper].W));
+      F = fk(L, move);
+      L[h.hand] = localFor(F, h.hand, W);
+      F = fk(L, move);
+    }
+    return F;
+  }
+
   function plantOf(pose: Pose): Plant {
     const F = fk(toLocal(pose), pose.move);
     // each foot laid flat as it stands at rest, only turned about the upright as the stance turns it
@@ -259,8 +307,10 @@ export function skeleton(A: AnimAsset, canon: AnimAsset, gameHeight = 0): Skelet
     return { at: [on(0), on(1)], W: [flat(LEG[0].foot), flat(LEG[1].foot)] };
   }
 
-  function finish(pose: Pose, o: { plant?: Plant; armsOut?: number; grip?: GripAt; held?: Held } = {}): { local: Array<M3 | undefined>; move: V } {
+  function finish(pose: Pose, o: FinishOptions = {}): { local: Array<M3 | undefined>; move: V } {
     const L = toLocal(pose);
+    // each fist closed on the tool in it, as its socket says (turns in this body's own bone frames)
+    for (const [side, held] of Object.entries(o.tools ?? {}) as Array<[Side, Held | undefined]>) for (const [b, e] of Object.entries(held?.sockets[side].curl ?? {})) { const i = at.get(`${b}_${side}`); if (i !== undefined) L[i] = euler(e); }
     let F = fk(L, pose.move);
     if (o.grip) {
       // the ground where the planted feet stand on it (a stance's feet can stand a little off the rest's floor)
@@ -270,7 +320,7 @@ export function skeleton(A: AnimAsset, canon: AnimAsset, gameHeight = 0): Skelet
     // the arms kept off the body (as lowpoly.ts fromGame): seen from the chest, each upper arm and forearm turned out until
     // it leans in no further than the body's rule allows, further as it swings forward or back
     const chest = mm(F[CHEST].W, tr(bones[CHEST].R));
-    for (const i of o.grip ? [] : ARM) {
+    for (const i of o.grip || o.free ? [] : ARM) {
       const b = bones[i], r0 = col(b.R, 1), side = Math.sign(r0[0]), v = mv(tr(chest), col(F[i].W, 1));
       const sw = A.game.armSwing ? A.game.armSwing[v[2] > 0 ? 0 : 1] * Math.min(1, Math.abs(v[2]) / (A.game.armSwingAt ?? 0.5)) : 0;
       const xmin = Math.min(0.95, Math.abs(r0[0]) * A.game.armIn + sw + (o.armsOut ?? 0));
@@ -330,6 +380,14 @@ export function skeleton(A: AnimAsset, canon: AnimAsset, gameHeight = 0): Skelet
           L[bi] = qmat(toe.w >= 1 ? want : slerp(quat(L[bi] ?? I3), want, toe.w));
           F = fk(L, pose.move);
         }
+      }
+    }
+    // the hands reached to their places, in the frame the feet stand in (the ground where they stand on it)
+    if (o.hands) {
+      const up = o.plant ? Math.min(...LEG.map((g, s) => (o.plant as Plant).at[s][1] - bones[g.foot].head[1])) : 0;
+      for (const [side, h] of Object.entries(o.hands) as Array<[Side, HandAt]>) {
+        const s = side === 'l' ? 0 : 1, p: V = [h.at[0] * height, A.floor + up + h.at[1] * height, h.at[2] * height];
+        F = reachTo(L, F, pose.move, s, p, h.way, o.tools?.[side]);
       }
     }
     return { local: L, move: pose.move };

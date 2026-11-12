@@ -71,3 +71,38 @@ export function poseToPose(beats: Beat[], o: { length: number; loop: boolean; la
   const foot = (s: 'l' | 'r'): FootKeys => Object.fromEntries((['z', 'lift', 'pitch'] as FootChannel[]).map((ch) => [ch, beats.map((b) => keyOf(b, b.t, (b.pose.feet as { l: Foot; r: Foot })[s][ch], `$${ch}_${s}`))])) as FootKeys;
   return { tracks, move, poses: beats.filter((b) => b.name).map((b) => ({ t: b.t, name: b.name as string })), ...(keyed ? { footKeys: { l: foot('l'), r: foot('r') } } : {}) };
 }
+
+/** A bone's name on the other side (left for right), or itself. */
+const otherSide = (bone: string): string => { const m = /_(l|r)$/.exec(bone); return m ? bone.slice(0, -1) + (m[1] === 'l' ? 'r' : 'l') : bone; };
+/** Keys of turns mirrored (the turns across the body, ry and rz, reversed), or of a shift (`flip`: across it, x, reversed). */
+const mirrorKeys = (keys: Array<Key<Euler>>, shift = false): Array<Key<Euler>> => keys.map((k) => ({ ...k, v: shift ? [-k.v[0], k.v[1], k.v[2]] : [k.v[0], -k.v[1], -k.v[2]] }));
+const mirrorTracks = (t: Record<string, Array<Key<Euler>>>): Record<string, Array<Key<Euler>>> => Object.fromEntries(Object.entries(t).map(([b, keys]) => [otherSide(b), mirrorKeys(keys, b === '$move')]));
+const swapSides = <T>(r: Partial<Record<'l' | 'r', T>> | undefined): Partial<Record<'l' | 'r', T>> | undefined => r && Object.fromEntries(Object.entries(r).map(([s, v]) => [s === 'l' ? 'r' : 'l', v]));
+/**
+ * A whole clip mirrored left for right, named `name`: every track, accent, the shift, the stance, each body's corrections,
+ * the reached hands (their places and ways across the body reversed) and the tools in them swapped hand for hand.
+ */
+export function mirrorClip(c: Clip, name: string): Clip {
+  const hands = swapSides(c.hands);
+  return {
+    ...c, name,
+    tracks: mirrorTracks(c.tracks),
+    ...(c.accents ? { accents: mirrorTracks(c.accents) } : {}),
+    ...(c.move ? { move: mirrorKeys(c.move, true) } : {}),
+    ...(c.plant ? { plant: { rot: Object.fromEntries(Object.entries(c.plant.rot).map(([b, e]) => [otherSide(b), [e[0], -e[1], -e[2]] as Euler])), ...(c.plant.move ? { move: [-c.plant.move[0], c.plant.move[1], c.plant.move[2]] as Euler } : {}) } } : {}),
+    ...(c.bodies ? {
+      bodies: Object.fromEntries(Object.entries(c.bodies).map(([who, f]) => [who, f && {
+        ...f,
+        ...(f.add ? { add: Object.fromEntries(Object.entries(f.add).map(([b, e]) => [otherSide(b), [e[0], -e[1], -e[2]] as Euler])) } : {}),
+        ...(f.tracks ? { tracks: mirrorTracks(f.tracks) } : {}),
+        ...(f.scale ? { scale: Object.fromEntries(Object.entries(f.scale).map(([b, k]) => [otherSide(b), k])) } : {}),
+        ...(f.move !== undefined ? { move: f.move } : {}),
+        ...(f.grip ? { grip: swapSides(f.grip) } : {}),
+        ...(f.hands ? { hands: Object.fromEntries(Object.entries(f.hands).map(([s, d]) => [s === 'l' ? 'r' : 'l', d && [-d[0], d[1], d[2]]])) } : {}),
+      }])),
+    } : {}),
+    ...(hands ? { hands: Object.fromEntries(Object.entries(hands).map(([s, h]) => [s, h && { at: mirrorKeys(h.at, true), way: [-h.way[0], h.way[1], h.way[2]] as Euler }])) } : {}),
+    ...(c.tools ? { tools: swapSides(c.tools) } : {}),
+    ...(c.strike ? { strike: { ...c.strike, side: c.strike.side === 'l' ? 'r' : 'l' } } : {}),
+  };
+}

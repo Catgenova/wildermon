@@ -147,7 +147,13 @@ export class Vision {
   }
 
   state(x: number, y: number): number {
-    if (!this.game.settings.fog) return VISIBLE;
+    if (!this.game.settings.fog) {
+      // With the fog off, ground the island has not sent is not shown from the seed: unseen, and asked for.
+      const w = this.game.world;
+      if (w.isRead(x, y)) return VISIBLE;
+      w.askRead(x, y);
+      return UNSEEN;
+    }
     const i = y * this.w + x;
     if (this.visible[i]) return VISIBLE;
     return this.game.world.seen[i] ? KNOWN : UNSEEN;
@@ -177,7 +183,16 @@ export class Vision {
    */
   update(): void {
     const g = this.game;
-    if (!g.settings.fog) return;
+    if (!g.settings.fog) {
+      // Land read from the island since the last frame: drawn afresh, the map and the world alike.
+      const read = g.world.takeRead();
+      if (read) {
+        this.revision++;
+        this.dirty = read === 'all' ? null : read;
+      }
+      return;
+    }
+    g.world.dropAsks();
     const tile = g.player.tileY * this.w + g.player.tileX;
     const aged = g.time - this.lastAt > 1;
     if (!this.stale && tile === this.lastTile && !aged) return;

@@ -1,8 +1,8 @@
 /**
  * The sculpted bodies on the island: the door the figure comes through
- * (`drawLive` in `src/render/figure.ts`) when the "Sculpted figures" setting
- * is on and there is WebGL2. Loaded only then, as a chunk of its own, so the
- * game as it ships carries none of this.
+ * (`drawLive` in `src/render/figure.ts`) where there is WebGL2. Loaded as a
+ * chunk of its own the first time a body is drawn, so the page's first load
+ * carries none of this.
  *
  * A look's body is baked off the frame: asked for, it goes on a queue that
  * idle time works through a band at a time (the far band first, so a crowd
@@ -36,7 +36,7 @@ let gen = 0;
 const queue: Array<{ e: Entry; band: Band }> = [];
 let pumping = false;
 
-const lookKey = (l: Look): string => `${l.gender}|${l.skin}|${l.hair}|${l.hairColour}|${l.eyes}|${l.beard}`;
+const lookKey = (l: Look): string => `${l.gender}|${l.skin}|${l.hair}|${l.hairColour}|${l.hairBright}`;
 
 /** Steps whenever a bake lands or a look goes, so pictures kept of bodies know to be made again. */
 export const sculptGen = (): number => gen;

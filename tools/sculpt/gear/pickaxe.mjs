@@ -29,7 +29,7 @@
 // Enchanted: the runes, the inlay, the hub's star and disc and the pommel's star and disc lit (unlit, full bright), and
 // glow added round the hub, the pommel, each rune, the hammer's diamond and the inlay; the channel's recess lit orange.
 
-import { meshOf, trisOf } from '../lowgear.mjs';
+import { meshOf, trisOf, metalFaces, metalMats } from '../lowgear.mjs';
 import { buildRig } from '../lowrig.mjs';
 
 /** The sheet's front view, px: the pommel's foot to the cap's top. */
@@ -62,6 +62,9 @@ export const MATS_PLAIN = {
   gem: { c: '#d4b47a' },
   glow: { c: '#ff9a35', glow: 1 },
 };
+/** The head's stone, drawn in the metal it is smithed from (`metalFaces`): the pick, the centre block, the neck, the hammer, their cracks. */
+const METAL = ['stone', 'stoneL', 'stoneB', 'bevel', 'crack'];
+Object.assign(MATS_PLAIN, metalMats(MATS_PLAIN, METAL));
 export const MATS_ENCHANTED = {
   ...MATS_PLAIN,
   rune: { c: '#ffa83a', emit: true },
@@ -92,6 +95,7 @@ export function buildPickaxe({ enchanted = false, length } = {}) {
   const lerp = (a, b, t) => a + (b - a) * t;
 
   /* ---- the pick: a crescent from inside the centre block to the point ----------------------------------------------- */
+  const headFrom = G.F.length;
   // stations (the sheet's front view, measured): X, the spine's top U, the underside's U; the half-thickness from the side
   // view and the top plan (13 px at the root to the point)
   const PS = [[-12, 221, 182], [-30, 225, 187], [-44, 226.5, 190.4], [-58, 228, 192.4], [-72, 227.5, 193.4], [-86, 224.5, 193.4], [-100, 215.5, 192.4], [-113, 209.5, 189.8], [-125, 204, 186.8], [-135, 198.5, 183.8], [-142, 193.5, 181.2]];
@@ -148,6 +152,8 @@ export function buildPickaxe({ enchanted = false, length } = {}) {
   F([...hm[0]].reverse(), 'bevel', [-1, 0, 0]);
   tube(hm, (i, j) => (i === 2 ? 'gold' : i === 0 ? 'bevel' : j === 7 ? 'stoneL' : j === 3 ? 'bevel' : j === 0 || j === 4 ? 'stoneB' : 'stone'), [53.5, 65, 77]);
   F(hm[3], 'stone', [1, 0, 0]);
+
+  const headTo = G.F.length;
 
   /* ---- the hub: on both faces of the centre block, a gold ring round the disc and its star --------------------------- */
   const HUB = [0, 201], NH = 14;
@@ -292,12 +298,15 @@ export function buildPickaxe({ enchanted = false, length } = {}) {
   }
 
   /* ---- hairline cracks over the stone, a little darker ---------------------------------------------------------------- */
+  const cracksFrom = G.F.length;
   const crack = (pts, zOf, out) => { for (let j = 0; j + 1 < pts.length; j++) { const [x0, u0] = pts[j], [x1, u1] = pts[j + 1], l = Math.hypot(x1 - x0, u1 - u0), nx = -(u1 - u0) / l * 0.35, nu = (x1 - x0) / l * 0.35; F([P(x0 - nx, u0 - nu, zOf(x0)), P(x0 + nx, u0 + nu, zOf(x0)), P(x1 + nx, u1 + nu, zOf(x1)), P(x1 - nx, u1 - nu, zOf(x1))], 'crack', out); } };
   for (const sz of [1, -1]) {
     const out = sz > 0 ? FRONT : BACK;
     crack([[-102, 206], [-107, 201.5], [-114, 199.5]], (X) => (faceAt(X).z + 0.2) * sz, out);
     crack([[58, 222], [63, 214], [61, 205], [67, 197]], () => (HZ + 0.2) * sz, out);
   }
+  // (the head's stone in the metal it is smithed from; its gold, hub, runes, collars, haft, cap and pommel their own)
+  metalFaces(G, [[headFrom, headTo], [cracksFrom, G.F.length]], METAL);
 
   const tris = trisOf(G).length;
 

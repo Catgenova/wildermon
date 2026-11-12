@@ -1,4 +1,4 @@
-/** Tile types, modelled on Wurm's surface tiles. */
+/** Tile types of the surface. */
 export const TileType = {
   Grass: 0,
   Dirt: 1,

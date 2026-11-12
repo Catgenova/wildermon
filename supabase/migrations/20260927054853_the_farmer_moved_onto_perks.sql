@@ -1248,15 +1248,15 @@ begin
       guard := guard + 1;
       -- A go, for what the baubles make of its yield (`bauble_yield`), and
       -- what they made of it said after the go has said its own piece.
-      perform set_config('wurm.bauble_go', 'go', true);
-      perform set_config('wurm.bauble_made', '', true);
+      perform set_config('wildermon.bauble_go', 'go', true);
+      perform set_config('wildermon.bauble_made', '', true);
       -- And the perks, for the rules too deep to be handed the body: for
       -- this go and no other (`pkx`), cleared the moment it is done.
-      perform set_config('wurm.pk', coalesce(p.class_mul->'fx', '{}'::jsonb)::text, true);
-      perform set_config('wurm.pk_act', p.act, true);
+      perform set_config('wildermon.pk', coalesce(p.class_mul->'fx', '{}'::jsonb)::text, true);
+      perform set_config('wildermon.pk_act', p.act, true);
       perform act_perform(p_world, p_uid, p.act, p.act_target);
-      perform set_config('wurm.pk', '', true);
-      perform set_config('wurm.pk_act', '', true);
+      perform set_config('wildermon.pk', '', true);
+      perform set_config('wildermon.pk_act', '', true);
       perform bauble_said(p_world, p_uid);
       -- And what the go took out of you, which nothing over here had ever
       -- charged: `action_def.stamina` was a column no function read.

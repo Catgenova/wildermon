@@ -40,8 +40,8 @@ language plpgsql
 as $$
 begin
   -- Once an ask, not once a swing.
-  if current_setting('wurm.cart_full', true) is not distinct from 'said' then return; end if;
-  perform set_config('wurm.cart_full', 'said', true);
+  if current_setting('wildermon.cart_full', true) is not distinct from 'said' then return; end if;
+  perform set_config('wildermon.cart_full', 'said', true);
   perform tell(p_world, p_uid, 'The ' || lower(placed_name(p_cart))
     || ' is full. What does not fit goes in your pack.', 'error');
 end $$;

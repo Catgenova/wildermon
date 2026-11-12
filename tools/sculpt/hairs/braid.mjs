@@ -38,6 +38,8 @@ export const CROWN_LINES = {
 };
 
 export default {
+  // the name the game shows for it (src/sculpt/assets/lowhair-styles.json, written by tools/sculpt/lowhair.mjs --asset)
+  name: 'Braid',
   crown: CROWN_LINES,
   // the braid (tools/sculpt/lowbraidbraid.mjs): sheet rows in the front view. The root's row (where the braid leaves the
   // crown's seam); each heart's top, bottom (its point) and width (px); the tie's rows and width; the tip's rows and

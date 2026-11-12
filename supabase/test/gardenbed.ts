@@ -50,7 +50,7 @@ const psql = (sql: string): string =>
       ...process.env,
       PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
       PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wurm',
+      PGUSER: process.env.PGUSER ?? 'wildermon',
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).trim();
@@ -194,12 +194,12 @@ begin
   insert into said values ('SOWN', pg_temp.crop(w, 10, 10) || '|' || coalesce(pg_temp.said(w, u, 'Sown: %'), 'unsaid'));
   perform act_perform(w, u, 'tend_crop', ${tile(10, 10)});
   insert into said values ('TENDED', (select c.tended || ':' || c.tended_now from crop c where c.world_id = w and c.x = 10 and c.y = 10));
-  perform set_config('wurm.season', 'winter', true);
+  perform set_config('wildermon.season', 'winter', true);
   insert into crop (world_id, x, y, id, stage, stage_at, ql) values (w, 25, 10, 'wheat', 0, now() - make_interval(secs => ${PER} + 1), 40);
   update crop set stage_at = now() - make_interval(secs => ${PER} / glasshouse_growth() + 1) where world_id = w and x = 10 and y = 10;
   perform crops_settle(w, 15.5, 10.5, 12);
   insert into said values ('WINTER', pg_temp.crop(w, 10, 10) || '|' || pg_temp.crop(w, 25, 10));
-  perform set_config('wurm.season', '', true);
+  perform set_config('wildermon.season', '', true);
   update crop set stage = ${STAGE_NAMES.length - 1}, stage_at = now() where world_id = w and x = 10 and y = 10;
   delete from item where world_id = w and holder_uid = u and def = 'wheat';
   insert into said values ('REAPASK', coalesce(act_refusal(w, u, 'harvest_crop', ${tile(10, 10)}), 'none'));
@@ -230,11 +230,11 @@ begin
   perform pg_temp.at(w, u, 21, 10, 0);
   perform act_perform(w, u, 'plant_seed', ${tile(21, 10)}::jsonb || jsonb_build_object('itemUid', v_seed));
   insert into said values ('GLASS', pg_temp.crop(w, 20, 10) || '|' || pg_temp.crop(w, 21, 10) || '|' || glasshouse(w, 3));
-  perform set_config('wurm.season', 'winter', true);
+  perform set_config('wildermon.season', 'winter', true);
   update crop set stage_at = now() - make_interval(secs => ${PER} / glasshouse_growth() + 1) where world_id = w and x in (20, 21) and y = 10;
   perform crops_settle(w, 20.5, 10.5, 3);
   insert into said values ('GLASSWINTER', pg_temp.crop(w, 20, 10) || '|' || pg_temp.crop(w, 21, 10));
-  perform set_config('wurm.season', '', true);
+  perform set_config('wildermon.season', '', true);
   delete from wall where world_id = w and level = 0 and dir = 'v' and x = 22 and y = 10;
   insert into said values ('WALLOFF', pg_temp.crop(w, 20, 10) || '|' || pg_temp.crop(w, 21, 10) || '|' || glasshouse(w, 3));
 

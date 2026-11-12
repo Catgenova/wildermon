@@ -20,7 +20,7 @@ const lower = (id: string): string => itemDef(id).name.toLowerCase();
 const QUANTITY = 'Select Quantity';
 
 /** Where the pinned and the lately made are kept: in this browser, like the window layout, since they are about whoever sits here. */
-const KEPT_KEY = 'wurm-iso-recipes';
+const KEPT_KEY = 'wildermon-iso-recipes';
 /** How many of the lately made are shown above the book. */
 export const RECENT = 6;
 /** Every recipe that makes a thing, by the thing. */

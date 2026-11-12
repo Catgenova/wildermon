@@ -4,7 +4,7 @@
 //
 //   node tools/sculpt/lowplacegame.mjs --out <dir> [--name sixseven-game] [--sets outfit1,hood,plate,leather,bare]
 //       [--views front,q3,side] [--zoom 10] [--fps 20] [--seconds 1.2] [--crop 0.62] [--width 26] [--state emote|work|idle] [--job chop]
-//       [--from <seconds>] [--keys t1,t2,...] [--genders man,woman] [--act <seconds>]
+//       [--from <seconds>] [--keys t1,t2,...] [--bodies man,woman] [--act <seconds>] [--tool <id>[:<material>[:enchanted]]]
 //     <dir>/<name>.gif: rows the outfits, columns him then her in each view, played in real time: each body its own id, its
 //       phase the island's (six a second stood) and the clock (performance.now, which the game fades clips over) the
 //       frame's, so a body goes from one clip into the next as it does in the game; each frame taken from the page's
@@ -15,8 +15,9 @@
 //     --ahead u: each body drawn u game units back from the way it faces, across the screen (a body knelt forward at the
 //       ground kept in its cell).
 //     --keys: also <dir>/<name>-keys.png, the frames at those clip times, stood still (no fades).
-//     --genders: the bodies drawn (both by default); --act: a go's length at work (3 s by default; a clip's own length
-//       plays it at its own times, so --keys are its times).
+//     --tool: the piece the job is done with (FigurePose.tool: drawn in its metal, lit when enchanted), e.g. hammer:gold:enchanted.
+//     --bodies: which bodies are drawn (him, her or both: one at a time plays each body on its own clock).
+//     --act: a go's length at work (3 s by default; a clip's own length plays it at its own times, so --keys are its times).
 //     --crop k keeps the top k of each cell (the arms and the trunk close up), or with --low its bottom k (a body knelt or
 //       crouched at the ground); --width w makes each cell w game units wide.
 //
@@ -37,7 +38,7 @@ const out = resolve(opt('out', 'tmp/lowplacegame')), name = opt('name', 'sixseve
 const sets = opt('sets', 'outfit1,hood,plate,leather,bare').split(','), VIEWS = { front: 0, q3: 1, side: 2, rq3: 3, back: 4 };
 const views = opt('views', 'front,q3,side').split(',').map((v) => VIEWS[v]);
 const zoom = +opt('zoom', '10'), width = +opt('width', '26'), fps = +opt('fps', '20'), seconds = +opt('seconds', '1.2'), crop = +opt('crop', '0.62');
-const genders = opt('genders', 'man,woman').split(','), act = +opt('act', '3');
+const tool = opt('tool', ''), bodies = opt('bodies', opt('genders', 'man,woman')).split(','), act = +opt('act', '3');
 const low = args.includes('--low'), back = +opt('back', 'Infinity'), ahead = +opt('ahead', '0');
 const state = opt('state', 'emote'), job = opt('job', 'chop'), from = +opt('from', '0.6'), keys = opt('keys', '').split(',').filter(Boolean).map(Number);
 mkdirSync(out, { recursive: true });
@@ -62,7 +63,7 @@ window.ready = async () => { sculptedFigures(true); await import('./src/sculpt/s
 /** What a body is doing at s seconds in. */
 const doing = (s, st) => {
   const working = st === 'work' || (st === 'idle-work' && s >= ${from} && s < ${back});
-  if (working) return { working: true, job: ${JSON.stringify(job)}, act: { t: st === 'work' ? s : s - ${from}, length: ${act} } };
+  if (working) return { working: true, job: ${JSON.stringify(job)}, ${tool ? `tool: ${JSON.stringify({ id: tool.split(':')[0], material: tool.split(':')[1] || undefined, enchanted: tool.split(':')[2] === 'enchanted' })},` : ''} act: { t: st === 'work' ? s : s - ${from}, length: ${act} } };
   return st === 'emote' ? { working: false, emote: 'wave', emoteT: s } : { working: false };
 };
 // rows of cells [set, gender, facing]; at s seconds (the clock and the phase), each body its own id unless still
@@ -91,13 +92,13 @@ try {
   await p.addScriptTag({ content: b.outputFiles[0].text });
   await p.evaluate(() => window.ready());
   mkdirSync(dir, { recursive: true });
-  const rows = sets.map((set) => genders.flatMap((g) => views.map((f) => [set, g, f])));
+  const rows = sets.map((set) => bodies.flatMap((g) => views.map((f) => [set, g, f])));
   const save = async (file, s, still) => { const url = await p.evaluate(([ss, r, st, x]) => window.frame(ss, r, st, x), [s, rows, still, state]); writeFileSync(join(dir, file), Buffer.from(url.split(',')[1], 'base64')); };
   const N = Math.round(seconds * fps);
   // (a run-in before the first frame kept, so each body's fade into its clip is done: the frames from 0 s are the game's)
   for (let k = 0; k < N; k++) await save(`f${String(k).padStart(4, '0')}.png`, k / fps, false);
   for (let k = 0; k < keys.length; k++) await save(`k${String(k).padStart(3, '0')}.png`, keys[k], true);
-  const label = `${name}: ${sets.join(' / ')} (rows); ${genders.join(' then ')}, ${opt('views', 'front,q3,side')} (columns); zoom ${zoom}; ${state}${state.includes('work') ? ` (${job})` : ''}`;
+  const label = `${name}: ${sets.join(' / ')} (rows); ${bodies.join(' then ')}, ${opt('views', 'front,q3,side')} (columns); zoom ${zoom}; ${state}${state.includes('work') ? ` (${job})` : ''}`;
   execFileSync(process.env.PYTHON ?? 'python3', ['-c', String.raw`
 import sys, glob
 from PIL import Image, ImageDraw

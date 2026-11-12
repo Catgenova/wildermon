@@ -90,7 +90,16 @@ const [firstLine, ...rest] = made.sql.split('\n');
 const body = made.ddl
   ? [firstLine, rest[0], '', guard.trimEnd(), ...rest.slice(1)].join('\n')
   : made.sql;
-writeFileSync(join(DIR, name), body);
+/*
+ * A migration that creates or replaces a function ends with the doors locked
+ * again, as every hand-written one does: a function made here is otherwise
+ * left open to whoever Postgres grants a new function to. It goes on the
+ * migration only, so `defs-state.sql` stays the TypeScript's.
+ */
+const doors = /\bcreate\s+(or\s+replace\s+)?function\b/i.test(body)
+  ? `${body.trimEnd()}\n\nselect private.lock_doors();\n`
+  : body;
+writeFileSync(join(DIR, name), doors);
 writeFileSync(STATE, sql);
 console.log(made.whole
   ? `definitions changed: the rulebook itself moved, so ${name} is the whole snapshot (${made.sql.split('\n').length} lines)`

@@ -50,6 +50,13 @@ export interface Correction {
    * and the body's own stride, the game's units a run of the clip.
    */
   feet?: { in?: number; lift?: number; stride?: number };
+  /** The reached hands' places moved for this body (`Clip.hands`), body heights across, up and forward: a shorter reach brought in. */
+  hands?: Partial<Record<Side, Euler>>;
+  /**
+   * How far up its handle each hand's tool is held (`Clip.tools`), the game's units toward its head from where its grip
+   * says (`grip.lead`): a body that holds a long tool shorter (choked up), its contact that much nearer the fist.
+   */
+  grip?: Partial<Record<Side, number>>;
 }
 
 /** Both hands on one handle: see `Clip.grip`. */
@@ -65,6 +72,18 @@ export interface Grip {
 }
 /** A grip at a moment: how far off the ground the far end is kept, how far it is let down onto it, and how far the left elbow lines up. */
 export interface GripAt { ground: number; rest: number; lineUp: number }
+
+/**
+ * A hand put on a place in the world while a clip plays (`Clip.hands`), its arm reached to it (`./skeleton.ts` finish): the
+ * fist's grip (its tool's socket, or where a fist closes on a handle) at `at` over time, in body heights across (the body's
+ * left), up from the ground and forward, in the frame the feet stand in; the grip running along `way` toward the thumb,
+ * the knuckles as near the forearm's way as that allows.
+ */
+export interface HandReach { at: Array<Key<Euler>>; way: Euler }
+/** A hand's place and its grip's way at a moment (`HandReach`). */
+export interface HandAt { at: Euler; way: Euler }
+/** The hands a clip holds a tool in (`Clip.tools`), by the side. */
+export type Side = 'l' | 'r';
 
 /** A foot's channels as a clip keys them (`Clip.feet`). */
 export type FootChannel = 'z' | 'lift' | 'pitch';
@@ -116,6 +135,17 @@ export interface Clip {
    * the holds, so the fast beats between them keep their speed.
    */
   stretch?: Array<[number, number]>;
+  /** The arms as keyed, not kept off the body (`./skeleton.ts` finish): a clip whose hands work in front of it. */
+  armsFree?: boolean;
+  /** Hands put on places in the world, their arms reached to them (`HandReach`): the other arms as keyed. */
+  hands?: Partial<Record<Side, HandReach>>;
+  /** The tool drawn in each hand while the clip plays, by its asset's id (`../lowpoly.ts`), its fist closed on it. */
+  tools?: Partial<Record<Side, string>>;
+  /**
+   * The hand that strikes with its tool (`tools`) and when its tool meets the work: a job's own tool that reaches less far
+   * than the clip's has the work brought to it (`../index.ts`).
+   */
+  strike?: { side: Side; t: number };
 }
 
 /** The bones a clip masked `upper` moves: the spine above the waist, the neck, the head and the arms. */
@@ -282,6 +312,17 @@ export function gripAt(c: Clip, t: number): GripAt | undefined {
   if (!c.grip) return undefined;
   const at = (k?: Array<Key<number>>): number => (k ? sampleKey(k, wrap(c, t), c.length, c.loop) : 0);
   return { ground: c.grip.ground ?? 0, rest: at(c.grip.rest), lineUp: at(c.grip.lineUp) };
+}
+
+/** A clip's reached hands at time t (`Clip.hands`): none for a clip that reaches none. */
+export function handsAt(c: Clip, t: number, body?: 'man' | 'woman', shift: Partial<Record<Side, Euler>> = {}): Partial<Record<Side, HandAt>> | undefined {
+  if (!c.hands) return undefined;
+  const out: Partial<Record<Side, HandAt>> = {};
+  for (const [s, h] of Object.entries(c.hands) as Array<[Side, HandReach]>) {
+    const at = sampleKeys(h.at, wrap(c, t), c.length, c.loop), d = (body && c.bodies?.[body]?.hands?.[s]) || [0, 0, 0], e = shift[s] ?? [0, 0, 0];
+    out[s] = { at: [at[0] + d[0] + e[0], at[1] + d[1] + e[1], at[2] + d[2] + e[2]], way: h.way };
+  }
+  return out;
 }
 
 /** The events a clip passes from time a to time b (b after a; a loop's wrap counted). */

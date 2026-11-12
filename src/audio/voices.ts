@@ -36,7 +36,7 @@ const VOICES: Partial<Record<string, () => Promise<Voice>>> = {
   noot: () => import('./voice-clay').then((m) => m.CLAY_VOICE),
   // The Sapgnaw, the Logchewer and the Timberlord.
   bevere: () => import('./voice-gnaw').then((m) => m.GNAW_VOICE),
-  // The Sluglow, the Slugember and the Slugferno.
+  // The Snailglow, the Slugember and the Slugferno.
   embra: () => import('./voice-slug').then((m) => m.SLUG_VOICE),
   // The Whispet, the Lanternveil and the Hallowmire.
   whispet: () => import('./voice-ghost').then((m) => m.GHOST_VOICE),

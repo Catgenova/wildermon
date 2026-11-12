@@ -92,7 +92,7 @@ export function pairRefuses(g: Game, a: Creature, b: Creature): string | null {
     }
     if (c.hunger < 0.5) return `${c.name} is too hungry: feed it first.`;
     if (g.time - c.bredAt < BREED_REST) return `${c.name} bred recently: ${clockLeft(BREED_REST - (g.time - c.bredAt))} left.`;
-    if (c.due > 0) return `${c.name} is already in young.`;
+    if (c.due > 0) return `${c.name} is already pregnant.`;
   }
   return null;
 }
@@ -284,8 +284,8 @@ export const HUSBANDRY_ACTIONS: ActionDef[] = [
   },
   {
     id: 'pair_creature',
-    label: 'Put it to a mate',
-    verb: 'putting them together',
+    label: 'Breed with a mate',
+    verb: 'breeding',
     skill: HUSBANDRY,
     stamina: 0.04,
     baseTime: 9,
@@ -296,7 +296,7 @@ export const HUSBANDRY_ACTIONS: ActionDef[] = [
     labelFor: (t, g) => {
       const c = creatureOf(g, t);
       const mate = c && mateFor(g, c);
-      return mate ? `Put it to ${mate.name}` : 'Put it to a mate';
+      return mate ? `Breed with ${mate.name}` : 'Breed with a mate';
     },
     // What it would throw, before it is done (`breedPreview`); nothing where it would be refused, which says why instead.
     confirms: (t, g) => {
@@ -311,7 +311,7 @@ export const HUSBANDRY_ACTIONS: ActionDef[] = [
       if (!c) return 'Gone.';
       if (!g.deed) return 'Need a settlement: the young go to its totem.';
       if (!nearPlayer(g, c, 2.4)) return `Stand next to ${c.name}.`;
-      if (c.due > 0) return `${c.name} is already in young.`;
+      if (c.due > 0) return `${c.name} is already pregnant.`;
       const mate = mateFor(g, c);
       if (!mate) {
         const def = SPECIES[c.species];
@@ -367,7 +367,7 @@ export const HUSBANDRY_ACTIONS: ActionDef[] = [
       // something in it; with the skill you can see what.
       const seen = c.traits.filter((id) => readsTrait(g, id));
       const hidden = c.traits.length - seen.length;
-      const carrying = c.due > 0 ? ` In young, due in ${clockLeft(c.due - g.time)}.` : '';
+      const carrying = c.due > 0 ? ` Pregnant, due in ${clockLeft(c.due - g.time)}.` : '';
       g.logMsg(
         `${c.name}, ${SEX_NAMES[c.sex]} ${def.name.toLowerCase()}, ${ageOf(c, g.time)}, ${careWord(c.care)}. Traits: ${seen.length ? traitList(seen) : 'none readable'}${hidden ? `, ${hidden} unreadable` : ''}.${carrying}`,
         'event',

@@ -6,7 +6,7 @@
 -- `caches_for`, `cache_ground`, `cache_spot_at`, `cache_draws`, `cache_loot`, `cache_pick`, `cache_said`,
 -- `cache_search_said`, ...). Here:
 --
---   * `winter_now`: the season fruit keeps is winter (`fruit_season`, which a test pins with `wurm.season`);
+--   * `winter_now`: the season fruit keeps is winter (`fruit_season`, which a test pins with `wildermon.season`);
 --   * the butcher branch of `perform_fight`: in winter, `winter_fur` times the fur;
 --   * `critter_cache`, which nothing may read: where this winter's caches lie, and `cache_winter`, which winter an
 --     island's were laid for;

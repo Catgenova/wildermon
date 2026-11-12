@@ -345,8 +345,11 @@ export interface Frame {
   lod: number;
 }
 
+const BETWEEN = { shoulder: 1, waist: 0.92, hip: 1.03 };
+
 function frameOf(look: Look, lod = 1): Frame {
-  const b = BUILDS[look.gender] ?? BUILDS.neither;
+  // (a body in between, the old 'neither': no look has it now, but the walk's pace was reckoned over all three, `paced.ts`)
+  const b = BUILDS[look.gender] ?? BETWEEN;
   const fem = look.gender === 'woman' ? 1 : look.gender === 'man' ? 0 : 0.5;
   return { sh: b.shoulder, wa: b.waist, hi: b.hip, fem, tall: 1 - fem * 0.035, lod };
 }
@@ -1964,7 +1967,8 @@ function bodyBoot(fr: Frame): Mesh {
 
 function kitOf(look: Look, lod: number): Kit {
   const fr = frameOf(look, lod);
-  const beard = beardOf(fr, look.beard);
+  // (a look no longer chooses a beard: the sculpted bodies have none)
+  const beard = beardOf(fr, 'none');
   const sw = (fr.sh + fr.wa) / 2;
   const chest = rings([
     [-0.1, 1.58 * sw, 1.22, 0, 0], bustRing(fr, 1), [1.7, 2.06 * fr.sh, 1.22, 0, -0.04], [2.24, 1.3 * fr.sh, 0.74, 0, -0.08],
@@ -2040,7 +2044,7 @@ function kitOf(look: Look, lod: number): Kit {
 
 const kits = new Map<string, Kit>();
 function kitFor(look: Look, lod = 1): Kit {
-  const key = `${look.gender}|${look.hair}|${look.beard}|${lod}`;
+  const key = `${look.gender}|${look.hair}|${lod}`;
   let k = kits.get(key);
   if (!k) {
     k = kitOf(look, lod);
@@ -2369,7 +2373,12 @@ export interface FigurePose {
   /** What is worn and held, each piece drawn on the body in its own material, dye and rarity. */
   gear?: GearLook;
   /**
-   * Which garments a low-poly body has on (Sculpted figures, `../sculpt/lowpoly`): each left out at the game's default,
+   * The tool the job in hand is done with, when it is one a sculpted figure holds (mining's pickaxe, a bench tool: `../sculpt/anim/routes.ts` CLIP_OF_TOOL): the one the job
+   * uses, in its own metal, lit when enchanted. Left out, a sculpted figure at that job holds one of no metal (iron's).
+   */
+  tool?: GearPiece;
+  /**
+   * Which garments a low-poly body has on (the sculpted bodies, `../sculpt/lowpoly`): each left out at the game's default,
    * the shawl, the trousers, the boots and the tunic worn and the hood down; the hood is up only with the shawl, and the
    * hair is not drawn under it. The plate set's pieces are off unless asked for, each plain unless `enchanted` says so.
    */
@@ -6447,6 +6456,22 @@ function weatheredOf(P: Palette): Palette {
   if (!w) weathered.set(P, (w = { ...P, wood: mixRGB(P.wood, CHALK, 0.4), woodDark: mixRGB(P.woodDark, COOL_SHADOW, 0.18) }));
   return w;
 }
+/**
+ * A metal as gear is forged of it (`METAL_TONE`, iron where the material is not a metal): its colour, its shadow, its lit
+ * edge and a blade's face, each along its own ramp. The sculpted figures' heads and blades take theirs from here too
+ * (`src/sculpt/lowpoly.ts` metalTint).
+ */
+export function metalShades(material?: string): { metal: RGB; dark: RGB; lit: RGB; blade: RGB } {
+  const metal = METAL_TONE[(material ?? '').toLowerCase()] ?? METAL_TONE.iron;
+  return {
+    metal,
+    // The metal's own colour, lighter and darker along its own ramp: a lit edge that is still steel, a shadow that is still iron.
+    dark: mixRGB(metal, COOL_SHADOW, 0.25),
+    // Copper's lit edge further toward the light's own colour, a pale peach, where a lift of its own colour is a hotter pink.
+    lit: mixRGB(lift(metal, 1.16), WARM_LIGHT, metal === METAL_TONE.copper ? 0.34 : 0.1),
+    blade: mixRGB(lift(metal, 1.1), WARM_LIGHT, 0.12),
+  };
+}
 /** The metals that are fittings in their own right, gilt rather than iron. */
 const YELLOW_METAL = new Set(['gold', 'brass', 'bronze', 'electrum', 'seryll']);
 
@@ -6467,7 +6492,7 @@ function gearPalette(base: Palette, p: GearPiece, step = 0): Palette {
   let pal = gearPals.get(key);
   if (pal) return pal;
   const mat = (p.material ?? '').toLowerCase();
-  const metal = METAL_TONE[mat] ?? METAL_TONE.iron;
+  const { metal, dark: metalDark, lit: metalLit, blade } = metalShades(mat);
   // A wood worked into a haft or a board is the furniture's wood, chalked a little further: a club is not the loudest thing on a body.
   const wood = mixRGB(WOOD_GEAR[mat] ?? WOOD_GEAR.oak, CHALK, 0.3);
   // A dye as the island's chalky range has it: a third of the way to its grey.
@@ -6484,13 +6509,12 @@ function gearPalette(base: Palette, p: GearPiece, step = 0): Palette {
   pal = {
     ...base,
     metal,
-    // The metal's own colour, lighter and darker along its own ramp: a lit edge that is still steel, a shadow that is still iron.
-    metalDark: mixRGB(metal, COOL_SHADOW, 0.25),
-    // Copper's lit edge further toward the light's own colour, a pale peach, where a lift of its own colour is a hotter pink.
-    metalLit: mixRGB(lift(metal, 1.16), WARM_LIGHT, metal === METAL_TONE.copper ? 0.34 : 0.1),
+    // its shadow, lit edge and blade along its own ramp (`metalShades`)
+    metalDark,
+    metalLit,
     mail: mixRGB(metal, COOL_SHADOW, 0.16),
     rivet: mixRGB(metal, WARM_LIGHT, 0.5),
-    blade: mixRGB(lift(metal, 1.1), WARM_LIGHT, 0.12),
+    blade,
     fitting: YELLOW_METAL.has(mat) ? mixRGB(mixRGB(metal, CHALK, 0.22), WARM_LIGHT, 0.12) : GEAR_BASE.fitting,
     scale: DRAGON,
     scaleDark: mixRGB(DRAGON, COOL_SHADOW, 0.2),
@@ -11317,13 +11341,20 @@ export function sculptRig(pose: FigurePose): { rig: Rig; rest: Rig } {
 const gearLod = (zoom: number): number => (zoom < 1.5 ? 0.5 : zoom < STILL_BELOW ? 0.75 : 1);
 
 /**
- * The sculpted bodies (`src/sculpt/sculpted.ts`), behind the "Sculpted figures" setting: loaded as a chunk of their own
- * the first time it is on, and from then drawn in place of the flat figure wherever a body is drawn (`drawLive`), once a
- * look's bake has landed. Off, nothing here is loaded and the figure is drawn as it always was.
+ * The sculpted bodies (`src/sculpt/sculpted.ts`), every body the island draws: loaded as a chunk of their own the first
+ * time they are asked for (the renderer, every frame; the character creator), and from then drawn in place of the flat
+ * figure wherever a body is drawn (`drawLive`). The flat figure is drawn where they cannot be: before the chunk has
+ * loaded, with no WebGL2 (`glContext`), and swimming, driving or seated (`drawSculpted`).
  */
-const SCULPT: { on: boolean; flips: number; loading: boolean; draw: ((ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose) => boolean) | null; gen: () => number } =
-  { on: false, flips: 0, loading: false, draw: null, gen: () => 0 };
-export function sculptedFigures(on: boolean): void {
+const SCULPT: { on: boolean; flips: number; loading: boolean; draw: ((ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose) => boolean) | null; gen: () => number; asked: Set<string> } =
+  { on: false, flips: 0, loading: false, draw: null, gen: () => 0, asked: new Set() };
+/**
+ * On or off, as asked by `by`: the island's renderer (every frame) or the character creator. On while anybody asks.
+ */
+export function sculptedFigures(want: boolean, by: 'island' | 'creator' = 'island'): void {
+  if (want) SCULPT.asked.add(by);
+  else SCULPT.asked.delete(by);
+  const on = SCULPT.asked.size > 0;
   if (on === SCULPT.on) return;
   SCULPT.on = on;
   SCULPT.flips++;
@@ -11332,6 +11363,8 @@ export function sculptedFigures(on: boolean): void {
     import('../sculpt/sculpted').then((m) => { SCULPT.draw = m.drawSculptLive; SCULPT.gen = m.sculptGen; SCULPT.flips++; }).catch(() => { SCULPT.loading = false; });
   }
 }
+/** Whether the sculpted bodies are on and loaded, so a figure drawn now is drawn sculpted where it can be. */
+export const sculptedReady = (): boolean => SCULPT.on && !!SCULPT.draw;
 /** What of the sculpted bodies a kept picture depends on: whether they are on, and which bakes have landed. */
 const sculptKey = (): string => (SCULPT.on ? `s${SCULPT.flips}.${SCULPT.gen()}` : '');
 /** The sculpted body in the figure's place, where it is on, can be, and is baked. */
@@ -12357,7 +12390,7 @@ function drawStill(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: 
   const seen = Math.sqrt(Math.abs(t.a * t.d - t.b * t.c)) || 1, was = stills.get(id)?.dev;
   const dev = was !== undefined && Math.abs(seen - was) < 0.05 * was ? was : Math.max(1, Math.round(seen * 16)) / 16;
   const look = pose.look ?? DEFAULT_LOOK;
-  const key = [look.gender, look.skin, look.hair, look.hairColour, look.eyes, look.beard, look.shirt, look.trousers, pose.tunic, pose.trousers,
+  const key = [look.gender, look.skin, look.hair, look.hairColour, look.hairBright, pose.tunic, pose.trousers,
     Math.round(facing * 100), zoom.toFixed(3), dev, doing(pose), pose.emote ?? '', gearKey(pose.gear), sculptKey()].join('|');
   if (stride(ctx, sx, sy, zoom, pose, kit, facing, changing, ink, key, dev)) return;
   let st = stills.get(id);

@@ -189,8 +189,8 @@ export function creatureLines(g: Game, c: Creature): string[] {
   if (traits.length) lines.push(`Traits: ${traits.join(', ')}`);
   // Who it was bred from, and how deep its line runs; anything not bred says nothing about it.
   if (c.pedigree) lines.push(pedigreeLine(c.pedigree), ...lineLines(c));
-  // "In young", as the Wildermon card says it: a vola does not carry a calf.
-  if (c.due > 0) lines.push(`In young · due in ${clockLeft(c.due - g.time)}`);
+  // "Pregnant", as the Wildermon card says it: a vola does not carry a calf.
+  if (c.due > 0) lines.push(`Pregnant · due in ${clockLeft(c.due - g.time)}`);
   return lines;
 }
 

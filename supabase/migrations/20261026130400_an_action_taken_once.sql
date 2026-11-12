@@ -2,7 +2,7 @@
 --
 -- A browser that loses the answer to a call does not know whether the island did the thing, and a call
 -- sent again after a dropped connection could do it twice: two gathers for one click, a trade accepted
--- twice. So every call the browser makes to a door carries a key of its own, in the `x-wurm-once` header
+-- twice. So every call the browser makes to a door carries a key of its own, in the `x-wildermon-once` header
 -- (`src/net/supabase.ts`), and a retry carries the same key. The island keeps the keys it has taken, by
 -- account, for `private.once_window()`; a key it has already taken is refused with SQLSTATE `WK409` and
 -- the whole call rolls back, and the browser says nothing about it.
@@ -28,7 +28,7 @@ revoke all on table private.once_key from public, anon, authenticated;
 /** How long a key is kept: a retry comes within seconds, and this is ten minutes. */
 create or replace function private.once_window() returns interval language sql immutable as $fn$ select interval '10 minutes' $fn$;
 /** The header a key comes in, as PostgREST hands headers on (lower case). */
-create or replace function private.once_header() returns text language sql immutable as $fn$ select 'x-wurm-once'::text $fn$;
+create or replace function private.once_header() returns text language sql immutable as $fn$ select 'x-wildermon-once'::text $fn$;
 
 /**
  * This call's key, taken: through, or refused when the same account already took it inside the window.
@@ -48,13 +48,13 @@ begin
     raise exception 'Bad request: % is not a key.', private.once_header() using errcode = '22023';
   end if;
   v_key := v_k::uuid;
-  if current_setting('wurm.once', true) = v_key::text then return; end if;
+  if current_setting('wildermon.once', true) = v_key::text then return; end if;
   insert into private.once_key as o (uid, key, at) values (v_uid, v_key, now())
   on conflict (uid, key) do update set at = now() where o.at < now() - private.once_window();
   if not found then
     raise exception 'once: already taken' using errcode = 'WK409';
   end if;
-  perform set_config('wurm.once', v_key::text, true);
+  perform set_config('wildermon.once', v_key::text, true);
 end $fn$;
 
 /** Keys past the window, let go. On the clock every five minutes; returns how many. */

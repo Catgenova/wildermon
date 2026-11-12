@@ -12,7 +12,7 @@ set -e
 HERE="$(cd "$(dirname "$0")" && pwd)"
 PGHOST=${PGHOST:-/var/run/postgresql}
 PGPORT=${PGPORT:-5433}
-PGUSER=${PGUSER:-wurm}
+PGUSER=${PGUSER:-wildermon}
 PGDATABASE=${PGDATABASE:-postgres}
 export PGHOST PGPORT PGUSER PGDATABASE PGPASSWORD
 PSQL="psql -v ON_ERROR_STOP=1 -q"

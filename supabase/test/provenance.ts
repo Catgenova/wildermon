@@ -34,7 +34,7 @@ const ENV = {
   ...process.env,
   PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
   PGPORT: process.env.PGPORT ?? '5433',
-  PGUSER: process.env.PGUSER ?? 'wurm',
+  PGUSER: process.env.PGUSER ?? 'wildermon',
   PGDATABASE: process.env.PGDATABASE ?? 'postgres',
 };
 
@@ -138,8 +138,18 @@ check('a craft: what it makes is craft, under the action, and the crafter\'s',
   planks.length > 0 && planks.every((p) => p === `craft|act:make_planks|${INES}`), planks.join(' '));
 
 at = top();
-psql(`update player set body_at = now(), x = 9.5, y = 9.5 where world_id = ${W_} and uid = '${INES}';
-${go(INES, 'forage', `'{"kind":"tile","x":9,"y":9}'`)}`);
+/*
+ * A forage can find nothing: each pass is empty one time in five (`forage_empty`) and asks a skill roll, and a live run
+ * came up with nothing found. So this go is one that cannot: a Naturalist's Sure Find (no pass empty by chance) and a
+ * Foreknow's go (no roll in it fails; `settle` spends it), both put back after.
+ */
+const lit = (s: string): string => (s === '' ? 'null' : `'${s.replace(/'/g, "''")}'`);
+const [mulWas, foreWas] = psql(`select coalesce(class_mul::text, '') || '|' || foreknow from player where world_id = ${W_} and uid = '${INES}';`).split('|');
+psql(`update player set body_at = now(), x = 9.5, y = 9.5, foreknow = 1,
+         class_mul = jsonb_set(coalesce(class_mul, '{}'::jsonb), '{fx}', coalesce(class_mul->'fx', '{}'::jsonb) || '{"empty:forage": 0}')
+ where world_id = ${W_} and uid = '${INES}';
+${go(INES, 'forage', `'{"kind":"tile","x":9,"y":9}'`)}
+update player set foreknow = ${foreWas}, class_mul = ${lit(mulWas)}::jsonb where world_id = ${W_} and uid = '${INES}';`);
 const foraged = origins('true', at);
 check('a forage: what it finds is gather, under the action, and the forager\'s',
   foraged.length > 0 && foraged.every((p) => p === `gather|act:forage|${INES}`), foraged.join(' '));
@@ -172,7 +182,7 @@ const part = origins(`def = 'plank'`, at);
 check('a part split off a stack is the stack\'s', part.length === 1 && part[0] === `craft|act:make_planks|${INES}`, part.join(' '));
 
 at = top();
-psql(`select set_config('wurm.source', 'migration', false) \\g /dev/null
+psql(`select set_config('wildermon.source', 'migration', false) \\g /dev/null
 insert into item (world_id, holder, holder_uid, def, ql, count) values (${W_}, 'player', '${JOSS}', 'nail', 50, 3);`);
 check('a thing a migration writes is the migration\'s', origins(`def = 'nail'`, at).join(' ') === 'migration|migration|-',
   origins(`def = 'nail'`, at).join(' '));
@@ -195,8 +205,8 @@ check('each door is the kind it is', kinds === KINDS.map(([, k]) => k).join(' ')
 /* ---- the sweep ------------------------------------------------------------------ */
 console.log('--- the sweep');
 // Each impossible kind, with the checks that refuse them taken off, beside good ones; rolled back.
-const MIG = `select set_config('wurm.source', 'migration', true) \\g /dev/null`;
-const PLAIN = `select set_config('wurm.source', '', true) \\g /dev/null`;
+const MIG = `select set_config('wildermon.source', 'migration', true) \\g /dev/null`;
+const PLAIN = `select set_config('wildermon.source', '', true) \\g /dev/null`;
 const swept = psql(`
 begin;
 alter table item drop constraint item_ql_check, drop constraint item_count_check, drop constraint item_dmg_check;
@@ -321,15 +331,15 @@ const goes = (who: string, act: string, n: number, gap: number): string => `
 do $$
 declare i int; t0 double precision := extract(epoch from now());
 begin
-  perform set_config('wurm.source', 'act:${act}', true);
-  perform set_config('wurm.uid', '${who}', true);
+  perform set_config('wildermon.source', 'act:${act}', true);
+  perform set_config('wildermon.uid', '${who}', true);
   for i in 1..${n} loop
-    perform set_config('wurm.go_at', (t0 - ${n * gap} + i * ${gap})::text, true);
+    perform set_config('wildermon.go_at', (t0 - ${n * gap} + i * ${gap})::text, true);
     perform give(${W_}, '${who}', 'sprout', 1, 30);
   end loop;
-  perform set_config('wurm.source', '', true);
-  perform set_config('wurm.uid', '', true);
-  perform set_config('wurm.go_at', '', true);
+  perform set_config('wildermon.source', '', true);
+  perform set_config('wildermon.uid', '', true);
+  perform set_config('wildermon.go_at', '', true);
 end $$;`;
 const floor = Number(psql(`select private.watch_go_floor('forage');`));
 psql(`delete from private.watch_made_new where world_id = ${W_};

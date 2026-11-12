@@ -120,16 +120,22 @@ export const drinkable = (liquid: LiquidKind | undefined): boolean => liquid !==
 type FurnitureTarget = Extract<Target, { kind: 'furniture' }>;
 const pieceOf = (g: Game, t: Target): PlacedFurniture | undefined => (t.kind === 'furniture' ? g.furniture.get((t as FurnitureTarget).id) : undefined);
 
-/** Barrels near enough to tip something into. */
+/**
+ * Barrels near enough to tip something into: a barrel, not a well or a fountain. Asked for: "Brewing should not be an
+ * option directly in wells." Water is drawn from a well into a barrel and brewed there, as the brewing worker always did.
+ */
+export const BREW_NOT_WELL = 'Not a barrel.';
 export function brewBarrel(g: Game, t: Target): PlacedFurniture | undefined {
   const f = pieceOf(g, t);
-  return f && holdsLiquid(f) ? f : undefined;
+  return f && holdsLiquid(f) && !isWell(f) ? f : undefined;
 }
 
 /** Why this brew cannot be set going in this barrel, or null. */
 export function brewReason(g: Game, f: PlacedFurniture | undefined, brew: BrewDef): string | null {
   if (!f) return 'Stand at a barrel.';
   if (!holdsLiquid(f)) return 'That holds no liquid.';
+  // Not in a well or a fountain: in a barrel (`brewBarrel`). The island's `brew_reason`.
+  if (isWell(f)) return BREW_NOT_WELL;
   if (isWorking(f)) return 'Already brewing.';
   if (f.liquid !== 'water') return `Needs water: empty the ${furnitureName(f).toLowerCase()} and fill it from a well.`;
   if (litresIn(f) < brew.litres) return `Need ${brew.litres} litres of water; has ${litresIn(f).toFixed(0)}.`;
@@ -151,7 +157,8 @@ export const BREWING_ACTIONS: ActionDef[] = [
     baseTime: 10,
     applies: (t, g) => brewBarrel(g, t) !== undefined,
     check: (t, g) => {
-      const f = brewBarrel(g, t);
+      // The piece itself, a well too, so a well is told it is not a barrel, as the island tells it.
+      const f = pieceOf(g, t);
       const brew = t.kind === 'furniture' && t.brew ? BREW_BY_ID.get(t.brew as LiquidKind) : undefined;
       if (!brew) return 'Choose what to brew.';
       return brewReason(g, f, brew);

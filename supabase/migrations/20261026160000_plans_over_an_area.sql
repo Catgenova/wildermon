@@ -58,13 +58,13 @@ $fn$;
  * `rpc_plan_area` or `rpc_plan_undo` has it so. Every other job, and these anywhere else, reach as they always did.
  */
 create or replace function private.area_reach(p_action text) returns boolean language sql stable as $fn$
-  select coalesce(current_setting('wurm.area', true), '') = 'on'
+  select coalesce(current_setting('wildermon.area', true), '') = 'on'
      and (private.area_plan_job(p_action) or p_action in ('remove_wall', 'remove_floor', 'remove_from_plan'))
 $fn$;
 
 /** Whether the lines a job tells are held back just now: each piece of a plan over an area, said once for the lot. */
 create or replace function private.hushed() returns boolean language sql stable as $fn$
-  select coalesce(current_setting('wurm.hush', true), '') = 'on'
+  select coalesce(current_setting('wildermon.hush', true), '') = 'on'
 $fn$;
 
 /** A body's last plan: the pieces it planned in one transaction, to take back within `plan_undo_seconds()`. */
@@ -119,19 +119,19 @@ language plpgsql as $fn$
 declare p player;
 begin
   select * into p from player where world_id = p_world and uid = p_uid;
-  perform set_config('wurm.pk', coalesce(p.class_mul->'fx', '{}'::jsonb)::text, true);
-  perform set_config('wurm.pk_act', p_action, true);
-  perform set_config('wurm.floor', floor_said(p_world, p.level, p.x, p.y), true);
-  perform set_config('wurm.source', 'act:' || p_action, true);
-  perform set_config('wurm.uid', p_uid::text, true);
-  perform set_config('wurm.go_at', extract(epoch from now())::text, true);
+  perform set_config('wildermon.pk', coalesce(p.class_mul->'fx', '{}'::jsonb)::text, true);
+  perform set_config('wildermon.pk_act', p_action, true);
+  perform set_config('wildermon.floor', floor_said(p_world, p.level, p.x, p.y), true);
+  perform set_config('wildermon.source', 'act:' || p_action, true);
+  perform set_config('wildermon.uid', p_uid::text, true);
+  perform set_config('wildermon.go_at', extract(epoch from now())::text, true);
   perform act_perform(p_world, p_uid, p_action, p_target);
-  perform set_config('wurm.source', '', true);
-  perform set_config('wurm.uid', '', true);
-  perform set_config('wurm.go_at', '', true);
-  perform set_config('wurm.pk', '', true);
-  perform set_config('wurm.pk_act', '', true);
-  perform set_config('wurm.floor', '', true);
+  perform set_config('wildermon.source', '', true);
+  perform set_config('wildermon.uid', '', true);
+  perform set_config('wildermon.go_at', '', true);
+  perform set_config('wildermon.pk', '', true);
+  perform set_config('wildermon.pk_act', '', true);
+  perform set_config('wildermon.floor', '', true);
 end $fn$;
 
 /** What a count of a plan's pieces is called: "12 walls", "1 roof tile". */
@@ -180,22 +180,22 @@ begin
     perform tell(p_world, me, why, 'error');
     return jsonb_build_object('planned', 0, 'why', why);
   end if;
-  v_was_area := coalesce(current_setting('wurm.area', true), '');
-  v_was_hush := coalesce(current_setting('wurm.hush', true), '');
-  perform set_config('wurm.area', 'on', true);
+  v_was_area := coalesce(current_setting('wildermon.area', true), '');
+  v_was_hush := coalesce(current_setting('wildermon.hush', true), '');
+  perform set_config('wildermon.area', 'on', true);
   for a in select e from jsonb_array_elements(p_asks) e loop
     why := act_refusal(p_world, me, a->>'action', a->'target');
     if why is null then
-      perform set_config('wurm.hush', 'on', true);
+      perform set_config('wildermon.hush', 'on', true);
       perform private.area_go(p_world, me, a->>'action', a->'target');
-      perform set_config('wurm.hush', v_was_hush, true);
+      perform set_config('wildermon.hush', v_was_hush, true);
       v_done := v_done + 1;
     else
       v_refused := v_refused + 1;
       first_why := coalesce(first_why, why);
     end if;
   end loop;
-  perform set_config('wurm.area', v_was_area, true);
+  perform set_config('wildermon.area', v_was_area, true);
   -- The wind of one plan for the lot: a plan over an area is not refused half way for the wind it would take.
   if v_done > 0 then perform spend_wind(p_world, me, p_asks->0->>'action'); end if;
   v_line := case when v_done > 0 then 'Planned: ' || private.plan_count_word(p_asks->0->>'action', p_asks->0->'target', v_done) || '.' end;
@@ -227,24 +227,24 @@ begin
     return jsonb_build_object('removed', 0, 'why', why);
   end if;
   delete from private.plan_undo where world_id = p_world and uid = me;
-  v_was_area := coalesce(current_setting('wurm.area', true), '');
-  v_was_hush := coalesce(current_setting('wurm.hush', true), '');
-  perform set_config('wurm.area', 'on', true);
+  v_was_area := coalesce(current_setting('wildermon.area', true), '');
+  v_was_hush := coalesce(current_setting('wildermon.hush', true), '');
+  perform set_config('wildermon.area', 'on', true);
   for a in select e from jsonb_array_elements(u.pieces) with ordinality t(e, o) order by o desc loop
     if not private.plan_still_mine(p_world, me, a->>'action', a->'target') then continue; end if;
     v_job := private.undo_job(a->>'action');
     v_t := (a->'target') - 'material' - 'wallType' - 'roofShape' - 'name';
     why := act_refusal(p_world, me, v_job, v_t);
     if why is null then
-      perform set_config('wurm.hush', 'on', true);
+      perform set_config('wildermon.hush', 'on', true);
       perform private.area_go(p_world, me, v_job, v_t);
-      perform set_config('wurm.hush', v_was_hush, true);
+      perform set_config('wildermon.hush', v_was_hush, true);
       v_done := v_done + 1;
     else
       first_why := coalesce(first_why, why);
     end if;
   end loop;
-  perform set_config('wurm.area', v_was_area, true);
+  perform set_config('wildermon.area', v_was_area, true);
   if v_done > 0 then perform spend_wind(p_world, me, private.undo_job(u.pieces->0->>'action')); end if;
   -- What taking them down kept back said with it: the stone a Mason's Salvage saves (`remove_wall`).
   v_line := case when v_done > 0 then 'Undone: ' || private.plan_count_word(u.pieces->0->>'action', u.pieces->0->'target', v_done) || '.'

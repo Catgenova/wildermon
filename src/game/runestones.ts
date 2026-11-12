@@ -343,6 +343,7 @@ const telestoneOf = (g: Game, t: Target) => {
  * `telestone_refusal`, word for word and in the same order.
  */
 export function telestoneRefusal(g: Game, t: Target): string | null {
+  if (t.kind === 'item' && t.stone === BACK) return telestoneBackRefusal(g, t);
   const it = telestoneOf(g, t);
   if (!it || t.kind !== 'item') return TELESTONE_SAID.item;
   if (!hasRunestones(g.world.w)) return TELESTONE_SAID.nowhere;
@@ -366,6 +367,38 @@ export function telestoneRefusal(g: Game, t: Target): string | null {
   return null;
 }
 
+/** The journey back to where the last journey left from: the journey's action, its target's stone this. */
+export const BACK = 'back';
+
+/** What the island says of a journey back (`telestone_back_refusal`, `perform_telestone`). */
+export const TELESTONE_BACK_SAID = {
+  none: 'No journey by Telestone to travel back from.',
+  noRoom: 'There is no free ground where you left from to arrive on.',
+  done: 'Travelled back to where you left from.',
+} as const;
+
+/**
+ * Why a journey back will not be made, or null when it will: the island's
+ * `telestone_back_refusal`, word for word and in the same order. Once a
+ * journey back, from anywhere, with no wait and no reach; where it goes the
+ * island keeps, and a refreshed page leaves the asking to it.
+ */
+export function telestoneBackRefusal(g: Game, t: Target): string | null {
+  const it = telestoneOf(g, t);
+  if (!it || t.kind !== 'item') return TELESTONE_SAID.item;
+  if (g.player.telestoneBack === null) return TELESTONE_BACK_SAID.none;
+  if (g.action && g.action.def.id !== TRAVEL) return TELESTONE_SAID.busy;
+  if (g.inAFight()) return TELESTONE_SAID.fight;
+  if (g.driving() || [...g.furniture.values()].some((f) => f.hitched)) return TELESTONE_SAID.driving;
+  if (g.aboardShip()) return TELESTONE_SAID.aboard;
+  if (g.mounted()) return TELESTONE_SAID.mounted;
+  const pet = g.companion();
+  if (pet) return companionSaid(pet.name);
+  if (g.player.swimming) return TELESTONE_SAID.swimming;
+  if (g.stalled()) return TELESTONE_SAID.heavy;
+  return null;
+}
+
 /** The journey, as an action on the Telestone in your pack, with the stone in the target (`stone`). */
 export const TRAVEL = 'travel_runestone';
 
@@ -386,11 +419,20 @@ export const TELESTONE_ACTIONS: ActionDef[] = [
     applies: (t, g) => !!telestoneOf(g, t),
     check: (t, g) => telestoneRefusal(g, t),
     perform: (t, g) => {
+      // The journey back: where the island said the last journey left from, if it has said (it moves the body anyway).
+      if (t.kind === 'item' && t.stone === BACK) {
+        const b = g.player.telestoneBack;
+        if (b) g.putBody(b.x, b.y, b.level);
+        g.player.telestoneBack = null;
+        g.logMsg(TELESTONE_BACK_SAID.done, 'event');
+        return;
+      }
       const it = telestoneOf(g, t);
       const s = t.kind === 'item' ? RUNESTONE_BY_ID.get(t.stone ?? '') : undefined;
       const land = s ? landingTile(g, s) : null;
       if (!it || !s || !land) return;
       const rest = telestoneRest(it.ql);
+      g.player.telestoneBack = { x: g.player.x, y: g.player.y, level: g.player.level };
       g.putBody(land.x + 0.5, land.y + 0.5, 0);
       g.player.usedAt[TELESTONE_KEY] = g.wallNow() + rest;
       g.note('telestone');

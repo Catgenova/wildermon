@@ -99,7 +99,7 @@ function session() {
   const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
   const exp = Math.floor(Date.now() / 1000) + 365 * 86400;
   const token = `${b64({ alg: 'HS256', typ: 'JWT' })}.${b64({ sub: UID, role: 'authenticated', aud: 'authenticated', exp, session_id: 's' })}.x`;
-  const user = { id: UID, aud: 'authenticated', role: 'authenticated', email: 'tester@wurm.test', app_metadata: { provider: 'email' }, user_metadata: {}, created_at: '2026-01-01T00:00:00Z' };
+  const user = { id: UID, aud: 'authenticated', role: 'authenticated', email: 'tester@wildermon.test', app_metadata: { provider: 'email' }, user_metadata: {}, created_at: '2026-01-01T00:00:00Z' };
   return { access_token: token, token_type: 'bearer', expires_in: 365 * 86400, expires_at: exp, refresh_token: 'r', user };
 }
 
@@ -166,7 +166,7 @@ async function openGame(browser, isl, { viewport = { width: 1280, height: 800 },
   page.on('pageerror', (e) => thrown.push(e.message));
   const auth = session();
   await page.addInitScript((s) => {
-    try { localStorage.setItem('wurm.auth', JSON.stringify(s)); } catch { /* none */ }
+    try { localStorage.setItem('wildermon.auth', JSON.stringify(s)); } catch { /* none */ }
     // What the boot card showed, as it showed it, and when its first frame came.
     const seen = [];
     Object.defineProperty(window, '__boot', { value: { seen, gone: null, firstFrame: null } });
@@ -239,7 +239,7 @@ async function ashore(browser, base) {
   await page.goto(`${base}/index.html`, { waitUntil: 'commit' });
   await page.waitForFunction(() => window.__boot.firstFrame !== null, null, { timeout: 60_000 });
   const boot = await page.evaluate(() => ({
-    ...window.__boot, phases: window.wurm?.boot ?? null,
+    ...window.__boot, phases: window.wildermon?.boot ?? null,
     // When the last of the page's scripts had come in, and when the first word reached the boot card.
     scripts: Math.max(...performance.getEntriesByType('resource').filter((e) => /\.js(\?|$)/.test(e.name)).map((e) => e.responseEnd)),
   }));
@@ -250,18 +250,18 @@ async function ashore(browser, base) {
 async function again(page) {
   await page.reload({ waitUntil: 'commit' });
   await page.waitForFunction(() => window.__boot.firstFrame !== null, null, { timeout: 60_000 });
-  return page.evaluate(() => ({ ...window.__boot, phases: window.wurm?.boot ?? null }));
+  return page.evaluate(() => ({ ...window.__boot, phases: window.wildermon?.boot ?? null }));
 }
 
 /** Cut the network (or only the socket), change a tile, bring it back, and time it to playable. */
 async function drop(page, isl, kind) {
-  await page.waitForFunction(() => window.wurm?.island && !window.wurm.island.deaf(), null, { timeout: 30_000 });
+  await page.waitForFunction(() => window.wildermon?.island && !window.wildermon.island.deaf(), null, { timeout: 30_000 });
   await page.waitForTimeout(1500);
   const joinsBefore = isl.calls.get('rpc_join') ?? 0;
   const at = await page.evaluate(() => {
-    const p = window.wurm.game.player;
+    const p = window.wildermon.game.player;
     const x = Math.floor(p.x) + 2, y = Math.floor(p.y);
-    return { x, y, tile: window.wurm.game.world.getTile(x, y) };
+    return { x, y, tile: window.wildermon.game.world.getTile(x, y) };
   });
   const tile = at.tile === 1 ? 4 : 1;
   if (kind === 'network') {
@@ -283,8 +283,8 @@ async function drop(page, isl, kind) {
     const tick = () => {
       const t = performance.now() - from;
       const banner = document.querySelector('.reconnect-banner');
-      if (got.joined === undefined && !window.wurm.island.deaf()) got.joined = t;
-      if (got.laid === undefined && window.wurm.game.world.getTile(x, y) === tile) got.laid = t;
+      if (got.joined === undefined && !window.wildermon.island.deaf()) got.joined = t;
+      if (got.laid === undefined && window.wildermon.game.world.getTile(x, y) === tile) got.laid = t;
       if (got.bannerSeen === undefined && banner && !banner.hidden) got.bannerSeen = t;
       const quiet = !banner || banner.hidden;
       if (got.joined !== undefined && got.laid !== undefined && quiet) { got.playable = t; done(got); return; }

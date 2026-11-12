@@ -1,9 +1,9 @@
 # Wildermon
 
-A browser remake of Wurm Online as a 2.5D isometric game. The whole page is one
+A multiplayer 2.5D isometric island game in the browser. The whole page is one
 canvas; every piece of UI is an HTML overlay floating above it.
 
-**Play it: <https://catgenova.github.io/Wurm/>**
+**Play it: <https://catgenova.github.io/wildermon/>**
 
 No runtime dependencies: rendering is Canvas 2D, terrain and sprites are
 procedural, the UI is plain DOM. Vite + TypeScript for the toolchain.
@@ -23,8 +23,8 @@ the save.
 
 `account.html` sets up a username and a password, and nothing else — there is
 no e-mail address to give and nothing is ever sent to you. The username *is*
-the login (`alice` signs in as `alice@players.wurm.invalid`, a domain RFC 2606
-reserves so that it can never reach anybody), which means signing up is itself
+the login (`alice` signs in as `alice@catgenova.github.io`, the host the game
+is served from, which takes no mail, so the address reaches nobody), which means signing up is itself
 the reservation and a name cannot be forged: the island reads it back out of
 the address rather than taking a client's word. Eight characters at the least,
 and the password is checked against the Pwned Passwords list by k-anonymity —
@@ -206,8 +206,8 @@ in world time.
 
 ## What is in the game
 
-- **Terrain like Wurm's.** A 1024×1024 tile island — a million tiles, about
-  four kilometres a side at Wurm's four metres to the tile — whose height map
+- **Terrain.** A 1024×1024 tile island — a million tiles, about
+  four kilometres a side at four metres to the tile — whose height map
   lives on tile corners, so tiles are sloped quads rather than flat stamps. Heights are in
   "dirt" units (one dig = one unit = 10 cm on a 4 m tile). Water sits at height
   zero and floods anything below it.
@@ -268,7 +268,7 @@ in world time.
   your own floor again; Page Up and Page Down do the same. A cutaway toggle
   (X) takes away the walls standing between you and the inside of a building
   while leaving the far walls in place.
-- **Building, Wurm style.** Plan on flat packed dirt with a mallet, extend the
+- **Building.** Plan on flat packed dirt with a mallet, extend the
   footprint, plan walls on tile borders (solid, window, bay, door, double door)
   in twelve materials, feed them materials to build, lay floors with the paving
   skill, and plan another storey only once every wall below is built. Walls
@@ -1238,6 +1238,3 @@ first, then runs the timer; moving interrupts it.
 - Creatures and combat.
 - Multi-tile gates wide enough to take a wagon through.
 - Multiplayer server and persistence beyond the browser.
-
-Wurm Online is a trademark of Code Club AB. This is a fan project and is not
-affiliated with them.

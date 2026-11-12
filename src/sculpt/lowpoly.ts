@@ -8,7 +8,7 @@
  * own axes, the thumbs closed toward the palm), the helpers driven from those, and the body stood on its lowest sole.
  * Shaded as the review renders shade it: one colour a polygon, from its normal in view space, by the light fitted for
  * that body (`tools/sculpt/lowlight-<who>.json`, written by `tools/sculpt/lowlight.py`), in the look's skin. A hairstyle
- * made for the low-poly bodies (`tools/sculpt/lowhair.mjs`, `./assets/lowhair.json`: so far 'swept') is drawn with the
+ * made for the low-poly bodies (`tools/sculpt/lowhair.mjs`, `./assets/lowhair.json`: 'swept', 'braid', 'bob') is drawn with the
  * body, on the head bone, in three tones of the look's hair colour (its valleys a fourth, darker), the body's scalp
  * under it shaved; any other style draws no hair yet, and none is drawn while the hood is up (`hairShown`). The
  * undergarment (`tools/sculpt/lowunder.mjs`: his briefs; her briefs and band) is the body's own polygons painted, their
@@ -37,7 +37,17 @@
  * clip's blow, the blade's slash trail (`./anim/trail.ts`), lit gold when it is enchanted. Wielded but not in hand (no
  * clip gripping it), it is carried on the back: laid at rest on its back socket (`sockets.<who>.back`, by
  * `tools/sculpt/lowgear.mjs` backSocketOf: the hilt behind the right shoulder, the point toward the left hip, its flat
- * on the shawl's cape) and skinned wholly to the upper back (spine_03).
+ * on the shawl's cape) and skinned wholly to the upper back (spine_03). The maul is drawn the same way in both hands as
+ * the Runestone Warhammer (`assets/warhammer.json`, `tools/sculpt/gear/warhammer.mjs`), its striking ends kept off the
+ * ground (`Held.ends`, `Held.rest`), its head's slash trail over the blow (`PropAsset.trail`), and carried on the back
+ * head up (its back socket: the head behind the right shoulder blade, the haft toward the left hip, clear of every
+ * garment set). Mining (the jobs swung overhead, `./anim` SWING_TOOL) draws the Runestone Pickaxe
+ * (`assets/pickaxe.json`, `tools/sculpt/gear/pickaxe.mjs`) in both hands the same way, with no trail.
+ *
+ * Each prop's head or blade (its stone, `PropMaterial.metal`) is drawn in the metal it was smithed from: the weapon's
+ * material, or for mining the pose's tool's (`FigurePose.tool`), in the flat figure's colours for that metal
+ * (`metalShades`; iron's for none), lit as metal (`Material.metal`: `./gl.ts` METAL_CURVE, METAL_SHEEN); its gold, wood,
+ * leather, collars, emblems, pommel and glow keep their own colours (`metalTint`).
  */
 import MALE_ASSET from './assets/lowmale.json';
 import FEMALE_ASSET from './assets/lowfemale.json';
@@ -76,10 +86,23 @@ import FEMALE_LEATHER_SHAWL_OVER from './assets/lowleathershawlover-female.json'
 import MALE_LEATHER_CHEST from './assets/lowleatherchest-male.json';
 import FEMALE_LEATHER_CHEST from './assets/lowleatherchest-female.json';
 import LONG_SWORD from './assets/long_sword.json';
+import WARHAMMER from './assets/warhammer.json';
+import PICKAXE from './assets/pickaxe.json';
+// the Runecut hand tools, struck with at the bench (tools/sculpt/gear/hammer.mjs, mallet.mjs, chisel.mjs, hatchet.mjs, butchering_knife.mjs)
+import HAMMER from './assets/hammer.json';
+import MALLET from './assets/mallet.json';
+import CHISEL from './assets/chisel.json';
+import HATCHET from './assets/hatchet.json';
+import BUTCHERING_KNIFE from './assets/butchering_knife.json';
+import AWL from './assets/awl.json';
+import CARVING_KNIFE from './assets/carving_knife.json';
+import TROWEL from './assets/trowel.json';
+import FILE from './assets/file.json';
+import WHETSTONE from './assets/whetstone.json';
 import HAIR_ASSET from './assets/lowhair.json';
 import MALE_LIGHT from '../../tools/sculpt/lowlight-male.json';
 import FEMALE_LIGHT from '../../tools/sculpt/lowlight-female.json';
-import { sculptRig, viewOf, type FigurePose, type Rig } from '../render/figure';
+import { metalShades, sculptRig, viewOf, type FigurePose, type GearPiece, type Rig } from '../render/figure';
 import { DEFAULT_LOOK, type Look } from '../game/look';
 import { STRIDE, type Baked } from './bake';
 import { M, bodyMaterials } from './models/body';
@@ -87,7 +110,8 @@ import { bonesOf, FEMALE, heightOf, MALE, REST_EXTRAS, relaxedIdle, type Bones, 
 import { humanProportions } from './human';
 import { SH_TERMS, type LowLight, type SculptDraw, type TrailDraw } from './gl';
 import type { Material } from './sdf';
-import { animate, clipFor, heldIn } from './anim';
+import { animate, clipFor, heldIn, SWING_TOOL, toolsIn } from './anim';
+import type { Side } from './anim/clip';
 import { wrap } from './anim/clip';
 import { slashTrail } from './anim/trail';
 import { skeleton, type AnimAsset, type Held, type Skeleton } from './anim/skeleton';
@@ -150,11 +174,49 @@ export interface GarmentAsset {
 interface Socket { bone: string; o: V; R: M3; curl?: Record<string, [number, number, number]> }
 interface PropAsset {
   id: string; length: number; verts: number[]; polys: Array<[number[], number]>; tris: number[]; glowFrom: number;
-  plain: Array<{ c: string; kind: number }>; enchanted: Array<{ c: string; kind: number }>;
+  mats: string[];
+  /** Its materials' colours and kinds (0 lit, 1 unlit, 2 glow), and those drawn in its metal (`metalTint`) their role in it. */
+  plain: PropMaterial[]; enchanted: PropMaterial[];
   grip: { lead: V; second: V; from?: number; to?: number };
   sockets: Record<'male' | 'female', Record<'l' | 'r', Socket> & { back?: Socket }>; scale: Record<'male' | 'female', number>;
+  /** Its points kept off the ground (its own frame), and how far its far end is let down onto it (`Held.ends`, `Held.rest`). */
+  ends?: V[]; rest?: number;
+  /** Where along it (its own y) its slash trail's inner edge is (`Held.inner`): a prop that leaves one other than the long sword. */
+  trail?: number;
+  /** A hand tool's: the hand it is held in (the chisel the left; the right where not given). */
+  hand?: 'l' | 'r';
+  /** A hand tool's point that meets the work, its own frame (the chisel's: its struck top), and its reach from the fist (grip.lead). */
+  contact?: V; reach?: number;
 }
+/**
+ * A prop's material: its colour and kind, and for the stone of a head or a blade, its role in the metal it is smithed
+ * from (`tools/sculpt/lowgear.mjs` metalMats): a face, or the bevel's lit edge.
+ */
+interface PropMaterial { c: string; kind: number; metal?: 'face' | 'edge' }
 const SWORD = LONG_SWORD as unknown as PropAsset;
+/**
+ * The props drawn in both hands, by the id of what is held (`heldIn`): the long sword, the maul as the Runestone
+ * Warhammer, and the pickaxe (`SWING_TOOL`) as the Runestone Pickaxe; and the hand tools a clip holds in one fist, by
+ * item id, each drawn in the metal and enchantment of the pose's tool (`FigurePose.tool`). One is drawn at a time, so all
+ * take the same materials (`PROP_MAT`).
+ */
+const PROPS: readonly PropAsset[] = [SWORD, { ...(WARHAMMER as unknown as PropAsset), id: 'maul' }, { ...(PICKAXE as unknown as PropAsset), id: SWING_TOOL },
+  // the hand tools by item id, each in one fist (`PropAsset.hand`), its working part in its metal (the mallet all wood)
+  HAMMER as unknown as PropAsset, MALLET as unknown as PropAsset, CHISEL as unknown as PropAsset, HATCHET as unknown as PropAsset, BUTCHERING_KNIFE as unknown as PropAsset,
+  // the hand tools held in one fist at the bench (tools/sculpt/gear/finetools.mjs): the awl, the carving knife, the trowel,
+  // the file and the whetstone, by item id; the knife's, the trowel's and the file's blades in their metal
+  AWL as unknown as PropAsset, CARVING_KNIFE as unknown as PropAsset, TROWEL as unknown as PropAsset, FILE as unknown as PropAsset, WHETSTONE as unknown as PropAsset,
+];
+const PROP_OF = new Map(PROPS.map((p) => [p.id, p]));
+/**
+ * The hand tools a clip draws in one hand each (`./anim` Clip.tools, `toolsIn`), by item id: the props that meet the
+ * work (`PropAsset.contact`). Each laid at rest on its hand's socket and skinned wholly to that hand, its fist closed on it
+ * as its socket says, drawn in the place of its hand's materials (`toolMat`).
+ */
+const TOOL_PROPS: readonly PropAsset[] = PROPS.filter((p) => p.contact);
+const TOOL_OF = new Map(TOOL_PROPS.map((p) => [p.id, p]));
+/** Whether a prop leaves a slash trail in its clip's blow (`lowTrail`): the long sword, and one that says where its trail's inner edge is. */
+const trails = (p: PropAsset): boolean => p === SWORD || p.trail !== undefined;
 /** The sword's points over the last quarter of its blade (its glow's left out), its own frame: what of it reaches lowest. */
 const ENDS: V[] = (() => {
   const used = new Set<number>(), from = SWORD.grip.lead[1] + 0.75 * (SWORD.length - SWORD.grip.lead[1]), out: V[] = [];
@@ -338,13 +400,22 @@ const looksOf = (g: GarmentAsset, look: 'plain' | 'enchanted'): Array<{ c: strin
  * the renderer's materials.
  */
 const swordMat = (): number => GARMENT_MAT + GARMENT_COLOURS.length;
+/** Where the prop drawn takes its materials (`PROPS`): the sword's place, whichever it is. */
+const PROP_MAT = swordMat;
+/**
+ * The most materials a prop drawn takes: the prop's place (`PROP_MAT`) holds the one gripped in both hands or carried on
+ * the back, and each hand's tool (`TOOL_PROPS`, one in a hand at a time) has a place of this many after it.
+ */
+const PROP_SLOTS = 19;
+/** Where the tool in a hand takes its materials: the right's place after the prop's, the left's after that. */
+const toolMat = (side: Side): number => PROP_MAT() + PROP_SLOTS * (side === 'r' ? 1 : 2);
 
 /**
  * One body: its asset, the figure's proportions it is posed with, its height as a share of the base man's, and the
  * garments it can wear (their own bones posed with the body's always, each garment's after the one before; each drawn
  * when the bake is asked for with it worn), and its hairstyles.
  */
-function lowBody(A: Asset, P: Proportions, share: number, garments: readonly GarmentAsset[], hairs: Record<string, HairAsset>): { baked: (worn: readonly boolean[], sword?: 'hand' | 'back', style?: string, lit?: readonly boolean[], drop?: readonly boolean[]) => Baked; bones: (pose: FigurePose, worn?: readonly boolean[]) => Float32Array; shapes: () => number[]; trail: (pose: FigurePose, lit: boolean) => TrailDraw | undefined; skeleton: Skeleton; held: Held; figure: (pose: FigurePose) => Array<M3 | undefined> } {
+function lowBody(A: Asset, P: Proportions, share: number, garments: readonly GarmentAsset[], hairs: Record<string, HairAsset>): { baked: (worn: readonly boolean[], sword?: 'hand' | 'back', style?: string, lit?: readonly boolean[], drop?: readonly boolean[], prop?: string, tools?: Partial<Record<Side, string>>, up?: Partial<Record<Side, number>>) => Baked; bones: (pose: FigurePose, worn?: readonly boolean[], over?: Record<string, [number, number, number]>) => Float32Array; shapes: () => number[]; trail: (pose: FigurePose, lit: boolean) => TrailDraw | undefined; skeleton: Skeleton; held: Held; heldOf: (id: string) => Held | undefined; toolHeld: (id: string) => Held | undefined; figure: (pose: FigurePose) => Array<M3 | undefined> } {
   const BONES = A.bones;
   const AT = new Map(BONES.map((b, i) => [b.name, i]));
   for (const g of garments) if (g.base !== BONES.length) throw new Error(`garment for ${g.base} bones on a body of ${BONES.length}`);
@@ -383,6 +454,10 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
   /** The sword as this body holds it: its sockets, its grip and its point along it, its scale. */
   const WHO = (A as unknown as { who?: string }).who === 'female' ? 'female' : 'male';
   const HELD: Held = { sockets: SWORD.sockets[WHO], lead: SWORD.grip.lead[1], second: secondOn(SWORD, WHO), tip: SWORD.length, ends: ENDS, scale: SWORD.scale[WHO] };
+  /** Each prop as this body holds it (the sword's above), by the weapon's id. */
+  /** Each hand tool as this body holds it (its sockets, its scale, where it meets the work), by id. */
+  const TOOL_HELD = new Map<string, Held>(TOOL_PROPS.map((p) => [p.id, { sockets: p.sockets[WHO], lead: p.grip.lead[1], second: p.grip.lead[1], tip: p.length, scale: p.scale[WHO], contact: p.contact }]));
+  const HELDS = new Map<string, Held>(PROPS.map((p) => [p.id, p === SWORD ? HELD : { sockets: p.sockets[WHO], lead: p.grip.lead[1], second: secondOn(p, WHO), tip: p.length, ends: p.ends, rest: p.rest, scale: p.scale[WHO], ...(p.trail !== undefined ? { inner: p.trail } : {}) }]));
 
   /** Each bone's world rotation and head for a local pose (bone index -> 3x3), the helpers driven, as lowrig.mjs posed(). */
   function posed(local: Array<M3 | undefined>, move: V = [0, 0, 0]): Frame[] {
@@ -488,9 +563,9 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
    * (`M.hairCut`, three tones; in a valley `M.hairValley` to `M.hairValley4`, its valley's step), the body's shaved
    * polygons the scalp's (`M.hairUnder`).
    */
-  function lowBaked(worn: readonly boolean[], sword?: 'hand' | 'back', style = '', lit: readonly boolean[] = [], drop: readonly boolean[] = []): Baked {
+  function lowBaked(worn: readonly boolean[], sword?: 'hand' | 'back', style = '', lit: readonly boolean[] = [], drop: readonly boolean[] = [], prop = SWORD.id, tools: Partial<Record<Side, string>> = {}, up: Partial<Record<Side, number>> = {}): Baked {
     const hair = hairs[style];
-    const key = `${garments.map((_, k) => (worn[k] ? (lit[k] ? 2 : 1) + (drop[k] ? 2 : 0) : 0)).join('')}|${sword ?? ''}|${hair ? style : ''}`, had = BAKED.get(key);
+    const key = `${garments.map((_, k) => (worn[k] ? (lit[k] ? 2 : 1) + (drop[k] ? 2 : 0) : 0)).join('')}|${sword ? `${sword}:${prop}` : ''}|${hair ? style : ''}|${tools.l ?? ''}:${tools.r ?? ''}:${up.l ?? 0}:${up.r ?? 0}`, had = BAKED.get(key);
     if (had) return had;
     const t0 = performance.now();
     const verts: number[] = [], tris: number[] = [], faceSkin: number[] = [];
@@ -575,15 +650,28 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
       });
       shapes = { from, count: verts.length / STRIDE - from, shapes: SH.length, data: Float32Array.from(data) };
     });
-    if (sword) {
+    const PR = PROP_OF.get(prop);
+    if (sword && PR) {
       // laid at rest on the right hand's socket, all of it on that hand, or on the back's, all of it on the upper back;
       // its glow's polygons left out
-      const so = (sword === 'back' ? SWORD.sockets[WHO].back : undefined) ?? SWORD.sockets[WHO].r, hand = AT.get(so.bone) as number, k = 1 / SWORD.scale[WHO], g = SWORD.grip.lead, V3s: number[] = [];
-      for (let i = 0; i < SWORD.verts.length; i += 3) V3s.push(...add(so.o, mv(so.R, [(SWORD.verts[i] - g[0]) * k, (SWORD.verts[i + 1] - g[1]) * k, (SWORD.verts[i + 2] - g[2]) * k])));
+      const so = (sword === 'back' ? PR.sockets[WHO].back : undefined) ?? PR.sockets[WHO][PR.hand ?? 'r'], hand = AT.get(so.bone) as number, k = 1 / PR.scale[WHO], g = PR.grip.lead, V3s: number[] = [];
+      for (let i = 0; i < PR.verts.length; i += 3) V3s.push(...add(so.o, mv(so.R, [(PR.verts[i] - g[0]) * k, (PR.verts[i + 1] - g[1]) * k, (PR.verts[i + 2] - g[2]) * k])));
       const T3: number[] = [];
-      for (let t = 0; t < SWORD.tris.length; t += 4) if (SWORD.tris[t + 3] < SWORD.glowFrom) T3.push(SWORD.tris[t], SWORD.tris[t + 1], SWORD.tris[t + 2], SWORD.tris[t + 3]);
-      const off = swordMat();
-      lay(V3s, SWORD.polys, T3, Array.from({ length: V3s.length / 3 }, () => [hand, 1]), (pi) => off + SWORD.polys[pi][1]);
+      for (let t = 0; t < PR.tris.length; t += 4) if (PR.tris[t + 3] < PR.glowFrom) T3.push(PR.tris[t], PR.tris[t + 1], PR.tris[t + 2], PR.tris[t + 3]);
+      const off = PROP_MAT();
+      lay(V3s, PR.polys, T3, Array.from({ length: V3s.length / 3 }, () => [hand, 1]), (pi) => off + PR.polys[pi][1]);
+    }
+    // each hand's tool laid at rest on its hand's socket, its grip at the fist as far further up its handle as the body
+    // holds it (`up`), all of it on that hand
+    for (const [side, id] of Object.entries(tools) as Array<[Side, string | undefined]>) {
+      const TP = id ? TOOL_OF.get(id) : undefined;
+      if (!TP) continue;
+      const so = TP.sockets[WHO][side], hand = AT.get(so.bone) as number, k = 1 / TP.scale[WHO], g: V = [TP.grip.lead[0], TP.grip.lead[1] + (up[side] ?? 0), TP.grip.lead[2]], V3s: number[] = [];
+      for (let i = 0; i < TP.verts.length; i += 3) V3s.push(...add(so.o, mv(so.R, [(TP.verts[i] - g[0]) * k, (TP.verts[i + 1] - g[1]) * k, (TP.verts[i + 2] - g[2]) * k])));
+      const T3: number[] = [];
+      for (let t = 0; t < TP.tris.length; t += 4) if (TP.tris[t + 3] < (TP.glowFrom < 0 ? Infinity : TP.glowFrom)) T3.push(TP.tris[t], TP.tris[t + 1], TP.tris[t + 2], TP.tris[t + 3]);
+      const off = toolMat(side);
+      lay(V3s, TP.polys, T3, Array.from({ length: V3s.length / 3 }, () => [hand, 1]), (pi) => off + TP.polys[pi][1]);
     }
     const baked: Baked = { band: 1, verts: Float32Array.from(verts), tris: Uint32Array.from(tris), nVerts: verts.length / STRIDE, nTris: tris.length / 3, bones: ALL.map((b) => b.name), ms: performance.now() - t0, grid: [0, 0, 0], cell: 0, faceSkin: Float32Array.from(faceSkin) };
     if (shapes) baked.shapes = shapes;
@@ -611,11 +699,13 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
   /** How far the last pose drawn (`lowBones`) was lifted to stand on its lowest sole, mesh units. */
   let DY = 0;
   /**
-   * The slash trail of the sword in hand at the pose's moment of its clip (`./anim/trail.ts`), as drawn: in the figure's
-   * frame, stood as the body last drawn (`lowBones`) was; none out of the blow.
+   * The slash trail of the prop in hand at the pose's moment of its clip (`./anim/trail.ts`), as drawn: in the figure's
+   * frame, stood as the body last drawn (`lowBones`) was; none out of the blow, and none for a prop that leaves none
+   * (`trails`).
    */
   function lowTrail(pose: FigurePose, lit: boolean): TrailDraw | undefined {
-    const c = clipFor(pose, SK.body), pts = c?.clip.grip ? slashTrail(SK, c.clip, wrap(c.clip, c.t), HELD) : undefined;
+    const c = clipFor(pose, SK.body), id = heldIn(pose), prop = id === undefined ? undefined : PROP_OF.get(id), held = id === undefined ? undefined : HELDS.get(id);
+    const pts = c?.clip.grip && prop && held && trails(prop) ? slashTrail(SK, c.clip, wrap(c.clip, c.t), held) : undefined;
     if (!pts) return undefined;
     const strip = new Float32Array(pts.length * 10), up: V = [0, DY, 0];
     pts.forEach((q, k) => strip.set([...toGame(add(q.inner, up)), q.a, 0, ...toGame(add(q.tip, up)), q.a, 1], k * 10));
@@ -625,9 +715,12 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
   /** The skinning matrices for a pose (3x4 rows per bone, the figure's frame), the body stood on its lowest sole (or a worn garment's). */
   /** The worn garment's corrective shapes' weights in the last pose bound (`lowBones`). */
   let SHAPES_W: number[] = [];
-  function lowBones(pose: FigurePose, worn: readonly boolean[] = []): Float32Array {
-    // a clip where the state has one (./anim), else the figure's pose on the rig
-    const { local, move } = animate(SK, pose, () => fromGame(bonesOf(rigFor(pose), P, [], REST_EXTRAS), gameRest()), heldIn(pose) === SWORD.id ? HELD : undefined);
+  function lowBones(pose: FigurePose, worn: readonly boolean[] = [], over?: Record<string, [number, number, number]>): Float32Array {
+    // a clip where the state has one (./anim), else the figure's pose on the rig; the bones in `over` turned as it says
+    // (local [rx, ry, rz] degrees: the authoring tools' still holds, `lowHoldScene`)
+    const id = heldIn(pose), { local: drawn, move } = animate(SK, pose, () => fromGame(bonesOf(rigFor(pose), P, [], REST_EXTRAS), gameRest()), id === undefined ? undefined : HELDS.get(id), (tool) => TOOL_HELD.get(tool));
+    const local = over ? [...drawn] : drawn;
+    if (over) for (const [b, e] of Object.entries(over)) { const i = AT.get(b); if (i !== undefined) local[i] = euler(e[0], e[1], e[2]); }
     const Fb = posed(local, move), F = [...Fb, ...garments.flatMap((g) => garmentFrames(BONES, g.bones, Fb))];
     // each bone's skinning turn and shift in the mesh's frame: v -> S v + t
     const S = F.map((f, i) => mm(f.W, tr(ALL[i].R)));
@@ -657,7 +750,7 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
     return out;
   }
 
-  return { baked: lowBaked, bones: lowBones, shapes: () => SHAPES_W, trail: lowTrail, skeleton: SK, held: HELD, figure: (pose) => fromGame(bonesOf(rigFor(pose), P, [], REST_EXTRAS), gameRest()) };
+  return { baked: lowBaked, bones: lowBones, shapes: () => SHAPES_W, trail: lowTrail, skeleton: SK, held: HELD, heldOf: (id) => HELDS.get(id), toolHeld: (id) => TOOL_HELD.get(id), figure: (pose) => fromGame(bonesOf(rigFor(pose), P, [], REST_EXTRAS), gameRest()) };
 }
 
 /**
@@ -761,9 +854,29 @@ const BODIES = {
 };
 /** The garments' materials after the body's (each once, however many garments share it): lit by the body's light in their own colours, unlit (glowing in the bloom), or metal (lit by its brightness, as the sword). */
 const GARMENT_MATS: Material[] = GARMENT_COLOURS.map((m) => (m.kind === 1 ? { colour: m.c, emissive: true } : m.kind === 2 ? { colour: m.c, gear: true } : { colour: m.c, cloth: true }));
-/** The sword's materials, plain or enchanted: lit by the body's light by brightness in its own colours, or unlit (and so glowing in the bloom). */
-const SWORD_MATS = { plain: SWORD.plain, enchanted: SWORD.enchanted } as const;
-const swordMats = (which: 'plain' | 'enchanted'): Material[] => SWORD_MATS[which].map((m) => (m.kind === 0 ? { colour: m.c, gear: true } : { colour: m.c, emissive: true }));
+const LUMA = (c: readonly number[]): number => 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2];
+const hexOfRgb = (c: readonly number[]): string => `#${c.map((v) => Math.round(Math.min(255, Math.max(0, v))).toString(16).padStart(2, '0')).join('')}`;
+/**
+ * A head's or a blade's stone in the metal it is smithed from (`PropMaterial.metal`; `metalShades`, the colours the flat
+ * figure forges gear in, iron for no metal or one it does not know): a face the metal's colour, as much lighter or darker
+ * than it as the face's own colour is than the head's stone (`stoneM`), so its facets and cracks still part; the bevel
+ * the metal's lit edge. Everything else of the prop keeps its own colour.
+ */
+function metalTint(p: PropAsset, m: PropMaterial, metal: string | undefined): string {
+  if (!m.metal || m.kind !== 0) return m.c;
+  const sh = metalShades(metal);
+  if (m.metal === 'edge') return hexOfRgb(sh.lit);
+  const ref = p.plain[p.mats.indexOf('stoneM')] ?? m, k = Math.pow(LUMA(hexRgb(m.c)) / LUMA(hexRgb(ref.c)), METAL_FACETS);
+  const top = Math.min(1, METAL_TOP / LUMA(sh.metal));
+  return hexOfRgb(sh.metal.map((v) => v * k * top));
+}
+/**
+ * How much further apart a metal's facets are than the stone's they were modelled in (its shade over the head's stone,
+ * to this power), and the brightest a face of it is (0 to 255, as luma), so a pale metal keeps its colour in the light.
+ */
+const METAL_FACETS = 1.8, METAL_TOP = 172;
+/** A prop's materials, plain or enchanted, its head's or blade's stone in its metal (`metalTint`): lit by the body's light by brightness, or unlit (and so glowing in the bloom). */
+const propMats = (p: PropAsset, which: 'plain' | 'enchanted', metal: string | undefined): Material[] => p[which].map((m) => (m.kind === 0 ? { colour: metalTint(p, m, metal), gear: true, ...(m.metal ? { metal: true } : {}) } : { colour: m.c, emissive: true }));
 /** The skin colour the bodies' light was fitted to (`tools/sculpt/lowlight.py`), red, green and blue nought to one: a cloth's colour over it tints the light. */
 const FIT_SKIN: [number, number, number] = [0.68, 0.49, 0.41];
 
@@ -786,17 +899,77 @@ function toneOf(materials: Material[]): [number, number, number] {
 export const lowSkeleton = (body: 'man' | 'woman'): Skeleton => BODIES[body].skeleton;
 /** The long sword as a body holds it in both hands (for the authoring tools). */
 export const lowHeld = (body: 'man' | 'woman'): Held => BODIES[body].held;
+/** A hand tool (`TOOL_PROPS`, by id) as a body holds it (for the authoring tools). */
+export const lowToolHeld = (body: 'man' | 'woman', id: string): Held | undefined => BODIES[body].toolHeld(id);
+/** Where the tool in a hand takes its materials, and how many it may take (for the authoring tools). */
+export const lowToolMats = (side: Side): [number, number] => [toolMat(side), PROP_SLOTS];
+/** A prop drawn in both hands (`PROPS`, by the weapon's id) as a body holds it (for the authoring tools). */
+export const lowHeldOf = (body: 'man' | 'woman', id: string): Held | undefined => BODIES[body].heldOf(id);
 /** A body's local turns for a pose as the figure's pose maps onto it, with no clip (for the authoring tools to compare). */
 export const lowFigure = (body: 'man' | 'woman', pose: FigurePose): Array<M3 | undefined> => BODIES[body].figure(pose);
+
+/**
+ * A prop alone (`PROPS`, by the id of what is held), stood on its foot and turned `yaw` degrees about the upright, in the
+ * metal and look of a piece, as the game draws it in hand (lit by the man's light by brightness, its glow left out): for
+ * the authoring tools' close-ups.
+ */
+export function lowPropDraw(id: string, piece: GearPiece | undefined, yaw = 0): SculptDraw | undefined {
+  const p = PROP_OF.get(id);
+  if (!p) return undefined;
+  const c = Math.cos((yaw * Math.PI) / 180), s = Math.sin((yaw * Math.PI) / 180);
+  // its y up (the game's z), its z toward the game's -y, turned about the upright
+  const at = (i: number): V => { const x = p.verts[i * 3], y = p.verts[i * 3 + 1], z = -p.verts[i * 3 + 2]; return [x * c - z * s, x * s + z * c, y]; };
+  const verts: number[] = [], tris: number[] = [], faceSkin: number[] = [];
+  for (let t = 0; t < p.tris.length; t += 4) {
+    const pi = p.tris[t + 3];
+    if (pi >= p.glowFrom) continue;
+    const pts = p.polys[pi][0].map(at);
+    let n: V = [0, 0, 0];
+    for (let k = 0; k < pts.length; k++) { const a = pts[k], b = pts[(k + 1) % pts.length]; n = [n[0] + (a[1] - b[1]) * (a[2] + b[2]), n[1] + (a[2] - b[2]) * (a[0] + b[0]), n[2] + (a[0] - b[0]) * (a[1] + b[1])]; }
+    const l = Math.hypot(...n) || 1, mat = p.polys[pi][1];
+    for (let k = 0; k < 3; k++) {
+      const q = at(p.tris[t + k]);
+      verts.push(q[0], q[1], q[2], n[0] / l, n[1] / l, n[2] / l, mat, 0, 0, 0, 0, 1, 0, 0, 0, mat, -1);
+      faceSkin.push(0, 0, 0, 0, 1, 0, 0, 0);
+      tris.push(tris.length);
+    }
+  }
+  const baked: Baked = { band: 1, verts: Float32Array.from(verts), tris: Uint32Array.from(tris), nVerts: verts.length / STRIDE, nTris: tris.length / 3, bones: ['prop'], ms: 0, grid: [0, 0, 0], cell: 0, faceSkin: Float32Array.from(faceSkin) };
+  const materials = propMats(p, piece?.enchanted ? 'enchanted' : 'plain', piece?.material);
+  return { baked, bones: Float32Array.from([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0]), materials, view: viewOf(0), blink: 0, low: { sh: SH.man, tone: [1, 1, 1], fit: FIT_SKIN } };
+}
+
+/**
+ * A body stood holding a hand tool (`PROPS`, by item id) in its fist, for the authoring tools' held check (no clip draws
+ * one yet): the pose's figure, the bones in `turns` turned as it says (local [rx, ry, rz] degrees, as
+ * tools/sculpt/lowrig.mjs posed: the arm raised to the work), the fist closed on the tool as its socket says, the tool in
+ * its hand (`PropAsset.hand`) in the pose's tool's metal (`FigurePose.tool`), lit when that is enchanted.
+ */
+export function lowHoldScene(pose: FigurePose, id: string, turns: Record<string, [number, number, number]> = {}): SculptDraw | undefined {
+  const prop = PROP_OF.get(id);
+  if (!prop) return undefined;
+  const look = pose.look ?? DEFAULT_LOOK, facing = ((Math.round(pose.facing) % 8) + 8) % 8;
+  const who = look.gender === 'woman' ? 'woman' : 'man', body = BODIES[who], side = prop.hand ?? 'r';
+  const worn = GARMENTS.map((g) => g.wears(pose)), enchanted = GARMENTS.map((g) => g.enchanted?.(pose) ?? false), drops = GARMENTS.map((g) => g.drops?.(pose) ?? false);
+  const curl = prop.sockets[who === 'woman' ? 'female' : 'male'][side].curl ?? {};
+  const over: Record<string, [number, number, number]> = { ...Object.fromEntries(Object.entries(curl).map(([b, e]) => [`${b}_${side}`, e])), ...turns };
+  const materials = materialsOf(look, prop, pose.tool?.enchanted ? 'enchanted' : 'plain', pose.tool?.material);
+  const bones = body.bones(pose, worn, over), shapes = body.shapes();
+  return { baked: body.baked(worn, 'hand', hairStyle(pose, look.hair), enchanted, drops, id), bones, materials, view: viewOf(facing), blink: 0, low: { sh: SH[who], tone: toneOf(materials), fit: FIT_SKIN }, ...(shapes.some((w) => w > 0) ? { shapes } : {}) };
+}
 
 /** Whether a look is drawn as a low-poly body: a man or a woman (neither keeps the sculpted base). */
 export const hasLowBody = (look: { gender: string }): boolean => look.gender === 'man' || look.gender === 'woman';
 
 
-/** The look's materials with the garments' after them and the sword's (plain or enchanted) after those, kept per look's materials so the renderer's copy is reused. */
+/**
+ * The look's materials with the garments' after them and the prop's drawn (plain or enchanted, in its metal) after those,
+ * kept per look's materials and prop so the renderer's copy is reused.
+ */
 const DRESSED = new Map<string, Material[]>();
-function materialsOf(look: Look, sword: 'plain' | 'enchanted' = 'plain'): Material[] {
-  const body = bodyMaterials(look), key = `${body.map((m) => m.colour).join()}|${sword}`;
+function materialsOf(look: Look, prop: PropAsset = SWORD, lit: 'plain' | 'enchanted' = 'plain', metal?: string, tools: Partial<Record<Side, { id: string; piece?: GearPiece }>> = {}): Material[] {
+  const toolKey = (['r', 'l'] as const).map((s) => { const t = tools[s]; return t ? `${t.id}:${t.piece?.material ?? ''}:${t.piece?.enchanted ? 1 : 0}` : ''; }).join(',');
+  const body = bodyMaterials(look), key = `${body.map((m) => m.colour).join()}|${prop.id}|${lit}|${metal ?? ''}|${toolKey}`;
   let out = DRESSED.get(key);
   if (!out) {
     out = [...body];
@@ -807,7 +980,12 @@ function materialsOf(look: Look, sword: 'plain' | 'enchanted' = 'plain'): Materi
     [M.hairValley, M.hairValley2, M.hairValley3, M.hairValley4].forEach((m, i) => { (out as Material[])[m] = { colour: hair, ramp: true, valley: i + 1, noCrease: true }; });
     out[M.hairUnder] = { colour: hair, shave: true };
     GARMENT_MATS.forEach((m, k) => { (out as Material[])[GARMENT_MAT + k] = m; });
-    swordMats(sword).forEach((m, k) => { (out as Material[])[swordMat() + k] = m; });
+    propMats(prop, lit, metal).forEach((m, k) => { (out as Material[])[PROP_MAT() + k] = m; });
+    // each hand's tool in its hand's place, in the metal and look of the piece it is drawn as
+    for (const [side, t] of Object.entries(tools) as Array<[Side, { id: string; piece?: GearPiece } | undefined]>) {
+      const p = t ? TOOL_OF.get(t.id) : undefined;
+      if (p) propMats(p, t?.piece?.enchanted ? 'enchanted' : 'plain', t?.piece?.material).slice(0, PROP_SLOTS).forEach((m, k) => { (out as Material[])[toolMat(side) + k] = m; });
+    }
     if (DRESSED.size > 64) DRESSED.clear();
     DRESSED.set(key, out);
   }
@@ -820,11 +998,38 @@ export function lowScene(pose: FigurePose): SculptDraw {
   const facing = ((Math.round(pose.facing) % 8) + 8) % 8;
   const who = look.gender === 'woman' ? 'woman' : 'man', body = BODIES[who];
   const worn = GARMENTS.map((g) => g.wears(pose)), enchanted = GARMENTS.map((g) => g.enchanted?.(pose) ?? false), drops = GARMENTS.map((g) => g.drops?.(pose) ?? false);
-  // the sword in both hands while a clip grips it, else on the back while it is wielded
-  const weapon = pose.gear?.weapon, inHand = heldIn(pose) === SWORD.id, sword = inHand ? 'hand' : weapon?.id === SWORD.id ? 'back' : undefined;
-  const lit = weapon?.enchanted ? 'enchanted' : 'plain';
-  const materials = materialsOf(look, lit), low: LowLight = { sh: SH[who], tone: toneOf(materials), fit: FIT_SKIN };
-  const bones = body.bones(pose, worn), trail = inHand ? body.trail(pose, lit === 'enchanted') : undefined;
+  // the prop in both hands while a clip grips it (the long sword, the maul, mining's pickaxe), else on the back while it
+  // is wielded (one with a back socket); the piece it is drawn as (the weapon, or the job's tool) in its metal, lit when
+  // enchanted
+  const weapon = pose.gear?.weapon, held = heldIn(pose), prop = held !== undefined ? PROP_OF.get(held) : undefined;
+  const inHand = !!prop, onBack = !inHand && weapon ? PROP_OF.get(weapon.id) : undefined;
+  const sword = inHand ? 'hand' : onBack?.sockets[who === 'woman' ? 'female' : 'male'].back ? 'back' : undefined, drawn = sword ? prop ?? onBack : undefined;
+  const piece: GearPiece | undefined = held === SWING_TOOL || (held !== undefined && held === pose.tool?.id) ? pose.tool : weapon;
+  const lit = piece?.enchanted ? 'enchanted' : 'plain';
+  // the tools in the hands while a clip holds them (`toolsIn`): the job's own in its metal, the other hand's plain
+  const hands = toolsIn(pose, who), tools = hands?.tools ?? {};
+  const pieces = Object.fromEntries(Object.entries(tools).map(([s, id]) => [s, { id: id as string, piece: id === pose.tool?.id ? pose.tool : undefined }]));
+  const materials = materialsOf(look, drawn, lit, piece?.material, pieces), low: LowLight = { sh: SH[who], tone: toneOf(materials), fit: FIT_SKIN };
+  const bones = body.bones(pose, worn), trail = inHand && prop && trails(prop) ? body.trail(pose, lit === 'enchanted') : undefined;
   const shapes = body.shapes();
-  return { baked: body.baked(worn, sword, hairStyle(pose, look.hair), enchanted, drops), bones, materials, view: viewOf(facing), blink: 0, low, ...(trail ? { trail } : {}), ...(shapes.some((w) => w > 0) ? { shapes } : {}) };
+  return { baked: body.baked(worn, sword, hairStyle(pose, look.hair), enchanted, drops, drawn?.id, tools, hands?.up), bones, materials, view: viewOf(facing), blink: 0, low, ...(trail ? { trail } : {}), ...(shapes.some((w) => w > 0) ? { shapes } : {}) };
+}
+
+/** Local turns by bone name, [rx, ry, rz] degrees (as `tools/sculpt/lowrig.mjs` posed). */
+type Turns = Readonly<Record<string, readonly [number, number, number]>>;
+/**
+ * A hand tool (`PROPS`, by id) in the right fist of a body stood idle (the pose's look, outfit and facing), the right arm
+ * turned by `turns` and the fist closed on the tool as its socket says, in the metal and enchantment of `pose.tool`: for
+ * the authoring tools to check the grip in the game's renderer before a clip holds it.
+ */
+export function lowToolStill(pose: FigurePose, id: string, turns: Turns): SculptDraw | undefined {
+  const prop = PROP_OF.get(id);
+  if (!prop) return undefined;
+  const look = pose.look ?? DEFAULT_LOOK, who = look.gender === 'woman' ? 'woman' : 'man', body = BODIES[who];
+  const stood: FigurePose = { ...pose, working: false, job: undefined, act: undefined };
+  const worn = GARMENTS.map((g) => g.wears(stood)), enchanted = GARMENTS.map((g) => g.enchanted?.(stood) ?? false), drops = GARMENTS.map((g) => g.drops?.(stood) ?? false);
+  const curl = Object.fromEntries(Object.entries(prop.sockets[who === 'woman' ? 'female' : 'male'].r.curl ?? {}).map(([b, e]) => [`${b}_r`, e]));
+  const materials = materialsOf(look, prop, pose.tool?.enchanted ? 'enchanted' : 'plain', pose.tool?.material), low: LowLight = { sh: SH[who], tone: toneOf(materials), fit: FIT_SKIN };
+  const bones = body.bones(stood, worn, { ...turns, ...curl } as Record<string, [number, number, number]>);
+  return { baked: body.baked(worn, 'hand', hairStyle(stood, look.hair), enchanted, drops, id), bones, materials, view: viewOf(((Math.round(pose.facing) % 8) + 8) % 8), blink: 0, low };
 }

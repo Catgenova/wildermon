@@ -56,7 +56,7 @@ import { Asker } from './ui/ask';
 import { mountRespawn } from './ui/respawn';
 import { asleepIn } from './game/sleep';
 import { UI } from './ui/ui';
-import { dragging } from './ui/dragdrop';
+import { makeDropZone } from './ui/dragdrop';
 // Debug surface only. These come last on purpose: main is the entry point, so
 // the order of its imports is the order the module graph is evaluated in.
 import { groundRoll, ROCK_VARIANTS, TILE_DEFS } from './world/tiles';
@@ -349,7 +349,7 @@ camera.focus(player.x, player.y, game.playerHeight(), null);
 declare global {
   interface Window {
     /** Console handle for poking at the running game. */
-    wurm: { game: Game; renderer: Renderer; camera: typeof camera; sound: Sound; ACTIONS: typeof ACTIONS; RECIPES: typeof RECIPES; FURNITURE: typeof FURNITURE; MATERIALS: typeof MATERIALS; RELICS: typeof RELICS; TRAITS: typeof TRAITS; TITLES: typeof TITLES; DYES: typeof DYES; WOUND_KINDS: typeof WOUND_KINDS; TRAPS: typeof TRAPS; BRIDGES: typeof BRIDGES; bridgeDone: typeof bridgeDone; BAITS: typeof BAITS; FISH_IDS: string[]; SPECIES: typeof SPECIES; WEAPON_BY_ID: typeof WEAPON_BY_ID; itemName: typeof itemName; arch: { partsMissing: typeof partsMissing; piecesHeld: typeof piecesHeld }; ui: UI; island: Island;
+    wildermon: { game: Game; renderer: Renderer; camera: typeof camera; sound: Sound; ACTIONS: typeof ACTIONS; RECIPES: typeof RECIPES; FURNITURE: typeof FURNITURE; MATERIALS: typeof MATERIALS; RELICS: typeof RELICS; TRAITS: typeof TRAITS; TITLES: typeof TITLES; DYES: typeof DYES; WOUND_KINDS: typeof WOUND_KINDS; TRAPS: typeof TRAPS; BRIDGES: typeof BRIDGES; bridgeDone: typeof bridgeDone; BAITS: typeof BAITS; FISH_IDS: string[]; SPECIES: typeof SPECIES; WEAPON_BY_ID: typeof WEAPON_BY_ID; itemName: typeof itemName; arch: { partsMissing: typeof partsMissing; piecesHeld: typeof piecesHeld }; ui: UI; island: Island;
       /**
        * Play a spell's drawing from you at what is under the cursor, with no island (`Renderer.playSpell`): `from` as though
        * the island had moved you there from that spot, `companion` with that creature as your companion; and every spell id.
@@ -360,7 +360,7 @@ declare global {
   }
 }
 Object.assign(window as unknown as Record<string, unknown>, { catchFish, windAt, windFrom, windWord, pointOfSail, sailWord, favourCap, prayerWorth, PATHS, sittingWorth, weaponDamage, loopsFor, BELT_MAX, coaxBonus, COAX_STEP, COAX_LAPSE, rollsAt, PER_ROLL, cropSprite, creatureLines, tameChance, knackLands, knackBonus, KNACK_ODDS, KNACK_CAP, KNACK_BONUS, KNACK_HOME, boonTime, knacksOf, BOON_BONUS, tableMul, upkeepMul, fedness, balance, NUTRIENTS, ITEM_DEFS, TILE_DEFS, groundRoll, crateName, furnitureName, trapName, postName, lanternReach, candleBurn, lanternState, sunAt, skyWash, puffAge, puffOf, PUFFS, PUFF_LIFE, PUFF_RISE, DUST_LIFE, FLOAT_LIFE, FLOAT_RISE, MERGE_WINDOW, Floaters, skyAt, unknownInk, findPath, waterRgb, CROPS, DAY_SECONDS, TORCH_BURN, WORLD_PACE, drawPortrait, drawHeadshot, LOOK_TABLES, cleanLook, randomLook, HAZE_MAX, HAZE_REACH, ROCK_VARIANTS, METALS, smeltableIn, smeltSeconds, needsIron, creatureSkills, tileUses, bodyOf, PROTOCOL, cleanName, cleanText, encode, decode, packLand, packWorld, unpack });
-window.wurm = { game, renderer, camera, sound, ACTIONS, RECIPES, FURNITURE, MATERIALS, RELICS, TRAITS, TITLES, DYES, WOUND_KINDS, TRAPS, BRIDGES, bridgeDone, BAITS, FISH_IDS: FISH.map((f) => f.id), SPECIES, WEAPON_BY_ID, itemName, arch: { partsMissing, piecesHeld }, ui, island,
+window.wildermon = { game, renderer, camera, sound, ACTIONS, RECIPES, FURNITURE, MATERIALS, RELICS, TRAITS, TITLES, DYES, WOUND_KINDS, TRAPS, BRIDGES, bridgeDone, BAITS, FISH_IDS: FISH.map((f) => f.id), SPECIES, WEAPON_BY_ID, itemName, arch: { partsMissing, piecesHeld }, ui, island,
   spell: (id: string, at?: CastAt, opts?: { from?: { x: number; y: number }; companion?: number }) => renderer.playSpell(id, at, opts), spells: ALL_SPELL_IDS };
 
 input.onClick = (x, y, button) => {
@@ -404,27 +404,20 @@ input.onClick = (x, y, button) => {
  * Something dragged out of the pack and let go over a crate, a chest, a cart --
  * anything standing in the world that holds things -- goes into it.
  *
- * The browser's own drag and drop holds pointer events back while it lasts, so
- * the frame loop below cannot see where the cursor is. What is under it is
+ * The row carrying it holds the pointer while the drag lasts (`dragdrop.ts`),
+ * so the frame loop below cannot see where the cursor is. What is under it is
  * asked here, of the drag itself, and kept for the loop to outline.
  */
 let dropOver: { pick: Pick; x: number; y: number } | null = null;
-canvasEl.addEventListener('dragover', (e) => {
-  const carried = dragging();
-  if (!carried || carried.from !== 'inventory') return;
-  const pick = renderer.pick(e.clientX, e.clientY);
-  dropOver = pick && ui.storeAt(pick) ? { pick, x: e.clientX, y: e.clientY } : null;
-  if (!dropOver) return;
-  e.preventDefault();
-  if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
-});
-canvasEl.addEventListener('dragleave', () => (dropOver = null));
-window.addEventListener('dragend', () => (dropOver = null));
-canvasEl.addEventListener('drop', (e) => {
-  const carried = dragging();
+makeDropZone(canvasEl, (carried, x, y) => {
+  if (carried.from !== 'inventory') return false;
+  const pick = renderer.pick(x, y);
+  dropOver = pick && ui.storeAt(pick) ? { pick, x, y } : null;
+  return dropOver !== null;
+}, (carried, x, y) => {
   dropOver = null;
-  if (carried && ui.dropOnWorld(carried, renderer.pick(e.clientX, e.clientY))) e.preventDefault();
-});
+  ui.dropOnWorld(carried, renderer.pick(x, y));
+}, () => (dropOver = null));
 
 input.onDrag = (dx, dy, button) => {
   if (button === 0 || button === 1) camera.panBy(dx, dy);
@@ -707,7 +700,7 @@ boot.finish();
 boot.stop();
 document.getElementById('boot')?.remove();
 // How long each phase took, for whoever is looking (`scripts/login-check.mjs`).
-window.wurm.boot = boot.steps.timings();
+window.wildermon.boot = boot.steps.timings();
 
 // The cobblestone painted before it is needed: a wall of it coming into view should not be the thing that pays for drawing it.
 warmMasonry();

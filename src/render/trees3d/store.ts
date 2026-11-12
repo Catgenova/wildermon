@@ -18,7 +18,7 @@ declare const __TREES3D__: string | undefined;
 const CODE: string | undefined = typeof __TREES3D__ === 'string' ? __TREES3D__ : undefined;
 /** Bytes of PNG kept at most: about 1,700 bakes. */
 const MOST_BYTES = 64_000_000;
-const DB = 'wurm-trees3d';
+const DB = 'wildermon-trees3d';
 
 export interface Stored {
   canvas: HTMLCanvasElement;
