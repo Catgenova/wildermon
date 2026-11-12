@@ -15,30 +15,10 @@
  * Runs against the database the suite leaves behind, in one transaction that
  * is rolled back.
  */
-import { execFileSync } from 'node:child_process';
 import { ACTION_BY_ID } from '../../src/game/actions';
 import { MOULD_SKILL, MOULDS } from '../../src/game/metal';
 import { RECIPE_BY_ID } from '../../src/game/recipes';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { psql, check, finish } from './harness';
 
 /* ---- on the island --------------------------------------------------------------- */
 
@@ -113,6 +93,4 @@ check('in the browser, every mould is formed by blacksmithing', forms.every((r) 
 check('and its QL is the smith\'s, not the sand\'s', forms.every((r) => !r?.qlFromInputs));
 check('pouring a mould is blacksmithing work', ACTION_BY_ID.get('pour_mould')?.skill === MOULD_SKILL, ACTION_BY_ID.get('pour_mould')?.skill);
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\na mould is the smith's — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish(`a mould is the smith's`);

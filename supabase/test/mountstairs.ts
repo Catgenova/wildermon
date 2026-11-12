@@ -28,7 +28,6 @@
  * Runs against the database the suite leaves behind, in a transaction it
  * rolls back: Hoarding, Dane and Hunger on it.
  */
-import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import { TOP_LEVELS, type Side, type WallType } from '../../src/game/building';
@@ -36,20 +35,7 @@ import { MOUNT_STAIRS_SAID, MOUNT_STOREY_SAID, mountGroundSaid, type IslandCreat
 import { pathOptions } from '../../src/game/player';
 import { findPath } from '../../src/world/pathfinding';
 import { TileType } from '../../src/world/tiles';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
+import { psql } from './harness';
 
 let bad = 0;
 let good = 0;

@@ -17,7 +17,6 @@
  *
  * Runs against the database the suite leaves behind: Faraway, and Ivar on it.
  */
-import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { Game } from '../../src/game/game';
 import {
@@ -27,26 +26,8 @@ import {
 import { PLACEABLE_ACTION_BY_ID } from '../../src/game/placeables';
 import { skillGain } from '../../src/game/skills';
 import { DRIVING } from '../../src/game/travel';
+import { psql, ok, bad, check } from './harness';
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 const near = (a: number, b: number, eps = 1e-12): boolean => Math.abs(a - b) <= eps;
 
 const MINING = workSkill(SPECIES.quarra)!;

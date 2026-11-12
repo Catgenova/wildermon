@@ -27,31 +27,11 @@
  *   npx esbuild supabase/test/mending.ts --bundle --platform=node --format=esm \
  *     --external:typescript --outfile=node_modules/.cache/mending.mjs && node node_modules/.cache/mending.mjs
  */
-import { execFileSync } from 'node:child_process';
 import { BASE_QUEUE, Game } from '../../src/game/game';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import { IMPROVE_DAMAGE, improvable, lockFor, lockTakes, outOfSaid, stockFor, stockKinds } from '../../src/game/improve';
 import { cyclePlan, cycleTarget, heldEquipment, honeQueue, passesAhead, pieceJob, piecePlans, piecesThatFit, queueRoom, repairGoes, repairQueue } from '../../src/game/mending';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { psql, check, finish } from './harness';
 
 /* ---- the browser's rules ------------------------------------------------------------------------- */
 
@@ -363,6 +343,4 @@ const tsGoes = dmgs.map((d) => repairGoes(gr, d)).join(',');
 check('both sides: the goes a repair takes', at('GOES') === tsGoes, `island ${at('GOES')}, browser ${tsGoes}`);
 check('the door takes mend, stock, stockOf, all and cycles', at('DOOR') === 'taken / taken / taken', at('DOOR'));
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\nimprove and repair — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('improve and repair');

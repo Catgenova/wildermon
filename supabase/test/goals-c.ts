@@ -18,7 +18,6 @@
  *
  * Runs against the database the suite leaves behind.
  */
-import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { Game } from '../../src/game/game';
 import { ALL_GOALS, JOURNAL } from '../../src/game/journal';
@@ -33,25 +32,7 @@ import { RUNESTONES, STONE_VISIT } from '../../src/game/runestones';
 import { CLASS_SPELLS } from '../../src/game/talents';
 import { BANDS } from '../../src/world/atlas-world';
 import { REGIONS } from '../../src/world/regions';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { psql, ok, bad, check, finish } from './harness';
 
 const MINE = [...ISLAND_GOALS, ...WILDERMON_GOALS_C, ...TRADE_GOALS];
 const goal = (id: string) => {
@@ -504,6 +485,4 @@ const held = new Set(ok.concat(bad).map((l) => l.slice(5).split(':')[0]));
 const unheld = MINE.filter((g) => !held.has(g.id)).map((g) => g.id);
 check('every goal here is held to the island', unheld.length === 0, unheld.join(', '));
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\nthe island, fighting and faith, people and trade — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('the island, fighting and faith, people and trade');

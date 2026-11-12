@@ -27,7 +27,6 @@
  * shows the burn at the depth the line says, and a wound the beat sent with
  * its null `dressing` left out as open.
  */
-import { execFileSync } from 'node:child_process';
 // The rulebook first: `firstaid` is a part of it and cannot be loaded on its own.
 import '../../src/game/actions';
 import { Game } from '../../src/game/game';
@@ -35,26 +34,8 @@ import { SPELL_BAR } from '../../src/game/patrons';
 import { CLASS_SPELL_BY_ID } from '../../src/game/talents';
 import { CLOSE_BARE, dressingPace, PART_NAMES, WOUND_KINDS, type Wound } from '../../src/game/wounds';
 import { woundView } from '../../src/ui/health';
+import { psql, ok, bad, check } from './harness';
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 const near = (a: number, b: number, by = 1e-9): boolean => Math.abs(a - b) <= by;
 /** A depth as the wound window shows it, and as the island's line says it (`faith_pct`). */
 const pct = (x: number): string => `${Math.round(x * 100)}%`;

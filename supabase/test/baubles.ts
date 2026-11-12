@@ -27,7 +27,6 @@
  *
  * Runs against the database the suite leaves behind, and puts it back.
  */
-import { execFileSync } from 'node:child_process';
 import { Game, type Deed } from '../../src/game/game';
 import { ACTION_BY_ID, ACTIONS, type Target } from '../../src/game/actions';
 import { RECIPES } from '../../src/game/recipes';
@@ -41,27 +40,13 @@ import { ITEM_DEFS, rarityStep } from '../../src/game/items';
 import { canImprove, improvable } from '../../src/game/improve';
 import { lacksSaid } from '../../src/game/ranks';
 import { TileType } from '../../src/world/tiles';
+import { psql, ok, bad, check, seed } from './harness';
+/** Every roll in this test, off one seed (SEED to play it again). */
+const seeded = seed();
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 16 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
+
 const lit = (s: string): string => `'${s.replace(/'/g, "''")}'`;
 
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 const near = (a: number, b: number, eps: number): boolean => Math.abs(a - b) <= eps;
 
 /* ---- the lists ------------------------------------------------------------ */
@@ -171,7 +156,7 @@ check(`every bauble the island rolls the browser reads, inside its range times i
   rolledWrong.length === 0 && islandRolls.length === BAUBLE_TIERS.length * RARES.length * 40, rolledWrong.slice(0, 4).join('; '));
 const browserRolls: Array<[string, string]> = [];
 for (const t of BAUBLE_TIERS) for (let rare = 0; rare <= 3; rare++) for (let i = 0; i < 25; i++) {
-  browserRolls.push([t.item, rollBauble(t.id, rare, Math.random)]);
+  browserRolls.push([t.item, rollBauble(t.id, rare, seeded)]);
 }
 const readThere = rows(`select count(*) filter (where r.kind is not null) || '|' || count(*) from (values ${
   browserRolls.map(([d, e]) => `(${lit(d)}, ${lit(e)})`).join(', ')}) v(d, e) cross join lateral bauble_read(v.d, v.e) r`);
@@ -182,7 +167,7 @@ const N = 6000;
 const islandTiers = new Map(rows(`select id || '|' || count(*) from (select bauble_tier_roll() id from generate_series(1, ${N})) x group by id`)
   .map((l) => l.split('|') as [string, string]).map(([k, v]) => [k, Number(v) / N]));
 const browserTiers = new Map<string, number>();
-for (let i = 0; i < N; i++) { const t = rollTier(Math.random); browserTiers.set(t, (browserTiers.get(t) ?? 0) + 1 / N); }
+for (let i = 0; i < N; i++) { const t = rollTier(seeded); browserTiers.set(t, (browserTiers.get(t) ?? 0) + 1 / N); }
 check('the island rolls the tiers in their shares', BAUBLE_TIERS.every((t) => near(islandTiers.get(t.id) ?? 0, t.odds, 0.025)),
   BAUBLE_TIERS.map((t) => `${t.id} ${(islandTiers.get(t.id) ?? 0).toFixed(3)} of ${t.odds}`).join(', '));
 check('and so does the browser', BAUBLE_TIERS.every((t) => near(browserTiers.get(t.id) ?? 0, t.odds, 0.025)),

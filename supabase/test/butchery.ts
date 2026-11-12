@@ -22,30 +22,11 @@
  *     the knife in hand, from the same rule: the skill exactly with this knife,
  *     and 0.6 to 1.4 times it, plus 1, bare-handed.
  */
-import { execFileSync } from 'node:child_process';
 import { Game, productQlRange } from '../../src/game/game';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import { butcherPreview } from '../../src/game/butcher';
 import { wearPerUse } from '../../src/game/limits';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { psql, ok, bad, check } from './harness';
 
 const PARTS = ['meat', 'fur', 'hide', 'bone', 'gland'];
 

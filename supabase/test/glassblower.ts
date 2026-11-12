@@ -15,7 +15,6 @@
  *
  * Runs against the database the suite leaves behind, in one transaction that is rolled back.
  */
-import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { deedJobLine } from '../../src/game/creaturecrate';
 import {
@@ -26,26 +25,7 @@ import { idleSays } from '../../src/game/workerlog';
 import { RECIPE_BY_ID } from '../../src/game/recipes';
 import { helpText } from '../../src/ui/panels/help';
 import { TileType } from '../../src/world/tiles';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { psql, check, finish } from './harness';
 
 const ID = 'glimmip';
 const R = RECIPE_BY_ID.get(GLASS_RECIPES[0])!;
@@ -225,6 +205,4 @@ for (const { k, at: st, sand, level, after: want, why } of CASES) {
   if (k === 'LIT') check('in the browser, it learns glassblowing as it works', (c.skills[GATHER_SKILL.glass] ?? 0) > 1, String(c.skills[GATHER_SKILL.glass]));
 }
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\nglassblower — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('glassblower');

@@ -28,12 +28,7 @@
 import { Game } from '../../src/game/game';
 import { ALL_GOALS, JOURNAL, ashore, chapterOf, nextGoals } from '../../src/game/journal';
 import { RECIPES, prospect } from '../../src/game/recipes';
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { ok, bad, check } from './harness';
 
 /* ---- the guide leads, and then gets out of the way ------------------------ */
 

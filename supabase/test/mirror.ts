@@ -21,12 +21,8 @@
  */
 import { Island, type PlayerRow } from '../../src/net/island';
 import { cleanLook, type Look } from '../../src/game/look';
+import { ok, bad, check } from './harness';
 
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 const same = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.stringify(b);
 
 /* The keeper: every call is written down, and `rpc_set_look` answers as the refusal or the cleaning says. */

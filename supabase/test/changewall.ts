@@ -29,7 +29,6 @@
  * ground, the settlement and Dane are put back after.
  */
 import { Game } from '../../src/game/game';
-import { execFileSync } from 'node:child_process';
 import { ACTION_BY_ID } from '../../src/game/actions';
 import { heftWord, isDone, MATERIAL_BY_ID, wallBill, WALL_TYPE_BY_ID, type Side, type WallType } from '../../src/game/building';
 import { needsText } from '../../src/game/buildActions';
@@ -37,25 +36,8 @@ import { COUNTER_EMPTY_FIRST, COUNTER_GROUND } from '../../src/game/counters';
 import { changeLine, HIDDEN_DOOR_ALONE, planLine } from '../../src/game/gates';
 import { GLASS_ONLY } from '../../src/game/glasshouse';
 import { TileType } from '../../src/world/tiles';
+import { psql, ok, bad, check } from './harness';
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 const W = `(select id from world where name = 'Hoarding')`;
 const DANE = `(select uid from player where world_id = ${W} and name = 'Dane')`;
 const ITEMS = `'mallet', 'trowel', 'log', 'plank', 'timber', 'marble_brick', 'mortar', 'hinge'`;

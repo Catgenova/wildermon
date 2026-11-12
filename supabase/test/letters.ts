@@ -17,12 +17,7 @@
  */
 import { neighbours, writeTo } from '../../src/ui/panels/social';
 import type { Social } from '../../src/net/island';
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { ok, bad, check } from './harness';
 
 const folk = (uid: string, name: string) => ({ uid, name, online: true });
 const cat = folk('u-cat', 'catgenova');

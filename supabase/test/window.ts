@@ -24,6 +24,7 @@ import { execFileSync } from 'node:child_process';
 import { generateWorld } from '../../src/world/generate';
 import { rowsOf, layRows, layChange, blankWorld, type LandRow, type TileChange } from '../../src/net/landpack';
 import { LAND_NEAR } from '../../src/game/keep';
+import { ok, bad, check } from './harness';
 
 const SIZE = 96;
 const SEED = 4242;
@@ -42,12 +43,6 @@ const psql = (sql: string): string =>
     encoding: 'utf8',
     maxBuffer: 512 * 1024 * 1024,
   }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 
 /* ---- An island, handed over and opened ---------------------------------- */
 

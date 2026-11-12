@@ -38,6 +38,7 @@ import {
   BAR_FOR, barLabel, barLine, isBarred, REPORT_HANDLED_DAYS, REPORT_NOTE_MAX, REPORT_OPEN_DAYS, REPORT_REASONS, REPORTS_A_DAY,
   type Kept, type KeptBody, type KeptReport,
 } from '../../src/game/keeper';
+import { ok, bad, check } from './harness';
 
 const ENV = {
   ...process.env,
@@ -79,12 +80,6 @@ const parsed = <T>(r: Ran): T | null => {
 };
 /** What a door said in refusing: the exception's own line, without psql's "ERROR:  ". */
 const refused = (r: Ran): string => (/ERROR:\s+(.*)/.exec(r.err)?.[1] ?? '').trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 
 const KEEP = 'ef000000-0000-4000-8000-0000000000a1';
 const THERE = 'ef000000-0000-4000-8000-0000000000a2';

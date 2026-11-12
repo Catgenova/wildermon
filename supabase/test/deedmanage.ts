@@ -36,7 +36,6 @@
  * folder. Needs a Chromium for its second half, as `care.ts` finds one; with
  * none it says so, and fails only when `CROWD_STRICT` is set, as it is in CI.
  */
-import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { build } from 'esbuild';
@@ -47,25 +46,7 @@ import { DEED_TABS } from '../../src/ui/panels/deed';
 import { SPECIALTY_AT, UNFED_PACE, UPKEEP_FOR } from '../../src/game/creatures';
 import { percent, waitWords } from '../../src/game/words';
 import type { Social } from '../../src/net/island';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { psql, ok, bad, check } from './harness';
 
 const BOSS = 'd1660000-0000-4000-8000-00000000000b';
 const CIT = 'd1660000-0000-4000-8000-00000000000c';

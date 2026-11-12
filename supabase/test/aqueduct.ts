@@ -51,7 +51,6 @@
  *
  * Runs against the database the suite leaves behind, and puts it back.
  */
-import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { ACTIONS, type ActionDef, type Target } from '../../src/game/actions';
 import { STONE_ARCH } from '../../src/game/bridges';
@@ -68,20 +67,7 @@ import {
   AQUEDUCT_FLOW, AQUEDUCT_LPS, aqueductShut, CHANNEL_DEEP, CHANNEL_WIDE, CORNER_LITRES, FOUNTAIN_RIM, fillSeconds, pondRate, settleWater,
   type AqueductLine, type Channel,
 } from '../../src/world/aqueducts';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 256 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
+import { psql } from './harness';
 
 let bad = 0;
 const say = (ok: boolean, line: string): void => {

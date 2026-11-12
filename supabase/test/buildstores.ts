@@ -20,32 +20,13 @@
  * The island half runs against the database the suite leaves behind, in one
  * transaction that is rolled back.
  */
-import { execFileSync } from 'node:child_process';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import type { Bridge } from '../../src/game/bridges';
 import { buildReach } from '../../src/game/buildActions';
 import { Game } from '../../src/game/game';
 import type { Item } from '../../src/game/items';
 import { CRAFT_REACH } from '../../src/game/recipes';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { psql, check, finish } from './harness';
 
 /* ---- the browser --------------------------------------------------------- */
 
@@ -205,6 +186,4 @@ for (const k of ['WALL_ASK', 'WALL', 'SPAN_ASK', 'SPAN', 'WALL_OFF', 'SPAN_OFF',
 
 /* ---- what was found ------------------------------------------------------------------------------- */
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\nbuilding out of the stores — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('building out of the stores');

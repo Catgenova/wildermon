@@ -23,7 +23,6 @@
  * is rolled back.
  */
 import { NEED_LYE } from '../../src/game/placeables';
-import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import { BIND_BY_ID } from '../../src/game/keybinds';
@@ -31,26 +30,7 @@ import { RECIPE_BY_ID } from '../../src/game/recipes';
 import { WOUND_CLOSED, woundKey, type Wound } from '../../src/game/wounds';
 import { caresFor, recipeWords } from '../../src/ui/health';
 import { FRAMES } from '../../src/ui/runecut-frames';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { psql, check, finish } from './harness';
 
 /* ---- on the island --------------------------------------------------------------- */
 
@@ -169,6 +149,4 @@ check('and how to make the cover that suits it, from the recipe', !!dress && !!c
 check('the window has a key', (BIND_BY_ID.get('win_health')?.keys.length ?? 0) > 0);
 check('and a frame of its own', FRAMES.some((f) => f.for.includes('health')));
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\na wound you point at — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('a wound you point at');

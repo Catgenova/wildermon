@@ -26,6 +26,7 @@
  */
 import { execFileSync } from 'node:child_process';
 import { KEEPER_CODE, NEW_BODIES_A_DAY } from '../../src/game/keeper';
+import { ok, bad, check } from './harness';
 
 const ENV = {
   ...process.env,
@@ -67,12 +68,6 @@ const as = (who: string, text: string, o: As = {}): Ran => sql(
   + `select set_config('request.headers', ${lit(o.headers ? JSON.stringify(o.headers) : '')}, false) \\g /dev/null\n`
   + `set role authenticated;\n${text}\n`);
 const anon = (text: string): Ran => sql(`set role anon;\n${text}\n`);
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 
 const ROCK = 'ac000000-0000-4000-8000-0000000000a1';
 const FOUNDER = 'ac000000-0000-4000-8000-000000000001'; // Fenna, who founded Account Rock

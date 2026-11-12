@@ -17,12 +17,7 @@
  */
 import { Island } from '../../src/net/island';
 import { RETRY_NEWER } from '../../src/net/askdown';
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { check, finish } from './harness';
 
 /* ---- the stand-in island ----------------------------------------------------------------------------------------- */
 
@@ -109,6 +104,4 @@ check('ten seconds busy, out of step at first: the two come into step, and go in
   byDoor('rpc_near') >= 9 && byDoor('rpc_creatures') + byDoor('rpc_near') <= 11 && byDoor('rpc_ground') <= 1,
   `rpc_near ${byDoor('rpc_near')}, rpc_creatures ${byDoor('rpc_creatures')}, rpc_ground ${byDoor('rpc_ground')}`);
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\nthe new forms asked again once the island has them — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('the new forms asked again once the island has them');

@@ -22,32 +22,12 @@
  * ring `deed_stone_gap()` tiles out from the stone's edge (`stone_half()` from its centre), with the ring's edge
  * through the middle of the nearest tile the island would allow a token on.
  */
-import { execFileSync } from 'node:child_process';
 import { foundingPreview, foundingRefusal, ACTION_BY_ID, deedAcrossAt } from '../../src/game/actions';
 import { DEED_SPACING, DEED_STONE_GAP, deedNearStone, deedTooClose, Game, MAX_DEED_LEVEL } from '../../src/game/game';
 import { RUNESTONES, stoneGap } from '../../src/game/runestones';
 import { World } from '../../src/world/world';
 import { MAP_LEGEND, mapStones, type MapSettlement } from '../../src/ui/panels/minimap';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 16 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { psql, ok, bad, check } from './harness';
 
 /* ---- the island ------------------------------------------------------------ */
 

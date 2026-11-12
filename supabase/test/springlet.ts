@@ -15,7 +15,6 @@
  *
  * Runs against the database the suite leaves behind, in one transaction that is rolled back.
  */
-import { execFileSync } from 'node:child_process';
 // `game` first: the root of the module graph, so nothing below comes out half-built.
 import { Game } from '../../src/game/game';
 import { ageDef, deepTile, footing, HAUL_SKILL, MONSTER_SHARE, SPECIES, SPRINGLET_LAND, waterOver, WILD_SPECIES, type Creature } from '../../src/game/creatures';
@@ -23,25 +22,8 @@ import { FISH } from '../../src/game/fishing';
 import { wildShare } from '../../src/game/guide';
 import { BASE_SPEED } from '../../src/game/player';
 import { TileType } from '../../src/world/tiles';
+import { psql, ok, bad, check } from './harness';
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 /** Equal but for a `real` column's rounding. */
 const near = (a: number, b: number): boolean => Math.abs(a - b) <= 1e-6 * Math.max(1, Math.abs(b));
 

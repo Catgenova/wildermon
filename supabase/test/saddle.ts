@@ -20,12 +20,7 @@ import { build } from 'esbuild';
 import { chromium, type LaunchOptions } from 'playwright-core';
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { ok, bad, check } from './harness';
 
 /** A Chromium to drive, as `crowd.ts` finds one, or null. */
 function browserOptions(): LaunchOptions | null {

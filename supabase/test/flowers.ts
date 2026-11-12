@@ -26,7 +26,6 @@
  *
  * Runs against the database the suite leaves behind: Faraway, and Ivar on it.
  */
-import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { bloomOf, FLOWER_FROM, FLOWER_MOST, FLOWER_OCTAVES, FLOWER_STEP, flowerDrift } from '../../src/world/flowers';
 import { SEASON_DAYS, SEASONS, seasonAt, yearOf, YEAR_DAYS, YEAR_FROM } from '../../src/world/calendar';
@@ -34,26 +33,7 @@ import { DAY_SECONDS } from '../../src/game/pace';
 import { FLOWERS_PICKED, lastDawn, MOWN_TODAY, TileType } from '../../src/world/tiles';
 import { flowerRefusal, flowersHere, groundSays, pickedSays } from '../../src/game/wildflowers';
 import { ACTIONS } from '../../src/game/actions';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 256 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { psql, ok, bad, check } from './harness';
 
 /* ---- the numbers ----------------------------------------------------------- */
 

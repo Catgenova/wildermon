@@ -13,27 +13,8 @@
  *
  * It makes its own island and rolls it back.
  */
-import { execFileSync } from 'node:child_process';
 import { HOME_LEG } from '../../src/game/creatures';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { psql, check, finish } from './harness';
 
 const TOKEN = [16, 16] as const;
 const FAR = 300;
@@ -97,6 +78,4 @@ check('the workers\' sweep settles it, and only it: the one at home is left to t
 }
 check('the clock runs the workers\' sweep every round', said.get('TICK') === 'true', said.get('TICK'));
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\na worker far from anybody still walks home — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('a worker far from anybody still walks home');

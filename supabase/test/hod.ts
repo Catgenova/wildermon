@@ -11,30 +11,11 @@
  *
  * The island half makes its own island and rolls it back.
  */
-import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { TileType } from '../../src/world/tiles';
 import { SPECIES, workRangeOf } from '../../src/game/creatures';
 import type { Item } from '../../src/game/items';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { psql, check, finish } from './harness';
 
 /** The token, and the two walls: the marble one seven tiles off, the log one nearer. */
 const TOKEN = [16, 16] as const;
@@ -129,6 +110,4 @@ check('what went into the wall came out of the chest, one for one, give or take 
   `chest ${left('marble_brick')}|${left('mortar')}`);
 check('and the log wall nobody brought logs for is left as it was', JSON.stringify(logs.needed) === JSON.stringify(logBill), JSON.stringify(logs.needed));
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\na hod carrier brings what the stores hold — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('a hod carrier brings what the stores hold');

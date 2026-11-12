@@ -23,25 +23,11 @@
  *
  * Runs against the database the suite leaves behind, and puts it back.
  */
-import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { attackOf, bloodMul, Creatures, maxHealth, rarityLine, rarityMul, raritySays, SPECIES, workRangeOf, type IslandCreature } from '../../src/game/creatures';
 import { RARITIES, RARITY_ODDS, rarityChance } from '../../src/game/items';
 import { BLOOD_CHANNELS, CHANNELS, husbandryOdds, rollTraits, traitMul, traitTier, TIERS, type ChannelDef, type TraitChannel } from '../../src/game/traits';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
+import { psql } from './harness';
 
 let bad = 0;
 const say = (ok: boolean, line: string): void => {

@@ -9,12 +9,7 @@
  */
 import { Game } from '../../src/game/game';
 import { CREATURE_ACTION_BY_ID } from '../../src/game/creatureActions';
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { check, finish } from './harness';
 
 const g = Game.create(4251);
 for (const c of [...g.creatures.list.values()]) g.creatures.remove(c.id);
@@ -45,6 +40,4 @@ check(`a third of yours is taken on at level ${g.deed.level}`, why === null, why
 for (const c of g.creatures.list.values()) delete c.mine;
 check('in a game of your own every worker on the list is yours', g.creatures.workers().length === 6, String(g.creatures.workers().length));
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\na settlement's places count its own workers — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish(`a settlement's places count its own workers`);

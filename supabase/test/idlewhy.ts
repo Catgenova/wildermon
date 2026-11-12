@@ -18,30 +18,11 @@
  *
  * The island half makes its own island and rolls it back.
  */
-import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { HOME_SLACK, SPECIES, workRangeOf, type Creature, type GatherKind } from '../../src/game/creatures';
 import { idleSays, type Idle, type IdleWhy } from '../../src/game/workerlog';
 import { TileType } from '../../src/world/tiles';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { psql, check, finish } from './harness';
 
 const T = 60;
 const FAR = 300;
@@ -184,6 +165,4 @@ check('a worker being worked is sent as it was stored, with its ledger for its k
   isle.get('SENT') === `range|${reach}|true`, isle.get('SENT'));
 check(`and your own workers are sent wherever they are: the one ${FAR} tiles off`, isle.get('SENTFAR') === 'true', isle.get('SENTFAR'));
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\na worker says why it is idle — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('a worker says why it is idle');

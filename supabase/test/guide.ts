@@ -41,13 +41,13 @@
  * Runs against the database the suite leaves behind: Hoarding, and Dane on it,
  * and puts it all back.
  */
-import { execFileSync } from 'node:child_process';
 // `game` first: the root of the module graph, so nothing below comes out half-built.
 import { Game } from '../../src/game/game';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import {
   EVOLVE_AT, footing, HERD_REACH, levelSkill, MONSTER_CAP, MONSTER_KEEP_OFF, PULL_DEFAULT, seasonSays, SPECIES, WATER_RANGE, WILD_RANGE, type Creature, type SpeciesDef,
 } from '../../src/game/creatures';
+import { psql, ok, bad, check } from './harness';
 /** A Woolabee's level skill, which sets its stage (`creatureLevel`): a skill it does not level by sets none. */
 const WOOL_LEVEL = levelSkill(SPECIES.woola)!;
 import {
@@ -59,24 +59,6 @@ import { packLand, packWorld, unpack } from '../../src/game/save';
 import { TILE_DEFS } from '../../src/world/tiles';
 import { percent, timeWords } from '../../src/game/words';
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 const sorted = (xs: Iterable<string>): string => [...xs].sort().join(',');
 
 /* ---- the pages -------------------------------------------------------------- */

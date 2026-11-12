@@ -22,7 +22,6 @@
  *
  * The island half makes its own island and rolls it back.
  */
-import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { AROUND_ACTION_BY_ID, AROUND_MOST, AROUND_STOPPED, aroundTrade } from '../../src/game/around';
 import { GATHER_VERB, HOME_SLACK, SPECIES, workRangeOf, type Creature, type GatherKind } from '../../src/game/creatures';
@@ -31,26 +30,7 @@ import { furnitureRoom } from '../../src/game/furniture';
 import { POST_FOLLOW_REACH } from '../../src/game/posts';
 import { idleSays } from '../../src/game/workerlog';
 import { TileType } from '../../src/world/tiles';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { psql, check, finish } from './harness';
 
 const U = '7e5b0000-0000-4000-8000-0000000a0001';
 const S = '7e5b0000-0000-4000-8000-0000000a0002';
@@ -552,6 +532,4 @@ check('its keeper not seen for the logout time: its own settle sends it back', i
   check('assigned to the settlement: off work round you, on its roll', isle.get('ASSIGN') === 'true|deed|null|1', isle.get('ASSIGN'));
 }
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\na wildermon works round its keeper — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('a wildermon works round its keeper');

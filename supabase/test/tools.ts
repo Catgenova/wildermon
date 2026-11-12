@@ -23,31 +23,13 @@
  * Runs against the database the suite leaves behind.
  */
 import { RELICS } from '../../src/game/archaeology';
-import { execFileSync } from 'node:child_process';
 import { ACTIONS } from '../../src/game/actions';
 import { RECIPES } from '../../src/game/recipes';
 import { MOULDS } from '../../src/game/metal';
 import { POTTERY } from '../../src/game/kiln';
 import { ITEM_DEFS } from '../../src/game/items';
+import { psql, ok, bad, check } from './harness';
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 // The action list is what resolves the ring of imports these all sit in; ask
 // for it first or the recipe list comes back empty and this passes on nothing.
 void ACTIONS.length;

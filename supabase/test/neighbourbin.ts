@@ -14,31 +14,12 @@
  *
  * Runs against the database the suite leaves behind, in one transaction that is rolled back.
  */
-import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { type PlacedFurniture } from '../../src/game/furniture';
 import { type PlacedCrate } from '../../src/game/crates';
 import { type Creature } from '../../src/game/creatures';
 import { type Item } from '../../src/game/items';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { psql, check, finish } from './harness';
 
 const ANN = 'd71c4a17-0000-4000-8000-0000000000a1';
 const BO = 'd71c4a17-0000-4000-8000-0000000000b0';
@@ -158,6 +139,4 @@ const round = g.aroundStores({ x: 23, y: 21, radius: 6 } as Parameters<typeof g.
 check('browser: working around Bo there, neither Ann\'s bin nor her crate', round.every((s) => !(s.x === 24 && s.y === 20) && !(s.x === 22 && s.y === 21)),
   round.map((s) => `${s.x},${s.y}`).join(' ') || 'none');
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\na worker fills its keeper's storage — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish(`a worker fills its keeper's storage`);

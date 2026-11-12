@@ -43,7 +43,6 @@
  * Runs against the database the suite leaves behind, inside a transaction that
  * is rolled back.
  */
-import { execFileSync } from 'node:child_process';
 // `game` first: the root of the module graph, so nothing below comes out half-built.
 import { Game } from '../../src/game/game';
 import { ACTION_BY_ID } from '../../src/game/actions';
@@ -57,26 +56,10 @@ import {
   mutationTier, pct, rollTrait, TIERS, TRAIT_SLOTS, traitName, traitOf, traitTier, upgradeChance, type BreedOdds, type Line, type TraitChannel,
   type TraitTier,
 } from '../../src/game/traits';
+import { psql, ok, bad, check, seed } from './harness';
+/** Every roll in this test, off one seed (SEED to play it again). */
+const seeded = seed();
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 
 /* ---- the pair ---------------------------------------------------------------- */
 
@@ -180,7 +163,7 @@ for (const c of CASES) {
     `${slots} / ${tiers} / ${odds.mutated}`);
   check(`${c.what}: each parent trait's share is its share among every trait`,
     Object.keys(odds.carry).every((id) => odds.carry[id] === (odds.every[id] ?? 0)) && Object.keys(odds.carry).length === new Set([...c.sire, ...c.dam]).size);
-  const fresh = tally(Array.from({ length: MANY }, () => breedTraits(c.sire, c.dam, c.h, c.care, Math.random, c.keep, c.up, c.copy)), c.sire, c.dam);
+  const fresh = tally(Array.from({ length: MANY }, () => breedTraits(c.sire, c.dam, c.h, c.care, seeded, c.keep, c.up, c.copy)), c.sire, c.dam);
   if (c.copy) check(`${c.what}: every copy is in every young one`, c.copy.every((id) => Math.abs(odds.carry[id] - 1) < 1e-12), c.copy.map((id) => odds.carry[id]).join(', '));
   const off = agree(odds, fresh, MANY);
   check(`${c.what}: the odds land where ${MANY} fresh draws of breedTraits do, on all ${Object.keys(odds.every).length} traits, ${TIERS.length} tiers, ${CHANNELS.length} channels`,
@@ -389,7 +372,7 @@ console.log('--- the island');
 // One rule for a wild roll: the island's against the browser's own.
 TAKEN.forEach((taken, k) => {
   const isle = all(`ROLL${k}`);
-  const mine = Array.from({ length: MANY }, () => rollTrait(Math.random, taken, ROLL_SKILL) as string);
+  const mine = Array.from({ length: MANY }, () => rollTrait(seeded, taken, ROLL_SKILL) as string);
   const share = (xs: string[], f: (id: string) => boolean): number => xs.filter(f).length / xs.length;
   const off: string[] = [];
   for (const t of TIERS) {
@@ -408,7 +391,7 @@ TAKEN.forEach((taken, k) => {
 {
   const tier = mutationTier(SIRE, DAM);
   const bred = all('BRED').map((v) => JSON.parse(v) as { traits: string[]; from: Record<string, string> });
-  const muts = [...bred.map((b) => mutationOf(b.from as never)), ...Array.from({ length: MANY }, () => mutationOf(breedTraits(SIRE, DAM, HUSBANDRY, CARE, Math.random).from))]
+  const muts = [...bred.map((b) => mutationOf(b.from as never)), ...Array.from({ length: MANY }, () => mutationOf(breedTraits(SIRE, DAM, HUSBANDRY, CARE, seeded).from))]
     .filter((x): x is string => !!x);
   check(`every mutation that came, on either side, is the tier the preview says (${tier}) and a name neither parent carries`,
     muts.length > 0 && muts.every((id) => traitTier(id) === tier && ![...SIRE, ...DAM].some((t) => familyOf(t) === familyOf(id))), `${muts.length}: ${muts.slice(0, 5).join(', ')}`);

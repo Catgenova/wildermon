@@ -19,12 +19,8 @@
  */
 import { BOOT_PHASES, BootProgress, NEAR_REACH } from '../../src/ui/bootsteps';
 import { NEAR_PARTS, nearFirst } from '../../src/render/preload';
+import { ok, bad, check, timeScale } from './harness';
 
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 const near = (a: number, b: number): boolean => Math.abs(a - b) < 1e-9;
 const sleep = (ms: number): Promise<void> => new Promise((done) => setTimeout(done, ms));
 
@@ -236,7 +232,7 @@ check('listening, the island is not deaf', !island.deaf() && !island.cut() && is
   const answered = await island.comeBack();
   const took = performance.now() - from;
   check('coming back answers', answered === true);
-  check('well inside the socket\'s own backoff', took < 1000, `${Math.round(took)} ms`);
+  check('well inside the socket\'s own backoff', took < 1000 * timeScale(), `${Math.round(took)} ms`);
   check('with the socket opened once, by the coming back', rt.connects === 1, String(rt.connects));
   check('on the socket itself, not through the client\'s connect', rt.clientConnects === 0, String(rt.clientConnects));
   check('and every channel joined again', !island.deaf() && rt.channels.every((c) => c.state === 'joined'));
@@ -262,7 +258,7 @@ check('listening, the island is not deaf', !island.deaf() && !island.cut() && is
   const answered = await island.comeBack();
   const took = performance.now() - from;
   check('cut with no network, a coming back says so', answered === false);
-  check(`within ${REJOIN_WAIT_MS} ms`, took < REJOIN_WAIT_MS + 500, `${Math.round(took)} ms`);
+  check(`within ${REJOIN_WAIT_MS} ms`, took < REJOIN_WAIT_MS + 500 * timeScale(), `${Math.round(took)} ms`);
   check('having tried the socket more than once', rt.connects > 1, String(rt.connects));
   online = true;
   clearTimeout(rt.backoff);

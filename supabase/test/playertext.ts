@@ -27,6 +27,7 @@ import { cleanSignature, SIGN_MAX } from '../../src/game/signing';
 import { cleanNotice } from '../../src/game/noticeboard';
 import { RANK_NAME_MAX, rankNameRefusal } from '../../src/game/ranks';
 import { NAME_MAX } from '../../src/game/naming';
+import { check, finish } from './harness';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -43,11 +44,6 @@ const psql = (sql: string): string =>
     },
   }).trim();
 
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 /** A string as a SQL literal, whatever is in it. */
 const sq = (s: string): string => `'${s.replace(/'/g, "''")}'`;
 /** A list of strings as a jsonb literal: JSON escapes the controls, Postgres takes the rest as it is. */
@@ -284,6 +280,4 @@ is('FREE_OK', 'true', 'and Beekeeper is');
 is('MYNAME_STAFF', 'NONE', 'a sign-up that poses as staff is not taken up as an account');
 is('MYNAME_ROW', '0', 'and no account is made');
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\nplayer text — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('player text');

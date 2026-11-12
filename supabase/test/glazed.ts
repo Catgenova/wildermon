@@ -18,7 +18,6 @@
  */
 import { BUCKET_LITRES, litresOf } from '../../src/game/items';
 import { LYE_USE } from '../../src/game/placeables';
-import { execFileSync } from 'node:child_process';
 import { ACTION_BY_ID, ACTIONS } from '../../src/game/actions';
 import { WALL_TYPE_BY_ID, wallBill, type Side } from '../../src/game/building';
 import { dyeHex, dyeText, pureDye } from '../../src/game/dyestuffs';
@@ -26,25 +25,8 @@ import { dyedAlready } from '../../src/game/dyes';
 import { Game } from '../../src/game/game';
 import { ITEM_DEFS } from '../../src/game/items';
 import { RECIPE_BY_ID } from '../../src/game/recipes';
+import { psql, ok, bad, check } from './harness';
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 void ACTIONS.length;
 const W = `(select id from world where name = 'Hoarding')`;
 const U = `(select uid from player where world_id = ${W} and name = 'Dane')`;

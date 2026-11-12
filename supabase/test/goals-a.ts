@@ -20,7 +20,6 @@
  *
  * Runs against the database the suite leaves behind.
  */
-import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 // `game` first: the root of the module graph, so nothing below comes out half-built.
 import { BROWSER_TALLY, Game, MAX_DEED_LEVEL, deedWorkersAt } from '../../src/game/game';
@@ -32,26 +31,8 @@ import { stageSlots, TRAITS } from '../../src/game/traits';
 import { GEAR_SLOTS, gearId } from '../../src/game/wildgear';
 import { ROSE_FLOWER } from '../../src/game/roses';
 import { DAY_SECONDS } from '../../src/game/pace';
+import { psql, check, finish } from './harness';
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 const PART = [...WILDERMON_A, ...STANDING_A];
 const goal = (id: string) => {
   const g = PART.find((x) => x.id === id);
@@ -426,6 +407,4 @@ const prefixed = (k: string): boolean => {
 const unnoted = [...keys].filter((k) => !BROWSER_TALLY.has(k) && !defs.includes(`'${k}'`) && !prefixed(k));
 check(`every count this part reads (${keys.size}) is noted on the island`, unnoted.length === 0, unnoted.join(', '));
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\ngoals of the wildermon and of a settlement — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('goals of the wildermon and of a settlement');

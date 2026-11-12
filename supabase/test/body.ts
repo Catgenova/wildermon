@@ -13,6 +13,7 @@ import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { ACTION_BY_ID, TEACHES_NOTHING } from '../../src/game/actions';
 import { TileType } from '../../src/world/tiles';
+import { ok, bad, check } from './harness';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -26,12 +27,6 @@ const psql = (sql: string): string =>
       PGDATABASE: process.env.PGDATABASE ?? 'postgres',
     },
   }).replace(/\n$/, '');
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 
 const mine = [...TEACHES_NOTHING].sort().join(',');
 const theirs = psql("select coalesce(string_agg(id, ',' order by id), '') from action_def where teaches_nothing(id)");

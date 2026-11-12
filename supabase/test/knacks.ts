@@ -17,33 +17,16 @@
  *
  * Runs against any database with the migrations on it.
  */
-import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { SWIM_LEARN } from '../../src/game/body';
 import { CLIMB_LEARN } from '../../src/game/player';
 import { DRIVING_LEARN, SAILING_LEARN } from '../../src/game/travel';
 import { SKILL_DEFS } from '../../src/game/skills';
 import { knackChance, KNACK_BY_LEARNING, KNACK_GO, KNACK_ODDS } from '../../src/game/titles';
+import { psql, ok, bad, check } from './harness';
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
 const lit = (s: string): string => `'${s.replace(/'/g, "''")}'`;
 
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 const near = (a: number, b: number): boolean => Math.abs(a - b) <= 1e-12 + 1e-9 * Math.abs(b);
 
 /* ---- the rule, both sides ------------------------------------------------- */

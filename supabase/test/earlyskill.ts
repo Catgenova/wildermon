@@ -16,28 +16,9 @@
  * each case lands in the branch it is there for. Runs against the database the
  * suite leaves behind, in one transaction that is rolled back.
  */
-import { execFileSync } from 'node:child_process';
 import { Skills, EARLY_SKILL_BELOW, EARLY_SKILL_MUL, earlyGain, playerGain, skillGain } from '../../src/game/skills';
+import { psql, check, finish } from './harness';
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 const near = (a: number, b: number): boolean => Math.abs(a - b) <= 1e-12 * Math.max(1, Math.abs(b));
 
 /*
@@ -146,6 +127,4 @@ check('the watch counts the goes a rise took at the rate below the mark and abov
   watch.length === RISES.length && RISES.every(([a, z], i) => Math.abs(watch[i] - goes(a, z)) <= 1e-9 * goes(a, z)),
   `${watch.join(',')} / ${RISES.map(([a, z]) => goes(a, z)).join(',')}`);
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\nskill gain below ${EARLY_SKILL_BELOW} — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish(`skill gain below ${EARLY_SKILL_BELOW}`);

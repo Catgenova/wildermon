@@ -15,7 +15,6 @@
  * Runs against the database the suite leaves behind, and puts it back.
  */
 import { failDamage } from '../../src/game/faildamage';
-import { execFileSync } from 'node:child_process';
 // First, so the rules load in the order the game loads them: building and items lean on each other.
 import { ACTIONS } from '../../src/game/actions';
 import { laidInSaid, MATERIAL_BY_ID, onlyRefusal, onlySaid, wallBill, WALL_TYPE_BY_ID, WALL_TYPES } from '../../src/game/building';
@@ -23,27 +22,9 @@ import { CRAFT_CLASSES } from '../../src/game/classes';
 import { bagRefuses, ITEM_DEFS, type Item } from '../../src/game/items';
 import { RECIPE_BY_ID, type Recipe } from '../../src/game/recipes';
 import { SKILL_DEFS } from '../../src/game/skills';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
+import { psql, ok, bad, check } from './harness';
 
 void ACTIONS.length;
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 
 const recipe = (id: string): Recipe => {
   const r = RECIPE_BY_ID.get(id);

@@ -10,12 +10,7 @@
  */
 import { Game, type IslandGround } from '../../src/game/game';
 import { anvilName } from '../../src/game/anvil';
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { ok, bad, check } from './harness';
 
 const game = Game.create(4242);
 const row = (id: number, sub: string, x: number) => ({

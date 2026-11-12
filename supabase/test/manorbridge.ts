@@ -19,12 +19,7 @@ import type { PathPoint } from '../../src/world/pathfinding';
 import type { TileType } from '../../src/world/tiles';
 import type { Bridge } from '../../src/game/bridges';
 import type { BuildingsJSON, FloorKind, Wall } from '../../src/game/building';
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { ok, bad, check } from './harness';
 
 type Row = { buildings: Array<{ id: number; name: string; levels: number; roof: string | null; deck: number | null; work_level: number | null }>;
   tiles: Array<[number, number, number, boolean | null]>;

@@ -27,24 +27,11 @@
  *
  * Runs against the database the suite leaves behind.
  */
-import { execFileSync } from 'node:child_process';
 import { CLASSES, classRefusal, PERK_CLASSES } from '../../src/game/classes';
+import { psql } from './harness';
 
 /** Whether any trade is still on a tree, which the node half of the Tree tab is asked of; none is, the Warder having moved last. */
 const TREED = CLASSES.some((c) => !PERK_CLASSES.has(c.id));
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
 
 const ok: string[] = [];
 const bad: string[] = [];

@@ -11,6 +11,7 @@ import { generateAtlasWindow } from '../../src/world/atlas-world';
 import { CHUNK, World } from '../../src/world/world';
 import { packFog, unpackFog } from '../../src/net/fogpack';
 import { readAtlas } from '../../tools/atlas-node';
+import { ok, bad, check, timeScale } from './harness';
 
 const atlas = readAtlas();
 const SIZE = 512;
@@ -23,12 +24,6 @@ function joining(): World {
   w.streamFrom((x0, y0, ww, hh) => generateAtlasWindow(SEED, atlas, x0, y0, ww, hh, SIZE));
   return w;
 }
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 
 /*
  * A road walked across the island, seen twenty tiles either side.
@@ -132,7 +127,7 @@ check('and reading it again works out none', back.grown === again, `still ${back
   }
   const took = Date.now() - at;
   check('and looking at every bit of it at once is not a freeze',
-    took < 4000, `${all.grown} squares worked out in ${took}ms, for ${seenCount} tiles of fog`);
+    took < 4000 * timeScale(), `${all.grown} squares worked out in ${took}ms, for ${seenCount} tiles of fog`);
 }
 
 /* Ground nobody walked stays dark, and reading it works nothing out. */

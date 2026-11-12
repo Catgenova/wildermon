@@ -20,6 +20,7 @@
  */
 import { execFileSync } from 'node:child_process';
 import { gearFrom, wornWire } from '../../src/game/worn';
+import { ok, bad, check } from './harness';
 
 const ENV = {
   ...process.env,
@@ -37,12 +38,6 @@ const fails = (sql: string): string => {
   } catch (e) {
     return String((e as { stderr?: string }).stderr ?? e);
   }
-};
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
 };
 
 const ANNA = 'e1e1e1e1-e1e1-e1e1-e1e1-e1e1e1e1e1e1';

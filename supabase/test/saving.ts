@@ -19,12 +19,7 @@
  *     body and all, so a caller reading the error still reads it.
  */
 import { CANNOT_SAVE, onSaving, READ_ONLY, watchedFetch } from '../../src/net/supabase';
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { ok, bad, check } from './harness';
 
 const REST = 'https://island.example/rest/v1/rpc/';
 /** What the stand-in network answers each door with, set per call below. */

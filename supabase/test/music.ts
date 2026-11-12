@@ -24,12 +24,7 @@ import { ALL_TRACKS, DAY_TRACKS, MOMENTS, momentAt, tracksFor } from '../../src/
 import { SIGN_IN_TRACKS } from '../../src/audio/music/playlist-sign-in';
 import { BRIDGE_NOTES, harpRoll } from '../../src/audio/music/bridge';
 import { SEASONS } from '../../src/world/calendar';
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { ok, bad, check } from './harness';
 
 const TRACKS: readonly Track[] = ALL_TRACKS;
 /** The keys each instrument has, low and high, MIDI. */

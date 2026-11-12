@@ -14,12 +14,7 @@ import { pathOptions } from '../../src/game/player';
 import { findPath, GREED, GREEDY_FROM, LIFT_COST, PARTIAL_GAIN, type PathOptions, type PathPoint } from '../../src/world/pathfinding';
 import { TileType } from '../../src/world/tiles';
 import type { World } from '../../src/world/world';
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { ok, bad, check } from './harness';
 
 /* ---- the search before the memo, as it was ---------------------------------------------------------------------- */
 

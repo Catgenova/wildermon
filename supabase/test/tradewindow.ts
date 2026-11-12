@@ -34,6 +34,7 @@
  */
 import { execFile, execFileSync } from 'node:child_process';
 import { BARTER_IDLE, BARTER_MOST, BARTER_REACH, BARTER_SAID, barterPutRefusal, barterSaid, barterThing, sideWords, type Barter } from '../../src/game/barter';
+import { ok, bad, check } from './harness';
 
 const ENV = {
   ...process.env,
@@ -79,12 +80,6 @@ const said = (r: Ran): Said => {
   } catch {
     return { why: `UNREADABLE ${r.out}` };
   }
-};
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
 };
 
 const W = 'bb000000-0000-4000-8000-0000000000a1';

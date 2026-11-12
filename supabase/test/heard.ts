@@ -31,12 +31,7 @@ import { SKILL_DEFS } from '../../src/game/skills';
 import { TileType } from '../../src/world/tiles';
 import { FOOTINGS, HUSHED, isWork, mixAt, STROKE_BY_ID, strokeOf } from '../../src/audio/sound';
 import { blow, chime, footfall, stroke, STROKES } from '../../src/audio/kit';
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { ok, bad, check } from './harness';
 
 /* ---- every job is answered for ------------------------------------------- */
 

@@ -19,12 +19,7 @@
  */
 import { Island } from '../../src/net/island';
 import { REGION } from '../../src/game/keep';
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { ok, bad, check } from './harness';
 
 type Bind = { filter: { event?: string }; callback: (m: unknown) => void };
 type Ch = { topic: string; state: string; bindings: Record<string, Bind[] | undefined>; subscribe(): unknown };

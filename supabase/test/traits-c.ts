@@ -18,33 +18,14 @@
  *
  * Runs against the database the suite leaves behind; the island half makes its own island and rolls it back.
  */
-import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { bloodMul, rarityMul, stageLoads, type Creature } from '../../src/game/creatures';
 import { findChance } from '../../src/game/archaeology';
 import { WORKER_REST_FIRST } from '../../src/game/keep';
 import { keptSight } from '../../src/game/vision';
 import { BLOOD_CHANNELS, bredLine, CHANNEL_BY_ID, CHANNELS, figSays, lineMul, rollTrait, TRAITS, traitMul, traitOf, traitSays, type TraitChannel } from '../../src/game/traits';
+import { psql, check, finish } from './harness';
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 const near = (a: number, b: number): boolean => Math.abs(a - b) < 1e-6;
 
 /** The four, and the channel each is on. */
@@ -298,6 +279,4 @@ const make = (species: string, mode: Creature['mode'], traits: string[], rare = 
     ['WAIT_SETTLER', 'WAIT_BESIDE', 'WAIT_ALONE'].map((k) => said.get(k)).join(' / '));
 }
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\nnight-eyed, deep-pocketed, lucky finder and settler, the same on both sides — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('night-eyed, deep-pocketed, lucky finder and settler, the same on both sides');

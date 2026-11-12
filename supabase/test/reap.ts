@@ -19,28 +19,9 @@
  * put down in a transaction that is rolled back, and the clock's own tidy is
  * called on them. Runs against the database the suite leaves behind.
  */
-import { execFileSync } from 'node:child_process';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 
 /** Each island: its name, when it was made, whether it opened, when anybody on it was last seen, and whether it lasts. */
+import { psql, ok, bad, check } from './harness';
 const ISLANDS: Array<{ name: string; made: string; ready: boolean; seen?: string; lasts?: string; home?: true; goes: boolean }> = [
   { name: 'Reap home', made: '60 days', ready: true, home: true, goes: false },
   { name: 'Reap shut', made: '25 hours', ready: false, goes: true },

@@ -28,12 +28,8 @@ import { Game } from '../../src/game/game';
 import { ARMOUR_BY_ID, ARMOUR_CLASSES, hitChance, pieceSoak, SHIELDS, SLOTS, slotOf, WEAPON_BY_ID, weaponDamage } from '../../src/game/gear';
 import { SKILL_BY_ID } from '../../src/game/skills';
 import { equipReport, fitsSlot } from '../../src/ui/equipment';
+import { check, finish } from './harness';
 
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 const near = (a: number, b: number, by = 1e-9): boolean => Math.abs(a - b) <= by * Math.max(1, Math.abs(b));
 
 const g = Game.create(4242);
@@ -147,6 +143,4 @@ check('putting on goes into the place it is worn, and taking off empties it, by 
 const after = equipReport(g);
 check('and the window then says the head is bare', after.slots.find((s) => s.slot === 'head')?.item === null);
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\nthe Equipment window's numbers are the fight's own — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish(`the Equipment window's numbers are the fight's own`);

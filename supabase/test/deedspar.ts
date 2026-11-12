@@ -19,7 +19,6 @@
  *
  * Runs against the database the suite leaves behind, in one transaction that is rolled back.
  */
-import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import {
   GATHER_SKILL, GUARD_LEARN, GUARD_LEVEL, LEARN_PACE, LEARNS_GAIN, learnPace, maxHealth, SPAR_REACH, SPAR_SLACK, SPAR_YIELD, sparBack,
@@ -30,26 +29,8 @@ import { idleSays } from '../../src/game/workerlog';
 import { skillGain } from '../../src/game/skills';
 import { TileType } from '../../src/world/tiles';
 import { percent } from '../../src/game/words';
+import { psql, check, finish } from './harness';
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 const near = (a: number, b: number, by = 1e-6): boolean => Math.abs(a - b) <= by;
 const T = 16;
 const U = '7e5b0000-0000-4000-8000-0000000000e9';
@@ -385,6 +366,4 @@ check(`and the guard walks to within ${SPAR_REACH} of it and spars, a go at its 
     !!refused && refused === island && Number(n) >= g.workerCap, `${refused} / ${at('FULL')}`);
 }
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\na Sparra on a settlement spars with your guards — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('a Sparra on a settlement spars with your guards');

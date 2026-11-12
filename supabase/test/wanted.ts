@@ -48,6 +48,7 @@ import { spanWords } from '../../src/game/words';
 import { SALE_DAYS } from '../../src/game/prices';
 import { dur, helpText } from '../../src/ui/panels/help';
 import type { Order } from '../../src/net/island';
+import { ok, bad, check } from './harness';
 
 const ENV = {
   ...process.env,
@@ -68,12 +69,6 @@ const session = (sql: string): Promise<string> => new Promise((done, fail) => {
   p.on('close', (code) => (code === 0 ? done(out.trim()) : fail(new Error(err))));
   p.stdin.end(sql);
 });
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 
 /* ---- the browser ------------------------------------------------------------ */
 console.log('--- the browser');

@@ -20,26 +20,12 @@
  *     `POOL_FILL` concrete stops it;
  *   * in the browser, the same.
  */
-import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { ACTIONS, type ActionDef, type Target } from '../../src/game/actions';
 import { waterDepth } from '../../src/game/fishing';
 import { POOL_FILL } from '../../src/game/foundations';
 import { POOL_DEPTH, POOL_LIP, settleChain, springCorner, type Slab } from '../../src/world/springs';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 256 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
+import { psql } from './harness';
 
 let bad = 0;
 const say = (ok: boolean, line: string): void => {

@@ -35,12 +35,8 @@ import HAIR from '../../src/sculpt/assets/lowhair.json';
 import INDEX from '../../src/sculpt/assets/lowhair-styles.json';
 import MALE_LIGHT from '../../tools/sculpt/lowlight-male.json';
 import FEMALE_LIGHT from '../../tools/sculpt/lowlight-female.json';
+import { ok, bad, check } from './harness';
 
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 /** The same, whatever order an object's keys come in (Postgres keeps a jsonb's keys in its own order). */
 const sorted = (x: unknown): unknown => (Array.isArray(x) ? x.map(sorted) : x && typeof x === 'object'
   ? Object.fromEntries(Object.keys(x).sort().map((k) => [k, sorted((x as Record<string, unknown>)[k])])) : x);

@@ -14,28 +14,8 @@
  * Every step is its own transaction, the clock moved by moving the creature's own times back. Makes its own island,
  * and takes it away again.
  */
-import { execFileSync } from 'node:child_process';
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
-
+import { psql, check, finish } from './harness';
 const ME = 'c4a7e000-0000-4000-8000-0000000000c1';
 const ISLE = 'Cratedkeeps';
 const W = `(select id from world where name = '${ISLE}')`;
@@ -106,6 +86,4 @@ check('its keeper moved: written, at its keeper', xmin() !== x0
 
 psql(`delete from world where name = '${ISLE}';`);
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\na wildermon in a crate keeps — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('a wildermon in a crate keeps');

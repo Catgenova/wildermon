@@ -10,12 +10,7 @@
  */
 import { Game } from '../../src/game/game';
 import { PLAYER_ATTACKER, SPECIES, threatens } from '../../src/game/creatures';
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { check, finish } from './harness';
 
 const g = Game.create(4250);
 const old = g.time - 3600 * 24 * 40;
@@ -44,6 +39,4 @@ check('nor one already dead', !threatens(dead, SPECIES[hunters[0]]));
 
 check('the marking is on unless turned off in Settings', g.settings.markThreats === true);
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\nhostiles marked — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('hostiles marked');

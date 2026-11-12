@@ -12,12 +12,7 @@ import { ACTION_BY_ID } from '../../src/game/actions';
 import { FIGHT_BACK_GOES, SPECIES } from '../../src/game/creatures';
 import { Game } from '../../src/game/game';
 import { TileType } from '../../src/world/tiles';
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { ok, bad, check } from './harness';
 
 const game = Game.create(4242);
 const w = game.world;

@@ -29,33 +29,16 @@
  * Runs against the database the suite leaves behind, in one transaction that is
  * rolled back.
  */
-import { execFileSync } from 'node:child_process';
 // `game` first: the root of the module graph, so nothing below comes out half-built.
 import { Game } from '../../src/game/game';
 import { mutationSaid, type Creature } from '../../src/game/creatures';
 import {
   breedTraits, familyOf, lowestSlot, MUTATION_ODDS, mutationOf, mutationTier, TIERS, TRAITS, traitTier, TRAIT_SLOTS, type TraitSource, type TraitTier,
 } from '../../src/game/traits';
+import { psql, check, finish, seed } from './harness';
+/** Every roll in this test, off one seed (SEED to play it again). */
+const seeded = seed();
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 
 const rank = (id: string): number => TIERS.indexOf(traitTier(id));
 const TOP: TraitTier = TIERS[TIERS.length - 1];
@@ -105,8 +88,8 @@ for (const [name, pair] of Object.entries(PAIRS)) {
     !why, why ?? `${plain.traits} -> ${mutated.traits}`);
 }
 check('browser: an empty slot is the lowest there is, and in a full set the lowest-tier one is taken',
-  lowestSlot(['swift'], Math.random).slot === 1 && lowestSlot([], Math.random).slot === 0
-    && lowestSlot(['swift', 'willing', 'fleet'], Math.random).slot === 1 && TRAIT_SLOTS === 3);
+  lowestSlot(['swift'], seeded).slot === 1 && lowestSlot([], seeded).slot === 0
+    && lowestSlot(['swift', 'willing', 'fleet'], seeded).slot === 1 && TRAIT_SLOTS === 3);
 {
   // Where two share the lowest tier, either may go, and the one above them never does.
   const set = ['willing', 'thrifty', 'swift'];
@@ -120,7 +103,7 @@ check('browser: an empty slot is the lowest there is, and in a full set the lowe
   let n = 0;
   const broken: string[] = [];
   for (let i = 0; i < N; i++) {
-    const b = breedTraits(pair.sire, pair.dam, 50, 0.5, Math.random);
+    const b = breedTraits(pair.sire, pair.dam, 50, 0.5, seeded);
     const m = mutationOf(b.from);
     if (!m) continue;
     n++;
@@ -242,6 +225,4 @@ for (const [name, pair] of Object.entries(PAIRS)) {
 }
 check(`the top tier stays ${TOP}`, mutationTier(PAIRS.top.sire, PAIRS.top.dam) === TOP);
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\na mutation — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('a mutation');

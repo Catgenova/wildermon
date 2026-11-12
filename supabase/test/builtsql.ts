@@ -13,29 +13,9 @@
  * And the check itself, on functions written to be caught and to be let through, so that a check that
  * passes because it no longer reads anything is caught too.
  */
-import { execFileSync } from 'node:child_process';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 256 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 
 /** A piece of a function's body: code, or a literal with what is inside it. */
+import { psql, check, finish } from './harness';
 interface Piece { code: string; lit: string | null }
 
 /** A body cut into code and literals, comments dropped. Literals: '...', E'...', $tag$...$tag$. */
@@ -203,6 +183,4 @@ check('barter_split and rpc_work_deliver run no EXECUTE at all',
   real.filter((f) => /^(barter_split|rpc_work_deliver)\(/.test(f.fn)).every((f) => executes(f.src).length === 0)
     && real.filter((f) => /^(barter_split|rpc_work_deliver)\(/.test(f.fn)).length === 2);
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\nno SQL built at run time — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('no SQL built at run time');

@@ -14,6 +14,7 @@
 import { execFileSync } from 'node:child_process';
 import { lastDawn, TREE_AGES } from '../../src/world/tiles';
 import { hoursHence, treeOutlook } from '../../src/game/actions';
+import { ok, bad, check } from './harness';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -30,12 +31,6 @@ const psql = (sql: string): string =>
     // since it follows "You see ..." on both sides, and that space is part of
     // what has to agree.
   }).replace(/\n$/, '');
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 
 // The island the suite left, its woods turned over a minute after the last dawn.
 psql(`update world set trees_at = tree_last_dawn() + interval '1 minute' where name = 'Hoarding'`);

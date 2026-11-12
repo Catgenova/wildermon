@@ -41,6 +41,7 @@
 import { execFileSync } from 'node:child_process';
 import { awayFor } from '../../src/game/away';
 import { clearQuestion, heardLine, moveTarget, MUTE_FOR, muteLabel, muteLine, type Kept, type KeptBody } from '../../src/game/keeper';
+import { ok, bad, check } from './harness';
 
 const ENV = {
   ...process.env,
@@ -82,12 +83,6 @@ const parsed = <T>(r: Ran): T | null => {
   } catch {
     return null;
   }
-};
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
 };
 
 const KEEP = 'ee000000-0000-4000-8000-0000000000a1';

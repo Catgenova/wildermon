@@ -26,7 +26,6 @@
  *
  * Runs against the database the suite leaves behind, in one transaction that is rolled back.
  */
-import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { deedJobLine } from '../../src/game/creaturecrate';
 import {
@@ -47,26 +46,7 @@ import { helpText } from '../../src/ui/panels/help';
 import { BUSH_DEFS, TileType } from '../../src/world/tiles';
 import { fruitsAt } from '../../src/game/fruiting';
 import { DAY_SECONDS } from '../../src/game/pace';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { psql, check, finish } from './harness';
 
 /** Each kind, its new trade, and the action your own hands do it by (for the skill it trains). */
 const KINDS: Array<[id: string, trade: GatherKind]> = [
@@ -1096,6 +1076,4 @@ for (const k of CASES) {
     inCrate(crate) === '-' && planted.join(' ') === LILY_SPOTS && kinds.sort().join(',') === WATER_PLANTS.map((d) => d.id).sort().join(','), `${inCrate(crate)} ${planted.join(' ')}`);
 }
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\nrepurpose — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('repurpose');

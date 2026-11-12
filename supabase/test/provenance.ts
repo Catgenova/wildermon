@@ -29,6 +29,7 @@
 import { execFileSync } from 'node:child_process';
 import { flagLabel, flagLine, WATCH_RATE_LEAST, WATCH_RATE_TIMES, type WatchFlag } from '../../src/game/watch';
 import { reportReason } from '../../src/game/keeper';
+import { ok, bad, check } from './harness';
 
 const ENV = {
   ...process.env,
@@ -57,12 +58,6 @@ const psql = (text: string): string => {
 const as = (who: string, text: string): Ran => sql(
   `select set_config('request.jwt.claims', '${JSON.stringify({ sub: who })}', false) \\g /dev/null\nset role authenticated;\n${text}\n`);
 const anon = (text: string): Ran => sql(`set role anon;\n${text}\n`);
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 
 const W = 'e5a00000-0000-4000-8000-0000000000a1';
 const HALE = 'e5a00000-0000-4000-8000-000000000001'; // made Provenfold, keeps it

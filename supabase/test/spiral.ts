@@ -29,33 +29,14 @@
  * it, on the ground `outstairs.ts` uses, and puts the ground, his settlement
  * and Dane back after.
  */
-import { execFileSync } from 'node:child_process';
 import { ACTION_BY_ID } from '../../src/game/actions';
 import { CELLAR_DEPTH, CELLAR_LEVEL, floorBill, isDone, SINGLE_STAIRS_SHARE, SPIRAL, SPIRAL_FOOT_SAID, SPIRAL_STAIRS_NAME, WALL_HEIGHT, type Side } from '../../src/game/building';
 import { frameSays } from '../../src/game/frameActions';
 import { Game } from '../../src/game/game';
 import { storeyHeight, storeyTileAt } from '../../src/game/storeyview';
 import { TileType } from '../../src/world/tiles';
+import { psql, ok, bad, check } from './harness';
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 const W = `(select id from world where name = 'Hoarding')`;
 const DANE = `(select uid from player where world_id = ${W} and name = 'Dane')`;
 

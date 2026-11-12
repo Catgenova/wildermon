@@ -26,6 +26,7 @@
  */
 import { execFileSync } from 'node:child_process';
 import { EXECUTE, REALTIME_POLICIES, SCHEMA_USAGE, TABLES, type Read } from './permissions.allow';
+import { check, finish } from './harness';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -42,11 +43,6 @@ const psql = (sql: string): string =>
     },
   }).trim();
 
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 const listed = (xs: readonly string[]): string => (xs.length ? xs.join(', ') : 'none');
 
 const ROLES = ['anon', 'authenticated'] as const;
@@ -386,6 +382,4 @@ check('nor on a table in private', (said.get('privtabs') as string[]).length ===
     rtSays.join(' | '));
 }
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\npermissions — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('permissions');

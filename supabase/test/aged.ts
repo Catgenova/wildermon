@@ -23,7 +23,6 @@
  *   npx esbuild supabase/test/aged.ts --bundle --platform=node --format=esm \
  *     --external:typescript --outfile=node_modules/.cache/aged.mjs && node node_modules/.cache/aged.mjs
  */
-import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { ACTION_BY_ID, type ActionDef, type Target } from '../../src/game/actions';
 import { ageGain, ageingRule, brewQl, CELLAR_AGEING, keepsQl, MEAD_AGE_CAP, MEAD_AGE_RATE } from '../../src/game/ageing';
@@ -33,26 +32,8 @@ import { ITEM_DEFS, type Item } from '../../src/game/items';
 import { DAY_SECONDS } from '../../src/game/pace';
 import { vesselSays } from '../../src/game/placeables';
 import { TileType } from '../../src/world/tiles';
+import { psql, check, finish } from './harness';
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 /** A QL as the island writes it down: a `real`, read back as a double. */
 const real = (x: number): string => String(Math.fround(x));
 
@@ -372,6 +353,4 @@ check(`Examine says a mead's own rate and cap, the same on both sides: “${sayI
 
 /* ---- what was found ------------------------------------------------------------------------------- */
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\naged — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('aged');

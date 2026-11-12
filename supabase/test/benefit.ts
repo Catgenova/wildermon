@@ -56,12 +56,7 @@ import { WEAPONS } from '../../src/game/gear';
 import { helpText } from '../../src/ui/panels/help';
 import { ALL_GOALS } from '../../src/game/journal';
 import { numberWord, share } from '../../src/game/words';
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { ok, bad, check } from './harness';
 
 /**
  * Numbers in text that are not a rule's number, and why. A snippet excuses

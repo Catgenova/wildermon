@@ -28,12 +28,7 @@ import { chromium, type LaunchOptions, type Page } from 'playwright-core';
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { NEED_KINDS } from '../../src/ui/panels/care';
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { ok, bad, check } from './harness';
 
 /** A Chromium to drive, as `crowd.ts` finds one, or null. */
 function browserOptions(): LaunchOptions | null {

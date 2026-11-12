@@ -10,28 +10,10 @@
  * through any wear at all, an Oath through a blow, a Due Reward through
  * `skill_mult`. Every number asked after is the browser's own.
  */
-import { execFileSync } from 'node:child_process';
 import { BLOW_SHARE } from '../../src/game/creatures';
 import { FAITH_SPELL_BY_ID, FAITH_SPELLS, FAITH_TIER_AT, SPELLS_PER_TIER, type FaithSpellDef } from '../../src/game/patrons';
+import { psql, ok, bad, check } from './harness';
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 const near = (a: number, b: number, by = 1e-6): boolean => Math.abs(a - b) <= by;
 const spell = (id: string): FaithSpellDef => {
   const s = FAITH_SPELL_BY_ID.get(`justice_${id}`);

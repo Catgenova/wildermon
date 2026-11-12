@@ -34,7 +34,6 @@
  *
  * Runs against the database the suite leaves behind, in one transaction that is rolled back.
  */
-import { execFileSync } from 'node:child_process';
 import {
   CARE_BONUS, DAIRY_FULL, EVOLVE_AT, footing, GUARD_LEARN, LEARN_PACE, LEARN_PACE_LEAST, LEARN_PACE_MOST, learnPace, PULL_PACE_TIMES,
   LEARNS_GAIN, OUT_EVERY, PULL_LEARN, restFor, SPECIES, STAGE_LOADS, STAGE_MUL, TIRE_GOES, workDuration, type GatherKind, type LearnsBy,
@@ -49,12 +48,7 @@ import { WEAPONS } from '../../src/game/gear';
 import { swingSeconds } from '../../src/game/fight';
 import { MAX_VEHICLE_SPEED } from '../../src/game/game';
 import { SKEP_REACH } from '../../src/game/bees';
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { psql, check, finish } from './harness';
 
 /* ---- the model ------------------------------------------------------------------------------------------------- */
 
@@ -317,20 +311,6 @@ check('every trade and way of learning is measured but a hunt, which is 1',
 
 /* ---- the same on both sides ------------------------------------------------------------------------------------ */
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
 const table = new Map(psql('select id || \'=\' || pace from learn_pace_def order by id').split('\n').filter(Boolean)
   .map((l) => l.split('=') as [string, string]).map(([k, v]) => [k, Number(v)]));
 check('the island\'s learn_pace_def is LEARN_PACE, every trade and way of learning',
@@ -375,6 +355,4 @@ CASES.forEach(([sp, skill], i) => {
     Math.abs(pace - mine) < 1e-9 && Math.abs(gain - want) < 1e-9, `island ${pace} ${gain}, browser ${mine} ${want}`);
 });
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\nlearning evened out across trades — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('learning evened out across trades');

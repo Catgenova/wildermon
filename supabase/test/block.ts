@@ -17,7 +17,6 @@
  *
  * Runs against the database the suite leaves behind.
  */
-import { execFileSync } from 'node:child_process';
 import {
   BLOCK_MOST, BLOCK_PER_SKILL, BLOCK_QL_FROM, BLOCK_QL_SPAN, blockChance, BLOCKED_SAID, CROWD_BLOCK, dodgeChance, SHIELD_WEAR,
 } from '../../src/game/fight';
@@ -27,25 +26,8 @@ import { itemDef } from '../../src/game/items';
 import { finePercent, percent } from '../../src/game/words';
 import { compareLines } from '../../src/ui/compare';
 import { TileType } from '../../src/world/tiles';
+import { psql, ok, bad, check } from './harness';
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 const near = (a: number, b: number, by = 1e-6): boolean => Math.abs(a - b) <= by * Math.max(1, Math.abs(b));
 const none = (_k: string, d: number): number => d;
 

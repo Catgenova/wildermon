@@ -13,31 +13,13 @@
  *
  * The island half makes its own island and rolls it back.
  */
-import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { SPECIES, workRangeOf, type Creature } from '../../src/game/creatures';
 import { idleSays, IDLE_WANTS, type Idle, type IdleWhy } from '../../src/game/workerlog';
 import { TileType } from '../../src/world/tiles';
 import { itemDef, type Item } from '../../src/game/items';
+import { psql, check, finish } from './harness';
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 const j = (v: unknown): string => `'${JSON.stringify(v).replace(/'/g, "''")}'::jsonb`;
 
 /* ---- the settlement, set out in the browser ------------------------------ */
@@ -196,6 +178,4 @@ check(`it names at most ${IDLE_WANTS} things, the island's \`idle_wants\` the sa
   check('past those, the rest are counted', idleSays(four, 'hod') === `Idle: no ${name('marble_brick')}, ${name('glass')}, ${name('mortar')} or 1 more in your settlement stores.`, idleSays(four, 'hod'));
 }
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\na hod carrier says what it wants and puts back what nothing wants — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('a hod carrier says what it wants and puts back what nothing wants');

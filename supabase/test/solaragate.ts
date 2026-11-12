@@ -11,6 +11,7 @@
  * On a copy of the database it is given (`template`), dropped after.
  */
 import { execFileSync } from 'node:child_process';
+import { check, finish } from './harness';
 
 const LYING_BYTES = 110;
 const DELTA_KB = 10;
@@ -25,12 +26,6 @@ const base = process.env.PGDATABASE ?? 'postgres';
 const COPY = 'solara_gate';
 const admin = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-d', 'template1', '-c', sql], { encoding: 'utf8', env }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 
 admin(`drop database if exists ${COPY}`);
 admin(`create database ${COPY} template ${base}`);
@@ -53,6 +48,4 @@ check('asked again with nothing written, the crates are left out', m.delta_crate
 check('and no companion at heel is sent again, but one with panniers', m.delta_active === 0, `${m.delta_active} of ${m.delta_cre_rows} rows`);
 check(`and that answer is at most ${DELTA_KB} kB`, (m.delta_kb ?? Infinity) <= DELTA_KB, `${m.delta_kb} kB`);
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\na settlement grown to Solara's size, what it sends — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish(`a settlement grown to Solara's size, what it sends`);

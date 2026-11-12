@@ -16,31 +16,13 @@
  *
  * The island half makes its own island and rolls it back.
  */
-import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import type { Creature } from '../../src/game/creatures';
 import { DAY_SECONDS } from '../../src/game/pace';
 import { LEDGER_ITEMS, LEDGER_SHOWN, ledgerAdd, ledgerLines, type WorkLedger } from '../../src/game/workerlog';
 import { TileType } from '../../src/world/tiles';
+import { psql, check, finish } from './harness';
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 /** Equal as data, whatever order the keys came in: jsonb keeps its own. */
 const same = (a: unknown, b: unknown): boolean => {
   if (a === null || b === null || typeof a !== 'object' || typeof b !== 'object') {
@@ -211,6 +193,4 @@ check('the island day is the island clock over a day\'s length', isle.get('DAY')
   check('and a ledger last written two days ago says nothing', ledgerLines(l, 11).length === 0);
 }
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\na worker keeps a ledger — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('a worker keeps a ledger');

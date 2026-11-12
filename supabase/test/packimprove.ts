@@ -12,30 +12,11 @@
  *
  * Runs against the database the suite leaves behind, in one transaction that is rolled back.
  */
-import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import { canImprove, improvable, PACKS } from '../../src/game/improve';
 import { ITEM_DEFS } from '../../src/game/items';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { psql, check, finish } from './harness';
 
 const ids = Object.keys(PACKS).sort();
 const said = (id: string): string => { const w = improvable(id); return w ? `${w.material.id}:${w.skill}` : 'no'; };
@@ -99,6 +80,4 @@ const t = { kind: 'item', uid: sack.uid } as Target;
 const mine = act?.applies(t, g) ? (act.check?.(t, g) ?? 'none') : 'not offered';
 check('a sack without cloth: refused, the same words both sides', at('SACK') !== 'none' && at('SACK') === mine, `island "${at('SACK')}", browser "${mine}"`);
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\npacks improvable — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('packs improvable');

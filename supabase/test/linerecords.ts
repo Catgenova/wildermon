@@ -27,33 +27,13 @@
  * Runs against the database the suite leaves behind, in one transaction that is
  * rolled back.
  */
-import { execFileSync } from 'node:child_process';
 // `game` first: the root of the module graph, so nothing below comes out half-built.
 import '../../src/game/game';
 import { bloodMul, type Creature } from '../../src/game/creatures';
 import { bredScore, dayOf, RECORD_STATS, recordFigure, recordSaid, type BredRecord, type RecordStat } from '../../src/game/boards';
 import { BOARD_RULES } from '../../src/ui/panels/boards';
 import type { Line, TraitChannel } from '../../src/game/traits';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { psql, ok, bad, check, timeScale } from './harness';
 
 const arr = (xs: string[]): string => `array[${xs.map((x) => `'${x}'`).join(',')}]::text[]`;
 const U = '7e5b0000-0000-4000-8000-0000000000d1';
@@ -254,7 +234,7 @@ console.log('--- read back');
 {
   const ms = Number(isle.get('COST'));
   console.log(`   a birth's note: ${ms.toFixed(3)} ms`);
-  check(`a birth's note is one statement, under ${NOTE_MS} ms`, ms < NOTE_MS, `${ms} ms`);
+  check(`a birth's note is one statement, under ${NOTE_MS} ms`, ms < NOTE_MS * timeScale(), `${ms} ms`);
 }
 
 for (const l of [...ok, ...bad]) console.log(l);

@@ -23,12 +23,7 @@ import { FORGET_AFTER, loadAllWildermon, loadWildermon, onWildermonForgotten, sw
 import { loadAllVoices } from '../../src/audio/voices';
 import { beastsKept, kitOf } from '../../src/render/beasts';
 import { SPECIES } from '../../src/game/creatures';
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { ok, bad, check } from './harness';
 
 // Before anything is fetched: nothing.
 check('a line not yet fetched has no model', wildermonKind('rabba') === null && wildermonTop('rabba') === undefined);

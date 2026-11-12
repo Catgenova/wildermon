@@ -14,27 +14,8 @@
  *
  * Runs against the database the suite leaves behind, in one transaction that is rolled back.
  */
-import { execFileSync } from 'node:child_process';
 import { SEAT_STALE_S } from '../../src/net/supabase';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { psql, check, finish } from './harness';
 
 const U = 'a9c1e000-0000-4000-8000-0000000000c5';
 const A = '11111111-1111-4111-8111-111111111111';
@@ -127,6 +108,4 @@ net.onElsewhere(() => { told++; });
 await net.watchedFetch('https://island.example/rest/v1/rpc/rpc_move', { method: 'POST' });
 check('browser: a call refused for another device\'s seat tells the page', told === 1, String(told));
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\none device at a time — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('one device at a time');

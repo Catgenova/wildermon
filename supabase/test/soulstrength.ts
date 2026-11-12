@@ -20,7 +20,6 @@
  * The island half runs in one transaction that is rolled back, on an island of
  * its own.
  */
-import { execFileSync } from 'node:child_process';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import { CHAR_START, Game, type Deed } from '../../src/game/game';
 import { SKILL_TOP } from '../../src/game/skills';
@@ -29,26 +28,8 @@ import { TAME_NERVE } from '../../src/game/creatureActions';
 import { prayerWorth } from '../../src/game/faith';
 import { SIT_CALM, sittingWorth } from '../../src/game/meditation';
 import { soulFx, SOUL_FX } from '../../src/game/talents';
+import { psql, ok, bad, check } from './harness';
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 const near = (a: number, b: number, by = 1e-9): boolean => Math.abs(a - b) <= by;
 /** Favour, Calm and health are kept in single precision on the island: a millionth either way. */
 
