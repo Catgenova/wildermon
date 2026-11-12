@@ -9649,10 +9649,17 @@ img:is(.rc-plate, .rc-niche, .ui-frame, .ui-frame-edge):not([src]) {
 .eq-card-trade { background: var(--eq-iron-lit); color: var(--eq-ink); font-size: 8px; }
 
 /* ---- The shopping list (src/ui/panels/shopping.ts) ---- */
+/* Scrolls inside the window as `.settings-page` does: the window body (`settings-body`) does not. */
 .shop {
   display: grid;
+  align-content: start;
   gap: 6px;
-  padding: 4px 2px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 8px 4px 2px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--t-thumb, #5a4a30) transparent;
 }
 
 .shop-section {
@@ -9714,11 +9721,18 @@ img:is(.rc-plate, .rc-niche, .ui-frame, .ui-frame-edge):not([src]) {
 }
 
 /* ---- Improve and repair (src/ui/panels/mend.ts) ---- */
+/* Scrolls inside the window as `.settings-page` does: the window body (`settings-body`) does not. */
 .mend {
   display: grid;
+  align-content: start;
   gap: 10px;
-  padding: 4px 2px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 8px 4px 2px;
   font-size: 12px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--t-thumb, #5a4a30) transparent;
 }
 
 .mend-section {

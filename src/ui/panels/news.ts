@@ -4264,6 +4264,11 @@ export const NEWS: News[] = [
     lines: () => ['Fixed: a bed its owner named, as written in "Asleep in …" and "Not yours: …" (was lower case).'],
   },
   {
+    n: 528,
+    day: '2026-11-12',
+    lines: () => ['Fixed: Improve and repair, Shopping list: scroll bar when the window is shorter than its contents.'],
+  },
+  {
     n: 525,
     day: '2026-11-11',
     lines: () => ['Renamed: Put it to <mate> → Breed with <mate>.', 'Renamed: in young → pregnant.'],
