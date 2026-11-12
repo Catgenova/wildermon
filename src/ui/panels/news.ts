@@ -4282,6 +4282,14 @@ export const NEWS: News[] = [
     lines: () => ['Fixed: top of a waterfall off a pond behind a raised cliff edge: water drawn only over the pond, behind the rim (was: over the rim and its moss beside the fall, up to 2 tiles along).'],
   },
   {
+    n: 531,
+    day: '2026-11-12',
+    lines: () => {
+      const d = SPECIES.embra;
+      return [`Renamed: ${d.was![d.was!.length - 1]} → ${d.name}; unnamed ones, carcasses and stud book records too.`];
+    },
+  },
+  {
     n: 525,
     day: '2026-11-11',
     lines: () => ['Renamed: Put it to <mate> → Breed with <mate>.', 'Renamed: in young → pregnant.'],

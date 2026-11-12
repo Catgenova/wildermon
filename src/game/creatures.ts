@@ -1764,9 +1764,9 @@ export const SPECIES: Record<string, SpeciesDef> = {
   embra: {
     id: 'embra',
     wound: 'burn',
-    name: 'Sluglow',
-    was: ['Embra'],
-    // Asked for: "Embra > sluglow slugember slugferno". Its words, and each stage's, are written once every number is here
+    name: 'Snailglow',
+    was: ['Embra', 'Sluglow'],
+    // Asked for: "Embra > sluglow slugember slugferno", then "sluglow to snailglow". Its words, and each stage's, are written once every number is here
     // (`sayLine`).
     description: '',
     stages: [
