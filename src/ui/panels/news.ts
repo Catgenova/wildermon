@@ -4269,6 +4269,11 @@ export const NEWS: News[] = [
     lines: () => ['Fixed: Improve and repair, Shopping list: scroll bar when the window is shorter than its contents.'],
   },
   {
+    n: 529,
+    day: '2026-11-12',
+    lines: () => ['Fixed: top of a waterfall off a pond behind a raised cliff edge: water drawn only over the pond, behind the rim (was: over the rim and its moss beside the fall, up to 2 tiles along).'],
+  },
+  {
     n: 525,
     day: '2026-11-11',
     lines: () => ['Renamed: Put it to <mate> → Breed with <mate>.', 'Renamed: in young → pregnant.'],
