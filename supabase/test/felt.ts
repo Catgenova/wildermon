@@ -92,7 +92,7 @@ say('nor does one going the other way',
   say('a real rise past a hundred floats only the rise',
     tidy(skillRises(book({ digging: 100.5 }), asHeld, true)), [{ id: 'digging', gain: 0.13 }]);
   say('and the beat\'s reading in play.ts is the skill as it stands',
-    /skillRises\(what\.skills, \(id\) => game\.skills\.standing\(id\)/.test(readFileSync(new URL('../../src/net/play.ts', import.meta.url), 'utf8')), true);
+    /skillRises\(what\.skills, \(id\) => game\.skills\.standing\(id\)/.test(readFileSync('src/net/play.ts', 'utf8')), true);
 }
 
 // A skill the browser has never heard of starts where every skill starts.
