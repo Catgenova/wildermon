@@ -1,7 +1,8 @@
 /**
- * G1, work at the ground with both hands and no tool: knelt on both knees with the toes tucked under, bowed low over the
- * ground in front of the knees, the head down on the hands; one hand dug in and drawn back toward the knees as the other
- * lifts and comes forward over the spot, then the other's dig. The shoulders roll down after the digging hand, the head
+ * G1, work at the ground with both hands and no tool: knelt on both knees with the toes tucked under, leant forward from
+ * the knees with the hips kept high, bowed over the ground just ahead of the knees, the head raised over the shoulders and
+ * looking down at the hands; one hand dug in and drawn back toward the knees as the other lifts and comes forward over
+ * the spot, then the other's dig, the elbows turned out. The shoulders roll down after the digging hand, the head
  * turned after it. The knees and the balls of the feet planted throughout. The jobs done with no tool at the ground play
  * it (`../index.ts` CLIP_OF_JOB): planting and sowing, foraging and searching, the traps, picking up, at the water's
  * edge, tending a campfire.
@@ -38,7 +39,11 @@ const ARMS_DRAW: Record<string, Euler> = {
   upperarm_l: [22, 8.9, 25.8], lowerarm_l: [60.3, 12.3, 0], hand_l: [10, 49.2, -28.3],
 };
 
-/** Knelt: the thighs a little forward of upright, bowed from the hips and the spine, the shoulders let down, the head down on the ground ahead. */
+/**
+ * Knelt: the thighs a little forward of upright, the hips high off the heels; bowed from the hips and the spine (the back
+ * about 70 degrees from upright, as little as puts the fingertips on the ground: the arms are short), the shoulders let
+ * forward and down, the neck raised so the head looks down at the hands from over the shoulders.
+ */
 const KNELT: KeyPose = {
   rot: {
     pelvis: [40, 0, 0], spine_01: [13, 0, 0], spine_02: [11, 0, 0], spine_03: [9, 0, 0], clavicle_l: [28, 0, 0], clavicle_r: [28, 0, 0], neck_01: [-32, 0, 0], neck_02: [-14, 0, 0], head: [14, 0, 0],
@@ -49,16 +54,32 @@ const KNELT: KeyPose = {
   feet: { l: { z: 0, lift: 0, pitch: -TOES }, r: { z: 0, lift: 0, pitch: -TOES } },
 };
 /** The right hand over its spot. */
-const REACH: KeyPose = merge(KNELT, { rot: { ...ARMS_REACH,  } });
+const REACH: KeyPose = merge(KNELT, { rot: { ...ARMS_REACH } });
 /** The right hand's dig: the shoulders rolled down after it, the head turned to it. */
 const DUG: KeyPose = merge(KNELT, { rot: { ...ARMS_DIG, spine_02: [12, 4, 0], spine_03: [10, 4, 0], head: [14, -10, 0] } });
-/** The dig drawn back toward the knees. */
+/** The dig drawn back toward the knees, the shoulders held where the dig rolled them. */
 const DRAWN: KeyPose = merge(KNELT, { rot: { ...ARMS_DRAW, spine_02: [12, 4, 0], spine_03: [10, 4, 0], head: [14, -10, 0] } });
 
-/** Her arms as turns added to his (`Clip.bodies.woman.tracks`), at the same beats. */
-const HER_REACH: Record<string, Euler> = {"pelvis":[8,0,0],"spine_02":[3,0,0],"clavicle_l":[16,0,0],"clavicle_r":[16,0,0],"neck_01":[-18,0,0],"neck_02":[-6,0,0],"upperarm_r":[-23.8,8.6,-15.6],"lowerarm_r":[20.4,-3.1,0],"hand_r":[6.9,7.6,-9.1],"upperarm_l":[-26.4,7.7,21.8],"lowerarm_l":[36.9,-7.6,0],"hand_l":[15,-1.9,0]};
-const HER_DIG: Record<string, Euler> = {"pelvis":[8,0,0],"spine_02":[3,0,0],"clavicle_l":[16,0,0],"clavicle_r":[16,0,0],"neck_01":[-18,0,0],"neck_02":[-6,0,0],"upperarm_r":[-19.8,-4.1,-21.3],"lowerarm_r":[18.1,7.4,0],"hand_r":[9.6,9,-7.7],"upperarm_l":[-31.3,4.7,23.7],"lowerarm_l":[32.7,-2.4,0],"hand_l":[13.6,-5.4,-0.1]};
-const HER_DRAW: Record<string, Euler> = {"pelvis":[8,0,0],"spine_02":[3,0,0],"clavicle_l":[16,0,0],"clavicle_r":[16,0,0],"neck_01":[-18,0,0],"neck_02":[-6,0,0],"upperarm_r":[-25,-7.4,-20.8],"lowerarm_r":[30,9.1,0],"hand_r":[11.8,4.4,-1.9],"upperarm_l":[-28.1,3.9,28.7],"lowerarm_l":[32.4,-5.7,0],"hand_l":[14.7,-10.4,-1]};
+/**
+ * Hers as turns added to his (`Clip.bodies.woman.tracks`), at the same beats: her shins longer for her height stand her
+ * hips higher, so she is bowed further at the hips and her shoulders let further forward and down to put her fingertips on
+ * the ground, her neck raised to keep her head as far over her shoulders as his; and her arms solved on her.
+ */
+const HER_REACH: Record<string, Euler> = {
+  pelvis: [8, 0, 0], spine_02: [3, 0, 0], clavicle_l: [16, 0, 0], clavicle_r: [16, 0, 0], neck_01: [-18, 0, 0], neck_02: [-6, 0, 0],
+  upperarm_r: [-23.8, 8.6, -15.6], lowerarm_r: [20.4, -3.1, 0], hand_r: [6.9, 7.6, -9.1],
+  upperarm_l: [-26.4, 7.7, 21.8], lowerarm_l: [36.9, -7.6, 0], hand_l: [15, -1.9, 0],
+};
+const HER_DIG: Record<string, Euler> = {
+  pelvis: [8, 0, 0], spine_02: [3, 0, 0], clavicle_l: [16, 0, 0], clavicle_r: [16, 0, 0], neck_01: [-18, 0, 0], neck_02: [-6, 0, 0],
+  upperarm_r: [-19.8, -4.1, -21.3], lowerarm_r: [18.1, 7.4, 0], hand_r: [9.6, 9, -7.7],
+  upperarm_l: [-31.3, 4.7, 23.7], lowerarm_l: [32.7, -2.4, 0], hand_l: [13.6, -5.4, -0.1],
+};
+const HER_DRAW: Record<string, Euler> = {
+  pelvis: [8, 0, 0], spine_02: [3, 0, 0], clavicle_l: [16, 0, 0], clavicle_r: [16, 0, 0], neck_01: [-18, 0, 0], neck_02: [-6, 0, 0],
+  upperarm_r: [-25, -7.4, -20.8], lowerarm_r: [30, 9.1, 0], hand_r: [11.8, 4.4, -1.9],
+  upperarm_l: [-28.1, 3.9, 28.7], lowerarm_l: [32.4, -5.7, 0], hand_l: [14.7, -10.4, -1],
+};
 
 /** The trunk and the head eased into the dig as into any key, so only the arms land on it. */
 const SOFT: Beat['per'] = Object.fromEntries(['pelvis', 'spine_01', 'spine_02', 'spine_03', 'clavicle_l', 'clavicle_r', 'neck_01', 'neck_02', 'head'].map((b) => [b, { ease: 'inOut' as const }]));
@@ -73,7 +94,7 @@ const beats = (reach: KeyPose, dug: KeyPose, drawn: KeyPose): Beat[] => [
 ];
 export const BEATS: Beat[] = beats(REACH, DUG, DRAWN);
 /** The hands trailing the forearms, the shoulders the hands, the head the shoulders: seconds each bone's keys are late. */
-export const LAG = {hand_l: 0.03, hand_r: 0.03, spine_02: 0.03, spine_03: 0.04, neck_01: 0.06, neck_02: 0.07, head: 0.08};
+export const LAG = { hand_l: 0.03, hand_r: 0.03, spine_02: 0.03, spine_03: 0.04, neck_01: 0.06, neck_02: 0.07, head: 0.08 };
 const { footKeys, ...KEYS } = poseToPose(BEATS, { length: LENGTH, loop: true, lag: LAG });
 const HER = poseToPose(beats({ rot: HER_REACH }, { rot: HER_DIG }, { rot: HER_DRAW }), { length: LENGTH, loop: true, lag: LAG }).tracks as Record<string, Array<Key<Euler>>>;
 

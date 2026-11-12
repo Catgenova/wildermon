@@ -70,7 +70,8 @@ const GROUND_JOBS = [
 /**
  * The clip a job in the `work` state plays, by the job (its action's id), where it is not the state's own (`CLIP_OF.work`):
  * the work with the hands and no tool at waist height (`hands`) for the jobs below, and for every recipe made with no tool
- * that is not cooked at a campfire (`handsRecipe`). A later clip for a family of jobs adds its rows.
+ * that is not cooked at a campfire (`handsRecipe`); the work knelt at the ground (`ground`) for `GROUND_JOBS`. A later
+ * clip for a family of jobs adds its rows.
  */
 export const CLIP_OF_JOB: Readonly<Record<string, string>> = Object.fromEntries([
   // an item in hand
