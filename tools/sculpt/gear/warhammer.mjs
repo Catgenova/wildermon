@@ -135,7 +135,7 @@ export function buildWarhammer({ enchanted = false, length } = {}) {
   const ZK = 0.96;
   const ring = (U, s, c, zk = ZK) => oct(0, 0, s, s * zk, c).map(([x, z]) => P(x, U, z));
   const PROFILE = [];
-  const R = (U, s, c, m, zk = ZK) => { PROFILE.push([U, s, c]); return { U, s, r: ring(U, s, c, zk), m }; };
+  const R = (U, s, c, m, zk = ZK) => { PROFILE.push([U, s, c, zk]); return { U, s, r: ring(U, s, c, zk), m }; };
   const loft = (rings, mat) => {
     for (let i = 0; i + 1 < rings.length; i++) for (let j = 0; j < 8; j++) {
       const a = rings[i].r, b = rings[i + 1].r, m = typeof mat === 'function' ? mat(i, j) : rings[i].m ?? mat;
@@ -144,22 +144,23 @@ export function buildWarhammer({ enchanted = false, length } = {}) {
     }
   };
   // the wood: straight grained, its facets two tones, from the lower collar to the middle collar
-  const WS = 7, W0 = 40, W1 = 161, WC = WS * 0.586;
-  const wood = [R(W0, WS, WC), R(W1, WS, WC)];
+  // (round in section: as deep as it is wide, the sheet's 13 px in every view)
+  const WS = 6.6, W0 = 40, W1 = 161, WC = WS * 0.586;
+  const wood = [R(W0, WS, WC, undefined, 1), R(W1, WS, WC, undefined, 1)];
   loft(wood, (i, j) => (j % 2 ? 'wood2' : 'wood'));
   // its grain: thin lines down the front, back and sides
-  const zW = WS * ZK;
-  for (const [ax, sd] of [['z', 1], ['z', -1], ['x', 1], ['x', -1]]) for (const [o, u0, u1] of [[-2.6, W0 + 6, W1 - 22], [1.4, W0 + 30, W1 - 4], [3.6, W0 + 2, W0 + 48]]) {
-    const at = (t, U) => (ax === 'z' ? P(t, U, sd * (zW + 0.12)) : P(sd * (WS + 0.12), U, t * ZK));
+  const zW = WS;
+  for (const [ax, sd] of [['z', 1], ['z', -1], ['x', 1], ['x', -1]]) for (const [o, u0, u1] of [[-2.4, W0 + 6, W1 - 22], [2, W0 + 30, W1 - 4]]) {
+    const at = (t, U) => (ax === 'z' ? P(t, U, sd * (zW + 0.12)) : P(sd * (WS + 0.12), U, t));
     const w = 0.45;
     F([at(o - w, u0), at(o + w, u0), at(o + w * 0.6, u1), at(o - w * 0.6, u1)], 'grain', ax === 'z' ? [0, 0, sd] : [sd, 0, 0]);
   }
   // the lower collar and, under it, the pommel ring (its cap)
-  const lower = [R(W0, WS, WC, 'gold'), R(W0, 9.2, 3.2, 'gold'), R(W0 - 1.2, 10.2, 3.6, 'gold'), R(34.5, 10.2, 3.6, 'gold'), R(33.5, 8.8, 3, 'goldD'), R(32.5, 8.8, 3, 'gold'), R(32.5, 9.8, 3.4, 'gold'), R(29.4, 9.8, 3.4, 'gold'), R(28.6, 8.8, 3)];
+  const lower = [R(W0, WS, WC, 'gold', 1), R(W0, 9.6, 3.3, 'gold'), R(39.2, 10.5, 3.7, 'gold'), R(34, 10.3, 3.6, 'gold'), R(33.4, 9.7, 3.4, 'goldD'), R(32.6, 9.7, 3.4, 'gold'), R(32.6, 10.1, 3.5, 'gold'), R(29.6, 9.8, 3.4, 'gold'), R(28.6, 9, 3.1)];
   loft(lower);
   // the middle collar, the panel, the upper collar
   const PS = 7, PCc = 2.2;
-  const mid = [R(W1, WS, WC, 'gold'), R(W1, 8, 2.8, 'gold'), R(W1 + 1, 8.7, 3, 'gold'), R(169, 8.7, 3, 'gold'), R(170, 8, 2.8, 'gold'), R(170, PS, PCc, 'stone'), R(201, PS, PCc, 'gold'), R(201, 8.8, 3, 'gold'), R(202, 9.6, 3.2, 'gold'), R(209, 9.6, 3.2, 'gold'), R(210, 8.8, 3, 'stoneB')];
+  const mid = [R(W1, WS, WC, 'gold', 1), R(W1, 8, 2.8, 'gold'), R(W1 + 1, 8.7, 3, 'gold'), R(169, 8.7, 3, 'gold'), R(170, 8, 2.8, 'gold'), R(170, PS, PCc, 'stone', 1), R(201, PS, PCc, 'gold', 1), R(201, 8.8, 3, 'gold'), R(202, 9.6, 3.2, 'gold'), R(209, 9.6, 3.2, 'gold'), R(210, 8.8, 3, 'stoneB')];
   // (the panel's corners gold, its flats stone)
   loft(mid, (i, j) => (i === 5 ? (j % 2 === 0 ? 'gold' : 'panel') : mid[i].m));
 
@@ -187,10 +188,11 @@ export function buildWarhammer({ enchanted = false, length } = {}) {
     for (let j = 0; j < n; j++) { const a = (90 + j * st) * DEG, r = j % 2 ? ri : rs > 0 && j % 4 !== 0 ? rs : rl; pts.push(Q(cx + r * Math.cos(a), cu + r * Math.sin(a), z)); }
     for (let j = 0; j < n; j++) F([c, pts[j], pts[(j + 1) % n]], mat, out);
   };
-  const medallion = (cx, cu, sz, zb, ro, ri, zr, zd, n, disc, starR, Q = QZ) => {
-    // a gold ring (its outer wall from zb up to zr, its top, its inner wall down to the disc at zd), the disc, the star
+  const medallion = (cx, cu, sz, zb, ro, ri, zr, zd, n, disc, starR, Q = QZ, bend = null) => {
+    // a gold ring (its outer wall from zb up to zr, its top, its inner wall down to the disc at zd), the disc, the star;
+    // its depth bent by bend(u) where it sits on a face that curves away up and down (the pommel's)
     const out = Q === QZ ? (sz > 0 ? FRONT : BACK) : [sz, 0, 0];
-    const at = (r, z) => [...Array(n).keys()].map((j) => { const a = (90 + (j + 0.5) * 360 / n) * DEG; return Q(cx + r * Math.cos(a), cu + r * Math.sin(a), z * sz); });
+    const at = (r, z) => [...Array(n).keys()].map((j) => { const a = (90 + (j + 0.5) * 360 / n) * DEG, u = cu + r * Math.sin(a); return Q(cx + r * Math.cos(a), u, (z + (bend ? bend(u) : 0)) * sz); });
     const ob = at(ro, zb), ot = at(ro, zr), it = at(ri, zr), id = at(ri, zd);
     for (let j = 0; j < n; j++) {
       const j1 = (j + 1) % n;
@@ -205,21 +207,24 @@ export function buildWarhammer({ enchanted = false, length } = {}) {
   };
   // the emblem on the hub: the star on the front, a plain stone disc in the ring on the back
   const HUB = [0, 233.5];
-  medallion(HUB[0], HUB[1], 1, 12, 14.8, 9.8, 20.4, 18.6, 16, 'core', [9, 6, 2.5]);
-  medallion(HUB[0], HUB[1], -1, 12, 14.8, 9.8, 20.4, 18.6, 16, 'stoneL', null);
+  medallion(HUB[0], HUB[1], 1, 12, 14.8, 9.8, 20.4, 18.6, 14, 'core', [9, 6, 2.5]);
+  medallion(HUB[0], HUB[1], -1, 12, 14.8, 9.8, 20.4, 18.6, 12, 'stoneL', null);
 
   /* ---- the pommel: an eight-sided faceted stone under the ring, its point down; a medallion on each face ---------- */
   const PM = 18.4;
   {
-    const PR = [[28.6, 8.8], [24.5, 12.2], [18.5, 13.6], [12.5, 12.6], [5.5, 7.6], [0, 3]];
+    const PR = [[28.6, 9], [25, 11.6], [20.5, 13.3], [15, 13.5], [11, 11.4], [5, 6.6], [0, 2.6]];
     const rs = PR.map(([U, s]) => { PROFILE.push([U, s, s * 0.3]); return { U, s, r: ring(U, s, s * 0.3, 0.97) }; });
-    loft(rs, (i, j) => (i >= 3 ? (j % 2 ? 'bevel' : 'stoneB') : i === 0 ? (j % 2 ? 'stoneL' : 'stone') : (j % 2 ? 'stone' : 'stoneL')));
+    loft(rs, (i, j) => (i >= 4 ? (j % 2 ? 'bevel' : 'stoneB') : i === 0 ? (j % 2 ? 'stoneL' : 'stone') : (j % 2 ? 'stone' : 'stoneL')));
     F(rs[rs.length - 1].r, 'bevel', [0, -1, 0]);
-    for (const Q of [QZ, QX]) for (const sz of [1, -1]) medallion(0, PM, sz, 10, 7.8, 5.8, Q === QZ ? 13.9 : 14.2, Q === QZ ? 13.3 : 13.6, 8, 'gem', Q === QZ ? [5, 3.3, 1.4] : [4.8, 0, 1.5], Q);
+    // (the medallions follow the faces' slope above and below their middle)
+    const sAt = (U) => { for (let i = 0; i + 1 < PR.length; i++) { const [u0, s0] = PR[i], [u1, s1] = PR[i + 1]; if (U <= u0 && U >= u1) return s0 + (s1 - s0) * (u0 - U) / (u0 - u1); } return PR[PR.length - 1][1]; };
+    const bend = (U) => Math.min(0, sAt(U) - sAt(PM));
+    for (const Q of [QZ, QX]) for (const sz of [1, -1]) medallion(0, PM, sz, 10, 7, 5.2, Q === QZ ? 14 : 14.4, Q === QZ ? 13.55 : 13.95, 8, 'gem', Q === QZ ? [4.4, 2.9, 1.2] : [4.2, 0, 1.3], Q, bend);
   }
 
   /* ---- the panel's inlay, front and back: a gold frame, its recess, three runes ------------------------------------ */
-  const zP = PS * ZK;
+  const zP = PS;
   const runeMark = (U, z, sz, r) => { const out = sz > 0 ? FRONT : BACK; F([P(0, U + r, z), P(-r * 0.62, U, z), P(0, U - r, z), P(r * 0.62, U, z)], 'rune', out); };
   for (const sz of [1, -1]) {
     const out = sz > 0 ? FRONT : BACK, z = (zP + 0.2) * sz;
@@ -237,6 +242,10 @@ export function buildWarhammer({ enchanted = false, length } = {}) {
     const X = s * (FACE + 0.25), out = [s, 0, 0], c = P(X + s * 0.15, FS, 0), pts = [];
     for (let j = 0; j < 16; j++) { const a = (90 + j * 22.5) * DEG, r = j % 2 ? 3.2 : j % 8 === 0 ? 15.5 : j % 4 === 0 ? 12 : 8; pts.push(P(X, FS + r * Math.sin(a), r * Math.cos(a))); }
     for (let j = 0; j < 16; j++) F([c, pts[j], pts[(j + 1) % 16]], 'rune', out);
+    // its white-hot middle, a smaller star over it
+    const X2 = X + s * 0.1, c2 = P(X2 + s * 0.12, FS, 0), q = [];
+    for (let j = 0; j < 16; j++) { const a = (90 + j * 22.5) * DEG, r = j % 2 ? 1.5 : j % 8 === 0 ? 7.5 : j % 4 === 0 ? 5.5 : 3.6; q.push(P(X2, FS + r * Math.sin(a), r * Math.cos(a))); }
+    for (let j = 0; j < 16; j++) F([c2, q[j], q[(j + 1) % 16]], 'star', out);
   };
   faceStar(1); faceStar(-1);
 
@@ -253,7 +262,7 @@ export function buildWarhammer({ enchanted = false, length } = {}) {
   /* ---- the glow, enchanted: added over the rest, its corners' alpha falling to nothing ------------------------------ */
   if (enchanted) {
     const disc = (cx, cu, z, r, a, n = 10) => { const c = P(cx, cu, z, a), rim = [...Array(n).keys()].map((j) => P(cx + r * Math.cos(j * 2 * Math.PI / n), cu + r * Math.sin(j * 2 * Math.PI / n), z, 0)); for (let j = 0; j < n; j++) F([c, rim[j], rim[(j + 1) % n]], 'glow', z >= 0 ? FRONT : BACK); };
-    disc(HUB[0], HUB[1], 20.6, 22, 0.32, 12);
+    disc(HUB[0], HUB[1], 20.6, 19.5, 0.24, 12);
     for (const sz of [1, -1]) {
       disc(0, PM, 14.4 * sz, 15, 0.4);
       { const X = 14.8 * sz, c = P(X, PM, 0, 0.4), rim = [...Array(10).keys()].map((j) => P(X, PM + 15 * Math.cos(j * Math.PI / 5), 15 * Math.sin(j * Math.PI / 5), 0)); for (let j = 0; j < 10; j++) F([c, rim[j], rim[(j + 1) % 10]], 'glow', [sz, 0, 0]); }
@@ -290,13 +299,13 @@ export function buildWarhammer({ enchanted = false, length } = {}) {
       const P2 = [...PROFILE].sort((a, b) => a[0] - b[0]);
       let best = null;
       for (let i = 0; i + 1 < P2.length; i++) {
-        const [u0, s0, c0] = P2[i], [u1, s1, c1] = P2[i + 1];
+        const [u0, s0, c0, z0 = ZK] = P2[i], [u1, s1, c1, z1 = ZK] = P2[i + 1];
         if (U < u0 || U > u1) continue;
         const t = u1 > u0 ? (U - u0) / (u1 - u0) : 0, ss = s0 + (s1 - s0) * t, cc = c0 + (c1 - c0) * t;
-        if (!best || ss > best[0]) best = [ss, cc];
+        if (!best || ss > best[0]) best = [ss, cc, z0 + (z1 - z0) * t];
       }
       if (!best) return 0;
-      const [sx, c] = best, sz = sx * ZK;
+      const [sx, c, zk] = best, sz = sx * zk;
       return Math.min(sx - X, sz - Z, sx + sz - c - X - Z) * k;
     },
     // the striking ends, its own frame: both faces' corners, the bands' and the bevels' outer corners (what the swing
