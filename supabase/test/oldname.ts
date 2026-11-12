@@ -20,6 +20,7 @@
  */
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
+import { ok, bad, check } from './harness';
 
 const MIGRATION = resolve(process.cwd(), 'supabase/migrations/20261111235900_wildermon_by_name.sql');
 const env = {
@@ -32,12 +33,6 @@ const env = {
 const psql = (sql: string): { out: string; err: string; status: number } => {
   const r = spawnSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], { input: sql, encoding: 'utf8', env });
   return { out: (r.stdout ?? '').trim(), err: (r.stderr ?? '').trim(), status: r.status ?? -1 };
-};
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
 };
 
 // The former name, made the way the migration makes it: from bytes, so this file does not spell it.

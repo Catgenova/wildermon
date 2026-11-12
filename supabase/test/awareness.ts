@@ -20,7 +20,6 @@
  * its own; what awareness is taught is read off `char_told`, replaced inside
  * that transaction by one that writes down what it was asked.
  */
-import { execFileSync } from 'node:child_process';
 import { CHAR_START, DAY_SECONDS, DUSK, Game, TWILIGHT } from '../../src/game/game';
 import { SKILL_BY_ID, SKILL_TOP } from '../../src/game/skills';
 import { DARK_WALK, DARK_WORK, NIGHT_EYES_FROM, TRACK_AWARE } from '../../src/game/learn';
@@ -29,25 +28,8 @@ import { hitChance, WEAPONS } from '../../src/game/gear';
 import { TRACK, trackLevel, trackReach, trackSaid } from '../../src/game/tracking';
 import { traitReadNeeds } from '../../src/game/husbandry';
 import { TRAITS } from '../../src/game/traits';
+import { psql, ok, bad, check } from './harness';
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 const near = (a: number, b: number): boolean => Math.abs(a - b) < 1e-9;
 
 const LEVELS = [CHAR_START, 60, SKILL_TOP];

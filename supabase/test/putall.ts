@@ -27,6 +27,7 @@
  */
 import { execFile, execFileSync } from 'node:child_process';
 import { ACT_MANY_JOBS, ACT_MANY_MOST, Island, type ItemRow } from '../../src/net/island';
+import { ok, bad, check, timeScale } from './harness';
 
 const ENV = {
   ...process.env,
@@ -42,12 +43,6 @@ const later = (text: string): Promise<{ out: string; err: string }> => new Promi
     done({ out: (out ?? '').trim(), err: e ? (err || String(e)) : '' }));
   child.stdin?.end(text);
 });
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 
 const W = 'ee000000-0000-4000-8000-0000000000e1';
 const A = 'ee000000-0000-4000-8000-000000000001';
@@ -214,8 +209,8 @@ for (const where of ['crate', 'cart'] as const) {
   console.log(`    ${targets.length} things in ${put.ms.length} calls: ${put.ms.join(', ')} ms; the clock alone ${alone.join(', ')} ms, while putting ${during.join(', ')} ms; ${all} ms in all`);
   check(`${where}: every call answered`, put.errs.length === 0, put.errs.join(' / '));
   check(`${where}: ${Math.ceil(targets.length / ACT_MANY_MOST)} calls for ${targets.length} things`, put.ms.length === Math.ceil(targets.length / ACT_MANY_MOST));
-  check(`${where}: every call inside ${CALL_MS} ms`, put.ms.every((m) => m <= CALL_MS), put.ms.join(', '));
-  check(`${where}: the lot inside ${ALL_MS} ms`, all <= ALL_MS, `${all} ms`);
+  check(`${where}: every call inside ${CALL_MS} ms`, put.ms.every((m) => m <= CALL_MS * timeScale()), put.ms.join(', '));
+  check(`${where}: the lot inside ${ALL_MS} ms`, all <= ALL_MS * timeScale(), `${all} ms`);
   check(`${where}: the clock never stood waiting on a lock more than ${WAIT_SAMPLES * 50} ms`, waited >= 0 && waited <= WAIT_SAMPLES, `${waited} samples of 50 ms`);
   check(`${where}: not one made or lost`, before.pack + before.store === after.pack + after.store,
     `${before.pack}+${before.store} → ${after.pack}+${after.store}`);

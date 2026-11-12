@@ -18,7 +18,6 @@
  *
  * Runs against the database the suite leaves behind, in one transaction that is rolled back.
  */
-import { execFileSync } from 'node:child_process';
 import { Game, DAY_SECONDS } from '../../src/game/game';
 import { BUTCHER_PARTS } from '../../src/game/butcher';
 import {
@@ -28,26 +27,8 @@ import {
 import { THREAT_HOLD } from '../../src/game/fight';
 import { whereItLives } from '../../src/game/guide';
 import { TileType } from '../../src/world/tiles';
+import { psql, check, finish } from './harness';
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 const near = (a: number, b: number, by = 0.25): boolean => Math.abs(a - b) <= by;
 
 const C = SPECIES.crumbud;
@@ -451,6 +432,4 @@ const off = (o: Creature, a: Creature): boolean => o.brawl !== a.id && markOn(g,
   clear();
 }
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\nthe crumbud — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('the crumbud');

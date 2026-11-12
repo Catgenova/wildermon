@@ -15,27 +15,8 @@
  *
  * Runs against the database the suite leaves behind, in one transaction that is rolled back.
  */
-import { execFileSync } from 'node:child_process';
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
-
+import { psql, check, finish } from './harness';
 const T = 40;
 const U = '7e5b0000-0000-4000-8000-00000000f007';
 /** The first flight, up to storey 2, climbed northward from its foot at T+1, T. */
@@ -123,6 +104,4 @@ check('a hod carrier never says stairs for that wall', !said.has('SAID_STAIRS'),
 check('it walks to the foot of the second flight on storey 2', said.has('AT_FOOT'), (said.get('AT_FOOT') ?? []).slice(0, 3).join(','));
 check('and fits the wall', at('WALL') === '{"mortar": 0}', at('WALL'));
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\nthe foot of a flight a storey up — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('the foot of a flight a storey up');

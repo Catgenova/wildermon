@@ -19,12 +19,7 @@
 import { Game } from '../../src/game/game';
 import { TileType } from '../../src/world/tiles';
 import type { Creature } from '../../src/game/creatures';
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { ok, bad, check } from './harness';
 
 const g = Game.create(4321, 64);
 for (let y = 20; y <= 44; y++) for (let x = 20; x <= 44; x++) { g.world.setHeight(x, y, 20); g.world.setTile(x, y, TileType.Grass, 0); }

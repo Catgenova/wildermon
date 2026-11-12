@@ -22,7 +22,6 @@
  *   * a long walk: further than one path is found over, it gets there in legs;
  *   * the island says when a dam's young are due, for her keeper only.
  */
-import { execFileSync } from 'node:child_process';
 import { ACTION_BY_ID } from '../../src/game/actions';
 import { foodToEat, AutoEat } from '../../src/game/autoeat';
 import { Game, TRAVEL_LEG } from '../../src/game/game';
@@ -36,25 +35,7 @@ import { COOKED_MEAT_TOO, isBaitFor, SPECIES } from '../../src/game/creatures';
 import { RECIPES } from '../../src/game/recipes';
 import { FISH } from '../../src/game/fishing';
 import { liveSettings, SETTING_DEFAULTS } from '../../src/game/settings';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { psql, check, finish } from './harness';
 
 const game = Game.create(4242);
 // A dry, open spot to stand on, with room round it.
@@ -315,6 +296,4 @@ rollback;
   check('the island\'s diet rows say the same', island === want, `${island.split(' ').length} rows, browser ${want.split(' ').length}`);
 }
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\nten conveniences — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('ten conveniences');

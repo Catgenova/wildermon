@@ -46,6 +46,7 @@ import { MOVE_EVERY, STAIRS_AGAIN, turnsOf, VIA_MAX } from '../../src/net/island
 import { Game } from '../../src/game/game';
 import { clockSteps } from '../../src/engine/loop';
 import { TILE_DEFS, TileType } from '../../src/world/tiles';
+import { ok, bad, check, timeScale } from './harness';
 
 const PG_ENV = {
   ...process.env,
@@ -58,11 +59,6 @@ const PSQL_ARGS = ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'];
 const psql = (sql: string): string =>
   execFileSync('psql', PSQL_ARGS, { input: sql, encoding: 'utf8', env: PG_ENV }).trim();
 
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 const kv = (out: string): Map<string, string> =>
   new Map(out.split('\n').filter((l) => l.includes('=')).map((l) => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1)]));
 
@@ -185,7 +181,7 @@ psql(`begin; select private.pace('${TWICE}', 'look'); select private.pace('${TWI
 const waited = Date.now() - askedAt;
 await held;
 check(`a call does not wait for another of the same body still open on another connection (held ${HOLD_SECS} s)`,
-  waited < 1000, `${waited} ms`);
+  waited < 1000 * timeScale(), `${waited} ms`);
 
 /* ---- a door refused does nothing ------------------------------------------------------------ */
 

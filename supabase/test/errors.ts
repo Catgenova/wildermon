@@ -9,6 +9,7 @@
  */
 import { execFileSync } from 'node:child_process';
 import { forgetReports, queueReport, reportErrorsTo, REPORTS_A_SESSION, worthReporting, type ErrorReport } from '../../src/net/errors';
+import { ok, bad, check } from './harness';
 
 const WHO = '44444444-4444-4444-4444-444444444444';
 
@@ -24,12 +25,6 @@ const psql = (sql: string, as = WHO): string =>
     input: `select set_config('request.jwt.claims', '{"sub":"${as}"}', false) \\g /dev/null\n${sql}\n`,
     encoding: 'utf8',
   }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 
 /* ---- The browser ---------------------------------------------------------- */
 console.log('--- the browser');

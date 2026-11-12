@@ -20,31 +20,12 @@
  *
  * Runs against the database the suite leaves behind, in one transaction that is rolled back.
  */
-import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { GATHER_SKILL, learnPace, REED_LEVELS, SKILL_TOP, SPECIES, workDuration, type Creature, type GatherKind } from '../../src/game/creatures';
 import { skillGain } from '../../src/game/skills';
 import { TileType } from '../../src/world/tiles';
+import { psql, check, finish } from './harness';
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 const near = (a: number, b: number, by = 1e-6): boolean => Math.abs(a - b) <= by * Math.max(1, Math.abs(b));
 const T = 16;
 const U = '7e5b0000-0000-4000-8000-0000000000e7';
@@ -281,6 +262,4 @@ check('the Stitchkit\'s words say a go\'s time off the rule, not a second and a 
   && !SPECIES.tinka.description.includes('a go every'), SPECIES.tinka.description);
 check('and the Reedpup\'s say its armful off the rule', SPECIES.sedra.description.includes(`Reeds per cut: 1, +1 per ${REED_LEVELS} levels`), SPECIES.sedra.description);
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\nthe browser's errands and the island's reed cutter agree — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish(`the browser's errands and the island's reed cutter agree`);

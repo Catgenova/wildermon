@@ -31,12 +31,7 @@ import { HALF_H, HALF_W, UNITS_PER_TILE } from '../../src/render/iso';
 import { beastTurn, facingOf, FACINGS } from '../../src/render/sprites';
 import { headingView, pieceView } from '../../src/render/furniture';
 import type { Side } from '../../src/game/building';
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { ok, bad, check } from './harness';
 
 /* ---- the two the drawings were made at are left alone -------------------- */
 const right = beastTurn(2);

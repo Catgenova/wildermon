@@ -35,12 +35,7 @@ import { BASE_SPEED, CADENCE, gaitAt, phasePerTile, RIDE_PHASE, STRIDE as STRIDE
 import { figureJoint, type FigurePose, type V3 } from '../../src/render/figure';
 import { DEFAULT_LOOK, type Look } from '../../src/game/look';
 import { UNITS_PER_TILE } from '../../src/render/iso';
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { ok, bad, check } from './harness';
 
 const walking = (phase: number): Moving => ({ phase, moving: true, gait: 0 });
 const running = (phase: number): Moving => ({ phase, moving: true, gait: 1 });

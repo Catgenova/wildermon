@@ -10,33 +10,13 @@
  *
  * Runs against the database the suite leaves behind, in one transaction that is rolled back.
  */
-import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { ACTION_BY_ID, type ActionDef, type Target } from '../../src/game/actions';
 import { type PlacedFurniture } from '../../src/game/furniture';
 import { DRINK_LITRES, itemName, LITRE_KG, litresOf, TAN_LYE, unitWeight, type Item } from '../../src/game/items';
 import { RECIPE_BY_ID } from '../../src/game/recipes';
 import { TileType } from '../../src/world/tiles';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { psql, check, finish } from './harness';
 
 const DOUGH = RECIPE_BY_ID.get('make_dough')!.inputs.find((i) => i.litres)!.litres!;
 check(`a dough takes ${DOUGH} L water, a tanning ${TAN_LYE} L lye; a litre weighs ${LITRE_KG} kg`, DOUGH > 0 && TAN_LYE > 0 && LITRE_KG > 0);
@@ -218,6 +198,4 @@ both('POUR', 'a part bucket poured: empty', (v) => v.startsWith('bucket|Bucket|'
 both('POURED', 'and the barrel took its 3 L, no more', (v) => v === '3');
 check('the browser reads a bucket with no litres on it as full', litresOf({ id: 'water_bucket' }) === 5);
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\nlitres — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('litres');

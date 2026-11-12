@@ -24,12 +24,12 @@
  *
  * Runs against the database the suite leaves behind.
  */
-import { execFileSync } from 'node:child_process';
 import {
   SCHOOLS, SPELLS, spellDef, spellWear, spellForce, spellSecs, spellRange,
   landEase, spellRefusal, spellsOf,
 } from '../../src/game/arcane';
 import { classDef, RITES } from '../../src/game/classes';
+import { psql, ok, bad, check } from './harness';
 
 /**
  * The rite that spares the stone, which is what thrift is asked of now no
@@ -43,24 +43,6 @@ const THRIFT_SPELL = spellsOf(THRIFT_SCHOOL.id).find((s) => s.level === 1)!;
 const THRIFT_GEM = THRIFT_SPELL.gem[0].toUpperCase() + THRIFT_SPELL.gem.slice(1);
 const NOT_THRIFT = SCHOOLS.find((sc) => sc.id !== THRIFT_SCHOOL.id)!;
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 const near = (a: number, b: number, by = 1e-9): boolean => Math.abs(a - b) <= by;
 
 const out = psql(`

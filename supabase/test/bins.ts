@@ -11,31 +11,18 @@
  * island's `furniture_refuses` reads the same list off `item_def.raw` and
  * says the same words; the suite (404, 404b) asks it the same questions.
  */
-import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { CRAFT_BIN_REFUSAL, FURNITURE, furnitureCapacity, furnitureDef, furnitureHeft, furnitureHolds, furnitureKg, furnitureRefuses, furnitureRoom, LARDER_REFUSAL, RAW_BIN_REFUSAL, SEED_BIN_REFUSAL, SPROUT_BIN_REFUSAL, TAKES, type PlacedFurniture } from '../../src/game/furniture';
 import { CROP_LIST } from '../../src/game/farming';
 import { ITEM_DEFS, type Item } from '../../src/game/items';
 import { RECIPES } from '../../src/game/recipes';
+import { psql } from './harness';
 
 void Game;
 const ok: string[] = [];
 const bad: string[] = [];
 const check = (what: string, right: boolean, saw: string): void => { (right ? ok : bad).push(`${right ? 'ok  ' : 'BAD '} ${what} — ${saw}`); };
 
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
 
 const bin = { id: 1, x: 5, y: 6, sx: 0, sy: 0, kind: 'bulk_bin', ql: 50, items: [] } as unknown as PlacedFurniture;
 const thing = (id: string): Item => ({ uid: 1, id, ql: 50, dmg: 0, count: 1 });

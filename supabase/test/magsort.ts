@@ -15,7 +15,6 @@
  *
  * The island half makes its own island and rolls it back.
  */
-import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { SPECIES, workRangeOf, type Creature, type GatherKind } from '../../src/game/creatures';
 import { crateCentre } from '../../src/game/crates';
@@ -23,25 +22,7 @@ import { furnitureCapacity, furnitureCentre, type PlacedFurniture } from '../../
 import { idleSays, type Idle, type IdleWhy } from '../../src/game/workerlog';
 import type { Item } from '../../src/game/items';
 import { TileType } from '../../src/world/tiles';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { psql, check, finish } from './harness';
 
 const T = 60;
 const U = '7e5b0000-0000-4000-8000-000000000f59';
@@ -251,6 +232,4 @@ check('one load of four, and nothing more once the bin is full', isle.get('FULLS
 check('and it says why it stands idle again, the same on both sides',
   islandIdle('FULLIDLE')?.why === 'range' && browserFull.idle === `range|${reach}`, `${isle.get('FULLIDLE')} / ${browserFull.idle}`);
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\na magga sorts the bins — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('a magga sorts the bins');

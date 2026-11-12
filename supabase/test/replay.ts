@@ -18,6 +18,7 @@ import { generateAtlasWindow } from '../../src/world/atlas-world';
 import { CHUNK, World } from '../../src/world/world';
 import { layChange, layHistory, type TileChange } from '../../src/net/landpack';
 import { readAtlas } from '../../tools/atlas-node';
+import { ok, bad, check } from './harness';
 
 const atlas = readAtlas();
 const SIZE = 256;
@@ -61,12 +62,6 @@ function dug(x: number, y: number, by = 8): TileChange {
     soil: was.soil.map((d) => Math.max(0, d - by)),
   };
 }
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 
 /*
  * A change on ground nobody has looked at.

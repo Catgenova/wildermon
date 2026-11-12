@@ -16,28 +16,9 @@
  *
  * Makes its own islands and rolls them back.
  */
-import { execFileSync } from 'node:child_process';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 
 /** The only calls a visitor with no account may make. */
+import { psql, check, finish } from './harness';
 const ANON_RPCS = ['rpc_name_free'];
 /** rpc_name_free, calls a minute per client IP. */
 const NAME_FREE_MOST = 20;
@@ -283,6 +264,4 @@ check('another IP is answered meanwhile', said.get('ASK:other') === 'true', said
   check('a bucket a slot, the slots bounded', rows === '3' && Number(hi) < 4096 && lo === '-1', `${rows} rows, slots ${lo}..${hi}`);
 }
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\nthe doors — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('the doors');

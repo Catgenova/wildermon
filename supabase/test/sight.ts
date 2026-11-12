@@ -28,12 +28,7 @@
 import { Game } from '../../src/game/game';
 import type { Side, WallType } from '../../src/game/building';
 import { TileType } from '../../src/world/tiles';
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { ok, bad, check } from './harness';
 
 const game = Game.create(4242);
 game.settings.fog = true;

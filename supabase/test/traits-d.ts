@@ -16,32 +16,12 @@
  *
  * Runs against the database the suite leaves behind, in one transaction that is rolled back.
  */
-import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { abilityFx, abilityRest, attackOf, maxHealth, SPECIES, type Creature } from '../../src/game/creatures';
 import { venom } from '../../src/game/enchanting';
 import { HEAVY_HIT, KNIFE_BLEED, VENOM_DRAIN } from '../../src/game/fight';
 import { CHANNEL_BY_ID, FIGHTING, gradeId, rollTrait, TIERS, traitOf, traitSays, type TraitChannel, type TraitTier } from '../../src/game/traits';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { psql, check, finish } from './harness';
 
 /** The plain traits and the fighting families of part D, and what each was asked to be. */
 const PLAIN: Array<[string, TraitTier, TraitChannel, number]> = [
@@ -349,6 +329,4 @@ const inBand = (hits: number, n: number, p: number): boolean => Math.abs(hits - 
   }
 }
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\nsix traits for a fight (part D) — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('six traits for a fight (part D)');

@@ -19,13 +19,13 @@
  * own `rpc_social` answer, word for word. Runs against the database the suite
  * leaves behind.
  */
-import { execFileSync } from 'node:child_process';
 import type { Social } from '../../src/net/island';
 // The game first: `deed.ts` and `actions.ts` import each other through it, and the game is what loads them in order.
 import '../../src/game/game';
 import { DEFAULT_RANKS, permsOf, rankMay } from '../../src/game/ranks';
 import { standingWord } from '../../src/game/deed';
 import { defsOf, inviteDeeds, inviteRefusal, myRank, rankedLine, rankOf, rankRefusal, sendAwayRefusal } from '../../src/ui/panels/social';
+import { psql, ok, bad, check } from './harness';
 
 /*
  * Since ranks became the founder's own (145, `customranks.ts`), Mayor,
@@ -37,25 +37,6 @@ import { defsOf, inviteDeeds, inviteRefusal, myRank, rankedLine, rankOf, rankRef
  */
 const SETTABLE = DEFAULT_RANKS.map((r) => r.name.toLowerCase());
 const permsNamed = (name: string): number => permsOf(DEFAULT_RANKS.find((r) => r.name.toLowerCase() === name)!.powers);
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 
 /* ---- the rule, in the browser alone --------------------------------------- */
 

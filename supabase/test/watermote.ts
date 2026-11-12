@@ -15,33 +15,13 @@
  * Runs against the database the suite leaves behind (Hoarding, Crowd2 digging
  * and Dane on a settlement building), and puts it back.
  */
-import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { ACTION_BY_ID, ACTIONS, WATER_MOTE_USES, type ActionDef, type Target } from '../../src/game/actions';
 import { RECIPE_BY_ID, recipeReason } from '../../src/game/recipes';
 import { WATER_MOTE, WATER_MOTE_NEED, WATER_MOTES_EACH } from '../../src/game/motes';
 import { itemDef } from '../../src/game/items';
 import { furnitureDef } from '../../src/game/furniture';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { psql, ok, bad, check } from './harness';
 
 /** The three pieces, by recipe. */
 const PIECES = [

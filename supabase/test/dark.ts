@@ -20,27 +20,8 @@
  * Runs against the database the suite leaves behind: Hoarding, and Dane on it.
  * Every clock it winds is wound inside a transaction that is thrown away.
  */
-import { execFileSync } from 'node:child_process';
 import { DAWN, DAY_SECONDS, DUSK, Game } from '../../src/game/game';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { psql, ok, bad, check } from './harness';
 
 const game = Game.create(4242);
 /** The browser's own clock, wound to a given hour of the day. */

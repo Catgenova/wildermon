@@ -31,7 +31,6 @@
  *   npx esbuild supabase/test/enchant2.ts --bundle --platform=node --format=esm \
  *     --external:typescript --outfile=node_modules/.cache/enchant2.mjs && node node_modules/.cache/enchant2.mjs
  */
-import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { ACTION_BY_ID, type ActionDef, type Target } from '../../src/game/actions';
 import type { Item } from '../../src/game/items';
@@ -44,26 +43,8 @@ import { WEAPON_BY_ID } from '../../src/game/gear';
 import { BLOW_SHARE, maxHealth, SPECIES, type Creature } from '../../src/game/creatures';
 import { TileType } from '../../src/world/tiles';
 import { heldBurn, heldReachOf, torchBurn } from '../../src/game/light';
+import { psql, check, finish } from './harness';
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 const near = (a: number, b: number, eps = 1e-6): boolean => Math.abs(a - b) <= eps;
 
 /** Everything after the first three: what this test is about. */
@@ -672,6 +653,4 @@ check(`a candle in a lantern with Lantern's Grace at QL 100 burns ${enchantValue
     && isle.get('TORCH') === `${Math.round(heldBurn(torch))}|${heldReachOf(torch)}` && near(heldBurn(torch), torchBurn(50) * (1 + enchantValue(GRACE, 40))),
   `${isle.get('CANDLE0')} ${isle.get('CANDLE')} ${isle.get('TORCH')} / ${plain.join('|')} ${graced.join('|')} ${Math.round(heldBurn(torch))}|${heldReachOf(torch)}`);
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\nenchanting, part 2 — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('enchanting, part 2');

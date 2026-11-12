@@ -31,6 +31,7 @@ import {
   flagLabel, flagLine, WATCH_INPUT_CV, WATCH_INPUT_MINS, WATCH_INPUT_RUN, WATCH_INPUT_STILL, WATCH_INPUT_SYNTHETIC,
   type WatchFlags,
 } from '../../src/game/watch';
+import { ok, bad, check } from './harness';
 
 const ENV = {
   ...process.env,
@@ -58,12 +59,6 @@ const psql = (text: string): string => {
 };
 const as = (who: string, text: string): Ran => sql(
   `select set_config('request.jwt.claims', '${JSON.stringify({ sub: who })}', false) \\g /dev/null\nset role authenticated;\n${text}\n`);
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 
 const W = 'ec000000-0000-4000-8000-0000000000a1';
 const KELL = 'ec000000-0000-4000-8000-000000000001';

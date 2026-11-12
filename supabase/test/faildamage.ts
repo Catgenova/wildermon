@@ -25,7 +25,6 @@
  *   npx esbuild supabase/test/faildamage.ts --bundle --platform=node --format=esm --packages=external \
  *     --outfile=node_modules/.cache/faildamage.mjs && node node_modules/.cache/faildamage.mjs
  */
-import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import { itemDef, type Item } from '../../src/game/items';
@@ -36,26 +35,8 @@ import { RECIPE_BY_ID, recipeAction, SPARED, STONE_KEPT } from '../../src/game/r
 import { SECOND_HEAT } from '../../src/game/anvil';
 import { BREW_BY_ID } from '../../src/game/brewing';
 import { GEMS } from '../../src/game/gems';
+import { psql, ok, bad, check } from './harness';
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 const q = (s: string): string => `'${s.replace(/'/g, "''")}'`;
 
 const perk = (cls: string, name: string): PerkDef => {

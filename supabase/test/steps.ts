@@ -21,7 +21,6 @@
  * Runs against the database the suite leaves behind: Hoarding, and Dane on
  * it. Everything it does there is rolled back.
  */
-import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { ACTION_BY_ID } from '../../src/game/actions';
 import { onSteps } from '../../src/game/player';
@@ -31,26 +30,8 @@ import {
 } from '../../src/world/tiles';
 import { STEPS_BACK, stepsBack } from '../../src/game/steps';
 import type { Target } from '../../src/game/actions';
+import { psql, ok, bad, check } from './harness';
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 const q = (s: string): string => `'${s.replace(/'/g, "''")}'`;
 /** The island's answers, one `tag|value` a line, read back out of a temp table before everything is rolled back. */
 const said = (lines: string, tag: string): string =>

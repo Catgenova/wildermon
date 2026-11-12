@@ -54,25 +54,7 @@ import { chromium, type LaunchOptions, type Page } from 'playwright-core';
 import { againstAverage, againstWords, answers, offersFor, type FindStall } from '../../src/game/marketfind';
 import { SALE_DAYS, SALES_SHOWN, saleLine, summarise, type SaleDay } from '../../src/game/prices';
 import { MARKET_MARK } from '../../src/game/marks';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { psql, ok, bad, check } from './harness';
 
 /* ---- the island ------------------------------------------------------------- */
 console.log('--- the island');

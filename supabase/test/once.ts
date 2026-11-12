@@ -20,27 +20,9 @@
  *   * a door that only reads keeps no key; a call with no key is not counted; a key that is not one is refused;
  *   * the sweep lets go of keys past the window, and every door that changes something takes a key.
  */
-import { execFileSync } from 'node:child_process';
 import { ONCE_HEADER, ONCE_RETRIES, ONCE_TAKEN, watchedFetch } from '../../src/net/supabase';
+import { psql, check, finish } from './harness';
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /* ---- the browser ---------------------------------------------------------------------------------- */
@@ -307,6 +289,4 @@ check('the sweep lets go of a key past the window and keeps the rest', said.get(
 }
 check('no door that reads or walks does', said.get('UNKEYED') === '0', said.get('UNKEYED'));
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\nan action taken once — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('an action taken once');

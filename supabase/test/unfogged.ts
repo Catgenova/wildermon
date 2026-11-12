@@ -22,12 +22,7 @@ import { packTreeData, TileType, TREE_DEFS, treeSpecies, treeVariant } from '../
 import { CHUNK, World } from '../../src/world/world';
 import { LAND_STEP, LAND_UNFOGGED_EVERY } from '../../src/game/keep';
 import { readAtlas } from '../../tools/atlas-node';
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { ok, bad, check } from './harness';
 
 const SIZE = 1024;
 const SEED = 4242;

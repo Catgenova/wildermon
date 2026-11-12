@@ -20,32 +20,12 @@
  *
  * Runs against the database the suite leaves behind, and puts it back.
  */
-import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { ANVIL_ACTION_BY_ID } from '../../src/game/anvil';
 import { RARITIES, RARITY_ODDS, rarityBands, rareInputSaid, rarityStep } from '../../src/game/items';
 import { RECIPE_ACTIONS, RECIPE_BY_ID } from '../../src/game/recipes';
 import type { Target } from '../../src/game/actions';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { psql, check, finish } from './harness';
 
 /**
  * Goes of each kind rolled for the odds, and how far the supreme share may be
@@ -345,6 +325,4 @@ for (let i = 0; i < 10; i++) {
 check('and a supreme casting beats out a piece at least supreme, and says so as the island does',
   pieceSteps.length === 10 && pieceSteps.every((s) => s >= SUPREME) && told().at(-1) === at('PIECESAID'), `${pieceSteps.join(',')} / ${told().at(-1)}`);
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\nrare ingredients — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('rare ingredients');

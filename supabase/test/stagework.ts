@@ -20,7 +20,6 @@
  *
  * Runs against the database the suite leaves behind, in one transaction that is rolled back.
  */
-import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import {
   GATHER_SKILL, HANDS_TRADES, learnPace, LOAD_TRADES, SPECIES, STAGE_LOADS, stageLoads, stageWorkSays, EVOLVE_AT,
@@ -29,26 +28,8 @@ import {
 import { BUCKET_LITRES } from '../../src/game/furniture';
 import { skillGain } from '../../src/game/skills';
 import { TileType } from '../../src/world/tiles';
+import { psql, check, finish } from './harness';
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 const near = (a: number, b: number): boolean => Math.abs(a - b) < 1e-9 * Math.max(1, Math.abs(b));
 const [AT1, AT2] = EVOLVE_AT;
 const KINDS = Object.keys(GATHER_SKILL) as GatherKind[];
@@ -398,6 +379,4 @@ for (const sp of ['sedra', 'tinka', 'cobbe', 'embra', 'quarra']) {
 check('and a kind with no trade, or one a stage lets do no more at once, is told nothing of it',
   ['woola', 'warda', 'whispet', 'roxxen', 'orse'].every((sp) => !SPECIES[sp].stages![1].description.includes(' a trip') && !SPECIES[sp].stages![1].description.includes(' a cycle,')));
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\neach stage does more at once — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('each stage does more at once');

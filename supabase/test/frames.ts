@@ -37,12 +37,8 @@ import { CATCH_UP, clockSteps, MAX_STEP } from '../../src/engine/loop';
 import { turnsAhead, turnsOf, VIA_MAX } from '../../src/net/island';
 import { TILE_DEFS, TileType } from '../../src/world/tiles';
 import { BASE_SPEED } from '../../src/game/player';
+import { ok, bad, check } from './harness';
 
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 const sum = (a: number[]): number => a.reduce((s, v) => s + v, 0);
 
 /* ---- the clock ------------------------------------------------------------------------------ */

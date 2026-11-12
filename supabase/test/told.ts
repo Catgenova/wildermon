@@ -40,12 +40,8 @@
  */
 import { Island, MOVE_EVERY, MOVE_LOST, type PlayerRow } from '../../src/net/island';
 import { BASE_SPEED } from '../../src/game/player';
+import { ok, bad, check } from './harness';
 
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 const sleep = (ms: number): Promise<void> => new Promise((done) => setTimeout(done, ms));
 const t0 = performance.now();
 /** Milliseconds since the start, on the clock the link runs on. */

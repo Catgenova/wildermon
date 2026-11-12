@@ -28,12 +28,7 @@ import { join, resolve } from 'node:path';
 import { build } from 'esbuild';
 import { chromium, type LaunchOptions } from 'playwright-core';
 import type { TrailSample } from './trailwater-page';
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { ok, bad, check } from './harness';
 
 function browserOptions(): LaunchOptions | null {
   const args = ['--no-sandbox', '--disable-dev-shm-usage'];

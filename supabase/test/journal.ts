@@ -26,7 +26,6 @@
  * on the island for whoever did it ('tamed', 'around'), and the browser shows both goals met from the tally the beat
  * carries; their how-tos read off the rules they name.
  */
-import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { BROWSER_TALLY, Game } from '../../src/game/game';
 import { ALL_GOALS, JOURNAL } from '../../src/game/journal';
@@ -36,25 +35,8 @@ import { AROUND_ACTION_BY_ID, AROUND_MOST, aroundTrade } from '../../src/game/ar
 import { SPECIES, WILD_STAGE_TAME } from '../../src/game/creatures';
 import { itemDef } from '../../src/game/items';
 import { POST_FOLLOW_REACH } from '../../src/game/posts';
+import { psql, check, finish } from './harness';
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 const goal = (id: string) => {
   const g = ALL_GOALS.find((x) => x.id === id);
   if (!g) throw new Error(`no goal ${id}`);
@@ -357,6 +339,4 @@ check(`the Work around me goal is the menu's label, and its how-to the reach to 
     && aroundHow.includes(`${Math.min(...workRanges)}–${Math.max(...workRanges)} tiles by kind`),
   `${goal('workaround').text}: ${aroundHow}`);
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\nthe journal counts only your own work — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('the journal counts only your own work');

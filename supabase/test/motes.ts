@@ -38,7 +38,6 @@
  *   npx esbuild supabase/test/motes.ts --bundle --platform=node --format=esm \
  *     --outfile=node_modules/.cache/motes.mjs && node node_modules/.cache/motes.mjs
  */
-import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import { SKILL_BY_ID, isQuiet, playerGain, skillGain } from '../../src/game/skills';
@@ -55,26 +54,7 @@ import { REGIONS } from '../../src/world/regions';
 import { chartCells, chartRegion } from '../../src/world/chart';
 import { TILE_DEFS, TileType } from '../../src/world/tiles';
 import { mulberry32 } from '../../src/world/noise';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { psql, ok, bad, check } from './harness';
 
 /* ---- the numbers and the words, on both sides ------------------------------ */
 

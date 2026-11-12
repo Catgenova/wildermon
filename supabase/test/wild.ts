@@ -21,11 +21,11 @@
  * creature could stand on). This measures the mix that comes out against the
  * weights, and against the arithmetic of the old scheme.
  */
-import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { PER_REGION, SITE_LOOKS, SPECIES, WILD_SPECIES, WILD_TARGET, wildTargetFor } from '../../src/game/creatures';
 import { bedrockAt } from '../../src/world/ore';
 import { isSeam, TileType } from '../../src/world/tiles';
+import { psql } from './harness';
 
 /*
  * Enough rolls that a species living on a twentieth of the island is counted
@@ -148,18 +148,6 @@ say(molaNow + slack(molaWant) >= molaWant * 0.5, `one in ${Math.round(1 / Math.m
  * populations on the same ground with nothing to say so — so the numbers cross
  * with the rest of the rulebook now, and this is where that is held to.
  */
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
 
 const knobs = psql(`select wild_per_region() || '|' || wild_floor() || '|' || site_looks();`).split('|');
 say(Number(knobs[0]) === PER_REGION && Number(knobs[1]) === WILD_TARGET,

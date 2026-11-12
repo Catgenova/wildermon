@@ -12,12 +12,7 @@
 import '../../src/game/actions';
 import { SORTS, orderBy } from '../../src/ui/sorting';
 import type { Item } from '../../src/game/items';
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { check, finish } from './harness';
 
 const mould = (uid: number, ql: number, dmg = 0): Item => ({ uid, id: 'nail_mould', ql, dmg, count: 1 } as Item);
 const pack = [mould(7, 30), mould(3, 30), mould(12, 55, 4), mould(5, 30, 2), mould(9, 12)];
@@ -31,6 +26,4 @@ for (const [key, label] of SORTS) {
 const byName = orderBy(shuffles[2], 'name').map((it) => it.uid);
 check('of one name, the best first and then the oldest', byName.join(',') === '12,3,5,7,9', byName.join(','));
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\nthings of one kind keep their place — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('things of one kind keep their place');

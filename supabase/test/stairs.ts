@@ -21,7 +21,6 @@
  *
  * Runs against the database the suite leaves behind, and puts it back.
  */
-import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import type { Target } from '../../src/game/actions';
 import { BUILD_ACTION_BY_ID } from '../../src/game/buildActions';
@@ -32,20 +31,7 @@ import { TOP_LEVELS } from '../../src/game/building';
 import { pathOptions } from '../../src/game/player';
 import { findPath } from '../../src/world/pathfinding';
 import { TileType } from '../../src/world/tiles';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
+import { psql } from './harness';
 
 let bad = 0;
 let good = 0;

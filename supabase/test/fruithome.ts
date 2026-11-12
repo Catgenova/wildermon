@@ -14,6 +14,7 @@
  *
  * The island is made for the test and deleted after it.
  */
+import { ok, bad, check } from './harness';
 process.env.MOVE_GROUND_TEST = '1';
 process.env.PGHOST ??= '/var/run/postgresql';
 process.env.PGPORT ??= '5433';
@@ -28,12 +29,6 @@ const { FRUIT_MOVE, FOUNDING_FRUIT, OWN_FRUIT, fruitHome, psql } = await import(
 
 const sql = psql([process.env.PGDATABASE ?? 'postgres']);
 const one = (text: string): string => sql(text)[0]?.[0] ?? '';
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 
 const SIZE = 1024;
 const SEED = 4242;

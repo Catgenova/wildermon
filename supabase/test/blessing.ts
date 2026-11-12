@@ -14,28 +14,10 @@
  *
  * Every number asked after is the browser's, off the spell's own `fx`.
  */
-import { execFileSync } from 'node:child_process';
 import { FAITH_SPELL_BY_ID, FAITH_SPELLS, FAITH_TIER_AT, LAND_GROWS, SPELLS_PER_TIER, type FaithSpellDef } from '../../src/game/patrons';
 import { TREE_AGES } from '../../src/world/tiles';
+import { psql, ok, bad, check } from './harness';
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 const near = (a: number, b: number, by = 1e-6): boolean => Math.abs(a - b) <= by;
 const spell = (id: string): FaithSpellDef => {
   const s = FAITH_SPELL_BY_ID.get(`blessing_${id}`);

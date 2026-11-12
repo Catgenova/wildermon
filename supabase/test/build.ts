@@ -21,6 +21,7 @@
  */
 import { execFileSync } from 'node:child_process';
 import { STALE_BUILD } from '../../src/version';
+import { ok, bad, check } from './harness';
 
 const ENV = {
   ...process.env,
@@ -48,12 +49,6 @@ const psql = (text: string): string => {
 };
 const as = (who: string, text: string): Ran => sql(
   `select set_config('request.jwt.claims', '${JSON.stringify({ sub: who })}', false) \\g /dev/null\nset role authenticated;\n${text}\n`);
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 
 const ANNA = 'eb000000-0000-4000-8000-000000000001';
 const A = '0123456789abcdef';

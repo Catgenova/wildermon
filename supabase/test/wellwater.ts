@@ -17,29 +17,10 @@
  *
  * Runs against the database the suite leaves behind: Faraway, and Ivar on it.
  */
-import { execFileSync } from 'node:child_process';
 import { WELL_HOLDS, WELL_TRICKLE, WELL_TRICKLE_AT, WELL_TRICKLE_QL } from '../../src/game/furniture';
 import { Game, type IslandGround } from '../../src/game/game';
 import { litreSources } from '../../src/game/placeables';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { psql, ok, bad, check } from './harness';
 
 const QL = 40;
 const AGO = 100;

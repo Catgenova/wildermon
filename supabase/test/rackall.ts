@@ -22,31 +22,12 @@
  * off his deed so that a crate somebody else set down is not his to empty.
  * Touches only its own tile.
  */
-import { execFileSync } from 'node:child_process';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import { Game } from '../../src/game/game';
 import { crateHolds, crateShut, rackSpotOf, rackStock, rackTakes, type PlacedCrate } from '../../src/game/crates';
 import { furnitureCentre, rackDeck } from '../../src/game/furniture';
 import { itemDef, type Item } from '../../src/game/items';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { psql, ok, bad, check } from './harness';
 
 const W = `(select id from world where name = 'Hoarding')`;
 const DANE = `(select uid from player where world_id = ${W} and name = 'Dane')`;

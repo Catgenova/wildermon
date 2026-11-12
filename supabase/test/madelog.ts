@@ -12,32 +12,12 @@
  *
  * Runs against the database the suite leaves behind, in one transaction that is rolled back.
  */
-import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { smithMakes, smithPer, SPIN_RECIPES, type Creature } from '../../src/game/creatures';
 import { RECIPE_BY_ID } from '../../src/game/recipes';
 import { TileType } from '../../src/world/tiles';
 import { article } from '../../src/game/words';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { psql, check, finish } from './harness';
 
 type Station = 'spindle' | 'anvil' | 'campfire' | 'smelter' | null;
 const recipeMakes = (id: string): Record<string, number> => ({ [RECIPE_BY_ID.get(id)!.result]: RECIPE_BY_ID.get(id)!.count ?? 1 });
@@ -230,6 +210,4 @@ for (const { id, items, at: st, made } of CASES) {
     !!c.ledger && (c.ledger.now.made.water_bucket ?? 0) <= BUCKETS && count(crate, 'water_bucket') === BUCKETS, `${says(c.ledger?.now.made)} stores ${count(crate, 'water_bucket')}`);
 }
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\nmade on the log — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('made on the log');

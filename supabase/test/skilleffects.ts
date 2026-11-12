@@ -19,12 +19,7 @@ import { SKILL_DEFS, SKILL_TOP } from '../../src/game/skills';
 import { atLevel, effectsOf, effectTracks } from '../../src/game/skilleffects';
 import { weaponDamage, WEAPONS } from '../../src/game/gear';
 import { percent } from '../../src/game/words';
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { ok, bad, check } from './harness';
 
 const g = Game.create(4242);
 g.skills.values.set('mining', 37.5);

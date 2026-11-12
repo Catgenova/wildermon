@@ -15,11 +15,11 @@
  * Runs against the database the suite leaves behind, in one transaction that
  * is rolled back.
  */
-import { execFileSync } from 'node:child_process';
 import { packLand, packWorld, unpack } from '../../src/game/save';
 import { Game } from '../../src/game/game';
 import { BUTCHER_PARTS } from '../../src/game/butcher';
 import { attackOf, bloodMul, EVOLVE_AT, kindName, levelSkill, maxHealth, SPECIES, STAGE_MUL, STAGE_PERKS, stageOf, type Creature } from '../../src/game/creatures';
+import { psql, check, finish } from './harness';
 
 /** A kind that does not evolve, and the skill it levels by: the first with no stages that levels at all. */
 // A kind with no stages: every wildermon line has its stages now, so a monster (a goblin), which levels fighting and
@@ -28,25 +28,6 @@ const STILL = Object.values(SPECIES).find((d) => !d.stages && !d.monster && leve
   ?? Object.values(SPECIES).find((d) => !d.stages && d.monster)!;
 const STILL_SKILL = levelSkill(STILL) ?? 'fighting';
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 const near = (a: number, b: number): boolean => Math.abs(a - b) < 1e-6 * Math.max(1, Math.abs(b));
 const [AT1, AT2] = EVOLVE_AT;
 const H = STAGE_MUL.hardy!, T = STAGE_MUL.tough!, S = STAGE_MUL.speed!, W = STAGE_MUL.work!, G = STAGE_MUL.grow!;
@@ -389,6 +370,4 @@ check(`a ${STILL.name} is not touched at any level`, stageOf(still) === 0 && kin
     back?.creatures.get(tusk.id)?.name === SPECIES.seavic.stages![1].name, back?.creatures.get(tusk.id)?.name);
 }
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\nwildermon evolve — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('wildermon evolve');

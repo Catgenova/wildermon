@@ -47,7 +47,6 @@
  * ground back as it found it.
  */
 import { Game, type IslandGround } from '../../src/game/game';
-import { execFileSync } from 'node:child_process';
 import { ACTION_BY_ID, type ActionDef, type Target } from '../../src/game/actions';
 import { borderOf, MATERIALS, WALL_TYPE_BY_ID, WALL_TYPES, wallBill, type Side } from '../../src/game/building';
 import { BRIDGES, CLEARANCE, PULL_REACH, rampRefusal, spanBill, type BridgeKind } from '../../src/game/bridges';
@@ -66,25 +65,8 @@ import { metres, TileType } from '../../src/world/tiles';
 import { numberWord, spanWords } from '../../src/game/words';
 import { lacksSaid } from '../../src/game/ranks';
 import { PLAN_TOOL } from '../../src/game/buildActions';
+import { psql, ok, bad, check } from './harness';
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 const same = (a: Record<string, number>, b: Record<string, number>): boolean =>
   Object.keys(a).length === Object.keys(b).length && Object.entries(a).every(([k, n]) => b[k] === n);
 const said = (bill: Record<string, number>): string => Object.entries(bill).map(([k, n]) => `${n} ${k}`).join(', ');

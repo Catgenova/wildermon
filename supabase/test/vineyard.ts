@@ -24,7 +24,6 @@
  *   npx esbuild supabase/test/vineyard.ts --bundle --platform=node --format=esm \
  *     --external:typescript --outfile=node_modules/.cache/vineyard.mjs && node node_modules/.cache/vineyard.mjs
  */
-import { execFileSync } from 'node:child_process';
 import { Game, type IslandGround } from '../../src/game/game';
 import { ACTION_BY_ID, type ActionDef, type Target } from '../../src/game/actions';
 import { ageGain, ageingRule, brewQl, CELLAR_AGEING, fixedTo, WINE_AGE_CAP, WINE_AGE_RATE, wineAgeSays } from '../../src/game/ageing';
@@ -44,26 +43,7 @@ import { SUBTILES } from '../../src/game/crates';
 import { WALL_TYPES, type Building, type Side, type WallType } from '../../src/game/building';
 import { SEASON_DAYS, seasonAt, YEAR_DAYS, YEAR_FROM } from '../../src/world/calendar';
 import { BUSH_DEFS, TileType } from '../../src/world/tiles';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { psql, check, finish } from './harness';
 
 /* ---- the moments everything is held at ------------------------------------------------------------- */
 
@@ -855,6 +835,4 @@ check('drawn dry it forgets its age; water poured in has none; a brew that does 
 
 /* ---- what was found ------------------------------------------------------------------------------- */
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\nvineyards — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('vineyards');

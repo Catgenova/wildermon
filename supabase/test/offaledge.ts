@@ -13,27 +13,8 @@
  *
  * Runs against the database the suite leaves behind, in one transaction that is rolled back.
  */
-import { execFileSync } from 'node:child_process';
 import { UNSTICK_REACH, UNSTICK_SEARCH } from '../../src/game/keep';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { psql, check, finish } from './harness';
 
 const NELL = 'd71c4a17-0000-4000-8000-0000000000f3';
 const out = psql(`
@@ -105,6 +86,4 @@ check('and the body walks on from there', at('WALKS') === '20.50 17.50 false', a
 check('asked again on open ground: "Not stuck: a walk gets off this ground."', at('AGAIN') === 'Not stuck: a walk gets off this ground.', at('AGAIN'));
 check('up a storey: the ground floor, same tile, as before', at('STOREY') === '0 20.5 17.5 0', at('STOREY'));
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\nI'm stuck, on the ground — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish(`I'm stuck, on the ground`);

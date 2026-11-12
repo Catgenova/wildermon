@@ -49,7 +49,6 @@
  *   npx esbuild supabase/test/respawnpick.ts --bundle --platform=node --format=esm \
  *     --external:typescript --outfile=node_modules/.cache/respawnpick.mjs && node node_modules/.cache/respawnpick.mjs
  */
-import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { build } from 'esbuild';
@@ -62,26 +61,7 @@ import { Island } from '../../src/net/island';
 import { supabase } from '../../src/net/supabase';
 import type { Driven, Shown } from './respawnpick-page';
 import { RESPAWN_ARM_MS } from '../../src/ui/respawn';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { psql, bad, check, finish } from './harness';
 
 /* ---- the island ------------------------------------------------------------ */
 
@@ -407,6 +387,4 @@ if (!browser || !offer) {
   }
 }
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\non death, where to wake — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('on death, where to wake');

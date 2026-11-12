@@ -24,6 +24,7 @@
 import { execFileSync } from 'node:child_process';
 import { generateWorld } from '../../src/world/generate';
 import { rowsOf, type LandRow } from '../../src/net/landpack';
+import { ok, bad, check } from './harness';
 
 const SIZE = 192;
 const SEED = 5151;
@@ -43,12 +44,6 @@ const psql = (sql: string): string =>
     encoding: 'utf8',
     maxBuffer: 256 * 1024 * 1024,
   }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 
 const gen = generateWorld(SEED, SIZE);
 const id = psql(`select rpc_found('A cheaper stir', ${SEED}, ${SIZE}, ${gen.spawn.x}, ${gen.spawn.y})`);

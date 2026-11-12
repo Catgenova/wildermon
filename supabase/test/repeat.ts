@@ -20,12 +20,7 @@ import { Game } from '../../src/game/game';
 import { ACTION_BY_ID, type ActionDef } from '../../src/game/actions';
 import { BINDS, BIND_BY_ID } from '../../src/game/keybinds';
 import type { Target } from '../../src/game/actions';
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { ok, bad, check } from './harness';
 
 const g = Game.create(4242);
 const asked: Array<{ def: string; target: Target; goes?: number }> = [];

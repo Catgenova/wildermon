@@ -29,6 +29,7 @@ import { numberWord } from '../../src/game/words';
 import { PATH_LIST } from '../../src/game/meditation';
 import { findPath } from '../../src/world/pathfinding';
 import type { World } from '../../src/world/world';
+import { seed as seedFrom } from './harness';
 
 const SIZE = Number(process.env.ISLAND_SIZE ?? 64);
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
@@ -286,11 +287,13 @@ async function main(): Promise<void> {
   // The same generator the join uses, or the island handed over and the island
   // come back to are two different islands. Rolled again, a few times at most,
   // while it leaves the body nowhere to walk to that a shovel would take.
+  // Off one seed of the harness's, printed, so a run that fails can be rolled the same again (SEED=<n>).
+  const rolls = seedFrom();
   let seed = 0;
   let gen: ReturnType<typeof generateAtlasWorld> | null = null;
   for (let tries = 0; !gen || (tries < 20 && !soilWithinWalk(gen.world, gen.spawn.x, gen.spawn.y)); tries++) {
     if (gen) say(`  seed ${seed} leaves the body nowhere to walk to that a shovel would take; rolling again`);
-    seed = (Math.random() * 0x7fffffff) >>> 0;
+    seed = (rolls() * 0x7fffffff) >>> 0;
     gen = generateAtlasWorld(seed, readAtlas(), SIZE);
   }
   say(`  rolled a ${SIZE}×${SIZE} island, seed ${seed}, spawn ${gen.spawn.x},${gen.spawn.y}`);

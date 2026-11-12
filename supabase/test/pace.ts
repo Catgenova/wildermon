@@ -19,7 +19,6 @@
  * the island, up to a second behind the channel, were laid over what it had
  * said, pulling everybody on the move back to where they had been.
  */
-import { execFileSync } from 'node:child_process';
 import { furnitureDef } from '../../src/game/furniture';
 import { hullSpeed } from '../../src/game/game';
 import { Roster, WALK_SLACK, walkSpan } from '../../src/game/roster';
@@ -27,19 +26,7 @@ import { BODY_EVERY } from '../../src/game/keep';
 import { SAILING, sailingPace } from '../../src/game/travel';
 import { WEATHER_MOST } from '../../src/game/wind';
 import type { PeerState } from '../../src/net/protocol';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-    input: sql,
-    encoding: 'utf8',
-  }).trim();
+import { psql } from './harness';
 
 const ok: string[] = [];
 const bad: string[] = [];

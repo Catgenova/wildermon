@@ -29,7 +29,6 @@
  *
  * Runs against the database the suite leaves behind, and puts it back.
  */
-import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { ACTION_BY_ID, DIG_TILE_TIME, digDepth, FLATTEN_STEP, MINE_DEPTH, SLOPE_FLOOR, SLOPE_PER_SKILL, slopeNeeds, SPOIL_REACH, TILE_CORNERS } from '../../src/game/actions';
 import { CLASSES, PERK_CLASSES, PERK_TIER_AT, PERKS_PER_TIER } from '../../src/game/classes';
@@ -43,6 +42,7 @@ import { MATERIALS as BUILD_MATERIALS } from '../../src/game/building';
 import { metres, ROAD_TILES, TILE_DEFS } from '../../src/world/tiles';
 import { STANCE_TAKEN } from '../../src/game/fight';
 import { WEAPON_BY_ID } from '../../src/game/gear';
+import { psql, ok, bad, check } from './harness';
 
 /** Every kind of weapon there is, for a perk on the swing of one (a Sworn Blade's Light Sword: `wind:swords`). */
 const WEAPON_KINDS = new Set<string>([...WEAPON_BY_ID.values()].map((w) => w.kind));
@@ -50,25 +50,6 @@ const WEAPON_KINDS = new Set<string>([...WEAPON_BY_ID.values()].map((w) => w.kin
 /** A Forester's Woodsman's Stride: a pace on each tile that slows a walker, which the browser alone reads. */
 const STRIDE_KEYS = STRIDE.map(walkKey);
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 const near = (a: number, b: number, by = 1e-6): boolean => Math.abs(a - b) <= by;
 /** Two folds, key for key, to within a float's last bits. */
 const sameFx = (a: Fx, b: Fx): boolean => {

@@ -16,30 +16,12 @@
  *
  * Makes its own island and rolls it back.
  */
-import { execFileSync } from 'node:child_process';
 import type { Target } from '../../src/game/actions';
 import { randomLook } from '../../src/game/look';
 import type { Lined } from '../../src/net/island';
 import type { SpellAim } from '../../src/ui/spellbar';
+import { psql, check, finish } from './harness';
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 const lit = (v: unknown): string => `'${JSON.stringify(v).replace(/'/g, "''")}'::jsonb`;
 
 const ME = 'a0d00000-0000-4000-8000-0000000000d1';
@@ -277,6 +259,4 @@ check('a price past the most is refused', said.get('PRICE_MORE') === '22023 Bad 
 check('and an order at one', said.get('ORDER_MORE') === '22023 Bad request: rpc_order p_price: out of range.', said.get('ORDER_MORE'));
 check('a price at the most is not', said.get('PRICE_OK') === '', said.get('PRICE_OK'));
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\nwhat a browser hands the island — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('what a browser hands the island');

@@ -15,6 +15,7 @@
  * away after, since the race wants two sessions to see the same purse.
  */
 import { execFileSync, spawn } from 'node:child_process';
+import { ok, bad, check } from './harness';
 
 const ENV = {
   ...process.env,
@@ -34,12 +35,6 @@ const session = (sql: string): Promise<string> => new Promise((done, fail) => {
   p.on('close', (code) => (code === 0 ? done(out.trim()) : fail(new Error(err))));
   p.stdin.end(sql);
 });
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 
 const IONA = 'd6d6d6d6-d6d6-d6d6-d6d6-d6d6d6d6d6d6';
 const world = psql(`select id from world where name = 'Hoarding';`);

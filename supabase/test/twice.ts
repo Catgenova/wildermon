@@ -32,6 +32,7 @@
  * Makes and removes everything it uses, on an island of its own.
  */
 import { execFile, execFileSync } from 'node:child_process';
+import { ok, bad, check } from './harness';
 
 const ENV = {
   ...process.env,
@@ -61,12 +62,6 @@ const later = (text: string): Promise<Ran> => new Promise((done) => {
     done({ out: (out ?? '').trim(), err: e ? (err || String(e)) : '' }));
   child.stdin?.end(text);
 });
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 
 const W = 'cc000000-0000-4000-8000-0000000000c1';
 const N = 6;

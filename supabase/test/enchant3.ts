@@ -19,7 +19,6 @@
  *   npx esbuild supabase/test/enchant3.ts --bundle --platform=node --format=esm \
  *     --external:typescript --outfile=node_modules/.cache/enchant3.mjs && node node_modules/.cache/enchant3.mjs
  */
-import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { ACTION_BY_ID, type ActionDef, type Target } from '../../src/game/actions';
 import { bagRoom, roomFor, type Item } from '../../src/game/items';
@@ -39,26 +38,8 @@ import { enchantSays } from '../../src/game/enchanting';
 import { knackChance } from '../../src/game/titles';
 import { sittingWorth } from '../../src/game/meditation';
 import { TileType } from '../../src/world/tiles';
+import { psql, check, finish } from './harness';
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 const near = (a: number, b: number, eps = 1e-6): boolean => Math.abs(a - b) <= eps;
 
 const E = (id: string): EnchantmentDef => ENCHANTMENTS[id];
@@ -752,9 +733,7 @@ check('taken off, the saddle and bridle come back into the pack with their encha
 
 check('every one of them is in the table once', ENCHANTMENT_LIST.filter((e) => PART3.includes(e)).length === PART3.length);
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\nenchanting, part 3 — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('enchanting, part 3');
 
 function times(x: number): string {
   return `${Number(x.toFixed(2))} times`;

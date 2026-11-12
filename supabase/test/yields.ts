@@ -18,7 +18,6 @@
  *   npx esbuild supabase/test/yields.ts --bundle --platform=node --format=esm \
  *     --external:typescript --outfile=node_modules/.cache/yields.mjs && node node_modules/.cache/yields.mjs
  */
-import { execFileSync } from 'node:child_process';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import { FORAGE_COOLDOWN, Game, SPROUT_COOLDOWN } from '../../src/game/game';
 import { EMPTY_CHANCE, FIND_CHECK } from '../../src/game/forage';
@@ -32,25 +31,7 @@ import { findChance, qlCap, searchPasses, seasonWindow } from '../../src/game/yi
 import { readyIn, waitWords } from '../../src/game/words';
 import { tileUses, yieldLines } from '../../src/ui/tileinfo';
 import { BUSH_DEFS, packTreeData, TileType, TREE_AGES, TREE_DEFS } from '../../src/world/tiles';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { psql, ok, bad, check } from './harness';
 
 const now = Date.now() / 1000;
 const AGO = 40;

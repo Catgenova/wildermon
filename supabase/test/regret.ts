@@ -29,7 +29,6 @@
  *
  * Runs against the database the suite leaves behind, and puts it back.
  */
-import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { ACTION_BY_ID } from '../../src/game/actions';
 import { ITEM_DEFS } from '../../src/game/items';
@@ -42,6 +41,7 @@ import { perksOf } from '../../src/game/perks';
 import { PATRON_AT, PATRON_BY_ID, spellsOf } from '../../src/game/patrons';
 import { CHOOSE_AT, PATH_PICKS, PATHS } from '../../src/game/meditation';
 import { FAITH } from '../../src/game/faith';
+import { psql, ok, bad, check } from './harness';
 
 /** A Blessing spell of the first faith tier, to be cleared with the patron. */
 const BLESS = spellsOf('blessing', 1)[0].id;
@@ -54,24 +54,6 @@ const [TF_A, , , TF_B] = perksOf('terraformer').map((p) => p.id);
 /** A Sworn Blade's first passive, which is a perk of the fighting trade like any other. */
 const BLADE_PERK = perksOf('blade').find((p) => p.tier === 1 && Object.keys(p.fx).length > 0)!.id;
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 const pct = (n: number): string => `${(n * 100).toFixed(1)}%`;
 const nameOf = (id: string): string => CLASSES.find((c) => c.id === id)!.name;
 

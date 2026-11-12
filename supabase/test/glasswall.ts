@@ -20,31 +20,12 @@
  * it), and puts it back.
  */
 import { Game } from '../../src/game/game';
-import { execFileSync } from 'node:child_process';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import { FLOOR_KIND_NAMES, GLASS_ROOF, isDone, MATERIALS_WITH_GLASS, takesAs, wallBill, WALL_TYPES, type FloorKind, type Side } from '../../src/game/building';
 import { GLASS, GLASS_ONLY, isGlasshouse, walledRound } from '../../src/game/glasshouse';
 import { TileType } from '../../src/world/tiles';
+import { psql, ok, bad, check } from './harness';
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 const q = (s: string): string => `'${s.replace(/'/g, "''")}'`;
 const tileT = (x: number, y: number, extra: Record<string, unknown> = {}): string => q(JSON.stringify({ kind: 'tile', x, y, ...extra }));
 const sameBill = (a: Record<string, number>, b: Record<string, number>): boolean =>

@@ -11,6 +11,7 @@
  * Chromium from `CHROME_PATH`, or the one this container has.
  */
 import { execFileSync } from 'node:child_process';
+import { ok, bad, check } from './harness';
 
 const BUILDING_SCREENS = 4;
 const SCULPT_REDRAWS = 4;
@@ -24,12 +25,6 @@ const line = execFileSync('node', ['node_modules/.cache/solara.mjs', JSON.string
 const r = JSON.parse(line) as {
   counts: Record<string, number>; frames: number;
   api: Record<string, number>; imgs: Record<string, { n: number; kpx: number }>;
-};
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
 };
 
 check('the settlement is the size it is meant to be', r.counts.walls >= 250 && r.counts.floors >= 350 && r.counts.lying >= 600 && r.counts.peers === 30,

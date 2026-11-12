@@ -15,31 +15,12 @@
  * The browser's half runs on its own; the island's against the database the suite leaves behind (Hoarding, and Dane
  * on it), in one transaction that is rolled back.
  */
-import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { creatureLines } from '../../src/ui/creatureinfo';
 import { attackOf, Creatures, kindName, maxHealth, SPECIES, subspeciesName, type IslandCreature } from '../../src/game/creatures';
 import { guidePage, subspeciesLines } from '../../src/game/guide';
+import { psql, check, finish } from './harness';
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 /** Whether `n` of `of` draws is within four standard deviations of a chance `p`. */
 const about = (n: number, of: number, p: number): boolean => Math.abs(n - of * p) <= 4 * Math.sqrt(of * p * (1 - p));
 
@@ -145,6 +126,4 @@ check(`the island's goblin has as many variants as there are subspecies: ${answe
     drawn.every((m, v) => m?.kind === GOBLINS[v] && m.key === `goblin~${v}`), drawn.map((m) => m?.key).join(', '));
 }
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\ngoblin subspecies — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('goblin subspecies');

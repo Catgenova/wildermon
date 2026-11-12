@@ -15,33 +15,14 @@
  *
  * Runs against the database the suite leaves behind, in one transaction that is rolled back.
  */
-import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import {
   GATHER_SKILL, GATHER_VERB, SPECIALTY_AT, SPECIALTY_BONUS, specialtyMul, specialtySays, workDuration, type Creature,
 } from '../../src/game/creatures';
 import { percent } from '../../src/game/words';
 import { TileType } from '../../src/world/tiles';
+import { psql, check, finish, timeScale } from './harness';
 
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
 const near = (a: number, b: number, by = 1e-6): boolean => Math.abs(a - b) <= by * Math.max(1, Math.abs(b));
 const T = 30;
 const U = '7e5b0000-0000-4000-8000-0000000000e5';
@@ -144,7 +125,7 @@ check('a keeping watch has no go to quicken, however many keep it', near(Number(
 check('the count is sent for its card', at('SENT') === '3', at('SENT'));
 {
   const [ms, n] = at('MS').split(',').map(Number);
-  check(`counted once a go in ${ms.toFixed(3)} ms with a thousand wild ones about and ${n} reed cutters on the settlement, well under a millisecond`, ms < 1, at('MS'));
+  check(`counted once a go in ${ms.toFixed(3)} ms with a thousand wild ones about and ${n} reed cutters on the settlement, well under a millisecond`, ms < 1 * timeScale(), at('MS'));
   check(`and every trade at once, for the creatures read, in ${Number(at('MSALL')).toFixed(3)} ms`, Number(at('MSALL')) < 2, at('MSALL'));
 }
 
@@ -192,6 +173,4 @@ check('a specialty says its trade, its workers and what it adds, off the rule',
   specialtySays('reed', 4) === `Specialty: ${GATHER_VERB.reed}, 4 workers: task speed +${percent(SPECIALTY_BONUS)}.`, specialtySays('reed', 4));
 check('and a trade short of one says how many of how many', specialtySays('water', 1).includes(`1/${SPECIALTY_AT} workers for a specialty`), specialtySays('water', 1));
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\nthree of a trade make a specialty — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('three of a trade make a specialty');

@@ -24,30 +24,10 @@
  * Every step is its own transaction, as a browser's asks are: a cursor is a snapshot, and only rows written by
  * transactions after it are new to it. Makes its own island, and takes it away again.
  */
-import { execFileSync } from 'node:child_process';
 import { AWAY_SLOWER, MOBS_EVERY } from '../../src/game/keep';
 import type { IslandCreature } from '../../src/game/creatures';
 import { MobsHeld, unpack, type MobsAnswer } from '../../src/net/mobsync';
-
-const psql = (sql: string): string =>
-  execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
-    input: sql,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      PGHOST: process.env.PGHOST ?? '/var/run/postgresql',
-      PGPORT: process.env.PGPORT ?? '5433',
-      PGUSER: process.env.PGUSER ?? 'wildermon',
-      PGDATABASE: process.env.PGDATABASE ?? 'postgres',
-    },
-  }).trim();
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { psql, check, finish } from './harness';
 
 const ME = 'fdd10000-0000-4000-8000-0000000000a1';
 const YOU = 'fdd10000-0000-4000-8000-0000000000a2';
@@ -376,6 +356,4 @@ check(`the longest wait between two asks, ${longest} s in a background tab, is w
 
 psql(`delete from world where name = '${ISLE}';`);
 
-for (const line of [...ok, ...bad]) console.log(line);
-console.log(`\nthe creatures read, only what changed — ${ok.length} of ${ok.length + bad.length}`);
-if (bad.length) process.exit(1);
+finish('the creatures read, only what changed');

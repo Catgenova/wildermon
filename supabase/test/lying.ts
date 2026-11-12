@@ -15,12 +15,7 @@
 import { Game } from '../../src/game/game';
 import type { IslandGround } from '../../src/game/game';
 import type { ItemRow } from '../../src/net/island';
-
-const ok: string[] = [];
-const bad: string[] = [];
-const check = (what: string, passed: boolean, detail = ''): void => {
-  (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
-};
+import { ok, bad, check } from './harness';
 
 /** A row as `select *` hands one over, lying on a tile. */
 function row(id: number, def: string, gx: number, gy: number, over: Partial<ItemRow> = {}): ItemRow {
