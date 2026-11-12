@@ -1849,6 +1849,11 @@ const inkAt = (step: number, size = 1): number => Math.max(1.1, (0.7 * step) / s
  * A wildermon of a kind with its feet at (sx, sy), at `zoom` (its age already
  * in it), in the colours of its variant.
  */
+/** PROTOTYPE (perf-solara): what the beasts cost, counted. */
+export const BEAST_COUNT = { live: 0, liveMs: 0, made: 0, madeMs: 0, kept: 0 };
+(globalThis as unknown as { __beasts?: typeof BEAST_COUNT }).__beasts = BEAST_COUNT;
+const realNow = (): number => (globalThis as unknown as { driven?: { realNow: () => number } }).driven?.realNow() ?? performance.now();
+
 export function drawBeast(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, species: string, kind: Kind, colors: [string, string], p: BeastPose): void {
   zoom *= kind.size ?? 1;
   const now = performance.now() / 1000;
@@ -1907,6 +1912,7 @@ export function drawBeast(ctx: CanvasRenderingContext2D, sx: number, sy: number,
   // Turning, getting going or settling, or rare, its light crossing it: drawn for itself, as it is this frame.
   if (changing || (!ways && !Number.isInteger(facing)) || p.rare || (p.act && !actHeld)) {
     const t0 = changing && !p.rare && !p.act ? performance.now() : 0;
+    const tLive = realNow();
     const [ax, ay] = ahead(a.u);
     ctx.save();
     ctx.translate(sx + ax, sy + ay);
@@ -1918,6 +1924,7 @@ export function drawBeast(ctx: CanvasRenderingContext2D, sx: number, sy: number,
     if (a.act?.kind === 'evolve') evolveBurst(ctx, species, kind, pal, a.act.t, false);
     ctx.restore();
     if (t0) spent += performance.now() - t0;
+    BEAST_COUNT.live++; BEAST_COUNT.liveMs += realNow() - tLive;
     return;
   }
   // Which picture it is: a fifteenth of a second of an act (and a twelfth of a stride, at it on the move), a twelfth of a stride
@@ -2007,13 +2014,16 @@ export function drawBeast(ctx: CanvasRenderingContext2D, sx: number, sy: number,
     }
   } else {
     made = performance.now();
+    const tMade = realNow();
     f = pictureOf(kind, kit, reachOf(species, kind, kit), pal, facing, a, step, step * dev, base);
     keep(key, f, now);
+    BEAST_COUNT.made++; BEAST_COUNT.madeMs += realNow() - tMade;
     if (h) {
       h.waiting = undefined;
       h.shown = key;
     }
   }
+  if (!made) BEAST_COUNT.kept++;
   const [ax, ay] = go > 0 ? ahead(a.u) : [0, 0];
   ctx.drawImage(f.canvas, sx + ax - (f.ox / f.k) * zoom, sy + ay - (f.oy / f.k) * zoom, (f.canvas.width / f.k) * zoom, (f.canvas.height / f.k) * zoom);
   // What a new picture cost is counted to here: the canvas fills it in the first time it is put down, not as it is drawn.

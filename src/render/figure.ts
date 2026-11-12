@@ -11352,6 +11352,8 @@ const SCULPT: { on: boolean; flips: number; loading: boolean; draw: ((ctx: Canva
  * On or off, as asked by `by`: the island's renderer (every frame) or the character creator. On while anybody asks.
  */
 export function sculptedFigures(want: boolean, by: 'island' | 'creator' = 'island'): void {
+  // PROTOTYPE (perf-solara): the island asks once a frame, which is when its sculpted redraws are counted afresh.
+  if (by === 'island') sculptLeft.left = sculptBudget();
   if (want) SCULPT.asked.add(by);
   else SCULPT.asked.delete(by);
   const on = SCULPT.asked.size > 0;
@@ -11363,6 +11365,19 @@ export function sculptedFigures(want: boolean, by: 'island' | 'creator' = 'islan
     import('../sculpt/sculpted').then((m) => { SCULPT.draw = m.drawSculptLive; SCULPT.gen = m.sculptGen; SCULPT.flips++; }).catch(() => { SCULPT.loading = false; });
   }
 }
+/**
+ * PROTOTYPE (perf-solara): sculpted bodies drawn again a frame, at most. Each is a WebGL draw put down on a 2D canvas,
+ * which waits for the GL; past the budget a body is put down from the picture it last had.
+ */
+const sculptLeft = { left: Infinity };
+const sculptBudget = (): number => (globalThis as unknown as { __proto?: Record<string, number | boolean> }).__proto?.glBudget as number ?? Infinity;
+/** Whether a sculpted redraw may be made now (and counts it), or the last picture must stand. */
+const sculptMay = (): boolean => {
+  if (!SCULPT.on || !SCULPT.draw) return true;
+  if (sculptLeft.left <= 0) return false;
+  sculptLeft.left--;
+  return true;
+};
 /** Whether the sculpted bodies are on and loaded, so a figure drawn now is drawn sculpted where it can be. */
 export const sculptedReady = (): boolean => SCULPT.on && !!SCULPT.draw;
 /** What of the sculpted bodies a kept picture depends on: whether they are on, and which bakes have landed. */
@@ -12362,6 +12377,8 @@ interface Still {
   drawn?: number;
   /** The picture of its loop standing it was last put down from instead (`idleLoop`), if it was. */
   shown?: HTMLCanvasElement;
+  /** PROTOTYPE: the zoom and device scale it was drawn at. */
+  sized?: string;
 }
 
 const stills = new Map<string, Still>();
@@ -12404,7 +12421,8 @@ function drawStill(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: 
   const close = zoom >= STILL_BELOW;
   // Something rare on them is drawn often enough for its glint to cross it smoothly.
   const rate = Math.min(Math.max(pose.emote ? 30 : STILL_RATE[doing(pose)] ?? 30, gearShines(pose.gear) ? SHINE_RATE : 0), lately.count > CROWD ? CROWD_RATE : Infinity);
-  if (!st || st.key !== key || changing || now - st.at >= 1 / rate || now < st.at) {
+  const sized = `${zoom.toFixed(3)}|${dev}`;
+  if (!st || st.sized !== sized || ((st.key !== key || changing || now - st.at >= 1 / rate || now < st.at) && sculptMay())) {
     const k = zoom * dev;
     const w = Math.ceil((STILL_BOX.right - STILL_BOX.left) * k), h = Math.ceil((STILL_BOX.bottom - STILL_BOX.top) * k);
     if (!st) {
@@ -12420,6 +12438,7 @@ function drawStill(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: 
     st.ox = Math.round(-STILL_BOX.left * k);
     st.oy = Math.round(-STILL_BOX.top * k);
     st.dev = dev;
+    st.sized = sized;
     st.key = key;
     st.at = now;
     st.drawn = (st.drawn ?? 0) + 1;
@@ -12550,6 +12569,7 @@ function idleLoop(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: n
     idles.delete(key);
     idles.set(key, f);
   } else {
+    if (!sculptMay()) return false;
     while (idlePixels + w * h > IDLE_PIXELS && idles.size) {
       const [old, gone] = idles.entries().next().value as [string, StrideFrame];
       idles.delete(old);
@@ -12598,6 +12618,7 @@ function stride(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: num
     strides.delete(key);
     strides.set(key, f);
   } else {
+    if (!sculptMay()) return false;
     const k = zoom * dev;
     const w = Math.ceil((STILL_BOX.right - STILL_BOX.left) * k), h = Math.ceil((STILL_BOX.bottom - STILL_BOX.top) * k);
     while (stridePixels + w * h > STRIDE_PIXELS && strides.size) {

@@ -461,7 +461,9 @@ import { flowerSeason, flowersOn } from '../world/flowers';
 import { drawFace, EDGES, ROCK_MOSS, sprigOf, topEdges, type Face } from './outcrops';
 import { cropFrame, FIELD_LAYOUTS } from './crops';
 import { forgetTrees, grownAt, stumpGrown, spriteScaleFor, bushSprite, crateSprite, cropFlatSprite, cropSprite, drawCampfire, drawCreature, type CreaturePose, drawPlayer, facingOf, lyingSprite, treeSprite, type Sprite, drawTrap, drawDeck, stumpSprite, type DeckShape } from './sprites';
-import { inkOf } from './ink';
+import { inkOf, READ_BACK } from './ink';
+/** PROTOTYPE switches (perf-solara), read at the call: `globalThis.__proto = { crop: false }` for the old way. */
+export const proto = (k: string): boolean => ((globalThis as unknown as { __proto?: Record<string, boolean> }).__proto?.[k] ?? true);
 import { wildermonHead, wildermonSaddle, wildermonSeat, wildermonTop } from './wildermon';
 import {
   drawChains, drawDrawbridgeSpan, drawGallows, drawGatewayDressing, drawGrille, drawGrooves, drawHiddenMark, drawHingeCrib, drawLandingCrib,
@@ -12809,6 +12811,9 @@ export class Renderer {
     }
   }
 
+  /** PROTOTYPE: the pad pictures are drawn on before they are cut to what is in them. */
+  private bakePad: { cv: HTMLCanvasElement; g: CanvasRenderingContext2D } | null = null;
+
   private baked(key: string, ax: number, ay: number, box: [number, number, number, number], draw: () => void, ver: number,
     { occludes = true, lit = true }: BakeAs = {}): void {
     const ctx = this.canvas.ctx;
@@ -12864,6 +12869,7 @@ export class Renderer {
       if (occludes) this.occludeLine(box, draw);
       return;
     }
+    if (proto('crop')) { this.bakeCropped(key, had, ax, ay, bx, by, w, h, draw, ver, occludes, zoom); return; }
     this.bakesLeft--;
     let cv = had?.cv;
     if (had) {
@@ -12875,20 +12881,65 @@ export class Renderer {
       cv.width = w;
       cv.height = h;
     } else {
-      /*
-       * Its old picture's canvas, the same size: cleared, and its pen put back
-       * as a new one's is. A wall drawn into it leaves its alpha, its way of
-       * laying one colour over another and the rest as it last set them, and
-       * a picture made again on that came out a shade off one made fresh --
-       * which, now a picture is made again only when something has changed,
-       * would have stayed. Setting the width again does the same in a browser
-       * without `reset`.
-       */
       const old = cv.getContext('2d') as CanvasRenderingContext2D & { reset?: () => void };
       if (old.reset) old.reset();
       else cv.width = w;
     }
-    const g = cv.getContext('2d') as CanvasRenderingContext2D;
+    const g0 = cv.getContext('2d') as CanvasRenderingContext2D;
+    g0.setTransform(dpr, 0, 0, dpr, -bx, -by);
+    g0.lineCap = ctx.lineCap;
+    g0.lineJoin = ctx.lineJoin;
+    g0.miterLimit = ctx.miterLimit;
+    g0.lineWidth = ctx.lineWidth;
+    g0.strokeStyle = ctx.strokeStyle;
+    g0.fillStyle = ctx.fillStyle;
+    g0.font = ctx.font;
+    g0.textAlign = ctx.textAlign;
+    g0.textBaseline = ctx.textBaseline;
+    g0.setLineDash(ctx.getLineDash());
+    {
+      const canvas = this.canvas as { ctx: CanvasRenderingContext2D };
+      canvas.ctx = g0;
+      try {
+        draw();
+      } finally {
+        canvas.ctx = ctx;
+      }
+    }
+    this.bakeRoom(w * h);
+    let spread = 0;
+    for (let i = 0; i < key.length; i++) spread = (spread * 31 + key.charCodeAt(i)) >>> 0;
+    const turn = (spread % 1000) / 1000;
+    this.bakes.set(key, {
+      cv, ax, ay, bx: bx / dpr, by: by / dpr, at: this.time, life: BAKE_KEEP * (0.75 + turn / 2), wait: BAKE_LIFE * turn,
+      ver, epoch: this.bakeEpoch, light: this.bakeLight, shape: this.bakeShape, zoom, used: this.frameNo,
+    });
+    this.bakePixels += w * h;
+    ctx.drawImage(cv, bx / dpr, by / dpr, w / dpr, h / dpr);
+    if (occludes && this.runeNight.keeping) this.runeNight.occlude(ctx, cv, bx / dpr, by / dpr, w / dpr, h / dpr);
+  }
+
+  /** PROTOTYPE (perf-solara): `baked`'s making of a picture, cut to the box round what was drawn. */
+  private bakeCropped(key: string, had: Baked | undefined, ax: number, ay: number, bx: number, by: number, w: number, h: number, draw: () => void, ver: number, occludes: boolean, zoom: number): void {
+    const ctx = this.canvas.ctx;
+    const dpr = this.canvas.dpr;
+    this.bakesLeft--;
+    let cv = had?.cv;
+    if (had) {
+      this.bakePixels -= had.cv.width * had.cv.height;
+      this.bakes.delete(key);
+    }
+    /*
+     * PROTOTYPE (perf-solara): drawn first on one kept pad in memory (`READ_BACK`), then cut to the box round what was
+     * drawn: a floor's box is 1.8 tiles each way and a wall's a whole storey, and four fifths of every such picture was
+     * clear pixels put down every frame.
+     */
+    const pad = this.bakePad ??= (() => { const c = document.createElement('canvas'); return { cv: c, g: c.getContext('2d', READ_BACK) as CanvasRenderingContext2D }; })();
+    if (pad.cv.width < w || pad.cv.height < h) { pad.cv.width = Math.max(pad.cv.width, w); pad.cv.height = Math.max(pad.cv.height, h); }
+    else { (pad.g as CanvasRenderingContext2D & { reset?: () => void }).reset?.(); pad.g.setTransform(1, 0, 0, 1, 0, 0); pad.g.clearRect(0, 0, w, h); }
+    const g = pad.g;
+    g.globalAlpha = 1;
+    g.globalCompositeOperation = 'source-over';
     g.setTransform(dpr, 0, 0, dpr, -bx, -by);
     // What the screen's pen was left holding, which the drawing reads without setting: the ends of a line, the joins, the type.
     g.lineCap = ctx.lineCap;
@@ -12909,18 +12960,34 @@ export class Renderer {
     } finally {
       canvas.ctx = ctx;
     }
-    this.bakeRoom(w * h);
-    // Its turn, by the key, so they come due apart: when the light moves on, and when it is kept no longer.
-    let spread = 0;
-    for (let i = 0; i < key.length; i++) spread = (spread * 31 + key.charCodeAt(i)) >>> 0;
-    const turn = (spread % 1000) / 1000;
+    const px = g.getImageData(0, 0, w, h).data;
+    let cx0 = w, cy0 = h, cx1 = -1, cy1 = -1;
+    for (let yy = 0; yy < h; yy++) {
+      const row = yy * w * 4;
+      for (let xx = 0; xx < w; xx++) if (px[row + xx * 4 + 3]) { if (xx < cx0) cx0 = xx; if (xx > cx1) cx1 = xx; if (yy < cy0) cy0 = yy; cy1 = yy; }
+    }
+    if (cx1 < 0) { cx0 = cy0 = 0; cx1 = cy1 = 0; }
+    const cw = cx1 - cx0 + 1, ch = cy1 - cy0 + 1;
+    if (!cv) cv = document.createElement('canvas');
+    if (cv.width !== cw || cv.height !== ch) { cv.width = cw; cv.height = ch; }
+    else {
+      const old = cv.getContext('2d') as CanvasRenderingContext2D & { reset?: () => void };
+      if (old.reset) old.reset();
+      else cv.width = cw;
+    }
+    (cv.getContext('2d') as CanvasRenderingContext2D).drawImage(pad.cv, cx0, cy0, cw, ch, 0, 0, cw, ch);
+    const bx2 = bx + cx0, by2 = by + cy0;
+    this.bakeRoom(cw * ch);
+    let spread0 = 0;
+    for (let i = 0; i < key.length; i++) spread0 = (spread0 * 31 + key.charCodeAt(i)) >>> 0;
+    const turn0 = (spread0 % 1000) / 1000;
     this.bakes.set(key, {
-      cv, ax, ay, bx: bx / dpr, by: by / dpr, at: this.time, life: BAKE_KEEP * (0.75 + turn / 2), wait: BAKE_LIFE * turn,
+      cv, ax, ay, bx: bx2 / dpr, by: by2 / dpr, at: this.time, life: BAKE_KEEP * (0.75 + turn0 / 2), wait: BAKE_LIFE * turn0,
       ver, epoch: this.bakeEpoch, light: this.bakeLight, shape: this.bakeShape, zoom, used: this.frameNo,
     });
-    this.bakePixels += w * h;
-    ctx.drawImage(cv, bx / dpr, by / dpr, w / dpr, h / dpr);
-    if (occludes && this.runeNight.keeping) this.runeNight.occlude(ctx, cv, bx / dpr, by / dpr, w / dpr, h / dpr);
+    this.bakePixels += cw * ch;
+    ctx.drawImage(cv, bx2 / dpr, by2 / dpr, cw / dpr, ch / dpr);
+    if (occludes && this.runeNight.keeping) this.runeNight.occlude(ctx, cv, bx2 / dpr, by2 / dpr, cw / dpr, ch / dpr);
   }
 
   /** A picture drawn: to the back of the order they are put away in (`bakeRoom`), once a frame. */
