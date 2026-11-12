@@ -419,6 +419,8 @@ export interface PlayerRow {
   gear?: unknown;
   act: string | null;
   act_ends: string | null;
+  /** The tool the job in hand is done with, as the island took it from their pack: see `toolFrom`. */
+  act_tool?: unknown;
   [key: string]: unknown;
 }
 
@@ -530,7 +532,7 @@ export interface ItemRow {
  * queues -- to every browser on the island: the square of the people on it in kilobytes, 265 kB a read with 150
  * awake against 48 kB of this.
  */
-const PEOPLE_COLUMNS = 'world_id,uid,name,x,y,level,look,act,act_ends';
+const PEOPLE_COLUMNS = 'world_id,uid,name,x,y,level,look,act,act_ends,act_tool';
 
 const PACK_COLUMNS = 'id,def,ql,dmg,count,extra,holder,inside,gx,gy,charges,locked,issued,rare,dye,bless,'
   + 'maker,piece,creature,mark,enchant,engraving,lit,lit_at';
@@ -1262,6 +1264,8 @@ export interface ActResult {
    */
   pack?: ItemRow[];
   crates?: IslandCrate[];
+  /** The tool the job started is done with, as the island took it from the pack (`player.act_tool`). */
+  tool?: unknown;
 }
 
 export class Island {
@@ -2354,7 +2358,7 @@ export class Island {
       // island refused the beat (`error`, not a throw): nothing was kept.
       if (ticking && !error) this.ticked = this.ticked.slice(ticking.length);
       const said = (data ?? {}) as {
-        settled?: number; act?: string | null; ends?: string | null;
+        settled?: number; act?: string | null; act_tool?: unknown; ends?: string | null;
         left?: number | null; secs?: number | null; total?: number | null; queued?: number;
         queue?: unknown; cap?: number | null;
         stats?: Record<string, number> | null; skills?: Record<string, number> | null;
@@ -2442,6 +2446,7 @@ export class Island {
        */
       if ((said.settled ?? 0) > 0 && this.doing !== null && (CLEARS_GREEN.has(this.doing) || WORKS_A_GATE.has(this.doing))) this.groundSlow = true;
       this.doing = said.act ?? null;
+      this.doingTool = said.act ? said.act_tool ?? null : null;
       this.hooks.doing?.({
         act: said.act ?? null,
         total: said.total ?? 0,
@@ -3503,7 +3508,7 @@ export class Island {
       if (stairs && `${Math.floor(x)},${Math.floor(y)},${level}` !== this.lastTile) return true;
     }
     if (!this.bodies || now - this.lastBody < BODY_EVERY) return false;
-    return !this.lastShown || `${said}|${this.doing ?? ''}` !== this.lastShownAt;
+    return !this.lastShown || `${said}|${this.doing ?? ''}|${JSON.stringify(this.doingTool)}` !== this.lastShownAt;
   }
 
   /**
@@ -3556,7 +3561,7 @@ export class Island {
       this.wornWas = wearing;
       this.wornSaid = wearing ? JSON.stringify(wearing) : '';
     }
-    const at = `${said}|${this.doing ?? ''}`;
+    const at = `${said}|${this.doing ?? ''}|${JSON.stringify(this.doingTool)}`;
     const shown = `${at}|${this.wornSaid}`;
     if (shown !== this.lastShown && now - this.lastBody >= BODY_EVERY && this.bodies) {
       this.lastBody = now;
@@ -3564,7 +3569,7 @@ export class Island {
       this.lastShownAt = at;
       void this.bodies.send({
         type: 'broadcast', event: 'body',
-        payload: { uid: this.uid, name: this.me?.name ?? '', x, y, level, look: this.me?.look, act: this.doing, gear: wearing },
+        payload: { uid: this.uid, name: this.me?.name ?? '', x, y, level, look: this.me?.look, act: this.doing, act_tool: this.doingTool, gear: wearing },
       });
     }
 
@@ -4766,6 +4771,7 @@ export class Island {
     // the screen now rather than a heartbeat from now.
     if (result.started && !result.done && result.seconds) {
       this.doing = action;
+      this.doingTool = result.tool ?? null;
       this.hooks.doing?.({ act: action, total: result.seconds, secs: result.seconds, left: times, goes: times, queued: 0 });
     }
     /*
@@ -5062,6 +5068,8 @@ export class Island {
    * is what rides the body broadcast.
    */
   private doing: string | null = null;
+  /** The tool of the job in hand, in the island's words (`act_tool`): it rides the body broadcast with `doing`. */
+  private doingTool: unknown = null;
 
   async leave(): Promise<void> {
     if (this.beat) clearTimeout(this.beat);

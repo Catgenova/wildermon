@@ -14,11 +14,12 @@
  * out of a table we wrote, or a colour that is exactly `#rrggbb`. A thing we
  * do not know, or one that is not worn where it says it is, draws nothing.
  */
-import type { GearLook } from '../render/figure';
+import type { GearLook, GearPiece } from '../render/figure';
 import { SLOTS, slotOf, type Slot } from './gear';
 import { materialOf } from './materials';
 import { dyeHexOf, isHex } from './dyestuffs';
 import { CIRCLET, stonesOf } from './gems';
+import { ITEM_DEFS } from './items';
 
 /** One piece: which thing, how rare, what it is made of as the item names it, and its dye's colour. */
 export type WornPiece = [string, number, string | null, string | null];
@@ -65,4 +66,19 @@ export function gearFrom(raw: unknown): GearLook | undefined {
     any = true;
   }
   return any ? out : undefined;
+}
+
+/**
+ * The tool somebody's job in hand is done with, as the island took it from their pack when the job started
+ * (`player.act_tool`, `private.act_tool_of`) and as it rides the body message: [the thing's id, its rarity from nought
+ * to three, its material as the item names it, whether it is enchanted]. Drawn in their hands in its metal, lit when
+ * enchanted (`FigurePose.tool`); nothing for a thing we do not know, or for one that is not the tool the job names
+ * (`wants`, its `ActionDef.tool`, where it names one).
+ */
+export function toolFrom(raw: unknown, wants?: string): GearPiece | undefined {
+  if (!Array.isArray(raw) || typeof raw[0] !== 'string' || !Object.hasOwn(ITEM_DEFS, raw[0])) return undefined;
+  if (wants !== undefined && raw[0] !== wants) return undefined;
+  const rare = typeof raw[1] === 'number' && Number.isInteger(raw[1]) ? Math.max(0, Math.min(3, raw[1])) : 0;
+  const material = typeof raw[2] === 'string' ? materialOf(raw[2])?.id : undefined;
+  return { id: raw[0], ...(rare ? { rare } : {}), ...(material ? { material } : {}), ...(raw[3] === true ? { enchanted: true } : {}) };
 }

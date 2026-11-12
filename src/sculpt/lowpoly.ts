@@ -39,7 +39,15 @@
  * `tools/sculpt/lowgear.mjs` backSocketOf: the hilt behind the right shoulder, the point toward the left hip, its flat
  * on the shawl's cape) and skinned wholly to the upper back (spine_03). The maul is drawn the same way in both hands as
  * the Runestone Warhammer (`assets/warhammer.json`, `tools/sculpt/gear/warhammer.mjs`), its striking ends kept off the
- * ground (`Held.ends`, `Held.rest`), with no slash trail and not carried on the back (it has no back socket).
+ * ground (`Held.ends`, `Held.rest`), its head's slash trail over the blow (`PropAsset.trail`), and carried on the back
+ * head up (its back socket: the head behind the right shoulder blade, the haft toward the left hip, clear of every
+ * garment set). Mining (the jobs swung overhead, `./anim` SWING_TOOL) draws the Runestone Pickaxe
+ * (`assets/pickaxe.json`, `tools/sculpt/gear/pickaxe.mjs`) in both hands the same way, with no trail.
+ *
+ * Each prop's head or blade (its stone, `PropMaterial.metal`) is drawn in the metal it was smithed from: the weapon's
+ * material, or for mining the pose's tool's (`FigurePose.tool`), in the flat figure's colours for that metal
+ * (`metalShades`; iron's for none), lit as metal (`Material.metal`: `./gl.ts` METAL_CURVE, METAL_SHEEN); its gold, wood,
+ * leather, collars, emblems, pommel and glow keep their own colours (`metalTint`).
  */
 import MALE_ASSET from './assets/lowmale.json';
 import FEMALE_ASSET from './assets/lowfemale.json';
@@ -79,10 +87,11 @@ import MALE_LEATHER_CHEST from './assets/lowleatherchest-male.json';
 import FEMALE_LEATHER_CHEST from './assets/lowleatherchest-female.json';
 import LONG_SWORD from './assets/long_sword.json';
 import WARHAMMER from './assets/warhammer.json';
+import PICKAXE from './assets/pickaxe.json';
 import HAIR_ASSET from './assets/lowhair.json';
 import MALE_LIGHT from '../../tools/sculpt/lowlight-male.json';
 import FEMALE_LIGHT from '../../tools/sculpt/lowlight-female.json';
-import { sculptRig, viewOf, type FigurePose, type Rig } from '../render/figure';
+import { metalShades, sculptRig, viewOf, type FigurePose, type GearPiece, type Rig } from '../render/figure';
 import { DEFAULT_LOOK, type Look } from '../game/look';
 import { STRIDE, type Baked } from './bake';
 import { M, bodyMaterials } from './models/body';
@@ -90,7 +99,7 @@ import { bonesOf, FEMALE, heightOf, MALE, REST_EXTRAS, relaxedIdle, type Bones, 
 import { humanProportions } from './human';
 import { SH_TERMS, type LowLight, type SculptDraw, type TrailDraw } from './gl';
 import type { Material } from './sdf';
-import { animate, clipFor, heldIn } from './anim';
+import { animate, clipFor, heldIn, SWING_TOOL } from './anim';
 import { wrap } from './anim/clip';
 import { slashTrail } from './anim/trail';
 import { skeleton, type AnimAsset, type Held, type Skeleton } from './anim/skeleton';
@@ -153,19 +162,31 @@ export interface GarmentAsset {
 interface Socket { bone: string; o: V; R: M3; curl?: Record<string, [number, number, number]> }
 interface PropAsset {
   id: string; length: number; verts: number[]; polys: Array<[number[], number]>; tris: number[]; glowFrom: number;
-  plain: Array<{ c: string; kind: number }>; enchanted: Array<{ c: string; kind: number }>;
+  mats: string[];
+  /** Its materials' colours and kinds (0 lit, 1 unlit, 2 glow), and those drawn in its metal (`metalTint`) their role in it. */
+  plain: PropMaterial[]; enchanted: PropMaterial[];
   grip: { lead: V; second: V; from?: number; to?: number };
   sockets: Record<'male' | 'female', Record<'l' | 'r', Socket> & { back?: Socket }>; scale: Record<'male' | 'female', number>;
   /** Its points kept off the ground (its own frame), and how far its far end is let down onto it (`Held.ends`, `Held.rest`). */
   ends?: V[]; rest?: number;
+  /** Where along it (its own y) its slash trail's inner edge is (`Held.inner`): a prop that leaves one other than the long sword. */
+  trail?: number;
 }
+/**
+ * A prop's material: its colour and kind, and for the stone of a head or a blade, its role in the metal it is smithed
+ * from (`tools/sculpt/lowgear.mjs` metalMats): a face, or the bevel's lit edge.
+ */
+interface PropMaterial { c: string; kind: number; metal?: 'face' | 'edge' }
 const SWORD = LONG_SWORD as unknown as PropAsset;
 /**
- * The props drawn in both hands, by the weapon's id: the long sword, and the maul as the Runestone Warhammer. Each its
- * materials after the one before's (`propMat`).
+ * The props drawn in both hands, by the id of what is held (`heldIn`): the long sword, the maul as the Runestone
+ * Warhammer, and the pickaxe (`SWING_TOOL`) as the Runestone Pickaxe. One is drawn at a time, so all take the same
+ * materials (`PROP_MAT`).
  */
-const PROPS: readonly PropAsset[] = [SWORD, { ...(WARHAMMER as unknown as PropAsset), id: 'maul' }];
+const PROPS: readonly PropAsset[] = [SWORD, { ...(WARHAMMER as unknown as PropAsset), id: 'maul' }, { ...(PICKAXE as unknown as PropAsset), id: SWING_TOOL }];
 const PROP_OF = new Map(PROPS.map((p) => [p.id, p]));
+/** Whether a prop leaves a slash trail in its clip's blow (`lowTrail`): the long sword, and one that says where its trail's inner edge is. */
+const trails = (p: PropAsset): boolean => p === SWORD || p.trail !== undefined;
 /** The sword's points over the last quarter of its blade (its glow's left out), its own frame: what of it reaches lowest. */
 const ENDS: V[] = (() => {
   const used = new Set<number>(), from = SWORD.grip.lead[1] + 0.75 * (SWORD.length - SWORD.grip.lead[1]), out: V[] = [];
@@ -349,8 +370,8 @@ const looksOf = (g: GarmentAsset, look: 'plain' | 'enchanted'): Array<{ c: strin
  * the renderer's materials.
  */
 const swordMat = (): number => GARMENT_MAT + GARMENT_COLOURS.length;
-/** Where a prop's materials start: after the sword's, each prop after the one before (`PROPS`). */
-const propMat = (prop: PropAsset): number => swordMat() + PROPS.slice(0, PROPS.indexOf(prop)).reduce((n, p) => n + p.plain.length, 0);
+/** Where the prop drawn takes its materials (`PROPS`): the sword's place, whichever it is. */
+const PROP_MAT = swordMat;
 
 /**
  * One body: its asset, the figure's proportions it is posed with, its height as a share of the base man's, and the
@@ -397,7 +418,7 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
   const WHO = (A as unknown as { who?: string }).who === 'female' ? 'female' : 'male';
   const HELD: Held = { sockets: SWORD.sockets[WHO], lead: SWORD.grip.lead[1], second: secondOn(SWORD, WHO), tip: SWORD.length, ends: ENDS, scale: SWORD.scale[WHO] };
   /** Each prop as this body holds it (the sword's above), by the weapon's id. */
-  const HELDS = new Map<string, Held>(PROPS.map((p) => [p.id, p === SWORD ? HELD : { sockets: p.sockets[WHO], lead: p.grip.lead[1], second: secondOn(p, WHO), tip: p.length, ends: p.ends, rest: p.rest, scale: p.scale[WHO] }]));
+  const HELDS = new Map<string, Held>(PROPS.map((p) => [p.id, p === SWORD ? HELD : { sockets: p.sockets[WHO], lead: p.grip.lead[1], second: secondOn(p, WHO), tip: p.length, ends: p.ends, rest: p.rest, scale: p.scale[WHO], ...(p.trail !== undefined ? { inner: p.trail } : {}) }]));
 
   /** Each bone's world rotation and head for a local pose (bone index -> 3x3), the helpers driven, as lowrig.mjs posed(). */
   function posed(local: Array<M3 | undefined>, move: V = [0, 0, 0]): Frame[] {
@@ -598,7 +619,7 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
       for (let i = 0; i < PR.verts.length; i += 3) V3s.push(...add(so.o, mv(so.R, [(PR.verts[i] - g[0]) * k, (PR.verts[i + 1] - g[1]) * k, (PR.verts[i + 2] - g[2]) * k])));
       const T3: number[] = [];
       for (let t = 0; t < PR.tris.length; t += 4) if (PR.tris[t + 3] < PR.glowFrom) T3.push(PR.tris[t], PR.tris[t + 1], PR.tris[t + 2], PR.tris[t + 3]);
-      const off = propMat(PR);
+      const off = PROP_MAT();
       lay(V3s, PR.polys, T3, Array.from({ length: V3s.length / 3 }, () => [hand, 1]), (pi) => off + PR.polys[pi][1]);
     }
     const baked: Baked = { band: 1, verts: Float32Array.from(verts), tris: Uint32Array.from(tris), nVerts: verts.length / STRIDE, nTris: tris.length / 3, bones: ALL.map((b) => b.name), ms: performance.now() - t0, grid: [0, 0, 0], cell: 0, faceSkin: Float32Array.from(faceSkin) };
@@ -627,11 +648,13 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
   /** How far the last pose drawn (`lowBones`) was lifted to stand on its lowest sole, mesh units. */
   let DY = 0;
   /**
-   * The slash trail of the sword in hand at the pose's moment of its clip (`./anim/trail.ts`), as drawn: in the figure's
-   * frame, stood as the body last drawn (`lowBones`) was; none out of the blow.
+   * The slash trail of the prop in hand at the pose's moment of its clip (`./anim/trail.ts`), as drawn: in the figure's
+   * frame, stood as the body last drawn (`lowBones`) was; none out of the blow, and none for a prop that leaves none
+   * (`trails`).
    */
   function lowTrail(pose: FigurePose, lit: boolean): TrailDraw | undefined {
-    const c = clipFor(pose, SK.body), pts = c?.clip.grip && heldIn(pose) === SWORD.id ? slashTrail(SK, c.clip, wrap(c.clip, c.t), HELD) : undefined;
+    const c = clipFor(pose, SK.body), id = heldIn(pose), prop = id === undefined ? undefined : PROP_OF.get(id), held = id === undefined ? undefined : HELDS.get(id);
+    const pts = c?.clip.grip && prop && held && trails(prop) ? slashTrail(SK, c.clip, wrap(c.clip, c.t), held) : undefined;
     if (!pts) return undefined;
     const strip = new Float32Array(pts.length * 10), up: V = [0, DY, 0];
     pts.forEach((q, k) => strip.set([...toGame(add(q.inner, up)), q.a, 0, ...toGame(add(q.tip, up)), q.a, 1], k * 10));
@@ -777,11 +800,29 @@ const BODIES = {
 };
 /** The garments' materials after the body's (each once, however many garments share it): lit by the body's light in their own colours, unlit (glowing in the bloom), or metal (lit by its brightness, as the sword). */
 const GARMENT_MATS: Material[] = GARMENT_COLOURS.map((m) => (m.kind === 1 ? { colour: m.c, emissive: true } : m.kind === 2 ? { colour: m.c, gear: true } : { colour: m.c, cloth: true }));
-/** The sword's materials, plain or enchanted: lit by the body's light by brightness in its own colours, or unlit (and so glowing in the bloom). */
-const SWORD_MATS = { plain: SWORD.plain, enchanted: SWORD.enchanted } as const;
-const swordMats = (which: 'plain' | 'enchanted'): Material[] => SWORD_MATS[which].map((m) => (m.kind === 0 ? { colour: m.c, gear: true } : { colour: m.c, emissive: true }));
-/** A prop's materials, plain or enchanted, as the sword's. */
-const propMats = (p: PropAsset, which: 'plain' | 'enchanted'): Material[] => p[which].map((m) => (m.kind === 0 ? { colour: m.c, gear: true } : { colour: m.c, emissive: true }));
+const LUMA = (c: readonly number[]): number => 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2];
+const hexOfRgb = (c: readonly number[]): string => `#${c.map((v) => Math.round(Math.min(255, Math.max(0, v))).toString(16).padStart(2, '0')).join('')}`;
+/**
+ * A head's or a blade's stone in the metal it is smithed from (`PropMaterial.metal`; `metalShades`, the colours the flat
+ * figure forges gear in, iron for no metal or one it does not know): a face the metal's colour, as much lighter or darker
+ * than it as the face's own colour is than the head's stone (`stoneM`), so its facets and cracks still part; the bevel
+ * the metal's lit edge. Everything else of the prop keeps its own colour.
+ */
+function metalTint(p: PropAsset, m: PropMaterial, metal: string | undefined): string {
+  if (!m.metal || m.kind !== 0) return m.c;
+  const sh = metalShades(metal);
+  if (m.metal === 'edge') return hexOfRgb(sh.lit);
+  const ref = p.plain[p.mats.indexOf('stoneM')] ?? m, k = Math.pow(LUMA(hexRgb(m.c)) / LUMA(hexRgb(ref.c)), METAL_FACETS);
+  const top = Math.min(1, METAL_TOP / LUMA(sh.metal));
+  return hexOfRgb(sh.metal.map((v) => v * k * top));
+}
+/**
+ * How much further apart a metal's facets are than the stone's they were modelled in (its shade over the head's stone,
+ * to this power), and the brightest a face of it is (0 to 255, as luma), so a pale metal keeps its colour in the light.
+ */
+const METAL_FACETS = 1.8, METAL_TOP = 172;
+/** A prop's materials, plain or enchanted, its head's or blade's stone in its metal (`metalTint`): lit by the body's light by brightness, or unlit (and so glowing in the bloom). */
+const propMats = (p: PropAsset, which: 'plain' | 'enchanted', metal: string | undefined): Material[] => p[which].map((m) => (m.kind === 0 ? { colour: metalTint(p, m, metal), gear: true, ...(m.metal ? { metal: true } : {}) } : { colour: m.c, emissive: true }));
 /** The skin colour the bodies' light was fitted to (`tools/sculpt/lowlight.py`), red, green and blue nought to one: a cloth's colour over it tints the light. */
 const FIT_SKIN: [number, number, number] = [0.68, 0.49, 0.41];
 
@@ -809,14 +850,48 @@ export const lowHeldOf = (body: 'man' | 'woman', id: string): Held | undefined =
 /** A body's local turns for a pose as the figure's pose maps onto it, with no clip (for the authoring tools to compare). */
 export const lowFigure = (body: 'man' | 'woman', pose: FigurePose): Array<M3 | undefined> => BODIES[body].figure(pose);
 
+/**
+ * A prop alone (`PROPS`, by the id of what is held), stood on its foot and turned `yaw` degrees about the upright, in the
+ * metal and look of a piece, as the game draws it in hand (lit by the man's light by brightness, its glow left out): for
+ * the authoring tools' close-ups.
+ */
+export function lowPropDraw(id: string, piece: GearPiece | undefined, yaw = 0): SculptDraw | undefined {
+  const p = PROP_OF.get(id);
+  if (!p) return undefined;
+  const c = Math.cos((yaw * Math.PI) / 180), s = Math.sin((yaw * Math.PI) / 180);
+  // its y up (the game's z), its z toward the game's -y, turned about the upright
+  const at = (i: number): V => { const x = p.verts[i * 3], y = p.verts[i * 3 + 1], z = -p.verts[i * 3 + 2]; return [x * c - z * s, x * s + z * c, y]; };
+  const verts: number[] = [], tris: number[] = [], faceSkin: number[] = [];
+  for (let t = 0; t < p.tris.length; t += 4) {
+    const pi = p.tris[t + 3];
+    if (pi >= p.glowFrom) continue;
+    const pts = p.polys[pi][0].map(at);
+    let n: V = [0, 0, 0];
+    for (let k = 0; k < pts.length; k++) { const a = pts[k], b = pts[(k + 1) % pts.length]; n = [n[0] + (a[1] - b[1]) * (a[2] + b[2]), n[1] + (a[2] - b[2]) * (a[0] + b[0]), n[2] + (a[0] - b[0]) * (a[1] + b[1])]; }
+    const l = Math.hypot(...n) || 1, mat = p.polys[pi][1];
+    for (let k = 0; k < 3; k++) {
+      const q = at(p.tris[t + k]);
+      verts.push(q[0], q[1], q[2], n[0] / l, n[1] / l, n[2] / l, mat, 0, 0, 0, 0, 1, 0, 0, 0, mat, -1);
+      faceSkin.push(0, 0, 0, 0, 1, 0, 0, 0);
+      tris.push(tris.length);
+    }
+  }
+  const baked: Baked = { band: 1, verts: Float32Array.from(verts), tris: Uint32Array.from(tris), nVerts: verts.length / STRIDE, nTris: tris.length / 3, bones: ['prop'], ms: 0, grid: [0, 0, 0], cell: 0, faceSkin: Float32Array.from(faceSkin) };
+  const materials = propMats(p, piece?.enchanted ? 'enchanted' : 'plain', piece?.material);
+  return { baked, bones: Float32Array.from([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0]), materials, view: viewOf(0), blink: 0, low: { sh: SH.man, tone: [1, 1, 1], fit: FIT_SKIN } };
+}
+
 /** Whether a look is drawn as a low-poly body: a man or a woman (neither keeps the sculpted base). */
 export const hasLowBody = (look: { gender: string }): boolean => look.gender === 'man' || look.gender === 'woman';
 
 
-/** The look's materials with the garments' after them and the sword's (plain or enchanted) after those, kept per look's materials so the renderer's copy is reused. */
+/**
+ * The look's materials with the garments' after them and the prop's drawn (plain or enchanted, in its metal) after those,
+ * kept per look's materials and prop so the renderer's copy is reused.
+ */
 const DRESSED = new Map<string, Material[]>();
-function materialsOf(look: Look, sword: 'plain' | 'enchanted' = 'plain'): Material[] {
-  const body = bodyMaterials(look), key = `${body.map((m) => m.colour).join()}|${sword}`;
+function materialsOf(look: Look, prop: PropAsset = SWORD, lit: 'plain' | 'enchanted' = 'plain', metal?: string): Material[] {
+  const body = bodyMaterials(look), key = `${body.map((m) => m.colour).join()}|${prop.id}|${lit}|${metal ?? ''}`;
   let out = DRESSED.get(key);
   if (!out) {
     out = [...body];
@@ -827,8 +902,7 @@ function materialsOf(look: Look, sword: 'plain' | 'enchanted' = 'plain'): Materi
     [M.hairValley, M.hairValley2, M.hairValley3, M.hairValley4].forEach((m, i) => { (out as Material[])[m] = { colour: hair, ramp: true, valley: i + 1, noCrease: true }; });
     out[M.hairUnder] = { colour: hair, shave: true };
     GARMENT_MATS.forEach((m, k) => { (out as Material[])[GARMENT_MAT + k] = m; });
-    swordMats(sword).forEach((m, k) => { (out as Material[])[swordMat() + k] = m; });
-    for (const p of PROPS) if (p !== SWORD) propMats(p, sword).forEach((m, k) => { (out as Material[])[propMat(p) + k] = m; });
+    propMats(prop, lit, metal).forEach((m, k) => { (out as Material[])[PROP_MAT() + k] = m; });
     if (DRESSED.size > 64) DRESSED.clear();
     DRESSED.set(key, out);
   }
@@ -841,14 +915,16 @@ export function lowScene(pose: FigurePose): SculptDraw {
   const facing = ((Math.round(pose.facing) % 8) + 8) % 8;
   const who = look.gender === 'woman' ? 'woman' : 'man', body = BODIES[who];
   const worn = GARMENTS.map((g) => g.wears(pose)), enchanted = GARMENTS.map((g) => g.enchanted?.(pose) ?? false), drops = GARMENTS.map((g) => g.drops?.(pose) ?? false);
-  // the prop in both hands while a clip grips it (the long sword, the maul), else on the back while it is wielded (one
-  // with a back socket: the long sword)
+  // the prop in both hands while a clip grips it (the long sword, the maul, mining's pickaxe), else on the back while it
+  // is wielded (one with a back socket); the piece it is drawn as (the weapon, or the job's tool) in its metal, lit when
+  // enchanted
   const weapon = pose.gear?.weapon, held = heldIn(pose), prop = held !== undefined ? PROP_OF.get(held) : undefined;
   const inHand = !!prop, onBack = !inHand && weapon ? PROP_OF.get(weapon.id) : undefined;
-  const sword = inHand ? 'hand' : onBack?.sockets[who === 'woman' ? 'female' : 'male'].back ? 'back' : undefined, propId = (prop ?? onBack)?.id;
-  const lit = weapon?.enchanted ? 'enchanted' : 'plain';
-  const materials = materialsOf(look, lit), low: LowLight = { sh: SH[who], tone: toneOf(materials), fit: FIT_SKIN };
-  const bones = body.bones(pose, worn), trail = inHand && prop === SWORD ? body.trail(pose, lit === 'enchanted') : undefined;
+  const sword = inHand ? 'hand' : onBack?.sockets[who === 'woman' ? 'female' : 'male'].back ? 'back' : undefined, drawn = sword ? prop ?? onBack : undefined;
+  const piece: GearPiece | undefined = held === SWING_TOOL ? pose.tool : weapon;
+  const lit = piece?.enchanted ? 'enchanted' : 'plain';
+  const materials = materialsOf(look, drawn, lit, piece?.material), low: LowLight = { sh: SH[who], tone: toneOf(materials), fit: FIT_SKIN };
+  const bones = body.bones(pose, worn), trail = inHand && prop && trails(prop) ? body.trail(pose, lit === 'enchanted') : undefined;
   const shapes = body.shapes();
-  return { baked: body.baked(worn, sword, hairStyle(pose, look.hair), enchanted, drops, propId), bones, materials, view: viewOf(facing), blink: 0, low, ...(trail ? { trail } : {}), ...(shapes.some((w) => w > 0) ? { shapes } : {}) };
+  return { baked: body.baked(worn, sword, hairStyle(pose, look.hair), enchanted, drops, drawn?.id), bones, materials, view: viewOf(facing), blink: 0, low, ...(trail ? { trail } : {}), ...(shapes.some((w) => w > 0) ? { shapes } : {}) };
 }

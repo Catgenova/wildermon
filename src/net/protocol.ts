@@ -1,4 +1,4 @@
-import type { GearLook } from '../render/figure';
+import type { GearLook, GearPiece } from '../render/figure';
 import type { Look } from '../game/look';
 import type { Target } from '../game/actions';
 
@@ -95,6 +95,8 @@ export interface PeerState {
   look?: Look;
   /** What they have on, each piece to be drawn in its own material, dye and rarity; already checked against our own tables (`gearFrom`). */
   gear?: GearLook;
+  /** The tool the job in hand is done with (mining's pickaxe), in its metal, as the island took it from their pack (`toolFrom`). */
+  tool?: GearPiece;
 }
 
 /**

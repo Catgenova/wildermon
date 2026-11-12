@@ -117,7 +117,7 @@ import { SPELL_VISUALS } from '../../render/spells';
 import { furnitureDef, liquidCapacity, POND_EVERY, STATION_REACH, WATER_AT_HAND, type PlacedFurniture } from '../../game/furniture';
 import { billWords, countOf, DRINK_LITRES, LIQUID_NAME, LITRE_KG, lyeAshFor, LYE_ASH_PER_LITRE, TAN_LYE, type Item } from '../../game/items';
 import { RUNE_GATE, RUNE_GATE_FADE, RUNE_GATE_GLOW_REACH, RUNE_GATE_REACH, RUNE_GATE_RISE, runeGateName } from '../../game/runegate';
-import { COIN_METALS, coinPurity, INGOT_LUMPS, INGOT_WEIGHT, MOULD_BY_ID, MOULD_SKILL, SMITH_TOOL } from '../../game/metal';
+import { COIN_METALS, METALS, coinPurity, INGOT_LUMPS, INGOT_WEIGHT, MOULD_BY_ID, MOULD_SKILL, SMITH_TOOL } from '../../game/metal';
 import { meltFits, meltLumps, meltQl } from '../../game/melt';
 import { furnaceMadeSaid, meltingSaid, SMELTER_CAPACITY } from '../../game/smelter';
 import { TOOL_JOBS } from '../../game/jobtools';
@@ -4273,6 +4273,19 @@ export const NEWS: News[] = [
   },
   {
     n: 537,
+    day: '2026-11-12',
+    lines: () => {
+      const swing = ['mine', 'chip_corner', 'mine_cellar'].map((id) => ACTION_BY_ID.get(id)?.label).filter((l): l is string => !!l);
+      return [
+        `New: ${itemDef('long_sword').name.toLowerCase()} blade, ${itemDef('maul').name.toLowerCase()} head and ${itemDef('pickaxe').name.toLowerCase()} head in their metal (${listed(METALS.map((m) => m.name.toLowerCase()))}); no metal: iron.`,
+        `New: ${listed(swing)}: ${itemDef('pickaxe').name.toLowerCase()} in both hands, overhead swing, in the metal of the best ${itemDef('pickaxe').name.toLowerCase()} in the pack; enchanted: glows.`,
+        `New: other players at ${listedOr(swing)}: their own ${itemDef('pickaxe').name.toLowerCase()}'s metal and enchantment (was: iron).`,
+        `New: ${itemDef('maul').name.toLowerCase()} on the back when wielded, head up; slash trail in a fight.`,
+      ];
+    },
+  },
+  {
+    n: 538,
     day: '2026-11-12',
     lines: () => [
       `New: hairstyle ${HAIRSTYLES.find((h) => h.id === 'bob')?.name}, ${listed(GENDERS.map((g) => g.name))}: blunt fringe cut above the brows, ends at the jaw, turned under. Leather hat: pressed under it. Plate helm, hood up: not drawn.`,

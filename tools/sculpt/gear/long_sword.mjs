@@ -17,7 +17,7 @@
 // a gold-rimmed gem on each face). Enchanted: the engraving, the panel's wall, the core and the gem lit (unlit, full
 // bright), and glow added round the blade, the core, the lower ring's point and the gem.
 
-import { meshOf, trisOf, gameNumbers } from '../lowgear.mjs';
+import { meshOf, trisOf, gameNumbers, metalFaces, metalMats } from '../lowgear.mjs';
 
 /** Its length, game units: as long as the woman is tall in the game (sole to crown: the base man's height, WOMAN_OF_MAN of it). */
 export async function swordLength() { const g = await gameNumbers(); return g.man * g.womanOfMan; }
@@ -41,6 +41,9 @@ export const MATS_PLAIN = {
   gem: { c: '#d4b47a' },
   glow: { c: '#ff9a35', glow: 1 },
 };
+/** The blade's stone, drawn in the metal it is smithed from (`metalFaces`): its faces, edge bevels, back, recessed panel and cracks. */
+const METAL = ['stone', 'stoneL', 'stoneB', 'bevel', 'crack', 'panel'];
+Object.assign(MATS_PLAIN, metalMats(MATS_PLAIN, METAL));
 export const MATS_ENCHANTED = {
   ...MATS_PLAIN,
   wall: { c: '#ffc46a', emit: true },
@@ -63,6 +66,7 @@ export function buildLongSword({ enchanted = false, length } = {}) {
   const glowOn = enchanted;
 
   /* ---- the blade ------------------------------------------------------------------------------------------------ */
+  const bladeFrom = G.F.length;
   const Ub = 520;
   // contours, the right half from the guard to the point: the edge (E), the bevel's top (BO), the border's inner edge (BI),
   // the panel's edge (PE); the blade a little wider than the hero view's (156 px to its 144, between it and the small views')
@@ -85,6 +89,9 @@ export function buildLongSword({ enchanted = false, length } = {}) {
   crack([[-34, 1300], [-6, 1322], [26, 1345]]);
   const fe = full(E);
   for (let j = 0; j + 1 < eF.length; j++) F([eF[j], eF[j + 1], eB[j + 1], eB[j]], 'bevel', { from: [0, (fe[j][1] + fe[j + 1][1]) / 2, 0] });
+
+  // (the blade's stone in the metal it is smithed from; its gold wall, engraving and guard their own)
+  metalFaces(G, [[bladeFrom, G.F.length]], METAL);
 
   /* ---- the engraving ------------------------------------------------------------------------------------------- */
   const zE = 13.7, wl = 5.5;
