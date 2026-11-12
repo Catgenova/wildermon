@@ -3004,7 +3004,7 @@ export function helpText(): string {
       <b>cloth</b> (tailoring) ${percent(ARMOUR_CLASSES.cloth.soak)}; <b>leather</b> (tanned hide, knife, leatherworking) ${percent(ARMOUR_CLASSES.leather.soak)};
       <b>chain</b> (moulds, riveted at an anvil, chain armoursmithing) ${percent(ARMOUR_CLASSES.chain.soak)}; <b>plate</b> (beaten whole, plate armoursmithing) ${percent(ARMOUR_CLASSES.plate.soak)}.</li>
       <li>QL and skill raise it; damage lowers it. Wears where struck; a piece at full damage falls off.</li>
-      <li>Burden (slowdown from weight carried): a full suit of iron plate: ${percent(PLATE_SUIT / (1 + PLATE_SUIT))} slower, +${percent(PLATE_SUIT)} wind per action (cloth: ${percent(ARMOUR_CLASSES.cloth.burden)}).</li>
+      <li>Burden (slowdown on foot from armour, shield and load): a full suit of iron plate: ${percent(PLATE_SUIT / (1 + PLATE_SUIT))} slower, +${percent(PLATE_SUIT)} wind per action (cloth: ${percent(ARMOUR_CLASSES.cloth.burden)}). Mounted, driving or aboard: load past the limit only.</li>
       <li><b>Shield</b> (off hand): blocks a whole blow. ${blockSays()} No hand free for it with a two-handed weapon. Hover one in the pack for your current chance and its breakdown.</li>
     </ul>
     <h3>Weapons and the bow</h3>

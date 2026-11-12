@@ -305,6 +305,8 @@ export class Player {
   belt: Array<BeltPin | null> = Array.from({ length: BELT_MAX }, () => null);
   /** How much armour is weighing you down, 0 for nothing worn. */
   burden = 0;
+  /** Of `burden`, the load past the limit: what slows a mount, a team or a boat under you (`Game.loadBurden`). */
+  loadBurden = 0;
   /**
    * Carrying more than a body can walk under. Set from `Game.stalled`, which
    * is the same sum the island holds a body to. Not a stop any more — a
@@ -485,7 +487,9 @@ export class Player {
     }
     if (this.swimming) speed *= this.swimSpeed;
     if (this.stats.stamina < WINDED_AT && !free) speed *= WINDED_PACE;
-    if (this.burden > 0 && !free) speed /= 1 + this.burden;
+    // On your own feet everything you carry and wear; in a saddle, on a seat or aboard, only the load past your limit.
+    const drag = this.speedMul === 1 ? this.burden : this.loadBurden;
+    if (drag > 0 && !free) speed /= 1 + drag;
     /*
      * And a load half again over the limit leaves you a twentieth of your
      * pace. The walk is no longer dropped: at five per cent you are still

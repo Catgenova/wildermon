@@ -4257,7 +4257,7 @@ export const NEWS: News[] = [
     },
   },
   {
-    n: 532,
+    n: 533,
     day: '2026-11-12',
     lines: () => [
       `New: sculpted bodies, every player: ${listed(GENDERS.map((g) => g.name))}. Flat figure: swimming, driving, seated, no WebGL2, until the bodies load. Max zoom ${SCULPTED_MAX_ZOOM}× (was ${MAX_ZOOM}×).`,
@@ -4305,6 +4305,11 @@ export const NEWS: News[] = [
       const d = SPECIES.embra;
       return [`Renamed: ${d.was![d.was!.length - 1]} → ${d.name}; unnamed ones, carcasses and stud book records too.`];
     },
+  },
+  {
+    n: 532,
+    day: '2026-11-12',
+    lines: () => ['Changed: armour and shield burden: on foot only. Mount, cart, wagon and boat speed: no armour slowdown; load past the limit still slows them.'],
   },
   {
     n: 525,
