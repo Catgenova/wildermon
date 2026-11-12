@@ -149,6 +149,10 @@ const wallRow = ([b, x, y, side]: [number, number, number, Side]): string => {
   return `(w, 0, '${dir}', ${bx}, ${by}, ${b}, 'solid', 'log', '{"log": 0}', '{"log": 4}')`;
 };
 island(`
+  -- The ground is nobody's settlement: island.sql stakes 'Latecomer' over a hoard buried at random on this island,
+  -- and a deed over these tiles makes the island keep things at a tenth of the rate the browser's ground does.
+  delete from deed where world_id = w
+     and x + radius >= 18 and x - radius <= 40 and y + radius >= 42 and y - radius <= 48;
   delete from cellar_tile where world_id = w;
   delete from wall where world_id = w;
   delete from floor_tile where world_id = w;
