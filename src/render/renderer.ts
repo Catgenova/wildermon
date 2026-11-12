@@ -481,7 +481,7 @@ import type { Body as SpellBody, WorldRec as SpellRec } from './spells/kit';
 import type { CastAt, CastTold } from '../game/events';
 import { lookStep, nextLookAt, yearAt } from './foliage';
 import { DAY_SECONDS } from '../game/pace';
-import { cartSway, FIGURE_TOP, figurePicture, sculptedFigures, sculptedReady, type GearLook, type GearPiece, type Seat } from './figure';
+import { cartSway, FIGURE_TOP, figurePicture, sculptedFigures, sculptedReady, type GearLook, type GearPiece, type GearSlot, type Seat } from './figure';
 /**
  * How much larger a beast in the traces is drawn than one loose: enough that
  * a grown orse, the draught beast, stands a quarter again as tall as a body
@@ -1310,9 +1310,12 @@ const FIELD_LIP_FOOT = 'rgba(58,40,26,0.5)';
 /** The most a field's picture is sheared down the screen for each pixel across or down it (`fieldTilt`). */
 const FIELD_TILT_MOST = 0.45;
 
-/** Your gear with the weapon marked enchanted when it is (`GearPiece.enchanted`: a sculpted figure's sword glows): your own only, the wire not saying. */
-function enchantedFrom(gear: GearLook | undefined, enchant: unknown): GearLook | undefined {
-  return gear?.weapon && enchant ? { ...gear, weapon: { ...gear.weapon, enchanted: true } } : gear;
+/** Your gear with each enchanted piece marked so (`GearPiece.enchanted`: a sculpted figure's sword and armour glow): your own only, the wire not saying. */
+function enchantedFrom(gear: GearLook | undefined, enchantOf: (slot: GearSlot) => unknown): GearLook | undefined {
+  if (!gear) return gear;
+  const out: GearLook = { ...gear };
+  for (const slot of Object.keys(gear) as GearSlot[]) { const p = out[slot]; if (p && enchantOf(slot)) out[slot] = { ...p, enchanted: true }; }
+  return out;
 }
 
 /** The tool a job is done with as a sculpted figure holds it (`FigurePose.tool`): the one the job uses, in its metal, lit when enchanted. */
@@ -6878,7 +6881,7 @@ export class Renderer {
             seat: ent.seat,
             look: player.look,
             // Everything on, each piece drawn in its own material, dye and rarity.
-            gear: enchantedFrom(gearFrom(wornWire((slot) => this.game.worn(slot))), this.game.worn('weapon')?.enchant),
+            gear: enchantedFrom(gearFrom(wornWire((slot) => this.game.worn(slot))), (slot) => this.game.worn(slot)?.enchant),
             // The tool the job in hand uses (the best of its kind in the pack, `Inventory.tool`), in its own metal.
             tool: this.game.action?.state === 'performing' && this.game.action.def.tool ? toolPiece(this.game.inventory.tool(this.game.action.def.tool)) : undefined,
             // Both clocks here are `performance.now()`: the one the emote was

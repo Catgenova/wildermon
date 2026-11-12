@@ -4327,6 +4327,15 @@ export const NEWS: News[] = [
     ],
   },
   {
+    n: 542,
+    day: '2026-11-12',
+    lines: () => [
+      'New: worn armour on the sculpted body, as equipped: cloth, leather and plate (was: starter clothes on everyone).',
+      `New: plate in its metal, piece by piece (${METALS.length} metals); cloth and leather in their dye; your enchanted pieces glow.`,
+      'Chain and scale: starter clothes until modelled.',
+    ],
+  },
+  {
     n: 529,
     day: '2026-11-12',
     lines: () => [
