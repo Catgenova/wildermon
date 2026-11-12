@@ -489,6 +489,78 @@ interface Stock {
   stained?: boolean;
 }
 
+/** Which painter a stock is laid by: its lay, and on a bond what it is laid for. */
+type Pattern = 'rubble' | 'bond' | 'ornate' | 'slab' | 'stained' | 'render' | 'frame' | 'log' | 'plank' | 'gild';
+function patternOf(S: Stock): Pattern {
+  if (S.lay !== 'bond') return S.lay;
+  return S.stained ? 'stained' : S.slab ? 'slab' : S.ornate ? 'ornate' : 'bond';
+}
+/**
+ * What a lay paints, piece by piece: every picture of a masonry is cut and
+ * assembled the same way, and these are the parts of it that differ by lay.
+ */
+interface Lay {
+  /** A storey's field, and the units in it that are this variant's own to mark. */
+  courses(g: Ctx, R: Rand, crests: Pt[], open: boolean, vi: number): Block[];
+  /** What an archway is cut in: jambs, imposts, the ring. */
+  arch(g: Ctx, R: Rand): void;
+  /** What a window or a bay is cut in. */
+  surround(g: Ctx, R: Rand, x0: number, x1: number, head: number, sill: number, wide: number, shelf: number): void;
+  /** What a doorway or a cart gate is cut in, `reach` the corbels under a gate's beam. */
+  doorway(g: Ctx, R: Rand, x0: number, x1: number, head: number, deep: number, reach: number): void;
+  /** The foot of the ground storey: a plinth, a footing, the eroded foot of a coat. */
+  foot(g: Ctx, R: Rand): void;
+  /** The top of a wall, seen from above. */
+  cap(g: Ctx): void;
+  /** The stone over a corner, on a masonry whose cap is a course of stones. */
+  corner?(): HTMLCanvasElement;
+  /** The end of a storey where a run stops, `Wc` across. */
+  ends(g: Ctx, R: Rand, Wc: number): void;
+  /** The end of the ground storey, on a masonry whose foot goes round a free end. */
+  endsFoot?(g: Ctx, R: Rand, Wc: number, y0: number, ends: HTMLCanvasElement): void;
+  /** A low wall's coping, if it has one. */
+  coping?(g: Ctx, seed: number): void;
+  /** The course a dry cope is levelled on, if it has one. */
+  levelling?(g: Ctx, R: Rand): void;
+  /** A low wall's body under its coping, `fh` tall. */
+  lowCourses(g: Ctx, R: Rand, fh: number, rows: number, vi: number): Block[];
+  /** A low wall's cap from above. */
+  lowCap(g: Ctx, v: Variant): void;
+  /** A low wall's end. */
+  lowEnds(g: Ctx, R: Rand, Wc: number, fh: number, rows: number): void;
+  /** A pier at one side of a gate in a low wall, before the gap is cut. */
+  gatePier?(g: Ctx, R: Rand, side: number, line: number, fh: number): void;
+  /** What stands either side of a gate in a low wall, after the gap is cut. */
+  gateAfter?(g: Ctx, R: Rand, fh: number, gx0: number, gx1: number): void;
+  /** The top of a gate's pier, seen from above. */
+  gateCapPier(g: Ctx, R: Rand, x: number): void;
+  /** A low wall's post at a corner or an end. */
+  lowPost?(fh: number): NonNullable<Low['post']>;
+  /** A low wall's cope stone over a corner. */
+  lowCorner?(): HTMLCanvasElement;
+  /** A storey's post at a corner or an end. */
+  post?(): NonNullable<Masonry['post']>;
+  /** The quoins at a section's left (-1) or right (1) end. */
+  quoins?(side: -1 | 1): HTMLCanvasElement;
+  /** The flat colour laid under a section's picture (`Masonry.under`). */
+  under?(): [number, number, number] | undefined;
+  /** The rise of a head nothing stands on, its rolled brow, the coat's losses and the beam ends: a coat of mud's. */
+  crest?(): number[][];
+  brow?(): HTMLCanvasElement[];
+  losses?(): NonNullable<Masonry['losses']>;
+  vigas?(losses: NonNullable<Masonry['losses']>): NonNullable<Masonry['vigas']>;
+  /** How much of the top of a face is the head of the storey (`Masonry.head`). */
+  head: number;
+  soft?: boolean;
+  wrap?: boolean;
+  scatter?: boolean;
+  handed?: boolean;
+  /** Whether a face away from the sun keeps its brightest pixels (`Masonry.gleam`). */
+  gleam?: boolean;
+  /** How far a gate's piers stand over the wall (`Masonry.piers`). */
+  piers?: number;
+}
+
 /* ---- the two masonries -------------------------------------------------- */
 /**
  * Cobblestone, sampled off the castle art the island is meant to sit beside.
@@ -4206,6 +4278,11 @@ function paint(S: Stock): Masonry {
     stone(g, 0, y0, PILASTER / 2 + 4, y1 - y0, R, 'dress', 'unit', 0, 1.2);
     stone(g, TW - PILASTER / 2 - 4, y0, PILASTER / 2 + 4, y1 - y0, R, 'dress', 'unit', 0, 1.2);
   }
+  /** A garden wall of stained glass: a panel of leaded glass under the coping. */
+  function lowStained(g: Ctx, R: Rand, fh: number): Block[] {
+    glassField(g, COPE, fh, R);
+    return [];
+  }
   /** A storey of a stained glass wall: the marble's band over a panel of leaded glass. */
   function paintStained(g: Ctx, R: Rand): Block[] {
     g.fillStyle = PASTEL.joint;
@@ -4233,8 +4310,6 @@ function paint(S: Stock): Masonry {
    * whole of what there is to look at.
    */
   function paintBond(g: Ctx, R: Rand, crests: Pt[]): Block[] {
-    if (S.stained) return paintStained(g, R);
-    if (S.slab) return paintSlabs(g, R);
     g.fillStyle = PASTEL.joint;
     g.fillRect(0, 0, TW, TH);
     slabs(g, 0, BAND, R);
@@ -4574,13 +4649,7 @@ function paint(S: Stock): Masonry {
 
   /** The band and the courses, the same contract in every variant, then `extras` marks each on a stone
    *  of its own. Returns the stones that are this variant's to mark, with the course each is on. */
-  function paintCourses(g: Ctx, R: Rand, crests: Pt[], open = false, vi = -1): Block[] {
-    if (S.lay === 'bond') return paintBond(g, R, crests);
-    if (S.lay === 'render') return paintRender(g, R, open);
-    if (S.lay === 'frame') return paintFrame(g, R, open, vi);
-    if (S.lay === 'log') return paintLogs(g, R, open, vi);
-    if (S.lay === 'plank') return paintPlanks(g, R);
-    if (S.lay === 'gild') return paintSilver(g, R, open, vi);
+  function rubbleCourses(g: Ctx, R: Rand, crests: Pt[]): Block[] {
     g.fillStyle = PASTEL.joint; g.fillRect(0, 0, TW, TH);
     slabs(g, 0, BAND, R);
     const own: Block[] = [];   // not the seam stones, not near the seam
@@ -5196,6 +5265,14 @@ function paint(S: Stock): Masonry {
     return S.lay === 'bond' ? (t < 0.3 ? 'plinth' : 'dress') : t < 0.18 ? 'green' : t < 0.28 ? 'dark' : 'dress';
   };
 
+  /** An archway in laid stone: a jamb and an impost each side, and the ring over them. */
+  function stoneArch(g: Ctx, R: Rand): void {
+    jamb(g, R, -1);
+    jamb(g, R, 1);
+    impost(g, R, -1);
+    impost(g, R, 1);
+    voussoirs(g, R);
+  }
   /** The ring: wedges of no two depths, on joints that are not quite radial. */
   function voussoirs(g: Ctx, R: Rand): void {
     // Odd, so one stone caps the crown rather than a joint splitting it.
@@ -5732,13 +5809,8 @@ function paint(S: Stock): Masonry {
     g.fillStyle = PASTEL.ringJoint; g.fill();
     dressed(g, roughen(kp, R, 2, 0.5), 'dress', -2, -2.5, 1.8);
   }
-  function surround(g: Ctx, R: Rand, x0: number, x1: number, head: number, sill: number, wide: number, shelf: number): void {
-    if (S.lay === 'render') { renderSurround(g, R, x0, x1, head, sill, shelf); return; }
-    if (S.lay === 'frame') { frameSurround(g, R, x0, x1, head, sill, shelf); return; }
-    if (S.lay === 'log' || S.lay === 'plank') { boardSurround(g, R, x0, x1, head, sill, shelf); return; }
-    if (S.lay === 'gild') { silverSurround(g, R, x0, x1, head, sill, shelf); return; }
-    if (S.slab) { marbleSurround(g, R, x0, x1, head, sill, shelf); return; }
-    if (S.ornate) { ornateSurround(g, R, x0, x1, head, sill, wide, shelf); return; }
+  /** A window or a bay in laid stone: the pocket, the sill, the jambs, the relieving wedges and the lintel. */
+  function stoneSurround(g: Ctx, R: Rand, x0: number, x1: number, head: number, sill: number, wide: number, shelf: number): void {
     const top = lintelTop(head);
     winPocket(g, R, x0, x1, top - 46, sill);
     // The sill first, because everything either side of the hole stands on it.
@@ -5877,13 +5949,7 @@ function paint(S: Stock): Masonry {
    * has to carry. It sits above the head of the opening, which is why the cut
    * leaves it and takes everything under it.
    */
-  function doorway(g: Ctx, R: Rand, x0: number, x1: number, head: number, deep: number, reach: number): void {
-    if (S.lay === 'render') { renderDoorway(g, R, x0, x1, head, deep, reach); return; }
-    if (S.lay === 'frame') { frameDoorway(g, R, x0, x1, head, deep); return; }
-    if (S.lay === 'log' || S.lay === 'plank') { boardDoorway(g, R, x0, x1, head, deep); return; }
-    if (S.lay === 'gild') { silverDoorway(g, R, x0, x1, head, deep); return; }
-    if (S.slab) { marbleDoorway(g, R, x0, x1, head); return; }
-    if (S.ornate) { ornateDoorway(g, R, x0, x1, head); return; }
+  function stoneDoorway(g: Ctx, R: Rand, x0: number, x1: number, head: number, deep: number, reach: number): void {
     const bTop = head - (reach ? CORBEL_H : 0) - deep + 3;
     const box: Pt[] = [[x0 - 26, bTop - 10], [x1 + 26, bTop - 10], [x1 + 26, TH + 8], [x0 - 26, TH + 8]];
     shape(g, roughen(box, R, 6, 4.5));
@@ -6180,12 +6246,8 @@ function paint(S: Stock): Masonry {
     wearOne(g, stone(g, x + gap / 2, rise, Math.max(4, w - gap), COPE - MORTAR / 2 - rise, R, tone, 'laid', lean, COPE_INK), R);
   }
 
-  function coping(g: Ctx, seed: number): void {
-    if (S.lay === 'render') { renderCope(g, seed); return; }
-    if (S.lay === 'frame') { frameCope(g); return; }
-    // The head of a low wall of logs is the top of its topmost log, and of
-    // planks the cap board its boards are painted with.
-    if (S.lay === 'log' || S.lay === 'plank' || S.lay === 'gild') return;
+  /** The coping of a low wall of laid stone: a run of cope stones on edge, the one across the seam the same in every variant. */
+  function stoneCoping(g: Ctx, seed: number): void {
     // Which way the whole run leans, settled once and kept, so a cope reads as
     // one job rather than as a row of stones that fell that way.
     const tip = (rand(431)() - 0.5) * 0.12;
@@ -6234,11 +6296,13 @@ function paint(S: Stock): Masonry {
    * came out as a zipper: the course is meant to be the quietest thing on the
    * wall, a line of packing you notice only because the cope sits on it.
    */
-  function levelling(g: Ctx, R: Rand): void {
-    // A length of cut cope is bedded straight on the top course of brick. The
-    // packing under a dry cope is how a field wall makes a level bed out of
-    // what it has; brick is already level, so the bond runs up to the cope.
-    if (S.lay !== 'rubble') return;
+  /**
+   * The levelling course under a dry cope. A length of cut cope is bedded
+   * straight on the top course of brick; the packing under a dry cope is how a
+   * field wall makes a level bed out of what it has. Brick is already level,
+   * so the bond runs up to the cope and has none.
+   */
+  function rubbleLevelling(g: Ctx, R: Rand): void {
     const J = 2, ink = 0.8, room = LEVEL - J;
     /**
      * One of them. Its depth is what the stone happened to be and it sits
@@ -6277,13 +6341,7 @@ function paint(S: Stock): Masonry {
    * brickwork -- the one thing a field wall is not. Two courses of five or
    * six, at eighty pixels by fifty, is the same masonry as the house.
    */
-  function lowCourses(g: Ctx, R: Rand, fh: number, rows: number, vi: number): Block[] {
-    if (S.lay === 'bond') return lowBond(g, R, fh, rows);
-    if (S.lay === 'render') return lowRender(g, R, fh);
-    if (S.lay === 'frame') return lowFrame(g, R, fh);
-    if (S.lay === 'log') return lowLogs(g, R, fh);
-    if (S.lay === 'plank') return lowPlanks(g, R, fh);
-    if (S.lay === 'gild') return lowSilver(g, R, fh, vi);
+  function rubbleLow(g: Ctx, R: Rand, fh: number, rows: number): Block[] {
     const top = COPE + LEVEL;
     /*
      * Courses of unequal depth, the deepest at the bottom.
@@ -6373,7 +6431,6 @@ function paint(S: Stock): Masonry {
    * unit thick, and there is nothing for a header to bond to.
    */
   function lowBond(g: Ctx, R: Rand, fh: number, rows: number): Block[] {
-    if (S.stained) { glassField(g, COPE, fh, R); return []; }
     const top = COPE;
     const own: Block[] = [];
     const zone = firing(R);
@@ -6500,6 +6557,656 @@ function paint(S: Stock): Masonry {
     if (R() < 0.6) fissure(g, inField(10, R), 6, 10 + R() * 12, R);
   }
 
+  /* ---- the cap, the corner stone and the end of a storey, by lay ------------- */
+  /**
+   * The top of a wall that is one flat tone turned up at the sky: a mud
+   * coat, a step paler for it (plain: one picture over every section, its
+   * cracks were a mark repeating every four metres down the run); the
+   * topmost log, or the head band, which the renderer lays flat.
+   */
+  function flatCap(g: Ctx): void {
+    g.fillStyle = TONES.top.lit; g.fillRect(0, 0, TW, CAP_H);
+  }
+  /**
+   * The top of a frame is its plate seen from above: the oak turned up
+   * at the sky, a step paler, and its grain running along it.
+   */
+  function frameCap(g: Ctx): void {
+    g.fillStyle = TONES.top.lit; g.fillRect(0, 0, TW, CAP_H);
+    g.strokeStyle = hexA(TONES.top.shade, 0.8); g.lineWidth = 1.2;
+    for (const f of [0.3, 0.55, 0.8]) {
+      g.beginPath();
+      for (let x = 0; x <= TW; x += 16) g.lineTo(x, CAP_H * f + Math.sin(x * 0.02 + f * 9) * 1.5);
+      g.stroke();
+    }
+  }
+  /**
+   * The top of laid stone. On a bond the top is the band course seen from
+   * above, and a face turned up at the sky is a step lighter than the same
+   * stone on the side.
+   */
+  function stoneCap(g: Ctx): void {
+    g.fillStyle = PASTEL.joint; g.fillRect(0, 0, TW, CAP_H);
+    slabs(g, 0, CAP_H, rand(99), S.lay === 'bond' ? 'top' : 'flat');
+  }
+  /** The stone at a corner (`Masonry.corner`): as deep as the cap, as long as a wall is thick, cut as the cap's are. */
+  function stoneCorner(): HTMLCanvasElement {
+    const CW = Math.round(2 * WALL_THICK * TW), c = cnv(CW, CAP_H), g = ctxOf(c);
+    g.fillStyle = PASTEL.joint; g.fillRect(0, 0, CW, CAP_H);
+    stone(g, MORTAR / 2, MORTAR / 2, CW - MORTAR, CAP_H - MORTAR, rand(97), S.lay === 'bond' ? 'top' : 'flat', S.lay === 'bond' ? 'unit' : 'sawn');
+    return c;
+  }
+  /**
+   * The end of a mud wall is the coat come round the corner; the roll of
+   * it round the arris is the renderer's, in the light of both faces.
+   */
+  function renderEnds(g: Ctx, R: Rand, Wc: number): void {
+    g.fillStyle = PASTEL.stone; g.fillRect(0, 0, Wc, TH);
+    g.fillStyle = hexA(PASTEL.stoneHi, 0.5); g.fillRect(0, 0, Wc, 6);
+  }
+  /** The end of a frame is the side of its end post, the plate over it. */
+  function frameEnds(g: Ctx, R: Rand, Wc: number): void {
+    member(g, -2, 0, Wc + 2, TH, R, false, false);
+    member(g, -2, 0, Wc + 2, PLATE, R);
+  }
+  /** The end of a silver wall is the side of its pilaster, the frieze over it. */
+  function silverEnds(g: Ctx, R: Rand, Wc: number): void {
+    g.drawImage(silverCorner(TH, false), 0, 0, Wc, TH);
+    g.fillStyle = PASTEL.dress; g.fillRect(0, 0, Wc, FRIEZE);
+    g.fillStyle = PASTEL.rim; g.fillRect(0, 0, Wc, 6);
+    g.fillStyle = PASTEL.soffit; g.fillRect(0, FRIEZE - 7, Wc, 7);
+    g.fillStyle = hexA(PASTEL.line, 0.8); g.fillRect(0, FRIEZE - 1.5, Wc, 1.5);
+  }
+  /** The end of a plank wall is the side of its corner board, the band over it. */
+  function plankEnds(g: Ctx, R: Rand, Wc: number): void {
+    member(g, -2, 0, Wc + 2, TH, R, false, false);
+    member(g, -2, 0, Wc + 2, HEAD_BAND, R);
+  }
+  /** The end of a log wall is its logs' cut ends, one over another. */
+  function logEnds(g: Ctx, R: Rand, Wc: number): void {
+    g.fillStyle = PASTEL.stone; g.fillRect(0, 0, Wc, TH);
+    for (let k = 0; k < LOGS; k++) endGrain(g, Wc / 2, k * LOG_CH + (LOG_CH - CHINK) / 2, Wc * 0.47, (LOG_CH - CHINK) / 2 + 1, R);
+  }
+  /** The end of laid stone: the band's stone over the courses, or on a bond over its quoins. */
+  function stoneEnds(g: Ctx, R: Rand, Wc: number): void {
+    g.fillStyle = PASTEL.joint; g.fillRect(0, 0, Wc, TH);
+    stone(g, MORTAR / 2, MORTAR / 2, Wc - MORTAR, BAND - MORTAR, R, 'flat', 'sawn');
+    if (S.lay === 'bond') {
+      /*
+       * Quoins. Where a brick wall stops -- a corner of a house, the end of a
+       * run -- it is finished in cut stone, because an arris of brick is the
+       * first thing a cart takes off and the corner is what carries the two
+       * walls into each other. Five stones to the storey, each two courses
+       * of brick deep, in the dressings' two tones turn about.
+       */
+      const n = 5, ch = (TH - BAND) / n;
+      for (let i = 0; i < n; i++) {
+        stone(g, MORTAR / 2, BAND + i * ch + MORTAR / 2, Wc - MORTAR, ch - MORTAR, R, i % 2 ? 'plinth' : 'dress', 'unit', 0, 1.8);
+      }
+      return;
+    }
+    for (let i = 0; i < COURSES; i++) {
+      stone(g, MORTAR / 2, BAND + i * CH + MORTAR / 2, Wc - MORTAR, CH - MORTAR, R, ['', 'brown', 'green', ''][i]);
+    }
+  }
+  /** A log wall's ground storey at its end: its logs' ends, on the footing. */
+  function logEndsFoot(g: Ctx, R: Rand, Wc: number, y0: number, ends: HTMLCanvasElement): void {
+    g.drawImage(ends, 0, 0);
+    footing(g, R, y0, TH);
+  }
+  /** A plank wall's ground storey at its end: the corner board, the skirt and the footing. */
+  function plankEndsFoot(g: Ctx, R: Rand, Wc: number, y0: number, ends: HTMLCanvasElement): void {
+    g.drawImage(ends, 0, 0);
+    member(g, -2, y0 - SKIRT, Wc + 2, y0, R);
+    footing(g, R, y0, TH);
+  }
+  /** A silver wall's ground storey at its end: the pilaster's side on the plinth. */
+  function silverEndsFoot(g: Ctx, R: Rand, Wc: number, y0: number, ends: HTMLCanvasElement): void {
+    g.drawImage(ends, 0, 0);
+    g.save(); g.beginPath(); g.rect(0, 0, Wc, TH); g.clip();
+    silverPlinth(g, y0, TH);
+    g.restore();
+  }
+  /** A frame's ground storey at its end: the end post's side on the sole, and the footing round the end. */
+  function frameEndsFoot(g: Ctx, R: Rand, Wc: number, y0: number): void {
+    member(g, -2, 0, Wc + 2, y0, R, false, false);
+    member(g, -2, 0, Wc + 2, PLATE, R);
+    member(g, -2, y0 - SOLE, Wc + 2, y0, R);
+    footing(g, R, y0, TH);
+  }
+  /** The foot of a ground storey of laid stone: its plinth, where it has one. */
+  function stoneFoot(g: Ctx, R: Rand): void {
+    if (S.plinth) plinthOf(g, R);
+  }
+  /* ---- the low wall's pieces, by lay ---------------------------------------- */
+  /** A low wall's cap seen from above that is one pale band: a mud cap, with nothing in it to count; a log's, a plank's, silver's. */
+  function flatLowCap(g: Ctx): void {
+    g.fillStyle = TONES.top.lit; g.fillRect(0, -2, TW, CAP_H + 2);
+  }
+  /** The rail along the head of a frame, seen from above: oak, paler for facing the sky. */
+  function frameLowCap(g: Ctx): void {
+    g.fillStyle = TONES.top.lit; g.fillRect(0, -2, TW, CAP_H + 2);
+    g.strokeStyle = hexA(TONES.top.shade, 0.8); g.lineWidth = 1.2;
+    for (const f of [0.35, 0.7]) {
+      g.beginPath();
+      for (let x = 0; x <= TW; x += 16) g.lineTo(x, CAP_H * f + Math.sin(x * 0.02 + f * 7) * 1.5);
+      g.stroke();
+    }
+  }
+  /** The coping of laid stone from above: the same run of stones, laid across the thickness. */
+  function stoneLowCap(g: Ctx, v: Variant): void {
+    const w0 = CSEAM[1] - CSEAM[0];
+    /*
+     * Not `flat`: a flat stone takes the flat tone and nothing else, and a
+     * coping seen from above that is all one colour is the comb again. In
+     * the coping's own ink, though, and -- the thing that matters here --
+     * with its own length.
+     *
+     * Every comber ran the full sixty-four pixels of the wall's thickness
+     * with its ends on two ruled lines, and every one of them carried the
+     * lit rim that makes a block read as a block, so the top of the wall
+     * was a row of keycaps. A comber is a stone: it is as long as it is,
+     * it is set square to the wall by eye, one in four does not reach
+     * across and gets a second stone behind it, and no stone in a thing
+     * two pixels deep on screen has a highlight on its own edge.
+     */
+    const top = (x: number, w: number, RR: Rand, tone: string): void => {
+      if (S.lay === 'bond') {
+        // A length of dressed cope seen from above is a slab across the
+        // wall's whole thickness, set square to it. The hand shows in a
+        // pixel of overhang at one end and not in a stone skewed across it.
+        g.fillStyle = PASTEL.joint;
+        g.fillRect(x - 1, 0, w + 2, CAP_H);
+        const j0 = RR() * 3, j1 = RR() * 3;
+        void stone(g, x + MORTAR / 2, j0, w - MORTAR, CAP_H - j0 - j1, RR, tone === 'plinth' ? 'dress' : 'top', 'unit', (RR() - 0.5) * 0.01, 1.2, false);
+        return;
+      }
+      // One end jitters hard and the other a little, so the two arrises of
+      // the run are ragged independently rather than both nearly straight.
+      const far = RR() < 0.5;
+      const j0 = -5 + RR() * (far ? 25 : 10), j1 = 1 + RR() * (far ? 5 : 20);
+      /*
+       * The hearting between the combers, laid stone by stone rather than
+       * as one rectangle behind the lot. A cap that opens with a filled
+       * rectangle has a ruled far edge whatever the stones on it do, and at
+       * four of the eight rotations that edge is the wall's whole outline
+       * against the sky.
+       */
+      g.fillStyle = PASTEL.joint;
+      g.fillRect(x - 1, Math.min(j0, 0) + 2, w + 2, CAP_H - Math.min(j0, 0) - 2);
+      const tilt = (RR() - 0.5) * 0.55;
+      // Lighter again than the face of the coping. This strip is two or
+      // three pixels deep at the zoom people play at, so an outline that
+      // reads as a joint up close reads as a dashed line along the top of
+      // the wall from a field away -- which is a painted kerb, not stone.
+      const run = CAP_H - j0 - j1;
+      if (RR() < 0.26) {
+        const a = run * (0.4 + RR() * 0.2);
+        void stone(g, x + MORTAR / 2, j0, w - MORTAR, a, RR, tone, 'laid', tilt, 1.05, false);
+        void stone(g, x + MORTAR / 2, j0 + a + 2, w - MORTAR, run - a - 2, RR, RR() < 0.5 ? 'weather' : '', 'laid', -tilt, 1.05, false);
+        return;
+      }
+      void stone(g, x + MORTAR / 2, j0, w - MORTAR, run, RR, tone, 'laid', tilt, 1.05, false);
+    };
+    top(CSEAM[0], w0, rand(313), S.lay === 'bond' ? 'dress' : '');
+    top(TW + CSEAM[0], w0, rand(313), S.lay === 'bond' ? 'dress' : '');
+    // The same widths and the same tones as the face of it, taken from the
+    // same two lists rather than from a roll of its own, because these are
+    // the tops of those stones and not a second row of them.
+    const seed = copeSeed(v.seed), ws = copeWidths(seed), tones = copeTones(seed, ws.length), R = rand(seed + 577);
+    let x = CSEAM[1];
+    for (let k = 0; k < ws.length; k++) { top(x, ws[k], R, tones[k]); x += ws[k]; }
+  }
+  /** The end of a low mud wall: the coat come round the end of it, under the cap's paler band. */
+  function renderLowEnds(g: Ctx, R: Rand, Wc: number, fh: number): void {
+    g.fillStyle = PASTEL.stone; g.fillRect(0, 0, Wc, fh);
+    g.fillStyle = TONES.top.lit; g.fillRect(0, 0, Wc, COPE + 1);
+    g.fillStyle = 'rgba(46, 34, 62, 0.3)'; g.fillRect(0, COPE + 1, Wc, 4);
+  }
+  /** The end of a low silver wall: the side of its pilaster, the cap moulding over it, on the plinth. */
+  function silverLowEnds(g: Ctx, R: Rand, Wc: number, fh: number): void {
+    const sole = fh - LOW_FOOT;
+    g.drawImage(silverCorner(sole, false), 0, 0, Wc, sole);
+    slab(g, -8, 0, Wc + 8, 22, PASTEL.dress, 5);
+    g.save(); g.beginPath(); g.rect(0, 0, Wc, fh); g.clip();
+    silverPlinth(g, sole, fh);
+    g.restore();
+  }
+  /** The end of a low plank wall: the side of its corner board, the cap and the bottom rail, on the footing. */
+  function plankLowEnds(g: Ctx, R: Rand, Wc: number, fh: number): void {
+    const sole = fh - LOW_FOOT;
+    member(g, -2, 0, Wc + 2, sole, R, false, false);
+    member(g, -2, 0, Wc + 2, 20, R);
+    member(g, -2, sole - SKIRT, Wc + 2, sole, R);
+    footing(g, R, sole, fh);
+  }
+  /** The end of a low log wall: the cut ends of its logs, one over another, on the footing. */
+  function logLowEnds(g: Ctx, R: Rand, Wc: number, fh: number): void {
+    const sole = fh - LOW_FOOT, n = lowLogCount(fh), ch = sole / n;
+    g.fillStyle = PASTEL.stone; g.fillRect(0, 0, Wc, sole);
+    for (let k = 0; k < n; k++) endGrain(g, Wc / 2, k * ch + (ch - CHINK) / 2, Wc * 0.47, (ch - CHINK) / 2 + 1, R);
+    footing(g, R, sole, fh);
+  }
+  /**
+   * The end of a low frame: the side of the end post, the rail over it, and
+   * the footing it stands on, which goes round the end as it runs along the face.
+   */
+  function frameLowEnds(g: Ctx, R: Rand, Wc: number, fh: number): void {
+    member(g, -2, 0, Wc + 2, fh - LOW_FOOT, R, false, false);
+    member(g, -2, 0, Wc + 2, 24, R);
+    member(g, -2, fh - LOW_FOOT - SOLE, Wc + 2, fh - LOW_FOOT, R);
+    footing(g, R, fh - LOW_FOOT, fh);
+  }
+  /** The end of a low wall of laid stone: the cope's ends over the levelling course and the courses, or on a bond over its quoins. */
+  function stoneLowEnds(g: Ctx, R: Rand, Wc: number, fh: number, rows: number): void {
+    g.fillStyle = PASTEL.joint; g.fillRect(0, 0, Wc, fh);
+    let cx = 0, ex = 0;
+    // A bond's cope is cut stone, so its end is too.
+    const heads: Array<[number, string, number]> = S.lay === 'bond'
+      ? [[0.52, 'dress', 2], [0.48, 'plinth', 3]]
+      : [[0.36, '', 5], [0.34, 'weather', 1], [0.3, 'bleach', 7]];
+    for (const [f, tone, up] of heads) {
+      const w = f * Wc;
+      stone(g, cx + 1, up, w - 2, COPE - MORTAR / 2 - up, R, tone, 'laid', (R() - 0.5) * 0.06, COPE_INK);
+      cx += w;
+    }
+    // Not `flat`: a flat stone takes `TONES.flat` and nothing else, which is
+    // the lightest tone in the table, so the quietest course in the wall
+    // came out as the brightest thing on its head -- one pale pill where
+    // the run shows a course of packing.
+    if (S.lay === 'bond') {
+      // Where a brick garden wall stops it is finished in cut stone, the
+      // same quoins a house's corner is: two to the height of the wall.
+      const qh = (fh - COPE) / 2;
+      for (let i = 0; i < 2; i++) {
+        stone(g, MORTAR / 2, COPE + i * qh + MORTAR / 2, Wc - MORTAR, qh - MORTAR, R, i ? 'plinth' : 'dress', 'unit', 0, 1.8);
+      }
+      return;
+    }
+    for (const [f, tn] of [[0.38, 'weather'], [0.34, 'dark'], [0.28, 'brown']] as Array<[number, string]>) {
+      const w = f * Wc;
+      stone(g, ex + 1, COPE + 1 + R() * 2, w - 2, LEVEL - 3, R, tn, 'laid', (R() - 0.5) * 0.08, 0.9);
+      ex += w;
+    }
+    const ch = (fh - COPE - LEVEL) / rows;
+    for (let i = 0; i < rows; i++) {
+      const y = COPE + LEVEL + i * ch + MORTAR / 2, h = ch - MORTAR;
+      const split = Wc * (i % 2 ? 0.42 : 0.6);
+      stone(g, MORTAR / 2, y, split - MORTAR, h, R, ['', 'brown', 'green', ''][i % 4]);
+      stone(g, split + MORTAR / 2, y, Wc - split - MORTAR, h, R, i === rows - 1 ? 'weather' : 'dark');
+    }
+  }
+  /**
+   * A pier of the same mud as the wall and in the same coat, built up
+   * a hand higher than the wall it interrupts and domed over -- the
+   * dome is the renderer's, cut into the head of the wall -- its coat
+   * rolled round its arrises, its foot eaten as the wall's is, and a
+   * shade thrown down the wall on its field side, because it stands
+   * out of it. Cream and square, it was a planed post.
+   */
+  function renderPier(g: Ctx, R: Rand, side: number, line: number, fh: number): void {
+    const x = side < 0 ? line + OVER - 52 : line - OVER, w = 52;
+    g.beginPath(); softRect(g, x, 0, w, fh + 6, 6);
+    g.fillStyle = PASTEL.stone; g.fill();
+    g.save(); g.clip();
+    g.fillStyle = hexA(PASTEL.stoneHi, 0.45); g.fillRect(x, 0, 6, fh);
+    g.fillStyle = hexA(PASTEL.stoneShade, 0.5); g.fillRect(x + w - 7, 0, 7, fh);
+    const head = g.createLinearGradient(0, 0, 0, 16);
+    head.addColorStop(0, TONES.top.lit); head.addColorStop(1, hexA(TONES.top.lit, 0));
+    g.fillStyle = head; g.fillRect(x, 0, w, 16);
+    erosionOf(g, R, Math.min(34, fh * 0.3), fh);
+    g.restore();
+    g.fillStyle = 'rgba(46, 34, 62, 0.26)';
+    g.fillRect(side < 0 ? x - 4 : x + w, 0, 4, fh);
+  }
+  /**
+   * A marble gate hangs between two piers as wide as what is left of
+   * the wall either side of it, which stand over the wall they end
+   * (see `Masonry.piers`): blocks of the dove grey the pier's whole
+   * width, the odd course of two, and a cap with its top weathered
+   * pale.
+   */
+  function slabPier(g: Ctx, R: Rand, side: number, line: number, fh: number): void {
+    const x0 = side < 0 ? -2 : line - OVER, x1 = side < 0 ? line + OVER : TW + 2;
+    const n = Math.max(2, Math.round((fh - COPE) / 58)), qh = (fh + 6 - COPE) / n;
+    for (let k = 0; k < n; k++) {
+      const y = COPE + k * qh + MORTAR / 2;
+      if (k % 2) {
+        const mid = x0 + (x1 - x0) * (0.42 + R() * 0.16);
+        dressing(g, x0, y, mid - x0 - MORTAR / 2, qh - MORTAR, R, dressTone(R));
+        dressing(g, mid + MORTAR / 2, y, x1 - mid - MORTAR / 2, qh - MORTAR, R, dressTone(R));
+      } else dressing(g, x0, y, x1 - x0, qh - MORTAR, R, dressTone(R));
+    }
+    dressing(g, x0, MORTAR / 2, x1 - x0, COPE - MORTAR, R, 'dress');
+    g.fillStyle = '#d6d9e0'; g.fillRect(x0 + 1, MORTAR / 2 + 1, x1 - x0 - 2, 4.5);
+    g.fillStyle = hexA('#969aa6', 0.85); g.fillRect(x0, COPE, x1 - x0, 3);
+  }
+  /**
+   * A pier laid for show, square and true, in the dressings' stone: stones as
+   * deep as the wall divides into, long and short turn about, and a cap over the lot.
+   */
+  function ornatePier(g: Ctx, R: Rand, side: number, line: number, fh: number): void {
+    const n = Math.max(2, Math.round((fh - COPE) / 52)), qh = (fh + 6 - COPE) / n;
+    for (let k = 0; k < n; k++) {
+      const w = k % 2 ? 40 : 54;
+      dressing(g, side < 0 ? line + OVER - w : line - OVER, COPE + k * qh + MORTAR / 2, w, qh - MORTAR, R, dressTone(R));
+    }
+    dressing(g, side < 0 ? line + OVER - 60 : line - OVER, MORTAR / 2, 60, COPE - MORTAR, R, 'dress');
+    g.fillStyle = 'rgba(40, 32, 62, 0.3)';
+    g.fillRect(side < 0 ? line + OVER - 64 : line - OVER + 60, 0, 4, fh);
+  }
+  /** A pier of laid stone either side of a gate in a low wall, and a flat stone over it. */
+  function stonePier(g: Ctx, R: Rand, side: number, line: number, fh: number): void {
+    let y = fh - 2;
+    while (y > COPE + LEVEL - 4) {
+      const h = 28 + R() * 16, w = 34 + R() * 14;
+      wearOne(g, stone(g, side < 0 ? line + OVER - w : line - OVER, y - h, w, h, R, pickDressed(R), 'laid', (R() - 0.5) * 0.02), R);
+      y -= h + MORTAR + R() * 2;
+    }
+    wearOne(g, stone(g, side < 0 ? line + OVER - 52 : line - OVER, MORTAR / 2, 52, COPE + LEVEL - MORTAR, R, 'dress', 'laid', (R() - 0.5) * 0.015), R);
+    // A pier stands proud of the wall it interrupts, so it throws a line
+    // of shadow down the field side of itself. Without one it is a paler
+    // patch of the same wall in the same plane, and the step up at the
+    // gateway reads as the wall changing height for no reason.
+    g.fillStyle = 'rgba(96, 86, 66, 0.3)';
+    g.fillRect(side < 0 ? line + OVER - 56 : line - OVER + 52, 0, 4, fh);
+  }
+  /**
+   * A pier either side of the way through a low silver wall, as wide as the
+   * wall between the gap and the pilaster at the end, so no sliver of a panel
+   * is left standing between them; the cap moulding run on over it, cut to the wall.
+   */
+  function silverGate(g: Ctx, R: Rand, fh: number, gx0: number, gx1: number): void {
+    const sole = fh - LOW_FOOT;
+    g.save();
+    g.beginPath(); g.rect(0, -PROUD, gx0, fh + PROUD); g.rect(gx1, -PROUD, TW - gx1, fh + PROUD); g.clip();
+    pilaster(g, R, (PIL / 2 + gx0) / 2, 22, sole, gx0 - PIL / 2); pilaster(g, R, (gx1 + TW - PIL / 2) / 2, 22, sole, TW - PIL / 2 - gx1);
+    slab(g, -8, 0, TW + 8, 22, PASTEL.dress, 5);
+    g.restore();
+  }
+  /**
+   * A squared post either side of the way through a low plank wall, the boards
+   * run into it and the cap and the rail run on over it, cut to the wall.
+   */
+  function plankGate(g: Ctx, R: Rand, fh: number, gx0: number, gx1: number): void {
+    const sole = fh - LOW_FOOT;
+    g.save();
+    g.beginPath(); g.rect(0, -PROUD, gx0, fh + PROUD); g.rect(gx1, -PROUD, TW - gx1, fh + PROUD); g.clip();
+    for (const [a, b] of [[gx0 - 38, gx0], [gx1, gx1 + 38]]) { proud(g, a, 0, b, sole); member(g, a, 0, b, sole, R); }
+    member(g, -6, 0, TW + 6, 20, rand(2543), true);
+    member(g, -6, sole - SKIRT, TW + 6, sole, rand(2531), true);
+    g.restore();
+  }
+  /**
+   * A post of round log either side of the way through, the logs of the
+   * wall run into it, standing on the footing -- after the gap is cut,
+   * and cut to the wall, so the shade it throws falls on the logs and
+   * not across the gateway.
+   */
+  function logGate(g: Ctx, R: Rand, fh: number, gx0: number, gx1: number): void {
+    const sole = fh - LOW_FOOT;
+    g.save();
+    g.beginPath(); g.rect(0, -PROUD, gx0, fh + PROUD); g.rect(gx1, -PROUD, TW - gx1, fh + PROUD); g.clip();
+    logPost(g, gx0 - 40, gx0, 0, sole, R);
+    logPost(g, gx1, gx1 + 40, 0, sole, R);
+    g.restore();
+  }
+  /**
+   * A gate post either side of the way through, from the rail down to
+   * the sole and out to the fence's own end post -- after the gap is
+   * cut, so its edge on the gateway keeps its ink. A bay of limewash a
+   * hand wide between the two posts was a daub panel nobody would
+   * build, and a pale slit down every gate post; and a post of its own
+   * beside the end post was a doubled post.
+   */
+  function frameGate(g: Ctx, R: Rand, fh: number, gx0: number, gx1: number): void {
+    g.save();
+    g.beginPath(); g.rect(0, -PROUD, gx0, fh + PROUD); g.rect(gx1, -PROUD, TW - gx1, fh + PROUD); g.clip();
+    const e = POST / 2, sole = fh - LOW_FOOT;
+    // Cut from the same oak as the fence's own end post, laid from the
+    // same seed, so the two read as one post where they meet at the seam.
+    for (const [a, b] of [[-e, gx0], [gx1, TW + e]]) member(g, a, 0, b, sole, rand(1759));
+    // And the sole and the rail run on over them, as over every post of the fence.
+    member(g, -6, sole - SOLE, TW + 6, sole, rand(1763), true);
+    frameCope(g);
+    g.restore();
+  }
+  /** The top of a mud pier, rounded over and paler for facing the sky. */
+  function renderCapPier(g: Ctx, R: Rand, x: number): void {
+    g.beginPath(); softRect(g, x, 2, 52, CAP_H - 4, 12);
+    g.fillStyle = lighten(TONES.top.lit, 3); g.fill();
+    g.strokeStyle = hexA(PASTEL.line, 0.4); g.lineWidth = 1; g.stroke();
+  }
+  /** The flat stone a pier is finished with. */
+  function stoneCapPier(g: Ctx, R: Rand, x: number): void {
+    wearOne(g, stone(g, x, 2, 52, CAP_H - 4, R, 'dress', 'laid', (R() - 0.5) * 0.02, 1.2, false), R);
+  }
+  /** The cope stone over a corner or a junction of a low wall of laid stone (`Low.corner`), laid across the run's thickness as the cap's are. */
+  function stoneLowCorner(): HTMLCanvasElement {
+    const CW = Math.round(2 * WALL_THICK * 1.25 * TW), c = cnv(CW, CAP_H + PROUD), g = ctxOf(c), R = rand(331);
+    g.translate(0, PROUD);
+    g.fillStyle = PASTEL.joint; g.fillRect(0, 0, CW, CAP_H);
+    if (S.lay === 'bond') void stone(g, MORTAR / 2, MORTAR / 2, CW - MORTAR, CAP_H - MORTAR, R, 'dress', 'unit', 0, 1.2, false);
+    else void stone(g, MORTAR / 2, MORTAR / 2, CW - MORTAR, CAP_H - MORTAR, R, '', 'laid', (R() - 0.5) * 0.1, 1.05, false);
+    return c;
+  }
+
+  /* ---- the posts, by lay ------------------------------------------------------ */
+  function framePost(): NonNullable<Masonry['post']> {
+    return { img: cornerPost(TH, [PLATE / 2 + 1]), reach: POST / 2, free: true };
+  }
+  function logPostOf(): NonNullable<Masonry['post']> {
+    return { img: logCorner(TH, LOGS, true), alt: logCorner(TH, LOGS, false), reach: 28, free: false };
+  }
+  function plankPost(): NonNullable<Masonry['post']> {
+    return { img: plankCorner(TH), reach: BATTEN / 2, free: true };
+  }
+  function silverPost(): NonNullable<Masonry['post']> {
+    return { img: silverCorner(TH), reach: PIL / 2, free: true };
+  }
+  function frameLowPost(fh: number): NonNullable<Low['post']> {
+    return { img: cornerPost(fh - LOW_FOOT, []), foot: LOW_FOOT };
+  }
+  function logLowPost(fh: number): NonNullable<Low['post']> {
+    return { img: logCorner(fh - LOW_FOOT, lowLogCount(fh), true), alt: logCorner(fh - LOW_FOOT, lowLogCount(fh), false), foot: LOW_FOOT };
+  }
+  function plankLowPost(fh: number): NonNullable<Low['post']> {
+    return { img: plankCorner(fh - LOW_FOOT), foot: LOW_FOOT };
+  }
+  function silverLowPost(fh: number): NonNullable<Low['post']> {
+    return { img: silverCorner(fh - LOW_FOOT), foot: LOW_FOOT };
+  }
+  /* ---- what shows under a section, by lay -------------------------------------- */
+  /** Under a coat of mud or a log wall, the coat's own stone. */
+  function stoneUnder(): [number, number, number] { return channels(PASTEL.stone); }
+  /** Under a frame, a plank wall or worked metal, the oak or the metal its seams fall in. */
+  function dressUnder(): [number, number, number] { return channels(PASTEL.dress); }
+  /** Under marble, the slabs' joint. */
+  function slabUnder(): [number, number, number] { return channels(PASTEL.slabJoint); }
+  /** Under a bond laid with its grain showing or by a master, the joint; under any other, nothing. */
+  function bondUnder(): [number, number, number] | undefined { return S.grain || S.master ? channels(PASTEL.joint) : undefined; }
+
+  /* ---- the lays ------------------------------------------------------------------ */
+  /**
+   * What every wall of laid stone or brick shares, whatever its field is laid
+   * in: the openings cut in it, its plinth, the cap and the end of a storey,
+   * the coping, piers and ends of a garden wall.
+   */
+  const LAID_LAY: Omit<Lay, 'courses' | 'lowCourses'> = {
+    arch: stoneArch,
+    surround: stoneSurround,
+    doorway: stoneDoorway,
+    foot: stoneFoot,
+    cap: stoneCap,
+    corner: stoneCorner,
+    ends: stoneEnds,
+    coping: stoneCoping,
+    lowCap: stoneLowCap,
+    lowEnds: stoneLowEnds,
+    gatePier: stonePier,
+    gateCapPier: stoneCapPier,
+    lowCorner: stoneLowCorner,
+    head: BAND,
+  };
+  /** Cobblestone: field stone laid by eye, on a levelling course under a dry cope. */
+  const RUBBLE_LAY: Lay = {
+    ...LAID_LAY,
+    courses: rubbleCourses,
+    levelling: rubbleLevelling,
+    lowCourses: rubbleLow,
+  };
+  /** A moulded unit laid to a line in a half lap, dressed in cut stone: brick, stone brick, sandstone. */
+  const BOND_LAY: Lay = {
+    ...LAID_LAY,
+    courses: paintBond,
+    lowCourses: lowBond,
+    quoins,
+    under: bondUnder,
+  };
+  /** Slate: a bond laid for show, its openings in flat arches and its gate piers square and true. */
+  const ORNATE_LAY: Lay = {
+    ...BOND_LAY,
+    arch: ornateArch,
+    surround: ornateSurround,
+    doorway: ornateDoorway,
+    gatePier: ornatePier,
+  };
+  /** Marble: great slabs, its openings in architraves, its gates between piers. */
+  const SLAB_LAY: Lay = {
+    ...BOND_LAY,
+    courses: paintSlabs,
+    arch: marbleArch,
+    surround: (g, R, x0, x1, head, sill, wide, shelf) => marbleSurround(g, R, x0, x1, head, sill, shelf),
+    doorway: marbleDoorway,
+    gatePier: slabPier,
+    under: slabUnder,
+    scatter: true,
+    piers: 0.1,
+  };
+  /** Stained glass: leaded panes under the marble's band, in the marble's openings. Seen through, so nothing is laid under it. */
+  const STAINED_LAY: Lay = {
+    ...SLAB_LAY,
+    courses: paintStained,
+    lowCourses: (g, R, fh) => lowStained(g, R, fh),
+    under: undefined,
+  };
+  /** Adobe: mud brick under a coat of mud. */
+  const RENDER_LAY: Lay = {
+    courses: (g, R, crests, open) => paintRender(g, R, open),
+    arch: renderArch,
+    surround: (g, R, x0, x1, head, sill, wide, shelf) => renderSurround(g, R, x0, x1, head, sill, shelf),
+    doorway: renderDoorway,
+    foot: (g, R) => erosionOf(g, R, S.plinth, TH),
+    cap: flatCap,
+    ends: renderEnds,
+    coping: renderCope,
+    lowCourses: (g, R, fh) => lowRender(g, R, fh),
+    lowCap: flatLowCap,
+    lowEnds: renderLowEnds,
+    gatePier: renderPier,
+    gateCapPier: renderCapPier,
+    under: stoneUnder,
+    crest: renderCrest,
+    brow: renderBrow,
+    losses: renderLosses,
+    vigas: renderVigas,
+    head: BAND,
+    soft: true,
+    wrap: true,
+    scatter: true,
+  };
+  /** Timbercraft: an oak frame on a stone footing, its panels limewashed. */
+  const FRAME_LAY: Lay = {
+    courses: (g, R, crests, open, vi) => paintFrame(g, R, open, vi),
+    arch: frameArch,
+    surround: (g, R, x0, x1, head, sill, wide, shelf) => frameSurround(g, R, x0, x1, head, sill, shelf),
+    doorway: frameDoorway,
+    foot: footingOf,
+    cap: frameCap,
+    ends: frameEnds,
+    endsFoot: frameEndsFoot,
+    coping: (g) => frameCope(g),
+    lowCourses: (g, R, fh) => lowFrame(g, R, fh),
+    lowCap: frameLowCap,
+    lowEnds: frameLowEnds,
+    gateAfter: frameGate,
+    gateCapPier: stoneCapPier,
+    lowPost: frameLowPost,
+    post: framePost,
+    under: dressUnder,
+    head: PLATE,
+    wrap: true,
+    scatter: true,
+    handed: true,
+  };
+  /** Log: round logs laid on one another, chinked, their ends crossing at the corners. */
+  const LOG_LAY: Lay = {
+    courses: (g, R, crests, open, vi) => paintLogs(g, R, open, vi),
+    arch: boardArch,
+    surround: (g, R, x0, x1, head, sill, wide, shelf) => boardSurround(g, R, x0, x1, head, sill, shelf),
+    doorway: boardDoorway,
+    foot: logFootingOf,
+    cap: flatCap,
+    ends: logEnds,
+    endsFoot: logEndsFoot,
+    lowCourses: (g, R, fh) => lowLogs(g, R, fh),
+    lowCap: flatLowCap,
+    lowEnds: logLowEnds,
+    gateAfter: logGate,
+    gateCapPier: stoneCapPier,
+    lowPost: logLowPost,
+    post: logPostOf,
+    under: stoneUnder,
+    head: 0,
+    wrap: true,
+    scatter: true,
+    handed: true,
+  };
+  /** Plank: boards on end with a batten over every joint, in a trim of darker boards. */
+  const PLANK_LAY: Lay = {
+    ...LOG_LAY,
+    courses: (g, R) => paintPlanks(g, R),
+    foot: plankFootingOf,
+    ends: plankEnds,
+    endsFoot: plankEndsFoot,
+    lowCourses: (g, R, fh) => lowPlanks(g, R, fh),
+    lowEnds: plankLowEnds,
+    gateAfter: plankGate,
+    lowPost: plankLowPost,
+    post: plankPost,
+    under: dressUnder,
+    head: HEAD_BAND,
+  };
+  /** Silver and gold: worked metal throughout, chased panels between fluted pilasters. */
+  const GILD_LAY: Lay = {
+    courses: (g, R, crests, open, vi) => paintSilver(g, R, open, vi),
+    arch: silverArch,
+    surround: (g, R, x0, x1, head, sill, wide, shelf) => silverSurround(g, R, x0, x1, head, sill, shelf),
+    doorway: silverDoorway,
+    foot: (g, R) => silverPlinth(g, TH - S.plinth, TH, R),
+    cap: flatCap,
+    ends: silverEnds,
+    endsFoot: silverEndsFoot,
+    lowCourses: (g, R, fh, rows, vi) => lowSilver(g, R, fh, vi),
+    lowCap: flatLowCap,
+    lowEnds: silverLowEnds,
+    gateAfter: silverGate,
+    gateCapPier: stoneCapPier,
+    lowPost: silverLowPost,
+    post: silverPost,
+    under: dressUnder,
+    head: FRIEZE,
+    wrap: true,
+    scatter: true,
+    handed: true,
+    gleam: true,
+  };
+  const LAYS: Record<Pattern, Lay> = {
+    rubble: RUBBLE_LAY, bond: BOND_LAY, ornate: ORNATE_LAY, slab: SLAB_LAY, stained: STAINED_LAY,
+    render: RENDER_LAY, frame: FRAME_LAY, log: LOG_LAY, plank: PLANK_LAY, gild: GILD_LAY,
+  };
+  const LAY = LAYS[patternOf(S)];
+
   /* ---- the textures ------------------------------------------------------ */
   const cnv = (w: number, h: number): HTMLCanvasElement => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
   /** A picture of nothing, one per variant, for what does not grow on a bare masonry. */
@@ -6522,11 +7229,13 @@ function paint(S: Stock): Masonry {
     return c;
   };
   const STONES: Block[][] = [];
-  const FACE = VARIANTS.map((v, i) => {
-    const c = cnv(TW, TH), g = ctxOf(c);
-    STONES[i] = paintCourses(g, rand(v.seed), (S.growth ? v.drapes : []).map((d): Pt => { const h2 = d.w / 2, c = clamp(d.cx, MARGIN + h2, TW - MARGIN - h2); return [c - h2, c + h2]; }), false, i);
-    return c;
-  });
+  function facePictures(): HTMLCanvasElement[] {
+    return VARIANTS.map((v, i) => {
+      const c = cnv(TW, TH), g = ctxOf(c);
+      STONES[i] = LAY.courses(g, rand(v.seed), (S.growth ? v.drapes : []).map((d): Pt => { const h2 = d.w / 2, c = clamp(d.cx, MARGIN + h2, TW - MARGIN - h2); return [c - h2, c + h2]; }), false, i);
+      return c;
+    });
+  }
   /**
    * And the same section with a way through it.
    *
@@ -6536,247 +7245,261 @@ function paint(S: Stock): Masonry {
    * the pocket, the jambs and the ring, and then the hole out of the lot in
    * one pass: the curve belongs to the compass and the stones to the hammer.
    */
-  const ARCHED = VARIANTS.map((v) => {
-    const c = cnv(TW, TH), g = ctxOf(c);
-    paintCourses(g, rand(v.seed), (S.growth ? v.drapes : []).map((d): Pt => { const h2 = d.w / 2, m = clamp(d.cx, MARGIN + h2, TW - MARGIN - h2); return [m - h2, m + h2]; }), true);
-    const R = rand(v.seed * 131 + 17);
-    if (S.lay === 'render') renderArch(g, R);
-    else if (S.lay === 'frame') frameArch(g, R);
-    else if (S.lay === 'log' || S.lay === 'plank') boardArch(g, R);
-    else if (S.lay === 'gild') silverArch(g, R);
-    else if (S.slab) marbleArch(g, R);
-    else if (S.ornate) ornateArch(g, R);
-    else {
-      jamb(g, R, -1);
-      jamb(g, R, 1);
-      impost(g, R, -1);
-      impost(g, R, 1);
-      voussoirs(g, R);
-    }
-    // Opaque, deliberately: `destination-out` takes away as much as the source
-    // puts down, so a fill left over at 0.55 from the last pitted stone would
-    // leave the field ghosting through the opening at 0.45.
-    g.globalAlpha = 1;
-    g.fillStyle = '#000';
-    g.globalCompositeOperation = 'destination-out';
-    openingPath(g);
-    g.fill();
-    g.globalCompositeOperation = 'source-over';
-    return c;
-  });
+  function archPictures(): HTMLCanvasElement[] {
+    return VARIANTS.map((v) => {
+      const c = cnv(TW, TH), g = ctxOf(c);
+      LAY.courses(g, rand(v.seed), (S.growth ? v.drapes : []).map((d): Pt => { const h2 = d.w / 2, m = clamp(d.cx, MARGIN + h2, TW - MARGIN - h2); return [m - h2, m + h2]; }), true, -1);
+      LAY.arch(g, rand(v.seed * 131 + 17));
+      // Opaque, deliberately: `destination-out` takes away as much as the source
+      // puts down, so a fill left over at 0.55 from the last pitted stone would
+      // leave the field ghosting through the opening at 0.45.
+      g.globalAlpha = 1;
+      g.fillStyle = '#000';
+      g.globalCompositeOperation = 'destination-out';
+      openingPath(g);
+      g.fill();
+      g.globalCompositeOperation = 'source-over';
+      return c;
+    });
+  }
   /**
    * The ivy that hangs into the opening, one tongue per curtain that reaches
    * over it. It is rooted six pixels above the curve, so it comes out from
    * under the ring rather than out of the air.
    */
-  const ARCH_IVY = !S.growth ? bare() : VARIANTS.map((v) => {
-    const c = cnv(TW, TH), g = ctxOf(c);
-    const R = rand(v.seed * 991 + 43);
-    for (const d of v.drapes) {
-      if (!d.fall) continue;
-      const half = d.w / 2, dcx = clamp(d.cx, MARGIN + half, TW - MARGIN - half);
-      if (dcx - half > A_CX + A_R * 0.85 || dcx + half < A_CX - A_R * 0.85) continue;
-      const x = clamp(dcx, A_CX - A_R * 0.76, A_CX + A_R * 0.76);
-      const y0 = A_CY - Math.sqrt(Math.max(0, A_R * A_R - (x - A_CX) ** 2)) - 6;
-      const cs: Lobe[] = [];
-      tongueLobes(cs, x, y0, 13 + 11 * R(), CH * (0.7 + 0.9 * R()), R);
-      shadowOf(g, cs, 5, 6);
-      mass(g, cs, R, { r: 8.5, lobe: R() < 0.4 ? 1 : 0 });
-    }
-    return c;
-  });
+  function archIvyPictures(): HTMLCanvasElement[] {
+    return !S.growth ? bare() : VARIANTS.map((v) => {
+      const c = cnv(TW, TH), g = ctxOf(c);
+      const R = rand(v.seed * 991 + 43);
+      for (const d of v.drapes) {
+        if (!d.fall) continue;
+        const half = d.w / 2, dcx = clamp(d.cx, MARGIN + half, TW - MARGIN - half);
+        if (dcx - half > A_CX + A_R * 0.85 || dcx + half < A_CX - A_R * 0.85) continue;
+        const x = clamp(dcx, A_CX - A_R * 0.76, A_CX + A_R * 0.76);
+        const y0 = A_CY - Math.sqrt(Math.max(0, A_R * A_R - (x - A_CX) ** 2)) - 6;
+        const cs: Lobe[] = [];
+        tongueLobes(cs, x, y0, 13 + 11 * R(), CH * (0.7 + 0.9 * R()), R);
+        shadowOf(g, cs, 5, 6);
+        mass(g, cs, R, { r: 8.5, lobe: R() < 0.4 ? 1 : 0 });
+      }
+      return c;
+    });
+  }
   /** And what has seeded itself in the gap: grass in the threshold, a tuft on an impost. */
-  const ARCH_WEED = !S.growth ? bare() : VARIANTS.map((v) => {
-    const c = cnv(TW, TH), g = ctxOf(c);
-    const R = rand(v.seed * 557 + 29);
-    for (const side of [-1, 1]) {
-      if (R() < 0.4) continue;
-      tussock(g, A_CX + side * A_R * (0.42 + R() * 0.42), TH + 3, 34 + R() * 30, 26 + R() * 26, R);
-    }
-    // The impost is a ledge, and rain that runs off the ring stands on it.
-    for (const side of [-1, 1]) {
-      if (R() < 0.55) continue;
-      tussock(g, A_CX + side * (A_R - 6 + R() * 14), A_CY + 1, 22 + R() * 14, 14 + R() * 10, R);
-    }
-    return c;
-  });
+  function archWeedPictures(): HTMLCanvasElement[] {
+    return !S.growth ? bare() : VARIANTS.map((v) => {
+      const c = cnv(TW, TH), g = ctxOf(c);
+      const R = rand(v.seed * 557 + 29);
+      for (const side of [-1, 1]) {
+        if (R() < 0.4) continue;
+        tussock(g, A_CX + side * A_R * (0.42 + R() * 0.42), TH + 3, 34 + R() * 30, 26 + R() * 26, R);
+      }
+      // The impost is a ledge, and rain that runs off the ring stands on it.
+      for (const side of [-1, 1]) {
+        if (R() < 0.55) continue;
+        tussock(g, A_CX + side * (A_R - 6 + R() * 14), A_CY + 1, 22 + R() * 14, 14 + R() * 10, R);
+      }
+      return c;
+    });
+  }
   /** And the same section with a window in it, drawn and cut the same way. */
-  const WINDOWED = VARIANTS.map((v) => {
-    const c = cnv(TW, TH), g = ctxOf(c);
-    paintCourses(g, rand(v.seed), (S.growth ? v.drapes : []).map((d): Pt => { const h2 = d.w / 2, m = clamp(d.cx, MARGIN + h2, TW - MARGIN - h2); return [m - h2, m + h2]; }), true);
-    surround(g, rand(v.seed * 197 + 61), W_X0, W_X1, W_HEAD, W_SILL, 66, 0);
-    g.globalAlpha = 1;
-    g.fillStyle = '#000';
-    g.globalCompositeOperation = 'destination-out';
-    g.beginPath();
-    g.rect(W_X0, W_HEAD, W_X1 - W_X0, W_SILL - W_HEAD);
-    g.fill();
-    g.globalCompositeOperation = 'source-over';
-    return c;
-  });
+  function windowPictures(): HTMLCanvasElement[] {
+    return VARIANTS.map((v) => {
+      const c = cnv(TW, TH), g = ctxOf(c);
+      LAY.courses(g, rand(v.seed), (S.growth ? v.drapes : []).map((d): Pt => { const h2 = d.w / 2, m = clamp(d.cx, MARGIN + h2, TW - MARGIN - h2); return [m - h2, m + h2]; }), true, -1);
+      LAY.surround(g, rand(v.seed * 197 + 61), W_X0, W_X1, W_HEAD, W_SILL, 66, 0);
+      g.globalAlpha = 1;
+      g.fillStyle = '#000';
+      g.globalCompositeOperation = 'destination-out';
+      g.beginPath();
+      g.rect(W_X0, W_HEAD, W_X1 - W_X0, W_SILL - W_HEAD);
+      g.fill();
+      g.globalCompositeOperation = 'source-over';
+      return c;
+    });
+  }
   /**
    * What grows at a window: ivy over the head of it, and whatever has seeded
    * in the joint behind the sill, which is where the rain that runs off the
    * glass ends up.
    */
-  const WIN_IVY = !S.growth ? bare() : VARIANTS.map((v) => {
-    const c = cnv(TW, TH), g = ctxOf(c);
-    const R = rand(v.seed * 883 + 19);
-    for (const d of v.drapes) {
-      if (!d.fall) continue;
-      const half = d.w / 2, dcx = clamp(d.cx, MARGIN + half, TW - MARGIN - half);
-      if (dcx - half > W_X1 - 10 || dcx + half < W_X0 + 10) continue;
-      const x = clamp(dcx, W_X0 + 18, W_X1 - 18);
-      const cs: Lobe[] = [];
-      tongueLobes(cs, x, W_HEAD - 8, 11 + 9 * R(), (W_SILL - W_HEAD) * (0.35 + 0.5 * R()), R);
-      shadowOf(g, cs, 5, 6);
-      mass(g, cs, R, { r: 8.5, lobe: R() < 0.4 ? 1 : 0 });
-    }
-    return c;
-  });
-  const WIN_WEED = !S.growth ? bare() : VARIANTS.map((v) => {
-    const c = cnv(TW, TH), g = ctxOf(c);
-    const R = rand(v.seed * 419 + 83);
-    for (const side of [-1, 1]) {
-      if (R() < 0.45) continue;
-      const x = (W_X0 + W_X1) / 2 + side * (W_X1 - W_X0) * (0.18 + R() * 0.28);
-      tussock(g, x, W_SILL - 2, 22 + R() * 18, 14 + R() * 12, R);
-    }
-    return c;
-  });
+  function winIvyPictures(): HTMLCanvasElement[] {
+    return !S.growth ? bare() : VARIANTS.map((v) => {
+      const c = cnv(TW, TH), g = ctxOf(c);
+      const R = rand(v.seed * 883 + 19);
+      for (const d of v.drapes) {
+        if (!d.fall) continue;
+        const half = d.w / 2, dcx = clamp(d.cx, MARGIN + half, TW - MARGIN - half);
+        if (dcx - half > W_X1 - 10 || dcx + half < W_X0 + 10) continue;
+        const x = clamp(dcx, W_X0 + 18, W_X1 - 18);
+        const cs: Lobe[] = [];
+        tongueLobes(cs, x, W_HEAD - 8, 11 + 9 * R(), (W_SILL - W_HEAD) * (0.35 + 0.5 * R()), R);
+        shadowOf(g, cs, 5, 6);
+        mass(g, cs, R, { r: 8.5, lobe: R() < 0.4 ? 1 : 0 });
+      }
+      return c;
+    });
+  }
+  function winWeedPictures(): HTMLCanvasElement[] {
+    return !S.growth ? bare() : VARIANTS.map((v) => {
+      const c = cnv(TW, TH), g = ctxOf(c);
+      const R = rand(v.seed * 419 + 83);
+      for (const side of [-1, 1]) {
+        if (R() < 0.45) continue;
+        const x = (W_X0 + W_X1) / 2 + side * (W_X1 - W_X0) * (0.18 + R() * 0.28);
+        tussock(g, x, W_SILL - 2, 22 + R() * 18, 14 + R() * 12, R);
+      }
+      return c;
+    });
+  }
   /** And with a bay: the same hole and surround, on a shelf rather than a sill. */
-  const BAYED = VARIANTS.map((v) => {
-    const c = cnv(TW, TH), g = ctxOf(c);
-    paintCourses(g, rand(v.seed), (S.growth ? v.drapes : []).map((d): Pt => { const h2 = d.w / 2, m = clamp(d.cx, MARGIN + h2, TW - MARGIN - h2); return [m - h2, m + h2]; }), true);
-    surround(g, rand(v.seed * 251 + 13), Y_X0, Y_X1, Y_HEAD, Y_SILL, 46, 10);
-    g.globalAlpha = 1;
-    g.fillStyle = '#000';
-    g.globalCompositeOperation = 'destination-out';
-    g.beginPath();
-    g.rect(Y_X0, Y_HEAD, Y_X1 - Y_X0, Y_SILL - Y_HEAD);
-    g.fill();
-    g.globalCompositeOperation = 'source-over';
-    return c;
-  });
+  function bayPictures(): HTMLCanvasElement[] {
+    return VARIANTS.map((v) => {
+      const c = cnv(TW, TH), g = ctxOf(c);
+      LAY.courses(g, rand(v.seed), (S.growth ? v.drapes : []).map((d): Pt => { const h2 = d.w / 2, m = clamp(d.cx, MARGIN + h2, TW - MARGIN - h2); return [m - h2, m + h2]; }), true, -1);
+      LAY.surround(g, rand(v.seed * 251 + 13), Y_X0, Y_X1, Y_HEAD, Y_SILL, 46, 10);
+      g.globalAlpha = 1;
+      g.fillStyle = '#000';
+      g.globalCompositeOperation = 'destination-out';
+      g.beginPath();
+      g.rect(Y_X0, Y_HEAD, Y_X1 - Y_X0, Y_SILL - Y_HEAD);
+      g.fill();
+      g.globalCompositeOperation = 'source-over';
+      return c;
+    });
+  }
   /** And the same section with a doorway in it. */
-  const DOORED = VARIANTS.map((v) => {
-    const c = cnv(TW, TH), g = ctxOf(c);
-    paintCourses(g, rand(v.seed), (S.growth ? v.drapes : []).map((d): Pt => { const h2 = d.w / 2, m = clamp(d.cx, MARGIN + h2, TW - MARGIN - h2); return [m - h2, m + h2]; }), true);
-    doorway(g, rand(v.seed * 311 + 29), D_X0, D_X1, D_HEAD, BEAM, 0);
-    g.globalAlpha = 1;
-    g.fillStyle = '#000';
-    g.globalCompositeOperation = 'destination-out';
-    g.beginPath();
-    g.rect(D_X0, D_HEAD, D_X1 - D_X0, TH - D_HEAD);
-    g.fill();
-    g.globalCompositeOperation = 'source-over';
-    return c;
-  });
+  function doorPictures(): HTMLCanvasElement[] {
+    return VARIANTS.map((v) => {
+      const c = cnv(TW, TH), g = ctxOf(c);
+      LAY.courses(g, rand(v.seed), (S.growth ? v.drapes : []).map((d): Pt => { const h2 = d.w / 2, m = clamp(d.cx, MARGIN + h2, TW - MARGIN - h2); return [m - h2, m + h2]; }), true, -1);
+      LAY.doorway(g, rand(v.seed * 311 + 29), D_X0, D_X1, D_HEAD, BEAM, 0);
+      g.globalAlpha = 1;
+      g.fillStyle = '#000';
+      g.globalCompositeOperation = 'destination-out';
+      g.beginPath();
+      g.rect(D_X0, D_HEAD, D_X1 - D_X0, TH - D_HEAD);
+      g.fill();
+      g.globalCompositeOperation = 'source-over';
+      return c;
+    });
+  }
   /** And the gate: the same drawing at twice the span, on corbels. */
-  const GATED = VARIANTS.map((v) => {
-    const c = cnv(TW, TH), g = ctxOf(c);
-    paintCourses(g, rand(v.seed), (S.growth ? v.drapes : []).map((d): Pt => { const h2 = d.w / 2, m = clamp(d.cx, MARGIN + h2, TW - MARGIN - h2); return [m - h2, m + h2]; }), true);
-    doorway(g, rand(v.seed * 373 + 41), V_X0, V_X1, V_HEAD, GATE_BEAM, CORBEL);
-    g.globalAlpha = 1;
-    g.fillStyle = '#000';
-    g.globalCompositeOperation = 'destination-out';
-    g.beginPath();
-    g.rect(V_X0, V_HEAD, V_X1 - V_X0, TH - V_HEAD);
-    g.fill();
-    g.globalCompositeOperation = 'source-over';
-    return c;
-  });
+  function gatePictures(): HTMLCanvasElement[] {
+    return VARIANTS.map((v) => {
+      const c = cnv(TW, TH), g = ctxOf(c);
+      LAY.courses(g, rand(v.seed), (S.growth ? v.drapes : []).map((d): Pt => { const h2 = d.w / 2, m = clamp(d.cx, MARGIN + h2, TW - MARGIN - h2); return [m - h2, m + h2]; }), true, -1);
+      LAY.doorway(g, rand(v.seed * 373 + 41), V_X0, V_X1, V_HEAD, GATE_BEAM, CORBEL);
+      g.globalAlpha = 1;
+      g.fillStyle = '#000';
+      g.globalCompositeOperation = 'destination-out';
+      g.beginPath();
+      g.rect(V_X0, V_HEAD, V_X1 - V_X0, TH - V_HEAD);
+      g.fill();
+      g.globalCompositeOperation = 'source-over';
+      return c;
+    });
+  }
   /**
    * What grows at a doorway, which is less than anywhere else on the wall,
    * because a doorway is the one part of it somebody walks through every day.
    * Ivy over the head where the curtain reaches that far, and a tuft in each
    * bottom corner where a boot never goes.
    */
-  const DOOR_IVY = !S.growth ? bare() : VARIANTS.map((v) => {
-    const c = cnv(TW, TH), g = ctxOf(c);
-    const R = rand(v.seed * 733 + 37);
-    for (const d of v.drapes) {
-      if (!d.fall) continue;
-      const half = d.w / 2, dcx = clamp(d.cx, MARGIN + half, TW - MARGIN - half);
-      if (dcx - half > D_X1 - 10 || dcx + half < D_X0 + 10) continue;
-      const x = clamp(dcx, D_X0 + 16, D_X1 - 16);
-      const cs: Lobe[] = [];
-      tongueLobes(cs, x, D_HEAD - 7, 12 + 10 * R(), CH * (0.4 + 0.7 * R()), R);
-      shadowOf(g, cs, 5, 6);
-      mass(g, cs, R, { r: 8.5, lobe: R() < 0.4 ? 1 : 0 });
-    }
-    return c;
-  });
-  const DOOR_WEED = !S.growth ? bare() : VARIANTS.map((v) => {
-    const c = cnv(TW, TH), g = ctxOf(c);
-    const R = rand(v.seed * 617 + 53);
-    for (const side of [-1, 1]) {
-      if (R() < 0.5) continue;
-      tussock(g, (side < 0 ? D_X0 : D_X1) + side * (R() * 12 - 4), TH + 2, 26 + R() * 18, 18 + R() * 14, R);
-    }
-    return c;
-  });
+  function doorIvyPictures(): HTMLCanvasElement[] {
+    return !S.growth ? bare() : VARIANTS.map((v) => {
+      const c = cnv(TW, TH), g = ctxOf(c);
+      const R = rand(v.seed * 733 + 37);
+      for (const d of v.drapes) {
+        if (!d.fall) continue;
+        const half = d.w / 2, dcx = clamp(d.cx, MARGIN + half, TW - MARGIN - half);
+        if (dcx - half > D_X1 - 10 || dcx + half < D_X0 + 10) continue;
+        const x = clamp(dcx, D_X0 + 16, D_X1 - 16);
+        const cs: Lobe[] = [];
+        tongueLobes(cs, x, D_HEAD - 7, 12 + 10 * R(), CH * (0.4 + 0.7 * R()), R);
+        shadowOf(g, cs, 5, 6);
+        mass(g, cs, R, { r: 8.5, lobe: R() < 0.4 ? 1 : 0 });
+      }
+      return c;
+    });
+  }
+  function doorWeedPictures(): HTMLCanvasElement[] {
+    return !S.growth ? bare() : VARIANTS.map((v) => {
+      const c = cnv(TW, TH), g = ctxOf(c);
+      const R = rand(v.seed * 617 + 53);
+      for (const side of [-1, 1]) {
+        if (R() < 0.5) continue;
+        tussock(g, (side < 0 ? D_X0 : D_X1) + side * (R() * 12 - 4), TH + 2, 26 + R() * 18, 18 + R() * 14, R);
+      }
+      return c;
+    });
+  }
   /**
    * And the gate's, which is thinner again: a cart wheel goes closer to a
    * jamb than a boot does, so only the ivy over the head is sure of itself
    * and there is nothing in the corners but a wisp.
    */
-  const GATE_IVY = !S.growth ? bare() : VARIANTS.map((v) => {
-    const c = cnv(TW, TH), g = ctxOf(c);
-    const R = rand(v.seed * 541 + 71);
-    for (const d of v.drapes) {
-      if (!d.fall) continue;
-      const half = d.w / 2, dcx = clamp(d.cx, MARGIN + half, TW - MARGIN - half);
-      if (dcx - half > V_X1 - 10 || dcx + half < V_X0 + 10) continue;
-      const x = clamp(dcx, V_X0 + 20, V_X1 - 20);
-      const cs: Lobe[] = [];
-      tongueLobes(cs, x, V_HEAD - 7, 12 + 10 * R(), CH * (0.4 + 0.7 * R()), R);
-      shadowOf(g, cs, 5, 6);
-      mass(g, cs, R, { r: 8.5, lobe: R() < 0.4 ? 1 : 0 });
-    }
-    return c;
-  });
-  const GATE_WEED = !S.growth ? bare() : VARIANTS.map((v) => {
-    const c = cnv(TW, TH), g = ctxOf(c);
-    const R = rand(v.seed * 467 + 97);
-    for (const side of [-1, 1]) {
-      if (R() < 0.62) continue;
-      tussock(g, (side < 0 ? V_X0 : V_X1) + side * (R() * 10 - 3), TH + 2, 20 + R() * 14, 14 + R() * 10, R);
-    }
-    return c;
-  });
+  function gateIvyPictures(): HTMLCanvasElement[] {
+    return !S.growth ? bare() : VARIANTS.map((v) => {
+      const c = cnv(TW, TH), g = ctxOf(c);
+      const R = rand(v.seed * 541 + 71);
+      for (const d of v.drapes) {
+        if (!d.fall) continue;
+        const half = d.w / 2, dcx = clamp(d.cx, MARGIN + half, TW - MARGIN - half);
+        if (dcx - half > V_X1 - 10 || dcx + half < V_X0 + 10) continue;
+        const x = clamp(dcx, V_X0 + 20, V_X1 - 20);
+        const cs: Lobe[] = [];
+        tongueLobes(cs, x, V_HEAD - 7, 12 + 10 * R(), CH * (0.4 + 0.7 * R()), R);
+        shadowOf(g, cs, 5, 6);
+        mass(g, cs, R, { r: 8.5, lobe: R() < 0.4 ? 1 : 0 });
+      }
+      return c;
+    });
+  }
+  function gateWeedPictures(): HTMLCanvasElement[] {
+    return !S.growth ? bare() : VARIANTS.map((v) => {
+      const c = cnv(TW, TH), g = ctxOf(c);
+      const R = rand(v.seed * 467 + 97);
+      for (const side of [-1, 1]) {
+        if (R() < 0.62) continue;
+        tussock(g, (side < 0 ? V_X0 : V_X1) + side * (R() * 10 - 3), TH + 2, 20 + R() * 14, 14 + R() * 10, R);
+      }
+      return c;
+    });
+  }
   /** The growth over the top is painted PAD px taller than the face, the extra above the top edge: the
    *  crest of each drape, standing above the cap, is part of the same silhouette. */
   const PAD = 64;
-  const SPILL = !S.growth ? bare() : VARIANTS.map((v) => {
-    const c = cnv(TW, TH + PAD), g = ctxOf(c);
-    g.translate(0, PAD);
-    for (const m of v.drapes) {
-      const lay = drapeLayout(m, rand(m.seed)), R = rand(m.seed + 1);
-      shadowOf(g, lay.cs, 6, 7);
-      mass(g, lay.cs, R, { r: lay.r, lobe: R() < 0.33 ? 0 : 1 });
-    }
-    return c;
-  });
-  const BASE = !S.growth ? bare() : VARIANTS.map((v) => {
-    const c = cnv(TW, TH), g = ctxOf(c);
-    for (const b of v.foot.hedges) hedge(g, b, rand(b.seed));
-    return c;
-  });
-  const FOOT = VARIANTS.map((v, i) => {
-    const c = cnv(TW, TH), g = ctxOf(c);
-    if (S.lay === 'render') erosionOf(g, rand(v.seed * 23 + 11), S.plinth, TH);
-    else if (S.lay === 'frame') footingOf(g, rand(v.seed * 23 + 11));
-    else if (S.lay === 'log') logFootingOf(g, rand(v.seed * 23 + 11));
-    else if (S.lay === 'plank') plankFootingOf(g, rand(v.seed * 23 + 11));
-    else if (S.lay === 'gild') silverPlinth(g, TH - S.plinth, TH, rand(v.seed * 23 + 11));
-    else if (S.plinth) plinthOf(g, rand(v.seed * 23 + 11));
-    // Moss grows on what is there to grow on: a unit the plinth now covers is
-    // not, so it does not get a lens of it hanging in front of cut stone.
-    const on = S.plinth ? STONES[i].filter((b) => b.y + b.h < TH - S.plinth) : STONES[i].slice();
-    if (S.growth) footMoss(g, on, v.extras.moss, rand(v.seed * 19 + 7));
-    return c;
-  });
+  function spillPictures(): HTMLCanvasElement[] {
+    return !S.growth ? bare() : VARIANTS.map((v) => {
+      const c = cnv(TW, TH + PAD), g = ctxOf(c);
+      g.translate(0, PAD);
+      for (const m of v.drapes) {
+        const lay = drapeLayout(m, rand(m.seed)), R = rand(m.seed + 1);
+        shadowOf(g, lay.cs, 6, 7);
+        mass(g, lay.cs, R, { r: lay.r, lobe: R() < 0.33 ? 0 : 1 });
+      }
+      return c;
+    });
+  }
+  function basePictures(): HTMLCanvasElement[] {
+    return !S.growth ? bare() : VARIANTS.map((v) => {
+      const c = cnv(TW, TH), g = ctxOf(c);
+      for (const b of v.foot.hedges) hedge(g, b, rand(b.seed));
+      return c;
+    });
+  }
+  function footPictures(): HTMLCanvasElement[] {
+    return VARIANTS.map((v, i) => {
+      const c = cnv(TW, TH), g = ctxOf(c);
+      LAY.foot(g, rand(v.seed * 23 + 11));
+      // Moss grows on what is there to grow on: a unit the plinth now covers is
+      // not, so it does not get a lens of it hanging in front of cut stone.
+      const on = S.plinth ? STONES[i].filter((b) => b.y + b.h < TH - S.plinth) : STONES[i].slice();
+      if (S.growth) footMoss(g, on, v.extras.moss, rand(v.seed * 19 + 7));
+      return c;
+    });
+  }
   /** How many lengths a head's rise is given in, along a section. */
   const CREST_N = 16;
   /**
@@ -6787,16 +7510,18 @@ function paint(S: Stock): Masonry {
    * at either end, so a head runs on into the next section's. A mud wall
    * laid to a line was a box with a lid on it.
    */
-  const CREST = S.lay !== 'render' ? undefined : VARIANTS.map((v) => {
-    const R = rand(v.seed * 131 + 71);
-    const humps = Array.from({ length: 1 + Math.floor(R() * 2.4) }, () => ({ c: 0.18 + R() * 0.64, w: 0.16 + R() * 0.24, a: 4 + R() * 10 }));
-    return Array.from({ length: CREST_N + 1 }, (_, i) => {
-      const x = i / CREST_N, taper = Math.min(1, x / 0.1, (1 - x) / 0.1);
-      let r = 0;
-      for (const h of humps) { const u = (x - h.c) / h.w; if (Math.abs(u) < 1) r += h.a * (1 - u * u) ** 2; }
-      return r * taper;
+  function renderCrest(): number[][] {
+    return VARIANTS.map((v) => {
+      const R = rand(v.seed * 131 + 71);
+      const humps = Array.from({ length: 1 + Math.floor(R() * 2.4) }, () => ({ c: 0.18 + R() * 0.64, w: 0.16 + R() * 0.24, a: 4 + R() * 10 }));
+      return Array.from({ length: CREST_N + 1 }, (_, i) => {
+        const x = i / CREST_N, taper = Math.min(1, x / 0.1, (1 - x) / 0.1);
+        let r = 0;
+        for (const h of humps) { const u = (x - h.c) / h.w; if (Math.abs(u) < 1) r += h.a * (1 - u * u) ** 2; }
+        return r * taper;
+      });
     });
-  });
+  }
   /**
    * The head of a wall that nothing stands on: the coat laid over the top and
    * rounded off by the hand that laid it, a roll of it paler for turning up
@@ -6805,21 +7530,23 @@ function paint(S: Stock): Masonry {
    * comes in at one depth at both ends, so any section's meets any other's.
    */
   const BROW_H = 24;
-  const BROW = S.lay !== 'render' ? undefined : VARIANTS.map((v) => {
-    const c = cnv(TW, BROW_H), g = ctxOf(c), R = rand(v.seed * 5 + 3);
-    const a = R() * 6, b = R() * 6, cc = R() * 6;
-    const edge = (x: number): number => {
-      const e = Math.min(1, Math.min(x, TW - x) / 48);
-      return 12 + (Math.sin(x * 0.029 + a) * 2.4 + Math.sin(x * 0.083 + b) * 1.5 + Math.sin(x * 0.21 + cc) * 0.8) * e;
-    };
-    g.beginPath(); g.moveTo(0, 0);
-    for (let x = 0; x <= TW; x += 6) g.lineTo(x, edge(x));
-    g.lineTo(TW, 0); g.closePath();
-    const roll = g.createLinearGradient(0, 0, 0, 16);
-    roll.addColorStop(0, TONES.top.lit); roll.addColorStop(1, lighten(PASTEL.stone, 3));
-    g.fillStyle = roll; g.fill();
-    return c;
-  });
+  function renderBrow(): HTMLCanvasElement[] {
+    return VARIANTS.map((v) => {
+      const c = cnv(TW, BROW_H), g = ctxOf(c), R = rand(v.seed * 5 + 3);
+      const a = R() * 6, b = R() * 6, cc = R() * 6;
+      const edge = (x: number): number => {
+        const e = Math.min(1, Math.min(x, TW - x) / 48);
+        return 12 + (Math.sin(x * 0.029 + a) * 2.4 + Math.sin(x * 0.083 + b) * 1.5 + Math.sin(x * 0.21 + cc) * 0.8) * e;
+      };
+      g.beginPath(); g.moveTo(0, 0);
+      for (let x = 0; x <= TW; x += 6) g.lineTo(x, edge(x));
+      g.lineTo(TW, 0); g.closePath();
+      const roll = g.createLinearGradient(0, 0, 0, 16);
+      roll.addColorStop(0, TONES.top.lit); roll.addColorStop(1, lighten(PASTEL.stone, 3));
+      g.fillStyle = roll; g.fill();
+      return c;
+    });
+  }
   /**
    * The beam ends of the floor over a storey, per variant, for a wall the
    * joists rest on: the logs painted for each way they can stand off a face
@@ -6845,196 +7572,99 @@ function paint(S: Stock): Masonry {
    * long course or two just under the head, where the rain comes over it,
    * the top straight along a joint.
    */
-  const LOSSES = S.lay !== 'render' ? undefined : (() => {
-    const R = rand(4127);
-    const uq = TW / S.across / 4;
-    // A coat that lets go along the joints stops at a brick's end more often than not.
-    const q = (x: number): number => Math.round(x / uq) * uq + (R() - 0.5) * 8;
-    const corner = [0, 1, 2, 3].map(() => {
-      const n = 3 + Math.floor(R() * 3), w = 120;
-      const runs: Array<[number, number]> = [];
-      let d = 34 + R() * 40;
-      for (let i = 0; i < n; i++) {
-        d = clamp(d + (R() - 0.45) * 56, 26, w - 10);
-        runs.push([w - q(d), w + 4]);
-      }
-      return lossPicture(runs, R);
-    });
-    /*
-     * Each course of a loss is let go at each end by its own amount: a stack
-     * that grows the same on both sides course by course was a ziggurat, and
-     * a small one a cross, stamped on the wall.
-     */
-    const grow = (a: number, b: number, lo: number, hi: number): [number, number] =>
-      [clamp(q(a - (R() - 0.3) * 34), lo, b - 30), clamp(q(b + (R() - 0.3) * 34), a + 30, hi)];
-    const foot = [0, 1, 2, 3].map(() => {
-      const n = 2 + Math.floor(R() * 2), w = 150 + R() * 40;
-      const runs: Array<[number, number]> = [];
-      let [a, b] = [q(w * (0.15 + R() * 0.35)), 0];
-      b = q(a + 30 + R() * 40);
-      for (let i = 0; i < n + 2; i++) {
-        runs.push([a, b]);
-        [a, b] = grow(a, b, 2, w - 2);
-      }
-      return lossPicture(runs, R);
-    });
-    const sill = [0, 1, 2].map(() => {
-      // Under the end of the board, the lower course carried off to one side by the water's run.
-      const w = 90 + R() * 30, a = q(8 + R() * 16), b = q(a + 50 + R() * 26);
-      const side = R() < 0.5;
-      return lossPicture([[a, b], side ? [q(a + 18 + R() * 16), q(b + 6 + R() * 14)] : [q(a - 6 - R() * 10), q(b - 18 - R() * 16)]].map(([x, y]) => [clamp(x, 2, w - 32), clamp(y, x + 26, w - 2)] as [number, number]), R);
-    });
-    const head = [0, 1, 2].map(() => {
-      const w = 170 + R() * 80;
-      const runs: Array<[number, number]> = [[4, w - 4]];
-      if (R() < 0.7) {
-        const a = q(10 + R() * (w * 0.5)), b = q(a + 40 + R() * (w * 0.35));
-        runs.push([a, Math.min(w - 4, b)]);
-      }
-      return lossPicture(runs, R);
-    });
-    return { corner, foot, sill, head, lip: LOSS_LIP, ch: MUD_CH, from: BAND };
-  })();
-  const perPx = TH / (WALL_HEIGHT * HEIGHT_SCALE);
-  const VIGAS = !LOSSES ? undefined : (() => {
-    const rows = VARIANTS.map(vigaRow);
-    return {
-      iso: rows.map((r) => vigaLogs(r, -TW, TILE_H * perPx, LOSSES.sill)),
-      square: rows.map((r) => vigaLogs(r, 0, (TILE_H / Math.SQRT2) * perPx, LOSSES.sill)),
-      shade: rows.map(vigaShade),
-      h: VIGA_H,
-      sh: VIGA_SH,
-    };
-  })();
-  /** The cap's stone, the same for every variant, drawn under the island's light. */
-  const CAP_STONE = (() => {
-    const c = cnv(TW, CAP_H), g = ctxOf(c);
-    if (S.lay === 'render') {
-      // The top of a mud wall is the same coat turned up at the sky, a step
-      // paler for it. Plain: one picture over every section, its cracks were
-      // a mark repeating every four metres down the run.
-      g.fillStyle = TONES.top.lit; g.fillRect(0, 0, TW, CAP_H);
-      return c;
-    }
-    if (S.lay === 'log' || S.lay === 'plank' || S.lay === 'gild') {
-      // The top of the topmost log, or of the head band, which the renderer lays flat.
-      g.fillStyle = TONES.top.lit; g.fillRect(0, 0, TW, CAP_H);
-      return c;
-    }
-    if (S.lay === 'frame') {
-      // The top of a frame is its plate seen from above: the oak turned up
-      // at the sky, a step paler, and its grain running along it.
-      g.fillStyle = TONES.top.lit; g.fillRect(0, 0, TW, CAP_H);
-      g.strokeStyle = hexA(TONES.top.shade, 0.8); g.lineWidth = 1.2;
-      for (const f of [0.3, 0.55, 0.8]) {
-        g.beginPath();
-        for (let x = 0; x <= TW; x += 16) g.lineTo(x, CAP_H * f + Math.sin(x * 0.02 + f * 9) * 1.5);
-        g.stroke();
-      }
-      return c;
-    }
-    g.fillStyle = PASTEL.joint; g.fillRect(0, 0, TW, CAP_H);
-    // On a bond the top is the band course seen from above, and a face
-    // turned up at the sky is a step lighter than the same stone on the side.
-    slabs(g, 0, CAP_H, rand(99), S.lay === 'bond' ? 'top' : 'flat');
-    return c;
-  })();
-  /** The stone at a corner (`Masonry.corner`): as deep as the cap, as long as a wall is thick, cut as the cap's are. */
-  const CORNER_STONE = (() => {
-    if (S.lay !== 'bond' && S.lay !== 'rubble') return undefined;
-    const CW = Math.round(2 * WALL_THICK * TW), c = cnv(CW, CAP_H), g = ctxOf(c);
-    g.fillStyle = PASTEL.joint; g.fillRect(0, 0, CW, CAP_H);
-    stone(g, MORTAR / 2, MORTAR / 2, CW - MORTAR, CAP_H - MORTAR, rand(97), S.lay === 'bond' ? 'top' : 'flat', S.lay === 'bond' ? 'unit' : 'sawn');
-    return c;
-  })();
-  const ENDS = (() => {
-    const Wc = 64, c = cnv(Wc, TH), g = ctxOf(c), R = rand(7);
-    if (S.lay === 'render') {
-      // The end of a mud wall is the coat come round the corner; the roll of
-      // it round the arris is the renderer's, in the light of both faces.
-      g.fillStyle = PASTEL.stone; g.fillRect(0, 0, Wc, TH);
-      g.fillStyle = hexA(PASTEL.stoneHi, 0.5); g.fillRect(0, 0, Wc, 6);
-      return c;
-    }
-    if (S.lay === 'frame') {
-      // The end of a frame is the side of its end post, the plate over it.
-      member(g, -2, 0, Wc + 2, TH, R, false, false);
-      member(g, -2, 0, Wc + 2, PLATE, R);
-      return c;
-    }
-    if (S.lay === 'gild') {
-      // The end of a silver wall is the side of its pilaster, the frieze over it.
-      g.drawImage(silverCorner(TH, false), 0, 0, Wc, TH);
-      g.fillStyle = PASTEL.dress; g.fillRect(0, 0, Wc, FRIEZE);
-      g.fillStyle = PASTEL.rim; g.fillRect(0, 0, Wc, 6);
-      g.fillStyle = PASTEL.soffit; g.fillRect(0, FRIEZE - 7, Wc, 7);
-      g.fillStyle = hexA(PASTEL.line, 0.8); g.fillRect(0, FRIEZE - 1.5, Wc, 1.5);
-      return c;
-    }
-    if (S.lay === 'plank') {
-      // The end of a plank wall is the side of its corner board, the band over it.
-      member(g, -2, 0, Wc + 2, TH, R, false, false);
-      member(g, -2, 0, Wc + 2, HEAD_BAND, R);
-      return c;
-    }
-    if (S.lay === 'log') {
-      // The end of a log wall is its logs' cut ends, one over another.
-      g.fillStyle = PASTEL.stone; g.fillRect(0, 0, Wc, TH);
-      for (let k = 0; k < LOGS; k++) endGrain(g, Wc / 2, k * LOG_CH + (LOG_CH - CHINK) / 2, Wc * 0.47, (LOG_CH - CHINK) / 2 + 1, R);
-      return c;
-    }
-    g.fillStyle = PASTEL.joint; g.fillRect(0, 0, Wc, TH);
-    stone(g, MORTAR / 2, MORTAR / 2, Wc - MORTAR, BAND - MORTAR, R, 'flat', 'sawn');
-    if (S.lay === 'bond') {
+  function renderLosses(): NonNullable<Masonry['losses']> {
+    return (() => {
+      const R = rand(4127);
+      const uq = TW / S.across / 4;
+      // A coat that lets go along the joints stops at a brick's end more often than not.
+      const q = (x: number): number => Math.round(x / uq) * uq + (R() - 0.5) * 8;
+      const corner = [0, 1, 2, 3].map(() => {
+        const n = 3 + Math.floor(R() * 3), w = 120;
+        const runs: Array<[number, number]> = [];
+        let d = 34 + R() * 40;
+        for (let i = 0; i < n; i++) {
+          d = clamp(d + (R() - 0.45) * 56, 26, w - 10);
+          runs.push([w - q(d), w + 4]);
+        }
+        return lossPicture(runs, R);
+      });
       /*
-       * Quoins. Where a brick wall stops -- a corner of a house, the end of a
-       * run -- it is finished in cut stone, because an arris of brick is the
-       * first thing a cart takes off and the corner is what carries the two
-       * walls into each other. Five stones to the storey, each two courses
-       * of brick deep, in the dressings' two tones turn about.
+       * Each course of a loss is let go at each end by its own amount: a stack
+       * that grows the same on both sides course by course was a ziggurat, and
+       * a small one a cross, stamped on the wall.
        */
-      const n = 5, ch = (TH - BAND) / n;
-      for (let i = 0; i < n; i++) {
-        stone(g, MORTAR / 2, BAND + i * ch + MORTAR / 2, Wc - MORTAR, ch - MORTAR, R, i % 2 ? 'plinth' : 'dress', 'unit', 0, 1.8);
-      }
+      const grow = (a: number, b: number, lo: number, hi: number): [number, number] =>
+        [clamp(q(a - (R() - 0.3) * 34), lo, b - 30), clamp(q(b + (R() - 0.3) * 34), a + 30, hi)];
+      const foot = [0, 1, 2, 3].map(() => {
+        const n = 2 + Math.floor(R() * 2), w = 150 + R() * 40;
+        const runs: Array<[number, number]> = [];
+        let [a, b] = [q(w * (0.15 + R() * 0.35)), 0];
+        b = q(a + 30 + R() * 40);
+        for (let i = 0; i < n + 2; i++) {
+          runs.push([a, b]);
+          [a, b] = grow(a, b, 2, w - 2);
+        }
+        return lossPicture(runs, R);
+      });
+      const sill = [0, 1, 2].map(() => {
+        // Under the end of the board, the lower course carried off to one side by the water's run.
+        const w = 90 + R() * 30, a = q(8 + R() * 16), b = q(a + 50 + R() * 26);
+        const side = R() < 0.5;
+        return lossPicture([[a, b], side ? [q(a + 18 + R() * 16), q(b + 6 + R() * 14)] : [q(a - 6 - R() * 10), q(b - 18 - R() * 16)]].map(([x, y]) => [clamp(x, 2, w - 32), clamp(y, x + 26, w - 2)] as [number, number]), R);
+      });
+      const head = [0, 1, 2].map(() => {
+        const w = 170 + R() * 80;
+        const runs: Array<[number, number]> = [[4, w - 4]];
+        if (R() < 0.7) {
+          const a = q(10 + R() * (w * 0.5)), b = q(a + 40 + R() * (w * 0.35));
+          runs.push([a, Math.min(w - 4, b)]);
+        }
+        return lossPicture(runs, R);
+      });
+      return { corner, foot, sill, head, lip: LOSS_LIP, ch: MUD_CH, from: BAND };
+    })();
+  }
+  const perPx = TH / (WALL_HEIGHT * HEIGHT_SCALE);
+  function renderVigas(losses: NonNullable<Masonry['losses']>): NonNullable<Masonry['vigas']> {
+    return (() => {
+      const rows = VARIANTS.map(vigaRow);
+      return {
+        iso: rows.map((r) => vigaLogs(r, -TW, TILE_H * perPx, losses.sill)),
+        square: rows.map((r) => vigaLogs(r, 0, (TILE_H / Math.SQRT2) * perPx, losses.sill)),
+        shade: rows.map(vigaShade),
+        h: VIGA_H,
+        sh: VIGA_SH,
+      };
+    })();
+  }
+  /** The cap's stone, the same for every variant, drawn under the island's light. */
+  function capPicture(): HTMLCanvasElement {
+    return (() => {
+      const c = cnv(TW, CAP_H), g = ctxOf(c);
+      LAY.cap(g);
       return c;
-    }
-    for (let i = 0; i < COURSES; i++) {
-      stone(g, MORTAR / 2, BAND + i * CH + MORTAR / 2, Wc - MORTAR, CH - MORTAR, R, ['', 'brown', 'green', ''][i]);
-    }
-    return c;
-  })();
+    })();
+  }
+  /** The stone at a corner (`Masonry.corner`): as deep as the cap, as long as a wall is thick, cut as the cap's are. */
+  function endsPicture(): HTMLCanvasElement {
+    return (() => {
+      const Wc = 64, c = cnv(Wc, TH), g = ctxOf(c), R = rand(7);
+      LAY.ends(g, R, Wc);
+      return c;
+    })();
+  }
   /**
    * On a frame, the end of the ground storey: the side of its end post on the
    * sole, and the footing going round the end as it runs along the face. The
    * post ran down into the grass, beside a face that stood on a footing.
    */
-  const ENDS_FOOT = S.lay !== 'frame' && S.lay !== 'log' && S.lay !== 'plank' && S.lay !== 'gild' ? undefined : (() => {
-    const Wc = 64, c = cnv(Wc, TH), g = ctxOf(c), R = rand(13), y0 = TH - S.plinth;
-    if (S.lay === 'log') {
-      g.drawImage(ENDS, 0, 0);
-      footing(g, R, y0, TH);
+  function endsFootPicture(ENDS: HTMLCanvasElement): HTMLCanvasElement {
+    return (() => {
+      const Wc = 64, c = cnv(Wc, TH), g = ctxOf(c), R = rand(13), y0 = TH - S.plinth;
+      LAY.endsFoot?.(g, R, Wc, y0, ENDS);
       return c;
-    }
-    if (S.lay === 'plank') {
-      g.drawImage(ENDS, 0, 0);
-      member(g, -2, y0 - SKIRT, Wc + 2, y0, R);
-      footing(g, R, y0, TH);
-      return c;
-    }
-    if (S.lay === 'gild') {
-      g.drawImage(ENDS, 0, 0);
-      g.save(); g.beginPath(); g.rect(0, 0, Wc, TH); g.clip();
-      silverPlinth(g, y0, TH);
-      g.restore();
-      return c;
-    }
-    member(g, -2, 0, Wc + 2, y0, R, false, false);
-    member(g, -2, 0, Wc + 2, PLATE, R);
-    member(g, -2, y0 - SOLE, Wc + 2, y0, R);
-    footing(g, R, y0, TH);
-    return c;
-  })();
+    })();
+  }
   /**
    * The low wall, at whatever height is asked for, painted once per height.
    *
@@ -7063,9 +7693,11 @@ function paint(S: Stock): Masonry {
       g.translate(0, PROUD);
       const R = rand(v.seed * 83 + 5);
       g.fillStyle = PASTEL.joint; g.fillRect(0, 0, TW, fh);
-      const own = lowCourses(g, R, fh, rows, vi);
-      levelling(g, R);
-      coping(g, copeSeed(v.seed));
+      const own = LAY.lowCourses(g, R, fh, rows, vi);
+      LAY.levelling?.(g, R);
+      // The head of a low wall of logs is the top of its topmost log, and of
+      // planks the cap board its boards are painted with: those have no coping.
+      LAY.coping?.(g, copeSeed(v.seed));
       // At the stock's own rate of wear, as the tall wall's is: a garden wall
       // of brick took the whole of a novice's rubble's and was specked with it.
       const k = S.wear;
@@ -7114,88 +7746,7 @@ function paint(S: Stock): Masonry {
     const cap = VARIANTS.map((v) => {
       const c = cnv(TW, CAP_H + PROUD), g = ctxOf(c);
       g.translate(0, PROUD);
-      if (S.lay === 'render') {
-        // A mud cap seen from above is one pale band of coat; there is
-        // nothing in it to count.
-        g.fillStyle = TONES.top.lit; g.fillRect(0, -2, TW, CAP_H + 2);
-        return c;
-      }
-      if (S.lay === 'log' || S.lay === 'plank' || S.lay === 'gild') {
-        g.fillStyle = TONES.top.lit; g.fillRect(0, -2, TW, CAP_H + 2);
-        return c;
-      }
-      if (S.lay === 'frame') {
-        // The rail along the head, seen from above: oak, paler for facing the sky.
-        g.fillStyle = TONES.top.lit; g.fillRect(0, -2, TW, CAP_H + 2);
-        g.strokeStyle = hexA(TONES.top.shade, 0.8); g.lineWidth = 1.2;
-        for (const f of [0.35, 0.7]) {
-          g.beginPath();
-          for (let x = 0; x <= TW; x += 16) g.lineTo(x, CAP_H * f + Math.sin(x * 0.02 + f * 7) * 1.5);
-          g.stroke();
-        }
-        return c;
-      }
-      const w0 = CSEAM[1] - CSEAM[0];
-      /*
-       * Not `flat`: a flat stone takes the flat tone and nothing else, and a
-       * coping seen from above that is all one colour is the comb again. In
-       * the coping's own ink, though, and -- the thing that matters here --
-       * with its own length.
-       *
-       * Every comber ran the full sixty-four pixels of the wall's thickness
-       * with its ends on two ruled lines, and every one of them carried the
-       * lit rim that makes a block read as a block, so the top of the wall
-       * was a row of keycaps. A comber is a stone: it is as long as it is,
-       * it is set square to the wall by eye, one in four does not reach
-       * across and gets a second stone behind it, and no stone in a thing
-       * two pixels deep on screen has a highlight on its own edge.
-       */
-      const top = (x: number, w: number, RR: Rand, tone: string): void => {
-        if (S.lay === 'bond') {
-          // A length of dressed cope seen from above is a slab across the
-          // wall's whole thickness, set square to it. The hand shows in a
-          // pixel of overhang at one end and not in a stone skewed across it.
-          g.fillStyle = PASTEL.joint;
-          g.fillRect(x - 1, 0, w + 2, CAP_H);
-          const j0 = RR() * 3, j1 = RR() * 3;
-          void stone(g, x + MORTAR / 2, j0, w - MORTAR, CAP_H - j0 - j1, RR, tone === 'plinth' ? 'dress' : 'top', 'unit', (RR() - 0.5) * 0.01, 1.2, false);
-          return;
-        }
-        // One end jitters hard and the other a little, so the two arrises of
-        // the run are ragged independently rather than both nearly straight.
-        const far = RR() < 0.5;
-        const j0 = -5 + RR() * (far ? 25 : 10), j1 = 1 + RR() * (far ? 5 : 20);
-        /*
-         * The hearting between the combers, laid stone by stone rather than
-         * as one rectangle behind the lot. A cap that opens with a filled
-         * rectangle has a ruled far edge whatever the stones on it do, and at
-         * four of the eight rotations that edge is the wall's whole outline
-         * against the sky.
-         */
-        g.fillStyle = PASTEL.joint;
-        g.fillRect(x - 1, Math.min(j0, 0) + 2, w + 2, CAP_H - Math.min(j0, 0) - 2);
-        const tilt = (RR() - 0.5) * 0.55;
-        // Lighter again than the face of the coping. This strip is two or
-        // three pixels deep at the zoom people play at, so an outline that
-        // reads as a joint up close reads as a dashed line along the top of
-        // the wall from a field away -- which is a painted kerb, not stone.
-        const run = CAP_H - j0 - j1;
-        if (RR() < 0.26) {
-          const a = run * (0.4 + RR() * 0.2);
-          void stone(g, x + MORTAR / 2, j0, w - MORTAR, a, RR, tone, 'laid', tilt, 1.05, false);
-          void stone(g, x + MORTAR / 2, j0 + a + 2, w - MORTAR, run - a - 2, RR, RR() < 0.5 ? 'weather' : '', 'laid', -tilt, 1.05, false);
-          return;
-        }
-        void stone(g, x + MORTAR / 2, j0, w - MORTAR, run, RR, tone, 'laid', tilt, 1.05, false);
-      };
-      top(CSEAM[0], w0, rand(313), S.lay === 'bond' ? 'dress' : '');
-      top(TW + CSEAM[0], w0, rand(313), S.lay === 'bond' ? 'dress' : '');
-      // The same widths and the same tones as the face of it, taken from the
-      // same two lists rather than from a roll of its own, because these are
-      // the tops of those stones and not a second row of them.
-      const seed = copeSeed(v.seed), ws = copeWidths(seed), tones = copeTones(seed, ws.length), R = rand(seed + 577);
-      let x = CSEAM[1];
-      for (let k = 0; k < ws.length; k++) { top(x, ws[k], R, tones[k]); x += ws[k]; }
+      LAY.lowCap(g, v);
       return c;
     });
     /**
@@ -7211,85 +7762,7 @@ function paint(S: Stock): Masonry {
      */
     const ends = (() => {
       const Wc = 64, c = cnv(Wc, fh), g = ctxOf(c), R = rand(11);
-      if (S.lay === 'render') {
-        // The coat come round the end of it, under the cap's paler band.
-        g.fillStyle = PASTEL.stone; g.fillRect(0, 0, Wc, fh);
-        g.fillStyle = TONES.top.lit; g.fillRect(0, 0, Wc, COPE + 1);
-        g.fillStyle = 'rgba(46, 34, 62, 0.3)'; g.fillRect(0, COPE + 1, Wc, 4);
-        return c;
-      }
-      if (S.lay === 'gild') {
-        // The side of its pilaster, the cap moulding over it, on the plinth.
-        const sole = fh - LOW_FOOT;
-        g.drawImage(silverCorner(sole, false), 0, 0, Wc, sole);
-        slab(g, -8, 0, Wc + 8, 22, PASTEL.dress, 5);
-        g.save(); g.beginPath(); g.rect(0, 0, Wc, fh); g.clip();
-        silverPlinth(g, sole, fh);
-        g.restore();
-        return c;
-      }
-      if (S.lay === 'plank') {
-        // The side of its corner board, the cap and the bottom rail, on the footing.
-        const sole = fh - LOW_FOOT;
-        member(g, -2, 0, Wc + 2, sole, R, false, false);
-        member(g, -2, 0, Wc + 2, 20, R);
-        member(g, -2, sole - SKIRT, Wc + 2, sole, R);
-        footing(g, R, sole, fh);
-        return c;
-      }
-      if (S.lay === 'log') {
-        // The cut ends of its logs, one over another, on the footing.
-        const sole = fh - LOW_FOOT, n = lowLogCount(fh), ch = sole / n;
-        g.fillStyle = PASTEL.stone; g.fillRect(0, 0, Wc, sole);
-        for (let k = 0; k < n; k++) endGrain(g, Wc / 2, k * ch + (ch - CHINK) / 2, Wc * 0.47, (ch - CHINK) / 2 + 1, R);
-        footing(g, R, sole, fh);
-        return c;
-      }
-      if (S.lay === 'frame') {
-        // The side of the end post, the rail over it, and the footing it
-        // stands on, which goes round the end as it runs along the face.
-        member(g, -2, 0, Wc + 2, fh - LOW_FOOT, R, false, false);
-        member(g, -2, 0, Wc + 2, 24, R);
-        member(g, -2, fh - LOW_FOOT - SOLE, Wc + 2, fh - LOW_FOOT, R);
-        footing(g, R, fh - LOW_FOOT, fh);
-        return c;
-      }
-      g.fillStyle = PASTEL.joint; g.fillRect(0, 0, Wc, fh);
-      let cx = 0, ex = 0;
-      // A bond's cope is cut stone, so its end is too.
-      const heads: Array<[number, string, number]> = S.lay === 'bond'
-        ? [[0.52, 'dress', 2], [0.48, 'plinth', 3]]
-        : [[0.36, '', 5], [0.34, 'weather', 1], [0.3, 'bleach', 7]];
-      for (const [f, tone, up] of heads) {
-        const w = f * Wc;
-        stone(g, cx + 1, up, w - 2, COPE - MORTAR / 2 - up, R, tone, 'laid', (R() - 0.5) * 0.06, COPE_INK);
-        cx += w;
-      }
-      // Not `flat`: a flat stone takes `TONES.flat` and nothing else, which is
-      // the lightest tone in the table, so the quietest course in the wall
-      // came out as the brightest thing on its head -- one pale pill where
-      // the run shows a course of packing.
-      if (S.lay === 'bond') {
-        // Where a brick garden wall stops it is finished in cut stone, the
-        // same quoins a house's corner is: two to the height of the wall.
-        const qh = (fh - COPE) / 2;
-        for (let i = 0; i < 2; i++) {
-          stone(g, MORTAR / 2, COPE + i * qh + MORTAR / 2, Wc - MORTAR, qh - MORTAR, R, i ? 'plinth' : 'dress', 'unit', 0, 1.8);
-        }
-        return c;
-      }
-      for (const [f, tn] of [[0.38, 'weather'], [0.34, 'dark'], [0.28, 'brown']] as Array<[number, string]>) {
-        const w = f * Wc;
-        stone(g, ex + 1, COPE + 1 + R() * 2, w - 2, LEVEL - 3, R, tn, 'laid', (R() - 0.5) * 0.08, 0.9);
-        ex += w;
-      }
-      const ch = (fh - COPE - LEVEL) / rows;
-      for (let i = 0; i < rows; i++) {
-        const y = COPE + LEVEL + i * ch + MORTAR / 2, h = ch - MORTAR;
-        const split = Wc * (i % 2 ? 0.42 : 0.6);
-        stone(g, MORTAR / 2, y, split - MORTAR, h, R, ['', 'brown', 'green', ''][i % 4]);
-        stone(g, split + MORTAR / 2, y, Wc - split - MORTAR, h, R, i === rows - 1 ? 'weather' : 'dark');
-      }
+      LAY.lowEnds(g, R, Wc, fh, rows);
       return c;
     })();
     /*
@@ -7308,138 +7781,14 @@ function paint(S: Stock): Masonry {
       const R = rand(v.seed * 197 + 71);
       for (const side of [-1, 1]) {
         const line = side < 0 ? gx0 : gx1;
-        if (S.lay === 'frame' || S.lay === 'log' || S.lay === 'plank' || S.lay === 'gild') continue;
-        if (S.lay === 'render') {
-          /*
-           * A pier of the same mud as the wall and in the same coat, built up
-           * a hand higher than the wall it interrupts and domed over -- the
-           * dome is the renderer's, cut into the head of the wall -- its coat
-           * rolled round its arrises, its foot eaten as the wall's is, and a
-           * shade thrown down the wall on its field side, because it stands
-           * out of it. Cream and square, it was a planed post.
-           */
-          const x = side < 0 ? line + OVER - 52 : line - OVER, w = 52;
-          g.beginPath(); softRect(g, x, 0, w, fh + 6, 6);
-          g.fillStyle = PASTEL.stone; g.fill();
-          g.save(); g.clip();
-          g.fillStyle = hexA(PASTEL.stoneHi, 0.45); g.fillRect(x, 0, 6, fh);
-          g.fillStyle = hexA(PASTEL.stoneShade, 0.5); g.fillRect(x + w - 7, 0, 7, fh);
-          const head = g.createLinearGradient(0, 0, 0, 16);
-          head.addColorStop(0, TONES.top.lit); head.addColorStop(1, hexA(TONES.top.lit, 0));
-          g.fillStyle = head; g.fillRect(x, 0, w, 16);
-          erosionOf(g, R, Math.min(34, fh * 0.3), fh);
-          g.restore();
-          g.fillStyle = 'rgba(46, 34, 62, 0.26)';
-          g.fillRect(side < 0 ? x - 4 : x + w, 0, 4, fh);
-          continue;
-        }
-        if (S.slab) {
-          /*
-           * A marble gate hangs between two piers as wide as what is left of
-           * the wall either side of it, which stand over the wall they end
-           * (see `Masonry.piers`): blocks of the dove grey the pier's whole
-           * width, the odd course of two, and a cap with its top weathered
-           * pale.
-           */
-          const x0 = side < 0 ? -2 : line - OVER, x1 = side < 0 ? line + OVER : TW + 2;
-          const n = Math.max(2, Math.round((fh - COPE) / 58)), qh = (fh + 6 - COPE) / n;
-          for (let k = 0; k < n; k++) {
-            const y = COPE + k * qh + MORTAR / 2;
-            if (k % 2) {
-              const mid = x0 + (x1 - x0) * (0.42 + R() * 0.16);
-              dressing(g, x0, y, mid - x0 - MORTAR / 2, qh - MORTAR, R, dressTone(R));
-              dressing(g, mid + MORTAR / 2, y, x1 - mid - MORTAR / 2, qh - MORTAR, R, dressTone(R));
-            } else dressing(g, x0, y, x1 - x0, qh - MORTAR, R, dressTone(R));
-          }
-          dressing(g, x0, MORTAR / 2, x1 - x0, COPE - MORTAR, R, 'dress');
-          g.fillStyle = '#d6d9e0'; g.fillRect(x0 + 1, MORTAR / 2 + 1, x1 - x0 - 2, 4.5);
-          g.fillStyle = hexA('#969aa6', 0.85); g.fillRect(x0, COPE, x1 - x0, 3);
-          continue;
-        }
-        if (S.master) {
-          // Square and true, in the dressings' stone: stones as deep as the
-          // wall divides into, long and short turn about, and a cap over the lot.
-          const n = Math.max(2, Math.round((fh - COPE) / 52)), qh = (fh + 6 - COPE) / n;
-          for (let k = 0; k < n; k++) {
-            const w = k % 2 ? 40 : 54;
-            dressing(g, side < 0 ? line + OVER - w : line - OVER, COPE + k * qh + MORTAR / 2, w, qh - MORTAR, R, dressTone(R));
-          }
-          dressing(g, side < 0 ? line + OVER - 60 : line - OVER, MORTAR / 2, 60, COPE - MORTAR, R, 'dress');
-          g.fillStyle = 'rgba(40, 32, 62, 0.3)';
-          g.fillRect(side < 0 ? line + OVER - 64 : line - OVER + 60, 0, 4, fh);
-          continue;
-        }
-        let y = fh - 2;
-        while (y > COPE + LEVEL - 4) {
-          const h = 28 + R() * 16, w = 34 + R() * 14;
-          wearOne(g, stone(g, side < 0 ? line + OVER - w : line - OVER, y - h, w, h, R, pickDressed(R), 'laid', (R() - 0.5) * 0.02), R);
-          y -= h + MORTAR + R() * 2;
-        }
-        wearOne(g, stone(g, side < 0 ? line + OVER - 52 : line - OVER, MORTAR / 2, 52, COPE + LEVEL - MORTAR, R, 'dress', 'laid', (R() - 0.5) * 0.015), R);
-        // A pier stands proud of the wall it interrupts, so it throws a line
-        // of shadow down the field side of itself. Without one it is a paler
-        // patch of the same wall in the same plane, and the step up at the
-        // gateway reads as the wall changing height for no reason.
-        g.fillStyle = 'rgba(96, 86, 66, 0.3)';
-        g.fillRect(side < 0 ? line + OVER - 56 : line - OVER + 52, 0, 4, fh);
+        LAY.gatePier?.(g, R, side, line, fh);
       }
       g.globalAlpha = 1;
       g.fillStyle = '#000';
       g.globalCompositeOperation = 'destination-out';
       g.fillRect(gx0, -PROUD, gx1 - gx0, fh + PROUD);
       g.globalCompositeOperation = 'source-over';
-      if (S.lay === 'gild') {
-        // A pier either side of the way through, as wide as the wall between
-        // the gap and the pilaster at the end, so no sliver of a panel is left
-        // standing between them; the cap moulding run on over it, cut to the wall.
-        const sole = fh - LOW_FOOT;
-        g.save();
-        g.beginPath(); g.rect(0, -PROUD, gx0, fh + PROUD); g.rect(gx1, -PROUD, TW - gx1, fh + PROUD); g.clip();
-        pilaster(g, R, (PIL / 2 + gx0) / 2, 22, sole, gx0 - PIL / 2); pilaster(g, R, (gx1 + TW - PIL / 2) / 2, 22, sole, TW - PIL / 2 - gx1);
-        slab(g, -8, 0, TW + 8, 22, PASTEL.dress, 5);
-        g.restore();
-      }
-      if (S.lay === 'plank') {
-        // A squared post either side of the way through, the boards run into
-        // it and the cap and the rail run on over it, cut to the wall.
-        const sole = fh - LOW_FOOT;
-        g.save();
-        g.beginPath(); g.rect(0, -PROUD, gx0, fh + PROUD); g.rect(gx1, -PROUD, TW - gx1, fh + PROUD); g.clip();
-        for (const [a, b] of [[gx0 - 38, gx0], [gx1, gx1 + 38]]) { proud(g, a, 0, b, sole); member(g, a, 0, b, sole, R); }
-        member(g, -6, 0, TW + 6, 20, rand(2543), true);
-        member(g, -6, sole - SKIRT, TW + 6, sole, rand(2531), true);
-        g.restore();
-      }
-      if (S.lay === 'log') {
-        // A post of round log either side of the way through, the logs of the
-        // wall run into it, standing on the footing -- after the gap is cut,
-        // and cut to the wall, so the shade it throws falls on the logs and
-        // not across the gateway.
-        const sole = fh - LOW_FOOT;
-        g.save();
-        g.beginPath(); g.rect(0, -PROUD, gx0, fh + PROUD); g.rect(gx1, -PROUD, TW - gx1, fh + PROUD); g.clip();
-        logPost(g, gx0 - 40, gx0, 0, sole, R);
-        logPost(g, gx1, gx1 + 40, 0, sole, R);
-        g.restore();
-      }
-      if (S.lay === 'frame') {
-        // A gate post either side of the way through, from the rail down to
-        // the sole and out to the fence's own end post -- after the gap is
-        // cut, so its edge on the gateway keeps its ink. A bay of limewash a
-        // hand wide between the two posts was a daub panel nobody would
-        // build, and a pale slit down every gate post; and a post of its own
-        // beside the end post was a doubled post.
-        g.save();
-        g.beginPath(); g.rect(0, -PROUD, gx0, fh + PROUD); g.rect(gx1, -PROUD, TW - gx1, fh + PROUD); g.clip();
-        const e = POST / 2, sole = fh - LOW_FOOT;
-        // Cut from the same oak as the fence's own end post, laid from the
-        // same seed, so the two read as one post where they meet at the seam.
-        for (const [a, b] of [[-e, gx0], [gx1, TW + e]]) member(g, a, 0, b, sole, rand(1759));
-        // And the sole and the rail run on over them, as over every post of the fence.
-        member(g, -6, sole - SOLE, TW + 6, sole, rand(1763), true);
-        frameCope(g);
-        g.restore();
-      }
+      LAY.gateAfter?.(g, R, fh, gx0, gx1);
       return c;
     });
     /**
@@ -7461,14 +7810,7 @@ function paint(S: Stock): Masonry {
       g.translate(0, PROUD);
       for (const side of [-1, 1]) {
         const x = side < 0 ? gx0 + OVER - 52 : gx1 - OVER;
-        if (S.lay === 'render') {
-          // The top of a mud pier, rounded over and paler for facing the sky.
-          g.beginPath(); softRect(g, x, 2, 52, CAP_H - 4, 12);
-          g.fillStyle = lighten(TONES.top.lit, 3); g.fill();
-          g.strokeStyle = hexA(PASTEL.line, 0.4); g.lineWidth = 1; g.stroke();
-          continue;
-        }
-        wearOne(g, stone(g, x, 2, 52, CAP_H - 4, R, 'dress', 'laid', (R() - 0.5) * 0.02, 1.2, false), R);
+        LAY.gateCapPier(g, R, x);
       }
       // Last, not first. The pier stones overhang into the gap the way every
       // other dressed stone in this file does, and cutting before drawing
@@ -7499,20 +7841,9 @@ function paint(S: Stock): Masonry {
         return x > gx0 + OVER && x < gx1 - OVER ? 0 : pillowRise(p, x);
       });
     });
-    const post = S.lay === 'frame' ? { img: cornerPost(fh - LOW_FOOT, []), foot: LOW_FOOT }
-      : S.lay === 'log' ? { img: logCorner(fh - LOW_FOOT, lowLogCount(fh), true), alt: logCorner(fh - LOW_FOOT, lowLogCount(fh), false), foot: LOW_FOOT }
-        : S.lay === 'plank' ? { img: plankCorner(fh - LOW_FOOT), foot: LOW_FOOT }
-          : S.lay === 'gild' ? { img: silverCorner(fh - LOW_FOOT), foot: LOW_FOOT }
-            : undefined;
+    const post = LAY.lowPost?.(fh);
     /** The cope stone over a corner or a junction (`Low.corner`), laid across the run's thickness as the cap's are. */
-    const corner = S.lay === 'bond' || S.lay === 'rubble' ? (() => {
-      const CW = Math.round(2 * WALL_THICK * 1.25 * TW), c = cnv(CW, CAP_H + PROUD), g = ctxOf(c), R = rand(331);
-      g.translate(0, PROUD);
-      g.fillStyle = PASTEL.joint; g.fillRect(0, 0, CW, CAP_H);
-      if (S.lay === 'bond') void stone(g, MORTAR / 2, MORTAR / 2, CW - MORTAR, CAP_H - MORTAR, R, 'dress', 'unit', 0, 1.2, false);
-      else void stone(g, MORTAR / 2, MORTAR / 2, CW - MORTAR, CAP_H - MORTAR, R, '', 'laid', (R() - 0.5) * 0.1, 1.05, false);
-      return c;
-    })() : undefined;
+    const corner = LAY.lowCorner?.();
     const made: Low = { face, gate, cap, gateCap, ends, h: fh, proud: PROUD, crest, gateCrest, post, corner };
     LOWS.set(k, made);
     return made;
@@ -7774,6 +8105,33 @@ function paint(S: Stock): Masonry {
     return out;
   };
 
+  /* ---- the set --------------------------------------------------------------- */
+  const FACE = facePictures();
+  const ARCHED = archPictures();
+  const ARCH_IVY = archIvyPictures();
+  const ARCH_WEED = archWeedPictures();
+  const WINDOWED = windowPictures();
+  const WIN_IVY = winIvyPictures();
+  const WIN_WEED = winWeedPictures();
+  const BAYED = bayPictures();
+  const DOORED = doorPictures();
+  const GATED = gatePictures();
+  const DOOR_IVY = doorIvyPictures();
+  const DOOR_WEED = doorWeedPictures();
+  const GATE_IVY = gateIvyPictures();
+  const GATE_WEED = gateWeedPictures();
+  const SPILL = spillPictures();
+  const BASE = basePictures();
+  const FOOT = footPictures();
+  const CREST = LAY.crest?.();
+  const BROW = LAY.brow?.();
+  const LOSSES = LAY.losses?.();
+  const VIGAS = LOSSES && LAY.vigas?.(LOSSES);
+  const CAP_STONE = capPicture();
+  const CORNER_STONE = LAY.corner?.();
+  const ENDS = endsPicture();
+  const ENDS_FOOT = LAY.endsFoot ? endsFootPicture(ENDS) : undefined;
+
   return {
     face: FACE,
     arch: ARCHED,
@@ -7789,20 +8147,20 @@ function paint(S: Stock): Masonry {
     gateIvy: GATE_IVY,
     gateWeed: GATE_WEED,
     bay: BAYED,
-    quoinL: S.lay === 'bond' ? quoins(-1) : undefined,
-    quoinR: S.lay === 'bond' ? quoins(1) : undefined,
+    quoinL: LAY.quoins?.(-1),
+    quoinR: LAY.quoins?.(1),
     vigas: VIGAS,
     brow: BROW,
     crest: CREST,
     losses: LOSSES,
-    soft: S.lay === 'render',
+    soft: !!LAY.soft,
     shadow: S.shadow,
     top: TONES.top && { lit: channels(TONES.top.lit), hi: channels(TONES.top.hi), shade: channels(TONES.top.shade) },
-    wrap: S.lay === 'render' || S.lay === 'frame' || S.lay === 'log' || S.lay === 'plank' || S.lay === 'gild',
-    scatter: S.lay === 'render' || S.lay === 'frame' || S.lay === 'log' || S.lay === 'plank' || S.lay === 'gild' || !!S.slab,
+    wrap: !!LAY.wrap,
+    scatter: !!LAY.scatter,
     hi: channels(PASTEL.stoneHi),
-    low,
-    piers: S.slab ? 0.1 : undefined,
+    low: (k) => low(k),
+    piers: LAY.piers,
     spill: SPILL,
     base: BASE,
     foot: FOOT,
@@ -7810,29 +8168,23 @@ function paint(S: Stock): Masonry {
     corner: CORNER_STONE,
     ends: ENDS,
     endsFoot: ENDS_FOOT,
-    gleam: S.lay === 'gild' ? gleamOf : undefined,
-    handed: S.lay === 'frame' || S.lay === 'log' || S.lay === 'plank' || S.lay === 'gild',
-    post: S.lay === 'frame' ? { img: cornerPost(TH, [PLATE / 2 + 1]), reach: POST / 2, free: true }
-      : S.lay === 'log' ? { img: logCorner(TH, LOGS, true), alt: logCorner(TH, LOGS, false), reach: 28, free: false }
-        : S.lay === 'plank' ? { img: plankCorner(TH), reach: BATTEN / 2, free: true }
-          : S.lay === 'gild' ? { img: silverCorner(TH), reach: PIL / 2, free: true }
-            : undefined,
+    gleam: LAY.gleam ? (img) => gleamOf(img) : undefined,
+    handed: !!LAY.handed,
+    post: LAY.post?.(),
     reveal: channels(PASTEL.reveal),
     line: channels(PASTEL.line),
     beam: channels(PASTEL.beam),
     beamLine: channels(PASTEL.beamLine),
     w: TW,
     h: TH,
-    head: S.lay === 'frame' ? PLATE : S.lay === 'log' ? 0 : S.lay === 'plank' ? HEAD_BAND : S.lay === 'gild' ? FRIEZE : BAND,
+    head: LAY.head,
     plinth: S.plinth,
     shade: S.shade,
     growth: S.growth,
-    // Stained glass is seen through, so nothing is laid under its picture: what shows through it is what stands behind the wall.
-    under: S.stained ? undefined : S.lay === 'render' || S.lay === 'log' ? channels(PASTEL.stone) : S.lay === 'frame' || S.lay === 'plank' || S.lay === 'gild' ? channels(PASTEL.dress)
-      : S.slab ? channels(PASTEL.slabJoint) : S.grain || S.master ? channels(PASTEL.joint) : undefined,
+    under: LAY.under?.(),
     pad: PAD,
     capH: CAP_H,
-    pave,
+    pave: () => pave(),
     paveN: PAVE_N,
     neutral: NEUTRAL,
     tells: VARIANTS.map((v) => v.tells),
