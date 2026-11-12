@@ -16,8 +16,10 @@ import { WALK } from './clips/walk';
 import { SWING } from './clips/swing';
 import { SIXSEVEN } from './clips/sixseven';
 import { WORK } from './clips/work';
+import { HANDS } from './clips/hands';
 import { mirrorClip } from './author';
 import { ACTION_BY_ID } from '../../game/actions';
+import { RECIPE_BY_ID } from '../../game/recipes';
 import { strideAt } from '../../game/player';
 import { WEAPON_BY_ID } from '../../game/gear';
 import { UNITS_PER_TILE } from '../../render/iso';
@@ -30,7 +32,7 @@ import { UNITS_PER_TILE } from '../../render/iso';
  */
 export type State = 'idle' | 'walk' | 'swing' | 'work' | 'fight' | 'meditate' | 'emote' | 'cast';
 /** Every clip, by name (the authoring tools find a clip here, `tools/sculpt/lowanim.mjs --clip <name>`). */
-export const CLIPS: Record<string, Clip> = { idle: IDLE, walk: WALK, swing: SWING, sixseven: SIXSEVEN, work: WORK, 'work-left': mirrorClip(WORK, 'work-left') };
+export const CLIPS: Record<string, Clip> = { idle: IDLE, walk: WALK, swing: SWING, sixseven: SIXSEVEN, work: WORK, 'work-left': mirrorClip(WORK, 'work-left'), hands: HANDS };
 /** The clip a state plays until its own is approved: the 6 7 gesture. */
 export const PLACEHOLDER = 'sixseven';
 /**
@@ -60,19 +62,40 @@ export const CLIP_OF_TOOL: Readonly<Record<string, string>> = {
   awl: 'work', carving_knife: 'work', trowel: 'work', file: 'work', whetstone: 'work',
 };
 /**
- * The same by the job, for a job whose tool is chosen each go (`ActionDef.toolFor`) or is a list (improving: the
- * material's tools): planning (the mallet), building a wall, a floor or a column (the mallet or the trowel, by material),
- * and improving (a file, a whetstone, a carving knife, an awl, a chisel or a needle).
+ * The clip a job in the `work` state plays, by the job (its action's id), before its tool (`CLIP_OF_TOOL`):
+ * - the strike (`work`) for a job whose tool is chosen each go (`ActionDef.toolFor`) or is a list (improving: the
+ *   material's tools): planning (the mallet), building a wall, a floor or a column (the mallet or the trowel, by material),
+ *   and improving (a file, a whetstone, a carving knife, an awl, a chisel or a needle);
+ * - the work with the hands and no tool at waist height (`hands`) for the jobs below, and for every recipe made with no
+ *   tool that is not cooked at a campfire (`handsRecipe`).
+ * A later clip for a family of jobs adds its rows.
  */
 export const CLIP_OF_JOB: Readonly<Record<string, string>> = Object.fromEntries([
-  'plan_building', 'add_to_building', 'plan_wall', 'plan_fence', 'plan_floor', 'plan_column',
-  'build_wall', 'change_wall', 'add_floor', 'build_floor', 'build_column', 'improve_item',
-].map((job) => [job, 'work']));
-/** The clip a job in the `work` state plays (`CLIP_OF_JOB`, then `CLIP_OF_TOOL`, then the state's own). */
+  ...[
+    'plan_building', 'add_to_building', 'plan_wall', 'plan_fence', 'plan_floor', 'plan_column',
+    'build_wall', 'change_wall', 'add_floor', 'build_floor', 'build_column', 'improve_item',
+  ].map((job) => [job, 'work']),
+  ...[
+    // an item in hand
+    'repair_item', 'patch_item', 'mend_kit', 'seal_item', 'sign_item', 'dye_item', 'make_dye_recipe', 'boil_dye_recipe', 'strip_dye',
+    'enchant', 'absorb_soul', 'hone_whetstone', 'open_seed_jar', 'open_ferment', 'serve_dish', 'quench_item', 'draw_map', 'copy_map',
+    'use_bronze_mirror', 'use_ancient_file', 'use_ancient_lamp', 'use_ancient_pot',
+    // a vessel filled or emptied, a waist-high smelter, kiln, oven, barrel, crate or piece of furniture
+    'fill_bucket', 'fill_skin', 'pour_into_barrel', 'empty_vessel',
+    'fuel_smelter', 'light_smelter', 'damp_smelter', 'pour_ingot', 'smelter_take_all', 'fuel_kiln', 'light_kiln', 'damp_kiln', 'kiln_take_all',
+    'fuel_oven', 'light_oven', 'put_out_oven', 'furniture_take_all', 'crate_take_all', 'start_brew', 'set_brew_spring',
+  ].map((job) => [job, 'hands']),
+]);
+/** Whether a job is a recipe made with no tool and not at a campfire (cooking there is done crouched at the fire). */
+const handsRecipe = (job: string): boolean => {
+  const r = RECIPE_BY_ID.get(job);
+  return !!r && !r.tool && !ACTION_BY_ID.get(job)?.tool && r.station !== 'campfire';
+};
+/** The clip a job in the `work` state plays (`CLIP_OF_JOB`, then `CLIP_OF_TOOL`, then `handsRecipe`, then the state's own). */
 export function workClipOf(job: string | undefined): string {
   if (!job) return CLIP_OF.work;
   const tool = ACTION_BY_ID.get(job)?.tool;
-  return CLIP_OF_JOB[job] ?? (tool !== undefined ? CLIP_OF_TOOL[tool] : undefined) ?? CLIP_OF.work;
+  return CLIP_OF_JOB[job] ?? (tool !== undefined ? CLIP_OF_TOOL[tool] : undefined) ?? (handsRecipe(job) ? 'hands' : CLIP_OF.work);
 }
 /**
  * The clips played left-handed (`lefty`), by the right-handed clip's name: its mirror. The flat figure works left-handed
