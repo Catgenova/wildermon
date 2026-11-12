@@ -120,10 +120,14 @@ const FADE = 0.2;
  * the two clips stand them (`plantBetween`): getting down onto the knees at the ground and up off them.
  */
 const SETTLE: Readonly<Record<string, number>> = { ground: 0.55 };
+/** Seconds after a long fade lands over which the clip's own motion is let go into from rest. */
+const RELEASE = 0.25;
 /** The legs' bones, which a long fade keeps on its own pace (the root's too); the rest lead or trail them. */
 const LEGS = /^(thigh|calf|foot|ball)_[lr]$/;
 /** Smoothstep, clamped. */
 const smooth = (u: number): number => { const x = Math.min(1, Math.max(0, u)); return x * x * (3 - 2 * x); };
+/** Smootherstep, clamped: at rest at both ends, its pace easing to nothing too (a long fade's arrival). */
+const smoother = (u: number): number => { const x = Math.min(1, Math.max(0, u)); return x * x * x * (x * (6 * x - 15) + 10); };
 
 /** The state a pose is in, of those a clip can play. */
 export function stateOf(pose: FigurePose): State | undefined {
@@ -205,20 +209,26 @@ export function animate(sk: Skeleton, pose: FigurePose, figure: () => Array<M3 |
   if (KEPT.size > MAX_KEPT) KEPT.delete(KEPT.keys().next().value as string);
   let out = now;
   if (k.from) {
-    const u = (ms - k.at) / 1000 / (k.span ?? FADE), w = smooth(u);
-    if (u >= 1) k.from = null;
-    else {
-      out = blendLocal(k.from, now, w);
-      // a long fade (getting down or up): the trunk, the head and the arms ahead of the legs going down (bowed to the
-      // ground as the knees bend) and behind them coming up (the legs straightened under the bowed trunk first); the feet
-      // kept where the two clips stand them, the legs bent to reach
-      const plant = (k.span ?? FADE) > FADE && k.was && c ? plantBetween(sk, k.was, c, w) : undefined;
-      if (plant) {
-        const top = blendLocal(k.from, now, k.source in SETTLE ? smooth(u * 1.5) : smooth(u * 1.5 - 0.5));
-        const local = out.local.map((m, i) => (LEGS.test(sk.bones[i]?.name ?? '') ? m : top.local[i]));
-        out = sk.finish({ q: local.map((m) => m && quat(m)), move: out.move }, { plant, armsOut: -3 });
+    const span = k.span ?? FADE, u = (ms - k.at) / 1000 / span, settle = span > FADE && !!k.was && !!c && !!plantBetween(sk, k.was, c, 0);
+    if (u >= 1 + (settle ? RELEASE / span : 0)) k.from = null;
+    else if (settle && k.was && c) {
+      // a long fade (getting down or up): toward the pose the clip is at as the fade lands, held still meanwhile, then let
+      // go into the clip's own motion from rest (never a motion against the fade's); the trunk, the head and the arms ahead
+      // of the legs going down (bowed to the ground as the knees bend) and behind them coming up (the legs straightened
+      // under the bowed trunk first); the feet kept where the two clips stand them, the legs bent to reach
+      const rem = (1 - u) * span, ahead = stateOf(pose) === 'walk' ? c : clipFor({ ...pose, phase: pose.phase + rem * 6, ...(pose.act ? { act: { ...pose.act, t: pose.act.t + rem } } : {}) }, sk.body) ?? c;
+      const goal = ahead === c ? now : clipLocal(sk, ahead.clip, ahead.t, ahead.clip.grip ? held : undefined);
+      let local: Array<M3 | undefined>, move: V, plant;
+      if (u < 1) {
+        const w = smoother(u), legs = blendLocal(k.from, goal, w), top = blendLocal(k.from, goal, smoother(k.source in SETTLE ? u * 1.5 : u * 1.5 - 0.5));
+        local = legs.local.map((m, i) => (LEGS.test(sk.bones[i]?.name ?? '') ? m : top.local[i]));
+        move = legs.move; plant = plantBetween(sk, k.was, ahead, w);
+      } else {
+        const v = smoother(((u - 1) * span) / RELEASE), b = blendLocal(goal, now, v);
+        local = b.local; move = b.move; plant = plantBetween(sk, ahead, c, v);
       }
-    }
+      out = sk.finish({ q: local.map((m) => m && quat(m)), move }, { plant, armsOut: -3 });
+    } else out = blendLocal(k.from, now, smooth(u));
   }
   k.out = out;
   return out;
