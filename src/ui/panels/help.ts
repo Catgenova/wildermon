@@ -2867,12 +2867,16 @@ export function helpText(): string {
       <li>Opened by <b>Improve and repair…</b> on an item's menu, or the UI Menu. <b>Held equipment</b>: worn, or improvable, loose in the pack (not in a bag).</li>
       <li><b>Repair</b>: each piece's QL, damage, and actions, time and QL cost of a full repair (at repair ${startOf('repair')}: −${+repairGo(startOf('repair')).healed.toFixed(2)} damage an action,
       QL −${+repairGo(startOf('repair')).cost.toFixed(4)} a damage point). <b>Repair all</b>: every damaged piece Repair takes, most damaged first, one after another.</li>
+      <li><b>Each row</b>: Repair, Hone, <b>Improve</b> (one pass, as on the item's menu; greyed with Improve's refusal). Improve also chooses the row.</li>
+      <li><b>Choose several</b>: Ctrl/⌘-click a name (add or take off), Shift-click (a run of rows), or ✓ on the row; Enter or Space on a name. Improve and Cycles then cover every chosen piece.</li>
       <li><b>${itemDef(WHETSTONE).name}</b>: an item each, all damage off, QL kept, used up. <b>Hone all</b>: the most damaged pieces, a whetstone each, while whetstones are held.</li>
       <li><b>Improve</b>, one item: QL and max QL, tools held, each stock kind (carried, in stores within reach), every pass the chosen kind allows (QL if passed, chance,
       stock left), time an action.</li>
       <li><b>Cycles</b>: Improve × up to ${JOB_GOES_MOST}, held to one stock kind. Failed pass: +${IMPROVE_FAIL_LEAST} to ${IMPROVE_FAIL_LEAST + IMPROVE_FAIL_SPREAD} damage;
       over ${IMPROVE_DAMAGE}: a full Repair, then the rest. A repair is not a cycle. Stops at the first of: the count, out of the chosen kind (no other kind used),
       the target QL, max QL.</li>
+      <li><b>Cycles, several pieces</b>: in the rows' order, each held to the kind chosen for its material where it takes it (else its first kind), sharing stock;
+      one job in the action queue a piece (over ${IMPROVE_DAMAGE} damage: a full Repair, then the run). Pieces past the action queue's room (${BASE_QUEUE}, one more per ${QUEUE_PER_MIND} mind logic) are not queued.</li>
     </ul>
     <h3>Ashes, lye and tanning</h3>
     <ul>

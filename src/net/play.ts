@@ -297,7 +297,7 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
     lastTarget = target;
     // gates: a solid wall asked for as a hidden door goes in the one call that keeps the ask with its plan (`gates.ts`).
     // A fight asked for without a count goes on until it is over or out of reach, as it does here.
-    void island.act(def.id, target as unknown as Record<string, unknown>, goes ?? (isFightJob(def.id) ? FIGHT_BACK_GOES : 1), hiddenAsk(target));
+    return island.act(def.id, target as unknown as Record<string, unknown>, goes ?? (isFightJob(def.id) ? FIGHT_BACK_GOES : 1), hiddenAsk(target));
   };
   /*
    * Many things into a store or out of one, a few dozen to an ask (`Island.actMany`). With a job in hand the

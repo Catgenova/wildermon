@@ -5509,7 +5509,9 @@ export class Game {
    * the game from a thing that does into a thing that asks — one seam rather
    * than a second copy of every action.
    */
-  ask: ((def: ActionDef, target: Target, goes?: number) => void) | null = null;
+  ask: ((def: ActionDef, target: Target, goes?: number) => void | Promise<unknown>) | null = null;
+  /** The answer to the last ask sent by `ask`, while `requestInTurn` waits on it. */
+  private askSent: Promise<unknown> | null = null;
   /**
    * Many things put in a store or taken out of one, asked of the island in one ask a few dozen at a time
    * (`rpc_act_many`); set by `play.ts`. False when the job is not one it takes: asked one at a time, as ever.
@@ -5772,7 +5774,7 @@ export class Game {
         this.events.emit('action');
         return;
       }
-      this.ask(def, target, goes);
+      this.askSent = this.ask(def, target, goes) ?? null;
       return;
     }
     /*
@@ -5843,6 +5845,24 @@ export class Game {
       return;
     }
     this.startAction(def, target, goes);
+  }
+
+  /**
+   * Several jobs asked for in turn, each once the island has answered the one
+   * before (`ask`), so they line up in the order given rather than the order
+   * their calls happen to land in. Stops at the first refused: refused here,
+   * or neither started nor queued by the island.
+   */
+  async requestInTurn(asks: ReadonlyArray<{ def: ActionDef; target: Target; goes?: number }>): Promise<void> {
+    for (const { def, target, goes } of asks) {
+      this.askSent = null;
+      this.requestAction(def, target, goes);
+      const sent = this.askSent;
+      this.askSent = null;
+      if (!sent) return;
+      const said = (await sent) as { started?: boolean; queued?: boolean } | undefined;
+      if (said && typeof said === 'object' && !said.started && !said.queued) return;
+    }
   }
 
   /**

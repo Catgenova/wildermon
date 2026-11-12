@@ -9797,7 +9797,26 @@ img:is(.rc-plate, .rc-niche, .ui-frame, .ui-frame-edge):not([src]) {
 
 .mend-num { text-align: right; }
 .mend-pick { cursor: pointer; text-decoration: underline dotted; }
+.mend-pick:focus-visible { outline: 1px solid var(--ui-accent); outline-offset: -1px; }
 .mend-chosen td { background: color-mix(in srgb, var(--ui-accent) 14%, transparent); }
+.mend-chosen td.mend-name { font-weight: 600; }
+/* The box a row is chosen by: a thumb's Ctrl-click. */
+.mend-table td.mend-tick { width: 1px; padding: 0 2px 0 4px; }
+.mend-tick input { margin: 0; width: 16px; height: 16px; vertical-align: middle; cursor: pointer; }
+.mend-count { font-weight: 600; }
+.mend-count .mend-row { font-weight: normal; padding: 0; }
+/* A piece the action queue has no room for. */
+.mend-left td { opacity: 0.55; }
+/* A narrow window: the cost and the row's buttons wrap rather than run off its side. */
+.mend-table td.mend-cost { white-space: normal; min-width: 5em; }
+.mend-table td.mend-acts { white-space: normal; min-width: 7.5em; text-align: right; line-height: 1.9; }
+.mend-part { white-space: nowrap; }
+/* A table of the pieces chosen: its words wrap in a narrow window. */
+.mend-each td { white-space: normal; }
+.mend-each td.mend-num { white-space: nowrap; }
+.mend-each td.mend-name { width: auto; min-width: 5em; }
+.mend-acts .tb-btn { margin: 0 0 0 3px; padding-left: 6px; padding-right: 6px; }
+.mend-wide { overflow-x: auto; min-width: 0; }
 
 .mend-passes {
   max-height: 180px;
@@ -9828,7 +9847,7 @@ img:is(.rc-plate, .rc-niche, .ui-frame, .ui-frame-edge):not([src]) {
 
 /* A phone: the table scrolls sideways inside the window, never the page. */
 @media (max-width: 520px) {
-  .mend-repair { overflow-x: auto; }
+  .mend-tick input { width: 22px; height: 22px; }
 }
 
 /* ---- A phone ------------------------------------------------------------- */
