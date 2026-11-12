@@ -97,6 +97,7 @@ export function mirrorClip(c: Clip, name: string): Clip {
         ...(f.tracks ? { tracks: mirrorTracks(f.tracks) } : {}),
         ...(f.scale ? { scale: Object.fromEntries(Object.entries(f.scale).map(([b, k]) => [otherSide(b), k])) } : {}),
         ...(f.move !== undefined ? { move: f.move } : {}),
+        ...(f.grip ? { grip: swapSides(f.grip) } : {}),
         ...(f.hands ? { hands: Object.fromEntries(Object.entries(f.hands).map(([s, d]) => [s === 'l' ? 'r' : 'l', d && [-d[0], d[1], d[2]]])) } : {}),
       }])),
     } : {}),

@@ -154,9 +154,13 @@ export function heldIn(pose: FigurePose): string | undefined {
   return c?.clip.grip && pose.job === FIGHT ? pose.gear?.weapon?.id : undefined;
 }
 
-/** The tools a pose's clip draws in its hands (`Clip.tools`), by the side: none for a clip that holds none. */
-export function toolsIn(pose: FigurePose): Clip['tools'] {
-  return clipFor(pose)?.clip.tools;
+/**
+ * The tools a pose's clip draws in its hands (`Clip.tools`), by the side, and how far up its handle each is held on the
+ * body (`Correction.grip`): none for a clip that holds none.
+ */
+export function toolsIn(pose: FigurePose, body: 'man' | 'woman' = pose.look?.gender === 'woman' ? 'woman' : 'man'): { tools: NonNullable<Clip['tools']>; up: Partial<Record<'l' | 'r', number>> } | undefined {
+  const c = clipFor(pose, body)?.clip;
+  return c?.tools ? { tools: c.tools, up: c.bodies?.[body]?.grip ?? {} } : undefined;
 }
 
 /** A share of a loop for a body, from its id, so bodies stood together do not breathe as one. */

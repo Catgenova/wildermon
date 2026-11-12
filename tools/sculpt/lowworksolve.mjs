@@ -39,7 +39,7 @@ function measure(body, sk, local, move) {
   const F = sk.fk(local, move), mal = T.lowToolHeld(body, 'mallet'), chi = T.lowToolHeld(body, 'chisel');
   const gr = sk.gripOf(F, mal)[1], gl = sk.gripOf(F, chi)[0];
   const top = add(gl.at, mv(gl.R, scl(sub(CHI.contact, CHI.grip.lead), 1 / chi.scale)));
-  const face = add(gr.at, mv(gr.R, scl(sub(MAL.contact, MAL.grip.lead), 1 / mal.scale)));
+  const up = WORK.bodies?.[body]?.grip?.r ?? 0, face = add(gr.at, mv(gr.R, scl(sub(MAL.contact, [MAL.grip.lead[0], MAL.grip.lead[1] + up, MAL.grip.lead[2]]), 1 / mal.scale)));
   return { face, top, x: col(gr.R, 0), y: col(gr.R, 1), chisel: col(gl.R, 1), fist: gr.at, left: gl.at, elbow: F[sk.at.get('lowerarm_r')].P, shoulder: F[sk.at.get('upperarm_r')].P };
 }
 const BONES = [['upperarm_r', 0], ['upperarm_r', 1], ['upperarm_r', 2], ['lowerarm_r', 0], ['hand_r', 0], ['hand_r', 1], ['hand_r', 2]];
@@ -67,7 +67,10 @@ function solveKey(body, k, prev) {
     else if (prev) for (const [b, j] of BONES) near += 0.5 * (arm[b][j] - prev[b][j]) ** 2;
     const de = poleOff(m);
     const wo = want.contact ? 1 : 0.8;
-    return 2e-4 * near + 3000 * d * d + 2 * de + wo * (1.2 * (1 - dot(m.x, unit(want.face))) + 0.6 * (1 - dot(m.y, unit(want.way)))) + 1.5e-4 * (hd[0] * hd[0] + hd[2] * hd[2] + 0.03 * hd[1] * hd[1]);
+    // the upper arm's forward raise kept under the shawl's knee (its front cape lifts fast past 40 degrees of it, turning
+    // its underside out) at the keys by the work
+    const lift = /^(rest|impact|smear|over)$/.test(k) ? 0.003 * Math.max(0, arm.upperarm_r[0] - 30) ** 2 : 0;
+    return lift + 2e-4 * near + 3000 * d * d + 2 * de + wo * (1.2 * (1 - dot(m.x, unit(want.face))) + 0.6 * (1 - dot(m.y, unit(want.way)))) + 1.5e-4 * (hd[0] * hd[0] + hd[2] * hd[2] + 0.03 * hd[1] * hd[1]);
   };
   const starts = (body === 'woman' ? [W.ARMS[k] ?? prev] : [...(prev ? [prev] : []), W.ARMS[k] ?? prev, { upperarm_r: [40, 0, 30], lowerarm_r: [80, 0, 0], hand_r: [0, 0, 0] }, { upperarm_r: [70, -40, 60], lowerarm_r: [110, 0, 0], hand_r: [0, 60, 0] }, { upperarm_r: [20, 40, 40], lowerarm_r: [120, 0, 0], hand_r: [0, -60, 0] }, { upperarm_r: [100, 0, 50], lowerarm_r: [130, 0, 0], hand_r: [0, 0, 0] }, { upperarm_r: [-20, 0, -75], lowerarm_r: [135, 0, 0], hand_r: [0, 0, 0] }, { upperarm_r: [20, 0, -60], lowerarm_r: [120, 0, 0], hand_r: [0, 0, 0] }]).filter(Boolean);
   let best = null;

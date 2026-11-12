@@ -52,6 +52,11 @@ export interface Correction {
   feet?: { in?: number; lift?: number; stride?: number };
   /** The reached hands' places moved for this body (`Clip.hands`), body heights across, up and forward: a shorter reach brought in. */
   hands?: Partial<Record<Side, Euler>>;
+  /**
+   * How far up its handle each hand's tool is held (`Clip.tools`), the game's units toward its head from where its grip
+   * says (`grip.lead`): a body that holds a long tool shorter (choked up), its contact that much nearer the fist.
+   */
+  grip?: Partial<Record<Side, number>>;
 }
 
 /** Both hands on one handle: see `Clip.grip`. */
