@@ -7,7 +7,7 @@
  * browser does not know — which is exactly how the bug below happened.
  */
 import { RARITIES, type Item } from '../game/items';
-import type { ItemRow } from './island';
+import type { ItemRow } from '../contract/rows';
 
 /** As much of an island as this needs: what its clock says about a stamp. */
 export interface Aged {

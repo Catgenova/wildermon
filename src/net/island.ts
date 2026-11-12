@@ -18,12 +18,12 @@ import type { IslandCreature } from '../game/creatures';
 import type { IslandSpring } from '../game/springs';
 import type { BredRecord } from '../game/boards';
 import { cleanLook, type Look } from '../game/look';
-import type { IslandCrate, IslandGround } from '../game/game';
+import type { IslandCrate, IslandGround } from '../contract/ground';
+import type { ItemRow, PlayerRow, WorldRow } from '../contract/rows';
 import { TALK_LOG } from '../game/events';
 import type { DeedRole, PowerId, RankDef } from '../game/ranks';
 import type { StoreLogEntry } from '../game/stores';
 import type { DeedWatch } from '../game/visitors';
-import type { Mark } from '../game/items';
 import type { PathBeat, PathSaid } from '../game/meditation';
 import { AWAY_SLOWER, BODY_EVERY, BODY_FRESH, FORAGED_EVERY, SPRINGS_EVERY, SWIRLS_EVERY, GATE_FOLK_EVERY, CHANGE_PAGE, FOG_EVERY, FOUND_MAX, GROUND_EVERY, GROUND_IDLE, GROUND_RANGE, GUIDE_BATCH, GUIDE_EVERY, HEARTBEAT, LAND_NEAR, LAND_STEP, LAND_UNFOGGED_EVERY, MOBS_EVERY, MOBS_RANGE, NEAR_WHOLE_EVERY, RECONCILE_EVERY, REGION, SNAP_GAP } from '../game/keep';
 import type { GuideBook } from '../game/guide';
@@ -362,18 +362,8 @@ export function lineUp(rows: unknown): Lined[] {
   return out;
 }
 
-export interface WorldRow {
-  id: string;
-  name: string;
-  seed: number;
-  size: number;
-  spawn_x: number;
-  spawn_y: number;
-  epoch: string;
-  ready: boolean;
-  /** How far the island has let the land's history go: every change up to this one may be gone. */
-  changes_from?: number;
-}
+/** The island's rows, named here for the modules that have always taken them from here. */
+export type { ItemRow, PlayerRow, WorldRow };
 
 /** One thing a spell left on you, as the beat says it (`blessings_said`): its seconds left and the numbers the island keeps of it. */
 export type HeldSaid = { secs: number } & Record<string, unknown>;
@@ -403,26 +393,6 @@ export function heldOf(raw: unknown, left: (until: string) => number): Record<st
     out[key] = kept;
   }
   return out;
-}
-
-export interface PlayerRow {
-  world_id: string;
-  /** Favour banked, as it stood when last settled; your own row only. */
-  favour?: number;
-  uid: string;
-  name: string;
-  x: number;
-  y: number;
-  level: number;
-  /** Skin, hair, eyes and clothes, as ids out of `look_option`. */
-  look?: unknown;
-  /** What they have on, as `rpc_worn` and the body message say it: see `gearFrom`. */
-  gear?: unknown;
-  act: string | null;
-  act_ends: string | null;
-  /** The tool the job in hand is done with, as the island took it from their pack: see `toolFrom`. */
-  act_tool?: unknown;
-  [key: string]: unknown;
 }
 
 /** What a beat says about you (`IslandHooks.mine`). */
@@ -469,57 +439,6 @@ interface GroundAsk {
   asked: number;
   plain: { p_world: string; p_range: number; p_slow: boolean };
   since: string;
-}
-
-/**
- * A row of the island's `item` table, whole.
- *
- * Named out rather than left to the index signature below, because what this
- * carries is the difference between a thing and the browser's idea of it: the
- * six fields at the top were all that was ever read off one, and the seven
- * under them were dropped on the floor. See `packed` in `play.ts`.
- */
-export interface ItemRow {
-  id: number;
-  def: string;
-  ql: number;
-  dmg: number;
-  count: number;
-  extra: string | null;
-  holder: string;
-  /** Drinks left in a skin, or seconds of candle left as of `lit_at` in a lantern. */
-  charges: number | null;
-  /** Put by: not to be dropped, eaten, or swallowed by a recipe looking for its kind. */
-  locked: boolean;
-  /** Handed out rather than made, and so with nothing in it to better. */
-  issued: boolean;
-  /** 'rare', 'supreme' or 'fantastic'; null for the ordinary run of things. */
-  rare: string | null;
-  /** The colour it has taken, as a `dye_def` id. */
-  dye: string | null;
-  /** Circles of cunning worked into it. */
-  bless: number | null;
-  /** Who made it, for rare work and better. */
-  maker: string | null;
-  /** The piece a casting is of, for a casting; null for everything else. */
-  piece: string | null;
-  /** The wildermon shut in it, for a wildermon crate; null for everything else. */
-  creature?: number | null;
-  /** What its maker's perks put into it: a Carpenter's chest that holds more. Null for most things. */
-  mark?: Mark | null;
-  /** What is enchanted into it from a scroll (`enchant.ts`). Null for most things. */
-  enchant?: Enchant | null;
-  /** The line cut into a memorial stone (`memorial.ts`). Null for everything else. */
-  engraving?: string | null;
-  /** Alight, for the things that burn, and when it was set going. */
-  lit: boolean;
-  lit_at: string | null;
-  /** The bag this is in, when `holder` says 'bag'. */
-  inside: number | null;
-  /** The tile it lies on, when `holder` says 'ground'. */
-  gx: number | null;
-  gy: number | null;
-  [key: string]: unknown;
 }
 
 /**

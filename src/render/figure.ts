@@ -1,4 +1,5 @@
 import { METAL_TONE } from './materials';
+import type { GearLook, GearPiece, GearSlot } from '../contract/gear';
 import { HOPS, emotePose } from '../game/emotes';
 import {
   BUILDS, DEFAULT_LOOK, eyeColour, hairColour, shirtColour, skinColour, trouserColour, type Look,
@@ -6392,18 +6393,7 @@ const TOON_THIN_PX = 2, TOON_FLECK_PX = 0.8;
  */
 
 /** A piece as a body wears it: which thing, how rare, the material it was made of and the colour it was dyed. */
-export interface GearPiece {
-  id: string;
-  rare?: number;
-  /** A material's id: a metal, a wood or a stone. */
-  material?: string;
-  /** The dye's colour, as `#rrggbb`. */
-  dye?: string;
-  /** Enchanted: a sculpted figure's sword drawn with its engraving lit. */
-  enchanted?: boolean;
-}
-export type GearSlot = 'head' | 'chest' | 'arms' | 'legs' | 'feet' | 'weapon' | 'offhand' | 'belt' | 'jewel';
-export type GearLook = Partial<Record<GearSlot, GearPiece>>;
+export type { GearLook, GearPiece, GearSlot } from '../contract/gear';
 /** The order a body is dressed in, inside out. */
 const DRESSED: GearSlot[] = ['legs', 'feet', 'chest', 'arms', 'head', 'belt', 'jewel', 'offhand', 'weapon'];
 /** How much lighter (or darker) cloth and hide are worn in each place: a cap a little lighter than the coat, breeches and shoes darker. */
