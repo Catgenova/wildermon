@@ -168,12 +168,12 @@ const OLD_BUILDS: Record<string, { shoulder: number; waist: number; hip: number 
 };
 /**
  * The twenty haircuts there were, each to the nearest hairstyle there is now:
- * cropped to the shoulders or above to the swept back, longer to the braid,
- * and a tonsure to bald. A haircut there is a mesh for is itself.
+ * a bowl cut or a fringe to the bob, the rest cropped to the shoulders or
+ * above to the swept back, longer to the braid, and a tonsure to bald. A haircut there is a mesh for is itself.
  */
 const OLD_HAIRSTYLES: Record<string, string> = {
   bald: 'bald', tonsure: 'bald',
-  crop: 'swept', short: 'swept', bowl: 'swept', side: 'swept', swept: 'swept', fringe: 'swept', curls: 'swept',
+  crop: 'swept', short: 'swept', bowl: 'bob', side: 'swept', swept: 'swept', fringe: 'bob', curls: 'swept',
   afro: 'swept', waves: 'swept', ridge: 'swept', undercut: 'swept',
   long: 'braid', ponytail: 'braid', topknot: 'braid', bun: 'braid', braid: 'braid', braids: 'braid', locs: 'braid',
 };

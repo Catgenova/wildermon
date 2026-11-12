@@ -8,6 +8,10 @@
   {
    "id": "braid",
    "name": "Braid"
+  },
+  {
+   "id": "bob",
+   "name": "Bob"
   }
  ]
 }
