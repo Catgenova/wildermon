@@ -4254,7 +4254,7 @@ export const NEWS: News[] = [
     },
   },
   {
-    n: 528,
+    n: 529,
     day: '2026-11-12',
     lines: () => [
       'Reset once, in this browser: settings, keybinds, window places, window layouts, tracker, shopping list, pinned and recent recipes, craft queue folded or open, map pins.',
@@ -4270,6 +4270,11 @@ export const NEWS: News[] = [
     n: 527,
     day: '2026-11-11',
     lines: () => ['Fixed: a bed its owner named, as written in "Asleep in …" and "Not yours: …" (was lower case).'],
+  },
+  {
+    n: 528,
+    day: '2026-11-12',
+    lines: () => ['Fixed: Improve and repair, Shopping list: scroll bar when the window is shorter than its contents.'],
   },
   {
     n: 525,
