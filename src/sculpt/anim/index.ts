@@ -15,6 +15,9 @@ import { IDLE } from './clips/idle';
 import { WALK } from './clips/walk';
 import { SWING } from './clips/swing';
 import { SIXSEVEN } from './clips/sixseven';
+import { HANDS } from './clips/hands';
+import { ACTION_BY_ID } from '../../game/actions';
+import { RECIPE_BY_ID } from '../../game/recipes';
 import { strideAt } from '../../game/player';
 import { WEAPON_BY_ID } from '../../game/gear';
 import { UNITS_PER_TILE } from '../../render/iso';
@@ -27,7 +30,7 @@ import { UNITS_PER_TILE } from '../../render/iso';
  */
 export type State = 'idle' | 'walk' | 'swing' | 'work' | 'fight' | 'meditate' | 'emote' | 'cast';
 /** Every clip, by name (the authoring tools find a clip here, `tools/sculpt/lowanim.mjs --clip <name>`). */
-export const CLIPS: Record<string, Clip> = { idle: IDLE, walk: WALK, swing: SWING, sixseven: SIXSEVEN };
+export const CLIPS: Record<string, Clip> = { idle: IDLE, walk: WALK, swing: SWING, sixseven: SIXSEVEN, hands: HANDS };
 /** The clip a state plays until its own is approved: the 6 7 gesture. */
 export const PLACEHOLDER = 'sixseven';
 /**
@@ -46,6 +49,31 @@ export const CLIP_OF: Record<State, string> = {
   emote: PLACEHOLDER,
   cast: PLACEHOLDER,
 };
+/**
+ * The clip a job in the `work` state plays, by the job (its action's id), where it is not the state's own (`CLIP_OF.work`):
+ * the work with the hands and no tool at waist height (`hands`) for the jobs below, and for every recipe made with no tool
+ * that is not cooked at a campfire (`handsRecipe`). A later clip for a family of jobs adds its rows.
+ */
+export const CLIP_OF_JOB: Readonly<Record<string, string>> = Object.fromEntries([
+  // an item in hand
+  'repair_item', 'patch_item', 'mend_kit', 'seal_item', 'sign_item', 'dye_item', 'make_dye_recipe', 'boil_dye_recipe', 'strip_dye',
+  'enchant', 'absorb_soul', 'hone_whetstone', 'open_seed_jar', 'open_ferment', 'serve_dish', 'quench_item', 'draw_map', 'copy_map',
+  'use_bronze_mirror', 'use_ancient_file', 'use_ancient_lamp', 'use_ancient_pot',
+  // a vessel filled or emptied, a waist-high smelter, kiln, oven, barrel, crate or piece of furniture
+  'fill_bucket', 'fill_skin', 'pour_into_barrel', 'empty_vessel',
+  'fuel_smelter', 'light_smelter', 'damp_smelter', 'pour_ingot', 'smelter_take_all', 'fuel_kiln', 'light_kiln', 'damp_kiln', 'kiln_take_all',
+  'fuel_oven', 'light_oven', 'put_out_oven', 'furniture_take_all', 'crate_take_all', 'start_brew', 'set_brew_spring',
+].map((job) => [job, 'hands']));
+/** Whether a job is a recipe made with no tool and not at a campfire (cooking there is done crouched at the fire). */
+const handsRecipe = (job: string): boolean => {
+  const r = RECIPE_BY_ID.get(job);
+  return !!r && !r.tool && !ACTION_BY_ID.get(job)?.tool && r.station !== 'campfire';
+};
+/** The clip a job in the `work` state plays (`CLIP_OF_JOB`, then `handsRecipe`, then the state's own). */
+export function workClipOf(job: string | undefined): string {
+  if (!job) return CLIP_OF.work;
+  return CLIP_OF_JOB[job] ?? (handsRecipe(job) ? 'hands' : CLIP_OF.work);
+}
 /** The jobs done with the overhead swing whatever is in hand: the pickaxe's. */
 const SWING_JOBS = new Set(['mine', 'chip_corner', 'mine_cellar']);
 /** Meditating's job. */
@@ -95,7 +123,7 @@ export const walkPhase = (c: Clip, t: number, body: 'man' | 'woman', gait = 0): 
  * the game carries the body over (`walkTime`).
  */
 export function clipFor(pose: FigurePose, body: 'man' | 'woman' = pose.look?.gender === 'woman' ? 'woman' : 'man'): { clip: Clip; t: number } | undefined {
-  const s = ON ? stateOf(pose) : undefined, clip = s && CLIPS[CLIP_OF[s]];
+  const s = ON ? stateOf(pose) : undefined, clip = s && CLIPS[s === 'work' ? workClipOf(pose.job) : CLIP_OF[s]];
   if (!clip) return undefined;
   if (s === 'walk') return { clip, t: walkTime(clip, pose.phase, body, pose.gait ?? 0) };
   // a go of a timed job: fitted to its length (the holds stretched, the blow kept: `fitTime`), a fight's swing one blow

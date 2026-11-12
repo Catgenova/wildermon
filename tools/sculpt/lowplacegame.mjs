@@ -4,7 +4,7 @@
 //
 //   node tools/sculpt/lowplacegame.mjs --out <dir> [--name sixseven-game] [--sets outfit1,hood,plate,leather,bare]
 //       [--views front,q3,side] [--zoom 10] [--fps 20] [--seconds 1.2] [--crop 0.62] [--width 26] [--state emote|work|idle] [--job chop]
-//       [--from <seconds>] [--keys t1,t2,...]
+//       [--from <seconds>] [--keys t1,t2,...] [--genders man,woman] [--act <seconds>]
 //     <dir>/<name>.gif: rows the outfits, columns him then her in each view, played in real time: each body its own id, its
 //       phase the island's (six a second stood) and the clock (performance.now, which the game fades clips over) the
 //       frame's, so a body goes from one clip into the next as it does in the game; each frame taken from the page's
@@ -13,12 +13,15 @@
 //       go's time `act`), `idle` (stood doing nothing; the idle clip), or `idle-work` (stood, then set to --job at --from
 //       seconds: the fade from the idle into what the job plays).
 //     --keys: also <dir>/<name>-keys.png, the frames at those clip times, stood still (no fades).
+//     --genders: the bodies drawn (both by default); --act: a go's length at work (3 s by default; a clip's own length
+//       plays it at its own times, so --keys are its times).
 //     --crop k keeps the top k of each cell (the arms and the trunk close up); --width w makes each cell w game units wide.
 //
 // Outfits: outfit1 (the first outfit: the shawl, the tunic, the trousers, the boots, the hood down), hood (the same with
 // the hood up), plate (the plate set: chest & arms, leggings, boots, helm, mantle), leather (the leather set's leggings,
-// boots, shawl and hat; the first outfit's tunic under the shawl), bare (nothing on).
-// Playwright's Chromium (/opt/pw-browsers/chromium) with software GL; the GIF needs Python's PIL.
+// boots, shawl and hat; the first outfit's tunic under the shawl), leatherset (the whole leather set: its chest too, the
+// shawl worn over it), bare (nothing on but the undergarment).
+// Playwright's Chromium (/opt/pw-browsers/chromium) with software GL; the GIF needs Python's PIL (PYTHON: a python that has it).
 import { build } from 'esbuild';
 import { chromium } from 'playwright-core';
 import { execFileSync } from 'node:child_process';
@@ -31,6 +34,7 @@ const out = resolve(opt('out', 'tmp/lowplacegame')), name = opt('name', 'sixseve
 const sets = opt('sets', 'outfit1,hood,plate,leather,bare').split(','), VIEWS = { front: 0, q3: 1, side: 2, rq3: 3, back: 4 };
 const views = opt('views', 'front,q3,side').split(',').map((v) => VIEWS[v]);
 const zoom = +opt('zoom', '10'), width = +opt('width', '26'), fps = +opt('fps', '20'), seconds = +opt('seconds', '1.2'), crop = +opt('crop', '0.62');
+const genders = opt('genders', 'man,woman').split(','), act = +opt('act', '3');
 const state = opt('state', 'emote'), job = opt('job', 'chop'), from = +opt('from', '0.6'), keys = opt('keys', '').split(',').filter(Boolean).map(Number);
 mkdirSync(out, { recursive: true });
 const ROOT = new URL('../..', import.meta.url).pathname;
@@ -39,6 +43,7 @@ const OUTFITS = {
   hood: { hood: true },
   plate: { plateChest: true, plateLegs: true, plateBoots: true, plateHelm: true, plateMantle: true },
   leather: { leatherLegs: true, leatherBoots: true, leatherShawl: true, leatherHat: true },
+  leatherset: { leatherChest: true, leatherLegs: true, leatherBoots: true, leatherShawl: true, leatherHat: true },
   bare: { shawl: false, trousers: false, boots: false, tunic: false, hood: false },
 };
 const entry = `
@@ -53,7 +58,7 @@ window.ready = async () => { sculptedFigures(true); await import('./src/sculpt/s
 /** What a body is doing at s seconds in. */
 const doing = (s, st) => {
   const working = st === 'work' || (st === 'idle-work' && s >= ${from});
-  if (working) return { working: true, job: ${JSON.stringify(job)}, act: { t: st === 'work' ? s : s - ${from}, length: 3 } };
+  if (working) return { working: true, job: ${JSON.stringify(job)}, act: { t: st === 'work' ? s : s - ${from}, length: ${act} } };
   return st === 'emote' ? { working: false, emote: 'wave', emoteT: s } : { working: false };
 };
 // rows of cells [set, gender, facing]; at s seconds (the clock and the phase), each body its own id unless still
@@ -82,14 +87,14 @@ try {
   await p.addScriptTag({ content: b.outputFiles[0].text });
   await p.evaluate(() => window.ready());
   mkdirSync(dir, { recursive: true });
-  const rows = sets.map((set) => ['man', 'woman'].flatMap((g) => views.map((f) => [set, g, f])));
+  const rows = sets.map((set) => genders.flatMap((g) => views.map((f) => [set, g, f])));
   const save = async (file, s, still) => { const url = await p.evaluate(([ss, r, st, x]) => window.frame(ss, r, st, x), [s, rows, still, state]); writeFileSync(join(dir, file), Buffer.from(url.split(',')[1], 'base64')); };
   const N = Math.round(seconds * fps);
   // (a run-in before the first frame kept, so each body's fade into its clip is done: the frames from 0 s are the game's)
   for (let k = 0; k < N; k++) await save(`f${String(k).padStart(4, '0')}.png`, k / fps, false);
   for (let k = 0; k < keys.length; k++) await save(`k${String(k).padStart(3, '0')}.png`, keys[k], true);
-  const label = `${name}: ${sets.join(' / ')} (rows); him then her, ${opt('views', 'front,q3,side')} (columns); zoom ${zoom}; ${state}${state.includes('work') ? ` (${job})` : ''}`;
-  execFileSync('python3', ['-c', String.raw`
+  const label = `${name}: ${sets.join(' / ')} (rows); ${genders.join(' then ')}, ${opt('views', 'front,q3,side')} (columns); zoom ${zoom}; ${state}${state.includes('work') ? ` (${job})` : ''}`;
+  execFileSync(process.env.PYTHON ?? 'python3', ['-c', String.raw`
 import sys, glob
 from PIL import Image, ImageDraw
 d, gif, png, label, fps, keys = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], float(sys.argv[5]), sys.argv[6].split(',') if sys.argv[6] else []
