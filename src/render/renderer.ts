@@ -480,7 +480,7 @@ import type { Body as SpellBody, WorldRec as SpellRec } from './spells/kit';
 import type { CastAt, CastTold } from '../game/events';
 import { lookStep, nextLookAt, yearAt } from './foliage';
 import { DAY_SECONDS } from '../game/pace';
-import { cartSway, FIGURE_TOP, figurePicture, sculptedFigures, type GearLook, type Seat } from './figure';
+import { cartSway, FIGURE_TOP, figurePicture, sculptedFigures, sculptedReady, type GearLook, type Seat } from './figure';
 /**
  * How much larger a beast in the traces is drawn than one loose: enough that
  * a grown orse, the draught beast, stands a quarter again as tall as a body
@@ -4041,8 +4041,8 @@ export class Renderer {
    */
   render(dt: number): void {
     const cam = this.camera;
-    // Closer with the sculpted bodies on; turned off, the zoom is brought back under the ceiling without them.
-    cam.closest(this.game.settings.sculpted ? SCULPTED_MAX_ZOOM : MAX_ZOOM);
+    // Closer once the sculpted bodies have loaded; until then, the flat figure's ceiling.
+    cam.closest(sculptedReady() ? SCULPTED_MAX_ZOOM : MAX_ZOOM);
     const cx = cam.cx, cy = cam.cy;
     const unit = cam.zoom * this.canvas.dpr;
     cam.cx = Math.round(cx * unit) / unit;
@@ -4073,7 +4073,7 @@ export class Renderer {
       this.forgetHems();
     }
     this.timings.set(this, this.game.settings.timings);
-    sculptedFigures(this.game.settings.sculpted);
+    sculptedFigures(true);
     this.timings.begin();
     try {
       this.renderFrame(dt);

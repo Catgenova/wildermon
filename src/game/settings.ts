@@ -118,8 +118,6 @@ export const SETTING_DEFAULTS = {
    * no wakes or dust.
    */
   graphics: 'full' as Graphics,
-  /** Bodies drawn from the sculpted base by WebGL2 (`src/sculpt/sculpted.ts`) in place of the flat figure. Off unless chosen. */
-  sculpted: false,
   /**
    * Motion (`src/engine/motion.ts`): as the system asks (`prefers-reduced-motion`),
    * always less, or always full. Less: no sway in trees, bushes and flowers,

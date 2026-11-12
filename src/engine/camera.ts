@@ -5,7 +5,7 @@ const clamp = (v: number, lo: number, hi: number): number => Math.min(hi, Math.m
 
 /** How far in the camera goes. Asked for: five. */
 export const MAX_ZOOM = 5;
-/** And with the "Sculpted figures" setting on, to see one's own body close: ten (a man about 400 px tall). */
+/** And once the sculpted bodies have loaded, to see one's own body close: ten (a man about 400 px tall). */
 export const SCULPTED_MAX_ZOOM = 10;
 
 /**
@@ -30,8 +30,8 @@ export class Camera {
   private sin = 0;
   minZoom = 0.35;
   /**
-   * How far in you may go: `MAX_ZOOM`, or `SCULPTED_MAX_ZOOM` with the
-   * "Sculpted figures" setting on (`closest`).
+   * How far in you may go: `MAX_ZOOM`, or `SCULPTED_MAX_ZOOM` once the
+   * sculpted bodies have loaded (`closest`).
    *
    * The ground costs nothing to zoom — it is drawn as polygons and gets
    * sharper. What has a resolution is the sprites: a tree or a body is a

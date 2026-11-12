@@ -144,6 +144,7 @@ import { HUNGRY_AT, HURT_AT } from './wildermon';
 import { CARE_WANTING as CARE_WANTING_317, COOKED_MEAT_TOO } from '../../game/creatures';
 import { GENDERS, HAIR_FADE, HAIRSTYLES } from '../../game/look';
 import { OUTFITS } from '../creator';
+import { MAX_ZOOM, SCULPTED_MAX_ZOOM } from '../../engine/camera';
 import { article, burnsFor, capital, finePercent, listed, listedOr, numberWord, percent, readyIn, timeWords } from '../../game/words';
 import { DEED_UPGRADES } from '../../game/deed';
 import { LYE_USE, SHORE_REACH } from '../../game/placeables';
@@ -4257,12 +4258,16 @@ export const NEWS: News[] = [
   },
   {
     n: 530,
-    day: '2026-11-20',
+    day: '2026-11-12',
     lines: () => [
-      `Changed: character creator for the sculpted bodies. Body: ${listedOr(GENDERS.map((g) => g.name))}. Hair: ${listedOr(HAIRSTYLES.map((h) => h.name))}.`,
-      `Added: sliders: Hair colour (hue, the whole colour wheel), Hair brightness (near black to near white, the hue fading to grey over its top ${percent(HAIR_FADE)}), Skin (palest to darkest), each with its exact colour beside it.`,
-      `Added: creator preview: the sculpted body, idle, turned by ◀ ▶ or dragging; Head close-up; outfit ${listedOr(OUTFITS.map((o) => o.name))}, head always bare.`,
-      'Removed: build Neither, eyes, beards, shirt and trousers colours, the swatch hair colours and the flat figure\'s other haircuts. Existing looks: each to the nearest there is now.',
+      `New: sculpted bodies, every player: ${listed(GENDERS.map((g) => g.name))}. Flat figure: swimming, driving, seated, no WebGL2, until the bodies load. Max zoom ${SCULPTED_MAX_ZOOM}× (was ${MAX_ZOOM}×).`,
+      'New: sculpted outfits: cloth (hood, shawl, tunic, trousers, boots), leather (hat, shawl, chest and arms, leggings, boots), plate (helm, mantle, chest, leggings, boots), undergarment. Enchanted pieces glow.',
+      `New: animations: idle; walk; overhead swing (mining; a fight with ${listedOr(WEAPONS.filter((w) => w.twoHanded && !w.ammo).map((w) => itemDef(w.id).name.toLowerCase()))}). Other jobs, fights, meditating, emotes, casting: one placeholder gesture.`,
+      `New: ${itemDef('maul').name.toLowerCase()} drawn as the Runestone Warhammer, both hands, overhead swing. ${itemDef('long_sword').name}: both hands in a fight, slash trail; on the back when wielded.`,
+      `Changed: character creator. Body: ${listedOr(GENDERS.map((g) => g.name))}. Hair: ${listedOr(HAIRSTYLES.map((h) => h.name))}. Hair colour: hue, the whole colour wheel. Hair brightness: near black to near white, grey over its top ${percent(HAIR_FADE)}. Skin: palest to darkest.`,
+      `Changed: creator preview: the sculpted body, idle, turned by ◀ ▶ or dragging; Head close-up; outfit ${listedOr(OUTFITS.map((o) => o.name))}, head bare.`,
+      'Removed: build Neither, eyes, beards, shirt and trousers colours, swatch hair colours, other haircuts. Existing looks: the nearest body, hairstyle, hair colour and skin.',
+      'Removed: Sculpted figures setting (always on).',
     ],
   },
   {
