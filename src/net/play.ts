@@ -1,6 +1,6 @@
 import { preloadTreesAt, type TreePreload } from '../render/preload';
 import { TREE_WAIT_MS, type BootPhase } from '../ui/bootsteps';
-import { gearFrom } from '../game/worn';
+import { gearFrom, toolFrom } from '../game/worn';
 import { BROWSER_TALLY, Game, SPROUT_COOLDOWN } from '../game/game';
 import type { Marker } from '../game/marks';
 import { EMOTE_BY_ID } from '../game/emotes';
@@ -817,7 +817,7 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
       .map((p) => ({
         id: hashId(p.uid), uid: p.uid, name: p.name, x: p.x, y: p.y, dirX: 0, dirY: 1,
         level: p.level, moving: false, swimming: false, working: !!p.act,
-        act: p.act ?? undefined, look: cleanLook(p.look), gear: gearFrom(p.gear),
+        act: p.act ?? undefined, look: cleanLook(p.look), gear: gearFrom(p.gear), tool: p.act ? toolFrom(p.act_tool, ACTION_BY_ID.get(p.act)?.tool) : undefined,
       })));
   };
   for (const [text, kind, at] of log) game.write(text, kind as Parameters<Game['write']>[1], at);

@@ -4477,6 +4477,21 @@ jobs:
             --outfile=node_modules/.cache/miner.mjs --log-level=error
           node node_modules/.cache/miner.mjs
 
+      - name: Somebody else at mining is drawn with their own pickaxe, the same on both sides
+        if: matrix.shard == 5
+        run: |
+          # Asked for: "other players are shown mining with their own pickaxe's
+          # metal", not iron. The island takes the job's tool from the pack as
+          # the job starts and at every go (player.act_tool) and says it in
+          # rpc_act's and rpc_settle's answers; one body mining with a copper
+          # pickaxe and then an enchanted gold one is read by another body on
+          # the island, signed in as them, as copper and then gold, enchanted:
+          # the same piece as the miner's own browser takes from the same pack,
+          # and the sculpted figure drawn with the head in that metal.
+          npx esbuild supabase/test/othertool.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/othertool.mjs --log-level=error
+          node node_modules/.cache/othertool.mjs
+
       - name: The Mason's perks, each where its rule is
         if: matrix.shard == 5
         run: |

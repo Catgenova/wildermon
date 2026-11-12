@@ -6902,6 +6902,8 @@ export class Renderer {
             trousers: peer.trousers,
             look: peer.look,
             gear: peer.gear,
+            // The tool their job in hand uses, in its own metal, as the island took it from their pack (`toolFrom`).
+            tool: peer.working ? peer.tool : undefined,
             emote: peer.emote,
             emoteT: emoteAt(peer.emote, peer.emoteAt, performance.now() / 1000) ?? undefined,
             cast: this.spells.poseOf({ kind: 'peer', id: peer.id }),
