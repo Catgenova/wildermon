@@ -348,8 +348,13 @@ const looksOf = (g: GarmentAsset, look: 'plain' | 'enchanted'): Array<{ c: strin
  * the renderer's materials.
  */
 const swordMat = (): number => GARMENT_MAT + GARMENT_COLOURS.length;
-/** Where a hand tool's materials start (`TOOL_PROPS`): after the sword's, each tool's after the one before. */
-const toolMat = (id: string): number => swordMat() + SWORD.plain.length + TOOL_PROPS.slice(0, TOOL_PROPS.findIndex((p) => p.id === id)).reduce((n, p) => n + p.plain.length, 0);
+/**
+ * The most materials a prop drawn in a hand takes: the sword's place (`swordMat`) holds the one prop gripped in both hands
+ * or carried on the back, and each hand's tool (`TOOL_PROPS`, one in a hand at a time) has a place of this many after it.
+ */
+const PROP_SLOTS = 19;
+/** Where the tool in a hand takes its materials: the right's place after the sword's, the left's after that. */
+const toolMat = (side: Side): number => swordMat() + PROP_SLOTS * (side === 'r' ? 1 : 2);
 
 /**
  * One body: its asset, the figure's proportions it is posed with, its height as a share of the base man's, and the
@@ -607,7 +612,7 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
       for (let i = 0; i < PR.verts.length; i += 3) V3s.push(...add(so.o, mv(so.R, [(PR.verts[i] - g[0]) * k, (PR.verts[i + 1] - g[1]) * k, (PR.verts[i + 2] - g[2]) * k])));
       const T3: number[] = [];
       for (let t = 0; t < PR.tris.length; t += 4) if (PR.tris[t + 3] < (PR.glowFrom < 0 ? Infinity : PR.glowFrom)) T3.push(PR.tris[t], PR.tris[t + 1], PR.tris[t + 2], PR.tris[t + 3]);
-      const off = toolMat(PR.id);
+      const off = toolMat(side);
       lay(V3s, PR.polys, T3, Array.from({ length: V3s.length / 3 }, () => [hand, 1]), (pi) => off + PR.polys[pi][1]);
     }
     const baked: Baked = { band: 1, verts: Float32Array.from(verts), tris: Uint32Array.from(tris), nVerts: verts.length / STRIDE, nTris: tris.length / 3, bones: ALL.map((b) => b.name), ms: performance.now() - t0, grid: [0, 0, 0], cell: 0, faceSkin: Float32Array.from(faceSkin) };
@@ -811,6 +816,8 @@ function toneOf(materials: Material[]): [number, number, number] {
 export const lowSkeleton = (body: 'man' | 'woman'): Skeleton => BODIES[body].skeleton;
 /** The long sword as a body holds it in both hands (for the authoring tools). */
 export const lowHeld = (body: 'man' | 'woman'): Held => BODIES[body].held;
+/** Where the tool in a hand takes its materials, and how many it may take (for the authoring tools). */
+export const lowToolMats = (side: Side): [number, number] => [toolMat(side), PROP_SLOTS];
 /** A hand tool (`TOOL_PROPS`, by id) as a body holds it (for the authoring tools). */
 export const lowToolHeld = (body: 'man' | 'woman', id: string): Held | undefined => BODIES[body].toolHeld(id);
 /** A body's local turns for a pose as the figure's pose maps onto it, with no clip (for the authoring tools to compare). */
@@ -822,8 +829,8 @@ export const hasLowBody = (look: { gender: string }): boolean => look.gender ===
 
 /** The look's materials with the garments' after them and the sword's (plain or enchanted) after those, kept per look's materials so the renderer's copy is reused. */
 const DRESSED = new Map<string, Material[]>();
-function materialsOf(look: Look, sword: 'plain' | 'enchanted' = 'plain'): Material[] {
-  const body = bodyMaterials(look), key = `${body.map((m) => m.colour).join()}|${sword}`;
+function materialsOf(look: Look, sword: 'plain' | 'enchanted' = 'plain', tools: Partial<Record<Side, string>> = {}): Material[] {
+  const body = bodyMaterials(look), key = `${body.map((m) => m.colour).join()}|${sword}|${tools.r ?? ''}:${tools.l ?? ''}`;
   let out = DRESSED.get(key);
   if (!out) {
     out = [...body];
@@ -835,7 +842,11 @@ function materialsOf(look: Look, sword: 'plain' | 'enchanted' = 'plain'): Materi
     out[M.hairUnder] = { colour: hair, shave: true };
     GARMENT_MATS.forEach((m, k) => { (out as Material[])[GARMENT_MAT + k] = m; });
     swordMats(sword).forEach((m, k) => { (out as Material[])[swordMat() + k] = m; });
-    for (const p of TOOL_PROPS) p.plain.forEach((m, k) => { (out as Material[])[toolMat(p.id) + k] = m.kind === 0 ? { colour: m.c, gear: true } : { colour: m.c, emissive: true }; });
+    // each hand's tool in its hand's place
+    for (const [side, id] of Object.entries(tools) as Array<[Side, string | undefined]>) {
+      const p = id ? TOOL_OF.get(id) : undefined;
+      p?.plain.slice(0, PROP_SLOTS).forEach((m, k) => { (out as Material[])[toolMat(side) + k] = m.kind === 0 ? { colour: m.c, gear: true } : { colour: m.c, emissive: true }; });
+    }
     if (DRESSED.size > 64) DRESSED.clear();
     DRESSED.set(key, out);
   }
@@ -851,8 +862,8 @@ export function lowScene(pose: FigurePose): SculptDraw {
   // the sword in both hands while a clip grips it, else on the back while it is wielded
   const weapon = pose.gear?.weapon, inHand = heldIn(pose) === SWORD.id, sword = inHand ? 'hand' : weapon?.id === SWORD.id ? 'back' : undefined;
   const lit = weapon?.enchanted ? 'enchanted' : 'plain';
-  const materials = materialsOf(look, lit), low: LowLight = { sh: SH[who], tone: toneOf(materials), fit: FIT_SKIN };
+  const tools = toolsIn(pose) ?? {}, materials = materialsOf(look, lit, tools), low: LowLight = { sh: SH[who], tone: toneOf(materials), fit: FIT_SKIN };
   const bones = body.bones(pose, worn), trail = inHand ? body.trail(pose, lit === 'enchanted') : undefined;
   const shapes = body.shapes();
-  return { baked: body.baked(worn, sword, hairStyle(pose, look.hair), enchanted, drops, toolsIn(pose)), bones, materials, view: viewOf(facing), blink: 0, low, ...(trail ? { trail } : {}), ...(shapes.some((w) => w > 0) ? { shapes } : {}) };
+  return { baked: body.baked(worn, sword, hairStyle(pose, look.hair), enchanted, drops, tools), bones, materials, view: viewOf(facing), blink: 0, low, ...(trail ? { trail } : {}), ...(shapes.some((w) => w > 0) ? { shapes } : {}) };
 }

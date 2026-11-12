@@ -33,7 +33,7 @@ const OUTFITS = {
   bare: { shawl: false, trousers: false, boots: false, tunic: false, hood: false },
 };
 const b = await build({
-  stdin: { contents: `export { lowScene } from './src/sculpt/lowpoly'; export { CLIPS, clipFor } from './src/sculpt/anim'; export { DEFAULT_LOOK } from './src/game/look';`, resolveDir: ROOT, loader: 'ts' },
+  stdin: { contents: `export { lowScene, lowToolMats } from './src/sculpt/lowpoly'; export { CLIPS, clipFor } from './src/sculpt/anim'; export { DEFAULT_LOOK } from './src/game/look';`, resolveDir: ROOT, loader: 'ts' },
   bundle: true, format: 'esm', platform: 'node', write: false, logLevel: 'error', target: 'es2022', absWorkingDir: ROOT,
   loader: { '.png': 'dataurl', '.svg': 'dataurl', '.webp': 'dataurl', '.wav': 'dataurl', '.ogg': 'dataurl', '.mp3': 'dataurl' },
   define: { 'import.meta.env': '{}', __DEPLOY__: 'undefined' },
@@ -107,9 +107,8 @@ function crossings(pose) {
     }
     P.push(q); dom.push(names[best] ?? '');
   }
-  // (the tools' own triangles named for the tool in the breakdown: their materials are the last the draw has, the
-  // mallet's then the chisel's, lowpoly.ts TOOL_PROPS)
-  const nm = s.materials.length, tag = (i) => { const m = V[i * 17 + 6]; return m >= nm - 6 ? 'chisel' : m >= nm - 10 ? 'mallet' : dom[i]; };
+  // (the tools' own triangles named for the hand's tool in the breakdown: by their materials' places, lowpoly.ts toolMat)
+  const [r0, n] = TS.lowToolMats('r'), [l0] = TS.lowToolMats('l'), tag = (i) => { const m = V[i * 17 + 6]; return m >= l0 && m < l0 + n ? 'tool_l' : m >= r0 && m < r0 + n ? 'tool_r' : dom[i]; };
   const T = Array.from({ length: s.baked.nTris }, (_, t) => ({ v: [s.baked.tris[t * 3], s.baked.tris[t * 3 + 1], s.baked.tris[t * 3 + 2]] }));
   const side = (re, sd) => (t) => t.v.every((i) => re.exec(dom[i])?.[2] === sd);
   const offArms = T.filter((t) => !t.v.some((i) => ARM.test(dom[i])));
