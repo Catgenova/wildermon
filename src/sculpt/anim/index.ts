@@ -16,6 +16,7 @@ import { WALK } from './clips/walk';
 import { SWING } from './clips/swing';
 import { SIXSEVEN } from './clips/sixseven';
 import { HANDS } from './clips/hands';
+import { GROUND } from './clips/ground';
 import { ACTION_BY_ID } from '../../game/actions';
 import { RECIPE_BY_ID } from '../../game/recipes';
 import { strideAt } from '../../game/player';
@@ -30,7 +31,7 @@ import { UNITS_PER_TILE } from '../../render/iso';
  */
 export type State = 'idle' | 'walk' | 'swing' | 'work' | 'fight' | 'meditate' | 'emote' | 'cast';
 /** Every clip, by name (the authoring tools find a clip here, `tools/sculpt/lowanim.mjs --clip <name>`). */
-export const CLIPS: Record<string, Clip> = { idle: IDLE, walk: WALK, swing: SWING, sixseven: SIXSEVEN, hands: HANDS };
+export const CLIPS: Record<string, Clip> = { idle: IDLE, walk: WALK, swing: SWING, sixseven: SIXSEVEN, hands: HANDS, ground: GROUND };
 /** The clip a state plays until its own is approved: the 6 7 gesture. */
 export const PLACEHOLDER = 'sixseven';
 /**
@@ -50,6 +51,22 @@ export const CLIP_OF: Record<State, string> = {
   cast: PLACEHOLDER,
 };
 /**
+ * The jobs done knelt at the ground with no tool (`ground`): planting and sowing, foraging and searching, the traps, picking
+ * up, at the water's edge, at a campfire or an ash pit. (Driving a post in and pulling it up are lifts, not ground work.)
+ */
+const GROUND_JOBS = [
+  // a tile or a plant
+  'plant', 'plant_seed', 'sow_patch', 'plant_moss', 'plant_grass', 'plant_vine', 'drop_dirt', 'drop_dirt_here', 'change_tile',
+  'forage', 'botanize', 'pick_flowers', 'collect_motes', 'lift_stones', 'track', 'search_caches', 'dig_cache',
+  // an item or a trap on the ground
+  'pick_up', 'pick_up_all', 'set_trap', 'take_catch', 'empty_creel', 'pick_up_trap', 'strike_foundation',
+  // the water's edge
+  'pan', 'drink', 'plant_lily', 'plant_lotus', 'pick_water_plant', 'pull_water_plant',
+  // a fire on the ground, an ash pit
+  'build_campfire', 'light_campfire', 'fuel_campfire', 'put_out_campfire', 'take_apart_campfire',
+  'take_ashes_fire', 'take_ashes_oven', 'take_ashes_smelter', 'take_ashes_kiln',
+];
+/**
  * The clip a job in the `work` state plays, by the job (its action's id), where it is not the state's own (`CLIP_OF.work`):
  * the work with the hands and no tool at waist height (`hands`) for the jobs below, and for every recipe made with no tool
  * that is not cooked at a campfire (`handsRecipe`). A later clip for a family of jobs adds its rows.
@@ -63,16 +80,21 @@ export const CLIP_OF_JOB: Readonly<Record<string, string>> = Object.fromEntries(
   'fill_bucket', 'fill_skin', 'pour_into_barrel', 'empty_vessel',
   'fuel_smelter', 'light_smelter', 'damp_smelter', 'pour_ingot', 'smelter_take_all', 'fuel_kiln', 'light_kiln', 'damp_kiln', 'kiln_take_all',
   'fuel_oven', 'light_oven', 'put_out_oven', 'furniture_take_all', 'crate_take_all', 'start_brew', 'set_brew_spring',
-].map((job) => [job, 'hands']));
+].map((job) => [job, 'hands']).concat(GROUND_JOBS.map((job) => [job, 'ground'])));
 /** Whether a job is a recipe made with no tool and not at a campfire (cooking there is done crouched at the fire). */
 const handsRecipe = (job: string): boolean => {
   const r = RECIPE_BY_ID.get(job);
   return !!r && !r.tool && !ACTION_BY_ID.get(job)?.tool && r.station !== 'campfire';
 };
-/** The clip a job in the `work` state plays (`CLIP_OF_JOB`, then `handsRecipe`, then the state's own). */
+/** Whether a job is a recipe cooked at a campfire with no tool: done knelt at the fire (`ground`). */
+const groundRecipe = (job: string): boolean => {
+  const r = RECIPE_BY_ID.get(job);
+  return !!r && !r.tool && !ACTION_BY_ID.get(job)?.tool && r.station === 'campfire';
+};
+/** The clip a job in the `work` state plays (`CLIP_OF_JOB`, then `handsRecipe` and `groundRecipe`, then the state's own). */
 export function workClipOf(job: string | undefined): string {
   if (!job) return CLIP_OF.work;
-  return CLIP_OF_JOB[job] ?? (handsRecipe(job) ? 'hands' : CLIP_OF.work);
+  return CLIP_OF_JOB[job] ?? (handsRecipe(job) ? 'hands' : groundRecipe(job) ? 'ground' : CLIP_OF.work);
 }
 /** The jobs done with the overhead swing whatever is in hand: the pickaxe's. */
 const SWING_JOBS = new Set(['mine', 'chip_corner', 'mine_cellar']);

@@ -78,9 +78,9 @@ function crossings(pose) {
   return ALL ? { n, arm, P, T, all: crossPairs(P, T).map(([i, j]) => ({ i, j, key: i * 1e6 + j, bones: [i, j].map((t) => dom[T[t].v[0]]) })) } : { n, arm, all: [] };
 }
 
-/** How far the game's camera looks down (src/render/figure.ts viewOf), in degrees, and its eight eyes (as lowleathersetcross.mjs). */
+/** How far the game's camera looks down (src/render/figure.ts viewOf), in degrees, and its eight eyes round the figure (its frame here: z up). */
 const VIEW_DOWN = Math.atan((2 * (24 / 40)) / 2.25 / Math.SQRT2) * 180 / Math.PI;
-const EYES = Array.from({ length: 8 }, (_, k) => { const a = (k * Math.PI) / 4, e = VIEW_DOWN * Math.PI / 180; return [Math.sin(a) * Math.cos(e), Math.sin(e), Math.cos(a) * Math.cos(e)]; });
+const EYES = Array.from({ length: 8 }, (_, k) => { const a = (k * Math.PI) / 4, e = VIEW_DOWN * Math.PI / 180; return [Math.sin(a) * Math.cos(e), Math.cos(a) * Math.cos(e), Math.sin(e)]; });
 /** Where two crossing triangles meet: the mean of the points where an edge of either passes through the other. */
 function meetOf(A, B) {
   const pts = [];

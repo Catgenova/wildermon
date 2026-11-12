@@ -15,7 +15,8 @@
 //     --keys: also <dir>/<name>-keys.png, the frames at those clip times, stood still (no fades).
 //     --genders: the bodies drawn (both by default); --act: a go's length at work (3 s by default; a clip's own length
 //       plays it at its own times, so --keys are its times).
-//     --crop k keeps the top k of each cell (the arms and the trunk close up); --width w makes each cell w game units wide.
+//     --crop k keeps the top k of each cell (the arms and the trunk close up), or with --low its bottom k (a body knelt or
+//       crouched at the ground); --width w makes each cell w game units wide.
 //
 // Outfits: outfit1 (the first outfit: the shawl, the tunic, the trousers, the boots, the hood down), hood (the same with
 // the hood up), plate (the plate set: chest & arms, leggings, boots, helm, mantle), leather (the leather set's leggings,
@@ -35,6 +36,7 @@ const sets = opt('sets', 'outfit1,hood,plate,leather,bare').split(','), VIEWS = 
 const views = opt('views', 'front,q3,side').split(',').map((v) => VIEWS[v]);
 const zoom = +opt('zoom', '10'), width = +opt('width', '26'), fps = +opt('fps', '20'), seconds = +opt('seconds', '1.2'), crop = +opt('crop', '0.62');
 const genders = opt('genders', 'man,woman').split(','), act = +opt('act', '3');
+const low = args.includes('--low');
 const state = opt('state', 'emote'), job = opt('job', 'chop'), from = +opt('from', '0.6'), keys = opt('keys', '').split(',').filter(Boolean).map(Number);
 mkdirSync(out, { recursive: true });
 const ROOT = new URL('../..', import.meta.url).pathname;
@@ -69,7 +71,7 @@ window.frame = (s, rows, still, st) => {
   CLOCK = s * 1000;
   rows.forEach((row, j) => row.forEach(([set, gender, facing], i) => {
     g.save(); g.beginPath(); g.rect(i * w, j * h, w, h); g.clip();
-    drawFigure(g, i * w + w / 2, j * h + full - 2 * ${zoom} - 8, ${zoom}, { id: still ? undefined : set + '-' + gender + '-' + facing, phase: s * 6, moving: false, facing, swimming: false, look: look(gender), outfit: OUTFITS[set], ...doing(s, st) });
+    drawFigure(g, i * w + w / 2, j * h + (${low} ? h : full) - 2 * ${zoom} - 8, ${zoom}, { id: still ? undefined : set + '-' + gender + '-' + facing, phase: s * 6, moving: false, facing, swimming: false, look: look(gender), outfit: OUTFITS[set], ...doing(s, st) });
     g.restore();
     g.fillStyle = '#2f292b'; g.fillRect(i * w, j * h, 1, h);
   }));
