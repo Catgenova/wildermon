@@ -1,14 +1,15 @@
 /**
  * H1, work with the hands and no tool: stood at a bench's height, both hands on what is worked a forearm's length ahead
- * of the belt and a shoulder's width apart, the head down over it; one hand pressed down and forward into it with the
- * trunk behind it as the other holds, both lifted back, then the other hand's press. Both feet planted, the knees given
- * on each press. The jobs done with no tool at waist height play it (`../index.ts` CLIP_OF_JOB): the crafting from the
+ * of the belt and a shoulder's width apart, the head down over it; one hand pressed forward and down into it with the
+ * weight shifted over it as the other holds, lifted back, then the other hand's press. Both feet planted, the knees
+ * given on each press. The jobs done with no tool at waist height play it (`../index.ts` CLIP_OF_JOB): the crafting from the
  * pack and at a waist-high station, mending, sealing, dyeing, mixing, writing a scroll.
  *
- * The arms are kept where every outfit takes them: the upper arms forward no more than 28 degrees and turned in no more
+ * The body is kept where every outfit takes it: the upper arms forward no more than 32 degrees and turned in no more
  * than 14, the elbows bent no more than 70 (the first outfit's shawl hangs over the upper arms, the leather chest's
- * sleeves bunch at the elbow), the forearms straight ahead and the hands turned in at the wrist; the trunk leant without
- * a twist and the neck kept nearly straight, the head pitched at the skull (the shawl's and the hood's collars).
+ * sleeves bunch at the elbow), the forearms straight ahead and the hands turned in at the wrist; the trunk not bent
+ * forward (the plate cuirass crosses itself, the plate and leather skirts the thighs) and the neck straight, the head
+ * pitched at the skull no more than 14 (the shawl's and the hood's collars).
  */
 import type { Clip, Key } from '../clip';
 import { merge, mirror, poseToPose, type Beat, type KeyPose } from '../author';
@@ -26,32 +27,32 @@ const PRESS = 0.36, GIVE = 0.14;
  * out to its side, then flat down; the holder's down and in.
  */
 const ARMS_GATHER: Record<string, Euler> = {
-  upperarm_r: [18, -10, -10], lowerarm_r: [70, 0, 0], hand_r: [-10.9, -43.8, 8.9],
-  upperarm_l: [20, 13, 10], lowerarm_l: [64, 0, 0], hand_l: [-15.8, 42.1, -11.8],
+  upperarm_r: [16, -10, -11], lowerarm_r: [70, 0, 0], hand_r: [-9.4, -34.9, 1.9],
+  upperarm_l: [20, 13, 10], lowerarm_l: [64, 0, 0], hand_l: [-11.5, 42.8, -2.6],
 };
 const ARMS_PRESS: Record<string, Euler> = {
-  upperarm_r: [28, -14, -11], lowerarm_r: [50, 0, 0], hand_r: [-31.8, -67.9, 16.5],
-  upperarm_l: [21, 13, 10], lowerarm_l: [62, 0, 0], hand_l: [-23.3, 46.8, -13],
+  upperarm_r: [32, -14, -12], lowerarm_r: [40, 0, 0], hand_r: [-24.9, -65.5, 1],
+  upperarm_l: [22, 13, 10], lowerarm_l: [60, 0, 0], hand_l: [-12.4, 46.3, -1.8],
 };
 /** Her hands solved the same on her (the arms as his). */
-const HER_GATHER: Record<string, Euler> = { hand_r: [-7.8, -45, 2], hand_l: [-12.7, 44.1, -4.8] };
-const HER_PRESS: Record<string, Euler> = { hand_r: [-26.2, -70.8, 11.1], hand_l: [-19.6, 49.4, -6.3] };
+const HER_GATHER: Record<string, Euler> = { hand_r: [-7.3, -36.1, -5.3], hand_l: [-8.4, 44.2, 4.2] };
+const HER_PRESS: Record<string, Euler> = { hand_r: [-19.4, -67.8, -4.3], hand_l: [-8.9, 47.8, 5] };
 
 /** The fingers closed a little on what is held; the pressing hand's opened onto its heel. */
 const HOLD: Record<string, Euler> = { fingers_01_l: [16, 0, 0], fingers_02_l: [22, 0, 0], fingers_01_r: [16, 0, 0], fingers_02_r: [22, 0, 0] };
 const HEEL: Record<string, Euler> = { fingers_01_r: [4, 0, 0], fingers_02_r: [6, 0, 0] };
 
-/** Gathered for the right hand's press: leant a little over the work from the hips, the head down on the hands. */
+/** Gathered for the right hand's press: the head down on the hands. */
 const GATHER: KeyPose = merge({ rot: HOLD }, {
-  rot: { ...ARMS_GATHER, head: [12, 0, 0] },
+  rot: { ...ARMS_GATHER, head: [13, -2, 0] },
 });
-/** The right hand's press: leant in behind it from the hips, the weight over to the right, the knees given. */
+/** The right hand's press: the weight over to the right, the knees given, the head turned after the hand. */
 const PRESSED: KeyPose = merge({ rot: HOLD }, {
-  rot: { ...ARMS_PRESS, ...HEEL, head: [10, 0, 0] },
-  move: [-0.005, -0.003, 0.002],
+  rot: { ...ARMS_PRESS, ...HEEL, head: [13, -8, 0] },
+  move: [-0.006, -0.004, 0.002],
 });
-/** The press's give: sunk a little further into it. */
-const GIVEN: KeyPose = merge(PRESSED, { rot: { lowerarm_r: [47, 0, 0], head: [12, 0, 0] }, move: [-0.006, -0.004, 0.002] });
+/** The press's give: the arm reached a little further into it, sunk a little further, the head nodded. */
+const GIVEN: KeyPose = merge(PRESSED, { rot: { lowerarm_r: [37, 0, 0], head: [14, -8, 0] }, move: [-0.007, -0.005, 0.002] });
 
 /** Her hands as turns added to his (`Clip.bodies.woman.tracks`), at the same beats. */
 const herOf = (his: Record<string, Euler>, hers: Record<string, Euler>): KeyPose => ({ rot: Object.fromEntries(Object.keys(hers).map((b) => [b, [hers[b][0] - his[b][0], hers[b][1] - his[b][1], hers[b][2] - his[b][2]] as Euler])) });
