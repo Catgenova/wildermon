@@ -18,8 +18,10 @@ import { ACTIONS, ACTION_BY_ID, SPOIL_ORDER, spoilFrom, TEACHES_NOTHING, TRY_LEA
 import { feedable, feedFill, riposte } from './creatureActions';
 import { aimPin, BELT_MAX, loopsFor, pinLabel, type BeltPin } from './belt';
 import { bodyForward } from '../net/felt';
-import type { IslandCrate, IslandGround, StoredThing } from '../contract/ground';
+import type { IslandCrate, IslandGround } from '../contract/ground';
 import { packed, type Aged } from '../net/packed';
+import { furnaceJobs, furnaceOutput } from '../net/rows/furnace';
+import { storedThing } from '../net/rows/stored';
 import { DROWN_RATE, DROWN_WARN, EXHAUSTED, HEAL_FED, HEAL_RATE, HUNGER_RATE, staminaBarAbove, SWIM_LEARN, SWIM_WIND, THIRST_RATE, WIND_PER_LEVEL, WIND_REST, WIND_STARVING, WIND_WALK } from './body';
 import { markName, MARK_CAP, MARK_COLOURS, type Marker } from './marks';
 import { acrossSide, Buildings, OPPOSITE_SIDE, type FloorTile, CELLAR_DECAY, CELLAR_FLOOR, CELLAR_LEVEL, connectsDown, floorKind, floorOf, INDOORS_DECAY, isDone, isSpiral, keepJobLevel, SPIRAL_FOOT_SAID, progressOf, roofShapeDef, TOP_LEVELS, WALL_HEIGHT, walkableKind, workLevel, type BuildingsJSON, type Building, type Wall, type Side, type Bill, type Column } from './building';
@@ -29,7 +31,7 @@ import { UNDONE_PLANS, type PlanAnswer } from './planarea';
 import { CRATE_DEFS, crateCentre, crateName, crateCapacity, crateShut, crateUnits, STORE_REACH, SUBTILES, subtileOf, type CrateKind, type PlacedCrate } from './crates';
 import { anvilAnchor, anvilCentre, anvilCovers, anvilName, ANVIL_SUBTILES, type PlacedAnvil } from './anvil';
 import { fireAnchor, fireCentre, fireCovers, FIRE_SUBTILES, type PlacedCampfire } from './campfire';
-import { furnaceMadeSaid, smelterAnchor, smelterCentre, smelterCovers, smelterName, SMELTER_H, SMELTER_PLUME, SMELTER_PLUME_WORKING, SMELTER_STACK_BACK, SMELTER_STACK_UP, SMELTER_W, type PlacedSmelter, type Plume, type SmeltJob } from './smelter';
+import { furnaceMadeSaid, smelterAnchor, smelterCentre, smelterCovers, smelterName, SMELTER_H, SMELTER_PLUME, SMELTER_PLUME_WORKING, SMELTER_STACK_BACK, SMELTER_STACK_UP, SMELTER_W, type PlacedSmelter, type Plume } from './smelter';
 import { kilnAnchor, kilnCentre, kilnCovers, kilnName, KILN_GLOW, KILN_GLOW_FIRING, KILN_PLUME, KILN_PLUME_FIRING, KILN_SUBTILES, KILN_VENT_BACK, KILN_VENT_UP, type PlacedKiln } from './kiln';
 import { WELL_TRICKLE, WELL_TRICKLE_AT, WELL_TRICKLE_QL, ACROSS_OF, DEED_PLACE, FURNITURE, ONE_ALTAR, deckSpot, isPlanter, furnitureAnchor, furnitureCapacity, furnitureCentre, furnitureCovers, furnitureDef, furnitureHeft, furnitureHolds, furnitureKg, furnitureRefuses, furnitureRoom, furnitureUnits, hiveRoom, POND_EVERY, rackDeck, rackSpots, teamOf, vehicleOf, type LiquidKind, type PlacedFurniture, furnitureName, facingOf, LIQUID_NAME, isBoat, furnitureFootprint, holdsLiquid, WATER_AT_HAND, STATION_REACH, type BoatDef, pieceShut } from './furniture';
 import { hiveTakes } from './bees';
@@ -46,7 +48,7 @@ import { HOST_ID } from '../net/protocol';
 import { Roster } from './roster';
 import { runeGateLights } from './runegate';
 import { GameEmitter, isTalk, TALK_LOG, type LogEntry, type LogKind } from './events';
-import { bagTake, DEED_DECAY, describeWith, foldInto, foodFill, groundDecayRate, Inventory, ITEM_DEFS, itemName, type Item, markOf, type Mark, rarityOf, rarityStep, itemDef, sameMark, sameStack, spendOut, unmendable, unrestored } from './items';
+import { bagTake, DEED_DECAY, describeWith, foldInto, foodFill, groundDecayRate, Inventory, ITEM_DEFS, itemName, type Item, markOf, rarityOf, rarityStep, itemDef, sameMark, sameStack, spendOut, unmendable, unrestored } from './items';
 import { ENCHANTERS_PLINTH, ENCHANTMENTS, furnaceBurn, moreSaid, NETMENDER_WEAR, swingEnchant, wornEnchant, type Enchant, type EnchantEffect } from './enchant';
 import { BASE_SPEED, CARRY_CRAWL, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER_LEVEL, groundStep, MAX_STAND, MAX_STEP, pathOptions, Player, readPlayer, type LiftRule, standsOn, walkKey, SWIM_DEPTH, SWIM_SPEED } from './player';
 import { findPath } from '../world/pathfinding';
@@ -10729,47 +10731,6 @@ export class Game {
 }
 
 /**
- * A thing the island says is on the ground, as the row comes off `placed`.
- *
- * The row itself, less the columns that are nobody's business — so a column
- * the island learns later arrives here without anybody having to widen a list.
- */
-/**
- * What a furnace off the island is working on and has finished, as things the
- * browser knows.
- *
- * The island writes a finished piece as `{def, ql, count, extra}` — its own
- * shape for a thing — and a job as `{makes, left, total, ql}` with nothing
- * about what went in. The browser's item has an `id`, and its job has an
- * `item`. Reported from the island as a right-click on a smelter that locked
- * the game up: the menu named what was finished in it, a piece with no `id`
- * has no name, and a name with nothing in it cannot be lowercased. The list
- * had been taken as it came, cast and not looked at.
- *
- * The uid is the furnace's and the piece's place in it, negative so it can
- * never be a uid of anything in the pack, and the same on every read so a
- * menu built off one read and used after the next still names the same
- * piece.
- */
-export function furnaceOutput(furnace: number, rows: unknown[] | undefined): Item[] {
-  return (rows ?? []).map((raw, i) => {
-    const o = raw as {
-      id?: string; def?: string; ql?: number; dmg?: number; count?: number; extra?: string | null; piece?: string | null; uid?: number; mark?: Mark | null;
-    };
-    return {
-      uid: typeof o.uid === 'number' ? o.uid : -(furnace * 1000 + i + 1),
-      id: o.id ?? o.def ?? 'lump',
-      ql: o.ql ?? 1,
-      dmg: o.dmg ?? 0,
-      count: o.count ?? 1,
-      extra: o.extra ?? undefined,
-      piece: o.piece ?? undefined,
-      ...(o.mark ? { mark: o.mark } : {}),
-    };
-  });
-}
-
-/**
  * A finished piece put with what is waiting, folded into a stack of its kind
  * the way a pack folds it: twenty lumps wait as one entry of twenty rather
  * than twenty of one, and the quality is the average by the unit. The
@@ -10785,36 +10746,8 @@ export function furnaceOut(output: Item[], made: Item): void {
   } else output.push(made);
 }
 
-/** And the jobs, each with something in the `item` a local finish would read. */
-export function furnaceJobs(rows: unknown[] | undefined): SmeltJob[] {
-  return (rows ?? []).map((raw) => {
-    const j = raw as { makes?: string; left?: number; total?: number; ql?: number; extra?: string | null; piece?: string | null; item?: Item };
-    const ql = j.ql ?? 1;
-    return {
-      item: j.item ?? { uid: 0, id: j.extra ? `${j.extra.toLowerCase()}_lump` : (j.makes ?? ''), ql, dmg: 0, count: 1 },
-      makes: j.makes ?? '',
-      left: j.left ?? 0,
-      total: j.total ?? j.left ?? 0,
-      ql,
-      extra: j.extra ?? undefined,
-      piece: j.piece ?? undefined,
-    };
-  });
-}
-
 export type { IslandCrate, IslandGround, IslandPlaced, StoredThing } from '../contract/ground';
-
-/** A stored thing as this side holds one: the same fields `packed` reads off a pack's row. */
-export const storedThing = (it: StoredThing): Item => ({
-  uid: it.id, id: it.def, ql: it.ql, dmg: it.dmg, count: it.count,
-  extra: it.extra ?? undefined,
-  rare: rarityStep(it.rare),
-  dye: it.dye ?? undefined,
-  enchant: it.enchant ?? undefined,
-  ...(typeof it.creature === 'number' ? { creature: it.creature } : {}),
-  ...(it.occupant ? { occupant: it.occupant } : {}),
-  ...(typeof it.price === 'number' ? { price: it.price } : {}),
-});
+export { storedThing };
 
 /** How far apart, in seconds, two reads of when a thing began to green are the same moment, read across the network twice (`sinceAgo`). */
 const SAME_SINCE = 60;

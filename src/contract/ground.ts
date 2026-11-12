@@ -14,7 +14,12 @@ import type { ItemRow } from './rows';
  * bridges. `Game.sawGround` lays it.
  */
 
-/** A thing set down: a fire, a furnace, an anvil, a post, a trap, a counter or a piece of furniture. */
+/**
+ * A thing the island says is on the ground, as the row comes off `placed`.
+ *
+ * The row itself, less the columns that are nobody's business — so a column
+ * the island learns later arrives here without anybody having to widen a list.
+ */
 export interface IslandPlaced {
   id: number;
   kind: string;

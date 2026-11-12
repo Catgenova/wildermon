@@ -10,10 +10,15 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { ErrorReport } from './errors';
 import { CHUNK, World } from '../world/world';
 import { PAVED } from '../world/tiles';
-import { blankWorld, layChange, layHistory, layRows, rowsOf, type LandRow, type TileChange } from './landpack';
+import { blankWorld, layChange, layHistory, layRows, rowsOf, type LandRow } from './landpack';
 import { generateAtlasWindow, loadAtlas, type Atlas } from '../world/atlas-world';
 import { CANNOT_SAVE, heldSeat, PROJECT, seatLost, supabase, signIn } from './supabase';
 import { rpc, rpcIn, type DoorArgs, type RpcArgs, type WorldDoor } from './rpc';
+import { isFields, listOf, numbersIn, stringsIn } from './rows/read';
+import { changeRow, type ChangeRow } from './rows/land';
+import { playerRow } from './rows/player';
+import { itemRow } from './rows/item';
+import { chatRow, deedSpot, foragedRow } from './rows/said';
 import type { IslandCreature } from '../game/creatures';
 import type { IslandSpring } from '../game/springs';
 import type { BredRecord } from '../game/boards';
@@ -1975,7 +1980,7 @@ export class Island {
           .select('n,x,y,tile,data,corners,soil')
           .eq('world_id', info.id).gt('n', after).order('n').limit(take);
         if (error) return { rows: [], error: error.message };
-        return { rows: rowsIn<TileChange & { n: number; world_id?: string }>(data) };
+        return { rows: listOf(data, changeRow) };
       },
       (c) => this.applyChange(c),
       (seen) => this.hooks.progress?.(seen, 0, 'changes', 'land'),
@@ -2335,7 +2340,7 @@ export class Island {
         stats: said.stats ?? null,
         skills: said.skills ?? null,
         wounds: Array.isArray(said.wounds) ? said.wounds : undefined,
-        marks: said.marks?.tiles ? { tiles: rowsIn<number>(said.marks.tiles), secs: said.marks.secs ?? 0 } : null,
+        marks: said.marks?.tiles ? { tiles: numbersIn(said.marks.tiles), secs: said.marks.secs ?? 0 } : null,
         path: said.path && typeof said.path === 'object' ? said.path : undefined,
         rested: said.rested, sleepOn: typeof said.sleep_on === 'boolean' ? said.sleep_on : undefined,
         favour: said.favour, boons: said.boons, knacks: said.knacks,
@@ -2543,7 +2548,7 @@ export class Island {
    * moving the cursor past a row that arrived here would step over every dig
    * in the rest of the island. `catchUp` owns it.
    */
-  private applyChange(c: TileChange & { n: number; world_id?: string }): void {
+  private applyChange(c: ChangeRow): void {
     const w = this.world;
     if (!w) return;
     // A block number is a block number on every island, and Realtime takes one
@@ -2628,7 +2633,7 @@ export class Island {
     for (const b of blocks) {
       listening = listening.on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'tile_change', filter: `region=eq.${b}` },
-        (m) => this.applyChange(m.new as never));
+        (m) => { const c = isFields(m.new) ? changeRow(m.new) : null; if (c) this.applyChange(c); });
     }
     this.channel = listening
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'event', filter: on },
@@ -2917,7 +2922,7 @@ export class Island {
       if (Array.isArray(gone)) this.hooks.swirlsGone?.(gone.filter((id): id is number => typeof id === 'number'));
     }
     if (Array.isArray(body.rows)) {
-      for (const c of body.rows as Array<TileChange & { n: number }>) this.applyChange(c);
+      for (const c of listOf(body.rows, changeRow)) this.applyChange(c);
     } else if (typeof body.upto === 'number' && body.upto > this.seenChange) {
       const now = Date.now();
       if (now - this.landAsked < LAND_ASKED_EVERY * 1000) return;
@@ -3304,7 +3309,7 @@ export class Island {
       .gt('at', from);
     // A read that failed is not ground grown back: what we had stands till the next.
     if (error || !Array.isArray(data)) return;
-    this.hooks.foraged(rowsIn<{ x: number; y: number; kind: string; at: string }>(data)
+    this.hooks.foraged(listOf(data, foragedRow)
       .map((r) => ({ x: r.x, y: r.y, kind: r.kind, ago: this.since(r.at) })));
   }
 
@@ -3360,7 +3365,7 @@ export class Island {
     const was = new Map(this.people);
     this.people.clear();
     const now = performance.now() / 1000;
-    for (const p of rowsIn<PlayerRow>(data)) {
+    for (const p of listOf(data, playerRow)) {
       p.gear = wearing ? wearing[p.uid] : was.get(p.uid)?.gear;
       // Somebody heard from over the channel lately is where the channel said,
       // not where their row was last written (\`BODY_FRESH\`).
@@ -3408,7 +3413,7 @@ export class Island {
     // laid down.
     if (asked !== this.acted) return;
     this.pack.clear();
-    for (const it of rowsIn<ItemRow>(data)) this.pack.set(it.id, it);
+    for (const it of listOf(data, itemRow)) this.pack.set(it.id, it);
     this.hooks.pack([...this.pack.values()]);
   }
 
@@ -3752,8 +3757,8 @@ export class Island {
       return;
     }
     const got = data as { added?: unknown; had?: unknown };
-    const added = rowsIn<string>(got.added).filter((id) => typeof id === 'string');
-    const had = rowsIn<string>(got.had).filter((id) => typeof id === 'string');
+    const added = stringsIn(got.added);
+    const had = stringsIn(got.had);
     for (const id of [...added, ...had]) this.guideTold.add(id);
     this.hooks.guided?.(added, had);
   }
@@ -3768,8 +3773,7 @@ export class Island {
     const { data, error } = await rpc('rpc_guide', { p_world: this.info.id });
     if (error || !data || typeof data !== 'object') return null;
     const got = data as Partial<Record<keyof GuideBook, unknown>>;
-    const kinds = (v: unknown): string[] => rowsIn<string>(v).filter((id) => typeof id === 'string');
-    return { seen: kinds(got.seen), tamed: kinds(got.tamed), bred: kinds(got.bred) };
+    return { seen: stringsIn(got.seen), tamed: stringsIn(got.tamed), bred: stringsIn(got.bred) };
   }
 
   /**
@@ -4525,9 +4529,7 @@ export class Island {
     if (!this.info) return null;
     const { data, error } = await rpc('rpc_settlements', { p_world: this.info.id });
     if (error || !data) return null;
-    return rowsIn<{ name: string; x: number; y: number; radius: number; mine: boolean }>((data as { deeds?: unknown }).deeds)
-      .filter((d) => typeof d.x === 'number' && typeof d.y === 'number' && typeof d.radius === 'number')
-      .map((d) => ({ name: String(d.name ?? ''), x: d.x, y: d.y, radius: d.radius, mine: !!d.mine }));
+    return listOf(isFields(data) ? data.deeds : null, deedSpot);
   }
 
   /** A thing's last `SALES_SHOWN` sales on the island this month, newest first (`rpc_sales`). */
@@ -4895,8 +4897,8 @@ export class Island {
     const { data } = await rpc('rpc_chat', { p_world: this.info.id, p_limit: limit });
     // `rpc_chat` has sent `at` since the day it was written and nothing read it.
     // Only what was said before we came ashore: anything after it comes down with the other lines (`HeardLines`).
-    return rowsIn<{ n: number; text: string; at?: string }>(data)
-      .filter((l) => !(typeof l.n === 'number' && l.n > this.lines.floor && this.lines.floor > 0))
+    return listOf(data, chatRow)
+      .filter((l) => !(l.n > this.lines.floor && this.lines.floor > 0))
       .map((l) => ({ n: l.n, text: l.text, at: whenSaid(l.at) }));
   }
 
