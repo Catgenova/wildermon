@@ -4257,7 +4257,7 @@ export const NEWS: News[] = [
     },
   },
   {
-    n: 530,
+    n: 532,
     day: '2026-11-12',
     lines: () => [
       `New: sculpted bodies, every player: ${listed(GENDERS.map((g) => g.name))}. Flat figure: swimming, driving, seated, no WebGL2, until the bodies load. Max zoom ${SCULPTED_MAX_ZOOM}× (was ${MAX_ZOOM}×).`,
@@ -4292,6 +4292,19 @@ export const NEWS: News[] = [
     n: 528,
     day: '2026-11-12',
     lines: () => ['Fixed: Improve and repair, Shopping list: scroll bar when the window is shorter than its contents.'],
+  },
+  {
+    n: 530,
+    day: '2026-11-12',
+    lines: () => ['Fixed: top of a waterfall off a pond behind a raised cliff edge: water drawn only over the pond, behind the rim (was: over the rim and its moss beside the fall, up to 2 tiles along).'],
+  },
+  {
+    n: 531,
+    day: '2026-11-12',
+    lines: () => {
+      const d = SPECIES.embra;
+      return [`Renamed: ${d.was![d.was!.length - 1]} → ${d.name}; unnamed ones, carcasses and stud book records too.`];
+    },
   },
   {
     n: 525,

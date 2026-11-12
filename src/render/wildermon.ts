@@ -56,7 +56,7 @@ const LINES: Record<string, () => Promise<Line>> = {
   grubba: () => import('./wild-petal').then((m) => line(m.BUDSCARAB, [m.BLOSSOMHORN, m.FLORANTLER])),
   cobbe: () => import('./wild-brick').then((m) => line(m.BRICKLING, [m.MORTARBACK, m.BASTIONDRAKE])),
   quarra: () => import('./wild-chip').then((m) => line(m.CHIPTAIL, [m.QUARRYBASH, m.MONOLITHUMP])),
-  embra: () => import('./wild-slug').then((m) => line(m.SLUGLOW, [m.SLUGEMBER, m.SLUGFERNO])),
+  embra: () => import('./wild-slug').then((m) => line(m.SNAILGLOW, [m.SLUGEMBER, m.SLUGFERNO])),
   bogga: () => import('./wild-toad').then((m) => line(m.MOSSKIP, [m.CRAGHOPPER, m.BASTIONTOAD])),
   bevere: () => import('./wild-gnaw').then((m) => line(m.SAPGNAW, [m.LOGCHEWER, m.TIMBERLORD])),
   wadd: () => import('./wild-penguin').then((m) => line(m.FINLET, [m.REEFFIN, m.TIDEHARVEST])),
