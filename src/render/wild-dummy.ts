@@ -1,9 +1,9 @@
 import {
-  ACT_SECS, add, beat, bipedBones, blush, clamp, cross, cyc, DEG, coatPalette, darker, disc, dot, drift, eyes, frac, lerp, lighter, merge, mix, moved,
-  onEgg, orb, orbAlong, paint, scale, smile, smooth, sub, TAU, tube, unit, type Anim, type BipedPose, type BipedSpec, type Bones, type Disc, type Kind,
-  type Piece,
+  ACT_SECS, add, beat, bipedBones, blush, clamp, cross, cyc, DEG, coatPalette, darker, disc, drift, eyes, frac, lerp, lighter,
+  merge, mix, moved, onEgg, orb, orbAlong, paint, scale, smile, smooth, TAU, tube, unit, type Anim, type BipedPose, type BipedSpec,
+  type Bones, type Disc, type Kind, type Piece,
 } from './beasts';
-import { blade, cut } from './beastkit';
+import { blade, css, cut, hump, jitter, nearSide, ramp } from './beastkit';
 import { joint, mesh, onScreen, place, type Mat, type Mesh, type RGB, type V3, type View } from './figure';
 
 /**
@@ -141,12 +141,6 @@ const DUMMITITAN_LOOK: Dummy = {
   size: 4.0,
 };
 
-/** A number of its own for each strand or leaf, nought to one, so a fringe is not a pattern. */
-const jitter = (i: number): number => frac(Math.sin(i * 12.9898 + 4.1) * 43758.5453);
-/** A rise from nought to one between `a` and `b`, eased. */
-const ramp = (t: number, a: number, b: number): number => smooth((t - a) / (b - a));
-/** A bump from nought up to one at `c` and back, `r` either side of it, eased. */
-const hump = (t: number, c: number, r: number): number => smooth(1 - Math.abs(t - c) / r);
 
 /* ---- the strike, in time ------------------------------------------------------------------- */
 
@@ -791,11 +785,8 @@ function dummyBuild(s: Dummy, lod: number): Piece[] {
 
 const STRAW: RGB = [232, 196, 120];
 const STRAW_DARK: RGB = [196, 150, 84];
-const css = (c: RGB, al: number): string => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${clamp(al).toFixed(3)})`;
 /** Where something thrown from `p` with velocity `v` is `s` seconds on, falling slowly, as straw does; it lies where it lands. */
 const thrown = (p: V3, v: V3, s: number, fall = 9): V3 => [p[0] + v[0] * s, p[1] + v[1] * s, Math.max(0.03, p[2] + v[2] * s - 0.5 * fall * s * s)];
-/** Whether a point is on the viewer's side of a body whose middle is at `c`. */
-const nearSide = (p: V3, c: V3, view: View): boolean => dot(sub(p, c), view.T) > 0;
 
 /**
  * Straw puffed out of it at each blow: wisps flung out of its body and its paw, turning as they fall; the more of them the bigger

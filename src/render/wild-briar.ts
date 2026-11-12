@@ -3,7 +3,7 @@ import {
   pastel, quadBones, quadBonesOf, quadPose, scale, smile, smooth, sub, TAU, tube, unit, type Anim, type Bones, type Disc, type Kind, type Piece, type QuadPose,
   type LegSpec, type QuadSpec,
 } from './beasts';
-import { cut, quadPieces } from './beastkit';
+import { css, cut, hump, jitter, nearSide, quadPieces, ramp } from './beastkit';
 import { UNITS_PER_TILE } from './iso';
 import { joint, mesh, onScreen, place, type Face, type Mat, type Mesh, type RGB, type V3, type View, type Xf } from './figure';
 import { trot } from './wild-paws';
@@ -184,12 +184,6 @@ const TAILS: readonly Tail[] = [
 
 /* ---- helpers --------------------------------------------------------------------------- */
 
-/** A number of its own for each thing, nought to one, so a row of leaves is not a pattern. */
-const jitter = (i: number): number => frac(Math.sin(i * 12.9898 + 4.1) * 43758.5453);
-/** A rise from nought to one between `a` and `b`, eased. */
-const ramp = (t: number, a: number, b: number): number => smooth((t - a) / (b - a));
-/** A bump from nought up to one at `c` and back, `r` either side of it, eased. */
-const hump = (t: number, c: number, r: number): number => smooth(1 - Math.abs(t - c) / r);
 
 /** Where a point on a body of rings is, `y` along it and `th` round it from its right side (up positive), and the way out of it there. */
 function onRings(R: Rings, y: number, th: number): { p: V3; n: V3 } {
@@ -1197,7 +1191,6 @@ function briarBuild(s: Briar, lod: number): Piece[] {
 
 /* ---- what it throws about --------------------------------------------------------------- */
 
-const css = (c: RGB, al: number): string => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${clamp(al).toFixed(3)})`;
 const DUST: RGB = [176, 166, 140];
 /** A leaf shaken loose: sage, a darker sage, blush pink, the same on every variant. */
 const LOOSE: readonly RGB[] = [[150, 176, 112], [104, 134, 86], [238, 156, 170]];
@@ -1229,8 +1222,6 @@ function looseLeaf(g: CanvasRenderingContext2D, x: number, y: number, r: number,
 
 /** Where something thrown from `p` with velocity `v` is `s` seconds on, drifting down as a leaf does. */
 const drifted = (p: V3, v: V3, s: number): V3 => [p[0] + v[0] * s, p[1] + v[1] * s, Math.max(0.03, p[2] + v[2] * s - 8 * s * s)];
-/** Whether a point is on the viewer's side of a body whose middle is at `c`. */
-const nearSide = (p: V3, c: V3, view: View): boolean => dot(sub(p, c), view.T) > 0;
 
 /**
  * The streak a claw leaves in the air as the strike lands: three pale curved

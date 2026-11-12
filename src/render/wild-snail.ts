@@ -2,7 +2,7 @@ import {
   ACT_SECS, add, clamp, coatPalette, cross, cyc, disc, dot, drift, eyes, frac, lerp, merge, mix, onEgg, orb, orbAlong, paint, scale, smile,
   smooth, sub, TAU, taper, tube, unit, type Anim, type Bones, type Disc, type Kind, type Piece,
 } from './beasts';
-import { cut } from './beastkit';
+import { cut, hump, jitter, nearSide, ramp } from './beastkit';
 import { joint, mesh, onScreen, place, ROOT, type Face, type Mat, type Mesh, type RGB, type V3, type View, type Xf } from './figure';
 
 /**
@@ -99,12 +99,6 @@ const HEARTH_LOOK: Snail = {
   size: 1.85,
 };
 
-/** A number of its own for each thing, nought to one, so a scatter is not a pattern. */
-const jitter = (i: number): number => frac(Math.sin(i * 12.9898 + 4.1) * 43758.5453);
-/** A rise from nought to one between `a` and `b`, eased. */
-const ramp = (t: number, a: number, b: number): number => smooth((t - a) / (b - a));
-/** A bump from nought up to one at `c` and back, `r` either side of it, eased. */
-const hump = (t: number, c: number, r: number): number => smooth(1 - Math.abs(t - c) / r);
 
 /* ---- the strike and the task, in time ---------------------------------------------------- */
 
@@ -986,8 +980,6 @@ const ROT_DARK: RGB = [98, 80, 44];
 const LEAF_BITS: readonly RGB[] = [[132, 178, 84], [226, 132, 52], [236, 178, 70], [92, 142, 70]];
 /** How big a stage's crumbs, bits and things are drawn, against the Snaileaf's. */
 const bigness = (s: Snail): number => [1, 1.25, 1.6][s.stage];
-/** Whether a point is on the viewer's side of a body whose middle is at `c`. */
-const nearSide = (p: V3, c: V3, view: View): boolean => dot(sub(p, c), view.T) > 0;
 const midOf = (s: Snail, b: Bones): V3 => [0, (b.shell.t[1] + b.ring2.t[1]) / 2, s.shell.R * 0.6];
 /** Where something thrown from `p` with velocity `v` is `t` seconds on; it lies where it lands. */
 const thrown = (p: V3, v: V3, t: number, fall = 9): V3 => [p[0] + v[0] * t, p[1] + v[1] * t, Math.max(0.03, p[2] + v[2] * t - 0.5 * fall * t * t)];

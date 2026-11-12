@@ -2,7 +2,7 @@ import {
   ACT_SECS, add, beat, clamp, coatPalette, cross, curve, cyc, DEG, disc, dot, frac, lerp, lifted, LOOP, merge, mix, onEgg, orb, orbAlong, paint, pastel,
   quadBonesOf, scale, shadowOf, smile, smooth, step, sub, TAU, tube, unit, type Anim, type Bones, type Disc, type Kind, type LegSpec, type Piece, type QuadPose, type QuadSpec,
 } from './beasts';
-import { cut, quadPieces } from './beastkit';
+import { css, cut, hump, jitter, nearSide, quadPieces, ramp } from './beastkit';
 import { joint, mesh, onScreen, place, ROOT, type Face, type Mat, type Mesh, type RGB, type V3, type View, type Xf } from './figure';
 
 /**
@@ -160,8 +160,6 @@ const CLOUDBORNE_LOOK: Cloud = {
   size: 2.1,
 };
 
-/** A number of its own for each puff and flower, nought to one, so a fleece is not a pattern. */
-const jitter = (i: number): number => frac(Math.sin(i * 12.9898 + 4.1) * 43758.5453);
 
 /** Where a point on a body of rings is, `y` along it and `th` round it from its right side (up positive), and the way out of it there. */
 function onRings(R: Rings, y: number, th: number): { p: V3; n: V3 } {
@@ -297,10 +295,6 @@ function sweepOf(spec: QuadSpec, fore: boolean): number {
   return mid / (fore ? f : h);
 }
 
-/** A rise from nought to one between `a` and `b`, eased. */
-const ramp = (t: number, a: number, b: number): number => smooth((t - a) / (b - a));
-/** A bump from nought up to one at `c` and back, `r` either side of it, eased. */
-const hump = (t: number, c: number, r: number): number => smooth(1 - Math.abs(t - c) / r);
 
 /** How far through a strike each stage's blow lands: when its horns meet what it butts. */
 export const CLOUD_HITS = [0.5, 0.52, 0.52] as const;
@@ -1717,10 +1711,7 @@ const ICE: RGB = [196, 228, 255];
 const GOLD: RGB = [246, 214, 128];
 const GRASS: RGB = [128, 168, 88];
 const INK: RGB = [96, 102, 150];
-const css = (c: RGB, al: number): string => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${clamp(al).toFixed(3)})`;
 
-/** Whether a point is on the viewer's side of a body whose middle is at `c`: drawn over the body if so, under it if not. */
-const nearSide = (p: V3, c: V3, view: View): boolean => dot(sub(p, c), view.T) > 0;
 /**
  * How big a stage's things in the air are drawn, against the Cloudram's, in
  * the units of the screen they are drawn on: about two to a unit of its body

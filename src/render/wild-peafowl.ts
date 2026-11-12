@@ -2,7 +2,7 @@ import {
   ACT_SECS, add, beat, bend, birdBones, clamp, coatPalette, cross, curve, cyc, DEG, dot, eyes, frac, lerp, merge, mix, orb, orbAlong,
   scale, smooth, sub, taper, TAU, tube, unit, type Anim, type BirdPose, type BirdSpec, type Bones, type Kind, type Piece,
 } from './beasts';
-import { birdLegPieces, cut } from './beastkit';
+import { birdLegPieces, cut, jitter, ramp } from './beastkit';
 import { joint, mesh, ROOT, type Face, type Mat, type Mesh, type RGB, type V3, type Xf } from './figure';
 import { patch } from './wild-birds';
 
@@ -76,10 +76,6 @@ interface Pea {
 
 /* ---- helpers ------------------------------------------------------------------------- */
 
-/** A number of its own for each thing, nought to one, so feathers are not a pattern. */
-const jitter = (i: number): number => frac(Math.sin(i * 12.9898 + 4.1) * 43758.5453);
-/** A rise from nought to one between `a` and `b`, eased. */
-const ramp = (t: number, a: number, b: number): number => smooth((t - a) / (b - a));
 /** A ringing that dies away, `since` seconds after a blow. */
 const ringOut = (since: number, k: number, f = 2.4, damp = 4): number => (since < 0 ? 0 : k * Math.exp(-since * damp) * Math.sin(since * TAU * f));
 /** `v` turned about the unit axis `d` by `a` radians. */

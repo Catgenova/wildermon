@@ -2,7 +2,7 @@ import {
   ACT_SECS, add, beat, clamp, coatPalette, cross, curve, DEG, disc, dot, frac, lerp, merge, mix, orb, orbAlong, paint, quadBonesOf, scale,
   smooth, step, sub, TAU, tube, unit, type Anim, type Bones, type Disc, type Kind, type Piece, type QuadPose, type QuadSpec,
 } from './beasts';
-import { cut, quadPieces } from './beastkit';
+import { css, cut, hump, jitter, nearSide, quadPieces, ramp } from './beastkit';
 import { joint, mesh, onScreen, place, type Face, type Mat, type Mesh, type RGB, type V3, type View } from './figure';
 import { trot } from './wild-paws';
 
@@ -156,8 +156,6 @@ const SNUFFTHORN_LOOK: Snuff = {
   size: 1.92,
 };
 
-/** A number of its own for each leaf, nought to one, so a mane is not a pattern. */
-const jitter = (i: number): number => frac(Math.sin(i * 12.9898 + 4.1) * 43758.5453);
 
 /** Where a point on a body of rings is, `y` along it and `th` round it from its right side (up positive), and the way out of it there. */
 function onRings(R: { y: number[]; z: number[]; w: number[]; h: number[] }, y: number, th: number): { p: V3; n: V3 } {
@@ -215,10 +213,6 @@ const DIAGONALS = [0, 0.5, 0.5, 0];
 const STRIKE = { gather: 0.38, hit: 0.52, done: 1 };
 /** How far into a strike the scrape of a fore hoof before the charge is over, from its start. */
 const SCRAPE = 0.32;
-/** A rise from nought to one between `a` and `b`, eased. */
-const ramp = (t: number, a: number, b: number): number => smooth((t - a) / (b - a));
-/** A bump from nought up to one at `c` and back, `r` either side of it, eased. */
-const hump = (t: number, c: number, r: number): number => smooth(1 - Math.abs(t - c) / r);
 
 /** How far through a strike it has gathered itself (nought to one and gone again by the hit) and thrown itself forward. */
 function strikeOf(t: number): { gather: number; thrust: number; settle: number } {
@@ -897,7 +891,6 @@ const LEAF: RGB = [150, 188, 104];
 const LEAF_PINK: RGB = [238, 196, 192];
 const PETAL: RGB = [250, 226, 228];
 const EARTH: RGB = [132, 98, 72];
-const css = (c: RGB, al: number): string => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${clamp(al).toFixed(3)})`;
 
 /**
  * A leaf in the air, `len` long, turned `ang`: two-tone down its middle, with
@@ -978,8 +971,6 @@ function dust(g: CanvasRenderingContext2D, view: View, at: V3, r: number, al: nu
 
 /** Where something thrown from `p` with velocity `v` is `s` seconds on, falling; it lies where it lands. */
 const thrown = (p: V3, v: V3, s: number, fall = 9): V3 => [p[0] + v[0] * s, p[1] + v[1] * s, Math.max(0.02, p[2] + v[2] * s - 0.5 * fall * s * s)];
-/** Whether a point is on the viewer's side of a body whose middle is at `c`: drawn over the body if so, under it if not. */
-const nearSide = (p: V3, c: V3, view: View): boolean => dot(sub(p, c), view.T) > 0;
 /** How big a stage's things in the air are drawn, against the Snuffroot's. */
 const bigness = (s: Snuff): number => s.len / 2.7;
 

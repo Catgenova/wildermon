@@ -2,7 +2,7 @@ import {
   ACT_SECS, add, clamp, coatPalette, cross, curve, cyc, DEG, disc, dot, frac, lerp, LOOP, merge, mirrored, mix, orb, orbAlong, paint, pastel, scale,
   smooth, sub, taper, TAU, tube, unit, type Anim, type Bones, type Disc, type Kind, type Piece,
 } from './beasts';
-import { blade, cut } from './beastkit';
+import { blade, css, cut, hump, jitter, nearSide, ramp } from './beastkit';
 import { joint, mesh, onScreen, place, ROOT, type Face, type Mat, type Mesh, type RGB, type V3, type View, type Xf } from './figure';
 
 /**
@@ -186,12 +186,6 @@ const HALLOWMIRE_LOOK: Ghost = {
 
 /* ---- small things -------------------------------------------------------------------- */
 
-/** A number of its own for each thing, nought to one, so a fringe is not a pattern. */
-const jitter = (i: number): number => frac(Math.sin(i * 12.9898 + 4.1) * 43758.5453);
-/** A rise from nought to one between `a` and `b`, eased. */
-const ramp = (t: number, a: number, b: number): number => smooth((t - a) / (b - a));
-/** A bump from nought up to one at `c` and back, `r` either side of it, eased. */
-const hump = (t: number, c: number, r: number): number => smooth(1 - Math.abs(t - c) / r);
 /** A soft limit: about `x` while small, never past `k`. */
 const soft = (x: number, k: number): number => k * Math.tanh(x / k);
 
@@ -1129,10 +1123,7 @@ const LILAC: RGB = [196, 172, 246];
 const MIST: RGB = [244, 238, 255];
 const AMBER: RGB = [255, 176, 72];
 const PUMPKIN: RGB = [255, 136, 38];
-const css = (c: RGB, al: number): string => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${clamp(al).toFixed(3)})`;
 
-/** Whether a point is on the viewer's side of a body whose middle is at `c`: drawn over the body if so, under it if not. */
-const nearSide = (p: V3, c: V3, view: View): boolean => dot(sub(p, c), view.T) > 0;
 /** How big a stage's things in the air are drawn. */
 const bigness = (s: Ghost): number => [0.7, 1, 1.45][s.stage];
 /** How tall it stands, to the top of its hat, over the ground. */

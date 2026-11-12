@@ -2,12 +2,11 @@ import {
   ACT_SECS, add, clamp, coatPalette, cross, curve, cyc, DEG, disc, dot, frac, lerp, merge, mix, orbAlong, paint, scale, smooth, sub,
   TAU, tube, unit, type Anim, type Bones, type Disc, type Kind, type Piece, type QuadPose, type QuadSpec,
 } from './beasts';
-import { cut, quadPieces } from './beastkit';
+import { cut, hump, jitter, mixV, nearSide, quadPieces, ramp } from './beastkit';
 import { mesh, onScreen, place, type Face, type Mat, type Mesh, type RGB, type V3, type View, type Xf } from './figure';
 import {
-  badgerBones, BADGER_HITS, barrelSolid, blot, blowFlash, css, domed, earOf, eyesOf, headSolids, hump, jitter,
-  left, legPieces, line, mixV, nearSide, onRings, ramp, restOf, specOf, stillPlan, stirOf, strikeBurst, thrown,
-  wound, type Badger, type Plan, type Rest, type Stir,
+  badgerBones, BADGER_HITS, barrelSolid, blot, blowFlash, css, domed, earOf, eyesOf, headSolids, left, legPieces, line, onRings,
+  restOf, specOf, stillPlan, stirOf, strikeBurst, thrown, wound, type Badger, type Plan, type Rest, type Stir,
 } from './wild-badger';
 
 /**

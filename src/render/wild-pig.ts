@@ -3,7 +3,7 @@ import {
   quadPose, scale, shadowOf, smooth, step, sub, TAU, tube, unit, type Anim, type Bones, type Disc, type Kind, type MatOf, type Piece, type QuadPose,
   type QuadSpec,
 } from './beasts';
-import { cut, quadPieces, under } from './beastkit';
+import { css, cut, hump, jitter, nearSide, quadPieces, ramp, under } from './beastkit';
 import { joint, mesh, onScreen, place, type Face, type Mat, type Mesh, type RGB, type V3, type View } from './figure';
 import { trot } from './wild-paws';
 
@@ -171,12 +171,6 @@ function sized(k: number, H: Pig['head']): Pig['head'] {
   return { ...H, y: by(H.y), z: by(H.z), w: by(H.w), h: by(H.h) };
 }
 
-/** A number of its own for each leaf, nought to one, so a mane is not a pattern. */
-const jitter = (i: number): number => frac(Math.sin(i * 12.9898 + 4.1) * 43758.5453);
-/** A rise from nought to one between `a` and `b`, eased. */
-const ramp = (t: number, a: number, b: number): number => smooth((t - a) / (b - a));
-/** A bump from nought up to one at `c` and back, `r` either side of it, eased. */
-const hump = (t: number, c: number, r: number): number => smooth(1 - Math.abs(t - c) / r);
 
 /** Where a point on a body of rings is, `y` along it and `th` round it from its right side (up positive), and the way out of it there. */
 function onRings(R: Rings, y: number, th: number): { p: V3; n: V3 } {
@@ -1917,7 +1911,6 @@ const CHAFF: RGB = [246, 214, 128];
 const SOIL: RGB = [96, 66, 46];
 const LOAM: RGB = [150, 110, 76];
 const RIM: RGB = [196, 160, 118];
-const css = (c: RGB, al: number): string => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${clamp(al).toFixed(3)})`;
 
 /** A leaf in the air, `len` long, turned `ang`: two-tone down its middle, a soft edge in a darker shade, its rib only when big enough to be more than a smudge. */
 function flyingLeaf(g: CanvasRenderingContext2D, x: number, y: number, len: number, ang: number, c: RGB, al: number): void {
@@ -2039,8 +2032,6 @@ function dust(g: CanvasRenderingContext2D, view: View, at: V3, r: number, al: nu
 
 /** Where something thrown from `p` with velocity `v` is `s` seconds on, falling; it lies where it lands. */
 const thrown = (p: V3, v: V3, s: number, fall = 9): V3 => [p[0] + v[0] * s, p[1] + v[1] * s, Math.max(0.02, p[2] + v[2] * s - 0.5 * fall * s * s)];
-/** Whether a point is on the viewer's side of a body whose middle is at `c`: drawn over the body if so, under it if not. */
-const nearSide = (p: V3, c: V3, view: View): boolean => dot(sub(p, c), view.T) > 0;
 /** How big a stage's things in the air are drawn, against the Plowhog's: less than in proportion on the small one, so they still read. */
 const bigness = (s: Pig): number => 0.4 + 0.6 * (s.len / 2.6);
 /** How tall it stands, over the top of its mane, for throwing what it throws high enough to be seen over it from behind. */
