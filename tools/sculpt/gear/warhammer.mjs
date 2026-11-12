@@ -48,19 +48,19 @@ export const MATS_PLAIN = {
   wood: { c: '#a8693f', vary: 0.03 },
   wood2: { c: '#935a36', vary: 0.03 },
   grain: { c: '#74401f' },
-  panel: { c: '#c9b79f' },
+  panel: { c: '#d8b48e' },
   rune: { c: '#a8957f' },
   core: { c: '#d8c3a6' },
   star: { c: '#e2cfa4' },
   gem: { c: '#d4b47a' },
-  glow: { c: '#ff9a35', glow: 1 },
+  glow: { c: '#ff7a22', glow: 1 },
 };
 export const MATS_ENCHANTED = {
   ...MATS_PLAIN,
-  rune: { c: '#ffb040', emit: true },
-  core: { c: '#ffa23c', emit: true },
-  star: { c: '#fff4d2', emit: true },
-  gem: { c: '#ffa847', emit: true },
+  rune: { c: '#ff9430', emit: true },
+  core: { c: '#ff8d36', emit: true },
+  star: { c: '#fff1c4', emit: true },
+  gem: { c: '#ff9a3c', emit: true },
 };
 
 export function buildWarhammer({ enchanted = false, length } = {}) {
@@ -78,9 +78,10 @@ export function buildWarhammer({ enchanted = false, length } = {}) {
   };
   const FRONT = [0, 0, 1], BACK = [0, 0, -1];
   const DEG = Math.PI / 180;
-  // where the fists close: the lead (right) up the haft, the second (left) a fist's breadth and more under it, over the
-  // lower collar (src/sculpt/lowpoly.ts secondOn keeps them apart)
-  const LEAD = 72, SECOND = 46;
+  // where the fists close: the second (left) at the wood's foot, its little finger on the lower collar, the lead (right)
+  // a fist's breadth over it (src/sculpt/lowpoly.ts secondOn keeps them apart): held by the end, so the pommel stands out
+  // of the hands as little as it can (higher, it swings into his jaw at the swing's rest and into the hips at the impact)
+  const LEAD = 62, SECOND = 38;
 
   /* ---- shapes ---------------------------------------------------------------------------------------------------- */
   /** An octagon round (a, b) of half sizes ha, hb, its corners cut ca along a and cb along b; corners from (+a, +b) round. */
@@ -117,7 +118,7 @@ export function buildWarhammer({ enchanted = false, length } = {}) {
     tube([b0, b1], (i, j) => SIDE_M[j], [X(BAND[1]), X(BODY)]);
     tube([b1, f0], (i, j) => (j === 7 || j === 0 || j === 6 ? 'stoneL' : j === 1 || j === 5 ? 'stoneB' : 'bevel'), [X(BODY), X(FACE)]);
     // the face: a gold frame round its edge, the plate inside it
-    const f1 = hring(X(FACE + 0.12), FH - 2.2, FZ - 2.2, FCU - 0.9, FCZ - 0.9, UC + 1.5, null, FCUB - 1.2);
+    const f1 = hring(X(FACE + 0.12), FH - 1.5, FZ - 1.5, FCU - 0.6, FCZ - 0.6, UC + 1.5, null, FCUB - 0.8);
     for (let j = 0; j < 8; j++) F([f0[j], f0[(j + 1) % 8], f1[(j + 1) % 8], f1[j]], 'gold', [s, 0, 0]);
     F(f1, 'stone', [s, 0, 0]);
     faces[s] = [...f0, ...band[1], ...b1];
@@ -208,7 +209,7 @@ export function buildWarhammer({ enchanted = false, length } = {}) {
   medallion(HUB[0], HUB[1], -1, 12, 14.8, 9.8, 20.4, 18.6, 16, 'stoneL', null);
 
   /* ---- the pommel: an eight-sided faceted stone under the ring, its point down; a medallion on each face ---------- */
-  const PM = 19;
+  const PM = 18.4;
   {
     const PR = [[28.6, 8.8], [24.5, 12.2], [18.5, 13.6], [12.5, 12.6], [5.5, 7.6], [0, 3]];
     const rs = PR.map(([U, s]) => { PROFILE.push([U, s, s * 0.3]); return { U, s, r: ring(U, s, s * 0.3, 0.97) }; });
@@ -230,11 +231,11 @@ export function buildWarhammer({ enchanted = false, length } = {}) {
   }
 
   /* ---- the faces' rune stars ------------------------------------------------------------------------------------------ */
-  const FS = 231;
+  const FS = 232.5;
   const faceStar = (s) => {
     // in the face's plane (U, Z) at X = s FACE: eight points, the long ones up, down and across
     const X = s * (FACE + 0.25), out = [s, 0, 0], c = P(X + s * 0.15, FS, 0), pts = [];
-    for (let j = 0; j < 16; j++) { const a = (90 + j * 22.5) * DEG, r = j % 2 ? 2.6 : j % 8 === 0 ? 15 : j % 4 === 0 ? 11 : 7; pts.push(P(X, FS + r * Math.sin(a), r * Math.cos(a))); }
+    for (let j = 0; j < 16; j++) { const a = (90 + j * 22.5) * DEG, r = j % 2 ? 3.2 : j % 8 === 0 ? 15.5 : j % 4 === 0 ? 12 : 8; pts.push(P(X, FS + r * Math.sin(a), r * Math.cos(a))); }
     for (let j = 0; j < 16; j++) F([c, pts[j], pts[(j + 1) % 16]], 'rune', out);
   };
   faceStar(1); faceStar(-1);
@@ -252,7 +253,7 @@ export function buildWarhammer({ enchanted = false, length } = {}) {
   /* ---- the glow, enchanted: added over the rest, its corners' alpha falling to nothing ------------------------------ */
   if (enchanted) {
     const disc = (cx, cu, z, r, a, n = 10) => { const c = P(cx, cu, z, a), rim = [...Array(n).keys()].map((j) => P(cx + r * Math.cos(j * 2 * Math.PI / n), cu + r * Math.sin(j * 2 * Math.PI / n), z, 0)); for (let j = 0; j < n; j++) F([c, rim[j], rim[(j + 1) % n]], 'glow', z >= 0 ? FRONT : BACK); };
-    disc(HUB[0], HUB[1], 20.2, 30, 0.45, 12);
+    disc(HUB[0], HUB[1], 20.6, 22, 0.32, 12);
     for (const sz of [1, -1]) {
       disc(0, PM, 14.4 * sz, 15, 0.4);
       { const X = 14.8 * sz, c = P(X, PM, 0, 0.4), rim = [...Array(10).keys()].map((j) => P(X, PM + 15 * Math.cos(j * Math.PI / 5), 15 * Math.sin(j * Math.PI / 5), 0)); for (let j = 0; j < 10; j++) F([c, rim[j], rim[(j + 1) % 10]], 'glow', [sz, 0, 0]); }

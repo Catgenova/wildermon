@@ -35,7 +35,7 @@ const SECS = ${SECS};
 const look = (gender) => ({ ...DEFAULT_LOOK, gender, hair: 'bald', beard: 'none' });
 const VIEWS = [[0, 'front'], [1, '3/4'], [2, 'side'], [4, 'back']];
 const pose = (gender, facing, t, lit, id, length = SECS) => ({ id, phase: 0, moving: false, facing, swimming: false, working: true, job: 'attack_creature', act: { t, length }, gear: { weapon: { id: 'maul', material: 'iron', enchanted: lit } }, look: look(gender) });
-const size = (zoom) => [Math.ceil(52 * zoom), Math.ceil(64 * zoom)];
+const size = (zoom) => [Math.ceil(52 * zoom), Math.ceil(76 * zoom)];
 function cell(zoom, p) {
   const [cw, ch] = size(zoom), cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
   const g = cv.getContext('2d'); g.fillStyle = '#7d9b5e'; g.fillRect(0, 0, cw, ch);

@@ -16,6 +16,7 @@
 //     metrics: the head's and the haft's triangles crossing the body's, the grip's crossing the fingers', how deep the
 //       hands and the body are in the haft, the head's lowest point off the ground through the clip and at the impact;
 //     gif: the whole clip, both bodies, front, three-quarter, side and back (swing-<who>.gif; needs Python's PIL).
+//   (HAM_DEBUG=1: each frame the haft crosses the body in, with the body's bones it crosses)
 //
 // The swing is the game's own: the clip and its player bundled from src/sculpt/anim (clipLocal, each body's skeleton from
 // src/sculpt/lowpoly.ts), the warhammer held as the game holds it (a Held of its asset: the hand sockets and their curl,
@@ -173,7 +174,9 @@ if (only.includes('held')) {
     const h = swingAt(who, t), p = who === 'female' ? lit : plain, Rt = [h.g.R[0], h.g.R[3], h.g.R[6], h.g.R[1], h.g.R[4], h.g.R[7], h.g.R[2], h.g.R[5], h.g.R[8]];
     const mid = mul(add(h.at, h.l), 0.5), loc = (q) => mul(mv(Rt, sub(q, mid)), ASSET.scale[who]);
     const near = (Dd, r) => { const o = []; for (let i = 0; i < Dd.length; i += 33) { let ok = true; for (let kk = 0; kk < 3; kk++) if (Math.hypot(Dd[i + kk * 11], Dd[i + kk * 11 + 1], Dd[i + kk * 11 + 2]) > r) ok = false; if (ok) for (let j = 0; j < 33; j++) o.push(Dd[i + j]); } return o; };
-    const items = [near(bodyDrawable(rigs[who], h.P.map(loc)), 1.4), near(hamD(p, h.Q.map(loc)), 1.6)];
+    // (the warhammer from the pommel to the wood's top, whole: the wood is one facet long)
+    const low = []; { const Dd = hamD(p, h.Q.map(loc)), Pl = p.G.V; const keep = new Set(); trisOf(p.G).forEach((t, i) => { if (t.v.some((v) => Pl[v][1] / L * SHEET_L < 165)) keep.add(i); }); let i = 0; for (const t of trisOf(p.G)) { if (keep.has(i)) for (let j = 0; j < 33; j++) low.push(Dd[i * 33 + j]); i++; } }
+    const items = [near(bodyDrawable(rigs[who], h.P.map(loc)), 1.4), low];
     const name = `${who === 'male' ? 'Him' : 'Her'}, ${lab}`;
     [[0, 0, -90, 'down the haft'], [1, 90, 0, 'from one face'], [2, 180, 0, 'from the emblem\'s side']].forEach(([r, yaw, pitch, v]) => cells.push({ items, cam: { yaw, pitch, s: 90, c: [0, 0, 0] }, box: [col * cw, r * ch, cw, ch], bg: BG, ink: 1, label: `${name}: ${v}` }));
     col++;
@@ -214,6 +217,7 @@ if (only.includes('metrics') || only.includes('swing')) {
       if (a > m.headX) { m.headX = a; m.headXAt = +t.toFixed(2); }
       m.headXHead = Math.max(m.headXHead, a2);
       if (b > m.haftX) { m.haftX = b; m.haftXAt = +t.toFixed(2); }
+      if (b > 0) { m.haftXFrames = (m.haftXFrames ?? 0) + 1; (m.haftXTimes ??= []).push(+t.toFixed(2)); if (process.env.HAM_DEBUG) console.log(who, t.toFixed(2), b, JSON.stringify(by(bp, notHandT))); }
       m.gripFingersX = Math.max(m.gripFingersX, c);
       // the warhammer's head off the body's head (nearest points, cm of a 1.8 m man)
       { let best = Infinity; for (const i of HV) for (let j = 0; j < h.P.length; j += 3) if (isHead[j]) best = Math.min(best, Math.hypot(...sub(h.Q[i], h.P[j]))); const cm = best * s * 180 / 16.5; if (cm < m.headClearCm) { m.headClearCm = +cm.toFixed(1); m.headClearAt = +t.toFixed(2); } }
@@ -261,7 +265,7 @@ if (only.includes('metrics') || only.includes('swing')) {
     m.fistGap = +((A.grip.lead[1] - hi.held.second)).toFixed(3);
     m.endMin = +m.endMin.toFixed(2);
     report[who] = m;
-    console.log(`swing ${who}: head x body ≤${m.headX} (at ${m.headXAt}s: ${JSON.stringify(m.headXBones ?? {})}; x the body's head ${m.headXHead}), the head ≥${m.headClearCm} cm off the body's head (at ${m.headClearAt}s); haft x body (not the hands) ≤${m.haftX} (at ${m.haftXAt}s: ${JSON.stringify(m.haftXBones ?? {})}), grip x hands ≤${m.gripFingersX}; hands ≤${m.handInCm} cm into the haft (right ${m.handIn.r}, left ${m.handIn.l}; at ${m.handInAt}s, ${m.handInBone}; the long sword's ≤${m.swordHandInCm} cm into its grip, its hilt x body ≤${m.swordHiltX}), body ≤${m.bodyInCm} cm (at ${m.bodyInAt}s); the left fist ≤${m.leftOffCm} cm off the grip's axis (at ${m.leftOffAt}s); lowest point ≥${m.endMin} gu off the ground (at ${m.endMinAt}s, its point ${m.endMinAtPx} sheet px), ${m.lowAtImpact} at the impact; fists ${m.fistGap} gu apart, along the grip (U px): right ${m.fistsU.right}, left ${m.fistsU.left}`);
+    console.log(`swing ${who}: head x body ≤${m.headX} (at ${m.headXAt}s: ${JSON.stringify(m.headXBones ?? {})}; x the body's head ${m.headXHead}), the head ≥${m.headClearCm} cm off the body's head (at ${m.headClearAt}s); haft x body (not the hands) ≤${m.haftX} (at ${m.haftXAt}s: ${JSON.stringify(m.haftXBones ?? {})}; in ${m.haftXFrames ?? 0} of 100 frames, ${(m.haftXTimes ?? []).join(' ')}), grip x hands ≤${m.gripFingersX}; hands ≤${m.handInCm} cm into the haft (right ${m.handIn.r}, left ${m.handIn.l}; at ${m.handInAt}s, ${m.handInBone}; the long sword's ≤${m.swordHandInCm} cm into its grip, its hilt x body ≤${m.swordHiltX}), body ≤${m.bodyInCm} cm (at ${m.bodyInAt}s); the left fist ≤${m.leftOffCm} cm off the grip's axis (at ${m.leftOffAt}s); lowest point ≥${m.endMin} gu off the ground (at ${m.endMinAt}s, its point ${m.endMinAtPx} sheet px), ${m.lowAtImpact} at the impact; fists ${m.fistGap} gu apart, along the grip (U px): right ${m.fistsU.right}, left ${m.fistsU.left}`);
   }
   stats.swing = report;
 }
