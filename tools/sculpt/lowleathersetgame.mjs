@@ -4,9 +4,10 @@
 //
 //   node tools/sculpt/lowleathersetgame.mjs --out <dir> [--tag set] [--zooms 5,10] [--gif 8] [--views 0,1,2,4] [--fps 12]
 //       [--looks plain,enchanted] [--still-only] [--gif-only] [--pieces leatherChest,leatherShawl,...]
-//       [--stills 0,1,2,3,4] [--bodies man,woman] [--clips idle,walk,swing]
+//       [--stills 0,1,2,3,4] [--bodies man,woman] [--clips idle,walk,swing] [--pose walk:<phase>]
 //     (--pieces: the set's pieces worn, by their outfit keys; all five by default; --stills the facings of the stills;
-//     --bodies the bodies drawn; --clips the clips played)
+//     --bodies the bodies drawn; --clips the clips played; --pose the stills in a clip at a phase (the walk's phase, the
+//     idle's or the swing's time), held a second first)
 //     <tag>-<look>-z<zoom>.png: both bodies front, three-quarter, side, rear three-quarter and back;
 //     <tag>-<look>-<idle|walk|swing>-z<zoom>.gif: the idle, the walk and the two-handed swing (at work on a creature with
 //       the long sword), both bodies from each of --views, each body and view played on its own in real time, frame by
@@ -28,6 +29,7 @@ const zooms = opt('zooms', '5,10').split(',').map(Number).filter((z) => z > 0);
 const gifZoom = +opt('gif', '8'), views = opt('views', '0,1,2,4').split(',').map(Number), fps = +opt('fps', '12');
 const looks = opt('looks', 'plain,enchanted').split(',');
 const clips = opt('clips', 'idle,walk,swing').split(',');
+const [poseClip, posePh] = opt('pose', 'still:1.5').split(':'), stillPh = +posePh;
 const stills = opt('stills', '0,1,2,3,4').split(',').map(Number), bodies = opt('bodies', 'man,woman').split(',');
 const PY = process.env.PY ?? 'python3';
 mkdirSync(out, { recursive: true });
@@ -96,8 +98,8 @@ try {
         for (const f of stills) {
           const path = join(tmp, `s-${lk}-${z}-${g}-${f}.png`);
           // (held a moment so the animator settles on the facing)
-          for (let k = 0; k < 6; k++) { await p.evaluate((a) => window.cell(...a), [z, g, f, 'still', 1.5, en]); await p.waitForTimeout(60); }
-          save(await p.evaluate((a) => window.cell(...a), [z, g, f, 'still', 1.5, en]), path); row.push(path);
+          for (let k = 0; k < (poseClip === 'still' ? 6 : 16); k++) { await p.evaluate((a) => window.cell(...a), [z, g, f, poseClip, stillPh, en]); await p.waitForTimeout(60); }
+          save(await p.evaluate((a) => window.cell(...a), [z, g, f, poseClip, stillPh, en]), path); row.push(path);
         }
         rows.push(row);
       }

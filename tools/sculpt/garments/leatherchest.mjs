@@ -33,7 +33,7 @@ import { existsSync, readFileSync } from 'node:fs';
  * The leather set's shared materials (every piece of the set uses these names and values, so the game gives each one
  * slot): dark (the darkest leather: the collar's inside), leather (the base sleeves and the collar), light (the plates),
  * trim (the raised trim, the lacing, the rivets), rune (the emblem and the bracers' rune band: the trim's colour plain,
- * glowing enchanted), glow (the glow itself). MATS: each one's colour as the shot tools draw it plain. Read off the
+ * glowing enchanted), glow (the glow itself); and the chest's own edge (its plates' bevelled strips). MATS: each one's colour as the shot tools draw it plain. Read off the
  * chest sheet under the game's light (tools/sculpt/lowleatherchestshot.mjs --only palette).
  */
 export const MATS = {
@@ -43,7 +43,11 @@ export const MATS = {
   trim: [0.91, 0.518, 0.282],
   rune: [0.91, 0.518, 0.282],
   glow: [0.996, 0.792, 0.427],
+  // (the chest's own: its plates' bevelled edges, lighter than the plates; the set's other pieces do not use it)
+  edge: [0.64, 0.36, 0.27],
 };
+/** The plates' bevelled strips in `edge` (LCHEST_EDGE=0: in the plate's own colour, for comparing). */
+const EDGE = (typeof process === 'undefined' || process.env?.LCHEST_EDGE !== '0') ? 'edge' : null;
 /** How the set's leather is lit: 2, by the light's brightness only (kind 0, cloth, turned its shadows red-black in the game). */
 export const KIND = +(process.env.LEATHER_KIND ?? 2);
 /**
@@ -261,7 +265,7 @@ function fitOut(rows, ring, out, S, c, passes = 4, reach = 0.3) {
 /* ---- the plate builder ----------------------------------------------------------------------------------------------- */
 /**
  * A plate on G from a grid of points `rows` (R + 1 rows of C + 1 points; `ring`: C points, closed round). Its face the
- * grid's quads (mat(r, c), else `mat`), its border by side (top, bottom, left, right) 'trim' (a raised strip in the trim colour), 'bevel' (in the plate's own colour; either with the
+ * grid's quads (mat(r, c), else `mat`), its border by side (top, bottom, left, right) 'trim' (a raised strip in the trim colour), 'bevel' (in the lighter edge colour; either with the
  * edge behind it), 'edge' (the edge alone) or 'open'; every vertex weighted `bone` ({ name: share }). out(p): the way out
  * from the body at p. Returns { faces (its face triangles' points, for laying decals on), N (normals by grid point) }.
  */
@@ -325,7 +329,7 @@ function plateOf(G, rows, o) {
       // (the edge under a plate's foot in the dark leather: the shadow line the sheet draws under each plate)
       const fm = faceMat(L[k].r - (L[k].seg === 'bottom' ? 1 : 0), L[k].c - (L[k].seg === 'right' ? 1 : 0)), em = o.edgeMat ?? (L[k].seg === (o.footSide ?? 'bottom') && o.shadow !== false ? 'dark' : fm);
       if (kind === 'trim' || kind === 'bevel') {
-        G.poly([pts[k].b, pts[j].b, lazy(j, 'T'), lazy(k, 'T')], kind === 'trim' ? (o.rimMat ?? 'trim') : fm, tag);
+        G.poly([pts[k].b, pts[j].b, lazy(j, 'T'), lazy(k, 'T')], kind === 'trim' ? (o.rimMat ?? 'trim') : (EDGE ?? fm), tag);
         G.poly([lazy(k, 'T'), lazy(j, 'T'), lazy(j, 'E'), lazy(k, 'E')], em, tag);
       } else {
         G.poly([pts[k].b, pts[j].b, lazy(j, 'E'), lazy(k, 'E')], em, tag);
