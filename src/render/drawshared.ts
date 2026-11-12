@@ -1,4 +1,5 @@
 import type { PlacedAnvil } from '../game/anvil';
+import type { Side, StairHand } from '../game/building';
 import type { PlacedCampfire } from '../game/campfire';
 import type { Creature } from '../game/creatures';
 import type { PlacedFurniture } from '../game/furniture';
@@ -119,3 +120,12 @@ export const PLAN_COLOR = 'rgba(120, 220, 140, 0.95)';
 export const FLIGHT_STEPS = 8;
 export const rgb = (c: readonly [number, number, number], k: number, a = 1): string =>
   `rgba(${Math.min(255, c[0] * k) | 0},${Math.min(255, c[1] * k) | 0},${Math.min(255, c[2] * k) | 0},${a})`;
+
+/**
+ * What is on its way to the ground: a piece of furniture following the
+ * cursor, or a staircase on its tile, turned the way Q and E have turned it.
+ * `ok` is whether it can go where it is.
+ */
+export type Ghost =
+  | { kind: 'furniture'; piece: string; material?: string; x: number; y: number; sx: number; sy: number; facing: Side; ok: boolean; level?: number }
+  | { kind: 'stairs'; x: number; y: number; level: number; material: string; floorKind: 'stairs' | 'ladder'; side: Side; hand?: StairHand; ok: boolean; buildingId?: number };
