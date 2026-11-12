@@ -60,10 +60,11 @@ begin
   for r in 1 .. ${ROUNDS} loop
     update creature set until = now() - interval '1 hour', settled_at = now() - interval '1 hour' where world_id = w and id = k;
     update creature set until = now() - interval '1 hour', settled_at = now() - interval '1 hour' where world_id = w and mode = 'wild' and to_x < 20;
-    select until into v_before from creature where world_id = w and id = k;
+    -- Settled: its body reckoned to now (settled_at). One at heel already is not moved, so its until is as it was.
+    select settled_at into v_before from creature where world_id = w and id = k;
     perform pg_advisory_unlock_all();
     v_ticked := world_tick();
-    select until into v_after from creature where world_id = w and id = k;
+    select settled_at into v_after from creature where world_id = w and id = k;
     if v_after > v_before then v_got := v_got + 1; end if;
     v_wild := v_wild + (v_ticked->>'stirred')::int - case when v_after > v_before then 1 else 0 end;
   end loop;
