@@ -20,7 +20,8 @@
 --
 -- Then it looks again (`pg_temp.old_name_left`) and fails, naming each thing left, if anything in the catalog, in
 -- `public`, `private` or `auth`, or in any table this role may update still holds the word. A table this role may
--- not update elsewhere (a platform schema) is named in a notice instead. An account whose own name holds the word
+-- not update elsewhere (a platform schema), or may not read outside `public` and `private`, is named in a notice
+-- instead. `auth.users` and `auth.identities` are updated by name, so a role that may not fails there. An account whose own name holds the word
 -- stops it before anything is changed: a login name is the player's to choose.
 --
 -- Run again, it finds nothing and changes nothing. Tested in supabase/test/oldname.ts.
@@ -74,7 +75,7 @@ $$;
 
 /** Everything in the database that still holds the word: what it is, which one, and whether this role may fix it. */
 create or replace function pg_temp.old_name_left()
-returns table (kind text, what text, strict boolean)
+returns table (kind text, what text, firm boolean)
 language plpgsql as $$
 declare r record; v_n bigint;
 begin
@@ -132,14 +133,14 @@ begin
   end if;
   for r in select * from pg_temp.text_columns() loop
     if not has_table_privilege(r.rel, 'SELECT') then
-      kind := 'unreadable table'; what := r.rel::regclass::text; strict := r.nsp in ('public', 'private', 'auth');
+      kind := 'unreadable table'; what := r.rel::regclass::text; firm := r.nsp in ('public', 'private');
       return next;
       continue;
     end if;
     execute format('select count(*) from %s where %s', r.rel::regclass, pg_temp.where_held(r.cols)) into v_n;
     if v_n > 0 then
       kind := 'rows'; what := format('%s: %s', r.rel::regclass, v_n);
-      strict := has_table_privilege(r.rel, 'UPDATE') or r.nsp in ('public', 'private', 'auth');
+      firm := has_table_privilege(r.rel, 'UPDATE') or r.nsp in ('public', 'private', 'auth');
       return next;
     end if;
   end loop;
@@ -342,8 +343,8 @@ begin
   raise notice 'Renamed: %', said;
 
   -- ---- And looked at again.
-  select string_agg(kind || ' ' || what, '; ') filter (where strict),
-         string_agg(kind || ' ' || what, '; ') filter (where not strict)
+  select string_agg(kind || ' ' || what, '; ') filter (where firm),
+         string_agg(kind || ' ' || what, '; ') filter (where not firm)
     into v_strict, v_loose
     from pg_temp.old_name_left();
   if v_loose is not null then

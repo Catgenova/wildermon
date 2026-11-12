@@ -98,7 +98,7 @@ select 'comment=' || obj_description('public.oldname_t'::regclass, 'pg_class') |
 select 'row=' || note || ' ' || meta::text || ' ' || tags::text from public.oldname_t where id = 1;
 select 'setting=' || array_to_string(setconfig, ',') from pg_db_role_setting
  where setrole = current_user::regrole and setdatabase = (select oid from pg_database where datname = current_database());
-select 'left=' || count(*) from pg_temp.old_name_left() where strict;
+select 'left=' || count(*) from pg_temp.old_name_left() where firm;
 `;
 
 const run = psql(`begin;\n${PLANT}\n\\i ${MIGRATION}\n${ASK}\n\\i ${MIGRATION}\nrollback;\n`);
