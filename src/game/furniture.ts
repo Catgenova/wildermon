@@ -845,6 +845,8 @@ export const furnitureName = (f: PlacedFurniture): string => {
   const rare = rarityOf(f).name;
   return rare ? `${rare.charAt(0).toUpperCase()}${rare.slice(1)} ${plain.toLowerCase()}` : plain;
 };
+/** The name inside a line: a name its owner gave as written, the game's own in lower case. The island's `placed_name_in_line`. */
+export const furnitureNameInLine = (f: PlacedFurniture): string => f.name || furnitureName(f).toLowerCase();
 export const furnitureUnits = (f: PlacedFurniture): number => f.items.reduce((n, it) => n + it.count, 0);
 /** How much more a counting piece will take. `furnitureRoom` is the general one. */
 export const furnitureSpare = (f: PlacedFurniture): number => Math.max(0, furnitureCapacity(f) - furnitureUnits(f));

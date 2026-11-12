@@ -10,6 +10,7 @@ import {
   furnitureCentre,
   furnitureDef,
   furnitureName,
+  furnitureNameInLine,
   hearthCapacity,
   hearthLeft,
   tracesStoreyRefusal,
@@ -1005,7 +1006,7 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       const f = pieceOf(g, t);
       if (!f || !isBed(f)) return 'Not a bed.';
       if (!nearPiece(g, f)) return 'Stand next to it.';
-      if (f.mine === false && !g.deedOfMineAt(Math.floor(f.x), Math.floor(f.y))) return sleepNotYours(furnitureName(f));
+      if (f.mine === false && !g.deedOfMineAt(Math.floor(f.x), Math.floor(f.y))) return sleepNotYours(furnitureNameInLine(f));
       if (g.action && g.action.def.id !== 'sleep') return SLEEP_SAID.busy;
       if (g.inAFight()) return SLEEP_SAID.fight;
       if (g.mounted()) return SLEEP_SAID.mounted;
@@ -1021,7 +1022,7 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       g.note('slept');
       // In a bed of your own making, for the journal (the island's `perform_last` asks who made it).
       if (f.mine !== false) g.note('slept:own');
-      g.fallAsleep(rest, furnitureName(f));
+      g.fallAsleep(rest, furnitureNameInLine(f));
     },
   },
   {
