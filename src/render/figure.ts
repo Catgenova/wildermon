@@ -2384,6 +2384,10 @@ export interface FigurePose {
    */
   outfit?: Partial<Record<'shawl' | 'trousers' | 'boots' | 'tunic' | 'hood' | 'plateChest' | 'plateLegs' | 'plateBoots' | 'plateHelm' | 'plateMantle' | 'leatherChest' | 'leatherLegs' | 'leatherBoots' | 'leatherShawl' | 'leatherHat', boolean>> & {
     enchanted?: Partial<Record<'chest' | 'legs' | 'boots' | 'helm' | 'mantle' | 'leatherChest' | 'leatherLegs' | 'leatherBoots' | 'leatherShawl' | 'leatherHat' | 'clothShawl' | 'clothHood' | 'clothTunic' | 'clothTrousers' | 'clothBoots', boolean>>;
+    /** The metal each plate piece is smithed from (`GearPiece.material`): its plates drawn in it (`src/sculpt/lowpoly.ts` plateMats); none, its own colours. */
+    metal?: Partial<Record<PlatePiece, string>>;
+    /** The dye each cloth or leather piece is dyed (`GearPiece.dye`, `#rrggbb`): its fabric or leather drawn in it (`src/sculpt/lowpoly.ts` dyeMat). */
+    dye?: Partial<Record<DyedPiece, string>>;
   };
   /**
    * A spell part way through being cast: which, and how far through it, nought to one. What it does to the body
@@ -6402,6 +6406,10 @@ export interface GearPiece {
   /** Enchanted: a sculpted figure's sword drawn with its engraving lit. */
   enchanted?: boolean;
 }
+/** The plate set's sculpted pieces, each in its own metal (`FigurePose.outfit.metal`). */
+export type PlatePiece = 'chest' | 'legs' | 'boots' | 'helm';
+/** The cloth and leather sculpted pieces a dye colours (`FigurePose.outfit.dye`). */
+export type DyedPiece = 'hood' | 'tunic' | 'trousers' | 'boots' | 'leatherChest' | 'leatherLegs' | 'leatherBoots' | 'leatherHat';
 export type GearSlot = 'head' | 'chest' | 'arms' | 'legs' | 'feet' | 'weapon' | 'offhand' | 'belt' | 'jewel';
 export type GearLook = Partial<Record<GearSlot, GearPiece>>;
 /** The order a body is dressed in, inside out. */
