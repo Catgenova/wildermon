@@ -13,6 +13,7 @@ import { PAVED } from '../world/tiles';
 import { blankWorld, layChange, layHistory, layRows, rowsOf, type LandRow, type TileChange } from './landpack';
 import { generateAtlasWindow, loadAtlas, type Atlas } from '../world/atlas-world';
 import { CANNOT_SAVE, heldSeat, PROJECT, seatLost, supabase, signIn } from './supabase';
+import { rpc, rpcIn, type DoorArgs, type RpcArgs, type WorldDoor } from './rpc';
 import type { IslandCreature } from '../game/creatures';
 import type { IslandSpring } from '../game/springs';
 import type { BredRecord } from '../game/boards';
@@ -1596,10 +1597,9 @@ export class Island {
       );
     }
     this.uid = await signIn();
-    const sb = supabase();
     // `lasts`, in seconds, is how long the island is kept whoever is on it:
     // the live test's is kept a day, in case the test dies before giving it up.
-    const { data: id, error } = await sb.rpc('rpc_found', {
+    const { data: id, error } = await rpc('rpc_found', {
       p_name: name, p_seed: world.seed, p_size: world.w, p_spawn_x: spawn.x, p_spawn_y: spawn.y,
       ...(lasts === undefined ? {} : { p_lasts: lasts }),
     });
@@ -1607,11 +1607,11 @@ export class Island {
     const rows = world.h + 1;
     for (let y = 0; y <= world.h; y += UPLOAD_BATCH) {
       const batch = rowsOf(world, y, Math.min(world.h, y + UPLOAD_BATCH - 1));
-      const { error: put } = await sb.rpc('rpc_put_land', { p_world: id, p_rows: batch });
+      const { error: put } = await rpc('rpc_put_land', { p_world: id, p_rows: batch });
       if (put) throw new Error(`The land did not all arrive: ${put.message}`);
       this.hooks.progress?.(Math.min(rows, y + UPLOAD_BATCH), rows, 'handing over', 'world');
     }
-    const { error: open } = await sb.rpc('rpc_ready', { p_world: id });
+    const { error: open } = await rpc('rpc_ready', { p_world: id });
     if (open) throw new Error(`The island would not open: ${open.message}`);
     return id;
   }
@@ -1665,7 +1665,6 @@ export class Island {
    */
   async join(worldId: string, name: string, stone: string | null = null): Promise<void> {
     this.uid = await signIn();
-    const sb = supabase();
     /*
      * This build, before anything else: an old or altered page is sent back
      * for the current one (20261026130900). Asked already when there was a
@@ -1674,7 +1673,7 @@ export class Island {
     const early = this.buildEarly ? await this.buildEarly : 'unasked';
     this.buildEarly = null;
     if ((early === 'unasked' ? await this.buildSaid() : early) === 'stale') throw new StaleBuild();
-    const { data, error } = await sb.rpc('rpc_join', stone ? { p_world: worldId, p_name: name, p_stone: stone } : { p_world: worldId, p_name: name });
+    const { data, error } = await rpc('rpc_join', stone ? { p_world: worldId, p_name: name, p_stone: stone } : { p_world: worldId, p_name: name });
     if (error) throw new Error(`The island would not have us: ${error.message}`);
     const got = data as { world: WorldRow; you: PlayerRow; new: boolean };
     this.info = got.world;
@@ -1844,7 +1843,7 @@ export class Island {
   /** Whether the island takes this build (`rpc_build_check`): only a plain no is stale; a check that cannot be made lets the join go on. */
   private async buildSaid(): Promise<'ok' | 'stale'> {
     if (!BUILD) return 'ok';
-    const { data: build, error } = await supabase().rpc('rpc_build_check', { p_build: BUILD, p_deploy: DEPLOY ?? null });
+    const { data: build, error } = await rpc('rpc_build_check', { p_build: BUILD, p_deploy: DEPLOY ?? null });
     return !error && (build as { ok?: unknown } | null)?.ok === false ? 'stale' : 'ok';
   }
 
@@ -1948,7 +1947,7 @@ export class Island {
     w.fogTouched = false;
     const packed = packFog(w);
     if (!packed) return;
-    const { error } = await supabase().rpc('rpc_fog', { p_world: this.info.id, p_seen: packed });
+    const { error } = await rpc('rpc_fog', { p_world: this.info.id, p_seen: packed });
     // Refused or unreachable: put the flag back so the next round tries again
     // rather than waiting for somebody to walk somewhere new.
     if (error) w.fogTouched = true;
@@ -2121,7 +2120,7 @@ export class Island {
     const info = this.info;
     const w = this.world;
     if (!info || !w) return 0;
-    const { data, error } = await supabase().rpc('rpc_land_window', {
+    const { data, error } = await rpc('rpc_land_window', {
       p_world: info.id, p_x0: x0, p_y0: y0, p_x1: x1, p_y1: y1,
     });
     if (error) throw new Error(error.message);
@@ -2312,7 +2311,7 @@ export class Island {
   async inputNote(note: InputNote): Promise<void> {
     if (!this.info) return;
     try {
-      await supabase().rpc('rpc_input_note', { p_world: this.info.id, p_note: note });
+      await rpc('rpc_input_note', { p_world: this.info.id, p_note: note });
     } catch {
       /* the next one goes in its turn */
     }
@@ -2346,7 +2345,7 @@ export class Island {
       const ticking = this.ticked.length ? this.ticked.slice() : null;
       // When it was asked, for how far the floor of the lines heard may move once it answers (`HeardLines.settled`).
       const asked = performance.now();
-      const { data, error } = await supabase().rpc('rpc_settle', {
+      const { data, error } = await rpc('rpc_settle', {
         p_seen: this.seenChange,
         p_world: this.info.id,
         p_said: this.lines.floor,
@@ -3153,7 +3152,7 @@ export class Island {
     if (ground && !mobs) mobs = this.mobsAsk(now, NEAR_EARLY);
     const at = performance.now() / 1000;
     if (mobs && ground && ![this.nearOld, this.mobsOld, this.mobsLoose, this.groundOld].some((l) => l.on(at))) {
-      const { data, error } = await supabase().rpc('rpc_near', {
+      const { data, error } = await rpc('rpc_near', {
         ...mobs.since, p_pack: true, p_ground_range: ground.plain.p_range, p_slow: ground.plain.p_slow, p_ground_since: ground.since,
       });
       if (!lacks(error, /rpc_near|p_ground_since/)) {
@@ -3214,11 +3213,11 @@ export class Island {
      * page has no `p_pack`, or no `p_since` either (PostgREST: no such function): asked as it used to be, and the
      * newer way again `RETRY_NEWER` seconds on (`askdown.ts`).
      */
-    return askDown([
+    return askDown<RpcArgs<'rpc_creatures'>>([
       { args: { ...ask.since, p_pack: true }, lacked: this.mobsLoose, says: /p_pack/ },
       { args: ask.since, lacked: this.mobsOld, says: /p_since|p_have/ },
       { args: ask.plain, lacked: null, says: /$^/ },
-    ], performance.now() / 1000, (args) => supabase().rpc('rpc_creatures', args));
+    ], performance.now() / 1000, (args) => rpc('rpc_creatures', args));
   }
 
   /** A creatures answer laid, however it came. */
@@ -3306,10 +3305,10 @@ export class Island {
   private async groundCall(ask: GroundAsk): Promise<{ data: unknown; error: { code?: string; message: string } | null }> {
     // An island a migration behind this page has no `p_since` (PostgREST: no such function): asked as it used to be,
     // and the newer way again `RETRY_NEWER` seconds on (`askdown.ts`).
-    return askDown([
+    return askDown<RpcArgs<'rpc_ground'>>([
       { args: { ...ask.plain, p_since: ask.since }, lacked: this.groundOld, says: /p_since/ },
       { args: ask.plain, lacked: null, says: /$^/ },
-    ], performance.now() / 1000, (args) => supabase().rpc('rpc_ground', args));
+    ], performance.now() / 1000, (args) => rpc('rpc_ground', args));
   }
 
   /** A ground answer laid, however it came. */
@@ -3354,7 +3353,7 @@ export class Island {
   async refreshSprings(now: number): Promise<void> {
     if (!this.info || !this.hooks.springs || now - this.lastSprings < SPRINGS_EVERY * this.slower()) return;
     this.lastSprings = now;
-    const { data, error } = await supabase().rpc('rpc_springs', {
+    const { data, error } = await rpc('rpc_springs', {
       p_world: this.info.id, p_range: GROUND_RANGE, p_known: this.hooks.knownSprings?.() ?? {},
     });
     if (error || !data) return;
@@ -3401,7 +3400,7 @@ export class Island {
     if (!this.swirlsOwed && now - this.lastSwirls < SWIRLS_EVERY * this.slower()) return;
     this.swirlsOwed = false;
     this.lastSwirls = now;
-    const { data, error } = await supabase().rpc('rpc_swirls', { p_world: this.info.id });
+    const { data, error } = await rpc('rpc_swirls', { p_world: this.info.id });
     // A call that failed is not a day with no swirls in it: asked again on the next step.
     if (error || !Array.isArray(data)) {
       this.swirlsOwed = true;
@@ -3420,7 +3419,7 @@ export class Island {
     if (!this.info || !this.hooks.gateFolk || !this.hooks.gatesHeld?.()) return;
     if (now - this.lastGateFolk < GATE_FOLK_EVERY * this.slower()) return;
     this.lastGateFolk = now;
-    const { data, error } = await supabase().rpc('rpc_rune_gate_folk', { p_world: this.info.id });
+    const { data, error } = await rpc('rpc_rune_gate_folk', { p_world: this.info.id });
     if (error || !Array.isArray(data)) return;
     this.hooks.gateFolk(data as unknown[]);
   }
@@ -3430,7 +3429,7 @@ export class Island {
     // And what each of them has on, which their rows cannot say: see `rpc_worn`.
     const [{ data, error }, worn] = await Promise.all([
       supabase().from('player').select(PEOPLE_COLUMNS).eq('world_id', this.info.id).eq('away', false),
-      supabase().rpc('rpc_worn', { p_world: this.info.id }),
+      rpc('rpc_worn', { p_world: this.info.id }),
     ]);
     // A call that failed is not an island with nobody on it. See `refreshMobs`,
     // which learned this first: clearing on a dropped read empties the roster
@@ -3751,10 +3750,10 @@ export class Island {
     const from = this.islandHas && this.islandHas.level === level ? this.islandHas : null;
     const via = turnsOf(from, taken.filter((s) => s.level === level), { x, y });
     const plain = { p_world: world, p_x: x, p_y: y, p_level: level };
-    let { data, error } = await supabase().rpc('rpc_move', via.length ? { ...plain, p_via: via.map((p) => [p.x, p.y]) } : plain);
+    let { data, error } = await rpc('rpc_move', via.length ? { ...plain, p_via: via.map((p) => [p.x, p.y]) } : plain);
     // An island a migration behind this page has no `p_via` (PostgREST: no such function): the word goes as it used to.
     if (error && via.length && (error.code === 'PGRST202' || /p_via/.test(error.message))) {
-      ({ data, error } = await supabase().rpc('rpc_move', plain));
+      ({ data, error } = await rpc('rpc_move', plain));
     }
     // Barred while the `kicked` word was missed (a tab asleep, a channel down): the step says so instead.
     if (error && isBarred(error.message)) this.hooks.kicked?.();
@@ -3827,7 +3826,7 @@ export class Island {
       this.guideWaiting.delete(id);
       this.guideAsking.add(id);
     }
-    const { data, error } = await supabase().rpc('rpc_guide_seen', { p_world: this.info.id, p_species: batch });
+    const { data, error } = await rpc('rpc_guide_seen', { p_world: this.info.id, p_species: batch });
     for (const id of batch) this.guideAsking.delete(id);
     if (error || !data || typeof data !== 'object') {
       for (const id of batch) this.guideWaiting.add(id);
@@ -3847,7 +3846,7 @@ export class Island {
    */
   async guide(): Promise<GuideBook | null> {
     if (!this.info) return null;
-    const { data, error } = await supabase().rpc('rpc_guide', { p_world: this.info.id });
+    const { data, error } = await rpc('rpc_guide', { p_world: this.info.id });
     if (error || !data || typeof data !== 'object') return null;
     const got = data as Partial<Record<keyof GuideBook, unknown>>;
     const kinds = (v: unknown): string[] => rowsIn<string>(v).filter((id) => typeof id === 'string');
@@ -3866,7 +3865,7 @@ export class Island {
    */
   async social(): Promise<Social | null> {
     if (!this.info) return null;
-    const { data, error } = await supabase().rpc('rpc_social', { p_world: this.info.id });
+    const { data, error } = await rpc('rpc_social', { p_world: this.info.id });
     if (error || !data) return null;
     return data as Social;
   }
@@ -3878,7 +3877,7 @@ export class Island {
    */
   async boards(): Promise<Boards | null> {
     if (!this.info) return null;
-    const { data, error } = await supabase().rpc('rpc_boards', { p_world: this.info.id });
+    const { data, error } = await rpc('rpc_boards', { p_world: this.info.id });
     if (error || !data || typeof data !== 'object') return null;
     const got = data as Partial<Boards>;
     return {
@@ -3892,7 +3891,7 @@ export class Island {
   /** Each kind's bred records (`rpc_bred_records`), for the Field guide; null when the island did not answer. */
   async bredRecords(): Promise<BredRecord[] | null> {
     if (!this.info) return null;
-    const { data, error } = await supabase().rpc('rpc_bred_records', { p_world: this.info.id });
+    const { data, error } = await rpc('rpc_bred_records', { p_world: this.info.id });
     if (error || !Array.isArray(data)) return null;
     return rowsIn<BredRecord>(data);
   }
@@ -3908,7 +3907,7 @@ export class Island {
    */
   async treasureMap(item: number): Promise<TreasureMap | null> {
     if (!this.info) return null;
-    const { data, error } = await supabase().rpc('rpc_treasure_map', {
+    const { data, error } = await rpc('rpc_treasure_map', {
       p_world: this.info.id, p_item: item,
     });
     if (error || !data) return null;
@@ -3926,7 +3925,7 @@ export class Island {
    */
   async classes(): Promise<ClassesSaid | null> {
     if (!this.info) return null;
-    const { data, error } = await supabase().rpc('rpc_classes', { p_world: this.info.id });
+    const { data, error } = await rpc('rpc_classes', { p_world: this.info.id });
     if (error || !data) return null;
     return data as ClassesSaid;
   }
@@ -3934,7 +3933,7 @@ export class Island {
   /** The trees of the trades you hold, their rites, and the fold they come to. */
   async tree(): Promise<TreeSaid | null> {
     if (!this.info) return null;
-    const { data, error } = await supabase().rpc('rpc_tree', { p_world: this.info.id });
+    const { data, error } = await rpc('rpc_tree', { p_world: this.info.id });
     if (error || !data) return null;
     return data as TreeSaid;
   }
@@ -3986,7 +3985,7 @@ export class Island {
    */
   async unstick(): Promise<string | null> {
     if (!this.info) return 'You are not on an island.';
-    const { data, error } = await supabase().rpc('rpc_unstick', { p_world: this.info.id });
+    const { data, error } = await rpc('rpc_unstick', { p_world: this.info.id });
     if (error) return error.message;
     const said = (data ?? {}) as { why?: string; x?: number; y?: number; level?: number };
     if (typeof said.why === 'string') return said.why;
@@ -4055,7 +4054,7 @@ export class Island {
    */
   async respawn(at: string): Promise<string | null> {
     if (!this.info) return 'You are not on an island.';
-    const { data, error } = await supabase().rpc('rpc_respawn', { p_world: this.info.id, p_at: at });
+    const { data, error } = await rpc('rpc_respawn', { p_world: this.info.id, p_at: at });
     // The next beat says whether the offer still stands.
     this.armBeat(0.5);
     if (error) return error.message;
@@ -4066,9 +4065,9 @@ export class Island {
   }
 
   /** A faith door: the whole answer, or `why` alone when it refused or failed. */
-  private async faithDoor(door: string, args: Record<string, unknown>): Promise<FaithSaid | null> {
+  private async faithDoor<N extends WorldDoor>(door: N, args: DoorArgs<N>): Promise<FaithSaid | null> {
     if (!this.info) return null;
-    const { data, error } = await supabase().rpc(door, { p_world: this.info.id, ...args });
+    const { data, error } = await rpcIn(door, this.info.id, args);
     if (error) return { why: error.message } as FaithSaid;
     return (data as FaithSaid | null) ?? null;
   }
@@ -4080,7 +4079,7 @@ export class Island {
   /** How warm you are: a band, and never a bearing. */
   async treasureWarm(item: number): Promise<{ here: boolean; say: string } | null> {
     if (!this.info) return null;
-    const { data, error } = await supabase().rpc('rpc_treasure_warm', {
+    const { data, error } = await rpc('rpc_treasure_warm', {
       p_world: this.info.id, p_item: item,
     });
     if (error || !data) return null;
@@ -4123,7 +4122,7 @@ export class Island {
    */
   async wearTitle(id: string | null): Promise<void> {
     if (!this.info) return;
-    const { data, error } = await supabase().rpc('rpc_wear_title', {
+    const { data, error } = await rpc('rpc_wear_title', {
       p_world: this.info.id, p_title: id,
     });
     if (error) {
@@ -4147,7 +4146,7 @@ export class Island {
    * anybody who missed that.
    */
   async wearLook(look: Look): Promise<Look> {
-    const { data, error } = await supabase().rpc('rpc_set_look', { p_look: look });
+    const { data, error } = await rpc('rpc_set_look', { p_look: look });
     if (error) throw new Error(error.message);
     const kept = cleanLook(data);
     if (this.me) this.me.look = kept;
@@ -4172,7 +4171,7 @@ export class Island {
    * arrive: a report about a failure that fails is not worth a second report.
    */
   reportError(r: ErrorReport): void {
-    void supabase().rpc('rpc_report_error', {
+    void rpc('rpc_report_error', {
       p_build: r.build, p_message: r.message, p_stack: r.stack ?? null,
       p_place: r.place ?? null, p_world: this.info?.id ?? null,
     }).then(() => undefined, () => undefined);
@@ -4180,7 +4179,7 @@ export class Island {
 
   async craftPrefs(fromStores: boolean, spareRare: boolean, quiet = false): Promise<void> {
     if (!this.info) return;
-    const { error } = await supabase().rpc('rpc_craft_prefs', {
+    const { error } = await rpc('rpc_craft_prefs', {
       p_world: this.info.id, p_from_stores: fromStores, p_spare_rare: spareRare,
     });
     if (error && !quiet) this.hooks.say(`The island did not hear that (${error.message}).`, 'error');
@@ -4192,7 +4191,7 @@ export class Island {
    */
   async sleepBonus(on: boolean): Promise<{ on: boolean; left: number } | { why: string }> {
     if (!this.info) return { why: 'You are not on an island.' };
-    const { data, error } = await supabase().rpc('rpc_sleep_bonus', { p_world: this.info.id, p_on: on });
+    const { data, error } = await rpc('rpc_sleep_bonus', { p_world: this.info.id, p_on: on });
     if (error) return { why: error.message };
     const d = (data ?? {}) as { on?: boolean; left?: number; why?: string };
     if (typeof d.why === 'string') return { why: d.why };
@@ -4201,7 +4200,7 @@ export class Island {
 
   async fightPrefs(stance: string, fightBack: boolean, quiet = false): Promise<void> {
     if (!this.info) return;
-    const { error } = await supabase().rpc('rpc_fight_prefs', {
+    const { error } = await rpc('rpc_fight_prefs', {
       p_world: this.info.id, p_stance: stance, p_fight_back: fightBack,
     });
     if (error && !quiet) this.hooks.say(`The island did not hear that (${error.message}).`, 'error');
@@ -4268,7 +4267,7 @@ export class Island {
    */
   async settlement(founder: string, seen = false): Promise<SettleBoard | string> {
     if (!this.info) return 'You are not on an island.';
-    const { data, error } = await supabase().rpc('rpc_settlement', { p_world: this.info.id, p_founder: founder, p_seen: seen });
+    const { data, error } = await rpc('rpc_settlement', { p_world: this.info.id, p_founder: founder, p_seen: seen });
     if (error) return error.message;
     const why = (data as { why?: string } | null)?.why;
     return why ?? (data as SettleBoard);
@@ -4303,7 +4302,7 @@ export class Island {
    */
   async noticesAshore(): Promise<Array<Notice & { deed: string; founder: string }>> {
     if (!this.info) return [];
-    const { data, error } = await supabase().rpc('rpc_notices_ashore', { p_world: this.info.id });
+    const { data, error } = await rpc('rpc_notices_ashore', { p_world: this.info.id });
     if (error) return [];
     return (data as { notices?: Array<Notice & { deed: string; founder: string }> } | null)?.notices ?? [];
   }
@@ -4316,7 +4315,7 @@ export class Island {
    */
   async markStore(kind: 'crate' | 'furniture', id: number, on: boolean): Promise<{ why?: string; deed?: string; storeOf?: string | null }> {
     if (!this.info) return { why: 'You are not on an island.' };
-    const { data, error } = await supabase().rpc('rpc_store_mark', { p_world: this.info.id, p_kind: kind, p_id: id, p_on: on });
+    const { data, error } = await rpc('rpc_store_mark', { p_world: this.info.id, p_kind: kind, p_id: id, p_on: on });
     if (error) return { why: error.message };
     const said = data as { why?: string; deed?: string; store_of?: string | null } | null;
     return said?.why ? { why: said.why } : { deed: said?.deed, storeOf: said?.store_of ?? null };
@@ -4328,7 +4327,7 @@ export class Island {
    */
   async storeLog(founder: string): Promise<{ why?: string; log?: StoreLogEntry[] }> {
     if (!this.info) return { why: 'You are not on an island.' };
-    const { data, error } = await supabase().rpc('rpc_store_log', { p_world: this.info.id, p_founder: founder });
+    const { data, error } = await rpc('rpc_store_log', { p_world: this.info.id, p_founder: founder });
     if (error) return { why: error.message };
     const said = data as { why?: string; log?: StoreLogEntry[] } | null;
     return said?.why ? { why: said.why } : { log: said?.log ?? [] };
@@ -4341,7 +4340,7 @@ export class Island {
    */
   async deedWatch(founder: string): Promise<DeedWatch | string> {
     if (!this.info) return 'You are not on an island.';
-    const { data, error } = await supabase().rpc('rpc_deed_watch', { p_world: this.info.id, p_founder: founder });
+    const { data, error } = await rpc('rpc_deed_watch', { p_world: this.info.id, p_founder: founder });
     if (error) return error.message;
     const why = (data as { why?: string } | null)?.why;
     return why ?? (data as DeedWatch);
@@ -4424,7 +4423,7 @@ export class Island {
    */
   async amKeeper(): Promise<boolean> {
     if (!this.info) return false;
-    const { data, error } = await supabase().rpc('rpc_owner_am_i', { p_world: this.info.id });
+    const { data, error } = await rpc('rpc_owner_am_i', { p_world: this.info.id });
     return !error && data === true;
   }
 
@@ -4434,7 +4433,7 @@ export class Island {
   /** Everybody with a body on the island, as its keepers see them. Null when the island did not answer. */
   async kept(): Promise<Kept | null> {
     if (!this.info) return null;
-    const { data, error } = await supabase().rpc('rpc_owner_online', { p_world: this.info.id });
+    const { data, error } = await rpc('rpc_owner_online', { p_world: this.info.id });
     this.keptWhy = error?.message ?? null;
     if (error || !data || typeof data !== 'object') return null;
     const got = data as Partial<Kept>;
@@ -4458,7 +4457,7 @@ export class Island {
   /** What the island's watch has flagged, newest first. Null when the island did not answer. */
   async keeperFlags(): Promise<WatchFlags | null> {
     if (!this.info) return null;
-    const { data, error } = await supabase().rpc('rpc_owner_flags', { p_world: this.info.id });
+    const { data, error } = await rpc('rpc_owner_flags', { p_world: this.info.id });
     if (error || !data || typeof data !== 'object') return null;
     const got = data as Partial<WatchFlags>;
     return { flags: rowsIn<WatchFlag>(got.flags), open: got.open ?? 0 };
@@ -4481,7 +4480,7 @@ export class Island {
   /** The open reports, newest first, as the island's keepers see them. Null when the island did not answer. */
   async keptReports(): Promise<KeptReport[] | null> {
     if (!this.info) return null;
-    const { data, error } = await supabase().rpc('rpc_owner_reports', { p_world: this.info.id });
+    const { data, error } = await rpc('rpc_owner_reports', { p_world: this.info.id });
     // A refusal (`why`, an authenticator code wanted) is no answer, not an empty list.
     if (error || !data || typeof data !== 'object' || 'why' in data) return null;
     return rowsIn<KeptReport>((data as { reports?: unknown }).reports);
@@ -4519,7 +4518,7 @@ export class Island {
 
   async deals(): Promise<Deal[]> {
     if (!this.info) return [];
-    const { data, error } = await supabase().rpc('rpc_deals', { p_world: this.info.id });
+    const { data, error } = await rpc('rpc_deals', { p_world: this.info.id });
     if (error || !data) return [];
     return rowsIn<Deal>(data);
   }
@@ -4543,7 +4542,7 @@ export class Island {
   /** The trade you are in, or null; and why one you were in has just ended, when it has. */
   async barter(): Promise<{ barter: Barter | null; why?: string } | null> {
     if (!this.info) return null;
-    const { data, error } = await supabase().rpc('rpc_barter', { p_world: this.info.id });
+    const { data, error } = await rpc('rpc_barter', { p_world: this.info.id });
     if (error || !data || typeof data !== 'object') return null;
     const got = data as { barter?: Barter | null; why?: string };
     return { barter: got.barter ?? null, ...(typeof got.why === 'string' ? { why: got.why } : {}) };
@@ -4594,7 +4593,7 @@ export class Island {
    */
   async market(): Promise<{ board: boolean; stalls: Stall[]; token?: BoardSpot | null }> {
     if (!this.info) return { board: false, stalls: [] };
-    const { data, error } = await supabase().rpc('rpc_market', { p_world: this.info.id });
+    const { data, error } = await rpc('rpc_market', { p_world: this.info.id });
     if (error || !data) return { board: false, stalls: [] };
     const got = data as { board?: boolean; stalls?: unknown; token?: BoardSpot | null };
     const t = got.token;
@@ -4605,7 +4604,7 @@ export class Island {
   /** Every settlement on the island, for the map (`rpc_settlements`); null when the island did not answer. */
   async settlements(): Promise<Array<{ name: string; x: number; y: number; radius: number; mine: boolean }> | null> {
     if (!this.info) return null;
-    const { data, error } = await supabase().rpc('rpc_settlements', { p_world: this.info.id });
+    const { data, error } = await rpc('rpc_settlements', { p_world: this.info.id });
     if (error || !data) return null;
     return rowsIn<{ name: string; x: number; y: number; radius: number; mine: boolean }>((data as { deeds?: unknown }).deeds)
       .filter((d) => typeof d.x === 'number' && typeof d.y === 'number' && typeof d.radius === 'number')
@@ -4615,7 +4614,7 @@ export class Island {
   /** A thing's last `SALES_SHOWN` sales on the island this month, newest first (`rpc_sales`). */
   async sales(def: string): Promise<Sale[]> {
     if (!this.info) return [];
-    const { data, error } = await supabase().rpc('rpc_sales', { p_world: this.info.id, p_def: def });
+    const { data, error } = await rpc('rpc_sales', { p_world: this.info.id, p_def: def });
     if (error || !data) return [];
     return rowsIn<Sale>((data as { sales?: unknown }).sales);
   }
@@ -4623,7 +4622,7 @@ export class Island {
   /** What everything has sold for on the island in the last `SALE_DAYS` days, a row a day per thing (`rpc_prices`). */
   async prices(): Promise<Prices> {
     if (!this.info) return {};
-    const { data, error } = await supabase().rpc('rpc_prices', { p_world: this.info.id });
+    const { data, error } = await rpc('rpc_prices', { p_world: this.info.id });
     if (error || !data) return {};
     const sold = (data as { sold?: unknown }).sold;
     return sold && typeof sold === 'object' ? (sold as Prices) : {};
@@ -4635,7 +4634,7 @@ export class Island {
 
   async waiting(): Promise<{ at_box: boolean; things: Parcel[] }> {
     if (!this.info) return { at_box: false, things: [] };
-    const { data, error } = await supabase().rpc('rpc_parcels', { p_world: this.info.id });
+    const { data, error } = await rpc('rpc_parcels', { p_world: this.info.id });
     if (error || !data) return { at_box: false, things: [] };
     const got = data as { at_box?: boolean; things?: unknown };
     return { at_box: !!got.at_box, things: rowsIn<Parcel>(got.things) };
@@ -4651,7 +4650,7 @@ export class Island {
    */
   async orders(): Promise<{ board: boolean; orders: Order[] }> {
     if (!this.info) return { board: false, orders: [] };
-    const { data, error } = await supabase().rpc('rpc_orders', { p_world: this.info.id });
+    const { data, error } = await rpc('rpc_orders', { p_world: this.info.id });
     if (error || !data) return { board: false, orders: [] };
     const got = data as { board?: boolean; orders?: unknown };
     return { board: !!got.board, orders: rowsIn<Order>(got.orders) };
@@ -4676,16 +4675,16 @@ export class Island {
    * One shape for every door that answers with a refusal or nothing: the
    * refusal when there is one, null when it went through.
    */
-  private async asked(fn: string, args: Record<string, unknown>): Promise<string | null> {
+  private async asked<N extends WorldDoor>(fn: N, args: DoorArgs<N>): Promise<string | null> {
     if (!this.info) return 'You are not on an island.';
-    const { data, error } = await supabase().rpc(fn, { p_world: this.info.id, ...args });
+    const { data, error } = await rpcIn(fn, this.info.id, args);
     if (error) return error.message;
     return ((data as { why?: string } | null)?.why) ?? null;
   }
 
   async letters(uid: string, limit = 60): Promise<Letter[]> {
     if (!this.info) return [];
-    const { data, error } = await supabase().rpc('rpc_letters', {
+    const { data, error } = await rpc('rpc_letters', {
       p_world: this.info.id, p_with: uid, p_limit: limit,
     });
     if (error || !data) return [];
@@ -4701,9 +4700,9 @@ export class Island {
    * social doors while they were the only six; taking up a trade, buying a
    * node and calling a rite are the same shape and wanted no second helper.
    */
-  private async door(door: string, args: Record<string, unknown>): Promise<string | null> {
+  private async door<N extends WorldDoor>(door: N, args: DoorArgs<N>): Promise<string | null> {
     if (!this.info) return 'You are not on an island.';
-    const { data, error } = await supabase().rpc(door, { p_world: this.info.id, ...args });
+    const { data, error } = await rpcIn(door, this.info.id, args);
     this.mobsWhole = true;
     if (error) return error.message;
     return (data as { why?: string } | null)?.why ?? null;
@@ -4720,8 +4719,8 @@ export class Island {
      * keeps the ask beside it in the same transaction, and answers as it does.
      */
     const { data, error } = hidden
-      ? await supabase().rpc('rpc_plan_hidden_wall', { p_world: this.info.id, p_target: target, p_times: times })
-      : await supabase().rpc('rpc_act', {
+      ? await rpc('rpc_plan_hidden_wall', { p_world: this.info.id, p_target: target, p_times: times })
+      : await rpc('rpc_act', {
         p_world: this.info.id, p_action: action, p_target: target, p_times: times,
       });
     /*
@@ -4830,7 +4829,7 @@ export class Island {
     for (let i = 0; i < targets.length; i += ACT_MANY_MOST) {
       const chunk = targets.slice(i, i + ACT_MANY_MOST);
       const sent = ++this.asksSent;
-      const { data, error } = await supabase().rpc('rpc_act_many', { p_world: this.info.id, p_action: action, p_targets: chunk });
+      const { data, error } = await rpc('rpc_act_many', { p_world: this.info.id, p_action: action, p_targets: chunk });
       // Raised rather than refused, so told nowhere else (`act`).
       if (error) {
         this.hooks.say(refusedSaid(error.message), 'error');
@@ -4862,7 +4861,7 @@ export class Island {
    */
   async planArea(asks: Array<{ action: string; target: unknown }>): Promise<{ planned?: number; refused?: number; why?: string }> {
     if (!this.info) return { why: 'You are not on an island.' };
-    const { data, error } = await supabase().rpc('rpc_plan_area', { p_world: this.info.id, p_asks: asks });
+    const { data, error } = await rpc('rpc_plan_area', { p_world: this.info.id, p_asks: asks });
     // Raised rather than refused, so told nowhere else (`act`).
     if (error) {
       this.hooks.say(refusedSaid(error.message), 'error');
@@ -4877,7 +4876,7 @@ export class Island {
   /** Your last plan taken back (`rpc_plan_undo`): how many pieces came down, or why none. */
   async undoPlan(): Promise<{ removed?: number; why?: string }> {
     if (!this.info) return { why: 'You are not on an island.' };
-    const { data, error } = await supabase().rpc('rpc_plan_undo', { p_world: this.info.id });
+    const { data, error } = await rpc('rpc_plan_undo', { p_world: this.info.id });
     // Raised rather than refused, so told nowhere else (`act`).
     if (error) {
       this.hooks.say(refusedSaid(error.message), 'error');
@@ -4907,7 +4906,7 @@ export class Island {
     if (!this.info) return;
     if (this.beat) clearTimeout(this.beat);
     this.beat = null;
-    const { error } = await supabase().rpc('rpc_cancel', { p_world: this.info.id });
+    const { error } = await rpc('rpc_cancel', { p_world: this.info.id });
     // The island says what was stopped; a stop it would not take says why here, or nowhere (`act`).
     if (error) this.hooks.say(refusedSaid(error.message), 'error');
     await this.pulse();
@@ -4927,7 +4926,7 @@ export class Island {
     if (!this.info) return;
     if (this.beat) clearTimeout(this.beat);
     this.beat = null;
-    const { error } = await supabase().rpc('rpc_hold', { p_world: this.info.id });
+    const { error } = await rpc('rpc_hold', { p_world: this.info.id });
     // The island says what was put down; a hold it would not take says why here, or nowhere (`act`).
     if (error) this.hooks.say(refusedSaid(error.message), 'error');
     await this.pulse();
@@ -4940,7 +4939,7 @@ export class Island {
    */
   async queueOrder(seen: Lined[], order: number[]): Promise<void> {
     if (!this.info) return;
-    const { data, error } = await supabase().rpc('rpc_queue_order', { p_world: this.info.id, p_seen: seen, p_order: order });
+    const { data, error } = await rpc('rpc_queue_order', { p_world: this.info.id, p_seen: seen, p_order: order });
     // Raised rather than refused, so told nowhere else (`act`); the next beat puts the queue back as the island has it.
     if (error) {
       this.hooks.say(refusedSaid(error.message), 'error');
@@ -4965,7 +4964,7 @@ export class Island {
    */
   async say(text: string): Promise<string | null> {
     if (!this.info) return null;
-    const { data, error } = await supabase().rpc('rpc_say', { p_world: this.info.id, p_text: text });
+    const { data, error } = await rpc('rpc_say', { p_world: this.info.id, p_text: text });
     if (error) return error.message;
     const said = data as { said?: string | null; why?: string } | null;
     return said?.why ?? null;
@@ -4974,7 +4973,7 @@ export class Island {
   /** What has been said lately, oldest first, for somebody just arriving. */
   async recentChat(limit = TALK_LOG): Promise<Array<{ n: number; text: string; at?: number }>> {
     if (!this.info) return [];
-    const { data } = await supabase().rpc('rpc_chat', { p_world: this.info.id, p_limit: limit });
+    const { data } = await rpc('rpc_chat', { p_world: this.info.id, p_limit: limit });
     // `rpc_chat` has sent `at` since the day it was written and nothing read it.
     // Only what was said before we came ashore: anything after it comes down with the other lines (`HeardLines`).
     return rowsIn<{ n: number; text: string; at?: string }>(data)

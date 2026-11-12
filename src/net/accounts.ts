@@ -1,5 +1,6 @@
 import { cleanLook, type Look } from '../game/look';
 import { supabase } from './supabase';
+import { rpc } from './rpc';
 import { captchaOptions } from './captcha';
 import { nameRefusal } from '../game/playertext';
 
@@ -202,7 +203,7 @@ export async function passwordVerdict(pw: string): Promise<string | null> {
 
 /** Is this name still going spare? A courtesy — signing up is what reserves it. */
 export async function nameFree(name: string): Promise<boolean> {
-  const { data, error } = await supabase().rpc('rpc_name_free', { p_name: foldName(name) });
+  const { data, error } = await rpc('rpc_name_free', { p_name: foldName(name) });
   if (error) throw new Error(`Could not ask the island keeper: ${error.message}`);
   return data === true;
 }
@@ -295,7 +296,7 @@ export async function createAccount(rawName: string, password: string): Promise<
   if ((had.data.session?.user as { is_anonymous?: boolean } | undefined)?.is_anonymous) {
     const { error: grew } = await sb.auth.updateUser({ email: nameEmail(name), password, data: { display: shown } });
     if (!grew) {
-      const { data: called } = await sb.rpc('rpc_my_name');
+      const { data: called } = await rpc('rpc_my_name');
       if (typeof called === 'string' && foldName(called) === name) return { name: called, unconfirmed: false };
     } else if (/already|taken|registered|exists/i.test(grew.message)) {
       throw new Error('That name is taken. Try another.');
@@ -318,7 +319,7 @@ export async function createAccount(rawName: string, password: string): Promise<
   if (!data.user) throw new Error('The island keeper did not say whether the account was made.');
   if (!data.session) return { name: shown, unconfirmed: true };
 
-  const { data: called } = await sb.rpc('rpc_my_name');
+  const { data: called } = await rpc('rpc_my_name');
   return { name: typeof called === 'string' && called ? called : shown, unconfirmed: false };
 }
 
@@ -334,10 +335,10 @@ export async function signInAs(rawName: string, password: string): Promise<strin
    * on every island (`rpc_name_case`). Whoever got in with the password
    * owns the account, and only its capitals can change.
    */
-  const { data: called } = await sb.rpc('rpc_my_name');
+  const { data: called } = await rpc('rpc_my_name');
   const shown = writtenName(rawName);
   if (typeof called === 'string' && called !== shown) {
-    const { data: cased, error: refused } = await sb.rpc('rpc_name_case', { p_display: shown });
+    const { data: cased, error: refused } = await rpc('rpc_name_case', { p_display: shown });
     if (!refused && typeof cased === 'string') return cased;
   }
   return typeof called === 'string' && called ? called : shown;
@@ -398,7 +399,7 @@ export async function whoAmI(): Promise<string | null> {
   const had = await sb.auth.getSession();
   const session = had.data.session;
   if (!session) return null;
-  const { data, error } = await sb.rpc('rpc_my_name');
+  const { data, error } = await rpc('rpc_my_name');
   if (!error) return typeof data === 'string' && data ? data : null;
   const named = emailName(session.user?.email ?? '');
   return named && nameTrouble(named) === null ? named : null;
@@ -410,7 +411,7 @@ export async function whoAmI(): Promise<string | null> {
  * island did not answer.
  */
 export async function sentOffLine(island: string): Promise<string | null> {
-  const { data, error } = await supabase().rpc('rpc_barred', { p_world: island });
+  const { data, error } = await rpc('rpc_barred', { p_world: island });
   if (error || !data || typeof data !== 'object') return null;
   const line = (data as { line?: unknown }).line;
   return typeof line === 'string' ? line : null;
@@ -428,7 +429,7 @@ export async function signOut(): Promise<void> {
  * creator and lets somebody coming back walk straight past it.
  */
 export async function myLook(): Promise<Look | null> {
-  const { data, error } = await supabase().rpc('rpc_my_look');
+  const { data, error } = await rpc('rpc_my_look');
   if (error || data === null || data === undefined) return null;
   return cleanLook(data);
 }
@@ -442,7 +443,7 @@ export async function myLook(): Promise<Look | null> {
  * a face nobody else would ever see.
  */
 export async function setLook(look: Look): Promise<Look> {
-  const { data, error } = await supabase().rpc('rpc_set_look', { p_look: look });
+  const { data, error } = await rpc('rpc_set_look', { p_look: look });
   if (error) throw new Error(`The island keeper would not take that face: ${error.message}`);
   return cleanLook(data);
 }
