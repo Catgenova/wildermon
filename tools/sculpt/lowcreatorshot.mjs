@@ -28,13 +28,14 @@ const css = ['src/account.css', 'src/ui/creator.css'].map((f) => readFileSync(jo
 const kept = '/opt/pw-browsers/chromium';
 const browser = await chromium.launch({ ...(existsSync(kept) ? { executablePath: kept } : {}), args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 try {
-  const p = await browser.newPage({ viewport: { width: 1100, height: 900 }, deviceScaleFactor: 1 });
-  p.on('pageerror', (e) => console.log('ERR', e.message));
-  await p.setContent(`<!doctype html><html><head><style>${css}\nbody{display:block;margin:0;padding:16px;background:#1d1a1f;min-height:0}</style></head><body></body></html>`);
-  await p.addScriptTag({ content: b.outputFiles[0].text });
-  // (the page clipped to the element: the mirror redraws every frame, so it is never "stable" for an element shot)
-  const shot = async (sel, path) => { const r = await p.evaluate((q) => { const e = document.querySelector(q).getBoundingClientRect(); return { x: e.x, y: e.y, width: Math.ceil(e.width), height: Math.ceil(e.height) }; }, sel); await p.screenshot({ path, clip: r, timeout: 120000, animations: 'allow' }); };
+  // (a page of its own for each body: a creator left running slows the next one's shots past their time)
   for (const gender of ['man', 'woman']) {
+    const p = await browser.newPage({ viewport: { width: 1100, height: 900 }, deviceScaleFactor: 1 });
+    p.on('pageerror', (e) => console.log('ERR', e.message));
+    await p.setContent(`<!doctype html><html><head><style>${css}\nbody{display:block;margin:0;padding:16px;background:#1d1a1f;min-height:0}</style></head><body></body></html>`);
+    await p.addScriptTag({ content: b.outputFiles[0].text });
+    // (the page clipped to the element: the mirror redraws every frame, so it is never "stable" for an element shot)
+    const shot = async (sel, path) => { const r = await p.evaluate((q) => { const e = document.querySelector(q).getBoundingClientRect(); return { x: e.x, y: e.y, width: Math.ceil(e.width), height: Math.ceil(e.height) }; }, sel); await p.screenshot({ path, clip: r, timeout: 120000, animations: 'allow' }); };
     await p.evaluate((g) => window.make(g), gender);
     await p.waitForTimeout(4000);
     // the hairstyle's tile, by its name
@@ -49,6 +50,7 @@ try {
     const head = join(out, `creator-${hair}-${gender}-head.png`);
     await shot('.cr-me', head);
     console.log('wrote', head);
+    await p.close();
   }
 } finally {
   await browser.close();
