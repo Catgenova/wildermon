@@ -86,7 +86,7 @@ export const GATEWAY = { t0: DOUBLE.t0, t1: DOUBLE.t1, spring: 0.56, crown: 0.74
 const RING = 4;
 const VOUSSOIRS = 11;
 
-/** An opening with a curved head, as the renderer's own archway is (`Renderer.archGeom`), with the ring round it. */
+/** An opening with a curved head, as the renderer's own archway is (`WallPainter.archGeom`), with the ring round it. */
 export interface ArchShape {
   t0: number;
   t1: number;
