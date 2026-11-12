@@ -43,6 +43,12 @@ const TRAIL_RGB = { plain: { edge: '#f3ead8', mid: '#fffaf0' }, lit: { edge: '#f
 /** A low-poly body's hair in a valley (`Material.valley`, its step: the darkest first): its colour times this, however
  * lit (the numbers; `tools/sculpt/lowhairshot.mjs` reads them from here). */
 export const HAIR_VALLEYS = [0.62, 0.7, 0.78, 0.86];
+/**
+ * A head or a blade in its metal (`Material.gear` and `metal`, `./lowpoly.ts` metalTint), lit by brightness b (the light
+ * over the light the bodies were fitted to): its colour times (floor + (1 - floor) b^power), [floor, power]; then a sheen,
+ * [how far toward white, from b, full at b], on the facets turned to the light.
+ */
+export const METAL_CURVE = [0.12, 1.5], METAL_SHEEN = [0.32, 1.08, 1.4];
 /** Corrective shapes a draw may weigh (`Baked.shapes`). */
 const MAX_SHAPES = 8;
 /** Texels a row of the shapes' texture (each vertex's shapes, two texels a shape, run on along the rows). */
@@ -175,7 +181,14 @@ void main() {
       const vec3 LUM = vec3(0.299, 0.587, 0.114);
       // and matte paint on the body (the undergarment) by the brightness of the light less its highlight and rims
       if (matte) lit = lowLightMatte(lv);
-      c = matte ? min(base * (0.18 + 0.82 * dot(lit, LUM) / dot(uFit, LUM)), 1.0) : skin ? min(lit * uTone, 1.0) : cloth ? min(lit * base / uFit, 1.0) : gear ? min(base * (0.18 + 0.82 * dot(lit, LUM) / dot(uFit, LUM)), 1.0) : base;
+      float b = dot(lit, LUM) / dot(uFit, LUM);
+      c = matte ? min(base * (0.18 + 0.82 * b), 1.0) : skin ? min(lit * uTone, 1.0) : cloth ? min(lit * base / uFit, 1.0) : gear ? min(base * (0.18 + 0.82 * b), 1.0) : base;
+      // and a head or a blade in its metal (gear and metal) steeper: its facets turned from the light darker, those full
+      // in it brighter, and a sheen toward white on those turned straight to it (METAL_CURVE, METAL_SHEEN)
+      if (gear && metal) {
+        c = base * (${METAL_CURVE[0].toFixed(3)} + ${(1 - METAL_CURVE[0]).toFixed(3)} * pow(b, ${METAL_CURVE[1].toFixed(3)}));
+        c = min(c + (1.0 - min(c, 1.0)) * ${METAL_SHEEN[0].toFixed(3)} * smoothstep(${METAL_SHEEN[1].toFixed(3)}, ${METAL_SHEEN[2].toFixed(3)}, b), 1.0);
+      }
     }
   } else if (uFlat > 0.5) {
     c = base;

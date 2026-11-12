@@ -98,6 +98,8 @@ export interface Held {
    * given): the long sword's point rests on the ground at the swing's rest and drag; a pickaxe (0) keeps its head off it.
    */
   rest?: number;
+  /** Where along it (its own y) the slash trail's inner edge is at the blade (`./trail.ts`); a share of the way from the lead fist to the far end where not given. */
+  inner?: number;
 }
 const smooth = (x: number): number => { const u = Math.min(1, Math.max(0, x)); return u * u * (3 - 2 * u); };
 

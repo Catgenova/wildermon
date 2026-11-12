@@ -27,7 +27,7 @@
 // Enchanted: the face stars, the emblem's disc and star, the pommel's discs and stars and the panels' runes lit (unlit,
 // full bright), and glow added round them.
 
-import { meshOf, trisOf } from '../lowgear.mjs';
+import { meshOf, trisOf, metalFaces, metalMats } from '../lowgear.mjs';
 import { buildRig } from '../lowrig.mjs';
 
 /** The sheet's front view, px: the pommel's foot to the finial's top. */
@@ -59,6 +59,9 @@ export const MATS_PLAIN = {
   gem: { c: '#d4b47a' },
   glow: { c: '#ff7a22', glow: 1 },
 };
+/** The head's stone, drawn in the metal it is smithed from (`metalFaces`): the blocks, their faces, the necks, the hub's post, their cracks. */
+const METAL = ['stone', 'stoneL', 'stoneB', 'bevel', 'crack'];
+Object.assign(MATS_PLAIN, metalMats(MATS_PLAIN, METAL));
 export const MATS_ENCHANTED = {
   ...MATS_PLAIN,
   rune: { c: '#ff9430', emit: true },
@@ -95,6 +98,7 @@ export function buildWarhammer({ enchanted = false, length } = {}) {
   const oct = (a, b, ha, hb, c) => oct2(a, b, ha, hb, c, c);
 
   /* ---- the head's blocks and necks: eight-sided sections across U, Z, along X ------------------------------------- */
+  const headFrom = G.F.length;
   const UC = 230.5;
   /** A ring across the head at X: half height hu, half depth hz, its corners cut cu, cz; (u, z) from the top front round. */
   const hring = (X, hu, hz, cu, cz, uc = UC, jit = null, cuB = cu) => oct2(uc, 0, hu, hz, cu, cz, cuB).map(([u, z], j) => P(X, u + (jit ? jit[j][0] : 0), z + (jit ? jit[j][1] : 0)));
@@ -139,6 +143,8 @@ export function buildWarhammer({ enchanted = false, length } = {}) {
     tube([g0, g1], (i, j) => (j === 3 ? 'goldD' : 'gold'), [X(13.5), X(10.5)]);
   }
 
+  const headTo = G.F.length;
+
   /* ---- the haft: eight-sided rings up the U axis, lofted ---------------------------------------------------------- */
   const ZK = 0.96;
   const ring = (U, s, c, zk = ZK) => oct(0, 0, s, s * zk, c).map(([x, z]) => P(x, U, z));
@@ -174,11 +180,14 @@ export function buildWarhammer({ enchanted = false, length } = {}) {
 
   /* ---- the hub: the post round the haft, its corners gold, the finial ---------------------------------------------- */
   const HX = 11, HZ = 13, HC = 2.6;
+  const hubFrom = G.F.length;
+  let hubTo = hubFrom;
   {
     const lo = oct(0, 0, HX, HZ, HC).map(([x, z]) => P(x, 210, z)), hi = oct(0, 0, HX, HZ, HC).map(([x, z]) => P(x, 260, z));
     PROFILE.push([210, HX, HC], [260, HX, HC]);
     for (let j = 0; j < 8; j++) F([lo[j], lo[(j + 1) % 8], hi[(j + 1) % 8], hi[j]], j % 2 === 0 ? 'gold' : j === 3 || j === 7 ? 'stoneB' : 'stone', FROM(0, 235, 0));
     F(lo, 'bevel', [0, -1, 0]);
+    hubTo = G.F.length;
     const fin = [{ U: 260, s: HX, r: hi, m: 'gold' }, R(260, 11.8, 3.6, 'gold'), R(264, 11.8, 3.6, 'gold'), R(267.4, 7.5, 2.6, 'gold'), R(269, 3.4, 1.2, 'gold')];
     loft(fin);
     F(fin[fin.length - 1].r, 'gold', [0, 1, 0]);
@@ -258,12 +267,15 @@ export function buildWarhammer({ enchanted = false, length } = {}) {
   faceStar(1); faceStar(-1);
 
   /* ---- hairline cracks over the blocks' fronts and backs, a little darker -------------------------------------------- */
+  const cracksFrom = G.F.length;
   const crack = (pts, z, out) => { for (let j = 0; j + 1 < pts.length; j++) { const [x0, u0] = pts[j], [x1, u1] = pts[j + 1], l = Math.hypot(x1 - x0, u1 - u0), nx = -(u1 - u0) / l * 0.35, nu = (x1 - x0) / l * 0.35; F([P(x0 - nx, u0 - nu, z), P(x0 + nx, u0 + nu, z), P(x1 + nx, u1 + nu, z), P(x1 - nx, u1 - nu, z)], 'crack', out); } };
   for (const sz of [1, -1]) {
     const out = sz > 0 ? FRONT : BACK, z = (BZ + 0.15) * sz;
     crack([[40, 240], [43, 233], [41.5, 226]], z, out);
     crack([[-39.5, 222], [-43, 228], [-44.5, 236]], z, out);
   }
+  // (the head's stone in the metal it is smithed from; its gold, emblem, stars, collars, panel, haft and pommel their own)
+  metalFaces(G, [[headFrom, headTo], [hubFrom, hubTo], [cracksFrom, G.F.length]], METAL);
 
   const tris = trisOf(G).length;
 
@@ -319,14 +331,28 @@ export function buildWarhammer({ enchanted = false, length } = {}) {
     // the striking ends, its own frame: both faces' corners, the bands' and the bevels' outer corners (what the swing
     // keeps off the ground) and the finial's, the leading face's centre first
     ends: [[-FACE * k, UC * k, 0], ...[1, -1, 0].flatMap((s) => faces[s].map((i) => G.V[i]))],
+    // the head's middle along it: the blocks' centre line
+    headU: UC * k,
   };
 }
+
+/**
+ * Carried on the back while it is wielded and not in hand (lowgear.mjs backSocketOf; src/sculpt/lowpoly.ts draws it there
+ * as it draws the long sword), head up: the head's middle (`anchor`, the blocks' centre line) at `guard` behind the right
+ * shoulder blade, the haft slanting `lean` degrees from upright down toward the left hip, the emblem's face out (`flip`),
+ * held `gap` clear of every garment of every set (`garments`) at rest.
+ */
+export const BACK_GARMENTS = ['shawl', 'tunic', 'trousers', 'boots', 'hood', 'helm', 'mantle', 'platechest', 'platelegs', 'plateboots', 'leatherchest', 'leatherlegs', 'leatherlegsflaps', 'leatherboots', 'leathershawl', 'leathershawlover', 'hat'];
+export const BACK_DESIGN = {
+  male: { up: true, flip: true, lean: 42, guard: [-0.8, -0.95], gap: 0.3, tilts: [-12, 12], wide: 0.12, blade: 0, garments: BACK_GARMENTS },
+  female: { up: true, flip: true, lean: 42, guard: [-0.7, -1.0], gap: 0.3, tilts: [-12, 12], wide: 0.12, blade: 0, garments: BACK_GARMENTS },
+};
 
 /* ---- the game's copy: node tools/sculpt/gear/warhammer.mjs [--out src/sculpt/assets/warhammer.json] ------------------- */
 if (import.meta.url === `file://${process.argv[1]}`) {
   const { writeFileSync } = await import('node:fs');
   const { resolve } = await import('node:path');
-  const { gearAsset } = await import('../lowgear.mjs');
+  const { gearAsset, backSocketOf } = await import('../lowgear.mjs');
   const args = process.argv.slice(2), at = args.indexOf('--out');
   const out = resolve(at < 0 ? new URL('../../../src/sculpt/assets/warhammer.json', import.meta.url).pathname : args[at + 1]);
   const L = await warhammerLength();
@@ -345,6 +371,14 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   asset.ends = plain.ends.map((p) => p.map((x) => +x.toFixed(5)));
   // never let down onto the ground where the swing lets a blade's point down (src/sculpt/anim/skeleton.ts Held.rest)
   asset.rest = 0;
+  // its slash trail (src/sculpt/anim/trail.ts) the head's: from the lowest of its striking ends to the finial
+  asset.trail = +Math.min(...asset.ends.map((p) => p[1])).toFixed(5);
+  // carried on the back, head up (BACK_DESIGN), its head's middle the blocks' centre line
+  for (const who of ['male', 'female']) {
+    const b = backSocketOf(who, { verts: plain.G.V.flat(), grip: plain.grip }, asset.scale[who], { ...BACK_DESIGN[who], anchor: plain.headU });
+    asset.sockets[who].back = b.socket;
+    console.log(`${who}: on the back, tilt ${b.tilt}, gaps ${b.gaps.join(', ')}`);
+  }
   asset.units = "game units; its own frame: y along the haft from the pommel's foot (0) to the finial's top, x along the head (a face leading), z = x × y (out of the sheet's back face)";
   writeFileSync(out, JSON.stringify(asset));
   console.log(`wrote ${out}: ${asset.counts.tris} triangles (${asset.counts.glowTris} more of glow), ${L.toFixed(4)} game units`);

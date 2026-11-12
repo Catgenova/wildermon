@@ -108,13 +108,16 @@ export function clipFor(pose: FigurePose, body: 'man' | 'woman' = pose.look?.gen
   return { clip, t: pose.phase / 6 + offsetOf(pose.id) * clip.length };
 }
 
+/** What the jobs swung overhead are done with (`SWING_JOBS`): drawn in both hands as they are. */
+export const SWING_TOOL = 'pickaxe';
 /**
- * What a pose holds in both hands as its clip plays (`Clip.grip`), by its id: the weapon in hand in a fight; nothing at
- * work (mining's pickaxe is not drawn yet, so the hands close on a handle of their own).
+ * What a pose holds in both hands as its clip plays (`Clip.grip`), by its id: the weapon in hand in a fight; the pickaxe
+ * at a job swung overhead (`SWING_JOBS`, `SWING_TOOL`); nothing at any other work.
  */
 export function heldIn(pose: FigurePose): string | undefined {
   const c = clipFor(pose);
-  return c?.clip.grip && pose.job === FIGHT ? pose.gear?.weapon?.id : undefined;
+  if (!c?.clip.grip) return undefined;
+  return pose.job === FIGHT ? pose.gear?.weapon?.id : SWING_JOBS.has(pose.job ?? '') ? SWING_TOOL : undefined;
 }
 
 /** A share of a loop for a body, from its id, so bodies stood together do not breathe as one. */
