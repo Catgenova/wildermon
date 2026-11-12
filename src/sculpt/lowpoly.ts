@@ -94,6 +94,11 @@ import MALLET from './assets/mallet.json';
 import CHISEL from './assets/chisel.json';
 import HATCHET from './assets/hatchet.json';
 import BUTCHERING_KNIFE from './assets/butchering_knife.json';
+import AWL from './assets/awl.json';
+import CARVING_KNIFE from './assets/carving_knife.json';
+import TROWEL from './assets/trowel.json';
+import FILE from './assets/file.json';
+import WHETSTONE from './assets/whetstone.json';
 import HAIR_ASSET from './assets/lowhair.json';
 import MALE_LIGHT from '../../tools/sculpt/lowlight-male.json';
 import FEMALE_LIGHT from '../../tools/sculpt/lowlight-female.json';
@@ -191,12 +196,16 @@ interface PropMaterial { c: string; kind: number; metal?: 'face' | 'edge' }
 const SWORD = LONG_SWORD as unknown as PropAsset;
 /**
  * The props drawn in both hands, by the id of what is held (`heldIn`): the long sword, the maul as the Runestone
- * Warhammer, and the pickaxe (`SWING_TOOL`) as the Runestone Pickaxe. One is drawn at a time, so all take the same
- * materials (`PROP_MAT`).
+ * Warhammer, and the pickaxe (`SWING_TOOL`) as the Runestone Pickaxe; and the hand tools a clip holds in one fist, by
+ * item id, each drawn in the metal and enchantment of the pose's tool (`FigurePose.tool`). One is drawn at a time, so all
+ * take the same materials (`PROP_MAT`).
  */
 const PROPS: readonly PropAsset[] = [SWORD, { ...(WARHAMMER as unknown as PropAsset), id: 'maul' }, { ...(PICKAXE as unknown as PropAsset), id: SWING_TOOL },
   // the hand tools by item id, each in one fist (`PropAsset.hand`), its working part in its metal (the mallet all wood)
   HAMMER as unknown as PropAsset, MALLET as unknown as PropAsset, CHISEL as unknown as PropAsset, HATCHET as unknown as PropAsset, BUTCHERING_KNIFE as unknown as PropAsset,
+  // the hand tools held in one fist at the bench (tools/sculpt/gear/finetools.mjs): the awl, the carving knife, the trowel,
+  // the file and the whetstone, by item id; the knife's, the trowel's and the file's blades in their metal
+  AWL as unknown as PropAsset, CARVING_KNIFE as unknown as PropAsset, TROWEL as unknown as PropAsset, FILE as unknown as PropAsset, WHETSTONE as unknown as PropAsset,
 ];
 const PROP_OF = new Map(PROPS.map((p) => [p.id, p]));
 /**
@@ -995,7 +1004,7 @@ export function lowScene(pose: FigurePose): SculptDraw {
   const weapon = pose.gear?.weapon, held = heldIn(pose), prop = held !== undefined ? PROP_OF.get(held) : undefined;
   const inHand = !!prop, onBack = !inHand && weapon ? PROP_OF.get(weapon.id) : undefined;
   const sword = inHand ? 'hand' : onBack?.sockets[who === 'woman' ? 'female' : 'male'].back ? 'back' : undefined, drawn = sword ? prop ?? onBack : undefined;
-  const piece: GearPiece | undefined = held === SWING_TOOL ? pose.tool : weapon;
+  const piece: GearPiece | undefined = held === SWING_TOOL || (held !== undefined && held === pose.tool?.id) ? pose.tool : weapon;
   const lit = piece?.enchanted ? 'enchanted' : 'plain';
   // the tools in the hands while a clip holds them (`toolsIn`): the job's own in its metal, the other hand's plain
   const hands = toolsIn(pose, who), tools = hands?.tools ?? {};
@@ -1004,4 +1013,23 @@ export function lowScene(pose: FigurePose): SculptDraw {
   const bones = body.bones(pose, worn), trail = inHand && prop && trails(prop) ? body.trail(pose, lit === 'enchanted') : undefined;
   const shapes = body.shapes();
   return { baked: body.baked(worn, sword, hairStyle(pose, look.hair), enchanted, drops, drawn?.id, tools, hands?.up), bones, materials, view: viewOf(facing), blink: 0, low, ...(trail ? { trail } : {}), ...(shapes.some((w) => w > 0) ? { shapes } : {}) };
+}
+
+/** Local turns by bone name, [rx, ry, rz] degrees (as `tools/sculpt/lowrig.mjs` posed). */
+type Turns = Readonly<Record<string, readonly [number, number, number]>>;
+/**
+ * A hand tool (`PROPS`, by id) in the right fist of a body stood idle (the pose's look, outfit and facing), the right arm
+ * turned by `turns` and the fist closed on the tool as its socket says, in the metal and enchantment of `pose.tool`: for
+ * the authoring tools to check the grip in the game's renderer before a clip holds it.
+ */
+export function lowToolStill(pose: FigurePose, id: string, turns: Turns): SculptDraw | undefined {
+  const prop = PROP_OF.get(id);
+  if (!prop) return undefined;
+  const look = pose.look ?? DEFAULT_LOOK, who = look.gender === 'woman' ? 'woman' : 'man', body = BODIES[who];
+  const stood: FigurePose = { ...pose, working: false, job: undefined, act: undefined };
+  const worn = GARMENTS.map((g) => g.wears(stood)), enchanted = GARMENTS.map((g) => g.enchanted?.(stood) ?? false), drops = GARMENTS.map((g) => g.drops?.(stood) ?? false);
+  const curl = Object.fromEntries(Object.entries(prop.sockets[who === 'woman' ? 'female' : 'male'].r.curl ?? {}).map(([b, e]) => [`${b}_r`, e]));
+  const materials = materialsOf(look, prop, pose.tool?.enchanted ? 'enchanted' : 'plain', pose.tool?.material), low: LowLight = { sh: SH[who], tone: toneOf(materials), fit: FIT_SKIN };
+  const bones = body.bones(stood, worn, { ...turns, ...curl } as Record<string, [number, number, number]>);
+  return { baked: body.baked(worn, 'hand', hairStyle(stood, look.hair), enchanted, drops, id), bones, materials, view: viewOf(((Math.round(pose.facing) % 8) + 8) % 8), blink: 0, low };
 }
