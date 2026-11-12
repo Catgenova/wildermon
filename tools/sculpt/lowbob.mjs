@@ -71,9 +71,13 @@ export function outlineIoU(tris, who, ctx = ioUCtx(who)) {
 }
 export function ioUCtx(who, rig = buildRig(who)) {
   const m = maskOf(), cams = bobCams(who);
-  return { m, cams, Zb: bodyDepth(rig.B, cams, m.w, m.h) };
+  // (the fringe's band per view that shows the face: the face's columns, from FRINGE_TOP to a little under the cut,
+  // tools/sculpt/lowbobsheet.py)
+  const band = JSON.parse(readFileSync(join(DIR, 'hairs/bob-sheet.json'), 'utf8')).marks.fringe ?? {};
+  return { m, cams, band, Zb: bodyDepth(rig.B, cams, m.w, m.h) };
 }
-export function viewIoU(tris, v, { m, cams, Zb }) {
+export function viewIoU(tris, v, ctx) {
+  const { m, cams, Zb } = ctx;
   const c = cams[v], Z = Float32Array.from(Zb[v]), cov = new Uint8Array(m.w * m.h), st = bodyAt(c);
   raster(tris.map((t) => t.map(st)), c, Z, m.w, m.h, cov, 1);
   const [lo, hi] = SPAN[v];
@@ -83,7 +87,15 @@ export function viewIoU(tris, v, { m, cams, Zb }) {
     if (a || b) either++;
     if (a && b) both++; else if (a) bare++; else if (b) over++;
   }
-  return { iou: +(both / Math.max(1, either)).toFixed(4), bare, over };
+  const out = { iou: +(both / Math.max(1, either)).toFixed(4), bare, over };
+  // the fringe's band alone: its strands and the forehead between them
+  const fb = ctx.band?.[v];
+  if (fb) {
+    let b2 = 0, e2 = 0;
+    for (let y = 150; y < fb.cut + 6; y++) for (let x = fb.columns[0]; x <= fb.columns[1]; x++) { const i = y * m.w + x, a = m.raw[i], b = cov[i]; if (a || b) e2++; if (a && b) b2++; }
+    out.fringe = +(b2 / Math.max(1, e2)).toFixed(4);
+  }
+  return out;
 }
 
 /**
@@ -223,10 +235,32 @@ export function buildBob(rig, style = BOB, { adjust = null, clear = true, temple
   // both sides: her right (negative) mirrored, then her left; the front's and the back's middle once
   const cols = [...half.slice().reverse().filter((c) => c.th > 0 && c.th < 180).map((c) => ({ ...c, th: -c.th })), ...half.filter((c) => c.th < 180)];
   if (half.some((c) => c.th === 0)) cols.splice(cols.findIndex((c) => c.th === 0), 1), cols.splice(cols.findIndex((c) => c.th >= 0), 0, half.find((c) => c.th === 0));
+  // (each lock's border, but the temple's, as a narrow valley between two columns `valleyHalf` degrees each side of it,
+  // the strip between them in the valleys' shade: the crease between two locks)
+  if (S.valleyHalf) for (let j = cols.length - 1; j >= 0; j--) {
+    const c = cols[j];
+    if (c.ridge || Math.abs(Math.abs(c.th) - S.temple) <= Math.max(...S.templeGap) + 1e-6) continue;
+    cols.splice(j, 1, { ...c, th: c.th - S.valleyHalf, strip: true, part: c.th === 0 }, { ...c, th: c.th + S.valleyHalf, part: c.th === 0 });
+  }
+  // (the fringe's notches, where the sheet's forehead shows between its strands: each a column at the notch's apex,
+  // its cut raised to the apex, between two at its base's ends, the columns between left out; placed where the front
+  // view's camera puts them on this body's fringe, tools/sculpt/hairs/bob.mjs notches)
+  if (S.notches) {
+    const cam = bobCams(rig.who).front, st = bodyAt(cam), ph0 = S.notchPhi;
+    const thOf = (x) => { let best = 0, err = Infinity; for (let th = -70; th <= 70; th += 0.25) { const q = sheetAt(add(C, mul(dirOf(th, ph0), R.body(th, ph0) + S.notchOut)), cam); const e = Math.abs(q[0] - x); if (e < err) { err = e; best = th; } } return best; };
+    for (const n of S.notches) {
+      const a = thOf(n.base[0]), b = thOf(n.base[1]), t = thOf(n.x), lo = Math.min(a, b), hi = Math.max(a, b);
+      for (let j = cols.length - 1; j >= 0; j--) if (cols[j].th > lo - 1.5 && cols[j].th < hi + 1.5) cols.splice(j, 1);
+      cols.push({ th: lo, ridge: false, fringe: true }, { th: t, ridge: false, fringe: true, notch: (n.cut - n.apex) / cam.s }, { th: hi, ridge: false, fringe: true });
+    }
+    cols.sort((p, q) => p.th - q.th);
+  }
   // (the fit's temple per side: her right's [0] and her left's [1] fringe end and curtain front edge turned that many
   // degrees back, negative forward)
   for (const c of cols) if (Math.abs(Math.abs(c.th) - S.temple) <= Math.max(...S.templeGap) + 1e-6) c.th += Math.sign(c.th) * temple[c.th < 0 ? 0 : 1];
   const nc = cols.length;
+  // (a fit made for another set of columns is left out)
+  if (adjust && adjust.length !== nc) adjust = null;
   // each column's hem: where the hull ends (smoothed along the fringe and along the sides), a ridge's lower by its tip
   for (const c of cols) c.hem0 = hemOf(R, C, c.th, c.fringe ? S.fringeFrom : 40);
   // (the sides' and the back's hems as heights, smoothed along the columns `hemSmooth` passes: the hull's voxels step)
@@ -306,7 +340,7 @@ export function buildBob(rig, style = BOB, { adjust = null, clear = true, temple
       const cu = c.fringe ? 0 : S.curl[S.curl.length - 1 - (last - i)] ?? 0, d0 = dirOf(c.th, 0);
       let po = add(P(c.th, ph, rr), mul(d0, -cu));
       // (the fringe's cut level at Yf: a strand's middle `fringeTipY` lower, the parting `partRiseY` higher)
-      const yCut = Yf - (c.ridge ? S.fringeTipY : 0) + (c.th === 0 ? S.partRiseY : 0);
+      const yCut = Yf - (c.ridge ? S.fringeTipY : 0) + (c.th === 0 || c.part ? S.partRiseY : 0) + (c.notch ?? 0);
       if (c.fringe && i === last) po = [po[0], yCut, po[2]];
       o.push(po);
       // the inside: sunk into the scalp where the hair lies on it; a thickness in from the outside where it hangs free,
@@ -337,8 +371,9 @@ export function buildBob(rig, style = BOB, { adjust = null, clear = true, temple
     const k = (j + 1) % nc, Lj = oi[j].length, Lk = oi[k].length, L = Math.min(Lj, Lk);
     poly([crownO, oi[k][0], oi[j][0]]);
     poly([crownI, ii[j][0], ii[k][0]], { valley: S.insideShade });
+    const crease = cols[j].strip ? { valley: S.creaseShade } : {};
     for (let i = 0; i + 1 < L; i++) {
-      poly([oi[j][i], oi[k][i], oi[k][i + 1], oi[j][i + 1]]);
+      poly([oi[j][i], oi[k][i], oi[k][i + 1], oi[j][i + 1]], i ? crease : {});
       poly([ii[j][i], ii[j][i + 1], ii[k][i + 1], ii[k][i]], { valley: S.insideShade });
     }
     // the rim: the blunt cut's thickness, under the shorter of the two; down the longer's front edge past it
@@ -436,9 +471,10 @@ export const tri3 = (h, P = h.verts) => h.tris.map(([a, b, c]) => [P[a], P[b], P
  *           even, then each side's own), so a row moves as one smooth band and the hem stays one even line;
  *   fine    then each corner alone (the corners above and below it by half), small steps, a lock's bend along its
  *           length and two neighbours apart costing (SMOOTH), the hems' drops kept even (HEM_EVEN).
+ * The score: the five views' IoU, and FRINGE_W of each fringe band's (its strands and the forehead between them).
  * Coordinate descent, the step halved each round.
  */
-const SMOOTH = 2, HEM_EVEN = 40, FOURIER = 4;
+const SMOOTH = 2, HEM_EVEN = 40, FOURIER = 4, FRINGE_W = 0.5;
 const basisOf = (th) => { const t = (th * Math.PI) / 180, out = [1]; for (let k = 1; k <= FOURIER; k++) out.push(Math.cos(k * t), Math.sin(k * t)); return out; };
 export function fitOutline(rig, style = BOB, { rounds = 3, fine = 2, step = 0.03, log = true } = {}) {
   const ctx = ioUCtx(rig.who, rig);
@@ -460,7 +496,7 @@ export function fitOutline(rig, style = BOB, { rounds = 3, fine = 2, step = 0.03
     return SMOOTH * e;
   };
   const temple = [0, 0], crown = [0, 0];
-  const score = () => { const r = outlineIoU(tri3(hair = buildBob(rig, style, { adjust: expand(), clear: false, temple, crown })), rig.who, ctx); return { r, s: Object.values(r).reduce((a, q) => a + q.iou, 0) - rough() }; };
+  const score = () => { const r = outlineIoU(tri3(hair = buildBob(rig, style, { adjust: expand(), clear: false, temple, crown })), rig.who, ctx); return { r, s: Object.values(r).reduce((a, q) => a + q.iou + FRINGE_W * (q.fringe ?? 0), 0) - rough() }; };
   let best = score();
   const say = (what) => log && console.log(rig.who, what, Object.entries(best.r).map(([v, q]) => `${v} ${q.iou}`).join(' '));
   say('fit start');

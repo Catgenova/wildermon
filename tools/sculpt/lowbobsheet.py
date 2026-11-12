@@ -186,6 +186,34 @@ for v, (a, b) in SPAN.items():
         if not fig[y, x + s * 2]: out.append([float(x + (1 if s > 0 else 0)), float(y + 0.5)])
     marks[v]['neck'] = out
 
+# ---- the fringe's negative space -------------------------------------------------------------------------------------
+# In the views that show the face (front, three-quarter, profile), within the face's columns (the skin run round the
+# pupils at FACE_DY under them): from FRINGE_TOP down, every pixel lit like the skin is skin (the forehead between the
+# fringe's strands, the notches at the temples), and from the fringe's cut (CUT_DY over the pupils) down everything is
+# the face (the forehead under the cut, the brows, the lashes).
+FACE_DY, FRINGE_TOP, CUT_DY = 6, 150, 28
+lit_skin = (gr > 0.6) & (hue > 0.11) & (lum > 105)
+gaps = {}
+for v in ('front', 'q3', 'profile'):
+    ps = marks[v].get('pupils', [])
+    if not ps: continue
+    py = int(round(sum(p[1] for p in ps) / len(ps)))
+    a, b = SPAN[v]
+    yf = py + FACE_DY
+    xs = [int(p[0]) for p in ps]
+    row = skin[yf]
+    xa, xb = min(xs), max(xs)
+    while xa > a and row[xa - 1]: xa -= 1
+    while xb < b - 1 and row[xb + 1]: xb += 1
+    before = int(hair[FRINGE_TOP:yf, xa:xb + 1].sum())
+    band = np.zeros(hair.shape, bool); band[FRINGE_TOP:yf, xa:xb + 1] = True
+    cut = py - CUT_DY
+    face = band & (lit_skin | (np.arange(H)[:, None] >= cut))
+    hair &= ~face
+    skin |= face & fig
+    gaps[v] = {'columns': [xa, xb], 'cut': cut, 'freed': before - int(hair[FRINGE_TOP:yf, xa:xb + 1].sum())}
+marks['fringe'] = gaps
+
 json.dump({'w': W, 'h': H, 'span': SPAN, 'fig': runs(fig), 'hair': runs(hair), 'skin': runs(skin), 'marks': marks},
           open(os.path.join(D, 'hairs/bob-sheet.json'), 'w'), separators=(',', ':'))
 json.dump({'w': W, 'h': H, 'runs': runs(hair), 'skin': runs(skin)}, open(os.path.join(D, 'hairs/bob-mask.json'), 'w'), separators=(',', ':'))

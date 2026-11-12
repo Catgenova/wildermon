@@ -68,6 +68,21 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     await shoot(10 + 5 * (cw2 + gap), 34 + 2 * (ch2 + gap), cells, join(out, `bob-close-${w}${tag}.png`), { imgs, texts: [{ css: 'left:12px;top:6px', html: `Bob close: the sheet (top), ${WHO[w]} (bottom)` }] });
   }
 
+  if (only.includes('fringe')) for (const w of who) {
+    // the fringe close: the sheet's (top) beside ours (bottom), front, three-quarter and profile, the band round the cut
+    const rig = RIGS[w], hair = HAIRS[w], C = bobCams(w), K = 4, cw2 = 480, ch2 = 360, cells = [], imgs = [];
+    const FB = JSON.parse((await import('node:fs')).readFileSync(new URL('./hairs/bob-sheet.json', import.meta.url), 'utf8')).marks.fringe;
+    LABELS.filter(([v]) => FB[v]).forEach(([v, label], i) => {
+      const c = C[v], x = 10 + i * (cw2 + gap), fx = (FB[v].columns[0] + FB[v].columns[1]) / 2, fy = FB[v].cut - 15, st = bodyAt(c);
+      imgs.push({ src: REF, size: REF_SIZE, crop: [fx - cw2 / K / 2, fy - ch2 / K / 2, cw2 / K, ch2 / K], box: [x, 34, cw2, ch2] });
+      // (the plain camera's middle moved to the crop's middle: across by the pivot's column, down by its row)
+      const cam = camOf(c, K, c.cy - fy), dx = (fx - c.cx) / c.s, a = (c.yaw * Math.PI) / 180;
+      cam.c = [cam.c[0] + dx * Math.cos(a), cam.c[1], cam.c[2] + dx * Math.sin(a)];
+      cells.push({ meshes: [bodyMesh(rig, hair, rig.B.verts.map(st), SHEET_HAIR, { parts: ['head', 'neck', 'torso'] }), hairMesh(rig, hair, hair.verts.map(st))], cam, box: [x, 34 + ch2 + gap, cw2, ch2], label });
+    });
+    await shoot(10 + 3 * (cw2 + gap), 34 + 2 * (ch2 + gap), cells, join(out, `bob-fringe-${w}${tag}.png`), { imgs, texts: [{ css: 'left:12px;top:6px', html: `Bob fringe close: the sheet (top), ${WHO[w]} (bottom)` }] });
+  }
+
   if (only.includes('wire')) for (const w of who) {
     const rig = RIGS[w], hair = HAIRS[w], cw2 = 330, ch2 = 420;
     const cells = [[0, 'Front'], [-45, 'Three-quarter'], [-90, 'Profile'], [180, 'Back']].map(([yaw, label], i) => ({ meshes: [{ ...bodyMesh(rig, hair, rig.B.verts, SHEET_HAIR, { parts: ['head', 'neck', 'torso'] }), edges: true, edgec: [0.95, 0.85, 0.78] }, { ...hairMesh(rig, hair), edges: true, edgec: [1, 0.93, 0.85] }], cam: { yaw, pitch: 0, s: 120, c: [0, 0.9, 0] }, box: [10 + i * (cw2 + 8), 34, cw2, ch2], label }));

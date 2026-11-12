@@ -25,20 +25,24 @@ export default {
   fringeShift: -0.09,
   // the rows down each column: from the crown (0) to the fringe's cut (1), the same in every column; then on the sides
   // and the back from that level (0) on down to the hem (1)
-  rowsTop: [0, 0.3, 0.6, 0.85, 1],
-  rowsLow: [0.4, 0.75, 1],
+  rowsTop: [0, 0.4, 0.75, 1],
+  rowsLow: [0.5, 0.82, 1],
   // a lock's tip: its ridge's hem this many degrees lower than its borders' (the fringe's nearly straight)
   tip: 0, fringeTip: 0, partRise: 0,
   // the fringe's cut: each strand's middle this much lower than its borders (separate blunt strands), the parting this
   // much higher (a narrow split showing the forehead); never lower than the brows' top less browCover
-  fringeTipY: 0.018, partRiseY: 0.035, browCover: 0.005,
+  fringeTipY: 0.018, partRiseY: 0, browCover: 0.005,
+  // the fringe's notches as the sheet's front view draws them (tools/sculpt/hairs/bob-sheet.json, its fringe band):
+  // each its apex's column and row, its base's columns, on the cut's row; placed on the fringe at notchPhi degrees up
+  notchPhi: 4, notchOut: 0.08,
+  notches: [{ x: 150, apex: 173, base: [143, 157], cut: 199 }, { x: 183.5, apex: 181, base: [176, 189], cut: 199 }, { x: 214, apex: 185, base: [208, 217], cut: 199 }],
   // the sides' and the back's hem this far under the hull's (the hull's lower edge is the highest of the views' lock
   // tips), carried straight down
   hemDrop: 0.03,
   // the sides' and the back's hems' heights smoothed along the columns this many passes (the hull's voxels step)
   hemSmooth: 3,
   // a lock's relief: its ridge out and its borders in by this share of the hair's thickness there, at most `relief`
-  reliefShare: 0.4, relief: 0.05,
+  reliefShare: 0.5, relief: 0.07,
   // the relief's share per row (after the crown): the crown's planes flatter
   reliefRows: [0, 0.6],
   // the ends turned under: the last rows (the hem last) moved in toward the head's upright axis by this much
@@ -56,7 +60,9 @@ export default {
   // the fringe below the hairline a sheet this thick (off the forehead under it)
   fringeSheet: 0.035,
   // each quad two triangles, each its own flat facet
-  triFacets: true,
+  triFacets: false,
   // a ridge's rows moved this share of the way to the next row (diagonal facets)
-  stagger: 0.2,
+  stagger: 0,
+  // each lock's border a crease this many degrees each side of it, in this valley shade
+  valleyHalf: 1.2, creaseShade: 3,
 };

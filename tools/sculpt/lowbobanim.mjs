@@ -3,10 +3,10 @@
 // each low-poly body: per clip the frames where the hair's faces cross the body's (the face, the ears, the neck, the
 // chest and shoulders; the scalp it covers left out), and the most in one frame.
 //
-//   node tools/sculpt/lowbobanim.mjs [--who female,male] [--frames 24] [--write 8]
+//   node tools/sculpt/lowbobanim.mjs [--who female,male] [--frames 24] [--write 8 [--dense idle:48]]
 //     --write n: each clip's poses at n times written to tools/sculpt/hairs/bob-poses-<who>.json (each control bone's
 //     turn, as tools/sculpt/lowrig.mjs posed takes it), for tools/sculpt/lowbob.mjs clearBody to keep the hair off the
-//     body in them
+//     body in them; --dense: a clip's own count (the idle's slow sway, 48 by default)
 import { build } from 'esbuild';
 import { rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -30,13 +30,13 @@ rmSync(mod);
 
 /** A clip's pose at time t on a rig: the control bones' turns, as posed() takes them. */
 const poseAt = (rig, sk, clip, t, held) => { const r = AN.clipLocal(sk, clip, t, held), pose = { $move: r.move }; r.local.forEach((m, i) => { if (m && rig.bones[i].kind === 'control') pose[rig.bones[i].name] = m; }); return pose; };
-const W = +opt('write', '0');
+const W = +opt('write', '0'), DENSE = Object.fromEntries(opt('dense', 'idle:48').split(',').filter(Boolean).map((d) => [d.split(':')[0], +d.split(':')[1]]));
 for (const who of opt('who', 'female,male').split(',')) {
   const rig = buildRig(who), body = who === 'female' ? 'woman' : 'man', sk = AN.lowSkeleton(body);
   if (W) {
     const out = [];
-    for (const [name, clip] of Object.entries(AN.CLIPS)) for (let k = 0; k < W; k++) {
-      const pose = poseAt(rig, sk, clip, (k / W) * clip.length, clip.grip ? AN.lowHeld(body) : undefined);
+    for (const [name, clip] of Object.entries(AN.CLIPS)) for (let k = 0, n = DENSE[name] ?? W; k < n; k++) {
+      const pose = poseAt(rig, sk, clip, (k / n) * clip.length, clip.grip ? AN.lowHeld(body) : undefined);
       out.push(Object.fromEntries(Object.entries(pose).map(([b, m]) => [b, Array.from(m, (x) => +x.toFixed(5))])));
       out.at(-1).$clip = `${name} ${k}`;
     }
