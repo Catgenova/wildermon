@@ -224,7 +224,7 @@ export function crumble(g: Game, due: readonly PlacedFurniture[]): void {
     g.removeFurniture(f.id);
     g.events.emit('world', f.x, f.y);
     if (!lost) continue;
-    for (const a of g.actors.values()) if (a.who === f.grave?.who) a.hear(crumbledSaid(f.x, f.y, lost), 'event');
+    if (g.actor.who === f.grave?.who) g.actor.hear(crumbledSaid(f.x, f.y, lost), 'event');
   }
   g.markOwnGraves();
 }

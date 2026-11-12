@@ -41,14 +41,14 @@ import { glassResync, underGlass } from './glasshouse';
 import { pannierName, pannierRefusal, panniersOffered, pannierTake } from './panniers';
 import { ageDef, inWorld, kindName, stageOf, bridleTeam, harnessTeam, tameNeeds, attackOf, bloodMul, BLOW_SHARE, markOn, CALL_WINDOW, Creatures, setLocalKept, FIGHT_BACK_GOES, footing, HAUL_SKILL, haulLearn, MAX_MOUNT_SPEED, MOUNT_STAIRS_SAID, isBaitFor, tracesSkill, isShod, landRidden, maxHealth, PLAYER_ATTACKER, PULL_DEFAULT, SHOE_PACE, SHOE_STEP, shoeTeam, shoeTeamStep, tackSpeed, type Creature, type CreatureJSON, type WorkSite } from './creatures';
 import { CRAFT_REACH, type CraftStock, type Station } from './recipes';
-import { Actor, type ActiveAction, type GuestSave } from './actor';
-import { HOST_ID, type PeerId } from '../net/protocol';
+import { Actor, type ActiveAction } from './actor';
+import { HOST_ID } from '../net/protocol';
 import { Roster } from './roster';
 import { runeGateLights } from './runegate';
 import { GameEmitter, isTalk, TALK_LOG, type LogEntry, type LogKind } from './events';
 import { bagTake, DEED_DECAY, describeWith, foldInto, foodFill, groundDecayRate, Inventory, ITEM_DEFS, itemName, type Item, markOf, type Mark, rarityOf, rarityStep, itemDef, sameMark, sameStack, spendOut, unmendable, unrestored } from './items';
 import { ENCHANTERS_PLINTH, ENCHANTMENTS, furnaceBurn, moreSaid, NETMENDER_WEAR, swingEnchant, wornEnchant, type Enchant, type EnchantEffect } from './enchant';
-import { BASE_SPEED, CARRY_CRAWL, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER_LEVEL, groundStep, MAX_STAND, MAX_STEP, pathOptions, Player, readPlayer, type LiftRule, standsOn, walkKey, writePlayer, SWIM_DEPTH, SWIM_SPEED } from './player';
+import { BASE_SPEED, CARRY_CRAWL, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER_LEVEL, groundStep, MAX_STAND, MAX_STEP, pathOptions, Player, readPlayer, type LiftRule, standsOn, walkKey, SWIM_DEPTH, SWIM_SPEED } from './player';
 import { findPath } from '../world/pathfinding';
 import { randomLook, type Look } from './look';
 import { ACTION_FLOOR, ACTION_PACE, DAY_SECONDS } from './pace';
@@ -384,8 +384,6 @@ export interface GameInit {
   cellarGround?: Record<string, Item[]>;
   skills?: Record<string, number>;
   time?: number;
-  /** The island's guest book: everybody who has visited, and what they had. */
-  guests?: GuestSave[];
 }
 
 /** Actions you can hold in your head before any mind logic is earned. */
@@ -691,35 +689,12 @@ export class Game {
   readonly world: World;
   /** Where you wake up: the shore you came in on until a bed says otherwise. */
   spawn: { x: number; y: number };
-  /**
-   * Whoever is acting at this instant: their body, their pack, their skills.
-   *
-   * These were `readonly` and pointed at the one person on the island. They
-   * still point at one person — they are simply no longer always the same
-   * person. Everything that reads them reads them exactly as it always did;
-   * `as()` decides who that is, and puts it back afterwards. See `actor.ts`
-   * for why it was done this way round and not the other.
-   */
-  player: Player;
-  inventory: Inventory;
-  skills: Skills;
-  /** Everyone with a body on this island, by who they are on the wire. */
-  readonly actors = new Map<PeerId, Actor>();
-  /**
-   * The guest book: everyone who has ever set foot here, and what they had
-   * when they left.
-   *
-   * Filed by a durable name the visitor keeps on their own machine, not by
-   * the number they are given when they connect — that is handed out fresh
-   * every session and would make everyone a stranger every time. Somebody who
-   * comes back finds their pack where they left it, their skills where they
-   * earned them, and themselves standing where they logged out.
-   */
-  readonly guestbook = new Map<string, GuestSave>();
-  /** Whoever is playing on this machine. Never changes for the life of a game. */
+  /** The person at this screen: their body, their pack, their skills (`local`'s). */
+  readonly player: Player;
+  readonly inventory: Inventory;
+  readonly skills: Skills;
+  /** Whoever is playing on this machine, and what they are in the middle of. Never changes for the life of a game. */
   readonly local: Actor;
-  /** Whoever `player`, `inventory` and `skills` are pointing at this instant. */
-  private acting: Actor;
   readonly events = new GameEmitter();
   readonly log: LogEntry[] = [];
   /**
@@ -864,12 +839,11 @@ export class Game {
 
   /**
    * Mark a kind in the field guide, for the person at this screen, and say so
-   * the first time it is seen. A guest's taming on a host's machine is the
-   * guest's, and it is not written into the host's book.
+   * the first time it is seen.
    */
   guideMark(species: string, what: GuideMark): void {
     // A kind's page, or a stage's (`species:stage`), seen and tamed, or a wild form's (`species/form`), seen and tamed.
-    if (this.acting !== this.local || !guideMarks(species).includes(what)) return;
+    if (!guideMarks(species).includes(what)) return;
     const fresh = this.guide.mark(species, what);
     if (!fresh.length) return;
     if (fresh.includes('seen')) this.logMsg(this.guideSeenLine(species), 'wildermon');
@@ -975,10 +949,6 @@ export class Game {
    * are tested, and only now and again, so a list of fifty costs nothing.
    */
   private checkJournal(): void {
-    // The journal belongs to the person at this screen, and is written down in
-    // their save. A guest's mining skill is not the host's progress, and a
-    // guest has no journal of their own yet — so theirs ticks nothing.
-    if (this.acting !== this.local) return;
     if (!this.journalReady) return;
     if (this.time - this.journalAt < 2) return;
     this.journalAt = this.time;
@@ -1096,11 +1066,11 @@ export class Game {
   hooks: GameHooks = { prompt: async (_q, fallback) => fallback, confirm: async () => true, choose: async (_q, choices) => choices[0]?.key ?? null };
   /** What the acting person is in the middle of, and what is behind it. */
   get action(): ActiveAction | null {
-    return this.acting.action;
+    return this.local.action;
   }
 
   set action(a: ActiveAction | null) {
-    this.acting.action = a;
+    this.local.action = a;
   }
 
   /**
@@ -1190,7 +1160,7 @@ export class Game {
 
   /** Actions lined up behind the one in hand, oldest first. */
   get queue(): Array<{ def: ActionDef; target: Target; goes?: number; was?: string }> {
-    return this.acting.queue;
+    return this.local.queue;
   }
   /**
    * What lies on the floor of a cellar, by tile, apart from what lies on the
@@ -1272,33 +1242,6 @@ export class Game {
 
   private decayClock = 0;
 
-  /**
-   * The guest book as it stands, with everybody currently on the island
-   * written into it as they are this instant.
-   *
-   * A record is normally filed when somebody leaves, which is the moment their
-   * pack stops changing. But a host who saves and then closes the tab never
-   * sees anybody leave, and the evening four guests just spent filling their
-   * packs would go with the tab. So a save asks, and everybody still standing
-   * here is written down mid-sentence.
-   */
-  guestRecords(): GuestSave[] {
-    const out = new Map(this.guestbook);
-    for (const actor of this.actors.values()) if (actor !== this.local) out.set(actor.who, this.guestSave(actor));
-    return [...out.values()];
-  }
-
-  /** Everything of a visitor's that outlives their visit. */
-  private guestSave(actor: Actor): GuestSave {
-    return {
-      who: actor.who,
-      body: writePlayer(actor.player),
-      items: actor.inventory.items,
-      skills: actor.skills.toJSON(),
-      seen: Date.now(),
-    };
-  }
-
   static create(seed: number, size = WORLD_SIZE): Game {
     const gen = generateWorld(seed, size);
     const game = new Game({ seed, world: gen.world, spawn: gen.spawn });
@@ -1342,24 +1285,9 @@ export class Game {
       }
     }
     this.skills = new Skills(init.skills);
-    for (const g of init.guests ?? []) {
-      if (!g || typeof g.who !== 'string') continue;
-      this.guestbook.set(g.who, g);
-      // A visitor's numbers are the island's numbers. Nothing made while they
-      // are away may be given a number one of their things is already wearing,
-      // or the two become one the evening they walk back in.
-      for (const it of g.items ?? []) if (it.uid >= this.inventory.nextUid) this.inventory.nextUid = it.uid + 1;
-    }
-    // The one person a single-player island has. On a shared one they are the
-    // host, which is the same thing said differently.
+    // The person at this screen.
     this.local = new Actor(HOST_ID, 'local', this.player, this.inventory, this.skills);
     this.local.hear = (text, kind) => this.write(text, kind);
-    this.local.packed = () => this.events.emit('inventory');
-    this.acting = this.local;
-    // News about a person only reaches this screen when it is about the person
-    // at it.
-    this.events.mine = () => this.acting === this.local;
-    this.actors.set(this.local.id, this.local);
     // A new castaway washes ashore at eight in the morning, not at midnight.
     this.time = init.time ?? (8 / 24) * DAY_SECONDS;
     /*
@@ -4431,9 +4359,7 @@ export class Game {
    *
    * Everybody else's lives on their `Peer`, which is where everything drawn
    * about somebody else lives. The one body the roster does not hold is this
-   * one, so it keeps its own — and it is here rather than on `player` because
-   * `player` is swapped between actors on a shared machine and what was said
-   * belongs to the screen, not to whichever body it is pointing at.
+   * one, so it keeps its own.
    */
   saidAloud: { text: string; at: number } | null = null;
   /**
@@ -4565,18 +4491,9 @@ export class Game {
     return gain;
   }
 
-  /**
-   * Tell whoever is acting what just happened to them.
-   *
-   * Every one of these lines is in the second person — *you dig a hole*, *your
-   * pick is blunt* — and every one of them was written on the assumption that
-   * there is one *you*. There still is, per line: it is whoever the game is
-   * acting as when the line is written, which is exactly who the line is
-   * about. A guest's news goes home to their machine and never appears in the
-   * host's log, which is right: the host did not dig that hole.
-   */
+  /** Tell the person at this screen what just happened to them. */
   logMsg(text: string, kind: LogKind = 'info'): void {
-    this.acting.hear(text, kind);
+    this.local.hear(text, kind);
   }
 
   /**
@@ -4611,88 +4528,9 @@ export class Game {
     this.events.emit('log', entry);
   }
 
-  /**
-   * Do something as somebody else: their body, their pack, their skills, for
-   * the length of one call and no longer.
-   *
-   * Nested swaps are fine and are what happens when one person's action stirs
-   * another's — the previous actor is put back, not the local one. The
-   * `finally` is the whole safety of the thing: an action that throws must not
-   * leave the island wearing a guest's arms.
-   */
-  as<T>(actor: Actor, fn: () => T): T {
-    const was = this.acting;
-    this.acting = actor;
-    this.player = actor.player;
-    this.inventory = actor.inventory;
-    this.skills = actor.skills;
-    try {
-      return fn();
-    } finally {
-      this.acting = was;
-      this.player = was.player;
-      this.inventory = was.inventory;
-      this.skills = was.skills;
-    }
-  }
-
-  /** Whoever the game is acting as this instant. */
+  /** The person at this screen (`local`). */
   get actor(): Actor {
-    return this.acting;
-  }
-
-  /**
-   * Somebody has arrived and wants a body. They get an empty one: a guest
-   * wearing a copy of the host's pack would be a guest handed the host's tools.
-   */
-  welcome(id: PeerId, who: string, name: string, hear: Actor['hear']): Actor {
-    const had = this.actors.get(id);
-    if (had) return had;
-    const actor = Actor.arriving(id, who, name, this.spawn.x + 0.5, this.spawn.y + 0.5, this.inventory.well);
-    const kept = this.guestbook.get(who);
-    if (kept) {
-      // Somebody who has been here before picks up exactly where they left
-      // off: the same pack, the same skills, the same spot on the ground.
-      readPlayer(actor.player, kept.body);
-      actor.player.name = name;
-      actor.inventory.items = kept.items.map((it) => ({ ...it }));
-      for (const [skill, v] of Object.entries(kept.skills)) actor.skills.values.set(skill, v);
-      // Their things came back from the book with the numbers they left
-      // wearing; the island counts on from above them.
-      for (const it of actor.inventory.items) if (it.uid >= actor.inventory.nextUid) actor.inventory.nextUid = it.uid + 1;
-    }
-    actor.hear = hear;
-    actor.inventory.onChange = () => actor.packed();
-    this.actors.set(id, actor);
-    return actor;
-  }
-
-  /** Whether this island has seen somebody before, and what it remembers of them. */
-  remembers(who: string): GuestSave | undefined {
-    return this.guestbook.get(who);
-  }
-
-  /**
-   * Somebody has gone. Their body and their pack go into the guest book
-   * rather than onto the ground.
-   *
-   * They used to be tipped out where they stood, on the reasoning that a guest
-   * who quits mid-haul should not take the island's ore with them. That was
-   * the right call for a visitor the island would never see again; it is the
-   * wrong one now that it will. A pack somebody spent an evening filling is
-   * theirs, and it waits for them.
-   */
-  farewell(id: PeerId): GuestSave | null {
-    const actor = this.actors.get(id);
-    if (!actor || actor === this.local) return null;
-    this.actors.delete(id);
-    // Whatever they were in the middle of is not: an action is a moment, and
-    // this one is over.
-    actor.action = null;
-    actor.queue.length = 0;
-    const kept = this.guestSave(actor);
-    this.guestbook.set(actor.who, kept);
-    return kept;
+    return this.local;
   }
 
   update(dt: number): void {
@@ -4711,19 +4549,8 @@ export class Game {
     this.lookForKinds(dt);
     // Which way the hulls other people are steering point, before anybody aboard one is put on her deck.
     this.trackHelms();
-    // Every body on the island walks, tires, heals and gets on with whatever
-    // it is doing — each wearing its own arms for the length of its own turn.
-    if (this.actors.size > 1) {
-      for (const actor of this.actors.values()) this.as(actor, () => this.updateBody(dt));
-    } else this.updateBody(dt);
-    /*
-     * Outside the body loop, and deliberately.
-     *
-     * `updateBody` runs once per actor on a machine hosting other people, with
-     * `this.player` swapped to each of them in turn — and following is one
-     * person's, kept on the game rather than on a body. Inside that loop it
-     * would walk every guest after whoever you picked.
-     */
+    // Your body walks, tires, heals and gets on with whatever it is doing.
+    this.updateBody(dt);
     if (this.followed) this.updateFollow(dt);
     if (this.travel) this.updateTravel();
     this.updateWorld(dt);
@@ -4782,7 +4609,7 @@ export class Game {
       moved = p.update(dt, this.world, rule, this.buildings.pierTiles.size || this.foundations.size ? this.onFloor : undefined, lift);
       if (this.bridges.size && (fx !== p.tileX || fy !== p.tileY)) this.underDeck = this.walksUnder(fx, fy, p.tileX, p.tileY);
     }
-    this.acting.stepped = moved;
+    this.local.stepped = moved;
     /*
      * And the ground under a step on your own feet wears (`WEARS`), in a game
      * of your own. On an island the island counts it, off the walk it is told
@@ -4933,17 +4760,17 @@ export class Game {
        * a `swimming` row to send. An hour of open water, and a refresh put it
        * back to one.
        */
-      this.acting.swimClock += dt;
-      if (this.acting.swimClock >= 1) {
-        this.acting.swimClock = 0;
+      this.local.swimClock += dt;
+      if (this.local.swimClock >= 1) {
+        this.local.swimClock = 0;
         if (!this.bodyFromIsland) this.gainSkill('swimming', SWIM_LEARN);
       }
       if (!this.bodyFromIsland) {
         s.stamina = Math.max(0, s.stamina - (dt * this.swimWind()) / this.staminaBar());
         if (s.stamina <= 0) {
           s.health = Math.max(0, s.health - dt * DROWN_RATE);
-          if (this.time - this.acting.drownWarning > DROWN_WARN) {
-            this.acting.drownWarning = this.time;
+          if (this.time - this.local.drownWarning > DROWN_WARN) {
+            this.local.drownWarning = this.time;
             this.logMsg('Drowning: no stamina. Get to shore.', 'error');
           }
         }
@@ -8003,9 +7830,8 @@ export class Game {
         }
       }
       if (f.hitched) this.dragCart(f);
-      // A cart goes at the pace of whoever has its reins, which on a shared
-      // island is not always the person sitting at this screen.
-      if (def.vehicle && teamOf(f).length) this.haulVehicle(f, dt, this.actors.get(f.driverId ?? this.local.id)?.stepped ?? 0);
+      // A cart goes at the pace of whoever has its reins: yours as you walked, and still for anybody else's.
+      if (def.vehicle && teamOf(f).length) this.haulVehicle(f, dt, (f.driverId ?? this.local.id) === this.local.id ? this.local.stepped : 0);
       if (def.boat && f.driven) this.floatBoat(f);
     }
     if (crumbled.length) crumble(this, crumbled);
@@ -8016,14 +7842,14 @@ export class Game {
    * can be driven at the same time, which is what keeps this a lookup.
    */
   driving(): PlacedFurniture | undefined {
-    const me = this.acting.id;
+    const me = this.local.id;
     for (const f of this.furniture.values()) if (f.driven && (f.driverId ?? me) === me) return f;
     return undefined;
   }
 
   /** Who this body is in a hull's list of passengers, on this machine. An island names them by uid instead. */
   riderId(): string {
-    return `local:${this.acting.id}`;
+    return `local:${this.local.id}`;
   }
 
   /** The hull this body is riding in as a passenger, if it is. */
@@ -8060,7 +7886,7 @@ export class Game {
    * their body has been; `helmHeadings` keeps the last way it moved.
    */
   shipHeading(f: PlacedFurniture): number {
-    if (f.driven && (f.driverId ?? this.acting.id) === this.acting.id) return this.heading();
+    if (f.driven && (f.driverId ?? this.local.id) === this.local.id) return this.heading();
     const known = this.helmHeadings.get(f.id);
     if (known !== undefined) return known;
     const [ax, ay] = ACROSS_OF[f.facing ?? 's'];
@@ -8358,7 +8184,7 @@ export class Game {
     const p = this.player;
     p.aboard = null;
     p.seat = 0;
-    const me = this.acting.id;
+    const me = this.local.id;
     for (const f of this.furniture.values()) {
       if (f.driven && (f.driverId ?? me) === me) {
         f.driven = false;
