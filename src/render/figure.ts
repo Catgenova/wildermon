@@ -11346,14 +11346,14 @@ const gearLod = (zoom: number): number => (zoom < 1.5 ? 0.5 : zoom < STILL_BELOW
  * figure wherever a body is drawn (`drawLive`). The flat figure is drawn where they cannot be: before the chunk has
  * loaded, with no WebGL2 (`glContext`), and swimming, driving or seated (`drawSculpted`).
  */
-const SCULPT: { on: boolean; flips: number; loading: boolean; draw: ((ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose) => boolean) | null; gen: () => number; asked: Set<string> } =
-  { on: false, flips: 0, loading: false, draw: null, gen: () => 0, asked: new Set() };
+const SCULPT: { on: boolean; flips: number; loading: boolean; draw: ((ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose) => boolean) | null; gen: () => number; asked: Set<string>; soft: boolean } =
+  { on: false, flips: 0, loading: false, draw: null, gen: () => 0, asked: new Set(), soft: false };
 /**
  * On or off, as asked by `by`: the island's renderer (every frame) or the character creator. On while anybody asks.
  */
 export function sculptedFigures(want: boolean, by: 'island' | 'creator' = 'island'): void {
-  // PROTOTYPE (perf-solara): the island asks once a frame, which is when its sculpted redraws are counted afresh.
-  if (by === 'island') sculptLeft.left = sculptBudget();
+  // The island asks once a frame, which is when its sculpted redraws are counted afresh.
+  if (by === 'island') sculptLeft.left = SCULPT.soft ? SCULPT_REDRAWS_SOFT : SCULPT_REDRAWS;
   if (want) SCULPT.asked.add(by);
   else SCULPT.asked.delete(by);
   const on = SCULPT.asked.size > 0;
@@ -11362,18 +11362,19 @@ export function sculptedFigures(want: boolean, by: 'island' | 'creator' = 'islan
   SCULPT.flips++;
   if (on && !SCULPT.draw && !SCULPT.loading) {
     SCULPT.loading = true;
-    import('../sculpt/sculpted').then((m) => { SCULPT.draw = m.drawSculptLive; SCULPT.gen = m.sculptGen; SCULPT.flips++; }).catch(() => { SCULPT.loading = false; });
+    import('../sculpt/sculpted').then((m) => { SCULPT.draw = m.drawSculptLive; SCULPT.gen = m.sculptGen; SCULPT.soft = m.glSoftware(); SCULPT.flips++; }).catch(() => { SCULPT.loading = false; });
   }
 }
 /**
- * PROTOTYPE (perf-solara): sculpted bodies drawn again a frame, at most. Each is a WebGL draw put down on a 2D canvas,
- * which waits for the GL; past the budget a body is put down from the picture it last had.
+ * Sculpted bodies the island draws again a frame, at most: each is a WebGL draw put down on a 2D canvas, which waits on
+ * the GL (about 9 ms a body on a processor-drawn GL, `glSoftware`). Past it a body is put down from the picture it last
+ * had, and drawn again in a later frame. Your own body and a body never drawn yet are drawn whatever is left.
  */
-const sculptLeft = { left: Infinity };
-const sculptBudget = (): number => (globalThis as unknown as { __proto?: Record<string, number | boolean> }).__proto?.glBudget as number ?? Infinity;
-/** Whether a sculpted redraw may be made now (and counts it), or the last picture must stand. */
-const sculptMay = (): boolean => {
-  if (!SCULPT.on || !SCULPT.draw) return true;
+const SCULPT_REDRAWS = 4, SCULPT_REDRAWS_SOFT = 1;
+const sculptLeft = { left: SCULPT_REDRAWS };
+/** Whether a sculpted redraw of body `id` may be made now (and counts it), or the last picture must stand. */
+const sculptMay = (id?: string): boolean => {
+  if (!SCULPT.on || !SCULPT.draw || !SCULPT.asked.has('island') || id === 'player') return true;
   if (sculptLeft.left <= 0) return false;
   sculptLeft.left--;
   return true;
@@ -12377,7 +12378,7 @@ interface Still {
   drawn?: number;
   /** The picture of its loop standing it was last put down from instead (`idleLoop`), if it was. */
   shown?: HTMLCanvasElement;
-  /** PROTOTYPE: the zoom and device scale it was drawn at. */
+  /** The zoom and device scale it was drawn at: a picture at another size is drawn again whatever the budget (`sculptMay`). */
   sized?: string;
 }
 
@@ -12422,7 +12423,7 @@ function drawStill(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: 
   // Something rare on them is drawn often enough for its glint to cross it smoothly.
   const rate = Math.min(Math.max(pose.emote ? 30 : STILL_RATE[doing(pose)] ?? 30, gearShines(pose.gear) ? SHINE_RATE : 0), lately.count > CROWD ? CROWD_RATE : Infinity);
   const sized = `${zoom.toFixed(3)}|${dev}`;
-  if (!st || st.sized !== sized || ((st.key !== key || changing || now - st.at >= 1 / rate || now < st.at) && sculptMay())) {
+  if (!st || st.sized !== sized || ((st.key !== key || changing || now - st.at >= 1 / rate || now < st.at) && sculptMay(id))) {
     const k = zoom * dev;
     const w = Math.ceil((STILL_BOX.right - STILL_BOX.left) * k), h = Math.ceil((STILL_BOX.bottom - STILL_BOX.top) * k);
     if (!st) {
@@ -12569,7 +12570,7 @@ function idleLoop(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: n
     idles.delete(key);
     idles.set(key, f);
   } else {
-    if (!sculptMay()) return false;
+    if (!sculptMay(pose.id)) return false;
     while (idlePixels + w * h > IDLE_PIXELS && idles.size) {
       const [old, gone] = idles.entries().next().value as [string, StrideFrame];
       idles.delete(old);
@@ -12618,7 +12619,7 @@ function stride(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: num
     strides.delete(key);
     strides.set(key, f);
   } else {
-    if (!sculptMay()) return false;
+    if (!sculptMay(pose.id)) return false;
     const k = zoom * dev;
     const w = Math.ceil((STILL_BOX.right - STILL_BOX.left) * k), h = Math.ceil((STILL_BOX.bottom - STILL_BOX.top) * k);
     while (stridePixels + w * h > STRIDE_PIXELS && strides.size) {

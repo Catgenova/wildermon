@@ -345,6 +345,18 @@ function compile(gl: WebGL2RenderingContext, vs: string, fs: string): WebGLProgr
   return p;
 }
 
+/**
+ * Whether the GL context is drawn by the processor rather than a graphics card (SwiftShader, llvmpipe): about 9 ms a
+ * sculpted body there against well under one on a card, so the island redraws fewer of them a frame (`sculptMay`).
+ */
+export function glSoftware(): boolean {
+  const c = glContext();
+  if (!c) return false;
+  const info = c.gl.getExtension('WEBGL_debug_renderer_info');
+  const name = String(c.gl.getParameter(info ? info.UNMASKED_RENDERER_WEBGL : c.gl.RENDERER) ?? '');
+  return /swiftshader|llvmpipe|softpipe|software/i.test(name);
+}
+
 /** The one GL context, made on first use; null where there is no WebGL2 (the caller falls back to the 2D figure). */
 export function glContext(): Ctx | null {
   if (CTX !== undefined) return CTX;
