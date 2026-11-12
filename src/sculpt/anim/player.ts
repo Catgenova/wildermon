@@ -8,7 +8,6 @@
  * `ClipPlayer` keeps the layers and their fades for a body drawn frame after frame.
  */
 import { UPPER, eventsBetween, fitTime, gripAt, runsOf, sampleClip, sampleFeet, stanceOf, strideOf, wrap, type Clip } from './clip';
-import type { Foot } from './clip';
 import { QI, add, qmat, qmul, quat, scl, slerp, type M3, type Q, type V } from './math';
 import type { Held, Plant, Pose, Skeleton } from './skeleton';
 
@@ -216,7 +215,7 @@ export class ClipPlayer {
 
 /**
  * Where a body's feet stand w of the way from one clip's place (at its time) to another's: the two stances blended, and
- * each foot's keyed channels (forward, up, rolled about the heel or the ball: \`Clip.feet\`) blended over them, so a foot
+ * each foot's keyed channels (forward, up, rolled about the heel or the ball: `Clip.feet`) blended over them, so a foot
  * rolled up onto its toes by one clip and flat in the other rolls about its ball as it goes; none unless both plant.
  */
 export function plantBetween(sk: Skeleton, a: { clip: Clip; t: number }, b: { clip: Clip; t: number }, w: number): Plant | undefined {
@@ -225,10 +224,10 @@ export function plantBetween(sk: Skeleton, a: { clip: Clip; t: number }, b: { cl
   const at = (s: number): V => add(pa.at[s], scl(add(pb.at[s], scl(pa.at[s], -1)), w));
   const W = (s: number): M3 => qmat(slerp(quat(pa.W[s]), quat(pb.W[s]), w));
   const fa = sampleFeet(a.clip, a.t, sk.body), fb = sampleFeet(b.clip, b.t, sk.body), sa = strideOf(a.clip, sk.body), sb = strideOf(b.clip, sk.body);
-  const feet = [0, 1].map((s) => {
+  const foot = (s: 0 | 1): { z: number; lift: number; pitch: number } => {
     const x = fa?.[s] ?? { z: 0, lift: 0, pitch: 0 }, y = fb?.[s] ?? { z: 0, lift: 0, pitch: 0 };
     return { z: x.z * sa + (y.z * sb - x.z * sa) * w, lift: x.lift + (y.lift - x.lift) * w, pitch: x.pitch + (y.pitch - x.pitch) * w };
-  }) as [Foot, Foot];
+  };
   const inward = (a.clip.bodies?.[sk.body]?.feet?.in ?? 0) * (1 - w) + (b.clip.bodies?.[sk.body]?.feet?.in ?? 0) * w;
-  return sk.step({ at: [at(0), at(1)], W: [W(0), W(1)] }, feet, 1, inward);
+  return sk.step({ at: [at(0), at(1)], W: [W(0), W(1)] }, [foot(0), foot(1)], 1, inward);
 }

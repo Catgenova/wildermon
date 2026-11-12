@@ -116,8 +116,8 @@ export function clipsOn(on: boolean): void { ON = on; }
 /** Seconds a body takes to fade from one source of its pose to the next. */
 const FADE = 0.2;
 /**
- * Seconds a fade into or out of a clip takes where that is longer than \`FADE\`, its feet kept planted throughout where
- * the two clips stand them (\`plantBetween\`): getting down onto the knees at the ground and up off them.
+ * Seconds a fade into or out of a clip takes where that is longer than `FADE`, its feet kept planted throughout where
+ * the two clips stand them (`plantBetween`): getting down onto the knees at the ground and up off them.
  */
 const SETTLE: Readonly<Record<string, number>> = { ground: 0.55 };
 /** The legs' bones, which a long fade keeps on its own pace (the root's too); the rest lead or trail them. */
