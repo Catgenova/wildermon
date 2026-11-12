@@ -2361,6 +2361,19 @@ jobs:
             --outfile=node_modules/.cache/mirror.mjs --log-level=error
           node node_modules/.cache/mirror.mjs
 
+      - name: Looks for the sculpted bodies, the same on both sides
+        if: matrix.shard == 2
+        run: |
+          # "revamp the character customization screen for the new models. It
+          # will only have the 2 body types, 3 hairstyles (2+bald). It needs
+          # sliders for hair color and skin tone." The bodies and the
+          # hairstyles there is a mesh for; the skin, hair colour and grey as
+          # numbers clamped to nought to one; every old id to the nearest of
+          # now; look_clean as cleanLook; the doors, the old rows rewritten.
+          npx esbuild supabase/test/sculptlook.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/sculptlook.mjs --log-level=error
+          node node_modules/.cache/sculptlook.mjs
+
       - name: Bodies go to the blocks round you, not to the whole island
         if: matrix.shard == 2
         run: |

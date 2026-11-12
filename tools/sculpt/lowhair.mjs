@@ -34,8 +34,10 @@
 // pieces: [{ id, polys: [first, end) }], shave: [body polygon indices], centre, checks }.
 //
 //   node tools/sculpt/lowhair.mjs [--who male|female] [--style swept]   # counts and checks
-//   node tools/sculpt/lowhair.mjs --asset   # every style on both bodies into src/sculpt/assets/lowhair.json (gameHair)
-import { writeFileSync } from 'node:fs';
+//   node tools/sculpt/lowhair.mjs --asset   # every style on both bodies into src/sculpt/assets/lowhair.json (gameHair),
+//                                            # and their ids and names into src/sculpt/assets/lowhair-styles.json
+//                                            # (tools/sculpt/lowhairasset.mjs)
+import { execFileSync } from 'node:child_process';
 import { buildRig, posed, skin, add, sub, mul, dot, cross, unit, lerp } from './lowrig.mjs';
 import SWEPT from './hairs/swept.mjs';
 import { dirOfMap, mapOfDir } from './lowhairlines.mjs';
@@ -870,16 +872,8 @@ export function gameHair(rig, hair) {
 if (import.meta.url === `file://${process.argv[1]}`) {
   const args = process.argv.slice(2), opt = (n, f) => { const i = args.indexOf(`--${n}`); return i < 0 ? f : args[i + 1]; };
   const HULL = carve(opt('style', 'swept'));
-  if (args.includes('--asset')) {
-    const out = { built: 'node tools/sculpt/lowhair.mjs --asset (tools/sculpt/lowhair.mjs gameHair)' };
-    for (const who of ['male', 'female']) {
-      const rig = buildRig(who);
-      out[who] = Object.fromEntries(Object.entries(STYLES).map(([id, st]) => [id, gameHair(rig, buildHair(rig, st, carve(id)))]));
-    }
-    const file = new URL('../../src/sculpt/assets/lowhair.json', import.meta.url);
-    writeFileSync(file, JSON.stringify(out));
-    console.log('wrote', file.pathname);
-  }
+  // (written by tools/sculpt/lowhairasset.mjs, which builds the side braid too: tools/sculpt/lowbraid.mjs imports this file)
+  if (args.includes('--asset')) execFileSync('node', [new URL('./lowhairasset.mjs', import.meta.url).pathname], { stdio: 'inherit' });
   for (const who of opt('who', args.includes('--asset') ? '' : 'male,female').split(',').filter(Boolean)) {
     const rig = buildRig(who), hair = buildHair(rig, STYLES[opt('style', 'swept')], HULL);
     const rest = crossings(rig, hair, rig.B.verts, hair.verts);

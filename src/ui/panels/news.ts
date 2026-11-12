@@ -14,7 +14,6 @@ import { BLOSSOM } from '../../audio/music/tracks/blossom';
 import { ALL_TRACKS, playlistSays } from '../../audio/music/playlist';
 import { CUT_POLL_MS, CUT_QUIET_MS, RECONNECT_RETRY_MOST_MS, RECONNECT_RETRY_MS, RECONNECTING } from '../phone';
 import { BOOT_PHASES, NEAR_REACH, TREE_WAIT_MS } from '../bootsteps';
-import { DYED_HAIR, HAIR_COLOURS } from '../../game/look';
 import { POST_FOLLOW_REACH } from '../../game/posts';
 import { AROUND_MOST, aroundStoreTrades } from '../../game/around';
 import { AUTO_EAT_AT } from '../../game/autoeat';
@@ -113,7 +112,6 @@ import { lifeSeasons } from '../../render/life';
 import { LAYERS, TRIAL_SECONDS } from '../../render/timings';
 import { SHORE_ROCK, SURGE_PERIOD, SURGE_UP, SWELL_RATE, WATER_STOPS, WET_ROCK, WET_SAND } from '../../render/water';
 import { WALK_FRAMES } from '../../render/figure';
-import { BEARD_ODDS } from '../../game/look';
 import { EMOTE_BY_ID } from '../../game/emotes';
 import { SPELL_VISUALS } from '../../render/spells';
 import { furnitureDef, liquidCapacity, POND_EVERY, STATION_REACH, type PlacedFurniture } from '../../game/furniture';
@@ -144,6 +142,8 @@ import { ALIGNMENT_NAMES, BAR_SLOTS, FAITH_SPELLS, FAITH_TIER_AT, PATRON_AT, PAT
 import { NEED_KINDS, NEED_LABEL } from './care';
 import { HUNGRY_AT, HURT_AT } from './wildermon';
 import { CARE_WANTING as CARE_WANTING_317, COOKED_MEAT_TOO } from '../../game/creatures';
+import { GENDERS, HAIR_FADE, HAIRSTYLES } from '../../game/look';
+import { OUTFITS } from '../creator';
 import { article, burnsFor, capital, finePercent, listed, listedOr, numberWord, percent, readyIn, timeWords } from '../../game/words';
 import { DEED_UPGRADES } from '../../game/deed';
 import { LYE_USE, SHORE_REACH } from '../../game/placeables';
@@ -1598,8 +1598,9 @@ export const NEWS: News[] = [
     lines: () => [
       'Changed: woman build: fuller chest visible side and three-quarter, narrower waist, wider hips; '
         + 'finer, higher-arched brows, lash lines, fuller lips. Neither build: 1/2 the body difference, none of the face\'s.',
-      `Changed: Roll me one beard odds: man ${percent(BEARD_ODDS.man)}, neither ${percent(BEARD_ODDS.neither)}, `
-        + `woman ${BEARD_ODDS.woman ? percent(BEARD_ODDS.woman) : 'never'}. Any build can still choose any beard.`,
+      // (the odds as they were: beards went with the sculpted bodies)
+      'Changed: Roll me one beard odds: man 60%, neither 20%, '
+        + 'woman never. Any build can still choose any beard.',
     ],
   },
   {
@@ -3128,7 +3129,8 @@ export const NEWS: News[] = [
     n: 235,
     day: '2026-10-21',
     lines: () => [
-      `Added: dyed hair colours in the character creator: ${listed(HAIR_COLOURS.filter((c) => DYED_HAIR.has(c.id)).map((c) => c.name.toLowerCase()))}. Never rolled at random.`,
+      // (the colours as they were: the swatches went with the sculpted bodies' sliders)
+      `Added: dyed hair colours in the character creator: ${listed(['pastel blue', 'blue', 'teal', 'green', 'purple', 'lavender', 'pink', 'magenta', 'red'])}. Never rolled at random.`,
     ],
   },
   {
@@ -4250,6 +4252,16 @@ export const NEWS: News[] = [
       return [`Changed: ${d.was![0]} is now the ${d.name} line: ${d.name}, ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats. Stage 3 skill: ${two.name} ${perkSays('leecha')}.`,
         'Each stage: own model, animations and voice.'];
     },
+  },
+  {
+    n: 527,
+    day: '2026-11-20',
+    lines: () => [
+      `Changed: character creator for the sculpted bodies. Body: ${listedOr(GENDERS.map((g) => g.name))}. Hair: ${listedOr(HAIRSTYLES.map((h) => h.name))}.`,
+      `Added: sliders: Hair colour (hue, the whole colour wheel), Hair brightness (near black to near white, the hue fading to grey over its top ${percent(HAIR_FADE)}), Skin (palest to darkest), each with its exact colour beside it.`,
+      `Added: creator preview: the sculpted body, idle, turned by ◀ ▶ or dragging; Head close-up; outfit ${listedOr(OUTFITS.map((o) => o.name))}, head always bare.`,
+      'Removed: build Neither, eyes, beards, shirt and trousers colours, the swatch hair colours and the flat figure\'s other haircuts. Existing looks: each to the nearest there is now.',
+    ],
   },
   {
     n: 513,

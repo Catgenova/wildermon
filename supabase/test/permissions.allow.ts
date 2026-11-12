@@ -90,6 +90,7 @@ export const TABLES: Record<string, Read> = {
   learn_pace_def: 'rules',
   liquid_def: 'rules',
   look_option: 'rules',
+  look_legacy: 'rules',
   loot_table: 'rules',
   map_band: 'rules',
   material_def: 'rules',

@@ -4291,11 +4291,13 @@ reset role;
 -- back on its own and everybody would be face down by the third section.
 update player set stats = jsonb_set(coalesce(stats, '{}'::jsonb), '{stamina}', '1'), body_at = now() \g /dev/null
 \echo '--- a face, and where it is kept'
--- Eight short strings, chosen on the landing page between making an account
--- and stepping ashore. What is measured here is that none of them can be
--- anything but an entry in a table we wrote: a look goes from a stranger's
--- browser through this database into `fillStyle` on everybody else's machine,
--- and that path is no place for a free-text colour.
+-- A body and a hairstyle out of a table, and three numbers from nought to
+-- one (the skin, the hair's hue and its brightness), chosen on the account page
+-- between making an account and stepping ashore. What is measured here is that
+-- none of them can be anything but an entry in a table we wrote or a number in
+-- range: a look goes from a stranger's browser through this database into
+-- `fillStyle` on everybody else's machine, and that path is no place for a
+-- free-text colour. (`sculptlook.ts` measures the rest, against the browser's.)
 select '557. what the creator offers: ' || string_agg(kind || ' ' || n, ', ' order by kind)
   from (select kind, count(*) as n from look_option group by kind) k;
 select '558. and every kind has one to fall back on: '
@@ -4306,23 +4308,26 @@ select '559. a look full of rubbish: '
      || look_clean('{"skin":"green","hair":"<script>alert(1)</script>","eyes":"blue","shirt":"woad","gender":"woman"}'::jsonb)::text;
 select '560. and one that is empty: ' || look_clean('{}'::jsonb)::text;
 select '561. a random face is a real one: '
-     || (select count(*) from jsonb_each_text(look_random()) f
-         where exists (select 1 from look_option o where o.kind = f.key and o.id = f.value))
-     || ' of its ' || (select count(*) from jsonb_each_text(look_random())) || ' fields are in the tables';
+     || (select count(*) from jsonb_each(look_random()) f
+         where exists (select 1 from look_option o where o.kind = f.key and o.id = f.value #>> '{}')
+            or (f.key = any(look_tones()) and jsonb_typeof(f.value) = 'number' and (f.value #>> '{}')::numeric between 0 and 1))
+     || ' of its ' || (select count(*) from jsonb_each_text(look_random())) || ' fields are in the tables or in range';
 
 -- Alice comes ashore, and then changes her mind about her hair.
 select set_config('request.jwt.claims', json_build_object('sub', :'alice')::text, false) \g /dev/null
 select rpc_join(:'world', 'Alice') \g /dev/null
 select '562. alice comes ashore with no face chosen: ' || (select (look ->> 'hair') is not null
        from player where uid = :'alice') || ' — she has one anyway, because nobody is the default figure';
-select rpc_set_look('{"gender":"woman","skin":"deep","hair":"braids","hairColour":"black","eyes":"green","beard":"none","shirt":"woad","trousers":"bark"}'::jsonb) \g /dev/null
+select rpc_set_look('{"gender":"woman","skin":0.79,"hair":"braid","hairColour":0.6,"hairBright":0.3}'::jsonb) \g /dev/null
 select '563. she chooses: ' || (select look ->> 'hair' from account where uid = :'alice')
-     || ', ' || (select look ->> 'skin' from account where uid = :'alice')
+     || ', skin ' || (select look ->> 'skin' from account where uid = :'alice')
      || ' — and the body already ashore has it too: '
      || (select look ->> 'hair' from player where uid = :'alice');
+-- A look from before the sculpted bodies, as an old browser would send it: each old id to the nearest of now.
+select '563a. an old look, eight ids: ' || (rpc_set_look('{"gender":"neither","skin":"deep","hair":"braids","hairColour":"black","eyes":"green","beard":"none","shirt":"woad","trousers":"bark"}'::jsonb))::text;
 -- A look is a whole face rather than a patch, so what is not named goes back
 -- to the fallback along with what was named and is not real. The creator
--- always sends all eight; this is what happens to anything that does not.
+-- always sends all five; this is what happens to anything that does not.
 select rpc_set_look('{"hair":"there is no such haircut","skin":"#ff0000","eyes":"amber"}'::jsonb) \g /dev/null
 select '564. three fields, one of them a colour and one a haircut nobody has: '
      || (select look::text from account where uid = :'alice')
@@ -4332,8 +4337,8 @@ select '564. three fields, one of them a colour and one a haircut nobody has: '
 -- it on the body rather than only on the account.
 set role authenticated;
 select set_config('request.jwt.claims', json_build_object('sub', :'hild')::text, false) \g /dev/null
-select '565. hild looks at alice: ' || coalesce((select p.look ->> 'eyes' || ' eyes, '
-       || (p.look ->> 'skin') || ' skin' from player p where p.uid = :'alice'), 'nothing to see');
+select '565. hild looks at alice: ' || coalesce((select (p.look ->> 'hair') || ' hair, skin '
+       || (p.look ->> 'skin') from player p where p.uid = :'alice'), 'nothing to see');
 reset role;
 
 -- A body with nobody behind it still gets a face of its own.

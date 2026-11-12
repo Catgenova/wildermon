@@ -397,7 +397,7 @@ export function buildBraid(rig, style = BRAID, H = carve(), { clear = true } = {
   // temples, below the forehead's hairline, or an ear) or the neck's has its corners moved out from the skull's centre a little at a time
   const notFace = B.polys.map((p, i) => i).filter((i) => { const p = B.polys[i]; if (p.part !== 'head') return p.part !== 'neck' && p.part !== 'torso'; if (p.ear) return false; const c = p.v.reduce((a, v) => add(a, mul(B.verts[v], 1 / p.v.length)), [0, 0, 0]); return !isFace(c); });
   for (let it = 0; clear && it < 90; it++) {
-    const hits = crossings(rig, { verts, polys, tris, scalp: notFace }, B.verts, verts).hits.filter(([hp]) => pieces[polys[hp].piece].kind === 'clump' || pieces[polys[hp].piece].kind === 'strand');
+    const hits = crossings(rig, { verts, polys, tris, pieces, scalp: notFace }, B.verts, verts).hits.filter(([hp]) => pieces[polys[hp].piece].kind === 'clump' || pieces[polys[hp].piece].kind === 'strand');
     if (!hits.length) break;
     for (const v of new Set(hits.flatMap(([hp]) => polys[hp].v))) verts[v] = add(verts[v], mul(unit(sub(verts[v], C)), 0.005 * k));
   }

@@ -673,7 +673,7 @@ export class SettingsPanel {
       const row = document.createElement('div');
       row.className = 'setting-row setting-look';
       const text = document.createElement('span');
-      setMarkup(text, fixed('<b>Appearance</b><small>Opens the character creator (build, skin, hair, hair colour, eyes, beard, shirt, trousers). <i>Step ashore</i>: apply and return. <i>On to the island</i>: no change.</small>'));
+      setMarkup(text, fixed('<b>Appearance</b><small>Opens the character creator (body, hair, hair colour, grey, skin). <i>Step ashore</i>: apply and return. <i>On to the island</i>: no change.</small>'));
       const open = document.createElement('button');
       open.type = 'button';
       open.className = 'tb-btn tb-small';

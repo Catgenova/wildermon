@@ -4090,6 +4090,15 @@ const PORTRAIT_WAVE = 3;
 /** And over a hop's height, for the body coming up onto its toes as it leaves the ground. */
 const PORTRAIT_HOP = 4;
 
+/**
+ * Each sculpted body's height standing, to the top of the head, the figure's units (hers 0.85 of his, `WOMAN_OF_MAN`
+ * in src/sculpt/lowpoly.ts); the room a portrait gives the taller, so both are drawn to the one scale; and how much
+ * from the top of the head down a close portrait shows: the head and the shoulders.
+ */
+const PORTRAIT_TOP: Record<string, number> = { man: 37.5, woman: 32 };
+const PORTRAIT_ROOM = 41;
+const PORTRAIT_CLOSE = 10;
+
 /** What the creator's mirror can show a body doing. */
 export type PortraitMotion = 'idle' | 'walk' | 'run' | 'work' | 'wave' | 'hop';
 
@@ -4099,12 +4108,14 @@ export type PortraitMotion = 'idle' | 'walk' | 'run' | 'work' | 'wave' | 'hop';
  * round. It is `drawPlayer` and not a second drawing of a person: a preview
  * that is its own code is a preview that can lie to you.
  */
-export function drawPortrait(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, look: Look, t = 0, facing = 1, motion: PortraitMotion = 'idle'): void {
+export function drawPortrait(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, look: Look, t = 0, facing = 1, motion: PortraitMotion = 'idle',
+  opts: { outfit?: FigurePose['outfit']; close?: boolean } = {}): void {
   // Room over the head for the hand raised in a wave and for the top of a hop, which went out of the top of the frame.
   const room = motion === 'hop' ? HOPS[0].high + PORTRAIT_HOP : motion === 'wave' ? PORTRAIT_WAVE : 0;
-  const zoom = Math.min(w / 30, h / (44 + room));
+  // Close: the head and shoulders filling the frame (PORTRAIT_CLOSE of the figure's height from the top of the head down).
+  const zoom = opts.close ? Math.min(w / PORTRAIT_CLOSE, h / PORTRAIT_CLOSE) : Math.min(w / 24, h / (PORTRAIT_ROOM + room));
   // One body, so going from standing to walking and turning round are blended as they are on the island.
-  const pose: PlayerPose = { id: 'mirror', phase: t * 6, moving: false, facing, swimming: false, working: false, look };
+  const pose: PlayerPose = { id: 'mirror', phase: t * 6, moving: false, facing, swimming: false, working: false, look, ...(opts.outfit ? { outfit: opts.outfit } : {}) };
   if (motion === 'walk' || motion === 'run') {
     pose.moving = true;
     pose.gait = motion === 'run' ? 1 : 0;
@@ -4124,8 +4135,8 @@ export function drawPortrait(ctx: CanvasRenderingContext2D, x: number, y: number
   ctx.beginPath();
   ctx.rect(x, y, w, h);
   ctx.clip();
-  const fx = x + w / 2, fy = y + h - h * 0.1;
-  footShade(ctx, fx, fy, zoom, pose);
+  const fx = x + w / 2, fy = opts.close ? y + ((PORTRAIT_TOP[look.gender] ?? PORTRAIT_TOP.man) + 1.8) * zoom : y + h - h * 0.05;
+  if (!opts.close) footShade(ctx, fx, fy, zoom, pose);
   drawFigure(ctx, fx, fy, zoom, pose, { ink: 1.6 });
   ctx.restore();
 }

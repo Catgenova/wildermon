@@ -29,6 +29,8 @@ const TUFT = { clearCap: 0.04, tube: { smooth: 3, perRow: true, acrossRows: 1 },
 const MEET = 0.5;
 
 export default {
+  // the name the game shows for it (src/sculpt/assets/lowhair-styles.json, written by tools/sculpt/lowhair.mjs --asset)
+  name: 'Swept back',
   jitter: 0, mapScale: { female: 1 },
   // the outline fitted onto the sheet's in its five views (tools/sculpt/lowhair.mjs outlineFit)
   // (on the man only: the woman's face is too far from the sheet's for her registration to place her outline, her
