@@ -190,16 +190,16 @@ function awl(K) {
   const h = handle(K, { r0: 0.13, swell: 0.162, mid: 0.66, r1: 0.12, top: 1.12, pommel: 0.17, zk: 1 });
   // the bolster: a gold-stepped stone block the point rises from, a rune diamond on each broad face
   const B0 = h.top, B1 = B0 + 0.2, bh = 0.11;
-  const bo = [h.last, ring(B0, bh, bh, bh * 0.32), ring(B1 - 0.04, bh, bh, bh * 0.32), ring(B1, 0.075, 0.075, 0.025)];
+  const bo = [h.last, ring(B0, bh, bh, bh * 0.32), ring(B1 - 0.04, bh, bh, bh * 0.32), ring(B1, 0.088, 0.088, 0.028)];
   cap({ r: h.last.r }, 'goldD', [0, 1, 0]);
   loft(bo.slice(1), (i, j) => (i === 0 ? (j % 2 ? 'stone' : 'stoneL') : 'bevel'));
   // the point: eight-sided, waisted a little and drawn to the tip
-  const TIP = 2.16, sp = [bo[3], ring(1.62, 0.06, 0.06, 0.02), ring(1.95, 0.036, 0.036, 0.012)];
+  const TIP = 2.16, sp = [bo[3], ring(1.62, 0.07, 0.07, 0.022), ring(1.95, 0.042, 0.042, 0.014)];
   loft(sp, (i, j) => (j % 2 ? (j === 1 || j === 7 ? 'stoneL' : 'stone') : 'stoneB'));
   const tip = P(0, TIP, 0);
   for (let j = 0; j < 8; j++) F([sp[2].r[j], sp[2].r[(j + 1) % 8], tip], j % 2 ? 'stone' : 'bevel', { from: [0, 1.9, 0] });
   // a vein up the point's front and back
-  const zOf = (sz) => (x, y) => sz * (y < 1.62 ? 0.075 + (0.06 - 0.075) * (y - B1) / (1.62 - B1) : 0.06 + (0.036 - 0.06) * (y - 1.62) / 0.33) * 0.93 + sz * 0.003;
+  const zOf = (sz) => (x, y) => sz * (y < 1.62 ? 0.088 + (0.07 - 0.088) * (y - B1) / (1.62 - B1) : 0.07 + (0.042 - 0.07) * (y - 1.62) / 0.33) * 0.93 + sz * 0.003;
   for (const sz of [1, -1]) K.strip([[0.012 * sz, B1 + 0.05], [-0.01 * sz, 1.5], [0.008 * sz, 1.78]], 0.011, zOf(sz), 'crack', [0, 0, sz]);
   for (const sz of [1, -1]) K.medallion(0, (B0 + B1 - 0.04) / 2 + 0.005, sz * bh, sz, 0.085, 0.064);
   const tris = trisOf(G).length;

@@ -46,7 +46,7 @@ if (what.has('block')) {
   }
   const W = x;
   // each tool front (its broad face), side (its edge, the blow's way to the left) and top (down the handle), larger
-  const S2 = 150, ch = 520, views = [['front', { yaw: 0, pitch: 0 }], ['side', { yaw: 90, pitch: 0 }], ['top', { yaw: 0, pitch: -89.9 }]];
+  const S2 = 112, ch = 520, views = [['front', { yaw: 0, pitch: 0 }], ['side', { yaw: 90, pitch: 0 }], ['top', { yaw: 0, pitch: -89.9 }]];
   const cw = Math.floor(W / (TOOL_IDS.length * 3));
   TOOL_IDS.forEach((id, t) => views.forEach(([v, cam], i) => {
     const p = plain[id], top = v === 'top';
@@ -56,7 +56,7 @@ if (what.has('block')) {
 }
 
 if (what.has('views')) {
-  const cw = 170, ch = 430, s = 140, V = [['front', 0, 0], ['3/4', 35, 10], ['side', 90, 0], ['back', 180, 0], ['top', 0, -89.9]];
+  const cw = 170, ch = 430, s = 104, V = [['front', 0, 0], ['3/4', 35, 10], ['side', 90, 0], ['back', 180, 0], ['top', 0, -89.9]];
   const cells = [];
   [plain, lit].forEach((set, r) => TOOL_IDS.forEach((id, t) => V.forEach(([v, yaw, pitch], i) => {
     const p = set[id], top = v === 'top';
@@ -69,17 +69,17 @@ if (what.has('views')) {
 if (what.has('details')) {
   // per tool: the working part close, at a three-quarter; the pommel close
   const cw = 260, ch = 300, cells = [];
-  const work = { awl: [0, 1.6, 0, 260], carving_knife: [0, 1.75, 0, 240], trowel: [0, 1.95, -0.25, 200], file: [0, 1.9, 0, 160], whetstone: [0, 1.35, 0, 300] };
+  const work = { awl: [0, 2.6, 0, 190], carving_knife: [0, 2.8, 0, 180], trowel: [0, 3.1, -0.34, 150], file: [0, 3.0, 0, 120], whetstone: [0, 2.0, 0, 240] };
   [plain, lit].forEach((set, r) => TOOL_IDS.forEach((id, t) => {
     const p = set[id], [wx, wy, wz, ws] = work[id];
     cells.push({ items: [D(p)], cam: { yaw: 25, pitch: 12, s: ws, c: [wx, wy, wz] }, box: [t * cw, r * 2 * ch, cw, ch], bg: r ? [0.12, 0.11, 0.13] : BG, ...ink, label: `${TOOLS[id].name}${r ? ' (enchanted)' : ''}` });
-    cells.push({ items: [D(p)], cam: { yaw: 20, pitch: 15, s: 520, c: [0, id === 'whetstone' ? 1.75 : 0.25, 0] }, box: [t * cw, (r * 2 + 1) * ch, cw, ch], bg: r ? [0.12, 0.11, 0.13] : BG, ...ink, note: id === 'whetstone' ? 'top cap' : 'pommel, collar' });
+    cells.push({ items: [D(p)], cam: { yaw: 20, pitch: 15, s: 390, c: [0, id === 'whetstone' ? 2.36 : 0.34, 0] }, box: [t * cw, (r * 2 + 1) * ch, cw, ch], bg: r ? [0.12, 0.11, 0.13] : BG, ...ink, note: id === 'whetstone' ? 'top cap' : 'pommel, collar' });
   }));
   await shoot(TOOL_IDS.length * cw, 4 * ch, cells, `${out}/tools-b-details.png`);
 }
 
 if (what.has('wire')) {
-  const cw = 220, ch = 440, s = 140, cells = [];
+  const cw = 220, ch = 440, s = 104, cells = [];
   TOOL_IDS.forEach((id, t) => [[0, 0], [90, 0]].forEach(([yaw, pitch], i) => {
     const p = plain[id];
     cells.push({ items: [D(p)], cam: { yaw, pitch, s, c: [0, p.L / 2, 0] }, box: [(t * 2 + i) * cw, 0, cw, ch], bg: BG, label: i ? '' : `${TOOLS[id].name}: ${p.tris}`, edges: [{ lines: triEdgesOf(p.G, p.G.V), c: [0.25, 0.9, 0.85] }] });
