@@ -67,7 +67,7 @@ import { BEAM_DEEP, drawBeam, drawColumn, drawJettySupports, drawRailing, JOIST_
 import { jettyBase, outsideStairBase, spiralBase } from '../game/frame';
 import { drawSpiralPiece, drawSpiralWhole, spiralCapGlow, spiralKey, spiralShade, spiralOutline, spiralPieces, type SpiralFlight, type SpiralFrame, type SpiralPieceAt } from './spiralkit';
 import { spiralHeading, spiralRise, spiralSpot, spiralTurn, SPIRAL_TREADS } from '../game/spiral';
-import { storeyHeight, storeyTileAt } from '../game/storeyview';
+import { storeyHeight } from '../game/storeyview';
 import { drawSteps, stepsFootAt } from './steps';
 import { seasonAt, type Season } from '../world/calendar';
 import { drawShine, shines } from './shine';
@@ -117,7 +117,7 @@ import { Wakes } from './wake';
 import { foamTexture, pondWaterOn, SpringWater, WATER_ON } from './ponds';
 import { drawFountain } from './fountain';
 import { fallView } from './falls';
-import { AqueductPainter, hullOf, type AqueductPart, type AqueductShape } from './aqueducts';
+import { AqueductPainter, hullOf, type AqueductPart } from './aqueducts';
 import { drawPool, type Run } from './pools';
 import { drawStones, STONES_RISE } from './stones';
 import { drawPierFeet, drawPierTile, pierFeetOf, slabOutline, type PierFoot, type PierTile } from './piers';
@@ -508,9 +508,9 @@ import {
 import { drawPlinthRunes, plinthNight } from './plinth';
 import { plinthBusy } from '../game/plinth';
 import { ENCHANTERS_PLINTH } from '../game/enchant';
-import { PICK_SLACK, PICK_SLACK_TOUCH } from './pickslack';
+import { Picker, type PickHost, type Pick, type HitRect, inOutline, type HitShape } from './picking';
+export { type Pick } from './picking';
 
-/** Result of picking a screen point: the tile, the approximate world position and the nearest corner. */
 /**
  * What is on its way to the ground: a piece of furniture following the
  * cursor, or a staircase on its tile, turned the way Q and E have turned it.
@@ -533,56 +533,6 @@ export interface PlanGhostPiece {
   side?: Side;
   level: number;
   ok: boolean;
-}
-
-export interface Pick {
-  x: number;
-  y: number;
-  wx: number;
-  wy: number;
-  cx: number;
-  cy: number;
-  /** A creature under the cursor, when one is. */
-  creature?: number;
-  /**
-   * Somebody else under the cursor, by the uid the island knows them by.
-   *
-   * Everything else on this list is picked by a number that means something to
-   * this browser. A person has to be picked by something that means something
-   * to the *island*, because what you do with one — invite them home, ask to be
-   * their friend, write to them — is a door and not a drawing.
-   */
-  peer?: string;
-  /** A crate under the cursor, when one is. */
-  crate?: number;
-  /** A campfire under the cursor, when one is. */
-  fire?: number;
-  /** A smelter under the cursor, when one is. */
-  smelter?: number;
-  /** An anvil under the cursor, when one is. */
-  anvil?: number;
-  /** A work post under the cursor, when one is. */
-  post?: number;
-  /** A trap under the cursor, when one is. */
-  trap?: number;
-  /** A bridge under the cursor, when one is. */
-  bridge?: number;
-  /** A kiln under the cursor, when one is. */
-  kiln?: number;
-  /** A piece of furniture under the cursor, when one is. */
-  furniture?: number;
-  /** Picked on the floor of a cellar, looking into it, rather than on the ground over it. */
-  down?: boolean;
-  /**
-   * The storey picked on, while one is pinned on the storey control (`storeyview.ts`): its floor, or 0 for the
-   * ground. Undefined on Auto, where a click is on the ground and a walk arrives wherever it first can.
-   */
-  level?: number;
-  /**
-   * For a thing set down on the ground (a wagon, a crate, a fire...): the ground the cursor is over behind it, as it
-   * would have been picked were the thing not there, so the tile under or behind a thing can still be got at.
-   */
-  ground?: Pick;
 }
 
 /** Seconds a cart's rock and bump take to come on as she sets off, and to die away as she stops (`cartRoll`). */
@@ -732,34 +682,6 @@ interface PilasterGuard {
   head: [number, number] | null;
   /** A head level with the wall's top (`columnSpan`): the pilaster laid again over the wall, kept to its head. */
   cap?: () => void;
-}
-
-interface HitRect {
-  x: number;
-  y: number;
-  left: number;
-  top: number;
-  w: number;
-  h: number;
-  creature?: number;
-  peer?: string;
-  crate?: number;
-  fire?: number;
-  smelter?: number;
-  kiln?: number;
-  furniture?: number;
-  anvil?: number;
-  post?: number;
-  trap?: number;
-  bridge?: number;
-  /** An aqueduct's bay: its outline in the box, which is what a click has to land on (`./aqueducts`). */
-  aq?: AqueductShape;
-  /** Or the outlines in the box a click has to land on one of, each as x, y pairs: a bridge's deck and its lips. */
-  poly?: Float64Array[];
-  /** Its place in the drawing order: the one drawn last over a point is the one picked there. */
-  seq?: number;
-  /** What it was drawn as: a point picks it only on those pixels (`PICK_SLACK`). */
-  shapes?: HitShape[];
 }
 
 
@@ -1060,17 +982,6 @@ function hash4(a: number, b: number, c: number, d: number): number {
   return ((k ^ (k >>> 15)) >>> 0) / 4294967296;
 }
 
-/** Whether a screen point is inside a polygon of screen points. */
-function inOutline(p: ReadonlyArray<readonly [number, number]>, sx: number, sy: number): boolean {
-  let inside = false;
-  for (let i = 0, j = p.length - 1; i < p.length; j = i++) {
-    const [xi, yi] = p[i];
-    const [xj, yj] = p[j];
-    if (yi > sy !== yj > sy && sx < ((xj - xi) * (sy - yi)) / (yj - yi) + xi) inside = !inside;
-  }
-  return inside;
-}
-
 /** Which way is out through a piece's front, and which way its width runs, in the world, by the side it faces. */
 const FRONT_OF: Record<Side, [number, number]> = { s: [0, 1], e: [1, 0], n: [0, -1], w: [-1, 0] };
 const ACROSS_OF: Record<Side, [number, number]> = { s: [1, 0], e: [0, -1], n: [-1, 0], w: [0, 1] };
@@ -1116,31 +1027,6 @@ const SUN_STEPS = 48;
  * at the step before until a later frame gets to it.
  */
 const SUN_REPAINT_MS = 2;
-
-/** How often a still cursor is told again what it is over, in milliseconds. */
-const PICK_EVERY = 90;
-
-const pickSlack = (): number => (typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches ? PICK_SLACK_TOUCH : PICK_SLACK);
-/**
- * Alpha a drawn pixel needs to pick its thing, out of 255: `PICK_SOLID`, or
- * `PICK_ALPHA` and lighter than `PICK_SHADE` in its brightest channel. A
- * shadow is dark and see-through (black at 0.2 to 0.34, a piece's at 0.17)
- * and picks nothing.
- */
-const PICK_ALPHA = 40;
-const PICK_SOLID = 150;
-const PICK_SHADE = 100;
-
-/** One drawing of a thing, kept to test a point against its pixels (`Renderer.shapeHas`). */
-interface HitShape {
-  draw: (g: CanvasRenderingContext2D, px: number, py: number) => void;
-  sx: number;
-  sy: number;
-  /** The transform it was drawn under, relative to the screen's: a boat's roll (`swayIn`). */
-  m: DOMMatrix | null;
-  /** How opaque it was drawn (`footOver` draws it again so). */
-  alpha: number;
-}
 
 /**
  * Something standing on the ground that reaches out over the tiles of the
@@ -1230,22 +1116,6 @@ const clamp255 = (v: number): number => (v < 0 ? 0 : v > 255 ? 255 : v | 0);
 /** The crops whose plants flower, which a butterfly will come to in a planter: the herbs and the fibre crops. */
 const FLOWERING_LOOKS: ReadonlySet<CropLook> = new Set<CropLook>(['herb', 'fibre']);
 
-/** Scratch for the outlines `coveredAfter` tests a point against. */
-const COVER_PTS = new Float64Array(8);
-
-/** Whether a point is inside a closed outline of `n` numbers, x, y pairs, by the crossings of a ray from it. */
-function inPolygon(p: ArrayLike<number>, n: number, x: number, y: number): boolean {
-  let inside = false;
-  for (let i = 0, j = n - 2; i < n; j = i, i += 2) {
-    const xi = p[i];
-    const yi = p[i + 1];
-    const xj = p[j];
-    const yj = p[j + 1];
-    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
-  }
-  return inside;
-}
-
 /** How deep the lip `drawDeck` lays under a deck's edges that run left to right is, in zoom-one pixels. */
 const DECK_EDGE = 2.5;
 
@@ -1270,20 +1140,6 @@ function deckOutline(q: ReadonlyArray<readonly [number, number]> | undefined, sx
 /** How far down the pier `drawDeck` stands a deck on reaches from just under its middle, in zoom-one pixels: nought for none. */
 function deckPier(kind: string, drop: number): number {
   return drop > 2 && kind !== 'rope' ? Math.min(34, drop * 0.8) : 0;
-}
-
-/** Whether a point is within `r` of the segment from `ax, ay` to `bx, by`. */
-function nearSegment(ax: number, ay: number, bx: number, by: number, x: number, y: number, r: number): boolean {
-  const dx = bx - ax, dy = by - ay;
-  const l2 = dx * dx + dy * dy;
-  const t = l2 > 0 ? Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / l2)) : 0;
-  return Math.hypot(x - ax - dx * t, y - ay - dy * t) <= r;
-}
-
-/** Whether a point is inside the convex hull of some points, x, y pairs. */
-function inHull(pts: number[], x: number, y: number): boolean {
-  const hull = hullOf(pts);
-  return hull.length >= 6 && inPolygon(hull, hull.length, x, y);
 }
 
 /** A piece of a cellar's drawing laid into a canvas of its own (`Renderer.layOut`), and where it was laid against. */
@@ -1695,11 +1551,8 @@ export class Renderer {
   /** The wind as the surface sees it, worked out once a frame rather than per tile. */
   private surf = { dirX: 1, dirY: 0, force: 0.5 };
   private drawnTiles = 0;
-  /** What the cursor was last told it was over, and when. */
-  private picked: Pick | null = null;
-  private pickedAt = -1e9;
-  private pickX = NaN;
-  private pickY = NaN;
+  /** What is under a point on the screen (`picking.ts`). */
+  private readonly picker = new Picker(this.pickHost());
   private playerFacing = 1;
   private creatureHits: HitRect[] = [];
   /** The hostile creatures drawn this frame, and how to draw each again, for marking them over the trees (`drawThreats`). */
@@ -1721,8 +1574,6 @@ export class Renderer {
   private feet: Foot[] = [];
   /** The feet the thing being drawn stands near (`footShy`), or null. */
   private shyOf: Foot[] | null = null;
-  /** The few pixels a pick is tested on (`shapeHas`). */
-  private hitPad: HTMLCanvasElement | null = null;
   /**
    * The pieces drawn this frame with a light of their own -- an altar's stars
    * -- and where, so the night can be taken back off them when it is laid
@@ -2032,6 +1883,33 @@ export class Renderer {
     });
     canvas.onResize(() => this.camera.setViewport(canvas.width, canvas.height));
     this.camera.setViewport(canvas.width, canvas.height);
+  }
+
+  /** What `picking.ts` reaches of the renderer. */
+  private pickHost(): PickHost {
+    const r = this;
+    return {
+      get anvilHits() { return r.anvilHits; },
+      get aqueducts() { return r.aqueducts; },
+      get camera() { return r.camera; },
+      get cellarHulls() { return r.cellarHulls; },
+      get crateHits() { return r.crateHits; },
+      get creatureHits() { return r.creatureHits; },
+      get deckHits() { return r.deckHits; },
+      get fireHits() { return r.fireHits; },
+      get furnitureHits() { return r.furnitureHits; },
+      get game() { return r.game; },
+      get kilnHits() { return r.kilnHits; },
+      get peerHits() { return r.peerHits; },
+      get postHits() { return r.postHits; },
+      get pts() { return r.pts; },
+      roofFrame: r.roofFrame.bind(r),
+      get roofQueue() { return r.roofQueue; },
+      get roofShapes() { return r.roofShapes; },
+      get smelterHits() { return r.smelterHits; },
+      get stoneHits() { return r.stoneHits; },
+      get trapHits() { return r.trapHits; },
+    };
   }
 
   get tilesDrawn(): number {
@@ -17903,13 +17781,6 @@ export class Renderer {
     return sailTrim(this.game.heading(), this.game.wind());
   }
 
-  /** Screen point to tile, taking terrain height into account; creatures and trees are picked by their sprite. */
-  /**
-   * What is under a screen point. Things standing on the ground are picked by
-   * their sprite; a tree is not, because a tree is the tile rather than a thing
-   * on it — its canopy leans over the tiles behind it, and catching clicks with
-   * it put the cursor on a tile a long way from where it was pointing.
-   */
   /**
    * What is under the cursor, asked no oftener than it can have changed.
    *
@@ -17921,449 +17792,21 @@ export class Renderer {
    * from under it and a sixth of the work.
    */
   hoverPick(sx: number, sy: number): Pick | null {
-    const now = performance.now();
-    if (sx === this.pickX && sy === this.pickY && now - this.pickedAt < PICK_EVERY) return this.picked;
-    this.pickX = sx;
-    this.pickY = sy;
-    this.pickedAt = now;
-    this.picked = this.pick(sx, sy);
-    return this.picked;
+    return this.picker.hoverPick(sx, sy);
   }
 
   /** The cursor has left the canvas: what was under it is not under it now. */
   forgetPick(): void {
-    this.pickX = NaN;
-    this.picked = null;
+    this.picker.forgetPick();
   }
 
   /** What is under the cursor, and for a thing set down there, the ground behind it too (`Pick.ground`). */
   pick(sx: number, sy: number): Pick | null {
-    const p = this.pickTop(sx, sy);
-    const pinned = this.game.pinnedStorey();
-    if (p && p.peer === undefined && p.creature === undefined && p.bridge === undefined && !p.down
-      && (p.crate ?? p.fire ?? p.smelter ?? p.kiln ?? p.anvil ?? p.post ?? p.trap ?? p.furniture) !== undefined) {
-      const up = pinned ? this.storeyPick(sx, sy, pinned) : null;
-      const ground = up ? null : this.groundPick(sx, sy);
-      p.ground = up ?? (ground && pinned !== null ? { ...ground, level: 0 } : ground) ?? undefined;
-    }
-    // Pinned on a storey, whatever is picked is on it: only what stands on it is drawn (`storeyview.ts`).
-    if (p && pinned !== null && p.level === undefined && !p.down) p.level = pinned;
-    return p;
-  }
-
-  private pickTop(sx: number, sy: number): Pick | null {
-    for (let i = this.peerHits.length - 1; i >= 0; i--) {
-      const h = this.peerHits[i];
-      if (sx >= h.left && sx <= h.left + h.w && sy >= h.top && sy <= h.top + h.h) return { ...this.makePick(h.x, h.y, sx, sy), peer: h.peer };
-    }
-    for (let i = this.creatureHits.length - 1; i >= 0; i--) {
-      const h = this.creatureHits[i];
-      if (sx >= h.left && sx <= h.left + h.w && sy >= h.top && sy <= h.top + h.h) return { ...this.makePick(h.x, h.y, sx, sy), creature: h.creature };
-    }
-    /*
-     * A thing set down -- a crate, a wagon, a furnace, a chest -- by its own
-     * pixels, give or take `PICK_SLACK`, and the one drawn last over the
-     * point first: a wagon's box no longer takes the crates beside it.
-     */
-    const things: HitRect[] = [];
-    const slack = pickSlack();
-    for (const list of [this.crateHits, this.smelterHits, this.furnitureHits, this.kilnHits, this.postHits, this.trapHits, this.anvilHits, this.fireHits]) {
-      for (const h of list) {
-        if (sx >= h.left - slack && sx <= h.left + h.w + slack && sy >= h.top - slack && sy <= h.top + h.h + slack) things.push(h);
-      }
-    }
-    things.sort((a, b) => (b.seq ?? 0) - (a.seq ?? 0));
-    for (const h of things) {
-      if (!this.shapeHas(h, sx, sy, slack)) continue;
-      const at = this.makePick(h.x, h.y, sx, sy);
-      if (h.crate !== undefined) return { ...at, crate: h.crate };
-      if (h.smelter !== undefined) return { ...at, smelter: h.smelter };
-      if (h.furniture !== undefined) return { ...at, furniture: h.furniture };
-      if (h.kiln !== undefined) return { ...at, kiln: h.kiln };
-      if (h.post !== undefined) return { ...at, post: h.post };
-      if (h.trap !== undefined) return { ...at, trap: h.trap };
-      if (h.anvil !== undefined) return { ...at, anvil: h.anvil };
-      return { ...at, fire: h.fire };
-    }
-    /*
-     * Pinned on a storey over the ground, a building's own floor under the point is that storey's: a bridge piece's
-     * hit is the box round its balustrades and arches, which reaches over the floor its end meets, and took every
-     * click on the edge between them.
-     */
-    const aloft = this.deckHits.length ? this.game.pinnedStorey() : null;
-    const floorUp = aloft !== null && aloft > 0 ? this.storeyPick(sx, sy, aloft) : null;
-    if (floorUp && this.game.buildings.buildingAt(floorUp.x, floorUp.y)) return floorUp;
-    for (let i = this.deckHits.length - 1; i >= 0; i--) {
-      const h = this.deckHits[i];
-      if (sx < h.left || sx > h.left + h.w || sy < h.top || sy > h.top + h.h) continue;
-      if (h.poly && !h.poly.some((o) => inPolygon(o, o.length, sx, sy))) continue;
-      // An aqueduct's bay takes the click where its masonry is drawn and nothing drawn after it stands over that point.
-      if (h.aq && (!this.aqueducts.hits(h.aq, sx, sy) || this.coveredAfter(sx, sy, h.x, h.y, h.bridge))) continue;
-      // Where on the tile, at the deck's height: the side nearest the click is the side under it (`nearestSide`).
-      return { ...this.makePick(h.x, h.y, sx, sy, this.game.deckAt(h.x, h.y) ?? undefined), bridge: h.bridge };
-    }
-    // A Runestone or a settlement's token, by the stone standing up off its footprint: its centre tile, whose hover and Examine name it.
-    for (let i = this.stoneHits.length - 1; i >= 0; i--) {
-      const h = this.stoneHits[i];
-      if (sx >= h.left && sx <= h.left + h.w && sy >= h.top && sy <= h.top + h.h) return this.makePick(h.x, h.y, sx, sy);
-    }
-    // Looking into a cellar: its floor, nearest first; and a side of the dig is nothing to click on.
-    if (this.cellarHulls.length) {
-      const hulls = this.cellarHulls;
-      for (let i = hulls.length - 1; i >= 0; i--) {
-        if (inOutline(hulls[i].floor, sx, sy)) {
-          const { x, y } = hulls[i];
-          return { ...this.makePick(x, y, sx, sy, cellarFloorHeight(this.game, x, y)), down: true };
-        }
-      }
-      for (const h of hulls) if (inOutline(h.hull, sx, sy)) return null;
-    }
-    // Pinned on a storey over the ground: its floor, and where none of it is under the cursor, the ground.
-    const pinned = this.game.pinnedStorey();
-    if (pinned !== null && pinned > 0) {
-      const up = this.storeyPick(sx, sy, pinned);
-      if (up) return up;
-      const ground = this.groundPick(sx, sy);
-      return ground && { ...ground, level: 0 };
-    }
-    return this.groundPick(sx, sy);
-  }
-
-  /**
-   * The tile of a storey under a point on the screen (`storeyview.ts`): of
-   * those that answer on the storey (`storeyTileAt`), the first whose floor,
-   * laid flat at its height (`storeyHeight`), is under the point, from the
-   * nearest line back.
-   */
-  private storeyPick(sx: number, sy: number, level: number): Pick | null {
-    // A pitched roof on its own level is picked on its slopes, where it is drawn, not on the flat of its eaves.
-    const roof = this.roofPick(sx, sy, level);
-    if (roof) return roof;
-    const cam = this.camera;
-    const world = this.game.world;
-    const iso = cam.screenToIso(sx, sy);
-    const V = cam.view;
-    const stepW = HALF_W * V.unit;
-    const stepH = HALF_H * V.unit;
-    const eF = iso.x / stepW;
-    const dF = iso.y / stepH;
-    const up = Math.ceil(((world.maxHeight + (level + 1) * WALL_HEIGHT) * HEIGHT_SCALE) / stepH) + 1;
-    const down = Math.ceil((-world.minHeight * HEIGHT_SCALE) / stepH) + 3;
-    for (let d = Math.floor(dF) + up; d >= Math.floor(dF) - down; d--) {
-      for (let e = Math.floor(eF) - 1; e <= Math.ceil(eF) + 1; e++) {
-        if (V.staggered && ((e + d) & 1) !== 0) continue;
-        const x = V.x[0] + V.x[1] * d + V.x[2] * e;
-        const y = V.y[0] + V.y[1] * d + V.y[2] * e;
-        if (!world.inBounds(x, y) || !storeyTileAt(this.game, x, y, level)) continue;
-        const h = storeyHeight(this.game, x, y, level);
-        if (!this.pointInTile(x, y, sx, sy, h)) continue;
-        return this.game.vision.state(x, y) === UNSEEN ? null : { ...this.makePick(x, y, sx, sy, h), level };
-      }
-    }
-    return null;
-  }
-
-  /**
-   * The roof tile under a point on the screen, on the level a pitched roof
-   * sits on (`storeyview.ts`): of the faces of every such roof drawn there
-   * (`roofFrame`), the nearest the eye that the point is in, picked at the
-   * face's own height; null where none is.
-   */
-  private roofPick(sx: number, sy: number, level: number): Pick | null {
-    const cam = this.camera;
-    const V = cam.view;
-    let best: { x: number; y: number; h: number; d: number } | null = null;
-    for (const b of this.game.buildings.list.values()) {
-      if (b.levels !== level || roofShapeOf(b) === 'flat') continue;
-      const frame = this.roofFrame(b);
-      if (!frame) continue;
-      const pitch = ROOF_PITCH * roofShapeDef(b).rise;
-      for (const face of frame.model.faces) {
-        const n = face.pts.length;
-        const poly = new Float64Array(n * 2);
-        let mx = 0, my = 0, md = 0;
-        face.pts.forEach((q, i) => {
-          poly[i * 2] = cam.worldToScreenX(q[0], q[1]);
-          poly[i * 2 + 1] = cam.worldToScreenY(q[0], q[1], frame.eave + pitch * q[2]);
-          mx += q[0] / n;
-          my += q[1] / n;
-          md += q[2] / n;
-        });
-        if (!inPolygon(poly, n * 2, sx, sy)) continue;
-        const d = depthOf(V, mx, my);
-        if (best && best.d >= d) continue;
-        const f = frame.roofs[face.tile];
-        best = { x: f.x, y: f.y, h: frame.eave + pitch * md, d };
-      }
-    }
-    if (!best) return null;
-    return this.game.vision.state(best.x, best.y) === UNSEEN ? null : { ...this.makePick(best.x, best.y, sx, sy, best.h), level };
-  }
-
-  /** The ground under a point on the screen, whatever stands on it: the first tile it hits, from the nearest line back. */
-  private groundPick(sx: number, sy: number): Pick | null {
-    const cam = this.camera;
-    const world = this.game.world;
-    const iso = cam.screenToIso(sx, sy);
-    const V = cam.view;
-    const stepW = HALF_W * V.unit;
-    const stepH = HALF_H * V.unit;
-    const eF = iso.x / stepW;
-    const dF = iso.y / stepH;
-    // A hill in front stands between the cursor and the ground it is over, so
-    // the search runs from the nearest line that could reach this high back to
-    // the furthest that could reach this low, and takes the first tile it hits.
-    const up = Math.ceil((world.maxHeight * HEIGHT_SCALE) / stepH) + 1;
-    const down = Math.ceil((-world.minHeight * HEIGHT_SCALE) / stepH) + 3;
-    const eLo = Math.floor(eF) - 1;
-    const eHi = Math.ceil(eF) + 1;
-    for (let d = Math.floor(dF) + up; d >= Math.floor(dF) - down; d--) {
-      for (let e = eLo; e <= eHi; e++) {
-        if (V.staggered && ((e + d) & 1) !== 0) continue;
-        const x = V.x[0] + V.x[1] * d + V.x[2] * e;
-        const y = V.y[0] + V.y[1] * d + V.y[2] * e;
-        if (!world.inBounds(x, y)) continue;
-        // Ground nobody has seen is not there to be clicked on.
-        if (this.pointInTile(x, y, sx, sy)) return this.game.vision.state(x, y) === UNSEEN ? null : this.makePick(x, y, sx, sy);
-      }
-    }
-    return null;
-  }
-
-  /**
-   * Whether something drawn after the bay of an aqueduct on tile `bx, by`
-   * stands over a screen point: the ground or the water of a line of the
-   * ground nearer the camera, a foundation or a deck on piers on one, a wall
-   * a nearer line draws, or the roof of a building laid after it. A click
-   * there is on that, not on the masonry behind it.
-   */
-  private coveredAfter(sx: number, sy: number, bx: number, by: number, bridge: number | undefined): boolean {
-    const cam = this.camera;
-    const world = this.game.world;
-    const V = cam.view;
-    const d0 = depthOf(V, bx, by);
-    const iso = cam.screenToIso(sx, sy);
-    const stepW = HALF_W * V.unit;
-    const stepH = HALF_H * V.unit;
-    const eF = iso.x / stepW;
-    const dF = iso.y / stepH;
-    const bld = this.game.buildings;
-    // As high as anything on a line can stand: the ground, and the storeys and the roof of a building on it.
-    const up = Math.ceil(((world.maxHeight + (TOP_LEVELS + 2) * WALL_HEIGHT) * HEIGHT_SCALE) / stepH) + 1;
-    const down = Math.ceil((-world.minHeight * HEIGHT_SCALE) / stepH) + 3;
-    const p = COVER_PTS;
-    const corner = (cx: number, cy: number, h: number, i: number): void => {
-      p[i * 2] = cam.worldToScreenX(cx, cy);
-      p[i * 2 + 1] = cam.worldToScreenY(cx, cy, h);
-    };
-    for (let d = Math.floor(dF) + up; d > d0 && d >= Math.floor(dF) - down; d--) {
-      for (let e = Math.floor(eF) - 1; e <= Math.ceil(eF) + 1; e++) {
-        if (V.staggered && ((e + d) & 1) !== 0) continue;
-        const x = V.x[0] + V.x[1] * d + V.x[2] * e;
-        const y = V.y[0] + V.y[1] * d + V.y[2] * e;
-        if (!world.inBounds(x, y)) continue;
-        // The ground, or the water over it.
-        const water = world.surfaceAt(x, y);
-        corner(x, y, Math.max(world.getHeight(x, y), water), 0);
-        corner(x + 1, y, Math.max(world.getHeight(x + 1, y), water), 1);
-        corner(x + 1, y + 1, Math.max(world.getHeight(x + 1, y + 1), water), 2);
-        corner(x, y + 1, Math.max(world.getHeight(x, y + 1), water), 3);
-        if (inPolygon(p, 8, sx, sy)) return true;
-        // A poured foundation, as the box it stands in. (A bridge's deck drawn after the bay is before it in `deckHits`.)
-        const slab = this.game.foundations.size ? this.game.slabAt(x, y) : undefined;
-        if (slab && this.boxHas(x, y, null, slab.top, sx, sy)) return true;
-        // A finished deck on piers, as thick as it is laid (`slabOutline`).
-        const deck = bld.pierTiles.size ? this.game.pierDeckAt(x, y) : null;
-        if (deck !== null && this.boxHas(x, y, deck - FLOOR_DEEP, deck, sx, sy)) return true;
-        // The walls this line draws: the borders of the tile facing away from the camera, every storey of them.
-        for (const side of V.back) {
-          for (let level = 0; level < TOP_LEVELS; level++) {
-            const w = bld.walls.size ? bld.wall(level, x, y, side) : undefined;
-            if (!w) break;
-            if (!isDone(w) || WALL_TYPE_BY_ID.get(w.type)?.low) continue;
-            const owner = bld.list.get(w.building);
-            const [ax, ay, bx2, by2] = side === 'n' ? [x, y, x + 1, y] : side === 's' ? [x, y + 1, x + 1, y + 1] : side === 'w' ? [x, y, x, y + 1] : [x + 1, y, x + 1, y + 1];
-            // On the ground at the corner of the tile drawing it, or on the deck of a building on piers (`drawStructures`).
-            const base = owner?.deck ?? world.getHeight(x, y);
-            corner(ax, ay, base + level * WALL_HEIGHT, 0);
-            corner(bx2, by2, base + level * WALL_HEIGHT, 1);
-            corner(bx2, by2, base + (level + 1) * WALL_HEIGHT, 2);
-            corner(ax, ay, base + (level + 1) * WALL_HEIGHT, 3);
-            if (owner && inPolygon(p, 8, sx, sy)) return true;
-          }
-        }
-      }
-    }
-    // A roof laid after it, unless the bay stands in front of that building and is cut out of its roof (`AqueductPainter.before`).
-    for (const [row, list] of this.roofQueue) {
-      if (row <= d0) continue;
-      for (const b of list) {
-        if (this.aqueducts.before(b.tiles, row, V).some((c) => c.b.id === bridge && c.b.spans[c.k].x === bx && c.b.spans[c.k].y === by)) continue;
-        if (this.roofCovers(b, sx, sy)) return true;
-      }
-    }
-    return false;
-  }
-
-  /** Whether a screen point is in the box over a tile from `bottom` (its ground where null) up to `top`, as the eye sees it. */
-  private boxHas(x: number, y: number, bottom: number | null, top: number, sx: number, sy: number): boolean {
-    const cam = this.camera;
-    const w = this.game.world;
-    const pts: number[] = [];
-    for (const [cx, cy] of [[x, y], [x + 1, y], [x + 1, y + 1], [x, y + 1]]) {
-      const px = cam.worldToScreenX(cx, cy);
-      pts.push(px, cam.worldToScreenY(cx, cy, top), px, cam.worldToScreenY(cx, cy, bottom ?? w.getHeight(cx, cy)));
-    }
-    return inHull(pts, sx, sy);
-  }
-
-  /**
-   * Whether a screen point is on a building's pitched roof as `drawPitchedRoof`
-   * lays it: a face, a hair past its edges as it is outlined; the cap along a
-   * ridge or a hip, as wide as it is stroked; the fascia under an eave on the
-   * near side; or a gable end on the near side (`drawGable`).
-   */
-  private roofCovers(b: Building, sx: number, sy: number): boolean {
-    const kept = this.roofShapes.get(b.id);
-    if (!kept) return false;
-    const cam = this.camera;
-    const zoom = cam.zoom;
-    const world = this.game.world;
-    const bld = this.game.buildings;
-    const roofs: FloorTile[] = [];
-    for (const k of b.tiles) {
-      const [x, y] = k.split(',').map(Number);
-      const f = bld.floor(b.levels, x, y);
-      if (f && floorKind(f) === 'roof') roofs.push(f);
-    }
-    if (!roofs.length) return false;
-    let eave = -Infinity;
-    for (const f of roofs) eave = Math.max(eave, world.getHeight(f.x, f.y));
-    // A building on piers stands on its deck, whatever the ground under it does.
-    if (b.deck != null) eave = b.deck;
-    eave += b.levels * WALL_HEIGHT;
-    const pitch = ROOF_PITCH * roofShapeDef(b).rise;
-    const model = kept.model;
-    const X = (q: RoofPt): number => cam.worldToScreenX(q[0], q[1]);
-    const Y = (q: RoofPt, drop = 0): number => cam.worldToScreenY(q[0], q[1], eave + pitch * q[2] - drop);
-    for (const face of model.faces) {
-      const n = face.pts.length;
-      const poly = new Float64Array(n * 2);
-      let cx = 0, cy = 0;
-      face.pts.forEach((q, i) => {
-        poly[i * 2] = X(q);
-        poly[i * 2 + 1] = Y(q);
-        cx += poly[i * 2] / n;
-        cy += poly[i * 2 + 1] / n;
-      });
-      for (let i = 0; i < n * 2; i += 2) {
-        const l = Math.hypot(poly[i] - cx, poly[i + 1] - cy) || 1;
-        poly[i] += ((poly[i] - cx) / l) * 0.5;
-        poly[i + 1] += ((poly[i + 1] - cy) / l) * 0.5;
-      }
-      if (inPolygon(poly, n * 2, sx, sy)) return true;
-    }
-    for (const c of model.creases) {
-      if (c.kind === 'valley' || !isDone(roofs[c.tile])) continue;
-      const w = Math.max(1.5, covering(roofs[c.tile].material).cap.w * zoom);
-      const reach = (w + Math.max(1.2, 1.4 * zoom)) / 2 + Math.max(0.5, 0.5 * zoom);
-      if (nearSegment(X(c.a), Y(c.a), X(c.b), Y(c.b), sx, sy, reach)) return true;
-    }
-    const p = COVER_PTS;
-    for (const e of model.edges) {
-      if (!isDone(roofs[e.tile])) continue;
-      const [ox, oy] = FALLS[e.out];
-      if (cam.nearSide(ox, oy) < 0) continue;
-      const dp = covering(roofs[e.tile].material).fascia.deep;
-      p[0] = X(e.a); p[1] = Y(e.a); p[2] = X(e.b); p[3] = Y(e.b);
-      p[4] = X(e.b); p[5] = Y(e.b, dp); p[6] = X(e.a); p[7] = Y(e.a, dp);
-      if (inPolygon(p, 8, sx, sy)) return true;
-    }
-    for (const g of model.gables) {
-      const [ox, oy] = FALLS[g.out];
-      if (cam.nearSide(ox, oy) < 0) continue;
-      const out: number[] = [];
-      const at = (q: RoofPt, h: number): void => {
-        const wx = q[0] + ox * WALL_THICK, wy = q[1] + oy * WALL_THICK;
-        out.push(cam.worldToScreenX(wx, wy), cam.worldToScreenY(wx, wy, eave + h));
-      };
-      at(g.line[0], 0);
-      for (const q of g.line) at(q, pitch * q[2]);
-      at(g.line[g.line.length - 1], 0);
-      if (inPolygon(out, out.length, sx, sy)) return true;
-    }
-    return false;
+    return this.picker.pick(sx, sy);
   }
 
   /** This entity's hit box's place in the drawing order and what it was drawn as (`HitRect.seq`, `shapes`). */
   private shaped(): { seq: number; shapes: HitShape[] } {
     return { seq: this.hitSeq++, shapes: this.entPaints.slice() };
-  }
-
-  /**
-   * Whether a point lands on what a hit box's thing was drawn as, or within
-   * `PICK_SLACK` of it (`PICK_SLACK_TOUCH` by finger): its drawings again on a few pixels round the point,
-   * and any of them covered. A box with no drawing kept is all box.
-   */
-  private shapeHas(h: HitRect, sx: number, sy: number, slack: number): boolean {
-    if (!h.shapes?.length) return sx >= h.left && sx <= h.left + h.w && sy >= h.top && sy <= h.top + h.h;
-    const n = slack * 2 + 1;
-    const pad = (this.hitPad ??= document.createElement('canvas'));
-    if (pad.width !== n) pad.width = pad.height = n;
-    const g = pad.getContext('2d', { willReadFrequently: true });
-    if (!g) return true;
-    g.setTransform(1, 0, 0, 1, 0, 0);
-    g.clearRect(0, 0, n, n);
-    for (const d of h.shapes) {
-      g.save();
-      const at = new DOMMatrix([1, 0, 0, 1, slack - sx, slack - sy]);
-      g.setTransform(d.m ? at.multiply(d.m) : at);
-      try {
-        d.draw(g, d.sx, d.sy);
-      } catch {
-        g.restore();
-        return true;
-      }
-      g.restore();
-    }
-    const px = g.getImageData(0, 0, n, n).data;
-    for (let i = 0; i < px.length; i += 4) {
-      const a = px[i + 3];
-      if (a >= PICK_SOLID || (a >= PICK_ALPHA && Math.max(px[i], px[i + 1], px[i + 2]) >= PICK_SHADE)) return true;
-    }
-    return false;
-  }
-
-  /** Whether a screen point is on a tile: on its ground, or laid flat at height `flat` (a storey's floor). */
-  private pointInTile(x: number, y: number, sx: number, sy: number, flat?: number): boolean {
-    const w = this.game.world;
-    const cam = this.camera;
-    const p = this.pts;
-    const h = (cx: number, cy: number): number => flat ?? w.getHeight(cx, cy);
-    p[0] = cam.worldToScreenX(x, y);
-    p[1] = cam.worldToScreenY(x, y, h(x, y));
-    p[2] = cam.worldToScreenX(x + 1, y);
-    p[3] = cam.worldToScreenY(x + 1, y, h(x + 1, y));
-    p[4] = cam.worldToScreenX(x + 1, y + 1);
-    p[5] = cam.worldToScreenY(x + 1, y + 1, h(x + 1, y + 1));
-    p[6] = cam.worldToScreenX(x, y + 1);
-    p[7] = cam.worldToScreenY(x, y + 1, h(x, y + 1));
-    let inside = false;
-    for (let i = 0, j = 3; i < 4; j = i++) {
-      const xi = p[i * 2];
-      const yi = p[i * 2 + 1];
-      const xj = p[j * 2];
-      const yj = p[j * 2 + 1];
-      if (yi > sy !== yj > sy && sx < ((xj - xi) * (sy - yi)) / (yj - yi) + xi) inside = !inside;
-    }
-    return inside;
-  }
-
-  private makePick(x: number, y: number, sx: number, sy: number, h?: number): Pick {
-    const w = this.game.world;
-    const approx = this.camera.screenToWorld(sx, sy, h ?? w.centerHeight(x, y));
-    const wx = Math.min(x + 0.999, Math.max(x, approx.x));
-    const wy = Math.min(y + 0.999, Math.max(y, approx.y));
-    return { x, y, wx, wy, cx: Math.round(wx), cy: Math.round(wy) };
   }
 }
