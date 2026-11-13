@@ -85,7 +85,7 @@ const STEP: ToolAt = { ...SET, at: [BX, -0.04, 0.32] };
 const DRIVEN: ToolAt = { ...SET, at: [BX, -0.12, 0.33], her: [0, 0.015, 0] };
 const LEVERED: ToolAt = { at: [BX, -0.06, 0.42], way: [-0.1, -0.86, 0.5], face: [0, 0.5, 0.86], slide: 2.4 };
 const LIFTED: ToolAt = { at: [0.1, 0.45, 0.1], way: [-0.45, -0.3, 0.84], face: [0, -0.94, -0.34], fist: true, slide: 2.6, her: [-0.03, 0, -0.03] };
-const TOSSED: ToolAt = { at: [0.06, 0.55, 0.12], way: [-0.8, -0.12, 0.6], face: [0.6, 0.1, 0.8], fist: true, slide: 2.6, her: [-0.03, 0, -0.03] };
+const TOSSED: ToolAt = { at: [0.06, 0.6, 0.14], way: [-0.85, 0.02, 0.52], face: [0.6, 0.1, 0.8], fist: true, slide: 2.6, her: [-0.03, 0, -0.03] };
 const BACK: ToolAt = { at: [BX, 0.06, 0.34], way: [-0.1, -0.92, 0.38], face: [0, 0.38, 0.92], slide: 2.4 };
 /** Where the stance stands the right foot's ankle forward, body heights (the tread is reached from there). */
 const FOOT_R_Z = -0.03;
@@ -213,7 +213,7 @@ const SICKLE_AT: Record<string, { at: Euler; way: Euler; face: Euler }> = {
   back: { at: [-0.14, 0.31, 0.24], way: [0.4, -0.2, 0.9], face: [0.9, 0.2, -0.4] },
 };
 const K_CROUCH: KeyPose = {
-  rot: { pelvis: [34, 8, 0], spine_01: [12, 3, 0], spine_02: [10, 3, 0], spine_03: [8, 2, 0], clavicle_r: [10, 0, 0], neck_01: [-24, 0, 0], neck_02: [-6, 0, 0], head: [8, 4, 0], fingers_01_l: [20, 0, 0], fingers_02_l: [25, 0, 0] },
+  rot: { pelvis: [34, 8, 0], spine_01: [12, 3, 0], spine_02: [10, 3, 0], spine_03: [8, 2, 0], neck_01: [-24, 0, 0], neck_02: [-6, 0, 0], head: [8, 4, 0], fingers_01_l: [20, 0, 0], fingers_02_l: [25, 0, 0] },
   move: [0, -0.17, 0.02],
 };
 const K_GRAB: KeyPose = merge(K_CROUCH, { rot: { pelvis: [36, 9, 0], spine_02: [11, 4, 0], head: [8, 6, 0], ...FIST_L }, move: [0.006, -0.175, 0.03] });
