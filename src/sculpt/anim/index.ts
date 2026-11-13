@@ -24,6 +24,7 @@ import { HOP, NOD, WAVE, WAVE_AHEAD, waveRaise } from './clips/emote';
 import { BLOCK, COVER, SHIELD_ARM } from './clips/block';
 import { BODY as FLINCH, flinchClipOf } from './clips/flinch';
 import { SEAT_OARS, SEAT_REINS, SEAT_SADDLE, SEAT_TILLER, SEAT_TILLER_LEFT, SEAT_TUCK } from './clips/seated';
+import { DIG, RAKE, REAP } from './clips/dig';
 import { mirrorClip } from './author';
 import { ACTION_BY_ID } from '../../game/actions';
 import { clipOfJob } from './routes';
@@ -47,6 +48,7 @@ export const CLIPS: Record<string, Clip> = {
   'seat-reins': SEAT_REINS, 'seat-oars': SEAT_OARS, 'seat-tiller': SEAT_TILLER, 'seat-tiller-left': SEAT_TILLER_LEFT, saddle: SEAT_SADDLE, 'saddle-tuck': SEAT_TUCK,
   // the emotes (`emoteClipOf`)
   wave: WAVE, 'wave-left': mirrorClip(WAVE, 'wave-left'), 'wave-ahead': WAVE_AHEAD, 'wave-ahead-left': mirrorClip(WAVE_AHEAD, 'wave-ahead-left'), nod: NOD, hop: HOP,
+  dig: DIG, 'dig-left': mirrorClip(DIG, 'dig-left'), rake: RAKE, 'rake-left': mirrorClip(RAKE, 'rake-left'), reap: REAP, 'reap-left': mirrorClip(REAP, 'reap-left'),
 };
 /** The clip a state plays until its own is approved: the 6 7 gesture. */
 export const PLACEHOLDER = 'sixseven';
@@ -117,12 +119,13 @@ export function workClipOf(job: string | undefined): string {
  * The clips played left-handed (`lefty`), by the right-handed clip's name: its mirror. The flat figure works left-handed
  * from the two facings where its right hand's blow would cross the face (`../../render/figure.ts` lefty); so does this.
  */
-const LEFT_OF: Readonly<Record<string, string>> = { work: 'work-left', fight: 'fight-left' };
+const LEFT_OF: Readonly<Record<string, string>> = { work: 'work-left', fight: 'fight-left', dig: 'dig-left', rake: 'rake-left', reap: 'reap-left' };
 /** Whether work is done left-handed from where it is seen: as the flat figure (facings three and seven). */
 const lefty = (facing: number): boolean => { const f = ((Math.round(facing) % 8) + 8) % 8; return f === 3 || f === 7; };
 
-/** The jobs done with the overhead swing whatever is in hand: the pickaxe's. */
+/** The jobs done with the overhead swing whatever is in hand: the pickaxe's (mining, and those its tool routes to the swing: `./routes.ts`). */
 const SWING_JOBS = new Set(['mine', 'chip_corner', 'mine_cellar']);
+const swingJob = (job: string | undefined): boolean => !!job && (SWING_JOBS.has(job) || clipOfJob(job) === 'swing');
 /** Meditating's job. */
 const MEDITATE = 'meditate';
 /**
@@ -138,7 +141,7 @@ const fightWeapon = (pose: FigurePose) => (pose.job === FIGHT && pose.gear?.weap
 const shoots = (pose: FigurePose): boolean => !!fightWeapon(pose)?.ammo;
 /** Whether a pose's job is swung overhead in both hands. */
 const swings = (pose: FigurePose): boolean => {
-  if (SWING_JOBS.has(pose.job ?? '')) return true;
+  if (swingJob(pose.job)) return true;
   const w = fightWeapon(pose);
   return !!w && ((!!w.twoHanded && !w.ammo) || BOTH_HANDS.has(w.id));
 };
@@ -165,9 +168,10 @@ export const clipsPlaying = (): boolean => ON;
 const FADE = 0.2;
 /**
  * Seconds a fade into or out of a clip takes where that is longer than `FADE`, its feet kept planted throughout where
- * the two clips stand them (`plantBetween`): getting down onto the knees at the ground and up off them.
+ * the two clips stand them (`plantBetween`): getting down onto the knees at the ground and up off them; down into the
+ * sickle's crouch and up out of it.
  */
-const SETTLE: Readonly<Record<string, number>> = { ground: 0.55 };
+const SETTLE: Readonly<Record<string, number>> = { ground: 0.55, reap: 0.4, 'reap-left': 0.4 };
 /** Seconds after a long fade lands over which the clip's own motion is let go into from rest. */
 const RELEASE = 0.25;
 /** The legs' bones, which a long fade keeps on its own pace (the root's too); the rest lead or trail them. */
@@ -234,7 +238,7 @@ export const SWING_TOOL = 'pickaxe';
 export function heldIn(pose: FigurePose): string | undefined {
   const c = clipFor(pose);
   if (!c?.clip.grip && !c?.clip.wields) return undefined;
-  return pose.job === FIGHT ? pose.gear?.weapon?.id : SWING_JOBS.has(pose.job ?? '') ? SWING_TOOL : undefined;
+  return pose.job === FIGHT ? pose.gear?.weapon?.id : swingJob(pose.job) ? SWING_TOOL : undefined;
 }
 
 /**

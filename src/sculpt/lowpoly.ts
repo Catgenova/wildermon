@@ -182,6 +182,9 @@ import CLUB from './assets/club.json';
 import SPEAR from './assets/spear.json';
 import JAVELIN from './assets/javelin.json';
 import THROWING_AXE from './assets/throwing_axe.json';
+import SHOVEL from './assets/shovel.json';
+import RAKE from './assets/rake.json';
+import SICKLE from './assets/sickle.json';
 import HAIR_ASSET from './assets/lowhair.json';
 import MALE_LIGHT from '../../tools/sculpt/lowlight-male.json';
 import FEMALE_LIGHT from '../../tools/sculpt/lowlight-female.json';
@@ -318,6 +321,9 @@ const PROPS: readonly PropAsset[] = [SWORD, { ...(WARHAMMER as unknown as PropAs
   // javelin; the ancient short sword drawn as the short sword
   SWORD_1H as unknown as PropAsset, SHORT_SWORD as unknown as PropAsset, { ...(SHORT_SWORD as unknown as PropAsset), id: ANCIENT_SWORD }, HUNTING_KNIFE as unknown as PropAsset,
   BATTLE_AXE as unknown as PropAsset, CLUB as unknown as PropAsset, SPEAR as unknown as PropAsset, JAVELIN as unknown as PropAsset, THROWING_AXE as unknown as PropAsset,
+  // the digging and field tools by item id (tools/sculpt/gear/farmtools.mjs), in the right fist while their clips play
+  // (./anim/clips/dig.ts), the other hand on the shovel's and the rake's haft (`Clip.second`); their iron in their metal
+  SHOVEL as unknown as PropAsset, RAKE as unknown as PropAsset, SICKLE as unknown as PropAsset,
 ];
 const PROP_OF = new Map(PROPS.map((p) => [p.id, p]));
 /**
