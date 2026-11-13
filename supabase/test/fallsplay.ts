@@ -163,7 +163,7 @@ function tongueOf(game: Game, pond: PondWater, label: string): void {
   let offTile = 0;
   let offWater = 0;
   let falls = -1;
-  // The pond's water on a tile, as `Renderer.drawPonds` lays it.
+  // The pond's water on a tile, as `WaterPainter.drawPonds` lays it.
   const waterOn = (x: number, y: number): number => {
     let mask = 0;
     for (let i = 0; i < 4; i++) {

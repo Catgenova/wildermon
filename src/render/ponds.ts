@@ -7,7 +7,7 @@
  * corners each pond covers and how high it stands, which corners each stream
  * runs over, and when each starts. This is only how that looks. A pond's water
  * is drawn tile by tile with the ground, the way the sea is
- * (`Renderer.drawPonds`); everything here is laid over a line of the ground
+ * (`WaterPainter.drawPonds`); everything here is laid over a line of the ground
  * once that line is down -- the light on a pond, a stream, a fall -- so ground
  * standing in front of it still hides it. The mist off a fall goes up with the
  * smoke, after everything.
@@ -1730,7 +1730,7 @@ const PIECE: number[] = [];
 const CLIP_A: number[] = [];
 
 /**
- * A pond's water on tile `x`, `y`, as `Renderer.drawPonds` lays it: world
+ * A pond's water on tile `x`, `y`, as `WaterPainter.drawPonds` lays it: world
  * x, y pairs into `out`, walked round the tile's corners in the order `cs`
  * gives them, `c` the ground at each. Over the corners it covers (`mask`, a
  * bit for each of `cs`); cut where the ground comes up through its surface

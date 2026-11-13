@@ -20,9 +20,10 @@ export type Body = 'man' | 'woman';
 /**
  * The procedural layer's inputs (`Skeleton.finish`): where the feet are planted; how much further out the arms are kept;
  * both hands on one handle (`grip`, with what is `held`); or the arms as keyed (`free`), the hands in `hands` reached to
- * their places, each fist closed on the tool in it (`tools`).
+ * their places, each fist closed on the tool in it (`tools`); or each fist in `reach` put on a place given in the mesh's own
+ * units and frame (a seat's reins, oars or tiller: `../index.ts` seatedLocal), its grip along `way`.
  */
-export interface FinishOptions { plant?: Plant; armsOut?: number; grip?: GripAt; held?: Held; free?: boolean; hands?: Partial<Record<Side, HandAt>>; tools?: Partial<Record<Side, Held>> }
+export interface FinishOptions { plant?: Plant; armsOut?: number; grip?: GripAt; held?: Held; free?: boolean; hands?: Partial<Record<Side, HandAt>>; tools?: Partial<Record<Side, Held>>; reach?: Partial<Record<Side, { at: V; way: V }>> }
 /** The most of its length a planted leg is stretched to (bone-straight, its knee is the rig's straightest): nearly locked. */
 const REACH = 0.998;
 /** The share of its reach over which a leg in the air straightens softly toward its foot's place (`finish`). */
@@ -390,6 +391,7 @@ export function skeleton(A: AnimAsset, canon: AnimAsset, gameHeight = 0): Skelet
         F = reachTo(L, F, pose.move, s, p, h.way, o.tools?.[side]);
       }
     }
+    for (const [side, h] of Object.entries(o.reach ?? {}) as Array<[Side, { at: V; way: V }]>) F = reachTo(L, F, pose.move, side === 'l' ? 0 : 1, h.at, h.way);
     return { local: L, move: pose.move };
   }
 

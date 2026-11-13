@@ -212,27 +212,72 @@ export function mailShell(G, rig, o) {
       list.forEach((p, i) => (by.get(find(i)) ?? by.set(find(i), []).get(find(i))).push(p));
       parts.push(...by.values());
     }
-    for (const list of parts) {
-      if (list.length === 1 && list[0].length <= 4) { polys.push(list[0]); continue; }
-      const k = courseOfPiece(list[0]);
-      // (the outline: the directed edges whose reverse no piece of the cell has, chained)
+    // (each part's outline, the directed edges whose reverse none of its pieces has, chained; null where it is not one loop)
+    const outline = (list) => {
       const dir = new Map(), has = new Set(), byKey = new Map();
       for (const p of list) p.forEach((q, n) => { const r = p[(n + 1) % p.length]; has.add(`${q.key}>${r.key}`); byKey.set(q.key, q); });
       for (const p of list) p.forEach((q, n) => { const r = p[(n + 1) % p.length]; if (!has.has(`${r.key}>${q.key}`)) dir.set(q.key, (dir.get(q.key) ?? []).concat([r.key])); });
-      let ok = [...dir.values()].every((l) => l.length === 1);
-      const loop = [];
-      if (ok) {
-        const start = dir.keys().next().value;
-        let cur = start;
-        for (let n = 0; n <= dir.size; n++) { loop.push(byKey.get(cur)); cur = dir.get(cur)[0]; if (cur === start) break; }
-        ok = loop.length === dir.size;
-      }
-      const out = ok ? loop.filter((q) => corner(q, k) || free.has(q.key)) : [];
-      // (convex in the cell's own coordinates, the arc and the field)
-      const convex = (P) => { let sg = 0; for (let n = 0; n < P.length; n++) { const a = P[n], b = P[(n + 1) % P.length], c = P[(n + 2) % P.length], cr = (b.g - a.g) * (c.f - b.f) - (b.f - a.f) * (c.g - b.g); if (Math.abs(cr) < 1e-9) continue; if (sg && Math.sign(cr) !== sg) return false; sg = Math.sign(cr); } return true; };
-      if (ok && out.length >= 3 && convex(out)) polys.push(Object.assign(out, { t: list[0].t, lo: Math.max(...list.map((p) => p.lo)), hi: Math.min(...list.map((p) => p.hi)), up: list[0].up }));
-      else polys.push(...list);
+      if (![...dir.values()].every((l) => l.length === 1)) return null;
+      const loop = [], start = dir.keys().next().value;
+      let cur = start;
+      for (let n = 0; n <= dir.size; n++) { loop.push(byKey.get(cur)); cur = dir.get(cur)[0]; if (cur === start) break; }
+      return loop.length === dir.size ? loop : null;
+    };
+    // (convex in the cell's own coordinates, the arc and the field)
+    const convex = (P) => { let sg = 0; for (let n = 0; n < P.length; n++) { const a = P[n], b = P[(n + 1) % P.length], c = P[(n + 2) % P.length], cr = (b.g - a.g) * (c.f - b.f) - (b.f - a.f) * (c.g - b.g); if (Math.abs(cr) < 1e-9) continue; if (sg && Math.sign(cr) !== sg) return false; sg = Math.sign(cr); } return true; };
+    const loops = parts.map((list) => (list.length === 1 && list[0].length <= 4 ? null : outline(list)));
+    // (a merged cell keeps every point it shares with a cell that keeps its pieces, so the two meet edge to edge with no
+    // gap and no lip between them; repeated while a cell that kept more points can no longer merge)
+    const kept = new Set(), merged = parts.map((list, i) => !!loops[i]);
+    for (let pass = 0; pass < 4; pass++) {
+      kept.clear();
+      parts.forEach((list, i) => { if (!merged[i]) for (const p of list) for (const q of p) kept.add(q.key); });
+      let changed = false;
+      parts.forEach((list, i) => {
+        if (!merged[i]) return;
+        const k = courseOfPiece(list[0]), out = loops[i].filter((q) => corner(q, k) || free.has(q.key) || kept.has(q.key));
+        if (out.length < 3 || !convex(out)) { merged[i] = false; changed = true; }
+      });
+      if (!changed) break;
     }
+    parts.forEach((list, i) => {
+      if (!merged[i]) { polys.push(...list); return; }
+      const k = courseOfPiece(list[0]), out = loops[i].filter((q) => corner(q, k) || free.has(q.key) || kept.has(q.key));
+      polys.push(Object.assign(out, { t: list[0].t, lo: Math.max(...list.map((p) => p.lo)), hi: Math.min(...list.map((p) => p.hi)), up: list[0].up }));
+    });
+  }
+  // (one point for one place: points cut in different triangles that land on the same place on the body are one)
+  {
+    const at = new Map(), q5 = (x) => Math.round(x * 2e4);
+    polys = polys.map((p) => Object.assign(p.map((q) => { const key = `${q5(q.p[0])},${q5(q.p[1])},${q5(q.p[2])}`; if (!at.has(key)) at.set(key, q); return at.get(key); }), { t: p.t, lo: p.lo, hi: p.hi, up: p.up }));
+  }
+  // (where two neighbours cut the line between them at different places, as where a limb's links meet the trunk's or
+  // their arc comes round, each takes the other's points along it, so they meet edge to edge: no gap, and no lip)
+  {
+    const ekey = (a, b) => (a.key < b.key ? `${a.key}#${b.key}` : `${b.key}#${a.key}`), count = new Map();
+    for (const p of polys) p.forEach((q, n) => { const kk = ekey(q, p[(n + 1) % p.length]); count.set(kk, (count.get(kk) ?? 0) + 1); });
+    const loose = new Map(), cell = 0.25, grid = new Map(), gk = (p) => p.map((x) => Math.floor(x / cell)).join(',');
+    for (const p of polys) p.forEach((q, n) => { const r = p[(n + 1) % p.length]; if (count.get(ekey(q, r)) === 1) { loose.set(q.key, q); loose.set(r.key, r); } });
+    for (const q of loose.values()) { const k2 = gk(q.p); (grid.get(k2) ?? grid.set(k2, []).get(k2)).push(q); }
+    const near = (a, b) => {
+      const lo = [0, 1, 2].map((j) => Math.floor(Math.min(a.p[j], b.p[j]) / cell)), hi = [0, 1, 2].map((j) => Math.floor(Math.max(a.p[j], b.p[j]) / cell)), out = [];
+      for (let x = lo[0]; x <= hi[0]; x++) for (let y = lo[1]; y <= hi[1]; y++) for (let z = lo[2]; z <= hi[2]; z++) out.push(...(grid.get(`${x},${y},${z}`) ?? []));
+      return out;
+    };
+    polys = polys.map((p) => {
+      const out = [];
+      p.forEach((q, n) => {
+        out.push(q);
+        const r = p[(n + 1) % p.length];
+        if (count.get(ekey(q, r)) !== 1 || (Math.abs(q.f - r.f) < 1e-6 && Math.abs(q.f / h - Math.round(q.f / h)) < 1e-6)) return;
+        const d = sub(r.p, q.p), L2 = dot(d, d);
+        if (L2 < 1e-12) return;
+        const on = near(q, r).filter((m) => m.key !== q.key && m.key !== r.key).map((m) => { const t = dot(sub(m.p, q.p), d) / L2, off = sub(sub(m.p, q.p), mul(d, t)); return { m, t, e: Math.hypot(...off) }; }).filter(({ t, e }) => t > 1e-4 && t < 1 - 1e-4 && e < 2e-4);
+        on.sort((x, y) => x.t - y.t);
+        for (const { m } of on) if (out[out.length - 1].key !== m.key) out.push(m);
+      });
+      return Object.assign(out, { t: p.t, lo: p.lo, hi: p.hi, up: p.up });
+    });
   }
   // each piece in its course: its upper slope or its lower, by its middle
   const seen = new Map(), steps = [];
@@ -264,7 +309,7 @@ export function mailShell(G, rig, o) {
     if (o.edges) { o.edges(a, b, vertOf(a, k), vertOf(b, k), sub(m, c)); continue; }
     const q = [vertOf(a, k), vertOf(b, k), vertOf(b, k, lipTo), vertOf(a, k, lipTo)];
     facing(G, q, sub(m, c));
-    G.polys.push({ v: q, mat: o.lipMat ?? 'shade', part: tag, tag });
+    G.polys.push({ v: q, mat: o.lipMat ?? 'shade', part: tag, tag: `${tag} lip` });
   }
   // a body vertex wholly under the mail: every triangle round it kept and inside its hems
   const tri = new Map();
@@ -275,9 +320,9 @@ export function mailShell(G, rig, o) {
 
 /**
  * The brass row at a hem: the course the hem `lo` (or the top `hi`) cuts, and the next one in where that is cut to less
- * than four tenths of a course; its upper slopes in gold, its lower in rune (the gold's colour plain, glowing enchanted).
+ * than four tenths of a course; its upper slopes in rune (the gold's colour plain, glowing enchanted), its lower in gold.
  */
-export const hemRow = (h, { lo = -Infinity, hi = Infinity } = {}) => (k, up) => (k <= Math.floor((lo + 0.4 * h) / h + 1e-7) || k >= Math.floor((hi - 0.4 * h) / h + 1e-7) ? (up ? 'gold' : 'rune') : null);
+export const hemRow = (h, { lo = -Infinity, hi = Infinity } = {}) => (k, up) => (k <= Math.floor((lo + 0.4 * h) / h + 1e-7) || k >= Math.floor((hi - 0.4 * h) / h + 1e-7) ? (up ? 'rune' : 'gold') : null);
 
 /** A polygon's corners turned so its normal points along `want`. */
 export function facing(G, v, want) { if (dot(newell(G.verts, v), want) < 0) v.reverse(); return v; }
@@ -406,4 +451,20 @@ export function ringAt(S, ax, az, y, n, c, { dy = 0.12, wedge = 20, a0 = 0 } = {
     }
     return [ax + d[0] * (r + c), y, az + d[2] * (r + c)];
   });
+}
+
+/**
+ * A core, as the plate set's (platechest.mjs coreOn): a gold ring of `sides` sides, radius r, standing on the surface at
+ * p (its way out n, its first corner toward `up`) round a domed gem in core (glowing when enchanted).
+ */
+export function coreOn(G, p, n, up, { r, sides = 8, w, tag }) {
+  n = unit(n); const u = unit(sub(up, mul(n, dot(up, n)))), v = cross(n, u), H = r * 0.32;
+  const ring = (rad, lift) => Array.from({ length: sides }, (_, k) => { const a = (k / sides) * 2 * Math.PI; return G.add(add(add(p, mul(n, lift)), add(mul(u, Math.cos(a) * rad), mul(v, Math.sin(a) * rad))), w, tag); });
+  const base = ring(r, 0.01), top = ring(r * 0.84, H), inner = ring(r * 0.68, H * 0.85), tip = G.add(add(p, mul(n, H * 1.45)), w, tag);
+  G.tag = tag;
+  const out = (q) => sub(mul(q.reduce((s, i) => add(s, G.verts[i]), [0, 0, 0]), 1 / q.length), p);
+  for (let k = 0; k < sides; k++) {
+    const j = (k + 1) % sides;
+    for (const [q, mat] of [[[base[k], base[j], top[j], top[k]], 'gold'], [[top[k], top[j], inner[j], inner[k]], 'gold'], [[inner[k], inner[j], tip], 'core']]) G.polys.push({ v: facing(G, q, add(out(q), mul(n, 0.5))), mat, part: tag, tag });
+  }
 }

@@ -4,6 +4,11 @@
  *   node .perf-out/solara.mjs '<json>'   where json is { runs: [{ name, scene, dpr, zoom, hour, frames, step, throttle, profile, pan, groundEvery }] }
  *
  * `profile`: a CPU profile of the measured frames, its self time summed by function, the top 30 printed.
+ * `shot`: the canvas after the run, saved as a PNG at that path.
+ *
+ * SEEDED=1 with FROZEN=1: the same picture every run, so two trees' renderers can be compared pixel for pixel. The
+ * clock starts at the same time, Math.random is seeded, and idle work waits for the driver to hand it a fixed budget
+ * between rounds. SETTLE=<ms>: wait that long after load for the page's pictures before the first frame.
  */
 import { build } from 'esbuild';
 import { chromium } from 'playwright-core';
@@ -30,8 +35,8 @@ try {
     await tab.setContent('<html><body style="margin:0;overflow:hidden"></body></html>');
     await tab.addScriptTag({ content: `(() => {
       const real = performance.now.bind(performance);
-      let t = real();
-      const d0 = Date.now() - t;
+      let t = ${process.env.SEEDED ? 10000 : "real()"};
+      const d0 = ${process.env.SEEDED ? 1.75e12 : "Date.now() - t"};
       // The page's clock moves by \`tick\`, and within a frame by the real time spent in it, so budgets kept in
       // milliseconds a frame (the beasts' allowance, the trees' idle slice) hold as they do in a browser.
       let mark = real();
@@ -43,6 +48,15 @@ try {
       const make = document.createElement.bind(document);
       document.createElement = (name, o) => { if (String(name).toLowerCase() === 'canvas') made++; return make(name, o); };
       window.driven = { tick: (ms) => { t = Math.max(t + ms, last); mark = real(); }, realNow: real, canvases: () => made };
+      if (${process.env.SEEDED ? 'true' : 'false'}) {
+        // The same every run: a seeded Math.random, and idle work held until the driver hands it a fixed budget.
+        let s = 0x2545f491;
+        Math.random = () => { s = (s + 0x6d2b79f5) | 0; let q = Math.imul(s ^ (s >>> 15), 1 | s); q = (q + Math.imul(q ^ (q >>> 7), 61 | q)) ^ q; return ((q ^ (q >>> 14)) >>> 0) / 4294967296; };
+        const idle = new Map(); let next = 1;
+        window.requestIdleCallback = (f) => { idle.set(next, f); return next++; };
+        window.cancelIdleCallback = (id) => { idle.delete(id); };
+        window.driven.idle = () => { let n = 0; while (idle.size && n < 100000) { const [id, f] = idle.entries().next().value; idle.delete(id); f({ timeRemaining: () => 50, didTimeout: false }); n++; } return n; };
+      }
     })();` });
     await tab.addScriptTag({ content: `window.solaraScene = ${JSON.stringify(r.scene)};` });
     const tLoad = Date.now();
@@ -57,7 +71,14 @@ try {
       (window as unknown as { solara: { frames: (...a: unknown[]) => unknown } }).solara.frames(frames, step, zoom, hour, { pan, groundEvery }),
     [frames, step, zoom, hour, r.pan ?? 0, r.groundEvery ?? 0] as const);
     // Warm: a few rounds with breaks between, so the sculpted chunk and the idle bakes land.
-    for (let i = 0; i < (r.warm ?? 4); i++) { await run(30); await tab.waitForTimeout(150); }
+    const idle = () => tab.evaluate(() => (window as unknown as { driven: { idle?: () => number } }).driven.idle?.());
+    // Pictures and fonts the page loads in its own time, in before the first frame (`SETTLE`, ms).
+    if (process.env.SETTLE) { await tab.waitForTimeout(+process.env.SETTLE); await idle(); }
+    for (let i = 0; i < (r.warm ?? 4); i++) {
+      await run(30);
+      await tab.waitForTimeout(150);
+      if (process.env.SEEDED) { await idle(); await tab.waitForTimeout(50); await idle(); }
+    }
     if (r.throttle) await cdp.send('Emulation.setCPUThrottlingRate', { rate: r.throttle });
     if (r.profile) { await cdp.send('Profiler.enable'); await cdp.send('Profiler.setSamplingInterval', { interval: 200 }); await cdp.send('Profiler.start'); }
     const m = await run(n) as Record<string, unknown>;

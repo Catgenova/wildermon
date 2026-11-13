@@ -13,6 +13,8 @@
 //       clips: a frame from each clip the bodies play (idle, walk, the overhead swing in a fight with the maul, the
 //         placeholder in a fight with the long sword, the bench work with the hammer, the hands, the ground), 3/4 and side;
 //       (--only <clip,...>: those clips alone, from 3/4, rear 3/4 and the left side, for a closer look)
+//       glow: chain beside plate, plain and enchanted; legs: the hauberk over --legs cloth|leather|plate|chain, idle and walk;
+//       crotch: the leggings alone, close, idle, walk and knelt;
 //       compare: chain, plate and leather side by side, front and 3/4 at --zoom and at 3, both bodies.
 //     --pieces: the chain pieces worn (all five unless given); the rest of the first outfit stays under what they do not
 //     replace.
@@ -37,11 +39,12 @@ import { DEFAULT_LOOK } from './src/game/look';
 import { CLIPS } from './src/sculpt/anim';
 const BG = '#7d9b5e';
 const PIECES = ${JSON.stringify(pieces)};
+const LEGS = ${JSON.stringify(opt('legs', 'cloth'))};
 const ONLY = ${JSON.stringify(opt('only', '').split(',').filter(Boolean))};
 const SLOT = { coif: ['head', 'chain_coif'], hauberk: ['chest', 'chain_hauberk'], sleeves: ['arms', 'chain_sleeves'], leggings: ['legs', 'chain_leggings'], boots: ['feet', 'chain_boots'] };
 /** The chain pieces worn, in a metal, enchanted or not. */
 const chain = (material, lit = false, only = PIECES) => Object.fromEntries(only.map((k) => [SLOT[k][0], { id: SLOT[k][1], material, ...(lit ? { enchanted: true } : {}) }]));
-const plate = (material, lit = false) => ({ head: { id: 'helm', material }, chest: { id: 'plate_breastplate', material }, arms: { id: 'plate_arms', material }, legs: { id: 'plate_legs', material }, feet: { id: 'plate_boots', material }, ...(lit ? {} : {}) });
+const plate = (material, lit = false) => Object.fromEntries([['head', 'helm'], ['chest', 'plate_breastplate'], ['arms', 'plate_arms'], ['legs', 'plate_legs'], ['feet', 'plate_boots']].map(([s, id]) => [s, { id, material, ...(lit ? { enchanted: true } : {}) }]));
 const leather = () => ({ head: { id: 'leather_cap' }, chest: { id: 'leather_jerkin' }, arms: { id: 'leather_sleeves' }, legs: { id: 'leather_trousers' }, feet: { id: 'leather_boots' } });
 const look = (gender) => ({ ...DEFAULT_LOOK, gender, hair: gender === 'woman' ? 'braid' : 'swept', beard: 'none' });
 const lab = (t, cls = 'l') => { const d = document.createElement('div'); d.className = cls; d.textContent = t; return d; };
@@ -52,7 +55,11 @@ function cell(c) {
   const g = cv.getContext('2d'); g.fillStyle = BG; g.fillRect(0, 0, cw, ch);
   drawFigure(g, cw / 2, ch - 3 * z - 8, z, { phase: c.phase ?? 1.5, moving: !!c.moving, facing: c.facing, swimming: false, working: !!c.working, look: look(c.gender), gear: c.gear,
     ...(c.job ? { job: c.job } : {}), ...(c.act ? { act: c.act } : {}), ...(c.tool ? { tool: c.tool } : {}), ...(c.outfit ? { outfit: c.outfit } : {}) });
-  return cv;
+  if (!c.crop) return cv;
+  // (c.crop: [x0, y0, x1, y1], shares of the cell kept)
+  const [x0, y0, x1, y1] = c.crop.map((f, k) => Math.round(f * (k % 2 ? ch : cw))), o = document.createElement('canvas');
+  o.width = x1 - x0; o.height = y1 - y0; o.getContext('2d').drawImage(cv, x0, y0, o.width, o.height, 0, 0, o.width, o.height);
+  return o;
 }
 function rows(title, list) {
   const root = document.getElementById('root'); root.innerHTML = '';
@@ -120,6 +127,29 @@ window.sheets = {
   },
   close: (zoom, metal) => {
     rows('Close, ' + metal + ', zoom ' + zoom + ': plain and enchanted', [['', [['man', 1, false], ['man', 1, true], ['woman', 0, false], ['woman', 7, true], ['man', 4, false]].map(([gender, f, lit]) => ({ gender, facing: f, zoom, gear: chain(metal, lit), label: lit ? 'enchanted' : 'plain' }))]]);
+  },
+  glow: (zoom, metal) => {
+    // (the same light, side by side: the chain set and the plate set, plain and enchanted)
+    const L = [];
+    for (const z of [zoom, 3]) for (const gender of ['man', 'woman']) L.push([gender + ' z' + z, [[chain, 'chain'], [plate, 'plate']].flatMap(([set, n]) => [[0, false], [0, true], [1, true]].map(([f, lit]) => ({ gender, facing: f, zoom: z, gear: set(metal, lit), label: n + (lit ? ' enchanted' : ' plain') })))]);
+    rows('Enchanted: chain beside plate (' + metal + '), the game renderer', L);
+  },
+  legs: (zoom, metal) => {
+    // (the hauberk and sleeves over one set's legs: --legs cloth (the first outfit's trousers), leather, plate, chain)
+    const legs = { cloth: {}, leather: { legs: { id: 'leather_trousers' } }, plate: { legs: { id: 'plate_legs', material: 'steel' } }, chain: { legs: { id: 'chain_leggings', material: 'steel' } } }[LEGS];
+    const gear = { ...legs, ...chain(metal, false, ['hauberk', 'sleeves']) };
+    const L = [];
+    for (const gender of ['man', 'woman']) for (const mv of [false, true]) L.push([gender + (mv ? ' walk' : ' idle'), VIEWS.map(([f, v]) => ({ gender, facing: f, zoom, moving: mv, phase: mv ? WALK : 1.5, gear, label: v }))]);
+    rows('The hauberk (' + metal + ') over the ' + LEGS + ' legs, zoom ' + zoom, L);
+  },
+  crotch: (zoom, metal) => {
+    // (the leggings alone, nothing over the hips, close: idle, walk, knelt)
+    const outfit = { shawl: false, tunic: false, trousers: false, chainLegs: true, metal: { chainLegs: metal } };
+    const C = [['idle', {}], ['walk', { moving: true, phase: WALK }], ['ground', { working: true, job: 'plant', act: { t: 1.2, length: 3 } }]];
+    const L = [];
+    // (each cell cropped to the hips: the ground's, where the body kneels, lower)
+    for (const gender of ['man', 'woman']) L.push([gender, C.flatMap(([n, o]) => [0, 1, 4].map((f) => ({ gender, facing: f, zoom, outfit, ...o, crop: n === 'ground' ? [0.2, 0.6, 0.8, 1] : gender === 'man' ? [0.3, 0.45, 0.7, 0.75] : [0.3, 0.48, 0.7, 0.78], label: n + ' ' + ['front', '3/4', '', '', 'back'][f] })))]);
+    rows('The leggings alone at the crotch (' + metal + '), zoom ' + zoom, L);
   },
   compare: (zoom) => {
     const sets = [['chain', chain('iron')], ['plate', plate('iron')], ['leather', leather()]];

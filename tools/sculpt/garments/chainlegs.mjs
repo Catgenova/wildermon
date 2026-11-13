@@ -15,7 +15,7 @@
 // Units and axes are the body's: y up (the chin's underside 0), z forward, x the body's left.
 import { add, mul } from '../lowgarment.mjs';
 import { bodySamples } from './platechest.mjs';
-import { hemRow, chainMesh, mailShell, coveredPolys, band, stud, writePiece, linksOf, axisThrough, legBones, ringAt } from './chainmail.mjs';
+import { coreOn, hemRow, chainMesh, mailShell, coveredPolys, band, stud, writePiece, linksOf, axisThrough, legBones, ringAt } from './chainmail.mjs';
 import { COURSE, DESIGN as CHEST, skinAt } from './chainchest.mjs';
 
 /**
@@ -25,8 +25,8 @@ import { COURSE, DESIGN as CHEST, skinAt } from './chainchest.mjs';
  * replace begins; the links' radius round a leg.
  */
 export const DESIGN = {
-  male: { c: 0.05, top: -4.45, band: [-4.55, -4.0], foot: 0.3, garter: { y: -0.75, w: 0.24, c: 0.04 }, boots: 0.42, under: 0.2, links: { rL: 0.62 } },
-  female: { c: 0.045, top: -3.9, band: [-4.0, -3.55], foot: 0.28, garter: { y: -0.7, w: 0.22, c: 0.035 }, boots: 0.42, under: 0.2, links: { rL: 0.55 } },
+  male: { core: 0.1, c: 0.05, top: -4.45, band: [-4.55, -4.0], foot: 0.3, garter: { y: -0.75, w: 0.24, c: 0.04 }, boots: 0.42, under: 0.2, links: { rL: 0.62 } },
+  female: { core: 0.09, c: 0.045, top: -3.9, band: [-4.0, -3.55], foot: 0.28, garter: { y: -0.7, w: 0.22, c: 0.035 }, boots: 0.42, under: 0.2, links: { rL: 0.55 } },
 };
 
 export function buildChainLegs(rig, D = DESIGN[rig.who]) {
@@ -57,7 +57,9 @@ export function buildChainLegs(rig, D = DESIGN[rig.who]) {
     band(G, rows, { axis: (p) => { const [x, z] = ax(p[1]); return [x, p[1], z]; }, t: 0.03, mat: (r) => (r === 1 ? 'rune' : 'leather'), w: (p) => skinAt(rig, p, skin), tag: s > 0 ? 'garter.l' : 'garter.r' });
     // its buckle on the outside
     const k = 4, out = rows[1][s > 0 ? k : 16 - k], [x, z] = ax(gy), n = [out[0] - x, 0, out[2] - z];
-    stud(G, add(out, mul(n, 0.02 / Math.hypot(n[0], n[2]))), n, [0, 0, 1], { a: 0.1, b: 0.13, h: 0.04, inset: 0.55, w: skinAt(rig, out, skin), tag: 'garter buckle' });
+    const w = skinAt(rig, out, skin), nn = mul(n, 1 / Math.hypot(n[0], n[2]));
+    stud(G, add(out, mul(nn, 0.02)), nn, [0, 0, 1], { a: 0.11, b: 0.13, h: 0.035, w, tag: 'garter buckle' });
+    coreOn(G, add(out, mul(nn, 0.05)), nn, [0, 1, 0], { r: D.core, sides: 6, w, tag: 'garter core' });
   }
   G.hides = coveredPolys(rig, (i) => upper.covered(i, 0.02) || lower.covered(i, 0.02) || (upper.covered(i) && lower.covered(i)));
   return G;

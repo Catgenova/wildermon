@@ -37,7 +37,7 @@
  * (`drawPierFeet`): never in among the posts and decks, whose drawing it
  * would break up. The swell and the wakes are laid over the water behind a
  * building on piers before it is drawn, and never under its decks
- * (`Renderer.layWater`); the wild pads and the ripples on a pond keep out
+ * (`WaterPainter.layWater`); the wild pads and the ripples on a pond keep out
  * from under them (`WaterFrame.decked`).
  *
  * Below `DETAIL_FROM` it is shapes and colours: no courses, no rings.

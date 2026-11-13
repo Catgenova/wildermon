@@ -8,6 +8,7 @@ import { PLAN_AREA_MOST, PLAN_UNDO_SECONDS } from '../../game/planarea';
 import { UPDATE_CHECK_MS } from '../update';
 import { JOURNAL_TABS } from './journaltabs';
 import { RESPAWN_ARM_MS } from '../respawn';
+import { BLOCK_SECS } from '../../game/fight';
 import { MAP_LEGEND, SETTLEMENT_BORDER_PX, MAP_ZOOM_MIN } from './minimap';
 import { FAST_DPR, LOW_POWER_FPS, SETTING_DEFAULTS } from '../../game/settings';
 import { BLOSSOM } from '../../audio/music/tracks/blossom';
@@ -4334,6 +4335,22 @@ export const NEWS: News[] = [
       `New: plate in its metal, piece by piece (${METALS.length} metals); cloth and leather in their dye; your enchanted pieces glow.`,
       'Chain and scale: starter clothes until modelled.',
     ],
+  },
+  {
+    n: 543,
+    day: '2026-11-13',
+    lines: () => [
+      'New: chain and scale on the sculpted body, as equipped (was: starter clothes); chain in its metal; enchanted pieces glow.',
+      'New: weapons drawn as equipped: in hand fighting, on the back or at the belt otherwise.',
+      'New: one-handed weapons swung in one hand; bows drawn and loosed, quiver on the back.',
+      'New: shields, tool belt, jewelled pendant and ring drawn as equipped. Pendant: over cloth and leather chests only.',
+      'New: sculpted bodies seated on carts, wagons and boats and astride mounts (was: the flat figure).',
+    ],
+  },
+  {
+    n: 544,
+    day: '2026-11-13',
+    lines: () => [`New: shield block drawn on the blocker, seen by players nearby: shield arm raised for ${BLOCK_SECS} s per blocked blow.`],
   },
   {
     n: 529,

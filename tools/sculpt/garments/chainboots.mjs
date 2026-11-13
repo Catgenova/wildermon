@@ -16,7 +16,7 @@
 //
 // Units and axes are the body's: y up (the chin's underside 0), z forward, x the body's left.
 import { add, mul, unit } from '../lowgarment.mjs';
-import { chainMesh, mailShell, coveredPolys, stud, writePiece, linksOf, axisThrough, legBones, facing, normalsOf } from './chainmail.mjs';
+import { coreOn, chainMesh, mailShell, coveredPolys, stud, writePiece, linksOf, axisThrough, legBones, facing, normalsOf } from './chainmail.mjs';
 import { COURSE, DESIGN as CHEST, skinAt } from './chainchest.mjs';
 import { DESIGN as LEGS } from './chainlegs.mjs';
 
@@ -27,8 +27,8 @@ import { DESIGN as LEGS } from './chainlegs.mjs';
  * links' radius round the leg.
  */
 export const DESIGN = {
-  male: { c: 0.06, sole: 0.2, welt: 0.07, cuff: [-0.06, 0.26], ankle: { y: 0.32, w: 0.2 }, instep: { at: 0.5, w: 0.22 }, strap: 0.05, links: { rL: 0.5 } },
-  female: { c: 0.055, sole: 0.18, welt: 0.06, cuff: [-0.05, 0.24], ankle: { y: 0.3, w: 0.18 }, instep: { at: 0.5, w: 0.2 }, strap: 0.045, links: { rL: 0.44 } },
+  male: { core: 0.1, c: 0.06, sole: 0.2, welt: 0.07, cuff: [-0.06, 0.26], ankle: { y: 0.32, w: 0.2 }, instep: { at: 0.5, w: 0.22 }, strap: 0.05, links: { rL: 0.5 } },
+  female: { core: 0.09, c: 0.055, sole: 0.18, welt: 0.06, cuff: [-0.05, 0.24], ankle: { y: 0.3, w: 0.18 }, instep: { at: 0.5, w: 0.2 }, strap: 0.045, links: { rL: 0.44 } },
 };
 
 export function buildChainBoots(rig, D = DESIGN[rig.who]) {
@@ -81,7 +81,9 @@ export function buildChainBoots(rig, D = DESIGN[rig.who]) {
   for (const s of [1, -1]) {
     const [x, z] = legAxis(s)(ay), p = B.verts.reduce((best, q, i) => (B.part[i] === 'legs' && Math.abs(q[1] - ay) < 0.2 && q[0] * s > 0 && (!best || q[0] * s > best[0] * s) ? q : best), null);
     const n = unit([p[0] - x, 0, p[2] - z]);
-    stud(G, add(p, mul(n, over + 0.015)), n, [0, 0, 1], { a: 0.09, b: 0.12, h: 0.035, inset: 0.55, w: skinAt(rig, p, ['legs']), tag: 'ankle buckle' });
+    const w = skinAt(rig, p, ['legs']);
+    stud(G, add(p, mul(n, over + 0.015)), n, [0, 0, 1], { a: 0.11, b: 0.13, h: 0.035, w, tag: 'ankle buckle' });
+    coreOn(G, add(p, mul(n, over + 0.045)), n, [0, 1, 0], { r: D.core, sides: 6, w, tag: 'ankle core' });
   }
   G.soles = soles;
   // (a body vertex under the boot: every triangle round it the mail's or the sole's, below the top)

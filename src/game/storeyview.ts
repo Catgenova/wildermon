@@ -19,7 +19,7 @@
  * A roof is a storey of its own: its building's level `levels`. Pinned there,
  * the roof is drawn and nothing under it, its tiles still to plan are marked
  * out at its eaves (`Renderer.drawRoofSites`), a pitched roof is clicked on
- * its slopes (`Renderer.roofPick`), and its menu is the roof's work and
+ * its slopes (`Picker.roofPick`), and its menu is the roof's work and
  * nothing else; a storey under it neither draws it nor offers its work. A
  * click on a pitched roof chooses the tile and walks nowhere
  * (`pitchedRoofAt`): a flat one is a terrace, walked on.
