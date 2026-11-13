@@ -2,7 +2,7 @@
 // looked over close and in the rig's poses, with the numbers:
 //
 //   node tools/sculpt/lowscaleshawlshot.mjs --out <dir> [--only alone,views,wire,looks,poses,metrics] [--tag <name>]
-//        [--helm] [--design '{...}']
+//        [--helm] [--clips walk,idle,swing,fight,shoot,ground] [--chest <asset: lowscalechest, lowplatechest, lowchainchest, lowleatherchest, lowtunic>] [--design '{...}']
 //     <tag>-alone.png: the wings alone, front, three-quarter, side, back and from above, both bodies;
 //     <tag>-views.png: worn over the cuirass, front, three-quarter, side, rear three-quarter and back, both bodies
 //       (--helm: the scale helm on);
@@ -18,7 +18,7 @@ import { pathToFileURL } from 'node:url';
 import { build } from 'esbuild';
 import { buildRig, posed, skin, armsOut, axisAngle, mm, tr } from './lowrig.mjs';
 import { skinGarment, crossPairs } from './lowgarment.mjs';
-import { buildScaleShawl, scaleShawlWeights, scaleChestOf, MATS, LOOKS, DESIGN } from './garments/scaleshawl.mjs';
+import { buildScaleShawl, scaleShawlWeights, chestAssetOf, MATS, LOOKS, DESIGN } from './garments/scaleshawl.mjs';
 import { shoot, closeBrowser, lookColour } from './lowgarmentshot.mjs';
 
 const args = process.argv.slice(2);
@@ -41,15 +41,16 @@ function assetMesh(file) {
 }
 const M = {};
 for (const who of ['male', 'female']) {
-  const rig = buildRig(who), chest = scaleChestOf(who);
-  const G = buildScaleShawl(rig, { ...DESIGN[who], ...over }, { chest });
+  // (the chest drawn and measured under the wings: --chest <asset>, the scale cuirass unless named)
+  const rig = buildRig(who), chest = chestAssetOf(opt('chest', 'lowscalechest'), who);
+  const G = buildScaleShawl(rig, { ...DESIGN[who], ...over });
   G.vw = scaleShawlWeights(rig, G);
   const helm = flag('helm') ? assetMesh(`lowscalehelm-${who}.json`) : null;
   M[who] = { rig, G, chest, helm };
   console.log(who, `${G.tris.length} triangles, cleared ${JSON.stringify(G.cleared)}`);
 }
 const bodyMesh = (rig, P, hidden = new Set()) => ({ who: rig.who, P, polys: rig.B.polys.map((p) => p.nv ?? p.v), tris: rig.B.tris.filter((t) => !hidden.has(t.poly)).map((t) => [...t.v, t.poly]), col: rig.B.polys.map((p) => (p.mat === 'skin' ? SKIN : p.mat === 'pupil' ? [0.08, 0.06, 0.06] : [0.22, 0.15, 0.13])) });
-const assetDraw = (rig, A, P, look = 'plain') => ({ who: rig.who, P, polys: A.polys.map((p) => p.v), tris: A.tris.map((t) => [...t.v, t.poly]), col: A.polys.map((p) => lookColour(A[look][A.mats.indexOf(p.mat)])) });
+const assetDraw = (rig, A, P, look = 'plain') => ({ who: rig.who, P, polys: A.polys.map((p) => p.v), tris: A.tris.map((t) => [...t.v, t.poly]), col: A.polys.map((p) => { const i = A.mats.indexOf(p.mat); return (A[look] ?? A.plain) ? lookColour((A[look] ?? A.plain)[i]) : A.colours[i]; }) });
 const wingDraw = (rig, G, P, look = 'plain', edges = false) => ({ who: rig.who, P, polys: G.polys.map((p) => p.v), tris: G.tris.map((t) => [...t.v, t.poly]), col: G.polys.map((p) => lookColour(LOOKS[look][p.mat] ?? { c: MATS[p.mat], kind: 0 })), edges, edgec: [0.12, 0.1, 0.1] });
 
 /* ---- poses ---------------------------------------------------------------------------------------------------------- */
@@ -80,7 +81,7 @@ function clipPose(who, name, t) {
 }
 const keyT = (name, key) => AN.CLIPS[name].poses?.find((p) => p.name === key)?.t;
 /** Every clip checked, sampled through its length: the walk, the idle, the overhead swing, the fight, the shot, the ground. */
-const CLIPS = [['walk', 8], ['idle', 12], ['swing', 16], ['fight', 12], ['shoot', 12], ['ground', 12]];
+const CLIPS = [['walk', 8], ['idle', 12], ['swing', 16], ['fight', 12], ['shoot', 12], ['ground', 12]].filter(([n]) => opt('clips', n).split(',').includes(n));
 function allPoses(who) {
   const { rig } = M[who];
   return [{ id: 'rest', label: 'Rest', pose: {} }, ...testPoses(rig),

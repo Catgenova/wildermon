@@ -8,7 +8,7 @@
 // red-brown leather: the set's own colours (garments/scale.mjs), so worn with the cuirass it takes no material of its
 // own. Skinned to the body's clavicles, spine_03 and upper arms (garments/mantle.mjs mantleWeights), no bones of its own.
 //
-//   buildScaleShawl(rig, design?, { chest }) → { verts, polys: [{ v, mat, part, tag }], tris, part, design, cleared }
+//   buildScaleShawl(rig, design?, { chest, unders }) → { verts, polys: [{ v, mat, part, tag }], tris, part, design, cleared }
 //   scaleShawlWeights(rig, G) → per vertex [[bone, weight], ...] (the body's bones only)
 //
 //   node tools/sculpt/garments/scaleshawl.mjs
@@ -25,7 +25,7 @@
 //
 // Units and axes are the body's: y up (the chin's underside 0), z forward, x the body's left.
 import { readFileSync, existsSync } from 'node:fs';
-import { samplesOf, envelope, drape, atRY, meshOf, orient, trisOf, crossPairs, offPlane, TOL, sub, add, mul, unit, cross, dot } from '../lowgarment.mjs';
+import { samplesOf, envelope, drape, atRY, meshOf, orient, trisOf, crossPairs, closestOnBody, offPlane, TOL, sub, add, mul, unit, cross, dot } from '../lowgarment.mjs';
 import { MATS as SET, LOOKS as SET_LOOKS } from './scale.mjs';
 import { mantleWeights } from './mantle.mjs';
 
@@ -55,7 +55,8 @@ export const LOOKS = Object.fromEntries(['plain', 'enchanted'].map((L) => [L, { 
  *   scales: along each leading edge from u `from`, each `w` long, reaching `v` of the panel across, thickness `t`;
  *   joints: the wrist's radius and spur (leaning from the way out by `rise` up and `lean` out to the side), the ribs' joints' radius at `at` along them; clasp: the claws' root's radius, its reach
  *   across the middle (x past 0), its rise and hook (y), its stand-off in front of the chest;
- *   clear: the local clearance pass (step, iterations, margin over the cuirass); weights: mantleWeights's settings.
+ *   clear: the local clearance pass (step, iterations, margin over the chests); weights: mantleWeights's settings, and
+ *   frontAz (scaleShawlWeights: the front on the cuirass's own weights).
  */
 export const DESIGN = {
   male: {
@@ -70,7 +71,7 @@ export const DESIGN = {
     joints: { K: 0.18, spurK: 0.55, rise: 1.2, lean: 0.35, r: 0.09, at: 0.5 },
     clasp: { r: 0.11, across: 0.16, rise: 0.1, hook: 0.24, gap: 0.15, off: 0.06 },
     clear: { step: 0.012, it: 60, margin: 0.02 },
-    weights: { smooth: 4, chestNear: 2, chestSurf: 'radial', chestSmooth: 2 },
+    weights: { smooth: 4, chestNear: 2, chestSurf: 'radial', chestSmooth: 2, frontAz: 45 },
   },
   female: {
     z0: -0.14, yA: -0.3, depth: 3.5, OUT: 0.06, STEP: 3,
@@ -84,23 +85,33 @@ export const DESIGN = {
     joints: { K: 0.16, spurK: 0.48, rise: 1.2, lean: 0.35, r: 0.08, at: 0.5 },
     clasp: { r: 0.095, across: 0.14, rise: 0.09, hook: 0.21, gap: 0.13, off: 0.06 },
     clear: { step: 0.012, it: 60, margin: 0.02 },
-    weights: { smooth: 4, chestNear: 2, chestSurf: 'radial', chestSmooth: 2 },
+    weights: { smooth: 4, chestNear: 2, chestSurf: 'radial', chestSmooth: 2, frontAz: 45 },
   },
 };
 
 /**
- * The scale cuirass the wings are worn over, at rest (src/sculpt/assets/lowscalechest-<who>.json, or one in the directory
- * SCALE_CHEST_DIR names): { verts, tris, polys, vw (its weights), hides, plain, mats }, or null where it is not there.
+ * A chest piece the wings are worn over, at rest (src/sculpt/assets/<name>-<who>.json, or one in the directory
+ * SCALE_CHEST_DIR names): { verts, tris, polys, vw (its weights), hides, plain, enchanted, mats, colours }, or null where
+ * it is not there.
  */
-export function scaleChestOf(who) {
-  const dir = process.env.SCALE_CHEST_DIR ?? new URL('../../../src/sculpt/assets/', import.meta.url).pathname, file = `${dir}/lowscalechest-${who}.json`;
+export function chestAssetOf(name, who) {
+  const dir = process.env.SCALE_CHEST_DIR ?? new URL('../../../src/sculpt/assets/', import.meta.url).pathname, file = `${dir}/${name}-${who}.json`;
   if (!existsSync(file)) return null;
   const A = JSON.parse(readFileSync(file, 'utf8')), verts = [], tris = [];
   for (let i = 0; i < A.verts.length; i += 3) verts.push(A.verts.slice(i, i + 3));
   for (let i = 0; i < A.tris.length; i += 4) tris.push({ v: A.tris.slice(i, i + 3), poly: A.tris[i + 3] });
   const polys = A.polys.map(([v, m]) => ({ v, mat: A.mats[m] })), vw = A.weights.map((w) => { const o = []; for (let k = 0; k < w.length; k += 2) o.push([w[k], w[k + 1]]); return o; });
-  return { verts, tris, polys, vw, hides: A.hides ?? [], plain: A.plain, enchanted: A.enchanted, mats: A.mats };
+  return { name, verts, tris, polys, vw, hides: A.hides ?? [], plain: A.plain, enchanted: A.enchanted, mats: A.mats, colours: A.colours };
 }
+/** The scale cuirass, the chest the wings' weights follow. */
+export const scaleChestOf = (who) => chestAssetOf('lowscalechest', who);
+/**
+ * Every chest piece a shawl is worn over (the game draws a worn shawl over whatever chest is worn, or the tunic with none):
+ * the cuirass, the plate breastplate, the hauberk, the leather jerkin and the first outfit's tunic; the wings are fitted
+ * over all of them at once.
+ */
+export const CHESTS = ['lowscalechest', 'lowplatechest', 'lowchainchest', 'lowleatherchest', 'lowtunic'];
+export const chestsOf = (who) => CHESTS.map((n) => chestAssetOf(n, who)).filter(Boolean);
 
 const P2 = { add: (a, b) => [a[0] + b[0], a[1] + b[1]], sub: (a, b) => [a[0] - b[0], a[1] - b[1]], mul: (a, k) => [a[0] * k, a[1] * k], len: (a) => Math.hypot(a[0], a[1]) };
 /** The outward normal (away from the axis, or up) of a segment a→b in (r, y). */
@@ -111,9 +122,9 @@ const lerp2 = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
  * The body's line down from the neck in every column (STEP degrees round): the drape over the body and the cuirass
  * grown by OUT from beside the collar at yA, `depth` down; and pos(deg, s, off), the point s along it and off it.
  */
-export function linesOf(rig, D, chest) {
+export function linesOf(rig, D, unders = []) {
   const { z0, STEP } = D, NC = Math.round(360 / STEP);
-  const S = [...samplesOf(rig.B), ...(chest ? samplesOf({ tris: chest.tris }, chest.verts) : [])];
+  const S = [...samplesOf(rig.B), ...unders.flatMap((u) => samplesOf({ tris: u.tris }, u.verts))];
   const cols = [];
   for (let c = 0; c < NC; c++) {
     const deg = c * STEP, E = envelope(S, z0, deg, STEP, D.OUT, D.yA - D.depth, D.yA + 0.06);
@@ -158,8 +169,8 @@ function knob(G, c, ax, r, a, b, n, mat, part) {
   for (let j = 0; j < n; j++) { const k = (j + 1) % n; G.poly([ring[j], ring[k], top], mat, part); G.poly([ring[k], ring[j], bot], mat, part); }
 }
 
-export function buildScaleShawl(rig, D = DESIGN[rig.who], { chest = scaleChestOf(rig.who) } = {}) {
-  const { pos, sOfY } = linesOf(rig, D, chest);
+export function buildScaleShawl(rig, D = DESIGN[rig.who], { chest = scaleChestOf(rig.who), unders = chestsOf(rig.who) } = {}) {
+  const { pos, sOfY } = linesOf(rig, D, unders);
   const G = meshOf();
   G.nrm = [];   // per vertex: the way out (for the clearance)
   G.grp = [];   // per vertex: its piece (moved whole by the clearance), or -1
@@ -314,7 +325,7 @@ export function buildScaleShawl(rig, D = DESIGN[rig.who], { chest = scaleChestOf
     }
   }
   orient(G, (p) => [p[0], 0, p[2] - D.z0]);
-  G.cleared = clearLocally(G, chest, D);
+  G.cleared = clearLocally(G, unders, D);
   G.tris = trisOf(G);
   G.design = D;
   G.chest = chest;
@@ -322,19 +333,20 @@ export function buildScaleShawl(rig, D = DESIGN[rig.who], { chest = scaleChestOf
 }
 
 /**
- * Where the cuirass (grown by `margin`) or the body passes through the wings, the wings' vertices there pushed out a step
+ * Where a chest piece worn under (grown by `margin`) passes through the wings, the wings' vertices there pushed out a step
  * at a time along their way out (a piece, a bone, a scale, a joint or a claw, moved whole), until nothing crosses.
  */
-function clearLocally(G, chest, D) {
+function clearLocally(G, unders, D) {
   const C = D.clear, moved = new Float32Array(G.verts.length);
-  if (!chest) return null;
-  const grown = chest.verts.map((p) => { const r = Math.hypot(p[0], p[2] - D.z0) || 1; return [p[0] + (p[0] / r) * C.margin, p[1] + C.margin * 0.3, p[2] + ((p[2] - D.z0) / r) * C.margin]; });
+  if (!unders.length) return null;
+  const grow = (p) => { const r = Math.hypot(p[0], p[2] - D.z0) || 1; return [p[0] + (p[0] / r) * C.margin, p[1] + C.margin * 0.3, p[2] + ((p[2] - D.z0) / r) * C.margin]; };
+  const meshes = unders.flatMap((u) => [[u.verts.map(grow), u.tris], [u.verts, u.tris]]);
   const byGrp = new Map();
   G.grp.forEach((g, i) => { if (g >= 0) (byGrp.get(g) ?? byGrp.set(g, []).get(g)).push(i); });
   const wayOf = (i) => G.nrm[i] ?? unit([G.verts[i][0], 0, G.verts[i][2] - D.z0]);
   let it = 0, left = 0;
   for (; it < C.it; it++) {
-    const T = trisOf(G), cp = [...crossPairs(G.verts, T, grown, chest.tris), ...crossPairs(G.verts, T, chest.verts, chest.tris)];
+    const T = trisOf(G), cp = meshes.flatMap(([V, TT]) => crossPairs(G.verts, T, V, TT));
     left = cp.length;
     if (!cp.length) break;
     const bad = new Set(), groups = new Set();
@@ -351,16 +363,30 @@ function clearLocally(G, chest, D) {
 /**
  * The wings' weights: the plate mantle's (garments/mantle.mjs mantleWeights: the body's at the closest point taken onto
  * spine_03, the clavicles and the upper arms, smoothed, the arms' share capped and falling off toward the front and the
- * back, blended near the cuirass into the cuirass's own), each joint, claw and scale rigid on its mean.
+ * back, blended near the cuirass into the cuirass's own; at the front the cuirass's own), each joint, claw and scale
+ * rigid on its mean.
  */
 export function scaleShawlWeights(rig, G) {
   const D = G.design;
   const parts = [...new Set(G.part)].filter((p) => /^(joint|wrist|claw)_/.test(p));
   const g = { ...G, design: { z0: D.z0, ...D.weights }, clasps: parts.map((part) => ({ part })) };
   const vw = mantleWeights(rig, g, { chest: G.chest, armMax: D.weights.armMax ?? 0.45 });
-  // (each scale and each bone's piece kept whole where it is small: the scales rigid on their mean)
+  // (frontAz: within this many degrees of the front, the leading edge, its scales and the claws lie on the chest: they
+  // take the cuirass's own weights at its closest point, fading back to the mantle's over the next `frontFade`)
+  const FA = D.weights.frontAz, FF = D.weights.frontFade ?? 15;
+  if (FA != null && G.chest) G.verts.forEach((p, i) => {
+    const az = Math.abs(Math.atan2(p[0], p[2] - D.z0)) * 180 / Math.PI, t = Math.min(1, Math.max(0, (FA + FF - az) / FF));
+    if (t <= 0) return;
+    const h = closestOnBody(G.chest.verts, G.chest.tris, p), m = {};
+    G.chest.tris[h.tri].v.forEach((j, k) => { for (const [b, x] of G.chest.vw[j]) m[b] = (m[b] ?? 0) + t * h.w[k] * x; });
+    for (const [b, x] of vw[i]) m[b] = (m[b] ?? 0) + (1 - t) * x;
+    const l = Object.entries(m).map(([b, x]) => [+b, x]).filter(([, x]) => x > 1e-3).sort((a, b) => b[1] - a[1]).slice(0, 4), tt = l.reduce((a, [, x]) => a + x, 0);
+    vw[i] = l.map(([b, x]) => [b, x / tt]);
+  });
+  // (each scale, joint and claw kept whole: rigid on its mean)
   const byGrp = new Map();
   G.grp.forEach((k, i) => { if (k >= 0 && /^scales_/.test(G.part[i])) (byGrp.get(k) ?? byGrp.set(k, []).get(k)).push(i); });
+  G.part.forEach((p, i) => { if (/^(joint|wrist|claw)_/.test(p)) (byGrp.get(p) ?? byGrp.set(p, []).get(p)).push(i); });
   for (const ids of byGrp.values()) {
     const m = {};
     for (const i of ids) for (const [b, x] of vw[i]) m[b] = (m[b] ?? 0) + x / ids.length;

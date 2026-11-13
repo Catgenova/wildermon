@@ -11,6 +11,8 @@
 //     clips: the one-handed fight (a sword), the overhead swing (a long sword), the bow's draw, the work at the ground
 //       (kneeling) and riding (astride, the reins in hand, no mount drawn), each at its key frames, three-quarter and rear
 //       three-quarter (--clips fight,swing,bow,kneel,riding for some);
+//     chests: the wings over each chest piece (none: the tunic; the leather jerkin, the plate breastplate, the chain
+//       hauberk, the scale cuirass), three-quarter and back;
 //     walk: the walk and the idle, front, side and back.
 //   --crop x0,y0,x1,y1: every cell cut to that box (shares of the cell), for a close look.
 // Playwright's Chromium (/opt/pw-browsers/chromium) with software GL, one device pixel a canvas pixel.
@@ -54,6 +56,11 @@ const SETS = {
     // (--clips fight,swing,bow,kneel,riding: only those; a kneel's or a rider's cell cut lower, where the body is)
     const want = opt('clips', 'fight,swing,bow,kneel,riding').split(','), low = [0.1, 0.4, 0.9, 1];
     return ['man', 'woman'].flatMap((gender) => [1, 3].map((facing) => C.filter(([n]) => want.includes(n.split(' ')[0])).map(([n, p]) => ({ zoom: Z, gender, facing, ...SCALE(false), pose: p, label: `${gender} ${n}`, ...(/kneel/.test(n) ? { crop: low } : /riding/.test(n) ? { dy: 16 } : {}) }))));
+  },
+  chests: () => {
+    // (the wings over each chest piece the game draws them over: none, the tunic, being the first outfit's)
+    const C = [['tunic (no chest)', {}], ['leather jerkin', { leatherChest: true }], ['plate breastplate', { plateChest: true }], ['chain hauberk', { chainChest: true }], ['scale cuirass', { scaleChest: true }]];
+    return ['man', 'woman'].flatMap((gender) => [[1, '3/4'], [4, 'back']].map(([facing, f]) => C.map(([n, o]) => ({ zoom: Z, gender, facing, outfit: { scaleShawl: true, ...o }, label: `${gender} ${n} ${f}` }))));
   },
   walk: () => ['man', 'woman'].map((gender) => [[0, 0.4], [2, 0.4], [2, 2.0], [4, 2.0], [1, 3.0]].map(([facing, phase], k) => ({ zoom: Z, gender, facing, ...SCALE(false), moving: k < 4, phase, label: `${gender} ${k < 4 ? 'walk' : 'idle'}` }))),
 };
