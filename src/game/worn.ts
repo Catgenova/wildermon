@@ -14,7 +14,7 @@
  * out of a table we wrote, or a colour that is exactly `#rrggbb`. A thing we
  * do not know, or one that is not worn where it says it is, draws nothing.
  */
-import type { GearLook, GearPiece } from '../render/figure';
+import type { GearLook, GearPiece } from '../contract/gear';
 import { SLOTS, slotOf, type Slot } from './gear';
 import { materialOf } from './materials';
 import { dyeHexOf, isHex } from './dyestuffs';

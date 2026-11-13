@@ -1,4 +1,4 @@
-import type { GearLook, GearPiece } from '../render/figure';
+import type { GearLook, GearPiece } from '../contract/gear';
 import type { Look } from '../game/look';
 
 /**

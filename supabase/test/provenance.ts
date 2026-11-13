@@ -118,10 +118,14 @@ const top = (): number => Number(psql('select coalesce(max(id), 0) from item;'))
 
 /* ---- origin --------------------------------------------------------------------- */
 console.log('--- origin');
+// Built by the migrations, the rows from before read it off the column's missing value; restored from a dump of that
+// (the CI shards: pg_restore), they carry it written in. Either way no default, and no row without an origin.
+const missing = psql(`select coalesce(attmissingval::text, '') from pg_attribute where attrelid = 'public.item'::regclass and attname = 'origin';`);
 check('every row from before reads before: the column\'s value for rows older than it',
-  psql(`select attmissingval::text from pg_attribute where attrelid = 'public.item'::regclass and attname = 'origin';`) === '{before}'
+  (missing === '{before}' || missing === '')
     && psql(`select pg_get_expr(adbin, adrelid) from pg_attrdef d join pg_attribute a on a.attrelid = d.adrelid and a.attnum = d.adnum
-              where d.adrelid = 'public.item'::regclass and a.attname = 'origin';`) === '');
+              where d.adrelid = 'public.item'::regclass and a.attname = 'origin';`) === ''
+    && psql(`select count(*) from item where origin is null;`) === '0', missing);
 check('a thing given by a job of the clock is the clock\'s', origins(`def = 'saw'`).join(' ') === 'clock|give|-',
   origins(`def = 'saw'`).join(' '));
 
