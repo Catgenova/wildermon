@@ -12,6 +12,10 @@
   {
    "id": "bob",
    "name": "Bob"
+  },
+  {
+   "id": "crew",
+   "name": "Crew cut"
   }
  ]
 }

@@ -13,12 +13,15 @@ import { buildBraid, carve as carveBraid } from './lowbraid.mjs';
 import BRAID from './hairs/braid.mjs';
 import { bobOf } from './lowbob.mjs';
 import BOB from './hairs/bob.mjs';
+import { crewOf } from './lowcrew.mjs';
+import CREW from './hairs/crew.mjs';
 
 const braidHull = carveBraid();
 const BUILDERS = {
   ...Object.fromEntries(Object.entries(STYLES).map(([id, st]) => [id, { name: st.name, build: (rig) => buildHair(rig, st, carve(id)) }])),
   braid: { name: BRAID.name, build: (rig) => buildBraid(rig, BRAID, braidHull) },
   bob: { name: BOB.name, build: (rig) => bobOf(rig, BOB) },
+  crew: { name: CREW.name, build: (rig) => crewOf(rig, CREW) },
 };
 
 const out = { built: 'node tools/sculpt/lowhair.mjs --asset (tools/sculpt/lowhair.mjs gameHair)' };
