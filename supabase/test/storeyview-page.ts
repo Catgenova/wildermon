@@ -91,8 +91,10 @@ renderer.camera.zoom = 1.5;
 /** The storeys of the walls drawn in the last frame, by building: every way a wall is put down (`drawWall`, `guardedWall`). */
 const drawn: Array<{ building: number; level: number }> = [];
 {
-  const own = renderer as unknown as Record<string, (...a: unknown[]) => unknown>;
+  // `drawWall` is the renderer's wall painter's (`walldraw.ts`), `guardedWall` the renderer's own.
+  const r = renderer as unknown as Record<string, (...a: unknown[]) => unknown> & { walls: Record<string, (...a: unknown[]) => unknown> };
   for (const name of ['drawWall', 'guardedWall']) {
+    const own = name === 'drawWall' ? r.walls : r;
     const fn = own[name];
     own[name] = function (this: unknown, ...a: unknown[]): unknown {
       const w = a[0] as Wall;
