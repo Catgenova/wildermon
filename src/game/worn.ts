@@ -49,7 +49,6 @@ export function sameWorn(a: WornWire, b: WornWire): boolean {
 export function gearFrom(raw: unknown): GearLook | undefined {
   if (!raw || typeof raw !== 'object') return undefined;
   const out: GearLook = {};
-  let any = false;
   for (const slot of SLOTS) {
     // A bag on the back or at the side is not drawn on the figure.
     if (slot === 'back' || slot === 'side') continue;
@@ -63,9 +62,9 @@ export function gearFrom(raw: unknown): GearLook | undefined {
     const hex = typeof v[3] === 'string' && v[3].length <= 24 ? dyeHexOf(v[3]) : null;
     const dye = isHex(hex) ? hex : undefined;
     out[slot] = { id: v[0], rare: rare || undefined, material, dye };
-    any = true;
   }
-  return any ? out : undefined;
+  // Nothing on is a body in its undergarment (`outfitOf`), not one whose gear is not known.
+  return out;
 }
 
 /**

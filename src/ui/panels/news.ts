@@ -4417,6 +4417,11 @@ export const NEWS: News[] = [
     ],
   },
   {
+    n: 576,
+    day: '2026-11-13',
+    lines: () => ['Changed: an empty chest, legs or feet slot shows the undergarment there, on you and on other players (was: cloth tunic, trousers and shoes).'],
+  },
+  {
     n: 575,
     day: '2026-11-13',
     lines: () => ['Changed: the flat player figure only in a browser without WebGL2; elsewhere a body not yet loaded is not drawn (was: drawn flat until loaded).'],

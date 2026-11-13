@@ -1304,7 +1304,8 @@ const SHAWL_GARMENTS: ReadonlySet<OutfitKey> = new Set<OutfitKey>(['shawl', 'lea
  */
 export function outfitOf(gear: FigurePose['gear']): NonNullable<FigurePose['outfit']> {
   const dye: Partial<Record<DyedPiece, string>> = {};
-  const out: NonNullable<FigurePose['outfit']> = { shawl: false }, enchanted: NonNullable<NonNullable<FigurePose['outfit']>['enchanted']> = {}, metal: Partial<Record<PlatePiece, string>> = {};
+  // A slot with nothing in it is the undergarment there (`tools/sculpt/lowunder.mjs`), not the first outfit's cloth piece.
+  const out: NonNullable<FigurePose['outfit']> = { shawl: false, tunic: false, trousers: false, boots: false, hood: false }, enchanted: NonNullable<NonNullable<FigurePose['outfit']>['enchanted']> = {}, metal: Partial<Record<PlatePiece, string>> = {};
   const chestKey = gear?.chest ? ITEM_PIECES[gear.chest.id]?.key : undefined;
   for (const slot of ['shawl', 'chest', 'head', 'legs', 'feet'] as const) {
     const piece = gear?.[slot], to = piece ? ITEM_PIECES[piece.id] : undefined;
