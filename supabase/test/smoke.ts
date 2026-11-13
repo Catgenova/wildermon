@@ -1100,13 +1100,14 @@ async function main(): Promise<void> {
        * answer: whether the island stopped and whether it *said* it stopped
        * are two different questions, and this is the one that was wrong.
        */
-      await drain(id, uid);
+      // (what was still running before, and the island's own words if it refused: a failure here says why)
+      const drained = await drain(id, uid);
       const many = await island.act('dig', { x: cx, y: cy, cx, cy }, 8);
       const { data: mid } = await supabase().from('player').select('act,act_left,act_queue')
         .eq('world_id', id).eq('uid', uid).single();
       const busy = mid as { act: string | null; act_left: number | null } | null;
       check('eight goes of digging are in hand', many.started && busy?.act === 'dig',
-        `${busy?.act ?? 'nothing'}, ${busy?.act_left ?? 0} to go`);
+        `${busy?.act ?? 'nothing'}, ${busy?.act_left ?? 0} to go${many.started ? '' : `; refused: ${'why' in many ? many.why : '?'}`}${drained < 0 ? '; the head never emptied before' : ''}`);
       await island.stop();
       const { data: stopped } = await supabase().from('player').select('act,act_left,act_ends,act_queue')
         .eq('world_id', id).eq('uid', uid).single();
