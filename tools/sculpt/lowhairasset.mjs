@@ -16,6 +16,8 @@ import { bobOf } from './lowbob.mjs';
 import BOB from './hairs/bob.mjs';
 import { pompOf } from './lowpomp.mjs';
 import POMP from './hairs/pompadour.mjs';
+import { buildTopknot } from './lowtopknot.mjs';
+import TOPKNOT from './hairs/topknot.mjs';
 
 const braidHull = carveBraid();
 const BUILDERS = {
@@ -23,6 +25,7 @@ const BUILDERS = {
   braid: { name: BRAID.name, build: (rig) => buildBraid(rig, BRAID, braidHull) },
   bob: { name: BOB.name, build: (rig) => bobOf(rig, BOB) },
   pompadour: { name: POMP.name, build: (rig) => pompOf(rig, POMP) },
+  topknot: { name: TOPKNOT.name, build: (rig) => buildTopknot(rig, TOPKNOT) },
 };
 
 const out = { built: 'node tools/sculpt/lowhair.mjs --asset (tools/sculpt/lowhair.mjs gameHair)' };
