@@ -43,7 +43,7 @@ import { pitchedRoofAt } from './game/storeyview';
 import { warmMasonry } from './render/masonry';
 import { warmMeadow } from './render/meadow';
 import { Renderer, skyWash, sunAt, type Pick } from './render/renderer';
-import { FIGURE_TOP } from './render/figure';
+import { canDrawBodies, FIGURE_TOP, NO_WEBGL } from './render/figure';
 import { Sound } from './audio/sound';
 import { Music } from './audio/music/music';
 import { tracksFor } from './audio/music/playlist';
@@ -85,7 +85,7 @@ import { DAY_SECONDS } from './game/game';
 import { TORCH_BURN } from './game/light';
 import { findPath } from './world/pathfinding';
 import { waterRgb } from './render/water';
-import { drawHeadshot, drawPortrait } from './render/sprites';
+import { drawPortrait } from './render/sprites';
 import { followScreen, pageZoom, setUiSize, unzoomPage } from './ui/screen';
 import { applyLook } from './ui/theme';
 import { STALE_BUILD, StaleBuild } from './version';
@@ -183,9 +183,13 @@ const boot = ((): { say: (phase: BootPhase, detail?: string, at?: number, of?: n
  * no longer takes (`StaleBuild`) says so instead, with a Reload that fetches the current one.
  */
 function cannotReach(why: string, stale = false): void {
+  cannotRun(stale ? STALE_BUILD : `Can't reach the island: ${why}`, stale);
+}
+/** What stops the page said on the boot card, with a Retry, or with `stale` a Reload that fetches the current build. */
+function cannotRun(said: string, stale = false): void {
   const card = document.querySelector('#boot .boot-card');
   const line = card?.querySelector('.boot-now span');
-  if (line) line.textContent = stale ? STALE_BUILD : `Can't reach the island: ${why}`;
+  if (line) line.textContent = said;
   const clock = card?.querySelector('.boot-now b');
   if (clock) clock.textContent = '';
   const again = document.createElement('button');
@@ -241,6 +245,12 @@ function playingElsewhere(stop?: () => void): void {
 }
 // Before anything that could throw: what goes wrong from here on is written down (see `errors.ts`).
 watchErrors();
+// No WebGL2, no bodies (`canDrawBodies`): said on the boot card with a Retry, before the island is asked for anything.
+if (!canDrawBodies()) {
+  boot.stop();
+  cannotRun(NO_WEBGL);
+  await new Promise<never>(() => {});
+}
 // This tab's seat on the account, before the first call (`holdSeat`).
 holdSeat();
 const started = await startIsland(params, boot.say, (stones) => pickStone(document.querySelector('#boot .boot-card'), stones)).catch((e: unknown) => {
@@ -357,7 +367,7 @@ declare global {
       boot?: Partial<Record<BootPhase, number>> };
   }
 }
-Object.assign(window as unknown as Record<string, unknown>, { catchFish, windAt, windFrom, windWord, pointOfSail, sailWord, favourCap, prayerWorth, PATHS, sittingWorth, weaponDamage, loopsFor, BELT_MAX, coaxBonus, COAX_STEP, COAX_LAPSE, rollsAt, PER_ROLL, cropSprite, creatureLines, tameChance, knackLands, knackBonus, KNACK_ODDS, KNACK_CAP, KNACK_BONUS, KNACK_HOME, boonTime, knacksOf, BOON_BONUS, tableMul, upkeepMul, fedness, balance, NUTRIENTS, ITEM_DEFS, TILE_DEFS, groundRoll, crateName, furnitureName, trapName, postName, lanternReach, candleBurn, lanternState, sunAt, skyWash, puffAge, puffOf, PUFFS, PUFF_LIFE, PUFF_RISE, DUST_LIFE, FLOAT_LIFE, FLOAT_RISE, MERGE_WINDOW, Floaters, skyAt, unknownInk, findPath, waterRgb, CROPS, DAY_SECONDS, TORCH_BURN, WORLD_PACE, drawPortrait, drawHeadshot, LOOK_TABLES, cleanLook, randomLook, HAZE_MAX, HAZE_REACH, ROCK_VARIANTS, METALS, smeltableIn, smeltSeconds, needsIron, creatureSkills, tileUses });
+Object.assign(window as unknown as Record<string, unknown>, { catchFish, windAt, windFrom, windWord, pointOfSail, sailWord, favourCap, prayerWorth, PATHS, sittingWorth, weaponDamage, loopsFor, BELT_MAX, coaxBonus, COAX_STEP, COAX_LAPSE, rollsAt, PER_ROLL, cropSprite, creatureLines, tameChance, knackLands, knackBonus, KNACK_ODDS, KNACK_CAP, KNACK_BONUS, KNACK_HOME, boonTime, knacksOf, BOON_BONUS, tableMul, upkeepMul, fedness, balance, NUTRIENTS, ITEM_DEFS, TILE_DEFS, groundRoll, crateName, furnitureName, trapName, postName, lanternReach, candleBurn, lanternState, sunAt, skyWash, puffAge, puffOf, PUFFS, PUFF_LIFE, PUFF_RISE, DUST_LIFE, FLOAT_LIFE, FLOAT_RISE, MERGE_WINDOW, Floaters, skyAt, unknownInk, findPath, waterRgb, CROPS, DAY_SECONDS, TORCH_BURN, WORLD_PACE, drawPortrait, LOOK_TABLES, cleanLook, randomLook, HAZE_MAX, HAZE_REACH, ROCK_VARIANTS, METALS, smeltableIn, smeltSeconds, needsIron, creatureSkills, tileUses });
 window.wildermon = { game, renderer, camera, sound, ACTIONS, RECIPES, FURNITURE, MATERIALS, RELICS, TRAITS, TITLES, DYES, WOUND_KINDS, TRAPS, BRIDGES, bridgeDone, BAITS, FISH_IDS: FISH.map((f) => f.id), SPECIES, WEAPON_BY_ID, itemName, arch: { partsMissing, piecesHeld }, ui, island,
   spell: (id: string, at?: CastAt, opts?: { from?: { x: number; y: number }; companion?: number }) => renderer.playSpell(id, at, opts), spells: ALL_SPELL_IDS };
 

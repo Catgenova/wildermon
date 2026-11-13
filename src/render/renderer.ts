@@ -3851,7 +3851,7 @@ export class Renderer {
    */
   render(dt: number): void {
     const cam = this.camera;
-    // Closer once the sculpted bodies have loaded; until then, the flat figure's ceiling.
+    // Closer once the sculpted bodies have loaded; until then, `MAX_ZOOM`.
     cam.closest(sculptedReady() ? SCULPTED_MAX_ZOOM : MAX_ZOOM);
     const cx = cam.cx, cy = cam.cy;
     const unit = cam.zoom * this.canvas.dpr;
@@ -3883,7 +3883,7 @@ export class Renderer {
       this.forgetHems();
     }
     this.timings.set(this.timed, this.game.settings.timings);
-    sculptedFigures(true);
+    sculptedFigures('island');
     this.timings.begin();
     try {
       this.renderFrame(dt);
