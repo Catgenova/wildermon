@@ -79,6 +79,13 @@ const LEFT_OF: Readonly<Record<string, string>> = { work: 'work-left', fight: 'f
 };
 /** Whether work is done left-handed from where it is seen: as the flat figure (facings three and seven). */
 const lefty = (facing: number): boolean => { const f = ((Math.round(facing) % 8) + 8) % 8; return f === 3 || f === 7; };
+/**
+ * The facings a clip is played left-handed from where they are not the flat figure's (`lefty`): those that turn the body's
+ * right side away from the viewer (it faces left: five, six and seven), so what is worked at with the right hand (the saw
+ * and its sawhorse, the rod, the net) stays on the side seen.
+ */
+const LEFT_FACINGS: Readonly<Record<string, readonly number[]>> = { saw: [5, 6, 7], fish: [5, 6, 7], net: [5, 6, 7] };
+const leftyFor = (name: string, facing: number): boolean => { const at = LEFT_FACINGS[name]; return at ? at.includes(((Math.round(facing) % 8) + 8) % 8) : lefty(facing); };
 
 /** The jobs done with the overhead swing whatever is in hand: the pickaxe's. */
 const SWING_JOBS = new Set(['mine', 'chip_corner', 'mine_cellar']);
@@ -163,7 +170,7 @@ export const walkPhase = (c: Clip, t: number, body: 'man' | 'woman', gait = 0): 
  */
 export function clipFor(pose: FigurePose, body: 'man' | 'woman' = pose.look?.gender === 'woman' ? 'woman' : 'man'): { clip: Clip; t: number } | undefined {
   const s = ON ? stateOf(pose) : undefined, name = s === 'work' ? workClipOf(pose.job) : s === 'fight' && shoots(pose) ? SHOOT.name : s === 'fight' && ONE_HAND(pose) ? 'fight' : s && CLIP_OF[s];
-  const clip = name ? CLIPS[(lefty(pose.facing) && LEFT_OF[name]) || name] : undefined;
+  const clip = name ? CLIPS[(leftyFor(name, pose.facing) && LEFT_OF[name]) || name] : undefined;
   if (!clip) return undefined;
   if (s === 'walk') return { clip, t: walkTime(clip, pose.phase, body, pose.gait ?? 0) };
   // a go of a timed job: fitted to its length (the holds stretched, the blow kept: `fitTime`), a fight's swing one blow

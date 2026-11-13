@@ -6,7 +6,8 @@
  * CLIP_OF_TOOL).
  *
  * Feet planted, the left ahead. The body faces the water: the renderer turns it to the spot the net goes into
- * (`../../../render/renderer.ts`). Played mirrored, left-handed, from the facings the flat figure works left-handed from.
+ * (`../../../render/renderer.ts`). Played mirrored, left-handed, from the facings that turn the body's right side away from the viewer (`../index.ts`
+ * LEFT_FACINGS).
  */
 import type { Clip } from '../clip';
 import { mirrorClip, poseToPose, type Beat, type KeyPose } from '../author';

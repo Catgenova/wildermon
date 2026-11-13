@@ -8,8 +8,8 @@
  * (the cut) leans the trunk in behind the fist, the shoulders turned a little after it; the pull draws the elbow back
  * past the ribs, the trunk let back. The right fist is reached along the stroke (`Clip.hands`), the blade's way and the
  * knuckles' kept to it, so the teeth run along one line through the kerf; the left palm kept where it is on the log.
- * Played mirrored, left-handed, from the facings the flat figure works left-handed from (`../index.ts` lefty), the
- * sawhorse then under the right palm (`sawhorse_r`, its mirror).
+ * Played mirrored, left-handed, from the facings that turn the body's right side away from the viewer (`../index.ts`
+ * LEFT_FACINGS), the sawhorse then under the right palm (`sawhorse_r`, its mirror).
  */
 import type { Clip, Key } from '../clip';
 import { mirrorClip, poseToPose, type Beat, type KeyPose } from '../author';
