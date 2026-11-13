@@ -1093,9 +1093,9 @@
   },
   {
     "file": "supabase/test/blockmark.ts",
-    "title": "A blow taken on the shield is marked on the body",
+    "title": "A blow blocked or landed is marked on the body",
     "shard": 2,
-    "why": "Asked for: the blocking body plays a short block, seen by the blocker and by every other player nearby. A blow blocked sets player.blocked_at to its instant with BLOCKED_SAID said; a blow that lands, with a shield on or none, leaves it unmarked; the beat says it to the blocker (rpc_settle blocked_at) and the roster reads it off the row."
+    "why": "Asked for: the blocking body plays a short block, and a body a blow lands on flinches, seen by the one struck and by every other player nearby. A blow blocked sets player.blocked_at to its instant with BLOCKED_SAID said and leaves hurt_at; a blow that lands, with a shield on or none, leaves blocked_at and sets hurt_at and hurt_where (a hit location, the one its line names: landedOf); a dodge or a ward taking it whole marks neither; the beat says them to the one struck (rpc_settle) and the roster reads them off the row."
   },
   {
     "file": "supabase/test/reach.ts",

@@ -48,7 +48,7 @@ import { drawWorkPost, drawWorkPostLive, drawWorkPostNight, workPostBounds, work
 import { isRuneLantern } from '../game/runelantern';
 import { isRuneGate } from '../game/runegate';
 import { HALF_H, HALF_W, HEIGHT_SCALE, UNITS_PER_TILE } from './iso';
-import { beastReach, blockAt, HUNT_REACH, inFightReach, isFightJob, WIND_UP } from '../game/fight';
+import { beastReach, blockAt, flinchAt, HUNT_REACH, inFightReach, isFightJob, WIND_UP } from '../game/fight';
 import { depthOf, type View } from './view';
 import type { RoofModel } from './roofshape';
 import { isGlasshouse } from '../game/glasshouse';
@@ -455,7 +455,7 @@ import type { Body as SpellBody } from './spells/kit';
 import type { CastAt, CastTold } from '../game/events';
 import { lookStep, nextLookAt, yearAt } from './foliage';
 import { DAY_SECONDS } from '../game/pace';
-import { cartSway, FIGURE_TOP, figurePicture, sculptedFigures, sculptedReady, type GearLook, type GearPiece, type GearSlot, type Seat } from './figure';
+import { cartSway, FIGURE_TOP, figurePicture, sculptedFigures, sculptedReady, type FigurePose, type GearLook, type GearPiece, type GearSlot, type Seat } from './figure';
 /**
  * How much larger a beast in the traces is drawn than one loose: enough that
  * a grown orse, the draught beast, stands a quarter again as tall as a body
@@ -6422,6 +6422,20 @@ export class Renderer {
    * walking north and one walking east do not leave at the same angle, and the
    * screen is what it is being drawn on.
    */
+  /**
+   * A blow landing on a body at (x, y) facing `facing`, stamped at `at` on the drawing clock (`FigurePose.flinch`):
+   * how far through, where, and from where the creature that struck it stands, round from the body's front toward its
+   * left, as the screen has the two; from ahead when nothing says what struck.
+   */
+  private flinchOf(at: number | undefined, where: string | undefined, by: number | undefined, x: number, y: number, facing: number): FigurePose['flinch'] {
+    const t = flinchAt(at, performance.now() / 1000);
+    if (t === undefined) return undefined;
+    const c = by === undefined ? undefined : this.game.creatures.get(by);
+    if (!c) return { t, where };
+    const cam = this.camera, dx = c.x - x, dy = c.y - y, du = cam.rotateX(dx, dy), dv = cam.rotateY(dx, dy);
+    return { t, where, from: Math.atan2((du - dv) * HALF_W, (du + dv) * HALF_H) - (facing * Math.PI) / 4 };
+  }
+
   private facingOnScreen(dx: number, dy: number, was?: number): number {
     const cam = this.camera;
     const du = cam.rotateX(dx, dy);
@@ -6673,6 +6687,7 @@ export class Renderer {
             emoteT: emoteAt(player.emote, player.emoteAt, performance.now() / 1000) ?? undefined,
             cast: this.spells.poseOf(PLAYER_CASTS),
             block: blockAt(player.blockedAt, performance.now() / 1000),
+            flinch: this.flinchOf(player.hurtAt, player.hurtWhere, player.hurtBy, player.x, player.y, ent.seatFacing ?? this.playerFacing),
             veil: this.spells.veilOf(PLAYER_CASTS),
           })),
           undefined,
@@ -6723,6 +6738,7 @@ export class Renderer {
             emoteT: emoteAt(peer.emote, peer.emoteAt, performance.now() / 1000) ?? undefined,
             cast: this.spells.poseOf({ kind: 'peer', id: peer.id }),
             block: blockAt(peer.blockedAt, performance.now() / 1000),
+            flinch: this.flinchOf(peer.hurtAt, peer.hurtWhere, peer.hurtBy, peer.x, peer.y, ent.seatFacing ?? peer.facing),
             veil: this.spells.veilOf({ kind: 'peer', id: peer.id }),
           })),
           undefined,

@@ -185,6 +185,13 @@ export class Player {
   emoteAt?: number;
   /** When the island last said a blow was taken on the shield worn (`player.blocked_at`), on the drawing clock as `emoteAt`. */
   blockedAt?: number;
+  /**
+   * When the island last said a blow landed on you (`player.hurt_at`), on the drawing clock as `emoteAt`; where it landed
+   * (`player.hurt_where`) and what struck it (`stats.hurtBy`, a creature's id), when said.
+   */
+  hurtAt?: number;
+  hurtWhere?: string;
+  hurtBy?: number;
   /** Last movement direction in world space; the renderer turns it into a screen facing. */
   dirX = 1;
   dirY = 0;

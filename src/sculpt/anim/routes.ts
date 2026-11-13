@@ -7,12 +7,18 @@ import { RECIPE_BY_ID } from '../../game/recipes';
 
 /**
  * The clip a job in the `work` state plays, by the tool it is done with (its action's `tool`, `../../game/actions.ts`):
- * the strike at the bench (`work`) for the tools struck with or held to the work in one hand; any other tool, or none,
+ * the strike at the bench (`work`) for the tools struck with or held to the work in one hand; the shovel's stroke, the
+ * rake's pull and the sickle's cut (`dig`, `rake`, `reap`) for theirs; the overhead swing (`swing`) for the pickaxe's jobs
+ * that are not mining (taking up paving and steps, digging a pool, prospecting: at the ground); any other tool, or none,
  * the state's own (`./index.ts` `CLIP_OF.work`). A later clip for a family of tools adds its rows.
  */
 export const CLIP_OF_TOOL: Readonly<Record<string, string>> = {
   hammer: 'work', mallet: 'work', chisel: 'work', hatchet: 'work', butchering_knife: 'work',
   awl: 'work', carving_knife: 'work', trowel: 'work', file: 'work', whetstone: 'work',
+  // the digging and field tools (./clips/dig.ts); the pickaxe's jobs at the ground the overhead swing, as mining's
+  shovel: 'dig', rake: 'rake', sickle: 'reap', pickaxe: 'swing',
+  // the kitchen's (./clips/kitchen.ts): grinding at the quern, stirring in a vessel, frying
+  quern: 'quern', clay_pot: 'stir', clay_bowl: 'stir', clay_jar: 'stir', frying_pan: 'fry',
 };
 /**
  * The clip a job in the `work` state plays, by the job (its action's id), before its tool (`CLIP_OF_TOOL`):
@@ -53,6 +59,11 @@ export const CLIP_OF_JOB: Readonly<Record<string, string>> = Object.fromEntries(
     'build_campfire', 'light_campfire', 'fuel_campfire', 'put_out_campfire', 'take_apart_campfire',
     'take_ashes_fire', 'take_ashes_oven', 'take_ashes_smelter', 'take_ashes_kiln',
   ].map((job) => [job, 'ground']),
+  // the kitchen's (./clips/kitchen.ts): pressing at the quern (`press`, before the quern's grinding); cooking at a fire with
+  // no tool, knelt with the skewer over it (`roast`); a barrel leached into lye or filled, at waist height (`hands`)
+  ...[...RECIPE_BY_ID.values()].filter((r) => r.tool === 'quern' && r.id.startsWith('press_')).map((r) => [r.id, 'press']),
+  ...[...RECIPE_BY_ID.values()].filter((r) => r.station === 'campfire' && !r.tool && !ACTION_BY_ID.get(r.id)?.tool).map((r) => [r.id, 'roast']),
+  ...['leach_lye', 'fill_barrel'].map((job) => [job, 'hands']),
 ]);
 /** Whether a job is a recipe made with no tool and not at a campfire (cooking there is done crouched at the fire). */
 const handsRecipe = (job: string): boolean => {
