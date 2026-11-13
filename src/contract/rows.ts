@@ -38,6 +38,13 @@ export interface PlayerRow {
   act_ends: string | null;
   /** The tool the job in hand is done with, as the island took it from their pack: see `toolFrom`. */
   act_tool?: unknown;
+  /** When they last took a blow on their shield (`player.blocked_at`), the island's instant; null if never. */
+  blocked_at?: string | null;
+  /** When a blow last landed on them (`player.hurt_at`), the island's instant, and where (`hurt_where`); null if never. */
+  hurt_at?: string | null;
+  hurt_where?: string | null;
+  /** What struck it, a creature's id: their body broadcast only (their `stats.hurtBy`). */
+  hurt_by?: number | null;
   [key: string]: unknown;
 }
 

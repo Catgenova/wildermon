@@ -189,6 +189,8 @@ begin
         perform skill_raise(p_world, p_uid, 'shields', 0.5);
         -- The same words as the browser's (`BLOCKED_SAID`).
         perform tell(p_world, p_uid, 'Blocked with shield.', 'fight');
+        -- And when, for the body drawn blocking (`player.blocked_at`).
+        update player set blocked_at = now() where world_id = p_world and uid = p_uid;
         if v_from.id is not null then
           -- A Sworn Blade's Counterweight: its next blow put back, paid by its own turn (`class_stagger_owed`).
           if pk(p.class_mul, 'stagger:block', 0) > 0 then
@@ -310,7 +312,8 @@ begin
    * Unqualified, `stats` is the column of the row being updated, which is the
    * live value. Nothing else in here reads it after this point.
    */
-  update player set wounds = out_w,
+  -- And when and where, for the body drawn struck (`player.hurt_at`, `player.hurt_where`).
+  update player set wounds = out_w, hurt_at = now(), hurt_where = part,
       stats = jsonb_set(jsonb_set(stats, '{health}', to_jsonb(health)),
                         '{hurtSettled}', to_jsonb(now()))
     where world_id = p_world and uid = p_uid;

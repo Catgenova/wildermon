@@ -6,7 +6,9 @@
 // polygons it covers whole are hidden (`hides`).
 //
 //   buildScaleChest(rig, design?) → { verts, polys: [{ v, mat, part, tag }], tris, part, wt, design, hides }
-//   (its weights: platechest.mjs plateChestWeights, each piece rigid on its bone or bones, as the plate chest's)
+//   (its weights: platechest.mjs plateChestWeights, each piece rigid on its bone or bones, as the plate chest's; the front
+//   and the back with their scales taking the clavicles' share of the skin under them, followSkin; the trunk's skin they
+//   leave bare, round the collar and over the trapezius, under a layer of the cuirass's leather, underTrunk)
 //
 //   node tools/sculpt/garments/scalechest.mjs
 //     writes the game's copy beside each body: src/sculpt/assets/lowscalechest-male.json and lowscalechest-female.json
@@ -21,7 +23,7 @@
 // Units and axes are the body's: y up (the chin's underside 0), z forward, x the body's left.
 import { meshOf, trisOf, sub, add, mul, dot, cross, unit } from '../lowgarment.mjs';
 import { TORSO_RING } from '../lowarm.mjs';
-import { designOf, fitOut, plateOf, surfOf, gridAt, coreOn, inlayOn, mirrorCols, pauldronFrame, armCharts, bodySamples, collarFrame, trunkCharts, plateChestWeights, piece, tabAt } from './platechest.mjs';
+import { designOf, fitOut, plateOf, surfOf, gridAt, coreOn, inlayOn, mirrorCols, pauldronFrame, armCharts, bodySamples, collarFrame, trunkCharts, plateChestWeights, piece, tabAt, followSkin, underTrunk } from './platechest.mjs';
 import { MATS, LOOKS, scalesOn, polyTris, coursesOf } from './scale.mjs';
 
 /**
@@ -362,10 +364,15 @@ export function buildScaleChest(rig, design = designOf(rig.who), SC = SCALE[rig.
     map.set(i, j);
   }
   for (let k = p0; k < p1; k++) { const p = G.polys[k]; G.polys.push({ ...p, v: p.v.map((i) => map.get(i)).reverse() }); }
+  // (the front and the back, their scales: following the skin under them over the clavicles, as the plate chest's;
+  // and the trunk's skin they leave bare under the cuirass's leather, platechest.mjs followSkin and underTrunk)
+  const TRUNK = new Set(['front', 'back', 'front scales', 'back scales']);
+  followSkin(rig, G, (i) => TRUNK.has(G.part[i]) && G.wt[i].spine_03 === 1, D.follow);
+  const under = D.under ? underTrunk(rig, G, { ...D.under, mat: 'leather' }) : [];
   G.side = G.verts.map((p) => (p[0] >= 0 ? 'L' : 'R'));
   G.tris = trisOf(G);
   G.design = D;
-  G.hides = hiddenPolys(rig, G);
+  G.hides = [...new Set([...hiddenPolys(rig, G), ...under])].sort((a, b) => a - b);
   return G;
 }
 

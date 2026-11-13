@@ -8,6 +8,7 @@ import { PLAN_AREA_MOST, PLAN_UNDO_SECONDS } from '../../game/planarea';
 import { UPDATE_CHECK_MS } from '../update';
 import { JOURNAL_TABS } from './journaltabs';
 import { RESPAWN_ARM_MS } from '../respawn';
+import { BLOCK_SECS, FLINCH_LIT, FLINCH_SECS } from '../../game/fight';
 import { MAP_LEGEND, SETTLEMENT_BORDER_PX, MAP_ZOOM_MIN } from './minimap';
 import { FAST_DPR, LOW_POWER_FPS, SETTING_DEFAULTS } from '../../game/settings';
 import { BLOSSOM } from '../../audio/music/tracks/blossom';
@@ -4296,7 +4297,7 @@ export const NEWS: News[] = [
     n: 539,
     day: '2026-11-12',
     lines: () => {
-      const tools = Object.keys(CLIP_OF_TOOL).map((id) => itemDef(id).name.toLowerCase());
+      const tools = Object.keys(CLIP_OF_TOOL).filter((id) => CLIP_OF_TOOL[id] === 'work').map((id) => itemDef(id).name.toLowerCase());
       // the models with a head or blade tinted to its metal (src/sculpt/assets/<id>.json, `metal` materials)
       const metal = ['hammer', 'chisel', 'hatchet', 'butchering_knife', 'carving_knife', 'trowel', 'file'].map((id) => itemDef(id).name.toLowerCase());
       const jobs = (clip: string): number => [...ACTION_BY_ID.keys()].filter((id) => clipOfJob(id) === clip).length;
@@ -4351,8 +4352,16 @@ export const NEWS: News[] = [
     day: '2026-11-13',
     lines: () => {
       const tend = new Set(['offer', 'milk', 'groom', 'groom-hand', 'tack', 'lead', 'heal', 'heal-self']);
-      const jobs = [...ACTION_BY_ID.keys()].filter((id) => tend.has(clipOfJob(id) ?? '')).length;
-      return [`New: animation tending a wildermon and healing on the sculpted body: ${jobs} jobs (taming, feeding, milking, grooming, tacking, gear, mounting, hitching, breeding, treating; dressing your own wounds), brush drawn in hand (was: a placeholder gesture).`];
+      const tended = [...ACTION_BY_ID.keys()].filter((id) => tend.has(clipOfJob(id) ?? '')).length;
+      const jobs = (clip: string, not: string[] = []): number => [...ACTION_BY_ID.keys()].filter((id) => clipOfJob(id) === clip && !not.includes(id)).length;
+      const name = (id: string): string => itemDef(id).name.toLowerCase();
+      return [
+        `New: ${name('shovel')} (${jobs('dig')} jobs), ${name('rake')} (${jobs('rake')}) and ${name('sickle')} (${jobs('reap')}) work animated on the sculpted body, tool in hand in its metal; ${name('pickaxe')} at the ground (${jobs('swing', ['mine', 'chip_corner', 'mine_cellar'])} jobs): overhead swing (was: a placeholder gesture).`,
+        `New: shield block drawn on the blocker, seen by players nearby: shield arm raised for ${BLOCK_SECS} s per blocked blow.`,
+        'New: Wave and Hop animated on the sculpted body (was: a placeholder gesture). Both hands full: a nod.',
+        `New: animation tending a wildermon and healing on the sculpted body: ${tended} jobs (taming, feeding, milking, grooming, tacking, gear, mounting, hitching, breeding, treating; dressing your own wounds), brush drawn in hand (was: a placeholder gesture).`,
+        `New: hit reaction drawn on the body struck, seen by players nearby: ${FLINCH_SECS} s per landed blow; flash ${FLINCH_LIT * 1000} ms, off under less motion.`,
+      ];
     },
   },
   {

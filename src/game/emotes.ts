@@ -73,12 +73,19 @@ export function emotePose(id: string, t: number): { lift: number; wave: number }
     return { lift: 0, wave: 0 };
   }
   if (id === 'wave') {
-    // Up, three swings, down: the arm rises over the first fifth and drops
-    // over the last, so it is never snapped into place or out of it.
-    const up = Math.min(1, k / 0.2, (1 - k) / 0.2);
-    return { lift: 0, wave: Math.max(0, up) * Math.sin(k * Math.PI * 6) };
+    // Up, three swings, down (`waveUp`).
+    return { lift: 0, wave: waveUp(k) * Math.sin(k * Math.PI * 6) };
   }
   return { lift: 0, wave: 0 };
+}
+
+/**
+ * How far up a waving arm is, `t` of the way through the wave (0 hanging, 1 raised): it rises over the first fifth and
+ * drops over the last, so it is never snapped into place or out of it.
+ */
+export function waveUp(t: number): number {
+  const k = Math.max(0, Math.min(1, t));
+  return Math.max(0, Math.min(1, k / 0.2, (1 - k) / 0.2));
 }
 
 /** How far through an emote started at `at`, or null once it is over. */
