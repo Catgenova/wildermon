@@ -4467,6 +4467,11 @@ export const NEWS: News[] = [
     lines: () => [`New: hairstyle ${HAIRSTYLES.find((h) => h.id === 'pixie')?.name} (character creator; Settings, Display, Appearance: Customize character).`],
   },
   {
+    n: 566,
+    day: '2026-11-13',
+    lines: () => [`New: hairstyle ${HAIRSTYLES.find((h) => h.id === 'waves')?.name} (character creator; Settings, Appearance: Customize character).`],
+  },
+  {
     n: 565,
     day: '2026-11-13',
     lines: () => [`New: hairstyle ${HAIRSTYLES.find((h) => h.id === 'ponytail')?.name} (character creator; Settings, Appearance: Customize character).`],
