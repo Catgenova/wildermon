@@ -148,7 +148,7 @@ function secR(D, az, a) {
 }
 
 /** The hairstyles drawn pressed under the hat (the game's '<style>:hat'); the others are drawn as they are. */
-const PRESSED = ['swept', 'bob', 'pompadour', 'topknot', 'crew', 'mohawk', 'cornrows', 'buzz', 'afro', 'warrior', 'dreads', 'crownbraid', 'spacebuns'];
+const PRESSED = ['swept', 'bob', 'pompadour', 'topknot', 'crew', 'mohawk', 'cornrows', 'buzz', 'afro', 'warrior', 'dreads', 'crownbraid', 'spacebuns', 'pixie'];
 /** The head's and the hair's points in the hat's frame (the body's head samples, the hair's vertices and samples). */
 const HAIR = JSON.parse(readFileSync(new URL('../../../src/sculpt/assets/lowhair.json', import.meta.url), 'utf8'));
 export function hairMesh(who, style = 'swept') {
