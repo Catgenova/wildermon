@@ -62,7 +62,6 @@ check('the creator offers Bald and every one of them, by name', same(HAIRSTYLES,
   HAIRSTYLES.map((h) => h.name).join(', '));
 check('every hairstyle there is a mesh for and bald', HAIRSTYLES.length === INDEX.styles.length + 1, HAIRSTYLES.map((h) => h.id).join());
 check('the pompadour among them', HAIRSTYLES.some((h) => h.id === 'pompadour' && h.name === 'Pompadour'), HAIRSTYLES.map((h) => h.id).join());
-check('the hairstyles and bald', HAIRSTYLES.length === INDEX.styles.length + 1, HAIRSTYLES.map((h) => h.id).join());
 check('cornrows among them', HAIRSTYLES.some((h) => h.id === 'cornrows' && h.name === 'Cornrows'), HAIRSTYLES.map((h) => h.id).join());
 check('the swept back, the braid, the bob and the afro among them, and bald', ['bald', 'swept', 'braid', 'bob', 'afro'].every((id) => HAIRSTYLES.some((h) => h.id === id)), HAIRSTYLES.map((h) => h.id).join());
 check('the ids the island checks are the bodies and the hairstyles', same(Object.keys(LOOK_TABLES), ['gender', 'hair']));
@@ -145,7 +144,6 @@ check('every old haircut to one there is a mesh for', hairNow.every((h) => HAIRS
 check('short to the swept back, long to the braid, bald and the tonsure to bald',
   cleanLook({ hair: 'crop' }).hair === 'swept' && cleanLook({ hair: 'ponytail' }).hair === 'braid' && cleanLook({ hair: 'tonsure' }).hair === 'bald');
 check('a bowl cut and a fringe to the bob', cleanLook({ hair: 'bowl' }).hair === 'bob' && cleanLook({ hair: 'fringe' }).hair === 'bob');
-check('every hairstyle there is a mesh for and bald', HAIRSTYLES.length === INDEX.styles.length + 1, HAIRSTYLES.map((h) => h.id).join());
 check('the top knot to the top knot', cleanLook({ hair: 'topknot' }).hair === 'topknot');
 check('a short cut to the crew cut', cleanLook({ hair: 'short' }).hair === 'crew');
 check('the ridge to the mohawk', cleanLook({ hair: 'ridge' }).hair === 'mohawk');
