@@ -44,6 +44,10 @@
   {
    "id": "warrior",
    "name": "Shoulder length"
+  },
+  {
+   "id": "sideshave",
+   "name": "Side shave"
   }
  ]
 }

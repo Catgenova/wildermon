@@ -2,7 +2,8 @@
 // src/sculpt/assets/lowhair.json, and each style's id and name into src/sculpt/assets/lowhair-styles.json, the list the
 // character creator offers (src/game/look.ts HAIRSTYLES, with Bald). The styles lowhair.mjs builds (its STYLES) and the
 // side braid, built by tools/sculpt/lowbraid.mjs; the bob, by tools/sculpt/lowbob.mjs (its outline fit read from
-// tools/sculpt/hairs/bob-fit-<who>.json); the pompadour, by tools/sculpt/lowpomp.mjs. A style's name is its module's
+// tools/sculpt/hairs/bob-fit-<who>.json); the pompadour, by tools/sculpt/lowpomp.mjs; the side shave, by
+// tools/sculpt/lowsideshave.mjs. A style's name is its module's
 // `name` (tools/sculpt/hairs/<id>.mjs).
 //
 //   node tools/sculpt/lowhairasset.mjs   (or node tools/sculpt/lowhair.mjs --asset)
@@ -30,6 +31,8 @@ import { afroOf } from './lowafro.mjs';
 import AFRO from './hairs/afro.mjs';
 import { warriorOf } from './lowwarrior.mjs';
 import WARRIOR from './hairs/warrior.mjs';
+import { sideshaveOf } from './lowsideshave.mjs';
+import SIDESHAVE from './hairs/sideshave.mjs';
 
 const braidHull = carveBraid();
 const BUILDERS = {
@@ -44,6 +47,7 @@ const BUILDERS = {
   buzz: { name: BUZZ.name, build: (rig) => buzzOf(rig, BUZZ) },
   afro: { name: AFRO.name, build: (rig) => afroOf(rig, AFRO) },
   warrior: { name: WARRIOR.name, build: (rig) => warriorOf(rig, WARRIOR) },
+  sideshave: { name: SIDESHAVE.name, build: (rig) => sideshaveOf(rig, SIDESHAVE) },
 };
 
 const out = { built: 'node tools/sculpt/lowhair.mjs --asset (tools/sculpt/lowhair.mjs gameHair)' };
