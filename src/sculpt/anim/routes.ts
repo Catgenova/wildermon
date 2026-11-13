@@ -15,6 +15,24 @@ export const CLIP_OF_TOOL: Readonly<Record<string, string>> = {
   awl: 'work', carving_knife: 'work', trowel: 'work', file: 'work', whetstone: 'work',
 };
 /**
+ * The jobs done to a wildermon or a wound with the hands, by the clip each plays (`./clips/tend.ts`): held out to it
+ * (`offer`), crouched at the flank (`milk`), the brush or the comb down its flank (`groom`, `groom-hand`), the tack and the
+ * gear laid over and buckled (`tack`), a hand on it and a lead pulled (`lead`), crouched dressing its leg (`heal`), and
+ * one's own forearm dressed (`heal-self`: the dressing and the poultice done from the pack, which are one's own wounds,
+ * and done beside somebody else too, which plays it as well).
+ */
+const TEND_JOBS: ReadonlyArray<[string, string]> = [
+  ...['tame', 'feed'].map((job): [string, string] => [job, 'offer']),
+  ['milk_creature', 'milk'], ['groom', 'groom'], ['use_ancient_comb', 'groom-hand'],
+  ...[
+    'tack_creature', 'untack_creature', 'fit_gear_pack', 'remove_gear_pack', 'fit_gear_harness', 'remove_gear_harness',
+    'fit_gear_barding', 'remove_gear_barding', 'use_ancient_brace', 'use_ancient_collar', 'use_ancient_bridle',
+  ].map((job): [string, string] => [job, 'tack']),
+  ...['mount_creature', 'hitch_creature', 'pair_creature'].map((job): [string, string] => [job, 'lead']),
+  ...['treat_creature', 'treat_poultice'].map((job): [string, string] => [job, 'heal']),
+  ...['bind_wound', 'dress_poultice', 'clean_wound', 'apply_salve'].map((job): [string, string] => [job, 'heal-self']),
+];
+/**
  * The clip a job in the `work` state plays, by the job (its action's id), before its tool (`CLIP_OF_TOOL`):
  * - the strike (`work`) for a job whose tool is chosen each go (`ActionDef.toolFor`) or is a list (improving: the
  *   material's tools): planning (the mallet), building a wall, a floor or a column (the mallet or the trowel, by material),
@@ -24,6 +42,7 @@ export const CLIP_OF_TOOL: Readonly<Record<string, string>> = {
  * - the work knelt at the ground with no tool (`ground`): planting and sowing, foraging and searching, the traps, picking
  *   up, at the water's edge, tending a campfire or an ash pit. (Driving a post in and pulling it up are lifts, not ground
  *   work; cooking at a campfire keeps the state's own until a clip of its own.)
+ * - the tending of a wildermon and the healing (`TEND_JOBS`).
  * A later clip for a family of jobs adds its rows.
  */
 export const CLIP_OF_JOB: Readonly<Record<string, string>> = Object.fromEntries([
@@ -53,6 +72,8 @@ export const CLIP_OF_JOB: Readonly<Record<string, string>> = Object.fromEntries(
     'build_campfire', 'light_campfire', 'fuel_campfire', 'put_out_campfire', 'take_apart_campfire',
     'take_ashes_fire', 'take_ashes_oven', 'take_ashes_smelter', 'take_ashes_kiln',
   ].map((job) => [job, 'ground']),
+  // tending a wildermon and healing (./clips/tend.ts)
+  ...TEND_JOBS,
 ]);
 /** Whether a job is a recipe made with no tool and not at a campfire (cooking there is done crouched at the fire). */
 const handsRecipe = (job: string): boolean => {

@@ -4347,6 +4347,15 @@ export const NEWS: News[] = [
     ],
   },
   {
+    n: 544,
+    day: '2026-11-13',
+    lines: () => {
+      const tend = new Set(['offer', 'milk', 'groom', 'groom-hand', 'tack', 'lead', 'heal', 'heal-self']);
+      const jobs = [...ACTION_BY_ID.keys()].filter((id) => tend.has(clipOfJob(id) ?? '')).length;
+      return [`New: animation tending a wildermon and healing on the sculpted body: ${jobs} jobs (taming, feeding, milking, grooming, tacking, gear, mounting, hitching, breeding, treating; dressing your own wounds), brush drawn in hand (was: a placeholder gesture).`];
+    },
+  },
+  {
     n: 529,
     day: '2026-11-12',
     lines: () => [

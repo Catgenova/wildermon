@@ -22,6 +22,7 @@ import { SHOOT } from './clips/shoot';
 import { FIGHT as FIGHT_CLIP } from './clips/fight';
 import { SEAT_OARS, SEAT_REINS, SEAT_SADDLE, SEAT_TILLER, SEAT_TILLER_LEFT, SEAT_TUCK } from './clips/seated';
 import { mirrorClip } from './author';
+import { TEND_CLIPS, TEND_LEFT } from './clips/tend';
 import { ACTION_BY_ID } from '../../game/actions';
 import { clipOfJob } from './routes';
 import { strideAt } from '../../game/player';
@@ -40,6 +41,8 @@ export const CLIPS: Record<string, Clip> = {
   idle: IDLE, walk: WALK, swing: SWING, sixseven: SIXSEVEN, work: WORK, 'work-left': mirrorClip(WORK, 'work-left'), hands: HANDS, ground: GROUND,
   fight: FIGHT_CLIP, 'fight-left': mirrorClip(FIGHT_CLIP, 'fight-left'), shoot: SHOOT,
   'seat-reins': SEAT_REINS, 'seat-oars': SEAT_OARS, 'seat-tiller': SEAT_TILLER, 'seat-tiller-left': SEAT_TILLER_LEFT, saddle: SEAT_SADDLE, 'saddle-tuck': SEAT_TUCK,
+  // tending a beast and healing (./clips/tend.ts), each with its mirror
+  ...TEND_CLIPS,
 };
 /** The clip a state plays until its own is approved: the 6 7 gesture. */
 export const PLACEHOLDER = 'sixseven';
@@ -70,7 +73,7 @@ export function workClipOf(job: string | undefined): string {
  * The clips played left-handed (`lefty`), by the right-handed clip's name: its mirror. The flat figure works left-handed
  * from the two facings where its right hand's blow would cross the face (`../../render/figure.ts` lefty); so does this.
  */
-const LEFT_OF: Readonly<Record<string, string>> = { work: 'work-left', fight: 'fight-left' };
+const LEFT_OF: Readonly<Record<string, string>> = { work: 'work-left', fight: 'fight-left', ...TEND_LEFT };
 /** Whether work is done left-handed from where it is seen: as the flat figure (facings three and seven). */
 const lefty = (facing: number): boolean => { const f = ((Math.round(facing) % 8) + 8) % 8; return f === 3 || f === 7; };
 
@@ -118,9 +121,10 @@ export const clipsPlaying = (): boolean => ON;
 const FADE = 0.2;
 /**
  * Seconds a fade into or out of a clip takes where that is longer than `FADE`, its feet kept planted throughout where
- * the two clips stand them (`plantBetween`): getting down onto the knees at the ground and up off them.
+ * the two clips stand them (`plantBetween`): getting down onto the knees at the ground and up off them; down into the
+ * crouch at a beast's flank (milking, treating its wounds) and up out of it.
  */
-const SETTLE: Readonly<Record<string, number>> = { ground: 0.55 };
+const SETTLE: Readonly<Record<string, number>> = { ground: 0.55, milk: 0.45, 'milk-left': 0.45, heal: 0.45, 'heal-left': 0.45 };
 /** Seconds after a long fade lands over which the clip's own motion is let go into from rest. */
 const RELEASE = 0.25;
 /** The legs' bones, which a long fade keeps on its own pace (the root's too); the rest lead or trail them. */
