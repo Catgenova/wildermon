@@ -13,6 +13,8 @@
  * asked for are drawn together at the end of the frame.
  */
 
+import { BODY_BUDGET_MS } from './bodybudget';
+
 /** The clock bodies are timed by: the page's own, but for a test whose page clock is driven (`bodyKnobs`). */
 const clock = { now: (): number => performance.now() };
 
@@ -155,20 +157,63 @@ export function ask(job: Job): void {
 /** Whether a body under `key` has been asked for this frame. */
 export const asked = (key: string): boolean => queue.has(key);
 
-/** The bodies asked for this frame, most wanted first, the queue emptied. */
-export function takeAsked(): Job[] {
+/** The bodies asked for this frame and the most of them its share of the budget allows, most wanted first; the queue emptied. */
+export function takeAsked(soft: boolean): { take: Job[]; left: number } {
   const all = [...queue.values()].sort((a, b) => a.prio - b.prio || b.late - a.late);
   queue.clear();
-  return all;
+  if (!perUnit) perUnit = soft ? FIRST_SOFT : FIRST_CARD;
+  allow = Math.min(allow + BODY_BUDGET_MS, 2 * BODY_BUDGET_MS);
+  const take: Job[] = [];
+  let est = 0;
+  for (const j of all) {
+    if (j.prio > 0 && est >= allow) continue;
+    take.push(j);
+    est += costOf(j);
+  }
+  return { take, left: all.length - take.length };
 }
 
-/** A frame's bodies drawn: `ms` it took, `n` drawn, `left` asked for and not drawn. */
-export function spent(ms: number, n: number, left: number): void {
+/*
+ * The budget. A frame may spend `BODY_BUDGET_MS` on bodies, on average: a quarter of a frame at sixty a second, leaving the
+ * rest for the ground, the trees, the wildermon and the browser. What it does not spend carries to the next (up to a
+ * second frame's), and a frame that spends more than it had is paid back by the frames after it, so a body that costs more
+ * than a frame's share (on a processor-drawn GL a body is several frames' worth) is drawn every few frames rather than
+ * never, and no frame draws more than one body past its share. Your own body is drawn whatever is left, and charged. What
+ * a body costs is learnt as they are drawn: milliseconds for every device pixel of the pictures and a fixed share each
+ * (`FIXED_PIXELS`), an average over the last few frames.
+ */
+let allow = 0;
+let perUnit = 0;
+/** A body's cost that is not its pixels, as pixels: setting up its draw, and its share of the wait for the GL. */
+const FIXED_PIXELS = 40_000;
+/** What a body is taken to cost before any is timed: about 30 ms on a processor-drawn GL, 1.5 ms on a card, at the zoom played at. */
+const FIRST_SOFT = 30 / 65_000, FIRST_CARD = 1.5 / 65_000;
+/** How far each frame's timing moves the cost learnt. */
+const LEARN = 0.25;
+const unitsOf = (w: number, h: number, tiles: number): number => (w * h + FIXED_PIXELS) * tiles;
+const costOf = (j: Job): number => perUnit * unitsOf(j.w, j.h, j.tiles);
+/** Milliseconds a body `w` by `h` device pixels is expected to take, from what bodies have taken so far. */
+export const bodyCost = (w: number, h: number, tiles = 1): number => (perUnit || FIRST_CARD) * unitsOf(w, h, tiles);
+/** Whether the bodies are over their budget: drawn more than their share lately, the frames after paying it back. */
+export const bodiesBehind = (): boolean => allow < 0;
+
+/** A frame's bodies drawn: `ms` it took for `jobs`, and `left` asked for and not drawn. */
+export function spent(ms: number, jobs: Job[], left: number): void {
   const st = bodyKnobs.stats;
   st.ms += ms;
-  st.drawn += n;
+  st.drawn += jobs.length;
   st.deferred += left;
+  allow = Math.max(-20 * BODY_BUDGET_MS, allow - ms);
+  const units = jobs.reduce((p, j) => p + unitsOf(j.w, j.h, j.tiles), 0);
+  if (units > 0 && ms > 0) perUnit += (ms / units - perUnit) * LEARN;
 }
+
+/** Whether the zoom has stayed put long enough to make pictures at it (`Renderer.zoomSettled`): told every frame. */
+let settled = true;
+export function bodiesFrame(zoomSettled: boolean): void {
+  settled = zoomSettled;
+}
+export const zoomSettled = (): boolean => settled;
 
 export const bodyClock = (): number => clock.now();
 export const picturesHeld = (): number => held;

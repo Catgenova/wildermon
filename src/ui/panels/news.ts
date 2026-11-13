@@ -178,7 +178,7 @@ import { foodFill, itemDef, RARITIES, rarityBands, rarityChance, rareInputSaid, 
 import { SIGHT_FORM_AT, SIGHT_RARITY_AT } from '../../game/sighted';
 import { improvable, IMPROVE_DAMAGE as MEND_DAMAGE, IMPROVE_FAIL_LEAST, IMPROVE_FAIL_SPREAD } from '../../game/improve';
 import { JOB_GOES_MOST } from '../../game/mending';
-import { SCULPT_REDRAWS, SCULPT_REDRAWS_SOFT, weaponCarry } from '../../render/figure';
+import { weaponCarry } from '../../render/figure';
 import { ACTION_SHARE, FEWER_SHARE, HIT_STOP_HEAVY } from '../../render/fx/actions';
 import { BLOCK_SPARKS, CRACK_SECS, HIT_PUFF, SHOCK_REACH, SPIRAL_MOTES, SPLINTERS, STREAK_SECS, TWANG_SECS } from '../../render/fx/combat';
 import { RUNE_SHARES } from '../../sculpt/anim/runes';
@@ -4329,7 +4329,7 @@ export const NEWS: News[] = [
     n: 541,
     day: '2026-11-12',
     lines: () => [
-      `Faster frames: other players' bodies redrawn at most ${SCULPT_REDRAWS} a frame (${SCULPT_REDRAWS_SOFT} without a graphics card); yours every frame.`,
+      'Faster frames: other players\' bodies redrawn at most 4 a frame (1 without a graphics card); yours every frame.',
       'Faster frames: buildings: pictures cut to what is drawn; off screen: skipped.',
       'Faster island reads: crates: sent when changed; companions at heel: not sent again; things on the ground: only their set fields.',
       'Faster: workers storing a load: stores checked nearest first, first with room taken; recipes from the stores: stock counted from four columns.',

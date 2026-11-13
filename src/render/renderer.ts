@@ -457,7 +457,7 @@ import type { Body as SpellBody } from './spells/kit';
 import type { CastAt, CastTold } from '../game/events';
 import { lookStep, nextLookAt, yearAt } from './foliage';
 import { DAY_SECONDS } from '../game/pace';
-import { cartSway, drawBodies, FIGURE_TOP, figurePicture, sculptedFigures, sculptedReady, type FigurePose, type GearLook, type GearPiece, type GearSlot, type Seat } from './figure';
+import { bodiesFrame, cartSway, drawBodies, FIGURE_TOP, figurePicture, sculptedFigures, sculptedReady, type FigurePose, type GearLook, type GearPiece, type GearSlot, type Seat } from './figure';
 /**
  * How much larger a beast in the traces is drawn than one loose: enough that
  * a grown orse, the draught beast, stands a quarter again as tall as a body
@@ -3880,6 +3880,7 @@ export class Renderer {
     this.stillsLeft.left = this.zoomSettled ? STILLS_A_FRAME : 0;
     piecesFrame(this.zoomSettled);
     beastFrame();
+    bodiesFrame(this.zoomSettled);
     zoomHeld.left = this.zoomSettled ? 1 : 0;
     this.hemsMade = 0;
     if (fit !== this.hemFor) {

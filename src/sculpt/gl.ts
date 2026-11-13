@@ -405,7 +405,7 @@ function compile(gl: WebGL2RenderingContext, vs: string, fs: string): WebGLProgr
 
 /**
  * Whether the GL context is drawn by the processor rather than a graphics card (SwiftShader, llvmpipe): about 9 ms a
- * sculpted body there against well under one on a card, so the island redraws fewer of them a frame (`sculptMay`).
+ * sculpted body there against well under one on a card, so the island takes a body to cost more there before it has timed one (`../render/bodies.ts` takeAsked).
  */
 export function glSoftware(): boolean {
   const c = glContext();

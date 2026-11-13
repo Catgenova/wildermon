@@ -13,9 +13,10 @@ import {
 import { HALF_H, HALF_W, HEIGHT_SCALE, UNITS_PER_TILE } from './iso';
 import { rarityOf } from '../game/items';
 import { BASE_SPEED, CADENCE } from '../game/player';
-import { ask, asked, bodyClock, KeptPics, picBegin, picDrop, picEnd, picNew, picPut, spent, takeAsked, type Job, type Pic } from './bodies';
+import { BODY_BUDGET_MS } from './bodybudget';
+import { ask, asked, bodyClock, bodyCost, KeptPics, picBegin, picDrop, picEnd, picNew, picPut, spent, takeAsked, zoomSettled, type Job, type Pic } from './bodies';
 import type { GlTile } from '../sculpt/gl';
-export { bodyKnobs } from './bodies';
+export { bodyKnobs, bodiesFrame } from './bodies';
 
 /**
  * People, as low-poly bodies.
@@ -11520,8 +11521,6 @@ export function flatFigures(): boolean {
  * On or off, as asked by `by`: the island's renderer (every frame) or the character creator. On while anybody asks.
  */
 export function sculptedFigures(want: boolean, by: 'island' | 'creator' = 'island'): void {
-  // The island asks once a frame, which is when its sculpted redraws are counted afresh.
-  if (by === 'island') sculptLeft.left = SCULPT.soft ? SCULPT_REDRAWS_SOFT : SCULPT_REDRAWS;
   if (want) SCULPT.asked.add(by);
   else SCULPT.asked.delete(by);
   const on = SCULPT.asked.size > 0;
@@ -11537,20 +11536,6 @@ export function sculptedFigures(want: boolean, by: 'island' | 'creator' = 'islan
     }).catch(() => { SCULPT.loading = false; });
   }
 }
-/**
- * Sculpted bodies the island draws again a frame, at most: each is a WebGL draw put down on a 2D canvas, which waits on
- * the GL (about 9 ms a body on a processor-drawn GL, `glSoftware`). Past it a body is put down from the picture it last
- * had, and drawn again in a later frame. Your own body and a body never drawn yet are drawn whatever is left.
- */
-export const SCULPT_REDRAWS = 4, SCULPT_REDRAWS_SOFT = 1;
-const sculptLeft = { left: SCULPT_REDRAWS };
-/** Whether a sculpted redraw of body `id` may be made now (and counts it), or the last picture must stand. */
-const sculptMay = (id?: string): boolean => {
-  if (!SCULPT.on || !SCULPT.draw || !SCULPT.asked.has('island') || id === 'player') return true;
-  if (sculptLeft.left <= 0) return false;
-  sculptLeft.left--;
-  return true;
-};
 /** Whether the sculpted bodies are on and loaded, so a figure drawn now is drawn sculpted where it can be. */
 export const sculptedReady = (): boolean => SCULPT.on && !!SCULPT.draw;
 /** The effect marks on the clips, followed per body (`../sculpt/fxmarks.ts`), once the sculpted bodies have loaded; and whether their GL is the processor's (`glSoftware`). */
@@ -12661,7 +12646,7 @@ interface Still {
   seen: number;
   /** Device pixels to a unit of the screen it goes on. */
   dev: number;
-  /** The zoom and device scale it was drawn at: a picture at another size is drawn again whatever the budget (`sculptMay`). */
+  /** The zoom and device scale it was drawn at: a picture at another size is drawn again, first among those due. */
   sized?: string;
 }
 
@@ -12759,37 +12744,78 @@ function drawStill(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: 
    * time. Kept fresh meanwhile, so a crowd's pictures are not let go while they are still in view.
    */
   const due = still ? st.key !== key : st.key !== key || changing || now - st.at >= 1 / rate || now < st.at;
-  const fresh = !st.pic?.live, resized = !fresh && st.sized !== sized;
-  if (fresh || resized || (due && sculptMay(id))) {
+  const fresh = !st.pic?.live && !shown.get(id)?.pic.live, resized = !fresh && st.sized !== sized;
+  /*
+   * Asked for, and drawn at the end of the frame if the budget has room (`takeAsked`): your own body first; then a body
+   * with nothing to put down (the nearest the middle of the screen first, at half the size where a whole one is more than
+   * a frame's share, drawn again whole later); then one put down stretched from another size (not while the zoom is still
+   * moving: none is made for a size gone next frame); then those due, the most overdue first.
+   */
+  if (fresh) placeholder(ctx, sx, sy, id, pose, kit, r, facing, ink, now, zoom, dev);
+  else if ((resized && zoomSettled()) || (!resized && due)) {
     const s = st;
-    ask(bodyJob(`s|${id}`, id === 'player' ? 0 : fresh ? 1 : resized ? 2 : 3, (now - s.at) * rate, pose, kit, r, facing, ink, now, zoom, dev, (pic) => {
+    ask(bodyJob(`s|${id}`, id === 'player' ? 0 : resized ? 2 : 3, resized ? -fromMiddle(ctx, sx, sy) : (now - s.at) * rate, pose, kit, r, facing, ink, now, zoom, dev, (pic) => {
       picDrop(s.pic);
       s.pic = pic;
       s.key = key;
       s.at = now;
       s.sized = sized;
     }));
-  } else if (still) st.at = now;
+  }
+  if (still && !due) st.at = now;
   if (st.pic?.live) putDown(ctx, id, st.pic, sx, sy, zoom, now);
   else putShown(ctx, id, sx, sy, zoom, now);
 }
 
+/** How far body at (sx, sy) on `ctx` is from the middle of the canvas, in device pixels. */
+function fromMiddle(ctx: CanvasRenderingContext2D, sx: number, sy: number): number {
+  const t = ctx.getTransform();
+  return Math.hypot(t.a * sx + t.c * sy + t.e - ctx.canvas.width / 2, t.b * sx + t.d * sy + t.f - ctx.canvas.height / 2);
+}
+
+/**
+ * A body with nothing to put down asked for as a picture of its own, ahead of everything but your own body: at half the
+ * size where a whole one would cost more than the budget's share of a frame (`bodyCost`), and drawn again whole later as
+ * one put down at another size.
+ */
+function placeholder(ctx: CanvasRenderingContext2D, sx: number, sy: number, id: string, pose: FigurePose, kit: Kit, r: Rig, facing: number, ink: number, now: number, zoom: number, dev: number): void {
+  const b = boxAt(zoom * dev);
+  const d = id !== 'player' && bodyCost(b.w, b.h, pose.swimming ? 2 : 1) > BODY_BUDGET_MS ? dev / 2 : dev;
+  ask(bodyJob(`s|${id}`, id === 'player' ? 0 : 1, -fromMiddle(ctx, sx, sy), pose, kit, r, facing, ink, now, zoom, d, (pic) => {
+    let st = stills.get(id);
+    if (!st) stills.set(id, (st = { pic: null, key: '', at: now, seen: now, dev }));
+    picDrop(st.pic);
+    st.pic = pic;
+    st.key = '';
+    st.at = now;
+    st.sized = `${zoom.toFixed(3)}|${d}`;
+    // What the body looks like until its own kind of picture is drawn (`putShown`).
+    if (!shown.get(id)?.pic.live) shown.set(id, { pic, put: { ctx, ...picPut(NOWHERE, pic, 0, 0, zoom, false) }, at: now });
+  }));
+}
+/** A context nothing is put down on, for a place worked out and not drawn. */
+const NOWHERE = { drawImage: () => {} } as unknown as CanvasRenderingContext2D;
+
 /**
  * A frame of a loop put down for body `id` (`base` the loop, `i` of `count` the frame), from the pictures kept in `kept`:
- * asked for when it is not there yet (`make`, null when it may not be now: false, and the body is drawn as a still), and
- * meanwhile a frame beside it in the loop, else what the body last had.
+ * asked for when it is not there yet (`make`, null when it may not be: false, and the body is drawn as a still), and
+ * meanwhile a frame beside it in the loop, else what the body last had, else a picture of its own (`placeholder`).
  */
 function fromLoop(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, id: string, now: number, kept: KeptPics, base: string, i: number, count: number,
-  make: (key: string) => Job | null): boolean {
+  make: (key: string) => Job | null, pose: FigurePose, kit: Kit, r: Rig, facing: number, ink: number, dev: number): boolean {
   const key = `${base}|${i}`;
   const f = kept.get(key);
   if (f) {
     putDown(ctx, id, f, sx, sy, zoom, now);
     return true;
   }
-  const j = asked(key) ? null : make(key);
-  if (!j && !asked(key)) return false;
-  if (j) ask(j);
+  const had = shown.get(id)?.pic.live;
+  // While the zoom is moving, a body that has something to put down puts it down stretched, and nothing is made.
+  if (!had || zoomSettled()) {
+    const j = asked(key) ? null : make(key);
+    if (!j && !asked(key)) return false;
+    if (j) ask(j);
+  }
   for (const d of [-1, 1, -2, 2]) {
     const n = kept.peek(`${base}|${(((i + d) % count) + count) % count}`);
     if (n) {
@@ -12797,7 +12823,7 @@ function fromLoop(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: n
       return true;
     }
   }
-  putShown(ctx, id, sx, sy, zoom, now);
+  if (!putShown(ctx, id, sx, sy, zoom, now)) placeholder(ctx, sx, sy, id, pose, kit, r, facing, ink, now, zoom, dev);
   return true;
 }
 
@@ -12900,8 +12926,8 @@ function idleLoop(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: n
   // The same clock the pose is worked out from (`rigOf`).
   const t = (((pose.phase / 6) % IDLE_LOOP) + IDLE_LOOP) % IDLE_LOOP;
   const i = Math.min(count - 1, Math.floor(t * rate));
-  return fromLoop(ctx, sx, sy, zoom, id, now, idles, still, i, count, (key) => (!sculptMay(pose.id) ? null
-    : bodyJob(key, id === 'player' ? 0 : shown.get(id)?.pic.live ? 3 : 1, 0, pose, kit, r, facing, ink, now, zoom, dev, (pic) => idles.set(key, pic))));
+  return fromLoop(ctx, sx, sy, zoom, id, now, idles, still, i, count,
+    (key) => bodyJob(key, id === 'player' ? 0 : 3, 0, pose, kit, r, facing, ink, now, zoom, dev, (pic) => idles.set(key, pic)), pose, kit, r, facing, ink, dev);
 }
 
 /** Put down a walking body from its stride's pictures, asking for the picture it needs if it is new; false when it is not walking steadily. */
@@ -12914,11 +12940,10 @@ function stride(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: num
   // Which of the strides in `WALK_VARY` it is on, as the walk counts them (`rigOf`).
   const N = WALK_VARY.length, n = (((Math.floor(pose.phase / TAU) % N) + N) % N), v = (n + strideSeed(pose.id)) % N;
   return fromLoop(ctx, sx, sy, zoom, id, now, strides, `${still}|${gait}|${v}`, i, WALK_FRAMES, (key) => {
-    if (!sculptMay(pose.id)) return null;
     // The middle of its sixteenth, at its step of gait.
     const at: FigurePose = { ...pose, phase: (n + (i + 0.5) / WALK_FRAMES) * TAU, gait };
-    return bodyJob(key, id === 'player' ? 0 : shown.get(id)?.pic.live ? 3 : 1, 0, at, kit, rigOf(at, kit.fr), facing, ink, 0, zoom, dev, (pic) => strides.set(key, pic));
-  });
+    return bodyJob(key, id === 'player' ? 0 : 3, 0, at, kit, rigOf(at, kit.fr), facing, ink, 0, zoom, dev, (pic) => strides.set(key, pic));
+  }, pose, kit, rigOf(pose, kit.fr), facing, ink, dev);
 }
 
 /*
@@ -12933,8 +12958,11 @@ const GLB: { mode: 'now' | 'record' | 'blit'; rec: Array<GlTile | null>; i: numb
 
 /** Draw the bodies the frame asked for. */
 export function drawBodies(): void {
-  const jobs = takeAsked();
-  if (!jobs.length) return;
+  const { take: jobs, left } = takeAsked(SCULPT.soft);
+  if (!jobs.length) {
+    spent(0, jobs, left);
+    return;
+  }
   const t0 = bodyClock();
   const B = SCULPT.on && SCULPT.draw && !flatFigures() ? SCULPT.batch : null;
   const now = performance.now();
@@ -12976,7 +13004,7 @@ export function drawBodies(): void {
     }
     i = j;
   }
-  spent(bodyClock() - t0, jobs.length, 0);
+  spent(bodyClock() - t0, jobs, left);
 }
 /** A body drawn into its picture (or, not to `keep`, drawn and let go: a batch's first go). */
 function drawInto(pic: Pic, job: Job, keep = true): void {
