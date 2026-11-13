@@ -77,7 +77,8 @@ export { CLIP_OF_JOB, CLIP_OF_TOOL } from './routes';
 const WAVING = new Map<string, { arm: number; t: number }>();
 /**
  * The clip an emote plays, by its id: the hop's; a wave with the arm the flat figure waves with (`waveArmOf`: the right's
- * clip, or its mirror for the left), staged for where it is seen from (side on, the arm raised ahead: `sideOn`), or with
+ * clip, or its mirror for the left), staged for where it is seen from (the arm raised ahead side on, and with the far arm
+ * three-quarters on: `ahead`), or with
  * both hands full its nod; none for any other (the state's own, `CLIP_OF.emote`).
  */
 export function emoteClipOf(pose: FigurePose): string | undefined {
@@ -89,10 +90,17 @@ export function emoteClipOf(pose: FigurePose): string | undefined {
     WAVING.set(pose.id, { arm, t });
     if (WAVING.size > MAX_KEPT) WAVING.delete(WAVING.keys().next().value as string);
   }
-  return arm < 0 ? NOD.name : `${sideOn(pose.facing) ? WAVE_AHEAD.name : WAVE.name}${arm === 0 ? '-left' : ''}`;
+  return arm < 0 ? NOD.name : `${ahead(pose, arm) ? WAVE_AHEAD.name : WAVE.name}${arm === 0 ? '-left' : ''}`;
 }
-/** Whether a body is seen side on (facings two and six), where a wave is staged ahead of the face (`WAVE_AHEAD`). */
-const sideOn = (facing: number): boolean => { const f = ((Math.round(facing) % 8) + 8) % 8; return f === 2 || f === 6; };
+/**
+ * Whether a wave with `arm` is staged ahead of the face (`WAVE_AHEAD`), as the flat figure stages it: seen side on (facings
+ * two and six); and made with the far arm (not the one a wave with both hands free is made with) seen three-quarters on
+ * from in front (facings one and seven), where raised out to the side its hand is behind the head.
+ */
+function ahead(pose: FigurePose, arm: number): boolean {
+  const f = ((Math.round(pose.facing) % 8) + 8) % 8;
+  return f === 2 || f === 6 || ((f === 1 || f === 7) && arm !== waveArmOf({ ...pose, gear: undefined }));
+}
 /** The clips of a wave, and the side its arm is on (none for the nod): made over a walk, that arm's bones are the wave's (`animate`). */
 const WAVES: Readonly<Record<string, Side | undefined>> = { wave: 'r', 'wave-left': 'l', 'wave-ahead': 'r', 'wave-ahead-left': 'l', nod: undefined };
 /** The bones of an arm, from the shoulder to the fingers. */
