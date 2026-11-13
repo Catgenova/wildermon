@@ -203,15 +203,77 @@ export function spent(ms: number, jobs: Job[], left: number): void {
   st.ms += ms;
   st.drawn += jobs.length;
   st.deferred += left;
+  lineFrame(ms, jobs.length, left);
   allow = Math.max(-20 * BODY_BUDGET_MS, allow - ms);
   const units = jobs.reduce((p, j) => p + unitsOf(j.w, j.h, j.tiles), 0);
+  bodiesThisFrame += ms;
   if (units > 0 && ms > 0) perUnit += (ms / units - perUnit) * (ms / units > perUnit ? LEARN_UP : LEARN);
+}
+
+/*
+ * The quality. Where frames run long and the bodies are a good part of why -- the middle frame over the last two seconds
+ * longer than `SLOW_MS`, with the bodies a quarter of the time or more -- bodies are drawn a step smaller (their pictures
+ * at `STEPS[n].scale` of the screen's pixels, stretched to size) and less often (`STEPS[n].rate` of their rates). Back a
+ * step once the middle frame has been under `QUICK_MS` for `UP_AFTER` ms, and only if the bodies' time a frame grown by the
+ * larger pictures (as their pixels: the square of the step in scale) would still leave it under `SLOW_MS`; and a step is
+ * held `HOLD_MS` at least either way: so it does not go up and down from one moment to the next. Only how bodies are
+ * drawn: nothing of the game.
+ */
+const STEPS = [{ scale: 1, rate: 1 }, { scale: 0.75, rate: 0.75 }, { scale: 0.5, rate: 0.5 }];
+/** How many quality steps there are. */
+export const QUALITY_STEPS = STEPS.length;
+const SLOW_MS = 40, QUICK_MS = 28, WINDOW_MS = 2000, UP_AFTER = 4000, HOLD_MS = 2000, LOOK_EVERY = 500;
+/** What What's new says of the quality (`src/ui/panels/news.ts`). */
+export const QUALITY = { scales: STEPS.map((q) => q.scale), slow: SLOW_MS, quick: QUICK_MS, over: WINDOW_MS, up: UP_AFTER };
+let step = 0, stepAt = -Infinity, quickSince = Infinity, lookedAt = 0, frameAt = 0;
+/** The frames of the last `WINDOW_MS`: when each began, how long it was, and what of it went on the bodies. */
+const lately: Array<{ at: number; ms: number; bodies: number }> = [];
+let bodiesThisFrame = 0;
+
+/** The step the quality is at (0 the best), and the share of the screen's pixels bodies are drawn at and of their rates. */
+export const qualityStep = (): number => step;
+export const qualityScale = (): number => STEPS[step].scale;
+export const qualityRate = (): number => STEPS[step].rate;
+
+/** A frame begins: the last one's length counted, and the quality looked at again twice a second. */
+function frameBegins(): void {
+  const now = clock.now();
+  if (frameAt && now - frameAt < 1000) lately.push({ at: now, ms: now - frameAt, bodies: bodiesThisFrame });
+  frameAt = now;
+  bodiesThisFrame = 0;
+  while (lately.length && now - lately[0].at > WINDOW_MS) lately.shift();
+  if (pinned !== null) {
+    step = Math.max(0, Math.min(STEPS.length - 1, pinned));
+    bodyKnobs.stats.step = step;
+    return;
+  }
+  if (now - lookedAt < LOOK_EVERY || lately.length < 10) return;
+  lookedAt = now;
+  const sorted = lately.map((f) => f.ms).sort((a, b) => a - b), middle = sorted[sorted.length >> 1];
+  const all = lately.reduce((p, f) => p + f.ms, 0), bodies = lately.reduce((p, f) => p + f.bodies, 0);
+  const held = now - stepAt < HOLD_MS;
+  if (middle >= QUICK_MS) quickSince = Infinity;
+  else if (quickSince === Infinity) quickSince = now;
+  if (!held && step < STEPS.length - 1 && middle > SLOW_MS && bodies >= all / 4) {
+    step++;
+    stepAt = now;
+    quickSince = Infinity;
+  } else if (!held && step > 0 && now - quickSince >= UP_AFTER) {
+    const up = STEPS[step - 1].scale / STEPS[step].scale;
+    if (middle + (bodies / lately.length) * (up * up - 1) < SLOW_MS) {
+      step--;
+      stepAt = now;
+      quickSince = now;
+    }
+  }
+  bodyKnobs.stats.step = step;
 }
 
 /** Whether the zoom has stayed put long enough to make pictures at it (`Renderer.zoomSettled`): told every frame. */
 let settled = true;
 export function bodiesFrame(zoomSettled: boolean): void {
   settled = zoomSettled;
+  frameBegins();
 }
 export const zoomSettled = (): boolean => settled;
 
@@ -266,4 +328,30 @@ export class KeptPics {
   get pixels(): number {
     return this.px;
   }
+}
+
+/* ---- the line under the frame rate -------------------------------------------------------------------------------- */
+
+/** The bodies' line under the frame rate (`Settings.timings`), and what it is made of since it was last written. */
+const line = { text: '', frames: 0, ms: 0, drawn: 0, waiting: 0, at: 0 };
+/** Seconds the line is averaged over: the layers' own (`TIMING_WINDOW` in `./timings.ts`). */
+const LINE_WINDOW = 0.5;
+/**
+ * The bodies a frame, averaged over half a second: milliseconds drawing them, how many were drawn, how many asked for and
+ * left for a later frame, and the quality step (the best the highest).
+ */
+export function bodiesLine(): string {
+  return line.text;
+}
+function lineFrame(ms: number, drawn: number, waiting: number): void {
+  line.frames++;
+  line.ms += ms;
+  line.drawn += drawn;
+  line.waiting += waiting;
+  const now = clock.now();
+  if (now - line.at < LINE_WINDOW * 1000 && now >= line.at) return;
+  const n = Math.max(1, line.frames);
+  line.text = `bodies ${(line.ms / n).toFixed(1)} ms · ${(line.drawn / n).toFixed(1)} drawn · ${(line.waiting / n).toFixed(1)} waiting · quality ${STEPS.length - step}/${STEPS.length}`;
+  line.frames = line.ms = line.drawn = line.waiting = 0;
+  line.at = now;
 }

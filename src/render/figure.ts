@@ -14,7 +14,7 @@ import { HALF_H, HALF_W, HEIGHT_SCALE, UNITS_PER_TILE } from './iso';
 import { rarityOf } from '../game/items';
 import { BASE_SPEED, CADENCE } from '../game/player';
 import { BODY_BUDGET_MS } from './bodybudget';
-import { ask, asked, bodyClock, bodyCost, KeptPics, picBegin, picDrop, picEnd, picNew, picPut, spent, takeAsked, zoomSettled, type Job, type Pic } from './bodies';
+import { ask, asked, bodiesBehind, bodyClock, bodyCost, KeptPics, qualityRate, qualityScale, picBegin, picDrop, picEnd, picNew, picPut, spent, takeAsked, zoomSettled, type Job, type Pic } from './bodies';
 import type { GlTile } from '../sculpt/gl';
 export { bodyKnobs, bodiesFrame } from './bodies';
 
@@ -11598,7 +11598,9 @@ export function drawFigure(ctx: CanvasRenderingContext2D, sx: number, sy: number
   const settled = pose.id && !still
     ? settle(pose.id, pose, (f, left, kept) => rigOf({ ...pose, facing: f }, kit.fr, left, kept), now)
     : { rig: rigOf(pose, kit.fr), facing: (((pose.seat ? pose.facing : Math.round(pose.facing)) % 8) + 8) % 8, changing: false };
-  const { rig: r, facing } = settled;
+  const { rig: r } = settled;
+  // Turning while the bodies are over their budget (`bodiesBehind`): in whole eighths, a picture each, rather than one a frame.
+  const facing = settled.changing && pose.id && !pose.seat && !Number.isInteger(settled.facing) && bodiesBehind() ? Math.round(settled.facing) % 8 : settled.facing;
   // A cast moves every frame it lasts, so it is drawn every frame, as a blend or a turn is, and never from a stride's pictures.
   const changing = settled.changing || !!pose.cast;
   // Most of a pixel however far out, and never more than three and a half however far in.
@@ -12628,6 +12630,33 @@ const SHINE_RATE = 24;
 const CROWD = 8;
 const CROWD_RATE = 15;
 
+/*
+ * Small or far, a body is drawn less often: under `SMALL` device pixels tall, down to half its rate at half that; and from
+ * `NEAR` tiles from your own body, down to half at `FAR` -- and never under `MIN_RATE` a second. A loop is kept at as many
+ * fewer pictures. Times the quality's own share (`qualityRate`).
+ */
+const SMALL = 120, NEAR = 10, FAR = 20, MIN_RATE = 6;
+/** What What's new says of how often bodies are drawn (`src/ui/panels/news.ts`). */
+export const BODY_RATES = { work: STILL_RATE.work, small: SMALL, near: NEAR, far: FAR, least: MIN_RATE };
+/** Where your own body was last put down, in device pixels of the canvas it went on. */
+const mine = { x: 0, y: 0, canvas: null as unknown };
+function rateShare(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, dev: number, id: string): number {
+  const t = ctx.getTransform(), x = t.a * sx + t.c * sy + t.e, y = t.b * sx + t.d * sy + t.f;
+  if (id === 'player') {
+    mine.x = x;
+    mine.y = y;
+    mine.canvas = ctx.canvas;
+    return qualityRate();
+  }
+  const tall = (STILL_BOX.bottom - STILL_BOX.top) * zoom * dev;
+  const bySize = 0.5 + 0.5 * Math.max(0, Math.min(1, (tall - SMALL / 2) / (SMALL / 2)));
+  // Tiles from your body on the screen (two half-widths a tile across at this zoom); on another canvas, as near.
+  const tiles = mine.canvas === ctx.canvas ? Math.hypot(x - mine.x, y - mine.y) / (2 * HALF_W * zoom * dev) : 0;
+  const byFar = 1 - 0.5 * Math.max(0, Math.min(1, (tiles - NEAR) / (FAR - NEAR)));
+  // In quarters, so a loop's count of pictures (and so its pictures) does not change with every step a body takes.
+  return (Math.round(Math.min(bySize, byFar) * 4) / 4) * qualityRate();
+}
+
 /** Who has been drawn lately, counted afresh every quarter of a second, and how many were last time. */
 const lately = { since: 0, ids: new Set<string>(), count: 0 };
 
@@ -12660,7 +12689,7 @@ const shown = new Map<string, { pic: Pic; put: { ctx: CanvasRenderingContext2D; 
 
 /** Put `pic` down for body `id`, and remember it as what the body looks like now. */
 function putDown(ctx: CanvasRenderingContext2D, id: string, pic: Pic, sx: number, sy: number, zoom: number, now: number): void {
-  const put = { ctx, ...picPut(ctx, pic, sx, sy, zoom, zoom >= STILL_BELOW) };
+  const put = { ctx, ...picPut(ctx, pic, sx, sy, zoom, zoom >= STILL_BELOW && pic.dev >= 1) };
   const s = shown.get(id);
   if (s) {
     s.pic = pic;
@@ -12711,7 +12740,8 @@ function drawStill(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: 
    * still goes by a per cent and a half either way at sea, which crossed from one sixteenth to the next at some sizes. That
    * much off, the picture is drawn that much larger or smaller, which nobody sees.
    */
-  const seen = Math.sqrt(Math.abs(t.a * t.d - t.b * t.c)) || 1, was = stills.get(id)?.dev;
+  // At the quality's share of the screen's pixels (`qualityScale`), stretched to size as it is put down.
+  const seen = (Math.sqrt(Math.abs(t.a * t.d - t.b * t.c)) || 1) * qualityScale(), was = stills.get(id)?.dev;
   const dev = was !== undefined && Math.abs(seen - was) < 0.05 * was ? was : Math.max(1, Math.round(seen * 16)) / 16;
   const look = pose.look ?? DEFAULT_LOOK;
   const key = [look.gender, look.skin, look.hair, look.hairColour, look.hairBright, pose.tunic, pose.trousers,
@@ -12740,14 +12770,16 @@ function drawStill(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: 
   st.dev = dev;
   st.seen = now;
   // Something rare on them is drawn often enough for its glint to cross it smoothly.
-  const rate = Math.min(Math.max(pose.emote ? 30 : STILL_RATE[doing(pose)] ?? 30, gearShines(pose.gear) ? SHINE_RATE : 0), lately.count > CROWD ? CROWD_RATE : Infinity);
+  const rate = Math.max(MIN_RATE, rateShare(ctx, sx, sy, zoom, dev, id)
+    * Math.min(Math.max(pose.emote ? 30 : STILL_RATE[doing(pose)] ?? 30, gearShines(pose.gear) ? SHINE_RATE : 0), lately.count > CROWD ? CROWD_RATE : Infinity));
   const sized = `${zoom.toFixed(3)}|${dev}`;
   /*
    * With animations off (`still`), nothing in the picture moves on its own: drawn again only when something in its key
    * changes (the look, what is worn, the way it faces, what it is doing, the size, the sculpted bakes), never for the
    * time. Kept fresh meanwhile, so a crowd's pictures are not let go while they are still in view.
    */
-  const due = still ? st.key !== key : st.key !== key || changing || now - st.at >= 1 / rate || now < st.at;
+  // Blending or turning, every frame; but over the budget, at its rate like the rest.
+  const due = still ? st.key !== key : st.key !== key || (changing && !bodiesBehind()) || now - st.at >= 1 / rate || now < st.at;
   const fresh = !st.pic?.live && !shown.get(id)?.pic.live, resized = !fresh && st.sized !== sized;
   /*
    * Asked for, and drawn at the end of the frame if the budget has room (`takeAsked`): your own body first; then a body
@@ -12923,9 +12955,15 @@ function loopShape(id: string, now: number, count: number, w: number, h: number)
   }
   looping.ids.add(id);
   const share = LOOP_PIXELS / Math.max(1, looping.count, looping.ids.size);
-  const n = Math.min(count, Math.floor(share / (w * h)));
-  if (n >= LOOP_FEWEST || n >= count) return { n, scale: 1 };
-  return { n: Math.min(count, Math.max(LOOP_FEWEST, Math.floor((4 * share) / (w * h)))), scale: 0.5 };
+  // Halved, not cut to fit: a loop's count (and so its pictures) stays put as bodies come into view and go out of it.
+  const fit = (px: number): number => {
+    let n = count;
+    while (n > LOOP_FEWEST && n * px > share) n = Math.max(LOOP_FEWEST, Math.round(n / 2));
+    return n;
+  };
+  const n = fit(w * h);
+  if (n * w * h <= share || n >= count) return { n, scale: 1 };
+  return { n: fit((w * h) / 4), scale: 0.5 };
 }
 
 /*
@@ -12951,7 +12989,7 @@ function idleLoop(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: n
   ink: number, now: number, still: string, dev: number, id: string): boolean {
   if (changing || doing(pose) !== 'idle' || pose.emote || pose.seat || !Number.isInteger(facing) || gearShines(pose.gear)) return false;
   const b = boxAt(zoom * dev);
-  const { n, scale } = loopShape(id, now, IDLE_LOOP * STILL_RATE.idle, b.w, b.h);
+  const { n, scale } = loopShape(id, now, Math.round(IDLE_LOOP * Math.max(MIN_RATE, STILL_RATE.idle * rateShare(ctx, sx, sy, zoom, dev, id))), b.w, b.h);
   // The same clock the pose is worked out from (`rigOf`).
   const t = (((pose.phase / 6) % IDLE_LOOP) + IDLE_LOOP) % IDLE_LOOP;
   const i = Math.min(n - 1, Math.floor((t / IDLE_LOOP) * n));
@@ -12981,7 +13019,7 @@ function clipLoop(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: n
   const c = SCULPT.clipNow(pose);
   if (!c || c.fading) return false;
   const b = boxAt(zoom * dev);
-  const { n, scale } = loopShape(id, now, Math.max(1, Math.round(c.length * STILL_RATE.work)), b.w, b.h);
+  const { n, scale } = loopShape(id, now, Math.max(1, Math.round(c.length * Math.max(MIN_RATE, STILL_RATE.work * rateShare(ctx, sx, sy, zoom, dev, id)))), b.w, b.h);
   const i = Math.min(n - 1, Math.floor((c.t / c.length) * n));
   // What is held is drawn too: the tool, in its metal.
   const held = pose.tool ? `${pose.tool.id}.${pose.tool.material ?? ''}.${pose.tool.enchanted ? 1 : 0}` : '';

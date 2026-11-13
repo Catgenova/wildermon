@@ -3,6 +3,8 @@ import { MONSTER_GROWTH } from '../../render/monster-size';
 import { FORGET_AFTER, LOADING_AT_ONCE, SLICE_MS } from '../../render/wildermon';
 import { ACT_SECS } from '../../render/beasts';
 import { NAME_PX } from '../../render/namelabels';
+import { BODY_BUDGET_MS } from '../../render/bodybudget';
+import { QUALITY } from '../../render/bodies';
 import { COLOUR_FORM_ODDS, FORM_PASS, formGives, formName, SIZE_FORM_ODDS } from '../../game/wildforms';
 import { BUILD_COUNTS, MOST_GOES } from '../buildCounts';
 import { PLAN_AREA_MOST, PLAN_UNDO_SECONDS } from '../../game/planarea';
@@ -178,7 +180,7 @@ import { foodFill, itemDef, RARITIES, rarityBands, rarityChance, rareInputSaid, 
 import { SIGHT_FORM_AT, SIGHT_RARITY_AT } from '../../game/sighted';
 import { improvable, IMPROVE_DAMAGE as MEND_DAMAGE, IMPROVE_FAIL_LEAST, IMPROVE_FAIL_SPREAD } from '../../game/improve';
 import { JOB_GOES_MOST } from '../../game/mending';
-import { weaponCarry } from '../../render/figure';
+import { BODY_RATES, weaponCarry } from '../../render/figure';
 import { ACTION_SHARE, FEWER_SHARE, HIT_STOP_HEAVY } from '../../render/fx/actions';
 import { BLOCK_SPARKS, CRACK_SECS, HIT_PUFF, SHOCK_REACH, SPIRAL_MOTES, SPLINTERS, STREAK_SECS, TWANG_SECS } from '../../render/fx/combat';
 import { RUNE_SHARES } from '../../sculpt/anim/runes';
@@ -4414,6 +4416,19 @@ export const NEWS: News[] = [
       `New: fishing net: ${LIFT_DROPS * NET_LIFT.length} drops off the net as it is lifted, ${SHAKE_DROPS} at each of ${NET_SHAKES.length} shakes.`,
       `New: rowing under way: ${OAR_DROPS} drops a blade at the catch; whirl pair a blade a stroke, ${SWIRL_SECS} s.`,
       'Without a graphics card: swimming strokes\' splashes, rings treading water, the float\'s strike and a catch only.',
+    ],
+  },
+  {
+    n: 579,
+    day: '2026-11-13',
+    lines: () => [
+      'Changed: bodies drawn in one GL pass a frame, put down after one wait for the GL (was: one wait a body). Busy stretch of 30 at work and fighting, no graphics card: 36 to 12 ms a frame.',
+      `Changed: bodies drawn within ${BODY_BUDGET_MS} ms a frame on average, the most wanted first (was: 4 a frame, 1 without a graphics card; a body new in view or at a new size whatever the count). Zoom change over a crowd of 60, no graphics card: 1000 to 15 ms a frame.`,
+      `Changed: a body not yet drawn at this size: its last picture stretched to it; never drawn: at half size first where a whole one costs over ${BODY_BUDGET_MS} ms. Fast camera sweep over 90 people, no graphics card: 46 to 17 ms a frame.`,
+      `New: work and fight clips kept as loops of ${BODY_RATES.work} pictures a second, shared by bodies dressed alike; a crowd or a close zoom keeps fewer or half-size pictures (was: each body drawn ${BODY_RATES.work} times a second).`,
+      `Changed: bodies under ${BODY_RATES.small} px tall or over ${BODY_RATES.near} tiles from you drawn less often: half as often at ${BODY_RATES.small / 2} px or ${BODY_RATES.far} tiles; at least ${BODY_RATES.least} a second. Turning while over budget: in eighths.`,
+      `New: body quality: pictures at ${QUALITY.scales.map((k) => `${Math.round(k * 100)}%`).join(', ')} of the screen's pixels and of their rates; a step down when the middle frame over ${QUALITY.over / 1000} s is over ${QUALITY.slow} ms with bodies a quarter of it; a step up after ${QUALITY.up / 1000} s under ${QUALITY.quick} ms.`,
+      'New: Show drawing times: a bodies line: ms a frame, bodies drawn a frame, bodies waiting a frame, quality step.',
     ],
   },
   {

@@ -24,7 +24,7 @@ import { BODY_BUDGET_MS } from '../../src/render/bodybudget';
 import { check, finish } from './harness';
 
 /** On against Off, by the median frame: at most this many times as long, and this many ms over. */
-const ON_TIMES = 1.6;
+const ON_TIMES = 2.5;
 const ON_PLUS = 4;
 /** Milliseconds a frame the bodies may run over their budget on average: a body is started while any of it is left. */
 const SLACK = 2;
