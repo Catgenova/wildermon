@@ -1,7 +1,7 @@
 // The scale set's helm (the item scale_helm): a cap of dragon scale in courses over a dark leather shell, its crown a
-// faceted scale-plate boss, a scale-plate band round the brow edged in gold with a core over the brow, and the shell
-// carried down at the sides into scaled cheek guards and behind into a neck guard, the face open. Rigid on the head
-// bone, no bones of its own.
+// faceted scale-plate boss, a scale-plate band round the brow edged in gold with a core over the brow, a riveted
+// scale-plate cheek guard each side and two curved scale-plate lames over the nape, each with a hard gold-rimmed foot, the
+// face open. Rigid on the head bone, no bones of its own.
 //
 //   buildScaleHelm(rig, design?) → { verts, polys: [{ v, mat, part, tag }], tris, wt, hides }
 //
@@ -12,15 +12,16 @@
 //
 // The construction, about a centre in the head (C) and a pole straight up: a direction by φ from the pole and its
 // azimuth (0 forward, 90 the body's left). The shell: rows from the crown (φ0) down to its lower edge, which runs by
-// azimuth (`edge`: over the brow at the front, down over the cheeks and the nape), each point the head's reach that way
+// azimuth (`edge`: over the brow at the front, a little under the band elsewhere), each point the head's reach that way
 // (its samples in a cone round the direction) out by the clearance, smoothed round each row, fitted over the head
 // (platechest.mjs fitOut) and laid as a plate (plateOf) in the dark leather, its top rows scale-plate and closed by a low
-// cone; the scales in courses over it (scale.mjs scalesOn); the band (a second plate over them, `band`, gold-rimmed) with
-// its core at the front.
+// cone; the scales in courses over it (scale.mjs scalesOn); the guards (plates hung from under the band, the neck's lower
+// lame first, the cheeks over the lames' ends, each fitted over what is under it); the band (a plate over them all,
+// gold-rimmed) with its core at the front.
 //
 // Units and axes are the body's: y up (the chin's underside 0), z forward, x the body's left.
 import { meshOf, trisOf, sub, add, mul, dot, cross, unit } from '../lowgarment.mjs';
-import { fitOut, plateOf, coreOn, gridAt, piece, bodySamples } from './platechest.mjs';
+import { fitOut, plateOf, coreOn, gridAt, piece, bodySamples, surfOf } from './platechest.mjs';
 import { MATS, LOOKS, scalesOn, polyTris, coursesOf, rayTris } from './scale.mjs';
 
 /**
@@ -28,26 +29,35 @@ import { MATS, LOOKS, scalesOn, polyTris, coursesOf, rayTris } from './scale.mjs
  * edge: the shell's lower edge, φ by |azimuth| ([[az, φ], ...], straight between); c: the clearance off the head by φ
  * ([[φ, c], ...]); band: its middle φ by |azimuth|, its half height (degrees), how far it stands off the shell; rim: the
  * band's gold rim (platechest.mjs plateOf); scales: a course's height (degrees of φ), a scale's width, lift, ridge,
- * thickness, from φ; core: its radius.
+ * thickness, from φ; core: its radius; flare: the guards' lean out under the band, per degree of φ;
+ * cheek: φ from its top to its foot, its span in |azimuth| at the top and at the foot (front, back), how far it stands off
+ * the head, its middle row's bulge, its studs (row, column on its grid); neck: its span in azimuth, its lames (φ top and
+ * foot, how far off: the upper further, over the lower's top), the bulge.
  */
 export const DESIGN = {
   male: {
-    C: [0, 1.15, -0.06], phi0: 14, rows: [0, 0.1, 0.22, 0.36, 0.5, 0.64, 0.78, 0.9, 1], crown: 1,
-    edge: [[0, 80], [40, 84], [52, 96], [64, 122], [110, 125], [140, 119], [180, 117]],
+    C: [0, 1.15, -0.06], phi0: 14, rows: [0, 0.12, 0.26, 0.42, 0.58, 0.74, 0.88, 1], crown: 1,
+    edge: [[0, 80], [40, 84], [60, 94], [110, 98], [180, 104]],
     c: [[0, 0.07], [60, 0.08], [100, 0.1], [140, 0.16]],
     band: { phi: [[0, 70], [60, 76], [100, 88], [180, 100]], half: 7, off: 0.1 },
     rim: { w: 0.07, h: 0.03, t: 0.03 },
     scales: { course: 18, w: 0.4, lift: [0.012, 0.06], ridge: 0.022, thick: 0.03, from: 22 },
     core: 0.15,
+    cheek: { phi: [84, 119], top: [56, 124], bottom: [76, 116], off: 0.16, bulge: 0.025, studs: [[0.55, 1.2], [0.55, 2.8], [1.45, 2]] },
+    neck: { az: [116, 244], lames: [{ phi: [106, 119], off: 0.05 }, { phi: [95, 109], off: 0.11 }], bulge: 0.02 },
+    flare: 0.004,
   },
   female: {
-    C: [0, 1.12, -0.06], phi0: 14, rows: [0, 0.1, 0.22, 0.36, 0.5, 0.64, 0.78, 0.9, 1], crown: 1,
-    edge: [[0, 78], [40, 82], [52, 94], [64, 120], [110, 123], [140, 118], [180, 116]],
+    C: [0, 1.12, -0.06], phi0: 14, rows: [0, 0.12, 0.26, 0.42, 0.58, 0.74, 0.88, 1], crown: 1,
+    edge: [[0, 78], [40, 82], [60, 92], [110, 96], [180, 102]],
     c: [[0, 0.06], [60, 0.07], [100, 0.09], [140, 0.14]],
     band: { phi: [[0, 68], [60, 74], [100, 86], [180, 98]], half: 6.5, off: 0.09 },
     rim: { w: 0.06, h: 0.026, t: 0.026 },
     scales: { course: 17, w: 0.36, lift: [0.011, 0.054], ridge: 0.02, thick: 0.027, from: 22 },
     core: 0.13,
+    cheek: { phi: [82, 116], top: [56, 124], bottom: [76, 116], off: 0.14, bulge: 0.022, studs: [[0.55, 1.2], [0.55, 2.8], [1.45, 2]] },
+    neck: { az: [116, 244], lames: [{ phi: [104, 117], off: 0.045 }, { phi: [93, 107], off: 0.1 }], bulge: 0.018 },
+    flare: 0.004,
   },
 };
 
@@ -97,15 +107,60 @@ export function buildScaleHelm(rig, D = DESIGN[rig.who]) {
   const Sd = D.scales, maxEdge = Math.max(...D.edge.map(([, e]) => e));
   const { us, h } = coursesOf(Sd.from, maxEdge + Sd.course * 0.1, Sd.course);
   scalesOn(G, { tris: shellTris }, { h, us, w: Sd.w, v: [180, 540], lift: Sd.lift, ridge: Sd.ridge, thick: Sd.thick, cast: (u, v) => [C, dir(u, v)], out: (p) => sub(p, C), wt, tag: 'scales', minRun: 10 });
-  // the band over them: its rows on the shell, out past the scales by `off`
+  const scaleS = [];
+  for (const p of G.polys) if (p.tag === 'scales') for (const i of p.v) scaleS.push(G.verts[i]);
+  // the guards: solid scale-plates hung under the band, each a plate with a hard foot rimmed in gold. Their faces the
+  // head's reach (over the band's height) or straight down from it (under it, flaring by `flare` a degree), out by
+  // `off`; fitted over the head, the shell and the cap's scales
+  const r90m = new Map();
+  const R = (phi, az) => {
+    if (phi <= 90) return reach(dir(phi, az)) + interp(D.c, phi);
+    const k = Math.round(az * 2) / 2;
+    if (!r90m.has(k)) r90m.set(k, reach(dir(90, k)) + interp(D.c, 90));
+    return (r90m.get(k) + D.flare * (phi - 90)) / Math.sin(rad(phi));
+  };
+  const at = (phi, az, extra) => add(C, mul(dir(phi, az), R(phi, az) + extra));
+  const sideOut = (p) => [p[0] - C[0], 0, p[2] - C[2]];
+  const under = [[head, 0.06], [surfOf(G, s0), 0.03], [scaleS, 0.02]];
+  // (a stud: a gold four-sided boss on a plate, its rivet)
+  const stud = (pl, rf, cf, r) => {
+    const h0 = gridAt(pl, rf, cf), n = h0.n, u = unit(cross(n, [0, 1, 0])), v = cross(u, n);
+    const V = (p) => { const i = G.vert(p, 'stud'); G.wt[i] = wt; return i; };
+    const base = [u, v, mul(u, -1), mul(v, -1)].map((d) => V(add(add(h0.q, mul(n, 0.008)), mul(d, r)))), top = V(add(h0.q, mul(n, r * 0.9)));
+    G.tag = 'stud';
+    const c0 = G.polys.length;
+    base.forEach((a, k) => G.poly([a, base[(k + 1) % 4], top], 'gold', 'stud'));
+    piece(G, c0, () => n);
+  };
+  // the neck guard: two curved lames across the back, the upper over the lower's top
+  const Nk = D.neck, nAz = Array.from({ length: 9 }, (_, k) => Nk.az[0] + ((Nk.az[1] - Nk.az[0]) * k) / 8);
+  for (const L of Nk.lames) {
+    const rows = [0, 0.5, 1].map((f, r) => nAz.map((az) => at(L.phi[0] + (L.phi[1] - L.phi[0]) * f, az, L.off + (r === 1 ? Nk.bulge : 0))));
+    fitOut(rows, false, sideOut, under, 0);
+    const p0 = G.polys.length;
+    plateOf(G, rows, { tag: 'neck', bone: wt, rim: D.rim, out: sideOut, border: { top: 'open', bottom: 'trim', left: 'edge', right: 'edge' }, mat: (r) => (r === 0 ? 'scale' : 'edge'), edgeMat: 'edge' });
+    under.push([surfOf(G, p0), 0.03]);
+  }
+  // the cheek guards: one plate a side, narrowing to its foot along the jaw, its front edge rimmed in gold, three studs
+  const Ck = D.cheek;
+  for (const s of [1, -1]) {
+    const rows = [0, 0.5, 1].map((f, r) => Array.from({ length: 5 }, (_, k) => {
+      const a0 = Ck.top[0] + (Ck.bottom[0] - Ck.top[0]) * f, a1 = Ck.top[1] + (Ck.bottom[1] - Ck.top[1]) * f, az = a0 + ((a1 - a0) * k) / 4;
+      return at(Ck.phi[0] + (Ck.phi[1] - Ck.phi[0]) * f, s * az, Ck.off + (r === 1 ? Ck.bulge : 0));
+    }));
+    fitOut(rows, false, sideOut, under, 0);
+    const cheek = plateOf(G, rows, { tag: 'cheek', bone: wt, rim: D.rim, out: sideOut, border: { top: 'open', bottom: 'trim', left: 'trim', right: 'edge' }, mat: (r) => (r === 0 ? 'scale' : 'edge'), edgeMat: 'edge' });
+    for (const [rf, cf] of Ck.studs) stud(cheek, rf, cf, D.rim.w * 0.6);
+  }
+  const guardS = [];
+  for (const p of G.polys) if (p.tag === 'neck' || p.tag === 'cheek') for (const i of p.v) guardS.push(G.verts[i]);
+  // the band over them all: its rows on the shell, out past the scales and the guards' tops by `off`
   const Bd = D.band;
   const bandRows = [-1, 0, 1].map((f) => AZ.map((az) => {
     const phi = byAz(Bd.phi, az) + f * Bd.half, d = dir(phi, az), s = rayTris(shellTris, C, d) || reach(d) + interp(D.c, phi);
     return add(C, mul(d, s + Bd.off));
   }));
-  const scaleS = [];
-  for (const p of G.polys) if (p.tag === 'scales') for (const i of p.v) scaleS.push(G.verts[i]);
-  fitOut(bandRows, true, (p) => sub(p, C), [[head, 0.06], [scaleS, 0.012]], 0);
+  fitOut(bandRows, true, (p) => sub(p, C), [[head, 0.06], [scaleS, 0.012], [guardS, 0.012]], 0);
   const band = plateOf(G, bandRows, { tag: 'band', bone: wt, rim: D.rim, out: (p) => sub(p, C), ring: true, border: { top: 'trim', bottom: 'trim' }, mat: 'scale', edgeMat: 'edge' });
   coreOn(G, band, gridAt(band, 1, 0).q, { dir: [0, 1, 0], out: [0, 0, 1] }, D.core, 6, 'core');
   G.tris = trisOf(G);
