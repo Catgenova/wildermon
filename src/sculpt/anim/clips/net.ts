@@ -18,6 +18,11 @@ import { onHandle, type Hold } from './pole';
 const LENGTH = 5.2;
 /** The drag's end: the hoop drawn in to the bank, about to be lifted. */
 export const DRAWN = 2.3;
+/** The bag lifted clear of the water, and the two shakes, seconds in. */
+export const NET_CLEAR = 2.7;
+export const NET_SHAKES = [3.15, 3.5];
+/** Drops off the bag at each shake (`../../../render/fx/water.ts` netdrops). */
+export const SHAKE_DROPS = 6;
 /** The front fist and the rear: game units up the pole (tools/sculpt/gear/sawfish.mjs NET lead and butt), and apart over the man's height. */
 const NET_LEAD = 2.6, NET_BUTT = 0.5;
 const GAP = -(NET_LEAD - NET_BUTT) / 16.5;
@@ -78,6 +83,11 @@ export const NET: Clip = {
   tools: { r: 'fishing_net' },
   strike: { side: 'r', t: DRAWN },
   stretch: [[0, DRAWN]],
+  // water running off the bag as it is lifted clear, and shaken out of it twice (`../../../render/fx/water.ts`)
+  fx: [
+    { at: NET_CLEAR, from: { tool: 'head' }, kind: 'netdrops' },
+    ...NET_SHAKES.map((t) => ({ at: t, from: { tool: 'head' as const }, kind: 'netdrops', params: { n: SHAKE_DROPS } })),
+  ],
   bodies: { man: { armsOut: -3 }, woman: { armsOut: -3, add: { thigh_l: [0, 0, -6], thigh_r: [0, 0, 6], pelvis: [5, 0, 0] }, hands: { r: [0.015, 0, -0.06], l: [0.015, 0, -0.06] } } },
 };
 export const NET_LEFT: Clip = mirrorClip(NET, 'net-left');

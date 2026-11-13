@@ -2,13 +2,16 @@
  * Action effects: what a body's work and blows throw off (sparks off a blade, chips off a pick), drawn where the island
  * draws the body doing it.
  *
- * Two ways in:
+ * Three ways in:
  *   - **Marks on the clips** (`../../sculpt/anim/clip.ts` Clip.fx). Every body drawn in a frame is passed through `seen`
  *     (the player and each peer, `Renderer.drawEntities`); at the start of the next frame each body's clip is followed
  *     (`../../sculpt/fxmarks.ts`, in the sculpted bodies' chunk) and each mark its time crossed fires its effect at the
  *     place it names on the body, turned and stood where the body is in the world. The clip's time is the clip player's
  *     own, so every screen fires a peer's at the moment it draws it, with nothing sent.
  *   - **What the island says** (`fxAt`): an effect at a body by who it is (a block, a hit), at a place on it or its middle.
+ *   - **Followed frame by frame** (`FxFollower`): what goes on with a body beside its marks, from the same pose: an oar's
+ *     stroke (`./rowing.ts`), a fishing line out and what the island says came of your own go (`./fishing.ts`, `told`);
+ *     and a swimmer under way's wake (`ActionWhere.wake`).
  *
  * The effects themselves are `./registry.ts` ACTION_FX, drawn with `./kit.ts` ActionKit on the spells' stage
  * (`../spells/stage.ts`): its particle pool, its passes and its lights, so a spell and a blow are counted together and
@@ -25,7 +28,7 @@
  *   - **A hold** (`hitStop`): a struck body's clip time held for up to `HIT_STOP_MOST` ms, then caught up over three times
  *     as long; none with Motion reduced or Effects off.
  */
-import { sculptFx, sculptSoft, type FigurePose } from '../figure';
+import { sculptFx, sculptSoft, treadRingsByFx, type FigurePose } from '../figure';
 import { MOST_PARTICLES, MOST_LIGHTS, rngOf, type Body, type Eye, type P3, type Who } from '../spells/kit';
 import { UNITS_PER_TILE } from '../iso';
 import type { SpellStage } from '../spells/stage';
@@ -33,7 +36,9 @@ import type { Effects } from '../../game/settings';
 import { ActionKit, SMALL_ZOOM } from './kit';
 import { FxMaterials, type FxWorld } from './material';
 import { ACTION_FX, type FxLinger } from './registry';
-import type { FxBody, FxEvent, FxFrom, FxPoint, V3 } from './types';
+import type { FollowFrame, FxBody, FxEvent, FxFollower, FxFrom, FxMark, FxPoint, V3 } from './types';
+import { Rowing } from './rowing';
+import { Fishing } from './fishing';
 import { BLOCK_SECS, FLINCH_SECS } from '../../game/fight';
 import { BLOCK_IMPACT } from '../../sculpt/anim/clips/block';
 import { FLINCH_SNAP } from '../../sculpt/anim/clips/flinch';
@@ -82,6 +87,12 @@ export interface ActionWhere extends FxWorld {
   foe(w: Who): P3 | null;
   /** The ground's height under a point, height units. */
   ground(x: number, y: number): number;
+  /** The water's surface under a point as it is drawn, height units, or null where there is none. */
+  water(x: number, y: number): number | null;
+  /** Where somebody fishing casts to, as the island finds it (`castAt`): known for you alone. */
+  cast(w: Who): { x: number; y: number } | null;
+  /** A swimmer under way at a point this frame, for the wake behind them (`../wake.ts` Wakes). */
+  wake(id: string, x: number, y: number): void;
 }
 
 /** A frame's conditions (`ActionFx.update`). */
@@ -107,6 +118,11 @@ export function whoOfId(id: string): Who | null {
   return id[0] === 'o' ? { kind: 'peer', id: n } : id[0] === 'c' ? { kind: 'creature', id: n } : null;
 }
 
+/** A mark's point put on the water (`params.surface`): at the figure's level nought, where a swimmer's water is drawn. */
+function surfaced(p: FxPoint | null, params: FxMark['params']): FxPoint | null {
+  return p && params?.surface === true ? { ...p, at: [p.at[0], p.at[1], 0] } : p;
+}
+
 /** A seed from a body, a mark and a run of its clip. */
 function seedOf(id: string, i: number, run: number): number {
   let h = 2166136261;
@@ -125,6 +141,13 @@ export class ActionFx {
   /** Bodies drawn this frame, by id, for the next frame's update; and those that frame is following. */
   private drawn = new Map<string, FigurePose>();
   private following = new Map<string, FigurePose>();
+  /** Where a body was drawn this frame when that is not where it stands (sat in a boat: `seen`), and last frame's. */
+  private placed = new Map<string, P3>();
+  private wasPlaced = new Map<string, P3>();
+  /** What is followed on a body beside its marks: an oar's stroke, a line out. */
+  private readonly rowing = new Rowing();
+  private readonly fishing: Fishing;
+  private readonly followers: FxFollower[];
   private lingers: Lingering[] = [];
   private asked: Asked[] = [];
   /** Each body's block and flinch last frame (`FigurePose.block`, `flinch.t`), to fire their moments as they are passed. */
@@ -146,7 +169,10 @@ export class ActionFx {
 
   constructor(private readonly stage: SpellStage, private readonly where: ActionWhere) {
     this.mat = new FxMaterials(where);
+    this.fishing = new Fishing((id) => { const w = whoOfId(id); return w ? where.cast(w) : null; });
+    this.followers = [this.rowing, this.fishing];
     const k = this.k;
+    k.water = (x, y) => where.water(x, y);
     k.parts = stage.parts;
     k.out = stage.out;
     k.mat = this.mat;
@@ -159,12 +185,26 @@ export class ActionFx {
    * A body as it is drawn this frame (the pose handed to the figure): kept for the next frame's marks, and returned with
    * its clip time held where a hold is on it (`hitStop`).
    */
-  seen(pose: FigurePose): FigurePose {
+  seen(pose: FigurePose, at?: P3): FigurePose {
     const id = pose.id;
     if (!id || this.effects === 'off') return pose;
-    const held = this.heldBack(id), out = held > 0 && !pose.moving ? { ...pose, phase: pose.phase - held * 6, ...(pose.act ? { act: { ...pose.act, t: Math.max(0, pose.act.t - held) } } : {}) } : pose;
+    const held = this.heldBack(id), was = held > 0 && !pose.moving ? { ...pose, phase: pose.phase - held * 6, ...(pose.act ? { act: { ...pose.act, t: Math.max(0, pose.act.t - held) } } : {}) } : pose;
+    // (a rod's line drawn here while it is out: `./fishing.ts`)
+    const out = pose.working ? { ...was, line: true } : was;
     this.drawn.set(id, out);
+    if (at) this.placed.set(id, at);
     return out;
+  }
+
+  /** What the island said of your own go (a log line): a fish caught is brought out at the float (`./fishing.ts`). */
+  told(text: string): void {
+    if (this.effects !== 'off' && text.startsWith('Caught:')) this.fishing.caught('player');
+  }
+
+  /** Where a body is this frame: where it stands, or where it was drawn (sat in a boat, `seen`). */
+  private bodyOf(id: string, who: Who): Body | null {
+    const b = this.where.body(who), at = this.wasPlaced.get(id);
+    return b && at ? { ...b, x: at.x, y: at.y, z: at.z } : b;
   }
 
   /** Seconds of clip a body is held back by now (`hitStop`). */
@@ -210,6 +250,9 @@ export class ActionFx {
     this.holds.clear();
     this.drawn.clear();
     this.following.clear();
+    this.placed.clear();
+    this.wasPlaced.clear();
+    for (const f of this.followers) f.clear();
     this.overlays.clear();
     this.heavies.length = this.landed.length = 0;
   }
@@ -227,7 +270,12 @@ export class ActionFx {
     this.following = this.drawn;
     this.drawn = was;
     this.drawn.clear();
+    const at = this.wasPlaced;
+    this.wasPlaced = this.placed;
+    this.placed = at;
+    this.placed.clear();
     if (env.effects === 'off') {
+      treadRingsByFx(false);
       this.lingers.length = 0;
       this.asked.length = 0;
       this.holds.clear();
@@ -262,14 +310,24 @@ export class ActionFx {
     this.lingers.length = keep;
     // the marks crossed, and what the island asked for
     const fx = sculptFx(), soft = this.soft ?? sculptSoft(), long = env.dt > LONG_FRAME;
+    // the rings off a hand treading water are the marks' (`../../sculpt/anim/clips/swim.ts` TREAD) while there are marks
+    treadRingsByFx(!!fx);
     if (fx) for (const [id, pose] of this.following) {
       for (const c of fx.track(id, pose, env.now)) {
         const run = ACTION_FX[c.mark.kind];
         if (!run || long || (soft && !c.mark.key)) { this.stats.skipped++; continue; }
-        const who = whoOfId(id), b = who ? this.where.body(who) : null, p = b ? c.point() : null;
+        const who = whoOfId(id), b = who ? this.bodyOf(id, who) : null, p = b ? surfaced(c.point(), c.mark.params) : null;
         if (!b || !p) { this.stats.skipped++; continue; }
         this.fire(this.eventOf(id, b, pose, p, c.mark.kind, c.mark.params ?? {}, !!c.mark.key, seedOf(id, c.i, c.run)), env);
       }
+    }
+    // what is followed beside the marks: oars, a line out; and a swimmer's wake
+    if (fx) for (const [id, pose] of this.following) {
+      const who = whoOfId(id), b = who ? this.bodyOf(id, who) : null;
+      if (!b) continue;
+      if (pose.swimming && pose.moving && id !== 'player') this.where.wake(id, b.x, b.y);
+      const f = this.followOf(id, pose, b, fx, soft, long, env);
+      for (const w of this.followers) w.follow(f);
     }
     // a blow on a shield, a blow landing: laid over the clips, fired at their moments
     if (fx) this.overlaysOf(fx, long, env);
@@ -288,6 +346,25 @@ export class ActionFx {
     let now = 0;
     for (let i = 0; i < ps.span; i++) if (ps.life[i] > 0) now++;
     if (now > this.stats.most) this.stats.most = now;
+  }
+
+  /** A body as a follower sees it this frame (`FollowFrame`). */
+  private followOf(id: string, pose: FigurePose, b: Body, fx: NonNullable<ReturnType<typeof sculptFx>>, soft: boolean, long: boolean, env: ActionEnv): FollowFrame {
+    const facing = pose.seat ? pose.facing : Math.round(pose.facing), turned: Body = { ...b, facing }, k = this.k;
+    const body: FxBody = { x: b.x, y: b.y, z: b.z, facing };
+    return {
+      id, pose, body: turned, fx, now: env.now, dt: env.dt, night: env.night,
+      local: (p) => k.local(turned, p[0], p[1], p[2]),
+      water: (x, y) => this.where.water(x, y),
+      fire: (kind, at, o = {}) => {
+        if (!ACTION_FX[kind] || long || (soft && !o.key)) { this.stats.skipped++; return; }
+        this.fire({ kind, who: id, at, way: o.way ?? null, body, ...(o.to ? { to: o.to } : {}), pose, params: o.params ?? {}, mine: id === 'player', key: !!o.key, seed: seedOf(id, 200, o.seed ?? Math.floor(env.now * 60)) }, env);
+      },
+      draw: (fn) => {
+        const e: FxEvent = { kind: '', who: id, at: { x: b.x, y: b.y, z: b.z }, way: null, body, pose, params: {}, mine: id === 'player', key: true, seed: 0 };
+        this.drawWith(e, 1, false, () => fn(k));
+      },
+    };
   }
 
   /** An event at a point of a body (its figure's frame) put in the world where the body stands, turned as it is drawn. */

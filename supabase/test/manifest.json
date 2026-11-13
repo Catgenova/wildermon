@@ -374,7 +374,7 @@
   },
   {
     "file": "supabase/test/actionfx.ts",
-    "title": "Action effects with thirty at work, and thirty in a fight, keep to their share of the particles and cost little",
+    "title": "Action effects with thirty at work, thirty in a fight, and thirty on the water keep to their share of the particles and cost little",
     "shard": 1,
     "external": [
       "esbuild",
@@ -383,7 +383,7 @@
     "env": {
       "FX_STRICT": "1"
     },
-    "why": "Sparks off a one-handed blow and chips off a pick fire from marks on the clips, on the spells' particle pool. Drawn in Chrome on the page's own clock with thirty people fighting or mining: both kinds fire; the particles alive stay within the action effects' share of the pool, asked for far more or not; a spell's particles past that share leave the effects none; a frame with them is within a quarter and 3 ms of one with Effects off; Off fires and adds nothing, Fewer adds less, and on the processor's GL only the marks marked key fire. And thirty in a fight (shields, two-handed weapons, bows, every class of armour, blows on all of them in turn): blocks, blows landing, heavy blows and bows fire, within the same share and margin; on the processor's GL the blocks and the blows landing still fire, the heavy blows and the bows not."
+    "why": "Sparks off a one-handed blow and chips off a pick fire from marks on the clips, on the spells' particle pool. Drawn in Chrome on the page's own clock with thirty people fighting or mining: both kinds fire; the particles alive stay within the action effects' share of the pool, asked for far more or not; a spell's particles past that share leave the effects none; a frame with them is within a quarter and 3 ms of one with Effects off; Off fires and adds nothing, Fewer adds less, and on the processor's GL only the marks marked key fire. And thirty in a fight (shields, two-handed weapons, bows, every class of armour, blows on all of them in turn): blocks, blows landing, heavy blows and bows fire, within the same share and margin; on the processor's GL the blocks and the blows landing still fire, the heavy blows and the bows not. And thirty on the water (twenty swimming, under way and treading water; ten rowing boats under way): splashes, flicks, rings, the oars' splashes and whirls fire, within the same share and margin; on the processor's GL the splashes and the rings still fire, the flicks, oars and whirls not."
   },
   {
     "file": "supabase/test/access.ts",

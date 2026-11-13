@@ -12,7 +12,7 @@
  * Each is keyed as a few key poses on its run and sampled smoothly between them (`sampled`: through each key at the pace
  * the keys either side of it set, as the flat figure's `loop`), every bone at even steps of the run.
  */
-import type { Clip, HandReach, Key } from '../clip';
+import type { Clip, FxMark, HandReach, Key } from '../clip';
 import type { Euler } from '../math';
 import { TREAD_RATE } from '../../../render/figure';
 
@@ -155,6 +155,10 @@ const SWIM_KEYS: At[] = [
   { at: 0.64, pose: KICK },
   { at: 0.8, pose: GLIDE },
 ];
+/** Where in the stroke the hands take hold (the catch), come forward again (the shoot) and the head is up to breathe: shares of it. */
+export const SWIM_CATCH = 0.14, SWIM_RECOVER = 0.52, SWIM_BREATH = 0.4;
+/** Drops off a hand as it comes forward again (`../../../render/fx/water.ts` splash). */
+export const RECOVER_DROPS = 3;
 /** The key poses by name, for the sheets. */
 const SWIM_NAMES = ['glide', 'catch', 'pull', 'breath', 'shoot', 'kick'];
 
@@ -167,6 +171,13 @@ export const SWIM: Clip = {
   // (the thumbs in toward the middle: the palms down along the glide, out as the hands sweep out, back as they come in)
   ...sampled(SWIM_KEYS, STROKE, { l: [-1, 0, 0], r: [1, 0, 0] }),
   poses: SWIM_KEYS.slice(0, -1).map((k, i) => ({ t: +(k.at * STROKE).toFixed(4), name: SWIM_NAMES[i] })),
+  // the water off the hands (`../../../render/fx/water.ts`), on its surface (`params.surface`): a splash at each as it
+  // takes hold at the catch, a smaller one as they come forward again, drops flicked off them at the breath
+  fx: (['l', 'r'] as const).flatMap((s): FxMark[] => [
+    { share: SWIM_CATCH, from: { bone: `hand_${s}` }, kind: 'splash', key: true, params: { surface: true } },
+    { share: SWIM_RECOVER, from: { bone: `hand_${s}` }, kind: 'splash', params: { surface: true, n: RECOVER_DROPS } },
+    { share: SWIM_BREATH, from: { bone: `hand_${s}` }, kind: 'flick', params: { surface: true } },
+  ]),
 };
 
 /*
@@ -218,4 +229,11 @@ export const TREAD: Clip = {
   poses: [0, 0.25, 0.5, 0.75].map((u) => ({ t: +(u * SWEEP).toFixed(4), name: `sweep ${u}` })),
   // her head set lower on her shoulders: let down a little less, so it stands as far out of the water as his
   bodies: { woman: { move: [1, 0.975, 1] } },
+  // a soft ring on the water at each hand as it reaches the end of its sweep out (the left at a quarter of a sweep, the
+  // right 0.35 radians before it), on the surface (`../../../render/fx/water.ts`); in the processor's GL too, as they are
+  // the only rings treading water makes while the effects are on (`../../../render/figure.ts` treadRingsByFx)
+  fx: Array.from({ length: SWEEPS }, (_, j) => [
+    { share: (j + 0.25) / SWEEPS, from: { bone: 'hand_l' }, kind: 'ripple', key: true, params: { surface: true } },
+    { share: (j + 0.25 - 0.35 / TAU) / SWEEPS, from: { bone: 'hand_r' }, kind: 'ripple', key: true, params: { surface: true } },
+  ]).flat(),
 };

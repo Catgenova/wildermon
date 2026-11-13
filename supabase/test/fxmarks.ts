@@ -7,12 +7,14 @@
  *   * a leap past `SKIP`, a change of clip, or a body unseen for `GAP` starts afresh and fires nothing;
  *   * a timed job's go fitted to its length (`fitTime`) fires the mark once a go, however long the go;
  *   * the mirrored clip (played left-handed) fires from the other hand, and the point is where the weapon is, the same
- *     every time it is asked.
+ *     every time it is asked;
+ *   * a swimmer's stroke, played wrapped to each stroke (`../../src/sculpt/anim` clipFor), fires each hand's catch, its
+ *     coming forward and its breath once a stroke, as many strokes as are swum.
  */
 import { fxTrack, GAP, REWIND, SKIP } from '../../src/sculpt/fxmarks';
 import { clipFor } from '../../src/sculpt/anim';
 import { markTime, runsOf } from '../../src/sculpt/anim/clip';
-import type { FigurePose } from '../../src/render/figure';
+import { SWIM_STROKE, type FigurePose } from '../../src/render/figure';
 import { check, finish } from './harness';
 
 const look = { gender: 'man', hair: 'swept', hairColour: 0.3, hairBright: 0.5, skin: 0.4 } as FigurePose['look'];
@@ -80,5 +82,17 @@ check('the one-handed fight carries its sparks mark', c0.clip.fx?.some((m) => m.
   }
   check('played right-handed, from the right hand; left-handed (the mirrored clip), from the left', !!right && !!left && / r /.test(right) && /-left l /.test(left), `${right}; ${left}`);
   check('the point is on the weapon, and the same each time it is asked', hand === 'sword' && again === 'same', `${hand}, ${again}`);
+}
+{
+  // Swum for five strokes at a stroke a second and a quarter, from a little into the first: each hand's catch and coming
+  // forward (splash) and its breath (flick) once a stroke.
+  const strokes = 5, secs = 1.25, swimmer = (phase: number): FigurePose => ({ id: 'swim', phase, moving: true, facing: 1, swimming: true, working: false, look });
+  const kinds: Record<string, number> = {};
+  for (let t = 0.02; t <= strokes * secs + 0.02; t += DT) {
+    now += DT;
+    for (const c of fxTrack('swim', swimmer((t / secs) * SWIM_STROKE), now)) kinds[c.mark.kind] = (kinds[c.mark.kind] ?? 0) + 1;
+  }
+  check(`a swimmer's stroke, ${strokes} strokes: ${4 * strokes} splashes (the catch and coming forward, each hand) and ${2 * strokes} flicks`,
+    kinds.splash === 4 * strokes && kinds.flick === 2 * strokes, JSON.stringify(kinds));
 }
 finish('the effect marks on the clips, followed body by body');
