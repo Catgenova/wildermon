@@ -52,7 +52,7 @@ function legObstacles(who) {
   const out = [], dir = new URL('../../../src/sculpt/assets/', import.meta.url);
   // (every garment on the legs: its name has legs, leggings or trousers in it, whichever set it is from; not the leather
   // leggings' hip flaps, left off under the hauberk)
-  for (const name of readdirSync(dir).filter((n) => new RegExp(`^low.*(legs|leggings|trousers).*-${who}\\.json$`).test(n) && !n.includes("flaps"))) {
+  for (const name of readdirSync(dir).filter((n) => new RegExp(`^low.*(legs|leggings|trousers).*-${who}\\.json$`).test(n) && !n.includes("flaps") && !n.includes("chestlegs"))) {
     const f = new URL(name, dir);
     if (!existsSync(f)) continue;
     const v = JSON.parse(readFileSync(f, 'utf8')).verts;
@@ -228,4 +228,5 @@ export function buildChainChest(rig, D = DESIGN[rig.who]) {
   return G;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) await writePiece('chainchest', buildChainChest, 'chainchest.mjs');
+// (its waist and skirt over every legs piece: garments/overlegs.mjs)
+if (import.meta.url === `file://${process.argv[1]}`) await writePiece('chainchest', buildChainChest, 'chainchest.mjs', async (rig, G) => (await import('./overlegs.mjs')).overLegs(rig, G, 'chainChest'));

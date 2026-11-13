@@ -65,6 +65,8 @@ export async function writeAssets(which = ['tunic', 'shawl', 'shawlover', 'shawl
     if (which.includes('shawlover')) O.shawlover = buildShawlOver(rig, O, 'full');
     if (which.includes('shawloverslim')) O.shawloverslim = buildShawlOver(rig, O, 'slim');
     for (const what of which) {
+      // (the tunic's skirt over every legs piece: garments/overlegs.mjs; after the shawls' fits, which it does not reach)
+      if (what === 'tunic') (await import('./overlegs.mjs')).overLegs(rig, O.tunic, 'tunic');
       const G = O[what], file = new URL(`../../../src/sculpt/assets/low${what}-${who}.json`, import.meta.url);
       const A = { built: 'node tools/sculpt/garments/outfit1.mjs (tools/sculpt/lowgarment.mjs garmentAsset)', ...garmentAsset(rig, G, what === 'tunic' ? TUNIC_MATS : SHAWL_MATS, what === 'tunic' ? TUNIC_LOOKS : SHAWL_LOOKS), ...(what === 'tunic' ? { hides: O.hides.tunic } : {}) };
       writeFileSync(file, JSON.stringify(A));

@@ -391,13 +391,17 @@ export function finish(G) {
   return G;
 }
 
-/** Writes a piece's game copy beside each body (lowgarment.mjs garmentAsset), with `hides` and `soles` and `dropFrom` where it has them. */
-export async function writePiece(name, build, script) {
+/**
+ * Writes a piece's game copy beside each body (lowgarment.mjs garmentAsset), with `hides` and `soles` and `dropFrom` where
+ * it has them; `after(rig, G)` (if given) on the finished mesh first.
+ */
+export async function writePiece(name, build, script, after = null) {
   const { writeFileSync } = await import('node:fs');
   const { buildRig } = await import('../lowrig.mjs');
   const { garmentAsset } = await import('../lowgarment.mjs');
   for (const who of ['male', 'female']) {
     const rig = buildRig(who), G = finish(build(rig));
+    if (after) await after(rig, G);
     const file = new URL(`../../../src/sculpt/assets/low${name}-${who}.json`, import.meta.url);
     const A = { built: `node tools/sculpt/garments/${script} (tools/sculpt/lowgarment.mjs garmentAsset)`, ...garmentAsset(rig, G, MATS, LOOKS), hides: G.hides, ...(G.soles ? { soles: G.soles } : {}), ...(G.dropFrom !== undefined ? { dropFrom: G.dropFrom } : {}) };
     writeFileSync(file, JSON.stringify(A));

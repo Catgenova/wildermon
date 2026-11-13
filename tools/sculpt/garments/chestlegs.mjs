@@ -20,7 +20,8 @@
 //    only because a legs triangle is left out, the nearest such triangle on that line of sight is kept, until none is.
 //
 //   node tools/sculpt/garments/chestlegs.mjs [--who male,female] [--reach 1] [--margin 0] [--up 0] [--down 0] [--side 0]
-//       [--no-refine]
+//       [--no-refine] [--chests plateChest,...] [--frames 1] [--out <file, {who} the body>]
+//     (--chests: only those rows made again, the rest kept from the table; --frames: the clips' frames scaled, for a quick look)
 //     writes src/sculpt/assets/lowchestlegs-<who>.json: { built, <chest>: { <legs>: { tris, drop, show } } } (CHESTS, LEGS),
 //     each legs asset's triangle count (for a check that it was not rebuilt since), the triangles left out under that
 //     chest and the body's polygons the legs piece hides drawn again there (`showOf`).
@@ -40,8 +41,8 @@ export const LEGS = { trousers: 'lowtrousers', leatherLegs: 'lowleatherlegs', le
 export const CHEST_ITEMS = { tunic: 'tunic', jerkin: 'leatherChest', breastplate: 'plateChest', hauberk: 'chainChest', cuirass: 'scaleChest' };
 export const LEGS_ITEMS = {
   cloth: () => [['trousers', false]],
-  // (the waist dropped and the hip flaps off under the leather chest and the hauberk)
-  leather: (chest) => (chest === 'leatherChest' || chest === 'chainChest' ? [['leatherLegs', true]] : [['leatherLegs', false], ['leatherFlaps', false]]),
+  // (the waist dropped under the leather chest and the hauberk; the hip flaps off under every chest but the tunic)
+  leather: (chest) => (chest === 'leatherChest' || chest === 'chainChest' ? [['leatherLegs', true]] : chest === 'tunic' ? [['leatherLegs', false], ['leatherFlaps', false]] : [['leatherLegs', false]]),
   plate: () => [['plateLegs', false]],
   chain: () => [['chainLegs', false]],
   scale: (chest) => [['scaleLegs', chest === 'scaleChest']],
@@ -336,19 +337,25 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const opt = (n, f) => { const i = args.indexOf(`--${n}`); return i < 0 ? f : args[i + 1]; };
   const o = Object.fromEntries(['reach', 'margin', 'up', 'down', 'side'].map((k) => [k, +opt(k, { reach: 1, margin: 0, up: 0, down: 0, side: 0 }[k])]));
   const refining = !args.includes('--no-refine'), AN = refining ? await loadAnim() : null;
+  // (--chests: only those chests' rows made again, the others kept from the table as it is; --frames: each group's
+  // frames scaled, for a quick look)
+  const only = opt('chests', ''), scale = +opt('frames', 1);
   for (const who of opt('who', 'male,female').split(',')) {
     const rig = buildRig(who), body = who === 'male' ? 'man' : 'woman';
     const legs = Object.fromEntries(Object.entries(LEGS).map(([k, n]) => { const L = assetOf(n, who); return [k, { L, P: bodyPoints(rig, L) }]; }));
     const out = { built: `node tools/sculpt/garments/chestlegs.mjs ${Object.entries(o).map(([k, v]) => `--${k} ${v}`).join(' ')}${refining ? '' : ' --no-refine'}` };
-    const D = {};
+    const D = {}, file = join(ROOT, `src/sculpt/assets/lowchestlegs-${who}.json`), was = only ? JSON.parse(readFileSync(file, 'utf8')) : null;
+    const chosen = (c) => !only || only.split(',').includes(c);
     for (const [c, n] of Object.entries(CHESTS)) {
+      if (!chosen(c)) continue;
       const A = assetOf(n, who);
       D[c] = Object.fromEntries(Object.entries(legs).map(([l, { L, P }]) => [l, new Set(underChest(rig, A, L, P, o))]));
     }
     if (refining) {
-      const poses = Object.entries(REFINE).flatMap(([g, k]) => posesOf(AN, rig, body, g, k));
+      const poses = Object.entries(REFINE).flatMap(([g, k]) => posesOf(AN, rig, body, g, g === 'rest' ? k : Math.max(1, Math.round(k * scale))));
       // (each chest item over each legs item: its legs garments' sets refined as they are worn together)
       for (const [ci, ck] of Object.entries(CHEST_ITEMS)) for (const li of Object.keys(LEGS_ITEMS)) {
+        if (!chosen(ck)) continue;
         const before = LEGS_ITEMS[li](ck).map(([k]) => D[ck][k].size), seenIn = gaps(rig, who, ci, li, D[ck]), kept = refine(rig, who, ci, li, D[ck], poses);
         console.log(who, `${ci}/${li}`, 'left out', before.join('+'), 'kept in its gaps', seenIn, 'kept in the clips', kept);
       }
@@ -356,12 +363,15 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     // (each legs garment's body drawn again under each chest, as its legs item is worn under that chest's item)
     const itemOf = Object.fromEntries(Object.keys(LEGS).map((k) => [k, Object.keys(LEGS_ITEMS).find((li) => LEGS_ITEMS[li]('tunic').some(([x]) => x === k))]));
     for (const [ci, c] of Object.entries(CHEST_ITEMS)) {
+      if (!chosen(c)) { out[c] = was[c]; continue; }
       out[c] = Object.fromEntries(Object.entries(D[c]).map(([l, s]) => {
         const show = pairOf(rig, who, ci, itemOf[l], D[c]).L.find((G) => G.key === l)?.show ?? [];
         return [l, { tris: legs[l].L.tris.length / 4, drop: [...s].sort((a, b) => a - b), show }];
       }));
       console.log(who, c, Object.entries(out[c]).map(([l, d]) => `${l} ${d.drop.length}/${d.tris} (body ${d.show.length})`).join(', '));
     }
-    writeFileSync(join(ROOT, `src/sculpt/assets/lowchestlegs-${who}.json`), JSON.stringify(out));
+    if (only) out.built = was.built;
+    // (--out: written there instead, `{who}` in it the body)
+    writeFileSync(opt('out', '') ? opt('out', '').replace('{who}', who) : file, JSON.stringify(out));
   }
 }

@@ -1465,8 +1465,9 @@ const GARMENTS: ReadonlyArray<{ man: GarmentAsset; woman: GarmentAsset; wears: (
   { man: MALE_LEATHER_BOOTS as unknown as GarmentAsset, woman: FEMALE_LEATHER_BOOTS as unknown as GarmentAsset, wears: wearsLeatherBoots, enchanted: enchantedOf('leatherBoots'), dye: 'leatherBoots' },
   // (their waist, from dropFrom on (the waistband and the cloth above the chest's undershirt's foot), left out under the leather chest)
   { man: MALE_LEATHER_LEGS as unknown as GarmentAsset, woman: FEMALE_LEATHER_LEGS as unknown as GarmentAsset, wears: (p) => p.outfit?.leatherLegs ?? false, enchanted: enchantedOf('leatherLegs'), drops: (p) => wearsLeatherChest(p) || (p.outfit?.chainChest ?? false), legs: 'leatherLegs', dye: 'leatherLegs' },
-  // (their hip flaps, only without the leather chest or the hauberk: its skirt takes their place over the hip)
-  { man: MALE_LEATHER_LEGS_FLAPS as unknown as GarmentAsset, woman: FEMALE_LEATHER_LEGS_FLAPS as unknown as GarmentAsset, wears: (p) => (p.outfit?.leatherLegs ?? false) && !(p.outfit?.leatherChest ?? false) && !(p.outfit?.chainChest ?? false), enchanted: enchantedOf('leatherLegs'), legs: 'leatherFlaps', dye: 'leatherLegs' },
+  // (their hip flaps, only without the leather chest, the breastplate, the hauberk or the cuirass: its skirt or faulds take
+  // their place over the hip)
+  { man: MALE_LEATHER_LEGS_FLAPS as unknown as GarmentAsset, woman: FEMALE_LEATHER_LEGS_FLAPS as unknown as GarmentAsset, wears: (p) => (p.outfit?.leatherLegs ?? false) && !(p.outfit?.leatherChest ?? false) && !wearsPlateChest(p) && !(p.outfit?.chainChest ?? false) && !(p.outfit?.scaleChest ?? false), enchanted: enchantedOf('leatherLegs'), legs: 'leatherFlaps', dye: 'leatherLegs' },
   // the leather set's chest & arms (`tools/sculpt/garments/leatherchest.mjs`): over the leggings, under the shawl (its
   // polygons the shawl covers, from dropFrom on, left out under it)
   { man: MALE_LEATHER_CHEST as unknown as GarmentAsset, woman: FEMALE_LEATHER_CHEST as unknown as GarmentAsset, wears: wearsLeatherChest, enchanted: enchantedOf('leatherChest'), drops: wearsLeatherShawl, chest: 'leatherChest', dye: 'leatherChest' },

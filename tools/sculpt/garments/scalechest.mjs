@@ -410,9 +410,12 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const { writeFileSync } = await import('node:fs');
   const { buildRig } = await import('../lowrig.mjs');
   const { garmentAsset } = await import('../lowgarment.mjs');
+  const { overLegs } = await import('./overlegs.mjs');
   for (const who of ['male', 'female']) {
     const rig = buildRig(who), G = buildScaleChest(rig);
     G.vw = plateChestWeights(rig, G);
+    // (its waist and skirt over every legs piece: garments/overlegs.mjs)
+    overLegs(rig, G, 'scaleChest');
     const file = new URL(`../../../src/sculpt/assets/lowscalechest-${who}.json`, import.meta.url);
     const A = { built: 'node tools/sculpt/garments/scalechest.mjs (tools/sculpt/lowgarment.mjs garmentAsset)', ...garmentAsset(rig, G, MATS, LOOKS), hides: G.hides };
     writeFileSync(file, JSON.stringify(A));

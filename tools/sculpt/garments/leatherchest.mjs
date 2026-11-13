@@ -1401,9 +1401,12 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const { buildRig } = await import('../lowrig.mjs');
   const { garmentAsset } = await import('../lowgarment.mjs');
   const { buildLeatherShawlOver, chestOf } = await import('./leathershawl.mjs');
+  const { overLegs } = await import('./overlegs.mjs');
   for (const who of ['male', 'female']) {
     const rig = buildRig(who), G = buildLeatherChest(rig);
     G.vw = leatherChestWeights(rig, G);
+    // (its waist and skirt over every legs piece: garments/overlegs.mjs)
+    overLegs(rig, G, 'leatherChest');
     const S = await buildLeatherShawlOver(rig, undefined, { chest: chestOf(G), shapes: false });
     const drop = new Set(underShawl(G, S)), order = [...G.polys.keys()].sort((a, b) => drop.has(a) - drop.has(b));
     G.polys = order.map((k) => G.polys[k]); G.tris = trisOf(G); G.dropFrom = G.polys.length - drop.size;
