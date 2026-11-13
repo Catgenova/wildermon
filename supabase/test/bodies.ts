@@ -96,7 +96,11 @@ try {
     await tab.evaluate(() => (window as unknown as { bodies: Api }).bodies.pin(0));
     for (const scene of ['busy', 'crowd'] as Scene[]) {
       for (const a of ['off', 'on']) {
-        for (let i = 0; i < 4; i++) await run(tab, 30, a, scene);
+        // Four rounds; Off, until no body is left waiting (where the renderer counts them), up to forty.
+        for (let i = 0; i < 40; i++) {
+          const m = await run(tab, 30, a, scene);
+          if (i >= 3 && (a === 'on' || !(m.deferred > 0))) break;
+        }
         const url = await tab.evaluate(() => (window as unknown as { bodies: Api }).bodies.shot());
         writeFileSync(join(shots, `${scene}-${a}.png`), Buffer.from(url.split(',')[1], 'base64'));
       }

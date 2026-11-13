@@ -35,7 +35,7 @@ import { FISH, FISH_LEFT } from './clips/fish';
 import { NET, NET_LEFT } from './clips/net';
 import { TEND_CLIPS, TEND_LEFT } from './clips/tend';
 import { LIFE, LIFE_LEFT, LIFE_SETTLE } from './clips/life';
-import { gettingDown } from './down';
+import { gettingAbout, gettingDown } from './down';
 import { ACTION_BY_ID } from '../../game/actions';
 import { animationsOff } from '../../engine/motion';
 import { clipOfJob } from './routes';
@@ -633,4 +633,19 @@ export function animate(sk: Skeleton, pose: FigurePose, figure: () => Array<M3 |
   }
   k.out = out;
   return over(out);
+}
+
+/**
+ * Whether a body (`pose.id`, on `body`) is between one source of its pose and the next (`animate`): part way through a
+ * fade, getting down or up, or doing something it has not been drawn doing yet (its next drawing starts the fade). A
+ * picture of it then is its own, not one of its clip's loop, which the island shares between bodies dressed alike
+ * (`../../render/figure.ts` clipLoop). A body never drawn has nothing to fade from.
+ */
+export function poseFading(pose: FigurePose, body: 'man' | 'woman' = pose.look?.gender === 'woman' ? 'woman' : 'man'): boolean {
+  if (!pose.id) return false;
+  const key = `${body}|${pose.id}`, k = KEPT.get(key), ms = performance.now();
+  if (!k) return false;
+  const c = clipFor(pose, body), source = c ? c.clip.name + (c.over ? `+${c.over.clip.name}` : '') : 'figure';
+  if (k.source !== source || gettingAbout(key, ms)) return true;
+  return !!k.from && (ms - k.at) / 1000 < (k.span ?? FADE) + RELEASE;
 }

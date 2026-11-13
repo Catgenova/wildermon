@@ -11496,7 +11496,9 @@ const SCULPT: {
   gen: () => number; asked: Set<string>; soft: boolean; fx: SculptFx | null; noGl: boolean;
   /** Drawing many bodies on one GL canvas and putting them down after (`drawBodies`, `../sculpt/gl.ts` glBatchBegin). */
   batch: { begin: (count: number, cw: number, ch: number, now: number) => number; end: () => void; last: () => GlTile | null; blit: (ctx: CanvasRenderingContext2D, t: GlTile) => void } | null;
-} = { on: false, flips: 0, loading: false, draw: null, gen: () => 0, asked: new Set(), soft: false, fx: null, noGl: false, batch: null };
+  /** The clip a body plays alone and where in it, for the loops of work and a fight (`clipLoop`, `../sculpt/sculpted.ts` clipNow). */
+  clipNow: ((pose: FigurePose) => { name: string; t: number; length: number; fading: boolean } | null) | null;
+} = { on: false, flips: 0, loading: false, draw: null, gen: () => 0, asked: new Set(), soft: false, fx: null, noGl: false, batch: null, clipNow: null };
 let FLAT: boolean | undefined;
 /**
  * Whether people are drawn flat here: only a browser the sculpted bodies cannot be drawn in -- no WebGL2, no float colour
@@ -11532,6 +11534,7 @@ export function sculptedFigures(want: boolean, by: 'island' | 'creator' = 'islan
     import('../sculpt/sculpted').then((m) => {
       SCULPT.draw = m.drawSculptLive; SCULPT.gen = m.sculptGen; SCULPT.soft = m.glSoftware(); SCULPT.fx = m.SCULPT_FX; SCULPT.noGl = !m.glDraws();
       SCULPT.batch = { begin: m.glBatchBegin, end: m.glBatchEnd, last: m.glBatchLast, blit: m.glBlit };
+      SCULPT.clipNow = m.clipNow;
       SCULPT.flips++;
     }).catch(() => { SCULPT.loading = false; });
   }
@@ -12721,6 +12724,7 @@ function drawStill(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: 
   }
   lately.ids.add(id);
   if (idleLoop(ctx, sx, sy, zoom, pose, kit, r, facing, changing, ink, now, key, dev, id)) return;
+  if (clipLoop(ctx, sx, sy, zoom, pose, kit, r, facing, changing, ink, now, key, dev, id)) return;
   let st = stills.get(id);
   if (!st) {
     st = { pic: null, key: '', at: 0, seen: now, dev };
@@ -12890,9 +12894,39 @@ function drawVeiled(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom:
 /** Pictures to a stride, and the steps between a walk and a run they are kept at. */
 export const WALK_FRAMES = 16;
 const GAIT_STEPS = 10;
-/** Device pixels of stride pictures kept, the longest unused going first: about forty-eight megabytes. */
-const STRIDE_PIXELS = 12_000_000;
-const strides = new KeptPics(STRIDE_PIXELS);
+/**
+ * Device pixels of the pictures of loops kept -- strides, standing about, and the clips of work and a fight (`clipLoop`)
+ * -- the longest unused going first: about a hundred and twelve megabytes, what the strides' and the standing pictures'
+ * were between them before the clips had loops.
+ */
+const LOOP_PIXELS = 28_000_000;
+const loops = new KeptPics(LOOP_PIXELS);
+const strides = loops, idles = loops;
+/**
+ * Bodies put down from a loop lately, counted afresh every quarter of a second, for what share of `LOOP_PIXELS` a loop may
+ * have (`loopShape`); bodies dressed alike share theirs, so this is the most loops there can be.
+ */
+const looping = { since: 0, ids: new Set<string>(), count: 0 };
+/** Pictures to a loop, at fewest: under it a loop is kept at half the size rather than with fewer. */
+const LOOP_FEWEST = 6;
+/**
+ * How many pictures a loop of `count` is kept at, and at what share of its size, for body `id` (`w` by `h` device pixels
+ * whole): all of them while every body put down from a loop lately has room for one of its size; else fewer, each held
+ * longer; and past `LOOP_FEWEST`, at half the size (a quarter of the pixels) and stretched to it. A crowd or a close zoom
+ * is put down from fewer or smaller pictures, never drawn afresh body by body.
+ */
+function loopShape(id: string, now: number, count: number, w: number, h: number): { n: number; scale: number } {
+  if (now - looping.since > 0.25 || now < looping.since) {
+    looping.count = looping.ids.size;
+    looping.ids.clear();
+    looping.since = now;
+  }
+  looping.ids.add(id);
+  const share = LOOP_PIXELS / Math.max(1, looping.count, looping.ids.size);
+  const n = Math.min(count, Math.floor(share / (w * h)));
+  if (n >= LOOP_FEWEST || n >= count) return { n, scale: 1 };
+  return { n: Math.min(count, Math.max(LOOP_FEWEST, Math.floor((4 * share) / (w * h)))), scale: 0.5 };
+}
 
 /*
  * Standing about is a loop as well: everything a body does standing (`idle`)
@@ -12905,29 +12939,54 @@ const strides = new KeptPics(STRIDE_PIXELS);
  * again: after its first loop standing at a size, a body standing about draws
  * nothing, and two people dressed alike share the pictures. A picture is the
  * body as it was when that twelfth was first wanted, somewhere in it, which is
- * what the still drawn a dozen times a second showed. Kept only while a loop
- * for everybody drawn lately fits in `IDLE_PIXELS`: close in, where one loop
- * is a great many pixels, or with a crowd standing about, a body is drawn as
- * a still as before. Emoting, turning, blending, or wearing something whose
- * light moves across it, it is drawn as a still too.
+ * what the still drawn a dozen times a second showed. Close in, where one loop
+ * is a great many pixels, or with a crowd standing about, the loop is kept at
+ * fewer pictures or smaller ones (`loopShape`). Emoting, turning, blending, or
+ * wearing something whose light moves across it, it is drawn as a still.
  */
 const IDLE_LOOP = 16;
-/** Device pixels of standing pictures kept, the longest unused going first: about sixty-four megabytes. */
-const IDLE_PIXELS = 16_000_000;
-const idles = new KeptPics(IDLE_PIXELS);
 
 /** Put down a body standing about from its loop's pictures, asking for the one it needs if it is new; false when it is not to be. */
 function idleLoop(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose, kit: Kit, r: Rig, facing: number, changing: boolean,
   ink: number, now: number, still: string, dev: number, id: string): boolean {
   if (changing || doing(pose) !== 'idle' || pose.emote || pose.seat || !Number.isInteger(facing) || gearShines(pose.gear)) return false;
-  const rate = STILL_RATE.idle, count = IDLE_LOOP * rate;
   const b = boxAt(zoom * dev);
-  if (Math.max(1, lately.count, lately.ids.size) * count * b.w * b.h > IDLE_PIXELS) return false;
+  const { n, scale } = loopShape(id, now, IDLE_LOOP * STILL_RATE.idle, b.w, b.h);
   // The same clock the pose is worked out from (`rigOf`).
   const t = (((pose.phase / 6) % IDLE_LOOP) + IDLE_LOOP) % IDLE_LOOP;
-  const i = Math.min(count - 1, Math.floor(t * rate));
-  return fromLoop(ctx, sx, sy, zoom, id, now, idles, still, i, count,
-    (key) => bodyJob(key, id === 'player' ? 0 : 3, 0, pose, kit, r, facing, ink, now, zoom, dev, (pic) => idles.set(key, pic)), pose, kit, r, facing, ink, dev);
+  const i = Math.min(n - 1, Math.floor((t / IDLE_LOOP) * n));
+  return fromLoop(ctx, sx, sy, zoom, id, now, idles, `${still}|idle|${n}|${scale}`, i, n,
+    (key) => bodyJob(key, id === 'player' ? 0 : 3, 0, pose, kit, r, facing, ink, now, zoom, dev * scale, (pic) => idles.set(key, pic)), pose, kit, r, facing, ink, dev);
+}
+
+/*
+ * Work and a fight are loops too: a job's clip and a fight's come round again
+ * and again, a blow a go, for as long as the body keeps at it. They were drawn
+ * afresh body by body twenty times a second for as long as anybody worked, so a
+ * yard of people at work or a fight in a crowd cost a body or more every frame.
+ * Now each twentieth of a second of the clip is kept as a picture the first time
+ * a body is at it, for that clip, that look, what is worn and held, the way it
+ * faces and the size, and put down for every body at that point of it after:
+ * two people dressed alike at the same job share them, and a body that has been
+ * at it for a go draws nothing more. Between one thing and the next (`changing`,
+ * or the sculpted body's own fade: `poseFading`), hit, blocking, casting,
+ * emoting, sat, or wearing something whose light moves across it, it is drawn as
+ * a still. Kept at fewer pictures or smaller ones as the stand of it is
+ * (`loopShape`).
+ */
+function clipLoop(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose, kit: Kit, r: Rig, facing: number, changing: boolean,
+  ink: number, now: number, still: string, dev: number, id: string): boolean {
+  if (changing || !pose.working || pose.moving || pose.swimming || pose.driving || pose.seat || pose.emote || pose.cast || pose.block !== undefined || pose.flinch
+    || !Number.isInteger(facing) || gearShines(pose.gear) || !SCULPT.clipNow) return false;
+  const c = SCULPT.clipNow(pose);
+  if (!c || c.fading) return false;
+  const b = boxAt(zoom * dev);
+  const { n, scale } = loopShape(id, now, Math.max(1, Math.round(c.length * STILL_RATE.work)), b.w, b.h);
+  const i = Math.min(n - 1, Math.floor((c.t / c.length) * n));
+  // What is held is drawn too: the tool, in its metal.
+  const held = pose.tool ? `${pose.tool.id}.${pose.tool.material ?? ''}.${pose.tool.enchanted ? 1 : 0}` : '';
+  return fromLoop(ctx, sx, sy, zoom, id, now, loops, `${still}|clip|${c.name}|${held}|${n}|${scale}`, i, n,
+    (key) => bodyJob(key, id === 'player' ? 0 : 3, 0, pose, kit, r, facing, ink, now, zoom, dev * scale, (pic) => loops.set(key, pic)), pose, kit, r, facing, ink, dev);
 }
 
 /** Put down a walking body from its stride's pictures, asking for the picture it needs if it is new; false when it is not walking steadily. */

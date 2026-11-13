@@ -188,8 +188,8 @@ let perUnit = 0;
 const FIXED_PIXELS = 40_000;
 /** What a body is taken to cost before any is timed: about 30 ms on a processor-drawn GL, 1.5 ms on a card, at the zoom played at. */
 const FIRST_SOFT = 30 / 65_000, FIRST_CARD = 1.5 / 65_000;
-/** How far each frame's timing moves the cost learnt. */
-const LEARN = 0.25;
+/** How far each frame's timing moves the cost learnt: further when bodies cost more than thought, so one dear frame is not followed by another. */
+const LEARN = 0.25, LEARN_UP = 0.75;
 const unitsOf = (w: number, h: number, tiles: number): number => (w * h + FIXED_PIXELS) * tiles;
 const costOf = (j: Job): number => perUnit * unitsOf(j.w, j.h, j.tiles);
 /** Milliseconds a body `w` by `h` device pixels is expected to take, from what bodies have taken so far. */
@@ -205,7 +205,7 @@ export function spent(ms: number, jobs: Job[], left: number): void {
   st.deferred += left;
   allow = Math.max(-20 * BODY_BUDGET_MS, allow - ms);
   const units = jobs.reduce((p, j) => p + unitsOf(j.w, j.h, j.tiles), 0);
-  if (units > 0 && ms > 0) perUnit += (ms / units - perUnit) * LEARN;
+  if (units > 0 && ms > 0) perUnit += (ms / units - perUnit) * (ms / units > perUnit ? LEARN_UP : LEARN);
 }
 
 /** Whether the zoom has stayed put long enough to make pictures at it (`Renderer.zoomSettled`): told every frame. */
