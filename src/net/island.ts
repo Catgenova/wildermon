@@ -3417,7 +3417,8 @@ export class Island {
     this.people.clear();
     const now = performance.now() / 1000;
     for (const p of listOf(data, playerRow)) {
-      p.gear = wearing ? wearing[p.uid] : was.get(p.uid)?.gear;
+      // Not in what the island says is worn: nothing on (it lists only those with something), not not known.
+      p.gear = wearing ? (wearing[p.uid] ?? {}) : was.get(p.uid)?.gear;
       // Somebody heard from over the channel lately is where the channel said,
       // not where their row was last written (\`BODY_FRESH\`).
       const said = was.get(p.uid);

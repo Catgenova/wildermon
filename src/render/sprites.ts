@@ -1573,7 +1573,6 @@ export interface CreaturePose {
   variant?: number;
   /** What it is doing this moment, and how far through it (`BeastPose.act`). */
   act?: { kind: BeastAct; t: number };
-  label?: string;
   /** Species id; decides which body is drawn. */
   species?: string;
   /** How much fleece is on it, 0..1, for the species that grow one. */
@@ -2145,7 +2144,7 @@ function standingSprite(pose: CreaturePose): Sprite | null {
   const key = `${SPRITE_SCALE}|body:${pose.species}:${pose.colors.join(',')}:${pose.facing ?? 0}:${fleece}`;
   const had = cache.get(key);
   if (had) return had;
-  const still: CreaturePose = { ...pose, moving: false, gait: 0, scale: 1, health: 1, label: undefined };
+  const still: CreaturePose = { ...pose, moving: false, gait: 0, scale: 1, health: 1 };
   const box = inkBox((ctx) => drawBody(ctx, BODY_PAD, BODY_FOOT, 1, still), BODY_PAD * 2, BODY_SKY);
   // A body that laid down no ink at all is not worth a canvas; draw it live.
   if (!box) return null;
@@ -3967,29 +3966,27 @@ function drawVespBody(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoo
   ctx.restore();
 }
 
-/** The health bar and the name over a body, over the top of it: `top` is how high that is over its feet at zoom one. */
-function drawCreatureOverlay(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: CreaturePose, top = 21): void {
+/** How high over its feet a body drawn by hand is topped, at zoom one, for its health bar. */
+const CREATURE_TOP = 21;
+
+/** The health bar over a body, over the top of it: `top` is how high that is over its feet at zoom one. Its name is `NameLabels`'s. */
+function drawCreatureOverlay(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: CreaturePose, top = CREATURE_TOP): void {
+  if (pose.health >= 1) return;
   const bar = sy - (top + 3) * zoom;
-  if (pose.health < 1) {
-    const w = 18 * zoom;
-    ctx.fillStyle = 'rgba(0,0,0,0.6)';
-    ctx.fillRect(sx - w / 2, bar, w, 3 * zoom);
-    ctx.fillStyle = pose.health > 0.5 ? inkOr('good', '#7ccf5a') : pose.health > 0.25 ? inkOr('warn', '#e3b657') : inkOr('bad', '#e0574d');
-    ctx.fillRect(sx - w / 2, bar, w * Math.max(0, pose.health), 3 * zoom);
-  }
-  if (pose.label) {
-    ctx.font = `${Math.max(9, 10 * zoom)}px "Segoe UI", system-ui, sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'bottom';
-    ctx.lineWidth = 3;
-    // Round joins: mitred, the outline of an M or a V put a dark spike up over the name at its points.
-    ctx.lineJoin = 'round';
-    ctx.strokeStyle = 'rgba(0,0,0,0.7)';
-    ctx.strokeText(pose.label, sx, bar - 2 * zoom);
-    ctx.lineJoin = 'miter';
-    ctx.fillStyle = '#e3b657';
-    ctx.fillText(pose.label, sx, bar - 2 * zoom);
-  }
+  const w = 18 * zoom;
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.fillRect(sx - w / 2, bar, w, 3 * zoom);
+  ctx.fillStyle = pose.health > 0.5 ? inkOr('good', '#7ccf5a') : pose.health > 0.25 ? inkOr('warn', '#e3b657') : inkOr('bad', '#e0574d');
+  ctx.fillRect(sx - w / 2, bar, w * Math.max(0, pose.health), 3 * zoom);
+}
+
+/**
+ * How high over its feet the top of what `drawCreature` draws reaches, its health bar included, at zoom one and at
+ * its `scale`: where its name starts (`NameLabels`).
+ */
+export function creatureTop(pose: Pick<CreaturePose, 'species' | 'stage' | 'variant' | 'scale' | 'health'>): number {
+  const top = (modelled(pose.species) ? wildermonTop(pose.species as string, pose.stage, pose.variant) : undefined) ?? CREATURE_TOP;
+  return (top + (pose.health < 1 ? 3 : 0)) * (pose.scale ?? 1);
 }
 
 /* ---- People ------------------------------------------------------------- */

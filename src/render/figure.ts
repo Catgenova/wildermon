@@ -11487,8 +11487,28 @@ const gearLod = (zoom: number): number => (zoom < 1.5 ? 0.5 : zoom < STILL_BELOW
  * box or the hull hidden (`drawLive`). In the water, it is drawn in two, cut at the surface: what is under it faint and
  * what is over it among the rings on the water (`drawLive`).
  */
-const SCULPT: { on: boolean; flips: number; loading: boolean; draw: ((ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose, water?: 'over' | 'under') => boolean) | null; gen: () => number; asked: Set<string>; soft: boolean; fx: SculptFx | null } =
-  { on: false, flips: 0, loading: false, draw: null, gen: () => 0, asked: new Set(), soft: false, fx: null };
+const SCULPT: { on: boolean; flips: number; loading: boolean; draw: ((ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose, water?: 'over' | 'under') => boolean) | null; gen: () => number; asked: Set<string>; soft: boolean; fx: SculptFx | null; noGl: boolean } =
+  { on: false, flips: 0, loading: false, draw: null, gen: () => 0, asked: new Set(), soft: false, fx: null, noGl: false };
+let FLAT: boolean | undefined;
+/**
+ * Whether people are drawn flat here: only a browser the sculpted bodies cannot be drawn in -- no WebGL2, no float colour
+ * buffer (as `glContext` asks), or shaders its GL will not take (`glDraws`, once the sculpted bodies have loaded). Asked
+ * for: keep the flat figure "for exclusive use with browsers without WebGL". Anywhere else a body not yet drawn sculpted
+ * (the bodies still loading) is not drawn at all.
+ */
+export function flatFigures(): boolean {
+  if (SCULPT.noGl) return true;
+  if (FLAT === undefined) {
+    try {
+      const gl = document.createElement('canvas').getContext('webgl2');
+      FLAT = !gl || !gl.getExtension('EXT_color_buffer_float');
+      gl?.getExtension('WEBGL_lose_context')?.loseContext();
+    } catch {
+      FLAT = true;
+    }
+  }
+  return FLAT;
+}
 /**
  * On or off, as asked by `by`: the island's renderer (every frame) or the character creator. On while anybody asks.
  */
@@ -11503,7 +11523,7 @@ export function sculptedFigures(want: boolean, by: 'island' | 'creator' = 'islan
   SCULPT.flips++;
   if (on && !SCULPT.draw && !SCULPT.loading) {
     SCULPT.loading = true;
-    import('../sculpt/sculpted').then((m) => { SCULPT.draw = m.drawSculptLive; SCULPT.gen = m.sculptGen; SCULPT.soft = m.glSoftware(); SCULPT.fx = m.SCULPT_FX; SCULPT.flips++; }).catch(() => { SCULPT.loading = false; });
+    import('../sculpt/sculpted').then((m) => { SCULPT.draw = m.drawSculptLive; SCULPT.gen = m.sculptGen; SCULPT.soft = m.glSoftware(); SCULPT.fx = m.SCULPT_FX; SCULPT.noGl = !m.glDraws(); SCULPT.flips++; }).catch(() => { SCULPT.loading = false; });
   }
 }
 /**
@@ -12457,7 +12477,11 @@ function drawLive(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: n
   // Sat driving, the sculpted body goes in among what it holds and sits in, and in the water among the rings on it, below;
   // anywhere else it is the whole of it.
   const seated = !!seatOf(pose);
+  // The flat figure only where the sculpted bodies cannot be drawn (`flatFigures`): anywhere else, nothing until they are.
+  const flat = flatFigures();
+  if (!flat && !(SCULPT.on && SCULPT.draw)) return;
   if (!seated && !pose.swimming && drawSculpted(ctx, sx, sy, zoom, { ...pose, facing })) return;
+  if (!flat && !seated && !pose.swimming) return;
   const look = pose.look ?? DEFAULT_LOOK;
   const b = skeleton(kit.fr, r);
   const view = viewOf(facing);
@@ -12485,6 +12509,10 @@ function drawLive(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: n
     drawSculpted(ctx, sx, sy, zoom, sp, 'over');
     ctx.setTransform(inner);
   } else if (pose.swimming) {
+    if (!flat) {
+      ctx.restore();
+      return;
+    }
     const parts = partsNow();
     const above = waterline(parts, true, new Set([b.chest, ...parts.filter((p) => onJoint(p, b.arm0) || onJoint(p, b.arm1)).map((p) => p.xf)]), pal);
     const through = wakeOf(b, kit.fr, view.T), rings = [...through, ...shouldersOut(parts, b, through, view.T), ...collarOut(above, b)];
@@ -12530,7 +12558,7 @@ function drawLive(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: n
       ctx.setTransform(inner);
     }
     // Astride, the far leg goes down behind the beast's barrel, which is drawn first: hidden behind it rather than drawn over its flank.
-    if (!sculpted) render(ctx, r.sit?.astride && !r.sit.ground ? behindBarrel(partsNow()) : partsNow(), pal, view, ink, 1 / zoom, now);
+    if (!sculpted && flat) render(ctx, r.sit?.astride && !r.sit.ground ? behindBarrel(partsNow()) : partsNow(), pal, view, ink, 1 / zoom, now);
     if (sides) ctx.restore();
     for (const o of r.oars ?? []) if (near(o)) oar(ctx, view, ink, o);
     // The tiller over the body, but for what of it the body is in front of (`tillerPart`); over the rim, as it is.
