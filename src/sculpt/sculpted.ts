@@ -7,10 +7,10 @@
  * A look's body is baked off the frame: asked for, it goes on a queue that
  * idle time works through a band at a time (the far band first, so a crowd
  * is sculpted soon and sharpened as time allows), and until a band of it is
- * ready the flat figure is drawn as it always was. The pictures the island
+ * ready nothing is drawn. The pictures the island
  * keeps of a body (`drawStill` and the stride and idle loops) carry
- * `sculptGen`, which steps whenever a bake lands, so a body kept flat is drawn
- * again sculpted. Looks are kept least-recently-used, so many strangers
+ * `sculptGen`, which steps whenever a bake lands, so a body kept before it
+ * landed is drawn again. Looks are kept least-recently-used, so many strangers
  * passing through cost what `MAX_LOOKS` bodies cost and no more; a look put
  * out has its bakes and their buffers on the graphics chip let go.
  */
@@ -121,9 +121,8 @@ function pump(): void {
 }
 
 /**
- * A body drawn sculpted with its feet at (sx, sy), in place of the flat
- * figure; false when it cannot be yet (no WebGL2, or the look's bake not
- * landed), and the flat figure is drawn instead. Drawn at the band the zoom
+ * A body drawn sculpted with its feet at (sx, sy); false when it cannot be
+ * (no WebGL2, or the look's bake not landed), and nothing is drawn. Drawn at the band the zoom
  * wants if that is baked, else at the nearest band that is, the wanted one
  * queued. In the water, what of a low-poly body is over its surface (`water`
  * 'over', the default) or under it ('under'), as `lowScene` cuts it; a body

@@ -2,7 +2,7 @@ import {
   GENDERS, HAIRSTYLES, HAIR_DARKEST, HAIR_FADE, HAIR_LIGHTEST, SKIN_RAMP, cleanLook, hairColour, hairColourOf, randomLook, skinColour, toneOf,
   type Look, type Ramp,
 } from '../game/look';
-import { sculptedFigures, sculptedReady, type FigurePose } from '../render/figure';
+import { canDrawBodies, NO_WEBGL, sculptedFigures, sculptedReady, type FigurePose } from '../render/figure';
 import { drawPortrait } from '../render/sprites';
 
 /** Dragging across the mirror turns it an eighth for every so far dragged. */
@@ -100,11 +100,13 @@ export class Creator {
   private outfit: Outfit = OUTFITS[0].outfit;
   /** Whether the thumbnails were last drawn with the sculpted bodies loaded: they land after the page does. */
   private thumbsSculpted = false;
+  /** Whether this browser can draw a body (`canDrawBodies`): without WebGL2 the mirror says so instead. */
+  private readonly drawable = canDrawBodies();
 
   /** `shown` says whether anybody can see it; the mirror stops moving while nobody can. */
   constructor(start: Look, private readonly shown: () => boolean) {
-    // The sculpted bodies, the island's own: the flat figure only until they have loaded, or with no WebGL2.
-    sculptedFigures(true, 'creator');
+    // The sculpted bodies, the island's own, asked for ahead of the first drawn: nothing in the mirror until they have loaded.
+    sculptedFigures();
     this.chosen = cleanLook(start);
     this.el = document.createElement('div');
     this.el.className = 'cr';
@@ -118,7 +120,7 @@ export class Creator {
     this.mirror.width = 240;
     this.mirror.height = 380;
     this.mirror.tabIndex = 0;
-    this.mirror.setAttribute('aria-label', 'Preview. Drag or arrow keys to turn.');
+    this.mirror.setAttribute('aria-label', this.drawable ? 'Preview. Drag or arrow keys to turn.' : NO_WEBGL);
 
     const turn = document.createElement('div');
     turn.className = 'cr-turn';
@@ -341,9 +343,18 @@ export class Creator {
         this.mirror.height = h;
       }
       ctx.clearRect(0, 0, this.mirror.width, this.mirror.height);
-      const shown = this.preview ?? this.chosen;
-      drawPortrait(ctx, 0, 0, this.mirror.width, this.mirror.height, shown, now / 1000, this.facing, 'idle',
-        { close: this.close, outfit: this.outfit });
+      if (!this.drawable) {
+        // No WebGL2: the mirror says so, in the page's own colour, a line across its middle.
+        const px = Math.max(10, Math.round(this.mirror.width / 18));
+        ctx.font = `${px}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.fillStyle = getComputedStyle(this.mirror).color || '#ddd';
+        ctx.fillText(NO_WEBGL, this.mirror.width / 2, this.mirror.height / 2, this.mirror.width - 2 * px);
+      } else {
+        const shown = this.preview ?? this.chosen;
+        drawPortrait(ctx, 0, 0, this.mirror.width, this.mirror.height, shown, now / 1000, this.facing, 'idle',
+          { close: this.close, outfit: this.outfit });
+      }
     }
     // The thumbnails again once the sculpted bodies have landed.
     if (!this.thumbsSculpted && sculptedReady()) this.drawThumbs();

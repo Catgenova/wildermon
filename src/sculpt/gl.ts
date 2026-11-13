@@ -65,9 +65,9 @@ const DEG = Math.PI / 180;
 const LOW_INK = (zoom: number): number => Math.min(2, Math.max(1, 0.8 + 0.2 * zoom));
 /**
  * A body in the water (`SculptDraw.water`): the foam round it where it goes through the surface, its colour and how
- * opaque (the flat figure's `foam`), and how wide in screen px at a zoom (its 0.55 units, a pixel at least); how far over
+ * opaque (as the flat figure's foam was), and how wide in screen px at a zoom (its 0.55 units, a pixel at least); how far over
  * the surface (figure units) what is up out of it is still wet, washed toward the water's colour by `WET_MOST` at the
- * surface and by nothing there (the flat figure's `wetted`), and that colour (its `UNDERWATER` lightened by an eighth).
+ * surface and by nothing there (as the flat figure's wet was), and that colour (its `UNDERWATER` lightened by an eighth).
  */
 const FOAM_RGB = [238, 247, 250], FOAM_A = 0.8, FOAM_PX = (zoom: number): number => Math.max(1, 0.55 * zoom);
 const WET_UP = 0.9, WET_MOST = 0.3, WET_RGB = [69, 112, 122];
@@ -405,7 +405,7 @@ export function glSoftware(): boolean {
   return /swiftshader|llvmpipe|softpipe|software/i.test(name);
 }
 
-/** The one GL context, made on first use; null where there is no WebGL2 (the caller falls back to the 2D figure). */
+/** The one GL context, made on first use; null where there is no WebGL2 (no body is drawn: `canDrawBodies` in `../render/figure.ts`). */
 export function glContext(): Ctx | null {
   if (CTX !== undefined) return CTX;
   const cv = document.createElement('canvas');
@@ -544,7 +544,7 @@ export interface SculptDraw {
   /**
    * A body in the water: the level of its surface in the figure's frame (up from the feet, the figure's units), and which
    * side of it is drawn: what is over it (cut at it, the foam round it and what is just up out of it wet), or what is under
-   * it (for the caller to lay down faint, as the flat figure's `underwater`).
+   * it (for the caller to lay down faint, `underwaterBy` in `../render/figure.ts`).
    */
   water?: { level: number; keep: 'over' | 'under' };
 }
