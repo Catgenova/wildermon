@@ -149,6 +149,7 @@ check('the top knot to the top knot', cleanLook({ hair: 'topknot' }).hair === 't
 check('a short cut to the crew cut', cleanLook({ hair: 'short' }).hair === 'crew');
 check('the ridge to the mohawk', cleanLook({ hair: 'ridge' }).hair === 'mohawk');
 check('an afro to the afro', cleanLook({ hair: 'afro' }).hair === 'afro');
+check('locs to the dreads', cleanLook({ hair: 'locs' }).hair === 'dreads');
 const SKINS: Record<string, string> = { porcelain: '#f5ddc6', fair: '#ecc8a6', light: '#ddae85', olive: '#c79a68', tan: '#b5804f', bronze: '#9d6a3f', umber: '#855634', deep: '#6b4328', dark: '#55341f', ebony: '#3e2617' };
 check('every old skin is its very colour', Object.entries(SKINS).every(([id, c]) => skinColour(cleanLook({ skin: id })) === c),
   Object.keys(SKINS).filter((id) => skinColour(cleanLook({ skin: id })) !== SKINS[id]).join());
