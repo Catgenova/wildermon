@@ -5,7 +5,7 @@ import { cushions, hashOf, type Cushion } from './ivy';
 import { inkOr } from './inks';
 import type { Look } from '../game/look';
 import { EMOTE_BY_ID, HOPS, emotePose } from '../game/emotes';
-import { drawFigure, figureJoints, figureStance, sculptedReady, shineOver, stillPose, viewOf, type FigurePose } from './figure';
+import { drawBust, drawFigure, figureJoints, figureStance, shineOver, stillPose, viewOf, type FigurePose } from './figure';
 import { BUSH_DEFS, TREE_AGES, TREE_DEFS } from '../world/tiles';
 import { drawWildermon, drawWildermonPortrait, modelled, wildermonTop } from './wildermon';
 import { BUSH_WOOD, bushYear, leafageOf } from './foliage';
@@ -4049,8 +4049,7 @@ export function facingOf(sx: number, sy: number, was?: number): number {
 export function drawPlayer(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: PlayerPose): void {
   // Animations off: the shade under the still pose too (`stillPose`), not under a hop or a cast.
   if (animationsOff()) pose = stillPose(pose);
-  // No shade under a body not drawn yet: the sculpted bodies still loading (`sculptedReady`).
-  if (!pose.swimming && !pose.driving && sculptedReady()) footShade(ctx, sx, sy, zoom, pose);
+  if (!pose.swimming && !pose.driving) footShade(ctx, sx, sy, zoom, pose);
   drawFigure(ctx, sx, sy, zoom, pose);
 }
 
@@ -4077,6 +4076,15 @@ export function castShade(pose: FigurePose): [number, number, number] {
   const lift = Math.max(0, Math.min(a[2] - rest[0][2], b[2] - rest[1][2]));
   const v = viewOf(((Math.round(pose.facing) % 8) + 8) % 8);
   return [x * v.ex[0] + y * v.ey[0], x * v.ex[1] + y * v.ey[1], Math.min(1, lift / 7)];
+}
+
+/**
+ * Just the head and shoulders, filling the box: what a haircut or a beard is
+ * chosen by. The same head the island draws, so a thumbnail cannot promise
+ * what the body will not wear.
+ */
+export function drawHeadshot(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, look: Look, facing = 1, t?: number, tall = size): void {
+  drawBust(ctx, x, y, size, look, facing, t, tall);
 }
 
 /** How much taller than standing, in the figure's own units, a body waving is in the mirror: the hand up over the head. */
@@ -4130,7 +4138,7 @@ export function drawPortrait(ctx: CanvasRenderingContext2D, x: number, y: number
   ctx.rect(x, y, w, h);
   ctx.clip();
   const fx = x + w / 2, fy = opts.close ? y + ((PORTRAIT_TOP[look.gender] ?? PORTRAIT_TOP.man) + 1.8) * zoom : y + h - h * 0.05;
-  if (!opts.close && sculptedReady()) footShade(ctx, fx, fy, zoom, pose);
+  if (!opts.close) footShade(ctx, fx, fy, zoom, pose);
   drawFigure(ctx, fx, fy, zoom, pose, { ink: 1.6 });
   ctx.restore();
 }

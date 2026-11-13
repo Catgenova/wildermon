@@ -430,7 +430,7 @@ const api = {
    */
   async live(who: Who = 'male', zoom = 2, frames = 12): Promise<{ memory: unknown; sculpted: boolean }> {
     const look = lookOf(who);
-    sculptedFigures();
+    sculptedFigures(true);
     const facings = [0, 1, 2, 3, 4, 5, 6, 7];
     const what = ['idle:0', 'walk:0.3', 'idle:0.5', 'walk:0.7'];
     let cells: Array<{ cv: HTMLCanvasElement; label: string }> = [];

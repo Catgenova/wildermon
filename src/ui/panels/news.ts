@@ -178,7 +178,7 @@ import { foodFill, itemDef, RARITIES, rarityBands, rarityChance, rareInputSaid, 
 import { SIGHT_FORM_AT, SIGHT_RARITY_AT } from '../../game/sighted';
 import { improvable, IMPROVE_DAMAGE as MEND_DAMAGE, IMPROVE_FAIL_LEAST, IMPROVE_FAIL_SPREAD } from '../../game/improve';
 import { JOB_GOES_MOST } from '../../game/mending';
-import { NO_WEBGL, SCULPT_REDRAWS, SCULPT_REDRAWS_SOFT, weaponCarry } from '../../render/figure';
+import { SCULPT_REDRAWS, SCULPT_REDRAWS_SOFT, weaponCarry } from '../../render/figure';
 import { ACTION_SHARE, FEWER_SHARE, HIT_STOP_HEAVY } from '../../render/fx/actions';
 import { BLOCK_SPARKS, CRACK_SECS, HIT_PUFF, SHOCK_REACH, SPIRAL_MOTES, SPLINTERS, STREAK_SECS, TWANG_SECS } from '../../render/fx/combat';
 import { RUNE_SHARES } from '../../sculpt/anim/runes';
@@ -4417,6 +4417,11 @@ export const NEWS: News[] = [
     ],
   },
   {
+    n: 575,
+    day: '2026-11-13',
+    lines: () => ['Changed: the flat player figure only in a browser without WebGL2; elsewhere a body not yet loaded is not drawn (was: drawn flat until loaded).'],
+  },
+  {
     n: 574,
     day: '2026-11-13',
     lines: () => [`Fixed: wildermon turned from a removed kind (${listed(Object.values(REMOVED_KINDS).map((k) => k.name))}) still called by that kind's name, and their carcasses and stud book records. Now: the name of the kind they became, at their stage.`],
@@ -4470,14 +4475,6 @@ export const NEWS: News[] = [
           itemDef(m?.also?.item ?? 'fur').name.toLowerCase()} at an anvil (was: casting only). Fur spent on success only.`,
       ];
     },
-  },
-  {
-    n: 555,
-    day: '2026-11-13',
-    lines: () => [
-      'Removed: flat player figure. Players, Equipment and Health windows, creator preview: sculpted body only; none drawn until the bodies load (was: flat until then).',
-      `Changed: no WebGL2: "${NO_WEBGL}" on the loading card with Retry, and in the creator preview (was: flat figures).`,
-    ],
   },
   {
     n: 529,
