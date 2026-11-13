@@ -6,10 +6,10 @@
  * A body drawn frame after frame (`FigurePose.id`) is faded over a fifth of a second whenever it goes from a clip to the
  * figure's pose or to another clip, so nothing jumps; a body drawn once (no id) is posed with nothing kept.
  */
-import type { FigurePose, Seat } from '../../render/figure';
+import { viewOf, waveArmOf, type FigurePose, type Seat } from '../../render/figure';
 import { fitTime, runsOf, strideOf, type Clip, type Side } from './clip';
-import { qmat, qmul, quat, type M3, type Q, type V } from './math';
-import { addPose, blendLocal, blendPose, clipLocal, plantBetween, poseAt } from './player';
+import { I3, qmat, qmul, quat, type M3, type Q, type V } from './math';
+import { addPose, blendLocal, blendPose, clipLocal, lookAt, plantBetween, poseAt } from './player';
 import type { Held, Pose, Skeleton } from './skeleton';
 import { IDLE } from './clips/idle';
 import { WALK } from './clips/walk';
@@ -20,6 +20,7 @@ import { HANDS } from './clips/hands';
 import { GROUND } from './clips/ground';
 import { SHOOT } from './clips/shoot';
 import { FIGHT as FIGHT_CLIP } from './clips/fight';
+import { HOP, NOD, WAVE, WAVE_AHEAD, waveRaise } from './clips/emote';
 import { SEAT_OARS, SEAT_REINS, SEAT_SADDLE, SEAT_TILLER, SEAT_TILLER_LEFT, SEAT_TUCK } from './clips/seated';
 import { mirrorClip } from './author';
 import { ACTION_BY_ID } from '../../game/actions';
@@ -40,6 +41,8 @@ export const CLIPS: Record<string, Clip> = {
   idle: IDLE, walk: WALK, swing: SWING, sixseven: SIXSEVEN, work: WORK, 'work-left': mirrorClip(WORK, 'work-left'), hands: HANDS, ground: GROUND,
   fight: FIGHT_CLIP, 'fight-left': mirrorClip(FIGHT_CLIP, 'fight-left'), shoot: SHOOT,
   'seat-reins': SEAT_REINS, 'seat-oars': SEAT_OARS, 'seat-tiller': SEAT_TILLER, 'seat-tiller-left': SEAT_TILLER_LEFT, saddle: SEAT_SADDLE, 'saddle-tuck': SEAT_TUCK,
+  // the emotes (`emoteClipOf`)
+  wave: WAVE, 'wave-left': mirrorClip(WAVE, 'wave-left'), 'wave-ahead': WAVE_AHEAD, 'wave-ahead-left': mirrorClip(WAVE_AHEAD, 'wave-ahead-left'), nod: NOD, hop: HOP,
 };
 /** The clip a state plays until its own is approved: the 6 7 gesture. */
 export const PLACEHOLDER = 'sixseven';
@@ -47,8 +50,10 @@ export const PLACEHOLDER = 'sixseven';
  * The clip each state plays, by name: its own where approved, the placeholder where not. Each placeholder is replaced
  * here when the state's own clip lands; a job at `work` plays its tool's clip where it has one (`workClipOf`), the
  * state's otherwise; a fight with a weapon swung in one hand plays the one-handed fight (`ONE_HAND`, `./clips/fight.ts`),
- * any other fight the state's own. (Running, and walking or running while casting, emoting or at work, keep the
- * figure's pose: a stood clip would slide its planted feet over the ground. Swimming is drawn by the flat figure; sat
+ * any other fight the state's own; an emote plays its own clip where it has one (`emoteClipOf`), the state's otherwise.
+ * (Running, and walking or running while casting, emoting or at work, keep the figure's pose: a stood clip would slide its
+ * planted feet over the ground. But a hop, made on the spot moving or not as the flat figure's is; and a wave while
+ * walking, the walk with the waving arm the wave's. Swimming is drawn by the flat figure; sat
  * driving plays its seat's clip, `seatClipOf`, put on the seat by `seatedLocal`.)
  */
 export const CLIP_OF: Record<State, string> = {
@@ -62,6 +67,36 @@ export const CLIP_OF: Record<State, string> = {
   cast: PLACEHOLDER,
 };
 export { CLIP_OF_JOB, CLIP_OF_TOOL } from './routes';
+/**
+ * The arm each body's wave is being made with, chosen as it starts and kept to its end (as the flat figure keeps it,
+ * `../../render/figure.ts` settle), with how far through it was last drawn: a wave drawn earlier in it than that is a new one.
+ */
+const WAVING = new Map<string, { arm: number; t: number }>();
+/**
+ * The clip an emote plays, by its id: the hop's; a wave with the arm the flat figure waves with (`waveArmOf`: the right's
+ * clip, or its mirror for the left), staged for where it is seen from (side on, the arm raised ahead: `sideOn`), or with
+ * both hands full its nod; none for any other (the state's own, `CLIP_OF.emote`).
+ */
+export function emoteClipOf(pose: FigurePose): string | undefined {
+  if (pose.emote === 'hop') return HOP.name;
+  if (pose.emote !== 'wave') return undefined;
+  const t = pose.emoteT ?? 0, was = pose.id ? WAVING.get(pose.id) : undefined, arm = was && t >= was.t ? was.arm : waveArmOf(pose);
+  if (pose.id) {
+    WAVING.delete(pose.id);
+    WAVING.set(pose.id, { arm, t });
+    if (WAVING.size > MAX_KEPT) WAVING.delete(WAVING.keys().next().value as string);
+  }
+  return arm < 0 ? NOD.name : `${sideOn(pose.facing) ? WAVE_AHEAD.name : WAVE.name}${arm === 0 ? '-left' : ''}`;
+}
+/** Whether a body is seen side on (facings two and six), where a wave is staged ahead of the face (`WAVE_AHEAD`). */
+const sideOn = (facing: number): boolean => { const f = ((Math.round(facing) % 8) + 8) % 8; return f === 2 || f === 6; };
+/** The clips of a wave, and the side its arm is on (none for the nod): made over a walk, that arm's bones are the wave's (`animate`). */
+const WAVES: Readonly<Record<string, Side | undefined>> = { wave: 'r', 'wave-left': 'l', 'wave-ahead': 'r', 'wave-ahead-left': 'l', nod: undefined };
+/** The bones of an arm, from the shoulder to the fingers. */
+const ARM_BONE = /^(clavicle|upperarm|lowerarm|hand|thumb_0\d|fingers_0\d)_([lr])$/;
+/** How far a waving body's head is turned toward whoever is looking (of the way there, up to `LOOK_MOST` degrees), as the flat figure's. */
+const LOOK_SHARE = 0.6, LOOK_MOST = 20;
+
 /** The clip a job in the `work` state plays (`./routes.ts` `clipOfJob`, else the state's own). */
 export function workClipOf(job: string | undefined): string {
   return (job ? clipOfJob(job) : undefined) ?? CLIP_OF.work;
@@ -133,7 +168,11 @@ const smoother = (u: number): number => { const x = Math.min(1, Math.max(0, u));
 /** The state a pose is in, of those a clip can play. */
 export function stateOf(pose: FigurePose): State | undefined {
   if (pose.swimming || pose.driving) return undefined;
-  if (pose.moving) return !pose.working && !pose.emote && !pose.cast && (pose.gait ?? 0) <= WALK_GAIT ? 'walk' : undefined;
+  // (a hop is made on the spot, the legs its own, as the flat figure's; a wave over the walk, `clipFor`)
+  if (pose.moving) {
+    if (pose.emote === 'hop' && !pose.working && !pose.cast) return 'emote';
+    return !pose.working && (!pose.emote || pose.emote === 'wave') && !pose.cast && (pose.gait ?? 0) <= WALK_GAIT ? 'walk' : undefined;
+  }
   if (pose.cast) return 'cast';
   if (pose.emote) return 'emote';
   if (!pose.working) return 'idle';
@@ -155,11 +194,15 @@ export const walkPhase = (c: Clip, t: number, body: 'man' | 'woman', gait = 0): 
  * The clip a pose plays on a body and where in it, or none: the figure's pose is kept. A walk is played over the ground
  * the game carries the body over (`walkTime`).
  */
-export function clipFor(pose: FigurePose, body: 'man' | 'woman' = pose.look?.gender === 'woman' ? 'woman' : 'man'): { clip: Clip; t: number } | undefined {
-  const s = ON ? stateOf(pose) : undefined, name = s === 'work' ? workClipOf(pose.job) : s === 'fight' && shoots(pose) ? SHOOT.name : s === 'fight' && ONE_HAND(pose) ? 'fight' : s && CLIP_OF[s];
+export function clipFor(pose: FigurePose, body: 'man' | 'woman' = pose.look?.gender === 'woman' ? 'woman' : 'man'): { clip: Clip; t: number; over?: { clip: Clip; t: number } } | undefined {
+  const s = ON ? stateOf(pose) : undefined, emote = s === 'emote' || s === 'walk' ? emoteClipOf(pose) : undefined;
+  const name = s === 'work' ? workClipOf(pose.job) : s === 'fight' && shoots(pose) ? SHOOT.name : s === 'fight' && ONE_HAND(pose) ? 'fight' : s === 'emote' ? emote ?? CLIP_OF.emote : s && CLIP_OF[s];
   const clip = name ? CLIPS[(lefty(pose.facing) && LEFT_OF[name]) || name] : undefined;
   if (!clip) return undefined;
-  if (s === 'walk') return { clip, t: walkTime(clip, pose.phase, body, pose.gait ?? 0) };
+  // an emote's own clip: played once over the emote, its time the emote's
+  const own = emote ? CLIPS[emote] : undefined, at = own ? { clip: own, t: Math.max(0, Math.min(1, pose.emoteT ?? 0)) * own.length } : undefined;
+  if (s === 'walk') return { clip, t: walkTime(clip, pose.phase, body, pose.gait ?? 0), ...(at ? { over: at } : {}) };
+  if (s === 'emote' && at) return at;
   // a go of a timed job: fitted to its length (the holds stretched, the blow kept: `fitTime`), a fight's swing one blow
   // a go (the placeholder as many runs as come nearest)
   if (pose.act && pose.act.length > 0) {
@@ -325,17 +368,33 @@ export function animate(sk: Skeleton, pose: FigurePose, figure: () => Array<M3 |
   const sat = fit && ON ? seatedLocal(sk, pose, fit) : undefined;
   const c = sat ? undefined : clipFor(pose, sk.body);
   // a clip at a time: one holding hand tools holds the job's own, the work brought to the striking one where it reaches less far
-  const play = (p: { clip: Clip; t: number }): Local => {
+  const play = (p: { clip: Clip; t: number; over?: { clip: Clip; t: number } }): Local => {
+    if (p.over) {
+      // a wave over the walk: the walk, the waving arm's bones the wave's, the head turned as the wave turns it
+      const walk = play({ clip: p.clip, t: p.t }), wave = play(p.over), side = WAVES[p.over.clip.name];
+      walk.local.forEach((_, i) => { const m = ARM_BONE.exec(sk.bones[i]?.name ?? ''); if (m && m[2] === side) walk.local[i] = wave.local[i]; });
+      return looked(walk, p.over);
+    }
     const hold = p.clip.tools ? toolsIn(pose, sk.body) : undefined, side = p.clip.strike?.side ?? 'r', other = side === 'r' ? 'l' : 'r';
     const id = hold?.tools[side], ref = p.clip.tools?.[side];
     const d = tools && id && ref && id !== ref ? shiftOf(sk, p.clip, tools(id), tools(ref), id) : undefined;
     // (a clip that wields what is in hand: both fists reached as they close on its grip)
     const wield = p.clip.wields && held ? { hold: { l: held, r: held } } : {};
-    return clipLocal(sk, p.clip, p.t, p.clip.grip ? held : undefined, tools, { ids: hold?.tools, ...(d ? { shift: { [other]: d } } : {}), ...wield });
+    return looked(clipLocal(sk, p.clip, p.t, p.clip.grip ? held : undefined, tools, { ids: hold?.tools, ...(d ? { shift: { [other]: d } } : {}), ...wield }), p);
+  };
+  // a wave's (or its nod's) head turned toward whoever is looking as the arm comes up, when they are in front, as the flat figure's
+  const looked = (out: Local, p: { clip: Clip; t: number }): Local => {
+    if (!(p.clip.name in WAVES)) return out;
+    const T = viewOf(((Math.round(pose.facing) % 8) + 8) % 8).T, to = T[1] > -0.2 ? Math.max(-LOOK_MOST, Math.min(LOOK_MOST, (Math.atan2(-T[0], T[1]) * 180) / Math.PI)) : 0;
+    const yaw = LOOK_SHARE * to * waveRaise(p.t / p.clip.length);
+    if (Math.abs(yaw) < 1e-3) return out;
+    const add = lookAt(sk, yaw, 0), local = [...out.local];
+    add.q.forEach((q, i) => { if (q) local[i] = qmat(qmul(quat(local[i] ?? I3), q)); });
+    return { local, move: out.move };
   };
   const now: Local = sat ?? (c ? play(c) : { local: figure(), move: [0, 0, 0] });
   if (!pose.id) return now;
-  const key = `${sk.body}|${pose.id}`, source = sat ? sat.name : c ? c.clip.name : 'figure', ms = performance.now();
+  const key = `${sk.body}|${pose.id}`, source = sat ? sat.name : c ? c.clip.name + (c.over ? `+${c.over.clip.name}` : '') : 'figure', ms = performance.now();
   let k = KEPT.get(key);
   if (k) KEPT.delete(key);
   if (!k) k = { source, out: now, from: null, at: ms };

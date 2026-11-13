@@ -4347,6 +4347,13 @@ export const NEWS: News[] = [
     ],
   },
   {
+    n: 544,
+    day: '2026-11-13',
+    lines: () => [
+      'New: Wave and Hop animated on the sculpted body (was: a placeholder gesture). Both hands full: a nod.',
+    ],
+  },
+  {
     n: 529,
     day: '2026-11-12',
     lines: () => [

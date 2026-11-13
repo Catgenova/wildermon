@@ -3892,6 +3892,14 @@ function waveArm(facing: number, busy: [boolean, boolean]): number {
   const k = stagedArm(facing);
   return busy[0] && busy[1] ? 0 : busy[k] ? 1 - k : k;
 }
+/**
+ * The arm a pose's wave is made with at `facing` (`waveArm`, its hands' load as `busyOf` reads them): 0 the left, 1 the
+ * right; or -1 with both hands full, where the flat figure nods instead (`wave`, `nod`). For the sculpted bodies' clips.
+ */
+export function waveArmOf(p: FigurePose, facing = p.facing): number {
+  const busy = busyOf(p, facing);
+  return busy[0] && busy[1] ? -1 : waveArm(facing, busy);
+}
 /** The arm a wave is staged for at `facing` with both hands free: the near one, but the far one side on (see `wave`). */
 const stagedArm = (facing: number): number => {
   const f = ((Math.round(facing) % 8) + 8) % 8;

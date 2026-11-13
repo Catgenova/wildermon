@@ -194,6 +194,9 @@ import { SH_TERMS, type LowLight, type SculptDraw, type TrailDraw } from './gl';
 import type { Material } from './sdf';
 import { animate, clipFor, clipsPlaying, CLIPS, heldIn, ONE_HAND, SWING_TOOL, toolsIn, type SeatFit } from './anim';
 import { clipLocal } from './anim/player';
+import { hopAir } from './anim/clips/emote';
+import { HOPS, emotePose } from '../game/emotes';
+import { HEIGHT_SCALE } from '../render/iso';
 import type { Side } from './anim/clip';
 import { wrap } from './anim/clip';
 import { slashTrail } from './anim/trail';
@@ -1013,6 +1016,39 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
 
   /** How far the last pose drawn (`lowBones`) was lifted to stand on its lowest sole, mesh units. */
   let DY = 0;
+  /** How far up the pelvis is from the lowest of the body's own soles in a pose (frames by bone, `posed`), mesh units. */
+  function hipsUp(F: readonly Frame[]): number {
+    let low = Infinity;
+    for (const vi of A.soles) {
+      const v: V = [A.verts[vi * 3], A.verts[vi * 3 + 1], A.verts[vi * 3 + 2]], w = A.weights[vi];
+      let y = 0;
+      for (let j = 0; j < w.length; j += 2) { const b = w[j], S = mm(F[b].W, tr(BONES[b].R)); y += w[j + 1] * (S[3] * (v[0] - BONES[b].head[0]) + S[4] * (v[1] - BONES[b].head[1]) + S[5] * (v[2] - BONES[b].head[2]) + F[b].P[1]); }
+      low = Math.min(low, y);
+    }
+    return F[AT.get('pelvis') as number].P[1] - low;
+  }
+  /** `hipsUp` at a time of the hop's clip (seconds), kept. */
+  const HOP_HIPS = new Map<number, number>();
+  const hopHips = (t: number): number => {
+    let h = HOP_HIPS.get(t);
+    if (h === undefined) { const r = clipLocal(SK, CLIPS.hop, t); HOP_HIPS.set(t, (h = hipsUp(posed(r.local, r.move)))); }
+    return h;
+  };
+  /**
+   * How far a body at a hop (`../game/emotes.ts` HOPS) is lifted off the ground in the air, mesh units, as the flat figure is
+   * (`../render/figure.ts` hop): the hips carried from where they are as the feet leave the ground to where they are as
+   * they come down, raised by the leap's height (`emotePose`) over that, whatever the legs do under them; the shadow, the
+   * ground's, left where it is. None on the ground, or at anything else.
+   */
+  function hopLift(pose: FigurePose, F: readonly Frame[]): number {
+    const c = clipFor(pose, SK.body);
+    if (c?.clip !== CLIPS.hop) return 0;
+    const k = c.t / c.clip.length, air = hopAir(k);
+    if (!air) return 0;
+    const h = HOPS[air.i], off = hopHips(h.off * c.clip.length), on = hopHips(h.on * c.clip.length);
+    const want = off + (on - off) * air.u + emotePose('hop', k).lift / HEIGHT_SCALE / scale();
+    return Math.max(0, want - hipsUp(F));
+  }
   /**
    * The slash trail of the prop in hand at the pose's moment of its clip (`./anim/trail.ts`), as drawn: in the figure's
    * frame, stood as the body last drawn (`lowBones`) was; none out of the blow, and none for a prop that leaves none
@@ -1057,7 +1093,8 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
     };
     stand(A.verts, A.weights, A.soles);
     garments.forEach((g, k) => { if (worn[k] && g.soles) stand(g.verts, WEIGHTS[k], g.soles); });
-    const dy = fit ? 0 : A.floor - low, s = scale();
+    // (in a hop's leap, lifted off the ground: `hopLift`)
+    const dy = fit ? 0 : A.floor - low + hopLift(pose, Fb), s = scale();
     DY = dy;
     const sk = shapedOf(garments, worn);
     SHAPES_W = sk < 0 ? [] : shapeWeights(BONES, garments[sk], Fb);
