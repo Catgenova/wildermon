@@ -14,9 +14,11 @@
 //     (lowgarment.mjs garmentAsset, with `hides` and the `plain` and `enchanted` looks; loaded by src/sculpt/lowpoly.ts)
 //
 // Every plate is rigid: all its vertices carry one weight list (one bone, or a fixed share of two at a joint), so it never
-// stretches; plates at a joint overlap, the upper one outside, so no gap opens as the joint bends. Only the under-layer
-// (a sleeve of the arm's own rings, pushed out) and the gauntlet (the hand's own polygons, pushed out along their normals,
-// so the plates follow the fingers' curl) are skinned as the skin under them.
+// stretches; plates at a joint overlap, the upper one outside, so no gap opens as the joint bends. The breast and back
+// plates take the clavicles' share of the skin under them (`followSkin`, D.follow), so they move with the shoulders as the
+// skin does. The under-layers (a sleeve of the arm's own rings, pushed out; the trunk's skin the plates leave bare, the
+// trapezius and the upper back round the collar, pushed out: `underTrunk`, D.under) and the gauntlet (the hand's own
+// polygons, pushed out along their normals, so the plates follow the fingers' curl) are skinned as the skin under them.
 //
 // A plate is a grid of points (rows down, columns round) on a section of the body: each point the body's reach in its
 // column's direction (the convex hull of the body's samples in a slab across an axis, so a plate bridges the body's
@@ -25,7 +27,7 @@
 // another plate. Cores (a gold ring standing on the plate round a glowing dome) and inlays (gold strips) lie on a plate.
 //
 // Units and axes are the body's: y up (the chin's underside 0), z forward, x the body's left.
-import { meshOf, orient, trisOf, samplesOf, closestOnTri, sub, add, mul, dot, cross, unit, lerp } from '../lowgarment.mjs';
+import { meshOf, orient, trisOf, samplesOf, closestOnTri, closestOnBody, sub, add, mul, dot, cross, unit, lerp } from '../lowgarment.mjs';
 import { TORSO_RING } from '../lowarm.mjs';
 import { existsSync, readFileSync } from 'node:fs';
 
@@ -50,7 +52,8 @@ export const LOOKS = {
  * The design per body. Heights are the body's y; az, azimuth round the torso (0 the front, 90 the body's left); θ round
  * a limb (0 forward, 90 out, 180 back); t along a limb's bone from its head. Lists by column are [front ... back] for a
  * symmetric piece, mirrored. `c` clearances off the body (the hull of its samples); rim { w, h, t }: the gold rim's width
- * and rise, the plate's thickness behind it.
+ * and rise, the plate's thickness behind it. follow { bones, k }: the bones whose share of the skin the breast and back
+ * plates take (`followSkin`); under { off, top, bottom, mat }: the trunk's bare skin under a layer (`underTrunk`).
  */
 export const DESIGN = {
   male: {
@@ -58,6 +61,8 @@ export const DESIGN = {
     fit: { trunk: 0.045, lame: 0.025, fauld: 0.1, arm: 0.04, gap: 0.02 },
     legs: { top: -3.94, bottom: -5.45, c: [0.035, 0.095, 0.16, 0.29, 0.28, 0.27, 0.21] },
     wedge: 8, sideC: 0.08, shrugC: 0.08,
+    follow: { bones: ['clavicle_l', 'clavicle_r'], k: 1 },
+    under: { off: 0.025, top: -0.25, bottom: -2.6, mat: 'shade' },
     collar: { cols: [[14, 66, 118], [128, 154, 180]], base: [-0.78, -0.78, -0.62], top: [-0.06, 0.12, 0.19], lip: [55, -0.38], lipIn: 0.14, trim: 0.12, c: 0.38, flare: 0.05, wall: 0.07, spread: 0.12, sink: -0.18, open: 46, shrug: 0.4 },
     breast: { az: [0, 22, 46, 70, 94], top: [-0.62, -0.64, -0.68, -0.82, -1.95], bottom: [-4.05, -3.8, -3.45, -3.2, -3.1], rows: [0, 0.3, 0.55, 0.8, 1], c: [0.1, 0.075, 0.055, 0.06, 0.065], flat: 22, core: { y: -1.9, r: 0.44, n: 8 } },
     back: { az: [100, 118, 140, 160, 180], top: [-1.95, -0.78, -0.6, -0.56, -0.54], bottom: [-3.0, -3.2, -3.4, -3.55, -3.65], rows: [0, 0.45, 1], c: [0.045, 0.05, 0.055], ridge: 0.06, side: 0 },
@@ -90,6 +95,8 @@ export const DESIGN = {
     fit: { trunk: 0.04, lame: 0.022, fauld: 0.09, arm: 0.035, gap: 0.018 },
     legs: { top: -3.58, bottom: -4.16, c: [0.05, 0.1, 0.14, 0.18, 0.17, 0.16, 0.11] },
     wedge: 8, sideC: 0.06,
+    follow: { bones: ['clavicle_l', 'clavicle_r'], k: 1 },
+    under: { off: 0.022, top: -0.25, bottom: -2.2, mat: 'shade' },
     collar: { cols: [[14, 66, 118], [128, 154, 180]], base: [-0.85, -0.78, -0.62], top: [-0.25, -0.1, 0.0], lipIn: 0.12, trim: 0.11, c: 0.28, flare: 0.04, wall: 0.06, spread: 0.1, sink: -0.05, open: 46, shrug: 0.35 },
     breast: { az: [0, 18, 36, 56, 76, 96], top: [-0.7, -0.71, -0.74, -0.8, -0.95, -1.85], bottom: [-3.55, -3.4, -3.2, -3.0, -2.85, -2.75], rows: [0, 0.18, 0.36, 0.5, 0.64, 0.82, 1], c: [0.04, 0.04, 0.04, 0.04, 0.045, 0.05, 0.055], bust: { y: -1.6, az: [48, 66] }, flat: 18, core: { y: -1.6, r: 0.38, n: 8 } },
     back: { az: [100, 118, 140, 160, 180], top: [-1.85, -0.9, -0.72, -0.64, -0.6], bottom: [-2.6, -2.8, -2.95, -3.05, -3.15], rows: [0, 0.45, 1], c: [0.04, 0.045, 0.05], ridge: 0.05, side: 0 },
@@ -937,11 +944,71 @@ export function buildPlateChest(rig, design = designOf(rig.who)) {
     map.set(i, j);
   }
   for (let k = p0; k < p1; k++) { const p = G.polys[k]; G.polys.push({ ...p, v: p.v.map((i) => map.get(i)).reverse() }); }
+  // (the breast and back plates, their rims, core and inlays: from rigid on the chest to following the skin under them)
+  const trunkWt = new Set(G.plates.filter((pl) => pl.tag === 'breast' || pl.tag === 'back').map((pl) => pl.wt));
+  followSkin(rig, G, (i) => trunkWt.has(G.wt[i]), D.follow);
+  // (the trunk's skin the plates leave bare, under a layer of the plate's shade)
+  const under = D.under ? underTrunk(rig, G, D.under) : [];
   G.side = G.verts.map((p) => (p[0] >= 0 ? 'L' : 'R'));
   G.tris = trisOf(G);
   G.design = D;
-  G.hides = hiddenPolys(rig, G);
+  G.hides = [...new Set([...hiddenPolys(rig, G), ...under])].sort((a, b) => a - b);
   return G;
+}
+
+/**
+ * The under-layer over the trunk's skin a chest garment leaves bare (U: { off, top, bottom, mat }): the trapezius between the
+ * collar and the pauldrons, the upper back and the upper chest round the collar's foot, the shoulder's back and front by
+ * the armpit. The body's own skin polygons of the trunk and the neck's foot not hidden by what is built so far, with
+ * their middle from `top` down to `bottom`, pushed out along the body's vertex normals by `off`, each vertex weighted
+ * as the skin under it ($body), so it follows the skin in any pose (the knelt bow at the ground turns the upper back and
+ * the shoulders' tops to the camera); in `mat` (the under material by default). Returns those body polygons, hidden
+ * under it.
+ */
+export function underTrunk(rig, G, U) {
+  const { B } = rig, hidden = new Set(hiddenPolys(rig, { ...G, tris: trisOf(G) }));
+  const VN = B.verts.map(() => [0, 0, 0]);
+  for (const t of B.tris) { const [a, b, c] = t.v.map((i) => B.verts[i]), n = cross(sub(b, a), sub(c, a)); for (const i of t.v) VN[i] = add(VN[i], n); }
+  const sel = B.polys.map((_, k) => k).filter((k) => {
+    const p = B.polys[k];
+    if (hidden.has(k) || p.mat !== 'skin' || !['torso', 'neck', 'joint'].includes(p.part)) return false;
+    const y = p.v.reduce((s, i) => s + B.verts[i][1], 0) / p.v.length;
+    return y <= U.top && y >= U.bottom;
+  });
+  const at = new Map();
+  const V = (i) => { if (!at.has(i)) { const v = G.vert(add(B.verts[i], mul(unit(VN[i]), U.off)), 'under'); G.wt[v] = { $body: i }; at.set(i, v); } return at.get(i); };
+  // (each polygon as the body winds it, out)
+  G.tag = 'under';
+  for (const k of sel) G.poly(B.polys[k].v.map(V), U.mat ?? 'under', 'under');
+  return sel;
+}
+
+/**
+ * The trunk's plates over the clavicles: each vertex `which(i)` picks (the plates' own, rigid on the chest) takes the
+ * share of `follow.bones` the body's skin has under it (its weights at the closest point of the trunk's surface), times
+ * `follow.k`, the rest kept on its own bones. The skin of the upper chest and the upper back hangs from the clavicles as well as the chest: rigid on the chest, the plates over it
+ * let it through when the shoulders roll forward (the ground clip's knelt bow: the clavicles turned 28 degrees on him,
+ * 36 on her) and leave it bare under the pauldrons' back edge; following it, they keep the clearance they were fitted
+ * with. In place; returns the vertices changed.
+ */
+export function followSkin(rig, G, which, follow = { bones: ['clavicle_l', 'clavicle_r'], k: 1 }) {
+  const { B } = rig, keep = B.tris.map((t) => t.v.every((i) => ['torso', 'neck', 'pelvis'].includes(B.part[i])));
+  const want = follow.bones.map((n) => rig.at.get(n));
+  if (want.some((b) => b === undefined)) throw new Error(`no bone in ${follow.bones}`);
+  let changed = 0;
+  G.wt.forEach((w, i) => {
+    if (!which(i)) return;
+    // (the skin's weights at the closest point of the trunk's surface: its triangle's corners' blended)
+    const h = closestOnBody(B.verts, B.tris, G.verts[i], keep), share = want.map(() => 0);
+    B.tris[h.tri].v.forEach((j, q) => { for (const [b, x] of rig.vw[j]) { const k = want.indexOf(b); if (k >= 0) share[k] += h.w[q] * x; } });
+    const c = share.map((x) => follow.k * x), rest = 1 - c.reduce((a, b) => a + b, 0);
+    if (rest >= 1 - 1e-4) return;
+    const out = Object.fromEntries(Object.entries(w).map(([b, x]) => [b, x * rest]));
+    follow.bones.forEach((n, k) => { if (c[k] > 1e-4) out[n] = (out[n] ?? 0) + c[k]; });
+    G.wt[i] = out;
+    changed++;
+  });
+  return changed;
 }
 
 /**

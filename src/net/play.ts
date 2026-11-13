@@ -20,7 +20,7 @@ import { hiddenAsk } from '../game/gates';
 import { swirlIn, type Swirl } from '../game/motes';
 import { startChoices, TELESTONE_KEY, type Runestone, type RunestoneId } from '../game/runestones';
 import { runeGatesHeld, sawGateFolk } from '../game/runegate';
-import { isFightJob, isFightStance } from '../game/fight';
+import { BLOCK_FRESH, isFightJob, isFightStance } from '../game/fight';
 import { FIGHT_BACK_GOES } from '../game/creatures';
 import { saidWords } from '../game/roster';
 import { skillRises, tookOff } from './felt';
@@ -823,6 +823,16 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
         level: p.level, moving: false, swimming: false, working: !!p.act,
         act: p.act ?? undefined, look: cleanLook(p.look), gear: gearFrom(p.gear), tool: p.act ? toolFrom(p.act_tool, ACTION_BY_ID.get(p.act)?.tool) : undefined,
       })));
+    // And a blow somebody took on their shield, drawn on them while it is fresh (`Roster.blocked`).
+    for (const p of people) {
+      if (p.uid === island.uid || typeof p.blocked_at !== 'string') continue;
+      const ms = Date.parse(p.blocked_at);
+      if (Number.isFinite(ms) && island.since(p.blocked_at) < BLOCK_FRESH) game.roster.blocked(hashId(p.uid), ms);
+    }
+  };
+  // A blow taken on your own shield, drawn on you (`FigurePose.block`), on the clock the frames are drawn on.
+  island.hooks.blocked = () => {
+    game.player.blockedAt = performance.now() / 1000;
   };
   for (const [text, kind, at] of log) game.write(text, kind as Parameters<Game['write']>[1], at);
   game.write(`You are on ${info.name}. Send somebody this page's address and they can join you.`, 'system');
