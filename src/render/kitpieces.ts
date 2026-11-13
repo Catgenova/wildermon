@@ -1,4 +1,5 @@
 import { FACINGS, furnitureDef } from '../game/furniture';
+import { animationsOff, animNow } from '../engine/motion';
 import type { Side } from '../game/building';
 import { HALF_H, HALF_W, HEIGHT_SCALE, UNITS_PER_TILE } from './iso';
 import { VIEWS } from './view';
@@ -730,16 +731,16 @@ const FLICKER_MS = 150;
 /** A look with the flicker its fire is at now, when it is lit and flickers (`KitPiece.flicker`); any other look as it is. */
 function flickering(piece: KitPiece, look: KitLook): KitLook {
   if (!piece.flicker || !look.lit) return look.frame === undefined ? look : { ...look, frame: undefined };
-  return { ...look, frame: Math.floor(performance.now() / FLICKER_MS) % piece.flicker };
+  return { ...look, frame: animationsOff() ? 0 : Math.floor(performance.now() / FLICKER_MS) % piece.flicker };
 }
 
 /** What moves on a kit piece, over its bake: whatever the piece draws live (`KitPiece.live`). */
-export function drawKitLive(ctx: Ctx, sx: number, sy: number, zoom: number, kind: string, view: KitView, night = 0, air?: KitAir, t = performance.now() / 1000): void {
+export function drawKitLive(ctx: Ctx, sx: number, sy: number, zoom: number, kind: string, view: KitView, night = 0, air?: KitAir, t = animNow()): void {
   KIT_PIECES[kind]?.live?.(ctx, sx, sy, zoom, view, night, t, air);
 }
 
 /** Where a kit piece takes the night back off itself this frame, if it does. */
-export const kitHoles = (sx: number, sy: number, zoom: number, kind: string, view: KitView, t = performance.now() / 1000): Array<{ x: number; y: number; r: number; a: number }> =>
+export const kitHoles = (sx: number, sy: number, zoom: number, kind: string, view: KitView, t = animNow()): Array<{ x: number; y: number; r: number; a: number }> =>
   KIT_PIECES[kind]?.holes?.(sx, sy, zoom, view, t) ?? [];
 /** Whether a kit piece has a live drawing that wants the wind, and whether it takes the night off itself. */
 export const kitWind = (kind: string): boolean => isKit(kind) && !!KIT_PIECES[kind].wind;

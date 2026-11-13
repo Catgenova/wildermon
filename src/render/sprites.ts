@@ -1,10 +1,11 @@
 import type { BeastAct } from '../game/events';
+import { animationsOff } from '../engine/motion';
 import { hash2, mulberry32 } from '../world/noise';
 import { cushions, hashOf, type Cushion } from './ivy';
 import { inkOr } from './inks';
 import type { Look } from '../game/look';
 import { EMOTE_BY_ID, HOPS, emotePose } from '../game/emotes';
-import { drawBust, drawFigure, figureJoints, figureStance, shineOver, viewOf, type FigurePose } from './figure';
+import { drawBust, drawFigure, figureJoints, figureStance, shineOver, stillPose, viewOf, type FigurePose } from './figure';
 import { BUSH_DEFS, TREE_AGES, TREE_DEFS } from '../world/tiles';
 import { drawWildermon, drawWildermonPortrait, modelled, wildermonTop } from './wildermon';
 import { BUSH_WOOD, bushYear, leafageOf } from './foliage';
@@ -2040,6 +2041,8 @@ export function drawCreature(ctx: CanvasRenderingContext2D, sx: number, sy: numb
   // Age is drawn rather than written: a yearling is two thirds the size of
   // its parents and an old one has put weight on.
   zoom *= pose.scale ?? 1;
+  // Animations off: standing, head up, at nought on its clock, glided while it moves (`drawBeast` for the models).
+  if (animationsOff()) pose = { ...pose, phase: 0, moving: false, gait: 0, graze: false, act: undefined };
   // A kind that is a model now is drawn as one; the rest as they always were.
   if (modelled(pose.species)) {
     drawWildermon(ctx, sx, sy, zoom, pose.species as string, pose.colors, {
@@ -2091,7 +2094,7 @@ function drawRareBody(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoo
   } finally {
     bareBody = false;
   }
-  shineOver(ctx, rareCanvas, W, H, sx - (mx + box.ax) * zoom, sy - (my + box.ay) * zoom, w, h, pose.rare ?? 0, (pose.id ?? 0) % 97, performance.now() / 1000);
+  shineOver(ctx, rareCanvas, W, H, sx - (mx + box.ax) * zoom, sy - (my + box.ay) * zoom, w, h, pose.rare ?? 0, (pose.id ?? 0) % 97, animationsOff() ? 0 : performance.now() / 1000);
 }
 
 /** One body, drawn out of paths, with its feet at (sx, sy). */
@@ -4047,6 +4050,8 @@ export function facingOf(sx: number, sy: number, was?: number): number {
  * makes a hop look like leaving the ground rather than growing.
  */
 export function drawPlayer(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: PlayerPose): void {
+  // Animations off: the shade under the still pose too (`stillPose`), not under a hop or a cast.
+  if (animationsOff()) pose = stillPose(pose);
   if (!pose.swimming && !pose.driving) footShade(ctx, sx, sy, zoom, pose);
   drawFigure(ctx, sx, sy, zoom, pose);
 }

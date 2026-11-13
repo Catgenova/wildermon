@@ -98,6 +98,8 @@ export interface WallHost {
   storeyHidden(level: number): boolean;
   readonly structs: StructureWatch;
   readonly time: number;
+  /** The clock what moves on its own is drawn at (`Renderer.anim`): held while animations are off. */
+  readonly anim: number;
   wallLift: Path2D | null;
 }
 
@@ -346,7 +348,7 @@ export class WallPainter {
     const m = gateMiddle(border);
     const sx = cam.worldToScreenX(m.x, m.y), sy = cam.worldToScreenY(m.x, m.y, base);
     const { lit, since } = runeGateLit(this.r.game, wall, performance.now() / 1000);
-    const zoom = cam.zoom, turn = cam.rotation, variant = gateVariant(border.dir, border.x, border.y), dark = this.r.game.darkness(), t = this.r.time;
+    const zoom = cam.zoom, turn = cam.rotation, variant = gateVariant(border.dir, border.x, border.y), dark = this.r.game.darkness(), t = this.r.anim;
     const layer = (which: 'back' | 'front'): void => {
       const ctx = this.r.canvas.ctx;
       const was = ctx.globalAlpha;

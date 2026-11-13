@@ -8,7 +8,7 @@ import { ACTION_BY_ID } from '../game/actions';
 import type { FullscreenCanvas } from '../engine/canvas';
 import { onPhone } from '../engine/device';
 import { drawsFast, drawsLow } from '../game/settings';
-import { lessMotion } from '../engine/motion';
+import { animationsOff, lessMotion, setAnimations } from '../engine/motion';
 import type { Game } from '../game/game';
 import {
   borderOf,
@@ -930,7 +930,13 @@ function toolPiece(it: { id: string; extra?: string; rare?: number; enchant?: un
 
 export class Renderer {
   readonly camera = new Camera();
+  /** The drawing clock, seconds: what fades and goes by (numbers rising, dust, pictures kept their time) is timed on it. */
   time = 0;
+  /**
+   * The clock what moves on its own is drawn at -- the sway, the water, smoke and fire, lights on things, cloth, a boat's
+   * roll, a body's idle -- which is the drawing clock's, and stands where it is while animations are off (`held`).
+   */
+  anim = 0;
   hover: Pick | null = null;
   /** What is being set down, drawn after everything that stands. */
   ghost: Ghost | null = null;
@@ -1593,7 +1599,7 @@ export class Renderer {
     // A turn of work throws something up where the work is going: chips off
     // the rock, earth off the spade, in the colour of whatever is there.
     game.events.on('strike', (x, y) => {
-      if (this.camera.zoom < 0.6 || this.still) return;
+      if (this.camera.zoom < 0.6 || this.still || this.held) return;
       const tx = Math.floor(x);
       const ty = Math.floor(y);
       const w = game.world;
@@ -1662,6 +1668,7 @@ export class Renderer {
       storeyHidden: r.storeyHidden.bind(r),
       get structs() { return r.structs; },
       get time() { return r.time; },
+      get anim() { return r.anim; },
       get wallLift() { return r.wallLift; },
       set wallLift(v) { r.wallLift = v; },
     };
@@ -1780,7 +1787,8 @@ export class Renderer {
       get springWater() { return r.springWater; },
       get sunNow() { return r.sunNow; },
       get surf() { return r.surf; },
-      get time() { return r.time; },
+      // The water's clock is the one its swell, its shimmer and its wakes move on: held while animations are off.
+      get time() { return r.anim; },
       get tint() { return r.tint; },
       get wakes() { return r.wakes; },
       get wetPierBuildings() { return r.wetPierBuildings; },
@@ -2081,7 +2089,7 @@ export class Renderer {
   private flicker(l: { x: number; y: number; steady?: boolean }): number {
     if (l.steady || this.calm) return 1;
     const seed = l.x * 0.7 + l.y * 1.3;
-    return 1 + 0.055 * Math.sin(this.time * 6.1 + seed) + 0.035 * Math.sin(this.time * 11.3 + seed * 2.1);
+    return 1 + 0.055 * Math.sin(this.anim * 6.1 + seed) + 0.035 * Math.sin(this.anim * 11.3 + seed * 2.1);
   }
 
   /**
@@ -3280,7 +3288,7 @@ export class Renderer {
         }
         continue;
       }
-      const spr = flowerSprite(colour, variant, this.calm ? 0 : swayFrame(lean, this.lean.force, this.time, phase));
+      const spr = flowerSprite(colour, variant, this.calm ? 0 : swayFrame(lean, this.lean.force, this.anim, phase));
       const k = zoom * size;
       const ready = this.atSize(spr.canvas, spr.w * k, spr.h * k);
       ctx.drawImage(ready, sx - spr.ax * k, sy - spr.ay * k, spr.w * k, spr.h * k);
@@ -3892,8 +3900,16 @@ export class Renderer {
   private fast = false;
   /** The low-end graphics this frame (`drawsLow`, or Low power): no wakes and no dust either, and the solid trees, bushes, stumps, logs and fields drawn flat. */
   private still = false;
-  /** Less motion this frame (`lessMotion`): no sway in trees, bushes and flowers, no bob or pulse in the markers, steady lights. */
+  /** Less motion this frame (`lessMotion`), or animations off: no sway in trees, bushes and flowers, no bob or pulse in the markers, steady lights. */
   private calm = false;
+  /**
+   * Animations off this frame (`Settings.animations`, `animationsOff`): `anim` stood still, every body and creature in its
+   * still pose, no wakes or dust raised, a cart's rock and her wheels' turn held, the small life's clock held, a blow's
+   * flash on a body not drawn, the action effects off, and the spells' lingering effects held where they are.
+   */
+  private held = false;
+  /** The island's clock the small life was last drawn at (`Life.frame`), held while animations are off. */
+  private lifeClock = 0;
   /**
    * Whether the distance is hazed over (`drawHaze`). Off for a view with no
    * distance in it to speak of: the landing page's cove (src/landing/backdrop.ts),
@@ -3931,8 +3947,11 @@ export class Renderer {
     const phone = onPhone();
     this.fast = drawsFast(this.game.settings, phone);
     this.still = drawsLow(this.game.settings, phone);
-    this.calm = lessMotion();
+    setAnimations(this.game.settings.animations !== 'off');
+    this.held = animationsOff();
+    this.calm = lessMotion() || this.held;
     this.time += dt;
+    if (!this.held) this.anim += dt;
     this.frameDt = dt;
     this.poolRuns.clear();
     this.greenAt = greenNow();
@@ -3948,9 +3967,9 @@ export class Renderer {
     this.pinned = this.game.pinnedStorey();
     this.roomTiles = this.pinned === null ? this.myRoom() : null;
     // The spells first: what they light is among what is burning.
-    this.spells.update({ eye: this.camera, now: performance.now() / 1000, dt, fast: this.fast, night: this.game.darkness() });
+    this.spells.update({ eye: this.camera, now: performance.now() / 1000, dt, fast: this.fast, night: this.game.darkness(), held: this.held });
     // And what bodies' work threw off, on the same stage, after the spells (`./fx/actions.ts`).
-    this.actionFx.update({ eye: this.camera, now: performance.now() / 1000, dt, fast: this.fast, night: this.game.darkness(), effects: this.game.settings.effects, calm: this.calm, me: this.game.player });
+    this.actionFx.update({ eye: this.camera, now: performance.now() / 1000, dt, fast: this.fast, night: this.game.darkness(), effects: this.held ? 'off' : this.game.settings.effects, calm: this.calm, me: this.game.player });
     this.game.spellLights = this.spells.lights;
     // What is burning, for glass to glow with at night, and last frame's glow gone.
     if (this.game.darkness() > 0.02) {
@@ -4075,7 +4094,7 @@ export class Renderer {
     this.pierFeet.clear();
     this.waters.wetPiers(cam.view);
     this.plantFrame = this.game.waterPlants.size
-      ? { cam, t: this.time, now: Date.now() / 1000, dark: this.game.darkness(), surface: this.drawnSurface, ground: this.groundHere }
+      ? { cam, t: this.anim, now: Date.now() / 1000, dark: this.game.darkness(), surface: this.drawnSurface, ground: this.groundHere }
       : null;
     // The swell runs down the wind, and everything crossing open water drags
     // something behind it. Both are worked out once for the frame.
@@ -4091,7 +4110,7 @@ export class Renderer {
       const ll = Math.hypot(lx, ly) || 1;
       this.lean = { x: lx / ll, y: ly / ll, force: wind.force };
     }
-    if (!this.still) {
+    if (!this.still && !this.held) {
       this.waters.markWakes();
       this.markDust();
     }
@@ -4312,8 +4331,8 @@ export class Renderer {
     if (this.game.bridges.size) {
       const springs = this.game.springs;
       this.aqueducts.frame({
-        cam, world, t: this.time, now: Date.now(), dark: this.game.darkness(), sunUp: Math.max(0, sun[2]),
-        fv: fallView(cam, this.time, W, H, HEIGHT_SCALE * zoom),
+        cam, world, t: this.anim, now: Date.now(), dark: this.game.darkness(), sunUp: Math.max(0, sun[2]),
+        fv: fallView(cam, this.anim, W, H, HEIGHT_SCALE * zoom),
         flowing: (id) => springs.flowingSince(id),
         surface: (x, y) => world.water?.levelAt(x, y) ?? null,
         slab: (x, y) => this.game.slabAt(x, y)?.top ?? null,
@@ -4343,7 +4362,7 @@ export class Renderer {
     // The water springs have made, if any: where each pond stands this frame, how far each stream has run, and which line of the ground each piece goes after.
     const water = world.water;
     // Their outline, and the sea's, only matters to a wake, so it is gathered only while something is leaving one.
-    const waked = this.wakes.live(this.time).length > 0;
+    const waked = this.wakes.live(this.anim).length > 0;
     this.pondPath = water && waked ? new Path2D() : null;
     this.seaPath = waked ? new Path2D() : null;
     this.tint.begin(cam, this.frameNo, HEIGHT_SCALE);
@@ -4352,12 +4371,12 @@ export class Renderer {
       this.shoreField.touchBox(b[0], b[1], b[2], b[3]);
       this.reachMoved.push(b);
     }
-    this.shore.begin({ cam, t: this.time, dirX: this.surf.dirX, dirY: this.surf.dirY });
+    this.shore.begin({ cam, t: this.anim, dirX: this.surf.dirX, dirY: this.surf.dirY });
     // The sea, under everything (`drawSea`).
     this.seaUnder = this.waters.drawSea(ctx, zoom);
     if (water) {
       this.springWater.frame({
-        world, cam, view: V, now: Date.now(), t: this.time, width: W, height: H, dLo, dHi,
+        world, cam, view: V, now: Date.now(), t: this.anim, width: W, height: H, dLo, dHi,
         lean: this.lean, sun, dark: this.game.darkness(), wellAt: this.wellAt,
         slab: this.game.foundations.size ? this.slabOver : undefined,
         decked: this.game.buildings.pierTiles.size ? this.pierOver : undefined,
@@ -4375,8 +4394,8 @@ export class Renderer {
     this.year = year;
     if (!this.fast) this.life.frame({
       world, cam, view: V, dLo, dHi, eMin, eMax, width: W, height: H,
-      // The island's clock where there is one, so every player sees the same butterfly in the same place.
-      clock: this.game.islandClock ? this.game.islandClock() : this.game.time,
+      // The island's clock where there is one, so every player sees the same butterfly in the same place; held while animations are off.
+      clock: this.held && this.lifeClock ? this.lifeClock : (this.lifeClock = this.game.islandClock ? this.game.islandClock() : this.game.time),
       hour: hour0, dark: this.game.darkness(), season: this.year.season, day: this.year.day,
       windX: this.surf.dirX, windY: this.surf.dirY, force: this.surf.force,
       visible: this.lifeVisible, covered: this.lifeCovered, indoors: this.lifeIndoors, pieces: this.lifePieces,
@@ -4568,7 +4587,7 @@ export class Renderer {
           const feet = this.pierFeet.get(`${x},${y}`);
           if (feet) {
             this.shore.flush(ctx);
-            drawPierFeet(ctx, cam, feet, this.time);
+            drawPierFeet(ctx, cam, feet, this.anim);
             this.pierFeet.delete(`${x},${y}`);
           }
         }
@@ -5695,7 +5714,7 @@ export class Renderer {
   private drawThreats(ctx: CanvasRenderingContext2D, zoom: number): void {
     if (!this.threats.length) return;
     const red = inkOr('bad', '#e2553c');
-    const bob = this.calm ? 0 : Math.sin(this.time * 4) * 2 * zoom;
+    const bob = this.calm ? 0 : Math.sin(this.anim * 4) * 2 * zoom;
     for (const t of this.threats) {
       const { pad, g, ox, oy, side } = this.scratch(zoom);
       t.draw(g, ox, oy);
@@ -5715,7 +5734,7 @@ export class Renderer {
       ctx.lineWidth = Math.max(1.5, zoom * 1.5);
       ctx.strokeStyle = 'rgba(20, 6, 4, 0.85)';
       ctx.stroke();
-      ctx.globalAlpha = t.hunting ? (this.calm ? 0.95 : 0.75 + 0.25 * Math.sin(this.time * 8)) : 0.8;
+      ctx.globalAlpha = t.hunting ? (this.calm ? 0.95 : 0.75 + 0.25 * Math.sin(this.anim * 8)) : 0.8;
       ctx.fillStyle = red;
       ctx.fill();
       // Hunting you: a second marker over the first, so the shape says it as well as the pulse and the colour.
@@ -5874,7 +5893,7 @@ export class Renderer {
       ctx.restore();
     }
     // Struck: the edge of the view reddens for the length of the flash.
-    const struck = this.flashOf(game.player.attackedAt);
+    const struck = this.flashOf(game.player.attackedAt, false);
     if (struck > 0) {
       const glow = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.32, W / 2, H / 2, Math.max(W, H) * 0.72);
       glow.addColorStop(0, inkOr('bad', 'rgba(190, 28, 18, 0)', 0));
@@ -5888,8 +5907,8 @@ export class Renderer {
   /** The stepping stones of the line of the ground just drawn, over its water, each one out in the sea cut out of the sea the swell goes over. */
   private stonesOnLine(ctx: CanvasRenderingContext2D): void {
     const world = this.game.world;
-    if (this.stoneRowDim.length) drawStones(ctx, this.camera, world, this.stoneRowDim, this.time, false, this.seaPath);
-    if (this.stoneRow.length) drawStones(ctx, this.camera, world, this.stoneRow, this.time, true, this.seaPath);
+    if (this.stoneRowDim.length) drawStones(ctx, this.camera, world, this.stoneRowDim, this.anim, false, this.seaPath);
+    if (this.stoneRow.length) drawStones(ctx, this.camera, world, this.stoneRow, this.anim, true, this.seaPath);
     this.stoneRow.length = 0;
     this.stoneRowDim.length = 0;
   }
@@ -6032,7 +6051,7 @@ export class Renderer {
     w.seen = this.time;
     // Heeled to the side her sail is out on: the other side from the wind's, which is the sign of her trim.
     const lee = (this.pieceTrim(f) ?? 0.25) < 0 ? 1 : -1;
-    const s = boatSway(this.time, w.under, lee, (f.id * 7.31) % 97);
+    const s = boatSway(this.anim, w.under, lee, (f.id * 7.31) % 97);
     return { at: { heel: s.heel, pitch: s.pitch }, screen: { ox: fe.sx, oy: fe.sy, ...swayOnScreen(fe.view, s, zoom) } };
   }
 
@@ -6062,6 +6081,7 @@ export class Renderer {
    */
   private readonly carting = new Map<number, { on: number; phase: number; seen: number }>();
   private cartRoll(f: PlacedFurniture): { heel: number; pitch: number; lift: number } | undefined {
+    if (this.held) return undefined;
     const by = this.driverOf(f), going = by?.moving ? 1 : 0;
     let w = this.carting.get(f.id);
     if (!w || this.time - w.seen > 1) {
@@ -6095,6 +6115,8 @@ export class Renderer {
     if (!w) return undefined;
     // Driven by somebody else, she is where their hands are, which is read a dozen times a second; where she was set down
     // is read once, so her wheels stood still under her while she went along, and a re-read over two tiles was not rolled.
+    // Animations off: where they were, sharp.
+    if (this.held) return wheelTrim(f.kind, this.rolled.get(f.id)?.turns ?? 0, 0);
     const [x, y] = f.helm ? this.game.hullCentre(f) : furnitureCentre(f);
     let r = this.rolled.get(f.id);
     if (!r) {
@@ -6495,7 +6517,7 @@ export class Renderer {
       const p = game.player;
       const z = this.footOn(p.x, p.y, Math.max(0, p.level)) + Math.max(0, p.visualLevel) * WALL_HEIGHT;
       return personBody(p.x, p.y, z, this.playerFacing, 'player', {
-        id: 'player', phase: p.moving ? p.walkPhase : this.time * 6, moving: p.moving, gait: 0, facing: this.playerFacing, swimming: p.swimming, working: false,
+        id: 'player', phase: p.moving ? p.walkPhase : this.anim * 6, moving: p.moving, gait: 0, facing: this.playerFacing, swimming: p.swimming, working: false,
         look: p.look, gear: gearFrom(wornWire((slot) => game.worn(slot))),
       });
     }
@@ -6505,7 +6527,7 @@ export class Renderer {
       const [x, y] = game.roster.drawnAt(peer);
       const z = this.footOn(x, y, peer.level) + peer.level * WALL_HEIGHT;
       return personBody(x, y, z, peer.facing, 'peer', {
-        id: 'o' + peer.id, phase: peer.moving ? peer.stepPhase : this.time * 6, moving: peer.moving, facing: peer.facing, swimming: peer.swimming, working: !!peer.working, job: peer.act,
+        id: 'o' + peer.id, phase: peer.moving ? peer.stepPhase : this.anim * 6, moving: peer.moving, facing: peer.facing, swimming: peer.swimming, working: !!peer.working, job: peer.act,
         look: peer.look, gear: peer.gear,
       });
     }
@@ -6689,7 +6711,7 @@ export class Renderer {
         this.paint(ctx, zoom, struck > 0 ? 'flash' : 'none', struck * 0.75, ex, ey - (ent.lift ?? 0), (g, px, py) =>
           drawPlayer(g, px, py, zoom, this.actionFx.seen({
             id: 'player',
-            phase: player.moving ? player.walkPhase : this.time * 6,
+            phase: player.moving ? player.walkPhase : this.anim * 6,
             // On a deck it is the hull that is going somewhere, not the feet.
             moving: player.moving && !ent.standing,
             gait: this.gaits.of('player', player.x, player.y, this.frameDt),
@@ -6745,7 +6767,7 @@ export class Renderer {
           drawPlayer(g, px, py, zoom, this.actionFx.seen({
             id: 'o' + peer.id,
             // On their own feet the ground they cover times their stride (`stepPhase`); on a seat, the clock times its rock.
-            phase: peer.moving ? ((ent.lift ?? 0) > 0 && !ent.standing ? peer.walkPhase : peer.stepPhase) : this.time * 6,
+            phase: peer.moving ? ((ent.lift ?? 0) > 0 && !ent.standing ? peer.walkPhase : peer.stepPhase) : this.anim * 6,
             moving: peer.moving && !ent.standing,
             gait: this.gaits.of('o' + peer.id, peer.x, peer.y, this.frameDt),
             facing: ent.seatFacing ?? peer.facing,
@@ -6949,9 +6971,9 @@ export class Renderer {
            */
           const facing = pieceFacing(piece), turn = this.camera.rotation, dark = this.game.darkness();
           this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => {
-            drawn = drawMemorial(g, px, py, zoom, facing, turn, piece.engraving, dark, this.time);
+            drawn = drawMemorial(g, px, py, zoom, facing, turn, piece.engraving, dark, this.anim);
           }, undefined, pieceBox);
-          this.runeNight.source(ctx, ent.sx, ent.sy, zoom, memorialNight(facing, turn, zoom, piece.engraving), this.time);
+          this.runeNight.source(ctx, ent.sx, ent.sy, zoom, memorialNight(facing, turn, zoom, piece.engraving), this.anim);
         } else if (piece.kind === 'fountain') {
           /*
            * A tiered fountain: its stone in three layers with its water drawn
@@ -6960,7 +6982,7 @@ export class Renderer {
            */
           const [wx, wy] = furnitureCentre(piece);
           const base = this.pieceBase(piece, wx, wy);
-          const fv = fallView(this.camera, this.time, this.canvas.width, this.canvas.height, HEIGHT_SCALE * zoom);
+          const fv = fallView(this.camera, this.anim, this.canvas.width, this.canvas.height, HEIGHT_SCALE * zoom);
           const dark = this.game.darkness();
           const flowing = (piece.litres ?? 0) >= 1;
           if (flowing) this.fountainFoam ??= foamTexture();
@@ -6988,13 +7010,13 @@ export class Renderer {
            */
           const look = this.denLook(piece), dark = this.game.darkness();
           this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => {
-            drawDen(g, px, py, zoom, piece.kind, view, look, this.time, false);
+            drawDen(g, px, py, zoom, piece.kind, view, look, this.anim, false);
           }, undefined, pieceBox);
           // Clicked by its basket and its hood, not the grass at its foot.
           const [hl, ht, hr, hb] = denHit(piece.kind, view, zoom);
           drawn = [hl * zoom, ht * zoom, hr * zoom, hb * zoom];
           // Its bells' light turned up by what the wash will take off it there, their own pool of light having taken some (`denPools`).
-          drawDenLive(ctx, ent.sx, ent.sy, zoom, piece.kind, view, look, this.time, dark, dark > 0.02 ? this.nightOver(ent.sx, ent.sy - 24 * zoom, dark) : 0);
+          drawDenLive(ctx, ent.sx, ent.sy, zoom, piece.kind, view, look, this.anim, dark, dark > 0.02 ? this.nightOver(ent.sx, ent.sy - 24 * zoom, dark) : 0);
           // The turns either side of this one baked ahead while the browser is idle, so turning the camera finds them made.
           const rot = this.camera.rotation, facing = pieceFacing(piece);
           prewarmDen(piece.kind, [pieceView(facing, rot + 1), pieceView(facing, rot - 1)], zoom, look);
@@ -7010,12 +7032,12 @@ export class Renderer {
           const [hl, ht, hr, hb] = runeLanternHit(look, turn, zoom);
           const box: [number, number, number, number] = [ent.sx + (hl - 12) * zoom, ent.sy + (ht - 12) * zoom, (hr - hl + 24) * zoom, (hb - ht + 20) * zoom];
           // Its bloom under it, lighting the ground and whatever stands behind it, not its own stone.
-          drawRuneLanternBloom(ctx, ent.sx, ent.sy, zoom, look, turn, dark, this.time);
+          drawRuneLanternBloom(ctx, ent.sx, ent.sy, zoom, look, turn, dark, this.anim);
           this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => {
-            drawRuneLantern(g, px, py, zoom, look, turn, dark, this.time, false);
+            drawRuneLantern(g, px, py, zoom, look, turn, dark, this.anim, false);
           }, undefined, box);
-          drawRuneLanternLive(ctx, ent.sx, ent.sy, zoom, look, turn, dark, this.time);
-          this.runeNight.source(ctx, ent.sx, ent.sy, zoom, runeLanternNight(look, turn, zoom), this.time);
+          drawRuneLanternLive(ctx, ent.sx, ent.sy, zoom, look, turn, dark, this.anim);
+          this.runeNight.source(ctx, ent.sx, ent.sy, zoom, runeLanternNight(look, turn, zoom), this.anim);
           drawn = [hl * zoom, ht * zoom, hr * zoom, hb * zoom];
         } else {
           /*
@@ -7040,9 +7062,9 @@ export class Renderer {
            */
           if (piece.kind === ENCHANTERS_PLINTH) {
             const busy = plinthBusy(this.game, piece), trim = this.pieceTrim(piece), dark = this.game.darkness();
-            drawPlinthRunes(ctx, ent.sx, ent.sy, zoom, view, trim, dark, busy, this.time);
+            drawPlinthRunes(ctx, ent.sx, ent.sy, zoom, view, trim, dark, busy, this.anim);
             if (dark > 0.02) {
-              const lit = plinthNight(ent.sx, ent.sy, zoom, view, trim, busy, this.time);
+              const lit = plinthNight(ent.sx, ent.sy, zoom, view, trim, busy, this.anim);
               this.runeNight.glowing(ctx, ...lit.box, lit.holes, lit.masks);
             }
           }
@@ -7102,7 +7124,7 @@ export class Renderer {
           const [wx, wy] = furnitureCentre(piece);
           this.standsOn(wx, wy, ent.sy, Math.hypot(fw, fh) / 2 / SUBTILES + FOOT_PAST, zoom);
         }
-        if (shines(ent.rare)) drawShine(ctx, ent.sx, ent.sy, zoom, ent.rare as number, piece.id, this.time, W * 2 * zoom, h * zoom);
+        if (shines(ent.rare)) drawShine(ctx, ent.sx, ent.sy, zoom, ent.rare as number, piece.id, this.anim, W * 2 * zoom, h * zoom);
       }
       if (ent.kind === 'kiln' && ent.kiln) {
         /*
@@ -7118,15 +7140,15 @@ export class Renderer {
         const [bl, bt, br, bb] = kilnBounds(turn, zoom);
         const box: [number, number, number, number] = [ent.sx + bl * zoom, ent.sy + bt * zoom, (br - bl) * zoom, (bb - bt) * zoom];
         this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => {
-          drawKiln(g, px, py, zoom, turn, look, dark, this.time, false);
+          drawKiln(g, px, py, zoom, turn, look, dark, this.anim, false);
         }, undefined, box);
-        drawKilnLive(ctx, ent.sx, ent.sy, zoom, turn, look, dark, this.time);
+        drawKilnLive(ctx, ent.sx, ent.sy, zoom, turn, look, dark, this.anim);
         // Its fire and runes after dark, added as light here in its own place, so what stands in front is drawn over it.
-        if (look.lit && dark > 0.02) drawKilnNight(ctx, ent.sx, ent.sy, zoom, turn, look, dark, this.time, this.nightOver(ent.sx, ent.sy - 24 * zoom, dark));
+        if (look.lit && dark > 0.02) drawKilnNight(ctx, ent.sx, ent.sy, zoom, turn, look, dark, this.anim, this.nightOver(ent.sx, ent.sy - 24 * zoom, dark));
         const [hl, ht, hr, hb] = kilnHit(turn, zoom);
         this.kilnHits.push({ ...this.shaped(), x: ent.x, y: ent.y, left: ent.sx + hl * zoom, top: ent.sy + ht * zoom, w: (hr - hl) * zoom, h: (hb - ht) * zoom, kiln: kiln.id });
         if (!behind) this.standsOn(...kilnCentre(kiln), ent.sy, this.footReach(KILN_SUBTILES, KILN_SUBTILES, hl, hr), zoom);
-        if (shines(ent.rare)) drawShine(ctx, ent.sx, ent.sy, zoom, ent.rare as number, kiln.id, this.time, (hr - hl) * zoom, (hb - ht) * 0.75 * zoom);
+        if (shines(ent.rare)) drawShine(ctx, ent.sx, ent.sy, zoom, ent.rare as number, kiln.id, this.anim, (hr - hl) * zoom, (hb - ht) * 0.75 * zoom);
         continue;
       }
       if (ent.kind === 'smelter' && ent.smelter) {
@@ -7144,15 +7166,15 @@ export class Renderer {
         const [bl, bt, br, bb] = smelterBounds(turn, zoom);
         const box: [number, number, number, number] = [ent.sx + bl * zoom, ent.sy + bt * zoom, (br - bl) * zoom, (bb - bt) * zoom];
         this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => {
-          drawSmelter(g, px, py, zoom, turn, look, dark, this.time, false);
+          drawSmelter(g, px, py, zoom, turn, look, dark, this.anim, false);
         }, undefined, box);
-        drawSmelterLive(ctx, ent.sx, ent.sy, zoom, turn, look, dark, this.time);
+        drawSmelterLive(ctx, ent.sx, ent.sy, zoom, turn, look, dark, this.anim);
         // Its fire and runes after dark, added as light here in its own place, so what stands in front is drawn over it.
-        if (look.lit && dark > 0.02) drawSmelterNight(ctx, ent.sx, ent.sy, zoom, turn, look, dark, this.time, this.nightOver(ent.sx, ent.sy - 30 * zoom, dark));
+        if (look.lit && dark > 0.02) drawSmelterNight(ctx, ent.sx, ent.sy, zoom, turn, look, dark, this.anim, this.nightOver(ent.sx, ent.sy - 30 * zoom, dark));
         const [hl, ht, hr, hb] = smelterHit(turn, zoom);
         this.smelterHits.push({ ...this.shaped(), x: ent.x, y: ent.y, left: ent.sx + hl * zoom, top: ent.sy + ht * zoom, w: (hr - hl) * zoom, h: (hb - ht) * zoom, smelter: sm.id });
         if (!behind) this.standsOn(...smelterCentre(sm), ent.sy, this.footReach(SMELTER_W, SMELTER_H, hl, hr), zoom);
-        if (shines(ent.rare)) drawShine(ctx, ent.sx, ent.sy, zoom, ent.rare as number, sm.id, this.time, (hr - hl) * zoom, (hb - ht) * 0.75 * zoom);
+        if (shines(ent.rare)) drawShine(ctx, ent.sx, ent.sy, zoom, ent.rare as number, sm.id, this.anim, (hr - hl) * zoom, (hb - ht) * 0.75 * zoom);
         continue;
       }
       if (ent.kind === 'anvil' && ent.anvil) {
@@ -7170,9 +7192,9 @@ export class Renderer {
         const [bl, bt, br, bb] = anvilBounds(face, shade, variant, turn, zoom);
         const box: [number, number, number, number] = [ent.sx + bl * zoom, ent.sy + bt * zoom, (br - bl) * zoom, (bb - bt) * zoom];
         this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => {
-          drawAnvil(g, px, py, zoom, face, shade, turn, variant, dark, this.time, false);
+          drawAnvil(g, px, py, zoom, face, shade, turn, variant, dark, this.anim, false);
         }, undefined, box);
-        drawAnvilLive(ctx, ent.sx, ent.sy, zoom, face, shade, turn, variant, dark, this.time);
+        drawAnvilLive(ctx, ent.sx, ent.sy, zoom, face, shade, turn, variant, dark, this.anim);
         if (dark > 0.02) {
           /*
            * Its rune's light here in its own place, turned up by what the wash
@@ -7184,13 +7206,13 @@ export class Renderer {
            */
           const over = this.nightOver(ent.sx, ent.sy - 8 * zoom, dark);
           const dim = over > ANVIL_UNDER_WASH;
-          drawAnvilNight(ctx, ent.sx, ent.sy, zoom, face, shade, turn, variant, dark, this.time, dim ? 0 : over);
-          if (dim) this.runeNight.source(ctx, ent.sx, ent.sy, zoom, anvilNight(face, shade, variant, turn, zoom), this.time);
+          drawAnvilNight(ctx, ent.sx, ent.sy, zoom, face, shade, turn, variant, dark, this.anim, dim ? 0 : over);
+          if (dim) this.runeNight.source(ctx, ent.sx, ent.sy, zoom, anvilNight(face, shade, variant, turn, zoom), this.anim);
         }
         const [hl, ht, hr, hb] = anvilHit(face, shade, variant, turn, zoom);
         this.anvilHits.push({ ...this.shaped(), x: ent.x, y: ent.y, left: ent.sx + hl * zoom, top: ent.sy + ht * zoom, w: (hr - hl) * zoom, h: (hb - ht) * zoom, anvil: an.id });
         if (!behind) this.standsOn(...anvilCentre(an), ent.sy, this.footReach(ANVIL_SUBTILES, ANVIL_SUBTILES, hl, hr), zoom);
-        if (shines(ent.rare)) drawShine(ctx, ent.sx, ent.sy, zoom, ent.rare as number, an.id, this.time, (hr - hl) * zoom, (hb - ht) * 0.75 * zoom);
+        if (shines(ent.rare)) drawShine(ctx, ent.sx, ent.sy, zoom, ent.rare as number, an.id, this.anim, (hr - hl) * zoom, (hb - ht) * 0.75 * zoom);
         continue;
       }
       if (ent.kind === 'post' && ent.post) {
@@ -7211,14 +7233,14 @@ export class Renderer {
         const [bl, bt, br, bb] = workPostBounds(look, turn, zoom);
         const box: [number, number, number, number] = [ent.sx + bl * zoom, ent.sy + bt * zoom, (br - bl) * zoom, (bb - bt) * zoom];
         this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => {
-          drawWorkPost(g, px, py, zoom, look, turn, dark, this.time, false);
+          drawWorkPost(g, px, py, zoom, look, turn, dark, this.anim, false);
         }, undefined, box);
-        drawWorkPostLive(ctx, ent.sx, ent.sy, zoom, look, turn, dark, this.time);
+        drawWorkPostLive(ctx, ent.sx, ent.sy, zoom, look, turn, dark, this.anim);
         if (look.worked && dark > 0.02) {
           const over = this.nightOver(ent.sx, ent.sy - 26 * zoom, dark);
           const dim = over > ANVIL_UNDER_WASH;
-          drawWorkPostNight(ctx, ent.sx, ent.sy, zoom, look, turn, dark, this.time, dim ? 0 : over);
-          if (dim) this.runeNight.source(ctx, ent.sx, ent.sy, zoom, workPostNight(look, turn, zoom), this.time);
+          drawWorkPostNight(ctx, ent.sx, ent.sy, zoom, look, turn, dark, this.anim, dim ? 0 : over);
+          if (dim) this.runeNight.source(ctx, ent.sx, ent.sy, zoom, workPostNight(look, turn, zoom), this.anim);
         }
         const [hl, ht, hr, hb] = workPostHit(look, turn, zoom);
         this.postHits.push({ ...this.shaped(), x: ent.x, y: ent.y, left: ent.sx + hl * zoom, top: ent.sy + ht * zoom, w: (hr - hl) * zoom, h: (hb - ht) * zoom, post: post.id });
@@ -7242,12 +7264,12 @@ export class Renderer {
         // The box it is drawn in, turf and all, for keeping it off a runestone's runes (`paint`).
         const [bl, bt, br, bb] = deedTotemBounds(look, turn, zoom);
         const box: [number, number, number, number] = [ent.sx + bl * zoom, ent.sy + bt * zoom, (br - bl) * zoom, (bb - bt) * zoom];
-        drawDeedTotemBloom(ctx, ent.sx, ent.sy, zoom, look, turn, dark, this.time);
+        drawDeedTotemBloom(ctx, ent.sx, ent.sy, zoom, look, turn, dark, this.anim);
         this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => {
-          drawDeedTotem(g, px, py, zoom, look, turn, dark, this.time, false);
+          drawDeedTotem(g, px, py, zoom, look, turn, dark, this.anim, false);
         }, undefined, box);
-        drawDeedTotemLive(ctx, ent.sx, ent.sy, zoom, look, turn, dark, this.time);
-        this.runeNight.source(ctx, ent.sx, ent.sy, zoom, deedTotemNight(look, turn, zoom), this.time);
+        drawDeedTotemLive(ctx, ent.sx, ent.sy, zoom, look, turn, dark, this.anim);
+        this.runeNight.source(ctx, ent.sx, ent.sy, zoom, deedTotemNight(look, turn, zoom), this.anim);
         // A box round each part of it -- each block, the bowl, the wings, the crown -- and not the air between them.
         for (const [hl, ht, hr, hb] of deedTotemHits(look, turn, zoom)) {
           this.stoneHits.push({ x: ent.x, y: ent.y, left: ent.sx + hl * zoom, top: ent.sy + ht * zoom, w: (hr - hl) * zoom, h: (hb - ht) * zoom });
@@ -7256,16 +7278,16 @@ export class Renderer {
       }
       if (ent.kind === 'runestone' && ent.stone) {
         const id = ent.stone.id, turn = this.camera.rotation;
-        drawRunestone(ctx, ent.sx, ent.sy, zoom, id, turn, this.game.darkness(), this.time);
+        drawRunestone(ctx, ent.sx, ent.sy, zoom, id, turn, this.game.darkness(), this.anim);
         // From here on whatever is drawn in front of its runes is kept off their light (`RunestoneNight`).
-        this.runeNight.stone(ctx, ent.sx, ent.sy, zoom, id, turn, this.time);
+        this.runeNight.stone(ctx, ent.sx, ent.sy, zoom, id, turn, this.anim);
         const c = stoneCentre(ent.stone, this.game.world.w);
         const [l, t, r, b] = runestoneHit(id, turn);
         this.stoneHits.push({ x: c.x, y: c.y, left: ent.sx + l * zoom, top: ent.sy + t * zoom, w: (r - l) * zoom, h: (b - t) * zoom });
         continue;
       }
       if (ent.kind === 'swirl' && ent.swirl) {
-        drawSwirl(ctx, ent.sx, ent.sy, zoom, ent.swirl.element, this.time, ent.swirl.id);
+        drawSwirl(ctx, ent.sx, ent.sy, zoom, ent.swirl.element, this.anim, ent.swirl.id);
         // And its light over the night, once the night is laid (`glowSwirl`).
         this.swirlsSeen.push({ s: ent.swirl, x: ent.sx, y: ent.sy });
         continue;
@@ -7362,7 +7384,7 @@ export class Renderer {
       }
       if (ent.kind === 'campfire' && ent.fire) {
         const fire = ent.fire;
-        this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => drawCampfire(g, px, py, zoom, fire.lit, fire.fuel, this.time));
+        this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => drawCampfire(g, px, py, zoom, fire.lit, fire.fuel, this.anim));
         this.fireHits.push({ ...this.shaped(), x: ent.x, y: ent.y, left: ent.sx - 22 * zoom, top: ent.sy - 20 * zoom, w: 44 * zoom, h: 30 * zoom, fire: fire.id });
         continue;
       }
@@ -7418,7 +7440,7 @@ export class Renderer {
        * a heap keeps the same motes in the same places from one frame to the
        * next and two heaps side by side do not shine in step.
        */
-      if (shines(ent.rare)) drawShine(ctx, ent.sx, ent.sy, zoom, ent.rare as number, ent.x * 4099 + ent.y, this.time, dw, spr.ay * zoom);
+      if (shines(ent.rare)) drawShine(ctx, ent.sx, ent.sy, zoom, ent.rare as number, ent.x * 4099 + ent.y, this.anim, dw, spr.ay * zoom);
       if (ent.kind === 'crate' && ent.crateId !== undefined) {
         this.crateHits.push({ ...this.shaped(), x: ent.x, y: ent.y, left, top, w: dw, h: dh, crate: ent.crateId });
       }
@@ -7451,7 +7473,7 @@ export class Renderer {
   }
 
   private solidAt(x: number, y: number): TreeView {
-    return { x, y, turn: this.camera.rotation, hour: this.solidHour, dark: this.solidDark, sway: this.solidSway ? swayAt(x, y, this.time * 1000) : 0 };
+    return { x, y, turn: this.camera.rotation, hour: this.solidHour, dark: this.solidDark, sway: this.solidSway ? swayAt(x, y, this.anim * 1000) : 0 };
   }
 
   /**
@@ -8170,9 +8192,9 @@ export class Renderer {
       const px = cam.worldToScreenX(wx, wy);
       const py = cam.worldToScreenY(wx, wy, below ? cellarFloorHeight(this.game, ghost.x, ghost.y) : this.pieceBase({ kind: ghost.piece, level: ghost.level }, wx, wy));
       // A memorial stone is drawn as itself (`memorial.ts`), blank, as it will be set down.
-      if (ghost.piece === MEMORIAL) drawMemorial(ctx, px, py, zoom, ghost.facing, cam.rotation, undefined, 0, this.time);
+      if (ghost.piece === MEMORIAL) drawMemorial(ctx, px, py, zoom, ghost.facing, cam.rotation, undefined, 0, this.anim);
       else if (isRuneLantern({ kind: ghost.piece })) {
-        drawRuneLantern(ctx, px, py, zoom, { facing: ghost.facing, stage: 0, stages: PIECE_STAGES, variant: runeLanternVariant(ghost.x, ghost.y, ghost.sx, ghost.sy) }, cam.rotation, 0, this.time);
+        drawRuneLantern(ctx, px, py, zoom, { facing: ghost.facing, stage: 0, stages: PIECE_STAGES, variant: runeLanternVariant(ghost.x, ghost.y, ghost.sx, ghost.sy) }, cam.rotation, 0, this.anim);
       } else drawFurniture(ctx, px, py, zoom, ghost.piece, false, undefined, undefined, pieceView(ghost.facing, cam.rotation), ghost.material);
       if (!ghost.ok) {
         const [W, D] = furnitureSpan(ghost.piece);
@@ -9755,7 +9777,7 @@ export class Renderer {
     if (f.pool) {
       const water = this.springWater;
       drawPool(ctx, cam, {
-        x, y, top: f.top, time: lit ? this.time : null, concrete: CONCRETE,
+        x, y, top: f.top, time: lit ? this.anim : null, concrete: CONCRETE,
         poolTop: (px, py) => {
           const o = this.game.foundationAt(px, py);
           return o?.pool && foundationDone(o) ? o.top : null;
@@ -10339,7 +10361,7 @@ export class Renderer {
     const w = this.game.world;
     // Fade out over the last few seconds rather than blinking off.
     const left = p.until - this.game.time;
-    const pulse = this.calm ? 0.85 : 0.72 + Math.sin(this.time * 3) * 0.22;
+    const pulse = this.calm ? 0.85 : 0.72 + Math.sin(this.anim * 3) * 0.22;
     ctx.save();
     ctx.globalAlpha = Math.min(1, left / 8) * pulse;
     for (const key of p.tiles) {
@@ -10499,7 +10521,7 @@ export class Renderer {
       const sy = cam.worldToScreenY(f.x, f.y, w.heightAt(f.x, f.y));
       const seed = (f.x * 0.37 + f.y * 0.71) % 1;
       for (let i = 0; i < PUFFS; i++) {
-        const age = puffAge(i, this.time, seed);
+        const age = puffAge(i, this.anim, seed);
         const puff = puffOf(age, f.heat);
         // A plume of its own where it says so (`Game.fires`): a smelter's stack sends up a short, thin, pale one.
         const pl = f.plume, pale = pl?.pale ?? 0, size = pl?.size ?? 1;
@@ -10748,7 +10770,9 @@ export class Renderer {
     ctx.restore();
   }
 
-  private flashOf(at: number): number {
+  private flashOf(at: number, body = true): number {
+    // Animations off: no flash over a body (the edge of the view still reddens).
+    if (body && this.held) return 0;
     const since = this.game.time - at;
     if (since < 0 || since > Renderer.FLASH) return 0;
     return 1 - since / Renderer.FLASH;
@@ -10886,7 +10910,7 @@ export class Renderer {
       const action = game.action;
       if (action && action.target.kind === 'tile') {
         const t = action.target;
-        const pulse = this.calm ? 0.85 : 0.55 + 0.45 * Math.sin(this.time * 6);
+        const pulse = this.calm ? 0.85 : 0.55 + 0.45 * Math.sin(this.anim * 6);
         ctx.lineWidth = 2;
         if (action.def.corner) {
           this.cornerMarker(ctx, t.cx, t.cy, zoom, `rgba(255,200,70,${pulse.toFixed(2)})`);
@@ -10987,7 +11011,7 @@ export class Renderer {
     // The fireflies, which are lights: over the night, not under it.
     if (!this.fast) this.life.glow(ctx);
     // And the mote swirls' glow and glints, the same way (`glowSwirl`).
-    if (dark > 0.02) for (const w of this.swirlsSeen) glowSwirl(ctx, w.x, w.y, zoom, w.s.element, this.time, w.s.id, dark);
+    if (dark > 0.02) for (const w of this.swirlsSeen) glowSwirl(ctx, w.x, w.y, zoom, w.s.element, this.anim, w.s.id, dark);
     // And the spells' light, over the night too, and the screen's tint for a great one of your own over that.
     this.spells.glowPass(ctx);
     this.spells.screenPass(ctx, this.canvas.width, this.canvas.height);
@@ -11198,7 +11222,7 @@ export class Renderer {
     const [fx, fy] = FRONT_OF[facing], [ax, ay] = ACROSS_OF[facing];
     const deed = this.deedOver(f.x, f.y);
     return {
-      x: s.dirX * ax + s.dirY * ay, y: s.dirX * fx + s.dirY * fy, force: s.force, t: this.time,
+      x: s.dirX * ax + s.dirY * ay, y: s.dirX * fx + s.dirY * fy, force: s.force, t: this.anim,
       tint: dyeOf(f) ?? undefined, device: deed ? deviceOf(deed) : undefined,
     };
   }

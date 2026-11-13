@@ -1,4 +1,5 @@
 import { FACINGS, FURNITURE, furnitureDef } from '../game/furniture';
+import { animationsOff, animNow } from '../engine/motion';
 import { planterHolds, planterTrim } from './plantertrim';
 import type { Seat } from './figure';
 import { cropPlant } from './crops';
@@ -2345,7 +2346,7 @@ export function drawLampBloom(ctx: CanvasRenderingContext2D, sx: number, sy: num
  */
 export function drawFurnitureLive(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, kind: string, view: PieceView, night = 0, air: Air = STILL): void {
   if (isKit(kind)) { drawKitLive(ctx, sx, sy, zoom, kind, view, night, air); return; }
-  LIVE[kind]?.(ctx, sx, sy, zoom, view, performance.now() / 1000, night);
+  LIVE[kind]?.(ctx, sx, sy, zoom, view, animNow(), night);
   // And cloth, as the wind has it this frame.
   CLOTH[kind]?.(ctx, sx, sy, zoom, view, air);
 }
@@ -2364,7 +2365,7 @@ export const glowsAtNight = (kind: string): boolean => (isKit(kind) ? kitGlows(k
  */
 export function furnitureHoles(sx: number, sy: number, zoom: number, kind: string, view: PieceView): Array<{ x: number; y: number; r: number; a: number }> {
   if (isKit(kind)) return kitHoles(sx, sy, zoom, kind, view);
-  return HOLES[kind]?.(sx, sy, zoom, view, performance.now() / 1000) ?? [];
+  return HOLES[kind]?.(sx, sy, zoom, view, animNow()) ?? [];
 }
 
 /* ---- moss on stone that stands out of doors (`greening.ts`) -------------------- */
@@ -5504,7 +5505,7 @@ function bakedFor(zoom: number, kind: string, lit: boolean, tint: Tint | undefin
   const scale = BAKE_STEPS.find((s) => s >= zoom - 1e-3) ?? zoom;
   // The ink is a pixel wide on the screen until the zoom is under one, when it is held at a pixel and so is its own bake.
   const inkZoom = zoom < 0.95 ? Math.round(zoom * 20) / 20 : 1;
-  const frame = lit ? Math.floor(performance.now() / 150) % 4 : 0;
+  const frame = lit && !animationsOff() ? Math.floor(performance.now() / 150) % 4 : 0;
   const set = trim === undefined || Number.isInteger(trim) ? trim : Math.round(trim * 20) / 20;
   const aboard = (crew ? `|${crew.tall}:${crew.at.map((a) => a.join(',')).join(';')}` : '') + (manned ? '|manned' : '') + (rolling ? '|rolling' : '');
   const piece = `${kind}|${material ?? ''}|${lit ? frame : '-'}|${tint?.colour ?? ''}|${set ?? ''}|${view.ux.toFixed(3)},${view.uy.toFixed(3)},${view.vx.toFixed(3)},${view.vy.toFixed(3)}${aboard}`;

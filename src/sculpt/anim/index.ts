@@ -36,6 +36,7 @@ import { TEND_CLIPS, TEND_LEFT } from './clips/tend';
 import { LIFE, LIFE_LEFT, LIFE_SETTLE } from './clips/life';
 import { gettingDown } from './down';
 import { ACTION_BY_ID } from '../../game/actions';
+import { animationsOff } from '../../engine/motion';
 import { clipOfJob } from './routes';
 import { strideAt } from '../../game/player';
 import { SHIELDS, WEAPON_BY_ID } from '../../game/gear';
@@ -571,6 +572,12 @@ export function animate(sk: Skeleton, pose: FigurePose, figure: () => Array<M3 |
     return flinching(pose) ? { ...flinchOver(sk, b, pose.flinch as NonNullable<FigurePose['flinch']>, stood), wet: o.wet } : b;
   };
   if (!pose.id) return over(now);
+  // Animations off: the still pose as it is, never part way through a fade from what it was (`stillPose` in the figure),
+  // and nothing kept to fade from when they are on again.
+  if (animationsOff()) {
+    KEPT.delete(`${sk.body}|${pose.id}`);
+    return over(now);
+  }
   const key = `${sk.body}|${pose.id}`, source = sat ? sat.name : c ? c.clip.name + (c.over ? `+${c.over.clip.name}` : '') : 'figure', ms = performance.now();
   let k = KEPT.get(key);
   const fresh = !k;

@@ -386,6 +386,19 @@
     "why": "Sparks off a one-handed blow and chips off a pick fire from marks on the clips, on the spells' particle pool. Drawn in Chrome on the page's own clock with thirty people fighting or mining: both kinds fire; the particles alive stay within the action effects' share of the pool, asked for far more or not; a spell's particles past that share leave the effects none; a frame with them is within a quarter and 3 ms of one with Effects off; Off fires and adds nothing, Fewer adds less, and on the processor's GL only the marks marked key fire. And thirty in a fight (shields, two-handed weapons, bows, every class of armour, blows on all of them in turn): blocks, blows landing, heavy blows and bows fire, within the same share and margin; on the processor's GL the blocks and the blows landing still fire, the heavy blows and the bows not."
   },
   {
+    "file": "supabase/test/animoff.ts",
+    "title": "Animations Off holds every body and creature still and draws them again only when they change",
+    "shard": 1,
+    "external": [
+      "esbuild",
+      "playwright-core"
+    ],
+    "env": {
+      "ANIMOFF_STRICT": "1"
+    },
+    "why": "Asked for: a performance setting that turns off all animation, for slow machines. Drawn in Chrome on the page's own clock with thirty people at work and in a fight, eight wildermon (three walking), trees, the sea with a swimmer and a lit fire, three rounds of On and Off in turn: Off draws bodies afresh next to never once nothing changes and ten times fewer than On or better, makes no wildermon pictures once their still poses are drawn, and a frame is no slower than On."
+  },
+  {
     "file": "supabase/test/access.ts",
     "title": "Low-end graphics draw the wood flat, less motion stops its sway, and every key is a row",
     "shard": 1,

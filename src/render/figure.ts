@@ -1,4 +1,5 @@
 import { METAL_TONE } from './materials';
+import { animationsOff } from '../engine/motion';
 import type { GearLook, GearPiece, GearSlot } from '../contract/gear';
 import type { SculptFx } from './fx/types';
 import { HOPS, emotePose } from '../game/emotes';
@@ -11484,17 +11485,42 @@ const sculptKey = (): string => (SCULPT.on ? `s${SCULPT.flips}.${SCULPT.gen()}` 
 const drawSculpted = (ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose, water?: 'over' | 'under'): boolean =>
   SCULPT.on && !!SCULPT.draw && SCULPT.draw(ctx, sx, sy, zoom, pose, water);
 
+/**
+ * A body's still pose with animations off (`animationsOff`): one pose for each broad state, at nought on its clock --
+ * standing, sat on what it is sat on, in the water treading it, and lain asleep, sat meditating or knelt at prayer
+ * (`STILL_JOBS`) -- and nothing played over it (no stride, work, fight, emote, cast, block or flinch). Moving, it is
+ * glided. Any other job is stood.
+ */
+export function stillPose(p: FigurePose): FigurePose {
+  const rest = p.working && !p.moving && !p.swimming && !p.driving && STILL_JOBS.has(p.job ?? '');
+  return {
+    ...p, phase: 0, moving: false, gait: 0, working: rest, job: rest ? p.job : undefined, emote: undefined, emoteT: undefined,
+    act: undefined, cast: undefined, block: undefined, flinch: undefined, tool: undefined,
+  };
+}
+/** The jobs held as they are with animations off, for a body lain, sat or knelt at them: asleep, meditating, at prayer. */
+const STILL_JOBS = new Set(['sleep', MEDITATE, 'pray', 'pray_statue']);
+
+/**
+ * Pictures of bodies drawn afresh (`drawLive` into a kept picture, or straight onto the screen), counted since the page
+ * opened: what a frame costs in bodies, for the measures (`supabase/test/animoff.ts`).
+ */
+export const figureStats = { redraws: 0 };
+
 export function drawFigure(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose, opts: { ink?: number } = {}): void {
   const veil = pose.veil;
   if (veil && (veil.tint > 0.004 || veil.fade > 0.004)) {
     drawVeiled(ctx, sx, sy, zoom, veil, pose.id, (g) => drawFigure(g, 0, 0, zoom, { ...pose, veil: undefined }, opts));
     return;
   }
+  // Animations off: the still pose, turned and changed in one frame rather than blended (`settle`).
+  const still = animationsOff();
+  if (still) pose = stillPose(pose);
   const look = pose.look ?? DEFAULT_LOOK;
   // Cut coarser at the sizes the island is played at: under one and a half, a lock of hair is a pixel or two.
   const kit = kitFor(look, zoom < 1.5 ? 0.5 : 1);
   const now = performance.now() / 1000;
-  const settled = pose.id
+  const settled = pose.id && !still
     ? settle(pose.id, pose, (f, left, kept) => rigOf({ ...pose, facing: f }, kit.fr, left, kept), now)
     : { rig: rigOf(pose, kit.fr), facing: (((pose.seat ? pose.facing : Math.round(pose.facing)) % 8) + 8) % 8, changing: false };
   const { rig: r, facing } = settled;
@@ -11503,9 +11529,10 @@ export function drawFigure(ctx: CanvasRenderingContext2D, sx: number, sy: number
   // Most of a pixel however far out, and never more than three and a half however far in.
   const ink = opts.ink !== undefined ? opts.ink / zoom : Math.max(0.9 / zoom, 0.7);
   if (pose.id && opts.ink === undefined) {
-    drawStill(ctx, sx, sy, zoom, pose, kit, r, facing, changing, ink, now);
+    drawStill(ctx, sx, sy, zoom, pose, kit, r, facing, changing, ink, now, still);
     return;
   }
+  figureStats.redraws++;
   drawLive(ctx, sx, sy, zoom, pose, kit, r, facing, ink, now);
 }
 
@@ -12546,7 +12573,7 @@ export function figurePicture(id: string): { ctx: CanvasRenderingContext2D; canv
   return st?.put ? { ...st.put, canvas: st.shown ?? st.canvas, ver: st.drawn ?? 0 } : null;
 }
 
-function drawStill(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose, kit: Kit, r: Rig, facing: number, changing: boolean, ink: number, now: number): void {
+function drawStill(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose, kit: Kit, r: Rig, facing: number, changing: boolean, ink: number, now: number, still = false): void {
   const id = pose.id as string;
   const t = ctx.getTransform();
   /*
@@ -12561,7 +12588,7 @@ function drawStill(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: 
   const dev = was !== undefined && Math.abs(seen - was) < 0.05 * was ? was : Math.max(1, Math.round(seen * 16)) / 16;
   const look = pose.look ?? DEFAULT_LOOK;
   const key = [look.gender, look.skin, look.hair, look.hairColour, look.hairBright, pose.tunic, pose.trousers,
-    Math.round(facing * 100), zoom.toFixed(3), dev, doing(pose), pose.emote ?? '', gearKey(pose.gear), sculptKey()].join('|');
+    Math.round(facing * 100), zoom.toFixed(3), dev, doing(pose), pose.working ? pose.job ?? '' : '', pose.emote ?? '', gearKey(pose.gear), sculptKey()].join('|');
   if (stride(ctx, sx, sy, zoom, pose, kit, facing, changing, ink, key, dev)) return;
   let st = stills.get(id);
   if (now - lately.since > 0.25 || now < lately.since) {
@@ -12575,7 +12602,13 @@ function drawStill(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: 
   // Something rare on them is drawn often enough for its glint to cross it smoothly.
   const rate = Math.min(Math.max(pose.emote ? 30 : STILL_RATE[doing(pose)] ?? 30, gearShines(pose.gear) ? SHINE_RATE : 0), lately.count > CROWD ? CROWD_RATE : Infinity);
   const sized = `${zoom.toFixed(3)}|${dev}`;
-  if (!st || st.sized !== sized || ((st.key !== key || changing || now - st.at >= 1 / rate || now < st.at) && sculptMay(id))) {
+  /*
+   * With animations off (`still`), nothing in the picture moves on its own: drawn again only when something in its key
+   * changes (the look, what is worn, the way it faces, what it is doing, the size, the sculpted bakes), never for the
+   * time. Kept fresh meanwhile, so a crowd's pictures are not let go while they are still in view.
+   */
+  const due = still ? st?.key !== key : st?.key !== key || changing || now - (st?.at ?? 0) >= 1 / rate || now < (st?.at ?? 0);
+  if (!st || st.sized !== sized || (due && sculptMay(id))) {
     const k = zoom * dev;
     const w = Math.ceil((STILL_BOX.right - STILL_BOX.left) * k), h = Math.ceil((STILL_BOX.bottom - STILL_BOX.top) * k);
     if (!st) {
@@ -12599,8 +12632,9 @@ function drawStill(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: 
     st.g.setTransform(1, 0, 0, 1, 0, 0);
     st.g.clearRect(0, 0, w, h);
     st.g.setTransform(dev, 0, 0, dev, st.ox, st.oy);
+    figureStats.redraws++;
     drawLive(st.g, 0, 0, zoom, pose, kit, r, facing, ink, now);
-  }
+  } else if (still) st.at = now;
   const x = sx - st.ox / st.dev, y = sy - st.oy / st.dev;
   const px = close ? Math.round(x * st.dev) / st.dev : x, py = close ? Math.round(y * st.dev) / st.dev : y;
   ctx.drawImage(st.canvas, px, py, st.canvas.width / st.dev, st.canvas.height / st.dev);
@@ -12734,6 +12768,7 @@ function idleLoop(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: n
     const g = canvas.getContext('2d') as CanvasRenderingContext2D;
     f = { canvas, ox: Math.round(-STILL_BOX.left * k), oy: Math.round(-STILL_BOX.top * k), dev };
     g.setTransform(dev, 0, 0, dev, f.ox, f.oy);
+    figureStats.redraws++;
     drawLive(g, 0, 0, zoom, pose, kit, r, facing, ink, now);
     idles.set(key, f);
     idlePixels += w * h;
@@ -12787,6 +12822,7 @@ function stride(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: num
     g.setTransform(dev, 0, 0, dev, f.ox, f.oy);
     // The middle of its sixteenth, at its step of gait.
     const at: FigurePose = { ...pose, phase: (n + (i + 0.5) / WALK_FRAMES) * TAU, gait };
+    figureStats.redraws++;
     drawLive(g, 0, 0, zoom, at, kit, rigOf(at, kit.fr), facing, ink, 0);
     strides.set(key, f);
     stridePixels += w * h;

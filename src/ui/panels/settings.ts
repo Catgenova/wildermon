@@ -15,7 +15,7 @@ import { FIGHT_BACK_STILL, FIGHT_QUIET } from '../../game/fight';
 import { LAYOUT_SLOTS, type UIWindow, type WindowManager } from '../windows';
 import { fixed, html, setMarkup, type Markup } from '../html';
 import { setUiSize, UI_SIZE_MAX, UI_SIZE_MIN, UI_SIZE_PRESETS, uiSizeShown } from '../screen';
-import { FAST_DPR, FRAME_CAPS, FULL_DPR, LOW_POWER_FPS, type Effects, type Graphics, type UiColours, type UiFrames, type UiLight, type UiStyle } from '../../game/settings';
+import { FAST_DPR, FRAME_CAPS, FULL_DPR, LOW_POWER_FPS, type Animations, type Effects, type Graphics, type UiColours, type UiFrames, type UiLight, type UiStyle } from '../../game/settings';
 import { ACTION_LIGHTS, ACTION_SHARE, FAR_SHARE, FEWER_SHARE, HIT_STOP_HEAVY, NEAR_TILES } from '../../render/fx/actions';
 import { MOST_PARTICLES } from '../../render/spells/kit';
 import type { Motion } from '../../engine/motion';
@@ -456,6 +456,17 @@ export class SettingsPanel {
       [['all', 'All'], ['fewer', 'Fewer'], ['off', 'Off']],
       () => game.settings.effects,
       (v) => (game.settings.effects = v),
+    );
+    // Animations off (src/engine/motion.ts animationsOff): for a slow machine, every picture kept until what is in it changes.
+    choose<Animations>(
+      'Animations',
+      'Off: bodies and creatures in one pose per state (standing, seated, treading water, asleep, meditating, praying), '
+        + 'glided while moving, redrawn only on a change of look, gear, facing or state. '
+        + 'Held still: water, trees, bushes, flowers, smoke, fire, lights, wakes, dust, cloth, spells\' lingering effects. '
+        + 'Effects: Off. No hit flash on bodies. Damage numbers, chat and windows unchanged.',
+      [['on', 'On'], ['off', 'Off']],
+      () => game.settings.animations,
+      (v) => (game.settings.animations = v),
     );
     choose<number>(
       'Frame rate limit',

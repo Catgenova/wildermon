@@ -96,6 +96,8 @@ const SHAPES_MOST = 15;
 const MOST_PLAYING = 32;
 /** A cast whose caster cannot be found for this long is let go. */
 const LOST_FOR = 2;
+/** Seconds into a lingering effect it is drawn at, held, while animations are off (`SpellStage.held`). */
+const HELD_AGE = 1.5;
 
 interface Playing {
   id: string;
@@ -241,6 +243,13 @@ export class SpellStage {
   readonly parts = new Particles(MOST_PARTICLES);
   private readonly k = new FxScene();
   private now = 0;
+  /**
+   * The clock what the spells put up is drawn at: `now`, or with animations off (`update`'s `held`) the moment they went
+   * off, so nothing a spell leaves flickers, turns or wobbles.
+   */
+  private drawNow = 0;
+  /** Animations off this frame: what lingers drawn at `HELD_AGE`, and no particles let off by the second. */
+  private held = false;
   /** How dark it is this frame, nought by day to one at the dead of night (`update`'s `night`). */
   private night = 0;
   private eye: Eye | null = null;
@@ -592,8 +601,10 @@ export class SpellStage {
    * Run every cast for this frame, `now` seconds on the drawing clock: their
    * bodies found where they are, their moments passed, their effects recorded.
    */
-  update(env: { eye: Eye; now: number; dt: number; fast: boolean; night?: number }): void {
+  update(env: { eye: Eye; now: number; dt: number; fast: boolean; night?: number; held?: boolean }): void {
     this.now = env.now;
+    this.drawNow = env.held && this.held ? this.drawNow : env.now;
+    this.held = !!env.held;
     this.eye = env.eye;
     this.out.reset();
     this.joints.clear();
@@ -602,8 +613,8 @@ export class SpellStage {
     const k = this.k;
     k.eye = env.eye;
     k.zoom = env.eye.zoom;
-    k.now = env.now;
-    k.dt = Math.min(0.1, env.dt);
+    k.now = this.drawNow;
+    k.dt = this.held ? 0 : Math.min(0.1, env.dt);
     k.fast = env.fast;
     k.night = this.night = clamp(env.night ?? 0);
     k.partCap = env.fast ? Math.round(MOST_PARTICLES / 3) : MOST_PARTICLES;
@@ -749,7 +760,7 @@ export class SpellStage {
     k.seed = p.seed;
     k.mine = p.mine;
     k.from = p.from;
-    k.rand = rngOf((p.seed ^ Math.imul(Math.floor(this.now * 60), 2654435761)) >>> 0);
+    k.rand = rngOf((p.seed ^ Math.imul(Math.floor(this.drawNow * 60), 2654435761)) >>> 0);
     k.companion = pet;
     k.lightsLeft = 2;
     k.healing = !!p.info?.fx.heal;
@@ -787,7 +798,9 @@ export class SpellStage {
       if (gone && (fx.linger.on ?? 'target') === 'target') on = false;
       else {
         const age = t - p.arrive;
-        if (age < lingers) fx.linger.draw(k, age, lingers - age);
+        // Animations off: drawn as it is `HELD_AGE` in, or half way through a short one, until it is over.
+        const at = this.held ? Math.min(HELD_AGE, lingers / 2) : age;
+        if (age < lingers) fx.linger.draw(k, at, lingers - at);
       }
     }
     // Over its budgets this frame: said, for the preview.
@@ -1329,7 +1342,7 @@ export class SpellStage {
   drawItem(ctx: CanvasRenderingContext2D, rec: WorldRec): void {
     ctx.save();
     if (rec.p >= 0) {
-      if (this.parts.life[rec.p] > 0 && this.eye) drawParticle(ctx, this.parts, rec.p, this.eye, this.now);
+      if (this.parts.life[rec.p] > 0 && this.eye) drawParticle(ctx, this.parts, rec.p, this.eye, this.drawNow);
     } else rec.draw?.(ctx);
     ctx.restore();
   }
@@ -1350,7 +1363,7 @@ export class SpellStage {
         if (ps.life[i] <= 0 || !isLightKind(ps.kind[i])) continue;
         // Over rather than added, for a spark that has to keep its colour (`BurstOpts.over`).
         if (ps.flags[i] & 1) ctx.globalCompositeOperation = 'source-over';
-        drawParticle(ctx, ps, i, this.eye, this.now);
+        drawParticle(ctx, ps, i, this.eye, this.drawNow);
         if (ps.flags[i] & 1) ctx.globalCompositeOperation = 'lighter';
       }
     }

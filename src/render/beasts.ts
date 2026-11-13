@@ -5,6 +5,7 @@ import {
 import { HEIGHT_SCALE, UNITS_PER_TILE } from './iso';
 import type { BeastAct } from '../game/events';
 import { ACT_SECS } from './beat-times';
+import { animationsOff } from '../engine/motion';
 
 /**
  * Wildermon, as low-poly bodies.
@@ -1407,7 +1408,8 @@ function keep(key: string, f: Frame, now: number): void {
  * for as long as it was in view. Drawn straight onto a canvas of that box, at
  * the same whole pixels as on the whole box.
  */
-function pictureOf(kind: Kind, kit: readonly Piece[], r: Reach, pal: Palette, facing: number, a: Anim, step: number, k: number, set: string): Frame {
+function pictureOf(kind: Kind, kit: readonly Piece[], r: Reach, pal: Palette, facing: number, a: Anim, step: number, k: number, set: string, shine?: BeastShine): Frame {
+  beastStats.made++;
   const w = Math.max(1, Math.ceil((r.right - r.left) * k)), h = Math.max(1, Math.ceil((r.bottom - r.top) * k));
   const ox = Math.round(-r.left * k), oy = Math.round(-r.top * k);
   // At an act, the whole box: what a kind flings about at a strike or a task, drawn by hand, goes further from it than that.
@@ -1417,7 +1419,7 @@ function pictureOf(kind: Kind, kit: readonly Piece[], r: Reach, pal: Palette, fa
   canvas.height = Math.max(1, c.y1 - c.y0 + 1);
   const g = canvas.getContext('2d') as CanvasRenderingContext2D;
   g.setTransform(k, 0, 0, k, ox - c.x0, oy - c.y0);
-  drawKind(g, kind, kit, pal, facing, a, inkAt(step, kind.size), 1 / step);
+  drawKind(g, kind, kit, pal, facing, a, inkAt(step, kind.size), 1 / step, false, shine);
   return { canvas, ox: ox - c.x0, oy: oy - c.y0, k, px: canvas.width * canvas.height, set };
 }
 
@@ -1850,11 +1852,26 @@ const inkAt = (step: number, size = 1): number => Math.max(1.1, (0.7 * step) / s
  * A wildermon of a kind with its feet at (sx, sy), at `zoom` (its age already
  * in it), in the colours of its variant.
  */
+/**
+ * Pictures of wildermon made (`pictureOf`) and bodies drawn for themselves a frame (turning, rare, at an act on the move),
+ * counted since the page opened, for the measures (`supabase/test/animoff.ts`).
+ */
+export const beastStats = { made: 0, live: 0 };
+
+/**
+ * A body's still pose with animations off (`animationsOff`): standing, head up, at one moment of its loop with its eyes
+ * open, the same for every body of its kind; glided while it moves; no act. A rare one is kept as a picture with its
+ * shine where it is at nought, rather than drawn afresh every frame for the shine to cross it.
+ */
+const STILL_T = 1;
+
 export function drawBeast(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, species: string, kind: Kind, colors: [string, string], p: BeastPose): void {
   zoom *= kind.size ?? 1;
   const now = performance.now() / 1000;
   const id = p.id !== undefined ? String(p.id) : undefined;
-  const s = id ? settle(id, p, now) : { facing: ((Math.round(p.facing) % 8) + 8) % 8, go: p.moving ? 1 : 0, graze: p.graze && !p.moving ? 1 : 0, changing: false };
+  const still = animationsOff();
+  if (still) p = { ...p, phase: 0, moving: false, gait: 0, graze: false, act: undefined };
+  const s = id && !still ? settle(id, p, now) : { facing: ((Math.round(p.facing) % 8) + 8) % 8, go: p.moving ? 1 : 0, graze: p.graze && !p.moving ? 1 : 0, changing: false };
   const t = ctx.getTransform();
   const dev = Math.hypot(t.a, t.b) || 1;
   const step = STEPS.find((z) => z >= zoom * 0.98) ?? STEPS[STEPS.length - 1];
@@ -1881,7 +1898,8 @@ export function drawBeast(ctx: CanvasRenderingContext2D, sx: number, sy: number,
   // Settled on the grass is all the way down, so a picture of it is the same whoever wanted it first.
   if (!changing && graze > 0.99) graze = 1;
   const a = animOf(kind, p, now, go, graze);
-  if (id) a.u = strideOf(id, kind, p.phase, a.gait, now);
+  if (still) a.t = STILL_T;
+  else if (id) a.u = strideOf(id, kind, p.phase, a.gait, now);
   // A body that leaps is carried in the air rather than at an even pace (`leapOf`): how far ahead of the island's place for it, or
   // behind, it is drawn, along the way it faces, for the part of its stride its picture is.
   const going = go > 0.5 && id ? held.get(id)?.k : undefined;
@@ -1906,7 +1924,8 @@ export function drawBeast(ctx: CanvasRenderingContext2D, sx: number, sy: number,
   // themselves.
   const actHeld = !!a.act && a.act.kind !== 'evolve' && !changing && (graze === 0 || graze === 1) && (go === 0 || a.act.kind === 'work');
   // Turning, getting going or settling, or rare, its light crossing it: drawn for itself, as it is this frame.
-  if (changing || (!ways && !Number.isInteger(facing)) || p.rare || (p.act && !actHeld)) {
+  if (changing || (!ways && !Number.isInteger(facing)) || (p.rare && !still) || (p.act && !actHeld)) {
+    beastStats.live++;
     const t0 = changing && !p.rare && !p.act ? performance.now() : 0;
     const [ax, ay] = ahead(a.u);
     ctx.save();
@@ -1963,11 +1982,13 @@ export function drawBeast(ctx: CanvasRenderingContext2D, sx: number, sy: number,
   }
   const fleece = Math.round(clamp(a.fleece) * 6);
   a.fleece = fleece / 6;
-  const keyAt = (w: number): string => `${species}|${colors[0]}|${colors[1]}|${w}|${step}|${dev}|${prefix}${i}|${fleece}`;
+  // A rare one held still keeps pictures of its own, its shine in them (`STILL_T`).
+  const coat = still && p.rare ? `${colors[1]}|r${p.rare}` : colors[1];
+  const keyAt = (w: number): string => `${species}|${colors[0]}|${coat}|${w}|${step}|${dev}|${prefix}${i}|${fleece}`;
   // Part way round: at the nearest of its ways, drawn now if it is not yet and a new picture may be; or else at the nearest of
   // them that is drawn; or, none, at the nearest of the eight, put down from the pictures nearest it as any body waiting is.
   if (ways) facing = frames.has(keyAt(ways[0])) || drawingAllowed() ? ways[0] : ways.find((w) => frames.has(keyAt(w))) ?? facing;
-  const head = `${species}|${colors[0]}|${colors[1]}|${facing}|`;
+  const head = `${species}|${colors[0]}|${coat}|${facing}|`;
   const base = `${head}${step}|${dev}|`;
   const key = `${base}${prefix}${i}|${fleece}`;
   let fkey = key;
@@ -2008,7 +2029,8 @@ export function drawBeast(ctx: CanvasRenderingContext2D, sx: number, sy: number,
     }
   } else {
     made = performance.now();
-    f = pictureOf(kind, kit, reachOf(species, kind, kit), pal, facing, a, step, step * dev, base);
+    f = pictureOf(kind, kit, reachOf(species, kind, kit), pal, facing, a, step, step * dev, base,
+      still && p.rare ? { rare: p.rare, seed: typeof p.id === 'number' ? p.id % 97 : 0, now: 0 } : undefined);
     keep(key, f, now);
     if (h) {
       h.waiting = undefined;

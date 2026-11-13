@@ -4390,6 +4390,15 @@ export const NEWS: News[] = [
     ],
   },
   {
+    n: 547,
+    day: '2026-11-13',
+    lines: () => [
+      'New: Animations setting (Settings, Performance): On, Off. Off: bodies and creatures in one pose per state (standing, seated, treading water, asleep, meditating, praying), '
+        + 'glided while moving, redrawn only on a change of look, gear, facing or state; water, trees, bushes, flowers, smoke, fire, lights, wakes, dust, cloth and spells\' lingering effects held still; '
+        + 'Effects off; no hit flash on bodies.',
+    ],
+  },
+  {
     n: 529,
     day: '2026-11-12',
     lines: () => [

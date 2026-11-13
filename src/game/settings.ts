@@ -129,6 +129,12 @@ export const SETTING_DEFAULTS = {
    * particles, no lights); Off.
    */
   effects: 'all' as Effects,
+  /**
+   * Animations (`animationsOff` in `src/engine/motion.ts`): On; or Off, for a slow machine: bodies and creatures in a
+   * still pose, glided while they move, and drawn again only when what is in the picture changes; water, trees, grass,
+   * smoke, fire, wakes, cloth and the spells' lingering effects held still; Effects off.
+   */
+  animations: 'on' as Animations,
   /** Under the frame rate, the milliseconds a frame spends drawing each layer (`Timings`). */
   timings: false,
   /**
@@ -190,6 +196,10 @@ export const SETTING_DEFAULTS = {
 /** The action effects' settings, most first: All, Fewer and Off. */
 export const EFFECTS = ['all', 'fewer', 'off'] as const;
 export type Effects = (typeof EFFECTS)[number];
+
+/** Animations on or off (`SETTING_DEFAULTS.animations`). */
+export const ANIMATIONS = ['on', 'off'] as const;
+export type Animations = (typeof ANIMATIONS)[number];
 
 /** Whether Low power is on, which it only ever is on a phone. */
 export const lowPowerOn = (s: { lowPower: boolean }, phone: boolean): boolean => phone && s.lowPower;
@@ -270,6 +280,7 @@ function read(): Partial<typeof SETTING_DEFAULTS> {
     if (!(GRAPHICS as readonly string[]).includes(out.graphics as string)) delete out.graphics;
     if (!(MOTIONS as readonly string[]).includes(out.motion as string)) delete out.motion;
     if (!(EFFECTS as readonly string[]).includes(out.effects as string)) delete out.effects;
+    if (!(ANIMATIONS as readonly string[]).includes(out.animations as string)) delete out.animations;
     if (!(FRAME_CAPS as readonly number[]).includes(out.frameCap as number)) delete out.frameCap;
     if (!(UI_STYLES as readonly string[]).includes(out.uiStyle as string)) delete out.uiStyle;
     if (!(UI_LIGHTS as readonly string[]).includes(out.uiLight as string)) delete out.uiLight;

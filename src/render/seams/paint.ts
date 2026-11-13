@@ -1,4 +1,5 @@
 import { hash2 } from '../../world/noise';
+import { animationsOff } from '../../engine/motion';
 import { READ_BACK } from '../ink';
 import type { Ctx, SeamLook, Stud } from './types';
 
@@ -416,7 +417,7 @@ export function paintSeam(g: Ctx, kind: number, look: SeamLook, x: number, y: nu
   if (st && pics.sprites.length && zoom >= (st.from ?? 0)) {
     const sw = st.w * STUD_UNIT * zoom, sh = st.h * STUD_UNIT * zoom;
     const offX = st.ax * sw, offY = st.ay * sh;
-    const secs = st.twinkle ? now() / 1000 : 0;
+    const secs = st.twinkle && !animationsOff() ? now() / 1000 : 0;
     const alpha = g.globalAlpha;
     for (let b = first; b <= last; b++) {
       const mid = b * pitch + (hash2(b, seed, 619) - 0.5) * 2 * drift;
@@ -446,5 +447,5 @@ export function paintSeam(g: Ctx, kind: number, look: SeamLook, x: number, y: nu
     }
     if (st.twinkle) g.globalAlpha = alpha;
   }
-  if (look.extra) look.extra({ g, x, y, zoom, now: now() / 1000, at: map });
+  if (look.extra) look.extra({ g, x, y, zoom, now: animationsOff() ? 0 : now() / 1000, at: map });
 }
