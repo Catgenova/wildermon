@@ -198,12 +198,13 @@ export const RAKE: Clip = {
 /* ---- the sickle ----------------------------------------------------------------------------------------------------- */
 /**
  * K1, the sickle's cut: crouched, the knees bent and the trunk bowed over the stalks ahead; the left hand reached out and
- * closed on a bunch of them, the sickle's blade swept under it from the right, low over the ground, and drawn back
+ * closed on a bunch of them, the sickle's blade swept under it from the right, at the knees, and drawn back
  * toward the body; the cut bunch lifted and laid aside to the left, the sickle brought back out to the right.
  */
 const REAP_LENGTH = 1.6;
 /** The stalks gathered: where the left fist closes on them. */
 const BUNCH: Euler = [0.05, 0.3, 0.33];
+/** The sickle's fist through the cut, body heights up: its blade swept at the knees. */
 const R_LOW = 0.24;
 /** The sickle's fist (body heights), its handle's way and its blade's way out of the handle (`knuckles`). */
 const SICKLE_AT: Record<string, { at: Euler; way: Euler; face: Euler }> = {
