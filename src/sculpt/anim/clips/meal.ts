@@ -89,11 +89,11 @@ export const DRINK_CUP: Clip = clipOf('drink-cup', 2, CUP_BITES, 'cup', [[0.65, 
 const SKIN_BITES: Bite[] = [
   { t: 0, name: 'held', key: true, rot: {}, jaw: SHUT, at: [-0.07, 0.62, 0.17], way: [0.2, 1, 0.1] },
   { t: 0.5, name: 'raised', key: true, rot: UP, jaw: SHUT, at: [-0.03, 0.9, 0.14], way: [0.15, -0.2, -1] },
-  { t: 0.7, name: 'tipped', key: true, rot: BACK, jaw: SHUT, at: [-0.02, 0.93, 0.12], way: [0.15, -0.5, -0.85] },
-  { t: 0.9, name: 'swallow', rot: GULP, jaw: SHUT, at: [-0.02, 0.935, 0.12], way: [0.15, -0.55, -0.82] },
-  { t: 1.1, rot: BACK, jaw: SHUT, at: [-0.02, 0.935, 0.12], way: [0.15, -0.55, -0.82] },
-  { t: 1.3, rot: GULP, jaw: SHUT, at: [-0.02, 0.94, 0.12], way: [0.15, -0.6, -0.8] },
-  { t: 1.45, rot: BACK, jaw: SHUT, at: [-0.02, 0.93, 0.12], way: [0.15, -0.5, -0.85] },
+  { t: 0.7, name: 'tipped', key: true, rot: BACK, jaw: SHUT, at: [-0.02, 0.91, 0.12], way: [0.15, -0.5, -0.85] },
+  { t: 0.9, name: 'swallow', rot: GULP, jaw: SHUT, at: [-0.02, 0.915, 0.12], way: [0.15, -0.55, -0.82] },
+  { t: 1.1, rot: BACK, jaw: SHUT, at: [-0.02, 0.915, 0.12], way: [0.15, -0.55, -0.82] },
+  { t: 1.3, rot: GULP, jaw: SHUT, at: [-0.02, 0.92, 0.12], way: [0.15, -0.6, -0.8] },
+  { t: 1.45, rot: BACK, jaw: SHUT, at: [-0.02, 0.91, 0.12], way: [0.15, -0.5, -0.85] },
   { t: 1.8, name: 'lowered', rot: {}, jaw: SHUT, at: [-0.07, 0.63, 0.17], way: [0.2, 1, 0.1] },
 ];
 export const DRINK_SKIN: Clip = clipOf('drink-skin', 2, SKIN_BITES, 'waterskin', [[0.7, 1.45]], [0.005, -0.01, -0.035]);

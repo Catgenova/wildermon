@@ -9,8 +9,8 @@
 // from its foot toward the end that goes to the mouth (toward the thumb of the fist that holds it); x along the hand
 // toward the knuckles; z = x × y. grip.lead is the fist point, contact the end that meets the mouth: the cup's and the
 // skin's lip, the roll's bitten end. Plain wood, leather and crust: nothing on them is lit when enchanted (none are).
-// Sized at life size and a little over (a cup a hand high, a skin a forearm long, a roll a hand and a half long), so each reads at
-// the island's zoom as a shape of its own colour in the fist.
+// Built at life size (a cup a hand high, a skin a forearm long, a roll a hand and a half long), drawn larger (SCALE) so each
+// reads at the island's zoom as a shape of its own colour in the fist.
 import { meshOf, trisOf } from '../lowgear.mjs';
 
 export const MATS = {
@@ -89,14 +89,17 @@ function bread(G) {
 }
 
 const BUILD = { cup, waterskin, bread };
+/** Each drawn larger than life, so it reads in the fist at the island's zoom as a shape of its own colour. */
+const SCALE = { cup: 1.4, waterskin: 1.3, bread: 1.2 };
 
 export function build(id) {
   const fn = BUILD[id];
   if (!fn) throw new Error(`vessels: no ${id}`);
   const G = meshOf();
   G.A = [];
-  const r = fn(G);
-  for (let i = 0; i < G.V.length; i++) G.A[i] = 1;
+  const r = fn(G), k = SCALE[id];
+  for (let i = 0; i < G.V.length; i++) { G.A[i] = 1; G.V[i] = G.V[i].map((v) => v * k); }
+  r.L *= k; r.lead *= k; r.radius *= k; r.contact = r.contact.map((v) => v * k);
   const tris = trisOf(G).length;
   return {
     id, G, MATS, L: r.L, tris, all: tris, parts: r.parts,
