@@ -10,7 +10,8 @@
 //                              round the hips, fitted over what is worn there: `cloth` (the tunic and whatever legs), `leather`
 //                              (the leather chest), `plate` (the plate chest), `chain` (the hauberk), `scale` (the cuirass)
 //   lowpendant<over>-<who>.json the pendant (jewelled_pendant): a gold-framed stone on a gold chain on the breastbone, over the
-//                              cloth shawl (`cloth`) or the leather chest (`leather`); under plate, mail or scale it is not drawn
+//                              cloth shawl (`cloth`), its copies over armour (`shawlover`, `shawloverslim`), the leather chest (`leather`) or
+//                              the tunic (`tunic`); under the leather shawl, the mantle, plate, mail or scale it is not drawn
 //   lowring-<who>.json         the ring (jewelled_ring): a gold band on the right hand's ring finger, its stone set on the back
 //   lowcirclet<hair>-<who>.json the circlet (circlet): a thin gold band round the head over the hair, three settings; one fit
 //                              for each hairstyle (`swept`, `braid`, `bob`) and for none (`bare`)
@@ -25,7 +26,7 @@
 // kitMat): the wooden shield's wood in its wood (`wood`, `woodS`), its iron (`iron`), the metal shield's plates in its metal
 // (`plate`, `shade`), a jewel's stone in its gem (`gem`), the circlet's settings in theirs (`stone1` to `stone3`).
 //
-//   node tools/sculpt/garments/kit.mjs [--out src/sculpt/assets]
+//   node tools/sculpt/garments/kit.mjs [--out src/sculpt/assets] [--only pendant]  (--only: the pieces whose names start so)
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -341,7 +342,7 @@ function belt(who, body, over) {
 }
 
 /* ---- the pendant ------------------------------------------------------------------------------------------------------ */
-const PENDANT_OVER = { cloth: ['shawl'], leather: ['leatherchest'] };
+const PENDANT_OVER = { cloth: ['shawl'], shawlover: ['shawlover'], shawloverslim: ['shawloverslim'], leather: ['leatherchest'], tunic: ['tunic'] };
 /** The pendant's height on the breastbone and where its chain goes under the collar, each body's (mesh units). */
 const PENDANT_AT = { male: { y: -1.75, top: -0.55, side: 0.55 }, female: { y: -1.55, top: -0.6, side: 0.45 } };
 function pendant(who, body, over) {
@@ -469,7 +470,9 @@ function circlet(who, body, style) {
 if (import.meta.url === `file://${process.argv[1]}`) {
   const args = process.argv.slice(2), at = args.indexOf('--out');
   const dir = resolve(at < 0 ? ASSETS : args[at + 1]);
+  const only = args.includes('--only') ? args[args.indexOf('--only') + 1] : '';
   const write = (name, who, body, built) => {
+    if (!name.startsWith(only)) return;
     const vw = built.vw ?? built.G.V.map(() => [[built.bone, 1]]);
     const g = garment(who, body, built.G, vw, built.glowFrom), f = join(dir, `low${name}-${who}.json`);
     writeFileSync(f, JSON.stringify(g));
