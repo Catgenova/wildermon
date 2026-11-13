@@ -4416,6 +4416,11 @@ export const NEWS: News[] = [
     ],
   },
   {
+    n: 569,
+    day: '2026-11-13',
+    lines: () => [`New: hairstyle ${HAIRSTYLES.find((h) => h.id === 'crownbraid')?.name} (character creator; Settings, Display: Appearance, Customize character).`],
+  },
+  {
     n: 562,
     day: '2026-11-13',
     lines: () => [
