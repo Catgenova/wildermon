@@ -116,6 +116,8 @@ uniform vec3 uL; uniform vec3 uT; uniform float uGrain; uniform float uNight; un
 uniform float uLow; uniform vec3 uSH[${SH_TERMS}]; uniform vec3 uTone; uniform vec3 uFit; uniform vec3 uXv, uYv, uZv;
 // What of the body is behind an egg (SculptDraw.hide: a mount's barrel), left out: its middle and its radii, none at radii nought.
 uniform vec3 uHideC, uHideR;
+// Lit by a blow landing (SculptDraw.hit), nought to one.
+uniform float uHit;
 layout(location=0) out vec4 oCol; layout(location=1) out vec4 oNd; layout(location=2) out vec4 oId;
 vec3 hsv2rgb(vec3 c){ vec4 K = vec4(1.0, 2.0/3.0, 1.0/3.0, 3.0); vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www); return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y); }
 vec3 rgb2hsv(vec3 c){ vec4 K = vec4(0.0, -1.0/3.0, 2.0/3.0, -1.0); vec4 p = c.g < c.b ? vec4(c.bg, K.wz) : vec4(c.gb, K.xy); vec4 q = c.r < p.x ? vec4(p.xyw, c.r) : vec4(c.r, p.yzx); float d = q.x - min(q.w, q.y); float e = 1.0e-10; return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x); }
@@ -231,6 +233,8 @@ void main() {
     c += (hash(floor(gl_FragCoord.xy / 2.0)) - 0.5) * uGrain;
   }
   if (!emissive && uMode < 0.5) c = mix(c, vec3(12.0, 20.0, 44.0) / 255.0, uNight * 0.68);
+  // Lit by a blow: toward a hot red-white, most at the rim where the surface turns from the viewer, as night or day.
+  if (uHit > 0.0 && uMode < 0.5) c = mix(c, vec3(1.0, 0.84, 0.78), uHit * (0.3 + 0.55 * pow(1.0 - clamp(dot(n, uT), 0.0, 1.0), 2.0)));
   oCol = vec4(c, 1.0);
   oNd = vec4(n * 0.5 + 0.5, vDepth);
   oId = vec4(float(mi) / 255.0, emissive ? 1.0 : 0.0, noInk ? 1.0 : (noCrease ? 0.5 : 0.0), thinInk ? 0.5 : 1.0);
@@ -379,7 +383,7 @@ export function glContext(): Ctx | null {
   const quad = gl.createBuffer()!;
   gl.bindBuffer(gl.ARRAY_BUFFER, quad);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
-  const names = ['uBones', 'uEx', 'uEy', 'uHS', 'uT', 'uHalf', 'uDepth', 'uOff', 'uMat', 'uL', 'uGrain', 'uNight', 'uMode', 'uFlat', 'uBlink', 'uLow', 'uSH', 'uTone', 'uFit', 'uXv', 'uYv', 'uZv', 'uShapes', 'uShapeFrom', 'uShapeCount', 'uShapeK', 'uShapeW', 'uHideC', 'uHideR'];
+  const names = ['uBones', 'uEx', 'uEy', 'uHS', 'uT', 'uHalf', 'uDepth', 'uOff', 'uMat', 'uL', 'uGrain', 'uNight', 'uMode', 'uFlat', 'uBlink', 'uLow', 'uSH', 'uTone', 'uFit', 'uXv', 'uYv', 'uZv', 'uShapes', 'uShapeFrom', 'uShapeCount', 'uShapeK', 'uShapeW', 'uHideC', 'uHideR', 'uHit'];
   const u = Object.fromEntries(names.map((n) => [n, gl.getUniformLocation(prog, n)]));
   const wu = Object.fromEntries(names.map((n) => [n, gl.getUniformLocation(wire, n)]));
   const eu = Object.fromEntries(['uCol', 'uNd', 'uId', 'uPx', 'uInk', 'uDepthStep', 'uShow', 'uNight', 'uInner'].map((n) => [n, gl.getUniformLocation(edge, n)]));
@@ -502,6 +506,8 @@ export interface SculptDraw {
    * the viewer, or inside it: a mount's barrel under its rider, the far leg down its flank (`../render/figure.ts` BARREL).
    */
   hide?: { c: readonly [number, number, number]; r: readonly [number, number, number] };
+  /** How far the body is lit by a blow landing on it (`../render/figure.ts` FigurePose.flinch), nought to one. */
+  hit?: number;
 }
 /**
  * A slash trail as drawn: a triangle strip, five numbers a point (x, y, z in the figure's frame as the body's skinned
@@ -549,6 +555,7 @@ export function drawSculptGL(ctx: CanvasRenderingContext2D, sx: number, sy: numb
     gl.uniform1f(u.uMode, o.debug === 'normals' ? 1 : o.debug === 'mats' ? 2 : o.debug === 'bones' ? 3 : 0);
     gl.uniform1f(u.uFlat, o.flat ? 1 : 0);
     gl.uniform1f(u.uBlink, d.blink ?? 0);
+    gl.uniform1f(u.uHit, d.hit ?? 0);
     gl.uniform1f(u.uLow, low ? 1 : 0);
     gl.uniform3f(u.uHideC, d.hide?.c[0] ?? 0, d.hide?.c[1] ?? 0, d.hide?.c[2] ?? 0);
     gl.uniform3f(u.uHideR, d.hide?.r[0] ?? 0, d.hide?.r[1] ?? 0, d.hide?.r[2] ?? 0);

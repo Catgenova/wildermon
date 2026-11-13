@@ -829,10 +829,24 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
       const ms = Date.parse(p.blocked_at);
       if (Number.isFinite(ms) && island.since(p.blocked_at) < BLOCK_FRESH) game.roster.blocked(hashId(p.uid), ms);
     }
+    // And a blow that landed on somebody, where and from what (`Roster.hurt`).
+    for (const p of people) {
+      if (p.uid === island.uid || typeof p.hurt_at !== 'string') continue;
+      const ms = Date.parse(p.hurt_at);
+      if (Number.isFinite(ms) && island.since(p.hurt_at) < BLOCK_FRESH) {
+        game.roster.hurt(hashId(p.uid), ms, typeof p.hurt_where === 'string' ? p.hurt_where : undefined, typeof p.hurt_by === 'number' ? p.hurt_by : undefined);
+      }
+    }
   };
   // A blow taken on your own shield, drawn on you (`FigurePose.block`), on the clock the frames are drawn on.
   island.hooks.blocked = () => {
     game.player.blockedAt = performance.now() / 1000;
+  };
+  // And a blow landing on you (`FigurePose.flinch`): stamped once a blow, where and from what as soon as they are said.
+  island.hooks.hurt = (where, by, again) => {
+    if (!again) game.player.hurtAt = performance.now() / 1000;
+    game.player.hurtWhere = where ?? undefined;
+    game.player.hurtBy = by ?? undefined;
   };
   for (const [text, kind, at] of log) game.write(text, kind as Parameters<Game['write']>[1], at);
   game.write(`You are on ${info.name}. Send somebody this page's address and they can join you.`, 'system');

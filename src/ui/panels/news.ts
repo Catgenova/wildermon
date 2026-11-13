@@ -8,7 +8,7 @@ import { PLAN_AREA_MOST, PLAN_UNDO_SECONDS } from '../../game/planarea';
 import { UPDATE_CHECK_MS } from '../update';
 import { JOURNAL_TABS } from './journaltabs';
 import { RESPAWN_ARM_MS } from '../respawn';
-import { BLOCK_SECS } from '../../game/fight';
+import { BLOCK_SECS, FLINCH_LIT, FLINCH_SECS } from '../../game/fight';
 import { MAP_LEGEND, SETTLEMENT_BORDER_PX, MAP_ZOOM_MIN } from './minimap';
 import { FAST_DPR, LOW_POWER_FPS, SETTING_DEFAULTS } from '../../game/settings';
 import { BLOSSOM } from '../../audio/music/tracks/blossom';
@@ -4350,7 +4350,10 @@ export const NEWS: News[] = [
   {
     n: 544,
     day: '2026-11-13',
-    lines: () => [`New: shield block drawn on the blocker, seen by players nearby: shield arm raised for ${BLOCK_SECS} s per blocked blow.`],
+    lines: () => [
+      `New: shield block drawn on the blocker, seen by players nearby: shield arm raised for ${BLOCK_SECS} s per blocked blow.`,
+      `New: hit reaction drawn on the body struck, seen by players nearby: ${FLINCH_SECS} s per landed blow; flash ${FLINCH_LIT * 1000} ms, off under less motion.`,
+    ],
   },
   {
     n: 529,
