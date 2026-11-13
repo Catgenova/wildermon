@@ -166,6 +166,7 @@ import CARVING_KNIFE from './assets/carving_knife.json';
 import TROWEL from './assets/trowel.json';
 import FILE from './assets/file.json';
 import WHETSTONE from './assets/whetstone.json';
+import GROOM_BRUSH from './assets/groom_brush.json';
 // the bows (tools/sculpt/gear/bow.mjs), each with its quiver on the back and the arrow it draws
 import SHORT_BOW from './assets/short_bow.json';
 import MEDIUM_BOW from './assets/medium_bow.json';
@@ -313,6 +314,8 @@ const PROPS: readonly PropAsset[] = [SWORD, { ...(WARHAMMER as unknown as PropAs
   // javelin; the ancient short sword drawn as the short sword
   SWORD_1H as unknown as PropAsset, SHORT_SWORD as unknown as PropAsset, { ...(SHORT_SWORD as unknown as PropAsset), id: ANCIENT_SWORD }, HUNTING_KNIFE as unknown as PropAsset,
   BATTLE_AXE as unknown as PropAsset, CLUB as unknown as PropAsset, SPEAR as unknown as PropAsset, JAVELIN as unknown as PropAsset, THROWING_AXE as unknown as PropAsset,
+  // the grooming brush in the right fist at the groom clip (./anim/clips/tend.ts; tools/sculpt/gear/groom_brush.mjs), all wood
+  GROOM_BRUSH as unknown as PropAsset,
 ];
 const PROP_OF = new Map(PROPS.map((p) => [p.id, p]));
 /**
