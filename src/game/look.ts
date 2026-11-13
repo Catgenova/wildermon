@@ -171,7 +171,7 @@ const OLD_BUILDS: Record<string, { shoulder: number; waist: number; hip: number 
  * a bowl cut or a fringe to the bob, a short cut to the crew cut, the ridge to the mohawk, long and loose to the
  * shoulder length, a ponytail to the high ponytail, a bun to the low chignon, locs to the dreads, the rest cropped to
  * the shoulders or above to the swept back, longer to the braid, and a tonsure to bald. A haircut there is a mesh for
- * is itself (the afro, ponytail, the top knot).
+ * is itself (the afro, the top knot).
  */
 const OLD_HAIRSTYLES: Record<string, string> = {
   bald: 'bald', tonsure: 'bald',
