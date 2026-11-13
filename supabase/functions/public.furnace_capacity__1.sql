@@ -5,5 +5,6 @@ CREATE OR REPLACE FUNCTION public.furnace_capacity(p placed)
  LANGUAGE sql
  STABLE
 AS $function$
-  select room_for(furnace_capacity(p.kind), p.rare)
+  select greatest(1, round(greatest(1, least(100, floor(coalesce(p.ql, 1))))
+                           * coalesce((select r.charge from rarity_def r where r.id = p.rare), 1)))::int
 $function$

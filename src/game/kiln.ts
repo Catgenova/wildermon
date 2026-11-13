@@ -4,7 +4,7 @@ import { FIRE_CAPACITY, FUEL_SAID, FUEL_VALUES, fuelAtHand, fuelledSaid, hasAshe
 import { burnsFor, heatSaid } from './words';
 import { SUBTILES } from './crates';
 import type { Game } from './game';
-import { itemDef, itemName, rarityOf, roomFor, type Item } from './items';
+import { chargesFor, itemDef, itemName, rarityOf, type Item } from './items';
 import { world } from './pace';
 import type { CraftStock } from './recipes';
 import type { Plume } from './smelter';
@@ -51,14 +51,13 @@ export interface PlacedKiln {
 
 /** A kiln covers two subtiles each way: four in all. */
 export const KILN_SUBTILES = 2;
-export const KILN_CAPACITY = 16;
 /** What to call it: a plain kiln, or the rarity it was built with. */
 export const kilnName = (k: { rare?: number }): string => {
   const rare = rarityOf(k).name;
   return rare ? `${rare.charAt(0).toUpperCase()}${rare.slice(1)} kiln` : 'Kiln';
 };
-/** How much green ware this one will hold: the plain sixteen, and more for a rare kiln. */
-export const kilnCapacity = (k: { rare?: number }): number => roomFor(KILN_CAPACITY, k);
+/** How much green ware this one will hold: a piece a QL, times its rarity's (`chargesFor`). */
+export const kilnCapacity = (k: { ql: number; rare?: number }): number => chargesFor(k);
 
 /** Green ware, and what it becomes once it has been fired. */
 export interface PotteryDef {

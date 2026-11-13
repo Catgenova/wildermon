@@ -839,6 +839,8 @@ out.push(`alter table rarity_def add column if not exists lift text not null def
  */
 out.push(`alter table rarity_def add column if not exists size real not null default 1;`);
 out.push(`alter table rarity_def add column if not exists blood real not null default 1;`);
+/* And the charges a furnace holds at that step (`chargesFor`): the island's `furnace_capacity` reads it here. */
+out.push(`alter table rarity_def add column if not exists charge real not null default 1;`);
 out.push(`create table if not exists dye_def (
   id text primary key, name text not null, word text not null
 );`);
@@ -1390,7 +1392,7 @@ for (const t of [...STONE_BEDS].sort((a, b) => a - b)) out.push(`insert into sto
  */
 RARITIES.forEach((r, ord) => {
   if (!r.name) return;
-  out.push(`insert into rarity_def values (${q(r.name)}, ${q(ord)}, ${q(r.boost)}, ${q(r.keep)}, ${q(r.ceiling)}, ${q(RARITY_ODDS[ord - 1])}, ${q(RARITY_WORD[ord])}, ${q(RARITY_LIFT[ord])}, ${q(r.size)}, ${q(r.blood)});`);
+  out.push(`insert into rarity_def values (${q(r.name)}, ${q(ord)}, ${q(r.boost)}, ${q(r.keep)}, ${q(r.ceiling)}, ${q(RARITY_ODDS[ord - 1])}, ${q(RARITY_WORD[ord])}, ${q(RARITY_LIFT[ord])}, ${q(r.size)}, ${q(r.blood)}, ${q(r.charge)});`);
 });
 for (const d of LEGACY_DYES) out.push(`insert into dye_def values (${q(d.id)}, ${q(d.name)}, ${q(d.word)});`);
 for (const m of Object.values(IMPROVE_MATERIALS)) {

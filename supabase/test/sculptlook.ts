@@ -66,6 +66,7 @@ check('cornrows among them', HAIRSTYLES.some((h) => h.id === 'cornrows' && h.nam
 check('the crown braid among them', HAIRSTYLES.some((h) => h.id === 'crownbraid' && h.name === 'Crown braid'), HAIRSTYLES.map((h) => h.id).join());
 check('the pixie cut among them', HAIRSTYLES.some((h) => h.id === 'pixie' && h.name === 'Pixie cut'), HAIRSTYLES.map((h) => h.id).join());
 check('the shag among them', HAIRSTYLES.some((h) => h.id === 'shag' && h.name === 'Shag'), HAIRSTYLES.map((h) => h.id).join());
+check('balding and the monk cut among them', HAIRSTYLES.some((h) => h.id === 'balding' && h.name === 'Balding') && HAIRSTYLES.some((h) => h.id === 'monk' && h.name === 'Monk cut'), HAIRSTYLES.map((h) => h.id).join());
 check('the swept back, the braid, the bob and the afro among them, and bald', ['bald', 'swept', 'braid', 'bob', 'afro'].every((id) => HAIRSTYLES.some((h) => h.id === id)), HAIRSTYLES.map((h) => h.id).join());
 check('the ids the island checks are the bodies and the hairstyles', same(Object.keys(LOOK_TABLES), ['gender', 'hair']));
 
@@ -145,8 +146,9 @@ const OLD_HAIR = ['bald', 'crop', 'short', 'bowl', 'side', 'swept', 'fringe', 'c
 const hairNow = OLD_HAIR.map((h) => cleanLook({ hair: h }).hair);
 check('every old haircut to one there is a mesh for', hairNow.every((h) => HAIRSTYLES.some((s) => s.id === h)), OLD_HAIR.map((h, i) => `${h}>${hairNow[i]}`).join(' '));
 check('the old bun to the low chignon', cleanLook({ hair: 'bun' }).hair === 'chignon' && HAIRSTYLES.some((h) => h.id === 'chignon' && h.name === 'Low chignon'), cleanLook({ hair: 'bun' }).hair);
-check('short to the swept back, long to the braid, bald and the tonsure to bald',
-  cleanLook({ hair: 'crop' }).hair === 'swept' && cleanLook({ hair: 'braid' }).hair === 'braid' && cleanLook({ hair: 'tonsure' }).hair === 'bald');
+check('short to the swept back, long to the braid, bald to bald',
+  cleanLook({ hair: 'crop' }).hair === 'swept' && cleanLook({ hair: 'braid' }).hair === 'braid' && cleanLook({ hair: 'bald' }).hair === 'bald');
+check('the tonsure to the monk cut', cleanLook({ hair: 'tonsure' }).hair === 'monk' && HAIRSTYLES.some((h) => h.id === 'monk' && h.name === 'Monk cut'), cleanLook({ hair: 'tonsure' }).hair);
 check('the ponytail to the high ponytail', cleanLook({ hair: 'ponytail' }).hair === 'ponytail');
 check('long and loose to the shoulder length', cleanLook({ hair: 'long' }).hair === 'warrior');
 check('twin braids to the twin braids', cleanLook({ hair: 'braids' }).hair === 'twinbraids');
