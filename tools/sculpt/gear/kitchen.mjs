@@ -258,6 +258,8 @@ export async function writeAsset(id, outDir) {
   a.rest = 0;
   a.reach = r5(Math.hypot(...plain.contact.map((c, k) => c - plain.grip.lead[k])));
   if (plain.mirror) a.mirror = true;
+  // (no glow: its glow begins after its last polygon)
+  if (a.glowFrom < 0) a.glowFrom = a.polys.length;
   const assets = new URL('../../../src/sculpt/assets', import.meta.url).pathname;
   const meshOf = (who) => { const body = JSON.parse(readFileSync(join(assets, `low${who}.json`), 'utf8')); let top = -Infinity; for (let i = 1; i < body.verts.length; i += 3) top = Math.max(top, body.verts[i]); return { body, h: top - body.floor }; };
   // (the same share of her height as of his: her scale his, as much larger as her mesh is shorter)
