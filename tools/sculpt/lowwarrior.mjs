@@ -35,7 +35,7 @@ const ramp = (x, a, b) => Math.min(1, Math.max(0, (x - a) / (b - a)));
 const hash = (i, j) => { const x = Math.sin(i * 12.9898 + j * 78.233) * 43758.5453; return x - Math.floor(x); };
 
 /** The furthest crossing of a ray from o along unit d with triangles ({ P: three points, poly }): { t, poly }. */
-function farHit(tris, o, d) {
+export function farHit(tris, o, d) {
   let best = 0, poly = -1;
   for (const { P: [a, b, c], poly: pi } of tris) {
     const e1 = sub(b, a), e2 = sub(c, a), p = cross(d, e2), det = dot(e1, p);
@@ -111,7 +111,7 @@ function spline(pts, u) {
 
 /** A border's path over the skull (her left), at a in [0, 1]: its directions at the style's capRows (shares of its
  * length), the parting's first. */
-function pathOf(S, a) {
+export function pathOf(S, a) {
   const K = S.keys, j = Math.max(0, Math.min(K.length - 2, K.findIndex((k, i) => i + 1 < K.length && a <= K[i + 1].a)));
   const k0 = K[j], k1 = K[j + 1], t = (a - k0.a) / (k1.a - k0.a);
   const ctrl = k0.pts.map((p, i) => unit(lerp(dirOf(...p), dirOf(...k1.pts[i]), t)));
@@ -284,7 +284,7 @@ export function buildWarrior(rig, style = WARRIOR, { clear = true } = {}) {
  * cut under its convex creases): a corner of the skin (not the ears') under the cap and within `margin` of its outside
  * (or through it) moves the outside's face there out along its corners' rays, until none is.
  */
-function coverSkin(B, C, verts, polys, margin) {
+export function coverSkin(B, C, verts, polys, margin) {
   // (its corners, and points along its triangles' edges and inside them: a crease between two corners pokes through too)
   const skinV = [];
   for (const t of B.tris) {
@@ -308,7 +308,7 @@ function coverSkin(B, C, verts, polys, margin) {
 }
 
 /** Each polygon's triangles, the quad's shorter diagonal (a lock's plane folds along its length). */
-function trisOf(verts, polys) {
+export function trisOf(verts, polys) {
   const tris = [];
   polys.forEach((p, pi) => {
     if (p.v.length === 3) { tris.push([...p.v, pi]); return; }
@@ -320,7 +320,7 @@ function trisOf(verts, polys) {
 
 /** The head's skin polygons (not the ears) under the hair's polygons that pass `keep`, seen from the skull's middle:
  * with `every` corner under it, or `some`. */
-function scalpOf(B, C, hair, how, keep) {
+export function scalpOf(B, C, hair, how, keep) {
   const T = hair.tris.filter(([, , , pi]) => keep(hair.polys[pi])).map(([a, b, c]) => ({ P: [hair.verts[a], hair.verts[b], hair.verts[c]], poly: 0 })), memo = new Map();
   const under = (vi) => { if (!memo.has(vi)) memo.set(vi, farHit(T, C, unit(sub(B.verts[vi], C))).t > 0); return memo.get(vi); };
   const out = [];
