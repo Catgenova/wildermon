@@ -122,7 +122,7 @@ import { ANCIENT_HELM, ANCIENT_HELM_SIGHT, ANCIENT_SWORD, ANCIENT_SWORD_SWING, A
 import { ODDS_BAND, ODDS_BANDS_AT, ODDS_EXACT_AT, ODDS_LIKELY, ODDS_PLACES, PAIR_RANGE, TIER_LEVEL } from '../../game/husbandry';
 import { IMPROVE_DAMAGE, IMPROVE_FAIL_LEAST, IMPROVE_FAIL_SPREAD, IMPROVE_FLOOR } from '../../game/improve';
 import { JOB_GOES_MOST } from '../../game/mending';
-import { billWords, countOf, DEED_DECAY, DRINK_LITRES, foodFill, HOARD_METALS, itemDef, ITEM_DEFS, LITRE_KG, RARITIES, RARITY_ROOM, rarityBands, rarityChance, roomFor, TAN_LYE, UNMENDABLE, unmendableSays } from '../../game/items';
+import { billWords, countOf, DEED_DECAY, DRINK_LITRES, foodFill, HOARD_METALS, itemDef, ITEM_DEFS, LITRE_KG, CHARGE_PER_QL, CHARGE_QL, chargesFor, RARITIES, RARITY_ROOM, rarityBands, rarityChance, TAN_LYE, UNMENDABLE, unmendableSays } from '../../game/items';
 import { ALL_GOALS, JOURNAL, LEGEND_AT } from '../../game/journal';
 import { entryTameLevel, guideEntries, guidePages, keepable } from '../../game/guide';
 import { TRACK_BANDS, TRACK_RANGE_BASE, TRACK_RANGE_PER, TRACK_SHOW, trackBandsSays, trackErrSays, trackRange } from '../../game/tracking';
@@ -132,7 +132,6 @@ import {
 } from '../../game/winter';
 import { SIGHT_FORM_AT, SIGHT_RARITY_AT } from '../../game/sighted';
 import { MOBS_RANGE } from '../../game/keep';
-import { KILN_CAPACITY } from '../../game/kiln';
 import { candleBurn, FIRE_REACH, HELD_LIGHTS, lanternReach, MEMORIAL_REACH, OVEN_REACH, PLINTH_BUSY_REACH, PLINTH_REACH, torchBurn, torchReach } from '../../game/light';
 import { MARK_CAP } from '../../game/marks';
 import { TOOL_JOBS } from '../../game/jobtools';
@@ -154,7 +153,7 @@ import { BOOKS, bookDrops, RECIPE_DROP_ODDS, RECIPE_DROPPERS } from '../../game/
 import { FAIL_DAMAGE_SAID } from '../../game/faildamage';
 import { TREE_DEPTH } from '../recipetree';
 import { EARLY_SKILL_BELOW, EARLY_SKILL_MUL, GAIN_RATE, MIN_GAIN, playerGain, SKILL_BY_ID } from '../../game/skills';
-import { SMELTER_CAPACITY, SMELTER_H, SMELTER_W } from '../../game/smelter';
+import { SMELTER_H, SMELTER_W } from '../../game/smelter';
 import { MELT_HEAT, MELT_KEEP, MELT_SHARE, meltLumps } from '../../game/melt';
 import { KNACK_BONUS, KNACK_CAP, KNACK_GO, KNACK_HOME, KNACK_ODDS, TITLE_STEPS, titlesFor } from '../../game/titles';
 import { CATCH_MOST, CHECK_EVERY, CREEL_BAIT_LOSS, creelOdds, HUNTER_TRAPPED, TIMID_TRAPPED, TRAPS } from '../../game/traps';
@@ -1787,11 +1786,11 @@ export function helpText(): string {
     <ul>
       <li>Mining a seam gives <b>ore</b>. <b>Stone smelter</b>: masonry, ${bill('make_smelter', true)}, with a trowel; made in the crafting window, carried,
       <b>set down</b> on ${SMELTER_W * SMELTER_H} spots of a tile on your own settlement. Picked up whole when cold, empty and raked out.</li>
-      <li>Fuel as a campfire (coal burns longest); light; charge with ore. Smelt time per piece: longer for fine ore and harder metal, shorter in a better smelter.
+      <li>Charges: <b>${CHARGE_PER_QL} a QL</b> of the smelter, up to ${chargesFor({ ql: CHARGE_QL })} at QL ${CHARGE_QL}; × its rarity's (Rarity). Fuel as a campfire (coal burns longest); light; charge with ore. Smelt time per piece: longer for fine ore and harder metal, shorter in a better smelter.
       Draw the lumps off when done.</li>
       <li>Lumps of one metal merge into one lump; quality (QL) = average weighted by size.</li>
       <li><b>Melt down</b> (lit smelter): anything cast from metal or hafted to a cast head. Lumps back: ${frac(MELT_SHARE)} of its metal, at least ${meltLumps({ uid: 0, id: 'coin', ql: 1, dmg: 0, count: 1, extra: 'Iron' }, 1)}.
-      QL: ${frac(MELT_KEEP)} of its QL, less its damage. Heat: ${frac(MELT_HEAT)} of ore's. All of a stack: what fits in the smelter (${SMELTER_CAPACITY} lumps); the rest stays in the pack.
+      QL: ${frac(MELT_KEEP)} of its QL, less its damage. Heat: ${frac(MELT_HEAT)} of ore's. All of a stack: what fits in the smelter (its charges); the rest stays in the pack.
       Work done: told to whoever put it in, count and QL per kind.</li>
       <li><b>Alloys</b> at a hot smelter: bronze, brass, pewter, electrum, <b>steel</b> (${bill('make_steel')}). QL from the input metal; skill only sets how little is lost.</li>
     </ul>
@@ -2840,9 +2839,10 @@ export function helpText(): string {
       <li>Effect: <b>better at its use</b> by ${listed(RARE_STEPS.map((step) => frac(RARITIES[step].boost - 1))).replace(/ and ([^,]*)$/, ' or $1')} (edge, armour, tool accuracy);
       <b>wears and rots at ${listed(RARE_STEPS.map((step) => percent(RARITIES[step].keep)))}</b> of the ordinary rate; <b>improvable past your skill ceiling</b> by
       ${listed(RARE_STEPS.map((step) => String(RARITIES[step].ceiling))).replace(/ and ([^,]*)$/, ' or $1')}.</li>
-      <li>Containers (bag, crate, cupboard, weight bin, smelter charge, kiln load): +${percent(RARITY_ROOM)} capacity a step (${RARE_STEPS.map((n) => `<b>${percent(RARITY_ROOM * n)}</b>`).join(', ')}
-      for rare, supreme and fantastic), at least <b>one more unit a step</b> (a kiln's ${KILN_CAPACITY}: ${listed(RARE_STEPS.map((n) => String(roomFor(KILN_CAPACITY, { rare: n }))))}).
-      Kept when set down and picked up.</li>
+      <li>Containers (bag, crate, cupboard, weight bin): +${percent(RARITY_ROOM)} capacity a step (${RARE_STEPS.map((n) => `<b>${percent(RARITY_ROOM * n)}</b>`).join(', ')}
+      for rare, supreme and fantastic), at least <b>one more unit a step</b>. Kept when set down and picked up.</li>
+      <li>Smelter and kiln charges: <b>× ${listed(RARE_STEPS.map((n) => String(RARITIES[n].charge))).replace(/ and ([^,]*)$/, ' or $1')}</b> for rare, supreme or fantastic
+      (QL ${CHARGE_QL}: ${listed([0, ...RARE_STEPS].map((n) => String(chargesFor({ ql: CHARGE_QL, rare: n }))))}).</li>
       <li>Shown in their own colour in the pack; on the ground they glow (rare: a few motes; supreme: more over a bloom; fantastic: a gold bloom under a star).</li>
     </ul>
     <h3>Signed masterworks</h3>
@@ -3134,7 +3134,7 @@ export function helpText(): string {
     <ul>
       <li>Clay: dug from a clay pit with a shovel. <b>Pottery</b>: <b>unfired</b> bricks, bowls, pots, jars; unusable until fired. Tool: trowel.</li>
       <li><b>Kiln</b>: ${bill('make_kiln')}, trowel; carried; set down on dry flat ground; picked up when cold and empty.</li>
-      <li>Fuel as a fire (peat and coal included); load the ware; light. Fire time per piece; a better kiln is faster and keeps more of the potter's quality (QL).</li>
+      <li>Charges: <b>${CHARGE_PER_QL} piece a QL</b> of the kiln, up to ${chargesFor({ ql: CHARGE_QL })} at QL ${CHARGE_QL}; × its rarity's (Rarity). Fuel as a fire (peat and coal included); load the ware; light. Fire time per piece; a better kiln is faster and keeps more of the potter's quality (QL).</li>
       <li>Fired: bowl (cooking), pot (pottage), jar (preserves), brick (building).</li>
       <li><b>${SPECIES.potta.name}</b> line (settlement worker): ${GATHER_DO.kiln}. Does not light or fuel them.</li>
       <li>Artisan <b>amphora</b> (${bill('make_amphora')}, fired like a pot): holds ${itemDef('amphora').holds} of one food or drink; contents rot at ${frac(itemDef('amphora').shelter ?? 1)} the rate on the ground.</li>

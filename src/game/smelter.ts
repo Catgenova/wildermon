@@ -5,7 +5,7 @@ import { burnsFor, heatSaid } from './words';
 import { DEED_PLACE } from './furniture';
 import { SUBTILES } from './crates';
 import type { Game } from './game';
-import { itemDef, itemName, markOf, rarityOf, roomFor, type Item } from './items';
+import { chargesFor, itemDef, itemName, markOf, rarityOf, type Item } from './items';
 import { MELT_HEAT, MELT_KEEP, MELT_SHARE, meltFits, meltLumps, meltQl, meltRefusal, metalOfItem } from './melt';
 import { fixedTo } from './ageing';
 import { matOf } from './materials';
@@ -80,14 +80,13 @@ export const furnaceMadeSaid = (kind: string, made: ReadonlyArray<{ count: numbe
 /** A smelter is three subtiles one way and two the other: six in all. */
 export const SMELTER_W = 3;
 export const SMELTER_H = 2;
-export const SMELTER_CAPACITY = 20;
 /** What to call it: a plain smelter, or the rarity it was built with. */
 export const smelterName = (s: { rare?: number }): string => {
   const rare = rarityOf(s).name;
   return rare ? `${rare.charAt(0).toUpperCase()}${rare.slice(1)} smelter` : 'Smelter';
 };
-/** How many jobs this one will hold: the plain twenty, and more for a rare furnace. */
-export const smelterCapacity = (s: { rare?: number }): number => roomFor(SMELTER_CAPACITY, s);
+/** How many charges this one will hold: a charge a QL, times its rarity's (`chargesFor`). */
+export const smelterCapacity = (s: { ql: number; rare?: number }): number => chargesFor(s);
 
 /**
  * Where its smoke comes out: the head of its stack, so high over the ground

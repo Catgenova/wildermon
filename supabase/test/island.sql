@@ -1509,7 +1509,7 @@ select '231. setting it down, asked the island''s way and the browser''s: '
 select act_perform(:'world2', :'ivar', 'place_kiln', ('{"kind":"tile","x":9,"y":8,"sx":0,"sy":0,"itemUid":' || :'kit' || '}')::jsonb) \g /dev/null
 select coalesce(max(id), 0) as kiln from placed where world_id = :'world2' and kind = 'kiln' \gset
 select '232. ' || (select text from event where uid = :'ivar' order by n desc limit 1)
-     || ' — it holds ' || furnace_capacity('kiln') || ' pieces at once';
+     || ' — it holds ' || (select furnace_capacity(p) from placed p where p.id = :'kiln') || ' pieces at once, a piece a QL';
 delete from event where uid = :'ivar';
 select '233. packing it with nothing to pack: ' || coalesce(act_refusal(:'world2', :'ivar', 'load_kiln', ('{"kind":"kiln","id":' || :'kiln' || '}')::jsonb), 'allowed');
 insert into item (world_id, holder, holder_uid, def, ql, count) values (:'world2', 'player', :'ivar', 'unfired_clay_brick', 60, 8);
