@@ -4365,6 +4365,7 @@ export const NEWS: News[] = [
         `New: sawing and fishing animated on the sculpted body: ${jobs('saw')} jobs at the saw, ${jobs('fish')} with the fishing rod, ${jobs('net')} with the fishing net; the tool drawn in hand (was: a placeholder gesture).`,
         'New: sculpted bodies swimming and treading water (was: the flat figure).',
         'Changed: leaching lye and filling a barrel: both hands at waist height (was: a placeholder gesture).',
+        'New: sleeping, eating, drinking, praying and meditating animated on the sculpted body (was: a placeholder gesture).',
       ];
     },
   },

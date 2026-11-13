@@ -32,6 +32,8 @@ import { SAW, SAW_LEFT } from './clips/saw';
 import { FISH, FISH_LEFT } from './clips/fish';
 import { NET, NET_LEFT } from './clips/net';
 import { TEND_CLIPS, TEND_LEFT } from './clips/tend';
+import { LIFE, LIFE_LEFT, LIFE_SETTLE } from './clips/life';
+import { gettingDown } from './down';
 import { ACTION_BY_ID } from '../../game/actions';
 import { clipOfJob } from './routes';
 import { strideAt } from '../../game/player';
@@ -62,6 +64,8 @@ export const CLIPS: Record<string, Clip> = {
   saw: SAW, 'saw-left': SAW_LEFT, fish: FISH, 'fish-left': FISH_LEFT, net: NET, 'net-left': NET_LEFT,
   // tending a beast and healing (./clips/tend.ts), each with its mirror
   ...TEND_CLIPS,
+  // sleeping, eating, drinking, praying, meditating (`./clips/life.ts`)
+  ...LIFE,
 };
 /** The clip a state plays until its own is approved: the 6 7 gesture. */
 export const PLACEHOLDER = 'sixseven';
@@ -81,7 +85,7 @@ export const CLIP_OF: Record<State, string> = {
   swing: 'swing',
   work: PLACEHOLDER,
   fight: PLACEHOLDER,
-  meditate: PLACEHOLDER,
+  meditate: 'meditate',
   emote: PLACEHOLDER,
   cast: PLACEHOLDER,
   swim: 'swim',
@@ -139,6 +143,7 @@ const LEFT_OF: Readonly<Record<string, string>> = {
   quern: 'quern-left', stir: 'stir-left', roast: 'roast-left', fry: 'fry-left',
   saw: 'saw-left', fish: 'fish-left', net: 'net-left',
   ...TEND_LEFT,
+  ...LIFE_LEFT,
 };
 /** Whether work is done left-handed from where it is seen: as the flat figure (facings three and seven). */
 const lefty = (facing: number): boolean => { const f = ((Math.round(facing) % 8) + 8) % 8; return f === 3 || f === 7; };
@@ -204,6 +209,7 @@ const SETTLE: Readonly<Record<string, number>> = {
   quern: 0.55, 'quern-left': 0.55, press: 0.55, roast: 0.55, 'roast-left': 0.55, fry: 0.55, 'fry-left': 0.55,
   // the crouch at a beast's flank (./clips/tend.ts)
   milk: 0.45, 'milk-left': 0.45, heal: 0.45, 'heal-left': 0.45,
+  ...LIFE_SETTLE,
 };
 /**
  * The clips played in the water (`./clips/swim.ts`), and seconds a fade between them takes: from the stroke to treading
@@ -561,6 +567,7 @@ export function animate(sk: Skeleton, pose: FigurePose, figure: () => Array<M3 |
   if (!pose.id) return over(now);
   const key = `${sk.body}|${pose.id}`, source = sat ? sat.name : c ? c.clip.name + (c.over ? `+${c.over.clip.name}` : '') : 'figure', ms = performance.now();
   let k = KEPT.get(key);
+  const fresh = !k;
   if (k) KEPT.delete(key);
   if (!k) k = { source, out: now, from: null, at: ms };
   else if (k.source !== source) { k.span = WATER.has(k.source) && WATER.has(source) ? WATER_FADE : Math.max(SETTLE[k.source] ?? FADE, SETTLE[source] ?? FADE); k.from = k.out; k.was = k.cur; k.source = source; k.at = ms; }
@@ -568,7 +575,10 @@ export function animate(sk: Skeleton, pose: FigurePose, figure: () => Array<M3 |
   KEPT.set(key, k);
   if (KEPT.size > MAX_KEPT) KEPT.delete(KEPT.keys().next().value as string);
   let out = now;
-  if (k.from) {
+  // sat or lain down, or got up again: the clip's own way down onto the ground and up off it (`./down.ts`)
+  const down = gettingDown(sk, key, k, fresh, now, ms);
+  if (down) out = down;
+  else if (k.from) {
     const span = k.span ?? FADE, u = (ms - k.at) / 1000 / span, settle = span > FADE && !!k.was && !!c && !!plantBetween(sk, k.was, c, 0);
     if (u >= 1 + (settle ? RELEASE / span : 0)) k.from = null;
     else if (settle && k.was && c) {

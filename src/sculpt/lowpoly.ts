@@ -169,6 +169,10 @@ import TROWEL from './assets/trowel.json';
 import FILE from './assets/file.json';
 import WHETSTONE from './assets/whetstone.json';
 import GROOM_BRUSH from './assets/groom_brush.json';
+// what is eaten and drunk from in one fist (tools/sculpt/gear/vessels.mjs)
+import CUP from './assets/cup.json';
+import WATERSKIN from './assets/waterskin.json';
+import BREAD from './assets/bread.json';
 // the bows (tools/sculpt/gear/bow.mjs), each with its quiver on the back and the arrow it draws
 import SHORT_BOW from './assets/short_bow.json';
 import MEDIUM_BOW from './assets/medium_bow.json';
@@ -214,6 +218,7 @@ import { humanProportions } from './human';
 import { SH_TERMS, type LowLight, type SculptDraw, type TrailDraw } from './gl';
 import type { Material } from './sdf';
 import { animate, clipFor, clipsPlaying, CLIPS, heldIn, ONE_HAND, SWING_TOOL, toolsIn, type SeatFit } from './anim';
+import { eyesShut, onTheGround } from './anim/down';
 import { clipLocal } from './anim/player';
 import { hopAir } from './anim/clips/emote';
 import { HOPS, emotePose } from '../game/emotes';
@@ -353,6 +358,8 @@ const PROPS: readonly PropAsset[] = [SWORD, { ...(WARHAMMER as unknown as PropAs
   SAW as unknown as PropAsset, SAWHORSE as unknown as PropAsset, SAWHORSE_R as unknown as PropAsset, FISHING_ROD as unknown as PropAsset, FISHING_NET as unknown as PropAsset,
   // the grooming brush in the right fist at the groom clip (./anim/clips/tend.ts; tools/sculpt/gear/groom_brush.mjs), all wood
   GROOM_BRUSH as unknown as PropAsset,
+  // what is eaten and drunk from, in the right fist while the eat and drink clips play (./anim/clips/meal.ts)
+  CUP as unknown as PropAsset, WATERSKIN as unknown as PropAsset, BREAD as unknown as PropAsset,
 ];
 const PROP_OF = new Map(PROPS.map((p) => [p.id, p]));
 /**
@@ -1144,7 +1151,8 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
     garments.forEach((g, k) => { if (worn[k] && g.soles) stand(g.verts, WEIGHTS[k], g.soles); });
     // (in a hop's leap, lifted off the ground: `hopLift`); in the water, held where its clip puts it (`./anim/clips/swim.ts`:
     // the surface the floor's level), not stood on its soles; going in or coming out, stood on them only as far as it is out
-    const dy = fit ? 0 : (A.floor - low) * (1 - wet) + hopLift(pose, Fb), s = scale();
+    // (sat or lain on the ground, or on the way down onto it or up: put where its clip puts it, `./anim/down.ts`)
+    const dy = fit || onTheGround(`${SK.body}|${pose.id}`, clipFor(pose, SK.body)?.clip.name) ? 0 : (A.floor - low) * (1 - wet) + hopLift(pose, Fb), s = scale();
     DY = dy;
     WET = wet;
     const sk = shapedOf(garments, worn);
@@ -1654,7 +1662,9 @@ export function lowScene(given: FigurePose, part: 'over' | 'under' = 'over'): Sc
   // lit by a blow for its first moments (`FLINCH_LIT`), not under less motion
   const struck = pose.flinch ? pose.flinch.t * FLINCH_SECS : Infinity, hit = struck >= 0 && struck < FLINCH_LIT && !lessMotion() ? 1 - struck / FLINCH_LIT : 0;
   const water = pose.swimming || body.wet() > 0 ? { level: 0, keep: part } : undefined;
-  return { baked, bones, materials, view: viewOf(facing), blink: 0, low, ...(trail ? { trail } : {}), ...(shapes.some((w) => w > 0) ? { shapes } : {}), ...(hide ? { hide } : {}), ...(hit > 0 ? { hit } : {}), ...(water ? { water } : {}) };
+  // (the eyes shut asleep, meditating and praying: `./anim/down.ts` eyesShut)
+  const blink = eyesShut(`${who}|${pose.id}`, clipFor(pose, who)?.clip.name, performance.now()) ? 1 : 0;
+  return { baked, bones, materials, view: viewOf(facing), blink, low, ...(trail ? { trail } : {}), ...(shapes.some((w) => w > 0) ? { shapes } : {}), ...(hide ? { hide } : {}), ...(hit > 0 ? { hit } : {}), ...(water ? { water } : {}) };
 }
 
 /** Local turns by bone name, [rx, ry, rz] degrees (as `tools/sculpt/lowrig.mjs` posed). */
