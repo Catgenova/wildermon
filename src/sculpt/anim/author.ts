@@ -82,7 +82,8 @@ const mirrorTracks = (t: Record<string, Array<Key<Euler>>>): Record<string, Arra
 const swapSides = <T>(r: Partial<Record<'l' | 'r', T>> | undefined): Partial<Record<'l' | 'r', T>> | undefined => r && Object.fromEntries(Object.entries(r).map(([s, v]) => [s === 'l' ? 'r' : 'l', v]));
 /**
  * A whole clip mirrored left for right, named `name`: every track, accent, the shift, the stance, each body's corrections,
- * the reached hands (their places and ways across the body reversed) and the tools in them swapped hand for hand.
+ * the reached hands (their places and ways across the body reversed), the tools in them swapped hand for hand and the
+ * keyed feet foot for foot.
  */
 export function mirrorClip(c: Clip, name: string): Clip {
   const hands = swapSides(c.hands);
@@ -108,5 +109,7 @@ export function mirrorClip(c: Clip, name: string): Clip {
     ...(c.second ? { second: { side: c.second.side === 'l' ? 'r' : 'l', at: typeof c.second.at[0] === 'number' ? [(c.second.at as Euler)[0], (c.second.at as Euler)[1], -(c.second.at as Euler)[2]] as Euler : (c.second.at as Array<Key<Euler>>).map((k) => ({ ...k, v: [k.v[0], k.v[1], -k.v[2]] as Euler })), way: [c.second.way[0], c.second.way[1], -c.second.way[2]] as Euler } } : {}),
     ...(c.tools ? { tools: swapSides(c.tools) } : {}),
     ...(c.strike ? { strike: { ...c.strike, side: c.strike.side === 'l' ? 'r' : 'l' } } : {}),
+    // (the keyed feet swapped foot for foot)
+    ...(c.feet ? { feet: { stride: c.feet.stride, l: c.feet.r, r: c.feet.l } } : {}),
   };
 }

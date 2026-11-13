@@ -207,18 +207,18 @@ const BUNCH: Euler = [0.05, 0.3, 0.33];
 const R_LOW = 0.24;
 /** The sickle's fist (body heights), its handle's way and its blade's way out of the handle (`knuckles`). */
 const SICKLE_AT: Record<string, { at: Euler; way: Euler; face: Euler }> = {
-  out: { at: [-0.2, 0.31, 0.27], way: [0.2, -0.35, 1], face: [1, 0.15, -0.1] },
-  under: { at: [-0.11, R_LOW, 0.3], way: [0.55, -0.45, 0.75], face: [0.85, 0.1, -0.5] },
-  cut: { at: [0.02, R_LOW, 0.26], way: [0.85, -0.35, 0.4], face: [0.4, 0.1, -0.9] },
-  back: { at: [-0.1, 0.31, 0.2], way: [0.4, -0.2, 0.9], face: [0.9, 0.2, -0.4] },
+  out: { at: [-0.23, 0.3, 0.3], way: [0.2, -0.35, 1], face: [1, 0.15, -0.1] },
+  under: { at: [-0.14, R_LOW, 0.36], way: [0.55, -0.45, 0.75], face: [0.85, 0.1, -0.5] },
+  cut: { at: [0.0, R_LOW, 0.33], way: [0.85, -0.35, 0.4], face: [0.4, 0.1, -0.9] },
+  back: { at: [-0.14, 0.31, 0.24], way: [0.4, -0.2, 0.9], face: [0.9, 0.2, -0.4] },
 };
 const K_CROUCH: KeyPose = {
-  rot: { pelvis: [34, -4, 0], spine_01: [12, -2, 0], spine_02: [10, -2, 0], spine_03: [8, -2, 0], neck_01: [-24, 0, 0], neck_02: [-6, 0, 0], head: [8, 4, 0], fingers_01_l: [20, 0, 0], fingers_02_l: [25, 0, 0] },
+  rot: { pelvis: [34, 8, 0], spine_01: [12, 3, 0], spine_02: [10, 3, 0], spine_03: [8, 2, 0], clavicle_r: [10, 0, 0], neck_01: [-24, 0, 0], neck_02: [-6, 0, 0], head: [8, 4, 0], fingers_01_l: [20, 0, 0], fingers_02_l: [25, 0, 0] },
   move: [0, -0.17, 0.02],
 };
-const K_GRAB: KeyPose = merge(K_CROUCH, { rot: { pelvis: [36, 2, 0], spine_02: [11, 3, 0], head: [8, 6, 0], ...FIST_L }, move: [0.006, -0.175, 0.03] });
-const K_CUT: KeyPose = merge(K_GRAB, { rot: { pelvis: [36, 6, 0], spine_02: [11, 5, 0], spine_03: [9, 4, 0], head: [8, 2, 0] }, move: [0.004, -0.18, 0.02] });
-const K_LAY: KeyPose = merge(K_CROUCH, { rot: { pelvis: [32, 10, 0], spine_02: [9, 6, 0], spine_03: [7, 6, 0], head: [6, 12, 0], ...FIST_L }, move: [0.01, -0.165, 0.01] });
+const K_GRAB: KeyPose = merge(K_CROUCH, { rot: { pelvis: [36, 9, 0], spine_02: [11, 4, 0], head: [8, 6, 0], ...FIST_L }, move: [0.006, -0.175, 0.03] });
+const K_CUT: KeyPose = merge(K_GRAB, { rot: { pelvis: [36, 10, 0], spine_02: [11, 5, 0], spine_03: [9, 4, 0], head: [8, 2, 0] }, move: [0.004, -0.18, 0.02] });
+const K_LAY: KeyPose = merge(K_CROUCH, { rot: { pelvis: [32, 13, 0], spine_02: [9, 6, 0], spine_03: [7, 6, 0], head: [6, 12, 0], ...FIST_L }, move: [0.01, -0.165, 0.01] });
 export const REAP_BEATS: Beat[] = [
   { t: 0, pose: K_CROUCH, ease: 'inOut', stage: 'key', name: 'reach' },
   { t: 0.32, pose: K_GRAB, ease: 'inOut', stage: 'key', name: 'gathered' },
