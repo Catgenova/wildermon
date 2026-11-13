@@ -4759,7 +4759,7 @@ export class Renderer {
             // The low-end graphics: drawn flat (`cropFlatSprite`), and a field lying fallow is its ground alone.
             const def = cropDef(crop.id);
             this.take('crop', x, y, mx, my - avg * hs,
-              cropFlatSprite(crop.id, Math.min(3, crop.stage), def.look, def.colors[0], def.colors[1], this.dormant && !crop.glass, !V.staggered));
+              cropFlatSprite(crop.id, Math.min(3, crop.stage), def.look, def.colors[0], def.colors[1], this.dormant && !crop.glass, crop.tendedNow, !V.staggered));
           } else if (crop) {
             const def = cropDef(crop.id);
             /*
@@ -4770,12 +4770,12 @@ export class Renderer {
              * and a glasshouse's crops stood half out through its walls.
              */
             this.take('crop', x, y, mx, my - avg * hs,
-              cropSprite(crop.id, Math.min(3, crop.stage), def.colors[0], def.colors[1], this.dormant && !crop.glass, cam.rotation, this.cropStep,
+              cropSprite(crop.id, Math.min(3, crop.stage), def.colors[0], def.colors[1], this.dormant && !crop.glass, crop.tendedNow, cam.rotation, this.cropStep,
                 Math.floor(hash2(x, y, 6151) * FIELD_LAYOUTS))).tilt = this.fieldTilt(c, off, mx - baseX, my - baseY, avg, hs);
           } else if (!this.still) {
             // A field tilled and lying fallow: its ridges and furrows, rimed in a winter out of glass. Ground, so first on its line, under whoever stands on it.
             const rimed = this.dormant && !isGlasshouse(this.game.buildings, this.game.buildings.buildingAt(x, y));
-            const bare = this.take('crop', x, y, mx, my - avg * hs, cropSprite('', -1, '', '', rimed, cam.rotation, this.cropStep));
+            const bare = this.take('crop', x, y, mx, my - avg * hs, cropSprite('', -1, '', '', rimed, false, cam.rotation, this.cropStep));
             bare.key = -1e9;
             bare.tilt = this.fieldTilt(c, off, mx - baseX, my - baseY, avg, hs);
           }
@@ -8926,8 +8926,8 @@ export class Renderer {
     const sx = cam.worldToScreenX(x + 0.5, y + 0.5), sy = cam.worldToScreenY(x + 0.5, y + 0.5, h);
     const def = cropDef(crop.id);
     const spr = this.still
-      ? cropFlatSprite(crop.id, Math.min(3, crop.stage), def.look, def.colors[0], def.colors[1], false, !cam.view.staggered)
-      : cropSprite(crop.id, Math.min(3, crop.stage), def.colors[0], def.colors[1], false, rotation, this.cropStep, Math.floor(hash2(x, y, 6151) * FIELD_LAYOUTS));
+      ? cropFlatSprite(crop.id, Math.min(3, crop.stage), def.look, def.colors[0], def.colors[1], false, crop.tendedNow, !cam.view.staggered)
+      : cropSprite(crop.id, Math.min(3, crop.stage), def.colors[0], def.colors[1], false, crop.tendedNow, rotation, this.cropStep, Math.floor(hash2(x, y, 6151) * FIELD_LAYOUTS));
     this.take('crop', x, y, sx, sy, spr);
   }
 
@@ -11224,10 +11224,10 @@ export class Renderer {
       const g = greenShows(days, 0, this.walls.wetness(f.x, f.y));
       return mossTrim(Math.round(g * PIECE_STAGES), pieceFacing(f));
     }
-    // A planter is drawn with what grows in it, at the stage it is at.
+    // A planter is drawn with what grows in it, at the stage it is at, tended or not.
     if (isPlanter(f)) {
       const c = this.game.planted.get(f.id);
-      return c ? planterTrim(c.id, c.stage) : 0;
+      return c ? planterTrim(c.id, c.stage, c.tendedNow) : 0;
     }
     if (rackSpots(f)) {
       let mask = 0;
