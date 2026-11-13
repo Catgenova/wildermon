@@ -53,6 +53,11 @@ export const CLIP_OF_JOB: Readonly<Record<string, string>> = Object.fromEntries(
     'build_campfire', 'light_campfire', 'fuel_campfire', 'put_out_campfire', 'take_apart_campfire',
     'take_ashes_fire', 'take_ashes_oven', 'take_ashes_smelter', 'take_ashes_kiln',
   ].map((job) => [job, 'ground']),
+  // daily life (`./clips/life.ts`): lain asleep, sat meditating, knelt at prayer and at a sacrifice, eating and drinking
+  ...Object.entries({
+    sleep: 'sleep', meditate: 'meditate', pray: 'pray', pray_statue: 'pray-statue', sacrifice: 'sacrifice',
+    eat: 'eat', drink_tea: 'drink-cup', drink_from_vessel: 'drink-cup', drink_skin: 'drink-skin',
+  }),
 ]);
 /** Whether a job is a recipe made with no tool and not at a campfire (cooking there is done crouched at the fire). */
 const handsRecipe = (job: string): boolean => {

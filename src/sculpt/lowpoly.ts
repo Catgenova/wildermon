@@ -166,6 +166,10 @@ import CARVING_KNIFE from './assets/carving_knife.json';
 import TROWEL from './assets/trowel.json';
 import FILE from './assets/file.json';
 import WHETSTONE from './assets/whetstone.json';
+// what is eaten and drunk from in one fist (tools/sculpt/gear/vessels.mjs)
+import CUP from './assets/cup.json';
+import WATERSKIN from './assets/waterskin.json';
+import BREAD from './assets/bread.json';
 // the bows (tools/sculpt/gear/bow.mjs), each with its quiver on the back and the arrow it draws
 import SHORT_BOW from './assets/short_bow.json';
 import MEDIUM_BOW from './assets/medium_bow.json';
@@ -193,6 +197,7 @@ import { humanProportions } from './human';
 import { SH_TERMS, type LowLight, type SculptDraw, type TrailDraw } from './gl';
 import type { Material } from './sdf';
 import { animate, clipFor, clipsPlaying, CLIPS, heldIn, ONE_HAND, SWING_TOOL, toolsIn, type SeatFit } from './anim';
+import { eyesShut, onTheGround } from './anim/down';
 import { clipLocal } from './anim/player';
 import type { Side } from './anim/clip';
 import { wrap } from './anim/clip';
@@ -313,6 +318,8 @@ const PROPS: readonly PropAsset[] = [SWORD, { ...(WARHAMMER as unknown as PropAs
   // javelin; the ancient short sword drawn as the short sword
   SWORD_1H as unknown as PropAsset, SHORT_SWORD as unknown as PropAsset, { ...(SHORT_SWORD as unknown as PropAsset), id: ANCIENT_SWORD }, HUNTING_KNIFE as unknown as PropAsset,
   BATTLE_AXE as unknown as PropAsset, CLUB as unknown as PropAsset, SPEAR as unknown as PropAsset, JAVELIN as unknown as PropAsset, THROWING_AXE as unknown as PropAsset,
+  // what is eaten and drunk from, in the right fist while the eat and drink clips play (./anim/clips/meal.ts)
+  CUP as unknown as PropAsset, WATERSKIN as unknown as PropAsset, BREAD as unknown as PropAsset,
 ];
 const PROP_OF = new Map(PROPS.map((p) => [p.id, p]));
 /**
@@ -1057,7 +1064,8 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
     };
     stand(A.verts, A.weights, A.soles);
     garments.forEach((g, k) => { if (worn[k] && g.soles) stand(g.verts, WEIGHTS[k], g.soles); });
-    const dy = fit ? 0 : A.floor - low, s = scale();
+    // (sat or lain on the ground, or on the way down onto it or up: put where its clip puts it, `./anim/down.ts`)
+    const dy = fit || onTheGround(`${SK.body}|${pose.id}`, clipFor(pose, SK.body)?.clip.name) ? 0 : A.floor - low, s = scale();
     DY = dy;
     const sk = shapedOf(garments, worn);
     SHAPES_W = sk < 0 ? [] : shapeWeights(BONES, garments[sk], Fb);
@@ -1557,7 +1565,9 @@ export function lowScene(given: FigurePose): SculptDraw {
   const shapes = body.shapes();
   // astride, what of the body is behind the beast's barrel (the far leg down its flank) left out, as the flat figure's is
   const hide = seat?.astride ? { c: BARREL.c, r: BARREL.r } : undefined;
-  return { baked, bones, materials, view: viewOf(facing), blink: 0, low, ...(trail ? { trail } : {}), ...(shapes.some((w) => w > 0) ? { shapes } : {}), ...(hide ? { hide } : {}) };
+  // (the eyes shut asleep, meditating and praying: `./anim/down.ts` eyesShut)
+  const blink = eyesShut(`${who}|${pose.id}`, clipFor(pose, who)?.clip.name, performance.now()) ? 1 : 0;
+  return { baked, bones, materials, view: viewOf(facing), blink, low, ...(trail ? { trail } : {}), ...(shapes.some((w) => w > 0) ? { shapes } : {}), ...(hide ? { hide } : {}) };
 }
 
 /** Local turns by bone name, [rx, ry, rz] degrees (as `tools/sculpt/lowrig.mjs` posed). */

@@ -22,6 +22,8 @@ import { SHOOT } from './clips/shoot';
 import { FIGHT as FIGHT_CLIP } from './clips/fight';
 import { SEAT_OARS, SEAT_REINS, SEAT_SADDLE, SEAT_TILLER, SEAT_TILLER_LEFT, SEAT_TUCK } from './clips/seated';
 import { mirrorClip } from './author';
+import { LIFE, LIFE_LEFT, LIFE_SETTLE } from './clips/life';
+import { gettingDown } from './down';
 import { ACTION_BY_ID } from '../../game/actions';
 import { clipOfJob } from './routes';
 import { strideAt } from '../../game/player';
@@ -40,6 +42,8 @@ export const CLIPS: Record<string, Clip> = {
   idle: IDLE, walk: WALK, swing: SWING, sixseven: SIXSEVEN, work: WORK, 'work-left': mirrorClip(WORK, 'work-left'), hands: HANDS, ground: GROUND,
   fight: FIGHT_CLIP, 'fight-left': mirrorClip(FIGHT_CLIP, 'fight-left'), shoot: SHOOT,
   'seat-reins': SEAT_REINS, 'seat-oars': SEAT_OARS, 'seat-tiller': SEAT_TILLER, 'seat-tiller-left': SEAT_TILLER_LEFT, saddle: SEAT_SADDLE, 'saddle-tuck': SEAT_TUCK,
+  // sleeping, eating, drinking, praying, meditating (`./clips/life.ts`)
+  ...LIFE,
 };
 /** The clip a state plays until its own is approved: the 6 7 gesture. */
 export const PLACEHOLDER = 'sixseven';
@@ -57,7 +61,7 @@ export const CLIP_OF: Record<State, string> = {
   swing: 'swing',
   work: PLACEHOLDER,
   fight: PLACEHOLDER,
-  meditate: PLACEHOLDER,
+  meditate: 'meditate',
   emote: PLACEHOLDER,
   cast: PLACEHOLDER,
 };
@@ -70,7 +74,7 @@ export function workClipOf(job: string | undefined): string {
  * The clips played left-handed (`lefty`), by the right-handed clip's name: its mirror. The flat figure works left-handed
  * from the two facings where its right hand's blow would cross the face (`../../render/figure.ts` lefty); so does this.
  */
-const LEFT_OF: Readonly<Record<string, string>> = { work: 'work-left', fight: 'fight-left' };
+const LEFT_OF: Readonly<Record<string, string>> = { work: 'work-left', fight: 'fight-left', ...LIFE_LEFT };
 /** Whether work is done left-handed from where it is seen: as the flat figure (facings three and seven). */
 const lefty = (facing: number): boolean => { const f = ((Math.round(facing) % 8) + 8) % 8; return f === 3 || f === 7; };
 
@@ -120,7 +124,7 @@ const FADE = 0.2;
  * Seconds a fade into or out of a clip takes where that is longer than `FADE`, its feet kept planted throughout where
  * the two clips stand them (`plantBetween`): getting down onto the knees at the ground and up off them.
  */
-const SETTLE: Readonly<Record<string, number>> = { ground: 0.55 };
+const SETTLE: Readonly<Record<string, number>> = { ground: 0.55, ...LIFE_SETTLE };
 /** Seconds after a long fade lands over which the clip's own motion is let go into from rest. */
 const RELEASE = 0.25;
 /** The legs' bones, which a long fade keeps on its own pace (the root's too); the rest lead or trail them. */
@@ -337,6 +341,7 @@ export function animate(sk: Skeleton, pose: FigurePose, figure: () => Array<M3 |
   if (!pose.id) return now;
   const key = `${sk.body}|${pose.id}`, source = sat ? sat.name : c ? c.clip.name : 'figure', ms = performance.now();
   let k = KEPT.get(key);
+  const fresh = !k;
   if (k) KEPT.delete(key);
   if (!k) k = { source, out: now, from: null, at: ms };
   else if (k.source !== source) { k.span = Math.max(SETTLE[k.source] ?? FADE, SETTLE[source] ?? FADE); k.from = k.out; k.was = k.cur; k.source = source; k.at = ms; }
@@ -344,7 +349,10 @@ export function animate(sk: Skeleton, pose: FigurePose, figure: () => Array<M3 |
   KEPT.set(key, k);
   if (KEPT.size > MAX_KEPT) KEPT.delete(KEPT.keys().next().value as string);
   let out = now;
-  if (k.from) {
+  // sat or lain down, or got up again: the clip's own way down onto the ground and up off it (`./down.ts`)
+  const down = gettingDown(sk, key, k, fresh, now, ms);
+  if (down) out = down;
+  else if (k.from) {
     const span = k.span ?? FADE, u = (ms - k.at) / 1000 / span, settle = span > FADE && !!k.was && !!c && !!plantBetween(sk, k.was, c, 0);
     if (u >= 1 + (settle ? RELEASE / span : 0)) k.from = null;
     else if (settle && k.was && c) {
