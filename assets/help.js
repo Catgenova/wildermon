@@ -1,31 +1,31 @@
-import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,Ao as te,Ar as ne,At as re,Av as c,Bb as ie,Bc as ae,Bg as oe,Bm as se,Br as ce,Bs as le,Bt as ue,Bu as de,Cg as fe,Cl as pe,Co as me,Cp as he,Db as ge,Dc as _e,Dg as ve,Dm as ye,Dn as be,Do as xe,Dr as Se,Du as Ce,Dv as we,E as Te,Eb as Ee,Ec as De,Eg as Oe,En as ke,Eo as Ae,Er as je,Es as Me,F as Ne,Fa as Pe,Fg as Fe,Fm as Ie,Fn as Le,Fo as Re,Fr as ze,Fs as Be,Fu as Ve,Fv as He,Gh as Ue,Gm as We,Gr as Ge,Hb as Ke,Hg as qe,Hh as Je,Hi as Ye,Hm as Xe,Ho as Ze,Hr as Qe,Ht as $e,Hu as et,Ic as tt,Id as nt,Ih as rt,Il as it,Io as at,Ir as ot,J as st,Ja as ct,Jf as lt,Jh as ut,Ju as dt,Kc as ft,Kf as pt,Kh as mt,Km as ht,Ko as gt,Kr as _t,Ks as vt,L_ as yt,Lb as bt,Lc as xt,Lg as St,Lo as Ct,Lr as wt,Lv as Tt,M as Et,Mc as Dt,Mg as Ot,Mm as kt,Mo as At,Mr as jt,Ms as Mt,Mt as Nt,Mu as Pt,Mv as Ft,N as It,Ni as Lt,Nm as Rt,No as zt,Ns as Bt,Nv as Vt,O_ as Ht,Oa as Ut,Oo as Wt,Or as Gt,Ot as Kt,Ou as qt,Ov as Jt,P as Yt,Pa as Xt,Pg as Zt,Pm as Qt,Pv as $t,Qb as en,Qc as tn,Qi as nn,Ql as rn,Qt as an,Qv as on,Rb as sn,Rm as cn,Rp as ln,Rr as un,Rv as dn,S_ as fn,Sf as pn,Sh as mn,Si as hn,Sr as gn,Ss as _n,Ta as vn,Tb as yn,Tc as bn,Tg as xn,Tm as Sn,To as Cn,Tp as wn,Tr as Tn,Tt as En,Ua as Dn,Ud as On,Uf as kn,Uh as An,Um as jn,Ur as Mn,Us as Nn,Va as Pn,Vb as Fn,Vc as In,Vg as Ln,Vh as Rn,Vm as zn,Vr as Bn,Vs as l,Wb as Vn,Wh as Hn,Wm as Un,Ws as Wn,Wu as Gn,X as Kn,Xf as qn,Xg as Jn,Xh as Yn,Xm as Xn,Xs as Zn,Yb as Qn,Yc as $n,Yf as er,Yg as tr,Yr as nr,Yv as rr,Z_ as ir,Za as ar,Zg as or,Zh as sr,Zm as cr,Zy as lr,_b as ur,_c as dr,_f as fr,_g as pr,_i as mr,_l as hr,_o as gr,_v as _r,_x as vr,_y as yr,a_ as br,ag as xr,ah as Sr,al as Cr,ap as wr,ar as Tr,au as Er,bc as Dr,bi as Or,bn as kr,bo as Ar,br as jr,bt as Mr,bv as Nr,cd as Pr,cg as Fr,ci as Ir,cl as Lr,cn as Rr,cr as zr,cu as Br,cv as Vr,d as Hr,db as Ur,dc as Wr,di as Gr,dl as Kr,dn as qr,do as Jr,dt as Yr,du as Xr,e_ as Zr,eh as Qr,ei as $r,en as ei,ex as ti,f as ni,fc as ri,fd as ii,fg as ai,fl as oi,fo as si,fr as ci,ft as li,fu as ui,fv as di,fx as fi,fy as pi,ga as mi,gc as hi,gg as gi,gn as _i,go as vi,gp as yi,gr as bi,gv as xi,gx as Si,gy as Ci,ha as wi,hc as Ti,hg as Ei,hh as Di,hi as Oi,ho as ki,hp as Ai,hx as ji,hy as Mi,i as Ni,i_ as Pi,ib as Fi,ii as Ii,il as Li,in as Ri,ir as zi,ix as Bi,j as Vi,jc as Hi,jg as Ui,jm as Wi,jo as Gi,jr as Ki,js as qi,ju as Ji,jv as Yi,k as Xi,k_ as u,kg as Zi,kl as Qi,km as $i,ko as ea,kr as ta,kt as na,ku as ra,ky as d,lb as ia,ld as aa,lg as oa,li as sa,ll as f,lr as ca,lt as la,lu as ua,lv as da,m_ as fa,ma as pa,mc as ma,md as ha,mg as ga,mi as _a,ml as va,mr as ya,n as p,ni as ba,nn as xa,o_ as Sa,oa as m,od as Ca,of as wa,oh as Ta,oi as Ea,ol as Da,or as Oa,ou as ka,oy as Aa,p_ as ja,pa as Ma,pg as Na,pi as Pa,pl as Fa,pm as Ia,pr as La,pt as Ra,pu as za,px as Ba,qc as Va,qf as Ha,qh as Ua,ql as Wa,qm as Ga,qr as Ka,r as qa,r_ as Ja,rh as Ya,ri as h,rl as Xa,rr as Za,sa as Qa,sb as $a,sc as eo,sd as to,sg as no,sl as ro,sr as io,t_ as ao,tc as oo,th as so,ti as co,tn as lo,ty as uo,u_ as fo,ua as po,ub as g,ud as mo,ug as ho,ui as go,ur as _o,ut as vo,vc as yo,vi as bo,vl as xo,vn as So,vo as Co,vr as wo,vv as To,vx as Eo,vy as Do,wl as Oo,wm as ko,wo as Ao,wr as jo,ws as Mo,xa as No,xb as Po,xc as Fo,xf as Io,xg as Lo,xi as Ro,xl as zo,xo as Bo,xr as Vo,xs as Ho,y as Uo,y_ as Wo,yc as Go,yi as Ko,yo as qo,yr as Jo,yt as Yo,yu as Xo,yy as Zo,z as Qo,zg as $o,zm as es,zo as ts,zp as ns,zs as rs,zt as is}from"./actions.js";import{c as as,i as os,l as ss,n as cs,o as ls,r as us,s as ds,u as fs,v as ps}from"./creator.js";import{$l as ms,$n as hs,$p as gs,$r as _s,$s as vs,Ac as ys,Ad as bs,Al as xs,Ao as Ss,Ap as Cs,Bc as ws,Bd as Ts,Bf as _,Bn as Es,Br as Ds,Bu as Os,Ca as ks,Cd as As,Cm as js,Cr as Ms,Cs as Ns,Cu as Ps,Dc as Fs,Dd as Is,Di as Ls,Do as Rs,Dp as zs,Dr as Bs,Ea as Vs,Ei as Hs,Em as v,Ep as Us,Er as Ws,Es as Gs,Eu as Ks,Ff as qs,Fl as Js,Fm as Ys,Fn as Xs,Fo as Zs,Fr as Qs,Fs as $s,Fu as ec,Gc as tc,Gf as nc,Gl as rc,Gn as ic,Gt as ac,Ha as oc,Hc as sc,Hd as cc,Hi as lc,Hl as uc,Hn as dc,Ho as fc,Hs as pc,Id as mc,Ii as hc,Il as gc,Im as _c,Ip as vc,Ir as yc,Iu as bc,Jc as xc,Ji as Sc,Ju as Cc,Ka as wc,Kc as Tc,Ki as y,Ko as Ec,Ku as Dc,Ld as Oc,Lf as kc,Ll as Ac,Lm as b,Lo as jc,Lr as Mc,Lu as Nc,Mf as Pc,Ml as Fc,Mm as Ic,Mo as Lc,Mp as Rc,Mr as zc,Na as Bc,Nd as Vc,Nn as Hc,No as Uc,Np as Wc,Nr as Gc,Oa as x,Om as S,Ou as Kc,Pa as qc,Pd as Jc,Pl as Yc,Pn as Xc,Po as Zc,Pr as Qc,Qc as $c,Ql as el,Qn as tl,Qo as nl,Qs as rl,Rl as il,Rm as al,Ru as ol,Sa as sl,Sl as cl,Sp as ll,St as ul,Ta as dl,Tc as fl,Ti as pl,Tl as ml,Tm as C,Tr as hl,Uc as gl,Ud as _l,Ui as vl,Un as yl,Ur as bl,Va as xl,Vc as Sl,Vd as Cl,Vf as wl,Vi as Tl,Vl as El,Vm as Dl,Vn as Ol,Wc as kl,Wd as Al,Wi as jl,Wn as Ml,Wt as Nl,Wu as Pl,Xa as w,Xd as Fl,Xl as Il,Xn as Ll,Xo as Rl,Xr as zl,Xu as Bl,Yc as Vl,Yf as T,Yn as Hl,Zn as Ul,Zo as Wl,Zs as Gl,Zu as Kl,_c as ql,_m as Jl,_p as Yl,_r as Xl,_t as Zl,_u as Ql,aa as $l,af as eu,am as tu,an as nu,ar as ru,bf as iu,bm as E,bt as au,bu as ou,cd as su,cf as cu,cm as lu,cn as uu,cr as du,df as fu,dn as pu,do as mu,dr as hu,ec as gu,ed as _u,er as vu,es as yu,fi as bu,fo as xu,fr as Su,gc as Cu,gl as wu,gu as D,hl as Tu,hs as Eu,hu as Du,if as Ou,ii as ku,ir as Au,iu as ju,ja as Mu,ji as Nu,jn as Pu,jp as Fu,jr as Iu,kf as Lu,kl as Ru,ko as zu,ks as Bu,ld as Vu,lf as Hu,ln as Uu,lr as Wu,ms as Gu,mu as Ku,nr as qu,ns as Ju,oa as Yu,od as Xu,om as Zu,on as Qu,or as $u,pr as ed,ps as O,pu as td,qc as nd,ql as rd,qt as id,qu as ad,rf as od,sm as sd,ta as cd,tc as ld,td as ud,tf as dd,tr as fd,ts as pd,tu as md,ur as hd,vl as gd,vm as k,vo as _d,vp as vd,vr as yd,vt as bd,wd as xd,wr as Sd,xa as Cd,xc as wd,xd as Td,xp as Ed,xr as Dd,xt as Od,xu as kd,yf as Ad,yl as jd,yr as Md,yt as Nd,yu as Pd,zu as Fd}from"./figure.js";import{$n as Id,An as Ld,Ar as Rd,Cr as zd,Dr as Bd,Fn as Vd,Gn as Hd,Hn as Ud,Jn as Wd,Kn as Gd,Ln as Kd,Mn as qd,Mr as Jd,Nr as Yd,Or as Xd,Pn as Zd,Pr as Qd,Qn as $d,Rn as ef,Vn as tf,Wn as nf,Yn as rf,Zn as A,an as af,ar as of,cn as sf,di as cf,dn as lf,er as uf,fi as df,fr as ff,gi as pf,hn as mf,ir as hf,jn as gf,jr as _f,kr as vf,li as yf,ln as bf,mi as xf,nr as Sf,on as Cf,or as wf,pr as Tf,qn as Ef,rr as Df,sn as Of,tr as kf,vr as Af,wr as jf,yr as Mf,zr as Nf}from"./sprites.js";import{B as Pf,n as Ff}from"./life.js";import"./view.js";import{Bn as If,C as Lf,Ct as Rf,Dn as zf,Fn as Bf,Ft as Vf,It as Hf,Jn as Uf,Kn as j,O as Wf,On as Gf,Qt as Kf,St as qf,Tn as Jf,Tt as Yf,Vn as Xf,Xn as Zf,Xt as Qf,Yn as $f,Yt as ep,Zn as tp,_ as np,at as rp,bt as ip,ct as ap,dt as op,f as sp,it as cp,lt as lp,m as up,mn as dp,ot as M,qn as fp,r as pp,ut as mp,v as hp}from"./watch.js";import{b as gp,c as _p}from"./runecut-art.js";var vp=C(Lu.filter(e=>e.yields.endsWith(`_shards`)).map(e=>w(e.yields).name.toLowerCase())),yp=cp.find(e=>`ore:below`in e.fx),bp=pi.filter(e=>e.hearth).map(e=>k(e.name)+` `+e.name.toLowerCase()),xp=An.filter(e=>e.ages),Sp=Hn.get(`grape_wine`)?.ages,Cp=Object.keys(dl).filter(e=>Rn(e)&&!Yn(e)&&e!==`dye`).map(e=>dl[e]),wp=e=>zt.find(t=>t.id===e)?.label??e,Tp=pi.filter(e=>ha().includes(e.id)&&e.bill.length).map(e=>k(e.name)+` `+e.name.toLowerCase()),Ep=pi.filter(e=>((e.capacity??0)>0||(e.heft??0)>0)&&!Fi(e.id,e)).map(e=>k(e.name)+` `+e.name.toLowerCase()),Dp=()=>{let e=_p.filter(e=>Vf.has(e.kind)).map(e=>`the ${e.label.toLowerCase()}`);return e.length>1?`${e.slice(0,-1).join(`, `)} or ${e[e.length-1]}`:e.join(``)},Op=e=>M(`farmer`).find(t=>e in t.fx)?.name??e,kp=()=>{let e=ud.get(Rd),t=(Os.find(t=>t.id===e?.laidIn)?.name??``).toLowerCase();return`<p><b>${Nf()}</b>: settlement entrance.</p>
+import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,Ao as te,Ar as ne,At as re,Av as ie,Bb as ae,Bc as oe,Bg as se,Bm as ce,Br as le,Bs as ue,Bt as de,Bu as fe,Cg as pe,Cl as me,Co as he,Cp as ge,Db as _e,Dc as ve,Dg as ye,Dm as be,Dn as xe,Do as Se,Dr as Ce,Du as we,Dv as Te,E as Ee,Eb as De,Ec as Oe,Eg as ke,En as Ae,Eo as je,Er as Me,Es as Ne,F as Pe,Fa as Fe,Fg as Ie,Fm as Le,Fn as Re,Fo as ze,Fr as Be,Fs as Ve,Fu as He,Fv as Ue,Gh as We,Gm as Ge,Gr as Ke,Hb as qe,Hg as Je,Hh as Ye,Hi as Xe,Hm as Ze,Ho as Qe,Hr as $e,Ht as et,Hu as tt,Ic as nt,Id as rt,Ih as it,Il as at,Io as ot,Ir as st,J as ct,Ja as lt,Jf as ut,Jh as dt,Ju as ft,Kc as pt,Kf as mt,Kh as ht,Km as gt,Ko as _t,Kr as vt,Ks as yt,L_ as bt,Lb as xt,Lc as St,Lg as Ct,Lo as wt,Lr as Tt,Lv as Et,M as Dt,Mc as Ot,Mg as kt,Mm as At,Mo as jt,Mr as Mt,Ms as Nt,Mt as Pt,Mu as Ft,Mv as It,N as Lt,Ni as Rt,Nm as zt,No as Bt,Ns as Vt,Nv as Ht,O_ as Ut,Oa as Wt,Oo as Gt,Or as Kt,Ot as qt,Ou as Jt,Ov as Yt,P as Xt,Pa as Zt,Pg as Qt,Pm as $t,Pv as en,Qb as tn,Qc as nn,Qi as rn,Ql as an,Qt as on,Qv as sn,Rb as cn,Rm as ln,Rp as un,Rr as dn,Rv as fn,S_ as pn,Sf as mn,Sh as hn,Si as gn,Sr as _n,Ss as vn,Ta as yn,Tb as bn,Tc as xn,Tg as Sn,Tm as Cn,To as wn,Tp as Tn,Tr as En,Tt as Dn,Ua as On,Ud as kn,Uf as An,Uh as jn,Um as Mn,Ur as Nn,Us as Pn,Va as Fn,Vb as In,Vc as Ln,Vg as Rn,Vh as zn,Vm as Bn,Vr as Vn,Vs as c,Wb as Hn,Wh as Un,Wm as Wn,Ws as Gn,Wu as Kn,X as qn,Xf as Jn,Xg as Yn,Xh as Xn,Xm as Zn,Xs as Qn,Yb as $n,Yc as er,Yf as tr,Yg as nr,Yr as rr,Yv as ir,Z_ as ar,Za as or,Zg as sr,Zh as cr,Zm as lr,Zy as ur,_b as dr,_c as fr,_f as pr,_g as mr,_i as hr,_l as gr,_o as _r,_v as vr,_x as yr,_y as br,a_ as xr,ag as l,ah as Sr,al as Cr,ap as wr,ar as Tr,au as Er,bc as Dr,bi as Or,bn as kr,bo as Ar,br as jr,bt as Mr,bv as Nr,cd as Pr,cg as Fr,ci as Ir,cl as Lr,cn as Rr,cr as zr,cu as Br,cv as Vr,d as Hr,db as Ur,dc as Wr,di as Gr,dl as Kr,dn as qr,do as Jr,dt as Yr,du as Xr,e_ as Zr,eh as Qr,ei as $r,en as ei,ex as ti,f as ni,fc as ri,fd as ii,fg as ai,fl as oi,fo as si,fr as ci,ft as li,fu as ui,fv as di,fx as fi,fy as pi,ga as mi,gc as hi,gg as gi,gn as _i,go as vi,gp as yi,gr as bi,gv as xi,gx as Si,gy as Ci,ha as wi,hc as Ti,hg as Ei,hh as Di,hi as Oi,ho as ki,hp as Ai,hx as ji,hy as Mi,i as Ni,i_ as Pi,ib as Fi,ii as Ii,il as Li,in as Ri,ir as zi,ix as Bi,j as Vi,jc as Hi,jg as Ui,jm as Wi,jo as Gi,jr as Ki,js as qi,ju as Ji,jv as Yi,k as Xi,k_ as u,kg as Zi,kl as Qi,km as $i,ko as ea,kr as ta,kt as na,ku as ra,ky as d,lb as ia,ld as aa,lg as oa,li as sa,ll as f,lr as ca,lt as la,lu as ua,lv as da,m_ as fa,ma as pa,mc as ma,md as ha,mg as ga,mi as _a,ml as va,mr as ya,n as p,ni as ba,nn as xa,o_ as Sa,oa as m,od as Ca,of as wa,oh as Ta,oi as Ea,ol as Da,or as Oa,ou as ka,oy as Aa,p_ as ja,pa as Ma,pg as Na,pi as Pa,pl as Fa,pm as Ia,pr as La,pt as Ra,pu as za,px as Ba,qc as Va,qf as Ha,qh as Ua,ql as Wa,qm as Ga,qr as Ka,r as qa,r_ as Ja,rh as Ya,ri as h,rl as Xa,rr as Za,sa as Qa,sb as $a,sc as eo,sd as to,sg as no,sl as ro,sr as io,t_ as ao,tc as oo,th as so,ti as co,tn as lo,ty as uo,u_ as fo,ua as po,ub as g,ud as mo,ug as ho,ui as go,ur as _o,ut as vo,vc as yo,vi as bo,vl as xo,vn as So,vo as Co,vr as wo,vv as To,vx as Eo,vy as Do,wl as Oo,wm as ko,wo as Ao,wr as jo,ws as Mo,xa as No,xb as Po,xc as Fo,xf as Io,xg as Lo,xi as Ro,xl as zo,xo as Bo,xr as Vo,xs as Ho,y as Uo,y_ as Wo,yc as Go,yi as Ko,yo as qo,yr as Jo,yt as Yo,yu as Xo,yy as Zo,z as Qo,zg as $o,zm as es,zo as ts,zp as ns,zs as rs,zt as is}from"./actions.js";import{c as as,i as os,l as ss,n as cs,o as ls,r as us,s as ds,u as fs,v as ps}from"./creator.js";import{$l as ms,$n as hs,$p as gs,$r as _s,$s as vs,Ac as ys,Ad as bs,Al as xs,Ao as Ss,Ap as Cs,Bc as ws,Bd as Ts,Bf as _,Bn as Es,Br as Ds,Bu as Os,Ca as ks,Cd as As,Cm as js,Cr as Ms,Cs as Ns,Cu as Ps,Dc as Fs,Dd as Is,Di as Ls,Do as Rs,Dp as zs,Dr as Bs,Ea as Vs,Ei as Hs,Em as v,Ep as Us,Er as Ws,Es as Gs,Eu as Ks,Ff as qs,Fl as Js,Fm as Ys,Fn as Xs,Fo as Zs,Fr as Qs,Fs as $s,Fu as ec,Gc as tc,Gf as nc,Gl as rc,Gn as ic,Gt as ac,Ha as oc,Hc as sc,Hd as cc,Hi as lc,Hl as uc,Hn as dc,Ho as fc,Hs as pc,Id as mc,Ii as hc,Il as gc,Im as _c,Ip as vc,Ir as yc,Iu as bc,Jc as xc,Ji as Sc,Ju as Cc,Ka as wc,Kc as Tc,Ki as y,Ko as Ec,Ku as Dc,Ld as Oc,Lf as kc,Ll as Ac,Lm as b,Lo as jc,Lr as Mc,Lu as Nc,Mf as Pc,Ml as Fc,Mm as Ic,Mo as Lc,Mp as Rc,Mr as zc,Na as Bc,Nd as Vc,Nn as Hc,No as Uc,Np as Wc,Nr as Gc,Oa as x,Om as S,Ou as Kc,Pa as qc,Pd as Jc,Pl as Yc,Pn as Xc,Po as Zc,Pr as Qc,Qc as $c,Ql as el,Qn as tl,Qo as nl,Qs as rl,Rl as il,Rm as al,Ru as ol,Sa as sl,Sl as cl,Sp as ll,St as ul,Ta as dl,Tc as fl,Ti as pl,Tl as ml,Tm as C,Tr as hl,Uc as gl,Ud as _l,Ui as vl,Un as yl,Ur as bl,Va as xl,Vc as Sl,Vd as Cl,Vf as wl,Vi as Tl,Vl as El,Vm as Dl,Vn as Ol,Wc as kl,Wd as Al,Wi as jl,Wn as Ml,Wt as Nl,Wu as Pl,Xa as w,Xd as Fl,Xl as Il,Xn as Ll,Xo as Rl,Xr as zl,Xu as Bl,Yc as Vl,Yf as T,Yn as Hl,Zn as Ul,Zo as Wl,Zs as Gl,Zu as Kl,_c as ql,_m as Jl,_p as Yl,_r as Xl,_t as Zl,_u as Ql,aa as $l,af as eu,am as tu,an as nu,ar as ru,bf as iu,bm as E,bt as au,bu as ou,cd as su,cf as cu,cm as lu,cn as uu,cr as du,df as fu,dn as pu,do as mu,dr as hu,ec as gu,ed as _u,er as vu,es as yu,fi as bu,fo as xu,fr as Su,gc as Cu,gl as wu,gu as D,hl as Tu,hs as Eu,hu as Du,if as Ou,ii as ku,ir as Au,iu as ju,ja as Mu,ji as Nu,jn as Pu,jp as Fu,jr as Iu,kf as Lu,kl as Ru,ko as zu,ks as Bu,ld as Vu,lf as Hu,ln as Uu,lr as Wu,ms as Gu,mu as Ku,nr as qu,ns as Ju,oa as Yu,od as Xu,om as Zu,on as Qu,or as $u,pr as ed,ps as O,pu as td,qc as nd,ql as rd,qt as id,qu as ad,rf as od,sm as sd,ta as cd,tc as ld,td as ud,tf as dd,tr as fd,ts as pd,tu as md,ur as hd,vl as gd,vm as k,vo as _d,vp as vd,vr as yd,vt as bd,wd as xd,wr as Sd,xa as Cd,xc as wd,xd as Td,xp as Ed,xr as Dd,xt as Od,xu as kd,yf as Ad,yl as jd,yr as Md,yt as Nd,yu as Pd,zu as Fd}from"./figure.js";import{$n as Id,Ar as Ld,Br as Rd,Fn as zd,Fr as Bd,Gn as Vd,Hn as Hd,In as Ud,Jn as Wd,Kn as Gd,Mn as Kd,Mr as qd,Nn as Jd,Nr as Yd,Or as Xd,Pr as Zd,Qn as A,Rn as Qd,Tr as $d,Un as ef,Xn as tf,Yn as nf,_i as rf,ar as af,br as of,cn as sf,er as cf,fi as lf,fn as uf,gn as df,hi as ff,ir as pf,jn as mf,jr as hf,kr as gf,ln as _f,mr as vf,nr as yf,on as bf,or as xf,pi as Sf,pr as Cf,qn as wf,rr as Tf,sn as Ef,sr as Df,tr as Of,ui as kf,un as Af,wr as jf,yr as Mf,zn as Nf}from"./sprites.js";import{B as Pf,n as Ff}from"./life.js";import"./view.js";import{Bn as If,C as Lf,Ct as Rf,Dn as zf,Fn as Bf,Ft as Vf,It as Hf,Jn as Uf,Kn as j,O as Wf,On as Gf,Qt as Kf,St as qf,Tn as Jf,Tt as Yf,Vn as Xf,Xn as Zf,Xt as Qf,Yn as $f,Yt as ep,Zn as tp,_ as np,at as rp,bt as ip,ct as ap,dt as op,f as sp,it as cp,lt as lp,m as up,mn as dp,ot as M,qn as fp,r as pp,ut as mp,v as hp}from"./watch.js";import{b as gp,c as _p}from"./runecut-art.js";var vp=C(Lu.filter(e=>e.yields.endsWith(`_shards`)).map(e=>w(e.yields).name.toLowerCase())),yp=cp.find(e=>`ore:below`in e.fx),bp=pi.filter(e=>e.hearth).map(e=>k(e.name)+` `+e.name.toLowerCase()),xp=jn.filter(e=>e.ages),Sp=Un.get(`grape_wine`)?.ages,Cp=Object.keys(dl).filter(e=>zn(e)&&!Xn(e)&&e!==`dye`).map(e=>dl[e]),wp=e=>Bt.find(t=>t.id===e)?.label??e,Tp=pi.filter(e=>ha().includes(e.id)&&e.bill.length).map(e=>k(e.name)+` `+e.name.toLowerCase()),Ep=pi.filter(e=>((e.capacity??0)>0||(e.heft??0)>0)&&!Fi(e.id,e)).map(e=>k(e.name)+` `+e.name.toLowerCase()),Dp=()=>{let e=_p.filter(e=>Vf.has(e.kind)).map(e=>`the ${e.label.toLowerCase()}`);return e.length>1?`${e.slice(0,-1).join(`, `)} or ${e[e.length-1]}`:e.join(``)},Op=e=>M(`farmer`).find(t=>e in t.fx)?.name??e,kp=()=>{let e=ud.get(hf),t=(Os.find(t=>t.id===e?.laidIn)?.name??``).toLowerCase();return`<p><b>${Rd()}</b>: settlement entrance.</p>
     <ul>
       <li>Build: point at a tile edge on the ground, <b>Plan fence</b>, <b>${e?.name}</b>; feed with <b>Build fence</b>.
-      Material: ${t} only. Bill: ${L(Object.entries(bs(e?.laidIn??``,Rd).total))}.</li>
+      Material: ${t} only. Bill: ${L(Object.entries(bs(e?.laidIn??``,hf).total))}.</li>
       <li>No door, no lock, see-through. People, carts and wildermon pass. Nothing rests on its lintel.</li>
-      <li>Lights while a citizen stands within ${Yd} of a tile of the middle of its opening: the founder, or a rank
+      <li>Lights while a citizen stands within ${Zd} of a tile of the middle of its opening: the founder, or a rank
       with <b>${g.gate.label}</b>, of a settlement whose border takes in the tile on either side.
       Strangers, ranks without ${g.gate.label} and wildermon do not light it.</li>
-      <li>Light up: ${Qd} s. Go out: ${_f} s after the last citizen leaves.</li>
-      <li>Lit after dark: light ${Jd} tiles round its opening. No other effect.</li>
+      <li>Light up: ${Bd} s. Go out: ${qd} s after the last citizen leaves.</li>
+      <li>Lit after dark: light ${Yd} tiles round its opening. No other effect.</li>
       <li>Island: the member lists of settlements with a rune gate are sent to every player ashore.</li>
-    </ul>`},Ap=()=>{let e=_u.filter(e=>e.low).map(e=>e.name.toLowerCase()).map(e=>`${k(e)} ${e}`);return e.length<2?e[0]??``:`${e.slice(0,-1).join(`, `)} or ${e[e.length-1]}`},jp=()=>C(Object.entries(Vu(bc.id,`roof`,xd(void 0)).total).map(([e,t])=>`${t} ${nt(e,t)}`)),Mp=()=>C(Object.entries(bs(bc.id,`solid`).total).map(([e,t])=>`${t} ${nt(e,t)}`)),Np=()=>su(Vu(ec.id),nt,ec.id),Pp=()=>C(Object.values(ec.extra??{}).map(e=>e.toLowerCase())),Fp=()=>C(_u.filter(e=>Is(bc,{wall:e.id})).map(e=>e.id===`solid`?`solid wall`:e.name.toLowerCase())),Ip=()=>M(`farmer`).filter(e=>!(`rotate:plant_seed`in e.fx)&&Object.keys(e.fx).some(e=>/:(plant_seed|harvest_crop)$/.test(e)||e.startsWith(`plus:`))),Lp=()=>`${+(450/60).toFixed(1)} minutes`,N=e=>`×${+e.toFixed(2)}`,P=e=>{for(let t of[2,3,4,5,6,8,10,12,20]){let n=Math.round(e*t);if(n>=1&&n<t&&Math.abs(e*t-n)<1e-6)return`${n}/${t}`}return S(e)},F=e=>{let t=Math.round(e),n=(e,t)=>`${e} ${t}${e===1?``:`s`}`;if(t<90)return n(t,`second`);if(t<600)return n(Math.round(t/30)/2,`minute`);let r=Math.round(t/60);if(r<60)return n(r,`minute`);if(r<120)return r===60?n(1,`hour`):`${n(1,`hour`)} ${n(r-60,`minute`)}`;let i=Math.round(r/15)/4;return i>=24&&i%24==0?n(i/24,`day`):n(i,`hour`)},I=(e,t)=>oc(e,t,!0),L=e=>xl(e,!0),Rp=e=>{let t=R(e);return`<b>${t.label}</b>, ${B(e)} into ${I(t.result,t.count??1)}`},zp=`+${+(on*100).toFixed(4)}%`,Bp=`${zp} per soul strength level over 20`,Vp=(e,t)=>`+${Dl(e,t,1).toFixed(1)}`,Hp=Array.from({length:5},(e,t)=>1+t),Up=[1,50,100],Wp=Yu.get(`short_sword`),Gp=[1,30,50],Kp=e=>String(+e.toFixed(2)),qp=[0,50,100],Jp=e=>Math.round(dn(qp[1],$t[0],e)),Yp=()=>{let e=Os.find(e=>e.id===`stained_glass`);return e?Td(e):``},Xp=e=>ud.get(e)?.fittings?.find(([e])=>e===`glass`)?.[1]??0,R=e=>{let t=l.get(e);if(!t)throw Error(`The help names a recipe there is not: ${e}`);return t},Zp={garment:`a garment`,banner:`a banner`,sail:`a sailing boat`,ship:`a caravel`,wall:`a side of a wall`,floor:`a tile of floor`},Qp=e=>{let t=Yc[e];if(!t)throw Error(`The help names an enchantment there is not: ${e}`);return ms(t,ju(t,100))},z=e=>b.get(e)?.name??e,$p=[0,1],em=`${S($p[0])}–${S($p[1])}: from brushing and feeding; raises breeding odds`;function tm(){let e=[[1,20],[20,40],[50,50],[90,100]],t=cp.find(e=>`burn:secs`in e.fx),n=cp.find(e=>`burn:rate`in e.fx),r=Mr&&t&&n?` Swung by a Kindler: counts as their burn. Lasts ${N(Mr.fx.long)} as long while ${Mr.name} holds
+    </ul>`},Ap=()=>{let e=_u.filter(e=>e.low).map(e=>e.name.toLowerCase()).map(e=>`${k(e)} ${e}`);return e.length<2?e[0]??``:`${e.slice(0,-1).join(`, `)} or ${e[e.length-1]}`},jp=()=>C(Object.entries(Vu(bc.id,`roof`,xd(void 0)).total).map(([e,t])=>`${t} ${rt(e,t)}`)),Mp=()=>C(Object.entries(bs(bc.id,`solid`).total).map(([e,t])=>`${t} ${rt(e,t)}`)),Np=()=>su(Vu(ec.id),rt,ec.id),Pp=()=>C(Object.values(ec.extra??{}).map(e=>e.toLowerCase())),Fp=()=>C(_u.filter(e=>Is(bc,{wall:e.id})).map(e=>e.id===`solid`?`solid wall`:e.name.toLowerCase())),Ip=()=>M(`farmer`).filter(e=>!(`rotate:plant_seed`in e.fx)&&Object.keys(e.fx).some(e=>/:(plant_seed|harvest_crop)$/.test(e)||e.startsWith(`plus:`))),Lp=()=>`${+(450/60).toFixed(1)} minutes`,N=e=>`×${+e.toFixed(2)}`,P=e=>{for(let t of[2,3,4,5,6,8,10,12,20]){let n=Math.round(e*t);if(n>=1&&n<t&&Math.abs(e*t-n)<1e-6)return`${n}/${t}`}return S(e)},F=e=>{let t=Math.round(e),n=(e,t)=>`${e} ${t}${e===1?``:`s`}`;if(t<90)return n(t,`second`);if(t<600)return n(Math.round(t/30)/2,`minute`);let r=Math.round(t/60);if(r<60)return n(r,`minute`);if(r<120)return r===60?n(1,`hour`):`${n(1,`hour`)} ${n(r-60,`minute`)}`;let i=Math.round(r/15)/4;return i>=24&&i%24==0?n(i/24,`day`):n(i,`hour`)},I=(e,t)=>oc(e,t,!0),L=e=>xl(e,!0),Rp=e=>{let t=R(e);return`<b>${t.label}</b>, ${B(e)} into ${I(t.result,t.count??1)}`},zp=`+${+(sn*100).toFixed(4)}%`,Bp=`${zp} per soul strength level over 20`,Vp=(e,t)=>`+${Dl(e,t,1).toFixed(1)}`,Hp=Array.from({length:5},(e,t)=>1+t),Up=[1,50,100],Wp=Yu.get(`short_sword`),Gp=[1,30,50],Kp=e=>String(+e.toFixed(2)),qp=[0,50,100],Jp=e=>Math.round(fn(qp[1],en[0],e)),Yp=()=>{let e=Os.find(e=>e.id===`stained_glass`);return e?Td(e):``},Xp=e=>ud.get(e)?.fittings?.find(([e])=>e===`glass`)?.[1]??0,R=e=>{let t=c.get(e);if(!t)throw Error(`The help names a recipe there is not: ${e}`);return t},Zp={garment:`a garment`,banner:`a banner`,sail:`a sailing boat`,ship:`a caravel`,wall:`a side of a wall`,floor:`a tile of floor`},Qp=e=>{let t=Yc[e];if(!t)throw Error(`The help names an enchantment there is not: ${e}`);return ms(t,ju(t,100))},z=e=>b.get(e)?.name??e,$p=[0,1],em=`${S($p[0])}–${S($p[1])}: from brushing and feeding; raises breeding odds`;function tm(){let e=[[1,20],[20,40],[50,50],[90,100]],t=cp.find(e=>`burn:secs`in e.fx),n=cp.find(e=>`burn:rate`in e.fx),r=Mr&&t&&n?` Swung by a Kindler: counts as their burn. Lasts ${N(Mr.fx.long)} as long while ${Mr.name} holds
       (${Mr.fx.secs} s); +${S(t.fx[`burn:secs`]-1)} duration with ${t.name}; +${S(n.fx[`burn:rate`]-1)}
       damage a second with ${n.name}.`:``,i=Js.map(e=>`<li><b>${e.name}</b>: ${B(`make_${e.scroll}`)}; on ${uc[e.on]}.
-      QL 100: ${En(e,100)} Scales with QL; QL 50: ${En(e,50)}
+      QL 100: ${Dn(e,100)} Scales with QL; QL 50: ${Dn(e,50)}
       ${e.effect===`burn`?r:``}</li>`).join(``),o=Js[0];return`<h4>Scrolls</h4>
     <ul>
       <li>Written at the crafting window with <b>enchanting</b>, one recipe per enchantment, at ${U(`make_${o.scroll}`)}.</li>
-      <li>Every scroll shut until its <b>Formula</b> is read: greyed, padlocked, "${a(l.get(`make_${o.scroll}`))}".
-      A Formula: per butchering, ${C(qt(`formula`).map(e=>`${e.kind} ${S(e.odds)}`))}; one not read first.
-      <b>${Ce.formula.label}</b>: opens it for good, Formula used up; already open: not read ("${Ce.formula.known}").</li>
+      <li>Every scroll shut until its <b>Formula</b> is read: greyed, padlocked, "${a(c.get(`make_${o.scroll}`))}".
+      A Formula: per butchering, ${C(Jt(`formula`).map(e=>`${e.kind} ${S(e.odds)}`))}; one not read first.
+      <b>${we.formula.label}</b>: opens it for good, Formula used up; already open: not read ("${we.formula.known}").</li>
       <li>Quality (QL): the usual craft check, capped at the papyrus sheet's QL.</li>
       <li>Failure: motes lost; the sheet takes 25 damage (spread over its pile's sheets); a sheet that would reach 100 is used up.</li>
     </ul>
     <ul>${i}</ul>
     <h4>Enchanter's plinth</h4>
     <ul>
-      <li>Enchant is done standing within ${yr} tiles of the middle of an <b>enchanter's plinth</b> on the ground; writing a scroll needs none.</li>
+      <li>Enchant is done standing within ${br} tiles of the middle of an <b>enchanter's plinth</b> on the ground; writing a scroll needs none.</li>
       <li>Bill: ${B(`make_${Fc}`)}. Built with a trowel at ${U(`make_${Fc}`)}. Gathers moss like a statue.</li>
       <li>Night light: ${jd} tiles at rest, ${gd} tiles while somebody enchants at it.</li>
     </ul>
@@ -64,7 +64,7 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     </ul>
     <h4>Tools</h4>
     <ul>
-      <li>Action tools: ${C([...Kt()].map(e=>w(e).name.toLowerCase()))}. A weapon takes
+      <li>Action tools: ${C([...qt()].map(e=>w(e).name.toLowerCase()))}. A weapon takes
       ${C(Js.filter(e=>e.on===`tool`).map(e=>e.name))} only if it is one of these.</li>
       <li>Several of a tool carried: the one best at the action is used, and its enchantment counts.</li>
       <li>Swiftwork: % off time per action (${Qp(`swiftwork`)} at QL 100) after the floor; multiplies with time-per-action perks, a piece standing near and Steady Hands.</li>
@@ -114,7 +114,7 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     </ul>
     <h4>Traps, nets, beds</h4>
     <ul>
-      <li>Snarecraft: multiplies a trap's catch chance after its QL, the wildermon's wariness and timid or hunter; max ${md(dr)}.
+      <li>Snarecraft: multiplies a trap's catch chance after its QL, the wildermon's wariness and timid or hunter; max ${md(fr)}.
       Creel: multiplies fish chance after maker's mark. Enchanted in place or in the pack; kept through pickup and set-down.</li>
       <li>Netmender: multiplies a drag's average haul after a Fisher's Full Net and the net's maker's mark; its fish % × 5 off
       drag wear on the net, alongside Truesteel and perks.</li>
@@ -144,7 +144,7 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       <li>Barrel: keeps its QL, averaged by litres with milk already there (see Brewing).</li>
       <li>Cheese: pressed in a clay bowl (${U(`make_cheese`)}): ${H(`make_cheese`)} <b>cheeses</b>. Returns a <b>bucket of whey</b>
       (5 litres).</li>
-      <li>Butter: churned within ${yr} tiles of a <b>butter churn</b> on the ground (${U(ri)}): ${H(ri)}
+      <li>Butter: churned within ${br} tiles of a <b>butter churn</b> on the ground (${U(ri)}): ${H(ri)}
       pats of <b>butter</b>. Returns the bucket empty. Churn: ${(b.get(R(`make_butter_churn`).skill)?.name??``).toLowerCase()},
       ${B(`make_${Wr}`)}.</li>
       <li>Failed cheese or butter: bucket of milk damaged by its QL (see Crafting, <i>Failure</i>).</li>
@@ -158,15 +158,15 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     </ul>
     <h4>Whey</h4>
     <ul>
-      <li>Feed to any wildermon you keep: fills ${S(Ti)} of its hunger (one item of its own diet: ${S(Gt)}). Bucket returned empty.</li>
+      <li>Feed to any wildermon you keep: fills ${S(Ti)} of its hunger (one item of its own diet: ${S(Kt)}). Bucket returned empty.</li>
       <li>Drink: ${S(w(`whey_bucket`).drink??0)} of thirst a litre. Can be poured into a barrel or tipped out. Rots as fast as a bucket of milk.</li>
-    </ul>`}var rm=[25,50,100],B=(e,t=!0)=>xl(R(e).inputs.map(e=>[e.item,e.count??1]),t),V=(e,t)=>{let n=R(e).inputs.find(e=>e.item===t);if(!n)throw Error(`The help says ${e} takes ${t}, and it does not.`);return n.litres??n.count??1},im=e=>{let t=R(e).inputs.find(e=>e.litres);if(!t)throw Error(`The help says ${e} takes a liquid, and it does not.`);return`${t.litres} L ${dl[qc[t.item].liquid]}`},H=e=>R(e).count??1,U=e=>{let t=R(e);return`${(b.get(t.skill)?.name??t.skill).toLowerCase()} ${t.difficulty??0}`},W=e=>{let t=fu.get(e);if(!t)throw Error(`The help names a material there is not: ${e}`);return t},am=e=>qs[e],om=e=>1-nc(am(e).roll,1),sm=e=>{let t=0;for(let n=1;n<=48;n++){if(t=Math.min(12,t+e),t>=8)return n;t=Math.max(0,t-1)}return null},cm=e=>`${e} time${e===1?``:`s`}`,lm=2,um=[1,2],dm=(e,t)=>w(e).feeds?.[t]??0,fm=ud.get(`counter`)??{factor:1,fittings:[]},pm=fm.fittings?.find(([e])=>e===`hinge`)?.[1]??0,G=100,K=1,mm=3600,hm=e=>`${String(Math.floor(e)).padStart(2,`0`)}:${String(Math.round(e%1*60)).padStart(2,`0`)}`,gm=Object.values(h).filter(e=>e.glow),_m=Object.values(h).filter(e=>e.wound===`burn`),vm=18/24,q=e=>b.get(e)?.start??1,J=100,ym=100,bm=y.plate.burden*W(`iron`).weight,xm=e=>Math.round(100/(Ps(e)*W(`copper`).wear)/10)*10,Sm=80,Cm=90,wm=e=>Math.ceil(Sm/Uo(e).healed),Tm=e=>`${+(Sm*Uo(e).cost).toFixed(1)} points`,Em=Object.values($c),Dm=`${D} to ${+(D+Ql).toFixed(2)} times`,Om=1,km=e=>String(+(e/10).toFixed(2)),Am=ud.get(`railing`)??{factor:0},jm=()=>{let e=[...new Set(Os.map(e=>e.heft))].sort((e,t)=>e-t),t=e=>e.length<2?e[0]??``:`${e.slice(0,-1).join(`, `)} or ${e[e.length-1]}`;return e.map(n=>`${Nc[n]} (${C(Os.filter(e=>e.heft===n).map(e=>e.name.toLowerCase()))}) goes over ${n===e[0]?`anything`:n===e[e.length-1]?`${Nc[n]} only`:t(e.filter(e=>e>=n).map(e=>Nc[e]))}`).join(`; `)},Mm=()=>[`log`,`marble`].map(e=>`${L(Object.entries(Xu(e).needed))} in ${e}`).join(`, `),Y=x.map((e,t)=>t).slice(1),Nm=x.findIndex(e=>e.name===`supreme`),Pm=(()=>{let e=x.map((e,t)=>+(t===0||t===Nm)),t=x.map((e,t)=>t===0?2:0);return{units:e.reduce((e,t)=>e+t,0),step:x[Nm].name,more:mu(e)[Nm]-mu(t)[Nm]}})(),Fm=Wa.get(`study_book`)?.baseTime??0,Im=(al.find(e=>e.id===`papyrusmaking`)?.name??`papyrusmaking`).toLowerCase(),Lm=50,[Rm,zm]=pt,Bm=p.get(`plan_wall`),Vm=p.get(`demolish_bridge`),Hm=p.get(`demolish_aqueduct`),Um=p.get(`set_aqueduct_mote`),Wm=e=>Math.ceil(14/e),Gm=e=>`${k(e)} ${e.toLowerCase()}`,X=e=>p.get(e)?.label??e,Z=e=>`${cc(Al(e))} (${Al(e)})`,Km=e=>{let t=Math.floor(Oc/e.length),n={red:0,yellow:0,blue:0,ql:50};return e.forEach((r,i)=>{n[r]=i===0?Oc-t*(e.length-1):t}),n},qm={...Km([`red`,`blue`]),ql:38},Jm=e=>C(Qr(e).map(e=>`${dd(e.grams)} kg of ${w(e.from).name.toLowerCase()} (${e.count})`)),Ym=2,Xm=26,Zm=75,Qm=[...new Set(jl.map(e=>e.slot))],$m=Object.values(y).filter(e=>!jl.some(t=>t.cls===e.id&&l.get(`make_${t.id}`)?.inputs.some(e=>e.item===`dragon_scale`))),eh=[...new Set($l.map(e=>e.kind))],th=$l.filter(e=>e.ammo&&l.get(`make_${e.id}`)?.inputs.some(e=>e.item===`bow_string`)),nh=Object.values(h).filter(e=>e.butcher?.feather||e.shearYield===`feather`),rh=rn[rn.length-1],ih=e=>ll.find(t=>t.id===e)?.level??0,ah=h.orse.speed*Ye(0),oh=Math.min(5,h.orse.speed*Ye(J)),sh=C(Object.entries(Nt).map(([e,t],n)=>`level ${e} ${n===0?`wants `:``}${C(t.map(e=>`${e.label[0].toLowerCase()}${e.label.slice(1)}`))}`)),ch=[...new Set(Object.values(h).filter(e=>!e.monster).map(e=>e.workRange))].sort((e,t)=>e-t),lh=(()=>{let e=new Map;for(let t of Object.values(h))t.rangePerStep&&t.rangePerStep!==10&&e.set(t.rangePerStep,[...e.get(t.rangePerStep)??[],`a ${t.name}`]);return C([...e.entries()].sort((e,t)=>e[0]-t[0]).map(([e,t])=>`${C(t).replace(/ and ([^,]*)$/,` or $1`)} ${e}`))})(),uh=C([0,20,40,J].map((e,t)=>t===0?`${kt(e)} pass below 20`:`${kt(e)} at ${e}`)),dh=e=>e&&`${e[0].toLowerCase()}${e.slice(1)}`,fh=Object.values(h).filter(e=>e.monster),ph=fh.map(e=>e.notice??7).sort((e,t)=>e-t),mh=ce.reduce((e,[,t])=>e+t,0),hh=sl.filter(e=>!Fu.some(t=>e===`${t}_lump`)),gh=$l.find(e=>e.id===`composite_bow`)??$l[0],_h=[...th].sort((e,t)=>(t.range??0)-(e.range??0))[0]??$l[0],vh=jl.filter(e=>e.cls===`scale`).reduce((e,t)=>e+V(`make_${t.id}`,`dragon_scale`),0),yh=Object.fromEntries(f.map(e=>{let t=Kr.filter(t=>t.tier===e).map(e=>Math.max(...Object.values(e.effects).map(e=>Math.abs((e??1)-1))));return[e,[Math.min(...t),Math.max(...t)]]})),bh=Lu.filter(e=>e.level).sort((e,t)=>(e.level??0)-(t.level??0)),xh=e=>e.replace(/ (vein|seam)$/,``).toLowerCase(),Sh=[1,50,90,99],Ch=e=>Dl(e,tf,1),wh=e=>String(Number(Ch(e).toPrecision(Ch(e)>=.1?2:1))),Th=()=>{let e=d(ar).bill.map(([e,t])=>`<b>${t} × ${w(e).name.toLowerCase()}</b>`);return`${e.slice(0,-1).join(`, `)} and ${e[e.length-1]}`},Eh=ho[0]?.class,Dh=Eh?oa[Eh].length:0,Oh=Dh?Na/Dh:0,kh=Dh?`the nodes you bought or the perks you took`:`the perks you took`,Ah=e=>ho.find(t=>t.rank===e)?.cost??0,jh=e=>`${Ah(e)} point${Ah(e)===1?``:`s`}`,Mh=(e,t)=>ho.find(n=>n.channel===e&&n.rank===t)?.note??``,Nh=Fr.filter(e=>ga.has(e.id)&&e.kind===`craft`),Ph=Nh.length?M(Nh[0].id)[0]:void 0,Fh=Fr.filter(e=>ga.has(e.id)&&e.kind===`combat`),Ih=Fh.length?M(Fh[0].id).map(e=>fo.get(e.id)).find(e=>e!==void 0):void 0,Lh=e=>M(`forester`).find(t=>t.name===e)?.fx??{},Rh=2*(Lh(`Clear Brush`).clear_brush??0)+1,zh=e=>M(`farmer`).find(t=>t.name===e)?.fx??{},Bh=e=>M(`cook`).find(t=>t.name===e)?.fx??{},Vh=e=>M(`fisher`).find(t=>t.name===e)?.fx??{},Hh=e=>M(`tailor`).find(t=>t.name===e)?.fx??{},Uh=e=>M(`herdsman`).find(t=>t.name===e)?.fx??{},Wh=2*(zh(`Sow a Patch`).sow_patch??0)+1,Gh=[...new Set(gi.map(e=>Object.keys(e.muls).length))].sort((e,t)=>e-t),Kh=e=>Object.entries(Lo(e)?.muls??{}).map(([e,t])=>`${no[e].note.toLowerCase()} ${pr(t)}`).join(`, `),qh=b.get(`awareness`)?.start??20,Jh=`${+(gf*100).toFixed(3)}%`,Yh=S(Ef(80)),Xh=80,Zh=e=>+e.toFixed(2),Qh=Object.keys(ks).filter(e=>ks[e].holds),$h=pi.filter(e=>l.get(`make_${e.id}`)?.skill===`fine_carpentry`),eg=$h.filter(e=>e.capacity&&!e.liquid).sort((e,t)=>(e.capacity??0)-(t.capacity??0)),tg=Object.keys(Dc).length,ng=pi.filter(e=>e.boat),rg=d(`rowing_boat`),ig=d(`sailing_boat`),ag=d(`caravel`),og=d(`large_cart`),sg=d(`wagon`),cg=pi.filter(e=>e.liquid).sort((e,t)=>(e.liquid??0)-(t.liquid??0)),lg=d(`craft_bin`).heft??0,ug=d(`seed_bin`).heft??0,dg=d(`sprout_bin`).heft??0,fg=11,pg=(kn.Gold??0)/(kn.Silver??1),mg=5,hg=[...Rc].filter(e=>!Fu.includes(e)),gg=40,_g=Hn.get(`cider`)??An[0],vg=kc.filter(e=>e.fruit),Q=e=>w(e).name.toLowerCase(),yg=iu.filter(e=>e.yields),bg=O.map(e=>`in ${e} <b>${C(vg.filter(t=>ye(t.fruit??``,e)).map(e=>e.name.toLowerCase()))}</b>`),xg=e=>e.filter(([e])=>ko[e]).map(([e])=>`<b>${Q(e)}</b> in ${C(Sn(e))}`).join(`; `),Sg=e=>C(e.filter(([e])=>!ko[e]).map(([e])=>Q(e))),Cg=$i.concat(Wi).filter(([e])=>e.endsWith(`_seed`)).every(([e])=>!ko[e]),wg=e=>e.replace(/^The /,`the `),Tg=e=>(Lu.find(t=>t.yields===e)?.name??e).replace(/ (vein|seam)$/,``).toLowerCase(),Eg=Ns.map(e=>({R:e,trees:e.trees.filter(e=>kc[e]?.fruit).map(e=>kc[e].name.toLowerCase())})).filter(e=>e.trees.length),Dg=[`deep pink`,`pale pink`,`white`].map(e=>[e,vg.filter(t=>af[t.fruit??``]?.family===e).map(e=>e.name.toLowerCase())]),Og=da.flatMap(e=>[di(e,1),di(e,G)]),kg=Math.min(...Og),Ag=Math.max(...Og),jg=e=>{let t=Us.find(t=>t.id===e);if(!t)throw Error(`The help names a mould there is not: ${e}`);return`poured at the smelter and beaten out on an anvil, ${`${t.lumps} lump${t.lumps===1?``:`s`} of metal`} ${t.per?`to ${t.per}`:`to each`}`},Mg=e=>{let t=e=>e.speed*nc(e.roll,1);return 60*t(am(_.Slabs))/t(am(e))},Ng={ql:50,force:.6},Pg=C([Math.PI/2,Math.PI,To,0].map(e=>(ig.boat?$d(ig.boat,Ng.ql,20,Jt(Ng.force)*Nr(e),0):0).toFixed(1))),Fg=Array.from({length:4},(e,t)=>t+2),Ig=()=>Li.filter(e=>e.blood===!1).map(e=>e.label),Lg=zo(Kr.filter(e=>e.effects.tough!==void 0).slice(0,1).map(e=>e.id),{tough:4})[0]??``,Rg=()=>{let e=Object.values(oi).map(e=>`<b>${e.label}</b> (${e.means})`);return`${e.slice(0,-1).join(`, `)} or ${e[e.length-1]}`},zg=50,Bg=`kemma.sheela.salva.carra.tanna.grista.wicka.brambo.grazza.siffa.potta.cindra.hoppa.simma.relka.bedda.wurla.sprigga.ambra.petta.scurra.rippa.chissa.mudda.flecha.papra.glossa.dippa.ulva.dowse.glimmip.dulla.spitta.crakka.awla.scorcha.leecha.frosta.whirla`.split(`.`),Vg=()=>[`make_bandage`,`make_cover_${Vl[0]}`,`make_salve_${Vl[0]}`].map(e=>{let t=l.get(e),n=t.count??1;return`${w(t.result).name.toLowerCase()}s ${n} to ${n+Ea.leecha.n}`}).join(`, `),$=e=>{let t=h[e]?.stages;return t?`${t[0].name} at ${Jo[0]}, ${t[1].name} at ${Jo[1]}`:`none`},Hg=[`thumpa`,`sparra`],Ug=[`lungra`,`stona`,`whispet`,`crumbud`],Wg=[`whispet`,`crumbud`],Gg={kemma:`a brushing puts in ${S(Ho(1,1))} care (${em}) at no husbandry and ${S(Ho(100,100))} at 100, as a keeper of its skill with a brush as good. Evolves: ${$(`kemma`)}`,sheela:`a full fleece gives 3 wool and a full crop of feathers 6, and a milking a bucket of milk; evolves: ${$(`sheela`)}`,salva:`a QL ${zg} dressing puts back ${S(_n(1,zg))} of a life at no first aid and ${S(_n(100,zg))} at 100. Evolves: ${$(`salva`)}; ${m(`salva`).toLowerCase()}`,hoppa:`it tries ${C(An.map(e=>e.name.toLowerCase()))} in that order. Evolves: ${$(`hoppa`)}; ${m(`hoppa`).toLowerCase()}`,simma:`it tries ${Lt().length} recipes in the order the recipes are listed, from ${w(l.get(Lt()[0]).result).name.toLowerCase()} on. Evolves: ${$(`simma`)}; ${m(`simma`).toLowerCase()}`,relka:`a relic comes out at what its pieces were worth less their damage, times ${S(pa(1))} at no restoration and ${S(pa(100))} at 100`,ambra:`1 tar a pine a day`,petta:`it leaves every tile within 3 of a skep or a hive to the bees`,tanna:`a hide and 1 L lye per leather. Evolves: ${$(`tanna`)}; ${m(`tanna`).toLowerCase()}`,dulla:`evolves: ${$(`dulla`)}; ${m(`dulla`).toLowerCase()}`,brambo:`evolves: ${$(`brambo`)}; ${m(`brambo`).toLowerCase()}`,carra:`evolves: ${$(`carra`)}; ${m(`carra`).toLowerCase()}`,awla:`evolves: ${$(`awla`)}; ${m(`awla`).toLowerCase()} (${l.get(`make_shafts`).count} to ${l.get(`make_shafts`).count+Ea.awla.n})`,cindra:`evolves: ${$(`cindra`)}; ${m(`cindra`).toLowerCase()}`,flecha:`evolves: ${$(`flecha`)}; ${m(`flecha`).toLowerCase()}`,scurra:`evolves: ${$(`scurra`)}; ${m(`scurra`).toLowerCase()}`,glossa:`evolves: ${$(`glossa`)}; ${m(`glossa`).toLowerCase()} (${l.get(`make_mortar`).count} to ${l.get(`make_mortar`).count+Ea.glossa.n})`,crakka:`evolves: ${$(`crakka`)}; ${m(`crakka`).toLowerCase()} (${l.get(`mix_concrete`).count??1} to ${(l.get(`mix_concrete`).count??1)+Ea.crakka.n})`,leecha:`evolves: ${$(`leecha`)}; ${m(`leecha`).toLowerCase()} (${Vg()})`,chissa:`evolves: ${$(`chissa`)}; ${m(`chissa`).toLowerCase()} (${l.get(`make_stone_brick`).count??1} to ${(l.get(`make_stone_brick`).count??1)+Ea.chissa.n})`,scorcha:`evolves: ${$(`scorcha`)}; ${m(`scorcha`).toLowerCase()} (bronze ${l.get(`make_bronze`).count??1} to ${(l.get(`make_bronze`).count??1)+Ea.scorcha.n})`,frosta:`evolves: ${$(`frosta`)}; ${m(`frosta`).toLowerCase()} (${l.get(`make_cheese`).count??1} to ${(l.get(`make_cheese`).count??1)+Ea.frosta.n})`,spitta:`evolves: ${$(`spitta`)}; ${m(`spitta`).toLowerCase()} (${Ii[2]} to ${Ii[2]+Ea.spitta.n} a trip)`,whirla:`evolves: ${$(`whirla`)}; ${m(`whirla`).toLowerCase()} (butter ${(l.get(`churn_butter`).count??1)*Ii[2]} to ${(l.get(`churn_butter`).count??1)*(Ii[2]+Ea.whirla.n)} a cycle)`};function Kg(){let e=e=>{let t=Kn[e],n=rn.find(e=>e.result===t)?.name??``;return`<b>${w(t).name}</b> (restored from ${k(n)} ${n})`},t=f[f.length-1];return`<p>${Object.keys(Kn).length} relics restore into items used on a wildermon of yours, out of its crate and beside you,
+    </ul>`}var rm=[25,50,100],B=(e,t=!0)=>xl(R(e).inputs.map(e=>[e.item,e.count??1]),t),V=(e,t)=>{let n=R(e).inputs.find(e=>e.item===t);if(!n)throw Error(`The help says ${e} takes ${t}, and it does not.`);return n.litres??n.count??1},im=e=>{let t=R(e).inputs.find(e=>e.litres);if(!t)throw Error(`The help says ${e} takes a liquid, and it does not.`);return`${t.litres} L ${dl[qc[t.item].liquid]}`},H=e=>R(e).count??1,U=e=>{let t=R(e);return`${(b.get(t.skill)?.name??t.skill).toLowerCase()} ${t.difficulty??0}`},W=e=>{let t=fu.get(e);if(!t)throw Error(`The help names a material there is not: ${e}`);return t},am=e=>qs[e],om=e=>1-nc(am(e).roll,1),sm=e=>{let t=0;for(let n=1;n<=48;n++){if(t=Math.min(12,t+e),t>=8)return n;t=Math.max(0,t-1)}return null},cm=e=>`${e} time${e===1?``:`s`}`,lm=2,um=[1,2],dm=(e,t)=>w(e).feeds?.[t]??0,fm=ud.get(`counter`)??{factor:1,fittings:[]},pm=fm.fittings?.find(([e])=>e===`hinge`)?.[1]??0,G=100,K=1,mm=3600,hm=e=>`${String(Math.floor(e)).padStart(2,`0`)}:${String(Math.round(e%1*60)).padStart(2,`0`)}`,gm=Object.values(h).filter(e=>e.glow),_m=Object.values(h).filter(e=>e.wound===`burn`),vm=18/24,q=e=>b.get(e)?.start??1,J=100,ym=100,bm=y.plate.burden*W(`iron`).weight,xm=e=>Math.round(100/(Ps(e)*W(`copper`).wear)/10)*10,Sm=80,Cm=90,wm=e=>Math.ceil(Sm/Uo(e).healed),Tm=e=>`${+(Sm*Uo(e).cost).toFixed(1)} points`,Em=Object.values($c),Dm=`${D} to ${+(D+Ql).toFixed(2)} times`,Om=1,km=e=>String(+(e/10).toFixed(2)),Am=ud.get(`railing`)??{factor:0},jm=()=>{let e=[...new Set(Os.map(e=>e.heft))].sort((e,t)=>e-t),t=e=>e.length<2?e[0]??``:`${e.slice(0,-1).join(`, `)} or ${e[e.length-1]}`;return e.map(n=>`${Nc[n]} (${C(Os.filter(e=>e.heft===n).map(e=>e.name.toLowerCase()))}) goes over ${n===e[0]?`anything`:n===e[e.length-1]?`${Nc[n]} only`:t(e.filter(e=>e>=n).map(e=>Nc[e]))}`).join(`; `)},Mm=()=>[`log`,`marble`].map(e=>`${L(Object.entries(Xu(e).needed))} in ${e}`).join(`, `),Y=x.map((e,t)=>t).slice(1),Nm=x.findIndex(e=>e.name===`supreme`),Pm=(()=>{let e=x.map((e,t)=>+(t===0||t===Nm)),t=x.map((e,t)=>t===0?2:0);return{units:e.reduce((e,t)=>e+t,0),step:x[Nm].name,more:mu(e)[Nm]-mu(t)[Nm]}})(),Fm=Wa.get(`study_book`)?.baseTime??0,Im=(al.find(e=>e.id===`papyrusmaking`)?.name??`papyrusmaking`).toLowerCase(),Lm=50,[Rm,zm]=mt,Bm=p.get(`plan_wall`),Vm=p.get(`demolish_bridge`),Hm=p.get(`demolish_aqueduct`),Um=p.get(`set_aqueduct_mote`),Wm=e=>Math.ceil(14/e),Gm=e=>`${k(e)} ${e.toLowerCase()}`,X=e=>p.get(e)?.label??e,Z=e=>`${cc(Al(e))} (${Al(e)})`,Km=e=>{let t=Math.floor(Oc/e.length),n={red:0,yellow:0,blue:0,ql:50};return e.forEach((r,i)=>{n[r]=i===0?Oc-t*(e.length-1):t}),n},qm={...Km([`red`,`blue`]),ql:38},Jm=e=>C(Qr(e).map(e=>`${dd(e.grams)} kg of ${w(e.from).name.toLowerCase()} (${e.count})`)),Ym=2,Xm=26,Zm=75,Qm=[...new Set(jl.map(e=>e.slot))],$m=Object.values(y).filter(e=>!jl.some(t=>t.cls===e.id&&c.get(`make_${t.id}`)?.inputs.some(e=>e.item===`dragon_scale`))),eh=[...new Set($l.map(e=>e.kind))],th=$l.filter(e=>e.ammo&&c.get(`make_${e.id}`)?.inputs.some(e=>e.item===`bow_string`)),nh=Object.values(h).filter(e=>e.butcher?.feather||e.shearYield===`feather`),rh=an[an.length-1],ih=e=>ll.find(t=>t.id===e)?.level??0,ah=h.orse.speed*Xe(0),oh=Math.min(5,h.orse.speed*Xe(J)),sh=C(Object.entries(Pt).map(([e,t],n)=>`level ${e} ${n===0?`wants `:``}${C(t.map(e=>`${e.label[0].toLowerCase()}${e.label.slice(1)}`))}`)),ch=[...new Set(Object.values(h).filter(e=>!e.monster).map(e=>e.workRange))].sort((e,t)=>e-t),lh=(()=>{let e=new Map;for(let t of Object.values(h))t.rangePerStep&&t.rangePerStep!==10&&e.set(t.rangePerStep,[...e.get(t.rangePerStep)??[],`a ${t.name}`]);return C([...e.entries()].sort((e,t)=>e[0]-t[0]).map(([e,t])=>`${C(t).replace(/ and ([^,]*)$/,` or $1`)} ${e}`))})(),uh=C([0,20,40,J].map((e,t)=>t===0?`${At(e)} pass below 20`:`${At(e)} at ${e}`)),dh=e=>e&&`${e[0].toLowerCase()}${e.slice(1)}`,fh=Object.values(h).filter(e=>e.monster),ph=fh.map(e=>e.notice??7).sort((e,t)=>e-t),mh=le.reduce((e,[,t])=>e+t,0),hh=sl.filter(e=>!Fu.some(t=>e===`${t}_lump`)),gh=$l.find(e=>e.id===`composite_bow`)??$l[0],_h=[...th].sort((e,t)=>(t.range??0)-(e.range??0))[0]??$l[0],vh=jl.filter(e=>e.cls===`scale`).reduce((e,t)=>e+V(`make_${t.id}`,`dragon_scale`),0),yh=Object.fromEntries(f.map(e=>{let t=Kr.filter(t=>t.tier===e).map(e=>Math.max(...Object.values(e.effects).map(e=>Math.abs((e??1)-1))));return[e,[Math.min(...t),Math.max(...t)]]})),bh=Lu.filter(e=>e.level).sort((e,t)=>(e.level??0)-(t.level??0)),xh=e=>e.replace(/ (vein|seam)$/,``).toLowerCase(),Sh=[1,50,90,99],Ch=e=>Dl(e,Hd,1),wh=e=>String(Number(Ch(e).toPrecision(Ch(e)>=.1?2:1))),Th=()=>{let e=d(or).bill.map(([e,t])=>`<b>${t} × ${w(e).name.toLowerCase()}</b>`);return`${e.slice(0,-1).join(`, `)} and ${e[e.length-1]}`},Eh=ho[0]?.class,Dh=Eh?oa[Eh].length:0,Oh=Dh?Na/Dh:0,kh=Dh?`the nodes you bought or the perks you took`:`the perks you took`,Ah=e=>ho.find(t=>t.rank===e)?.cost??0,jh=e=>`${Ah(e)} point${Ah(e)===1?``:`s`}`,Mh=(e,t)=>ho.find(n=>n.channel===e&&n.rank===t)?.note??``,Nh=Fr.filter(e=>ga.has(e.id)&&e.kind===`craft`),Ph=Nh.length?M(Nh[0].id)[0]:void 0,Fh=Fr.filter(e=>ga.has(e.id)&&e.kind===`combat`),Ih=Fh.length?M(Fh[0].id).map(e=>fo.get(e.id)).find(e=>e!==void 0):void 0,Lh=e=>M(`forester`).find(t=>t.name===e)?.fx??{},Rh=2*(Lh(`Clear Brush`).clear_brush??0)+1,zh=e=>M(`farmer`).find(t=>t.name===e)?.fx??{},Bh=e=>M(`cook`).find(t=>t.name===e)?.fx??{},Vh=e=>M(`fisher`).find(t=>t.name===e)?.fx??{},Hh=e=>M(`tailor`).find(t=>t.name===e)?.fx??{},Uh=e=>M(`herdsman`).find(t=>t.name===e)?.fx??{},Wh=2*(zh(`Sow a Patch`).sow_patch??0)+1,Gh=[...new Set(gi.map(e=>Object.keys(e.muls).length))].sort((e,t)=>e-t),Kh=e=>Object.entries(Lo(e)?.muls??{}).map(([e,t])=>`${no[e].note.toLowerCase()} ${mr(t)}`).join(`, `),qh=b.get(`awareness`)?.start??20,Jh=`${+(Kd*100).toFixed(3)}%`,Yh=S(Wd(80)),Xh=80,Zh=e=>+e.toFixed(2),Qh=Object.keys(ks).filter(e=>ks[e].holds),$h=pi.filter(e=>c.get(`make_${e.id}`)?.skill===`fine_carpentry`),eg=$h.filter(e=>e.capacity&&!e.liquid).sort((e,t)=>(e.capacity??0)-(t.capacity??0)),tg=Object.keys(Dc).length,ng=pi.filter(e=>e.boat),rg=d(`rowing_boat`),ig=d(`sailing_boat`),ag=d(`caravel`),og=d(`large_cart`),sg=d(`wagon`),cg=pi.filter(e=>e.liquid).sort((e,t)=>(e.liquid??0)-(t.liquid??0)),lg=d(`craft_bin`).heft??0,ug=d(`seed_bin`).heft??0,dg=d(`sprout_bin`).heft??0,fg=11,pg=(An.Gold??0)/(An.Silver??1),mg=5,hg=[...Rc].filter(e=>!Fu.includes(e)),gg=40,_g=Un.get(`cider`)??jn[0],vg=kc.filter(e=>e.fruit),Q=e=>w(e).name.toLowerCase(),yg=iu.filter(e=>e.yields),bg=O.map(e=>`in ${e} <b>${C(vg.filter(t=>be(t.fruit??``,e)).map(e=>e.name.toLowerCase()))}</b>`),xg=e=>e.filter(([e])=>ko[e]).map(([e])=>`<b>${Q(e)}</b> in ${C(Cn(e))}`).join(`; `),Sg=e=>C(e.filter(([e])=>!ko[e]).map(([e])=>Q(e))),Cg=$i.concat(Wi).filter(([e])=>e.endsWith(`_seed`)).every(([e])=>!ko[e]),wg=e=>e.replace(/^The /,`the `),Tg=e=>(Lu.find(t=>t.yields===e)?.name??e).replace(/ (vein|seam)$/,``).toLowerCase(),Eg=Ns.map(e=>({R:e,trees:e.trees.filter(e=>kc[e]?.fruit).map(e=>kc[e].name.toLowerCase())})).filter(e=>e.trees.length),Dg=[`deep pink`,`pale pink`,`white`].map(e=>[e,vg.filter(t=>bf[t.fruit??``]?.family===e).map(e=>e.name.toLowerCase())]),Og=da.flatMap(e=>[di(e,1),di(e,G)]),kg=Math.min(...Og),Ag=Math.max(...Og),jg=e=>{let t=Us.find(t=>t.id===e);if(!t)throw Error(`The help names a mould there is not: ${e}`);return`poured at the smelter and beaten out on an anvil, ${`${t.lumps} lump${t.lumps===1?``:`s`} of metal`} ${t.per?`to ${t.per}`:`to each`}`},Mg=e=>{let t=e=>e.speed*nc(e.roll,1);return 60*t(am(_.Slabs))/t(am(e))},Ng={ql:50,force:.6},Pg=C([Math.PI/2,Math.PI,To,0].map(e=>(ig.boat?Id(ig.boat,Ng.ql,20,Yt(Ng.force)*Nr(e),0):0).toFixed(1))),Fg=Array.from({length:4},(e,t)=>t+2),Ig=()=>Li.filter(e=>e.blood===!1).map(e=>e.label),Lg=zo(Kr.filter(e=>e.effects.tough!==void 0).slice(0,1).map(e=>e.id),{tough:4})[0]??``,Rg=()=>{let e=Object.values(oi).map(e=>`<b>${e.label}</b> (${e.means})`);return`${e.slice(0,-1).join(`, `)} or ${e[e.length-1]}`},zg=50,Bg=`kemma.sheela.salva.carra.tanna.grista.wicka.brambo.grazza.siffa.potta.cindra.hoppa.simma.relka.bedda.wurla.sprigga.ambra.petta.scurra.rippa.chissa.mudda.flecha.papra.glossa.dippa.ulva.dowse.glimmip.dulla.spitta.crakka.awla.scorcha.leecha.frosta.whirla`.split(`.`),Vg=()=>[`make_bandage`,`make_cover_${Vl[0]}`,`make_salve_${Vl[0]}`].map(e=>{let t=c.get(e),n=t.count??1;return`${w(t.result).name.toLowerCase()}s ${n} to ${n+Ea.leecha.n}`}).join(`, `),$=e=>{let t=h[e]?.stages;return t?`${t[0].name} at ${Jo[0]}, ${t[1].name} at ${Jo[1]}`:`none`},Hg=[`thumpa`,`sparra`],Ug=[`lungra`,`stona`,`whispet`,`crumbud`],Wg=[`whispet`,`crumbud`],Gg={kemma:`a brushing puts in ${S(Ho(1,1))} care (${em}) at no husbandry and ${S(Ho(100,100))} at 100, as a keeper of its skill with a brush as good. Evolves: ${$(`kemma`)}`,sheela:`a full fleece gives 3 wool and a full crop of feathers 6, and a milking a bucket of milk; evolves: ${$(`sheela`)}`,salva:`a QL ${zg} dressing puts back ${S(vn(1,zg))} of a life at no first aid and ${S(vn(100,zg))} at 100. Evolves: ${$(`salva`)}; ${m(`salva`).toLowerCase()}`,hoppa:`it tries ${C(jn.map(e=>e.name.toLowerCase()))} in that order. Evolves: ${$(`hoppa`)}; ${m(`hoppa`).toLowerCase()}`,simma:`it tries ${Rt().length} recipes in the order the recipes are listed, from ${w(c.get(Rt()[0]).result).name.toLowerCase()} on. Evolves: ${$(`simma`)}; ${m(`simma`).toLowerCase()}`,relka:`a relic comes out at what its pieces were worth less their damage, times ${S(pa(1))} at no restoration and ${S(pa(100))} at 100`,ambra:`1 tar a pine a day`,petta:`it leaves every tile within 3 of a skep or a hive to the bees`,tanna:`a hide and 1 L lye per leather. Evolves: ${$(`tanna`)}; ${m(`tanna`).toLowerCase()}`,dulla:`evolves: ${$(`dulla`)}; ${m(`dulla`).toLowerCase()}`,brambo:`evolves: ${$(`brambo`)}; ${m(`brambo`).toLowerCase()}`,carra:`evolves: ${$(`carra`)}; ${m(`carra`).toLowerCase()}`,awla:`evolves: ${$(`awla`)}; ${m(`awla`).toLowerCase()} (${c.get(`make_shafts`).count} to ${c.get(`make_shafts`).count+Ea.awla.n})`,cindra:`evolves: ${$(`cindra`)}; ${m(`cindra`).toLowerCase()}`,flecha:`evolves: ${$(`flecha`)}; ${m(`flecha`).toLowerCase()}`,scurra:`evolves: ${$(`scurra`)}; ${m(`scurra`).toLowerCase()}`,glossa:`evolves: ${$(`glossa`)}; ${m(`glossa`).toLowerCase()} (${c.get(`make_mortar`).count} to ${c.get(`make_mortar`).count+Ea.glossa.n})`,crakka:`evolves: ${$(`crakka`)}; ${m(`crakka`).toLowerCase()} (${c.get(`mix_concrete`).count??1} to ${(c.get(`mix_concrete`).count??1)+Ea.crakka.n})`,leecha:`evolves: ${$(`leecha`)}; ${m(`leecha`).toLowerCase()} (${Vg()})`,chissa:`evolves: ${$(`chissa`)}; ${m(`chissa`).toLowerCase()} (${c.get(`make_stone_brick`).count??1} to ${(c.get(`make_stone_brick`).count??1)+Ea.chissa.n})`,scorcha:`evolves: ${$(`scorcha`)}; ${m(`scorcha`).toLowerCase()} (bronze ${c.get(`make_bronze`).count??1} to ${(c.get(`make_bronze`).count??1)+Ea.scorcha.n})`,frosta:`evolves: ${$(`frosta`)}; ${m(`frosta`).toLowerCase()} (${c.get(`make_cheese`).count??1} to ${(c.get(`make_cheese`).count??1)+Ea.frosta.n})`,spitta:`evolves: ${$(`spitta`)}; ${m(`spitta`).toLowerCase()} (${Ii[2]} to ${Ii[2]+Ea.spitta.n} a trip)`,whirla:`evolves: ${$(`whirla`)}; ${m(`whirla`).toLowerCase()} (butter ${(c.get(`churn_butter`).count??1)*Ii[2]} to ${(c.get(`churn_butter`).count??1)*(Ii[2]+Ea.whirla.n)} a cycle)`};function Kg(){let e=e=>{let t=qn[e],n=an.find(e=>e.result===t)?.name??``;return`<b>${w(t).name}</b> (restored from ${k(n)} ${n})`},t=f[f.length-1];return`<p>${Object.keys(qn).length} relics restore into items used on a wildermon of yours, out of its crate and beside you,
     from its menu. Used up whatever the result; refused and kept when it would do nothing.</p>
     <ul>
       <li>${e(`use_ancient_comb`)}: one age back. Old to grown (full pace (speed multiplier) and pull again, from ${S(Za.old.speed)} pace and ${S(Za.old.pull)} pull).
       Grown to young: cannot be worked, ridden or harnessed until grown again. Not on a young one.</li>
       <li>${e(`use_ancient_file`)}: 1 in 20: one rarity step up (${C(x.map(e=>e.name||`ordinary`))}).
-      Every blood figure over an ordinary one's: ${C(x.slice(1).map(e=>pe(e.blood)))} at ${C(x.slice(1).map(e=>e.name))}.
+      Every blood figure over an ordinary one's: ${C(x.slice(1).map(e=>me(e.blood)))} at ${C(x.slice(1).map(e=>e.name))}.
       Not on ${k(x[x.length-1].name)} ${x[x.length-1].name} one.</li>
       <li>${e(`use_ancient_lamp`)}: replaces its lowest-rarity trait (random among ties) with a random trait it does not carry
       (the outgoing one included), same rarity; 1 in 20: the rarity above (${C(f.slice(1).map((e,t)=>`${f[t]} to ${e}`))}).
@@ -188,26 +188,26 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     <p>Four relics restore into items used on you and your things:</p>
     <ul>
       <li>${Xg(mo)}: Hone with it, on a damaged tool or weapon in your pack: all damage off, QL kept. Not on an unrestored find, nor ${Yg()}. Used up.</li>
-      <li>${Xg(Ca)}: Open: 5 seeds of one of ${Ke.length} crops at random, at the jar's QL. Used up.</li>
+      <li>${Xg(Ca)}: Open: 5 seeds of one of ${qe.length} crops at random, at the jar's QL. Used up.</li>
       <li>${Xg(to)}: carried: rare chance ×2 on your next ${Pr} crafts and forgings (an anvil's casting work). One go each;
       its name says the goes left; used up after the last.</li>
       <li>${Xg(aa)}: Skills window, <i>Rune tablet +${1 .toFixed(1)}</i> on a skill under 50: that skill +${1 .toFixed(1)}. Used up.</li>
     </ul>
-    <p>${rn.filter(e=>Bc.has(e.result)).length} relics restore into gear, worn or wielded as ${k(Q(`helm`))} ${Q(`helm`)} and ${k(Q(qg.id))} ${Q(qg.id)} (armour, damage, reach, weight):</p>
+    <p>${an.filter(e=>Bc.has(e.result)).length} relics restore into gear, worn or wielded as ${k(Q(`helm`))} ${Q(`helm`)} and ${k(Q(qg.id))} ${Q(qg.id)} (armour, damage, reach, weight):</p>
     <ul>
       <li>${Xg(Tl)}: head slot, plate. Worn: sight radius +3 tiles.</li>
       <li>${Xg(lc)}: swing time ×${vl} a ${Q(qg.id)}'s: ${Jg.swing} seconds against ${qg.swing}, before skill.</li>
       <li>Neither: Improve, Repair, repair kit, ancient whetstone, a mender in the stores. Refused: <i>${Rs({id:Tl})}</i></li>
     </ul>
-    <p>Helms and short swords restored before these existed stay a plain helm and short sword.</p>`}var qg=Yu.get(`short_sword`),Jg=Yu.get(lc),Yg=()=>v([...Bc].map(e=>`${k(Q(e))} ${Q(e)}`));function Xg(e){let t=rn.find(t=>t.result===e)?.name??``;return`<b>${w(e).name}</b> (restored from ${k(t)} ${t})`}var Zg=e=>xr(t.get(e)?.keys[0]??``),Qg=e=>{let t=R(e);return`<b>${t.label}</b>${t.tool?` (${Q(t.tool)})`:``}`},$g=e=>`<b>${R(e).label}</b> (${C(R(e).inputs.map(e=>Q(e.item)))})`,e_=e=>{let t=p.get(e)?.tool;return`<b>${X(e)}</b>${t?` (${Q(t)})`:``}`},t_={tree:()=>`Right-click a tree: ${e_(`cut_down`)}`,plank:()=>`Crafting (<kbd>${Zg(`win_craft`)}</kbd>): ${Qg(`make_planks`)}, ${H(`make_planks`)} planks a log`,fire:()=>`Crafting (<kbd>${Zg(`win_craft`)}</kbd>): ${Qg(`make_shafts`)}, 2 shafts; right-click the ground: ${e_(`build_campfire`)}; right-click the fire: ${e_(`light_campfire`)}`,cook:()=>`Crafting (<kbd>${Zg(`win_craft`)}</kbd>), next to a lit fire: ${$g(`cook_meat`)}, ${$g(`bake_potato`)}`,crate:()=>`Crafting (<kbd>${Zg(`win_craft`)}</kbd>): ${Qg(`make_log_crate`)}; right-click the ground: ${e_(`place_crate`)}`,deed:()=>`Right-click the ground: ${e_(`found_settlement`)} (${Q(`deed_stake`)}, in the pack)`};function n_(){let e=Dr[0],t=q(`taming`),n=zd().filter(e=>(Af({def:e,stage:0})??1/0)<=t).length;return`
+    <p>Helms and short swords restored before these existed stay a plain helm and short sword.</p>`}var qg=Yu.get(`short_sword`),Jg=Yu.get(lc),Yg=()=>v([...Bc].map(e=>`${k(Q(e))} ${Q(e)}`));function Xg(e){let t=an.find(t=>t.result===e)?.name??``;return`<b>${w(e).name}</b> (restored from ${k(t)} ${t})`}var Zg=e=>l(t.get(e)?.keys[0]??``),Qg=e=>{let t=R(e);return`<b>${t.label}</b>${t.tool?` (${Q(t.tool)})`:``}`},$g=e=>`<b>${R(e).label}</b> (${C(R(e).inputs.map(e=>Q(e.item)))})`,e_=e=>{let t=p.get(e)?.tool;return`<b>${X(e)}</b>${t?` (${Q(t)})`:``}`},t_={tree:()=>`Right-click a tree: ${e_(`cut_down`)}`,plank:()=>`Crafting (<kbd>${Zg(`win_craft`)}</kbd>): ${Qg(`make_planks`)}, ${H(`make_planks`)} planks a log`,fire:()=>`Crafting (<kbd>${Zg(`win_craft`)}</kbd>): ${Qg(`make_shafts`)}, 2 shafts; right-click the ground: ${e_(`build_campfire`)}; right-click the fire: ${e_(`light_campfire`)}`,cook:()=>`Crafting (<kbd>${Zg(`win_craft`)}</kbd>), next to a lit fire: ${$g(`cook_meat`)}, ${$g(`bake_potato`)}`,crate:()=>`Crafting (<kbd>${Zg(`win_craft`)}</kbd>): ${Qg(`make_log_crate`)}; right-click the ground: ${e_(`place_crate`)}`,deed:()=>`Right-click the ground: ${e_(`found_settlement`)} (${Q(`deed_stake`)}, in the pack)`};function n_(){let e=Dr[0],t=q(`taming`),n=jf().filter(e=>(Mf({def:e,stage:0})??1/0)<=t).length;return`
     <h3>First hour</h3>
     <ul>
       <li><b>Goals</b>: Journal (<kbd>${Zg(`win_journal`)}</kbd>), Goals tab, chapter <b>${e.name}</b>: ${e.goals.length} goals</li>
-      <li><b>Eat</b>: Inventory (<kbd>${Zg(`win_inventory`)}</kbd>), click the ${Q(nf)}: <b>${X(`eat`)}</b>. ${Hd} in the starting pack, food bar +${S(wc(nf,20))} each</li>
+      <li><b>Eat</b>: Inventory (<kbd>${Zg(`win_inventory`)}</kbd>), click the ${Q(Vd)}: <b>${X(`eat`)}</b>. ${Gd} in the starting pack, food bar +${S(wc(Vd,20))} each</li>
       ${e.goals.map(e=>`<li><b>${e.text}</b>: ${t_[e.id]?.()??`Journal (<kbd>${Zg(`win_journal`)}</kbd>), Goals tab`}</li>`).join(`
       `)}
       <li><b>Tame</b>: right-click a wild one: <b>${X(`tame`)}</b>, offering of its food in the pack. Taming ${t} at the start: ${n} kinds. Field guide (<kbd>${Zg(`win_guide`)}</kbd>): <b>Tameable now</b></li>
-    </ul>`}function r_(){let re=Th(),me=Rg();return`${n_()}
+    </ul>`}function r_(){let re=Th(),he=Rg();return`${n_()}
     <h3>Getting around</h3>
     <p>Movement is by clicking only. Keys move the <i>view</i>. Walking paths round obstacles.</p>
     <table>
@@ -235,8 +235,8 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       <li>Event log: one-line bar; tap to open, ▾ to fold.</li>
       <li><b>Add to Home Screen</b> (browser menu): fullscreen, own icon.</li>
       <li>Settings (<kbd>O</kbd>), Display, <b>Phone</b>: <i>Fullscreen</i> (where the browser has it; not iPhone Safari);
-      <i>Keep screen on while working</i> (${pf.keepAwake?`on`:`off`} at first): while an action runs or one is queued;
-      <i>Low power</i> (${pf.lowPower?`on`:`off`} at first): frame limit 30/s, Fast graphics (1 pixel per screen pixel), no wakes or dust.</li>
+      <i>Keep screen on while working</i> (${rf.keepAwake?`on`:`off`} at first): while an action runs or one is queued;
+      <i>Low power</i> (${rf.lowPower?`on`:`off`} at first): frame limit 30/s, Fast graphics (1 pixel per screen pixel), no wakes or dust.</li>
       <li>Page hidden: nothing drawn. Back to it with the live connection cut: <i>${$f}</i> until the island answers and every channel is joined again; changes since read at once.</li>
       <li>Live connection cut while in front (any screen): picked up within 250 ms, no rejoin; <i>${$f}</i> after ${Uf/1e3} s; tried again after ${tp/1e3} s, doubling to ${Zf/1e3} s.</li>
       <li>Text boxes: no zoom on focus; kept above the keyboard.</li>
@@ -381,7 +381,7 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     <h4>Work</h4>
     <ul>
       <li>Set: founder and ranks with <b>${g.work.label}</b>. A thing (anything a settlement crate takes: everything but coins and crates), a count from one to
-      ${Ee}, optional minimum quality (QL) (whole number up to ${ge}). Max 8 open at once. Same people may <b>Take down</b> any.</li>
+      ${De}, optional minimum quality (QL) (whole number up to ${_e}). Max 8 open at once. Same people may <b>Take down</b> any.</li>
       <li>Deliver: any citizen, within 3 tiles of the settlement totem: <b>Deliver</b> on a work, or <b>Deliver work</b> in the settlement's menu
       (opens this tab).</li>
       <li>Moves every matching item from your pack (that thing, at the work's QL or better; not worn, held, kept back, in a bag or holding anything) into
@@ -452,14 +452,14 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     <ul>
       <li>Raised by work only. Eating, drinking and moving items in and out of crates, bags and barrels cost wind and teach nothing.</li>
       <li>Start at 20. Each is raised only by the things listed. One action there = one action in a skill, before the curve and multipliers.</li>
-      <li>Every raise: the same one in ${Pt} knack chance as an action in a skill; the knack lands on that characteristic.</li>
+      <li>Every raise: the same one in ${Ft} knack chance as an action in a skill; the knack lands on that characteristic.</li>
     </ul>
     <table>
       <tr><td><b>Body strength</b></td><td>Hit damage. Raised by ${sp(`body_strength`)}.</td></tr>
-      <tr><td><b>Body stamina</b></td><td>Stamina bar ×${xf(0)} at 20, ×${xf(Xh)} at 100. Stamina cost of actions and swings ×${Zh(of(0))} to ×${Zh(of(Xh))}. Stamina recovery ×${Zh(wf(0))} to ×${Zh(wf(Xh))}. Spending and recovery per second: shares of the bar. Raised by ${sp(`body_stamina`)}.</td></tr>
-      <tr><td><b>Body control</b></td><td>Time per action and swing ×${Zh(rf(0))} at 20, ×${Zh(rf(Xh))} at 100. Dodge chance +${S(ru)} per level over ${qu}, −${S($u)} per kg of armour worn, max ${S(Au)} (${S(ku(100,0))} at 100 unarmoured). Hit chance + level ÷ 500 (+${S(100/500)} at 100). Sailing boat speed ×${Zh(Wd(!0,20))} to ×${Zh(Wd(!0,100))}. Raised by ${sp(`body_control`)}.</td></tr>
-      <tr><td><b>Mind logic</b></td><td>Action queue 3, one more per 10 levels over 20 (${Sf(100)} at 100). Difficulty −${ef} per level over 20, max half (−${uf(100)} at 100): crafts, ${C(Kd.map(e=>z(e).toLowerCase()))}. Raised by ${sp(`mind_logic`)}.</td></tr>
-      <tr><td><b>Soul strength</b></td><td>Tame chance +${S(Ud)} per level over 20 (+${S(hf(80))} at 100). Favour per prayer, Calm per sitting, Beastmaster spell heal, blow and bonus: ${zp} per level over 20 (+${S(Df(80)-1)} at 100). Raised by ${sp(`soul_strength`)}.</td></tr>
+      <tr><td><b>Body stamina</b></td><td>Stamina bar ×${ff(0)} at 20, ×${ff(Xh)} at 100. Stamina cost of actions and swings ×${Zh(xf(0))} to ×${Zh(xf(Xh))}. Stamina recovery ×${Zh(Df(0))} to ×${Zh(Df(Xh))}. Spending and recovery per second: shares of the bar. Raised by ${sp(`body_stamina`)}.</td></tr>
+      <tr><td><b>Body control</b></td><td>Time per action and swing ×${Zh(tf(0))} at 20, ×${Zh(tf(Xh))} at 100. Dodge chance +${S(ru)} per level over ${qu}, −${S($u)} per kg of armour worn, max ${S(Au)} (${S(ku(100,0))} at 100 unarmoured). Hit chance + level ÷ 500 (+${S(100/500)} at 100). Sailing boat speed ×${Zh(nf(!0,20))} to ×${Zh(nf(!0,100))}. Raised by ${sp(`body_control`)}.</td></tr>
+      <tr><td><b>Mind logic</b></td><td>Action queue 3, one more per 10 levels over 20 (${Tf(100)} at 100). Difficulty −${Nf} per level over 20, max half (−${Of(100)} at 100): crafts, ${C(Qd.map(e=>z(e).toLowerCase()))}. Raised by ${sp(`mind_logic`)}.</td></tr>
+      <tr><td><b>Soul strength</b></td><td>Tame chance +${S(ef)} per level over 20 (+${S(af(80))} at 100). Favour per prayer, Calm per sitting, Beastmaster spell heal, blow and bonus: ${zp} per level over 20 (+${S(pf(80)-1)} at 100). Raised by ${sp(`soul_strength`)}.</td></tr>
     </table>
     <ul>
       <li><b>Climbing</b>: step between tiles from ${T(32)} m and standable slope from ${T(60)} m, both +${km(ul)} m a level.
@@ -468,7 +468,7 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       <li><b>Swimming</b>: deep-water speed and wind cost. Learned while out of your depth.</li>
       <li>Both log only whole points. Current value: Skills window (<kbd>K</kbd>).</li>
       <li>Skills window: click a skill for a slider per effect. Left end: the skill's starting value. Right end: 100. Marker: your level.</li>
-      <li>Skills window, top: <b>Sleep bonus</b> on/off and stored (also <b>${xr(t.get(`sleep_bonus`)?.keys[0]??``)}</b> and the status panel). On: skill gain ${N(2)} on every skill while any is stored, drains in real time. Gained by Sleep in a bed (<i>Beds</i>).</li>
+      <li>Skills window, top: <b>Sleep bonus</b> on/off and stored (also <b>${l(t.get(`sleep_bonus`)?.keys[0]??``)}</b> and the status panel). On: skill gain ${N(2)} on every skill while any is stored, drains in real time. Gained by Sleep in a bed (<i>Beds</i>).</li>
     </ul>
     <h3>What you can see</h3>
     <table>
@@ -482,14 +482,14 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     <h4>Awareness, and how far that circle reaches</h4>
     <ul>
       <li><b>Awareness</b>: a characteristic. <b>Starts at ${qh}</b>.</li>
-      <li>Sight range: 15 tiles on the flat at 100. At ${qh}: ${S(vf(qh))}
-      (${Math.round(15*vf(qh))} tiles against 15). Scales with the square root of the level.</li>
+      <li>Sight range: 15 tiles on the flat at 100. At ${qh}: ${S(Ld(qh))}
+      (${Math.round(15*Ld(qh))} tiles against 15). Scales with the square root of the level.</li>
       <li>Per level over 20: monster notice range −${Jh} (−${Yh} at 100); tracking range +${Jh} (+${Yh} at 100);
-      hit chance +${Jh} × darkness, over ${S(rr)} dark or underground (+${Yh} at 100 in full dark).
+      hit chance +${Jh} × darkness, over ${S(ir)} dark or underground (+${Yh} at 100 in full dark).
       Animal husbandry to read a trait: one level less per 10 levels over 20 (−${kd(100)} at 100).</li>
       <li>Raised by ${sp(`awareness`)}.</li>
       <li>${w(Tl).name} worn: sight +3 tiles, after everything else.</li>
-      <li>Height adds distance; ridges hide what is behind; a wood blocks sight ${Math.ceil(1/Xd)} trees deep;
+      <li>Height adds distance; ridges hide what is behind; a wood blocks sight ${Math.ceil(1/gf)} trees deep;
       <b>darkness takes ${P(Ku)} of sight</b>.</li>
       <li>Your settlement is in sight while you hold it; your wildermon see from wherever they work.</li>
       <li>Walls: only <b>solid</b> ones block sight. Window, bay, door, double door, arch, gate: seen through. Fence, half wall: seen over.</li>
@@ -532,7 +532,7 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       tired arms, darkness).</li>
       <li>Under each: time left or count. Point or tap: exact effect and source.</li>
       <li>Tired arms: under ${S(Qs)} stamina; swing up to ${S(yc)} longer.</li>
-      <li>Health does not mend while food or water is at or under ${S(yf)}.</li>
+      <li>Health does not mend while food or water is at or under ${S(kf)}.</li>
     </ul>
     <h3>Trades</h3>
     <ul>
@@ -629,7 +629,7 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     <h4>Search boxes</h4>
     <ul>
       <li>Inventory: name and kind. Recipe book: product, skill, workplace and ingredients at once (<i>leather</i>, <i>mason</i>: the oven and the well;
-      <i>nail</i>: all ${le.filter(e=>e.inputs.some(e=>e.item===`nail`)).length} recipes that use nails).</li>
+      <i>nail</i>: all ${ue.filter(e=>e.inputs.some(e=>e.item===`nail`)).length} recipes that use nails).</li>
       <li>Match count at the foot. <kbd>Esc</kbd> clears.</li>
     </ul>
     <h3>The ledger</h3>
@@ -655,7 +655,7 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     <h4>Failure</h4>
     <ul>
       <li>Failed craft: nothing used up, nothing handed back. Each unit it would have used, off the stacks it would have used: damage by that stack's QL,
-      ${sr}, straight line between.</li>
+      ${cr}, straight line between.</li>
       <li>Only the units it would have used: a pile's damage rises by that over its count. Reaching 100 damage: those units gone.</li>
       <li>Litre inputs: that damage as a share of the litres it would have taken, lost, to the whole litre; the vessel undamaged.</li>
       <li>Every recipe with a skill check, smelting, alloys, cooking, kilns and glass included; the anvil, coins, brewing and dye recipes the same.
@@ -706,19 +706,19 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     </ul>
     <h3>Brewing</h3>
     <ul>
-      <li>Fill a barrel (right-click it: <b>Fill with water</b>): to the brim at a shore within 1 tile; from a well or fountain within reach, what it holds. Stand at it, <b>set a brew going</b>. ${An.length} brews:
-      ${C(An.map(e=>`<b>${e.name.toLowerCase()}</b>: ${I(e.input,e.count)} + ${e.litres} litres of water, ${F(e.time)}`))}.</li>
+      <li>Fill a barrel (right-click it: <b>Fill with water</b>): to the brim at a shore within 1 tile; from a well or fountain within reach, what it holds. Stand at it, <b>set a brew going</b>. ${jn.length} brews:
+      ${C(jn.map(e=>`<b>${e.name.toLowerCase()}</b>: ${I(e.input,e.count)} + ${e.litres} litres of water, ${F(e.time)}`))}.</li>
       <li>Yield: litres of drink = litres of water.</li>
       <li>While working: cannot be drawn off; cannot be hurried. Then draw into a bucket and drink from that.</li>
-      <li><b>${Ue}</b> (right-click a barrel: ${Je.get(`set_brew_spring`)?.label}; 1 water mote used up): brew time ×${Ua},
-      ${C(An.map(e=>`${e.name.toLowerCase()} ${F(e.time*Ua)}`))}. Workers' brews too. Not while working; once a barrel ("${mt}"); lost when the barrel is picked up.</li>
-      <li>Brew quality (QL): half the ingredients' QL + half your <b>brewing</b>. Failed brew: ingredients damaged by their QL (${sr}); water lost: that damage as a share of the brew's litres, by the barrel's QL, to the whole litre.</li>
+      <li><b>${We}</b> (right-click a barrel: ${Ye.get(`set_brew_spring`)?.label}; 1 water mote used up): brew time ×${Ua},
+      ${C(jn.map(e=>`${e.name.toLowerCase()} ${F(e.time*Ua)}`))}. Workers' brews too. Not while working; once a barrel ("${ht}"); lost when the barrel is picked up.</li>
+      <li>Brew quality (QL): half the ingredients' QL + half your <b>brewing</b>. Failed brew: ingredients damaged by their QL (${cr}); water lost: that damage as a share of the brew's litres, by the barrel's QL, to the whole litre.</li>
     </ul>
     <h4>Ageing</h4>
     <ul>
       <li>${C(xp.map((e,t)=>`<b>${t?e.name.toLowerCase():e.name}</b>`))} gain QL per island day (${F(gs)}) kept after finishing;
       4 times as much in a barrel in a <b>cellar</b>; capped over the brewed QL; max QL 100.</li>
-      ${rt.map(({ageing:e,brews:t})=>`<li>${C(t.map(e=>e.name.toLowerCase()))}: ${e.rate} QL a day (${e.rate*4} in a cellar),
+      ${it.map(({ageing:e,brews:t})=>`<li>${C(t.map(e=>e.name.toLowerCase()))}: ${e.rate} QL a day (${e.rate*4} in a cellar),
       up to ${e.cap} QL more; reached in ${e.cap/e.rate} days out of a cellar, ${e.cap/(e.rate*4)} in one.</li>`).join(``)}
       <li>Ages until the barrel is empty. Examine the barrel: time kept, QL gained, current QL. Drinks are at the current QL.</li>
       <li>A barrel poured into stops ageing (drawing off and pouring back cannot pass the cap).</li>
@@ -752,8 +752,8 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     <ul>
       <li><b>Fishing rod</b>: ${B(`make_fishing_rod`)}. Stand at water and fish.</li>
       <li>Line reach: 3 tiles; casts into the deepest water in reach. Inland: no catch.</li>
-      <li>${Gn.length} fish at ${new Set(Gn.map(e=>e.depth)).size} depths:
-      ${C(Gn.map(e=>`<b>${e.name.toLowerCase()}</b> ${e.depth>0?`from ${T(e.depth)} m deep`:`in any water`}${e.level>Gn[0].level?`, fishing ${e.level}`:``}`))}.
+      <li>${Kn.length} fish at ${new Set(Kn.map(e=>e.depth)).size} depths:
+      ${C(Kn.map(e=>`<b>${e.name.toLowerCase()}</b> ${e.depth>0?`from ${T(e.depth)} m deep`:`in any water`}${e.level>Kn[0].level?`, fishing ${e.level}`:``}`))}.
       Shallow beaches give perch at most; deep water right off a bank gives everything.</li>
       <li>Cooked over a fire; helpings by size: pike ${H(`cook_pike`)}, sturgeon ${H(`cook_sturgeon`)}.</li>
     </ul>
@@ -762,15 +762,15 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       <li>Bare hook: whatever passes, mostly minnows.</li>
       <li><b>Worms</b> (dug from damp dirt with a shovel; marshes have many): <b>perch</b>. Live <b>minnow</b> or raw <b>meat</b>: <b>pike</b>.
       Whole <b>perch</b>: <b>sturgeon</b>. Corn: a weak bait.</li>
-      <li>Cook with Bait Maker: cuts <b>offal</b> from every carcass; draws ${C((et.get(`offal`)?.favours??[]).map(e=>`${w(e).name.toLowerCase()}`))}.</li>
+      <li>Cook with Bait Maker: cuts <b>offal</b> from every carcass; draws ${C((tt.get(`offal`)?.favours??[]).map(e=>`${w(e).name.toLowerCase()}`))}.</li>
       <li>The best bait in the pack goes on automatically; the menu names it.</li>
-      <li>Deep enough water, skill for all: sturgeon is ${S(dt(`sturgeon`))} of bites on a bare hook, ${S(dt(`sturgeon`,`perch`))} on perch.</li>
+      <li>Deep enough water, skill for all: sturgeon is ${S(ft(`sturgeon`))} of bites on a bare hook, ${S(ft(`sturgeon`,`perch`))} on perch.</li>
     </ul>
     <h4>Net and creel</h4>
     <ul>
       <li><b>Net</b>: ${B(`make_net`)}, knotted with a needle. <b>Dragged</b> through wadeable water: several small fish a haul; big fish escape.</li>
       <li><b>Creel</b>: ${B(`make_creel`)}. <b>Sink it in water</b> off a bank and bait it; fishes unattended. Holds ${yo.creel.hold??0};
-      about <b>${Math.round(1/It)} fish per baiting</b>. Emptied from the bank. Best possible creel, kept baited and emptied:
+      about <b>${Math.round(1/Lt)} fish per baiting</b>. Emptied from the bank. Best possible creel, kept baited and emptied:
       about ${Math.round(mm/45*Qo(G))} fish an hour.</li>
       <li>Tailor with Fisher's Friend: their nets haul ${S((Hh(`Fisher's Friend`)[`catch:fishing_net`]??1)-1)} more on average; their creels
       ${S((Hh(`Fisher's Friend`)[`catch:creel`]??1)-1)} likelier to catch per check.</li>
@@ -794,7 +794,7 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       <li><b>${h.plucka.name}</b> on a settlement: picks bearing trees into the crate.</li>
       <li><b>Seasons</b>: ${bg.join(`; `)}. Out of season, <b>Pick fruit</b> gives nothing and names the next season; a plucka skips the tree;
       <b>Examine</b> gives its seasons and whether it is in season.</li>
-      <li>Bushes: <b>Harvest</b> with a sickle cuts ${yg.map(e=>`${Q(e.yields??``)} off a ${e.name.toLowerCase()} only in ${C(Sn(e.yields??``))}`).join(`; `)}.</li>
+      <li>Bushes: <b>Harvest</b> with a sickle cuts ${yg.map(e=>`${Q(e.yields??``)} off a ${e.name.toLowerCase()} only in ${C(Cn(e.yields??``))}`).join(`; `)}.</li>
       <li>Yield per picking: sapling none; mature about 3; old about 5; more with forestry. A few minutes to regrow.</li>
       <li>${E(I(`apple`,V(`make_apple_pie`,`apple`)))} + a dough: ${H(`make_apple_pie`)} <b>apple pies</b> (the best food).
       ${E(I(`cherry`,V(`make_cherry_preserves`,`cherry`)))}: ${H(`make_cherry_preserves`)} jars of <b>preserves</b> (needs its Recipe read).
@@ -804,36 +804,36 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     <h4>Forester</h4>
     <ul>
       <li><b>Coppice</b> (hatchet): a mature or older tree back to young, for ${Lh(`Coppice`).coppice??0} logs; it keeps growing.</li>
-      <li><b>Tap resin</b> (carving knife): ${Lh(`Tap Resin`).tap_resin??0} tar from a living ${kc[Me].name.toLowerCase()}, once a day per tree;
+      <li><b>Tap resin</b> (carving knife): ${Lh(`Tap Resin`).tap_resin??0} tar from a living ${kc[Ne].name.toLowerCase()}, once a day per tree;
       the day starts at the daily reset (${hm(13)} UTC).</li>
       <li><b>Clear brush</b> (sickle): every bush and reed in the ${Rh}&times;${Rh} tiles round the chosen one, at once;
       bushes leave ${qs[Ni[_.Bush]].name.toLowerCase()}, reeds ${qs[Ni[_.Reed]].name.toLowerCase()}.</li>
     </ul>
     <h3>Vineyards</h3>
     <ul>
-      <li>Wild vines: in ${at.toLowerCase()}es. <b>${wp(Cn)}</b> (${w(Ao).name.toLowerCase()} in pack): ${I(Wt,1)};
+      <li>Wild vines: in ${ot.toLowerCase()}es. <b>${wp(wn)}</b> (${w(Ao).name.toLowerCase()} in pack): ${I(Gt,1)};
       again once the bush regrows, as after a harvest.</li>
       <li><b>Trellis</b>: ${B(`make_trellis`)} (${U(`make_trellis`)}, ${w(R(`make_trellis`).tool??``).name.toLowerCase()}).
-      ${At()} ${Ze()} Turn: moves to the next side of its tile with such a wall; refused where there is none.</li>
-      <li><b>${wp(Gi)}</b> at its foot: roots only where the trellis stands on ${gt()}.</li>
+      ${jt()} ${Qe()} Turn: moves to the next side of its tile with such a wall; refused where there is none.</li>
+      <li><b>${wp(Gi)}</b> at its foot: roots only where the trellis stands on ${_t()}.</li>
       <li>Bears from 3 days after planting, only in <b>${ea}</b>; <b>${wp(te)}</b> out of season gives nothing and says how long.</li>
-      <li>In ${ea}: picked ${ts(1)}; grapes = 6 &times; (${xe} + ${Re} &divide; 130), rounded:
-      ${Ct(1)} at the start, ${Ct(50)} at ${Re} 50, ${Ct(100)} at 100.</li>
-      <li>Cutting, planting and picking train ${Re}. Picking a trellis up loses its vine.</li>
-      <li><b>Grape wine</b>: ${I(Ae,Hn.get(`grape_wine`)?.count??0)} + ${Hn.get(`grape_wine`)?.litres} litres of water in a barrel,
-      ${F(Hn.get(`grape_wine`)?.time??0)}. Ages${Sp===Hn.get(`wine`)?.ages?` as cherry wine`:``}: ${Sp?.rate} quality (QL) a day,
+      <li>In ${ea}: picked ${ts(1)}; grapes = 6 &times; (${Se} + ${ze} &divide; 130), rounded:
+      ${wt(1)} at the start, ${wt(50)} at ${ze} 50, ${wt(100)} at 100.</li>
+      <li>Cutting, planting and picking train ${ze}. Picking a trellis up loses its vine.</li>
+      <li><b>Grape wine</b>: ${I(je,Un.get(`grape_wine`)?.count??0)} + ${Un.get(`grape_wine`)?.litres} litres of water in a barrel,
+      ${F(Un.get(`grape_wine`)?.time??0)}. Ages${Sp===Un.get(`wine`)?.ages?` as cherry wine`:``}: ${Sp?.rate} quality (QL) a day,
       ${(Sp?.rate??0)*4} in a cellar, up to ${Sp?.cap} QL more (see Brewing).</li>
     </ul>
     <h3>Farming</h3>
     <ul>
       <li><b>Till</b> (rake in pack): grass or dirt into a field.</li>
       <li>Seeds: foraging (vegetables, starches) and botanizing (spices, fibres)${Cg?`, every season`:``}. A field's menu offers <b>Sow</b> for each carried.</li>
-      <li>${Vn.length} growth stages: ${C(Vn)}. Time per growth stage by crop (mint fastest, corn slowest).</li>
-      <li><b>Tend</b>: once per growth stage. Untended: ${Qn(0).produce} crop. Tended every growth stage: <b>${Qn(3).produce} crops</b>.
+      <li>${Hn.length} growth stages: ${C(Hn)}. Time per growth stage by crop (mint fastest, corn slowest).</li>
+      <li><b>Tend</b>: once per growth stage. Untended: ${$n(0).produce} crop. Tended every growth stage: <b>${$n(3).produce} crops</b>.
       Seed, either way: ${ti()} per harvest (settlement workers too).</li>
       <li>Tending and tilling train <b>Farming</b>; farming sets harvest quality (QL).</li>
       <li>Harvesting leaves the field tilled (resowable; a ${h.seavic.name} can run one alone).</li>
-      <li><b>${ec.name}</b>: a floor that farms as a field, ${en(1)} in every season while open to the sky or under glass (see Building).</li>
+      <li><b>${ec.name}</b>: a floor that farms as a field, ${tn(1)} in every season while open to the sky or under glass (see Building).</li>
     </ul>
     <h4>Farmer patches</h4>
     <ul>
@@ -844,15 +844,15 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     </ul>
     <h4>Seasons</h4>
     <ul>
-      <li>Field growth: ${C(O.map(e=>`${en(Si[e])} in ${e}`))}.</li>
+      <li>Field growth: ${C(O.map(e=>`${tn(Si[e])} in ${e}`))}.</li>
       <li>Winter: crops <b>hold their growth stage until spring</b>; nothing dies; sowing, tending and harvesting still work. A growth stage running into winter finishes after it.
-      Before the first spring: ${en(1)}.</li>
+      Before the first spring: ${tn(1)}.</li>
       <li>Hovering a field: real time to the next growth stage; in winter, time until spring.</li>
     </ul>
     <h4>Planter</h4>
     <ul>
-      <li>One crop, <b>${en(ji)} in every season</b>, winter included, indoors or out. Cotton growth stage: ${F(ie.cotton.stageSeconds)} in a spring field,
-      ${F(ie.cotton.stageSeconds/ji)} in a planter.</li>
+      <li>One crop, <b>${tn(ji)} in every season</b>, winter included, indoors or out. Cotton growth stage: ${F(ae.cotton.stageSeconds)} in a spring field,
+      ${F(ae.cotton.stageSeconds/ji)} in a planter.</li>
       <li>Sow, tend and harvest from its menu: the field's seeds, growth stages and yields. <b>Pull it up</b>: what grows goes back into the soil.</li>
       <li>Farmer perks that work on it: ${C(Ip().map(e=>e.name))}; ${Op(`rotate:plant_seed`)} reads the planter's own last crop.
       Fields only: ${C([`sow_patch`,`tend_patch`,`harvest_patch`].map(Op))}.</li>
@@ -866,11 +866,11 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       <li><b>Cook</b> at a lit fire: cooked meat fills ${S(w(`cooked_meat`).food??0)} of the food bar (raw ${S(w(`meat`).food??0)}); baked potatoes;
       roast onions and nuts; with a <b>clay bowl</b>: berry compote, meat and vegetable stew.</li>
       <li><b>Cottage pie</b> (${U(`make_cottage_pie`)}, clay bowl, lit fire, its Recipe read): ${B(`make_cottage_pie`)}; makes ${H(`make_cottage_pie`)}, ${S(w(`cottage_pie`).food??0)} food each.</li>
-      <li><b>Recipes</b>: ${C(Zn(`recipe`).map(e=>eo(e).toLowerCase()))}: shut until read. Crafting window: greyed, padlocked, "${a(Zn(`recipe`)[0])}".
-      A Recipe: ${S(o)} per butchering of a ${v([...an])} carcass; one not read first. <b>Read recipe</b>: opens it for good, Recipe used up; already open: not read.
+      <li><b>Recipes</b>: ${C(Qn(`recipe`).map(e=>eo(e).toLowerCase()))}: shut until read. Crafting window: greyed, padlocked, "${a(Qn(`recipe`)[0])}".
+      A Recipe: ${S(o)} per butchering of a ${v([...on])} carcass; one not read first. <b>Read recipe</b>: opens it for good, Recipe used up; already open: not read.
       Simma: does not cook them.</li>
-      <li><b>Oven</b> recipes: a ${Wn.oven} within reach; a brazier does not count. Campfire recipes: a lit fire, oven or brazier.</li>
-      <li><b>Ferments</b>: a go seals a <b>${w(Nn).name.toLowerCase()}</b>, named for what it makes, at the go's QL and rarity; its vessel used up.
+      <li><b>Oven</b> recipes: a ${Gn.oven} within reach; a brazier does not count. Campfire recipes: a lit fire, oven or brazier.</li>
+      <li><b>Ferments</b>: a go seals a <b>${w(Pn).name.toLowerCase()}</b>, named for what it makes, at the go's QL and rarity; its vessel used up.
       <b>Open</b> when ready: the dish at that QL, the vessel back at QL 20; sooner: time left. Some only in a cellar: "${rs}"</li>
       <li><b>Serve</b> a dish for a group: 1 share to each other player in reach, nearest first; the rest to you.</li>
       <li>Cooking recipes: in the crafting window, unlocked next to a lit fire. Failed dish: ingredients damaged by their QL.</li>
@@ -901,8 +901,8 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       <li>Fuel as a campfire (coal burns longest); light; charge with ore. Smelt time per piece: longer for fine ore and harder metal, shorter in a better smelter.
       Draw the lumps off when done.</li>
       <li>Lumps of one metal merge into one lump; quality (QL) = average weighted by size.</li>
-      <li><b>Melt down</b> (lit smelter): anything cast from metal or hafted to a cast head. Lumps back: ${P(Bt)} of its metal, at least ${Be({uid:0,id:`coin`,ql:1,dmg:0,count:1,extra:`Iron`},1)}.
-      QL: ${P(Mt)} of its QL, less its damage. Heat: ${P(qi)} of ore's. All of a stack: what fits in the smelter (20 lumps); the rest stays in the pack.
+      <li><b>Melt down</b> (lit smelter): anything cast from metal or hafted to a cast head. Lumps back: ${P(Vt)} of its metal, at least ${Ve({uid:0,id:`coin`,ql:1,dmg:0,count:1,extra:`Iron`},1)}.
+      QL: ${P(Nt)} of its QL, less its damage. Heat: ${P(qi)} of ore's. All of a stack: what fits in the smelter (20 lumps); the rest stays in the pack.
       Work done: told to whoever put it in, count and QL per kind.</li>
       <li><b>Alloys</b> at a hot smelter: bronze, brass, pewter, electrum, <b>steel</b> (${B(`make_steel`)}). QL from the input metal; skill only sets how little is lost.</li>
     </ul>
@@ -916,7 +916,7 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       <li><b>Anvil mould</b>, poured at the smelter: an anvil of that metal from ${zs.get(`anvil_mould`).lumps} lumps; set down on 4 spots of a tile.</li>
       <li>Other moulds, <b>poured at the smelter</b> in any metal: a <b>casting</b> (shovel head casting, nail casting…) out with the lumps.</li>
       <li>Castings are finished at an <b>anvil</b> with <b>blacksmithing</b>, <b>weaponsmithing</b> or <b>armoursmithing</b> as the piece needs. Skill sets success and QL,
-      with the casting (mould and metal QL) and the anvil. Failure: casting damaged by its QL (${sr}), not used up.</li>
+      with the casting (mould and metal QL) and the anvil. Failure: casting damaged by its QL (${cr}), not used up.</li>
       ${Us.filter(e=>e.also).map(e=>`<li><b>${w(e.makes).name}</b>: casting + ${e.also?.count} × ${w(e.also?.item??``).name.toLowerCase()} at the anvil, spent on success.</li>`).join(``)}
       <li>Tool heads and blades: fit a shaft. Swords hit far harder than tools. A helm stops most of a cornered wildermon's damage.</li>
     </ul>
@@ -937,7 +937,7 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       <li><b>Bottle</b>: holds ${w(`bottle`).holds??0} of one food or drink; contents rot at ${P(w(`bottle`).shelter??1)} of the rate on the ground.</li>
       <li>Solid <b>stained glass</b> wall: ${L(Os.find(e=>e.id===`stained_glass`)?.bill??[])}; trowel; trains masonry. One firing glazes one wall.
       ${Yp()}</li>
-      <li><b>${w(ht).name}</b>: <b>Dye it</b>, ${cr(1)} of dye a panel, one panel an action; keeps the colour; stacks apart from clear ones.</li>
+      <li><b>${w(gt).name}</b>: <b>Dye it</b>, ${lr(1)} of dye a panel, one panel an action; keeps the colour; stacks apart from clear ones.</li>
       <li>A window or bay window is the colour of the <b>last panel fitted</b> (a clear panel last: clear). Seen by everybody, inside and out.
       Stained glass walls keep their gem colours and take no dyed panel.</li>
     </ul>
@@ -967,8 +967,8 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     <h3>Settling and building</h3>
     <h4>Founding</h4>
     <ul>
-      <li><b>Settlement stake</b>: a shaft, carving knife. Use where you stand: a settlement ${fg} by ${fg} tiles round a settlement totem. Token at least ${Zt} tiles from every other settlement's token on one axis (borders at level 5 5 tiles apart), and at least 100 tiles from every runestone.</li>
-      <li><b>Preview settlement here</b> (tile menu, stake in the pack): border at level ${Fe(null)} (${ni(Fe(null))} by ${ni(Fe(null))} tiles) and, fainter, at level 5 (${ni(5)} by ${ni(5)}), drawn on the ground; red where founding is refused. Log: the refusal, or allowed. Measured from every settlement on the island. Shown until the stake is spent or <b>Clear settlement preview</b>.</li>
+      <li><b>Settlement stake</b>: a shaft, carving knife. Use where you stand: a settlement ${fg} by ${fg} tiles round a settlement totem. Token at least ${Qt} tiles from every other settlement's token on one axis (borders at level 5 5 tiles apart), and at least 100 tiles from every runestone.</li>
+      <li><b>Preview settlement here</b> (tile menu, stake in the pack): border at level ${Ie(null)} (${ni(Ie(null))} by ${ni(Ie(null))} tiles) and, fainter, at level 5 (${ni(5)} by ${ni(5)}), drawn on the ground; red where founding is refused. Log: the refusal, or allowed. Measured from every settlement on the island. Shown until the stake is spent or <b>Clear settlement preview</b>.</li>
       <li>One settlement at a time. Building only on its land.</li>
       <li>Items left outside on settlement land: rot rate ${P(Cd)} of that off it.</li>
     </ul>
@@ -1021,8 +1021,8 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       Its menu lists what is missing.</li>
       <li>Ground-floor tiles with no floor planned and no slab poured: <b>Till</b> with a rake into fields (all field rules, Farmer patches and perks included).</li>
       <li>With a field inside: no floor over the field, no roof but glass, no storey above. <b>Clear the field</b> packs it flat again.</li>
-      <li>Growth: <b>${en(1)} in every season</b>, winter included (open field: ${C(O.map(e=>`${en(Si[e])} in ${e}`))}).
-      Cotton growth stage: ${F(ie.cotton.stageSeconds/1)} all year.</li>
+      <li>Growth: <b>${tn(1)} in every season</b>, winter included (open field: ${C(O.map(e=>`${tn(Si[e])} in ${e}`))}).
+      Cotton growth stage: ${F(ae.cotton.stageSeconds/1)} all year.</li>
       <li>Last panel or wall in: crops continue at glasshouse growth speed from their progress. A roof tile or wall removed, or a tile added: field growth speed from there.</li>
       <li>Indoors: items left in it rot at ${P(ol)} of the open-air rate.</li>
     </ul>
@@ -1031,7 +1031,7 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       <li><b>Plan floor</b> offers <b>${ec.name.toLowerCase()}</b>, any storey: ${Np()} per tile; mallet; trains carpentry. ${Td(ec)}</li>
       <li>Ribbons: ${Pp()} only. Hod carriers: timber and dirt only.</li>
       <li>Finished: a field, no tilling. Sow, tend, harvest and patches from the storey you stand on (all field rules and Farmer perks included).</li>
-      <li>Growth: <b>${en(1)} in every season</b>, winter included, while open: nothing finished above it, or the nearest finished thing above a glass roof.</li>
+      <li>Growth: <b>${tn(1)} in every season</b>, winter included, while open: nothing finished above it, or the nearest finished thing above a glass roof.</li>
       <li>Covered (floor, staircase or roof not of glass above): "${fi}" Growing crop: holds its progress until uncovered.</li>
       <li>One crop per tile, any storey: "${Ba}"</li>
       <li>Removed or relaid in another material: its crop goes with it. Settlement farm workers: beds on any storey a finished staircase reaches.</li>
@@ -1049,8 +1049,8 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     <ul>
       <li>Ground-floor wall type in ${C(Os.filter(e=>e.kind===`stone`&&Is(e,{wall:`portcullis`})).map(e=>e.name.toLowerCase()))}; as wide as a double door.
       Bill: ${L(ud.get(`portcullis`)?.fittings??[])} over the stone's own (stone brick: ${L(Object.entries(bs(`stone_brick`,`portcullis`).total))}).</li>
-      <li><b>Raise the portcullis</b>: ${he(`raise_portcullis`,A)}. <b>Lower the portcullis</b>: ${he(`lower_portcullis`,A)}.
-      From either side, within ${wn(`raise_portcullis`)} tile${wn(`raise_portcullis`)===1?``:`s`} of the tile beside it.</li>
+      <li><b>Raise the portcullis</b>: ${ge(`raise_portcullis`,A)}. <b>Lower the portcullis</b>: ${ge(`lower_portcullis`,A)}.
+      From either side, within ${Tn(`raise_portcullis`)} tile${Tn(`raise_portcullis`)===1?``:`s`} of the tile beside it.</li>
       <li>Down: nothing passes (people, carts, wildermon). Up: everything passes, carts included. Always see-through.</li>
       <li>Pointing at it (either side, any storey) shows up or down and padlocked.</li>
       <li>No padlock: anybody raises or lowers it. <b>Fit a padlock</b>: only its key holder and the settlement's founder raise, lower or take it down.</li>
@@ -1182,7 +1182,7 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       <li>Keeps its facing whatever the view. <b>Turn it</b>: ${P(1/tg)} round. Stairs and ladders: Q and E pick the climbing side (and the half on a
       ${ad}, a half at a time).</li>
       <li>Storage (${eg.length} pieces): ${C(eg.map((e,t)=>`${e.name.endsWith(`s`)?``:`a `}${e.name.toLowerCase()} ${t===0?`takes `:``}${e.capacity}`))}
-      (plank crate: ${mn.plank.capacity}).</li>
+      (plank crate: ${hn.plank.capacity}).</li>
       <li><b>Larder</b>: food and drink (raw or cooked), flour, dough and cornmeal only.</li>
       <li><b>Open</b> to see inside; <b>Put away</b> on a carried item while beside it. Must be empty to pick up.</li>
       <li>Drag a stack from the inventory onto a crate, cart, wagon or holding piece: goes in whole (Put away rules); walks there if out of reach.
@@ -1197,10 +1197,10 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       solid log wall ${bs(`log`,`solid`).needed.log??0}).</li>
       <li><b>Ground floor</b> only, in a wall with no building across it: that side is the <b>street</b>; no building is planned or added onto that tile afterwards.</li>
       <li>Impassable; carries a storey like any wall; does not block sight.</li>
-      <li>Owner: whoever planned it. Within <b>${pn} tiles</b> of the wall's middle, either side: <b>Set out on the counter</b> on a pack item, or drag the stack.
+      <li>Owner: whoever planned it. Within <b>${mn} tiles</b> of the wall's middle, either side: <b>Set out on the counter</b> on a pack item, or drag the stack.
       Holds <b>${Io} things</b>, as a stall; a wildermon crate is the only furniture it takes.</li>
       <li>Prices: <b>Stall</b> tab of the <b>Market</b> window; unpriced items are not for sale.</li>
-      <li>Buyers: <b>street side only</b>, within ${pn} tiles, not inside any building (the shop's other rooms and next door included).
+      <li>Buyers: <b>street side only</b>, within ${mn} tiles, not inside any building (the shop's other rooms and next door included).
       Right-click beside it: <b>Buy</b> (<b>Buy from</b> its keeper's counter where several sell onto the tile), or <b>Look at</b> and <b>Buy</b> on an item.</li>
       <li>Items and prices visible within <b>6 tiles</b>; further off, only the count.</li>
       <li>Silver goes to its <b>till</b>: keeper empties it from either side with <b>Take the takings</b>; items come back with <b>Take</b>.</li>
@@ -1224,8 +1224,8 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     </ul>
     <h3>Memorial stones</h3>
     <ul>
-      <li><b>Memorial stone</b>: ${B(`make_${In}`)} (${U(`make_${In}`)}). Set down on a ${d(In).w} by ${d(In).h} block of subtiles.</li>
-      <li><b>Engrave</b>: within <b>${Pd} tiles</b>, ${w(ae).name.toLowerCase()} in pack; one line up to <b>72 characters</b>.
+      <li><b>Memorial stone</b>: ${B(`make_${Ln}`)} (${U(`make_${Ln}`)}). Set down on a ${d(Ln).w} by ${d(Ln).h} block of subtiles.</li>
+      <li><b>Engrave</b>: within <b>${Pd} tiles</b>, ${w(oe).name.toLowerCase()} in pack; one line up to <b>72 characters</b>.
       ${E((b.get(`masonry`)?.name??`masonry`).toLowerCase())} work: trains it, wears the chisel like an action.</li>
       <li>Cleaned like chat: line breaks and tabs become spaces; runs of spaces become one. <b>Cut a new line</b> replaces it.</li>
       <li>Who may engrave: whoever set it down and anybody of the settlement it stands on; nobody muted by a keeper.</li>
@@ -1249,10 +1249,10 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     <ul>
       <li><b>Work post</b>: <b>${B(`make_work_post`,!0)}</b>, mallet. Driven in on any tile <b>outside your own borders</b> (refused inside).</li>
       <li><b>Set a wildermon to it</b> (its menu): <b>one</b>, following you within 4 tiles or in a crate in your pack or beside you (let out at the post). Same task and skill pay as on a settlement, measured from the post.</li>
-      <li>Range: <b>${Le(1)} tiles round a rough post, ${Le(G)} round the best</b>, whatever the wildermon's own range.</li>
+      <li>Range: <b>${Re(1)} tiles round a rough post, ${Re(G)} round the best</b>, whatever the wildermon's own range.</li>
       <li>Loads go into anything with room inside that circle; with nothing there, all the way home.</li>
       <li>Hungry: it eats the lowest-QL thing of its diet from a container <b>you made</b> inside that circle, as a settlement worker does from its settlement's.</li>
-      <li><b>Rots where it stands</b>: <b>${F(be)}</b> (roughest) to <b>${F(ke)}</b> (best); leans as it goes; one warning near the end.</li>
+      <li><b>Rots where it stands</b>: <b>${F(xe)}</b> (roughest) to <b>${F(Ae)}</b> (best); leans as it goes; one warning near the end.</li>
       <li>Fallen, pulled up or stood down, its worker goes, first that applies: an empty <b>wildermon crate</b> in your pack; else <b>follows you</b>,
       set down beside you, if nothing does; else <b>works on your settlement</b> if a working slot is free; else back to the wild.</li>
       <li>Can be pulled up early; comes up as worn as it was.</li>
@@ -1264,7 +1264,7 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       Works its task within <b>its own work range of you</b>, measured from the tile you stand on as you move.</li>
       <li>Storage: crates and storage furniture you may put into, carts, wagons and boats included, within that range and <b>not on any settlement</b>; the cart you pull, what you drive and the boat you are in, wherever they are. Not stalls, trash crates, mailboxes, hives, ponds or barrels.</li>
       <li>Loads: the bin that takes them first, then the nearest store with room. No storage in reach: &ldquo;${j({why:`nostore`,n:h.rabba.workRange,around:!0},`forage`)}&rdquo; Full: &ldquo;${j({why:`full`,n:0,around:!0},`forage`)}&rdquo; Nothing is dropped.</li>
-      <li>Tasks: every gathering task, as on a post; and at the stores ${C(st())}, makings out of storage in reach. Settlement only: guarding, stoking, sparring and every task at settlement stations, buildings or wildermon.</li>
+      <li>Tasks: every gathering task, as on a post; and at the stores ${C(ct())}, makings out of storage in reach. Settlement only: guarding, stoking, sparring and every task at settlement stations, buildings or wildermon.</li>
       <li><b>Stop</b> (status panel, or <b>Stop work around me</b> on its menu): back to following you; with another following you by then, as a post's worker goes. On the island it also stops when you go offline.</li>
       <li>Not counted against your settlement level's working slots.</li>
     </ul>
@@ -1278,7 +1278,7 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       (${Math.round(lg/w(`nail`).weight)} nails or ${Math.round(lg/w(`plank`).weight)} planks); no item-count limit. Stronger wood: proportionally more.</li>
       <li><b>Seed bin</b>, <b>sprout bin</b>: ${d(`seed_bin`).w*d(`seed_bin`).h} subtile each, ${B(`make_seed_bin`)} apiece; weighed.
       Seed bin <b>${ug} kg</b> (${Math.round(ug/w(`wheat_seed`).weight)} wheat seeds or ${Math.round(ug/w(`potato_seed`).weight)} seed potatoes): the
-      ${Fn.size} sowable seeds only. Sprout bin <b>${dg} kg</b> (${Math.round(dg/w(`sprout`).weight)} sprouts): sprouts only.</li>
+      ${In.size} sowable seeds only. Sprout bin <b>${dg} kg</b> (${Math.round(dg/w(`sprout`).weight)} sprouts): sprouts only.</li>
       <li><b>Trash crate</b>: contents rot <b>${N(d(`trash_crate`).trash??1)} faster</b> than out in the rain; gone in minutes.
       <b>Put away</b> never picks it; use <b>Throw it in the trash</b> on the item.</li>
       <li><b>Small cart</b>: holds ${d(`cart`).capacity}. <b>Take hold of it</b>: follows you until you <b>let go</b>. One cart at a time; not into water or over what it cannot roll over.</li>
@@ -1291,10 +1291,10 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       middle of; everything between at least ${T(3)} m below the deck over its tile's middle (a gap, not a slope).</li>
       <li>End height: the tile's middle (mean of corners), or the top of a poured foundation or finished deck on piers; an upper-floor end at that floor's height.
       Ends within ${T(12)} m: a level deck at their mean.</li>
-      <li>${C(Object.values(ln).filter(e=>e!==On&&!e.material).map(e=>`<b>${e.name.toLowerCase()}</b> (${L(e.bill)} a span${e.tool===`trowel`?`, trowel`:``}): <b>${e.span}</b> tiles, ${e.carts?`carries a cart`:`foot traffic only`}`))}.</li>
+      <li>${C(Object.values(un).filter(e=>e!==kn&&!e.material).map(e=>`<b>${e.name.toLowerCase()}</b> (${L(e.bill)} a span${e.tool===`trowel`?`, trowel`:``}): <b>${e.span}</b> tiles, ${e.carts?`carries a cart`:`foot traffic only`}`))}.</li>
       <li>One bridge per wall material: max length its storeys + 4 tiles; bay (one arch or beam) at most its heft + 1 tiles, all bays one length;
       max drop under the deck its storeys; its tool and trade. Per span: a solid wall's bill a lane. Per pier (one between bays): a solid wall's bill a storey of drop there, rounded up.
-      ${C(Object.values(ln).filter(e=>e.material).map(e=>`<b>${e.name.toLowerCase()}</b> ${e.span} tiles, bay ${e.bay}, drop ${e.storeys} storeys`))}.</li>
+      ${C(Object.values(un).filter(e=>e.material).map(e=>`<b>${e.name.toLowerCase()}</b> ${e.span} tiles, bay ${e.bay}, drop ${e.storeys} storeys`))}.</li>
       <li>Lanes: up to 3: the line set out along; at 2, one more on the side picked; at 3, one more each side. Every lane's ends land as the line's,
       on the same storey within ${T(12)} m. 2 lanes: wagons cross. 3 lanes: furniture and stalls on the outer lanes of a finished deck.
       Furniture under a deck: <b>${T(20)} m</b> clearance.</li>
@@ -1311,10 +1311,10 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     </ul>
     <h4>Drawbridge</h4>
     <ul>
-      <li>Open ground to open ground, neither end in a building, at most ${ln.draw.span} tiles of deck. First span also takes ${L(ln.draw.winch??[])}
+      <li>Open ground to open ground, neither end in a building, at most ${un.draw.span} tiles of deck. First span also takes ${L(un.draw.winch??[])}
       (hinge, gallows, winch, chains). Hinged at the end it was set out from, where its winch stands.</li>
-      <li>${wn(`raise_drawbridge`)===0?`On that tile`:`Within ${wn(`raise_drawbridge`)} tiles of that tile`}:
-      <b>Raise the drawbridge</b> ${he(`raise_drawbridge`,A)}; <b>Lower the drawbridge</b> ${he(`lower_drawbridge`,A)}.</li>
+      <li>${Tn(`raise_drawbridge`)===0?`On that tile`:`Within ${Tn(`raise_drawbridge`)} tiles of that tile`}:
+      <b>Raise the drawbridge</b> ${ge(`raise_drawbridge`,A)}; <b>Lower the drawbridge</b> ${ge(`lower_drawbridge`,A)}.</li>
       <li>Raised: nobody, no cart, no wildermon crosses; its hinge is shut; blocks sight. Only what is under the span remains; anybody on the deck as it rises is left in it.</li>
       <li>A moat or ditch under it blocks people only where too steep to climb: a tile falling more than ${T(60)} m corner to corner, or a step over ${T(32)} m
       between neighbouring tile middles, each +${km(ul)} m per climbing level. Water stops nobody (swum).</li>
@@ -1327,7 +1327,7 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     <h3>Aqueducts</h3>
     <h4>Setting out</h4>
     <ul>
-      <li>Carries a spring's water from a pond or pool to a basin up to <b>${On.span}</b> tiles off, over whatever lies between.</li>
+      <li>Carries a spring's water from a pond or pool to a basin up to <b>${kn.span}</b> tiles off, over whatever lies between.</li>
       <li>Right-click the target tile (a pool in a foundation, a pond, a tiered fountain, or a hollow holding <b>${T(3)} m</b> or more over no more than 576 corners):
       <b>Lead an aqueduct here</b> offers the first pond or pool straight out each way within an aqueduct's span, with the reason where one will not do.
       <b>Throw a bridge across</b> does not make one.</li>
@@ -1335,7 +1335,7 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       over its ground). Everything under it at least <b>${T(3)} m</b> below the channel bed.</li>
       <li>Refused: anything bridged or built in the way; a tree or bush under a span; a bridge at either end. On a settlement, only its builders lead water from or to it.</li>
       <li>One aqueduct per pond or pool: the first takes all its water; a second from the same water is refused.</li>
-      <li>Built like a bridge, a span at a time, a unit an action, trowel: ${L(On.bill)} a span, masonry difficulty ${On.difficulty}.</li>
+      <li>Built like a bridge, a span at a time, a unit an action, trowel: ${L(kn.bill)} a span, masonry difficulty ${kn.difficulty}.</li>
       <li><b>${Hm?.label}</b>: half back; within ${ns} tiles of the middle of either end; on a settlement, builders only.
       Gathers moss like a stone arch (see Ivy and moss on old stone).</li>
     </ul>
@@ -1348,12 +1348,12 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     <ul>
       <li>Runs while a spring's pond or pool at its head stands at the channel's height or higher: <b>all</b> the water that would go over that lip goes along it; the stream beyond
       dries up, with every pond only it kept.</li>
-      <li>Channel: <b>${Ln*4} m</b> wide, water <b>${T(1)} m</b> deep, at 4 tiles a second:
-      <b>${oe} litres a second</b> (${$o} a minute); ${1/4} s per span.</li>
+      <li>Channel: <b>${Rn*4} m</b> wide, water <b>${T(1)} m</b> deep, at 4 tiles a second:
+      <b>${se} litres a second</b> (${$o} a minute); ${1/4} s per span.</li>
       <li>Into a <b>pool</b>: full at once; overflows its lowest edge as if a spring rose in it (never the edge its end pier stands on, nor edges between tiles of its line).</li>
-      <li>Into a <b>hollow</b>: fills at the channel's rate (${qe} litres per corner under water per ${T(Om)} m over that corner), then spills over its lip; at once if a spring's
+      <li>Into a <b>hollow</b>: fills at the channel's rate (${Je} litres per corner under water per ${T(Om)} m over that corner), then spills over its lip; at once if a spring's
       pond already stands there.</li>
-      <li>Into a <b>fountain</b>: +${oe} litres a second over its own well; empty to full in ${+((d(`fountain`).well??0)/oe).toFixed(2)} s.</li>
+      <li>Into a <b>fountain</b>: +${se} litres a second over its own well; empty to full in ${+((d(`fountain`).well??0)/se).toFixed(2)} s.</li>
       <li>Onto bare ground: runs downhill from the tile's lowest corner.</li>
       <li>The last-span message and its menu name the outcome and a hollow's fill time. A spring dug in its head pond or pool says its water goes along it.</li>
       <li>Head water below the channel (spring stopped, pond cut lower): runs dry; hollows it filled empty; a foot pool keeps its water but stops overflowing; a fountain is back to
@@ -1370,13 +1370,13 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       <li><b>Ivy</b>: every finished wall, fence and half wall of ${C(Os.filter(e=>e.kind===`stone`).map(e=>e.name.toLowerCase()))}; up from the foot and
       down from the top where nothing stands on it; never on doorways, arches, windows or gates.</li>
       <li><b>Moss</b>: paving joints (${C(Object.values(qs).filter(e=>e.paved).map(e=>e.name.toLowerCase()))}), poured foundations,
-      ${C(pi.filter(e=>e.mossy).map(e=>Gm(e.name)))}, ${C(Object.values(ln).filter(e=>e.stone).map(e=>Gm(e.name.toLowerCase())))}, ${Gm(ln.aqueduct.name)}.</li>
+      ${C(pi.filter(e=>e.mossy).map(e=>Gm(e.name)))}, ${C(Object.values(un).filter(e=>e.stone).map(e=>Gm(e.name.toLowerCase())))}, ${Gm(un.aqueduct.name)}.</li>
       <li>Bare when built, laid, set down or poured; grows a day at a time for <b>14 days</b> (a day = ${Ha/mm} hours real time), then stops.
       Things standing before this existed started bare that day. Island: one clock for everybody.</li>
-      <li>Cover = days ÷ 14 × pace (speed multiplier). Pace: <b>${er}</b> for tops and south or east faces; <b>${+(er+lt).toFixed(2)}</b> for north or west faces;
-      <b>+${qn}</b> on a water tile, ${S(1/4)} of that less per tile further off, none at 4 tiles.</li>
-      <li>End result: south or east face ${S(er)} covered; north or west face covered after ${Wm(er+lt)} days; facing water after
-      ${Wm(er+lt+qn)}.</li>
+      <li>Cover = days ÷ 14 × pace (speed multiplier). Pace: <b>${tr}</b> for tops and south or east faces; <b>${+(tr+ut).toFixed(2)}</b> for north or west faces;
+      <b>+${Jn}</b> on a water tile, ${S(1/4)} of that less per tile further off, none at 4 tiles.</li>
+      <li>End result: south or east face ${S(tr)} covered; north or west face covered after ${Wm(tr+ut)} days; facing water after
+      ${Wm(tr+ut+Jn)}.</li>
       <li><b>${Rm.label}</b> (${Gm(w(Rm.tool??``).name)}): right-click a wall, choose the side; every storey on that side at once.
       <b>${zm.label}</b> (${Gm(w(zm.tool??``).name)}): right-click the paving or foundation (both where a tile has both), statue, arch or aqueduct.</li>
       <li>Either: ${F(A(Rm.baseTime))} an action with a tool of no quality, less with better; ${S(Rm.stamina)} stamina. Leaves bare stone that starts again.
@@ -1407,10 +1407,10 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       <li>Direction and strength both wander (calm to gale within a day); computed from the clock: the same for everybody at that hour, different per island.</li>
       <li>Rowing boats ignore it. Sailing boats depend on the <b>angle</b> more than the strength: across the wind fastest; downwind steady and slower; close-hauled slow.</li>
       <li>Within ${Math.round(To*180/Math.PI)} degrees of the wind: <b>in irons</b>, almost no way. Upwind: <b>tack</b> (close-hauled on one side, then the other).</li>
-      <li>Example: quality (QL) ${Ng.ql} sailing boat, body control 20, ${we(Ng.force)}: ${Pg} tiles a second on a beam reach, running,
+      <li>Example: quality (QL) ${Ng.ql} sailing boat, body control 20, ${Te(Ng.force)}: ${Pg} tiles a second on a beam reach, running,
       close-hauled and in irons.</li>
       <li>Under sail the bars show the wind: arrow, name, direction it is from, point of sail.</li>
-      <li>Sailing boat <b>holds ${ig.capacity??0} things</b>, crates included; fully loaded she is ${S(qd)} slower than empty.</li>
+      <li>Sailing boat <b>holds ${ig.capacity??0} things</b>, crates included; fully loaded she is ${S(Jd)} slower than empty.</li>
     </ul>
     <h3>Why a road is worth its stone</h3>
     <ul>
@@ -1440,23 +1440,23 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     </ul>
     <h3>Wildflowers</h3>
     <ul>
-      <li>Grass flowers in ${C(Ie)}, in drifts fixed by location (the same for everybody).</li>
-      <li>Max per tile in a drift: <b>${Qt.summer} clumps</b> in summer (widest drifts), <b>${Qt.spring}</b> in spring; none in autumn or winter.</li>
+      <li>Grass flowers in ${C(Le)}, in drifts fixed by location (the same for everybody).</li>
+      <li>Max per tile in a drift: <b>${$t.summer} clumps</b> in summer (widest drifts), <b>${$t.spring}</b> in spring; none in autumn or winter.</li>
       <li>Grass only: never lawn, steppe, tundra, moss, trail, field, paving, or under a building.</li>
       <li><b>Pick flowers</b> (bare hands): a <b>wildflower</b> per clump, quality (QL) your foraging; trains foraging. The tile is bare for everybody until the first day of the
       next ${O[0]}.</li>
-      <li>Use: <b>${Jc.get(`wildflowers`)?.primary} dye</b>: ${B(Fl(`wildflowers`))} boil into ${se} litres (${U(Fl(`wildflowers`))});
-      ${dd(_l(se,1))} kg, ${dd(_l(1,1))} kg per litre of lye.</li>
+      <li>Use: <b>${Jc.get(`wildflowers`)?.primary} dye</b>: ${B(Fl(`wildflowers`))} boil into ${ce} litres (${U(Fl(`wildflowers`))});
+      ${dd(_l(ce,1))} kg, ${dd(_l(1,1))} kg per litre of lye.</li>
     </ul>
     <h3>Bees</h3>
     <ul>
-      <li><b>Skep</b>: ${B(`make_${De}`)} (${U(`make_${De}`)}, ${w(R(`make_skep`).tool??``).name.toLowerCase()}). Set down like furniture.</li>
+      <li><b>Skep</b>: ${B(`make_${Oe}`)} (${U(`make_${Oe}`)}, ${w(R(`make_skep`).tool??``).name.toLowerCase()}). Set down like furniture.</li>
       <li>Range: <b>3 tiles</b> each way (a square 7 tiles across).</li>
       <li>Output: <b>a honey per 50 hours per flowering clump</b> in range; <b>a beeswax per 4 honey</b>.
-      ${C(rm.map(e=>`${e} clumps: ${Hi(e,`summer`)} honey an hour (full in ${F(12/ee(e,`summer`)*bn)})`))}.</li>
-      <li>Holds <b>12 honey</b> (and ${Dt(12)} beeswax); stops when full.</li>
+      ${C(rm.map(e=>`${e} clumps: ${Hi(e,`summer`)} honey an hour (full in ${F(12/ee(e,`summer`)*xn)})`))}.</li>
+      <li>Holds <b>12 honey</b> (and ${Ot(12)} beeswax); stops when full.</li>
       <li>Clumps counted per season as Pick flowers finds them: picked tiles and tiles under buildings count none. Nothing in
-      ${C(O.filter(e=>!Ie.includes(e)&&e!==`winter`))} (no flowers), nothing in ${_e} regardless.</li>
+      ${C(O.filter(e=>!Le.includes(e)&&e!==`winter`))} (no flowers), nothing in ${ve} regardless.</li>
       <li>Fills on the wall clock, while you are away too.</li>
       <li><b>Take honey</b> within ${Pd} tiles: every whole honey and its beeswax, at your ${(b.get(`animal_husbandry`)?.name??`animal_husbandry`).toLowerCase()} with the skep
       as the tool (its quality (QL) counts as a tool's); trains ${(b.get(`animal_husbandry`)?.name??`animal_husbandry`).toLowerCase()}. Restarts empty; a part honey is lost.</li>
@@ -1489,7 +1489,7 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       <li>On death: <b>Respawn</b> beside one, on the same ring as a first join (Dying, below).</li>
       <li><b>Safe ring</b>: 60 tiles (${Math.round(60/Zl)} s walking) round the island's spawn and each Runestone.
       No spawns there of ${C(Object.values(h).filter(wi).map(e=>`${e.name.toLowerCase()}s`))}.
-      No hunt started on you, or by one, standing there; one hunting you there or come into it: stops, goes home, ignores you for ${Math.round(ot)} s.
+      No hunt started on you, or by one, standing there; one hunting you there or come into it: stops, goes home, ignores you for ${Math.round(st)} s.
       Not covered: a creature you struck or drew onto you with a class skill; a wild creature's fight with a tame one.</li>
       <li>Impassable; nothing dug, built, planted or set down on its 9 tiles. Hover or Examine names it.</li>
       <li>Meditation gain ${N(u.stone)} on a rug within ${u.stoneReach} tiles (Meditation, below).</li>
@@ -1518,19 +1518,19 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     <ul>
       <li><b>Large cart</b>: ${B(`make_large_cart`,!0)}. Holds <b>${og.capacity} things of any weight</b>; ${og.vehicle?.yokes??0} yokes;
       ${og.vehicle?.needs??0} wildermon move it, ${og.vehicle?.yokes??0} faster.</li>
-      <li><b>Wagon</b>: ${B(`make_wagon`,!0)}. Holds <b>${sg.capacity} things</b>; needs <b>${sg.vehicle?lr(sg.vehicle):``} yokes</b> filled to move.</li>
+      <li><b>Wagon</b>: ${B(`make_wagon`,!0)}. Holds <b>${sg.capacity} things</b>; needs <b>${sg.vehicle?ur(sg.vehicle):``} yokes</b> filled to move.</li>
       <li><b>Hitch</b> (from its menu, beside it): a tamed wildermon with you or a settlement worker; one in a wildermon crate is let out first. Then <b>take the reins</b>.</li>
       <li><b>Shoe it</b> (from a mount's or draught beast's menu, beside it, grown): 4 horseshoes and a mallet in the pack; lasts 7 days.
       Mount: speed on laid stone +${S(i-1)}, step ${km(8)} m steeper. Draught beast in the traces, at its share of the team:
-      speed on laid stone +${S((i-1)*jt)}, step ${km(8*jt)} m steeper.</li>
+      speed on laid stone +${S((i-1)*Mt)}, step ${km(8*Mt)} m steeper.</li>
       <li>Pace (speed multiplier): the team's speed and number, and hunger (a hungry one is slower).</li>
-      <li><b>Driving</b> (the driver): team pace +${S(gr(50)-1)} at 50, +${S(si)} at 100; trained per tile entered
+      <li><b>Driving</b> (the driver): team pace +${S(_r(50)-1)} at 50, +${S(si)} at 100; trained per tile entered
       on the seat. A ${h.seavic.name} pair outruns walking; ${sg.vehicle?.needs??0} ${h.quarra.name}s do not, but shift ${sg.capacity??0} bricks.</li>
       <li>Wildermon in the traces and mounts train <b>climbing</b>, per tile pulled or ridden: ${ta} base gain on the flat (${h.roxxen.name}'s driving base), to
       ${ta+Ki} at a rise of ${Ki*ne} or more. The team's climbing sets wheel speed and the steepest step taken.</li>
       <li>Climbing: level and evolution of a draught kind or a mount whose level skill it is (${C(Object.values(h).filter(e=>n(e)===`climbing`&&!e.monster).map(e=>e.name))});
       for any other kind, no level or evolution.</li>
-      <li><b>${h.roxxen.name}</b>: learns <b>driving</b> instead, ${wt.pull} (${S(nr*un.pull/1)} of an action); its driving counts where
+      <li><b>${h.roxxen.name}</b>: learns <b>driving</b> instead, ${Tt.pull} (${S(rr*dn.pull/1)} of an action); its driving counts where
       another wildermon's climbing does. Standing still, in or out of the traces: no learning.</li>
       <li>Open ground only: no fords, garden steps or steep ground. Indoors through an <b>arch</b>, <b>double door</b> or <b>gate</b>, never a plain door.</li>
       <li>Indoors: up a finished <b>wide staircase</b> from its foot, onto finished floors of that storey; no ${ad}, ladder or roof; never over a staircase's rails.
@@ -1549,7 +1549,7 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     <ul>
       <li><b>Well</b>: masonry, ${B(`make_well`)}. <b>Draws its own water</b> up to <b>${d(`well`).well} litres</b>; rate set by its quality (QL).</li>
       <li>Fill a bucket or waterskin as at a shore, or <b>drink from it</b>.</li>
-      <li><b>Drink</b> from a barrel, well, fountain, bucket or skin: any liquid but ${C([...ut].map(e=>dl[e]))} ("Not drinkable."); 1 litre a drink.
+      <li><b>Drink</b> from a barrel, well, fountain, bucket or skin: any liquid but ${C([...dt].map(e=>dl[e]))} ("Not drinkable."); 1 litre a drink.
       Bucket of water: ${S(w(`water_bucket`).drink??0)} of thirst; bucket of whey: ${S(w(`whey_bucket`).drink??0)}.</li>
       <li><b>Barrels</b>: liquid only; ${cg.length} sizes: ${C(cg.map((e,t)=>`<b>${e.name.toLowerCase()}</b> (${e.liquid}${t===0?` litres`:``})`))}.
       One liquid per barrel.</li>
@@ -1557,9 +1557,9 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     </ul>
     <h3>Sleep bonus, and what the cooking is for</h3>
     <ul>
-      <li><b>Sleep bonus</b>: +${Ui(3600*Ot(1,0))} to +${Ui(3600*Ot(1,100))} per hour logged off asleep in a bed, by QL; max ${Ui(fe)} stored. See <i>Beds</i>.</li>
-      <li>On (<b>${xr(t.get(`sleep_bonus`)?.keys[0]??``)}</b>, Skills window, status panel): skill gain <b>${N(2)}</b> while any is stored; drains in real time while on the island. Off: kept.</li>
-      <li><b>Meal boost</b>: dishes off a shut recipe only (${C(da.map(e=>`${w(e).name.toLowerCase()}: ${C(xi(e).map(_r))}`))}).
+      <li><b>Sleep bonus</b>: +${Ui(3600*kt(1,0))} to +${Ui(3600*kt(1,100))} per hour logged off asleep in a bed, by QL; max ${Ui(pe)} stored. See <i>Beds</i>.</li>
+      <li>On (<b>${l(t.get(`sleep_bonus`)?.keys[0]??``)}</b>, Skills window, status panel): skill gain <b>${N(2)}</b> while any is stored; drains in real time while on the island. Off: kept.</li>
+      <li><b>Meal boost</b>: dishes off a shut recipe only (${C(da.map(e=>`${w(e).name.toLowerCase()}: ${C(xi(e).map(vr))}`))}).
       Skill gain ${N(1+Vr)} in each skill named on the dish for ${F(kg)} to ${F(Ag)}, by fill and quality (QL).
       A meal boost expires; a knack earned at work does not.</li>
       <li>Other food, drinks, brews, spirit and tinctures: no meal boost. <b>Examine</b> a dish to see its skills.</li>
@@ -1579,8 +1579,8 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       <li>Raw food: one, a little (potato ${S(dm(`potato`,`starch`))} starch; meat ${S(dm(`meat`,`flesh`))} flesh).</li>
       <li><b>Cooked dishes feed several, more</b>: bread ${S(dm(`bread`,`starch`))} starch; cooked fish ${S(dm(`cooked_fish`,`flesh`))} flesh and ${S(dm(`cooked_fish`,`fat`))} fat.
       <b>Stew</b>: the only food feeding all ${Qu.length}. Higher quality (QL) fills more.</li>
-      <li>Anything in you <b>slows hunger and thirst</b>: full board, <b>${P(1-nu)}</b> of the normal rate (hunger bar to half in ${F(.5/(cf*(1-nu)))}
-      instead of ${F(.5/cf)}).</li>
+      <li>Anything in you <b>slows hunger and thirst</b>: full board, <b>${P(1-nu)}</b> of the normal rate (hunger bar to half in ${F(.5/(lf*(1-nu)))}
+      instead of ${F(.5/lf)}).</li>
       <li><b>All</b> full: skill gain <b>${P(pu)} more</b>, read off the <b>lowest</b> one (one empty: nothing).</li>
     </ul>
     <h3>Money, and four ways to spend it</h3>
@@ -1588,7 +1588,7 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     <ul>
       <li><b>A gold coin = ${pg} silver</b>. Prices are in silver; change comes in silver.</li>
       <li>Paying uses your largest coins first (${pg+1} silver from a gold and ${mg} silver leaves 4).</li>
-      <li><b>Struck from ${Yl.join(` or `)} only</b>, 20 per lump, at an anvil with a coin die in the pack. One lump spent a strike that comes off; a failure damages it by its QL (${sr}).</li>
+      <li><b>Struck from ${Yl.join(` or `)} only</b>, 20 per lump, at an anvil with a coin die in the pack. One lump spent a strike that comes off; a failure damages it by its QL (${cr}).</li>
       <li>After the smith's check, gold quality (QL): takes the die every time at QL 100, ${S(vc(50))} at QL 50, ${S(1-vd)} at the bottom; linear between.</li>
       <li>Gold ore: only under the mountain of ${Ns.filter(e=>e.mountain?.includes(`gold_ore`)).map(e=>wg(e.name)).join(` and `)}; never panned or in a hoard.</li>
       <li>Gold coins in the grass: a <b>foraging</b> action finds one one time in 200, max 3 a day per person (daily reset (${hm(13)} UTC) to the next).
@@ -1602,7 +1602,7 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       Buy at the stall: <b>Buy</b> at its counter; the price goes from your purse to its till.</li>
       <li><b>Find</b> (Board and Prices tabs): every priced thing on every stall and shop counter matching the words typed (name or material), one row each:
       QL, silver each, % under or over its 30-day average, stall, location, distance; max 60 rows. Sort: price each, QL, distance.</li>
-      <li>Each row: <b>Walk</b> (there, however far), <b>Pin</b> (a map mark in the market colour), <b>Buy</b> once within ${pn} tiles of its counter.</li>
+      <li>Each row: <b>Walk</b> (there, however far), <b>Pin</b> (a map mark in the market colour), <b>Buy</b> once within ${mn} tiles of its counter.</li>
       <li>Away from a totem or mailbox: the last board read this session (Find, Walk, Pin and Buy still work; Fill does not), and the nearest settlement totem with Walk and Pin.</li>
       <li><b>Prices</b> tab: every thing sold in 30 days: count, lowest to highest silver each, average, average QL, a bar a day.
       <b>History</b>: its last 12 sales: when, how many, QL, silver each. <b>Order</b>: the buy-order form for it at its average price.</li>
@@ -1654,7 +1654,7 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       <li>Starting ranks on every settlement (Mayor also holds <b>${g.notices.label}</b> and <b>${g.work.label}</b>):</li>
     </ul>
     <table>
-      ${$a.map(e=>`<tr><td><b>${e.name}</b>${e.name===`Builder`?` (newcomers)`:``}</td><td>May ${Po(ur(e.powers))}.</td></tr>`).join(`
+      ${$a.map(e=>`<tr><td><b>${e.name}</b>${e.name===`Builder`?` (newcomers)`:``}</td><td>May ${Po(dr(e.powers))}.</td></tr>`).join(`
       `)}
     </table>
     <ul>
@@ -1697,16 +1697,16 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     </ul>
     <h3>The field guide</h3>
     <ul>
-      <li>Journal, <b>Field guide</b> tab (<kbd>F4</kbd>): a page for each of ${zd().length} creature kinds, and one for each of their ${Mf().length-zd().length} evolution stages after its kind's; marks <b>seen</b>, <b>tamed</b>, <b>bred</b>. A stage's page: seen; tamed when one of yours reaches that stage or is tamed at it.</li>
+      <li>Journal, <b>Field guide</b> tab (<kbd>F4</kbd>): a page for each of ${jf().length} creature kinds, and one for each of their ${of().length-jf().length} evolution stages after its kind's; marks <b>seen</b>, <b>tamed</b>, <b>bred</b>. A stage's page: seen; tamed when one of yours reaches that stage or is tamed at it.</li>
       <li>A stage's page: seen once one at that stage stood in your sight; its model, level it comes in at, stat multipliers, wild odds and taming, habitat, its combat figures. Tamed and bred are its kind's.</li>
       <li>Seen: one stood out of a crate within your sight (your wildermon's and settlement's sight count). Tamed: an offering took, or one taken from a trap.
       Bred: a young born to a dam you keep. Taming or breeding also marks seen; the first sighting is logged.</li>
-      <li>Index: seen kinds drawn, the rest as shadows. Progress: seen of all ${Mf().length} pages; tamed and bred of the ${zd().filter(jf).length}
+      <li>Index: seen kinds drawn, the rest as shadows. Progress: seen of all ${of().length} pages; tamed and bred of the ${jf().filter($d).length}
       tameable (monsters are not).</li>
       <li>A page: where it spawns and how far it keeps from home, its % of wild spawns, taming needed and accepted food, its use once yours, how it fights, carcass yield.</li>
       <li><b>Field guide</b> on any creature's menu opens its page.</li>
       <li>Search, above the index: name, line or task of the kinds seen; kinds not seen hidden while searching.</li>
-      <li><b>Tameable now (Taming</b> <i>your level</i><b>)</b>, under the search: only kinds and stages seen whose taming is at or under your Taming (a stage: its kind's +15 a stage). Not monsters. With the search: both. Taming ${q(`taming`)} at the start: ${zd().filter(e=>(Af({def:e,stage:0})??1/0)<=q(`taming`)).length} kinds.</li>
+      <li><b>Tameable now (Taming</b> <i>your level</i><b>)</b>, under the search: only kinds and stages seen whose taming is at or under your Taming (a stage: its kind's +15 a stage). Not monsters. With the search: both. Taming ${q(`taming`)} at the start: ${jf().filter(e=>(Mf({def:e,stage:0})??1/0)<=q(`taming`)).length} kinds.</li>
       <li><b>Forms</b> (a tameable kind's page): its colour form, large form and small form, each with its wild odds and effect, marked seen (one in it in your sight) and tamed. Not counted in the progress.</li>
       <li>A kind's page: <b>Bred records</b>, the island's best bred of it (${Rf.map(e=>e.name.toLowerCase()).join(`, `)}), as on the Leaderboards.</li>
       <li>Kept by the island; a sighting counts only within 40 tiles of you.</li>
@@ -1730,13 +1730,13 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     </ul>
     <h4>Sighted</h4>
     <ul>
-      <li>A wild one in view that is rare or in a form: one log line, of what your Tracking notices of it. Noticed from Tracking level: ${x.flatMap((e,t)=>t?[`${e.name} ${Tf[t]}`]:[]).join(`, `)}; large and small form ${ff.large}; pale and dark form ${ff.colour}.</li>
+      <li>A wild one in view that is rare or in a form: one log line, of what your Tracking notices of it. Noticed from Tracking level: ${x.flatMap((e,t)=>t?[`${e.name} ${vf[t]}`]:[]).join(`, `)}; large and small form ${Cf.large}; pale and dark form ${Cf.colour}.</li>
       <li>Detail by Tracking, as a track's: the way to it to ${qr.map(e=>e.points===360?`the degree`:`${e.points} points`).join(`, `)}; distance from level ${qr.find(e=>e.round!==null).at}; its level from ${qr.find(e=>e.detail).at}.</li>
     </ul>
     <h3>What the island will not tell you</h3>
     <ul>
       <li><b>Skill is the ceiling; tool quality (QL) is the chance to reach it.</b> Tool QL sets the chance of each action: success gives your skill, failure roughly the tool's worth.
-      Starting copper chisel: QL ${Id(`chisel`)}, reaching your ceiling about one action in ${Math.round(100/Id(`chisel`))}.
+      Starting copper chisel: QL ${cf(`chisel`)}, reaching your ceiling about one action in ${Math.round(100/cf(`chisel`))}.
       Crafting (<kbd>R</kbd>) rows show the expected QL and mark where the tool is the limit.</li>
       <li><b>Free, instant actions teach the body nothing</b> (examining, locking, naming, choosing a stance). Only work with a cost trains.</li>
       <li><b>Carts need a double door, archway or gate</b>; never a single door. A fence with no gate traps a cart.</li>
@@ -1761,7 +1761,7 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     <h3>Finding things in a store</h3>
     <ul>
       <li>Crates, cupboards, carts and bags: <b>search box</b> and the pack's <b>sort</b> (name, quality (QL), weight, damage, count).</li>
-      <li>Settlement crate: ${mn.plank.capacity} things of every sort the settlement produces.</li>
+      <li>Settlement crate: ${hn.plank.capacity} things of every sort the settlement produces.</li>
     </ul>
     <h3>What you can hear</h3>
     <ul>
@@ -1771,7 +1771,7 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       <li>Generated live from noise and oscillators; nothing downloaded.</li>
       <li>Volume: top of the Display tab in <b>Settings</b> (<kbd>O</kbd>); zero turns sound off.</li>
       <li><b>Music</b>: piano soundtrack, generated live, ${If.length} tracks, by the island's hour and season: ${Xf()}. Changes at a phrase end, over a harp bridge.</li>
-      <li>Music volume: under Volume (${Math.round(pf.music*100)}% to start); zero turns it off. Sign-in page: Music on/off button.</li>
+      <li>Music volume: under Volume (${Math.round(rf.music*100)}% to start); zero turns it off. Sign-in page: Music on/off button.</li>
     </ul>
     <h3>Light after dark</h3>
     <ul>
@@ -1781,8 +1781,8 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       <li><b>Lantern</b> (${B(`make_lantern`)}, ${U(`make_lantern`)}) with a <b>candle</b> (${B(`make_candle`)}, ${U(`make_candle`)}):
       <b>${ml(K)} tiles and ${F(cl(K))}</b> a candle at the roughest, <b>${ml(G)} tiles and
       ${F(cl(G))}</b> at the best.</li>
-      <li>Lit at anything burning you stand at (${fr()}) or off something alight in your hand. Burn <b>only while lit</b>; each says when it goes out.</li>
-      <li>Carried lit: gives back <b>${P(Bd)}</b> of the sight darkness takes; its reach is a <b>minimum</b> on your sight.</li>
+      <li>Lit at anything burning you stand at (${pr()}) or off something alight in your hand. Burn <b>only while lit</b>; each says when it goes out.</li>
+      <li>Carried lit: gives back <b>${P(Xd)}</b> of the sight darkness takes; its reach is a <b>minimum</b> on your sight.</li>
       <li>Other lights: <b>lit campfire</b> 5 tiles; <b>oven, kiln or smelter</b> in blast 4 tiles; ${gm.length} glowing creatures:
       ${C(gm.map(e=>`a ${e.name.toLowerCase()} ${e.glow??0} tiles`))}. No light is computed while the sun is up.</li>
       <li>A lantern on a <b>lantern post</b> or in a <b>lantern pillar</b> lights the ground round it for everybody, at its hand-held reach (see <i>Lantern posts</i>).</li>
@@ -1797,17 +1797,17 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     <h4>Year</h4>
     <ul>
       <li>${O.length} seasons (${C([...O])}) of <b>90 days</b>, ${Gu} days a year.
-      A year day = a clock day (<b>${F(gs)}</b>): a season <b>${F(vr)}</b>, a year ${F(Eo)}.</li>
+      A year day = a clock day (<b>${F(gs)}</b>): a season <b>${F(yr)}</b>, a year ${F(Eo)}.</li>
       <li>Counted from the daily reset (<b>${hm(13)} UTC</b>) that began the first 90-day spring, on
       ${new Date(Eu*1e3).toLocaleDateString(`en-GB`,{day:`numeric`,month:`long`,year:`numeric`,timeZone:`UTC`})}, the same on every island (not from the clock's midnight,
       which sleeping moves). The clock line shows season and day.</li>
-      <li>Evergreen: ${C(kc.filter((e,t)=>mf(t)).map(e=>e.name.toLowerCase()))} (darker in winter). Other trees: leaf out over the first
-      <b>${sf} days of spring</b>, full leaf in summer, turn over the first ${lf} days of autumn, drop over the last ${bf},
+      <li>Evergreen: ${C(kc.filter((e,t)=>df(t)).map(e=>e.name.toLowerCase()))} (darker in winter). Other trees: leaf out over the first
+      <b>${_f} days of spring</b>, full leaf in summer, turn over the first ${uf} days of autumn, drop over the last ${Af},
       <b>bare in winter</b>.</li>
       <li>Every tree old enough to fruit <b>flowers all 90 days of spring</b>; bears in its own seasons (<i>Fruit trees</i>).</li>
-      <li>Bushes bare in winter: ${C(iu.filter(e=>!Cf.has(e.name)).map(e=>e.name.toLowerCase().replace(` bush`,`s`)))};
-      evergreen: ${C(iu.filter(e=>Cf.has(e.name)).map(e=>e.name.toLowerCase().replace(` bush`,``)))}.
-      Roses and lavender flower from day ${Of} of spring to the end of summer; the thorn through spring.</li>
+      <li>Bushes bare in winter: ${C(iu.filter(e=>!Ef.has(e.name)).map(e=>e.name.toLowerCase().replace(` bush`,`s`)))};
+      evergreen: ${C(iu.filter(e=>Ef.has(e.name)).map(e=>e.name.toLowerCase().replace(` bush`,``)))}.
+      Roses and lavender flower from day ${sf} of spring to the end of summer; the thorn through spring.</li>
       <li>Leaves and flowers are visual only; yields and seasons: <i>Fruit trees</i>.</li>
       <li>Ambient life, visual only: <b>butterflies</b> at flowers by day, <b>dragonflies</b> over ponds, pools and streams morning to dusk, <b>fireflies</b> over grass near
       trees and water at night: ${Ff()}.</li>
@@ -1816,8 +1816,8 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     <ul>
       <li><b>Make this your home</b> (bed or cot): where you wake, whatever happens.</li>
       <li><b>Sleep</b>, any hour: <b>logs you off</b>. A bed of yours, or one on a settlement of yours; not in a fight, mounted, or with another action going.</li>
-      <li>On lying down: stamina full; health +${S(Oe*Zi(1,0))} to +${S(Oe*Zi(1,100))} by QL, × bed worth, +${S(Fd-1)} indoors; food −${S(xn)}, water −${S(ve)}.</li>
-      <li>Asleep: <b>sleep bonus +${Ui(3600*Ot(1,0))} to +${Ui(3600*Ot(1,100))} per hour</b> in a bed, by QL, × bed worth (cot ${S(d(`cot`).bed??0)}, tent ${S(d(`tent`).bed??0)}); max ${Ui(fe)} stored. Logged off anywhere else: none.</li>
+      <li>On lying down: stamina full; health +${S(ke*Zi(1,0))} to +${S(ke*Zi(1,100))} by QL, × bed worth, +${S(Fd-1)} indoors; food −${S(Sn)}, water −${S(ye)}.</li>
+      <li>Asleep: <b>sleep bonus +${Ui(3600*kt(1,0))} to +${Ui(3600*kt(1,100))} per hour</b> in a bed, by QL, × bed worth (cot ${S(d(`cot`).bed??0)}, tent ${S(d(`tent`).bed??0)}); max ${Ui(pe)} stored. Logged off anywhere else: none.</li>
       <li>Next login: you wake standing beside the bed (where it stood, if it is gone), with the time slept and the sleep bonus gained in the event log.</li>
       <li>Tailor: <b>tent</b>, ${B(`make_tent`)}, with a needle. Set down anywhere; sleeps as a bed: ${S((d(`tent`).bed??0)/(d(`bed`).bed??1))} of a bed
       of its quality (QL).</li>
@@ -1829,7 +1829,7 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       <li>Open container footer: <b>Take all</b> (into your pack); <b>Put all in</b> (everything loose in your pack); <b>Put in what it holds</b> (only kinds already inside).
       Items <b>kept back</b> and worn items never move.</li>
       <li><b>Inventory</b>: sort by name, quality (QL), weight, damage or count; grouped by kind or flat.</li>
-      <li><b>Pick up everything here</b>: your tile and the ${(2*Vd.SWEEP+1)**2-1} round it at once, nearest pile first.</li>
+      <li><b>Pick up everything here</b>: your tile and the ${(2*Ud.SWEEP+1)**2-1} round it at once, nearest pile first.</li>
     </ul>
     <h3>Keeping something back</h3>
     <ul>
@@ -1842,8 +1842,8 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       (220 at the start, ${120+J*5} at ${J}).</li>
       <li>Worn bags, the whole limit: <b>backpack</b> (Back) +${S(Sc.backpack)}, <b>sack</b> (Side) +${S(Sc.sack)}, each × QL%; both at once.</li>
       <li>Over it: slower, and more wind per action, rising with the excess, as armour does. ${ym} kilos over a starting limit drags like about
-      ${Math.round(kf(ym,220)/bm)} full suits of iron plate.</li>
-      <li>Past <b>${N(Zd)}</b> the limit: <b>${P(bd)} pace (speed multiplier)</b>. Any amount over: every swing or draw <b>${S(Bs)} longer</b>.</li>
+      ${Math.round(yf(ym,220)/bm)} full suits of iron plate.</li>
+      <li>Past <b>${N(zd)}</b> the limit: <b>${P(bd)} pace (speed multiplier)</b>. Any amount over: every swing or draw <b>${S(Bs)} longer</b>.</li>
       <li>Inventory footer turns red with the excess; the bars show it too.</li>
       <li>Damage column: <b>amber past 75</b>, <b>red past 90</b>.</li>
     </ul>
@@ -1882,7 +1882,7 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     <ul>
       <li>Damage through armour leaves a <b>wound</b> of a kind, where it landed. It <b>bleeds</b> until dressed; goes <b>bad</b> if never dressed; nothing heals while any is open.
       The bars panel lists them worst first, with what each needs.</li>
-      <li><b>Health</b> window (<b>${xr(t.get(`win_health`)?.keys[0]??``)}</b>, or Health on the menu): each wound on a body figure and in a list, worst first:
+      <li><b>Health</b> window (<b>${l(t.get(`win_health`)?.keys[0]??``)}</b>, or Health on the menu): each wound on a body figure and in a list, worst first:
       depth, health lost a minute, time to close. Click one: treatments, what each needs (dressing, bucket of lye, salve), how many you carry, how to make one,
       and a button that treats that wound (or says why not). Below: effects against and for you, and recent food.</li>
       <li>${Em.length} kinds, each with a suited herb: ${C(Em.map((e,t)=>`<b>${e.name}</b>${t===0?`: `:` `}<b>${e.herb}</b>`))}.
@@ -1892,11 +1892,11 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     <ul>
       <li><b>Bandage</b>: cloth cut ${H(`make_bandage`)} to a length with a knife. <b>Healing cover</b>: the herb bruised into cotton, ${H(`make_cover_${Em[0].herb}`)}
       a batch, <b>first aid</b>.</li>
-      <li>Either stops bleeding and restores ${S(_n(q(`first_aid`),K))} to ${S(_n(J,G))} of your health at once, by first aid and quality (QL).</li>
+      <li>Either stops bleeding and restores ${S(vn(q(`first_aid`),K))} to ${S(vn(J,G))} of your health at once, by first aid and quality (QL).</li>
       <li>Right-click: goes on the worst wound it would close faster than its current dressing, and names it. Rank, slowest first: ${C(Tc)}.
       Only over a lower rank; refused, with the reason, when nothing would improve.</li>
-      <li>Close rate: cloth ${N(Sl/ws)} that of bare. <b>Right herb</b>: ${N($e)} the instant heal, ${N(kl/Sl)} cloth's close rate,
-      <b>never goes bad</b>. Wrong herb: ${N(ue)} the heal, ${S(tc/Sl-1)} faster than cloth.</li>
+      <li>Close rate: cloth ${N(Sl/ws)} that of bare. <b>Right herb</b>: ${N(et)} the instant heal, ${N(kl/Sl)} cloth's close rate,
+      <b>never goes bad</b>. Wrong herb: ${N(de)} the heal, ${S(tc/Sl-1)} faster than cloth.</li>
       <li>Chance of going bad, against an open wound: cloth ${S(nd)}, wrong herb ${S(xc)}.</li>
       <li><b>Chirurgy</b>: every ${Math.round(sc/gl)} points adds the base close rate again, on every wound.</li>
       <li><b>Gone bad</b>: drains instead of closing; no dressing holds (skipped for the next worst). Scour with a bucket of <b>lye</b> first (hard first aid); it reopens and
@@ -1930,7 +1930,7 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       <li><b>What you carried stays</b> in a <b>grave</b> where you fell: pack, held items, toolbelt, every bag and its contents.</li>
       <li>Kept on you: clothing, armour, jewel, starting kit, a crate with a wildermon in it, anything offered in a deal.</li>
       <li>Died in water too deep to stand: grave on the nearest dry ground within <b>3 tiles</b>, else where you fell. Carrying nothing: no grave.</li>
-      <li>For <b>${F(it)}</b> real time (online or not): yours only; nobody else opens, takes from, picks up or breaks it; they are told whose it is.</li>
+      <li>For <b>${F(at)}</b> real time (online or not): yours only; nobody else opens, takes from, picks up or breaks it; they are told whose it is.</li>
       <li>Open like a chest; take one at a time or <b>Take everything</b>; nothing goes back in.</li>
       <li>Then it <b>crumbles</b> with whatever is left. One grave per death; each is on your map until it crumbles.</li>
       <li><b>Death grace</b>: your first <b>24 h</b> played. ${zf} Time left: <b>Death grace</b> in the effects row.</li>
@@ -1939,7 +1939,7 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     <h3>What quality is worth</h3>
     <ul>
       <li><b>Skill is the ceiling; tool quality (QL) is the percentage chance an action comes out at your skill.</b> Otherwise: ${Dm} the tool's QL, never above your skill.</li>
-      <li>Starting hatchet: QL ${Id(`hatchet`)}, so ${P(Id(`hatchet`)/G)} of logs come out at your skill.</li>
+      <li>Starting hatchet: QL ${cf(`hatchet`)}, so ${P(cf(`hatchet`)/G)} of logs come out at your skill.</li>
       <li>No tool (picking berries, tending a field): ${Dm} your skill, + 1.</li>
     </ul>
     <h3>Rare things</h3>
@@ -1969,8 +1969,8 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     <ul>
       <li><b>Improve</b> (right-click a finished item): each pass uses a little stock; success raises quality (QL), by a lot at first and very little near the top.
       Failure damages it; past 10 damage it must be <b>Repair</b>ed before more work. Not on ${Yg()}.</li>
-      <li><b>Starting kit</b>: one of each of ${Gd.length-1} tools at QL 20, and a water skin. Named <b>Starter (tool)</b>. <b>Cannot be improved</b> (repairable only), <b>sold or traded</b> (barter, deal, parcel, stall price, order). Kept on death; a missing piece given again on coming ashore and on waking after a death.</li>
-      <li><b>Starting food</b>: ${Hd} ${Q(nf)} at QL 20, food bar +${S(wc(nf,20))} each (${S(Hd*wc(nf,20))} in all). First coming ashore only; not a kit piece (eaten, traded, into the grave; not given again).</li>
+      <li><b>Starting kit</b>: one of each of ${wf.length-1} tools at QL 20, and a water skin. Named <b>Starter (tool)</b>. <b>Cannot be improved</b> (repairable only), <b>sold or traded</b> (barter, deal, parcel, stall price, order). Kept on death; a missing piece given again on coming ashore and on waking after a death.</li>
+      <li><b>Starting food</b>: ${Gd} ${Q(Vd)} at QL 20, food bar +${S(wc(Vd,20))} each (${S(Gd*wc(Vd,20))} in all). First coming ashore only; not a kit piece (eaten, traded, into the grave; not given again).</li>
     </ul>
     <table>
       <tr><td><b>Metal</b></td><td><b>File</b> + <b>whetstone</b>; a lump of metal per pass</td></tr>
@@ -2003,13 +2003,13 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     </ul>
     <h3>Ashes, lye and tanning</h3>
     <ul>
-      <li><b>Ashes</b>: a <b>campfire</b>, <b>smelter</b> or <b>kiln</b> leaves one lot per ${F(1/Ld)} of burning. <b>Take ashes</b>, lit or cold; they accumulate.</li>
+      <li><b>Ashes</b>: a <b>campfire</b>, <b>smelter</b> or <b>kiln</b> leaves one lot per ${F(1/mf)} of burning. <b>Take ashes</b>, lit or cold; they accumulate.</li>
       <li><b>Bucket</b>: ${B(`make_bucket`)}, mallet. <b>Fill</b> at any shore (not on dry land). <b>Empty</b> any time.</li>
       <li><b>Litres</b>: a bucket holds 5 L; weight ${w(`bucket`).weight} kg + ${Vs} kg a litre. A recipe's liquid comes out of the buckets carried, then buckets in stores,
       then barrels, wells and fountains within its reach; a bucket at its last litre is an empty bucket. <b>Fill with water</b> tops up a part bucket of water.</li>
       <li><b>Bucket of lye</b>: ${V(`make_lye`,`ash`)} lots of ashes + a full bucket of water; <b>Alchemy</b>. 5 L.</li>
       <li><b>Tanning</b> (leatherworking): raw <b>hide</b> + ${im(`tan_hide`)} + carving knife: <b>leather</b>. Failure: hide damaged and lye lost by their QL.</li>
-      <li>Cleaning a wound, ${X(`strip_dye`)}, ${X(`strip_wall_paint`)}: 1 L lye (${X(`scrub_dye`)}, ${X(`scrub_wall_paint`)}: a ${w(Un).name.toLowerCase()}, no lye).</li>
+      <li>Cleaning a wound, ${X(`strip_dye`)}, ${X(`strip_wall_paint`)}: 1 L lye (${X(`scrub_dye`)}, ${X(`scrub_wall_paint`)}: a ${w(Wn).name.toLowerCase()}, no lye).</li>
       <li>Leather: cap, jerkin, shawl, trousers, boots; improving leather pieces.</li>
     </ul>
     <h3>Reeds, papyrus and books</h3>
@@ -2020,7 +2020,7 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       <li><b>Ink</b> (alchemy): a gland + ${V(`make_ink`,`ash`)} lots of ashes + ${im(`make_ink`)}: ${H(`make_ink`)} lots of ink.</li>
       <li><b>Book</b>: ${V(`make_book`,`papyrus`)} sheets, ${V(`make_book`,`leather`)} leather boards, a lot of ink, a needle.</li>
       <li><b>Study</b>: ${F(A(Fm))} an action; trains <b>mind logic</b> (queue size); wears the pages. At a <b>lectern</b>: skill gain ${N(2)}.</li>
-      <li>Artisan <b>trade book</b> (${B(`write_trade_book_${vt[0]}`)}, needle): on any skill they have at 50; studying trains that skill instead of
+      <li>Artisan <b>trade book</b> (${B(`write_trade_book_${yt[0]}`)}, needle): on any skill they have at 50; studying trains that skill instead of
       mind logic, same amount an action. Anybody may read it. Artisan perks can raise gain or lower wear; Examine gives the figures.</li>
     </ul>
     <h3>Maps</h3>
@@ -2037,15 +2037,15 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     </ul>
     <h3>Titles and knacks</h3>
     <ul>
-      <li><b>Titles</b>: every skill at ${C(Ve.map(String))} (${de(`carpentry`).map(e=>e.name).join(`, `)}). Wear <b>one</b>, chosen in Skills (<kbd>K</kbd>),
+      <li><b>Titles</b>: every skill at ${C(He.map(String))} (${fe(`carpentry`).map(e=>e.name).join(`, `)}). Wear <b>one</b>, chosen in Skills (<kbd>K</kbd>),
       shown beside your position. Click it to remove.</li>
-      <li><b>Knack</b>: <b>one action in ${Pt}</b> in any skill at any level. Lands on that skill ${P(Ji)} of the time, otherwise a neighbouring skill (carpentry may give bowyery).</li>
+      <li><b>Knack</b>: <b>one action in ${Ft}</b> in any skill at any level. Lands on that skill ${P(Ji)} of the time, otherwise a neighbouring skill (carpentry may give bowyery).</li>
       <li>Each knack: +${P(ra)} on all that skill's gains, permanent. Max <b>5</b> a skill (${N(1+5*ra)} on every gain).
       Stacks with rest and meal boosts. Skills window shows each skill's count.</li>
-      <li>Swimming, climbing, driving, sailing count for knacks as a fraction of an action: a second in deep water ${S(df/1)}; a tile driven or sailed
+      <li>Swimming, climbing, driving, sailing count for knacks as a fraction of an action: a second in deep water ${S(Sf/1)}; a tile driven or sailed
       ${S(Jr/1)}; a steep step ${S((Nd+au*Od)/1)}
-      to ${S((Nd+Od)/1)}, steeper more. One knack per ${Math.round(Pt*1/df).toLocaleString(`en`)} seconds of swimming;
-      per ${Math.round(Pt*1/Jr).toLocaleString(`en`)} tiles driven.</li>
+      to ${S((Nd+Od)/1)}, steeper more. One knack per ${Math.round(Ft*1/Sf).toLocaleString(`en`)} seconds of swimming;
+      per ${Math.round(Ft*1/Jr).toLocaleString(`en`)} tiles driven.</li>
       <li>Pure chance per action: no milestones, no slowdown at high levels.</li>
       <li>Meal boost: skill gain ${N(1+Vr)} instead of +${P(ra)}, but expires after ${F(kg)} to ${F(Ag)}. They stack, with rest too.</li>
     </ul>
@@ -2054,9 +2054,9 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     <ul>
       <li>Undyed: cloth wool-white, leather hide-brown.</li>
       <li>Boiled dye is <b>${C(Ts.map(e=>e))}</b> only. Boil a dyestuff in a bucket of <b>lye</b>: <b>${dd(_l(1,1))} kg per litre of lye</b>, by weight;
-      litres of dye = litres of lye. A bucket is <b>${se} litres</b>: ${dd(_l(se,1))} kg makes ${se} litres, pure, quality (QL) your alchemy.</li>
+      litres of dye = litres of lye. A bucket is <b>${ce} litres</b>: ${dd(_l(ce,1))} kg makes ${ce} litres, pure, quality (QL) your alchemy.</li>
       <li>Uses the fewest whole items that weigh enough, and reports the count:
-      ${C(Ts.map(e=>`${e} from ${v(Vc.filter(t=>t.primary===e).map(e=>`${I(e.from,Ga(e.from))} at ${dd(Xn(e.from))} kg each (alchemy ${e.difficulty})`))}`))}.
+      ${C(Ts.map(e=>`${e} from ${v(Vc.filter(t=>t.primary===e).map(e=>`${I(e.from,Ga(e.from))} at ${dd(Zn(e.from))} kg each (alchemy ${e.difficulty})`))}`))}.
       Short: reports the weight needed and held.</li>
     </ul>
     <h4>Mixing</h4>
@@ -2075,35 +2075,35 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     </ul>
     <h4>Recipes</h4>
     <ul>
-      <li><b>${p.get(jn)?.label}</b> on a bucket of dye in your pack or a dye barrel beside you: one sheet of
+      <li><b>${p.get(Mn)?.label}</b> on a bucket of dye in your pack or a dye barrel beside you: one sheet of
       ${w(Ya).name.toLowerCase()} (the best in the pack) becomes a <b>dye recipe</b>: the dye's mix and QL. Dye used: none.</li>
-      <li>Name: colour word and hex. Examine: the mix; per ${se} L of lye, each primary's share of ${dd(so(Oc))} kg of
+      <li>Name: colour word and hex. Examine: the mix; per ${ce} L of lye, each primary's share of ${dd(so(Oc))} kg of
       ${C(Ts.map(e=>`${w(Cl[e]).name.toLowerCase()} (${e})`))}; output QL at most the recipe's.</li>
-      <li>Example: ${Z(qm)} at QL ${eu(qm.ql)} (${cu(qm)}): ${Jm(qm)} per ${se} L of lye.</li>
-      <li><b>${p.get(cn)?.label}</b> on the recipe: ${Gm(w(es).name)} and the dyestuffs listed, from your pack;
-      ${se} litres of exactly the recipe's mix. QL: your alchemy's roll, at most the recipe's.</li>
+      <li>Example: ${Z(qm)} at QL ${eu(qm.ql)} (${cu(qm)}): ${Jm(qm)} per ${ce} L of lye.</li>
+      <li><b>${p.get(ln)?.label}</b> on the recipe: ${Gm(w(es).name)} and the dyestuffs listed, from your pack;
+      ${ce} litres of exactly the recipe's mix. QL: your alchemy's roll, at most the recipe's.</li>
       <li>Alchemy, time and stamina: as a dyestuff boil. Difficulty: the hardest of its dyestuffs' boils (the example: alchemy ${r(qm)}).
       ${C([`double_boil`,`thrifty_dyer`,`sure_boil`].map(e=>`Naturalist ${rp.get(`naturalist_${e}`)?.name}`))}: as on a dyestuff boil. Failed: dyestuffs and lye damaged by their QL. Recipe kept.</li>
-      <li>Short: "${Xe.noLye}", or the weight needed and held.</li>
+      <li>Short: "${Ze.noLye}", or the weight needed and held.</li>
     </ul>
     <h4>Dyeing</h4>
     <ul>
       <li>Litres by size (a litre = a kilo): <b>${mc.garment}</b> garment, cloth, bag, saddle or bridle; <b>${mc.banner}</b> banner or flag; <b>${mc.sail}</b>
-      sailing boat; <b>${mc.ship}</b> caravel; <b>${mc.wall}</b> a side of a wall or a tile of floor; <b>1</b> a ${w(ht).name.toLowerCase()}.</li>
+      sailing boat; <b>${mc.ship}</b> caravel; <b>${mc.wall}</b> a side of a wall or a tile of floor; <b>1</b> a ${w(gt).name.toLowerCase()}.</li>
       <li>From <b>one</b> source only: a bucket of dye loose in your pack (not in a bag, not kept back), or a dye barrel within <b>3 tiles</b> that is yours or on your
       settlement. A bucket holds 5 litres, so ${C(Object.keys(mc).filter(e=>mc[e]>5).map(e=>Zp[e]))} ${Object.keys(mc).filter(e=>mc[e]>5).length===1?`needs`:`need`} a barrel.</li>
       <li>Several sources with enough: you pick (colour, hex, QL, litres listed); one: used. Short: reports litres needed and the most any source holds.</li>
       <li>Takes the dye's exact colour; named by the nearest plain colour word; Examine gives the hex.</li>
       <li>Dyeable: cloth and leather (not metal): cloth and leather armour, cloth, sacks, satchels, backpacks, saddle, bridle, <b>banner</b>, a <b>flagpole</b>'s flag, a
-      <b>sailing boat</b>'s or <b>caravel</b>'s sail, and a <b>${w(ht).name.toLowerCase()}</b> (colours its window or bay; see Glass).</li>
+      <b>sailing boat</b>'s or <b>caravel</b>'s sail, and a <b>${w(gt).name.toLowerCase()}</b> (colours its window or bay; see Glass).</li>
       <li>Dyed chest and leg pieces show on your figure.</li>
       <li><b>Banner</b>: ${B(`make_banner`)}; planted anywhere; flies its dyed colour.</li>
       <li><b>${X(`paint_wall`)}</b> (a finished side), <b>${X(`paint_floor`)}</b> (a finished floor): building menu; ${Gm(w(p.get(`paint_wall`)?.tool??``).name.toLowerCase())}.</li>
       <li><b>${X(`strip_dye`)}</b> (in your pack), <b>${X(`strip_wall_paint`)}</b> (a side): 1 L lye; alchemy; an action at alchemy ${q(`alchemy`)}:
       ${[`strip_dye`,`strip_wall_paint`].map(e=>`${X(e)} ${F(A(p.get(e)?.baseTime??0,q(`alchemy`)))}`).join(`, `)}; less with more.</li>
-      <li><b>${X(`scrub_dye`)}</b> (in your pack, or ${v(pi.filter(e=>zn.has(e.id)).map(e=>Gm(e.name.toLowerCase())))} set down; its padlock
-      must admit you), <b>${X(`scrub_wall_paint`)}</b> (a side), <b>${X(`scrub_floor_paint`)}</b>: ${Gm(w(Un).name.toLowerCase())}, no lye, no skill;
-      ${F(A(12))} an action with a brush of no quality, less with better; ${S(We)} stamina; brush wear 1 an action.</li>
+      <li><b>${X(`scrub_dye`)}</b> (in your pack, or ${v(pi.filter(e=>Bn.has(e.id)).map(e=>Gm(e.name.toLowerCase())))} set down; its padlock
+      must admit you), <b>${X(`scrub_wall_paint`)}</b> (a side), <b>${X(`scrub_floor_paint`)}</b>: ${Gm(w(Wn).name.toLowerCase())}, no lye, no skill;
+      ${F(A(12))} an action with a brush of no quality, less with better; ${S(Ge)} stamina; brush wear 1 an action.</li>
     </ul>
     <h3>Rope</h3>
     <ul>
@@ -2132,8 +2132,8 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     <h4>Starting a fight</h4>
     <ul>
       <li><b>Left click</b> on a wild thing that is after you, or a kind that hunts on sight: walk to it and swing (or shoot with a bow); follows it up to 8 tiles.</li>
-      <li><b>${xr(t.get(`fight_mark`)?.keys[0]??``)}</b>: mark the nearest such thing within 12 tiles, the next nearest on each press.
-      <b>${xr(t.get(`fight`)?.keys[0]??``)}</b>: attack the marked or last-clicked one.</li>
+      <li><b>${l(t.get(`fight_mark`)?.keys[0]??``)}</b>: mark the nearest such thing within 12 tiles, the next nearest on each press.
+      <b>${l(t.get(`fight`)?.keys[0]??``)}</b>: attack the marked or last-clicked one.</li>
       <li>A fight jumps the queue; the current action resumes after. Clicking the ground walks out of a fight.</li>
       <li>Struck creatures that do not flee <b>hit back on their own clock</b>: hunters and monsters every ${Ol} seconds, defensive kinds every ${Es}, others every
       ${dc}. Chase up to 8 tiles from where struck; give up at 6 tiles away.</li>
@@ -2142,7 +2142,7 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     </ul>
     <h4>Equipment window</h4>
     <ul>
-      <li><b>${xr(t.get(`win_equipment`)?.keys[0]??``)}</b> or Equipment on the menu: you in your gear, a socket for each of ${cd.length} places.</li>
+      <li><b>${l(t.get(`win_equipment`)?.keys[0]??``)}</b> or Equipment on the menu: you in your gear, a socket for each of ${cd.length} places.</li>
       <li>Drag onto a socket or onto you (from the shelf or the pack) to equip; to the shelf to remove. Click on the shelf: equip; a double-click on a socket: remove.</li>
       <li>Shelf: each item's change against what is in its place.</li>
       <li>Tabs: every number a fight reads, from the fight's own rule: blow damage, time, hit and critical chance, reach, damage a second; hit locations and what is stopped there,
@@ -2150,7 +2150,7 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     </ul>
     <h4>Stance and swing</h4>
     <ul>
-      <li><b>Stance</b>: button beside the health bar, or <b>${xr(t.get(`fight_stance`)?.keys[0]??``)}</b> for the next. ${hd.map(e=>`<b>${hu[e]}</b>: ${Nu(e)}`).join(` `)}</li>
+      <li><b>Stance</b>: button beside the health bar, or <b>${l(t.get(`fight_stance`)?.keys[0]??``)}</b> for the next. ${hd.map(e=>`<b>${hu[e]}</b>: ${Nu(e)}`).join(` `)}</li>
       <li>Base swing time (seconds): ${C([...$l].filter(e=>!e.ammo).sort((e,t)=>e.swing-t.swing).map(e=>`${w(e.id).name.toLowerCase()} ${e.swing}`))}; bare hands ${Su.swing}.
       A bow's draw likewise.</li>
       <li>Skill shortens it as on any action (fighting for swings, archery for draws), and body control too. ${w(Wp.id).name}:
@@ -2198,14 +2198,14 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       <li><b>Throwers</b>: ${C(Object.values(h).filter(e=>e.throws).map(e=>`${e.name.toLowerCase()}s`))}: stand off ${Ms} tiles, throw from up to 6;
       each throw ${S(Qc)} of a blow, a crush. Closer than ${Ms-1} tiles: back away at ${S(Xc)} of walking; melee only when cornered.</li>
       <li><b>Fleeing</b>: hunters below ${S(Dd)} health, monsters below ${S(Ws)}; ${C(Object.values(h).filter(e=>e.coward).map(e=>`${e.name.toLowerCase()}s`))}
-      below ${S(Ll)}, or ${S(Ul)} once another of their kind within 8 tiles has fled. Runs 6 seconds; ignores you for ${Math.round(ot)}.
+      below ${S(Ll)}, or ${S(Ul)} once another of their kind within 8 tiles has fled. Runs 6 seconds; ignores you for ${Math.round(st)}.
       The leader dying or fleeing makes the whole pack flee.</li>
     </ul>
     <h4>Companion orders</h4>
     <ul>
-      <li><b>Attack my target</b> (its menu), <b>Set</b> <i>name</i> <b>on it</b> (a wild one's menu), or <b>${xr(t.get(`pet_attack`)?.keys[0]??``)}</b>: attacks your target or mark,
+      <li><b>Attack my target</b> (its menu), <b>Set</b> <i>name</i> <b>on it</b> (a wild one's menu), or <b>${l(t.get(`pet_attack`)?.keys[0]??``)}</b>: attacks your target or mark,
       else the nearest foe, whatever its stance.</li>
-      <li><b>Fall back</b> or <b>${xr(t.get(`pet_back`)?.keys[0]??``)}</b>: returns to you; starts no fight for 8 seconds.</li>
+      <li><b>Fall back</b> or <b>${l(t.get(`pet_back`)?.keys[0]??``)}</b>: returns to you; starts no fight for 8 seconds.</li>
       <li><b>Guarding you</b> stance: attacks anything hunting you within 5 tiles before it strikes, and whatever strikes it or you; gives up 4 tiles from you
       (otherwise 9). A dashed blue line links it to its target.</li>
       <li><b>Threat</b>: a creature fights what hurt it last. Your companion hitting something on you draws it after you have not hurt it for 3 seconds (logged);
@@ -2268,13 +2268,13 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       <li>A fragment names its relic and piece (<i>${rh.name} ${rh.parts-1}/${rh.parts}</i>); found at 18 to 68 damage.</li>
       <li><b>Fragments and tarnished baubles cannot be repaired until restored</b> (no Repair, repair kit or worker mending). Damage only rises (failed restoring, weather);
       at 100 it breaks. Restored, it mends like anything else, but for ${Yg()}.</li>
-      <li>${rn.length} relics, from ${k(rn[0].name)} <b>${rn[0].name}</b> in ${rn[0].parts} pieces to ${k(rh.name)} <b>${rh.name}</b> in ${rh.parts};
+      <li>${an.length} relics, from ${k(an[0].name)} <b>${an[0].name}</b> in ${an[0].parts} pieces to ${k(rh.name)} <b>${rh.name}</b> in ${rh.parts};
       each recognised only at enough archaeology. Common ones turn up far more often; pieces you lack are favoured.</li>
       <li><b>Investigate</b>: with a trowel. <b>Restore</b> (all pieces in hand, right-click one): with a brush; <b>Restoration</b>, at any damage short of breaking. Failure: 5 to 14 more damage on
       every piece. Result quality (QL): the pieces' worth, less ${S(1/200)} per point of their damage.</li>
       <li>A <b>statuette</b>: <b>Enchant</b> on it in the pack, one option per patron, any patron: 1 mote of each of the ${Rl.length} elements, used up →
       ${v(wd.map(e=>`<b>${fl(e)}</b>`))}; QL kept. <b>${z(`enchanting`)}</b>; never fails. A statue: <b>Pray</b> (see <b>An altar</b>).</li>
-      <li>${E(C([...Bc].map(e=>{let t=rn.find(t=>t.result===e)?.name??``;return`${k(t)} <b>${t}</b> is ${k(Q(e))} ${Q(e)}`})))} (below).</li>
+      <li>${E(C([...Bc].map(e=>{let t=an.find(t=>t.result===e)?.name??``;return`${k(t)} <b>${t}</b> is ${k(Q(e))} ${Q(e)}`})))} (below).</li>
     </ul>
     ${Kg()}
     <h3>Baubles</h3>
@@ -2285,7 +2285,7 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       <li>Another ${S(za)}: a whole <b>Bauble of Regret</b> (undoes a class, patron or path; see <b>Trades</b> and <b>Faith</b>).</li>
     </ul>
     <table>
-      ${ua.map(e=>`<tr><td><b>${e.name}</b></td><td>${e.slots} sockets. ${e.id===`minor`?`1 to 5% less time per action, or 1 to 5% more skill gained, in one of the ${ui.length} skills an action is done with.`:e.id===`major`?`1 to 5% chance of ${N(2)} yield per action in one of ${Xr.length} skills: every crafting-window skill, and ${C(Xr.filter(e=>!le.some(t=>t.skill===e)).map(e=>b.get(e)?.name.toLowerCase()??e))}.`:`One of: ${C(Er.map(e=>`+1 ${e.said}`))}.`}</td></tr>`).join(`
+      ${ua.map(e=>`<tr><td><b>${e.name}</b></td><td>${e.slots} sockets. ${e.id===`minor`?`1 to 5% less time per action, or 1 to 5% more skill gained, in one of the ${ui.length} skills an action is done with.`:e.id===`major`?`1 to 5% chance of ${N(2)} yield per action in one of ${Xr.length} skills: every crafting-window skill, and ${C(Xr.filter(e=>!ue.some(t=>t.skill===e)).map(e=>b.get(e)?.name.toLowerCase()??e))}.`:`One of: ${C(Er.map(e=>`+1 ${e.said}`))}.`}</td></tr>`).join(`
       `)}
     </table>
     <ul>
@@ -2319,15 +2319,15 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       and not off a work post. Card when idle: &ldquo;${j({why:`range`,n:h.magga.workRange},`fetch`)}&rdquo; Wild ones steal items left near their trees. Evolves: ${$(`magga`)}.</td></tr>
       <tr><td><b>${h.woola.name}</b></td><td>No task. <b>Shear</b> with a knife for <b>wool</b> once grown; regrows in ${F(1/(h.woola.fleece??1))}.
       Evolves: ${$(`woola`)}.</td></tr>
-      <tr><td><b>${h.ulva.name}</b></td><td>Fights back when struck. Taming ${h.ulva.tameLevel}. Settlement task: ${je.spin} at your spindles (<b>The settlement's hands</b>). Evolves: ${$(`ulva`)}.</td></tr>
+      <tr><td><b>${h.ulva.name}</b></td><td>Fights back when struck. Taming ${h.ulva.tameLevel}. Settlement task: ${Me.spin} at your spindles (<b>The settlement's hands</b>). Evolves: ${$(`ulva`)}.</td></tr>
       <tr><td><b>${h.roxxen.name}</b></td><td>Draught ox: +${S(h.roxxen.pull)} team pace (speed multiplier) in the traces. No settlement task. Level = <b>driving</b>, learned
-      ${wt.pull}; counts in the traces where another wildermon's climbing does (speed and steepest step). Largest carcass. Evolves: ${$(`roxxen`)}.</td></tr>
+      ${Tt.pull}; counts in the traces where another wildermon's climbing does (speed and steepest step). Largest carcass. Evolves: ${$(`roxxen`)}.</td></tr>
       <tr><td><b>${h.orse.name}</b></td><td>Mount; learns <b>climbing</b> in the traces or ridden. Fit a <b>saddle</b> and <b>bridle</b> from its menu, then <b>mount</b>.
       Green: ${N(ah/Zl)} your pace on the same ground; climbing maxed: ${N(oh/ah)} a green one, up slopes you must walk round.
       Tailor Saddler tack: +${S((Hh(`Saddler`)[`speed:saddle`]??1)-1)} mount speed, past the usual 5 tiles a second; their yokes do the same for carts
       and wagons. Evolves: ${$(`orse`)}.</td></tr>
       <tr><td><b>${h.rowl.name}</b></td><td>Hunts on sight; taming ${h.rowl.tameLevel}; unruly when tamed. On a settlement: patrols round the totem, kills anything wild inside,
-      carcasses to storage. <b>Fighting</b> sets damage (${N(Pn(J))} at mastery) and patrol radius (${h.rowl.workRange} to
+      carcasses to storage. <b>Fighting</b> sets damage (${N(Fn(J))} at mastery) and patrol radius (${h.rowl.workRange} to
       ${h.rowl.workRange+po(J)*(h.rowl.rangePerStep??10)} tiles).</td></tr>
       <tr><td><b>${h.noot.name}</b></td><td>Beside clay pits; eats root vegetables. Collects <b>clay</b> off the bed to the crate (ground height unchanged). Evolves: ${$(`noot`)}.</td></tr>
     </table>
@@ -2338,21 +2338,21 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       <li><b>Keep at it</b>: after a refused offering, <b>+${S(La)} chance</b> per attempt in a row, capped only by the overall cap. Lapses after ${F(ci)};
       <b>hitting it ends the run</b>. Examine shows progress.</li>
       <li><b>Taming gained</b> per attempt (offering, taking a catch out of a trap, Call of the Wild): <b>+${S(1/20)} per point of taming needed</b>.
-      ${[`rabba`,`snout`].map(e=>`${h[e].name} ${N(Xt({species:e,skills:{}}))}`).join(`, `)}.</li>
-      <li><b>Evolved in the wild</b>: ${(()=>{let[e,t]=vn(1),[r,i]=vn(2),a=h.sedra,o=a.stages[0].name;return`1 in ${bo[0]} wild ones of an evolving kind are at their second evolution stage (level ${e} to ${t-1}), 1 in ${bo[1]} at their third
+      ${[`rabba`,`snout`].map(e=>`${h[e].name} ${N(Zt({species:e,skills:{}}))}`).join(`, `)}.</li>
+      <li><b>Evolved in the wild</b>: ${(()=>{let[e,t]=yn(1),[r,i]=yn(2),a=h.sedra,o=a.stages[0].name;return`1 in ${bo[0]} wild ones of an evolving kind are at their second evolution stage (level ${e} to ${t-1}), 1 in ${bo[1]} at their third
       (level ${r} to ${i-1}), with that evolution stage's name, look, health, blow, pace and task. Per evolution stage past the first: <b>+15 taming</b> needed and
-      <b>${S(mr)} of the kind's</b> base chance. ${o}: taming ${Pe({species:a.id,skills:{[n(a)]:e}}).level}, base
-      ${S(Pe({species:a.id,skills:{[n(a)]:e}}).chance)} (${a.name}: ${a.tameLevel}, ${S(a.tameChance)}). Its card shows the requirement.`})()}</li>
+      <b>${S(hr)} of the kind's</b> base chance. ${o}: taming ${Fe({species:a.id,skills:{[n(a)]:e}}).level}, base
+      ${S(Fe({species:a.id,skills:{[n(a)]:e}}).chance)} (${a.name}: ${a.tameLevel}, ${S(a.tameChance)}). Its card shows the requirement.`})()}</li>
     </ul>
     <h4>Age and stats</h4>
     <ul>
       <li><b>Young</b>: ${S(Za.young.scale)} size, ${S(Za.young.speed)} pace, no fleece or milk, cannot be harnessed or ridden; ${N(Za.young.tame)} as easy to tame.</li>
-      <li><b>Grown</b> after ${F(Or)} (all other figures assume grown). <b>Old</b> after ${F(Ge)}: ${S(Za.old.speed)} pace, ${S(Za.old.pull)} pull,
-      ${S(Za.old.growth)} fleece regrowth; heavier; carcass +${S(Za.old.yield-1)}. <b>Dies of old age</b> ${F(_t)} after turning old.</li>
+      <li><b>Grown</b> after ${F(Or)} (all other figures assume grown). <b>Old</b> after ${F(Ke)}: ${S(Za.old.speed)} pace, ${S(Za.old.pull)} pull,
+      ${S(Za.old.growth)} fleece regrowth; heavier; carcass +${S(Za.old.yield-1)}. <b>Dies of old age</b> ${F(vt)} after turning old.</li>
       <li>The Wildermon window shows its age and a yearling's time to grow. Wildermon present when the island was raised count as grown.
-      ${E(k(w(Kn.use_ancient_comb).name.toLowerCase()))} <b>${w(Kn.use_ancient_comb).name.toLowerCase()}</b> takes one age off (see <b>Digging up the past</b>).</li>
+      ${E(k(w(qn.use_ancient_comb).name.toLowerCase()))} <b>${w(qn.use_ancient_comb).name.toLowerCase()}</b> takes one age off (see <b>Digging up the past</b>).</li>
       <li><b>Base stats</b> (card): its ${Tr.length} base stats as the rules read them: ${C(Tr.map(e=>`<b>${e.name}</b>, ${e.says}`))}; each a multiplier on its kind's.
-      Beside each: points from ${k(w(Kn.use_ancient_pot).name.toLowerCase())} ${w(Kn.use_ancient_pot).name.toLowerCase()}, +${S(Ka)} each, max 10.</li>
+      Beside each: points from ${k(w(qn.use_ancient_pot).name.toLowerCase())} ${w(qn.use_ancient_pot).name.toLowerCase()}, +${S(Ka)} each, max 10.</li>
       <li><b>Cull</b> (its menu, anywhere): one action; leaves a normal carcass; confirmation, stronger for valuable blood. <b>Release</b>: back to the wild, blood intact.
       Neither while harnessed or ridden.</li>
     </ul>
@@ -2361,7 +2361,7 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       <li><b>${h.bogga.name}</b>: marshes; collects <b>peat and tar</b>.</li>
       <li><b>${h.sedra.name}</b>: cuts <b>reeds</b>, 3 a cut at 100 foraging. Evolves: ${$(`sedra`)}.</li>
       <li><b>${h.holla.name}</b>: carries <b>water</b> from the shore or a well into your barrels. Evolves: ${$(`holla`)}.</li>
-      <li><b>${h.dowse.name}</b>: only over metal; on a settlement <b>${je.nail}</b> at your anvils (<b>The settlement's hands</b>). Evolves: ${$(`dowse`)}.</li>
+      <li><b>${h.dowse.name}</b>: only over metal; on a settlement <b>${Me.nail}</b> at your anvils (<b>The settlement's hands</b>). Evolves: ${$(`dowse`)}.</li>
       <li><b>${h.sappa.name}</b>: <b>plants sprouts</b> where trees were felled.</li>
       <li><b>${h.snedda.name}</b>: <b>prunes</b> trees whose next growth stage is dead; nothing else. Level: forestry. Evolves: ${$(`snedda`)}.</li>
       <li><b>${h.cobbe.name}</b>: <b>hod</b>: carries what a planned wall (any storey), floor, roof, staircase, ladder, column, open bridge or aqueduct span or foundation
@@ -2376,7 +2376,7 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       <li><b>${h.wadd.name}</b>: mount; swims deep water with a rider. Evolves: ${$(`wadd`)}.</li>
       <li><b>${h.springlet.name}</b>: saddle mount; swims deep water with a rider. Ridden on land: ${+h.springlet.speed.toFixed(2)} tiles a second
       (${N(h.springlet.speed/Zl)} your walking pace), flat. Ridden in water (any water over the tile's bed): ${k(h.orse.name)} ${h.orse.name}'s pace,
-      ${+((h.springlet.swimSpeed??0)*Ye(0)).toFixed(2)} tiles a second green. Wild: only in deep water. Eats ${h.springlet.baitHint}. Level: <b>climbing</b>, ridden.
+      ${+((h.springlet.swimSpeed??0)*Xe(0)).toFixed(2)} tiles a second green. Wild: only in deep water. Eats ${h.springlet.baitHint}. Level: <b>climbing</b>, ridden.
       Evolves: ${$(`springlet`)}.</li>
       <li>Mounted, indoors: through an <b>arch</b>, <b>double door</b> or <b>gate</b>; no plain door, hidden door or iron-bound gate. Up a finished <b>wide staircase</b>
       from its foot, onto finished floors of that storey; no ${ad}, ladder or roof; never over a staircase's rails. Mount and dismount on the ground floor only.
@@ -2384,16 +2384,16 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       <li><b>${h.warda.name}</b>: sees ${h.warda.sight} tiles for you wherever it stands. Evolves: ${$(`warda`)}.</li>
       <li><b>${h.quill.name}</b>: <b>pluck</b> with a carving knife for <b>feathers</b>: up to 6 when full. Evolves: ${$(`quill`)}; ${m(`quill`).toLowerCase()}.</li>
       <li><b>${h.cudda.name}</b>: <b>milked</b> into an empty bucket; a bucket of milk makes ${H(`make_cheese`)} <b>cheeses</b>. Evolves: ${$(`cudda`)}; ${m(`cudda`).toLowerCase()}.</li>
-      <li><b>${h.vesp.name}</b>. Build a <b>hive</b> (${B(`make_hive`,!0)}) on your settlement. Task <b>${je.hive}</b>: the nearest hive with room within its reach of the totem;
+      <li><b>${h.vesp.name}</b>. Build a <b>hive</b> (${B(`make_hive`,!0)}) on your settlement. Task <b>${Me.hive}</b>: the nearest hive with room within its reach of the totem;
       per go, out to one wildflower tile within 3 tiles of the hive, in turn, and back. <b>Honey</b> into the hive: a skep's rate there, a honey per 50 hours worked
-      per clump within 3 tiles, per ${h.vesp.name}; a <b>beeswax</b> per 4 honey; none in ${_e}. Quality (QL): as a gathered load, its ${z(Tn.hive).toLowerCase()}.
-      Idle: no hive in reach, hives full, no wildflowers within 3 tiles of its hive, ${_e}. Following you: fills no hive. Evolves: ${$(`vesp`)}. ${E(B(`make_candle`))}: ${H(`make_candle`)} <b>candles</b>.</li>
+      per clump within 3 tiles, per ${h.vesp.name}; a <b>beeswax</b> per 4 honey; none in ${ve}. Quality (QL): as a gathered load, its ${z(En.hive).toLowerCase()}.
+      Idle: no hive in reach, hives full, no wildflowers within 3 tiles of its hive, ${ve}. Following you: fills no hive. Evolves: ${$(`vesp`)}. ${E(B(`make_candle`))}: ${H(`make_candle`)} <b>candles</b>.</li>
     </ul>
     <h4>The settlement's hands</h4>
     <ul>
       <li>${Bg.length} chore workers, set to a settlement as usual, working within their reach of the totem. ${Bg.filter(e=>Pa.has(h[e].gathers)).length} work at the settlement stores
       or at one of your stations: output goes into that store, else any settlement store that takes it, else onto the ground there.
-      No tools: no ${v(ct())} needed in the stores, none worn. Stations still needed: spindle, paper press, butter churn, anvil, lit campfire or oven, smelter (lit, for glass and alloys), kiln, barrel, trellis.
+      No tools: no ${v(lt())} needed in the stores, none worn. Stations still needed: spindle, paper press, butter churn, anvil, lit campfire or oven, smelter (lit, for glass and alloys), kiln, barrel, trellis.
       No perk needed: salves (${h.leecha.name}).
       Alloy QL (${h.scorcha.name}): the lumps' QL &times; (${zi[0]} + smelting &divide; ${zi[1]}), as your own hands.
       Glazing and butchering: by hand only.</li>
@@ -2411,27 +2411,27 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     <ul>
       <li>${Ug.length} use an ability instead of a blow, the first time it is useful, then not until its cooldown ends; each is a fighting class's spell at that spell's numbers, except the
       ${C(Ug.filter(e=>!fo.has(h[e].ability)).map(e=>`${h[e].name}'s`))}. Used wherever one of yours fights; wild ones fight normally.</li>
-      ${Ug.map(e=>{let t=h[e];return`<li><b>${t.name}</b> (taming ${t.tameLevel}), ${Ro(t.ability)}: ${hn(t.ability)}.</li>`}).join(``)}
+      ${Ug.map(e=>{let t=h[e];return`<li><b>${t.name}</b> (taming ${t.tameLevel}), ${Ro(t.ability)}: ${gn(t.ability)}.</li>`}).join(``)}
       ${Wg.map(e=>{let t=h[e],[n,r]=t.stages;return`<li>${t.name}: wild only ${t.nocturnal?`after dark, `:``}from ${mi(t.season)} (UTC calendar), every year; on other days no wild ones; tamed, kept or bred ones stay all year.
-      Level = body strength. Evolves into ${k(n.name)} ${n.name} at ${Jo[0]} (${Ut(1,!1)}) and ${k(r.name)} ${r.name} at ${Jo[1]}
-      (${Ut(2,!1)}), against ${k(t.name)} ${t.name}.</li>`}).join(``)}
+      Level = body strength. Evolves into ${k(n.name)} ${n.name} at ${Jo[0]} (${Wt(1,!1)}) and ${k(r.name)} ${r.name} at ${Jo[1]}
+      (${Wt(2,!1)}), against ${k(t.name)} ${t.name}.</li>`}).join(``)}
     </ul>
     <h4>Settlement menu and upgrades</h4>
     <ul>
       <li>Right-click any tile of your settlement: <b>settlement menu</b>: its wildermon, their <b>orders</b>, <b>upgrade</b>, rename, disband.</li>
       <li>Orders (settlement menu, or Settlement window, <b>Workers</b> tab): every settlement worker on it, the founder's and the citizens', and every one assigned after.
-      ${yn.map(e=>`<b>${Ir[e]}</b>: ${Lf[e]}`).join(` `)} Guards and hunters fight at their trade whatever the orders.</li>
+      ${bn.map(e=>`<b>${Ir[e]}</b>: ${Lf[e]}`).join(` `)} Guards and hunters fight at their trade whatever the orders.</li>
       <li>Settlement window, <b>Workers</b> tab: each worker's upkeep (fed, time to unfed), each task's workers against 3 for a specialty, with your
       wildermon that would add to it (<b>Assign</b>), guards and orders.</li>
       <li>Settlement window, <b>Visitors</b> tab: everybody not a citizen who came onto it, by the hour: first and last hour and hours seen, kept 7 days.
       Founder and ranks with <b>${g.visitors.label}</b>.</li>
-      <li>Each upgrade: border +2 tiles; +${St(2)-St(1)} working wildermon. Requirements: ${sh}. In order; each level asks only
+      <li>Each upgrade: border +2 tiles; +${Ct(2)-Ct(1)} working wildermon. Requirements: ${sh}. In order; each level asks only
       the new thing. The menu ticks what you have. Max level 5.</li>
       <li>The totem grows a carved block per level, each with one lit rune: lit runes = level.</li>
     </ul>
     <h4>Settlement workers</h4>
     <ul>
-      <li><b>Food</b>: under ${P(ze)} fed, a worker eats from any crate on the settlement holding its food, then returns to work.</li>
+      <li><b>Food</b>: under ${P(Be)} fed, a worker eats from any crate on the settlement holding its food, then returns to work.</li>
       <li><b>Its settlement</b>: the one you founded, else the oldest you are a citizen of. Beds, stores, ground items, stations, hearths and planned work: on it only.
       Trees, ore, ground, crops, hives, planting and post storage: on it or on no settlement. Never on another settlement, one you are a citizen of included.</li>
       <li><b>Range</b>: starts at ${ch[0]} to ${ch[ch.length-1]} tiles from the totem by sort; +10 tiles per 10 levels of its task skill
@@ -2458,9 +2458,9 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       <li><b>Level</b> and <b>evolution stage</b>: its level skill only: its task's, its own (no task), or climbing for a draught kind or mount with neither. Other skills
       (climbing in the traces, fighting): no level, no evolution. A kind with no level skill: its highest skill.</li>
       <li>Settlement workers learn at half a player's pace and work at half a player's speed; higher skill: better finds, faster work.</li>
-      <li>Kinds with no work learn their skill otherwise: ${C(Object.values(h).filter(e=>e.learns).map(e=>`${e.name} its ${(b.get(e.learns.skill)?.name??e.learns.skill).toLowerCase()}, ${wt[e.learns.by]}`))}.</li>
+      <li>Kinds with no work learn their skill otherwise: ${C(Object.values(h).filter(e=>e.learns).map(e=>`${e.name} its ${(b.get(e.learns.skill)?.name??e.learns.skill).toLowerCase()}, ${Tt[e.learns.by]}`))}.</li>
       <li><b>Learning pace by task</b>: each gain at its level skill × its task's multiplier, set so every task reaches level ${Jo[0]} and then ${Jo[1]} in about the middle task's time:
-      ${nn()}. Hunting and anything else: the skill curve's own gain.</li>
+      ${rn()}. Hunting and anything else: the skill curve's own gain.</li>
     </ul>
     <h4>Loads per evolution stage</h4>
     <ul>
@@ -2504,13 +2504,13 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     <h4>Upkeep and specialties</h4>
     <ul>
       <li>Eats from your settlement stores when hungry. ${F(Oi)} (an island day) at work without a meal (no food it eats there): ${S(_a)} task pace until it eats;
-      card: &ldquo;${Dn({species:`sedra`,unfed:Oi})}&rdquo;.</li>
+      card: &ldquo;${On({species:`sedra`,unfed:Oi})}&rdquo;.</li>
       <li><b>Specialty</b>: 3 or more settlement workers of one task on a settlement: each ${S(ba)} faster (work time ÷ ${1+ba}), on top of evolution stage and blood.
       Not keeping watch or hunting. Listed per task in the settlement window and on each card.</li>
     </ul>
     <h4>Wildermon crates</h4>
     <ul>
-      <li>Holds <b>one</b> wildermon. Fine carpentry, mallet, ${re}; <b>${w(ar).weight} kg</b>; no rot.</li>
+      <li>Holds <b>one</b> wildermon. Fine carpentry, mallet, ${re}; <b>${w(or).weight} kg</b>; no rot.</li>
       <li>Your first tame follows you; <b>every later one goes into an empty crate in your pack</b> (none: cannot tame). Trap catches likewise.</li>
       <li>Put your follower or a settlement worker into an empty carried crate from its menu.</li>
       <li>Set down on any spot: shown inside with its name. Open (beside it, or from the pack): <b>let it out to follow you</b> (the current follower goes into the crate), or
@@ -2523,7 +2523,7 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     <ul>
       <li>Each tile: a 4 by 4 grid of spots.</li>
       <li><b>Log crate</b>: ${B(`make_log_crate`)} (no nails). <b>Plank crate</b>: ${B(`make_plank_crate`)} (mallet). Right-click a spot to place; snaps to the grid.
-      Hold ${mn.log.capacity} and ${mn.plank.capacity}. Open, empty, pick up when empty. The settlement crate beside the totem is one.</li>
+      Hold ${hn.log.capacity} and ${hn.plank.capacity}. Open, empty, pick up when empty. The settlement crate beside the totem is one.</li>
       <li>Workers fill the settlement crate first, then the nearest store on the settlement that takes the load (crate, raw material bin, chest, larder, cart); never a <b>trash crate</b>.</li>
       <li><b>All full</b>: the worker holds its load near the totem and says so once; resumes when room appears.</li>
       <li>Seed for sowing and wood for stoking come from any store on the settlement.</li>
@@ -2541,61 +2541,61 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     </ul>
     <h3>Meditation, and the three paths</h3>
     <ul>
-      <li><b>Rug</b>: ${B(`make_rug`)}, needle. Stand on the spot, <b>Sit and think about nothing</b>. Once per ${F(Ht)}. Trains meditation and soul strength.</li>
+      <li><b>Rug</b>: ${B(`make_rug`)}, needle. Stand on the spot, <b>Sit and think about nothing</b>. Once per ${F(Ut)}. Trains meditation and soul strength.</li>
       <li>Calm (meditation resource) gain by place: your own yard ${S(u.yard)}; high ground off your settlement ${N(u.high)}; where the ground runs out and the air is thin <b>${N(u.thin)}</b>.</li>
       <li>Modifiers: feet in water +${S(u.water-1)}; a mote swirl within ${u.swirlReach} tiles +${S(u.swirl-1)}; a <b>Runestone</b> within
       ${u.stoneReach} tiles (to its nearest tile) <b>${N(u.stone)}</b>; within ${u.staleReach} tiles of anywhere you sat since the last daily reset (${hm(13)} UTC)
       ${S(u.stale)}.</li>
       <li>All multiply (Runestone + feet in water: ${N(u.stone*u.water)}). A blow landing on you ends the sitting with nothing.</li>
-      <li><b>Calm</b> per sitting: 10 Calm × the spot's multiplier, ${Bp}. Cap follows the favour curve, off meditation: ${C(fn.filter((e,t)=>t%2==0).map(e=>`${Math.floor(yt(e))} at ${e}`))}.
+      <li><b>Calm</b> per sitting: 10 Calm × the spot's multiplier, ${Bp}. Cap follows the favour curve, off meditation: ${C(pn.filter((e,t)=>t%2==0).map(e=>`${Math.floor(bt(e))} at ${e}`))}.
       No regeneration; spent on techniques.</li>
       <li>At ${fa} meditation: choose <b>one</b> of ${Wo.length} paths at the rug; earlier choices stand.</li>
       <li><b>Undo</b> on your path (Faith window, Path tab, with a <b>Bauble of Regret</b> in the pack): breaks the bauble, removes the path and its picks, techniques off the spell bar. Calm and meditation stay. Then any path at the rug again.</li>
-      <li>Tiered paths: 3 picks at each path tier (${C(fn.map(String))} meditation): a <b>technique</b> and 2 <b>disciplines</b>; take one, kept while you hold the path,
+      <li>Tiered paths: 3 picks at each path tier (${C(pn.map(String))} meditation): a <b>technique</b> and 2 <b>disciplines</b>; take one, kept while you hold the path,
       in the <b>Faith</b> window's Path tab. Technique: the spell bar's path slot; costs Calm; cooldown. Discipline: always on.</li>
     </ul>
     <table>
-      ${Wo.filter(e=>e.moved).flatMap(e=>fn.map((t,n)=>`<tr><td><b>${e.name}</b> ${t}</td><td>${ir(e.id,n+1).map(e=>e.kind===`technique`?`<b>${e.name}</b> (${e.cost} Calm, cooldown ${F(e.rest)}): ${dh(e.note)}`:`<i>${e.name}</i>: ${dh(e.note)}`).join(` `)}</td></tr>`)).join(`
+      ${Wo.filter(e=>e.moved).flatMap(e=>pn.map((t,n)=>`<tr><td><b>${e.name}</b> ${t}</td><td>${ar(e.id,n+1).map(e=>e.kind===`technique`?`<b>${e.name}</b> (${e.cost} Calm, cooldown ${F(e.rest)}): ${dh(e.note)}`:`<i>${e.name}</i>: ${dh(e.note)}`).join(` `)}</td></tr>`)).join(`
       `)}
     </table>
     ${Wo.every(e=>e.moved)?``:`<p>${C(Wo.filter(e=>!e.moved).map(e=>e.name))}: steps unchanged until moved to path tiers.</p>`}
     <h3>An altar, and what kneeling at one buys</h3>
     <ul>
       <li><b>Altar</b>: masonry, ${B(`make_altar`)}, trowel. Built and set down only on a settlement of yours (founded or citizen). One per settlement.</li>
-      <li><b>Pray</b>: banks <b>favour</b>; once per ${F(He)}. Trains <b>${z(`praying`)}</b> about ${C([1,20,50].map(e=>`${Vp(e,Aa(!0))} at ${e}`))};
-      <b>${z(`prayer`)}</b> about ${C([1,20,50].map(e=>`${Vp(e,Ft)} at ${e}`))}; soul strength.</li>
-      <li><b>${z(`praying`)}</b> sets favour per prayer (quality (QL) ${qp[1]} altar at ${hm($t[0])}): ${C(Up.map(e=>`${Jp(e)} favour at ${z(`praying`)} ${e}`))}; ${Bp}.</li>
-      <li><b>${z(`prayer`)}</b> sets max favour: ${C(Up.map(e=>`${Math.floor(Tt(e))} favour at ${z(`prayer`)} ${e}`))}.</li>
-      <li>Best at <b>${C($t.map(hm))}</b>: favour ${N((Yi+Vt)/Yi)} that at 3 hours or more from either; tapering between.</li>
-      <li>Altar QL ${qp[2]}: favour ${N(dn(qp[2],$t[0],1)/dn(qp[0],$t[0],1))} that at a QL ${qp[0]} one.</li>
+      <li><b>Pray</b>: banks <b>favour</b>; once per ${F(Ue)}. Trains <b>${z(`praying`)}</b> about ${C([1,20,50].map(e=>`${Vp(e,Aa(!0))} at ${e}`))};
+      <b>${z(`prayer`)}</b> about ${C([1,20,50].map(e=>`${Vp(e,It)} at ${e}`))}; soul strength.</li>
+      <li><b>${z(`praying`)}</b> sets favour per prayer (quality (QL) ${qp[1]} altar at ${hm(en[0])}): ${C(Up.map(e=>`${Jp(e)} favour at ${z(`praying`)} ${e}`))}; ${Bp}.</li>
+      <li><b>${z(`prayer`)}</b> sets max favour: ${C(Up.map(e=>`${Math.floor(Et(e))} favour at ${z(`prayer`)} ${e}`))}.</li>
+      <li>Best at <b>${C(en.map(hm))}</b>: favour ${N((Yi+Ht)/Yi)} that at 3 hours or more from either; tapering between.</li>
+      <li>Altar QL ${qp[2]}: favour ${N(fn(qp[2],en[0],1)/fn(qp[0],en[0],1))} that at a QL ${qp[0]} one.</li>
       <li><b>${v(wd.map(fl))}</b> (an enchanted statuette, see <b>Digging up the past</b>): <b>Pray</b> on it in the pack, anywhere, no altar:
       favour, wait and training as at an altar of the statue's QL. Followers of its patron only; no patron: refused.</li>
-      <li>Regeneration: ${Number((c*3600).toFixed(1))} favour an hour, up to your cap.</li>
+      <li>Regeneration: ${Number((ie*3600).toFixed(1))} favour an hour, up to your cap.</li>
       <li>Holds the settlement's bauble sockets (see <b>Baubles</b>).</li>
       <li><b>Sacrifice</b> (altar menu): gives up one ${x.slice(1,-1).map(e=>e.name).join(`, `)} or ${x[x.length-1].name} item from the pack (one of a stack);
       fills ${C(Qu.map(e=>Uu[e].toLowerCase()))} to the top. Trains soul strength.</li>
-      <li>${S(Te)} of sacrifices leave a <b>soul</b> of the item's rarity. <b>Absorb into</b> (on the soul) an ordinary pack item (one of a stack): it takes that rarity.</li>
+      <li>${S(Ee)} of sacrifices leave a <b>soul</b> of the item's rarity. <b>Absorb into</b> (on the soul) an ordinary pack item (one of a stack): it takes that rarity.</li>
       <li>Not sacrificable: locked or worn items, bags with contents, occupied wildermon crates. Baubles take no soul (rarity drawn on restoring).</li>
     </ul>
     <h3>Patrons and the spell bar</h3>
     <ul>
-      <li>At <b>${Zr} ${z(`prayer`)}</b>: take a <b>patron</b> in the <b>Faith</b> window: ${C(wd.map(e=>`<b>${e.name}</b> (${tr[e.alignment].toLowerCase()})`))}.</li>
+      <li>At <b>${Zr} ${z(`prayer`)}</b>: take a <b>patron</b> in the <b>Faith</b> window: ${C(wd.map(e=>`<b>${e.name}</b> (${nr[e.alignment].toLowerCase()})`))}.</li>
       <li><b>Undo</b> on your patron (Faith window, with a <b>Bauble of Regret</b> in the pack): breaks the bauble, removes the patron and its spells, off the spell bar. Favour and ${z(`prayer`)} stay. Then any patron again.</li>
       <li>3 spells at each of ${e.length} faith tiers (${C(e.map(String))} ${z(`prayer`)}); take one per faith tier: ${e.length} of
       ${e.length*3}. Every patron's faith tiers are readable beforehand. Patron and spell choices need confirming.</li>
       <li>Spells cost favour and have their own cooldown in seconds.</li>
-      <li><b>Spell bar</b>: ${Jn} slots: ${C([`class`,`faith`,`path`].map(e=>`${Sa(e)} for ${ao[e].toLowerCase()} spells`))}.
+      <li><b>Spell bar</b>: ${Yn} slots: ${C([`class`,`faith`,`path`].map(e=>`${Sa(e)} for ${ao[e].toLowerCase()} spells`))}.
       New patron spells fill the first empty faith slot, fighting-class spells the first empty class slot, techniques the path slot. Right-click a slot to change or empty it.
       Dark shading: cooldown left.</li>
       <li>Path techniques are called from the Path tab or the rug.</li>
       <li>Targets (each spell says): ${v(Ja.map(e=>`<b>${Pi[e]}</b>`))}. Wildermon: any creature not after you; enemy: any wild creature
       (a peaceful wild one is both). Thing: in your pack or set down. Ground spells reach everything within their own tiles of the spot.</li>
-      <li>Range: <b>${br}</b> tiles for anything but you and what you carry.</li>
+      <li>Range: <b>${xr}</b> tiles for anything but you and what you carry.</li>
       <li>Click a slot, or <b>Shift</b> + its number: casts on your target or mark if it takes a creature, else on you or your spot if allowed, else asks for a target.
       Right-click a person, creature, thing or ground: cast any bar spell that takes it.</li>
-      <li>The Blessing's ${or.filter(e=>e.patron===`blessing`).length} spells: per faith tier one heal, one guard, one for creatures, things and land.
-      Justice's ${or.filter(e=>e.patron===`justice`).length}: one judging its target, one keeping order in a fight, one measuring.
-      Chaos's ${or.filter(e=>e.patron===`chaos`).length}: one ruin, one dread, one bargain (paid in your health or items, not favour); none on another person.
+      <li>The Blessing's ${sr.filter(e=>e.patron===`blessing`).length} spells: per faith tier one heal, one guard, one for creatures, things and land.
+      Justice's ${sr.filter(e=>e.patron===`justice`).length}: one judging its target, one keeping order in a fight, one measuring.
+      Chaos's ${sr.filter(e=>e.patron===`chaos`).length}: one ruin, one dread, one bargain (paid in your health or items, not favour); none on another person.
       Every spell's numbers: Faith window.</li>
     </ul>
     <h3>The things that are not wildermon</h3>
@@ -2606,16 +2606,16 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       <li>Dragon subspecies, 1 in ${h.dragon.subspecies.length} wild each, same health, blow and speed: ${C(h.dragon.subspecies.map(e=>`<b>${e}</b>`))}.</li>
       <li>Goblin subspecies, 1 in ${h.goblin.subspecies.length} wild each, same health, blow and speed: ${C(h.goblin.subspecies.map(e=>`<b>${e}</b>`))}.</li>
       <li>Notice range ${ph[0]} to ${ph[ph.length-1]} tiles (other hunters 7); they come straight at you and chase far.</li>
-      <li><b>Rare</b>: ${S(Mn)} of wild spawns; of those ${C(ce.map(([e,t])=>`${S(t/mh)} ${h[e].name.toLowerCase()}s`))}.</li>
-      <li>Max alive: ${C(ce.map(([e])=>`${Bn[e]??1} ${h[e].name.toLowerCase()}${(Bn[e]??1)===1?``:`s`}`))}.
-      Distance kept from your settlement totem: ${C(ce.map(([e])=>`${h[e].name.toLowerCase()} ${Qe[e]??0} tiles`))}.</li>
+      <li><b>Rare</b>: ${S(Nn)} of wild spawns; of those ${C(le.map(([e,t])=>`${S(t/mh)} ${h[e].name.toLowerCase()}s`))}.</li>
+      <li>Max alive: ${C(le.map(([e])=>`${Vn[e]??1} ${h[e].name.toLowerCase()}${(Vn[e]??1)===1?``:`s`}`))}.
+      Distance kept from your settlement totem: ${C(le.map(([e])=>`${h[e].name.toLowerCase()} ${$e[e]??0} tiles`))}.</li>
       <li>Cannot be tamed, trapped, bred or brushed.</li>
-      <li>Blow against an unarmoured life: ${C(ce.map(([e])=>`${h[e].name.toLowerCase()} ${S(Math.round(h[e].attack*td*100)/100)}`))}.</li>
+      <li>Blow against an unarmoured life: ${C(le.map(([e])=>`${h[e].name.toLowerCase()} ${S(Math.round(h[e].attack*td*100)/100)}`))}.</li>
       ${Ns.filter(e=>e.monsters).map(e=>`<li>${E(wg(e.name))}: monster country: every wild spawn is one of these; holds ${N(e.monsters??1)} the number the rest of the chart shares
-      (${C(ce.filter(([t])=>(Gs(t)??e)===e).map(([t])=>`${(Bn[t]??1)*(e.monsters??1)} ${h[t].name.toLowerCase()}${(Bn[t]??1)*(e.monsters??1)===1?``:`s`}`))}).</li>`).join(``)}
+      (${C(le.filter(([t])=>(Gs(t)??e)===e).map(([t])=>`${(Vn[t]??1)*(e.monsters??1)} ${h[t].name.toLowerCase()}${(Vn[t]??1)*(e.monsters??1)===1?``:`s`}`))}).</li>`).join(``)}
       ${Ns.filter(e=>e.lair?.length).map(e=>`<li>${E(C(e.lair.map(e=>`${h[e].name.toLowerCase()}`)))}: only on ${wg(e.name)}.</li>`).join(``)}
-      <li>Butchering a ${v([...an])}: ${S(o)} chance of a <b>Recipe</b> (${C(Zn(`recipe`).map(e=>eo(e).toLowerCase()))}).</li>
-      <li>Butchering: ${C(qt(`formula`).map(e=>`${e.kind} ${S(e.odds)}`))} chance of a <b>Formula</b> (one of the ${Zn(`formula`).length} enchantment scrolls; Enchanting).</li>
+      <li>Butchering a ${v([...on])}: ${S(o)} chance of a <b>Recipe</b> (${C(Qn(`recipe`).map(e=>eo(e).toLowerCase()))}).</li>
+      <li>Butchering: ${C(Jt(`formula`).map(e=>`${e.kind} ${S(e.odds)}`))} chance of a <b>Formula</b> (one of the ${Qn(`formula`).length} enchantment scrolls; Enchanting).</li>
       <li>Butchering: the usual yields, plus <b>tusk</b> and <b>sinew</b> (orc, ogre); dragon: ${h.dragon.butcher.scale??0} <b>dragon scales</b> and a <b>hoard</b> of 4 to
       10 lumps (by carcass kept) of the ${hh.length} deep metals and ${sl.length-hh.length} precious ones; the only source of them together.</li>
       <li><b>Composite bow</b>: ${B(`make_composite_bow`)}, ${U(`make_composite_bow`)}. Range <b>${gh.range??0}</b> tiles, ${gh.damage} damage
@@ -2631,7 +2631,7 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       <li>Set on any spot <b>outside your own borders</b> (nothing wild comes inside), then <b>bait it</b> from the pack; the menu lists which kinds each carried item draws.
       Warier than the trap holds: it takes the bait and leaves.</li>
       <li>Rots in place: snare ${F(yo.snare.lifeMin)} to ${F(yo.snare.lifeMax)}, a good deadfall up to ${F(yo.deadfall.lifeMax)}; a catch inside escapes when it falls.</li>
-      <li><b>Timid</b> wildermon ${N(Ne)} as likely to be caught; hunters ${S(Yt)}.</li>
+      <li><b>Timid</b> wildermon ${N(Pe)} as likely to be caught; hunters ${S(Xt)}.</li>
       <li>Taking the catch out is a <b>taming</b> check at the usual requirement; a failure means another try.</li>
     </ul>
     <h3>Blood, the brush and breeding</h3>
@@ -2648,19 +2648,19 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       <li><b>Fighting blood</b> (${Cr.length} traits: fanged, plated, slippery, quick-jawed, quick-healing…): one name in every rarity; its <b>grade</b> is drawn separately on the same odds
       (fanged, fanged (rare), (supreme), (fantastic)), worth ${C(f.map(e=>N(ro[e])).slice(1))} the common grade. Bred up a grade at a time.
       ${S(Da)} of wild traits are fighting blood. One grade per name per wildermon.</li>
-      <li>${E(k(w(Kn.use_ancient_lamp).name.toLowerCase()))} <b>${w(Kn.use_ancient_lamp).name.toLowerCase()}</b>: replaces the lowest-rarity trait with one of that rarity,
+      <li>${E(k(w(qn.use_ancient_lamp).name.toLowerCase()))} <b>${w(qn.use_ancient_lamp).name.toLowerCase()}</b>: replaces the lowest-rarity trait with one of that rarity,
       one in 20 the rarity above (see <b>Digging up the past</b>).</li>
     </ul>
     <h4>Rare wildermon</h4>
     <ul>
       <li>Odds as for made things: ${C(Y.map(e=>`1 in ${Math.round(1/xu(e))} ${x[e].name}`))}. Never monsters. Young: rarity drawn at birth, whatever the parents.</li>
       <li>Size: rare <b>${N(x[1].size)}</b>, ${C(Y.slice(1).map(e=>`${x[e].name} ${N(x[e].size)}`))}; shimmers in its rarity's colour.</li>
-      <li>${C(Xa.filter(e=>e.up).map(e=>e.label))}: up ${C(Y.map(e=>`<b>${pe(x[e].blood).slice(1)}</b> ${x[e].name}`))};
-      ${C(Xa.filter(e=>!e.up).map(e=>e.label))}: down ${C(Y.map(e=>`<b>${pe(1/x[e].blood).slice(1)}</b> ${x[e].name}`))};
+      <li>${C(Xa.filter(e=>e.up).map(e=>e.label))}: up ${C(Y.map(e=>`<b>${me(x[e].blood).slice(1)}</b> ${x[e].name}`))};
+      ${C(Xa.filter(e=>!e.up).map(e=>e.label))}: down ${C(Y.map(e=>`<b>${me(1/x[e].blood).slice(1)}</b> ${x[e].name}`))};
       on top of traits.</li>
       <li>No effect on ${C(Ig())}: trait figures only.</li>
-      <li>Wild rare ones draw better traits: better than common ${C(Y.map(e=>`${S(Math.round(100*Fa(hr(0,e)))/100)} for ${x[e].name}`))}
-      (ordinary ${S(Math.round(100*Fa(hr(0,0)))/100)}).</li>
+      <li>Wild rare ones draw better traits: better than common ${C(Y.map(e=>`${S(Math.round(100*Fa(gr(0,e)))/100)} for ${x[e].name}`))}
+      (ordinary ${S(Math.round(100*Fa(gr(0,0)))/100)}).</li>
       <li>Rarity shown on its card, the Wildermon window and <b>Look it over</b>.</li>
     </ul>
     <h4>Care and feeding</h4>
@@ -2668,7 +2668,7 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       <li><b>Brush</b>: ${B(`make_brush`)}, carving knife. <b>Brush a wildermon down</b>: adds <b>care</b> (${em}; works faster, learns faster, heals). Care drains over ${F(3*mm)}
       left alone.</li>
       <li><b>Feeding</b>: each item of its diet eaten (from your hand or the stores): <b>+${S(jr)} care</b> at quality (QL) 100, proportionally less below; for ${F(Vo)}:
-      <b>learns ${S(gn)} faster</b> at QL 100, proportionally less; learning bonus ${N(2)} for its <b>favourite</b> (the first food on its field guide page).</li>
+      <b>learns ${S(_n)} faster</b> at QL 100, proportionally less; learning bonus ${N(2)} for its <b>favourite</b> (the first food on its field guide page).</li>
       <li><b>Cooked meat</b> in a diet: also ${C(bi.map(e=>w(e).name.toLowerCase()))}. Feeding and taming bait alike.</li>
       <li>No stacking: an equal or better meal replaces the effect and restarts the ${F(Vo)}; a lesser one does nothing. Grazing and whey give neither.
       The card shows its favourite's worth and the time left.</li>
@@ -2676,7 +2676,7 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     <h4>Breeding</h4>
     <ul>
       <li>A <b>male</b> and <b>female</b> of one sort within 4 tiles, both <b>grown</b> and <b>fed</b>, neither mated in the last ${F(zr)}: <b>Breed with a mate</b>.</li>
-      <li>Taken: gestation ${F(Se)}; the young's traits are fixed at mating (a sire sold, released or eaten meanwhile still counts).</li>
+      <li>Taken: gestation ${F(Ce)}; the young's traits are fixed at mating (a sire sold, released or eaten meanwhile still counts).</li>
       <li>The young <b>follows you</b> if nothing does; else an <b>empty wildermon crate in your pack</b>; else an <b>empty crate of yours on your settlement</b>, nearest the mother;
       else the wild.</li>
       <li>3 slots filled one at a time from the pair's traits. Husbandry sets <b>parent inheritance</b> (${P(xo(0,0))} at no skill,
@@ -2686,21 +2686,21 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       one level less per 10 awareness over 20.
       Unread: <i>something</i>.</li>
       <li>Only females give milk. Young and old ones do not breed.</li>
-      <li><b>Pedigree</b> (card and hover): <b>dam</b>, <b>sire</b>, and each readable trait's source: ${me}.</li>
+      <li><b>Pedigree</b> (card and hover): <b>dam</b>, <b>sire</b>, and each readable trait's source: ${he}.</li>
     </ul>
     <h4>Lines and mutations</h4>
     <ul>
       <li>A <b>line</b> per thing a trait can change. Wild: depth one wherever it carries a trait. Young: one deeper than the deeper parent where it carries one, max 5;
       none where it carries none.</li>
-      <li>Each generation past the first: <b>+${S(Lr)}</b> on its blood there: ${C(Fg.map(e=>`${pe(va(e,`tough`))} at depth ${e}`))};
-      for ${C(Xa.filter(e=>!e.up).map(e=>e.label))} (lower is better): ${C(Fg.map(e=>pe(va(e,`appetite`))))}.
+      <li>Each generation past the first: <b>+${S(Lr)}</b> on its blood there: ${C(Fg.map(e=>`${me(va(e,`tough`))} at depth ${e}`))};
+      for ${C(Xa.filter(e=>!e.up).map(e=>e.label))} (lower is better): ${C(Fg.map(e=>me(va(e,`appetite`))))}.
       Card line: <i>${Lg}</i>.</li>
       <li>No line on ${C(Ig())}.</li>
       <li><b>Mutation</b>: one young in 200: a trait neither parent has in any grade, one rarity above their best (${C(f.slice(1).map((e,t)=>`${e} for ${f[t]}`))};
       ${f[f.length-1]} stays ${f[f.length-1]}), in its lowest-rarity slot. Announced at birth; card marks it <b>mutation</b>.</li>
       <li><b>Wild forms</b>: rolled at each wild spawn, independently, never on monsters. Colour form: 1 in 500, a palette none of its variants has (pale for a kind with no coat lighter than
-      ${S(Va)} lightness, dark for the rest). Size form: 1 in 200, half each: ${tn(h.rabba,`large`).toLowerCase()} (${$n(`large`)}),
-      ${tn(h.rabba,`small`).toLowerCase()} (${$n(`small`)}). Kept when tamed. Young: each form at ${S(ft)} per parent that has it.
+      ${S(Va)} lightness, dark for the rest). Size form: 1 in 200, half each: ${nn(h.rabba,`large`).toLowerCase()} (${er(`large`)}),
+      ${nn(h.rabba,`small`).toLowerCase()} (${er(`small`)}). Kept when tamed. Young: each form at ${S(pt)} per parent that has it.
       Card names it; the Field guide page marks each form seen and tamed.</li>
       <li>Preview (<b>Breed with a mate</b>, before <b>Yes</b>), worked out exactly from the mating's own draw at your husbandry, care and perks: take chance; per trait, inheritance and rarity-up chance;
       chance of each parent trait; line depth and carry chance per thing; rarity odds.</li>
@@ -2713,7 +2713,7 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       <li>Lasting Care: care drains over ${F((Uh(`Lasting Care`)[`kept:care_hours`]??3)*mm)} instead of ${F(3*mm)}.</li>
       <li>Well Kept: fully brushed, works and learns ${S(Uh(`Well Kept`)[`kept:care_bonus`]??.25)} faster instead of ${S(_o)}.</li>
       <li>Light Eaters: hunger ${S(1-(Uh(`Light Eaters`)[`kept:hunger`]??1))} slower.</li>
-      <li>Long-lived: old at ${F(Uh(`Long-lived`)[`kept:old_at`]??Ge)} instead of ${F(Ge)}.</li>
+      <li>Long-lived: old at ${F(Uh(`Long-lived`)[`kept:old_at`]??Ke)} instead of ${F(Ke)}.</li>
       <li>Choose the Sex: <i>For a female young</i> / <i>For a male young</i> under <b>Breed with a mate</b>.</li>
       <li>Twins: one in ${Math.round(1/(Uh(`Twins`)[`breed:twins`]??1))} pairings give a second young (into an empty wildermon crate once the first follows you).</li>
       <li>Stud Book: <b>Examine</b> on one of theirs with them: take chance with its would-be mate, and per-trait inheritance and rarity-up chances.</li>
@@ -2784,12 +2784,12 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       <b>Lay timber steps</b> (mallet, carpentry 12): ${Vi}, in that wood. Several materials carried: the menu asks. On a settlement: needs ${g.shape.label}.</li>
       <li>Standable up to slope <b>${T(80)} m</b> (bare ground: ${T(60)} m, +${km(ul)} m per climbing level). Steps on or off ignore the ${T(32)} m step limit between tile centres;
       only the tile stepped onto must be standable. Wildermon, mounts, carts and wagons likewise.</li>
-      <li><b>Take up the steps</b> (pickaxe, paving): ${P(Xi)} back, rounded down (${Et(3)} of 3 slabs and ${Et(6)} of 6 bricks,
-      or ${Et(10)} of 10 planks); leaves packed dirt.</li>
+      <li><b>Take up the steps</b> (pickaxe, paving): ${P(Xi)} back, rounded down (${Dt(3)} of 3 slabs and ${Dt(6)} of 6 bricks,
+      or ${Dt(10)} of 10 planks); leaves packed dirt.</li>
       <li><b>Rose arch</b> (${U(`make_rose_arch`)}: ${B(`make_rose_arch`)}); <b>stone rose arch</b> (${U(`make_stone_rose_arch`)}, trowel: ${B(`make_stone_rose_arch`)}):
-      ${d(`rose_arch`).w} subtiles across, ${d(`rose_arch`).h} deep; set down like furniture; walk-through. ${sn} Pointing shows its roses' state and time to the next change.</li>
+      ${d(`rose_arch`).w} subtiles across, ${d(`rose_arch`).h} deep; set down like furniture; walk-through. ${cn} Pointing shows its roses' state and time to the next change.</li>
       <li><b>Lavender arch</b> (${U(`make_lavender_arch`)}: ${B(`make_lavender_arch`)}); <b>stone lavender arch</b> (${U(`make_stone_lavender_arch`)}, trowel: ${B(`make_stone_lavender_arch`)}):
-      ${d(`lavender_arch`).w} subtiles across, ${d(`lavender_arch`).h} deep; set down like furniture; walk-through. ${bt} Pointing shows its lavender's state and time to the next change.</li>
+      ${d(`lavender_arch`).w} subtiles across, ${d(`lavender_arch`).h} deep; set down like furniture; walk-through. ${xt} Pointing shows its lavender's state and time to the next change.</li>
       <li><b>Flagpole</b> (${U(`make_flagpole`)}: ${B(`make_flagpole`)}): the flag shows wind direction and strength. A <b>banner</b> does too. Dyed before setting down: flies that colour.
       On a settlement: shows its device, one of ${Pf}, picked by the settlement's name.</li>
     </ul>
@@ -2811,7 +2811,7 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       <li><b>Aqueduct</b>: takes all a pond's or pool's water elsewhere, ${$o} litres a minute (see Aqueducts).</li>
     </ul>
     ${i_()}
-  `}function i_(){let e=tt.get(`lily`),t=tt.get(`lotus`),n=Jc.get(t.flower),r=Bo.find(t=>t.id===`plant_${e.id}`)?.range??1,i=e=>(e*60).toFixed(1),a=Pc.map(e=>e.name.replace(/ slabs$/,``).toLowerCase());return`
+  `}function i_(){let e=nt.get(`lily`),t=nt.get(`lotus`),n=Jc.get(t.flower),r=Bo.find(t=>t.id===`plant_${e.id}`)?.range??1,i=e=>(e*60).toFixed(1),a=Pc.map(e=>e.name.replace(/ slabs$/,``).toLowerCase());return`
     <h3>A water garden: stepping stones, a fountain, lilies and lotus</h3>
     <h4>Stepping stones</h4>
     <ul>
@@ -2829,19 +2829,19 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
     </ul>
     <h4>Water lilies and lotus</h4>
     <ul>
-      <li>Botanizing on a tile with or beside still water (sea, pond, pool): <b>${w(e.from).name.toLowerCase()}</b> about 1 find in ${Rt(e.from)};
-      <b>${w(t.from).name.toLowerCase()}</b> 1 in ${Rt(t.from)}; plus the usual finds.</li>
+      <li>Botanizing on a tile with or beside still water (sea, pond, pool): <b>${w(e.from).name.toLowerCase()}</b> about 1 find in ${zt(e.from)};
+      <b>${w(t.from).name.toLowerCase()}</b> 1 in ${zt(t.from)}; plus the usual finds.</li>
       <li>Plant within ${r} tiles in a pond, pool or the sea's shallows, water <b>${T(2)} to ${T(20)} m</b> deep; never in running water,
       one a tile, not among stepping stones.</li>
-      <li>Leaves at once (in season); <b>roots in ${F(xt)}</b>; then follows the island's year, the same for everybody.</li>
-      <li>Water lily: ${me(e)}. Lotus: ${me(t)}.</li>
+      <li>Leaves at once (in season); <b>roots in ${F(St)}</b>; then follows the island's year, the same for everybody.</li>
+      <li>Water lily: ${he(e)}. Lotus: ${he(t)}.</li>
       <li>In ${C(O.filter(n=>!e.leaves.includes(n)&&!t.leaves.includes(n)))}: root only, under water; leaves return in
       ${O.find(n=>e.leaves.includes(n)&&t.leaves.includes(n))}.</li>
       <li><b>Pick</b> a flower or seed head: gone until the season turns.</li>
-      <li>${Ga(t.flower)} lotus flowers (${dd(_l(se,1))} kg) + a bucket of lye: ${se} litres of <b>${n?.primary}</b> dye.
+      <li>${Ga(t.flower)} lotus flowers (${dd(_l(ce,1))} kg) + a bucket of lye: ${ce} litres of <b>${n?.primary}</b> dye.
       Water lily flowers: no use.</li>
       <li>Seed head: <b>${t.seedCount??0} ${w(t.seed??``).name.toLowerCase()}</b>: plant, or eat: raw ${S(w(t.seed??``).food??0)} of the food bar;
       roasted at a campfire (${V(`roast_lotus_seeds`,t.seed??``)} a handful) ${S(w(`roast_lotus_seeds`).food??0)}.</li>
       <li><b>Pull it up</b>: the root or seed back.</li>
     </ul>
-  `}function a_(e,t){let n=t.trim().toLowerCase();if(!n)return[];let r=e=>{let t=0;for(let r=e.indexOf(n);r>=0;r=e.indexOf(n,r+n.length))t+=1;return t};return e.map(({title:e,body:t},n)=>({i:n,head:r(e.toLowerCase()),all:r(`${e} ${t}`.toLowerCase())})).filter(e=>e.all>0).sort((e,t)=>Number(t.head>0)-Number(e.head>0)||t.all-e.all||e.i-t.i).map(e=>e.i)}function o_(e){e.classList.add(`help-body`);let t=document.createElement(`div`);np(t,up(r_()));let n=[],r=null;for(let e of[...t.childNodes]){if(e instanceof HTMLHeadingElement&&e.tagName===`H3`){r=document.createElement(`section`),r.className=`help-sec`,r.id=`help-${n.length}`,r.append(e),n.push({title:e.textContent??``,el:r});continue}r?r.append(e):(e.nodeType!==Node.TEXT_NODE||(e.textContent??``).trim())&&t.removeChild(e)}let i=document.createElement(`input`);i.type=`search`,i.className=`panel-search help-search`,i.placeholder=`Search the help…`,i.setAttribute(`aria-label`,`Search the help`);let a=document.createElement(`button`);a.type=`button`,a.className=`help-toc`,a.setAttribute(`aria-controls`,`help-contents`);let o=document.createElement(`nav`);o.className=`help-contents`,o.id=`help-contents`;let s=document.createElement(`div`);s.className=`help-pages`;let ee=document.createElement(`div`);ee.className=`help-count`,ee.hidden=!0;let te=e=>{o.hidden=!e,a.setAttribute(`aria-expanded`,String(e))};a.addEventListener(`click`,()=>te(a.getAttribute(`aria-expanded`)!==`true`)),te(!1);let ne=n.map(({title:e,el:t},r)=>{let a=document.createElement(`button`);return a.type=`button`,a.className=`help-link`,a.textContent=e,a.addEventListener(`click`,()=>{i.value&&(i.value=``,c(``)),te(!1),t.scrollIntoView({block:`start`}),t.classList.add(`help-found`),setTimeout(()=>t.classList.remove(`help-found`),1200)}),a.title=`Jump to “${e}” (section ${r+1} of ${n.length})`,a});o.append(...ne);let re=e=>{let t=new Set;for(let e of s.querySelectorAll(`mark.help-mark`))e.parentNode&&t.add(e.parentNode),e.replaceWith(...e.childNodes);for(let e of t)e.normalize();if(e.length<2)return null;for(let{el:t}of n){if(t.hidden)continue;let n=document.createTreeWalker(t,NodeFilter.SHOW_TEXT),r=[];for(let t=n.nextNode();t;t=n.nextNode())t.nodeValue?.toLowerCase().includes(e)&&r.push(t);for(let t of r)for(let n=t.data.toLowerCase().indexOf(e);n>=0;n=t.data.toLowerCase().indexOf(e)){let r=t.splitText(n);t=r.splitText(e.length);let i=document.createElement(`mark`);i.className=`help-mark`,r.replaceWith(i),i.append(r)}}return s.querySelector(`mark.help-mark`)},c=e=>{let t=e.trim().toLowerCase(),r=0,i=a_(n.map(({title:e,el:t})=>({title:e,body:(t.textContent??``).slice(e.length)})),t);for(let e=0;e<n.length;e+=1){let a=!t||i.includes(e);n[e].el.hidden=!a,ne[e].hidden=!a,a&&(r+=1)}let te=t?[...i,...n.keys()].filter((e,t,n)=>n.indexOf(e)===t):[...n.keys()];s.append(...te.map(e=>n[e].el)),o.append(...te.map(e=>ne[e])),a.textContent=t?`Contents: ${r} of ${n.length} sections`:`Contents: ${n.length} sections`,a.hidden=t!==``&&!r,ee.hidden=!t||r>0,ee.textContent=`Nothing in the help answers to “${e.trim()}”. Esc in the box clears the search.`,s.scrollTop=0;let c=re(t),ie=c?.closest(`.help-sec`);if(c&&ie){let e=s.getBoundingClientRect().top,t=s.offsetHeight/(s.getBoundingClientRect().height||1),n=(c.getBoundingClientRect().top-ie.getBoundingClientRect().top)*t<s.clientHeight*.6?ie:c;s.scrollTop=Math.max(0,(n.getBoundingClientRect().top-e)*t-(n===ie?0:40))}return r};return i.addEventListener(`input`,()=>c(i.value)),i.addEventListener(`keydown`,e=>{e.stopPropagation(),e.key===`Escape`&&(i.value=``,c(``))}),dp(e),s.append(...n.map(e=>e.el)),c(``),e.replaceChildren(i,a,o,ee,s),{titles:n.map(e=>e.title),jump:e=>{let t=n.findIndex(t=>t.title===e);t>=0&&ne[t].click()},search:e=>(i.value=e,c(e)>0)}}export{o_ as buildHelp};
+  `}function a_(e,t){let n=t.trim().toLowerCase();if(!n)return[];let r=e=>{let t=0;for(let r=e.indexOf(n);r>=0;r=e.indexOf(n,r+n.length))t+=1;return t};return e.map(({title:e,body:t},n)=>({i:n,head:r(e.toLowerCase()),all:r(`${e} ${t}`.toLowerCase())})).filter(e=>e.all>0).sort((e,t)=>Number(t.head>0)-Number(e.head>0)||t.all-e.all||e.i-t.i).map(e=>e.i)}function o_(e){e.classList.add(`help-body`);let t=document.createElement(`div`);np(t,up(r_()));let n=[],r=null;for(let e of[...t.childNodes]){if(e instanceof HTMLHeadingElement&&e.tagName===`H3`){r=document.createElement(`section`),r.className=`help-sec`,r.id=`help-${n.length}`,r.append(e),n.push({title:e.textContent??``,el:r});continue}r?r.append(e):(e.nodeType!==Node.TEXT_NODE||(e.textContent??``).trim())&&t.removeChild(e)}let i=document.createElement(`input`);i.type=`search`,i.className=`panel-search help-search`,i.placeholder=`Search the help…`,i.setAttribute(`aria-label`,`Search the help`);let a=document.createElement(`button`);a.type=`button`,a.className=`help-toc`,a.setAttribute(`aria-controls`,`help-contents`);let o=document.createElement(`nav`);o.className=`help-contents`,o.id=`help-contents`;let s=document.createElement(`div`);s.className=`help-pages`;let ee=document.createElement(`div`);ee.className=`help-count`,ee.hidden=!0;let te=e=>{o.hidden=!e,a.setAttribute(`aria-expanded`,String(e))};a.addEventListener(`click`,()=>te(a.getAttribute(`aria-expanded`)!==`true`)),te(!1);let ne=n.map(({title:e,el:t},r)=>{let a=document.createElement(`button`);return a.type=`button`,a.className=`help-link`,a.textContent=e,a.addEventListener(`click`,()=>{i.value&&(i.value=``,ie(``)),te(!1),t.scrollIntoView({block:`start`}),t.classList.add(`help-found`),setTimeout(()=>t.classList.remove(`help-found`),1200)}),a.title=`Jump to “${e}” (section ${r+1} of ${n.length})`,a});o.append(...ne);let re=e=>{let t=new Set;for(let e of s.querySelectorAll(`mark.help-mark`))e.parentNode&&t.add(e.parentNode),e.replaceWith(...e.childNodes);for(let e of t)e.normalize();if(e.length<2)return null;for(let{el:t}of n){if(t.hidden)continue;let n=document.createTreeWalker(t,NodeFilter.SHOW_TEXT),r=[];for(let t=n.nextNode();t;t=n.nextNode())t.nodeValue?.toLowerCase().includes(e)&&r.push(t);for(let t of r)for(let n=t.data.toLowerCase().indexOf(e);n>=0;n=t.data.toLowerCase().indexOf(e)){let r=t.splitText(n);t=r.splitText(e.length);let i=document.createElement(`mark`);i.className=`help-mark`,r.replaceWith(i),i.append(r)}}return s.querySelector(`mark.help-mark`)},ie=e=>{let t=e.trim().toLowerCase(),r=0,i=a_(n.map(({title:e,el:t})=>({title:e,body:(t.textContent??``).slice(e.length)})),t);for(let e=0;e<n.length;e+=1){let a=!t||i.includes(e);n[e].el.hidden=!a,ne[e].hidden=!a,a&&(r+=1)}let te=t?[...i,...n.keys()].filter((e,t,n)=>n.indexOf(e)===t):[...n.keys()];s.append(...te.map(e=>n[e].el)),o.append(...te.map(e=>ne[e])),a.textContent=t?`Contents: ${r} of ${n.length} sections`:`Contents: ${n.length} sections`,a.hidden=t!==``&&!r,ee.hidden=!t||r>0,ee.textContent=`Nothing in the help answers to “${e.trim()}”. Esc in the box clears the search.`,s.scrollTop=0;let ie=re(t),ae=ie?.closest(`.help-sec`);if(ie&&ae){let e=s.getBoundingClientRect().top,t=s.offsetHeight/(s.getBoundingClientRect().height||1),n=(ie.getBoundingClientRect().top-ae.getBoundingClientRect().top)*t<s.clientHeight*.6?ae:ie;s.scrollTop=Math.max(0,(n.getBoundingClientRect().top-e)*t-(n===ae?0:40))}return r};return i.addEventListener(`input`,()=>ie(i.value)),i.addEventListener(`keydown`,e=>{e.stopPropagation(),e.key===`Escape`&&(i.value=``,ie(``))}),dp(e),s.append(...n.map(e=>e.el)),ie(``),e.replaceChildren(i,a,o,ee,s),{titles:n.map(e=>e.title),jump:e=>{let t=n.findIndex(t=>t.title===e);t>=0&&ne[t].click()},search:e=>(i.value=e,ie(e)>0)}}export{o_ as buildHelp};
