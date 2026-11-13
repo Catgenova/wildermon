@@ -37,7 +37,11 @@ export type Mask = 'full' | 'upper' | 'additive';
 export interface Correction {
   /** Turns added to the authored turns, per bone, degrees. */
   add?: Record<string, Euler>;
-  /** Turns added over time, per bone, degrees (keyed as the clip's own tracks; `$move` the shift, body heights): a key pose put right for this body alone. */
+  /**
+   * Turns added over time, per bone, degrees (keyed as the clip's own tracks; `$move` the shift, body heights; `$hand_l` and
+   * `$hand_r` a reached hand's place moved, body heights, as `hands`; `$second` the other hand's place along the tool, its
+   * own game units, as `Clip.second`): a key pose put right for this body alone.
+   */
   tracks?: Record<string, Array<Key<Euler>>>;
   /** Scales on the authored turns, per bone (1: as authored): one for all three, or one each for rx, ry, rz. */
   scale?: Record<string, number | Euler>;
@@ -80,12 +84,30 @@ export interface GripAt { ground: number; rest: number; lineUp: number }
  * the knuckles as near the forearm's way as that allows.
  */
 export interface HandReach {
-  at: Array<Key<Euler>>; way: Euler;
-  /** The grip's way over time in place of `way` (each key's way, normalised as it is sampled): a hand that turns its tool as it goes. */
-  ways?: Array<Key<Euler>>;
+  at: Array<Key<Euler>>; way: Euler | Array<Key<Euler>>;
+  /** The way the knuckles point, keyed (a tool's face turned as the stroke needs: the shovel's blade), in place of the forearm's own way. */
+  knuckles?: Array<Key<Euler>>;
+}
+/** A hand's grip's way: as given, or keyed over time (a tool's haft turned through a stroke), at time t (wrapped). */
+const wayAt = (way: HandReach['way'], t: number, length: number, loop: boolean): Euler => (typeof way[0] === 'number' ? (way as Euler) : sampleKeys(way as Array<Key<Euler>>, t, length, loop));
+/**
+ * The other hand on the tool in a hand (`Clip.second`): the fist of `side` closed on the point `at` of the tool held in
+ * the other (`Clip.tools`; its own frame, game units: y along its haft from the butt), or keyed over time (the hand slid
+ * along the haft), its grip along `way` (the tool's own frame: its y up the haft), its arm reached there after the tool's
+ * hand is placed.
+ */
+export interface SecondHand { side: Side; at: Euler | Array<Key<Euler>>; way: Euler }
+/**
+ * The other hand on the tool at time t (`Clip.second`), its place on the tool sampled, a body's own added (`Correction.tracks`
+ * `$second`, game units along the tool): none for a clip that puts none there.
+ */
+export function secondAt(c: Clip, t: number, body?: 'man' | 'woman'): { side: Side; at: Euler; way: Euler } | undefined {
+  if (!c.second) return undefined;
+  const at = wayAt(c.second.at, wrap(c, t), c.length, c.loop), k = body && c.bodies?.[body]?.tracks?.$second, d = k ? sampleKeys(k, wrap(c, t), c.length, c.loop) : [0, 0, 0];
+  return { side: c.second.side, at: [at[0] + d[0], at[1] + d[1], at[2] + d[2]], way: c.second.way };
 }
 /** A hand's place and its grip's way at a moment (`HandReach`). */
-export interface HandAt { at: Euler; way: Euler }
+export interface HandAt { at: Euler; way: Euler; knuckles?: Euler }
 /** The hands a clip holds a tool in (`Clip.tools`), by the side. */
 export type Side = 'l' | 'r';
 
@@ -145,6 +167,8 @@ export interface Clip {
   hands?: Partial<Record<Side, HandReach>>;
   /** The tool drawn in each hand while the clip plays, by its asset's id (`../lowpoly.ts`), its fist closed on it. */
   tools?: Partial<Record<Side, string>>;
+  /** The other hand closed on the tool in a hand (`SecondHand`): a long haft in both hands. */
+  second?: SecondHand;
   /**
    * The hand that strikes with its tool (`tools`) and when its tool meets the work: a job's own tool that reaches less far
    * than the clip's has the work brought to it (`../index.ts`).
@@ -252,7 +276,7 @@ export function sampleClip(c: Clip, t: number, body?: 'man' | 'woman'): { rot: R
     rot[bone] = [e[0] + d[0], e[1] + d[1], e[2] + d[2]];
   }
   for (const [bone, keys] of Object.entries(fix?.tracks ?? {})) {
-    if (bone === '$move') continue;
+    if (bone.startsWith('$')) continue;
     const d = sampleKeys(keys, tt, c.length, c.loop), e = rot[bone] ?? [0, 0, 0];
     rot[bone] = [e[0] + d[0], e[1] + d[1], e[2] + d[2]];
   }
@@ -333,9 +357,10 @@ export function handsAt(c: Clip, t: number, body?: 'man' | 'woman', shift: Parti
   if (!c.hands) return undefined;
   const out: Partial<Record<Side, HandAt>> = {};
   for (const [s, h] of Object.entries(c.hands) as Array<[Side, HandReach]>) {
-    const at = sampleKeys(h.at, wrap(c, t), c.length, c.loop), d = (body && c.bodies?.[body]?.hands?.[s]) || [0, 0, 0], e = shift[s] ?? [0, 0, 0];
-    const w = h.ways ? sampleKeys(h.ways, wrap(c, t), c.length, c.loop) : h.way, wl = Math.hypot(w[0], w[1], w[2]) || 1;
-    out[s] = { at: [at[0] + d[0] + e[0], at[1] + d[1] + e[1], at[2] + d[2] + e[2]], way: [w[0] / wl, w[1] / wl, w[2] / wl] };
+    // (a body's own place for the hand over time, `Correction.tracks` `$hand_l` and `$hand_r`, added to its constant one)
+    const at = sampleKeys(h.at, wrap(c, t), c.length, c.loop), kept = body && c.bodies?.[body]?.tracks?.[`$hand_${s}`], k = kept ? sampleKeys(kept, wrap(c, t), c.length, c.loop) : [0, 0, 0];
+    const d0 = (body && c.bodies?.[body]?.hands?.[s]) || [0, 0, 0], d = [d0[0] + k[0], d0[1] + k[1], d0[2] + k[2]], e = shift[s] ?? [0, 0, 0];
+    out[s] = { at: [at[0] + d[0] + e[0], at[1] + d[1] + e[1], at[2] + d[2] + e[2]], way: wayAt(h.way, wrap(c, t), c.length, c.loop), ...(h.knuckles ? { knuckles: sampleKeys(h.knuckles, wrap(c, t), c.length, c.loop) } : {}) };
   }
   return out;
 }

@@ -26,7 +26,7 @@ import { KNELT, TOES } from './ground';
 /** A track of places (or ways) keyed at times, each reached as its key says (`inOut` where not given). */
 const keys = (pts: Array<[number, Euler, Key<Euler>['ease']?]>): Array<Key<Euler>> => pts.map(([t, v, ease]) => ({ t, v, ...(ease ? { ease } : {}) }));
 /** A hand reached along places and ways keyed at times. */
-const reach = (at: Array<[number, Euler, Key<Euler>['ease']?]>, ways: Array<[number, Euler, Key<Euler>['ease']?]>): HandReach => ({ at: keys(at), way: ways[0][1], ways: keys(ways) });
+const reach = (at: Array<[number, Euler, Key<Euler>['ease']?]>, ways: Array<[number, Euler, Key<Euler>['ease']?]>): HandReach => ({ at: keys(at), way: ways.length > 1 ? keys(ways) : ways[0][1] });
 /** A place held still. */
 const still = (at: Euler, way: Euler): HandReach => ({ at: [{ t: 0, v: at }], way });
 const add3 = (a: Euler, b: Euler): Euler => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
@@ -280,7 +280,7 @@ export const BRUSH_ITEM: Clip = {
   },
   tools: { r: 'brush', l: 'work_pot' },
   bodies: {
-    woman: { add: HER_FEET, hands: { l: [0, 0.02, -0.02], r: [-0.008, 0.02, -0.02] } },
+    woman: { add: HER_FEET, hands: { l: [0, 0.045, -0.05], r: [-0.008, 0.045, -0.05] } },
   },
 };
 /** The same with a piece of cloth in the left fist: dye scrubbed off. */

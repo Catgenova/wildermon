@@ -7,7 +7,7 @@
  * `poseAt` samples one clip at a time with nothing kept between frames, which is all a loop such as the idle needs; a
  * `ClipPlayer` keeps the layers and their fades for a body drawn frame after frame.
  */
-import { UPPER, eventsBetween, fitTime, gripAt, handsAt, runsOf, type Side, sampleClip, sampleFeet, stanceOf, strideOf, wrap, type Clip } from './clip';
+import { UPPER, eventsBetween, fitTime, gripAt, handsAt, runsOf, secondAt, type Side, sampleClip, sampleFeet, stanceOf, strideOf, wrap, type Clip } from './clip';
 import { QI, add, qmat, qmul, quat, scl, slerp, type M3, type Q, type V } from './math';
 import type { Held, Plant, Pose, Skeleton } from './skeleton';
 
@@ -56,7 +56,7 @@ export function plantAt(sk: Skeleton, c: Clip, t: number): Plant | undefined {
 export function clipLocal(sk: Skeleton, c: Clip, t: number, held?: Held, tools?: (id: string) => Held | undefined, o: { ids?: Partial<Record<Side, string>>; shift?: Partial<Record<Side, [number, number, number]>>; hold?: Partial<Record<Side, Held>> } = {}): { local: Array<M3 | undefined>; move: V } {
   // (`o.hold`: what each fist closes on as it is reached, in place of the hand tools: the weapon a clip wields, `Clip.wields`)
   const ids = o.ids ?? c.tools, inHand = o.hold ?? (ids && tools ? Object.fromEntries(Object.entries(ids).map(([s, id]) => [s, id ? tools(id) : undefined])) : undefined);
-  return sk.finish(poseAt(sk, c, t), { plant: plantAt(sk, c, t), armsOut: c.bodies?.[sk.body]?.armsOut, grip: gripAt(c, t), held, free: c.armsFree, hands: handsAt(c, t, sk.body, o.shift), tools: inHand });
+  return sk.finish(poseAt(sk, c, t), { plant: plantAt(sk, c, t), armsOut: c.bodies?.[sk.body]?.armsOut, grip: gripAt(c, t), held, free: c.armsFree, hands: handsAt(c, t, sk.body, o.shift), tools: inHand, second: secondAt(c, t, sk.body) });
 }
 
 /**

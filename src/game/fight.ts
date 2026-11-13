@@ -6,7 +6,7 @@ import { describeFrom, describeWith, itemDef, type Item } from './items';
 import type { SpeciesDef } from './creatures';
 import { SKILL_BY_ID } from './skills';
 import { finePercent, listed, percent } from './words';
-import { WOUND_BY_WEAPON, type Wound, type WoundKind } from './wounds';
+import { PART_NAMES, WOUND_BY_WEAPON, type Wound, type WoundKind } from './wounds';
 import { ACTION_FLOOR, ACTION_PACE } from './pace';
 import { QL_TOP } from './limits';
 
@@ -455,6 +455,42 @@ export const BLOCK_PER_SKILL = 0.0025;
 export const SHIELD_WEAR = 3;
 /** What the fight log says of a blocked blow, on both sides. */
 export const BLOCKED_SAID = 'Blocked with shield.';
+/** Seconds a blocking body is drawn blocking (`src/sculpt/anim/clips/block.ts`), from the island's `player.blocked_at`. */
+export const BLOCK_SECS = 0.45;
+/**
+ * Seconds old a block may be when it reaches this browser and still be drawn: one heard later (a roster read, a beat
+ * after a quiet spell) is caught up on and not drawn.
+ */
+export const BLOCK_FRESH = 3;
+/** How far through a block stamped at `at` on the drawing clock, nought to one, or undefined once over or before one. */
+export function blockAt(at: number | undefined, now: number): number | undefined {
+  return phaseOf(at, now, BLOCK_SECS);
+}
+/** Seconds a body a blow lands on is drawn flinching (`src/sculpt/anim/clips/flinch.ts`), from the island's `player.hurt_at`. */
+export const FLINCH_SECS = 0.35;
+/** Seconds of the flinch the body is lit by the blow (`src/sculpt/gl.ts` SculptDraw.hit). */
+export const FLINCH_LIT = 0.08;
+/** What the fight log says of a blow that lands, on both sides, between the blow and the wound (`hurt_player`, `hurtPlayer`). */
+export const WOUND_SAID = '. Wound: ';
+/** How far through a flinch stamped at `at` on the drawing clock, nought to one, or undefined once over or before one. */
+export function flinchAt(at: number | undefined, now: number): number | undefined {
+  return phaseOf(at, now, FLINCH_SECS);
+}
+/**
+ * Whether a fight line says a blow landed (`WOUND_SAID`), and where (a `HIT_LOCATIONS` slot, off the wound's
+ * "to the <part>"): undefined for any other line, null for one landed somewhere not named.
+ */
+export function landedOf(text: string): string | null | undefined {
+  const at = text.indexOf(WOUND_SAID);
+  if (at < 0) return undefined;
+  const m = / to the ([a-z]+)/.exec(text.slice(at + WOUND_SAID.length));
+  return (m && Object.keys(PART_NAMES).find((k) => PART_NAMES[k] === m[1] && k !== 'offhand' && k !== 'weapon')) ?? null;
+}
+const phaseOf = (at: number | undefined, now: number, secs: number): number | undefined => {
+  if (at === undefined) return undefined;
+  const t = (now - at) / secs;
+  return t >= 0 && t < 1 ? t : undefined;
+};
 /** What a shield's quality makes of its own share: ×0.6 at QL 0, ×1 at QL 64. */
 export const blockQl = (ql: number): number => BLOCK_QL_FROM + ql / BLOCK_QL_SPAN;
 /**

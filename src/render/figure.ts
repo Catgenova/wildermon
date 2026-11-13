@@ -1,6 +1,10 @@
 import { METAL_TONE } from './materials';
 import type { GearLook, GearPiece, GearSlot } from '../contract/gear';
 import { HOPS, emotePose } from '../game/emotes';
+import { BLOCK, BLOCK_IMPACT, COVER } from '../sculpt/anim/clips/block';
+import { FLINCH_SNAP } from '../sculpt/anim/clips/flinch';
+import { FLINCH_SECS } from '../game/fight';
+import { sampleKey } from '../sculpt/anim/clip';
 import {
   BUILDS, DEFAULT_LOOK, eyeColour, hairColour, shirtColour, skinColour, trouserColour, type Look,
 } from '../game/look';
@@ -2406,6 +2410,20 @@ export interface FigurePose {
    */
   cast?: { id: string; t: number };
   /**
+   * A blow taken on the shield worn, how far through it, nought to one (`../game/fight` blockAt, `BLOCK_SECS`): the shield
+   * arm brought up across the chest and the body braced behind it (`../sculpt/anim/clips/block.ts`), laid over whatever else
+   * the body is doing. Nothing without a shield on.
+   */
+  block?: number;
+  /**
+   * A blow landing on the body (`../game/fight` flinchAt, `FLINCH_SECS`): how far through the flinch, nought to one;
+   * where it landed (a hit location's slot: head, chest, arms, legs, feet), when known; and where it came from, radians
+   * round from straight ahead toward the body's left (π: from behind), when known, else from ahead. The body jolted away
+   * from it (`../sculpt/anim/clips/flinch.ts`), lit by it for its first `FLINCH_LIT` seconds; laid over whatever else the
+   * body is doing.
+   */
+  flinch?: { t: number; where?: string; from?: number };
+  /**
    * The body veiled by a spell (`FxScene.veil` in ./spells/kit): `tint` of the way to `colour` over all of it, and
    * drawn `fade` of the way to nothing -- a shroud, a body gone to smoke. Laid over the picture as it is put down,
    * so the picture itself is kept as it is.
@@ -3892,6 +3910,14 @@ function waveArm(facing: number, busy: [boolean, boolean]): number {
   const k = stagedArm(facing);
   return busy[0] && busy[1] ? 0 : busy[k] ? 1 - k : k;
 }
+/**
+ * The arm a pose's wave is made with at `facing` (`waveArm`, its hands' load as `busyOf` reads them): 0 the left, 1 the
+ * right; or -1 with both hands full, where the flat figure nods instead (`wave`, `nod`). For the sculpted bodies' clips.
+ */
+export function waveArmOf(p: FigurePose, facing = p.facing): number {
+  const busy = busyOf(p, facing);
+  return busy[0] && busy[1] ? -1 : waveArm(facing, busy);
+}
 /** The arm a wave is staged for at `facing` with both hands free: the near one, but the far one side on (see `wave`). */
 const stagedArm = (facing: number): number => {
   const f = ((Math.round(facing) % 8) + 8) % 8;
@@ -4328,6 +4354,8 @@ function rigOf(p: FigurePose, fr: Frame, left = lefty(p.facing), kept: Kept = {}
   // Both, while something heavy goes from one shoulder to the other in them.
   if (r.swapping) r.loose = [false, false];
   if (p.gear?.offhand && !r.stowed) r.loose[0] = false;
+  if (p.block !== undefined && p.gear?.offhand && !r.stowed && !p.swimming && !p.driving) blocked(r, p.block);
+  if (p.flinch && !p.swimming && !p.driving) flinched(r, p.flinch);
   if (p.cast && castPoser) {
     // Each hand's goal, seeded where the hand is before the cast, so a goal the cast sets is blended in from there (see `Rig.reach`).
     seedReach(r, fr);
@@ -9412,6 +9440,40 @@ const SHIELD_OUT = [38, 15, 66, 45, 38, 75, 55, 38];
  */
 const SHIELD_RUN = [-23, -30, 0, 0, -28, 20, 20, 0];
 const SHIELD_BENT = [40, 76];
+
+/**
+ * A blow taken on the shield, `u` of the way through it (`FigurePose.block`): the shield arm brought up and in across
+ * the chest as far as the sculpted body's block takes its arm (`COVER`), knocked in at the impact; the trunk leant in.
+ */
+const BLOCK_ARM: Euler = [52, 4, 58], BLOCK_ELBOW = 104;
+function blocked(r: Rig, u: number): void {
+  const t = Math.min(1, Math.max(0, u)) * BLOCK.length, w = sampleKey(COVER, t, BLOCK.length, false);
+  // (the knock at the impact: a sharp bump there, gone by the settle)
+  const k = Math.max(0, 1 - Math.abs(t - BLOCK_IMPACT) / 0.06);
+  const a = r.arm[0];
+  r.arm[0] = [a[0] + (BLOCK_ARM[0] - 8 * k - a[0]) * w, a[1] + (BLOCK_ARM[1] - a[1]) * w, a[2] + (BLOCK_ARM[2] - a[2]) * w];
+  r.elbow[0] += (BLOCK_ELBOW + 10 * k - r.elbow[0]) * w;
+  r.spine = [r.spine[0] - 3 * w + 3 * k, r.spine[1], r.spine[2]];
+  r.loose[0] = false;
+}
+
+/**
+ * A blow landing, `f.t` of the way through the flinch (`FigurePose.flinch`): the trunk jolted away from where it came
+ * from and the head snapped back with it (further for a blow to the head), the knees dipping (buckling for one to the
+ * legs), all at its snap (`FLINCH_SNAP`) and gone by its end.
+ */
+function flinched(r: Rig, f: NonNullable<FigurePose['flinch']>): void {
+  const t = Math.min(1, Math.max(0, f.t)) * FLINCH_SECS;
+  const k = t < FLINCH_SNAP ? t / FLINCH_SNAP : Math.max(0, 1 - (t - FLINCH_SNAP) / (FLINCH_SECS * 0.75 - FLINCH_SNAP));
+  const a = f.from ?? 0, back = Math.cos(a) * k, side = Math.sin(a) * k;
+  const head = f.where === 'head', legs = f.where === 'legs' || f.where === 'feet';
+  // (pitch: above nought leans back)
+  r.spine = [r.spine[0] + 6 * back, r.spine[1], r.spine[2] - 6 * side];
+  r.chest = [r.chest[0] + (head ? 4 : 9) * back, r.chest[1], r.chest[2] - 5 * side];
+  r.head = [r.head[0] + (head ? 20 : 10) * back, r.head[1], r.head[2] - 5 * side];
+  const dip = (legs ? 26 : 8) * k;
+  r.knee = [r.knee[0] + dip, r.knee[1] + dip];
+}
 
 /** A frame at `at` on a bone, its z along `dir` and its x as near `out` as square to that allows. */
 function aimed(bone: Xf, at: V3, dir: V3, out: V3): Xf {

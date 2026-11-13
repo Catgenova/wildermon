@@ -6,10 +6,10 @@
  * A body drawn frame after frame (`FigurePose.id`) is faded over a fifth of a second whenever it goes from a clip to the
  * figure's pose or to another clip, so nothing jumps; a body drawn once (no id) is posed with nothing kept.
  */
-import type { FigurePose, Seat } from '../../render/figure';
-import { fitTime, runsOf, strideOf, type Clip, type Side } from './clip';
-import { qmat, qmul, quat, type M3, type Q, type V } from './math';
-import { addPose, blendLocal, blendPose, clipLocal, plantBetween, poseAt } from './player';
+import { viewOf, waveArmOf, type FigurePose, type Seat } from '../../render/figure';
+import { fitTime, runsOf, sampleClip, sampleKey, strideOf, type Clip, type Side } from './clip';
+import { add, I3, mm, QI, qmat, qmul, quat, scl, slerp, tr, type M3, type Q, type V } from './math';
+import { addPose, blendLocal, blendPose, clipLocal, lookAt, plantBetween, poseAt } from './player';
 import type { Held, Pose, Skeleton } from './skeleton';
 import { IDLE } from './clips/idle';
 import { WALK } from './clips/walk';
@@ -20,14 +20,20 @@ import { HANDS } from './clips/hands';
 import { GROUND } from './clips/ground';
 import { SHOOT } from './clips/shoot';
 import { FIGHT as FIGHT_CLIP } from './clips/fight';
+import { HOP, NOD, WAVE, WAVE_AHEAD, waveRaise } from './clips/emote';
+import { BLOCK, COVER, SHIELD_ARM } from './clips/block';
+import { BODY as FLINCH, flinchClipOf } from './clips/flinch';
 import { SEAT_OARS, SEAT_REINS, SEAT_SADDLE, SEAT_TILLER, SEAT_TILLER_LEFT, SEAT_TUCK } from './clips/seated';
+import { DIG, RAKE, REAP } from './clips/dig';
 import { BRUSH_CLOTH, BRUSH_FLOOR, BRUSH_ITEM, BRUSH_WALL, ROPE, SEW } from './clips/handwork';
 import { mirrorClip } from './author';
 import { ACTION_BY_ID } from '../../game/actions';
 import { clipOfJob } from './routes';
 import { strideAt } from '../../game/player';
-import { WEAPON_BY_ID } from '../../game/gear';
+import { SHIELDS, WEAPON_BY_ID } from '../../game/gear';
 import { UNITS_PER_TILE } from '../../render/iso';
+/** A unit quaternion's inverse. */
+const qinv = ([w, x, y, z]: Q): Q => [w, -x, -y, -z];
 
 /**
  * The states a body is drawn in that a clip can play, all stood still but the walk: doing nothing (`idle`); walking
@@ -39,8 +45,11 @@ export type State = 'idle' | 'walk' | 'swing' | 'work' | 'fight' | 'meditate' | 
 /** Every clip, by name (the authoring tools find a clip here, `tools/sculpt/lowanim.mjs --clip <name>`). */
 export const CLIPS: Record<string, Clip> = {
   idle: IDLE, walk: WALK, swing: SWING, sixseven: SIXSEVEN, work: WORK, 'work-left': mirrorClip(WORK, 'work-left'), hands: HANDS, ground: GROUND,
-  fight: FIGHT_CLIP, 'fight-left': mirrorClip(FIGHT_CLIP, 'fight-left'), shoot: SHOOT,
+  fight: FIGHT_CLIP, 'fight-left': mirrorClip(FIGHT_CLIP, 'fight-left'), shoot: SHOOT, block: BLOCK, flinch: FLINCH,
   'seat-reins': SEAT_REINS, 'seat-oars': SEAT_OARS, 'seat-tiller': SEAT_TILLER, 'seat-tiller-left': SEAT_TILLER_LEFT, saddle: SEAT_SADDLE, 'saddle-tuck': SEAT_TUCK,
+  // the emotes (`emoteClipOf`)
+  wave: WAVE, 'wave-left': mirrorClip(WAVE, 'wave-left'), 'wave-ahead': WAVE_AHEAD, 'wave-ahead-left': mirrorClip(WAVE_AHEAD, 'wave-ahead-left'), nod: NOD, hop: HOP,
+  dig: DIG, 'dig-left': mirrorClip(DIG, 'dig-left'), rake: RAKE, 'rake-left': mirrorClip(RAKE, 'rake-left'), reap: REAP, 'reap-left': mirrorClip(REAP, 'reap-left'),
   // the handwork (./clips/handwork.ts): sewing, brushing a wall, a floor and the work in hand, laying up a rope; each mirrored left-handed
   ...Object.fromEntries([SEW, BRUSH_WALL, BRUSH_FLOOR, BRUSH_ITEM, BRUSH_CLOTH, ROPE].flatMap((c) => [[c.name, c], [`${c.name}-left`, mirrorClip(c, `${c.name}-left`)]])),
 };
@@ -50,8 +59,10 @@ export const PLACEHOLDER = 'sixseven';
  * The clip each state plays, by name: its own where approved, the placeholder where not. Each placeholder is replaced
  * here when the state's own clip lands; a job at `work` plays its tool's clip where it has one (`workClipOf`), the
  * state's otherwise; a fight with a weapon swung in one hand plays the one-handed fight (`ONE_HAND`, `./clips/fight.ts`),
- * any other fight the state's own. (Running, and walking or running while casting, emoting or at work, keep the
- * figure's pose: a stood clip would slide its planted feet over the ground. Swimming is drawn by the flat figure; sat
+ * any other fight the state's own; an emote plays its own clip where it has one (`emoteClipOf`), the state's otherwise.
+ * (Running, and walking or running while casting, emoting or at work, keep the figure's pose: a stood clip would slide its
+ * planted feet over the ground. But a hop, made on the spot moving or not as the flat figure's is; and a wave while
+ * walking, the walk with the waving arm the wave's. Swimming is drawn by the flat figure; sat
  * driving plays its seat's clip, `seatClipOf`, put on the seat by `seatedLocal`.)
  */
 export const CLIP_OF: Record<State, string> = {
@@ -65,6 +76,44 @@ export const CLIP_OF: Record<State, string> = {
   cast: PLACEHOLDER,
 };
 export { CLIP_OF_JOB, CLIP_OF_TOOL } from './routes';
+/**
+ * The arm each body's wave is being made with, chosen as it starts and kept to its end (as the flat figure keeps it,
+ * `../../render/figure.ts` settle), with how far through it was last drawn: a wave drawn earlier in it than that is a new one.
+ */
+const WAVING = new Map<string, { arm: number; t: number }>();
+/**
+ * The clip an emote plays, by its id: the hop's; a wave with the arm the flat figure waves with (`waveArmOf`: the right's
+ * clip, or its mirror for the left), staged for where it is seen from (the arm raised ahead side on, and with the far arm
+ * three-quarters on: `ahead`), or with
+ * both hands full its nod; none for any other (the state's own, `CLIP_OF.emote`).
+ */
+export function emoteClipOf(pose: FigurePose): string | undefined {
+  if (pose.emote === 'hop') return HOP.name;
+  if (pose.emote !== 'wave') return undefined;
+  const t = pose.emoteT ?? 0, was = pose.id ? WAVING.get(pose.id) : undefined, arm = was && t >= was.t ? was.arm : waveArmOf(pose);
+  if (pose.id) {
+    WAVING.delete(pose.id);
+    WAVING.set(pose.id, { arm, t });
+    if (WAVING.size > MAX_KEPT) WAVING.delete(WAVING.keys().next().value as string);
+  }
+  return arm < 0 ? NOD.name : `${ahead(pose, arm) ? WAVE_AHEAD.name : WAVE.name}${arm === 0 ? '-left' : ''}`;
+}
+/**
+ * Whether a wave with `arm` is staged ahead of the face (`WAVE_AHEAD`), as the flat figure stages it: seen side on (facings
+ * two and six); and made with the far arm (not the one a wave with both hands free is made with) seen three-quarters on
+ * from in front (facings one and seven), where raised out to the side its hand is behind the head.
+ */
+function ahead(pose: FigurePose, arm: number): boolean {
+  const f = ((Math.round(pose.facing) % 8) + 8) % 8;
+  return f === 2 || f === 6 || ((f === 1 || f === 7) && arm !== waveArmOf({ ...pose, gear: undefined }));
+}
+/** The clips of a wave, and the side its arm is on (none for the nod): made over a walk, that arm's bones are the wave's (`animate`). */
+const WAVES: Readonly<Record<string, Side | undefined>> = { wave: 'r', 'wave-left': 'l', 'wave-ahead': 'r', 'wave-ahead-left': 'l', nod: undefined };
+/** The bones of an arm, from the shoulder to the fingers. */
+const ARM_BONE = /^(clavicle|upperarm|lowerarm|hand|thumb_0\d|fingers_0\d)_([lr])$/;
+/** How far a waving body's head is turned toward whoever is looking (of the way there, up to `LOOK_MOST` degrees), as the flat figure's. */
+const LOOK_SHARE = 0.6, LOOK_MOST = 20;
+
 /** The clip a job in the `work` state plays (`./routes.ts` `clipOfJob`, else the state's own). */
 export function workClipOf(job: string | undefined): string {
   return (job ? clipOfJob(job) : undefined) ?? CLIP_OF.work;
@@ -74,14 +123,15 @@ export function workClipOf(job: string | undefined): string {
  * from the two facings where its right hand's blow would cross the face (`../../render/figure.ts` lefty); so does this.
  */
 const LEFT_OF: Readonly<Record<string, string>> = {
-  work: 'work-left', fight: 'fight-left',
+  work: 'work-left', fight: 'fight-left', dig: 'dig-left', rake: 'rake-left', reap: 'reap-left',
   ...Object.fromEntries(['sew', 'brush-wall', 'brush-floor', 'brush-item', 'brush-cloth', 'rope'].map((n) => [n, `${n}-left`])),
 };
 /** Whether work is done left-handed from where it is seen: as the flat figure (facings three and seven). */
 const lefty = (facing: number): boolean => { const f = ((Math.round(facing) % 8) + 8) % 8; return f === 3 || f === 7; };
 
-/** The jobs done with the overhead swing whatever is in hand: the pickaxe's. */
+/** The jobs done with the overhead swing whatever is in hand: the pickaxe's (mining, and those its tool routes to the swing: `./routes.ts`). */
 const SWING_JOBS = new Set(['mine', 'chip_corner', 'mine_cellar']);
+const swingJob = (job: string | undefined): boolean => !!job && (SWING_JOBS.has(job) || clipOfJob(job) === 'swing');
 /** Meditating's job. */
 const MEDITATE = 'meditate';
 /**
@@ -97,7 +147,7 @@ const fightWeapon = (pose: FigurePose) => (pose.job === FIGHT && pose.gear?.weap
 const shoots = (pose: FigurePose): boolean => !!fightWeapon(pose)?.ammo;
 /** Whether a pose's job is swung overhead in both hands. */
 const swings = (pose: FigurePose): boolean => {
-  if (SWING_JOBS.has(pose.job ?? '')) return true;
+  if (swingJob(pose.job)) return true;
   const w = fightWeapon(pose);
   return !!w && ((!!w.twoHanded && !w.ammo) || BOTH_HANDS.has(w.id));
 };
@@ -124,9 +174,10 @@ export const clipsPlaying = (): boolean => ON;
 const FADE = 0.2;
 /**
  * Seconds a fade into or out of a clip takes where that is longer than `FADE`, its feet kept planted throughout where
- * the two clips stand them (`plantBetween`): getting down onto the knees at the ground and up off them.
+ * the two clips stand them (`plantBetween`): getting down onto the knees at the ground and up off them; down into the
+ * sickle's crouch and up out of it.
  */
-const SETTLE: Readonly<Record<string, number>> = { ground: 0.55, 'brush-floor': 0.55, 'brush-floor-left': 0.55 };
+const SETTLE: Readonly<Record<string, number>> = { ground: 0.55, reap: 0.4, 'reap-left': 0.4, 'brush-floor': 0.55, 'brush-floor-left': 0.55 };
 /** Seconds after a long fade lands over which the clip's own motion is let go into from rest. */
 const RELEASE = 0.25;
 /** The legs' bones, which a long fade keeps on its own pace (the root's too); the rest lead or trail them. */
@@ -139,7 +190,11 @@ const smoother = (u: number): number => { const x = Math.min(1, Math.max(0, u));
 /** The state a pose is in, of those a clip can play. */
 export function stateOf(pose: FigurePose): State | undefined {
   if (pose.swimming || pose.driving) return undefined;
-  if (pose.moving) return !pose.working && !pose.emote && !pose.cast && (pose.gait ?? 0) <= WALK_GAIT ? 'walk' : undefined;
+  // (a hop is made on the spot, the legs its own, as the flat figure's; a wave over the walk, `clipFor`)
+  if (pose.moving) {
+    if (pose.emote === 'hop' && !pose.working && !pose.cast) return 'emote';
+    return !pose.working && (!pose.emote || pose.emote === 'wave') && !pose.cast && (pose.gait ?? 0) <= WALK_GAIT ? 'walk' : undefined;
+  }
   if (pose.cast) return 'cast';
   if (pose.emote) return 'emote';
   if (!pose.working) return 'idle';
@@ -161,11 +216,15 @@ export const walkPhase = (c: Clip, t: number, body: 'man' | 'woman', gait = 0): 
  * The clip a pose plays on a body and where in it, or none: the figure's pose is kept. A walk is played over the ground
  * the game carries the body over (`walkTime`).
  */
-export function clipFor(pose: FigurePose, body: 'man' | 'woman' = pose.look?.gender === 'woman' ? 'woman' : 'man'): { clip: Clip; t: number } | undefined {
-  const s = ON ? stateOf(pose) : undefined, name = s === 'work' ? workClipOf(pose.job) : s === 'fight' && shoots(pose) ? SHOOT.name : s === 'fight' && ONE_HAND(pose) ? 'fight' : s && CLIP_OF[s];
+export function clipFor(pose: FigurePose, body: 'man' | 'woman' = pose.look?.gender === 'woman' ? 'woman' : 'man'): { clip: Clip; t: number; over?: { clip: Clip; t: number } } | undefined {
+  const s = ON ? stateOf(pose) : undefined, emote = s === 'emote' || s === 'walk' ? emoteClipOf(pose) : undefined;
+  const name = s === 'work' ? workClipOf(pose.job) : s === 'fight' && shoots(pose) ? SHOOT.name : s === 'fight' && ONE_HAND(pose) ? 'fight' : s === 'emote' ? emote ?? CLIP_OF.emote : s && CLIP_OF[s];
   const clip = name ? CLIPS[(lefty(pose.facing) && LEFT_OF[name]) || name] : undefined;
   if (!clip) return undefined;
-  if (s === 'walk') return { clip, t: walkTime(clip, pose.phase, body, pose.gait ?? 0) };
+  // an emote's own clip: played once over the emote, its time the emote's
+  const own = emote ? CLIPS[emote] : undefined, at = own ? { clip: own, t: Math.max(0, Math.min(1, pose.emoteT ?? 0)) * own.length } : undefined;
+  if (s === 'walk') return { clip, t: walkTime(clip, pose.phase, body, pose.gait ?? 0), ...(at ? { over: at } : {}) };
+  if (s === 'emote' && at) return at;
   // a go of a timed job: fitted to its length (the holds stretched, the blow kept: `fitTime`), a fight's swing one blow
   // a go (the placeholder as many runs as come nearest)
   if (pose.act && pose.act.length > 0) {
@@ -185,7 +244,7 @@ export const SWING_TOOL = 'pickaxe';
 export function heldIn(pose: FigurePose): string | undefined {
   const c = clipFor(pose);
   if (!c?.clip.grip && !c?.clip.wields) return undefined;
-  return pose.job === FIGHT ? pose.gear?.weapon?.id : SWING_JOBS.has(pose.job ?? '') ? SWING_TOOL : undefined;
+  return pose.job === FIGHT ? pose.gear?.weapon?.id : swingJob(pose.job) ? SWING_TOOL : undefined;
 }
 
 /**
@@ -317,6 +376,84 @@ export function seatedLocal(sk: Skeleton, pose: FigurePose, fit: SeatFit): { loc
 }
 
 type Local = { local: Array<M3 | undefined>; move: V };
+
+/** Whether a pose is part way through a blow taken on its shield (`FigurePose.block`), a shield worn, stood or walking. */
+export const blocking = (pose: FigurePose): boolean =>
+  ON && pose.block !== undefined && pose.block >= 0 && pose.block < 1 && !!pose.gear?.offhand && pose.gear.offhand.id in SHIELDS && !pose.swimming && !pose.driving;
+const TAKEN = new Set(SHIELD_ARM);
+/** How much of the trunk's own lean and turn (a fight's bend over the blow, a walk's sway) the guard is kept clear of. */
+const SQUARE = 0.85;
+/**
+ * The block (`./clips/block.ts`) laid over what a body is drawn with, `u` of the way through it: everything the clip
+ * turns but the shield arm added; the shield arm taken to the clip's as far as `COVER` says, its guard kept square to
+ * where the body faces however the trunk is leant or turned (`SQUARE` of it), so it covers the chest over a fight's bend
+ * as over the idle; on a clip stood on its feet (`stood`), the hips let down as it says with the feet kept where they
+ * stood (the knees bent to reach), else the legs left as they are.
+ */
+export function blockOver(sk: Skeleton, base: Local, u: number, stood: boolean): Local {
+  const t = Math.min(1, Math.max(0, u)) * BLOCK.length, s = sampleClip(BLOCK, t, sk.body), w = sampleKey(COVER, t, BLOCK.length, false);
+  const q: Array<Q | undefined> = base.local.map((m) => (m ? quat(m) : undefined)), p: Array<Q | undefined> = [...q];
+  for (const [bone, e] of Object.entries(s.rot)) {
+    const i = sk.at.get(bone);
+    if (i === undefined || TAKEN.has(bone) || (!stood && LEGS.test(bone))) continue;
+    p[i] = qmul(q[i] ?? QI, sk.local(i, e));
+  }
+  // the chest as it is drawn against the chest stood square: the turn that takes the one to the other, in its own frame
+  const chest = sk.at.get('spine_03') as number, clav = sk.at.get('clavicle_l') as number;
+  const W = sk.fk(p.map((x) => (x ? qmat(x) : undefined)), [0, 0, 0])[chest].W, R = sk.bones[chest].R;
+  const rel = quat(mm(tr(R), sk.bones[clav].R)), square = slerp(QI, quat(mm(tr(W), R)), SQUARE);
+  for (const [bone, e] of Object.entries(s.rot)) {
+    const i = sk.at.get(bone);
+    if (i === undefined || !TAKEN.has(bone)) continue;
+    // (the clavicle, the chest's child, carries the squaring for the arm under it)
+    const r = i === clav ? qmul(qmul(qinv(rel), qmul(square, rel)), sk.local(i, e)) : sk.local(i, e);
+    p[i] = slerp(q[i] ?? QI, r, w);
+  }
+  if (!stood) return { local: p.map((x, i) => (x ? qmat(x) : base.local[i])), move: base.move };
+  return sk.finish({ q: p, move: add(base.move, scl(s.move, sk.height)) }, { plant: sk.plantOf({ q, move: base.move }), free: true });
+}
+/** Whether a pose is part way through a blow landing on it (`FigurePose.flinch`), stood or walking. */
+export const flinching = (pose: FigurePose): boolean => ON && !!pose.flinch && pose.flinch.t >= 0 && pose.flinch.t < 1 && !pose.swimming && !pose.driving;
+/** The bones a flinch turns away from where the blow came from (`FigurePose.flinch.from`): the trunk, the neck and the head. */
+const TRUNK_BONES = new Set(['pelvis', 'spine_01', 'spine_02', 'spine_03', 'neck_01', 'neck_02', 'head']);
+/** How much of the trunk's jolt is kept off the arms (`flinchOver`). */
+const STEADY = 0.6;
+/** Which way a bone's roll (rz) leans the trunk toward the body's right: the lean away from a blow from its left. */
+const LEAN_RIGHT = 1;
+/**
+ * A blow landing (`./clips/flinch.ts`, the clip for where it landed) added over what a body is drawn with: the trunk's
+ * lean and the body's shift turned to go away from where it came from (`from`: its lean back from a blow ahead a lean
+ * to the right from one on the left), the arms and legs as keyed; on a clip stood on its feet (`stood`), the hips let
+ * down as it says with the feet kept where they stood, else the legs and the shift left as they are.
+ */
+export function flinchOver(sk: Skeleton, base: Local, f: NonNullable<FigurePose['flinch']>, stood: boolean): Local {
+  const clip = flinchClipOf(f.where), t = Math.min(1, Math.max(0, f.t)) * clip.length, s = sampleClip(clip, t, sk.body);
+  const a = f.from ?? 0, ca = Math.cos(a), sa = Math.sin(a);
+  const q: Array<Q | undefined> = base.local.map((m) => (m ? quat(m) : undefined)), p: Array<Q | undefined> = [...q];
+  for (const [bone, e] of Object.entries(s.rot)) {
+    const i = sk.at.get(bone);
+    if (i === undefined || (!stood && LEGS.test(bone))) continue;
+    // (a lean back, rx below nought, from ahead; to the right from the left: rx turned into rz)
+    const r = TRUNK_BONES.has(bone) ? [e[0] * ca, e[1], e[2] + LEAN_RIGHT * -e[0] * sa] as [number, number, number] : e;
+    p[i] = qmul(q[i] ?? QI, sk.local(i, r));
+  }
+  // the arms carried by the trunk's jolt only so far (`STEADY` of it kept off them), so what is in the hands (a weapon, a
+  // raised shield) is not flung about with it
+  const chest = sk.at.get('spine_03') as number, R = sk.bones[chest].R;
+  const fk = (x: Array<Q | undefined>): M3 => sk.fk(x.map((y) => (y ? qmat(y) : undefined)), [0, 0, 0])[chest].W;
+  const back = slerp(QI, quat(mm(tr(fk(p)), fk(q))), STEADY);
+  for (const side of ['l', 'r']) {
+    const i = sk.at.get(`clavicle_${side}`);
+    if (i === undefined) continue;
+    const rel = quat(mm(tr(R), sk.bones[i].R));
+    p[i] = qmul(qmul(qinv(rel), qmul(back, rel)), p[i] ?? QI);
+  }
+  if (!stood) return { local: p.map((x, i) => (x ? qmat(x) : base.local[i])), move: base.move };
+  // the shift back (z below nought) from a blow ahead turned away from where it came from: across by its sine
+  const m = s.move, move: V = [m[0] + m[2] * sa, m[1], m[2] * ca];
+  return sk.finish({ q: p, move: add(base.move, scl(move, sk.height)) }, { plant: sk.plantOf({ q, move: base.move }), free: true });
+}
+
 /** What a body was drawn with last (its clip and time, when one), and at the change, what it came from. */
 interface Kept { source: string; out: Local; from: Local | null; at: number; was?: { clip: Clip; t: number }; cur?: { clip: Clip; t: number }; span?: number }
 const KEPT = new Map<string, Kept>();
@@ -331,17 +468,40 @@ export function animate(sk: Skeleton, pose: FigurePose, figure: () => Array<M3 |
   const sat = fit && ON ? seatedLocal(sk, pose, fit) : undefined;
   const c = sat ? undefined : clipFor(pose, sk.body);
   // a clip at a time: one holding hand tools holds the job's own, the work brought to the striking one where it reaches less far
-  const play = (p: { clip: Clip; t: number }): Local => {
+  const play = (p: { clip: Clip; t: number; over?: { clip: Clip; t: number } }): Local => {
+    if (p.over) {
+      // a wave over the walk: the walk, the waving arm's bones the wave's, the head turned as the wave turns it
+      const walk = play({ clip: p.clip, t: p.t }), wave = play(p.over), side = WAVES[p.over.clip.name];
+      walk.local.forEach((_, i) => { const m = ARM_BONE.exec(sk.bones[i]?.name ?? ''); if (m && m[2] === side) walk.local[i] = wave.local[i]; });
+      return looked(walk, p.over);
+    }
     const hold = p.clip.tools ? toolsIn(pose, sk.body) : undefined, side = p.clip.strike?.side ?? 'r', other = side === 'r' ? 'l' : 'r';
     const id = hold?.tools[side], ref = p.clip.tools?.[side];
     const d = tools && id && ref && id !== ref ? shiftOf(sk, p.clip, tools(id), tools(ref), id) : undefined;
     // (a clip that wields what is in hand: both fists reached as they close on its grip)
     const wield = p.clip.wields && held ? { hold: { l: held, r: held } } : {};
-    return clipLocal(sk, p.clip, p.t, p.clip.grip ? held : undefined, tools, { ids: hold?.tools, ...(d ? { shift: { [other]: d } } : {}), ...wield });
+    return looked(clipLocal(sk, p.clip, p.t, p.clip.grip ? held : undefined, tools, { ids: hold?.tools, ...(d ? { shift: { [other]: d } } : {}), ...wield }), p);
+  };
+  // a wave's (or its nod's) head turned toward whoever is looking as the arm comes up, when they are in front, as the flat figure's
+  const looked = (out: Local, p: { clip: Clip; t: number }): Local => {
+    if (!(p.clip.name in WAVES)) return out;
+    const T = viewOf(((Math.round(pose.facing) % 8) + 8) % 8).T, to = T[1] > -0.2 ? Math.max(-LOOK_MOST, Math.min(LOOK_MOST, (Math.atan2(-T[0], T[1]) * 180) / Math.PI)) : 0;
+    const yaw = LOOK_SHARE * to * waveRaise(p.t / p.clip.length);
+    if (Math.abs(yaw) < 1e-3) return out;
+    const add = lookAt(sk, yaw, 0), local = [...out.local];
+    add.q.forEach((q, i) => { if (q) local[i] = qmat(qmul(quat(local[i] ?? I3), q)); });
+    return { local, move: out.move };
   };
   const now: Local = sat ?? (c ? play(c) : { local: figure(), move: [0, 0, 0] });
-  if (!pose.id) return now;
-  const key = `${sk.body}|${pose.id}`, source = sat ? sat.name : c ? c.clip.name : 'figure', ms = performance.now();
+  // a blow on the shield over it all, stood (the feet kept) on a clip that stands its feet and keys none
+  const stood = !sat && !!c?.clip.plant && !c.clip.feet && c.clip.name !== 'ground';
+  // (and a blow landing over that: `flinchOver`)
+  const over = (o: Local): Local => {
+    const b = blocking(pose) ? blockOver(sk, o, pose.block as number, stood) : o;
+    return flinching(pose) ? flinchOver(sk, b, pose.flinch as NonNullable<FigurePose['flinch']>, stood) : b;
+  };
+  if (!pose.id) return over(now);
+  const key = `${sk.body}|${pose.id}`, source = sat ? sat.name : c ? c.clip.name + (c.over ? `+${c.over.clip.name}` : '') : 'figure', ms = performance.now();
   let k = KEPT.get(key);
   if (k) KEPT.delete(key);
   if (!k) k = { source, out: now, from: null, at: ms };
@@ -373,5 +533,5 @@ export function animate(sk: Skeleton, pose: FigurePose, figure: () => Array<M3 |
     } else out = blendLocal(k.from, now, smooth(u));
   }
   k.out = out;
-  return out;
+  return over(out);
 }
