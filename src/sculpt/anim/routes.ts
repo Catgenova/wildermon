@@ -7,12 +7,16 @@ import { RECIPE_BY_ID } from '../../game/recipes';
 
 /**
  * The clip a job in the `work` state plays, by the tool it is done with (its action's `tool`, `../../game/actions.ts`):
- * the strike at the bench (`work`) for the tools struck with or held to the work in one hand; any other tool, or none,
+ * the strike at the bench (`work`) for the tools struck with or held to the work in one hand; the shovel's stroke, the
+ * rake's pull and the sickle's cut (`dig`, `rake`, `reap`) for theirs; the overhead swing (`swing`) for the pickaxe's jobs
+ * that are not mining (taking up paving and steps, digging a pool, prospecting: at the ground); any other tool, or none,
  * the state's own (`./index.ts` `CLIP_OF.work`). A later clip for a family of tools adds its rows.
  */
 export const CLIP_OF_TOOL: Readonly<Record<string, string>> = {
   hammer: 'work', mallet: 'work', chisel: 'work', hatchet: 'work', butchering_knife: 'work',
   awl: 'work', carving_knife: 'work', trowel: 'work', file: 'work', whetstone: 'work',
+  // the digging and field tools (./clips/dig.ts); the pickaxe's jobs at the ground the overhead swing, as mining's
+  shovel: 'dig', rake: 'rake', sickle: 'reap', pickaxe: 'swing',
 };
 /**
  * The clip a job in the `work` state plays, by the job (its action's id), before its tool (`CLIP_OF_TOOL`):

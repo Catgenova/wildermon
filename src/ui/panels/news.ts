@@ -4296,7 +4296,7 @@ export const NEWS: News[] = [
     n: 539,
     day: '2026-11-12',
     lines: () => {
-      const tools = Object.keys(CLIP_OF_TOOL).map((id) => itemDef(id).name.toLowerCase());
+      const tools = Object.keys(CLIP_OF_TOOL).filter((id) => CLIP_OF_TOOL[id] === 'work').map((id) => itemDef(id).name.toLowerCase());
       // the models with a head or blade tinted to its metal (src/sculpt/assets/<id>.json, `metal` materials)
       const metal = ['hammer', 'chisel', 'hatchet', 'butchering_knife', 'carving_knife', 'trowel', 'file'].map((id) => itemDef(id).name.toLowerCase());
       const jobs = (clip: string): number => [...ACTION_BY_ID.keys()].filter((id) => clipOfJob(id) === clip).length;
@@ -4345,6 +4345,17 @@ export const NEWS: News[] = [
       'New: shields, tool belt, jewelled pendant and ring drawn as equipped. Pendant: over cloth and leather chests only.',
       'New: sculpted bodies seated on carts, wagons and boats and astride mounts (was: the flat figure).',
     ],
+  },
+  {
+    n: 544,
+    day: '2026-11-13',
+    lines: () => {
+      const jobs = (clip: string, not: string[] = []): number => [...ACTION_BY_ID.keys()].filter((id) => clipOfJob(id) === clip && !not.includes(id)).length;
+      const name = (id: string): string => itemDef(id).name.toLowerCase();
+      return [
+        `New: ${name('shovel')} (${jobs('dig')} jobs), ${name('rake')} (${jobs('rake')}) and ${name('sickle')} (${jobs('reap')}) work animated on the sculpted body, tool in hand in its metal; ${name('pickaxe')} at the ground (${jobs('swing', ['mine', 'chip_corner', 'mine_cellar'])} jobs): overhead swing (was: a placeholder gesture).`,
+      ];
+    },
   },
   {
     n: 529,
