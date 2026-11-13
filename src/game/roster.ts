@@ -2,7 +2,7 @@ import type { PeerId, PeerState } from '../net/protocol';
 import { tileKey } from './tileindex';
 import { phasePerTile, RIDE_CADENCE } from './player';
 import { BODY_EVERY } from './keep';
-import { BLOCK_SECS } from './fight';
+import { BLOCK_SECS, FLINCH_SECS } from './fight';
 
 /** Handed back for a tile nobody is standing on, so the common answer is free. */
 const NOBODY: readonly Peer[] = [];
@@ -92,6 +92,11 @@ export interface Peer extends PeerState {
    */
   blockedMs?: number;
   blockedAt?: number;
+  /** The last blow that landed on them (`player.hurt_at`), as `blockedMs` and `blockedAt`; where (`hurt_where`) and what struck (a creature's id), when said. */
+  hurtMs?: number;
+  hurtAt?: number;
+  hurtWhere?: string;
+  hurtBy?: number;
 }
 
 /**
@@ -342,6 +347,26 @@ export class Roster {
     if (!p || ms < (p.blockedMs ?? -Infinity) + BLOCK_SECS * 1000) return;
     p.blockedMs = ms;
     p.blockedAt = clock();
+  }
+
+  /**
+   * A blow landed on somebody at the island's instant `ms` (epoch milliseconds), where and from what when said. Stamped
+   * on arrival, as a block is; a blow within `FLINCH_SECS` of the last one heard is the same blow heard again, which only
+   * says where and from what if the first did not.
+   */
+  hurt(id: number, ms: number, where?: string, by?: number): void {
+    const p = this.peers.get(id);
+    if (!p) return;
+    const again = ms < (p.hurtMs ?? -Infinity) + FLINCH_SECS * 1000;
+    if (!again) {
+      p.hurtMs = ms;
+      p.hurtAt = clock();
+      p.hurtWhere = where;
+      p.hurtBy = by;
+      return;
+    }
+    p.hurtWhere ??= where;
+    p.hurtBy ??= by;
   }
 
   /** Somebody said something out loud, for the bubble over their head. */

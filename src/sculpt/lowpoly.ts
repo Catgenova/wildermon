@@ -69,6 +69,8 @@
  * (`metalShades`; iron's for none), lit as metal (`Material.metal`: `./gl.ts` METAL_CURVE, METAL_SHEEN); its gold, wood,
  * leather, collars, emblems, pommel and glow keep their own colours (`metalTint`).
  */
+import { FLINCH_LIT, FLINCH_SECS } from '../game/fight';
+import { lessMotion } from '../engine/motion';
 import MALE_ASSET from './assets/lowmale.json';
 import FEMALE_ASSET from './assets/lowfemale.json';
 import MALE_SHAWL from './assets/lowshawl-male.json';
@@ -1594,7 +1596,9 @@ export function lowScene(given: FigurePose): SculptDraw {
   const shapes = body.shapes();
   // astride, what of the body is behind the beast's barrel (the far leg down its flank) left out, as the flat figure's is
   const hide = seat?.astride ? { c: BARREL.c, r: BARREL.r } : undefined;
-  return { baked, bones, materials, view: viewOf(facing), blink: 0, low, ...(trail ? { trail } : {}), ...(shapes.some((w) => w > 0) ? { shapes } : {}), ...(hide ? { hide } : {}) };
+  // lit by a blow for its first moments (`FLINCH_LIT`), not under less motion
+  const struck = pose.flinch ? pose.flinch.t * FLINCH_SECS : Infinity, hit = struck >= 0 && struck < FLINCH_LIT && !lessMotion() ? 1 - struck / FLINCH_LIT : 0;
+  return { baked, bones, materials, view: viewOf(facing), blink: 0, low, ...(trail ? { trail } : {}), ...(shapes.some((w) => w > 0) ? { shapes } : {}), ...(hide ? { hide } : {}), ...(hit > 0 ? { hit } : {}) };
 }
 
 /** Local turns by bone name, [rx, ry, rz] degrees (as `tools/sculpt/lowrig.mjs` posed). */

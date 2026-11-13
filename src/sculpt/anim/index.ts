@@ -22,6 +22,7 @@ import { SHOOT } from './clips/shoot';
 import { FIGHT as FIGHT_CLIP } from './clips/fight';
 import { HOP, NOD, WAVE, WAVE_AHEAD, waveRaise } from './clips/emote';
 import { BLOCK, COVER, SHIELD_ARM } from './clips/block';
+import { BODY as FLINCH, flinchClipOf } from './clips/flinch';
 import { SEAT_OARS, SEAT_REINS, SEAT_SADDLE, SEAT_TILLER, SEAT_TILLER_LEFT, SEAT_TUCK } from './clips/seated';
 import { mirrorClip } from './author';
 import { ACTION_BY_ID } from '../../game/actions';
@@ -42,7 +43,7 @@ export type State = 'idle' | 'walk' | 'swing' | 'work' | 'fight' | 'meditate' | 
 /** Every clip, by name (the authoring tools find a clip here, `tools/sculpt/lowanim.mjs --clip <name>`). */
 export const CLIPS: Record<string, Clip> = {
   idle: IDLE, walk: WALK, swing: SWING, sixseven: SIXSEVEN, work: WORK, 'work-left': mirrorClip(WORK, 'work-left'), hands: HANDS, ground: GROUND,
-  fight: FIGHT_CLIP, 'fight-left': mirrorClip(FIGHT_CLIP, 'fight-left'), shoot: SHOOT, block: BLOCK,
+  fight: FIGHT_CLIP, 'fight-left': mirrorClip(FIGHT_CLIP, 'fight-left'), shoot: SHOOT, block: BLOCK, flinch: FLINCH,
   'seat-reins': SEAT_REINS, 'seat-oars': SEAT_OARS, 'seat-tiller': SEAT_TILLER, 'seat-tiller-left': SEAT_TILLER_LEFT, saddle: SEAT_SADDLE, 'saddle-tuck': SEAT_TUCK,
   // the emotes (`emoteClipOf`)
   wave: WAVE, 'wave-left': mirrorClip(WAVE, 'wave-left'), 'wave-ahead': WAVE_AHEAD, 'wave-ahead-left': mirrorClip(WAVE_AHEAD, 'wave-ahead-left'), nod: NOD, hop: HOP,
@@ -401,6 +402,48 @@ export function blockOver(sk: Skeleton, base: Local, u: number, stood: boolean):
   if (!stood) return { local: p.map((x, i) => (x ? qmat(x) : base.local[i])), move: base.move };
   return sk.finish({ q: p, move: add(base.move, scl(s.move, sk.height)) }, { plant: sk.plantOf({ q, move: base.move }), free: true });
 }
+/** Whether a pose is part way through a blow landing on it (`FigurePose.flinch`), stood or walking. */
+export const flinching = (pose: FigurePose): boolean => ON && !!pose.flinch && pose.flinch.t >= 0 && pose.flinch.t < 1 && !pose.swimming && !pose.driving;
+/** The bones a flinch turns away from where the blow came from (`FigurePose.flinch.from`): the trunk, the neck and the head. */
+const TRUNK_BONES = new Set(['pelvis', 'spine_01', 'spine_02', 'spine_03', 'neck_01', 'neck_02', 'head']);
+/** How much of the trunk's jolt is kept off the arms (`flinchOver`). */
+const STEADY = 0.6;
+/** Which way a bone's roll (rz) leans the trunk toward the body's right: the lean away from a blow from its left. */
+const LEAN_RIGHT = 1;
+/**
+ * A blow landing (`./clips/flinch.ts`, the clip for where it landed) added over what a body is drawn with: the trunk's
+ * lean and the body's shift turned to go away from where it came from (`from`: its lean back from a blow ahead a lean
+ * to the right from one on the left), the arms and legs as keyed; on a clip stood on its feet (`stood`), the hips let
+ * down as it says with the feet kept where they stood, else the legs and the shift left as they are.
+ */
+export function flinchOver(sk: Skeleton, base: Local, f: NonNullable<FigurePose['flinch']>, stood: boolean): Local {
+  const clip = flinchClipOf(f.where), t = Math.min(1, Math.max(0, f.t)) * clip.length, s = sampleClip(clip, t, sk.body);
+  const a = f.from ?? 0, ca = Math.cos(a), sa = Math.sin(a);
+  const q: Array<Q | undefined> = base.local.map((m) => (m ? quat(m) : undefined)), p: Array<Q | undefined> = [...q];
+  for (const [bone, e] of Object.entries(s.rot)) {
+    const i = sk.at.get(bone);
+    if (i === undefined || (!stood && LEGS.test(bone))) continue;
+    // (a lean back, rx below nought, from ahead; to the right from the left: rx turned into rz)
+    const r = TRUNK_BONES.has(bone) ? [e[0] * ca, e[1], e[2] + LEAN_RIGHT * -e[0] * sa] as [number, number, number] : e;
+    p[i] = qmul(q[i] ?? QI, sk.local(i, r));
+  }
+  // the arms carried by the trunk's jolt only so far (`STEADY` of it kept off them), so what is in the hands (a weapon, a
+  // raised shield) is not flung about with it
+  const chest = sk.at.get('spine_03') as number, R = sk.bones[chest].R;
+  const fk = (x: Array<Q | undefined>): M3 => sk.fk(x.map((y) => (y ? qmat(y) : undefined)), [0, 0, 0])[chest].W;
+  const back = slerp(QI, quat(mm(tr(fk(p)), fk(q))), STEADY);
+  for (const side of ['l', 'r']) {
+    const i = sk.at.get(`clavicle_${side}`);
+    if (i === undefined) continue;
+    const rel = quat(mm(tr(R), sk.bones[i].R));
+    p[i] = qmul(qmul(qinv(rel), qmul(back, rel)), p[i] ?? QI);
+  }
+  if (!stood) return { local: p.map((x, i) => (x ? qmat(x) : base.local[i])), move: base.move };
+  // the shift back (z below nought) from a blow ahead turned away from where it came from: across by its sine
+  const m = s.move, move: V = [m[0] + m[2] * sa, m[1], m[2] * ca];
+  return sk.finish({ q: p, move: add(base.move, scl(move, sk.height)) }, { plant: sk.plantOf({ q, move: base.move }), free: true });
+}
+
 /** What a body was drawn with last (its clip and time, when one), and at the change, what it came from. */
 interface Kept { source: string; out: Local; from: Local | null; at: number; was?: { clip: Clip; t: number }; cur?: { clip: Clip; t: number }; span?: number }
 const KEPT = new Map<string, Kept>();
@@ -441,7 +484,12 @@ export function animate(sk: Skeleton, pose: FigurePose, figure: () => Array<M3 |
   };
   const now: Local = sat ?? (c ? play(c) : { local: figure(), move: [0, 0, 0] });
   // a blow on the shield over it all, stood (the feet kept) on a clip that stands its feet and keys none
-  const over = (o: Local): Local => (blocking(pose) ? blockOver(sk, o, pose.block as number, !sat && !!c?.clip.plant && !c.clip.feet && c.clip.name !== 'ground') : o);
+  const stood = !sat && !!c?.clip.plant && !c.clip.feet && c.clip.name !== 'ground';
+  // (and a blow landing over that: `flinchOver`)
+  const over = (o: Local): Local => {
+    const b = blocking(pose) ? blockOver(sk, o, pose.block as number, stood) : o;
+    return flinching(pose) ? flinchOver(sk, b, pose.flinch as NonNullable<FigurePose['flinch']>, stood) : b;
+  };
   if (!pose.id) return over(now);
   const key = `${sk.body}|${pose.id}`, source = sat ? sat.name : c ? c.clip.name + (c.over ? `+${c.over.clip.name}` : '') : 'figure', ms = performance.now();
   let k = KEPT.get(key);
