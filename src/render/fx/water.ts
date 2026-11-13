@@ -31,8 +31,8 @@ const num = (v: unknown, d: number): number => (typeof v === 'number' && Number.
 /** Drops a swimmer's catch throws up, before the level of detail; and those flicked off a hand at the breath. */
 export const SPLASH_DROPS = 7;
 export const FLICK_DROPS = 4;
-/** Drops falling off a net's bag lifted clear of the water. */
-export const NET_DROPS = 16;
+/** Drops falling off a net's bag, unless the mark says (`../../sculpt/anim/clips/net.ts` LIFT_DROPS, SHAKE_DROPS). */
+const NET_DROPS = 6;
 /** Drops off an oar's blade going in. */
 export const OAR_DROPS = 5;
 /** Seconds a whirl left by an oar lasts. */
@@ -165,9 +165,9 @@ const swirl: ActionFxFn = (e, k) => {
       const eye = kk.eye, paths: number[][] = [];
       for (const s of [-1, 1]) {
         const cx = e.at.x + h.x * half * s, cy = e.at.y + h.y * half * s, pts: number[] = [];
-        // a spiral of a turn and a quarter, opening out and turned on as it goes
+        // a spiral of a turn, opening out and turned on as it goes
         for (let i = 0; i <= 14; i++) {
-          const f = i / 14, th = turn + s * (f * 1.25 * TAU + u * 3), r = (0.012 + 0.05 * f) * (1 + 0.6 * u);
+          const f = i / 14, th = turn + s * (f * TAU + u * 3), r = (0.012 + 0.05 * f) * (1 + 0.6 * u);
           pts.push(eye.worldToScreenX(cx + Math.cos(th) * r, cy + Math.sin(th) * r), eye.worldToScreenY(cx + Math.cos(th) * r, cy + Math.sin(th) * r, e.at.z));
         }
         paths.push(pts);
@@ -221,7 +221,7 @@ const catchFish: ActionFxFn = (e, k) => {
       kk.emit(p, 40 * (1 - f), { kind: 'drop', colour: dropsOf(kk), size: 1, sizeEnd: 0.6, life: [0.2, 0.35], speed: [0.01, 0.06], up: [-2, 4], gravity: 60, drag: 0.6, small: true });
       if (glint > 0.05 && kk.rand() < 0.5) kk.flare({ x: p.x + (kk.rand() - 0.5) * 0.06, y: p.y + (kk.rand() - 0.5) * 0.06, z: p.z - kk.rand() * 3 }, 2.2, glint * (0.6 + 0.4 * kk.rand()), '#ffffff', kk.rand() * Math.PI, '#fff8e0');
       // the fish: a lozenge and a tail, along the way it goes on the screen, flipping over as it flies
-      const sx = kk.sx(p), sy = kk.sy(p), ang = Math.atan2(kk.sy(q) - sy, kk.sx(q) - sx), flip = Math.cos(spin * f), L = 2.4 * zoom, W = 0.75 * zoom * Math.max(0.25, Math.abs(flip));
+      const sx = kk.sx(p), sy = kk.sy(p), ang = Math.atan2(kk.sy(q) - sy, kk.sx(q) - sx), flip = Math.cos(spin * f), L = Math.max(6, 3.4 * zoom), W = Math.max(1.6, 0.95 * zoom) * Math.max(0.25, Math.abs(flip));
       const back = flip > 0 ? FISH_BACK : FISH_BELLY, belly = flip > 0 ? FISH_BELLY : FISH_BACK;
       kk.worldDraw(p, (g) => {
         g.save();
