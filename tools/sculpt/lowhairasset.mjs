@@ -30,6 +30,8 @@ import { afroOf } from './lowafro.mjs';
 import AFRO from './hairs/afro.mjs';
 import { warriorOf } from './lowwarrior.mjs';
 import WARRIOR from './hairs/warrior.mjs';
+import { pixieOf } from './lowpixie.mjs';
+import PIXIE from './hairs/pixie.mjs';
 
 const braidHull = carveBraid();
 const BUILDERS = {
@@ -44,6 +46,7 @@ const BUILDERS = {
   buzz: { name: BUZZ.name, build: (rig) => buzzOf(rig, BUZZ) },
   afro: { name: AFRO.name, build: (rig) => afroOf(rig, AFRO) },
   warrior: { name: WARRIOR.name, build: (rig) => warriorOf(rig, WARRIOR) },
+  pixie: { name: PIXIE.name, build: (rig) => pixieOf(rig, PIXIE) },
 };
 
 const out = { built: 'node tools/sculpt/lowhair.mjs --asset (tools/sculpt/lowhair.mjs gameHair)' };
