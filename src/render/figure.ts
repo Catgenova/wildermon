@@ -2383,9 +2383,12 @@ export interface FigurePose {
    * the shawl, the trousers, the boots and the tunic worn and the hood down; the hood is up only with the shawl, and the
    * hair is not drawn under it. The plate, leather and chain sets' pieces are off unless asked for, each plain unless `enchanted` says so.
    */
-  outfit?: Partial<Record<'shawl' | 'trousers' | 'boots' | 'tunic' | 'hood' | 'plateChest' | 'plateLegs' | 'plateBoots' | 'plateHelm' | 'plateMantle' | 'leatherChest' | 'leatherLegs' | 'leatherBoots' | 'leatherShawl' | 'leatherHat' | ChainPiece, boolean>> & {
-    enchanted?: Partial<Record<'chest' | 'legs' | 'boots' | 'helm' | 'mantle' | 'leatherChest' | 'leatherLegs' | 'leatherBoots' | 'leatherShawl' | 'leatherHat' | 'clothShawl' | 'clothHood' | 'clothTunic' | 'clothTrousers' | 'clothBoots' | ChainPiece, boolean>>;
-    /** The metal each plate or chain piece is smithed from (`GearPiece.material`): its plates or its mail drawn in it (`src/sculpt/lowpoly.ts` plateMat); none, its own colours. */
+  outfit?: Partial<Record<'shawl' | 'trousers' | 'boots' | 'tunic' | 'hood' | 'plateChest' | 'plateLegs' | 'plateBoots' | 'plateHelm' | 'plateMantle' | 'leatherChest' | 'leatherLegs' | 'leatherBoots' | 'leatherShawl' | 'leatherHat' | ChainPiece | 'scaleHelm' | 'scaleChest' | 'scaleLegs' | 'scaleBoots', boolean>> & {
+    enchanted?: Partial<Record<'chest' | 'legs' | 'boots' | 'helm' | 'mantle' | 'leatherChest' | 'leatherLegs' | 'leatherBoots' | 'leatherShawl' | 'leatherHat' | 'clothShawl' | 'clothHood' | 'clothTunic' | 'clothTrousers' | 'clothBoots' | ChainPiece | 'scaleHelm' | 'scaleChest' | 'scaleLegs' | 'scaleBoots', boolean>>;
+    /**
+     * The metal each plate or chain piece is smithed from (`GearPiece.material`): its plates or its mail drawn in it (`src/sculpt/lowpoly.ts` plateMat); none, its own colours.
+     * The scale set's pieces (`scale`, one for the set) in dragon scale's colour (`DRAGON_SCALE`), or a metal's where one is named.
+     */
     metal?: Partial<Record<PlatePiece, string>>;
     /** The dye each cloth or leather piece is dyed (`GearPiece.dye`, `#rrggbb`): its fabric or leather drawn in it (`src/sculpt/lowpoly.ts` dyeMat). */
     dye?: Partial<Record<DyedPiece, string>>;
@@ -6400,8 +6403,8 @@ const TOON_THIN_PX = 2, TOON_FLECK_PX = 0.8;
 export type { GearLook, GearPiece, GearSlot } from '../contract/gear';
 /** The chain set's sculpted pieces (`src/sculpt/lowpoly.ts`: the coif, the hauberk and sleeves, the leggings, the boots). */
 export type ChainPiece = 'chainCoif' | 'chainChest' | 'chainLegs' | 'chainBoots';
-/** The plate and chain sets' sculpted pieces, each in its own metal (`FigurePose.outfit.metal`). */
-export type PlatePiece = 'chest' | 'legs' | 'boots' | 'helm' | ChainPiece;
+/** The plate and chain sets' sculpted pieces, each in its own metal (`FigurePose.outfit.metal`), and the scale set's, all in one material. */
+export type PlatePiece = 'chest' | 'legs' | 'boots' | 'helm' | ChainPiece | 'scale';
 /** The cloth and leather sculpted pieces a dye colours (`FigurePose.outfit.dye`). */
 export type DyedPiece = 'hood' | 'tunic' | 'trousers' | 'boots' | 'leatherChest' | 'leatherLegs' | 'leatherBoots' | 'leatherHat';
 /** The order a body is dressed in, inside out. */
@@ -6434,6 +6437,10 @@ const GEM_TONE: Record<string, RGB> = {
 };
 /** Dragon scale, off one kind of beast and one colour: a jade gone grey at the edges. */
 const DRAGON: RGB = [98, 146, 128];
+/** Dragon scale's colour, for the sculpted scale set (`../sculpt/lowpoly.ts` scaleMat). */
+export const DRAGON_SCALE: Readonly<RGB> = DRAGON;
+/** Whether a material names a metal the figure forges gear in (`METAL_TONE`). */
+export const isMetalTone = (material?: string): boolean => !!material && Object.hasOwn(METAL_TONE, material.toLowerCase());
 /** What a metal's shadow and its light lean toward. */
 const COOL_SHADOW: RGB = [58, 64, 84];
 /** The grey a dye is chalked toward. */

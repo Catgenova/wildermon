@@ -49,10 +49,10 @@ export const LOOKS = {
   enchanted: Object.fromEntries(Object.entries(MATS).map(([n, c]) => [n, n === 'core' || n === 'rune' ? { c: GLOW, kind: 1 } : { c, kind: 2 }])),
 };
 
-const rad = (d) => d * Math.PI / 180;
+export const rad = (d) => d * Math.PI / 180;
 
 /** A height round the leg from a table [[azimuth, y], ...] (degrees nought to 360, in order), straight between entries. */
-function tab(T) {
+export function tab(T) {
   return (az) => {
     const a = ((az % 360) + 360) % 360, L = [...T, [T[0][0] + 360, T[0][1]]];
     for (let k = 0; k + 1 < L.length; k++) if (a >= L[k][0] && a <= L[k + 1][0]) return L[k][1] + (L[k + 1][1] - L[k][1]) * (a - L[k][0]) / (L[k + 1][0] - L[k][0]);
@@ -100,7 +100,7 @@ export const DESIGN = {
 };
 
 /** [front, outside, back, inside] blended round the leg by azimuth (degrees from its front toward its outside). */
-const round4 = (v, az) => {
+export const round4 = (v, az) => {
   if (typeof v === 'number') return v;
   if (typeof v === 'function') return v(az);
   const [f, o, b, i] = v, c = Math.cos(rad(az)), s = Math.sin(rad(az));
@@ -115,7 +115,7 @@ const roundBand = (az, A, v) => {
 
 /* ---- the body's reach: horizontal rays out from an axis ------------------------------------------------------------- */
 /** Where a ray o + s d (s > 0) leaves the triangles T (each three points): the furthest s, or 0. */
-function rayOut(T, o, d, nearest = false) {
+export function rayOut(T, o, d, nearest = false) {
   let best = nearest ? Infinity : 0;
   for (const [a, b, c] of T) {
     const e1 = sub(b, a), e2 = sub(c, a), h = cross(d, e2), det = dot(e1, h);
@@ -130,13 +130,13 @@ function rayOut(T, o, d, nearest = false) {
   return best;
 }
 /** Triangles (as points) of the body's parts, those with every corner passing keep. */
-const bodyTris = (B, parts, keep = () => true) => B.tris.filter((t) => t.v.every((i) => parts.has(B.part[i]) && keep(B.verts[i]))).map((t) => t.v.map((i) => B.verts[i]));
+export const bodyTris = (B, parts, keep = () => true) => B.tris.filter((t) => t.v.every((i) => parts.has(B.part[i]) && keep(B.verts[i]))).map((t) => t.v.map((i) => B.verts[i]));
 
 /**
  * The left leg's field: its axis (the middles of the body's leg rings, straight between them) and the body's reach out
  * from it: at (y, az, off) the point off the body's surface by `off` along the horizontal ray from the axis at height y.
  */
-function legField(B) {
+export function legField(B) {
   const T = bodyTris(B, new Set(['torso', 'pelvis', 'legs'])).filter((t) => t[0][0] + t[1][0] + t[2][0] > 0);
   const names = ['th', 'tg', 'tm', 'tl', 'ka', 'kb', 'kc', 'ca', 'cb', 'an'].filter((r) => B.index.has(`${r}0.L`));
   const rings = names.map((r) => {
@@ -193,7 +193,7 @@ function chordOut(az, closed, off, seg, passes = 3) {
  * clears what lies under it: at points inside each cell (and along its edges) want(y, a, i, k, fy, fk) is the radius the
  * surface must reach there; where the cell's face (its corners blended) falls short, its four corners go out by as much.
  */
-function cellOut(Y, az, R, closed, axis, want, passes = 4) {
+export function cellOut(Y, az, R, closed, axis, want, passes = 4) {
   const N = az.length, n = closed ? N : N - 1, F = [0, 0.25, 0.5, 0.75, 1];
   const pt = (y, a, r) => { const c = axis(y); return [c[0] + Math.sin(rad(a)) * r, y, c[1] + Math.cos(rad(a)) * r]; };
   for (let it = 0; it < passes; it++) {
@@ -222,7 +222,7 @@ function cellOut(Y, az, R, closed, axis, want, passes = 4) {
  * its edges turned in by the thickness t (a lip) where `lip` says, a trimmed edge raised by `raise` over a band `trim`
  * wide (gold), an open plate turned in at its sides too (`sides`). Returns { nodes, pts, closed, mat(i, k) }.
  */
-function shell(rows, az, pt, { t, raise, trim, closed = false, lipTop = true, lipBottom = true, trimTop = false, trimBottom = true, sides = true, trimSides = false, mat = 'plate', lipMat = 'shade', inset = null }) {
+export function shell(rows, az, pt, { t, raise, trim, closed = false, lipTop = true, lipBottom = true, trimTop = false, trimBottom = true, sides = true, trimSides = false, mat = 'plate', lipMat = 'shade', inset = null }) {
   const R = rows.length;
   const node = (i, k, dOff = 0) => ({ y: rows[i].y[k], az: az[k], off: rows[i].off[k] + dOff });
   // (the node `trim` along the plate from row i toward row j, raised)
@@ -250,7 +250,7 @@ function shell(rows, az, pt, { t, raise, trim, closed = false, lipTop = true, li
 }
 
 /** Lay a plate's grid into the mesh: quads between rows, round (closed) or across (open). */
-function lay(G, P, tag) {
+export function lay(G, P, tag) {
   const ids = P.pts.map((row) => row.map((p) => G.vert(p, tag)));
   G.tag = tag;
   const C = ids[0].length, last = P.closed ? C : C - 1;
@@ -354,7 +354,7 @@ export function buildPlateLegs(rig, design = DESIGN[rig.who], { stage = 9 } = {}
  * by the clearance and `lvl` layers, and the plates under it (the cuisse's foot, the upper shin's top) by the gap, over
  * the guard's whole span round each node (so its straight faces clear them too).
  */
-function kneeGuard(G, D, F) {
+export function kneeGuard(G, D, F) {
   const K = D.knee, c = F.axis(K.mid), W = K.wing;
   const soup = trisOf(G).map((t) => t.v.map((i) => G.verts[i]));
   const ray = (y, az) => { const d = [Math.sin(rad(az)), 0, Math.cos(rad(az))]; return [F.reach(y, az, c), rayOut(soup, [c[0], y, c[1]], d)]; };
@@ -422,7 +422,7 @@ function kneeGuard(G, D, F) {
  * the plates under it (his lames' tops, her cuisses') by the gap; flat at the front (no padding: no further forward than
  * the body's front there, the clearance and the thickness).
  */
-function hipBand(G, D, B) {
+export function hipBand(G, D, B) {
   const Bd = D.band, z0 = Bd.z0, gapU = Bd.gap ?? D.gap;
   // (its ring's columns: CF, `cols` a side (else the design's), CB)
   const half = Bd.cols ?? Bd.az, az = [...half, ...half.slice(1, -1).map((a) => -a).reverse()];
