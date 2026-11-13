@@ -38,6 +38,8 @@ export interface PlayerRow {
   act_ends: string | null;
   /** The tool the job in hand is done with, as the island took it from their pack: see `toolFrom`. */
   act_tool?: unknown;
+  /** When they last took a blow on their shield (`player.blocked_at`), the island's instant; null if never. */
+  blocked_at?: string | null;
   [key: string]: unknown;
 }
 

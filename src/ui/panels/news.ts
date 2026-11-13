@@ -8,6 +8,7 @@ import { PLAN_AREA_MOST, PLAN_UNDO_SECONDS } from '../../game/planarea';
 import { UPDATE_CHECK_MS } from '../update';
 import { JOURNAL_TABS } from './journaltabs';
 import { RESPAWN_ARM_MS } from '../respawn';
+import { BLOCK_SECS } from '../../game/fight';
 import { MAP_LEGEND, SETTLEMENT_BORDER_PX, MAP_ZOOM_MIN } from './minimap';
 import { FAST_DPR, LOW_POWER_FPS, SETTING_DEFAULTS } from '../../game/settings';
 import { BLOSSOM } from '../../audio/music/tracks/blossom';
@@ -4352,6 +4353,7 @@ export const NEWS: News[] = [
     lines: () => {
       const jobs = (clip: string): number => [...ACTION_BY_ID.keys()].filter((id) => clipOfJob(id) === clip).length;
       return [
+        `New: shield block drawn on the blocker, seen by players nearby: shield arm raised for ${BLOCK_SECS} s per blocked blow.`,
         `New: animation at the quern, grinding: ${jobs('quern')} jobs; pressing: ${jobs('press')}. Stirring a pot, bowl or jar: ${jobs('stir')}. Cooking on a skewer at a fire: ${jobs('roast')}. Frying: ${jobs('fry')} (was: a placeholder gesture).`,
         'Changed: leaching lye and filling a barrel: both hands at waist height (was: a placeholder gesture).',
       ];

@@ -183,6 +183,8 @@ export class Player {
    */
   emote?: string;
   emoteAt?: number;
+  /** When the island last said a blow was taken on the shield worn (`player.blocked_at`), on the drawing clock as `emoteAt`. */
+  blockedAt?: number;
   /** Last movement direction in world space; the renderer turns it into a screen facing. */
   dirX = 1;
   dirY = 0;
