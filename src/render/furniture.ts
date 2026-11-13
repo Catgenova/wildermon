@@ -5350,7 +5350,14 @@ export function drawFurniture(ctx: CanvasRenderingContext2D, sx: number, sy: num
 }
 
 /** A picture of somebody as it was last put down: what it was put down on, and where, in that context's own units. */
-export interface Silhouette { ctx: CanvasRenderingContext2D; canvas: CanvasImageSource & { width: number; height: number }; x: number; y: number; w: number; h: number; ver?: number }
+/**
+ * A helmsman's picture as put down (`figurePicture` in `./figure`): on `ctx` at x, y, w, h; the picture `canvas`'s `sx`,
+ * `sy`, `sw`, `sh` (the whole of it, left out), and what names it (`key`, else the canvas).
+ */
+export interface Silhouette {
+  ctx: CanvasRenderingContext2D; canvas: CanvasImageSource & { width: number; height: number }; x: number; y: number; w: number; h: number; ver?: number;
+  sx?: number; sy?: number; sw?: number; sh?: number; key?: object;
+}
 
 /**
  * A helmsman seen through what is in front of him. Sailing toward
@@ -5382,8 +5389,9 @@ function seeThrough(ctx: CanvasRenderingContext2D, c: HTMLCanvasElement, at: [nu
   // Drawn on another picture than this one -- a flash or a ring round him under the pointer -- it is nowhere here to see through.
   if (helm.ctx !== ctx) { ctx.drawImage(c, x, y, w, h); return; }
   const k = c.width / w, hx = (helm.x - x) * k, hy = (helm.y - y) * k;
-  let his = seen.get(helm.canvas);
-  if (!his) seen.set(helm.canvas, (his = new WeakMap()));
+  const named = helm.key ?? helm.canvas;
+  let his = seen.get(named);
+  if (!his) seen.set(named, (his = new WeakMap()));
   let kept = his.get(c);
   if (!kept || helm.ver === undefined || kept.ver !== helm.ver || Math.abs(kept.x - hx) > 1 || Math.abs(kept.y - hy) > 1 || Math.abs(kept.w - helm.w * k) > 1) {
     const pad = kept?.pad ?? document.createElement('canvas');
@@ -5401,7 +5409,7 @@ function seeThrough(ctx: CanvasRenderingContext2D, c: HTMLCanvasElement, at: [nu
     g.globalCompositeOperation = 'destination-out';
     g.globalAlpha = HELM_SEEN.most;
     g.filter = `blur(${(HELM_SEEN.soft * k).toFixed(2)}px)`;
-    g.drawImage(helm.canvas, 0, 0, helm.canvas.width, helm.canvas.height, hx, hy, helm.w * k, helm.h * k);
+    g.drawImage(helm.canvas, helm.sx ?? 0, helm.sy ?? 0, helm.sw ?? helm.canvas.width, helm.sh ?? helm.canvas.height, hx, hy, helm.w * k, helm.h * k);
     g.filter = 'none';
     g.globalAlpha = 1;
     g.globalCompositeOperation = 'source-over';
