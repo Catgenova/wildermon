@@ -53,7 +53,7 @@ const PRAY = 7;
 /** Bowed over the hands: the neck and head down, the shoulders a little round. */
 const BOWED = knelt({ ...ELBOWS, ...FLAT, spine_02: [4, 0, 0], spine_03: [5, 0, 0], neck_01: [12, 0, 0], neck_02: [8, 0, 0], head: [16, 0, 0] });
 /** Bowed lower: the back rounded over the hands from the waist, the head further down. */
-const LOWER = knelt({ ...ELBOWS, ...FLAT, pelvis: [6, 0, 0], spine_01: [5, 0, 0], spine_02: [8, 0, 0], spine_03: [8, 0, 0], neck_01: [16, 0, 0], neck_02: [10, 0, 0], head: [20, 0, 0] }, [0, -0.278, 0.222]);
+const LOWER = knelt({ ...ELBOWS, ...FLAT, pelvis: [12, 0, 0], spine_01: [7, 0, 0], spine_02: [11, 0, 0], spine_03: [11, 0, 0], neck_01: [18, 0, 0], neck_02: [12, 0, 0], head: [24, 0, 0] }, [0, -0.282, 0.224]);
 const PRAY_BEATS: Beat[] = [
   { t: 0, pose: BOWED, ease: 'inOut', stage: 'key', name: 'bowed' },
   { t: 2.4, pose: BOWED, ease: 'inOut' },
@@ -61,7 +61,7 @@ const PRAY_BEATS: Beat[] = [
   { t: 5.4, pose: LOWER, ease: 'inOut' },
 ];
 /** The hands' places over the run: before the chest, carried down and forward with the lower bow. */
-const PRAY_HANDS: Array<[number, number, number]> = [[0, 0.43, 0.37], [2.4, 0.43, 0.37], [3.8, 0.415, 0.385], [5.4, 0.415, 0.385]];
+const PRAY_HANDS: Array<[number, number, number]> = [[0, 0.43, 0.37], [2.4, 0.43, 0.37], [3.8, 0.39, 0.41], [5.4, 0.39, 0.41]];
 
 /* ---- at a statue --------------------------------------------------------------------------------------------------- */
 
