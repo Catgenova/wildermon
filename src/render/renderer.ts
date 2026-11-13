@@ -48,7 +48,7 @@ import { drawWorkPost, drawWorkPostLive, drawWorkPostNight, workPostBounds, work
 import { isRuneLantern } from '../game/runelantern';
 import { isRuneGate } from '../game/runegate';
 import { HALF_H, HALF_W, HEIGHT_SCALE, UNITS_PER_TILE } from './iso';
-import { beastReach, HUNT_REACH, inFightReach, isFightJob, WIND_UP } from '../game/fight';
+import { beastReach, blockAt, HUNT_REACH, inFightReach, isFightJob, WIND_UP } from '../game/fight';
 import { depthOf, type View } from './view';
 import type { RoofModel } from './roofshape';
 import { isGlasshouse } from '../game/glasshouse';
@@ -6696,6 +6696,7 @@ export class Renderer {
             emote: player.emote,
             emoteT: emoteAt(player.emote, player.emoteAt, performance.now() / 1000) ?? undefined,
             cast: this.spells.poseOf(PLAYER_CASTS),
+            block: blockAt(player.blockedAt, performance.now() / 1000),
             veil: this.spells.veilOf(PLAYER_CASTS),
           }),
           undefined,
@@ -6745,6 +6746,7 @@ export class Renderer {
             emote: peer.emote,
             emoteT: emoteAt(peer.emote, peer.emoteAt, performance.now() / 1000) ?? undefined,
             cast: this.spells.poseOf({ kind: 'peer', id: peer.id }),
+            block: blockAt(peer.blockedAt, performance.now() / 1000),
             veil: this.spells.veilOf({ kind: 'peer', id: peer.id }),
           }),
           undefined,

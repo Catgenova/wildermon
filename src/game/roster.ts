@@ -2,6 +2,7 @@ import type { PeerId, PeerState } from '../net/protocol';
 import { tileKey } from './tileindex';
 import { phasePerTile, RIDE_CADENCE } from './player';
 import { BODY_EVERY } from './keep';
+import { BLOCK_SECS } from './fight';
 
 /** Handed back for a tile nobody is standing on, so the common answer is free. */
 const NOBODY: readonly Peer[] = [];
@@ -84,6 +85,13 @@ export interface Peer extends PeerState {
    */
   said?: string;
   saidAt?: number;
+  /**
+   * The last blow they took on their shield (`player.blocked_at`): the island's instant, epoch milliseconds, so one
+   * block heard twice (their body broadcast, then the roster's read) is drawn once; and when it reached us, on the
+   * local clock like `emoteAt`, for the block drawn (`../render` `FigurePose.block`).
+   */
+  blockedMs?: number;
+  blockedAt?: number;
 }
 
 /**
@@ -323,6 +331,17 @@ export class Roster {
     if (!p) return;
     p.emote = emote;
     p.emoteAt = clock();
+  }
+
+  /**
+   * Somebody took a blow on their shield at the island's instant `ms` (epoch milliseconds). Stamped on arrival, as an
+   * emote is; a block within `BLOCK_SECS` of the last one heard is the same block heard again.
+   */
+  blocked(id: number, ms: number): void {
+    const p = this.peers.get(id);
+    if (!p || ms < (p.blockedMs ?? -Infinity) + BLOCK_SECS * 1000) return;
+    p.blockedMs = ms;
+    p.blockedAt = clock();
   }
 
   /** Somebody said something out loud, for the bubble over their head. */

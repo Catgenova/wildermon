@@ -189,6 +189,8 @@ begin
         perform skill_raise(p_world, p_uid, 'shields', 0.5);
         -- The same words as the browser's (`BLOCKED_SAID`).
         perform tell(p_world, p_uid, 'Blocked with shield.', 'fight');
+        -- And when, for the body drawn blocking (`player.blocked_at`).
+        update player set blocked_at = now() where world_id = p_world and uid = p_uid;
         if v_from.id is not null then
           -- A Sworn Blade's Counterweight: its next blow put back, paid by its own turn (`class_stagger_owed`).
           if pk(p.class_mul, 'stagger:block', 0) > 0 then

@@ -8,6 +8,7 @@ import { PLAN_AREA_MOST, PLAN_UNDO_SECONDS } from '../../game/planarea';
 import { UPDATE_CHECK_MS } from '../update';
 import { JOURNAL_TABS } from './journaltabs';
 import { RESPAWN_ARM_MS } from '../respawn';
+import { BLOCK_SECS } from '../../game/fight';
 import { MAP_LEGEND, SETTLEMENT_BORDER_PX, MAP_ZOOM_MIN } from './minimap';
 import { FAST_DPR, LOW_POWER_FPS, SETTING_DEFAULTS } from '../../game/settings';
 import { BLOSSOM } from '../../audio/music/tracks/blossom';
@@ -4351,7 +4352,10 @@ export const NEWS: News[] = [
     day: '2026-11-13',
     lines: () => {
       const jobs = (...clips: string[]): number => [...ACTION_BY_ID.keys()].filter((id) => clips.includes(clipOfJob(id) ?? '')).length;
-      return [`New: sawing and fishing animated on the sculpted body: ${jobs('saw', 'fish', 'net')} jobs (saw, fishing rod, fishing net); the tool drawn in hand (was: a placeholder gesture).`];
+      return [
+        `New: shield block drawn on the blocker, seen by players nearby: shield arm raised for ${BLOCK_SECS} s per blocked blow.`,
+        `New: sawing and fishing animated on the sculpted body: ${jobs('saw', 'fish', 'net')} jobs (saw, fishing rod, fishing net); the tool drawn in hand (was: a placeholder gesture).`,
+      ];
     },
   },
   {

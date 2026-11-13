@@ -5,7 +5,7 @@
 // the hair, the garments), in the idle clip over its whole loop and in the walk (the walk reported, the idle a failure),
 // and its clearance: the nearest any of its points comes to everything else (game units).
 //
-//   node tools/sculpt/lowpropbackcheck.mjs [--weapon maul] [--asset warhammer] [--idle 24] [--walk 16] [--who male,female]
+//   node tools/sculpt/lowpropbackcheck.mjs [--weapon maul] [--asset warhammer] [--idle 24] [--walk 16] [--ground 0] [--who male,female]
 //   Exits 1 when the prop crosses anything in the idle.
 import { build } from 'esbuild';
 import { readFileSync } from 'node:fs';
@@ -61,23 +61,25 @@ function clearance(P, A, B) {
   return d;
 }
 
-const nIdle = +opt('idle', '24'), nWalk = +opt('walk', '16'), idleLen = TS.CLIPS.idle.length;
+const nIdle = +opt('idle', '24'), nWalk = +opt('walk', '16'), nGround = +opt('ground', '0'), idleLen = TS.CLIPS.idle.length, groundLen = TS.CLIPS.ground.length;
 let fail = false;
 for (const who of opt('who', 'male,female').split(',')) {
   const look = { gender: who === 'male' ? 'man' : 'woman', skin: 'light', hair: 'swept', hairColour: 'brown', eyes: 'brown', beard: 'none', shirt: 'unbleached', trousers: 'walnut' };
   for (const [name, outfit] of Object.entries(OUTFITS)) {
     const r = {};
-    for (const [kind, moving, n] of [['idle', false, nIdle], ['walk', true, nWalk]]) {
+    for (const [kind, moving, n] of [['idle', false, nIdle], ['walk', true, nWalk], ['ground', false, nGround]]) {
+      if (!n) continue;
       const c = (r[kind] = { cross: 0, clear: Infinity, at: null });
       for (let k = 0; k < n; k++) {
-        // (the idle's time is its phase over six: the whole loop is six times its length)
-        const phase = moving ? (k / n) * Math.PI * 2 : (k / n) * 6 * idleLen;
-        const s = TS.lowScene({ phase, moving, facing: 0, swimming: false, working: false, look, gear: { weapon: { id: WEAPON } }, outfit });
+        // (the idle's time is its phase over six: the whole loop is six times its length; the ground's a go of planting)
+        const phase = moving ? (k / n) * Math.PI * 2 : kind === 'ground' ? 0 : (k / n) * 6 * idleLen;
+        const knelt = kind === 'ground' ? { working: true, job: 'plant', act: { t: (k / n) * groundLen, length: groundLen } } : { working: false };
+        const s = TS.lowScene({ phase, moving, facing: 0, swimming: false, look, gear: { weapon: { id: WEAPON } }, outfit, ...knelt });
         const { P, T } = skinned(s);
         const prop = T.slice(T.length - nProp), rest = T.slice(0, T.length - nProp);
         c.cross += crossPairs(P, prop, P, rest).length;
         const d = clearance(P, prop, rest);
-        if (d < c.clear) { c.clear = d; c.at = moving ? `walk ${k}/${n}` : `idle ${(phase / 6).toFixed(2)} s`; }
+        if (d < c.clear) { c.clear = d; c.at = moving ? `walk ${k}/${n}` : kind === 'ground' ? `ground ${((k / n) * groundLen).toFixed(2)} s` : `idle ${(phase / 6).toFixed(2)} s`; }
       }
       c.clear = +c.clear.toFixed(3);
       if (kind === 'idle' && c.cross) fail = true;
