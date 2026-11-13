@@ -6,11 +6,11 @@
 //                              wood, an iron rim and boss, four gold runes round the boss; on the left forearm
 //   lowshieldmetal-<who>.json  the metal shield (metal_shield): a heater in its metal, a gold rim, a gold-ringed core at its
 //                              middle and a gold rune line down it, its back dark; on the left forearm
-//   lowbelt<over>-<who>.json   the tool belt (toolbelt): dark leather, a gold buckle with a core, two pouches and a loop
+//   lowbelt<over>-<who>.json   the tool belt (toolbelt): dark leather, a gold buckle with a core, three pouches and a loop
 //                              round the hips, fitted over what is worn there: `cloth` (the tunic and whatever legs), `leather`
-//                              (the leather chest), `plate` (the plate chest)
+//                              (the leather chest), `plate` (the plate chest), `chain` (the hauberk), `scale` (the cuirass)
 //   lowpendant<over>-<who>.json the pendant (jewelled_pendant): a gold-framed stone on a gold chain on the breastbone, over the
-//                              cloth shawl (`cloth`) or the leather chest (`leather`); under plate it is not drawn
+//                              cloth shawl (`cloth`) or the leather chest (`leather`); under plate, mail or scale it is not drawn
 //   lowring-<who>.json         the ring (jewelled_ring): a gold band on the right hand's ring finger, its stone set on the back
 //   lowcirclet<hair>-<who>.json the circlet (circlet): a thin gold band round the head over the hair, three settings; one fit
 //                              for each hairstyle (`swept`, `braid`, `bob`) and for none (`bare`)
@@ -231,9 +231,11 @@ function metalShield(body, H0 = 2.35, W0 = 1.75) {
 /* ---- the tool belt ------------------------------------------------------------------------------------------------- */
 /** What each fit of the belt is worn over at the hips (src/sculpt/assets low<name>-<who>.json, the body always). */
 const BELT_OVER = {
-  cloth: ['tunic', 'trousers', 'leatherlegs', 'leatherlegsflaps', 'platelegs'],
-  leather: ['leatherchest', 'leatherlegs', 'platelegs'],
-  plate: ['platechest', 'leatherlegs', 'platelegs'],
+  cloth: ['tunic', 'trousers', 'leatherlegs', 'leatherlegsflaps', 'platelegs', 'chainlegs', 'scalelegs'],
+  leather: ['leatherchest', 'leatherlegs', 'platelegs', 'chainlegs', 'scalelegs'],
+  plate: ['platechest', 'leatherlegs', 'platelegs', 'chainlegs', 'scalelegs'],
+  chain: ['chainchest', 'leatherlegs', 'platelegs', 'chainlegs', 'scalelegs'],
+  scale: ['scalechest', 'leatherlegs', 'platelegs', 'chainlegs', 'scalelegs'],
 };
 /** Each body's belt line: its middle's height at the front and at the back (mesh units), its band's half height. */
 const BELT_AT = { male: { front: -4.62, back: -4.38, half: 0.2 }, female: { front: -3.82, back: -3.6, half: 0.18 } };

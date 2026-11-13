@@ -14,6 +14,7 @@
 - GitHub Pages serves `main` from the repository root. `index.html` and `assets/` at the root are
   generated: run `npm run build` (typecheck + bundle + copy to root) before committing and commit
   the regenerated files together with the source change. Edit `src/index.html`, never the root one.
+- Function snapshots: `supabase/functions/<schema>.<name>.sql`, public and private. Regenerate: `node scripts/snapshot-functions.mjs` on a database built by `supabase/test/run.sh`; checked in CI (`db` job).
 
 ## Text the player reads
 

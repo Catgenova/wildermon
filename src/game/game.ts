@@ -18,8 +18,10 @@ import { ACTIONS, ACTION_BY_ID, SPOIL_ORDER, spoilFrom, TEACHES_NOTHING, TRY_LEA
 import { feedable, feedFill, riposte } from './creatureActions';
 import { aimPin, BELT_MAX, loopsFor, pinLabel, type BeltPin } from './belt';
 import { bodyForward } from '../net/felt';
-import type { ItemRow } from '../net/island';
+import type { IslandCrate, IslandGround } from '../contract/ground';
 import { packed, type Aged } from '../net/packed';
+import { furnaceJobs, furnaceOutput } from '../net/rows/furnace';
+import { storedThing } from '../net/rows/stored';
 import { DROWN_RATE, DROWN_WARN, EXHAUSTED, HEAL_FED, HEAL_RATE, HUNGER_RATE, staminaBarAbove, SWIM_LEARN, SWIM_WIND, THIRST_RATE, WIND_PER_LEVEL, WIND_REST, WIND_STARVING, WIND_WALK } from './body';
 import { markName, MARK_CAP, MARK_COLOURS, type Marker } from './marks';
 import { acrossSide, Buildings, OPPOSITE_SIDE, type FloorTile, CELLAR_DECAY, CELLAR_FLOOR, CELLAR_LEVEL, connectsDown, floorKind, floorOf, INDOORS_DECAY, isDone, isSpiral, keepJobLevel, SPIRAL_FOOT_SAID, progressOf, roofShapeDef, TOP_LEVELS, WALL_HEIGHT, walkableKind, workLevel, type BuildingsJSON, type Building, type Wall, type Side, type Bill, type Column } from './building';
@@ -29,7 +31,7 @@ import { UNDONE_PLANS, type PlanAnswer } from './planarea';
 import { CRATE_DEFS, crateCentre, crateName, crateCapacity, crateShut, crateUnits, STORE_REACH, SUBTILES, subtileOf, type CrateKind, type PlacedCrate } from './crates';
 import { anvilAnchor, anvilCentre, anvilCovers, anvilName, ANVIL_SUBTILES, type PlacedAnvil } from './anvil';
 import { fireAnchor, fireCentre, fireCovers, FIRE_SUBTILES, type PlacedCampfire } from './campfire';
-import { furnaceMadeSaid, smelterAnchor, smelterCentre, smelterCovers, smelterName, SMELTER_H, SMELTER_PLUME, SMELTER_PLUME_WORKING, SMELTER_STACK_BACK, SMELTER_STACK_UP, SMELTER_W, type PlacedSmelter, type Plume, type SmeltJob } from './smelter';
+import { furnaceMadeSaid, smelterAnchor, smelterCentre, smelterCovers, smelterName, SMELTER_H, SMELTER_PLUME, SMELTER_PLUME_WORKING, SMELTER_STACK_BACK, SMELTER_STACK_UP, SMELTER_W, type PlacedSmelter, type Plume } from './smelter';
 import { kilnAnchor, kilnCentre, kilnCovers, kilnName, KILN_GLOW, KILN_GLOW_FIRING, KILN_PLUME, KILN_PLUME_FIRING, KILN_SUBTILES, KILN_VENT_BACK, KILN_VENT_UP, type PlacedKiln } from './kiln';
 import { WELL_TRICKLE, WELL_TRICKLE_AT, WELL_TRICKLE_QL, ACROSS_OF, DEED_PLACE, FURNITURE, ONE_ALTAR, deckSpot, isPlanter, furnitureAnchor, furnitureCapacity, furnitureCentre, furnitureCovers, furnitureDef, furnitureHeft, furnitureHolds, furnitureKg, furnitureRefuses, furnitureRoom, furnitureUnits, hiveRoom, POND_EVERY, rackDeck, rackSpots, teamOf, vehicleOf, type LiquidKind, type PlacedFurniture, furnitureName, facingOf, LIQUID_NAME, isBoat, furnitureFootprint, holdsLiquid, WATER_AT_HAND, STATION_REACH, type BoatDef, pieceShut } from './furniture';
 import { hiveTakes } from './bees';
@@ -46,7 +48,7 @@ import { HOST_ID } from '../net/protocol';
 import { Roster } from './roster';
 import { runeGateLights } from './runegate';
 import { GameEmitter, isTalk, TALK_LOG, type LogEntry, type LogKind } from './events';
-import { bagTake, DEED_DECAY, describeWith, foldInto, foodFill, groundDecayRate, Inventory, ITEM_DEFS, itemName, type Item, markOf, type Mark, rarityOf, rarityStep, itemDef, sameMark, sameStack, spendOut, unmendable, unrestored } from './items';
+import { bagTake, DEED_DECAY, describeWith, foldInto, foodFill, groundDecayRate, Inventory, ITEM_DEFS, itemName, type Item, markOf, rarityOf, rarityStep, itemDef, sameMark, sameStack, spendOut, unmendable, unrestored } from './items';
 import { ENCHANTERS_PLINTH, ENCHANTMENTS, furnaceBurn, moreSaid, NETMENDER_WEAR, swingEnchant, wornEnchant, type Enchant, type EnchantEffect } from './enchant';
 import { BASE_SPEED, CARRY_CRAWL, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER_LEVEL, groundStep, MAX_STAND, MAX_STEP, pathOptions, Player, readPlayer, type LiftRule, standsOn, walkKey, SWIM_DEPTH, SWIM_SPEED } from './player';
 import { findPath } from '../world/pathfinding';
@@ -115,7 +117,7 @@ import { strokeOf } from '../audio/strokes';
 import { lockRefusal, type Lockable } from './locks';
 import { REACH_FORCE, sailFactor, sailWord, windAt, windFrom, windWord, type Wind } from './wind';
 import { festerChance, PART_NAMES, woundClose, woundDrain, WOUND_KINDS, woundText, type Wound, type WoundKind } from './wounds';
-import { baubleLearn, baublePace, baublePlus, baublesFrom, baublesServe, baubleTwice, YIELD_TIMES, type DeedBauble, type IslandBauble } from './baubles';
+import { baubleLearn, baublePace, baublePlus, baublesFrom, baublesServe, baubleTwice, YIELD_TIMES, type DeedBauble } from './baubles';
 import { orderRefusal, queueDropped, seenOf, type SeenJob } from './jobqueue';
 import { layOver, same } from './heldrows';
 
@@ -10729,47 +10731,6 @@ export class Game {
 }
 
 /**
- * A thing the island says is on the ground, as the row comes off `placed`.
- *
- * The row itself, less the columns that are nobody's business — so a column
- * the island learns later arrives here without anybody having to widen a list.
- */
-/**
- * What a furnace off the island is working on and has finished, as things the
- * browser knows.
- *
- * The island writes a finished piece as `{def, ql, count, extra}` — its own
- * shape for a thing — and a job as `{makes, left, total, ql}` with nothing
- * about what went in. The browser's item has an `id`, and its job has an
- * `item`. Reported from the island as a right-click on a smelter that locked
- * the game up: the menu named what was finished in it, a piece with no `id`
- * has no name, and a name with nothing in it cannot be lowercased. The list
- * had been taken as it came, cast and not looked at.
- *
- * The uid is the furnace's and the piece's place in it, negative so it can
- * never be a uid of anything in the pack, and the same on every read so a
- * menu built off one read and used after the next still names the same
- * piece.
- */
-export function furnaceOutput(furnace: number, rows: unknown[] | undefined): Item[] {
-  return (rows ?? []).map((raw, i) => {
-    const o = raw as {
-      id?: string; def?: string; ql?: number; dmg?: number; count?: number; extra?: string | null; piece?: string | null; uid?: number; mark?: Mark | null;
-    };
-    return {
-      uid: typeof o.uid === 'number' ? o.uid : -(furnace * 1000 + i + 1),
-      id: o.id ?? o.def ?? 'lump',
-      ql: o.ql ?? 1,
-      dmg: o.dmg ?? 0,
-      count: o.count ?? 1,
-      extra: o.extra ?? undefined,
-      piece: o.piece ?? undefined,
-      ...(o.mark ? { mark: o.mark } : {}),
-    };
-  });
-}
-
-/**
  * A finished piece put with what is waiting, folded into a stack of its kind
  * the way a pack folds it: twenty lumps wait as one entry of twenty rather
  * than twenty of one, and the quality is the average by the unit. The
@@ -10785,196 +10746,8 @@ export function furnaceOut(output: Item[], made: Item): void {
   } else output.push(made);
 }
 
-/** And the jobs, each with something in the `item` a local finish would read. */
-export function furnaceJobs(rows: unknown[] | undefined): SmeltJob[] {
-  return (rows ?? []).map((raw) => {
-    const j = raw as { makes?: string; left?: number; total?: number; ql?: number; extra?: string | null; piece?: string | null; item?: Item };
-    const ql = j.ql ?? 1;
-    return {
-      item: j.item ?? { uid: 0, id: j.extra ? `${j.extra.toLowerCase()}_lump` : (j.makes ?? ''), ql, dmg: 0, count: 1 },
-      makes: j.makes ?? '',
-      left: j.left ?? 0,
-      total: j.total ?? j.left ?? 0,
-      ql,
-      extra: j.extra ?? undefined,
-      piece: j.piece ?? undefined,
-    };
-  });
-}
-
-export interface IslandPlaced {
-  id: number;
-  kind: string;
-  sub: string | null;
-  x: number;
-  y: number;
-  /** The storey it stands on: -1 down in a cellar; absent from older islands, and 0 on the ground. */
-  level?: number | null;
-  sx: number;
-  sy: number;
-  ql: number | null;
-  fuel: number | null;
-  ash: number | null;
-  /** The enchantment set into it where it stands (`enchanting.ts`), absent for none. */
-  enchant?: Enchant | null;
-  lit: boolean | null;
-  dmg: number | null;
-  name: string | null;
-  material: string | null;
-  /** Which way a piece faces, for furniture; absent from older islands. */
-  facing?: string | null;
-  /**
-   * 'rare', 'supreme' or 'fantastic', for a piece that was one before it was
-   * set down; absent from older islands, and null for the rest.
-   */
-  rare?: string | null;
-  litres: number | null;
-  liquid: string | null;
-  /** Seconds a brew in it still has to work (`ferment_left`), not the whole of its working. */
-  ferment: number | null;
-  /** For a barrel of wine, when it stops working, in epoch seconds (`ageing.ts`); absent from older islands. */
-  aged_from?: number | null;
-  /** For a trellis, when its vine was planted and last picked, in epoch seconds (`vineyard.ts`); absent from older islands. */
-  vine_at?: number | null;
-  picked_at?: number | null;
-  bait: string | null;
-  bait_ql: number | null;
-  caught: number | null;
-  /** A furnace's queue and what it has made; a planter's last crop (`sown`), for a Farmer's Crop Rotation. */
-  state: { jobs?: unknown[]; output?: unknown[]; sown?: string; skep_at?: number; spring?: boolean } | null;
-  mine: boolean;
-  /** The padlock fitted to it, by the number it shares with its key. */
-  lock?: number | null;
-  /** The founder of the settlement it is a store of, when it is marked one (`stores.ts`). */
-  store_of?: string | null;
-  /** For a wildermon bed, the wildermon asleep in it (`PlacedFurniture.sleeper`). */
-  sleeper?: number | null;
-  /** Whoever has the reins of it or is sitting in it, by uid. */
-  driver?: string | null;
-  /** Whether that helm is as good as empty, its holder having gone away; only sent when there is a holder. */
-  helm_open?: boolean;
-  /** Who is aboard as a passenger and in which place on deck, for a hull that has any; absent when nobody is. */
-  riders?: Array<{ uid: string; seat: number }>;
-  /** Whoever has a cart by the shafts, by uid. */
-  puller?: string | null;
-  /** The wildermon shut in it, for a wildermon crate; absent from older islands. */
-  creature?: number | null;
-  /** What its maker's perks put into it (`Mark`); null for most, and absent from older islands. */
-  mark?: Mark | null;
-  /** The colour a banner, a flag or a sail was dyed; null undyed, and absent from older islands. */
-  dye?: string | null;
-  /** The line cut into a memorial stone (`memorial.ts`); null uncut. */
-  engraving?: string | null;
-  /**
-   * When it was set down, in epoch seconds, for a piece with roses or
-   * lavender on it (`furniture_def.roses`): what they grow from (`roses.ts`).
-   */
-  set?: number | null;
-  /**
-   * What is in it, for a piece of furniture near enough to reach into.
-   *
-   * Reported as "i opened it and dragged my dirt into it and the dirt
-   * vanished". It had not: the island had it in the bin and said so to
-   * nobody. Every chest, bin, larder and cart on an island read as empty
-   * here, because this read filled `items` with a bare `[]` and nothing ever
-   * filled it again — so anything put away went out of the pack and was
-   * never seen again. It rides with the row now, the way a crate's contents
-   * have since crates crossed, and only within reach, since a yard of full
-   * chests is not worth a phone's second.
-   */
-  things?: StoredThing[];
-  /**
-   * For a grave: whose it is, by name, and the seconds it has left before it
-   * crumbles. What is in it rides in `things`, to its owner only and from
-   * within reach; `units`, how many things that is, to its owner from anywhere.
-   */
-  grave?: { name: string | null; left: number; units?: number | null };
-  /**
-   * For a piece that gathers moss (a statue), seconds since the moss on it
-   * began: since it was set down or last scrubbed, and never from before
-   * greening came to the island (`greening.ts`). Absent for everything else.
-   */
-  green_ago?: number | null;
-}
-
-/** A crate, likewise. */
-export interface IslandCrate {
-  id: number;
-  kind: string;
-  /** The enchantment set into it where it stands (`enchanting.ts`), absent for none. */
-  enchant?: Enchant | null;
-  /** Its wear, out of a hundred. */
-  dmg?: number | null;
-  /** The storey it stands on: -1 down in a cellar; absent from older islands, and 0 on the ground. */
-  level?: number | null;
-  /** The padlock fitted to it, by the number it shares with its key. */
-  lock?: number | null;
-  /** The founder of the settlement it is a store of, when it is marked one (`stores.ts`). */
-  store_of?: string | null;
-  /** Whether it is yours: the island's `crate_yours`. */
-  mine?: boolean;
-  x: number;
-  y: number;
-  sx: number;
-  sy: number;
-  material: string | null;
-  /** What it was built at; absent from older islands, where every crate was a 20. */
-  ql?: number | null;
-  /** 'rare', 'supreme' or 'fantastic'; absent from older islands, null for the rest. */
-  rare?: string | null;
-  name: string | null;
-  deed: boolean;
-  /**
-   * What is in it, and how much of it.
-   *
-   * `units` comes for every crate in sight; `things` only for the ones near
-   * enough to reach into. The browser used to be told neither, so every crate
-   * on an island was drawn empty for ever — which is what "if I put things in
-   * the deed crate it automatically puts them back in my inventory" was: the
-   * thing went in, the crate never showed it, and the pack settled back to the
-   * island's truth a moment later.
-   */
-  units?: number;
-  things?: StoredThing[];
-}
-
-/**
- * A thing in a chest, a bin or a crate, as the island sends one: the island's
- * `rpc_ground` and `crates_near`. Its rarity, its colour and its enchantment
- * ride with it, so an enchanted sword put away still reads "(Razoredge)";
- * absent from an island from before they did.
- */
-export interface StoredThing {
-  id: number;
-  def: string;
-  ql: number;
-  dmg: number;
-  count: number;
-  extra: string | null;
-  /** 'rare', 'supreme' or 'fantastic'; null for the ordinary run of things. */
-  rare?: string | null;
-  /** The colour it has taken, as a `dye_def` id. */
-  dye?: string | null;
-  /** What is enchanted into it from a scroll (`enchant.ts`). */
-  enchant?: Enchant | null;
-  /** For a wildermon crate, the wildermon in it and its name; absent from older islands. */
-  creature?: number | null;
-  occupant?: string | null;
-  /** Its price in silver, on a market stall: what anybody at it sees and buys it for. */
-  price?: number | null;
-}
-
-/** A stored thing as this side holds one: the same fields `packed` reads off a pack's row. */
-export const storedThing = (it: StoredThing): Item => ({
-  uid: it.id, id: it.def, ql: it.ql, dmg: it.dmg, count: it.count,
-  extra: it.extra ?? undefined,
-  rare: rarityStep(it.rare),
-  dye: it.dye ?? undefined,
-  enchant: it.enchant ?? undefined,
-  ...(typeof it.creature === 'number' ? { creature: it.creature } : {}),
-  ...(it.occupant ? { occupant: it.occupant } : {}),
-  ...(typeof it.price === 'number' ? { price: it.price } : {}),
-});
+export type { IslandCrate, IslandGround, IslandPlaced, StoredThing } from '../contract/ground';
+export { storedThing };
 
 /** How far apart, in seconds, two reads of when a thing began to green are the same moment, read across the network twice (`sinceAgo`). */
 const SAME_SINCE = 60;
@@ -10990,123 +10763,5 @@ const FAST_KEYS: ReadonlySet<string> = new Set(['placed', 'crates', 'lying', 'ce
 const sinceAgo = (ago: number | null | undefined): number | undefined =>
   ago === null || ago === undefined || !Number.isFinite(ago) ? undefined : Date.now() / 1000 - ago;
 
-/** Everything on the ground within sight, as one answer. */
 /** An island clock for a ground read that comes without one: nothing lying about has been burning. */
 const UNLIT: Aged = { since: () => 0 };
-
-export interface IslandGround {
-  placed: IslandPlaced[];
-  crates: IslandCrate[];
-  /** The height the ground is being worked to, or null for none. */
-  level?: number | null;
-  /**
-   * What is lying on the ground within range, whole rows, on the fast half.
-   * Left out means nothing said; an empty list means nothing is there.
-   */
-  lying?: ItemRow[];
-  /**
-   * And what is lying on the floors of the cellars in range, the same way
-   * (the rows held as `cellar` on the island): with the fast half, whenever
-   * it is sent.
-   */
-  cellarLying?: ItemRow[];
-  /**
-   * What is growing, and how far along.
-   *
-   * `grown` is how far into the stage it is in, in growing seconds on the
-   * clock it grows on, rather than the hour the stage began: the island keeps
-   * `stage_at` as a timestamp and this browser counts on its own field clock,
-   * and a winter between the two readings would put a stage start read as an
-   * hour somewhere a field clock never stood. `ago` is the wall seconds since
-   * it began, which is all an island from before the year sent.
-   */
-  crops?: Array<{ x: number; y: number; id: string; stage: number; ago?: number; grown?: number; tended: number; tendedNow: boolean; ql: number; pace?: number; glass?: boolean; hand?: boolean; level?: number; still?: boolean }>;
-  /** What grows in the planters within reach, by the planter's id and tile, on the slow half beside `crops`. */
-  planted?: Array<{ planter: number; x: number; y: number; id: string; stage: number; ago?: number; grown?: number; tended: number; tendedNow: boolean; ql: number; pace?: number }>;
-  /** The island's wall clock as it answered, in epoch seconds: what `wallSkew` is set by. */
-  now?: number;
-  /**
-   * The felling notches near you and how long ago the woods last turned
-   * over, both on the slow half. Look reads them: "2 of 3 strokes in it", and
-   * "the woods turn over in 9 hours". A browser on an island keeps no clock
-   * of its own for the woods, so this is the only place it hears the hour.
-   */
-  notches?: Array<{ x: number; y: number; cuts: number }>;
-  treesAgo?: number;
-  /**
-   * The water lilies and lotus planted near you, on the slow half: when each
-   * was planted and last picked, in seconds of the wall clock -- the same
-   * clock both sides read the year off, so what one is doing is worked out
-   * here exactly as the island works it out (`waterPlantState`).
-   */
-  waterPlants?: Array<{ x: number; y: number; kind: WaterPlantKind; at: number; picked: number | null }>;
-  /**
-   * Your own settlement, on the slow half.
-   *
-   * Optional, and the three states are three different answers: absent is
-   * "this read said nothing about it", null is "you have no settlement" —
-   * which is what a disband sends — and an object is the one you have. The
-   * fast read carries none of the three, which is why `sawGround` applies it
-   * only when it was sent, and why this was wrong to type as always present.
-   */
-  deed?: { name: string; x: number; y: number; radius: number; level: number; mine: boolean; role?: DeedRole | null; rank?: string | null; perms?: number | null; baubles?: IslandBauble[] | null } | null;
-  /**
-   * Other people's settlements, and only those near enough to be standing in.
-   *
-   * Separate from `deed` because the browser does two quite different things
-   * with the two. `deed` is yours: `vision.ts` lights it whatever the hour and
-   * however far off, `journal.ts` counts it as a stake you planted, `onDeed`
-   * decides what you may build. None of that is true of somebody else's, and
-   * handing theirs over as `deed` — which is what an island with one
-   * settlement in it did — lit their homestead in your fog and ticked their
-   * work off in your journal.
-   */
-  deeds?: Array<{ name: string; x: number; y: number; radius: number; level: number; holder: string | null; mine?: boolean; role?: DeedRole | null; rank?: string | null; perms?: number | null; baubles?: IslandBauble[] | null }>;
-  /**
-   * Everybody else ashore, with whereabouts while the island is quiet.
-   *
-   * On the slow half, beside the settlements, because it is the same kind of
-   * thing: a fact about the island rather than about the tile you are on.
-   * `folk_ashore` decides whether the positions come with it — see
-   * `CROWD_HIDES`.
-   */
-  folk?: Array<{ uid: string; name: string; online: boolean; x?: number; y?: number }>;
-  /**
-   * Every grave of yours on the island, however far off, on the slow half:
-   * what the marks on your map are put down and taken up by. `placed` has
-   * only the ones in range, and you wake a long way from where you fell.
-   */
-  graves?: Array<{ id: number; x: number; y: number }>;
-  /**
-   * What is standing, and what is half built.
-   *
-   * The island has kept `building`, `wall` and `floor_tile` since buildings
-   * were ported and has never once said a word about them, so on an island a
-   * building was invisible to everybody — including whoever planned it. It
-   * went up in Postgres, the rules answered about it, and no browser ever drew
-   * a wall of it.
-   */
-  buildings?: BuildingsJSON & { walls: Array<Wall & { greenAgo?: number | null }> };
-  /**
-   * And the slabs, which are not buildings: a foundation is ground somebody
-   * poured, and it is laid beside the terrain rather than inside a house.
-   */
-  foundations?: Array<Foundation & { greenAgo?: number | null }>;
-  nextFoundationId?: number;
-  /**
-   * The bridges in range, spans and all, on the slow half: shaped as the
-   * browser's own. The island has kept them since bridges were ported and
-   * said nothing, so on an island a bridge was neither drawn nor walked.
-   */
-  bridges?: Array<Bridge & { greenAgo?: number | null }>;
-  /**
-   * Stone that ages (`greening.ts`), on the slow half: the seconds since
-   * greening came to this island, and every tile in range paved or scrubbed
-   * since, with the seconds since that. A paved tile not in the list began
-   * when greening came in. Each wall, slab, bridge and statue carries its own
-   * as `greenAgo` (`green_ago` on what is set down): seconds since it began,
-   * for the ones that green.
-   */
-  greenFromAgo?: number;
-  paving?: Array<{ x: number; y: number; ago: number }>;
-}

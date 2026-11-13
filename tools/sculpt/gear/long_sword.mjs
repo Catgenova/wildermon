@@ -52,16 +52,34 @@ export const MATS_ENCHANTED = {
   gem: { c: '#ffe7a6', emit: true },
 };
 
-export function buildLongSword({ enchanted = false, length } = {}) {
-  if (!(length > 0)) throw new Error('buildLongSword: the length (swordLength())');
+/**
+ * The sheet's heights as built (`buildLongSword`'s `form`): the grip (199 to 400 px) drawn `grip` as long, the blade above
+ * the guard's spurs (575 px on) `blade` as long, the pommel and the guard `hilt` as long, everything across and through
+ * `wide` as wide. The
+ * long sword's is the sheet's own; the one-handed swords (tools/sculpt/gear/blades.mjs) shorten both.
+ */
+const SHEET = { hilt: 1, grip: 1, blade: 1, wide: 1 };
+const G0 = 199, G1 = 400, B0 = 575;
+const heightOf = (f) => {
+  const h = f.hilt ?? 1, a = G0 * h, b = a + (G1 - G0) * f.grip, c = b + (B0 - G1) * h;
+  return (u) => (u <= G0 ? u * h : u <= G1 ? a + (u - G0) * f.grip : u <= B0 ? b + (u - G1) * h : c + (u - B0) * f.blade);
+};
+
+export function buildLongSword({ enchanted = false, length, form = SHEET, k: px, motif = 'full' } = {}) {
+  if (!(length > 0) && !(px > 0)) throw new Error('buildLongSword: the length (swordLength())');
   const G = meshOf();
   G.A = [];
-  const k = length / SHEET_L;
-  const P = (x, u, z, a) => { const i = G.p([x * k, u * k, z * k]); if (a !== undefined) G.A[i] = a; return i; };
+  const k = px ?? length / SHEET_L, U = heightOf(form), wk = form.wide;
+  if (!(length > 0)) length = U(SHEET_L) * k;
+  /** A sheet point (x, u, z px) in its frame. */
+  const S = (x, u, z) => [x * k * wk, U(u) * k, z * k * wk];
+  const P = (x, u, z, a) => { const i = G.p(S(x, u, z)); if (a !== undefined) G.A[i] = a; return i; };
   const F = (v, mat, out) => {
     const w = v.filter((x, j) => x !== v[(j + 1) % v.length]);
-    if (w.length >= 3) G.f(w, mat, out && (out.from ? { from: out.from.map((q) => q * k) } : out));
+    if (w.length >= 3) G.f(w, mat, out && (out.fromG ? { from: out.fromG } : out.from ? { from: S(...out.from) } : out));
   };
+  /** An engraved ring's height in px for its width r, so it is drawn round however the blade is shortened. */
+  const round = (r) => (r * wk) / form.blade;
   const FRONT = [0, 0, 1], BACK = [0, 0, -1];
   const glowOn = enchanted;
 
@@ -122,22 +140,27 @@ export function buildLongSword({ enchanted = false, length } = {}) {
   // the motif: nested rings and arcs round the orb on the panel's right (the outer ones taller than wide, as the sheet draws
   // them, the outermost cut by the panel's left edge so it sweeps up toward the point and down toward the guard), three
   // arcs round a point on the right edge above, one long arc across from the upper right down the left
-  const Fo = [33, 851], Go = [46, 1060];
-  arc(...Fo, 12, 12, 45); arc(...Fo, 23, 23, 36);
-  for (const r of [37, 52, 68]) arc(...Fo, r, r * (1 + (r - 30) / 100), 30);
-  arc(...Fo, 88, 125, 26);
-  for (const r of [24, 42, 62]) arc(...Go, r, r * 1.6, 30);
-  arc(118, 1010, 170, 170, 20);
+  // (a short blade, `motif` 'short': the orb's two inner rings and the ray, the centre line and the stars; every ring drawn
+  // round however the blade is shortened, `round`)
+  const Fo = motif === 'short' ? [20, 760] : [33, 851], Go = [46, 1060];
+  arc(...Fo, 12, round(12), 45); arc(...Fo, 23, round(23), 36);
+  if (motif !== 'short') {
+    for (const r of [37, 52, 68]) arc(...Fo, r, round(r) * (1 + (r - 30) / 100), 30);
+    arc(...Fo, 88, round(125), 26);
+    for (const r of [24, 42, 62]) arc(...Go, r, round(r) * 1.6, 30);
+    arc(118, 1010, 170, round(170), 20);
+  }
   // the ray left of the orb, and the centre line up from the guard
-  F([P(-30, 851 - 1.6, zE), P(Fo[0] - 18, 851 - 1.6, zE), P(Fo[0] - 18, 851 + 1.6, zE), P(-30, 851 + 1.6, zE)], 'engrave', FRONT);
-  F([P(-9, 575, zE), P(9, 575, zE), P(0, 777, zE)], 'engrave', FRONT);
+  F([P(-30, Fo[1] - 1.6 / form.blade, zE), P(Fo[0] - 18, Fo[1] - 1.6 / form.blade, zE), P(Fo[0] - 18, Fo[1] + 1.6 / form.blade, zE), P(-30, Fo[1] + 1.6 / form.blade, zE)], 'engrave', FRONT);
+  F([P(-9, 575, zE), P(9, 575, zE), P(0, motif === 'short' ? 575 + (Fo[1] - 575) * 0.62 : 777, zE)], 'engrave', FRONT);
   // stars: two crossed diamonds each
   const star = (x, u, s) => {
-    const t = s * 0.22;
-    F([P(x, u - s, zE + 0.2), P(x + t, u, zE + 0.2), P(x, u + s, zE + 0.2), P(x - t, u, zE + 0.2)], 'engrave', FRONT);
-    F([P(x - s, u, zE + 0.3), P(x, u - t, zE + 0.3), P(x + s, u, zE + 0.3), P(x, u + t, zE + 0.3)], 'engrave', FRONT);
+    const t = s * 0.22, su = round(s), tu = round(t);
+    F([P(x, u - su, zE + 0.2), P(x + t, u, zE + 0.2), P(x, u + su, zE + 0.2), P(x - t, u, zE + 0.2)], 'engrave', FRONT);
+    F([P(x - s, u, zE + 0.3), P(x, u - tu, zE + 0.3), P(x + s, u, zE + 0.3), P(x, u + tu, zE + 0.3)], 'engrave', FRONT);
   };
-  star(-1, 1299, 11); star(21, 1279, 8.5); star(-23, 1249, 7.5);
+  if (motif === 'short') { star(-2, 1230, 11); star(-20, 1060, 8.5); }
+  else { star(-1, 1299, 11); star(21, 1279, 8.5); star(-23, 1249, 7.5); }
 
   /* ---- the guard: housing, horns, spurs --------------------------------------------------------------------------- */
   const C = [0, 505], NH = 10;
@@ -191,7 +214,7 @@ export function buildLongSword({ enchanted = false, length } = {}) {
   const loft = (rings, mats) => {
     for (let i = 0; i + 1 < rings.length; i++) for (let j = 0; j < 6; j++) {
       const a = rings[i], b = rings[i + 1];
-      F([a[j], a[(j + 1) % 6], b[(j + 1) % 6], b[j]], typeof mats === 'function' ? mats(i, j) : mats, { from: [0, (G.V[a[j]][1] + G.V[b[j]][1]) / 2 / k, 0] });
+      F([a[j], a[(j + 1) % 6], b[(j + 1) % 6], b[j]], typeof mats === 'function' ? mats(i, j) : mats, { fromG: [0, (G.V[a[j]][1] + G.V[b[j]][1]) / 2, 0] });
     }
   };
   const upper = [[456, 21], [441, 33], [429, 32], [425, 25], [400, 21.5]].map(([u, r]) => hex(u, r));
@@ -203,7 +226,7 @@ export function buildLongSword({ enchanted = false, length } = {}) {
   for (let i = 0; i < NB; i++) {
     const a = gr[i], b = gr[i + 1];
     for (let j = 0; j < 6; j++) {
-      const from = { from: [0, (G.V[a[j]][1] + G.V[b[j]][1]) / 2 / k, 0] }, j1 = (j + 1) % 6;
+      const from = { fromG: [0, (G.V[a[j]][1] + G.V[b[j]][1]) / 2, 0] }, j1 = (j + 1) % 6;
       // a cut's halves belong to the diamonds round its two free corners: a diamond a row of the grip's rings, its tone
       // the row's
       const up = i % 2 ? 'leather2' : 'leather', down = i % 2 ? 'leather' : 'leather2';
@@ -266,10 +289,10 @@ export function buildLongSword({ enchanted = false, length } = {}) {
     // below the guard's collar) and the second hand's (a hand's breadth lower, toward the pommel), the grip's radius, and
     // which way the edges and the engraved face lie (the edges along the hand's length, knuckles to wrist: the socket's x;
     // the engraved face out of the back of the right hand: the socket's z)
-    grip: { axis: [0, 1, 0], lead: [0, 372 * k, 0], second: [0, 292 * k, 0], radius: 21.5 * k, edge: [1, 0, 0], face: [0, 0, 1], from: 199 * k, to: 400 * k },
-    grips: { main: [0, 372 * k, 0], off: [0, 292 * k, 0] },
-    gripR: 21.5 * k,
-    halfWidth: 86 * k,
+    grip: { axis: [0, 1, 0], lead: [0, U(372) * k, 0], second: [0, U(292) * k, 0], radius: 21.5 * k * wk, edge: [1, 0, 0], face: [0, 0, 1], from: U(199) * k, to: U(400) * k },
+    grips: { main: [0, U(372) * k, 0], off: [0, U(292) * k, 0] },
+    gripR: 21.5 * k * wk,
+    halfWidth: 86 * k * wk,
     // two-handed: carried on the back while it is not in hand (lowgear.mjs backSocketOf)
     back: true,
   };

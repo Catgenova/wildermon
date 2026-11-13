@@ -189,7 +189,7 @@ export function sectioner(S, { o, a, e1, e2, dt = 0.1, centred = false, wedge = 
  * samples over it (their foot inside it) less than c under it (or above it) move its corners out along its normal by
  * the shortfall; a few passes, each corner moved by the most any of its faces asks.
  */
-function fitOut(rows, ring, out, S, c, passes = 4, reach = 0.3) {
+export function fitOut(rows, ring, out, S, c, passes = 4, reach = 0.3) {
   // (S may be layers [[points, clearance], ...]: the body's samples, and the surfaces of the pieces under this one)
   if (S.length && Array.isArray(S[0]) && Array.isArray(S[0][0])) { for (let it = 0; it < passes; it++) for (const [P, cc] of S) fitOut(rows, ring, out, P, cc, 1); return; }
   const R = rows.length - 1, n = rows[0].length, C = ring ? n : n - 1;
@@ -231,7 +231,7 @@ function fitOut(rows, ring, out, S, c, passes = 4, reach = 0.3) {
  * edge behind it), 'edge' (the edge alone) or 'open'; every vertex weighted `bone` ({ name: share }). out(p): the way out
  * from the body at p. Returns { faces (its face triangles' points, for laying decals on), N (normals by grid point) }.
  */
-function plateOf(G, rows, o) {
+export function plateOf(G, rows, o) {
   if (o.fit) fitOut(rows, !!o.ring, o.out, o.fit.S, o.fit.c);
   const ring = !!o.ring, R = rows.length - 1, n = rows[0].length, C = ring ? n : n - 1, rim = o.rim;
   const tag = o.tag, wt = o.bone, mat = o.mat ?? 'plate';
@@ -296,10 +296,10 @@ function plateOf(G, rows, o) {
 }
 
 /** The polygons from `start` on, each connected piece wound consistently and outward (out(centroid), lowgarment.mjs orient). */
-const piece = (G, start, out) => orient({ verts: G.verts, polys: G.polys.slice(start) }, out);
+export const piece = (G, start, out) => orient({ verts: G.verts, polys: G.polys.slice(start) }, out);
 
 /** Points on the polygons from p0 to p1 (their corners and a grid on each triangle about `step` apart). */
-function surfOf(G, p0, p1 = G.polys.length, step = 0.07) {
+export function surfOf(G, p0, p1 = G.polys.length, step = 0.07) {
   const out = [];
   for (let k = p0; k < p1; k++) {
     const v = G.polys[k].v;
@@ -313,7 +313,7 @@ function surfOf(G, p0, p1 = G.polys.length, step = 0.07) {
 }
 
 /** The closest point on a plate's face to p, and the face's normal there (out). */
-function onPlate(pl, p, out) {
+export function onPlate(pl, p, out) {
   let best = null;
   for (const [a, b, c] of pl.faces) {
     const [q] = closestOnTri(p, a, b, c), d = Math.hypot(...sub(p, q));
@@ -322,7 +322,7 @@ function onPlate(pl, p, out) {
   return best;
 }
 /** A point on a plate's grid at fractional row rf and column cf (bilinear), laid on its face. */
-function gridAt(pl, rf, cf) {
+export function gridAt(pl, rf, cf) {
   const R = pl.rows.length - 1, n = pl.rows[0].length;
   const r0 = Math.max(0, Math.min(R - 1, Math.floor(rf))), c0 = Math.max(0, Math.min(n - 2, Math.floor(cf)));
   const u = rf - r0, v = cf - c0, P = pl.rows;
@@ -335,7 +335,7 @@ function gridAt(pl, rf, cf) {
  * A core on a plate: a gold ring (n sides, radius r) standing on it round a glowing dome. At p (on the plate's face),
  * `up` the way its first corner points.
  */
-function coreOn(G, pl, p, up, r, nSides, tag) {
+export function coreOn(G, pl, p, up, r, nSides, tag) {
   const h0 = onPlate(pl, p, up.out ?? [0, 0, 1]), n = h0.n, c = h0.q;
   let u = sub(up.dir, mul(n, dot(up.dir, n))); u = unit(u);
   const v = cross(n, u);
@@ -361,7 +361,7 @@ function coreOn(G, pl, p, up, r, nSides, tag) {
   piece(G, start, () => n);
 }
 /** An inlay: a gold strip of width w along points on a plate (each { q, n } from gridAt / onPlate), lifted off its face. */
-function inlayOn(G, pl, pts0, w, tag, mat = 'rune', lift = 0.022) {
+export function inlayOn(G, pl, pts0, w, tag, mat = 'rune', lift = 0.022) {
   // (each span split in four, the points between laid back on the plate's face, so the strip follows its curve)
   const pts = [];
   pts0.forEach((h, k) => {
@@ -391,10 +391,10 @@ export function tabAt(T, key, a) {
 /* ---- the pieces -------------------------------------------------------------------------------------------------------- */
 const AZ = (deg) => deg;
 /** A list by column for a symmetric piece ([centre ... side]) laid out from one side through the centre to the other. */
-const mirrorCols = (L, neg = (x) => x) => [...L.slice(1).reverse().map(neg), ...L];
+export const mirrorCols = (L, neg = (x) => x) => [...L.slice(1).reverse().map(neg), ...L];
 
 /** Where a horizontal ray from o along d (unit, level) meets a grid's face (its furthest crossing), or 0. */
-function rayGrid(rows, ring, o, d) {
+export function rayGrid(rows, ring, o, d) {
   const R = rows.length - 1, n = rows[0].length, C = ring ? n : n - 1;
   let best = 0;
   for (let r = 0; r < R; r++) for (let k = 0; k < C; k++) {

@@ -28,7 +28,11 @@
  * (`assets/lowhood-<who>.json` by `tools/sculpt/garments/hood.mjs`, no bones of its own, rising out of the shawl's cowl;
  * while it is up the hair is not drawn, `hairShown`), and the plate set's helm (`assets/lowhelm-<who>.json` by
  * `tools/sculpt/garments/helm.mjs`: rigid on the head, the head's polygons it covers whole left out, the hair not drawn
- * under it; off unless `outfit.plateHelm`). Garments share materials by colour.
+ * under it; off unless `outfit.plateHelm`), the chain set's coif, hauberk & sleeves, leggings and boots (mail laid over
+ * the body's own triangles in courses of rings, by `tools/sculpt/garments/chaincoif.mjs`, chainchest.mjs, chainlegs.mjs,
+ * chainboots.mjs; their mail in its metal), and the scale set's helm, cuirass & sleeves, leggings and boots
+ * (`assets/lowscale<piece>-<who>.json` by `tools/sculpt/garments/scale*.mjs`: dragon scale in courses over leather, all
+ * four in the set's one material, `scaleMat`). Garments share materials by colour; a bake takes only the worn ones' (`usedOf`).
  *
  * In both hands while a clip grips it (`./anim` Clip.grip, `heldIn`), the long sword (`assets/long_sword.json`,
  * `tools/sculpt/lowgear.mjs` gearAsset): laid at rest on the right hand's socket (its grip's lead point at the fist,
@@ -43,6 +47,15 @@
  * head up (its back socket: the head behind the right shoulder blade, the haft toward the left hip, clear of every
  * garment set). Mining (the jobs swung overhead, `./anim` SWING_TOOL) draws the Runestone Pickaxe
  * (`assets/pickaxe.json`, `tools/sculpt/gear/pickaxe.mjs`) in both hands the same way, with no trail.
+ *
+ * Every other weapon wielded is drawn too (`tools/sculpt/gear/weapons.mjs`; the hatchet and the butchering and carving
+ * knives are the hand tools' own props): the battle axe, the spear and the javelin in both hands in the overhead swing,
+ * each with its head's slash trail, and carried on the back while not in hand (the axe head up as the maul, the spear and
+ * the javelin point up); the swords, the knives, the hatchet, the club and the throwing axe in the striking fist of the
+ * one-handed fight (`./anim` ONE_HAND, `./anim/clips/fight.ts`) as a hand tool is (`toolsIn`), each with its blade's or
+ * head's slash trail; carried while not in hand, the swords and the club on the back as the long sword, the knives, the
+ * hatchet and the throwing axe across the small of the back under the belt (`sockets.<who>.belt`, tools/sculpt/lowgear.mjs
+ * beltSocketOf), rigid on the pelvis. The club's wood is drawn in the wood it is carved from (`woodTint`).
  *
  * A bow (`assets/<bow>.json`, `tools/sculpt/gear/bow.mjs`) is drawn in the left fist while a fight's shot plays
  * (`./anim/clips/shoot.ts`, `Clip.wields`), its string drawn to the right fist and the arrow on it as the shot is at it
@@ -103,6 +116,10 @@ import MALE_BELT_LEATHER from './assets/lowbeltleather-male.json';
 import FEMALE_BELT_LEATHER from './assets/lowbeltleather-female.json';
 import MALE_BELT_PLATE from './assets/lowbeltplate-male.json';
 import FEMALE_BELT_PLATE from './assets/lowbeltplate-female.json';
+import MALE_BELT_CHAIN from './assets/lowbeltchain-male.json';
+import FEMALE_BELT_CHAIN from './assets/lowbeltchain-female.json';
+import MALE_BELT_SCALE from './assets/lowbeltscale-male.json';
+import FEMALE_BELT_SCALE from './assets/lowbeltscale-female.json';
 import MALE_PENDANT_CLOTH from './assets/lowpendantcloth-male.json';
 import FEMALE_PENDANT_CLOTH from './assets/lowpendantcloth-female.json';
 import MALE_PENDANT_LEATHER from './assets/lowpendantleather-male.json';
@@ -117,6 +134,24 @@ import MALE_CIRCLET_BRAID from './assets/lowcircletbraid-male.json';
 import FEMALE_CIRCLET_BRAID from './assets/lowcircletbraid-female.json';
 import MALE_CIRCLET_BOB from './assets/lowcircletbob-male.json';
 import FEMALE_CIRCLET_BOB from './assets/lowcircletbob-female.json';
+// the chain set (tools/sculpt/garments/chainchest.mjs, chaincoif.mjs, chainlegs.mjs, chainboots.mjs)
+import MALE_CHAIN_CHEST from './assets/lowchainchest-male.json';
+import FEMALE_CHAIN_CHEST from './assets/lowchainchest-female.json';
+import MALE_CHAIN_COIF from './assets/lowchaincoif-male.json';
+import FEMALE_CHAIN_COIF from './assets/lowchaincoif-female.json';
+import MALE_CHAIN_LEGS from './assets/lowchainlegs-male.json';
+import FEMALE_CHAIN_LEGS from './assets/lowchainlegs-female.json';
+import MALE_CHAIN_BOOTS from './assets/lowchainboots-male.json';
+import FEMALE_CHAIN_BOOTS from './assets/lowchainboots-female.json';
+// the scale set (tools/sculpt/garments/scalechest.mjs)
+import MALE_SCALE_CHEST from './assets/lowscalechest-male.json';
+import FEMALE_SCALE_CHEST from './assets/lowscalechest-female.json';
+import MALE_SCALE_LEGS from './assets/lowscalelegs-male.json';
+import FEMALE_SCALE_LEGS from './assets/lowscalelegs-female.json';
+import MALE_SCALE_BOOTS from './assets/lowscaleboots-male.json';
+import FEMALE_SCALE_BOOTS from './assets/lowscaleboots-female.json';
+import MALE_SCALE_HELM from './assets/lowscalehelm-male.json';
+import FEMALE_SCALE_HELM from './assets/lowscalehelm-female.json';
 import LONG_SWORD from './assets/long_sword.json';
 import WARHAMMER from './assets/warhammer.json';
 import PICKAXE from './assets/pickaxe.json';
@@ -136,18 +171,28 @@ import SHORT_BOW from './assets/short_bow.json';
 import MEDIUM_BOW from './assets/medium_bow.json';
 import LONG_BOW from './assets/long_bow.json';
 import COMPOSITE_BOW from './assets/composite_bow.json';
+// the weapons wielded that are not the long sword or the maul (tools/sculpt/gear/weapons.mjs)
+import SWORD_1H from './assets/sword.json';
+import SHORT_SWORD from './assets/short_sword.json';
+import HUNTING_KNIFE from './assets/hunting_knife.json';
+import BATTLE_AXE from './assets/battle_axe.json';
+import CLUB from './assets/club.json';
+import SPEAR from './assets/spear.json';
+import JAVELIN from './assets/javelin.json';
+import THROWING_AXE from './assets/throwing_axe.json';
 import HAIR_ASSET from './assets/lowhair.json';
 import MALE_LIGHT from '../../tools/sculpt/lowlight-male.json';
 import FEMALE_LIGHT from '../../tools/sculpt/lowlight-female.json';
-import { gemTone, metalShades, sculptRig, viewOf, woodTone, type FigurePose, type DyedPiece, type GearPiece, type PlatePiece, type Rig } from '../render/figure';
+import { DRAGON_SCALE, gemTone, isMetalTone, metalShades, sculptRig, viewOf, woodTone, type ChainPiece, type FigurePose, type DyedPiece, type GearPiece, type PlatePiece, type Rig } from '../render/figure';
 import { DEFAULT_LOOK, type Look } from '../game/look';
+import { ANCIENT_SWORD } from '../game/gear';
 import { STRIDE, type Baked } from './bake';
 import { M, bodyMaterials } from './models/body';
 import { bonesOf, FEMALE, heightOf, MALE, REST_EXTRAS, relaxedIdle, type Bones, type Proportions } from './rig';
 import { humanProportions } from './human';
 import { SH_TERMS, type LowLight, type SculptDraw, type TrailDraw } from './gl';
 import type { Material } from './sdf';
-import { animate, clipFor, CLIPS, heldIn, SWING_TOOL, toolsIn } from './anim';
+import { animate, clipFor, CLIPS, heldIn, ONE_HAND, SWING_TOOL, toolsIn } from './anim';
 import { clipLocal } from './anim/player';
 import type { Side } from './anim/clip';
 import { wrap } from './anim/clip';
@@ -216,7 +261,12 @@ interface PropAsset {
   /** Its materials' colours and kinds (0 lit, 1 unlit, 2 glow), and those drawn in its metal (`metalTint`) their role in it. */
   plain: PropMaterial[]; enchanted: PropMaterial[];
   grip: { lead: V; second: V; from?: number; to?: number };
-  sockets: Record<'male' | 'female', Record<'l' | 'r', Socket> & { back?: Socket }>; scale: Record<'male' | 'female', number>;
+  /**
+   * Each body's sockets: the hands', and where it is carried while it is wielded and not in hand, on the back (`back`:
+   * rigid on the upper back) or across the small of the back (`belt`: rigid on the pelvis; tools/sculpt/lowgear.mjs
+   * beltSocketOf).
+   */
+  sockets: Record<'male' | 'female', Record<'l' | 'r', Socket> & { back?: Socket; belt?: Socket }>; scale: Record<'male' | 'female', number>;
   /** Its points kept off the ground (its own frame), and how far its far end is let down onto it (`Held.ends`, `Held.rest`). */
   ends?: V[]; rest?: number;
   /** Where along it (its own y) its slash trail's inner edge is (`Held.inner`): a prop that leaves one other than the long sword. */
@@ -241,6 +291,8 @@ interface PropPart { verts: number[]; polys: Array<[number[], number]>; tris: nu
  * from (`tools/sculpt/lowgear.mjs` metalMats): a face, or the bevel's lit edge.
  */
 interface PropMaterial { c: string; kind: number; metal?: 'face' | 'edge'; wood?: boolean }
+/** Where the prop drawn is (`lowBaked`): in the hand, carried on the back, or at the belt. */
+type Carried = 'hand' | 'back' | 'belt';
 const SWORD = LONG_SWORD as unknown as PropAsset;
 /**
  * The props drawn in both hands, by the id of what is held (`heldIn`): the long sword, the maul as the Runestone
@@ -257,12 +309,16 @@ const PROPS: readonly PropAsset[] = [SWORD, { ...(WARHAMMER as unknown as PropAs
   // the bows by item id, held in the left fist while a fight's shot draws them (./anim/clips/shoot.ts), else carried on
   // the back over their quiver; their wood in the bow's wood
   SHORT_BOW as unknown as PropAsset, MEDIUM_BOW as unknown as PropAsset, LONG_BOW as unknown as PropAsset, COMPOSITE_BOW as unknown as PropAsset,
+  // the weapons by item id (tools/sculpt/gear/weapons.mjs): the swords, the knife, the axes, the club, the spear and the
+  // javelin; the ancient short sword drawn as the short sword
+  SWORD_1H as unknown as PropAsset, SHORT_SWORD as unknown as PropAsset, { ...(SHORT_SWORD as unknown as PropAsset), id: ANCIENT_SWORD }, HUNTING_KNIFE as unknown as PropAsset,
+  BATTLE_AXE as unknown as PropAsset, CLUB as unknown as PropAsset, SPEAR as unknown as PropAsset, JAVELIN as unknown as PropAsset, THROWING_AXE as unknown as PropAsset,
 ];
 const PROP_OF = new Map(PROPS.map((p) => [p.id, p]));
 /**
  * The hand tools a clip draws in one hand each (`./anim` Clip.tools, `toolsIn`), by item id: the props that meet the
  * work (`PropAsset.contact`). Each laid at rest on its hand's socket and skinned wholly to that hand, its fist closed on it
- * as its socket says, drawn in the place of its hand's materials (`toolMat`).
+ * as its socket says, drawn in the place of its hand's materials (`placesOf`).
  */
 const TOOL_PROPS: readonly PropAsset[] = PROPS.filter((p) => p.contact);
 const TOOL_OF = new Map(TOOL_PROPS.map((p) => [p.id, p]));
@@ -459,54 +515,63 @@ const colourIndex = (m: { c: string; kind: number }, piece?: Tinted, role?: Plat
   return k >= 0 ? k : GARMENT_COLOURS.push({ c: m.c, kind: m.kind, piece, role }) - 1;
 };
 /**
- * A plate piece's plates (`mats` 'plate', the face) and their shadow side ('shade'): each piece's its own materials, so
- * each is drawn in the metal it is smithed from (`plateMats`). Its gold, under layer, cores and runes keep their colours.
+ * A plate piece's plates (`mats` 'plate', the face) and their shadow side ('shade'), and a chain piece's mail (its rings'
+ * upper slopes and lower): each piece's its own materials, so each is drawn in the metal it is smithed from (`plateMat`).
+ * Its gold, under layer, leather, cores and runes keep their colours.
  */
 type PlateRole = 'face' | 'shade' | 'iron' | 'gem' | 'stone1' | 'stone2' | 'stone3';
-const PLATE_ROLE: Readonly<Record<string, PlateRole>> = { plate: 'face', shade: 'shade' };
+const PLATE_ROLE: Readonly<Record<string, PlateRole>> = { plate: 'face', shade: 'shade', scale: 'face', edge: 'shade' };
 /** A dyed piece's materials the dye takes: its fabric or leather (the face) and their lighter and darker parts (as shade: as much lighter or darker than the dye). */
 const DYE_ROLE: Readonly<Record<string, PlateRole>> = { fabric: 'face', pattern: 'shade', leather: 'face', dark: 'shade', light: 'shade', tan: 'shade' };
 /** A garment's materials in a look: its own plain or enchanted, else its colours, lit. */
 const looksOf = (g: GarmentAsset, look: 'plain' | 'enchanted'): Array<{ c: string; kind: number }> => (look === 'enchanted' ? g.enchanted : undefined) ?? g.plain ?? g.colours.map((c) => ({ c: hexOf(c), kind: 0 }));
 /**
- * Where the sword's materials start: after the garments' (all their colours, once the bodies are built). Its plain and
- * its enchanted materials take the same places (`materialsOf` lays in the one it is drawn with), so the draw keeps within
- * the renderer's materials.
+ * Where the prop drawn takes its materials (`PROPS`: the sword's place, whichever it is): straight after the body's. Its
+ * plain and its enchanted materials take the same places (`materialsOf` lays in the one it is drawn with).
  */
-const swordMat = (): number => GARMENT_MAT + GARMENT_COLOURS.length;
-/** Where the prop drawn takes its materials (`PROPS`): the sword's place, whichever it is. */
-const PROP_MAT = swordMat;
+const PROP_MAT = (): number => GARMENT_MAT;
 /**
  * The most materials a prop drawn takes: the prop's place (`PROP_MAT`) holds the one gripped in both hands or carried on
  * the back, and each hand's tool (`TOOL_PROPS`, one in a hand at a time) has a place of this many after it.
  */
-const PROP_SLOTS = 19;
-/**
- * Where the tool in a hand takes its materials: the right's place after the prop's (as many as the prop drawn draws,
- * `usedOf`; none with no prop drawn), the left's after that.
- */
-const toolMat = (side: Side, prop?: PropAsset): number => PROP_MAT() + (prop ? usedOf(prop) : 0) + (side === 'r' ? 0 : PROP_SLOTS);
+const PROP_SLOTS = 20;
 /** How many of a prop's materials it draws: up to the last its drawn polygons (its quiver's, its arrow's) take (its glow's never). */
-const USED = new WeakMap<PropAsset, number>();
-function usedOf(p: PropAsset): number {
-  let n = USED.get(p);
+const PROP_USED = new WeakMap<PropAsset, number>();
+function propUsed(p: PropAsset): number {
+  let n = PROP_USED.get(p);
   if (n === undefined) {
     let m = 0;
     p.polys.forEach(([, k], i) => { if (i < p.glowFrom || p.glowFrom < 0) m = Math.max(m, k + 1); });
     const q = p.quiver;
     if (q) q.polys.forEach(([, k], i) => { if (i < q.glowFrom) m = Math.max(m, k + 1); });
     p.draw?.arrow.polys.forEach(([, k]) => { m = Math.max(m, k + 1); });
-    USED.set(p, (n = m));
+    PROP_USED.set(p, (n = Math.min(PROP_SLOTS, m)));
   }
   return n;
 }
+/**
+ * Where a draw's parts take their materials (`placesOf`): the prop drawn straight after the body's (`PROP_MAT`), the right
+ * hand's tool after as many as the prop draws (`propUsed`; none with no prop drawn), the left hand's after as many as the
+ * right's draws, and the worn garments' after those: each bake takes only the materials of the garments it has on
+ * (`usedOf`, each once, in the order they are laid), so the draw keeps within the renderer's materials (`./gl.ts`
+ * MAX_MATS) however many garments the bodies can wear and whatever is in the hands.
+ */
+interface Places { r: number; l: number; worn: number }
+function placesOf(prop: PropAsset | undefined, tools: Partial<Record<Side, string>>): Places {
+  const r = PROP_MAT() + (prop ? propUsed(prop) : 0), rt = tools.r ? TOOL_OF.get(tools.r) : undefined, l = r + (rt ? propUsed(rt) : 0), lt = tools.l ? TOOL_OF.get(tools.l) : undefined;
+  return { r, l, worn: l + (lt ? propUsed(lt) : 0) };
+}
+/** The most a draw's garments' materials start after: a prop and both hands' tools each as many as a prop may take. */
+const WORN_MOST = PROP_MAT() + PROP_SLOTS * 3;
+/** Each bake's garments' materials (their places among all the garments', `GARMENT_COLOURS`, in the bake's order) and where they start. */
+const USED = new WeakMap<Baked, { used: readonly number[]; at: number }>();
 
 /**
  * One body: its asset, the figure's proportions it is posed with, its height as a share of the base man's, and the
  * garments it can wear (their own bones posed with the body's always, each garment's after the one before; each drawn
  * when the bake is asked for with it worn), and its hairstyles.
  */
-function lowBody(A: Asset, P: Proportions, share: number, garments: readonly GarmentAsset[], hairs: Record<string, HairAsset>, tints: ReadonlyArray<Tinted | undefined>): { baked: (worn: readonly boolean[], sword?: 'hand' | 'back', style?: string, lit?: readonly boolean[], drop?: readonly boolean[], prop?: string, tools?: Partial<Record<Side, string>>, up?: Partial<Record<Side, number>>, nock?: number) => Baked; bones: (pose: FigurePose, worn?: readonly boolean[], over?: Record<string, [number, number, number]>) => Float32Array; shapes: () => number[]; trail: (pose: FigurePose, lit: boolean) => TrailDraw | undefined; skeleton: Skeleton; held: Held; heldOf: (id: string) => Held | undefined; toolHeld: (id: string) => Held | undefined; figure: (pose: FigurePose) => Array<M3 | undefined> } {
+function lowBody(A: Asset, P: Proportions, share: number, garments: readonly GarmentAsset[], hairs: Record<string, HairAsset>, tints: ReadonlyArray<Tinted | undefined>): { baked: (worn: readonly boolean[], sword?: Carried, style?: string, lit?: readonly boolean[], drop?: readonly boolean[], prop?: string, tools?: Partial<Record<Side, string>>, up?: Partial<Record<Side, number>>, nock?: number) => Baked; bones: (pose: FigurePose, worn?: readonly boolean[], over?: Record<string, [number, number, number]>) => Float32Array; shapes: () => number[]; trail: (pose: FigurePose, lit: boolean) => TrailDraw | undefined; skeleton: Skeleton; held: Held; heldOf: (id: string) => Held | undefined; toolHeld: (id: string) => Held | undefined; figure: (pose: FigurePose) => Array<M3 | undefined>; used: (worn: readonly boolean[], lit?: readonly boolean[]) => number[] } {
   const BONES = A.bones;
   const AT = new Map(BONES.map((b, i) => [b.name, i]));
   for (const g of garments) if (g.base !== BONES.length) throw new Error(`garment for ${g.base} bones on a body of ${BONES.length}`);
@@ -521,6 +586,8 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
     return colourIndex(m, role && t, role);
   }));
   const MATS_OF = { plain: indexOf('plain'), enchanted: indexOf('enchanted') };
+  /** The garments' materials a bake takes (their places among all the garments'), each once, in the order they are laid. */
+  const usedOf = (worn: readonly boolean[], lit: readonly boolean[] = []): number[] => [...new Set(garments.flatMap((_, k) => (worn[k] ? MATS_OF[lit[k] ? 'enchanted' : 'plain'][k] : [])))];
 
   /**
    * Where the other fist closes on a prop's grip on this body: where the grip says, or further down it by as much as keeps
@@ -551,7 +618,7 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
   const HELD: Held = { sockets: SWORD.sockets[WHO], lead: SWORD.grip.lead[1], second: secondOn(SWORD, WHO), tip: SWORD.length, ends: ENDS, scale: SWORD.scale[WHO] };
   /** Each prop as this body holds it (the sword's above), by the weapon's id. */
   /** Each hand tool as this body holds it (its sockets, its scale, where it meets the work), by id. */
-  const TOOL_HELD = new Map<string, Held>(TOOL_PROPS.map((p) => [p.id, { sockets: p.sockets[WHO], lead: p.grip.lead[1], second: p.grip.lead[1], tip: p.length, scale: p.scale[WHO], contact: p.contact }]));
+  const TOOL_HELD = new Map<string, Held>(TOOL_PROPS.map((p) => [p.id, { sockets: p.sockets[WHO], lead: p.grip.lead[1], second: p.grip.lead[1], tip: p.length, scale: p.scale[WHO], contact: p.contact, ...(p.trail !== undefined ? { inner: p.trail } : {}) }]));
   const HELDS = new Map<string, Held>(PROPS.map((p) => [p.id, p === SWORD ? HELD : { sockets: p.sockets[WHO], lead: p.grip.lead[1], second: secondOn(p, WHO), tip: p.length, ends: p.ends, rest: p.rest, scale: p.scale[WHO], ...(p.trail !== undefined ? { inner: p.trail } : {}) }]));
 
   /** Each bone's world rotation and head for a local pose (bone index -> 3x3), the helpers driven, as lowrig.mjs posed(). */
@@ -707,7 +774,7 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
    * (`M.hairCut`, three tones; in a valley `M.hairValley` to `M.hairValley4`, its valley's step), the body's shaved
    * polygons the scalp's (`M.hairUnder`).
    */
-  function lowBaked(worn: readonly boolean[], sword?: 'hand' | 'back', style = '', lit: readonly boolean[] = [], drop: readonly boolean[] = [], prop = SWORD.id, tools: Partial<Record<Side, string>> = {}, up: Partial<Record<Side, number>> = {}, nock = 0): Baked {
+  function lowBaked(worn: readonly boolean[], sword?: Carried, style = '', lit: readonly boolean[] = [], drop: readonly boolean[] = [], prop = SWORD.id, tools: Partial<Record<Side, string>> = {}, up: Partial<Record<Side, number>> = {}, nock = 0): Baked {
     const hair = hairs[style];
     const key = `${garments.map((_, k) => (worn[k] ? (lit[k] ? 2 : 1) + (drop[k] ? 2 : 0) : 0)).join('')}|${sword ? `${sword}:${prop}` : ''}|${hair ? style : ''}|${tools.l ?? ''}:${tools.r ?? ''}:${up.l ?? 0}:${up.r ?? 0}|${nock}`, had = BAKED.get(key);
     if (had) return had;
@@ -761,7 +828,8 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
     // (a piece split off a polygon a garment hides is hidden with it)
     for (const [piece, parent] of A.split ?? []) if (hidden.has(parent)) hidden.add(piece);
     lay(allVerts, allPolys, allTris, allWeights, (pi) => MATS[allPolys[pi][1]] ?? M.skin, hidden);
-    const shaped = shapedOf(garments, worn);
+    const PR = PROP_OF.get(prop), places = placesOf(sword && PR ? PR : undefined, tools);
+    const shaped = shapedOf(garments, worn), used = usedOf(worn, lit), slot = new Map(used.map((m, j) => [m, places.worn + j]));
     let shapes: Baked['shapes'];
     garments.forEach((g, k) => {
       if (!worn[k]) return;
@@ -772,7 +840,7 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
       // (the shaped one's corrective shapes at each of its corners: the offset, the figure's units and axes, and its
       // polygon's normal's)
       const SH = k === shaped ? g.shapes ?? [] : [];
-      if (!SH.length) { lay(g.verts, g.polys, T3, WEIGHTS[k], (pi) => GARMENT_MAT + mats[g.polys[pi][1]]); return; }
+      if (!SH.length) { lay(g.verts, g.polys, T3, WEIGHTS[k], (pi) => slot.get(mats[g.polys[pi][1]]) as number); return; }
       const from = verts.length / STRIDE, data: number[] = [];
       const gv = (i: number): V => [g.verts[i * 3], g.verts[i * 3 + 1], g.verts[i * 3 + 2]];
       const normalOf = (v: number[], off: (i: number) => V): V => {
@@ -786,7 +854,7 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
       const N0 = g.polys.map(([v]) => normalOf(v, () => [0, 0, 0]));
       const NS = full.map((o) => g.polys.map(([v]) => normalOf(v, (i) => [o[i * 3], o[i * 3 + 1], o[i * 3 + 2]])));
       const sc = scale();
-      lay(g.verts, g.polys, T3, WEIGHTS[k], (pi) => GARMENT_MAT + mats[g.polys[pi][1]], null, (i, pi) => {
+      lay(g.verts, g.polys, T3, WEIGHTS[k], (pi) => slot.get(mats[g.polys[pi][1]]) as number, null, (i, pi) => {
         full.forEach((o, q) => {
           const d = mv(T, [o[i * 3], o[i * 3 + 1], o[i * 3 + 2]]), n = sub(NS[q][pi], N0[pi]);
           data.push(d[0] * sc, d[1] * sc, d[2] * sc, 0, n[0], n[1], n[2], 0);
@@ -794,11 +862,10 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
       });
       shapes = { from, count: verts.length / STRIDE - from, shapes: SH.length, data: Float32Array.from(data) };
     });
-    const PR = PROP_OF.get(prop);
     if (sword && PR) {
-      // laid at rest on the right hand's socket, all of it on that hand, or on the back's, all of it on the upper back;
-      // its glow's polygons left out
-      const so = (sword === 'back' ? PR.sockets[WHO].back : undefined) ?? PR.sockets[WHO][PR.hand ?? 'r'], hand = AT.get(so.bone) as number, k = 1 / PR.scale[WHO], g = PR.grip.lead, V3s: number[] = [];
+      // laid at rest on the right hand's socket, all of it on that hand, or on the back's or the belt's, all of it on the
+      // upper back or the pelvis; its glow's polygons left out
+      const so = (sword === 'back' || sword === 'belt' ? PR.sockets[WHO][sword] : undefined) ?? PR.sockets[WHO][PR.hand ?? 'r'], hand = AT.get(so.bone) as number, k = 1 / PR.scale[WHO], g = PR.grip.lead, V3s: number[] = [];
       for (let i = 0; i < PR.verts.length; i += 3) V3s.push(...add(so.o, mv(so.R, [(PR.verts[i] - g[0]) * k, (PR.verts[i + 1] - g[1]) * k, (PR.verts[i + 2] - g[2]) * k])));
       // (a bow's braced string left out while it is drawn: `nock` 2)
       const T3: number[] = [], braced = nock === 2 && sword === 'hand' && PR.draw ? PR.draw.stringMat : -1;
@@ -825,11 +892,12 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
       for (let i = 0; i < TP.verts.length; i += 3) V3s.push(...add(so.o, mv(so.R, [(TP.verts[i] - g[0]) * k, (TP.verts[i + 1] - g[1]) * k, (TP.verts[i + 2] - g[2]) * k])));
       const T3: number[] = [];
       for (let t = 0; t < TP.tris.length; t += 4) if (TP.tris[t + 3] < (TP.glowFrom < 0 ? Infinity : TP.glowFrom)) T3.push(TP.tris[t], TP.tris[t + 1], TP.tris[t + 2], TP.tris[t + 3]);
-      const off = toolMat(side, sword && PR ? PR : undefined);
+      const off = places[side];
       lay(V3s, TP.polys, T3, Array.from({ length: V3s.length / 3 }, () => [hand, 1]), (pi) => off + TP.polys[pi][1]);
     }
     const baked: Baked = { band: 1, verts: Float32Array.from(verts), tris: Uint32Array.from(tris), nVerts: verts.length / STRIDE, nTris: tris.length / 3, bones: ALL.map((b) => b.name), ms: performance.now() - t0, grid: [0, 0, 0], cell: 0, faceSkin: Float32Array.from(faceSkin) };
     if (shapes) baked.shapes = shapes;
+    USED.set(baked, { used, at: places.worn });
     BAKED.set(key, baked);
     return baked;
   }
@@ -860,7 +928,10 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
    */
   function lowTrail(pose: FigurePose, lit: boolean): TrailDraw | undefined {
     const c = clipFor(pose, SK.body), id = heldIn(pose), prop = id === undefined ? undefined : PROP_OF.get(id), held = id === undefined ? undefined : HELDS.get(id);
-    const pts = c?.clip.grip && prop && held && trails(prop) ? slashTrail(SK, c.clip, wrap(c.clip, c.t), held) : undefined;
+    // (or the weapon in the striking fist of the one-handed fight, `ONE_HAND`)
+    const side = c?.clip.strike?.side ?? 'r', one = c && !c.clip.grip && ONE_HAND(pose) ? toolsIn(pose, SK.body)?.tools[side] : undefined, tool = one ? TOOL_OF.get(one) : undefined, toolHeld = one ? TOOL_HELD.get(one) : undefined;
+    const pts = c?.clip.grip && prop && held && trails(prop) ? slashTrail(SK, c.clip, wrap(c.clip, c.t), held)
+      : c && tool && toolHeld && tool.trail !== undefined ? slashTrail(SK, c.clip, wrap(c.clip, c.t), toolHeld, side) : undefined;
     if (!pts) return undefined;
     const strip = new Float32Array(pts.length * 10), up: V = [0, DY, 0];
     pts.forEach((q, k) => strip.set([...toGame(add(q.inner, up)), q.a, 0, ...toGame(add(q.tip, up)), q.a, 1], k * 10));
@@ -905,14 +976,14 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
     return out;
   }
 
-  return { baked: lowBaked, bones: lowBones, shapes: () => SHAPES_W, trail: lowTrail, skeleton: SK, held: HELD, heldOf: (id) => HELDS.get(id), toolHeld: (id) => TOOL_HELD.get(id), figure: (pose) => fromGame(bonesOf(rigFor(pose), P, [], REST_EXTRAS), gameRest()) };
+  return { baked: lowBaked, bones: lowBones, shapes: () => SHAPES_W, trail: lowTrail, skeleton: SK, held: HELD, heldOf: (id) => HELDS.get(id), toolHeld: (id) => TOOL_HELD.get(id), figure: (pose) => fromGame(bonesOf(rigFor(pose), P, [], REST_EXTRAS), gameRest()), used: usedOf };
 }
 
-type OutfitKey = 'hood' | 'tunic' | 'trousers' | 'boots' | 'plateChest' | 'plateLegs' | 'plateBoots' | 'plateHelm' | 'leatherChest' | 'leatherLegs' | 'leatherBoots' | 'leatherHat';
+type OutfitKey = 'hood' | 'tunic' | 'trousers' | 'boots' | 'plateChest' | 'plateLegs' | 'plateBoots' | 'plateHelm' | 'leatherChest' | 'leatherLegs' | 'leatherBoots' | 'leatherHat' | ChainPiece | 'scaleHelm' | 'scaleChest' | 'scaleLegs' | 'scaleBoots';
 type EnchantKey = keyof NonNullable<NonNullable<FigurePose['outfit']>['enchanted']>;
 /**
- * The sculpted piece each worn item is drawn as (`outfitOf`): its wear switch, its enchantment's, and for plate the piece
- * whose metal it is. A set's chest and arms are one garment, worn for either item.
+ * The sculpted piece each worn item is drawn as (`outfitOf`): its wear switch, its enchantment's, and for plate and chain
+ * the piece whose metal it is. A set's chest and arms are one garment, worn for either item.
  */
 const ITEM_PIECES: Readonly<Record<string, { key: OutfitKey; ench: EnchantKey; plate?: PlatePiece }>> = {
   wool_cap: { key: 'hood', ench: 'clothHood' },
@@ -931,6 +1002,17 @@ const ITEM_PIECES: Readonly<Record<string, { key: OutfitKey; ench: EnchantKey; p
   plate_arms: { key: 'plateChest', ench: 'chest', plate: 'chest' },
   plate_legs: { key: 'plateLegs', ench: 'legs', plate: 'legs' },
   plate_boots: { key: 'plateBoots', ench: 'boots', plate: 'boots' },
+  chain_coif: { key: 'chainCoif', ench: 'chainCoif', plate: 'chainCoif' },
+  chain_hauberk: { key: 'chainChest', ench: 'chainChest', plate: 'chainChest' },
+  chain_sleeves: { key: 'chainChest', ench: 'chainChest', plate: 'chainChest' },
+  chain_leggings: { key: 'chainLegs', ench: 'chainLegs', plate: 'chainLegs' },
+  chain_boots: { key: 'chainBoots', ench: 'chainBoots', plate: 'chainBoots' },
+  // the scale set: all its pieces in one material (`scale`: dragon scale, which none of them names)
+  scale_helm: { key: 'scaleHelm', ench: 'scaleHelm', plate: 'scale' },
+  scale_cuirass: { key: 'scaleChest', ench: 'scaleChest', plate: 'scale' },
+  scale_sleeves: { key: 'scaleChest', ench: 'scaleChest', plate: 'scale' },
+  scale_leggings: { key: 'scaleLegs', ench: 'scaleLegs', plate: 'scale' },
+  scale_boots: { key: 'scaleBoots', ench: 'scaleBoots', plate: 'scale' },
 };
 /**
  * What a figure has equipped (`FigurePose.gear`) as its outfit: each worn piece's sculpted garment, enchanted when it is,
@@ -965,18 +1047,22 @@ const dressed = (pose: FigurePose): FigurePose => (pose.outfit || !pose.gear ? p
  * piece worn over the same place: the shawl to any chest armour, mantle or leather shawl, the trousers to plate or
  * leather leggings, the tunic to plate or leather chest, the hood to the helm or the hat, the boots to plate or leather boots. */
 const o = (pose: FigurePose): NonNullable<FigurePose['outfit']> => pose.outfit ?? {};
-const wearsShawl = (pose: FigurePose): boolean => (pose.outfit?.shawl ?? true) && !(o(pose).plateChest || o(pose).plateMantle || o(pose).leatherChest || o(pose).leatherShawl);
-const wearsTrousers = (pose: FigurePose): boolean => (pose.outfit?.trousers ?? true) && !(o(pose).plateLegs || o(pose).leatherLegs);
+const wearsShawl = (pose: FigurePose): boolean => (pose.outfit?.shawl ?? true) && !(o(pose).plateChest || o(pose).plateMantle || o(pose).leatherChest || o(pose).leatherShawl || o(pose).chainChest || o(pose).scaleChest);
+const wearsTrousers = (pose: FigurePose): boolean => (pose.outfit?.trousers ?? true) && !(o(pose).plateLegs || o(pose).leatherLegs || o(pose).chainLegs || o(pose).scaleLegs);
 /** Whether a figure wears the plate set's boots (`tools/sculpt/garments/plateboots.mjs`; over the leggings, the body stood on their soles): off unless asked for. */
 const wearsPlateBoots = (pose: FigurePose): boolean => pose.outfit?.plateBoots ?? false;
 /** Whether a figure wears the boots (the body stands on their soles while it does): not under the plate or leather boots. */
 /** Whether a figure wears the leather set's boots (`tools/sculpt/garments/leatherboots.mjs`; the body stood on their soles): off unless asked for. */
 const wearsLeatherBoots = (pose: FigurePose): boolean => pose.outfit?.leatherBoots ?? false;
-const wearsBoots = (pose: FigurePose): boolean => (pose.outfit?.boots ?? true) && !wearsPlateBoots(pose) && !wearsLeatherBoots(pose);
+/** Whether a figure wears the chain set's boots (`tools/sculpt/garments/chainboots.mjs`; the body stood on their soles): off unless asked for. */
+const wearsChainBoots = (pose: FigurePose): boolean => pose.outfit?.chainBoots ?? false;
+/** Whether a figure wears the scale set's boots (`tools/sculpt/garments/scaleboots.mjs`; the body stood on their soles): off unless asked for. */
+const wearsScaleBoots = (pose: FigurePose): boolean => pose.outfit?.scaleBoots ?? false;
+const wearsBoots = (pose: FigurePose): boolean => (pose.outfit?.boots ?? true) && !wearsPlateBoots(pose) && !wearsLeatherBoots(pose) && !wearsChainBoots(pose) && !wearsScaleBoots(pose);
 /** Whether a figure wears the tunic (under the shawl, over the trousers). */
-const wearsTunic = (pose: FigurePose): boolean => (pose.outfit?.tunic ?? true) && !(o(pose).plateChest || o(pose).leatherChest);
+const wearsTunic = (pose: FigurePose): boolean => (pose.outfit?.tunic ?? true) && !(o(pose).plateChest || o(pose).leatherChest || o(pose).chainChest || o(pose).scaleChest);
 /** Whether a figure has the hood up: down unless asked for, and only with the shawl (it rises out of the shawl's cowl). */
-const wearsHood = (pose: FigurePose): boolean => (pose.outfit?.hood ?? false) && wearsShawl(pose) && !(o(pose).plateHelm || o(pose).leatherHat);
+const wearsHood = (pose: FigurePose): boolean => (pose.outfit?.hood ?? false) && wearsShawl(pose) && !(o(pose).plateHelm || o(pose).leatherHat || o(pose).chainCoif || o(pose).scaleHelm);
 /**
  * Whether a figure's hair is drawn over its low-poly head: not while the hood is up (the hood's shell is snug on the
  * skull, so any hairstyle would come through it), nor under the plate helm. A hairstyle drawn with the body checks this
@@ -987,7 +1073,16 @@ const wearsHood = (pose: FigurePose): boolean => (pose.outfit?.hood ?? false) &&
  * the head, no bones of its own; the head's polygons it covers whole, `hides`, left out): off unless asked for.
  */
 const wearsHelm = (pose: FigurePose): boolean => pose.outfit?.plateHelm ?? false;
-export const hairShown = (pose: FigurePose): boolean => !wearsHood(pose) && !wearsHelm(pose);
+/**
+ * Whether a figure wears the chain set's coif (`assets/lowchaincoif-<who>.json` by `tools/sculpt/garments/chaincoif.mjs`:
+ * mail over the skull and the neck, the face open, the hair not drawn under it): off unless `outfit.chainCoif`. Its
+ * tippet over the shoulders is left out under a chest piece with a collar of its own (`coifTippetDropped`).
+ */
+const wearsCoif = (pose: FigurePose): boolean => pose.outfit?.chainCoif ?? false;
+const coifTippetDropped = (pose: FigurePose): boolean => wearsShawl(pose) || !!(o(pose).plateChest || o(pose).plateMantle || o(pose).leatherChest || o(pose).leatherShawl || o(pose).scaleChest);
+/** Whether a figure wears the scale set's helm (`tools/sculpt/garments/scalehelm.mjs`: rigid on the head, the hair not drawn under it): off unless asked for. */
+const wearsScaleHelm = (pose: FigurePose): boolean => pose.outfit?.scaleHelm ?? false;
+export const hairShown = (pose: FigurePose): boolean => !wearsHood(pose) && !wearsHelm(pose) && !wearsCoif(pose) && !wearsScaleHelm(pose);
 /**
  * Whether a figure wears the leather set's feathered cap (`assets/lowhat-<who>.json` by `tools/sculpt/garments/hat.mjs`:
  * rigid on the head, no bones of its own, its crown snug on the skull, the hair drawn pressed under it, `hairStyle`):
@@ -1005,7 +1100,7 @@ const hairStyle = (pose: FigurePose, style: string): string => (!hairShown(pose)
  * Whether a piece is enchanted (`FigurePose.outfit.enchanted`): the plate set's cores and engraving, the leather set's
  * runes, the first outfit's (cloth...) trim lines and patterns lit, as the long sword's when it is; plain unless asked for.
  */
-export const enchantedOf = (piece: 'chest' | 'legs' | 'boots' | 'helm' | 'mantle' | 'leatherChest' | 'leatherLegs' | 'leatherBoots' | 'leatherShawl' | 'leatherHat' | 'clothShawl' | 'clothHood' | 'clothTunic' | 'clothTrousers' | 'clothBoots') => (pose: FigurePose): boolean => pose.outfit?.enchanted?.[piece] ?? false;
+export const enchantedOf = (piece: EnchantKey) => (pose: FigurePose): boolean => pose.outfit?.enchanted?.[piece] ?? false;
 /** Whether a figure wears the plate set's chest & arms (`tools/sculpt/garments/platechest.mjs`); off unless asked for. */
 const wearsPlateChest = (pose: FigurePose): boolean => pose.outfit?.plateChest ?? false;
 /** Whether a figure wears the leather set's shawl (`tools/sculpt/garments/leathershawl.mjs`, over the chest armour); off unless asked for. */
@@ -1032,16 +1127,16 @@ const GARMENTS: ReadonlyArray<{ man: GarmentAsset; woman: GarmentAsset; wears: (
   { man: MALE_HELM as unknown as GarmentAsset, woman: FEMALE_HELM as unknown as GarmentAsset, wears: wearsHelm, enchanted: enchantedOf('helm'), plate: 'helm' },
   // the plate set's leggings (`tools/sculpt/garments/platelegs.mjs`): off unless asked for; their base layer takes the place of the legs' skin
   { man: MALE_PLATE_LEGS as unknown as GarmentAsset, woman: FEMALE_PLATE_LEGS as unknown as GarmentAsset, wears: (p) => p.outfit?.plateLegs ?? false, enchanted: enchantedOf('legs'), plate: 'legs' },
-  { man: MALE_PLATE_BOOTS as unknown as GarmentAsset, woman: FEMALE_PLATE_BOOTS as unknown as GarmentAsset, wears: wearsPlateBoots, enchanted: enchantedOf('boots'), drops: (pose) => pose.outfit?.plateLegs ?? false, plate: 'boots' },
+  { man: MALE_PLATE_BOOTS as unknown as GarmentAsset, woman: FEMALE_PLATE_BOOTS as unknown as GarmentAsset, wears: wearsPlateBoots, enchanted: enchantedOf('boots'), drops: (pose) => (pose.outfit?.plateLegs || pose.outfit?.scaleLegs) ?? false, plate: 'boots' },
   { man: MALE_PLATE_CHEST as unknown as GarmentAsset, woman: FEMALE_PLATE_CHEST as unknown as GarmentAsset, wears: wearsPlateChest, enchanted: enchantedOf('chest'), plate: 'chest' },
   // the plate set's fur mantle (`assets/lowmantle-<who>.json` by `tools/sculpt/garments/mantle.mjs`): off unless asked
   // for; enchanted, its clasps' cores glow
   { man: MALE_MANTLE as unknown as GarmentAsset, woman: FEMALE_MANTLE as unknown as GarmentAsset, wears: (p) => p.outfit?.plateMantle ?? false, enchanted: enchantedOf('mantle') },
   { man: MALE_LEATHER_BOOTS as unknown as GarmentAsset, woman: FEMALE_LEATHER_BOOTS as unknown as GarmentAsset, wears: wearsLeatherBoots, enchanted: enchantedOf('leatherBoots'), dye: 'leatherBoots' },
   // (their waist, from dropFrom on (the waistband and the cloth above the chest's undershirt's foot), left out under the leather chest)
-  { man: MALE_LEATHER_LEGS as unknown as GarmentAsset, woman: FEMALE_LEATHER_LEGS as unknown as GarmentAsset, wears: (p) => p.outfit?.leatherLegs ?? false, enchanted: enchantedOf('leatherLegs'), drops: wearsLeatherChest, dye: 'leatherLegs' },
-  // (their hip flaps, only without the leather chest: its skirt takes their place over the hip)
-  { man: MALE_LEATHER_LEGS_FLAPS as unknown as GarmentAsset, woman: FEMALE_LEATHER_LEGS_FLAPS as unknown as GarmentAsset, wears: (p) => (p.outfit?.leatherLegs ?? false) && !(p.outfit?.leatherChest ?? false), enchanted: enchantedOf('leatherLegs'), dye: 'leatherLegs' },
+  { man: MALE_LEATHER_LEGS as unknown as GarmentAsset, woman: FEMALE_LEATHER_LEGS as unknown as GarmentAsset, wears: (p) => p.outfit?.leatherLegs ?? false, enchanted: enchantedOf('leatherLegs'), drops: (p) => wearsLeatherChest(p) || (p.outfit?.chainChest ?? false), dye: 'leatherLegs' },
+  // (their hip flaps, only without the leather chest or the hauberk: its skirt takes their place over the hip)
+  { man: MALE_LEATHER_LEGS_FLAPS as unknown as GarmentAsset, woman: FEMALE_LEATHER_LEGS_FLAPS as unknown as GarmentAsset, wears: (p) => (p.outfit?.leatherLegs ?? false) && !(p.outfit?.leatherChest ?? false) && !(p.outfit?.chainChest ?? false), enchanted: enchantedOf('leatherLegs'), dye: 'leatherLegs' },
   // the leather set's chest & arms (`tools/sculpt/garments/leatherchest.mjs`): over the leggings, under the shawl (its
   // polygons the shawl covers, from dropFrom on, left out under it)
   { man: MALE_LEATHER_CHEST as unknown as GarmentAsset, woman: FEMALE_LEATHER_CHEST as unknown as GarmentAsset, wears: wearsLeatherChest, enchanted: enchantedOf('leatherChest'), drops: wearsLeatherShawl, dye: 'leatherChest' },
@@ -1049,15 +1144,36 @@ const GARMENTS: ReadonlyArray<{ man: GarmentAsset; woman: GarmentAsset; wears: (
   // (the leather shawl: its own copy over the leather chest, fitted over its plates; the plain one without it)
   { man: MALE_LEATHER_SHAWL as unknown as GarmentAsset, woman: FEMALE_LEATHER_SHAWL as unknown as GarmentAsset, wears: (p) => wearsLeatherShawl(p) && !wearsLeatherChest(p), enchanted: enchantedOf('leatherShawl') },
   { man: MALE_LEATHER_SHAWL_OVER as unknown as GarmentAsset, woman: FEMALE_LEATHER_SHAWL_OVER as unknown as GarmentAsset, wears: (p) => wearsLeatherShawl(p) && wearsLeatherChest(p), enchanted: enchantedOf('leatherShawl') },
+  // the chain set's hauberk & sleeves (`tools/sculpt/garments/chainchest.mjs`): its mail in its metal; its skirt over
+  // whichever leggings are worn
+  { man: MALE_CHAIN_COIF as unknown as GarmentAsset, woman: FEMALE_CHAIN_COIF as unknown as GarmentAsset, wears: wearsCoif, enchanted: enchantedOf('chainCoif'), drops: coifTippetDropped, plate: 'chainCoif' },
+  // (the leggings' mail below the boots' top, from dropFrom on, left out under the chain boots, which take its place)
+  { man: MALE_CHAIN_LEGS as unknown as GarmentAsset, woman: FEMALE_CHAIN_LEGS as unknown as GarmentAsset, wears: (p) => p.outfit?.chainLegs ?? false, enchanted: enchantedOf('chainLegs'), drops: wearsChainBoots, plate: 'chainLegs' },
+  { man: MALE_CHAIN_BOOTS as unknown as GarmentAsset, woman: FEMALE_CHAIN_BOOTS as unknown as GarmentAsset, wears: wearsChainBoots, enchanted: enchantedOf('chainBoots'), plate: 'chainBoots' },
+  { man: MALE_CHAIN_CHEST as unknown as GarmentAsset, woman: FEMALE_CHAIN_CHEST as unknown as GarmentAsset, wears: (p) => p.outfit?.chainChest ?? false, enchanted: enchantedOf('chainChest'), plate: 'chainChest' },
+  // the scale set's cuirass & sleeves (`tools/sculpt/garments/scalechest.mjs`): off unless asked for; its scales and
+  // scale-plate in the set's material (`scaleMat`)
+  // the scale set's leggings (`tools/sculpt/garments/scalelegs.mjs`): off unless asked for; their leather takes the
+  // place of the legs' skin
+  { man: MALE_SCALE_LEGS as unknown as GarmentAsset, woman: FEMALE_SCALE_LEGS as unknown as GarmentAsset, wears: (p) => p.outfit?.scaleLegs ?? false, enchanted: enchantedOf('scaleLegs'), drops: (p) => p.outfit?.scaleChest ?? false, plate: 'scale' },
+  // the scale set's boots (`tools/sculpt/garments/scaleboots.mjs`; the body stood on their soles): off unless asked for
+  { man: MALE_SCALE_BOOTS as unknown as GarmentAsset, woman: FEMALE_SCALE_BOOTS as unknown as GarmentAsset, wears: wearsScaleBoots, enchanted: enchantedOf('scaleBoots'), plate: 'scale' },
+  // the scale set's helm (`tools/sculpt/garments/scalehelm.mjs`: rigid on the head, the head's polygons it covers whole left
+  // out, the hair not drawn under it): off unless asked for
+  { man: MALE_SCALE_HELM as unknown as GarmentAsset, woman: FEMALE_SCALE_HELM as unknown as GarmentAsset, wears: wearsScaleHelm, enchanted: enchantedOf('scaleHelm'), plate: 'scale' },
+  { man: MALE_SCALE_CHEST as unknown as GarmentAsset, woman: FEMALE_SCALE_CHEST as unknown as GarmentAsset, wears: (p) => p.outfit?.scaleChest ?? false, enchanted: enchantedOf('scaleChest'), plate: 'scale' },
   // what is worn besides the sets (tools/sculpt/garments/kit.mjs), from the gear: the shield on the left forearm (the
   // wooden one in its wood, the metal one in its metal), the tool belt over what is worn at the hips (fitted over the cloth,
-  // the leather chest or the plate chest), the pendant on the breastbone over the shawl or the leather chest (under plate
-  // not drawn), the ring on the right hand, the circlet over the hair; each lit when enchanted
+  // the leather chest, the plate chest, the hauberk or the scale cuirass), the pendant on the breastbone over the shawl
+  // or the leather chest (under plate, mail or scale not drawn), the ring on the right hand, the circlet over the hair;
+  // each lit when enchanted
   { man: MALE_SHIELD_WOOD as unknown as GarmentAsset, woman: FEMALE_SHIELD_WOOD as unknown as GarmentAsset, wears: (p) => p.gear?.offhand?.id === 'wooden_shield', enchanted: (p) => !!p.gear?.offhand?.enchanted, kit: 'shieldWood' },
   { man: MALE_SHIELD_METAL as unknown as GarmentAsset, woman: FEMALE_SHIELD_METAL as unknown as GarmentAsset, wears: (p) => p.gear?.offhand?.id === 'metal_shield', enchanted: (p) => !!p.gear?.offhand?.enchanted, kit: 'shieldMetal' },
   { man: MALE_BELT_CLOTH as unknown as GarmentAsset, woman: FEMALE_BELT_CLOTH as unknown as GarmentAsset, wears: (p) => beltOver(p) === 'cloth', enchanted: (p) => !!p.gear?.belt?.enchanted },
   { man: MALE_BELT_LEATHER as unknown as GarmentAsset, woman: FEMALE_BELT_LEATHER as unknown as GarmentAsset, wears: (p) => beltOver(p) === 'leather', enchanted: (p) => !!p.gear?.belt?.enchanted },
   { man: MALE_BELT_PLATE as unknown as GarmentAsset, woman: FEMALE_BELT_PLATE as unknown as GarmentAsset, wears: (p) => beltOver(p) === 'plate', enchanted: (p) => !!p.gear?.belt?.enchanted },
+  { man: MALE_BELT_CHAIN as unknown as GarmentAsset, woman: FEMALE_BELT_CHAIN as unknown as GarmentAsset, wears: (p) => beltOver(p) === 'chain', enchanted: (p) => !!p.gear?.belt?.enchanted },
+  { man: MALE_BELT_SCALE as unknown as GarmentAsset, woman: FEMALE_BELT_SCALE as unknown as GarmentAsset, wears: (p) => beltOver(p) === 'scale', enchanted: (p) => !!p.gear?.belt?.enchanted },
   { man: MALE_PENDANT_CLOTH as unknown as GarmentAsset, woman: FEMALE_PENDANT_CLOTH as unknown as GarmentAsset, wears: (p) => p.gear?.jewel?.id === 'jewelled_pendant' && wearsShawl(p), enchanted: (p) => !!p.gear?.jewel?.enchanted, kit: 'jewel' },
   { man: MALE_PENDANT_LEATHER as unknown as GarmentAsset, woman: FEMALE_PENDANT_LEATHER as unknown as GarmentAsset, wears: (p) => p.gear?.jewel?.id === 'jewelled_pendant' && !wearsShawl(p) && wearsLeatherChest(p) && !wearsPlateChest(p) && !wearsLeatherShawl(p), enchanted: (p) => !!p.gear?.jewel?.enchanted, kit: 'jewel' },
   { man: MALE_RING as unknown as GarmentAsset, woman: FEMALE_RING as unknown as GarmentAsset, wears: (p) => p.gear?.jewel?.id === 'jewelled_ring', enchanted: (p) => !!p.gear?.jewel?.enchanted, kit: 'jewel' },
@@ -1068,10 +1184,10 @@ const GARMENTS: ReadonlyArray<{ man: GarmentAsset; woman: GarmentAsset; wears: (
 ];
 /** The hairstyle a circlet is fitted over: the one drawn (`hairStyle`) where it has a fit, else none. */
 const circletOver = (p: FigurePose): string => { const s = hairStyle(p, (p.look ?? DEFAULT_LOOK).hair); return s === 'swept' || s === 'braid' || s === 'bob' ? s : 'bare'; };
-/** Which fit of the tool belt a figure wears (`tools/sculpt/garments/kit.mjs` BELT_OVER), or none: over the plate chest, the leather chest, or the cloth. */
-function beltOver(p: FigurePose): 'cloth' | 'leather' | 'plate' | undefined {
+/** Which fit of the tool belt a figure wears (`tools/sculpt/garments/kit.mjs` BELT_OVER), or none: over the plate chest, the hauberk, the scale cuirass, the leather chest, or the cloth. */
+function beltOver(p: FigurePose): 'cloth' | 'leather' | 'plate' | 'chain' | 'scale' | undefined {
   if (p.gear?.belt?.id !== 'toolbelt') return undefined;
-  return wearsPlateChest(p) ? 'plate' : wearsLeatherChest(p) ? 'leather' : 'cloth';
+  return wearsPlateChest(p) ? 'plate' : o(p).chainChest ? 'chain' : o(p).scaleChest ? 'scale' : wearsLeatherChest(p) ? 'leather' : 'cloth';
 }
 
 /** What tints a garment's materials: its plate piece's metal, or its dye. */
@@ -1091,9 +1207,7 @@ const hexOfRgb = (c: readonly number[]): string => `#${c.map((v) => Math.round(M
  * the metal's lit edge. Everything else of the prop keeps its own colour.
  */
 function metalTint(p: PropAsset, m: PropMaterial, metal: string | undefined): string {
-  // (a bow's wood in the wood it was made of: its colour as much lighter or darker, channel by channel, than oak's as that
-  // wood is, oak being what the bows' wood was modelled in)
-  if (m.wood && m.kind === 0) { const w = woodTone(metal); return w ? hexOfRgb(hexRgb(m.c).map((v, i) => (v * w[i]) / OAK[i])) : m.c; }
+  if (m.wood && m.kind === 0) return woodTint(p, m, metal);
   if (!m.metal || m.kind !== 0) return m.c;
   const sh = metalShades(metal);
   if (m.metal === 'edge') return hexOfRgb(sh.lit);
@@ -1102,11 +1216,22 @@ function metalTint(p: PropAsset, m: PropMaterial, metal: string | undefined): st
   return hexOfRgb(sh.metal.map((v) => v * k * top));
 }
 /**
+ * A prop carved whole from a wood (the club, `PropMaterial.wood`) in the wood it is carved from (`woodTone`, the flat
+ * figure's colours for that wood): that wood's colour, scaled as much as the modelled colour is darker than oak's; as
+ * modelled for no wood or one the figure does not know.
+ */
+function woodTint(p: PropAsset, m: PropMaterial, wood: string | undefined): string {
+  const w = woodTone(wood), oak = woodTone('oak');
+  if (!w || !oak) return m.c;
+  const c = hexRgb(m.c), k = LUMA(c) / LUMA(oak);
+  return hexOfRgb(w.map((v) => v * k));
+}
+/**
  * How much further apart a metal's facets are than the stone's they were modelled in (its shade over the head's stone,
  * to this power), and the brightest a face of it is (0 to 255, as luma), so a pale metal keeps its colour in the light.
  */
 const METAL_FACETS = 1.8, METAL_TOP = 172;
-/** The wood the props' wood was modelled in (`metalTint`). */
+/** The wood the kit's wood is measured against (`kitMat`). */
 const OAK = woodTone('oak') as [number, number, number];
 /**
  * A plate piece's plates in the metal it is smithed from (`FigurePose.outfit.metal`; `metalShades`, as a prop's head,
@@ -1120,6 +1245,17 @@ function plateMat(g: (typeof GARMENT_COLOURS)[number], metal: string): Material 
   return { colour: hexOfRgb(sh.metal.map((v) => v * k * top)), gear: true, metal: true };
 }
 /**
+ * The scale set's scales and scale-plate (`PLATE_ROLE` scale, edge) in its material: dragon scale's colour
+ * (`DRAGON_SCALE`), the edge as much darker than it as it was modelled, lit as the plate set's (by brightness, no metal
+ * sheen); a piece made of a metal in that metal, as plate (`plateMat`).
+ */
+function scaleMat(g: (typeof GARMENT_COLOURS)[number], material: string | undefined): Material {
+  if (isMetalTone(material)) return plateMat(g, material as string);
+  const face = GARMENT_COLOURS.find((x) => x.piece === g.piece && x.role === 'face' && x.kind === g.kind) ?? g;
+  const k = g.role === 'shade' ? LUMA(hexRgb(g.c)) / LUMA(hexRgb(face.c)) : 1;
+  return { colour: hexOfRgb(DRAGON_SCALE.map((v) => v * k)), gear: true };
+}
+/**
  * A dyed piece's fabric or leather in its dye (`FigurePose.outfit.dye`): the face the dye's colour, a part modelled lighter
  * or darker than the face as much lighter or darker than the dye, lit as it was. Its trim, seams, straps and runes keep theirs.
  */
@@ -1129,8 +1265,8 @@ function dyeMat(g: (typeof GARMENT_COLOURS)[number], dye: string, was: Material)
   return { ...was, colour: hexOfRgb(hexRgb(dye).map((v) => v * k)) };
 }
 /**
- * A kit piece's material in what it is made of (`KitTints`): the wooden shield's wood as much lighter or darker, channel
- * by channel, than oak's as its wood is (as a bow's, `metalTint`), its iron as iron is forged; the metal shield's plates in
+ * A kit piece's material in what it is made of (`KitTints`): the wooden shield's wood that wood's colour, scaled as much
+ * as the modelled colour is darker than oak's (as a carved prop's, `woodTint`), its iron as iron is forged; the metal shield's plates in
  * its metal as a plate piece's are (`plateMat`); a jewel's stone and each of the circlet's in its gem's colour (an empty
  * setting gold), lit as metal so its facets glint. Its gold, rim and dark keep their own.
  */
@@ -1138,7 +1274,7 @@ function kitMat(g: (typeof GARMENT_COLOURS)[number], kit: KitTints, was: Materia
   const piece = g.piece?.slice(4) as KitPiece, role = g.role;
   const metal = (rgb: readonly number[]): Material => ({ colour: hexOfRgb(rgb), gear: true, metal: true });
   if (role === 'iron') { const sh = metalShades('iron'); return metal(sh.metal.map((v) => v * Math.min(1, METAL_TOP / LUMA(sh.metal)))); }
-  if (piece === 'shieldWood') { const w = woodTone(kit.shield); return w ? { ...was, colour: hexOfRgb(hexRgb(g.c).map((v, i) => (v * w[i]) / OAK[i])) } : was; }
+  if (piece === 'shieldWood') { const w = woodTone(kit.shield), k = LUMA(hexRgb(g.c)) / LUMA(OAK); return w ? { ...was, colour: hexOfRgb(w.map((v) => v * k)) } : was; }
   if (piece === 'shieldMetal') return plateMat(g, kit.shield ?? 'iron');
   const stone = piece === 'jewel' ? kit.jewel : role?.startsWith('stone') ? kit.stones?.[Number(role.slice(5)) - 1] : undefined, tone = gemTone(stone);
   if (piece === 'circlet' && !tone) return metal(hexRgb('#f5bd66'));
@@ -1170,8 +1306,20 @@ export const lowSkeleton = (body: 'man' | 'woman'): Skeleton => BODIES[body].ske
 export const lowHeld = (body: 'man' | 'woman'): Held => BODIES[body].held;
 /** A hand tool (`TOOL_PROPS`, by id) as a body holds it (for the authoring tools). */
 export const lowToolHeld = (body: 'man' | 'woman', id: string): Held | undefined => BODIES[body].toolHeld(id);
-/** Where the tool in a hand takes its materials, and how many it may take (for the authoring tools). */
-export const lowToolMats = (side: Side, prop?: string): [number, number] => [toolMat(side, prop ? PROP_OF.get(prop) : undefined), PROP_SLOTS];
+/** Where the tool in a hand takes its materials and how many it takes, with the prop drawn and the hands' tools (for the authoring tools). */
+export function lowToolMats(side: Side, prop?: string, tools: Partial<Record<Side, string>> = {}): [number, number] {
+  // (as many as the tool in that hand draws where the hands' tools are named, none where that hand holds none: `placesOf`)
+  const own = tools[side] ? TOOL_OF.get(tools[side] as string) : undefined, named = Object.keys(tools).length > 0;
+  return [placesOf(prop ? PROP_OF.get(prop) : undefined, tools)[side], own ? propUsed(own) : named ? 0 : PROP_SLOTS];
+}
+/**
+ * The most materials a draw of a pose takes, whatever it holds (for the authoring tools to keep within `./gl.ts`
+ * MAX_MATS): the body's, the prop's and both hands' tools' places, and the worn garments' materials (`usedOf`).
+ */
+export function lowMaterialsMost(given: FigurePose): number {
+  const pose = dressed(given), who = (pose.look ?? DEFAULT_LOOK).gender === 'woman' ? 'woman' : 'man';
+  return WORN_MOST + BODIES[who].used(GARMENTS.map((g) => g.wears(pose)), GARMENTS.map((g) => g.enchanted?.(pose) ?? false)).length;
+}
 /** A prop drawn in both hands (`PROPS`, by the weapon's id) as a body holds it (for the authoring tools). */
 export const lowHeldOf = (body: 'man' | 'woman', id: string): Held | undefined => BODIES[body].heldOf(id);
 /** A body's local turns for a pose as the figure's pose maps onto it, with no clip (for the authoring tools to compare). */
@@ -1226,9 +1374,10 @@ export function lowHoldScene(given: FigurePose, id: string, turns: Record<string
   const worn = GARMENTS.map((g) => g.wears(pose)), enchanted = GARMENTS.map((g) => g.enchanted?.(pose) ?? false), drops = GARMENTS.map((g) => g.drops?.(pose) ?? false);
   const curl = prop.sockets[who === 'woman' ? 'female' : 'male'][side].curl ?? {};
   const over: Record<string, [number, number, number]> = { ...Object.fromEntries(Object.entries(curl).map(([b, e]) => [`${b}_${side}`, e])), ...turns };
-  const materials = materialsOf(look, prop, pose.tool?.enchanted ? 'enchanted' : 'plain', pose.tool?.material, {}, pose.outfit?.metal, pose.outfit?.dye, kitOf(pose));
+  const baked = body.baked(worn, 'hand', hairStyle(pose, look.hair), enchanted, drops, id);
+  const materials = materialsOf(look, prop, pose.tool?.enchanted ? 'enchanted' : 'plain', pose.tool?.material, {}, pose.outfit?.metal, pose.outfit?.dye, USED.get(baked), kitOf(pose));
   const bones = body.bones(pose, worn, over), shapes = body.shapes();
-  return { baked: body.baked(worn, 'hand', hairStyle(pose, look.hair), enchanted, drops, id), bones, materials, view: viewOf(facing), blink: 0, low: { sh: SH[who], tone: toneOf(materials), fit: FIT_SKIN }, ...(shapes.some((w) => w > 0) ? { shapes } : {}) };
+  return { baked, bones, materials, view: viewOf(facing), blink: 0, low: { sh: SH[who], tone: toneOf(materials), fit: FIT_SKIN }, ...(shapes.some((w) => w > 0) ? { shapes } : {}) };
 }
 
 /** Whether a look is drawn as a low-poly body: a man or a woman (neither keeps the sculpted base). */
@@ -1236,14 +1385,15 @@ export const hasLowBody = (look: { gender: string }): boolean => look.gender ===
 
 
 /**
- * The look's materials with the garments' after them and the prop's drawn (plain or enchanted, in its metal) after those,
- * kept per look's materials and prop so the renderer's copy is reused.
+ * The look's materials with the prop's drawn (plain or enchanted, in its metal) after them, each hand's tool after that,
+ * and the worn garments' after those (`used`, the bake's: `usedOf`), kept per look's materials, prop and garments so the
+ * renderer's copy is reused.
  */
 const DRESSED = new Map<string, Material[]>();
-function materialsOf(look: Look, prop: PropAsset | undefined, lit: 'plain' | 'enchanted' = 'plain', metal?: string, tools: Partial<Record<Side, { id: string; piece?: GearPiece }>> = {}, plate: Partial<Record<PlatePiece, string>> = {}, dye: Partial<Record<DyedPiece, string>> = {}, kit: KitTints = {}): Material[] {
+function materialsOf(look: Look, prop: PropAsset | undefined, lit: 'plain' | 'enchanted' = 'plain', metal?: string, tools: Partial<Record<Side, { id: string; piece?: GearPiece }>> = {}, plate: Partial<Record<PlatePiece, string>> = {}, dye: Partial<Record<DyedPiece, string>> = {}, worn: { used: readonly number[]; at: number } = { used: [], at: WORN_MOST }, kit: KitTints = {}): Material[] {
   const toolKey = (['r', 'l'] as const).map((s) => { const t = tools[s]; return t ? `${t.id}:${t.piece?.material ?? ''}:${t.piece?.enchanted ? 1 : 0}` : ''; }).join(',');
-  const plateKey = (['chest', 'legs', 'boots', 'helm'] as const).map((p) => plate[p] ?? '').join(',') + ';' + Object.entries(dye).sort().join(',') + `;${kit.shield ?? ''}:${kit.jewel ?? ''}:${(kit.stones ?? []).join('+')}`;
-  const body = bodyMaterials(look), key = `${body.map((m) => m.colour).join()}|${prop?.id ?? ''}|${lit}|${metal ?? ''}|${toolKey}|${plateKey}`;
+  const plateKey = (['chest', 'legs', 'boots', 'helm', 'chainCoif', 'chainChest', 'chainLegs', 'chainBoots', 'scale'] as const).map((p) => plate[p] ?? '').join(',') + ';' + Object.entries(dye).sort().join(',') + `;${kit.shield ?? ''}:${kit.jewel ?? ''}:${(kit.stones ?? []).join('+')}`;
+  const body = bodyMaterials(look), key = `${body.map((m) => m.colour).join()}|${prop?.id ?? ''}|${lit}|${metal ?? ''}|${toolKey}|${plateKey}|${worn.at}:${worn.used.join('.')}`;
   let out = DRESSED.get(key);
   if (!out) {
     out = [...body];
@@ -1253,24 +1403,35 @@ function materialsOf(look: Look, prop: PropAsset | undefined, lit: 'plain' | 'en
     out[M.hairCut] = { colour: hair, ramp: true, noCrease: true };
     [M.hairValley, M.hairValley2, M.hairValley3, M.hairValley4].forEach((m, i) => { (out as Material[])[m] = { colour: hair, ramp: true, valley: i + 1, noCrease: true }; });
     out[M.hairUnder] = { colour: hair, shave: true };
-    // (each plate piece's plates in its own metal)
-    // (and each dyed piece's fabric or leather in its dye)
-    GARMENT_MATS.forEach((m, k) => {
-      const g = GARMENT_COLOURS[k], dyed = g.piece?.startsWith('dye:') ? dye[g.piece.slice(4) as DyedPiece] : undefined;
+    // (the places the props and tools leave empty: the body's skin, never drawn)
+    for (let k = body.length; k < worn.at; k++) out[k] = body[M.skin];
+    // the worn garments' materials in the bake's order (`usedOf`): each plate or chain piece's plates or mail in its own
+    // metal, each dyed piece's fabric or leather in its dye, each kit piece's wood, metal or stones its own (`kitMat`)
+    worn.used.forEach((k, j) => {
+      const m = GARMENT_MATS[k], g = GARMENT_COLOURS[k], dyed = g.piece?.startsWith('dye:') ? dye[g.piece.slice(4) as DyedPiece] : undefined;
       const pm = g.piece && !g.piece.startsWith('dye:') && !g.piece.startsWith('kit:') ? plate[g.piece as PlatePiece] : undefined;
-      (out as Material[])[GARMENT_MAT + k] = pm ? plateMat(g, pm) : dyed && m.emissive !== true ? dyeMat(g, dyed, m) : g.piece?.startsWith('kit:') && g.role ? kitMat(g, kit, m) : m;
+      (out as Material[])[worn.at + j] = g.piece === 'scale' ? scaleMat(g, pm) : pm ? plateMat(g, pm) : dyed && m.emissive !== true ? dyeMat(g, dyed, m) : g.piece?.startsWith('kit:') && g.role ? kitMat(g, kit, m) : m;
     });
     // (the prop drawn in its place, as many of its materials as it draws; the hand tools after it)
-    if (prop) propMats(prop, lit, metal).slice(0, usedOf(prop)).forEach((m, k) => { (out as Material[])[PROP_MAT() + k] = m; });
-    // each hand's tool in its hand's place, in the metal and look of the piece it is drawn as
+    if (prop) propMats(prop, lit, metal).slice(0, propUsed(prop)).forEach((m, k) => { (out as Material[])[PROP_MAT() + k] = m; });
+    // each hand's tool in its hand's place (`placesOf`), in the metal and look of the piece it is drawn as
+    const at = placesOf(prop, Object.fromEntries(Object.entries(tools).map(([sd, t]) => [sd, t?.id])));
     for (const [side, t] of Object.entries(tools) as Array<[Side, { id: string; piece?: GearPiece } | undefined]>) {
       const p = t ? TOOL_OF.get(t.id) : undefined;
-      if (p) propMats(p, t?.piece?.enchanted ? 'enchanted' : 'plain', t?.piece?.material).slice(0, PROP_SLOTS).forEach((m, k) => { (out as Material[])[toolMat(side, prop) + k] = m; });
+      if (p) propMats(p, t?.piece?.enchanted ? 'enchanted' : 'plain', t?.piece?.material).slice(0, propUsed(p)).forEach((m, k) => { (out as Material[])[at[side] + k] = m; });
     }
     if (DRESSED.size > 64) DRESSED.clear();
     DRESSED.set(key, out);
   }
   return out;
+}
+
+/** A bow in hand's string drawn to the other fist (2) or an arrow in that fist (1) as its shot is at it (`Clip.bow`); 0 otherwise. */
+function nockOf(pose: FigurePose, who: 'man' | 'woman', prop: PropAsset | undefined): number {
+  const shot = prop?.draw ? clipFor(pose, who) : undefined, bw = shot?.clip.bow;
+  if (!shot || !bw) return 0;
+  const t = wrap(shot.clip, shot.t);
+  return t >= bw.drawn[0] && t < bw.drawn[1] ? 2 : t >= bw.arrow[0] && t <= bw.arrow[1] ? 1 : 0;
 }
 
 /** Everything a draw needs for a pose (`drawSculptGL`): the man's body for a man, the woman's for a woman, the garments it wears over it. */
@@ -1279,24 +1440,23 @@ export function lowScene(given: FigurePose): SculptDraw {
   const facing = ((Math.round(pose.facing) % 8) + 8) % 8;
   const who = look.gender === 'woman' ? 'woman' : 'man', body = BODIES[who];
   const worn = GARMENTS.map((g) => g.wears(pose)), enchanted = GARMENTS.map((g) => g.enchanted?.(pose) ?? false), drops = GARMENTS.map((g) => g.drops?.(pose) ?? false);
-  // the prop in both hands while a clip grips it (the long sword, the maul, mining's pickaxe), else on the back while it
-  // is wielded (one with a back socket); the piece it is drawn as (the weapon, or the job's tool) in its metal, lit when
-  // enchanted
+  // the prop in both hands while a clip grips it (the long sword, the maul, mining's pickaxe), else carried while it is
+  // wielded and not in a hand: on the back (one with a back socket) or at the belt (one with a belt socket); the piece it is
+  // drawn as (the weapon, or the job's tool) in its metal, lit when enchanted
   const weapon = pose.gear?.weapon, held = heldIn(pose), prop = held !== undefined ? PROP_OF.get(held) : undefined;
-  const inHand = !!prop, onBack = !inHand && weapon ? PROP_OF.get(weapon.id) : undefined;
-  const sword = inHand ? 'hand' : onBack?.sockets[who === 'woman' ? 'female' : 'male'].back ? 'back' : undefined, drawn = sword ? prop ?? onBack : undefined;
+  // the tools in the hands while a clip holds them (`toolsIn`): the job's own in its metal, the weapon of the one-handed
+  // fight in its, the other hand's plain
+  const hands = toolsIn(pose, who), tools = hands?.tools ?? {}, fight = ONE_HAND(pose);
+  const pieces = Object.fromEntries(Object.entries(tools).map(([s, id]) => [s, { id: id as string, piece: fight && id === weapon?.id ? weapon : id === pose.tool?.id ? pose.tool : undefined }]));
+  const inHand = !!prop, carried = !inHand && weapon && !(fight && Object.values(tools).includes(weapon.id)) ? PROP_OF.get(weapon.id) : undefined;
+  const at = carried?.sockets[who === 'woman' ? 'female' : 'male'], sword: Carried | undefined = inHand ? 'hand' : at?.back ? 'back' : at?.belt ? 'belt' : undefined, drawn = sword ? prop ?? carried : undefined;
   const piece: GearPiece | undefined = held === SWING_TOOL || (held !== undefined && held === pose.tool?.id) ? pose.tool : weapon;
   const lit = piece?.enchanted ? 'enchanted' : 'plain';
-  // the tools in the hands while a clip holds them (`toolsIn`): the job's own in its metal, the other hand's plain
-  const hands = toolsIn(pose, who), tools = hands?.tools ?? {};
-  const pieces = Object.fromEntries(Object.entries(tools).map(([s, id]) => [s, { id: id as string, piece: id === pose.tool?.id ? pose.tool : undefined }]));
-  const materials = materialsOf(look, drawn, lit, piece?.material, pieces, pose.outfit?.metal, pose.outfit?.dye, kitOf(pose)), low: LowLight = { sh: SH[who], tone: toneOf(materials), fit: FIT_SKIN };
-  const bones = body.bones(pose, worn), trail = inHand && prop && trails(prop) ? body.trail(pose, lit === 'enchanted') : undefined;
+  const baked = body.baked(worn, sword, hairStyle(pose, look.hair), enchanted, drops, drawn?.id, tools, hands?.up, nockOf(pose, who, inHand ? prop : undefined));
+  const materials = materialsOf(look, drawn, lit, piece?.material, pieces, pose.outfit?.metal, pose.outfit?.dye, USED.get(baked), kitOf(pose)), low: LowLight = { sh: SH[who], tone: toneOf(materials), fit: FIT_SKIN };
+  const bones = body.bones(pose, worn), trail = (inHand && prop && trails(prop)) || fight ? body.trail(pose, lit === 'enchanted') : undefined;
   const shapes = body.shapes();
-  // a bow in hand: its string drawn to the other fist (2) or an arrow in that fist (1) as the shot is at it (`Clip.bow`)
-  const shot = inHand && prop?.draw ? clipFor(pose, who) : undefined, bw = shot?.clip.bow, at = shot && bw ? wrap(shot.clip, shot.t) : 0;
-  const nock = !bw ? 0 : at >= bw.drawn[0] && at < bw.drawn[1] ? 2 : at >= bw.arrow[0] && at <= bw.arrow[1] ? 1 : 0;
-  return { baked: body.baked(worn, sword, hairStyle(pose, look.hair), enchanted, drops, drawn?.id, tools, hands?.up, nock), bones, materials, view: viewOf(facing), blink: 0, low, ...(trail ? { trail } : {}), ...(shapes.some((w) => w > 0) ? { shapes } : {}) };
+  return { baked, bones, materials, view: viewOf(facing), blink: 0, low, ...(trail ? { trail } : {}), ...(shapes.some((w) => w > 0) ? { shapes } : {}) };
 }
 
 /** Local turns by bone name, [rx, ry, rz] degrees (as `tools/sculpt/lowrig.mjs` posed). */
@@ -1313,7 +1473,8 @@ export function lowToolStill(given: FigurePose, id: string, turns: Turns): Sculp
   const stood: FigurePose = { ...pose, working: false, job: undefined, act: undefined };
   const worn = GARMENTS.map((g) => g.wears(stood)), enchanted = GARMENTS.map((g) => g.enchanted?.(stood) ?? false), drops = GARMENTS.map((g) => g.drops?.(stood) ?? false);
   const curl = Object.fromEntries(Object.entries(prop.sockets[who === 'woman' ? 'female' : 'male'].r.curl ?? {}).map(([b, e]) => [`${b}_r`, e]));
-  const materials = materialsOf(look, prop, pose.tool?.enchanted ? 'enchanted' : 'plain', pose.tool?.material, {}, pose.outfit?.metal, pose.outfit?.dye, kitOf(pose)), low: LowLight = { sh: SH[who], tone: toneOf(materials), fit: FIT_SKIN };
+  const baked = body.baked(worn, 'hand', hairStyle(stood, look.hair), enchanted, drops, id);
+  const materials = materialsOf(look, prop, pose.tool?.enchanted ? 'enchanted' : 'plain', pose.tool?.material, {}, pose.outfit?.metal, pose.outfit?.dye, USED.get(baked), kitOf(pose)), low: LowLight = { sh: SH[who], tone: toneOf(materials), fit: FIT_SKIN };
   const bones = body.bones(stood, worn, { ...turns, ...curl } as Record<string, [number, number, number]>);
-  return { baked: body.baked(worn, 'hand', hairStyle(stood, look.hair), enchanted, drops, id), bones, materials, view: viewOf(((Math.round(pose.facing) % 8) + 8) % 8), blink: 0, low };
+  return { baked, bones, materials, view: viewOf(((Math.round(pose.facing) % 8) + 8) % 8), blink: 0, low };
 }

@@ -1,4 +1,5 @@
 import { METAL_TONE } from './materials';
+import type { GearLook, GearPiece, GearSlot } from '../contract/gear';
 import { HOPS, emotePose } from '../game/emotes';
 import {
   BUILDS, DEFAULT_LOOK, eyeColour, hairColour, shirtColour, skinColour, trouserColour, type Look,
@@ -2380,11 +2381,14 @@ export interface FigurePose {
   /**
    * Which garments a low-poly body has on (the sculpted bodies, `../sculpt/lowpoly`): each left out at the game's default,
    * the shawl, the trousers, the boots and the tunic worn and the hood down; the hood is up only with the shawl, and the
-   * hair is not drawn under it. The plate set's pieces are off unless asked for, each plain unless `enchanted` says so.
+   * hair is not drawn under it. The plate, leather and chain sets' pieces are off unless asked for, each plain unless `enchanted` says so.
    */
-  outfit?: Partial<Record<'shawl' | 'trousers' | 'boots' | 'tunic' | 'hood' | 'plateChest' | 'plateLegs' | 'plateBoots' | 'plateHelm' | 'plateMantle' | 'leatherChest' | 'leatherLegs' | 'leatherBoots' | 'leatherShawl' | 'leatherHat', boolean>> & {
-    enchanted?: Partial<Record<'chest' | 'legs' | 'boots' | 'helm' | 'mantle' | 'leatherChest' | 'leatherLegs' | 'leatherBoots' | 'leatherShawl' | 'leatherHat' | 'clothShawl' | 'clothHood' | 'clothTunic' | 'clothTrousers' | 'clothBoots', boolean>>;
-    /** The metal each plate piece is smithed from (`GearPiece.material`): its plates drawn in it (`src/sculpt/lowpoly.ts` plateMats); none, its own colours. */
+  outfit?: Partial<Record<'shawl' | 'trousers' | 'boots' | 'tunic' | 'hood' | 'plateChest' | 'plateLegs' | 'plateBoots' | 'plateHelm' | 'plateMantle' | 'leatherChest' | 'leatherLegs' | 'leatherBoots' | 'leatherShawl' | 'leatherHat' | ChainPiece | 'scaleHelm' | 'scaleChest' | 'scaleLegs' | 'scaleBoots', boolean>> & {
+    enchanted?: Partial<Record<'chest' | 'legs' | 'boots' | 'helm' | 'mantle' | 'leatherChest' | 'leatherLegs' | 'leatherBoots' | 'leatherShawl' | 'leatherHat' | 'clothShawl' | 'clothHood' | 'clothTunic' | 'clothTrousers' | 'clothBoots' | ChainPiece | 'scaleHelm' | 'scaleChest' | 'scaleLegs' | 'scaleBoots', boolean>>;
+    /**
+     * The metal each plate or chain piece is smithed from (`GearPiece.material`): its plates or its mail drawn in it (`src/sculpt/lowpoly.ts` plateMat); none, its own colours.
+     * The scale set's pieces (`scale`, one for the set) in dragon scale's colour (`DRAGON_SCALE`), or a metal's where one is named.
+     */
     metal?: Partial<Record<PlatePiece, string>>;
     /** The dye each cloth or leather piece is dyed (`GearPiece.dye`, `#rrggbb`): its fabric or leather drawn in it (`src/sculpt/lowpoly.ts` dyeMat). */
     dye?: Partial<Record<DyedPiece, string>>;
@@ -6396,22 +6400,13 @@ const TOON_THIN_PX = 2, TOON_FLECK_PX = 0.8;
  */
 
 /** A piece as a body wears it: which thing, how rare, the material it was made of and the colour it was dyed. */
-export interface GearPiece {
-  id: string;
-  rare?: number;
-  /** A material's id: a metal, a wood or a stone. */
-  material?: string;
-  /** The dye's colour, as `#rrggbb`. */
-  dye?: string;
-  /** Enchanted: a sculpted figure's sword drawn with its engraving lit. */
-  enchanted?: boolean;
-}
-/** The plate set's sculpted pieces, each in its own metal (`FigurePose.outfit.metal`). */
-export type PlatePiece = 'chest' | 'legs' | 'boots' | 'helm';
+export type { GearLook, GearPiece, GearSlot } from '../contract/gear';
+/** The chain set's sculpted pieces (`src/sculpt/lowpoly.ts`: the coif, the hauberk and sleeves, the leggings, the boots). */
+export type ChainPiece = 'chainCoif' | 'chainChest' | 'chainLegs' | 'chainBoots';
+/** The plate and chain sets' sculpted pieces, each in its own metal (`FigurePose.outfit.metal`), and the scale set's, all in one material. */
+export type PlatePiece = 'chest' | 'legs' | 'boots' | 'helm' | ChainPiece | 'scale';
 /** The cloth and leather sculpted pieces a dye colours (`FigurePose.outfit.dye`). */
 export type DyedPiece = 'hood' | 'tunic' | 'trousers' | 'boots' | 'leatherChest' | 'leatherLegs' | 'leatherBoots' | 'leatherHat';
-export type GearSlot = 'head' | 'chest' | 'arms' | 'legs' | 'feet' | 'weapon' | 'offhand' | 'belt' | 'jewel';
-export type GearLook = Partial<Record<GearSlot, GearPiece>>;
 /** The order a body is dressed in, inside out. */
 const DRESSED: GearSlot[] = ['legs', 'feet', 'chest', 'arms', 'head', 'belt', 'jewel', 'offhand', 'weapon'];
 /** How much lighter (or darker) cloth and hide are worn in each place: a cap a little lighter than the coat, breeches and shoes darker. */
@@ -6440,12 +6435,14 @@ const GEM_TONE: Record<string, RGB> = {
   diamond: [226, 240, 248], ruby: [226, 98, 120], sapphire: [108, 148, 228], emerald: [98, 192, 146], garnet: [168, 64, 82], topaz: [242, 198, 102],
   opal: [236, 222, 238], peridot: [176, 208, 96], amethyst: [168, 120, 208], jasper: [182, 92, 66], onyx: [58, 58, 66], amber: [232, 164, 64],
 };
-/** A wood as gear is worked of it (`WOOD_GEAR`): the sculpted figures' bows and shields (src/sculpt/lowpoly.ts) take theirs from here; none for a material that is not a wood. */
-export const woodTone = (material?: string): RGB | undefined => WOOD_GEAR[(material ?? '').toLowerCase()];
 /** A stone as a jewel is set with it (`GEM_TONE`): the sculpted figures' rings, pendants and circlets take theirs from here; none for a stone we do not know. */
 export const gemTone = (id?: string): RGB | undefined => GEM_TONE[(id ?? '').trim().toLowerCase()];
 /** Dragon scale, off one kind of beast and one colour: a jade gone grey at the edges. */
 const DRAGON: RGB = [98, 146, 128];
+/** Dragon scale's colour, for the sculpted scale set (`../sculpt/lowpoly.ts` scaleMat). */
+export const DRAGON_SCALE: Readonly<RGB> = DRAGON;
+/** Whether a material names a metal the figure forges gear in (`METAL_TONE`). */
+export const isMetalTone = (material?: string): boolean => !!material && Object.hasOwn(METAL_TONE, material.toLowerCase());
 /** What a metal's shadow and its light lean toward. */
 const COOL_SHADOW: RGB = [58, 64, 84];
 /** The grey a dye is chalked toward. */
@@ -6467,6 +6464,13 @@ function weatheredOf(P: Palette): Palette {
   let w = weathered.get(P);
   if (!w) weathered.set(P, (w = { ...P, wood: mixRGB(P.wood, CHALK, 0.4), woodDark: mixRGB(P.woodDark, COOL_SHADOW, 0.18) }));
   return w;
+}
+/**
+ * A wood as gear is carved from it (`WOOD_GEAR`), or nothing where the material is not a wood: the sculpted figures' club,
+ * bows and wooden shield take their wood from here (`src/sculpt/lowpoly.ts` metalTint, kitMat).
+ */
+export function woodTone(material?: string): RGB | undefined {
+  return WOOD_GEAR[(material ?? '').toLowerCase()];
 }
 /**
  * A metal as gear is forged of it (`METAL_TONE`, iron where the material is not a metal): its colour, its shadow, its lit

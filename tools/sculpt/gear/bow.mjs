@@ -312,7 +312,7 @@ export function buildQuiver({ enchanted = false } = {}) {
  * The garments a thing on the back is held clear of (src/sculpt/assets low<name>-<who>.json): every one worn from the gear
  * in play (not the creator's fur mantle or leather shawl, which no item puts on).
  */
-export const BACK_GARMENTS = ['shawl', 'tunic', 'trousers', 'boots', 'hood', 'helm', 'platechest', 'platelegs', 'plateboots', 'leatherchest', 'leatherlegs', 'leatherlegsflaps', 'leatherboots', 'hat'];
+export const BACK_GARMENTS = ['shawl', 'tunic', 'trousers', 'boots', 'hood', 'helm', 'platechest', 'platelegs', 'plateboots', 'leatherchest', 'leatherlegs', 'leatherlegsflaps', 'leatherboots', 'hat', 'chainchest', 'chaincoif', 'chainlegs', 'chainboots', 'scalechest', 'scalehelm', 'scalelegs', 'scaleboots'];
 /**
  * The quiver on the back (lowgear.mjs backSocketOf), its mouth behind the right shoulder (`up`), slanting `lean` down toward
  * the left hip, its face (the medallion) out of the back (`flip`); the bow over the left shoulder blade, slanting the other
