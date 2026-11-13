@@ -11,6 +11,7 @@ import type { Ghost, Entity } from './drawshared';
 import { FOG_COLOR } from './fog';
 import type { PieceView } from './furniture';
 import { HALF_W, HALF_H } from './iso';
+import type { NameLabels } from './namelabels';
 import { inOutline, type HitRect } from './picking';
 import { lyingSprite, crateSprite, type Sprite } from './sprites';
 import { StairPainter } from './stairdraw';
@@ -43,6 +44,7 @@ export interface CellarHost {
   inCellarPass: boolean;
   readonly kilnHits: HitRect[];
   logsAt(x: number, y: number): TreeView | undefined;
+  readonly names: NameLabels;
   nightLayer(res?: number): HTMLCanvasElement;
   readonly peerHits: HitRect[];
   readonly postHits: HitRect[];
@@ -161,6 +163,8 @@ export class CellarPainter {
       this.r.furnitureHits, this.r.anvilHits, this.r.postHits, this.r.trapHits, this.r.deckHits];
     const upTop = hitLists.map((l) => l.length);
     this.r.inCellarPass = true;
+    // The names up top are under the veil with their bodies: only those down here are drawn over the cellar.
+    this.r.names.clear();
     for (let i = 0; i < tiles.length;) {
       const d = depthOf(V, tiles[i].x, tiles[i].y);
       this.r.ents.length = 0;

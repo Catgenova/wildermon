@@ -2838,6 +2838,11 @@ export class Game {
     return item;
   }
 
+  /** What is drawn in a slot of your body, here and for everybody else: what is worn, less the helm while `hideHelm` is on. */
+  shown(slot: Slot): Item | undefined {
+    return slot === 'head' && this.settings.hideHelm ? undefined : this.worn(slot);
+  }
+
   isEquipped(uid: number): boolean {
     if (uid === undefined) return false;
     for (const slot of SLOTS) if (this.player.equipped[slot] === uid) return !!this.inventory.get(uid);
@@ -4263,6 +4268,8 @@ export class Game {
    * reason: the island lands the blows, so its copy is the one that counts.
    */
   fightPrefsChanged?: () => void;
+  /** And `hideHelm`: the island hands round what everybody has on (`rpc_worn`), so it is told as well. */
+  lookPrefsChanged?: () => void;
 
   /** Stand the next way round (`FIGHT_STANCES`), and say what it does. */
   cycleStance(): void {

@@ -20,6 +20,8 @@ import { bandOf, STRIDE } from './bake';
 import type { Band } from './sdf';
 import { drawSculptGL, forgetBuffers, glContext } from './gl';
 export { glSoftware } from './gl';
+/** Whether this browser's GL draws the sculpted bodies at all: WebGL2, the float colour buffer, and shaders that fit it. */
+export const glDraws = (): boolean => !!glContext();
 export { SCULPT_FX } from './fxmarks';
 import { bakedAt, built, forgetBuilt, proportionsOf, sculptScene, type Built } from './index';
 import { hasLowBody, lowScene } from './lowpoly';

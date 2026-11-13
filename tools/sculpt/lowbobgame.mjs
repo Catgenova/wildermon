@@ -3,7 +3,7 @@
 // idle and walking, front (facing 0), three-quarter (1), side (2) and back (4); under the leather hat and the plate
 // helm; in the two-handed swing; and a turntable of each body (the eight facings, idle) as a GIF.
 //
-//   node tools/sculpt/lowbobgame.mjs --out <dir> [--zoom 10] [--hair bob] [--only sheet,gear,swing,turn,walk]
+//   node tools/sculpt/lowbobgame.mjs --out <dir> [--zoom 10] [--hair bob] [--facings 0,1,2,4] [--only sheet,gear,swing,turn,walk]
 //     sheet: <dir>/bob-game-z<zoom>.png; gear: <dir>/bob-gear-z<zoom>.png (the leather hat, the plate helm);
 //     swing: <dir>/bob-swing.png (the long sword's swing at six clip times); turn: <dir>/bob-turn-<man|woman>.gif;
 //     walk: <dir>/bob-walk.gif
@@ -18,7 +18,7 @@ import { join, resolve } from 'node:path';
 
 const args = process.argv.slice(2);
 const opt = (n, f) => { const i = args.indexOf(`--${n}`); return i < 0 ? f : args[i + 1]; };
-const out = resolve(opt('out', 'tmp/lowbobgame')), zoom = +opt('zoom', '10'), hair = opt('hair', 'bob'), only = opt('only', 'sheet,gear,swing,turn,walk').split(',');
+const out = resolve(opt('out', 'tmp/lowbobgame')), zoom = +opt('zoom', '10'), hair = opt('hair', 'bob'), facings = opt('facings', '0,1,2,4').split(',').map(Number), only = opt('only', 'sheet,gear,swing,turn,walk').split(',');
 const PY = process.env.PY ?? 'python3';
 mkdirSync(out, { recursive: true });
 const ROOT = new URL('../..', import.meta.url).pathname;
@@ -28,7 +28,8 @@ import { DEFAULT_LOOK } from './src/game/look';
 const HAIR = ${JSON.stringify(hair)};
 const look = (gender) => ({ ...DEFAULT_LOOK, gender, hair: HAIR });
 const BARE = { shawl: false, trousers: false, boots: false, tunic: false, hood: false };
-const FACES = ['front', '3/4', 'side', '', 'back'];
+const FACES = ['front', '3/4', 'side', 'rear 3/4', 'back', 'other rear 3/4', 'other side', 'other 3/4'];
+const FACINGS = ${JSON.stringify(facings)};
 function cell(zoom, gender, facing, moving, phase, outfit = BARE, extra = {}, w = 34, h = 48) {
   const cw = Math.ceil(w * zoom), ch = Math.ceil(h * zoom) + 24, cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
   const g = cv.getContext('2d'); g.fillStyle = '#7d9b5e'; g.fillRect(0, 0, cw, ch);
@@ -46,7 +47,7 @@ window.sheet = (zoom) => {
   root.appendChild(lab('Hair ' + HAIR + ' in the game (drawFigure, Sculpted figures on), zoom ' + zoom + ', no outfit: idle and walk; then the heads larger', 'h'));
   for (const gender of ['man', 'woman']) {
     const row = rowOf(root), heads = rowOf(root);
-    for (const [what, moving, phase] of [['idle', false, 1.5], ['walk', true, Math.PI / 2]]) for (const facing of [0, 1, 2, 4]) {
+    for (const [what, moving, phase] of [['idle', false, 1.5], ['walk', true, Math.PI / 2]]) for (const facing of FACINGS) {
       const cv = cell(zoom, gender, facing, moving, phase);
       row.appendChild(box(cv, gender + ' ' + what + ' ' + FACES[facing]));
       if (what === 'idle') { const h = head(cell(zoom * 2, gender, facing, false, 1.5), zoom * 2, gender); heads.appendChild(box(h, gender + ' head ' + FACES[facing])); }
@@ -58,7 +59,7 @@ window.gear = (zoom) => {
   root.appendChild(lab('Hair ' + HAIR + ' under the leather hat (pressed under it) and the plate helm (hidden), zoom ' + zoom, 'h'));
   for (const [name, o] of [['leather hat', { ...BARE, leatherHat: true }], ['plate helm', { ...BARE, plateHelm: true }]]) for (const gender of ['man', 'woman']) {
     const row = rowOf(root);
-    for (const facing of [0, 1, 2, 4]) row.appendChild(box(head(cell(zoom * 2, gender, facing, false, 1.5, o), zoom * 2, gender), gender + ' ' + name + ' ' + FACES[facing]));
+    for (const facing of FACINGS) row.appendChild(box(head(cell(zoom * 2, gender, facing, false, 1.5, o), zoom * 2, gender), gender + ' ' + name + ' ' + FACES[facing]));
   }
 };
 window.swing = (zoom, times) => {
@@ -66,11 +67,11 @@ window.swing = (zoom, times) => {
   root.appendChild(lab('Hair ' + HAIR + ' in the two-handed swing (the long sword), zoom ' + zoom + ': front, 3/4, side, back', 'h'));
   for (const t of times) for (const gender of ['man', 'woman']) {
     const row = rowOf(root);
-    for (const facing of [0, 1, 2, 4]) row.appendChild(box(cell(zoom, gender, facing, false, 0, BARE, { working: true, job: 'attack_creature', act: { t, length: 2 }, gear: { weapon: { id: 'long_sword', material: 'iron', enchanted: false } } }, 56, 64), gender + ' t ' + t.toFixed(2) + ' ' + FACES[facing]));
+    for (const facing of FACINGS) row.appendChild(box(cell(zoom, gender, facing, false, 0, BARE, { working: true, job: 'attack_creature', act: { t, length: 2 }, gear: { weapon: { id: 'long_sword', material: 'iron', enchanted: false } } }, 56, 64), gender + ' t ' + t.toFixed(2) + ' ' + FACES[facing]));
   }
 };
 window.turn = (zoom, gender, facing) => { const root = document.getElementById('root'); root.innerHTML = ''; const r = rowOf(root); r.id = 'frame'; r.appendChild(cell(zoom, gender, facing, false, 1.5)); };
-window.walk = (zoom, u) => { const root = document.getElementById('root'); root.innerHTML = ''; const r = rowOf(root); r.id = 'frame'; for (const gender of ['man', 'woman']) for (const facing of [0, 1, 2, 4]) r.appendChild(cell(zoom, gender, facing, true, u * Math.PI * 2)); };
+window.walk = (zoom, u) => { const root = document.getElementById('root'); root.innerHTML = ''; const r = rowOf(root); r.id = 'frame'; for (const gender of ['man', 'woman']) for (const facing of FACINGS) r.appendChild(cell(zoom, gender, facing, true, u * Math.PI * 2)); };
 `;
 const b = await build({ stdin: { contents: entry, resolveDir: ROOT, loader: 'ts' }, bundle: true, format: 'iife', write: false, logLevel: 'error', target: 'es2022', loader: { '.png': 'dataurl', '.svg': 'dataurl', '.webp': 'dataurl', '.wav': 'dataurl', '.ogg': 'dataurl', '.mp3': 'dataurl' }, define: { 'import.meta.env': '{}', __DEPLOY__: 'undefined' }, absWorkingDir: ROOT });
 const kept = '/opt/pw-browsers/chromium';

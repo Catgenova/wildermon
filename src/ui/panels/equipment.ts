@@ -669,7 +669,7 @@ export class EquipmentPanel {
       working: false,
       id: 'equipment-doll',
       look: p.look ?? DEFAULT_LOOK,
-      gear: gearFrom(wornWire((slot) => this.game.worn(slot))),
+      gear: gearFrom(wornWire((slot) => this.game.shown(slot))),
       ...(k >= 0 && k < 1 && !this.still ? { emote: 'hop', emoteT: k } : {}),
     };
   }

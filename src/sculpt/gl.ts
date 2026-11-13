@@ -76,12 +76,15 @@ const VS = `#version 300 es
 precision highp float;
 layout(location=0) in vec3 aPos; layout(location=1) in vec3 aNrm; layout(location=2) in float aMat; layout(location=3) in vec4 aBones; layout(location=4) in vec4 aW; layout(location=5) in vec2 aStamp;
 layout(location=6) in vec4 aFaceBones; layout(location=7) in vec4 aFaceW;
-uniform vec4 uBones[${MAX_BONES * 3}];
+// The bones' matrices, three rows (texels) a bone along one row of a float texture: a phone's GPU may hold as few as 256
+// vertex uniform vectors (MAX_VERTEX_UNIFORM_VECTORS), which MAX_BONES * 3 rows as uniforms and the rest would pass.
+uniform highp sampler2D uBones;
 uniform vec2 uEx, uEy; uniform float uHS; uniform vec3 uT; uniform vec2 uHalf; uniform float uDepth; uniform vec2 uOff; uniform float uLow;
 uniform highp sampler2D uShapes; uniform int uShapeFrom, uShapeCount, uShapeK; uniform float uShapeW[${MAX_SHAPES}];
 out vec3 vNrm; out vec3 vPos; flat out float vMat; flat out float vBone; out float vDepth; flat out float vMatB; out float vStamp; flat out vec3 vFace;
-vec3 skinP(int b, vec3 p) { vec4 q = vec4(p, 1.0); return vec3(dot(uBones[b*3], q), dot(uBones[b*3+1], q), dot(uBones[b*3+2], q)); }
-vec3 skinN(int b, vec3 n) { return vec3(dot(uBones[b*3].xyz, n), dot(uBones[b*3+1].xyz, n), dot(uBones[b*3+2].xyz, n)); }
+vec4 boneRow(int r) { return texelFetch(uBones, ivec2(r, 0), 0); }
+vec3 skinP(int b, vec3 p) { vec4 q = vec4(p, 1.0); return vec3(dot(boneRow(b*3), q), dot(boneRow(b*3+1), q), dot(boneRow(b*3+2), q)); }
+vec3 skinN(int b, vec3 n) { return vec3(dot(boneRow(b*3).xyz, n), dot(boneRow(b*3+1).xyz, n), dot(boneRow(b*3+2).xyz, n)); }
 void main() {
   // A garment's corrective shapes, by their weights, at rest: its offset and its polygon's normal's.
   vec3 rp = aPos, rn = aNrm;
@@ -374,6 +377,8 @@ interface Ctx {
   gl: WebGL2RenderingContext; cv: HTMLCanvasElement; prog: WebGLProgram; edge: WebGLProgram; wire: WebGLProgram;
   /** The slash trail's program, its uniforms and its buffer, made the first time one is drawn. */
   trail?: { prog: WebGLProgram; u: Record<string, WebGLUniformLocation | null>; buf: WebGLBuffer };
+  /** The bones' matrices for the draw in hand (`uBones`): MAX_BONES * 3 RGBA32F texels in one row. */
+  tBones: WebGLTexture;
   fbo: WebGLFramebuffer; tCol: WebGLTexture; tNd: WebGLTexture; tId: WebGLTexture; depth: WebGLRenderbuffer; quad: WebGLBuffer;
   w: number; h: number; u: Record<string, WebGLUniformLocation | null>; eu: Record<string, WebGLUniformLocation | null>; wu: Record<string, WebGLUniformLocation | null>;
 }
@@ -412,7 +417,19 @@ export function glContext(): Ctx | null {
   const gl = cv.getContext('webgl2', { premultipliedAlpha: true, antialias: false, alpha: true, preserveDrawingBuffer: false });
   if (!gl) return (CTX = null);
   if (!gl.getExtension('EXT_color_buffer_float')) return (CTX = null);
-  const prog = compile(gl, VS, FS), edge = compile(gl, EDGE_VS, EDGE_FS), wire = compile(gl, VS, WIRE_FS);
+  // A GPU the shaders do not fit draws no bodies rather than stopping whatever asked for one (the sign-in among them).
+  let prog: WebGLProgram, edge: WebGLProgram, wire: WebGLProgram;
+  try {
+    prog = compile(gl, VS, FS); edge = compile(gl, EDGE_VS, EDGE_FS); wire = compile(gl, VS, WIRE_FS);
+  } catch (e) {
+    console.warn('Sculpted bodies: shaders would not compile here', e);
+    return (CTX = null);
+  }
+  const tBones = gl.createTexture()!;
+  gl.bindTexture(gl.TEXTURE_2D, tBones);
+  gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA32F, MAX_BONES * 3, 1);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
   const quad = gl.createBuffer()!;
   gl.bindBuffer(gl.ARRAY_BUFFER, quad);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
@@ -420,7 +437,7 @@ export function glContext(): Ctx | null {
   const u = Object.fromEntries(names.map((n) => [n, gl.getUniformLocation(prog, n)]));
   const wu = Object.fromEntries(names.map((n) => [n, gl.getUniformLocation(wire, n)]));
   const eu = Object.fromEntries(['uCol', 'uNd', 'uId', 'uPx', 'uInk', 'uDepthStep', 'uShow', 'uNight', 'uInner', 'uFoam'].map((n) => [n, gl.getUniformLocation(edge, n)]));
-  CTX = { gl, cv, prog, edge, wire, fbo: gl.createFramebuffer()!, tCol: gl.createTexture()!, tNd: gl.createTexture()!, tId: gl.createTexture()!, depth: gl.createRenderbuffer()!, quad, w: 0, h: 0, u, eu, wu };
+  CTX = { gl, cv, prog, edge, wire, tBones, fbo: gl.createFramebuffer()!, tCol: gl.createTexture()!, tNd: gl.createTexture()!, tId: gl.createTexture()!, depth: gl.createRenderbuffer()!, quad, w: 0, h: 0, u, eu, wu };
   return CTX;
 }
 
@@ -578,7 +595,10 @@ export function drawSculptGL(ctx: CanvasRenderingContext2D, sx: number, sy: numb
   const low = d.low && bf.face ? d.low : undefined;
   const setCommon = (prog: WebGLProgram, u: Record<string, WebGLUniformLocation | null>): void => {
     gl.useProgram(prog);
-    gl.uniform4fv(u.uBones, d.bones.length >= MAX_BONES * 12 ? d.bones.subarray(0, MAX_BONES * 12) : padded(d.bones));
+    // the bones on a unit of their own (4), as the shapes are on 3, never on one of the frame's own textures
+    gl.activeTexture(gl.TEXTURE4); gl.bindTexture(gl.TEXTURE_2D, C.tBones);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, MAX_BONES * 3, 1, gl.RGBA, gl.FLOAT, d.bones.length >= MAX_BONES * 12 ? d.bones.subarray(0, MAX_BONES * 12) : padded(d.bones));
+    gl.uniform1i(u.uBones, 4);
     const v = d.view;
     gl.uniform2f(u.uEx, v.ex[0], v.ex[1]);
     gl.uniform2f(u.uEy, v.ey[0], v.ey[1]);

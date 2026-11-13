@@ -50,6 +50,7 @@ export interface Rpc {
   rpc_leave_deed: { args: { p_world: string; p_founder: string; p_uid?: string | null }; returns: unknown };
   rpc_letter: { args: { p_world: string; p_uid: string; p_text: string }; returns: unknown };
   rpc_letters: { args: { p_world: string; p_with: string; p_limit?: number }; returns: unknown };
+  rpc_look_prefs: { args: { p_world: string; p_hide_helm?: boolean | null }; returns: unknown };
   rpc_market: { args: { p_world: string }; returns: unknown };
   rpc_move: { args: { p_world: string; p_x: number; p_y: number; p_level?: number; p_via?: unknown }; returns: unknown };
   rpc_my_look: { args: {}; returns: unknown };

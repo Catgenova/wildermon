@@ -815,6 +815,11 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
   if (!isFightStance(toldStance) || typeof toldBack !== 'boolean') {
     void island.fightPrefs(game.settings.fightStance, game.settings.fightBack, true);
   }
+  // Hide helm, the same way round: the island hands round what you have on, so a copy it already has wins.
+  const toldHelm = me.hide_helm;
+  if (typeof toldHelm === 'boolean') game.settings.hideHelm = toldHelm;
+  else void island.lookPrefs(game.settings.hideHelm, true);
+  game.lookPrefsChanged = () => void island.lookPrefs(game.settings.hideHelm);
   island.hooks.people = (people: PlayerRow[]) => {
     game.roster.sawAll(people
       .filter((p) => p.uid !== island.uid)

@@ -22,6 +22,7 @@ begin
           join item i on i.id = case when jsonb_typeof(e.value) = 'number' then (e.value)::text::bigint end
                      and i.world_id = p_world
                      and i.holder = 'player' and i.holder_uid = p.uid
+         where not (e.key = 'head' and coalesce(p.hide_helm, false))
       ) w
      where p.world_id = p_world and not p.away and w.gear is not null
   ), '{}'::jsonb);

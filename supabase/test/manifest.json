@@ -1309,6 +1309,12 @@
     "why": "Two flights in a line, the second's foot where the first comes off: the way to that tile a storey up is found and stops there, the way on up still climbs both, and a hod carrier fits a wall planned on that tile's side and never says no stairs up."
   },
   {
+    "file": "supabase/test/stairline.ts",
+    "title": "A worker climbs a staircase of flights in a line to any storey of it, and comes back down",
+    "shard": 3,
+    "why": "Four flights in a line, each one's head the next one's foot: a beast stepped off a flight only at its head or its foot, so it went on up to the top storey every time, never onto a storey between, and never down off the top. Bastiondrakes stood on the ground saying no stairs up to storey 4 beside the staircase."
+  },
+  {
     "file": "supabase/test/helpsearch.ts",
     "title": "The help's search puts the sections with it in their heading first",
     "shard": 3,

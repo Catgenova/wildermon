@@ -665,7 +665,7 @@ function aboveV(style, verts, pieces, skull, C, k) {
  * (z under ear front + buzz.lean (y - ear top), y over the ear's top less buzz.drop), each kept part a patch BUZZ off its
  * face (polygons marked buzz, drawn in the shave's tone; not a closed piece). The head's mesh is left as it is.
  */
-function buzzOf(B, style, verts, polys, k) {
+export function buzzOf(B, style, verts, polys, k) {
   const ear = B.names.map((n, i) => (n && n.startsWith('ear.L') ? B.verts[i] : null)).filter(Boolean);
   const top = Math.max(...ear.map((p) => p[1])), front = Math.max(...ear.filter((p) => p[1] > top - 0.15).map((p) => p[2]));
   const { lean = 0.25, drop = 0.03, ahead = 0 } = style.buzz;
@@ -861,8 +861,8 @@ export function gameHair(rig, hair) {
     verts: hair.verts.flat().map(r5),
     polys: hair.polys.map((p) => p.v),
     // each polygon's material: 4 the hair, 5 to 8 the hair in a valley (its step, the darkest first), 3 the buzz (the
-    // shave's tone)
-    mat: hair.polys.map((p) => (p.buzz ? 3 : p.valley ? 4 + p.valley : 4)),
+    // shave's tone; also a polygon marked shaved, the buzz cut's taper)
+    mat: hair.polys.map((p) => (p.buzz || p.shaved ? 3 : p.valley ? 4 + p.valley : 4)),
     tris: hair.tris.flat(),
     weights: hair.weights.map((l) => l.flatMap(([bn, w]) => [rig.at.get(bn), +w.toFixed(4)])),
     shave: hair.shave,

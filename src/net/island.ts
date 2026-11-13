@@ -3417,7 +3417,8 @@ export class Island {
     this.people.clear();
     const now = performance.now() / 1000;
     for (const p of listOf(data, playerRow)) {
-      p.gear = wearing ? wearing[p.uid] : was.get(p.uid)?.gear;
+      // Not in what the island says is worn: nothing on (it lists only those with something), not not known.
+      p.gear = wearing ? (wearing[p.uid] ?? {}) : was.get(p.uid)?.gear;
       // Somebody heard from over the channel lately is where the channel said,
       // not where their row was last written (\`BODY_FRESH\`).
       const said = was.get(p.uid);
@@ -4171,6 +4172,13 @@ export class Island {
     const d = (data ?? {}) as { on?: boolean; left?: number; why?: string };
     if (typeof d.why === 'string') return { why: d.why };
     return { on: !!d.on, left: Number(d.left ?? 0) };
+  }
+
+  /** Whether the head slot is left off your body as everybody draws it (`hideHelm`, `rpc_look_prefs`). */
+  async lookPrefs(hideHelm: boolean, quiet = false): Promise<void> {
+    if (!this.info) return;
+    const { error } = await rpc('rpc_look_prefs', { p_world: this.info.id, p_hide_helm: hideHelm });
+    if (error && !quiet) this.hooks.say(`The island did not hear that (${error.message}).`, 'error');
   }
 
   async fightPrefs(stance: string, fightBack: boolean, quiet = false): Promise<void> {

@@ -12,6 +12,78 @@
   {
    "id": "bob",
    "name": "Bob"
+  },
+  {
+   "id": "pompadour",
+   "name": "Pompadour"
+  },
+  {
+   "id": "topknot",
+   "name": "Top knot"
+  },
+  {
+   "id": "crew",
+   "name": "Crew cut"
+  },
+  {
+   "id": "mohawk",
+   "name": "Mohawk"
+  },
+  {
+   "id": "cornrows",
+   "name": "Cornrows"
+  },
+  {
+   "id": "buzz",
+   "name": "Buzz cut"
+  },
+  {
+   "id": "afro",
+   "name": "Afro"
+  },
+  {
+   "id": "warrior",
+   "name": "Shoulder length"
+  },
+  {
+   "id": "dreads",
+   "name": "Dreads"
+  },
+  {
+   "id": "crownbraid",
+   "name": "Crown braid"
+  },
+  {
+   "id": "spacebuns",
+   "name": "Space buns"
+  },
+  {
+   "id": "pixie",
+   "name": "Pixie cut"
+  },
+  {
+   "id": "chignon",
+   "name": "Low chignon"
+  },
+  {
+   "id": "shag",
+   "name": "Shag"
+  },
+  {
+   "id": "ponytail",
+   "name": "High ponytail"
+  },
+  {
+   "id": "sideshave",
+   "name": "Side shave"
+  },
+  {
+   "id": "twinbraids",
+   "name": "Twin braids"
+  },
+  {
+   "id": "waves",
+   "name": "Long waves"
   }
  ]
 }

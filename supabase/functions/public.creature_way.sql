@@ -14,7 +14,7 @@ declare
   q int[] := '{}'; qh int := 1; qn int := 0; k int; kn int; x int; y int; l int; nx int; ny int; d int;
   dxs int[] := array[1, -1, 0, 0]; dys int[] := array[0, 0, 1, -1]; op int[] := array[2, 1, 4, 3];
   g_seen boolean := false; g_par int := 0; g_x int; g_y int; hit int := 0; v_out int[] := '{}';
-  r record; fx int; fy int; blk boolean; ok boolean;
+  r record; fx int; fy int; blk boolean; ok boolean; hx int; hy int; hk int; lk boolean;
   -- The bridges a storey up (`storey_deck_cells`), those in the search, and per cell: whose deck it is (`dk`), whose
   -- end (`en`), by place in `v_bs`.
   cb bigint[]; cl int[]; cx int[]; cy int[]; cd boolean[]; v_bs bigint[] := '{}'; v_more bigint[]; dk int[]; en int[];
@@ -140,6 +140,15 @@ begin
     exit search when qh > qn;
     k := q[qh]; qh := qh + 1;
     l := (k - 1) / wh; x := bx0 + (k - 1) % w; y := by0 + ((k - 1) / w) % h;
+    -- On a flight whose head is the foot of the next flight up, the two climbed the same way: a landing at its head.
+    lk := false;
+    if st[k] = 2 and l + 1 <= top then
+      hx := x + dxs[op[ft[k]]]; hy := y + dys[op[ft[k]]];
+      if hx between bx0 and bx1 and hy between by0 and by1 then
+        hk := ((l + 1) * h + (hy - by0)) * w + (hx - bx0) + 1;
+        lk := st[hk] = 2 and ft[hk] = ft[k];
+      end if;
+    end if;
     -- Round a spiral staircase, up it from its foot and down it from its head (`Game.liftRule`).
     if l + 1 <= top and st[k + wh] = 3 and par[k + wh] = 0 then
       par[k + wh] := k; qn := qn + 1; q[qn] := k + wh;
@@ -164,14 +173,15 @@ begin
           if not g_seen and g_par = 0 and st[kn - wh] not in (2, 4) and creature_tile_ok(p_world, nx, ny) then
             g_par := k; g_x := nx; g_y := ny;
           end if;
-        elsif st[kn - wh] in (1, 3) and par[kn - wh] = 0 then
+        -- Or onto the head of the flight under it, climbed the same way: on down that one.
+        elsif (st[kn - wh] in (1, 3) or (st[kn - wh] = 2 and ft[kn - wh] = d)) and par[kn - wh] = 0 then
           par[kn - wh] := k; qn := qn + 1; q[qn] := kn - wh;
           if goal[kn - wh] then hit := kn - wh; exit search; end if;
         end if;
         continue;
       end if;
-      -- Its rails: off a flight only at its head or its foot.
-      continue when st[k] = 2 and d <> op[ft[k]];
+      -- Its rails: off a flight only at its head or its foot, and at a landing (above) off its sides too.
+      continue when st[k] = 2 and d <> op[ft[k]] and not lk;
       continue when case d when 1 then bv[kn] when 2 then bv[k] when 3 then bh[kn] else bh[k] end;
       -- A bridge's deck: onto it from one of its ends or along it, off it onto one of its ends (`Game.bridgeStepLevel`).
       continue when (st[kn] = 6 and dk[kn] <> dk[k] and en[k] <> dk[kn]) or (st[k] = 6 and st[kn] <> 6 and en[kn] <> dk[k]);
@@ -187,8 +197,13 @@ begin
           if goal[kn + wh] then hit := kn + wh; exit search; end if;
         end if;
       elsif st[kn] = 2 then
-        -- Onto the head of a flight up to this storey, from the storey's side: on its way down.
-        if ft[kn] = d and par[kn] = 0 then
+        -- Onto the head of a flight up to this storey, from the storey's side: on its way down. Onto a landing (above)
+        -- from either side too.
+        hx := nx + dxs[op[ft[kn]]]; hy := ny + dys[op[ft[kn]]];
+        hk := ((l + 1) * h + (hy - by0)) * w + (hx - bx0) + 1;
+        if par[kn] = 0 and (ft[kn] = d
+            or (d <> op[ft[kn]] and l + 1 <= top and hx between bx0 and bx1 and hy between by0 and by1
+                and st[hk] = 2 and ft[hk] = ft[kn])) then
           par[kn] := k; qn := qn + 1; q[qn] := kn;
           if goal[kn] then hit := kn; exit search; end if;
         end if;

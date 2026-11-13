@@ -425,6 +425,7 @@ function drawStill(g: CanvasRenderingContext2D, px: number, py: number, zoom: nu
 }
 import { FLOAT_COLOURS, Floaters } from './floaters';
 import { inkOr, WORLD_INK } from './inks';
+import { NameLabels } from './namelabels';
 import { drawSpeech } from './bubble';
 import { SKILL_BY_ID } from '../game/skills';
 import { PUFFS, PUFF_DRIFT, PUFF_RISE, puffAge, puffOf } from './smoke';
@@ -437,7 +438,7 @@ import { clumpOf, FLOWER_COLOURS, flowerSprite, swayFrame, tileColour } from './
 import { flowerSeason, flowersOn } from '../world/flowers';
 import { drawFace, EDGES, ROCK_MOSS, sprigOf, topEdges, type Face } from './outcrops';
 import { cropFrame, FIELD_LAYOUTS } from './crops';
-import { forgetTrees, grownAt, stumpGrown, spriteScaleFor, bushSprite, crateSprite, cropFlatSprite, cropSprite, drawCampfire, drawCreature, type CreaturePose, drawPlayer, facingOf, lyingSprite, treeSprite, type Sprite, drawTrap, drawDeck, stumpSprite } from './sprites';
+import { forgetTrees, grownAt, stumpGrown, spriteScaleFor, bushSprite, crateSprite, cropFlatSprite, cropSprite, drawCampfire, drawCreature, creatureTop, type CreaturePose, drawPlayer, facingOf, lyingSprite, treeSprite, type Sprite, drawTrap, drawDeck, stumpSprite } from './sprites';
 import { inkOf, READ_BACK } from './ink';
 import { wildermonHead, wildermonSaddle, wildermonSeat, wildermonTop } from './wildermon';
 import {
@@ -1332,6 +1333,8 @@ export class Renderer {
   private creatureHits: HitRect[] = [];
   /** The hostile creatures drawn this frame, and how to draw each again, for marking them over the trees (`drawThreats`). */
   private threats: Array<{ sx: number; sy: number; top: number; hunting: boolean; draw: (g: CanvasRenderingContext2D, px: number, py: number) => void }> = [];
+  /** The names over the creatures and the people drawn this frame, laid out and drawn over all of it at the end (`NameLabels`). */
+  private names = new NameLabels();
   private peerHits: HitRect[] = [];
   private crateHits: HitRect[] = [];
   private fireHits: HitRect[] = [];
@@ -1739,6 +1742,7 @@ export class Renderer {
       set inCellarPass(v) { r.inCellarPass = v; },
       get kilnHits() { return r.kilnHits; },
       logsAt: r.logsAt.bind(r),
+      get names() { return r.names; },
       nightLayer: r.nightLayer.bind(r),
       get peerHits() { return r.peerHits; },
       get postHits() { return r.postHits; },
@@ -4321,6 +4325,7 @@ export class Renderer {
     const c = this.cornerBuf;
     this.creatureHits.length = 0;
     this.threats.length = 0;
+    this.names.begin(this.game.settings.uiSize);
     this.peerHits.length = 0;
     this.crateHits.length = 0;
     this.fireHits.length = 0;
@@ -5186,6 +5191,8 @@ export class Renderer {
     if (this.planGhost?.length) this.drawPlanGhost(ctx, this.planGhost);
     this.drawFight(ctx, zoom);
     if (this.game.settings.markThreats) this.drawThreats(ctx, zoom);
+    // Every name, over everything, laid out together so none covers another.
+    this.names.flush(ctx);
   }
 
   /**
@@ -5714,6 +5721,40 @@ export class Renderer {
 
   /** Where your feet were drawn this frame, on the screen. */
   private feetAt: { x: number; y: number } | null = null;
+
+  /**
+   * A creature's name, handed to the names drawn over the frame (`NameLabels`): every one of them at every zoom, by
+   * its colour for whose it is, over its head and over whatever else is drawn there -- its health bar, the bar
+   * `drawFight` puts over one after you, the red marker `drawThreats` puts over a hostile one and the ! of a heavy
+   * blow coming -- which are kept clear of every other name as well. `tall` is how high its head is at zoom one.
+   */
+  private nameCreature(cr: Creature, def: (typeof SPECIES)[string], look: CreaturePose, tall: number, sway: Swayed | undefined, sx: number, sy: number, zoom: number): void {
+    const [x, head] = swayedAt(sway, sx, sy - tall * zoom);
+    const feet = swayedAt(sway, sx, sy)[1];
+    const hostile = threatens(cr, def);
+    let lift = Math.max(0, creatureTop(look) - tall) * zoom;
+    const marked = this.game.fightTarget ?? this.game.marked;
+    if (cr.mode === 'wild' && cr.health > 0 && (cr.enemy === PLAYER_ATTACKER || cr.id === marked)) lift = Math.max(lift, 3 * zoom + Math.max(3, 4 * zoom) + 1);
+    if (hostile && this.game.settings.markThreats) {
+      const r = 5 * Math.max(0.8, zoom);
+      const mark = (cr.enemy === PLAYER_ATTACKER ? 14 * zoom + 3 * r : 6 * zoom + 1.6 * r) + (this.calm ? 0 : 2 * zoom);
+      this.names.block(x - r, head - mark, 2 * r, mark);
+      lift = Math.max(lift, mark);
+    }
+    if (cr.windup > 0) {
+      const size = Math.max(11, Math.round(18 * zoom));
+      this.names.block(x - size / 2, head - 16 * zoom - size, size, size);
+      lift = Math.max(lift, 16 * zoom + size);
+    }
+    this.names.add({
+      text: cr.name,
+      ink: hostile ? 'hostile' : cr.mode === 'wild' ? 'wild' : cr.mine === false ? 'theirs' : 'mine',
+      x,
+      head,
+      lift,
+      z: feet,
+    });
+  }
 
   /**
    * Hostile creatures, marked over whatever stands in front of them: asked,
@@ -6541,7 +6582,7 @@ export class Renderer {
       const z = this.footOn(p.x, p.y, Math.max(0, p.level)) + Math.max(0, p.visualLevel) * WALL_HEIGHT;
       return personBody(p.x, p.y, z, this.playerFacing, 'player', {
         id: 'player', phase: p.moving ? p.walkPhase : this.anim * 6, moving: p.moving, gait: 0, facing: this.playerFacing, swimming: p.swimming, working: false,
-        look: p.look, gear: gearFrom(wornWire((slot) => game.worn(slot))),
+        look: p.look, gear: gearFrom(wornWire((slot) => game.shown(slot))),
       });
     }
     if (w.kind === 'peer') {
@@ -6749,7 +6790,7 @@ export class Renderer {
             seat: ent.seat,
             look: player.look,
             // Everything on, each piece drawn in its own material, dye and rarity.
-            gear: enchantedFrom(gearFrom(wornWire((slot) => this.game.worn(slot))), (slot) => this.game.worn(slot)?.enchant),
+            gear: enchantedFrom(gearFrom(wornWire((slot) => this.game.shown(slot))), (slot) => this.game.shown(slot)?.enchant),
             // The tool the job in hand uses (the best of its kind in the pack, `Inventory.tool`), in its own metal.
             tool: this.game.action?.state === 'performing' && this.game.action.def.tool ? toolPiece(this.game.inventory.tool(this.game.action.def.tool)) : undefined,
             // Both clocks here are `performance.now()`: the one the emote was
@@ -6816,44 +6857,33 @@ export class Renderer {
           peerBox,
         );
         if (ent.clip) ctx.restore();
-        // Somebody else is only somebody else if you can tell which one.
-        if (zoom >= 0.5) this.words(ctx, ent.sway, ex, ey - (FIGURE_TOP + 1) * zoom, (ex, ty) => {
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'alphabetic';
-          ctx.strokeStyle = 'rgba(10,10,12,0.85)';
-          ctx.lineWidth = 3;
-          ctx.font = `${Math.round(11 * zoom)}px system-ui, sans-serif`;
-          ctx.strokeText(peer.name, ex, ty);
-          ctx.fillStyle = '#cfe6ff';
-          ctx.fillText(peer.name, ex, ty);
-          /*
-           * And what they are at, over the name.
-           *
-           * The figure already bends over when somebody is working, which says
-           * that they are busy and nothing about what at — so a yard with four
-           * people in it was four people bending over. The id crosses the wire
-           * and the words are looked up here, out of the same table this
-           * browser names its own actions from: an id we have never heard of
-           * draws nothing rather than drawing whatever it says.
-           *
-           * Smaller and dimmer than the name, and above it, so a crowd reads
-           * as names with a note over each rather than as two rows of text.
-           */
-          const doing = peer.act ? ACTION_BY_ID.get(peer.act)?.verb : undefined;
-          if (doing) {
-            ctx.font = `${Math.round(9 * zoom)}px system-ui, sans-serif`;
-            ctx.strokeText(doing, ex, ty - 11 * zoom);
-            ctx.fillStyle = 'rgba(207,230,255,0.72)';
-            ctx.fillText(doing, ex, ty - 11 * zoom);
-          }
-          ctx.lineWidth = 1;
-          ctx.textAlign = 'left';
-        });
-        // Over the name and over whatever they are at, so a person talking
-        // while they dig reads top to bottom: what they said, what they are
-        // doing, who they are.
+        /*
+         * Somebody else is only somebody else if you can tell which one: their
+         * name on a plate over their head (`NameLabels`), and what they are at
+         * on the same plate over it.
+         *
+         * The figure already bends over when somebody is working, which says
+         * that they are busy and nothing about what at — so a yard with four
+         * people in it was four people bending over. The id crosses the wire
+         * and the words are looked up here, out of the same table this
+         * browser names its own actions from: an id we have never heard of
+         * draws nothing rather than drawing whatever it says.
+         *
+         * And what they said over the plate, wherever the plate is put, so a
+         * person talking while they dig reads top to bottom: what they said,
+         * what they are doing, who they are.
+         */
+        const [nx, ny] = swayedAt(ent.sway, ex, ey - FIGURE_TOP * zoom);
         const said = peer.said;
-        if (said) this.words(ctx, ent.sway, ex, ey - (FIGURE_TOP + 17) * zoom, (x, y) => this.speechBubble(ctx, zoom, x, y, said, peer.saidAt ?? 0));
+        this.names.add({
+          text: peer.name,
+          note: peer.act ? ACTION_BY_ID.get(peer.act)?.verb : undefined,
+          ink: 'player',
+          x: nx,
+          head: ny,
+          z: swayedAt(ent.sway, ex, ey)[1],
+          over: said ? (x, top) => this.speechBubble(ctx, zoom, x, top - 6 * zoom, said, peer.saidAt ?? 0) : undefined,
+        });
         continue;
       }
       if (ent.kind === 'creature' && ent.creature) {
@@ -6899,7 +6929,6 @@ export class Renderer {
           health: cr.health / maxHealth(cr, def),
           fleece: cr.fleece,
           scale: big,
-          label: cr.mode === 'wild' ? undefined : cr.name,
           id: cr.id,
           graze: cr.state === 'forage',
           rare: cr.rare,
@@ -6920,6 +6949,7 @@ export class Renderer {
         if (cr.hitchedTo !== null) this.drawReins(ctx, cr, ent.sx, ent.sy, turned, big, zoom);
         // And a mark over it, for the second it has to be seen in.
         if (cr.windup > 0) this.drawWindupMark(ctx, ent.sx, ent.sy - (tall + 16) * zoom, zoom);
+        this.nameCreature(cr, def, look, tall, ent.sway, ent.sx + csx, ent.sy + csy, zoom);
         this.creatureHits.push({ x: ent.x, y: ent.y, left: ent.sx - wide * zoom, top: ent.sy - tall * zoom, w: 2 * wide * zoom, h: (tall + 2) * zoom, creature: cr.id });
         continue;
       }
@@ -6946,8 +6976,8 @@ export class Renderer {
         /*
          * A wildermon crate with somebody in it: its far half, the wildermon
          * standing on its floor facing the door, and its near half and lid
-         * over them, so it is seen inside rather than on top. Its name stands
-         * over the crate the way a companion's stands over its head.
+         * over them, so it is seen inside rather than on top. No name over it:
+         * a crated one is the one wildermon whose name is not drawn.
          */
         const inside = piece.kind === CREATURE_CRATE && piece.creature !== undefined ? this.game.creatures.get(piece.creature) : undefined;
         if (inside && inside.mode === 'stored') {
@@ -6973,18 +7003,6 @@ export class Renderer {
             }, this.stillsLeft);
             drawFurniture(g, px, py, zoom, piece.kind, false, tint, 1, view, piece.material);
           }, undefined, pieceBox);
-          if (zoom >= 0.6) {
-            ctx.font = `${Math.max(9, 10 * zoom)}px "Segoe UI", system-ui, sans-serif`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'bottom';
-            ctx.lineWidth = 3;
-            ctx.strokeStyle = 'rgba(0,0,0,0.7)';
-            ctx.strokeText(inside.name, ent.sx, ent.sy - (h + 4) * zoom);
-            ctx.fillStyle = '#e3b657';
-            ctx.fillText(inside.name, ent.sx, ent.sy - (h + 4) * zoom);
-            ctx.textAlign = 'left';
-            ctx.lineWidth = 1;
-          }
         } else if (piece.kind === MEMORIAL) {
           /*
            * A memorial stone, drawn as the Runestones are (`memorial.ts`): its

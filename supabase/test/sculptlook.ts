@@ -60,7 +60,13 @@ check('every hairstyle in the list has a mesh on both bodies',
 check('and every mesh is in the list', meshed('male').every((id) => INDEX.styles.some((s) => s.id === id)), meshed('male').join());
 check('the creator offers Bald and every one of them, by name', same(HAIRSTYLES, [{ id: 'bald', name: 'Bald' }, ...INDEX.styles]),
   HAIRSTYLES.map((h) => h.name).join(', '));
-check('three hairstyles and bald, so far', HAIRSTYLES.length === 4, HAIRSTYLES.map((h) => h.id).join());
+check('every hairstyle there is a mesh for and bald', HAIRSTYLES.length === INDEX.styles.length + 1, HAIRSTYLES.map((h) => h.id).join());
+check('the pompadour among them', HAIRSTYLES.some((h) => h.id === 'pompadour' && h.name === 'Pompadour'), HAIRSTYLES.map((h) => h.id).join());
+check('cornrows among them', HAIRSTYLES.some((h) => h.id === 'cornrows' && h.name === 'Cornrows'), HAIRSTYLES.map((h) => h.id).join());
+check('the crown braid among them', HAIRSTYLES.some((h) => h.id === 'crownbraid' && h.name === 'Crown braid'), HAIRSTYLES.map((h) => h.id).join());
+check('the pixie cut among them', HAIRSTYLES.some((h) => h.id === 'pixie' && h.name === 'Pixie cut'), HAIRSTYLES.map((h) => h.id).join());
+check('the shag among them', HAIRSTYLES.some((h) => h.id === 'shag' && h.name === 'Shag'), HAIRSTYLES.map((h) => h.id).join());
+check('the swept back, the braid, the bob and the afro among them, and bald', ['bald', 'swept', 'braid', 'bob', 'afro'].every((id) => HAIRSTYLES.some((h) => h.id === id)), HAIRSTYLES.map((h) => h.id).join());
 check('the ids the island checks are the bodies and the hairstyles', same(Object.keys(LOOK_TABLES), ['gender', 'hair']));
 
 /* ---- the ramps ------------------------------------------------------------------------------------- */
@@ -120,7 +126,7 @@ console.log('--- a look');
 check('numbers kept to three places', same(cleanLook({ ...DEFAULT_LOOK, skin: 0.12345, hairColour: 0.5, hairBright: 0.0004 }),
   { ...DEFAULT_LOOK, skin: 0.123, hairColour: 0.5, hairBright: 0 }));
 check('and to nought to one', same(cleanLook({ ...DEFAULT_LOOK, skin: -3, hairColour: 7, hairBright: 1 }), { ...DEFAULT_LOOK, skin: 0, hairColour: 1, hairBright: 1 }));
-check('anything else is the default', same(cleanLook({ gender: 'goblin', hair: 'mohawk', skin: '#ff0000', hairColour: null, hairBright: [1] }), DEFAULT_LOOK),
+check('anything else is the default', same(cleanLook({ gender: 'goblin', hair: 'not-a-style', skin: '#ff0000', hairColour: null, hairBright: [1] }), DEFAULT_LOOK),
   JSON.stringify(cleanLook({ gender: 'goblin', hair: 'mohawk', skin: '#ff0000', hairColour: null, hairBright: [1] })));
 check('nothing at all is the default', same(cleanLook(null), DEFAULT_LOOK) && same(cleanLook([1, 2]), DEFAULT_LOOK) && same(cleanLook('woman'), DEFAULT_LOOK));
 check('eyes, beards and cloth are not kept', same(Object.keys(cleanLook({ ...DEFAULT_LOOK, eyes: 'green', beard: 'full', shirt: 'woad' })), LOOK_KINDS));
@@ -133,14 +139,25 @@ check('and comes as either body and every hairstyle', GENDERS.every((g) => rolle
 console.log('--- looks from before');
 const old = { gender: 'neither', skin: 'olive', hair: 'long', hairColour: 'auburn', eyes: 'hazel', beard: 'none', shirt: 'madder', trousers: 'bark' };
 const now = cleanLook(old);
-check('an old look becomes one of now', now.gender === 'man' && now.hair === 'braid' && skinColour(now) === '#c79a68' && gap(hairColour(now), '#7d3a1d') < 6, JSON.stringify(now));
+check('an old look becomes one of now', now.gender === 'man' && now.hair === 'warrior' && skinColour(now) === '#c79a68' && gap(hairColour(now), '#7d3a1d') < 6, JSON.stringify(now));
 check('neither: the build nearest it, the man\'s', cleanLook({ gender: 'neither' }).gender === 'man');
 const OLD_HAIR = ['bald', 'crop', 'short', 'bowl', 'side', 'swept', 'fringe', 'curls', 'afro', 'waves', 'long', 'ponytail', 'topknot', 'bun', 'braid', 'braids', 'locs', 'ridge', 'undercut', 'tonsure'];
 const hairNow = OLD_HAIR.map((h) => cleanLook({ hair: h }).hair);
 check('every old haircut to one there is a mesh for', hairNow.every((h) => HAIRSTYLES.some((s) => s.id === h)), OLD_HAIR.map((h, i) => `${h}>${hairNow[i]}`).join(' '));
+check('the old bun to the low chignon', cleanLook({ hair: 'bun' }).hair === 'chignon' && HAIRSTYLES.some((h) => h.id === 'chignon' && h.name === 'Low chignon'), cleanLook({ hair: 'bun' }).hair);
 check('short to the swept back, long to the braid, bald and the tonsure to bald',
-  cleanLook({ hair: 'crop' }).hair === 'swept' && cleanLook({ hair: 'ponytail' }).hair === 'braid' && cleanLook({ hair: 'tonsure' }).hair === 'bald');
+  cleanLook({ hair: 'crop' }).hair === 'swept' && cleanLook({ hair: 'braid' }).hair === 'braid' && cleanLook({ hair: 'tonsure' }).hair === 'bald');
+check('the ponytail to the high ponytail', cleanLook({ hair: 'ponytail' }).hair === 'ponytail');
+check('long and loose to the shoulder length', cleanLook({ hair: 'long' }).hair === 'warrior');
+check('twin braids to the twin braids', cleanLook({ hair: 'braids' }).hair === 'twinbraids');
+check('long waves to the long waves', cleanLook({ hair: 'waves' }).hair === 'waves');
 check('a bowl cut and a fringe to the bob', cleanLook({ hair: 'bowl' }).hair === 'bob' && cleanLook({ hair: 'fringe' }).hair === 'bob');
+check('the top knot to the top knot', cleanLook({ hair: 'topknot' }).hair === 'topknot');
+check('a short cut to the crew cut', cleanLook({ hair: 'short' }).hair === 'crew');
+check('the ridge to the mohawk', cleanLook({ hair: 'ridge' }).hair === 'mohawk');
+check('an afro to the afro', cleanLook({ hair: 'afro' }).hair === 'afro');
+check('locs to the dreads', cleanLook({ hair: 'locs' }).hair === 'dreads');
+check('the space buns kept as they are', cleanLook({ hair: 'spacebuns' }).hair === 'spacebuns');
 const SKINS: Record<string, string> = { porcelain: '#f5ddc6', fair: '#ecc8a6', light: '#ddae85', olive: '#c79a68', tan: '#b5804f', bronze: '#9d6a3f', umber: '#855634', deep: '#6b4328', dark: '#55341f', ebony: '#3e2617' };
 check('every old skin is its very colour', Object.entries(SKINS).every(([id, c]) => skinColour(cleanLook({ skin: id })) === c),
   Object.keys(SKINS).filter((id) => skinColour(cleanLook({ skin: id })) !== SKINS[id]).join());
