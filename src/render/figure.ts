@@ -6468,8 +6468,8 @@ const TOON_THIN_PX = 2, TOON_FLECK_PX = 0.8;
 
 /** A piece as a body wears it: which thing, how rare, the material it was made of and the colour it was dyed. */
 export type { GearLook, GearPiece, GearSlot } from '../contract/gear';
-/** The chain set's sculpted pieces (`src/sculpt/lowpoly.ts`: the coif, the hauberk and sleeves, the leggings, the boots). */
-export type ChainPiece = 'chainCoif' | 'chainChest' | 'chainLegs' | 'chainBoots';
+/** The chain set's sculpted pieces (`src/sculpt/lowpoly.ts`: the coif, the hauberk and sleeves, the shawl, the leggings, the boots). */
+export type ChainPiece = 'chainCoif' | 'chainChest' | 'chainShawl' | 'chainLegs' | 'chainBoots';
 /** The plate and chain sets' sculpted pieces, each in its own metal (`FigurePose.outfit.metal`), and the scale set's, all in one material. */
 export type PlatePiece = 'chest' | 'legs' | 'boots' | 'helm' | ChainPiece | 'scale';
 /** The cloth and leather sculpted pieces a dye colours (`FigurePose.outfit.dye`). */

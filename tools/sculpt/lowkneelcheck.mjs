@@ -14,10 +14,11 @@
 //     what is worn against itself (worn × worn: a piece through another, an under-layer through the plates over it), most
 //     in a frame and of those the seen.
 //     Clips: ground (a go of planting, one run of the clip, as the game plays it), idle (its whole loop), walk (one turn
-//     of the walk phase), work (a go at the bench with the hammer), fight (the long sword's placeholder: a go of a fight).
+//     of the walk phase), work (a go at the bench with the hammer), fight (the long sword's overhead swing: a go of a
+//     fight), fight1 (the one-handed fight, the sword: a go).
 //     Sets: plate (helm, chest & arms, leggings, boots: steel), mantle (the plate set and its fur mantle), leather (chest
 //     & arms, leggings, boots, shawl, hat), leatherchest (the same less the shawl), chain (coif, hauberk & sleeves,
-//     leggings, boots), scale (helm, cuirass & sleeves, leggings, boots), outfit1 (the cloth shawl, tunic, trousers and
+//     leggings, boots), chainshawl (the chain set and its shawl), scale (helm, cuirass & sleeves, leggings, boots), outfit1 (the cloth shawl, tunic, trousers and
 //     boots), bare (nothing worn).
 import { build } from 'esbuild';
 import { writeFileSync } from 'node:fs';
@@ -35,12 +36,13 @@ const OUTFITS = {
   leather: { leatherChest: true, leatherLegs: true, leatherBoots: true, leatherShawl: true, leatherHat: true },
   leatherchest: { leatherChest: true, leatherLegs: true, leatherBoots: true, leatherHat: true },
   chain: { chainCoif: true, chainChest: true, chainLegs: true, chainBoots: true },
+  chainshawl: { chainCoif: true, chainChest: true, chainShawl: true, chainLegs: true, chainBoots: true },
   scale: { scaleHelm: true, scaleChest: true, scaleLegs: true, scaleBoots: true },
   outfit1: {},
   bare: { shawl: false, trousers: false, boots: false, tunic: false, hood: false },
 };
 const b = await build({
-  stdin: { contents: `export { lowScene } from './src/sculpt/lowpoly'; export { CLIPS, workClipOf } from './src/sculpt/anim'; export { DEFAULT_LOOK } from './src/game/look'; export { M } from './src/sculpt/models/body';`, resolveDir: ROOT, loader: 'ts' },
+  stdin: { contents: `export { lowScene, lowWornAt } from './src/sculpt/lowpoly'; export { CLIPS, workClipOf } from './src/sculpt/anim'; export { DEFAULT_LOOK } from './src/game/look'; export { M } from './src/sculpt/models/body';`, resolveDir: ROOT, loader: 'ts' },
   bundle: true, format: 'esm', platform: 'node', write: false, logLevel: 'error', target: 'es2022', absWorkingDir: ROOT,
   loader: { '.png': 'dataurl', '.svg': 'dataurl', '.webp': 'dataurl', '.wav': 'dataurl', '.ogg': 'dataurl', '.mp3': 'dataurl' },
   define: { 'import.meta.env': '{}', __DEPLOY__: 'undefined' },
@@ -50,7 +52,8 @@ if (TS.workClipOf('plant') !== 'ground') throw new Error(`plant plays ${TS.workC
 
 /**
  * Where the body's materials end and the worn garments' start (src/sculpt/lowpoly.ts GARMENT_MAT, WORN_MAT): the body's
- * own (`M`), then the prop's and each hand's tool's places (PROP_SLOTS, twenty each), then the garments'.
+ * own (`M`), then the prop's and each hand's tool's places (PROP_SLOTS, twenty each at most), then the garments' (where
+ * a bake's start: lowWornAt).
  */
 const GARMENT_MAT = Object.keys(TS.M).length, WORN_MAT = GARMENT_MAT + 20 * 3;
 
@@ -73,7 +76,8 @@ function sceneOf(pose) {
   const T = Array.from({ length: s.baked.nTris }, (_, t) => ({ v: [s.baked.tris[t * 3], s.baked.tris[t * 3 + 1], s.baked.tris[t * 3 + 2]] }));
   // (the body's skin: its own materials, the first laid; what is worn: the materials past the props' places)
   const body = [], worn = [];
-  T.forEach((t, k) => { const m = mat[t.v[0]]; if (m < GARMENT_MAT) body.push(k); else if (m >= WORN_MAT) worn.push(k); });
+  const wornAt = TS.lowWornAt(s.baked) ?? WORN_MAT;
+  T.forEach((t, k) => { const m = mat[t.v[0]]; if (m < GARMENT_MAT) body.push(k); else if (m >= wornAt) worn.push(k); });
   return { P, T, dom, mat, body, worn };
 }
 
@@ -131,6 +135,7 @@ const POSES = {
   walk: (k, n) => ({ moving: true, phase: (2 * Math.PI * k) / n }),
   work: (k, n) => ({ working: true, job: 'build_wall', tool: { id: 'hammer', material: 'iron' }, act: { t: (k / n) * 3, length: 3 }, phase: 0 }),
   fight: (k, n) => ({ working: true, job: 'attack_creature', gear: { weapon: { id: 'long_sword' } }, act: { t: (k / n) * 2, length: 2 }, phase: 0 }),
+  fight1: (k, n) => ({ working: true, job: 'attack_creature', gear: { weapon: { id: 'sword' } }, act: { t: (k / n) * 2, length: 2 }, phase: 0 }),
 };
 
 const report = {};

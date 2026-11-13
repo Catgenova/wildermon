@@ -3,7 +3,7 @@
 // cap's rim showing round the face under it, and a gold clasp on the brow with its gem (glowing when enchanted). The
 // hair is not drawn under it (src/sculpt/lowpoly.ts hairShown). The head's and the neck's polygons it covers whole are
 // hidden (`hides`). Its tippet, from `dropFrom` on, is left out under a chest piece with a collar of its own (the plate
-// and the leather chests, the shawl, the mantle), the hood's neck then tucked under that collar.
+// and the leather chests, the shawl, the mantle, the chain shawl), the hood's neck then tucked under that collar.
 //
 //   buildChainCoif(rig, design?) → the mesh (chainmail.mjs chainMesh, its `hides`, `dropFrom`)
 //

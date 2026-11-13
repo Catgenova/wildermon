@@ -141,6 +141,8 @@ import MALE_CHAIN_CHEST from './assets/lowchainchest-male.json';
 import FEMALE_CHAIN_CHEST from './assets/lowchainchest-female.json';
 import MALE_CHAIN_COIF from './assets/lowchaincoif-male.json';
 import FEMALE_CHAIN_COIF from './assets/lowchaincoif-female.json';
+import MALE_CHAIN_SHAWL from './assets/lowchainshawl-male.json';
+import FEMALE_CHAIN_SHAWL from './assets/lowchainshawl-female.json';
 import MALE_CHAIN_LEGS from './assets/lowchainlegs-male.json';
 import FEMALE_CHAIN_LEGS from './assets/lowchainlegs-female.json';
 import MALE_CHAIN_BOOTS from './assets/lowchainboots-male.json';
@@ -1295,10 +1297,10 @@ const dressed = (pose: FigurePose): FigurePose => (pose.outfit || !pose.gear ? p
  * (In play, what a figure has equipped: `outfitOf`.)
  */
 /** A pose's outfit switches (none set: the first outfit, the defaults). The first outfit's pieces give way to a set's
- * piece worn over the same place: the shawl to any chest armour, mantle or leather shawl, the trousers to plate or
+ * piece worn over the same place: the shawl to any chest armour, mantle, leather shawl or chain shawl, the trousers to plate or
  * leather leggings, the tunic to plate or leather chest, the hood to the helm or the hat, the boots to plate or leather boots. */
 const o = (pose: FigurePose): NonNullable<FigurePose['outfit']> => pose.outfit ?? {};
-const wearsShawl = (pose: FigurePose): boolean => (pose.outfit?.shawl ?? true) && !(o(pose).plateChest || o(pose).plateMantle || o(pose).leatherChest || o(pose).leatherShawl || o(pose).chainChest || o(pose).scaleChest);
+const wearsShawl = (pose: FigurePose): boolean => (pose.outfit?.shawl ?? true) && !(o(pose).plateChest || o(pose).plateMantle || o(pose).leatherChest || o(pose).leatherShawl || o(pose).chainChest || o(pose).chainShawl || o(pose).scaleChest);
 const wearsTrousers = (pose: FigurePose): boolean => (pose.outfit?.trousers ?? true) && !(o(pose).plateLegs || o(pose).leatherLegs || o(pose).chainLegs || o(pose).scaleLegs);
 /** Whether a figure wears the plate set's boots (`tools/sculpt/garments/plateboots.mjs`; over the leggings, the body stood on their soles): off unless asked for. */
 const wearsPlateBoots = (pose: FigurePose): boolean => pose.outfit?.plateBoots ?? false;
@@ -1330,7 +1332,7 @@ const wearsHelm = (pose: FigurePose): boolean => pose.outfit?.plateHelm ?? false
  * tippet over the shoulders is left out under a chest piece with a collar of its own (`coifTippetDropped`).
  */
 const wearsCoif = (pose: FigurePose): boolean => pose.outfit?.chainCoif ?? false;
-const coifTippetDropped = (pose: FigurePose): boolean => wearsShawl(pose) || !!(o(pose).plateChest || o(pose).plateMantle || o(pose).leatherChest || o(pose).leatherShawl || o(pose).scaleChest);
+const coifTippetDropped = (pose: FigurePose): boolean => wearsShawl(pose) || !!(o(pose).plateChest || o(pose).plateMantle || o(pose).leatherChest || o(pose).leatherShawl || o(pose).chainShawl || o(pose).scaleChest);
 /** Whether a figure wears the scale set's helm (`tools/sculpt/garments/scalehelm.mjs`: rigid on the head, the hair not drawn under it): off unless asked for. */
 const wearsScaleHelm = (pose: FigurePose): boolean => pose.outfit?.scaleHelm ?? false;
 export const hairShown = (pose: FigurePose): boolean => !wearsHood(pose) && !wearsHelm(pose) && !wearsCoif(pose) && !wearsScaleHelm(pose);
@@ -1402,6 +1404,10 @@ const GARMENTS: ReadonlyArray<{ man: GarmentAsset; woman: GarmentAsset; wears: (
   { man: MALE_CHAIN_LEGS as unknown as GarmentAsset, woman: FEMALE_CHAIN_LEGS as unknown as GarmentAsset, wears: (p) => p.outfit?.chainLegs ?? false, enchanted: enchantedOf('chainLegs'), drops: wearsChainBoots, plate: 'chainLegs' },
   { man: MALE_CHAIN_BOOTS as unknown as GarmentAsset, woman: FEMALE_CHAIN_BOOTS as unknown as GarmentAsset, wears: wearsChainBoots, enchanted: enchantedOf('chainBoots'), plate: 'chainBoots' },
   { man: MALE_CHAIN_CHEST as unknown as GarmentAsset, woman: FEMALE_CHAIN_CHEST as unknown as GarmentAsset, wears: (p) => p.outfit?.chainChest ?? false, enchanted: enchantedOf('chainChest'), plate: 'chainChest' },
+  // the chain set's shawl, the petal gorget (`tools/sculpt/garments/chainshawl.mjs`): over the hauberk, the coif's tippet
+  // left out under its collar; its mail in its metal, its brass its own; enchanted, the collar's diamonds and the tabs'
+  // edges glow
+  { man: MALE_CHAIN_SHAWL as unknown as GarmentAsset, woman: FEMALE_CHAIN_SHAWL as unknown as GarmentAsset, wears: (p) => p.outfit?.chainShawl ?? false, enchanted: enchantedOf('chainShawl'), plate: 'chainShawl' },
   // the scale set's cuirass & sleeves (`tools/sculpt/garments/scalechest.mjs`): off unless asked for; its scales and
   // scale-plate in the set's material (`scaleMat`)
   // the scale set's leggings (`tools/sculpt/garments/scalelegs.mjs`): off unless asked for; their leather takes the
@@ -1575,6 +1581,8 @@ export function lowMaterialsMost(given: FigurePose): number {
   const pose = dressed(given), who = (pose.look ?? DEFAULT_LOOK).gender === 'woman' ? 'woman' : 'man';
   return WORN_MOST + BODIES[who].used(GARMENTS.map((g) => g.wears(pose)), GARMENTS.map((g) => g.enchanted?.(pose) ?? false)).length;
 }
+/** Where a bake's worn garments' materials start (`placesOf`: after the prop's and the hands' tools'), for the authoring tools to tell them from the props'. */
+export const lowWornAt = (baked: Baked): number | undefined => USED.get(baked)?.at;
 /** A prop drawn in both hands (`PROPS`, by the weapon's id) as a body holds it (for the authoring tools). */
 export const lowHeldOf = (body: 'man' | 'woman', id: string): Held | undefined => BODIES[body].heldOf(id);
 /** A body's local turns for a pose as the figure's pose maps onto it, with no clip (for the authoring tools to compare). */
@@ -1647,7 +1655,7 @@ export const hasLowBody = (look: { gender: string }): boolean => look.gender ===
 const DRESSED = new Map<string, Material[]>();
 function materialsOf(look: Look, prop: PropAsset | undefined, lit: 'plain' | 'enchanted' = 'plain', metal?: string, tools: Partial<Record<Side, { id: string; piece?: GearPiece }>> = {}, plate: Partial<Record<PlatePiece, string>> = {}, dye: Partial<Record<DyedPiece, string>> = {}, worn: { used: readonly number[]; at: number } = { used: [], at: WORN_MOST }, kit: KitTints = {}): Material[] {
   const toolKey = (['r', 'l'] as const).map((s) => { const t = tools[s]; return t ? `${t.id}:${t.piece?.material ?? ''}:${t.piece?.enchanted ? 1 : 0}` : ''; }).join(',');
-  const plateKey = (['chest', 'legs', 'boots', 'helm', 'chainCoif', 'chainChest', 'chainLegs', 'chainBoots', 'scale'] as const).map((p) => plate[p] ?? '').join(',') + ';' + Object.entries(dye).sort().join(',') + `;${kit.shield ?? ''}:${kit.jewel ?? ''}:${(kit.stones ?? []).join('+')}`;
+  const plateKey = (['chest', 'legs', 'boots', 'helm', 'chainCoif', 'chainChest', 'chainShawl', 'chainLegs', 'chainBoots', 'scale'] as const).map((p) => plate[p] ?? '').join(',') + ';' + Object.entries(dye).sort().join(',') + `;${kit.shield ?? ''}:${kit.jewel ?? ''}:${(kit.stones ?? []).join('+')}`;
   const body = bodyMaterials(look), key = `${body.map((m) => m.colour).join()}|${prop?.id ?? ''}|${lit}|${metal ?? ''}|${toolKey}|${plateKey}|${worn.at}:${worn.used.join('.')}`;
   let out = DRESSED.get(key);
   if (!out) {
