@@ -36,6 +36,10 @@
   {
    "id": "buzz",
    "name": "Buzz cut"
+  },
+  {
+   "id": "afro",
+   "name": "Afro"
   }
  ]
 }

@@ -4277,6 +4277,7 @@ export const NEWS: News[] = [
       `New: ${itemDef('maul').name.toLowerCase()} drawn as the Runestone Warhammer, both hands, overhead swing. ${itemDef('long_sword').name}: both hands in a fight, slash trail; on the back when wielded.`,
       `Changed: character creator. Body: ${listedOr(GENDERS.map((g) => g.name))}. Hair: ${listedOr(HAIRSTYLES.filter((h) => h.id !== 'bob' && h.id !== 'crew').map((h) => h.name))}. Hair colour: hue, the whole colour wheel. Hair brightness: near black to near white, grey over its top ${percent(HAIR_FADE)}. Skin: palest to darkest.`,
       `Changed: character creator. Body: ${listedOr(GENDERS.map((g) => g.name))}. Hair: ${listedOr(HAIRSTYLES.filter((h) => !['bob', 'mohawk'].includes(h.id)).map((h) => h.name))}. Hair colour: hue, the whole colour wheel. Hair brightness: near black to near white, grey over its top ${percent(HAIR_FADE)}. Skin: palest to darkest.`,
+      `Changed: character creator. Body: ${listedOr(GENDERS.map((g) => g.name))}. Hair: ${listedOr(HAIRSTYLES.filter((h) => h.id !== 'bob' && h.id !== 'afro').map((h) => h.name))}. Hair colour: hue, the whole colour wheel. Hair brightness: near black to near white, grey over its top ${percent(HAIR_FADE)}. Skin: palest to darkest.`,
       `Changed: creator preview: the sculpted body, idle, turned by ◀ ▶ or dragging; Head close-up; outfit ${listedOr(OUTFITS.map((o) => o.name))}, head bare.`,
       'Removed: build Neither, eyes, beards, shirt and trousers colours, swatch hair colours, other haircuts. Existing looks: the nearest body, hairstyle, hair colour and skin.',
       'Removed: Sculpted figures setting (always on).',
@@ -4468,6 +4469,11 @@ export const NEWS: News[] = [
     n: 554,
     day: '2026-11-13',
     lines: () => [`New: hairstyle ${HAIRSTYLES.find((h) => h.id === 'buzz')?.name}, ${listed(GENDERS.map((g) => g.name))} (Settings, Display, Appearance: Customize character).`],
+  },
+  {
+    n: 553,
+    day: '2026-11-13',
+    lines: () => [`New: hairstyle ${HAIRSTYLES.find((h) => h.id === 'afro')?.name} (Settings, Display: Customize character).`],
   },
   {
     n: 548,

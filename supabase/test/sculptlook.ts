@@ -64,6 +64,7 @@ check('every hairstyle there is a mesh for and bald', HAIRSTYLES.length === INDE
 check('the pompadour among them', HAIRSTYLES.some((h) => h.id === 'pompadour' && h.name === 'Pompadour'), HAIRSTYLES.map((h) => h.id).join());
 check('the hairstyles and bald', HAIRSTYLES.length === INDEX.styles.length + 1, HAIRSTYLES.map((h) => h.id).join());
 check('cornrows among them', HAIRSTYLES.some((h) => h.id === 'cornrows' && h.name === 'Cornrows'), HAIRSTYLES.map((h) => h.id).join());
+check('the swept back, the braid, the bob and the afro among them, and bald', ['bald', 'swept', 'braid', 'bob', 'afro'].every((id) => HAIRSTYLES.some((h) => h.id === id)), HAIRSTYLES.map((h) => h.id).join());
 check('the ids the island checks are the bodies and the hairstyles', same(Object.keys(LOOK_TABLES), ['gender', 'hair']));
 
 /* ---- the ramps ------------------------------------------------------------------------------------- */
@@ -148,6 +149,7 @@ check('every hairstyle there is a mesh for and bald', HAIRSTYLES.length === INDE
 check('the top knot to the top knot', cleanLook({ hair: 'topknot' }).hair === 'topknot');
 check('a short cut to the crew cut', cleanLook({ hair: 'short' }).hair === 'crew');
 check('the ridge to the mohawk', cleanLook({ hair: 'ridge' }).hair === 'mohawk');
+check('an afro to the afro', cleanLook({ hair: 'afro' }).hair === 'afro');
 const SKINS: Record<string, string> = { porcelain: '#f5ddc6', fair: '#ecc8a6', light: '#ddae85', olive: '#c79a68', tan: '#b5804f', bronze: '#9d6a3f', umber: '#855634', deep: '#6b4328', dark: '#55341f', ebony: '#3e2617' };
 check('every old skin is its very colour', Object.entries(SKINS).every(([id, c]) => skinColour(cleanLook({ skin: id })) === c),
   Object.keys(SKINS).filter((id) => skinColour(cleanLook({ skin: id })) !== SKINS[id]).join());
