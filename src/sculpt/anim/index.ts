@@ -31,6 +31,7 @@ import { mirrorClip } from './author';
 import { SAW, SAW_LEFT } from './clips/saw';
 import { FISH, FISH_LEFT } from './clips/fish';
 import { NET, NET_LEFT } from './clips/net';
+import { TEND_CLIPS, TEND_LEFT } from './clips/tend';
 import { ACTION_BY_ID } from '../../game/actions';
 import { clipOfJob } from './routes';
 import { strideAt } from '../../game/player';
@@ -59,6 +60,8 @@ export const CLIPS: Record<string, Clip> = {
   roast: ROAST, 'roast-left': mirrorClip(ROAST, 'roast-left'), fry: FRY, 'fry-left': mirrorClip(FRY, 'fry-left'),
   swim: SWIM, tread: TREAD,
   saw: SAW, 'saw-left': SAW_LEFT, fish: FISH, 'fish-left': FISH_LEFT, net: NET, 'net-left': NET_LEFT,
+  // tending a beast and healing (./clips/tend.ts), each with its mirror
+  ...TEND_CLIPS,
 };
 /** The clip a state plays until its own is approved: the 6 7 gesture. */
 export const PLACEHOLDER = 'sixseven';
@@ -135,6 +138,7 @@ const LEFT_OF: Readonly<Record<string, string>> = {
   work: 'work-left', fight: 'fight-left', dig: 'dig-left', rake: 'rake-left', reap: 'reap-left',
   quern: 'quern-left', stir: 'stir-left', roast: 'roast-left', fry: 'fry-left',
   saw: 'saw-left', fish: 'fish-left', net: 'net-left',
+  ...TEND_LEFT,
 };
 /** Whether work is done left-handed from where it is seen: as the flat figure (facings three and seven). */
 const lefty = (facing: number): boolean => { const f = ((Math.round(facing) % 8) + 8) % 8; return f === 3 || f === 7; };
@@ -192,12 +196,14 @@ const FADE = 0.2;
 /**
  * Seconds a fade into or out of a clip takes where that is longer than `FADE`, its feet kept planted throughout where
  * the two clips stand them (`plantBetween`): getting down onto the knees at the ground and up off them; down into the
- * sickle's crouch and up out of it.
+ * sickle's crouch and up out of it; down into the crouch at a beast's flank (milking, treating its wounds) and up out of it.
  */
 const SETTLE: Readonly<Record<string, number>> = {
   ground: 0.55, reap: 0.4, 'reap-left': 0.4,
   // the kitchen's knelt clips (./clips/kitchen.ts)
   quern: 0.55, 'quern-left': 0.55, press: 0.55, roast: 0.55, 'roast-left': 0.55, fry: 0.55, 'fry-left': 0.55,
+  // the crouch at a beast's flank (./clips/tend.ts)
+  milk: 0.45, 'milk-left': 0.45, heal: 0.45, 'heal-left': 0.45,
 };
 /**
  * The clips played in the water (`./clips/swim.ts`), and seconds a fade between them takes: from the stroke to treading

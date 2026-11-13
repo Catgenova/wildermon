@@ -168,6 +168,7 @@ import CARVING_KNIFE from './assets/carving_knife.json';
 import TROWEL from './assets/trowel.json';
 import FILE from './assets/file.json';
 import WHETSTONE from './assets/whetstone.json';
+import GROOM_BRUSH from './assets/groom_brush.json';
 // the bows (tools/sculpt/gear/bow.mjs), each with its quiver on the back and the arrow it draws
 import SHORT_BOW from './assets/short_bow.json';
 import MEDIUM_BOW from './assets/medium_bow.json';
@@ -350,6 +351,8 @@ const PROPS: readonly PropAsset[] = [SWORD, { ...(WARHAMMER as unknown as PropAs
   // the saw with the sawhorse under the other palm (its mirror under the right), the fishing rod and the fishing net, each
   // in one fist (./anim/clips/saw.ts, fish.ts, net.ts); the saw's blade in its metal, the rod's wood in its wood
   SAW as unknown as PropAsset, SAWHORSE as unknown as PropAsset, SAWHORSE_R as unknown as PropAsset, FISHING_ROD as unknown as PropAsset, FISHING_NET as unknown as PropAsset,
+  // the grooming brush in the right fist at the groom clip (./anim/clips/tend.ts; tools/sculpt/gear/groom_brush.mjs), all wood
+  GROOM_BRUSH as unknown as PropAsset,
 ];
 const PROP_OF = new Map(PROPS.map((p) => [p.id, p]));
 /**
