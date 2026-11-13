@@ -19,10 +19,10 @@
 // Weighted from the pelvis at its top to a share of its side's thigh at its hem (more at the front than behind).
 //
 // Units and axes are the body's: y up (the chin's underside 0), z forward, x the body's left.
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { sub, add, mul, unit, closestOnBody } from '../lowgarment.mjs';
 import { sectioner } from './platechest.mjs';
-import { hemRow, chainMesh, mailShell, coveredPolys, band, stud, facing, named, writePiece, linksOf, axisThrough, armBones } from './chainmail.mjs';
+import { coreOn, hemRow, chainMesh, mailShell, coveredPolys, band, stud, facing, named, writePiece, linksOf, axisThrough, armBones } from './chainmail.mjs';
 
 /** The courses' grid, shared by the set: their spacing, the ridge's height, the crest's place up a course and the foot's offset. */
 export const COURSE = { male: { h: 0.36, d: 0.055, crest: 0.45, foot: 0 }, female: { h: 0.32, d: 0.05, crest: 0.45, foot: 0 } };
@@ -35,8 +35,8 @@ export const COURSE = { male: { h: 0.36, d: 0.055, crest: 0.45, foot: 0 }, femal
  * front and back, its columns' spacing); the gambeson's drop under the skirt's hem.
  */
 export const DESIGN = {
-  male: { links: { w: 0.42, rT: 1.25, rA: 0.42, edge: 0.75, centre: 0.2 }, c: 0.05, arm: 0.045, collar: -0.18, cuff: 0.38, under: 0.06, belt: { y: -3.8, w: 0.42, c: 0.05 }, skirt: { top: -3.7, hem: -6.45, r: 1.5, c: 0.12, flare: 0.05, slit: 7, front: 0.7, back: 0.5, gap: 0.05 }, gambeson: 0.3 },
-  female: { links: { w: 0.38, rT: 1.0, rA: 0.34, edge: 0.75, centre: 0.2 }, c: 0.04, arm: 0.04, collar: -0.25, cuff: 0.34, under: 0.06, belt: { y: -3.3, w: 0.36, c: 0.045 }, skirt: { top: -3.22, hem: -5.4, r: 1.3, c: 0.11, flare: 0.06, slit: 7, front: 0.7, back: 0.5, gap: 0.045 }, gambeson: 0.26 },
+  male: { cores: { y: -1.95, breast: 0.4, belt: 0.16 }, links: { w: 0.42, rT: 1.25, rA: 0.42, edge: 0.75, centre: 0.2 }, c: 0.05, arm: 0.045, collar: -0.18, cuff: 0.38, under: 0.06, belt: { y: -3.8, w: 0.42, c: 0.05 }, skirt: { top: -3.7, hem: -6.45, r: 1.5, c: 0.12, flare: 0.05, slit: 7, front: 0.7, back: 0.5, gap: 0.05, backing: { inset: 0.1, span: 6 } }, gambeson: 0.3 },
+  female: { cores: { y: -1.75, breast: 0.34, belt: 0.14 }, links: { w: 0.38, rT: 1.0, rA: 0.34, edge: 0.75, centre: 0.2 }, c: 0.04, arm: 0.04, collar: -0.25, cuff: 0.34, under: 0.06, belt: { y: -3.3, w: 0.36, c: 0.045 }, skirt: { top: -3.22, hem: -5.4, r: 1.3, c: 0.11, flare: 0.06, slit: 7, front: 0.7, back: 0.5, gap: 0.045, backing: { inset: 0.09, span: 6 } }, gambeson: 0.26 },
 };
 
 /** The body's weights at the closest point of its surface (its triangles in `parts`), as { bone: w }. */
@@ -47,11 +47,13 @@ export function skinAt(rig, p, parts) {
   return o;
 }
 
-/** The other sets' leggings at rest (their game copies' vertices), the skirt's obstacles. */
+/** Every set's legs garments at rest (their game copies' vertices: any asset named for legs, leggings or trousers), the skirt's obstacles. */
 function legObstacles(who) {
-  const out = [];
-  for (const name of ['platelegs', 'leatherlegs', 'chainlegs', 'trousers']) {
-    const f = new URL(`../../../src/sculpt/assets/low${name}-${who}.json`, import.meta.url);
+  const out = [], dir = new URL('../../../src/sculpt/assets/', import.meta.url);
+  // (every garment on the legs: its name has legs, leggings or trousers in it, whichever set it is from; not the leather
+  // leggings' hip flaps, left off under the hauberk)
+  for (const name of readdirSync(dir).filter((n) => new RegExp(`^low.*(legs|leggings|trousers).*-${who}\\.json$`).test(n) && !n.includes("flaps"))) {
+    const f = new URL(name, dir);
     if (!existsSync(f)) continue;
     const v = JSON.parse(readFileSync(f, 'utf8')).verts;
     for (let i = 0; i < v.length; i += 3) out.push([v[i], v[i + 1], v[i + 2]]);
@@ -79,6 +81,56 @@ export function skirtRows(top, hem, g, { h, d, foot }, L, gambeson) {
   return R;
 }
 
+/**
+ * Each column's radius from the hips' axis down it (columns by signed azimuth `az`, each its heights `ys[row][column]`):
+ * the hips' reach, the clearance and the flare, clear of the obstacles by the gap and the slits' backing's room behind
+ * the skirt (`Sk.back`), never in from the row above, then smoothed round each row, never in (a hem that falls as one
+ * piece).
+ */
+function skirtRadii(Sk, sec, fz, obstacles, az, ys, half) {
+  const R = az.map((a, c) => {
+    const dir = [Math.sin((a * Math.PI) / 180), 0, Math.cos((a * Math.PI) / 180)];
+    let prev = 0;
+    return ys.map((row) => {
+      const y = row[c], q = sec.at(y, a, 0), reach = Math.hypot(q[0], q[2] - fz);
+      let r = reach + Sk.c + Sk.flare * (Sk.top - y);
+      for (const p of obstacles) {
+        if (Math.abs(p[1] - y) > 0.18) continue;
+        const v = [p[0], 0, p[2] - fz], l = Math.hypot(v[0], v[2]);
+        if (l < 1e-6 || (v[0] * dir[0] + v[2] * dir[2]) / l < Math.cos((half * Math.PI) / 180)) continue;
+        r = Math.max(r, l + Sk.gap + Sk.backing.inset);
+      }
+      prev = Math.max(prev, r);
+      return prev;
+    });
+  });
+  for (let it = 0; it < 2; it++) R.forEach((col, c) => col.forEach((r, k) => { const m = (R[Math.max(0, c - 1)][k] + 2 * r + R[Math.min(R.length - 1, c + 1)][k]) / 4; col[k] = Math.max(r, m); }));
+  return R;
+}
+
+/**
+ * The gambeson behind a slit (centred on azimuth `at`, 0 the front, 180 the back): a panel `Sk.backing.inset` inside the
+ * skirt, from its top down to the gambeson's foot, `Sk.backing.span` degrees either side of the slit, so whatever is worn
+ * on the legs under the hauberk does not show through it; weighted from the pelvis to the thighs' mean (the skirt's share
+ * at its middle).
+ */
+function slitBacking(G, rig, D, sec, fz, obstacles, at, tag) {
+  const Sk = D.skirt, B = Sk.backing, a0 = Sk.slit + B.span, n = 6;
+  const az = Array.from({ length: n + 1 }, (_, k) => at - a0 + (2 * a0 * k) / n);
+  const top = Sk.top, foot = Sk.hem - D.gambeson, nr = Math.max(2, Math.ceil((top - foot) / 0.3));
+  const ys = Array.from({ length: nr + 1 }, (_, r) => az.map(() => top + ((foot - top) * r) / nr));
+  const R = skirtRadii(Sk, sec, fz, obstacles, az, ys, a0 / n + 6);
+  const share = Sk.front + (Sk.back - Sk.front) * (at / 180);
+  const wAt = (y) => { const u = Math.max(0, Math.min(1, (top - y) / (top - Sk.hem))), sh = share * u; return named(rig, { pelvis: 1 - sh, thigh_l: sh / 2, thigh_r: sh / 2 }); };
+  const dirOf = (a) => [Math.sin((a * Math.PI) / 180), 0, Math.cos((a * Math.PI) / 180)];
+  const ids = ys.map((row, r) => az.map((a, c) => G.add(add([0, row[c], fz], mul(dirOf(a), R[c][r] - B.inset)), wAt(row[c]), tag)));
+  G.tag = tag;
+  for (let r = 0; r < nr; r++) for (let c = 0; c < n; c++) {
+    const q = [ids[r][c], ids[r][c + 1], ids[r + 1][c + 1], ids[r + 1][c]];
+    G.polys.push({ v: facing(G, q, dirOf((az[c] + az[c + 1]) / 2)), mat: 'under', part: tag, tag });
+  }
+}
+
 function skirtHalf(G, rig, D, s, sec, fz, obstacles, tag) {
   const Sk = D.skirt, C = COURSE[rig.who], L = D.links;
   // (the columns every half link round the hips at the skirt's radius, from the slit in front to the slit behind)
@@ -89,23 +141,7 @@ function skirtHalf(G, rig, D, s, sec, fz, obstacles, tag) {
   const rows = skirtRows(Sk.top, Sk.hem, g, C, L, D.gambeson);
   const axisAt = (y) => [0, y, fz];
   const dirOf = (a) => [Math.sin((a * Math.PI) / 180) * s, 0, Math.cos((a * Math.PI) / 180)];
-  // each column's radius down it: the reach, the clearance and the flare, clear of the obstacles, never in from above
-  const R = az.map((a, c) => {
-    const dir = dirOf(a), half = Math.max(stepDeg, 6);
-    let prev = 0;
-    return rows.map((row) => {
-      const y = row.ys[c], q = sec.at(y, a * s, 0), reach = Math.hypot(q[0], q[2] - fz);
-      let r = reach + Sk.c + Sk.flare * (Sk.top - y);
-      for (const p of obstacles) {
-        if (Math.abs(p[1] - y) > 0.18) continue;
-        const v = [p[0], 0, p[2] - fz], l = Math.hypot(v[0], v[2]);
-        if (l < 1e-6 || (v[0] * dir[0] + v[2] * dir[2]) / l < Math.cos((half * Math.PI) / 180)) continue;
-        r = Math.max(r, l + Sk.gap);
-      }
-      prev = Math.max(prev, r);
-      return prev;
-    });
-  });
+  const R = skirtRadii(Sk, sec, fz, obstacles, az.map((a) => a * s), rows.map((row) => row.ys), Math.max(stepDeg, 6));
   // (smoothed round each row, never in: a hem that falls as one piece)
   for (let it = 0; it < 2; it++) R.forEach((col, c) => col.forEach((r, k) => { const m = (R[Math.max(0, c - 1)][k] + 2 * r + R[Math.min(R.length - 1, c + 1)][k]) / 4; col[k] = Math.max(r, m); }));
   const thigh = s > 0 ? 'thigh_l' : 'thigh_r';
@@ -118,7 +154,7 @@ function skirtHalf(G, rig, D, s, sec, fz, obstacles, tag) {
     const step = a.kind === 'foot' && b.kind === 'top';
     // (no step where the courses' feet sit on the skirt as their tops do)
     if (step && !(C.foot > 0)) continue;
-    const mat = b.kind === 'gam' ? (a.kind === 'gam' ? 'under' : 'shade') : step ? 'shade' : a.hem ? (a.kind === 'top' ? 'gold' : 'rune') : a.kind === 'top' ? 'plate' : 'shade';
+    const mat = b.kind === 'gam' ? (a.kind === 'gam' ? 'under' : 'shade') : step ? 'shade' : a.hem ? (a.kind === 'top' ? 'rune' : 'gold') : a.kind === 'top' ? 'plate' : 'shade';
     facing(G, q, step ? [0, -1, 0] : dirOf((az[c] + az[c + 1]) / 2));
     G.polys.push({ v: q, mat, part: tag, tag });
   }
@@ -174,7 +210,11 @@ export function buildChainChest(rig, D = DESIGN[rig.who]) {
   band(G, beltRows, { axis: (p) => [0, p[1], fz], t: 0.035, mat: (r) => (r === 1 ? 'rune' : 'leather'), edgeMat: 'leather', w: (p) => skinAt(rig, p, skin), tag: 'belt' });
   // its buckle at the front, its gem
   const front = beltRows[1][0], fr = add(front, [0, -0.04, 0]);
-  stud(G, fr, [0, 0, 1], [1, 0, 0], { a: 0.2, b: 0.17, h: 0.05, inset: 0.55, w: skinAt(rig, front, skin), tag: 'buckle' });
+  stud(G, fr, [0, 0, 1], [1, 0, 0], { a: 0.22, b: 0.19, h: 0.04, w: skinAt(rig, front, skin), tag: 'buckle' });
+  coreOn(G, add(fr, [0, 0, 0.04]), [0, 0, 1], [0, 1, 0], { r: D.cores.belt, w: skinAt(rig, front, skin), tag: 'buckle core' });
+  // the breast's core, on the mail below the collar (the plate set's breast core's place)
+  const breast = B.verts.reduce((best, p, i) => (B.part[i] === 'torso' && Math.abs(p[0]) < 0.25 && Math.abs(p[1] - D.cores.y) < 0.35 && (!best || p[2] > best[2]) ? p : best), null);
+  coreOn(G, [0, D.cores.y, breast[2] + D.c + C.d + 0.01], [0, 0, 1], [0, 1, 0], { r: D.cores.breast, w: skinAt(rig, breast, ['torso']), tag: 'breast core' });
   // the clasp at the throat: on the collar's front, a gold diamond with its gem
   const neckFront = B.verts.reduce((best, p, i) => (B.part[i] === 'neck' && Math.abs(p[1] - (D.collar - 0.35)) < 0.25 && (!best || p[2] > best[2]) ? p : best), null);
   stud(G, add(neckFront, [0, 0, D.c + C.d + 0.02]), [0, 0.15, 1], [1, 0, 0], { a: 0.13, b: 0.16, h: 0.04, inset: 0.6, w: skinAt(rig, neckFront, ['neck', 'torso']), tag: 'clasp', diamond: true });
@@ -182,6 +222,8 @@ export function buildChainChest(rig, D = DESIGN[rig.who]) {
   const hips = sectioner(S.filter((p) => p[1] > D.skirt.hem - 3.2 && p[1] < D.skirt.top + 0.5), { o: [0, 0, fz], a: [0, 1, 0], e1: [0, 0, 1], e2: [1, 0, 0], dt: 0.12 });
   const obstacles = legObstacles(rig.who);
   for (const s of [1, -1]) skirtHalf(G, rig, D, s, hips, fz, obstacles, s > 0 ? 'skirt.l' : 'skirt.r');
+  // the gambeson behind the slits, in front and behind
+  for (const at of [0, 180]) slitBacking(G, rig, D, hips, fz, obstacles, at, at ? 'slit backing.b' : 'slit backing.f');
   G.hides = coveredPolys(rig, (i) => mail.covered(i, 0.02) || cuff.covered(i, 0.02));
   return G;
 }

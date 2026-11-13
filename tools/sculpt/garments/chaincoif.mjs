@@ -17,7 +17,7 @@
 //
 // Units and axes are the body's: y up (the chin's underside 0), z forward, x the body's left.
 import { add } from '../lowgarment.mjs';
-import { hemRow, chainMesh, mailShell, coveredPolys, stud, writePiece, linksOf } from './chainmail.mjs';
+import { coreOn, hemRow, chainMesh, mailShell, coveredPolys, stud, writePiece, linksOf } from './chainmail.mjs';
 import { COURSE, DESIGN as CHEST, skinAt } from './chainchest.mjs';
 
 /**
@@ -26,8 +26,8 @@ import { COURSE, DESIGN as CHEST, skinAt } from './chainchest.mjs';
  * (its height), the neck's foot when the tippet is left out (`neckFoot`); the links' radius round the head.
  */
 export const DESIGN = {
-  male: { head: 0.1, neck: 0.12, tippet: 0.17, face: { y: 0.8, rx: 0.64, ry: 0.98, z: 0.02 }, hem: -1.55, links: { rT: 0.72 } },
-  female: { head: 0.09, neck: 0.11, tippet: 0.15, face: { y: 0.78, rx: 0.6, ry: 0.96, z: 0.02 }, hem: -1.55, links: { rT: 0.66 } },
+  male: { core: 0.12, head: 0.1, neck: 0.12, tippet: 0.17, face: { y: 0.8, rx: 0.64, ry: 0.98, z: 0.02 }, hem: -1.55, links: { rT: 0.72 } },
+  female: { core: 0.11, head: 0.09, neck: 0.11, tippet: 0.15, face: { y: 0.78, rx: 0.6, ry: 0.96, z: 0.02 }, hem: -1.55, links: { rT: 0.66 } },
 };
 
 export function buildChainCoif(rig, D = DESIGN[rig.who]) {
@@ -58,7 +58,9 @@ export function buildChainCoif(rig, D = DESIGN[rig.who]) {
   });
   // the clasp on the brow
   const brow = B.verts.reduce((best, p, i) => (B.part[i] === 'head' && Math.abs(p[0]) < 0.2 && p[1] > D.face.y + D.face.ry * 0.7 && p[1] < D.face.y + D.face.ry * 1.25 && (!best || p[2] > best[2]) ? p : best), null);
-  stud(G, add(brow, [0, 0.04, D.head + C.d + 0.01]), [0, 0.35, 1], [1, 0, 0], { a: 0.12, b: 0.14, h: 0.035, inset: 0.6, w: skinAt(rig, brow, ['head']), tag: 'coif clasp', diamond: true });
+  const bw = skinAt(rig, brow, ['head']), bp = add(brow, [0, 0.04, D.head + C.d + 0.01]);
+  stud(G, bp, [0, 0.35, 1], [1, 0, 0], { a: 0.15, b: 0.17, h: 0.03, w: bw, tag: 'coif clasp', diamond: true });
+  coreOn(G, add(bp, [0, 0.01, 0.03]), [0, 0.35, 1], [0, 1, 0], { r: D.core, sides: 6, w: bw, tag: 'coif core' });
   // the tippet over the shoulders, left out under another collar (from here on)
   G.dropFrom = G.polys.length;
   mailShell(G, rig, {
