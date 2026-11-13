@@ -193,7 +193,10 @@ begin
                              fail_damage_item(v_cast.id, 1)) end, 'event');
     return;
   end if;
+  -- And what else the piece takes at the anvil, at hand before the casting goes and spent with it (`mould_def.also_item`).
+  if d.also_n > 0 and craft_count(p_world, p_uid, d.also_item) < d.also_n then return; end if;
   if not spend_stack(p_world, p_uid, v_cast.id, 1) then return; end if;
+  if d.also_n > 0 then perform craft_consume(p_world, p_uid, d.also_item, d.also_n); end if;
 
   -- The casting carries the mould and the metal it was poured from, so it stands for both.
   -- Better for a Smith's Toolsmith on a tool's head or blade (`ql:` and the piece).

@@ -864,7 +864,7 @@ export class Hud {
     // What is in your hands and how much armour is on you.
     const held = this.game.worn('weapon');
     const shield = this.game.worn('offhand');
-    const pieces = (['head', 'chest', 'arms', 'legs', 'feet'] as const).filter((sl) => this.game.worn(sl)).length;
+    const pieces = (['head', 'chest', 'shawl', 'legs', 'feet'] as const).filter((sl) => this.game.worn(sl)).length;
     if (held || shield || pieces) {
       const bits: string[] = [];
       if (held) bits.push(itemName(held));

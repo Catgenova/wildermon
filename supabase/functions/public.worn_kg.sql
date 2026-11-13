@@ -6,7 +6,7 @@ CREATE OR REPLACE FUNCTION public.worn_kg(p_world uuid, p_uid uuid)
  STABLE
 AS $function$
   select coalesce(sum(idf.weight), 0)::double precision
-    from unnest(array['head', 'chest', 'arms', 'legs', 'feet']) s(slot)
+    from (select h.worn as slot from hit_location h) s
     cross join lateral worn(p_world, p_uid, s.slot) w
     join item_def idf on idf.id = w.def
    where w.id is not null and exists (select 1 from armour_def a where a.id = w.def)

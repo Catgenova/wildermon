@@ -6470,14 +6470,14 @@ const TOON_THIN_PX = 2, TOON_FLECK_PX = 0.8;
 export type { GearLook, GearPiece, GearSlot } from '../contract/gear';
 /** The chain set's sculpted pieces (`src/sculpt/lowpoly.ts`: the coif, the hauberk and sleeves, the leggings, the boots). */
 export type ChainPiece = 'chainCoif' | 'chainChest' | 'chainLegs' | 'chainBoots';
-/** The plate and chain sets' sculpted pieces, each in its own metal (`FigurePose.outfit.metal`), and the scale set's, all in one material. */
-export type PlatePiece = 'chest' | 'legs' | 'boots' | 'helm' | ChainPiece | 'scale';
+/** The plate and chain sets' sculpted pieces, each in its own metal (`FigurePose.outfit.metal`; the plate shawl's mantle its clasps and rim), and the scale set's, all in one material. */
+export type PlatePiece = 'chest' | 'legs' | 'boots' | 'helm' | 'mantle' | ChainPiece | 'scale';
 /** The cloth and leather sculpted pieces a dye colours (`FigurePose.outfit.dye`). */
-export type DyedPiece = 'hood' | 'tunic' | 'trousers' | 'boots' | 'leatherChest' | 'leatherLegs' | 'leatherBoots' | 'leatherHat';
+export type DyedPiece = 'hood' | 'tunic' | 'shawl' | 'trousers' | 'boots' | 'leatherChest' | 'leatherShawl' | 'leatherLegs' | 'leatherBoots' | 'leatherHat';
 /** The order a body is dressed in, inside out. */
-const DRESSED: GearSlot[] = ['legs', 'feet', 'chest', 'arms', 'head', 'belt', 'jewel', 'offhand', 'weapon'];
+const DRESSED: GearSlot[] = ['legs', 'feet', 'chest', 'shawl', 'head', 'belt', 'jewel', 'offhand', 'weapon'];
 /** How much lighter (or darker) cloth and hide are worn in each place: a cap a little lighter than the coat, breeches and shoes darker. */
-const STEP: Partial<Record<GearSlot, number>> = { head: 0.1, arms: -0.07, legs: -0.16, feet: -0.26 };
+const STEP: Partial<Record<GearSlot, number>> = { head: 0.1, shawl: -0.07, legs: -0.16, feet: -0.26 };
 
 /** What a body has on, as a string: a kept drawing of it is drawn again when this changes. */
 export const gearKey = (g?: GearLook): string =>
@@ -7493,7 +7493,7 @@ const MODELS: Record<string, (b: Build, fit: number) => GearModel> = {
         // And short sleeves of it to halfway down the upper arm, but for over a sleeve of mail, which is the hauberk's own sleeve
         // carried on down the arm: worn over it, its open foot stood off the sleeve under it and was a row of teeth along the top
         // of a raised arm.
-        { bone: 'arm', side: 'both', over: ['upper'], bias: 0.02, convex: true, unless: 'chain_sleeves', mesh: worn(upperShell(b, 1.2, -1.45, 'mail'), 'mail') },
+        { bone: 'arm', side: 'both', over: ['upper'], bias: 0.02, convex: true, unless: 'chain_shawl', mesh: worn(upperShell(b, 1.2, -1.45, 'mail'), 'mail') },
       ],
       hides: ['skirt', 'belt', 'chest', 'abdomen'],
     };
@@ -7543,7 +7543,7 @@ const MODELS: Record<string, (b: Build, fit: number) => GearModel> = {
   },
 
   /* Arms, hands and all */
-  cloth_sleeves: (b) => ({
+  cloth_shawl: (b) => ({
     layer: 1,
     bits: [
       // Padded out, thickest over the shoulder, and rolled at the cuff: the top of it rounded in and sloping in toward the neck, as a
@@ -7562,7 +7562,7 @@ const MODELS: Record<string, (b: Build, fit: number) => GearModel> = {
     ],
     hides: ['upper', 'lower'],
   }),
-  leather_sleeves: (b) => ({
+  leather_shawl: (b) => ({
     layer: 2,
     bits: [
       // No ball over the elbow, as with cloth: from behind it was a button of lit hide on each arm.
@@ -7578,7 +7578,7 @@ const MODELS: Record<string, (b: Build, fit: number) => GearModel> = {
     glove: 'leather',
     hides: ['upper', 'lower'],
   }),
-  chain_sleeves: (b) => ({
+  chain_shawl: (b) => ({
     layer: 3,
     bits: [
       // No ball over the elbow: mail hangs in one sleeve bent there, and a ball stood out of the crook of every bent arm.
@@ -7594,7 +7594,7 @@ const MODELS: Record<string, (b: Build, fit: number) => GearModel> = {
     glove: 'mail',
     hides: ['upper', 'lower'],
   }),
-  plate_arms: (b) => ({
+  plate_shawl: (b) => ({
     layer: 5,
     bits: [
       // The rerebrace down the upper arm, and the pauldron standing off the shoulder: one plate domed over the point of it, and two
@@ -7628,7 +7628,7 @@ const MODELS: Record<string, (b: Build, fit: number) => GearModel> = {
     glove: 'metal',
     hides: ['upper', 'lower'],
   }),
-  scale_sleeves: (b) => ({
+  scale_shawl: (b) => ({
     layer: 4,
     bits: [
       // Courses of scale down the arm, the upper arm's hem cut in points over the elbow, and no ball at the elbow: side on it was a

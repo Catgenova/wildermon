@@ -1806,6 +1806,7 @@ export function helpText(): string {
       <li>Other moulds, <b>poured at the smelter</b> in any metal: a <b>casting</b> (shovel head casting, nail casting…) out with the lumps.</li>
       <li>Castings are finished at an <b>anvil</b> with <b>blacksmithing</b>, <b>weaponsmithing</b> or <b>armoursmithing</b> as the piece needs. Skill sets success and QL,
       with the casting (mould and metal QL) and the anvil. Failure: casting damaged by its QL (${FAIL_DAMAGE_SAID}), not used up.</li>
+      ${MOULDS.filter((m) => m.also).map((m) => `<li><b>${itemDef(m.makes).name}</b>: casting + ${m.also?.count} × ${itemDef(m.also?.item ?? '').name.toLowerCase()} at the anvil, spent on success.</li>`).join('')}
       <li>Tool heads and blades: fit a shaft. Swords hit far harder than tools. A helm stops most of a cornered wildermon's damage.</li>
     </ul>
     <h4>Smith</h4>
@@ -2895,7 +2896,7 @@ export function helpText(): string {
       <li><b>Bucket of lye</b>: ${need('make_lye', 'ash')} lots of ashes + a full bucket of water; <b>Alchemy</b>. ${BUCKET_LITRES} L.</li>
       <li><b>Tanning</b> (leatherworking): raw <b>hide</b> + ${litresOf('tan_hide')} + carving knife: <b>leather</b>. Failure: hide damaged and lye lost by their QL.</li>
       <li>Cleaning a wound, ${act('strip_dye')}, ${act('strip_wall_paint')}: ${LYE_USE} L lye (${act('scrub_dye')}, ${act('scrub_wall_paint')}: a ${itemDef(SCRUB_TOOL).name.toLowerCase()}, no lye).</li>
-      <li>Leather: cap, jerkin, sleeves, trousers, boots; improving leather pieces.</li>
+      <li>Leather: cap, jerkin, shawl, trousers, boots; improving leather pieces.</li>
     </ul>
     <h3>Reeds, papyrus and books</h3>
     <ul>

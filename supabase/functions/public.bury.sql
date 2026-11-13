@@ -12,7 +12,7 @@ begin
   -- What stays on the body: whatever is worn where a blow lands, and a jewel.
   v_worn := array(select e.value::bigint from jsonb_each_text(coalesce(p.equipped, '{}'::jsonb)) e
                    where e.value ~ '^[0-9]+$'
-                     and (e.key in (select h.slot from hit_location h) or e.key = 'jewel'));
+                     and (e.key in (select h.worn from hit_location h) or e.key = 'jewel'));
   if p.uid is null or not exists (
        select 1 from item i
         where i.world_id = p_world and i.holder = 'player' and i.holder_uid = p_uid
@@ -55,7 +55,7 @@ begin
      and i.creature is null and i.deal is null and not i.issued and not (i.id = any(v_worn));
   -- Nothing is in your hands or on your belt any more.
   update player set equipped = coalesce((select jsonb_object_agg(e.key, e.value) from jsonb_each(equipped) e
-                                          where e.key in (select h.slot from hit_location h) or e.key = 'jewel'),
+                                          where e.key in (select h.worn from hit_location h) or e.key = 'jewel'),
                                         '{}'::jsonb)
    where world_id = p_world and uid = p_uid;
   return 'You have died. What you carried is in a grave '

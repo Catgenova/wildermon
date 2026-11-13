@@ -130,7 +130,7 @@ function gearFor(spell: string, weapon?: string, offhand?: string): GearLook {
   const group: Record<string, string> = { blade: 'sword', berserker: 'battle_axe', pikeman: 'spear', archer: 'short_bow', skirmisher: 'javelin', chirurgeon: 'hunting_knife' };
   const w = weapon ?? (info?.needs ? by[info.needs] : undefined) ?? (info ? group[info.group] : undefined);
   const gear: GearLook = {
-    chest: { id: 'leather_jerkin' }, arms: { id: 'leather_sleeves' }, legs: { id: 'cloth_trousers' }, feet: { id: 'leather_boots' },
+    chest: { id: 'leather_jerkin' }, shawl: { id: 'leather_shawl' }, legs: { id: 'cloth_trousers' }, feet: { id: 'leather_boots' },
   };
   if (w && w !== 'none') gear.weapon = { id: w, material: 'iron' };
   const off = offhand ?? (info?.needs === 'shield' ? 'wooden_shield' : undefined);

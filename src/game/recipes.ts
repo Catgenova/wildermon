@@ -297,7 +297,7 @@ export const RECIPES: Recipe[] = [
   { id: 'make_composite_bow', category: 'Cloth', result: 'composite_bow', inputs: [{ item: 'tusk', count: 2 }, { item: 'sinew', count: 4 }, { item: 'shaft', count: 2 }, { item: 'rope', count: 1 }], tool: 'carving_knife', skill: 'bowyery', label: 'Lay up a composite bow', verb: 'laying up a composite bow', baseTime: 30, stamina: 0.06, difficulty: 46, done: '', spareOnFail: true },
   { id: 'make_scale_helm', category: 'Cloth', result: 'scale_helm', inputs: [{ item: 'dragon_scale', count: 3 }, { item: 'leather', count: 2 }, { item: 'ribbon', count: 1 }], tool: 'awl', skill: 'leatherworking', label: 'Rivet a scale helm', verb: 'riveting scale', baseTime: 22, stamina: 0.05, difficulty: 50, done: '', spareOnFail: true },
   { id: 'make_scale_cuirass', category: 'Cloth', result: 'scale_cuirass', inputs: [{ item: 'dragon_scale', count: 8 }, { item: 'leather', count: 5 }, { item: 'ribbon', count: 2 }], tool: 'awl', skill: 'leatherworking', label: 'Rivet a scale cuirass', verb: 'riveting scale', baseTime: 40, stamina: 0.08, difficulty: 58, done: '', spareOnFail: true },
-  { id: 'make_scale_sleeves', category: 'Cloth', result: 'scale_sleeves', inputs: [{ item: 'dragon_scale', count: 5 }, { item: 'leather', count: 3 }, { item: 'ribbon', count: 1 }], tool: 'awl', skill: 'leatherworking', label: 'Rivet scale sleeves', verb: 'riveting scale', baseTime: 30, stamina: 0.06, difficulty: 54, done: '', spareOnFail: true },
+  { id: 'make_scale_shawl', category: 'Cloth', result: 'scale_shawl', inputs: [{ item: 'dragon_scale', count: 5 }, { item: 'leather', count: 3 }, { item: 'ribbon', count: 1 }], tool: 'awl', skill: 'leatherworking', label: 'Rivet a scale shawl', verb: 'riveting scale', baseTime: 30, stamina: 0.06, difficulty: 54, done: '', spareOnFail: true },
   { id: 'make_scale_leggings', category: 'Cloth', result: 'scale_leggings', inputs: [{ item: 'dragon_scale', count: 6 }, { item: 'leather', count: 4 }, { item: 'ribbon', count: 2 }], tool: 'awl', skill: 'leatherworking', label: 'Rivet scale leggings', verb: 'riveting scale', baseTime: 34, stamina: 0.07, difficulty: 56, done: '', spareOnFail: true },
   { id: 'make_scale_boots', category: 'Cloth', result: 'scale_boots', inputs: [{ item: 'dragon_scale', count: 4 }, { item: 'leather', count: 3 }, { item: 'ribbon', count: 1 }], tool: 'awl', skill: 'leatherworking', label: 'Rivet scale boots', verb: 'riveting scale', baseTime: 26, stamina: 0.05, difficulty: 52, done: '', spareOnFail: true },
   { id: 'make_net', category: 'Cloth', result: 'fishing_net', inputs: [{ item: 'yarn', count: 12 }, { item: 'rope', count: 2 }], tool: 'needle', skill: 'ropemaking', label: 'Knot a net', verb: 'knotting a net', baseTime: 22, stamina: 0.05, difficulty: 24, done: '', spareOnFail: true },
@@ -321,13 +321,13 @@ export const RECIPES: Recipe[] = [
   // Cloth armour: sewn from what the loom gives you.
   { id: 'make_wool_cap', category: 'Cloth', result: 'wool_cap', inputs: [{ item: 'cloth', count: 2 }], tool: SEW_TOOL, skill: 'tailoring', label: 'Sew a wool cap', verb: 'sewing a cap', baseTime: 10, stamina: 0.03, difficulty: 14, done: '' },
   { id: 'make_cloth_tunic', category: 'Cloth', result: 'cloth_tunic', inputs: [{ item: 'cloth', count: 4 }], tool: SEW_TOOL, skill: 'tailoring', label: 'Sew a cloth tunic', verb: 'sewing a tunic', baseTime: 14, stamina: 0.04, difficulty: 18, done: '' },
-  { id: 'make_cloth_sleeves', category: 'Cloth', result: 'cloth_sleeves', inputs: [{ item: 'cloth', count: 2 }], tool: SEW_TOOL, skill: 'tailoring', label: 'Sew cloth sleeves', verb: 'sewing sleeves', baseTime: 10, stamina: 0.03, difficulty: 15, done: '' },
+  { id: 'make_cloth_shawl', category: 'Cloth', result: 'cloth_shawl', inputs: [{ item: 'cloth', count: 2 }], tool: SEW_TOOL, skill: 'tailoring', label: 'Sew a cloth shawl', verb: 'sewing a shawl', baseTime: 10, stamina: 0.03, difficulty: 15, done: '' },
   { id: 'make_cloth_trousers', category: 'Cloth', result: 'cloth_trousers', inputs: [{ item: 'cloth', count: 3 }], tool: SEW_TOOL, skill: 'tailoring', label: 'Sew cloth trousers', verb: 'sewing trousers', baseTime: 12, stamina: 0.03, difficulty: 16, done: '' },
   { id: 'make_cloth_shoes', category: 'Cloth', result: 'cloth_shoes', inputs: [{ item: 'cloth', count: 2 }], tool: SEW_TOOL, skill: 'tailoring', label: 'Sew cloth shoes', verb: 'sewing shoes', baseTime: 9, stamina: 0.03, difficulty: 14, done: '' },
   // Leather, cut from hide with a knife.
   { id: 'make_leather_cap', category: 'Cloth', result: 'leather_cap', inputs: [{ item: 'leather', count: 2 }], tool: 'carving_knife', skill: 'leatherworking', label: 'Cut a leather cap', verb: 'working leather', baseTime: 11, stamina: 0.04, difficulty: 16, done: '', spareOnFail: true },
   { id: 'make_leather_jerkin', category: 'Cloth', result: 'leather_jerkin', inputs: [{ item: 'leather', count: 5 }], tool: 'carving_knife', skill: 'leatherworking', label: 'Cut a leather jerkin', verb: 'working leather', baseTime: 16, stamina: 0.05, difficulty: 22, done: '', spareOnFail: true },
-  { id: 'make_leather_sleeves', category: 'Cloth', result: 'leather_sleeves', inputs: [{ item: 'leather', count: 3 }], tool: 'carving_knife', skill: 'leatherworking', label: 'Cut leather sleeves', verb: 'working leather', baseTime: 12, stamina: 0.04, difficulty: 19, done: '', spareOnFail: true },
+  { id: 'make_leather_shawl', category: 'Cloth', result: 'leather_shawl', inputs: [{ item: 'leather', count: 3 }], tool: 'carving_knife', skill: 'leatherworking', label: 'Cut a leather shawl', verb: 'working leather', baseTime: 12, stamina: 0.04, difficulty: 19, done: '', spareOnFail: true },
   { id: 'make_leather_trousers', category: 'Cloth', result: 'leather_trousers', inputs: [{ item: 'leather', count: 4 }], tool: 'carving_knife', skill: 'leatherworking', label: 'Cut leather trousers', verb: 'working leather', baseTime: 14, stamina: 0.05, difficulty: 20, done: '', spareOnFail: true },
   { id: 'make_leather_boots', category: 'Cloth', result: 'leather_boots', inputs: [{ item: 'leather', count: 3 }], tool: 'carving_knife', skill: 'leatherworking', label: 'Cut leather boots', verb: 'working leather', baseTime: 13, stamina: 0.04, difficulty: 18, done: '', spareOnFail: true },
   // Vehicle parts. A wheel is a carpenter's piece; the metal in it is banded on.
@@ -457,7 +457,8 @@ const MOULD_RECIPES: Recipe[] = MOULDS.map((m) => ({
   tool: SMITH_TOOL,
   skill: MOULD_SKILL,
   label: `Fire ${/^[aeiou]/i.test(m.name) ? 'an' : 'a'} ${m.name.toLowerCase()}`,
-  note: `Casts ${(m.per ?? 1) > 1 ? `${m.per} × ` : ''}${lower(m.makes)} from ${m.lumps} × metal lump, poured at a smelter${castWhole(m) ? '' : ', smithed at an anvil'}`,
+  note: `Casts ${(m.per ?? 1) > 1 ? `${m.per} × ` : ''}${lower(m.makes)} from ${m.lumps} × metal lump, poured at a smelter${castWhole(m) ? '' : ', smithed at an anvil'}${
+    m.also ? ` with ${m.also.count} × ${lower(m.also.item)}` : ''}`,
   verb: 'firing a mould',
   baseTime: 8 + m.sand,
   stamina: 0.03,
@@ -1537,4 +1538,14 @@ export function recipeAction(r: Recipe): ActionDef {
 
 export const RECIPE_ACTIONS: ActionDef[] = RECIPES.map(recipeAction);
 export const RECIPE_BY_ID = new Map(RECIPES.map((r) => [r.id, r]));
+/**
+ * Recipes renamed, by the id they had: sleeves and plate arms became shawls. What this browser kept under the old
+ * id (pinned and recent recipes, the shopping list) is read under the new one (`recipeNow`); the island moved its own.
+ */
+export const RECIPE_RENAMED: Readonly<Record<string, string>> = {
+  make_cloth_sleeves: 'make_cloth_shawl', make_leather_sleeves: 'make_leather_shawl', make_scale_sleeves: 'make_scale_shawl',
+  make_chain_sleeves_mould: 'make_chain_shawl_mould', make_plate_arms_mould: 'make_plate_shawl_mould',
+};
+/** A recipe id as it is now, for one kept under the id it had before a rename (`RECIPE_RENAMED`). */
+export const recipeNow = (id: string): string => RECIPE_RENAMED[id] ?? id;
 

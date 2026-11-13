@@ -220,7 +220,8 @@ begin
 
   taken := p_raw;
   note := '';
-  piece := worn(p_world, p_uid, part);
+  -- The piece worn over where it landed: a blow to the arms lands on the shawl (`part_worn`).
+  piece := worn(p_world, p_uid, part_worn(part));
   if piece.id is not null and exists (select 1 from armour_def where id = piece.def) then
     select c.* into cls from armour_def a join armour_class_def c on c.id = a.cls where a.id = piece.def;
     -- And the trade, on the line of armour this piece belongs to: a pikeman's
@@ -239,7 +240,7 @@ begin
     update item set dmg = least(100, dmg + v_worn) where id = piece.id;
     if (select i.dmg from item i where i.id = piece.id) >= 100 then
       delete from item where id = piece.id;
-      update player set equipped = equipped - part where world_id = p_world and uid = p_uid;
+      update player set equipped = equipped - part_worn(part) where world_id = p_world and uid = p_uid;
       perform tell(p_world, p_uid, 'Destroyed: ' || lower((select name from item_def where id = piece.def))
         || ' (' || damage_max()::int || '% damage).', 'fight');
     else

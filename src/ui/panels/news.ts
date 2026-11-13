@@ -171,7 +171,7 @@ import { defaultKey } from '../../game/keybinds';
 import { guideEntries, guidePages, wildShare } from '../../game/guide';
 import { MUTE_FOR, MUTE_SHUTS, NEW_BODIES_A_DAY, REPORT_REASONS, REPORTS_A_DAY } from '../../game/keeper';
 import { awayFor } from '../../game/away';
-import { ANCIENT_HELM, ANCIENT_HELM_SIGHT, ANCIENT_SWORD, ANCIENT_SWORD_SWING, ARMOUR, BANE_BONUS, SHIELDS, SLOTS, WEAPON_BY_ID, WEAPONS } from '../../game/gear';
+import { ANCIENT_HELM, ANCIENT_HELM_SIGHT, ANCIENT_SWORD, ANCIENT_SWORD_SWING, ARMOUR, BANE_BONUS, SHIELDS, SLOT_NAMES, SLOTS, WEAPON_BY_ID, WEAPONS } from '../../game/gear';
 import { JEWEL_PIECES } from '../../game/gems';
 import { foodFill, itemDef, RARITIES, rarityBands, rarityChance, rareInputSaid, unmendableSays } from '../../game/items';
 import { SIGHT_FORM_AT, SIGHT_RARITY_AT } from '../../game/sighted';
@@ -530,7 +530,7 @@ export const NEWS: News[] = [
         `Changed: from behind, ${either(shouldered)} on the shoulder rises behind it, haft visible under the head; carrying arm on the far side.`,
         `Changed: while working, ${either(slungHeavy)} on the back hangs head down; ${either(slungPoles)} hangs lower, clear of the hammer.`,
         `Changed: leather red-brown except skin-coloured, sheen on the lit side. ${named('leather_trousers')} knee pads flat and darker.`,
-        `Changed: ${itemDef('cloth_sleeves').name} join the coat at the shoulder and bend at the elbow with no visible joint. ${named('cloth_tunic')} collar, hem and cuffs faced a lighter shade.`,
+        `Changed: Cloth sleeves join the coat at the shoulder and bend at the elbow with no visible joint. ${named('cloth_tunic')} collar, hem and cuffs faced a lighter shade.`,
         `Changed: ${named('helm')} cheek plates narrow to the chin, neck guard flares. ${named('scale_helm')}: crest of splayed fins, scale cheek plates. Long hair under a cap or helm drawn in at the nape, falls in locks.`,
         `Changed: ${named('chain_coif')} face opening narrows at the chin, cut back at the cheek (face visible side on).`,
         `Changed: ${named('toolbelt')} hammer hangs head down from a loop; ${named('jewelled_ring')} shows a gold point from every side; ${named('wooden_shield')}: weathered boards, dark rawhide rim; ${named('chain_hauberk')} skirt flies out behind at a run; belted axe shows its blade three-quarters on.`,
@@ -546,8 +546,8 @@ export const NEWS: News[] = [
       return [
         `Changed: ${either(shine)} pieces tinted their rarity colour all over, lit and shaded, material still visible; outline a dark of that colour.`,
         'Changed: dragon scale in overlapping courses, edges pointed at shoulders, elbows, knees, hem and boot tops; gauntlets dark scale.',
-        `Changed: ${itemDef('chain_sleeves').name} flare over the hand back; ${named('chain_leggings')} hang over the knee in ragged points; ${named('chain_hauberk')} hem a band of bright rings of its metal.`,
-        `Changed: leather browner red; dyed leather keeps its dye. ${itemDef('leather_sleeves').name}: no elbow knob. Cloth and leather suit pieces step further apart in shade cap to shoes; wider quilting channels. Copper warmer, pale edges, green shadow.`,
+        `Changed: Chain sleeves flare over the hand back; ${named('chain_leggings')} hang over the knee in ragged points; ${named('chain_hauberk')} hem a band of bright rings of its metal.`,
+        `Changed: leather browner red; dyed leather keeps its dye. Leather sleeves: no elbow knob. Cloth and leather suit pieces step further apart in shade cap to shoes; wider quilting channels. Copper warmer, pale edges, green shadow.`,
         `Changed: back-slung items hang from a strap over the same shoulder; working left-handed, both on the other shoulder. ${named('long_bow')} longer, held further forward at a run. ${named('throwing_axe')} held head up.`,
         `Changed: ${named('chain_coif')} face opening pointed under the chin; ${named('scale_helm')} fins on the crown; long hair under a cap or helm falls as one curtain.`,
       ];
@@ -4414,6 +4414,18 @@ export const NEWS: News[] = [
       `New: rowing under way: ${OAR_DROPS} drops a blade at the catch; whirl pair a blade a stroke, ${SWIRL_SECS} s.`,
       'Without a graphics card: swimming strokes\' splashes, rings treading water, the float\'s strike and a catch only.',
     ],
+  },
+  {
+    n: 548,
+    day: '2026-11-13',
+    lines: () => {
+      const m = MOULD_BY_ID.get('plate_shawl_mould');
+      return [
+        `Changed: sleeves are shawls: slot ${SLOT_NAMES.shawl} (was: Arms); cloth, leather, chain, plate and scale shawls (was: sleeves / plate arms); yours converted.`,
+        `Changed: ${itemDef('plate_shawl').name}: ${m?.lumps} × metal lump in the ${m?.name.toLowerCase()} at a smelter, then the casting + ${m?.also?.count} × ${
+          itemDef(m?.also?.item ?? 'fur').name.toLowerCase()} at an anvil (was: casting only). Fur spent on success only.`,
+      ];
+    },
   },
   {
     n: 529,

@@ -236,7 +236,7 @@ export const JOURNAL: Chapter[] = [
       { id: 'ogre', text: 'Kill an ogre', met: did('slew:ogre') },
       { id: 'dragon', text: 'Kill a dragon', hint: 'Only one on the island', met: did('slew:dragon') },
       { id: 'hoard', text: 'Open a hoard', hint: 'Dig with a treasure map, or butcher a dragon', met: did('hoard') },
-      { id: 'scaled', text: 'Wear a full suit of dragon scale armour', met: (g) => ['head', 'chest', 'arms', 'legs', 'feet'].every((sl) => g.worn(sl as never)?.id.startsWith('scale_')) },
+      { id: 'scaled', text: 'Wear a full suit of dragon scale armour', met: (g) => ['head', 'chest', 'shawl', 'legs', 'feet'].every((sl) => g.worn(sl as never)?.id.startsWith('scale_')) },
       { id: 'composite', text: 'Make a composite bow', hint: 'Tusk and sinew: orc or ogre', met: did('made:composite_bow') },
       { id: 'bridged', text: 'Build a bridge', hint: 'Plan from one bank to the other', met: did('bridged') },
       { id: 'reach', text: 'Sail a beam reach in a fresh wind', hint: `Wind from the side, force ${REACH_FORCE} or more`, met: did('reach') },

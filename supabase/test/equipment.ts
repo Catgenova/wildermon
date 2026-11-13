@@ -87,7 +87,7 @@ const mailDef = mail && ARMOUR_BY_ID.get(mail.id);
 check('what the chest turns is `pieceSoak` of the mail on it',
   !!mail && !!mailDef && near(chest?.soak ?? NaN, Math.min(0.92, pieceSoak(mailDef, mail, g.skills.get(ARMOUR_CLASSES[mailDef.cls].skill)) * g.pathFx('hide', 1))),
   `${chest?.soak}`);
-check('a place with nothing on it turns nothing', r.slots.find((s) => s.slot === 'arms')?.soak === null);
+check('a place with nothing on it turns nothing', r.slots.find((s) => s.slot === 'shawl')?.soak === null);
 
 /* ---- the skills ---- */
 const swords = r.skills.find((s) => s.id === 'swords');

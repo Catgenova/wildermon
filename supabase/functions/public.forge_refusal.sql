@@ -94,5 +94,10 @@ begin
                 else 'Need a casting (pour a mould at a smelter).' end;
   end if;
   if not exists (select 1 from mould_def where makes = v_cast.piece) then return 'Choose a casting.'; end if;
-  return null;
+  -- And what else the piece takes at the anvil, at hand (`mould_def.also_item`): the plate shawl's fur. The browser's
+  -- `mouldAlsoRefusal`.
+  return (select 'Need ' || d.also_n || ' × ' || lower(f.name) || '.'
+            from mould_def d join item_def f on f.id = d.also_item
+           where d.makes = v_cast.piece and d.also_n > 0
+             and craft_count(p_world, p_uid, d.also_item) < d.also_n);
 end $function$
