@@ -42,6 +42,8 @@ import { chignonOf } from './lowchignon.mjs';
 import CHIGNON from './hairs/chignon.mjs';
 import { shagOf } from './lowshag.mjs';
 import SHAG from './hairs/shag.mjs';
+import { ponytailOf } from './lowponytail.mjs';
+import PONYTAIL from './hairs/ponytail.mjs';
 
 const braidHull = carveBraid();
 const BUILDERS = {
@@ -62,6 +64,7 @@ const BUILDERS = {
   pixie: { name: PIXIE.name, build: (rig) => pixieOf(rig, PIXIE) },
   chignon: { name: CHIGNON.name, build: (rig) => chignonOf(rig, CHIGNON) },
   shag: { name: SHAG.name, build: (rig) => shagOf(rig, SHAG) },
+  ponytail: { name: PONYTAIL.name, build: (rig) => ponytailOf(rig, PONYTAIL) },
 };
 
 const out = { built: 'node tools/sculpt/lowhair.mjs --asset (tools/sculpt/lowhair.mjs gameHair)' };
