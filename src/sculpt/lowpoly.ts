@@ -228,6 +228,9 @@ import { animate, clipFor, clipsPlaying, CLIPS, heldIn, ONE_HAND, SWING_TOOL, to
 import { eyesShut, onTheGround } from './anim/down';
 import { clipLocal } from './anim/player';
 import { hopAir } from './anim/clips/emote';
+import { FISH, FISH_LEFT, LINE_OUT } from './anim/clips/fish';
+/** The fishing rod's line and its float, by material (tools/sculpt/gear/fishing_rod.mjs). */
+const ROD_LINE = ['line', 'red', 'white'];
 import { HOPS, emotePose } from '../game/emotes';
 import { HEIGHT_SCALE } from '../render/iso';
 import type { Side } from './anim/clip';
@@ -328,6 +331,8 @@ interface PropAsset {
    * tool's hook. Its half width (game units) and material (and every other ribbon's, `alt`) in this prop's table.
    */
   tether?: { at: V; to: { id: string; at: V }; r: number; mat: number; alt?: number };
+  /** A rod's: the materials of its line and float, left out while the line is out over the water (`castOut`). */
+  line?: readonly string[];
   /** What goes on the back with it while it is wielded (a bow's quiver): its points (game units) on its socket there, rigid on the upper back, its polygons from glowFrom on its glow. */
   quiver?: PropPart & { glowFrom: number; sockets: Record<'male' | 'female', Socket> };
 }
@@ -368,7 +373,7 @@ const PROPS: readonly PropAsset[] = [SWORD, { ...(WARHAMMER as unknown as PropAs
   ...[QUERN, QUERN_HANDLE, WOODEN_SPOON, CLAY_POT, CLAY_BOWL, CLAY_JAR, FRYING_PAN, SKEWER].map((p) => p as unknown as PropAsset),
   // the saw with the sawhorse under the other palm (its mirror under the right), the fishing rod and the fishing net, each
   // in one fist (./anim/clips/saw.ts, fish.ts, net.ts); the saw's blade in its metal, the rod's wood in its wood
-  SAW as unknown as PropAsset, SAWHORSE as unknown as PropAsset, SAWHORSE_R as unknown as PropAsset, FISHING_ROD as unknown as PropAsset, FISHING_NET as unknown as PropAsset,
+  SAW as unknown as PropAsset, SAWHORSE as unknown as PropAsset, SAWHORSE_R as unknown as PropAsset, { ...(FISHING_ROD as unknown as PropAsset), line: ROD_LINE }, FISHING_NET as unknown as PropAsset,
   // the grooming brush in the right fist at the groom clip (./anim/clips/tend.ts; tools/sculpt/gear/groom_brush.mjs), all wood
   GROOM_BRUSH as unknown as PropAsset,
   // what is eaten and drunk from, in the right fist while the eat and drink clips play (./anim/clips/meal.ts)
@@ -640,7 +645,7 @@ const USED = new WeakMap<Baked, { used: readonly number[]; at: number }>();
  * garments it can wear (their own bones posed with the body's always, each garment's after the one before; each drawn
  * when the bake is asked for with it worn), and its hairstyles.
  */
-function lowBody(A: Asset, P: Proportions, share: number, garments: readonly GarmentAsset[], hairs: Record<string, HairAsset>, tints: ReadonlyArray<Tinted | undefined>): { baked: (worn: readonly boolean[], sword?: Carried, style?: string, lit?: readonly boolean[], drop?: readonly boolean[], prop?: string, tools?: Partial<Record<Side, string>>, up?: Partial<Record<Side, number>>, nock?: number) => Baked; bones: (pose: FigurePose, worn?: readonly boolean[], over?: Record<string, [number, number, number]>) => Float32Array; shapes: () => number[]; wet: () => number; trail: (pose: FigurePose, lit: boolean) => TrailDraw | undefined; skeleton: Skeleton; held: Held; heldOf: (id: string) => Held | undefined; toolHeld: (id: string) => Held | undefined; figure: (pose: FigurePose) => Array<M3 | undefined>; used: (worn: readonly boolean[], lit?: readonly boolean[]) => number[]; lift: (local: Array<M3 | undefined>, move: V) => number; toGame: (p: V) => V } {
+function lowBody(A: Asset, P: Proportions, share: number, garments: readonly GarmentAsset[], hairs: Record<string, HairAsset>, tints: ReadonlyArray<Tinted | undefined>): { baked: (worn: readonly boolean[], sword?: Carried, style?: string, lit?: readonly boolean[], drop?: readonly boolean[], prop?: string, tools?: Partial<Record<Side, string>>, up?: Partial<Record<Side, number>>, nock?: number, cast?: boolean) => Baked; bones: (pose: FigurePose, worn?: readonly boolean[], over?: Record<string, [number, number, number]>) => Float32Array; shapes: () => number[]; wet: () => number; trail: (pose: FigurePose, lit: boolean) => TrailDraw | undefined; skeleton: Skeleton; held: Held; heldOf: (id: string) => Held | undefined; toolHeld: (id: string) => Held | undefined; figure: (pose: FigurePose) => Array<M3 | undefined>; used: (worn: readonly boolean[], lit?: readonly boolean[]) => number[]; lift: (local: Array<M3 | undefined>, move: V) => number; toGame: (p: V) => V } {
   const BONES = A.bones;
   const AT = new Map(BONES.map((b, i) => [b.name, i]));
   for (const g of garments) if (g.base !== BONES.length) throw new Error(`garment for ${g.base} bones on a body of ${BONES.length}`);
@@ -843,9 +848,9 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
    * (`M.hairCut`, three tones; in a valley `M.hairValley` to `M.hairValley4`, its valley's step), the body's shaved
    * polygons the scalp's (`M.hairUnder`).
    */
-  function lowBaked(worn: readonly boolean[], sword?: Carried, style = '', lit: readonly boolean[] = [], drop: readonly boolean[] = [], prop = SWORD.id, tools: Partial<Record<Side, string>> = {}, up: Partial<Record<Side, number>> = {}, nock = 0): Baked {
+  function lowBaked(worn: readonly boolean[], sword?: Carried, style = '', lit: readonly boolean[] = [], drop: readonly boolean[] = [], prop = SWORD.id, tools: Partial<Record<Side, string>> = {}, up: Partial<Record<Side, number>> = {}, nock = 0, cast = false): Baked {
     const hair = hairs[style];
-    const key = `${garments.map((_, k) => (worn[k] ? (lit[k] ? 2 : 1) + (drop[k] ? 2 : 0) : 0)).join('')}|${sword ? `${sword}:${prop}` : ''}|${hair ? style : ''}|${tools.l ?? ''}:${tools.r ?? ''}:${up.l ?? 0}:${up.r ?? 0}|${nock}`, had = BAKED.get(key);
+    const key = `${garments.map((_, k) => (worn[k] ? (lit[k] ? 2 : 1) + (drop[k] ? 2 : 0) : 0)).join('')}|${sword ? `${sword}:${prop}` : ''}|${hair ? style : ''}|${tools.l ?? ''}:${tools.r ?? ''}:${up.l ?? 0}:${up.r ?? 0}|${nock}|${cast ? 1 : 0}`, had = BAKED.get(key);
     if (had) return had;
     const t0 = performance.now();
     const verts: number[] = [], tris: number[] = [], faceSkin: number[] = [];
@@ -965,8 +970,9 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
       const so = TP.sockets[WHO][side], hand = so.bone === GROUND ? ALL.length : AT.get(so.bone) as number, k = 1 / TP.scale[WHO], g: V = [TP.grip.lead[0], TP.grip.lead[1] + (up[side] ?? 0), TP.grip.lead[2]], V3s: number[] = [];
       const kz = side === 'l' && TP.mirror ? -k : k;
       for (let i = 0; i < TP.verts.length; i += 3) V3s.push(...add(so.o, mv(so.R, [(TP.verts[i] - g[0]) * k, (TP.verts[i + 1] - g[1]) * k, (TP.verts[i + 2] - g[2]) * kz])));
-      const T3: number[] = [];
-      for (let t = 0; t < TP.tris.length; t += 4) if (TP.tris[t + 3] < (TP.glowFrom < 0 ? Infinity : TP.glowFrom)) T3.push(TP.tris[t], TP.tris[t + 1], TP.tris[t + 2], TP.tris[t + 3]);
+      // (a rod's line and float left out while they are out over the water, drawn there by the effects: `cast`)
+      const T3: number[] = [], off3 = cast && TP.line ? new Set(TP.line.map((m) => TP.mats.indexOf(m))) : null;
+      for (let t = 0; t < TP.tris.length; t += 4) if (TP.tris[t + 3] < (TP.glowFrom < 0 ? Infinity : TP.glowFrom) && !off3?.has(TP.polys[TP.tris[t + 3]][1])) T3.push(TP.tris[t], TP.tris[t + 1], TP.tris[t + 2], TP.tris[t + 3]);
       const off = places[side], polys: Array<[number[], number, number[]?]> = kz < 0 ? TP.polys.map(([v, m]) => [v, m, [...v].reverse()]) : TP.polys;
       lay(V3s, polys, T3, Array.from({ length: V3s.length / 3 }, () => [hand, 1]), (pi) => off + TP.polys[pi][1]);
     }
@@ -1675,6 +1681,15 @@ function materialsOf(look: Look, prop: PropAsset | undefined, lit: 'plain' | 'en
   return out;
 }
 
+/** Whether a rod in hand has its line out over the water (`../sculpt/anim/clips/fish.ts` LINE_OUT): drawn by the effects, its own left out. */
+function castOut(pose: FigurePose, who: 'man' | 'woman', tools: Partial<Record<Side, string>>): boolean {
+  if (!pose.line || !Object.values(tools).some((id) => id && TOOL_OF.get(id)?.line)) return false;
+  const c = clipFor(pose, who);
+  if (!c || (c.clip.name !== FISH.name && c.clip.name !== FISH_LEFT.name)) return false;
+  const t = wrap(c.clip, c.t);
+  return t >= LINE_OUT[0] && t < LINE_OUT[1];
+}
+
 /** A bow in hand's string drawn to the other fist (2) or an arrow in that fist (1) as its shot is at it (`Clip.bow`); 0 otherwise. */
 function nockOf(pose: FigurePose, who: 'man' | 'woman', prop: PropAsset | undefined): number {
   const shot = prop?.draw ? clipFor(pose, who) : undefined, bw = shot?.clip.bow;
@@ -1708,7 +1723,7 @@ export function lowScene(given: FigurePose, part: 'over' | 'under' = 'over'): Sc
   const at = carried?.sockets[who === 'woman' ? 'female' : 'male'], sword: Carried | undefined = inHand ? 'hand' : at?.back ? (seat ? 'seat' : 'back') : at?.belt ? 'belt' : undefined, drawn = sword ? prop ?? carried : undefined;
   const piece: GearPiece | undefined = held === SWING_TOOL || (held !== undefined && held === pose.tool?.id) ? pose.tool : weapon;
   const lit = piece?.enchanted ? 'enchanted' : 'plain';
-  const baked = body.baked(worn, sword, hairStyle(pose, look.hair), enchanted, drops, drawn?.id, tools, hands?.up, nockOf(pose, who, inHand ? prop : undefined));
+  const baked = body.baked(worn, sword, hairStyle(pose, look.hair), enchanted, drops, drawn?.id, tools, hands?.up, nockOf(pose, who, inHand ? prop : undefined), castOut(pose, who, tools));
   const materials = materialsOf(look, drawn, lit, piece?.material, pieces, pose.outfit?.metal, pose.outfit?.dye, USED.get(baked), kitOf(pose)), low: LowLight = { sh: SH[who], tone: toneOf(materials), fit: FIT_SKIN };
   const bones = body.bones(pose, worn), trail = (inHand && prop && trails(prop)) || fight ? body.trail(pose, lit === 'enchanted') : undefined;
   const shapes = body.shapes();

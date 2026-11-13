@@ -49,7 +49,14 @@ export function fxTrack(id: string, pose: FigurePose, now: number): readonly FxC
     if (s) FOLLOWED.delete(id);
     return NONE;
   }
-  const t = c.t, name = c.clip.name;
+  const name = c.clip.name;
+  let t = c.t;
+  // a loop played wrapped to its run (the stroke, the walk: the clip player's own count starts again each run) counted on
+  // from the last frame, the nearer way round: its wrap is a step forward, not a new go
+  if (s && s.clip === name && c.clip.loop && !pose.act) {
+    const L = c.clip.length, d = ((((t - s.t) % L) + L * 1.5) % L) - L / 2;
+    t = s.t + d;
+  }
   if (s) FOLLOWED.delete(id);
   if (!s || s.clip !== name || now - s.at > GAP || now < s.at) {
     FOLLOWED.set(id, { clip: name, t, upTo: t, at: now });
@@ -190,4 +197,10 @@ function measure(body: 'man' | 'woman', r: Local, c: Clip | undefined, from: FxF
 }
 
 /** What the sculpted bodies' chunk gives the effects (`../render/figure.ts` sculptFx). */
-export const SCULPT_FX: SculptFx = { track: fxTrack, point: fxPoint, pointOver: fxPointOver };
+/** The clip a body plays now: its name, where in it (wrapped to its length) and how long it is; null where it plays none. */
+export function fxClip(pose: FigurePose): { name: string; t: number; length: number } | null {
+  const c = clipFor(pose, bodyOf(pose));
+  return c ? { name: c.clip.name, t: wrap(c.clip, c.t), length: c.clip.length } : null;
+}
+
+export const SCULPT_FX: SculptFx = { track: fxTrack, point: fxPoint, pointOver: fxPointOver, clip: fxClip };

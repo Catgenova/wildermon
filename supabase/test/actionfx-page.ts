@@ -4,8 +4,10 @@
  * its sparks) and fifteen mining (`../../src/sculpt/anim/clips/swing.ts`, its chips), each with its own metal, some
  * enchanted. In a fight ('combat'): ten with a one-handed weapon and a shield, metal or wood, taking blows on it; ten with a
  * two-handed weapon (its heavy blow); ten shooting a bow; all in armour of the five classes and none, blows landing on
- * every one of them in turn (`roster.blocked`, `roster.hurt`). Bundled for the browser by `actionfx.ts`; the clock is put
- * in before it by the driver.
+ * every one of them in turn (`roster.blocked`, `roster.hurt`). On the water ('water'): the sea to the east, twenty
+ * swimming in it (ten under way, `../../src/sculpt/anim/clips/swim.ts` SWIM, its splashes; ten treading water, its rings)
+ * and ten rowing boats under way, a peer at the oars of each (`../../src/render/fx/rowing.ts`). Bundled for the browser by
+ * `actionfx.ts`; the clock is put in before it by the driver.
  */
 import { Game } from '../../src/game/game';
 import type { PeerState } from '../../src/net/protocol';
@@ -30,6 +32,11 @@ for (let y = cy - R; y <= cy + R + 1; y++) for (let x = cx - R; x <= cx + R + 1;
 // Grass to the west, bare rock to the east: the miners on both.
 for (let y = cy - R; y <= cy + R; y++) for (let x = cx - R; x <= cx + R; x++) world.setTile(x, y, x > cx ? TileType.Rock : TileType.Grass);
 
+const scene = (window as unknown as { actionFxScene?: string }).actionFxScene ?? 'work';
+const water = scene === 'water';
+// On the water, the sea from a tile east of the body on: deep enough to swim and row in.
+if (water) for (let y = cy - R; y <= cy + R + 1; y++) for (let x = cx + 1; x <= cx + R + 1; x++) world.setHeight(x, y, -12);
+
 let hour = 13;
 const day0 = 1000 * DAY_SECONDS, opened = performance.now();
 game.islandClock = () => day0 + (hour / 24) * DAY_SECONDS + (performance.now() - opened) / 1000;
@@ -44,7 +51,7 @@ game.putBody(cx + 0.5, cy + 0.5, 0);
 
 const WEAPONS = ['sword', 'short_sword', 'hatchet', 'hunting_knife', 'throwing_axe'];
 const METALS = ['iron', 'steel', 'copper', 'bronze', 'silver'];
-const combat = (window as unknown as { actionFxScene?: string }).actionFxScene === 'combat';
+const combat = scene === 'combat';
 const HEAVY = ['long_sword', 'maul', 'battle_axe'], BOWS = ['short_bow', 'long_bow'];
 /** Armour by class, a piece for every slot, for a fight's bodies in turn; and where blows land, in turn. */
 const SETS: Array<Record<string, string>> = [
@@ -77,7 +84,37 @@ const peers: PeerState[] = Array.from({ length: 30 }, (_, i) => {
     tool: fight || combat ? undefined : { id: 'pickaxe', material, enchanted: i % 4 === 0 },
   } as unknown as PeerState;
 });
-game.roster.sawAll(peers);
+/** On the water: twenty swimming on a grid of five by four east of the body (the first ten under way north), and ten at the oars of a rowing boat, under way south. */
+const SWIMMERS = 20, ROWERS = 10;
+const swimmers: PeerState[] = Array.from({ length: SWIMMERS }, (_, i) => ({
+  id: 7000 + i, uid: `00000000-0000-4000-9000-${String(i).padStart(12, '0')}`, name: `Swimmer ${i}`,
+  x: cx + 2.5 + (i % 5) * 1.4, y: cy - 2.5 + Math.floor(i / 5) * 1.6, dirX: 0, dirY: -1, level: 0,
+  moving: i < 10, swimming: true, working: false,
+  look: { gender: i % 3 ? 'man' : 'woman', hair: HAIRSTYLES[1 + (i % (HAIRSTYLES.length - 1))].id, hairColour: (i * 0.137) % 1, hairBright: 0.5, skin: (i * 0.29) % 1 },
+} as unknown as PeerState));
+const rowers: PeerState[] = Array.from({ length: ROWERS }, (_, i) => ({
+  id: 7100 + i, uid: `00000000-0000-4000-9100-${String(i).padStart(12, '0')}`, name: `Rower ${i}`,
+  x: cx + 2.5 + (i % 5) * 2, y: cy + 4 + Math.floor(i / 5) * 2.5, dirX: 0, dirY: 1, level: 0,
+  moving: true, swimming: false, working: false,
+  look: { gender: i % 2 ? 'man' : 'woman', hair: HAIRSTYLES[1 + (i % (HAIRSTYLES.length - 1))].id, hairColour: (i * 0.21) % 1, hairBright: 0.5, skin: (i * 0.37) % 1 },
+} as unknown as PeerState));
+if (water) {
+  rowers.forEach((p, i) => {
+    const f = { id: 900 + i, x: Math.floor(p.x), y: Math.floor(p.y), sx: 0, sy: 0, facing: 's', kind: 'rowing_boat', ql: 50, items: [], helm: (p as unknown as { uid: string }).uid };
+    game.furniture.set(f.id, f as never);
+  });
+  game.placed.furniture.reset(game.furniture.values());
+}
+/** Where those under way have got to, a frame on: north for the swimmers, south for the boats, and back to the start after three tiles. */
+let gone = 0;
+function onTheWater(step: number): PeerState[] {
+  gone = (gone + (step / 1000) * 0.6) % 3;
+  return [
+    ...swimmers.map((p) => (p.moving ? { ...p, y: p.y - gone } : p)),
+    ...rowers.map((p) => ({ ...p, y: p.y + gone })),
+  ];
+}
+game.roster.sawAll(water ? onTheWater(0) : peers);
 
 const canvasEl = document.createElement('canvas');
 document.body.appendChild(canvasEl);
@@ -123,7 +160,8 @@ function frames(n: number, step: number, zoom: number, effects: Effects, soft: b
   let most = 0;
   for (let i = 0; i < n; i++) {
     driven.tick(step);
-    if (i % 15 === 0) game.roster.sawAll(peers);
+    if (water) game.roster.sawAll(onTheWater(step));
+    else if (i % 15 === 0) game.roster.sawAll(peers);
     // in a fight, every body takes a blow once a second, its turn of the second its own: on the shield where it has one
     // (every other time), else landing where it lands in turn
     if (combat) peers.forEach((p, j) => {

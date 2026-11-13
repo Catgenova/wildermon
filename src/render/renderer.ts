@@ -1237,6 +1237,15 @@ export class Renderer {
       const b = id === null || id === undefined ? null : this.spellBody({ kind: 'creature', id });
       return b ? { x: b.x, y: b.y, z: b.z + b.tall * 0.5 } : null;
     },
+    water: (x, y) => (this.game.world.inBounds(Math.floor(x), Math.floor(y)) ? this.drawnSurface(Math.floor(x), Math.floor(y)) : null),
+    cast: (w) => {
+      const at = w.kind === 'player' ? this.castSpot?.at : null, p = this.game.player;
+      return at ? { x: p.x + at[0], y: p.y + at[1] } : null;
+    },
+    wake: (id, x, y) => {
+      const w = this.game.world;
+      if (w.inBounds(Math.floor(x), Math.floor(y)) && w.hasWater(Math.floor(x), Math.floor(y))) this.wakes.mark(id, x, y, this.time, 0.3);
+    },
   });
   /** The season and its day, for the trees' look (`./foliage`): read once a frame off the wall clock, as the hud reads it. */
   private year = yearAt(Date.now() / 1000);
@@ -1586,6 +1595,8 @@ export class Renderer {
     // Damage and skill both go up over the thing they happened to. Damage adds
     // up per target, skill per skill, so a flurry of either reads as one
     // running number rather than a stack of them.
+    // what came of your own fishing go, for the fish brought out at the float (`./fx/fishing.ts`)
+    game.events.on('log', (e) => this.actionFx.told(e.text));
     game.events.on('hit', (x, y, amount, kind) => {
       const key = `${kind}:${Math.round(x)},${Math.round(y)}`;
       this.floaters.add(x, y, kind, key, amount, this.time, (total) => (total < 0.05 ? 'blocked' : `${kind === 'taken' ? '-' : ''}${total < 10 ? total.toFixed(1) : Math.round(total)}`));
@@ -6510,6 +6521,18 @@ export class Renderer {
 
   /* ---- spells ---------------------------------------------------------------------- */
 
+  /**
+   * Where the feet of somebody sat in what they drive are drawn (`seatOn`: the floor under the seat, drawn at `ex`, `ey`
+   * less its lift), in the world: for the effects at their oars (`./fx/rowing.ts`). Nothing for anybody not sat so.
+   */
+  private seatedAt(ent: Entity, ex: number, ey: number, zoom: number): { x: number; y: number; z: number } | undefined {
+    if (!ent.seat || !(ent.lift && ent.lift > 0)) return undefined;
+    const w = this.game.world, tx = Math.floor(ent.x), ty = Math.floor(ent.y);
+    const z = (w.inBounds(tx, ty) ? this.drawnSurface(tx, ty) ?? w.heightAt(ent.x, ent.y) : 0) + ent.lift / (zoom * HEIGHT_SCALE);
+    const p = this.camera.screenToWorld(ex, ey - ent.lift, z);
+    return { x: p.x, y: p.y, z };
+  }
+
   /** Where somebody a spell is cast by or at stands this frame, as the stage wants them; nothing when they are gone. */
   private spellBody(w: Who): SpellBody | null {
     const game = this.game;
@@ -6737,7 +6760,7 @@ export class Renderer {
             block: blockAt(player.blockedAt, performance.now() / 1000),
             flinch: this.flinchOf(player.hurtAt, player.hurtWhere, player.hurtBy, player.x, player.y, ent.seatFacing ?? this.playerFacing),
             veil: this.spells.veilOf(PLAYER_CASTS),
-          })),
+          }, this.seatedAt(ent, ex, ey, zoom))),
           undefined,
           figBox,
         );
@@ -6788,7 +6811,7 @@ export class Renderer {
             block: blockAt(peer.blockedAt, performance.now() / 1000),
             flinch: this.flinchOf(peer.hurtAt, peer.hurtWhere, peer.hurtBy, peer.x, peer.y, ent.seatFacing ?? peer.facing),
             veil: this.spells.veilOf({ kind: 'peer', id: peer.id }),
-          })),
+          }, this.seatedAt(ent, ex, ey + (ent.lift ?? 0), zoom))),
           undefined,
           peerBox,
         );

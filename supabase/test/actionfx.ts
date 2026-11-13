@@ -14,6 +14,11 @@
  * particles within the share and the frame within the margin as at work; Off fires nothing; on the processor's GL the
  * blocks and the blows landing (marked key) still fire, the heavy blows and the bows' not.
  *
+ * And on the water (the page's 'water': twenty swimming, ten of them under way and ten treading water, and ten rowing
+ * boats under way): the swimmers' splashes and flicks, the rings off the hands treading water, the oars' splashes and
+ * whirls; the particles within the share and the frame within the margin; Off fires nothing; on the processor's GL the
+ * stroke's splashes and the rings (key) still fire, the flicks, the oars' splashes and the whirls not.
+ *
  * Every effect is measured as on a graphics card (the page's `soft` set false) but the last. Needs a Chromium: the one in
  * `CHROME_PATH`, Playwright's, or an installed Chrome. With none it says so and passes, unless `FX_STRICT` is set.
  */
@@ -153,12 +158,29 @@ async function inAFight(): Promise<void> {
   if (thrown.length) check('the fight\'s page threw nothing', false, thrown.join('; '));
   await ctx.close();
 }
+/** Twenty swimming and ten rowing: splashes, flicks, rings treading water, the oars' splashes and whirls. */
+async function onTheWater(): Promise<void> {
+  const { ctx, tab, thrown, share, MOST_PARTICLES } = await open('water');
+  const all = await rounds(tab, share, MOST_PARTICLES, 'twenty swimming and ten rowing');
+  const k = (n: string): number => sum(all, n);
+  check('on the water, the strokes\' splashes and flicks, the rings treading water, and the oars\' splashes and whirls all fire',
+    k('splash') > 0 && k('flick') > 0 && k('ripple') > 0 && k('oar') > 0 && k('swirl') > 0,
+    `in ${3 * FRAMES} frames: ${k('splash')} splashes, ${k('flick')} flicks, ${k('ripple')} rings, ${k('oar')} oars, ${k('swirl')} whirls`);
+  const soft = await run(tab, FRAMES * 2, 'all', true);
+  const sk = (n: string): number => soft.byKind[n] ?? 0;
+  check('on the water on the processor\'s GL, the splashes and the rings (key) still fire; the flicks, the oars and the whirls not',
+    sk('splash') > 0 && sk('ripple') > 0 && !sk('flick') && !sk('oar') && !sk('swirl'),
+    `${sk('splash')} splashes, ${sk('ripple')} rings, ${sk('flick')} flicks, ${sk('oar')} oars, ${sk('swirl')} whirls`);
+  if (thrown.length) check('the water\'s page threw nothing', false, thrown.join('; '));
+  await ctx.close();
+}
 try {
   await atWork();
   await inAFight();
+  await onTheWater();
 } finally {
   await browser.close();
 }
 void ok;
 void bad;
-finish('action effects with thirty at work, and thirty in a fight, in view');
+finish('action effects with thirty at work, thirty in a fight, and thirty on the water, in view');

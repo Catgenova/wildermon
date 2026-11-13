@@ -181,6 +181,10 @@ import { SCULPT_REDRAWS, SCULPT_REDRAWS_SOFT, weaponCarry } from '../../render/f
 import { ACTION_SHARE, FEWER_SHARE, HIT_STOP_HEAVY } from '../../render/fx/actions';
 import { BLOCK_SPARKS, CRACK_SECS, HIT_PUFF, SHOCK_REACH, SPIRAL_MOTES, SPLINTERS, STREAK_SECS, TWANG_SECS } from '../../render/fx/combat';
 import { RUNE_SHARES } from '../../sculpt/anim/runes';
+import { CATCH_DROPS, CATCH_SECS, FLICK_DROPS, OAR_DROPS, SPLASH_DROPS, SWIRL_SECS, TREAD_RING_SECS } from '../../render/fx/water';
+import { AHEAD, BOB_RINGS } from '../../render/fx/fishing';
+import { RECOVER_DROPS } from '../../sculpt/anim/clips/swim';
+import { LIFT_DROPS, NET_LIFT, NET_SHAKES, SHAKE_DROPS } from '../../sculpt/anim/clips/net';
 import { MOST_PARTICLES } from '../../render/spells/kit';
 import { TRY_LEARN } from '../../game/learn';
 import { BASE_SPEED, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER_LEVEL, MAX_STEP, strideAt } from '../../game/player';
@@ -4396,6 +4400,19 @@ export const NEWS: News[] = [
       'New: Animations setting (Settings, Performance): On, Off. Off: bodies and creatures in one pose per state (standing, seated, treading water, asleep, meditating, praying), '
         + 'glided while moving, redrawn only on a change of look, gear, facing or state; water, trees, bushes, flowers, smoke, fire, lights, wakes, dust, cloth and spells\' lingering effects held still; '
         + 'Effects off; no hit flash on bodies.',
+    ],
+  },
+  {
+    n: 546,
+    day: '2026-11-13',
+    lines: () => [
+      `New: swimming effects: ${SPLASH_DROPS} drops a hand at the catch, ${RECOVER_DROPS} as it comes forward; ${FLICK_DROPS} drops off a hand at the breath; wake behind other swimmers.`,
+      `Changed: rings treading water: 2 at each hand, each sweep, ${TREAD_RING_SECS} s (was: rings round the body).`,
+      `New: fishing rod: line and float drawn out on the water from the cast to the reel-in; ring off the float every ${BOB_RINGS[0]}–${BOB_RINGS[1]} s; float jerked up at the strike. Other players' float: ${AHEAD} tiles ahead.`,
+      `New: your own catch: ${CATCH_DROPS} drops at the float, fish in the air to you ${CATCH_SECS * 1000} ms, glints by day. Shown when the catch is reported, at the end of the cast.`,
+      `New: fishing net: ${LIFT_DROPS * NET_LIFT.length} drops off the net as it is lifted, ${SHAKE_DROPS} at each of ${NET_SHAKES.length} shakes.`,
+      `New: rowing under way: ${OAR_DROPS} drops a blade at the catch; whirl pair a blade a stroke, ${SWIRL_SECS} s.`,
+      'Without a graphics card: swimming strokes\' splashes, rings treading water, the float\'s strike and a catch only.',
     ],
   },
   {

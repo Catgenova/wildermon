@@ -2431,6 +2431,8 @@ export interface FigurePose {
    * so the picture itself is kept as it is.
    */
   veil?: FigureVeil;
+  /** A rod's line and float drawn by the action effects while they are out over the water (`./fx/fishing.ts`): the rod's own left out then. */
+  line?: boolean;
 }
 
 /** A body veiled: see `FigurePose.veil`. `colour` is '#rrggbb'; `tint` and `fade` nought to one. */
@@ -3823,6 +3825,29 @@ function row(r: Rig, phi: number, moving: boolean, seat: Seat, fr: Frame): void 
     fistOn(r, fr, k, [at[0] - dir[0] * h, at[1] - dir[1] * h, at[2] - dir[2] * h], [s * 0.4, -0.7, -0.4], [s * dir[0], s * dir[1], s * dir[2]]);
   }
   r.tail = [10 - swing * 0.3, 0, 0];
+}
+
+/**
+ * For the action effects (`./fx/rowing.ts`): a rower's oars (the right, then the left): where each is in its stroke, a
+ * share of it (the blade goes in at `catch`), and, asked for, where each blade meets the water (the figure's level
+ * nought, as `oar` draws it), in the body's frame. Null for a body not sat at oars.
+ */
+export function oarsOf(pose: FigurePose): { catch: number; strokes: [number, number]; blades: () => V3[] } | null {
+  const seat = seatOf(pose);
+  if (seat?.hands !== 'oars') return null;
+  const st = (((pose.phase / ROW_STROKE) % 1) + 1) % 1;
+  return {
+    catch: ROW_CATCH,
+    strokes: [st, (st + ROW_LEAD) % 1],
+    blades: () => {
+      const r = rest();
+      row(r, pose.phase, pose.moving, seat, frameOf(pose.look ?? DEFAULT_LOOK));
+      return (r.oars ?? []).map((o) => {
+        const tip = o.lock[2] + o.out[2], u = tip < 0 && o.lock[2] > 0 ? o.lock[2] / (o.lock[2] - tip) : 1;
+        return [o.lock[0] + o.out[0] * u, o.lock[1] + o.out[1] * u, 0] as V3;
+      });
+    },
+  };
 }
 
 /*
@@ -11790,8 +11815,12 @@ interface RingSet {
   /** Treading water: how far the swimmer has gone on since setting off, which the rings are left that far behind. */
   drift?: number;
 }
+/** Whether the rings off a hand treading water are the action effects' (`./fx/water.ts` ripple, at the hands), and so not drawn here. */
+let treadByFx = false;
+export const treadRingsByFx = (on: boolean): void => { treadByFx = on; };
 function ripple(g: CanvasRenderingContext2D, view: View, set: RingSet, at: V3, fr: Frame): void {
   const { moving, phase } = set;
+  if (!moving && treadByFx) return;
   g.strokeStyle = 'rgb(255, 255, 255)';
   g.lineCap = 'round';
   const every = moving ? SWIM_STROKE : TAU / TREAD_RATE / 2;

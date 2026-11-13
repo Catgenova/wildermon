@@ -32,6 +32,8 @@ export class ActionKit extends FxScene {
   small = false;
   /** Whether it may put a light down (`light`). */
   lit = true;
+  /** The water's surface under a point, height units, or null where there is none. */
+  water: (x: number, y: number) => number | null = () => null;
   /** Particles the action effects may still add this frame. */
   room = 0;
   /** Particles added this frame, and asked for but left out for want of room. */

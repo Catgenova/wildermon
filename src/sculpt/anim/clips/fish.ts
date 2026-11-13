@@ -21,6 +21,10 @@ const LENGTH = 9;
 /** The flick landed out over the water, and the wait's start and end (the stretched span). */
 export const CAST = 1.6;
 const WAIT: [number, number] = [2.0, 7.3];
+/** The strike, and the line reeled in: seconds in. */
+export const STRIKE = 7.5, REELED = 8.6;
+/** The line out over the water, the float on it (`../../../render/fx/fishing.ts`): from the cast until it is reeled in. */
+export const LINE_OUT: readonly [number, number] = [CAST, REELED];
 /** The rod's fist and the other's below the reel: game units up the rod (tools/sculpt/gear/sawfish.mjs ROD lead and butt), and apart over the man's height. */
 const ROD_LEAD = 2.15, ROD_BUTT = 0.9;
 const GAP = -(ROD_LEAD - ROD_BUTT) / 16.5;
@@ -52,12 +56,12 @@ const HOLDS: Hold[] = [
   { t: 5.9, at: WAIT_AT, elev: WAIT_ELEV, ease: 'inOut', left: REST_L },
   { t: WAIT[1], at: WAIT_AT, elev: WAIT_ELEV, ease: 'inOut', left: REST_L },
   // the strike: snapped up; then reeled in, the left hand at the crank, the rod held up
-  { t: 7.5, at: [-0.12, 0.7, 0.18], elev: 55, ease: 'in' },
+  { t: STRIKE, at: [-0.12, 0.7, 0.18], elev: 55, ease: 'in' },
   { t: 7.75, at: [-0.12, 0.71, 0.17], elev: 50, ease: 'out', left: CRANK[0] },
   { t: 8.0, at: [-0.12, 0.705, 0.17], elev: 48, ease: 'inOut', left: CRANK[1] },
   { t: 8.2, at: [-0.12, 0.7, 0.175], elev: 46, ease: 'inOut', left: CRANK[0] },
   { t: 8.4, at: [-0.12, 0.695, 0.18], elev: 44, ease: 'inOut', left: CRANK[1] },
-  { t: 8.6, at: [-0.12, 0.69, 0.185], elev: 40, ease: 'inOut', left: CRANK[0] },
+  { t: REELED, at: [-0.12, 0.69, 0.185], elev: 40, ease: 'inOut', left: CRANK[0] },
 ];
 
 /** The trunk at each beat (the stance's lean and turn), the arms' turns only where their elbows go. */
@@ -73,7 +77,7 @@ const TRUNK = (o: { lean: number; turn: number; head: number; move: Euler; arms?
 const WAITING = TRUNK({ lean: 8, turn: 0, head: 10, move: [0.004, -0.012, 0.008] });
 const BACK = TRUNK({ lean: -4, turn: -22, head: 2, move: [-0.018, -0.006, -0.01], arms: { upperarm_r: [10, 40, -60], lowerarm_r: [110, 0, 0] } });
 const FLICK = TRUNK({ lean: 14, turn: 4, head: 6, move: [0.012, -0.02, 0.018] });
-const STRIKE = TRUNK({ lean: -6, turn: -6, head: 0, move: [-0.01, -0.008, -0.006] });
+const STRUCK = TRUNK({ lean: -6, turn: -6, head: 0, move: [-0.01, -0.008, -0.006] });
 const BEAT = (t: number, pose: KeyPose, ease: Beat['ease'], name?: string, stage?: Beat['stage']): Beat => ({ t, pose, ease, ...(name ? { name } : {}), ...(stage ? { stage } : {}) });
 export const BEATS: Beat[] = [
   BEAT(0, WAITING, 'inOut', 'waiting', 'key'),
@@ -82,8 +86,8 @@ export const BEATS: Beat[] = [
   BEAT(CAST, FLICK, 'in', 'cast out', 'key'),
   BEAT(WAIT[0], WAITING, 'out', 'wait'),
   BEAT(WAIT[1], WAITING, 'inOut'),
-  BEAT(7.5, STRIKE, 'in', 'strike', 'key'),
-  BEAT(8.6, STRIKE, 'inOut', 'reeled in'),
+  BEAT(STRIKE, STRUCK, 'in', 'strike', 'key'),
+  BEAT(REELED, STRUCK, 'inOut', 'reeled in'),
 ];
 /** The trunk after the arms, the head after the trunk: seconds each bone's keys are late. */
 export const LAG = { pelvis: 0.03, spine_01: 0.04, spine_02: 0.05, spine_03: 0.06, neck_01: 0.08, neck_02: 0.09, head: 0.1 };
