@@ -185,6 +185,15 @@ import THROWING_AXE from './assets/throwing_axe.json';
 import SHOVEL from './assets/shovel.json';
 import RAKE from './assets/rake.json';
 import SICKLE from './assets/sickle.json';
+// the kitchen's props (tools/sculpt/gear/kitchen.mjs): the quern set down and its peg, the spoon and the vessels, the pan, the skewer
+import QUERN from './assets/quern.json';
+import QUERN_HANDLE from './assets/quern_handle.json';
+import WOODEN_SPOON from './assets/wooden_spoon.json';
+import CLAY_POT from './assets/clay_pot.json';
+import CLAY_BOWL from './assets/clay_bowl.json';
+import CLAY_JAR from './assets/clay_jar.json';
+import FRYING_PAN from './assets/frying_pan.json';
+import SKEWER from './assets/skewer.json';
 import HAIR_ASSET from './assets/lowhair.json';
 import MALE_LIGHT from '../../tools/sculpt/lowlight-male.json';
 import FEMALE_LIGHT from '../../tools/sculpt/lowlight-female.json';
@@ -281,6 +290,11 @@ interface PropAsset {
   trail?: number;
   /** A hand tool's: the hand it is held in (the chisel the left; the right where not given). */
   hand?: 'l' | 'r';
+  /**
+   * A hand tool not symmetric across its own z (a frying pan's inside and underside): drawn mirrored across it in the left
+   * hand, so a clip mirrored left-handed (`./anim/author.ts` mirrorClip) holds the mirror image of what the right holds.
+   */
+  mirror?: boolean;
   /** A hand tool's point that meets the work, its own frame (the chisel's: its struck top), and its reach from the fist (grip.lead). */
   contact?: V; reach?: number;
   /**
@@ -324,6 +338,9 @@ const PROPS: readonly PropAsset[] = [SWORD, { ...(WARHAMMER as unknown as PropAs
   // the digging and field tools by item id (tools/sculpt/gear/farmtools.mjs), in the right fist while their clips play
   // (./anim/clips/dig.ts), the other hand on the shovel's and the rake's haft (`Clip.second`); their iron in their metal
   SHOVEL as unknown as PropAsset, RAKE as unknown as PropAsset, SICKLE as unknown as PropAsset,
+  // the kitchen's (./anim/clips/kitchen.ts): the hand quern set down on the ground (`GROUND`) and the peg its runner is turned
+  // by, the spoon and the vessels stirred in, the frying pan (its pan in its metal, mirrored in the left hand), the skewer
+  ...[QUERN, QUERN_HANDLE, WOODEN_SPOON, CLAY_POT, CLAY_BOWL, CLAY_JAR, FRYING_PAN, SKEWER].map((p) => p as unknown as PropAsset),
 ];
 const PROP_OF = new Map(PROPS.map((p) => [p.id, p]));
 /**
@@ -333,6 +350,13 @@ const PROP_OF = new Map(PROPS.map((p) => [p.id, p]));
  */
 const TOOL_PROPS: readonly PropAsset[] = PROPS.filter((p) => p.contact);
 const TOOL_OF = new Map(TOOL_PROPS.map((p) => [p.id, p]));
+/**
+ * The bone a prop set down on the ground in front of a body is laid on (`Socket.bone`: a hand quern), in place of a hand's:
+ * one of its own after all the others, never moved, so the prop stays where the feet stand at rest while the body works at it.
+ */
+const GROUND = 'ground';
+/** Whether a prop is set down on the ground (`GROUND`) rather than held: no fist closes on it. */
+const grounded = (p: PropAsset): boolean => p.sockets.male.r.bone === GROUND;
 /** Whether a prop leaves a slash trail in its clip's blow (`lowTrail`): the long sword, and one that says where its trail's inner edge is. */
 const trails = (p: PropAsset): boolean => p === SWORD || p.trail !== undefined;
 /** The sword's points over the last quarter of its blade (its glow's left out), its own frame: what of it reaches lowest. */
@@ -629,7 +653,7 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
   const HELD: Held = { sockets: SWORD.sockets[WHO], lead: SWORD.grip.lead[1], second: secondOn(SWORD, WHO), tip: SWORD.length, ends: ENDS, scale: SWORD.scale[WHO] };
   /** Each prop as this body holds it (the sword's above), by the weapon's id. */
   /** Each hand tool as this body holds it (its sockets, its scale, where it meets the work), by id. */
-  const TOOL_HELD = new Map<string, Held>(TOOL_PROPS.map((p) => [p.id, { sockets: p.sockets[WHO], lead: p.grip.lead[1], second: p.grip.lead[1], tip: p.length, scale: p.scale[WHO], contact: p.contact, ...(p.trail !== undefined ? { inner: p.trail } : {}) }]));
+  const TOOL_HELD = new Map<string, Held>(TOOL_PROPS.filter((p) => !grounded(p)).map((p) => [p.id, { sockets: p.sockets[WHO], lead: p.grip.lead[1], second: p.grip.lead[1], tip: p.length, scale: p.scale[WHO], contact: p.contact, ...(p.trail !== undefined ? { inner: p.trail } : {}) }]));
   const HELDS = new Map<string, Held>(PROPS.map((p) => [p.id, p === SWORD ? HELD : { sockets: p.sockets[WHO], lead: p.grip.lead[1], second: secondOn(p, WHO), tip: p.length, ends: p.ends, rest: p.rest, scale: p.scale[WHO], ...(p.trail !== undefined ? { inner: p.trail } : {}) }]));
 
   /** Each bone's world rotation and head for a local pose (bone index -> 3x3), the helpers driven, as lowrig.mjs posed(). */
@@ -902,14 +926,17 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
     for (const [side, id] of Object.entries(tools) as Array<[Side, string | undefined]>) {
       const TP = id ? TOOL_OF.get(id) : undefined;
       if (!TP) continue;
-      const so = TP.sockets[WHO][side], hand = AT.get(so.bone) as number, k = 1 / TP.scale[WHO], g: V = [TP.grip.lead[0], TP.grip.lead[1] + (up[side] ?? 0), TP.grip.lead[2]], V3s: number[] = [];
-      for (let i = 0; i < TP.verts.length; i += 3) V3s.push(...add(so.o, mv(so.R, [(TP.verts[i] - g[0]) * k, (TP.verts[i + 1] - g[1]) * k, (TP.verts[i + 2] - g[2]) * k])));
+      // (one set down on the ground on the ground's own bone, `GROUND`; one not symmetric across its z mirrored in the left
+      // hand, its outlines turned back so its faces still look out: `PropAsset.mirror`)
+      const so = TP.sockets[WHO][side], hand = so.bone === GROUND ? ALL.length : AT.get(so.bone) as number, k = 1 / TP.scale[WHO], g: V = [TP.grip.lead[0], TP.grip.lead[1] + (up[side] ?? 0), TP.grip.lead[2]], V3s: number[] = [];
+      const kz = side === 'l' && TP.mirror ? -k : k;
+      for (let i = 0; i < TP.verts.length; i += 3) V3s.push(...add(so.o, mv(so.R, [(TP.verts[i] - g[0]) * k, (TP.verts[i + 1] - g[1]) * k, (TP.verts[i + 2] - g[2]) * kz])));
       const T3: number[] = [];
       for (let t = 0; t < TP.tris.length; t += 4) if (TP.tris[t + 3] < (TP.glowFrom < 0 ? Infinity : TP.glowFrom)) T3.push(TP.tris[t], TP.tris[t + 1], TP.tris[t + 2], TP.tris[t + 3]);
-      const off = places[side];
-      lay(V3s, TP.polys, T3, Array.from({ length: V3s.length / 3 }, () => [hand, 1]), (pi) => off + TP.polys[pi][1]);
+      const off = places[side], polys: Array<[number[], number, number[]?]> = kz < 0 ? TP.polys.map(([v, m]) => [v, m, [...v].reverse()]) : TP.polys;
+      lay(V3s, polys, T3, Array.from({ length: V3s.length / 3 }, () => [hand, 1]), (pi) => off + TP.polys[pi][1]);
     }
-    const baked: Baked = { band: 1, verts: Float32Array.from(verts), tris: Uint32Array.from(tris), nVerts: verts.length / STRIDE, nTris: tris.length / 3, bones: ALL.map((b) => b.name), ms: performance.now() - t0, grid: [0, 0, 0], cell: 0, faceSkin: Float32Array.from(faceSkin) };
+    const baked: Baked = { band: 1, verts: Float32Array.from(verts), tris: Uint32Array.from(tris), nVerts: verts.length / STRIDE, nTris: tris.length / 3, bones: [...ALL.map((b) => b.name), GROUND], ms: performance.now() - t0, grid: [0, 0, 0], cell: 0, faceSkin: Float32Array.from(faceSkin) };
     if (shapes) baked.shapes = shapes;
     USED.set(baked, { used, at: places.worn });
     BAKED.set(key, baked);
@@ -1106,10 +1133,11 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
     DY = dy;
     const sk = shapedOf(garments, worn);
     SHAPES_W = sk < 0 ? [] : shapeWeights(BONES, garments[sk], Fb);
-    const out = new Float32Array(ALL.length * 12);
-    ALL.forEach((_, i) => {
-      const Ag = mm(T, mm(S[i], T));
-      const sh = mv(T, add(sub(add(mv(S[i], FLOOR), t[i]), FLOOR), [0, dy, 0]));
+    // (and the ground's, `GROUND`, after them: unmoved, where the feet stand at rest)
+    const out = new Float32Array((ALL.length + 1) * 12);
+    [...S, I3].forEach((Si, i) => {
+      const Ag = mm(T, mm(Si, T));
+      const sh = i < ALL.length ? mv(T, add(sub(add(mv(Si, FLOOR), t[i]), FLOOR), [0, dy, 0])) : [0, 0, 0];
       out.set([Ag[0], Ag[1], Ag[2], sh[0] * s, Ag[3], Ag[4], Ag[5], sh[1] * s, Ag[6], Ag[7], Ag[8], sh[2] * s], i * 12);
     });
     return out;
