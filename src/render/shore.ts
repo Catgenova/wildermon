@@ -587,7 +587,7 @@ export class ShorePainter {
 
   /**
    * The water's side of the sea's foam, over a rectangle of the screen, into
-   * the sea's picture (`Renderer.drawSea`), which is laid under everything;
+   * the sea's picture (`WaterPainter.drawSea`), which is laid under everything;
    * the land's side is drawn with the ground, tile by tile.
    */
   lace(g: CanvasRenderingContext2D, field: ShoreField, w: World, sx0: number, sy0: number, sx1: number, sy1: number): void {
@@ -647,8 +647,8 @@ export class ShorePainter {
    * just inside it, the same whatever the bank.
    *
    * Cut from the water's own edge on the tile -- where its corners' heights
-   * cross `level`, as the water is cut (`Renderer.seaLand`,
-   * `Renderer.drawPonds`) -- and measured in along each of the tile's sides
+   * cross `level`, as the water is cut (`WaterPainter.seaLand`,
+   * `WaterPainter.drawPonds`) -- and measured in along each of the tile's sides
    * from where the edge crosses it, so two tiles cut the same side alike and
    * the lines run on from one to the next.
    */

@@ -163,12 +163,14 @@ const renderer = new Renderer(canvas, game);
 /**
  * Walls, floor tiles and tiles' shade drawn afresh, rather than laid from
  * their pictures, since the page opened: counted on the renderer's own
- * drawing of each (`drawWallNow`, `drawFloorNow`, `groundShadeNow`).
+ * drawing of each (`WallPainter.drawWallNow`, `drawFloorNow`, `groundShadeNow`).
  */
 const afresh = { walls: 0, floors: 0, shades: 0 };
 {
-  const own = renderer as unknown as Record<string, (...a: unknown[]) => unknown>;
+  // A wall is drawn by the renderer's wall painter (`walldraw.ts`), the rest by the renderer.
+  const r = renderer as unknown as Record<string, (...a: unknown[]) => unknown> & { walls: Record<string, (...a: unknown[]) => unknown> };
   for (const [name, n] of [['drawWallNow', 'walls'], ['drawFloorNow', 'floors'], ['groundShadeNow', 'shades']] as const) {
+    const own = name === 'drawWallNow' ? r.walls : r;
     const fn = own[name];
     own[name] = function (this: unknown, ...a: unknown[]): unknown {
       afresh[n]++;
