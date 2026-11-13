@@ -4417,6 +4417,11 @@ export const NEWS: News[] = [
     ],
   },
   {
+    n: 577,
+    day: '2026-11-13',
+    lines: () => ['Fixed: trousers and leggings showing through chest armour and tunics.'],
+  },
+  {
     n: 576,
     day: '2026-11-13',
     lines: () => ['Changed: an empty chest, legs or feet slot shows the undergarment there, on you and on other players (was: cloth tunic, trousers and shoes).'],
@@ -4570,11 +4575,6 @@ export const NEWS: News[] = [
           itemDef(m?.also?.item ?? 'fur').name.toLowerCase()} at an anvil (was: casting only). Fur spent on success only.`,
       ];
     },
-  },
-  {
-    n: 549,
-    day: '2026-11-13',
-    lines: () => ['Fixed: trousers and leggings showing through chest armour and tunics.'],
   },
   {
     n: 529,
