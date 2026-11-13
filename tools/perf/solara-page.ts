@@ -6,6 +6,11 @@
  * wildermon at work (walking legs, told again every second as `rpc_near` does), wildermon following, wildermon
  * shut in crates, other people (sculpted bodies, mixed looks and gear, walking, working or standing, told twice a
  * second as Broadcast does), lit lamp posts.
+ *
+ * And for comparing pictures: `extras` (pitched, gabled and glass roofs, flights, a single flight, a spiral, ladders,
+ * a cellar under house 4 with a flight and a ladder down, every other kind of wall on houses 5 and 6, a glass wall,
+ * the sea south-east of the totem), `down` (the body in that cellar), `inside` (the body in house n), `at` (the body
+ * at [dx, dy] from the totem) and `turn` (the camera turned that many eighths).
  */
 import { Game, type IslandGround, type IslandPlaced } from '../../src/game/game';
 import type { IslandCreature } from '../../src/game/creatures';
@@ -16,16 +21,17 @@ import { FullscreenCanvas } from '../../src/engine/canvas';
 import { TileType } from '../../src/world/tiles';
 import { DAY_SECONDS } from '../../src/game/pace';
 import { HAIRSTYLES } from '../../src/game/look';
+import { CELLAR_DEPTH } from '../../src/game/building';
 
 interface Driven { tick: (ms: number) => void; realNow: () => number; canvases: () => number }
 const driven = (window as unknown as { driven: Driven }).driven;
 
 export interface Scene {
   houses?: number; storeys?: number; pieces?: number; lit?: number; crates?: number; lying?: number; lyingTiles?: number;
-  workers?: number; following?: number; stored?: number; peers?: number; lamps?: number; sculpt?: boolean;
+  workers?: number; following?: number; stored?: number; peers?: number; lamps?: number; sculpt?: boolean; extras?: boolean; down?: boolean; turn?: number; inside?: number; at?: number[];
 }
 const S: Required<Scene> = {
-  houses: 6, storeys: 2, pieces: 80, lit: 4, crates: 20, lying: 650, lyingTiles: 7, workers: 5, following: 12, stored: 32, peers: 0, lamps: 2, sculpt: true,
+  houses: 6, storeys: 2, pieces: 80, lit: 4, crates: 20, lying: 650, lyingTiles: 7, workers: 5, following: 12, stored: 32, peers: 0, lamps: 2, sculpt: true, extras: false, down: false, turn: 0, inside: 0, at: [],
   ...((window as unknown as { solaraScene?: Scene }).solaraScene ?? {}),
 };
 
@@ -104,6 +110,44 @@ for (let b = 0; b < S.houses; b++) {
     }
   }
   list.push({ id: bid, name: `House ${bid}`, tiles, levels: S.storeys });
+}
+
+const cellars: unknown[] = [];
+if (S.extras) {
+  const fl = floors as Array<Record<string, unknown>>;
+  const wl = walls as Array<Record<string, unknown>>;
+  for (const bl of list as Array<{ id: number; tiles: string[]; levels: number; roof?: string }>) {
+    const mat = bl.id === 3 ? 'stained_glass' : MATS[(bl.id - 1) % MATS.length];
+    if (bl.id % 2 === 0) bl.roof = 'gable';
+    for (const t of bl.tiles) { const [x, y] = t.split(',').map(Number); fl.push({ building: bl.id, level: S.storeys, x, y, material: mat, kind: 'roof', needed: {}, total: {} }); }
+  }
+  const set = (b: number, lv: number, dx: number, dy: number, more: Record<string, unknown>): void => {
+    const [x0, y0] = cells[b - 1];
+    const t = fl.find((q) => q.building === b && q.level === lv && q.x === x0 + dx && q.y === y0 + dy);
+    if (t) Object.assign(t, more);
+  };
+  set(1, 0, 1, 3, { kind: 'stairs', facing: 's' });
+  set(1, 0, 4, 3, { kind: 'stairs', facing: 'e', hand: 'l' });
+  set(2, 0, 2, 2, { kind: 'stairs', hand: 's' });
+  set(3, 0, 4, 1, { kind: 'ladder', facing: 'w' });
+  // A cellar under house 4, and a flight and a ladder down into it.
+  {
+    const [x0, y0] = cells[3];
+    for (let y = y0; y < y0 + 5; y++) for (let x = x0; x < x0 + 6; x++) cellars.push({ building: 4, x, y, dug: CELLAR_DEPTH });
+    set(4, 0, 2, 2, { kind: 'stairs', facing: 'n' });
+    set(4, 0, 4, 3, { kind: 'ladder', facing: 'e' });
+  }
+  // Every other kind of wall on houses 5 and 6, and a glass wall.
+  const KIND = ['bay', 'double_door', 'arch', 'half_wall', 'railing', 'counter', 'hidden_door', 'portcullis', 'iron_gate', 'fence', 'fence_gate', 'rune_gate'];
+  let k = 0;
+  for (const w of wl) if ((w.building === 5 || w.building === 6) && w.type === 'solid') w.type = KIND[k++ % KIND.length];
+  for (const w of wl) if (w.building === 3 && w.level === 1 && w.dir === 'v') w.material = 'stained_glass';
+  // The sea, south-east of the totem.
+  for (let y = cy + 3; y <= cy + 16; y++) for (let x = cx + 2; x <= cx + 18; x++) {
+    const d = Math.min(y - cy - 3, x - cx - 2, cx + 18 - x, cy + 16 - y);
+    if (d > 0 && free(x, y) && free(x - 1, y) && free(x, y - 1) && free(x - 1, y - 1)) world.setHeight(x, y, -2 - d * 2);
+  }
+  for (let y = cy + 3; y <= cy + 16; y++) for (let x = cx + 2; x <= cx + 18; x++) take(x, y);
 }
 
 // Pieces: inside the houses first (on every storey), then out in the open south of the totem; `lit` of them lamps and braziers alight.
@@ -196,10 +240,13 @@ const deed = { name: 'Solara', x: cx, y: cy, radius: 22, level: 5, mine: true, r
 /** The ground as `rpc_near` hands it over, built once: what `beat` lays again. */
 const ground = {
   placed, crates, lying, crops: [], now: Date.now() / 1000,
-  buildings: { nextId: S.houses + 1, list, walls, floors },
+  buildings: { nextId: S.houses + 1, list, walls, floors, cellars },
   deed, deeds: [{ ...deed, holder: 'me' }],
 } as unknown as IslandGround;
 game.sawGround(ground, undefined, 'me');
+if (S.at.length) game.putBody(cx + S.at[0], cy + S.at[1], 0);
+if (S.extras && S.inside) { const [x0, y0] = cells[S.inside - 1]; game.putBody(x0 + 2.5, y0 + 1.5, 0); }
+if (S.extras && S.down) { const [x0, y0] = cells[3]; game.putBody(x0 + 1.5, y0 + 1.5, -1); }
 const tNow = (): number => performance.now() / 1000;
 const creatureRows = (): IslandCreature[] => {
   const t = tNow();
@@ -224,6 +271,7 @@ const canvasEl = document.createElement('canvas');
 document.body.appendChild(canvasEl);
 const canvas = new FullscreenCanvas(canvasEl);
 const renderer = new Renderer(canvas, game);
+if (S.turn) renderer.camera.rotation = S.turn;
 
 /* ---- what is counted ------------------------------------------------------------------------------------------ */
 
@@ -257,7 +305,10 @@ for (const [name, bucket] of [
   ['drawOverlays', 'light/night'], ['drawTree', 'trees'], ['drawHaze', 'haze'], ['drawAir', 'haze'], ['drawFloaters', 'haze'],
   ['drawWater', 'water'], ['drawPonds', 'water'], ['drawSea', 'water'], ['groundFrame', 'ground'], ['drawStationRings', 'rings/labels'],
   ['drawThreats', 'rings/labels'], ['drawDeedBorder', 'deed'], ['drawFight', 'fight'],
-] as const) wrapAs(R_, name, bucket);
+] as const) {
+  // On the renderer, or on whichever of its painters draws it now (`waterdraw.ts`, `roofdraw.ts`, `walldraw.ts`).
+  for (const target of [R_, R_.waters, R_.roofs, R_.walls]) if (target) wrapAs(target as Record<string, unknown>, name, bucket);
+}
 
 /** Calls and time on the 2D and GL APIs that matter here: a WebGL canvas put down on a 2D one is a sync with the GL. */
 const api = { drawImageGL: 0, drawImageGLms: 0, drawImage: 0, fillText: 0, glDraws: 0, glms: 0, getImageData: 0, measureText: 0 };

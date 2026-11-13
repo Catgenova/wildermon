@@ -455,6 +455,19 @@ export const BLOCK_PER_SKILL = 0.0025;
 export const SHIELD_WEAR = 3;
 /** What the fight log says of a blocked blow, on both sides. */
 export const BLOCKED_SAID = 'Blocked with shield.';
+/** Seconds a blocking body is drawn blocking (`src/sculpt/anim/clips/block.ts`), from the island's `player.blocked_at`. */
+export const BLOCK_SECS = 0.45;
+/**
+ * Seconds old a block may be when it reaches this browser and still be drawn: one heard later (a roster read, a beat
+ * after a quiet spell) is caught up on and not drawn.
+ */
+export const BLOCK_FRESH = 3;
+/** How far through a block stamped at `at` on the drawing clock, nought to one, or undefined once over or before one. */
+export function blockAt(at: number | undefined, now: number): number | undefined {
+  if (at === undefined) return undefined;
+  const t = (now - at) / BLOCK_SECS;
+  return t >= 0 && t < 1 ? t : undefined;
+}
 /** What a shield's quality makes of its own share: ×0.6 at QL 0, ×1 at QL 64. */
 export const blockQl = (ql: number): number => BLOCK_QL_FROM + ql / BLOCK_QL_SPAN;
 /**
