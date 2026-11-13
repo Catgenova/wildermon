@@ -4416,6 +4416,14 @@ export const NEWS: News[] = [
     ],
   },
   {
+    n: 550,
+    day: '2026-11-13',
+    lines: () => {
+      const e = EMOTE_BY_ID.get('67');
+      return [`New: emote ${e?.label ?? '6 7'} (Emotes menu; /67): ${e?.seconds ?? 0} s.`];
+    },
+  },
+  {
     n: 548,
     day: '2026-11-13',
     lines: () => {

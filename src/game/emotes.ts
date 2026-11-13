@@ -26,7 +26,12 @@ export interface EmoteDef {
 export const EMOTES: EmoteDef[] = [
   { id: 'wave', label: 'Wave', said: '{name} waves.', seconds: 1.9 },
   { id: 'hop', label: 'Hop', said: '{name} hops on the spot.', seconds: 1.5 },
+  // The 6 7 gesture: both forearms out palms up, one lifted as the other drops, four times over (`SIX_SEVEN_SWAP`).
+  { id: '67', label: '6 7', said: '{name}: 6 7.', seconds: 2.4 },
 ];
+
+/** Seconds from the one hand up to the other and back, in the 6 7 emote: the sculpted clip's run (`clips/sixseven.ts`). */
+export const SIX_SEVEN_SWAP = 0.6;
 
 export const EMOTE_BY_ID = new Map(EMOTES.map((e) => [e.id, e]));
 

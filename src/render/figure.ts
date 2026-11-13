@@ -2,7 +2,7 @@ import { METAL_TONE } from './materials';
 import { animationsOff } from '../engine/motion';
 import type { GearLook, GearPiece, GearSlot } from '../contract/gear';
 import type { SculptFx } from './fx/types';
-import { HOPS, emotePose } from '../game/emotes';
+import { EMOTE_BY_ID, HOPS, SIX_SEVEN_SWAP, emotePose } from '../game/emotes';
 import { BLOCK, BLOCK_IMPACT, COVER } from '../sculpt/anim/clips/block';
 import { FLINCH_SNAP } from '../sculpt/anim/clips/flinch';
 import { FLINCH_SECS } from '../game/fight';
@@ -3927,6 +3927,27 @@ function palmTo(r: Rig, k: number, want: V3): number {
 function emote(r: Rig, id: string, t: number, facing: number, fr: Frame, busy: [boolean, boolean], arm = waveArm(facing, busy), staged = facing): void {
   if (id === 'wave') wave(r, t, facing, fr, arm, busy, staged);
   else if (id === 'hop') hop(r, t, fr, busy);
+  else if (id === '67') sixSeven(r, t);
+}
+
+/** The 6 7's upper arms, as the hop's keys (`HOP_ARMS`): forward, out, turned; the forearms out ahead of it, palms up. */
+const SIX_SEVEN_ARM: [number, number, number] = [22, 10, -40];
+/**
+ * The 6 7 gesture: both upper arms a little forward, the elbows bent so the forearms come out ahead, palms up; one forearm
+ * lifted as the other drops, swapped every half `SIX_SEVEN_SWAP`; the chest tilted after the higher hand and the head bobbed on
+ * each swap. Eased in over the first tenth and out over the last.
+ */
+function sixSeven(r: Rig, t: number): void {
+  const on = step(t, 0, 0.1) * (1 - step(t, 0.9, 1));
+  const secs = EMOTE_BY_ID.get('67')?.seconds ?? SIX_SEVEN_SWAP * 4;
+  const ph = (TAU * t * secs) / SIX_SEVEN_SWAP, swing = Math.sin(ph);
+  for (const k of [0, 1] as const) {
+    const s = k ? 1 : -1;
+    r.arm[k] = [r.arm[k][0] + (SIX_SEVEN_ARM[0] - r.arm[k][0]) * on, r.arm[k][1] + (SIX_SEVEN_ARM[1] - r.arm[k][1]) * on, r.arm[k][2] * (1 - on) + SIX_SEVEN_ARM[2] * on];
+    r.elbow[k] = r.elbow[k] + (78 + 28 * s * swing - r.elbow[k]) * on;
+  }
+  r.chest = [r.chest[0], r.chest[1] + 4 * swing * on, r.chest[2]];
+  r.head = [r.head[0] - 6 * Math.abs(Math.cos(ph)) * on, r.head[1] + 3 * swing * on, r.head[2]];
 }
 
 /**

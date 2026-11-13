@@ -15,6 +15,7 @@ import { IDLE } from './clips/idle';
 import { WALK } from './clips/walk';
 import { SWING } from './clips/swing';
 import { SIXSEVEN } from './clips/sixseven';
+import { EMOTE_BY_ID } from '../../game/emotes';
 import { WORK } from './clips/work';
 import { HANDS } from './clips/hands';
 import { GROUND } from './clips/ground';
@@ -109,6 +110,7 @@ const WAVING = new Map<string, { arm: number; t: number }>();
  */
 export function emoteClipOf(pose: FigurePose): string | undefined {
   if (pose.emote === 'hop') return HOP.name;
+  if (pose.emote === '67') return SIXSEVEN.name;
   if (pose.emote !== 'wave') return undefined;
   const t = pose.emoteT ?? 0, was = pose.id ? WAVING.get(pose.id) : undefined, arm = was && t >= was.t ? was.arm : waveArmOf(pose);
   if (pose.id) {
@@ -269,8 +271,10 @@ export function clipFor(pose: FigurePose, body: 'man' | 'woman' = pose.look?.gen
   const name = s === 'work' ? workClipOf(pose.job) : s === 'fight' && shoots(pose) ? SHOOT.name : s === 'fight' && ONE_HAND(pose) ? 'fight' : s === 'emote' ? emote ?? CLIP_OF.emote : s && CLIP_OF[s];
   const clip = name ? CLIPS[(leftyFor(name, pose.facing) && LEFT_OF[name]) || name] : undefined;
   if (!clip) return undefined;
-  // an emote's own clip: played once over the emote, its time the emote's
-  const own = emote ? CLIPS[emote] : undefined, at = own ? { clip: own, t: Math.max(0, Math.min(1, pose.emoteT ?? 0)) * own.length } : undefined;
+  // an emote's own clip: played once over the emote, its time the emote's (a looping one, the 6 7, run over and over for the
+  // emote's seconds)
+  const own = emote ? CLIPS[emote] : undefined, k = Math.max(0, Math.min(1, pose.emoteT ?? 0));
+  const at = own ? { clip: own, t: own.loop ? (k * (EMOTE_BY_ID.get(pose.emote ?? '')?.seconds ?? own.length)) % own.length : k * own.length } : undefined;
   if (s === 'walk') return { clip, t: walkTime(clip, pose.phase, body, pose.gait ?? 0), ...(at ? { over: at } : {}) };
   if (s === 'emote' && at) return at;
   // in the water, a stroke to each `SWIM_STROKE` of the walk's phase (which goes as fast as the swimmer does), as the
