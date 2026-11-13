@@ -7,8 +7,8 @@
  * figure's pose or to another clip, so nothing jumps; a body drawn once (no id) is posed with nothing kept.
  */
 import type { FigurePose, Seat } from '../../render/figure';
-import { fitTime, runsOf, strideOf, type Clip, type Side } from './clip';
-import { qmat, qmul, quat, type M3, type Q, type V } from './math';
+import { fitTime, runsOf, sampleClip, sampleKey, strideOf, type Clip, type Side } from './clip';
+import { add, mm, QI, qmat, qmul, quat, scl, slerp, tr, type M3, type Q, type V } from './math';
 import { addPose, blendLocal, blendPose, clipLocal, plantBetween, poseAt } from './player';
 import type { Held, Pose, Skeleton } from './skeleton';
 import { IDLE } from './clips/idle';
@@ -20,13 +20,16 @@ import { HANDS } from './clips/hands';
 import { GROUND } from './clips/ground';
 import { SHOOT } from './clips/shoot';
 import { FIGHT as FIGHT_CLIP } from './clips/fight';
+import { BLOCK, COVER, SHIELD_ARM } from './clips/block';
 import { SEAT_OARS, SEAT_REINS, SEAT_SADDLE, SEAT_TILLER, SEAT_TILLER_LEFT, SEAT_TUCK } from './clips/seated';
 import { mirrorClip } from './author';
 import { ACTION_BY_ID } from '../../game/actions';
 import { clipOfJob } from './routes';
 import { strideAt } from '../../game/player';
-import { WEAPON_BY_ID } from '../../game/gear';
+import { SHIELDS, WEAPON_BY_ID } from '../../game/gear';
 import { UNITS_PER_TILE } from '../../render/iso';
+/** A unit quaternion's inverse. */
+const qinv = ([w, x, y, z]: Q): Q => [w, -x, -y, -z];
 
 /**
  * The states a body is drawn in that a clip can play, all stood still but the walk: doing nothing (`idle`); walking
@@ -38,7 +41,7 @@ export type State = 'idle' | 'walk' | 'swing' | 'work' | 'fight' | 'meditate' | 
 /** Every clip, by name (the authoring tools find a clip here, `tools/sculpt/lowanim.mjs --clip <name>`). */
 export const CLIPS: Record<string, Clip> = {
   idle: IDLE, walk: WALK, swing: SWING, sixseven: SIXSEVEN, work: WORK, 'work-left': mirrorClip(WORK, 'work-left'), hands: HANDS, ground: GROUND,
-  fight: FIGHT_CLIP, 'fight-left': mirrorClip(FIGHT_CLIP, 'fight-left'), shoot: SHOOT,
+  fight: FIGHT_CLIP, 'fight-left': mirrorClip(FIGHT_CLIP, 'fight-left'), shoot: SHOOT, block: BLOCK,
   'seat-reins': SEAT_REINS, 'seat-oars': SEAT_OARS, 'seat-tiller': SEAT_TILLER, 'seat-tiller-left': SEAT_TILLER_LEFT, saddle: SEAT_SADDLE, 'saddle-tuck': SEAT_TUCK,
 };
 /** The clip a state plays until its own is approved: the 6 7 gesture. */
@@ -311,6 +314,42 @@ export function seatedLocal(sk: Skeleton, pose: FigurePose, fit: SeatFit): { loc
 }
 
 type Local = { local: Array<M3 | undefined>; move: V };
+
+/** Whether a pose is part way through a blow taken on its shield (`FigurePose.block`), a shield worn, stood or walking. */
+export const blocking = (pose: FigurePose): boolean =>
+  ON && pose.block !== undefined && pose.block >= 0 && pose.block < 1 && !!pose.gear?.offhand && pose.gear.offhand.id in SHIELDS && !pose.swimming && !pose.driving;
+const TAKEN = new Set(SHIELD_ARM);
+/** How much of the trunk's own lean and turn (a fight's bend over the blow, a walk's sway) the guard is kept clear of. */
+const SQUARE = 0.85;
+/**
+ * The block (`./clips/block.ts`) laid over what a body is drawn with, `u` of the way through it: everything the clip
+ * turns but the shield arm added; the shield arm taken to the clip's as far as `COVER` says, its guard kept square to
+ * where the body faces however the trunk is leant or turned (`SQUARE` of it), so it covers the chest over a fight's bend
+ * as over the idle; on a clip stood on its feet (`stood`), the hips let down as it says with the feet kept where they
+ * stood (the knees bent to reach), else the legs left as they are.
+ */
+export function blockOver(sk: Skeleton, base: Local, u: number, stood: boolean): Local {
+  const t = Math.min(1, Math.max(0, u)) * BLOCK.length, s = sampleClip(BLOCK, t, sk.body), w = sampleKey(COVER, t, BLOCK.length, false);
+  const q: Array<Q | undefined> = base.local.map((m) => (m ? quat(m) : undefined)), p: Array<Q | undefined> = [...q];
+  for (const [bone, e] of Object.entries(s.rot)) {
+    const i = sk.at.get(bone);
+    if (i === undefined || TAKEN.has(bone) || (!stood && LEGS.test(bone))) continue;
+    p[i] = qmul(q[i] ?? QI, sk.local(i, e));
+  }
+  // the chest as it is drawn against the chest stood square: the turn that takes the one to the other, in its own frame
+  const chest = sk.at.get('spine_03') as number, clav = sk.at.get('clavicle_l') as number;
+  const W = sk.fk(p.map((x) => (x ? qmat(x) : undefined)), [0, 0, 0])[chest].W, R = sk.bones[chest].R;
+  const rel = quat(mm(tr(R), sk.bones[clav].R)), square = slerp(QI, quat(mm(tr(W), R)), SQUARE);
+  for (const [bone, e] of Object.entries(s.rot)) {
+    const i = sk.at.get(bone);
+    if (i === undefined || !TAKEN.has(bone)) continue;
+    // (the clavicle, the chest's child, carries the squaring for the arm under it)
+    const r = i === clav ? qmul(qmul(qinv(rel), qmul(square, rel)), sk.local(i, e)) : sk.local(i, e);
+    p[i] = slerp(q[i] ?? QI, r, w);
+  }
+  if (!stood) return { local: p.map((x, i) => (x ? qmat(x) : base.local[i])), move: base.move };
+  return sk.finish({ q: p, move: add(base.move, scl(s.move, sk.height)) }, { plant: sk.plantOf({ q, move: base.move }), free: true });
+}
 /** What a body was drawn with last (its clip and time, when one), and at the change, what it came from. */
 interface Kept { source: string; out: Local; from: Local | null; at: number; was?: { clip: Clip; t: number }; cur?: { clip: Clip; t: number }; span?: number }
 const KEPT = new Map<string, Kept>();
@@ -334,7 +373,9 @@ export function animate(sk: Skeleton, pose: FigurePose, figure: () => Array<M3 |
     return clipLocal(sk, p.clip, p.t, p.clip.grip ? held : undefined, tools, { ids: hold?.tools, ...(d ? { shift: { [other]: d } } : {}), ...wield });
   };
   const now: Local = sat ?? (c ? play(c) : { local: figure(), move: [0, 0, 0] });
-  if (!pose.id) return now;
+  // a blow on the shield over it all, stood (the feet kept) on a clip that stands its feet and keys none
+  const over = (o: Local): Local => (blocking(pose) ? blockOver(sk, o, pose.block as number, !sat && !!c?.clip.plant && !c.clip.feet && c.clip.name !== 'ground') : o);
+  if (!pose.id) return over(now);
   const key = `${sk.body}|${pose.id}`, source = sat ? sat.name : c ? c.clip.name : 'figure', ms = performance.now();
   let k = KEPT.get(key);
   if (k) KEPT.delete(key);
@@ -367,5 +408,5 @@ export function animate(sk: Skeleton, pose: FigurePose, figure: () => Array<M3 |
     } else out = blendLocal(k.from, now, smooth(u));
   }
   k.out = out;
-  return out;
+  return over(out);
 }

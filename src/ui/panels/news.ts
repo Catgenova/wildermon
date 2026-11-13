@@ -8,6 +8,7 @@ import { PLAN_AREA_MOST, PLAN_UNDO_SECONDS } from '../../game/planarea';
 import { UPDATE_CHECK_MS } from '../update';
 import { JOURNAL_TABS } from './journaltabs';
 import { RESPAWN_ARM_MS } from '../respawn';
+import { BLOCK_SECS } from '../../game/fight';
 import { MAP_LEGEND, SETTLEMENT_BORDER_PX, MAP_ZOOM_MIN } from './minimap';
 import { FAST_DPR, LOW_POWER_FPS, SETTING_DEFAULTS } from '../../game/settings';
 import { BLOSSOM } from '../../audio/music/tracks/blossom';
@@ -4352,6 +4353,7 @@ export const NEWS: News[] = [
     n: 544,
     day: '2026-11-13',
     lines: () => [
+      `New: shield block drawn on the blocker, seen by players nearby: shield arm raised for ${BLOCK_SECS} s per blocked blow.`,
       `New: Effects setting (Settings, Performance): All, Fewer (${percent(FEWER_SHARE)} of particles, no lights), Off.`,
       'New: sparks off a one-handed blow, in the weapon\'s metal; gold motes off an enchanted one. Chips off a pick: in the stone struck; earth off other ground.',
       `Effects: at most ${percent(ACTION_SHARE)} of the ${MOST_PARTICLES} particles shared with spells; spells first.`,

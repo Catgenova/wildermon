@@ -2,6 +2,8 @@ import { METAL_TONE } from './materials';
 import type { GearLook, GearPiece, GearSlot } from '../contract/gear';
 import type { SculptFx } from './fx/types';
 import { HOPS, emotePose } from '../game/emotes';
+import { BLOCK, BLOCK_IMPACT, COVER } from '../sculpt/anim/clips/block';
+import { sampleKey } from '../sculpt/anim/clip';
 import {
   BUILDS, DEFAULT_LOOK, eyeColour, hairColour, shirtColour, skinColour, trouserColour, type Look,
 } from '../game/look';
@@ -2407,6 +2409,12 @@ export interface FigurePose {
    */
   cast?: { id: string; t: number };
   /**
+   * A blow taken on the shield worn, how far through it, nought to one (`../game/fight` blockAt, `BLOCK_SECS`): the shield
+   * arm brought up across the chest and the body braced behind it (`../sculpt/anim/clips/block.ts`), laid over whatever else
+   * the body is doing. Nothing without a shield on.
+   */
+  block?: number;
+  /**
    * The body veiled by a spell (`FxScene.veil` in ./spells/kit): `tint` of the way to `colour` over all of it, and
    * drawn `fade` of the way to nothing -- a shroud, a body gone to smoke. Laid over the picture as it is put down,
    * so the picture itself is kept as it is.
@@ -4329,6 +4337,7 @@ function rigOf(p: FigurePose, fr: Frame, left = lefty(p.facing), kept: Kept = {}
   // Both, while something heavy goes from one shoulder to the other in them.
   if (r.swapping) r.loose = [false, false];
   if (p.gear?.offhand && !r.stowed) r.loose[0] = false;
+  if (p.block !== undefined && p.gear?.offhand && !r.stowed && !p.swimming && !p.driving) blocked(r, p.block);
   if (p.cast && castPoser) {
     // Each hand's goal, seeded where the hand is before the cast, so a goal the cast sets is blended in from there (see `Rig.reach`).
     seedReach(r, fr);
@@ -9413,6 +9422,22 @@ const SHIELD_OUT = [38, 15, 66, 45, 38, 75, 55, 38];
  */
 const SHIELD_RUN = [-23, -30, 0, 0, -28, 20, 20, 0];
 const SHIELD_BENT = [40, 76];
+
+/**
+ * A blow taken on the shield, `u` of the way through it (`FigurePose.block`): the shield arm brought up and in across
+ * the chest as far as the sculpted body's block takes its arm (`COVER`), knocked in at the impact; the trunk leant in.
+ */
+const BLOCK_ARM: Euler = [52, 4, 58], BLOCK_ELBOW = 104;
+function blocked(r: Rig, u: number): void {
+  const t = Math.min(1, Math.max(0, u)) * BLOCK.length, w = sampleKey(COVER, t, BLOCK.length, false);
+  // (the knock at the impact: a sharp bump there, gone by the settle)
+  const k = Math.max(0, 1 - Math.abs(t - BLOCK_IMPACT) / 0.06);
+  const a = r.arm[0];
+  r.arm[0] = [a[0] + (BLOCK_ARM[0] - 8 * k - a[0]) * w, a[1] + (BLOCK_ARM[1] - a[1]) * w, a[2] + (BLOCK_ARM[2] - a[2]) * w];
+  r.elbow[0] += (BLOCK_ELBOW + 10 * k - r.elbow[0]) * w;
+  r.spine = [r.spine[0] + 3 * w - 3 * k, r.spine[1], r.spine[2]];
+  r.loose[0] = false;
+}
 
 /** A frame at `at` on a bone, its z along `dir` and its x as near `out` as square to that allows. */
 function aimed(bone: Xf, at: V3, dir: V3, out: V3): Xf {
