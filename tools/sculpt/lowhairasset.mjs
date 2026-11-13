@@ -32,6 +32,8 @@ import { warriorOf } from './lowwarrior.mjs';
 import WARRIOR from './hairs/warrior.mjs';
 import { dreadsOf } from './lowdreads.mjs';
 import DREADS from './hairs/dreads.mjs';
+import { crownbraidOf } from './lowcrownbraid.mjs';
+import CROWNBRAID from './hairs/crownbraid.mjs';
 
 const braidHull = carveBraid();
 const BUILDERS = {
@@ -47,6 +49,7 @@ const BUILDERS = {
   afro: { name: AFRO.name, build: (rig) => afroOf(rig, AFRO) },
   warrior: { name: WARRIOR.name, build: (rig) => warriorOf(rig, WARRIOR) },
   dreads: { name: DREADS.name, build: (rig) => dreadsOf(rig, DREADS) },
+  crownbraid: { name: CROWNBRAID.name, build: (rig) => crownbraidOf(rig, CROWNBRAID) },
 };
 
 const out = { built: 'node tools/sculpt/lowhair.mjs --asset (tools/sculpt/lowhair.mjs gameHair)' };
