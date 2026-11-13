@@ -9,8 +9,9 @@
  * left-handed, from the facings the work clip is (`../index.ts` lefty).
  */
 import type { Clip, Key } from '../clip';
+import { RUNE_SHARES } from '../runes';
 import type { Euler } from '../math';
-import { IMPACT, WORK } from './work';
+import { IMPACT, STRIKE, WORK } from './work';
 
 /** Turns added to the work clip's throughout (degrees). */
 const TURNS: Record<string, Euler> = {
@@ -33,5 +34,9 @@ export const FIGHT: Clip = {
   hands: undefined,
   tools: { r: 'sword' },
   // sparks off the weapon's head as the blow lands, in its metal (`../../../render/fx/strikes.ts`); drawn on every GL
-  fx: [{ at: IMPACT, from: { tool: 'head' }, kind: 'sparks', key: true }],
+  // and an enchanted weapon's trail shedding a rune three times over the blow (`../../../render/fx/combat.ts`)
+  fx: [
+    { at: IMPACT, from: { tool: 'head' }, kind: 'sparks', key: true },
+    ...RUNE_SHARES.map((w) => ({ at: STRIKE + (IMPACT - STRIKE) * w, from: { tool: 'tip' as const }, kind: 'runes' })),
+  ],
 };

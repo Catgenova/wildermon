@@ -198,19 +198,22 @@ export interface Clip {
 /**
  * Where on a body an effect mark fires from: a bone's head (`bone`, the rig's name: `hand_r`, `foot_l`), or a point of
  * what a hand holds (`tool`): its `tip` (the far end along its grip), its `head` (where it meets the work: a hand tool's
- * contact, the lowest of a long prop's far end, else its tip) or its `grip` (the fist on it). `side` the hand, the right
- * where not given; both hands on one prop are the right's.
+ * contact, the lowest of a long prop's far end, else its tip) or its `grip` (the fist on it); a bow's `top` and `bottom`
+ * (its string's ends) and `rest` (where the arrow lies on it). `side` the hand, the right where not given; both hands on
+ * one prop are the right's. Or the face of the shield worn on the left forearm (`shield`).
  */
-export type FxFrom = { bone: string } | { tool: 'tip' | 'head' | 'grip'; side?: Side };
+export type FxFrom = { bone: string } | { tool: 'tip' | 'head' | 'grip' | 'top' | 'bottom' | 'rest'; side?: Side } | { shield: 'face' };
 /**
  * An effect fired as a clip's time crosses a moment (`Clip.fx`): `at` seconds into it, or `share` of its length; from
- * where (`FxFrom`); which effect (`kind`, an entry of `../../render/fx` ACTION_FX); and its numbers, as the effect reads
+ * where (`FxFrom`), and to where if it reaches (`to`); which effect (`kind`, an entry of `../../render/fx` ACTION_FX); and its numbers, as the effect reads
  * them. `key`: drawn in the processor-drawn GL too (`glSoftware`), where only such marks fire.
  */
 export interface FxMark {
   at?: number;
   share?: number;
   from: FxFrom;
+  /** A second place the effect reaches to (a string's other end, the way an arrow flies from), found as `from` is. */
+  to?: FxFrom;
   kind: string;
   key?: boolean;
   params?: Readonly<Record<string, number | string | boolean>>;

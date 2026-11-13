@@ -178,7 +178,9 @@ import { SIGHT_FORM_AT, SIGHT_RARITY_AT } from '../../game/sighted';
 import { improvable, IMPROVE_DAMAGE as MEND_DAMAGE, IMPROVE_FAIL_LEAST, IMPROVE_FAIL_SPREAD } from '../../game/improve';
 import { JOB_GOES_MOST } from '../../game/mending';
 import { SCULPT_REDRAWS, SCULPT_REDRAWS_SOFT, weaponCarry } from '../../render/figure';
-import { ACTION_SHARE, FEWER_SHARE } from '../../render/fx/actions';
+import { ACTION_SHARE, FEWER_SHARE, HIT_STOP_HEAVY } from '../../render/fx/actions';
+import { BLOCK_SPARKS, CRACK_SECS, HIT_PUFF, SHOCK_REACH, SPIRAL_MOTES, SPLINTERS, STREAK_SECS, TWANG_SECS } from '../../render/fx/combat';
+import { RUNE_SHARES } from '../../sculpt/anim/runes';
 import { MOST_PARTICLES } from '../../render/spells/kit';
 import { TRY_LEARN } from '../../game/learn';
 import { BASE_SPEED, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER_LEVEL, MAX_STEP, strideAt } from '../../game/player';
@@ -4374,6 +4376,18 @@ export const NEWS: News[] = [
         `New: handwork animated on the sculpted body (was: a placeholder gesture): sewing ${jobs('sew')} jobs, brushing a wall ${jobs('brush-wall')}, a floor ${jobs('brush-floor')}, an item in hand ${jobs('brush-item') + jobs('brush-cloth')}, rope-making ${jobs('rope')}.`,
       ];
     },
+  },
+  {
+    n: 545,
+    day: '2026-11-13',
+    lines: () => [
+      `New: block effects. Metal shield: ${BLOCK_SPARKS} sparks in its metal, ring glint. Wooden shield: ${SPLINTERS} splinters, dust. Deflect held: streak of light to the attacker (your own blocks).`,
+      `New: blow landing effects, up to ${HIT_PUFF} particles at the body part struck, on the attacker's side, by the armour there: plate and scale, sparks in its metal; chain, glints; leather, dust; cloth or none, fluff.`,
+      `New: two-handed blows in a fight: ${HIT_STOP_HEAVY} ms hold of striker and struck (off with Motion reduced or Effects Off); dust ring ${SHOCK_REACH} tiles; crack on stone, ${CRACK_SECS} s.`,
+      `New: bow: string flicker ${TWANG_SECS * 1000} ms after the loose; streak along the arrow's flight ${STREAK_SECS * 1000} ms; enchanted bow: ${SPIRAL_MOTES} gold motes in a spiral.`,
+      `New: enchanted weapons: ${RUNE_SHARES.length} runes off the slash trail a blow.`,
+      `Effects on Fewer: ${percent(FEWER_SHARE)} of particles; Off: none. Without a graphics card: blocks, blows landing and one-handed sparks only.`,
+    ],
   },
   {
     n: 529,

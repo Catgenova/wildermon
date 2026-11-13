@@ -16,6 +16,8 @@ export interface FxPoint {
   way: V3 | null;
   /** What the point is on: the id of the weapon or tool, for a tool's point. */
   held?: string;
+  /** The mark's second place (`FxMark.to`), the same frame. */
+  to?: V3;
 }
 
 /** A mark a body's clip crossed since its last frame (`SculptFx.track`). */
@@ -35,6 +37,8 @@ export interface SculptFx {
   track(id: string, pose: FigurePose, now: number): readonly FxCross[];
   /** A point of a body as its clip has it now (`FxFrom`), or null where it plays none. */
   point(pose: FigurePose, from: FxFrom): FxPoint | null;
+  /** A point of a body as it is drawn now, a block and a blow landing laid over its clip (`FigurePose.block`, `flinch`). */
+  pointOver(pose: FigurePose, from: FxFrom): FxPoint | null;
 }
 
 /** A body an effect is fired at: where it stands (tiles; z the ground under its feet, height units) and which way it faces. */
@@ -54,6 +58,8 @@ export interface FxEvent {
   /** The body: 'player', or 'o' and a peer's id. */
   who: string;
   at: P3;
+  /** The mark's second place in the world (`FxMark.to`), or where the effect reaches to (an attacker), when it has one. */
+  to?: P3;
   /** A unit step in the world the point was moving along (tiles across and down, height units up, as one length), or null. */
   way: P3 | null;
   body: FxBody;

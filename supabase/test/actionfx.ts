@@ -9,6 +9,11 @@
  *   * with Effects off, nothing is fired and nothing added; on Fewer, fewer than on All;
  *   * on the processor's GL (`glSoftware`), only the marks marked `key` fire: the sparks and not the chips.
  *
+ * And thirty in a fight (the page's 'combat': shields, two-handed weapons and bows, in every class of armour, blows taken
+ * on the shields and landing on them all in turn): the blocks, the blows landing, the heavy blows and the bows' fire; the
+ * particles within the share and the frame within the margin as at work; Off fires nothing; on the processor's GL the
+ * blocks and the blows landing (marked key) still fire, the heavy blows and the bows' not.
+ *
  * Every effect is measured as on a graphics card (the page's `soft` set false) but the last. Needs a Chromium: the one in
  * `CHROME_PATH`, Playwright's, or an installed Chrome. With none it says so and passes, unless `FX_STRICT` is set.
  */
@@ -58,7 +63,8 @@ const run = (tab: Page, n: number, effects: string, soft = false, ask = 0, askN 
 const median = (xs: number[]): number => [...xs].sort((a, b) => a - b)[xs.length >> 1];
 
 const browser = await chromium.launch(options);
-try {
+/** The page opened on a scene ('work' or 'combat') and warmed: the sculpted bodies' chunk loaded and their bakes landed. */
+async function open(scene: string) {
   const ctx = await browser.newContext({ viewport: { width: 960, height: 540 }, deviceScaleFactor: 1 });
   const tab = await ctx.newPage();
   const thrown: string[] = [];
@@ -72,31 +78,42 @@ try {
     Date.now = () => d0 + t;
     window.driven = { tick: (ms) => { t += ms; }, realNow: real };
   })();` });
+  await tab.addScriptTag({ content: `window.actionFxScene = ${JSON.stringify(scene)};` });
   await tab.addScriptTag({ content: script });
-  // Warm: the sculpted bodies' chunk loaded and their bakes landed, a round at a time with a break for the idle work.
+  // a round at a time with a break for the idle work
   for (let i = 0; i < 6; i++) {
     await run(tab, 30, 'all');
     await tab.waitForTimeout(300);
   }
   if (thrown.length) throw new Error(`the page threw: ${thrown.join('; ')}`);
-  const { share, most: MOST_PARTICLES } = await tab.evaluate(() => { const a = (window as unknown as { actionFx: Api }).actionFx; return { share: a.share, most: a.most }; });
-
-  // All and Off in turn, three rounds each, so the machine's moods fall on both.
+  const { share, most } = await tab.evaluate(() => { const a = (window as unknown as { actionFx: Api }).actionFx; return { share: a.share, most: a.most }; });
+  return { ctx, tab, thrown, share, MOST_PARTICLES: most };
+}
+/** Effects on All and Off in turn, three rounds each, so the machine's moods fall on both; the particles and the frame held to theirs. */
+async function rounds(tab: Page, share: number, MOST_PARTICLES: number, what: string): Promise<Measured[]> {
   const all: Measured[] = [], off: Measured[] = [];
   for (let r = 0; r < 3; r++) {
     off.push(await run(tab, FRAMES, 'off'));
     all.push(await run(tab, FRAMES, 'all'));
   }
-  const fired = all.reduce((s, m) => s + m.fired, 0), kinds = all.reduce((s, m) => ({ sparks: s.sparks + (m.byKind.sparks ?? 0), chips: s.chips + (m.byKind.chips ?? 0) }), { sparks: 0, chips: 0 });
-  check('with Effects on All, thirty at work fire their marks: sparks off the blows and chips off the picks', kinds.sparks > 0 && kinds.chips > 0,
-    `${fired} in ${3 * FRAMES} frames: ${kinds.sparks} sparks, ${kinds.chips} chips; ${all.reduce((s, m) => s + m.spawned, 0)} particles`);
   const most = Math.max(...all.map((m) => m.most));
-  check(`and the particles alive stay within the action effects' share of the pool, ${share} of ${MOST_PARTICLES}`, most <= share, `at most ${most}`);
+  check(`${what}: the particles alive stay within the action effects' share of the pool, ${share} of ${MOST_PARTICLES}`, most <= share, `at most ${most}`);
   const tAll = median(all.map((m) => m.median)), tOff = median(off.map((m) => m.median));
-  check(`and a frame with them is within ${MARGIN * 100}% and ${MARGIN_MS} ms of the same with Effects off`, tAll <= tOff * (1 + MARGIN) + MARGIN_MS,
+  check(`${what}: a frame with them is within ${MARGIN * 100}% and ${MARGIN_MS} ms of the same with Effects off`, tAll <= tOff * (1 + MARGIN) + MARGIN_MS,
     `${tAll.toFixed(2)} ms against ${tOff.toFixed(2)} ms (medians of three rounds' medians)`);
-  check('with Effects off, nothing is fired and no particle added', off.every((m) => m.fired === 0 && m.spawned === 0 && m.alive === 0),
+  check(`${what}: with Effects off, nothing is fired and no particle added`, off.every((m) => m.fired === 0 && m.spawned === 0 && m.alive === 0),
     off.map((m) => `${m.fired} fired, ${m.spawned} added, ${m.alive} alive`).join('; '));
+  return all;
+}
+const sum = (ms: Measured[], kind: string): number => ms.reduce((s, m) => s + (m.byKind[kind] ?? 0), 0);
+/** Thirty at work: sparks and chips, the share held when flooded and when a spell holds the pool, Fewer, the processor's GL. */
+async function atWork(): Promise<void> {
+  const { ctx, tab, thrown, share, MOST_PARTICLES } = await open('work');
+
+  const all = await rounds(tab, share, MOST_PARTICLES, 'thirty at work');
+  const fired = all.reduce((s, m) => s + m.fired, 0);
+  check('with Effects on All, thirty at work fire their marks: sparks off the blows and chips off the picks', sum(all, 'sparks') > 0 && sum(all, 'chips') > 0,
+    `${fired} in ${3 * FRAMES} frames: ${sum(all, 'sparks')} sparks, ${sum(all, 'chips')} chips; ${all.reduce((s, m) => s + m.spawned, 0)} particles`);
 
   // Asked for far more than the pool at once: a burst of 200 particles at the body five times a frame.
   const flood = await run(tab, 30, 'all', false, 5, 200);
@@ -120,9 +137,28 @@ try {
     `${soft.byKind.sparks ?? 0} sparks, ${soft.byKind.chips ?? 0} chips`);
   if (thrown.length) check('the page threw nothing', false, thrown.join('; '));
   await ctx.close();
+}
+/** Thirty in a fight: blocks, blows landing, heavy blows, bows. */
+async function inAFight(): Promise<void> {
+  const { ctx, tab, thrown, share, MOST_PARTICLES } = await open('combat');
+  const all = await rounds(tab, share, MOST_PARTICLES, 'thirty in a fight');
+  const k = (n: string): number => sum(all, n);
+  check('in a fight, the blocks, the blows landing, the heavy blows and the bows all fire', k('block') > 0 && k('hit') > 0 && k('heavy') > 0 && k('loose') > 0 && k('twang') > 0,
+    `in ${3 * FRAMES} frames: ${k('block')} blocks, ${k('hit')} blows landing, ${k('heavy')} heavy blows, ${k('loose')} arrows loosed, ${k('twang')} strings, ${k('runes')} runes, ${k('sparks')} sparks`);
+  const soft = await run(tab, FRAMES * 2, 'all', true);
+  const sk = (n: string): number => soft.byKind[n] ?? 0;
+  check('in a fight on the processor\'s GL, the blocks and the blows landing (key) still fire; the heavy blows and the bows not',
+    sk('block') > 0 && sk('hit') > 0 && !sk('heavy') && !sk('loose') && !sk('twang'),
+    `${sk('block')} blocks, ${sk('hit')} blows landing, ${sk('heavy')} heavy, ${sk('loose')} arrows, ${sk('twang')} strings`);
+  if (thrown.length) check('the fight\'s page threw nothing', false, thrown.join('; '));
+  await ctx.close();
+}
+try {
+  await atWork();
+  await inAFight();
 } finally {
   await browser.close();
 }
 void ok;
 void bad;
-finish('action effects with thirty at work in view');
+finish('action effects with thirty at work, and thirty in a fight, in view');

@@ -68,6 +68,12 @@ export const SHOOT: Clip = {
   wields: 'l',
   bow: { drawn: [0, LOOSE], arrow: [QUIVER, LENGTH], full: (DRAWN + LOOSE) / 2 },
   events: [{ t: LOOSE, name: 'loose' }],
+  // at the loose, the string's flicker from tip to tip and the streak where the arrow flies, from the nock through its rest
+  // (`../../../render/fx/combat.ts`)
+  fx: [
+    { at: LOOSE, from: { tool: 'top', side: 'l' }, to: { tool: 'bottom', side: 'l' }, kind: 'twang' },
+    { at: LOOSE, from: { tool: 'rest', side: 'l' }, to: { bone: 'hand_r' }, kind: 'loose' },
+  ],
   // a go fitted to its length by the aim (the draw and the loose keep their speed)
   stretch: [[DRAWN, LOOSE]],
   bodies: {

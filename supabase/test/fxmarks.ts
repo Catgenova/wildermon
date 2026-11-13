@@ -25,16 +25,18 @@ const L = c0.clip.length, at = markTime(c0.clip, c0.clip.fx![0]);
 /** The phase that puts body `id` at clip time t (its time is the phase over six and its own share of the loop). */
 const phaseAt = (id: string, t: number): number => (t - (clipFor(fighter(id, 0))!.t)) * 6;
 
+/** The sparks mark alone (the fight's runes are marks too). */
+const sparks = (c: { mark: { kind: string } }): boolean => c.mark.kind === 'sparks';
 let now = 100;
 const DT = 1 / 30;
 /** Body `id` moved from clip time a to b in frames of DT, the fires counted. */
 function run(id: string, a: number, b: number): number {
   let n = 0;
-  for (let t = a; t <= b + 1e-9; t += DT) { now += DT; n += fxTrack(id, fighter(id, phaseAt(id, t)), now).length; }
+  for (let t = a; t <= b + 1e-9; t += DT) { now += DT; n += fxTrack(id, fighter(id, phaseAt(id, t)), now).filter(sparks).length; }
   return n;
 }
 
-check('the one-handed fight carries its sparks mark', c0.clip.fx?.[0]?.kind === 'sparks', `${c0.clip.name}: ${JSON.stringify(c0.clip.fx)}`);
+check('the one-handed fight carries its sparks mark', c0.clip.fx?.some((m) => m.kind === 'sparks') === true, `${c0.clip.name}: ${JSON.stringify(c0.clip.fx)}`);
 {
   const runs = 3, n = run('loop', at - 0.3, at - 0.3 + runs * L);
   check(`a mark fires once a run of the loop: ${runs} runs, ${runs} fires`, n === runs, `${n}`);
@@ -49,17 +51,17 @@ check('the one-handed fight carries its sparks mark', c0.clip.fx?.[0]?.kind === 
 {
   run('leap', at - 0.5, at - 0.4);
   now += DT;
-  const n = fxTrack('leap', fighter('leap', phaseAt('leap', at - 0.4 + SKIP + 0.2)), now).length;
+  const n = fxTrack('leap', fighter('leap', phaseAt('leap', at - 0.4 + SKIP + 0.2)), now).filter(sparks).length;
   check(`a frame that leaps ${(SKIP + 0.2).toFixed(1)} s over the mark fires nothing`, n === 0, `${n}`);
   run('gap', at - 0.5, at - 0.1);
   now += GAP + 0.5;
-  const g = fxTrack('gap', fighter('gap', phaseAt('gap', at + 0.05)), now).length;
+  const g = fxTrack('gap', fighter('gap', phaseAt('gap', at + 0.05)), now).filter(sparks).length;
   check(`a body unseen for ${GAP + 0.5} s crossing the mark fires nothing`, g === 0, `${g}`);
 }
 {
   // A timed go of the fight a second and a half long, started three times: the mark once a go.
   let n = 0;
-  for (let go = 0; go < 3; go++) for (let s = 0; s <= 1.5; s += DT) { now += DT; n += fxTrack('act', fighter('act', 0, 1, { t: s, length: 1.5 }), now).length; }
+  for (let go = 0; go < 3; go++) for (let s = 0; s <= 1.5; s += DT) { now += DT; n += fxTrack('act', fighter('act', 0, 1, { t: s, length: 1.5 }), now).filter(sparks).length; }
   const each = runsOf(c0.clip, 1.5).runs;
   check(`a timed go fitted to its length fires the mark once a run of it: 3 goes of ${each}, ${3 * each} fires`, n === 3 * each, `${n}`);
 }
@@ -69,7 +71,7 @@ check('the one-handed fight carries its sparks mark', c0.clip.fx?.[0]?.kind === 
     const id = `side${facing}`;
     for (let t = at - 0.3; t <= at + 0.1; t += DT) {
       now += DT;
-      for (const c of fxTrack(id, fighter(id, phaseAt(id, t), facing), now)) {
+      for (const c of fxTrack(id, fighter(id, phaseAt(id, t), facing), now).filter(sparks)) {
         const p = c.point();
         set(`${c.clip} ${c.mark.from && 'tool' in c.mark.from ? c.mark.from.side ?? 'r' : '?'} ${p ? p.at.map((v) => v.toFixed(2)).join(',') : 'none'}`);
         if (facing === 1) { again = JSON.stringify(c.point()) === JSON.stringify(p) ? 'same' : 'not'; hand = p?.held; }

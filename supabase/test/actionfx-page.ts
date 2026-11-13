@@ -1,8 +1,11 @@
 /**
- * The page `actionfx.ts` opens: thirty other people in view on grass and bare rock, fifteen fighting with a weapon in one
- * hand (`../../src/sculpt/anim/clips/fight.ts`, its sparks) and fifteen mining (`../../src/sculpt/anim/clips/swing.ts`, its
- * chips), each with its own metal, some enchanted, in the real game and renderer. Bundled for the browser by
- * `actionfx.ts`; the clock is put in before it by the driver.
+ * The page `actionfx.ts` opens: thirty other people in view on grass and bare rock in the real game and renderer. At work
+ * (`window.actionFxScene` 'work', the first): fifteen fighting with a weapon in one hand (`../../src/sculpt/anim/clips/fight.ts`,
+ * its sparks) and fifteen mining (`../../src/sculpt/anim/clips/swing.ts`, its chips), each with its own metal, some
+ * enchanted. In a fight ('combat'): ten with a one-handed weapon and a shield, metal or wood, taking blows on it; ten with a
+ * two-handed weapon (its heavy blow); ten shooting a bow; all in armour of the five classes and none, blows landing on
+ * every one of them in turn (`roster.blocked`, `roster.hurt`). Bundled for the browser by `actionfx.ts`; the clock is put
+ * in before it by the driver.
  */
 import { Game } from '../../src/game/game';
 import type { PeerState } from '../../src/net/protocol';
@@ -41,16 +44,37 @@ game.putBody(cx + 0.5, cy + 0.5, 0);
 
 const WEAPONS = ['sword', 'short_sword', 'hatchet', 'hunting_knife', 'throwing_axe'];
 const METALS = ['iron', 'steel', 'copper', 'bronze', 'silver'];
+const combat = (window as unknown as { actionFxScene?: string }).actionFxScene === 'combat';
+const HEAVY = ['long_sword', 'maul', 'battle_axe'], BOWS = ['short_bow', 'long_bow'];
+/** Armour by class, a piece for every slot, for a fight's bodies in turn; and where blows land, in turn. */
+const SETS: Array<Record<string, string>> = [
+  { head: 'helm', chest: 'plate_breastplate', arms: 'plate_arms', legs: 'plate_legs', feet: 'plate_boots' },
+  { head: 'chain_coif', chest: 'chain_hauberk', arms: 'chain_sleeves', legs: 'chain_leggings', feet: 'chain_boots' },
+  { head: 'leather_cap', chest: 'leather_jerkin', arms: 'leather_sleeves', legs: 'leather_trousers', feet: 'leather_boots' },
+  { head: 'wool_cap', chest: 'cloth_tunic', arms: 'cloth_sleeves', legs: 'cloth_trousers', feet: 'cloth_shoes' },
+  { head: 'scale_helm', chest: 'scale_cuirass', arms: 'scale_sleeves', legs: 'scale_leggings', feet: 'scale_boots' },
+  {},
+];
+const WHERE = ['chest', 'head', 'arms', 'legs', 'feet'];
+/** A fight's body: its weapon (and shield), its armour. */
+function fighter(i: number, material: string): Record<string, unknown> {
+  const kind = i % 3, set = SETS[i % SETS.length], gear: Record<string, unknown> = {};
+  for (const [slot, id] of Object.entries(set)) gear[slot] = { id, material };
+  if (kind === 0) { gear.weapon = { id: WEAPONS[i % WEAPONS.length], material, enchanted: i % 4 === 0 }; gear.offhand = { id: i % 2 ? 'metal_shield' : 'wooden_shield', material: i % 2 ? material : 'oak' }; }
+  else if (kind === 1) gear.weapon = { id: HEAVY[i % HEAVY.length], material, enchanted: i % 4 === 1 };
+  else gear.weapon = { id: BOWS[i % BOWS.length], material: 'oak', enchanted: i % 4 === 2 };
+  return gear;
+}
 /** Thirty people on a grid of six by five round the body, a tile and a half apart: the odd ones fighting, the even mining. */
 const peers: PeerState[] = Array.from({ length: 30 }, (_, i) => {
   const fight = i % 2 === 1, material = METALS[i % METALS.length];
   return {
     id: 6000 + i, uid: `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`, name: `Person ${i}`,
     x: cx - 3.25 + (i % 6) * 1.5, y: cy - 3.25 + Math.floor(i / 6) * 1.5, dirX: Math.cos(i), dirY: Math.sin(i), level: 0,
-    moving: false, swimming: false, working: true, act: fight ? 'attack_creature' : 'mine',
+    moving: false, swimming: false, working: true, act: fight || combat ? 'attack_creature' : 'mine',
     look: { gender: i % 3 ? 'man' : 'woman', hair: HAIRSTYLES[1 + (i % (HAIRSTYLES.length - 1))].id, hairColour: (i * 0.137) % 1, hairBright: 0.5, skin: (i * 0.29) % 1 },
-    gear: fight ? { weapon: { id: WEAPONS[i % WEAPONS.length], material, enchanted: i % 4 === 1 } } : undefined,
-    tool: fight ? undefined : { id: 'pickaxe', material, enchanted: i % 4 === 0 },
+    gear: combat ? fighter(i, material) : fight ? { weapon: { id: WEAPONS[i % WEAPONS.length], material, enchanted: i % 4 === 1 } } : undefined,
+    tool: fight || combat ? undefined : { id: 'pickaxe', material, enchanted: i % 4 === 0 },
   } as unknown as PeerState;
 });
 game.roster.sawAll(peers);
@@ -76,6 +100,9 @@ export interface Measured {
   alive: number;
 }
 
+/** Frames drawn since the page opened, for the fight's blows' turns. */
+let frame = 0;
+
 const alive = (): number => {
   let n = 0;
   for (let i = 0; i < parts.span; i++) if (parts.life[i] > 0) n++;
@@ -97,6 +124,16 @@ function frames(n: number, step: number, zoom: number, effects: Effects, soft: b
   for (let i = 0; i < n; i++) {
     driven.tick(step);
     if (i % 15 === 0) game.roster.sawAll(peers);
+    // in a fight, every body takes a blow once a second, its turn of the second its own: on the shield where it has one
+    // (every other time), else landing where it lands in turn
+    if (combat) peers.forEach((p, j) => {
+      const beat = frame + j * 7;
+      if (beat % 30 !== 0) return;
+      const shield = !!(p.gear as Record<string, unknown> | undefined)?.offhand && (beat / 30) % 2 === 0;
+      if (shield) game.roster.blocked(p.id, Date.now());
+      else game.roster.hurt(p.id, Date.now(), WHERE[(j + beat / 30) % WHERE.length]);
+    });
+    frame++;
     game.update(step / 1000);
     for (let j = 0; j < ask; j++) fx.fxAt({ kind: 'player' }, 'sparks', { n: askN });
     renderer.camera.focus(game.player.x, game.player.y, game.playerHeight(), step / 1000);

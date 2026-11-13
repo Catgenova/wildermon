@@ -12,6 +12,7 @@
 import type { ActionKit } from './kit';
 import type { FxEvent } from './types';
 import { STRIKE_FX } from './strikes';
+import { COMBAT_FX } from './combat';
 
 /** An effect going on after its first frame: drawn each frame for `secs`, `u` nought to one through them. */
 export interface FxLinger {
@@ -22,4 +23,5 @@ export type ActionFxFn = (e: FxEvent, k: ActionKit) => void | FxLinger;
 
 export const ACTION_FX: Readonly<Record<string, ActionFxFn>> = {
   ...STRIKE_FX,
+  ...COMBAT_FX,
 };

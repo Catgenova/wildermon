@@ -1224,6 +1224,13 @@ export class Renderer {
     groundColour: (tx, ty) => (this.game.world.inBounds(tx, ty) ? this.groundColor(tx, ty, true, this.sunNow) : null),
     tile: (tx, ty) => (this.game.world.inBounds(tx, ty) ? this.game.world.viewTile(tx, ty, true) : null),
     creature: (id) => this.game.creatures.get(id) ?? null,
+    // Deflect, as the island keeps it on your row (`Player.held`): yours alone, as nobody else's is sent
+    deflect: (w) => w.kind === 'player' && (this.game.player.held.deflect?.until ?? -Infinity) > this.game.time,
+    foe: (w) => {
+      const id = w.kind === 'player' ? this.game.fightTarget : w.kind === 'peer' ? this.game.roster.get(w.id)?.hurtBy : undefined;
+      const b = id === null || id === undefined ? null : this.spellBody({ kind: 'creature', id });
+      return b ? { x: b.x, y: b.y, z: b.z + b.tall * 0.5 } : null;
+    },
   });
   /** The season and its day, for the trees' look (`./foliage`): read once a frame off the wall clock, as the hud reads it. */
   private year = yearAt(Date.now() / 1000);

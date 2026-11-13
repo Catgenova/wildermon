@@ -13,6 +13,7 @@
  * never the heave or the blow.
  */
 import type { Clip, Key } from '../clip';
+import { RUNE_SHARES } from '../runes';
 import { merge, poseToPose, type Beat, type KeyPose } from '../author';
 import type { Euler } from '../math';
 
@@ -406,5 +407,10 @@ export const SWING: Clip = {
   stretch: [[0, 0.14], [0.14, 0.84], [1.34, STRIKE]],
   bodies: { woman: { tracks: herTracks() } },
   // chips off the pick's head as it bites, in the stone it struck (`../../../render/fx/strikes.ts`)
-  fx: [{ at: IMPACT, from: { tool: 'head' }, kind: 'chips' }],
+  // in a fight, the heavy blow's shock in the ground, held a moment (`params.stop`); and an enchanted blade's runes over the blow
+  fx: [
+    { at: IMPACT, from: { tool: 'head' }, kind: 'chips' },
+    { at: IMPACT, from: { tool: 'head' }, kind: 'heavy', params: { stop: true } },
+    ...RUNE_SHARES.map((w) => ({ at: STRIKE + (IMPACT - STRIKE) * w, from: { tool: 'tip' as const }, kind: 'runes' })),
+  ],
 };

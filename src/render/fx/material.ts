@@ -7,7 +7,8 @@
  *
  * Later phases add answers here (wood, leather, a blood's colour by kind).
  */
-import { metalShades, type FigurePose, type GearPiece } from '../figure';
+import { DRAGON_SCALE, isMetalTone, metalShades, woodTone, type FigurePose, type GearPiece } from '../figure';
+import { ARMOUR_BY_ID, type ArmourClass } from '../../game/gear';
 import { dustTone } from '../dust';
 import { TileType, dustiness } from '../../world/tiles';
 import { coatOf as coatColours, type Forms } from '../../game/wildforms';
@@ -27,6 +28,13 @@ export interface FxWorld {
 export interface GroundTone { colour: string; dust: string; stony: boolean; weight: number }
 /** A metal: its colour, shadow, lit edge and a blade's face; its name; and whether the piece is enchanted. */
 export interface MetalTone { metal: string; dark: string; lit: string; blade: string; name: string; enchanted: boolean }
+
+/** What a blow lands on at a slot of the body: the class of the armour worn there (none for bare or a cloth-less slot) and the piece. */
+export interface ArmourAt { cls: ArmourClass | 'none'; piece?: GearPiece }
+/** A shield: whether it is metal, its colours (a metal's, or its wood's face and shade), and whether it is enchanted. */
+export interface ShieldTone { metal: boolean; tone: MetalTone | null; wood: string; woodDark: string; enchanted: boolean }
+/** New-cut wood where a shield's material is not a wood we know. */
+const PLAIN_WOOD: [number, number, number] = [176, 132, 88];
 
 /** The tiles that are stone where they are struck: bare rock, cobbles, slabs, stepping stones. */
 export const STONY: ReadonlySet<number> = new Set<number>([TileType.Rock, TileType.Cobblestone, TileType.Slabs, TileType.SteppingStones, TileType.Steps]);
@@ -86,6 +94,25 @@ export class FxMaterials {
     if (id && pose.gear?.weapon?.id === id && pose.job === 'attack_creature') return pose.gear.weapon;
     if (pose.tool && (!id || pose.tool.id === id || id === 'pickaxe')) return pose.tool;
     return id && pose.gear?.weapon?.id === id ? pose.gear.weapon : undefined;
+  }
+
+  /** The armour worn at a slot of the body (`head`, `chest`, `arms`, `legs`, `feet`): its class and the piece. */
+  armour(pose: FigurePose | undefined, slot: string): ArmourAt {
+    const piece = pose?.gear?.[slot as 'head'], a = piece ? ARMOUR_BY_ID.get(piece.id) : undefined;
+    return a && piece ? { cls: a.cls, piece } : { cls: 'none' };
+  }
+
+  /** Dragon scale's colour, for a blow on scale armour. */
+  scale(): string {
+    return hexOf(DRAGON_SCALE);
+  }
+
+  /** The shield worn (`gear.offhand`): metal (the metal shield, or one of a metal) or wood, in its colours; null without one. */
+  shield(pose: FigurePose | undefined): ShieldTone | null {
+    const piece = pose?.gear?.offhand;
+    if (!piece || !/shield/.test(piece.id)) return null;
+    const metal = piece.id === 'metal_shield' || isMetalTone(piece.material), w = woodTone(piece.material) ?? PLAIN_WOOD;
+    return { metal, tone: metal ? this.metal(piece) : null, wood: hexOf(w), woodDark: hexOf([w[0] * 0.62, w[1] * 0.58, w[2] * 0.55]), enchanted: !!piece.enchanted };
   }
 
   /** A dyed piece's dye, or null for one undyed. */

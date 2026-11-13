@@ -3,7 +3,7 @@
  * `./clip.ts`, a pose is mirrored left for right, and a bone's keys can trail the beat (`lag`: overlapping action, the
  * arms catching up with the hips) or lead it.
  */
-import type { Clip, EaseName, Foot, FootChannel, FootKeys, Key } from './clip';
+import type { Clip, EaseName, Foot, FootChannel, FootKeys, FxFrom, Key } from './clip';
 import type { Euler } from './math';
 
 /**
@@ -80,6 +80,8 @@ const mirrorTracks = (t: Record<string, Array<Key<Euler>>>): Record<string, Arra
   // (the other hand's place along the tool, in the tool's own frame: its z turned the other way, as `Clip.second`'s)
   b === '$second' ? keys.map((k) => ({ ...k, v: [k.v[0], k.v[1], -k.v[2]] as Euler })) : mirrorKeys(keys, b === '$move' || b.startsWith('$hand_'))]));
 const swapSides = <T>(r: Partial<Record<'l' | 'r', T>> | undefined): Partial<Record<'l' | 'r', T>> | undefined => r && Object.fromEntries(Object.entries(r).map(([s, v]) => [s === 'l' ? 'r' : 'l', v]));
+/** An effect mark's place from the other side: a bone's on its mirror, a tool's in the other hand; the shield's as it is. */
+const mirrorFrom = (f: FxFrom): FxFrom => ('bone' in f ? { bone: otherSide(f.bone) } : 'tool' in f ? { ...f, side: f.side === 'l' ? 'r' : 'l' } : f);
 /**
  * A whole clip mirrored left for right, named `name`: every track, accent, the shift, the stance, each body's corrections,
  * the reached hands (their places and ways across the body reversed), the tools in them swapped hand for hand and the
@@ -110,7 +112,7 @@ export function mirrorClip(c: Clip, name: string): Clip {
     ...(c.tools ? { tools: swapSides(c.tools) } : {}),
     ...(c.strike ? { strike: { ...c.strike, side: c.strike.side === 'l' ? 'r' : 'l' } } : {}),
     // (the effect marks from the other side: a bone's on its mirror, a tool's in the other hand)
-    ...(c.fx ? { fx: c.fx.map((m) => ({ ...m, from: 'bone' in m.from ? { bone: otherSide(m.from.bone) } : { ...m.from, side: m.from.side === 'l' ? 'r' : 'l' } })) } : {}),
+    ...(c.fx ? { fx: c.fx.map((m) => ({ ...m, from: mirrorFrom(m.from), ...(m.to ? { to: mirrorFrom(m.to) } : {}) })) } : {}),
     // (the keyed feet swapped foot for foot)
     ...(c.feet ? { feet: { stride: c.feet.stride, l: c.feet.r, r: c.feet.l } } : {}),
   };

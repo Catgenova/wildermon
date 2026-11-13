@@ -27,12 +27,16 @@
  */
 import { sculptFx, sculptSoft, type FigurePose } from '../figure';
 import { MOST_PARTICLES, MOST_LIGHTS, rngOf, type Body, type Eye, type P3, type Who } from '../spells/kit';
+import { UNITS_PER_TILE } from '../iso';
 import type { SpellStage } from '../spells/stage';
 import type { Effects } from '../../game/settings';
 import { ActionKit, SMALL_ZOOM } from './kit';
 import { FxMaterials, type FxWorld } from './material';
 import { ACTION_FX, type FxLinger } from './registry';
-import type { FxBody, FxEvent, FxFrom, FxPoint } from './types';
+import type { FxBody, FxEvent, FxFrom, FxPoint, V3 } from './types';
+import { BLOCK_SECS, FLINCH_SECS } from '../../game/fight';
+import { BLOCK_IMPACT } from '../../sculpt/anim/clips/block';
+import { FLINCH_SNAP } from '../../sculpt/anim/clips/flinch';
 
 /** Of the particle pool, the share the action effects may fill (the spells' particles counted in it). */
 export const ACTION_SHARE = 0.4;
@@ -47,7 +51,22 @@ export const ACTION_LIGHTS = 2;
 export const LONG_FRAME = 1 / 20;
 /** The longest a hold of a body's clip time may be, milliseconds, and how many times as long it takes to catch up. */
 export const HIT_STOP_MOST = 60;
+/** The hold of a heavy blow (a two-handed weapon's), milliseconds: the striker's and the struck's. */
+export const HIT_STOP_HEAVY = 50;
 const CATCH_UP = 3;
+/** Seconds either side of a heavy blow within which a blow landing near it is the same blow, and both are held; and tiles near. */
+export const HEAVY_WINDOW = 0.15;
+const HEAVY_NEAR = 3;
+/** Where a block's blow lands in it, and a flinch's snap, as shares of their lengths (`FigurePose.block`, `flinch.t`). */
+const BLOCK_AT = BLOCK_IMPACT / BLOCK_SECS, FLINCH_AT = FLINCH_SNAP / FLINCH_SECS;
+/** Past the moment, how far into a block or a flinch first seen still fires it (a body come into view mid-way does not). */
+const LATE = 0.25;
+/** Where a blow landing is put, by where it landed: the bone (its side for a limb, `s`), and how far out toward the blow, tenths of a metre. */
+const LANDS: Readonly<Record<string, { bone: string; out: number }>> = {
+  head: { bone: 'head', out: 1.3 }, chest: { bone: 'spine_03', out: 2 }, arms: { bone: 'lowerarm_s', out: 0.8 }, legs: { bone: 'calf_s', out: 0.9 }, feet: { bone: 'foot_s', out: 0.9 },
+};
+/** Tiles ahead of a blocker a Deflect's streak goes to where what struck is not known, and how high, height units. */
+const DEFLECT_AHEAD = 1.2, DEFLECT_UP = 10;
 /** Effects going on after their first frame, at most. */
 const MOST_LINGERS = 64;
 /** Effects the island asked for, waiting for the next frame, at most. */
@@ -57,6 +76,10 @@ const MOST_ASKED = 32;
 export interface ActionWhere extends FxWorld {
   /** Somebody or something where it stands this frame, as the spells have it; null when gone. */
   body(w: Who): Body | null;
+  /** Whether somebody holds Deflect now (a blow they block lands back): known for you alone. */
+  deflect(w: Who): boolean;
+  /** Where what somebody is fighting is (its middle), when known. */
+  foe(w: Who): P3 | null;
   /** The ground's height under a point, height units. */
   ground(x: number, y: number): number;
 }
@@ -104,6 +127,11 @@ export class ActionFx {
   private following = new Map<string, FigurePose>();
   private lingers: Lingering[] = [];
   private asked: Asked[] = [];
+  /** Each body's block and flinch last frame (`FigurePose.block`, `flinch.t`), to fire their moments as they are passed. */
+  private overlays = new Map<string, { block?: number; flinch?: number }>();
+  /** Heavy blows and blows landing lately: who, where, when on the drawing clock (`HEAVY_WINDOW`). */
+  private heavies: Array<{ id: string; x: number; y: number; at: number }> = [];
+  private landed: Array<{ id: string; x: number; y: number; at: number }> = [];
   /** Holds of a body's clip time, by id: from when on the drawing clock, and how long (seconds). */
   private holds = new Map<string, { at: number; secs: number }>();
   private now = 0;
@@ -156,8 +184,11 @@ export class ActionFx {
    * then let it catch up: the weight of a blow. Nothing with Motion reduced or Effects off.
    */
   hitStop(who: Who, ms: number): void {
-    if (this.calm || this.effects === 'off' || !(ms > 0)) return;
-    this.holds.set(idOfWho(who), { at: this.now, secs: Math.min(HIT_STOP_MOST, ms) / 1000 });
+    this.holdId(idOfWho(who), ms);
+  }
+  private holdId(id: string, ms: number): void {
+    if (this.calm || this.effects === 'off' || !(ms > 0) || this.holds.has(id)) return;
+    this.holds.set(id, { at: this.now, secs: Math.min(HIT_STOP_MOST, ms) / 1000 });
   }
 
   /**
@@ -179,6 +210,8 @@ export class ActionFx {
     this.holds.clear();
     this.drawn.clear();
     this.following.clear();
+    this.overlays.clear();
+    this.heavies.length = this.landed.length = 0;
   }
 
   /**
@@ -238,6 +271,8 @@ export class ActionFx {
         this.fire(this.eventOf(id, b, pose, p, c.mark.kind, c.mark.params ?? {}, !!c.mark.key, seedOf(id, c.i, c.run)), env);
       }
     }
+    // a blow on a shield, a blow landing: laid over the clips, fired at their moments
+    if (fx) this.overlaysOf(fx, long, env);
     for (const a of this.asked) {
       if (long) { this.stats.skipped++; continue; }
       const id = idOfWho(a.who), b = this.where.body(a.who);
@@ -267,7 +302,8 @@ export class ActionFx {
       const o = k.local(turned, 0, 0, 0), w = k.local(turned, p.way[0], p.way[1], p.way[2]);
       way = { x: w.x - o.x, y: w.y - o.y, z: w.z - o.z };
     }
-    return { kind, who: id, at, way, body, ...(pose ? { pose } : {}), ...(p.held ? { held: p.held } : {}), params, mine: id === 'player', key, seed };
+    const to = p.to ? k.local(turned, p.to[0], p.to[1], p.to[2]) : undefined;
+    return { kind, who: id, at, way, body, ...(to ? { to } : {}), ...(pose ? { pose } : {}), ...(p.held ? { held: p.held } : {}), params, mine: id === 'player', key, seed };
   }
 
   /** Fire an event's effect now, under the frame's rules. */
@@ -281,6 +317,55 @@ export class ActionFx {
     this.stats.byKind[e.kind] = (this.stats.byKind[e.kind] ?? 0) + 1;
     const l = this.drawWith(e, share, lit, () => run(e, this.k));
     if (l && l.secs > 0 && this.lingers.length < MOST_LINGERS) this.lingers.push({ e, l, start: env.now, share, lit });
+    // a blow that holds (`params.stop`): the striker held `HIT_STOP_HEAVY`, and whoever a blow landed on near it within the window
+    if (e.params.stop === true && e.pose?.job === 'attack_creature') {
+      const stop = HIT_STOP_HEAVY;
+      this.holdId(e.who, stop);
+      this.heavies.push({ id: e.who, x: e.at.x, y: e.at.y, at: env.now });
+      for (const h of this.landed) if (Math.abs(h.at - env.now) <= HEAVY_WINDOW && Math.hypot(h.x - e.at.x, h.y - e.at.y) <= HEAVY_NEAR) this.holdId(h.id, stop);
+    }
+  }
+
+  /** The blocks and blows landing the bodies drawn last frame passed (their moments: `BLOCK_AT`, `FLINCH_AT`), fired. */
+  private overlaysOf(fx: NonNullable<ReturnType<typeof sculptFx>>, long: boolean, env: ActionEnv): void {
+    const now = env.now;
+    this.heavies = this.heavies.filter((h) => now - h.at <= HEAVY_WINDOW);
+    this.landed = this.landed.filter((h) => now - h.at <= HEAVY_WINDOW);
+    for (const [id, pose] of this.following) {
+      const was = this.overlays.get(id), u = pose.block, f = pose.flinch?.t;
+      if (u === undefined && f === undefined) { if (was) this.overlays.delete(id); continue; }
+      this.overlays.set(id, { block: u, flinch: f });
+      const passed = (prev: number | undefined, cur: number | undefined, at: number): boolean =>
+        cur !== undefined && cur >= at && (prev === undefined ? cur < at + LATE : prev < at && cur - prev < 0.5);
+      const who = whoOfId(id), b = who ? this.where.body(who) : null;
+      if (!who || !b) continue;
+      if (passed(was?.block, u, BLOCK_AT) && pose.gear?.offhand) {
+        if (long) { this.stats.skipped++; continue; }
+        const p = fx.pointOver(pose, { shield: 'face' });
+        if (!p) { this.stats.skipped++; continue; }
+        const deflect = this.where.deflect(who);
+        let to: P3 | undefined;
+        if (deflect) {
+          to = this.where.foe(who) ?? undefined;
+          if (!to) { const ahead = this.eventOf(id, b, pose, { at: [0, DEFLECT_AHEAD * UNITS_PER_TILE, DEFLECT_UP], way: null }, 'block', {}, true, 0).at; to = ahead; }
+        }
+        this.fire({ ...this.eventOf(id, b, pose, p, 'block', { deflect }, true, seedOf(id, 101, Math.floor(now * 10))), ...(to ? { to } : {}) }, env);
+      }
+      if (passed(was?.flinch, f, FLINCH_AT)) {
+        const fl = pose.flinch as NonNullable<FigurePose['flinch']>;
+        this.landed.push({ id, x: b.x, y: b.y, at: now });
+        for (const h of this.heavies) if (Math.hypot(h.x - b.x, h.y - b.y) <= HEAVY_NEAR) { this.holdId(id, HIT_STOP_HEAVY); break; }
+        if (long) { this.stats.skipped++; continue; }
+        // where it landed, on the side it came from: the bone, out toward the blow
+        const where = fl.where && LANDS[fl.where] ? fl.where : 'chest', land = LANDS[where], a = fl.from ?? 0;
+        const side = Math.sin(a) > 0 ? 'l' : 'r', p = fx.pointOver(pose, { bone: land.bone.replace(/_s$/, `_${side}`) });
+        if (!p) { this.stats.skipped++; continue; }
+        const out: V3 = [-Math.sin(a), Math.cos(a), 0];
+        const at: FxPoint = { at: [p.at[0] + out[0] * land.out, p.at[1] + out[1] * land.out, p.at[2]], way: out };
+        this.fire(this.eventOf(id, b, pose, at, 'hit', { where }, true, seedOf(id, 102, Math.floor(now * 10))), env);
+      }
+    }
+    if (this.overlays.size > 256) this.overlays.delete(this.overlays.keys().next().value as string);
   }
 
   /** Draw with the kit made ready for an event (its level of detail, its light if any is left), the lights it put down counted. */
