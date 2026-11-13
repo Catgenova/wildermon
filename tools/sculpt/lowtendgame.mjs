@@ -13,7 +13,7 @@
 //     idle, at the job from a seconds to b, idle again, a row of frames 0.1 s apart (--frames n of them, 30 if not given)
 //     instead of the moments: the fade in and out.
 //     --sheets: many sheets drawn in one browser, a JSON list of { name, job, and any of the options above by name
-//     (times and fade as strings, facings, genders, outfits and beasts as lists) }.
+//     (times and fade as strings, facings, genders, outfits and beasts as lists; strip: a row a body, its moments across) }.
 //
 // Playwright's Chromium (/opt/pw-browsers/chromium) with software GL, one device pixel a canvas pixel.
 import { build } from 'esbuild';
@@ -30,7 +30,7 @@ const list = (v, f) => (Array.isArray(v) ? v : String(v ?? f).split(','));
 const sheetOf = (o) => ({
   name: o.name ?? o.job, job: o.job, zoom: +(o.zoom ?? 10),
   facings: list(o.facings, '0,1,2,4').map(Number), genders: list(o.genders, 'man,woman'), outfits: list(o.outfits, 'cloth'), beasts: list(o.beasts, 'none'),
-  side: +(o.side ?? 1), reach: +(o.reach ?? 9), close: !!o.close, times: o.times ?? '', frames: +(o.frames ?? 0), fade: o.fade ?? '',
+  side: +(o.side ?? 1), reach: +(o.reach ?? 9), close: !!o.close, strip: !!o.strip, times: o.times ?? '', frames: +(o.frames ?? 0), fade: o.fade ?? '',
 });
 const sheets = opt('sheets', '') ? JSON.parse(readFileSync(opt('sheets', ''), 'utf8')).map(sheetOf)
   : [sheetOf({ name: opt('name', undefined), job: opt('job', 'milk_creature'), zoom: opt('zoom', '10'), facings: opt('facings', '0,1,2,4'), genders: opt('genders', 'man,woman'), outfits: opt('outfits', 'cloth'), beasts: opt('beasts', 'none'), side: opt('side', '1'), reach: opt('reach', '9'), close: flag('close'), times: opt('times', ''), frames: opt('frames', '0'), fade: opt('fade', '') })];
@@ -75,7 +75,8 @@ const cell = (S, W, H, gender, outfit, beastSpec, facing, t, label, fade, idTag)
   const v = viewOf(facing), bx = sx + v.ey[0] * reach * zoom, by = sy + v.ey[1] * reach * zoom;
   // (a fade: the clock at t, the body at its job only between the two times, its go begun at the first)
   const at = fade ? t >= fade[0] && t < fade[1] : true, wt = fade ? t - fade[0] : t;
-  if (fade) CLOCK = t * 1000;
+  // (each cell a frame of the island's: its count of sculpted redraws afresh, so a body drawn frame after frame is redrawn)
+  if (fade) { CLOCK = t * 1000; sculptedFigures(true); }
   const body = () => drawFigure(g, sx, sy, zoom, { id: fade ? idTag + gender + outfit + beastSpec + facing : undefined, phase: t * 6, moving: false, gait: 0, facing, swimming: false, working: at, job: at ? S.job : undefined, act: at ? { t: wt, length: clip.length } : undefined,
     look: { ...DEFAULT_LOOK, gender, beard: 'none' }, gear: OUTFITS[outfit] ?? {} });
   const B = BEASTS[beast];
@@ -128,7 +129,8 @@ try {
         const fade = S.fade ? String(S.fade).split(',').map(Number) : null;
         const each = (fn) => S.genders.flatMap((g) => S.outfits.flatMap((o) => S.beasts.flatMap((bb) => S.facings.map((f) => fn(g, o, bb, f)))));
         const rows = fade ? each((g, o, bb, f) => Array.from({ length: S.frames || 30 }, (_, k) => [g, o, bb, f, +(k * 0.1).toFixed(2), `${info.name} ${(k * 0.1).toFixed(1)}s${k * 0.1 >= fade[0] && k * 0.1 < fade[1] ? ' job' : ' idle'} | ${g} f${f}`, fade]))
-          : times.map(({ t, name: n }) => each((g, o, bb, f) => [g, o, bb, f, t, `${info.name} ${n} | ${g} ${o} ${bb === 'none' ? '' : bb + ' '}f${f}`, null]));
+          : S.strip ? each((g, o, bb, f) => times.map(({ t, name: n }) => [g, o, bb, f, t, `${info.name} ${n} | ${g} ${o} ${bb === 'none' ? '' : bb + ' '}f${f}`, null]))
+            : times.map(({ t, name: n }) => each((g, o, bb, f) => [g, o, bb, f, t, `${info.name} ${n} | ${g} ${o} ${bb === 'none' ? '' : bb + ' '}f${f}`, null]));
         // twice: the first draw asks for what loads; a fade's second draw starts its bodies afresh (other ids)
         await p.evaluate(([s, r]) => window.sheet(s, r, 'a'), [S, rows]);
         await p.waitForTimeout(300);
