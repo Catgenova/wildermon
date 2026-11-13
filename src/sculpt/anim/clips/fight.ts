@@ -10,7 +10,7 @@
  */
 import type { Clip, Key } from '../clip';
 import type { Euler } from '../math';
-import { WORK } from './work';
+import { IMPACT, WORK } from './work';
 
 /** Turns added to the work clip's throughout (degrees). */
 const TURNS: Record<string, Euler> = {
@@ -32,4 +32,6 @@ export const FIGHT: Clip = {
   // nothing held to the work: the left arm as keyed
   hands: undefined,
   tools: { r: 'sword' },
+  // sparks off the weapon's head as the blow lands, in its metal (`../../../render/fx/strikes.ts`); drawn on every GL
+  fx: [{ at: IMPACT, from: { tool: 'head' }, kind: 'sparks', key: true }],
 };

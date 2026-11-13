@@ -1,5 +1,6 @@
 import { METAL_TONE } from './materials';
 import type { GearLook, GearPiece, GearSlot } from '../contract/gear';
+import type { SculptFx } from './fx/types';
 import { HOPS, emotePose } from '../game/emotes';
 import {
   BUILDS, DEFAULT_LOOK, eyeColour, hairColour, shirtColour, skinColour, trouserColour, type Look,
@@ -11376,8 +11377,8 @@ const gearLod = (zoom: number): number => (zoom < 1.5 ? 0.5 : zoom < STILL_BELOW
  * flat figure's would be among what it holds and sits in: its reins, oars and tiller drawn round it, and what of it is down
  * behind the near side of the box or the hull hidden (`drawLive`).
  */
-const SCULPT: { on: boolean; flips: number; loading: boolean; draw: ((ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose) => boolean) | null; gen: () => number; asked: Set<string>; soft: boolean } =
-  { on: false, flips: 0, loading: false, draw: null, gen: () => 0, asked: new Set(), soft: false };
+const SCULPT: { on: boolean; flips: number; loading: boolean; draw: ((ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose) => boolean) | null; gen: () => number; asked: Set<string>; soft: boolean; fx: SculptFx | null } =
+  { on: false, flips: 0, loading: false, draw: null, gen: () => 0, asked: new Set(), soft: false, fx: null };
 /**
  * On or off, as asked by `by`: the island's renderer (every frame) or the character creator. On while anybody asks.
  */
@@ -11392,7 +11393,7 @@ export function sculptedFigures(want: boolean, by: 'island' | 'creator' = 'islan
   SCULPT.flips++;
   if (on && !SCULPT.draw && !SCULPT.loading) {
     SCULPT.loading = true;
-    import('../sculpt/sculpted').then((m) => { SCULPT.draw = m.drawSculptLive; SCULPT.gen = m.sculptGen; SCULPT.soft = m.glSoftware(); SCULPT.flips++; }).catch(() => { SCULPT.loading = false; });
+    import('../sculpt/sculpted').then((m) => { SCULPT.draw = m.drawSculptLive; SCULPT.gen = m.sculptGen; SCULPT.soft = m.glSoftware(); SCULPT.fx = m.SCULPT_FX; SCULPT.flips++; }).catch(() => { SCULPT.loading = false; });
   }
 }
 /**
@@ -11411,6 +11412,9 @@ const sculptMay = (id?: string): boolean => {
 };
 /** Whether the sculpted bodies are on and loaded, so a figure drawn now is drawn sculpted where it can be. */
 export const sculptedReady = (): boolean => SCULPT.on && !!SCULPT.draw;
+/** The effect marks on the clips, followed per body (`../sculpt/fxmarks.ts`), once the sculpted bodies have loaded; and whether their GL is the processor's (`glSoftware`). */
+export const sculptFx = (): SculptFx | null => SCULPT.fx;
+export const sculptSoft = (): boolean => SCULPT.soft;
 /** What of the sculpted bodies a kept picture depends on: whether they are on, and which bakes have landed. */
 const sculptKey = (): string => (SCULPT.on ? `s${SCULPT.flips}.${SCULPT.gen()}` : '');
 /** The sculpted body in the figure's place, where it is on, can be, and is baked. */

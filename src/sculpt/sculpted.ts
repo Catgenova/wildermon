@@ -20,6 +20,7 @@ import { bandOf, STRIDE } from './bake';
 import type { Band } from './sdf';
 import { drawSculptGL, forgetBuffers, glContext } from './gl';
 export { glSoftware } from './gl';
+export { SCULPT_FX } from './fxmarks';
 import { bakedAt, built, forgetBuilt, proportionsOf, sculptScene, type Built } from './index';
 import { hasLowBody, lowScene } from './lowpoly';
 

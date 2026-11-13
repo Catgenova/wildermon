@@ -156,6 +156,50 @@ export interface Clip {
    * fist (from the quiver to the loose; while drawn too), and the moment of the full draw, where the arrow is laid along.
    */
   bow?: { drawn: [number, number]; arrow: [number, number]; full: number };
+  /**
+   * Effects fired as the clip's time crosses each mark (`FxMark`, `../fxmarks.ts`), at the place the mark names on the body
+   * as the clip has it there, drawn by the renderer's action effects (`../../render/fx`).
+   */
+  fx?: FxMark[];
+}
+
+/**
+ * Where on a body an effect mark fires from: a bone's head (`bone`, the rig's name: `hand_r`, `foot_l`), or a point of
+ * what a hand holds (`tool`): its `tip` (the far end along its grip), its `head` (where it meets the work: a hand tool's
+ * contact, the lowest of a long prop's far end, else its tip) or its `grip` (the fist on it). `side` the hand, the right
+ * where not given; both hands on one prop are the right's.
+ */
+export type FxFrom = { bone: string } | { tool: 'tip' | 'head' | 'grip'; side?: Side };
+/**
+ * An effect fired as a clip's time crosses a moment (`Clip.fx`): `at` seconds into it, or `share` of its length; from
+ * where (`FxFrom`); which effect (`kind`, an entry of `../../render/fx` ACTION_FX); and its numbers, as the effect reads
+ * them. `key`: drawn in the processor-drawn GL too (`glSoftware`), where only such marks fire.
+ */
+export interface FxMark {
+  at?: number;
+  share?: number;
+  from: FxFrom;
+  kind: string;
+  key?: boolean;
+  params?: Readonly<Record<string, number | string | boolean>>;
+}
+/** A mark's moment in its clip, seconds. */
+export const markTime = (c: Clip, m: FxMark): number => Math.min(c.length, Math.max(0, m.at ?? (m.share ?? 0) * c.length));
+/**
+ * The marks a clip's time crosses from a to b (b after a; a loop's wrap counted, a one-shot's end held): each with its
+ * index in `Clip.fx`, its time on the same count as a and b, and the run of the loop it is in.
+ */
+export function marksBetween(c: Clip, a: number, b: number): Array<{ i: number; t: number; run: number }> {
+  const out: Array<{ i: number; t: number; run: number }> = [];
+  const fx = c.fx;
+  if (!fx?.length || !(b > a)) return out;
+  if (!c.loop) {
+    fx.forEach((m, i) => { const t = markTime(c, m); if (t > a && t <= b) out.push({ i, t, run: 0 }); });
+    return out;
+  }
+  const n0 = Math.floor(a / c.length), n1 = Math.floor(b / c.length);
+  for (let n = n0; n <= n1; n++) fx.forEach((m, i) => { const t = n * c.length + markTime(c, m); if (t > a && t <= b) out.push({ i, t, run: n }); });
+  return out.sort((x, y) => x.t - y.t);
 }
 
 /** The bones a clip masked `upper` moves: the spine above the waist, the neck, the head and the arms. */

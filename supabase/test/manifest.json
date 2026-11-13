@@ -367,6 +367,25 @@
     "why": "Solara stood under ten frames a second at any zoom: its wildermon's standing pictures came to five times what was kept, so each was drawn again just before it was wanted, and an altar in view after dark had the night mixed at four times the pixels. Then \"still massive fps drops\": every floor drawn afresh after dark, the shade round every wall cut to every tile every frame, and a wheel of the zoom making every crated wildermon and every piece again at every step. Drawn in Chrome on the page's own clock, on Solara as the island counted it: a second loop round must make next to no canvases, the night must be mixed at the lights' share, a settled frame must draw next to no floor or shade afresh, and a wheel of the zoom must stretch what it had rather than make it all again."
   },
   {
+    "file": "supabase/test/fxmarks.ts",
+    "title": "A mark on a clip fires once as the body's clip time passes it",
+    "shard": 1,
+    "why": "Action effects fire from marks on the clips, worked out on every screen from the body's own clip time with nothing sent. Followed per body: once a run of a loop; a frame drawn again or a clock put right fires nothing twice; a new go fires again; a leap, a change of clip or a body unseen starts afresh with no storm of effects; a timed go fitted to its length fires once a run; the mirrored clip fires from the other hand; the point is on the weapon and the same each time."
+  },
+  {
+    "file": "supabase/test/actionfx.ts",
+    "title": "Action effects with thirty at work in view keep to their share of the particles and cost little",
+    "shard": 1,
+    "external": [
+      "esbuild",
+      "playwright-core"
+    ],
+    "env": {
+      "FX_STRICT": "1"
+    },
+    "why": "Sparks off a one-handed blow and chips off a pick fire from marks on the clips, on the spells' particle pool. Drawn in Chrome on the page's own clock with thirty people fighting or mining: both kinds fire; the particles alive stay within the action effects' share of the pool, asked for far more or not; a spell's particles past that share leave the effects none; a frame with them is within a quarter and 3 ms of one with Effects off; Off fires and adds nothing, Fewer adds less, and on the processor's GL only the marks marked key fire."
+  },
+  {
     "file": "supabase/test/access.ts",
     "title": "Low-end graphics draw the wood flat, less motion stops its sway, and every key is a row",
     "shard": 1,

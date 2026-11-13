@@ -15,7 +15,9 @@ import { FIGHT_BACK_STILL, FIGHT_QUIET } from '../../game/fight';
 import { LAYOUT_SLOTS, type UIWindow, type WindowManager } from '../windows';
 import { fixed, html, setMarkup, type Markup } from '../html';
 import { setUiSize, UI_SIZE_MAX, UI_SIZE_MIN, UI_SIZE_PRESETS, uiSizeShown } from '../screen';
-import { FAST_DPR, FRAME_CAPS, FULL_DPR, LOW_POWER_FPS, type Graphics, type UiColours, type UiFrames, type UiLight, type UiStyle } from '../../game/settings';
+import { FAST_DPR, FRAME_CAPS, FULL_DPR, LOW_POWER_FPS, type Effects, type Graphics, type UiColours, type UiFrames, type UiLight, type UiStyle } from '../../game/settings';
+import { ACTION_LIGHTS, ACTION_SHARE, FAR_SHARE, FEWER_SHARE, NEAR_TILES } from '../../render/fx/actions';
+import { MOST_PARTICLES } from '../../render/spells/kit';
 import type { Motion } from '../../engine/motion';
 import { BUSH3D_SPECIES, STUMP3D_SPECIES, TREE3D_SPECIES } from '../../render/trees3d';
 import { FRAME_REACH, FRAME_REACHES, FRAME_RIM, FRAMES, frameLabel, frameOddities, RIM, RIMS } from '../runecut-art';
@@ -443,6 +445,17 @@ export class SettingsPanel {
         game.settings.graphics = v;
         game.graphicsChanged?.();
       },
+    );
+    // The action effects (src/render/fx): what blows and work throw off, on the spells' particles and lights.
+    choose<Effects>(
+      'Effects',
+      `All: sparks off one-handed blows, in the weapon's metal; chips off a pick, in the stone or earth struck. `
+        + `Particles: at most ${percent(ACTION_SHARE)} of ${MOST_PARTICLES} on screen, shared with spells (${Math.round(MOST_PARTICLES / 3)} with Fast or Low-end graphics); `
+        + `lights after dark: at most ${ACTION_LIGHTS}, within ${NEAR_TILES} tiles. Past ${NEAR_TILES} tiles: ${percent(FAR_SHARE)} of particles. `
+        + `Fewer: ${percent(FEWER_SHARE)} of particles, no lights. Off: none. Without a graphics card: sparks only.`,
+      [['all', 'All'], ['fewer', 'Fewer'], ['off', 'Off']],
+      () => game.settings.effects,
+      (v) => (game.settings.effects = v),
     );
     choose<number>(
       'Frame rate limit',

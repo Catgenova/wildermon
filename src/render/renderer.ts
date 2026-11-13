@@ -117,7 +117,7 @@ import type { Swirl } from '../game/motes';
 import { drawSwirl, glowSwirl } from './swirls';
 import { runestoneAt, stoneCentre, type Runestone } from '../game/runestones';
 import type { WaterField } from '../world/springs';
-import { Dust } from './dust';
+import { Dust, dustTone } from './dust';
 import { StructureWatch } from './structwatch';
 import { AFTER, BAKED, GroundChunks, LIT, staled, VOID, type GroundLine, type GroundRun } from './groundchunks';
 import { BEAST_WALK, Gaits } from './gait';
@@ -447,6 +447,7 @@ import { bridgeDone, bridgeLevels, deckHeight, type Bridge } from '../game/bridg
 import { bridgeNight, deckKey, drawBridgePiece, kitBridge, piecesAt, ropeKey, type BridgeFrame } from './bridgekit';
 import { SmallLife } from './life';
 import { personBody, SpellStage, type Aim, type Told, type Who } from './spells/stage';
+import { ActionFx } from './fx/actions';
 import { guessTold, type Standing } from './spells/guess';
 import { creatureWide, fallGradient, lightHole } from './spells/kit';
 import { spellInfo } from './spells/info';
@@ -854,26 +855,6 @@ function washInk(washes: ReadonlyArray<{ colour: string; alpha: number }>): stri
   return a > 0 ? `rgba(${Math.round(r / a)}, ${Math.round(g / a)}, ${Math.round(b / a)}, ${a.toFixed(4)})` : 'rgba(0, 0, 0, 0)';
 }
 
-/**
- * What a ground colour looks like once it is in the air. Kicked-up ground is
- * always paler than the ground it came off — it is the dry, fine part of it,
- * lit from every side at once — which also happens to be the only way dust off
- * a green field can be seen against the green field.
- */
-function dustTone(colour: string): string {
-  const m = /(\d+),(\d+),(\d+)/.exec(colour);
-  if (!m) return 'rgb(210,198,176)';
-  const r = +m[1];
-  const g = +m[2];
-  const b = +m[3];
-  // Dry earth for ordinary ground; for ground already brighter than that —
-  // snow, marble chippings — it goes towards white instead, since dust off a
-  // snowfield is not the colour of a ploughed field.
-  const pale = (r + g + b) / 3 > 190;
-  const mix = (v: number, to: number): number => Math.round(v + (to - v) * 0.62);
-  return `rgb(${mix(r, pale ? 255 : 236)},${mix(g, pale ? 255 : 226)},${mix(b, pale ? 255 : 202)})`;
-}
-
 const clamp255 = (v: number): number => (v < 0 ? 0 : v > 255 ? 255 : v | 0);
 
 /**
@@ -1231,6 +1212,17 @@ export class Renderer {
       return c ? this.spellBody({ kind: 'creature', id: c.id }) : null;
     },
     near: (x, y, r) => this.spellsNear(x, y, r),
+  });
+  /**
+   * What bodies' work and blows throw off (`./fx/actions.ts`): fired by the marks on their clips as they are drawn, or
+   * at a body for what the island says; drawn on the spells' stage, within its budget.
+   */
+  readonly actionFx: ActionFx = new ActionFx(this.spells, {
+    body: (w) => this.spellBody(w),
+    ground: (x, y) => (this.game.world.inBounds(Math.floor(x), Math.floor(y)) ? this.game.world.heightAt(x, y) : 0),
+    groundColour: (tx, ty) => (this.game.world.inBounds(tx, ty) ? this.groundColor(tx, ty, true, this.sunNow) : null),
+    tile: (tx, ty) => (this.game.world.inBounds(tx, ty) ? this.game.world.viewTile(tx, ty, true) : null),
+    creature: (id) => this.game.creatures.get(id) ?? null,
   });
   /** The season and its day, for the trees' look (`./foliage`): read once a frame off the wall clock, as the hud reads it. */
   private year = yearAt(Date.now() / 1000);
@@ -1614,6 +1606,7 @@ export class Renderer {
     });
     game.events.on('reset', () => {
       this.spells.clear();
+      this.actionFx.clear();
       this.floaters.clear();
       this.dust.clear();
       this.wakes.clear();
@@ -3946,6 +3939,8 @@ export class Renderer {
     this.roomTiles = this.pinned === null ? this.myRoom() : null;
     // The spells first: what they light is among what is burning.
     this.spells.update({ eye: this.camera, now: performance.now() / 1000, dt, fast: this.fast, night: this.game.darkness() });
+    // And what bodies' work threw off, on the same stage, after the spells (`./fx/actions.ts`).
+    this.actionFx.update({ eye: this.camera, now: performance.now() / 1000, dt, fast: this.fast, night: this.game.darkness(), effects: this.game.settings.effects, calm: this.calm, me: this.game.player });
     this.game.spellLights = this.spells.lights;
     // What is burning, for glass to glow with at night, and last frame's glow gone.
     if (this.game.darkness() > 0.02) {
@@ -6652,7 +6647,7 @@ export class Renderer {
         this.clipTo(ctx, ent.clip);
         const figBox: [number, number, number, number] = [ex - 34 * zoom, ey - (ent.lift ?? 0) - (FIGURE_TOP + 14) * zoom, 68 * zoom, (FIGURE_TOP + 22) * zoom];
         this.paint(ctx, zoom, struck > 0 ? 'flash' : 'none', struck * 0.75, ex, ey - (ent.lift ?? 0), (g, px, py) =>
-          drawPlayer(g, px, py, zoom, {
+          drawPlayer(g, px, py, zoom, this.actionFx.seen({
             id: 'player',
             phase: player.moving ? player.walkPhase : this.time * 6,
             // On a deck it is the hull that is going somewhere, not the feet.
@@ -6678,7 +6673,7 @@ export class Renderer {
             emoteT: emoteAt(player.emote, player.emoteAt, performance.now() / 1000) ?? undefined,
             cast: this.spells.poseOf(PLAYER_CASTS),
             veil: this.spells.veilOf(PLAYER_CASTS),
-          }),
+          })),
           undefined,
           figBox,
         );
@@ -6705,7 +6700,7 @@ export class Renderer {
         this.clipTo(ctx, ent.clip);
         const peerBox: [number, number, number, number] = [ex - 34 * zoom, ey - (FIGURE_TOP + 14) * zoom, 68 * zoom, (FIGURE_TOP + 22) * zoom];
         this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ex, ey, (g, px, py) =>
-          drawPlayer(g, px, py, zoom, {
+          drawPlayer(g, px, py, zoom, this.actionFx.seen({
             id: 'o' + peer.id,
             // On their own feet the ground they cover times their stride (`stepPhase`); on a seat, the clock times its rock.
             phase: peer.moving ? ((ent.lift ?? 0) > 0 && !ent.standing ? peer.walkPhase : peer.stepPhase) : this.time * 6,
@@ -6727,7 +6722,7 @@ export class Renderer {
             emoteT: emoteAt(peer.emote, peer.emoteAt, performance.now() / 1000) ?? undefined,
             cast: this.spells.poseOf({ kind: 'peer', id: peer.id }),
             veil: this.spells.veilOf({ kind: 'peer', id: peer.id }),
-          }),
+          })),
           undefined,
           peerBox,
         );
