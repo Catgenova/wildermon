@@ -26,6 +26,8 @@ export const CHIPS = 7;
 const GLINT_SECS = 0.12;
 /** The earth a pick turns up off ground that is not stone. */
 const EARTH = '#7d5d40';
+/** A chip's faces off its stone or its earth: shaded and lit (stone, pale itself, the further, to be seen on it). */
+const STONE_TONES = [0.42, 0.55, 1.45], EARTH_TONES = [0.6, 0.72, 1.3];
 /** An enchanted blade's golds (its slash trail's, `../../sculpt/gl.ts` TRAIL_RGB). */
 const GOLD = ['#ffe7a6', '#ffb347'];
 
@@ -73,8 +75,9 @@ const chips: ActionFxFn = (e, k) => {
   if (!g.stony) { const on = k.mat.ground(at.x + f.x * 0.5, at.y + f.y * 0.5); if (on.stony) g = on; }
   const base = g.stony ? g.colour : mixHex(EARTH, g.colour, 0.25);
   const n = num(e.params.n, CHIPS);
+  // (in the stone's own dark and lit faces, with no ink edge: an inked chip that small is a dark speck)
   k.burst(at, n, {
-    kind: 'shard', colour: [base, shadeHex(base, 0.78), shadeHex(base, 1.18)], size: 1.2, sizeEnd: 0.9, life: [0.3, 0.45], speed: [0.12, 0.4], up: [8, 18],
+    kind: 'shard', colour: (g.stony ? STONE_TONES : EARTH_TONES).map((t) => shadeHex(base, t)), size: 1.05, sizeEnd: 0.8, ink: false, life: [0.3, 0.45], speed: [0.12, 0.4], up: [8, 18],
     gravity: 75, drag: 0.4, spin: 2.5, jitter: 0.03, jitterZ: 0.2, bias: 2,
   });
   k.burst(at, 3, { kind: 'dust', colour: g.dust, size: 2.2, sizeEnd: 6, life: [0.45, 0.7], speed: [0.05, 0.15], up: [2, 5], gravity: -3, drag: 0.3, small: true });
