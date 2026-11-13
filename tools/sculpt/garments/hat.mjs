@@ -2,12 +2,13 @@
 // the head and a little wider than it, a wrap band with a ring ornament, a large asymmetric brim with a raised trim edge,
 // drooping past the eye line on the body's right and at the front, level with its tip swept up on the body's left under
 // the two angled feathers in the trim colour), fitted to each low-poly body from the one design (DESIGN, per body), its
-// crown sized to the skull (the head alone, by `clear`) and the swept-back hair and the bob (src/sculpt/assets/lowhair.json,
+// crown sized to the skull (the head alone, by `clear`) and the swept-back hair, the bob and the buzz cut (src/sculpt/assets/lowhair.json,
 // PRESSED) pressed under it (hatHair). Rigid on the head bone; no bones of its own.
 //
 //   buildHat(rig, design) → { verts, polys: [{ v, mat, part, tag, piece }], tris, part, design }
 //   hatWeights(rig, G) → per vertex [[bone, weight], ...] (the head only)
-//   hatHair(rig, G, { style }) → a hairstyle pressed under the hat (the game's '<style>:hat', 'swept:hat', 'bob:hat')
+//   hatHair(rig, G, { style }) → a hairstyle pressed under the hat (the game's '<style>:hat', 'swept:hat', 'bob:hat',
+//   'buzz:hat')
 //
 //   node tools/sculpt/garments/hat.mjs
 //     writes the game's copy beside each body: src/sculpt/assets/lowhat-male.json and lowhat-female.json
@@ -147,7 +148,7 @@ function secR(D, az, a) {
 }
 
 /** The hairstyles drawn pressed under the hat (the game's '<style>:hat'); the others are drawn as they are. */
-const PRESSED = ['swept', 'bob'];
+const PRESSED = ['swept', 'bob', 'buzz'];
 /** The head's and the hair's points in the hat's frame (the body's head samples, the hair's vertices and samples). */
 const HAIR = JSON.parse(readFileSync(new URL('../../../src/sculpt/assets/lowhair.json', import.meta.url), 'utf8'));
 export function hairMesh(who, style = 'swept') {

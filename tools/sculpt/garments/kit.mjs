@@ -427,7 +427,7 @@ function ringOf(body) {
 /** The band's middle at the front and at the back (above the head bone's head, mesh units), each body's. */
 const CIRCLET_AT = { male: { front: 0.86, back: 1.2, half: 0.06 }, female: { front: 0.8, back: 1.12, half: 0.055 } };
 /** The hairstyles a circlet is fitted over, one fit each (src/sculpt/assets/lowhair.json), and `bare` for none. */
-export const CIRCLET_HAIR = ['bare', 'swept', 'braid', 'bob'];
+export const CIRCLET_HAIR = ['bare', 'swept', 'braid', 'bob', 'buzz'];
 function circlet(who, body, style) {
   const { G, P, F, loft } = mesher(), A = CIRCLET_AT[who], hd = boneOf(body, 'head'), H = hd.head;
   const hair = load('lowhair.json')[who][style], surf = [...surface(body, 0.05), ...(hair ? surface(hair, 0.04) : [])];
