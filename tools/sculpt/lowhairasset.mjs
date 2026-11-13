@@ -2,7 +2,8 @@
 // src/sculpt/assets/lowhair.json, and each style's id and name into src/sculpt/assets/lowhair-styles.json, the list the
 // character creator offers (src/game/look.ts HAIRSTYLES, with Bald). The styles lowhair.mjs builds (its STYLES) and the
 // side braid, built by tools/sculpt/lowbraid.mjs; the bob, by tools/sculpt/lowbob.mjs (its outline fit read from
-// tools/sculpt/hairs/bob-fit-<who>.json); the pompadour, by tools/sculpt/lowpomp.mjs. A style's name is its module's
+// tools/sculpt/hairs/bob-fit-<who>.json); the pompadour, by tools/sculpt/lowpomp.mjs; the side shave, by
+// tools/sculpt/lowsideshave.mjs. A style's name is its module's
 // `name` (tools/sculpt/hairs/<id>.mjs).
 //
 //   node tools/sculpt/lowhairasset.mjs   (or node tools/sculpt/lowhair.mjs --asset)
@@ -44,6 +45,8 @@ import { shagOf } from './lowshag.mjs';
 import SHAG from './hairs/shag.mjs';
 import { ponytailOf } from './lowponytail.mjs';
 import PONYTAIL from './hairs/ponytail.mjs';
+import { sideshaveOf } from './lowsideshave.mjs';
+import SIDESHAVE from './hairs/sideshave.mjs';
 
 const braidHull = carveBraid();
 const BUILDERS = {
@@ -65,6 +68,7 @@ const BUILDERS = {
   chignon: { name: CHIGNON.name, build: (rig) => chignonOf(rig, CHIGNON) },
   shag: { name: SHAG.name, build: (rig) => shagOf(rig, SHAG) },
   ponytail: { name: PONYTAIL.name, build: (rig) => ponytailOf(rig, PONYTAIL) },
+  sideshave: { name: SIDESHAVE.name, build: (rig) => sideshaveOf(rig, SIDESHAVE) },
 };
 
 const out = { built: 'node tools/sculpt/lowhair.mjs --asset (tools/sculpt/lowhair.mjs gameHair)' };

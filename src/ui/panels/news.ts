@@ -4432,6 +4432,11 @@ export const NEWS: News[] = [
     lines: () => [`Fixed: wildermon turned from a removed kind (${listed(Object.values(REMOVED_KINDS).map((k) => k.name))}) still called by that kind's name, and their carcasses and stud book records. Now: the name of the kind they became, at their stage.`],
   },
   {
+    n: 573,
+    day: '2026-11-13',
+    lines: () => [`New: hairstyle ${HAIRSTYLES.find((h) => h.id === 'sideshave')?.name} (Settings, How you look: Customize character).`],
+  },
+  {
     n: 572,
     day: '2026-11-13',
     lines: () => [`New: hairstyle ${HAIRSTYLES.find((h) => h.id === 'shag')?.name} (character creator; Settings, Appearance: Customize character).`],
