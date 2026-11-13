@@ -4416,6 +4416,14 @@ export const NEWS: News[] = [
     ],
   },
   {
+    n: 562,
+    day: '2026-11-13',
+    lines: () => [
+      'Fixed: settlement workers on a staircase of flights in a line (each flight\'s head the next one\'s foot): up to every storey of it, off either side at a landing, and down from the top. '
+        + 'Was: storeys between two flights out of reach (Idle: no stairs up to storey 4), top storey with no way down (Idle: no stairs down).',
+    ],
+  },
+  {
     n: 561,
     day: '2026-11-13',
     lines: () => [
