@@ -101,7 +101,7 @@ export function mirrorClip(c: Clip, name: string): Clip {
         ...(f.hands ? { hands: Object.fromEntries(Object.entries(f.hands).map(([s, d]) => [s === 'l' ? 'r' : 'l', d && [-d[0], d[1], d[2]]])) } : {}),
       }])),
     } : {}),
-    ...(hands ? { hands: Object.fromEntries(Object.entries(hands).map(([s, h]) => [s, h && { at: mirrorKeys(h.at, true), way: [-h.way[0], h.way[1], h.way[2]] as Euler }])) } : {}),
+    ...(hands ? { hands: Object.fromEntries(Object.entries(hands).map(([s, h]) => [s, h && { at: mirrorKeys(h.at, true), way: [-h.way[0], h.way[1], h.way[2]] as Euler, ...(h.ways ? { ways: mirrorKeys(h.ways, true) } : {}), ...(h.knuckles ? { knuckles: mirrorKeys(h.knuckles, true) } : {}) }])) } : {}),
     ...(c.tools ? { tools: swapSides(c.tools) } : {}),
     ...(c.strike ? { strike: { ...c.strike, side: c.strike.side === 'l' ? 'r' : 'l' } } : {}),
   };

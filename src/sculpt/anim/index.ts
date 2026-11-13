@@ -22,6 +22,9 @@ import { SHOOT } from './clips/shoot';
 import { FIGHT as FIGHT_CLIP } from './clips/fight';
 import { SEAT_OARS, SEAT_REINS, SEAT_SADDLE, SEAT_TILLER, SEAT_TILLER_LEFT, SEAT_TUCK } from './clips/seated';
 import { mirrorClip } from './author';
+import { SAW, SAW_LEFT } from './clips/saw';
+import { FISH, FISH_LEFT } from './clips/fish';
+import { NET, NET_LEFT } from './clips/net';
 import { ACTION_BY_ID } from '../../game/actions';
 import { clipOfJob } from './routes';
 import { strideAt } from '../../game/player';
@@ -40,6 +43,7 @@ export const CLIPS: Record<string, Clip> = {
   idle: IDLE, walk: WALK, swing: SWING, sixseven: SIXSEVEN, work: WORK, 'work-left': mirrorClip(WORK, 'work-left'), hands: HANDS, ground: GROUND,
   fight: FIGHT_CLIP, 'fight-left': mirrorClip(FIGHT_CLIP, 'fight-left'), shoot: SHOOT,
   'seat-reins': SEAT_REINS, 'seat-oars': SEAT_OARS, 'seat-tiller': SEAT_TILLER, 'seat-tiller-left': SEAT_TILLER_LEFT, saddle: SEAT_SADDLE, 'saddle-tuck': SEAT_TUCK,
+  saw: SAW, 'saw-left': SAW_LEFT, fish: FISH, 'fish-left': FISH_LEFT, net: NET, 'net-left': NET_LEFT,
 };
 /** The clip a state plays until its own is approved: the 6 7 gesture. */
 export const PLACEHOLDER = 'sixseven';
@@ -70,7 +74,9 @@ export function workClipOf(job: string | undefined): string {
  * The clips played left-handed (`lefty`), by the right-handed clip's name: its mirror. The flat figure works left-handed
  * from the two facings where its right hand's blow would cross the face (`../../render/figure.ts` lefty); so does this.
  */
-const LEFT_OF: Readonly<Record<string, string>> = { work: 'work-left', fight: 'fight-left' };
+const LEFT_OF: Readonly<Record<string, string>> = { work: 'work-left', fight: 'fight-left',
+  saw: 'saw-left', fish: 'fish-left', net: 'net-left',
+};
 /** Whether work is done left-handed from where it is seen: as the flat figure (facings three and seven). */
 const lefty = (facing: number): boolean => { const f = ((Math.round(facing) % 8) + 8) % 8; return f === 3 || f === 7; };
 
@@ -163,7 +169,7 @@ export function clipFor(pose: FigurePose, body: 'man' | 'woman' = pose.look?.gen
   // a go of a timed job: fitted to its length (the holds stretched, the blow kept: `fitTime`), a fight's swing one blow
   // a go (the placeholder as many runs as come nearest)
   if (pose.act && pose.act.length > 0) {
-    const { run } = runsOf(clip, pose.act.length, (s === 'swing' && pose.job === FIGHT) || clip === SHOOT ? 1 : Infinity);
+    const { run } = runsOf(clip, pose.act.length, (s === 'swing' && pose.job === FIGHT) || clip === SHOOT || clip.oneAGo ? 1 : Infinity);
     return { clip, t: fitTime(clip, Math.max(0, pose.act.t), run) };
   }
   // its time the island's (the figure's phase runs at six a second while it stands), each body its own way into the loop

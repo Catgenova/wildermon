@@ -4347,6 +4347,14 @@ export const NEWS: News[] = [
     ],
   },
   {
+    n: 544,
+    day: '2026-11-13',
+    lines: () => {
+      const jobs = (...clips: string[]): number => [...ACTION_BY_ID.keys()].filter((id) => clips.includes(clipOfJob(id) ?? '')).length;
+      return [`New: sawing and fishing animated on the sculpted body: ${jobs('saw', 'fish', 'net')} jobs (saw, fishing rod, fishing net); the tool drawn in hand (was: a placeholder gesture).`];
+    },
+  },
+  {
     n: 529,
     day: '2026-11-12',
     lines: () => [

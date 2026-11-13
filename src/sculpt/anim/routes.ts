@@ -13,6 +13,7 @@ import { RECIPE_BY_ID } from '../../game/recipes';
 export const CLIP_OF_TOOL: Readonly<Record<string, string>> = {
   hammer: 'work', mallet: 'work', chisel: 'work', hatchet: 'work', butchering_knife: 'work',
   awl: 'work', carving_knife: 'work', trowel: 'work', file: 'work', whetstone: 'work',
+  saw: 'saw', fishing_rod: 'fish', fishing_net: 'net',
 };
 /**
  * The clip a job in the `work` state plays, by the job (its action's id), before its tool (`CLIP_OF_TOOL`):

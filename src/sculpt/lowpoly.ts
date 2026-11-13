@@ -180,6 +180,12 @@ import CLUB from './assets/club.json';
 import SPEAR from './assets/spear.json';
 import JAVELIN from './assets/javelin.json';
 import THROWING_AXE from './assets/throwing_axe.json';
+// the saw and the sawhorse under the other palm, the fishing rod, the fishing net (tools/sculpt/gear/sawfish.mjs)
+import SAW from './assets/saw.json';
+import SAWHORSE from './assets/sawhorse.json';
+import SAWHORSE_R from './assets/sawhorse_r.json';
+import FISHING_ROD from './assets/fishing_rod.json';
+import FISHING_NET from './assets/fishing_net.json';
 import HAIR_ASSET from './assets/lowhair.json';
 import MALE_LIGHT from '../../tools/sculpt/lowlight-male.json';
 import FEMALE_LIGHT from '../../tools/sculpt/lowlight-female.json';
@@ -313,6 +319,9 @@ const PROPS: readonly PropAsset[] = [SWORD, { ...(WARHAMMER as unknown as PropAs
   // javelin; the ancient short sword drawn as the short sword
   SWORD_1H as unknown as PropAsset, SHORT_SWORD as unknown as PropAsset, { ...(SHORT_SWORD as unknown as PropAsset), id: ANCIENT_SWORD }, HUNTING_KNIFE as unknown as PropAsset,
   BATTLE_AXE as unknown as PropAsset, CLUB as unknown as PropAsset, SPEAR as unknown as PropAsset, JAVELIN as unknown as PropAsset, THROWING_AXE as unknown as PropAsset,
+  // the saw with the sawhorse under the other palm (its mirror under the right), the fishing rod and the fishing net, each
+  // in one fist (./anim/clips/saw.ts, fish.ts, net.ts); the saw's blade in its metal, the rod's wood in its wood
+  SAW as unknown as PropAsset, SAWHORSE as unknown as PropAsset, SAWHORSE_R as unknown as PropAsset, FISHING_ROD as unknown as PropAsset, FISHING_NET as unknown as PropAsset,
 ];
 const PROP_OF = new Map(PROPS.map((p) => [p.id, p]));
 /**
