@@ -13,7 +13,7 @@
 
 set local lock_timeout = '3s';
 
-create temp table gone_name (name text primary key, now text not null) on commit drop;
+create temp table gone_name (name text primary key, now text not null);
 insert into gone_name values
   ('Testa', 'crakka'), ('Skulka', 'spitta'), ('Gasha', 'carra'), ('Hamma', 'awla'), ('Bashka', 'glossa'),
   ('Executa', 'carra'), ('Shova', 'whirla'), ('Howla', 'frosta'), ('Marka', 'scorcha'), ('Wardo', 'leecha'),
@@ -31,3 +31,5 @@ update item i set extra = s.name
 update bred_record r set name = s.name
   from gone_name g join species_def s on s.id = g.now
  where r.species = g.now and lower(r.name) = lower(g.name);
+
+drop table gone_name;
