@@ -217,7 +217,7 @@ export function grown(t, k) {
 export async function writeTool(id, build, extra = () => ({})) {
   const { writeFileSync } = await import('node:fs');
   const { resolve } = await import('node:path');
-  const { gearAsset } = await import('../lowgear.mjs');
+  const { gearAsset, addBelt } = await import('../lowgear.mjs');
   const { buildRig } = await import('../lowrig.mjs');
   const args = process.argv.slice(2), at = args.indexOf('--out');
   const out = resolve(at < 0 ? new URL(`../../../src/sculpt/assets/${id}.json`, import.meta.url).pathname : args[at + 1]);
@@ -228,6 +228,8 @@ export async function writeTool(id, build, extra = () => ({})) {
   asset.contact = r5(plain.contact);
   asset.reach = +Math.hypot(...plain.contact.map((c, k) => c - plain.grip.lead[k])).toFixed(5);
   Object.assign(asset, extra(plain));
+  // carried at the belt while it is wielded as a weapon and not in hand (lowgear.mjs BELT_OF)
+  addBelt(asset, plain);
   writeFileSync(out, JSON.stringify(asset));
   console.log(`wrote ${out}: ${asset.counts.tris} triangles (${asset.counts.glowTris} more of glow), ${asset.mats.length} materials, ${plain.L.toFixed(3)} long; lead ${plain.grip.lead[1].toFixed(3)}, contact ${asset.contact.join(', ')} (d ${plain.contact.map((c, k) => (c - plain.grip.lead[k]).toFixed(3)).join(', ')}, reach ${asset.reach})`);
   return asset;

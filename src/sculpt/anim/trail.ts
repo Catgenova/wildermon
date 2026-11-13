@@ -1,11 +1,12 @@
 /**
  * The slash trail: the sweep of a held blade over a clip's downward blow, drawn as a ribbon (`../gl` drawSculptGL) between
- * the blade's point and a point along it, from where the blow starts (the clip's `strike` event) to where the blade is now,
- * its last (the `impact` event) faded out over `FADE` seconds after it. Widest at the blade, tapering to nothing at the
+ * the blade's point and a point along it (held in the right fist: both hands' lead, or a weapon in one; or in the left, a
+ * clip played left-handed), from where the blow starts (the clip's `strike` event) to where the blade is now, its last
+ * (the `impact` event) faded out over `FADE` seconds after it. Widest at the blade, tapering to nothing at the
  * tail. The blade's path is the clip's own (its strike is never stretched: `Clip.stretch`), sampled once per body and held
  * prop, so a frame costs a few interpolations; a clip with no `strike` and `impact` events, or out of that window, none.
  */
-import type { Clip } from './clip';
+import type { Clip, Side } from './clip';
 import { clipLocal } from './player';
 import { add, scl, sub, type V } from './math';
 import type { Held, Skeleton } from './skeleton';
@@ -25,7 +26,7 @@ interface Path { from: number; to: number; samples: Sample[] }
 const PATHS = new WeakMap<Clip, Map<Skeleton, Map<Held, Path | null>>>();
 
 /** The clip's blow, its blade's path for a body holding a prop: none for a clip without the events. */
-function pathOf(sk: Skeleton, c: Clip, held: Held): Path | null {
+function pathOf(sk: Skeleton, c: Clip, held: Held, side: Side): Path | null {
   let bySk = PATHS.get(c);
   if (!bySk) PATHS.set(c, (bySk = new Map()));
   let byHeld = bySk.get(sk);
@@ -36,7 +37,7 @@ function pathOf(sk: Skeleton, c: Clip, held: Held): Path | null {
   if (from === undefined || to === undefined || to <= from) { byHeld.set(held, null); return null; }
   const samples: Sample[] = [], n = Math.ceil((to - from) / STEP);
   for (let k = 0; k <= n; k++) {
-    const r = clipLocal(sk, c, from + ((to - from) * k) / n, held), g = sk.gripOf(sk.fk(r.local, r.move), held)[1];
+    const r = clipLocal(sk, c, from + ((to - from) * k) / n, held), g = sk.gripOf(sk.fk(r.local, r.move), held)[side === 'l' ? 0 : 1];
     const along = (y: number): V => add(g.at, scl(g.way, (y - held.lead) / held.scale));
     samples.push({ inner: along(held.inner ?? held.lead + INNER * (held.tip - held.lead)), tip: along(held.tip) });
   }
@@ -57,8 +58,8 @@ function bladeAt(p: Path, t: number): Sample {
  * edge and its point (the mesh's units and axes; the inner edge drawn in toward the point as the ribbon thins) and how
  * opaque it is (nought to one); none outside the blow and its fade.
  */
-export function slashTrail(sk: Skeleton, c: Clip, t: number, held: Held): Array<{ inner: V; tip: V; a: number }> | undefined {
-  const p = pathOf(sk, c, held);
+export function slashTrail(sk: Skeleton, c: Clip, t: number, held: Held, side: Side = 'r'): Array<{ inner: V; tip: V; a: number }> | undefined {
+  const p = pathOf(sk, c, held, side);
   if (!p || t < p.from || t > p.to + FADE) return undefined;
   // after the blow: faded out, the tail drawn on toward the blade as it goes
   const after = Math.max(0, (t - p.to) / FADE), head = Math.min(t, p.to), tail = p.from + (head - p.from) * 0.7 * after, fade = 1 - after * after;

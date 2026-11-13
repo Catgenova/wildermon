@@ -443,7 +443,7 @@ export function build(id, { enchanted = false } = {}) {
 export async function writeAsset(id, outDir) {
   const { writeFileSync } = await import('node:fs');
   const { resolve, join } = await import('node:path');
-  const { gearAsset } = await import('../lowgear.mjs');
+  const { gearAsset, addBelt } = await import('../lowgear.mjs');
   const { buildRig } = await import('../lowrig.mjs');
   const dir = resolve(outDir ?? new URL('../../../src/sculpt/assets', import.meta.url).pathname);
   const plain = build(id), lit = build(id, { enchanted: true });
@@ -454,6 +454,8 @@ export async function writeAsset(id, outDir) {
   a.contact = plain.contact.map(r5);
   a.ends = plain.ends.map((p) => p.map(r5));
   a.rest = 0;
+  // carried at the belt while it is wielded as a weapon and not in hand (lowgear.mjs BELT_OF)
+  addBelt(a, plain);
   const out = join(dir, `${id}.json`);
   writeFileSync(out, JSON.stringify(a));
   console.log(`wrote ${out}: ${a.counts.tris} triangles (${a.counts.glowTris} more of glow), ${a.mats.length} materials, ${plain.L.toFixed(3)} long, lead ${a.grip.lead[1]}, contact ${a.contact}`);
