@@ -2370,7 +2370,7 @@ import{$g as e,$h as t,$i as n,$m as r,$r as i,$s as a,$t as o,A as s,Ac as ee,A
       <li><b>${h.tinka.name}</b>: <b>mends</b> damaged gear in your settlement stores, most damaged first. Evolves: ${$(`tinka`)}.</li>
       <li><b>${h.middun.name}</b>: turns rotting things on the ground into <b>compost</b>. Evolves: ${$(`middun`)}.</li>
       <li><b>${h.snout.name}</b>: finds <b>buried relics</b> and marks where to dig. Taming ${h.snout.tameLevel}.</li>
-      <li><b>${h.bura.name}</b>: no task. Panniers: <b>${h.bura.pannier.join(` / `)} items</b> by stage, × its hauling blood. Open from its menu (keeper, and ranks with
+      <li><b>${h.bura.name}</b>: no task. Panniers: <b>${h.bura.pannier.join(` / `)} items</b> by stage, × its hauling blood. Open from its menu, or drag from the pack onto it (keeper, and ranks with
       ${g.stores.label} where it stands on its keeper's settlement); a store within 3 tiles for crafting and building. Crate, release, cull: panniers empty only.
       Evolves: ${$(`bura`)}; ${m(`bura`).toLowerCase()}.</li>
       <li><b>${h.wadd.name}</b>: mount; swims deep water with a rider. Evolves: ${$(`wadd`)}.</li>
