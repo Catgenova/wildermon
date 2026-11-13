@@ -11,7 +11,7 @@
  *
  * The sea's surface is flat at nought, so the stretch from the picture to the
  * screen is one plain affine map for the whole view (`paint`, for
- * `Renderer.drawSea`). A pond's is the same map raised to its level, its
+ * `WaterPainter.drawSea`). A pond's is the same map raised to its level, its
  * water laid over its floor a tile at a time (`pond`).
  *
  * The sea's pictures are kept a block at a time and made again when the ground

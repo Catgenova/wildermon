@@ -11,7 +11,7 @@
  *     (`frame_footing`). And the island's own way for a worker (`creature_way`) knew only the buildings' floors.
  *   * "unable to select the wall adjoining the bridge and 4th storey to plan a wall". A click on the deck's side of
  *     that border was the bridge's, or open air's, with nothing of the wall in its menu; and the bridge piece's hit
- *     box reached over the floor's side too (`Renderer.pickTop`). Nothing refused the wall: a pinned storey's menu on
+ *     box reached over the floor's side too (`Picker.pickTop`). Nothing refused the wall: a pinned storey's menu on
  *     the deck now has the wall of the building's tile across the border (`wallAcross`).
  *
  * So, on a copy of the manor -- two buildings five storeys high, wide staircases up to storey 4, and a marble bridge

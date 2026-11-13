@@ -860,7 +860,7 @@ export class Buildings {
   readonly floors = new Map<string, FloorTile>();
   /** Every tile that stands on piers, whoever's building it is in (`piers.ts`). */
   readonly pierTiles = new Set<string>();
-  /** Counts every change to which tiles stand on piers, for what is worked out from them and kept (`Renderer.wetPiers`). */
+  /** Counts every change to which tiles stand on piers, for what is worked out from them and kept (`WaterPainter.wetPiers`). */
   pierStamp = 0;
   /** What has been dug out under the ground floors, by tile (`tileKey`). */
   readonly cellars = new Map<string, CellarTile>();
