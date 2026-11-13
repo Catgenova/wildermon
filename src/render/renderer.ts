@@ -53,7 +53,7 @@ import { isRuneLantern } from '../game/runelantern';
 import { drawRuneGate, gateVariant, RUNE_GATE_OPENING } from './runegate';
 import { gateMiddle, gateTiles, isRuneGate, RUNE_GATE_RISE, runeGateLit } from '../game/runegate';
 import { HALF_H, HALF_W, HEIGHT_SCALE, UNITS_PER_TILE } from './iso';
-import { beastReach, HUNT_REACH, inFightReach, isFightJob, WIND_UP } from '../game/fight';
+import { beastReach, blockAt, HUNT_REACH, inFightReach, isFightJob, WIND_UP } from '../game/fight';
 import { depthOf, type View } from './view';
 import { FALLS, roofModel, type Fall, type RoofGable, type RoofModel, type RoofPt } from './roofshape';
 import { COVER_PPT, covering } from './roofing';
@@ -6905,6 +6905,7 @@ export class Renderer {
             emote: player.emote,
             emoteT: emoteAt(player.emote, player.emoteAt, performance.now() / 1000) ?? undefined,
             cast: this.spells.poseOf(PLAYER_CASTS),
+            block: blockAt(player.blockedAt, performance.now() / 1000),
             veil: this.spells.veilOf(PLAYER_CASTS),
           }),
           undefined,
@@ -6954,6 +6955,7 @@ export class Renderer {
             emote: peer.emote,
             emoteT: emoteAt(peer.emote, peer.emoteAt, performance.now() / 1000) ?? undefined,
             cast: this.spells.poseOf({ kind: 'peer', id: peer.id }),
+            block: blockAt(peer.blockedAt, performance.now() / 1000),
             veil: this.spells.veilOf({ kind: 'peer', id: peer.id }),
           }),
           undefined,
