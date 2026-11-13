@@ -162,7 +162,7 @@ const RAISED: ToolAt = { at: [-0.04, 0.07, 0.6], way: [-0.18, -0.62, 0.76], face
 const CARRIED: ToolAt = { at: [0.0, 0.06, 0.8], way: [-0.07, -0.6, 0.8], face: [0, 0.8, 0.6], slide: 2.7 };
 const R_OUT: KeyPose = { rot: { pelvis: [22, 8, 0], spine_01: [9, 3, 0], spine_02: [8, 3, 0], spine_03: [6, 2, 0], neck_01: [-8, 0, 0], head: [6, 6, 0], ...FIST_R }, move: [0, -0.05, 0.03] };
 const R_DRAWN: KeyPose = merge(R_OUT, { rot: { pelvis: [12, 2, 0], spine_01: [5, 0, 0], spine_02: [4, 0, 0], spine_03: [3, 0, 0], neck_01: [-2, 0, 0], head: [12, 8, 0] }, move: [-0.004, -0.035, -0.02] });
-const R_RAISED: KeyPose = merge(R_DRAWN, { move: [-0.004, -0.032, -0.018] });
+const R_RAISED: KeyPose = merge(R_DRAWN, { rot: {}, move: [-0.004, -0.032, -0.018] });
 const R_CARRIED: KeyPose = merge(R_OUT, { rot: { pelvis: [20, 8, 0] }, move: [0, -0.045, 0.026] });
 export const RAKE_BEATS: Beat[] = [
   { t: 0, pose: R_OUT, ease: 'inOut', stage: 'key', name: 'reached out' },
