@@ -2,10 +2,12 @@
  * Where the pictures of bodies are kept, and the frame's list of bodies to draw (`../render/figure.ts` drawStill and the
  * loops, `drawBodies`).
  *
- * A body's picture is a slot on a page: one canvas holding a grid of pictures all of one size, so the pictures kept are a
- * few large canvases rather than hundreds of small ones. A small canvas is drawn by the processor in a browser that draws
- * a large one on the graphics chip (Chrome's least is about 128 by 128), and a sculpted body copied onto one is read back
- * off the chip; on a page it stays on the chip, and putting it down on the screen is a copy from chip to chip.
+ * A body's picture is a bitmap: drawn on an offscreen canvas kept for its size and handed over whole
+ * (`transferToImageBitmap`), no copy made, where it was a canvas of its own. A small canvas is drawn by the processor in a
+ * browser that draws a large one on the graphics chip (Chrome's least is about 128 by 128), so a sculpted body copied onto
+ * one was read back off the chip, and sent up again every time it was put down; a bitmap is made where the canvas it came
+ * off was, and put down from there. Pages of many pictures on one large canvas were tried: drawing one picture again on a
+ * page that had been put down from copied the whole page first, which cost more than it saved.
  *
  * A body to draw is asked for while the frame is drawn (`ask`), the picture it had put down meanwhile, and the bodies
  * asked for are drawn together at the end of the frame.
@@ -28,87 +30,85 @@ let pinned: number | null = null;
 /** Read by the quality (`qualityStep`) once it is in. */
 export const pinnedStep = (): number | null => pinned;
 
-/* ---- pages ---------------------------------------------------------------------------------------------------- */
-
-/** Clear device pixels round each slot, so a picture put down scaled never takes in its neighbour's edge. */
-const GUTTER = 2;
-/** Slots a page holds, at most, and the side of a page, at most. */
-const SLOTS = 1;
-const PAGE_SIDE = 2048;
-
-interface Page { canvas: HTMLCanvasElement; g: CanvasRenderingContext2D; cols: number; rows: number; free: number[]; used: number; size: Size }
-interface Size { w: number; h: number; pages: Page[] }
-const sizes = new Map<string, Size>();
-/** Device pixels of pages held, for the line (`bodiesLine`). */
-let pagePixels = 0;
+/* ---- pictures ------------------------------------------------------------------------------------------------- */
 
 /**
- * A picture of a body: its slot on its page (`x`, `y`, `w`, `h`, device pixels), where the feet are in it (`ox`, `oy`), the
- * device pixels to a unit of the context it was drawn for and the zoom it was drawn at, whether it is still there (a
- * picture let go has its slot given to another), and a number that changes whenever it is drawn.
+ * A picture of a body: what it is put down from (`src`, its `w` by `h` device pixels at `x`, `y`), where the feet are in
+ * it (`ox`, `oy`), the device pixels to a unit of the context it was drawn for and the zoom it was drawn at, whether it is
+ * still kept (`live`: one let go is not put down again), and a number that changes whenever it is drawn.
  */
 export interface Pic {
-  canvas: HTMLCanvasElement;
-  g: CanvasRenderingContext2D;
+  src: CanvasImageSource & { width: number; height: number };
   x: number; y: number; w: number; h: number;
   ox: number; oy: number; dev: number; zoom: number;
   live: boolean;
   ver: number;
-  page: Page;
-  slot: number;
 }
 let vers = 0;
 
-/** A slot `w` by `h` for a picture, on a page of that size with one free or a new one. */
-export function picNew(w: number, h: number, ox: number, oy: number, dev: number, zoom: number): Pic {
-  const id = `${w}x${h}`;
-  let size = sizes.get(id);
-  if (!size) sizes.set(id, (size = { w, h, pages: [] }));
-  let page = size.pages.find((p) => p.free.length);
-  if (!page) {
-    const cw = w + 2 * GUTTER, ch = h + 2 * GUTTER;
-    const cols = Math.max(1, Math.min(SLOTS, Math.floor(PAGE_SIDE / cw)));
-    const rows = Math.max(1, Math.min(Math.ceil(SLOTS / cols), Math.floor(PAGE_SIDE / ch)));
-    const canvas = document.createElement('canvas');
-    canvas.width = cols * cw;
-    canvas.height = rows * ch;
-    page = { canvas, g: canvas.getContext('2d') as CanvasRenderingContext2D, cols, rows, free: [], used: 0, size };
-    for (let i = cols * rows - 1; i >= 0; i--) page.free.push(i);
-    size.pages.push(page);
-    pagePixels += canvas.width * canvas.height;
-  }
-  const slot = page.free.pop() as number;
-  page.used++;
-  const cw = w + 2 * GUTTER, ch = h + 2 * GUTTER;
-  return { canvas: page.canvas, g: page.g, x: (slot % page.cols) * cw + GUTTER, y: Math.floor(slot / page.cols) * ch + GUTTER, w, h, ox, oy, dev, zoom, live: true, ver: ++vers, page, slot };
-}
+/** Whether pictures are made as bitmaps (`OffscreenCanvas.transferToImageBitmap`), as wherever there is an offscreen canvas. */
+const BITMAPS = typeof OffscreenCanvas !== 'undefined' && typeof OffscreenCanvas.prototype.transferToImageBitmap === 'function';
+/** The canvas each size of picture is drawn on before it is handed over as a bitmap: one a size, kept. */
+const pads = new Map<string, { c: OffscreenCanvas | HTMLCanvasElement; g: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D; at: number }>();
+/** Device pixels of pictures held, for the line (`bodiesLine`). */
+let held = 0;
 
-/** Let a picture go: its slot to the next asked for, and its page with it once the page is empty. */
+/** A picture `w` by `h`, not yet drawn: nothing to put down until it is (`picBegin`, `picEnd`). */
+export function picNew(w: number, h: number, ox: number, oy: number, dev: number, zoom: number): Pic {
+  return { src: EMPTY, x: 0, y: 0, w, h, ox, oy, dev, zoom, live: true, ver: ++vers };
+}
+const EMPTY = { width: 0, height: 0 } as unknown as Pic['src'];
+
+/** Let a picture go: its bitmap closed, so the memory goes back at once. */
 export function picDrop(p: Pic | null | undefined): void {
   if (!p?.live) return;
   p.live = false;
-  const page = p.page;
-  page.free.push(p.slot);
-  page.used--;
-  if (page.used > 0) return;
-  const size = page.size;
-  size.pages.splice(size.pages.indexOf(page), 1);
-  pagePixels -= page.canvas.width * page.canvas.height;
-  page.canvas.width = page.canvas.height = 0;
-  if (!size.pages.length) sizes.delete(`${size.w}x${size.h}`);
+  if (p.src !== EMPTY) held -= p.w * p.h;
+  if (typeof ImageBitmap !== 'undefined' && p.src instanceof ImageBitmap) p.src.close();
+  p.src = EMPTY;
 }
 
-/** Ready a picture's slot to be drawn into: cleared, held to the slot, the feet at the context's nought. Undone by `g.restore()`. */
+/**
+ * The context to draw picture `p` on: cleared, held to its size, the feet at its nought. Then `picEnd`, which takes what
+ * was drawn as the picture.
+ */
 export function picBegin(p: Pic): CanvasRenderingContext2D {
-  const g = p.g;
+  const id = `${p.w}x${p.h}`;
+  let pad = pads.get(id);
+  if (!pad) {
+    const c = BITMAPS ? new OffscreenCanvas(p.w, p.h) : document.createElement('canvas');
+    c.width = p.w;
+    c.height = p.h;
+    pad = { c, g: c.getContext('2d') as CanvasRenderingContext2D, at: 0 };
+    pads.set(id, pad);
+  }
+  pad.at = performance.now();
+  if (pads.size > 4) for (const [k, v] of pads) if (k !== id && pad.at - v.at > 5000) pads.delete(k);
+  const g = pad.g as CanvasRenderingContext2D;
   g.save();
   g.setTransform(1, 0, 0, 1, 0, 0);
-  g.clearRect(p.x - GUTTER, p.y - GUTTER, p.w + 2 * GUTTER, p.h + 2 * GUTTER);
-  g.beginPath();
-  g.rect(p.x, p.y, p.w, p.h);
-  g.clip();
-  g.setTransform(p.dev, 0, 0, p.dev, p.x + p.ox, p.y + p.oy);
+  g.clearRect(0, 0, p.w, p.h);
+  g.setTransform(p.dev, 0, 0, p.dev, p.ox, p.oy);
   return g;
+}
+/** What was drawn since `picBegin(p)` taken as `p`'s picture (unless not to `keep`, a batch's first go): the pad's own bitmap, handed over without a copy; or, with no offscreen canvas, a copy. */
+export function picEnd(p: Pic, keep = true): void {
+  const pad = pads.get(`${p.w}x${p.h}`);
+  if (!pad) return;
+  (pad.g as CanvasRenderingContext2D).restore();
+  if (!p.live || !keep) return;
+  if (p.src !== EMPTY) held -= p.w * p.h;
+  if (typeof ImageBitmap !== 'undefined' && p.src instanceof ImageBitmap) p.src.close();
+  if (BITMAPS) p.src = (pad.c as OffscreenCanvas).transferToImageBitmap();
+  else {
+    const c = document.createElement('canvas');
+    c.width = p.w;
+    c.height = p.h;
+    c.getContext('2d')?.drawImage(pad.c as HTMLCanvasElement, 0, 0);
+    p.src = c;
+  }
+  held += p.w * p.h;
+  p.ver = ++vers;
 }
 
 /**
@@ -123,14 +123,9 @@ export function picPut(ctx: CanvasRenderingContext2D, p: Pic, sx: number, sy: nu
     y = Math.round(y * p.dev) / p.dev;
   }
   const w = p.w * s, h = p.h * s;
-  ctx.drawImage(p.canvas, p.x, p.y, p.w, p.h, x, y, w, h);
+  if (p.src !== EMPTY) ctx.drawImage(p.src, p.x, p.y, p.w, p.h, x, y, w, h);
   return { x, y, w, h };
 }
-
-/** Mark a picture drawn afresh. */
-export const picDrawn = (p: Pic): void => {
-  p.ver = ++vers;
-};
 
 /* ---- the frame's bodies to draw ---------------------------------------------------------------------------------- */
 
@@ -176,7 +171,7 @@ export function spent(ms: number, n: number, left: number): void {
 }
 
 export const bodyClock = (): number => clock.now();
-export const pagesHeld = (): number => pagePixels;
+export const picturesHeld = (): number => held;
 
 /* ---- pictures kept for a loop ------------------------------------------------------------------------------------- */
 

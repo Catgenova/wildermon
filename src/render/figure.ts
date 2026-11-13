@@ -13,7 +13,7 @@ import {
 import { HALF_H, HALF_W, HEIGHT_SCALE, UNITS_PER_TILE } from './iso';
 import { rarityOf } from '../game/items';
 import { BASE_SPEED, CADENCE } from '../game/player';
-import { ask, asked, bodyClock, KeptPics, picBegin, picDrawn, picDrop, picNew, picPut, spent, takeAsked, type Job, type Pic } from './bodies';
+import { ask, asked, bodyClock, KeptPics, picBegin, picDrop, picEnd, picNew, picPut, spent, takeAsked, type Job, type Pic } from './bodies';
 import type { GlTile } from '../sculpt/gl';
 export { bodyKnobs } from './bodies';
 
@@ -12707,9 +12707,9 @@ function bodyJob(key: string, prio: number, late: number, pose: FigurePose, kit:
  * let fade over, so he shows through it (`seeThrough` in `./furniture`). The
  * picture is `canvas`'s `sx`, `sy`, `sw`, `sh`, and `key` names it.
  */
-export function figurePicture(id: string): { ctx: CanvasRenderingContext2D; canvas: HTMLCanvasElement; sx: number; sy: number; sw: number; sh: number; key: object; x: number; y: number; w: number; h: number; ver: number } | null {
+export function figurePicture(id: string): { ctx: CanvasRenderingContext2D; canvas: Pic['src']; sx: number; sy: number; sw: number; sh: number; key: object; x: number; y: number; w: number; h: number; ver: number } | null {
   const s = shown.get(id);
-  return s?.pic.live ? { ...s.put, canvas: s.pic.canvas, sx: s.pic.x, sy: s.pic.y, sw: s.pic.w, sh: s.pic.h, key: s.pic, ver: s.pic.ver } : null;
+  return s?.pic.live ? { ...s.put, canvas: s.pic.src, sx: s.pic.x, sy: s.pic.y, sw: s.pic.w, sh: s.pic.h, key: s.pic, ver: s.pic.ver } : null;
 }
 
 function drawStill(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose, kit: Kit, r: Rig, facing: number, changing: boolean, ink: number, now: number, still = false): void {
@@ -12956,7 +12956,7 @@ export function drawBodies(): void {
       for (let m = i; m < j; m++) {
         GLB.rec = [];
         const pic = picNew(jobs[m].w, jobs[m].h, jobs[m].ox, jobs[m].oy, jobs[m].dev, jobs[m].zoom);
-        drawInto(pic, jobs[m]);
+        drawInto(pic, jobs[m], false);
         recs.push(GLB.rec);
         pics.push(pic);
       }
@@ -12978,18 +12978,17 @@ export function drawBodies(): void {
   }
   spent(bodyClock() - t0, jobs.length, 0);
 }
-/** A body drawn into its picture's slot. */
-function drawInto(pic: Pic, job: Job): void {
+/** A body drawn into its picture (or, not to `keep`, drawn and let go: a batch's first go). */
+function drawInto(pic: Pic, job: Job, keep = true): void {
   const g = picBegin(pic);
   try {
     job.draw(g);
   } finally {
-    g.restore();
+    picEnd(pic, keep);
   }
 }
 /** A body's picture drawn: counted, and given to whatever asked for it. */
 function finished(pic: Pic, job: Job): void {
-  picDrawn(pic);
   figureStats.redraws++;
   job.done(pic);
 }
