@@ -18,6 +18,7 @@ import { SIXSEVEN } from './clips/sixseven';
 import { WORK } from './clips/work';
 import { HANDS } from './clips/hands';
 import { GROUND } from './clips/ground';
+import { SHOOT } from './clips/shoot';
 import { FIGHT as FIGHT_CLIP } from './clips/fight';
 import { mirrorClip } from './author';
 import { ACTION_BY_ID } from '../../game/actions';
@@ -34,7 +35,7 @@ import { UNITS_PER_TILE } from '../../render/iso';
  */
 export type State = 'idle' | 'walk' | 'swing' | 'work' | 'fight' | 'meditate' | 'emote' | 'cast';
 /** Every clip, by name (the authoring tools find a clip here, `tools/sculpt/lowanim.mjs --clip <name>`). */
-export const CLIPS: Record<string, Clip> = { idle: IDLE, walk: WALK, swing: SWING, sixseven: SIXSEVEN, work: WORK, 'work-left': mirrorClip(WORK, 'work-left'), hands: HANDS, ground: GROUND, fight: FIGHT_CLIP, 'fight-left': mirrorClip(FIGHT_CLIP, 'fight-left') };
+export const CLIPS: Record<string, Clip> = { idle: IDLE, walk: WALK, swing: SWING, sixseven: SIXSEVEN, work: WORK, 'work-left': mirrorClip(WORK, 'work-left'), hands: HANDS, ground: GROUND, fight: FIGHT_CLIP, 'fight-left': mirrorClip(FIGHT_CLIP, 'fight-left'), shoot: SHOOT };
 /** The clip a state plays until its own is approved: the 6 7 gesture. */
 export const PLACEHOLDER = 'sixseven';
 /**
@@ -81,6 +82,8 @@ const FIGHT = 'attack_creature';
 const BOTH_HANDS = new Set(['spear', 'javelin']);
 /** The weapon a fight is fought with, if the pose is in one. */
 const fightWeapon = (pose: FigurePose) => (pose.job === FIGHT && pose.gear?.weapon ? WEAPON_BY_ID.get(pose.gear.weapon.id) : undefined);
+/** Whether a pose is a fight with a bow in hand (an archery weapon: one that shoots arrows): it plays the shot (`SHOOT`). */
+const shoots = (pose: FigurePose): boolean => !!fightWeapon(pose)?.ammo;
 /** Whether a pose's job is swung overhead in both hands. */
 const swings = (pose: FigurePose): boolean => {
   if (SWING_JOBS.has(pose.job ?? '')) return true;
@@ -89,7 +92,7 @@ const swings = (pose: FigurePose): boolean => {
 };
 /**
  * Whether a pose is a fight with a weapon swung in one hand (a knife, a sword, a hatchet, a club, a throwing axe): the
- * one-handed fight clip (`./clips/fight.ts`) with it in the striking fist (`toolsIn`). A bow, and bare hands, keep the
+ * one-handed fight clip (`./clips/fight.ts`) with it in the striking fist (`toolsIn`). A bow plays the shot (`shoots`); bare hands keep the
  * state's own.
  */
 export const ONE_HAND = (pose: FigurePose): boolean => {
@@ -146,14 +149,14 @@ export const walkPhase = (c: Clip, t: number, body: 'man' | 'woman', gait = 0): 
  * the game carries the body over (`walkTime`).
  */
 export function clipFor(pose: FigurePose, body: 'man' | 'woman' = pose.look?.gender === 'woman' ? 'woman' : 'man'): { clip: Clip; t: number } | undefined {
-  const s = ON ? stateOf(pose) : undefined, name = s === 'work' ? workClipOf(pose.job) : s === 'fight' && ONE_HAND(pose) ? 'fight' : s && CLIP_OF[s];
+  const s = ON ? stateOf(pose) : undefined, name = s === 'work' ? workClipOf(pose.job) : s === 'fight' && shoots(pose) ? SHOOT.name : s === 'fight' && ONE_HAND(pose) ? 'fight' : s && CLIP_OF[s];
   const clip = name ? CLIPS[(lefty(pose.facing) && LEFT_OF[name]) || name] : undefined;
   if (!clip) return undefined;
   if (s === 'walk') return { clip, t: walkTime(clip, pose.phase, body, pose.gait ?? 0) };
   // a go of a timed job: fitted to its length (the holds stretched, the blow kept: `fitTime`), a fight's swing one blow
   // a go (the placeholder as many runs as come nearest)
   if (pose.act && pose.act.length > 0) {
-    const { run } = runsOf(clip, pose.act.length, s === 'swing' && pose.job === FIGHT ? 1 : Infinity);
+    const { run } = runsOf(clip, pose.act.length, (s === 'swing' && pose.job === FIGHT) || clip === SHOOT ? 1 : Infinity);
     return { clip, t: fitTime(clip, Math.max(0, pose.act.t), run) };
   }
   // its time the island's (the figure's phase runs at six a second while it stands), each body its own way into the loop
@@ -168,7 +171,7 @@ export const SWING_TOOL = 'pickaxe';
  */
 export function heldIn(pose: FigurePose): string | undefined {
   const c = clipFor(pose);
-  if (!c?.clip.grip) return undefined;
+  if (!c?.clip.grip && !c?.clip.wields) return undefined;
   return pose.job === FIGHT ? pose.gear?.weapon?.id : SWING_JOBS.has(pose.job ?? '') ? SWING_TOOL : undefined;
 }
 
@@ -248,7 +251,9 @@ export function animate(sk: Skeleton, pose: FigurePose, figure: () => Array<M3 |
     const hold = p.clip.tools ? toolsIn(pose, sk.body) : undefined, side = p.clip.strike?.side ?? 'r', other = side === 'r' ? 'l' : 'r';
     const id = hold?.tools[side], ref = p.clip.tools?.[side];
     const d = tools && id && ref && id !== ref ? shiftOf(sk, p.clip, tools(id), tools(ref), id) : undefined;
-    return clipLocal(sk, p.clip, p.t, p.clip.grip ? held : undefined, tools, { ids: hold?.tools, ...(d ? { shift: { [other]: d } } : {}) });
+    // (a clip that wields what is in hand: both fists reached as they close on its grip)
+    const wield = p.clip.wields && held ? { hold: { l: held, r: held } } : {};
+    return clipLocal(sk, p.clip, p.t, p.clip.grip ? held : undefined, tools, { ids: hold?.tools, ...(d ? { shift: { [other]: d } } : {}), ...wield });
   };
   const now: Local = c ? play(c) : { local: figure(), move: [0, 0, 0] };
   if (!pose.id) return now;
