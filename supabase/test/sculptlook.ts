@@ -62,6 +62,8 @@ check('the creator offers Bald and every one of them, by name', same(HAIRSTYLES,
   HAIRSTYLES.map((h) => h.name).join(', '));
 check('every hairstyle there is a mesh for and bald', HAIRSTYLES.length === INDEX.styles.length + 1, HAIRSTYLES.map((h) => h.id).join());
 check('the pompadour among them', HAIRSTYLES.some((h) => h.id === 'pompadour' && h.name === 'Pompadour'), HAIRSTYLES.map((h) => h.id).join());
+check('the hairstyles and bald', HAIRSTYLES.length === INDEX.styles.length + 1, HAIRSTYLES.map((h) => h.id).join());
+check('cornrows among them', HAIRSTYLES.some((h) => h.id === 'cornrows' && h.name === 'Cornrows'), HAIRSTYLES.map((h) => h.id).join());
 check('the ids the island checks are the bodies and the hairstyles', same(Object.keys(LOOK_TABLES), ['gender', 'hair']));
 
 /* ---- the ramps ------------------------------------------------------------------------------------- */

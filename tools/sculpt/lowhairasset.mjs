@@ -22,6 +22,8 @@ import { crewOf } from './lowcrew.mjs';
 import CREW from './hairs/crew.mjs';
 import { mohawkOf } from './lowmohawk.mjs';
 import MOHAWK from './hairs/mohawk.mjs';
+import { cornrowsOf } from './lowcornrows.mjs';
+import CORNROWS from './hairs/cornrows.mjs';
 
 const braidHull = carveBraid();
 const BUILDERS = {
@@ -32,6 +34,7 @@ const BUILDERS = {
   topknot: { name: TOPKNOT.name, build: (rig) => buildTopknot(rig, TOPKNOT) },
   crew: { name: CREW.name, build: (rig) => crewOf(rig, CREW) },
   mohawk: { name: MOHAWK.name, build: (rig) => mohawkOf(rig, MOHAWK) },
+  cornrows: { name: CORNROWS.name, build: (rig) => cornrowsOf(rig) },
 };
 
 const out = { built: 'node tools/sculpt/lowhair.mjs --asset (tools/sculpt/lowhair.mjs gameHair)' };
