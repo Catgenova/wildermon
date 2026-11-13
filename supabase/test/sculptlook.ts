@@ -142,7 +142,8 @@ const OLD_HAIR = ['bald', 'crop', 'short', 'bowl', 'side', 'swept', 'fringe', 'c
 const hairNow = OLD_HAIR.map((h) => cleanLook({ hair: h }).hair);
 check('every old haircut to one there is a mesh for', hairNow.every((h) => HAIRSTYLES.some((s) => s.id === h)), OLD_HAIR.map((h, i) => `${h}>${hairNow[i]}`).join(' '));
 check('short to the swept back, long to the braid, bald and the tonsure to bald',
-  cleanLook({ hair: 'crop' }).hair === 'swept' && cleanLook({ hair: 'ponytail' }).hair === 'braid' && cleanLook({ hair: 'tonsure' }).hair === 'bald');
+  cleanLook({ hair: 'crop' }).hair === 'swept' && cleanLook({ hair: 'bun' }).hair === 'braid' && cleanLook({ hair: 'tonsure' }).hair === 'bald');
+check('the ponytail to the high ponytail', cleanLook({ hair: 'ponytail' }).hair === 'ponytail');
 check('long and loose to the shoulder length', cleanLook({ hair: 'long' }).hair === 'warrior');
 check('a bowl cut and a fringe to the bob', cleanLook({ hair: 'bowl' }).hair === 'bob' && cleanLook({ hair: 'fringe' }).hair === 'bob');
 check('the top knot to the top knot', cleanLook({ hair: 'topknot' }).hair === 'topknot');
