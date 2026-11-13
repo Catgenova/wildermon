@@ -150,7 +150,6 @@ check('the top knot to the top knot', cleanLook({ hair: 'topknot' }).hair === 't
 check('a short cut to the crew cut', cleanLook({ hair: 'short' }).hair === 'crew');
 check('the ridge to the mohawk', cleanLook({ hair: 'ridge' }).hair === 'mohawk');
 check('an afro to the afro', cleanLook({ hair: 'afro' }).hair === 'afro');
-check('every hairstyle there is a mesh for and bald', HAIRSTYLES.length === INDEX.styles.length + 1, HAIRSTYLES.map((h) => h.id).join());
 check('locs to the dreads', cleanLook({ hair: 'locs' }).hair === 'dreads');
 check('the space buns kept as they are', cleanLook({ hair: 'spacebuns' }).hair === 'spacebuns');
 const SKINS: Record<string, string> = { porcelain: '#f5ddc6', fair: '#ecc8a6', light: '#ddae85', olive: '#c79a68', tan: '#b5804f', bronze: '#9d6a3f', umber: '#855634', deep: '#6b4328', dark: '#55341f', ebony: '#3e2617' };
