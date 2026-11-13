@@ -20,7 +20,7 @@ const HALF = LENGTH / 2;
 /** From a hand over the spot to its dig landing, and the dig drawn back: seconds. */
 const DIG = 0.3, DRAW = 0.45;
 /** Each foot rolled up onto its toes about the ball, degrees (the toes kept flat on the ground). */
-const TOES = 70;
+export const TOES = 70;
 
 /**
  * The arms solved on him (the palm's middle, the fingers' way and the palm's face) over the right hand's half: over the
@@ -44,7 +44,7 @@ const ARMS_DRAW: Record<string, Euler> = {
  * about 70 degrees from upright, as little as puts the fingertips on the ground: the arms are short), the shoulders let
  * forward and down, the neck raised so the head looks down at the hands from over the shoulders.
  */
-const KNELT: KeyPose = {
+export const KNELT: KeyPose = {
   rot: {
     pelvis: [40, 0, 0], spine_01: [13, 0, 0], spine_02: [11, 0, 0], spine_03: [9, 0, 0], clavicle_l: [28, 0, 0], clavicle_r: [28, 0, 0], neck_01: [-32, 0, 0], neck_02: [-14, 0, 0], head: [14, 0, 0],
     thigh_l: [30, 0, -10], thigh_r: [30, 0, 10], calf_l: [-90, 0, 0], calf_r: [-90, 0, 0],

@@ -21,6 +21,7 @@ import { GROUND } from './clips/ground';
 import { SHOOT } from './clips/shoot';
 import { FIGHT as FIGHT_CLIP } from './clips/fight';
 import { SEAT_OARS, SEAT_REINS, SEAT_SADDLE, SEAT_TILLER, SEAT_TILLER_LEFT, SEAT_TUCK } from './clips/seated';
+import { BRUSH_CLOTH, BRUSH_FLOOR, BRUSH_ITEM, BRUSH_WALL, ROPE, SEW } from './clips/handwork';
 import { mirrorClip } from './author';
 import { ACTION_BY_ID } from '../../game/actions';
 import { clipOfJob } from './routes';
@@ -40,6 +41,8 @@ export const CLIPS: Record<string, Clip> = {
   idle: IDLE, walk: WALK, swing: SWING, sixseven: SIXSEVEN, work: WORK, 'work-left': mirrorClip(WORK, 'work-left'), hands: HANDS, ground: GROUND,
   fight: FIGHT_CLIP, 'fight-left': mirrorClip(FIGHT_CLIP, 'fight-left'), shoot: SHOOT,
   'seat-reins': SEAT_REINS, 'seat-oars': SEAT_OARS, 'seat-tiller': SEAT_TILLER, 'seat-tiller-left': SEAT_TILLER_LEFT, saddle: SEAT_SADDLE, 'saddle-tuck': SEAT_TUCK,
+  // the handwork (./clips/handwork.ts): sewing, brushing a wall, a floor and the work in hand, laying up a rope; each mirrored left-handed
+  ...Object.fromEntries([SEW, BRUSH_WALL, BRUSH_FLOOR, BRUSH_ITEM, BRUSH_CLOTH, ROPE].flatMap((c) => [[c.name, c], [`${c.name}-left`, mirrorClip(c, `${c.name}-left`)]])),
 };
 /** The clip a state plays until its own is approved: the 6 7 gesture. */
 export const PLACEHOLDER = 'sixseven';
@@ -70,7 +73,10 @@ export function workClipOf(job: string | undefined): string {
  * The clips played left-handed (`lefty`), by the right-handed clip's name: its mirror. The flat figure works left-handed
  * from the two facings where its right hand's blow would cross the face (`../../render/figure.ts` lefty); so does this.
  */
-const LEFT_OF: Readonly<Record<string, string>> = { work: 'work-left', fight: 'fight-left' };
+const LEFT_OF: Readonly<Record<string, string>> = {
+  work: 'work-left', fight: 'fight-left',
+  ...Object.fromEntries(['sew', 'brush-wall', 'brush-floor', 'brush-item', 'brush-cloth', 'rope'].map((n) => [n, `${n}-left`])),
+};
 /** Whether work is done left-handed from where it is seen: as the flat figure (facings three and seven). */
 const lefty = (facing: number): boolean => { const f = ((Math.round(facing) % 8) + 8) % 8; return f === 3 || f === 7; };
 
@@ -120,7 +126,7 @@ const FADE = 0.2;
  * Seconds a fade into or out of a clip takes where that is longer than `FADE`, its feet kept planted throughout where
  * the two clips stand them (`plantBetween`): getting down onto the knees at the ground and up off them.
  */
-const SETTLE: Readonly<Record<string, number>> = { ground: 0.55 };
+const SETTLE: Readonly<Record<string, number>> = { ground: 0.55, 'brush-floor': 0.55, 'brush-floor-left': 0.55 };
 /** Seconds after a long fade lands over which the clip's own motion is let go into from rest. */
 const RELEASE = 0.25;
 /** The legs' bones, which a long fade keeps on its own pace (the root's too); the rest lead or trail them. */

@@ -8,11 +8,14 @@ import { RECIPE_BY_ID } from '../../game/recipes';
 /**
  * The clip a job in the `work` state plays, by the tool it is done with (its action's `tool`, `../../game/actions.ts`):
  * the strike at the bench (`work`) for the tools struck with or held to the work in one hand; any other tool, or none,
- * the state's own (`./index.ts` `CLIP_OF.work`). A later clip for a family of tools adds its rows.
+ * the state's own (`./index.ts` `CLIP_OF.work`); a needle's jobs sewn (`sew`), the rope tool's laid up (`rope`). A later clip for a family
+ * of tools adds its rows.
  */
 export const CLIP_OF_TOOL: Readonly<Record<string, string>> = {
   hammer: 'work', mallet: 'work', chisel: 'work', hatchet: 'work', butchering_knife: 'work',
   awl: 'work', carving_knife: 'work', trowel: 'work', file: 'work', whetstone: 'work',
+  // the handwork (./clips/handwork.ts): every job done with a needle sewn, with the rope tool laid up
+  needle: 'sew', rope_tool: 'rope',
 };
 /**
  * The clip a job in the `work` state plays, by the job (its action's id), before its tool (`CLIP_OF_TOOL`):
@@ -24,6 +27,8 @@ export const CLIP_OF_TOOL: Readonly<Record<string, string>> = {
  * - the work knelt at the ground with no tool (`ground`): planting and sowing, foraging and searching, the traps, picking
  *   up, at the water's edge, tending a campfire or an ash pit. (Driving a post in and pulling it up are lifts, not ground
  *   work; cooking at a campfire keeps the state's own until a clip of its own.)
+ * - the brush's jobs by what is brushed (`./clips/handwork.ts`): a wall (`brush-wall`), a floor or the ground
+ *   (`brush-floor`), an item held in the other hand (`brush-item`, a cloth's dye `brush-cloth`).
  * A later clip for a family of jobs adds its rows.
  */
 export const CLIP_OF_JOB: Readonly<Record<string, string>> = Object.fromEntries([
@@ -53,6 +58,11 @@ export const CLIP_OF_JOB: Readonly<Record<string, string>> = Object.fromEntries(
     'build_campfire', 'light_campfire', 'fuel_campfire', 'put_out_campfire', 'take_apart_campfire',
     'take_ashes_fire', 'take_ashes_oven', 'take_ashes_smelter', 'take_ashes_kiln',
   ].map((job) => [job, 'ground']),
+  // the brush's jobs by what is brushed (./clips/handwork.ts): a wall, a floor or the ground, the work held in the other hand
+  ...['paint_wall', 'scrub_wall_paint'].map((job) => [job, 'brush-wall']),
+  ...['paint_floor', 'scrub_floor_paint', 'scrub_moss'].map((job) => [job, 'brush-floor']),
+  ...['glaze_item', 'restore_relic'].map((job) => [job, 'brush-item']),
+  ['scrub_dye', 'brush-cloth'],
 ]);
 /** Whether a job is a recipe made with no tool and not at a campfire (cooking there is done crouched at the fire). */
 const handsRecipe = (job: string): boolean => {

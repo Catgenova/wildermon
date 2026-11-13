@@ -180,6 +180,13 @@ import CLUB from './assets/club.json';
 import SPEAR from './assets/spear.json';
 import JAVELIN from './assets/javelin.json';
 import THROWING_AXE from './assets/throwing_axe.json';
+// the handwork props (tools/sculpt/gear/handwork.mjs): the needle and the cloth, the brush and the pot it glazes, the rope tool and the strands
+import NEEDLE from './assets/needle.json';
+import CLOTH_PIECE from './assets/cloth_piece.json';
+import BRUSH from './assets/brush.json';
+import WORK_POT from './assets/work_pot.json';
+import ROPE_TOOL from './assets/rope_tool.json';
+import ROPE_STRANDS from './assets/rope_strands.json';
 import HAIR_ASSET from './assets/lowhair.json';
 import MALE_LIGHT from '../../tools/sculpt/lowlight-male.json';
 import FEMALE_LIGHT from '../../tools/sculpt/lowlight-female.json';
@@ -281,6 +288,12 @@ interface PropAsset {
    * (its own frame: y from the nock to the point), drawn on the other fist (`bowDrawn`).
    */
   draw?: { tips: [V, V]; rest: V; string: number; stringMat: number; arrow: PropPart; arrowLength: number };
+  /**
+   * A strand from a point on it (its own frame) to a point on the prop in the other fist (`to.id`, that one's own frame),
+   * each end on its own hand so it stretches between them: the needle's thread to the cloth, the laid rope to the rope
+   * tool's hook. Its half width (game units) and material (and every other ribbon's, `alt`) in this prop's table.
+   */
+  tether?: { at: V; to: { id: string; at: V }; r: number; mat: number; alt?: number };
   /** What goes on the back with it while it is wielded (a bow's quiver): its points (game units) on its socket there, rigid on the upper back, its polygons from glowFrom on its glow. */
   quiver?: PropPart & { glowFrom: number; sockets: Record<'male' | 'female', Socket> };
 }
@@ -313,6 +326,8 @@ const PROPS: readonly PropAsset[] = [SWORD, { ...(WARHAMMER as unknown as PropAs
   // javelin; the ancient short sword drawn as the short sword
   SWORD_1H as unknown as PropAsset, SHORT_SWORD as unknown as PropAsset, { ...(SHORT_SWORD as unknown as PropAsset), id: ANCIENT_SWORD }, HUNTING_KNIFE as unknown as PropAsset,
   BATTLE_AXE as unknown as PropAsset, CLUB as unknown as PropAsset, SPEAR as unknown as PropAsset, JAVELIN as unknown as PropAsset, THROWING_AXE as unknown as PropAsset,
+  // the handwork props, one in each fist (./anim/clips/handwork.ts): the needle and the cloth, the brush and the pot, the rope tool and the strands
+  NEEDLE as unknown as PropAsset, CLOTH_PIECE as unknown as PropAsset, BRUSH as unknown as PropAsset, WORK_POT as unknown as PropAsset, ROPE_TOOL as unknown as PropAsset, ROPE_STRANDS as unknown as PropAsset,
 ];
 const PROP_OF = new Map(PROPS.map((p) => [p.id, p]));
 /**
@@ -897,6 +912,26 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
       for (let t = 0; t < TP.tris.length; t += 4) if (TP.tris[t + 3] < (TP.glowFrom < 0 ? Infinity : TP.glowFrom)) T3.push(TP.tris[t], TP.tris[t + 1], TP.tris[t + 2], TP.tris[t + 3]);
       const off = places[side];
       lay(V3s, TP.polys, T3, Array.from({ length: V3s.length / 3 }, () => [hand, 1]), (pi) => off + TP.polys[pi][1]);
+    }
+    // a strand from a tool to the tool in the other fist (`PropAsset.tether`), each end on its own hand: three ribbons
+    // crossed, so it shows however it lies between them
+    for (const [side, id] of Object.entries(tools) as Array<[Side, string | undefined]>) {
+      const TP = id ? TOOL_OF.get(id) : undefined, te = TP?.tether, other: Side = side === 'r' ? 'l' : 'r', OP = te && tools[other] === te.to.id ? TOOL_OF.get(te.to.id) : undefined;
+      if (!TP || !te || !OP) continue;
+      const end = (p: PropAsset, s: Side, q: V): [V, number] => {
+        const so = p.sockets[WHO][s], k = 1 / p.scale[WHO], g: V = [p.grip.lead[0], p.grip.lead[1] + (up[s] ?? 0), p.grip.lead[2]];
+        return [add(so.o, mv(so.R, [(q[0] - g[0]) * k, (q[1] - g[1]) * k, (q[2] - g[2]) * k])), AT.get(so.bone) as number];
+      };
+      const [a, ai] = end(TP, side, te.at), [b, bi] = end(OP, other, te.to.at), r = te.r / TP.scale[WHO];
+      const V3s: number[] = [], polys: Array<[number[], number]> = [], T3: number[] = [], weights: number[][] = [];
+      ([[r, 0, 0], [0, r, 0], [0, 0, r]] as V[]).forEach((w, j) => {
+        const n = V3s.length / 3;
+        for (const [p, bone] of [[a, ai], [b, bi]] as Array<[V, number]>) for (const sg of [1, -1]) { V3s.push(p[0] + sg * w[0], p[1] + sg * w[1], p[2] + sg * w[2]); weights.push([bone, 1]); }
+        const pi = polys.length;
+        polys.push([[n, n + 1, n + 3, n + 2], j === 1 && te.alt !== undefined ? te.alt : te.mat]);
+        T3.push(n, n + 1, n + 3, pi, n, n + 3, n + 2, pi);
+      });
+      lay(V3s, polys, T3, weights, (pi) => places[side] + polys[pi][1]);
     }
     const baked: Baked = { band: 1, verts: Float32Array.from(verts), tris: Uint32Array.from(tris), nVerts: verts.length / STRIDE, nTris: tris.length / 3, bones: ALL.map((b) => b.name), ms: performance.now() - t0, grid: [0, 0, 0], cell: 0, faceSkin: Float32Array.from(faceSkin) };
     if (shapes) baked.shapes = shapes;
