@@ -6541,7 +6541,7 @@ export class Renderer {
       const z = this.footOn(p.x, p.y, Math.max(0, p.level)) + Math.max(0, p.visualLevel) * WALL_HEIGHT;
       return personBody(p.x, p.y, z, this.playerFacing, 'player', {
         id: 'player', phase: p.moving ? p.walkPhase : this.anim * 6, moving: p.moving, gait: 0, facing: this.playerFacing, swimming: p.swimming, working: false,
-        look: p.look, gear: gearFrom(wornWire((slot) => game.worn(slot))),
+        look: p.look, gear: gearFrom(wornWire((slot) => game.shown(slot))),
       });
     }
     if (w.kind === 'peer') {
@@ -6749,7 +6749,7 @@ export class Renderer {
             seat: ent.seat,
             look: player.look,
             // Everything on, each piece drawn in its own material, dye and rarity.
-            gear: enchantedFrom(gearFrom(wornWire((slot) => this.game.worn(slot))), (slot) => this.game.worn(slot)?.enchant),
+            gear: enchantedFrom(gearFrom(wornWire((slot) => this.game.shown(slot))), (slot) => this.game.shown(slot)?.enchant),
             // The tool the job in hand uses (the best of its kind in the pack, `Inventory.tool`), in its own metal.
             tool: this.game.action?.state === 'performing' && this.game.action.def.tool ? toolPiece(this.game.inventory.tool(this.game.action.def.tool)) : undefined,
             // Both clocks here are `performance.now()`: the one the emote was

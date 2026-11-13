@@ -565,6 +565,14 @@ export class SettingsPanel {
     add('Mark hostile creatures',
       `Aggressive creatures and any creature hunting you: red overlay through trees and buildings, ${percent(THREAT_SHADE)} strength (${percent(THREAT_SHADE_HUNTING)} while hunting you), red marker overhead (stacked and pulsing while hunting you).`,
       () => game.settings.markThreats, (v) => (game.settings.markThreats = v));
+    add('Hide helm',
+      'Head slot not drawn on your body, for you and every other player. Helm still worn: armour and weight unchanged.',
+      () => game.settings.hideHelm,
+      (v) => {
+        game.settings.hideHelm = v;
+        game.lookPrefsChanged?.();
+      },
+    );
     add('Rings over fires, ovens, braziers, smelters and kilns', `Within ${RING_REACH} tiles: outer ring fuel (full at ${burnsFor(FIRE_CAPACITY)} of burning; oven ${burnsFor(OVEN_CAPACITY)}, brazier ${burnsFor(BRAZIER_CAPACITY)}; orange solid lit, grey dashed cold); inner ring front item progress; gold dot when something is done.`,
       () => game.settings.stationRings, (v) => (game.settings.stationRings = v));
 

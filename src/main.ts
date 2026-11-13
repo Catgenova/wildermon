@@ -604,7 +604,7 @@ const loop = new GameLoop(
       const stairs = game.atStairs();
       if (t >= moveRound || island.wordDue(player.x, player.y, player.level, t, stairs)) {
         moveRound = t + MOVE_ROUND;
-        const now = wornWire((slot) => game.worn(slot));
+        const now = wornWire((slot) => game.shown(slot));
         if (!sameWorn(now, wearing)) wearing = now;
         void island.move(player.x, player.y, player.level, t, wearing, stairs, player.takeTurns());
       }

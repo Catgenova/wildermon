@@ -4416,6 +4416,13 @@ export const NEWS: News[] = [
     ],
   },
   {
+    n: 561,
+    day: '2026-11-13',
+    lines: () => [
+      'New: setting Hide helm (Settings, World view): head slot not drawn on your body, for you and every other player. Helm still worn: armour and weight unchanged.',
+    ],
+  },
+  {
     n: 550,
     day: '2026-11-13',
     lines: () => {

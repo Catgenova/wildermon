@@ -507,7 +507,7 @@ export class HealthPanel {
       swimming: false,
       working: false,
       look: p.look ?? DEFAULT_LOOK,
-      gear: gearFrom(wornWire((slot) => this.game.worn(slot))),
+      gear: gearFrom(wornWire((slot) => this.game.shown(slot))),
     };
   }
 

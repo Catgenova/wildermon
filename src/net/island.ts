@@ -4173,6 +4173,13 @@ export class Island {
     return { on: !!d.on, left: Number(d.left ?? 0) };
   }
 
+  /** Whether the head slot is left off your body as everybody draws it (`hideHelm`, `rpc_look_prefs`). */
+  async lookPrefs(hideHelm: boolean, quiet = false): Promise<void> {
+    if (!this.info) return;
+    const { error } = await rpc('rpc_look_prefs', { p_world: this.info.id, p_hide_helm: hideHelm });
+    if (error && !quiet) this.hooks.say(`The island did not hear that (${error.message}).`, 'error');
+  }
+
   async fightPrefs(stance: string, fightBack: boolean, quiet = false): Promise<void> {
     if (!this.info) return;
     const { error } = await rpc('rpc_fight_prefs', {

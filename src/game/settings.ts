@@ -158,6 +158,11 @@ export const SETTING_DEFAULTS = {
    */
   autoEat: 0,
   autoEatWorst: false,
+  /**
+   * The head slot left off your body as it is drawn, here and for every other player (`Game.shown`; the island's
+   * `player.hide_helm`, `rpc_look_prefs`). The helm is still worn: its armour and weight count.
+   */
+  hideHelm: false,
   /** Hostile creatures in red over the trees and buildings in front of them, with a marker over each (`drawThreats`). */
   markThreats: true,
   /** A ring over each fire, smelter and kiln near you: its fuel, the work in it, and a dot when something is ready (`drawStationRings`). */
