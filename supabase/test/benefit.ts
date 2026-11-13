@@ -68,6 +68,7 @@ const NOT_A_RULE: Array<{ at: string; why: string }> = [
   { at: 'two-handed weapon', why: 'the kind of weapon, which `twoHanded` says; nothing counts the hands' },
   { at: 'double door', why: 'the name of a wall, not a multiplier' },
   { at: 'double-click', why: 'a way of clicking, not a multiplier' },
+  { at: ': 6 7.', why: 'the name of an emote, said in chat; no rule counts it' },
   { at: '1 in', why: 'odds written "1 in N": the N is put in from the rule, and the one is the form of the odds' },
 ];
 

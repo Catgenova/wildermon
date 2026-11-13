@@ -291,6 +291,7 @@ export const EXECUTE: Record<'anon' | 'authenticated', readonly string[]> = {
     "rpc_leave_deed(uuid,uuid,uuid)",
     "rpc_letter(uuid,uuid,text)",
     "rpc_letters(uuid,uuid,integer)",
+    "rpc_look_prefs(uuid,boolean)",
     "rpc_market(uuid)",
     "rpc_move(uuid,double precision,double precision,integer,jsonb)",
     "rpc_my_look()",
