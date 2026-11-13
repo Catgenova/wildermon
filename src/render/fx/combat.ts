@@ -120,12 +120,12 @@ const hit: ActionFxFn = (e, k) => {
     return;
   }
   if (a.cls === 'leather') {
-    k.burst(e.at, Math.ceil(n / 2), { kind: 'dust', colour: mixHex(LEATHER_DUST, k.mat.dye(a.piece) ?? LEATHER_DUST, 0.3), size: 1.6, sizeEnd: 4.5, life: [0.3, 0.5], speed: [0.05, 0.16], up: [0, 3], gravity: -2, drag: 0.3, heading: h, cone: 2 });
+    k.burst(e.at, Math.ceil(n / 2), { kind: 'dust', colour: mixHex(LEATHER_DUST, k.mat.dye(a.piece) ?? LEATHER_DUST, 0.3), size: 1.4, sizeEnd: 3.5, life: [0.3, 0.45], speed: [0.05, 0.16], up: [0, 3], gravity: -2, drag: 0.3, heading: h, cone: 2 });
     return;
   }
   // cloth, or nothing worn there: fluff drifting down, in the cloth's dye
   const c = k.mat.dye(a.piece) ?? FLUFF;
-  k.burst(e.at, n, { kind: 'mote', colour: [c, mixHex(c, '#ffffff', 0.5)], size: 1, life: [0.45, 0.8], speed: [0.04, 0.14], up: [1, 4], gravity: 6, drag: 0.15, heading: h, cone: 2.6, jitter: 0.02, jitterZ: 1, over: true });
+  k.burst(e.at, n, { kind: 'mote', colour: [c, shadeHex(c, 0.8), mixHex(c, '#ffffff', 0.5)], size: 1.4, life: [0.45, 0.8], speed: [0.04, 0.14], up: [1, 4], gravity: 6, drag: 0.15, heading: h, cone: 2.6, jitter: 0.02, jitterZ: 1, over: true });
 };
 
 const heavy: ActionFxFn = (e, k) => {
