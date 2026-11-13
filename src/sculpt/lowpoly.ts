@@ -183,7 +183,7 @@ import THROWING_AXE from './assets/throwing_axe.json';
 import HAIR_ASSET from './assets/lowhair.json';
 import MALE_LIGHT from '../../tools/sculpt/lowlight-male.json';
 import FEMALE_LIGHT from '../../tools/sculpt/lowlight-female.json';
-import { DRAGON_SCALE, gemTone, isMetalTone, metalShades, sculptRig, viewOf, woodTone, type ChainPiece, type FigurePose, type DyedPiece, type GearPiece, type PlatePiece, type Rig } from '../render/figure';
+import { BARREL, DRAGON_SCALE, gemTone, isMetalTone, metalShades, sculptRig, seatOf, viewOf, woodTone, type ChainPiece, type FigurePose, type DyedPiece, type GearPiece, type PlatePiece, type Rig } from '../render/figure';
 import { DEFAULT_LOOK, type Look } from '../game/look';
 import { ANCIENT_SWORD } from '../game/gear';
 import { STRIDE, type Baked } from './bake';
@@ -192,7 +192,7 @@ import { bonesOf, FEMALE, heightOf, MALE, REST_EXTRAS, relaxedIdle, type Bones, 
 import { humanProportions } from './human';
 import { SH_TERMS, type LowLight, type SculptDraw, type TrailDraw } from './gl';
 import type { Material } from './sdf';
-import { animate, clipFor, CLIPS, heldIn, ONE_HAND, SWING_TOOL, toolsIn } from './anim';
+import { animate, clipFor, clipsPlaying, CLIPS, heldIn, ONE_HAND, SWING_TOOL, toolsIn, type SeatFit } from './anim';
 import { clipLocal } from './anim/player';
 import type { Side } from './anim/clip';
 import { wrap } from './anim/clip';
@@ -292,7 +292,7 @@ interface PropPart { verts: number[]; polys: Array<[number[], number]>; tris: nu
  */
 interface PropMaterial { c: string; kind: number; metal?: 'face' | 'edge'; wood?: boolean }
 /** Where the prop drawn is (`lowBaked`): in the hand, carried on the back, or at the belt. */
-type Carried = 'hand' | 'back' | 'belt';
+type Carried = 'hand' | 'back' | 'belt' | 'seat';
 const SWORD = LONG_SWORD as unknown as PropAsset;
 /**
  * The props drawn in both hands, by the id of what is held (`heldIn`): the long sword, the maul as the Runestone
@@ -864,9 +864,12 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
     });
     if (sword && PR) {
       // laid at rest on the right hand's socket, all of it on that hand, or on the back's or the belt's, all of it on the
-      // upper back or the pelvis; its glow's polygons left out
-      const so = (sword === 'back' || sword === 'belt' ? PR.sockets[WHO][sword] : undefined) ?? PR.sockets[WHO][PR.hand ?? 'r'], hand = AT.get(so.bone) as number, k = 1 / PR.scale[WHO], g = PR.grip.lead, V3s: number[] = [];
-      for (let i = 0; i < PR.verts.length; i += 3) V3s.push(...add(so.o, mv(so.R, [(PR.verts[i] - g[0]) * k, (PR.verts[i + 1] - g[1]) * k, (PR.verts[i + 2] - g[2]) * k])));
+      // upper back or the pelvis (sat, the back's); its glow's polygons left out
+      const sock = sword === 'seat' ? 'back' : sword;
+      const so = (sock === 'back' || sock === 'belt' ? PR.sockets[WHO][sock] : undefined) ?? PR.sockets[WHO][PR.hand ?? 'r'], hand = AT.get(so.bone) as number, k = 1 / PR.scale[WHO], g = PR.grip.lead, V3s: number[] = [];
+      // (sat, tipped across the back as far as keeps its low end over the seat: `seatTip`)
+      const tip = sword === 'seat' && PR.sockets[WHO].back ? seatTip(PR) : (p: V): V => p;
+      for (let i = 0; i < PR.verts.length; i += 3) V3s.push(...tip(add(so.o, mv(so.R, [(PR.verts[i] - g[0]) * k, (PR.verts[i + 1] - g[1]) * k, (PR.verts[i + 2] - g[2]) * k]))));
       // (a bow's braced string left out while it is drawn: `nock` 2)
       const T3: number[] = [], braced = nock === 2 && sword === 'hand' && PR.draw ? PR.draw.stringMat : -1;
       for (let t = 0; t < PR.tris.length; t += 4) if (PR.tris[t + 3] < PR.glowFrom && PR.polys[PR.tris[t + 3]][1] !== braced) T3.push(PR.tris[t], PR.tris[t + 1], PR.tris[t + 2], PR.tris[t + 3]);
@@ -902,6 +905,36 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
     return baked;
   }
 
+  /**
+   * How a prop carried on the back is moved while its wearer sits, so that its low end stays over the seat (the tops of the
+   * thighs, less a little of the body's height) rather than going down through the bench behind the hips and out under it,
+   * as the flat figure's did (`../render/figure.ts` SLUNG_CLEAR): raised (mesh units) as far as `SEAT_RAISE` of the body's
+   * height, and tipped across the back (degrees about the body's forward axis, through its middle) the least,
+   * five at a time and at most `SEAT_TIP`, that keeps the rest over; a long haft's end still under it is behind the body,
+   * the near side or the barrel. Kept per prop.
+   */
+  const TIPS = new Map<string, (p: V) => V>();
+  const SEAT_TIP = 20, SEAT_RAISE = 0.08;
+  function seatTip(PR: PropAsset): (p: V) => V {
+    let t = TIPS.get(PR.id);
+    if (t) return t;
+    const so = PR.sockets[WHO].back as Socket, k = 1 / PR.scale[WHO], g = PR.grip.lead, at: V[] = [];
+    for (let i = 0; i < PR.verts.length; i += 3) at.push(add(so.o, mv(so.R, [(PR.verts[i] - g[0]) * k, (PR.verts[i + 1] - g[1]) * k, (PR.verts[i + 2] - g[2]) * k])));
+    // (about the middle of it as it is carried)
+    const lo = at.reduce((m, p) => [Math.min(m[0], p[0]), Math.min(m[1], p[1]), Math.min(m[2], p[2])] as V, [Infinity, Infinity, Infinity] as V);
+    const hi = at.reduce((m, p) => [Math.max(m[0], p[0]), Math.max(m[1], p[1]), Math.max(m[2], p[2])] as V, [-Infinity, -Infinity, -Infinity] as V);
+    const c: V = [(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2], seat = BONES[AT.get('thigh_l') as number].head[1] - 0.08 * SK.height;
+    const turned = (deg: number, up = 0): ((p: V) => V) => { const R = axisAngle([0, 0, 1], deg); return (p) => add(add(c, mv(R, sub(p, c))), [0, up, 0]); };
+    const lowest = (deg: number): number => { const f = turned(deg); return at.reduce((m, p) => Math.min(m, f(p)[1]), Infinity); };
+    // (raised as far as the rest wants at a tip, up to `SEAT_RAISE` of the body's height)
+    const way = lowest(5) > lowest(-5) ? 1 : -1, rise = (deg: number): number => Math.max(0, seat - lowest(deg));
+    let a = 0;
+    while (Math.abs(a) < SEAT_TIP && rise(a) > SEAT_RAISE * SK.height) a += 5 * way;
+    t = turned(a, Math.min(rise(a), SEAT_RAISE * SK.height));
+    TIPS.set(PR.id, t);
+    return t;
+  }
+
   let G_REST: Bones | null = null;
   /** The figure's bones at the rest fitted to the body's (lowrig.mjs fitRest), for the turns the figure's bones make from it. */
   function gameRest(): Bones {
@@ -917,6 +950,65 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
     const figure = sculptRig(pose).rig;
     const idle = !pose.moving && !pose.working && !pose.swimming && !pose.driving && !pose.emote && !pose.cast;
     return idle ? relaxedIdle(figure, pose.phase / 6, pose.facing) : figure;
+  }
+
+  /**
+   * What is sat on: the body's vertices most weighted to the pelvis, a hip or the top of a thigh (the seat of the trousers,
+   * the underside of the thighs: on a bench or a thwart); and the pelvis's alone (astride, the crotch on the saddle).
+   */
+  const SEAT_V = ((): { all: number[]; pelvis: number[] } => {
+    const out = { all: [] as number[], pelvis: [] as number[] }, top = BONES[AT.get('thigh_l') as number].head[1] - 0.1 * SK.height;
+    A.weights.forEach((w, i) => {
+      let b = -1, most = 0;
+      for (let j = 0; j < w.length; j += 2) if (w[j + 1] > most) { most = w[j + 1]; b = w[j]; }
+      const name = BONES[b]?.name ?? '';
+      if (name === 'pelvis') { out.pelvis.push(i); out.all.push(i); } else if (/^(hip|thigh)_[lr]$/.test(name) && A.verts[i * 3 + 1] > top) out.all.push(i);
+    });
+    return out;
+  })();
+  /** The lowest of what is sat on (`SEAT_V`) in a pose, skinned as the GPU skins it, mesh units. */
+  function seatLow(local: Array<M3 | undefined>, move: V, astride: boolean): number {
+    const F = posed(local, move);
+    let low = Infinity;
+    for (const i of astride ? SEAT_V.pelvis : SEAT_V.all) {
+      const w = A.weights[i];
+      let y = 0;
+      for (let j = 0; j < w.length; j += 2) {
+        const b = w[j], f = F[b], S = mm(f.W, tr(BONES[b].R)), d = sub([A.verts[i * 3], A.verts[i * 3 + 1], A.verts[i * 3 + 2]], BONES[b].head);
+        y += w[j + 1] * (S[3] * d[0] + S[4] * d[1] + S[5] * d[2] + f.P[1]);
+      }
+      low = Math.min(low, y);
+    }
+    return low;
+  }
+  /**
+   * Where a body sat driving is put (`./anim` SeatFit), from its seat and the flat figure's pose on it (`rig`): the seat's
+   * top, the floor and the hips where the flat figure's are, the fists where its fists are (`Rig.fists`: on the reins, the
+   * oars' handles, the tiller's end) gripping along what they hold (an oar's loom toward its handle, the tiller toward its
+   * end, reins thumbs up and a little forward); the trunk turned as far as the flat figure's is from how it sits still.
+   */
+  /** How far into the saddle a rider's crotch goes, the game's units: its leather gives, and on the flat figure it is the thighs that rest on it. */
+  const SADDLE_SINK = 0.3;
+  function seatFit(pose: FigurePose, rig: Rig): SeatFit | undefined {
+    const seat = seatOf(pose);
+    if (!seat) return undefined;
+    const s = scale(), mesh = (g: readonly number[]): V => [-g[0] / s, A.floor + g[2] / s, g[1] / s];
+    const dir = (g: readonly number[]): V => { const v: V = [-g[0], g[2], g[1]], l = Math.hypot(...v) || 1; return [v[0] / l, v[1] / l, v[2] / l]; };
+    const reach: SeatFit['reach'] = {};
+    rig.fists?.forEach((f, k) => {
+      if (!f || f.rest) return;
+      const way = seat.hands === 'oars' ? f.haft.map((x) => (k ? -x : x)) : seat.hands === 'tiller' ? f.haft : [0, 0.35, 1];
+      reach[k ? 'r' : 'l'] = { at: mesh(f.at), way: dir(way) };
+    });
+    // the flat figure's trunk from where it would sit still on the same seat, unswayed
+    const still = sculptRig({ ...pose, moving: false, seat: pose.seat && { ...pose.seat, sway: undefined } }).rig;
+    const less = (a: readonly number[], b: readonly number[]): [number, number, number] => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+    const trunk: SeatFit['trunk'] = { pelvis: less(rig.pelvis, still.pelvis), spine: less(rig.spine, still.spine), chest: less(rig.chest, still.chest), neck: less(rig.neck, still.neck), head: less(rig.head, still.head) };
+    return {
+      // (astride, the crotch let down into the saddle's leather as far as the flat figure's thighs are)
+      seat, top: A.floor + (seat.up + rig.at[2] + rig.lift - (seat.astride ? SADDLE_SINK : 0)) / s, hips: [-rig.at[0] / s, rig.at[1] / s],
+      low: (local, move) => seatLow(local, move, !!seat.astride), reach, floor: !seat.astride, trunk,
+    };
   }
 
   /** How far the last pose drawn (`lowBones`) was lifted to stand on its lowest sole, mesh units. */
@@ -944,7 +1036,9 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
   function lowBones(pose: FigurePose, worn: readonly boolean[] = [], over?: Record<string, [number, number, number]>): Float32Array {
     // a clip where the state has one (./anim), else the figure's pose on the rig; the bones in `over` turned as it says
     // (local [rx, ry, rz] degrees: the authoring tools' still holds, `lowHoldScene`)
-    const id = heldIn(pose), { local: drawn, move } = animate(SK, pose, () => fromGame(bonesOf(rigFor(pose), P, [], REST_EXTRAS), gameRest()), id === undefined ? undefined : HELDS.get(id), (tool) => TOOL_HELD.get(tool));
+    // sat driving, put on the seat (`seatFit`) and drawn where it is put, not stood on its soles
+    const fit = seatOf(pose) && clipsPlaying() ? seatFit(pose, rigFor(pose)) : undefined;
+    const id = heldIn(pose), { local: drawn, move } = animate(SK, pose, () => fromGame(bonesOf(rigFor(pose), P, [], REST_EXTRAS), gameRest()), id === undefined ? undefined : HELDS.get(id), (tool) => TOOL_HELD.get(tool), fit);
     const local = over ? [...drawn] : drawn;
     if (over) for (const [b, e] of Object.entries(over)) { const i = AT.get(b); if (i !== undefined) local[i] = euler(e[0], e[1], e[2]); }
     const Fb = posed(local, move), F = [...Fb, ...garments.flatMap((g) => garmentFrames(BONES, g.bones, Fb))];
@@ -963,7 +1057,7 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
     };
     stand(A.verts, A.weights, A.soles);
     garments.forEach((g, k) => { if (worn[k] && g.soles) stand(g.verts, WEIGHTS[k], g.soles); });
-    const dy = A.floor - low, s = scale();
+    const dy = fit ? 0 : A.floor - low, s = scale();
     DY = dy;
     const sk = shapedOf(garments, worn);
     SHAPES_W = sk < 0 ? [] : shapeWeights(BONES, garments[sk], Fb);
@@ -1439,8 +1533,9 @@ function nockOf(pose: FigurePose, who: 'man' | 'woman', prop: PropAsset | undefi
 
 /** Everything a draw needs for a pose (`drawSculptGL`): the man's body for a man, the woman's for a woman, the garments it wears over it. */
 export function lowScene(given: FigurePose): SculptDraw {
-  const pose = dressed(given), look = pose.look ?? DEFAULT_LOOK;
-  const facing = ((Math.round(pose.facing) % 8) + 8) % 8;
+  const pose = dressed(given), look = pose.look ?? DEFAULT_LOOK, seat = seatOf(pose);
+  // (sat in something, square along it however it is turned, as the flat figure: `FigurePose.seat`)
+  const facing = (((seat ? pose.facing : Math.round(pose.facing)) % 8) + 8) % 8;
   const who = look.gender === 'woman' ? 'woman' : 'man', body = BODIES[who];
   const worn = GARMENTS.map((g) => g.wears(pose)), enchanted = GARMENTS.map((g) => g.enchanted?.(pose) ?? false), drops = GARMENTS.map((g) => g.drops?.(pose) ?? false);
   // the prop in both hands while a clip grips it (the long sword, the maul, mining's pickaxe), else carried while it is
@@ -1452,14 +1547,17 @@ export function lowScene(given: FigurePose): SculptDraw {
   const hands = toolsIn(pose, who), tools = hands?.tools ?? {}, fight = ONE_HAND(pose);
   const pieces = Object.fromEntries(Object.entries(tools).map(([s, id]) => [s, { id: id as string, piece: fight && id === weapon?.id ? weapon : id === pose.tool?.id ? pose.tool : undefined }]));
   const inHand = !!prop, carried = !inHand && weapon && !(fight && Object.values(tools).includes(weapon.id)) ? PROP_OF.get(weapon.id) : undefined;
-  const at = carried?.sockets[who === 'woman' ? 'female' : 'male'], sword: Carried | undefined = inHand ? 'hand' : at?.back ? 'back' : at?.belt ? 'belt' : undefined, drawn = sword ? prop ?? carried : undefined;
+  // (sat, one from the back tipped over the seat: 'seat')
+  const at = carried?.sockets[who === 'woman' ? 'female' : 'male'], sword: Carried | undefined = inHand ? 'hand' : at?.back ? (seat ? 'seat' : 'back') : at?.belt ? 'belt' : undefined, drawn = sword ? prop ?? carried : undefined;
   const piece: GearPiece | undefined = held === SWING_TOOL || (held !== undefined && held === pose.tool?.id) ? pose.tool : weapon;
   const lit = piece?.enchanted ? 'enchanted' : 'plain';
   const baked = body.baked(worn, sword, hairStyle(pose, look.hair), enchanted, drops, drawn?.id, tools, hands?.up, nockOf(pose, who, inHand ? prop : undefined));
   const materials = materialsOf(look, drawn, lit, piece?.material, pieces, pose.outfit?.metal, pose.outfit?.dye, USED.get(baked), kitOf(pose)), low: LowLight = { sh: SH[who], tone: toneOf(materials), fit: FIT_SKIN };
   const bones = body.bones(pose, worn), trail = (inHand && prop && trails(prop)) || fight ? body.trail(pose, lit === 'enchanted') : undefined;
   const shapes = body.shapes();
-  return { baked, bones, materials, view: viewOf(facing), blink: 0, low, ...(trail ? { trail } : {}), ...(shapes.some((w) => w > 0) ? { shapes } : {}) };
+  // astride, what of the body is behind the beast's barrel (the far leg down its flank) left out, as the flat figure's is
+  const hide = seat?.astride ? { c: BARREL.c, r: BARREL.r } : undefined;
+  return { baked, bones, materials, view: viewOf(facing), blink: 0, low, ...(trail ? { trail } : {}), ...(shapes.some((w) => w > 0) ? { shapes } : {}), ...(hide ? { hide } : {}) };
 }
 
 /** Local turns by bone name, [rx, ry, rz] degrees (as `tools/sculpt/lowrig.mjs` posed). */
