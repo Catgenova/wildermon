@@ -3,11 +3,12 @@
 // character creator offers (src/game/look.ts HAIRSTYLES, with Bald). The styles lowhair.mjs builds (its STYLES) and the
 // side braid, built by tools/sculpt/lowbraid.mjs; the bob, by tools/sculpt/lowbob.mjs (its outline fit read from
 // tools/sculpt/hairs/bob-fit-<who>.json); the pompadour, by tools/sculpt/lowpomp.mjs; the side shave, by
-// tools/sculpt/lowsideshave.mjs. A style's name is its module's
+// tools/sculpt/lowsideshave.mjs; balding and the monk cut, by tools/sculpt/lowring.mjs. A style's name is its module's
 // `name` (tools/sculpt/hairs/<id>.mjs).
 //
 //   node tools/sculpt/lowhairasset.mjs   (or node tools/sculpt/lowhair.mjs --asset)
-import { writeFileSync } from 'node:fs';
+//   node tools/sculpt/lowhairasset.mjs --only balding,monk   (those styles built, every other entry kept as written)
+import { readFileSync, writeFileSync } from 'node:fs';
 import { buildRig } from './lowrig.mjs';
 import { STYLES, buildHair, gameHair } from './lowhair.mjs';
 import { carve } from './lowhairhull.mjs';
@@ -51,6 +52,9 @@ import { twinBraidsOf } from './lowtwinbraids.mjs';
 import TWIN from './hairs/twinbraids.mjs';
 import { wavesOf } from './lowwaves.mjs';
 import WAVES from './hairs/waves.mjs';
+import { baldingOf, monkOf } from './lowring.mjs';
+import BALDING from './hairs/balding.mjs';
+import MONK from './hairs/monk.mjs';
 
 const braidHull = carveBraid();
 const BUILDERS = {
@@ -75,14 +79,19 @@ const BUILDERS = {
   sideshave: { name: SIDESHAVE.name, build: (rig) => sideshaveOf(rig, SIDESHAVE) },
   twinbraids: { name: TWIN.name, build: (rig) => twinBraidsOf(rig, TWIN) },
   waves: { name: WAVES.name, build: (rig) => wavesOf(rig, WAVES) },
+  balding: { name: BALDING.name, build: (rig) => baldingOf(rig, BALDING) },
+  monk: { name: MONK.name, build: (rig) => monkOf(rig, MONK) },
 };
 
+const file = new URL('../../src/sculpt/assets/lowhair.json', import.meta.url);
+// (--only: those styles built, the rest read back from the file as they were written)
+const args = process.argv.slice(2), only = args.includes('--only') ? args[args.indexOf('--only') + 1].split(',') : null;
+const was = only ? JSON.parse(readFileSync(file, 'utf8')) : null;
 const out = { built: 'node tools/sculpt/lowhair.mjs --asset (tools/sculpt/lowhair.mjs gameHair)' };
 for (const who of ['male', 'female']) {
   const rig = buildRig(who);
-  out[who] = Object.fromEntries(Object.entries(BUILDERS).map(([id, b]) => [id, gameHair(rig, b.build(rig))]));
+  out[who] = Object.fromEntries(Object.entries(BUILDERS).map(([id, b]) => [id, only && !only.includes(id) ? was[who][id] : gameHair(rig, b.build(rig))]));
 }
-const file = new URL('../../src/sculpt/assets/lowhair.json', import.meta.url);
 writeFileSync(file, JSON.stringify(out));
 console.log('wrote', file.pathname);
 const index = new URL('../../src/sculpt/assets/lowhair-styles.json', import.meta.url);

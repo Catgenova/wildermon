@@ -2190,11 +2190,13 @@ insert into look_option values ('hair', 'ponytail', 18, 'High ponytail', null, f
 insert into look_option values ('hair', 'sideshave', 19, 'Side shave', null, false);
 insert into look_option values ('hair', 'twinbraids', 20, 'Twin braids', null, false);
 insert into look_option values ('hair', 'waves', 21, 'Long waves', null, false);
+insert into look_option values ('hair', 'balding', 22, 'Balding', null, false);
+insert into look_option values ('hair', 'monk', 23, 'Monk cut', null, false);
 insert into look_legacy values ('gender', 'man', '{"gender":"man"}');
 insert into look_legacy values ('gender', 'woman', '{"gender":"woman"}');
 insert into look_legacy values ('gender', 'neither', '{"gender":"man"}');
 insert into look_legacy values ('hair', 'bald', '{"hair":"bald"}');
-insert into look_legacy values ('hair', 'tonsure', '{"hair":"bald"}');
+insert into look_legacy values ('hair', 'tonsure', '{"hair":"monk"}');
 insert into look_legacy values ('hair', 'crop', '{"hair":"swept"}');
 insert into look_legacy values ('hair', 'short', '{"hair":"crew"}');
 insert into look_legacy values ('hair', 'bowl', '{"hair":"bob"}');

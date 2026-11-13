@@ -4417,11 +4417,16 @@ export const NEWS: News[] = [
     ],
   },
   {
-    n: 580,
+    n: 581,
     day: '2026-11-13',
     lines: () => [
       `New: crop look at ${listed(STAGE_NAMES.slice(0, RIPE))}, on fields, garden beds and planters, winter included. Not tended this growth stage: pale soil, weeds. Tended: dark soil, water in the furrows. Ripe: unchanged.`,
     ],
+  },
+  {
+    n: 580,
+    day: '2026-11-13',
+    lines: () => [`New: hairstyles ${listed(['balding', 'monk'].map((id) => HAIRSTYLES.find((h) => h.id === id)?.name ?? id))} (character creator; Settings, Appearance: Customize character).`],
   },
   {
     n: 579,
