@@ -3261,9 +3261,9 @@ const SINK = 10.2;
  * a little with each sweep.
  */
 /** Walk-phase radians to a stroke: a stroke every second and a quarter at an unskilled swimmer's pace. */
-const SWIM_STROKE = TAU / 0.9;
+export const SWIM_STROKE = TAU / 0.9;
 /** Radians of the idle clock (six to a second) to one sweep of the hands treading water: one every second and three-quarters. */
-const TREAD_RATE = 0.6;
+export const TREAD_RATE = 0.6;
 /**
  * How high the head is held over the water treading it, in the middle of its bob, from the front or the back: the tops of
  * the shoulders break the surface at the top of each kick. Lowered to 0.62 for the stalk side on, it put them under at
@@ -11434,11 +11434,12 @@ const gearLod = (zoom: number): number => (zoom < 1.5 ? 0.5 : zoom < STILL_BELOW
  * The sculpted bodies (`src/sculpt/sculpted.ts`), every body the island draws: loaded as a chunk of their own the first
  * time they are asked for (the renderer, every frame; the character creator), and from then drawn in place of the flat
  * figure wherever a body is drawn (`drawLive`). The flat figure is drawn where they cannot be: before the chunk has
- * loaded, with no WebGL2 (`glContext`), and swimming (`drawSculpted`). Sat driving, the sculpted body is drawn where the
- * flat figure's would be among what it holds and sits in: its reins, oars and tiller drawn round it, and what of it is down
- * behind the near side of the box or the hull hidden (`drawLive`).
+ * loaded, and with no WebGL2 (`glContext`). Sat driving, the sculpted body is drawn where the flat figure's would be among
+ * what it holds and sits in: its reins, oars and tiller drawn round it, and what of it is down behind the near side of the
+ * box or the hull hidden (`drawLive`). In the water, it is drawn in two, cut at the surface: what is under it faint and
+ * what is over it among the rings on the water (`drawLive`).
  */
-const SCULPT: { on: boolean; flips: number; loading: boolean; draw: ((ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose) => boolean) | null; gen: () => number; asked: Set<string>; soft: boolean } =
+const SCULPT: { on: boolean; flips: number; loading: boolean; draw: ((ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose, water?: 'over' | 'under') => boolean) | null; gen: () => number; asked: Set<string>; soft: boolean } =
   { on: false, flips: 0, loading: false, draw: null, gen: () => 0, asked: new Set(), soft: false };
 /**
  * On or off, as asked by `by`: the island's renderer (every frame) or the character creator. On while anybody asks.
@@ -11476,8 +11477,8 @@ export const sculptedReady = (): boolean => SCULPT.on && !!SCULPT.draw;
 /** What of the sculpted bodies a kept picture depends on: whether they are on, and which bakes have landed. */
 const sculptKey = (): string => (SCULPT.on ? `s${SCULPT.flips}.${SCULPT.gen()}` : '');
 /** The sculpted body in the figure's place, where it is on, can be, and is baked. */
-const drawSculpted = (ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose): boolean =>
-  SCULPT.on && !!SCULPT.draw && !pose.swimming && SCULPT.draw(ctx, sx, sy, zoom, pose);
+const drawSculpted = (ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose, water?: 'over' | 'under'): boolean =>
+  SCULPT.on && !!SCULPT.draw && SCULPT.draw(ctx, sx, sy, zoom, pose, water);
 
 export function drawFigure(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose, opts: { ink?: number } = {}): void {
   const veil = pose.veil;
@@ -12219,6 +12220,14 @@ function foam(g: CanvasRenderingContext2D, view: View, wake: Wake[], near: boole
 const UNDERWATER: RGB = [44, 92, 104];
 const UNDERWATER_SHOWS = 0.32;
 let underPad: HTMLCanvasElement | null = null;
+/**
+ * The box round the figure's feet (its units) that what of it is under the water is drawn in: the flat figure's, and the
+ * sculpted body's (`../sculpt/gl.ts` UNDER_BOX), down to the feet of one upright in the water; and how far down the
+ * picture the sculpted body's is let fade out over, from where it is as faint as the flat figure's to where nothing is
+ * seen: what is deep in the water is not seen through it.
+ */
+const UNDER_BOX = { left: -30, right: 30, top: -24, bottom: 14 }, UNDER_SCULPT = { left: -42, right: 42, top: -30, bottom: 52 };
+const UNDER_FADE: [number, number] = [6, 40];
 
 /**
  * What of the body is under the water, drawn on a scratch picture, washed
@@ -12226,10 +12235,18 @@ let underPad: HTMLCanvasElement | null = null;
  * the surface as a shape, as a swimmer's body does.
  */
 function underwater(ctx: CanvasRenderingContext2D, parts: Part[], pal: Palette, view: View, ink: number, px: number, now: number): void {
-  if (!parts.length || typeof document === 'undefined') return;
+  if (!parts.length) return;
+  // Lined lightly: seen through the water, the edges go soft.
+  underwaterBy(ctx, UNDER_BOX, (g) => { render(g, parts, pal, view, ink * 0.5, px, now); return true; });
+}
+/**
+ * The same of whatever `draw` draws on the scratch picture, which is set to the figure's units round its feet at the scale
+ * `k` of a unit to a pixel of it, as `ctx` is: false, with nothing laid down, where it draws nothing.
+ */
+function underwaterBy(ctx: CanvasRenderingContext2D, box: typeof UNDER_BOX, draw: (g: CanvasRenderingContext2D, k: number) => boolean, fade?: [number, number]): boolean {
+  if (typeof document === 'undefined') return false;
   const t = ctx.getTransform();
   const k = Math.hypot(t.a, t.b);
-  const box = { left: -30, right: 30, top: -24, bottom: 14 };
   const w = Math.ceil((box.right - box.left) * k), h = Math.ceil((box.bottom - box.top) * k);
   underPad ??= document.createElement('canvas');
   if (underPad.width < w || underPad.height < h) {
@@ -12240,18 +12257,26 @@ function underwater(ctx: CanvasRenderingContext2D, parts: Part[], pal: Palette, 
   g.setTransform(1, 0, 0, 1, 0, 0);
   g.clearRect(0, 0, w, h);
   g.setTransform(k, 0, 0, k, -box.left * k, -box.top * k);
-  // Lined lightly: seen through the water, the edges go soft.
-  render(g, parts, pal, view, ink * 0.5, px, now);
+  if (!draw(g, k)) return false;
   g.setTransform(1, 0, 0, 1, 0, 0);
   g.globalCompositeOperation = 'source-atop';
   g.fillStyle = css(UNDERWATER, 1, 0.62);
   g.fillRect(0, 0, w, h);
+  if (fade) {
+    const f = g.createLinearGradient(0, (fade[0] - box.top) * k, 0, (fade[1] - box.top) * k);
+    f.addColorStop(0, 'rgba(0, 0, 0, 1)');
+    f.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    g.globalCompositeOperation = 'destination-in';
+    g.fillStyle = f;
+    g.fillRect(0, 0, w, h);
+  }
   g.globalCompositeOperation = 'source-over';
   ctx.save();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalAlpha = UNDERWATER_SHOWS;
   ctx.drawImage(underPad, 0, 0, w, h, t.e + box.left * k, t.f + box.top * k, w, h);
   ctx.restore();
+  return true;
 }
 
 /**
@@ -12348,9 +12373,10 @@ function ringSets(pose: FigurePose, now: number): RingSet[] {
 }
 
 function drawLive(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose, kit: Kit, r: Rig, facing: number, ink: number, now: number): void {
-  // Sat driving, the sculpted body goes in among what it holds and sits in, below; anywhere else it is the whole of it.
+  // Sat driving, the sculpted body goes in among what it holds and sits in, and in the water among the rings on it, below;
+  // anywhere else it is the whole of it.
   const seated = !!seatOf(pose);
-  if (!seated && drawSculpted(ctx, sx, sy, zoom, { ...pose, facing })) return;
+  if (!seated && !pose.swimming && drawSculpted(ctx, sx, sy, zoom, { ...pose, facing })) return;
   const look = pose.look ?? DEFAULT_LOOK;
   const b = skeleton(kit.fr, r);
   const view = viewOf(facing);
@@ -12361,7 +12387,23 @@ function drawLive(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: n
   ctx.scale(zoom, zoom);
   let made: Part[] | undefined;
   const partsNow = (): Part[] => (made ??= partsOf(kit, r, b, pose.gear, pal, facing, gearLod(zoom)));
-  if (pose.swimming) {
+  /*
+   * The sculpted body in the water, cut at the surface on the GPU (`../sculpt/lowpoly.ts` lowScene): what of it is under
+   * the surface laid down faint as the flat figure's is, the rings on the water over that, then what is over the surface
+   * with the foam round it where it goes through. Else the flat figure, cut here.
+   */
+  const sp = { ...pose, facing };
+  const sculptUnder = (g: CanvasRenderingContext2D, k: number): boolean => {
+    g.setTransform(k / zoom, 0, 0, k / zoom, -UNDER_SCULPT.left * k, -UNDER_SCULPT.top * k);
+    return drawSculpted(g, 0, 0, zoom, sp, 'under');
+  };
+  if (pose.swimming && SCULPT.on && SCULPT.draw && underwaterBy(ctx, UNDER_SCULPT, sculptUnder, UNDER_FADE)) {
+    for (const set of ringSets(pose, now)) ripple(ctx, view, set, set.moving ? kickAt(kit.fr) : TREAD_AT, kit.fr);
+    const inner = ctx.getTransform();
+    ctx.setTransform(outer);
+    drawSculpted(ctx, sx, sy, zoom, sp, 'over');
+    ctx.setTransform(inner);
+  } else if (pose.swimming) {
     const parts = partsNow();
     const above = waterline(parts, true, new Set([b.chest, ...parts.filter((p) => onJoint(p, b.arm0) || onJoint(p, b.arm1)).map((p) => p.xf)]), pal);
     const through = wakeOf(b, kit.fr, view.T), rings = [...through, ...shouldersOut(parts, b, through, view.T), ...collarOut(above, b)];

@@ -6,8 +6,8 @@
  * A body drawn frame after frame (`FigurePose.id`) is faded over a fifth of a second whenever it goes from a clip to the
  * figure's pose or to another clip, so nothing jumps; a body drawn once (no id) is posed with nothing kept.
  */
-import { viewOf, waveArmOf, type FigurePose, type Seat } from '../../render/figure';
-import { fitTime, runsOf, sampleClip, sampleKey, strideOf, type Clip, type Side } from './clip';
+import { SWIM_STROKE, viewOf, waveArmOf, type FigurePose, type Seat } from '../../render/figure';
+import { fitTime, handsAt, runsOf, sampleClip, sampleKey, strideOf, type Clip, type Side } from './clip';
 import { add, I3, mm, QI, qmat, qmul, quat, scl, slerp, tr, type M3, type Q, type V } from './math';
 import { addPose, blendLocal, blendPose, clipLocal, lookAt, plantBetween, poseAt } from './player';
 import type { Held, Pose, Skeleton } from './skeleton';
@@ -26,6 +26,7 @@ import { BODY as FLINCH, flinchClipOf } from './clips/flinch';
 import { SEAT_OARS, SEAT_REINS, SEAT_SADDLE, SEAT_TILLER, SEAT_TILLER_LEFT, SEAT_TUCK } from './clips/seated';
 import { DIG, RAKE, REAP } from './clips/dig';
 import { FRY, PRESS, QUERN, ROAST, STIR } from './clips/kitchen';
+import { SWIM, TREAD } from './clips/swim';
 import { mirrorClip } from './author';
 import { ACTION_BY_ID } from '../../game/actions';
 import { clipOfJob } from './routes';
@@ -39,9 +40,9 @@ const qinv = ([w, x, y, z]: Q): Q => [w, -x, -y, -z];
  * The states a body is drawn in that a clip can play, all stood still but the walk: doing nothing (`idle`); walking
  * (`walk`); swinging something heavy in both hands over the head (`swing`: mining; a fight with a two-handed sword, axe or
  * maul); any other job (`work`); a fight with anything else in hand (`fight`); meditating (`meditate`); an emote
- * (`emote`); casting a spell (`cast`).
+ * (`emote`); casting a spell (`cast`); in the water, swimming under way (`swim`) and treading water stopped (`tread`).
  */
-export type State = 'idle' | 'walk' | 'swing' | 'work' | 'fight' | 'meditate' | 'emote' | 'cast';
+export type State = 'idle' | 'walk' | 'swing' | 'work' | 'fight' | 'meditate' | 'emote' | 'cast' | 'swim' | 'tread';
 /** Every clip, by name (the authoring tools find a clip here, `tools/sculpt/lowanim.mjs --clip <name>`). */
 export const CLIPS: Record<string, Clip> = {
   idle: IDLE, walk: WALK, swing: SWING, sixseven: SIXSEVEN, work: WORK, 'work-left': mirrorClip(WORK, 'work-left'), hands: HANDS, ground: GROUND,
@@ -53,6 +54,7 @@ export const CLIPS: Record<string, Clip> = {
   // the kitchen's (./clips/kitchen.ts)
   quern: QUERN, 'quern-left': mirrorClip(QUERN, 'quern-left'), press: PRESS, stir: STIR, 'stir-left': mirrorClip(STIR, 'stir-left'),
   roast: ROAST, 'roast-left': mirrorClip(ROAST, 'roast-left'), fry: FRY, 'fry-left': mirrorClip(FRY, 'fry-left'),
+  swim: SWIM, tread: TREAD,
 };
 /** The clip a state plays until its own is approved: the 6 7 gesture. */
 export const PLACEHOLDER = 'sixseven';
@@ -63,7 +65,7 @@ export const PLACEHOLDER = 'sixseven';
  * any other fight the state's own; an emote plays its own clip where it has one (`emoteClipOf`), the state's otherwise.
  * (Running, and walking or running while casting, emoting or at work, keep the figure's pose: a stood clip would slide its
  * planted feet over the ground. But a hop, made on the spot moving or not as the flat figure's is; and a wave while
- * walking, the walk with the waving arm the wave's. Swimming is drawn by the flat figure; sat
+ * walking, the walk with the waving arm the wave's. Swimming plays the stroke and treading water its own (`./clips/swim.ts`); sat
  * driving plays its seat's clip, `seatClipOf`, put on the seat by `seatedLocal`.)
  */
 export const CLIP_OF: Record<State, string> = {
@@ -75,6 +77,8 @@ export const CLIP_OF: Record<State, string> = {
   meditate: PLACEHOLDER,
   emote: PLACEHOLDER,
   cast: PLACEHOLDER,
+  swim: 'swim',
+  tread: 'tread',
 };
 export { CLIP_OF_JOB, CLIP_OF_TOOL } from './routes';
 /**
@@ -183,6 +187,13 @@ const SETTLE: Readonly<Record<string, number>> = {
   // the kitchen's knelt clips (./clips/kitchen.ts)
   quern: 0.55, 'quern-left': 0.55, press: 0.55, roast: 0.55, 'roast-left': 0.55, fry: 0.55, 'fry-left': 0.55,
 };
+/**
+ * The clips played in the water (`./clips/swim.ts`), and seconds a fade between them takes: from the stroke to treading
+ * water and back, upright to lying along the surface, which in the water is not done in the time it takes to stop walking
+ * (the flat figure's `WATER_BLEND`). Into the water from the shore and out of it, `FADE` as any other.
+ */
+const WATER = new Set([SWIM.name, TREAD.name]);
+const WATER_FADE = 0.6;
 /** Seconds after a long fade lands over which the clip's own motion is let go into from rest. */
 const RELEASE = 0.25;
 /** The legs' bones, which a long fade keeps on its own pace (the root's too); the rest lead or trail them. */
@@ -194,7 +205,8 @@ const smoother = (u: number): number => { const x = Math.min(1, Math.max(0, u));
 
 /** The state a pose is in, of those a clip can play. */
 export function stateOf(pose: FigurePose): State | undefined {
-  if (pose.swimming || pose.driving) return undefined;
+  if (pose.swimming) return pose.moving ? 'swim' : 'tread';
+  if (pose.driving) return undefined;
   // (a hop is made on the spot, the legs its own, as the flat figure's; a wave over the walk, `clipFor`)
   if (pose.moving) {
     if (pose.emote === 'hop' && !pose.working && !pose.cast) return 'emote';
@@ -230,6 +242,11 @@ export function clipFor(pose: FigurePose, body: 'man' | 'woman' = pose.look?.gen
   const own = emote ? CLIPS[emote] : undefined, at = own ? { clip: own, t: Math.max(0, Math.min(1, pose.emoteT ?? 0)) * own.length } : undefined;
   if (s === 'walk') return { clip, t: walkTime(clip, pose.phase, body, pose.gait ?? 0), ...(at ? { over: at } : {}) };
   if (s === 'emote' && at) return at;
+  // in the water, a stroke to each `SWIM_STROKE` of the walk's phase (which goes as fast as the swimmer does), as the
+  // flat figure's; treading water on the island's clock, every body at the same point of its sweep as the flat figure's
+  // (the rings it leaves on the water are made where its hands are then, `../../render/figure.ts` ripple)
+  if (s === 'swim') return { clip, t: ((((pose.phase / SWIM_STROKE) % 1) + 1) % 1) * clip.length };
+  if (s === 'tread') return { clip, t: (((pose.phase / 6) % clip.length) + clip.length) % clip.length };
   // a go of a timed job: fitted to its length (the holds stretched, the blow kept: `fitTime`), a fight's swing one blow
   // a go (the placeholder as many runs as come nearest)
   if (pose.act && pose.act.length > 0) {
@@ -382,7 +399,22 @@ export function seatedLocal(sk: Skeleton, pose: FigurePose, fit: SeatFit): { loc
   return { ...out, name: clip.name };
 }
 
-type Local = { local: Array<M3 | undefined>; move: V };
+/** Finished locals and the body's shift; and how much of it is a pose in the water (`WATER`), nought to one, when any. */
+type Local = { local: Array<M3 | undefined>; move: V; wet?: number };
+/** Where two clips in the water put the hands (`Clip.hands`), w of the way from the one to the other: places and ways blended. */
+function waterHands(sk: Skeleton, a: { clip: Clip; t: number }, b: { clip: Clip; t: number }, w: number): ReturnType<typeof handsAt> {
+  const ha = handsAt(a.clip, a.t, sk.body), hb = handsAt(b.clip, b.t, sk.body);
+  if (!ha || !hb) return hb;
+  const mix = (x: V, y: V): V => [x[0] + (y[0] - x[0]) * w, x[1] + (y[1] - x[1]) * w, x[2] + (y[2] - x[2]) * w];
+  const out: ReturnType<typeof handsAt> = {};
+  for (const s of ['l', 'r'] as const) {
+    const p = ha[s], q = hb[s];
+    if (!p || !q) continue;
+    const way = mix(p.way, q.way), l = Math.hypot(...way) || 1;
+    out[s] = { at: mix(p.at, q.at), way: [way[0] / l, way[1] / l, way[2] / l] };
+  }
+  return out;
+}
 
 /** Whether a pose is part way through a blow taken on its shield (`FigurePose.block`), a shield worn, stood or walking. */
 export const blocking = (pose: FigurePose): boolean =>
@@ -500,19 +532,20 @@ export function animate(sk: Skeleton, pose: FigurePose, figure: () => Array<M3 |
     return { local, move: out.move };
   };
   const now: Local = sat ?? (c ? play(c) : { local: figure(), move: [0, 0, 0] });
+  if (c && WATER.has(c.clip.name)) now.wet = 1;
   // a blow on the shield over it all, stood (the feet kept) on a clip that stands its feet and keys none
   const stood = !sat && !!c?.clip.plant && !c.clip.feet && c.clip.name !== 'ground';
-  // (and a blow landing over that: `flinchOver`)
+  // (and a blow landing over that: `flinchOver`; in the water or not kept as it was)
   const over = (o: Local): Local => {
-    const b = blocking(pose) ? blockOver(sk, o, pose.block as number, stood) : o;
-    return flinching(pose) ? flinchOver(sk, b, pose.flinch as NonNullable<FigurePose['flinch']>, stood) : b;
+    const b = blocking(pose) ? { ...blockOver(sk, o, pose.block as number, stood), wet: o.wet } : o;
+    return flinching(pose) ? { ...flinchOver(sk, b, pose.flinch as NonNullable<FigurePose['flinch']>, stood), wet: o.wet } : b;
   };
   if (!pose.id) return over(now);
   const key = `${sk.body}|${pose.id}`, source = sat ? sat.name : c ? c.clip.name + (c.over ? `+${c.over.clip.name}` : '') : 'figure', ms = performance.now();
   let k = KEPT.get(key);
   if (k) KEPT.delete(key);
   if (!k) k = { source, out: now, from: null, at: ms };
-  else if (k.source !== source) { k.span = Math.max(SETTLE[k.source] ?? FADE, SETTLE[source] ?? FADE); k.from = k.out; k.was = k.cur; k.source = source; k.at = ms; }
+  else if (k.source !== source) { k.span = WATER.has(k.source) && WATER.has(source) ? WATER_FADE : Math.max(SETTLE[k.source] ?? FADE, SETTLE[source] ?? FADE); k.from = k.out; k.was = k.cur; k.source = source; k.at = ms; }
   k.cur = c ? { clip: c.clip, t: c.t } : undefined;
   KEPT.set(key, k);
   if (KEPT.size > MAX_KEPT) KEPT.delete(KEPT.keys().next().value as string);
@@ -537,7 +570,21 @@ export function animate(sk: Skeleton, pose: FigurePose, figure: () => Array<M3 |
         local = b.local; move = b.move; plant = plantBetween(sk, ahead, c, v);
       }
       out = sk.finish({ q: local.map((m) => m && quat(m)), move }, { plant, armsOut: -3 });
-    } else out = blendLocal(k.from, now, smooth(u));
+    } else if (k.was && c && WATER.has(k.was.clip.name) && WATER.has(c.clip.name)) {
+      /*
+       * From the stroke to treading water or back: the two clips' turns blended, and the hands put where the two put them in
+       * the water, blended there (`waterHands`), so they stay under its surface on the way rather than swinging up through
+       * it with the arms' turns (the flat figure's `mixWater`)
+       */
+      const w = smooth(u), from = k.was;
+      out = { ...sk.finish(blendPose(poseAt(sk, from.clip, from.t), poseAt(sk, c.clip, c.t), w), { free: true, hands: waterHands(sk, from, c, w) }), wet: 1 };
+    } else {
+      const w = smooth(u);
+      out = blendLocal(k.from, now, w);
+      // (going into the water or coming out of it: as far in as the fade has got)
+      const wet = (k.from.wet ?? 0) * (1 - w) + (now.wet ?? 0) * w;
+      if (wet > 0) out.wet = wet;
+    }
   }
   k.out = out;
   return over(out);

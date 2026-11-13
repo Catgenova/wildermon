@@ -124,15 +124,18 @@ function pump(): void {
  * figure; false when it cannot be yet (no WebGL2, or the look's bake not
  * landed), and the flat figure is drawn instead. Drawn at the band the zoom
  * wants if that is baked, else at the nearest band that is, the wanted one
- * queued.
+ * queued. In the water, what of a low-poly body is over its surface (`water`
+ * 'over', the default) or under it ('under'), as `lowScene` cuts it; a body
+ * of the base has no water drawn and is not drawn there.
  */
-export function drawSculptLive(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose): boolean {
+export function drawSculptLive(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose, water?: 'over' | 'under'): boolean {
   if (!glContext()) return false;
   // A man or a woman: the low-poly male or female on their own rig (`./lowpoly`), nothing to bake; neither keeps the base.
   if (hasLowBody(pose.look ?? DEFAULT_LOOK)) {
     const t = ctx.getTransform();
-    return drawSculptGL(ctx, sx, sy, zoom, lowScene(pose), { dpr: Math.sqrt(Math.abs(t.a * t.d - t.b * t.c)) || 1 });
+    return drawSculptGL(ctx, sx, sy, zoom, lowScene(pose, water), { dpr: Math.sqrt(Math.abs(t.a * t.d - t.b * t.c)) || 1 });
   }
+  if (pose.swimming) return false;
   const now = performance.now();
   const e = entryOf(pose.look ?? DEFAULT_LOOK, now);
   const wanted = bandOf(zoom);

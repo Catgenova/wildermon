@@ -606,7 +606,7 @@ const USED = new WeakMap<Baked, { used: readonly number[]; at: number }>();
  * garments it can wear (their own bones posed with the body's always, each garment's after the one before; each drawn
  * when the bake is asked for with it worn), and its hairstyles.
  */
-function lowBody(A: Asset, P: Proportions, share: number, garments: readonly GarmentAsset[], hairs: Record<string, HairAsset>, tints: ReadonlyArray<Tinted | undefined>): { baked: (worn: readonly boolean[], sword?: Carried, style?: string, lit?: readonly boolean[], drop?: readonly boolean[], prop?: string, tools?: Partial<Record<Side, string>>, up?: Partial<Record<Side, number>>, nock?: number) => Baked; bones: (pose: FigurePose, worn?: readonly boolean[], over?: Record<string, [number, number, number]>) => Float32Array; shapes: () => number[]; trail: (pose: FigurePose, lit: boolean) => TrailDraw | undefined; skeleton: Skeleton; held: Held; heldOf: (id: string) => Held | undefined; toolHeld: (id: string) => Held | undefined; figure: (pose: FigurePose) => Array<M3 | undefined>; used: (worn: readonly boolean[], lit?: readonly boolean[]) => number[] } {
+function lowBody(A: Asset, P: Proportions, share: number, garments: readonly GarmentAsset[], hairs: Record<string, HairAsset>, tints: ReadonlyArray<Tinted | undefined>): { baked: (worn: readonly boolean[], sword?: Carried, style?: string, lit?: readonly boolean[], drop?: readonly boolean[], prop?: string, tools?: Partial<Record<Side, string>>, up?: Partial<Record<Side, number>>, nock?: number) => Baked; bones: (pose: FigurePose, worn?: readonly boolean[], over?: Record<string, [number, number, number]>) => Float32Array; shapes: () => number[]; wet: () => number; trail: (pose: FigurePose, lit: boolean) => TrailDraw | undefined; skeleton: Skeleton; held: Held; heldOf: (id: string) => Held | undefined; toolHeld: (id: string) => Held | undefined; figure: (pose: FigurePose) => Array<M3 | undefined>; used: (worn: readonly boolean[], lit?: readonly boolean[]) => number[] } {
   const BONES = A.bones;
   const AT = new Map(BONES.map((b, i) => [b.name, i]));
   for (const g of garments) if (g.base !== BONES.length) throw new Error(`garment for ${g.base} bones on a body of ${BONES.length}`);
@@ -1084,6 +1084,8 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
     const want = off + (on - off) * air.u + emotePose('hop', k).lift / HEIGHT_SCALE / scale();
     return Math.max(0, want - hipsUp(F));
   }
+  /** How much of the last pose drawn (`lowBones`) was a pose in the water (`./anim` animate), nought to one. */
+  let WET = 0;
   /**
    * The slash trail of the prop in hand at the pose's moment of its clip (`./anim/trail.ts`), as drawn: in the figure's
    * frame, stood as the body last drawn (`lowBones`) was; none out of the blow, and none for a prop that leaves none
@@ -1109,7 +1111,7 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
     // (local [rx, ry, rz] degrees: the authoring tools' still holds, `lowHoldScene`)
     // sat driving, put on the seat (`seatFit`) and drawn where it is put, not stood on its soles
     const fit = seatOf(pose) && clipsPlaying() ? seatFit(pose, rigFor(pose)) : undefined;
-    const id = heldIn(pose), { local: drawn, move } = animate(SK, pose, () => fromGame(bonesOf(rigFor(pose), P, [], REST_EXTRAS), gameRest()), id === undefined ? undefined : HELDS.get(id), (tool) => TOOL_HELD.get(tool), fit);
+    const id = heldIn(pose), { local: drawn, move, wet = 0 } = animate(SK, pose, () => fromGame(bonesOf(rigFor(pose), P, [], REST_EXTRAS), gameRest()), id === undefined ? undefined : HELDS.get(id), (tool) => TOOL_HELD.get(tool), fit);
     const local = over ? [...drawn] : drawn;
     if (over) for (const [b, e] of Object.entries(over)) { const i = AT.get(b); if (i !== undefined) local[i] = euler(e[0], e[1], e[2]); }
     const Fb = posed(local, move), F = [...Fb, ...garments.flatMap((g) => garmentFrames(BONES, g.bones, Fb))];
@@ -1128,9 +1130,11 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
     };
     stand(A.verts, A.weights, A.soles);
     garments.forEach((g, k) => { if (worn[k] && g.soles) stand(g.verts, WEIGHTS[k], g.soles); });
-    // (in a hop's leap, lifted off the ground: `hopLift`)
-    const dy = fit ? 0 : A.floor - low + hopLift(pose, Fb), s = scale();
+    // (in a hop's leap, lifted off the ground: `hopLift`); in the water, held where its clip puts it (`./anim/clips/swim.ts`:
+    // the surface the floor's level), not stood on its soles; going in or coming out, stood on them only as far as it is out
+    const dy = fit ? 0 : (A.floor - low) * (1 - wet) + hopLift(pose, Fb), s = scale();
     DY = dy;
+    WET = wet;
     const sk = shapedOf(garments, worn);
     SHAPES_W = sk < 0 ? [] : shapeWeights(BONES, garments[sk], Fb);
     // (and the ground's, `GROUND`, after them: unmoved, where the feet stand at rest)
@@ -1143,7 +1147,7 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
     return out;
   }
 
-  return { baked: lowBaked, bones: lowBones, shapes: () => SHAPES_W, trail: lowTrail, skeleton: SK, held: HELD, heldOf: (id) => HELDS.get(id), toolHeld: (id) => TOOL_HELD.get(id), figure: (pose) => fromGame(bonesOf(rigFor(pose), P, [], REST_EXTRAS), gameRest()), used: usedOf };
+  return { baked: lowBaked, bones: lowBones, shapes: () => SHAPES_W, wet: () => WET, trail: lowTrail, skeleton: SK, held: HELD, heldOf: (id) => HELDS.get(id), toolHeld: (id) => TOOL_HELD.get(id), figure: (pose) => fromGame(bonesOf(rigFor(pose), P, [], REST_EXTRAS), gameRest()), used: usedOf };
 }
 
 type OutfitKey = 'hood' | 'tunic' | 'trousers' | 'boots' | 'plateChest' | 'plateLegs' | 'plateBoots' | 'plateHelm' | 'leatherChest' | 'leatherLegs' | 'leatherBoots' | 'leatherHat' | ChainPiece | 'scaleHelm' | 'scaleChest' | 'scaleLegs' | 'scaleBoots';
@@ -1604,8 +1608,13 @@ function nockOf(pose: FigurePose, who: 'man' | 'woman', prop: PropAsset | undefi
   return t >= bw.drawn[0] && t < bw.drawn[1] ? 2 : t >= bw.arrow[0] && t <= bw.arrow[1] ? 1 : 0;
 }
 
-/** Everything a draw needs for a pose (`drawSculptGL`): the man's body for a man, the woman's for a woman, the garments it wears over it. */
-export function lowScene(given: FigurePose): SculptDraw {
+/**
+ * Everything a draw needs for a pose (`drawSculptGL`): the man's body for a man, the woman's for a woman, the garments it
+ * wears over it; in the water (swimming, or still coming up out of it,
+ * `lowBody`'s `wet`), cut at its surface (the figure's level nought, `SculptDraw.water`): what is over it (`over`, the
+ * default) or what is under it (`under`).
+ */
+export function lowScene(given: FigurePose, part: 'over' | 'under' = 'over'): SculptDraw {
   const pose = dressed(given), look = pose.look ?? DEFAULT_LOOK, seat = seatOf(pose);
   // (sat in something, square along it however it is turned, as the flat figure: `FigurePose.seat`)
   const facing = (((seat ? pose.facing : Math.round(pose.facing)) % 8) + 8) % 8;
@@ -1632,7 +1641,8 @@ export function lowScene(given: FigurePose): SculptDraw {
   const hide = seat?.astride ? { c: BARREL.c, r: BARREL.r } : undefined;
   // lit by a blow for its first moments (`FLINCH_LIT`), not under less motion
   const struck = pose.flinch ? pose.flinch.t * FLINCH_SECS : Infinity, hit = struck >= 0 && struck < FLINCH_LIT && !lessMotion() ? 1 - struck / FLINCH_LIT : 0;
-  return { baked, bones, materials, view: viewOf(facing), blink: 0, low, ...(trail ? { trail } : {}), ...(shapes.some((w) => w > 0) ? { shapes } : {}), ...(hide ? { hide } : {}), ...(hit > 0 ? { hit } : {}) };
+  const water = pose.swimming || body.wet() > 0 ? { level: 0, keep: part } : undefined;
+  return { baked, bones, materials, view: viewOf(facing), blink: 0, low, ...(trail ? { trail } : {}), ...(shapes.some((w) => w > 0) ? { shapes } : {}), ...(hide ? { hide } : {}), ...(hit > 0 ? { hit } : {}), ...(water ? { water } : {}) };
 }
 
 /** Local turns by bone name, [rx, ry, rz] degrees (as `tools/sculpt/lowrig.mjs` posed). */
