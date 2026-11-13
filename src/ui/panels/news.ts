@@ -4416,6 +4416,11 @@ export const NEWS: News[] = [
     ],
   },
   {
+    n: 563,
+    day: '2026-11-13',
+    lines: () => ['Fixed: a sign-in that lapsed during play. Was: "The island\'s history is not coming through (permission denied for table tile_change)" repeated. Now: game stops; Signed out; Sign in.'],
+  },
+  {
     n: 562,
     day: '2026-11-13',
     lines: () => [

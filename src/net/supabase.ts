@@ -29,8 +29,47 @@ export function supabase(): SupabaseClient {
       realtime: { params: { eventsPerSecond: 5 } },
       global: { fetch: watchedFetch },
     });
+    client.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') signedOut();
+    });
   }
   return client;
+}
+
+/**
+ * Signed out under a page that was playing: the sign-in lapsed (its refresh failed) or was ended in another tab.
+ * Every call after it goes as nobody, and the island refuses each ("permission denied for table tile_change"), so the
+ * page is told once (`onSignedOut`) and stops, rather than trying again for ever.
+ */
+export const SIGNED_OUT = 'Signed out.';
+const signedOutWatchers = new Set<() => void>();
+let signedOutSaid = false;
+/** Be told, once, when this page's sign-in is gone. */
+export function onSignedOut(watch: () => void): () => void {
+  signedOutWatchers.add(watch);
+  return () => signedOutWatchers.delete(watch);
+}
+function signedOut(): void {
+  if (signedOutSaid || signedOutWatchers.size === 0) return;
+  signedOutSaid = true;
+  for (const watch of signedOutWatchers) watch();
+}
+/** Postgres' "permission denied" and PostgREST's expired or missing sign-in: a call that may have gone as nobody. */
+const AS_NOBODY = new Set(['42501', 'PGRST301', 'PGRST302', 'PGRST303']);
+let asking = false;
+/** Whether there is still a sign-in (refreshed if it is due); signed out when there is not. */
+async function stillSignedIn(): Promise<void> {
+  if (asking || signedOutSaid || !client) return;
+  asking = true;
+  try {
+    const { data } = await client.auth.getSession();
+    const s = data.session;
+    if (!s?.user || (s.expires_at !== undefined && s.expires_at * 1000 < Date.now())) signedOut();
+  } catch {
+    // Not reached at all: the network, not the sign-in. The calls' own errors say so.
+  } finally {
+    asking = false;
+  }
 }
 
 /**
@@ -186,7 +225,14 @@ async function onceFetch(input: RequestInfo | URL, init?: RequestInit): Promise<
 export async function watchedFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
   const door = /\/rest\/v1\/rpc\/([\w]+)/.exec(url)?.[1];
-  if (!door) return fetch(input, init);
+  if (!door) {
+    const res = await fetch(input, init);
+    if ((res.status === 401 || res.status === 403) && url.includes('/rest/v1/')) {
+      const body = (await res.clone().json().catch(() => null)) as { code?: string } | null;
+      if (res.status === 401 || AS_NOBODY.has(body?.code ?? '')) void stillSignedIn();
+    }
+    return res;
+  }
   const res = await onceFetch(input, seated(init));
   if (res.ok) {
     if (refused.has(door)) {
@@ -196,6 +242,7 @@ export async function watchedFetch(input: RequestInfo | URL, init?: RequestInit)
   } else {
     const body = (await res.clone().json().catch(() => null)) as { code?: string; message?: string } | null;
     if (body?.message === SEAT_ELSEWHERE) seatLost();
+    if (res.status === 401 || AS_NOBODY.has(body?.code ?? '')) void stillSignedIn();
     if (body?.code === READ_ONLY) {
       const was = refused.size;
       refused.add(door);
