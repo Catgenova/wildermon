@@ -32,6 +32,10 @@
   {
    "id": "cornrows",
    "name": "Cornrows"
+  },
+  {
+   "id": "buzz",
+   "name": "Buzz cut"
   }
  ]
 }

@@ -10,6 +10,7 @@
  * that body (`tools/sculpt/lowlight-<who>.json`, written by `tools/sculpt/lowlight.py`), in the look's skin. A hairstyle
  * made for the low-poly bodies (`tools/sculpt/lowhair.mjs`, `./assets/lowhair.json`: 'swept', 'braid', 'bob', 'pompadour') is drawn with the
  * made for the low-poly bodies (`tools/sculpt/lowhair.mjs`, `./assets/lowhair.json`: 'swept', 'braid', 'bob', 'mohawk') is drawn with the
+ * made for the low-poly bodies (`tools/sculpt/lowhair.mjs`, `./assets/lowhair.json`: 'swept', 'braid', 'bob', 'buzz') is drawn with the
  * body, on the head bone, in three tones of the look's hair colour (its valleys a fourth, darker), the body's scalp
  * under it shaved; any other style draws no hair yet, and none is drawn while the hood is up (`hairShown`). The
  * undergarment (`tools/sculpt/lowunder.mjs`: his briefs; her briefs and band) is the body's own polygons painted, their
@@ -151,6 +152,8 @@ import MALE_CIRCLET_BOB from './assets/lowcircletbob-male.json';
 import FEMALE_CIRCLET_BOB from './assets/lowcircletbob-female.json';
 import MALE_CIRCLET_MOHAWK from './assets/lowcircletmohawk-male.json';
 import FEMALE_CIRCLET_MOHAWK from './assets/lowcircletmohawk-female.json';
+import MALE_CIRCLET_BUZZ from './assets/lowcircletbuzz-male.json';
+import FEMALE_CIRCLET_BUZZ from './assets/lowcircletbuzz-female.json';
 // the chain set (tools/sculpt/garments/chainchest.mjs, chaincoif.mjs, chainlegs.mjs, chainboots.mjs)
 import MALE_CHAIN_CHEST from './assets/lowchainchest-male.json';
 import FEMALE_CHAIN_CHEST from './assets/lowchainchest-female.json';
@@ -1499,11 +1502,13 @@ const GARMENTS: ReadonlyArray<{ man: GarmentAsset; woman: GarmentAsset; wears: (
   { man: MALE_RING as unknown as GarmentAsset, woman: FEMALE_RING as unknown as GarmentAsset, wears: (p) => p.gear?.jewel?.id === 'jewelled_ring', enchanted: (p) => !!p.gear?.jewel?.enchanted, kit: 'jewel' },
   // (the circlet fitted over each hairstyle, and over none)
   ...([['bare', MALE_CIRCLET_BARE, FEMALE_CIRCLET_BARE], ['swept', MALE_CIRCLET_SWEPT, FEMALE_CIRCLET_SWEPT], ['braid', MALE_CIRCLET_BRAID, FEMALE_CIRCLET_BRAID], ['bob', MALE_CIRCLET_BOB, FEMALE_CIRCLET_BOB], ['mohawk', MALE_CIRCLET_MOHAWK, FEMALE_CIRCLET_MOHAWK]] as const).map(([style, man, woman]) => ({
+  ...([['bare', MALE_CIRCLET_BARE, FEMALE_CIRCLET_BARE], ['swept', MALE_CIRCLET_SWEPT, FEMALE_CIRCLET_SWEPT], ['braid', MALE_CIRCLET_BRAID, FEMALE_CIRCLET_BRAID], ['bob', MALE_CIRCLET_BOB, FEMALE_CIRCLET_BOB], ['buzz', MALE_CIRCLET_BUZZ, FEMALE_CIRCLET_BUZZ]] as const).map(([style, man, woman]) => ({
     man: man as unknown as GarmentAsset, woman: woman as unknown as GarmentAsset, wears: (p: FigurePose) => p.gear?.head?.id === 'circlet' && circletOver(p) === style, enchanted: (p: FigurePose) => !!p.gear?.head?.enchanted, kit: 'circlet' as const,
   })),
 ];
 /** The hairstyle a circlet is fitted over: the one drawn (`hairStyle`) where it has a fit, else none. */
 const circletOver = (p: FigurePose): string => { const s = hairStyle(p, (p.look ?? DEFAULT_LOOK).hair); return s === 'swept' || s === 'braid' || s === 'bob' || s === 'mohawk' ? s : 'bare'; };
+const circletOver = (p: FigurePose): string => { const s = hairStyle(p, (p.look ?? DEFAULT_LOOK).hair); return s === 'swept' || s === 'braid' || s === 'bob' || s === 'buzz' ? s : 'bare'; };
 /** Which fit of the pendant a figure wears (tools/sculpt/garments/kit.mjs PENDANT_OVER), or none: over what is outermost on the breastbone. */
 function pendantOver(p: FigurePose): 'shawl' | 'shawlSlim' | 'shawlOver' | 'leather' | 'tunic' | undefined {
   if (p.gear?.jewel?.id !== 'jewelled_pendant') return undefined;

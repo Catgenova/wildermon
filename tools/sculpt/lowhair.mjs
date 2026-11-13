@@ -861,8 +861,8 @@ export function gameHair(rig, hair) {
     verts: hair.verts.flat().map(r5),
     polys: hair.polys.map((p) => p.v),
     // each polygon's material: 4 the hair, 5 to 8 the hair in a valley (its step, the darkest first), 3 the buzz (the
-    // shave's tone)
-    mat: hair.polys.map((p) => (p.buzz ? 3 : p.valley ? 4 + p.valley : 4)),
+    // shave's tone; also a polygon marked shaved, the buzz cut's taper)
+    mat: hair.polys.map((p) => (p.buzz || p.shaved ? 3 : p.valley ? 4 + p.valley : 4)),
     tris: hair.tris.flat(),
     weights: hair.weights.map((l) => l.flatMap(([bn, w]) => [rig.at.get(bn), +w.toFixed(4)])),
     shave: hair.shave,
