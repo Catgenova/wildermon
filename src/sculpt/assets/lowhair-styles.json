@@ -20,6 +20,10 @@
   {
    "id": "topknot",
    "name": "Top knot"
+  },
+  {
+   "id": "crew",
+   "name": "Crew cut"
   }
  ]
 }
