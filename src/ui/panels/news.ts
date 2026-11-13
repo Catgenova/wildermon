@@ -4428,6 +4428,11 @@ export const NEWS: News[] = [
     },
   },
   {
+    n: 549,
+    day: '2026-11-13',
+    lines: () => ['Fixed: trousers and leggings showing through chest armour and tunics.'],
+  },
+  {
     n: 529,
     day: '2026-11-12',
     lines: () => [

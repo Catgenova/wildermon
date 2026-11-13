@@ -148,6 +148,9 @@ import MALE_CIRCLET_BRAID from './assets/lowcircletbraid-male.json';
 import FEMALE_CIRCLET_BRAID from './assets/lowcircletbraid-female.json';
 import MALE_CIRCLET_BOB from './assets/lowcircletbob-male.json';
 import FEMALE_CIRCLET_BOB from './assets/lowcircletbob-female.json';
+// the legs pieces' triangles under each chest piece (tools/sculpt/garments/chestlegs.mjs: `ChestLegs`)
+import MALE_CHEST_LEGS from './assets/lowchestlegs-male.json';
+import FEMALE_CHEST_LEGS from './assets/lowchestlegs-female.json';
 // the chain set (tools/sculpt/garments/chainchest.mjs, chaincoif.mjs, chainlegs.mjs, chainboots.mjs)
 import MALE_CHAIN_CHEST from './assets/lowchainchest-male.json';
 import FEMALE_CHAIN_CHEST from './assets/lowchainchest-female.json';
@@ -665,7 +668,7 @@ const USED = new WeakMap<Baked, { used: readonly number[]; at: number }>();
  * garments it can wear (their own bones posed with the body's always, each garment's after the one before; each drawn
  * when the bake is asked for with it worn), and its hairstyles.
  */
-function lowBody(A: Asset, P: Proportions, share: number, garments: readonly GarmentAsset[], hairs: Record<string, HairAsset>, tints: ReadonlyArray<Tinted | undefined>): { baked: (worn: readonly boolean[], sword?: Carried, style?: string, lit?: readonly boolean[], drop?: readonly boolean[], prop?: string, tools?: Partial<Record<Side, string>>, up?: Partial<Record<Side, number>>, nock?: number, cast?: boolean) => Baked; bones: (pose: FigurePose, worn?: readonly boolean[], over?: Record<string, [number, number, number]>) => Float32Array; shapes: () => number[]; wet: () => number; trail: (pose: FigurePose, lit: boolean) => TrailDraw | undefined; skeleton: Skeleton; held: Held; heldOf: (id: string) => Held | undefined; toolHeld: (id: string) => Held | undefined; figure: (pose: FigurePose) => Array<M3 | undefined>; used: (worn: readonly boolean[], lit?: readonly boolean[]) => number[]; lift: (local: Array<M3 | undefined>, move: V) => number; toGame: (p: V) => V } {
+function lowBody(A: Asset, P: Proportions, share: number, garments: readonly GarmentAsset[], hairs: Record<string, HairAsset>, tints: ReadonlyArray<Tinted | undefined>, under: ReadonlyArray<ReadonlyArray<readonly [number, readonly number[], readonly number[]]>>): { baked: (worn: readonly boolean[], sword?: Carried, style?: string, lit?: readonly boolean[], drop?: readonly boolean[], prop?: string, tools?: Partial<Record<Side, string>>, up?: Partial<Record<Side, number>>, nock?: number, cast?: boolean) => Baked; bones: (pose: FigurePose, worn?: readonly boolean[], over?: Record<string, [number, number, number]>) => Float32Array; shapes: () => number[]; wet: () => number; trail: (pose: FigurePose, lit: boolean) => TrailDraw | undefined; skeleton: Skeleton; held: Held; heldOf: (id: string) => Held | undefined; toolHeld: (id: string) => Held | undefined; figure: (pose: FigurePose) => Array<M3 | undefined>; used: (worn: readonly boolean[], lit?: readonly boolean[]) => number[]; lift: (local: Array<M3 | undefined>, move: V) => number; toGame: (p: V) => V } {
   const BONES = A.bones;
   const AT = new Map(BONES.map((b, i) => [b.name, i]));
   for (const g of garments) if (g.base !== BONES.length) throw new Error(`garment for ${g.base} bones on a body of ${BONES.length}`);
@@ -924,7 +927,12 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
     if (hair) hair.polys.forEach((v, j) => allPolys.push([v.map((i) => i + nBody), hair.mat[j]]));
     const allVerts = hair ? A.verts.concat(hair.verts) : A.verts, allWeights = hair ? A.weights.concat(hair.weights) : A.weights;
     const allTris = hair ? A.tris.concat(hair.tris.map((x, k) => (k % 4 === 3 ? x + nPolys : x + nBody))) : A.tris;
-    const hidden = new Set(garments.flatMap((g, k) => (worn[k] ? g.hides ?? [] : [])));
+    // (a legs piece's body polygons drawn again where its triangles are left out under the chest worn over it: `ChestLegs`)
+    const hidden = new Set(garments.flatMap((g, k) => {
+      if (!worn[k]) return [];
+      const shown = under[k].some(([j]) => worn[j]) ? new Set(under[k].flatMap(([j, , s]) => (worn[j] ? s : []))) : null;
+      return shown ? (g.hides ?? []).filter((p) => !shown.has(p)) : g.hides ?? [];
+    }));
     // (a piece split off a polygon a garment hides is hidden with it)
     for (const [piece, parent] of A.split ?? []) if (hidden.has(parent)) hidden.add(piece);
     lay(allVerts, allPolys, allTris, allWeights, (pi) => MATS[allPolys[pi][1]] ?? M.skin, hidden);
@@ -936,7 +944,9 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
       // (plain: its glow's polygons left out)
       // (and its polygons from dropFrom on left out while its entry drops them)
       const end = Math.min(lit[k] || g.glowFrom === undefined ? Infinity : g.glowFrom, drop[k] && g.dropFrom !== undefined ? g.dropFrom : Infinity);
-      const mats = MATS_OF[lit[k] ? 'enchanted' : 'plain'][k], T3 = end === Infinity ? g.tris : g.tris.filter((_, t) => g.tris[t - (t % 4) + 3] < end);
+      // (and a legs piece's triangles under the chest piece worn over it: `ChestLegs`)
+      const gone = under[k].some(([j]) => worn[j]) ? new Set(under[k].flatMap(([j, t]) => (worn[j] ? t : []))) : null;
+      const mats = MATS_OF[lit[k] ? 'enchanted' : 'plain'][k], T3 = end === Infinity && !gone ? g.tris : g.tris.filter((_, t) => g.tris[t - (t % 4) + 3] < end && !gone?.has(t >> 2));
       // (the shaped one's corrective shapes at each of its corners: the offset, the figure's units and axes, and its
       // polygon's normal's)
       const SH = k === shaped ? g.shapes ?? [] : [];
@@ -1408,39 +1418,53 @@ const wearsLeatherShawl = (pose: FigurePose): boolean => pose.outfit?.leatherSha
  * asked for.
  */
 const wearsLeatherChest = (pose: FigurePose): boolean => pose.outfit?.leatherChest ?? false;
+/** The chest pieces and the legs pieces, by their keys in `ChestLegs`. */
+type ChestOver = 'tunic' | 'leatherChest' | 'plateChest' | 'chainChest' | 'scaleChest';
+type LegsUnder = 'trousers' | 'leatherLegs' | 'leatherFlaps' | 'plateLegs' | 'chainLegs' | 'scaleLegs';
+/**
+ * The legs pieces' triangles under each chest piece (`assets/lowchestlegs-<who>.json` by
+ * `tools/sculpt/garments/chestlegs.mjs`: the waistband, the hips and the seat the chest covers at rest, and whatever of
+ * the legs piece stands out through it there, clear of the hem, its slits and the gaps between its plates; none whose
+ * leaving out would open a hole in the game's clips), left out while that chest is worn over it, so the chest is drawn
+ * over the legs with nothing of them under it to come through; the body's polygons under what is left out, which the legs
+ * piece hides, drawn again (`show`), as under the chest worn alone. Each with the legs piece's triangle count it was made
+ * for.
+ */
+type ChestLegs = Readonly<Record<ChestOver, Readonly<Record<LegsUnder, { tris: number; drop: readonly number[]; show: readonly number[] }>>>>;
 
 /**
  * The garments a low-poly body can wear, in the order they are laid over it: each its copy for the man and the woman, its
  * wear hook and, for one that can be enchanted, its enchantment's. (A garment's `drops`: whether its polygons from
  * `dropFrom` on are left out, e.g. the plate boots' knee crests while the plate leggings' knee guards are worn over the
- * same place.)
+ * same place. A chest piece's `chest` and a legs piece's `legs`: their keys in `ChestLegs`, the legs piece's triangles
+ * under the chest left out while both are worn.)
  */
-const GARMENTS: ReadonlyArray<{ man: GarmentAsset; woman: GarmentAsset; wears: (pose: FigurePose) => boolean; enchanted?: (pose: FigurePose) => boolean; drops?: (pose: FigurePose) => boolean; plate?: PlatePiece; dye?: DyedPiece; kit?: KitPiece }> = [
+const GARMENTS: ReadonlyArray<{ man: GarmentAsset; woman: GarmentAsset; wears: (pose: FigurePose) => boolean; enchanted?: (pose: FigurePose) => boolean; drops?: (pose: FigurePose) => boolean; chest?: ChestOver; legs?: LegsUnder; plate?: PlatePiece; dye?: DyedPiece; kit?: KitPiece }> = [
   // the cloth shawl: over the tunic, or its copies fitted over armour (outfit1.mjs buildShawlOver: slim, full), all on the
   // same bones
   { man: MALE_SHAWL as unknown as GarmentAsset, woman: FEMALE_SHAWL as unknown as GarmentAsset, wears: (p) => wearsShawl(p) && !armourChest(p), enchanted: enchantedOf('clothShawl'), dye: 'shawl' },
   { man: MALE_SHAWL_SLIM as unknown as GarmentAsset, woman: FEMALE_SHAWL_SLIM as unknown as GarmentAsset, wears: (p) => wearsShawl(p) && armourFit(p) === 'slim', enchanted: enchantedOf('clothShawl'), dye: 'shawl' },
   { man: MALE_SHAWL_OVER as unknown as GarmentAsset, woman: FEMALE_SHAWL_OVER as unknown as GarmentAsset, wears: (p) => wearsShawl(p) && armourFit(p) === 'full', enchanted: enchantedOf('clothShawl'), dye: 'shawl' },
-  { man: MALE_TROUSERS as unknown as GarmentAsset, woman: FEMALE_TROUSERS as unknown as GarmentAsset, wears: wearsTrousers, enchanted: enchantedOf('clothTrousers'), dye: 'trousers' },
+  { man: MALE_TROUSERS as unknown as GarmentAsset, woman: FEMALE_TROUSERS as unknown as GarmentAsset, wears: wearsTrousers, enchanted: enchantedOf('clothTrousers'), legs: 'trousers', dye: 'trousers' },
   { man: MALE_BOOTS as unknown as GarmentAsset, woman: FEMALE_BOOTS as unknown as GarmentAsset, wears: wearsBoots, enchanted: enchantedOf('clothBoots'), dye: 'boots' },
-  { man: MALE_TUNIC as unknown as GarmentAsset, woman: FEMALE_TUNIC as unknown as GarmentAsset, wears: wearsTunic, enchanted: enchantedOf('clothTunic'), dye: 'tunic' },
+  { man: MALE_TUNIC as unknown as GarmentAsset, woman: FEMALE_TUNIC as unknown as GarmentAsset, wears: wearsTunic, enchanted: enchantedOf('clothTunic'), chest: 'tunic', dye: 'tunic' },
   { man: MALE_HOOD as unknown as GarmentAsset, woman: FEMALE_HOOD as unknown as GarmentAsset, wears: wearsHood, enchanted: enchantedOf('clothHood'), dye: 'hood' },
   { man: MALE_HELM as unknown as GarmentAsset, woman: FEMALE_HELM as unknown as GarmentAsset, wears: wearsHelm, enchanted: enchantedOf('helm'), plate: 'helm' },
   // the plate set's leggings (`tools/sculpt/garments/platelegs.mjs`): off unless asked for; their base layer takes the place of the legs' skin
-  { man: MALE_PLATE_LEGS as unknown as GarmentAsset, woman: FEMALE_PLATE_LEGS as unknown as GarmentAsset, wears: (p) => p.outfit?.plateLegs ?? false, enchanted: enchantedOf('legs'), plate: 'legs' },
+  { man: MALE_PLATE_LEGS as unknown as GarmentAsset, woman: FEMALE_PLATE_LEGS as unknown as GarmentAsset, wears: (p) => p.outfit?.plateLegs ?? false, enchanted: enchantedOf('legs'), legs: 'plateLegs', plate: 'legs' },
   { man: MALE_PLATE_BOOTS as unknown as GarmentAsset, woman: FEMALE_PLATE_BOOTS as unknown as GarmentAsset, wears: wearsPlateBoots, enchanted: enchantedOf('boots'), drops: (pose) => (pose.outfit?.plateLegs || pose.outfit?.scaleLegs) ?? false, plate: 'boots' },
-  { man: MALE_PLATE_CHEST as unknown as GarmentAsset, woman: FEMALE_PLATE_CHEST as unknown as GarmentAsset, wears: wearsPlateChest, enchanted: enchantedOf('chest'), plate: 'chest' },
+  { man: MALE_PLATE_CHEST as unknown as GarmentAsset, woman: FEMALE_PLATE_CHEST as unknown as GarmentAsset, wears: wearsPlateChest, enchanted: enchantedOf('chest'), chest: 'plateChest', plate: 'chest' },
   // the plate set's fur mantle (`assets/lowmantle-<who>.json` by `tools/sculpt/garments/mantle.mjs`), the plate shawl: off
   // unless asked for; its clasps and rim in the shawl's metal (`MANTLE_ROLE`); enchanted, its clasps' cores glow
   { man: MALE_MANTLE as unknown as GarmentAsset, woman: FEMALE_MANTLE as unknown as GarmentAsset, wears: (p) => p.outfit?.plateMantle ?? false, enchanted: enchantedOf('mantle'), plate: 'mantle' },
   { man: MALE_LEATHER_BOOTS as unknown as GarmentAsset, woman: FEMALE_LEATHER_BOOTS as unknown as GarmentAsset, wears: wearsLeatherBoots, enchanted: enchantedOf('leatherBoots'), dye: 'leatherBoots' },
   // (their waist, from dropFrom on (the waistband and the cloth above the chest's undershirt's foot), left out under the leather chest)
-  { man: MALE_LEATHER_LEGS as unknown as GarmentAsset, woman: FEMALE_LEATHER_LEGS as unknown as GarmentAsset, wears: (p) => p.outfit?.leatherLegs ?? false, enchanted: enchantedOf('leatherLegs'), drops: (p) => wearsLeatherChest(p) || (p.outfit?.chainChest ?? false), dye: 'leatherLegs' },
+  { man: MALE_LEATHER_LEGS as unknown as GarmentAsset, woman: FEMALE_LEATHER_LEGS as unknown as GarmentAsset, wears: (p) => p.outfit?.leatherLegs ?? false, enchanted: enchantedOf('leatherLegs'), drops: (p) => wearsLeatherChest(p) || (p.outfit?.chainChest ?? false), legs: 'leatherLegs', dye: 'leatherLegs' },
   // (their hip flaps, only without the leather chest or the hauberk: its skirt takes their place over the hip)
-  { man: MALE_LEATHER_LEGS_FLAPS as unknown as GarmentAsset, woman: FEMALE_LEATHER_LEGS_FLAPS as unknown as GarmentAsset, wears: (p) => (p.outfit?.leatherLegs ?? false) && !(p.outfit?.leatherChest ?? false) && !(p.outfit?.chainChest ?? false), enchanted: enchantedOf('leatherLegs'), dye: 'leatherLegs' },
+  { man: MALE_LEATHER_LEGS_FLAPS as unknown as GarmentAsset, woman: FEMALE_LEATHER_LEGS_FLAPS as unknown as GarmentAsset, wears: (p) => (p.outfit?.leatherLegs ?? false) && !(p.outfit?.leatherChest ?? false) && !(p.outfit?.chainChest ?? false), enchanted: enchantedOf('leatherLegs'), legs: 'leatherFlaps', dye: 'leatherLegs' },
   // the leather set's chest & arms (`tools/sculpt/garments/leatherchest.mjs`): over the leggings, under the shawl (its
   // polygons the shawl covers, from dropFrom on, left out under it)
-  { man: MALE_LEATHER_CHEST as unknown as GarmentAsset, woman: FEMALE_LEATHER_CHEST as unknown as GarmentAsset, wears: wearsLeatherChest, enchanted: enchantedOf('leatherChest'), drops: wearsLeatherShawl, dye: 'leatherChest' },
+  { man: MALE_LEATHER_CHEST as unknown as GarmentAsset, woman: FEMALE_LEATHER_CHEST as unknown as GarmentAsset, wears: wearsLeatherChest, enchanted: enchantedOf('leatherChest'), drops: wearsLeatherShawl, chest: 'leatherChest', dye: 'leatherChest' },
   { man: MALE_LEATHER_HAT as unknown as GarmentAsset, woman: FEMALE_LEATHER_HAT as unknown as GarmentAsset, wears: wearsLeatherHat, enchanted: enchantedOf('leatherHat'), dye: 'leatherHat' },
   // (the leather shawl: its own copy over the leather chest, fitted over its plates; the plain one without it)
   { man: MALE_LEATHER_SHAWL as unknown as GarmentAsset, woman: FEMALE_LEATHER_SHAWL as unknown as GarmentAsset, wears: (p) => wearsLeatherShawl(p) && !armourChest(p), enchanted: enchantedOf('leatherShawl'), dye: 'leatherShawl' },
@@ -1450,9 +1474,9 @@ const GARMENTS: ReadonlyArray<{ man: GarmentAsset; woman: GarmentAsset; wears: (
   // whichever leggings are worn
   { man: MALE_CHAIN_COIF as unknown as GarmentAsset, woman: FEMALE_CHAIN_COIF as unknown as GarmentAsset, wears: wearsCoif, enchanted: enchantedOf('chainCoif'), drops: coifTippetDropped, plate: 'chainCoif' },
   // (the leggings' mail below the boots' top, from dropFrom on, left out under the chain boots, which take its place)
-  { man: MALE_CHAIN_LEGS as unknown as GarmentAsset, woman: FEMALE_CHAIN_LEGS as unknown as GarmentAsset, wears: (p) => p.outfit?.chainLegs ?? false, enchanted: enchantedOf('chainLegs'), drops: wearsChainBoots, plate: 'chainLegs' },
+  { man: MALE_CHAIN_LEGS as unknown as GarmentAsset, woman: FEMALE_CHAIN_LEGS as unknown as GarmentAsset, wears: (p) => p.outfit?.chainLegs ?? false, enchanted: enchantedOf('chainLegs'), drops: wearsChainBoots, legs: 'chainLegs', plate: 'chainLegs' },
   { man: MALE_CHAIN_BOOTS as unknown as GarmentAsset, woman: FEMALE_CHAIN_BOOTS as unknown as GarmentAsset, wears: wearsChainBoots, enchanted: enchantedOf('chainBoots'), plate: 'chainBoots' },
-  { man: MALE_CHAIN_CHEST as unknown as GarmentAsset, woman: FEMALE_CHAIN_CHEST as unknown as GarmentAsset, wears: (p) => p.outfit?.chainChest ?? false, enchanted: enchantedOf('chainChest'), plate: 'chainChest' },
+  { man: MALE_CHAIN_CHEST as unknown as GarmentAsset, woman: FEMALE_CHAIN_CHEST as unknown as GarmentAsset, wears: (p) => p.outfit?.chainChest ?? false, enchanted: enchantedOf('chainChest'), chest: 'chainChest', plate: 'chainChest' },
   // the chain set's shawl, the petal gorget (`tools/sculpt/garments/chainshawl.mjs`): over any chest, the coif's tippet
   // left out under its collar; its mail in its metal, its brass its own; enchanted, the collar's diamonds and the tabs'
   // edges glow. Its own fit over nothing, the tunic or the hauberk (`armourFit` none or slim); its over-armour fit over
@@ -1463,13 +1487,13 @@ const GARMENTS: ReadonlyArray<{ man: GarmentAsset; woman: GarmentAsset; wears: (
   // scale-plate in the set's material (`scaleMat`)
   // the scale set's leggings (`tools/sculpt/garments/scalelegs.mjs`): off unless asked for; their leather takes the
   // place of the legs' skin
-  { man: MALE_SCALE_LEGS as unknown as GarmentAsset, woman: FEMALE_SCALE_LEGS as unknown as GarmentAsset, wears: (p) => p.outfit?.scaleLegs ?? false, enchanted: enchantedOf('scaleLegs'), drops: (p) => p.outfit?.scaleChest ?? false, plate: 'scale' },
+  { man: MALE_SCALE_LEGS as unknown as GarmentAsset, woman: FEMALE_SCALE_LEGS as unknown as GarmentAsset, wears: (p) => p.outfit?.scaleLegs ?? false, enchanted: enchantedOf('scaleLegs'), drops: (p) => p.outfit?.scaleChest ?? false, legs: 'scaleLegs', plate: 'scale' },
   // the scale set's boots (`tools/sculpt/garments/scaleboots.mjs`; the body stood on their soles): off unless asked for
   { man: MALE_SCALE_BOOTS as unknown as GarmentAsset, woman: FEMALE_SCALE_BOOTS as unknown as GarmentAsset, wears: wearsScaleBoots, enchanted: enchantedOf('scaleBoots'), plate: 'scale' },
   // the scale set's helm (`tools/sculpt/garments/scalehelm.mjs`: rigid on the head, the head's polygons it covers whole left
   // out, the hair not drawn under it): off unless asked for
   { man: MALE_SCALE_HELM as unknown as GarmentAsset, woman: FEMALE_SCALE_HELM as unknown as GarmentAsset, wears: wearsScaleHelm, enchanted: enchantedOf('scaleHelm'), plate: 'scale' },
-  { man: MALE_SCALE_CHEST as unknown as GarmentAsset, woman: FEMALE_SCALE_CHEST as unknown as GarmentAsset, wears: (p) => p.outfit?.scaleChest ?? false, enchanted: enchantedOf('scaleChest'), plate: 'scale' },
+  { man: MALE_SCALE_CHEST as unknown as GarmentAsset, woman: FEMALE_SCALE_CHEST as unknown as GarmentAsset, wears: (p) => p.outfit?.scaleChest ?? false, enchanted: enchantedOf('scaleChest'), chest: 'scaleChest', plate: 'scale' },
   // the scale set's wing mantle (`tools/sculpt/garments/scaleshawl.mjs`: two folded wings over the shoulders, fitted over
   // the cuirass, skinned to the body's bones): off unless `outfit.scaleShawl`; its ribs and scales in the set's material,
   // its joints and claws lit when enchanted
@@ -1515,11 +1539,17 @@ function beltOver(p: FigurePose): 'cloth' | 'leather' | 'plate' | 'chain' | 'sca
   return wearsPlateChest(p) ? 'plate' : o(p).chainChest ? 'chain' : o(p).scaleChest ? 'scale' : wearsLeatherChest(p) ? 'leather' : 'cloth';
 }
 
+/**
+ * Each garment's triangles left out while a chest piece is worn over it: for a legs piece, each chest piece's index among
+ * GARMENTS, the legs piece's triangles under it and the body's polygons drawn again there (`ChestLegs`); for any other, none.
+ */
+const underOf = (table: ChestLegs): Array<Array<readonly [number, readonly number[], readonly number[]]>> =>
+  GARMENTS.map((g) => (g.legs ? GARMENTS.flatMap((h, j) => { const u = h.chest && table[h.chest][g.legs as LegsUnder]; return u ? [[j, u.drop, u.show] as const] : []; }) : []));
 /** What tints a garment's materials: its plate piece's metal, or its dye. */
 const tintOf = (g: (typeof GARMENTS)[number]): Tinted | undefined => g.plate ?? (g.dye ? (`dye:${g.dye}` as const) : g.kit ? (`kit:${g.kit}` as const) : undefined);
 const BODIES = {
-  man: lowBody(MALE_ASSET as unknown as Asset, MALE, 1, GARMENTS.map((g) => g.man), { ...HAIRS.male, ...underHat(MALE_LEATHER_HAT) }, GARMENTS.map(tintOf)),
-  woman: lowBody(FEMALE_ASSET as unknown as Asset, FEMALE, WOMAN_OF_MAN, GARMENTS.map((g) => g.woman), { ...HAIRS.female, ...underHat(FEMALE_LEATHER_HAT) }, GARMENTS.map(tintOf)),
+  man: lowBody(MALE_ASSET as unknown as Asset, MALE, 1, GARMENTS.map((g) => g.man), { ...HAIRS.male, ...underHat(MALE_LEATHER_HAT) }, GARMENTS.map(tintOf), underOf(MALE_CHEST_LEGS)),
+  woman: lowBody(FEMALE_ASSET as unknown as Asset, FEMALE, WOMAN_OF_MAN, GARMENTS.map((g) => g.woman), { ...HAIRS.female, ...underHat(FEMALE_LEATHER_HAT) }, GARMENTS.map(tintOf), underOf(FEMALE_CHEST_LEGS)),
 };
 /** The garments' materials after the body's (each once, however many garments share it): lit by the body's light in their own colours, unlit (glowing in the bloom), or metal (lit by its brightness, as the sword). */
 const GARMENT_MATS: Material[] = GARMENT_COLOURS.map((m) => (m.kind === 1 ? { colour: m.c, emissive: true } : m.kind === 2 ? { colour: m.c, gear: true } : { colour: m.c, cloth: true }));
