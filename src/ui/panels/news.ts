@@ -4275,7 +4275,7 @@ export const NEWS: News[] = [
       'New: sculpted outfits: cloth (hood, shawl, tunic, trousers, boots), leather (hat, shawl, chest and arms, leggings, boots), plate (helm, mantle, chest, leggings, boots), undergarment. Enchanted pieces glow.',
       `New: animations: idle; walk; overhead swing (mining; a fight with ${listedOr(WEAPONS.filter((w) => w.twoHanded && !w.ammo).map((w) => itemDef(w.id).name.toLowerCase()))}). Other jobs, fights, meditating, emotes, casting: one placeholder gesture.`,
       `New: ${itemDef('maul').name.toLowerCase()} drawn as the Runestone Warhammer, both hands, overhead swing. ${itemDef('long_sword').name}: both hands in a fight, slash trail; on the back when wielded.`,
-      `Changed: character creator. Body: ${listedOr(GENDERS.map((g) => g.name))}. Hair: ${listedOr(HAIRSTYLES.filter((h) => h.id !== 'bob').map((h) => h.name))}. Hair colour: hue, the whole colour wheel. Hair brightness: near black to near white, grey over its top ${percent(HAIR_FADE)}. Skin: palest to darkest.`,
+      `Changed: character creator. Body: ${listedOr(GENDERS.map((g) => g.name))}. Hair: ${listedOr(HAIRSTYLES.filter((h) => !['bob', 'mohawk'].includes(h.id)).map((h) => h.name))}. Hair colour: hue, the whole colour wheel. Hair brightness: near black to near white, grey over its top ${percent(HAIR_FADE)}. Skin: palest to darkest.`,
       `Changed: creator preview: the sculpted body, idle, turned by ◀ ▶ or dragging; Head close-up; outfit ${listedOr(OUTFITS.map((o) => o.name))}, head bare.`,
       'Removed: build Neither, eyes, beards, shirt and trousers colours, swatch hair colours, other haircuts. Existing looks: the nearest body, hairstyle, hair colour and skin.',
       'Removed: Sculpted figures setting (always on).',
@@ -4422,6 +4422,11 @@ export const NEWS: News[] = [
       const e = EMOTE_BY_ID.get('67');
       return [`New: emote ${e?.label ?? '6 7'} (Emotes menu; /67): ${e?.seconds ?? 0} s.`];
     },
+  },
+  {
+    n: 551,
+    day: '2026-11-13',
+    lines: () => [`New: hairstyle ${HAIRSTYLES.find((h) => h.id === 'mohawk')?.name} (character creator).`],
   },
   {
     n: 548,
