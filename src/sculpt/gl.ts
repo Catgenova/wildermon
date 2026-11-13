@@ -31,6 +31,9 @@ export interface DrawOpts {
 
 /** The screen box a body fits in at zoom one, in figure units, as the 2D figure's `STILL_BOX`. */
 export const BOX = { left: -42, right: 42, top: -66, bottom: 14 };
+/** And what of a body in the water is under its surface (`SculptDraw.water`): down to the feet of one upright in it. */
+export const UNDER_BOX = { left: -42, right: 42, top: -30, bottom: 52 };
+const boxOf = (d: SculptDraw): typeof BOX => (d.water?.keep === 'under' ? UNDER_BOX : BOX);
 const MAX_BONES = 80;
 /** Materials a draw may use: a low-poly body's own (`bodyMaterials`), its garments' and its sword's (plain or enchanted) after them. */
 const MAX_MATS = 128;
@@ -60,6 +63,14 @@ const REVIEW_PITCH = 8;
 const DEG = Math.PI / 180;
 /** A low-poly body's outline in screen px at a zoom: a pixel at one, two at the closest. */
 const LOW_INK = (zoom: number): number => Math.min(2, Math.max(1, 0.8 + 0.2 * zoom));
+/**
+ * A body in the water (`SculptDraw.water`): the foam round it where it goes through the surface, its colour and how
+ * opaque (the flat figure's `foam`), and how wide in screen px at a zoom (its 0.55 units, a pixel at least); how far over
+ * the surface (figure units) what is up out of it is still wet, washed toward the water's colour by `WET_MOST` at the
+ * surface and by nothing there (the flat figure's `wetted`), and that colour (its `UNDERWATER` lightened by an eighth).
+ */
+const FOAM_RGB = [238, 247, 250], FOAM_A = 0.8, FOAM_PX = (zoom: number): number => Math.max(1, 0.55 * zoom);
+const WET_UP = 0.9, WET_MOST = 0.3, WET_RGB = [69, 112, 122];
 
 const VS = `#version 300 es
 precision highp float;
@@ -116,6 +127,10 @@ uniform vec3 uL; uniform vec3 uT; uniform float uGrain; uniform float uNight; un
 uniform float uLow; uniform vec3 uSH[${SH_TERMS}]; uniform vec3 uTone; uniform vec3 uFit; uniform vec3 uXv, uYv, uZv;
 // What of the body is behind an egg (SculptDraw.hide: a mount's barrel), left out: its middle and its radii, none at radii nought.
 uniform vec3 uHideC, uHideR;
+// Lit by a blow landing (SculptDraw.hit), nought to one.
+uniform float uHit;
+// The water's surface (SculptDraw.water): its level, and which side of it is drawn (1 over, -1 under, 0 no water).
+uniform vec2 uWater;
 layout(location=0) out vec4 oCol; layout(location=1) out vec4 oNd; layout(location=2) out vec4 oId;
 vec3 hsv2rgb(vec3 c){ vec4 K = vec4(1.0, 2.0/3.0, 1.0/3.0, 3.0); vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www); return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y); }
 vec3 rgb2hsv(vec3 c){ vec4 K = vec4(0.0, -1.0/3.0, 2.0/3.0, -1.0); vec4 p = c.g < c.b ? vec4(c.bg, K.wz) : vec4(c.gb, K.xy); vec4 q = c.r < p.x ? vec4(p.xyw, c.r) : vec4(c.r, p.yzx); float d = q.x - min(q.w, q.y); float e = 1.0e-10; return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x); }
@@ -148,6 +163,12 @@ void main() {
     float a = dot(dv, dv), b = dot(o, dv), c = dot(o, o) - 1.0, disc = b * b - a * c;
     if (disc > 0.0 && (-b + sqrt(disc)) / a > 0.0) discard;
   }
+  // in the water, only the side of its surface asked for; over it, a band along the surface where the foam goes round
+  // (marked for the edge pass, a few pixels however steep), and what is just up out of it wet
+  float up = vPos.z - uWater.x;
+  if (uWater.y != 0.0 && up * uWater.y < 0.0) discard;
+  bool atWater = uWater.y > 0.5 && up < clamp(3.0 * fwidth(vPos.z), 0.12, 0.8);
+  float wet = uWater.y > 0.5 ? ${WET_MOST.toFixed(2)} * (1.0 - smoothstep(0.0, ${WET_UP.toFixed(2)}, up)) : 0.0;
   vec3 n = uLow > 0.5 ? vFace : normalize(vNrm);
   // Seen from behind (the inside of a skirt or a sleeve, seen up into past a thigh drawn up sat): lit as the face toward the
   // viewer, not by the light from under the ground, which lit it a raw red.
@@ -230,10 +251,18 @@ void main() {
     // The grain, a breath of broken colour.
     c += (hash(floor(gl_FragCoord.xy / 2.0)) - 0.5) * uGrain;
   }
+  if (uMode < 0.5) c = mix(c, vec3(${WET_RGB.join('.0, ')}.0) / 255.0, wet);
   if (!emissive && uMode < 0.5) c = mix(c, vec3(12.0, 20.0, 44.0) / 255.0, uNight * 0.68);
+  // Lit by a blow: light added on the body, opaque, its shading kept: a red rim where the surface turns from the viewer,
+  // hot toward white at its edge, and a breath of red over the rest, as night or day.
+  if (uHit > 0.0 && uMode < 0.5) {
+    float z = clamp(uLow > 0.5 ? dot(n, uZv) : dot(n, uT), 0.0, 1.0), rim = smoothstep(0.35, 0.95, 1.0 - z);
+    c = mix(c, c * vec3(1.0, 0.72, 0.66) + vec3(0.12, 0.0, 0.0), 0.6 * uHit);
+    c = mix(c, mix(vec3(0.95, 0.16, 0.08), vec3(1.0, 0.78, 0.6), rim * rim), uHit * rim * 0.85);
+  }
   oCol = vec4(c, 1.0);
   oNd = vec4(n * 0.5 + 0.5, vDepth);
-  oId = vec4(float(mi) / 255.0, emissive ? 1.0 : 0.0, noInk ? 1.0 : (noCrease ? 0.5 : 0.0), thinInk ? 0.5 : 1.0);
+  oId = vec4(float(mi) / 255.0, emissive ? 1.0 : 0.0, noInk ? 1.0 : (noCrease ? 0.5 : 0.0), atWater ? 0.25 : (thinInk ? 0.5 : 1.0));
 }`;
 
 const EDGE_VS = `#version 300 es
@@ -241,25 +270,32 @@ in vec2 aP; out vec2 vUv; void main(){ vUv = aP * 0.5 + 0.5; gl_Position = vec4(
 
 const EDGE_FS = `#version 300 es
 precision highp float;
-in vec2 vUv; uniform sampler2D uCol; uniform sampler2D uNd; uniform sampler2D uId; uniform vec2 uPx; uniform float uInk; uniform float uDepthStep; uniform float uShow; uniform float uNight; uniform float uInner;
+in vec2 vUv; uniform sampler2D uCol; uniform sampler2D uNd; uniform sampler2D uId; uniform vec2 uPx; uniform float uInk; uniform float uDepthStep; uniform float uShow; uniform float uNight; uniform float uInner; uniform float uFoam;
 out vec4 o;
 vec3 inkOf(vec3 base) { return min(mix(base, vec3(0.157, 0.11, 0.102), 0.62), base * 0.5); }
 void main() {
   vec4 c = texture(uCol, vUv);
   vec4 nd = texture(uNd, vUv);
   vec4 id = texture(uId, vUv);
-  // The silhouette: an even band uInk px wide just outside the body, in a dark of the nearest body colour.
-  float sil = 0.0; vec3 near = vec3(0.0);
-  if (c.a < 0.5 && uInk > 0.0) {
+  // The silhouette: an even band uInk px wide just outside the body, in a dark of the nearest body colour; outside the
+  // band along the water's surface (a body in the water), the foam uFoam px wide instead.
+  float sil = 0.0, foam = 0.0; vec3 near = vec3(0.0);
+  float reach = max(uInk, uFoam);
+  if (c.a < 0.5 && reach > 0.0) {
     float best = 1.0e9;
     for (int d = 0; d < 16; d++) {
       float a = float(d) * 0.3927;
       vec2 dir = vec2(cos(a) * uPx.x, sin(a) * uPx.y);
       for (int k = 1; k <= 6; k++) {
-        float t = float(k) / 6.0 * uInk;
+        float t = float(k) / 6.0 * reach;
         if (t >= best) break;
         vec4 sm = texture(uCol, vUv + dir * t);
-        if (sm.a > 0.5) { if (texture(uId, vUv + dir * t).a > 0.75 || t <= uInk * 0.4) { sil = 1.0; best = t; near = sm.rgb; } break; }
+        if (sm.a > 0.5) {
+          float ia = texture(uId, vUv + dir * t).a;
+          if (ia > 0.125 && ia < 0.375) { if (t <= uFoam) { foam = 1.0; sil = 0.0; best = t; } }
+          else if (t <= uInk && (ia > 0.75 || t <= uInk * 0.4)) { sil = 1.0; foam = 0.0; best = t; near = sm.rgb; }
+          break;
+        }
       }
     }
   }
@@ -294,7 +330,8 @@ void main() {
     if (w > 0.0) glow = glow / w * min(1.0, w / 6.0) * (0.35 + 0.45 * uNight);
   }
   if (uShow > 0.5) { o = sil > 0.5 ? vec4(1.0, 0.2, 0.2, 1.0) : inner > 0.0 ? vec4(0.2, 1.0, 0.3, 1.0) : vec4(c.rgb * 0.5 + 0.3, c.a); return; }
-  if (sil > 0.5) o = vec4(inkOf(near), 1.0);
+  if (foam > 0.5) o = vec4(mix(vec3(${FOAM_RGB.join('.0, ')}.0) / 255.0, vec3(12.0, 20.0, 44.0) / 255.0, uNight * 0.68) * ${FOAM_A.toFixed(2)}, ${FOAM_A.toFixed(2)});
+  else if (sil > 0.5) o = vec4(inkOf(near), 1.0);
   else if (c.a > 0.5) o = vec4(mix(c.rgb, inkOf(c.rgb), inner) + glow, 1.0);
   else o = vec4(glow, glow == vec3(0.0) ? 0.0 : min(1.0, length(glow) * 2.0));
 }`;
@@ -379,10 +416,10 @@ export function glContext(): Ctx | null {
   const quad = gl.createBuffer()!;
   gl.bindBuffer(gl.ARRAY_BUFFER, quad);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
-  const names = ['uBones', 'uEx', 'uEy', 'uHS', 'uT', 'uHalf', 'uDepth', 'uOff', 'uMat', 'uL', 'uGrain', 'uNight', 'uMode', 'uFlat', 'uBlink', 'uLow', 'uSH', 'uTone', 'uFit', 'uXv', 'uYv', 'uZv', 'uShapes', 'uShapeFrom', 'uShapeCount', 'uShapeK', 'uShapeW', 'uHideC', 'uHideR'];
+  const names = ['uBones', 'uEx', 'uEy', 'uHS', 'uT', 'uHalf', 'uDepth', 'uOff', 'uMat', 'uL', 'uGrain', 'uNight', 'uMode', 'uFlat', 'uBlink', 'uLow', 'uSH', 'uTone', 'uFit', 'uXv', 'uYv', 'uZv', 'uShapes', 'uShapeFrom', 'uShapeCount', 'uShapeK', 'uShapeW', 'uHideC', 'uHideR', 'uHit', 'uWater'];
   const u = Object.fromEntries(names.map((n) => [n, gl.getUniformLocation(prog, n)]));
   const wu = Object.fromEntries(names.map((n) => [n, gl.getUniformLocation(wire, n)]));
-  const eu = Object.fromEntries(['uCol', 'uNd', 'uId', 'uPx', 'uInk', 'uDepthStep', 'uShow', 'uNight', 'uInner'].map((n) => [n, gl.getUniformLocation(edge, n)]));
+  const eu = Object.fromEntries(['uCol', 'uNd', 'uId', 'uPx', 'uInk', 'uDepthStep', 'uShow', 'uNight', 'uInner', 'uFoam'].map((n) => [n, gl.getUniformLocation(edge, n)]));
   CTX = { gl, cv, prog, edge, wire, fbo: gl.createFramebuffer()!, tCol: gl.createTexture()!, tNd: gl.createTexture()!, tId: gl.createTexture()!, depth: gl.createRenderbuffer()!, quad, w: 0, h: 0, u, eu, wu };
   return CTX;
 }
@@ -502,6 +539,14 @@ export interface SculptDraw {
    * the viewer, or inside it: a mount's barrel under its rider, the far leg down its flank (`../render/figure.ts` BARREL).
    */
   hide?: { c: readonly [number, number, number]; r: readonly [number, number, number] };
+  /** How far the body is lit by a blow landing on it (`../render/figure.ts` FigurePose.flinch), nought to one. */
+  hit?: number;
+  /**
+   * A body in the water: the level of its surface in the figure's frame (up from the feet, the figure's units), and which
+   * side of it is drawn: what is over it (cut at it, the foam round it and what is just up out of it wet), or what is under
+   * it (for the caller to lay down faint, as the flat figure's `underwater`).
+   */
+  water?: { level: number; keep: 'over' | 'under' };
 }
 /**
  * A slash trail as drawn: a triangle strip, five numbers a point (x, y, z in the figure's frame as the body's skinned
@@ -519,7 +564,7 @@ export function drawSculptGL(ctx: CanvasRenderingContext2D, sx: number, sy: numb
   if (!C) return false;
   const { gl } = C;
   const dpr = o.dpr ?? (window.devicePixelRatio || 1);
-  const w = Math.ceil((BOX.right - BOX.left) * zoom * dpr), h = Math.ceil((BOX.bottom - BOX.top) * zoom * dpr);
+  const box = boxOf(d), w = Math.ceil((box.right - box.left) * zoom * dpr), h = Math.ceil((box.bottom - box.top) * zoom * dpr);
   size(C, w, h);
   const bf = buffersOf(gl, d.baked);
   gl.bindFramebuffer(gl.FRAMEBUFFER, C.fbo);
@@ -539,9 +584,9 @@ export function drawSculptGL(ctx: CanvasRenderingContext2D, sx: number, sy: numb
     gl.uniform2f(u.uEy, v.ey[0], v.ey[1]);
     gl.uniform1f(u.uHS, HEIGHT_SCALE);
     gl.uniform3f(u.uT, v.T[0], v.T[1], v.T[2]);
-    gl.uniform2f(u.uHalf, (BOX.right - BOX.left) / 2, (BOX.bottom - BOX.top) / 2);
+    gl.uniform2f(u.uHalf, (box.right - box.left) / 2, (box.bottom - box.top) / 2);
     gl.uniform1f(u.uDepth, 80);
-    gl.uniform2f(u.uOff, (BOX.left + BOX.right) / 2, (BOX.top + BOX.bottom) / 2);
+    gl.uniform2f(u.uOff, (box.left + box.right) / 2, (box.top + box.bottom) / 2);
     gl.uniform4fv(u.uMat, matsOf(d.materials));
     gl.uniform3f(u.uL, v.L[0], v.L[1], v.L[2]);
     gl.uniform1f(u.uGrain, o.grain ?? 0.02);
@@ -549,9 +594,11 @@ export function drawSculptGL(ctx: CanvasRenderingContext2D, sx: number, sy: numb
     gl.uniform1f(u.uMode, o.debug === 'normals' ? 1 : o.debug === 'mats' ? 2 : o.debug === 'bones' ? 3 : 0);
     gl.uniform1f(u.uFlat, o.flat ? 1 : 0);
     gl.uniform1f(u.uBlink, d.blink ?? 0);
+    gl.uniform1f(u.uHit, d.hit ?? 0);
     gl.uniform1f(u.uLow, low ? 1 : 0);
     gl.uniform3f(u.uHideC, d.hide?.c[0] ?? 0, d.hide?.c[1] ?? 0, d.hide?.c[2] ?? 0);
     gl.uniform3f(u.uHideR, d.hide?.r[0] ?? 0, d.hide?.r[1] ?? 0, d.hide?.r[2] ?? 0);
+    gl.uniform2f(u.uWater, d.water?.level ?? 0, d.water ? (d.water.keep === 'over' ? 1 : -1) : 0);
     // the garment's corrective shapes: only while one weighs anything (their sampler on a unit of its own always, never
     // on one of the frame's own textures)
     gl.uniform1i(u.uShapes, 3);
@@ -619,13 +666,14 @@ export function drawSculptGL(ctx: CanvasRenderingContext2D, sx: number, sy: numb
   const ink = (o.ink ?? (low ? LOW_INK(zoom) : Math.min(3.2, Math.max(0.9, 0.55 * zoom)))) * dpr;
   gl.uniform1f(C.eu.uInk, ink);
   gl.uniform1f(C.eu.uInner, low ? 0 : 1);
+  gl.uniform1f(C.eu.uFoam, d.water?.keep === 'over' ? FOAM_PX(zoom) * dpr : 0);
   gl.uniform1f(C.eu.uDepthStep, 0.7);
   gl.uniform1f(C.eu.uShow, o.debug === 'edges' ? 1 : 0);
   gl.uniform1f(C.eu.uNight, o.night ?? 0);
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   if (d.trail && d.trail.n > 2) drawTrail(C, d, d.trail, w, h, o.night ?? 0);
   gl.flush();
-  ctx.drawImage(C.cv, 0, 0, w, h, sx + BOX.left * zoom, sy + BOX.top * zoom, w / dpr, h / dpr);
+  ctx.drawImage(C.cv, 0, 0, w, h, sx + box.left * zoom, sy + box.top * zoom, w / dpr, h / dpr);
   return true;
 }
 
@@ -642,8 +690,9 @@ function drawTrail(C: Ctx, d: SculptDraw, t: TrailDraw, w: number, h: number, ni
   gl.uniform2f(u.uEy, v.ey[0], v.ey[1]);
   gl.uniform1f(u.uHS, HEIGHT_SCALE);
   gl.uniform3f(u.uT, v.T[0], v.T[1], v.T[2]);
-  gl.uniform2f(u.uHalf, (BOX.right - BOX.left) / 2, (BOX.bottom - BOX.top) / 2);
-  gl.uniform2f(u.uOff, (BOX.left + BOX.right) / 2, (BOX.top + BOX.bottom) / 2);
+  const box = boxOf(d);
+  gl.uniform2f(u.uHalf, (box.right - box.left) / 2, (box.bottom - box.top) / 2);
+  gl.uniform2f(u.uOff, (box.left + box.right) / 2, (box.top + box.bottom) / 2);
   gl.uniform1i(u.uCol, 0);
   gl.uniform1i(u.uNd, 1);
   gl.uniform2f(u.uPx, 1 / w, 1 / h);

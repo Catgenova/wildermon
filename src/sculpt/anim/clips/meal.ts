@@ -30,7 +30,7 @@ function clipOf(name: string, length: number, bites: Bite[], tool: string, stret
   const beats: Beat[] = bites.map((b) => ({ t: b.t, pose: poseOf(b), ease: 'inOut', ...(b.key ? { stage: 'key' as const } : {}), ...(b.name ? { name: b.name } : {}) }));
   const keys = poseToPose(beats, { length, loop: true, lag: { head: 0.04, neck_02: 0.02 } });
   const ease = { ease: 'inOut' as const };
-  const r: HandReach = { at: bites.map((b): Key<Euler> => ({ t: b.t, v: b.at, ...ease })), way: bites[0].way, ways: bites.map((b): Key<Euler> => ({ t: b.t, v: b.way, ...ease })) };
+  const r: HandReach = { at: bites.map((b): Key<Euler> => ({ t: b.t, v: b.at, ...ease })), way: bites.map((b): Key<Euler> => ({ t: b.t, v: b.way, ...ease })) };
   return {
     name, loop: true, length, mask: 'full',
     // stood as the idle stands, feet a little apart and turned out; hers closer together

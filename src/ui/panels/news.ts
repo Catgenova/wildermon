@@ -8,7 +8,7 @@ import { PLAN_AREA_MOST, PLAN_UNDO_SECONDS } from '../../game/planarea';
 import { UPDATE_CHECK_MS } from '../update';
 import { JOURNAL_TABS } from './journaltabs';
 import { RESPAWN_ARM_MS } from '../respawn';
-import { BLOCK_SECS } from '../../game/fight';
+import { BLOCK_SECS, FLINCH_LIT, FLINCH_SECS } from '../../game/fight';
 import { MAP_LEGEND, SETTLEMENT_BORDER_PX, MAP_ZOOM_MIN } from './minimap';
 import { FAST_DPR, LOW_POWER_FPS, SETTING_DEFAULTS } from '../../game/settings';
 import { BLOSSOM } from '../../audio/music/tracks/blossom';
@@ -4297,7 +4297,7 @@ export const NEWS: News[] = [
     n: 539,
     day: '2026-11-12',
     lines: () => {
-      const tools = Object.keys(CLIP_OF_TOOL).map((id) => itemDef(id).name.toLowerCase());
+      const tools = Object.keys(CLIP_OF_TOOL).filter((id) => CLIP_OF_TOOL[id] === 'work').map((id) => itemDef(id).name.toLowerCase());
       // the models with a head or blade tinted to its metal (src/sculpt/assets/<id>.json, `metal` materials)
       const metal = ['hammer', 'chisel', 'hatchet', 'butchering_knife', 'carving_knife', 'trowel', 'file'].map((id) => itemDef(id).name.toLowerCase());
       const jobs = (clip: string): number => [...ACTION_BY_ID.keys()].filter((id) => clipOfJob(id) === clip).length;
@@ -4350,10 +4350,20 @@ export const NEWS: News[] = [
   {
     n: 544,
     day: '2026-11-13',
-    lines: () => [
-      `New: shield block drawn on the blocker, seen by players nearby: shield arm raised for ${BLOCK_SECS} s per blocked blow.`,
-      'New: sleeping, eating, drinking, praying and meditating animated on the sculpted body (was: a placeholder gesture).',
-    ],
+    lines: () => {
+      const jobs = (clip: string, not: string[] = []): number => [...ACTION_BY_ID.keys()].filter((id) => clipOfJob(id) === clip && !not.includes(id)).length;
+      const name = (id: string): string => itemDef(id).name.toLowerCase();
+      return [
+        `New: ${name('shovel')} (${jobs('dig')} jobs), ${name('rake')} (${jobs('rake')}) and ${name('sickle')} (${jobs('reap')}) work animated on the sculpted body, tool in hand in its metal; ${name('pickaxe')} at the ground (${jobs('swing', ['mine', 'chip_corner', 'mine_cellar'])} jobs): overhead swing (was: a placeholder gesture).`,
+        `New: shield block drawn on the blocker, seen by players nearby: shield arm raised for ${BLOCK_SECS} s per blocked blow.`,
+        'New: Wave and Hop animated on the sculpted body (was: a placeholder gesture). Both hands full: a nod.',
+        `New: hit reaction drawn on the body struck, seen by players nearby: ${FLINCH_SECS} s per landed blow; flash ${FLINCH_LIT * 1000} ms, off under less motion.`,
+        `New: animation at the quern, grinding: ${jobs('quern')} jobs; pressing: ${jobs('press')}. Stirring a pot, bowl or jar: ${jobs('stir')}. Cooking on a skewer at a fire: ${jobs('roast')}. Frying: ${jobs('fry')} (was: a placeholder gesture).`,
+        'New: sculpted bodies swimming and treading water (was: the flat figure).',
+        'Changed: leaching lye and filling a barrel: both hands at waist height (was: a placeholder gesture).',
+        'New: sleeping, eating, drinking, praying and meditating animated on the sculpted body (was: a placeholder gesture).',
+      ];
+    },
   },
   {
     n: 529,

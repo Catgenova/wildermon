@@ -21,9 +21,10 @@ export type Body = 'man' | 'woman';
  * The procedural layer's inputs (`Skeleton.finish`): where the feet are planted; how much further out the arms are kept;
  * both hands on one handle (`grip`, with what is `held`); or the arms as keyed (`free`), the hands in `hands` reached to
  * their places, each fist closed on the tool in it (`tools`); or each fist in `reach` put on a place given in the mesh's own
- * units and frame (a seat's reins, oars or tiller: `../index.ts` seatedLocal), its grip along `way`.
+ * units and frame (a seat's reins, oars or tiller: `../index.ts` seatedLocal), its grip along `way`; and the other hand
+ * closed on the tool in a hand (`second`: a point of it and the grip's way, in the tool's own frame), once that hand is placed.
  */
-export interface FinishOptions { plant?: Plant; armsOut?: number; grip?: GripAt; held?: Held; free?: boolean; hands?: Partial<Record<Side, HandAt>>; tools?: Partial<Record<Side, Held>>; reach?: Partial<Record<Side, { at: V; way: V }>> }
+export interface FinishOptions { plant?: Plant; armsOut?: number; grip?: GripAt; held?: Held; free?: boolean; hands?: Partial<Record<Side, HandAt>>; tools?: Partial<Record<Side, Held>>; reach?: Partial<Record<Side, { at: V; way: V }>>; second?: { side: Side; at: V; way: V } }
 /** The most of its length a planted leg is stretched to (bone-straight, its knee is the rig's straightest): nearly locked. */
 const REACH = 0.998;
 /** The share of its reach over which a leg in the air straightens softly toward its foot's place (`finish`). */
@@ -263,11 +264,12 @@ export function skeleton(A: AnimAsset, canon: AnimAsset, gameHeight = 0): Skelet
    * bent about its hinge to reach, the upper arm swung onto the line and turned about it so the elbow stays on the side it
    * was keyed on (as `twoHands` reaches the left). Twice over, the second time from the forearm the first put.
    */
-  function reachTo(L: Array<M3 | undefined>, F: Frame[], move: V, s: 0 | 1, at: V, way: V, held?: Held): Frame[] {
+  function reachTo(L: Array<M3 | undefined>, F: Frame[], move: V, s: 0 | 1, at: V, way: V, held?: Held, knuckles?: V): Frame[] {
     const h = HANDS[s], so = socketsOf(held)[s], y = unit(way);
     const frame = (x: V, yy: V): M3 => { const X = unit(x), Y = unit(sub(yy, scl(X, dot(yy, X)))), Z = cross(X, Y); return [X[0], Y[0], Z[0], X[1], Y[1], Z[1], X[2], Y[2], Z[2]]; };
     for (let n = 0; n < 2; n++) {
-      const fore = unit(sub(F[h.hand].P, F[h.lower].P)), x = sub(fore, scl(y, dot(fore, y)));
+      // (the knuckles the way asked, where asked: else the forearm's way)
+      const fore = knuckles ? unit(knuckles) : unit(sub(F[h.hand].P, F[h.lower].P)), x = sub(fore, scl(y, dot(fore, y)));
       const X = len(x) > 1e-6 ? unit(x) : unit(cross(y, [0, 0, 1])), Z = cross(X, y);
       const G: M3 = [X[0], y[0], Z[0], X[1], y[1], Z[1], X[2], y[2], Z[2]], W = mm(G, tr(so.R));
       const want = sub(at, mv(W, so.o));
@@ -388,10 +390,16 @@ export function skeleton(A: AnimAsset, canon: AnimAsset, gameHeight = 0): Skelet
       const up = o.plant ? Math.min(...LEG.map((g, s) => (o.plant as Plant).at[s][1] - bones[g.foot].head[1])) : 0;
       for (const [side, h] of Object.entries(o.hands) as Array<[Side, HandAt]>) {
         const s = side === 'l' ? 0 : 1, p: V = [h.at[0] * height, A.floor + up + h.at[1] * height, h.at[2] * height];
-        F = reachTo(L, F, pose.move, s, p, h.way, o.tools?.[side]);
+        F = reachTo(L, F, pose.move, s, p, h.way, o.tools?.[side], h.knuckles);
       }
     }
     for (const [side, h] of Object.entries(o.reach ?? {}) as Array<[Side, { at: V; way: V }]>) F = reachTo(L, F, pose.move, side === 'l' ? 0 : 1, h.at, h.way);
+    // the other hand on the tool in a hand: its point and way carried as the tool is in that fist (its socket's frame)
+    const two = o.second, inHand = two && o.tools?.[two.side === 'l' ? 'r' : 'l'];
+    if (two && inHand) {
+      const g = gripOf(F, inHand)[two.side === 'l' ? 1 : 0];
+      F = reachTo(L, F, pose.move, two.side === 'l' ? 0 : 1, add(g.at, mv(g.R, scl(sub(two.at, [0, inHand.lead, 0]), 1 / inHand.scale))), unit(mv(g.R, two.way)));
+    }
     return { local: L, move: pose.move };
   }
 
