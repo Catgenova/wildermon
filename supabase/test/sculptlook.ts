@@ -149,6 +149,7 @@ check('short to the swept back, long to the braid, bald and the tonsure to bald'
   cleanLook({ hair: 'crop' }).hair === 'swept' && cleanLook({ hair: 'braid' }).hair === 'braid' && cleanLook({ hair: 'tonsure' }).hair === 'bald');
 check('the ponytail to the high ponytail', cleanLook({ hair: 'ponytail' }).hair === 'ponytail');
 check('long and loose to the shoulder length', cleanLook({ hair: 'long' }).hair === 'warrior');
+check('twin braids to the twin braids', cleanLook({ hair: 'braids' }).hair === 'twinbraids');
 check('a bowl cut and a fringe to the bob', cleanLook({ hair: 'bowl' }).hair === 'bob' && cleanLook({ hair: 'fringe' }).hair === 'bob');
 check('the top knot to the top knot', cleanLook({ hair: 'topknot' }).hair === 'topknot');
 check('a short cut to the crew cut', cleanLook({ hair: 'short' }).hair === 'crew');
