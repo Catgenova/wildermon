@@ -47,7 +47,7 @@ export const CATCH_SECS = 0.75;
 export const CATCH_DROPS = 12;
 
 /** The night's blue the water's whites are let down toward after dark, and how far at the dead of night. */
-const NIGHT_WATER = '#1c2c40', NIGHT_DIM = 0.55;
+const NIGHT_WATER = '#1c2c40', NIGHT_DIM = 0.3;
 const WHITE = hexOf(FOAM), PALE = mixHex(WHITE, hexOf(WATER_TURQUOISE), 0.35), BLUE = mixHex(WHITE, hexOf(WATER_TEAL), 0.55);
 /** A caught fish's back and its belly. */
 const FISH_BACK = '#56707c', FISH_BELLY = '#c9d4d6';
