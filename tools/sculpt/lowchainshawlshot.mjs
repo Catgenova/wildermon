@@ -12,7 +12,7 @@ import { join } from 'node:path';
 import { mkdirSync } from 'node:fs';
 import { buildRig, posed, skin, axisAngle, mm, tr } from './lowrig.mjs';
 import { skinGarment, crossPairs } from './lowgarment.mjs';
-import { buildClear, chainShawlWeights, underOf, MATS } from './garments/chainshawl.mjs';
+import { buildClear, chainShawlWeights, underOf, assetMesh, MATS } from './garments/chainshawl.mjs';
 import { MATS as CHAIN } from './garments/chainmail.mjs';
 import { shoot, closeBrowser, SKIN } from './lowgarmentshot.mjs';
 
@@ -24,8 +24,9 @@ const RED = [0.95, 0.1, 0.1], BLUE = [0.2, 0.4, 1];
 const colOf = (m) => (MATS[m] ?? CHAIN[m] ?? [0.5, 0.5, 0.5]);
 const under = {}, rigs = {}, shawls = {};
 for (const who of WHO) {
-  rigs[who] = buildRig(who); under[who] = underOf(who);
-  const G = buildClear(rigs[who]); G.vw = chainShawlWeights(rigs[who], G); shawls[who] = G;
+  // (the shawl's own fit; shown and checked over the hauberk and the coif's hood)
+  rigs[who] = buildRig(who); under[who] = [assetMesh('lowchainchest', who), assetMesh('lowchaincoif', who, { to: 'drop' })];
+  const G = buildClear(rigs[who], undefined, underOf(who)); G.vw = chainShawlWeights(rigs[who], G); shawls[who] = G;
   const mats = {}; for (const p of G.polys) mats[p.mat] = (mats[p.mat] ?? 0) + 1;
   console.log(who, `${G.verts.length} vertices, ${G.tris.length} triangles, lifted ${JSON.stringify(G.extra)}`, G.left ? 'left ' + JSON.stringify(G.left) : 'clear', JSON.stringify(mats));
 }
