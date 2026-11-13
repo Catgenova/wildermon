@@ -233,8 +233,13 @@ void main() {
     c += (hash(floor(gl_FragCoord.xy / 2.0)) - 0.5) * uGrain;
   }
   if (!emissive && uMode < 0.5) c = mix(c, vec3(12.0, 20.0, 44.0) / 255.0, uNight * 0.68);
-  // Lit by a blow: toward a hot red-white, most at the rim where the surface turns from the viewer, as night or day.
-  if (uHit > 0.0 && uMode < 0.5) c = mix(c, vec3(1.0, 0.84, 0.78), uHit * (0.3 + 0.55 * pow(1.0 - clamp(dot(n, uT), 0.0, 1.0), 2.0)));
+  // Lit by a blow: light added on the body, opaque, its shading kept: a red rim where the surface turns from the viewer,
+  // hot toward white at its edge, and a breath of red over the rest, as night or day.
+  if (uHit > 0.0 && uMode < 0.5) {
+    float z = clamp(uLow > 0.5 ? dot(n, uZv) : dot(n, uT), 0.0, 1.0), rim = smoothstep(0.35, 0.95, 1.0 - z);
+    c = mix(c, c * vec3(1.0, 0.72, 0.66) + vec3(0.12, 0.0, 0.0), 0.6 * uHit);
+    c = mix(c, mix(vec3(0.95, 0.16, 0.08), vec3(1.0, 0.78, 0.6), rim * rim), uHit * rim * 0.85);
+  }
   oCol = vec4(c, 1.0);
   oNd = vec4(n * 0.5 + 0.5, vDepth);
   oId = vec4(float(mi) / 255.0, emissive ? 1.0 : 0.0, noInk ? 1.0 : (noCrease ? 0.5 : 0.0), thinInk ? 0.5 : 1.0);

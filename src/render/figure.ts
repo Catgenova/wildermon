@@ -9460,9 +9460,9 @@ function flinched(r: Rig, f: NonNullable<FigurePose['flinch']>): void {
   const a = f.from ?? 0, back = Math.cos(a) * k, side = Math.sin(a) * k;
   const head = f.where === 'head', legs = f.where === 'legs' || f.where === 'feet';
   // (pitch: above nought leans back)
-  r.spine = [r.spine[0] + 4 * back, r.spine[1], r.spine[2] - 5 * side];
-  r.chest = [r.chest[0] + (head ? 3 : 6) * back, r.chest[1], r.chest[2] - 4 * side];
-  r.head = [r.head[0] + (head ? 16 : 7) * back, r.head[1], r.head[2] - 4 * side];
+  r.spine = [r.spine[0] + 6 * back, r.spine[1], r.spine[2] - 6 * side];
+  r.chest = [r.chest[0] + (head ? 4 : 9) * back, r.chest[1], r.chest[2] - 5 * side];
+  r.head = [r.head[0] + (head ? 20 : 10) * back, r.head[1], r.head[2] - 5 * side];
   const dip = (legs ? 26 : 8) * k;
   r.knee = [r.knee[0] + dip, r.knee[1] + dip];
 }

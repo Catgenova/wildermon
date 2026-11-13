@@ -355,6 +355,8 @@ export function blockOver(sk: Skeleton, base: Local, u: number, stood: boolean):
 export const flinching = (pose: FigurePose): boolean => ON && !!pose.flinch && pose.flinch.t >= 0 && pose.flinch.t < 1 && !pose.swimming && !pose.driving;
 /** The bones a flinch turns away from where the blow came from (`FigurePose.flinch.from`): the trunk, the neck and the head. */
 const TRUNK_BONES = new Set(['pelvis', 'spine_01', 'spine_02', 'spine_03', 'neck_01', 'neck_02', 'head']);
+/** How much of the trunk's jolt is kept off the arms (`flinchOver`). */
+const STEADY = 0.6;
 /** Which way a bone's roll (rz) leans the trunk toward the body's right: the lean away from a blow from its left. */
 const LEAN_RIGHT = 1;
 /**
@@ -373,6 +375,17 @@ export function flinchOver(sk: Skeleton, base: Local, f: NonNullable<FigurePose[
     // (a lean back, rx below nought, from ahead; to the right from the left: rx turned into rz)
     const r = TRUNK_BONES.has(bone) ? [e[0] * ca, e[1], e[2] + LEAN_RIGHT * -e[0] * sa] as [number, number, number] : e;
     p[i] = qmul(q[i] ?? QI, sk.local(i, r));
+  }
+  // the arms carried by the trunk's jolt only so far (`STEADY` of it kept off them), so what is in the hands (a weapon, a
+  // raised shield) is not flung about with it
+  const chest = sk.at.get('spine_03') as number, R = sk.bones[chest].R;
+  const fk = (x: Array<Q | undefined>): M3 => sk.fk(x.map((y) => (y ? qmat(y) : undefined)), [0, 0, 0])[chest].W;
+  const back = slerp(QI, quat(mm(tr(fk(p)), fk(q))), STEADY);
+  for (const side of ['l', 'r']) {
+    const i = sk.at.get(`clavicle_${side}`);
+    if (i === undefined) continue;
+    const rel = quat(mm(tr(R), sk.bones[i].R));
+    p[i] = qmul(qmul(qinv(rel), qmul(back, rel)), p[i] ?? QI);
   }
   if (!stood) return { local: p.map((x, i) => (x ? qmat(x) : base.local[i])), move: base.move };
   // the shift back (z below nought) from a blow ahead turned away from where it came from: across by its sine
