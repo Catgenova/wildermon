@@ -12989,7 +12989,9 @@ function idleLoop(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: n
   ink: number, now: number, still: string, dev: number, id: string): boolean {
   if (changing || doing(pose) !== 'idle' || pose.emote || pose.seat || !Number.isInteger(facing) || gearShines(pose.gear)) return false;
   const b = boxAt(zoom * dev);
-  const { n, scale } = loopShape(id, now, Math.round(IDLE_LOOP * Math.max(MIN_RATE, STILL_RATE.idle * rateShare(ctx, sx, sy, zoom, dev, id))), b.w, b.h);
+  // With animations off, one picture: the still pose (`stillPose`), whatever share of the store the loops have.
+  const { n, scale } = animationsOff() ? { n: 1, scale: 1 }
+    : loopShape(id, now, Math.round(IDLE_LOOP * Math.max(MIN_RATE, STILL_RATE.idle * rateShare(ctx, sx, sy, zoom, dev, id))), b.w, b.h);
   // The same clock the pose is worked out from (`rigOf`).
   const t = (((pose.phase / 6) % IDLE_LOOP) + IDLE_LOOP) % IDLE_LOOP;
   const i = Math.min(n - 1, Math.floor((t / IDLE_LOOP) * n));
@@ -13019,7 +13021,9 @@ function clipLoop(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: n
   const c = SCULPT.clipNow(pose);
   if (!c || c.fading) return false;
   const b = boxAt(zoom * dev);
-  const { n, scale } = loopShape(id, now, Math.max(1, Math.round(c.length * Math.max(MIN_RATE, STILL_RATE.work * rateShare(ctx, sx, sy, zoom, dev, id)))), b.w, b.h);
+  // With animations off, one picture: the still pose (`stillPose`), shared by every body at that job dressed alike.
+  const { n, scale } = animationsOff() ? { n: 1, scale: 1 }
+    : loopShape(id, now, Math.max(1, Math.round(c.length * Math.max(MIN_RATE, STILL_RATE.work * rateShare(ctx, sx, sy, zoom, dev, id)))), b.w, b.h);
   const i = Math.min(n - 1, Math.floor((c.t / c.length) * n));
   // What is held is drawn too: the tool, in its metal.
   const held = pose.tool ? `${pose.tool.id}.${pose.tool.material ?? ''}.${pose.tool.enchanted ? 1 : 0}` : '';
