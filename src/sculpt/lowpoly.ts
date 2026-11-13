@@ -160,6 +160,8 @@ import FEMALE_CHAIN_BOOTS from './assets/lowchainboots-female.json';
 // the scale set (tools/sculpt/garments/scalechest.mjs)
 import MALE_SCALE_CHEST from './assets/lowscalechest-male.json';
 import FEMALE_SCALE_CHEST from './assets/lowscalechest-female.json';
+import MALE_SCALE_SHAWL from './assets/lowscaleshawl-male.json';
+import FEMALE_SCALE_SHAWL from './assets/lowscaleshawl-female.json';
 import MALE_SCALE_LEGS from './assets/lowscalelegs-male.json';
 import FEMALE_SCALE_LEGS from './assets/lowscalelegs-female.json';
 import MALE_SCALE_BOOTS from './assets/lowscaleboots-male.json';
@@ -1247,13 +1249,13 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
   return { baked: lowBaked, bones: lowBones, shapes: () => SHAPES_W, wet: () => WET, trail: lowTrail, skeleton: SK, held: HELD, heldOf: (id) => HELDS.get(id), toolHeld: (id) => TOOL_HELD.get(id), figure: (pose) => fromGame(bonesOf(rigFor(pose), P, [], REST_EXTRAS), gameRest()), used: usedOf , lift: lowLift, toGame };
 }
 
-type OutfitKey = 'hood' | 'tunic' | 'shawl' | 'trousers' | 'boots' | 'plateChest' | 'plateMantle' | 'plateLegs' | 'plateBoots' | 'plateHelm' | 'leatherChest' | 'leatherShawl' | 'leatherLegs' | 'leatherBoots' | 'leatherHat' | ChainPiece | 'scaleHelm' | 'scaleChest' | 'scaleLegs' | 'scaleBoots';
+type OutfitKey = 'hood' | 'tunic' | 'shawl' | 'trousers' | 'boots' | 'plateChest' | 'plateMantle' | 'plateLegs' | 'plateBoots' | 'plateHelm' | 'leatherChest' | 'leatherShawl' | 'leatherLegs' | 'leatherBoots' | 'leatherHat' | ChainPiece | 'scaleHelm' | 'scaleChest' | 'scaleShawl' | 'scaleLegs' | 'scaleBoots';
 type EnchantKey = keyof NonNullable<NonNullable<FigurePose['outfit']>['enchanted']>;
 /**
  * The sculpted piece each worn item is drawn as (`outfitOf`): its wear switch, its enchantment's, and for plate and chain
  * the piece whose metal it is. A shawl is the set's shawl where it has one of its own (the cloth shawl, the leather
- * shawl, the plate set's fur mantle, its clasps and rim in the shawl's metal); the chain and scale shawls are drawn as
- * their set's chest & arms, one garment worn for either item.
+ * shawl, the plate set's fur mantle, its clasps and rim in the shawl's metal, the scale set's wing mantle, its ribs and
+ * scales in the shawl's material); the chain shawl is drawn as its set's chest & arms, one garment worn for either item.
  */
 const ITEM_PIECES: Readonly<Record<string, { key: OutfitKey; ench: EnchantKey; plate?: PlatePiece }>> = {
   wool_cap: { key: 'hood', ench: 'clothHood' },
@@ -1280,16 +1282,17 @@ const ITEM_PIECES: Readonly<Record<string, { key: OutfitKey; ench: EnchantKey; p
   // the scale set: all its pieces in one material (`scale`: dragon scale, which none of them names)
   scale_helm: { key: 'scaleHelm', ench: 'scaleHelm', plate: 'scale' },
   scale_cuirass: { key: 'scaleChest', ench: 'scaleChest', plate: 'scale' },
-  scale_shawl: { key: 'scaleChest', ench: 'scaleChest', plate: 'scale' },
+  scale_shawl: { key: 'scaleShawl', ench: 'scaleShawl', plate: 'scale' },
   scale_leggings: { key: 'scaleLegs', ench: 'scaleLegs', plate: 'scale' },
   scale_boots: { key: 'scaleBoots', ench: 'scaleBoots', plate: 'scale' },
 };
 /**
  * The shawls drawn as a garment of their own: worn over whatever chest piece is worn (`armourChest`: each its copy fitted
- * over armour), the chest drawn under it. A shawl item whose piece is not one of these is drawn as its set's chest & arms
- * (the chain and scale shawls, for now: `ITEM_PIECES`), and gives way to a chest piece of another set.
+ * over armour where it has them; the plate and scale mantles are fitted over every chest), the chest drawn under it. A
+ * shawl item whose piece is not one of these is drawn as its set's chest & arms (the chain shawl, for now: `ITEM_PIECES`;
+ * its own garment's key belongs here when it has one), and gives way to a chest piece of another set.
  */
-const SHAWL_GARMENTS: ReadonlySet<OutfitKey> = new Set<OutfitKey>(['shawl', 'leatherShawl', 'plateMantle']);
+const SHAWL_GARMENTS: ReadonlySet<OutfitKey> = new Set<OutfitKey>(['shawl', 'leatherShawl', 'plateMantle', 'scaleShawl']);
 /**
  * What a figure has equipped (`FigurePose.gear`) as its outfit: each worn piece's sculpted garment, enchanted when it is,
  * plate in its metal. The first outfit's tunic, trousers and boots stay under what does not replace them; its shawl is
@@ -1369,7 +1372,7 @@ const wearsHelm = (pose: FigurePose): boolean => pose.outfit?.plateHelm ?? false
  * tippet over the shoulders is left out under a chest piece with a collar of its own (`coifTippetDropped`).
  */
 const wearsCoif = (pose: FigurePose): boolean => pose.outfit?.chainCoif ?? false;
-const coifTippetDropped = (pose: FigurePose): boolean => wearsShawl(pose) || !!(o(pose).plateChest || o(pose).plateMantle || o(pose).leatherChest || o(pose).leatherShawl || o(pose).scaleChest);
+const coifTippetDropped = (pose: FigurePose): boolean => wearsShawl(pose) || !!(o(pose).plateChest || o(pose).plateMantle || o(pose).leatherChest || o(pose).leatherShawl || o(pose).scaleChest || o(pose).scaleShawl);
 /** Whether a figure wears the scale set's helm (`tools/sculpt/garments/scalehelm.mjs`: rigid on the head, the hair not drawn under it): off unless asked for. */
 const wearsScaleHelm = (pose: FigurePose): boolean => pose.outfit?.scaleHelm ?? false;
 export const hairShown = (pose: FigurePose): boolean => !wearsHood(pose) && !wearsHelm(pose) && !wearsCoif(pose) && !wearsScaleHelm(pose);
@@ -1457,6 +1460,10 @@ const GARMENTS: ReadonlyArray<{ man: GarmentAsset; woman: GarmentAsset; wears: (
   // out, the hair not drawn under it): off unless asked for
   { man: MALE_SCALE_HELM as unknown as GarmentAsset, woman: FEMALE_SCALE_HELM as unknown as GarmentAsset, wears: wearsScaleHelm, enchanted: enchantedOf('scaleHelm'), plate: 'scale' },
   { man: MALE_SCALE_CHEST as unknown as GarmentAsset, woman: FEMALE_SCALE_CHEST as unknown as GarmentAsset, wears: (p) => p.outfit?.scaleChest ?? false, enchanted: enchantedOf('scaleChest'), plate: 'scale' },
+  // the scale set's wing mantle (`tools/sculpt/garments/scaleshawl.mjs`: two folded wings over the shoulders, fitted over
+  // the cuirass, skinned to the body's bones): off unless `outfit.scaleShawl`; its ribs and scales in the set's material,
+  // its joints and claws lit when enchanted
+  { man: MALE_SCALE_SHAWL as unknown as GarmentAsset, woman: FEMALE_SCALE_SHAWL as unknown as GarmentAsset, wears: (p) => p.outfit?.scaleShawl ?? false, enchanted: enchantedOf('scaleShawl'), plate: 'scale' },
   // what is worn besides the sets (tools/sculpt/garments/kit.mjs), from the gear: the shield on the left forearm (the
   // wooden one in its wood, the metal one in its metal), the tool belt over what is worn at the hips (fitted over the cloth,
   // the leather chest, the plate chest, the hauberk or the scale cuirass), the pendant on the breastbone over the shawl
@@ -1470,7 +1477,7 @@ const GARMENTS: ReadonlyArray<{ man: GarmentAsset; woman: GarmentAsset; wears: (
   { man: MALE_BELT_CHAIN as unknown as GarmentAsset, woman: FEMALE_BELT_CHAIN as unknown as GarmentAsset, wears: (p) => beltOver(p) === 'chain', enchanted: (p) => !!p.gear?.belt?.enchanted },
   { man: MALE_BELT_SCALE as unknown as GarmentAsset, woman: FEMALE_BELT_SCALE as unknown as GarmentAsset, wears: (p) => beltOver(p) === 'scale', enchanted: (p) => !!p.gear?.belt?.enchanted },
   // (the pendant over what is outermost on the breastbone: the cloth shawl, either copy; the leather chest; the tunic;
-  // under the leather shawl, the mantle, plate, mail or scale not drawn: `pendantOver`)
+  // under the leather shawl, the plate or scale mantle, plate, mail or scale not drawn: `pendantOver`)
   { man: MALE_PENDANT_CLOTH as unknown as GarmentAsset, woman: FEMALE_PENDANT_CLOTH as unknown as GarmentAsset, wears: (p) => pendantOver(p) === 'shawl', enchanted: (p) => !!p.gear?.jewel?.enchanted, kit: 'jewel' },
   { man: MALE_PENDANT_SHAWL_SLIM as unknown as GarmentAsset, woman: FEMALE_PENDANT_SHAWL_SLIM as unknown as GarmentAsset, wears: (p) => pendantOver(p) === 'shawlSlim', enchanted: (p) => !!p.gear?.jewel?.enchanted, kit: 'jewel' },
   { man: MALE_PENDANT_SHAWL_OVER as unknown as GarmentAsset, woman: FEMALE_PENDANT_SHAWL_OVER as unknown as GarmentAsset, wears: (p) => pendantOver(p) === 'shawlOver', enchanted: (p) => !!p.gear?.jewel?.enchanted, kit: 'jewel' },
@@ -1488,7 +1495,7 @@ const circletOver = (p: FigurePose): string => { const s = hairStyle(p, (p.look 
 function pendantOver(p: FigurePose): 'shawl' | 'shawlSlim' | 'shawlOver' | 'leather' | 'tunic' | undefined {
   if (p.gear?.jewel?.id !== 'jewelled_pendant') return undefined;
   if (wearsShawl(p)) { const fit = armourFit(p); return fit === 'slim' ? 'shawlSlim' : fit === 'full' ? 'shawlOver' : 'shawl'; }
-  if (wearsLeatherShawl(p) || o(p).plateMantle) return undefined;
+  if (wearsLeatherShawl(p) || o(p).plateMantle || o(p).scaleShawl) return undefined;
   if (wearsLeatherChest(p)) return 'leather';
   return armourChest(p) ? undefined : wearsTunic(p) ? 'tunic' : undefined;
 }
