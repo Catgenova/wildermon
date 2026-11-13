@@ -12,6 +12,10 @@
   {
    "id": "bob",
    "name": "Bob"
+  },
+  {
+   "id": "pompadour",
+   "name": "Pompadour"
   }
  ]
 }
