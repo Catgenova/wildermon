@@ -262,7 +262,8 @@ export function skeleton(A: AnimAsset, canon: AnimAsset, gameHeight = 0): Skelet
    * One hand reached to a place (`Clip.hands`): its fist's socket (the tool's in it, or the default) put at `at` (mesh
    * units), its grip along `way`, its knuckles as near the forearm's way as that allows (the wrist bent least); the elbow
    * bent about its hinge to reach, the upper arm swung onto the line and turned about it so the elbow stays on the side it
-   * was keyed on (as `twoHands` reaches the left). Twice over, the second time from the forearm the first put.
+   * was keyed on (as `twoHands` reaches the left). Twice over, the second time from the forearm the first put. With
+   * `knuckles` (`HandAt.knuckles`) the knuckles point that way instead, square to the grip.
    */
   function reachTo(L: Array<M3 | undefined>, F: Frame[], move: V, s: 0 | 1, at: V, way: V, held?: Held, knuckles?: V): Frame[] {
     const h = HANDS[s], so = socketsOf(held)[s], y = unit(way);

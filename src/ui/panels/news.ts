@@ -4359,6 +4359,7 @@ export const NEWS: News[] = [
         'New: Wave and Hop animated on the sculpted body (was: a placeholder gesture). Both hands full: a nod.',
         `New: hit reaction drawn on the body struck, seen by players nearby: ${FLINCH_SECS} s per landed blow; flash ${FLINCH_LIT * 1000} ms, off under less motion.`,
         `New: animation at the quern, grinding: ${jobs('quern')} jobs; pressing: ${jobs('press')}. Stirring a pot, bowl or jar: ${jobs('stir')}. Cooking on a skewer at a fire: ${jobs('roast')}. Frying: ${jobs('fry')} (was: a placeholder gesture).`,
+        `New: sawing and fishing animated on the sculpted body: ${jobs('saw')} jobs at the saw, ${jobs('fish')} with the fishing rod, ${jobs('net')} with the fishing net; the tool drawn in hand (was: a placeholder gesture).`,
         'New: sculpted bodies swimming and treading water (was: the flat figure).',
         'Changed: leaching lye and filling a barrel: both hands at waist height (was: a placeholder gesture).',
       ];

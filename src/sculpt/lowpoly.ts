@@ -194,6 +194,12 @@ import CLAY_BOWL from './assets/clay_bowl.json';
 import CLAY_JAR from './assets/clay_jar.json';
 import FRYING_PAN from './assets/frying_pan.json';
 import SKEWER from './assets/skewer.json';
+// the saw and the sawhorse under the other palm, the fishing rod, the fishing net (tools/sculpt/gear/sawfish.mjs)
+import SAW from './assets/saw.json';
+import SAWHORSE from './assets/sawhorse.json';
+import SAWHORSE_R from './assets/sawhorse_r.json';
+import FISHING_ROD from './assets/fishing_rod.json';
+import FISHING_NET from './assets/fishing_net.json';
 import HAIR_ASSET from './assets/lowhair.json';
 import MALE_LIGHT from '../../tools/sculpt/lowlight-male.json';
 import FEMALE_LIGHT from '../../tools/sculpt/lowlight-female.json';
@@ -341,6 +347,9 @@ const PROPS: readonly PropAsset[] = [SWORD, { ...(WARHAMMER as unknown as PropAs
   // the kitchen's (./anim/clips/kitchen.ts): the hand quern set down on the ground (`GROUND`) and the peg its runner is turned
   // by, the spoon and the vessels stirred in, the frying pan (its pan in its metal, mirrored in the left hand), the skewer
   ...[QUERN, QUERN_HANDLE, WOODEN_SPOON, CLAY_POT, CLAY_BOWL, CLAY_JAR, FRYING_PAN, SKEWER].map((p) => p as unknown as PropAsset),
+  // the saw with the sawhorse under the other palm (its mirror under the right), the fishing rod and the fishing net, each
+  // in one fist (./anim/clips/saw.ts, fish.ts, net.ts); the saw's blade in its metal, the rod's wood in its wood
+  SAW as unknown as PropAsset, SAWHORSE as unknown as PropAsset, SAWHORSE_R as unknown as PropAsset, FISHING_ROD as unknown as PropAsset, FISHING_NET as unknown as PropAsset,
 ];
 const PROP_OF = new Map(PROPS.map((p) => [p.id, p]));
 /**

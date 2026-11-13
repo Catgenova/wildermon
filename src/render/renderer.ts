@@ -84,6 +84,7 @@ import { roseStage } from '../game/roses';
 import { isTrellis, vineStage } from '../game/vineyard';
 import { fieldRate } from '../game/growth';
 import { dyeOf, dyeTint } from '../game/dyestuffs';
+import { castAt, netReach } from '../game/fishing';
 import { sailTrim } from '../game/wind';
 import { FURNITURE_BY_ID, isPlanter, rackDeck, rackSpots } from '../game/furniture';
 import { isLampPiece, lampBurning } from '../game/lamps';
@@ -1312,6 +1313,8 @@ export class Renderer {
   /** What is under a point on the screen (`picking.ts`). */
   private readonly picker = new Picker(this.pickHost());
   private playerFacing = 1;
+  /** Where the line or the net in hand goes into the water (`castAim`), kept for the go it was found for. */
+  private castSpot: { began: number | undefined; job: string; x: number; y: number; at: [number, number] | null } | null = null;
   private creatureHits: HitRect[] = [];
   /** The hostile creatures drawn this frame, and how to draw each again, for marking them over the trees (`drawThreats`). */
   private threats: Array<{ sx: number; sy: number; top: number; hunting: boolean; draw: (g: CanvasRenderingContext2D, px: number, py: number) => void }> = [];
@@ -6419,6 +6422,22 @@ export class Renderer {
   }
 
   /**
+   * Fishing (a rod's cast, a net's drag) stood still: the way to the water the line or the net goes into, as the island
+   * finds it (`castAt`), so the body faces it and the rod or the net is out over the water; none at any other job.
+   */
+  private castAim(): [number, number] | null {
+    const g = this.game, a = g.action, p = g.player;
+    if (!a || a.state !== 'performing' || p.moving || (a.def.id !== 'fish' && a.def.id !== 'drag_net') || a.target.kind !== 'tile') { this.castSpot = null; return null; }
+    const k = this.castSpot, t = a.target;
+    if (!k || k.began !== a.began || k.job !== a.def.id || k.x !== t.x || k.y !== t.y) {
+      const spot = castAt(g, t.x, t.y, a.def.id === 'drag_net' ? netReach(g) : undefined);
+      const dx = spot ? spot.x + 0.5 - p.x : 0, dy = spot ? spot.y + 0.5 - p.y : 0;
+      this.castSpot = { began: a.began, job: a.def.id, x: t.x, y: t.y, at: Math.hypot(dx, dy) > 0.05 ? [dx, dy] : null };
+    }
+    return this.castSpot!.at;
+  }
+
+  /**
    * Which of the eight ways something heading (dx, dy) through the world is
    * turned, as the screen sees it.
    *
@@ -6608,7 +6627,7 @@ export class Renderer {
     const player = this.game.player;
     // Round a spiral staircase's post, the way the climb goes round it, the stair turned as it is drawn (`spiralBody`).
     const lifting = player.lifting && this.spiralLift;
-    const [fdx, fdy] = lifting ? spiralHeading(this.spiralLift!.t, player.lifting!.to > player.lifting!.from, this.spiralLift!.turn) : [player.dirX, player.dirY];
+    const [fdx, fdy] = lifting ? spiralHeading(this.spiralLift!.t, player.lifting!.to > player.lifting!.from, this.spiralLift!.turn) : this.castAim() ?? [player.dirX, player.dirY];
     this.playerFacing = this.facingOnScreen(fdx, fdy, this.playerFacing);
     /*
      * What stands still on the ground under a jetty is behind the jetty's

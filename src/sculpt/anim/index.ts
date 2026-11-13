@@ -28,6 +28,9 @@ import { DIG, RAKE, REAP } from './clips/dig';
 import { FRY, PRESS, QUERN, ROAST, STIR } from './clips/kitchen';
 import { SWIM, TREAD } from './clips/swim';
 import { mirrorClip } from './author';
+import { SAW, SAW_LEFT } from './clips/saw';
+import { FISH, FISH_LEFT } from './clips/fish';
+import { NET, NET_LEFT } from './clips/net';
 import { ACTION_BY_ID } from '../../game/actions';
 import { clipOfJob } from './routes';
 import { strideAt } from '../../game/player';
@@ -55,6 +58,7 @@ export const CLIPS: Record<string, Clip> = {
   quern: QUERN, 'quern-left': mirrorClip(QUERN, 'quern-left'), press: PRESS, stir: STIR, 'stir-left': mirrorClip(STIR, 'stir-left'),
   roast: ROAST, 'roast-left': mirrorClip(ROAST, 'roast-left'), fry: FRY, 'fry-left': mirrorClip(FRY, 'fry-left'),
   swim: SWIM, tread: TREAD,
+  saw: SAW, 'saw-left': SAW_LEFT, fish: FISH, 'fish-left': FISH_LEFT, net: NET, 'net-left': NET_LEFT,
 };
 /** The clip a state plays until its own is approved: the 6 7 gesture. */
 export const PLACEHOLDER = 'sixseven';
@@ -130,9 +134,17 @@ export function workClipOf(job: string | undefined): string {
 const LEFT_OF: Readonly<Record<string, string>> = {
   work: 'work-left', fight: 'fight-left', dig: 'dig-left', rake: 'rake-left', reap: 'reap-left',
   quern: 'quern-left', stir: 'stir-left', roast: 'roast-left', fry: 'fry-left',
+  saw: 'saw-left', fish: 'fish-left', net: 'net-left',
 };
 /** Whether work is done left-handed from where it is seen: as the flat figure (facings three and seven). */
 const lefty = (facing: number): boolean => { const f = ((Math.round(facing) % 8) + 8) % 8; return f === 3 || f === 7; };
+/**
+ * The facings a clip is played left-handed from where they are not the flat figure's (`lefty`): those that turn the body's
+ * right side away from the viewer (it faces left: five, six and seven), so what is worked at with the right hand (the saw
+ * and its sawhorse, the rod, the net) stays on the side seen.
+ */
+const LEFT_FACINGS: Readonly<Record<string, readonly number[]>> = { saw: [5, 6, 7], fish: [5, 6, 7], net: [5, 6, 7] };
+const leftyFor = (name: string, facing: number): boolean => { const at = LEFT_FACINGS[name]; return at ? at.includes(((Math.round(facing) % 8) + 8) % 8) : lefty(facing); };
 
 /** The jobs done with the overhead swing whatever is in hand: the pickaxe's (mining, and those its tool routes to the swing: `./routes.ts`). */
 const SWING_JOBS = new Set(['mine', 'chip_corner', 'mine_cellar']);
@@ -236,7 +248,7 @@ export const walkPhase = (c: Clip, t: number, body: 'man' | 'woman', gait = 0): 
 export function clipFor(pose: FigurePose, body: 'man' | 'woman' = pose.look?.gender === 'woman' ? 'woman' : 'man'): { clip: Clip; t: number; over?: { clip: Clip; t: number } } | undefined {
   const s = ON ? stateOf(pose) : undefined, emote = s === 'emote' || s === 'walk' ? emoteClipOf(pose) : undefined;
   const name = s === 'work' ? workClipOf(pose.job) : s === 'fight' && shoots(pose) ? SHOOT.name : s === 'fight' && ONE_HAND(pose) ? 'fight' : s === 'emote' ? emote ?? CLIP_OF.emote : s && CLIP_OF[s];
-  const clip = name ? CLIPS[(lefty(pose.facing) && LEFT_OF[name]) || name] : undefined;
+  const clip = name ? CLIPS[(leftyFor(name, pose.facing) && LEFT_OF[name]) || name] : undefined;
   if (!clip) return undefined;
   // an emote's own clip: played once over the emote, its time the emote's
   const own = emote ? CLIPS[emote] : undefined, at = own ? { clip: own, t: Math.max(0, Math.min(1, pose.emoteT ?? 0)) * own.length } : undefined;
@@ -250,7 +262,7 @@ export function clipFor(pose: FigurePose, body: 'man' | 'woman' = pose.look?.gen
   // a go of a timed job: fitted to its length (the holds stretched, the blow kept: `fitTime`), a fight's swing one blow
   // a go (the placeholder as many runs as come nearest)
   if (pose.act && pose.act.length > 0) {
-    const { run } = runsOf(clip, pose.act.length, (s === 'swing' && pose.job === FIGHT) || clip === SHOOT ? 1 : Infinity);
+    const { run } = runsOf(clip, pose.act.length, (s === 'swing' && pose.job === FIGHT) || clip === SHOOT || clip.oneAGo ? 1 : Infinity);
     return { clip, t: fitTime(clip, Math.max(0, pose.act.t), run) };
   }
   // its time the island's (the figure's phase runs at six a second while it stands), each body its own way into the loop

@@ -19,6 +19,7 @@ export const CLIP_OF_TOOL: Readonly<Record<string, string>> = {
   shovel: 'dig', rake: 'rake', sickle: 'reap', pickaxe: 'swing',
   // the kitchen's (./clips/kitchen.ts): grinding at the quern, stirring in a vessel, frying
   quern: 'quern', clay_pot: 'stir', clay_bowl: 'stir', clay_jar: 'stir', frying_pan: 'fry',
+  saw: 'saw', fishing_rod: 'fish', fishing_net: 'net',
 };
 /**
  * The clip a job in the `work` state plays, by the job (its action's id), before its tool (`CLIP_OF_TOOL`):

@@ -85,6 +85,8 @@ export interface GripAt { ground: number; rest: number; lineUp: number }
  */
 export interface HandReach {
   at: Array<Key<Euler>>; way: Euler | Array<Key<Euler>>;
+  /** The grip's way over time, in place of `way` (a rod swung over the shoulder and cast out). */
+  ways?: Array<Key<Euler>>;
   /** The way the knuckles point, keyed (a tool's face turned as the stroke needs: the shovel's blade), in place of the forearm's own way. */
   knuckles?: Array<Key<Euler>>;
 }
@@ -161,6 +163,8 @@ export interface Clip {
    * the holds, so the fast beats between them keep their speed.
    */
   stretch?: Array<[number, number]>;
+  /** One run a go of a timed job however long the go (a cast a go), its holds stretched to fill it (`../index.ts` clipFor). */
+  oneAGo?: boolean;
   /** The arms as keyed, not kept off the body (`./skeleton.ts` finish): a clip whose hands work in front of it. */
   armsFree?: boolean;
   /** Hands put on places in the world, their arms reached to them (`HandReach`): the other arms as keyed. */
@@ -360,7 +364,7 @@ export function handsAt(c: Clip, t: number, body?: 'man' | 'woman', shift: Parti
     // (a body's own place for the hand over time, `Correction.tracks` `$hand_l` and `$hand_r`, added to its constant one)
     const at = sampleKeys(h.at, wrap(c, t), c.length, c.loop), kept = body && c.bodies?.[body]?.tracks?.[`$hand_${s}`], k = kept ? sampleKeys(kept, wrap(c, t), c.length, c.loop) : [0, 0, 0];
     const d0 = (body && c.bodies?.[body]?.hands?.[s]) || [0, 0, 0], d = [d0[0] + k[0], d0[1] + k[1], d0[2] + k[2]], e = shift[s] ?? [0, 0, 0];
-    out[s] = { at: [at[0] + d[0] + e[0], at[1] + d[1] + e[1], at[2] + d[2] + e[2]], way: wayAt(h.way, wrap(c, t), c.length, c.loop), ...(h.knuckles ? { knuckles: sampleKeys(h.knuckles, wrap(c, t), c.length, c.loop) } : {}) };
+    out[s] = { at: [at[0] + d[0] + e[0], at[1] + d[1] + e[1], at[2] + d[2] + e[2]], way: h.ways ? sampleKeys(h.ways, wrap(c, t), c.length, c.loop) : wayAt(h.way, wrap(c, t), c.length, c.loop), ...(h.knuckles ? { knuckles: sampleKeys(h.knuckles, wrap(c, t), c.length, c.loop) } : {}) };
   }
   return out;
 }
