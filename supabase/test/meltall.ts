@@ -29,7 +29,9 @@ const NAILS = 300;
 const NAIL_QL = 40;
 const HAUBERK_QL = 50;
 const FEW = 20;
-const CAP = smelterCapacity({});
+/** The smelters' QL, on both sides: a charge a QL (`chargesFor`), so this many lumps of room. */
+const SMELTER_QL = 20;
+const CAP = smelterCapacity({ ql: SMELTER_QL });
 const nails = (count: number): Item => ({ uid: 1, id: 'nail', ql: NAIL_QL, dmg: 0, count, extra: 'Iron' });
 const hauberk: Item = { uid: 2, id: 'chain_hauberk', ql: HAUBERK_QL, dmg: 0, count: 1, extra: 'Iron' };
 
@@ -57,10 +59,10 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', u)::text, true);
   -- Two lit smelters beside the body: one nobody built, one somebody else did.
   insert into placed (world_id, kind, x, y, sx, sy, cx, cy, ql, fuel, lit, state, made_by)
-    values (w, 'smelter', 10, 9, 0, 0, 10.375, 9.25, 50, 3600, true, '{"jobs": [], "output": []}'::jsonb, null)
+    values (w, 'smelter', 10, 9, 0, 0, 10.375, 9.25, ${SMELTER_QL}, 3600, true, '{"jobs": [], "output": []}'::jsonb, null)
     returning id into v_a;
   insert into placed (world_id, kind, x, y, sx, sy, cx, cy, ql, fuel, lit, state, made_by)
-    values (w, 'smelter', 9, 10, 0, 0, 9.375, 10.25, 50, 3600, true, '{"jobs": [], "output": []}'::jsonb, other)
+    values (w, 'smelter', 9, 10, 0, 0, 9.375, 10.25, ${SMELTER_QL}, 3600, true, '{"jobs": [], "output": []}'::jsonb, other)
     returning id into v_b;
   select coalesce(max(n), 0) into v_e from event where world_id = w;
 
@@ -149,7 +151,7 @@ const [px, py] = spot ?? [64, 64];
 game.player.x = px + 0.5;
 game.player.y = py + 0.5;
 for (const it of [...game.inventory.items]) if (it.id === 'nail' || it.id === 'chain_hauberk') game.inventory.remove(it.uid, it.count);
-const smelter = game.addSmelter(px + 1, py, 0, 0, 50);
+const smelter = game.addSmelter(px + 1, py, 0, 0, SMELTER_QL);
 smelter.fuel = 3600;
 smelter.lit = true;
 const stack = game.inventory.add('nail', { count: NAILS, ql: NAIL_QL, extra: 'Iron' });

@@ -117,11 +117,11 @@ import { WALK_FRAMES } from '../../render/figure';
 import { EMOTE_BY_ID } from '../../game/emotes';
 import { SPELL_VISUALS } from '../../render/spells';
 import { furnitureDef, liquidCapacity, POND_EVERY, STATION_REACH, WATER_AT_HAND, type PlacedFurniture } from '../../game/furniture';
-import { billWords, countOf, DRINK_LITRES, LIQUID_NAME, LITRE_KG, lyeAshFor, LYE_ASH_PER_LITRE, TAN_LYE, type Item } from '../../game/items';
+import { billWords, CHARGE_PER_QL, CHARGE_QL, chargesFor, countOf, DRINK_LITRES, LIQUID_NAME, LITRE_KG, lyeAshFor, LYE_ASH_PER_LITRE, RARITY_ROOM, TAN_LYE, type Item } from '../../game/items';
 import { RUNE_GATE, RUNE_GATE_FADE, RUNE_GATE_GLOW_REACH, RUNE_GATE_REACH, RUNE_GATE_RISE, runeGateName } from '../../game/runegate';
 import { COIN_METALS, METALS, coinPurity, INGOT_LUMPS, INGOT_WEIGHT, MOULD_BY_ID, MOULD_SKILL, SMITH_TOOL } from '../../game/metal';
 import { meltFits, meltLumps, meltQl } from '../../game/melt';
-import { furnaceMadeSaid, meltingSaid, SMELTER_CAPACITY } from '../../game/smelter';
+import { furnaceMadeSaid, meltingSaid } from '../../game/smelter';
 import { TOOL_JOBS } from '../../game/jobtools';
 import { CLIP_OF_TOOL, clipOfJob } from '../../sculpt/anim/routes';
 import { ORDER_LIFE } from '../../game/orders';
@@ -4417,6 +4417,13 @@ export const NEWS: News[] = [
     ],
   },
   {
+    n: 579,
+    day: '2026-11-13',
+    lines: () => [
+      `Changed: smelter and kiln charges: ${CHARGE_PER_QL} a QL, up to ${chargesFor({ ql: CHARGE_QL })} at QL ${CHARGE_QL}; rare ×${RARITIES[1].charge}, supreme ×${RARITIES[2].charge}, fantastic ×${RARITIES[3].charge} (was: smelter 20, kiln 16, +${percent(RARITY_ROOM)} a step of rarity).`,
+    ],
+  },
+  {
     n: 578,
     day: '2026-11-13',
     lines: () => [`Added: drag from the pack onto a ${SPECIES.bura.name}, any stage, whose panniers open for you: into its panniers.`],
@@ -4638,11 +4645,13 @@ export const NEWS: News[] = [
       const all = 300;
       const nails = { uid: 0, id: 'nail', ql: 40, dmg: 0, count: all, extra: 'Iron' } as Item;
       const mail = { uid: 0, id: 'chain_hauberk', ql: 50, dmg: 0, count: 1, extra: 'Iron' } as Item;
-      const fit = meltFits(nails, all, SMELTER_CAPACITY);
+      // A plain smelter's room on the day: twenty lumps, whatever its QL.
+      const room = 20;
+      const fit = meltFits(nails, all, room);
       const a = meltLumps(nails, fit);
       const b = meltLumps(mail, 1);
       return [
-        `Fixed: Melt down, All: a stack past the smelter's room (${SMELTER_CAPACITY} lumps) melts what fits; the rest stays in the pack (was: refused whole, "Smelter full."). `
+        `Fixed: Melt down, All: a stack past the smelter's room (${room} lumps) melts what fits; the rest stays in the pack (was: refused whole, "Smelter full."). `
           + `${all} nails: "${meltingSaid(fit, 'Nails', a, 'Iron', meltQl(nails), all - fit)}"`,
         `Fixed: smelter and kiln work done: told to whoever put it in, count and QL per kind, 1 line (was: told to the builder only, no count or QL). `
           + `${fit} nails and a chain hauberk: "${furnaceMadeSaid('smelter', [{ count: a + b, name: 'Iron lump', ql: (meltQl(nails) * a + meltQl(mail) * b) / (a + b) }])}"`,
