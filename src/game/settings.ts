@@ -124,6 +124,11 @@ export const SETTING_DEFAULTS = {
    * no bob or pulse in the markers, steady lights, no interface animation.
    */
   motion: 'auto' as Motion,
+  /**
+   * Action effects (`src/render/fx`): sparks off a blow, chips off a pick and the like. All; Fewer (`FEWER_SHARE` of the
+   * particles, no lights); Off.
+   */
+  effects: 'all' as Effects,
   /** Under the frame rate, the milliseconds a frame spends drawing each layer (`Timings`). */
   timings: false,
   /**
@@ -181,6 +186,10 @@ export const SETTING_DEFAULTS = {
   /** Somebody's name near the top of the screen as they log on or off (`src/ui/deedbanner.ts`). */
   presenceBanner: true,
 };
+
+/** The action effects' settings, most first: All, Fewer and Off. */
+export const EFFECTS = ['all', 'fewer', 'off'] as const;
+export type Effects = (typeof EFFECTS)[number];
 
 /** Whether Low power is on, which it only ever is on a phone. */
 export const lowPowerOn = (s: { lowPower: boolean }, phone: boolean): boolean => phone && s.lowPower;
@@ -260,6 +269,7 @@ function read(): Partial<typeof SETTING_DEFAULTS> {
     if (!['aggressive', 'balanced', 'defensive'].includes(out.fightStance as string)) delete out.fightStance;
     if (!(GRAPHICS as readonly string[]).includes(out.graphics as string)) delete out.graphics;
     if (!(MOTIONS as readonly string[]).includes(out.motion as string)) delete out.motion;
+    if (!(EFFECTS as readonly string[]).includes(out.effects as string)) delete out.effects;
     if (!(FRAME_CAPS as readonly number[]).includes(out.frameCap as number)) delete out.frameCap;
     if (!(UI_STYLES as readonly string[]).includes(out.uiStyle as string)) delete out.uiStyle;
     if (!(UI_LIGHTS as readonly string[]).includes(out.uiLight as string)) delete out.uiLight;

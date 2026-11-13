@@ -168,6 +168,11 @@ import CARVING_KNIFE from './assets/carving_knife.json';
 import TROWEL from './assets/trowel.json';
 import FILE from './assets/file.json';
 import WHETSTONE from './assets/whetstone.json';
+import GROOM_BRUSH from './assets/groom_brush.json';
+// what is eaten and drunk from in one fist (tools/sculpt/gear/vessels.mjs)
+import CUP from './assets/cup.json';
+import WATERSKIN from './assets/waterskin.json';
+import BREAD from './assets/bread.json';
 // the bows (tools/sculpt/gear/bow.mjs), each with its quiver on the back and the arrow it draws
 import SHORT_BOW from './assets/short_bow.json';
 import MEDIUM_BOW from './assets/medium_bow.json';
@@ -185,6 +190,21 @@ import THROWING_AXE from './assets/throwing_axe.json';
 import SHOVEL from './assets/shovel.json';
 import RAKE from './assets/rake.json';
 import SICKLE from './assets/sickle.json';
+// the kitchen's props (tools/sculpt/gear/kitchen.mjs): the quern set down and its peg, the spoon and the vessels, the pan, the skewer
+import QUERN from './assets/quern.json';
+import QUERN_HANDLE from './assets/quern_handle.json';
+import WOODEN_SPOON from './assets/wooden_spoon.json';
+import CLAY_POT from './assets/clay_pot.json';
+import CLAY_BOWL from './assets/clay_bowl.json';
+import CLAY_JAR from './assets/clay_jar.json';
+import FRYING_PAN from './assets/frying_pan.json';
+import SKEWER from './assets/skewer.json';
+// the saw and the sawhorse under the other palm, the fishing rod, the fishing net (tools/sculpt/gear/sawfish.mjs)
+import SAW from './assets/saw.json';
+import SAWHORSE from './assets/sawhorse.json';
+import SAWHORSE_R from './assets/sawhorse_r.json';
+import FISHING_ROD from './assets/fishing_rod.json';
+import FISHING_NET from './assets/fishing_net.json';
 // the handwork props (tools/sculpt/gear/handwork.mjs): the needle and the cloth, the brush and the pot it glazes, the rope tool and the strands
 import NEEDLE from './assets/needle.json';
 import CLOTH_PIECE from './assets/cloth_piece.json';
@@ -205,6 +225,7 @@ import { humanProportions } from './human';
 import { SH_TERMS, type LowLight, type SculptDraw, type TrailDraw } from './gl';
 import type { Material } from './sdf';
 import { animate, clipFor, clipsPlaying, CLIPS, heldIn, ONE_HAND, SWING_TOOL, toolsIn, type SeatFit } from './anim';
+import { eyesShut, onTheGround } from './anim/down';
 import { clipLocal } from './anim/player';
 import { hopAir } from './anim/clips/emote';
 import { HOPS, emotePose } from '../game/emotes';
@@ -288,6 +309,11 @@ interface PropAsset {
   trail?: number;
   /** A hand tool's: the hand it is held in (the chisel the left; the right where not given). */
   hand?: 'l' | 'r';
+  /**
+   * A hand tool not symmetric across its own z (a frying pan's inside and underside): drawn mirrored across it in the left
+   * hand, so a clip mirrored left-handed (`./anim/author.ts` mirrorClip) holds the mirror image of what the right holds.
+   */
+  mirror?: boolean;
   /** A hand tool's point that meets the work, its own frame (the chisel's: its struck top), and its reach from the fist (grip.lead). */
   contact?: V; reach?: number;
   /**
@@ -337,6 +363,16 @@ const PROPS: readonly PropAsset[] = [SWORD, { ...(WARHAMMER as unknown as PropAs
   // the digging and field tools by item id (tools/sculpt/gear/farmtools.mjs), in the right fist while their clips play
   // (./anim/clips/dig.ts), the other hand on the shovel's and the rake's haft (`Clip.second`); their iron in their metal
   SHOVEL as unknown as PropAsset, RAKE as unknown as PropAsset, SICKLE as unknown as PropAsset,
+  // the kitchen's (./anim/clips/kitchen.ts): the hand quern set down on the ground (`GROUND`) and the peg its runner is turned
+  // by, the spoon and the vessels stirred in, the frying pan (its pan in its metal, mirrored in the left hand), the skewer
+  ...[QUERN, QUERN_HANDLE, WOODEN_SPOON, CLAY_POT, CLAY_BOWL, CLAY_JAR, FRYING_PAN, SKEWER].map((p) => p as unknown as PropAsset),
+  // the saw with the sawhorse under the other palm (its mirror under the right), the fishing rod and the fishing net, each
+  // in one fist (./anim/clips/saw.ts, fish.ts, net.ts); the saw's blade in its metal, the rod's wood in its wood
+  SAW as unknown as PropAsset, SAWHORSE as unknown as PropAsset, SAWHORSE_R as unknown as PropAsset, FISHING_ROD as unknown as PropAsset, FISHING_NET as unknown as PropAsset,
+  // the grooming brush in the right fist at the groom clip (./anim/clips/tend.ts; tools/sculpt/gear/groom_brush.mjs), all wood
+  GROOM_BRUSH as unknown as PropAsset,
+  // what is eaten and drunk from, in the right fist while the eat and drink clips play (./anim/clips/meal.ts)
+  CUP as unknown as PropAsset, WATERSKIN as unknown as PropAsset, BREAD as unknown as PropAsset,
   // the handwork props, one in each fist (./anim/clips/handwork.ts): the needle and the cloth, the brush and the pot, the rope tool and the strands
   NEEDLE as unknown as PropAsset, CLOTH_PIECE as unknown as PropAsset, BRUSH as unknown as PropAsset, WORK_POT as unknown as PropAsset, ROPE_TOOL as unknown as PropAsset, ROPE_STRANDS as unknown as PropAsset,
 ];
@@ -348,6 +384,13 @@ const PROP_OF = new Map(PROPS.map((p) => [p.id, p]));
  */
 const TOOL_PROPS: readonly PropAsset[] = PROPS.filter((p) => p.contact);
 const TOOL_OF = new Map(TOOL_PROPS.map((p) => [p.id, p]));
+/**
+ * The bone a prop set down on the ground in front of a body is laid on (`Socket.bone`: a hand quern), in place of a hand's:
+ * one of its own after all the others, never moved, so the prop stays where the feet stand at rest while the body works at it.
+ */
+const GROUND = 'ground';
+/** Whether a prop is set down on the ground (`GROUND`) rather than held: no fist closes on it. */
+const grounded = (p: PropAsset): boolean => p.sockets.male.r.bone === GROUND;
 /** Whether a prop leaves a slash trail in its clip's blow (`lowTrail`): the long sword, and one that says where its trail's inner edge is. */
 const trails = (p: PropAsset): boolean => p === SWORD || p.trail !== undefined;
 /** The sword's points over the last quarter of its blade (its glow's left out), its own frame: what of it reaches lowest. */
@@ -597,7 +640,7 @@ const USED = new WeakMap<Baked, { used: readonly number[]; at: number }>();
  * garments it can wear (their own bones posed with the body's always, each garment's after the one before; each drawn
  * when the bake is asked for with it worn), and its hairstyles.
  */
-function lowBody(A: Asset, P: Proportions, share: number, garments: readonly GarmentAsset[], hairs: Record<string, HairAsset>, tints: ReadonlyArray<Tinted | undefined>): { baked: (worn: readonly boolean[], sword?: Carried, style?: string, lit?: readonly boolean[], drop?: readonly boolean[], prop?: string, tools?: Partial<Record<Side, string>>, up?: Partial<Record<Side, number>>, nock?: number) => Baked; bones: (pose: FigurePose, worn?: readonly boolean[], over?: Record<string, [number, number, number]>) => Float32Array; shapes: () => number[]; trail: (pose: FigurePose, lit: boolean) => TrailDraw | undefined; skeleton: Skeleton; held: Held; heldOf: (id: string) => Held | undefined; toolHeld: (id: string) => Held | undefined; figure: (pose: FigurePose) => Array<M3 | undefined>; used: (worn: readonly boolean[], lit?: readonly boolean[]) => number[] } {
+function lowBody(A: Asset, P: Proportions, share: number, garments: readonly GarmentAsset[], hairs: Record<string, HairAsset>, tints: ReadonlyArray<Tinted | undefined>): { baked: (worn: readonly boolean[], sword?: Carried, style?: string, lit?: readonly boolean[], drop?: readonly boolean[], prop?: string, tools?: Partial<Record<Side, string>>, up?: Partial<Record<Side, number>>, nock?: number) => Baked; bones: (pose: FigurePose, worn?: readonly boolean[], over?: Record<string, [number, number, number]>) => Float32Array; shapes: () => number[]; wet: () => number; trail: (pose: FigurePose, lit: boolean) => TrailDraw | undefined; skeleton: Skeleton; held: Held; heldOf: (id: string) => Held | undefined; toolHeld: (id: string) => Held | undefined; figure: (pose: FigurePose) => Array<M3 | undefined>; used: (worn: readonly boolean[], lit?: readonly boolean[]) => number[]; lift: (local: Array<M3 | undefined>, move: V) => number; toGame: (p: V) => V } {
   const BONES = A.bones;
   const AT = new Map(BONES.map((b, i) => [b.name, i]));
   for (const g of garments) if (g.base !== BONES.length) throw new Error(`garment for ${g.base} bones on a body of ${BONES.length}`);
@@ -644,7 +687,7 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
   const HELD: Held = { sockets: SWORD.sockets[WHO], lead: SWORD.grip.lead[1], second: secondOn(SWORD, WHO), tip: SWORD.length, ends: ENDS, scale: SWORD.scale[WHO] };
   /** Each prop as this body holds it (the sword's above), by the weapon's id. */
   /** Each hand tool as this body holds it (its sockets, its scale, where it meets the work), by id. */
-  const TOOL_HELD = new Map<string, Held>(TOOL_PROPS.map((p) => [p.id, { sockets: p.sockets[WHO], lead: p.grip.lead[1], second: p.grip.lead[1], tip: p.length, scale: p.scale[WHO], contact: p.contact, ...(p.trail !== undefined ? { inner: p.trail } : {}) }]));
+  const TOOL_HELD = new Map<string, Held>(TOOL_PROPS.filter((p) => !grounded(p)).map((p) => [p.id, { sockets: p.sockets[WHO], lead: p.grip.lead[1], second: p.grip.lead[1], tip: p.length, scale: p.scale[WHO], contact: p.contact, ...(p.trail !== undefined ? { inner: p.trail } : {}) }]));
   const HELDS = new Map<string, Held>(PROPS.map((p) => [p.id, p === SWORD ? HELD : { sockets: p.sockets[WHO], lead: p.grip.lead[1], second: secondOn(p, WHO), tip: p.length, ends: p.ends, rest: p.rest, scale: p.scale[WHO], ...(p.trail !== undefined ? { inner: p.trail } : {}) }]));
 
   /** Each bone's world rotation and head for a local pose (bone index -> 3x3), the helpers driven, as lowrig.mjs posed(). */
@@ -917,12 +960,15 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
     for (const [side, id] of Object.entries(tools) as Array<[Side, string | undefined]>) {
       const TP = id ? TOOL_OF.get(id) : undefined;
       if (!TP) continue;
-      const so = TP.sockets[WHO][side], hand = AT.get(so.bone) as number, k = 1 / TP.scale[WHO], g: V = [TP.grip.lead[0], TP.grip.lead[1] + (up[side] ?? 0), TP.grip.lead[2]], V3s: number[] = [];
-      for (let i = 0; i < TP.verts.length; i += 3) V3s.push(...add(so.o, mv(so.R, [(TP.verts[i] - g[0]) * k, (TP.verts[i + 1] - g[1]) * k, (TP.verts[i + 2] - g[2]) * k])));
+      // (one set down on the ground on the ground's own bone, `GROUND`; one not symmetric across its z mirrored in the left
+      // hand, its outlines turned back so its faces still look out: `PropAsset.mirror`)
+      const so = TP.sockets[WHO][side], hand = so.bone === GROUND ? ALL.length : AT.get(so.bone) as number, k = 1 / TP.scale[WHO], g: V = [TP.grip.lead[0], TP.grip.lead[1] + (up[side] ?? 0), TP.grip.lead[2]], V3s: number[] = [];
+      const kz = side === 'l' && TP.mirror ? -k : k;
+      for (let i = 0; i < TP.verts.length; i += 3) V3s.push(...add(so.o, mv(so.R, [(TP.verts[i] - g[0]) * k, (TP.verts[i + 1] - g[1]) * k, (TP.verts[i + 2] - g[2]) * kz])));
       const T3: number[] = [];
       for (let t = 0; t < TP.tris.length; t += 4) if (TP.tris[t + 3] < (TP.glowFrom < 0 ? Infinity : TP.glowFrom)) T3.push(TP.tris[t], TP.tris[t + 1], TP.tris[t + 2], TP.tris[t + 3]);
-      const off = places[side];
-      lay(V3s, TP.polys, T3, Array.from({ length: V3s.length / 3 }, () => [hand, 1]), (pi) => off + TP.polys[pi][1]);
+      const off = places[side], polys: Array<[number[], number, number[]?]> = kz < 0 ? TP.polys.map(([v, m]) => [v, m, [...v].reverse()]) : TP.polys;
+      lay(V3s, polys, T3, Array.from({ length: V3s.length / 3 }, () => [hand, 1]), (pi) => off + TP.polys[pi][1]);
     }
     // a strand from a tool to the tool in the other fist (`PropAsset.tether`), each end on its own hand: three ribbons
     // crossed, so it shows however it lies between them
@@ -944,7 +990,7 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
       });
       lay(V3s, polys, T3, weights, (pi) => places[side] + polys[pi][1]);
     }
-    const baked: Baked = { band: 1, verts: Float32Array.from(verts), tris: Uint32Array.from(tris), nVerts: verts.length / STRIDE, nTris: tris.length / 3, bones: ALL.map((b) => b.name), ms: performance.now() - t0, grid: [0, 0, 0], cell: 0, faceSkin: Float32Array.from(faceSkin) };
+    const baked: Baked = { band: 1, verts: Float32Array.from(verts), tris: Uint32Array.from(tris), nVerts: verts.length / STRIDE, nTris: tris.length / 3, bones: [...ALL.map((b) => b.name), GROUND], ms: performance.now() - t0, grid: [0, 0, 0], cell: 0, faceSkin: Float32Array.from(faceSkin) };
     if (shapes) baked.shapes = shapes;
     USED.set(baked, { used, at: places.worn });
     BAKED.set(key, baked);
@@ -1092,6 +1138,8 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
     const want = off + (on - off) * air.u + emotePose('hop', k).lift / HEIGHT_SCALE / scale();
     return Math.max(0, want - hipsUp(F));
   }
+  /** How much of the last pose drawn (`lowBones`) was a pose in the water (`./anim` animate), nought to one. */
+  let WET = 0;
   /**
    * The slash trail of the prop in hand at the pose's moment of its clip (`./anim/trail.ts`), as drawn: in the figure's
    * frame, stood as the body last drawn (`lowBones`) was; none out of the blow, and none for a prop that leaves none
@@ -1117,7 +1165,7 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
     // (local [rx, ry, rz] degrees: the authoring tools' still holds, `lowHoldScene`)
     // sat driving, put on the seat (`seatFit`) and drawn where it is put, not stood on its soles
     const fit = seatOf(pose) && clipsPlaying() ? seatFit(pose, rigFor(pose)) : undefined;
-    const id = heldIn(pose), { local: drawn, move } = animate(SK, pose, () => fromGame(bonesOf(rigFor(pose), P, [], REST_EXTRAS), gameRest()), id === undefined ? undefined : HELDS.get(id), (tool) => TOOL_HELD.get(tool), fit);
+    const id = heldIn(pose), { local: drawn, move, wet = 0 } = animate(SK, pose, () => fromGame(bonesOf(rigFor(pose), P, [], REST_EXTRAS), gameRest()), id === undefined ? undefined : HELDS.get(id), (tool) => TOOL_HELD.get(tool), fit);
     const local = over ? [...drawn] : drawn;
     if (over) for (const [b, e] of Object.entries(over)) { const i = AT.get(b); if (i !== undefined) local[i] = euler(e[0], e[1], e[2]); }
     const Fb = posed(local, move), F = [...Fb, ...garments.flatMap((g) => garmentFrames(BONES, g.bones, Fb))];
@@ -1136,21 +1184,41 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
     };
     stand(A.verts, A.weights, A.soles);
     garments.forEach((g, k) => { if (worn[k] && g.soles) stand(g.verts, WEIGHTS[k], g.soles); });
-    // (in a hop's leap, lifted off the ground: `hopLift`)
-    const dy = fit ? 0 : A.floor - low + hopLift(pose, Fb), s = scale();
+    // (in a hop's leap, lifted off the ground: `hopLift`); in the water, held where its clip puts it (`./anim/clips/swim.ts`:
+    // the surface the floor's level), not stood on its soles; going in or coming out, stood on them only as far as it is out
+    // (sat or lain on the ground, or on the way down onto it or up: put where its clip puts it, `./anim/down.ts`)
+    const dy = fit || onTheGround(`${SK.body}|${pose.id}`, clipFor(pose, SK.body)?.clip.name) ? 0 : (A.floor - low) * (1 - wet) + hopLift(pose, Fb), s = scale();
     DY = dy;
+    WET = wet;
     const sk = shapedOf(garments, worn);
     SHAPES_W = sk < 0 ? [] : shapeWeights(BONES, garments[sk], Fb);
-    const out = new Float32Array(ALL.length * 12);
-    ALL.forEach((_, i) => {
-      const Ag = mm(T, mm(S[i], T));
-      const sh = mv(T, add(sub(add(mv(S[i], FLOOR), t[i]), FLOOR), [0, dy, 0]));
+    // (and the ground's, `GROUND`, after them: unmoved, where the feet stand at rest)
+    const out = new Float32Array((ALL.length + 1) * 12);
+    [...S, I3].forEach((Si, i) => {
+      const Ag = mm(T, mm(Si, T));
+      const sh = i < ALL.length ? mv(T, add(sub(add(mv(Si, FLOOR), t[i]), FLOOR), [0, dy, 0])) : [0, 0, 0];
       out.set([Ag[0], Ag[1], Ag[2], sh[0] * s, Ag[3], Ag[4], Ag[5], sh[1] * s, Ag[6], Ag[7], Ag[8], sh[2] * s], i * 12);
     });
     return out;
   }
 
-  return { baked: lowBaked, bones: lowBones, shapes: () => SHAPES_W, trail: lowTrail, skeleton: SK, held: HELD, heldOf: (id) => HELDS.get(id), toolHeld: (id) => TOOL_HELD.get(id), figure: (pose) => fromGame(bonesOf(rigFor(pose), P, [], REST_EXTRAS), gameRest()), used: usedOf };
+  /**
+   * How far a pose is lifted to stand on its lowest sole, mesh units, as `lowBones` stands it (on the body's own soles: a
+   * worn boot's sole, under them, is left out): for a point of a body found apart from its draw (`./fxmarks.ts`).
+   */
+  function lowLift(local: Array<M3 | undefined>, move: V): number {
+    const F = posed(local, move);
+    let low = Infinity;
+    for (const vi of A.soles) {
+      const w = A.weights[vi], v: V = [A.verts[vi * 3], A.verts[vi * 3 + 1], A.verts[vi * 3 + 2]];
+      let y = 0;
+      for (let j = 0; j < w.length; j += 2) { const b = w[j], S = mm(F[b].W, tr(BONES[b].R)); y += w[j + 1] * (dot([S[3], S[4], S[5]], sub(v, BONES[b].head)) + F[b].P[1]); }
+      low = Math.min(low, y);
+    }
+    return low === Infinity ? 0 : A.floor - low;
+  }
+
+  return { baked: lowBaked, bones: lowBones, shapes: () => SHAPES_W, wet: () => WET, trail: lowTrail, skeleton: SK, held: HELD, heldOf: (id) => HELDS.get(id), toolHeld: (id) => TOOL_HELD.get(id), figure: (pose) => fromGame(bonesOf(rigFor(pose), P, [], REST_EXTRAS), gameRest()), used: usedOf , lift: lowLift, toGame };
 }
 
 type OutfitKey = 'hood' | 'tunic' | 'trousers' | 'boots' | 'plateChest' | 'plateLegs' | 'plateBoots' | 'plateHelm' | 'leatherChest' | 'leatherLegs' | 'leatherBoots' | 'leatherHat' | ChainPiece | 'scaleHelm' | 'scaleChest' | 'scaleLegs' | 'scaleBoots';
@@ -1477,6 +1545,8 @@ function toneOf(materials: Material[]): [number, number, number] {
   return [a[0] / b[0], a[1] / b[1], a[2] / b[2]];
 }
 
+/** A body's skeleton, props as held, lift onto its soles and the figure's frame: for a point of it found apart from a draw (`./fxmarks.ts`). */
+export const lowBodyOf = (body: 'man' | 'woman') => BODIES[body];
 /** A body's skeleton as the clip player poses it in the game (for the authoring tools). */
 export const lowSkeleton = (body: 'man' | 'woman'): Skeleton => BODIES[body].skeleton;
 /** The long sword as a body holds it in both hands (for the authoring tools). */
@@ -1611,8 +1681,13 @@ function nockOf(pose: FigurePose, who: 'man' | 'woman', prop: PropAsset | undefi
   return t >= bw.drawn[0] && t < bw.drawn[1] ? 2 : t >= bw.arrow[0] && t <= bw.arrow[1] ? 1 : 0;
 }
 
-/** Everything a draw needs for a pose (`drawSculptGL`): the man's body for a man, the woman's for a woman, the garments it wears over it. */
-export function lowScene(given: FigurePose): SculptDraw {
+/**
+ * Everything a draw needs for a pose (`drawSculptGL`): the man's body for a man, the woman's for a woman, the garments it
+ * wears over it; in the water (swimming, or still coming up out of it,
+ * `lowBody`'s `wet`), cut at its surface (the figure's level nought, `SculptDraw.water`): what is over it (`over`, the
+ * default) or what is under it (`under`).
+ */
+export function lowScene(given: FigurePose, part: 'over' | 'under' = 'over'): SculptDraw {
   const pose = dressed(given), look = pose.look ?? DEFAULT_LOOK, seat = seatOf(pose);
   // (sat in something, square along it however it is turned, as the flat figure: `FigurePose.seat`)
   const facing = (((seat ? pose.facing : Math.round(pose.facing)) % 8) + 8) % 8;
@@ -1639,7 +1714,10 @@ export function lowScene(given: FigurePose): SculptDraw {
   const hide = seat?.astride ? { c: BARREL.c, r: BARREL.r } : undefined;
   // lit by a blow for its first moments (`FLINCH_LIT`), not under less motion
   const struck = pose.flinch ? pose.flinch.t * FLINCH_SECS : Infinity, hit = struck >= 0 && struck < FLINCH_LIT && !lessMotion() ? 1 - struck / FLINCH_LIT : 0;
-  return { baked, bones, materials, view: viewOf(facing), blink: 0, low, ...(trail ? { trail } : {}), ...(shapes.some((w) => w > 0) ? { shapes } : {}), ...(hide ? { hide } : {}), ...(hit > 0 ? { hit } : {}) };
+  const water = pose.swimming || body.wet() > 0 ? { level: 0, keep: part } : undefined;
+  // (the eyes shut asleep, meditating and praying: `./anim/down.ts` eyesShut)
+  const blink = eyesShut(`${who}|${pose.id}`, clipFor(pose, who)?.clip.name, performance.now()) ? 1 : 0;
+  return { baked, bones, materials, view: viewOf(facing), blink, low, ...(trail ? { trail } : {}), ...(shapes.some((w) => w > 0) ? { shapes } : {}), ...(hide ? { hide } : {}), ...(hit > 0 ? { hit } : {}), ...(water ? { water } : {}) };
 }
 
 /** Local turns by bone name, [rx, ry, rz] degrees (as `tools/sculpt/lowrig.mjs` posed). */

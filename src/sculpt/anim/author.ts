@@ -104,11 +104,13 @@ export function mirrorClip(c: Clip, name: string): Clip {
         ...(f.hands ? { hands: Object.fromEntries(Object.entries(f.hands).map(([s, d]) => [s === 'l' ? 'r' : 'l', d && [-d[0], d[1], d[2]]])) } : {}),
       }])),
     } : {}),
-    ...(hands ? { hands: Object.fromEntries(Object.entries(hands).map(([s, h]) => [s, h && { at: mirrorKeys(h.at, true), way: typeof h.way[0] === 'number' ? [-(h.way as Euler)[0], (h.way as Euler)[1], (h.way as Euler)[2]] as Euler : mirrorKeys(h.way as Array<Key<Euler>>, true), ...(h.knuckles ? { knuckles: mirrorKeys(h.knuckles, true) } : {}) }])) } : {}),
+    ...(hands ? { hands: Object.fromEntries(Object.entries(hands).map(([s, h]) => [s, h && { at: mirrorKeys(h.at, true), way: typeof h.way[0] === 'number' ? [-(h.way as Euler)[0], (h.way as Euler)[1], (h.way as Euler)[2]] as Euler : mirrorKeys(h.way as Array<Key<Euler>>, true), ...(h.ways ? { ways: mirrorKeys(h.ways, true) } : {}), ...(h.knuckles ? { knuckles: mirrorKeys(h.knuckles, true) } : {}) }])) } : {}),
     // (the other hand on the tool: the tool in the other fist, its own z turned the other way in the world)
     ...(c.second ? { second: { side: c.second.side === 'l' ? 'r' : 'l', at: typeof c.second.at[0] === 'number' ? [(c.second.at as Euler)[0], (c.second.at as Euler)[1], -(c.second.at as Euler)[2]] as Euler : (c.second.at as Array<Key<Euler>>).map((k) => ({ ...k, v: [k.v[0], k.v[1], -k.v[2]] as Euler })), way: [c.second.way[0], c.second.way[1], -c.second.way[2]] as Euler } } : {}),
     ...(c.tools ? { tools: swapSides(c.tools) } : {}),
     ...(c.strike ? { strike: { ...c.strike, side: c.strike.side === 'l' ? 'r' : 'l' } } : {}),
+    // (the effect marks from the other side: a bone's on its mirror, a tool's in the other hand)
+    ...(c.fx ? { fx: c.fx.map((m) => ({ ...m, from: 'bone' in m.from ? { bone: otherSide(m.from.bone) } : { ...m.from, side: m.from.side === 'l' ? 'r' : 'l' } })) } : {}),
     // (the keyed feet swapped foot for foot)
     ...(c.feet ? { feet: { stride: c.feet.stride, l: c.feet.r, r: c.feet.l } } : {}),
   };

@@ -84,6 +84,7 @@ import { roseStage } from '../game/roses';
 import { isTrellis, vineStage } from '../game/vineyard';
 import { fieldRate } from '../game/growth';
 import { dyeOf, dyeTint } from '../game/dyestuffs';
+import { castAt, netReach } from '../game/fishing';
 import { sailTrim } from '../game/wind';
 import { FURNITURE_BY_ID, isPlanter, rackDeck, rackSpots } from '../game/furniture';
 import { isLampPiece, lampBurning } from '../game/lamps';
@@ -117,7 +118,7 @@ import type { Swirl } from '../game/motes';
 import { drawSwirl, glowSwirl } from './swirls';
 import { runestoneAt, stoneCentre, type Runestone } from '../game/runestones';
 import type { WaterField } from '../world/springs';
-import { Dust } from './dust';
+import { Dust, dustTone } from './dust';
 import { StructureWatch } from './structwatch';
 import { AFTER, BAKED, GroundChunks, LIT, staled, VOID, type GroundLine, type GroundRun } from './groundchunks';
 import { BEAST_WALK, Gaits } from './gait';
@@ -447,6 +448,7 @@ import { bridgeDone, bridgeLevels, deckHeight, type Bridge } from '../game/bridg
 import { bridgeNight, deckKey, drawBridgePiece, kitBridge, piecesAt, ropeKey, type BridgeFrame } from './bridgekit';
 import { SmallLife } from './life';
 import { personBody, SpellStage, type Aim, type Told, type Who } from './spells/stage';
+import { ActionFx } from './fx/actions';
 import { guessTold, type Standing } from './spells/guess';
 import { creatureWide, fallGradient, lightHole } from './spells/kit';
 import { spellInfo } from './spells/info';
@@ -854,26 +856,6 @@ function washInk(washes: ReadonlyArray<{ colour: string; alpha: number }>): stri
   return a > 0 ? `rgba(${Math.round(r / a)}, ${Math.round(g / a)}, ${Math.round(b / a)}, ${a.toFixed(4)})` : 'rgba(0, 0, 0, 0)';
 }
 
-/**
- * What a ground colour looks like once it is in the air. Kicked-up ground is
- * always paler than the ground it came off — it is the dry, fine part of it,
- * lit from every side at once — which also happens to be the only way dust off
- * a green field can be seen against the green field.
- */
-function dustTone(colour: string): string {
-  const m = /(\d+),(\d+),(\d+)/.exec(colour);
-  if (!m) return 'rgb(210,198,176)';
-  const r = +m[1];
-  const g = +m[2];
-  const b = +m[3];
-  // Dry earth for ordinary ground; for ground already brighter than that —
-  // snow, marble chippings — it goes towards white instead, since dust off a
-  // snowfield is not the colour of a ploughed field.
-  const pale = (r + g + b) / 3 > 190;
-  const mix = (v: number, to: number): number => Math.round(v + (to - v) * 0.62);
-  return `rgb(${mix(r, pale ? 255 : 236)},${mix(g, pale ? 255 : 226)},${mix(b, pale ? 255 : 202)})`;
-}
-
 const clamp255 = (v: number): number => (v < 0 ? 0 : v > 255 ? 255 : v | 0);
 
 /**
@@ -1232,6 +1214,17 @@ export class Renderer {
     },
     near: (x, y, r) => this.spellsNear(x, y, r),
   });
+  /**
+   * What bodies' work and blows throw off (`./fx/actions.ts`): fired by the marks on their clips as they are drawn, or
+   * at a body for what the island says; drawn on the spells' stage, within its budget.
+   */
+  readonly actionFx: ActionFx = new ActionFx(this.spells, {
+    body: (w) => this.spellBody(w),
+    ground: (x, y) => (this.game.world.inBounds(Math.floor(x), Math.floor(y)) ? this.game.world.heightAt(x, y) : 0),
+    groundColour: (tx, ty) => (this.game.world.inBounds(tx, ty) ? this.groundColor(tx, ty, true, this.sunNow) : null),
+    tile: (tx, ty) => (this.game.world.inBounds(tx, ty) ? this.game.world.viewTile(tx, ty, true) : null),
+    creature: (id) => this.game.creatures.get(id) ?? null,
+  });
   /** The season and its day, for the trees' look (`./foliage`): read once a frame off the wall clock, as the hud reads it. */
   private year = yearAt(Date.now() / 1000);
   /** What the small life asks of the island, made once rather than every frame. */
@@ -1312,6 +1305,8 @@ export class Renderer {
   /** What is under a point on the screen (`picking.ts`). */
   private readonly picker = new Picker(this.pickHost());
   private playerFacing = 1;
+  /** Where the line or the net in hand goes into the water (`castAim`), kept for the go it was found for. */
+  private castSpot: { began: number | undefined; job: string; x: number; y: number; at: [number, number] | null } | null = null;
   private creatureHits: HitRect[] = [];
   /** The hostile creatures drawn this frame, and how to draw each again, for marking them over the trees (`drawThreats`). */
   private threats: Array<{ sx: number; sy: number; top: number; hunting: boolean; draw: (g: CanvasRenderingContext2D, px: number, py: number) => void }> = [];
@@ -1614,6 +1609,7 @@ export class Renderer {
     });
     game.events.on('reset', () => {
       this.spells.clear();
+      this.actionFx.clear();
       this.floaters.clear();
       this.dust.clear();
       this.wakes.clear();
@@ -3946,6 +3942,8 @@ export class Renderer {
     this.roomTiles = this.pinned === null ? this.myRoom() : null;
     // The spells first: what they light is among what is burning.
     this.spells.update({ eye: this.camera, now: performance.now() / 1000, dt, fast: this.fast, night: this.game.darkness() });
+    // And what bodies' work threw off, on the same stage, after the spells (`./fx/actions.ts`).
+    this.actionFx.update({ eye: this.camera, now: performance.now() / 1000, dt, fast: this.fast, night: this.game.darkness(), effects: this.game.settings.effects, calm: this.calm, me: this.game.player });
     this.game.spellLights = this.spells.lights;
     // What is burning, for glass to glow with at night, and last frame's glow gone.
     if (this.game.darkness() > 0.02) {
@@ -6419,6 +6417,22 @@ export class Renderer {
   }
 
   /**
+   * Fishing (a rod's cast, a net's drag) stood still: the way to the water the line or the net goes into, as the island
+   * finds it (`castAt`), so the body faces it and the rod or the net is out over the water; none at any other job.
+   */
+  private castAim(): [number, number] | null {
+    const g = this.game, a = g.action, p = g.player;
+    if (!a || a.state !== 'performing' || p.moving || (a.def.id !== 'fish' && a.def.id !== 'drag_net') || a.target.kind !== 'tile') { this.castSpot = null; return null; }
+    const k = this.castSpot, t = a.target;
+    if (!k || k.began !== a.began || k.job !== a.def.id || k.x !== t.x || k.y !== t.y) {
+      const spot = castAt(g, t.x, t.y, a.def.id === 'drag_net' ? netReach(g) : undefined);
+      const dx = spot ? spot.x + 0.5 - p.x : 0, dy = spot ? spot.y + 0.5 - p.y : 0;
+      this.castSpot = { began: a.began, job: a.def.id, x: t.x, y: t.y, at: Math.hypot(dx, dy) > 0.05 ? [dx, dy] : null };
+    }
+    return this.castSpot!.at;
+  }
+
+  /**
    * Which of the eight ways something heading (dx, dy) through the world is
    * turned, as the screen sees it.
    *
@@ -6608,7 +6622,7 @@ export class Renderer {
     const player = this.game.player;
     // Round a spiral staircase's post, the way the climb goes round it, the stair turned as it is drawn (`spiralBody`).
     const lifting = player.lifting && this.spiralLift;
-    const [fdx, fdy] = lifting ? spiralHeading(this.spiralLift!.t, player.lifting!.to > player.lifting!.from, this.spiralLift!.turn) : [player.dirX, player.dirY];
+    const [fdx, fdy] = lifting ? spiralHeading(this.spiralLift!.t, player.lifting!.to > player.lifting!.from, this.spiralLift!.turn) : this.castAim() ?? [player.dirX, player.dirY];
     this.playerFacing = this.facingOnScreen(fdx, fdy, this.playerFacing);
     /*
      * What stands still on the ground under a jetty is behind the jetty's
@@ -6666,7 +6680,7 @@ export class Renderer {
         this.clipTo(ctx, ent.clip);
         const figBox: [number, number, number, number] = [ex - 34 * zoom, ey - (ent.lift ?? 0) - (FIGURE_TOP + 14) * zoom, 68 * zoom, (FIGURE_TOP + 22) * zoom];
         this.paint(ctx, zoom, struck > 0 ? 'flash' : 'none', struck * 0.75, ex, ey - (ent.lift ?? 0), (g, px, py) =>
-          drawPlayer(g, px, py, zoom, {
+          drawPlayer(g, px, py, zoom, this.actionFx.seen({
             id: 'player',
             phase: player.moving ? player.walkPhase : this.time * 6,
             // On a deck it is the hull that is going somewhere, not the feet.
@@ -6694,7 +6708,7 @@ export class Renderer {
             block: blockAt(player.blockedAt, performance.now() / 1000),
             flinch: this.flinchOf(player.hurtAt, player.hurtWhere, player.hurtBy, player.x, player.y, ent.seatFacing ?? this.playerFacing),
             veil: this.spells.veilOf(PLAYER_CASTS),
-          }),
+          })),
           undefined,
           figBox,
         );
@@ -6721,7 +6735,7 @@ export class Renderer {
         this.clipTo(ctx, ent.clip);
         const peerBox: [number, number, number, number] = [ex - 34 * zoom, ey - (FIGURE_TOP + 14) * zoom, 68 * zoom, (FIGURE_TOP + 22) * zoom];
         this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ex, ey, (g, px, py) =>
-          drawPlayer(g, px, py, zoom, {
+          drawPlayer(g, px, py, zoom, this.actionFx.seen({
             id: 'o' + peer.id,
             // On their own feet the ground they cover times their stride (`stepPhase`); on a seat, the clock times its rock.
             phase: peer.moving ? ((ent.lift ?? 0) > 0 && !ent.standing ? peer.walkPhase : peer.stepPhase) : this.time * 6,
@@ -6745,7 +6759,7 @@ export class Renderer {
             block: blockAt(peer.blockedAt, performance.now() / 1000),
             flinch: this.flinchOf(peer.hurtAt, peer.hurtWhere, peer.hurtBy, peer.x, peer.y, ent.seatFacing ?? peer.facing),
             veil: this.spells.veilOf({ kind: 'peer', id: peer.id }),
-          }),
+          })),
           undefined,
           peerBox,
         );

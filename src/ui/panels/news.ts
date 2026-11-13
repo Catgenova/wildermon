@@ -178,6 +178,8 @@ import { SIGHT_FORM_AT, SIGHT_RARITY_AT } from '../../game/sighted';
 import { improvable, IMPROVE_DAMAGE as MEND_DAMAGE, IMPROVE_FAIL_LEAST, IMPROVE_FAIL_SPREAD } from '../../game/improve';
 import { JOB_GOES_MOST } from '../../game/mending';
 import { SCULPT_REDRAWS, SCULPT_REDRAWS_SOFT, weaponCarry } from '../../render/figure';
+import { ACTION_SHARE, FEWER_SHARE } from '../../render/fx/actions';
+import { MOST_PARTICLES } from '../../render/spells/kit';
 import { TRY_LEARN } from '../../game/learn';
 import { BASE_SPEED, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER_LEVEL, MAX_STEP, strideAt } from '../../game/player';
 import { staminaBarAbove, SWIM_LEARN } from '../../game/body';
@@ -4351,13 +4353,24 @@ export const NEWS: News[] = [
     n: 544,
     day: '2026-11-13',
     lines: () => {
+      const tend = new Set(['offer', 'milk', 'groom', 'groom-hand', 'tack', 'lead', 'heal', 'heal-self']);
+      const tended = [...ACTION_BY_ID.keys()].filter((id) => tend.has(clipOfJob(id) ?? '')).length;
       const jobs = (clip: string, not: string[] = []): number => [...ACTION_BY_ID.keys()].filter((id) => clipOfJob(id) === clip && !not.includes(id)).length;
       const name = (id: string): string => itemDef(id).name.toLowerCase();
       return [
         `New: ${name('shovel')} (${jobs('dig')} jobs), ${name('rake')} (${jobs('rake')}) and ${name('sickle')} (${jobs('reap')}) work animated on the sculpted body, tool in hand in its metal; ${name('pickaxe')} at the ground (${jobs('swing', ['mine', 'chip_corner', 'mine_cellar'])} jobs): overhead swing (was: a placeholder gesture).`,
         `New: shield block drawn on the blocker, seen by players nearby: shield arm raised for ${BLOCK_SECS} s per blocked blow.`,
         'New: Wave and Hop animated on the sculpted body (was: a placeholder gesture). Both hands full: a nod.',
+        `New: animation tending a wildermon and healing on the sculpted body: ${tended} jobs (taming, feeding, milking, grooming, tacking, gear, mounting, hitching, breeding, treating; dressing your own wounds), brush drawn in hand (was: a placeholder gesture).`,
         `New: hit reaction drawn on the body struck, seen by players nearby: ${FLINCH_SECS} s per landed blow; flash ${FLINCH_LIT * 1000} ms, off under less motion.`,
+        `New: animation at the quern, grinding: ${jobs('quern')} jobs; pressing: ${jobs('press')}. Stirring a pot, bowl or jar: ${jobs('stir')}. Cooking on a skewer at a fire: ${jobs('roast')}. Frying: ${jobs('fry')} (was: a placeholder gesture).`,
+        `New: sawing and fishing animated on the sculpted body: ${jobs('saw')} jobs at the saw, ${jobs('fish')} with the fishing rod, ${jobs('net')} with the fishing net; the tool drawn in hand (was: a placeholder gesture).`,
+        'New: sculpted bodies swimming and treading water (was: the flat figure).',
+        'Changed: leaching lye and filling a barrel: both hands at waist height (was: a placeholder gesture).',
+        'New: sleeping, eating, drinking, praying and meditating animated on the sculpted body (was: a placeholder gesture).',
+        `New: Effects setting (Settings, Performance): All, Fewer (${percent(FEWER_SHARE)} of particles, no lights), Off.`,
+        'New: sparks off a one-handed blow, in the weapon\'s metal; gold motes off an enchanted one. Chips off a pick: in the stone struck; earth off other ground.',
+        `Effects: at most ${percent(ACTION_SHARE)} of the ${MOST_PARTICLES} particles shared with spells; spells first.`,
         `New: handwork animated on the sculpted body (was: a placeholder gesture): sewing ${jobs('sew')} jobs, brushing a wall ${jobs('brush-wall')}, a floor ${jobs('brush-floor')}, an item in hand ${jobs('brush-item') + jobs('brush-cloth')}, rope-making ${jobs('rope')}.`,
       ];
     },

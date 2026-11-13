@@ -405,4 +405,6 @@ export const SWING: Clip = {
   },
   stretch: [[0, 0.14], [0.14, 0.84], [1.34, STRIKE]],
   bodies: { woman: { tracks: herTracks() } },
+  // chips off the pick's head as it bites, in the stone it struck (`../../../render/fx/strikes.ts`)
+  fx: [{ at: IMPACT, from: { tool: 'head' }, kind: 'chips' }],
 };

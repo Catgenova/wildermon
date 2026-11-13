@@ -85,6 +85,8 @@ export interface GripAt { ground: number; rest: number; lineUp: number }
  */
 export interface HandReach {
   at: Array<Key<Euler>>; way: Euler | Array<Key<Euler>>;
+  /** The grip's way over time, in place of `way` (a rod swung over the shoulder and cast out). */
+  ways?: Array<Key<Euler>>;
   /** The way the knuckles point, keyed (a tool's face turned as the stroke needs: the shovel's blade), in place of the forearm's own way. */
   knuckles?: Array<Key<Euler>>;
 }
@@ -161,6 +163,8 @@ export interface Clip {
    * the holds, so the fast beats between them keep their speed.
    */
   stretch?: Array<[number, number]>;
+  /** One run a go of a timed job however long the go (a cast a go), its holds stretched to fill it (`../index.ts` clipFor). */
+  oneAGo?: boolean;
   /** The arms as keyed, not kept off the body (`./skeleton.ts` finish): a clip whose hands work in front of it. */
   armsFree?: boolean;
   /** Hands put on places in the world, their arms reached to them (`HandReach`): the other arms as keyed. */
@@ -184,6 +188,50 @@ export interface Clip {
    * fist (from the quiver to the loose; while drawn too), and the moment of the full draw, where the arrow is laid along.
    */
   bow?: { drawn: [number, number]; arrow: [number, number]; full: number };
+  /**
+   * Effects fired as the clip's time crosses each mark (`FxMark`, `../fxmarks.ts`), at the place the mark names on the body
+   * as the clip has it there, drawn by the renderer's action effects (`../../render/fx`).
+   */
+  fx?: FxMark[];
+}
+
+/**
+ * Where on a body an effect mark fires from: a bone's head (`bone`, the rig's name: `hand_r`, `foot_l`), or a point of
+ * what a hand holds (`tool`): its `tip` (the far end along its grip), its `head` (where it meets the work: a hand tool's
+ * contact, the lowest of a long prop's far end, else its tip) or its `grip` (the fist on it). `side` the hand, the right
+ * where not given; both hands on one prop are the right's.
+ */
+export type FxFrom = { bone: string } | { tool: 'tip' | 'head' | 'grip'; side?: Side };
+/**
+ * An effect fired as a clip's time crosses a moment (`Clip.fx`): `at` seconds into it, or `share` of its length; from
+ * where (`FxFrom`); which effect (`kind`, an entry of `../../render/fx` ACTION_FX); and its numbers, as the effect reads
+ * them. `key`: drawn in the processor-drawn GL too (`glSoftware`), where only such marks fire.
+ */
+export interface FxMark {
+  at?: number;
+  share?: number;
+  from: FxFrom;
+  kind: string;
+  key?: boolean;
+  params?: Readonly<Record<string, number | string | boolean>>;
+}
+/** A mark's moment in its clip, seconds. */
+export const markTime = (c: Clip, m: FxMark): number => Math.min(c.length, Math.max(0, m.at ?? (m.share ?? 0) * c.length));
+/**
+ * The marks a clip's time crosses from a to b (b after a; a loop's wrap counted, a one-shot's end held): each with its
+ * index in `Clip.fx`, its time on the same count as a and b, and the run of the loop it is in.
+ */
+export function marksBetween(c: Clip, a: number, b: number): Array<{ i: number; t: number; run: number }> {
+  const out: Array<{ i: number; t: number; run: number }> = [];
+  const fx = c.fx;
+  if (!fx?.length || !(b > a)) return out;
+  if (!c.loop) {
+    fx.forEach((m, i) => { const t = markTime(c, m); if (t > a && t <= b) out.push({ i, t, run: 0 }); });
+    return out;
+  }
+  const n0 = Math.floor(a / c.length), n1 = Math.floor(b / c.length);
+  for (let n = n0; n <= n1; n++) fx.forEach((m, i) => { const t = n * c.length + markTime(c, m); if (t > a && t <= b) out.push({ i, t, run: n }); });
+  return out.sort((x, y) => x.t - y.t);
 }
 
 /** The bones a clip masked `upper` moves: the spine above the waist, the neck, the head and the arms. */
@@ -360,7 +408,7 @@ export function handsAt(c: Clip, t: number, body?: 'man' | 'woman', shift: Parti
     // (a body's own place for the hand over time, `Correction.tracks` `$hand_l` and `$hand_r`, added to its constant one)
     const at = sampleKeys(h.at, wrap(c, t), c.length, c.loop), kept = body && c.bodies?.[body]?.tracks?.[`$hand_${s}`], k = kept ? sampleKeys(kept, wrap(c, t), c.length, c.loop) : [0, 0, 0];
     const d0 = (body && c.bodies?.[body]?.hands?.[s]) || [0, 0, 0], d = [d0[0] + k[0], d0[1] + k[1], d0[2] + k[2]], e = shift[s] ?? [0, 0, 0];
-    out[s] = { at: [at[0] + d[0] + e[0], at[1] + d[1] + e[1], at[2] + d[2] + e[2]], way: wayAt(h.way, wrap(c, t), c.length, c.loop), ...(h.knuckles ? { knuckles: sampleKeys(h.knuckles, wrap(c, t), c.length, c.loop) } : {}) };
+    out[s] = { at: [at[0] + d[0] + e[0], at[1] + d[1] + e[1], at[2] + d[2] + e[2]], way: h.ways ? sampleKeys(h.ways, wrap(c, t), c.length, c.loop) : wayAt(h.way, wrap(c, t), c.length, c.loop), ...(h.knuckles ? { knuckles: sampleKeys(h.knuckles, wrap(c, t), c.length, c.loop) } : {}) };
   }
   return out;
 }

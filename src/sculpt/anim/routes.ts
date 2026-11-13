@@ -18,9 +18,30 @@ export const CLIP_OF_TOOL: Readonly<Record<string, string>> = {
   awl: 'work', carving_knife: 'work', trowel: 'work', file: 'work', whetstone: 'work',
   // the digging and field tools (./clips/dig.ts); the pickaxe's jobs at the ground the overhead swing, as mining's
   shovel: 'dig', rake: 'rake', sickle: 'reap', pickaxe: 'swing',
+  // the kitchen's (./clips/kitchen.ts): grinding at the quern, stirring in a vessel, frying
+  quern: 'quern', clay_pot: 'stir', clay_bowl: 'stir', clay_jar: 'stir', frying_pan: 'fry',
+  saw: 'saw', fishing_rod: 'fish', fishing_net: 'net',
   // the handwork (./clips/handwork.ts): every job done with a needle sewn, with the rope tool laid up
   needle: 'sew', rope_tool: 'rope',
 };
+/**
+ * The jobs done to a wildermon or a wound with the hands, by the clip each plays (`./clips/tend.ts`): held out to it
+ * (`offer`), crouched at the flank (`milk`), the brush or the comb down its flank (`groom`, `groom-hand`), the tack and the
+ * gear laid over and buckled (`tack`), a hand on it and a lead pulled (`lead`), crouched dressing its leg (`heal`), and
+ * one's own forearm dressed (`heal-self`: the dressing and the poultice done from the pack, which are one's own wounds,
+ * and done beside somebody else too, which plays it as well).
+ */
+const TEND_JOBS: ReadonlyArray<[string, string]> = [
+  ...['tame', 'feed'].map((job): [string, string] => [job, 'offer']),
+  ['milk_creature', 'milk'], ['groom', 'groom'], ['use_ancient_comb', 'groom-hand'],
+  ...[
+    'tack_creature', 'untack_creature', 'fit_gear_pack', 'remove_gear_pack', 'fit_gear_harness', 'remove_gear_harness',
+    'fit_gear_barding', 'remove_gear_barding', 'use_ancient_brace', 'use_ancient_collar', 'use_ancient_bridle',
+  ].map((job): [string, string] => [job, 'tack']),
+  ...['mount_creature', 'hitch_creature', 'pair_creature'].map((job): [string, string] => [job, 'lead']),
+  ...['treat_creature', 'treat_poultice'].map((job): [string, string] => [job, 'heal']),
+  ...['bind_wound', 'dress_poultice', 'clean_wound', 'apply_salve'].map((job): [string, string] => [job, 'heal-self']),
+];
 /**
  * The clip a job in the `work` state plays, by the job (its action's id), before its tool (`CLIP_OF_TOOL`):
  * - the strike (`work`) for a job whose tool is chosen each go (`ActionDef.toolFor`) or is a list (improving: the
@@ -33,6 +54,7 @@ export const CLIP_OF_TOOL: Readonly<Record<string, string>> = {
  *   work; cooking at a campfire keeps the state's own until a clip of its own.)
  * - the brush's jobs by what is brushed (`./clips/handwork.ts`): a wall (`brush-wall`), a floor or the ground
  *   (`brush-floor`), an item held in the other hand (`brush-item`, a cloth's dye `brush-cloth`).
+ * - the tending of a wildermon and the healing (`TEND_JOBS`).
  * A later clip for a family of jobs adds its rows.
  */
 export const CLIP_OF_JOB: Readonly<Record<string, string>> = Object.fromEntries([
@@ -62,6 +84,18 @@ export const CLIP_OF_JOB: Readonly<Record<string, string>> = Object.fromEntries(
     'build_campfire', 'light_campfire', 'fuel_campfire', 'put_out_campfire', 'take_apart_campfire',
     'take_ashes_fire', 'take_ashes_oven', 'take_ashes_smelter', 'take_ashes_kiln',
   ].map((job) => [job, 'ground']),
+  // the kitchen's (./clips/kitchen.ts): pressing at the quern (`press`, before the quern's grinding); cooking at a fire with
+  // no tool, knelt with the skewer over it (`roast`); a barrel leached into lye or filled, at waist height (`hands`)
+  ...[...RECIPE_BY_ID.values()].filter((r) => r.tool === 'quern' && r.id.startsWith('press_')).map((r) => [r.id, 'press']),
+  ...[...RECIPE_BY_ID.values()].filter((r) => r.station === 'campfire' && !r.tool && !ACTION_BY_ID.get(r.id)?.tool).map((r) => [r.id, 'roast']),
+  ...['leach_lye', 'fill_barrel'].map((job) => [job, 'hands']),
+  // tending a wildermon and healing (./clips/tend.ts)
+  ...TEND_JOBS,
+  // daily life (`./clips/life.ts`): lain asleep, sat meditating, knelt at prayer and at a sacrifice, eating and drinking
+  ...Object.entries({
+    sleep: 'sleep', meditate: 'meditate', pray: 'pray', pray_statue: 'pray-statue', sacrifice: 'sacrifice',
+    eat: 'eat', drink_tea: 'drink-cup', drink_from_vessel: 'drink-cup', drink_skin: 'drink-skin',
+  }),
   // the brush's jobs by what is brushed (./clips/handwork.ts): a wall, a floor or the ground, the work held in the other hand
   ...['paint_wall', 'scrub_wall_paint'].map((job) => [job, 'brush-wall']),
   ...['paint_floor', 'scrub_floor_paint', 'scrub_moss'].map((job) => [job, 'brush-floor']),
