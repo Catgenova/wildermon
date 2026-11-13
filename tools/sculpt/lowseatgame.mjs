@@ -27,7 +27,7 @@ const angles = opt('angles', '0,90,180,270').split(',').map(Number);
 const cfg = {
   gender: opt('gender', 'man'), outfit: opt('outfit', 'cloth'), weapon: opt('weapon', 'long_sword'), flat: flag('flat'), moving: flag('moving'),
   heel: +opt('heel', '0'), pitch: +opt('pitch', '0'), frames: +opt('frames', '1'), step: +opt('step', '0.5'), phase: +opt('phase', '3'), hair: opt('hair', ''),
-  id: flag('id'), close: flag('close'), tuck: opt('tuck', ''), stand: flag('stand'), sink: +opt('sink', '0'),
+  id: flag('id'), close: flag('close'), wear: opt('wear', ''), tuck: opt('tuck', ''), stand: flag('stand'), sink: +opt('sink', '0'),
 };
 mkdirSync(out, { recursive: true });
 const ROOT = new URL('../..', import.meta.url).pathname;
@@ -58,7 +58,7 @@ window.ready = async () => {
   for (const [s] of Object.values(MOUNTS)) await loadWildermon(s);
   await new Promise((r) => setTimeout(r, 100));
 };
-const figure = (g, x, y, facing, seat, phase) => drawFigure(g, x, y, ${zoom}, { phase, moving: C.moving, facing, swimming: false, working: false, driving: !C.stand, seat: C.stand ? undefined : seat, look, gear, ...(C.id ? { id: 'seat-test' } : {}) });
+const figure = (g, x, y, facing, seat, phase) => drawFigure(g, x, y, ${zoom}, { phase, moving: C.moving, facing, swimming: false, working: false, driving: !C.stand, seat: C.stand ? undefined : seat, look, gear, ...(C.wear ? { outfit: Object.fromEntries(['shawl', 'trousers', 'boots', 'tunic', 'hood'].map((k) => [k, C.wear.split('+').includes(k)])) } : {}), ...(C.id ? { id: 'seat-test' } : {}) });
 window.cell = (scene, angle, phase) => {
   const zoom = ${zoom}, cw = Math.ceil(90 * zoom) + 40, ch = Math.ceil(90 * zoom) + 40;
   const cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;

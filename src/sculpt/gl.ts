@@ -149,6 +149,9 @@ void main() {
     if (disc > 0.0 && (-b + sqrt(disc)) / a > 0.0) discard;
   }
   vec3 n = uLow > 0.5 ? vFace : normalize(vNrm);
+  // Seen from behind (the inside of a skirt or a sleeve, seen up into past a thigh drawn up sat): lit as the face toward the
+  // viewer, not by the light from under the ground, which lit it a raw red.
+  if (dot(n, uT) < 0.0) n = -n;
   // The stamp's material where the stamp's distance says inside, its edge one pixel soft across the interpolated distance.
   float fw = max(fwidth(vStamp), 1e-4);
   float inStamp = smoothstep(-fw, fw, vStamp);
