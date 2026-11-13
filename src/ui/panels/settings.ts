@@ -449,10 +449,10 @@ export class SettingsPanel {
     // The action effects (src/render/fx): what blows and work throw off, on the spells' particles and lights.
     choose<Effects>(
       'Effects',
-      `All: sparks off one-handed blows, in the weapon's metal; chips off a pick, in the stone or earth struck; blocks, blows landing, two-handed blows (with a ${HIT_STOP_HEAVY} ms hold), bows, enchanted weapons' runes. `
+      `All: sparks off one-handed blows, in the weapon's metal; chips off a pick, in the stone or earth struck; blocks, blows landing, two-handed blows (with a ${HIT_STOP_HEAVY} ms hold), bows, enchanted weapons' runes; swimming (splashes, rings treading water), a fishing line and float, a net lifted, oars under way. `
         + `Particles: at most ${percent(ACTION_SHARE)} of ${MOST_PARTICLES} on screen, shared with spells (${Math.round(MOST_PARTICLES / 3)} with Fast or Low-end graphics); `
         + `lights after dark: at most ${ACTION_LIGHTS}, within ${NEAR_TILES} tiles. Past ${NEAR_TILES} tiles: ${percent(FAR_SHARE)} of particles. `
-        + `Fewer: ${percent(FEWER_SHARE)} of particles, no lights. Off: none. Without a graphics card: blocks, blows landing and one-handed sparks only. Motion reduced: no hold.`,
+        + `Fewer: ${percent(FEWER_SHARE)} of particles, no lights. Off: none. Without a graphics card: blocks, blows landing, one-handed sparks, swimming strokes' splashes, rings treading water, a float's strike and a catch only. Motion reduced: no hold.`,
       [['all', 'All'], ['fewer', 'Fewer'], ['off', 'Off']],
       () => game.settings.effects,
       (v) => (game.settings.effects = v),
