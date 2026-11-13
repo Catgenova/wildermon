@@ -38,6 +38,8 @@ import { spacebunsOf } from './lowspacebuns.mjs';
 import SPACEBUNS from './hairs/spacebuns.mjs';
 import { pixieOf } from './lowpixie.mjs';
 import PIXIE from './hairs/pixie.mjs';
+import { chignonOf } from './lowchignon.mjs';
+import CHIGNON from './hairs/chignon.mjs';
 
 const braidHull = carveBraid();
 const BUILDERS = {
@@ -56,6 +58,7 @@ const BUILDERS = {
   crownbraid: { name: CROWNBRAID.name, build: (rig) => crownbraidOf(rig, CROWNBRAID) },
   spacebuns: { name: SPACEBUNS.name, build: (rig) => spacebunsOf(rig, SPACEBUNS) },
   pixie: { name: PIXIE.name, build: (rig) => pixieOf(rig, PIXIE) },
+  chignon: { name: CHIGNON.name, build: (rig) => chignonOf(rig, CHIGNON) },
 };
 
 const out = { built: 'node tools/sculpt/lowhair.mjs --asset (tools/sculpt/lowhair.mjs gameHair)' };
