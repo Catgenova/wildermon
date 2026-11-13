@@ -873,9 +873,12 @@ const ITEM_PIECES: Readonly<Record<string, { key: OutfitKey; ench: EnchantKey; p
 export function outfitOf(gear: FigurePose['gear']): NonNullable<FigurePose['outfit']> {
   const dye: Partial<Record<DyedPiece, string>> = {};
   const out: NonNullable<FigurePose['outfit']> = {}, enchanted: NonNullable<NonNullable<FigurePose['outfit']>['enchanted']> = {}, metal: Partial<Record<PlatePiece, string>> = {};
+  // A set's chest and arms are one garment: with the chest and the arms from two sets, the chest's is drawn.
+  const chestKey = gear?.chest ? ITEM_PIECES[gear.chest.id]?.key : undefined;
   for (const slot of ['arms', 'chest', 'head', 'legs', 'feet'] as const) {
     const piece = gear?.[slot], to = piece ? ITEM_PIECES[piece.id] : undefined;
     if (!piece || !to) continue;
+    if (slot === 'arms' && chestKey && to.key !== chestKey) continue;
     out[to.key] = true;
     if (piece.enchanted) enchanted[to.ench] = true;
     if (to.plate && piece.material) metal[to.plate] = piece.material;
