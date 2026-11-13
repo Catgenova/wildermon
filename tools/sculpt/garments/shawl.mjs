@@ -583,7 +583,8 @@ export function shawlWeights(rig, G, o = {}) {
     }
     return capeMap(n);
   };
-  const vw = transferWeights(rig, G, { map, smooth: o.smooth ?? 24 });
+  // (worn over armour, `o.from`: the rig with the chests beside the body, outfit1.mjs buildShawlOver)
+  const vw = transferWeights(o.from ?? rig, G, { map, smooth: o.smooth ?? 24 });
   // the cloth's thickness moves as one: the underside takes the outside's weights (IT T0, I1 T1, I5 T5), the border's
   // rows theirs along T1-T5 by where they lie, the teeth's points their two columns'
   const R = G.rings, N = R.T0.length;

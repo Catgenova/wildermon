@@ -30,6 +30,7 @@
 //   the underside, THICK in from Lb: IB, IY, IM, IT; the collar's inside: ci (its foot), up to d.
 import { crossPairs, triTri, offPlane, TOL, samplesOf, envelope, drape, reachAt, atRY, dirOf, meshOf, orient, trisOf, transferWeights, sub, add, mul, lerp, unit, cross, dot } from '../lowgarment.mjs';
 import { shawlBones, SHAPES } from './shawl.mjs';
+import { armourUnder, overRig as overAll } from './overarmour.mjs';
 import { existsSync, readFileSync } from 'node:fs';
 
 /** The palette's swatches (sRGB 0..1; enchanted-glow-ref.png): dark brown, leather, light leather, trim tan, glow. */
@@ -578,8 +579,10 @@ export function leatherShawlWeights(rig, G, o = {}) {
   let vw;
   if (!G.over) vw = transferWeights(rig, G, { map, smooth: o.smooth ?? 24, only: (i) => shell.has(i) });
   else {
-    const C = G.over.chest, cape = transferWeights(overRig(rig, C), G, { map: capeMap, smooth: o.smooth ?? 24, only: (i) => shell.has(i) && G.part[i] !== 'collar' });
-    const collar = transferWeights(overRig(rig, C, (p) => p.tag === 'collar', false), G, { smooth: o.smooth ?? 24, only: (i) => shell.has(i) && G.part[i] === 'collar' });
+    const C = G.over.chest, cape = transferWeights(G.over.all ? overAll(rig, G.over.all) : overRig(rig, C), G, { map: capeMap, smooth: o.smooth ?? 24, only: (i) => shell.has(i) && G.part[i] !== 'collar' });
+    // (over the hauberk, the slim fit: the collar round the neck as the plain shawl's, on the body)
+    const collar = G.over.neck ? transferWeights(rig, G, { map, smooth: o.smooth ?? 24, only: (i) => shell.has(i) && G.part[i] === 'collar' })
+      : transferWeights(overRig(rig, C, (p) => p.tag === 'collar', false), G, { smooth: o.smooth ?? 24, only: (i) => shell.has(i) && G.part[i] === 'collar' });
     vw = cape.map((w, i) => w ?? collar[i]);
   }
   const R = G.rings, N = R.Y0.length, Ld = G.design.lift, nb = rig.bones.length;
@@ -602,7 +605,7 @@ export function leatherShawlWeights(rig, G, o = {}) {
   // trapezius)
   // (over the chest the cape's own, as the outside over it: the pauldrons and their straps rise under it with the
   // shoulders)
-  if (!G.over) for (let k = 0; k < N; k++) vw[R.IT[k]] = vw[R.ci[k]];
+  if (!G.over || G.over.neck) for (let k = 0; k < N; k++) vw[R.IT[k]] = vw[R.ci[k]];
   // the pieces: their shell corners'
   for (let i = 0; i < G.verts.length; i++) if (!shell.has(i)) vw[i] = blendW(G.src[i]);
   // the tabs' feet: half their hem's weights, half the body's closest to them (the arm swinging under them, the belly and
@@ -610,7 +613,7 @@ export function leatherShawlWeights(rig, G, o = {}) {
   const feet = G.tabFoot ?? new Set();
   if (feet.size) {
     // (the arm's below the shoulder taken as the upper arm's: the tab rides on the arm's swing, not the forearm's bend)
-    const bw = transferWeights(G.over ? overRig(rig, G.over.chest) : rig, G, { smooth: 0, only: (i) => feet.has(i), map: (n) => { const m = n.match(/^(lowerarm|hand|thumb|fingers|elbow|wrist|knuckles)\w*_(l|r)$/); return m ? `upperarm_${m[2]}` : n; } });
+    const bw = transferWeights(G.over ? (G.over.all ? overAll(rig, G.over.all) : overRig(rig, G.over.chest)) : rig, G, { smooth: 0, only: (i) => feet.has(i), map: (n) => { const m = n.match(/^(lowerarm|hand|thumb|fingers|elbow|wrist|knuckles)\w*_(l|r)$/); return m ? `upperarm_${m[2]}` : n; } });
     for (const i of feet) vw[i] = mix(vw[i], bw[i], o.foot ?? G.design.tabs.foot ?? 0.5);
   }
   return vw;
@@ -625,24 +628,28 @@ function overRig(rig, C, keep = () => true, body = true) {
   return { ...rig, B: { ...rig.B, verts: [...rig.B.verts, ...C.verts], tris: body ? [...rig.B.tris, ...T] : T }, vw: [...rig.vw, ...C.vw] };
 }
 
-/* ---- worn over the leather chest ------------------------------------------------------------------------------------ */
+/* ---- worn over armour ------------------------------------------------------------------------------------------------ */
 /**
- * The shawl worn over the leather chest (garments/leatherchest.mjs) is its own copy, built over the chest at rest: the
- * chest (`under`: the collar's inside clears the chest's stand collar by OVER's IN instead of the neck by the room left
- * for it) and OVER's changes to the design; without the chest the shawl is the one above, unchanged.
+ * The shawl worn over armour is a copy of its own, built at rest over the chest pieces it is worn over at once
+ * (garments/overarmour.mjs), in two fits: `slim` over the hauberk alone, the plain shawl's design over it
+ * (lowleathershawlover), close as the plain one is over the tunic; `full` over the leather chest, the plate chest, the
+ * hauberk and the scale cuirass (lowleathershawloverfull), so it clears whichever is worn: `under` all of them (the
+ * collar's inside clears the highest collar by OVER's IN instead of the neck by the room left for it), its
+ * collar's foot under the leather chest's stand collar (`stand`), OVER's changes to the design; on the plain shawl's
+ * bones (the two copies share them in the game). Without armour the shawl is the one above, unchanged.
  */
 export const OVER = {
   male: { collar: { IN: 0.06, enclose: [0.9, 0.08] }, round: 2 },
   female: { collar: { IN: 0.06, enclose: [0.9, 0.08] }, round: 2 },
 };
 const deepOver = (a, b) => { for (const [k, v] of Object.entries(b)) a[k] = v && typeof v === 'object' && !Array.isArray(v) && a[k] && typeof a[k] === 'object' && !Array.isArray(a[k]) ? deepOver(a[k], v) : v; return a; };
-/** The design worn over the chest: DESIGN's with OVER's (and SHAWL_OVER's, JSON { male, female }, for trying a change). */
+/** The design worn over armour: DESIGN's with OVER's (and SHAWL_OVER's, JSON { male, female }, for trying a change). */
 export function designOver(who) {
   const D = deepOver(structuredClone(DESIGN[who]), OVER[who] ?? {});
   if (typeof process !== 'undefined' && process.env?.SHAWL_OVER) deepOver(D, JSON.parse(process.env.SHAWL_OVER)[who] ?? {});
   return D;
 }
-/** The chest's polygons the shawl is fitted over (at rest), as a mesh of their own: { verts, tris }. */
+/** The leather chest's polygons (at rest), as a mesh of their own: { verts, tris }, and the chest itself. */
 export async function chestUnder(rig) {
   const { buildLeatherChest, leatherChestWeights } = await import('./leatherchest.mjs');
   const C = buildLeatherChest(rig);
@@ -651,16 +658,25 @@ export async function chestUnder(rig) {
 }
 /** A built chest (with its weights, `vw`) as `under`: its vertices and triangles, and the chest itself. */
 export const chestOf = (C) => ({ verts: C.verts, tris: C.tris, chest: C });
-/** The shawl as worn over the chest. */
+/** The shawl as worn over armour, in one of its fits: `slim` over the hauberk, `full` over every chest piece. */
 export async function buildLeatherShawlOver(rig, design = designOver(rig.who), o = {}) {
+  if (o.fit === 'slim') {
+    const mail = armourUnder(rig, ['lowchainchest']);
+    const G = buildLeatherShawl(rig, DESIGN[rig.who], { ...o, under: mail });
+    G.bones = buildLeatherShawl(rig, DESIGN[rig.who], { shapes: false }).bones;
+    G.over = { chest: mail[0], all: mail, neck: true };
+    return G;
+  }
   const U = o.chest ?? await chestUnder(rig), C = U.chest;
-  const G = buildLeatherShawl(rig, design, { ...o, under: [U], stand: [{ verts: C.verts, tris: C.tris.filter((t) => C.polys[t.poly].tag === 'collar') }] });
-  G.over = U;
+  const others = armourUnder(rig, ['lowplatechest', 'lowchainchest', 'lowscalechest']);
+  const G = buildLeatherShawl(rig, design, { ...o, under: [U, ...others], stand: [{ verts: C.verts, tris: C.tris.filter((t) => C.polys[t.poly].tag === 'collar') }] });
+  G.bones = buildLeatherShawl(rig, DESIGN[rig.who], { shapes: false }).bones;
+  G.over = { ...U, all: [{ verts: C.verts, tris: C.tris, vw: C.vw }, ...others] };
   return G;
 }
 
 /* ---- the game's copy ------------------------------------------------------------------------------------------------ */
-// (ONLY=plain or ONLY=over: only that copy written)
+// (ONLY=plain, ONLY=over or ONLY=full: only that copy written)
 export async function writeAssets() {
   const { writeFileSync } = await import('node:fs');
   const { buildRig } = await import('../lowrig.mjs');
@@ -668,8 +684,9 @@ export async function writeAssets() {
   const only = typeof process !== 'undefined' ? process.env?.ONLY : undefined;
   for (const who of ['male', 'female']) {
     const rig = buildRig(who);
-    for (const [name, make] of [['lowleathershawl', async () => buildLeatherShawl(rig)], ['lowleathershawlover', async () => buildLeatherShawlOver(rig)]]) {
-      if (only && name !== { plain: 'lowleathershawl', over: 'lowleathershawlover' }[only]) continue;
+    for (const [name, make] of [['lowleathershawl', async () => buildLeatherShawl(rig)], ['lowleathershawlover', async () => buildLeatherShawlOver(rig, undefined, { fit: 'slim' })],
+      ['lowleathershawloverfull', async () => buildLeatherShawlOver(rig, undefined, { fit: 'full' })]]) {
+      if (only && name !== { plain: 'lowleathershawl', over: 'lowleathershawlover', full: 'lowleathershawloverfull' }[only]) continue;
       const G = await make();
       G.vw = leatherShawlWeights(rig, G);
       const file = new URL(`../../../src/sculpt/assets/${name}-${who}.json`, import.meta.url);
