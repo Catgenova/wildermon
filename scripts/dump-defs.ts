@@ -51,7 +51,7 @@ import { BANDAGE_GAIN, CLEAN_GAIN, DRESS_CHECK, POULTICE_KEPT, poulticeSays } fr
 import { SHOT_ARCHERY, SHOT_FIGHT, SWING_ARM, SWING_BODY, SWING_FIGHT, TAME_GAIN, TAME_NERVE } from '../src/game/creatureActions';
 import { BAIT_PULL, BAIT_SHY, HOOK_BAIT, HOOK_BASE, HOOK_MOST, NET_GAIN, NET_HAUL, NET_LEAST, ROD_GAIN } from '../src/game/fishing';
 import { BREED_GAIN } from '../src/game/husbandry';
-import { BAG_CARRY, WEAPONS, ARMOUR, ARMOUR_CLASSES, SHIELDS, HIT_LOCATIONS } from '../src/game/gear';
+import { BAG_CARRY, WEAPONS, ARMOUR, ARMOUR_CLASSES, SHIELDS, HIT_LOCATIONS, COVERS } from '../src/game/gear';
 import { WOUND_BY_WEAPON, WOUND_KINDS } from '../src/game/wounds';
 import { BUTCHER_PARTS, HOARD_METALS } from '../src/game/butcher';
 import { CRATE_DEFS } from '../src/game/crates';
@@ -356,6 +356,8 @@ out.push(`create table if not exists shield_def (
 out.push(`create table if not exists hit_location (
   slot text primary key, ord int not null, share real not null
 );`);
+/* The slot whose piece covers each place a blow lands (`COVERS`): a blow to the arms lands on the shawl. */
+out.push(`alter table hit_location add column if not exists worn text;`);
 out.push(`create table if not exists wound_kind_def (
   id text primary key, name text not null, bleed real not null, fester real not null,
   herb text not null, note text not null
@@ -872,6 +874,9 @@ out.push(`create table if not exists mould_def (
   id text primary key, name text not null, makes text not null, skill text not null,
   sand int not null, difficulty real not null, lumps int not null, per int not null default 1
 );`);
+/* What else a mould's piece takes at the anvil, spent with the casting (`MouldDef.also`): the plate shawl's fur. */
+out.push(`alter table mould_def add column if not exists also_item text;`);
+out.push(`alter table mould_def add column if not exists also_n int not null default 0;`);
 out.push(`create table if not exists crate_def (
   kind text primary key, name text not null, item text not null, capacity int not null
 );`);
@@ -1441,7 +1446,8 @@ for (const m of METALS) {
 out.push(`update metal_def set coins = (id = any(array[${COIN_METALS.map(q).join(', ')}]::text[]));`);
 for (const d of POTTERY) out.push(`insert into pottery_def values (${q(d.unfired)}, ${q(d.fired)}, ${q(d.seconds)});`);
 for (const d of MOULDS) {
-  out.push(`insert into mould_def values (${q(d.id)}, ${q(d.name)}, ${q(d.makes)}, ${q(d.skill)}, ${q(d.sand)}, ${q(d.difficulty)}, ${q(d.lumps)}, ${q(d.per ?? 1)});`);
+  out.push(`insert into mould_def values (${q(d.id)}, ${q(d.name)}, ${q(d.makes)}, ${q(d.skill)}, ${q(d.sand)}, ${q(d.difficulty)}, ${q(d.lumps)}, ${q(d.per ?? 1)}, ${
+    q(d.also?.item ?? null)}, ${q(d.also?.count ?? 0)});`);
 }
 // What a dowse and a siffa smith at an anvil of yours (`SMITH_TRADES`): the mould whose piece and count a lump makes,
 // and the lumps each takes, in the order it takes them. Read by `errand_step` and `errand_do`.
@@ -1477,7 +1483,7 @@ for (const [fn, v] of [
 }
 out.push(`create or replace function weapon_reach(p_def text) returns double precision language sql immutable as $fn$ select case p_def ${
   WEAPONS.filter((w) => !w.ammo).map((w) => `when ${q(w.id)} then ${q(reachOf(w))}`).join(' ')} end::double precision $fn$;`);
-HIT_LOCATIONS.forEach(([slot, share], ord) => out.push(`insert into hit_location values (${q(slot)}, ${q(ord)}, ${q(share)});`));
+HIT_LOCATIONS.forEach(([part, share], ord) => out.push(`insert into hit_location values (${q(part)}, ${q(ord)}, ${q(share)}, ${q(COVERS[part])});`));
 for (const k of Object.values(WOUND_KINDS)) {
   out.push(`insert into wound_kind_def values (${q(k.id)}, ${q(k.name)}, ${q(k.bleed)}, ${q(k.fester)}, ${q(k.herb)}, ${q(k.note)});`);
 }

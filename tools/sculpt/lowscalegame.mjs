@@ -19,7 +19,7 @@ const out = resolve(opt('out', 'tmp/lowscalegame.png'));
 const ROOT = new URL('../..', import.meta.url).pathname;
 
 /** The scale set worn whole: as equipped (FigurePose.gear), the first outfit's pieces giving way to it. */
-const SCALE_GEAR = { head: { id: 'scale_helm' }, chest: { id: 'scale_cuirass' }, arms: { id: 'scale_sleeves' }, legs: { id: 'scale_leggings' }, feet: { id: 'scale_boots' } };
+const SCALE_GEAR = { head: { id: 'scale_helm' }, chest: { id: 'scale_cuirass' }, shawl: { id: 'scale_shawl' }, legs: { id: 'scale_leggings' }, feet: { id: 'scale_boots' } };
 const enchant = (g) => Object.fromEntries(Object.entries(g).map(([k, v]) => [k, { ...v, enchanted: true }]));
 /** Built-in sheets: `views` the set at zoom 10, both bodies, five facings, idle and walk; `game` the same at zoom 2.5. */
 const SETS = {

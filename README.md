@@ -584,7 +584,7 @@ in world time.
   which is what the Alchemy skill is for. One bucket of lye tans one raw hide:
   leatherworking and a carving knife take the hair off and work the skin soft,
   giving leather and the empty bucket back. Leather is what caps, jerkins,
-  sleeves, trousers and boots are cut from, and what an awl and needle work
+  shawls, trousers and boots are cut from, and what an awl and needle work
   into a leather piece when improving it.
 - **Wool, cloth and the loom.** Fibre becomes cloth in two steps with two
   pieces of furniture: a spindle spins wool, cotton or wemp into yarn, and a

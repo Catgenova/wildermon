@@ -8,7 +8,7 @@
  * Later phases add answers here (wood, leather, a blood's colour by kind).
  */
 import { DRAGON_SCALE, isMetalTone, metalShades, woodTone, type FigurePose, type GearPiece } from '../figure';
-import { ARMOUR_BY_ID, type ArmourClass } from '../../game/gear';
+import { ARMOUR_BY_ID, COVERS, type ArmourClass, type HitPart } from '../../game/gear';
 import { dustTone } from '../dust';
 import { TileType, dustiness } from '../../world/tiles';
 import { coatOf as coatColours, type Forms } from '../../game/wildforms';
@@ -96,8 +96,9 @@ export class FxMaterials {
     return id && pose.gear?.weapon?.id === id ? pose.gear.weapon : undefined;
   }
 
-  /** The armour worn at a slot of the body (`head`, `chest`, `arms`, `legs`, `feet`): its class and the piece. */
-  armour(pose: FigurePose | undefined, slot: string): ArmourAt {
+  /** The armour worn over where a blow lands (`head`, `chest`, `arms`, `legs`, `feet`; the arms' the shawl's, `COVERS`): its class and the piece. */
+  armour(pose: FigurePose | undefined, where: string): ArmourAt {
+    const slot = COVERS[where as HitPart] ?? where;
     const piece = pose?.gear?.[slot as 'head'], a = piece ? ARMOUR_BY_ID.get(piece.id) : undefined;
     return a && piece ? { cls: a.cls, piece } : { cls: 'none' };
   }

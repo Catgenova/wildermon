@@ -45,7 +45,7 @@ const SVG = 'http://www.w3.org/2000/svg';
 const SLOT_BONE: Record<Slot, [string, V3]> = {
   head: ['head', [0, 0, 1.2]],
   chest: ['chest', [0, 0, 0.6]],
-  arms: ['arm0', [0, 0, -2.2]],
+  shawl: ['arm0', [0, 0, -0.8]],
   legs: ['knee0', [0, 0, -1.4]],
   feet: ['ankle0', [0, 0, -0.4]],
   weapon: ['wrist1', [0, 0, -0.6]],
@@ -56,7 +56,7 @@ const SLOT_BONE: Record<Slot, [string, V3]> = {
   side: ['chest', [0, 0, -2.2]],
 };
 /** Which side each socket stands on: the places a blow lands on down the left, the rest (hands, belt, jewel) down the right. */
-const LEFT: Slot[] = ['head', 'chest', 'arms', 'legs', 'feet'];
+const LEFT: Slot[] = ['head', 'chest', 'shawl', 'legs', 'feet'];
 
 /** How much of the stage's height the body stands in, and how tall it may be against the gap between the sockets. */
 const BODY_SHARE = 0.74;
@@ -81,7 +81,7 @@ const SHELF_LEAST = 150;
 const GLYPH: Record<string, Markup> = fixedAll({
   head: '<path d="M4.5 15 C4.5 8 8 4.5 12 4.5 S19.5 8 19.5 15 V18 H15.5 V14 H8.5 V18 H4.5 Z"/><path d="M12 9 V15" class="eq-g-line"/>',
   chest: '<path d="M6 5 L9.5 4 Q12 6.5 14.5 4 L18 5 L19.5 9 L17.5 10 V19.5 Q12 21 6.5 19.5 V10 L4.5 9 Z"/><path d="M8.5 13 H15.5 M8.5 16 H15.5" class="eq-g-line"/>',
-  arms: '<path d="M7 4.5 H14 L16.5 12 L15 19.5 H9.5 L8.5 12 Z"/><path d="M9 9 H15 M9.5 14.5 H15.5" class="eq-g-line"/>',
+  shawl: '<path d="M3.5 8.5 Q12 3.5 20.5 8.5 L18.5 16.5 Q15 14 12 20 Q9 14 5.5 16.5 Z"/><path d="M8 7 Q12 10.5 16 7" class="eq-g-line"/>',
   legs: '<path d="M7 4 H17 L16.5 20 H13 L12 10 L11 20 H7.5 Z"/><path d="M7.5 8 H16.5" class="eq-g-line"/>',
   feet: '<path d="M8 4 H13 V13 L19.5 15.5 Q20.5 19.5 18 19.5 H5.5 Q4.5 19.5 4.8 17.5 L7.5 13 Z"/><path d="M7.5 13 H13" class="eq-g-line"/>',
   offhand: '<path d="M12 3.5 L19.5 6 V11.5 Q19.5 17.5 12 20.5 Q4.5 17.5 4.5 11.5 V6 Z"/><circle cx="12" cy="11.5" r="2.2" class="eq-g-line"/>',

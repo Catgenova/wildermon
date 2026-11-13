@@ -4,7 +4,7 @@ import { itemDef } from './items';
  * The tools of jobs that had gone without one, each named once: the recipe's or the action's `tool`, which the island
  * gets in its definitions (`recipe.tool`, `action_def.tool`), and which wears a go's worth with every go on both sides.
  */
-/** Sewing cloth clothes: a tunic, sleeves, trousers, shoes and a wool cap. */
+/** Sewing cloth clothes: a tunic, a shawl, trousers, shoes and a wool cap. */
 export const SEW_TOOL = 'needle';
 /** Fitting a head or a blade to a shaft, a haft, a grip or a handle. */
 export const FIT_TOOL = 'hammer';
@@ -19,7 +19,7 @@ export const BRUSH_TOOL = 'brush';
 
 /** The jobs each of those is needed for, by recipe or action id: for the help and the news to name, and the tests to ask. */
 export const TOOL_JOBS: Readonly<Record<string, readonly string[]>> = {
-  [SEW_TOOL]: ['make_wool_cap', 'make_cloth_tunic', 'make_cloth_sleeves', 'make_cloth_trousers', 'make_cloth_shoes'],
+  [SEW_TOOL]: ['make_wool_cap', 'make_cloth_tunic', 'make_cloth_shawl', 'make_cloth_trousers', 'make_cloth_shoes'],
   [FIT_TOOL]: ['fit_axe_head', 'fit_hammer_head', 'fit_hatchet_head', 'fit_knife_blade', 'fit_long_sword_blade', 'fit_maul_head',
     'fit_pickaxe_head', 'fit_rake_head', 'fit_saw_blade', 'fit_short_sword_blade', 'fit_shovel_head', 'fit_sickle_blade',
     'fit_spear_head', 'fit_sword_blade', 'fit_throwing_axe', 'fit_trowel_blade', 'make_carving_knife', 'make_hunting_knife'],

@@ -2,7 +2,7 @@ import type { Target } from './actions';
 import { SUBTILES } from './crates';
 import { furnitureAnchor, furnitureFootprint, furnitureUnits, type PlacedFurniture } from './furniture';
 import type { Game } from './game';
-import { HIT_LOCATIONS, SLOTS, type Slot } from './gear';
+import { ARMOUR_SLOTS, SLOTS, type Slot } from './gear';
 import { shoreNear } from './placeables';
 import { SWIM_DEPTH } from './player';
 import { spanWords } from './words';
@@ -44,7 +44,7 @@ const GRAVE_QL = 20;
 export const GRAVE_MARK = 'Your grave';
 
 /** What stays on the body: whatever is worn where a blow lands, head to feet, and a jewel. */
-export const STAYS_ON: readonly Slot[] = [...HIT_LOCATIONS.map(([slot]) => slot), 'jewel'];
+export const STAYS_ON: readonly Slot[] = [...ARMOUR_SLOTS, 'jewel'];
 
 export const isGrave = (f: { kind: string }): boolean => f.kind === GRAVE;
 

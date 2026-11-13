@@ -15,8 +15,8 @@ const entry = `
 import { lowScene, lowMaterialsMost, outfitOf } from './src/sculpt/lowpoly';
 import { DEFAULT_LOOK } from './src/game/look';
 import { ARMOUR } from './src/game/gear';
-const ITEMS = { head: 'chain_coif', chest: 'chain_hauberk', arms: 'chain_sleeves', legs: 'chain_leggings', feet: 'chain_boots' };
-const KEY = { chain_coif: 'chainCoif', chain_hauberk: 'chainChest', chain_sleeves: 'chainChest', chain_leggings: 'chainLegs', chain_boots: 'chainBoots' };
+const ITEMS = { head: 'chain_coif', chest: 'chain_hauberk', shawl: 'chain_shawl', legs: 'chain_leggings', feet: 'chain_boots' };
+const KEY = { chain_coif: 'chainCoif', chain_hauberk: 'chainChest', chain_shawl: 'chainChest', chain_leggings: 'chainLegs', chain_boots: 'chainBoots' };
 const fails = [];
 const ok = (c, m) => { if (!c || process.env.VERBOSE) console.log((c ? 'ok   ' : 'FAIL ') + m); if (!c) fails.push(m); };
 const pose = (gender, gear) => ({ phase: 0, moving: false, facing: 1, swimming: false, working: false, look: { ...DEFAULT_LOOK, gender }, gear });
@@ -39,7 +39,7 @@ for (const gender of ['man', 'woman']) {
   console.log(gender + ' the whole set: ' + d.baked.nTris + ' triangles drawn, baked in ' + Math.round(d.baked.ms) + ' ms (the first outfit ' + bare.baked.nTris + ', plate ' + plate.baked.nTris + ' in ' + Math.round(plate.baked.ms) + ' ms, leather ' + leather.baked.nTris + ' in ' + Math.round(leather.baked.ms) + ' ms)');
 }
 // every outfit the armour slots can make
-const bySlot = { head: [], chest: [], arms: [], legs: [], feet: [] };
+const bySlot = { head: [], chest: [], shawl: [], legs: [], feet: [] };
 for (const a of ARMOUR) if (bySlot[a.slot]) bySlot[a.slot].push(a.id);
 const slots = Object.keys(bySlot);
 // with the tool belt, either shield and either jewel worn over it

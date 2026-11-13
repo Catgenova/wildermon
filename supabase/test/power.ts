@@ -28,14 +28,13 @@ import {
   calmRefusal, deepLungsSaid, hardToKillSaid, MEDITATION, PATH_PICK_BY_ID, PATH_TIER_AT, PATHS, pathPickRefusal, picksOf, SECOND_WIND_SAID,
   SHRUG_NONE, SHRUG_SAID, surgeSaid, unbrokenSaid, type PathPickDef,
 } from '../../src/game/meditation';
-import { ARMOUR_BY_ID, ARMOUR_CLASSES, HIT_LOCATIONS, pieceSoak } from '../../src/game/gear';
+import { ARMOUR_BY_ID, ARMOUR_CLASSES, COVERS, HIT_LOCATIONS, pieceSoak } from '../../src/game/gear';
 import { ARMOUR_VS, HEAVY_HIT } from '../../src/game/fight';
 import { groundStep, MAX_STEP, CLIMB_PER_LEVEL } from '../../src/game/player';
 import { HUNGER_RATE, SWIM_WIND } from '../../src/game/body';
 import { bodyForward } from '../../src/net/felt';
 import { TileType } from '../../src/world/tiles';
 import type { World } from '../../src/world/world';
-import type { Slot } from '../../src/game/gear';
 import { mulberry32 } from '../../src/world/noise';
 import { psql, ok, bad, check } from './harness';
 
@@ -54,7 +53,7 @@ const AT: [number, number] = [9, 9];
 /** A rise between tiles past the plain step and inside Sure Feet's (`walk_share`). */
 const RISE = 36;
 /** The pieces of chain worn on every place a blow lands, for Ironhide. */
-const CHAIN: Record<string, string> = { head: 'chain_coif', chest: 'chain_hauberk', arms: 'chain_sleeves', legs: 'chain_leggings', feet: 'chain_boots' };
+const CHAIN: Record<string, string> = { head: 'chain_coif', chest: 'chain_hauberk', shawl: 'chain_shawl', legs: 'chain_leggings', feet: 'chain_boots' };
 
 /* ---- On the island -------------------------------------------------------------- */
 
@@ -114,7 +113,8 @@ begin
   select (wounds->0->>'part'), 1 - (stats->>'health')::double precision into v_part, v_left from player where world_id = w and uid = u;
   update item set dmg = 0 where world_id = w and holder_uid = u;
   update skill set value = 1 where world_id = w and uid = u and id in (select skill from armour_class_def);
-  it := worn(w, u, v_part);
+  -- The piece worn over where it landed (part_worn: the arms' is the shawl's).
+  it := worn(w, u, part_worn(v_part));
   select piece_soak(it, 1) * armour_vs(a.cls, 'bite') into v_soak from armour_def a where a.id = it.def;
   return v_part || ':' || v_left || ':' || v_soak;
 end $f$;
@@ -480,8 +480,8 @@ const body = (): void => (g as unknown as { updateBody(dt: number): void }).upda
   const e1 = g.expectedBlow(1, 'bite');
   let want0 = 0;
   let want1 = 0;
-  for (const [slot, share] of HIT_LOCATIONS) {
-    const it = g.worn(slot as Slot);
+  for (const [part, share] of HIT_LOCATIONS) {
+    const it = g.worn(COVERS[part]);
     const def = it && ARMOUR_BY_ID.get(it.id);
     if (!it || !def) continue;
     const s = pieceSoak(def, it, g.skills.get(ARMOUR_CLASSES[def.cls].skill)) * ARMOUR_VS[def.cls].bite;

@@ -1,4 +1,4 @@
-import type { Slot } from './gear';
+import type { Part } from './gear';
 import { percent } from './words';
 
 /**
@@ -51,7 +51,7 @@ export interface Wound {
   id: number;
   kind: WoundKind;
   /** Where it landed. */
-  part: Slot;
+  part: Part;
   /** How much of a life it took, and how much is left to close. */
   severity: number;
   /** Still open and losing blood. */

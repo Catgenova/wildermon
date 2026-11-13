@@ -179,7 +179,7 @@ export function lookOf(seed: number): Look {
 export function gearOf(cls: string): GearLook | undefined {
   if (cls === 'none') return undefined;
   const g: GearLook = {};
-  for (const a of ARMOUR) if (a.cls === cls && (a.slot === 'head' || a.slot === 'chest' || a.slot === 'arms' || a.slot === 'legs' || a.slot === 'feet')) g[a.slot] = { id: a.id, material: cls === 'cloth' || cls === 'leather' ? undefined : 'iron' };
+  for (const a of ARMOUR) if (a.cls === cls && (a.slot === 'head' || a.slot === 'chest' || a.slot === 'shawl' || a.slot === 'legs' || a.slot === 'feet')) g[a.slot] = { id: a.id, material: cls === 'cloth' || cls === 'leather' ? undefined : 'iron' };
   if (cls !== 'cloth') g.weapon = { id: 'sword', material: 'iron' };
   if (cls === 'chain' || cls === 'plate') g.offhand = { id: 'metal_shield', material: 'iron' };
   return g;

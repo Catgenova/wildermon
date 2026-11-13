@@ -10,13 +10,13 @@ import { matOf } from './materials';
  * and every kind of both trains a subskill of its own, by being used or by
  * being hit.
  */
-export type Slot = 'head' | 'chest' | 'arms' | 'legs' | 'feet' | 'weapon' | 'offhand' | 'belt' | 'jewel' | 'back' | 'side';
+export type Slot = 'head' | 'chest' | 'shawl' | 'legs' | 'feet' | 'weapon' | 'offhand' | 'belt' | 'jewel' | 'back' | 'side';
 
-export const SLOTS: Slot[] = ['head', 'chest', 'arms', 'legs', 'feet', 'weapon', 'offhand', 'belt', 'jewel', 'back', 'side'];
+export const SLOTS: Slot[] = ['head', 'chest', 'shawl', 'legs', 'feet', 'weapon', 'offhand', 'belt', 'jewel', 'back', 'side'];
 export const SLOT_NAMES: Record<Slot, string> = {
   head: 'Head',
   chest: 'Chest',
-  arms: 'Arms',
+  shawl: 'Shawl',
   legs: 'Legs',
   feet: 'Feet',
   weapon: 'Hand',
@@ -35,8 +35,17 @@ export const BAG_CARRY: Record<string, number> = { backpack: 0.5, sack: 0.25 };
 export const bagCarry = (item: Pick<Item, 'id' | 'ql'> | undefined): number => (item ? (BAG_CARRY[item.id] ?? 0) * Math.min(100, item.ql) / 100 : 0);
 for (const [id, carry] of Object.entries(BAG_CARRY)) describeFrom(id, { carry });
 
+/** Where on the body a blow lands. */
+export type HitPart = 'head' | 'chest' | 'arms' | 'legs' | 'feet';
+/** Where a wound is: where a blow lands, or the hand a weapon or a shield is held in. */
+export type Part = HitPart | 'weapon' | 'offhand';
+/** The slot whose piece covers each part a blow lands on (the island's `hit_location.worn`). */
+export const COVERS: Record<HitPart, Slot> = { head: 'head', chest: 'chest', arms: 'shawl', legs: 'legs', feet: 'feet' };
+/** The slots armour is worn in, head to feet: one to each part a blow lands on. */
+export const ARMOUR_SLOTS: Slot[] = Object.values(COVERS);
+
 /** Where a blow lands, and how likely each is. */
-export const HIT_LOCATIONS: Array<[Slot, number]> = [
+export const HIT_LOCATIONS: Array<[HitPart, number]> = [
   ['head', 0.12],
   ['chest', 0.34],
   ['arms', 0.16],
@@ -93,29 +102,29 @@ describeFrom(ANCIENT_HELM, { sight: ANCIENT_HELM_SIGHT });
 export const ARMOUR: ArmourDef[] = [
   armour('wool_cap', 'head', 'cloth'),
   armour('cloth_tunic', 'chest', 'cloth'),
-  armour('cloth_sleeves', 'arms', 'cloth'),
+  armour('cloth_shawl', 'shawl', 'cloth'),
   armour('cloth_trousers', 'legs', 'cloth'),
   armour('cloth_shoes', 'feet', 'cloth'),
   armour('leather_cap', 'head', 'leather'),
   armour('leather_jerkin', 'chest', 'leather'),
-  armour('leather_sleeves', 'arms', 'leather'),
+  armour('leather_shawl', 'shawl', 'leather'),
   armour('leather_trousers', 'legs', 'leather'),
   armour('leather_boots', 'feet', 'leather'),
   armour('chain_coif', 'head', 'chain'),
   armour('chain_hauberk', 'chest', 'chain'),
-  armour('chain_sleeves', 'arms', 'chain'),
+  armour('chain_shawl', 'shawl', 'chain'),
   armour('chain_leggings', 'legs', 'chain'),
   armour('chain_boots', 'feet', 'chain'),
   armour('helm', 'head', 'plate'),
   // Restored from an ancient helm's pieces: a helm, and sight further (`ANCIENT_HELM_SIGHT`).
   armour(ANCIENT_HELM, 'head', 'plate'),
   armour('plate_breastplate', 'chest', 'plate'),
-  armour('plate_arms', 'arms', 'plate'),
+  armour('plate_shawl', 'shawl', 'plate'),
   armour('plate_legs', 'legs', 'plate'),
   armour('plate_boots', 'feet', 'plate'),
   armour('scale_helm', 'head', 'scale'),
   armour('scale_cuirass', 'chest', 'scale'),
-  armour('scale_sleeves', 'arms', 'scale'),
+  armour('scale_shawl', 'shawl', 'scale'),
   armour('scale_leggings', 'legs', 'scale'),
   armour('scale_boots', 'feet', 'scale'),
 ];

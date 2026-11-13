@@ -55,11 +55,11 @@ const combat = scene === 'combat';
 const HEAVY = ['long_sword', 'maul', 'battle_axe'], BOWS = ['short_bow', 'long_bow'];
 /** Armour by class, a piece for every slot, for a fight's bodies in turn; and where blows land, in turn. */
 const SETS: Array<Record<string, string>> = [
-  { head: 'helm', chest: 'plate_breastplate', arms: 'plate_arms', legs: 'plate_legs', feet: 'plate_boots' },
-  { head: 'chain_coif', chest: 'chain_hauberk', arms: 'chain_sleeves', legs: 'chain_leggings', feet: 'chain_boots' },
-  { head: 'leather_cap', chest: 'leather_jerkin', arms: 'leather_sleeves', legs: 'leather_trousers', feet: 'leather_boots' },
-  { head: 'wool_cap', chest: 'cloth_tunic', arms: 'cloth_sleeves', legs: 'cloth_trousers', feet: 'cloth_shoes' },
-  { head: 'scale_helm', chest: 'scale_cuirass', arms: 'scale_sleeves', legs: 'scale_leggings', feet: 'scale_boots' },
+  { head: 'helm', chest: 'plate_breastplate', shawl: 'plate_shawl', legs: 'plate_legs', feet: 'plate_boots' },
+  { head: 'chain_coif', chest: 'chain_hauberk', shawl: 'chain_shawl', legs: 'chain_leggings', feet: 'chain_boots' },
+  { head: 'leather_cap', chest: 'leather_jerkin', shawl: 'leather_shawl', legs: 'leather_trousers', feet: 'leather_boots' },
+  { head: 'wool_cap', chest: 'cloth_tunic', shawl: 'cloth_shawl', legs: 'cloth_trousers', feet: 'cloth_shoes' },
+  { head: 'scale_helm', chest: 'scale_cuirass', shawl: 'scale_shawl', legs: 'scale_leggings', feet: 'scale_boots' },
   {},
 ];
 const WHERE = ['chest', 'head', 'arms', 'legs', 'feet'];

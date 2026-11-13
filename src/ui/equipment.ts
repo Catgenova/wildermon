@@ -13,7 +13,7 @@
  * again with that skill at where it starts and at its next level. So neither
  * can drift from the fight.
  */
-import { ARMOUR_BY_ID, ARMOUR_CLASSES, HIT_LOCATIONS, hitChance, pieceSoak, SHIELDS, SLOT_NAMES, SLOTS, slotOf, WEAPON_BY_ID,
+import { ARMOUR_BY_ID, ARMOUR_CLASSES, ARMOUR_SLOTS, COVERS, HIT_LOCATIONS, hitChance, pieceSoak, SHIELDS, SLOT_NAMES, SLOTS, slotOf, WEAPON_BY_ID,
   WEAPON_SKILL_NAMES, weaponDamage, type Slot, type WeaponDef } from '../game/gear';
 import { ARMOUR_SWING_BY, BLOCK_PER_SKILL, blockChance, blockQl, blowOf, bowReach, critMul, DODGE_FROM, DODGE_PER_CONTROL, DODGE_PER_KG, dodgeChance,
   FIGHT_STANCE_NAMES, FIGHT_STANCES, FIST, HIDE_NAMES, HIDE_TAKES, HIDES, meleeReach, myCritChance, nockedArrow, SHIELD_SWING_BY, SHIELD_WEAR, sideOf,
@@ -132,7 +132,7 @@ export interface EquipReport {
 
 /** What a place on the body is for, when nothing is in it. */
 export const EMPTY_SAYS: Record<Slot, string> = {
-  head: 'Empty', chest: 'Empty', arms: 'Empty', legs: 'Empty',
+  head: 'Empty', chest: 'Empty', shawl: 'Empty', legs: 'Empty',
   feet: 'Empty', weapon: 'Fists', offhand: 'Empty', belt: 'No belt: 0 action loops',
   jewel: 'Empty', back: 'No backpack: carry limit ×1', side: 'No sack: carry limit ×1',
 };
@@ -242,7 +242,7 @@ function heads(g: Game): Heads {
     through: KINDS.reduce((n, k) => n + g.expectedBlow(1, k), 0) / KINDS.length,
     slowed: armour * over - 1,
     kg: SLOTS.reduce((n, s) => n + (g.worn(s) ? itemWeight(g.worn(s) as Item) : 0), 0),
-    soak: new Map(HIT_LOCATIONS.map(([s]) => [s, slotSoak(g, s)])),
+    soak: new Map(ARMOUR_SLOTS.map((s) => [s, slotSoak(g, s)])),
     block: shield ? blockOf(g, shield) : 0,
   };
 }
@@ -306,7 +306,8 @@ export function equipReport(g: Game): EquipReport {
   const perk = (k: string, o: number): number => g.perk(k, o);
   const { def, item } = inHand(g);
   const ranged = !!def.ammo;
-  const struck = new Map(HIT_LOCATIONS);
+  // The share of blows that land on each part, on the slot worn over it (`COVERS`).
+  const struck = new Map<Slot, number>(HIT_LOCATIONS.map(([part, share]) => [COVERS[part], share]));
   const now = heads(g);
 
   const slots: SlotView[] = SLOTS.map((slot) => {
@@ -455,11 +456,11 @@ export function equipReport(g: Game): EquipReport {
   for (const cls of classes) {
     const id = ARMOUR_CLASSES[cls].skill;
     if (skills.some((s) => s.id === id)) continue;
-    const where = HIT_LOCATIONS.filter(([slot]) => {
+    const where = ARMOUR_SLOTS.filter((slot) => {
       const it = g.worn(slot);
       const a = it && ARMOUR_BY_ID.get(it.id);
       return !!a && ARMOUR_CLASSES[a.cls].skill === id;
-    }).map(([slot]) => slot);
+    });
     skills.push(skillView(g, id, skill(id), where.map((slot) => ({
       what: `${SLOT_NAMES[slot]} turns`,
       rule: (gg: Game): number => {

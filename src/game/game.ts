@@ -54,7 +54,7 @@ import { BASE_SPEED, CARRY_CRAWL, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STE
 import { findPath } from '../world/pathfinding';
 import { randomLook, type Look } from './look';
 import { ACTION_FLOOR, ACTION_PACE, DAY_SECONDS } from './pace';
-import { ARMOUR_BY_ID, ARMOUR_CLASSES, bagCarry, HIT_LOCATIONS, pieceBurden, pieceSoak, SHIELDS, WEAPON_BY_ID, type Slot, SLOTS, type WeaponDef } from './gear';
+import { ARMOUR_BY_ID, ARMOUR_CLASSES, ARMOUR_SLOTS, bagCarry, COVERS, HIT_LOCATIONS, type HitPart, type Part, pieceBurden, pieceSoak, SHIELDS, WEAPON_BY_ID, type Slot, SLOTS, type WeaponDef } from './gear';
 import { asleepIn, SLEEP_BONUS_MULT, SLEEP_FOOD, SLEEP_HEAL, SLEEP_WATER } from './sleep';
 import { boonTime, BOON_BONUS, clockLeft, knacksOf, knackSays, type Boon } from './boons';
 import { cleanSaid } from './chat';
@@ -3189,7 +3189,7 @@ export class Game {
   /** Everything worn, as pieces of armour. */
   private wornArmour(): Array<{ slot: Slot; item: Item; def: (typeof ARMOUR_BY_ID) extends Map<string, infer V> ? V : never }> {
     const out = [];
-    for (const slot of ['head', 'chest', 'arms', 'legs', 'feet'] as Slot[]) {
+    for (const slot of ARMOUR_SLOTS) {
       const item = this.worn(slot);
       const def = item && ARMOUR_BY_ID.get(item.id);
       if (item && def) out.push({ slot, item, def });
@@ -3264,7 +3264,7 @@ export class Game {
    * it aside and wears a little for doing so, and the armour learns from it.
    * A shield in the off hand may stop the whole thing first.
    */
-  absorb(raw: number, kind: WoundKind = 'bite'): { taken: number; part: Slot; worn: Item | null; blocked: boolean } {
+  absorb(raw: number, kind: WoundKind = 'bite'): { taken: number; part: Part; worn: Item | null; blocked: boolean } {
     // The shield, first of all.
     const shield = this.worn('offhand');
     const sh = shield && SHIELDS[shield.id];
@@ -3285,15 +3285,17 @@ export class Game {
     }
     // Then wherever it lands.
     let roll = this.rand();
-    let part: Slot = 'chest';
-    for (const [slot, share] of HIT_LOCATIONS) {
+    let part: HitPart = 'chest';
+    for (const [at, share] of HIT_LOCATIONS) {
       roll -= share;
       if (roll <= 0) {
-        part = slot;
+        part = at;
         break;
       }
     }
-    const item = this.worn(part);
+    // The piece worn over it: a blow to the arms lands on the shawl (`COVERS`).
+    const slot = COVERS[part];
+    const item = this.worn(slot);
     const def = item && ARMOUR_BY_ID.get(item.id);
     if (!item || !def) return { taken: raw, part, worn: null, blocked: false };
     const skillId = ARMOUR_CLASSES[def.cls].skill;
@@ -3304,7 +3306,7 @@ export class Game {
     item.dmg = Math.min(100, item.dmg + raw * 4 * this.perk('worn:armour', 1) * (kind === 'burn' ? BURN_WEAR : 1));
     if (item.dmg >= 100) {
       this.inventory.remove(item.uid, 1);
-      this.player.equipped[part] = null;
+      this.player.equipped[slot] = null;
       this.logMsg(`Destroyed: ${itemName(item).toLowerCase()} (${DAMAGE_MAX}% damage).`, 'fight');
     }
     this.events.emit('inventory');
@@ -3373,8 +3375,8 @@ export class Game {
     if (sh) through *= 1 - Math.min(1, blockChance(sh.block, shield.ql, this.skills.get('shields'), perk) + this.wornEnchant('block'));
     through *= this.enchantTaken(kind);
     let soaked = 0;
-    for (const [slot, share] of HIT_LOCATIONS) {
-      const item = this.worn(slot);
+    for (const [part, share] of HIT_LOCATIONS) {
+      const item = this.worn(COVERS[part]);
       const def = item && ARMOUR_BY_ID.get(item.id);
       if (!item || !def) continue;
       const soak = pieceSoak(def, item, this.skills.get(ARMOUR_CLASSES[def.cls].skill)) * this.pathFx('hide', 1);
@@ -3728,7 +3730,7 @@ export class Game {
   }
 
   /** Open a wound, or deepen one of the same kind already in that place. */
-  wound(kind: WoundKind, part: Slot, severity: number): Wound {
+  wound(kind: WoundKind, part: Part, severity: number): Wound {
     const had = this.player.wounds.find((w) => w.kind === kind && w.part === part && !w.infected);
     if (had) {
       had.severity += severity;

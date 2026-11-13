@@ -41,11 +41,11 @@ const BG = '#7d9b5e';
 const PIECES = ${JSON.stringify(pieces)};
 const LEGS = ${JSON.stringify(opt('legs', 'cloth'))};
 const ONLY = ${JSON.stringify(opt('only', '').split(',').filter(Boolean))};
-const SLOT = { coif: ['head', 'chain_coif'], hauberk: ['chest', 'chain_hauberk'], sleeves: ['arms', 'chain_sleeves'], leggings: ['legs', 'chain_leggings'], boots: ['feet', 'chain_boots'] };
+const SLOT = { coif: ['head', 'chain_coif'], hauberk: ['chest', 'chain_hauberk'], sleeves: ['shawl', 'chain_shawl'], leggings: ['legs', 'chain_leggings'], boots: ['feet', 'chain_boots'] };
 /** The chain pieces worn, in a metal, enchanted or not. */
 const chain = (material, lit = false, only = PIECES) => Object.fromEntries(only.map((k) => [SLOT[k][0], { id: SLOT[k][1], material, ...(lit ? { enchanted: true } : {}) }]));
-const plate = (material, lit = false) => Object.fromEntries([['head', 'helm'], ['chest', 'plate_breastplate'], ['arms', 'plate_arms'], ['legs', 'plate_legs'], ['feet', 'plate_boots']].map(([s, id]) => [s, { id, material, ...(lit ? { enchanted: true } : {}) }]));
-const leather = () => ({ head: { id: 'leather_cap' }, chest: { id: 'leather_jerkin' }, arms: { id: 'leather_sleeves' }, legs: { id: 'leather_trousers' }, feet: { id: 'leather_boots' } });
+const plate = (material, lit = false) => Object.fromEntries([['head', 'helm'], ['chest', 'plate_breastplate'], ['shawl', 'plate_shawl'], ['legs', 'plate_legs'], ['feet', 'plate_boots']].map(([s, id]) => [s, { id, material, ...(lit ? { enchanted: true } : {}) }]));
+const leather = () => ({ head: { id: 'leather_cap' }, chest: { id: 'leather_jerkin' }, shawl: { id: 'leather_shawl' }, legs: { id: 'leather_trousers' }, feet: { id: 'leather_boots' } });
 const look = (gender) => ({ ...DEFAULT_LOOK, gender, hair: gender === 'woman' ? 'braid' : 'swept', beard: 'none' });
 const lab = (t, cls = 'l') => { const d = document.createElement('div'); d.className = cls; d.textContent = t; return d; };
 const size = (z) => [Math.ceil(40 * z) + 24, Math.ceil(50 * z) + 24];
@@ -92,8 +92,8 @@ window.sheets = {
   },
   mixed: (zoom) => {
     const mixes = [
-      ['hauberk + plate legs/boots + helm', { ...plate('steel'), chest: { id: 'chain_hauberk', material: 'iron' }, arms: { id: 'chain_sleeves', material: 'iron' } }],
-      ['plate chest + chain legs/boots/coif', { ...chain('iron', false, ['coif', 'leggings', 'boots']), chest: { id: 'plate_breastplate', material: 'gold' }, arms: { id: 'plate_arms', material: 'gold' } }],
+      ['hauberk + plate legs/boots + helm', { ...plate('steel'), chest: { id: 'chain_hauberk', material: 'iron' }, shawl: { id: 'chain_shawl', material: 'iron' } }],
+      ['plate chest + chain legs/boots/coif', { ...chain('iron', false, ['coif', 'leggings', 'boots']), chest: { id: 'plate_breastplate', material: 'gold' }, shawl: { id: 'plate_shawl', material: 'gold' } }],
       ['leather jerkin + chain legs/boots', { ...leather(), ...chain('copper', false, ['leggings', 'boots']), head: { id: 'leather_cap' } }],
       ['chain hauberk + leather legs/boots/cap', { ...leather(), ...chain('mithril', false, ['hauberk', 'sleeves']) }],
       ['coif alone (first outfit)', chain('steel', false, ['coif'])],
