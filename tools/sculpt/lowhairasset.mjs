@@ -2,7 +2,7 @@
 // src/sculpt/assets/lowhair.json, and each style's id and name into src/sculpt/assets/lowhair-styles.json, the list the
 // character creator offers (src/game/look.ts HAIRSTYLES, with Bald). The styles lowhair.mjs builds (its STYLES) and the
 // side braid, built by tools/sculpt/lowbraid.mjs; the bob, by tools/sculpt/lowbob.mjs (its outline fit read from
-// tools/sculpt/hairs/bob-fit-<who>.json). A style's name is its module's `name` (tools/sculpt/hairs/<id>.mjs).
+// tools/sculpt/hairs/bob-fit-<who>.json); the top knot, by tools/sculpt/lowtopknot.mjs. A style's name is its module's `name` (tools/sculpt/hairs/<id>.mjs).
 //
 //   node tools/sculpt/lowhairasset.mjs   (or node tools/sculpt/lowhair.mjs --asset)
 import { writeFileSync } from 'node:fs';
@@ -13,12 +13,15 @@ import { buildBraid, carve as carveBraid } from './lowbraid.mjs';
 import BRAID from './hairs/braid.mjs';
 import { bobOf } from './lowbob.mjs';
 import BOB from './hairs/bob.mjs';
+import { buildTopknot } from './lowtopknot.mjs';
+import TOPKNOT from './hairs/topknot.mjs';
 
 const braidHull = carveBraid();
 const BUILDERS = {
   ...Object.fromEntries(Object.entries(STYLES).map(([id, st]) => [id, { name: st.name, build: (rig) => buildHair(rig, st, carve(id)) }])),
   braid: { name: BRAID.name, build: (rig) => buildBraid(rig, BRAID, braidHull) },
   bob: { name: BOB.name, build: (rig) => bobOf(rig, BOB) },
+  topknot: { name: TOPKNOT.name, build: (rig) => buildTopknot(rig, TOPKNOT) },
 };
 
 const out = { built: 'node tools/sculpt/lowhair.mjs --asset (tools/sculpt/lowhair.mjs gameHair)' };
