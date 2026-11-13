@@ -4417,6 +4417,11 @@ export const NEWS: News[] = [
     ],
   },
   {
+    n: 574,
+    day: '2026-11-13',
+    lines: () => [`Fixed: wildermon turned from a removed kind (${listed(Object.values(REMOVED_KINDS).map((k) => k.name))}) still called by that kind's name, and their carcasses and stud book records. Now: the name of the kind they became, at their stage.`],
+  },
+  {
     n: 564,
     day: '2026-11-13',
     lines: () => [
