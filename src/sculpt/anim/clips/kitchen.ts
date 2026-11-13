@@ -282,7 +282,7 @@ export const FRY: Clip = {
       at: [
         { t: 0, v: PAN_AT }, { t: 0.15, v: shift(PAN_AT, [0, 0, 0.03]), ease: 'out' }, { t: 0.3, v: PAN_AT, ease: 'out' },
         { t: 0.45, v: shift(PAN_AT, [0, 0, 0.03]), ease: 'out' }, { t: 0.6, v: shift(PAN_AT, [0, 0, -0.008]), ease: 'out' },
-        { t: 0.78, v: shift(PAN_AT, [0, 0.035, 0.012]), ease: 'in' }, { t: 0.95, v: PAN_AT, ease: 'out' },
+        { t: 0.78, v: shift(PAN_AT, [0, 0.01, 0]), ease: 'in' }, { t: 0.95, v: PAN_AT, ease: 'out' },
       ],
       way: PAN_WAY,
     },
