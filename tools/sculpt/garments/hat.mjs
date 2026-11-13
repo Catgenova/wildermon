@@ -2,8 +2,8 @@
 // the head and a little wider than it, a wrap band with a ring ornament, a large asymmetric brim with a raised trim edge,
 // drooping past the eye line on the body's right and at the front, level with its tip swept up on the body's left under
 // the two angled feathers in the trim colour), fitted to each low-poly body from the one design (DESIGN, per body), its
-// crown sized to the skull (the head alone, by `clear`) and the swept-back hair and the bob (src/sculpt/assets/lowhair.json,
-// PRESSED) pressed under it (hatHair). Rigid on the head bone; no bones of its own.
+// crown sized to the skull (the head alone, by `clear`) and the swept-back hair, the bob and the shoulder length
+// (src/sculpt/assets/lowhair.json, PRESSED) pressed under it (hatHair). Rigid on the head bone; no bones of its own.
 //
 //   buildHat(rig, design) → { verts, polys: [{ v, mat, part, tag, piece }], tris, part, design }
 //   hatWeights(rig, G) → per vertex [[bone, weight], ...] (the head only)
@@ -147,7 +147,7 @@ function secR(D, az, a) {
 }
 
 /** The hairstyles drawn pressed under the hat (the game's '<style>:hat'); the others are drawn as they are. */
-const PRESSED = ['swept', 'bob'];
+const PRESSED = ['swept', 'bob', 'warrior'];
 /** The head's and the hair's points in the hat's frame (the body's head samples, the hair's vertices and samples). */
 const HAIR = JSON.parse(readFileSync(new URL('../../../src/sculpt/assets/lowhair.json', import.meta.url), 'utf8'));
 export function hairMesh(who, style = 'swept') {
@@ -461,7 +461,7 @@ export function hatHair(rig, G, { gap = 0.025, least = 0.02, style = 'swept', pu
     for (const ti of new Set(sink)) for (const v of H.tris[ti].v) if (ray[v]) ray[v].h2 = Math.min(ray[v].cap, ray[v].h2 + 0.01);
     verts = H.verts.map((_, i) => at(i));
   }
-  // (a hairstyle that hangs below the hat, the bob: a triangle of it still through the hat drawn in under the band, its
+  // (a hairstyle that hangs below the hat, the bob, the shoulder length: a triangle of it still through the hat drawn in under the band, its
   // corners moved level toward the head's upright axis `pull` at a time; a corner that would sink a triangle into the
   // head held where it was)
   for (let it = 0; it < 120; it++) {

@@ -8,7 +8,7 @@
  * own axes, the thumbs closed toward the palm), the helpers driven from those, and the body stood on its lowest sole.
  * Shaded as the review renders shade it: one colour a polygon, from its normal in view space, by the light fitted for
  * that body (`tools/sculpt/lowlight-<who>.json`, written by `tools/sculpt/lowlight.py`), in the look's skin. A hairstyle
- * made for the low-poly bodies (`tools/sculpt/lowhair.mjs`, `./assets/lowhair.json`: 'swept', 'braid', 'bob') is drawn with the
+ * made for the low-poly bodies (`tools/sculpt/lowhair.mjs`, `./assets/lowhair.json`: 'swept', 'braid', 'bob', 'warrior') is drawn with the
  * body, on the head bone, in three tones of the look's hair colour (its valleys a fourth, darker), the body's scalp
  * under it shaved; any other style draws no hair yet, and none is drawn while the hood is up (`hairShown`). The
  * undergarment (`tools/sculpt/lowunder.mjs`: his briefs; her briefs and band) is the body's own polygons painted, their
