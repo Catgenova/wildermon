@@ -4347,6 +4347,17 @@ export const NEWS: News[] = [
     ],
   },
   {
+    n: 544,
+    day: '2026-11-13',
+    lines: () => {
+      const jobs = (clip: string): number => [...ACTION_BY_ID.keys()].filter((id) => clipOfJob(id) === clip).length;
+      return [
+        `New: animation at the quern, grinding: ${jobs('quern')} jobs; pressing: ${jobs('press')}. Stirring a pot, bowl or jar: ${jobs('stir')}. Cooking on a skewer at a fire: ${jobs('roast')}. Frying: ${jobs('fry')} (was: a placeholder gesture).`,
+        'Changed: leaching lye and filling a barrel: both hands at waist height (was: a placeholder gesture).',
+      ];
+    },
+  },
+  {
     n: 529,
     day: '2026-11-12',
     lines: () => [

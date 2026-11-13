@@ -21,6 +21,7 @@ import { GROUND } from './clips/ground';
 import { SHOOT } from './clips/shoot';
 import { FIGHT as FIGHT_CLIP } from './clips/fight';
 import { SEAT_OARS, SEAT_REINS, SEAT_SADDLE, SEAT_TILLER, SEAT_TILLER_LEFT, SEAT_TUCK } from './clips/seated';
+import { FRY, PRESS, QUERN, ROAST, STIR } from './clips/kitchen';
 import { mirrorClip } from './author';
 import { ACTION_BY_ID } from '../../game/actions';
 import { clipOfJob } from './routes';
@@ -40,6 +41,9 @@ export const CLIPS: Record<string, Clip> = {
   idle: IDLE, walk: WALK, swing: SWING, sixseven: SIXSEVEN, work: WORK, 'work-left': mirrorClip(WORK, 'work-left'), hands: HANDS, ground: GROUND,
   fight: FIGHT_CLIP, 'fight-left': mirrorClip(FIGHT_CLIP, 'fight-left'), shoot: SHOOT,
   'seat-reins': SEAT_REINS, 'seat-oars': SEAT_OARS, 'seat-tiller': SEAT_TILLER, 'seat-tiller-left': SEAT_TILLER_LEFT, saddle: SEAT_SADDLE, 'saddle-tuck': SEAT_TUCK,
+  // the kitchen's (./clips/kitchen.ts)
+  quern: QUERN, 'quern-left': mirrorClip(QUERN, 'quern-left'), press: PRESS, stir: STIR, 'stir-left': mirrorClip(STIR, 'stir-left'),
+  roast: ROAST, 'roast-left': mirrorClip(ROAST, 'roast-left'), fry: FRY, 'fry-left': mirrorClip(FRY, 'fry-left'),
 };
 /** The clip a state plays until its own is approved: the 6 7 gesture. */
 export const PLACEHOLDER = 'sixseven';
@@ -70,7 +74,10 @@ export function workClipOf(job: string | undefined): string {
  * The clips played left-handed (`lefty`), by the right-handed clip's name: its mirror. The flat figure works left-handed
  * from the two facings where its right hand's blow would cross the face (`../../render/figure.ts` lefty); so does this.
  */
-const LEFT_OF: Readonly<Record<string, string>> = { work: 'work-left', fight: 'fight-left' };
+const LEFT_OF: Readonly<Record<string, string>> = {
+  work: 'work-left', fight: 'fight-left',
+  quern: 'quern-left', stir: 'stir-left', roast: 'roast-left', fry: 'fry-left',
+};
 /** Whether work is done left-handed from where it is seen: as the flat figure (facings three and seven). */
 const lefty = (facing: number): boolean => { const f = ((Math.round(facing) % 8) + 8) % 8; return f === 3 || f === 7; };
 
@@ -120,7 +127,11 @@ const FADE = 0.2;
  * Seconds a fade into or out of a clip takes where that is longer than `FADE`, its feet kept planted throughout where
  * the two clips stand them (`plantBetween`): getting down onto the knees at the ground and up off them.
  */
-const SETTLE: Readonly<Record<string, number>> = { ground: 0.55 };
+const SETTLE: Readonly<Record<string, number>> = {
+  ground: 0.55,
+  // the kitchen's knelt clips (./clips/kitchen.ts)
+  quern: 0.55, 'quern-left': 0.55, press: 0.55, roast: 0.55, 'roast-left': 0.55, fry: 0.55, 'fry-left': 0.55,
+};
 /** Seconds after a long fade lands over which the clip's own motion is let go into from rest. */
 const RELEASE = 0.25;
 /** The legs' bones, which a long fade keeps on its own pace (the root's too); the rest lead or trail them. */
@@ -191,6 +202,8 @@ export const TOOLS_OF: Readonly<Record<string, { strike: string; hold?: string }
   hammer: { strike: 'hammer', hold: 'chisel' }, mallet: { strike: 'mallet', hold: 'chisel' }, chisel: { strike: 'mallet', hold: 'chisel' },
   hatchet: { strike: 'hatchet' }, butchering_knife: { strike: 'butchering_knife' }, awl: { strike: 'awl' }, carving_knife: { strike: 'carving_knife' },
   trowel: { strike: 'trowel' }, file: { strike: 'file' }, whetstone: { strike: 'whetstone' },
+  // the vessels stirred in (./clips/kitchen.ts STIR): the spoon going round, the vessel held by its lug
+  clay_pot: { strike: 'wooden_spoon', hold: 'clay_pot' }, clay_bowl: { strike: 'wooden_spoon', hold: 'clay_bowl' }, clay_jar: { strike: 'wooden_spoon', hold: 'clay_jar' },
 };
 /** The long tools a body's shorter grip (`Correction.grip`) is for: those that reach as far as the clip's own. */
 const LONG = new Set(['hammer', 'mallet', 'hatchet', 'butchering_knife']);
