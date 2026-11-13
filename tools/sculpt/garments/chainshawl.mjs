@@ -1,24 +1,26 @@
 // The chain set's shawl, the petal gorget: a stiff standing collar round the neck, worked in a diamond pattern (iron
-// diamonds, each sloping up to a raised brass inset ringed in the dark lining, on iron mail), its top a row of brass rings; and from the collar's foot a ring of
-// leaf-shaped mail tabs fanning down over the shoulders, the chest and the back, every other one laid over its two
-// neighbours, each edged in brass rings. Enchanted, the diamonds' insets and the tabs' brass edges glow. Worn over the
-// hauberk (chainchest.mjs) and clear of the coif (its tippet left out under the collar) and every helm. One design for
-// both bodies, each body its own numbers (DESIGN), skinned to the body's own bones (the collar on spine_03, the clavicles
-// and a little of neck_01; each tab from the collar's weights at its root to the skin's under it; no bones of its own).
+// diamonds, each sloping up to a raised brass inset ringed in the dark lining, on iron mail), its top a row of brass
+// rings; and from the collar's foot a ring of leaf-shaped mail tabs fanning down over the shoulders, the chest and the
+// back, every other one laid over its two neighbours, each edged in brass rings. Enchanted, the diamonds' insets and the
+// tabs' brass edges glow. Worn over any chest (two fits, `FITS`), clear of the coif (its tippet left out under the
+// collar) and every helm. One design for both bodies, each body its own numbers (DESIGN), skinned to the body's own
+// bones (the collar on spine_03, the clavicles and a little of neck_01; each tab from the collar's weights at its root
+// to the skin's under it; no bones of its own).
 //
 //   buildChainShawl(rig, design?, { under }) → { verts, polys: [{ v, mat, part, tag }], tris, part, design, petals }
 //   chainShawlWeights(rig, G) → per vertex [[bone, weight], ...] (the body's bones only)
 //
 //   node tools/sculpt/garments/chainshawl.mjs
-//     writes the game's copy beside each body: src/sculpt/assets/lowchainshawl-male.json and -female.json
-//     (lowgarment.mjs garmentAsset with the chain set's plain and enchanted looks; loaded by src/sculpt/lowpoly.ts, worn
-//     with outfit.chainShawl, its iron in outfit.metal.chainShawl)
+//     writes the game's copies beside each body (lowgarment.mjs garmentAsset with the chain set's plain and enchanted
+//     looks; loaded by src/sculpt/lowpoly.ts, worn with outfit.chainShawl, its iron in outfit.metal.chainShawl), one per
+//     fit (`FITS`): src/sculpt/assets/lowchainshawl-<who>.json over the hauberk, the cloth tunic or nothing, and
+//     lowchainshawlover-<who>.json over the leather, plate and scale chests
 //
 // The shape, round a vertical axis through the neck (azimuth 0 the front, 90 the body's left):
 //   the collar: `collar.n` diamonds round, between three rings (its foot, its middle half a diamond round, its top), each
 //   ring's height a blend [front, side, back] of the azimuth's cosine; its wall a straight line from the foot to the top,
 //   leaning out by `lean` degrees [front, side, back], its inside `gap` clear of what is worn under it round the neck
-//   (the hauberk's collar, the coif's hood); its wall `t` thick, the inside the padded lining, the top's lip brass;
+//   (the chests' collars, the coif's hood); its wall `t` thick, the inside the padded lining, the top's lip brass;
 //   the tabs: `petals.n` round from the front, each a leaf (its root `root` of its widest, its widest at `widest` up it,
 //   pointed) laid on the body's line from the collar's outside a little over its foot (lowgarment.mjs drape over what is
 //   worn under it, grown by `gap`), leaning out below the shoulder's corner and its tip lifted off by `flare`; the even
@@ -36,7 +38,7 @@ export const LOOKS = { plain: Object.fromEntries(USED.map((n) => [n, CHAIN_LOOKS
 
 /**
  * The design per body (the body's units: y up, the chin's underside 0):
- *   gap: what the garment keeps clear of what is under it;
+ *   gap: what the garment keeps clear of what is under it; rootTo, passes, reach, collarNeck: the weights' (chainShawlWeights);
  *   collar: n diamonds; foot, top: the rings' heights [front, side, back]; lean: the wall's lean out from upright
  *   (degrees, [front, side, back]); t: its thickness; inset: the diamonds' insets' share of the diamond; raise: how far
  *   the insets stand out; lip: the brass top's rise over the wall's top;
@@ -49,14 +51,14 @@ export const LOOKS = { plain: Object.fromEntries(USED.map((n) => [n, CHAIN_LOOKS
  */
 export const DESIGN = {
   male: {
-    gap: 0.05,
+    gap: 0.05, rootTo: 0.5, passes: 2, reach: 0.3,
     collar: { n: 14, foot: [-0.72, -0.36, -0.5], top: [-0.08, 0.16, 0.2], lean: [10, -14, -8], t: 0.07, inset: 0.6, raise: 0.035, lip: 0.02 },
-    petals: { n: 12, len: [1.1, 1.75, 1.75], wide: 1.55, root: 0.5, widest: 0.42, up: 0, t: 0.06, rib: 0.03, course: 0.2, d: 0.035, links: 3, rim: 0.12, layer: 0.035, flare: [0.22, 0.5, 0.42], lean: 0.12, depth: 2.6 },
+    petals: { n: 12, len: [1.1, 1.75, 1.75], wide: 1.55, root: 0.5, widest: 0.42, up: 0, t: 0.06, rib: 0.03, course: 0.2, d: 0.035, links: 3, rim: 0.12, layer: 0.05, flare: [0.22, 0.5, 0.42], lean: 0.12, depth: 2.6 },
   },
   female: {
-    gap: 0.045,
+    gap: 0.045, rootTo: 0.5, passes: 2, reach: 0.3, collarNeck: 0.6,
     collar: { n: 14, foot: [-0.68, -0.42, -0.52], top: [-0.1, 0.1, 0.14], lean: [10, -10, -6], t: 0.065, inset: 0.6, raise: 0.03, lip: 0.018 },
-    petals: { n: 12, len: [0.95, 1.5, 1.5], wide: 1.55, root: 0.5, widest: 0.42, up: 0, t: 0.055, rib: 0.027, course: 0.18, d: 0.032, links: 3, rim: 0.1, layer: 0.03, flare: [0.19, 0.43, 0.36], lean: 0.12, depth: 2.3 },
+    petals: { n: 12, len: [0.95, 1.5, 1.5], wide: 1.55, root: 0.5, widest: 0.42, up: 0, t: 0.055, rib: 0.027, course: 0.18, d: 0.032, links: 3, rim: 0.1, layer: 0.045, flare: [0.19, 0.43, 0.36], lean: 0.12, depth: 2.3 },
   },
 };
 
@@ -79,11 +81,19 @@ export function assetMesh(name, who, { from = 0, to = Infinity } = {}) {
   return { verts, tris, asset: A };
 }
 /**
- * What the shawl is worn over, at rest: the hauberk (chainchest.mjs) and the coif's hood, its tippet left out under the
+ * The chests each fit is worn over (`FITS`): the shawl's own over the hauberk (chainchest.mjs) and the cloth tunic (or
+ * nothing), its over-armour copy over those and the leather, plate and scale chests too (their collars and pauldrons).
+ */
+export const FITS = {
+  shawl: { file: 'lowchainshawl', chests: ['lowchainchest', 'lowtunic'] },
+  over: { file: 'lowchainshawlover', chests: ['lowchainchest', 'lowtunic', 'lowleatherchest', 'lowplatechest', 'lowscalechest'] },
+};
+/**
+ * What a fit of the shawl is worn over, at rest: its chests (`FITS`) and the coif's hood, its tippet left out under the
  * collar (chaincoif.mjs, its polygons before `dropFrom`).
  */
-export function underOf(who) {
-  return [assetMesh('lowchainchest', who), assetMesh('lowchaincoif', who, { to: 'drop' })].filter(Boolean);
+export function underOf(who, fit = 'shawl') {
+  return [...FITS[fit].chests.map((n) => assetMesh(n, who)), assetMesh('lowchaincoif', who, { to: 'drop' })].filter(Boolean);
 }
 
 /* ---- the shape -------------------------------------------------------------------------------------------------------- */
@@ -187,7 +197,7 @@ export function buildChainShawl(rig, D = DESIGN[rig.who], { under = underOf(rig.
   // arc at the root's radius), a midrib down its middle
   const U = [0, 0.2, T.widest, 0.62, 0.82];
   const shape = (u) => (u <= T.widest ? T.root + (1 - T.root) * Math.sin((Math.PI / 2) * (u / T.widest)) : Math.pow(Math.cos((Math.PI / 2) * ((u - T.widest) / (1 - T.widest))), 0.85));
-  G.petals = []; G.u = [];
+  G.petals = []; G.u = []; G.edge = [];
   const order = [...Array(T.n).keys()].sort((a, b) => (a % 2) - (b % 2) || a - b);
   for (const q of order) {
     const c = (q * 360) / T.n, len = blend3(T.len, c), half = ((T.wide * 360) / T.n / 2) * Math.PI / 180, layer = q % 2;
@@ -203,11 +213,11 @@ export function buildChainShawl(rig, D = DESIGN[rig.who], { under = underOf(rig.
     });
     const lift0 = extra.petal?.[q] ?? 0, flare = blend3(T.flare, c);
     const pos = ([sv, x], o) => { const r = Math.max(0.2, sec(cols, c, Math.max(0, sv), 0)[0]), deg = c + (x / r) * 180 / Math.PI, u = Math.max(0, sv / len); return atRY(deg, ...sec(cols, deg, Math.max(0, sv), lift0 + flare * u * u + o), z0); };
-    const part = `petal${q}`, V = (p, sv) => { const v = G.vert(p, part); G.u[v] = Math.max(0, Math.min(1, sv / len)); return v; };
+    const part = `petal${q}`, V = (p, sv, e = 0) => { const v = G.vert(p, part); G.u[v] = Math.max(0, Math.min(1, sv / len)); G.edge[v] = e; return v; };
     G.tag = part;
     const h = U.length;   // the outline: left side 0..h-1, the tip h, the right side h+1..2h (from the tip back to the root)
     const L = (k) => k;
-    const o = O.map((p) => V(pos(p, T.t), p[0])), b = O.map((p) => V(pos(p, 0), p[0]));
+    const o = O.map((p) => V(pos(p, T.t), p[0], 1)), b = O.map((p) => V(pos(p, 0), p[0], 1));
     // the mail inside the brass edge: courses across the tab `course` apart down it, each a ridge (its top on the tab, its
     // crest `d` out, falling to the next course's top), cut across into links, `links` columns each side of the midrib:
     // the crest high at one column and low at the next, every other course the other way, so each course reads as a row of
@@ -223,7 +233,7 @@ export function buildChainShawl(rig, D = DESIGN[rig.who], { under = underOf(rig.
     const tip = V(pos(I[h], T.t), I[h][0]);
     const grid = rows.map((r) => Array.from({ length: 2 * NL + 1 }, (_, c2) => {
       const j = c2 - NL, sv = r.s(j);
-      return j === 0 ? V(pos([sv, 0], T.t + T.rib), sv) : V(pos([sv, (j / NL) * xIn(sv)], r.off(j)), sv);
+      return j === 0 ? V(pos([sv, 0], T.t + T.rib), sv) : V(pos([sv, (j / NL) * xIn(sv)], r.off(j)), sv, Math.abs(j) / NL);
     }));
     grid.push(Array.from({ length: 2 * NL + 1 }, () => tip));
     for (let r = 0; r + 1 < grid.length; r++) for (let c2 = 0; c2 < 2 * NL; c2++) G.poly([grid[r][c2], grid[r][c2 + 1], grid[r + 1][c2 + 1], grid[r + 1][c2]], rows[r].kind === 'top' ? 'plate' : 'shade', part);
@@ -300,9 +310,10 @@ const smoothstep = (x) => { const u = Math.min(1, Math.max(0, x)); return u * u 
  * The collar on the body under its foot (each column's), taken onto spine_03 and the clavicles (an arm's bones onto its
  * clavicle), its top `collarNeck` of the way onto neck_01, so it turns a little with the head. Each tab from its root
  * on the collar's weights there to, past `rootTo` of the way down it, the body's at the closest point of its skin (as
- * the hauberk under it moves: the head and the neck taken onto spine_03), smoothed `smooth` times along its edges.
+ * the hauberk under it moves: the head and the neck taken onto spine_03), smoothed `smooth` times along its edges, then
+ * at its edges `passes` times over every tab vertex within `reach` (so tabs laid over one another move as one).
  */
-export function chainShawlWeights(rig, G, { collarNeck = G.design.collarNeck ?? 0.3, rootTo = G.design.rootTo ?? 0.35, smooth = G.design.smooth ?? 4 } = {}) {
+export function chainShawlWeights(rig, G, { collarNeck = G.design.collarNeck ?? 0.3, rootTo = G.design.rootTo ?? 0.35, smooth = G.design.smooth ?? 4, reach = G.design.reach ?? 0.3, passes = G.design.passes ?? 4, armFollow = G.design.armFollow ?? 0 } = {}) {
   const z0 = G.design.z0, C = G.collar;
   const fin = (w) => { const l = Object.entries(w).filter(([, x]) => x > 1e-3).sort((a, b) => b[1] - a[1]).slice(0, 4), t = l.reduce((a, [, x]) => a + x, 0); return l.map(([k, x]) => [rig.at.get(k), x / t]); };
   const azOf = (p) => Math.atan2(p[0], p[2] - z0) * 180 / Math.PI;
@@ -318,11 +329,22 @@ export function chainShawlWeights(rig, G, { collarNeck = G.design.collarNeck ?? 
   };
   const skinW = transferWeights(rig, G, { map: (nm) => (/^(head|jaw|neck_0[12])$/.test(nm) ? 'spine_03' : nm), smooth, only: (i) => G.part[i] !== 'collar' });
   const ys = G.verts.filter((_, i) => G.part[i] === 'collar').map((p) => p[1]), y0 = Math.min(...ys), y1 = Math.max(...ys);
-  return G.verts.map((p, i) => {
-    if (G.part[i] === 'collar') return fin(mix(footOf(azOf(p)), { neck_01: 1 }, collarNeck * (p[1] - y0) / (y1 - y0)));
+  const cOf = new Map(G.petals.map((P) => [P.part, P.c]));
+  let W = G.verts.map((p, i) => {
+    if (G.part[i] === 'collar') return mix(footOf(azOf(p)), { neck_01: 1 }, collarNeck * (p[1] - y0) / (y1 - y0));
     const own = Object.fromEntries(skinW[i].map(([bn, x]) => [rig.bones[bn].name, x]));
-    return fin(mix(footOf(azOf(p)), own, smoothstep(G.u[i] / rootTo)));
+    const w = mix(footOf(azOf(p)), own, smoothstep(G.u[i] / rootTo)), c = cOf.get(G.part[i]) * Math.PI / 180, f = armFollow * Math.abs(Math.sin(c)) * smoothstep(G.u[i]);
+    return f > 0 ? mix(w, { [`upperarm_${Math.sin(c) > 0 ? 'l' : 'r'}`]: 1 }, f) : w;
   });
+  // (the tabs' edges' weights smoothed over every tab vertex within `reach`, whichever tab: where one tab is laid over
+  // another the two move as one; their middles keep the skin's)
+  const tabs = G.verts.map((_, i) => i).filter((i) => G.part[i] !== 'collar');
+  const nb = new Map(tabs.filter((i) => G.edge[i] >= 0.5).map((i) => [i, tabs.filter((j) => j !== i && Math.hypot(...sub(G.verts[i], G.verts[j])) < reach)]));
+  for (let it = 0; it < passes; it++) {
+    const prev = W;
+    W = prev.map((w, i) => { const ns = nb.get(i); if (!ns?.length) return w; const o = {}; for (const x of [w, ...ns.map((j) => prev[j])]) for (const [k, v] of Object.entries(x)) o[k] = (o[k] ?? 0) + v / (ns.length + 1); return o; });
+  }
+  return W.map(fin);
 }
 
 /* ---- the game's copy ------------------------------------------------------------------------------------------------ */
@@ -330,12 +352,12 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const { writeFileSync } = await import('node:fs');
   const { buildRig } = await import('../lowrig.mjs');
   const { garmentAsset } = await import('../lowgarment.mjs');
-  for (const who of ['male', 'female']) {
-    const rig = buildRig(who), G = buildClear(rig);
+  for (const [fit, F] of Object.entries(FITS)) for (const who of ['male', 'female']) {
+    const rig = buildRig(who), G = buildClear(rig, DESIGN[who], underOf(who, fit));
     G.vw = chainShawlWeights(rig, G);
-    const file = new URL(`../../../src/sculpt/assets/lowchainshawl-${who}.json`, import.meta.url);
+    const file = new URL(`../../../src/sculpt/assets/${F.file}-${who}.json`, import.meta.url);
     const A = { built: 'node tools/sculpt/garments/chainshawl.mjs (tools/sculpt/lowgarment.mjs garmentAsset)', ...garmentAsset(rig, G, MATS, LOOKS) };
     writeFileSync(file, JSON.stringify(A));
-    console.log(who, `${G.verts.length} vertices, ${G.tris.length} triangles, lifted ${JSON.stringify(G.extra)}${G.left && Object.keys(G.left).length ? ', still crossing ' + JSON.stringify(G.left) : ''}: wrote`, file.pathname);
+    console.log(fit, who, `${G.verts.length} vertices, ${G.tris.length} triangles, lifted ${JSON.stringify(G.extra)}${G.left && Object.keys(G.left).length ? ', still crossing ' + JSON.stringify(G.left) : ''}: wrote`, file.pathname);
   }
 }

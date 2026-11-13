@@ -143,6 +143,8 @@ import MALE_CHAIN_COIF from './assets/lowchaincoif-male.json';
 import FEMALE_CHAIN_COIF from './assets/lowchaincoif-female.json';
 import MALE_CHAIN_SHAWL from './assets/lowchainshawl-male.json';
 import FEMALE_CHAIN_SHAWL from './assets/lowchainshawl-female.json';
+import MALE_CHAIN_SHAWL_OVER from './assets/lowchainshawlover-male.json';
+import FEMALE_CHAIN_SHAWL_OVER from './assets/lowchainshawlover-female.json';
 import MALE_CHAIN_LEGS from './assets/lowchainlegs-male.json';
 import FEMALE_CHAIN_LEGS from './assets/lowchainlegs-female.json';
 import MALE_CHAIN_BOOTS from './assets/lowchainboots-male.json';
@@ -1270,7 +1272,7 @@ const ITEM_PIECES: Readonly<Record<string, { key: OutfitKey; ench: EnchantKey; p
 };
 /** The shawls drawn as a garment of their own, and the chest pieces each is fitted over (none listed: over any). */
 const SHAWL_OVER: Readonly<Partial<Record<OutfitKey, readonly OutfitKey[] | null>>> = {
-  shawl: null, leatherShawl: ['tunic', 'leatherChest'], plateMantle: null, chainShawl: ['tunic', 'chainChest'],
+  shawl: null, leatherShawl: ['tunic', 'leatherChest'], plateMantle: null, chainShawl: null,
 };
 /**
  * What a figure has equipped (`FigurePose.gear`) as its outfit: each worn piece's sculpted garment, enchanted when it is,
@@ -1414,10 +1416,12 @@ const GARMENTS: ReadonlyArray<{ man: GarmentAsset; woman: GarmentAsset; wears: (
   { man: MALE_CHAIN_LEGS as unknown as GarmentAsset, woman: FEMALE_CHAIN_LEGS as unknown as GarmentAsset, wears: (p) => p.outfit?.chainLegs ?? false, enchanted: enchantedOf('chainLegs'), drops: wearsChainBoots, plate: 'chainLegs' },
   { man: MALE_CHAIN_BOOTS as unknown as GarmentAsset, woman: FEMALE_CHAIN_BOOTS as unknown as GarmentAsset, wears: wearsChainBoots, enchanted: enchantedOf('chainBoots'), plate: 'chainBoots' },
   { man: MALE_CHAIN_CHEST as unknown as GarmentAsset, woman: FEMALE_CHAIN_CHEST as unknown as GarmentAsset, wears: (p) => p.outfit?.chainChest ?? false, enchanted: enchantedOf('chainChest'), plate: 'chainChest' },
-  // the chain set's shawl, the petal gorget (`tools/sculpt/garments/chainshawl.mjs`): over the hauberk, the coif's tippet
+  // the chain set's shawl, the petal gorget (`tools/sculpt/garments/chainshawl.mjs`): over any chest, the coif's tippet
   // left out under its collar; its mail in its metal, its brass its own; enchanted, the collar's diamonds and the tabs'
-  // edges glow
-  { man: MALE_CHAIN_SHAWL as unknown as GarmentAsset, woman: FEMALE_CHAIN_SHAWL as unknown as GarmentAsset, wears: (p) => p.outfit?.chainShawl ?? false, enchanted: enchantedOf('chainShawl'), plate: 'chainShawl' },
+  // edges glow. Its own fit over the hauberk, the tunic or nothing; its over-armour fit over the leather, plate and scale
+  // chests (`overArmour`)
+  { man: MALE_CHAIN_SHAWL as unknown as GarmentAsset, woman: FEMALE_CHAIN_SHAWL as unknown as GarmentAsset, wears: (p) => (p.outfit?.chainShawl ?? false) && !overArmour(p), enchanted: enchantedOf('chainShawl'), plate: 'chainShawl' },
+  { man: MALE_CHAIN_SHAWL_OVER as unknown as GarmentAsset, woman: FEMALE_CHAIN_SHAWL_OVER as unknown as GarmentAsset, wears: (p) => (p.outfit?.chainShawl ?? false) && overArmour(p), enchanted: enchantedOf('chainShawl'), plate: 'chainShawl' },
   // the scale set's cuirass & sleeves (`tools/sculpt/garments/scalechest.mjs`): off unless asked for; its scales and
   // scale-plate in the set's material (`scaleMat`)
   // the scale set's leggings (`tools/sculpt/garments/scalelegs.mjs`): off unless asked for; their leather takes the
@@ -1449,6 +1453,8 @@ const GARMENTS: ReadonlyArray<{ man: GarmentAsset; woman: GarmentAsset; wears: (
     man: man as unknown as GarmentAsset, woman: woman as unknown as GarmentAsset, wears: (p: FigurePose) => p.gear?.head?.id === 'circlet' && circletOver(p) === style, enchanted: (p: FigurePose) => !!p.gear?.head?.enchanted, kit: 'circlet' as const,
   })),
 ];
+/** Whether a chest with a collar or pauldrons of its own is worn (the leather, plate or scale chest): the chain shawl's over-armour fit goes over it. */
+function overArmour(p: FigurePose): boolean { return !!(o(p).leatherChest || o(p).plateChest || o(p).scaleChest); }
 /** The hairstyle a circlet is fitted over: the one drawn (`hairStyle`) where it has a fit, else none. */
 const circletOver = (p: FigurePose): string => { const s = hairStyle(p, (p.look ?? DEFAULT_LOOK).hair); return s === 'swept' || s === 'braid' || s === 'bob' ? s : 'bare'; };
 /** Which fit of the tool belt a figure wears (`tools/sculpt/garments/kit.mjs` BELT_OVER), or none: over the plate chest, the hauberk, the scale cuirass, the leather chest, or the cloth. */
@@ -1591,8 +1597,6 @@ export function lowMaterialsMost(given: FigurePose): number {
   const pose = dressed(given), who = (pose.look ?? DEFAULT_LOOK).gender === 'woman' ? 'woman' : 'man';
   return WORN_MOST + BODIES[who].used(GARMENTS.map((g) => g.wears(pose)), GARMENTS.map((g) => g.enchanted?.(pose) ?? false)).length;
 }
-/** Where a bake's worn garments' materials start (`placesOf`: after the prop's and the hands' tools'), for the authoring tools to tell them from the props'. */
-export const lowWornAt = (baked: Baked): number | undefined => USED.get(baked)?.at;
 /** A prop drawn in both hands (`PROPS`, by the weapon's id) as a body holds it (for the authoring tools). */
 export const lowHeldOf = (body: 'man' | 'woman', id: string): Held | undefined => BODIES[body].heldOf(id);
 /** A body's local turns for a pose as the figure's pose maps onto it, with no clip (for the authoring tools to compare). */

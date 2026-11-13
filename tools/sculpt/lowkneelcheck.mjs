@@ -42,7 +42,7 @@ const OUTFITS = {
   bare: { shawl: false, trousers: false, boots: false, tunic: false, hood: false },
 };
 const b = await build({
-  stdin: { contents: `export { lowScene, lowWornAt } from './src/sculpt/lowpoly'; export { CLIPS, workClipOf } from './src/sculpt/anim'; export { DEFAULT_LOOK } from './src/game/look'; export { M } from './src/sculpt/models/body';`, resolveDir: ROOT, loader: 'ts' },
+  stdin: { contents: `export { lowScene } from './src/sculpt/lowpoly'; export { CLIPS, workClipOf } from './src/sculpt/anim'; export { DEFAULT_LOOK } from './src/game/look'; export { M } from './src/sculpt/models/body';`, resolveDir: ROOT, loader: 'ts' },
   bundle: true, format: 'esm', platform: 'node', write: false, logLevel: 'error', target: 'es2022', absWorkingDir: ROOT,
   loader: { '.png': 'dataurl', '.svg': 'dataurl', '.webp': 'dataurl', '.wav': 'dataurl', '.ogg': 'dataurl', '.mp3': 'dataurl' },
   define: { 'import.meta.env': '{}', __DEPLOY__: 'undefined' },
@@ -52,8 +52,7 @@ if (TS.workClipOf('plant') !== 'ground') throw new Error(`plant plays ${TS.workC
 
 /**
  * Where the body's materials end and the worn garments' start (src/sculpt/lowpoly.ts GARMENT_MAT, WORN_MAT): the body's
- * own (`M`), then the prop's and each hand's tool's places (PROP_SLOTS, twenty each at most), then the garments' (where
- * a bake's start: lowWornAt).
+ * own (`M`), then the prop's and each hand's tool's places (PROP_SLOTS, twenty each), then the garments'.
  */
 const GARMENT_MAT = Object.keys(TS.M).length, WORN_MAT = GARMENT_MAT + 20 * 3;
 
@@ -76,8 +75,7 @@ function sceneOf(pose) {
   const T = Array.from({ length: s.baked.nTris }, (_, t) => ({ v: [s.baked.tris[t * 3], s.baked.tris[t * 3 + 1], s.baked.tris[t * 3 + 2]] }));
   // (the body's skin: its own materials, the first laid; what is worn: the materials past the props' places)
   const body = [], worn = [];
-  const wornAt = TS.lowWornAt(s.baked) ?? WORN_MAT;
-  T.forEach((t, k) => { const m = mat[t.v[0]]; if (m < GARMENT_MAT) body.push(k); else if (m >= wornAt) worn.push(k); });
+  T.forEach((t, k) => { const m = mat[t.v[0]]; if (m < GARMENT_MAT) body.push(k); else if (m >= WORN_MAT) worn.push(k); });
   return { P, T, dom, mat, body, worn };
 }
 
