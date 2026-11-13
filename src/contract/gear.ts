@@ -15,6 +15,6 @@ export interface GearPiece {
   enchanted?: boolean;
 }
 /** The places on a body a piece is worn. */
-export type GearSlot = 'head' | 'chest' | 'arms' | 'legs' | 'feet' | 'weapon' | 'offhand' | 'belt' | 'jewel';
+export type GearSlot = 'head' | 'chest' | 'shawl' | 'legs' | 'feet' | 'weapon' | 'offhand' | 'belt' | 'jewel';
 /** A body's pieces, by place. */
 export type GearLook = Partial<Record<GearSlot, GearPiece>>;

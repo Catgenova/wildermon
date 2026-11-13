@@ -1,7 +1,7 @@
 import type { Game } from '../../game/game';
 import { itemDef } from '../../game/items';
 import { boundKey } from '../../game/keybinds';
-import { CRAFT_REACH, RECIPE_BY_ID, stationName } from '../../game/recipes';
+import { CRAFT_REACH, RECIPE_BY_ID, recipeNow, stationName } from '../../game/recipes';
 import { shoppingList, type ShoppingEntry } from '../../game/shopping';
 import { Repaint } from '../repaint';
 import type { UIWindow } from '../windows';
@@ -58,8 +58,9 @@ export class ShoppingPanel {
     try {
       const got = JSON.parse(localStorage.getItem(KEY) ?? '[]') as unknown;
       if (Array.isArray(got)) {
-        this.entries = got.filter((e): e is ShoppingEntry => !!e && typeof e.recipe === 'string' && RECIPE_BY_ID.has(e.recipe)
-          && typeof e.count === 'number' && e.count > 0).map((e) => ({ recipe: e.recipe, count: Math.floor(e.count) }));
+        // A recipe kept under an id since renamed is read under the new one (`recipeNow`).
+        this.entries = got.filter((e): e is ShoppingEntry => !!e && typeof e.recipe === 'string' && RECIPE_BY_ID.has(recipeNow(e.recipe))
+          && typeof e.count === 'number' && e.count > 0).map((e) => ({ recipe: recipeNow(e.recipe), count: Math.floor(e.count) }));
       }
     } catch {
       this.entries = [];

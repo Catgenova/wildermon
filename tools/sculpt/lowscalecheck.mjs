@@ -22,7 +22,7 @@ const b = await build({
 });
 const TS = await import('data:text/javascript;base64,' + Buffer.from(b.outputFiles[0].text).toString('base64'));
 const json = (f) => JSON.parse(readFileSync(new URL(f, `file://${ROOT}`), 'utf8'));
-const gear = JSON.parse(opt('outfit', '{"head":{"id":"scale_helm"},"chest":{"id":"scale_cuirass"},"arms":{"id":"scale_sleeves"},"legs":{"id":"scale_leggings"},"feet":{"id":"scale_boots"}}'));
+const gear = JSON.parse(opt('outfit', '{"head":{"id":"scale_helm"},"chest":{"id":"scale_cuirass"},"shawl":{"id":"scale_shawl"},"legs":{"id":"scale_leggings"},"feet":{"id":"scale_boots"}}'));
 /** The pieces in the order the game lays them (src/sculpt/lowpoly.ts GARMENTS: the scale set's), by outfit switch. */
 const PIECES = [['plateHelm', 'lowhelm'], ['plateLegs', 'lowplatelegs'], ['plateBoots', 'lowplateboots'], ['plateChest', 'lowplatechest'], ['scaleLegs', 'lowscalelegs'], ['scaleBoots', 'lowscaleboots'], ['scaleHelm', 'lowscalehelm'], ['scaleChest', 'lowscalechest']];
 /** What leaves a piece's polygons from dropFrom on out (src/sculpt/lowpoly.ts GARMENTS drops). */

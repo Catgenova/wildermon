@@ -1,4 +1,4 @@
-// The scale set's cuirass & sleeves (the items scale_cuirass and scale_sleeves, one garment worn for either): a leather
+// The scale set's cuirass & sleeves (the items scale_cuirass and scale_shawl, one garment worn for either): a leather
 // cuirass laid over with courses of dragon scale, under a standing collar of scale-plate; a dark belt with a core for a
 // buckle; a skirt of scaled leather panels over the upper thigh; scaled shoulder caps, a scale sleeve to the elbow
 // (two lapped rings, open toward the body), leather bracers with a glowing diamond and an engraved line, the hands bare;

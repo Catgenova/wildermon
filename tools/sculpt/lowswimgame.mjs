@@ -46,10 +46,10 @@ kitSync(true);
 const OUTFITS = {
   none: {},
   cloth: { chest: { id: 'cloth_tunic' }, legs: { id: 'cloth_trousers' }, feet: { id: 'cloth_shoes' } },
-  leather: { chest: { id: 'leather_jerkin' }, arms: { id: 'leather_sleeves' }, legs: { id: 'leather_trousers' }, feet: { id: 'leather_boots' }, head: { id: 'leather_cap' } },
-  chain: { chest: { id: 'chain_hauberk', material: 'iron' }, arms: { id: 'chain_sleeves', material: 'iron' }, legs: { id: 'chain_leggings', material: 'iron' }, feet: { id: 'chain_boots', material: 'iron' }, head: { id: 'chain_coif', material: 'iron' } },
-  scale: { chest: { id: 'scale_cuirass' }, arms: { id: 'scale_sleeves' }, legs: { id: 'scale_leggings' }, feet: { id: 'scale_boots' }, head: { id: 'scale_helm' } },
-  plate: { chest: { id: 'plate_breastplate', material: 'iron' }, arms: { id: 'plate_arms', material: 'iron' }, legs: { id: 'plate_legs', material: 'iron' }, feet: { id: 'plate_boots', material: 'iron' }, head: { id: 'helm', material: 'iron' } },
+  leather: { chest: { id: 'leather_jerkin' }, shawl: { id: 'leather_shawl' }, legs: { id: 'leather_trousers' }, feet: { id: 'leather_boots' }, head: { id: 'leather_cap' } },
+  chain: { chest: { id: 'chain_hauberk', material: 'iron' }, shawl: { id: 'chain_shawl', material: 'iron' }, legs: { id: 'chain_leggings', material: 'iron' }, feet: { id: 'chain_boots', material: 'iron' }, head: { id: 'chain_coif', material: 'iron' } },
+  scale: { chest: { id: 'scale_cuirass' }, shawl: { id: 'scale_shawl' }, legs: { id: 'scale_leggings' }, feet: { id: 'scale_boots' }, head: { id: 'scale_helm' } },
+  plate: { chest: { id: 'plate_breastplate', material: 'iron' }, shawl: { id: 'plate_shawl', material: 'iron' }, legs: { id: 'plate_legs', material: 'iron' }, feet: { id: 'plate_boots', material: 'iron' }, head: { id: 'helm', material: 'iron' } },
 };
 const gear = { ...(OUTFITS[C.outfit] ?? {}), ...(C.weapon !== 'none' ? { weapon: { id: C.weapon } } : {}) };
 const lookOf = (gender) => ({ ...DEFAULT_LOOK, gender, beard: 'none', ...(C.hair ? { hair: C.hair } : {}) });

@@ -133,7 +133,7 @@ const weaponNote = (w: { def: WeaponDef; item: Item | null; held: boolean }): st
 
 /** The armour piece a class's skill is shown with: one you wear of the class, otherwise its chest piece at `EXAMPLE_QL`. */
 function pieceFor(g: Game, cls: ArmourClass): { item: Item; worn: boolean } {
-  for (const slot of ['chest', 'head', 'legs', 'arms', 'feet'] as const) {
+  for (const slot of ['chest', 'head', 'legs', 'shawl', 'feet'] as const) {
     const it = g.worn(slot);
     if (it && ARMOUR_BY_ID.get(it.id)?.cls === cls) return { item: it, worn: true };
   }

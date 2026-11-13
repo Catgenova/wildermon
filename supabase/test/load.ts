@@ -150,7 +150,7 @@ say(!game.stalled() && moved > 0.5, `put down to ${(light * 100).toFixed(0)}% it
  * (`loadBurden`). The island's `travel_speed` counts no burden at all, so the browser is held to the slower of the two.
  */
 loadTo(0.3);
-for (const [slot, id] of [['head', 'helm'], ['chest', 'plate_breastplate'], ['arms', 'plate_arms'], ['legs', 'plate_legs'], ['feet', 'plate_boots']] as const) {
+for (const [slot, id] of [['head', 'helm'], ['chest', 'plate_breastplate'], ['shawl', 'plate_shawl'], ['legs', 'plate_legs'], ['feet', 'plate_boots']] as const) {
   const it = game.inventory.add(id, { ql: 50, extra: 'Iron' });
   if (it) game.equip(slot, it.uid);
 }
@@ -179,7 +179,7 @@ const foot = pace(1), ridden = pace(1.5);
 say(near(ridden / foot, 1.5 * (1 + suit), 0.03),
   `in that plate, 1.5× a walk under you covers ${(ridden / foot).toFixed(3)}× what your own feet do (no armour slowing it: ${(1.5 * (1 + suit)).toFixed(3)})`);
 loadTo(1.4);
-for (const s of ['head', 'chest', 'arms', 'legs', 'feet'] as const) game.equip(s, null);
+for (const s of ['head', 'chest', 'shawl', 'legs', 'feet'] as const) game.equip(s, null);
 const load = game.loadBurden();
 say(load > 0 && near(load, game.burden(), 1e-9), `a load past the limit still slows a mount, a team or a boat: ${load.toFixed(3)} of burden, all of it load`);
 

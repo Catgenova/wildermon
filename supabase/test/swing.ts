@@ -60,9 +60,9 @@ if (!ATTACK || !SHOOT || !MINE) throw new Error('no fight');
 const SWORD = WEAPON_BY_ID.get('short_sword');
 if (!SWORD) throw new Error('no short sword');
 const SKILLS = [1, 20, 47, 70];
-const PLATE: Array<[string, Slot]> = [['helm', 'head'], ['plate_breastplate', 'chest'], ['plate_arms', 'arms'], ['plate_legs', 'legs'], ['plate_boots', 'feet']];
+const PLATE: Array<[string, Slot]> = [['helm', 'head'], ['plate_breastplate', 'chest'], ['plate_shawl', 'shawl'], ['plate_legs', 'legs'], ['plate_boots', 'feet']];
 const PART = PLATE.slice(0, 2);
-const LEATHER: Array<[string, Slot]> = [['leather_cap', 'head'], ['leather_jerkin', 'chest'], ['leather_sleeves', 'arms'], ['leather_trousers', 'legs'], ['leather_boots', 'feet']];
+const LEATHER: Array<[string, Slot]> = [['leather_cap', 'head'], ['leather_jerkin', 'chest'], ['leather_shawl', 'shawl'], ['leather_trousers', 'legs'], ['leather_boots', 'feet']];
 /** What the two sets weigh, written down here so that a piece made heavier or lighter is caught rather than followed. */
 const LEATHER_KG = 8.2;
 const PLATE_KG = 31;
@@ -291,7 +291,7 @@ const laden = (over: boolean): void => {
 };
 /** Put on these pieces and take off every other. */
 const wear = (ids: string[]): void => {
-  for (const slot of ['head', 'chest', 'arms', 'legs', 'feet', 'offhand'] as Slot[]) g.equip(slot, null);
+  for (const slot of ['head', 'chest', 'shawl', 'legs', 'feet', 'offhand'] as Slot[]) g.equip(slot, null);
   for (const id of ids) g.equip(id === SHIELD ? 'offhand' : ([...PLATE, ...LEATHER].find(([p]) => p === id)?.[1] as Slot), pieces.get(id) ?? null);
 };
 /** That body as the island had it when it timed the go. */

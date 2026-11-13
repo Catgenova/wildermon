@@ -89,6 +89,12 @@ function lumpFor(g: Game, uid?: number): CraftStock | undefined {
   return s && isMetalStock(s.item.id) ? s : undefined;
 }
 
+/** What else a casting's piece takes at the anvil (`MouldDef.also`) at hand, from the same stock as the casting. */
+const alsoStock = (g: Game, def: MouldDef): CraftStock[] => (def.also ? g.stockOf((it) => it.id === def.also?.item, g.forgeReach()) : []);
+/** Why a casting's piece cannot be beaten out for want of what else it takes (`MouldDef.also`), or null with enough at hand. The island's `forge_refusal`. */
+export const mouldAlsoRefusal = (def: MouldDef, have: number): string | null =>
+  def.also && have < def.also.count ? `Need ${def.also.count} × ${itemDef(def.also.item).name.toLowerCase()}.` : null;
+
 /** What the anvil is worth to beat on: its quality, and how hard its own metal is. */
 export const anvilQl = (a: PlacedAnvil): number => workingQl(a.ql, METAL_BY_ID.get(a.metal)?.name);
 
@@ -258,8 +264,9 @@ export const ANVIL_ACTIONS: ActionDef[] = [
       const named = t.kind === 'anvil' ? t.itemUid : undefined;
       const casting = castingFor(g, named)?.item;
       if (!casting) return named !== undefined ? 'Choose a casting.' : 'Need a casting (pour a mould at a smelter).';
-      if (!MOULD_BY_MAKES.has(casting.piece as string)) return 'Choose a casting.';
-      return null;
+      const def = MOULD_BY_MAKES.get(casting.piece as string);
+      if (!def) return 'Choose a casting.';
+      return mouldAlsoRefusal(def, alsoStock(g, def).reduce((n, s) => n + s.item.count, 0));
     },
     perform: (t, g) => {
       const a = anvilOf(g, t);
@@ -289,6 +296,12 @@ export const ANVIL_ACTIONS: ActionDef[] = [
       const used = rarityTally();
       used[casting.rare ?? 0] += 1;
       if (!stack.spend(1)) return;
+      // And what else the piece takes (`MouldDef.also`), spent with it.
+      let owed = def.also?.count ?? 0;
+      for (const s of alsoStock(g, def)) {
+        const take = Math.min(owed, s.item.count);
+        if (take > 0 && s.spend(take)) owed -= take;
+      }
       g.events.emit('inventory');
       // The casting carries the mould and the metal it was poured from, so it
       // stands for both. More for a Smith's Toolsmith on a tool's head or blade.

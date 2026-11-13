@@ -219,7 +219,7 @@ begin
   v_boot := give(w, u, 'leather_boots', 1, 100);
   v_chest := give(w, u, 'leather_jerkin', 1, 100);
   v_cap := give(w, u, 'leather_cap', 1, 100);
-  v_arm := give(w, u, 'leather_sleeves', 1, 100);
+  v_arm := give(w, u, 'leather_shawl', 1, 100);
   v_leg := give(w, u, 'leather_trousers', 1, 100);
   v_sh := give(w, u, 'wooden_shield', 1, 100, 'Pine');
   v_s := give(w, u, 'featherstep_scroll', 1, 90);
@@ -233,7 +233,7 @@ begin
   insert into said values ('R:bulwarkshield', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'item', 'uid', v_sh, 'scroll', v_s)), 'none'));
 
   -- 9. Stoneskin on two pieces, then on four (past the cap); Emberward on one, then three; Featherstep; Bulwark; Shadowcloak.
-  update player set equipped = jsonb_build_object('feet', v_boot, 'chest', v_chest, 'head', v_cap, 'arms', v_arm, 'legs', v_leg, 'offhand', v_sh)
+  update player set equipped = jsonb_build_object('feet', v_boot, 'chest', v_chest, 'head', v_cap, 'shawl', v_arm, 'legs', v_leg, 'offhand', v_sh)
    where world_id = w and uid = u;
   insert into said values ('WALK0', travel_speed(w, u)::text);
   update item set enchant = '{"id": "stoneskin", "ql": 100}'::jsonb where id in (v_chest, v_cap);
@@ -498,7 +498,7 @@ g.player.equipped.weapon = null;
 const boot = thing('leather_boots', 100);
 const jerkin = thing('leather_jerkin', 100);
 const cap = thing('leather_cap', 100);
-const sleeves = thing('leather_sleeves', 100);
+const sleeves = thing('leather_shawl', 100);
 const trousers = thing('leather_trousers', 100);
 const shield = thing('wooden_shield', 100, 'Pine');
 const askWith = (e: EnchantmentDef, uid: number): string => {
@@ -515,7 +515,7 @@ check('Featherstep goes on boots, Shadowcloak on what is worn on the chest, Bulw
   refusals.map(([k, here, want]) => `${k}: ${isle.get(k)} / ${here} / ${want}`).join('; '));
 
 /* 9. Stoneskin, Emberward, Featherstep, Bulwark, Shadowcloak. */
-Object.assign(g.player.equipped, { feet: boot.uid, chest: jerkin.uid, head: cap.uid, arms: sleeves.uid, legs: trousers.uid, offhand: shield.uid });
+Object.assign(g.player.equipped, { feet: boot.uid, chest: jerkin.uid, head: cap.uid, shawl: sleeves.uid, legs: trousers.uid, offhand: shield.uid });
 const set = (e: EnchantmentDef | null, ...its: Item[]): void => { for (const it of its) it.enchant = e ? { id: e.id, ql: 100 } : undefined; };
 set(STONE, jerkin, cap);
 const skin2 = [g.enchantTaken('bite'), g.enchantTaken('burn')];

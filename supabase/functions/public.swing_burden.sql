@@ -13,7 +13,7 @@ begin
   select coalesce(sum(idf.weight * case when s.slot = 'offhand' then shield_swing_by() else armour_swing_by(a.cls) end), 0)
     into v_kg
     from player p
-    cross join unnest(array['head', 'chest', 'arms', 'legs', 'feet', 'offhand']) s(slot)
+    cross join (select h.worn as slot from hit_location h union all select 'offhand') s
     join item i on i.id = (p.equipped->>s.slot)::bigint
       and i.world_id = p_world and i.holder = 'player' and i.holder_uid = p_uid
     join item_def idf on idf.id = i.def

@@ -102,6 +102,8 @@ export function shoppingList(g: Game, entries: readonly ShoppingEntry[]): Shoppi
       const was = cast.get(id);
       const count = (was?.count ?? 0) + short;
       cast.set(id, { count, mould, fillings: Math.ceil(count / Math.max(1, mould.per ?? 1)) });
+      // And what else the piece takes at the anvil, a casting's worth at a time (`MouldDef.also`).
+      if (mould.also) want(mould.also.item, Math.ceil(short / Math.max(1, mould.per ?? 1)) * mould.also.count, depth + 1, new Set(above).add(id));
       return;
     }
     fetch.add(id);

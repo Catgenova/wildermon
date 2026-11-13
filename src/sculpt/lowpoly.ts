@@ -597,6 +597,8 @@ const colourIndex = (m: { c: string; kind: number }, piece?: Tinted, role?: Plat
  */
 type PlateRole = 'face' | 'shade' | 'iron' | 'gem' | 'stone1' | 'stone2' | 'stone3';
 const PLATE_ROLE: Readonly<Record<string, PlateRole>> = { plate: 'face', shade: 'shade', scale: 'face', edge: 'shade' };
+/** The plate shawl's mantle's metal: its clasps and the neck ring's rim (`gold`), in the metal the shawl is smithed from; its fur keeps its colours. */
+const MANTLE_ROLE: Readonly<Record<string, PlateRole>> = { gold: 'face' };
 /** A dyed piece's materials the dye takes: its fabric or leather (the face) and their lighter and darker parts (as shade: as much lighter or darker than the dye). */
 const DYE_ROLE: Readonly<Record<string, PlateRole>> = { fabric: 'face', pattern: 'shade', leather: 'face', dark: 'shade', light: 'shade', tan: 'shade' };
 /** A garment's materials in a look: its own plain or enchanted, else its colours, lit. */
@@ -658,7 +660,7 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
   const WEIGHTS = garments.map((g, k) => g.weights.map((w) => w.map((x, j) => (j % 2 === 0 && x >= g.base ? x - g.base + OWN[k] : x))));
   /** Each garment's materials, plain and enchanted: their indices among the garments'. */
   const indexOf = (look: 'plain' | 'enchanted') => garments.map((g, k) => looksOf(g, look).map((m, i) => {
-    const t = tints[k], role = !t ? undefined : t.startsWith('dye:') ? DYE_ROLE[g.mats[i]] : t.startsWith('kit:') ? KIT_ROLE[g.mats[i]] : PLATE_ROLE[g.mats[i]];
+    const t = tints[k], role = !t ? undefined : t.startsWith('dye:') ? DYE_ROLE[g.mats[i]] : t.startsWith('kit:') ? KIT_ROLE[g.mats[i]] : t === 'mantle' ? MANTLE_ROLE[g.mats[i]] : PLATE_ROLE[g.mats[i]];
     return colourIndex(m, role && t, role);
   }));
   const MATS_OF = { plain: indexOf('plain'), enchanted: indexOf('enchanted') };
@@ -1229,54 +1231,62 @@ function lowBody(A: Asset, P: Proportions, share: number, garments: readonly Gar
   return { baked: lowBaked, bones: lowBones, shapes: () => SHAPES_W, wet: () => WET, trail: lowTrail, skeleton: SK, held: HELD, heldOf: (id) => HELDS.get(id), toolHeld: (id) => TOOL_HELD.get(id), figure: (pose) => fromGame(bonesOf(rigFor(pose), P, [], REST_EXTRAS), gameRest()), used: usedOf , lift: lowLift, toGame };
 }
 
-type OutfitKey = 'hood' | 'tunic' | 'trousers' | 'boots' | 'plateChest' | 'plateLegs' | 'plateBoots' | 'plateHelm' | 'leatherChest' | 'leatherLegs' | 'leatherBoots' | 'leatherHat' | ChainPiece | 'scaleHelm' | 'scaleChest' | 'scaleLegs' | 'scaleBoots';
+type OutfitKey = 'hood' | 'tunic' | 'shawl' | 'trousers' | 'boots' | 'plateChest' | 'plateMantle' | 'plateLegs' | 'plateBoots' | 'plateHelm' | 'leatherChest' | 'leatherShawl' | 'leatherLegs' | 'leatherBoots' | 'leatherHat' | ChainPiece | 'scaleHelm' | 'scaleChest' | 'scaleLegs' | 'scaleBoots';
 type EnchantKey = keyof NonNullable<NonNullable<FigurePose['outfit']>['enchanted']>;
 /**
  * The sculpted piece each worn item is drawn as (`outfitOf`): its wear switch, its enchantment's, and for plate and chain
- * the piece whose metal it is. A set's chest and arms are one garment, worn for either item.
+ * the piece whose metal it is. A shawl is the set's shawl where it has one of its own (the cloth shawl, the leather
+ * shawl, the plate set's fur mantle, its clasps and rim in the shawl's metal, the chain set's petal gorget); the scale
+ * shawl is drawn as its set's chest & arms, one garment worn for either item.
  */
 const ITEM_PIECES: Readonly<Record<string, { key: OutfitKey; ench: EnchantKey; plate?: PlatePiece }>> = {
   wool_cap: { key: 'hood', ench: 'clothHood' },
   cloth_tunic: { key: 'tunic', ench: 'clothTunic' },
-  cloth_sleeves: { key: 'tunic', ench: 'clothTunic' },
+  cloth_shawl: { key: 'shawl', ench: 'clothShawl' },
   cloth_trousers: { key: 'trousers', ench: 'clothTrousers' },
   cloth_shoes: { key: 'boots', ench: 'clothBoots' },
   leather_cap: { key: 'leatherHat', ench: 'leatherHat' },
   leather_jerkin: { key: 'leatherChest', ench: 'leatherChest' },
-  leather_sleeves: { key: 'leatherChest', ench: 'leatherChest' },
+  leather_shawl: { key: 'leatherShawl', ench: 'leatherShawl' },
   leather_trousers: { key: 'leatherLegs', ench: 'leatherLegs' },
   leather_boots: { key: 'leatherBoots', ench: 'leatherBoots' },
   helm: { key: 'plateHelm', ench: 'helm', plate: 'helm' },
   ancient_helm: { key: 'plateHelm', ench: 'helm', plate: 'helm' },
   plate_breastplate: { key: 'plateChest', ench: 'chest', plate: 'chest' },
-  plate_arms: { key: 'plateChest', ench: 'chest', plate: 'chest' },
+  plate_shawl: { key: 'plateMantle', ench: 'mantle', plate: 'mantle' },
   plate_legs: { key: 'plateLegs', ench: 'legs', plate: 'legs' },
   plate_boots: { key: 'plateBoots', ench: 'boots', plate: 'boots' },
   chain_coif: { key: 'chainCoif', ench: 'chainCoif', plate: 'chainCoif' },
   chain_hauberk: { key: 'chainChest', ench: 'chainChest', plate: 'chainChest' },
-  chain_sleeves: { key: 'chainChest', ench: 'chainChest', plate: 'chainChest' },
+  chain_shawl: { key: 'chainShawl', ench: 'chainShawl', plate: 'chainShawl' },
   chain_leggings: { key: 'chainLegs', ench: 'chainLegs', plate: 'chainLegs' },
   chain_boots: { key: 'chainBoots', ench: 'chainBoots', plate: 'chainBoots' },
   // the scale set: all its pieces in one material (`scale`: dragon scale, which none of them names)
   scale_helm: { key: 'scaleHelm', ench: 'scaleHelm', plate: 'scale' },
   scale_cuirass: { key: 'scaleChest', ench: 'scaleChest', plate: 'scale' },
-  scale_sleeves: { key: 'scaleChest', ench: 'scaleChest', plate: 'scale' },
+  scale_shawl: { key: 'scaleChest', ench: 'scaleChest', plate: 'scale' },
   scale_leggings: { key: 'scaleLegs', ench: 'scaleLegs', plate: 'scale' },
   scale_boots: { key: 'scaleBoots', ench: 'scaleBoots', plate: 'scale' },
 };
+/** The shawls drawn as a garment of their own, and the chest pieces each is fitted over (none listed: over any). */
+const SHAWL_OVER: Readonly<Partial<Record<OutfitKey, readonly OutfitKey[] | null>>> = {
+  shawl: null, leatherShawl: ['tunic', 'leatherChest'], plateMantle: null, chainShawl: ['tunic', 'chainChest'],
+};
 /**
  * What a figure has equipped (`FigurePose.gear`) as its outfit: each worn piece's sculpted garment, enchanted when it is,
- * plate in its metal (the breastplate's over the arms'). The first outfit's pieces stay under what does not replace them.
+ * plate in its metal. The first outfit's pieces stay under what does not replace them.
  */
 export function outfitOf(gear: FigurePose['gear']): NonNullable<FigurePose['outfit']> {
   const dye: Partial<Record<DyedPiece, string>> = {};
   const out: NonNullable<FigurePose['outfit']> = {}, enchanted: NonNullable<NonNullable<FigurePose['outfit']>['enchanted']> = {}, metal: Partial<Record<PlatePiece, string>> = {};
-  // A set's chest and arms are one garment: with the chest and the arms from two sets, the chest's is drawn.
+  // A shawl of its own over the chest piece it is fitted over (the cloth shawl gives way to chest armour, `wearsShawl`);
+  // a scale shawl is its set's chest & arms: with the chest from another set, the chest's is drawn.
   const chestKey = gear?.chest ? ITEM_PIECES[gear.chest.id]?.key : undefined;
-  for (const slot of ['arms', 'chest', 'head', 'legs', 'feet'] as const) {
+  for (const slot of ['shawl', 'chest', 'head', 'legs', 'feet'] as const) {
     const piece = gear?.[slot], to = piece ? ITEM_PIECES[piece.id] : undefined;
     if (!piece || !to) continue;
-    if (slot === 'arms' && chestKey && to.key !== chestKey) continue;
+    const over = SHAWL_OVER[to.key];
+    if (slot === 'shawl' && chestKey && (over === undefined ? to.key !== chestKey : over !== null && !over.includes(chestKey))) continue;
     out[to.key] = true;
     if (piece.enchanted) enchanted[to.ench] = true;
     if (to.plate && piece.material) metal[to.plate] = piece.material;
@@ -1287,7 +1297,7 @@ export function outfitOf(gear: FigurePose['gear']): NonNullable<FigurePose['outf
   if (Object.keys(metal).length) out.metal = metal;
   return out;
 }
-const DYED: Readonly<Record<DyedPiece, true>> = { hood: true, tunic: true, trousers: true, boots: true, leatherChest: true, leatherLegs: true, leatherBoots: true, leatherHat: true };
+const DYED: Readonly<Record<DyedPiece, true>> = { hood: true, tunic: true, shawl: true, trousers: true, boots: true, leatherChest: true, leatherShawl: true, leatherLegs: true, leatherBoots: true, leatherHat: true };
 /** The pose with its outfit: the one it is given (the creator's), else what it has equipped (`outfitOf`). */
 const dressed = (pose: FigurePose): FigurePose => (pose.outfit || !pose.gear ? pose : { ...pose, outfit: outfitOf(pose.gear) });
 
@@ -1372,7 +1382,7 @@ const wearsLeatherChest = (pose: FigurePose): boolean => pose.outfit?.leatherChe
  * same place.)
  */
 const GARMENTS: ReadonlyArray<{ man: GarmentAsset; woman: GarmentAsset; wears: (pose: FigurePose) => boolean; enchanted?: (pose: FigurePose) => boolean; drops?: (pose: FigurePose) => boolean; plate?: PlatePiece; dye?: DyedPiece; kit?: KitPiece }> = [
-  { man: MALE_SHAWL as unknown as GarmentAsset, woman: FEMALE_SHAWL as unknown as GarmentAsset, wears: wearsShawl, enchanted: enchantedOf('clothShawl') },
+  { man: MALE_SHAWL as unknown as GarmentAsset, woman: FEMALE_SHAWL as unknown as GarmentAsset, wears: wearsShawl, enchanted: enchantedOf('clothShawl'), dye: 'shawl' },
   { man: MALE_TROUSERS as unknown as GarmentAsset, woman: FEMALE_TROUSERS as unknown as GarmentAsset, wears: wearsTrousers, enchanted: enchantedOf('clothTrousers'), dye: 'trousers' },
   { man: MALE_BOOTS as unknown as GarmentAsset, woman: FEMALE_BOOTS as unknown as GarmentAsset, wears: wearsBoots, enchanted: enchantedOf('clothBoots'), dye: 'boots' },
   { man: MALE_TUNIC as unknown as GarmentAsset, woman: FEMALE_TUNIC as unknown as GarmentAsset, wears: wearsTunic, enchanted: enchantedOf('clothTunic'), dye: 'tunic' },
@@ -1382,9 +1392,9 @@ const GARMENTS: ReadonlyArray<{ man: GarmentAsset; woman: GarmentAsset; wears: (
   { man: MALE_PLATE_LEGS as unknown as GarmentAsset, woman: FEMALE_PLATE_LEGS as unknown as GarmentAsset, wears: (p) => p.outfit?.plateLegs ?? false, enchanted: enchantedOf('legs'), plate: 'legs' },
   { man: MALE_PLATE_BOOTS as unknown as GarmentAsset, woman: FEMALE_PLATE_BOOTS as unknown as GarmentAsset, wears: wearsPlateBoots, enchanted: enchantedOf('boots'), drops: (pose) => (pose.outfit?.plateLegs || pose.outfit?.scaleLegs) ?? false, plate: 'boots' },
   { man: MALE_PLATE_CHEST as unknown as GarmentAsset, woman: FEMALE_PLATE_CHEST as unknown as GarmentAsset, wears: wearsPlateChest, enchanted: enchantedOf('chest'), plate: 'chest' },
-  // the plate set's fur mantle (`assets/lowmantle-<who>.json` by `tools/sculpt/garments/mantle.mjs`): off unless asked
-  // for; enchanted, its clasps' cores glow
-  { man: MALE_MANTLE as unknown as GarmentAsset, woman: FEMALE_MANTLE as unknown as GarmentAsset, wears: (p) => p.outfit?.plateMantle ?? false, enchanted: enchantedOf('mantle') },
+  // the plate set's fur mantle (`assets/lowmantle-<who>.json` by `tools/sculpt/garments/mantle.mjs`), the plate shawl: off
+  // unless asked for; its clasps and rim in the shawl's metal (`MANTLE_ROLE`); enchanted, its clasps' cores glow
+  { man: MALE_MANTLE as unknown as GarmentAsset, woman: FEMALE_MANTLE as unknown as GarmentAsset, wears: (p) => p.outfit?.plateMantle ?? false, enchanted: enchantedOf('mantle'), plate: 'mantle' },
   { man: MALE_LEATHER_BOOTS as unknown as GarmentAsset, woman: FEMALE_LEATHER_BOOTS as unknown as GarmentAsset, wears: wearsLeatherBoots, enchanted: enchantedOf('leatherBoots'), dye: 'leatherBoots' },
   // (their waist, from dropFrom on (the waistband and the cloth above the chest's undershirt's foot), left out under the leather chest)
   { man: MALE_LEATHER_LEGS as unknown as GarmentAsset, woman: FEMALE_LEATHER_LEGS as unknown as GarmentAsset, wears: (p) => p.outfit?.leatherLegs ?? false, enchanted: enchantedOf('leatherLegs'), drops: (p) => wearsLeatherChest(p) || (p.outfit?.chainChest ?? false), dye: 'leatherLegs' },
@@ -1395,8 +1405,8 @@ const GARMENTS: ReadonlyArray<{ man: GarmentAsset; woman: GarmentAsset; wears: (
   { man: MALE_LEATHER_CHEST as unknown as GarmentAsset, woman: FEMALE_LEATHER_CHEST as unknown as GarmentAsset, wears: wearsLeatherChest, enchanted: enchantedOf('leatherChest'), drops: wearsLeatherShawl, dye: 'leatherChest' },
   { man: MALE_LEATHER_HAT as unknown as GarmentAsset, woman: FEMALE_LEATHER_HAT as unknown as GarmentAsset, wears: wearsLeatherHat, enchanted: enchantedOf('leatherHat'), dye: 'leatherHat' },
   // (the leather shawl: its own copy over the leather chest, fitted over its plates; the plain one without it)
-  { man: MALE_LEATHER_SHAWL as unknown as GarmentAsset, woman: FEMALE_LEATHER_SHAWL as unknown as GarmentAsset, wears: (p) => wearsLeatherShawl(p) && !wearsLeatherChest(p), enchanted: enchantedOf('leatherShawl') },
-  { man: MALE_LEATHER_SHAWL_OVER as unknown as GarmentAsset, woman: FEMALE_LEATHER_SHAWL_OVER as unknown as GarmentAsset, wears: (p) => wearsLeatherShawl(p) && wearsLeatherChest(p), enchanted: enchantedOf('leatherShawl') },
+  { man: MALE_LEATHER_SHAWL as unknown as GarmentAsset, woman: FEMALE_LEATHER_SHAWL as unknown as GarmentAsset, wears: (p) => wearsLeatherShawl(p) && !wearsLeatherChest(p), enchanted: enchantedOf('leatherShawl'), dye: 'leatherShawl' },
+  { man: MALE_LEATHER_SHAWL_OVER as unknown as GarmentAsset, woman: FEMALE_LEATHER_SHAWL_OVER as unknown as GarmentAsset, wears: (p) => wearsLeatherShawl(p) && wearsLeatherChest(p), enchanted: enchantedOf('leatherShawl'), dye: 'leatherShawl' },
   // the chain set's hauberk & sleeves (`tools/sculpt/garments/chainchest.mjs`): its mail in its metal; its skirt over
   // whichever leggings are worn
   { man: MALE_CHAIN_COIF as unknown as GarmentAsset, woman: FEMALE_CHAIN_COIF as unknown as GarmentAsset, wears: wearsCoif, enchanted: enchantedOf('chainCoif'), drops: coifTippetDropped, plate: 'chainCoif' },
@@ -1655,7 +1665,7 @@ export const hasLowBody = (look: { gender: string }): boolean => look.gender ===
 const DRESSED = new Map<string, Material[]>();
 function materialsOf(look: Look, prop: PropAsset | undefined, lit: 'plain' | 'enchanted' = 'plain', metal?: string, tools: Partial<Record<Side, { id: string; piece?: GearPiece }>> = {}, plate: Partial<Record<PlatePiece, string>> = {}, dye: Partial<Record<DyedPiece, string>> = {}, worn: { used: readonly number[]; at: number } = { used: [], at: WORN_MOST }, kit: KitTints = {}): Material[] {
   const toolKey = (['r', 'l'] as const).map((s) => { const t = tools[s]; return t ? `${t.id}:${t.piece?.material ?? ''}:${t.piece?.enchanted ? 1 : 0}` : ''; }).join(',');
-  const plateKey = (['chest', 'legs', 'boots', 'helm', 'chainCoif', 'chainChest', 'chainShawl', 'chainLegs', 'chainBoots', 'scale'] as const).map((p) => plate[p] ?? '').join(',') + ';' + Object.entries(dye).sort().join(',') + `;${kit.shield ?? ''}:${kit.jewel ?? ''}:${(kit.stones ?? []).join('+')}`;
+  const plateKey = (['chest', 'legs', 'boots', 'helm', 'mantle', 'chainCoif', 'chainChest', 'chainShawl', 'chainLegs', 'chainBoots', 'scale'] as const).map((p) => plate[p] ?? '').join(',') + ';' + Object.entries(dye).sort().join(',') + `;${kit.shield ?? ''}:${kit.jewel ?? ''}:${(kit.stones ?? []).join('+')}`;
   const body = bodyMaterials(look), key = `${body.map((m) => m.colour).join()}|${prop?.id ?? ''}|${lit}|${metal ?? ''}|${toolKey}|${plateKey}|${worn.at}:${worn.used.join('.')}`;
   let out = DRESSED.get(key);
   if (!out) {

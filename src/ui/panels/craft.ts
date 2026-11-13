@@ -2,7 +2,7 @@ import { capital } from '../../game/words';
 import { ACTION_BY_ID } from '../../game/actions';
 import type { Game } from '../../game/game';
 import { itemDef } from '../../game/items';
-import { CRAFT_REACH, DEED_ONLY, liquidWord, needRecipeSays, RECIPE_BY_ID, RECIPE_CATEGORIES, RECIPES, materialChoices, prospect, reachFor, recipeReason, recipeStatus, recipeUnread, stationName, type CraftStock, type Recipe, type RecipeStatus } from '../../game/recipes';
+import { CRAFT_REACH, DEED_ONLY, liquidWord, needRecipeSays, RECIPE_BY_ID, recipeNow, RECIPE_CATEGORIES, RECIPES, materialChoices, prospect, reachFor, recipeReason, recipeStatus, recipeUnread, stationName, type CraftStock, type Recipe, type RecipeStatus } from '../../game/recipes';
 import { lockedHiddenSays, recipeSearch } from '../../game/craftsearch';
 import { isFurniture, ONE_ALTAR } from '../../game/furniture';
 import { SKILL_DEFS } from '../../game/skills';
@@ -39,7 +39,9 @@ interface Kept {
 function readKept(): Kept {
   try {
     const got = JSON.parse(localStorage.getItem(KEPT_KEY) ?? '{}') as Partial<Kept>;
-    const ids = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && RECIPE_BY_ID.has(x)) : []);
+    // Kept under an id since renamed: read under the new one, written back so the next time it is (`recipeNow`).
+    const ids = (v: unknown): string[] => (Array.isArray(v)
+      ? [...new Set(v.filter((x): x is string => typeof x === 'string').map(recipeNow))].filter((x) => RECIPE_BY_ID.has(x)) : []);
     return { pinned: ids(got.pinned), recent: ids(got.recent).slice(0, RECENT), showLocked: got.showLocked === true };
   } catch {
     return { pinned: [], recent: [] };

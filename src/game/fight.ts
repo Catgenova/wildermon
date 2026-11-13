@@ -142,7 +142,7 @@ export const swingByOf = (id: string): number => {
 export const swingKgOf = (id: string): number => (itemDef(id)?.weight ?? 0) * swingByOf(id);
 
 /** The places a piece of armour or a shield is worn in, in the order a set is told. */
-const ARMOUR_PLACES: Slot[] = ['head', 'chest', 'arms', 'legs', 'feet', 'offhand'];
+const ARMOUR_PLACES: Slot[] = ['head', 'chest', 'shawl', 'legs', 'feet', 'offhand'];
 let heaviest: { kg: number; counted: number; pieces: string[] } | null = null;
 /**
  * The heaviest set of armour there is, as a swing counts it: for each place,

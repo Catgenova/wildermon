@@ -159,6 +159,11 @@ export interface MouldDef {
   lumps: number;
   /** Pieces one filling makes; one unless the mould is a gang mould. */
   per?: number;
+  /**
+   * What else the piece takes at the anvil, spent with the casting when it is beaten out (from the same stock as the
+   * casting); a failed go spends none of it. The island's `mould_def.also_item` and `also_n`.
+   */
+  also?: { item: string; count: number };
 }
 
 /** The trade that forms every mould and pours it, whatever it casts (`pour_mould`). */
@@ -230,12 +235,13 @@ export const MOULDS: MouldDef[] = [
   // Chain: rings drawn from a mould and riveted up.
   { id: 'chain_coif_mould', name: 'Chain coif mould', makes: 'chain_coif', skill: 'chainsmithing', sand: 3, difficulty: 18, lumps: 2 },
   { id: 'chain_hauberk_mould', name: 'Chain hauberk mould', makes: 'chain_hauberk', skill: 'chainsmithing', sand: 5, difficulty: 26, lumps: 5 },
-  { id: 'chain_sleeves_mould', name: 'Chain sleeves mould', makes: 'chain_sleeves', skill: 'chainsmithing', sand: 3, difficulty: 20, lumps: 3 },
+  { id: 'chain_shawl_mould', name: 'Chain shawl mould', makes: 'chain_shawl', skill: 'chainsmithing', sand: 3, difficulty: 20, lumps: 3 },
   { id: 'chain_leggings_mould', name: 'Chain leggings mould', makes: 'chain_leggings', skill: 'chainsmithing', sand: 4, difficulty: 22, lumps: 4 },
   { id: 'chain_boots_mould', name: 'Chain boots mould', makes: 'chain_boots', skill: 'chainsmithing', sand: 3, difficulty: 18, lumps: 2 },
   // Plate: beaten out whole, and the helm has been here since the first anvil.
   { id: 'plate_breastplate_mould', name: 'Breastplate mould', makes: 'plate_breastplate', skill: 'platesmithing', sand: 6, difficulty: 32, lumps: 6 },
-  { id: 'plate_arms_mould', name: 'Plate arms mould', makes: 'plate_arms', skill: 'platesmithing', sand: 4, difficulty: 26, lumps: 3 },
+  // The shawl: its plates cast, beaten out over a fur lining.
+  { id: 'plate_shawl_mould', name: 'Plate shawl mould', makes: 'plate_shawl', skill: 'platesmithing', sand: 4, difficulty: 26, lumps: 3, also: { item: 'fur', count: 2 } },
   { id: 'plate_legs_mould', name: 'Plate legs mould', makes: 'plate_legs', skill: 'platesmithing', sand: 5, difficulty: 28, lumps: 4 },
   { id: 'plate_boots_mould', name: 'Plate boots mould', makes: 'plate_boots', skill: 'platesmithing', sand: 4, difficulty: 24, lumps: 3 },
 ];
