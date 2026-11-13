@@ -636,7 +636,6 @@ export class WaterPainter {
     return true;
   }
 
-
   /**
    * Which of the ponds on a tile have water on it this frame, into
    * `pondsHereLevel` and `pondsHereMask`: a pond still rising has not got to
@@ -843,7 +842,6 @@ export class WaterPainter {
     this.r.bankColours.set(key, { pages, level, h: [h[0], h[1], h[2], h[3]], gx: this.r.bankGx, gy: this.r.bankGy, colour });
     return colour;
   }
-
 
   /** Whether a tile is kept clear of the shore's wet band and foam: a slab poured over it, or a deck on piers. */
   shoreBare(x: number, y: number): boolean {
