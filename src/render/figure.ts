@@ -6440,6 +6440,10 @@ const GEM_TONE: Record<string, RGB> = {
   diamond: [226, 240, 248], ruby: [226, 98, 120], sapphire: [108, 148, 228], emerald: [98, 192, 146], garnet: [168, 64, 82], topaz: [242, 198, 102],
   opal: [236, 222, 238], peridot: [176, 208, 96], amethyst: [168, 120, 208], jasper: [182, 92, 66], onyx: [58, 58, 66], amber: [232, 164, 64],
 };
+/** A wood as gear is worked of it (`WOOD_GEAR`): the sculpted figures' bows and shields (src/sculpt/lowpoly.ts) take theirs from here; none for a material that is not a wood. */
+export const woodTone = (material?: string): RGB | undefined => WOOD_GEAR[(material ?? '').toLowerCase()];
+/** A stone as a jewel is set with it (`GEM_TONE`): the sculpted figures' rings, pendants and circlets take theirs from here; none for a stone we do not know. */
+export const gemTone = (id?: string): RGB | undefined => GEM_TONE[(id ?? '').trim().toLowerCase()];
 /** Dragon scale, off one kind of beast and one colour: a jade gone grey at the edges. */
 const DRAGON: RGB = [98, 146, 128];
 /** What a metal's shadow and its light lean toward. */

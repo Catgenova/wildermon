@@ -338,10 +338,11 @@ function wornAtRest(who, garments = ['shawl', 'tunic', 'trousers', 'boots']) {
  * toward the left hip); `anchor`, the point along it (its own y, game units) put at `guard` (the grip's top where not
  * given); `flip`, its z turned into the back (its x reversed with it: the face its z looks away from shows); `garments`,
  * the garments (src/sculpt/assets low<name>-<who>.json) it is held clear of; `blade`, from where along it (its own y) the
- * lie is measured (the grip's top where not given).
+ * lie is measured (the grip's top where not given); `extra`, more points (the body's rest, mesh units) it is held clear
+ * of as of those (a quiver already on the back).
  */
 export function backSocketOf(who, prop, scale, design = BACK[who]) {
-  const D = design, pts = wornAtRest(who, D.garments), k = 1 / scale, lead = prop.grip.lead, foot = D.anchor ?? prop.grip.to ?? lead[1], from = D.blade ?? prop.grip.to ?? lead[1];
+  const D = design, pts = [...wornAtRest(who, D.garments), ...(D.extra ?? [])], k = 1 / scale, lead = prop.grip.lead, foot = D.anchor ?? prop.grip.to ?? lead[1], from = D.blade ?? prop.grip.to ?? lead[1];
   // the surfaces' backmost z by cell, `wide` square in x and y
   const cell = D.wide, back = new Map();
   for (const p of pts) { const key = `${Math.floor(p[0] / cell)},${Math.floor(p[1] / cell)}`; back.set(key, Math.min(back.get(key) ?? Infinity, p[2])); }

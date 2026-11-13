@@ -53,8 +53,9 @@ export function plantAt(sk: Skeleton, c: Clip, t: number): Plant | undefined {
  * their place: a job's own); `o.shift`, the reached hands' places moved (body heights: the work brought to a tool that
  * reaches less far than the clip's own, `../index.ts`).
  */
-export function clipLocal(sk: Skeleton, c: Clip, t: number, held?: Held, tools?: (id: string) => Held | undefined, o: { ids?: Partial<Record<Side, string>>; shift?: Partial<Record<Side, [number, number, number]>> } = {}): { local: Array<M3 | undefined>; move: V } {
-  const ids = o.ids ?? c.tools, inHand = ids && tools ? Object.fromEntries(Object.entries(ids).map(([s, id]) => [s, id ? tools(id) : undefined])) : undefined;
+export function clipLocal(sk: Skeleton, c: Clip, t: number, held?: Held, tools?: (id: string) => Held | undefined, o: { ids?: Partial<Record<Side, string>>; shift?: Partial<Record<Side, [number, number, number]>>; hold?: Partial<Record<Side, Held>> } = {}): { local: Array<M3 | undefined>; move: V } {
+  // (`o.hold`: what each fist closes on as it is reached, in place of the hand tools: the weapon a clip wields, `Clip.wields`)
+  const ids = o.ids ?? c.tools, inHand = o.hold ?? (ids && tools ? Object.fromEntries(Object.entries(ids).map(([s, id]) => [s, id ? tools(id) : undefined])) : undefined);
   return sk.finish(poseAt(sk, c, t), { plant: plantAt(sk, c, t), armsOut: c.bodies?.[sk.body]?.armsOut, grip: gripAt(c, t), held, free: c.armsFree, hands: handsAt(c, t, sk.body, o.shift), tools: inHand });
 }
 

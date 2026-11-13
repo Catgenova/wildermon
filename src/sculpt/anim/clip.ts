@@ -146,6 +146,16 @@ export interface Clip {
    * than the clip's has the work brought to it (`../index.ts`).
    */
   strike?: { side: Side; t: number };
+  /**
+   * The hand the weapon in hand is drawn in while the clip plays (a bow in the left fist), both fists reached as they
+   * would close on its grip (`Clip.hands`).
+   */
+  wields?: Side;
+  /**
+   * A bow's shot (`../lowpoly.ts`): the span (seconds) its string is drawn to the other fist, the span an arrow is in that
+   * fist (from the quiver to the loose; while drawn too), and the moment of the full draw, where the arrow is laid along.
+   */
+  bow?: { drawn: [number, number]; arrow: [number, number]; full: number };
 }
 
 /** The bones a clip masked `upper` moves: the spine above the waist, the neck, the head and the arms. */
