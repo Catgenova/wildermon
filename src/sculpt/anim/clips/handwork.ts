@@ -194,9 +194,9 @@ export const BRUSH_WALL: Clip = {
 
 /* ---- B2, scrubbing a floor --------------------------------------------------------------------------------------------- */
 const FLOOR_LENGTH = 1.4;
-/** The brush's two scrubs: forward from near the knees and drawn back, the second a little to the left. */
+/** The brush's two scrubs, out to the right of the body: forward from beside the knees and drawn back, the second a little to the left. */
 const FLOOR_T = { back: 0, fore: 0.32, drawn: 0.7, fore2: 1.02 };
-const FLOOR_AT = { back: [-0.09, 0.075, 0.46] as Euler, fore: [-0.07, 0.07, 0.57] as Euler, back2: [-0.05, 0.075, 0.46] as Euler, fore2: [-0.03, 0.07, 0.57] as Euler };
+const FLOOR_AT = { back: [-0.15, 0.075, 0.43] as Euler, fore: [-0.13, 0.07, 0.6] as Euler, back2: [-0.12, 0.075, 0.43] as Euler, fore2: [-0.1, 0.07, 0.6] as Euler };
 /** The brush along the ground, its head ahead and a little to the left, the bristles down. */
 const FLOOR_WAY: Euler = [0.25, -0.3, 0.92];
 /** The left fist planted beside it, on its knuckles. */
@@ -245,7 +245,7 @@ const ITEM_LENGTH = 1.2;
 /** The left fist holding the work up (the pot by its foot, upright; the cloth by its corner), the brush's fist at the stroke's top and foot. */
 const ITEM_LEFT: Euler = [0.075, 0.61, 0.25];
 const ITEM_LEFT_WAY: Euler = [-0.25, 0.95, 0.15];
-const ITEM_TOP: Euler = [-0.017, 0.6, 0.255], ITEM_LOW: Euler = [-0.012, 0.56, 0.26];
+const ITEM_TOP: Euler = [-0.017, 0.612, 0.255], ITEM_LOW: Euler = [-0.012, 0.552, 0.26];
 /** The brush upright beside the work, its bristles looking across to it. */
 const ITEM_WAY: Euler = [0.15, 0.97, 0.1];
 const ITEM_T = [0, 0.3, 0.6, 0.9];
