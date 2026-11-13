@@ -60,7 +60,8 @@ check('every hairstyle in the list has a mesh on both bodies',
 check('and every mesh is in the list', meshed('male').every((id) => INDEX.styles.some((s) => s.id === id)), meshed('male').join());
 check('the creator offers Bald and every one of them, by name', same(HAIRSTYLES, [{ id: 'bald', name: 'Bald' }, ...INDEX.styles]),
   HAIRSTYLES.map((h) => h.name).join(', '));
-check('three hairstyles and bald, so far', HAIRSTYLES.length === 4, HAIRSTYLES.map((h) => h.id).join());
+check('every hairstyle there is a mesh for and bald', HAIRSTYLES.length === INDEX.styles.length + 1, HAIRSTYLES.map((h) => h.id).join());
+check('the pompadour among them', HAIRSTYLES.some((h) => h.id === 'pompadour' && h.name === 'Pompadour'), HAIRSTYLES.map((h) => h.id).join());
 check('the ids the island checks are the bodies and the hairstyles', same(Object.keys(LOOK_TABLES), ['gender', 'hair']));
 
 /* ---- the ramps ------------------------------------------------------------------------------------- */
