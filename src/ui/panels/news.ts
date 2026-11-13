@@ -4417,6 +4417,11 @@ export const NEWS: News[] = [
     ],
   },
   {
+    n: 579,
+    day: '2026-11-13',
+    lines: () => [`New: hairstyles ${listed(['balding', 'monk'].map((id) => HAIRSTYLES.find((h) => h.id === id)?.name ?? id))} (character creator; Settings, Appearance: Customize character).`],
+  },
+  {
     n: 578,
     day: '2026-11-13',
     lines: () => [`Added: drag from the pack onto a ${SPECIES.bura.name}, any stage, whose panniers open for you: into its panniers.`],

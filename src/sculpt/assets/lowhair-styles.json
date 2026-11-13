@@ -84,6 +84,14 @@
   {
    "id": "waves",
    "name": "Long waves"
+  },
+  {
+   "id": "balding",
+   "name": "Balding"
+  },
+  {
+   "id": "monk",
+   "name": "Monk cut"
   }
  ]
 }
