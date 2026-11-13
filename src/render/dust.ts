@@ -79,3 +79,23 @@ export class Dust {
     this.feet.clear();
   }
 }
+
+/**
+ * What a ground colour looks like once it is in the air. Kicked-up ground is
+ * always paler than the ground it came off — it is the dry, fine part of it,
+ * lit from every side at once — which also happens to be the only way dust off
+ * a green field can be seen against the green field.
+ */
+export function dustTone(colour: string): string {
+  const m = /(\d+),(\d+),(\d+)/.exec(colour);
+  if (!m) return 'rgb(210,198,176)';
+  const r = +m[1];
+  const g = +m[2];
+  const b = +m[3];
+  // Dry earth for ordinary ground; for ground already brighter than that —
+  // snow, marble chippings — it goes towards white instead, since dust off a
+  // snowfield is not the colour of a ploughed field.
+  const pale = (r + g + b) / 3 > 190;
+  const mix = (v: number, to: number): number => Math.round(v + (to - v) * 0.62);
+  return `rgb(${mix(r, pale ? 255 : 236)},${mix(g, pale ? 255 : 226)},${mix(b, pale ? 255 : 202)})`;
+}

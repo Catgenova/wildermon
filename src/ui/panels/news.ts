@@ -178,6 +178,8 @@ import { SIGHT_FORM_AT, SIGHT_RARITY_AT } from '../../game/sighted';
 import { improvable, IMPROVE_DAMAGE as MEND_DAMAGE, IMPROVE_FAIL_LEAST, IMPROVE_FAIL_SPREAD } from '../../game/improve';
 import { JOB_GOES_MOST } from '../../game/mending';
 import { SCULPT_REDRAWS, SCULPT_REDRAWS_SOFT, weaponCarry } from '../../render/figure';
+import { ACTION_SHARE, FEWER_SHARE } from '../../render/fx/actions';
+import { MOST_PARTICLES } from '../../render/spells/kit';
 import { TRY_LEARN } from '../../game/learn';
 import { BASE_SPEED, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER_LEVEL, MAX_STEP, strideAt } from '../../game/player';
 import { staminaBarAbove, SWIM_LEARN } from '../../game/body';
@@ -4366,6 +4368,9 @@ export const NEWS: News[] = [
         'New: sculpted bodies swimming and treading water (was: the flat figure).',
         'Changed: leaching lye and filling a barrel: both hands at waist height (was: a placeholder gesture).',
         'New: sleeping, eating, drinking, praying and meditating animated on the sculpted body (was: a placeholder gesture).',
+        `New: Effects setting (Settings, Performance): All, Fewer (${percent(FEWER_SHARE)} of particles, no lights), Off.`,
+        'New: sparks off a one-handed blow, in the weapon\'s metal; gold motes off an enchanted one. Chips off a pick: in the stone struck; earth off other ground.',
+        `Effects: at most ${percent(ACTION_SHARE)} of the ${MOST_PARTICLES} particles shared with spells; spells first.`,
       ];
     },
   },
