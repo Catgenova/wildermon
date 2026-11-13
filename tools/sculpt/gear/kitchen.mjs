@@ -120,7 +120,7 @@ function spoon(K) {
   // its back: the rim drawn round to a point behind the hollow
   for (let j = 0; j < n; j++) F([rim[(j + 1) % n], rim[j], back], j % 2 ? 'wood2' : 'wood', { from: [c[0] + 0.2, c[1], 0] });
   void G;
-  return { L, grip: gripOf(2.2, 0.13, 1.6, 2.9), contact: [c[0], c[1], 0], parts: 'handle, bowl' };
+  return { L, grip: gripOf(1.75, 0.12, 1.3, 2.9), contact: [c[0], c[1], 0], parts: 'handle, bowl' };
 }
 
 /* ---- the peg the quern's upper stone is turned by: upright in the fist, its foot on the stone --------------------- */
@@ -163,7 +163,7 @@ const jar = (K) => vessel(K, [[0.6, 0], [0.88, 0.4], [0.9, 1.0], [0.62, 1.55], [
  * The frying pan: the handle along y from its butt, the pan beyond its end, its inside looking along UP (in the handle's
  * frame, square to it: the way that is up while the clip holds it out over the fire); the pan in the item's metal.
  */
-export const PAN_UP = [0.12, 0, -1];
+export const PAN_UP = [0.44, 0, -0.9];
 function pan(K) {
   const { G, rod, lathe } = K;
   const up = unit(PAN_UP), H = 2.35, R = 1.35, c = [0, H + R * 0.95, 0];

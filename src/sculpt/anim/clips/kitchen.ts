@@ -3,7 +3,7 @@
  * (`../routes.ts` CLIP_OF_TOOL, CLIP_OF_JOB):
  * - `quern` (K1, grinding): knelt at the hand quern set down ahead of the knees (`QUERN_AT`; the quern on the ground's own
  *   bone, `../../lowpoly.ts` GROUND), the right fist round the peg turning the runner in circles, two turns a run, the
- *   trunk swayed after it; the left hand steadying the bed stone, lifted over the eye once a run to drop in grain;
+ *   trunk swayed after it; the left hand on the left thigh, lifted over the eye once a run to drop in grain;
  * - `press` (K2, pressing): knelt at the quern, both hands flat on the runner, the trunk leant in over them to press down
  *   and let up;
  * - `stir` (K3): stood, the left fist round the vessel's lug at the belt (a pot, a bowl or a jar: `../index.ts` TOOLS_OF),
@@ -25,7 +25,7 @@ import type { Euler } from '../math';
 /* ---- knelt ----------------------------------------------------------------------------------------------------------- */
 /** Each foot rolled up onto its toes about the ball, degrees (as the ground clip's). */
 const TOES = 70;
-/** How far the toes tucked under lift the frame the hands are put in (the ankles' rise), body heights: his, and hers more. */
+/** How far the toes tucked under lift the frame the hands are put in (the ankles' rise), body heights: his, and hers (of her height). */
 const UP = 0.02, HER_UP = 0.013;
 /** The legs and the shift knelt on both knees (the ground clip's: the knees on the ground, the hips over them). */
 const KNEEL: KeyPose = {
@@ -78,8 +78,8 @@ const SWAY = (a: number): Record<string, Euler> => {
   const far = (1 - Math.cos(a)) / 2, side = Math.sin(a);
   return { pelvis: [3 * far, 2 * side, 0], spine_02: [2 * far, 3 * side, 0], spine_03: [1.5 * far, 3 * side, 0], head: [-2 * far, -2 * side, 0] };
 };
-/** The left hand: at the bed stone's left side, steadying it; over the eye with a pinch of grain; let go of it. */
-const BED: Euler = [0.085, 0.15 - UP, 0.375], EYE: Euler = [0.028, 0.175 - UP, QUERN_AT[2] + 0.005];
+/** The left hand: on the left thigh; over the eye with a pinch of grain, let go into it. */
+const LAP: Euler = [0.085, 0.15 - UP, 0.375], EYE: Euler = [0.028, 0.175 - UP, QUERN_AT[2] + 0.005];
 /** The fingers: closed a little at rest, pinched round the grain, opened to let it go. */
 const REST_F: Record<string, Euler> = { fingers_01_l: [18, 0, 0], fingers_02_l: [24, 0, 0] };
 const PINCH: Record<string, Euler> = { fingers_01_l: [48, 0, 0], fingers_02_l: [58, 0, 0], thumb_01_l: [20, 0, 0], thumb_02_l: [20, 0, 0] };
@@ -103,9 +103,9 @@ const quernHands = (): Partial<Record<'l' | 'r', HandReach>> => ({
   r: { at: linear(Array.from({ length: 24 }, (_, k) => [k * 0.1, pegAt(k * 0.1)])), way: [0, 1, 0] },
   l: {
     at: [
-      { t: 0, v: BED }, { t: FEED.lift, v: BED, ease: 'inOut' },
+      { t: 0, v: LAP }, { t: FEED.lift, v: LAP, ease: 'inOut' },
       { t: FEED.over, v: EYE, ease: 'inOut' }, { t: FEED.drop, v: [EYE[0], EYE[1] - 0.012, EYE[2]], ease: 'inOut' },
-      { t: FEED.back, v: BED, ease: 'inOut' },
+      { t: FEED.back, v: LAP, ease: 'inOut' },
     ],
     way: [0, 0.2, 1],
   },
@@ -168,22 +168,22 @@ export const PRESS: Clip = {
 /* ---- K3, stirring: stood, the vessel held by its lug at the belt, the spoon going round in it --------------------------- */
 const STIR_LENGTH = 1.6;
 /** The left fist round the vessel's lug, the thumb up: the vessel out ahead of the knuckles, toward the middle. */
-export const LUG: Euler = [0.075, 0.555, 0.18];
+export const LUG: Euler = [0.08, 0.52, 0.21];
 /** The middle of the vessel's mouth with the fist there (measured on him), how far round the spoon goes, its fist over it. */
-const MOUTH: Euler = [0.018, 0.564, 0.243], ROUND = 0.026, SPOON = (2.2 - 0.47) / 16.5 - 0.006;
+const MOUTH: Euler = [0.03, 0.529, 0.279], ROUND = 0.026, SPOON = (1.75 - 0.47) / 16.5 - 0.006;
 /** Her hands moved from his (body heights): the lug as far as she reaches, the spoon over her vessel's mouth. */
-const HER_LUG: Euler = [0.005, 0.01, -0.05], HER_MOUTH: Euler = [-0.003, 0.03, -0.038];
+const HER_LUG: Euler = [0, 0.02, -0.04], HER_MOUTH: Euler = [-0.003, 0.037, -0.025];
 const spoonAt = (t: number): Euler => {
   const a = (t / (STIR_LENGTH / 2)) * Math.PI * 2;
   return [MOUTH[0] + ROUND * Math.sin(a), MOUTH[1] + SPOON, MOUTH[2] - ROUND * Math.cos(a)];
 };
 const STOOD: KeyPose = {
   rot: {
-    pelvis: [4, 0, 0], spine_01: [3, 0, 0], spine_02: [3, 0, 0], spine_03: [2, 0, 0], neck_01: [4, 0, 0], neck_02: [3, 0, 0], head: [18, 0, 0],
-    upperarm_r: [20, -10, -20], lowerarm_r: [80, 0, 0], upperarm_l: [20, 10, 20], lowerarm_l: [80, 0, 0],
+    pelvis: [11, 0, 0], spine_01: [5, 0, 0], spine_02: [5, 0, 0], spine_03: [4, 0, 0], neck_01: [2, 0, 0], neck_02: [2, 0, 0], head: [14, 0, 0],
+    upperarm_r: [5, -10, -25], lowerarm_r: [100, 0, 0], upperarm_l: [25, 10, 70], lowerarm_l: [80, 0, 0],
     fingers_01_l: [20, 0, 0], fingers_02_l: [26, 0, 0],
   },
-  move: [0, -0.004, 0],
+  move: [0, -0.008, -0.01],
 };
 const stirPose = (t: number): KeyPose => {
   const a = (t / (STIR_LENGTH / 2)) * Math.PI * 2, s = Math.sin(a), f = (1 - Math.cos(a)) / 2;
@@ -253,9 +253,9 @@ export const ROAST: Clip = {
 /* ---- K5, frying: the pan held out over the fire, shaken and tossed ---------------------------------------------------- */
 const FRY_LENGTH = 1.4;
 /** The right fist out ahead, the handle through it toward the pan (the thumb toward it), out to the left a little. */
-const PAN_AT: Euler = [-0.075, 0.25 - UP, 0.47], PAN_WAY: Euler = [0.3, 0, 0.95];
+const PAN_AT: Euler = [-0.075, 0.25 - UP, 0.51], PAN_WAY: Euler = [0.3, 0, 0.95];
 const shift = (p: Euler, d: Euler): Euler => [p[0] + d[0], p[1] + d[1], p[2] + d[2]];
-const FRY_HOLD = merge(AT_FIRE, { rot: { ...ELBOWS, ...ELBOW_OUT, ...REST_F, upperarm_r: [24, 0, -40] } });
+const FRY_HOLD = merge(plus(AT_FIRE, { pelvis: [5, 0, 0], head: [-4, 0, 0] }), { rot: { ...ELBOWS, ...ELBOW_OUT, ...REST_F, upperarm_r: [24, 0, -40] } });
 const FRY_BEATS: Beat[] = [
   { t: 0, pose: FRY_HOLD, ease: 'inOut', stage: 'key', name: 'held' },
   { t: 0.15, pose: plus(FRY_HOLD, { spine_03: [1, 0, 0] }), ease: 'out', name: 'forward' },
