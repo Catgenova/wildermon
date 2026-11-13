@@ -78,14 +78,17 @@ function posesOf(who) {
 }
 
 const TORSO = new Map();
+const BENT = ['ground', 'drink-cup', 'drink-cup-left', 'drink-skin', 'drink-skin-left', 'brush-floor', 'brush-floor-left'];
 /** The highest point of the torso (and the shoulder joints) straight under (x, z) in the head's own frame (where the
  * hair is, rigid on it), at rest and in each of the clips' poses (the shoulders rise against the head as the arms come
- * down and the head nods): the highest of them, or -Infinity. `still`: at rest and in the idle only. */
+ * down and the head nods): the highest of them, or -Infinity. `still`: at rest and in the idle only. The clips that
+ * bend the head down to the chest (BENT) are left to clearBody, which lifts the ends only where they meet it. */
 function torsoTop(rig, x, z, still = false) {
   if (!TORSO.has(rig.who)) {
     const B = rig.B, tris = B.tris.filter((t) => ['torso', 'joint'].includes(B.polys[t.poly].part)), hb = rig.bones[rig.at.get('head')];
     const sets = [Object.assign(tris.map((t) => ({ P: t.v.map((i) => B.verts[i]), poly: t.poly })), { still: true })];
     for (const pose of posesOf(rig.who)) {
+      if (BENT.includes(pose.$clip.split(' ')[0])) continue;
       const f = posed(rig, pose), P = skin(rig, f), h = f[rig.at.get('head')];
       // (a posed point back in the head's rest frame: the head's turn undone, S its rotation)
       const back = (q) => { const d = sub(q, h.P); return add(hb.head, [0, 1, 2].map((r) => h.S[r] * d[0] + h.S[3 + r] * d[1] + h.S[6 + r] * d[2])); };

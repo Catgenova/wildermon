@@ -4,7 +4,8 @@
 // chest and shoulders; the scalp it covers left out), and the most in one frame.
 //
 //   node tools/sculpt/lowwarrioranim.mjs [--who female,male] [--frames 24] [--clips idle,walk] [--write 24 [--dense idle:48]]
-//     --clips: only these clips (by default every clip to check; to write, the idle, the walk, the swing and the gesture)
+//     --clips: only these clips (by default every clip to check; to write, the idle, the walk, the swing, the gesture,
+//     and the clips that bend the head down to the chest: ground, drinking from a cup or a skin, brushing the floor)
 //     --write n: each clip's poses at n times written to tools/sculpt/hairs/warrior-poses-<who>.json (each control bone's
 //     turn, as tools/sculpt/lowrig.mjs posed takes it), for tools/sculpt/lowwarrior.mjs clearBody to keep the hair off the
 //     body in them; --dense: a clip's own count (the idle's slow sway, 48 by default)
@@ -32,7 +33,7 @@ rmSync(mod);
 
 /** A clip's pose at time t on a rig: the control bones' turns, as posed() takes them. */
 const poseAt = (rig, sk, clip, t, held) => { const r = AN.clipLocal(sk, clip, t, held), pose = { $move: r.move }; r.local.forEach((m, i) => { if (m && rig.bones[i].kind === 'control') pose[rig.bones[i].name] = m; }); return pose; };
-const W = +opt('write', '0'), ONLY = opt('clips', W ? 'idle,walk,swing,sixseven' : '').split(',').filter(Boolean);
+const W = +opt('write', '0'), ONLY = opt('clips', W ? 'idle,walk,swing,sixseven,ground,drink-cup,drink-cup-left,drink-skin,drink-skin-left,brush-floor,brush-floor-left' : '').split(',').filter(Boolean);
 const clipsOf = () => Object.entries(AN.CLIPS).filter(([name]) => !ONLY.length || ONLY.includes(name));
 const DENSE = Object.fromEntries(opt('dense', 'idle:48').split(',').filter(Boolean).map((d) => [d.split(':')[0], +d.split(':')[1]]));
 for (const who of opt('who', 'female,male').split(',')) {
