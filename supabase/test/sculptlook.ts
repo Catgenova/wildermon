@@ -121,7 +121,7 @@ console.log('--- a look');
 check('numbers kept to three places', same(cleanLook({ ...DEFAULT_LOOK, skin: 0.12345, hairColour: 0.5, hairBright: 0.0004 }),
   { ...DEFAULT_LOOK, skin: 0.123, hairColour: 0.5, hairBright: 0 }));
 check('and to nought to one', same(cleanLook({ ...DEFAULT_LOOK, skin: -3, hairColour: 7, hairBright: 1 }), { ...DEFAULT_LOOK, skin: 0, hairColour: 1, hairBright: 1 }));
-check('anything else is the default', same(cleanLook({ gender: 'goblin', hair: 'mohawk', skin: '#ff0000', hairColour: null, hairBright: [1] }), DEFAULT_LOOK),
+check('anything else is the default', same(cleanLook({ gender: 'goblin', hair: 'not-a-style', skin: '#ff0000', hairColour: null, hairBright: [1] }), DEFAULT_LOOK),
   JSON.stringify(cleanLook({ gender: 'goblin', hair: 'mohawk', skin: '#ff0000', hairColour: null, hairBright: [1] })));
 check('nothing at all is the default', same(cleanLook(null), DEFAULT_LOOK) && same(cleanLook([1, 2]), DEFAULT_LOOK) && same(cleanLook('woman'), DEFAULT_LOOK));
 check('eyes, beards and cloth are not kept', same(Object.keys(cleanLook({ ...DEFAULT_LOOK, eyes: 'green', beard: 'full', shirt: 'woad' })), LOOK_KINDS));
@@ -145,6 +145,7 @@ check('a bowl cut and a fringe to the bob', cleanLook({ hair: 'bowl' }).hair ===
 check('every hairstyle there is a mesh for and bald', HAIRSTYLES.length === INDEX.styles.length + 1, HAIRSTYLES.map((h) => h.id).join());
 check('the top knot to the top knot', cleanLook({ hair: 'topknot' }).hair === 'topknot');
 check('a short cut to the crew cut', cleanLook({ hair: 'short' }).hair === 'crew');
+check('the ridge to the mohawk', cleanLook({ hair: 'ridge' }).hair === 'mohawk');
 const SKINS: Record<string, string> = { porcelain: '#f5ddc6', fair: '#ecc8a6', light: '#ddae85', olive: '#c79a68', tan: '#b5804f', bronze: '#9d6a3f', umber: '#855634', deep: '#6b4328', dark: '#55341f', ebony: '#3e2617' };
 check('every old skin is its very colour', Object.entries(SKINS).every(([id, c]) => skinColour(cleanLook({ skin: id })) === c),
   Object.keys(SKINS).filter((id) => skinColour(cleanLook({ skin: id })) !== SKINS[id]).join());

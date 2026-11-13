@@ -24,6 +24,10 @@
   {
    "id": "crew",
    "name": "Crew cut"
+  },
+  {
+   "id": "mohawk",
+   "name": "Mohawk"
   }
  ]
 }
