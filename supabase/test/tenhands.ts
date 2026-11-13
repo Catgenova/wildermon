@@ -171,8 +171,12 @@ begin
   update creature set mode = 'deed', until = now() - interval '600 seconds', settled_at = now() - interval '600 seconds', phase = 'idle'
    where world_id = w and id = v_id;
   perform worker_settle(w, v_id);
+  -- What is left: in the crate, and in the wicka's arms. It takes up as many as its stage and blood carry
+  -- (stage_loads), which its rolled traits change, and keeps what it did not put in a post in hand.
   insert into said select 'LAMP', (placed_fuel(p) > 0)::text || '|' || (placed_lit(p) = is_night(w))::text || '|'
-    || (select coalesce(sum(count), 0) from item where world_id = w and holder = 'crate' and crate = 7101 and def = 'candle')
+    || ((select coalesce(sum(count), 0) from item where world_id = w and holder = 'crate' and crate = 7101 and def = 'candle')
+        + coalesce((select (k.carrying->>'count')::int from creature k
+            where k.world_id = w and k.id = v_id and k.carrying->>'def' = 'candle'), 0))
     from placed p where p.id = v_lamp;
   update creature set mode = 'stored' where world_id = w and id = v_id;
 
