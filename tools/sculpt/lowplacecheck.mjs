@@ -17,14 +17,27 @@
 //     A pair: a triangle of a forearm or hand (every corner most weighted to the lower arm, its twists, the wrist, the hand,
 //     the knuckles, the thumb or the fingers), and one of anything else but that arm (no corner most weighted to its upper
 //     arm, shoulder, elbow or below): the body, the garments, the other arm.
+//     --seat <reins|oars|tiller|tiller-left|saddle|tuck>: sat driving on that seat (src/sculpt/anim/clips/seated.ts, played as
+//       the game plays it: src/sculpt/anim/index.ts seatedLocal), its fists on what they hold, in place of --clip and --job.
 //   Exits 1 when the clip crosses more than the idle in any body and outfit (most in a frame, or frames with any).
 import { build } from 'esbuild';
 import { crossPairs, sub, add, mul, dot, cross } from './lowgarment.mjs';
 
 const args = process.argv.slice(2);
 const opt = (n, f) => { const i = args.indexOf(`--${n}`); return i < 0 ? f : args[i + 1]; };
-const job = opt('job', ''), ALL = args.includes('--all');
-const clipName = opt('clip', 'sixseven'), sets = opt('sets', 'outfit1,hood,plate,leather,bare').split(','), N = +opt('n', '24');
+const job = opt('job', ''), ALL = args.includes('--all'), seatName = opt('seat', '');
+/** The seats --seat names, as the game gives them (src/render/furniture.ts driverOn, src/render/renderer.ts SADDLE). */
+const SEATS = {
+  reins: { hands: 'reins', up: 2.7, grip: [0, 14, 5.6] },
+  oars: { hands: 'oars', up: 1.6, grip: [7.79, 3, 3.12] },
+  tiller: { hands: 'tiller', up: 3, grip: [3, 1, 6.5], pivot: [3, -6.2, 5.9] },
+  'tiller-left': { hands: 'tiller', up: 3, grip: [-3, 1, 6.5], pivot: [-3, -6.2, 5.9] },
+  saddle: { hands: 'reins', up: 0, astride: true, grip: [0, 7.5, 2.5] },
+  tuck: { hands: 'reins', up: 0, astride: true, grip: [0, 7.5, 2.5], tuck: 0.9 },
+};
+const seat = seatName ? SEATS[seatName] : undefined;
+if (seatName && !seat) throw new Error(`no seat ${seatName}`);
+const clipName = seat ? { reins: 'seat-reins', oars: 'seat-oars', tiller: 'seat-tiller', 'tiller-left': 'seat-tiller-left', saddle: 'saddle', tuck: 'saddle' }[seatName] : opt('clip', 'sixseven'), sets = opt('sets', 'outfit1,hood,plate,leather,bare').split(','), N = +opt('n', '24');
 const ROOT = new URL('../..', import.meta.url).pathname;
 const OUTFITS = {
   outfit1: {},
@@ -44,7 +57,7 @@ const TS = await import('data:text/javascript;base64,' + Buffer.from(b.outputFil
 const clip = TS.CLIPS[clipName];
 if (!clip) throw new Error(`no clip ${clipName}`);
 // (the clip played as an emote: its state's clip set to it for this check; with --job, as the game plays that job)
-if (!job) TS.CLIP_OF.emote = clipName;
+if (seat) { /* (played by the seat, not a state) */ } else if (!job) TS.CLIP_OF.emote = clipName;
 else if (TS.workClipOf(job) !== clipName) throw new Error(`${job} plays ${TS.workClipOf(job)}, not ${clipName}`);
 
 const FORE = /^(lowerarm|lowerarm_twist_0\d|wrist|hand|knuckles|thumb_0\d|fingers_0\d|fingers_mid)_([lr])$/;
@@ -139,7 +152,7 @@ for (const set of sets) for (const gender of ['man', 'woman']) {
     for (const x of all) idleAll.add(x.key);
   }
   for (let k = 0; k < N; k++) {
-    const t = (k / N) * clip.length, doing = job ? { working: true, job, act: { t, length: clip.length } } : { emote: 'wave' };
+    const t = (k / N) * clip.length, doing = seat ? { driving: true, seat } : job ? { working: true, job, act: { t, length: clip.length } } : { emote: 'wave' };
     const { n: x, all, P, T, arm } = crossings({ ...base, phase: t * 6, ...doing });
     const c = r[clipName];
     c.arm = Math.max(c.arm, arm);

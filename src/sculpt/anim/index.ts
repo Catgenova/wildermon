@@ -6,11 +6,11 @@
  * A body drawn frame after frame (`FigurePose.id`) is faded over a fifth of a second whenever it goes from a clip to the
  * figure's pose or to another clip, so nothing jumps; a body drawn once (no id) is posed with nothing kept.
  */
-import type { FigurePose } from '../../render/figure';
-import { fitTime, runsOf, strideOf, type Clip } from './clip';
-import { quat, type M3, type V } from './math';
-import { blendLocal, clipLocal, plantBetween } from './player';
-import type { Held, Skeleton } from './skeleton';
+import type { FigurePose, Seat } from '../../render/figure';
+import { fitTime, runsOf, strideOf, type Clip, type Side } from './clip';
+import { qmat, qmul, quat, type M3, type Q, type V } from './math';
+import { addPose, blendLocal, blendPose, clipLocal, plantBetween, poseAt } from './player';
+import type { Held, Pose, Skeleton } from './skeleton';
 import { IDLE } from './clips/idle';
 import { WALK } from './clips/walk';
 import { SWING } from './clips/swing';
@@ -18,6 +18,7 @@ import { SIXSEVEN } from './clips/sixseven';
 import { WORK } from './clips/work';
 import { HANDS } from './clips/hands';
 import { GROUND } from './clips/ground';
+import { SEAT_OARS, SEAT_REINS, SEAT_SADDLE, SEAT_TILLER, SEAT_TILLER_LEFT, SEAT_TUCK } from './clips/seated';
 import { mirrorClip } from './author';
 import { ACTION_BY_ID } from '../../game/actions';
 import { clipOfJob } from './routes';
@@ -33,15 +34,18 @@ import { UNITS_PER_TILE } from '../../render/iso';
  */
 export type State = 'idle' | 'walk' | 'swing' | 'work' | 'fight' | 'meditate' | 'emote' | 'cast';
 /** Every clip, by name (the authoring tools find a clip here, `tools/sculpt/lowanim.mjs --clip <name>`). */
-export const CLIPS: Record<string, Clip> = { idle: IDLE, walk: WALK, swing: SWING, sixseven: SIXSEVEN, work: WORK, 'work-left': mirrorClip(WORK, 'work-left'), hands: HANDS, ground: GROUND };
+export const CLIPS: Record<string, Clip> = {
+  idle: IDLE, walk: WALK, swing: SWING, sixseven: SIXSEVEN, work: WORK, 'work-left': mirrorClip(WORK, 'work-left'), hands: HANDS, ground: GROUND,
+  'seat-reins': SEAT_REINS, 'seat-oars': SEAT_OARS, 'seat-tiller': SEAT_TILLER, 'seat-tiller-left': SEAT_TILLER_LEFT, saddle: SEAT_SADDLE, 'saddle-tuck': SEAT_TUCK,
+};
 /** The clip a state plays until its own is approved: the 6 7 gesture. */
 export const PLACEHOLDER = 'sixseven';
 /**
  * The clip each state plays, by name: its own where approved, the placeholder where not. Each placeholder is replaced
  * here when the state's own clip lands; a job at `work` plays its tool's clip where it has one (`workClipOf`), the
  * state's otherwise. (Running, and walking or running while casting, emoting or at work, keep the
- * figure's pose: a stood clip would slide its planted feet over the ground. Swimming and driving are drawn by the flat
- * figure.)
+ * figure's pose: a stood clip would slide its planted feet over the ground. Swimming is drawn by the flat figure; sat
+ * driving plays its seat's clip, `seatClipOf`, put on the seat by `seatedLocal`.)
  */
 export const CLIP_OF: Record<State, string> = {
   idle: 'idle',
@@ -85,6 +89,8 @@ const TAU = Math.PI * 2;
 let ON = true;
 /** Clips played (true, as the game) or every state left to the figure's pose (false: for comparing with it). */
 export function clipsOn(on: boolean): void { ON = on; }
+/** Whether clips are played (`clipsOn`). */
+export const clipsPlaying = (): boolean => ON;
 
 /** Seconds a body takes to fade from one source of its pose to the next. */
 const FADE = 0.2;
@@ -210,6 +216,75 @@ function offsetOf(id: string | undefined): number {
   return (h >>> 0) / 4294967296;
 }
 
+/**
+ * The clip a body sat driving plays (`./clips/seated.ts`), by what it sits on and holds: astride, the saddle's (and how far
+ * toward the legs drawn up, `Seat.tuck`); at the oars; at a tiller, on the side the tiller is (`Seat.grip`); else on a
+ * box at the reins.
+ */
+export function seatClipOf(seat: Seat): { clip: Clip; tuck: number } {
+  if (seat.astride) return { clip: SEAT_SADDLE, tuck: Math.max(0, Math.min(1, seat.tuck ?? 0)) };
+  if (seat.hands === 'oars') return { clip: SEAT_OARS, tuck: 0 };
+  if (seat.hands === 'tiller') return { clip: seat.grip[0] >= 0 ? SEAT_TILLER : SEAT_TILLER_LEFT, tuck: 0 };
+  return { clip: SEAT_REINS, tuck: 0 };
+}
+
+/**
+ * Where a body sat driving is put, in the mesh's own units and frame (x the body's left, y up, z forward; `../lowpoly.ts`
+ * works it out from the seat and the flat figure's pose on it): the seat; the height of its top; where the hips go across
+ * and forward; the lowest of what is sat on for a pose's bones (the seat of the trousers, as skinned); each fist's place
+ * and its grip's way (where the flat figure's fists are: on the reins, the oars' handles, the tiller's end); whether the
+ * feet go down on the floor (`floor`), astride not; and turns added to the trunk, the flat figure's own
+ * from where it sits still (a cart's rock and jolt, a rower's swing, the balance against a hull's heel), degrees about
+ * the body's right, forward and up.
+ */
+export interface SeatFit {
+  seat: Seat;
+  top: number;
+  hips: [number, number];
+  low: (local: Array<M3 | undefined>, move: V) => number;
+  reach: Partial<Record<Side, { at: V; way: V }>>;
+  floor: boolean;
+  trunk?: Partial<Record<'pelvis' | 'spine' | 'chest' | 'neck' | 'head', [number, number, number]>>;
+}
+/** The sculpted bones each of the flat figure's trunk joints is shared over, and how much of it each takes. */
+const TRUNK: Readonly<Record<string, ReadonlyArray<[string, number]>>> = {
+  pelvis: [['pelvis', 1]], spine: [['spine_01', 0.5], ['spine_02', 0.5]], chest: [['spine_03', 1]], neck: [['neck_01', 0.5], ['neck_02', 0.5]], head: [['head', 1]],
+};
+/**
+ * The flat figure's trunk turns as an added pose: pitch about the body's right (mesh -x), roll about forward (+z), yaw about
+ * up (+y); the neck's and the head's yaw left to the clip's own look about.
+ */
+function trunkPose(sk: Skeleton, trunk: NonNullable<SeatFit['trunk']>): Pose {
+  const q: Array<Q | undefined> = [];
+  for (const [joint, e] of Object.entries(trunk)) for (const [bone, k] of TRUNK[joint] ?? []) {
+    const i = sk.at.get(bone);
+    if (i === undefined || !e) continue;
+    const yaw = joint === 'neck' || joint === 'head' ? 0 : e[2] * k;
+    q[i] = qmul(qmul(sk.world(i, [0, 1, 0], yaw), sk.world(i, [0, 0, 1], e[1] * k)), sk.world(i, [-1, 0, 0], e[0] * k));
+  }
+  return { q, move: [0, 0, 0] };
+}
+/**
+ * A body sat driving, finished: its seat's clip at the island's time (blended toward the legs drawn up as far as the seat
+ * says), the flat figure's trunk turns added; the hips put across and forward where the seat says and down on its top (the
+ * lowest of what is sat on, `SeatFit.low`, on it); the feet put down flat on the floor under where the clip has them, the
+ * knees bent to reach (never the hips let down to reach it); the fists on what they hold.
+ */
+export function seatedLocal(sk: Skeleton, pose: FigurePose, fit: SeatFit): { local: Array<M3 | undefined>; move: V; name: string } {
+  const { clip, tuck } = seatClipOf(fit.seat), t = pose.phase / 6 + offsetOf(pose.id) * clip.length;
+  let p = poseAt(sk, clip, t);
+  if (tuck > 0) p = blendPose(p, poseAt(sk, SEAT_TUCK, t), tuck);
+  if (fit.trunk) addPose(p, trunkPose(sk, fit.trunk), 1);
+  const pelvis = sk.at.get('pelvis') as number, local = (): Array<M3 | undefined> => p.q.map((q) => (q ? qmat(q) : undefined));
+  const F = sk.fk(local(), p.move);
+  p.move = [p.move[0] + fit.hips[0] - F[pelvis].P[0], p.move[1], p.move[2] + fit.hips[1] - F[pelvis].P[2]];
+  p.move = [p.move[0], p.move[1] + fit.top - fit.low(local(), p.move), p.move[2]];
+  // (each foot reached for as one in the air is, so the hips are never let down to it)
+  const plant = fit.floor ? { ...sk.plantOf(p), air: [1, 1] as [number, number] } : undefined;
+  const out = sk.finish(p, { plant, free: true, reach: fit.reach });
+  return { ...out, name: clip.name };
+}
+
 type Local = { local: Array<M3 | undefined>; move: V };
 /** What a body was drawn with last (its clip and time, when one), and at the change, what it came from. */
 interface Kept { source: string; out: Local; from: Local | null; at: number; was?: { clip: Clip; t: number }; cur?: { clip: Clip; t: number }; span?: number }
@@ -220,8 +295,10 @@ const MAX_KEPT = 256;
  * The local turns and shift a body is drawn with for a pose: its clip's if it has one, else `figure()` (the figure's pose
  * on the rig); faded from what it was drawn with when that changes.
  */
-export function animate(sk: Skeleton, pose: FigurePose, figure: () => Array<M3 | undefined>, held?: Held, tools?: (id: string) => Held | undefined): Local {
-  const c = clipFor(pose, sk.body);
+export function animate(sk: Skeleton, pose: FigurePose, figure: () => Array<M3 | undefined>, held?: Held, tools?: (id: string) => Held | undefined, fit?: SeatFit): Local {
+  // sat driving: the seat's clip, put on the seat (`seatedLocal`)
+  const sat = fit && ON ? seatedLocal(sk, pose, fit) : undefined;
+  const c = sat ? undefined : clipFor(pose, sk.body);
   // a clip at a time: one holding hand tools holds the job's own, the work brought to the striking one where it reaches less far
   const play = (p: { clip: Clip; t: number }): Local => {
     const hold = p.clip.tools ? toolsIn(pose, sk.body) : undefined, side = p.clip.strike?.side ?? 'r', other = side === 'r' ? 'l' : 'r';
@@ -229,9 +306,9 @@ export function animate(sk: Skeleton, pose: FigurePose, figure: () => Array<M3 |
     const d = tools && id && ref && id !== ref ? shiftOf(sk, p.clip, tools(id), tools(ref), id) : undefined;
     return clipLocal(sk, p.clip, p.t, p.clip.grip ? held : undefined, tools, { ids: hold?.tools, ...(d ? { shift: { [other]: d } } : {}) });
   };
-  const now: Local = c ? play(c) : { local: figure(), move: [0, 0, 0] };
+  const now: Local = sat ?? (c ? play(c) : { local: figure(), move: [0, 0, 0] });
   if (!pose.id) return now;
-  const key = `${sk.body}|${pose.id}`, source = c ? c.clip.name : 'figure', ms = performance.now();
+  const key = `${sk.body}|${pose.id}`, source = sat ? sat.name : c ? c.clip.name : 'figure', ms = performance.now();
   let k = KEPT.get(key);
   if (k) KEPT.delete(key);
   if (!k) k = { source, out: now, from: null, at: ms };

@@ -114,6 +114,8 @@ in vec3 vNrm; in vec3 vPos; flat in float vMat; flat in float vBone; in float vD
 uniform vec4 uMat[${MAX_MATS}];
 uniform vec3 uL; uniform vec3 uT; uniform float uGrain; uniform float uNight; uniform float uMode; uniform float uFlat; uniform float uBlink;
 uniform float uLow; uniform vec3 uSH[${SH_TERMS}]; uniform vec3 uTone; uniform vec3 uFit; uniform vec3 uXv, uYv, uZv;
+// What of the body is behind an egg (SculptDraw.hide: a mount's barrel), left out: its middle and its radii, none at radii nought.
+uniform vec3 uHideC, uHideR;
 layout(location=0) out vec4 oCol; layout(location=1) out vec4 oNd; layout(location=2) out vec4 oId;
 vec3 hsv2rgb(vec3 c){ vec4 K = vec4(1.0, 2.0/3.0, 1.0/3.0, 3.0); vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www); return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y); }
 vec3 rgb2hsv(vec3 c){ vec4 K = vec4(0.0, -1.0/3.0, 2.0/3.0, -1.0); vec4 p = c.g < c.b ? vec4(c.bg, K.wz) : vec4(c.gb, K.xy); vec4 q = c.r < p.x ? vec4(p.xyw, c.r) : vec4(c.r, p.yzx); float d = q.x - min(q.w, q.y); float e = 1.0e-10; return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x); }
@@ -140,6 +142,12 @@ vec3 lowLightMatte(vec3 v) {
 }
 vec3 hashCol(float i){ return 0.35 + 0.6 * vec3(hash(vec2(i, 1.0)), hash(vec2(i, 7.0)), hash(vec2(i, 13.0))); }
 void main() {
+  if (uHideR.x > 0.0) {
+    // the ray from here toward the viewer (+uT), through the egg made a ball: hidden where it leaves the ball ahead of here
+    vec3 o = (vPos - uHideC) / uHideR, dv = uT / uHideR;
+    float a = dot(dv, dv), b = dot(o, dv), c = dot(o, o) - 1.0, disc = b * b - a * c;
+    if (disc > 0.0 && (-b + sqrt(disc)) / a > 0.0) discard;
+  }
   vec3 n = uLow > 0.5 ? vFace : normalize(vNrm);
   // The stamp's material where the stamp's distance says inside, its edge one pixel soft across the interpolated distance.
   float fw = max(fwidth(vStamp), 1e-4);
@@ -368,7 +376,7 @@ export function glContext(): Ctx | null {
   const quad = gl.createBuffer()!;
   gl.bindBuffer(gl.ARRAY_BUFFER, quad);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
-  const names = ['uBones', 'uEx', 'uEy', 'uHS', 'uT', 'uHalf', 'uDepth', 'uOff', 'uMat', 'uL', 'uGrain', 'uNight', 'uMode', 'uFlat', 'uBlink', 'uLow', 'uSH', 'uTone', 'uFit', 'uXv', 'uYv', 'uZv', 'uShapes', 'uShapeFrom', 'uShapeCount', 'uShapeK', 'uShapeW'];
+  const names = ['uBones', 'uEx', 'uEy', 'uHS', 'uT', 'uHalf', 'uDepth', 'uOff', 'uMat', 'uL', 'uGrain', 'uNight', 'uMode', 'uFlat', 'uBlink', 'uLow', 'uSH', 'uTone', 'uFit', 'uXv', 'uYv', 'uZv', 'uShapes', 'uShapeFrom', 'uShapeCount', 'uShapeK', 'uShapeW', 'uHideC', 'uHideR'];
   const u = Object.fromEntries(names.map((n) => [n, gl.getUniformLocation(prog, n)]));
   const wu = Object.fromEntries(names.map((n) => [n, gl.getUniformLocation(wire, n)]));
   const eu = Object.fromEntries(['uCol', 'uNd', 'uId', 'uPx', 'uInk', 'uDepthStep', 'uShow', 'uNight', 'uInner'].map((n) => [n, gl.getUniformLocation(edge, n)]));
@@ -486,6 +494,11 @@ export interface SculptDraw {
   trail?: TrailDraw;
   /** The weight of each of the bake's corrective shapes (`Baked.shapes`) in this pose, nought to one. */
   shapes?: ArrayLike<number>;
+  /**
+   * An egg in the figure's frame (its middle and radii, the figure's units) that hides what of the body is behind it from
+   * the viewer, or inside it: a mount's barrel under its rider, the far leg down its flank (`../render/figure.ts` BARREL).
+   */
+  hide?: { c: readonly [number, number, number]; r: readonly [number, number, number] };
 }
 /**
  * A slash trail as drawn: a triangle strip, five numbers a point (x, y, z in the figure's frame as the body's skinned
@@ -534,6 +547,8 @@ export function drawSculptGL(ctx: CanvasRenderingContext2D, sx: number, sy: numb
     gl.uniform1f(u.uFlat, o.flat ? 1 : 0);
     gl.uniform1f(u.uBlink, d.blink ?? 0);
     gl.uniform1f(u.uLow, low ? 1 : 0);
+    gl.uniform3f(u.uHideC, d.hide?.c[0] ?? 0, d.hide?.c[1] ?? 0, d.hide?.c[2] ?? 0);
+    gl.uniform3f(u.uHideR, d.hide?.r[0] ?? 0, d.hide?.r[1] ?? 0, d.hide?.r[2] ?? 0);
     // the garment's corrective shapes: only while one weighs anything (their sampler on a unit of its own always, never
     // on one of the frame's own textures)
     gl.uniform1i(u.uShapes, 3);

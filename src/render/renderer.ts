@@ -494,6 +494,13 @@ import { cartSway, FIGURE_TOP, figurePicture, sculptedFigures, sculptedReady, ty
  * of the beast's mouth.
  */
 const SADDLE: Seat = { hands: 'reins', up: 0, astride: true, grip: [0, 7.5, 2.5] };
+/**
+ * How far a rider's legs are drawn up on a mount whose model does not say (`Seat.tuck`), by how high its saddle is
+ * (pixels at zoom one): none at `TUCK_NONE` units up or over, where the boots hang clear of the ground, all of it at
+ * `TUCK_ALL` or under, where they would stand on it.
+ */
+const TUCK_NONE = 9, TUCK_ALL = 5;
+const saddleTuck = (seat: number): number => Math.max(0, Math.min(1, (TUCK_NONE - seat / HEIGHT_SCALE) / (TUCK_NONE - TUCK_ALL)));
 /** Reins: dark leather, inked. */
 const REIN_LEATHER = 'rgb(112, 74, 46)';
 const REIN_LINE = 'rgba(46, 30, 22, 0.85)';
@@ -5157,6 +5164,8 @@ export class Renderer {
               const pe = this.take('peer', x, y, ce.sx, ce.sy + 0.01, null);
               pe.peer = rider;
               pe.lift = this.saddleSeat(cr) * zoom;
+              // Astride as I am on mine: they were sat on a cart's box, in the air over its back.
+              pe.seat = this.saddleOn(cr);
             }
           }
         }
@@ -5224,9 +5233,7 @@ export class Renderer {
         }
         // A rider, astride.
         else if (up) {
-          // The reins out to its bit, where its model has it, drawn up as the mount is; the legs drawn up as far as it says.
-          const own = wildermonSaddle(up.species, stageOf(up)), k = ageDef(up, this.game.time).scale * bodySize(up);
-          pe.seat = own ? { ...SADDLE, grip: [own.grip[0] * k, own.grip[1] * k, own.grip[2] * k], tuck: own.tuck } : SADDLE;
+          pe.seat = this.saddleOn(up);
         }
       }
       // A wall laid at the end of the line is laid again over one already laid, which took the wash off it then.
@@ -6461,6 +6468,15 @@ export class Renderer {
   }
 
   /** A mount's saddle: where its model has it at the stage it has come to, drawn up as the mount is by its age and rarity. */
+  /**
+   * How a rider sits on `up`: astride, the reins out to its bit where its model has it, drawn up as the mount is; the legs
+   * drawn up as far as it says, or, on one whose model says nothing, as far as its back is low (`saddleTuck`).
+   */
+  private saddleOn(up: Creature): Seat {
+    const own = wildermonSaddle(up.species, stageOf(up)), k = ageDef(up, this.game.time).scale * bodySize(up);
+    return own ? { ...SADDLE, grip: [own.grip[0] * k, own.grip[1] * k, own.grip[2] * k], tuck: own.tuck } : { ...SADDLE, tuck: saddleTuck(this.saddleSeat(up)) };
+  }
+
   private saddleSeat(up: Creature): number {
     return (wildermonSeat(up.species, stageOf(up)) ?? SPECIES[up.species]?.mount ?? 0) * ageDef(up, this.game.time).scale * bodySize(up);
   }

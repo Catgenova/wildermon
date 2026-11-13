@@ -2099,6 +2099,12 @@ export interface Rig {
   oars?: Array<{ lock: V3; out: V3; feather: number; splash?: number }>;
   /** A tiller in hand, from where it is pivoted on the rudder's head to its end in the fist, and its wood as `#rrggbb`: see `steer`. */
   tiller?: { pivot: V3; end: V3; wood?: string };
+  /**
+   * Where each fist was put sat driving (`fistOn`), left then right, in the body's frame from the feet, and the way what
+   * it holds runs through it; `rest`, a hand laid on the thigh holding nothing: what a sculpted body on the same seat
+   * reaches its hands to (`../sculpt/anim` seatedLocal).
+   */
+  fists?: [Fist | undefined, Fist | undefined];
   blink: boolean;
   reins: boolean;
   /** A mallet in the right hand and a chisel in the left. */
@@ -3499,6 +3505,8 @@ function shouldersUnder(r: Rig, fr: Frame, facing: number, give = 0, sink = 0, d
  * floor (`skeleton`), so it sits on the bench at every facing whatever the
  * build, and the hands go where what they hold is.
  */
+/** A fist put on something sat driving (`Rig.fists`). */
+export interface Fist { at: V3; haft: V3; rest?: boolean }
 /** The hips' frame, sat on a seat `up` high over the floor: the underside of the thighs on it, in the body's frame from the feet. */
 function hipsOn(r: Rig, up: number): Xf {
   const m = joint(ROOT, [0, 0, 0], ...r.pelvis).m;
@@ -3506,6 +3514,7 @@ function hipsOn(r: Rig, up: number): Xf {
 }
 /** Put the fist of hand `k` on a point given in the body's frame from the feet, `pole` the way the elbow goes, `haft` what it holds. */
 function fistOn(r: Rig, fr: Frame, k: number, at: V3, pole: V3, haft: V3): void {
+  (r.fists ??= [undefined, undefined])[k] = { at, haft };
   const { m, t } = hipsOn(r, r.sit?.up ?? 0);
   // Into the hips' own frame, which `hold` works in.
   const into = (v: V3): V3 => [m[0] * v[0] + m[3] * v[1] + m[6] * v[2], m[1] * v[0] + m[4] * v[1] + m[7] * v[2], m[2] * v[0] + m[5] * v[1] + m[8] * v[2]];
@@ -3521,7 +3530,7 @@ function fistOn(r: Rig, fr: Frame, k: number, at: V3, pole: V3, haft: V3): void 
 }
 
 /** A saddled beast's barrel under its rider, from the saddle: what the far leg is hidden behind. */
-const BARREL = { c: [0, 0, -2.4] as V3, r: [1.9, 5.5, 2.4] as V3 };
+export const BARREL = { c: [0, 0, -2.4] as V3, r: [1.9, 5.5, 2.4] as V3 };
 
 /**
  * The parts with whatever of them is behind the beast's barrel hidden: each that hides nothing else, copied with the
@@ -3541,6 +3550,8 @@ function behindBarrel(parts: Part[]): Part[] {
 
 /** The box seat of a cart or wagon when nothing says otherwise: the reins out ahead to a team, the bench a hand over the boards. */
 const BOX: Seat = { hands: 'reins', up: 2.7, grip: [0, 14, 5.6] };
+/** What a body is sat on driving (its own seat, or a cart's box when it says none), or nothing: swimming, or not driving. */
+export const seatOf = (p: FigurePose): Seat | undefined => (p.driving && !p.swimming ? p.seat ?? BOX : undefined);
 
 function drive(r: Rig, phi: number, moving: boolean, seat: Seat, fr: Frame): void {
   r.seat = seat;
@@ -3558,9 +3569,9 @@ function drive(r: Rig, phi: number, moving: boolean, seat: Seat, fr: Frame): voi
  * the reins out and let them back, so the hands give forward and come back
  * with them, the reins going slack and taut; the cart rocks on its wheels
  * and the body sways with it from the hips, the head held level over it,
- * and every so often a rut jolts the shoulders. Stopped, the hands are let
- * down onto the thighs with the reins slack, and the driver breathes and
- * looks about. On a saddle, the same hands over the withers, the legs down
+ * and every so often a rut jolts the shoulders. Stopped, the hands rest
+ * out over the knees with the reins slack (on the thighs, a sculpted body's
+ * knuckles went into them), and the driver breathes and looks about. On a saddle, the same hands over the withers, the legs down
  * either side of the beast with the heels down, and the body going with
  * the beast's stride.
  */
@@ -3668,7 +3679,7 @@ function reinsIn(r: Rig, phi: number, moving: boolean, seat: Seat, fr: Frame): v
     const s = k ? 1 : -1;
     const at: V3 = moving
       ? [s * 0.85, hips[1] + 2.75 + 0.42 * nod, hips[2] + 1.75 + 0.18 * nod - 0.25 * jolt]
-      : [s * 1.0, hips[1] + 2.35, hips[2] + 1.15 + 0.06 * b];
+      : [s * 0.85, hips[1] + 3.0, hips[2] + 2.6 + 0.06 * b];
     fistOn(r, fr, k, at, [s * 0.7, -0.6, -0.5], [-s * 0.9, 0.15, 0.4]);
   }
   r.tail = [12 + 4 * rock + 6 * jolt, 3 * rock + kick, 0];
@@ -3845,6 +3856,7 @@ function steer(r: Rig, phi: number, moving: boolean, seat: Seat, fr: Frame): voi
   const hips = hipsOn(r, seat.up).t;
   r.open[1 - k] = 1;
   fistOn(r, fr, 1 - k, [-s * 1.2, hips[1] + 1.75, hips[2] + 0.75], [-s * 0.3, -0.9, -0.6], [s, 0, 0]);
+  (r.fists as NonNullable<Rig['fists']>)[1 - k] = { ...(r.fists as NonNullable<Rig['fists']>)[1 - k] as Fist, rest: true };
   aimHand(r, fr, 1 - k, [0, 0.95, -0.3], [0, -0.2, 1]);
   r.tail = [10 - 0.2 * heel, -0.2 * heel, 0];
 }
@@ -11352,7 +11364,9 @@ const gearLod = (zoom: number): number => (zoom < 1.5 ? 0.5 : zoom < STILL_BELOW
  * The sculpted bodies (`src/sculpt/sculpted.ts`), every body the island draws: loaded as a chunk of their own the first
  * time they are asked for (the renderer, every frame; the character creator), and from then drawn in place of the flat
  * figure wherever a body is drawn (`drawLive`). The flat figure is drawn where they cannot be: before the chunk has
- * loaded, with no WebGL2 (`glContext`), and swimming, driving or seated (`drawSculpted`).
+ * loaded, with no WebGL2 (`glContext`), and swimming (`drawSculpted`). Sat driving, the sculpted body is drawn where the
+ * flat figure's would be among what it holds and sits in: its reins, oars and tiller drawn round it, and what of it is down
+ * behind the near side of the box or the hull hidden (`drawLive`).
  */
 const SCULPT: { on: boolean; flips: number; loading: boolean; draw: ((ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose) => boolean) | null; gen: () => number; asked: Set<string>; soft: boolean } =
   { on: false, flips: 0, loading: false, draw: null, gen: () => 0, asked: new Set(), soft: false };
@@ -11393,7 +11407,7 @@ export const sculptedReady = (): boolean => SCULPT.on && !!SCULPT.draw;
 const sculptKey = (): string => (SCULPT.on ? `s${SCULPT.flips}.${SCULPT.gen()}` : '');
 /** The sculpted body in the figure's place, where it is on, can be, and is baked. */
 const drawSculpted = (ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose): boolean =>
-  SCULPT.on && !!SCULPT.draw && !pose.swimming && !pose.driving && !pose.seat && SCULPT.draw(ctx, sx, sy, zoom, pose);
+  SCULPT.on && !!SCULPT.draw && !pose.swimming && SCULPT.draw(ctx, sx, sy, zoom, pose);
 
 export function drawFigure(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose, opts: { ink?: number } = {}): void {
   const veil = pose.veil;
@@ -12264,16 +12278,21 @@ function ringSets(pose: FigurePose, now: number): RingSet[] {
 }
 
 function drawLive(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose, kit: Kit, r: Rig, facing: number, ink: number, now: number): void {
-  if (drawSculpted(ctx, sx, sy, zoom, { ...pose, facing })) return;
+  // Sat driving, the sculpted body goes in among what it holds and sits in, below; anywhere else it is the whole of it.
+  const seated = !!seatOf(pose);
+  if (!seated && drawSculpted(ctx, sx, sy, zoom, { ...pose, facing })) return;
   const look = pose.look ?? DEFAULT_LOOK;
   const b = skeleton(kit.fr, r);
   const view = viewOf(facing);
   const pal = paletteOf(pose, look);
+  const outer = ctx.getTransform();
   ctx.save();
   ctx.translate(sx, sy);
   ctx.scale(zoom, zoom);
-  const parts = partsOf(kit, r, b, pose.gear, pal, facing, gearLod(zoom));
+  let made: Part[] | undefined;
+  const partsNow = (): Part[] => (made ??= partsOf(kit, r, b, pose.gear, pal, facing, gearLod(zoom)));
   if (pose.swimming) {
+    const parts = partsNow();
     const above = waterline(parts, true, new Set([b.chest, ...parts.filter((p) => onJoint(p, b.arm0) || onJoint(p, b.arm1)).map((p) => p.xf)]), pal);
     const through = wakeOf(b, kit.fr, view.T), rings = [...through, ...shouldersOut(parts, b, through, view.T), ...collarOut(above, b)];
     underwater(ctx, waterline(parts, false), pal, view, ink, 1 / zoom, now);
@@ -12308,12 +12327,21 @@ function drawLive(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: n
       }
       ctx.clip(p, 'evenodd');
     }
+    // The sculpted body sat there, its fists where the flat figure's are (`../sculpt/anim` seatedLocal), drawn through the clip
+    // of the near side as the flat figure is; else the flat figure.
+    let sculpted = false;
+    if (seated) {
+      const inner = ctx.getTransform();
+      ctx.setTransform(outer);
+      sculpted = drawSculpted(ctx, sx, sy, zoom, { ...pose, facing });
+      ctx.setTransform(inner);
+    }
     // Astride, the far leg goes down behind the beast's barrel, which is drawn first: hidden behind it rather than drawn over its flank.
-    render(ctx, r.sit?.astride && !r.sit.ground ? behindBarrel(parts) : parts, pal, view, ink, 1 / zoom, now);
+    if (!sculpted) render(ctx, r.sit?.astride && !r.sit.ground ? behindBarrel(partsNow()) : partsNow(), pal, view, ink, 1 / zoom, now);
     if (sides) ctx.restore();
     for (const o of r.oars ?? []) if (near(o)) oar(ctx, view, ink, o);
     // The tiller over the body, but for what of it the body is in front of (`tillerPart`); over the rim, as it is.
-    if (r.tiller) render(ctx, [tillerPart(r.tiller, parts, pal)], pal, view, ink, 1 / zoom, now);
+    if (r.tiller) render(ctx, [tillerPart(r.tiller, partsNow(), pal)], pal, view, ink, 1 / zoom, now);
     if (r.reins) reins(ctx, b, view, r, 1 / zoom, false);
   }
   ctx.restore();
