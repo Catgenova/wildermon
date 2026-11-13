@@ -141,6 +141,7 @@ check('neither: the build nearest it, the man\'s', cleanLook({ gender: 'neither'
 const OLD_HAIR = ['bald', 'crop', 'short', 'bowl', 'side', 'swept', 'fringe', 'curls', 'afro', 'waves', 'long', 'ponytail', 'topknot', 'bun', 'braid', 'braids', 'locs', 'ridge', 'undercut', 'tonsure'];
 const hairNow = OLD_HAIR.map((h) => cleanLook({ hair: h }).hair);
 check('every old haircut to one there is a mesh for', hairNow.every((h) => HAIRSTYLES.some((s) => s.id === h)), OLD_HAIR.map((h, i) => `${h}>${hairNow[i]}`).join(' '));
+check('the old bun to the low chignon', cleanLook({ hair: 'bun' }).hair === 'chignon' && HAIRSTYLES.some((h) => h.id === 'chignon' && h.name === 'Low chignon'), cleanLook({ hair: 'bun' }).hair);
 check('short to the swept back, long to the braid, bald and the tonsure to bald',
   cleanLook({ hair: 'crop' }).hair === 'swept' && cleanLook({ hair: 'ponytail' }).hair === 'braid' && cleanLook({ hair: 'tonsure' }).hair === 'bald');
 check('long and loose to the shoulder length', cleanLook({ hair: 'long' }).hair === 'warrior');
