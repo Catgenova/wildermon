@@ -31,7 +31,7 @@ const beats = (snap: KeyPose, rebound: KeyPose, settle: KeyPose): Beat[] => [
 ];
 const clipOf = (name: string, b: Beat[]): Clip => ({ name, loop: false, length: LENGTH, mask: 'additive', ...poseToPose(b, { length: LENGTH, loop: false }), events: [{ t: SNAP, name: 'impact' }] });
 
-/** A blow to the body: the chest knocked back and the head with it, the arms flung, the knees dipping; then folded round it. */
+/** A blow to the body: the chest knocked back and the head with it, the arms thrown out a little, the knees dipping; then folded round it. */
 export const BODY = clipOf('flinch', beats(
   { rot: { spine_01: [-4, 0, 0], spine_02: [-8, 0, 0], spine_03: [-11, 0, 0], neck_01: [-4, 0, 0], head: [-12, 0, 0],
     clavicle_l: [0, 0, 6], clavicle_r: [0, 0, -6], upperarm_l: [-6, 0, 6], upperarm_r: [-4, 0, -4], lowerarm_l: [6, 0, 0], lowerarm_r: [4, 0, 0] },
