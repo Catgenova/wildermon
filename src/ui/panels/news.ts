@@ -4361,6 +4361,8 @@ export const NEWS: News[] = [
         'New: Wave and Hop animated on the sculpted body (was: a placeholder gesture). Both hands full: a nod.',
         `New: animation tending a wildermon and healing on the sculpted body: ${tended} jobs (taming, feeding, milking, grooming, tacking, gear, mounting, hitching, breeding, treating; dressing your own wounds), brush drawn in hand (was: a placeholder gesture).`,
         `New: hit reaction drawn on the body struck, seen by players nearby: ${FLINCH_SECS} s per landed blow; flash ${FLINCH_LIT * 1000} ms, off under less motion.`,
+        `New: animation at the quern, grinding: ${jobs('quern')} jobs; pressing: ${jobs('press')}. Stirring a pot, bowl or jar: ${jobs('stir')}. Cooking on a skewer at a fire: ${jobs('roast')}. Frying: ${jobs('fry')} (was: a placeholder gesture).`,
+        'Changed: leaching lye and filling a barrel: both hands at waist height (was: a placeholder gesture).',
       ];
     },
   },
