@@ -1,4 +1,5 @@
-// A prop carried on the back (src/sculpt/assets/<asset>.json sockets.<who>.back, tools/sculpt/lowgear.mjs backSocketOf),
+// A prop carried on the back or at the belt (src/sculpt/assets/<asset>.json sockets.<who>.back or .belt, tools/sculpt/lowgear.mjs
+// backSocketOf, beltSocketOf),
 // checked in the game's own path in every outfit: lowScene's bake and bones for a body wielding it with no clip gripping
 // it, skinned as the shader skins them. Per body and outfit, the prop's triangles crossing anything else drawn (the body,
 // the hair, the garments), in the idle clip over its whole loop and in the walk (the walk reported, the idle a failure),

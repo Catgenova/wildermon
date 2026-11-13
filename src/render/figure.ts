@@ -6465,6 +6465,13 @@ function weatheredOf(P: Palette): Palette {
   return w;
 }
 /**
+ * A wood as gear is carved from it (`WOOD_GEAR`), or nothing where the material is not a wood: the sculpted figures' club
+ * takes its wood from here (`src/sculpt/lowpoly.ts` metalTint).
+ */
+export function woodTone(material?: string): RGB | undefined {
+  return WOOD_GEAR[(material ?? '').toLowerCase()];
+}
+/**
  * A metal as gear is forged of it (`METAL_TONE`, iron where the material is not a metal): its colour, its shadow, its lit
  * edge and a blade's face, each along its own ramp. The sculpted figures' heads and blades take theirs from here too
  * (`src/sculpt/lowpoly.ts` metalTint).

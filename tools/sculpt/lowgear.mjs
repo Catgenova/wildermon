@@ -367,6 +367,88 @@ export function backSocketOf(who, prop, scale, design = BACK[who]) {
   return { socket: { bone: 'spine_03', o: best.o.map(r5), R: best.R.map(r5) }, tilt: best.tilt, gaps: [r5(best.near), r5(best.mean)] };
 }
 
+/* ---- the belt socket --------------------------------------------------------------------------------------------- */
+/** Every garment of every set (src/sculpt/assets low<name>-<who>.json): what a carried weapon is held clear of. */
+export const ALL_GARMENTS = ['shawl', 'tunic', 'trousers', 'boots', 'hood', 'helm', 'mantle', 'platechest', 'platelegs', 'plateboots', 'leatherchest', 'leatherlegs', 'leatherlegsflaps', 'leatherboots', 'leathershawl', 'leathershawlover', 'hat'];
+/** The arms' bones (a point on them is not what a weapon at the belt is held off: they hang beside it). */
+const ARM_BONE = /^(clavicle|upperarm|lowerarm|hand|knuckles|thumb|fingers|elbow|wrist|forearm|shoulder)/;
+/**
+ * Points over the body and the garments named, at rest, with the arms left out: each vertex and points spread over each
+ * triangle, a triangle of an arm (its corners' heaviest bones an arm's) left out.
+ */
+function trunkAtRest(who, garments) {
+  const at = (f) => JSON.parse(readFileSync(join(REPO, 'src/sculpt/assets', f), 'utf8'));
+  const body = at(`low${who}.json`), names = body.bones.map((b) => b.name);
+  const pts = [];
+  for (const m of [body, ...garments.map((g) => at(`low${g}-${who}.json`))]) {
+    const V = m.verts, T = m.tris, P = (i) => [V[i * 3], V[i * 3 + 1], V[i * 3 + 2]];
+    const arm = (i) => { const w = m.weights[i]; let b = -1, top = 0; for (let j = 0; j < w.length; j += 2) if (w[j + 1] > top) { top = w[j + 1]; b = w[j]; } return b >= 0 && b < names.length && ARM_BONE.test(names[b]); };
+    for (let t = 0; t < T.length; t += 4) {
+      if (arm(T[t]) || arm(T[t + 1]) || arm(T[t + 2])) continue;
+      const [a, b, c] = [P(T[t]), P(T[t + 1]), P(T[t + 2])];
+      const n = Math.max(1, Math.ceil(Math.max(Math.hypot(...sub(b, a)), Math.hypot(...sub(c, b)), Math.hypot(...sub(a, c))) / 0.05));
+      for (let i = 0; i <= n; i++) for (let j = 0; j <= n - i; j++) { const u = i / n, v = j / n, w = 1 - u - v; pts.push([a[0] * w + b[0] * u + c[0] * v, a[1] * w + b[1] * u + c[1] * v, a[2] * w + b[2] * u + c[2] * v]); }
+    }
+  }
+  return { pts, body };
+}
+/**
+ * Where a short one-handed weapon is carried while it is wielded and not in hand, per body (`BELT_OF`), mesh units (the
+ * body's axes: y up, z forward, x the body's left): across the small of the back, under the belt and every shawl's and
+ * mantle's hem, its handle up to the right for the right hand, its point or head toward the left hip, its edge down,
+ * its flat to the back: behind the arms, which hang over the hips (at a hip, a weapon crosses the hand and the forearm
+ * beside it).
+ * `at`, where its anchor (its middle along its length) goes before it is set back; `dir`, the way its y runs (its butt
+ * to its head or point); `face`, the way its z looks; `out`, the way it is set back from the body until it is `gap` clear
+ * of the trunk and everything worn over it; `bone`, what it rides on.
+ */
+export const BELT = {
+  male: { at: [-0.15, -4.55, -1.0], dir: [0.94, -0.3, 0], face: [0, 0, 1], out: [0, 0, -1], gap: 0.14, bone: 'pelvis', wide: 0.12, anchor: 'mid' },
+  female: { at: [-0.3, -4.0, -1.3], dir: [0.94, -0.3, 0], face: [0, 0, 1], out: [0, 0, -1], gap: 0.14, bone: 'pelvis', wide: 0.12, anchor: 'mid' },
+};
+/** The weapons carried at the belt (`BELT`), by item id: the knives, the hatchet and the throwing axe. */
+export const BELT_OF = new Set(['hunting_knife', 'butchering_knife', 'carving_knife', 'hatchet', 'throwing_axe']);
+/**
+ * The belt socket of a prop on one body at rest (`BELT`): { socket: { bone, o, R } as the hand sockets are (the prop's
+ * grip.lead to o, its x, y, z to R's columns), out (how far it was set out along `out` from `at`), gaps: [nearest to
+ * the trunk and the garments, nearest to the arms at rest] }.
+ */
+export function beltSocketOf(who, prop, scale, D) {
+  const { pts, body } = trunkAtRest(who, D.garments ?? ALL_GARMENTS), k = 1 / scale, lead = prop.grip.lead;
+  let lo = Infinity, hi = -Infinity;
+  for (let i = 1; i < prop.verts.length; i += 3) { lo = Math.min(lo, prop.verts[i]); hi = Math.max(hi, prop.verts[i]); }
+  const anchor = D.anchor === 'mid' ? (lo + hi) / 2 : D.anchor === 'to' ? prop.grip.to : typeof D.anchor === 'number' ? D.anchor : lead[1];
+  const out = unit(D.out), e1 = unit(cross(out, Math.abs(out[1]) > 0.9 ? [1, 0, 0] : [0, 1, 0])), e2 = cross(out, e1);
+  const cell = D.wide, front = new Map();
+  for (const p of pts) { const key = `${Math.floor(dot(p, e1) / cell)},${Math.floor(dot(p, e2) / cell)}`; front.set(key, Math.max(front.get(key) ?? -Infinity, dot(p, out))); }
+  const over = (p) => { let s = -Infinity; const i = Math.floor(dot(p, e1) / cell), j = Math.floor(dot(p, e2) / cell); for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) s = Math.max(s, front.get(`${i + a},${j + b}`) ?? -Infinity); return s; };
+  const y = unit(D.dir), x = unit(cross(y, D.face)), z = cross(x, y), R = cols(x, y, z);
+  const o0 = sub(D.at, mul(y, (anchor - lead[1]) * k));
+  const P = [];
+  for (let i = 0; i < prop.verts.length; i += 3) P.push(add(o0, mv(R, [(prop.verts[i] - lead[0]) * k, (prop.verts[i + 1] - lead[1]) * k, (prop.verts[i + 2] - lead[2]) * k])));
+  let ds = -Infinity;
+  for (const p of P) { const s = over(p); if (s > -Infinity) ds = Math.max(ds, s + D.gap - dot(p, out)); }
+  if (ds === -Infinity) ds = 0;
+  const o = add(o0, mul(out, ds)), Q = P.map((p) => add(p, mul(out, ds)));
+  // the nearest the trunk and garments come, and the arms (the body's own arm vertices at rest)
+  const names = body.bones.map((b) => b.name), armPts = [];
+  for (let i = 0; i < body.verts.length / 3; i++) { const w = body.weights[i]; let b = -1, top = 0; for (let j = 0; j < w.length; j += 2) if (w[j + 1] > top) { top = w[j + 1]; b = w[j]; } if (b >= 0 && ARM_BONE.test(names[b])) armPts.push([body.verts[i * 3], body.verts[i * 3 + 1], body.verts[i * 3 + 2]]); }
+  let near = Infinity, arm = Infinity;
+  for (const q of Q) { const s = over(q); if (s > -Infinity) near = Math.min(near, dot(q, out) - s); for (const a of armPts) arm = Math.min(arm, Math.hypot(...sub(a, q))); }
+  const r5 = (v) => +v.toFixed(5);
+  return { socket: { bone: D.bone ?? 'pelvis', o: o.map(r5), R: R.map(r5) }, out: r5(ds), gaps: [r5(near), r5(arm)] };
+}
+/** A short one-handed prop's belt socket on each body (`BELT_OF`, `beltSocketOf`) added to its asset (gearAsset's): its `sockets.<who>.belt`. */
+export function addBelt(asset, plain, log = console.log) {
+  if (!BELT_OF.has(asset.id)) return asset;
+  for (const who of Object.keys(asset.sockets)) {
+    const h = beltSocketOf(who, { verts: plain.G.V.flat(), grip: plain.grip }, asset.scale[who], BELT[who]);
+    asset.sockets[who].belt = h.socket;
+    log(`  ${asset.id} ${who}: at the belt, set back ${h.out}, gaps ${h.gaps.join(', ')}`);
+  }
+  return asset;
+}
+
 /* ---- the game's copy ---------------------------------------------------------------------------------------------- */
 /**
  * A prop as the game loads it (src/sculpt/assets/<id>.json), rigid on one hand bone: its points (its own frame, game units),
