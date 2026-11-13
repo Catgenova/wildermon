@@ -4336,6 +4336,17 @@ export const NEWS: News[] = [
     ],
   },
   {
+    n: 543,
+    day: '2026-11-13',
+    lines: () => [
+      'New: chain and scale on the sculpted body, as equipped (was: starter clothes); chain in its metal; enchanted pieces glow.',
+      'New: weapons drawn as equipped: in hand fighting, on the back or at the belt otherwise.',
+      'New: one-handed weapons swung in one hand; bows drawn and loosed, quiver on the back.',
+      'New: shields, tool belt, jewelled pendant and ring drawn as equipped. Pendant: over cloth and leather chests only.',
+      'New: sculpted bodies seated on carts, wagons and boats and astride mounts (was: the flat figure).',
+    ],
+  },
+  {
     n: 529,
     day: '2026-11-12',
     lines: () => [
