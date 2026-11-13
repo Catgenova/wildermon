@@ -4417,6 +4417,11 @@ export const NEWS: News[] = [
     ],
   },
   {
+    n: 578,
+    day: '2026-11-13',
+    lines: () => [`Added: drag from the pack onto a ${SPECIES.bura.name}, any stage, whose panniers open for you: into its panniers.`],
+  },
+  {
     n: 577,
     day: '2026-11-13',
     lines: () => ['Fixed: trousers and leggings showing through chest armour and tunics.'],

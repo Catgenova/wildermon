@@ -6046,6 +6046,11 @@ export class Game {
       const f = this.furniture.get(target.into);
       return f ? { x: f.x, y: f.y, centre: furnitureCentre(f) } : null;
     }
+    // A thing let go over a pack beast walks to it first, and its panniers' reach is measured from where it stands.
+    if (def.id === 'store_in_pannier') {
+      const c = this.creatures.get(target.into);
+      return c ? { x: Math.floor(c.x), y: Math.floor(c.y), centre: [c.x, c.y] } : null;
+    }
     // Goods set out on a counter walk to the counter first, to its keeper's side of it or the other.
     if (def.id === 'set_out_goods') {
       const c = counterInto(this, target);

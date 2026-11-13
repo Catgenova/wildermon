@@ -90,7 +90,7 @@ import { runestoneAt } from '../game/runestones';
 import { cornerReading, groundReading, yieldLines } from './tileinfo';
 import { deedWorkersAt, MAX_DEED_LEVEL, type Deed } from '../game/game';
 import { isFounder, lacks } from '../game/ranks';
-import { pannierRefusal, panniersOffered } from '../game/panniers';
+import { pannierName, pannierRefusal, panniersOffered } from '../game/panniers';
 import { CRAFT_REACH, reachFor, RECIPE_BY_ID, recipeNeeds, recipeReason, recipeStatus, RECIPES, type CraftStock, type Recipe } from '../game/recipes';
 import { CraftPanel } from './panels/craft';
 import { unseenNews } from './panels/news';
@@ -899,9 +899,16 @@ export class UI {
    * And a crate rack, which holds nothing itself and so was never a place to
    * let anything go: what is dropped on one goes into the crates standing on
    * it, filling them one after another (`rack_put`).
+   *
+   * And a pack beast whose panniers open for you (`panniersOffered`): asked for, "allow dragging inventory into the
+   * packlet line". What is let go over it goes into its panniers (`store_in_pannier`).
    */
-  storeAt(pick: Pick | null): { kind: 'crate' | 'furniture' | 'rack'; id: number } | null {
+  storeAt(pick: Pick | null): { kind: 'crate' | 'furniture' | 'rack' | 'pannier'; id: number } | null {
     if (!pick) return null;
+    if (pick.creature !== undefined) {
+      const c = this.game.creatures.get(pick.creature);
+      if (c && panniersOffered(c)) return { kind: 'pannier', id: c.id };
+    }
     if (pick.crate !== undefined && this.game.crates.has(pick.crate)) return { kind: 'crate', id: pick.crate };
     if (pick.furniture === undefined) return null;
     const f = this.game.furniture.get(pick.furniture);
@@ -929,11 +936,13 @@ export class UI {
       g.logMsg(`Remove the ${p.name.toLowerCase()} first.`, 'error');
       return true;
     }
-    const def = ACTION_BY_ID.get(at.kind === 'crate' ? 'store_in_crate' : at.kind === 'rack' ? 'rack_put' : 'store_in_furniture');
+    const def = ACTION_BY_ID.get(at.kind === 'crate' ? 'store_in_crate' : at.kind === 'rack' ? 'rack_put'
+      : at.kind === 'pannier' ? 'store_in_pannier' : 'store_in_furniture');
     if (!def) return true;
     const target: Target = { kind: 'item', uid: held.uid, count: held.count, into: at.id };
     if (!def.applies(target, g)) {
-      const where = at.kind === 'crate' ? crateName(g.crates.get(at.id)!) : furnitureName(g.furniture.get(at.id)!);
+      const where = at.kind === 'crate' ? crateName(g.crates.get(at.id)!)
+        : at.kind === 'pannier' ? pannierName(g.creatures.get(at.id)!) : furnitureName(g.furniture.get(at.id)!);
       g.logMsg(`The ${p.name.toLowerCase()} will not go in the ${where.toLowerCase()}.`, 'error');
       return true;
     }

@@ -3266,7 +3266,7 @@ export function helpText(): string {
       <li><b>${SPECIES.tinka.name}</b>: <b>mends</b> damaged gear in your settlement stores, most damaged first. Evolves: ${evolves('tinka')}.</li>
       <li><b>${SPECIES.middun.name}</b>: turns rotting things on the ground into <b>compost</b>. Evolves: ${evolves('middun')}.</li>
       <li><b>${SPECIES.snout.name}</b>: finds <b>buried relics</b> and marks where to dig. Taming ${SPECIES.snout.tameLevel}.</li>
-      <li><b>${SPECIES.bura.name}</b>: no task. Panniers: <b>${SPECIES.bura.pannier!.join(' / ')} items</b> by stage, × its hauling blood. Open from its menu (keeper, and ranks with
+      <li><b>${SPECIES.bura.name}</b>: no task. Panniers: <b>${SPECIES.bura.pannier!.join(' / ')} items</b> by stage, × its hauling blood. Open from its menu, or drag from the pack onto it (keeper, and ranks with
       ${POWER.stores.label} where it stands on its keeper's settlement); a store within ${CRAFT_REACH} tiles for crafting and building. Crate, release, cull: panniers empty only.
       Evolves: ${evolves('bura')}; ${perkLine('bura').toLowerCase()}.</li>
       <li><b>${SPECIES.wadd.name}</b>: mount; swims deep water with a rider. Evolves: ${evolves('wadd')}.</li>
