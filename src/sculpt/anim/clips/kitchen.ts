@@ -216,9 +216,9 @@ const ROAST_LENGTH = 2;
 /** Leant toward the fire from the knees. */
 const AT_FIRE: KeyPose = plus(SAT, { pelvis: [4, 0, 0], neck_01: [-4, 0, 0], head: [-6, 0, 0] });
 /** The right fist out ahead, low, the stick through it toward the fire (the thumb toward its far end), down a little. */
-const SKEWER_AT: Euler = [-0.07, 0.24 - UP, 0.5], SKEWER_WAY: Euler = [0.08, -0.3, 0.95];
+const SKEWER_AT: Euler = [-0.12, 0.21 - UP, 0.54], SKEWER_WAY: Euler = [0.2, -0.3, 0.93];
 /** The left hand on the left thigh. */
-const THIGH: Euler = [0.115, 0.2 - UP, 0.34];
+const THIGH: Euler = [0.128, 0.2 - UP, 0.36];
 /** The elbow out and up (the fist rolled over one way about the stick) and in and down (the other). */
 const ELBOW_OUT: Record<string, Euler> = { upperarm_r: [40, 0, -80], lowerarm_r: [40, 0, 0] };
 const ELBOW_IN: Record<string, Euler> = { upperarm_r: [-10, 0, 10], lowerarm_r: [100, 0, 0] };
@@ -247,13 +247,14 @@ export const ROAST: Clip = {
   },
   tools: { r: 'skewer' },
   stretch: [[0, 0.25], [1.0, 1.25]],
-  bodies: { man: { armsOut: -3 }, woman: { armsOut: -3, ...HER_KNEEL, hands: { l: [0, UP - HER_UP, HER_AHEAD], r: [0, UP - HER_UP, HER_AHEAD] } } },
+  // (his shawl's front hangs further from his chest as he bows: he leans in less, his fist out past it)
+  bodies: { man: { armsOut: -3, add: { pelvis: [-8, 0, 0], spine_01: [-2, 0, 0], neck_01: [6, 0, 0] } }, woman: { armsOut: -3, ...HER_KNEEL, hands: { l: [0, UP - HER_UP, HER_AHEAD], r: [0, UP - HER_UP, HER_AHEAD] } } },
 };
 
 /* ---- K5, frying: the pan held out over the fire, shaken and tossed ---------------------------------------------------- */
 const FRY_LENGTH = 1.4;
 /** The right fist out ahead, the handle through it toward the pan (the thumb toward it), out to the left a little. */
-const PAN_AT: Euler = [-0.075, 0.25 - UP, 0.51], PAN_WAY: Euler = [0.3, 0, 0.95];
+const PAN_AT: Euler = [-0.12, 0.23 - UP, 0.53], PAN_WAY: Euler = [0.4, 0, 0.92];
 const shift = (p: Euler, d: Euler): Euler => [p[0] + d[0], p[1] + d[1], p[2] + d[2]];
 const FRY_HOLD = merge(plus(AT_FIRE, { pelvis: [5, 0, 0], head: [-4, 0, 0] }), { rot: { ...ELBOWS, ...ELBOW_OUT, ...REST_F, upperarm_r: [24, 0, -40] } });
 const FRY_BEATS: Beat[] = [
@@ -289,5 +290,6 @@ export const FRY: Clip = {
   },
   tools: { r: 'frying_pan' },
   stretch: [[0.95, FRY_LENGTH]],
-  bodies: { man: { armsOut: -3 }, woman: { armsOut: -3, ...HER_KNEEL, hands: { l: [0, UP - HER_UP, HER_AHEAD], r: [0, UP - HER_UP, HER_AHEAD] } } },
+  // (his shawl's front hangs further from his chest as he bows: he leans in less, his fist out past it)
+  bodies: { man: { armsOut: -3, add: { pelvis: [-8, 0, 0], spine_01: [-2, 0, 0], neck_01: [6, 0, 0] } }, woman: { armsOut: -3, ...HER_KNEEL, hands: { l: [0, UP - HER_UP, HER_AHEAD], r: [0, UP - HER_UP, HER_AHEAD] } } },
 };
