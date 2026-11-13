@@ -113,7 +113,8 @@ begin
   select (wounds->0->>'part'), 1 - (stats->>'health')::double precision into v_part, v_left from player where world_id = w and uid = u;
   update item set dmg = 0 where world_id = w and holder_uid = u;
   update skill set value = 1 where world_id = w and uid = u and id in (select skill from armour_class_def);
-  it := worn(w, u, v_part);
+  -- The piece worn over where it landed (part_worn: the arms' is the shawl's).
+  it := worn(w, u, part_worn(v_part));
   select piece_soak(it, 1) * armour_vs(a.cls, 'bite') into v_soak from armour_def a where a.id = it.def;
   return v_part || ':' || v_left || ':' || v_soak;
 end $f$;
