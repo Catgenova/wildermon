@@ -4351,12 +4351,14 @@ export const FORMER_NAME: Record<string, string> = Object.fromEntries(
   Object.values(SPECIES).filter((s) => s.was?.length).map((s) => [s.id, s.was![0]]),
 );
 /**
- * Whether what it is called is only one of its kind's own names -- its kind's, a stage's, or one its kind went by
- * before (`was`) -- so that nobody has named it. The island's `kind_named`.
+ * Whether what it is called is only one of its kind's own names -- its kind's, a stage's, one its kind went by
+ * before (`was`), or the name of a removed kind it was turned from (`REMOVED_KINDS`) -- so that nobody has named it.
+ * The island's `kind_named` (a removed kind's name: `20261120000014_a_removed_kinds_name_is_its_kind_now.sql`).
  */
 export function kindNamed(c: Pick<Creature, 'species' | 'name'>): boolean {
   const d = SPECIES[c.species];
-  return !!d && (c.name === d.name || !!d.stages?.some((st) => st.name === c.name) || !!d.was?.includes(c.name) || !!d.subspecies?.includes(c.name));
+  return !!d && (c.name === d.name || !!d.stages?.some((st) => st.name === c.name) || !!d.was?.includes(c.name) || !!d.subspecies?.includes(c.name)
+    || Object.values(REMOVED_KINDS).some((k) => k.becomes === c.species && k.name.toLowerCase() === c.name.toLowerCase()));
 }
 /**
  * Its name, or, where nobody has named it, what its kind is called at the stage it is at: one stood up a Pigroot that

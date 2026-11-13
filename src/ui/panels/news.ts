@@ -2,6 +2,7 @@ import { PICK_SLACK, PICK_SLACK_TOUCH } from '../../render/pickslack';
 import { MONSTER_GROWTH } from '../../render/monster-size';
 import { FORGET_AFTER, LOADING_AT_ONCE, SLICE_MS } from '../../render/wildermon';
 import { ACT_SECS } from '../../render/beasts';
+import { NAME_PX } from '../../render/namelabels';
 import { COLOUR_FORM_ODDS, FORM_PASS, formGives, formName, SIZE_FORM_ODDS } from '../../game/wildforms';
 import { BUILD_COUNTS, MOST_GOES } from '../buildCounts';
 import { PLAN_AREA_MOST, PLAN_UNDO_SECONDS } from '../../game/planarea';
@@ -4413,6 +4414,34 @@ export const NEWS: News[] = [
       `New: fishing net: ${LIFT_DROPS * NET_LIFT.length} drops off the net as it is lifted, ${SHAKE_DROPS} at each of ${NET_SHAKES.length} shakes.`,
       `New: rowing under way: ${OAR_DROPS} drops a blade at the catch; whirl pair a blade a stroke, ${SWIRL_SECS} s.`,
       'Without a graphics card: swimming strokes\' splashes, rings treading water, the float\'s strike and a catch only.',
+    ],
+  },
+  {
+    n: 574,
+    day: '2026-11-13',
+    lines: () => [`Fixed: wildermon turned from a removed kind (${listed(Object.values(REMOVED_KINDS).map((k) => k.name))}) still called by that kind's name, and their carcasses and stud book records. Now: the name of the kind they became, at their stage.`],
+  },
+  {
+    n: 564,
+    day: '2026-11-13',
+    lines: () => [
+      `Changed: names over creatures and players: ${NAME_PX} px at every zoom and body size, times Text size; on a plate. Was: scaled with zoom and body size, gold outlined.`,
+      'Colour by whose: players white, your wildermon gold, other players\' beige, wild grey, hostile red.',
+      'Never overlapping: moved up or to the side, with a line to the body.',
+      'Shown at every zoom, for every wildermon, wild ones included (was: tamed only; players from zoom 0.5). Crated: no name.',
+    ],
+  },
+  {
+    n: 563,
+    day: '2026-11-13',
+    lines: () => ['Fixed: a sign-in that lapsed during play. Was: "The island\'s history is not coming through (permission denied for table tile_change)" repeated. Now: game stops; Signed out; Sign in.'],
+  },
+  {
+    n: 562,
+    day: '2026-11-13',
+    lines: () => [
+      'Fixed: settlement workers on a staircase of flights in a line (each flight\'s head the next one\'s foot): up to every storey of it, off either side at a landing, and down from the top. '
+        + 'Was: storeys between two flights out of reach (Idle: no stairs up to storey 4), top storey with no way down (Idle: no stairs down).',
     ],
   },
   {

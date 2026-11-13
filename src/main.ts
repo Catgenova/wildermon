@@ -73,7 +73,7 @@ import { smeltSeconds } from './game/metal';
 import { needsIron } from './world/ore';
 import { tileUses } from './ui/tileinfo';
 import { startIsland } from './net/play';
-import { holdSeat, onElsewhere, SEAT_ELSEWHERE, takeSeat } from './net/supabase';
+import { holdSeat, onElsewhere, onSignedOut, SEAT_ELSEWHERE, SIGNED_OUT, takeSeat } from './net/supabase';
 import { pickStone } from './ui/stonestart';
 import { watchErrors } from './net/errors';
 import { mountSavingBanner } from './ui/saving';
@@ -204,6 +204,35 @@ function cannotRun(said: string, stale = false): void {
  * told and stops. `stop` is whatever this page still has running.
  */
 let elsewhereShown = false;
+/** The boot card over a stopped game: one line and one button (`onSignedOut`). */
+function stopCard(said: string, button: string, act: () => void): void {
+  if (elsewhereShown) return;
+  elsewhereShown = true;
+  document.getElementById('boot')?.remove();
+  const root = document.createElement('div');
+  root.id = 'boot';
+  const card = document.createElement('div');
+  card.className = 'boot-card';
+  const name = document.createElement('div');
+  name.className = 'boot-name';
+  name.textContent = 'Wildermon';
+  const now = document.createElement('div');
+  now.className = 'boot-now';
+  const line = document.createElement('span');
+  line.textContent = said;
+  now.append(line);
+  const go = document.createElement('button');
+  go.className = 'boot-retry';
+  go.type = 'button';
+  go.textContent = button;
+  go.addEventListener('click', act);
+  card.append(name, now, go);
+  root.append(card);
+  const ui = document.getElementById('ui');
+  if (ui) ui.hidden = true;
+  document.body.append(root);
+  go.focus();
+}
 function playingElsewhere(stop?: () => void): void {
   if (elsewhereShown) return;
   elsewhereShown = true;
@@ -765,6 +794,16 @@ onElsewhere(() => playingElsewhere(() => {
   loop.stop();
   onExit();
 }));
+// Signed out under the game (`onSignedOut`): the world stops, and the card's one button goes to the sign-in, to this island.
+onSignedOut(() => {
+  if (elsewhereShown) return;
+  loggedOff = true;
+  loop.stop();
+  stopCard(SIGNED_OUT, 'Sign in', () => {
+    const island = new URLSearchParams(location.search).get('island');
+    location.replace(`./account.html${island ? `?${new URLSearchParams({ island })}` : ''}`);
+  });
+});
 window.addEventListener('pagehide', onExit);
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) onExit();
