@@ -136,13 +136,14 @@ check('and comes as either body and every hairstyle', GENDERS.every((g) => rolle
 console.log('--- looks from before');
 const old = { gender: 'neither', skin: 'olive', hair: 'long', hairColour: 'auburn', eyes: 'hazel', beard: 'none', shirt: 'madder', trousers: 'bark' };
 const now = cleanLook(old);
-check('an old look becomes one of now', now.gender === 'man' && now.hair === 'braid' && skinColour(now) === '#c79a68' && gap(hairColour(now), '#7d3a1d') < 6, JSON.stringify(now));
+check('an old look becomes one of now', now.gender === 'man' && now.hair === 'warrior' && skinColour(now) === '#c79a68' && gap(hairColour(now), '#7d3a1d') < 6, JSON.stringify(now));
 check('neither: the build nearest it, the man\'s', cleanLook({ gender: 'neither' }).gender === 'man');
 const OLD_HAIR = ['bald', 'crop', 'short', 'bowl', 'side', 'swept', 'fringe', 'curls', 'afro', 'waves', 'long', 'ponytail', 'topknot', 'bun', 'braid', 'braids', 'locs', 'ridge', 'undercut', 'tonsure'];
 const hairNow = OLD_HAIR.map((h) => cleanLook({ hair: h }).hair);
 check('every old haircut to one there is a mesh for', hairNow.every((h) => HAIRSTYLES.some((s) => s.id === h)), OLD_HAIR.map((h, i) => `${h}>${hairNow[i]}`).join(' '));
 check('short to the swept back, long to the braid, bald and the tonsure to bald',
   cleanLook({ hair: 'crop' }).hair === 'swept' && cleanLook({ hair: 'ponytail' }).hair === 'braid' && cleanLook({ hair: 'tonsure' }).hair === 'bald');
+check('long and loose to the shoulder length', cleanLook({ hair: 'long' }).hair === 'warrior');
 check('a bowl cut and a fringe to the bob', cleanLook({ hair: 'bowl' }).hair === 'bob' && cleanLook({ hair: 'fringe' }).hair === 'bob');
 check('the top knot to the top knot', cleanLook({ hair: 'topknot' }).hair === 'topknot');
 check('a short cut to the crew cut', cleanLook({ hair: 'short' }).hair === 'crew');
