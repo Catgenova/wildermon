@@ -32,6 +32,13 @@ begin
     end if;
   end if;
 
+  if c.idle_why = 'gate' and array_length(c.idle_what, 1) >= 2 then
+    perform wtell(p_world, c.keeper, c.name || ' idle: only work above its level within ' || p_radius || ' tiles of ' || v_where || '. '
+      || (select skill_gate_refusal(g.name, g.skill, task_skill(c), g.level)
+            from skill_gate g where g.kind = c.idle_what[1] and g.id = c.idle_what[2]), 'error');
+    return;
+  end if;
+
   perform wtell(p_world, c.keeper, c.name || ' idle: no ' || work_words(p_kind)
     || ' within ' || p_radius || ' tiles of ' || v_where || '. '
     || case when p_kind in ('mine', 'quarry')

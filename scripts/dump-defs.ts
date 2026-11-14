@@ -1076,7 +1076,7 @@ out.push(`alter table tree_def add column if not exists fruit text;`);
  * species'. A birch and an oak of the same age come down for the same timber. */
 out.push(`alter table tree_def drop column if exists logs;`);
 /* The one rule for what a skill level opens (`skillgates.ts`): a thing, by its kind and id, and the skill and level it
- * needs. Read by `gate_refusal` for a person and `gate_open` for a worker. */
+ * needs. Read by `skill_gate_refusal` for a person and `worker_gate_open` for a worker. */
 out.push(`create table if not exists skill_gate (
   kind text not null, id text not null, name text not null, skill text not null, level int not null, primary key (kind, id)
 );`);

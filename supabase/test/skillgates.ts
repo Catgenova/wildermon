@@ -20,7 +20,7 @@ import { ACTION_BY_ID } from '../../src/game/actions';
 import { GATHER_SKILL, type Creature } from '../../src/game/creatures';
 import { idleSays } from '../../src/game/workerlog';
 import { creatureLines } from '../../src/ui/creatureinfo';
-import { GATE_LADDER, gateOf, gateRefusal, nextUnlockSaid, SKILL_GATES, unlocksOf } from '../../src/game/skillgates';
+import { GATE_LADDER, gateOf, skillGateRefusal, nextUnlockSaid, SKILL_GATES, unlocksOf } from '../../src/game/skillgates';
 import { packTreeData, TileType, TREE_AGES, TREE_DEFS } from '../../src/world/tiles';
 import { psql, check, finish } from './harness';
 
@@ -164,7 +164,7 @@ const fresh = (): Game => {
   g.player.y = T + 0.5;
   const cut = ACTION_BY_ID.get('cut_down')!;
   const at = { kind: 'tile', x: T + 3, y: T } as Parameters<NonNullable<typeof cut.check>>[0];
-  const words = gateRefusal('Willow', 'woodcutting', 12.4, NEED)!;
+  const words = skillGateRefusal('Willow', 'woodcutting', 12.4, NEED)!;
   g.skills.values.set('woodcutting', 12.4);
   const b12 = cut.check?.(at, g) ?? 'none';
   check(`you at woodcutting 12.4 by a mature willow: "${words}", the same on both sides (the menu's hint)`,

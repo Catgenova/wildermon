@@ -63,7 +63,8 @@ begin
   end if;
 
   if p_kind = 'woodcut' then
-    return here = tile_id('Tree') and exists (select 1 from beside_tile(p_world, p_x, p_y));
+    return here = tile_id('Tree') and exists (select 1 from beside_tile(p_world, p_x, p_y))
+       and worker_gate_open(c, tree_gate(land_data(p_world, p_x, p_y)));
   elsif p_kind = 'prune' then
     -- What would otherwise die: a stage that prunes back and whose next stage
     -- has no life in it. Nothing else is touched — a mature tree pruned stops

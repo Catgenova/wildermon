@@ -827,6 +827,9 @@ begin
         if kind = 'mine' then
           select * into v_mi from mine_idle(p_world, v_site.x, v_site.y, v_site.radius, c);
           if v_mi.why is not null then c.idle_why := v_mi.why; c.idle_n := v_mi.n; c.idle_what := v_mi.what; end if;
+        elsif kind = 'woodcut' then
+          select * into v_mi from gate_idle(p_world, v_site.x, v_site.y, v_site.radius, c, kind);
+          if v_mi.why is not null then c.idle_why := v_mi.why; c.idle_n := v_mi.n; c.idle_what := v_mi.what; end if;
         end if;
         -- All of it in reach worked and on its wait: the seconds till the soonest is back (`worker_wait_left`).
         if worker_wait_left(p_world, v_site.x, v_site.y, v_site.radius, kind) is not null then

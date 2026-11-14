@@ -102,7 +102,7 @@ import { capital, listed } from './words';
 import { pct, pickedSaid, qlTag, searchOdds, searchPasses, tagged, taggedWith } from './yields';
 import { fruitRefusal, fruitSeason, fruitingSays, inSeason } from './fruiting';
 import { RECIPE_ACTIONS } from './recipes';
-import { gateRefusal, treeGate } from './skillgates';
+import { skillGateRefusal, treeGate } from './skillgates';
 import { BRUSH_TOOL, lacksTool, MORTAR_TOOL, REAP_TOOL, TOOL_JOBS } from './jobtools';
 
 /**
@@ -689,7 +689,7 @@ export const oreNeeds = (g: Game, level: number): number => Math.max(0, level - 
 /** A tree's felling gate for you (`skillgates.ts`), or null: none, met, or a tree with no logs in it. The island's `tree_gate_refusal`. */
 export const treeGateRefusal = (g: Game, data: number): string | null => {
   const gate = treeGate(data);
-  return gate ? gateRefusal(gate.name, gate.skill, g.skills.get(gate.skill), gate.level) : null;
+  return gate ? skillGateRefusal(gate.name, gate.skill, g.skills.get(gate.skill), gate.level) : null;
 };
 
 /**
@@ -1804,7 +1804,7 @@ export const ACTIONS: ActionDef[] = [
       // Not with a tree bench round it (`fitting.ts`; the island's `gather_refusal`).
       if (t.kind === 'tile' && g.furnitureOnTile(t.x, t.y).some((f) => f.kind === TREE_BENCH)) return FITTING_SAID.benchRound;
       if (!g.inventory.has('hatchet')) return 'Need a hatchet.';
-      // A tree with logs in it fells only at its woodcutting (`skillgates.ts`; the island's `gate_refusal`).
+      // A tree with logs in it fells only at its woodcutting (`skillgates.ts`; the island's `skill_gate_refusal`).
       return type === TileType.Tree && t.kind === 'tile' ? treeGateRefusal(g, g.world.getData(t.x, t.y)) : null;
     },
     perform: (t, g) => {

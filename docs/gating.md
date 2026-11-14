@@ -76,7 +76,7 @@ skill_gate (kind text, id text, name text, skill text, level int, primary key (k
 A thing that is two things (a marble portcullis is a material and a wall type) has two gates, one each, and the first
 unmet is named.
 
-**One check, one set of words.** `gateRefusal(name, skill, have, need)` in the browser, `gate_refusal(name, skill,
+**One check, one set of words.** `skillGateRefusal(name, skill, have, need)` in the browser, `skill_gate_refusal(name, skill,
 have, need)` on the island, word for word, in the form mining already used:
 
 > Willow: needs woodcutting 70; have 12.4.
@@ -304,12 +304,25 @@ drive: no worker gate.
 
 ## 9. The pilot (built)
 
-* `src/game/skillgates.ts`: `GATE_LADDER`, `SKILL_GATES`, `TREE_GATE`, `gateOf`, `gateRefusal`, `treeGate`,
+* `src/game/skillgates.ts`: `GATE_LADDER`, `SKILL_GATES`, `TREE_GATE`, `gateOf`, `skillGateRefusal`, `treeGate`,
   `gateOpen`, `unlocksOf`, `nextUnlockSaid`, `unlocksSaid`, `GATE_STOPS`.
 * `skill_gate` emitted by `scripts/dump-defs.ts`; read by anybody, as the rulebook is (permissions.allow.ts).
-* Island (`20261120000065_skill_gates.sql`): `gate_refusal`, `skill_gate_of`, `worker_gate_open`, `tree_gate`,
+* Island (`20261120000065_skill_gates.sql`): `skill_gate_refusal`, `skill_gate_of`, `worker_gate_open`, `tree_gate`,
   `tree_gate_refusal`, `gate_idle`; patched `gather_refusal` (cut down), `ground_refusal` (coppice),
   `worker_gatherable`, `worker_do`, `worker_settle`, `worker_idle`, `rpc_creatures`.
 * Browser: `cut_down` and `coppice` checks (`treeGateRefusal`), `gatherable('woodcut')`, `gateIdle`, `finishFelling`,
   `IdleWhy` 'gate' and its words (`idleSays`, `IDLE_LABEL`), the Skills window's Unlocks, the help's Skill gates.
 * Test: `supabase/test/skillgates.ts`.
+
+## 10. Open questions
+
+1. Trees: maple at 20 and birch at 5 read as "early"; lowland woods are about a third birch and an eighth pine, so a
+   new player fells mostly pine at first (young trees with no logs, bushes and saplings still teach woodcutting).
+   Birch at 1 too?
+2. Willow at 70 is the top of the trees; shore woods are mostly willow. 70, or 90 to match the deepest seam?
+3. Existing gates off the ladder (taming bases 6, 8, 12 …; fish 15, 35, 45): keep their numbers, or snap them?
+4. The difficulty rule puts a wagon at carpentry 70, a caravel at 90 and scale armour at 80–90, and the smelter (the
+   Path's stone phase) at masonry 30. Cap big builds, or move the Path's steps onto what the gates open first?
+5. A worker reads every gate at its task skill (a hod carrier's masonry for a plank wall's carpentry gate). Or its own
+   level in the gate's skill?
+6. Walls: a material and a wall type are two gates (a marble portcullis needs both). Or one gate per material only?

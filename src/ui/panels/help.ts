@@ -180,7 +180,7 @@ import { AWARE_PER_LEVEL, AWARE_TRAIT_STEP, awareShareAbove, awareTraitEase, DEE
 import { NIGHT_EYES_FROM } from '../../game/learn';
 import { NO_GO, pointAt, windWord, windWorth } from '../../game/wind';
 import { article, capital, finePercent, listed, listedOr, percent, timeWords } from '../../game/words';
-import { GATE_LADDER, GATE_STOPS, GATED_SKILLS, gateRefusal, SKILL_GATES, unlocksSaid } from '../../game/skillgates';
+import { GATE_LADDER, GATE_STOPS, GATED_SKILLS, skillGateRefusal, SKILL_GATES, unlocksSaid } from '../../game/skillgates';
 import {
   bossSays, garrisonSays, HOARD_SCALE, HOARD_SCALE_CAP, HOARD_SHARE, hoardBook, hoardSays, LAIR_ANNOUNCE, LAIR_KINDS, LAIR_LEASH, LAIR_MOVE_CLEARS, LAIR_MOVE_DAYS,
   LAIR_RING, LAIR_RING_WILD, LAIR_SIGHT, LAIR_TRACK, lairRingUsual, lairRingWant, restockSays, SITE_SAYS,
@@ -3916,7 +3916,7 @@ export function helpText(): string {
     </ul>
     <h4>Skill gates</h4>
     <ul>
-      <li>Under a thing's level in its skill: refused, greyed in the menu with the need (&ldquo;${gateRefusal('Willow', 'woodcutting', 12.4, 70)}&rdquo;).
+      <li>Under a thing's level in its skill: refused, greyed in the menu with the need (&ldquo;${skillGateRefusal('Willow', 'woodcutting', 12.4, 70)}&rdquo;).
       A worker skips it at its own level in that skill. Levels: ${GATE_LADDER.join(', ')}. Skills window: each skill's gates, ticked when met.</li>
       ${GATED_SKILLS.map((id) => `<li><b>${SKILL_BY_ID.get(id)?.name ?? id}</b> (${listed([...new Set(SKILL_GATES.filter((g) => g.skill === id).map((g) => GATE_STOPS[g.kind]))])}): ${unlocksSaid(id)}.</li>`).join('\n      ')}
     </ul>

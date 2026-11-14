@@ -99,6 +99,7 @@ begin
     data := land_data(p_world, wx, wy);
     select * into tree from tree_def where id = tree_species(data);
     select * into v_age from tree_age_def where id = tree_age(data);
+    if not worker_gate_open(c, tree_gate(data)) then return null; end if;
     -- A worker swings the same number of times a person would, and the notch it
     -- leaves is the same notch: anybody may finish the tree it started.
     v_cuts := tree_cuts(p_world, wx, wy) + 1;

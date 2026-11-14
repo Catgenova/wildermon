@@ -235,6 +235,8 @@ begin
     if not coalesce((select bears from tree_age_def where id = tree_age(v_data)), false) then
       return v_tree.name || ': too young to coppice.';
     end if;
+    -- And only at its woodcutting (`skillgates.ts`).
+    if tree_gate_refusal(p_world, p_uid, v_data) is not null then return tree_gate_refusal(p_world, p_uid, v_data); end if;
 
   elsif p_action = 'tap_resin' then
     if pk(p_world, p_uid, 'tap_resin', 0) <= 0 then return 'Needs perk: Tap Resin (Forester).'; end if;

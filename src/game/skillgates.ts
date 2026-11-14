@@ -3,7 +3,7 @@
  *
  * A thing has at most one gate, a skill and a level (`SkillGate`). Under it the thing is refused, for a person and for a
  * worker alike; at it, allowed. Every gate is held here, once, and the island has the same table (`skill_gate`, emitted
- * by `npm run defs` from `SKILL_GATES`), the same check (`gate_refusal`) and the same words (`gateRefusal`):
+ * by `npm run defs` from `SKILL_GATES`), the same check (`skill_gate_refusal`) and the same words (`skillGateRefusal`):
  *
  *   "Willow: needs woodcutting 70; have 12.4."
  *
@@ -93,15 +93,15 @@ export const skillWord = (skill: string): string => (SKILL_BY_ID.get(skill)?.nam
 
 /**
  * The one refusal: null at or over the level, else "Willow: needs woodcutting 70; have 12.4." The island's
- * `gate_refusal`, word for word.
+ * `skill_gate_refusal`, word for word.
  */
-export const gateRefusal = (name: string, skill: string, have: number, need: number): string | null =>
+export const skillGateRefusal = (name: string, skill: string, have: number, need: number): string | null =>
   have >= need ? null : `${name}: needs ${skillWord(skill)} ${need}; have ${have.toFixed(1)}.`;
 
 /** A thing's refusal for somebody at `have` in its gate's skill (`haveOf`), or null for none. */
 export const gatedFor = (kind: GateKind, id: string, haveOf: (skill: string) => number): string | null => {
   const g = gateOf(kind, id);
-  return g ? gateRefusal(g.name, g.skill, haveOf(g.skill), g.level) : null;
+  return g ? skillGateRefusal(g.name, g.skill, haveOf(g.skill), g.level) : null;
 };
 
 /** The felling gate on a tree tile's data, or undefined for a tree with no logs in it: those anybody clears. */

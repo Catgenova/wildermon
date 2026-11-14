@@ -4,8 +4,8 @@
 -- and maple early on", and every gate the same way, for players and for wildermon working at their own level.
 --
 -- A thing has at most one gate, a skill and a level, held once in `src/game/skillgates.ts` and emitted to `skill_gate`
--- (kind, id, name, skill, level) by `npm run defs`. The one check is `gate_refusal`, in the words mining has always
--- used: "Willow: needs woodcutting 70; have 12.4." (the browser's `gateRefusal`, word for word). A worker uses the same
+-- (kind, id, name, skill, level) by `npm run defs`. The one check is `skill_gate_refusal`, in the words mining has always
+-- used: "Willow: needs woodcutting 70; have 12.4." (the browser's `skillGateRefusal`, word for word). A worker uses the same
 -- gate against its own level, its task skill (`worker_gate_open`), never takes work over it, and one with only
 -- gated work in reach says so (`gate_idle`: idle_why 'gate', idle_what [kind, id], idle_n its tiles off).
 --
@@ -34,8 +34,8 @@ create table if not exists skill_gate (
 
 /* ---- The rule ---------------------------------------------------------------------------------------------------- */
 
--- The one refusal: null at or over the level, else "Willow: needs woodcutting 70; have 12.4." (`gateRefusal`).
-create or replace function gate_refusal(p_name text, p_skill text, p_have double precision, p_need int) returns text
+-- The one refusal: null at or over the level, else "Willow: needs woodcutting 70; have 12.4." (`skillGateRefusal`).
+create or replace function skill_gate_refusal(p_name text, p_skill text, p_have double precision, p_need int) returns text
 language sql stable as $$
   select case when p_have >= p_need then null
     else p_name || ': needs ' || lower(coalesce((select s.name from skill_def s where s.id = p_skill), replace(p_skill, '_', ' ')))
@@ -71,7 +71,7 @@ declare g skill_gate;
 begin
   g := tree_gate(p_data);
   if g.kind is null then return null; end if;
-  return gate_refusal(g.name, g.skill, skill_of(p_world, p_uid, g.skill), g.level);
+  return skill_gate_refusal(g.name, g.skill, skill_of(p_world, p_uid, g.skill), g.level);
 end $$;
 
 -- Why a feller with no tree to work within `p_range` of (`p_cx`, `p_cy`) is idle, or nulls: a tree with logs whose
@@ -152,7 +152,7 @@ select pg_temp.patch_fn('worker_idle(uuid,creature,text,integer,integer,integer,
 $o$  perform wtell(p_world, c.keeper, c.name || ' idle: no ' || work_words(p_kind)$o$,
 $n$  if c.idle_why = 'gate' and array_length(c.idle_what, 1) >= 2 then
     perform wtell(p_world, c.keeper, c.name || ' idle: only work above its level within ' || p_radius || ' tiles of ' || v_where || '. '
-      || (select gate_refusal(g.name, g.skill, task_skill(c), g.level)
+      || (select skill_gate_refusal(g.name, g.skill, task_skill(c), g.level)
             from skill_gate g where g.kind = c.idle_what[1] and g.id = c.idle_what[2]), 'error');
     return;
   end if;
