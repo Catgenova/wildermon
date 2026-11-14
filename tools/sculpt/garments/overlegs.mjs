@@ -245,7 +245,7 @@ export const OVER_LEGS = {
   leatherChest: {
     male: { liner: { top: -4.1, low: -4.95, mat: 'dark' }, follow: FOLLOW.male },
     // (her jerkin's weights as they were: following her thighs, it crossed the plate leggings' faulds more when sat)
-    female: { liner: { top: -3.9, low: -4.55, mat: 'dark', arc: [45, 125] }, follow: { top: -4.1, full: -5.0 } },
+    female: { liner: { top: -3.9, low: -4.55, mat: 'dark', arc: [45, 125] } },
   },
   plateChest: {
     male: { liner: { top: -3.9, low: -4.75, mat: 'under' }, follow: FOLLOW.male },
