@@ -320,7 +320,7 @@ export const WINDOW_BOX: KitPiece = { model: (look) => windowBoxOf(look), uses: 
 /* ---- 3. the hanging basket ------------------------------------------------------------------------ */
 
 const ROPE: Tone = toneOf('#e9d3a6', '#a88a74');
-const HANG_Z = 23, BASKET_Z = 15.5, BASKET_R = 2.6;
+const HANG_Z = 23, BASKET_Z = 15.5, BASKET_R = 3.2;
 
 /** An iron bracket off the wall at the head of a hung piece, its hook out over `y` at `z`. */
 function bracket(y: number, z: number, wood: Tone = woodTone()): KitPart[] {
@@ -346,7 +346,7 @@ function hangingBasketOf(look: KitLook): KitModel {
   parts.push({ faces: lathe(0, y, [[BASKET_Z - 0.4, 0.3], [BASKET_Z, BASKET_R * 0.7], [BASKET_Z + 1.4, BASKET_R], [BASKET_Z + 2.4, BASKET_R * 1.02], [BASKET_Z + 2.4, BASKET_R * 0.86]], 10, CLAY, 0.5,
     () => ({ crease: 0.25 })) });
   const z = BASKET_Z + 2.3;
-  parts.push(...bloomRow([[-1, y, z], [1, y + 0.3, z]], look.trim, 0.95, 3, 2.4));
+  parts.push(...bloomRow([[-1.3, y, z], [1.3, y + 0.3, z]], look.trim, 1.25, 3, 1.4));
   // Hung up: no shade on the floor under it.
   return { parts, shade: null };
 }
@@ -493,7 +493,7 @@ function frond(g: Ctx, e: Eye, from: V3, mid: V3, to: V3, n: number, w: number, 
   }
 }
 
-const FERN: RGB[] = [hex('#c2e2a0'), hex('#86b878'), hex('#557e5a')];
+const FERN: RGB[] = [hex('#d0ebb0'), hex('#9ccb88'), hex('#6c9a6c')];
 const PALM: RGB[] = [hex('#b8dca8'), hex('#78ac82'), hex('#4c7860')];
 
 function fernParts(x: number, y: number, z: number, k: number): KitPart {
@@ -774,16 +774,19 @@ function flowerCartOf(look: KitLook): KitModel {
   for (const y of [-3.9, 3.9]) {
     parts.push({ faces: lathe(-1.5, y, [[0, 0.01], [0, 0.01]], 4, W), solid: false });
     parts.push(loose([[-1.5 - WH - 0.8, y - 0.8, -0.4], [-1.5 + WH + 0.8, y + 0.8, 2 * WH + 0.4]], (g, e) => {
-      const [cx, cy] = proj(e, [-1.5, y, WH]);
-      const rx = Math.hypot(e.ux, e.uy) * WH, ry = WH * 2.25;
+      // The rim as the circle it is, turned with the cart, and six spokes to its hub.
+      const at = (a: number, r: number) => proj(e, [-1.5 + Math.cos(a) * r, y, WH + Math.sin(a) * r]);
+      const [cx, cy] = at(0, 0);
       for (const [w, c] of [[1.6, deeper(W, 0.4).shade], [1, W.lit]] as Array<[number, RGB]>) {
         g.strokeStyle = css(c);
         g.lineWidth = w;
-        g.beginPath(); g.ellipse(cx, cy, Math.max(0.6, rx), ry, 0, 0, TAU); g.stroke();
+        g.beginPath();
+        for (let i = 0; i <= 24; i++) { const [px, py] = at((i / 24) * TAU, WH); if (i) g.lineTo(px, py); else g.moveTo(px, py); }
+        g.stroke();
       }
       g.strokeStyle = css(W.shade);
       g.lineWidth = 0.5;
-      for (let i = 0; i < 6; i++) { const a = (i / 6) * TAU; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(a) * rx, cy + Math.sin(a) * ry); g.stroke(); }
+      for (let i = 0; i < 6; i++) { const [px, py] = at((i / 6) * TAU, WH); g.beginPath(); g.moveTo(cx, cy); g.lineTo(px, py); g.stroke(); }
     }));
   }
   // The bed of the cart, its sides, its legs at the handle end, and the handles.
@@ -801,7 +804,7 @@ function flowerCartOf(look: KitLook): KitModel {
     parts.push({ faces: pot(x, y, 4.8, 1.3, 2.2) });
     parts.push(bloomPart([x, y, 6.9], c, 3, 0.8, 420 + Math.round(x * 3 + y)));
   }
-  return { parts, shade: shadeOf(-7.5, 9.6, -4, 4) };
+  return { parts, shade: shadeOf(-7.5, 7, -3.6, 3.6) };
 }
 
 export const FLOWER_CART: KitPiece = { model: (look) => flowerCartOf(look), uses: { material: true, tint: true } };
@@ -933,34 +936,40 @@ void roseOf;
  * drawn as before.
  */
 export const figureTrim = (index: number, ready: boolean): number => (index < 0 ? 0 : index + 1 + (ready ? 1000 : 0));
-/** What draws a kind as a carving, by its place in the guide's kinds: set by the renderer (`render/figurines.ts`), which loads the models. */
+/** What draws a kind as a carving, by its place in the guide's kinds: set by `render/gardenlook.ts`, which loads the models. */
 export const carving: { draw: ((g: Ctx, index: number, w: number, h: number, wood: RGB) => boolean) | null } = { draw: null };
 
 function figureOf(look: KitLook): KitModel {
   const W = woodTone(look.material, look.tint, 0.6);
   const t = Math.max(0, Math.floor(look.trim ?? 0));
   const index = (t % 1000) - 1;
+  const ready = t >= 1000 && index >= 0;
   const parts: KitPart[] = [];
   parts.push({ faces: slab(-2.2, 2.2, -2.2, 2.2, 0, 1.2, deeper(W, 0.15), { corner: 0.3, bevel: 0.15, paint: woodSides(701, 'x') }), edges: true });
-  const H = 6.5;
-  parts.push(loose([[-2.4, -2.4, 1.2], [2.4, 2.4, 1.2 + H]], (g, e) => {
+  const H = 8.5;
+  if (!ready) {
+    // No kind yet, or its model not come in: the block roughed out, two lumps stepping in.
+    parts.push({ faces: slab(-1.9, 1.9, -1.7, 1.7, 1.2, 5.4, W, { corner: 0.5, bevel: 0.3, paint: woodSides(703, 'y') }), edges: true });
+    parts.push({ faces: slab(-1.5, 1.5, -1.3, 1.3, 5.4, 1.2 + H, W, { corner: 0.6, bevel: 0.3, paint: woodSides(704, 'y') }), edges: true });
+    return { parts, shade: shadeOf(-2.2, 2.2, -2.2, 2.2) };
+  }
+  parts.push(loose([[-2.8, -2.8, 1.2], [2.8, 2.8, 1.2 + H]], (g, e) => {
     const [x, y] = proj(e, [0, 0, 1.2]);
-    const pw = 4.8 * across(e) * 1.1, ph = H * 2.25;
-    g.save();
-    g.translate(x - pw / 2, y - ph);
-    const drawn = index >= 0 && carving.draw?.(g, index, pw, ph, W.lit);
-    g.restore();
-    if (!drawn) {
-      // A block roughed out, before the kind's model has come in.
-      leafBlob(g, e, [0, 0, 4], 2, [W.lit, mix(W.lit, W.shade, 0.5), W.shade], 702, 0.9);
-    }
+    const pw = 5.6 * across(e) * 1.1, ph = H * 2.25;
+    // Ruled round in the wood's own deep shade, as a solid is.
+    inked(g, mix(W.shade, KIT_INK_RGB, 0.5), (h) => {
+      h.save();
+      h.translate(x - pw / 2, y - ph);
+      carving.draw?.(h, index, pw, ph, W.lit);
+      h.restore();
+    });
   }));
   return { parts, shade: shadeOf(-2.2, 2.2, -2.2, 2.2) };
 }
 
 export const CARVED_FIGURE: KitPiece = {
   model: (look) => figureOf(look), uses: { trim: true, material: true, tint: true },
-  states: [0, 4, 8, 20, 40].map((i) => ({ trim: figureTrim(i, true), label: `kind ${i + 1}` })),
+  states: [...[0, 4, 8, 20, 40].map((i) => ({ trim: figureTrim(i, true), label: `kind ${i + 1}` })), { trim: 0, label: 'no kind' }],
 };
 
 /* ---- 15. the trophy plaque ---------------------------------------------------------------------------- */

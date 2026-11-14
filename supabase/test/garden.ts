@@ -89,9 +89,9 @@ check('the fine carpentry pieces are made with fine carpentry and the rest with 
   && RECIPE_BY_ID.get(`make_${HANGING_BASKET}`)?.skill === 'ropemaking' && RECIPE_BY_ID.get(`make_${HEDGE}`)?.skill === 'forestry'
   && RECIPE_BY_ID.get(`make_${POTTED_FERN}`)?.skill === 'pottery' && RECIPE_BY_ID.get(`make_${WISTERIA_PERGOLA}`)?.skill === 'carpentry');
 check('a hanging basket is rope and a clay pot; a topiary tub, a bonsai and a hedge take sprouts; a folding screen cloth',
-  ['rope', 'clay_pot'].every((i) => RECIPE_BY_ID.get(`make_${HANGING_BASKET}`)?.inputs.some((x) => x.item === i))
-  && [TOPIARY_TUB, BONSAI].every((p) => RECIPE_BY_ID.get(`make_${p}`)?.inputs.some((x) => x.item === 'sprout'))
-  && RECIPE_BY_ID.get(`make_${HEDGE}`)?.inputs.some((x) => x.item === 'sprout' && x.count === 4)
+  ['rope', 'clay_pot'].every((i) => !!RECIPE_BY_ID.get(`make_${HANGING_BASKET}`)?.inputs.some((x) => x.item === i))
+  && [TOPIARY_TUB, BONSAI].every((p) => !!RECIPE_BY_ID.get(`make_${p}`)?.inputs.some((x) => x.item === 'sprout'))
+  && !!RECIPE_BY_ID.get(`make_${HEDGE}`)?.inputs.some((x) => x.item === 'sprout' && x.count === 4)
   && !!RECIPE_BY_ID.get(`make_${FOLDING_SCREEN}`)?.inputs.some((x) => x.item === 'cloth'));
 check('a folding screen takes a dye, on the island too', psql(`select count(*) from dyeable_item where id = '${FOLDING_SCREEN}'`) === '1');
 
