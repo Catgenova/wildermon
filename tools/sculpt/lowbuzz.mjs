@@ -35,11 +35,11 @@ const hash = (i, j) => { const x = Math.sin(i * 12.9898 + j * 78.233) * 43758.54
 const ease = (x) => { const t = Math.min(1, Math.max(0, x)); return t * t * (3 - 2 * t); };
 
 /** The skull's triangles with their corners' indices (the head's skin, the ears left out). */
-function skullTris(B) {
+export function skullTris(B) {
   return B.tris.filter((t) => { const p = B.polys[t.poly]; return p.part === 'head' && p.mat === 'skin' && !p.ear; }).map((t) => ({ v: t.v, P: t.v.map((i) => B.verts[i]), poly: t.poly }));
 }
 /** Where a ray from o along unit d last crosses the triangles: { t, tri, u, v } (barycentric on the triangle), t 0 for none. */
-function rayFar(T, o, d) {
+export function rayFar(T, o, d) {
   let best = { t: 0, tri: -1, u: 0, v: 0 };
   T.forEach(({ P: [a, b, c] }, i) => {
     const e1 = sub(b, a), e2 = sub(c, a), p = cross(d, e2), det = dot(e1, p);
@@ -61,7 +61,7 @@ export function hemAt(table, th) {
 
 /** A polygon split into triangles: a quad on its shorter diagonal, a larger one by ear clipping in the plane across its
  * mean direction from the skull's middle. */
-function trisOf(verts, v, C) {
+export function trisOf(verts, v, C) {
   if (v.length === 3) return [v];
   if (v.length === 4) { const [a, b, c, d] = v; return Math.hypot(...sub(verts[a], verts[c])) <= Math.hypot(...sub(verts[b], verts[d])) ? [[a, b, c], [a, c, d]] : [[a, b, d], [b, c, d]]; }
   const m = unit(v.reduce((s, i) => add(s, sub(verts[i], C)), [0, 0, 0]));
@@ -220,13 +220,13 @@ export function buildBuzz(rig, style = BUZZ, { clear = true } = {}) {
 }
 
 /** The hair's triangles from its polygons (each polygon's own). */
-function retri(hair) {
+export function retri(hair) {
   hair.tris = hair.polys.flatMap((p, pi) => trisOf(hair.verts, p.v, hair.centre).map((t) => [...t, pi]));
 }
 
 /** The skin's polygons (the skull's: the ears and the face's parts left out) the shell covers whole: every corner seen
  * from the skull's middle under it. */
-function scalpOf(B, C, outTris) {
+export function scalpOf(B, C, outTris) {
   const memo = new Map();
   const covered = (vi) => { if (!memo.has(vi)) memo.set(vi, rayFar(outTris, C, unit(sub(B.verts[vi], C))).t > 0); return memo.get(vi); };
   const out = new Set();
@@ -267,12 +267,12 @@ export function skinShows(rig, hair, show = BUZZ.show) {
  * the shoulders, the skin that bends with the neck) at rest or in a pose, or with the skin within `show` of its outside
  * at rest, has its triangle's corners moved out from the skull's middle `step` at a time (where the skin shows, by most
  * of what it falls short) (an inner corner's outer mate with it, the
- * shell kept its least thickness), until none is.
+ * shell kept its least thickness), until none is. poses: the body's poses it is kept clear in (the bob's, posesOf, unless given).
  */
 const CLEAR = 0.002;
-function clearBody(rig, hair, S, step = 0.003) {
+export function clearBody(rig, hair, S, step = 0.003, poses = posesOf(rig.who)) {
   const { verts } = hair, C = hair.centre, { mate } = hair.grid, outerOf = new Map(mate.map((m, i) => [m, i]));
-  const states = [{ P: rig.B.verts, f: null }, ...posesOf(rig.who).map((pose) => { const f = posed(rig, pose); return { P: skin(rig, f), f }; })];
+  const states = [{ P: rig.B.verts, f: null }, ...poses.map((pose) => { const f = posed(rig, pose); return { P: skin(rig, f), f }; })];
   // (the scalp's edge, the skull's skin the hair covers in part, left out: the inside's chords under its facets are
   // under the outside too, which `show` keeps over it)
   // (at rest the hair drawn in `CLEAR` toward the skull's middle: a face that only touches the face's or the ears' skin

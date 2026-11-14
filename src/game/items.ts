@@ -1108,13 +1108,15 @@ export interface RarityDef {
    * how often one lands on it).
    */
   blood: number;
+  /** What it does for the charges a furnace holds (`chargesFor`): times this many. */
+  charge: number;
 }
 
 export const RARITIES: RarityDef[] = [
-  { name: '', boost: 1, keep: 1, ceiling: 0, colour: '', css: '', size: 1, blood: 1 },
-  { name: 'rare', boost: 1.1, keep: 0.8, ceiling: 5, colour: '#8fc8f0', css: 'var(--rarity-rare, #8fc8f0)', size: 1.5, blood: 1.2 },
-  { name: 'supreme', boost: 1.25, keep: 0.6, ceiling: 12, colour: '#c79bf0', css: 'var(--rarity-supreme, #c79bf0)', size: 2, blood: 1.4 },
-  { name: 'fantastic', boost: 1.5, keep: 0.35, ceiling: 25, colour: '#f0c060', css: 'var(--rarity-fantastic, #f0c060)', size: 3, blood: 1.6 },
+  { name: '', boost: 1, keep: 1, ceiling: 0, colour: '', css: '', size: 1, blood: 1, charge: 1 },
+  { name: 'rare', boost: 1.1, keep: 0.8, ceiling: 5, colour: '#8fc8f0', css: 'var(--rarity-rare, #8fc8f0)', size: 1.5, blood: 1.2, charge: 1.5 },
+  { name: 'supreme', boost: 1.25, keep: 0.6, ceiling: 12, colour: '#c79bf0', css: 'var(--rarity-supreme, #c79bf0)', size: 2, blood: 1.4, charge: 2 },
+  { name: 'fantastic', boost: 1.5, keep: 0.35, ceiling: 25, colour: '#f0c060', css: 'var(--rarity-fantastic, #f0c060)', size: 3, blood: 1.6, charge: 3 },
 ];
 
 /**
@@ -1154,6 +1156,19 @@ export const rarityOf = (item: { rare?: number }): RarityDef => RARITIES[Math.ma
  * same kiln. Each step has to be a step.
  */
 export const RARITY_ROOM = 0.05;
+
+/**
+ * Charges a furnace holds (a smelter's lumps, a kiln's pieces): asked for, "smelters can hold up to 100 charges at
+ * 100ql. 1 charge per ql. rare bonus 1.5x, supreme 2x, fantastic 3x. use for other similar utilities". `CHARGE_PER_QL`
+ * a whole QL, up to `CHARGE_QL`, at least one, times its rarity's `charge`. The island's `furnace_capacity`.
+ */
+export const CHARGE_PER_QL = 1;
+export const CHARGE_QL = 100;
+export function chargesFor(thing: { ql: number; rare?: number }): number {
+  const step = Math.max(0, Math.min(RARITIES.length - 1, thing.rare ?? 0));
+  const ql = Math.max(1, Math.min(CHARGE_QL, Math.floor(thing.ql)));
+  return Math.max(1, Math.round(ql * CHARGE_PER_QL * RARITIES[step].charge));
+}
 export function roomFor(base: number, thing: { rare?: number }): number {
   const plain = Math.round(base);
   const step = Math.max(0, Math.min(RARITIES.length - 1, thing.rare ?? 0));

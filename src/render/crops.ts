@@ -2,6 +2,7 @@
  * Crops drawn: a planter's plants flat (`cropPlant`, a row along the box), and
  * a field's as solids lit by the sun (`fieldBake`, below).
  */
+import { RIPE } from '../game/farming';
 import { mulberry32 } from '../world/noise';
 import { HEIGHT_SCALE, UNITS_PER_TILE } from './iso';
 import { KIT_INK, KIT_INK_W } from './kit/core';
@@ -174,6 +175,24 @@ const FLOWER: Record<string, string> = {
 };
 /** Corn's tassel, and the husk round a cob. */
 const TASSEL = '#cdb07e';
+/**
+ * A stage the Tend action takes (`tend_crop`: not ripe, not tended at this
+ * stage) drawn one of two ways. Still to tend: dry pale soil, weeds in the
+ * furrows. Tended: dark damp soil, water along the furrows, each plant's foot
+ * hoed round.
+ */
+export const DRY_SOIL = 'rgba(244,226,186,0.27)';
+const DRY_CREST = 'rgba(255,246,222,0.4)';
+export const DAMP_SOIL = 'rgba(54,34,20,0.34)';
+const DAMP_CREST = 'rgba(255,236,214,0.26)';
+export const WATER_LINE = 'rgba(190,224,242,0.62)';
+const HOED = 'rgba(38,22,12,0.38)';
+/** Weeds: a yellow-green no crop is, a lit blade and a darker one. */
+export const WEED = '#c4d43c';
+const WEED_DARK = '#8aa82a';
+/** How many weeds a tile still to tend has, and how tall one stands, in height units. */
+const WEEDS = 18;
+const WEED_TALL = 2.6;
 
 /** Plants a row on a tile, by crop: a stage before ripe has the same. */
 const PER_ROW: Record<string, number> = {
@@ -507,17 +526,22 @@ export function cropFrame(): void {
  * A tile of field: `stage` -1 for one tilled and lying fallow, else the crop
  * `id` at that stage; `dormant` a field waiting out a winter, which grows
  * nothing: its green gone dull, a rime on its ridges and on whatever faces up.
+ * `tended` whether the stage it is at has been tended (`Crop.tendedNow`), which
+ * shows at every stage before ripe, in a winter as well, as Tend goes then too.
  * Seen from `turn`, under the sun's `step` (`sunStepOf`), `scale` pixels to a
  * pixel at zoom one, anchored at the tile's middle.
  *
  * Made now, or, once this frame has spent `CROP_BAKE_MS`, the same crop's
- * last bake in another layout, step of the sun or scale stands in; with none and
- * `CROP_COLD_MS` spent, the sown ground does until its turn comes.
+ * last bake in another layout, step of the sun or scale stands in -- tended or
+ * not as asked, else the other's; with none and `CROP_COLD_MS` spent, the sown
+ * ground does until its turn comes.
  */
-export function fieldBake(id: string, stage: number, leaf: string, fruit: string, dormant: boolean, turn: number, step: number, scale: number, layout = 0): CropBake {
+export function fieldBake(id: string, stage: number, leaf: string, fruit: string, dormant: boolean, tended: boolean, turn: number, step: number, scale: number, layout = 0): CropBake {
   // Bare and sown ground is the same whatever the crop and however it is laid out: one bake for all of them.
   if (stage <= 0) { id = ''; layout = 0; }
-  const head = `${id}|${stage}|${dormant ? 1 : 0}|${turn}`;
+  // Tended or not only shows at a stage the Tend action takes: fallow ground and a ripe crop are one picture either way.
+  const care = stage >= 0 && stage < RIPE ? (tended ? 2 : 1) : 0;
+  const head = `${id}|${stage}|${dormant ? 1 : 0}|${care}|${turn}`;
   const key = `${head}|${layout}|${step}|${scale}`;
   const had = cropBakes.get(key);
   if (had) {
@@ -525,14 +549,15 @@ export function fieldBake(id: string, stage: number, leaf: string, fruit: string
     return had.spr;
   }
   if (stage > 0 && cropSpent >= CROP_BAKE_MS) {
-    const near = cropLatest.get(head);
+    // Tended or not, the other's picture of the same crop and stage before bare ground: the tile is only a frame or two from its own.
+    const near = cropLatest.get(head) ?? (care ? cropLatest.get(`${id}|${stage}|${dormant ? 1 : 0}|${3 - care}|${turn}`) : undefined);
     if (near || cropSpent >= CROP_COLD_MS) {
       cropStats.standIns++;
-      return near ?? fieldBake('', 0, '', '', dormant, turn, step, scale);
+      return near ?? fieldBake('', 0, '', '', dormant, tended, turn, step, scale);
     }
   }
   const t0 = performance.now();
-  const spr = bakeField(id, stage, leaf, fruit, dormant, turn, step, scale, layout);
+  const spr = bakeField(id, stage, leaf, fruit, dormant, care, turn, step, scale, layout);
   const ms = performance.now() - t0;
   cropSpent += ms;
   cropStats.bakes++;
@@ -547,7 +572,7 @@ export function fieldBake(id: string, stage: number, leaf: string, fruit: string
       if (cropPixels <= CROP_PIXELS * 0.8 || b.used === cropFrameNo) break;
       cropBakes.delete(k);
       cropPixels -= b.spr.canvas.width * b.spr.canvas.height;
-      const h = k.split('|').slice(0, 4).join('|');
+      const h = k.split('|').slice(0, 5).join('|');
       if (cropLatest.get(h) === b.spr) cropLatest.delete(h);
     }
   }
@@ -562,7 +587,8 @@ export function forgetFields(): void {
   cropPixels = 0;
 }
 
-function bakeField(id: string, stage: number, leaf0: string, fruit0: string, dormant: boolean, turn: number, step: number, scale: number, layout: number): CropBake {
+/** `care`: 0 at a stage nobody tends (fallow, ripe), 1 still to tend, 2 tended (`fieldBake`). */
+function bakeField(id: string, stage: number, leaf0: string, fruit0: string, dormant: boolean, care: number, turn: number, step: number, scale: number, layout: number): CropBake {
   const leaf = dormant ? mixH(leaf0, DORMANT_LEAF, 0.6) : leaf0;
   const fruit = dormant ? mixH(fruit0, DORMANT_FRUIT, 0.45) : fruit0;
   const e = eyeOf(0, turn);
@@ -572,6 +598,7 @@ function bakeField(id: string, stage: number, leaf0: string, fruit0: string, dor
   // Back to front.
   const near = (p: V3): number => p[0] * e.toward[0] + p[1] * e.toward[1];
   feet.sort((a, b) => near(a.at) - near(b.at));
+  const weeds = care === 1 ? weedsOf(layout, stage, R0(id)) : [];
   // The sun across the screen, for which side of a round thing is lit.
   const look = lookOf(light, e, dormant);
   // Each way the plant grows, painted once, its foot at the origin: the same for every layout of the tile.
@@ -595,6 +622,7 @@ function bakeField(id: string, stage: number, leaf0: string, fruit0: string, dor
     grow(fx + st.x0, fy + st.y0);
     grow(fx + st.x0 + st.cv.width / scale, fy + st.y0 + st.cv.height / scale);
   }
+  for (const w of weeds) grow(...P(w), WEED_TALL * HEIGHT_SCALE + 2);
   x0 = Math.floor(x0); y0 = Math.floor(y0); x1 = Math.ceil(x1); y1 = Math.ceil(y1);
   const canvas = document.createElement('canvas');
   canvas.width = Math.max(1, Math.ceil((x1 - x0) * scale));
@@ -631,6 +659,11 @@ function bakeField(id: string, stage: number, leaf0: string, fruit0: string, dor
     g.fillStyle = d >= 0 ? rgb(SLOPE_LIT, Math.min(0.55, d * 1.6)) : rgb(SLOPE_DARK, Math.min(0.55, -d * 1.6));
     g.fill(faces);
   }
+  if (care) {
+    // A stage to tend: the soil pale and dry still to tend, dark and damp tended -- under a winter's snow, which lies white on either.
+    g.fillStyle = care === 1 ? DRY_SOIL : DAMP_SOIL;
+    g.fill(tile);
+  }
   const lineAlong = (y: number, z: number, path: Path2D): void => {
     const [a, b] = [P([-HALF, y, z]), P([HALF, y, z])];
     path.moveTo(a[0], a[1]);
@@ -655,8 +688,37 @@ function bakeField(id: string, stage: number, leaf0: string, fruit0: string, dor
   g.strokeStyle = dormant ? RIME : CREST_LIGHT;
   g.lineWidth = dormant ? 1.6 : 1.1;
   g.stroke(crests);
+  if (care === 1) {
+    // Still to tend: its ridges dusty.
+    g.strokeStyle = DRY_CREST;
+    g.lineWidth = 1.3;
+    g.stroke(crests);
+  } else if (care === 2) {
+    // Tended: its ridges crisp, each plant's foot hoed round, and water along the furrows -- frozen out of sight in a winter.
+    g.strokeStyle = DAMP_CREST;
+    g.lineWidth = 0.8;
+    g.stroke(crests);
+    if (feet.length) {
+      const hoed = new Path2D();
+      for (const f of feet) {
+        const [fx, fy] = P(f.at);
+        const rx = 1.7 * ACROSS;
+        hoed.moveTo(fx + rx, fy);
+        hoed.ellipse(fx, fy, rx, rx / 2, 0, 0, Math.PI * 2);
+      }
+      g.fillStyle = HOED;
+      g.fill(hoed);
+    }
+    if (!dormant) {
+      const water = new Path2D();
+      for (let j = 1; j < ROWS; j++) lineAlong(-HALF + j * ROW, 0, water);
+      g.strokeStyle = WATER_LINE;
+      g.lineWidth = 0.75;
+      g.stroke(water);
+    }
+  }
   if (stage === 0) {
-    // Sown: a dark drill pressed along each crest, the seed in it.
+    // Sown: a dark drill pressed along each crest, the seed in it: over the soil tended or not, so a sown field never reads as a fallow one.
     g.strokeStyle = DRILL;
     g.lineWidth = 1.9;
     g.stroke(crests);
@@ -688,13 +750,71 @@ function bakeField(id: string, stage: number, leaf0: string, fruit0: string, dor
   }
   g.restore();
 
-  /* ---- the plants, back to front: each stamped where it stands, on whole pixels ---- */
-  g.setTransform(1, 0, 0, 1, 0, 0);
-  for (const f of feet) {
-    const [fx, fy] = P(f.at), st = stamps[f.v];
-    g.drawImage(st.cv, Math.round((fx + st.x0 - x0) * scale), Math.round((fy + st.y0 - y0) * scale));
+  /* ---- the plants, back to front: each stamped where it stands, on whole pixels; and a tile still to tend, its weeds among them ---- */
+  const order = [...feet.map((f) => ({ near: near(f.at), f, w: null as V3 | null })), ...weeds.map((w) => ({ near: near(w), f: null, w }))];
+  order.sort((a, b) => a.near - b.near);
+  const weedLit = Math.min(0.85, 0.4 + look.stalkLit);
+  const weedCols = [WEED, WEED_DARK].map((c) => litCol(dormant ? mixH(c, DORMANT_LEAF, 0.55) : c, weedLit));
+  for (const { f, w } of order) {
+    if (f) {
+      const [fx, fy] = P(f.at), st = stamps[f.v];
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.drawImage(st.cv, Math.round((fx + st.x0 - x0) * scale), Math.round((fy + st.y0 - y0) * scale));
+    } else if (w) {
+      g.setTransform(scale, 0, 0, scale, -x0 * scale, -y0 * scale);
+      weedAt(g, P, w, weedCols);
+    }
   }
   return { canvas, w: x1 - x0, h: y1 - y0, ax: -x0, ay: -y0 };
+}
+
+const R0 = (id: string): number => fieldHash(id || 'sown');
+
+/**
+ * Where a tile still to tend has its weeds: in the furrows between its rows and
+ * along its edges, a few on the ridges between plants, by the layout and the
+ * crop's own roll; the same at every stage, so a weed stands where it stood.
+ */
+function weedsOf(layout: number, stage: number, seed: number): V3[] {
+  const R = mulberry32(seed + 4409 + layout * 271);
+  const E = HALF - RIM - 1.2;
+  const at: V3[] = [];
+  for (let i = 0; i < WEEDS; i++) {
+    const ridge = i % 5 === 4;
+    const j = Math.floor(R() * (ROWS + 1));
+    const y = ridge ? -HALF + (Math.min(ROWS - 1, j) + 0.5) * ROW : Math.max(-E, Math.min(E, -HALF + j * ROW));
+    at.push([-E + R() * 2 * E, y + (R() - 0.5) * 0.8, ridge ? RIDGE * 0.8 : 0.1]);
+  }
+  // Sown ground has nothing on its ridges but the drill.
+  return stage === 0 ? at.filter((p) => p[2] < 0.5) : at;
+}
+
+/** A weed: a tuft of blades splayed from `w`, `k` times a field's, inked as a stalk is, in `cols` (lit and darker). */
+function weedAt(g: CanvasRenderingContext2D, P: (p: V3) => P2, w: V3, cols: string[], k = 1): void {
+  const blades: P2[][] = [];
+  const turn0 = (w[0] * 7.3 + w[1] * 3.1) % TAU;
+  for (let i = 0; i < 5; i++) {
+    const a = turn0 + i * 1.26, tall = WEED_TALL * k * (0.65 + ((i * 37) % 7) / 14);
+    blades.push([P(w), P(out(w, a, 0.5 * k, tall * 0.6)), P(out(w, a, 1.3 * k, tall))]);
+  }
+  const path = (bs: P2[][]): void => {
+    g.beginPath();
+    for (const b of bs) {
+      g.moveTo(b[0][0], b[0][1]);
+      g.quadraticCurveTo(b[1][0], b[1][1], b[2][0], b[2][1]);
+    }
+    g.stroke();
+  };
+  // Its ink, then its lit blades and its darker ones, a stroke each.
+  const w0 = Math.max(0.35, 0.6 * k);
+  g.strokeStyle = STALK_INK;
+  g.lineWidth = w0 + KIT_INK_W * 1.6;
+  path(blades);
+  g.lineWidth = w0;
+  for (const odd of [0, 1]) {
+    g.strokeStyle = cols[odd];
+    path(blades.filter((_, i) => i % 2 === odd));
+  }
 }
 
 /** How a bake's plants are lit: the light, the sun's way across the screen, a stalk's light, and whether it is a winter. */
@@ -715,6 +835,8 @@ function lookOf(light: Light, e: Eye, dormant: boolean): PlantLook {
 
 /* ---- a planter's row ------------------------------------------------------------------- */
 
+/** How big a weed in a planter is, against one in a field: whatever size the crop is drawn at there. */
+const PLANTER_WEED = 0.75;
 /** The sun a planter's plants are lit by: a kit piece is baked once, so the late morning's. */
 const PLANTER_SUN = Math.round(SUN_STEPS * 0.4);
 
@@ -743,17 +865,24 @@ export function planterTall(id: string, stage: number, k: number): number {
 /**
  * A planter's row of a crop at a stage, `k` times a field's size, seen by a
  * kit piece's eye: the field's own plants (`plantOf`), lit and inked as
- * they are, back to front, each foot at one of `at`.
+ * they are, back to front, each foot at one of `at`; and `weeds`, a planter
+ * still to tend's, among them (`weedAt`), at a sown one's as well.
  */
-export function planterRow(g: CanvasRenderingContext2D, e: Eye, at: V3[], id: string, stage: number, leaf: string, fruit: string, k: number): void {
-  if (stage < 1) return;
-  const kinds = kindsOf(id, stage, leaf, fruit).map((ops) => sized(ops, k));
+export function planterRow(g: CanvasRenderingContext2D, e: Eye, at: V3[], id: string, stage: number, leaf: string, fruit: string, k: number, weeds: V3[] = []): void {
+  if (stage < 1 && !weeds.length) return;
+  const kinds = stage >= 1 ? kindsOf(id, stage, leaf, fruit).map((ops) => sized(ops, k)) : [];
   const look = lookOf(lightOf(PLANTER_SUN), e, false);
-  const order = at.map((p, i) => ({ p, i, d: p[0] * e.toward[0] + p[1] * e.toward[1] })).sort((a, b) => a.d - b.d);
+  const plants = stage >= 1 ? at.map((p, i) => ({ p, i, weed: false })) : [];
+  const order = [...plants, ...weeds.map((p, i) => ({ p, i, weed: true }))].map((o) => ({ ...o, d: o.p[0] * e.toward[0] + o.p[1] * e.toward[1] })).sort((a, b) => a.d - b.d);
+  const P = (q: V3): P2 => proj(e, q);
+  const weedCols = [WEED, WEED_DARK].map((c) => litCol(c, Math.min(0.85, 0.4 + look.stalkLit)));
   g.save();
   g.lineCap = 'round';
   g.lineJoin = 'round';
-  for (const { p, i } of order) paintPlant(g, kinds[i % VARIANTS], (q) => proj(e, [p[0] + q[0], p[1] + q[1], p[2] + q[2]]), look);
+  for (const { p, i, weed } of order) {
+    if (weed) weedAt(g, P, p, weedCols, PLANTER_WEED);
+    else paintPlant(g, kinds[i % VARIANTS], (q) => proj(e, [p[0] + q[0], p[1] + q[1], p[2] + q[2]]), look);
+  }
   g.restore();
 }
 

@@ -425,6 +425,19 @@
     "why": "Settings for the person at the screen, drawn in Chrome on a wood of solid oaks and rose bushes: Low-end graphics, and Low power on a phone, draw every tree and bush flat, Full and Fast draw them solid; Motion Reduced, or System under prefers-reduced-motion, stops the sway on every frame and leaves a 2 s transition at next to nothing; a Text size preset scales the interface by its share; every row of the Keys tab takes a new key and goes back with its reset; no key is under two things out of the box, and a kept table with one is mended; every key main.ts handles is a row."
   },
   {
+    "file": "supabase/test/croptend.ts",
+    "title": "A crop still to tend and a tended one look different at every stage before ripe",
+    "shard": 1,
+    "external": [
+      "esbuild",
+      "playwright-core"
+    ],
+    "env": {
+      "CROPTEND_STRICT": "1"
+    },
+    "why": "Asked for: \"a distinct Tendable/Tended difference on each crop model for the cycles pre harvest\". Tend goes on a crop not ripe and not tended at its stage, in a winter too. Drawn in Chrome, every crop at sown, sprouting and growing, by day, in a winter and at night, as a field tile and drawn flat: still to tend and tended are pictures of their own a quarter of their pixels or more apart; ripe is one picture either way; a planter's trim keeps tended before ripe only."
+  },
+  {
     "file": "supabase/test/saddle.ts",
     "title": "Somebody else is drawn once, in a saddle or at the reins",
     "shard": 1,

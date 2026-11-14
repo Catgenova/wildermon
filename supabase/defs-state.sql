@@ -353,6 +353,7 @@ alter table rarity_def add column if not exists word text not null default '';
 alter table rarity_def add column if not exists lift text not null default '';
 alter table rarity_def add column if not exists size real not null default 1;
 alter table rarity_def add column if not exists blood real not null default 1;
+alter table rarity_def add column if not exists charge real not null default 1;
 create table if not exists dye_def (
   id text primary key, name text not null, word text not null
 );
@@ -2189,11 +2190,13 @@ insert into look_option values ('hair', 'ponytail', 18, 'High ponytail', null, f
 insert into look_option values ('hair', 'sideshave', 19, 'Side shave', null, false);
 insert into look_option values ('hair', 'twinbraids', 20, 'Twin braids', null, false);
 insert into look_option values ('hair', 'waves', 21, 'Long waves', null, false);
+insert into look_option values ('hair', 'balding', 22, 'Balding', null, false);
+insert into look_option values ('hair', 'monk', 23, 'Monk cut', null, false);
 insert into look_legacy values ('gender', 'man', '{"gender":"man"}');
 insert into look_legacy values ('gender', 'woman', '{"gender":"woman"}');
 insert into look_legacy values ('gender', 'neither', '{"gender":"man"}');
 insert into look_legacy values ('hair', 'bald', '{"hair":"bald"}');
-insert into look_legacy values ('hair', 'tonsure', '{"hair":"bald"}');
+insert into look_legacy values ('hair', 'tonsure', '{"hair":"monk"}');
 insert into look_legacy values ('hair', 'crop', '{"hair":"swept"}');
 insert into look_legacy values ('hair', 'short', '{"hair":"crew"}');
 insert into look_legacy values ('hair', 'bowl', '{"hair":"bob"}');
@@ -3069,9 +3072,9 @@ insert into stone_bed values (12);
 insert into stone_bed values (18);
 insert into stone_bed values (19);
 insert into stone_bed values (20);
-insert into rarity_def values ('rare', 1, 1.1, 0.8, 5, 0.01, 'Rarity: rare.', 'Rarity raised: rare.', 1.5, 1.2);
-insert into rarity_def values ('supreme', 2, 1.25, 0.6, 12, 0.1, 'Rarity: supreme.', 'Rarity raised: supreme.', 2, 1.4);
-insert into rarity_def values ('fantastic', 3, 1.5, 0.35, 25, 0.1, 'Rarity: fantastic.', 'Rarity raised: fantastic.', 3, 1.6);
+insert into rarity_def values ('rare', 1, 1.1, 0.8, 5, 0.01, 'Rarity: rare.', 'Rarity raised: rare.', 1.5, 1.2, 1.5);
+insert into rarity_def values ('supreme', 2, 1.25, 0.6, 12, 0.1, 'Rarity: supreme.', 'Rarity raised: supreme.', 2, 1.4, 2);
+insert into rarity_def values ('fantastic', 3, 1.5, 0.35, 25, 0.1, 'Rarity: fantastic.', 'Rarity raised: fantastic.', 3, 1.6, 3);
 insert into dye_def values ('woad', 'Woad', 'blue');
 insert into dye_def values ('madder', 'Madder', 'red');
 insert into dye_def values ('scarlet', 'Scarlet', 'scarlet');

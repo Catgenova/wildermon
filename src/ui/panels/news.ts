@@ -119,11 +119,11 @@ import { WALK_FRAMES } from '../../render/figure';
 import { EMOTE_BY_ID } from '../../game/emotes';
 import { SPELL_VISUALS } from '../../render/spells';
 import { furnitureDef, liquidCapacity, POND_EVERY, STATION_REACH, WATER_AT_HAND, type PlacedFurniture } from '../../game/furniture';
-import { billWords, countOf, DRINK_LITRES, LIQUID_NAME, LITRE_KG, lyeAshFor, LYE_ASH_PER_LITRE, TAN_LYE, type Item } from '../../game/items';
+import { billWords, CHARGE_PER_QL, CHARGE_QL, chargesFor, countOf, DRINK_LITRES, LIQUID_NAME, LITRE_KG, lyeAshFor, LYE_ASH_PER_LITRE, RARITY_ROOM, TAN_LYE, type Item } from '../../game/items';
 import { RUNE_GATE, RUNE_GATE_FADE, RUNE_GATE_GLOW_REACH, RUNE_GATE_REACH, RUNE_GATE_RISE, runeGateName } from '../../game/runegate';
 import { COIN_METALS, METALS, coinPurity, INGOT_LUMPS, INGOT_WEIGHT, MOULD_BY_ID, MOULD_SKILL, SMITH_TOOL } from '../../game/metal';
 import { meltFits, meltLumps, meltQl } from '../../game/melt';
-import { furnaceMadeSaid, meltingSaid, SMELTER_CAPACITY } from '../../game/smelter';
+import { furnaceMadeSaid, meltingSaid } from '../../game/smelter';
 import { TOOL_JOBS } from '../../game/jobtools';
 import { CLIP_OF_TOOL, clipOfJob } from '../../sculpt/anim/routes';
 import { ORDER_LIFE } from '../../game/orders';
@@ -137,7 +137,7 @@ import { BANNER_MS, LEAVING_MS } from '../deedbanner';
 import { JAR_SEEDS, SEED_JAR, STAMP, STAMP_GOES, STAMP_RARE, TABLET, TABLET_BELOW, TABLET_GAIN, WHETSTONE } from '../../game/relicuse';
 import { RELICS } from '../../game/archaeology';
 import { BRACE_MOST, BRACE_STEP, BRIDLE_PACE, COLLAR_CUT } from '../../game/creatures';
-import { cropYield, RIPE, seedSays } from '../../game/farming';
+import { cropYield, RIPE, seedSays, STAGE_NAMES } from '../../game/farming';
 import { SEAT_ELSEWHERE, SEAT_STALE_S } from '../../net/supabase';
 import { HEARTBEAT, IDLE_LOGOUT, LAND_STEP, LAND_UNFOGGED_EVERY, RECONCILE_EVERY, WORKER_REST_EVERY, WORKER_REST_FIRST, WORKER_REST_MOST, UNSTICK_REACH, UNSTICK_SEARCH } from '../../game/keep';
 import { REPORTS_A_SESSION } from '../../net/errors';
@@ -4419,8 +4419,8 @@ export const NEWS: News[] = [
     ],
   },
   {
-    n: 579,
-    day: '2026-11-13',
+    n: 582,
+    day: '2026-11-14',
     lines: () => [
       'Changed: bodies drawn in one GL pass a frame, put down after one wait for the GL (was: one wait a body). Busy stretch of 30 at work and fighting, no graphics card: 36 to 12 ms a frame.',
       `Changed: bodies drawn within ${BODY_BUDGET_MS} ms a frame on average, the most wanted first (was: 4 a frame, 1 without a graphics card; a body new in view or at a new size whatever the count). Zoom change over a crowd of 60, no graphics card: 1000 to 15 ms a frame.`,
@@ -4429,6 +4429,25 @@ export const NEWS: News[] = [
       `Changed: bodies under ${BODY_RATES.small} px tall or over ${BODY_RATES.near} tiles from you drawn less often: half as often at ${BODY_RATES.small / 2} px or ${BODY_RATES.far} tiles; at least ${BODY_RATES.least} a second. Turning while over budget: in eighths.`,
       `New: body quality: pictures at ${QUALITY.scales.map((k) => `${Math.round(k * 100)}%`).join(', ')} of the screen's pixels and of their rates; a step down when the middle frame over ${QUALITY.over / 1000} s is over ${QUALITY.slow} ms with bodies a quarter of it; a step up after ${QUALITY.up / 1000} s under ${QUALITY.quick} ms.`,
       'New: Show drawing times: a bodies line: ms a frame, bodies drawn a frame, bodies waiting a frame, quality step.',
+    ],
+  },
+  {
+    n: 581,
+    day: '2026-11-13',
+    lines: () => [
+      `New: crop look at ${listed(STAGE_NAMES.slice(0, RIPE))}, on fields, garden beds and planters, winter included. Not tended this growth stage: pale soil, weeds. Tended: dark soil, water in the furrows. Ripe: unchanged.`,
+    ],
+  },
+  {
+    n: 580,
+    day: '2026-11-13',
+    lines: () => [`New: hairstyles ${listed(['balding', 'monk'].map((id) => HAIRSTYLES.find((h) => h.id === id)?.name ?? id))} (character creator; Settings, Appearance: Customize character).`],
+  },
+  {
+    n: 579,
+    day: '2026-11-13',
+    lines: () => [
+      `Changed: smelter and kiln charges: ${CHARGE_PER_QL} a QL, up to ${chargesFor({ ql: CHARGE_QL })} at QL ${CHARGE_QL}; rare ×${RARITIES[1].charge}, supreme ×${RARITIES[2].charge}, fantastic ×${RARITIES[3].charge} (was: smelter 20, kiln 16, +${percent(RARITY_ROOM)} a step of rarity).`,
     ],
   },
   {
@@ -4653,11 +4672,13 @@ export const NEWS: News[] = [
       const all = 300;
       const nails = { uid: 0, id: 'nail', ql: 40, dmg: 0, count: all, extra: 'Iron' } as Item;
       const mail = { uid: 0, id: 'chain_hauberk', ql: 50, dmg: 0, count: 1, extra: 'Iron' } as Item;
-      const fit = meltFits(nails, all, SMELTER_CAPACITY);
+      // A plain smelter's room on the day: twenty lumps, whatever its QL.
+      const room = 20;
+      const fit = meltFits(nails, all, room);
       const a = meltLumps(nails, fit);
       const b = meltLumps(mail, 1);
       return [
-        `Fixed: Melt down, All: a stack past the smelter's room (${SMELTER_CAPACITY} lumps) melts what fits; the rest stays in the pack (was: refused whole, "Smelter full."). `
+        `Fixed: Melt down, All: a stack past the smelter's room (${room} lumps) melts what fits; the rest stays in the pack (was: refused whole, "Smelter full."). `
           + `${all} nails: "${meltingSaid(fit, 'Nails', a, 'Iron', meltQl(nails), all - fit)}"`,
         `Fixed: smelter and kiln work done: told to whoever put it in, count and QL per kind, 1 line (was: told to the builder only, no count or QL). `
           + `${fit} nails and a chain hauberk: "${furnaceMadeSaid('smelter', [{ count: a + b, name: 'Iron lump', ql: (meltQl(nails) * a + meltQl(mail) * b) / (a + b) }])}"`,
