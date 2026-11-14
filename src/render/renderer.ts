@@ -73,6 +73,7 @@ import { trapCentre } from '../game/traps';
 import { ageDef, stageOf } from '../game/creatures';
 import { CRATE_DOOR, CREATURE_CRATE } from '../game/creaturecrate';
 import { FIRE_CAPACITY, fireCentre } from '../game/campfire';
+import { drawCampfireNight } from './kit/campfire';
 import { SMELTER_H, SMELTER_W, smelterCentre } from '../game/smelter';
 import { anvilBounds, anvilHit, anvilNight, anvilTone, anvilVariant, drawAnvil, drawAnvilLive, drawAnvilNight, drawKiln, drawKilnLive, drawKilnNight, drawSmelter, drawSmelterLive, drawSmelterNight, kilnBounds, kilnHit, smelterBounds, smelterHit } from './forge';
 import { KILN_SUBTILES, kilnCentre } from '../game/kiln';
@@ -7425,7 +7426,10 @@ export class Renderer {
       }
       if (ent.kind === 'campfire' && ent.fire) {
         const fire = ent.fire;
-        this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => drawCampfire(g, px, py, zoom, fire.lit, fire.fuel, this.anim));
+        this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => drawCampfire(g, px, py, zoom, fire.lit, fire.fuel, this.anim, this.camera.rotation, fire.ash ?? 0));
+        // Its fire after dark, added as light in its own place (`kit/campfire.ts`), as a smelter's is.
+        const dark = fire.lit ? this.game.darkness() : 0;
+        if (dark > 0.02) drawCampfireNight(ctx, ent.sx, ent.sy, zoom, fire.fuel, dark, this.anim, this.nightOver(ent.sx, ent.sy - 12 * zoom, dark));
         this.fireHits.push({ ...this.shaped(), x: ent.x, y: ent.y, left: ent.sx - 22 * zoom, top: ent.sy - 20 * zoom, w: 44 * zoom, h: 30 * zoom, fire: fire.id });
         continue;
       }

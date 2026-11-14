@@ -16,6 +16,8 @@ import { inkOf, READ_BACK } from './ink';
 import { woodOf } from './trees3d/stump';
 import type { Season } from '../world/calendar';
 import { cropPlant, DORMANT_FRUIT, DORMANT_LEAF, fieldBake } from './crops';
+import { SACK_EYE, sackModel, sackSize } from './kit/sack';
+import { layKitModel } from './kitpieces';
 
 /** A pre-rendered sprite. Sizes are in zoom-1 pixels; the canvas is drawn at SPRITE_SCALE for crispness. */
 export interface Sprite {
@@ -725,36 +727,17 @@ export function bushSprite(species: number, season: Season = 'summer', day = 1, 
 }
 
 /** A small heap of dropped goods. */
-export function pileSprite(): Sprite {
-  const key = `${SPRITE_SCALE}|pile`;
+export function pileSprite(size = 1): Sprite {
+  const key = `${SPRITE_SCALE}|pile|${size}`;
   let spr = cache.get(key);
   if (spr) return spr;
-  spr = makeSprite(36, 30, 18, 27, (ctx) => {
-    const bx = 18;
-    const by = 27;
-    shadow(ctx, bx, by, 11, 4);
-    ctx.fillStyle = '#8a6a42';
-    ctx.beginPath();
-    ctx.moveTo(bx - 9, by);
-    ctx.quadraticCurveTo(bx - 10, by - 12, bx - 3, by - 14);
-    ctx.quadraticCurveTo(bx + 1, by - 18, bx + 4, by - 14);
-    ctx.quadraticCurveTo(bx + 11, by - 11, bx + 9, by);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = '#5e4630';
-    ctx.fillRect(bx - 3, by - 15, 7, 2.5);
-    ctx.fillStyle = 'rgba(0,0,0,0.22)';
-    ctx.beginPath();
-    ctx.moveTo(bx + 2, by - 13);
-    ctx.quadraticCurveTo(bx + 11, by - 10, bx + 9, by);
-    ctx.lineTo(bx + 2, by);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = '#c9a15c';
-    ctx.beginPath();
-    ctx.arc(bx - 4, by - 6, 2.2, 0, TAU);
-    ctx.fill();
-  });
+  // A tied sack in the kit (`kit/sack.ts`), as big as what is in it, drawn from the one eye whichever way the camera turns.
+  const m = sackModel(size);
+  const [x0, y0, x1, y1] = layKitModel(null, m, SACK_EYE).bounds;
+  spr = makeSprite(x1 - x0, y1 - y0, -x0, -y0, (ctx) => {
+    ctx.translate(-x0, -y0);
+    layKitModel(ctx, m, SACK_EYE);
+  }, 1);
   cache.set(key, spr);
   return spr;
 }
@@ -975,7 +958,7 @@ export function lyingSprite(items: readonly { id: string; count?: number; extra?
     const solid = STUMP3D_SPECIES.has(species) ? log3dSprite(species, items.reduce((n, it) => n + (it.count ?? 1), 0), season, at, SPRITE_SCALE, beside) : null;
     if (solid) return solid;
   }
-  if (!items.some((it) => it.id === 'corpse')) return pileSprite();
+  if (!items.some((it) => it.id === 'corpse')) return pileSprite(sackSize(items));
   return carcassSprite(((x + y) & 1) === 1, items.some((it) => it.id !== 'corpse'));
 }
 
@@ -1154,90 +1137,8 @@ export function cropSprite(cropId: string, stage: number, leaf: string, fruit: s
   return fieldBake(cropId, stage, leaf, fruit, dormant, turn, step, SPRITE_SCALE, layout);
 }
 
-/**
- * A campfire filling a two by two block of subtiles: a ring of stones, logs
- * laid across it, and flames that flicker while it burns. Drawn live rather
- * than cached so the fire moves.
- */
-export function drawCampfire(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, lit: boolean, fuel: number, time: number): void {
-  ctx.save();
-  ctx.translate(sx, sy);
-  ctx.scale(zoom, zoom);
-  // The ring of stones, an iso diamond two subtiles across.
-  const rx = 22;
-  const ry = 11;
-  ctx.fillStyle = 'rgba(0,0,0,0.25)';
-  ctx.beginPath();
-  ctx.ellipse(0, 0, rx, ry, 0, 0, TAU);
-  ctx.fill();
-  ctx.fillStyle = '#2a2420';
-  ctx.beginPath();
-  ctx.ellipse(0, -1, rx - 4, ry - 2, 0, 0, TAU);
-  ctx.fill();
-  for (let i = 0; i < 9; i++) {
-    const a = (i / 9) * TAU + 0.2;
-    const stx = Math.cos(a) * (rx - 2);
-    const sty = Math.sin(a) * (ry - 1) - 1;
-    ctx.fillStyle = i % 2 ? '#8b8781' : '#6f6b66';
-    ctx.beginPath();
-    ctx.ellipse(stx, sty, 3.6, 2.6, a, 0, TAU);
-    ctx.fill();
-  }
-  // Logs laid across the pit, shrinking as the fuel goes.
-  const load = Math.max(0.25, Math.min(1, fuel / 900));
-  ctx.strokeStyle = lit ? '#3a2a1c' : '#6b5236';
-  ctx.lineCap = 'round';
-  for (const [a, len] of [
-    [0.5, 15],
-    [-0.6, 13],
-    [2.4, 12],
-  ] as Array<[number, number]>) {
-    const l = len * load;
-    ctx.lineWidth = 3.4;
-    ctx.beginPath();
-    ctx.moveTo(Math.cos(a) * -l, Math.sin(a) * -l * 0.5 - 2);
-    ctx.lineTo(Math.cos(a) * l, Math.sin(a) * l * 0.5 - 2);
-    ctx.stroke();
-  }
-  if (lit) {
-    // Embers under the flames.
-    ctx.fillStyle = 'rgba(226,106,40,0.55)';
-    ctx.beginPath();
-    ctx.ellipse(0, -2, rx - 8, ry - 4, 0, 0, TAU);
-    ctx.fill();
-    // Three tongues of flame on their own rhythms.
-    const flames: Array<[number, number, number, string]> = [
-      [0, 1, 0.9, '#f0c23c'],
-      [-5, 1.7, 0.7, '#e8863a'],
-      [5, 2.6, 0.65, '#e06a2c'],
-    ];
-    for (const [ox, speed, scale, color] of flames) {
-      const wob = Math.sin(time * speed * 3.1 + ox) * 1.6;
-      const h = (16 + Math.sin(time * speed * 4.3 + ox) * 4) * scale;
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.moveTo(ox - 5 * scale, -3);
-      ctx.quadraticCurveTo(ox - 6 * scale + wob, -h * 0.55, ox + wob * 0.6, -h);
-      ctx.quadraticCurveTo(ox + 6 * scale + wob, -h * 0.55, ox + 5 * scale, -3);
-      ctx.closePath();
-      ctx.fill();
-    }
-    ctx.fillStyle = 'rgba(255,240,190,0.85)';
-    const ih = 7 + Math.sin(time * 5.5) * 2;
-    ctx.beginPath();
-    ctx.moveTo(-2.4, -3);
-    ctx.quadraticCurveTo(-2.6, -ih * 0.6, 0, -ih);
-    ctx.quadraticCurveTo(2.6, -ih * 0.6, 2.4, -3);
-    ctx.closePath();
-    ctx.fill();
-  } else if (fuel > 0) {
-    ctx.fillStyle = 'rgba(120,110,96,0.5)';
-    ctx.beginPath();
-    ctx.ellipse(0, -2, rx - 9, ry - 5, 0, 0, TAU);
-    ctx.fill();
-  }
-  ctx.restore();
-}
+/** The campfire, in the kit (`kit/campfire.ts`). */
+export { drawCampfire } from './kit/campfire';
 
 /** An anvil on its block, coloured by the metal it was cast from. */
 /**

@@ -38,6 +38,8 @@ import { islandTime, LOCAL_NIGHT_ENDS, LOCAL_NIGHT_STARTS } from '../theme';
 import { FRAME_REACH, FRAME_REACHES, FRAME_RIM, FRAMES, frameLabel, frameOddities, RIM } from '../runecut-art';
 import { SALE_DAYS, SALES_SHOWN } from '../../game/prices';
 import { RECENT } from './craft';
+import { CAMPFIRE_LOGS } from '../../render/kit/campfire';
+import { SACK_FULL } from '../../render/kit/sack';
 import { STANDING_A, WILDERMON_A } from '../../game/journal-a';
 import { DAMAGE_MAX as NEWS_DAMAGE_MAX, PLACED_REACH, QL_TOP as NEWS_QL_TOP } from '../../game/limits';
 import { FAIL_DAMAGE_SAID } from '../../game/faildamage';
@@ -4414,6 +4416,15 @@ export const NEWS: News[] = [
       `New: fishing net: ${LIFT_DROPS * NET_LIFT.length} drops off the net as it is lifted, ${SHAKE_DROPS} at each of ${NET_SHAKES.length} shakes.`,
       `New: rowing under way: ${OAR_DROPS} drops a blade at the catch; whirl pair a blade a stroke, ${SWIRL_SECS} s.`,
       'Without a graphics card: swimming strokes\' splashes, rings treading water, the float\'s strike and a catch only.',
+    ],
+  },
+  {
+    n: 581,
+    day: '2026-11-14',
+    lines: () => [
+      'Changed: campfire and dropped items sack redrawn in the rune pastel kit.',
+      `Campfire logs: ${CAMPFIRE_LOGS[1]} to ${CAMPFIRE_LOGS[CAMPFIRE_LOGS.length - 1]}, one more each ${frac(1 / (CAMPFIRE_LOGS.length - 1))} of fuel held.`,
+      `Sack size: 1 thing; more; full at ${SACK_FULL.stacks} stacks or ${SACK_FULL.things} things.`,
     ],
   },
   {
