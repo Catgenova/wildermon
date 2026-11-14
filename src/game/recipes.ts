@@ -573,7 +573,7 @@ const FURNITURE_RECIPES: Recipe[] = FURNITURE.filter((f) => !f.grave && !f.lair 
   tool: f.tool ?? 'mallet',
   skill: f.skill ?? 'fine_carpentry',
   // A carpenter's piece is of the wood it is built from; a mason's is brick, and a tailor's cloth.
-  material: f.material ?? (f.skill === 'masonry' || f.skill === 'tailoring' || f.skill === 'fishing' || f.skill === 'ropemaking' || f.skill === 'pottery' || f.skill === 'forestry' ? undefined : ('wood' as const)),
+  material: f.material ?? (f.skill === 'masonry' || f.skill === 'tailoring' || f.skill === 'fishing' || f.skill === 'ropemaking' || f.skill === 'pottery' || f.skill === 'forestry' || f.skill === 'stonecutting' ? undefined : ('wood' as const)),
   ...(f.deed ? { deed: true } : {}),
   ...(f.perk ? { perk: f.perk } : {}),
   // A woven rug at a loom (`decor.ts`).

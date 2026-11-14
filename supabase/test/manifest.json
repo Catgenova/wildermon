@@ -2377,6 +2377,12 @@
     "why": "Fourteen furnishings with real recipes. Seats seat no more than they say, and sat in give the wind back as standing still, a swing more; a gazebo's tile decays as under a roof; a hay bale stack feeds a grass eater in reach once a day before the stores; a water trough takes water only, is a water carrier's barrel, and a wildermon in reach drinks from it and its care holds longer; a signpost's arms read bearing and distance live; a cairn named is on its settlement's map only; a fireplace against a solid wall inside only; a four-poster sleeps more than a bed; a vase keeps wildflowers fresh for days then throws them out; a side table shows what is set on it and is its owner's; a trophy mount keeps the heaviest fish of its kind, its owner's to replace. In the same words on both sides."
   },
   {
+    "file": "supabase/test/fittings.ts",
+    "title": "A paper lantern pole, a moss boulder, a tree bench, a spice shelf, a window seat, a training dummy, an archery target, a mooring post and a stone bust, the same on both sides",
+    "shard": 5,
+    "why": "Nine fittings with real recipes. A pole takes its candles three at once, burns a candle's time, is lit off a flame and lights its reach, its lanterns dyed one a dyeing; a boulder greens over five days by the moss rule and its owner keeps the moss from a worker's scrub; a tree bench stands only round a grown tree, which is not felled under it; a spice shelf holds herbs to its room on a wall and is its owner's; a window seat goes in a window from inside; practice at a dummy and a target is timed and costed as a fight and teaches half a fight's gain, arrows pulled with one in four broken; a boat tied to a post is moved only by whoever may; a bust is carved as a citizen of its settlement with their look. In the same words on both sides."
+  },
+  {
     "file": "supabase/test/vineyard.ts",
     "title": "Vineyards and wine that ages, the same on both sides",
     "shard": 5,
