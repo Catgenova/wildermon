@@ -28,7 +28,7 @@
  */
 import { execFileSync } from 'node:child_process';
 import { barterPutRefusal, barterSaid, barterThing, beastLines, type Barter } from '../../src/game/barter';
-import { kindName, lineLines, pedigreeLine, SPECIES } from '../../src/game/creatures';
+import { kindName, lineLines, pedigreeLine, SPECIES, type Pedigree } from '../../src/game/creatures';
 import { traitOf, traitSays } from '../../src/game/traits';
 import { formLabels } from '../../src/game/wildforms';
 import { ok, bad, check } from './harness';
@@ -94,11 +94,11 @@ const crated = (uid: string, species: string, name: string, more = ''): [number,
     values ('${W}', 'player', '${uid}', 'creature_crate', 30, 1, ${id}) returning id;`));
   return [id, crate];
 };
-const PEDIGREE = { dam: { id: 9001, name: 'Snow' }, sire: { id: 9002, name: 'Horn' }, from: { fleet: 'dam', curious: 'sire' }, line: { speed: 3 } };
+const PEDIGREE: Pedigree = { dam: { id: 9001, name: 'Snow' }, sire: { id: 9002, name: 'Horn' }, from: { fleet: 'dam', curious: 'sire' }, line: { speed: 3 } };
 const [PIP, PIP_CRATE] = crated(IVAR, 'rabba', 'Pip', `sex = 'female', traits = '{fleet,curious}', form_colour = true, form_size = 'large',
   rare = 'rare', stance = 'aggressive', skills = '{"foraging": 23.5}', pedigree = '${JSON.stringify(PEDIGREE)}'::jsonb`);
 const [WREN, WREN_CRATE] = crated(HILD, 'sparra', 'Wren', `sex = 'male', traits = '{keen_nosed}'`);
-const [MAB, MAB_CRATE] = crated(IVAR, 'rabba', 'Mab', `sex = 'female', due = now() + interval '1 day',
+const [, MAB_CRATE] = crated(IVAR, 'rabba', 'Mab', `sex = 'female', due = now() + interval '1 day',
   unborn = '{"traits": [], "sex": "male"}'::jsonb`);
 const [BO, BO_CRATE] = crated(IVAR, 'bura', 'Bo');
 psql(`insert into item (world_id, holder, pannier, def, ql, count) values ('${W}', 'pannier', ${BO}, 'log', 30, 3);`);
