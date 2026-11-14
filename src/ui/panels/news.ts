@@ -4429,6 +4429,7 @@ export const NEWS: News[] = [
       return [
         `New: animated on the sculpted body (was: a placeholder gesture). Winch handle, both hands: ${said('crank', 'crank-back')}. Key turned in the lock: ${said('key')}. Shafts taken up: ${said('cart')}. Step up onto the vehicle: ${said('board')}. Bell rope pulled: ${said('bell')}. Stake overhead, driven in: ${said('totem')}. Hand to the altar: ${said('bauble')}. Palms out: ${said('enchant')}.`,
         `Changed: ${ACTION_BY_ID.get('unhitch_team')?.label}: the tack clip (was: a placeholder gesture).`,
+        'Changed: bell: rope hung from a lever down the front of the frame (was: from the clapper, under the bell).',
       ];
     },
   },
