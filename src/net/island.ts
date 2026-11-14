@@ -242,6 +242,8 @@ interface HeardBody {
   refresh?: unknown;
   /** A portcullis or a drawbridge in this block went up or down (`perform_gate`). */
   gates?: unknown;
+  /** A trade's state, on its topic (`barter_send`): `done` when it has gone through. */
+  state?: unknown;
   /** A mote swirl in this block was collected (`{ gone: [id] }`), or the day's swirls were put down (`'day'`). */
   swirls?: unknown;
   /** Where a keeper of the island, or a Telestone, has put this body. */
@@ -2837,8 +2839,15 @@ export class Island {
         .on('broadcast', { event: 'elsewhere' }, (m) => {
           if (heardBody(m).seat !== heldSeat()) seatLost();
         })
-        // A trade we are in changed, on either side: the window asks again (`barter_send`).
-        .on('broadcast', { event: 'barter' }, () => this.hooks.barter?.())
+        // A trade we are in changed, on either side: the window asks again (`barter_send`). Done, the creatures are
+        // read whole at once too: a wildermon crate may have changed hands, and its wildermon keeper with it.
+        .on('broadcast', { event: 'barter' }, (m) => {
+          if (heardBody(m).state === 'done') {
+            this.mobsWhole = true;
+            this.lastMobs = -Infinity;
+          }
+          this.hooks.barter?.();
+        })
         // Something of one of our spells fired after its cast (`fx_fired`): drawn here, and passed on for everybody watching.
         .on('broadcast', { event: 'fx' }, (m) => {
           const f = firedIn((m as { payload?: unknown }).payload);

@@ -43,6 +43,17 @@ const TEND_JOBS: ReadonlyArray<[string, string]> = [
   ...['bind_wound', 'dress_poultice', 'clean_wound', 'apply_salve'].map((job): [string, string] => [job, 'heal-self']),
 ];
 /**
+ * The gates, the carts and a few jobs of their own, by the clip each plays (`./clips/misc.ts`): a winch's handle turned
+ * (`crank`; letting down, `crank-back`), a padlock's key turned (`key`), a cart's shafts taken up (`cart`), climbed aboard
+ * (`board`), the team's tack undone (`tack`, `./clips/tend.ts`), a bell's rope pulled (`bell`), a settlement's stake driven
+ * in (`totem`), a bauble set in the altar (`bauble`), a statue enchanted with the palms out (`enchant`).
+ */
+const MISC_JOBS: ReadonlyArray<[string, string]> = [
+  ['raise_portcullis', 'crank'], ['raise_drawbridge', 'crank'], ['lower_portcullis', 'crank-back'], ['lower_drawbridge', 'crank-back'],
+  ['take_off_lock', 'key'], ['pull_cart', 'cart'], ['board_vehicle', 'board'], ['board_passenger', 'board'], ['unhitch_team', 'tack'],
+  ['ring_bell', 'bell'], ['found_settlement', 'totem'], ['upgrade_deed', 'totem'], ['set_bauble', 'bauble'], ['enchant_statue', 'enchant'],
+];
+/**
  * The clip a job in the `work` state plays, by the job (its action's id), before its tool (`CLIP_OF_TOOL`):
  * - the strike (`work`) for a job whose tool is chosen each go (`ActionDef.toolFor`) or is a list (improving: the
  *   material's tools): planning (the mallet), building a wall, a floor or a column (the mallet or the trowel, by material),
@@ -105,6 +116,16 @@ export const CLIP_OF_JOB: Readonly<Record<string, string>> = Object.fromEntries(
   ...['paint_floor', 'scrub_floor_paint', 'scrub_moss'].map((job) => [job, 'brush-floor']),
   ...['glaze_item', 'restore_relic'].map((job) => [job, 'brush-item']),
   ['scrub_dye', 'brush-cloth'],
+  // the gates, the carts and a few jobs of their own (./clips/misc.ts)
+  ...MISC_JOBS,
+  // reaching up to pick, reading what is held, the lanterns (./clips/reach.ts): fruit and a sprout off a tree overhead,
+  // grapes off a trellis at the head, a comb out of a skep; a book, a rune tablet, a written sheet, a map; a lantern
+  // hung, taken down, given a candle, lit and put out overhead
+  ...Object.entries({
+    pick_fruit: 'pick-high', pick_sprout: 'pick-high', pick_grapes: 'pick-grapes', take_honey: 'take-honey',
+    study_book: 'read-book', read_rune_tablet: 'read-tablet', read_recipe: 'read-sheet', read_formula: 'read-sheet', study_map: 'read-map',
+    fit_lamp: 'lamp-fit', take_lamp: 'lamp-take', candle_lamp: 'lamp-candle', light_lamp: 'lamp-light', douse_lamp: 'lamp-douse',
+  }),
 ]);
 /** Whether a job is a recipe made with no tool and not at a campfire (cooking there is done crouched at the fire). */
 const handsRecipe = (job: string): boolean => {
