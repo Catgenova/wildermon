@@ -62,6 +62,7 @@ import { spiralHeading } from '../game/spiral';
 import { storeyHeight } from '../game/storeyview';
 import { drawSteps, stepsFootAt } from './steps';
 import { seasonAt, type Season } from '../world/calendar';
+import { gardenAmbience, gardenTrim } from './gardenlook';
 import { drawShine, shines } from './shine';
 import { NIGHT_WASH } from './nightwash';
 import { type Masonry, adobe, brickwork, cobble, goldwork, logwork, glasswork, marblework, planking, sandstone, silverwork, slatework, stonework, timbercraft } from './masonry';
@@ -4045,6 +4046,8 @@ export class Renderer {
     this.sky = sky;
     // The island's year, for what flowers and what does not (`seasonAt`): read off the wall clock once a frame.
     this.season = seasonAt(this.game.wallNow()).season;
+    // A birdhouse's birds: by the season, and as many as the Effects setting allows (`gardenlook.ts`).
+    gardenAmbience(this.season, this.held ? 'off' : this.game.settings.effects);
     const voidInk = css(unknownInk(sky));
     const back = ctx.createLinearGradient(0, 0, 0, H);
     back.addColorStop(0, css(sky.top));
@@ -11225,6 +11228,9 @@ export class Renderer {
       };
       return vineTrim(vineStage(f, this.game.wallNow()), Math.floor(hash2(f.x, f.y, 53) * VINE_VARIANTS), joins(-1), joins(1));
     }
+    // A garden piece: its flowers, its shape, how far it has grown, what it holds (`garden.ts`, `gardenlook.ts`).
+    const garden = gardenTrim(f, this.game.wallNow());
+    if (garden !== undefined) return garden;
     // An arch's roses or lavender: the variety, which is its place's, and how far it has grown (`roses.ts`).
     if (FURNITURE_BY_ID.get(f.kind)?.climber) {
       const r = roseStage(f.setAt, this.game.wallNow());
@@ -11276,7 +11282,7 @@ export class Renderer {
     const deed = this.deedOver(f.x, f.y);
     return {
       x: s.dirX * ax + s.dirY * ay, y: s.dirX * fx + s.dirY * fy, force: s.force, t: this.anim,
-      tint: dyeOf(f) ?? undefined, device: deed ? deviceOf(deed) : undefined,
+      tint: dyeOf(f) ?? undefined, device: deed ? deviceOf(deed) : undefined, seed: f.id,
     };
   }
 

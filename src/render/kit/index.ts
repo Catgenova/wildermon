@@ -32,6 +32,10 @@ import { DESK, LONG_TABLE, TABLE } from './tables';
 import { TRASH_CRATE } from './trash';
 import { TRELLIS } from './trellis';
 import { WELL } from './well';
+import {
+  ARBOUR_BENCH, BIRDHOUSE, BONSAI, CARVED_FIGURE, FLOWER_BED, FLOWER_CART, FOLDING_SCREEN, HANGING_BASKET, HEDGE, HERB_BOX, PLANT_STAND, POTTED_FERN, POTTED_PALM,
+  TOPIARY_TUB, TROPHY_PLAQUE, WIND_CHIME, WINDOW_BOX, WISTERIA_PERGOLA,
+} from './garden';
 
 /**
  * Every piece of furniture drawn in the kit, by its kind (`FurnitureDef.id`).
@@ -99,4 +103,23 @@ export const KIT_PIECES: Readonly<Record<string, KitPiece>> = {
   crate_shelf: CRATE_SHELF,
   creature_crate: CREATURE_CRATE,
   mailbox: MAILBOX,
+  // The garden pieces (`garden.ts`).
+  flower_bed: FLOWER_BED,
+  window_box: WINDOW_BOX,
+  hanging_basket: HANGING_BASKET,
+  herb_box: HERB_BOX,
+  topiary_tub: TOPIARY_TUB,
+  potted_fern: POTTED_FERN,
+  potted_palm: POTTED_PALM,
+  hedge: HEDGE,
+  wisteria_pergola: WISTERIA_PERGOLA,
+  bonsai: BONSAI,
+  flower_cart: FLOWER_CART,
+  birdhouse: BIRDHOUSE,
+  arbour_bench: ARBOUR_BENCH,
+  carved_figure: CARVED_FIGURE,
+  trophy_plaque: TROPHY_PLAQUE,
+  folding_screen: FOLDING_SCREEN,
+  plant_stand: PLANT_STAND,
+  wind_chime: WIND_CHIME,
 };

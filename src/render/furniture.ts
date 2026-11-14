@@ -1472,6 +1472,8 @@ export interface Air {
   t: number;
   tint?: Tint;
   device?: number;
+  /** Which piece it is, for what moves on it on a clock of its own (a birdhouse's birds). */
+  seed?: number;
 }
 /** Cloth with no weather on it: what a piece being set down is drawn with. */
 const STILL: Air = { x: 1, y: 0, force: 0, t: 0 };

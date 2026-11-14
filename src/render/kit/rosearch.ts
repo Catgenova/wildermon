@@ -43,17 +43,17 @@ const LEAF_INK: RGB = mix(LEAF[2], KIT_INK, 0.3);
 /** The trim of an arch's roses (`roseTrim`): variety, whether it is their season, and the days they have grown. */
 export const roseTrim = (variety: number, days: number, blooms: boolean): number =>
   (variety % BLOOMS.length) * 1000 + (blooms ? 100 : 0) + Math.floor(Math.min(4, Math.max(0, days)) * 20);
-const roseOf = (trim: number): { variety: number; days: number; blooms: boolean } =>
+export const roseOf = (trim: number): { variety: number; days: number; blooms: boolean } =>
   ({ variety: Math.floor(trim / 1000) % BLOOMS.length, blooms: trim % 1000 >= 100, days: (trim % 100) / 20 });
 
 /** A number in 0..1 for a place on the arch, the same every time it is drawn. */
-const jit = (i: number, k: number): number => {
+export const jit = (i: number, k: number): number => {
   const v = Math.sin(i * 12.9898 + k * 78.233) * 43758.5453;
   return v - Math.floor(v);
 };
 
 /** A leaf: a pointed oval at (x, y) turned to `a`, `L` long. */
-function leaf(g: Ctx, x: number, y: number, a: number, L: number, c: RGB): void {
+export function leaf(g: Ctx, x: number, y: number, a: number, L: number, c: RGB): void {
   g.save();
   g.translate(x, y);
   g.rotate(a);
@@ -129,7 +129,7 @@ function canesPart(at: (q: number) => V3, y: number, salt: number, caneTo: numbe
  * stands; `clear` is how far out from the middle a face's growth is laid,
  * clear of the frame, so it goes in front of it from that face's side.
  */
-function climbingRoses(side: (q: number) => V3, face: number, trim: number, clear: number): KitPart[] {
+export function climbingRoses(side: (q: number) => V3, face: number, trim: number, clear: number): KitPart[] {
   const { variety, days, blooms } = roseOf(trim);
   const leafTo = days < ROSE_LEAFY ? 0 : Math.min(1, 0.25 + (0.75 * (days - ROSE_LEAFY)) / (ROSE_BUD - ROSE_LEAFY));
   const caneTo = Math.min(1, 0.15 + (0.85 * days) / ROSE_LEAFY);

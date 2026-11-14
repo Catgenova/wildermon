@@ -14,6 +14,7 @@
 import '../../src/game/actions';
 import { SPECIES, type SpeciesDef } from '../../src/game/creatures';
 import { FURNITURE, furnitureDef } from '../../src/game/furniture';
+import '../../src/render/gardenlook';
 import { dyeTint } from '../../src/game/dyestuffs';
 import { ENCHANTERS_PLINTH } from '../../src/game/enchant';
 import { DEFAULT_LOOK, randomLook, type Look } from '../../src/game/look';
@@ -223,6 +224,8 @@ const furniture: Family = {
       views: 'turns', states: st, variants: vars, motions, emissive: lit || !!kit?.flicker, footprint: [f.w, f.h], heightPx: FURNITURE_HEIGHT[f.id], ref: 4,
     };
   }),
+  // A carved figure is drawn from its kind's model (`gardenlook.ts`): every line in before it is drawn.
+  prepare: async (a) => { if (a.kind === 'carved_figure') await loadAllWildermon(); },
   draw: (ctx, sx, sy, zoom, a, o) => {
     const view = pieceView(o.side, o.turn);
     const t = o.t;
