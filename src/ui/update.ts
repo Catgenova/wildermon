@@ -9,7 +9,7 @@
  * click refreshes the page's own copy of index.html first, so the reload
  * cannot come back from the browser's cache as the old version.
  */
-import { DEPLOY } from '../version';
+import { DEPLOY, STALE_BUILD, whenModuleMissed } from '../version';
 
 /** How often an open page asks which deploy the site is on. */
 export const UPDATE_CHECK_MS = 2 * 60_000;
@@ -45,14 +45,29 @@ export function updateButton(): HTMLButtonElement {
   const running = DEPLOY;
 
   let newest = running;
-  const look = async (): Promise<void> => {
-    const at = await siteDeploy();
-    if (at === undefined || at <= newest) return;
-    newest = at;
-    btn.textContent = `Update to v${at}`;
+  // A module this page had not loaded yet was refused (`moduleMissed`): with a later deploy on the site, it is this page
+  // that is out of date, and the button says so rather than offering the update. A wildermon line refused is drawn as
+  // its name and health bar with no body until the page is reloaded.
+  let missed = false;
+  const say = (): void => {
+    if (newest <= running) return;
+    btn.textContent = missed ? STALE_BUILD : `Update to v${newest}`;
+    btn.classList.toggle('hud-stale', missed);
     btn.title = `Running v${running}`;
     btn.hidden = false;
   };
+  let looking: Promise<void> | null = null;
+  const look = (): Promise<void> => (looking ??= siteDeploy().then((at) => {
+    if (at !== undefined && at > newest) newest = at;
+    say();
+  }).finally(() => {
+    looking = null;
+  }));
+  whenModuleMissed(() => {
+    missed = true;
+    say();
+    void look();
+  });
   btn.addEventListener('click', () => {
     btn.disabled = true;
     void reloadFresh();

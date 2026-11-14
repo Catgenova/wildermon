@@ -1,4 +1,5 @@
 import type { BeastAct } from '../game/events';
+import { MISSED_RETRY_MS, moduleMissed } from '../version';
 import { HYBRIDS } from '../game/hybridlist';
 
 /**
@@ -207,7 +208,11 @@ export function voiceOf(species: string): Voice | undefined {
   const load = VOICES[species];
   if (!load) return undefined;
   heard.set(species, null);
-  load().then((v) => heard.set(species, v), () => heard.delete(species));
+  // Refused, asked for again no sooner than `MISSED_RETRY_MS`: not at every cue in earshot (`moduleMissed`).
+  load().then((v) => heard.set(species, v), (e: unknown) => {
+    setTimeout(() => heard.delete(species), MISSED_RETRY_MS);
+    moduleMissed(`voice ${species}`, e);
+  });
   return undefined;
 }
 
