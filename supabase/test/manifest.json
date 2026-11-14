@@ -2383,6 +2383,12 @@
     "why": "Nine fittings with real recipes. A pole takes its candles three at once, burns a candle's time, is lit off a flame and lights its reach, its lanterns dyed one a dyeing; a boulder greens over five days by the moss rule and its owner keeps the moss from a worker's scrub; a tree bench stands only round a grown tree, which is not felled under it; a spice shelf holds herbs to its room on a wall and is its owner's; a window seat goes in a window from inside; practice at a dummy and a target is timed and costed as a fight and teaches half a fight's gain, arrows pulled with one in four broken; a boat tied to a post is moved only by whoever may; a bust is carved as a citizen of its settlement with their look. In the same words on both sides."
   },
   {
+    "file": "supabase/test/adorn.ts",
+    "title": "A lily pond, an ivy wall panel, a garden obelisk, a garden footbridge, a herb spiral, a buoy, a cauldron hearth, a cheese rack, a pelt rug, a plush wildermon, a game table, a gem lamp, a pedigree board and a worker nameplate, the same on both sides",
+    "shard": 5,
+    "why": "Fourteen adornments with real recipes, each on a rule the island already keeps. Botanizing by a pond rolls the water's edge; an ivy panel greens its wall over seven days and a worker's scrub passes that wall by, and Clear the ivy gives the cuttings it is made of; sweet peas climb an obelisk by the climbers' rule in a colour chosen; a footbridge is a bridge kind of one tile; a herb spiral's four slots grow on the field clock; a buoy floats, named as a cairn and on its maker's map; a lit cauldron hearth makes a pot dish four times over in one go's time; cheese on a rack ages by the wine rule; fur keeps the kind it came off and a pelt rug takes it; a plush is of a kind tamed; stones at a table go in turn between two players and the winner is tallied; a gem lamp is of its gem; a board shows a wildermon's line; a nameplate names a bed's worker. In the same words on both sides."
+  },
+  {
     "file": "supabase/test/vineyard.ts",
     "title": "Vineyards and wine that ages, the same on both sides",
     "shard": 5,

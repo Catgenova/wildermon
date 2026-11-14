@@ -19,6 +19,7 @@
  * pieces) and the season, as an arch's roses are (`roses.ts`): the same for
  * everybody looking.
  */
+import { IVY_PANEL } from './adorndefs';
 import type { ActionDef, Target } from './actions';
 import { HEDGE_CLIPS, type BloomKind, type HedgeClip, type TopiaryShape, BLOOM_COST, BLOOM_KINDS, BLOOM_SKILL, BLOOM_TIME, BONSAI_GROWN, BONSAI_STEPS, CLEAR_TIME, CLIP_TIME,
   HEDGE_FULL, PRUNE_REST, PRUNE_SKILL, PRUNE_TIME, PRUNE_TOOL, SHOW_TIME, TOPIARY_GROWS_OUT, TOPIARY_SHAPES, TRIM_SKILL, TRIM_TIME, TRIM_TOOL, POTS,
@@ -89,7 +90,7 @@ export const isGardenPiece = (def: FurnitureDef): boolean =>
     || (def.mount && def.mount !== 'pane' && def.mount !== 'hearth' && def.mount !== 'sill' && def.id !== FISH_MOUNT && def.id !== SPICE_SHELF))
   || def.climber === 'wisteria' || POTS.includes(def.id) || def.id === FOLDING_SCREEN || def.id === FLOWER_CART;
 /** Whether a piece grows from the moment it is set down, so the island hands every browser that moment (`furniture_def.roses`). */
-export const growsFromSet = (def: FurnitureDef): boolean => !!(def.climber || def.bloom || def.hedge || def.bonsai);
+export const growsFromSet = (def: FurnitureDef): boolean => !!(def.climber || def.bloom || def.hedge || def.bonsai || def.id === IVY_PANEL);
 
 /* ---- how it grows ------------------------------------------------------------------------- */
 

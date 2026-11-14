@@ -13,7 +13,8 @@ import { TREE_DEFS } from '../world/tiles';
  * everything made of it reads whichever of them apply to the sort of thing
  * it is.
  */
-export type MaterialKind = 'wood' | 'metal' | 'gem';
+/** `pelt`: a pelt rug's, the kind its fur came off (`adorn.ts`), named by no material: what the first input's label says. */
+export type MaterialKind = 'wood' | 'metal' | 'gem' | 'pelt';
 
 export interface MaterialDef {
   id: string;

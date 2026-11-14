@@ -38,6 +38,7 @@ import { ENCHANTERS_PLINTH, ENCHANTING, ENCHANTMENT_LIST, PAPER_PRESS, PLINTH_NA
 import { DAMAGE_MAX } from './limits';
 import { damageDrawn, failDamagedSaid, failLitres, failLitresSaid } from './faildamage';
 import { BUTTER_CHURN, BUTTER_PATS, CHURN_BUTTER, WHEY_BUCKET } from './dairy';
+import { CAULDRON_SERVINGS, CAULDRON_STATION, NAMEPLATE, PLUSH, plushRefusal } from './adorndefs';
 
 /** What working a thing out with your hands teaches the head. */
 export const CRAFT_HEAD = MIND_GAIN;
@@ -85,10 +86,10 @@ const article = (id: string): string => (/^[aeiou]/.test(lower(id)) ? 'an ' : 'a
 export type RecipeCategory = 'Woodwork' | 'Furniture' | 'Stonework' | 'Clay & thatch' | 'Cloth' | 'Alchemy' | 'Writing' | 'Cooking' | 'Smelting' | 'Glassblowing'
   | 'Jewellery' | 'Mending' | 'Enchanting';
 /** A place a recipe has to be worked at, beyond what is carried. */
-export type Station = 'campfire' | 'oven' | 'smelter' | 'spindle' | 'loom' | typeof PAPER_PRESS | typeof ENCHANTERS_PLINTH | typeof BUTTER_CHURN;
+export type Station = 'campfire' | 'oven' | 'smelter' | 'spindle' | 'loom' | typeof PAPER_PRESS | typeof ENCHANTERS_PLINTH | typeof BUTTER_CHURN | typeof CAULDRON_STATION;
 /** What a station is called where a recipe says it wants one. The island's `station_name` is generated from this. */
 export const STATION_NAME: Record<Station, string> = { campfire: 'lit campfire', oven: 'lit oven', smelter: 'hot smelter', spindle: 'spindle', loom: 'loom', paper_press: 'paper press',
-  [ENCHANTERS_PLINTH]: PLINTH_NAME, [BUTTER_CHURN]: 'butter churn' };
+  [ENCHANTERS_PLINTH]: PLINTH_NAME, [BUTTER_CHURN]: 'butter churn', [CAULDRON_STATION]: 'lit cauldron hearth' };
 
 export interface RecipeInput {
   item: string;
@@ -573,7 +574,8 @@ const FURNITURE_RECIPES: Recipe[] = FURNITURE.filter((f) => !f.grave && !f.lair 
   tool: f.tool ?? 'mallet',
   skill: f.skill ?? 'fine_carpentry',
   // A carpenter's piece is of the wood it is built from; a mason's is brick, and a tailor's cloth.
-  material: f.material ?? (f.skill === 'masonry' || f.skill === 'tailoring' || f.skill === 'fishing' || f.skill === 'ropemaking' || f.skill === 'pottery' || f.skill === 'forestry' || f.skill === 'stonecutting' ? undefined : ('wood' as const)),
+  material: f.material ?? (f.skill === 'masonry' || f.skill === 'tailoring' || f.skill === 'fishing' || f.skill === 'ropemaking' || f.skill === 'pottery' || f.skill === 'forestry' || f.skill === 'stonecutting'
+    || f.skill === 'blacksmithing' ? undefined : ('wood' as const)),
   ...(f.deed ? { deed: true } : {}),
   ...(f.perk ? { perk: f.perk } : {}),
   // A woven rug at a loom (`decor.ts`).
@@ -825,6 +827,36 @@ const TRAP_RECIPES: Recipe[] = Object.values(TRAPS)
   }));
 
 RECIPES.push(...TRAP_RECIPES);
+
+/*
+ * A worker nameplate, carved to hang on a wildermon bed (`adorn.ts`, `hang_plate`).
+ */
+RECIPES.push({
+  id: `make_${NAMEPLATE}`, category: 'Woodwork', result: NAMEPLATE, inputs: [{ item: 'plank' }, { item: 'nail', count: 2 }], tool: 'carving_knife', skill: 'carpentry', material: 'wood',
+  label: 'Carve a nameplate', verb: 'carving a nameplate', baseTime: 6, stamina: 0.02, difficulty: 6, done: '',
+});
+
+/**
+ * A pot dish: a cook's recipe over a fire whose go is simmered, boiled or
+ * stewed (`Recipe.verb`): a stew, a pottage, a porridge, a broth, a compote.
+ */
+export const POT_VERBS: readonly string[] = ['simmering', 'boiling', 'stewing'];
+export const isPotDish = (r: Recipe): boolean => r.category === 'Cooking' && r.skill === 'cooking' && r.station === 'campfire' && POT_VERBS.includes(r.verb.split(' ')[0]);
+/** A pot dish at a lit cauldron hearth (`adorn.ts`): every input × `CAULDRON_SERVINGS`, as many servings × that, in one go's time; the cauldron is the pot. */
+export const cauldronOf = (id: string): string => `cauldron_${id}`;
+export const POT_DISHES: readonly Recipe[] = RECIPES.filter(isPotDish);
+RECIPES.push(...POT_DISHES.map((r): Recipe => {
+  const { tool: _tool, ...rest } = r;
+  void _tool;
+  return {
+    ...rest,
+    id: cauldronOf(r.id),
+    count: (r.count ?? 1) * CAULDRON_SERVINGS,
+    inputs: r.inputs.map((i) => (i.litres !== undefined ? { ...i, litres: i.litres * CAULDRON_SERVINGS } : { ...i, count: (i.count ?? 1) * CAULDRON_SERVINGS })),
+    station: CAULDRON_STATION,
+    label: `${r.label} ×${CAULDRON_SERVINGS}`,
+  };
+}));
 // A trap takes a share of its rope's QL into its own (`ropework.ts`), built or woven.
 for (const r of RECIPES) {
   if (Object.prototype.hasOwnProperty.call(TRAPS, r.result) && r.inputs.some((i) => ROPE_INPUTS.includes(i.item))) r.ropeShare = ROPE_SHARE_TRAP;
@@ -1423,6 +1455,8 @@ export function recipeAction(r: Recipe): ActionDef {
     // A carved figure is of a kind seen in the field guide, chosen at the bench (`garden.ts`; the island's `craft_ran_out`).
     check: (t, g) => ranOut(t, g)
       ?? (r.result === CARVED_FIGURE ? figureRefusal((k) => g.guide.has(k, 'seen'), (t as { species?: string }).species) : null)
+      // And a plush of a kind tamed, chosen at the needle (`adorn.ts`; the island's `craft_ran_out`).
+      ?? (r.result === PLUSH ? plushRefusal((k) => g.guide.has(k, 'tamed'), (t as { species?: string }).species) : null)
       ?? recipeReason(r, g, t.kind === 'item' ? t.uid : undefined),
     // Counted with the stack it was started on, which may be one the settings would not have picked.
     maxRepeat: (t, g) => recipeStatus(r, g, undefined, g.craftStock(t.kind === 'item' ? t.uid : undefined, false, reachFor(g, r))).max,

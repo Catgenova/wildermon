@@ -10,6 +10,11 @@ import { metres } from '../world/tiles';
 import { MATERIAL_BY_ID, WALL_HEIGHT, type Side } from './building';
 import { AQUEDUCT_FLOW, CHANNEL_WIDE, TILE_METRES } from '../world/aqueducts';
 
+/** A garden footbridge's deck (`adorn.ts`): one tile between its two banks, so three tiles end to end. */
+export const FOOTBRIDGE_SPAN = 1;
+/** Planks its one tile of deck takes. */
+export const FOOTBRIDGE_PLANKS = 10;
+
 /**
  * Bridges.
  *
@@ -32,7 +37,7 @@ import { AQUEDUCT_FLOW, CHANNEL_WIDE, TILE_METRES } from '../world/aqueducts';
  */
 export const BRIDGE_MATERIALS = ['log', 'plank', 'timbercraft', 'cobblestone', 'slate', 'marble', 'sandstone', 'stone_brick', 'clay_adobe', 'clay_bricks'] as const;
 export type MaterialBridgeKind = (typeof BRIDGE_MATERIALS)[number];
-export type BridgeKind = 'rope' | 'aqueduct' | 'draw' | MaterialBridgeKind;
+export type BridgeKind = 'rope' | 'aqueduct' | 'draw' | 'footbridge' | MaterialBridgeKind;
 export const isMaterialBridge = (kind: string): kind is MaterialBridgeKind => (BRIDGE_MATERIALS as readonly string[]).includes(kind);
 
 /** A material bridge's longest run of deck past its material's storeys, in tiles: the island's `bridge_def.span`. */
@@ -180,10 +185,26 @@ export const BRIDGES: Record<BridgeKind, BridgeDef> = {
     grounded: true,
     note: 'First span also needs {winch.timber} timbers, {winch.hinge} hinges and {winch.ribbon} metal ribbons. Both ends outdoors on open ground, at most {span} tiles of deck. Raised or lowered from the end it was set out from, by anyone its padlock admits (anyone, unlocked); pulled down by the same within {reach} tiles of either end, on a settlement by its builders only. Raised: blocks crossing and sight over its hinge. Lowered: carts may cross.',
   },
+  /*
+   * A garden footbridge (`adorn.ts`): a short arched plank deck over a ditch,
+   * a stream or a channel, a garden piece rather than a crossing, so its bill
+   * is its own and not `BRIDGE_BILL_TIMES` a lane's.
+   */
+  footbridge: {
+    id: 'footbridge',
+    name: 'Garden footbridge',
+    bill: [['plank', FOOTBRIDGE_PLANKS], ['shaft', 4], ['nail', 12]],
+    span: FOOTBRIDGE_SPAN,
+    tool: 'mallet',
+    skill: 'carpentry',
+    difficulty: 14,
+    carts: false,
+    note: 'Deck: {span} tile, arched; 1 lane. Foot traffic only.',
+  },
 };
 
-/** The kinds "Throw a bridge across" offers, in the order it offers them: rope, the materials, the drawbridge. */
-export const THROWN: BridgeKind[] = ['rope', ...BRIDGE_MATERIALS, 'draw'];
+/** The kinds "Throw a bridge across" offers, in the order it offers them: rope, the materials, the drawbridge, the garden footbridge. */
+export const THROWN: BridgeKind[] = ['rope', ...BRIDGE_MATERIALS, 'draw', 'footbridge'];
 
 /**
  * What an aqueduct's channel adds to a span of stone arch: the slabs it is

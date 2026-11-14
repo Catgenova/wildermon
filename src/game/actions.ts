@@ -71,6 +71,7 @@ import { GARDEN_ACTIONS } from './garden';
 import { DECOR_ACTIONS } from './decor';
 import { FURNISH_ACTIONS } from './furnish';
 import { FITTING_ACTIONS, FITTING_SAID } from './fitting';
+import { ADORN_ACTIONS, pondNear } from './adorn';
 import { TREE_BENCH } from './fittingdefs';
 import { VINEYARD_ACTIONS } from './vineyard';
 import { CHART_ACTIONS, chartItemSays } from './cartography';
@@ -163,7 +164,7 @@ export type Target =
       itemUid?: number;
       count?: number;
       brew?: string;
-      /** Which socket of its tier a bauble goes into, when one is asked for (`set_bauble`). */
+      /** Which socket of its tier a bauble goes into, when one is asked for (`set_bauble`); a herb spiral's slot a seed is sown in (`spiral_sow`, `adorn.ts`). */
       slot?: number;
       /** Where a signpost's arm is pointed (`point_arm`, `furnish.ts`): `stone:<id>` or `deed:<x>,<y>`, a settlement's token. */
       dest?: string;
@@ -173,6 +174,8 @@ export type Target =
       who?: string;
       /** The arrows a shot at an archery target takes, as at a creature (`shoot_target`). */
       arrow?: string;
+      /** The wildermon a pedigree board shows, by its id (`set_lineage`). */
+      creature?: number;
       /** The scroll going into it where it stands, for `enchant` (`enchanting.ts`). */
       scroll?: number;
     }
@@ -2306,7 +2309,8 @@ export const ACTIONS: ActionDef[] = [
       g.markForaged(t.x, t.y, 'botanize');
       const rolls = searches(g, 'botanize', 'botanizing');
       // At the water's edge the table has water lily roots and lotus seeds in it too.
-      const found = lookOver(g, 'botanize', 'botanizing', atWaterEdge(g, t.x, t.y) ? BOTANIZE_WATER_TABLE : BOTANIZE_TABLE, rolls);
+      // And by a lily pond, on its tile or beside it, as at the shore (`adorn.ts`; the island's `pond_near`).
+      const found = lookOver(g, 'botanize', 'botanizing', atWaterEdge(g, t.x, t.y) || pondNear(g, t.x, t.y) ? BOTANIZE_WATER_TABLE : BOTANIZE_TABLE, rolls);
       if (!found.length) {
         g.missed();
         g.logMsg(rolls > 1 ? `Found nothing (${rolls} passes).` : 'Found nothing.', 'event');
@@ -3341,6 +3345,8 @@ export const ACTIONS: ActionDef[] = [
   ...FURNISH_ACTIONS,
   // The fittings' jobs: a pole's candles, a boulder's moss kept, a shelf's herbs, practice at a dummy and a target, a boat tied up, a bust carved (`fitting.ts`).
   ...FITTING_ACTIONS,
+  // The adornments' jobs: a pond's lilies, an obelisk's sweet peas, a spiral's herbs, a buoy named, a rack's cheese, stones at a table, a board's lineage, a bed's nameplate (`adorn.ts`).
+  ...ADORN_ACTIONS,
   // A trellis's vine, and a cutting off a wild one (`vineyard.ts`).
   ...VINEYARD_ACTIONS,
   // A skep's honey, taken and looked at (`bees.ts`).

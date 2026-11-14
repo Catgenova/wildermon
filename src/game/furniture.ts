@@ -33,6 +33,11 @@ import type { FittingState } from './fitting';
 import {
   ARCHERY_TARGET, LANTERN_POLE, MOORING_POST, MOSS_BOULDER, POLE_LANTERNS, SPICE_SHELF, STONE_BUST, TRAINING_DUMMY, TREE_BENCH, TREE_BENCH_SEATS, WINDOW_SEAT, WINDOW_SEATS,
 } from './fittingdefs';
+import type { AdornState } from './adorn';
+import {
+  BUOY, CAULDRON_HEARTH, CHEESE_RACK, FUR, GAME_TABLE, GARDEN_OBELISK, GEM_LAMP, HERB_SPIRAL, IVY_CUTTING, IVY_PANEL, LILY_POND, PEDIGREE_BOARD, PELT_RUG, PLUSH,
+  TABLE_SEATS,
+} from './adorndefs';
 import { HAMMOCK_REST, ROPE_WALK, ROPE_WALK_QL, ROPE_WALK_TIME, ROPEMAKING } from './ropework';
 import { LAIR_KINDS } from './lairs';
 
@@ -147,7 +152,9 @@ export interface FurnitureDef {
    */
   mossy?: boolean;
   /** What the piece is of, when it is not the wood it was built from. */
-  material?: 'wood' | 'metal';
+  material?: 'wood' | 'metal' | 'gem' | 'pelt';
+  /** A plush, sewn as a kind of wildermon its maker has tamed, chosen at the needle (`adorn.ts`). */
+  plush?: boolean;
   /**
    * A swarm's own house. Nobody puts anything into a hive: a Vesp set to work
    * the settlement fills it with honey and beeswax off the wildflowers in
@@ -637,6 +644,26 @@ export const FURNITURE: FurnitureDef[] = [
   piece(ARCHERY_TARGET, 'Archery target', 2, 1, [['thatch', 12], ['plank', 6], ['nail', 6]], 10, 10, '', undefined, { skill: 'carpentry' }),
   piece(MOORING_POST, 'Mooring post', 1, 1, [['log', 1], ['rope', 2]], 8, 8, '', undefined, { skill: 'carpentry' }),
   piece(STONE_BUST, 'Stone bust', 1, 1, [['rock_shards', 4]], 20, 14, '', undefined, { skill: 'stonecutting', tool: 'chisel' }),
+  /*
+   * The adornments (`adorn.ts`; their numbers in `adorndefs.ts`): a lily pond,
+   * an ivy wall panel, a garden obelisk sweet peas climb, a herb spiral, a
+   * buoy on the water, a cauldron hearth, a cheese rack, a pelt rug of the
+   * kind its fur came off, a plush wildermon, a game table, a gem lamp of its
+   * gem's colour and a pedigree board. (A worker nameplate hangs on a
+   * wildermon bed; a garden footbridge is a bridge, `bridges.ts`.)
+   */
+  piece(LILY_POND, 'Lily pond', 2, 2, [['stone_brick', 12], ['mortar', 4], ['clay', 4]], 14, 14, '', undefined, { skill: 'masonry', tool: 'shovel' }),
+  piece(IVY_PANEL, 'Ivy wall panel', 2, 1, [[IVY_CUTTING, 4], ['plank', 4], ['nail', 6]], 10, 8, '', undefined, { skill: 'forestry', tool: 'sickle', mount: 'wall' }),
+  piece(GARDEN_OBELISK, 'Garden obelisk', 1, 1, [['plank', 6], ['shaft', 4], ['nail', 10], ['wildflowers', 4]], 12, 10, '', undefined, { skill: 'carpentry', climber: 'sweet_pea' }),
+  piece(HERB_SPIRAL, 'Herb spiral', 3, 3, [['rock_shards', 16], ['mortar', 4], ['dirt', 2]], 14, 14, '', undefined, { skill: 'masonry', tool: 'trowel' }),
+  piece(BUOY, 'Buoy', 1, 1, [['log', 1], ['rope', 2], ['nail', 4]], 8, 8, '', undefined, { skill: 'carpentry' }),
+  piece(CAULDRON_HEARTH, 'Cauldron hearth', 2, 2, [['stone_brick', 20], ['mortar', 8], ['iron_lump', 6]], 20, 16, '', undefined, { skill: 'blacksmithing', tool: 'hammer', hearth: true }),
+  piece(CHEESE_RACK, 'Cheese rack', 2, 1, [['plank', 8], ['shaft', 4], ['nail', 10]], 10, 8, '', undefined, { skill: 'carpentry' }),
+  piece(PELT_RUG, 'Pelt rug', 2, 2, [[FUR, 4], ['leather', 2]], 12, 12, '', undefined, { skill: 'leatherworking', tool: 'needle', material: 'pelt' }),
+  piece(PLUSH, 'Plush wildermon', 1, 1, [['cloth', 3], ['yarn', 2]], 14, 10, '', undefined, { skill: 'tailoring', tool: 'needle', plush: true }),
+  piece(GAME_TABLE, 'Game table', 2, 2, [['plank', 10], ['shaft', 4], ['nail', 14]], 12, 10, '', undefined, { skill: 'carpentry', seats: TABLE_SEATS }),
+  piece(GEM_LAMP, 'Gem lamp', 1, 1, [['gem', 1], ['stone_brick', 4], ['mortar', 1]], 18, 12, '', undefined, { skill: 'jewellery', tool: 'file', material: 'gem' }),
+  piece(PEDIGREE_BOARD, 'Pedigree board', 2, 1, [['plank', 6], ['shaft', 2], ['nail', 8], ['papyrus', 1]], 10, 8, '', undefined, { skill: 'carpentry' }),
   piece('well', 'Well', 2, 2, [['stone_brick', 48], ['mortar', 16], ['shaft', 4], ['thick_rope', 1], ['nail', 16], [WATER_MOTE, WATER_MOTES_EACH]], 30, 24, '', undefined, { skill: 'masonry', tool: 'trowel', well: WELL_HOLDS }),
   /*
    * A tiered fountain: basins of cut slab, each smaller than the one under
@@ -936,6 +963,8 @@ export interface PlacedFurniture {
   furnish?: FurnishState;
   /** A fitting's: a pole's lanterns' colours, a boulder's moss kept, a shelf's jars, a target's arrows, a post's boat, a bust's citizen (`fitting.ts`), off the same `placed.garden`. */
   fitting?: FittingState;
+  /** An adornment's: a pond's lilies, an obelisk's colour, a spiral's herbs, a rack's cheeses, a plush's kind, a table's stones, a board's lineage, a bed's nameplate (`adorn.ts`), off the same `placed.garden`. */
+  adorn?: AdornState;
   /**
    * For a skep: when it was set down or last emptied, in epoch seconds, which
    * what it has made is worked out from (`bees.ts`); on the island
@@ -1502,6 +1531,8 @@ export const FURNITURE_ACTIONS: ActionDef[] = [
       if (f.furnish?.on?.length) return SHOWING_SAID;
       // And herbs on a spice shelf, arrows in a target (`fitting.ts`).
       if (f.fitting?.jars?.length || f.fitting?.stuck) return SHOWING_SAID;
+      // And cheese on a rack (`adorn.ts`).
+      if (f.adorn?.cheese?.length) return SHOWING_SAID;
       // A crop is not carried about in a box of earth: it is harvested, or turned back into the soil.
       if (g.planted.has(f.id)) return PLANTER_GROWING;
       // A rack holds nothing of its own, so `items` is empty however loaded it

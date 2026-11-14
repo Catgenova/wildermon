@@ -212,6 +212,11 @@ import { FIGURE_SAID, GARDEN_DONE, GARDEN_JOBS, GARDEN_SAID, growsFromSet, isGar
 import { DECOR_DONE, DECOR_JOBS, DECOR_SAID, KEPT_WHY, STAND_SLOTS, type DecorSaid } from '../src/game/decor';
 import { FURNISH_DONE, FURNISH_JOBS, FURNISH_SAID, type FurnishDone, type FurnishSaid } from '../src/game/furnish';
 import { BOULDER_AGAIN, BOULDER_NOTHING_YET, FITTING_DONE, FITTING_JOBS, FITTING_SAID, SHELF_HERBS, type FittingDone, type FittingSaid } from '../src/game/fitting';
+import { ADORN_DONE, ADORN_JOBS, ADORN_SAID, PEA_NAMES, SPIRAL_SEEDS, type AdornDone, type AdornSaid } from '../src/game/adorn';
+import {
+  BUOY, CAULDRON_HEARTH, CHEESE, CHEESE_AGEING, CHEESE_RACK, GAME_TABLE, GARDEN_OBELISK, GEM_LAMP, HERB_SPIRAL, IVY_CUTTING, IVY_CUTTINGS, IVY_PANEL, IVY_PANEL_DAYS, LILY_POND,
+  NAMEPLATE, PEDIGREE_BOARD, PELT_RUG, PLUSH, PLUSH_SAID, POND_LILIES, RACK_HOLDS, SPIRAL_PICK, SPIRAL_SLOTS, STONES_GOAL, STONES_SIDES,
+} from '../src/game/adorndefs';
 import {
   ARCHERY_TARGET, ARROW_BREAK_IN, BOULDER_MOSS_DAYS, LANTERN_POLE, MOOR_REACH, MOORING_POST, MOSS_BOULDER, POLE_LANTERNS, POLE_REACH, PRACTICE_GAIN, PRACTISE, practiceAs,
   SHELF_HOLDS, SHOOT_TARGET, SPICE_SHELF, STONE_BUST, TARGET_HOLDS, TRAINING_DUMMY, TREE_BENCH, WINDOW_SEAT,
@@ -229,7 +234,7 @@ import {
   BLOOM_COST, BLOOM_KINDS, BLOOM_SKILL, BONSAI_GROWN, BONSAI_STEPS, CARVED_FIGURE, HANG_FROM, HEDGE_CLIPS, HEDGE_FULL, HERB_BOX, POTS, PRUNE_REST,
   PRUNE_SKILL, PRUNE_TOOL, TOPIARY_GROWS_OUT, TOPIARY_SHAPES, TRIM_SKILL, TRIM_TOOL,
 } from '../src/game/gardendefs';
-import { HERBS_ONLY } from '../src/game/farming';
+import { HERBS_ONLY, RIPE } from '../src/game/farming';
 import type { FurnitureDef } from '../src/game/furniture';
 import { STUN_SECS } from '../src/game/fight';
 import { QL_BARE, QL_LOW, QL_SPAN } from '../src/game/game';
@@ -2955,10 +2960,10 @@ for (const [fn, v] of [
 ] as Array<[string, number]>) {
   out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);
 }
-// Each brew that ages, its own rate (QL a day out of a cellar) and cap (`BrewDef.ages`); null for anything else.
+// Each brew that ages, its own rate (QL a day out of a cellar) and cap (`BrewDef.ages`), and cheese on a rack (`adorn.ts`); null for anything else.
 for (const key of ['rate', 'cap'] as const) {
   out.push(`create or replace function age_${key}(p_liquid text) returns double precision language sql immutable as $fn$ select case p_liquid ${
-    BREWS.filter((b) => b.ages).map((b) => `when ${q(b.id)} then ${q(b.ages?.[key])}::double precision `).join('')}end $fn$;`);
+    BREWS.filter((b) => b.ages).map((b) => `when ${q(b.id)} then ${q(b.ages?.[key])}::double precision `).join('')}when ${q(CHEESE)} then ${q(CHEESE_AGEING[key])}::double precision end $fn$;`);
 }
 out.push(`create or replace function vine_soil(p_tile int) returns boolean language sql immutable as $fn$ select coalesce(p_tile = any(array[${VINE_SOIL.join(', ')}]::int[]), false) $fn$;`);
 out.push(`create or replace function brew_ages(p_liquid text) returns boolean language sql immutable as $fn$ select coalesce(p_liquid = any(array[${BREWS.filter((b) => b.ages).map((b) => q(b.id)).join(', ')}]::text[]), false) $fn$;`);
@@ -3127,6 +3132,31 @@ out.push(`create or replace function fitting_said(p_key text, p_name text, p_wha
   (Object.keys(FITTING_SAID) as FittingSaid[]).map((k) => `when ${q(k)} then ${q(FITTING_SAID[k])} `).join('')}end, '{name}', upper(left(coalesce(p_name, ''), 1)) || substr(coalesce(p_name, ''), 2)), '{what}', coalesce(p_what, '')) $fn$;`);
 out.push(`create or replace function fitting_done(p_key text, p_what text, p_n int, p_held int, p_of int) returns text language sql immutable as $fn$ select replace(replace(replace(replace(case p_key ${
   (Object.keys(FITTING_DONE) as FittingDone[]).map((k) => `when ${q(k)} then ${q(FITTING_DONE[k])} `).join('')}end, '{what}', coalesce(p_what, '')), '{n}', coalesce(p_n::text, '')), '{held}', coalesce(p_held::text, '')), '{of}', coalesce(p_of::text, '')) $fn$;`);
+/*
+ * The adornments (`adorn.ts`, `adorndefs.ts`): their jobs, every number the
+ * island's rules read, the seeds a herb spiral takes, and every sentence they say.
+ */
+out.push(`create or replace function adorn_action(p_action text) returns boolean language sql immutable as $fn$ select p_action = any (array[${ADORN_JOBS.map(q).join(', ')}]::text[]) $fn$;`);
+for (const [fn, v] of [
+  ['lily_pond_kind', LILY_POND], ['ivy_panel_kind', IVY_PANEL], ['garden_obelisk_kind', GARDEN_OBELISK], ['herb_spiral_kind', HERB_SPIRAL], ['buoy_kind', BUOY],
+  ['cauldron_hearth_kind', CAULDRON_HEARTH], ['cheese_rack_kind', CHEESE_RACK], ['pelt_rug_kind', PELT_RUG], ['plush_kind', PLUSH], ['game_table_kind', GAME_TABLE],
+  ['gem_lamp_kind', GEM_LAMP], ['pedigree_board_kind', PEDIGREE_BOARD], ['nameplate_item', NAMEPLATE], ['ivy_cutting_item', IVY_CUTTING], ['cheese_item', CHEESE],
+] as Array<[string, string]>) out.push(`create or replace function ${fn}() returns text language sql immutable as $fn$ select ${q(v)} $fn$;`);
+for (const [fn, v] of [
+  ['pond_lilies', POND_LILIES], ['ivy_cuttings', IVY_CUTTINGS], ['spiral_slots', SPIRAL_SLOTS], ['spiral_pick', SPIRAL_PICK], ['rack_holds', RACK_HOLDS],
+  ['stones_goal', STONES_GOAL], ['stones_sides', STONES_SIDES], ['spiral_ripe', RIPE],
+] as Array<[string, number]>) out.push(`create or replace function ${fn}() returns int language sql immutable as $fn$ select ${q(v)}::int $fn$;`);
+for (const [fn, v] of [
+  ['ivy_panel_days', IVY_PANEL_DAYS], ['cheese_age_rate', CHEESE_AGEING.rate], ['cheese_age_cap', CHEESE_AGEING.cap],
+] as Array<[string, number]>) out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);
+out.push(`create or replace function spiral_seeds() returns text[] language sql immutable as $fn$ select array[${SPIRAL_SEEDS.map(q).join(', ')}]::text[] $fn$;`);
+out.push(`create or replace function pea_colours() returns text[] language sql immutable as $fn$ select array[${PEA_NAMES.map(q).join(', ')}]::text[] $fn$;`);
+out.push(`create or replace function plush_said(p_key text) returns text language sql immutable as $fn$ select case p_key ${
+  (Object.keys(PLUSH_SAID) as Array<keyof typeof PLUSH_SAID>).map((k) => `when ${q(k)} then ${q(PLUSH_SAID[k])} `).join('')}end $fn$;`);
+out.push(`create or replace function adorn_said(p_key text, p_name text, p_n int, p_what text) returns text language sql immutable as $fn$ select replace(replace(replace(case p_key ${
+  (Object.keys(ADORN_SAID) as AdornSaid[]).map((k) => `when ${q(k)} then ${q(ADORN_SAID[k])} `).join('')}end, '{name}', upper(left(coalesce(p_name, ''), 1)) || substr(coalesce(p_name, ''), 2)), '{n}', coalesce(p_n::text, '')), '{what}', coalesce(p_what, '')) $fn$;`);
+out.push(`create or replace function adorn_done(p_key text, p_what text, p_n int, p_held text, p_of int) returns text language sql immutable as $fn$ select replace(replace(replace(replace(case p_key ${
+  (Object.keys(ADORN_DONE) as AdornDone[]).map((k) => `when ${q(k)} then ${q(ADORN_DONE[k])} `).join('')}end, '{what}', coalesce(p_what, '')), '{n}', coalesce(p_n::text, '')), '{held}', coalesce(p_held, '')), '{of}', coalesce(p_of::text, '')) $fn$;`);
 /*
  * Ropemaking (`ropework.ts`): the lay-ups and what the skill makes of them,
  * its pace on its own jobs, the rope walk, the bell rope and the lead rope.

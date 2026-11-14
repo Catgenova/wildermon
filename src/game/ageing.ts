@@ -4,6 +4,7 @@ import { describeFrom } from './items';
 import { QL_TOP } from './limits';
 import { DAY_SECONDS } from './pace';
 import { STATE_TAILS } from './pieceTails';
+import { CHEESE, CHEESE_AGEING } from './adorndefs';
 
 /**
  * Brews that age: a barrel of wine or mead gets better the longer it is kept
@@ -46,8 +47,11 @@ export const MEAD_AGE_CAP = MEAD_AGEING.cap;
 /** How many times as fast a brew ages in a barrel standing in a cellar. */
 export const CELLAR_AGEING = 4;
 
-/** How a liquid ages in its barrel, or nothing for one that does not. The island's `age_rate` and `age_cap`. */
-export const ageingOf = (liquid: LiquidKind | undefined): Ageing | undefined => (liquid ? BREW_BY_ID.get(liquid)?.ages : undefined);
+/** What ages: a brew in its barrel, or cheese on a rack (`adorn.ts`), by the one rule. */
+export type Ages = LiquidKind | typeof CHEESE;
+/** How a liquid ages in its barrel, or cheese on a rack, or nothing for one that does not. The island's `age_rate` and `age_cap`. */
+export const ageingOf = (liquid: Ages | undefined): Ageing | undefined =>
+  (liquid === CHEESE ? CHEESE_AGEING : liquid ? BREW_BY_ID.get(liquid)?.ages : undefined);
 
 /** Whether a liquid is a brew that ages in its barrel. The island's `brew_ages`. */
 export const brewAges = (liquid: LiquidKind | undefined): boolean => !!ageingOf(liquid);
@@ -69,7 +73,7 @@ export const inCellar = (f: Pick<PlacedFurniture, 'level'>): boolean => (f.level
  * not: the island's `age_gain`, operation for operation. Nothing for a liquid
  * that does not age.
  */
-export function ageGain(liquid: LiquidKind | undefined, age: number, cellar: boolean): number {
+export function ageGain(liquid: Ages | undefined, age: number, cellar: boolean): number {
   const a = ageingOf(liquid);
   if (!a || !(age > 0)) return 0;
   return Math.min(a.cap, a.rate * (cellar ? CELLAR_AGEING : 1) * (age / DAY_SECONDS));
