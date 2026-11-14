@@ -367,6 +367,12 @@
     "why": "Solara stood under ten frames a second at any zoom: its wildermon's standing pictures came to five times what was kept, so each was drawn again just before it was wanted, and an altar in view after dark had the night mixed at four times the pixels. Then \"still massive fps drops\": every floor drawn afresh after dark, the shade round every wall cut to every tile every frame, and a wheel of the zoom making every crated wildermon and every piece again at every step. Drawn in Chrome on the page's own clock, on Solara as the island counted it: a second loop round must make next to no canvases, the night must be mixed at the lights' share, a settled frame must draw next to no floor or shade afresh, and a wheel of the zoom must stretch what it had rather than make it all again."
   },
   {
+    "file": "supabase/test/reachclips.ts",
+    "title": "Picking, reading and the lanterns: each job plays its clip, the feet planted, the hands on what they reach and hold",
+    "shard": 1,
+    "why": "Fourteen jobs played the placeholder gesture: picking fruit, a sprout, grapes and honey, reading a book, a rune tablet, a recipe, a formula and a map, and the five jobs at a lantern post. Each now plays its own clip, from every facing (its mirror from the left-handed ones), on both bodies: the feet do not slide, the other hand stays on the book's page, the tablet's runes or the sheet's and the map's far edge, no hand goes behind the chest, and his hands reach up to the foot of a lantern on a post."
+  },
+  {
     "file": "supabase/test/fxmarks.ts",
     "title": "A mark on a clip fires once as the body's clip time passes it",
     "shard": 1,

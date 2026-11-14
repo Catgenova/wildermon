@@ -4422,6 +4422,19 @@ export const NEWS: News[] = [
     ],
   },
   {
+    n: 589,
+    day: '2026-11-14',
+    lines: () => {
+      const jobs = (...clips: string[]): number => [...ACTION_BY_ID.keys()].filter((id) => clips.includes(clipOfJob(id) ?? '')).length;
+      const name = (id: string): string => itemDef(id).name.toLowerCase();
+      return [
+        `New: picking animated on the sculpted body (was: a placeholder gesture). Fruit and sprouts, one hand overhead: ${jobs('pick-high')} jobs. Grapes, both hands at the head: ${jobs('pick-grapes')}. Honey, crouched at the ${name('skep')}: ${jobs('take-honey')}.`,
+        `New: reading animated, the thing read in hand, jobs: ${name('book')} ${jobs('read-book')}, ${name('rune_tablet')} ${jobs('read-tablet')}, ${name('cooking_recipe')} and ${name('enchant_formula')} ${jobs('read-sheet')}, ${name('drawn_map')} ${jobs('read-map')} (was: a placeholder gesture).`,
+        `New: ${name('lamp_post')} and ${name('lamp_pillar')} animated, both hands overhead, on the toes: ${jobs('lamp-fit', 'lamp-take', 'lamp-candle', 'lamp-light', 'lamp-douse')} jobs; ${name('lantern')}, ${name('candle')} and a lit taper in hand (was: a placeholder gesture).`,
+      ];
+    },
+  },
+  {
     n: 588,
     day: '2026-11-14',
     lines: () => [
