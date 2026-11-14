@@ -47,6 +47,8 @@ export function wirePath(game: Game, island: Island): void {
   game.pathTick = () => {
     pathCheck(game);
     if (!game.thePath?.on) return;
+    // The labels that move as you do (the stone's counter, the workers): the Path tab looks again.
+    game.events.emit('path');
     const s = currentStep(game);
     // The sites, while a step points at them: on the walk out and at the site.
     if (s && (s.id === 'walk' || s.id === 'site') && !asking) {

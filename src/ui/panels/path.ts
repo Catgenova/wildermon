@@ -12,9 +12,6 @@ import { listed } from '../../game/words';
 /** What a step's mark says: done, skipped, the one you are on, or still ahead. */
 const MARKS = { done: '✔', skipped: '↷', here: '▶', ahead: '·' } as const;
 
-/** How often the tab looks at whether its labels have moved, in milliseconds. */
-const REDRAW_MS = 2000;
-
 export class PathPanel {
   /** What the page was last drawn from, so a beat that changes nothing draws nothing. */
   private drawn = '';
@@ -24,8 +21,6 @@ export class PathPanel {
   constructor(private readonly page: HTMLElement, private readonly game: Game, private readonly showing: () => boolean) {
     game.events.on('path', () => this.refresh());
     game.events.on('journal', () => this.refresh());
-    // And the labels that move as you do (the stone's counter, the workers), while the tab is showing.
-    setInterval(() => this.refresh(), REDRAW_MS);
   }
 
   /** Draw again, if the tab is showing and anything it says has changed. */
