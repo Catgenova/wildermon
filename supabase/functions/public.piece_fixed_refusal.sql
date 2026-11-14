@@ -6,6 +6,9 @@ CREATE OR REPLACE FUNCTION public.piece_fixed_refusal(p_world uuid, p_uid uuid, 
  STABLE
 AS $function$
   select case when f.mount is not null then mount_refusal(p_world, p_uid, f.mount, p_x, p_y, p_facing, p_level)
-              when f.hedge then hedge_refusal(p_world, p_x, p_y, p_level) end
+              when f.hedge then hedge_refusal(p_world, p_x, p_y, p_level)
+              -- A tree bench round a grown tree; a mooring post at the water's edge (`fitting.ts`).
+              when f.id = tree_bench_kind() then tree_bench_refusal(p_world, p_x, p_y)
+              when f.id = mooring_post_kind() then case when water_edge(p_world, p_x, p_y) then null else fitting_said('notShore', null, null) end end
     from furniture_def f where f.id = p_sub
 $function$

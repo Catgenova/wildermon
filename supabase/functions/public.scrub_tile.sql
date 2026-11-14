@@ -11,7 +11,7 @@ begin
   end if;
   if (slab_at(p_world, p_x, p_y)).id is not null then perform green_mark(p_world, 'slab', p_x, p_y, 0); end if;
   perform green_mark(p_world, 'piece', pc.x, pc.y, pc.id)
-     from placed pc join furniture_def f on f.id = pc.sub and f.mossy
+     from placed pc join furniture_def f on f.id = pc.sub and f.mossy and not moss_kept(pc)
     where pc.world_id = p_world and pc.kind = 'furniture' and pc.x = p_x and pc.y = p_y;
   insert into green_since (world_id, thing, x, y, k, since)
     select p_world, 'wall', wl.x, wl.y, green_wall_k(wl.level, wl.dir), now()

@@ -13,6 +13,11 @@ begin
     if building_at(p_world, p_x, p_y) is null then return mount_said('outside'); end if;
     p_mount := 'wall';
   end if;
+  -- A window seat as curtains, from inside a building (`fitting.ts`).
+  if p_mount = 'sill' then
+    if building_at(p_world, p_x, p_y) is null then return mount_said('outside'); end if;
+    p_mount := 'pane';
+  end if;
   if p_mount in ('wall', 'pane') then
     w := wall_on_side(p_world, p_x, p_y, p_facing, p_level);
     if w.x is null or wall_seen_type(p_world, p_uid, w) <> (case when p_mount = 'pane' then 'window' else 'solid' end) then

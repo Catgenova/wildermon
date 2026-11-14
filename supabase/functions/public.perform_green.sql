@@ -34,7 +34,7 @@ begin
     pc := target_placed(p_world, p_target);
     perform green_mark(p_world, 'piece', pc.x, pc.y, pc.id);
     perform tell(p_world, p_uid, 'Moss scrubbed: the '
-      || lower((select f.name from furniture_def f where f.id = pc.sub)) || '. ' || green_again(), 'event');
+      || lower((select f.name from furniture_def f where f.id = pc.sub)) || '. ' || case when pc.sub = moss_boulder_kind() then boulder_again() else green_again() end, 'event');
   else
     select * into br from bridge b where b.world_id = p_world and b.id = (p_target->>'id')::bigint;
     perform green_mark(p_world, 'bridge', br.ax, br.ay, br.id);

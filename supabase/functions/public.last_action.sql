@@ -24,4 +24,6 @@ AS $function$
       or decor_action(p_action)
       -- The furnishings' jobs: a seat, a hay stack, a signpost, a cairn, a vase, a side table, a fish mount (`furnish.ts`).
       or furnish_action(p_action)
+      -- The fittings' jobs: a pole, a boulder, a shelf, a dummy, a target, a mooring post, a bust (`fitting.ts`).
+      or fitting_action(p_action)
 $function$

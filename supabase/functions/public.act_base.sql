@@ -7,6 +7,8 @@ CREATE OR REPLACE FUNCTION public.act_base(p_world uuid, p_uid uuid, p_action te
 AS $function$
 declare v_wind double precision; v_swing double precision; v_two boolean := false;
 begin
+  -- A swing at a training dummy is a swing, a shot at an archery target a draw (`fitting.ts`).
+  p_action := practice_as(p_action);
   if not is_fight(p_action) then return p_base; end if;
   select coalesce((pl.stats->>'stamina')::double precision, 1) into v_wind
     from player pl where pl.world_id = p_world and pl.uid = p_uid;

@@ -70,6 +70,11 @@ begin
     perform perform_furnish(p_world, p_uid, p_action, p_target);
     return;
   end if;
+  -- The fittings' jobs (`fitting.ts`).
+  if fitting_action(p_action) then
+    perform perform_fitting(p_world, p_uid, p_action, p_target);
+    return;
+  end if;
 
   if p_action = 'plan_bridge' then
     v_kind := coalesce(p_target->>'material', 'rope');
@@ -278,7 +283,7 @@ begin
     v_want := dye_source_hex(p_world, p_uid, v_from);
     if not dye_spend(v_from, v_n) then return; end if;
     -- A woven rug already dyed takes the colour as its next (`decor.ts`).
-    if it.def = woven_rug_kind() and it.dye is not null then
+    if it.def in (woven_rug_kind(), lantern_pole_kind()) and it.dye is not null then
       update item set garden = jsonb_set(coalesce(garden, '{}'::jsonb), '{tints}', coalesce(garden->'tints', '[]'::jsonb) || to_jsonb(v_want))
        where id = it.id;
     -- A stack is split so the rest stays as it was.
