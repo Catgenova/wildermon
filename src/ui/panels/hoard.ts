@@ -7,6 +7,7 @@ import { ACTION_BY_ID } from '../../game/actions';
 import type { UIWindow } from '../windows';
 import { CONTOUR_INDEX, CONTOUR_STEP } from './minimap';
 import { capital } from '../../game/words';
+import { kitBody } from '../kit';
 
 /** How often the warm line asks again while the map is open. */
 const REFRESH = 1.5;
@@ -45,7 +46,8 @@ export class HoardPanel {
     private readonly island: Island | null,
   ) {
     const page = document.createElement('div');
-    page.className = 'hoard-page';
+    kitBody(this.win.body);
+    page.className = 'hoard-page rc-scroll';
     this.canvas = document.createElement('canvas');
     this.canvas.className = 'hoard-view';
     this.canvas.width = VIEW;
@@ -56,7 +58,7 @@ export class HoardPanel {
     this.warm.className = 'hoard-warm';
     this.dig = document.createElement('button');
     this.dig.type = 'button';
-    this.dig.className = 'tb-btn hoard-dig';
+    this.dig.className = 'tb-btn rc-btn rc-go hoard-dig';
     this.dig.textContent = 'Dig up';
     this.dig.addEventListener('click', () => {
       const def = ACTION_BY_ID.get('unearth');

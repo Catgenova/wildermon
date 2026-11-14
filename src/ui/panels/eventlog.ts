@@ -3,6 +3,7 @@ import type { LogEntry, LogKind } from '../../game/events';
 import type { Game } from '../../game/game';
 import type { UIWindow } from '../windows';
 import { keepControlKeys } from '../controlkeys';
+import { kitBody } from '../kit';
 
 /**
  * When a line was said.
@@ -57,7 +58,7 @@ export class EventLogPanel {
     win: UIWindow,
     private readonly game: Game,
   ) {
-    win.body.classList.add('log-body');
+    kitBody(win.body, 'log-body');
     // Which lines are kept, and a box to look through them.
     const bar = document.createElement('div');
     bar.className = 'log-tabs';
@@ -74,7 +75,7 @@ export class EventLogPanel {
     }
     this.search = document.createElement('input');
     this.search.type = 'search';
-    this.search.className = 'panel-search log-search';
+    this.search.className = 'panel-search rc-field log-search';
     this.search.placeholder = 'Find…';
     this.search.title = 'Filter this tab; Esc clears';
     this.search.addEventListener('input', () => {
@@ -90,13 +91,13 @@ export class EventLogPanel {
     });
     bar.append(this.search);
     this.list = document.createElement('div');
-    this.list.className = 'log-list';
+    this.list.className = 'log-list rc-scroll';
     this.list.addEventListener('scroll', () => {
       this.pinned = this.list.scrollTop + this.list.clientHeight >= this.list.scrollHeight - 8;
     });
     this.input = document.createElement('input');
     this.input.type = 'text';
-    this.input.className = 'log-input';
+    this.input.className = 'log-input rc-field';
     this.input.placeholder = 'Chat (Enter)';
     this.input.maxLength = SAY_MAX;
     this.input.addEventListener('keydown', (e) => {
@@ -145,7 +146,7 @@ export class EventLogPanel {
     }
     if (!shown) {
       const empty = document.createElement('div');
-      empty.className = 'log-line log-info';
+      empty.className = 'log-line log-info rc-empty';
       const where = this.tab.kinds ? `on the ${this.tab.label} tab` : 'in the log';
       empty.textContent = this.query
         ? `No match ${where}: “${this.search.value.trim()}”. Esc clears.`

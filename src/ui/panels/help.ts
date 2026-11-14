@@ -274,6 +274,7 @@ import { CUT_POLL_MS, CUT_QUIET_MS, RECONNECT_RETRY_MOST_MS, RECONNECT_RETRY_MS,
 import { WATCH_AWAKE_HOURS, WATCH_BREAK_MINS, WATCH_KEEP_DAYS, WATCH_SKILL_MINS, WATCH_SKILL_TIMES, WATCH_STOCK_PER_MILLE } from '../../game/watch';
 import { fixed, setMarkup } from '../html';
 import { PATH_CARD_HOLD, PATH_DETOURS, PATH_KINDS, PATH_PHASES, PATH_SITE, PATH_SKILLS, PATH_STEPS, PATH_SURE } from '../../game/path';
+import { KIT, kitBody, made as kitMade } from '../kit';
 
 /** What a cellar's rock gives, by the stone: every stone's own shards. */
 const CELLAR_SHARDS = listed(ROCK_VARIANTS.filter((r) => r.yields.endsWith('_shards')).map((r) => itemDef(r.yields).name.toLowerCase()));
@@ -4015,9 +4016,10 @@ export interface HelpPages {
 }
 
 export function buildHelp(host: HTMLElement): HelpPages {
-  host.classList.add('help-body');
+  kitBody(host, 'help-body');
   const holder = document.createElement('div');
   setMarkup(holder, fixed(helpText()));
+  for (const t of holder.querySelectorAll('table')) t.classList.add(KIT.table);
   // Gather the run of nodes under each heading into a section of its own.
   const sections: Array<{ title: string; el: HTMLElement }> = [];
   let current: HTMLElement | null = null;
@@ -4026,6 +4028,7 @@ export function buildHelp(host: HTMLElement): HelpPages {
       current = document.createElement('section');
       current.className = 'help-sec';
       current.id = `help-${sections.length}`;
+      node.classList.add(KIT.section);
       current.append(node);
       sections.push({ title: node.textContent ?? '', el: current });
       continue;
@@ -4036,7 +4039,7 @@ export function buildHelp(host: HTMLElement): HelpPages {
 
   const search = document.createElement('input');
   search.type = 'search';
-  search.className = 'panel-search help-search';
+  search.className = 'panel-search rc-field help-search';
   search.placeholder = 'Search the help…';
   search.setAttribute('aria-label', 'Search the help');
   // The contents fold away under a line that opens them, so the pages have the room.
@@ -4045,12 +4048,12 @@ export function buildHelp(host: HTMLElement): HelpPages {
   toc.className = 'help-toc';
   toc.setAttribute('aria-controls', 'help-contents');
   const contents = document.createElement('nav');
-  contents.className = 'help-contents';
+  contents.className = 'help-contents rc-scroll';
   contents.id = 'help-contents';
   const pages = document.createElement('div');
-  pages.className = 'help-pages';
+  pages.className = 'help-pages rc-scroll';
   const count = document.createElement('div');
-  count.className = 'help-count';
+  count.className = 'help-count rc-empty';
   count.hidden = true;
 
   const fold = (open: boolean): void => {
@@ -4063,7 +4066,7 @@ export function buildHelp(host: HTMLElement): HelpPages {
   const links = sections.map(({ title, el }, i) => {
     const a = document.createElement('button');
     a.type = 'button';
-    a.className = 'help-link';
+    a.className = 'help-link rc-btn';
     a.textContent = title;
     a.addEventListener('click', () => {
       // Clear any search first, so the section being jumped to is on the page.
@@ -4157,7 +4160,9 @@ export function buildHelp(host: HTMLElement): HelpPages {
 
   pages.append(...sections.map((s) => s.el));
   show('');
-  host.replaceChildren(search, toc, contents, count, pages);
+  const box = kitMade('span', 'search');
+  box.append(search);
+  host.replaceChildren(box, toc, contents, count, pages);
   return {
     titles: sections.map((s) => s.title),
     jump: (title) => {

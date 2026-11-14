@@ -127,7 +127,7 @@ export class Asker {
         for (const c of choices) {
           const b = document.createElement('button');
           b.type = 'button';
-          b.className = 'tb-btn ask-choice';
+          b.className = 'tb-btn rc-btn ask-choice';
           b.append(document.createTextNode(c.text));
           if (c.colour) {
             const sw = document.createElement('span');
@@ -146,11 +146,11 @@ export class Asker {
       buttons.className = 'ask-buttons';
       const no = document.createElement('button');
       no.type = 'button';
-      no.className = 'tb-btn tb-small';
+      no.className = 'tb-btn rc-btn tb-small';
       no.textContent = 'Cancel';
       const yes = document.createElement('button');
       yes.type = 'button';
-      yes.className = 'tb-btn tb-small ask-ok';
+      yes.className = 'tb-btn rc-btn rc-go tb-small ask-ok';
       yes.textContent = field ? field.ok ?? 'Name it' : 'Yes';
       // A choice is made by pressing it: there is nothing for a yes to say.
       buttons.append(...(picks.length ? [no] : [no, yes]));

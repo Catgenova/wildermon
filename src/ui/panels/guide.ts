@@ -8,6 +8,7 @@ import { degreesSays, TRACK, trackable, trackErr, trackLevel, trackReach, trackT
 import { CULL_RANGE, GATHER_VERB } from '../../game/creatures';
 import { drawCreaturePortrait } from '../../render/sprites';
 import { drawSoon, drawWildermonPortrait } from '../../render/wildermon';
+import { made, meaning } from '../kit';
 
 /** How big a kind is drawn on the index and on its own page, in CSS pixels. */
 const CARD = { w: 76, h: 56 };
@@ -37,6 +38,8 @@ export class GuidePanel {
    * index's redraw, so typing keeps its place; the cards are hidden, not redrawn (`findCards`).
    */
   private readonly search: HTMLInputElement;
+  /** The search box's wrapper, which carries its glass. */
+  private readonly searchBox: HTMLSpanElement;
   /**
    * Asked for: a "Tameable now" filter. On, the index keeps the kinds and stages seen whose taming (`entryTameLevel`)
    * is at or under your Taming; never a monster. With the search, both must hold.
@@ -74,17 +77,17 @@ export class GuidePanel {
     this.counts = document.createElement('div');
     this.counts.className = 'guide-counts';
     this.bar = document.createElement('div');
-    this.bar.className = 'panel-bar guide-bar';
+    this.bar.className = 'panel-bar rc-bar guide-bar';
     this.view = document.createElement('div');
     this.search = document.createElement('input');
     this.search.type = 'search';
-    this.search.className = 'panel-search guide-search';
+    this.search.className = 'panel-search rc-field guide-search';
     this.search.placeholder = 'Search: name, line or task';
     this.search.setAttribute('aria-label', 'Search the field guide');
     this.search.addEventListener('input', () => this.findCards());
     this.tameable = document.createElement('button');
     this.tameable.type = 'button';
-    this.tameable.className = 'tb-btn tb-small guide-tameable';
+    this.tameable.className = 'tb-btn rc-btn tb-small guide-tameable';
     this.tameable.setAttribute('aria-pressed', 'false');
     this.tameable.addEventListener('click', () => {
       this.tameOnly = !this.tameOnly;
@@ -93,7 +96,9 @@ export class GuidePanel {
     this.found = document.createElement('div');
     this.found.className = 'guide-how';
     this.found.hidden = true;
-    host.append(this.counts, this.search, this.tameable, this.found, this.bar, this.view);
+    this.searchBox = made('span', 'search');
+    this.searchBox.append(this.search);
+    host.append(this.counts, this.searchBox, this.tameable, this.found, this.bar, this.view);
     game.events.on('guide', () => {
       if (this.showing()) this.draw();
     });
@@ -147,7 +152,7 @@ export class GuidePanel {
   /** Every kind, a card each: drawn and named once seen, a shadow until then. */
   private drawIndex(): void {
     this.bar.hidden = true;
-    this.search.hidden = false;
+    this.searchBox.hidden = false;
     this.tameable.hidden = false;
     const grid = document.createElement('div');
     grid.className = 'guide-grid';
@@ -175,7 +180,7 @@ export class GuidePanel {
       for (const m of ['tamed', 'bred'] as const) {
         if (!keepable(def) || !guideMarks(entry.key).includes(m) || !g.has(entry.key, m)) continue;
         const tag = document.createElement('span');
-        tag.className = 'guide-tag';
+        tag.className = 'guide-tag rc-tag';
         tag.textContent = MARK_NAMES[m].toLowerCase();
         tags.append(tag);
       }
@@ -229,13 +234,13 @@ export class GuidePanel {
     const at = pages.findIndex((e) => e.key === entry.key);
     this.bar.hidden = false;
     // A page is not searched; the search and the filter wait for the index.
-    this.search.hidden = true;
+    this.searchBox.hidden = true;
     this.tameable.hidden = true;
     this.found.hidden = true;
     const button = (text: string, title: string, go: () => void): HTMLButtonElement => {
       const b = document.createElement('button');
       b.type = 'button';
-      b.className = 'tb-btn tb-small';
+      b.className = 'tb-btn rc-btn tb-small';
       b.textContent = text;
       b.title = title;
       b.addEventListener('click', go);
@@ -269,7 +274,8 @@ export class GuidePanel {
       const note = document.createElement('div');
       note.className = 'guide-marks';
       const chip = document.createElement('span');
-      chip.className = 'guide-mark guide-mark-on';
+      chip.className = 'guide-mark rc-tag guide-mark-on';
+      meaning(chip, 'good');
       chip.textContent = NOTED_SAYS;
       chip.title = `${NOTED_SAYS}: Track only; not seen`;
       note.append(chip);
@@ -283,7 +289,8 @@ export class GuidePanel {
         if (m !== 'seen' && (!keepable(def) || !guideMarks(entry.key).includes(m))) continue;
         const chip = document.createElement('span');
         const has = this.game.guide.has(entry.key, m);
-        chip.className = `guide-mark${has ? ' guide-mark-on' : ''}`;
+        chip.className = `guide-mark rc-tag${has ? ' guide-mark-on' : ''}`;
+        meaning(chip, has ? 'good' : null);
         chip.textContent = MARK_NAMES[m];
         chip.title = has ? `${MARK_NAMES[m]}` : `Not ${MARK_NAMES[m].toLowerCase()} yet`;
         marks.append(chip);
@@ -296,7 +303,7 @@ export class GuidePanel {
       const L = trackLevel(this.game.skills.get(TRACKING));
       const go = document.createElement('button');
       go.type = 'button';
-      go.className = 'tb-btn tb-small guide-track';
+      go.className = 'tb-btn rc-btn tb-small guide-track';
       go.textContent = 'Track';
       // Alone, no further than the wild that is out (`trackAction.ts`).
       const reach = this.island ? trackReach(L, this.game.awareShare()) : Math.min(trackReach(L, this.game.awareShare()), CULL_RANGE);
@@ -316,7 +323,7 @@ export class GuidePanel {
       const order = RECORD_STATS.map((r) => r.id);
       const its = this.records.filter((r) => r.species === def.id).sort((a, b) => order.indexOf(a.stat) - order.indexOf(b.stat));
       const h = document.createElement('div');
-      h.className = 'skill-group';
+      h.className = 'skill-group rc-section';
       h.textContent = 'Bred records';
       const list = document.createElement('ul');
       list.className = 'guide-lines';
@@ -329,7 +336,7 @@ export class GuidePanel {
     }
     for (const s of guidePage(def, !!this.island, entry.stage, this.game.guide, this.game.lairsSeen)) {
       const h = document.createElement('div');
-      h.className = 'skill-group';
+      h.className = 'skill-group rc-section';
       h.textContent = s.head;
       const list = document.createElement('ul');
       list.className = 'guide-lines';

@@ -11,6 +11,7 @@ import { SKILL_BY_ID } from '../../game/skills';
 import { Picking } from '../picking';
 import { Repaint } from '../repaint';
 import type { UIWindow } from '../windows';
+import { kitBody } from '../kit';
 import { clockSaid } from './craftqueue';
 
 const ql1 = (n: number): string => n.toFixed(1);
@@ -66,9 +67,9 @@ export class MendPanel {
   private upto: number | null = null;
 
   constructor(private readonly win: UIWindow, private readonly game: Game) {
-    win.body.classList.add('settings-body', 'mend-body');
+    kitBody(win.body, 'settings-body', 'mend-body');
     this.body = document.createElement('div');
-    this.body.className = 'mend';
+    this.body.className = 'mend rc-scroll';
     win.body.append(this.body);
     for (const ev of ['inventory', 'crate', 'skill', 'action'] as const) game.events.on(ev as 'inventory', () => this.repaint.ask());
     win.onOpen = () => {
@@ -194,13 +195,14 @@ export class MendPanel {
       for (const it of rows) {
         const tr = document.createElement('tr');
         const picked = this.picking.uids.has(it.uid);
-        if (picked) tr.className = 'mend-chosen';
+        if (picked) tr.className = 'mend-chosen rc-on';
         const said = `${itemName(it)}${g.isEquipped(it.uid) ? ' (worn)' : ''}`;
         // The box: the same as a Ctrl-click (a Shift-click on it, the same as a Shift-click), for a thumb and the Tab key.
         const tick = this.cell(tr, '', 'mend-tick');
         if (canImprove(it.id)) {
           const box2 = document.createElement('input');
           box2.type = 'checkbox';
+          box2.className = 'rc-check';
           box2.checked = picked;
           box2.title = 'Choose for Improve';
           box2.setAttribute('aria-label', `Choose for Improve: ${said}`);
@@ -326,7 +328,7 @@ export class MendPanel {
     if (!what) return;
 
     const pick = document.createElement('select');
-    pick.className = 'panel-select mend-select';
+    pick.className = 'panel-select rc-field mend-select';
     pick.title = 'Item to improve';
     for (const p of pieces) {
       const o = document.createElement('option');
@@ -449,6 +451,7 @@ export class MendPanel {
       const tr = document.createElement('tr');
       const radio = document.createElement('input');
       radio.type = 'radio';
+      radio.className = 'rc-check';
       radio.name = `mend-kind-${mat}`;
       radio.checked = lockKey(k.lock) === on;
       radio.title = several ? 'Every piece that takes it held to this kind' : 'Run held to this kind';
@@ -490,7 +493,7 @@ export class MendPanel {
       i.step = String(step);
       i.value = value;
       i.title = title;
-      i.className = 'mend-input';
+      i.className = 'mend-input rc-field';
       i.addEventListener('keydown', (e) => e.stopPropagation());
       i.addEventListener('change', () => {
         set(i.value);
@@ -590,7 +593,7 @@ export class MendPanel {
       ? `${fit.map((p) => itemName(p.it)).join(', ')}: in turn, Improve × ${count} each, Repair when damage is over ${IMPROVE_DAMAGE}`
       : `${first ? `Repair × ${first.goes}, then ` : ''}Improve × ${count}, Repair when damage is over ${IMPROVE_DAMAGE}`);
     const go = this.row([]);
-    const b = this.button(label, title, !!why || !improve || !jobs.length, () => void g.requestInTurn(jobs), 'mend-go');
+    const b = this.button(label, title, !!why || !improve || !jobs.length, () => void g.requestInTurn(jobs), 'mend-go rc-go');
     b.dataset.mendFocus = 'queue';
     go.append(b);
     if (first && !why) go.append(this.row([`First: Repair to 0, ${actionsSaid(first.goes)}, QL −${first.ql.toFixed(2)}`], 'mend-dim'));
@@ -619,7 +622,7 @@ export class MendPanel {
     const box = document.createElement('section');
     box.className = `mend-section ${cls}`.trim();
     const h = document.createElement('div');
-    h.className = 'skill-group';
+    h.className = 'skill-group rc-section mend-head';
     h.textContent = title;
     box.append(h);
     this.body.append(box);
@@ -640,11 +643,11 @@ export class MendPanel {
   /** A table in a box of its own that scrolls sideways when the window is narrower than it. */
   private table(host: HTMLElement, heads: string[], cls = ''): HTMLTableSectionElement {
     const wide = document.createElement('div');
-    wide.className = 'mend-wide';
+    wide.className = 'mend-wide rc-wide';
     host.append(wide);
     host = wide;
     const t = document.createElement('table');
-    t.className = `mend-table ${cls}`.trim();
+    t.className = `mend-table rc-table ${cls}`.trim();
     const head = document.createElement('thead');
     const tr = document.createElement('tr');
     for (const h of heads) {
@@ -670,7 +673,7 @@ export class MendPanel {
   private button(text: string, title: string, disabled: boolean, go: () => void, cls = ''): HTMLButtonElement {
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = `tb-btn tb-small ${cls}`.trim();
+    b.className = `tb-btn rc-btn tb-small ${cls}`.trim();
     b.textContent = text;
     b.title = title;
     b.disabled = disabled;

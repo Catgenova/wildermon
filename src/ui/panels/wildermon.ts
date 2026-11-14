@@ -13,6 +13,7 @@ import { furnitureDef } from '../../game/furniture';
 import { SKILL_BY_ID } from '../../game/skills';
 import type { MenuItem } from '../contextmenu';
 import type { UIWindow } from '../windows';
+import { fullness, kitBody, kitSearch, meaning } from '../kit';
 import { percent } from '../../game/words';
 import { idleSays, ledgerLines } from '../../game/workerlog';
 import { workLines } from '../../game/workstats';
@@ -151,12 +152,10 @@ export class WildermonPanel {
     private readonly entriesFor: (id: number) => MenuItem[],
     private readonly showMenu: (x: number, y: number, title: string, items: MenuItem[]) => void,
   ) {
-    win.body.classList.add('pals-body');
+    kitBody(win.body, 'pals-body');
     // A herd of thirty is a scroll; searching and ordering it is the point.
-    this.search = document.createElement('input');
-    this.search.type = 'search';
-    this.search.className = 'panel-search';
-    this.search.placeholder = 'Name, kind, trait, task…';
+    const search = kitSearch('Name, kind, trait, task…');
+    this.search = search.input;
     this.search.addEventListener('input', () => {
       this.query = this.search.value.trim().toLowerCase();
       this.render();
@@ -169,9 +168,9 @@ export class WildermonPanel {
       this.render();
     });
     const bar = document.createElement('div');
-    bar.className = 'panel-bar';
+    bar.className = 'panel-bar rc-bar';
     const sortSel = document.createElement('select');
-    sortSel.className = 'panel-select';
+    sortSel.className = 'panel-select rc-field';
     sortSel.title = 'Sort';
     for (const [key, label] of SORTS) {
       const opt = document.createElement('option');
@@ -187,7 +186,7 @@ export class WildermonPanel {
     const groupBtn = document.createElement('button');
     this.groupBtn = groupBtn;
     groupBtn.type = 'button';
-    groupBtn.className = 'tb-btn tb-small tb-on';
+    groupBtn.className = 'tb-btn rc-btn tb-small tb-on';
     groupBtn.textContent = 'Grouped';
     groupBtn.title = 'Group by location, or one list';
     groupBtn.addEventListener('click', () => {
@@ -199,7 +198,7 @@ export class WildermonPanel {
     const attentionBtn = document.createElement('button');
     this.attentionBtn = attentionBtn;
     attentionBtn.type = 'button';
-    attentionBtn.className = 'tb-btn tb-small';
+    attentionBtn.className = 'tb-btn rc-btn tb-small';
     attentionBtn.textContent = 'Needs attention';
     attentionBtn.title = `Only those under ${Math.round(HUNGRY_AT * 100)}% fed, under ${Math.round(HURT_AT * 100)}% health, `
       + `under ${Math.round(CARE_WANTING * 100)}% care, or due within ${clockLeft(DUE_SOON)}`;
@@ -207,13 +206,13 @@ export class WildermonPanel {
     attentionBtn.addEventListener('click', () => this.showAttention(!this.attention));
     bar.append(sortSel, groupBtn, attentionBtn);
     this.list = document.createElement('div');
-    this.list.className = 'pals-list';
+    this.list.className = 'pals-list rc-scroll';
     this.footer = document.createElement('div');
-    this.footer.className = 'inv-footer';
+    this.footer.className = 'inv-footer rc-foot';
     this.care = new CarePanel(game, entriesFor, showMenu);
     this.cardsPage = document.createElement('div');
     this.cardsPage.className = 'pals-cards';
-    this.cardsPage.append(this.search, bar, this.list, this.footer);
+    this.cardsPage.append(search.el, bar, this.list, this.footer);
     const tabs = document.createElement('div');
     tabs.className = 'log-tabs pals-tabs';
     for (const [id, label, title] of [
@@ -312,7 +311,7 @@ export class WildermonPanel {
     let el = this.heads.get(mode);
     if (!el) {
       el = document.createElement('div');
-      el.className = 'inv-group';
+      el.className = 'inv-group rc-section';
       this.heads.set(mode, el);
     }
     if (el.textContent !== text) el.textContent = text;
@@ -322,7 +321,7 @@ export class WildermonPanel {
   /** A line that is only ever a sentence: built once, worded as needed. */
   private note(mode: string, text: string): HTMLDivElement {
     const el = this.heading(`note:${mode}`, text);
-    el.className = 'inv-empty';
+    el.className = 'inv-empty rc-empty';
     return el;
   }
 
@@ -461,7 +460,7 @@ export class WildermonPanel {
   private card(c: Creature): { el: HTMLDivElement; refresh: (c: Creature) => void } {
     let cur = c;
     const card = document.createElement('div');
-    card.className = 'pal-card';
+    card.className = 'pal-card rc-row';
     const head = document.createElement('div');
     head.className = 'pal-head';
     const name = document.createElement('span');
@@ -470,7 +469,7 @@ export class WildermonPanel {
     level.className = 'pal-level';
     const menu = document.createElement('button');
     menu.type = 'button';
-    menu.className = 'tb-btn tb-small';
+    menu.className = 'tb-btn rc-btn tb-small';
     menu.textContent = '⋯';
     menu.title = 'Actions';
     menu.addEventListener('click', (e) => {
@@ -502,9 +501,9 @@ export class WildermonPanel {
       l.className = 'hud-bar-label';
       l.textContent = label;
       const track = document.createElement('div');
-      track.className = 'hud-bar';
+      track.className = 'hud-bar rc-meter';
       const fill = document.createElement('div');
-      fill.className = `hud-bar-fill ${cls}`;
+      fill.className = `hud-bar-fill rc-meter-fill ${cls}`;
       track.append(fill);
       const value = document.createElement('span');
       value.className = 'hud-bar-value';
@@ -587,7 +586,8 @@ export class WildermonPanel {
         flags.replaceChildren();
         for (const what of wants) {
           const tag = document.createElement('span');
-          tag.className = `pal-flag pal-flag-${what}`;
+          tag.className = `pal-flag rc-tag pal-flag-${what}`;
+          meaning(tag, what === 'hurt' ? 'bad' : 'warn');
           tag.textContent = what;
           tag.title = what === 'hurt' ? `Under ${Math.round(HURT_AT * 100)}% health.` : `Under ${Math.round(HUNGRY_AT * 100)}% fed.`;
           flags.append(tag);
@@ -598,6 +598,7 @@ export class WildermonPanel {
       const width = (fill: HTMLDivElement, v: number): void => {
         const w = `${Math.round(Math.max(0, Math.min(1, v)) * 100)}%`;
         if (fill.style.width !== w) fill.style.width = w;
+        if (fill.parentElement) meaning(fill.parentElement, fullness(v));
       };
       const top = maxHealth(c, def);
       width(health.fill, c.health / top);
@@ -640,7 +641,7 @@ export class WildermonPanel {
         label.title = 'Base stats now, ancient pot points included';
         statBox.replaceChildren(label, ...tags.map((t) => {
           const tag = document.createElement('span');
-          tag.className = 'worth-tag';
+          tag.className = 'worth-tag rc-tag';
           tag.textContent = t.text;
           tag.title = t.title;
           return tag;
@@ -714,7 +715,7 @@ export class WildermonPanel {
       const t = traitOf(id);
       if (!t) continue;
       const chip = document.createElement('span');
-      chip.className = 'trait-chip';
+      chip.className = 'trait-chip rc-tag';
       const known = readsTrait(this.game, id);
       if (known) {
         chip.textContent = t.aura ? `◉ ${t.name}` : t.name;
@@ -794,7 +795,8 @@ export class WildermonPanel {
         if (!n) continue;
         any = true;
         const tag = document.createElement('span');
-        tag.className = `worth-tag ${isGain(ch.id, n) ? 'trait-up' : 'trait-down'}`;
+        tag.className = `worth-tag rc-tag ${isGain(ch.id, n) ? 'trait-up' : 'trait-down'}`;
+        meaning(tag, isGain(ch.id, n) ? 'good' : 'bad');
         tag.textContent = `${figSays(ch.id, n)} ${ch.label}`;
         tag.title = `${ch.note}.`;
         row.append(tag);
@@ -804,7 +806,8 @@ export class WildermonPanel {
       if (Math.abs(v - 1) < 0.005) continue;
       any = true;
       const tag = document.createElement('span');
-      tag.className = `worth-tag ${isGain(ch.id, v) ? 'trait-up' : 'trait-down'}`;
+      tag.className = `worth-tag rc-tag ${isGain(ch.id, v) ? 'trait-up' : 'trait-down'}`;
+      meaning(tag, isGain(ch.id, v) ? 'good' : 'bad');
       tag.textContent = `${pct(v)} ${ch.label}`;
       // Where it came from, so a figure that moved has somewhere to have moved from.
       const parts = [`${ch.note}.`, `Blood ${traitMul(c.traits, ch.id).toFixed(2)}×`];

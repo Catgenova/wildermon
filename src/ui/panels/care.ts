@@ -15,6 +15,7 @@ import { idleSays, type IdleWhy } from '../../game/workerlog';
 import { percent, timeWords } from '../../game/words';
 import type { MenuItem } from '../contextmenu';
 import { DUE_SOON, HUNGRY_AT, HURT_AT } from './attention';
+import { fullness, meaning, type Meaning } from '../kit';
 
 /**
  * The Wildermon window's Care tab: everything one of yours wants doing, worst
@@ -34,6 +35,11 @@ export const NEED_KINDS: readonly NeedKind[] = ['hurt', 'hungry', 'unfed', 'due'
 /** The tag on its row. */
 export const NEED_LABEL: Record<NeedKind, string> = {
   hurt: 'Hurt', hungry: 'Hungry', unfed: 'Unfed', due: 'Due', rest: 'No bed', idle: 'Idle', care: 'Care', gear: 'Gear', pair: 'Pair',
+};
+
+/** What a need's tag says by its colour: hurt is bad, going without is a warning, the rest are to do. */
+const NEED_MEANING: Record<NeedKind, Meaning | null> = {
+  hurt: 'bad', hungry: 'warn', unfed: 'warn', due: 'warn', rest: 'warn', idle: null, care: null, gear: null, pair: null,
 };
 
 /** A job that sees to a need: what its button says, the action, and what it is done to. */
@@ -281,15 +287,15 @@ export class CarePanel {
     private readonly showMenu: (x: number, y: number, title: string, items: MenuItem[]) => void,
   ) {
     const el = document.createElement('div');
-    el.className = 'care-page';
+    el.className = 'care-page rc-scroll';
     this.el = el;
 
     this.bulk = document.createElement('div');
-    this.bulk.className = 'panel-bar care-bulk';
+    this.bulk.className = 'panel-bar rc-bar care-bulk';
     const button = (text: string, title: string, on: () => void): HTMLButtonElement => {
       const b = document.createElement('button');
       b.type = 'button';
-      b.className = 'tb-btn tb-small';
+      b.className = 'tb-btn rc-btn tb-small';
       b.textContent = text;
       b.title = title;
       b.addEventListener('click', on);
@@ -308,16 +314,16 @@ export class CarePanel {
     this.bedsEl.className = 'care-beds';
 
     this.needHead = document.createElement('div');
-    this.needHead.className = 'inv-group';
+    this.needHead.className = 'inv-group rc-section';
     this.needList = document.createElement('div');
     this.needList.className = 'care-needs';
 
     this.herdHead = document.createElement('div');
-    this.herdHead.className = 'inv-group';
+    this.herdHead.className = 'inv-group rc-section';
     const filters = document.createElement('div');
-    filters.className = 'panel-bar care-filters';
+    filters.className = 'panel-bar rc-bar care-filters';
     this.stageSel = document.createElement('select');
-    this.stageSel.className = 'panel-select';
+    this.stageSel.className = 'panel-select rc-field';
     this.stageSel.title = 'Bed and gear size';
     for (const [v, label] of [['', 'All sizes'], ...GEAR_SIZES.map((s, i) => [String(i), `${s[0].toUpperCase()}${s.slice(1)}`])]) {
       const o = document.createElement('option');
@@ -326,7 +332,7 @@ export class CarePanel {
       this.stageSel.append(o);
     }
     this.jobSel = document.createElement('select');
-    this.jobSel.className = 'panel-select';
+    this.jobSel.className = 'panel-select rc-field';
     this.jobSel.title = 'Job';
     this.stageSel.addEventListener('change', () => this.render());
     this.jobSel.addEventListener('change', () => this.render());
@@ -534,7 +540,7 @@ export class CarePanel {
   private emptyNote(): HTMLDivElement {
     if (!this.empty) {
       this.empty = document.createElement('div');
-      this.empty.className = 'inv-empty';
+      this.empty.className = 'inv-empty rc-empty';
     }
     const n = this.game.creatures.yours().length;
     const t = n ? `None of ${n} wildermon` : 'No tamed wildermon';
@@ -563,16 +569,16 @@ export class CarePanel {
   private needRow(): { el: HTMLDivElement; refresh: (n: Need) => void } {
     let cur: Need | null = null;
     const el = document.createElement('div');
-    el.className = 'care-need';
+    el.className = 'care-need rc-row';
     const tag = document.createElement('span');
-    tag.className = 'pal-flag care-tag';
+    tag.className = 'pal-flag care-tag rc-tag';
     const who = document.createElement('span');
     who.className = 'care-who';
     const says = document.createElement('span');
     says.className = 'care-says';
     const fix = document.createElement('button');
     fix.type = 'button';
-    fix.className = 'tb-btn tb-small care-fix';
+    fix.className = 'tb-btn rc-btn tb-small care-fix';
     fix.addEventListener('click', (e) => {
       e.stopPropagation();
       if (cur?.fix) this.ask(cur.fix);
@@ -582,8 +588,9 @@ export class CarePanel {
       cur = n;
       const t = NEED_LABEL[n.kind];
       if (tag.textContent !== t) tag.textContent = t;
-      const cls = `pal-flag care-tag care-tag-${n.kind}`;
+      const cls = `pal-flag care-tag rc-tag care-tag-${n.kind}`;
       if (tag.className !== cls) tag.className = cls;
+      meaning(tag, NEED_MEANING[n.kind]);
       if (who.textContent !== n.name) who.textContent = n.name;
       if (says.textContent !== n.says) says.textContent = n.says;
       if (says.title !== n.title) says.title = n.title;
@@ -600,13 +607,13 @@ export class CarePanel {
   private herdRow(id: number): { el: HTMLDivElement; refresh: (c: Creature, needs: Need[]) => void } {
     let cur: Creature | null = null;
     const el = document.createElement('div');
-    el.className = 'care-row';
+    el.className = 'care-row rc-row';
     el.dataset.id = String(id);
     const head = document.createElement('div');
     head.className = 'care-row-head';
     const tick = document.createElement('input');
     tick.type = 'checkbox';
-    tick.className = 'care-tick';
+    tick.className = 'care-tick rc-check';
     tick.title = 'Select for Assign selected';
     tick.addEventListener('change', () => {
       if (tick.checked) this.selected.add(id);
@@ -621,7 +628,7 @@ export class CarePanel {
     level.className = 'pal-level';
     const menu = document.createElement('button');
     menu.type = 'button';
-    menu.className = 'tb-btn tb-small';
+    menu.className = 'tb-btn rc-btn tb-small';
     menu.textContent = '⋯';
     menu.title = 'Actions';
     menu.addEventListener('click', (e) => {
@@ -642,9 +649,9 @@ export class CarePanel {
       l.className = 'care-meter-label';
       l.textContent = label;
       const track = document.createElement('div');
-      track.className = 'hud-bar';
+      track.className = 'hud-bar rc-meter';
       const fill = document.createElement('div');
-      fill.className = `hud-bar-fill ${cls}`;
+      fill.className = `hud-bar-fill rc-meter-fill ${cls}`;
       track.append(fill);
       const value = document.createElement('span');
       value.className = 'care-meter-value';
@@ -661,6 +668,7 @@ export class CarePanel {
     const width = (fill: HTMLDivElement, v: number): void => {
       const w = `${Math.round(Math.max(0, Math.min(1, v)) * 100)}%`;
       if (fill.style.width !== w) fill.style.width = w;
+      if (fill.parentElement) meaning(fill.parentElement, fullness(v));
     };
     const say = (e: HTMLElement, t: string): void => {
       if (e.textContent !== t) e.textContent = t;
@@ -675,7 +683,8 @@ export class CarePanel {
         flags.dataset.says = flagKey;
         flags.replaceChildren(...needs.filter((n) => n.kind !== 'gear' && n.kind !== 'pair').map((n) => {
           const t = document.createElement('span');
-          t.className = `pal-flag care-tag-${n.kind}`;
+          t.className = `pal-flag rc-tag care-tag-${n.kind}`;
+          meaning(t, NEED_MEANING[n.kind]);
           t.textContent = NEED_LABEL[n.kind];
           return t;
         }));

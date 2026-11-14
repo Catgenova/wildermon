@@ -173,7 +173,7 @@ export class BoardsPanel {
     const shown = has(this.skill) ? this.skill : has(own) ? own : known[0][1][0].id;
     this.skill = shown;
     const pick = document.createElement('select');
-    pick.className = 'panel-select board-pick';
+    pick.className = 'panel-select rc-field board-pick';
     pick.title = 'Skill to show';
     for (const [group, defs] of known) {
       const og = document.createElement('optgroup');
@@ -193,7 +193,7 @@ export class BoardsPanel {
       this.draw();
     });
     const bar = document.createElement('div');
-    bar.className = 'panel-bar';
+    bar.className = 'panel-bar rc-bar';
     bar.append(pick);
     this.page.append(bar);
     this.columns('Who', '', 'Skill level');
@@ -232,7 +232,7 @@ export class BoardsPanel {
     this.columns('Record', 'Wildermon · breeder · born', 'Best');
     for (const kind of kinds) {
       const head = document.createElement('div');
-      head.className = 'skill-group';
+      head.className = 'skill-group rc-section';
       head.textContent = SPECIES[kind]?.name ?? kind;
       this.page.append(head);
       for (const r of records.filter((x) => x.species === kind).sort((a, b) => order.indexOf(a.stat) - order.indexOf(b.stat))) {
@@ -244,7 +244,7 @@ export class BoardsPanel {
   /** What each column of a board is, over its first place. */
   private columns(who: string, note: string, fig: string): void {
     const row = document.createElement('div');
-    row.className = 'skill-row board-row board-cols';
+    row.className = 'skill-row rc-colhead board-row board-cols';
     for (const [text, cls] of [['#', 'board-rank'], [who, ''], [note, 'skill-note'], [fig, 'skill-value']]) {
       const el = document.createElement('span');
       el.className = cls;
@@ -257,7 +257,7 @@ export class BoardsPanel {
   /** One place on a board: its number, who or what, a note, and the figure it is ranked by. Yours says so. */
   private place(n: number, who: string, note: string, fig: string, mine: boolean, title = ''): void {
     const row = document.createElement('div');
-    row.className = `skill-row board-row${mine ? ' board-mine' : ''}`;
+    row.className = `skill-row rc-row board-row${mine ? ' board-mine rc-on' : ''}`;
     const rank = document.createElement('span');
     rank.className = 'board-rank';
     // A record has no place to number.
@@ -267,7 +267,7 @@ export class BoardsPanel {
     name.textContent = who;
     if (mine) {
       const you = document.createElement('span');
-      you.className = 'board-you';
+      you.className = 'board-you rc-tag';
       you.textContent = 'you';
       name.append(you);
     }
@@ -284,7 +284,7 @@ export class BoardsPanel {
 
   private say(text: string): void {
     const el = document.createElement('div');
-    el.className = 'skill-note market-note board-note';
+    el.className = 'skill-note market-note board-note rc-empty';
     el.textContent = text;
     this.page.append(el);
   }

@@ -5,6 +5,7 @@ import { CRAFT_REACH, RECIPE_BY_ID, recipeNow, stationName } from '../../game/re
 import { shoppingList, type ShoppingEntry } from '../../game/shopping';
 import { Repaint } from '../repaint';
 import type { UIWindow } from '../windows';
+import { kit, kitBody, meaning } from '../kit';
 
 /** Where the list is kept: in this browser, like the pinned recipes, since it is about whoever sits here. */
 const KEY = 'wildermon-iso-shopping';
@@ -23,9 +24,9 @@ export class ShoppingPanel {
   private readonly repaint = new Repaint(500);
 
   constructor(private readonly win: UIWindow, private readonly game: Game) {
-    win.body.classList.add('settings-body', 'shop-body');
+    kitBody(win.body, 'settings-body', 'shop-body');
     this.body = document.createElement('div');
-    this.body.className = 'shop';
+    this.body.className = 'shop rc-scroll';
     win.body.append(this.body);
     this.load();
     for (const ev of ['inventory', 'crate', 'world'] as const) game.events.on(ev as 'inventory', () => this.repaint.ask());
@@ -82,7 +83,7 @@ export class ShoppingPanel {
     this.body.replaceChildren();
     if (!this.entries.length) {
       const empty = document.createElement('div');
-      empty.className = 'inv-empty';
+      empty.className = 'inv-empty rc-empty';
       empty.textContent = `Empty. Crafting (${boundKey('win_craft')}): press List on a recipe to add its full bill, down to raw materials, against what you hold and nearby stores.`;
       this.body.append(empty);
       return;
@@ -93,7 +94,7 @@ export class ShoppingPanel {
       const r = RECIPE_BY_ID.get(e.recipe);
       if (!r) continue;
       const row = document.createElement('div');
-      row.className = 'shop-row shop-entry';
+      row.className = 'shop-row rc-row shop-entry';
       const name = document.createElement('span');
       name.className = 'shop-name';
       name.textContent = `${itemDef(r.result).name} × ${e.count}`;
@@ -101,7 +102,7 @@ export class ShoppingPanel {
       const btn = (text: string, title: string, go: () => void): HTMLButtonElement => {
         const b = document.createElement('button');
         b.type = 'button';
-        b.className = 'tb-btn tb-small';
+        b.className = 'tb-btn rc-btn tb-small';
         b.textContent = text;
         b.title = title;
         b.addEventListener('click', go);
@@ -123,7 +124,7 @@ export class ShoppingPanel {
         this.repaint.force();
         this.render();
       });
-      off.classList.add('tb-danger');
+      off.classList.add('tb-danger', 'rc-danger');
       row.append(name, less, more, off);
       head.append(row);
     }
@@ -151,7 +152,7 @@ export class ShoppingPanel {
     const box = document.createElement('div');
     box.className = 'shop-section';
     const h = document.createElement('div');
-    h.className = 'skill-group';
+    h.className = 'skill-group rc-section';
     h.textContent = title;
     box.append(h);
     if (lead) box.append(this.note(lead));
@@ -177,13 +178,15 @@ export class ShoppingPanel {
   private line(name: string, have: number, need: number): HTMLDivElement {
     const row = document.createElement('div');
     const done = have >= need;
-    row.className = `shop-row shop-fetch${done ? ' shop-done' : ''}`;
+    row.className = `shop-row rc-row shop-fetch${done ? ' shop-done' : ''}`;
+    meaning(row, done ? 'good' : null);
     const n = document.createElement('span');
     n.className = 'shop-name';
     n.textContent = `${done ? '✔ ' : ''}${name}`;
     const bar = document.createElement('span');
-    bar.className = 'shop-bar';
-    const fill = document.createElement('span');
+    bar.className = 'shop-bar rc-meter';
+    meaning(bar, done ? 'good' : 'accent');
+    const fill = kit(document.createElement('span'), 'fill');
     fill.style.width = `${Math.round(Math.min(1, need ? have / need : 1) * 100)}%`;
     bar.append(fill);
     const count = document.createElement('span');

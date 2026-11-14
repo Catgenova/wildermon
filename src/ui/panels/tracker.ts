@@ -1,6 +1,7 @@
 import type { Game } from '../../game/game';
 import { SKILL_DEFS } from '../../game/skills';
 import type { MenuItem } from '../contextmenu';
+import { meaning } from '../kit';
 
 /**
  * How many trades you may keep an eye on at once.
@@ -78,7 +79,7 @@ export class TrackerPanel {
     this.list.className = 'track-list';
     this.addBtn = document.createElement('button');
     this.addBtn.type = 'button';
-    this.addBtn.className = 'tb-btn track-add';
+    this.addBtn.className = 'tb-btn rc-btn track-add';
     this.addBtn.addEventListener('click', () => {
       const r = this.addBtn.getBoundingClientRect();
       this.showMenu(r.left, r.bottom, 'Track a skill', this.choices());
@@ -139,7 +140,7 @@ export class TrackerPanel {
       : 'Track a skill…';
     if (!this.tracked.length) {
       const none = document.createElement('div');
-      none.className = 'inv-empty';
+      none.className = 'inv-empty rc-empty';
       none.textContent = `Track up to ${TRACKED_MAX} skills: level and progress to next.`;
       this.list.append(none);
       return;
@@ -151,7 +152,7 @@ export class TrackerPanel {
       const { level, part, capped } = toNext(value);
 
       const row = document.createElement('div');
-      row.className = 'track-row';
+      row.className = 'track-row rc-row';
 
       const name = document.createElement('span');
       name.className = 'track-name';
@@ -164,16 +165,17 @@ export class TrackerPanel {
 
       const drop = document.createElement('button');
       drop.type = 'button';
-      drop.className = 'tb-btn tb-small track-drop';
+      drop.className = 'tb-btn rc-btn tb-small rc-icon rc-danger track-drop';
       drop.textContent = '✕';
       drop.title = `Stop tracking ${def.name.toLowerCase()}`;
       drop.setAttribute('aria-label', drop.title);
       drop.addEventListener('click', () => void this.toggle(id));
 
       const track = document.createElement('div');
-      track.className = 'hud-bar track-bar';
+      track.className = 'hud-bar track-bar rc-meter';
+      meaning(track, capped ? 'good' : 'accent');
       const fill = document.createElement('div');
-      fill.className = 'hud-bar-fill track-fill';
+      fill.className = 'hud-bar-fill track-fill rc-meter-fill';
       fill.style.width = `${(part * 100).toFixed(1)}%`;
       track.append(fill);
 

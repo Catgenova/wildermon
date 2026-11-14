@@ -14,6 +14,7 @@ import { carriesRegret } from '../../game/baubles';
 import type { FaithBook } from '../faithbook';
 import { reveal, sharedWhy } from './trades';
 import type { UIWindow } from '../windows';
+import { kitBody, meaning } from '../kit';
 
 /** The skill favour is held by, as the Skills window names it: "Devotion". */
 const DEVOTION = SKILL_BY_ID.get(FAITH)?.name ?? FAITH;
@@ -66,7 +67,7 @@ export class FaithPanel {
     private readonly book: FaithBook,
     private readonly game: Game,
   ) {
-    win.body.classList.add('trade-body');
+    kitBody(win.body, 'trade-body');
     const bar = document.createElement('div');
     bar.className = 'trade-tabs log-tabs';
     for (const t of [...PATRONS.map((p): [Tab, string] => [p.id, p.name]), ['path', 'Path'] as [Tab, string]]) {
@@ -84,7 +85,7 @@ export class FaithPanel {
       bar.append(b);
     }
     this.page = document.createElement('div');
-    this.page.className = 'trade-page';
+    this.page.className = 'trade-page rc-scroll';
     win.body.append(bar, this.page);
     book.on(() => this.draw());
     win.onOpen = () => {
@@ -167,15 +168,16 @@ export class FaithPanel {
   private patronCard(p: PatronDef): HTMLDivElement {
     const s = this.book.said;
     const card = document.createElement('div');
-    card.className = 'trade-card';
-    if (s?.patron === p.id) card.classList.add('trade-mine');
+    card.className = 'trade-card rc-row';
+    if (s?.patron === p.id) card.classList.add('trade-mine', 'rc-on');
     const top = document.createElement('div');
     top.className = 'trade-card-top';
     const name = document.createElement('span');
     name.className = 'trade-name';
     name.textContent = p.name;
     const align = document.createElement('span');
-    align.className = `faith-align faith-${p.alignment}`;
+    align.className = `faith-align rc-tag faith-${p.alignment}`;
+    meaning(align, p.alignment === 'good' ? 'accent' : p.alignment === 'evil' ? 'bad' : 'info');
     align.textContent = ALIGNMENT_NAMES[p.alignment];
     top.append(name, align);
     card.append(top);
@@ -222,7 +224,7 @@ export class FaithPanel {
     const open = !!s && s.faith >= at;
     if (s && !open) block.classList.add('trade-tier-shut');
     const head = document.createElement('div');
-    head.className = 'trade-col-head';
+    head.className = 'trade-col-head rc-section';
     head.textContent = `Faith tier ${tier} · ${at} ${devotion}${s ? (open ? ' · open' : '') : ''}`;
     block.append(head);
     const spells = spellsOf(p.id, tier);
@@ -241,9 +243,9 @@ export class FaithPanel {
   private spellCard(p: PatronDef, sp: FaithSpellDef, quiet = false): HTMLDivElement {
     const s = this.book.said;
     const card = document.createElement('div');
-    card.className = 'trade-node';
+    card.className = 'trade-node rc-row';
     const taken = !!s?.taken.includes(sp.id);
-    if (taken) card.classList.add('trade-node-taken');
+    if (taken) card.classList.add('trade-node-taken', 'rc-on');
     const top = document.createElement('div');
     top.className = 'trade-card-top';
     const name = document.createElement('span');
@@ -327,7 +329,7 @@ export class FaithPanel {
   /** A path still on its steps: what each step gives, at the meditation it takes. */
   private stepsCard(path: PathDef, med: number): HTMLDivElement {
     const card = document.createElement('div');
-    card.className = 'trade-card trade-mine';
+    card.className = 'trade-card rc-row trade-mine rc-on';
     const top = document.createElement('div');
     top.className = 'trade-card-top';
     const name = document.createElement('span');
@@ -343,8 +345,8 @@ export class FaithPanel {
 
   private pathCard(path: PathDef, ps: PathSaid | null): HTMLDivElement {
     const card = document.createElement('div');
-    card.className = 'trade-card';
-    if (ps?.way === path.id) card.classList.add('trade-mine');
+    card.className = 'trade-card rc-row';
+    if (ps?.way === path.id) card.classList.add('trade-mine', 'rc-on');
     const top = document.createElement('div');
     top.className = 'trade-card-top';
     const name = document.createElement('span');
@@ -374,7 +376,7 @@ export class FaithPanel {
     const open = !!ps && ps.way === path.id && ps.meditation >= at;
     if (ps && ps.way === path.id && !open) block.classList.add('trade-tier-shut');
     const head = document.createElement('div');
-    head.className = 'trade-col-head';
+    head.className = 'trade-col-head rc-section';
     head.textContent = `Path tier ${tier} · ${at} meditation${open ? ' · open' : ''}`;
     block.append(head);
     const picks = picksOf(path.id as PathId, tier);
@@ -388,9 +390,9 @@ export class FaithPanel {
   /** One pick of a path's tier. `quiet`: its tier already says why it cannot be taken. */
   private pickCard(k: PathPickDef, ps: PathSaid | null, quiet = false): HTMLDivElement {
     const card = document.createElement('div');
-    card.className = 'trade-node';
+    card.className = 'trade-node rc-row';
     const taken = !!ps?.taken.includes(k.id);
-    if (taken) card.classList.add('trade-node-taken');
+    if (taken) card.classList.add('trade-node-taken', 'rc-on');
     const top = document.createElement('div');
     top.className = 'trade-card-top';
     const name = document.createElement('span');
@@ -510,7 +512,7 @@ export class FaithPanel {
     }
     const acts = document.createElement('div');
     acts.className = 'trade-acts';
-    const go = button(yes, 'trade-take trade-go');
+    const go = button(yes, 'trade-take trade-go rc-go');
     go.addEventListener('click', () => {
       go.disabled = true;
       this.confirming = null;
@@ -533,7 +535,8 @@ export class FaithPanel {
 function button(label: string, extra = ''): HTMLButtonElement {
   const b = document.createElement('button');
   b.type = 'button';
-  b.className = `tb-btn tb-small${extra ? ` ${extra}` : ''}`;
+  // A tab is the tab bar's, not a button of the kit's.
+  b.className = `tb-btn${/\blog-tab\b/.test(extra) ? '' : ' rc-btn'} tb-small${extra ? ` ${extra}` : ''}`;
   b.textContent = label;
   return b;
 }
@@ -548,14 +551,15 @@ function meter(label: string, held: number, cap: number, title: string): HTMLDiv
   name.textContent = label;
   // The status panel's bar, so a store of favour reads like a store of stamina.
   const bar = document.createElement('span');
-  bar.className = 'hud-bar faith-meter';
+  bar.className = 'hud-bar faith-meter rc-meter';
+  meaning(bar, 'accent');
   bar.setAttribute('role', 'meter');
   bar.setAttribute('aria-label', label);
   bar.setAttribute('aria-valuemin', '0');
   bar.setAttribute('aria-valuemax', String(cap));
   bar.setAttribute('aria-valuenow', String(held));
   const fill = document.createElement('span');
-  fill.className = 'hud-bar-fill faith-meter-fill';
+  fill.className = 'hud-bar-fill faith-meter-fill rc-meter-fill';
   fill.style.width = `${cap > 0 ? Math.min(100, (held / cap) * 100) : 0}%`;
   bar.append(fill);
   const num = document.createElement('span');

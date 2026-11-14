@@ -531,12 +531,12 @@ export class Hud {
       return b;
     };
     // Titles are set as the storey changes (`refreshStorey`).
-    this.storeyUp = mk('tb-btn storey-btn', '▲', 'Storey up (Page Up)', () => this.stepStorey(1));
+    this.storeyUp = mk('tb-btn rc-btn rc-icon storey-btn', '▲', 'Storey up (Page Up)', () => this.stepStorey(1));
     this.storeyLabel = mk('storey-label', 'Auto', 'All storeys', () => {
       this.game.settings.viewLevel = null;
     });
-    this.storeyDown = mk('tb-btn storey-btn', '▼', 'Storey down (Page Down)', () => this.stepStorey(-1));
-    this.cutBtn = mk('tb-btn storey-cut', '◪', `Cut away facing walls (${boundKey('cutaway')})`, () => {
+    this.storeyDown = mk('tb-btn rc-btn rc-icon storey-btn', '▼', 'Storey down (Page Down)', () => this.stepStorey(-1));
+    this.cutBtn = mk('tb-btn rc-btn rc-icon storey-cut', '◪', `Cut away facing walls (${boundKey('cutaway')})`, () => {
       this.game.settings.cutaway = !this.game.settings.cutaway;
     });
     this.storeyEl.append(this.storeyDown, this.storeyLabel, this.storeyUp, this.cutBtn);

@@ -115,12 +115,13 @@
   font-size: var(--rc-fs-2);
 }
 
-/* Meaning, for writing: `data-meaning` on a foot, a tag or a meter (`meaning` in src/ui/kit.ts). */
-:root[data-ui='runecut'] :is(.rc-foot, .rc-tag)[data-meaning='good'] { color: var(--t-good); }
-:root[data-ui='runecut'] :is(.rc-foot, .rc-tag)[data-meaning='warn'] { color: var(--t-warn); font-weight: 600; }
-:root[data-ui='runecut'] :is(.rc-foot, .rc-tag)[data-meaning='bad'] { color: var(--t-bad); font-weight: 600; }
-:root[data-ui='runecut'] :is(.rc-foot, .rc-tag)[data-meaning='info'] { color: var(--t-info); }
-:root[data-ui='runecut'] :is(.rc-foot, .rc-tag)[data-meaning='accent'] { color: var(--t-accent-ink); }
+/* Meaning, for writing: `data-meaning` on a foot, a row, a tag or a meter (`meaning` in src/ui/kit.ts). Dim: not met, not yet, off. */
+:root[data-ui='runecut'] :is(.rc-foot, .rc-row, .rc-tag)[data-meaning='good'] { color: var(--t-good); }
+:root[data-ui='runecut'] :is(.rc-foot, .rc-row, .rc-tag)[data-meaning='warn'] { color: var(--t-warn); font-weight: 600; }
+:root[data-ui='runecut'] :is(.rc-foot, .rc-row, .rc-tag)[data-meaning='bad'] { color: var(--t-bad); font-weight: 600; }
+:root[data-ui='runecut'] :is(.rc-foot, .rc-row, .rc-tag)[data-meaning='info'] { color: var(--t-info); }
+:root[data-ui='runecut'] :is(.rc-foot, .rc-row, .rc-tag)[data-meaning='accent'] { color: var(--t-accent-ink); }
+:root[data-ui='runecut'] :is(.rc-foot, .rc-row, .rc-tag)[data-meaning='dim'] { color: var(--t-dim); }
 
 /* Rows ------------------------------------------------------------------------ */
 
@@ -216,6 +217,13 @@
   font-weight: 500;
   letter-spacing: 0.06em;
   text-transform: none;
+}
+
+/* Column names inside the scroll area, over the rows below them: the row's padding alone, and no gutter of their own. */
+:root[data-ui='runecut'] .rc-scroll .rc-colhead {
+  padding: var(--rc-sp-1) var(--rc-sp-3) var(--rc-sp-1) 14px;
+  overflow: visible;
+  scrollbar-gutter: auto;
 }
 
 /* A section's name, ruled across to the edge. */
@@ -461,7 +469,7 @@
 }
 
 :root[data-ui='runecut'] .rc-table th {
-  padding: var(--rc-sp-1) var(--rc-sp-3);
+  padding: var(--rc-sp-1) var(--rc-sp-2);
   box-shadow: inset 0 -1px 0 var(--rc-shade);
   color: var(--t-dim);
   font-family: var(--rc-label-font);
@@ -472,12 +480,31 @@
 }
 
 :root[data-ui='runecut'] .rc-table td {
-  padding: var(--rc-sp-1) var(--rc-sp-3);
+  padding: var(--rc-sp-1) var(--rc-sp-2);
   background: var(--rc-stone-2);
 }
 
 :root[data-ui='runecut'] .rc-table tr:hover td {
   background: linear-gradient(var(--t-hover), var(--t-hover)), var(--rc-stone-2);
+}
+
+/* A chosen row of a table: the frame's accent, as a chosen row of a list. */
+:root[data-ui='runecut'] .rc-table tr:is(.selected, .rc-on) td {
+  background:
+    linear-gradient(color-mix(in srgb, var(--frame-accent) 26%, transparent), color-mix(in srgb, var(--frame-accent) 26%, transparent)),
+    var(--rc-stone-2);
+}
+
+:root[data-ui='runecut'] .rc-table tr:is(.selected, .rc-on) td:first-child {
+  box-shadow: inset 3px 0 0 var(--frame-accent);
+}
+
+/* A table wider than the window: it scrolls sideways in a box of its own, the one other scroller the kit has. */
+:root[data-ui='runecut'] .rc-wide {
+  max-width: 100%;
+  min-width: 0;
+  overflow: auto hidden;
+  scrollbar-width: thin;
 }
 
 /* An empty list, and a list with nothing that matches. */
@@ -537,7 +564,7 @@
  */
 :root[data-ui='runecut'] .rc-meter {
   position: relative;
-  flex: 0 0 auto;
+  flex-shrink: 0;
   height: 9px;
   margin: 0;
   padding: 1px 0;
@@ -577,6 +604,10 @@
   background: var(--rc-rune);
 }
 
+:root[data-ui='runecut'] .rc-meter[data-meaning='dim'] .rc-meter-fill {
+  background: var(--rc-shade);
+}
+
 /* A mark across the channel: where something starts. */
 :root[data-ui='runecut'] .rc-meter-mark {
   position: absolute;
@@ -590,4 +621,10 @@
 /* What is in a window's body stands the one padding in from the rim (`.rc-body`). */
 :root[data-ui='runecut'] .rc-body > * {
   margin-inline: var(--rc-pad);
+}
+
+/* A page that is a body of its own inside a window's body (the journal's ledger and help): the padding is the outer one's, once. */
+:root[data-ui='runecut'] .rc-body > .rc-body {
+  margin-inline: 0;
+  padding: 0;
 }

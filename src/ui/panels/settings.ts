@@ -33,6 +33,7 @@ import { RING_REACH, THREAT_SHADE, THREAT_SHADE_HUNTING } from '../../render/ren
 import { FIRE_CAPACITY } from '../../game/campfire';
 import { BRAZIER_CAPACITY, OVEN_CAPACITY } from '../../game/furniture';
 import { keepControlKeys } from '../controlkeys';
+import { kitBody } from '../kit';
 import { onPhone } from '../../engine/device';
 import { fullscreenOffered, isFullscreen, setFullscreen, wakeOffered } from '../phone';
 import { PATH_STEPS } from '../../game/path';
@@ -78,7 +79,7 @@ export class SettingsPanel {
     private readonly windows: WindowManager,
     unstick: (() => void) | null = null,
   ) {
-    win.body.classList.add('settings-body');
+    kitBody(win.body, 'settings-body');
     this.root = win.body;
     // A slot waiting for a key takes Tab, Enter and Space as keys to bind.
     keepControlKeys(win.body, 'button, select, summary, input[type="checkbox"]', () => this.grabbing !== null);
@@ -112,23 +113,23 @@ export class SettingsPanel {
     win.body.append(bar);
 
     const display = document.createElement('div');
-    display.className = 'settings-page';
+    display.className = 'settings-page rc-scroll';
     const keyPage = document.createElement('div');
-    keyPage.className = 'settings-page keys-page';
+    keyPage.className = 'settings-page rc-scroll keys-page';
     keyPage.hidden = true;
     const winPage = document.createElement('div');
-    winPage.className = 'settings-page';
+    winPage.className = 'settings-page rc-scroll';
     winPage.hidden = true;
     this.pages.set('display', display);
     this.pages.set('windows', winPage);
     this.pages.set('keys', keyPage);
     // The Game Rules and the Privacy Policy, word for word (`rules.ts`, `privacy.ts`), as on the landing page.
     const rulesPage = document.createElement('div');
-    rulesPage.className = 'settings-page';
+    rulesPage.className = 'settings-page rc-scroll';
     rulesPage.hidden = true;
     rulesPage.append(gameRules());
     const privacyPage = document.createElement('div');
-    privacyPage.className = 'settings-page';
+    privacyPage.className = 'settings-page rc-scroll';
     privacyPage.hidden = true;
     privacyPage.append(privacyPolicy());
     this.pages.set('rules', rulesPage);
@@ -140,9 +141,10 @@ export class SettingsPanel {
     const kbd = (id: string): Markup => html`<kbd class="setting-kbd" data-bind="${id}">${this.keys.label(id)}</kbd>`;
     const add = (label: string, hint: string | Markup, read: () => boolean, write: (v: boolean) => void): HTMLLabelElement => {
       const row = document.createElement('label');
-      row.className = 'setting-row';
+      row.className = 'setting-row rc-row';
       const input = document.createElement('input');
       input.type = 'checkbox';
+      input.className = 'rc-check';
       input.checked = read();
       input.addEventListener('change', () => write(input.checked));
       const text = document.createElement('span');
@@ -155,7 +157,7 @@ export class SettingsPanel {
     /** A heading over the run of rows after it on the Display tab. */
     const head = (text: string): void => {
       const h = document.createElement('h4');
-      h.className = 'keys-group';
+      h.className = 'keys-group rc-section';
       h.textContent = text;
       display.append(h);
     };
@@ -170,7 +172,7 @@ export class SettingsPanel {
      */
     {
       const row = document.createElement('label');
-      row.className = 'setting-row setting-pick';
+      row.className = 'setting-row rc-row setting-pick';
       const input = document.createElement('input');
       input.type = 'range';
       input.min = '0';
@@ -193,7 +195,7 @@ export class SettingsPanel {
     // The soundtrack's own level, beside the effects'.
     {
       const row = document.createElement('label');
-      row.className = 'setting-row setting-pick';
+      row.className = 'setting-row rc-row setting-pick';
       const input = document.createElement('input');
       input.type = 'range';
       input.min = '0';
@@ -247,7 +249,7 @@ export class SettingsPanel {
     };
     {
       const row = document.createElement('label');
-      row.className = 'setting-row setting-pick';
+      row.className = 'setting-row rc-row setting-pick';
       const input = document.createElement('input');
       input.type = 'range';
       input.min = String(Math.round(UI_SIZE_MIN * 100));
@@ -279,7 +281,7 @@ export class SettingsPanel {
     // The same size in one press: a preset each, its share written on it.
     {
       const row = document.createElement('div');
-      row.className = 'setting-row setting-look setting-presets';
+      row.className = 'setting-row rc-row setting-look setting-presets';
       const text = document.createElement('span');
       setMarkup(text, html`<b>Text size presets</b><small>${`Sets Text and window size: ${UI_SIZE_PRESETS.map(([v, name]) => `${name} ${Math.round(v * 100)}%`).join(', ')}.`}</small>`);
       const btns = document.createElement('span');
@@ -287,7 +289,7 @@ export class SettingsPanel {
       for (const [v, name] of UI_SIZE_PRESETS) {
         const b = document.createElement('button');
         b.type = 'button';
-        b.className = 'tb-btn tb-small';
+        b.className = 'tb-btn rc-btn tb-small';
         b.dataset.size = String(v);
         b.textContent = `${name} ${Math.round(v * 100)}%`;
         b.addEventListener('click', () => {
@@ -311,8 +313,9 @@ export class SettingsPanel {
      */
     const choose = <T extends string | number>(label: string, hint: string | Markup, options: Array<[T, string]>, read: () => T, write: (v: T) => void): void => {
       const row = document.createElement('label');
-      row.className = 'setting-row setting-pick';
+      row.className = 'setting-row rc-row setting-pick';
       const select = document.createElement('select');
+      select.className = 'rc-field';
       for (const [value, name] of options) {
         const o = document.createElement('option');
         o.value = String(value);
@@ -504,14 +507,14 @@ export class SettingsPanel {
     );
     {
       const row = document.createElement('div');
-      row.className = 'setting-row setting-look';
+      row.className = 'setting-row rc-row setting-look';
       const text = document.createElement('span');
       setMarkup(text, html`<b>Measure each layer</b><small>${`Hides each of ${listed(Object.keys(LAYERS))} for ${TRIAL_SECONDS} s in turn `
         + `(${(Object.keys(LAYERS).length + 2) * TRIAL_SECONDS} s total); shows frames per second without each under the frame rate. `
         + 'Close this window first.'}</small>`);
       const go = document.createElement('button');
       go.type = 'button';
-      go.className = 'tb-btn tb-small';
+      go.className = 'tb-btn rc-btn tb-small';
       go.textContent = 'Measure';
       go.addEventListener('click', () => game.measureDrawing?.());
       row.append(text, go);
@@ -714,12 +717,12 @@ export class SettingsPanel {
      */
     if (openLook) {
       const row = document.createElement('div');
-      row.className = 'setting-row setting-look';
+      row.className = 'setting-row rc-row setting-look';
       const text = document.createElement('span');
       setMarkup(text, fixed('<b>Appearance</b><small>Opens the character creator (body, hair, hair colour, hair brightness, skin). <i>Step ashore</i>: apply and return. <i>On to the island</i>: no change.</small>'));
       const open = document.createElement('button');
       open.type = 'button';
-      open.className = 'tb-btn tb-small';
+      open.className = 'tb-btn rc-btn tb-small';
       open.textContent = 'Customize character';
       open.addEventListener('click', openLook);
       row.append(text, open);
@@ -729,7 +732,7 @@ export class SettingsPanel {
     // Off a storey, or out of a pocket on the ground no walk leaves, on the island (`rpc_unstick`).
     if (unstick) {
       const row = document.createElement('div');
-      row.className = 'setting-row setting-look';
+      row.className = 'setting-row rc-row setting-look';
       const text = document.createElement('span');
       const name = document.createElement('b');
       name.textContent = 'I\'m stuck';
@@ -739,7 +742,7 @@ export class SettingsPanel {
       text.append(name, says);
       const go = document.createElement('button');
       go.type = 'button';
-      go.className = 'tb-btn tb-small';
+      go.className = 'tb-btn rc-btn tb-small';
       go.textContent = 'I\'m stuck';
       go.addEventListener('click', unstick);
       row.append(text, go);
@@ -764,14 +767,14 @@ export class SettingsPanel {
       const rows = BINDS.filter((b) => b.group === group);
       if (!rows.length) continue;
       const h = document.createElement('h4');
-      h.className = 'keys-group';
+      h.className = 'keys-group rc-section';
       h.textContent = group;
       keyPage.append(h);
       const table = document.createElement('div');
       table.className = 'keys-table';
       for (const bind of rows) {
         const row = document.createElement('div');
-        row.className = 'keys-row';
+        row.className = 'keys-row rc-row';
         const text = document.createElement('span');
         text.className = 'keys-what';
         setMarkup(text, html`<b>${bind.label}</b><small>${bind.hint}</small>`);
@@ -781,7 +784,7 @@ export class SettingsPanel {
         for (let slot = 0; slot < MAX_KEYS; slot++) {
           const b = document.createElement('button');
           b.type = 'button';
-          b.className = 'tb-btn tb-small keys-key';
+          b.className = 'tb-btn rc-btn tb-small keys-key';
           b.addEventListener('click', () => this.listen(bind.id, slot, b));
           btns.push(b);
           slots.append(b);
@@ -789,7 +792,7 @@ export class SettingsPanel {
         // Back to its own keys, which is the way back to Esc, Backspace and Delete: a slot listening takes those as cancel and unbind.
         const back = document.createElement('button');
         back.type = 'button';
-        back.className = 'tb-btn tb-small keys-default';
+        back.className = 'tb-btn rc-btn tb-small keys-default';
         back.textContent = '↺';
         const own = bind.keys.length ? bind.keys.map(keyName).join(' / ') : 'unbound';
         back.title = `Default: ${own}`;
@@ -817,7 +820,7 @@ export class SettingsPanel {
     foot.className = 'keys-foot';
     const reset = document.createElement('button');
     reset.type = 'button';
-    reset.className = 'tb-btn tb-small';
+    reset.className = 'tb-btn rc-btn tb-small';
     reset.textContent = 'Reset keys';
     reset.title = 'Restore default key bindings';
     // Every key you have set goes at once, so it is asked first.
@@ -855,11 +858,11 @@ export class SettingsPanel {
     };
     for (let slot = 0; slot < LAYOUT_SLOTS; slot++) {
       const row = document.createElement('div');
-      row.className = 'setting-row layout-row';
+      row.className = 'setting-row rc-row layout-row';
       const name = document.createElement('input');
       name.type = 'text';
       name.id = `layout-name-${slot + 1}`;
-      name.className = 'layout-name';
+      name.className = 'layout-name rc-field';
       name.maxLength = 24;
       name.value = this.windows.layoutName(slot);
       name.title = 'Layout name';
@@ -870,7 +873,7 @@ export class SettingsPanel {
       });
       const keep = document.createElement('button');
       keep.type = 'button';
-      keep.className = 'tb-btn tb-small';
+      keep.className = 'tb-btn rc-btn tb-small';
       keep.textContent = 'Keep';
       keep.title = 'Save current windows to this layout';
       keep.addEventListener('click', () => {
@@ -880,7 +883,7 @@ export class SettingsPanel {
       });
       const use = document.createElement('button');
       use.type = 'button';
-      use.className = 'tb-btn tb-small';
+      use.className = 'tb-btn rc-btn tb-small';
       use.textContent = 'Use';
       use.addEventListener('click', () => {
         if (this.windows.useLayout(slot)) sayHere(`Restored “${this.windows.layoutName(slot)}”.`);
@@ -898,9 +901,10 @@ export class SettingsPanel {
     for (const w of this.windows.windows.values()) {
       if (!w.opts.seeThrough) continue;
       const row = document.createElement('label');
-      row.className = 'setting-row';
+      row.className = 'setting-row rc-row';
       const input = document.createElement('input');
       input.type = 'checkbox';
+      input.className = 'rc-check';
       input.id = `see-${w.opts.id}`;
       input.checked = w.isSeeThrough;
       input.addEventListener('change', () => w.setSeeThrough(input.checked));

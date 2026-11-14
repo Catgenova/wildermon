@@ -8,6 +8,7 @@ import {
 } from '../../game/path';
 import { SKILL_BY_ID } from '../../game/skills';
 import { listed } from '../../game/words';
+import { meaning } from '../kit';
 
 /** What a step's mark says: done, skipped, the one you are on, or still ahead. */
 const MARKS = { done: '✔', skipped: '↷', here: '▶', ahead: '·' } as const;
@@ -40,13 +41,13 @@ export class PathPanel {
     const top = document.createElement('div');
     top.className = 'goal-tools';
     const count = document.createElement('div');
-    count.className = 'skill-group';
+    count.className = 'skill-group rc-section';
     const done = PATH_STEPS.filter((s) => g.pathDone.has(s.id)).length;
     const skipped = PATH_STEPS.filter((s) => !g.pathDone.has(s.id) && g.thePath?.skip.includes(s.id)).length;
     count.textContent = `Path: ${on ? 'On' : 'Off'} · ${done}/${PATH_STEPS.length} done · ${skipped} skipped`;
     const turn = document.createElement('button');
     turn.type = 'button';
-    turn.className = 'tb-btn tb-small';
+    turn.className = 'tb-btn rc-btn tb-small';
     turn.textContent = on ? 'Turn off' : 'Turn on';
     turn.title = on ? 'Path off: no line at the top, no ticks' : `Path on: the line at the top, steps tick themselves; notes ${PATH_KINDS.length} kinds in the field guide for Track`;
     turn.disabled = !g.pathDoor;
@@ -66,7 +67,7 @@ export class PathPanel {
       const steps = PATH_STEPS.filter((s) => s.phase === phase);
       if (!steps.length) continue;
       const head = document.createElement('div');
-      head.className = 'skill-group';
+      head.className = 'skill-group rc-section';
       head.textContent = title;
       this.page.append(head);
       for (const s of steps) {
@@ -82,7 +83,8 @@ export class PathPanel {
     const isDone = g.pathDone.has(s.id);
     const isSkipped = !isDone && !!g.thePath?.skip.includes(s.id);
     const row = document.createElement('div');
-    row.className = 'skill-row goal-row path-row' + (isDone ? ' goal-done' : '') + (s === here ? ' path-here' : '') + (isSkipped ? ' path-skipped' : '');
+    row.className = 'skill-row rc-row goal-row path-row' + (isDone ? ' goal-done' : '') + (s === here ? ' path-here rc-now' : '') + (isSkipped ? ' path-skipped' : '');
+    meaning(row, isDone ? 'good' : null);
     row.dataset.step = s.id;
     const tick = document.createElement('span');
     tick.className = 'goal-tick';
@@ -94,7 +96,7 @@ export class PathPanel {
     if (!isDone && g.thePath?.on) {
       const skip = document.createElement('button');
       skip.type = 'button';
-      skip.className = 'tb-btn tb-small path-skip';
+      skip.className = 'tb-btn rc-btn tb-small path-skip';
       skip.textContent = isSkipped ? 'Unskip' : 'Skip';
       skip.title = isSkipped ? 'Back on the Path' : 'Skip: the next step is current; done later, it still ticks';
       skip.disabled = this.asking.has(s.id) || !g.pathDoor;
@@ -116,7 +118,8 @@ export class PathPanel {
     const g = this.game;
     const isDone = g.pathDone.has(d.id);
     const row = document.createElement('div');
-    row.className = 'skill-row goal-row path-row path-detour' + (isDone ? ' goal-done' : '');
+    row.className = 'skill-row rc-row goal-row path-row path-detour' + (isDone ? ' goal-done' : '');
+    meaning(row, isDone ? 'good' : null);
     row.dataset.step = d.id;
     const tick = document.createElement('span');
     tick.className = 'goal-tick';

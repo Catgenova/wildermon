@@ -13,6 +13,7 @@ import { awayFor } from '../../game/away';
 import { COUNTER_BUY_FROM, COUNTER_REACH, sellsTooFar } from '../../game/counters';
 import { durationSaid } from '../../game/boons';
 import type { UIWindow } from '../windows';
+import { kitBody } from '../kit';
 
 /** How often the window asks again while it is open. */
 const REFRESH = 5;
@@ -139,7 +140,7 @@ export class MarketPanel {
     /** Somebody to offer to: the social window's list, so there is one roll. */
     private readonly folk: () => Array<{ uid: string; name: string }>,
   ) {
-    win.body.classList.add('skills-body');
+    kitBody(win.body, 'skills-body');
     this.bar = document.createElement('div');
     this.bar.className = 'log-tabs market-tabs';
     for (const [id, label, title] of [
@@ -160,7 +161,7 @@ export class MarketPanel {
       this.bar.append(b);
     }
     this.page = document.createElement('div');
-    this.page.className = 'market-page';
+    this.page.className = 'market-page rc-scroll';
     win.body.append(this.bar, this.page);
     win.onOpen = () => void this.refresh();
     this.draw();
@@ -273,7 +274,7 @@ export class MarketPanel {
   /** One thing's month of sales: its name, the month summed, its bars, History and Order; and its last sales when open. */
   private priceRow(def: string, days: readonly SaleDay[], s: SaleSummary): void {
     const row = document.createElement('div');
-    row.className = 'price-row';
+    row.className = 'price-row rc-row';
     row.dataset.def = def;
     const name = document.createElement('div');
     name.className = 'price-name';
@@ -342,10 +343,10 @@ export class MarketPanel {
    */
   private findBar(kinds: readonly string[], sorting = true): void {
     const bar = document.createElement('div');
-    bar.className = 'panel-bar market-findbar';
+    bar.className = 'panel-bar rc-bar market-findbar';
     const box = document.createElement('input');
     box.type = 'text';
-    box.className = 'panel-select market-find';
+    box.className = 'panel-select rc-field market-find';
     box.placeholder = 'Find: item or material';
     box.setAttribute('aria-label', 'Find');
     box.value = this.query;
@@ -367,7 +368,7 @@ export class MarketPanel {
     bar.append(box);
     if (sorting) {
       const sort = document.createElement('select');
-      sort.className = 'panel-select market-sort';
+      sort.className = 'panel-select rc-field market-sort';
       sort.title = 'Sort found';
       sort.setAttribute('aria-label', 'Sort found');
       for (const [id, label] of FIND_SORTS) sort.append(Object.assign(document.createElement('option'), { value: id, textContent: label, selected: id === this.sort }));
@@ -390,7 +391,7 @@ export class MarketPanel {
 
   private head(text: string): void {
     const el = document.createElement('div');
-    el.className = 'skill-group';
+    el.className = 'skill-group rc-section';
     el.textContent = text;
     this.page.append(el);
   }
@@ -398,7 +399,7 @@ export class MarketPanel {
   private button(label: string, title: string, go: () => void): HTMLButtonElement {
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = 'tb-btn tb-small market-do';
+    b.className = 'tb-btn rc-btn tb-small market-do';
     b.textContent = label;
     b.title = title;
     b.addEventListener('click', go);
@@ -421,7 +422,7 @@ export class MarketPanel {
   /** A row of the board or a stall: what, its price in a column of its own, and what to do. */
   private good(what: HTMLElement, cost: HTMLElement | string, ...acts: HTMLElement[]): HTMLDivElement {
     const row = document.createElement('div');
-    row.className = 'skill-row market-good';
+    row.className = 'skill-row rc-row market-good';
     const price = typeof cost === 'string' ? Object.assign(document.createElement('span'), { textContent: cost }) : cost;
     price.classList.add('market-cost');
     const doing = document.createElement('span');
@@ -446,7 +447,7 @@ export class MarketPanel {
     if (!theirs.length) this.say('None. Offers stand until taken or refused.');
     for (const d of theirs) {
       const row = document.createElement('div');
-      row.className = 'skill-row market-row';
+      row.className = 'skill-row rc-row market-row';
       row.append(this.lines(this.terms(d), `from ${d.who}`),
         this.button('Accept', 'Both must stand together', () => void this.act(this.island!.answerDeal(d.n, true))),
         this.button('Refuse', 'Refuse; everything returns', () => void this.act(this.island!.answerDeal(d.n, false))));
@@ -457,7 +458,7 @@ export class MarketPanel {
     if (!mine.length) this.say('None.');
     for (const d of mine) {
       const row = document.createElement('div');
-      row.className = 'skill-row market-row';
+      row.className = 'skill-row rc-row market-row';
       row.append(this.lines(this.terms(d), `to ${d.who}`), this.button('Withdraw', 'Everything held returns', () => void this.act(this.island!.answerDeal(d.n, false))));
       this.page.append(row);
     }
@@ -475,16 +476,16 @@ export class MarketPanel {
     this.pick(this.picked, 'Offer');
 
     const bar = document.createElement('div');
-    bar.className = 'panel-bar market-bar';
+    bar.className = 'panel-bar rc-bar market-bar';
     const price = document.createElement('input');
     price.type = 'number';
     price.min = '0';
-    price.className = 'panel-select market-price';
+    price.className = 'panel-select rc-field market-price';
     price.value = String(this.want);
     price.title = 'Silver asked. 0: gift.';
     price.addEventListener('input', () => (this.want = Math.max(0, Number(price.value) || 0)));
     const who = document.createElement('select');
-    who.className = 'panel-select market-who';
+    who.className = 'panel-select rc-field market-who';
     who.title = 'Recipient';
     for (const f of people) {
       const o = document.createElement('option');
@@ -518,7 +519,7 @@ export class MarketPanel {
       this.head(`${st.what === 'counter' ? 'Shop counter' : 'Stall'} at ${st.x},${st.y}${st.deed ? ` on ${st.deed}` : ''}`);
       const till = st.till ?? 0;
       const row = document.createElement('div');
-      row.className = 'skill-row market-row';
+      row.className = 'skill-row rc-row market-row';
       const text = document.createElement('span');
       text.className = 'market-what';
       text.textContent = till > 0 ? `Till: ${priceWords(till)}.` : 'Till empty.';
@@ -530,7 +531,7 @@ export class MarketPanel {
         const box = document.createElement('input');
         box.type = 'number';
         box.min = '0';
-        box.className = 'panel-select market-price';
+        box.className = 'panel-select rc-field market-price';
         box.value = String(good.price ?? 0);
         box.title = 'Silver price. 0: off sale.';
         box.setAttribute('aria-label', `Silver for ${goodName(good)}`);
@@ -591,7 +592,7 @@ export class MarketPanel {
       const far = tilesTo(st, me);
       const spot = stallSpot(st);
       const head = document.createElement('div');
-      head.className = 'skill-group market-stall';
+      head.className = 'skill-group rc-section market-stall';
       head.append(Object.assign(document.createElement('span'), { textContent: spot.name }));
       const acts = document.createElement('span');
       acts.className = 'market-acts';
@@ -643,7 +644,7 @@ export class MarketPanel {
       if (s) this.priceRow(def, this.prices[def], s);
       else {
         const row = document.createElement('div');
-        row.className = 'price-row';
+        row.className = 'price-row rc-row';
         row.dataset.def = def;
         row.append(this.lines(itemDef(def).name, `No sales in ${SALE_DAYS} days.`));
         const acts = document.createElement('span');
@@ -701,7 +702,7 @@ export class MarketPanel {
       const left = o.want - o.got;
       const have = couldBring(this.game.inventory.items, o, (uid) => this.game.isEquipped(uid));
       const row = document.createElement('div');
-      row.className = 'skill-row market-row';
+      row.className = 'skill-row rc-row market-row';
       row.append(this.lines(`${orderWords(o.def, left, o.ql)} at ${priceWords(o.price)} each`,
         `${o.who}'s order at ${o.x},${o.y}${o.deed ? ` on ${o.deed}` : ''}. `
         + `You have: ${have}.`));
@@ -712,7 +713,7 @@ export class MarketPanel {
         box.type = 'number';
         box.min = '1';
         box.max = String(most);
-        box.className = 'panel-select market-count';
+        box.className = 'panel-select rc-field market-count';
         box.value = String(Math.min(this.bringing.get(o.n) ?? most, most));
         box.title = 'Count to bring';
         box.setAttribute('aria-label', 'Count to bring');
@@ -741,7 +742,7 @@ export class MarketPanel {
     for (const o of mine) {
       const left = o.want - o.got;
       const row = document.createElement('div');
-      row.className = 'skill-row market-row';
+      row.className = 'skill-row rc-row market-row';
       row.append(this.lines(`${orderWords(o.def, left, o.ql)} at ${priceWords(o.price)} each`,
         `${o.got ? `${o.got}/${o.want} brought. ` : ''}${priceWords(left * o.price)} held, lapses in ${awayFor(o.left)}.`), this.button('Withdraw', `${priceWords(left * o.price)} returned to your purse`,
         () => void this.act(this.island!.cancelOrder(o.n))));
@@ -758,11 +759,11 @@ export class MarketPanel {
     held.className = 'skill-note market-note';
     held.textContent = this.holds();
     const form = document.createElement('div');
-    form.className = 'panel-bar market-order';
+    form.className = 'panel-bar rc-bar market-order';
     const list = kindList();
     const kind = document.createElement('input');
     kind.type = 'text';
-    kind.className = 'panel-select market-kind';
+    kind.className = 'panel-select rc-field market-kind';
     kind.placeholder = 'Item wanted';
     kind.title = 'Any material of this kind accepted';
     kind.setAttribute('list', list.id);
@@ -775,7 +776,7 @@ export class MarketPanel {
       const el = document.createElement('input');
       el.type = 'number';
       el.min = String(least);
-      el.className = 'panel-select market-count';
+      el.className = 'panel-select rc-field market-count';
       el.value = String(value);
       el.title = title;
       el.addEventListener('input', () => {
@@ -825,6 +826,7 @@ export class MarketPanel {
       const label = document.createElement('label');
       const box = document.createElement('input');
       box.type = 'checkbox';
+      box.className = 'rc-check';
       box.checked = into.has(it.uid);
       box.addEventListener('change', () => {
         if (box.checked) into.add(it.uid);
@@ -850,13 +852,13 @@ export class MarketPanel {
     }
     for (const t of this.waiting.things) {
       const row = document.createElement('div');
-      row.className = 'skill-row market-row';
+      row.className = 'skill-row rc-row market-row';
       row.append(this.lines(`${t.count > 1 ? `${t.count} × ` : ''}${nameOf(t)}`, t.from ? `from ${t.from}` : ''));
       this.page.append(row);
     }
     if (this.waiting.things.length) {
       const bar = document.createElement('div');
-      bar.className = 'panel-bar';
+      bar.className = 'panel-bar rc-bar';
       bar.append(this.button('Collect all', this.waiting.at_box ? 'Into your pack' : 'Need a mailbox',
         () => void this.act(this.island!.collect())));
       this.page.append(bar);
@@ -880,16 +882,16 @@ export class MarketPanel {
     }
     this.pick(this.posting, 'Send');
     const bar = document.createElement('div');
-    bar.className = 'panel-bar market-bar';
+    bar.className = 'panel-bar rc-bar market-bar';
     const note = document.createElement('input');
     note.type = 'text';
     note.maxLength = LETTER_MAX;
-    note.className = 'panel-select market-note-input';
+    note.className = 'panel-select rc-field market-note-input';
     note.placeholder = 'Note';
     note.value = this.note;
     note.addEventListener('input', () => (this.note = note.value));
     const who = document.createElement('select');
-    who.className = 'panel-select market-who';
+    who.className = 'panel-select rc-field market-who';
     who.title = 'Recipient';
     for (const f of people) {
       const o = document.createElement('option');

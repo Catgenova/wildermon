@@ -4,6 +4,7 @@ import { DEFAULT_RANKS, deedMay, FOUNDER, lacks, NEWCOMER_RANK, permsOf, rankMay
 import { leaveQuestion } from '../../game/deed';
 import { BARTER_REACH } from '../../game/barter';
 import type { UIWindow } from '../windows';
+import { kitBody } from '../kit';
 
 /** How often the window asks again while it is open. */
 const REFRESH = 6;
@@ -265,7 +266,7 @@ export class SocialPanel {
     private readonly game: Game,
     private readonly island: Island | null,
   ) {
-    win.body.classList.add('social-body');
+    kitBody(win.body, 'social-body');
     this.bar = document.createElement('div');
     this.bar.className = 'log-tabs';
     for (const [id, label, title] of [
@@ -288,7 +289,7 @@ export class SocialPanel {
       this.bar.append(b);
     }
     this.page = document.createElement('div');
-    this.page.className = 'social-page';
+    this.page.className = 'social-page rc-scroll';
     win.body.append(this.bar, this.page);
     win.onOpen = () => void this.refresh(true);
     this.draw();
@@ -393,14 +394,14 @@ export class SocialPanel {
 
   private head(text: string): HTMLDivElement {
     const el = document.createElement('div');
-    el.className = 'deed-head';
+    el.className = 'deed-head rc-section';
     el.textContent = text;
     return el;
   }
 
   private empty(text: string): HTMLDivElement {
     const el = document.createElement('div');
-    el.className = 'inv-empty';
+    el.className = 'inv-empty rc-empty';
     el.textContent = text;
     return el;
   }
@@ -408,7 +409,7 @@ export class SocialPanel {
   private button(label: string, title: string, go: () => void): HTMLButtonElement {
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = 'tb-btn tb-small social-do';
+    b.className = 'tb-btn rc-btn tb-small social-do';
     b.textContent = label;
     b.title = title;
     b.addEventListener('click', go);
@@ -422,7 +423,7 @@ export class SocialPanel {
    */
   private row(who: Folk, note: string, acts: HTMLButtonElement[], rank?: string): HTMLDivElement {
     const el = document.createElement('div');
-    el.className = 'social-row';
+    el.className = 'social-row rc-row';
     const dot = document.createElement('span');
     dot.className = `social-dot${who.online ? ' social-on' : ''}`;
     dot.title = who.online ? 'Ashore' : 'Away';
@@ -449,7 +450,7 @@ export class SocialPanel {
   /** A row that is a question rather than a person: a name, a note, and buttons. */
   private plain(text: string, note: string, acts: HTMLButtonElement[]): HTMLDivElement {
     const el = document.createElement('div');
-    el.className = 'social-row social-ask';
+    el.className = 'social-row rc-row social-ask';
     const name = document.createElement('span');
     name.className = 'social-name';
     name.textContent = text;
@@ -506,7 +507,7 @@ export class SocialPanel {
     if (can.length < 2) return null;
     const at = this.inviteTarget(s);
     const el = document.createElement('div');
-    el.className = 'social-row social-ask social-pick';
+    el.className = 'social-row rc-row social-ask social-pick';
     const text = document.createElement('span');
     text.className = 'social-name';
     text.textContent = 'Invite to';
@@ -546,7 +547,10 @@ export class SocialPanel {
     for (const [id, b] of this.tabs) b.classList.toggle('tb-on', id === this.tab);
 
     this.page.replaceChildren();
-    this.page.classList.toggle('social-talking', this.tab === 'letters' && !!this.talkingTo);
+    const talking = this.tab === 'letters' && !!this.talkingTo;
+    this.page.classList.toggle('social-talking', talking);
+    // A conversation scrolls in its thread, with the box to answer in under it; every other page scrolls as one.
+    this.page.classList.toggle('rc-scroll', !talking);
     if (!this.island) {
       this.page.append(this.empty('Social: island only.'));
       return;
@@ -718,7 +722,7 @@ export class SocialPanel {
         const away = this.button('Send away', `Remove ${who.name} from ${d.name} (asks to confirm).`,
           () => void this.sure(`Send ${who.name} away from ${d.name}? Removed at once; only a new invitation restores them.`,
             () => isle.leaveDeed(d.founder, who.uid)));
-        away.classList.add('tb-danger');
+        away.classList.add('tb-danger', 'rc-danger');
         acts.push(away);
       }
       this.page.append(this.row(who, this.whereabouts(who), acts, who.uid === d.founder ? 'Founder' : defOf(d, who.uid)?.name));
@@ -726,7 +730,7 @@ export class SocialPanel {
     if (!d.mine) {
       const leave = this.button('Leave', `Leave ${d.name} (asks to confirm).`,
         () => void this.sure(leaveQuestion({ name: d.name, x: d.x, y: d.y, radius: d.radius }, d.by), () => isle.leaveDeed(d.founder)));
-      leave.classList.add('tb-danger');
+      leave.classList.add('tb-danger', 'rc-danger');
       this.page.append(this.plain(`Your rank at ${d.name}: ${rankName(asRanked(d))}.`, '', [leave]));
     }
   }
@@ -762,7 +766,7 @@ export class SocialPanel {
     const isle = this.island;
     if (!isle) return;
     const back = document.createElement('div');
-    back.className = 'social-row social-ask';
+    back.className = 'social-row rc-row social-ask';
     const name = document.createElement('span');
     name.className = 'social-name';
     name.textContent = `${who.name} · ${this.whereabouts(who)}`;
@@ -775,7 +779,7 @@ export class SocialPanel {
     back.append(name, acts);
 
     const list = document.createElement('div');
-    list.className = 'social-thread';
+    list.className = 'social-thread rc-scroll';
     if (!this.thread.length) {
       list.append(this.empty(`No letters with ${who.name}.`));
     }
@@ -798,7 +802,7 @@ export class SocialPanel {
     const box = document.createElement('input');
     box.type = 'text';
     box.id = 'social-draft';
-    box.className = 'log-search';
+    box.className = 'log-search rc-field';
     box.maxLength = LETTER_MAX;
     box.placeholder = `Write to ${who.name}…`;
     box.value = this.draft;

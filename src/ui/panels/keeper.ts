@@ -8,6 +8,7 @@ import {
 } from '../../game/keeper';
 import type { MenuItem } from '../contextmenu';
 import type { UIWindow } from '../windows';
+import { kitBody } from '../kit';
 import { KeeperFlags } from './keeperflags';
 
 /** When so many seconds from now is, by this machine's clock: "Fri 15:05". */
@@ -49,9 +50,9 @@ export class KeeperPanel {
     private readonly island: Island,
     private readonly showMenu: (x: number, y: number, title: string, items: MenuItem[]) => void,
   ) {
-    win.body.classList.add('social-body');
+    kitBody(win.body, 'social-body');
     this.page = document.createElement('div');
-    this.page.className = 'social-page';
+    this.page.className = 'social-page rc-scroll';
     win.body.append(this.page);
     this.flags = new KeeperFlags(game, island);
     win.onOpen = () => void this.refresh(performance.now() / 1000);
@@ -155,11 +156,11 @@ export class KeeperPanel {
     box.inputMode = 'numeric';
     box.autocomplete = 'one-time-code';
     box.maxLength = 8;
-    box.className = 'panel-select';
+    box.className = 'panel-select rc-field';
     box.setAttribute('aria-label', 'Authenticator code');
     const go = document.createElement('button');
     go.type = 'submit';
-    go.className = 'tb-btn tb-small';
+    go.className = 'tb-btn rc-btn tb-small';
     go.textContent = 'Confirm';
     form.append(box, go);
     form.addEventListener('submit', (ev) => {
@@ -186,7 +187,7 @@ export class KeeperPanel {
   /** One body: whether they are ashore, who, where and how lately heard from, and the three things to do. */
   private row(b: KeptBody, kept: Kept): HTMLDivElement {
     const el = document.createElement('div');
-    el.className = 'social-row keeper-row';
+    el.className = 'social-row rc-row keeper-row';
     const dot = document.createElement('span');
     dot.className = `social-dot${b.away ? '' : ' social-on'}`;
     dot.title = b.away ? 'Away' : 'Ashore';
@@ -269,7 +270,7 @@ export class KeeperPanel {
   /** One open report: who sent it about whom, why, when, the note, and Mute, Kick and Handled for the one reported. */
   private reportRow(r: KeptReport, kept: Kept): HTMLDivElement {
     const el = document.createElement('div');
-    el.className = 'social-row keeper-row';
+    el.className = 'social-row rc-row keeper-row';
     const who = document.createElement('span');
     who.className = 'keeper-who';
     const name = document.createElement('span');
@@ -297,7 +298,7 @@ export class KeeperPanel {
   private button(label: string, title: string, go: () => void): HTMLButtonElement {
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = 'tb-btn tb-small social-do';
+    b.className = 'tb-btn rc-btn tb-small social-do';
     b.textContent = label;
     b.title = title;
     b.addEventListener('click', go);
@@ -313,14 +314,14 @@ export class KeeperPanel {
 
   private head(text: string): void {
     const el = document.createElement('div');
-    el.className = 'deed-head';
+    el.className = 'deed-head rc-section';
     el.textContent = text;
     this.page.append(el);
   }
 
   private empty(text: string): void {
     const el = document.createElement('div');
-    el.className = 'inv-empty';
+    el.className = 'inv-empty rc-empty';
     el.textContent = text;
     this.page.append(el);
   }

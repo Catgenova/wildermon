@@ -11,6 +11,8 @@
  *   * a `[data-frame]` rule that reaches inside the rim: a frame may dress its
  *     window's band, title, title buttons and niche, and nothing else.
  *
+ * A picture's own rule (`ART`) is art, and its colours are not counted.
+ *
  * A rule is a window's when a class in its selector is written in that
  * window's code (`WINDOWS` below): the class with the fewest windows decides,
  * and one in more than three is the kit's or the interface's own ("shared").
@@ -26,6 +28,15 @@ import { join } from 'node:path';
 const ROOT = new URL('..', import.meta.url).pathname;
 const STYLES = ['src/style.css', 'src/phone.css', 'src/ui/creator.css', 'src/ui/interior.css'];
 const SCALE = new Set([10, 11, 12, 13, 15]);
+
+/**
+ * Pictures inside a window, which are art and keep their own colours: the
+ * map (`.minimap`), the treasure map and its ground (`.hoard-view`), and the
+ * field guide's drawings (`.guide-picture`). A hex in a rule of theirs is the
+ * picture's, not the interior's.
+ */
+const ART = new Set(['minimap', 'hoard-view', 'guide-picture']);
+const isArt = (selector) => parts(selector).every((s) => [...s.matchAll(/\.([a-z][\w-]*)/g)].some((m) => ART.has(m[1])));
 
 /** Each window's code: what it is made in, so its classes can be found. */
 const WINDOWS = {
@@ -194,7 +205,7 @@ for (const file of STYLES) {
       }
       // Hex colours, not counting Classic's fallbacks inside a var().
       const bare = noFallbacks(value).replace(/url\([^)]*\)/g, '');
-      if (/#[0-9a-fA-F]{3,8}\b/.test(bare)) add('hex', file, r, `${p}: ${value.slice(0, 60)}`);
+      if (/#[0-9a-fA-F]{3,8}\b/.test(bare) && !isArt(r.selector)) add('hex', file, r, `${p}: ${value.slice(0, 60)}`);
       // Scrolling outside the kit's one scroll area.
       if (/^overflow(-x|-y)?$/.test(p) && /\b(auto|scroll)\b/.test(value) && !kit) add('overflow', file, r, `${p}: ${value}`);
     }
