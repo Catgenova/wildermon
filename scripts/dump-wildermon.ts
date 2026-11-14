@@ -11,10 +11,11 @@
  * the only things invented are the words a chip is printed with.
  */
 import {
-  AGES, COMPANION_SIGHT, footing, GATHER_DO, GATHER_SKILL, GATHER_VERB, MONSTERS, MONSTER_CAP, MONSTER_SHARE,
+  AGES, COMPANION_SIGHT, footing, GATHER_DO, GATHER_SKILL, GATHER_VERB,
   OLD_AT, RANGE_PER_STEP, SPECIES, WILD_SPECIES, YOUNG_FOR,
   type GatherKind, type SpeciesDef,
 } from '../src/game/creatures';
+import { lairOfKind } from '../src/game/lairs';
 import {
   CHANNELS, FIGHT_SHARE, FIGHTING, GRADE_STEP, HUSBANDRY_LIFT, TIER_COLOUR, TIERS, TRAIT_SLOTS, TRAITS,
   WILD_ODDS, husbandryOdds, isGain, pct, type TraitChannel, type TraitDef,
@@ -75,13 +76,12 @@ function roles(d: SpeciesDef): Array<{ id: string; name: string; note: string }>
 }
 
 const wildWeight = new Map(WILD_SPECIES);
-const monsterWeight = new Map(MONSTERS);
 const wildTotal = WILD_SPECIES.reduce((n, [, w]) => n + w, 0);
-const monsterTotal = MONSTERS.reduce((n, [, w]) => n + w, 0);
 
 const species = Object.values(SPECIES).map((d) => {
   const wild = wildWeight.get(d.id);
-  const mon = monsterWeight.get(d.id);
+  // A monster's lair (`lairs.ts`): it stands up only there, so it has no share of the wild.
+  const lair = lairOfKind(d.id);
   return {
     id: d.id,
     name: d.name,
@@ -91,9 +91,9 @@ const species = Object.values(SPECIES).map((d) => {
     trade: d.gathers ? trade(d.gathers) : null,
     trades: (d.trades ?? []).map(trade),
     /** The share of what the wild throws up that is this, as a share of one. */
-    share: wild !== undefined ? (wild / wildTotal) * (1 - MONSTER_SHARE)
-      : mon !== undefined ? (mon / monsterTotal) * MONSTER_SHARE : null,
-    cap: mon !== undefined ? MONSTER_CAP[d.id] ?? 1 : null,
+    share: wild !== undefined ? wild / wildTotal : null,
+    /** For a monster, how many lairs of its kind the island holds. */
+    cap: lair ? lair.count : null,
     stats: {
       health: d.health,
       attack: d.attack,
@@ -180,7 +180,6 @@ const data = {
   ages: Object.values(AGES),
   youngFor: YOUNG_FOR,
   oldAt: OLD_AT,
-  monsterShare: MONSTER_SHARE,
   rangePerStep: RANGE_PER_STEP,
   species,
   traits,

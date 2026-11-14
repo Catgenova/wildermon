@@ -342,7 +342,7 @@ footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line);
     st.append(statRow('Speed', s.stats.speed.toFixed(1), 'tiles/s'));
     if (s.monster) {
       st.append(statRow('Notices you', String(s.stats.notice ?? 7), 'tiles'));
-      if (s.cap !== null) st.append(statRow('At once', String(s.cap), 'island-wide'));
+      if (s.cap !== null) st.append(statRow('Lairs', String(s.cap), 'island-wide'));
     } else {
       st.append(statRow('Taming', String(s.stats.tameLevel), Math.round(s.stats.tameChance * 100) + '% a try'));
       if (s.trade) st.append(statRow('Range', String(s.stats.workRange), 'tiles, +' + s.stats.rangePerStep + '/10 skill'));

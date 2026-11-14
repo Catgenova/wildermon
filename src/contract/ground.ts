@@ -267,6 +267,11 @@ export interface IslandGround {
    */
   graves?: Array<{ id: number; x: number; y: number }>;
   /**
+   * Every monster lair you have seen (`lair_seen`), wherever it is, on the slow half: its pin on your map and "found"
+   * in your field guide (`lairs.ts`). The piece it is drawn as is in `placed` while it is in range.
+   */
+  lairs?: Array<{ id: number; kind: string; x: number; y: number }>;
+  /**
    * What is standing, and what is half built.
    *
    * The island has kept `building`, `wall` and `floor_tile` since buildings
