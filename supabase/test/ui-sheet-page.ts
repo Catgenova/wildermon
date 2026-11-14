@@ -82,6 +82,10 @@ const bag = game.inventory.add('sack', { ql: 30 });
 const made = new Inventory([], 900_000);
 bag.inside = ([['plank', 4], ['nail', 20], ['feather', 12], ['wool', 3], ['bread', 2], ['rope', 2], ['apple', 5], ['twine', 6], ['leather', 2], ['arrow', 30]] as const).map(([id, count]) => made.add(id, { ql: 24, count }));
 const crates = (ui as unknown as { cratePanel: CratePanel }).cratePanel;
+// And a ledger with something in it.
+for (const [id, n, best, rare] of [['plank', 40, 31.2, 0], ['bucket', 3, 22.5, 1], ['brush', 1, 18, 0], ['nail', 120, 44.8, 2]] as const) {
+  game.ledger[id] = { n, best, rare, first: day0, bestAt: day0 };
+}
 const TABS: JournalTab[] = ['goals', 'path', 'ledger', 'news', 'boards', 'guide', 'tracker', 'help'];
 const ids = [...ui.windows.windows.keys()];
 seen.keys = [...ids.filter((id) => id !== 'journal'), ...TABS.map((t) => `journal:${t}`)];

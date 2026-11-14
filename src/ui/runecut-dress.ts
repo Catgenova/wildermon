@@ -3,6 +3,8 @@ import { watchLook, type Look } from './theme';
 import { lessMotion } from '../engine/motion';
 import type { Join, Seam } from './snapgrid';
 import { livesOn, paintLife, type LifePiece, type LifeWorld } from './runecut-life';
+import { accentInk, FRAME_ACCENT } from './runecut-frames';
+import { css } from '../render/runestone';
 
 /**
  * Runecut's art on the page: each window's slab, its niche and its frame
@@ -326,6 +328,8 @@ class Dressed {
     this.box = null;
     if (!look || look.ui !== 'runecut' || this.el.hidden || !w || !h) {
       delete this.el.dataset.frame;
+      this.el.style.removeProperty('--frame-accent');
+      this.el.style.removeProperty('--frame-accent-ink');
       this.lampsFor([], false);
       this.still();
       for (const s of [this.plate, this.frame, this.edge, this.niche]) s.drop();
@@ -338,6 +342,16 @@ class Dressed {
     const kind = look.frames === 'themed' ? frameFor(this.id) : 'stone';
     // Which frame it wears, for the parts of the window itself that wear it too (src/style.css).
     if (this.el.dataset.frame !== kind) this.el.dataset.frame = kind;
+    /*
+     * The accent its frame lends the interior (`FRAME_ACCENT`): the frame it is
+     * made for, whether frames are shown or plain stone, so the inside of a
+     * window is the same either way. None named: stone's (src/ui/tokens.css).
+     */
+    const accent = FRAME_ACCENT[frameFor(this.id)];
+    if (accent && this.el.style.getPropertyValue('--frame-accent') !== css(accent)) {
+      this.el.style.setProperty('--frame-accent', css(accent));
+      this.el.style.setProperty('--frame-accent-ink', accentInk(accent));
+    }
     const rim = this.rimOf(kind);
     this.kind = kind;
     this.rim = rim;

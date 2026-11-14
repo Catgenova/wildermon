@@ -18,6 +18,7 @@ import { POWER } from '../../game/ranks';
 import { counterStore } from '../counterMenu';
 import { stallBuyRefusal } from '../../game/counters';
 import { deedAt, isSettlementStore, storeMarkable, storeMarkedLine, storeMarkRefusal, storeUse, type Keepable } from '../../game/stores';
+import { kit, kitBody, kitButton, kitEmpty, kitSearch, made, meaning } from '../kit';
 
 /** A crate or a piece of storage furniture, seen through the same window. */
 export interface Store {
@@ -156,40 +157,19 @@ export class CratePanel {
     /** A card for what is under the pointer: a weapon or armour set against what you have on (`compareLines`). */
     private readonly hover?: (item: Item | null, x: number, y: number) => void,
   ) {
-    win.body.classList.add('inv-body', 'items-body');
+    kitBody(win.body, 'inv-body', 'items-body');
     this.head = headRow({ label: '' });
-    this.list = document.createElement('div');
-    this.list.className = 'inv-list';
-    this.footer = document.createElement('div');
-    this.footer.className = 'inv-footer';
+    this.list = made('div', 'scroll', 'inv-list');
+    this.footer = made('div', 'foot', 'inv-footer');
     // Moving things a stack at a time is most of the tedium of a settlement.
-    this.bar = document.createElement('div');
-    this.bar.className = 'panel-bar';
-    const takeAll = document.createElement('button');
-    takeAll.type = 'button';
-    takeAll.className = 'tb-btn tb-small';
-    takeAll.textContent = 'Take all';
-    takeAll.title = 'Empty into your pack, up to your carry limit';
-    takeAll.addEventListener('click', () => this.takeAll());
-    const putAll = document.createElement('button');
-    putAll.type = 'button';
-    putAll.className = 'tb-btn tb-small';
-    putAll.textContent = 'Put all in';
-    putAll.title = 'Put all loose pack items in';
-    putAll.addEventListener('click', () => this.putAll());
-    const putKind = this.putKind = document.createElement('button');
-    putKind.type = 'button';
-    putKind.className = 'tb-btn tb-small';
-    putKind.textContent = 'Top up';
-    putKind.title = 'Put in only the kinds already inside';
-    putKind.addEventListener('click', () => this.putAll(true));
+    this.bar = made('div', 'bar', 'panel-bar');
+    const takeAll = kitButton('Take all', { title: 'Empty into your pack, up to your carry limit', onClick: () => this.takeAll() });
+    const putAll = kitButton('Put all in', { title: 'Put all loose pack items in', onClick: () => this.putAll() });
+    const putKind = this.putKind = kitButton('Top up', { title: 'Put in only the kinds already inside', onClick: () => this.putAll(true) });
     this.waysIn = [putAll, putKind];
     this.wayOut = takeAll;
-    const markBtn = this.markBtn = document.createElement('button');
-    markBtn.type = 'button';
-    markBtn.className = 'tb-btn tb-small';
+    const markBtn = this.markBtn = kitButton('', { onClick: () => this.toggleMark() });
     markBtn.hidden = true;
-    markBtn.addEventListener('click', () => this.toggleMark());
     this.bar.append(takeAll, putAll, putKind, markBtn);
     /*
      * And a box to search it.
@@ -199,10 +179,8 @@ export class CratePanel {
      * a deed crate holds three hundred. Finding the one damaged hatchet in a
      * cupboard meant reading the cupboard.
      */
-    this.search = document.createElement('input');
-    this.search.type = 'search';
-    this.search.className = 'panel-search';
-    this.search.placeholder = 'Search contents\u2026';
+    const search = kitSearch('Search contents\u2026');
+    this.search = search.input;
     this.search.addEventListener('input', () => {
       this.query = this.search.value.trim().toLowerCase();
       this.render();
@@ -215,14 +193,12 @@ export class CratePanel {
       this.render();
     });
     // The order beside the box, as both are about which rows show where; the bar below is for moving them.
-    this.find = document.createElement('div');
-    this.find.className = 'items-find';
-    this.find.append(this.search, sortSelect('Sort order', (key) => {
+    this.find = made('div', 'bar', 'items-find');
+    this.find.append(search.el, kit(sortSelect('Sort order', (key) => {
       this.sort = key;
       this.render();
-    }));
-    this.pickBar = document.createElement('div');
-    this.pickBar.className = 'pick-bar';
+    }), 'field'));
+    this.pickBar = made('div', 'bar', 'pick-bar');
     this.pickBar.hidden = true;
     win.body.append(this.find, this.head, this.list, this.pickBar, this.bar, this.footer);
     makeDropZone(
@@ -495,23 +471,20 @@ export class CratePanel {
     const say = document.createElement('span');
     say.textContent = `${n} picked`;
     say.title = 'Ctrl-click: toggle row. Shift-click: range. Drag a picked row: move all picked.';
-    const take = document.createElement('button');
-    take.type = 'button';
-    take.className = 'tb-btn tb-small';
-    take.textContent = 'Take out';
-    take.title = `All picked stacks from the ${store.what} into your pack`;
-    take.addEventListener('click', () => {
-      this.takeMany(store.items.filter((i) => this.picking.uids.has(i.uid)));
-      this.picking.clear();
-      this.render();
+    const take = kitButton('Take out', {
+      kind: 'go',
+      title: `All picked stacks from the ${store.what} into your pack`,
+      onClick: () => {
+        this.takeMany(store.items.filter((i) => this.picking.uids.has(i.uid)));
+        this.picking.clear();
+        this.render();
+      },
     });
-    const clear = document.createElement('button');
-    clear.type = 'button';
-    clear.className = 'tb-btn tb-small';
-    clear.textContent = 'Clear';
-    clear.addEventListener('click', () => {
-      this.picking.clear();
-      this.render();
+    const clear = kitButton('Clear', {
+      onClick: () => {
+        this.picking.clear();
+        this.render();
+      },
     });
     this.pickBar.replaceChildren(say, take, clear);
   }
@@ -728,12 +701,10 @@ export class CratePanel {
     const store = this.store();
     this.list.replaceChildren();
     if (!store) {
-      const empty = document.createElement('div');
-      empty.className = 'inv-empty';
-      empty.textContent = 'Nothing open. Open a crate, chest or cart (right-click), or a bag in your pack.';
-      this.list.append(empty);
+      this.list.append(kitEmpty('Nothing open. Open a crate, chest or cart (right-click), or a bag in your pack.'));
       this.footer.textContent = '';
       this.footer.classList.remove('inv-full');
+      meaning(this.footer, null);
       this.bar.hidden = true;
       // Nothing to search and no columns to name until something is open.
       this.find.hidden = true;
@@ -769,23 +740,20 @@ export class CratePanel {
     for (const b of this.waysIn) b.hidden = store.grave !== undefined || !!store.sell;
     if (this.wayOut) this.wayOut.hidden = !!store.sell;
     if (!store.items.length || !store.items.some((it) => this.matches(it))) {
-      const empty = document.createElement('div');
-      empty.className = 'inv-empty';
       // Two different emptinesses, and saying the wrong one is how somebody
       // comes to believe a full crate has been robbed.
-      empty.textContent = store.items.length
+      this.list.append(kitEmpty(store.items.length
         ? `No match: “${this.search.value.trim()}”. Esc clears.`
         : store.grave !== undefined || store.sell
           ? `The ${store.what} is empty.`
-          : `${capital(store.what)} empty. Drag from your pack, or Put all in.`;
-      this.list.append(empty);
+          : `${capital(store.what)} empty. Drag from your pack, or Put all in.`));
     }
     const listed = orderBy(store.items.filter((it) => this.matches(it)), this.sort);
     this.picking.keep(new Set(listed.map((it) => it.uid)));
     this.order = listed.map((it) => it.uid);
     for (const item of listed) {
       const row = document.createElement('div');
-      row.className = 'inv-row' + (this.picking.uids.has(item.uid) ? ' picked' : '');
+      row.className = 'inv-row rc-row' + (this.picking.uids.has(item.uid) ? ' picked' : '');
       // Ctrl-click and Shift-click pick rows; a plain click on the row does nothing, as it never did.
       if (!store.sell) {
         row.addEventListener('click', (e) => {
@@ -808,10 +776,7 @@ export class CratePanel {
       }
       const ql = qualityCell(this.game, item);
       const dmg = damageCell(item);
-      const take = document.createElement('button');
-      take.type = 'button';
-      take.className = 'tb-btn tb-small inv-take';
-      take.textContent = store.sell ? 'Buy' : 'Take';
+      const take = kitButton(store.sell ? 'Buy' : 'Take', { also: 'tb-btn tb-small inv-take' });
       const sell = store.sell;
       if (sell) take.title = sell.why(item) ?? `For ${item.price !== undefined ? priceWords(item.price) : 'nothing'}, the lot`;
       take.addEventListener('click', (e) => {
@@ -867,7 +832,9 @@ export class CratePanel {
         ? `${weight.toFixed(1)} / ${store.heft} kg · ${used} things`
         : `${used} / ${store.capacity} things · ${weight.toFixed(1)} kg`;
     // Full, in the colour the Stores window gives a full store, so the next drag's refusal is seen coming.
-    this.footer.classList.toggle('inv-full', store.grave === undefined && (store.heft ? weight >= store.heft : used >= store.capacity));
+    const full = store.grave === undefined && (store.heft ? weight >= store.heft : used >= store.capacity);
+    this.footer.classList.toggle('inv-full', full);
+    meaning(this.footer, full ? 'accent' : null);
   }
 
   /**

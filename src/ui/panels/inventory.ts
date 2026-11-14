@@ -13,6 +13,7 @@ import { nextFrame } from '../repaint';
 import type { UIWindow } from '../windows';
 import { COUNTS, pinEntry, pinnable } from '../beltmenu';
 import { orderBy, sortSelect, type SortKey } from '../sorting';
+import { kit, kitBody, kitButton, kitEmpty, kitMeter, kitPressed, kitSearch, kitSection, made, meaning, type Meaning } from '../kit';
 import { ACTION_BY_ID, type ActionDef, type Target } from '../../game/actions';
 import { DEPLOY_SAID, deploySpot, isDriveable, isFurniture } from '../../game/furniture';
 import { ABSORB_SAID, absorbable, SOUL } from '../../game/sacrifice';
@@ -43,8 +44,8 @@ export class InventoryPanel {
   private selected: number | null = null;
   private sort: SortKey = 'name';
   private grouped = true;
-  private load: HTMLDivElement;
-  private loadFill: HTMLDivElement;
+  /** What you carry, as a bar (`kitMeter`). */
+  private load: ReturnType<typeof kitMeter>;
   /** Several things picked at once with Ctrl- and Shift-click (`Picking`), and the bar that moves them. */
   private readonly picking = new Picking();
   private pickBar: HTMLDivElement;
@@ -73,10 +74,8 @@ export class InventoryPanel {
     /** Where the picked things can go in one press: the open store, by its name, or null when none is open and in reach. */
     private readonly pickedTo?: () => { where: string; go: (uids: number[]) => void } | null,
   ) {
-    this.search = document.createElement('input');
-    this.search.type = 'search';
-    this.search.className = 'panel-search';
-    this.search.placeholder = 'Search your pack…';
+    const search = kitSearch('Search your pack…');
+    this.search = search.input;
     this.search.addEventListener('input', () => {
       this.query = this.search.value.trim().toLowerCase();
       this.render();
@@ -90,58 +89,41 @@ export class InventoryPanel {
       this.render();
     });
     // How the list is put in order, and whether it is grouped by kind.
-    const bar = document.createElement('div');
-    bar.className = 'panel-bar';
-    const sortSel = sortSelect('Sort order', (key) => {
+    const bar = made('div', 'bar', 'panel-bar');
+    const sortSel = kit(sortSelect('Sort order', (key) => {
       this.sort = key;
       this.render();
+    }), 'field');
+    const groupBtn = kitButton('Grouped', {
+      title: 'Group by kind or show one list',
+      onClick: () => {
+        this.grouped = !this.grouped;
+        groupBtn.textContent = this.grouped ? 'Grouped' : 'Flat';
+        kitPressed(groupBtn, this.grouped);
+        this.render();
+      },
     });
-    const groupBtn = document.createElement('button');
-    groupBtn.type = 'button';
-    groupBtn.className = 'tb-btn tb-small';
-    groupBtn.textContent = 'Grouped';
-    groupBtn.title = 'Group by kind or show one list';
-    groupBtn.setAttribute('aria-pressed', 'true');
-    groupBtn.addEventListener('click', () => {
-      this.grouped = !this.grouped;
-      groupBtn.textContent = this.grouped ? 'Grouped' : 'Flat';
-      groupBtn.classList.toggle('tb-on', this.grouped);
-      groupBtn.setAttribute('aria-pressed', String(this.grouped));
-      this.render();
-    });
-    groupBtn.classList.add('tb-on');
+    kitPressed(groupBtn, true);
     // Every loose stack into a store within reach that already holds the like of it (`putaway.ts`).
-    const awayBtn = document.createElement('button');
-    awayBtn.type = 'button';
-    awayBtn.className = 'tb-btn tb-small';
-    awayBtn.textContent = 'Put away';
-    awayBtn.title = `Each stack into a crate, chest or cart within ${STORE_REACH} tiles already holding it`;
-    awayBtn.addEventListener('click', () => putAway(this.game));
+    const awayBtn = kitButton('Put away', {
+      title: `Each stack into a crate, chest or cart within ${STORE_REACH} tiles already holding it`,
+      onClick: () => putAway(this.game),
+    });
     bar.append(sortSel, groupBtn, awayBtn);
     const head = headRow({ label: 'Wt', className: 'inv-wt', title: 'Stack weight, kg' });
-    this.list = document.createElement('div');
-    this.list.className = 'inv-list';
-    this.footer = document.createElement('div');
-    this.footer.className = 'inv-footer';
+    this.list = made('div', 'scroll', 'inv-list');
+    this.footer = made('div', 'foot', 'inv-footer');
     /*
      * What you carry, as a bar: the mark is where the load starts to slow you
      * (`carryLimit`), the end is half again past it (`CARRY_STOP`), where you
      * are down to a crawl. Asked for so the slowdown is seen coming rather
      * than found by walking into it.
      */
-    this.load = document.createElement('div');
-    this.load.className = 'inv-load';
-    this.loadFill = document.createElement('div');
-    this.loadFill.className = 'inv-load-fill';
-    const mark = document.createElement('div');
-    mark.className = 'inv-load-mark';
-    mark.style.left = `${(100 / CARRY_STOP).toFixed(2)}%`;
-    this.load.append(this.loadFill, mark);
-    this.pickBar = document.createElement('div');
-    this.pickBar.className = 'pick-bar';
+    this.load = kitMeter('inv-load', 'inv-load-fill', [{ at: 1 / CARRY_STOP, also: 'inv-load-mark' }]);
+    this.pickBar = made('div', 'bar', 'pick-bar');
     this.pickBar.hidden = true;
-    win.body.append(this.search, bar, head, this.list, this.pickBar, this.load, this.footer);
-    win.body.classList.add('inv-body', 'items-body', 'pack-body');
+    win.body.append(search.el, bar, head, this.list, this.pickBar, this.load.el, this.footer);
+    kitBody(win.body, 'inv-body', 'items-body', 'pack-body');
     makeDropZone(
       this.list,
       (p) => p.from === 'store',
@@ -185,19 +167,13 @@ export class InventoryPanel {
     for (const [cat, label] of CATEGORY_ORDER) {
       const group = shown.filter((it) => itemDef(it.id).category === cat);
       if (!group.length) continue;
-      const header = document.createElement('div');
-      header.className = 'inv-group';
-      header.textContent = label;
-      this.list.append(header);
+      this.list.append(kitSection(label));
       for (const item of this.ordered(group)) this.list.append(this.row(item));
     }
     if (!shown.length) {
-      const empty = document.createElement('div');
-      empty.className = 'inv-empty';
-      empty.textContent = items.length
+      this.list.append(kitEmpty(items.length
         ? `No match: “${this.search.value.trim()}”. Esc clears.`
-        : 'Pack empty.';
-      this.list.append(empty);
+        : 'Pack empty.'));
     }
     this.drawPickBar();
     const weight = this.game.inventory.totalWeight();
@@ -212,10 +188,12 @@ export class InventoryPanel {
     this.footer.textContent = this.query ? `${shown.reduce((n, it) => n + it.count, 0)} of ${all}` : all;
     this.footer.classList.toggle('inv-over', over > 0);
     this.footer.classList.toggle('inv-stuck', stuck);
-    this.loadFill.style.width = `${Math.min(100, (weight / Math.max(0.001, stop)) * 100).toFixed(1)}%`;
-    this.load.classList.toggle('inv-over', over > 0);
-    this.load.classList.toggle('inv-stuck', stuck);
-    this.load.title = `${weight.toFixed(1)}/${stop.toFixed(0)} kg. From ${limit.toFixed(0)} kg: slower, more stamina use. At ${stop.toFixed(0)} kg: speed ×${CARRY_CRAWL}.`;
+    const said: Meaning = stuck ? 'bad' : over > 0 ? 'warn' : 'good';
+    meaning(this.footer, said === 'good' ? null : said);
+    this.load.set(weight / Math.max(0.001, stop), said);
+    this.load.el.classList.toggle('inv-over', over > 0);
+    this.load.el.classList.toggle('inv-stuck', stuck);
+    this.load.el.title = `${weight.toFixed(1)}/${stop.toFixed(0)} kg. From ${limit.toFixed(0)} kg: slower, more stamina use. At ${stop.toFixed(0)} kg: speed ×${CARRY_CRAWL}.`;
     this.footer.title = stuck
       ? `Load ${weight.toFixed(1)} kg (limit ${limit.toFixed(0)} kg). Over ${stop.toFixed(0)} kg: speed ×${CARRY_CRAWL}. Drop ${(weight - stop).toFixed(1)} kg.`
       : over > 0
@@ -234,34 +212,29 @@ export class InventoryPanel {
     const parts: HTMLElement[] = [say];
     const to = this.pickedTo?.();
     if (to) {
-      const go = document.createElement('button');
-      go.type = 'button';
-      go.className = 'tb-btn tb-small';
-      go.textContent = `Put in ${to.where}`;
-      go.title = `All picked stacks into ${to.where}`;
-      go.addEventListener('click', () => {
-        to.go([...this.picking.uids]);
+      parts.push(kitButton(`Put in ${to.where}`, {
+        kind: 'go',
+        title: `All picked stacks into ${to.where}`,
+        onClick: () => {
+          to.go([...this.picking.uids]);
+          this.picking.clear();
+          this.render();
+        },
+      }));
+    }
+    parts.push(kitButton('Clear', {
+      onClick: () => {
         this.picking.clear();
         this.render();
-      });
-      parts.push(go);
-    }
-    const clear = document.createElement('button');
-    clear.type = 'button';
-    clear.className = 'tb-btn tb-small';
-    clear.textContent = 'Clear';
-    clear.addEventListener('click', () => {
-      this.picking.clear();
-      this.render();
-    });
-    parts.push(clear);
+      },
+    }));
     this.pickBar.replaceChildren(...parts);
   }
 
   private row(item: Item): HTMLDivElement {
     const row = document.createElement('div');
     this.order.push(item.uid);
-    row.className = 'inv-row' + (item.uid === this.selected ? ' selected' : '') + (this.picking.uids.has(item.uid) ? ' picked' : '');
+    row.className = 'inv-row rc-row' + (item.uid === this.selected ? ' selected' : '') + (this.picking.uids.has(item.uid) ? ' picked' : '');
     const name = nameCell(item, { worn: this.game.isEquipped(item.uid), occupant: item.occupant ? undefined : occupantOf(this.game, item) });
     const ql = qualityCell(this.game, item);
     const dmg = damageCell(item);
