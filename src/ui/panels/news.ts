@@ -4422,9 +4422,9 @@ export const NEWS: News[] = [
     n: 582,
     day: '2026-11-14',
     lines: () => [
-      'Changed: bodies drawn in one GL pass a frame, put down after one wait for the GL (was: one wait a body). Busy stretch of 30 at work and fighting, no graphics card: 36 to 12 ms a frame.',
-      `Changed: bodies drawn within ${BODY_BUDGET_MS} ms a frame on average, the most wanted first (was: 4 a frame, 1 without a graphics card; a body new in view or at a new size whatever the count). Zoom change over a crowd of 60, no graphics card: 1000 to 15 ms a frame.`,
-      `Changed: a body not yet drawn at this size: its last picture stretched to it; never drawn: at half size first where a whole one costs over ${BODY_BUDGET_MS} ms. Fast camera sweep over 90 people, no graphics card: 46 to 17 ms a frame.`,
+      'Changed: bodies drawn in one GL pass a frame, put down after one wait for the GL (was: one wait a body). Busy stretch of 30 at work and fighting, no graphics card: 36 to 14 ms a frame.',
+      `Changed: bodies drawn within ${BODY_BUDGET_MS} ms a frame on average, the most wanted first (was: 4 a frame, 1 without a graphics card; a body new in view or at a new size whatever the count). Zoom change over a crowd of 60, no graphics card: 900 to 20 ms a frame.`,
+      `Changed: a body not yet drawn at this size: its last picture stretched to it; never drawn: at half size first where a whole one costs over ${BODY_BUDGET_MS} ms. Fast camera sweep over 90 people, no graphics card: 46 to 22 ms a frame.`,
       `New: work and fight clips kept as loops of ${BODY_RATES.work} pictures a second, shared by bodies dressed alike; a crowd or a close zoom keeps fewer or half-size pictures (was: each body drawn ${BODY_RATES.work} times a second).`,
       `Changed: bodies under ${BODY_RATES.small} px tall or over ${BODY_RATES.near} tiles from you drawn less often: half as often at ${BODY_RATES.small / 2} px or ${BODY_RATES.far} tiles; at least ${BODY_RATES.least} a second. Turning while over budget: in eighths.`,
       `New: body quality: pictures at ${QUALITY.scales.map((k) => `${Math.round(k * 100)}%`).join(', ')} of the screen's pixels and of their rates; a step down when the middle frame over ${QUALITY.over / 1000} s is over ${QUALITY.slow} ms with bodies a quarter of it; a step up after ${QUALITY.up / 1000} s under ${QUALITY.quick} ms.`,
