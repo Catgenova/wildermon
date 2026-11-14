@@ -8,6 +8,11 @@ AS $function$
 declare w wall; v_seen text; v_miss text;
 begin
   -- Curtains on either face of a finished window, on their storey, as a plaque on a solid wall (`decor.ts`).
+  -- A fireplace as a plaque, inside a building (`furnish.ts`).
+  if p_mount = 'hearth' then
+    if building_at(p_world, p_x, p_y) is null then return mount_said('outside'); end if;
+    p_mount := 'wall';
+  end if;
   if p_mount in ('wall', 'pane') then
     w := wall_on_side(p_world, p_x, p_y, p_facing, p_level);
     if w.x is null or wall_seen_type(p_world, p_uid, w) <> (case when p_mount = 'pane' then 'window' else 'solid' end) then

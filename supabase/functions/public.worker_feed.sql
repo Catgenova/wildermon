@@ -8,6 +8,8 @@ declare c creature; v_deed deed; v_it item; v_px int; v_py int; v_pr int; v_post
 begin
   select * into c from creature where world_id = p_world and id = p_id;
   if not found or c.mode = 'wild' then return null; end if;
+  -- A hay bale stack in reach first, a day's grass for one that eats it (`furnish.ts`).
+  if hay_feed(p_world, c, p_care) then return hay_item(); end if;
   if c.post is not null then
     select ws.x, ws.y, ws.radius, ws.post into v_px, v_py, v_pr, v_post from work_site(p_world, c) ws where ws.post is not null;
   end if;

@@ -64,6 +64,11 @@ begin
     perform perform_decor(p_world, p_uid, p_action, p_target);
     return;
   end if;
+  -- The furnishings' jobs (`furnish.ts`).
+  if furnish_action(p_action) then
+    perform perform_furnish(p_world, p_uid, p_action, p_target);
+    return;
+  end if;
 
   if p_action = 'plan_bridge' then
     v_kind := coalesce(p_target->>'material', 'rope');

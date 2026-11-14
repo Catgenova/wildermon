@@ -51,6 +51,10 @@ begin
   if decor_action(p_action) then
     return decor_refusal(p_world, p_uid, p_action, p_target);
   end if;
+  -- The furnishings' jobs (`furnish.ts`).
+  if furnish_action(p_action) then
+    return furnish_refusal(p_world, p_uid, p_action, p_target);
+  end if;
 
   if p_action = 'plan_bridge' then
     v_kind := coalesce(p_target->>'material', 'rope');
