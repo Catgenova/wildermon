@@ -104,6 +104,8 @@ export function sacrificeSetting(g: Game, t: Target): { why: string } | { altar:
 export function absorbSetting(g: Game, t: Target): { why: string } | { soul: Item; item: Item } {
   const soul = t.kind === 'item' && t.soul !== undefined ? g.inventory.get(t.soul) : undefined;
   if (!soul || soul.id !== SOUL || !soul.rare) return { why: ABSORB_SAID.pickSoul };
+  // A soul set aside (`Item.locked`) is not spent, as nothing set aside is: reported, "if a soul is locked it can be used infinite times".
+  if (soul.locked) return { why: SACRIFICE_SAID.locked };
   const item = t.kind === 'item' ? g.inventory.get(t.uid) : undefined;
   if (!item) return { why: ABSORB_SAID.pickItem };
   if (item.id === SOUL) return { why: ABSORB_SAID.intoSoul };

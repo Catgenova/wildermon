@@ -48,7 +48,7 @@ begin;
 create temp table said (k text, v text);
 do $$
 declare w uuid; u uuid; alt bigint; box bigint; axe bigint; planks bigint; plain bigint; kept bigint; worn bigint;
-        bag bigint; soul bigint; stack bigint; single bigint; bauble bigint; j jsonb; v_n int;
+        bag bigint; soul bigint; stack bigint; single bigint; bauble bigint; j jsonb; v_n int; spare bigint;
 begin
   -- The suite's own island, by name, and somebody on it.
   select id into w from world where name = 'Stonehaven';
@@ -126,6 +126,16 @@ begin
   single := give(w, u, 'hatchet', 1, 40);
   perform act_perform(w, u, 'absorb_soul', jsonb_build_object('kind', 'item', 'uid', single, 'soul', soul));
   insert into said select 'SINGLE', coalesce((select rare from item where id = single), 'plain');
+  -- A soul set aside is not spent: refused, and nothing used up, not even another soul in the pack.
+  soul := give(w, u, 'soul', 1, 40, null, 'rare');
+  update item set locked = true where id = soul;
+  spare := give(w, u, 'soul', 1, 40, null, 'supreme');
+  single := give(w, u, 'shovel', 1, 40);
+  j := jsonb_build_object('kind', 'item', 'uid', single, 'soul', soul);
+  insert into said values ('LOCKEDSOUL', coalesce(act_refusal(w, u, 'absorb_soul', j), 'null'));
+  perform act_perform(w, u, 'absorb_soul', j);
+  insert into said select 'LOCKEDKEPT', (select count(*) from item where id = soul) || '|' || (select count(*) from item where id = spare)
+    || '|' || coalesce((select rare from item where id = single), 'plain');
 end $$;
 select k || E'\\t' || coalesce(v, 'null') from said;
 rollback;
@@ -162,6 +172,8 @@ check('one of it, and the rest stay as they were', say('SPLIT') === 'plain x4,su
 check('and the soul is used up', say('SOULUSED') === '0', say('SOULUSED'));
 check('said as the browser says it', say('ABSORBSAID') === 'Absorbed: supreme soul into plank. Now supreme.', say('ABSORBSAID'));
 check('a thing on its own takes it where it is', say('SINGLE') === 'fantastic', say('SINGLE'));
+check('a soul set aside is refused, in the browser\'s words', say('LOCKEDSOUL') === SACRIFICE_SAID.locked, say('LOCKEDSOUL'));
+check('and asked anyway, it is kept, no other soul is spent, and the thing stays ordinary', say('LOCKEDKEPT') === '1|1|plain', say('LOCKEDKEPT'));
 
 /* ---- the browser ------------------------------------------------------------ */
 const game = Game.create(4242);
@@ -233,6 +245,11 @@ const soul3 = rare(SOUL, 3);
 const single = game.inventory.add('hatchet', { ql: 40 });
 absorb.perform({ kind: 'item', uid: single.uid, soul: soul3.uid }, game);
 check('a thing on its own takes it where it is', game.inventory.get(single.uid)?.rare === 3);
+const lockedSoul = rare(SOUL, 1);
+lockedSoul.locked = true;
+const shovel = game.inventory.add('shovel', { ql: 40 });
+check('in the browser, a soul set aside is refused in the island\'s words',
+  absorb.check?.({ kind: 'item', uid: shovel.uid, soul: lockedSoul.uid }, game) === say('LOCKEDSOUL'));
 
 // And how often, in the browser, over many.
 let left = 0;

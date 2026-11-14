@@ -4,13 +4,18 @@ CREATE OR REPLACE FUNCTION public.perform_absorb(p_world uuid, p_uid uuid, p_tar
  RETURNS void
  LANGUAGE plpgsql
 AS $function$
-declare s record; v_soul text; v_name text;
+declare s record; v_soul text; v_name text; v_left int;
 begin
   select * into s from absorb_setting(p_world, p_uid, p_target);
   if s.o_why is not null then return; end if;
+  -- One of the soul named, under the hold, before anything takes its rarity.
+  delete from item where id = (s.o_soul).id and count = 1 and not locked returning 0 into v_left;
+  if v_left is null then
+    update item set count = count - 1 where id = (s.o_soul).id and count > 1 and not locked returning count into v_left;
+  end if;
+  if v_left is null then return; end if;
   v_soul := lower(item_name(s.o_soul));
   v_name := lower(item_name(s.o_item));
   perform item_takes_rarity((s.o_item).id, (s.o_soul).rare);
-  perform consume(p_world, p_uid, 'soul', 1, (s.o_soul).id);
   perform tell(p_world, p_uid, 'Absorbed: ' || v_soul || ' into ' || v_name || '. Now ' || (s.o_soul).rare || '.', 'event');
 end $function$

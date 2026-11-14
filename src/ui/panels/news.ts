@@ -164,7 +164,7 @@ import { CLASS_LEARN_BLOW, CLASS_LEARN_KILL, CLASS_LEVEL_START, CLASS_SPELL_BY_I
 import { HUSBANDRY_ACTIONS, ODDS_BAND, ODDS_BANDS_AT, ODDS_EXACT_AT, ODDS_LIKELY, ODDS_PLACES } from '../../game/husbandry';
 import { BOON_BONUS, BOON_FOODS, knacksOf, skillWord, TINCTURE_BONUS, TINCTURE_SECONDS } from '../../game/boons';
 import { TINCTURE_NAMES } from '../../game/remedies';
-import { FED_SAID, SOUL_CHANCE } from '../../game/sacrifice';
+import { FED_SAID, SACRIFICE_SAID, SOUL_CHANCE } from '../../game/sacrifice';
 import { GRAVE_KEEPS, GRAVE_REACH } from '../../game/graves';
 import { DEATH_GRACE_HOURS, GRACE_SPARES, PLAYED_GAP } from '../../game/deathgrace';
 import { RESTORE_HARM, RESTORE_HARM_SPREAD, RESTORE_TOOL_NEED } from '../../game/archaeology';
@@ -4419,7 +4419,7 @@ export const NEWS: News[] = [
     ],
   },
   {
-    n: 582,
+    n: 583,
     day: '2026-11-14',
     lines: () => [
       'Changed: bodies drawn in one GL pass a frame, put down after one wait for the GL (was: one wait a body). Busy stretch of 30 at work and fighting, no graphics card: 36 to 14 ms a frame.',
@@ -4430,6 +4430,11 @@ export const NEWS: News[] = [
       `New: body quality: pictures at ${QUALITY.scales.map((k) => `${Math.round(k * 100)}%`).join(', ')} of the screen's pixels and of their rates; a step down when the middle frame over ${QUALITY.over / 1000} s is over ${QUALITY.slow} ms with bodies a quarter of it; a step up after ${QUALITY.up / 1000} s under ${QUALITY.quick} ms.`,
       'New: Show drawing times: a bodies line: ms a frame, bodies drawn a frame, bodies waiting a frame, quality step.',
     ],
+  },
+  {
+    n: 582,
+    day: '2026-11-14',
+    lines: () => [`Fixed: a soul set aside could be absorbed again and again, and absorbing it spent another soul in the pack. Now refused: "${SACRIFICE_SAID.locked}"`],
   },
   {
     n: 581,
