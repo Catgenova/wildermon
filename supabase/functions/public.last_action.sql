@@ -18,4 +18,6 @@ AS $function$
       or bee_action(p_action)
       -- A dye written down, and boiled again (`dyes.ts`).
       or dye_recipe_action(p_action)
+      -- The garden pieces' jobs: wildflowers, a trim, a clip, a prune, what is on show (`garden.ts`).
+      or garden_action(p_action)
 $function$

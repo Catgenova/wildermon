@@ -207,6 +207,13 @@ import {
 } from '../src/game/enchant';
 import { EFFECT_HEAD, EFFECT_SAID, EFFECT_TAIL, ENCHANT, ENCHANT_BURN, enchantLine, FITS, MELEE_WEAPONS } from '../src/game/enchanting';
 import { STATION_NAME, scrollHarmSaid } from '../src/game/recipes';
+import { FIGURE_SAID, GARDEN_DONE, GARDEN_JOBS, GARDEN_SAID, growsFromSet, isGardenPiece, MOUNT_SAID, type GardenSaid } from '../src/game/garden';
+import {
+  BLOOM_COST, BLOOM_KINDS, BLOOM_SKILL, BONSAI_GROWN, BONSAI_STEPS, CARVED_FIGURE, HANG_FROM, HEDGE_CLIPS, HEDGE_FULL, HERB_BOX, POTS, PRUNE_REST,
+  PRUNE_SKILL, PRUNE_TOOL, TOPIARY_GROWS_OUT, TOPIARY_SHAPES, TRIM_SKILL, TRIM_TOOL,
+} from '../src/game/gardendefs';
+import { HERBS_ONLY } from '../src/game/farming';
+import type { FurnitureDef } from '../src/game/furniture';
 import { STUN_SECS } from '../src/game/fight';
 import { QL_BARE, QL_LOW, QL_SPAN } from '../src/game/game';
 import { AWARE_PER_LEVEL, AWARE_TRAIT_STEP } from '../src/game/game';
@@ -466,6 +473,8 @@ out.push(`alter table item_def add column if not exists raw boolean not null def
 /* Kept in a larder though it is not food: flour, dough, cornmeal. Where a
  * thing lives and what a thing is are two questions, and this is the first. */
 out.push(`alter table item_def add column if not exists larder boolean not null default false;`);
+/* A trophy off a slain foe, which a trophy plaque holds (`ItemDef.trophy`, `garden.ts`). */
+out.push(`alter table item_def add column if not exists trophy boolean not null default false;`);
 /* How many times as long the knack it gives lasts, past the ceiling its food
  * and drink have: a Cook's spirit. */
 out.push(`alter table item_def add column if not exists knack real;`);
@@ -654,6 +663,21 @@ out.push(`alter table furniture_def add column if not exists den int;`);
 out.push(`alter table furniture_def add column if not exists crates int;`);
 /* Climbing roses or lavender grow on it (`FurnitureDef.climber`) from the moment it is set down, which the ground read hands over for it. */
 out.push(`alter table furniture_def add column if not exists roses boolean not null default false;`);
+/*
+ * The garden pieces (`garden.ts`): the wildflower slots a bed, a box or a
+ * basket holds; how a piece is fixed to a wall or hung; a hedge; a herb box's
+ * share of a planter's yield; a topiary tub, a bonsai; what a plaque or a stand
+ * holds on show and how many; a carved figure.
+ */
+out.push(`alter table furniture_def add column if not exists bloom int;`);
+out.push(`alter table furniture_def add column if not exists mount text;`);
+out.push(`alter table furniture_def add column if not exists hedge boolean not null default false;`);
+out.push(`alter table furniture_def add column if not exists herbs real;`);
+out.push(`alter table furniture_def add column if not exists topiary boolean not null default false;`);
+out.push(`alter table furniture_def add column if not exists bonsai boolean not null default false;`);
+out.push(`alter table furniture_def add column if not exists shows text;`);
+out.push(`alter table furniture_def add column if not exists shows_n int;`);
+out.push(`alter table furniture_def add column if not exists figure boolean not null default false;`);
 /* What a barrel of water becomes if you leave it alone. */
 out.push(`create table if not exists brew_def (
   id text primary key, name text not null, input text not null, count int not null,
@@ -1226,6 +1250,7 @@ for (const [id, d] of Object.entries(ITEM_DEFS)) {
   out.push(`insert into item_def values (${q(id)}, ${q(d.name)}, ${q(d.category)}, ${q(d.weight)}, ${q(!!d.stackable)}, ${q(d.decay)}, ${q(d.charges)});`);
   if (d.raw) out.push(`update item_def set raw = true where id = ${q(id)};`);
   if (d.larder) out.push(`update item_def set larder = true where id = ${q(id)};`);
+  if (d.trophy) out.push(`update item_def set trophy = true where id = ${q(id)};`);
 }
 for (const [id, d] of Object.entries(TILE_DEFS)) {
   out.push(`insert into tile_def values (${q(Number(id))}, ${q(d.name)}, ${q(d.speed)}, ${q(!!d.blocks)}, ${q(d.digYield)}, ${q(!!d.mineable)}, ${q(!!d.forage)}, ${q(!!d.botanize)}, ${q(!!d.pavable)}, ${q(!!d.turnsToDirt)}, ${q(!!d.collect)});`);
@@ -2534,7 +2559,17 @@ for (const f of FURNITURE as unknown as A[]) {
   if (f.trash !== undefined) out.push(`update furniture_def set trash = ${q(f.trash)} where id = ${q(f.id)};`);
   if (f.bed !== undefined) out.push(`update furniture_def set bed = ${q(f.bed)} where id = ${q(f.id)};`);
   if (f.den !== undefined) out.push(`update furniture_def set den = ${q(f.den)} where id = ${q(f.id)};`);
-  if (f.climber) out.push(`update furniture_def set roses = true where id = ${q(f.id)};`);
+  // What grows from the moment it is set down: what climbs it, its wildflowers, a hedge, a bonsai (`growsFromSet`).
+  if (growsFromSet(f as unknown as FurnitureDef)) out.push(`update furniture_def set roses = true where id = ${q(f.id)};`);
+  if (f.bloom !== undefined) out.push(`update furniture_def set bloom = ${q(f.bloom)} where id = ${q(f.id)};`);
+  if (f.mount) out.push(`update furniture_def set mount = ${q(f.mount)} where id = ${q(f.id)};`);
+  if (f.hedge) out.push(`update furniture_def set hedge = true where id = ${q(f.id)};`);
+  if (f.herbs !== undefined) out.push(`update furniture_def set herbs = ${q(f.herbs)} where id = ${q(f.id)};`);
+  if (f.topiary) out.push(`update furniture_def set topiary = true where id = ${q(f.id)};`);
+  if (f.bonsai) out.push(`update furniture_def set bonsai = true where id = ${q(f.id)};`);
+  const shows = f.shows as { what: string; n: number } | undefined;
+  if (shows) out.push(`update furniture_def set shows = ${q(shows.what)}, shows_n = ${q(shows.n)} where id = ${q(f.id)};`);
+  if (f.figure) out.push(`update furniture_def set figure = true where id = ${q(f.id)};`);
   if (f.crates !== undefined) out.push(`update furniture_def set crates = ${q(f.crates)} where id = ${q(f.id)};`);
   if (f.cart) out.push(`update furniture_def set cart = true where id = ${q(f.id)};`);
   const pace = f.pace as { skill: string; by: number; reach: number } | undefined;
@@ -2960,6 +2995,37 @@ for (const [fn, v] of [
 }
 out.push(`create or replace function settle_said(p_key text) returns text language sql immutable as $fn$ select case p_key ${
   Object.entries(SETTLE_SAID).map(([k, v]) => `when ${q(k)} then ${q(v)} `).join('')}end $fn$;`);
+/*
+ * The garden pieces (`garden.ts`, `gardendefs.ts`): their jobs, every number
+ * the island's rules read, and every sentence they say, `{name}` where the
+ * piece's own name goes.
+ */
+out.push(`create or replace function garden_action(p_action text) returns boolean language sql immutable as $fn$ select p_action = any (array[${GARDEN_JOBS.map(q).join(', ')}]::text[]) $fn$;`);
+out.push(`create or replace function garden_pieces() returns text[] language sql immutable as $fn$ select array[${FURNITURE.filter((f) => isGardenPiece(f)).map((f) => q(f.id)).join(', ')}]::text[] $fn$;`);
+out.push(`create or replace function herb_crops() returns text[] language sql immutable as $fn$ select array[${CROP_LIST.filter((c) => c.kind === 'spice').map((c) => q(c.id)).join(', ')}]::text[] $fn$;`);
+out.push(`create or replace function bloom_kinds() returns text[] language sql immutable as $fn$ select array[${BLOOM_KINDS.map(q).join(', ')}]::text[] $fn$;`);
+out.push(`create or replace function topiary_shapes() returns text[] language sql immutable as $fn$ select array[${TOPIARY_SHAPES.map(q).join(', ')}]::text[] $fn$;`);
+out.push(`create or replace function hedge_clips() returns text[] language sql immutable as $fn$ select array[${HEDGE_CLIPS.map(q).join(', ')}]::text[] $fn$;`);
+out.push(`create or replace function hang_from() returns text[] language sql immutable as $fn$ select array[${HANG_FROM.map(q).join(', ')}]::text[] $fn$;`);
+out.push(`create or replace function garden_pots() returns text[] language sql immutable as $fn$ select array[${POTS.map(q).join(', ')}]::text[] $fn$;`);
+for (const [fn, v] of [
+  ['bloom_cost', BLOOM_COST], ['bonsai_steps', BONSAI_STEPS],
+] as Array<[string, number]>) out.push(`create or replace function ${fn}() returns int language sql immutable as $fn$ select ${q(v)}::int $fn$;`);
+for (const [fn, v] of [
+  ['topiary_grows_out', TOPIARY_GROWS_OUT], ['hedge_full', HEDGE_FULL], ['bonsai_grown', BONSAI_GROWN], ['prune_rest', PRUNE_REST],
+] as Array<[string, number]>) out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);
+for (const [fn, v] of [
+  ['bloom_skill', BLOOM_SKILL], ['trim_skill', TRIM_SKILL], ['trim_tool', TRIM_TOOL], ['prune_skill', PRUNE_SKILL], ['prune_tool', PRUNE_TOOL],
+  ['carved_figure_kind', CARVED_FIGURE], ['herb_box_kind', HERB_BOX], ['herbs_only_said', HERBS_ONLY()],
+] as Array<[string, string]>) out.push(`create or replace function ${fn}() returns text language sql immutable as $fn$ select ${q(v)} $fn$;`);
+out.push(`create or replace function garden_said(p_key text, p_name text) returns text language sql immutable as $fn$ select replace(case p_key ${
+  (Object.keys(GARDEN_SAID) as GardenSaid[]).map((k) => `when ${q(k)} then ${q(GARDEN_SAID[k])} `).join('')}end, '{name}', upper(left(p_name, 1)) || substr(p_name, 2)) $fn$;`);
+out.push(`create or replace function garden_done(p_key text, p_what text, p_n int, p_of int) returns text language sql immutable as $fn$ select replace(replace(replace(case p_key ${
+  (Object.keys(GARDEN_DONE) as Array<keyof typeof GARDEN_DONE>).map((k) => `when ${q(k)} then ${q(GARDEN_DONE[k])} `).join('')}end, '{what}', coalesce(p_what, '')), '{n}', coalesce(p_n::text, '')), '{of}', coalesce(p_of::text, '')) $fn$;`);
+out.push(`create or replace function mount_said(p_key text) returns text language sql immutable as $fn$ select case p_key ${
+  (['noWindow', 'noWall', 'unfinished', 'inside', 'upstairs', 'noHook', 'turn'] as const).map((k) => `when ${q(k)} then ${q(MOUNT_SAID[k])} `).join('')}end $fn$;`);
+out.push(`create or replace function figure_said(p_key text) returns text language sql immutable as $fn$ select case p_key ${
+  (Object.keys(FIGURE_SAID) as Array<keyof typeof FIGURE_SAID>).map((k) => `when ${q(k)} then ${q(FIGURE_SAID[k])} `).join('')}end $fn$;`);
 /*
  * Ropemaking (`ropework.ts`): the lay-ups and what the skill makes of them,
  * its pace on its own jobs, the rope walk, the bell rope and the lead rope.

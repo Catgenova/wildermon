@@ -48,6 +48,11 @@ begin
           (select r.level from player r where r.world_id = p_world and r.uid = p_uid));
         if v_shut is not null then return v_shut; end if;
       end if;
+      -- Fixed to a wall or hung, where it is fixed; a hedge outside, from the ground (`garden.ts`).
+      v_shut := piece_fixed_refusal(p_world, p_uid, sub, (p_target->>'x')::int, (p_target->>'y')::int,
+        case when p_target->>'facing' in ('n', 'e', 's', 'w') then p_target->>'facing' else 's' end,
+        (select r.level from player r where r.world_id = p_world and r.uid = p_uid));
+      if v_shut is not null then return v_shut; end if;
     end if;
     -- And the block of spots it would take, which used to be the browser's to refuse alone.
     v_face := case when p_target->>'facing' in ('n', 'e', 's', 'w') then p_target->>'facing' else 's' end;
@@ -111,6 +116,17 @@ begin
       end if;
       return null;
     end if;
+    -- A piece fixed to a wall or hung goes round to the next side it is fixed on (`garden.ts`).
+    if exists (select 1 from furniture_def f where f.id = p.sub and f.mount is not null) then
+      v_face := mount_turns_to(p_world, p_uid, p);
+      if v_face is null then return mount_said('turn'); end if;
+      sz := placed_size(p.kind, p.sub, v_face);
+      v_at := piece_anchor(p.sub, v_face, p.sx, p.sy, sz);
+      if piece_block_taken(p_world, p.sub, v_face, p.x, p.y, v_at[1], v_at[2], sz[1], sz[2], p.id) then
+        return 'Blocked.';
+      end if;
+      return null;
+    end if;
     return furniture_turn_reason(p);
   elsif p_action in ('take_apart_campfire', 'pick_up_smelter', 'pick_up_furniture', 'pick_up_kiln') then
     if placed_lit(p) then return 'Put it out first.'; end if;
@@ -123,6 +139,8 @@ begin
       if exists (select 1 from item i where i.holder = 'furniture' and i.placed = p.id) then
         return 'Empty it first.';
       end if;
+      -- A trophy on a plaque, potted plants on a stand: taken down first (`garden.ts`).
+      if coalesce(jsonb_array_length(p.garden->'held'), 0) > 0 then return garden_said('showing', ''); end if;
       -- A crop is not carried about in a box of earth: it is harvested, or turned back into the soil.
       if exists (select 1 from planter_crop pc where pc.placed = p.id) then
         return planter_growing_said();

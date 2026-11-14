@@ -2,6 +2,7 @@
 // every go (`Game.soundOfWork`) without loading the mixer, which says it on
 // (`sound.ts`).
 import type { Stroke } from './kit';
+import { HEDGE_CLIPS, TOPIARY_SHAPES } from '../game/gardendefs';
 
 /**
  * What a job sounds like, which is a question about the stuff and not about
@@ -124,6 +125,10 @@ export const STROKE_BY_ID: Record<string, Stroke> = {
   scrub_dye: 'cloth', scrub_wall_paint: 'cloth', scrub_floor_paint: 'cloth',
   // A dye written down on a sheet of papyrus, as a map is (`dyes.ts`).
   make_dye_recipe: 'cloth',
+  // A topiary shrub trimmed, a hedge clipped and a bonsai pruned: blades through twigs (`garden.ts`).
+  ...Object.fromEntries([...TOPIARY_SHAPES.map((s) => `trim_topiary_${s}`), ...HEDGE_CLIPS.map((c) => `clip_hedge_${c}`), 'prune_bonsai'].map((id) => [id, 'snip' as Stroke])),
+  // A trophy hung on its plaque, a pot set on its stand, and taken down: wood on wood (`garden.ts`).
+  show_on_piece: 'wood', take_from_show: 'wood',
   // A lead line let down into the water, and a rigging set rove off on a hull (`sailActions.ts`).
   sound_depth: 'water', fit_rigging: 'cloth',
 };

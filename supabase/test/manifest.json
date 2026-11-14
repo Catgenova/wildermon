@@ -2347,6 +2347,12 @@
     "why": "Built with masonry and a trowel and set down like any piece. A stone chisel cuts a line of up to 72 characters into it, cleaned as talk is, by whoever set it down or anybody of the settlement it stands on, never by somebody a keeper has muted; every refusal in the same words; a new line over the old; Examine reads it back in quotes; and the line goes with the stone, picked up into the pack, said on Examine there, set down again, through the ground read, the pack's row and a save."
   },
   {
+    "file": "supabase/test/garden.ts",
+    "title": "The garden pieces, the same on both sides",
+    "shard": 5,
+    "why": "Eighteen pieces with real recipes (trade, tool, time, bill) and what each is on the island; wildflowers planted a kind to a slot in a bed, a window box and a basket, refused full and short, carried into the pack and back; a window box only under a window outside on the ground, in the middle of its row, not turned with no other window; a plaque only on a finished solid wall, either face; a basket and a chime hung from an eave or a lantern post; a herb box refusing a seed that is no herb's and harvested at its share of a planter's yield; a topiary shrub trimmed with a sickle and its trim's moment kept; a hedge outside, clipped once full and not twice the same way, shutting its border on the island's way and in the browser; a bonsai pruned by anybody a step a day to five; a carved figure only of a kind in the maker's field guide, chosen at the bench, kept through the pack and the ground; a plaque taking only a thing flagged a trophy (one defined in the test alone) with its slayer's name, by its owner or a citizen, not picked up with one on it; a stand's potted plants; growth by the moment set down and the season, at fixed moments in each season; every refusal and every line done in the same words on both sides."
+  },
+  {
     "file": "supabase/test/vineyard.ts",
     "title": "Vineyards and wine that ages, the same on both sides",
     "shard": 5,

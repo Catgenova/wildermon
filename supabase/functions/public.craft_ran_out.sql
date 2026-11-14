@@ -7,6 +7,10 @@ CREATE OR REPLACE FUNCTION public.craft_ran_out(p_world uuid, p_uid uuid, p_reci
 AS $function$
 declare o jsonb := p_target->'ranOut'; aimed bigint := target_item(p_target); n int;
 begin
+  -- A carved figure is of a kind its maker has seen in the field guide, chosen at the bench (`garden.ts`).
+  if p_recipe = 'make_' || carved_figure_kind() and figure_refusal(p_world, p_uid, p_target->>'species') is not null then
+    return figure_refusal(p_world, p_uid, p_target->>'species');
+  end if;
   if jsonb_typeof(o) is distinct from 'object' or jsonb_typeof(o->'item') is distinct from 'string'
      or jsonb_typeof(o->'material') is distinct from 'string' or aimed is null
      or exists (select 1 from craft_stock(p_world, p_uid, aimed) s where s.id = aimed) then

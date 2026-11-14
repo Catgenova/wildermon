@@ -8,7 +8,11 @@ AS $function$
 declare ax int := least(subtiles() - p_size[1], greatest(0, p_sx));
         ay int := least(subtiles() - p_size[2], greatest(0, p_sy));
 begin
-  if p_sub is distinct from vine_kind() then return array[ax, ay]; end if;
+  if not piece_along_side(p_sub) then return array[ax, ay]; end if;
+  -- A window box under the middle of its window (`furnitureAnchor`).
+  if (select f.mount from furniture_def f where f.id = p_sub) = 'window' then
+    if p_facing in ('n', 's') then ax := (subtiles() - p_size[1]) / 2; else ay := (subtiles() - p_size[2]) / 2; end if;
+  end if;
   return array[case p_facing when 'w' then 0 when 'e' then subtiles() - p_size[1] else ax end,
                case p_facing when 'n' then 0 when 's' then subtiles() - p_size[2] else ay end];
 end $function$

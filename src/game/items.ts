@@ -49,6 +49,11 @@ export interface ItemDef {
    */
   raw?: boolean;
   /**
+   * A trophy off a slain foe: what a trophy plaque holds (`garden.ts`). The
+   * island reads the same flag off `item_def.trophy`.
+   */
+  trophy?: boolean;
+  /**
    * Kept in a larder, though it is not food.
    *
    * Flour, dough and cornmeal are ground grain and what is made of it before
@@ -655,6 +660,25 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   enchanters_plinth: { name: 'Enchanter\'s plinth', category: 'misc', weight: 60, decay: 3, description: 'Enchant (a scroll into a thing): only within {reach} tiles of the middle of one set on the ground. Writing a scroll: not needed.' },
   // A mason's stone with a line of somebody's own words cut into it (`memorial.ts`).
   memorial_stone: { name: 'Memorial stone', category: 'misc', weight: 40, decay: 0, description: 'Set down; Engrave with a {chisel}: one line, up to {max} characters, masonry. Whoever set it down and anyone of its settlement can recut it. Examine reads it. Keeps its line when moved. Does not decay.' },
+  // The garden pieces (`garden.ts`, `gardendefs.ts`).
+  flower_bed: { name: 'Raised flower bed', category: 'misc', weight: 46, decay: 4, description: '{rule}' },
+  window_box: { name: 'Window box', category: 'misc', weight: 24, decay: 4, description: '{where} {rule}' },
+  hanging_basket: { name: 'Hanging basket', category: 'misc', weight: 22, decay: 5, description: '{where} {rule}' },
+  herb_box: { name: 'Herb box', category: 'misc', weight: 24, decay: 4, description: 'Grows one herb ({herbs}): sown, tended and harvested as a planter, at {share:pct} of its yield.' },
+  topiary_tub: { name: 'Topiary tub', category: 'misc', weight: 26, decay: 4, description: 'Trim into a {shapes}: {skill}, with a {tool}. Bushy again {out} after the last trim.' },
+  potted_fern: { name: 'Potted fern', category: 'misc', weight: 22, decay: 5, description: 'Set on a tiered plant stand, or down anywhere.' },
+  potted_palm: { name: 'Potted palm', category: 'misc', weight: 22, decay: 5, description: 'Set on a tiered plant stand, or down anywhere.' },
+  hedge: { name: 'Hedge', category: 'misc', weight: 1, decay: 5, description: 'One side of a tile, {across} spots. Blocks that side, as a fence. Full {full} after it is set down; then clip {clips} with a {tool}.' },
+  wisteria_pergola: { name: 'Wisteria pergola', category: 'misc', weight: 40, decay: 4, description: '{rule}' },
+  bonsai: { name: 'Bonsai on a stand', category: 'misc', weight: 6, decay: 4, description: 'Grown {grown} after it is set down. Prune with a {tool}, anyone: one step of shaping each, {steps} steps, one prune every {rest}.' },
+  flower_cart: { name: 'Flower cart', category: 'misc', weight: 34, decay: 4, description: 'Decoration. Not pulled or driven.' },
+  birdhouse: { name: 'Birdhouse', category: 'misc', weight: 6, decay: 4, description: 'Up to {most} small birds by day; none in {away}.' },
+  arbour_bench: { name: 'Arbour bench', category: 'misc', weight: 22, decay: 4, description: '{rule}' },
+  carved_figure: { name: 'Carved wildermon figure', category: 'misc', weight: 1, decay: 4, description: 'Carved as a kind seen in your field guide, chosen at the bench: any of {kinds}.' },
+  trophy_plaque: { name: 'Trophy plaque', category: 'misc', weight: 4, decay: 4, description: "{where} Holds {holds} trophy, with its slayer's name." },
+  folding_screen: { name: 'Folding screen', category: 'misc', weight: 9, decay: 4, description: 'Seen through. Dyeable.' },
+  plant_stand: { name: 'Tiered plant stand', category: 'misc', weight: 10, decay: 4, description: 'Holds {holds} potted plants ({pots}).' },
+  wind_chime: { name: 'Wind chime', category: 'misc', weight: 2, decay: 4, description: '{where} Sways and chimes with the wind; silent under {still}% wind.' },
   butter_churn: { name: 'Butter churn', category: 'misc', weight: 14, decay: 4, description: 'Churn a bucket of milk into {recipe.churn_butter.count} pats of butter (cooking), within {reach} tiles of one set on the ground; bucket returned empty.' },
   paper_press: { name: 'Paper press', category: 'misc', weight: 24, decay: 4, description: 'Press reed into papyrus, at one set on the ground.' },
   // Brick and mortar, carried flat-packed like everything else until it is set down.
@@ -672,10 +696,10 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   bell: { name: 'Bell', category: 'misc', weight: 24, decay: 3 },
   statue: { name: 'Statue', category: 'misc', weight: 50, decay: 3 },
   // The trophies out of a lair's hoard (`lairs.ts`), each on its stone plinth: set down as decoration.
-  chief_ear: { name: 'Goblin chief\'s ear', category: 'misc', weight: 6, decay: 0, description: 'Trophy: set down anywhere. From a goblin warren\'s hoard only. Does not decay.' },
-  warlord_tusk: { name: 'Warlord\'s tusk', category: 'misc', weight: 8, decay: 0, description: 'Trophy: set down anywhere. From an orc camp\'s hoard only. Does not decay.' },
-  ogre_king_jaw: { name: 'Ogre king\'s jaw', category: 'misc', weight: 10, decay: 0, description: 'Trophy: set down anywhere. From an ogre cave\'s hoard only. Does not decay.' },
-  great_dragon_scale: { name: 'Great dragon scale', category: 'misc', weight: 8, decay: 0, description: 'Trophy: set down anywhere. From a dragon roost\'s hoard only. Does not decay.' },
+  chief_ear: { name: 'Goblin chief\'s ear', category: 'misc', weight: 6, decay: 0, trophy: true, description: 'Trophy: set down anywhere. From a goblin warren\'s hoard only. Does not decay.' },
+  warlord_tusk: { name: 'Warlord\'s tusk', category: 'misc', weight: 8, decay: 0, trophy: true, description: 'Trophy: set down anywhere. From an orc camp\'s hoard only. Does not decay.' },
+  ogre_king_jaw: { name: 'Ogre king\'s jaw', category: 'misc', weight: 10, decay: 0, trophy: true, description: 'Trophy: set down anywhere. From an ogre cave\'s hoard only. Does not decay.' },
+  great_dragon_scale: { name: 'Great dragon scale', category: 'misc', weight: 8, decay: 0, trophy: true, description: 'Trophy: set down anywhere. From a dragon roost\'s hoard only. Does not decay.' },
   brazier: { name: 'Brazier', category: 'misc', weight: 30, decay: 3 },
   altar: { name: 'Altar', category: 'misc', weight: 64, decay: 3, description: 'Set down on your settlement; one per settlement.' },
   trash_crate: { name: 'Trash crate', category: 'misc', weight: 6, decay: 4, description: 'Contents rot {trash}× faster than in the rain.' },
@@ -964,6 +988,8 @@ export interface Item {
    * the ground (`memorial.ts`). The island keeps the same column.
    */
   engraving?: string;
+  /** The kind a carved figure is carved as, chosen at the bench (`garden.ts`); the island's `item.garden -> figure`. */
+  figure?: string;
 }
 
 /**
@@ -1662,6 +1688,8 @@ export function itemName(item: Item): string {
   else if (recipeOf(item)) name += ` (${dyeHex(recipeOf(item)!)})`;
   // And who is in it, for a wildermon crate in a store: a Wildermon crate (Biscuit).
   if (item.occupant) name += ` (${item.occupant})`;
+  // And the kind a carved figure is carved as (`garden.ts`): a Carved wildermon figure (oak) (rabba).
+  if (item.figure) name += ` (${item.figure})`;
   // And what is enchanted into it: a Sword (iron) (Emberbrand).
   return name + enchantMarker(item.enchant);
 }

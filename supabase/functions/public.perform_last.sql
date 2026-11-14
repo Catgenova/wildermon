@@ -54,6 +54,11 @@ begin
     perform perform_dye_recipe(p_world, p_uid, p_action, p_target);
     return;
   end if;
+  -- The garden pieces' jobs (`garden.ts`).
+  if garden_action(p_action) then
+    perform perform_garden(p_world, p_uid, p_action, p_target);
+    return;
+  end if;
 
   if p_action = 'plan_bridge' then
     v_kind := coalesce(p_target->>'material', 'rope');

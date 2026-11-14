@@ -15,7 +15,9 @@ begin
   -- The crop's own quality, lifted by the farmer's skill at harvest.
   o_ql := greatest(1, least(100, (p_ql + product_ql(p_skill, 0)) / 2));
   -- Love's Abundance takes more out of the same ground, a half rounded up as the browser rounds it.
-  o_got := greatest(1, floor(yld[2] * path_fx(p_world, p_uid, 'harvest', 1) + 0.5)::int)
+  -- And a herb box's share of a planter's, while one is being harvested (`reap_planter`).
+  o_got := greatest(1, floor(yld[2] * path_fx(p_world, p_uid, 'harvest', 1)
+             * coalesce(nullif(current_setting('wildermon.reap_share', true), '')::double precision, 1) + 0.5)::int)
          + floor(pk(p_world, p_uid, 'plus:' || cd.produce, 0))::int;
   o_rare := perk_rare(pk(p_world, p_uid, 'rare:harvest_crop', 0));
   o_produce := cd.produce;

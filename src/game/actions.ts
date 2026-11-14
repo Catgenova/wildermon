@@ -67,6 +67,7 @@ import { FAITH_ACTIONS } from './faith';
 import type { PatronId } from './patronlist';
 import { BAUBLE_ACTIONS } from './baubles';
 import { engravedItemSays, MEMORIAL_ACTIONS } from './memorial';
+import { GARDEN_ACTIONS } from './garden';
 import { VINEYARD_ACTIONS } from './vineyard';
 import { CHART_ACTIONS, chartItemSays } from './cartography';
 import { makerSays, SIGN_ACTIONS, signableKind } from './signing';
@@ -3318,6 +3319,8 @@ export const ACTIONS: ActionDef[] = [
   ...BAUBLE_ACTIONS,
   // A memorial stone's line, cut and read (`memorial.ts`).
   ...MEMORIAL_ACTIONS,
+  // The garden pieces' jobs: wildflowers planted, a shrub trimmed, a hedge clipped, a bonsai pruned, a trophy hung (`garden.ts`).
+  ...GARDEN_ACTIONS,
   // A trellis's vine, and a cutting off a wild one (`vineyard.ts`).
   ...VINEYARD_ACTIONS,
   // A skep's honey, taken and looked at (`bees.ts`).

@@ -62,7 +62,7 @@ const BLEG_X = 7.5, BLEG_FRONT = 1.85, BLEG_BACK = -1.6;
 const BPOST_TOP = 7.75, BRAIL_Z0 = 5.55, BRAIL_Z1 = 6.05, BCREST_Z0 = 6.6, BCREST_Z1 = 7.45, BCREST_CROWN = 7.95, BRAKE = 0.45;
 const benchRaked = (p: V3): V3 => [p[0], p[1] - (BRAKE * Math.max(0, p[2] - SEAT_Z1)) / (BPOST_TOP - SEAT_Z1), p[2]];
 
-function benchOf(look: KitLook): KitModel {
+export function benchOf(look: KitLook): KitModel {
   const { wood: WOOD, top: TOP, end: END } = woodTones(look.material, look.tint);
   const parts: KitPart[] = [];
   const solid = (faces: Face[], more: Partial<KitPart> = {}): KitPart => {

@@ -4,4 +4,4 @@ CREATE OR REPLACE FUNCTION public.is_planter(p_sub text)
  RETURNS boolean
  LANGUAGE sql
  IMMUTABLE
-AS $function$ select coalesce(p_sub = any(array['planter']::text[]), false) $function$
+AS $function$ select coalesce(p_sub = any(array['planter', 'herb_box']::text[]), false) $function$
