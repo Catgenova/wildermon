@@ -67,6 +67,7 @@ import { BARDING_CUT, gearBill, gearSays, GEAR_FLOOR, GEAR_QL_LEAST, GEAR_SIZE_B
 import { WORN_FLOOR, WORN_SPAN } from '../../game/limits';
 import { CRATE_DEFS, SUBTILES } from '../../game/crates';
 import { HAUL_LEARN, HAUL_LEARN_RISE, HAUL_LEARN_STEEP, HAUL_SHOE_SHARE, HAUL_SKILL, SHOE_DAYS, SHOE_PACE, SHOE_STEP, SHOES_PER_MOUNT } from '../../game/creatures';
+import { AROUND_LEASH, AROUND_LEFT } from '../../game/creatures';
 import { PERK_STAGE, perkLine, perkSays, ringKeepsOut, STAGE_PERKS } from '../../game/creatures';
 import {
   ALLOY_QL, AGES, BLOW_SHARE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, cookRecipes, restoredMul, STYLE_SAYS, sparTaskSays, SPAR_SLACK, SPAR_YIELD, abilityName, abilitySays, GATHER_DO, GATHER_SKILL, GATHER_VERB, workerSkipsTools, REED_LEVELS, RESIN_TAPPED, SKILL_TOP, TEND_JOBS, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
@@ -154,7 +155,7 @@ import { ORDER_LIFE } from '../../game/orders';
 import { KEPT_BEST, NUTRIENT_HOURS, NUTRIENT_NAMES, NUTRIENTS, TABLE_BEST } from '../../game/nutrition';
 import { LYE_USE, OVEN_CAPACITY, SHORE_REACH } from '../../game/placeables';
 import { BASE_SPEED, CARRY_CRAWL, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER_LEVEL, MAX_STAND, MAX_STEP, SWIM_DEPTH } from '../../game/player';
-import { deckBill, metres, PIER_CLEAR, PIER_DROP, PIER_WALL_DROP, PIER_WATER } from '../../game/piers';
+import { deckBill, metres, PIER_CLEAR, PIER_DROP, PIER_SHOO, PIER_WALL_DROP, PIER_WATER } from '../../game/piers';
 import { POST_FOLLOW_REACH, POST_LIFE_MAX, POST_LIFE_MIN, postRadius } from '../../game/posts';
 import { AROUND_MOST, aroundStoreTrades } from '../../game/around';
 import { CRAFT_REACH, FERMENT_CELLAR_SAYS, lockedRecipes, needRecipeSays, ranOutSaid, RECIPE_BY_ID, RECIPES, recipeTitle, SEALED_ITEM, STATION_NAME, TRADE_BOOK_AT, TRADE_BOOK_SKILLS } from '../../game/recipes';
@@ -2223,6 +2224,8 @@ export function helpText(): string {
       <li>Storage: crates and storage furniture you may put into, carts, wagons and boats included, within that range and <b>not on any settlement</b>; the cart you pull, what you drive and the boat you are in, wherever they are. Not stalls, trash crates, mailboxes, hives, ponds or barrels.</li>
       <li>Loads: the bin that takes them first, then the nearest store with room. No storage in reach: &ldquo;${idleSays({ why: 'nostore', n: SPECIES.rabba.workRange, around: true }, 'forage')}&rdquo; Full: &ldquo;${idleSays({ why: 'full', n: 0, around: true }, 'forage')}&rdquo; Nothing is dropped.</li>
       <li>Tasks: every gathering task, as on a post; and at the stores ${listed(aroundStoreTrades())}, makings out of storage in reach. Settlement only: guarding, stoking, sparring and every task at settlement stations, buildings or wildermon.</li>
+      <li>Over ${HOME_SLACK} tiles past its range of you: walks to you.
+      Left behind (over <b>${AROUND_LEASH}</b> tiles from you, or no way through toward you): to your tile, or the nearest it may stand on within ${PIER_SHOO}; working on. Neither: <b>${AROUND_LEFT}</b>, follows you.</li>
       <li><b>Stop</b> (status panel, or <b>Stop work around me</b> on its menu): back to following you; with another following you by then, as a post's worker goes. On the island it also stops when you go offline.</li>
       <li>Not counted against your settlement level's working slots.</li>
     </ul>

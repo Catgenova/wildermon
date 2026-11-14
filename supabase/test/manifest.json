@@ -1947,6 +1947,12 @@
     "why": "Asked for: \"Allow wildermon to Work Around Me, provided there is storage nearby (carts and wagons and accessible boats included).\" Its ground is its keeper's tile; its loads go into crates, furniture, carts, wagons and boats its keeper may use within its range; none, or full, and it idles and drops nothing. Stop, or its keeper offline, and it goes back into its crate or to following, on both sides."
   },
   {
+    "file": "supabase/test/aroundbehind.ts",
+    "title": "A worker round you left behind comes to you",
+    "shard": 6,
+    "why": "Reported: a Sapgnaw working round its keeper said \"Idle: walking to you, 98 tiles away.\" for good. Past around_leash tiles of its keeper, or with no leg open toward them, it is put on their tile and works on; with no land beside them, Work around me stops and it follows them, on both sides. And its card names its task once."
+  },
+  {
     "file": "supabase/test/storesread.ts",
     "title": "A settlement's stores are read off the settlement",
     "shard": 4,

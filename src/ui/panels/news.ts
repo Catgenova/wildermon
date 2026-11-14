@@ -92,6 +92,8 @@ import { BIND_BY_ID, keyName } from '../../game/keybinds';
 import { RUNESTONES, SAFE_RING, START_GAP, STONE_SPAN, TELE_FAR, TELE_FAST, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_SLOW } from '../../game/runestones';
 import { BAG_CARRY as BAG_CARRY_293 } from '../../game/gear';
 import { OLD_AT as OLD_AT_287, OLD_FOR as OLD_FOR_287, YOUNG_FOR as YOUNG_FOR_287 } from '../../game/creatures';
+import { AROUND_LEASH as AROUND_LEASH_601, AROUND_LEFT as AROUND_LEFT_601 } from '../../game/creatures';
+import { PIER_SHOO as PIER_SHOO_601 } from '../../game/piers';
 import { HAUL_LEARN as HAUL_LEARN_290, HAUL_LEARN_RISE as HAUL_LEARN_RISE_290, HAUL_LEARN_STEEP as HAUL_LEARN_STEEP_290 } from '../../game/creatures';
 import { HAUL_LEARN as HAUL_LEARN_450, HAUL_LEARN_STEEP as HAUL_LEARN_STEEP_450, HAUL_STEEP_AT as HAUL_STEEP_AT_450 } from '../../game/creatures';
 import { SEASON_DAYS, SHORT_SEASON_DAYS, YEAR_DAYS, YEAR_FROM } from '../../world/calendar';
@@ -4437,6 +4439,15 @@ export const NEWS: News[] = [
       `New: fishing net: ${LIFT_DROPS * NET_LIFT.length} drops off the net as it is lifted, ${SHAKE_DROPS} at each of ${NET_SHAKES.length} shakes.`,
       `New: rowing under way: ${OAR_DROPS} drops a blade at the catch; whirl pair a blade a stroke, ${SWIRL_SECS} s.`,
       'Without a graphics card: swimming strokes\' splashes, rings treading water, the float\'s strike and a catch only.',
+    ],
+  },
+  // Work around me left behind (`AROUND_LEASH`, the island's `around_catch_up`).
+  {
+    n: 601,
+    day: '2026-11-14',
+    lines: () => [
+      `Fixed: Work around me, left behind (over ${AROUND_LEASH_601} tiles from you, or no way through toward you): to your tile, or the nearest it may stand on within ${PIER_SHOO_601}, working on; `
+        + `neither: "${AROUND_LEFT_601}", follows you (was: "walking to you" for good). Its card: one task line (was: a second, "no task").`,
     ],
   },
   // Elementalism (`infusion.ts`, `infuseActions.ts`).

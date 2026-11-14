@@ -4710,6 +4710,14 @@ export const SKILL_STEP = 10;
  */
 export const HOME_SLACK = 8;
 export const HOME_LEG = 2;
+/**
+ * A worker round you (`Creature.around`) more than this many tiles from you, or with no leg open toward you, is left
+ * behind: put on your tile, or the nearest it may stand on within `PIER_SHOO` of it, and works on there; with neither,
+ * Work around me stops (`AROUND_LEFT`) and it follows you. The island's `around_leash` and `around_catch_up`.
+ */
+export const AROUND_LEASH = 40;
+/** What you are told when one left behind cannot be put beside you: the island's `around_left`. */
+export const AROUND_LEFT = 'Work around me stopped (left behind)';
 export const RANGE_PER_STEP = 10;
 export const rangeSteps = (skill: number): number => Math.floor(skill / SKILL_STEP);
 /** A worker's task skill, or 0 for a species with no job. */
@@ -6753,6 +6761,31 @@ export class Creatures {
     c.ty = c.y;
     c.moving = false;
     if (c.state === 'wander') c.state = 'idle';
+  }
+
+  /**
+   * A worker round you left behind (`AROUND_LEASH`): on your tile if it may stand there, else the nearest tile it may
+   * within `PIER_SHOO` of yours (`nearestOk`), idle and working on; with neither, Work around me stops (`AROUND_LEFT`)
+   * and it follows you. The island's `around_catch_up`.
+   */
+  private catchUp(game: Game, c: Creature): void {
+    const px = Math.floor(game.player.x), py = Math.floor(game.player.y);
+    const to: [number, number] | null = this.tileOk(game, px, py) ? [game.player.x, game.player.y] : (() => {
+      const t = this.nearestOk(game, px, py, PIER_SHOO);
+      return t ? [t[0] + 0.5, t[1] + 0.5] : null;
+    })();
+    if (!to) {
+      game.endAround(c, AROUND_LEFT);
+      return;
+    }
+    c.x = to[0];
+    c.y = to[1];
+    c.tx = c.x;
+    c.ty = c.y;
+    c.moving = false;
+    c.state = 'idle';
+    c.until = game.time;
+    if (c.idle?.why === 'far') c.idle = null;
   }
 
   /** The nearest tile to (x, y) a creature may walk, `reach` tiles off at most, ring by ring, rows from the north; or null. */
@@ -10717,7 +10750,9 @@ export class Creatures {
     // jobs, as the island's `worker_settle` walks one back that is past its range and `HOME_SLACK`.
     if (c.around && (c.state === 'idle' || c.state === 'wander')
       && Math.max(Math.abs(deed.x + 0.5 - c.x), Math.abs(deed.y + 0.5 - c.y)) > siteRange(c, def, deed) + HOME_SLACK) {
-      if (this.stepToward(game, c, deed.x + 0.5, deed.y + 0.5, dt) === 'blocked') c.until = game.time + 2;
+      // Left behind, past `AROUND_LEASH` or with no way on: beside you at once (`catchUp`), as a follower is.
+      if (Math.hypot(deed.x + 0.5 - c.x, deed.y + 0.5 - c.y) > AROUND_LEASH
+        || this.stepToward(game, c, deed.x + 0.5, deed.y + 0.5, dt) === 'blocked') this.catchUp(game, c);
       return;
     }
     // Round its keeper with no storage in reach of them: it does not set out (the island's `nostore`).

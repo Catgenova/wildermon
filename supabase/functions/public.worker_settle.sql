@@ -13,6 +13,7 @@ declare c creature; d species_def; kind text; guard int := 0; done int := 0;
         v_lv int; v_once int; v_routed boolean := true; -- storeys
         v_vine boolean := false; -- a bush picker planting vines
         v_hy_tried boolean := false; -- a hybrid that has looked for its second trade's work
+        v_behind boolean; v_lost boolean := false; -- round its keeper and left behind (`around_leash`)
 begin
   select * into c from creature where world_id = p_world and id = p_id for update;
   if not found or c.mode <> 'deed' then return 0; end if;
@@ -201,8 +202,28 @@ begin
     if c.phase = 'idle' and greatest(abs(v_site.x + 0.5 - cx), abs(v_site.y + 0.5 - cy)) > v_site.radius + home_slack() then
       dist := sqrt((v_site.x + 0.5 - cx) ^ 2 + (v_site.y + 0.5 - cy) ^ 2);
       c.idle_what := null; c.idle_why := 'far'; c.idle_n := dist;
-      select * into v_step from chase_leg(p_world, cx, cy,
-        cx + (v_site.x + 0.5 - cx) * home_leg() / dist, cy + (v_site.y + 0.5 - cy) * home_leg() / dist);
+      -- Round its keeper, past `around_leash` of them: no walk after them, left behind.
+      v_behind := c.around is not null and dist > around_leash();
+      if not v_behind then
+        select * into v_step from chase_leg(p_world, cx, cy,
+          cx + (v_site.x + 0.5 - cx) * home_leg() / dist, cy + (v_site.y + 0.5 - cy) * home_leg() / dist);
+        -- Or with no leg open toward them.
+        v_behind := c.around is not null and v_step.x is null;
+      end if;
+      if v_behind then
+        -- Beside them, idle and working on (`around_catch_up`); nowhere beside them to stand: following them.
+        select * into v_step from around_catch_up(p_world, c.keeper);
+        if v_step.x is null then
+          -- After its row is written, below.
+          v_lost := true;
+          exit settle;
+        end if;
+        c.from_x := v_step.x; c.from_y := v_step.y; c.to_x := v_step.x; c.to_y := v_step.y;
+        c.storey := 0; c.storey_from := 0;
+        c.leg_at := c.until; c.leg_ends := c.until;
+        c.idle_what := null; c.idle_why := null; c.idle_n := null;
+        continue;
+      end if;
       if v_step.x is null then
         c.from_x := cx; c.from_y := cy;
         c.leg_at := now(); c.leg_ends := now();
@@ -905,6 +926,8 @@ begin
                c.idle_since, c.idle_why, c.idle_what, c.idle_n, c.ledger, c.worn, c.gear, c.bed, c.enemy, c.spar_with, c.spar_at,
                c.storey, c.storey_from, c.way, now()));
   if v_did is not null and c.keeper is not null then perform wtell(p_world, c.keeper, work_done_line(c.name, v_did)); end if;
+  -- Left behind with nowhere beside its keeper to stand: following them (`around_end`).
+  if v_lost then perform around_end(p_world, p_id, around_left()); end if;
   perform set_config('wildermon.around', '', true);
   return done;
 end $function$
