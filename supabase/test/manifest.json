@@ -379,6 +379,12 @@
     "why": "Asked for: every spell played the placeholder gesture on the sculpted body. Every spell, both bodies, all eight facings, plays a casting clip by how it is cast (or its weapon's fight clip for a blow, a thrust or a shot), never the placeholder; each starts and ends stood with the arms hanging; run through a cast in frames, the release mark fires once on the frame the spell is let go, from the sending hand (the left where played mirrored); walking, a spell cast with the hands is laid over the walk; a throw, a blow and a shot hold the weapon; Animations Off stands idle."
   },
   {
+    "file": "supabase/test/emotes.ts",
+    "title": "Bow, cheer, point, clap and sit: their own clips, held and ended as they say",
+    "shard": 1,
+    "why": "Asked for: five more emotes on the sculpted bodies. Each plays a clip of its own, never the placeholder, the point with the arm that reads from where it is seen; the one-shots start and end stood; the clap's hands meet at every clap on both bodies; an emote is drawn only while it runs, the idle after; the sit is held until the body moves, swims or works, a peer's too; sat is on the ground; with Animations Off each is its still pose."
+  },
+  {
     "file": "supabase/test/actionfx.ts",
     "title": "Action effects with thirty at work, thirty in a fight, and thirty on the water keep to their share of the particles and cost little",
     "shard": 1,

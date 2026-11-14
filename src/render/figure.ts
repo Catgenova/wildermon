@@ -11568,8 +11568,10 @@ const drawSculpted = (ctx: CanvasRenderingContext2D, sx: number, sy: number, zoo
  */
 export function stillPose(p: FigurePose): FigurePose {
   const rest = p.working && !p.moving && !p.swimming && !p.driving && STILL_JOBS.has(p.job ?? '');
+  // (an emote that has a still pose, stood still: shown at it for as long as it runs, `EmoteDef.still`)
+  const still = p.emote && p.emoteT !== undefined && !p.moving && !p.working ? EMOTE_BY_ID.get(p.emote)?.still : undefined;
   return {
-    ...p, phase: 0, moving: false, gait: 0, working: rest, job: rest ? p.job : undefined, emote: undefined, emoteT: undefined,
+    ...p, phase: 0, moving: false, gait: 0, working: rest, job: rest ? p.job : undefined, emote: still !== undefined ? p.emote : undefined, emoteT: still,
     act: undefined, cast: undefined, block: undefined, flinch: undefined, tool: undefined,
   };
 }

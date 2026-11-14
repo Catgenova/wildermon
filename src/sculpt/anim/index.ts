@@ -35,6 +35,7 @@ import { FISH, FISH_LEFT } from './clips/fish';
 import { NET, NET_LEFT } from './clips/net';
 import { TEND_CLIPS, TEND_LEFT } from './clips/tend';
 import { LIFE, LIFE_LEFT, LIFE_SETTLE } from './clips/life';
+import { EMOTES2, emote2Clip } from './clips/emotes2';
 import { gettingAbout, gettingDown } from './down';
 import { ACTION_BY_ID } from '../../game/actions';
 import { animationsOff } from '../../engine/motion';
@@ -78,6 +79,8 @@ export const CLIPS: Record<string, Clip> = {
   ...Object.fromEntries([SEW, BRUSH_WALL, BRUSH_FLOOR, BRUSH_ITEM, BRUSH_CLOTH, ROPE].flatMap((c) => [[c.name, c], [`${c.name}-left`, mirrorClip(c, `${c.name}-left`)]])),
   // casting a spell (./clips/cast.ts), each with its mirror
   ...CAST_CLIPS,
+  // the bow, the cheer, the point, the clap and sat on the ground (`./clips/emotes2.ts`)
+  ...EMOTES2,
 };
 /** The clip a state plays until its own is approved: the 6 7 gesture. */
 export const PLACEHOLDER = 'sixseven';
@@ -119,6 +122,8 @@ const WAVING = new Map<string, { arm: number; t: number }>();
 export function emoteClipOf(pose: FigurePose): string | undefined {
   if (pose.emote === 'hop') return HOP.name;
   if (pose.emote === '67') return SIXSEVEN.name;
+  const own = pose.emote ? emote2Clip(pose.emote, pose.facing) : undefined;
+  if (own) return own;
   if (pose.emote !== 'wave') return undefined;
   const t = pose.emoteT ?? 0, was = pose.id ? WAVING.get(pose.id) : undefined, arm = was && t >= was.t ? was.arm : waveArmOf(pose);
   if (pose.id) {
@@ -318,7 +323,9 @@ export function clipFor(pose: FigurePose, body: 'man' | 'woman' = pose.look?.gen
   // an emote's own clip: played once over the emote, its time the emote's (a looping one, the 6 7, run over and over for the
   // emote's seconds)
   const own = emote ? CLIPS[emote] : undefined, k = Math.max(0, Math.min(1, pose.emoteT ?? 0));
-  const at = own ? { clip: own, t: own.loop ? (k * (EMOTE_BY_ID.get(pose.emote ?? '')?.seconds ?? own.length)) % own.length : k * own.length } : undefined;
+  const def = EMOTE_BY_ID.get(pose.emote ?? ''), secs = def?.seconds ?? own?.length ?? 0;
+  // (one held, sat on the ground: its loop on the island's clock as the idle's, got down into by its own way, `./down.ts`)
+  const at = own ? { clip: own, t: own.loop ? (def?.held ? (((pose.phase / 6 + offsetOf(pose.id) * own.length) % own.length) + own.length) % own.length : (k * secs) % own.length) : k * own.length } : undefined;
   if (s === 'walk') return { clip, t: walkTime(clip, pose.phase, body, pose.gait ?? 0), ...(at ? { over: at } : {}) };
   if (s === 'emote' && at) return at;
   // in the water, a stroke to each `SWIM_STROKE` of the walk's phase (which goes as fast as the swimmer does), as the

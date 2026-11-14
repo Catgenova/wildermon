@@ -13,7 +13,7 @@ import { UPDATE_CHECK_MS } from '../update';
 import { JOURNAL_TABS } from './journaltabs';
 import { RESPAWN_ARM_MS } from '../respawn';
 import { BLOCK_SECS, FLINCH_LIT, FLINCH_SECS } from '../../game/fight';
-// ---- spellcasting (What's new 589) ----
+// ---- spellcasting (What's new 590) ----
 import { ALL_SPELL_IDS, spellInfo } from '../../render/spells/info';
 import { RELEASE_MOTES, RELEASE_SECS } from '../../render/fx/cast';
 import { MAP_LEGEND, SETTLEMENT_BORDER_PX, MAP_ZOOM_MIN } from './minimap';
@@ -4425,7 +4425,7 @@ export const NEWS: News[] = [
     ],
   },
   {
-    n: 589,
+    n: 590,
     day: '2026-11-14',
     lines: () => {
       const n: Record<string, number> = {};
@@ -4435,6 +4435,21 @@ export const NEWS: News[] = [
         `New: blow ${n.strike}, thrust ${n.thrust} and shot ${n.shot} spells: the weapon's fight animation, weapon in hand, the blow or loose on the release.`,
         `New: spell effects leave from the sculpted body's casting hand. Release flare at the hand: ${RELEASE_MOTES} motes, ${RELEASE_SECS * 1000} ms, in the spell's colours.`,
         'New: casting while walking: arms and head cast over the walk. Facing left on screen: cast with the left hand.',
+      ];
+    },
+  },
+  {
+    n: 589,
+    day: '2026-11-14',
+    lines: () => {
+      const e = (id: string): string => {
+        const d = EMOTE_BY_ID.get(id);
+        return d ? `${d.label} (/${d.id}): ${d.held ? `${d.seconds} s down, held until you move, swim, board or work` : `${d.seconds} s`}` : id;
+      };
+      return [
+        `New: emotes (Emotes menu): ${['bow', 'cheer', 'point', 'clap', 'sit'].map(e).join('; ')}.`,
+        'New: Animations off: bow, cheer, point, clap: one still pose each; sit: sat.',
+        'Fixed: stood still after an emote: the idle (was: the emote\'s first pose held; after 6 7, the forearms out).',
       ];
     },
   },
