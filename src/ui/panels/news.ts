@@ -4422,7 +4422,7 @@ export const NEWS: News[] = [
     ],
   },
   {
-    n: 589,
+    n: 590,
     day: '2026-11-14',
     lines: () => {
       const said = (...clips: string[]): string => listed([...ACTION_BY_ID.values()].filter((a) => clips.includes(clipOfJob(a.id) ?? '') && a.id !== 'unhitch_team').map((a) => (a.id === 'enchant_statue' ? `${a.label} (statue)` : a.label)));
@@ -4430,6 +4430,21 @@ export const NEWS: News[] = [
         `New: animated on the sculpted body (was: a placeholder gesture). Winch handle, both hands: ${said('crank', 'crank-back')}. Key turned in the lock: ${said('key')}. Shafts taken up: ${said('cart')}. Step up onto the vehicle: ${said('board')}. Bell rope pulled: ${said('bell')}. Stake overhead, driven in: ${said('totem')}. Hand to the altar: ${said('bauble')}. Palms out: ${said('enchant')}.`,
         `Changed: ${ACTION_BY_ID.get('unhitch_team')?.label}: the tack clip (was: a placeholder gesture).`,
         'Changed: bell: rope hung from a lever down the front of the frame (was: from the clapper, under the bell).',
+      ];
+    },
+  },
+  {
+    n: 589,
+    day: '2026-11-14',
+    lines: () => {
+      const e = (id: string): string => {
+        const d = EMOTE_BY_ID.get(id);
+        return d ? `${d.label} (/${d.id}): ${d.held ? `${d.seconds} s down, held until you move, swim, board or work` : `${d.seconds} s`}` : id;
+      };
+      return [
+        `New: emotes (Emotes menu): ${['bow', 'cheer', 'point', 'clap', 'sit'].map(e).join('; ')}.`,
+        'New: Animations off: bow, cheer, point, clap: one still pose each; sit: sat.',
+        'Fixed: stood still after an emote: the idle (was: the emote\'s first pose held; after 6 7, the forearms out).',
       ];
     },
   },
