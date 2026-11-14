@@ -51,7 +51,9 @@ let vers = 0;
 /** Whether pictures are made as bitmaps (`OffscreenCanvas.transferToImageBitmap`), as wherever there is an offscreen canvas. */
 const BITMAPS = typeof OffscreenCanvas !== 'undefined' && typeof OffscreenCanvas.prototype.transferToImageBitmap === 'function';
 /** The canvas each size of picture is drawn on before it is handed over as a bitmap: one a size, kept. */
-const pads = new Map<string, { c: OffscreenCanvas | HTMLCanvasElement; g: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D; at: number }>();
+const pads = new Map<string, { c: OffscreenCanvas | HTMLCanvasElement; g: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D }>();
+/** Sizes of pad kept, at most: the longest unused let go first. A size is one zoom and screen, so a few are all a view uses. */
+const PADS = 6;
 /** Device pixels of pictures held, for the line (`bodiesLine`). */
 let held = 0;
 
@@ -81,11 +83,11 @@ export function picBegin(p: Pic): CanvasRenderingContext2D {
     const c = BITMAPS ? new OffscreenCanvas(p.w, p.h) : document.createElement('canvas');
     c.width = p.w;
     c.height = p.h;
-    pad = { c, g: c.getContext('2d') as CanvasRenderingContext2D, at: 0 };
-    pads.set(id, pad);
+    pad = { c, g: c.getContext('2d') as CanvasRenderingContext2D };
   }
-  pad.at = performance.now();
-  if (pads.size > 4) for (const [k, v] of pads) if (k !== id && pad.at - v.at > 5000) pads.delete(k);
+  pads.delete(id);
+  pads.set(id, pad);
+  if (pads.size > PADS) pads.delete(pads.keys().next().value as string);
   const g = pad.g as CanvasRenderingContext2D;
   g.save();
   g.setTransform(1, 0, 0, 1, 0, 0);
