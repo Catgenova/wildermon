@@ -25,7 +25,7 @@ import { BOIL_IN, boilCount, boilCountPlain, boiledDye, boilRefusal, BOIL_LITRES
 import { DYE_BUCKET, DYESTUFFS, dyeRecipeId } from './dyestuffs';
 import { HERBS, WOUND_KINDS } from './wounds';
 import { TRAPS } from './trapdefs';
-import { BELL_HEARD_BASE, BELL_HEARD_PER_QL, BELL_ROPE, bellHeard, isLayUp, LEAD_PACE, LEAD_ROPE, ROPE_INPUTS, ROPE_SHARE_BOAT, ROPE_SHARE_TRAP, ROPE_WALK, ROPE_WALK_QL, ropeBlend, ropeFailUnits, ROPEMAKING, TWINE_MADE } from './ropework';
+import { BELL_HEARD_BASE, BELL_HEARD_PER_QL, BELL_HEARD_TOP_QL, BELL_ROPE, bellHeard, isLayUp, LEAD_PACE, LEAD_ROPE, ROPE_INPUTS, ROPE_SHARE_BOAT, ROPE_SHARE_TRAP, ROPE_WALK, ROPE_WALK_QL, ropeBlend, ropeFailUnits, ROPEMAKING, TWINE_MADE } from './ropework';
 import { BREWS } from './brewing';
 import { isMaterialKind, matOf, type MaterialKind } from './materials';
 import { TREE_DEFS } from '../world/tiles';
@@ -833,7 +833,7 @@ describeFrom('twine', {
   wemp: RECIPES.find((r) => r.id === 'make_twine')!.inputs[0].count,
   uses: listed(RECIPES.filter((r) => r.inputs.some((i) => i.item === 'twine')).map((r) => lower(r.result))),
 });
-describeFrom(BELL_ROPE, { base: BELL_HEARD_BASE, per: BELL_HEARD_PER_QL, top: bellHeard(100) });
+describeFrom(BELL_ROPE, { base: BELL_HEARD_BASE, per: BELL_HEARD_PER_QL, top: bellHeard(BELL_HEARD_TOP_QL), ql: BELL_HEARD_TOP_QL });
 describeFrom(LEAD_ROPE, { pace: LEAD_PACE });
 describeFrom(RIGGING_SET, { pace: RIGGING_PACE, closer: RIGGING_CLOSER });
 describeFrom('twine_snare', { holds: TRAPS.twine_snare.holds });

@@ -74,7 +74,9 @@ export const HAMMOCK_REST = 0.75;
 export const BELL_ROPE = 'bell_rope';
 export const BELL_HEARD_BASE = 10;
 export const BELL_HEARD_PER_QL = 0.9;
-export const bellHeard = (ql: number): number => BELL_HEARD_BASE + BELL_HEARD_PER_QL * Math.max(0, Math.min(100, ql));
+/** The rope's QL past which it is heard no further. */
+export const BELL_HEARD_TOP_QL = 100;
+export const bellHeard = (ql: number): number => BELL_HEARD_BASE + BELL_HEARD_PER_QL * Math.max(0, Math.min(BELL_HEARD_TOP_QL, ql));
 /** Why a bell will not ring without one. */
 export const NO_BELL_ROPE = 'Needs a bell rope in your pack.';
 /** What a ring says to whoever rang it. The island's words too. */

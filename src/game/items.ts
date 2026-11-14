@@ -556,7 +556,7 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   sailcloth: { name: 'Sailcloth', category: 'material', weight: 0.4, stackable: true, decay: 10, description: 'Woven at a loom. Sails: sailing boat {sailing}, caravel {caravel}.' },
   hammock: { name: 'Hammock', category: 'misc', weight: 5, decay: 5, description: 'Sleep: {ofBed:pct} of the sleep bonus per hour asleep, and of the health back, of a bed of the same QL.' },
   rope_walk: { name: 'Rope walk', category: 'misc', weight: 40, decay: 4, description: 'Stand at it: rope and thick rope laid up in {time:pct} of the time, +{ql} QL.' },
-  bell_rope: { name: 'Bell rope', category: 'tool', weight: 1.8, decay: 4, description: 'Carried: needed to ring a bell. Heard within {base} tiles + {per} per QL ({top} at QL 100).' },
+  bell_rope: { name: 'Bell rope', category: 'tool', weight: 1.8, decay: 4, description: 'Carried: needed to ring a bell. Heard within {base} tiles + {per} per QL ({top} at QL {ql}).' },
   lead_rope: { name: 'Lead rope', category: 'tool', weight: 1.2, decay: 4, description: 'Carried: mount a tamed wildermon with no saddle and bridle; it goes at {pace:pct} of its speed.' },
   rigging_set: { name: 'Rigging set', category: 'misc', weight: 40, decay: 4, description: 'Fit to a sailing boat or a caravel: speed +{pace:pct}; {closer}° closer to the wind.' },
   twine_snare: { name: 'Twine snare', category: 'misc', weight: 0.3, decay: 6, description: 'Trap: set on land and bait it. Holds up to taming {holds}; used up by its first catch.' },

@@ -102,7 +102,7 @@ import {
   ROPE_SHARE_BOAT, ROPE_SHARE_TRAP, ROPE_TIME_PER_LEVEL, ROPE_WALK, ROPE_WALK_QL, ROPE_WALK_TIME, ropePerLayUp, ropeTime, TWINE_MADE,
 } from '../../game/ropework';
 import {
-  beamPace, CARGO_TOP, cargoRoom, CLOSE_LEARN, DEEP_CATCH, DEEP_NET, DEEP_WATER, GALE, GALE_LEARN, GALE_SAFE_AT, GALE_TILES_PER_DAMAGE, noGoDegrees,
+  beamPace, CARGO_TOP, cargoRoom, CLOSE_LEARN, DEEP_CATCH, DEEP_NET, DEEP_WATER, GALE, GALE_LEARN, GALE_SAFE_AT, GALE_TILES_PER_DAMAGE, noGoDegrees, SAIL_TOP_AT,
   RIGGING_CLOSER, RIGGING_PACE, RIGGING_SET, SAIL_QL_TOP, SOUND_REACH, SOUND_SHOWN, TACK_PACE, tackSecs,
 } from '../../game/sailing';
 import { SOUND_DEPTH } from '../../game/sailActions';
@@ -2368,7 +2368,7 @@ export function helpText(): string {
     <ul>
       <li>Direction and strength both wander (calm to gale within a day); computed from the clock: the same for everybody at that hour, different per island.</li>
       <li>Rowing boats ignore it. Sailing boats depend on the <b>angle</b> more than the strength: across the wind fastest; downwind steady and slower; close-hauled slow.</li>
-      <li>Closer to the wind than the helm can sail: <b>in irons</b>, almost no way. Closest to the wind: ${noGoDegrees(1)}° at Sailing 1 to ${noGoDegrees(100)}° at 100;
+      <li>Closer to the wind than the helm can sail: <b>in irons</b>, almost no way. Closest to the wind: ${noGoDegrees(1)}° untrained to ${noGoDegrees(SAIL_TOP_AT)}° at Sailing ${SAIL_TOP_AT};
       ${RIGGING_CLOSER}° closer with a rigging set. Upwind: <b>tack</b> (close-hauled on one side, then the other).</li>
       <li>Example: quality (QL) ${SAIL_EXAMPLE.ql} sailing boat, body control ${CHAR_START}, ${windWord(SAIL_EXAMPLE.force)}: ${sailSpeeds} tiles a second on a beam reach, running,
       close-hauled and in irons.</li>
@@ -3706,7 +3706,7 @@ export function helpText(): string {
       colour form ${percent(FORM_PASS)} per parent with one, in the hybrid's own colours; size form as any young.</li>
       <li>Hybrid: health +${percent(HYBRID_HARDY - 1)}; <b>infertile</b>; never wild; body and first task from the first parent, markings, colours and second task from the second.</li>
       <li>At work: one worker place; the first parent's task first, the second's when the first has none in reach; task speed ${percent(HYBRID_WORK)} of a pure-bred's in each;
-      level: mean of the two tasks' skills.</li>
+      level: mean of its tasks' skills.</li>
       <li>Pedigree: <i>Hybrid: ${SPECIES[HYBRIDS[0].a].name} × ${SPECIES[HYBRIDS[0].b].name} · Dam … · sire …</i>.</li>
       <li>Field guide: a page each, after the other wildermon; marked seen, and tamed and bred at a birth to a dam you keep.</li>
     </ul>
