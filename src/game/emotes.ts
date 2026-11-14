@@ -21,6 +21,10 @@ export interface EmoteDef {
   said: string;
   /** How long it runs, in seconds. */
   seconds: number;
+  /** Held at its end until the body moves, swims or works (`emoteLeft`): `seconds` is the way into it. */
+  held?: boolean;
+  /** With animations off, the share of the way through it shown, still (its key pose); none: not shown. */
+  still?: number;
 }
 
 export const EMOTES: EmoteDef[] = [
@@ -28,6 +32,12 @@ export const EMOTES: EmoteDef[] = [
   { id: 'hop', label: 'Hop', said: '{name} hops on the spot.', seconds: 1.5 },
   // The 6 7 gesture: both forearms out palms up, one lifted as the other drops, four times over (`SIX_SEVEN_SWAP`).
   { id: '67', label: '6 7', said: '{name}: 6 7.', seconds: 2.4 },
+  // Each of these the sculpted clip of its id (`../sculpt/anim/clips/emotes2.ts`); the flat figure stands.
+  { id: 'bow', label: 'Bow', said: '{name} bows.', seconds: 2.2, still: 0.55 },
+  { id: 'cheer', label: 'Cheer', said: '{name} cheers.', seconds: 1.8, still: 0.24 },
+  { id: 'point', label: 'Point', said: '{name} points.', seconds: 2.2, still: 0.4 },
+  { id: 'clap', label: 'Clap', said: '{name} claps.', seconds: 2.0, still: 0.21 },
+  { id: 'sit', label: 'Sit', said: '{name} sits.', seconds: 1.4, held: true, still: 1 },
 ];
 
 /** Seconds from the one hand up to the other and back, in the 6 7 emote: the sculpted clip's run (`clips/sixseven.ts`). */
@@ -93,11 +103,21 @@ export function waveUp(t: number): number {
   return Math.max(0, Math.min(1, k / 0.2, (1 - k) / 0.2));
 }
 
-/** How far through an emote started at `at`, or null once it is over. */
+/** How far through an emote started at `at`, or null once it is over; a held one (`EmoteDef.held`) at one from its end on. */
 export function emoteAt(id: string | undefined, at: number | undefined, now: number): number | null {
   if (!id || at === undefined) return null;
   const def = EMOTE_BY_ID.get(id);
   if (!def) return null;
   const t = (now - at) / def.seconds;
+  if (def.held && t > 1) return 1;
   return t >= 0 && t <= 1 ? t : null;
 }
+
+/** An emote as a body is drawn with it (`FigurePose.emote`, `emoteT`): none once it is over. */
+export function emoteNow(id: string | undefined, at: number | undefined, now: number): { emote?: string; emoteT?: number } {
+  const t = emoteAt(id, at, now);
+  return t === null ? {} : { emote: id, emoteT: t };
+}
+
+/** Whether a body's emote ends now it is `busy` (moving, swimming, driving or at work): a held one (sat on the ground) does. */
+export const emoteLeft = (id: string | undefined, busy: boolean): boolean => busy && !!id && !!EMOTE_BY_ID.get(id)?.held;

@@ -179,6 +179,7 @@ import {
 import { statueName } from '../../game/patronlist';
 import { ALIGNMENT_NAMES, BAR_SLOTS, FAITH_SPELLS, FAITH_TIER_AT, PATRON_AT, PATRONS, SCHOOL_NAMES, slotsFor, SPELL_ON_WORDS, SPELL_ONS, SPELL_REACH, SPELLS_PER_TIER } from '../../game/patrons';
 import { BIND_BY_ID, keyName } from '../../game/keybinds';
+import { EMOTES } from '../../game/emotes';
 import {
   CLOSE_BARE, CLOSE_CLOTH, CLOSE_PACE, CLOSE_PER_SKILL, CLOSE_RIGHT, CLOSE_WRONG, DRESSING_RANK, FESTER_CLOTH, FESTER_WRONG, HERBS, WOUND_KINDS,
 } from '../../game/wounds';
@@ -1180,6 +1181,11 @@ export function helpText(): string {
       <li>Footer: herd count, hungry count, hurt count. Clicking a count lays the herd out flat, worst first, unfiltered; the attention count opens the Care tab.</li>
     </ul>
     <h3>Other people</h3>
+    <h4>Emotes</h4>
+    <ul>
+      <li>Menu: <kbd>${keyOf('emotes')}</kbd>; or the command in chat. Seen by everybody in view; a line in their log.</li>
+      ${EMOTES.map((e) => `<li><b>${e.label}</b> (<kbd>/${e.id}</kbd>): ${e.held ? `${e.seconds} s down; held until you move, swim, board or work` : `${e.seconds} s`}.</li>`).join('')}
+    </ul>
     <h4>Right-click a person</h4>
     <ul>
       <li><b>Invite to a settlement</b> (you founded it, or your rank there holds ${POWER.invite.label}); <b>Ask to be a friend</b>; <b>Write</b>.</li>
