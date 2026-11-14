@@ -19,6 +19,7 @@ export type ItemCategory = 'tool' | 'material' | 'food' | 'plant' | 'misc';
 import type { Nutrient } from './nutrition';
 import { GEAR_ITEMS } from './wildgear';
 import { HOARD_SCALE_CAP } from './lairs';
+import { FIRE_STEEL, FIRE_STEEL_CAP, SULFUR, SULFUR_SLATE, summonSays, VOLCANO_KINDS, volcanoName } from './volcano';
 
 /** What a dish for a group gives out when it is served (`ItemDef.serve`). */
 export interface ServeDef {
@@ -269,6 +270,8 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   tar: { name: 'Tar', category: 'material', weight: 2, stackable: true, raw: true },
   rock_shards: { name: 'Rock shards', category: 'material', weight: 20, stackable: true, raw: true, decay: 5, description: 'Builds cobblestone walls; chiselled into bricks.' },
   slate_shards: { name: 'Slate shards', category: 'material', weight: 20, stackable: true, raw: true, decay: 5 },
+  sulfur: { name: 'Sulfur', category: 'material', weight: 0.2, stackable: true, raw: true, decay: 0,
+    description: 'Fire-tempered steel (smelter on {isle}). Butchering: {kinds}. Mining slate on {isle}: {slate} a go.' },
   marble_shards: { name: 'Marble shards', category: 'material', weight: 20, stackable: true, raw: true, decay: 5 },
   sandstone_shards: { name: 'Sandstone shards', category: 'material', weight: 20, stackable: true, raw: true, decay: 5 },
   stone_brick: { name: 'Stone brick', category: 'material', weight: 15, stackable: true, decay: 3 },
@@ -299,7 +302,8 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   adamantine_ore: { name: 'Adamantine ore', category: 'material', weight: 2, stackable: true, raw: true, decay: 2 },
   glimmersteel_ore: { name: 'Glimmersteel ore', category: 'material', weight: 2, stackable: true, raw: true, decay: 2 },
   mithril_ore: { name: 'Mithril ore', category: 'material', weight: 2, stackable: true, raw: true, decay: 2 },
-  seryll_ore: { name: 'Seryll ore', category: 'material', weight: 2, stackable: true, raw: true, decay: 2 },
+  seryll_ore: { name: 'Seryll ore', category: 'material', weight: 2, stackable: true, raw: true, decay: 2,
+    description: 'Mining a vein of it: {summon}.' },
   copper_lump: { name: 'Copper lump', category: 'material', weight: 1, stackable: true, decay: 2 },
   iron_lump: { name: 'Iron lump', category: 'material', weight: 1, stackable: true, decay: 3 },
   coal: { name: 'Coal', category: 'material', weight: 1, stackable: true, raw: true, decay: 3, description: 'Fuel for a campfire.' },
@@ -318,6 +322,8 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   brass_lump: { name: 'Brass lump', category: 'material', weight: 1, stackable: true, decay: 1 },
   pewter_lump: { name: 'Pewter lump', category: 'material', weight: 1, stackable: true, decay: 1 },
   electrum_lump: { name: 'Electrum lump', category: 'material', weight: 1, stackable: true, decay: 1 },
+  firesteel_lump: { name: 'Fire-tempered steel lump', category: 'material', weight: 1, stackable: true, decay: 1,
+    description: 'Weapons and tools of it: improve QL cap +{cap} over your skill. Made at a smelter on {isle} only.' },
   // Moulds, fired from sand, and the pieces beaten out of them.
   anvil_mould: { name: 'Anvil mould', category: 'tool', weight: 1.2, decay: 1 },
   nail_mould: { name: 'Nail mould', category: 'tool', weight: 1.2, decay: 1, description: '{per} nails per filling. Wears each filling; cannot be mended.' },
@@ -384,6 +390,7 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   offal: { name: 'Offal', category: 'material', weight: 0.2, stackable: true, raw: true, decay: 90, description: 'Fishing bait.' },
   broth: { name: 'Broth', category: 'food', weight: 0.4, stackable: true, food: 0.25, decay: 60, description: 'Feeds every food group.', feeds: { flesh: 0.08, starch: 0.08, greens: 0.08, fat: 0.08 } },
   gland: { name: 'Gland', category: 'material', weight: 0.2, stackable: true, raw: true, decay: 90, description: 'Ink ingredient. Rare butchering drop.' },
+  obsidian: { name: 'Obsidian', category: 'material', weight: 0.5, stackable: true, raw: true, decay: 0, description: 'From monsters killed on Volcano Isle.' },
   shaft: { name: 'Shaft', category: 'material', weight: 1, stackable: true, decay: 20, description: 'Tool handles and fence rails.' },
   ribbon: { name: 'Metal ribbon', category: 'material', weight: 0.4, stackable: true, decay: 1, description: 'One lump each.' },
   big_axle: { name: 'Big axle', category: 'material', weight: 8, stackable: true, decay: 1, description: 'Large cart: {recipe.make_large_cart.big_axle}. Wagon: {recipe.make_wagon.big_axle}.' },
@@ -772,6 +779,9 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   warlord_tusk: { name: 'Warlord\'s tusk', category: 'misc', weight: 8, decay: 0, trophy: true, description: 'Trophy: set down anywhere. From an orc camp\'s hoard only. Does not decay.' },
   ogre_king_jaw: { name: 'Ogre king\'s jaw', category: 'misc', weight: 10, decay: 0, trophy: true, description: 'Trophy: set down anywhere. From an ogre cave\'s hoard only. Does not decay.' },
   great_dragon_scale: { name: 'Great dragon scale', category: 'misc', weight: 8, decay: 0, trophy: true, description: 'Trophy: set down anywhere. From a dragon roost\'s hoard only. Does not decay.' },
+  ash_lord_veil: { name: 'Ash lord\'s veil', category: 'misc', weight: 4, decay: 0, trophy: true, description: 'Trophy: set down anywhere. From an ash vent\'s hoard only. Does not decay.' },
+  magma_core: { name: 'Magma core', category: 'misc', weight: 12, decay: 0, trophy: true, description: 'Trophy: set down anywhere. From a magma vent\'s hoard only. Does not decay.' },
+  cinder_alpha_fang: { name: 'Cinder alpha\'s fang', category: 'misc', weight: 3, decay: 0, trophy: true, description: 'Trophy: set down anywhere. From a cinder vent\'s hoard only. Does not decay.' },
   brazier: { name: 'Brazier', category: 'misc', weight: 30, decay: 3 },
   altar: { name: 'Altar', category: 'misc', weight: 64, decay: 3, description: 'Set down on your settlement; one per settlement.' },
   trash_crate: { name: 'Trash crate', category: 'misc', weight: 6, decay: 4, description: 'Contents rot {trash}× faster than in the rain.' },
@@ -955,6 +965,13 @@ for (const d of Object.values(ITEM_DEFS)) {
 }
 // A hoard dragon scale's QL cap on scale armour (`lairs.ts`).
 describeFrom('dragon_scale', { hoardCap: HOARD_SCALE_CAP });
+// Volcano Isle's (`volcano.ts`): the seryll's summons, sulfur, and fire-tempered steel's cap.
+{
+  const kinds = VOLCANO_KINDS.map((k) => k.replace(/_/g, ' '));
+  describeFrom('seryll_ore', { summon: summonSays(kinds) });
+  describeFrom(SULFUR, { isle: volcanoName(), kinds: kinds.join(', '), slate: percent(SULFUR_SLATE) });
+  describeFrom(`${FIRE_STEEL}_lump`, { isle: volcanoName(), cap: FIRE_STEEL_CAP });
+}
 
 
 // What a stone set in a piece gives, off the rule that gives it (`jewelGain`).

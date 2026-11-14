@@ -750,6 +750,10 @@ export const FURNITURE: FurnitureDef[] = [
   piece('warlord_tusk', 'Warlord\'s tusk', 1, 1, [], 0, 0, '', undefined, { trophy: true }),
   piece('ogre_king_jaw', 'Ogre king\'s jaw', 1, 1, [], 0, 0, '', undefined, { trophy: true }),
   piece('great_dragon_scale', 'Great dragon scale', 1, 1, [], 0, 0, '', undefined, { trophy: true }),
+  // Volcano Isle's vents' (`volcano.ts`).
+  piece('ash_lord_veil', 'Ash lord\'s veil', 1, 1, [], 0, 0, '', undefined, { trophy: true }),
+  piece('magma_core', 'Magma core', 1, 1, [], 0, 0, '', undefined, { trophy: true }),
+  piece('cinder_alpha_fang', 'Cinder alpha\'s fang', 1, 1, [], 0, 0, '', undefined, { trophy: true }),
 ];
 
 export const FURNITURE_BY_ID = new Map(FURNITURE.map((f) => [f.id, f]));

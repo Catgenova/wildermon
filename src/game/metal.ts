@@ -46,6 +46,8 @@ export const METALS: MetalDef[] = [
   metal('pewter', 'Pewter', 0, 0.9, null),
   metal('electrum', 'Electrum', 0, 1.3, null),
   metal('steel', 'Steel', 0, 1.7, null),
+  // Steel and sulfur at a smelter on Volcano Isle only (`volcano.ts`).
+  metal('firesteel', 'Fire-tempered steel', 0, 1.9, null),
 ];
 
 export const METAL_BY_ID = new Map(METALS.map((m) => [m.id, m]));

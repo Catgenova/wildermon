@@ -36,6 +36,9 @@ import { SKILL_DEFS } from './skills';
 import { CANDLE_DRAWN } from './light';
 import { ENCHANTERS_PLINTH, ENCHANTING, ENCHANTMENT_LIST, PAPER_PRESS, PLINTH_NAME, SCROLL_DIFFICULTY, SCROLL_HARM, SCROLL_SHEETS, scrollOf } from './enchant';
 import { DAMAGE_MAX } from './limits';
+import { FIRE_STEEL, FIRE_STEEL_RECIPE, SULFUR, VOLCANO } from './volcano';
+import { REGIONS } from '../world/regions';
+import { chartRegion } from '../world/chart';
 import { damageDrawn, failDamagedSaid, failLitres, failLitresSaid } from './faildamage';
 import { BUTTER_CHURN, BUTTER_PATS, CHURN_BUTTER, WHEY_BUCKET } from './dairy';
 import { CAULDRON_SERVINGS, CAULDRON_STATION, NAMEPLATE, PLUSH, plushRefusal } from './adorndefs';
@@ -131,6 +134,11 @@ export interface Recipe {
    * as `recipe.deed`, and refuses in the same words (`DEED_ONLY`).
    */
   deed?: boolean;
+  /**
+   * Worked only standing on this island, by its key in `REGIONS`: fire-tempered steel at a smelter on Volcano Isle
+   * (`volcano.ts`). The island keeps it as `recipe.isle`, the island's index, and refuses in the same words (`isleSays`).
+   */
+  isle?: string;
   skill: string;
   /** Menu label on the material, such as "Saw into planks". */
   label: string;
@@ -495,6 +503,8 @@ const SMELTER_RECIPES: Recipe[] = [
   { id: 'make_brass', category: 'Smelting', result: 'brass_lump', count: 4, inputs: [{ item: 'copper_lump', count: 3 }, { item: 'zinc_lump', count: 1 }], station: 'smelter', skill: 'smelting', qlFromInputs: true, label: 'Mix brass', verb: 'mixing an alloy', baseTime: 10, stamina: 0.03, difficulty: 12, done: '', spareOnFail: true },
   { id: 'make_pewter', category: 'Smelting', result: 'pewter_lump', count: 4, inputs: [{ item: 'tin_lump', count: 3 }, { item: 'lead_lump', count: 1 }], station: 'smelter', skill: 'smelting', qlFromInputs: true, label: 'Mix pewter', verb: 'mixing an alloy', baseTime: 10, stamina: 0.03, difficulty: 10, done: '', spareOnFail: true },
   { id: 'make_electrum', category: 'Smelting', result: 'electrum_lump', count: 4, inputs: [{ item: 'silver_lump', count: 2 }, { item: 'gold_lump', count: 2 }], station: 'smelter', skill: 'smelting', qlFromInputs: true, label: 'Mix electrum', verb: 'mixing an alloy', baseTime: 10, stamina: 0.03, difficulty: 18, done: '', spareOnFail: true },
+  // Fire-tempered steel (`volcano.ts`): steel and sulfur, at a smelter on Volcano Isle only.
+  { id: FIRE_STEEL_RECIPE, category: 'Smelting', result: `${FIRE_STEEL}_lump`, count: 2, inputs: [{ item: 'steel_lump', count: 2 }, { item: SULFUR, count: 1 }], station: 'smelter', isle: VOLCANO, skill: 'smelting', qlFromInputs: true, label: 'Temper steel with sulfur', verb: 'tempering steel', baseTime: 16, stamina: 0.04, difficulty: 30, done: '', spareOnFail: true },
 ];
 
 /**
@@ -924,6 +934,12 @@ cookedDishes(RECIPES.filter((r) => (r.station === 'campfire' || r.station === 'o
 
 /** Why a recipe that is worked on a settlement is refused anywhere else; the island says the same (`craft_refusal`). */
 export const DEED_ONLY = 'Build only on a settlement of yours.';
+/** Whether you stand on a recipe's island (`Recipe.isle`): always, for one kept to none. The island's `craft_refusal`. */
+export const onRecipeIsle = (r: Recipe, g: Game): boolean =>
+  !r.isle || chartRegion(g.player.x, g.player.y, g.world.w) === REGIONS.findIndex((R) => R.key === r.isle);
+/** Its refusal off its island: "Need: lit smelter on Volcano Isle." */
+export const isleSays = (r: Recipe): string =>
+  `Need: ${r.station ? STATION_NAME[r.station] : 'to be'} on ${REGIONS.find((R) => R.key === r.isle)?.name ?? r.isle}.`;
 /** What makes an altar, which a settlement that already has one will not see built on it (`ONE_ALTAR`). */
 const ALTARS = new Set(FURNITURE.filter((f) => f.altar).map((f) => f.id));
 /** Whether this recipe would be the settlement's second altar, for somebody standing where the player stands. */
@@ -1074,6 +1090,8 @@ export function recipeStatus(r: Recipe, g: Game, want?: string, stock: readonly 
   // A ferment that wants a cellar counts its cellar as part of where it is worked.
   const station = (!r.station || g.atStation(r.station)) && fermentPlaceOk(r, g);
   const deed = !r.deed || g.onDeed(g.player.tileX, g.player.tileY);
+  // And on its island, for one kept to an island (`Recipe.isle`), counted with the station.
+  const onIsle = onRecipeIsle(r, g);
   const second = secondAltar(r, g);
   const material = chooseMaterial(g, r, undefined, want, stock);
   const inputs = r.inputs.map((i) => {
@@ -1084,8 +1102,8 @@ export function recipeStatus(r: Recipe, g: Game, want?: string, stock: readonly 
     return { item: i.item, litres: false, need: needOf(g, r, i), have: countFor(stock, r, i.item, material), carried: countFor(stock, r, i.item, material, true) };
   });
   const unread = recipeUnread(r, g);
-  const max = tool && station && deed && !second && !unread ? Math.min(...inputs.map((i) => Math.floor(i.have / i.need))) : 0;
-  return { tool, station, deed, second, unread, inputs, ready: max >= 1, max, material };
+  const max = tool && station && onIsle && deed && !second && !unread ? Math.min(...inputs.map((i) => Math.floor(i.have / i.need))) : 0;
+  return { tool, station: station && onIsle, deed, second, unread, inputs, ready: max >= 1, max, material };
 }
 
 /**
@@ -1232,6 +1250,7 @@ export function recipeReason(r: Recipe, g: Game, preferUid?: number, stock: read
   }
   if (r.tool && !g.inventory.has(r.tool)) return `Need ${article(r.tool)}${lower(r.tool)}.`;
   if (r.station && !g.atStation(r.station)) return `Need: ${STATION_NAME[r.station]}.`;
+  if (!onRecipeIsle(r, g)) return isleSays(r);
   if (!fermentPlaceOk(r, g)) return FERMENT_CELLAR_SAYS;
   if (r.deed && !g.onDeed(g.player.tileX, g.player.tileY)) return DEED_ONLY;
   if (secondAltar(r, g)) return ONE_ALTAR;

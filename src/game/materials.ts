@@ -1,5 +1,6 @@
 import { GEMS, tradeName, type GemDef } from './gems';
 import { METAL_BY_INGOT, METAL_BY_LUMP, METALS } from './metal';
+import { FIRE_STEEL_CAP } from './volcano';
 import { TREE_DEFS } from '../world/tiles';
 
 /**
@@ -86,6 +87,8 @@ const METAL_PROPS: Record<string, Props> = {
   copper: { difficulty: 0, weight: 1, wear: 1, decay: 1, edge: 0.85, soak: 0.9, bite: 0.9, hold: 1, note: '' },
   iron: { difficulty: 2, weight: 1.1, wear: 0.75, decay: 1.35, edge: 1.12, soak: 1.12, bite: 1.1, hold: 1, note: '' },
   steel: { difficulty: 5, weight: 1.05, wear: 0.5, decay: 0.95, edge: 1.28, soak: 1.22, bite: 1.24, hold: 1, note: '' },
+  // Steel's own numbers: what it adds is its weapons' and tools' improve cap (`FIRE_STEEL_CAP`), said in its note.
+  firesteel: { difficulty: 6, weight: 1.05, wear: 0.5, decay: 0.95, edge: 1.28, soak: 1.22, bite: 1.24, hold: 1, note: `Weapons and tools: improve QL cap +${FIRE_STEEL_CAP} over your skill.` },
   tin: { difficulty: -2, weight: 0.85, wear: 1.5, decay: 1.1, edge: 0.5, soak: 0.55, bite: 0.6, hold: 1, note: '' },
   zinc: { difficulty: -1, weight: 0.9, wear: 1.4, decay: 1.05, edge: 0.55, soak: 0.6, bite: 0.65, hold: 1, note: '' },
   lead: { difficulty: -3, weight: 1.95, wear: 1.6, decay: 0.7, edge: 0.45, soak: 0.72, bite: 0.5, hold: 1, note: '' },

@@ -547,7 +547,7 @@ export const GATHER_DO: Record<GatherKind, string> = { forage: 'forage', botaniz
 };
 const GATHER_TABLE: Record<GatherKind, Array<[string, number]>> = { forage: FORAGE_TABLE, botanize: BOTANIZE_TABLE, woodcut: [], farm: [], mine: [], sand: [], clay: [], quarry: [], stoke: [], fetch: [], guard: [], hunt: [], peat: [], reed: [], water: [], prospect: [], plant: [], hod: [], mend: [], compost: [], seek: [], fish: [], prune: [], stump: [], fruit: [] , hive: [], groom: [], dairy: [], heal: [], tan: [], mill: [], lamp: [], bush: [], grass: [], pan: [], smelt: [], kiln: [], ash: [], brew: [], cook: [], restore: [], patch: [], worm: [], sprout: [], resin: [], flower: [], scrub: [], saw: [], chisel: [], brick: [], fletch: [], paper: [], fill: [], spin: [], nail: [], ribbon: [], glass: [],
   moss: [], vine: [], lily: [], concrete: [], mortar: [], timber: [], shaft: [], bandage: [], cheese: [], churn: [], alloy: [] };
-export type ButcherPart = 'meat' | 'fur' | 'leather' | 'bone' | 'gland' | 'feather' | 'clay' | 'tusk' | 'sinew' | 'scale' | 'hoard';
+export type ButcherPart = 'meat' | 'fur' | 'leather' | 'bone' | 'gland' | 'feather' | 'clay' | 'tusk' | 'sinew' | 'scale' | 'hoard' | 'sulfur';
 /** Marks a creature as last hurt by the player rather than another creature. */
 export const PLAYER_ATTACKER = -1;
 
@@ -712,6 +712,12 @@ export interface SpeciesDef {
   coward?: boolean;
   /** Its bite leaves venom in the wound (`VENOM_DRAIN`, `VENOM_SECS`). */
   venom?: boolean;
+  /** A blow of its that lands puts your hit chance at `ASH_BLIND_HIT` for `ASH_BLIND_SECS` (`volcano.ts`). The island's `species_def.blinds`. */
+  blinds?: boolean;
+  /** Burns do nothing to it: a Scorch, an Emberbrand, a Flamearrow (`volcano.ts`). The island's `species_def.fireproof`. */
+  fireproof?: boolean;
+  /** A weapon carrying an ice enchantment lands `FROST_WEAK` times its blow on it (`volcano.ts`). The island's `species_def.frost_weak`. */
+  frostWeak?: boolean;
   /** How one of yours fights another creature, besides its blow (`FightStyle`). */
   style?: FightStyle;
   /** What one of yours does in a fight once every so often instead of a blow (`AbilityId`). */
@@ -4169,6 +4175,107 @@ export const SPECIES: Record<string, SpeciesDef> = {
     hunter: true,
     defensive: true,
     glow: 5,
+    defaultStance: 'aggressive',
+  },
+
+  // ---- Volcano Isle's (`volcano.ts`) ----
+  //
+  // Each harder than an ogre and none as hard as the dragon, each at a vent of its own on Volcano Isle and nowhere
+  // else (`lairs.ts`, `Region.lair`), and each with sulfur on it as well as obsidian (`obsidianOf`).
+  ash_wraith: {
+    id: 'ash_wraith',
+    monster: true,
+    notice: 15,
+    wound: 'burn',
+    name: 'Ash wraith',
+    description: '',
+    health: 200,
+    attack: 38,
+    speed: 2.7,
+    tameLevel: 999,
+    tameChance: 0,
+    diet: [],
+    baitHint: 'nothing you would offer it',
+    timid: false,
+    gathers: null,
+    workRange: 0,
+    // One shroud each for its three subspecies, in their order: ash grey, soot, ember.
+    variants: [
+      ['#8e8890', '#e8a070'],
+      ['#5e5866', '#d88a5e'],
+      ['#9a7a78', '#f0b45c'],
+    ],
+    subspecies: ['Cinderveil Wraith', 'Soot Wraith', 'Ember-eyed Wraith'],
+    butcher: { bone: 3, sulfur: 3 },
+    hunter: true,
+    defensive: true,
+    blinds: true,
+    glow: 3,
+    defaultStance: 'aggressive',
+  },
+  magma_golem: {
+    id: 'magma_golem',
+    hide: 'thick',
+    heavy: true,
+    monster: true,
+    notice: 12,
+    wound: 'burn',
+    name: 'Magma golem',
+    description: '',
+    health: 360,
+    attack: 46,
+    speed: 1.5,
+    tameLevel: 999,
+    tameChance: 0,
+    diet: [],
+    baitHint: 'nothing you would offer it',
+    timid: false,
+    gathers: null,
+    workRange: 0,
+    // One crust each for its three subspecies, in their order: basalt, slag, obsidian.
+    variants: [
+      ['#6e6068', '#f08a4a'],
+      ['#8a6a5a', '#f4a83c'],
+      ['#4e4a5c', '#e8604a'],
+    ],
+    subspecies: ['Basalt Golem', 'Slag Golem', 'Glassback Golem'],
+    butcher: { sulfur: 6 },
+    hunter: true,
+    defensive: true,
+    fireproof: true,
+    frostWeak: true,
+    glow: 4,
+    defaultStance: 'aggressive',
+  },
+  cinder_hound: {
+    id: 'cinder_hound',
+    monster: true,
+    notice: 16,
+    wound: 'burn',
+    name: 'Cinder hound',
+    description: '',
+    health: 180,
+    attack: 36,
+    speed: 3.6,
+    tameLevel: 999,
+    tameChance: 0,
+    diet: [],
+    baitHint: 'nothing you would offer it',
+    timid: false,
+    gathers: null,
+    workRange: 0,
+    // One coat each for its three subspecies, in their order: charcoal, rust, ash.
+    variants: [
+      ['#5a5058', '#f09048'],
+      ['#8a5a4e', '#f4b050'],
+      ['#7e7882', '#ee7a50'],
+    ],
+    subspecies: ['Charcoal Hound', 'Rust Hound', 'Ashpelt Hound'],
+    butcher: { meat: 4, leather: 4, bone: 3, sinew: 2, sulfur: 2 },
+    hunter: true,
+    pack: true,
+    defensive: true,
+    glow: 2,
     defaultStance: 'aggressive',
   },
 };

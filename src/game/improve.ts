@@ -7,6 +7,7 @@ import { itemDef, itemName, liftRarity, rarityOf, RARITIES, RARITY_LIFT, temperO
 import { ingotOf, isMould, METALS } from './metal';
 import { waterNear } from './placeables';
 import { materialOfItem, matOf } from './materials';
+import { FIRE_STEEL_CAP, FIRE_STEEL_NAME } from './volcano';
 import type { CraftStock } from './recipes';
 
 /** What one pass with a file teaches, whichever way it comes out. */
@@ -153,7 +154,14 @@ export const canImprove = (id: string): boolean => !isMould(id) && improvable(id
  * own (`floor:improve`), whatever the trade, as `improve_ceiling` has it.
  */
 export const improveCeiling = (g: Game, skill: string, item?: Item): number =>
-  Math.max(g.perk('floor:improve', IMPROVE_FLOOR), g.skills.get(skill)) + (item ? rarityOf(item).ceiling : 0);
+  Math.max(g.perk('floor:improve', IMPROVE_FLOOR), g.skills.get(skill)) + (item ? rarityOf(item).ceiling + fireSteelCapOf(item) : 0);
+
+/**
+ * What a weapon or a tool of fire-tempered steel may be bettered past the hands: `FIRE_STEEL_CAP` (`volcano.ts`); nothing
+ * for anything else. The island's `fire_steel_cap`.
+ */
+export const fireSteelCapOf = (item: Pick<Item, 'id' | 'extra'>): number =>
+  item.extra === FIRE_STEEL_NAME && (WEAPON_BY_ID.has(item.id) || itemDef(item.id).category === 'tool') ? FIRE_STEEL_CAP : 0;
 
 /** How much a successful pass adds at this skill to a thing of this quality: a great deal at first, very little near the end. */
 export const improveStepAt = (level: number, ql: number): number => Math.max(0.08, Math.max(0, 100 - ql) * 0.05 * (0.35 + level / 130));

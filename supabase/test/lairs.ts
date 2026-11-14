@@ -37,7 +37,7 @@ import { SPECIES } from '../../src/game/creatures';
 import {
   EDGE_TREES, HILL_SLOPE, HOARD_BOOK, HOARD_SCALE, HOARD_SCALE_CAP, HOARD_SHARE, LAIR_ANNOUNCE, LAIR_APART, LAIR_KINDS, LAIR_LEASH,
   LAIR_MOVE_CLEARS, LAIR_MOVE_DAYS, LAIR_RING, LAIR_RING_WILD, LAIR_SIGHT, LAIR_TRACK, lairFoundingRefusal, lairFoundSays, lairRingWant,
-  OPEN_CLEAR, OPEN_SLOPE, type LairSeen,
+  OPEN_CLEAR, OPEN_SLOPE, FIRST_LAIRS, type LairSeen,
 } from '../../src/game/lairs';
 import { PER_REGION, REGION } from '../../src/game/creatures';
 import { bearingTo, lairTrackSaid, trackable, trackReading, trackRefusal } from '../../src/game/tracking';
@@ -91,7 +91,10 @@ begin
     || lair_sight() || '|' || lair_apart() || '|' || lair_ring_want() || '|' || edge_trees() || '|' || open_clear() || '|' || open_slope() || '|' || hill_slope());
 
   -- ---- Siting -------------------------------------------------------------------------------------------------------
-  for k in select * from lair_kinds() order by keep_off desc loop
+  -- Volcano Isle's vents are asked on an island of their own (\`volcano.ts\`): a 512 island's volcano has no room for them
+  -- beside the roost, and the clock is told it looked for them just now.
+  insert into lair_look (world_id, kind, at) select w, id, now() from lair_kinds() where site = 'vent';
+  for k in select * from lair_kinds() where site <> 'vent' order by keep_off desc loop
     for i in 1 .. k.count loop
       if lair_stand(w, k.id, 4000) is null then insert into said values ('NOSITE', k.id); end if;
     end loop;
@@ -107,7 +110,7 @@ begin
       || floor(sqrt((l.x - ${DEED.x}) ^ 2 + (l.y - ${DEED.y}) ^ 2))::int || '|' || k.keep_off || '|'
       || coalesce((select floor(min(sqrt((o.x - l.x) ^ 2 + (o.y - l.y) ^ 2)))::int from lair o where o.world_id = w and o.id <> l.id), 9999) || '|'
       || on_deed(w, l.x, l.y) || '|' || coalesce(region_at(w, l.x + 0.5, l.y + 0.5), -1) || '|' || centre_height(w, l.x, l.y) || '|'
-      || (select pl.sub || ':' || pl.x || ':' || pl.y from placed pl where pl.id = l.placed));
+      || (select pl.sub || ':' || pl.x || ':' || pl.y from placed pl where pl.id = l.placed) || '|' || near_tile(w, l.x, l.y, 'trees', vent_clear()::int));
   end loop;
   insert into said select 'ISLE', coalesce(monster_isle('dragon'), -1)::text;
   -- The highest ground of Volcano Isle, over every tile of it.
@@ -272,7 +275,7 @@ begin
    where c2.world_id = w and c2.lair is null and (c2.to_x - l.x - 0.5) ^ 2 + (c2.to_y - l.y - 0.5) ^ 2 <= ${LAIR_RING ** 2};
 
   -- ---- Restocks -----------------------------------------------------------------------------------------------------
-  for k in select * from lair_kinds() loop
+  for k in select * from lair_kinds() where site <> 'vent' loop
     select * into l from lair where world_id = w and kind = k.id order by id limit 1;
     -- Cleared, every one, its boss and garrison gone.
     delete from creature where world_id = w and lair = l.id;
@@ -354,6 +357,8 @@ select k || '=' || v from said;
 rollback;
 `);
 const lines = out.split('\n').filter((l) => l.includes('='));
+/** The lairs this island holds: every kind but Volcano Isle's vents (`supabase/test/volcano.ts`). */
+const FIRST_KINDS = LAIR_KINDS.filter((k) => FIRST_LAIRS.includes(k.id));
 const said = (k: string): string[] => lines.filter((l) => l.startsWith(`${k}=`)).map((l) => l.slice(k.length + 1));
 const one = (k: string): string => said(k)[0] ?? '';
 
@@ -368,20 +373,22 @@ check('and every number a lair keeps to',
   one('NUMS') === [LAIR_LEASH, LAIR_RING, LAIR_RING_WILD, LAIR_ANNOUNCE, HOARD_SHARE, HOARD_BOOK, HOARD_SCALE_CAP, HOARD_SCALE, LAIR_MOVE_CLEARS, LAIR_MOVE_DAYS,
     LAIR_TRACK, LAIR_SIGHT, LAIR_APART, lairRingWant(PER_REGION, REGION), EDGE_TREES, OPEN_CLEAR, OPEN_SLOPE, HILL_SLOPE].map(String).join('|'), one('NUMS'));
 check('the numbers asked for: 4, 2, 1 and 1 lairs, 40, 60, 80 and 120 tiles off a token, a 20-tile leash, a 30-tile ring',
-  LAIR_KINDS.map((k) => `${k.count}/${k.keepOff}`).join(',') === '4/40,2/60,1/80,1/120' && LAIR_LEASH === 20 && LAIR_RING === 30 && LAIR_RING_WILD === 1.5
+  LAIR_KINDS.filter((k) => FIRST_LAIRS.includes(k.id)).map((k) => `${k.count}/${k.keepOff}`).join(',') === '4/40,2/60,1/80,1/120' && LAIR_LEASH === 20 && LAIR_RING === 30 && LAIR_RING_WILD === 1.5
     && HOARD_SHARE === 0.1 && HOARD_BOOK === 0.25 && LAIR_MOVE_CLEARS === 3 && LAIR_MOVE_DAYS === 7 && LAIR_TRACK === 100);
 
 /* ---- siting --------------------------------------------------------------------------------------------------------- */
 
 const ISLE = Number(one('ISLE'));
 check('every lair was sited', !said('NOSITE').length, said('NOSITE').join(','));
-check('and no more than each kind\'s count, the clock adding none', one('COUNT') === [...LAIR_KINDS].sort((a, b) => (a.id < b.id ? -1 : 1)).map((k) => `${k.id}:${k.count}`).join('|'), one('COUNT'));
+check('and no more than each kind\'s count, the clock adding none', one('COUNT') === [...FIRST_KINDS].sort((a, b) => (a.id < b.id ? -1 : 1)).map((k) => `${k.id}:${k.count}`).join('|'), one('COUNT'));
 for (const s of said('SITE')) {
-  const [kind, x, y, tile, edgeTrees, openTrees, slope, deed, keep, apart, onDeed, region, height, piece] = s.split('|');
+  const [kind, x, y, tile, edgeTrees, openTrees, slope, deed, keep, apart, onDeed, region, height, piece, ventTrees] = s.split('|');
   const ground = kind === 'goblin_warren' ? tile === '0' && edgeTrees === 'true'
     : kind === 'orc_camp' ? tile === '0' && openTrees === 'false' && Number(slope) <= OPEN_SLOPE
       : kind === 'ogre_cave' ? tile === '4' && Number(slope) >= HILL_SLOPE
-        : Number(region) === ISLE && Number(height) === Number(one('HIGHEST'));
+        // Volcano Isle's vents (`volcano.ts`, and `supabase/test/volcano.ts`): on the island, no tree near.
+        : LAIR_KINDS.find((k) => k.id === kind)?.site === 'vent' ? Number(region) === ISLE && ventTrees === 'false'
+          : Number(region) === ISLE && Number(height) === Number(one('HIGHEST'));
   check(`${kind} at ${x},${y}: on its ground, ${deed} tiles off the token (≥ ${keep}), ${apart} off the next lair (≥ ${LAIR_APART}), on no deed, drawn there`,
     ground && Number(deed) >= Number(keep) && Number(apart) >= LAIR_APART && onDeed === 'false' && piece === `${kind}:${x}:${y}`, s);
 }
@@ -495,7 +502,7 @@ check(`and it is stocked to ${lairRingWant(PER_REGION, REGION)} wildermon, ${LAI
 
 /* ---- restocks --------------------------------------------------------------------------------------------------------- */
 
-for (const k of LAIR_KINDS) {
+for (const k of FIRST_KINDS) {
   const early = said('EARLY').find((e) => e.startsWith(`${k.id}|`));
   const back = said('BACK').find((e) => e.startsWith(`${k.id}|`));
   check(`${k.name}: still empty a second before its ${k.restock / 60} minutes`, early === `${k.id}|cleared|0`, early);

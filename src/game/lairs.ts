@@ -20,7 +20,7 @@ import { BOOK_DROPS, type BookKind } from './bookdrops';
 import { percent, spanWords } from './words';
 
 /** The ground a lair is sited on (`lair_site_ok`). */
-export type LairSite = 'forest_edge' | 'open_grass' | 'hillside' | 'peak';
+export type LairSite = 'forest_edge' | 'open_grass' | 'hillside' | 'peak' | 'vent';
 
 export interface LairKind {
   /** Its id, which is also the furniture kind it is drawn as. */
@@ -71,7 +71,26 @@ export const LAIR_KINDS: readonly LairKind[] = [
     garrison: [], boss: null, bossHealth: 1, bossAttack: 1,
     restock: 24 * 3600, keepOff: 120, map: 1, trophy: 'great_dragon_scale', scales: 5,
   },
+  // Volcano Isle's vents (`volcano.ts`), one kind each, each kept to the island by its kind (`Region.lair`).
+  {
+    id: 'ash_vent', name: 'Ash vent', species: 'ash_wraith', site: 'vent', count: 2,
+    garrison: [['ash_wraith', 2, 3]], boss: 'Ash lord', bossHealth: 2, bossAttack: 1.25,
+    restock: 2 * 3600, keepOff: 80, map: 1, trophy: 'ash_lord_veil', scales: 0,
+  },
+  {
+    id: 'magma_vent', name: 'Magma vent', species: 'magma_golem', site: 'vent', count: 2,
+    garrison: [['magma_golem', 1, 2]], boss: 'Magma heart', bossHealth: 1.5, bossAttack: 1.25,
+    restock: 3 * 3600, keepOff: 80, map: 1, trophy: 'magma_core', scales: 0,
+  },
+  {
+    id: 'cinder_vent', name: 'Cinder vent', species: 'cinder_hound', site: 'vent', count: 2,
+    // A pack of three.
+    garrison: [['cinder_hound', 3, 3]], boss: 'Cinder alpha', bossHealth: 2, bossAttack: 1.25,
+    restock: 3600, keepOff: 80, map: 1, trophy: 'cinder_alpha_fang', scales: 0,
+  },
 ];
+/** The lairs there were before Volcano Isle's vents, for what was said of them then (What's new). */
+export const FIRST_LAIRS: readonly string[] = ['goblin_warren', 'orc_camp', 'ogre_cave', 'dragon_roost'];
 
 export const LAIR_BY_ID: ReadonlyMap<string, LairKind> = new Map(LAIR_KINDS.map((k) => [k.id, k]));
 /** The lair of a monster's kind, by the kind's id. */
@@ -115,6 +134,8 @@ export const OPEN_CLEAR = 6;
 export const OPEN_SLOPE = 10;
 /** A hillside: bare rock with at least this much between the tile's corners, in tenths of a metre. */
 export const HILL_SLOPE = 24;
+/** A vent: no tree within this many tiles, on its kind's island (`Region.lair`), its whole leash on it. */
+export const VENT_CLEAR = 3;
 
 /** What each site is, in the help's and the guide's words. */
 export const SITE_SAYS: Record<LairSite, string> = {
@@ -122,6 +143,7 @@ export const SITE_SAYS: Record<LairSite, string> = {
   open_grass: `open grass: grass or steppe, no tree within ${OPEN_CLEAR} tiles, corners within ${OPEN_SLOPE / 10} m`,
   hillside: `hillside: bare rock, corners at least ${HILL_SLOPE / 10} m apart`,
   peak: 'mountain peak: the highest ground of its island',
+  vent: `volcano vent: no tree within ${VENT_CLEAR} tiles, its whole leash on its island`,
 };
 
 /**

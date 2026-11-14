@@ -171,9 +171,11 @@ const island = (key: string): string => out.split('\n').find((l) => l.startsWith
 
 check('the odds of a Recipe are the same on both sides', Number(island('ODDS')) === RECIPE_DROP_ODDS, island('ODDS'));
 check('goblins and orcs carry them, on both sides', island('DROPPERS') === RECIPE_DROPPERS.join(','), island('DROPPERS'));
-check('the books and the odds are the same on both sides: goblin and orc a Recipe at 5%, ogre a Formula at 5%, dragon one at 25%',
+check('the books and the odds are the same on both sides: goblin and orc a Recipe at 5%, ogre a Formula at 5%, dragon one at 25%; '
+  + 'Volcano Isle\'s ash wraith and magma golem a Formula at 5%, cinder hound a Recipe at 5%',
   island('DROPS') === BOOK_DROPS.map((d) => `${d.kind}:${d.book}:${d.odds}`).join(',')
-    && BOOK_DROPS.map((d) => `${d.kind}:${d.book}:${d.odds}`).join(',') === 'goblin:recipe:0.05,orc:recipe:0.05,ogre:formula:0.05,dragon:formula:0.25', island('DROPS'));
+    && BOOK_DROPS.map((d) => `${d.kind}:${d.book}:${d.odds}`).join(',') === 'goblin:recipe:0.05,orc:recipe:0.05,ogre:formula:0.05,dragon:formula:0.25,'
+      + 'ash_wraith:formula:0.05,magma_golem:formula:0.05,cinder_hound:recipe:0.05', island('DROPS'));
 check('every enchantment scroll is shut behind a Formula, titled the same, and nothing else is',
   island('FLOCKED') === FORMULAS.map((r) => `${r.id}:${recipeTitle(r)}`).join(',')
     && FORMULAS.length === RECIPES.filter((r) => r.category === 'Enchanting').length && FORMULAS.length === 43

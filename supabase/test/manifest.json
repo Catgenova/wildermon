@@ -3175,6 +3175,12 @@
     "why": "Asked for: monsters come only from lairs, with no wandering spawns and no raiding patrols. Every lair kind and number the same on both sides; each sited on its ground, kept from every token and every other lair, the dragon on Volcano Isle's highest ground, and no settlement founded that near one; its garrison up, no monster out of the wild, none past its leash however it is moved, none hunting past it; the boss out after the garrison and told round; a hoard share for each who dealt a tenth of its health, never silver or rare, the map and the book at their odds held at their lines and over a seeded draw; the cleared ring safe and stocked half again; every restock a second either side of its time, the dragon's day; three clears in seven days and it moves; Track to the nearest lair; hoard scales' raised cap. Every clock moved on the lair, never the wall's."
   },
   {
+    "file": "supabase/test/volcano.ts",
+    "title": "Volcano Isle's monsters at their vents, obsidian killed there and nowhere else, a seryll vein's summons, sulfur and fire-tempered steel",
+    "shard": 3,
+    "why": "Asked for: new harder monsters that live only on Volcano Isle, each at a vent with a boss and a hoard; obsidian only off monsters killed there; mining seryll with a chance to summon monsters, never in a settlement or the safe ring, gone after their time; sulfur, and fire-tempered steel made only at a smelter there with a raised QL cap. Every number the same on both sides; the vents sited on the island and nowhere else, their kinds standing nowhere else; a carcass's island read at the butchering; the chance held either side of its line; the summons' leash, refusals and going; the smelter refused off the island in the browser's words; the cap on both sides; the blinding, the burns and the frost."
+  },
+  {
     "file": "supabase/test/path.ts",
     "title": "The Path: steps the island confirms, sites, supplies and noted kinds",
     "shard": 5,
