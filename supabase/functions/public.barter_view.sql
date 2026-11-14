@@ -8,8 +8,8 @@ AS $function$
 begin
   return jsonb_build_object(
     'n', b.n, 'rev', b.rev, 'state', b.state, 'asker', b.asker = p_me,
-    'mine', barter_side(b, p_me),
-    'theirs', barter_side(b, case when p_me = b.asker then b.other else b.asker end),
+    'mine', barter_side(b, p_me, p_me),
+    'theirs', barter_side(b, case when p_me = b.asker then b.other else b.asker end, p_me),
     'left', greatest(0, round(barter_idle() - extract(epoch from now() - b.at))),
     'apart', round(coalesce(barter_apart(b.world_id, b.asker, b.other), 0)::numeric, 1));
 end $function$

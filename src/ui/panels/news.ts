@@ -13,7 +13,7 @@ import { UPDATE_CHECK_MS } from '../update';
 import { JOURNAL_TABS } from './journaltabs';
 import { RESPAWN_ARM_MS } from '../respawn';
 import { BLOCK_SECS, FLINCH_LIT, FLINCH_SECS } from '../../game/fight';
-// ---- spellcasting (What's new 590) ----
+// ---- spellcasting (What's new 592) ----
 import { ALL_SPELL_IDS, spellInfo } from '../../render/spells/info';
 import { RELEASE_MOTES, RELEASE_SECS } from '../../render/fx/cast';
 import { MAP_LEGEND, SETTLEMENT_BORDER_PX, MAP_ZOOM_MIN } from './minimap';
@@ -4425,7 +4425,7 @@ export const NEWS: News[] = [
     ],
   },
   {
-    n: 590,
+    n: 592,
     day: '2026-11-14',
     lines: () => {
       const n: Record<string, number> = {};
@@ -4435,6 +4435,29 @@ export const NEWS: News[] = [
         `New: blow ${n.strike}, thrust ${n.thrust} and shot ${n.shot} spells: the weapon's fight animation, weapon in hand, the blow or loose on the release.`,
         `New: spell effects leave from the sculpted body's casting hand. Release flare at the hand: ${RELEASE_MOTES} motes, ${RELEASE_SECS * 1000} ms, in the spell's colours.`,
         'New: casting while walking: arms and head cast over the walk. Facing left on screen: cast with the left hand.',
+      ];
+    },
+  },
+  {
+    n: 591,
+    day: '2026-11-14',
+    lines: () => [
+      'New: a wildermon in the Barter window, in its wildermon crate from your pack. Shown to both under the crate: name, sex, kind, age, level; rarity; '
+        + 'colour and size form; each trait and what it gives (unread below the animal husbandry for it); dam, sire and line. The new owner keeps it: traits, forms, skills, stance and pedigree unchanged.',
+      'New: wildermon refused on a barter side: a dam carrying young; panniers loaded.',
+      'Fixed: a crate\'s occupant changed after an Accept (let out, swapped, renamed) went in the deal unseen. Now: both Accepts cleared, both told, the new occupant shown.',
+    ],
+  },
+  {
+    n: 590,
+    day: '2026-11-14',
+    lines: () => {
+      const jobs = (...clips: string[]): number => [...ACTION_BY_ID.keys()].filter((id) => clips.includes(clipOfJob(id) ?? '')).length;
+      const name = (id: string): string => itemDef(id).name.toLowerCase();
+      return [
+        `New: picking animated on the sculpted body (was: a placeholder gesture). Fruit and sprouts, one hand overhead: ${jobs('pick-high')} jobs. Grapes, both hands at the head: ${jobs('pick-grapes')}. Honey, crouched at the ${name('skep')}: ${jobs('take-honey')}.`,
+        `New: reading animated, the thing read in hand, jobs: ${name('book')} ${jobs('read-book')}, ${name('rune_tablet')} ${jobs('read-tablet')}, ${name('cooking_recipe')} and ${name('enchant_formula')} ${jobs('read-sheet')}, ${name('drawn_map')} ${jobs('read-map')} (was: a placeholder gesture).`,
+        `New: ${name('lamp_post')} and ${name('lamp_pillar')} animated, both hands overhead, on the toes: ${jobs('lamp-fit', 'lamp-take', 'lamp-candle', 'lamp-light', 'lamp-douse')} jobs; ${name('lantern')}, ${name('candle')} and a lit taper in hand (was: a placeholder gesture).`,
       ];
     },
   },

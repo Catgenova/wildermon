@@ -1,8 +1,10 @@
 import type { Game } from '../../game/game';
 import type { Island } from '../../net/island';
 import {
-  BARTER_IDLE, BARTER_MOST, BARTER_REACH, BARTER_REFRESH, barterPutRefusal, barterSaid, sideWords, type Barter, type BarterSide, type BarterThing,
+  BARTER_IDLE, BARTER_MOST, BARTER_REACH, BARTER_REFRESH, barterPutRefusal, barterSaid, beastLines, sideWords, type Barter, type BarterSide, type BarterThing,
 } from '../../game/barter';
+import { occupantOf } from '../../game/creaturecrate';
+import { readsTrait } from '../../game/husbandry';
 import { itemName, type Item } from '../../game/items';
 import { purse } from '../../game/money';
 import { makeDropZone } from '../dragdrop';
@@ -188,6 +190,13 @@ export class BarterPanel {
           () => void this.send(b, side.things.filter((x) => x.id !== t.id).map((x) => ({ id: x.id, count: x.count })), side.coins)));
       }
       list.append(row);
+      // A wildermon in a crate: all of it, for the other side to read before pressing Accept.
+      if (t.beast) {
+        const card = document.createElement('div');
+        card.className = 'barter-beast';
+        for (const l of beastLines(t.beast, (id) => readsTrait(this.game, id))) card.append(this.line(l, 'barter-beast-line'));
+        list.append(card);
+      }
     }
     col.append(list);
     col.append(this.line(`Silver: ${side.coins}`, 'barter-coins'));
@@ -219,7 +228,8 @@ export class BarterPanel {
     for (const it of pack) {
       const o = document.createElement('option');
       o.value = String(it.uid);
-      o.textContent = it.count > 1 ? `${itemName(it)} (${it.count})` : itemName(it);
+      const who = it.occupant ? undefined : occupantOf(this.game, it);
+      o.textContent = it.count > 1 ? `${itemName(it)} (${it.count})` : who ? `${itemName(it)} (${who})` : itemName(it);
       sel.append(o);
     }
     sel.value = String(this.pick);
@@ -266,7 +276,8 @@ export class BarterPanel {
 
   /** Put a thing on your side, refused here first in the island's words where the browser can already see why. */
   private async put(b: Barter, it: Item, count: number): Promise<void> {
-    const why = barterPutRefusal(it, this.game.isEquipped(it.uid), count, b.mine.name);
+    const beast = it.creature === undefined ? undefined : this.game.creatures.get(it.creature);
+    const why = barterPutRefusal(it, this.game.isEquipped(it.uid), count, b.mine.name, beast ? { name: beast.name, due: beast.due > 0 } : null);
     if (why) {
       this.game.logMsg(why, 'error');
       return;
@@ -321,4 +332,4 @@ const keyOf = (b: Barter | null): string => (b ? `${b.n}:${b.state}:${b.rev}:${b
 
 /** A thing on a side, named as the pack names it. */
 const thingName = (t: BarterThing): string =>
-  itemName({ uid: 0, id: t.def, extra: t.extra ?? undefined, ql: t.ql, count: t.count, dmg: t.dmg } as Item);
+  itemName({ uid: 0, id: t.def, extra: t.extra ?? undefined, ql: t.ql, count: t.count, dmg: t.dmg, occupant: t.beast?.name } as Item);
