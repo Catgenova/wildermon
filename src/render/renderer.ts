@@ -140,6 +140,9 @@ import { drawPlantsFlat, drawPlantUpright, plantFoot, standsUp, type PlantFrame 
 import type { WaterPlant } from '../world/waterplants';
 import type { Swirl } from '../game/motes';
 import { drawSwirl, glowSwirl } from './swirls';
+import { drawLava, glowLava } from './lava';
+/** How far from the lava's box it can still be in view, in tiles. */
+const LAVA_VIEW = 160;
 import { activeInfusion } from '../game/infusion';
 import { isRigged } from '../game/sailing';
 import { MOTE_ELEMENTS, type MoteElement } from '../game/motes';
@@ -1399,6 +1402,11 @@ export class Renderer {
    * painted over it.
    */
   private glows: Array<{ sx: number; sy: number; kind: string; view: PieceView }> = [];
+  /** The lava drawn this frame, ten numbers a tile (its four corners on screen, then the tile), and how many (`glowLava`). */
+  private lavaSeen: number[] = [];
+  private lavaN = 0;
+  /** Whether the day's lava can be in view this frame: you are within `LAVA_VIEW` tiles of its box. */
+  private lavaNear = false;
   /** The mote swirls drawn this frame and where, for their light to be added over the night (`glowSwirl`). */
   private swirlsSeen: Array<{ s: Swirl; x: number; y: number }> = [];
   /**
@@ -4419,6 +4427,13 @@ export class Renderer {
     this.hitSeq = 0;
     this.glows.length = 0;
     this.swirlsSeen.length = 0;
+    // The lava drawn this frame, for its glow over the night (`glowLava`), and whether any can be in view at all.
+    this.lavaN = 0;
+    {
+      const b = this.game.lavaBox();
+      const p = this.game.player;
+      this.lavaNear = p.x > b[0] - LAVA_VIEW && p.y > b[1] - LAVA_VIEW && p.x < b[2] + LAVA_VIEW && p.y < b[3] + LAVA_VIEW;
+    }
     this.infusedSeen = this.infusedThings();
     // After dark; and for an altar's stars, whenever the night layer is laid at all (`drawOverlays`), so it can be mixed small.
     const dark0 = this.game.darkness();
@@ -4753,6 +4768,24 @@ export class Renderer {
         if (seamed && !wet && !run && t0 === TileType.Rock) {
           const kind = world.rockFace(x, y);
           if (kind > 0) seam(ctx, x, y, kind, pts, paveRot, zoom, this.canvas.dpr);
+        }
+
+        // The day's lava on Volcano Isle (`./lava`), over its ground: crusted where it stops; glowing after dark (`glowLava`).
+        if (this.lavaNear && !wet && this.game.lavaAt(x, y)) {
+          let open = 0;
+          for (let k = 0; k < 4; k++) {
+            const a = co[k], b = co[(k + 1) & 3];
+            const across = a[0] === b[0];
+            if (!this.game.lavaAt(across ? x + (a[0] === 0 ? -1 : 1) : x, across ? y : y + (a[1] === 0 ? -1 : 1))) open |= 1 << k;
+          }
+          drawLava(ctx, pts, co, open, x, y, this.anim, lit, this.still, this.calm);
+          if (lit) {
+            const o = this.lavaN * 10;
+            for (let k = 0; k < 8; k++) this.lavaSeen[o + k] = pts[k];
+            this.lavaSeen[o + 8] = x;
+            this.lavaSeen[o + 9] = y;
+            this.lavaN++;
+          }
         }
 
         // What stands on a line behind and reaches out over this tile's ground: drawn again over the part of it under its feet.
@@ -11304,6 +11337,8 @@ export class Renderer {
     if (!this.fast) this.life.glow(ctx);
     // And the mote swirls' glow and glints, the same way (`glowSwirl`).
     if (dark > 0.02) for (const w of this.swirlsSeen) glowSwirl(ctx, w.x, w.y, zoom, w.s.element, this.anim, w.s.id, dark);
+    // And the lava, burning through the night (`glowLava`).
+    if (dark > 0.02 && this.lavaN) glowLava(ctx, this.lavaSeen, this.lavaN, dark, this.anim, this.calm);
     // And the spells' light, over the night too, and the screen's tint for a great one of your own over that.
     this.spells.glowPass(ctx);
     this.spells.screenPass(ctx, this.canvas.width, this.canvas.height);

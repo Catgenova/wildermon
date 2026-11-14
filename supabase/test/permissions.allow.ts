@@ -186,6 +186,8 @@ export const TABLES: Record<string, Read> = {
   lair_seen: 'none',
   land_chunk: 'none',
   land_move: 'none',
+  // Volcano Isle's maze of lava a day at a time (`lava.ts`): the island's own; every browser works it out from the seed.
+  lava_day: 'none',
   mote_day: 'none',
   mote_swirl: 'none',
   // Every swirl collected, for attunement (`infusion.ts`): the island's own.

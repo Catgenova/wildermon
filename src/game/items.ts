@@ -532,6 +532,8 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   herb_tea: { name: 'Herb tea', category: 'misc', weight: 0.3, stackable: true, decay: 30, stamina: 0.2, description: 'Drink: +{stamina:pct} stamina.' },
   salve: { name: 'Salve', category: 'misc', weight: 0.1, stackable: true, decay: 6, description: 'Rub in over a dressing: the wound cannot go bad until it closes.' },
   tincture: { name: 'Tincture', category: 'misc', weight: 0.1, stackable: true, decay: 3, description: 'Effect: none.' },
+  // Drunk against Volcano Isle's heat (`lava.ts`, where its numbers are filled in).
+  cooling_draught: { name: 'Cooling draught', category: 'misc', weight: 0.3, stackable: true, decay: 30, description: 'Drink: heat −{drop:pct}; heat fill ×{fill} for {mins} min.' },
   cover: { name: 'Healing cover', category: 'tool', weight: 0.2, stackable: true, decay: 12, description: 'On the wound it suits: stops bleeding, keeps dirt out, closes it {cover.overCloth} times as fast as cloth.' },
   dye_bucket: { name: 'Bucket of dye', category: 'tool', weight: 6, decay: 10,
     description: 'Up to {bucketLitres} litres of one mix of red, yellow and blue at one QL, in the lye bucket it was boiled in. A boil: {dyeBoil} litres of one primary, {perKg} litre per kg of dyestuff. '

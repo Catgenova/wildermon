@@ -3175,6 +3175,12 @@
     "why": "Asked for: monsters come only from lairs, with no wandering spawns and no raiding patrols. Every lair kind and number the same on both sides; each sited on its ground, kept from every token and every other lair, the dragon on Volcano Isle's highest ground, and no settlement founded that near one; its garrison up, no monster out of the wild, none past its leash however it is moved, none hunting past it; the boss out after the garrison and told round; a hoard share for each who dealt a tenth of its health, never silver or rare, the map and the book at their odds held at their lines and over a seeded draw; the cleared ring safe and stocked half again; every restock a second either side of its time, the dragon's day; three clears in seven days and it moves; Track to the nearest lair; hoard scales' raised cap. Every clock moved on the lair, never the wall's."
   },
   {
+    "file": "supabase/test/lava.ts",
+    "title": "Volcano Isle's lava lies in a maze laid at every dawn, always with a way through, and its heat is held off",
+    "shard": 3,
+    "why": "Asked for: a shifting labyrinth of lava daily on Volcano Isle's upper slopes, and heat to prepare for. The day's maze (a spanning tree of rooms off the seed and the day) the same on both sides for sixty days, and every tile of the box today and tomorrow; a way with no lava from the foot to the caldera, the summit lair, a lair in the band and every seryll seam on sixty days, and on the live island's generated volcano; no lava on a settlement, a road, a building, a piece or a lair; health off on lava, nothing planted, dug, set down or founded on it in the same words, no creature on it; the heat filling, twice beside lava, burning at full only for the part of a stretch it was full, draining below; each of dragon scale, an ice infusion and a cooling draught slowing it by its stated amount; the draught brewed, drunk and refused; and the maze made and a tile asked, timed on both sides."
+  },
+  {
     "file": "supabase/test/path.ts",
     "title": "The Path: steps the island confirms, sites, supplies and noted kinds",
     "shard": 5,
