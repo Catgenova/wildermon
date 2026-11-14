@@ -6,7 +6,8 @@
  * both sides:
  *
  *   * the island the dragon keeps to is the same island on both (`Region.lair`, `monster_isle`), and its middle too;
- *   * with nothing but a dragon left to stand up, nothing does on the Crescent, and a dragon does on Volcano Isle;
+ *   * the wild's roll puts no dragon down on the Crescent or on Volcano Isle: a dragon stands up only at its roost, which is
+ *     sited on Volcano Isle (`lairs.ts`; `supabase/test/lairs.ts` sites it there);
  *   * a grand map's hoard, which a dragon guards, is buried on Volcano Isle wherever the map turned up, and one buried
  *     elsewhere before now moves there when its map is asked where it points; a worn map's stays where it is;
  *   * no wildermon on the island is called its kind's old name, and a save holding one called so comes back calling it
@@ -17,7 +18,7 @@
  */
 import { chartRegion } from '../../src/world/chart';
 import { lairOf, REGIONS } from '../../src/world/regions';
-import { FORMER_NAME, MONSTER_CAP, SPECIES } from '../../src/game/creatures';
+import { FORMER_NAME, SPECIES, WILD_SPECIES } from '../../src/game/creatures';
 import { Game } from '../../src/game/game';
 import { packLand, packWorld, unpack } from '../../src/game/save';
 import { hoardOf, hoardSpot, TREASURE_TIERS } from '../../src/game/treasure';
@@ -48,17 +49,15 @@ begin
   select wd.id, wd.size into w, v_size from world wd where exists (select 1 from player p where p.world_id = wd.id) order by wd.size desc limit 1;
   select uid into me from player where world_id = w limit 1;
   update deed set x = -100000, y = -100000 where world_id = w;
-  -- Nothing left with room under its cap but the dragon, and no dragon standing anywhere.
-  update wild_table set cap = 0 where monster and species <> 'dragon';
-  delete from creature where world_id = w and species = 'dragon';
   -- A tile on the Crescent and one on Volcano Isle.
   select gx, gy into cx, cy from generate_series(2, v_size - 3, greatest(1, v_size / 128)) gx, generate_series(2, v_size - 3, greatest(1, v_size / 128)) gy
    where region_at(w, gx + 0.5, gy + 0.5) = ${CRESCENT} order by gx, gy limit 1;
   select gx, gy into vx, vy from generate_series(2, v_size - 3, greatest(1, v_size / 128)) gx, generate_series(2, v_size - 3, greatest(1, v_size / 128)) gy
    where region_at(w, gx + 0.5, gy + 0.5) = ${VOLCANO} order by gx, gy limit 1;
   insert into said values ('FOUND', (cx is not null) || '|' || (vx is not null));
-  insert into said select 'CRESCENT', coalesce(string_agg(distinct coalesce(pick_monster(w, cx, cy), 'none'), ','), 'none') from generate_series(1, 30);
-  insert into said select 'VOLCANO', coalesce(string_agg(distinct coalesce(pick_monster(w, vx, vy), 'none'), ','), 'none') from generate_series(1, 30);
+  -- What the wild puts down on each, over many rolls: never a dragon (it stands up only at its roost).
+  insert into said select 'CRESCENT', count(*) filter (where got = 'dragon')::text from (select pick_wild(w, cx, cy) as got from generate_series(1, 300)) x;
+  insert into said select 'VOLCANO', count(*) filter (where got = 'dragon')::text from (select pick_wild(w, vx, vy) as got from generate_series(1, 300)) x;
   -- Ground high enough to bury a hoard in round Volcano Isle's middle, for an island made flat for the suite.
   for hx in floor(${LAIR.at[0]} * v_size)::int - 40 .. floor(${LAIR.at[0]} * v_size)::int + 40 loop
     for hy in floor(${LAIR.at[1]} * v_size)::int - 40 .. floor(${LAIR.at[1]} * v_size)::int + 40 loop
@@ -88,8 +87,8 @@ rollback;
 const lines = isle.split('\n').filter((l) => l.includes('='));
 const said = (k: string): string[] => lines.filter((l) => l.startsWith(`${k}=`)).map((l) => l.slice(k.length + 1));
 check('on the island: a tile on the Crescent and one on Volcano Isle', said('FOUND')[0] === 'true|true', said('FOUND')[0]);
-check('with only a dragon left to stand up, nothing does on the Crescent', said('CRESCENT')[0] === 'none', said('CRESCENT')[0]);
-check(`and a dragon does on ${LAIR.name}`, said('VOLCANO')[0] === 'dragon', said('VOLCANO')[0]);
+check('the wild puts no dragon down on the Crescent', said('CRESCENT')[0] === '0', said('CRESCENT')[0]);
+check(`nor on ${LAIR.name}: a dragon stands up only at its roost`, said('VOLCANO')[0] === '0', said('VOLCANO')[0]);
 check(`a ${GRAND.name} turned up on the Crescent is a map to ${LAIR.name}, every time`,
   said('GRAND').length === 5 && said('GRAND').every((r) => r === String(VOLCANO)), said('GRAND').join(','));
 check(`one buried on the Crescent before now moves to ${LAIR.name} when its map is asked`, said('ASTRAY')[0] === String(VOLCANO), said('ASTRAY')[0]);
@@ -112,19 +111,9 @@ const tileOf = (region: number): [number, number] => {
   return [-1, -1];
 };
 const [bcx, bcy] = tileOf(CRESCENT);
-const [bvx, bvy] = tileOf(VOLCANO);
 for (const c of [...game.creatures.list.values()]) game.creatures.remove(c.id);
 game.deed = null;
-const caps = { ...MONSTER_CAP };
-for (const id of Object.keys(MONSTER_CAP)) if (id !== 'dragon') MONSTER_CAP[id] = 0;
-const pick = (x: number, y: number): string => {
-  const got = new Set<string>();
-  for (let i = 0; i < 30; i++) got.add((game.creatures as unknown as { pickMonster(g: Game, x: number, y: number): string | null }).pickMonster(game, x, y) ?? 'none');
-  return [...got].sort().join(',');
-};
-check('in the browser: with only a dragon left to stand up, nothing does on the Crescent', pick(bcx, bcy) === 'none', pick(bcx, bcy));
-check(`and a dragon does on ${LAIR.name}`, pick(bvx, bvy) === 'dragon', pick(bvx, bvy));
-Object.assign(MONSTER_CAP, caps);
+check('in the browser: the wild\'s roll holds no monster, the dragon least of all', WILD_SPECIES.every(([id]) => !SPECIES[id]?.monster), WILD_SPECIES.filter(([id]) => SPECIES[id]?.monster).join(','));
 const spots = Array.from({ length: 5 }, () => hoardSpot(game, bcx, bcy, 'dragon'));
 check(`a ${GRAND.name}'s hoard is buried on ${LAIR.name} from the Crescent, every time`,
   spots.every((s) => !!s && chartRegion(s.x + 0.5, s.y + 0.5, size) === VOLCANO), spots.map((s) => s && chartRegion(s.x + 0.5, s.y + 0.5, size)).join(','));

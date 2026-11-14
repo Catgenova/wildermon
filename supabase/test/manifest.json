@@ -3031,5 +3031,11 @@
     "title": "Sleeves are shawls, and the plate shawl takes fur",
     "shard": 6,
     "why": "Asked for: \"Change the 'sleeves' equipment type to 'shawl' type. All existing crafted sleeves become shawls. Amend the plate shawl to include metal, fur in ingredients.\" The slot Shawl where Arms was, the five shawls in it, a blow to the arms on it at the arms' share, on both sides. 20261120000011 over a world planted with the old ids in a transaction it rolls back -- sleeves worn, in the pack, in a crate and on a stall, plate arms, their mould and castings of them in the pack and a smelter, a sleeves recipe queued, known, on the toolbelt, in the ledger and tally, a sale, an order and a count -- leaves shawls in every one of those places, worn in the shawl slot, every other column of every row as it was, nothing on the island naming an old id; run again, nothing changes. A blow to the arms damages the shawl worn, the shawl weighs in what you wear and stays on the body at a death. A plate shawl casting is refused at the anvil one fur short in the browser's words, a failed go spends no fur, a go that lands gives a shawl of the casting's metal and spends the fur."
+  },
+  {
+    "file": "supabase/test/lairs.ts",
+    "title": "Monsters come only from lairs, leashed to them, and a lair's boss opens a hoard",
+    "shard": 3,
+    "why": "Asked for: monsters come only from lairs, with no wandering spawns and no raiding patrols. Every lair kind and number the same on both sides; each sited on its ground, kept from every token and every other lair, the dragon on Volcano Isle's highest ground, and no settlement founded that near one; its garrison up, no monster out of the wild, none past its leash however it is moved, none hunting past it; the boss out after the garrison and told round; a hoard share for each who dealt a tenth of its health, never silver or rare, the map and the book at their odds held at their lines and over a seeded draw; the cleared ring safe and stocked half again; every restock a second either side of its time, the dragon's day; three clears in seven days and it moves; Track to the nearest lair; hoard scales' raised cap. Every clock moved on the lair, never the wall's."
   }
 ]
