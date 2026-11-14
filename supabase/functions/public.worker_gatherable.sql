@@ -86,7 +86,8 @@ begin
     return here = tile_id('Stump') and creature_tile_ok(p_world, p_x, p_y);
   elsif p_kind = 'mine' then
     rock := bedrock_at(p_world, p_x, p_y);
-    return here = tile_id('Rock') and rock.seam and rock.level <= task_skill(c)
+    return here = tile_id('Rock') and rock.seam
+       and (rock.level <= task_skill(c) or coalesce((select sd.any_seam from species_def sd where sd.id = c.species), false))
        and rock_height(p_world, p_x, p_y) > -mine_depth() and face_reach(p_world, p_x, p_y);
   elsif p_kind = 'quarry' then
     rock := bedrock_at(p_world, p_x, p_y);

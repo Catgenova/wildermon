@@ -12,6 +12,7 @@ AS $function$
     and land_tile(p_world, gx, gy) = tile_id('Rock')
     and (bedrock_at(p_world, gx, gy)).seam
     and (bedrock_at(p_world, gx, gy)).level > task_skill(c)
+    and not coalesce((select sd.any_seam from species_def sd where sd.id = c.species), false)
     and rock_height(p_world, gx, gy) > -mine_depth()
     and face_reach(p_world, gx, gy)
   order by (bedrock_at(p_world, gx, gy)).level, greatest(abs(gx - p_cx), abs(gy - p_cy))

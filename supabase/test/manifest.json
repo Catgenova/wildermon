@@ -1960,6 +1960,12 @@
     "why": "Asked for: \"Allow wildermon to Work Around Me, provided there is storage nearby (carts and wagons and accessible boats included).\" Its ground is its keeper's tile; its loads go into crates, furniture, carts, wagons and boats its keeper may use within its range; none, or full, and it idles and drops nothing. Stop, or its keeper offline, and it goes back into its crate or to following, on both sides."
   },
   {
+    "file": "supabase/test/moleseam.ts",
+    "title": "The Ironemole line mines any bare seam; a miner says why it is idle",
+    "shard": 6,
+    "why": "Asked for: \"Remove ore level requirements for oremander line.\" Reported: an Ironemole at mining 1 by bare rock said \"no bare rock with a seam in it\". An Ironemole at mining 1 mines bare iron; another miner and you do not, and its card names the seam and the mining it needs; bare rock with no seam says so; a kind's range per step is the defs' on both sides."
+  },
+  {
     "file": "supabase/test/aroundbehind.ts",
     "title": "A worker round you left behind comes to you",
     "shard": 6,

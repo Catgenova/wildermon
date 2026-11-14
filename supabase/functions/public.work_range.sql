@@ -7,7 +7,7 @@ CREATE OR REPLACE FUNCTION public.work_range(c creature)
 AS $function$
 begin
   return (
-select round((d.work_range + floor(task_skill(c) / 10) * 10) * beast_mul(c, 'range'))::int
+select round((d.work_range + floor(task_skill(c) / skill_step()) * coalesce(d.range_per_step, range_per_step())) * beast_mul(c, 'range'))::int
   from species_def d where d.id = c.species
   );
 end $function$

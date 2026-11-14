@@ -95,6 +95,7 @@ import { BAG_CARRY as BAG_CARRY_293 } from '../../game/gear';
 import { OLD_AT as OLD_AT_287, OLD_FOR as OLD_FOR_287, YOUNG_FOR as YOUNG_FOR_287 } from '../../game/creatures';
 import { AROUND_LEASH as AROUND_LEASH_602, AROUND_LEFT as AROUND_LEFT_602 } from '../../game/creatures';
 import { PIER_SHOO as PIER_SHOO_602 } from '../../game/piers';
+import { RANGE_PER_STEP as RANGE_PER_STEP_606, SKILL_STEP as SKILL_STEP_606 } from '../../game/creatures';
 import { HAUL_LEARN as HAUL_LEARN_290, HAUL_LEARN_RISE as HAUL_LEARN_RISE_290, HAUL_LEARN_STEEP as HAUL_LEARN_STEEP_290 } from '../../game/creatures';
 import { HAUL_LEARN as HAUL_LEARN_450, HAUL_LEARN_STEEP as HAUL_LEARN_STEEP_450, HAUL_STEEP_AT as HAUL_STEEP_AT_450 } from '../../game/creatures';
 import { SEASON_DAYS, SHORT_SEASON_DAYS, YEAR_DAYS, YEAR_FROM } from '../../world/calendar';
@@ -4458,6 +4459,25 @@ export const NEWS: News[] = [
       `New: rowing under way: ${OAR_DROPS} drops a blade at the catch; whirl pair a blade a stroke, ${SWIRL_SECS} s.`,
       'Without a graphics card: swimming strokes\' splashes, rings treading water, the float\'s strike and a catch only.',
     ],
+  },
+  // The Ironemole line takes any seam; a miner's idle line; a kind's own range per step (`anySeam`, `mine_idle`, `range_per_step`).
+  {
+    n: 606,
+    day: '2026-11-14',
+    lines: () => {
+      const seams = ROCK_VARIANTS.filter((r) => r.level && !r.yields.endsWith('_shards'));
+      const levels = [...new Set(seams.map((r) => r.level ?? 0))].sort((a, b) => a - b);
+      const was = levels.map((lv) => `${seams.filter((r) => r.level === lv).map((r) => r.name.replace(/ (vein|seam)$/, '').toLowerCase()).join(' and ')} at ${lv}`).join(', ');
+      const line = [SPECIES.mola.name, ...(SPECIES.mola.stages ?? []).map((s) => s.name)].join(', ');
+      const own = Object.values(SPECIES).filter((d) => d.rangePerStep !== undefined && d.rangePerStep !== RANGE_PER_STEP_606)
+        .map((d) => `${d.name} ${d.rangePerStep}`).join(', ');
+      return [
+        `Changed: ${line}: any bare seam, any mining level (was: ${was}). Yours and every other kind's: unchanged.`,
+        `Fixed: an idle miner's card: a bare seam above its mining ("${idleSays({ why: 'seam', n: 4, what: ['iron_ore'] }, 'mine', null, 1)}"); `
+          + `bare rock with no seam ("${idleSays({ why: 'noseam', n: SPECIES.mola.workRange }, 'mine')}") (was: "${idleSays({ why: 'range', n: SPECIES.mola.workRange }, 'mine')}" for both).`,
+        `Fixed: work range per ${SKILL_STEP_606} levels of task skill, on the island as on the card: ${own} tiles (was: ${RANGE_PER_STEP_606} on the island for every kind).`,
+      ];
+    },
   },
   {
     n: 605,

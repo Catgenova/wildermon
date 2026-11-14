@@ -22,6 +22,7 @@ import { countOf, itemDef } from './items';
 import { RECIPE_BY_ID } from './recipes';
 import { SKEP_IDLE } from './bees';
 import { SEASONS } from '../world/calendar';
+import { isSeam, ROCK_VARIANTS } from '../world/tiles';
 import { SKILL_BY_ID } from './skills';
 import { article, listed, listedOr } from './words';
 import { LEDGER_SHOWN, ledgerDays, type Idle, type LedgerDay, type WorkLedger } from './workerledger';
@@ -138,12 +139,19 @@ const secondsMore = (secs: number): string => {
   return `${n} second${n === 1 ? '' : 's'} left`;
 };
 
+/** The seams any mining takes, and their level: "copper vein and coal seam: 1", for a `seam` reason. */
+const easiestSeams = (): string => {
+  const seams = ROCK_VARIANTS.filter((r) => isSeam(r) && r.level);
+  const least = Math.min(...seams.map((r) => r.level ?? 0));
+  return `${listed(seams.filter((r) => r.level === least).map((r) => r.name.toLowerCase()))}: ${least}`;
+};
+
 /**
  * The sentence for a reason, in the game's own terms and with its number:
  * "Idle: no reed bed within 30 tiles of the token." `kind` is the trade it
- * works; `carrying` the name of what is in its arms, for `full`.
+ * works; `carrying` the name of what is in its arms, for `full`; `skill` its task skill, for `seam`.
  */
-export function idleSays(idle: Idle, kind: GatherKind | null | undefined, carrying?: string | null): string {
+export function idleSays(idle: Idle, kind: GatherKind | null | undefined, carrying?: string | null, skill?: number): string {
   const n = Math.round(idle.n);
   // Where it works from: its keeper, its post or the totem.
   const from = idle.around ? 'you' : idle.post ? 'its work post' : 'the totem';
@@ -177,6 +185,15 @@ export function idleSays(idle: Idle, kind: GatherKind | null | undefined, carryi
       return `Idle: holding ${carrying ? carrying.toLowerCase() : 'a load'}, settlement storage full.`;
     case 'nostore':
       return `Idle: no storage within ${n} tiles of you.`;
+    // A bare seam in range above its mining (the island's `mine_idle`, off `seam_beyond`): the nearest of the softest.
+    case 'seam': {
+      const rock = ROCK_VARIANTS.find((r) => r.yields === idle.what?.[0]);
+      const mining = skill !== undefined ? ` (yours ${skill.toFixed(1)})` : '';
+      return `Idle: ${rock?.name ?? 'a seam'} ${n} ${n === 1 ? 'tile' : 'tiles'} from ${from} needs mining ${rock?.level ?? '?'}${mining}; ${easiestSeams()}.`;
+    }
+    // Bare rock in range and not a seam in any of it (the island's `mine_idle`).
+    case 'noseam':
+      return `Idle: no seam in the bare rock within ${n} tiles of ${from}.`;
     case 'far':
       if (idle.around) return `Idle: walking to you, ${n} tiles away.`;
       return `Idle: walking home, ${n} tiles from its work.`;
