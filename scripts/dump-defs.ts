@@ -36,8 +36,12 @@ import { COAX_LAPSE, COAX_STEP, HERD_REACH, WILD_STAY, HUNT_HOME, HUNT_LEASH, HU
 import { FAMILY_OF, KNACK_BONUS, KNACK_BY_LEARNING, KNACK_CAP, KNACK_GO, KNACK_HOME, KNACK_ODDS, TITLES } from '../src/game/titles';
 import { KEPT_BEST, NUTRIENT_DECAY, TABLE_BEST } from '../src/game/nutrition';
 import { CROSS_CARE, CROSS_CHANCE, CROSS_SKILL, HYBRID_HARDY, HYBRID_WORK } from '../src/game/hybridlist';
-import { SPECIES, WILD_SPECIES, MONSTERS, MONSTER_CAP, MONSTER_SHARE, AGES,
+import { SPECIES, WILD_SPECIES, AGES,
          GATHER_SKILL, GATHER_VERB, GATHER_DO, SMITH_TRADES, smithLumps, STOKE_FIRST, STOKE_SMELTS_AT, BUSH_VINES_AT, type GatherKind } from '../src/game/creatures';
+import {
+  EDGE_TREES, HILL_SLOPE, HOARD_BOOK, HOARD_SCALE, HOARD_SCALE_CAP, HOARD_SHARE, LAIR_ANNOUNCE, LAIR_APART, LAIR_KINDS, LAIR_LEASH, LAIR_LOOK_EVERY, LAIR_MOVE_CLEARS,
+  LAIR_MOVE_DAYS, LAIR_RING, LAIR_RING_WILD, LAIR_SIGHT, LAIR_TRACK, lairRingWant, OPEN_CLEAR, OPEN_SLOPE,
+} from '../src/game/lairs';
 import { CHANNELS, TRAITS, WILD_ODDS, TRAIT_SLOTS, SLOTS_PER_STAGE, FIGHT_SHARE, GRADE_STEP, LAMP_TIER_ODDS, MUTATION_ODDS, PEDIGREE_MOST, PEDIGREE_STEP, TIERS } from '../src/game/traits';
 import { BOARD_TOP } from '../src/game/boards';
 import { CRAFT_HEAD, CRAFT_REACH } from '../src/game/recipes';
@@ -119,7 +123,7 @@ import { BRAZIER_BURN_AT_HUNDRED, BRAZIER_BURN_AT_ONE, BRAZIER_CAPACITY, LYE_USE
 import { FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_SPAN, WILD_STAGE_TAME, TAME_HARD, HAUL_LEARN, HAUL_LEARN_RISE, HAUL_LEARN_STEEP } from '../src/game/creatures';
 import { COLOUR_FORM_ODDS, FORM_PASS, LARGE_HEALTH, SIZE_FORM_ODDS, SMALL_SPEED } from '../src/game/wildforms';
 import { WORK_ITEMS } from '../src/game/workstats';
-import { CARE_BONUS, CARE_HOURS, GRAZE_FILL, GRAZE_HUNGRY, PER_REGION, WILD_TARGET } from '../src/game/creatures';
+import { CARE_BONUS, CARE_HOURS, GRAZE_FILL, GRAZE_HUNGRY, PER_REGION, REGION as WILD_SQUARE, WILD_TARGET } from '../src/game/creatures';
 import { BRACE_MOST, BRACE_STEP, BRIDLE_PACE, COLLAR_CUT } from '../src/game/creatures';
 import { BARDING_CUT, GEAR_FLOOR, HARNESS_PACE, PACK_LOADS } from '../src/game/wildgear';
 import { WORN_FLOOR, WORN_SPAN } from '../src/game/limits';
@@ -1216,7 +1220,7 @@ for (const r of RECIPES) {
   for (const i of r.inputs) if (i.item && !NAMED.has(i.item)) unnamed.add(i.item);
 }
 // A piece of furniture with no row was called by its id and weighed a kilo in a pack: "altar needs a capital".
-const unnamedPieces = FURNITURE.filter((f) => !NAMED.has(f.id) && !f.grave).map((f) => f.id);
+const unnamedPieces = FURNITURE.filter((f) => !NAMED.has(f.id) && !f.grave && !f.lair).map((f) => f.id);
 if (unnamedPieces.length) throw new Error(`furniture with no item definition: ${unnamedPieces.join(', ')}`);
 for (const [id, d] of Object.entries(ITEM_DEFS)) {
   out.push(`insert into item_def values (${q(id)}, ${q(d.name)}, ${q(d.category)}, ${q(d.weight)}, ${q(!!d.stackable)}, ${q(d.decay)}, ${q(d.charges)});`);
@@ -1529,7 +1533,6 @@ for (const [id, skill] of Object.entries(GATHER_SKILL)) {
 for (const [id, pace] of Object.entries(LEARN_PACE)) out.push(`insert into learn_pace_def values (${q(id)}, ${q(pace)});`);
 for (const [item, content] of Object.entries(METAL_CONTENT).sort()) out.push(`insert into melt_def values (${q(item)}, ${q(content)});`);
 for (const [id, weight] of WILD_SPECIES) out.push(`insert into wild_table values (${q(id)}, ${q(weight)}, false, null);`);
-for (const [id, weight] of MONSTERS) out.push(`insert into wild_table values (${q(id)}, ${q(weight)}, true, ${q(MONSTER_CAP[id] ?? 1)});`);
 for (const t of TRAITS) {
   out.push(`insert into trait_def values (${q(t.id)}, ${q(t.name)}, ${q(t.tier)}, ${q(!!t.aura)}, ${q('')}, ${q(t.family ?? null)});`);
   for (const [channel, mul] of Object.entries(t.effects)) out.push(`insert into trait_effect values (${q(t.id)}, ${q(channel)}, ${q(mul)});`);
@@ -1541,16 +1544,11 @@ for (const a of Object.values(AGES)) {
 }
 ['common', 'rare', 'supreme', 'fantastic'].forEach((tier, ord) =>
   out.push(`insert into tier_odds values (${q(tier)}, ${q(ord)}, ${q(WILD_ODDS[tier as 'common'])});`));
-// The two loose numbers, as functions rather than a row with no table to be in.
-out.push(`create or replace function monster_share() returns double precision language sql immutable as $fn$ select ${q(MONSTER_SHARE)}::double precision $fn$;`);
 /*
- * What each island of the chart does with its wild and its woods, by its
- * index in REGIONS, which is the byte `chart_region` holds for a stretch of the
- * chart: how many times the island-wide cap each monster may number there
- * (nought for an island whose wild is the usual mix), and whether trees seed
- * there at all.
+ * What each island of the chart does with its woods, by its index in REGIONS,
+ * which is the byte `chart_region` holds for a stretch of the chart: whether
+ * trees seed there at all (`region_treeless` below).
  */
-out.push(`create or replace function region_monsters(p_region int) returns int language sql immutable as $fn$ select case p_region ${REGIONS.map((R, i) => (R.monsters ? `when ${i} then ${R.monsters} ` : '')).join('')}else 0 end $fn$;`);
 // The middle of each island on the chart, nought to one each way (`Region.at`): where a hoard kept to it is buried round.
 out.push(`create or replace function region_middle(p_region int) returns double precision[] language sql immutable as $fn$ select case p_region ${REGIONS.map((R, i) => `when ${i} then array[${q(R.at[0])}, ${q(R.at[1])}]::double precision[] `).join('')}end $fn$;`);
 // The monsters kept to one island, by its index in REGIONS (`Region.lair`); null for one that may stand up on any.
@@ -3033,4 +3031,25 @@ for (const [fn, v] of [
 ] as Array<[string, string]>) {
   out.push(`create or replace function ${fn}() returns text language sql immutable as $fn$ select ${q(v)} $fn$;`);
 }
+/*
+ * Monster lairs (`lairs.ts`): each kind's site, count, boss, restock, distance
+ * from a settlement token and hoard; each garrison's kinds in the order a
+ * restock fills them; and the numbers every lair keeps to.
+ */
+out.push(`create or replace function lair_kinds() returns table (id text, name text, species text, site text, count int, boss text, boss_health double precision, boss_attack double precision, restock double precision, keep_off int, map double precision, trophy text, scales int) language sql immutable as $fn$ select * from (values ${
+  LAIR_KINDS.map((k) => `(${q(k.id)}, ${q(k.name)}, ${q(k.species)}, ${q(k.site)}, ${k.count}, ${q(k.boss)}::text, ${q(k.bossHealth)}::double precision, ${q(k.bossAttack)}::double precision, ${q(k.restock)}::double precision, ${k.keepOff}, ${q(k.map)}::double precision, ${q(k.trophy)}, ${k.scales})`).join(', ')
+}) v (id, name, species, site, count, boss, boss_health, boss_attack, restock, keep_off, map, trophy, scales) $fn$;`);
+out.push(`create or replace function lair_garrison() returns table (kind text, ord int, species text, least_n int, most_n int) language sql immutable as $fn$ select * from (values ${
+  LAIR_KINDS.flatMap((k) => k.garrison.map(([sp, lo, hi], i) => `(${q(k.id)}, ${i}, ${q(sp)}, ${lo}, ${hi})`)).join(', ') || `(null::text, 0, null::text, 0, 0)`
+}) v (kind, ord, species, least_n, most_n) where v.kind is not null $fn$;`);
+for (const [fn, v] of [
+  ['lair_leash', LAIR_LEASH], ['lair_ring', LAIR_RING], ['lair_ring_wild', LAIR_RING_WILD], ['lair_announce', LAIR_ANNOUNCE],
+  ['hoard_share', HOARD_SHARE], ['hoard_book', HOARD_BOOK], ['hoard_scale_cap', HOARD_SCALE_CAP],
+  ['lair_move_clears', LAIR_MOVE_CLEARS], ['lair_move_days', LAIR_MOVE_DAYS], ['lair_track', LAIR_TRACK], ['lair_sight', LAIR_SIGHT],
+  ['lair_apart', LAIR_APART], ['lair_look_every', LAIR_LOOK_EVERY], ['edge_trees', EDGE_TREES], ['open_clear', OPEN_CLEAR], ['open_slope', OPEN_SLOPE], ['hill_slope', HILL_SLOPE],
+] as Array<[string, number]>) {
+  out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);
+}
+out.push(`create or replace function lair_ring_want() returns int language sql immutable as $fn$ select ${lairRingWant(PER_REGION, WILD_SQUARE)} $fn$;`);
+out.push(`create or replace function hoard_scale() returns text language sql immutable as $fn$ select ${q(HOARD_SCALE)} $fn$;`);
 console.log(out.join('\n'));

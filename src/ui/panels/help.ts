@@ -69,9 +69,9 @@ import { CRATE_DEFS, SUBTILES } from '../../game/crates';
 import { HAUL_LEARN, HAUL_LEARN_RISE, HAUL_LEARN_STEEP, HAUL_SHOE_SHARE, HAUL_SKILL, SHOE_DAYS, SHOE_PACE, SHOE_STEP, SHOES_PER_MOUNT } from '../../game/creatures';
 import { PERK_STAGE, perkLine, perkSays, ringKeepsOut, STAGE_PERKS } from '../../game/creatures';
 import {
-  ALLOY_QL, AGES, BLOW_SHARE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, cookRecipes, restoredMul, STYLE_SAYS, sparTaskSays, SPAR_SLACK, SPAR_YIELD, abilityName, abilitySays, GATHER_DO, GATHER_SKILL, GATHER_VERB, workerSkipsTools, REED_LEVELS, RESIN_TAPPED, SKILL_TOP, TEND_JOBS, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
+  ALLOY_QL, AGES, BLOW_SHARE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, cookRecipes, restoredMul, STYLE_SAYS, sparTaskSays, SPAR_SLACK, SPAR_YIELD, abilityName, abilitySays, GATHER_DO, GATHER_SKILL, GATHER_VERB, workerSkipsTools, REED_LEVELS, RESIN_TAPPED, SKILL_TOP, TEND_JOBS, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT,
   BED_REST, DEN_HEALTH, restFor, SPECIALTY_AT, SPECIALTY_BONUS, TIRE_GOES, UNFED_PACE, unfedSays, UPKEEP_FOR,
-  BASE_STATS, BRACE_MOST, BRACE_STEP, BRIDLE_PACE, COLLAR_CUT, BLOW_MEMORY, EVOLVE_AT, FILE_RARITY_ODDS, HOME_SLACK, LEARNS_SAYS, PULL_LEARN, MONSTER_SHARE, MONSTERS, OLD_AT, WILD_RESET_DAYS, WILD_STAY, POT_MOST, POT_STEP, RANGE_PER_STEP, rangeSteps, seasonSays, SKILL_STEP, SPECIES, stageSays, trainedHit, YOUNG_FOR, FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, levelSkill, stageLevels, TAME_HARD, tameLearn, tameNeeds, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME, LEARN_PACE, learnPaceSays, STAGE_LOADS, TEND_REACH,
+  BASE_STATS, BRACE_MOST, BRACE_STEP, BRIDLE_PACE, COLLAR_CUT, BLOW_MEMORY, EVOLVE_AT, FILE_RARITY_ODDS, HOME_SLACK, LEARNS_SAYS, PULL_LEARN, MONSTER_KINDS, OLD_AT, PER_REGION, REGION as WILD_SQUARE, WILD_RESET_DAYS, WILD_STAY, POT_MOST, POT_STEP, RANGE_PER_STEP, rangeSteps, seasonSays, SKILL_STEP, SPECIES, stageSays, trainedHit, YOUNG_FOR, FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, levelSkill, stageLevels, TAME_HARD, tameLearn, tameNeeds, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME, LEARN_PACE, learnPaceSays, STAGE_LOADS, TEND_REACH,
 } from '../../game/creatures';
 import { DEED_UPGRADES } from '../../game/deed';
 import { FLIGHT_TILES, idleSays, LEDGER_ITEMS, LEDGER_SHOWN, workDoneLine } from '../../game/workerlog';
@@ -179,6 +179,10 @@ import { AWARE_PER_LEVEL, AWARE_TRAIT_STEP, awareShareAbove, awareTraitEase, DEE
 import { NIGHT_EYES_FROM } from '../../game/learn';
 import { NO_GO, pointAt, windWord, windWorth } from '../../game/wind';
 import { article, capital, finePercent, listed, listedOr, percent, timeWords } from '../../game/words';
+import {
+  bossSays, garrisonSays, HOARD_SCALE, HOARD_SCALE_CAP, HOARD_SHARE, hoardBook, hoardSays, LAIR_ANNOUNCE, LAIR_KINDS, LAIR_LEASH, LAIR_MOVE_CLEARS, LAIR_MOVE_DAYS,
+  LAIR_RING, LAIR_RING_WILD, LAIR_SIGHT, LAIR_TRACK, lairRingUsual, lairRingWant, restockSays, SITE_SAYS,
+} from '../../game/lairs';
 import { DODGE_MOST } from '../../game/fight';
 import { CONTROL_HIT } from '../../game/gear';
 import { BACK_PACE, BACK_SLACK, CIRCLE_ARC, CIRCLE_R, COWARD_AT, COWARD_DRAG, DRAW_WALK, FALL_BACK, FLEE_SECS, GUARD_RANGE, HUNTER_TURN, KEEP_OFF, MONSTER_TURN, PACK_CALL, PACK_MOST, PACK_RANGE, THROW_HIT, THROW_REACH } from '../../game/fight';
@@ -833,7 +837,6 @@ const lowerFirst = (t: string): string => (t ? `${t[0].toLowerCase()}${t.slice(1
 /** The things that are not wildermon, how far off they notice you, and how their weights add up. */
 const MONSTER_SORTS = Object.values(SPECIES).filter((s) => s.monster);
 const NOTICED = MONSTER_SORTS.map((s) => s.notice ?? HUNT_SIGHT).sort((a, b) => a - b);
-const MONSTER_WEIGHT = MONSTERS.reduce((n, [, w]) => n + w, 0);
 /** A hoard's deep metals: the ones nobody strikes a coin from. */
 const HOARD_DEEP = HOARD_METALS.filter((id) => !PRECIOUS_METALS.some((m) => id === `${m}_lump`));
 /** The composite bow, the best of the wooden ones, and what a suit of scale takes. */
@@ -3595,14 +3598,9 @@ export function helpText(): string {
       <li>Dragon subspecies, 1 in ${SPECIES.dragon.subspecies!.length} wild each, same health, blow and speed: ${listed(SPECIES.dragon.subspecies!.map((n) => `<b>${n}</b>`))}.</li>
       <li>Goblin subspecies, 1 in ${SPECIES.goblin.subspecies!.length} wild each, same health, blow and speed: ${listed(SPECIES.goblin.subspecies!.map((n) => `<b>${n}</b>`))}.</li>
       <li>Notice range ${NOTICED[0]} to ${NOTICED[NOTICED.length - 1]} tiles (other hunters ${HUNT_SIGHT}); they come straight at you and chase far.</li>
-      <li><b>Rare</b>: ${percent(MONSTER_SHARE)} of wild spawns; of those ${listed(MONSTERS.map(([id, w]) => `${percent(w / MONSTER_WEIGHT)} ${SPECIES[id].name.toLowerCase()}s`))}.</li>
-      <li>Max alive: ${listed(MONSTERS.map(([id]) => `${MONSTER_CAP[id] ?? 1} ${SPECIES[id].name.toLowerCase()}${(MONSTER_CAP[id] ?? 1) === 1 ? '' : 's'}`))}.
-      Distance kept from your settlement totem: ${listed(MONSTERS.map(([id]) => `${SPECIES[id].name.toLowerCase()} ${MONSTER_KEEP_OFF[id] ?? 0} tiles`))}.</li>
       <li>Cannot be tamed, trapped, bred or brushed.</li>
-      <li>Health: ${listed(MONSTERS.map(([id]) => `${SPECIES[id].name.toLowerCase()} ${SPECIES[id].health}`))}. Blow: ${listed(MONSTERS.map(([id]) => `${SPECIES[id].name.toLowerCase()} ${SPECIES[id].attack}`))} damage.</li>
-      <li>Blow against an unarmoured life: ${listed(MONSTERS.map(([id]) => `${SPECIES[id].name.toLowerCase()} ${percent(Math.round(SPECIES[id].attack * BLOW_SHARE * 100) / 100)}`))}.</li>
-      ${REGIONS.filter((R) => R.monsters).map((R) => `<li>${capital(islandName(R.name))}: monster country: every wild spawn is one of these; holds ${mul(R.monsters ?? 1)} the number the rest of the chart shares
-      (${listed(MONSTERS.filter(([id]) => (lairOf(id) ?? R) === R).map(([id]) => `${(MONSTER_CAP[id] ?? 1) * (R.monsters ?? 1)} ${SPECIES[id].name.toLowerCase()}${(MONSTER_CAP[id] ?? 1) * (R.monsters ?? 1) === 1 ? '' : 's'}`))}).</li>`).join('')}
+      <li>Health: ${listed(MONSTER_KINDS.map((id) => `${SPECIES[id].name.toLowerCase()} ${SPECIES[id].health}`))}. Blow: ${listed(MONSTER_KINDS.map((id) => `${SPECIES[id].name.toLowerCase()} ${SPECIES[id].attack}`))} damage.</li>
+      <li>Blow against an unarmoured life: ${listed(MONSTER_SORTS.map((d) => `${d.name.toLowerCase()} ${percent(Math.round(d.attack * BLOW_SHARE * 100) / 100)}`))}.</li>
       ${REGIONS.filter((R) => R.lair?.length).map((R) => `<li>${capital(listed(R.lair!.map((id) => `${SPECIES[id].name.toLowerCase()}`)))}: only on ${islandName(R.name)}.</li>`).join('')}
       <li>Butchering a ${listedOr([...RECIPE_DROPPERS])}: ${percent(RECIPE_DROP_ODDS)} chance of a <b>Recipe</b> (${listed(lockedRecipes('recipe').map((r) => recipeTitle(r).toLowerCase()))}).</li>
       <li>Butchering: ${listed(bookDrops('formula').map((d) => `${d.kind} ${percent(d.odds)}`))} chance of a <b>Formula</b> (one of the ${lockedRecipes('formula').length} enchantment scrolls; Enchanting).</li>
@@ -3612,6 +3610,27 @@ export function helpText(): string {
       (best wooden bow: ${BEST_WOOD_BOW.range ?? 0} tiles, ${BEST_WOOD_BOW.damage} damage).</li>
       <li><b>Scale armour</b> (dragon scale on leather): stops <b>${percent(ARMOUR_CLASSES.scale.soak)}</b> of a blow (plate ${percent(ARMOUR_CLASSES.plate.soak)}); lighter than chain.
       Full suit: ${SCALE_SUIT} scales; one dragon: ${SPECIES.dragon.butcher.scale ?? 0}.</li>
+    </ul>
+    <h3>Monster lairs</h3>
+    <ul>
+      <li>A monster stands up only at its kind's lair, never in the wild; none raids a settlement.</li>
+      ${LAIR_KINDS.map((k) => `<li><b>${k.name}</b> ×${k.count}: ${SITE_SAYS[k.site]}${lairOf(k.species) ? `, ${islandName(lairOf(k.species)!.name)} only` : ''}.
+      Garrison ${garrisonSays(k, (id) => SPECIES[id]?.name ?? id)}; boss ${bossSays(k, SPECIES[k.species].name)}; restock ${restockSays(k)};
+      at least ${k.keepOff} tiles from a settlement totem.</li>`).join('')}
+      <li>Leash: <b>${LAIR_LEASH}</b> tiles from its lair. A hunt past it is dropped and it walks back.</li>
+      <li>Boss: out once the garrison is dead; told to everybody within ${LAIR_ANNOUNCE} tiles.</li>
+      <li><b>Hoard</b> (the boss's kill): a share for everybody who dealt <b>${percent(HOARD_SHARE)}</b> of its health or more, their companions' blows counted.
+      Each share: ${listed(LAIR_KINDS.map((k) => `${k.name.toLowerCase()}: ${hoardSays(k, itemDef(k.trophy).name, itemDef(BOOKS[hoardBook(k)].item).name)}`))}.
+      No silver, never rare. The boss's carcass butchers as usual.</li>
+      <li>Hoard book: the one its boss's kind carries when butchered (${listed(LAIR_KINDS.map((k) => `${k.species} ${itemDef(BOOKS[hoardBook(k)].item).name}`))}), a shut one you have not read first.</li>
+      <li>Hoard dragon scales (<b>Dragon scale (${HOARD_SCALE})</b>): scale armour made of them alone, QL cap <b>${mul(HOARD_SCALE_CAP)}</b> your skill.</li>
+      <li>Trophies (${listed(LAIR_KINDS.map((k) => itemDef(k.trophy).name.toLowerCase()))}): set down anywhere as decoration; do not decay.</li>
+      <li>Cleared: empty until its restock. Its <b>${LAIR_RING}</b>-tile ring counts as the safe ring and holds ${lairRingWant(PER_REGION, WILD_SQUARE)} wildermon
+      (${mul(LAIR_RING_WILD)} the usual ${lairRingUsual(PER_REGION, WILD_SQUARE).toFixed(1)}).</li>
+      <li>Moves: cleared ${LAIR_MOVE_CLEARS} times in ${LAIR_MOVE_DAYS} days, it restocks at a new site.</li>
+      <li>Seen (within ${LAIR_SIGHT} tiles): pinned on your map; "Lair: found" on its kind's field guide page.</li>
+      <li><b>Track</b> on a monster's field guide page: its kind's nearest lair within ${LAIR_TRACK} tiles, way and distance at your Tracking's band.</li>
+      <li>Settlement: none founded nearer a lair than its kind's distance.</li>
     </ul>
     <h3>Traps</h3>
     <ul>

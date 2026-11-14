@@ -6,7 +6,7 @@
  * higher tracking level. Can only track discovered wildermon". This asks, of both sides:
  *
  *   * that the skill and the job are there, the job hidden from a tile's menu and in the Naturalist's trade;
- *   * that a kind not marked seen, a monster and no kind at all are refused, in the same words;
+ *   * that a kind not marked seen and no kind at all are refused, in the same words, and a monster is not (its lair's);
  *   * that the nearest wild one of the kind is found, past a kept one and a nearer one of another kind, and that one
  *     out of reach is not: "no sign within" the reach;
  *   * that the reach, the spread and the band are the same at every level on both sides, and the reading and its line
@@ -15,7 +15,7 @@
  *     error and to either end of it;
  *   * that a go trains Tracking, a full go when it finds one and `TRY_LEARN` of one when it does not;
  *   * that a go asked through `rpc_act` takes its time and is read when the clock settles it, arrow and all;
- *   * and that the field guide offers Track on a seen wildermon's page and on nothing else.
+ *   * and that the field guide offers Track on a seen wildermon's page and a monster's, and on nothing else.
  *
  * Runs against the database the suite leaves behind, in one transaction that is rolled back.
  */
@@ -222,7 +222,8 @@ check(`a go takes ${TRACK_TIME} seconds at nought, at the pace, and no less than
 const seen = new Set<string>();
 check('a kind not seen is refused, in the same words on both sides',
   said('UNSEEN') === trackRefusal(DEF, seen) && track.check?.(T, g) === said('UNSEEN'), said('UNSEEN'));
-check('a monster is refused, in the same words', said('MONSTER') === trackRefusal(MONSTER, seen), said('MONSTER'));
+// A monster's trail is its lair's, seen or not, since monsters come only from lairs (\`supabase/test/lairs.ts\` reads it).
+check('a monster is not refused, on either side: its trail is its lair\'s', said('MONSTER') === '-' && trackRefusal(MONSTER, seen) === null, said('MONSTER'));
 check('and no kind at all', said('NOKIND') === trackRefusal(undefined, seen), said('NOKIND'));
 check('asked through the door for a kind not seen, it does not start, and says why',
   said('ACTUNSEEN').includes('"started": false') && said('ACTUNSEEN').includes(trackRefusal(SPECIES[OTHER], seen)!), said('ACTUNSEEN'));
@@ -233,7 +234,7 @@ check('a kind marked seen is not refused, on both sides', said('SEEN') === '-' &
 
 check('a seen wildermon\'s page has a Track button', trackable(DEF, g.guide.seen));
 check('a wildermon not seen has none', !trackable(SPECIES[OTHER], g.guide.seen));
-check('a monster has none, seen or not', !trackable(MONSTER, new Set([MONSTER.id])));
+check('a monster has one, seen or not: to its lair', trackable(MONSTER, new Set()) && trackable(MONSTER, new Set([MONSTER.id])));
 check('the button asks for Track at the kind, from where you stand, and no tile menu offers it',
   JSON.stringify(trackTarget(g, KIND)) === JSON.stringify({ kind: 'tile', x: g.player.tileX, y: g.player.tileY, cx: g.player.tileX, cy: g.player.tileY, species: KIND })
     && track.applies(trackTarget(g, KIND), g) && !track.applies({ kind: 'tile', x: 1, y: 1, cx: 1, cy: 1 }, g) && !!track.hidden);

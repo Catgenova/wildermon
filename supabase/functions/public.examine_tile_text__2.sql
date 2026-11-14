@@ -80,5 +80,7 @@ begin
   select count(*) into n from crate c where c.world_id = p_world
     and p_x between c.x and c.x + c.sx - 1 and p_y between c.y and c.y + c.sy - 1;
   if n >= 1 then v_extra := v_extra || ' Crates: ' || n || '.'; end if;
+  -- And the lair it is by (`lair_says`).
+  v_extra := v_extra || lair_says(p_world, p_x, p_y);
   return v_out || v_extra;
 end $function$

@@ -1,4 +1,5 @@
 import type { Game } from '../../game/game';
+import { LAIR_TRACK, lairOfKind } from '../../game/lairs';
 import { countsLine, entryTameLevel, guideEntries, guideEntry, GUIDE_MARKS, guideMarks, guidePage, keepable, MARK_NAMES, type GuideEntry, type GuideMark } from '../../game/guide';
 import type { Island } from '../../net/island';
 import { recordSaid, RECORD_STATS, type BredRecord } from '../../game/boards';
@@ -277,7 +278,7 @@ export class GuidePanel {
       }
       side.append(marks);
     }
-    // Track: a wildermon whose page is marked seen, read back to the nearest wild one (`tracking.ts`).
+    // Track: a wildermon whose page is marked seen, read back to the nearest wild one, or a monster's lair (`tracking.ts`).
     const track = ACTION_BY_ID.get(TRACK);
     if (track && !entry.stage && trackable(def, this.game.guide.seen)) {
       const L = trackLevel(this.game.skills.get(TRACKING));
@@ -287,7 +288,10 @@ export class GuidePanel {
       go.textContent = 'Track';
       // Alone, no further than the wild that is out (`trackAction.ts`).
       const reach = this.island ? trackReach(L, this.game.awareShare()) : Math.min(trackReach(L, this.game.awareShare()), CULL_RANGE);
-      go.title = `Nearest wild ${def.name} within ${reach} tiles, bearing ±${degreesSays(trackErr(L))}° (Tracking ${L})`;
+      // A monster's: its kind's nearest lair (`LAIR_TRACK`).
+      const lair = def.monster ? lairOfKind(def.id) : undefined;
+      go.title = lair ? `Nearest ${lair.name.toLowerCase()} within ${LAIR_TRACK} tiles, bearing ±${degreesSays(trackErr(L))}° (Tracking ${L})`
+        : `Nearest wild ${def.name} within ${reach} tiles, bearing ±${degreesSays(trackErr(L))}° (Tracking ${L})`;
       go.addEventListener('click', () => this.game.requestAction(track, trackTarget(this.game, def.id)));
       side.append(go);
     }
@@ -311,7 +315,7 @@ export class GuidePanel {
       }
       this.view.append(h, list);
     }
-    for (const s of guidePage(def, !!this.island, entry.stage, this.game.guide)) {
+    for (const s of guidePage(def, !!this.island, entry.stage, this.game.guide, this.game.lairsSeen)) {
       const h = document.createElement('div');
       h.className = 'skill-group';
       h.textContent = s.head;

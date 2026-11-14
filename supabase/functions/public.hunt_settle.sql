@@ -71,7 +71,9 @@ begin
        or sqrt((v_cx - coalesce(c.home_x, v_cx)) ^ 2 + (v_cy - coalesce(c.home_y, v_cy)) ^ 2)
          > hunt_home()
        -- Or a hunt of its own, which no blow started, in the safe ring: it, or the one it is after (`safe_ring`).
-       or (c.threat_at is null and (in_safe_ring(p_world, p.x, p.y) or in_safe_ring(p_world, v_cx, v_cy))) then
+       or (c.threat_at is null and (in_safe_ring(p_world, p.x, p.y) or in_safe_ring(p_world, v_cx, v_cy)))
+       -- Or, for one of a lair's, the one it is after past its leash (`lair_leash`).
+       or (c.leash_x is not null and (p.x - c.leash_x) ^ 2 + (p.y - c.leash_y) ^ 2 > lair_leash() ^ 2) then
       c.hunting := null;
       c.windup_at := null;
       c.hunt_again := now() + make_interval(secs => hunt_rest());
@@ -152,6 +154,8 @@ begin
     end if;
     -- Nor while you stand in the safe ring or a Sanctuary (`at_peace`), or it stands in the ring.
     if at_peace(p_world, p.x, p.y) or in_safe_ring(p_world, v_cx, v_cy) then return c; end if;
+    -- Nor, for one of a lair's, on somebody past its leash (`lair_leash`).
+    if c.leash_x is not null and (p.x - c.leash_x) ^ 2 + (p.y - c.leash_y) ^ 2 > lair_leash() ^ 2 then return c; end if;
     c.hunting := p.uid;
     -- A hunt of its own: no blow started it, so the safe ring may call it off; the first blow struck sets it again.
     c.threat_at := null;

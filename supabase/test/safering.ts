@@ -106,6 +106,19 @@ begin
   -- and a quarter of the spawn's ring lies in it.
   v_bx := floor(w.spawn_x / stock_block())::int; v_by := floor(w.spawn_y / stock_block())::int;
   v_in := 0; v_in_bad := 0; v_out := 0; v_out_bad := 0;
+  /*
+   * A copse of trees here and there in the block, outside the ring and in it: the one kind the ring keeps out that the
+   * wild still puts down, the Rowl, a hunter, stands up only near a tree. Until monsters came only from lairs the block
+   * put them down outside the ring, and they were what this asked about; with none of them in the wild's roll, the
+   * Rowl is, and it wants a tree.
+   */
+  for tx in v_bx * stock_block() .. (v_bx + 1) * stock_block() - 1 by 9 loop
+    for ty in v_by * stock_block() .. (v_by + 1) * stock_block() - 1 by 9 loop
+      if tx < w.size and ty < w.size and centre_height(w.world_id, tx, ty) >= 2 and not has_water(w.world_id, tx, ty) then
+        perform land_set_tile(w.world_id, tx, ty, tile_id('Tree'));
+      end if;
+    end loop;
+  end loop;
   for i in 1 .. 20 loop
     delete from creature where world_id = w.world_id and mode = 'wild'
       and to_x >= v_bx * stock_block() and to_x < (v_bx + 1) * stock_block()

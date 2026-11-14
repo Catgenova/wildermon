@@ -1,4 +1,5 @@
 import { DEED_STONE_GAP, TRAVEL_LEG, type Game } from '../../game/game';
+import { LAIR_BY_ID } from '../../game/lairs';
 import { MARK_COLOURS, MARK_CSS, MARKET_MARK } from '../../game/marks';
 import { furnitureDef, furnitureName } from '../../game/furniture';
 import { hasRunestones, RUNESTONES, STONE_HALF, stoneCentre } from '../../game/runestones';
@@ -866,6 +867,8 @@ export class MinimapPanel {
     ctx.restore();
     const marks: Array<{ x: number; y: number; label: string }> = stones.map((s) => ({ x: s.x, y: s.y, label: s.name }));
     for (const f of this.game.furniture.values()) if (furnitureDef(f.kind).landmark) marks.push({ x: f.x, y: f.y, label: furnitureName(f) });
+    // And every lair you have seen, by its kind's name (`lairs.ts`).
+    for (const l of this.game.lairsSeen) marks.push({ x: l.x, y: l.y, label: LAIR_BY_ID.get(l.kind)?.name ?? 'Lair' });
     for (const f of marks) {
       const lx = (f.x + 0.5 - ox) * scale;
       const ly = (f.y + 0.5 - oy) * scale;

@@ -197,6 +197,7 @@ begin
       || case when c.keeper = me and c.mode = 'deed' then jsonb_build_object('ledger', c.ledger, 'worn', c.worn, 'unfed', c.unfed, 'sparWith', c.spar_with,
            'specialty', coalesce(((select deed_trade_counts(p_world, me))->>coalesce(c.job, (select sd.gathers from species_def sd where sd.id = c.species)))::int, 0))
          else '{}'::jsonb end
+      || case when c.boss then jsonb_build_object('boss', (select l.kind from lair l where l.world_id = c.world_id and l.id = c.lair)) else '{}'::jsonb end
       as more) v
     -- Your own in crates, wherever the crates are; and everything within range.
     where (c.world_id = p_world and c.keeper = me and c.mode in ('stored', 'deed'))

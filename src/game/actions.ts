@@ -1,4 +1,5 @@
 export { TRY_LEARN, tryGain } from './learn';
+import { lairFoundingRefusal } from './lairs';
 import { GRASS_PER_CUT, MOSS_PER_CUT } from './limits';
 import { PROSPECT_HEAD, tryGain } from './learn';
 import { BURYABLE, BUSH_DEFS, SLAB_BY_ITEM, SLAB_VARIANTS, TILE_DEFS, TREE_AGES, TREE_DEFS, TileType, bushSpecies, packTreeData, slabVariant, treeAge, treeSpecies, treeVariant, lastDawn, nextDawn, type TreeAge, LAWN_AFTER, MOWN_TODAY, MOWING, mownDays, mownToday } from '../world/tiles';
@@ -930,7 +931,9 @@ export function foundingRefusal(
       .sort((a, b) => a.gap - b.gap)[0];
     if (near) return deedNearStone(near.s.name, near.gap);
   }
-  return null;
+  // And a lair nearer than its kind keeps from a token, of those you have seen (`lairFoundingRefusal`): the island
+  // asks every one.
+  return lairFoundingRefusal(x, y, g.lairsSeen);
 }
 
 /** Tiles across a settlement's border at a level: the token and `deedRadiusAt` each way. */

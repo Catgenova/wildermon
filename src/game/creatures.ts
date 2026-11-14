@@ -1,4 +1,5 @@
 import { describeGoals } from './journal';
+import { LAIR_BY_ID } from './lairs';
 import { TileType, TILE_DEFS, TREE_DEFS, treeAge, treeSpecies, packTreeData, TREE_AGES } from '../world/tiles';
 import { isSeam } from '../world/tiles';
 import { mapFromBeast } from './treasure';
@@ -36,8 +37,6 @@ import { greenNow, greenOnTile, scrubTile } from './greening';
 import { GRASS_PER_CUT, MOSS_PER_CUT, QL_TOP } from './limits';
 import { PIER_SHOO } from './piers';
 import { bedrockAt, oreAt } from '../world/ore';
-import { chartRegion } from '../world/chart';
-import { lairOf, REGIONS } from '../world/regions';
 import { DIGGABLE, findChance, relicsWithin } from './archaeology';
 import { FISH, fishable, fishHere, waterDepth } from './fishing';
 import { describeFrom, describeWith, itemDef, litresOf, markOf, TAN_LYE, RARITIES, rarityOf, rarityStep, rollRarity, type Item, type Mark } from './items';
@@ -4377,23 +4376,6 @@ sayLineLater('scorcha', `Level: ${GATHER_SKILL.alloy}.`);
 sayLineLater('frosta', `Level: ${GATHER_SKILL.cheese}.`);
 sayLineLater('simma', `Level: ${GATHER_SKILL.cook}.`);
 
-/** Which species roam wild, by weight. */
-/**
- * The bad things, and how often one of the wild's slots turns out to be one.
- * A goblin is a bad afternoon; a dragon is something almost nobody sees.
- */
-export const MONSTERS: Array<[string, number]> = [
-  ['goblin', 60],
-  ['orc', 26],
-  ['ogre', 12],
-  ['dragon', 2],
-];
-/** The share of everything that stands up out there that is a monster. */
-export const MONSTER_SHARE = 0.022;
-/** How many of each may be walking about at once, across the whole island. */
-export const MONSTER_CAP: Record<string, number> = { goblin: 6, orc: 3, ogre: 2, dragon: 1 };
-/** How far from a settlement's token each keeps, in tiles: the bigger the thing, the further out. */
-export const MONSTER_KEEP_OFF: Record<string, number> = { goblin: 26, orc: 40, ogre: 55, dragon: 90 };
 /**
  * The ten guards taken out of the game (What's new 405), by their old ids: what each was called, the taming it asked,
  * and the kind an owned one of it became, each by fit. None stands up wild, none is bred, and on the island every
@@ -4454,6 +4436,9 @@ export function kindNamed(c: Pick<Creature, 'species' | 'name'>): boolean {
  */
 export const renamedKind = (c: Pick<Creature, 'species' | 'name' | 'skills'> & { variant?: number }): string => (kindNamed(c) ? kindName(c) : c.name);
 
+/** The monsters, by id, in the order they are written: none is in the wild's roll; each stands up only at a lair (`lairs.ts`). */
+export const MONSTER_KINDS: readonly string[] = Object.keys(SPECIES).filter((id) => SPECIES[id].monster);
+/** Which species roam wild, by weight. A monster is not among them: it stands up only at its lair (`lairs.ts`). */
 export const WILD_SPECIES: Array<[string, number]> = [
   ['rabba', 27],
   ['vola', 23],
@@ -5208,9 +5193,14 @@ export const bloodMul = (c: Creature, channel: TraitChannel): number =>
 
 /** What it can take, once its blood is counted, and its keeper's Thick Hide while it follows them. */
 export const maxHealth = (c: Creature, species: SpeciesDef): number =>
-  Math.round(species.health * bloodMul(c, 'hardy') * companionMul(c, 'hardy'));
+  Math.round(species.health * bloodMul(c, 'hardy') * companionMul(c, 'hardy') * bossMul(c, 'hardy'));
 /** What its attack lands for. */
-export const attackOf = (c: Creature, species: SpeciesDef): number => species.attack * bloodMul(c, 'tough');
+export const attackOf = (c: Creature, species: SpeciesDef): number => species.attack * bloodMul(c, 'tough') * bossMul(c, 'tough');
+/** A lair's boss's health and blow, its lair kind's multiples (`lairs.ts`); one for anything else. The island's `lair_boss_mul`. */
+export const bossMul = (c: Pick<Creature, 'boss'>, channel: 'hardy' | 'tough'): number => {
+  const k = c.boss ? LAIR_BY_ID.get(c.boss) : undefined;
+  return !k ? 1 : channel === 'hardy' ? k.bossHealth : k.bossAttack;
+};
 // What a creature's attack takes off a player, as a share of a life: kept in `limits.ts`, a leaf, so that what reads it as it loads (enchanting's words) never waits on this.
 import { BLOW_SHARE, CREATURE_ATTACK_MUL, CREATURE_HEALTH_MUL, creatureAttack, creatureHealth } from './limits';
 export { BLOW_SHARE, CREATURE_ATTACK_MUL, CREATURE_HEALTH_MUL };
@@ -5295,6 +5285,8 @@ export interface IslandCreature {
   /** Its wild forms (`wildforms.ts`): the island's `form_colour` and `form_size`. */
   formColour?: boolean;
   formSize?: SizeForm | null;
+  /** For a lair's boss, its lair's kind (`lairs.ts`). */
+  boss?: string | null;
   mode: string;
   stance: string;
   x: number;
@@ -5453,6 +5445,8 @@ export interface Creature {
   /** Its kind's colour form, and a size form, rolled in the wild and bred on (`wildforms.ts`). Saved. The island's `form_colour`, `form_size`. */
   formColour?: boolean;
   formSize?: SizeForm | null;
+  /** The lair kind it is the boss of (`lairs.ts`), its health and blow that kind's multiples; absent for anything else. The island's `boss`. */
+  boss?: string;
   x: number;
   y: number;
   mode: CreatureMode;
@@ -5886,8 +5880,8 @@ const MAX_STEP_TIME = 0.34;
 const LIVE_RANGE = 60;
 /** Exported for a track alone, which can find only what is out (`trackAction.ts`). */
 export const CULL_RANGE = 85;
-/** Tiles to a stretch of country, for the purposes of banking. */
-const REGION = 32;
+/** Tiles to a stretch of country, for the purposes of banking; the island stocks `PER_REGION` to a square of it (`creature_stock_block`). */
+export const REGION = 32;
 /** How often creatures are put away and let out, in seconds. */
 const STREAM_EVERY = 2;
 /** Most creatures let out in one pass, so a walk never stalls on it. */
@@ -6279,6 +6273,7 @@ export class Creatures {
       c.variant = r.variant ?? c.variant;
       if (r.formColour !== undefined) c.formColour = !!r.formColour;
       if (r.formSize !== undefined) c.formSize = r.formSize;
+      c.boss = r.boss ?? undefined;
       c.mode = r.mode as CreatureMode;
       c.stance = r.stance as Stance;
       c.health = r.health;
@@ -6931,7 +6926,7 @@ export class Creatures {
       let x = Math.floor(game.rand() * w.w);
       let y = Math.floor(game.rand() * w.h);
       if (!this.groundOk(game, x, y, minDistance)) continue;
-      const id = species ?? (game.rand() < MONSTER_SHARE ? this.pickMonster(game, x, y) : rollTable(WILD_SPECIES, game.rand()));
+      const id = species ?? rollTable(WILD_SPECIES, game.rand());
       if (!id) continue;
       if (!this.suits(game, SPECIES[id], x, y)) {
         /*
@@ -7205,35 +7200,13 @@ export class Creatures {
       // would be put away again on the next pass.
       const d = Math.max(Math.abs(x + 0.5 - px), Math.abs(y + 0.5 - py));
       if (d < 30 || d > LIVE_RANGE) continue;
-      // Now and again what stands up out there is not a wildermon at all.
-      const id = game.rand() < MONSTER_SHARE ? this.pickMonster(game, x, y) : rollTable(WILD_SPECIES, game.rand());
+      // A wildermon: a monster stands up only at its lair, on the island (`lairs.ts`).
+      const id = rollTable(WILD_SPECIES, game.rand());
       if (!id || !this.suits(game, SPECIES[id], x, y)) continue;
       this.standWild(game, id, x + 0.5, y + 0.5);
       return true;
     }
     return false;
-  }
-
-  /**
-   * Which of the bad things, if any. Each sort is capped across the island and
-   * the big ones keep away from anywhere anybody lives: nothing walks out of
-   * the trees onto your deed.
-   */
-  private pickMonster(game: Game, x: number, y: number): string | null {
-    const alive: Record<string, number> = {};
-    for (const c of this.list.values()) if (c.mode === 'wild') alive[c.species] = (alive[c.species] ?? 0) + 1;
-    // And one kept to an island (`Region.lair`) only on that island.
-    const here = REGIONS[chartRegion(x + 0.5, y + 0.5, game.world.w)];
-    const room = MONSTERS.filter(([id]) => (alive[id] ?? 0) < (MONSTER_CAP[id] ?? 1) && (lairOf(id) ?? here) === here);
-    if (!room.length) return null;
-    const id = rollTable(room, game.rand());
-    // A settlement keeps the worst of it at arm's length. The bigger the
-    // thing, the further out it wants to be.
-    const deed = game.deed;
-    if (deed) {
-      if (Math.hypot(x - deed.x, y - deed.y) < (MONSTER_KEEP_OFF[id] ?? 0)) return null;
-    }
-    return id;
   }
 
   /**
