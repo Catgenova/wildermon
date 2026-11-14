@@ -3,6 +3,7 @@ import { ALL_GOALS, JOURNAL, chapterOf, nextGoals } from '../../game/journal';
 import type { UIWindow } from '../windows';
 import { LedgerPanel } from './ledger';
 import { NewsPanel } from './news';
+import { PathPanel } from './path';
 
 /** The journal's tabs: what there is to do, what you have made, how any of it works, what has changed, who stands highest, every kind of creature, and the trades you are watching. */
 import { JOURNAL_TABS, type JournalTab } from './journaltabs';
@@ -50,6 +51,8 @@ export class JournalPanel {
   readonly guidePage: HTMLDivElement;
   /** The Tracker tab's page. */
   readonly trackerPage: HTMLDivElement;
+  /** The Path tab (`PathPanel`). */
+  private readonly path: PathPanel;
   /** Told whenever a tab is shown, the window open. */
   onShow: ((tab: JournalTab) => void) | null = null;
 
@@ -95,7 +98,12 @@ export class JournalPanel {
     this.trackerPage.hidden = true;
     this.pages.set('guide', this.guidePage);
     this.pages.set('tracker', this.trackerPage);
-    win.body.append(bar, goals, made, this.helpPage, news, this.boardsPage, this.guidePage, this.trackerPage);
+    const pathPage = document.createElement('div');
+    pathPage.className = 'settings-page skills-body';
+    pathPage.hidden = true;
+    this.pages.set('path', pathPage);
+    win.body.append(bar, goals, pathPage, made, this.helpPage, news, this.boardsPage, this.guidePage, this.trackerPage);
+    this.path = new PathPanel(pathPage, game, () => win.isOpen && this.tab === 'path');
     this.ledger = new LedgerPanel(made, game, () => win.isOpen && this.tab === 'ledger');
     this.count = document.createElement('div');
     this.count.className = 'skill-group';
@@ -160,6 +168,7 @@ export class JournalPanel {
     win.onOpen = () => {
       this.refresh();
       if (this.tab === 'ledger') this.ledger.refresh();
+      if (this.tab === 'path') this.path.refresh();
       if (this.tab === 'news') this.news.draw();
       this.onShow?.(this.tab);
     };
@@ -197,6 +206,7 @@ export class JournalPanel {
     for (const [id, page] of this.pages) page.hidden = id !== tab;
     if (tab === 'goals') this.refresh();
     if (tab === 'ledger') this.ledger.refresh();
+    if (tab === 'path') this.path.refresh();
     if (tab === 'news' && this.win.isOpen) this.news.draw();
     if (this.win.isOpen) this.onShow?.(tab);
   }

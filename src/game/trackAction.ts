@@ -32,7 +32,7 @@ export const TRACK_ACTIONS: ActionDef[] = [
     // A weight, as every job's is: `TRACK_TIME` seconds at nought, at the pace.
     baseTime: TRACK_TIME / ACTION_PACE,
     applies: (t) => t.kind === 'tile' && typeof t.species === 'string',
-    check: (t, g) => trackRefusal(t.kind === 'tile' && t.species ? SPECIES[t.species] : undefined, g.guide.seen),
+    check: (t, g) => trackRefusal(t.kind === 'tile' && t.species ? SPECIES[t.species] : undefined, g.guide.seen, g.guide.noted),
     /*
      * Alone, and only alone: on an island this is the island's (`perform_track`). Here the wild past the stretch
      * being walked is kept as a count of each stretch of country rather than as creatures (`Creatures.stream`), so a

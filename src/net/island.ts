@@ -424,6 +424,7 @@ export function rowSaid(me: PlayerRow): MineSaid {
   if (Array.isArray(me.titles)) said.titles = me.titles.filter((t): t is string => typeof t === 'string');
   if (typeof me.title === 'string' || me.title === null) said.title = me.title;
   if (Array.isArray(me.wounds)) said.wounds = me.wounds;
+  if (me.thepath !== undefined) said.thepath = me.thepath;
   return said;
 }
 
@@ -1046,6 +1047,8 @@ export interface IslandHooks {
     tally?: Record<string, number>;
     ledger?: Record<string, unknown>;
     ticked?: string[];
+    /** The Path's record (`player.thepath`), as the island keeps it: read by `pathStateIn`. */
+    thepath?: unknown;
   }) => void;
   /**
    * Everything wild within sight, as the island has it.
@@ -2309,6 +2312,7 @@ export class Island {
         blessings?: unknown; skin?: SkinSaid | null;
         sleep_on?: boolean; asleep?: string | null;
         tally?: Record<string, number>; ledger?: Record<string, unknown>; ticked?: string[];
+        thepath?: unknown;
         goes?: number | null; time?: number | null; night?: boolean | null;
         said?: Array<{ n: number; text: string; kind: string; at?: string }> | null;
         saidTo?: number | null;
@@ -2365,6 +2369,7 @@ export class Island {
         held: said.blessings && typeof said.blessings === 'object' ? this.held(said.blessings) : undefined,
         skin: said.skin && typeof said.skin === 'object' ? said.skin : undefined,
         tally: said.tally, ledger: said.ledger, ticked: said.ticked,
+        thepath: said.thepath,
         // Not said (the beat leaves nulls out) once it is over.
         grace: graceIn(said.grace),
       });
@@ -3801,6 +3806,36 @@ export class Island {
     if (!this.ticked.includes(id)) this.ticked.push(id);
   }
 
+  /**
+   * The Path (`path.ts`): turned on or off (`rpc_thepath`), a step skipped or taken back (`rpc_thepath_skip`), the
+   * supply for a tame step claimed (`rpc_thepath_supply`), each answered with the record as it now stands; and the
+   * suggested sites for a settlement near you (`rpc_thepath_sites`). Null, or no sites, when the island did not
+   * answer; a refusal comes back as its words.
+   */
+  async pathTurn(on: boolean): Promise<{ state: unknown; error: string | null }> {
+    if (!this.info) return { state: null, error: 'Not on an island.' };
+    const { data, error } = await rpc('rpc_thepath', { p_world: this.info.id, p_on: on });
+    return { state: error ? null : data, error: error ? refusedSaid(error.message) : null };
+  }
+
+  async pathSkip(step: string, skip: boolean): Promise<{ state: unknown; error: string | null }> {
+    if (!this.info) return { state: null, error: 'Not on an island.' };
+    const { data, error } = await rpc('rpc_thepath_skip', { p_world: this.info.id, p_step: step, p_skip: skip });
+    return { state: error ? null : data, error: error ? refusedSaid(error.message) : null };
+  }
+
+  async pathSupply(step: string): Promise<{ state: unknown; error: string | null }> {
+    if (!this.info) return { state: null, error: 'Not on an island.' };
+    const { data, error } = await rpc('rpc_thepath_supply', { p_world: this.info.id, p_step: step });
+    return { state: error ? null : data, error: error ? refusedSaid(error.message) : null };
+  }
+
+  async pathSites(): Promise<unknown> {
+    if (!this.info) return null;
+    const { data, error } = await rpc('rpc_thepath_sites', { p_world: this.info.id });
+    return error ? null : data;
+  }
+
   /** A kind has come into view: it goes over on the next round, unless the island has answered for it already. */
   sawKind(species: string): void {
     if (this.guideTold.has(species) || this.guideAsking.has(species)) return;
@@ -3847,7 +3882,7 @@ export class Island {
     const { data, error } = await rpc('rpc_guide', { p_world: this.info.id });
     if (error || !data || typeof data !== 'object') return null;
     const got = data as Partial<Record<keyof GuideBook, unknown>>;
-    return { seen: stringsIn(got.seen), tamed: stringsIn(got.tamed), bred: stringsIn(got.bred) };
+    return { seen: stringsIn(got.seen), tamed: stringsIn(got.tamed), bred: stringsIn(got.bred), noted: stringsIn(got.noted) };
   }
 
   /**

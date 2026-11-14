@@ -35,6 +35,8 @@ import { BRAZIER_CAPACITY, OVEN_CAPACITY } from '../../game/furniture';
 import { keepControlKeys } from '../controlkeys';
 import { onPhone } from '../../engine/device';
 import { fullscreenOffered, isFullscreen, setFullscreen, wakeOffered } from '../phone';
+import { PATH_STEPS } from '../../game/path';
+import { MAX_DEED_LEVEL } from '../../game/deedsize';
 
 interface Toggle {
   input: HTMLInputElement;
@@ -221,6 +223,13 @@ export class SettingsPanel {
      * number in the caption follows the drag, so you can see where you are.
      */
     head('Interface');
+    // The Path (`src/game/path.ts`): kept on the island with your body, not in this browser.
+    add(
+      'Path',
+      html`Steps: runestone to settlement level ${MAX_DEED_LEVEL}, ${PATH_STEPS.length} of them; a line at the top of the screen and the Journal's Path tab (${kbd('win_path')}). Kept on the island.`,
+      () => game.thePath?.on ?? false,
+      (v) => void game.pathDoor?.turn(v),
+    );
     /** The slider, kept so a preset can move it. */
     let sizeSlider: HTMLInputElement | null = null;
     let sizeSay: (() => void) | null = null;

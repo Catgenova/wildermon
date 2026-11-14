@@ -446,6 +446,12 @@ body {
   margin-bottom: 0.15rem;
 }
 
+/* The Path switch over the stones (src/ui/stonestart.ts): its own row, at the left. */
+.boot-path {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
 .boot-stone {
   display: flex;
   align-items: center;
@@ -6641,6 +6647,67 @@ body.dragging.drag-no, body.dragging.drag-no * { cursor: no-drop !important; }
 .pointer-ring-done {
   opacity: 0;
   transition: opacity 0.35s ease-out;
+}
+
+/* The Path's line at the top of the screen (src/ui/pathstrip.ts): the step you are on, an arrow to its place, a fold. */
+.path-strip {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 32px);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 6px 3px 10px;
+  border: 1px solid var(--ui-border);
+  border-radius: 3px;
+  background: var(--ui-bg-2);
+  box-shadow: 0 3px 10px var(--t-shadow, rgba(0, 0, 0, 0.45));
+  color: var(--ui-text);
+  font-size: 12px;
+  z-index: 91;
+}
+
+.path-strip[hidden] {
+  display: none;
+}
+
+.path-text {
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.path-far {
+  color: var(--ui-dim);
+  white-space: nowrap;
+}
+
+.path-far[hidden],
+.path-arrow[hidden] {
+  display: none;
+}
+
+/* The Path tab (src/ui/panels/path.ts): the step you are on lit, a skipped one dimmed, a detour set in. */
+.path-here {
+  outline: 1px solid var(--ui-accent);
+  outline-offset: -1px;
+}
+
+.path-skipped {
+  opacity: 0.55;
+}
+
+.path-detour {
+  padding-left: 22px;
+  font-style: italic;
+}
+
+.path-row .path-skip {
+  margin-left: auto;
 }
 
 /* A settlement's name as you cross into it, and "Leaving" as you go (src/ui/deedbanner.ts). Under every window. */

@@ -6,7 +6,7 @@ CREATE OR REPLACE FUNCTION public.rpc_settle(p_seen bigint DEFAULT NULL::bigint,
  SECURITY DEFINER
  SET search_path TO 'public'
 AS $function$
-declare me uuid := auth.uid(); r record; n int := 0; p player; v_world uuid;
+declare me uuid := auth.uid(); r record; n int := 0; p player; v_world uuid; v_ticked jsonb;
 begin
   perform private.pace(auth.uid(), 'look');
   perform private.check_args('rpc_settle', 'p_ticked', p_ticked, private.spec_ticked());
@@ -66,16 +66,22 @@ begin
    * journal is a list of things somebody thought worth doing and there is
    * nothing here worth guarding.
    */
-  if p_ticked is not null and jsonb_typeof(p_ticked) = 'array'
-     and jsonb_array_length(p_ticked) > 0 then
+  /*
+   * A Path step's tick (`path:<step>`) is kept only when it is on the Path's list and the island's own state says
+   * the step is met (`thepath_ticks`): the browser cannot tick one by itself.
+   */
+  if p_ticked is not null and jsonb_typeof(p_ticked) = 'array' and jsonb_array_length(p_ticked) > 0 then
+    v_ticked := thepath_ticks(v_world, me, p_ticked);
+  end if;
+  if v_ticked is not null and jsonb_array_length(v_ticked) > 0 then
     update player set
         ticked = (select coalesce(jsonb_agg(distinct g), '[]'::jsonb)
                   from (select jsonb_array_elements_text(coalesce(ticked, '[]'::jsonb)) as g
                         union
-                        select jsonb_array_elements_text(p_ticked)) u),
+                        select jsonb_array_elements_text(v_ticked)) u),
         tally_at = now()
       where uid = me and world_id = v_world
-        and not (coalesce(ticked, '[]'::jsonb) @> p_ticked);
+        and not (coalesce(ticked, '[]'::jsonb) @> v_ticked);
   end if;
   for r in select world_id from player
     where uid = me and world_id = v_world and act is not null and act_ends <= now()
@@ -306,5 +312,7 @@ begin
     -- Seconds of the death grace left, or null once it is over (`death_grace_left`).
     || jsonb_build_object('grace', death_grace_left(v_world, me))
     -- Logged off asleep in a bed, by its name: the page logs off (`sleep_fall`).
-    || jsonb_build_object('asleep', (select a.name from private.asleep a where a.world_id = v_world and a.uid = me)));
+    || jsonb_build_object('asleep', (select a.name from private.asleep a where a.world_id = v_world and a.uid = me))
+    -- The Path's record (`player.thepath`): on, skipped, supplied, counted; null for a body that never turned it on.
+    || jsonb_build_object('thepath', p.thepath));
 end $function$

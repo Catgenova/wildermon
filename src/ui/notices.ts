@@ -34,7 +34,7 @@ export const DONE_AFTER = 8;
 const LOOK_EVERY = 400;
 
 /** The bars a line across the top of the screen keeps clear of, and a settlement's name while it is up (`deedbanner.ts`). */
-const TOP_BARS = '.toolbar, .hud-status, .saving-banner, .deed-banner';
+const TOP_BARS = '.toolbar, .hud-status, .saving-banner, .deed-banner, .path-strip';
 /** Interface pixels from the top of the screen with no bar there, and the gap left under a bar. */
 const EDGE = 12;
 const GAP = 8;

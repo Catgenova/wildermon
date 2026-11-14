@@ -66,6 +66,7 @@ import * as creatureRules from './creatures';
 import * as guideRules from './guide';
 import * as aroundRules from './around';
 import * as postRules from './posts';
+import { PATH_TICK, type PathDoor, type PathSite, type PathState } from './pathstate';
 import { FieldGuide, formSeenLine, GUIDE_LOOK, guideEntry, guideMarks, guideName, seenLine, stageKey, type GuideBook, type GuideMark } from './guide';
 import { formKey, formsOf } from './wildforms';
 import { sightedLine } from './sighted';
@@ -796,6 +797,20 @@ export class Game {
   /** Goals already ticked off, which stay ticked whatever happens after. */
   readonly ticked = new Set<string>();
   /**
+   * The Path (`path.ts`): the island's record of it for you (`player.thepath`), null until it has said; the steps
+   * held done here, the ones the island has said back as ticked, when each was last sent up, and the suggested sites
+   * for a settlement (`rpc_thepath_sites`).
+   */
+  thePath: PathState | null = null;
+  readonly pathDone = new Set<string>();
+  readonly pathHeard = new Set<string>();
+  readonly pathSent = new Map<string, number>();
+  pathSites: PathSite[] = [];
+  /** Looks the Path's steps over (`pathCheck`), set where the rules are loaded: the journal's clock runs it. */
+  pathTick?: () => void;
+  /** Turns the Path on and off and skips its steps, on the island (`src/net/pathwire.ts`). */
+  pathDoor?: PathDoor;
+  /**
    * The field guide: every kind with a page, and which of them you have seen,
    * tamed and bred (`guide.ts`). Alone it is this side's and goes in the save;
    * on an island it is the island's, and this holds what the island has said.
@@ -984,6 +999,7 @@ export class Game {
       this.logMsg(`Journal: ${goal.text.toLowerCase()}. (${this.ticked.size} of ${ALL_GOALS.length})`, 'skill');
       this.events.emit('journal');
     }
+    this.pathTick?.();
   }
 
   /**
@@ -998,9 +1014,18 @@ export class Game {
    */
   heardTicked(ids: readonly unknown[]): void {
     const had = this.ticked.size;
-    for (const id of ids) if (typeof id === 'string') this.ticked.add(id);
+    const heard = this.pathHeard.size;
+    for (const id of ids) {
+      if (typeof id !== 'string') continue;
+      // A Path step's, which is not a goal (`path.ts`).
+      if (id.startsWith(PATH_TICK)) {
+        this.pathHeard.add(id.slice(PATH_TICK.length));
+        this.pathDone.add(id.slice(PATH_TICK.length));
+      } else this.ticked.add(id);
+    }
     this.journalReady = true;
     if (this.ticked.size > had) this.events.emit('goals');
+    if (this.pathHeard.size > heard) this.events.emit('path');
   }
 
   /** Placed crates by id; each sits on one subtile. */

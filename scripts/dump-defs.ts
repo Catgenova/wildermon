@@ -240,6 +240,8 @@ import {
 } from '../src/game/vineyard';
 import { CELLAR_AGEING, keepsQl } from '../src/game/ageing';
 import { HOUR, LOOK_SKEP, SKEP, SKEP_CLUMP_HOURS, SKEP_HOLDS, SKEP_IDLE, SKEP_REACH, SKEP_SAID, SKEP_SKILL, SKEP_WAX_EVERY, TAKE_HONEY, VESP_REST } from '../src/game/bees';
+import { ANVIL_LUMPS, PATH_CLAY, PATH_DETOURS, PATH_FISH, PATH_FORAGE, PATH_KINDS, PATH_SITE, PATH_SKILLED, PATH_STEPS, PATH_SURE, PATH_TAMES, SMELTER_BRICKS, SMELTER_MORTAR } from '../src/game/path';
+import { UPGRADE_WORKERS } from '../src/game/deed';
 
 const q = (v: unknown): string => {
   if (v === undefined || v === null) return 'null';
@@ -3159,4 +3161,25 @@ for (const [fn, v] of [
 }
 out.push(`create or replace function lair_ring_want() returns int language sql immutable as $fn$ select ${lairRingWant(PER_REGION, WILD_SQUARE)} $fn$;`);
 out.push(`create or replace function hoard_scale() returns text language sql immutable as $fn$ select ${q(HOARD_SCALE)} $fn$;`);
+/*
+ * The Path (`src/game/path.ts`): its steps and detours in order, the only ids a `path:` tick may carry
+ * (`rpc_settle`); the kinds turning it on notes (`guide_noted`); each tame step's kind; what a supply is sized for;
+ * the counts a step asks for, off the rules; and what a suggested site asks of the ground (`rpc_thepath_sites`).
+ */
+out.push(`create or replace function thepath_steps() returns text[] language sql immutable as $fn$ select ${arr(PATH_STEPS.map((s) => s.id))} $fn$;`);
+out.push(`create or replace function thepath_detours() returns text[] language sql immutable as $fn$ select ${arr(PATH_DETOURS.map((s) => s.id))} $fn$;`);
+out.push(`create or replace function thepath_kinds() returns text[] language sql immutable as $fn$ select ${arr([...PATH_KINDS])} $fn$;`);
+out.push(`create or replace function thepath_tames() returns table (step text, species text) language sql immutable as $fn$ select * from (values ${
+  PATH_TAMES.map(([step, sp]) => `(${q(step)}, ${q(sp)})`).join(', ')}) v (step, species) $fn$;`);
+for (const [fn, v] of [
+  ['thepath_sure', PATH_SURE], ['thepath_skilled', PATH_SKILLED],
+  ['thepath_site_trees', PATH_SITE.trees], ['thepath_site_tree_reach', PATH_SITE.treeReach], ['thepath_site_water', PATH_SITE.water],
+  ['thepath_site_rock', PATH_SITE.rock], ['thepath_site_count', PATH_SITE.count], ['thepath_site_reach', PATH_SITE.reach],
+  ['thepath_site_every', PATH_SITE.every], ['thepath_site_apart', PATH_SITE.apart],
+] as Array<[string, number]>) {
+  out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);
+}
+out.push(`create or replace function thepath_need(p_step text) returns int language sql immutable as $fn$ select case p_step ${
+  ([['forage', PATH_FORAGE], ['fish', PATH_FISH], ['clay', PATH_CLAY], ['bricks', SMELTER_BRICKS()], ['mortar', SMELTER_MORTAR()],
+    ['workers', UPGRADE_WORKERS], ['lumps', ANVIL_LUMPS]] as Array<[string, number]>).map(([k, n]) => `when ${q(k)} then ${n} `).join('')}else 1 end $fn$;`);
 console.log(out.join('\n'));

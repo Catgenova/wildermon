@@ -3155,5 +3155,14 @@
     "title": "Monsters come only from lairs, leashed to them, and a lair's boss opens a hoard",
     "shard": 3,
     "why": "Asked for: monsters come only from lairs, with no wandering spawns and no raiding patrols. Every lair kind and number the same on both sides; each sited on its ground, kept from every token and every other lair, the dragon on Volcano Isle's highest ground, and no settlement founded that near one; its garrison up, no monster out of the wild, none past its leash however it is moved, none hunting past it; the boss out after the garrison and told round; a hoard share for each who dealt a tenth of its health, never silver or rare, the map and the book at their odds held at their lines and over a seeded draw; the cleared ring safe and stocked half again; every restock a second either side of its time, the dragon's day; three clears in seven days and it moves; Track to the nearest lair; hoard scales' raised cap. Every clock moved on the lair, never the wall's."
+  },
+  {
+    "file": "supabase/test/path.ts",
+    "title": "The Path: steps the island confirms, sites, supplies and noted kinds",
+    "shard": 5,
+    "external": [
+      "typescript"
+    ],
+    "why": "Asked for: an optional step-by-step tutorial from the runestone to a level 5 settlement. Each step met on the island's own state and not before; a path tick kept only when on the list and met, so the browser cannot tick one; labels off the rules' numbers; noted kinds tracked and not counted as seen; suggested sites passing every founding check and their own criteria, inside a time budget on a 4096 island; in every season a tame step has food in season or a supply sized to tame at 90%, handed out issued and once."
   }
 ]

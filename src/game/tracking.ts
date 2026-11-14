@@ -191,16 +191,20 @@ export function trackSaid(kind: string, range: number, found: TrackFound | null,
  * Whether a kind's page in the field guide has a Track button: a wildermon you have seen, or a monster, seen or
  * not, whose trail is its lair's (`LAIR_TRACK`).
  */
-export const trackable = (def: SpeciesDef, seen: ReadonlySet<string>): boolean => !!def.monster || seen.has(def.id);
+export const trackable = (def: SpeciesDef, seen: ReadonlySet<string>, noted: ReadonlySet<string> = NONE): boolean =>
+  !!def.monster || seen.has(def.id) || noted.has(def.id);
 
 /** Why a kind (its definition, if there is one) cannot be tracked, or null when it can: the island's `track_refusal`, in the same words. */
-export function trackRefusal(def: SpeciesDef | undefined, seen: ReadonlySet<string>): string | null {
+export function trackRefusal(def: SpeciesDef | undefined, seen: ReadonlySet<string>, noted: ReadonlySet<string> = NONE): string | null {
   if (!def) return 'No such kind.';
   // A monster's trail is its lair's, seen or not.
   if (def.monster) return null;
-  if (!seen.has(def.id)) return `${def.name} not seen yet: only kinds marked seen in your field guide can be tracked.`;
+  // A kind the Path noted (`guide_noted`) is tracked as if seen.
+  if (!seen.has(def.id) && !noted.has(def.id)) return `${def.name} not seen yet: only kinds marked seen in your field guide can be tracked.`;
   return null;
 }
+/** No kinds: the noted set of a body the Path has noted nothing for. */
+const NONE: ReadonlySet<string> = new Set();
 
 /**
  * What Track says from a monster's page (`lair_track_go`): the nearest lair of its kind within `LAIR_TRACK`, its way
