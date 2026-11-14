@@ -41,7 +41,7 @@ import { foundationDone } from '../game/foundations';
 import { hash2 } from '../world/noise';
 import { bareRock, DAMP_SAND, dustiness, FLAT, growth, oreWash, PAVED, ROCK_VARIANTS, SLAB_VARIANTS, STREWN, TileType, TILE_DEFS, COVERED, bushSpecies, slabVariant, trailGround, stonesBed, treeSpecies, treeVariant } from '../world/tiles';
 import { drawRunestone, runestoneHit, RunestoneNight, softHole, type NightHole, type OccluderClip } from './runestone';
-import { BUSH3D_SPECIES, bush3dFoot, bush3dShadow, formAt, nextSunStep, STUMP3D_SPECIES, SWAY_FRAMES, sunStepOf, swayAt, TREE3D_SPECIES, tree3dFoot, tree3dFrame, tree3dIdle, tree3dShadow, tree3dStats, type TreeView } from './trees3d';
+import { BUSH3D_SPECIES, bush3dFoot, bush3dShadow, formAt, nextSunStep, STUMP3D_SPECIES, SWAY_FRAMES, sunStepOf, swayAt, TREE3D_SPECIES, tree3dFoot, tree3dFrame, tree3dGirth, tree3dIdle, tree3dShadow, tree3dStats, type TreeView } from './trees3d';
 import { drawRuneLantern, drawRuneLanternBloom, drawRuneLanternLive, runeLanternHit, runeLanternNight, runeLanternPool, runeLanternVariant, type RuneLanternLook } from './runelantern';
 import { deedTotemBounds, deedTotemHits, deedTotemNight, deedTotemVariant, drawDeedTotem, drawDeedTotemBloom, drawDeedTotemLive } from './deedtotem';
 import { drawWorkPost, drawWorkPostLive, drawWorkPostNight, workPostBounds, workPostHit, workPostNight, workPostVariant, type WorkPostLook } from './workpost';
@@ -67,7 +67,7 @@ import { gardenAmbience, gardenTrim, hangCodeOf } from './gardenlook';
 import { decorTrim } from './decorlook';
 import { furnishTrim } from './furnishlook';
 import { fittingTrim } from './fittinglook';
-import { LANTERN_POLE, PRACTISE, SHOOT_TARGET, STONE_BUST, TREE_BENCH } from '../game/fittingdefs';
+import { LANTERN_POLE, MOOR_REACH, MOORING_POST, PRACTISE, SHOOT_TARGET, STONE_BUST, TREE_BENCH } from '../game/fittingdefs';
 
 /** Pixels at zoom one a tree bench's two halves are sorted either side of the tree on its tile: its far half before, its near half after. */
 const BENCH_ROUND = 2;
@@ -90,11 +90,12 @@ import { drawCampfireNight } from './kit/campfire';
 import { SMELTER_H, SMELTER_W, smelterCentre } from '../game/smelter';
 import { anvilBounds, anvilHit, anvilNight, anvilTone, anvilVariant, drawAnvil, drawAnvilLive, drawAnvilNight, drawKiln, drawKilnLive, drawKilnNight, drawSmelter, drawSmelterLive, drawSmelterNight, kilnBounds, kilnHit, smelterBounds, smelterHit } from './forge';
 import { KILN_SUBTILES, kilnCentre } from '../game/kiln';
-import { furnitureCentre, furnitureDef, hearthCapacity, type PlacedFurniture, facingOf as pieceFacing, furnitureFootprint } from '../game/furniture';
+import { furnitureCentre, furnitureDef, hearthCapacity, isBoat, type PlacedFurniture, facingOf as pieceFacing, furnitureFootprint } from '../game/furniture';
 import { UNSEEN, VISIBLE } from '../game/vision';
 import { darknessAt, DAWN, deedLevel, deedRadiusAt, DUSK, MAX_DEED_LEVEL } from '../game/game';
-import { boatSway, clothInWind, crewOrder, deviceOf, drawFurniture, drawFurnitureLive, driverOn, swayOnScreen, WHEELS, wheelBlur, wheelTrim, steeredByTiller, woodHex, furnitureHoles, helmSeat, reinsTo, rowedPiece, furnitureSpan, FURNITURE_HEIGHT, glowsAtNight, headingView, mossTrim, PIECE_STAGES, pieceView, planterTrim, roseTrim, vineTrim, VINE_VARIANTS, type Air, type Crew, type PieceView } from './furniture';
-import { kitHolesLit } from './kitpieces';
+import { boatSway, gunwaleOf, clothInWind, crewOrder, deviceOf, drawFurniture, drawFurnitureLive, driverOn, swayOnScreen, WHEELS, wheelBlur, wheelTrim, steeredByTiller, woodHex, furnitureHoles, helmSeat, reinsTo, rowedPiece, furnitureSpan, FURNITURE_HEIGHT, glowsAtNight, headingView, mossTrim, PIECE_STAGES, pieceView, planterTrim, roseTrim, vineTrim, VINE_VARIANTS, type Air, type Crew, type PieceView } from './furniture';
+import { drawKit, kitHolesLit } from './kitpieces';
+import { BENCH_BAND, benchRound, POST_ROPE } from './kit/fittings';
 import { roseStage } from '../game/roses';
 import { isTrellis, vineStage } from '../game/vineyard';
 import { fieldRate } from '../game/growth';
@@ -503,6 +504,9 @@ const saddleTuck = (seat: number): number => Math.max(0, Math.min(1, (TUCK_NONE 
 /** Reins: dark leather, inked. */
 const REIN_LEATHER = 'rgb(112, 74, 46)';
 const REIN_LINE = 'rgba(46, 30, 22, 0.85)';
+/** A mooring rope's hemp, and the ink round it (`drawMooring`). */
+const ROPE_HEMP = 'rgb(214, 190, 150)';
+const ROPE_LINE = 'rgba(92, 66, 58, 0.85)';
 /** The grown orse's top the draught size was set against, in pixels at zoom one: pinned, so its model changing does not resize every team. */
 const DRAUGHT_ORSE_TOP = 31.4;
 const TRACES_SCALE = Math.max(1, (1.25 * FIGURE_TOP) / DRAUGHT_ORSE_TOP);
@@ -1157,6 +1161,7 @@ export class Renderer {
     e.layer = undefined;
     e.mote = undefined;
     e.fx = undefined;
+    e.rope = undefined;
     e.aq = undefined;
     e.bp = undefined;
     e.sp = undefined;
@@ -4335,9 +4340,14 @@ export class Renderer {
     this.spiralSeen = null;
     // Everybody at the helm of a hull somebody else is steering, or aboard one, is drawn with her; see `takeAboard`.
     this.seated.clear();
+    // And each boat tied to a post, by the post that holds her: the first holding her within reach (`postOf`).
+    this.moored.clear();
+    this.boatEnts.clear();
     for (const f of this.game.furniture.values()) {
       if (f.helm) this.seated.add(f.helm);
       for (const r of f.riders ?? []) this.seated.add(r.who);
+      const tied = f.kind === MOORING_POST && f.fitting?.tied !== undefined ? this.game.furniture.get(f.fitting.tied) : undefined;
+      if (tied && isBoat(tied) && !this.moored.has(tied.id) && Math.max(Math.abs(tied.x - f.x), Math.abs(tied.y - f.y)) <= MOOR_REACH) this.moored.set(tied.id, f);
     }
     // And everybody up on a wildermon, who is drawn on its saddle with it (`peerOnMount`): on one only, and not as well as at
     // a wagon's reins. Reported: "I appear double to other players": up on a mount and at the reins at once, drawn in both.
@@ -4969,6 +4979,9 @@ export class Renderer {
             // On a bridge's deck, among its pieces (`deckKey`): a stall on an outer lane, a wagon crossing. Anything else is under it (`pieceOnDeck`).
             if (this.game.bridges.size && this.game.pieceOnDeck(fu, Math.floor(wx), Math.floor(wy))) this.onBridgeDeck(fe, wx, wy);
             if (fu.helm || fu.riders?.length || player.aboard === fu.id || this.helming === fu) this.takeAboard(fu, fe, x, y, zoom);
+            // A boat tied to a post and the post: the rope between them (`drawMooring`).
+            if (isBoat(fu)) this.boatEnts.set(fu.id, fe);
+            if (fu.kind === MOORING_POST || this.moored.has(fu.id)) this.takeMooring(fu, fe, V);
             // A cart on the move rocks and bumps on the track under her driver, and her driver with her (`cartSwayOf`).
             if (reinsTo(fu.kind)) fe.sway = this.cartSwayOf(fu, fe.sx, fe.sy, zoom);
           }
@@ -6299,6 +6312,77 @@ export class Renderer {
     e.standing = standing;
   }
 
+  /** Each boat tied to a post this frame, by her id, and the post holding her; and each boat as she was taken this frame, for her sway. */
+  private readonly moored = new Map<number, PlacedFurniture>();
+  private readonly boatEnts = new Map<number, Entity>();
+
+  /**
+   * The rope from a mooring post to the boat tied to it, taken as a thing of
+   * its own on whichever of the two lines of the ground is the nearer, so
+   * that line's ground is not laid over it; and among that line before the
+   * post or the boat standing there, which is nearer than the rope's far end.
+   */
+  private takeMooring(f: PlacedFurniture, fe: Entity, V: View): void {
+    const post = f.kind === MOORING_POST ? f : this.moored.get(f.id);
+    const boat = f.kind === MOORING_POST ? (f.fitting?.tied !== undefined ? this.game.furniture.get(f.fitting.tied) : undefined) : f;
+    if (!post || !boat || this.moored.get(boat.id) !== post) return;
+    const atPost = depthOf(V, post.x, post.y), atBoat = depthOf(V, boat.x, boat.y);
+    if (f === post ? atPost < atBoat : atBoat <= atPost) return;
+    const cam = this.camera;
+    const [px, py] = furnitureCentre(post), [bx, by] = this.game.hullCentre(boat);
+    const mx = (px + bx) / 2, my = (py + by) / 2;
+    const re = this.take('rope', f.x, f.y, cam.worldToScreenX(mx, my), cam.worldToScreenY(mx, my, this.pieceBase(post, px, py)), null);
+    re.rope = { post, boat };
+    re.key = Math.min(re.sy, (fe.key ?? fe.sy) - 0.01);
+  }
+
+  /**
+   * A mooring rope: off the turns round the post on the side toward the boat
+   * to the top of her side nearest the post (`gunwaleOf`), as she lies and
+   * rolls, sagging by a little of its length and never below the water, the
+   * ground or a deck under it; drawn as the reins are, a line of ink under the rope.
+   */
+  private drawMooring(ctx: CanvasRenderingContext2D, post: PlacedFurniture, boat: PlacedFurniture, zoom: number): void {
+    const cam = this.camera, U = UNITS_PER_TILE;
+    const [px, py] = furnitureCentre(post), [cx, cy] = this.game.hullCentre(boat);
+    const a = this.game.shipHeading(boat), ca = Math.cos(a), sa = Math.sin(a);
+    // Where on her side the rope comes over, in her own frame: the point of her gunwale nearest the post.
+    const lx = ((px - cx) * ca + (py - cy) * sa) * U, ly = (-(px - cx) * sa + (py - cy) * ca) * U;
+    let end: readonly [number, number, number] = [0, 0, 0], best = Infinity;
+    for (const q of gunwaleOf(boat.kind) ?? []) {
+      const d = Math.hypot(q[0] - lx, q[1] - ly);
+      if (d < best) { best = d; end = q; }
+    }
+    const bx = cx + (end[0] * ca - end[1] * sa) / U, by = cy + (end[0] * sa + end[1] * ca) / U;
+    const bz = this.pieceBase(boat, cx, cy) + end[2];
+    // Off the post's turns on the side toward her.
+    const [ropeZ, ropeR] = POST_ROPE, dl = Math.hypot(bx - px, by - py) || 1;
+    const ax = px + ((bx - px) / dl) * (ropeR / U), ay = py + ((by - py) / dl) * (ropeR / U);
+    const az = this.pieceBase(post, px, py) + ropeZ;
+    const sag = Math.min(4, dl * U * 0.08);
+    const sway = this.boatEnts.get(boat.id)?.sway;
+    const N = 10, pts: Array<[number, number]> = [];
+    for (let i = 0; i <= N; i++) {
+      const u = i / N, x = ax + (bx - ax) * u, y = ay + (by - ay) * u;
+      const z = Math.max(az + (bz - az) * u - 4 * sag * u * (1 - u), Math.max(this.standTop(x, y), 0) + 0.3);
+      const sx = cam.worldToScreenX(x, y), sy = cam.worldToScreenY(x, y, z);
+      // Her end goes with her as she rolls, and the rope with it by how near her it is.
+      const [wx, wy] = swayedAt(sway, sx, sy);
+      pts.push([sx + (wx - sx) * u, sy + (wy - sy) * u]);
+    }
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    for (const [ink, w] of [[ROPE_LINE, 1.9], [ROPE_HEMP, 1.0]] as Array<[string, number]>) {
+      ctx.strokeStyle = ink;
+      ctx.lineWidth = Math.max(0.8, w * zoom * 0.6);
+      ctx.beginPath();
+      pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   /**
    * The reins of a beast in the traces: from where its head is drawn back to
    * the driver's box of the cart or wagon it is put to, at the height of the
@@ -6350,6 +6434,14 @@ export class Renderer {
     const h = this.game.world.heightAt(wx, wy);
     // On a bridge's deck, or on the ground under it (`pieceOnDeck`).
     return furnitureDef(f.kind).boat ? Math.max(h, 0) : this.standTop(wx, wy, this.game.bridges.size > 0 && this.game.pieceOnDeck(f, Math.floor(wx), Math.floor(wy)));
+  }
+
+  /** How far out a tree bench on a tile is built, round the trunk of the tree on it (`benchRound`): its own, with no tree drawn as a solid there. */
+  private benchRoundAt(x: number, y: number): number | undefined {
+    const world = this.game.world;
+    if (world.getTile(x, y) !== TileType.Tree) return undefined;
+    const data = world.getData(x, y);
+    return benchRound(tree3dGirth(treeSpecies(data), treeVariant(data), x, y, BENCH_BAND[0], BENCH_BAND[1]));
   }
 
   /** Whether a tile stands on piers, for the pond painter (`WaterFrame.decked`). */
@@ -6835,8 +6927,8 @@ export class Renderer {
       }
       this.occClips.length = 0;
       // Drawn in front of something whose foot is to be drawn again over the ground in front: drawn again after that foot (`footShy`).
-      if (this.feet.length && ent.kind !== 'life' && ent.kind !== 'spell') this.footShy(ent, zoom);
-      const under = ent.kind === 'life' || ent.kind === 'spell' || ent.kind === 'player' || ent.kind === 'peer' || ent.kind === 'creature' ? null : this.underJetty(ent);
+      if (this.feet.length && ent.kind !== 'life' && ent.kind !== 'spell' && ent.kind !== 'rope') this.footShy(ent, zoom);
+      const under = ent.kind === 'life' || ent.kind === 'spell' || ent.kind === 'rope' || ent.kind === 'player' || ent.kind === 'peer' || ent.kind === 'creature' ? null : this.underJetty(ent);
       if (under) {
         ctx.save();
         ctx.clip(under, 'evenodd');
@@ -6854,6 +6946,10 @@ export class Renderer {
       }
       if (ent.kind === 'spell') {
         if (ent.fx) this.spells.drawItem(ctx, ent.fx);
+        continue;
+      }
+      if (ent.kind === 'rope') {
+        if (ent.rope) this.drawMooring(ctx, ent.rope.post, ent.rope.boat, zoom);
         continue;
       }
       // Being hit beats being pointed at: a blow should read as a blow even
@@ -7141,10 +7237,10 @@ export class Renderer {
           }, undefined, pieceBox);
           drawn = box;
         } else if (piece.kind === TREE_BENCH && ent.layer !== undefined) {
-          // One half of a tree bench, the far or the near, as it was taken round its tree (`BENCH_ROUND`).
-          const layer = ent.layer;
+          // One half of a tree bench, the far or the near, as it was taken round its tree (`BENCH_ROUND`), built round its trunk (`benchRound`).
+          const look = { lit: false, tint: dyeOf(piece) ?? undefined, trim: ent.layer, material: piece.material, round: this.benchRoundAt(piece.x, piece.y) };
           this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => {
-            drawn = drawFurniture(g, px, py, zoom, piece.kind, false, dyeOf(piece) ?? undefined, layer, view, piece.material);
+            drawn = drawKit(g, px, py, zoom, piece.kind, look, view);
           }, undefined, pieceBox);
         } else if (isDen(piece.kind)) {
           /*
@@ -8352,6 +8448,9 @@ export class Renderer {
       if (ghost.piece === MEMORIAL) drawMemorial(ctx, px, py, zoom, ghost.facing, cam.rotation, undefined, 0, this.anim);
       else if (isRuneLantern({ kind: ghost.piece })) {
         drawRuneLantern(ctx, px, py, zoom, { facing: ghost.facing, stage: 0, stages: PIECE_STAGES, variant: runeLanternVariant(ghost.x, ghost.y, ghost.sx, ghost.sy) }, cam.rotation, 0, this.anim);
+      } else if (ghost.piece === TREE_BENCH) {
+        // A tree bench round the trunk it would go round.
+        drawKit(ctx, px, py, zoom, ghost.piece, { lit: false, material: ghost.material, round: this.benchRoundAt(ghost.x, ghost.y) }, pieceView(ghost.facing, cam.rotation));
       } else drawFurniture(ctx, px, py, zoom, ghost.piece, false, undefined, undefined, pieceView(ghost.facing, cam.rotation), ghost.material);
       if (!ghost.ok) {
         const [W, D] = furnitureSpan(ghost.piece);
