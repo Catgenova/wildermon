@@ -4422,6 +4422,15 @@ export const NEWS: News[] = [
     ],
   },
   {
+    n: 588,
+    day: '2026-11-14',
+    lines: () => [
+      "Fixed: trousers and leggings showing in chest armour's gaps and through its skirts; less of it kneeling, sitting and hopping.",
+      'Changed: leather jerkin, breastplate and cuirass: under-layer in the gaps at the waist and between the skirt plates (was: legs or skin).',
+      "Changed: leather trousers' hip flaps under the tunic only (was: also under the breastplate and the cuirass).",
+    ],
+  },
+  {
     n: 587,
     day: '2026-11-14',
     lines: () => [`Changed: Field guide order, ${guidePages().length} kinds: gathering, then crafting, then everything else; each by taming level, the higher tame chance first; the monsters last. A kind's stages after it (was: the order the kinds were added).`],
