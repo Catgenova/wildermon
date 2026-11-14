@@ -4,7 +4,7 @@ CREATE OR REPLACE FUNCTION public.perform_craft(p_world uuid, p_uid uuid, p_reci
  RETURNS void
  LANGUAGE plpgsql
 AS $function$
-declare r recipe; i record; v_n int; prefer bigint; mat text; hard double precision; tq double precision;
+declare v_scales int := 0; v_hoard int := 0; r recipe; i record; v_n int; prefer bigint; mat text; hard double precision; tq double precision;
         s double precision; made_ql double precision; rare text; total double precision := 0;
         v_made bigint; weight double precision := 0; one double precision; share double precision;
         only_mat boolean; was text; v_base int; spared boolean := false; v_mark jsonb;
@@ -161,6 +161,9 @@ begin
   v_kept := v_lye > 0 and random() < v_lye;
   -- The units used up, by their rarity, for what rare ones put on the chance of a rare one (`rarity_bands`):
   -- what was at hand before the go less what is after it.
+  -- The dragon scales at hand before the go, all and hoard (`hoard_scale`), for what it spends of each.
+  v_scales := craft_count(p_world, p_uid, 'dragon_scale', null, prefer);
+  v_hoard := craft_count(p_world, p_uid, 'dragon_scale', hoard_scale(), prefer);
   v_used := craft_units_held(p_world, p_uid, p_recipe, prefer);
   for i in select * from recipe_input where recipe = p_recipe order by ord loop
     continue when v_kept and exists (select 1 from vessel_def v where v.item = i.item);
@@ -171,12 +174,14 @@ begin
     if not craft_consume(p_world, p_uid, i.item, recipe_need(p_world, p_uid, p_recipe, i.count), prefer, mat) then return; end if;
   end loop;
   v_used := rarity_tally_less(v_used, craft_units_held(p_world, p_uid, p_recipe, prefer));
+  v_scales := v_scales - craft_count(p_world, p_uid, 'dragon_scale', null, prefer);
+  v_hoard := v_hoard - craft_count(p_world, p_uid, 'dragon_scale', hoard_scale(), prefer);
   perform craft_carry_on(p_world, p_uid, p_recipe, p_target, was, mat);
 
   if r.ql_from_inputs then
     made_ql := greatest(1, least(100, (case when weight > 0 then total / weight else 1 end) * (0.78 + s / 460)));
   else
-    made_ql := product_ql(s, tq);
+    made_ql := product_ql(case when v_scales > 0 and v_hoard = v_scales then s * hoard_scale_cap() else s end, tq);
   end if;
   -- And the tree, on the trade the recipe belongs to: the quality of what came
   -- off the bench, however it was arrived at. A hundred is still a hundred.

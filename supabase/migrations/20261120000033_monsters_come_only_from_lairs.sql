@@ -256,10 +256,23 @@ create or replace function lair_wants(p_kind text, p_size int) returns table (sp
     from lair_garrison() g where g.kind = p_kind order by g.ord
 $$;
 
-/** The piece a lair is drawn as, a whole tile, set down on its tile. */
+/**
+ * Whether a kind of lair's piece burns while it is held: an orc camp's fire. It burns on what it was given when the camp
+ * stood up or restocked, more than it will ever need, and is put out when the camp is cleared (`lair_fire`).
+ */
+create or replace function lair_burns(p_kind text) returns boolean language sql immutable as $$ select p_kind = 'orc_camp' $$;
+
+/** A lair's fire lit or put out, for a kind whose piece burns. */
+create or replace function lair_fire(p_world uuid, p_lair int, p_lit boolean) returns void language sql as $$
+  update placed pl set lit = p_lit, fuel = case when p_lit then 1e9 else 0 end, since = now()
+    from lair l where l.world_id = p_world and l.id = p_lair and pl.id = l.placed and lair_burns(l.kind)
+$$;
+
+/** The piece a lair is drawn as, a whole tile, set down on its tile: an orc camp's fire burning. */
 create or replace function lair_piece(p_world uuid, p_kind text, p_x int, p_y int) returns bigint language sql as $$
-  insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql)
-    values (p_world, 'furniture', p_kind, p_x, p_y, 0, 0, p_x + 0.5, p_y + 0.5, 50)
+  insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, lit, fuel, since)
+    values (p_world, 'furniture', p_kind, p_x, p_y, 0, 0, p_x + 0.5, p_y + 0.5, 50, lair_burns(p_kind),
+            case when lair_burns(p_kind) then 1e9 else 0 end, now())
   returning id
 $$;
 
@@ -395,6 +408,8 @@ begin
     end if;
     update lair set state = 'held', size = lair_size_roll(l.kind), stocked_at = now(), cleared_at = null
       where world_id = p_world and id = p_lair;
+    -- And an orc camp's fire lit again.
+    perform lair_fire(p_world, p_lair, true);
     if l.moving then
       select * into s from lair_site(p_world, l.kind, p_lair);
       if s.x is not null then
@@ -521,6 +536,8 @@ begin
   update lair set state = 'cleared', cleared_at = now(), clears = v_clears,
       moving = moving or cardinality(v_clears) >= lair_move_clears()
     where world_id = p_world and id = p_lair;
+  -- An orc camp's fire out.
+  perform lair_fire(p_world, p_lair, false);
   return v_n;
 end $$;
 

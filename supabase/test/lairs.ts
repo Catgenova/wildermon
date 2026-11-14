@@ -305,9 +305,12 @@ begin
     update lair set state = 'boss', clears = case when i = 1 then array[now() - interval '2 days', now() - interval '6 days']
                                                    else array[now() - interval '8 days', now() - interval '9 days'] end where world_id = w and id = l.id;
     v_id := lair_spawn(w, l.id, 'orc', true);
+    insert into said select 'FIRE', i || '|held|' || placed_lit(pl) from placed pl where pl.id = l.placed;
     perform wound_beast(w, v_id, 1e9, null, null, '${U.q}', null);
+    insert into said select 'FIRE', i || '|cleared|' || placed_lit(pl) from placed pl where pl.id = l.placed;
     update lair set cleared_at = now() - interval '2 hours' where world_id = w and id = l.id;
     perform lair_turn(w, l.id);
+    insert into said select 'FIRE', i || '|back|' || placed_lit(pl) from placed pl where pl.id = l.placed;
     insert into said select 'MOVED', i || '|' || l.x || ',' || l.y || '|' || l2.x || ',' || l2.y || '|' || l2.moving || '|' || cardinality(l2.clears) || '|'
       || (select pl.x || ',' || pl.y from placed pl where pl.id = l2.placed) || '|' || (select count(*) from lair_seen s2 where s2.world_id = w and s2.lair = l.id) || '|'
       || lair_site_ok(w, l2.kind, l2.x, l2.y, l2.id) || '|' || v_before
@@ -513,6 +516,9 @@ check(`cleared ${LAIR_MOVE_CLEARS} times in ${LAIR_MOVE_DAYS} days, a camp resto
   !!m1 && m1[1] !== m1[2] && m1[3] === 'false' && m1[4] === '0' && m1[5] === m1[2] && m1[6] === '0' && m1[7] === 'true', m1?.join('|'));
 check(`cleared once with two clears older than ${LAIR_MOVE_DAYS} days, the other stays where it was, still seen by whoever had seen it`,
   !!m2 && m2[1] === m2[2] && m2[4] === '1' && m2[6] === m2[8], m2?.join('|'));
+
+check('an orc camp\'s fire burns while it is held, is out once it is cleared, and burns again when it restocks',
+  said('FIRE').join(',') === '1|held|true,1|cleared|false,1|back|true,2|held|true,2|cleared|false,2|back|true', said('FIRE').join(','));
 
 /* ---- Track ------------------------------------------------------------------------------------------------------------ */
 

@@ -280,6 +280,10 @@ begin
      * marks them and takes the mark up when one goes. Off the index the
      * sweep uses, which holds nothing but graves.
      */
+    -- And every lair you have seen (`lair_seen`), wherever it is: a pin on your map, "found" in your field guide.
+    'lairs', coalesce((select jsonb_agg(jsonb_build_object('id', l.id, 'kind', l.kind, 'x', l.x, 'y', l.y) order by l.id)
+      from lair_seen s join lair l on l.world_id = s.world_id and l.id = s.lair
+      where s.world_id = p_world and s.uid = me), '[]'::jsonb),
     'graves', coalesce((select jsonb_agg(jsonb_build_object('id', g.id, 'x', g.x, 'y', g.y) order by g.id)
       from placed g
       where g.world_id = p_world and g.crumbles_at is not null and g.made_by = me), '[]'::jsonb),
