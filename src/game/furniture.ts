@@ -17,6 +17,7 @@ import { lanternReach } from './light';
 import { storeMoveRefusal, storeUse } from './stores';
 import { WATER_MOTE, WATER_MOTES_EACH } from './motes';
 import { HAMMOCK_REST, ROPE_WALK, ROPE_WALK_QL, ROPE_WALK_TIME, ROPEMAKING } from './ropework';
+import { LAIR_KINDS } from './lairs';
 
 /**
  * What a store takes, for the five that take one sort of thing: raw materials,
@@ -167,6 +168,14 @@ export interface FurnitureDef {
    * makes one, so it has no recipe. See `graves.ts`.
    */
   grave?: boolean;
+  /**
+   * A monster lair (`lairs.ts`): set down by the island where it sites one,
+   * nobody's, and never built, moved, taken or worked; the island refuses
+   * every action on it (`lair_refusal`).
+   */
+  lair?: boolean;
+  /** A trophy out of a lair's hoard (`lairs.ts`): set down anywhere as decoration, and never built. */
+  trophy?: boolean;
   /**
    * What is planted at its feet and climbs it -- roses or lavender -- growing
    * from the moment it is set down (`roses.ts`): the island hands every
@@ -580,6 +589,17 @@ export const FURNITURE: FurnitureDef[] = [
    * two doors as a chest; `graves.ts` says who may and for how long.
    */
   piece('grave', 'Grave', 1, 2, [], 0, 0, '', undefined, { grave: true }),
+  /*
+   * The lairs (`lairs.ts`): a tile each, set down by the island. A burrow
+   * mound for a goblin warren, a palisade round a fire for an orc camp, a cave
+   * mouth for an ogre cave and a nest of bones for a dragon roost.
+   */
+  ...LAIR_KINDS.map((k) => piece(k.id, k.name, 4, 4, [], 0, 0, '', undefined, { lair: true })),
+  /* And the trophies their hoards hold, each on a stone plinth: set down as any piece is. */
+  piece('chief_ear', 'Goblin chief\'s ear', 1, 1, [], 0, 0, '', undefined, { trophy: true }),
+  piece('warlord_tusk', 'Warlord\'s tusk', 1, 1, [], 0, 0, '', undefined, { trophy: true }),
+  piece('ogre_king_jaw', 'Ogre king\'s jaw', 1, 1, [], 0, 0, '', undefined, { trophy: true }),
+  piece('great_dragon_scale', 'Great dragon scale', 1, 1, [], 0, 0, '', undefined, { trophy: true }),
 ];
 
 export const FURNITURE_BY_ID = new Map(FURNITURE.map((f) => [f.id, f]));

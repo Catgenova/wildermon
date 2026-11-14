@@ -15,6 +15,11 @@ begin
   select * into sd from species_def d where d.id = p_target->>'species';
   select * into p from player pl where pl.world_id = p_world and pl.uid = p_uid;
   v_level := track_level(skill_of(p_world, p_uid, tracking_skill()));
+  -- A monster's: its kind's nearest lair (`lair_track_go`).
+  if sd.monster then
+    perform lair_track_go(p_world, p_uid, sd.id, v_level);
+    return;
+  end if;
   v_range := floor(track_range(v_level) * (1 + aware_share(p_world, p_uid)))::int;
   -- One kind's wild rows (`creature_wild_kind`), where each is now along its leg.
   select w.id, w.d into v_id, v_d from (

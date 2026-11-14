@@ -45,7 +45,7 @@
 import { Game } from '../../src/game/game';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import {
-  EVOLVE_AT, footing, HERD_REACH, levelSkill, MONSTER_CAP, MONSTER_KEEP_OFF, PULL_DEFAULT, seasonSays, SPECIES, WATER_RANGE, WILD_RANGE, type Creature, type SpeciesDef,
+  EVOLVE_AT, footing, HERD_REACH, levelSkill, PULL_DEFAULT, seasonSays, SPECIES, WATER_RANGE, WILD_RANGE, type Creature, type SpeciesDef,
 } from '../../src/game/creatures';
 import { psql, ok, bad, check } from './harness';
 import { HYBRID_HARDY } from '../../src/game/hybridlist';
@@ -55,6 +55,7 @@ import {
   countsLine, FieldGuide, GUIDE_ORDER, guideCounts, guideEntries, guideEntry, guideMarks, guidePage, guidePages, seenLine, stageKey, whereItLives, wildShare,
 } from '../../src/game/guide';
 import { GUIDE_BATCH, MOBS_RANGE } from '../../src/game/keep';
+import { LAIR_KINDS, LAIR_LEASH, lairOfKind } from '../../src/game/lairs';
 import { SAFE_RING } from '../../src/game/runestones';
 import { packLand, packWorld, unpack } from '../../src/game/save';
 import { TILE_DEFS } from '../../src/world/tiles';
@@ -101,6 +102,26 @@ for (const d of KINDS) {
     if (lines !== `Never wild: bred only, ${SPECIES[d.hybrid[0]].name} × ${SPECIES[d.hybrid[1]].name}` || whereItLives(d, true).join(' | ') !== lines) where.push(`${d.id} is not said to be never wild`);
     continue;
   }
+  /*
+   * A monster lives at its lair and nowhere else (\`lairs.ts\`): its page says its kind's lair, how many, its distance
+   * from a totem, the other lairs it is in the garrison of and its leash, and none of the wild's spawning lines. Its
+   * page said a share of the wild's roll, an island cap and a distance of its own from a totem until monsters came
+   * only from lairs.
+   */
+  if (d.monster) {
+    const k = lairOfKind(d.id);
+    const also = LAIR_KINDS.filter((o) => o !== k && o.garrison.some(([sp]) => sp === d.id));
+    const mwant: Array<[string, boolean, boolean]> = [
+      ['its lair', !!k, !!k && lines.includes(`Lair: ${k.name.toLowerCase()}, ${k.count} on the island, on `)],
+      ['its lair\'s distance from a totem', !!k, !!k && lines.includes(`Lair at least ${k.keepOff} tiles from a settlement totem`)],
+      ['the other lairs it guards', also.length > 0, also.every((o) => lines.includes(`Also in the garrison of: ${o.name.toLowerCase()}`)) && also.length > 0],
+      [`its ${LAIR_LEASH}-tile leash`, true, lines.includes(`Leash: ${LAIR_LEASH} tiles from its lair; stands up nowhere else`)],
+      ['no spawning off the wild\'s roll', false, /Spawns on|Spawn share|Home range|Island cap/.test(lines)],
+    ];
+    for (const [what, should, is] of mwant) if (should !== is) where.push(`${d.id} ${should ? 'lacks' : 'has'} ${what}`);
+    if (!whereItLives(d, true).includes(`Never within ${SAFE_RING} tiles of the island's spawn or a Runestone (safe ring)`)) where.push(`${d.id} lacks the safe ring on an island`);
+    continue;
+  }
   const want: Array<[string, boolean, boolean]> = [
     ['over a seam', !!d.onOre, lines.includes('vein or coal seam')],
     ['on sand', !!d.onSand, /on: sand/.test(lines)],
@@ -118,8 +139,6 @@ for (const d of KINDS) {
     ['alone, a hunter', !!d.hunter, lines.includes('Solitary: a home ground of its own')],
     [`home within ${WILD_RANGE}`, true, lines.includes(`Home range: ${WILD_RANGE} tiles`)],
     [`1 in ${Math.round(1 / wildShare(d))}`, true, lines.includes(`Spawn share: 1 in ${Math.round(1 / wildShare(d))}`)],
-    [`off a token by ${MONSTER_KEEP_OFF[d.id]}`, !!d.monster, lines.includes(`Never within ${MONSTER_KEEP_OFF[d.id]} tiles of a settlement totem`)],
-    [`no more than ${MONSTER_CAP[d.id]}`, !!d.monster, lines.includes(`Island cap: ${MONSTER_CAP[d.id] ?? 0} at once`)],
     ['no safe ring alone', false, lines.includes('safe ring')],
   ];
   for (const [what, should, is] of want) if (should !== is) where.push(`${d.id} ${should ? 'lacks' : 'has'} ${what}`);

@@ -3119,5 +3119,11 @@
     "title": "Elementalism: infusing, attunement and sensing",
     "shard": 6,
     "why": "Every infusion's strength, refusal and effect is the island's: fire's fuel, earth's yield, wind's pace, water's fill, life's growth, light's candle and dark's misses; attunement's extra mote and strength; sensing's reach and its hour."
+  },
+  {
+    "file": "supabase/test/lairs.ts",
+    "title": "Monsters come only from lairs, leashed to them, and a lair's boss opens a hoard",
+    "shard": 3,
+    "why": "Asked for: monsters come only from lairs, with no wandering spawns and no raiding patrols. Every lair kind and number the same on both sides; each sited on its ground, kept from every token and every other lair, the dragon on Volcano Isle's highest ground, and no settlement founded that near one; its garrison up, no monster out of the wild, none past its leash however it is moved, none hunting past it; the boss out after the garrison and told round; a hoard share for each who dealt a tenth of its health, never silver or rare, the map and the book at their odds held at their lines and over a seeded draw; the cleared ring safe and stocked half again; every restock a second either side of its time, the dragon's day; three clears in seven days and it moves; Track to the nearest lair; hoard scales' raised cap. Every clock moved on the lair, never the wall's."
   }
 ]

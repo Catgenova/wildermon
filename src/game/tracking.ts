@@ -45,6 +45,7 @@ import type { Game } from './game';
 import type { Creature, SpeciesDef } from './creatures';
 import { SKILL_TOP } from './skills';
 import { listed, percent } from './words';
+import { LAIR_TRACK } from './lairs';
 
 /** The skill a trail is read with, and the only thing that trains it. */
 export const TRACKING = 'tracking';
@@ -186,16 +187,27 @@ export function trackSaid(kind: string, range: number, found: TrackFound | null,
   return `Tracks: ${name}, ${r.way}, ${trackDistSays(r)}.`;
 }
 
-/** Whether a kind's page in the field guide has a Track button: a wildermon, not a monster, and one you have seen. */
-export const trackable = (def: SpeciesDef, seen: ReadonlySet<string>): boolean => !def.monster && seen.has(def.id);
+/**
+ * Whether a kind's page in the field guide has a Track button: a wildermon you have seen, or a monster, seen or
+ * not, whose trail is its lair's (`LAIR_TRACK`).
+ */
+export const trackable = (def: SpeciesDef, seen: ReadonlySet<string>): boolean => !!def.monster || seen.has(def.id);
 
 /** Why a kind (its definition, if there is one) cannot be tracked, or null when it can: the island's `track_refusal`, in the same words. */
 export function trackRefusal(def: SpeciesDef | undefined, seen: ReadonlySet<string>): string | null {
   if (!def) return 'No such kind.';
-  if (def.monster) return `${def.name}: not a wildermon, no trail.`;
+  // A monster's trail is its lair's, seen or not.
+  if (def.monster) return null;
   if (!seen.has(def.id)) return `${def.name} not seen yet: only kinds marked seen in your field guide can be tracked.`;
   return null;
 }
+
+/**
+ * What Track says from a monster's page (`lair_track_go`): the nearest lair of its kind within `LAIR_TRACK`, its way
+ * and distance as a wildermon's trail is read; or that there is none. The island's words.
+ */
+export const lairTrackSaid = (lair: string, r: TrackReading | null): string =>
+  (r ? `Lair: ${lair}, ${r.way}, ${trackDistSays(r)}.` : `No ${lair.toLowerCase()} within ${LAIR_TRACK} tiles.`);
 
 /** The nearest wild one of a kind within `range` of (x, y), nearer first and the lower id on a tie; null when there is none. */
 export function nearestWild(list: Iterable<Creature>, species: string, x: number, y: number, range: number): Creature | null {

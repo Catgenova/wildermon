@@ -17,7 +17,7 @@
  */
 // `game` first: the root of the module graph, so nothing below comes out half-built.
 import { Game } from '../../src/game/game';
-import { ageDef, deepTile, footing, HAUL_SKILL, MONSTER_SHARE, SPECIES, SPRINGLET_LAND, waterOver, WILD_SPECIES, type Creature } from '../../src/game/creatures';
+import { ageDef, deepTile, footing, HAUL_SKILL, SPECIES, SPRINGLET_LAND, waterOver, WILD_SPECIES, type Creature } from '../../src/game/creatures';
 import { FISH } from '../../src/game/fishing';
 import { wildShare } from '../../src/game/guide';
 import { BASE_SPEED } from '../../src/game/player';
@@ -120,7 +120,7 @@ begin
   insert into said select 'DIET', string_agg(item, ',' order by item) from species_diet where species = 'springlet';
   insert into said select 'WEIGHT', weight::text from wild_table where species = 'springlet';
   insert into said select 'SHARE', ((select weight from wild_table where species = 'springlet')
-    / (select sum(weight) from wild_table where not monster) * (1 - monster_share()))::text;
+    / (select sum(weight) from wild_table where not monster))::text;
   insert into said select 'LEAST', (select min(weight) from wild_table where not monster)::text;
   insert into said select 'SWIMS', string_agg(id || ':' || swims, ',' order by id) from species_def where id in ('springlet', 'orse');
   insert into said select 'LEVEL', level_skill('springlet');
@@ -190,7 +190,7 @@ const weight = WILD_SPECIES.find(([id]) => id === 'springlet')?.[1];
 check('it is the rarest weight in the wild table, on both sides', weight === 1 && Number(say('WEIGHT')) === weight
   && Number(say('LEAST')) === Math.min(...WILD_SPECIES.map(([, n]) => n)), `${weight}, island ${say('WEIGHT')}`);
 check(`and its share of the wild's roll is 1 in ${Math.round(1 / wildShare(SPECIES.springlet))} on both sides`,
-  near(Number(say('SHARE')), wildShare(SPECIES.springlet)) && near(wildShare(SPECIES.springlet), weight! / WILD_SPECIES.reduce((n, [, w]) => n + w, 0) * (1 - MONSTER_SHARE)),
+  near(Number(say('SHARE')), wildShare(SPECIES.springlet)) && near(wildShare(SPECIES.springlet), weight! / WILD_SPECIES.reduce((n, [, w]) => n + w, 0)),
   `${say('SHARE')} vs ${wildShare(SPECIES.springlet)}`);
 
 /* ---- in the browser --------------------------------------------------------------------- */
@@ -226,6 +226,8 @@ check(`and its share of the wild's roll is 1 in ${Math.round(1 / wildShare(SPECI
   at(SHORE - 2);
   check('in the browser it needs a saddle and a bridle to be mounted', !g.mount(s) && ((s.tacked = true), g.mount(s)));
   g.dismount();
+  // The Thistlekit saddled and bridled too, as the island's is: the same state, not led on a lead rope (`LEAD_PACE`).
+  o.tacked = true;
 
   at(SHORE - 2);
   const land = g.mountSpeed(s);

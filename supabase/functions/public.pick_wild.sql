@@ -7,14 +7,7 @@ CREATE OR REPLACE FUNCTION public.pick_wild(p_world uuid, p_x integer, p_y integ
 AS $function$
 declare got text; v_ring boolean;
 begin
-  if coalesce(region_monsters(region_at(p_world, p_x + 0.5, p_y + 0.5)), 0) > 0 then
-    if at_peace(p_world, p_x + 0.5, p_y + 0.5) then return null; end if;
-    return pick_monster(p_world, p_x, p_y);
-  end if;
   v_ring := in_safe_ring(p_world, p_x + 0.5, p_y + 0.5);
-  if not (v_ring or in_sanctuary(p_world, p_x + 0.5, p_y + 0.5)) and random() < monster_share() then
-    return pick_monster(p_world, p_x, p_y);
-  end if;
   select species into got from wild_table where not monster
     -- In the safe ring, none of the kinds it keeps out (`ring_keeps_out`).
     and not (v_ring and ring_keeps_out(species))

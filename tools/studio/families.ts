@@ -207,7 +207,12 @@ const furniture: Family = {
     const style: Style = kit || den || plinth ? 'kit' : 'old';
     const st: Variant[] = kit?.states ? kit.states.map((s) => ({ label: s.label, set: { state: s.trim } })) : plinth ? states(['bare', 'runed 1', 'runed 2']) : [];
     if (kit?.layers) for (let i = 0; i < kit.layers; i++) st.push({ label: `layer ${i}`, set: { state: i } });
-    const vars: Variant[] = [{ label: `dyed ${DYE}`, set: { tint: DYE } }, ...WOODS.map((m) => ({ label: m, set: { material: m } }))];
+    // The dye and the woods only for a piece whose model takes them: a kit piece that says what it uses and leaves them out
+    // (a lair, a trophy, a brazier) draws the same whatever it is given.
+    const vars: Variant[] = [
+      ...(!kit?.uses || kit.uses.tint ? [{ label: `dyed ${DYE}`, set: { tint: DYE } }] : []),
+      ...(!kit?.uses || kit.uses.material ? WOODS.map((m) => ({ label: m, set: { material: m } })) : []),
+    ];
     if (den) vars.push({ label: 'sleeper', set: { variant: 1 } });
     const motions: Motion[] = [];
     if (kit?.live || (!kit && !den && !plinth)) motions.push(frames('live', 'live (drawn over the bake)', 6, { lit: true }));
@@ -259,7 +264,8 @@ function kitFile(kind: string): string {
     bed: 'beds', cot: 'beds', tent: 'beds', bell: 'bell', bulk_bin: 'bins', craft_bin: 'bins', seed_bin: 'bins', sprout_bin: 'bins', brazier: 'brazier',
     cupboard: 'cases', larder: 'cases', wardrobe: 'cases', chair: 'chair', chest: 'chest', coffer: 'coffer', butter_churn: 'crafts', loom: 'crafts',
     paper_press: 'crafts', potters_wheel: 'crafts', spindle: 'crafts', creature_crate: 'creature-crate', firewood_rack: 'firewood', fountain: 'fountain',
-    grave: 'grave', lamp_pillar: 'lamps', lamp_post: 'lamps', mailbox: 'mailbox', oven: 'oven', planter: 'planter', fish_pond: 'pond',
+    grave: 'grave', goblin_warren: 'lairs', orc_camp: 'lairs', ogre_cave: 'lairs', dragon_roost: 'lairs', chief_ear: 'trophies', warlord_tusk: 'trophies',
+    ogre_king_jaw: 'trophies', great_dragon_scale: 'trophies', lamp_pillar: 'lamps', lamp_post: 'lamps', mailbox: 'mailbox', oven: 'oven', planter: 'planter', fish_pond: 'pond',
     lavender_arch: 'rosearch', rose_arch: 'rosearch', stone_lavender_arch: 'rosearch', stone_rose_arch: 'rosearch', bench: 'seating', stool: 'seating',
     bookshelf: 'shelving', crate_shelf: 'shelving', shelves: 'shelving', great_sign: 'signs', sign: 'signs', stall: 'stall', coat_rack: 'stands',
     lectern: 'stands', statue: 'statue', table: 'tables', long_table: 'tables', desk: 'tables', trash_crate: 'trash', trellis: 'trellis', well: 'turnery',

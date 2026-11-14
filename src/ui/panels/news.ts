@@ -209,8 +209,13 @@ import { KNACK_BY_LEARNING, KNACK_GO, KNACK_ODDS } from '../../game/titles';
 import { ALL_GOALS, JOURNAL } from '../../game/journal';
 import { ISLAND_GOALS, TRADE_GOALS, WILDERMON_GOALS_C } from '../../game/journal-c';
 import { IDLE_WANTS, idleSays, LEDGER_ITEMS, LEDGER_SHOWN, workDoneLine } from '../../game/workerlog';
-import { type GatherKind, bushVineSays, CULL_RANGE, COMPANION_SIGHT, FORMER_NAME, HUNT_REST, kindNameOf, REMOVED_KINDS, HEARTH_FULL, HOME_LEG, HOME_SLACK, MONSTER_CAP, MONSTERS, REED_LEVELS, ringKeepsOut, SPECIES, WILD_RESET_DAYS, WILD_SPECIES, WILD_STAY } from '../../game/creatures';
+import { type GatherKind, bushVineSays, CULL_RANGE, COMPANION_SIGHT, FORMER_NAME, HUNT_REST, kindNameOf, REMOVED_KINDS, HEARTH_FULL, HOME_LEG, HOME_SLACK, REED_LEVELS, ringKeepsOut, SPECIES, WILD_RESET_DAYS, WILD_SPECIES, WILD_STAY } from '../../game/creatures';
 import { TRACK_RANGE_BASE, TRACK_RANGE_PER, TRACK_SHOW, trackBandsSays, trackErrSays, trackRange } from '../../game/tracking';
+import {
+  bossSays, garrisonSays, HOARD_SCALE, HOARD_SCALE_CAP, HOARD_SHARE, hoardBook, hoardSays, LAIR_ANNOUNCE, LAIR_KINDS, LAIR_LEASH, LAIR_MOVE_CLEARS,
+  LAIR_MOVE_DAYS, LAIR_RING, LAIR_RING_WILD, LAIR_SIGHT, LAIR_TRACK, lairRingWant, restockSays, SITE_SAYS,
+} from '../../game/lairs';
+import { MONSTER_KINDS, PER_REGION, REGION as WILD_SQUARE } from '../../game/creatures';
 import {
   CACHE_DEED_GAP, CACHE_DRAW_EVERY, CACHE_DRAWS, CACHE_EVERY, CACHE_LOOT, CACHE_SPOT_BASE, CACHE_SPOT_EVERY, cacheOddsSays, lootSays, WINTER_FUR, WINTER_FUR_PART,
 } from '../../game/winter';
@@ -1591,11 +1596,12 @@ export const NEWS: News[] = [
   {
     n: 102,
     day: '2026-10-08',
-    lines: () => REGIONS.filter((R) => R.monsters || R.treeless).flatMap((R) => [
-      ...(R.treeless ? [`Changed: no trees grow or seed by themselves on the ${R.name.replace(/^The /, '')}.`] : []),
-      ...(R.monsters ? [`Changed: every wild creature that fights back on the ${R.name.replace(/^The /, '')} is a monster, never a wildermon, at ${mult(R.monsters)} `
-        + `the rest of the chart's count of each: ${listed(MONSTERS.map(([id]) => `${num((MONSTER_CAP[id] ?? 1) * (R.monsters ?? 1))} ${SPECIES[id].name.toLowerCase()}${(MONSTER_CAP[id] ?? 1) * (R.monsters ?? 1) === 1 ? '' : 's'}`))}.`] : []),
-    ]),
+    lines: () => [
+      ...REGIONS.filter((R) => R.treeless).map((R) => `Changed: no trees grow or seed by themselves on the ${R.name.replace(/^The /, '')}.`),
+      // As it was then: monsters come only from lairs since (\`lairs.ts\`), and the numbers it named are gone with the free spawn.
+      'Changed: every wild creature that fights back on the Northeast Tundra is a monster, never a wildermon, at ×3 the rest of the chart\'s count of each: '
+        + '18 goblins, 9 orcs, 6 ogres and 3 dragons.',
+    ],
   },
   {
     n: 103,
@@ -4440,6 +4446,28 @@ export const NEWS: News[] = [
       'Without a graphics card: swimming strokes\' splashes, rings treading water, the float\'s strike and a catch only.',
     ],
   },
+  // Monster lairs (`lairs.ts`).
+  {
+    n: 602,
+    day: '2026-11-14',
+    lines: () => [
+      'New: monster lairs. A goblin, orc, ogre or dragon stands up only at its kind\'s lair; none in the wild, none raids a settlement.',
+      ...LAIR_KINDS.map((k) => `New: ${k.name.toLowerCase()} ×${k.count}, on ${SITE_SAYS[k.site]}: garrison ${garrisonSays(k, (id) => SPECIES[id]?.name ?? id)}; `
+        + `boss ${bossSays(k, SPECIES[k.species].name)}; restock ${restockSays(k)}; at least ${k.keepOff} tiles from a settlement totem.`),
+      `New: leash ${LAIR_LEASH} tiles from its lair; a hunt past it dropped, back to the lair.`,
+      `New: boss out once its garrison is dead; told to everybody within ${LAIR_ANNOUNCE} tiles.`,
+      `New: hoard on the boss's kill: a share for everybody who dealt ${percent(HOARD_SHARE)} of its health or more, companions' blows counted. `
+        + `${listed(LAIR_KINDS.map((k) => `${k.name}: ${hoardSays(k, itemDef(k.trophy).name, itemDef(BOOKS[hoardBook(k)].item).name)}`))}. No silver, never rare.`,
+      `New: hoard dragon scales, "Dragon scale (${HOARD_SCALE})": scale armour made of them alone, QL cap ${mult(HOARD_SCALE_CAP)} your skill.`,
+      `New: trophies, set down anywhere as decoration: ${listed(LAIR_KINDS.map((k) => itemDef(k.trophy).name.toLowerCase()))}.`,
+      `New: cleared lair: empty until its restock; its ${LAIR_RING}-tile ring counts as the safe ring and holds ${lairRingWant(PER_REGION, WILD_SQUARE)} wildermon (${mult(LAIR_RING_WILD)} the usual).`,
+      `New: a lair cleared ${LAIR_MOVE_CLEARS} times in ${LAIR_MOVE_DAYS} days restocks at a new site.`,
+      `New: a lair seen (within ${LAIR_SIGHT} tiles): pinned on your map; "Lair: found" on its kind's field guide page.`,
+      `New: Track on a monster's field guide page: its kind's nearest lair within ${LAIR_TRACK} tiles.`,
+      'Changed: no settlement founded nearer a lair than its kind\'s distance.',
+      'Removed: monsters in the wild\'s roll and the Northeast Tundra\'s monster-only wild (its wild now the usual mix); every monster roaming when lairs landed.',
+    ],
+  },
   {
     n: 601,
     day: '2026-11-14',
@@ -4517,8 +4545,8 @@ export const NEWS: News[] = [
       const name = (id: string): string => SPECIES[id].name.toLowerCase();
       return [
         `Changed: every creature's base health ×${CREATURE_HEALTH_MUL}, base blow damage ×${CREATURE_ATTACK_MUL}: wildermon and monsters, wild and yours. Yours keep their share of health.`,
-        `Monster health: ${listed(MONSTERS.map(([id]) => `${name(id)} ${hp(SPECIES[id].health)}`))}.`,
-        `Monster blow: ${listed(MONSTERS.map(([id]) => `${name(id)} ${hit(SPECIES[id].attack)}`))}; on an unarmoured life ${listed(MONSTERS.map(([id]) => `${name(id)} ${life(SPECIES[id].attack)}`))}.`,
+        `Monster health: ${listed(MONSTER_KINDS.map((id) => `${name(id)} ${hp(SPECIES[id].health)}`))}.`,
+        `Monster blow: ${listed(MONSTER_KINDS.map((id) => `${name(id)} ${hit(SPECIES[id].attack)}`))}; on an unarmoured life ${listed(MONSTER_KINDS.map((id) => `${name(id)} ${life(SPECIES[id].attack)}`))}.`,
         `Changed: creature health back per second, unhurt: wild ${hp(REGEN_WILD)}, yours ${hp(REGEN_KEPT)}; time to heal unchanged.`,
         `Changed: wildermon bed size bands, non-evolving kinds: small under ${hp(DEN_HEALTH[0])} health, medium under ${hp(DEN_HEALTH[1])}; same kinds in each.`,
         'Unchanged: treasure map chance and map QL off a monster; your health, weapons, spells, traps and armour.',

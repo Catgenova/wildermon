@@ -178,6 +178,11 @@ export const TABLES: Record<string, Read> = {
   faith_zone: 'none',
   green_since: 'none',
   guide: 'none',
+  // The monster lairs (`lairs.ts`): where each is, what each body dealt its boss, who has seen it, when one was looked for.
+  lair: 'none',
+  lair_blow: 'none',
+  lair_look: 'none',
+  lair_seen: 'none',
   land_chunk: 'none',
   land_move: 'none',
   mote_day: 'none',
