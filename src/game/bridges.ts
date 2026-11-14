@@ -571,6 +571,15 @@ export function plannedWords(b: Bridge): string {
   return `${lanes}${setOutWords(b)}. Per span: ${spanWants({ x: 0, y: 0, ...span })}${pierWords}`;
 }
 
+/**
+ * The highest storey each end of a bridge set out from where you stand lands on, end a's first: the storey you stand
+ * on, and the storey picked at the far end (the target's `level`, the storey pinned when it was picked); none picked,
+ * the highest there is. Each end lands on that storey's finished floor, else the highest under it (`Game.topDeck`).
+ * The island's `bridge_storey_asked`.
+ */
+export const bridgeUpTo = (g: Game, t: Extract<Target, { kind: 'tile' }>): [number, number | undefined] =>
+  [Math.max(0, g.player.level), typeof t.level === 'number' ? Math.max(0, Math.floor(t.level)) : undefined];
+
 /** What may cross a bridge, as its last span decked says: by its kind and its width. The island's `bridge_crosses`. */
 export function crossWords(b: Bridge): string {
   if (!bridgeDef(b).carts) return 'Foot traffic only.';
@@ -596,7 +605,7 @@ export const BRIDGE_ACTIONS: ActionDef[] = [
       const kind = (t.material ?? 'rope') as BridgeKind;
       if (!BRIDGES[kind]) return 'Choose a material.';
       const [ax, ay] = [g.player.tileX, g.player.tileY];
-      return g.bridgeReason(kind, ax, ay, t.x, t.y, t.width ?? 1, sideStep(ax, ay, t.x, t.y, t.side) || 1);
+      return g.bridgeReason(kind, ax, ay, t.x, t.y, t.width ?? 1, sideStep(ax, ay, t.x, t.y, t.side) || 1, bridgeUpTo(g, t));
     },
     perform: (t, g) => {
       if (t.kind !== 'tile') return;
@@ -604,14 +613,16 @@ export const BRIDGE_ACTIONS: ActionDef[] = [
       const [ax, ay] = [g.player.tileX, g.player.tileY];
       const width = t.width ?? 1;
       const side = sideStep(ax, ay, t.x, t.y, t.side) || 1;
-      if (g.bridgeReason(kind, ax, ay, t.x, t.y, width, side)) return;
+      const upTo = bridgeUpTo(g, t);
+      if (g.bridgeReason(kind, ax, ay, t.x, t.y, width, side, upTo)) return;
       /*
        * The height the deck is carried at, off whatever each end lands on:
-       * bank, poured slab, or the floor of a storey. `centerHeight` was the
-       * ground under the tile, which is the one thing a bridge to a second
-       * storey is not carried at.
+       * bank, poured slab, or the floor of a storey: the storey stood on and
+       * the storey picked (`bridgeUpTo`). `centerHeight` was the ground under
+       * the tile, which is the one thing a bridge to a second storey is not
+       * carried at.
        */
-      const ends = [g.topDeck(ax, ay), g.topDeck(t.x, t.y)];
+      const ends = [g.topDeck(ax, ay, upTo[0]), g.topDeck(t.x, t.y, upTo[1])];
       const height = Math.round((ends[0].height + ends[1].height) / 2);
       // And past `END_SLOP` between them, a ramp: its deck rises from one end to the other (`rampRise`).
       const b = g.addBridge(kind, ax, ay, t.x, t.y, height, isMaterialBridge(kind) ? undefined : 'Oak', ends[0].level, ends[1].level,

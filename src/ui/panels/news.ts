@@ -4460,6 +4460,14 @@ export const NEWS: News[] = [
       'Without a graphics card: swimming strokes\' splashes, rings treading water, the float\'s strike and a catch only.',
     ],
   },
+  // A bridge's ends on the storey stood on and the storey picked (`bridgeUpTo`, `deck_level`).
+  {
+    n: 608,
+    day: '2026-11-14',
+    lines: () => [
+      'Fixed: bridges: built at the storey planned at each end (was: the highest finished floor on each end tile).',
+    ],
+  },
   // The Ironemole line takes any seam; a miner's idle line; a kind's own range per step (`anySeam`, `mine_idle`, `range_per_step`).
   {
     n: 606,
