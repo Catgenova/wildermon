@@ -12,6 +12,9 @@ on:
       settlement:
         description: 'A settlement by name: its moles and the bare rock in their range (blank skips it)'
         default: ''
+      bridge_near:
+        description: 'A tile as x,y: every bridge with an end within 12 tiles of it, its ends and its spans (blank skips it)'
+        default: ''
 
 # Reads the repository and nothing else; the project is reached with the AI environment's secrets.
 permissions:
@@ -204,6 +207,40 @@ jobs:
               where e.uid in (select uid from kin) and e.text like '% idle:%'
                 and exists (select 1 from moles m join creature c on c.id = m.id where position(c.name in e.text) > 0)
               order by e.n desc limit 20"
+
+      - name: The bridges near a tile
+        # Asked about: a bridge planned from storey 4 to storey 4 and planned and built 4 to 5 (2572, 3029, Solara). For
+        # the tile in the `bridge_near` input: every bridge with an end within 12 tiles, its row, its state, the storey
+        # and height each end stands on now, and its spans with what each still needs. Selects only, of STABLE
+        # functions, which cannot write; every list capped.
+        if: inputs.bridge_near != ''
+        continue-on-error: true
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF || 'glebtboagnafcgwjjvfy' }}
+          NEAR: ${{ inputs.bridge_near }}
+        run: |
+          supabase link --project-ref "$PROJECT_REF"
+          ask() { echo "== $1"; supabase db query --linked "$2" || echo "::warning::could not read: $1"; }
+          if ! [[ "$NEAR" =~ ^[0-9]+,[0-9]+$ ]]; then echo "::warning::bridge_near is not x,y"; exit 0; fi
+          nx=${NEAR%,*}; ny=${NEAR#*,}
+          near="with nb as (select b.* from bridge b where b.world_id::text like 'f3a88670%'
+                              and (greatest(abs(b.ax - $nx), abs(b.ay - $ny)) <= 12 or greatest(abs(b.bx - $nx), abs(b.by - $ny)) <= 12)
+                            order by b.id limit 20)"
+          ask "bridges with an end within 12 tiles of $NEAR" "$near select nb.id, nb.kind, nb.material, nb.ax, nb.ay, nb.bx, nb.by,
+                 nb.level, nb.level_b, nb.rise, nb.height, nb.width, nb.side, nb.raised, nb.lock, p.name as made_by,
+                 to_char(nb.made_at, 'MM-DD HH24:MI') as made_at, bridge_state(nb.world_id, nb.id) as state,
+                 (select d.name from deed d where d.world_id = nb.world_id
+                    and greatest(abs(nb.ax - d.x), abs(nb.ay - d.y)) <= d.radius limit 1) as deed
+            from nb left join player p on p.world_id = nb.world_id and p.uid = nb.made_by order by nb.id"
+          ask "their ends now: the highest finished floor and its height, and the ground" "$near
+          select nb.id, e.end_, e.x, e.y, top_deck(nb.world_id, e.x, e.y) as top_deck,
+                 round(deck_height(nb.world_id, e.x, e.y)::numeric, 1) as deck_height,
+                 round(surface_height(nb.world_id, e.x, e.y)::numeric, 1) as ground, wall_height() as storey_height
+            from nb cross join lateral (values ('a', nb.ax, nb.ay), ('b', nb.bx, nb.by)) e(end_, x, y) order by nb.id, e.end_"
+          ask "their spans (60 at most)" "$near select s.bridge, s.n, s.x, s.y, s.needed::text as needed, s.total::text as total
+            from bridge_span s join nb on nb.world_id = s.world_id and nb.id = s.bridge order by s.bridge, s.n limit 60"
 
       - name: Look
         env:
