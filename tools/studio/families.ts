@@ -108,8 +108,10 @@ export interface Opts {
   side: Side;
   night: number;
   lit: boolean;
-  /** A state, a trim, a layer, a stage: what the asset's `states` name. */
+  /** A state, a trim, a stage: what the asset's `states` name. */
   state: number;
+  /** For a piece drawn in layers (`KitPiece.layers`), the one layer drawn; all of them, in order, when there is none. */
+  layer?: number;
   variant: number;
   /** The drawing clock, seconds. */
   t: number;
@@ -211,7 +213,7 @@ const furniture: Family = {
     const st: Variant[] = kit?.states ? kit.states.map((s) => ({ label: s.label, set: { state: s.trim } })) : plinth ? states(['bare', 'runed 1', 'runed 2']) : [];
     // An armour stand's mannequin bare and in a full set (`decorlook.ts`): drawn over its bake, by the state.
     if (f.id === 'armour_stand') st.push({ label: 'empty', set: { state: STAND_EMPTY } }, { label: 'full set', set: { state: STAND_DRESSED } });
-    if (kit?.layers) for (let i = 0; i < kit.layers; i++) st.push({ label: `layer ${i}`, set: { state: i } });
+    if (kit?.layers) for (let i = 0; i < kit.layers; i++) st.push({ label: `layer ${i}`, set: { layer: i } });
     // The dye and the woods only for a piece whose model takes them: a kit piece that says what it uses and leaves them out
     // (a lair, a trophy, a brazier) draws the same whatever it is given.
     const vars: Variant[] = [
@@ -247,7 +249,9 @@ const furniture: Family = {
       return withClock(t, () => drawDen(ctx, sx, sy, zoom, a.kind, view, { sleeper: { colors: sp.variants[0], species: 'rabba', stage: 0, seed: 0.3 } }, t, true));
     }
     const wheels = WHEELS[a.kind];
-    const trim = wheels && o.motion === 'wheels' ? o.frame : o.state;
+    // A piece drawn in layers whole, as the game draws its layers one over the next, unless a cell asks for one of them.
+    const layered = isKit(a.kind) ? KIT_PIECES[a.kind].layers : undefined;
+    const trim = layered ? o.layer : wheels && o.motion === 'wheels' ? o.frame : o.state;
     kitBypass(false);
     const box = withClock(t, () => drawFurniture(ctx, sx, sy, zoom, a.kind, o.lit, o.tint ? dyeTint(o.tint) ?? undefined : undefined, trim, view, o.material));
     if (a.kind === 'armour_stand' && o.motion !== 'live') withClock(t, () => drawFurnitureLive(ctx, sx, sy, zoom, a.kind, view, o.night, { x: 0, y: 0, force: 0, t, seed: o.state === STAND_DRESSED ? STAND_DRESSED : STAND_EMPTY }));

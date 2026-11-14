@@ -186,33 +186,47 @@ export const MOSS_BOULDER: KitPiece = {
 /* ---- 3. the tree bench -------------------------------------------------------------------------- */
 
 const TB_IN = 4.6, TB_OUT = 8.8, TB_SEAT = 4.4, TB_BACK = 7.8;
+/** How far off the bark of its trunk a tree bench's back stands. */
+const TB_GAP = 0.8;
+/** The heights a tree bench is built round its trunk between (`tree3dGirth`): over the roots on the ground, to the top of its back. */
+export const BENCH_BAND: readonly [number, number] = [1, TB_BACK];
+/**
+ * A tree bench's round, as its look carries it (`KitLook.round`): its seat's inside, out from the middle, for a trunk
+ * `girth` out at its widest between `BENCH_BAND`'s heights, to a quarter of a unit; never under its own.
+ */
+export const benchRound = (girth: number | null | undefined): number | undefined =>
+  (girth === null || girth === undefined ? undefined : Math.max(TB_IN, Math.ceil((girth + TB_GAP) * 4) / 4));
 
 function treeBenchOf(look: KitLook): KitModel {
   const W = woodTone(look.material, look.tint, 0.5);
   const parts: KitPart[] = [];
   const at = (r: number, a: number): [number, number] => [Math.cos(a) * r, Math.sin(a) * r];
+  // Built round the trunk it stands round: its seat out from the bark, as deep as ever.
+  const rin = Math.max(TB_IN, look.round ?? TB_IN), rout = rin + TB_OUT - TB_IN;
   // Six sides of seat round the trunk, each a trapezoid of boards, its back against the tree and its legs under it. Each
   // side is in the far half of the ring or the near half by which way it is seen (`halfOf`): the renderer draws the tree
   // between the two, so the trunk stands up through the ring.
   for (let i = 0; i < 6; i++) {
     const a0 = (i / 6) * TAU + TAU / 12, a1 = ((i + 1) / 6) * TAU + TAU / 12, mid = (a0 + a1) / 2;
-    const layer = halfOf(...at(TB_OUT, mid));
+    const layer = halfOf(...at(rout, mid));
     const add = (faces: Face[], edges = true): void => { parts.push({ faces, edges, layer }); };
-    const r0 = TB_IN / Math.cos(TAU / 12), r1 = TB_OUT / Math.cos(TAU / 12);
+    const r0 = rin / Math.cos(TAU / 12), r1 = rout / Math.cos(TAU / 12);
     add(block([at(r0, a0), at(r0, a1), at(r1, a1), at(r1, a0)], TB_SEAT - 0.7, TB_SEAT, paler(W, 0.05), (g, k, s) => grain(g, k.fill, s.w, s.h, 801 + i, 'x', 0.6)));
     // The back: two rails against the trunk on short posts, open between, so the tree shows through.
-    const rb = (TB_IN - 0.5) / Math.cos(TAU / 12);
+    const rb = (rin - 0.5) / Math.cos(TAU / 12);
     for (const [z0, z1] of [[TB_BACK - 1.0, TB_BACK], [TB_SEAT + 1.6, TB_SEAT + 2.4]]) {
       add(block([at(rb, a0), at(rb, a1), at(rb + 0.45, a1), at(rb + 0.45, a0)], z0, z1, W, (g, k, s) => grain(g, k.fill, s.w, s.h, 821 + i, 'x', 0.6)));
     }
-    const [px, py] = at(TB_IN - 0.3, a0);
+    const [px, py] = at((rin - 0.3) / Math.cos(TAU / 12), a0);
     add(slab(px - 0.3, px + 0.3, py - 0.3, py + 0.3, TB_SEAT, TB_BACK, deeper(W, 0.08)));
-    for (const r of [TB_IN + 0.6, TB_OUT - 0.7]) {
+    for (const r of [rin + 0.6, rout - 0.7]) {
       const [x, y] = at(r, mid);
       add(leg(x, y, 0, TB_SEAT - 0.7, deeper(W, 0.12), 841 + i, 0.7), false);
     }
   }
-  return { parts, shade: shadeOf(-TB_OUT, TB_OUT, -TB_OUT, TB_OUT) };
+  // Its shade the ring's own six sides, not a square round it.
+  const shade = Array.from({ length: 6 }, (_, i): V3 => [...at(rout / Math.cos(TAU / 12), (i / 6) * TAU + TAU / 12), 0]);
+  return { parts, shade };
 }
 
 /** A tree bench in two layers, its far half and its near half, the tree drawn between them (`Renderer`, `TREE_BENCH`). */
@@ -401,8 +415,8 @@ export const ARCHERY_TARGET: KitPiece = {
 
 /* ---- 8. the mooring post ---------------------------------------------------------------------- */
 
-/** A post's trim: one with a boat tied to it. */
-export const postTrim = (tied: boolean): number => (tied ? 1 : 0);
+/** Where a post's rope comes off it, in the post's frame: the height of its turns, and how far out from its middle they lie. The rope to a boat tied to it is the renderer's (`Renderer.drawMooring`). */
+export const POST_ROPE: readonly [number, number] = [6.2, 1.95];
 
 function mooringPostOf(look: KitLook): KitModel {
   const W = woodTone(look.material, undefined, 0.65);
@@ -410,28 +424,12 @@ function mooringPostOf(look: KitLook): KitModel {
   // A short thick log, its top rounded and weathered, a rope wound round it twice.
   const post: KitPart = { faces: lathe(0, 0, [[0, 1.75], [7.6, 1.6], [8.6, 1.3], [9.2, 0.6], [9.4, 0.1]], 10, W, 0.5, (_k, i, s) => ({ crease: 0.18, paint: (g: Ctx, k: PaintCtx) => grain(g, k.fill, s.w, s.h, 1301 + i, 'y', 0.8) })), edges: true };
   parts.push(post);
-  for (const z of [5.6, 6.3]) parts.push({ faces: lathe(0, 0, [[z, 1.65], [z + 0.25, 1.95], [z + 0.55, 1.65]], 10, ROPE), after: [post] });
-  if ((look.trim ?? 0) > 0) {
-    // Tied: the rope paid out from it toward the water, sagging.
-    parts.push({
-      ...loose([-1, 0, 2], [1, 8, 7], (g, e) => {
-        const u = across(e);
-        const [x0, y0] = proj(e, [0, 1.9, 6.0]);
-        const [x1, y1] = proj(e, [0, 8, 3.2]);
-        const [mx, my] = proj(e, [0, 5, 2.2]);
-        g.strokeStyle = '#b8987a'; g.lineWidth = Math.max(0.8, 0.22 * u);
-        g.beginPath(); g.moveTo(x0, y0); g.quadraticCurveTo(mx, my, x1, y1); g.stroke();
-      }, false, 2),
-      after: [post],
-    });
-  }
+  // Each turn its outside only: its top, a disc as wide as the post, is inside the log.
+  for (const z of [5.6, 6.3]) parts.push({ faces: lathe(0, 0, [[z, 1.65], [z + 0.25, 1.95], [z + 0.55, 1.65]], 10, ROPE).filter((f) => f.pts.some((p) => p[2] !== f.pts[0][2])), after: [post] });
   return { parts, shade: shadeOf(-1.8, 1.8, -1.8, 1.8) };
 }
 
-export const MOORING_POST: KitPiece = {
-  model: (look) => mooringPostOf(look), uses: { trim: true, material: true },
-  states: [{ trim: postTrim(false), label: 'free' }, { trim: postTrim(true), label: 'a boat tied' }],
-};
+export const MOORING_POST: KitPiece = { model: (look) => mooringPostOf(look), uses: { material: true } };
 
 /* ---- 9. the stone bust -------------------------------------------------------------------------- */
 

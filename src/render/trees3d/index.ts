@@ -941,6 +941,31 @@ export function tree3dFoot(species: number, variant: number, x: number, y: numbe
   return footReach(skeletonOf(species, variant, formOf(species, x, y)));
 }
 
+/**
+ * How far out from a tile's tree's foot its wood stands between two heights, in tenths of a metre: the trunk,
+ * its flare and its roots, and any limb that low, each to its bark. What a tree bench is built round
+ * (`kit/fittings.ts`). Null for a species drawn flat.
+ */
+export function tree3dGirth(species: number, variant: number, x: number, y: number, z0: number, z1: number): number | null {
+  if (!TREE3D_SPECIES.has(species)) return null;
+  const form = formOf(species, x, y), key = `${species}|${variant}|${form}|${z0}|${z1}`;
+  const had = girths.get(key);
+  if (had !== undefined) return had;
+  const sk = skeletonOf(species, variant, form);
+  let out = 0;
+  for (const L of sk.limbs) {
+    if (Math.min(L.a[2], L.b[2]) - Math.max(L.ra, L.rb) > z1 || Math.max(L.a[2], L.b[2]) + Math.max(L.ra, L.rb) < z0) continue;
+    for (let i = 0; i <= 8; i++) {
+      const t = i / 8, z = L.a[2] + (L.b[2] - L.a[2]) * t, r = L.ra + (L.rb - L.ra) * t;
+      if (z + r < z0 || z - r > z1) continue;
+      out = Math.max(out, Math.hypot(L.a[0] + (L.b[0] - L.a[0]) * t, L.a[1] + (L.b[1] - L.a[1]) * t) + r);
+    }
+  }
+  girths.set(key, out);
+  return out;
+}
+const girths = new Map<string, number>();
+
 /* ---- bushes ---------------------------------------------------------------------------- */
 
 const bushModels = new Map<string, Skeleton>();

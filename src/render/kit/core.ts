@@ -35,6 +35,8 @@ export interface KitLook {
   material?: string;
   /** Which of a burning piece's flickers it is at (`KitPiece.flicker`): set only when it is lit, by the clock, never by the caller. */
   frame?: number;
+  /** What a piece is built round, how far out from its middle it stands clear of it: a tree bench's trunk (`benchRound`). */
+  round?: number;
 }
 
 /** One thing in a model. */

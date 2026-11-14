@@ -4493,6 +4493,7 @@ export const NEWS: News[] = [
         `New: ${made(ARCHERY_TARGET)}: Shoot, archery gain ×${PRACTICE_GAIN} a fight's; ${TARGET_HOLDS} arrows; Pull arrows, one in ${ARROW_BREAK_IN} broken.`,
         `New: ${made(MOORING_POST)}: at the water's edge; Tie up a boat within ${MOOR_REACH} tile: helm and lifting its owner's or key holder's only.`,
         `New: ${made(STONE_BUST)}: Carve, a citizen of its settlement, their head and hair in stone.`,
+        `Fixed: ${itemDef(TREE_BENCH).name} sized to its trunk; ${itemDef(MOORING_POST).name}: rope to the tied boat.`,
       ];
     },
   },

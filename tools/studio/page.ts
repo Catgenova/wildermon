@@ -418,9 +418,9 @@ const SCENES: Record<string, { about: string; tile: (x: number, y: number) => nu
     },
   },
   fittings: {
-    about: 'The fittings in place: a tree bench round a grown tree, a paper lantern pole alight, a moss boulder mossed and one bare, two busts of two citizens, a dummy, a target with arrows in it, a mooring post.',
-    tile: () => TileType.Grass,
-    height: () => 30,
+    about: 'The fittings in place: a tree bench round a grown tree, a paper lantern pole alight, a moss boulder mossed and one bare, two busts of two citizens, a dummy, a target with arrows in it, a mooring post at the water with a rowing boat tied to it.',
+    tile: (_x, y) => (y >= 27 ? TileType.Sand : TileType.Grass),
+    height: (_x, y) => (y <= 27 ? 4 : -6),
     dress: (game) => {
       const piece = (id: number, kind: string, x: number, y: number, more: Partial<PlacedFurniture> = {}): void => {
         const f = { id, kind, x, y, sx: 0, sy: 0, facing: 's', ql: 50, items: [], ...more } as unknown as PlacedFurniture;
@@ -437,7 +437,8 @@ const SCENES: Record<string, { about: string; tile: (x: number, y: number) => nu
       piece(9206, 'stone_bust', 26, 25, { sx: 1, sy: 1, fitting: { bust: { uid: 'b', name: 'Otto', look: { gender: 'man', hair: 'afro', skin: 0.7, hairColour: 0.5, hairBright: 0.2 } } } });
       piece(9207, 'training_dummy', 26, 23, { sx: 1, sy: 1 });
       piece(9208, 'archery_target', 22, 24, { sx: 1, sy: 1, fitting: { stuck: 5 } });
-      piece(9209, 'mooring_post', 24, 26, { sx: 1, sy: 1 });
+      piece(9210, 'rowing_boat', 24, 27, { sx: 0, sy: 1, facing: 'e' } as Partial<PlacedFurniture>);
+      piece(9209, 'mooring_post', 24, 26, { sx: 1, sy: 1, fitting: { tied: 9210 } });
     },
   },
   rock: { about: 'A rock face and its steps: stone and the outcrops.', tile: (x, y) => (Math.abs(x - 24) < 6 || y < 18 ? TileType.Rock : TileType.Grass), height: (x, y) => (y < 18 ? 90 : Math.abs(x - 24) < 6 ? 60 : 30) },
