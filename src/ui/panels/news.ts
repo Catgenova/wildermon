@@ -1629,7 +1629,8 @@ export const NEWS: News[] = [
     n: 102,
     day: '2026-10-08',
     lines: () => [
-      ...REGIONS.filter((R) => R.treeless).map((R) => `Changed: no trees grow or seed by themselves on the ${R.name.replace(/^The /, '')}.`),
+      // As it was then: trees grow and seed there again since 14 November (What's new 614).
+      'Changed: no trees grow or seed by themselves on the Northeast Tundra.',
       // As it was then: monsters come only from lairs since (\`lairs.ts\`), and the numbers it named are gone with the free spawn.
       'Changed: every wild creature that fights back on the Northeast Tundra is a monster, never a wildermon, at ×3 the rest of the chart\'s count of each: '
         + '18 goblins, 9 orcs, 6 ogres and 3 dragons.',
@@ -4476,6 +4477,16 @@ export const NEWS: News[] = [
       `New: fishing net: ${LIFT_DROPS * NET_LIFT.length} drops off the net as it is lifted, ${SHAKE_DROPS} at each of ${NET_SHAKES.length} shakes.`,
       `New: rowing under way: ${OAR_DROPS} drops a blade at the catch; whirl pair a blade a stroke, ${SWIRL_SECS} s.`,
       'Without a graphics card: swimming strokes\' splashes, rings treading water, the float\'s strike and a catch only.',
+    ],
+  },
+  // Trees and wildermon back on the Northeast Tundra (`regions.ts`, `tools/move-ground.ts`).
+  {
+    n: 614,
+    day: '2026-11-14',
+    lines: () => [
+      'Changed: Northeast Tundra: trees grow and seed (was: treeless).',
+      'Changed: Northeast Tundra: wildermon wild by habitat and season, as on every island (was: none).',
+      'Changed: islands founded before today: Northeast Tundra trees back on tiles nobody has changed.',
     ],
   },
   // The fittings (`fitting.ts`).

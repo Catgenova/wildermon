@@ -65,7 +65,11 @@ export interface Region {
    * band). Everywhere else on it is plain rock.
    */
   mountain?: string[];
-  /** Set where no tree grows of itself: none is laid down there, and none seeds there. */
+  /**
+   * Set where no tree grows of itself: none is laid down there, and none seeds there. No island has it now; the
+   * Northeast Tundra had it from 8 October to 14 November, and `tools/move-ground.ts` sets it back for a call to
+   * work out what the generator laid there then.
+   */
   treeless?: boolean;
   /**
    * The monsters that stand up here and on no other island, by species id: the dragon on Volcano Isle, the
@@ -112,7 +116,6 @@ export const REGIONS: Region[] = [
     ores: [],
     trees: [],
     mountain: ['gold_ore'],
-    treeless: true,
   },
   {
     key: 'Volcano',

@@ -1930,6 +1930,15 @@
     "why": "Reported: with the fog off the map drew lemons on Volcano Isle, and walking there found none. The live island's land is from 15 September and the fruit trees were held to their islands on the 18th; the move tool's fruit move (tools/move-ground.ts `fruitHome`) grows them there. Lemons on Volcano Isle only, ages kept, a tile in tile_change and a planted oak left alone, written down once, a second run a no-op."
   },
   {
+    "file": "supabase/test/tundralife.ts",
+    "title": "Trees and wildermon on the Northeast Tundra again",
+    "shard": 6,
+    "node": [
+      "--max-old-space-size=4096"
+    ],
+    "why": "Asked for: \"Allow vegetation and wildermon spawning again on the marble island.\" The Northeast Tundra was treeless from 8 October: the generator laid no tree there, tree_day let nothing seed there, and the move tool took the untouched trees off the live island. The generator lays trees there again (some on tundra ground, none on snow), the move tool's regrowTrees puts them back only on tiles still holding what the treeless generator laid (tile_change, changed ground and planted trees kept, written down once, a second run a no-op), a tree that dies there seeds there, and a block of it is stocked with wildermon and no monster."
+  },
+  {
     "file": "supabase/test/fruitkind.ts",
     "title": "Each island's own fruit trees, by kind, on woods that have turned over",
     "shard": 6,
