@@ -3,7 +3,7 @@
 CREATE OR REPLACE FUNCTION public.unmendable(p_def text)
  RETURNS boolean
  LANGUAGE sql
- IMMUTABLE
+ STABLE
 AS $function$
-  select p_def in ('ancient_helm', 'ancient_short_sword')
+  select p_def in ('ancient_helm', 'ancient_short_sword') or exists (select 1 from mould_def m where m.id = p_def)
 $function$

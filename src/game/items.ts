@@ -1,5 +1,5 @@
 import { matOfItem, workingQl } from './materials';
-import { COINS_PER_LUMP, INGOT_LUMPS, INGOT_WEIGHT, ingotOf, METALS, MOULDS, RARE_LUMP_FACTOR } from './metal';
+import { COINS_PER_LUMP, INGOT_LUMPS, INGOT_WEIGHT, ingotOf, isMould, METALS, MOULDS, RARE_LUMP_FACTOR } from './metal';
 import { dyeIn, dyeHex, colourWord, dyeWord, recipeOf } from './dyestuffs';
 import { MATERIAL_BY_ID, WALL_TYPES } from './building';
 import { candleBurn, lanternReach, torchBurn, torchReach } from './light';
@@ -1336,9 +1336,12 @@ export const NOT_RESTORED = 'Not restored: cannot be repaired. Gone if it breaks
  * repair kit, Mend, an ancient whetstone, nor a worker mending the stores.
  * Asked for: "ancient Helms and ancient short swords cant be improved or
  * repaired, even with ancient whetstones." The island's `unmendable`.
+ *
+ * And every mould (`isMould`), which wears a filling at a time and was always said to be past mending: reported,
+ * "Moulds should not be able to be repaired". Moulds were never improvable (`canImprove`).
  */
 export const UNMENDABLE: ReadonlySet<string> = new Set(['ancient_helm', 'ancient_short_sword']);
-export const unmendable = (item: { id: string }): boolean => UNMENDABLE.has(item.id);
+export const unmendable = (item: { id: string }): boolean => UNMENDABLE.has(item.id) || isMould(item.id);
 /** Why, in the island's words (`unmendable_says`): "Ancient helm: cannot be improved or repaired." */
 export const unmendableSays = (item: { id: string }): string => `${itemDef(item.id).name}: cannot be improved or repaired.`;
 
