@@ -120,6 +120,7 @@ export const TABLES: Record<string, Read> = {
   school_stone: 'rules',
   shield_def: 'rules',
   skill_def: 'rules',
+  skill_gate: 'rules',
   slab_def: 'rules',
   species_butcher: 'rules',
   species_def: 'rules',

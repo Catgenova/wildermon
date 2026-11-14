@@ -11,13 +11,15 @@
  * Runs against the database the suite leaves behind, in one transaction that is rolled back.
  */
 import { Game } from '../../src/game/game';
-import { packTreeData, TileType, TREE_AGES } from '../../src/world/tiles';
+import { packTreeData, TileType, TREE_AGES, TREE_DEFS } from '../../src/world/tiles';
 import type { Item } from '../../src/game/items';
 import { psql, ok, bad, check } from './harness';
 
 /** The age with the most logs, and its logs. */
 const AGE = TREE_AGES.reduce((best, a, i) => (a.logs > TREE_AGES[best].logs ? i : best), 0);
 const LOGS = TREE_AGES[AGE].logs;
+/** A pine: the tree a feller at any woodcutting may fell (`skillgates.ts`). */
+const PINE = TREE_DEFS.findIndex((t) => t.name === 'Pine');
 const KEEPER = '11111111-1111-1111-1111-111111111111';
 const TX = 2100, TY = 2100;
 
@@ -29,7 +31,7 @@ begin
   select id into w from world where name = 'Bigness';
   select * into v_age from tree_age_def where id = ${AGE};
   perform land_set_tile(w, ${TX}, ${TY}, tile_id('Tree'));
-  perform land_set_data(w, ${TX}, ${TY}, tree_pack(2, ${AGE}));
+  perform land_set_data(w, ${TX}, ${TY}, tree_pack(${PINE}, ${AGE}));
   perform tree_notch(w, ${TX}, ${TY}, v_age.hits - 1);
   delete from item where world_id = w and holder = 'ground' and gx = ${TX} and gy = ${TY};
   v_c := creature_spawn(w, 'bevere', ${TX + 1}.5, ${TY}.5, 'active', now() - interval '60 days', '${KEEPER}');
@@ -51,7 +53,7 @@ check('and none is left on the ground at the stump', at('GROUND') === '0' && at(
 {
   const g = Game.create(4271);
   for (const c of [...g.creatures.list.values()]) g.creatures.list.delete(c.id);
-  g.world.setTile(20, 20, TileType.Tree, packTreeData(2, AGE));
+  g.world.setTile(20, 20, TileType.Tree, packTreeData(PINE, AGE));
   g.world.setNotch(20, 20, TREE_AGES[AGE].hits - 1);
   const c = g.creatures.spawn('bevere', 21.5, 20.5, 'active', g.rand, g.time - 3600 * 24 * 60);
   c.workX = 20;

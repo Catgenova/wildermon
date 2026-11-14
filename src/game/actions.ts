@@ -102,6 +102,7 @@ import { capital, listed } from './words';
 import { pct, pickedSaid, qlTag, searchOdds, searchPasses, tagged, taggedWith } from './yields';
 import { fruitRefusal, fruitSeason, fruitingSays, inSeason } from './fruiting';
 import { RECIPE_ACTIONS } from './recipes';
+import { gateRefusal, treeGate } from './skillgates';
 import { BRUSH_TOOL, lacksTool, MORTAR_TOOL, REAP_TOOL, TOOL_JOBS } from './jobtools';
 
 /**
@@ -685,6 +686,11 @@ export const prospectReach = (g: Game): number =>
 export const mineDepth = (g: Game): number => g.perk('depth:mine', MINE_DEPTH);
 /** The mining an ore wants of this body before it can be worked: a Miner's Ore Sense wants less (`ore:below`). */
 export const oreNeeds = (g: Game, level: number): number => Math.max(0, level - g.perk('ore:below', 0));
+/** A tree's felling gate for you (`skillgates.ts`), or null: none, met, or a tree with no logs in it. The island's `tree_gate_refusal`. */
+export const treeGateRefusal = (g: Game, data: number): string | null => {
+  const gate = treeGate(data);
+  return gate ? gateRefusal(gate.name, gate.skill, g.skills.get(gate.skill), gate.level) : null;
+};
 
 /**
  * A Miner's Pan: how long a go takes. What it brings up is `PAN_ORES` (`worksites.ts`).
@@ -1797,7 +1803,9 @@ export const ACTIONS: ActionDef[] = [
       if (type !== TileType.Tree && type !== TileType.Bush) return 'No tree or bush here.';
       // Not with a tree bench round it (`fitting.ts`; the island's `gather_refusal`).
       if (t.kind === 'tile' && g.furnitureOnTile(t.x, t.y).some((f) => f.kind === TREE_BENCH)) return FITTING_SAID.benchRound;
-      return g.inventory.has('hatchet') ? null : 'Need a hatchet.';
+      if (!g.inventory.has('hatchet')) return 'Need a hatchet.';
+      // A tree with logs in it fells only at its woodcutting (`skillgates.ts`; the island's `gate_refusal`).
+      return type === TileType.Tree && t.kind === 'tile' ? treeGateRefusal(g, g.world.getData(t.x, t.y)) : null;
     },
     perform: (t, g) => {
       if (t.kind !== 'tile') return;
@@ -2170,7 +2178,7 @@ export const ACTIONS: ActionDef[] = [
       const data = g.world.getData(t.x, t.y);
       if (!treeAge(data).alive) return 'Tree is dead.';
       if (!coppiceable(data)) return `${TREE_DEFS[treeSpecies(data)].name}: too young to coppice.`;
-      return null;
+      return treeGateRefusal(g, data);
     },
     perform: (t, g) => {
       if (t.kind !== 'tile') return;

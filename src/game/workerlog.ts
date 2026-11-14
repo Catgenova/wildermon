@@ -24,6 +24,7 @@ import { SKEP_IDLE } from './bees';
 import { SEASONS } from '../world/calendar';
 import { isSeam, ROCK_VARIANTS } from '../world/tiles';
 import { SKILL_BY_ID } from './skills';
+import { gateOf, skillWord, type GateKind } from './skillgates';
 import { article, listed, listedOr } from './words';
 import { LEDGER_SHOWN, ledgerDays, type Idle, type LedgerDay, type WorkLedger } from './workerledger';
 
@@ -190,6 +191,13 @@ export function idleSays(idle: Idle, kind: GatherKind | null | undefined, carryi
       const rock = ROCK_VARIANTS.find((r) => r.yields === idle.what?.[0]);
       const mining = skill !== undefined ? ` (yours ${skill.toFixed(1)})` : '';
       return `Idle: ${rock?.name ?? 'a seam'} ${n} ${n === 1 ? 'tile' : 'tiles'} from ${from} needs mining ${rock?.level ?? '?'}${mining}; ${easiestSeams()}.`;
+    }
+    // Work in range only over its level in the task's skill (the island's `gate_idle`): the lowest gate, then the nearest.
+    case 'gate': {
+      const gate = idle.what && idle.what.length >= 2 ? gateOf(idle.what[0] as GateKind, idle.what[1]) : undefined;
+      if (!gate) return `Idle: work ${n} ${n === 1 ? 'tile' : 'tiles'} from ${from} above its level.`;
+      const yours = skill !== undefined ? ` (yours ${skill.toFixed(1)})` : '';
+      return `Idle: ${gate.name} ${n} ${n === 1 ? 'tile' : 'tiles'} from ${from} needs ${skillWord(gate.skill)} ${gate.level}${yours}.`;
     }
     // Bare rock in range and not a seam in any of it (the island's `mine_idle`).
     case 'noseam':

@@ -62,6 +62,7 @@ import { HYBRID_HARDY, HYBRID_WORK, HYBRIDS, type HybridCross } from './hybridli
 import { world } from './pace';
 import { emptyCrate, shutIn, standingCrate } from './crating';
 import { IDLE_WANTS, IDLE_WHYS, ledgerAdd, ledgerRoll, type Idle, type IdleWhy, type WorkLedger } from './workerledger';
+import { gateOpen, treeGate } from './skillgates';
 import { kindNames } from './journal-b';
 import { workFromLedger, workTime, type WorkStats } from './workstats';
 import { bredForm, formMul, wildFormRoll, type SizeForm } from './wildforms';
@@ -6821,6 +6822,30 @@ export class Creatures {
     return bare && !seam ? { why: 'noseam', n: range } : null;
   }
 
+  /**
+   * Why a feller with no tree to work in `range` of its ground is idle, past "no trees to fell": a tree with logs whose
+   * woodcutting gate is over its own (`skillgates.ts`), the lowest gate then the nearest, as `what` its gate's kind and
+   * id and `n` its tiles off (`gate`). Null for none. The tiles asked are trees no other worker is at, with a tile beside
+   * to stand on, on ground it may work. The island's `gate_idle`.
+   */
+  private gateIdle(game: Game, c: Creature, site: { x: number; y: number }, range: number): { why: IdleWhy; n: number; what?: string[] } | null {
+    const w = game.world;
+    const skill = taskSkill(c, this.species(c));
+    let best: { level: number; d: number; id: string } | null = null;
+    for (let dy = -range; dy <= range; dy++) {
+      for (let dx = -range; dx <= range; dx++) {
+        const x = site.x + dx, y = site.y + dy;
+        if (!w.inBounds(x, y) || w.getTile(x, y) !== TileType.Tree || this.claimed(x, y, c)) continue;
+        if (c.mode === 'deed' && !game.workerGround(x, y)) continue;
+        const gate = treeGate(w.getData(x, y));
+        if (gateOpen(gate, skill) || !this.beside(game, x, y)) continue;
+        const d = Math.max(Math.abs(dx), Math.abs(dy));
+        if (!best || gate!.level < best.level || (gate!.level === best.level && d < best.d)) best = { level: gate!.level, d, id: gate!.id };
+      }
+    }
+    return best ? { why: 'gate', n: best.d, what: ['tree', best.id] } : null;
+  }
+
   /** The nearest tile to (x, y) a creature may walk, `reach` tiles off at most, ring by ring, rows from the north; or null. */
   nearestOk(game: Game, x: number, y: number, reach: number): [number, number] | null {
     for (let r = 1; r <= reach; r++) {
@@ -7592,7 +7617,11 @@ export class Creatures {
       return this.tileOk(game, x, y) && !this.claimed(x, y, c);
     }
     if (kind === 'farm') return !!c && this.farmJobAt(game, c, x, y) !== null;
-    if (kind === 'woodcut') return game.world.getTile(x, y) === TileType.Tree && !!this.beside(game, x, y);
+    if (kind === 'woodcut') {
+      // And only a tree its own level, its task skill, may fell (`skillgates.ts`; the island's `worker_gatherable`).
+      if (game.world.getTile(x, y) !== TileType.Tree || !this.beside(game, x, y)) return false;
+      return !c || gateOpen(treeGate(game.world.getData(x, y)), taskSkill(c, this.species(c)));
+    }
     if (kind === 'prune') {
       // What would otherwise die: a stage that prunes back and whose next
       // stage has no life in it. Nothing else is touched — a mature tree
@@ -7867,6 +7896,8 @@ export class Creatures {
     const def = TREE_DEFS[treeSpecies(data)];
     const age = treeAge(data);
     const skill = c.skills[GATHER_SKILL.woodcut] ?? 1;
+    // Never a tree over its own level, however it came to be at one (`skillgates.ts`; the island's `worker_do`).
+    if (!gateOpen(treeGate(data), taskSkill(c, this.species(c)))) return null;
     this.gainSkill(game, c, GATHER_SKILL.woodcut, 0.225);
     // A worker swings the same number of times a person would, and the notch
     // it leaves is the same notch: anybody may finish the tree it started.
@@ -10997,7 +11028,8 @@ export class Creatures {
     if (kind && !ERRAND_JOBS.has(kind) && kind !== 'stoke') {
       const range = siteRange(c, def, deed);
       // A miner says what is wrong with the bare rock it has (`mineIdle`).
-      const mine = kind === 'mine' ? this.mineIdle(game, c, deed, range) : null;
+      // And a feller what is wrong with the trees it has (`gateIdle`).
+      const mine = kind === 'mine' ? this.mineIdle(game, c, deed, range) : kind === 'woodcut' ? this.gateIdle(game, c, deed, range) : null;
       if (mine) this.why(c, mine.why, mine.n, mine.what);
       else this.why(c, 'range', range);
     }

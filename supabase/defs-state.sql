@@ -464,6 +464,9 @@ alter table rock_def add column if not exists seam boolean not null default fals
 create table if not exists tree_def (id int primary key, name text not null, logs int not null);
 alter table tree_def add column if not exists fruit text;
 alter table tree_def drop column if exists logs;
+create table if not exists skill_gate (
+  kind text not null, id text not null, name text not null, skill text not null, level int not null, primary key (kind, id)
+);
 create table if not exists tree_age_def (
   id int primary key, name text not null, hits int not null, logs int not null,
   bears boolean not null, next int
@@ -524,6 +527,7 @@ begin
   execute 'alter table fish_def enable row level security';
   execute 'alter table bait_def enable row level security';
   execute 'alter table bait_favours enable row level security';
+  execute 'alter table skill_gate enable row level security';
 end $rls$;
 drop policy if exists action_def_read on action_def;
 create policy action_def_read on action_def for select to anon, authenticated using (true);
@@ -577,6 +581,10 @@ drop policy if exists bait_favours_read on bait_favours;
 create policy bait_favours_read on bait_favours for select to anon, authenticated using (true);
 grant select on bait_favours to anon, authenticated;
 revoke insert, update, delete on bait_favours from anon, authenticated;
+drop policy if exists skill_gate_read on skill_gate;
+create policy skill_gate_read on skill_gate for select to anon, authenticated using (true);
+grant select on skill_gate to anon, authenticated;
+revoke insert, update, delete on skill_gate from anon, authenticated;
 
 alter table if exists crop drop constraint if exists crop_id_fkey;
 
@@ -2335,6 +2343,7 @@ delete from furniture_def;
 delete from rock_def;
 delete from tree_def;
 delete from tree_age_def;
+delete from skill_gate;
 delete from bush_def;
 delete from loot_table;
 delete from crop_def;
@@ -7618,6 +7627,23 @@ insert into tree_def values (15, 'Apricot');
 update tree_def set fruit = 'apricot' where id = 15;
 insert into tree_def values (16, 'Quince');
 update tree_def set fruit = 'quince' where id = 16;
+insert into skill_gate values ('tree', 'pine', 'Pine', 'woodcutting', 1);
+insert into skill_gate values ('tree', 'birch', 'Birch', 'woodcutting', 5);
+insert into skill_gate values ('tree', 'oak', 'Oak', 'woodcutting', 10);
+insert into skill_gate values ('tree', 'fig', 'Fig', 'woodcutting', 20);
+insert into skill_gate values ('tree', 'maple', 'Maple', 'woodcutting', 20);
+insert into skill_gate values ('tree', 'peach', 'Peach', 'woodcutting', 20);
+insert into skill_gate values ('tree', 'apricot', 'Apricot', 'woodcutting', 30);
+insert into skill_gate values ('tree', 'cherry', 'Cherry', 'woodcutting', 30);
+insert into skill_gate values ('tree', 'lemon', 'Lemon', 'woodcutting', 30);
+insert into skill_gate values ('tree', 'apple', 'Apple', 'woodcutting', 40);
+insert into skill_gate values ('tree', 'pear', 'Pear', 'woodcutting', 40);
+insert into skill_gate values ('tree', 'plum', 'Plum', 'woodcutting', 40);
+insert into skill_gate values ('tree', 'quince', 'Quince', 'woodcutting', 40);
+insert into skill_gate values ('tree', 'cedar', 'Cedar', 'woodcutting', 50);
+insert into skill_gate values ('tree', 'pomegranate', 'Pomegranate', 'woodcutting', 50);
+insert into skill_gate values ('tree', 'olive', 'Olive', 'woodcutting', 60);
+insert into skill_gate values ('tree', 'willow', 'Willow', 'woodcutting', 70);
 insert into tree_age_def values (0, 'Young', 2, 2, false, 1, null, true);
 insert into tree_age_def values (1, 'Mature', 3, 4, true, 2, 0, true);
 insert into tree_age_def values (2, 'Old', 3, 3, true, 4, 1, true);

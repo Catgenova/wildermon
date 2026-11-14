@@ -1972,6 +1972,12 @@
     "why": "Asked for: \"Remove ore level requirements for oremander line.\" Reported: an Ironemole at mining 1 by bare rock said \"no bare rock with a seam in it\". An Ironemole at mining 1 mines bare iron; another miner and you do not, and its card names the seam and the mining it needs; bare rock with no seam says so; a kind's range per step is the defs' on both sides."
   },
   {
+    "file": "supabase/test/skillgates.ts",
+    "title": "Skill gates: tree felling by woodcutting, for you and for a feller",
+    "shard": 6,
+    "why": "Asked for: \"cutting trees is similarly gated, with willow requiring the highest level and pine the least. Oak birch and maple early on\", one uniform rule for every gate, for players and for wildermon at their own level, and each skill's gates ticked or not in the Skills window. The island's skill_gate is the browser's SKILL_GATES; you under a tree's level are refused in the same words on both sides and allowed at it; a sapling with no logs is anybody's; a Sapgnaw under its level skips the tree and its card says why, and takes a pine it may fell; the Unlocks list for woodcutting is the table, ticked at 1 and at 25."
+  },
+  {
     "file": "supabase/test/aroundbehind.ts",
     "title": "A worker round you left behind comes to you",
     "shard": 6,

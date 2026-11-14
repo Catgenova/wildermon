@@ -180,6 +180,7 @@ import { AWARE_PER_LEVEL, AWARE_TRAIT_STEP, awareShareAbove, awareTraitEase, DEE
 import { NIGHT_EYES_FROM } from '../../game/learn';
 import { NO_GO, pointAt, windWord, windWorth } from '../../game/wind';
 import { article, capital, finePercent, listed, listedOr, percent, timeWords } from '../../game/words';
+import { GATE_LADDER, GATE_STOPS, GATED_SKILLS, gateRefusal, SKILL_GATES, unlocksSaid } from '../../game/skillgates';
 import {
   bossSays, garrisonSays, HOARD_SCALE, HOARD_SCALE_CAP, HOARD_SHARE, hoardBook, hoardSays, LAIR_ANNOUNCE, LAIR_KINDS, LAIR_LEASH, LAIR_MOVE_CLEARS, LAIR_MOVE_DAYS,
   LAIR_RING, LAIR_RING_WILD, LAIR_SIGHT, LAIR_TRACK, lairRingUsual, lairRingWant, restockSays, SITE_SAYS,
@@ -3555,7 +3556,8 @@ export function helpText(): string {
       (&ldquo;${idleSays({ why: 'waiting', n: FORAGE_COOLDOWN }, 'sand')}&rdquo;); nothing in your settlement stores to work, naming what it needs
       (&ldquo;${idleSays({ why: 'stock', n: 0 }, 'mend')}&rdquo;); no barrel with room for its water; a load with nowhere to put it; walking home when over ${HOME_SLACK} tiles past
       its range, with the distance; a miner: a bare seam above its mining (&ldquo;${idleSays({ why: 'seam', n: 4, what: ['iron_ore'] }, 'mine', null, 1)}&rdquo;),
-      bare rock with no seam (&ldquo;${idleSays({ why: 'noseam', n: SPECIES.mola.workRange }, 'mine')}&rdquo;); no staircase up to its work's storey (&ldquo;${idleSays({ why: 'stairs', n: 2 }, 'hod')}&rdquo;); no staircase down from where it stands (&ldquo;${idleSays({ why: 'stranded', n: 2 }, 'hod')}&rdquo;): it stays on that storey until one is built.
+      bare rock with no seam (&ldquo;${idleSays({ why: 'noseam', n: SPECIES.mola.workRange }, 'mine')}&rdquo;); only work above its level in its task's skill, the lowest then the nearest
+      (&ldquo;${idleSays({ why: 'gate', n: 3, what: ['tree', 'willow'] }, 'woodcut', null, 12)}&rdquo;); no staircase up to its work's storey (&ldquo;${idleSays({ why: 'stairs', n: 2 }, 'hod')}&rdquo;); no staircase down from where it stands (&ldquo;${idleSays({ why: 'stranded', n: 2 }, 'hod')}&rdquo;): it stays on that storey until one is built.
       Island: no work while its keeper is away or no awake player is near enough; the card says which and how near.</li>
       <li><b>Storeys</b>: a store, station or planned work a storey up is walked to by the building's finished staircases: wide or ${SINGLE_STAIRS_NAME} onto it from
       its foot, off at its head, down off its foot; ${SPIRAL_STAIRS_NAME} on its own tile. Over finished floors only, and a finished bridge's deck between floors
@@ -3911,6 +3913,12 @@ export function helpText(): string {
       <li>Island-specific ground: ${listed(REGIONS.filter((R) => R.ores.length || (R.stone !== 'rock_shards' && !R.mountain)).map((R) => `${listed([...(R.stone !== 'rock_shards' && !R.mountain ? [R.stone] : []), ...R.ores].map((y) => `<b>${rockName(y)}</b>`))} on ${islandName(R.name)}`))}.
       ${REGIONS.filter((R) => R.mountain).map((R) => `${capital(islandName(R.name))}: plain rock, with <b>${rockName(R.stone)}</b> and ${listed((R.mountain ?? []).map((y) => `<b>${rockName(y)}</b>`))} seams only under its mountain, above the alpine line.`).join(' ')}
       Elsewhere, another island's seam is iron instead.</li>
+    </ul>
+    <h4>Skill gates</h4>
+    <ul>
+      <li>Under a thing's level in its skill: refused, greyed in the menu with the need (&ldquo;${gateRefusal('Willow', 'woodcutting', 12.4, 70)}&rdquo;).
+      A worker skips it at its own level in that skill. Levels: ${GATE_LADDER.join(', ')}. Skills window: each skill's gates, ticked when met.</li>
+      ${GATED_SKILLS.map((id) => `<li><b>${SKILL_BY_ID.get(id)?.name ?? id}</b> (${listed([...new Set(SKILL_GATES.filter((g) => g.skill === id).map((g) => GATE_STOPS[g.kind]))])}): ${unlocksSaid(id)}.</li>`).join('\n      ')}
     </ul>
     <h4>Flatten, decay, skill</h4>
     <ul>
