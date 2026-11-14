@@ -8,6 +8,10 @@ name: Look at the island
 
 on:
   workflow_dispatch:
+    inputs:
+      settlement:
+        description: 'A settlement by name: its moles and the bare rock in their range (blank skips it)'
+        default: ''
 
 # Reads the repository and nothing else; the project is reached with the AI environment's secrets.
 permissions:
@@ -132,6 +136,74 @@ jobs:
           ask "every live function that writes a creature's skills" "select n.nspname, p.proname
              from pg_proc p join pg_namespace n on n.oid = p.pronamespace
             where n.nspname in ('public', 'private') and p.prosrc ~* 'update\s+creature\M[^;]*\mskills\s*=' order by 1, 2"
+
+      - name: A settlement's moles and the bare rock in their range
+        # Asked about: an Ironemole and an Oremander on Vinyard that would not mine, "Idle: no bare rock with a seam in it
+        # within 8 tiles of the totem", with bare rock beside the totem. For the settlement named in the `settlement`
+        # input: the deed; every creature its founder or citizens keep whose trade is mine or quarry, with its skill,
+        # range and idle reason as the island works them out; every bare Rock tile within the largest of those ranges of
+        # the totem, its seam, level, height and reach, and `worker_gatherable` for each mole on it; the seams under soil
+        # in that range; and the last of their keepers' idle messages. Selects only, of STABLE functions, which cannot
+        # write; every list capped.
+        if: inputs.settlement != ''
+        continue-on-error: true
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF || 'glebtboagnafcgwjjvfy' }}
+          SETTLEMENT: ${{ inputs.settlement }}
+        run: |
+          supabase link --project-ref "$PROJECT_REF"
+          ask() { echo "== $1"; supabase db query --linked "$2" || echo "::warning::could not read: $1"; }
+          s=${SETTLEMENT//\'/\'\'}
+          # The settlement, its founder and citizens, and their moles, as every query below starts.
+          base="with dd as (select d.* from deed d where d.world_id::text like 'f3a88670%' and lower(d.name) = lower('$s')
+                                order by d.founded_at limit 1),
+                     kin as (select dd.founded_by as uid from dd
+                             union select m.uid from deed_member m join dd on m.world_id = dd.world_id and m.founder = dd.founded_by),
+                     moles as (select c.id, coalesce(c.job, sd.gathers) as kind from creature c
+                                 join dd on c.world_id = dd.world_id join species_def sd on sd.id = c.species
+                                where c.keeper in (select uid from kin)
+                                  and (coalesce(c.job, sd.gathers) in ('mine', 'quarry') or sd.gathers in ('mine', 'quarry'))
+                                order by c.id limit 40)"
+          ask "$SETTLEMENT: the deed" "$base select dd.world_id, dd.name, dd.x as totem_x, dd.y as totem_y, dd.radius, dd.level,
+                 p.name as founder, dd.founded_by, (select count(*) from kin) - 1 as citizens
+             from dd left join player p on p.world_id = dd.world_id and p.uid = dd.founded_by"
+          ask "$SETTLEMENT: its moles (and quarriers)" "$base select c.id, kp.name as keeper, c.name, c.species, stage_of(c) as stage, c.mode, c.phase,
+                 m.kind as job, round(task_skill(c)::numeric, 1) as task_skill, work_range(c) as work_range,
+                 c.idle_why, round(c.idle_n::numeric, 1) as idle_n, to_char(c.idle_since, 'MM-DD HH24:MI') as idle_since,
+                 round(creature_x(c)::numeric, 1) as x, round(creature_y(c)::numeric, 1) as y,
+                 greatest(abs(floor(creature_x(c))::int - dd.x), abs(floor(creature_y(c))::int - dd.y)) as tiles_from_totem,
+                 c.post, c.around is not null as around, left(c.skills::text, 120) as skills
+             from moles m join creature c on c.id = m.id join dd on c.world_id = dd.world_id
+             left join player kp on kp.world_id = c.world_id and kp.uid = c.keeper order by c.id"
+          ask "$SETTLEMENT: bare Rock within the moles' largest range of the totem (150 nearest)" "$base,
+                 r as (select coalesce(max(work_range(c)), 8) as n from moles m join creature c on c.id = m.id),
+                 bare as (select dd.world_id as w, dd.x as tx, dd.y as ty, gx, gy from dd, r,
+                                 generate_series(dd.x - least(r.n, 80), dd.x + least(r.n, 80)) gx,
+                                 generate_series(dd.y - least(r.n, 80), dd.y + least(r.n, 80)) gy
+                           where in_bounds(dd.world_id, gx, gy) and land_tile(dd.world_id, gx, gy) = tile_id('Rock'))
+             select b.gx as x, b.gy as y, greatest(abs(b.gx - b.tx), abs(b.gy - b.ty)) as from_totem,
+                    k.seam, k.name as rock, k.level, rock_height(b.w, b.gx, b.gy) as height, face_reach(b.w, b.gx, b.gy) as reach,
+                    (select string_agg(c.id || ' ' || m.kind || ': ' || worker_gatherable(b.w, b.gx, b.gy, m.kind, c)::text, ', ' order by c.id)
+                       from moles m join creature c on c.id = m.id) as gatherable_by_mole
+               from bare b cross join lateral bedrock_at(b.w, b.gx, b.gy) k
+              order by from_totem, b.gy, b.gx limit 150"
+          ask "$SETTLEMENT: seams under soil in that range, by metal" "$base,
+                 r as (select coalesce(max(work_range(c)), 8) as n from moles m join creature c on c.id = m.id)
+             select k.name as seam, k.level, count(*) as tiles,
+                    min(greatest(abs(gx - dd.x), abs(gy - dd.y))) as nearest_from_totem
+               from dd, r, generate_series(dd.x - least(r.n, 80), dd.x + least(r.n, 80)) gx,
+                    generate_series(dd.y - least(r.n, 80), dd.y + least(r.n, 80)) gy
+                    cross join lateral bedrock_at(dd.world_id, gx, gy) k
+              where in_bounds(dd.world_id, gx, gy) and k.seam and land_tile(dd.world_id, gx, gy) <> tile_id('Rock')
+              group by k.name, k.level order by k.level, k.name limit 30"
+          ask "$SETTLEMENT: its keepers' last 20 lines about the moles idling" "$base
+             select to_char(e.at, 'MM-DD HH24:MI') as at, p.name as keeper, e.kind, left(e.text, 300) as text
+               from event e join dd on e.world_id = dd.world_id join player p on p.world_id = e.world_id and p.uid = e.uid
+              where e.uid in (select uid from kin) and e.text like '% idle:%'
+                and exists (select 1 from moles m join creature c on c.id = m.id where position(c.name in e.text) > 0)
+              order by e.n desc limit 20"
 
       - name: Look
         env:
