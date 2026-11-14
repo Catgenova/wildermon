@@ -59,6 +59,6 @@ export interface PeerState {
   gear?: GearLook;
   /** The tool the job in hand is done with (mining's pickaxe), in its metal, as the island took it from their pack (`toolFrom`). */
   tool?: GearPiece;
-  /** Lain where they fell (`../game/fell.ts` lyingAt): `x`, `y` and `level` are where they fell. */
-  down?: boolean;
+  /** Lain where they fell (`../game/fell.ts` lyingAt): when they fell, on this page's clock (seconds); `x`, `y` and `level` are where. */
+  down?: number;
 }

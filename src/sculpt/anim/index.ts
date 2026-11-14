@@ -254,7 +254,7 @@ const smoother = (u: number): number => { const x = Math.min(1, Math.max(0, u));
 /** The state a pose is in, of those a clip can play. */
 export function stateOf(pose: FigurePose): State | undefined {
   // lain where it fell, whatever else it was doing; on a ladder, climbing it
-  if (pose.down) return 'down';
+  if (pose.down !== undefined) return 'down';
   if (pose.climb && !pose.driving) return 'climb';
   if (pose.swimming) return pose.moving ? 'swim' : 'tread';
   if (pose.driving) return undefined;
@@ -617,7 +617,7 @@ export function animate(sk: Skeleton, pose: FigurePose, figure: () => Array<M3 |
   if (KEPT.size > MAX_KEPT) KEPT.delete(KEPT.keys().next().value as string);
   let out = now;
   // sat or lain down, or got up again: the clip's own way down onto the ground and up off it (`./down.ts`)
-  const down = gettingDown(sk, key, k, fresh, now, ms);
+  const down = gettingDown(sk, key, k, fresh, now, ms, pose.down);
   if (down) out = down;
   else if (k.from) {
     const span = k.span ?? FADE, u = (ms - k.at) / 1000 / span, settle = span > FADE && !!k.was && !!c && !!plantBetween(sk, k.was, c, 0);

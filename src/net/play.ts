@@ -831,7 +831,8 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
           id: hashId(p.uid), uid: p.uid, name: p.name, x: lying?.x ?? p.x, y: lying?.y ?? p.y, dirX: 0, dirY: 1,
           level: lying?.level ?? p.level, moving: false, swimming: false, working: !lying && !!p.act,
           act: lying ? undefined : p.act ?? undefined, look: cleanLook(p.look), gear: gearFrom(p.gear), tool: p.act && !lying ? toolFrom(p.act_tool, ACTION_BY_ID.get(p.act)?.tool) : undefined,
-          ...(lying ? { down: true } : {}),
+          // (and when, on this page's clock, so its fall is drawn from where it has got to: none once up)
+          down: lying ? performance.now() / 1000 - island.since(new Date(lying.at).toISOString()) : undefined,
         };
       }));
     // And a blow somebody took on their shield, drawn on them while it is fresh (`Roster.blocked`).
@@ -862,6 +863,7 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
   };
   // And where you fell, while the island says so: drawn lying there while you are on the spawn (`Game.lying`).
   island.hooks.fell = (fell) => {
+    if (fell && fell.at !== game.player.fell?.at) game.player.fellAt = performance.now() / 1000 - island.since(new Date(fell.at).toISOString());
     game.player.fell = fell;
   };
   for (const [text, kind, at] of log) game.write(text, kind as Parameters<Game['write']>[1], at);

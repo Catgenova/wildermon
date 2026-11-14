@@ -48,18 +48,21 @@ const MAX_GOT = 256;
 /**
  * A body's pose while it gets down into its clip or up out of it (`now` the pose of what it does now; `k` what it is
  * drawn from, since when, and from what pose), or none: what it does now is drawn as it is. `fresh`: the body is seen for
- * the first time, so it is drawn already sat or lying.
+ * the first time, so it is drawn already sat or lying. `since`: seconds since it went down, where that is known (a body
+ * knocked down, `./clips/down-ko.ts`): the way down drawn from that far into it, a body first seen too.
  */
-export function gettingDown(sk: Skeleton, key: string, k: { source: string; from: Local | null; at: number }, fresh: boolean, now: Local, ms: number): Local | undefined {
+export function gettingDown(sk: Skeleton, key: string, k: { source: string; from: Local | null; at: number }, fresh: boolean, now: Local, ms: number, since?: number): Local | undefined {
   let g = GOT.get(key);
   const D = DOWNS.get(k.source);
   const from = (st: Got, e: number, pose: Local): Local => (st.from && e < FADE ? blendLocal(st.from, pose, smooth(e / FADE)) : pose);
   if (D) {
-    if (fresh) { set(key, { name: k.source, D, up: false, at: k.at, t0: D.length + LAND, from: null }); return undefined; }
-    if (!g || g.name !== k.source || g.at !== k.at) {
+    // (from as far into the way down as it has been since it went down, where that is known)
+    const into = since === undefined ? undefined : Math.min(D.length + LAND, Math.max(0, since - Math.max(0, ms - k.at) / 1000));
+    if (fresh && (into === undefined || into >= D.length + LAND)) { set(key, { name: k.source, D, up: false, at: k.at, t0: D.length + LAND, from: null }); return undefined; }
+    if (fresh || !g || g.name !== k.source || g.at !== k.at) {
       // going down: from the start, or from as far as a getting up had got back to
       const back = g && g.up && g.D === D ? Math.max(0, g.t0 - ((ms - g.at) / 1000) * UP) : 0;
-      g = set(key, { name: k.source, D, up: false, at: k.at, t0: back, from: k.from });
+      g = set(key, { name: k.source, D, up: false, at: k.at, t0: Math.max(back, into ?? 0), from: fresh ? null : k.from });
     }
     const e = (ms - g.at) / 1000, t = g.t0 + e;
     if (t >= D.length + LAND) { k.from = null; return undefined; }

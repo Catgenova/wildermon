@@ -64,7 +64,7 @@ const BACK: Array<Key<number>> = [{ t: 0, v: 0 }, { t: 0.12, v: 0 }, { t: 0.3, v
 const LIFT: Array<Key<number>> = [{ t: 0, v: 0 }, { t: 0.12, v: 0 }, { t: 0.27, v: 0.06, ease: 'out' }, { t: 0.42, v: 0, ease: 'in' }, { t: 0.62, v: 0 }, { t: 0.78, v: 0.04, ease: 'out' }, { t: 0.95, v: 0, ease: 'in' }, { t: LENGTH, v: 0 }];
 
 /** Whether a pose is part way through a heavy blow's stumble. */
-export const stumbling = (pose: FigurePose): boolean => !!pose.heavy && !!pose.flinch && pose.flinch.t >= 0 && pose.flinch.t < 1 && !pose.swimming && !pose.driving && !pose.down;
+export const stumbling = (pose: FigurePose): boolean => !!pose.heavy && !!pose.flinch && pose.flinch.t >= 0 && pose.flinch.t < 1 && !pose.swimming && !pose.driving && pose.down === undefined;
 /** The bones the stumble turns away from where the blow came from: the trunk, the neck and the head. */
 const TRUNK = new Set(['pelvis', 'spine_01', 'spine_02', 'spine_03', 'neck_01', 'neck_02', 'head']);
 const LEGS = /^(thigh|calf|foot|ball)_[lr]$/;

@@ -4949,7 +4949,7 @@ export class Renderer {
             }
             const flight = peer.level === 0 ? this.onFlight(px, py) : null;
             // On a ladder, on it as far up as the climb has got (`ladderbody.ts`).
-            const lb = peer.down ? null : ladderBody(this.game, px, py, peer.level);
+            const lb = peer.down !== undefined ? null : ladderBody(this.game, px, py, peer.level);
             // Under a bridge's deck, at the ground's height or the water's, rather than on it (`bodyUnder`).
             const under = this.game.bridges.size > 0 && peer.level === 0
               && this.bodyUnder(`p${peer.id}`, Math.floor(px), Math.floor(py), [Math.floor(peer.fromX), Math.floor(peer.fromY)], peer.swimming);
@@ -6826,7 +6826,7 @@ export class Renderer {
             block: blockAt(player.blockedAt, performance.now() / 1000),
             flinch: this.flinchOf(player.hurtAt, player.hurtWhere, player.hurtBy, player.x, player.y, ent.seatFacing ?? this.playerFacing, !!player.hurtHeavy),
             // knocked down, on a ladder, a heavy blow (`../sculpt/anim/clips/down-ko.ts`, `ladder.ts`, `stumble.ts`)
-            ...(this.game.lying() ? { down: true } : {}),
+            ...(this.game.lying() ? { down: Math.max(0, performance.now() / 1000 - player.fellAt) } : {}),
             ...(ent.ladder?.climb !== undefined ? { climb: { h: ent.ladder.climb } } : {}),
             ...(player.hurtHeavy ? { heavy: true } : {}),
             veil: this.spells.veilOf(PLAYER_CASTS),
@@ -6880,7 +6880,7 @@ export class Renderer {
             block: blockAt(peer.blockedAt, performance.now() / 1000),
             flinch: this.flinchOf(peer.hurtAt, peer.hurtWhere, peer.hurtBy, peer.x, peer.y, ent.seatFacing ?? peer.facing, !!peer.hurtHeavy),
             // knocked down, on a ladder, a heavy blow (`../sculpt/anim/clips/down-ko.ts`, `ladder.ts`, `stumble.ts`)
-            ...(peer.down ? { down: true } : {}),
+            ...(peer.down !== undefined ? { down: Math.max(0, performance.now() / 1000 - peer.down) } : {}),
             ...(ent.ladder?.climb !== undefined ? { climb: { h: ent.ladder.climb } } : {}),
             ...(peer.hurtHeavy ? { heavy: true } : {}),
             veil: this.spells.veilOf({ kind: 'peer', id: peer.id }),
