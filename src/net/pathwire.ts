@@ -40,7 +40,11 @@ export function wirePath(game: Game, island: Island): void {
   };
 
   game.pathDoor = {
-    turn: (on) => answer(island.pathTurn(on)),
+    turn: async (on) => {
+      const error = await answer(island.pathTurn(on));
+      if (!error) game.events.emit('pathTurned', on);
+      return error;
+    },
     skip: (step, skip) => answer(island.pathSkip(step, skip)),
   };
 

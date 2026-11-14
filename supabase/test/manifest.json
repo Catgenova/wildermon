@@ -3170,5 +3170,19 @@
       "typescript"
     ],
     "why": "Asked for: an optional step-by-step tutorial from the runestone to a level 5 settlement. Each step met on the island's own state and not before; a path tick kept only when on the list and met, so the browser cannot tick one; labels off the rules' numbers; noted kinds tracked and not counted as seen; suggested sites passing every founding check and their own criteria, inside a time budget on a 4096 island; in every season a tame step has food in season or a supply sized to tame at 90%, handed out issued and once."
+  },
+  {
+    "file": "supabase/test/pathcard.ts",
+    "title": "The Path card: Done, Next, How and Why as a step ticks, with a moving picture of the action",
+    "shard": 5,
+    "external": [
+      "typescript",
+      "esbuild",
+      "playwright-core"
+    ],
+    "env": {
+      "PATHCARD_STRICT": "1"
+    },
+    "why": "Asked for: \"Path needs to also display as a popup as each task is completed, with no-prose description of what to do next, how, and why\", with a moving picture of the action. Every step's how and why built from the rules (no figure written into their text; menu labels, tools, skills, a kind's spawn ground, bait and taming, an upgrade's requirements and the numbers each why names, the rules' own); every picture a clip of its own; one card a look, naming every step it ticked; none on the first look of a page opened with the Path on; turned on mid-game, one card with the next step. Drawn in Chrome: the card up on a tick, its buttons, its picture drawn and moving, Skip next, the Path tab, a job started after the hold taking it down, Path pop-ups Off, Animations Off a still frame."
   }
 ]

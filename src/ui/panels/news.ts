@@ -4506,6 +4506,8 @@ export const NEWS: News[] = [
       `New: Path on: ${PATH_KINDS.length} kinds noted in the field guide, Noted (Path): Track as if seen. Not counted as seen.`,
       `New: Path suggested sites: ${PATH_SITE.count} nearest founding tiles, trees ${PATH_SITE.trees}+ within ${PATH_SITE.treeReach}, water within ${PATH_SITE.water}, rock within ${PATH_SITE.rock}.`,
       `New: Path supply: a tame step with nothing in season: favourite food, ${percent(PATH_SURE)} to tame; issued; once a step.`,
+      'New: Path card, top right, as a step ticks: Done (every step ticked at once), Next, How (right-click, menu label, tool, skill; a kind\'s spawn ground, bait, taming), Why (what it unlocks or feeds, by step). Close, Skip next, Path tab.',
+      `New: Path card picture: you at the next step's job, its clip and tool; a tame step's kind beside you. Still frame with Animations off. Path turned on: one card, the next step. Settings, Interface: Path pop-ups (On).`,
     ],
   },
   // A bridge's ends on the storey stood on and the storey picked (`bridgeUpTo`, `deck_level`).

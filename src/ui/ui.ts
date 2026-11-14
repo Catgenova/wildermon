@@ -135,6 +135,7 @@ import { Notices } from './notices';
 import { PointerRing } from './pointerring';
 import { DeedBanner } from './deedbanner';
 import { PathStrip } from './pathstrip';
+import { PathCard } from './pathcard';
 import type { HelpPages } from './panels/help';
 import { BINDS, keyName, type Keybinds } from '../game/keybinds';
 import { Hud, WINDOWS } from './hud';
@@ -410,6 +411,8 @@ export class UI {
   private readonly deedBanner: DeedBanner;
   /** The Path's line at the top of the screen (`pathstrip.ts`). */
   private readonly pathStrip: PathStrip;
+  /** The Path's card as a step ticks (`pathcard.ts`). */
+  readonly pathCard: PathCard;
   /** Find anything (`palette`, Ctrl+K). */
   private readonly palette: Palette;
   /** The help, built into its window the first time anything asks for it. */
@@ -694,6 +697,7 @@ export class UI {
     this.pointerRing = new PointerRing(root, game, canvas);
     this.deedBanner = new DeedBanner(root, game);
     this.pathStrip = new PathStrip(root, game, () => this.journalPanel.open('path'));
+    this.pathCard = new PathCard(root, game, () => this.journalPanel.open('path'));
 
     /*
      * While you were away: what the island counted for you, shown once as you
@@ -1107,6 +1111,7 @@ export class UI {
     this.pointerRing.update(performance.now());
     this.deedBanner.update(performance.now());
     this.pathStrip.update(performance.now(), this.renderer.camera.northAngle());
+    this.pathCard.update(performance.now());
     this.hud.update(this.renderer, fps);
     this.renderer.selected = this.tilePanel.target ? { x: this.tilePanel.target.x, y: this.tilePanel.target.y, down: this.tilePanel.target.down, level: this.tilePanel.target.level } : null;
     this.minimap.update();
