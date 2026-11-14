@@ -11,8 +11,8 @@
  * - `board` (taking the reins or the helm, boarding as a passenger): both hands up to the rail ahead, the right foot
  *   up onto the step, pulled up onto it onto the left toes, the hips turned toward the seat: the seat's own sat pose
  *   (`./seated.ts`) is faded into from there as the body is put on it.
- * - `bell` (ringing a bell): both fists one behind the other on the end of the bell's rope out ahead at the belt, pulled
- *   back and down to the belly with the weight onto the heels, let forward with it, the head up to the bell.
+ * - `bell` (ringing a bell): stood at the front of the bell's frame facing it, both fists one over the other on its rope at
+ *   the head's height, pulled down to the chest with the knees given, carried back up by it.
  * - `totem` (founding a settlement, upgrading one): both fists on the stake, lifted overhead and driven down into the
  *   ground ahead with the knees bent.
  * - `bauble` (setting a bauble into the altar): the right hand out to the altar, pressed in, held, drawn back.
@@ -131,23 +131,35 @@ const KEY_BEATS: HandBeat[] = [
 export const KEY = handClip('key', KEY_LENGTH, KEY_BEATS, { l: [0, 1, 0], r: UPRIGHT }, { lag: { head: 0.08 }, stretch: [[1.2, 1.6]], bodies: { woman: { add: HER_FEET, hands: { l: [0, -0.01, -0.06], r: [0, -0.01, -0.06] } } } });
 
 /* ---- C1 cart: a cart's shafts taken up ---------------------------------------------------------------------------- */
-/** Seconds: crouched to the shafts (0.45), gripped (to 0.7), stood with them (1.1), leant into them (1.5). */
+/** Seconds: crouched to the shafts (0.5), gripped (to 0.75), stood with them (1.15), leant into them (1.5). */
 const CART_LENGTH = 1.5;
-/** Each shaft's place at the hand, the right's: low at the side, at the hip, and at the hip leant into. */
-const SHAFT_LOW: Euler = [-0.175, 0.33, 0.06], SHAFT_UP: Euler = [-0.175, 0.46, 0.02], SHAFT_LEANT: Euler = [-0.175, 0.45, -0.02];
+/**
+ * Each shaft's end at the hand, the right's: where the small cart's rest on the ground (`../../../render/furniture.ts`
+ * MODELS.cart: 2.3 game units either side of its middle, 2 up; his body heights), stood between them with the cart
+ * behind; lifted to the hip, and at the hip leant into.
+ */
+const SHAFT_LOW: Euler = [-2.3 / HEIGHT.man, 2 / HEIGHT.man, 0.07], SHAFT_UP: Euler = [-0.15, 0.46, -0.01], SHAFT_LEANT: Euler = [-0.15, 0.45, -0.05];
 const across = (v: Euler): Euler => [-v[0], v[1], v[2]];
 /** The right fist hanging at the side, a little forward: where the hands start from stood. */
 const HANG: Euler = [-0.15, 0.51, 0.07];
 /** Her hands nearer the middle at the sides (her hips narrower for her height), and nearer to reach ahead. */
 const HER_SIDES: Partial<Record<'l' | 'r', Euler>> = { l: [-0.03, 0.03, -0.01], r: [0.03, 0.03, -0.01] };
+/**
+ * Her right hand on the shaft's end where it is for her height (2.3 and 2 game units in her body heights), as a change
+ * from his place and her sides' (`HER_SIDES`), at the beats it holds the shaft there; nought elsewhere.
+ */
+const HER_END: Euler = [-2.3 / HEIGHT.woman - (-2.3 / HEIGHT.man + 0.03), 2 / HEIGHT.woman - (2 / HEIGHT.man + 0.03), 0.01];
+const HER_LOW: Array<Key<Euler>> = [
+  { t: 0, v: [0, 0, 0] }, { t: 0.5, v: HER_END, ease: 'inOut' }, { t: 0.75, v: HER_END, ease: 'linear' }, { t: 1.15, v: [0, 0, 0], ease: 'inOut' },
+];
 const CART_STAND: KeyPose = { rot: { ...ELBOWS, ...FLAT_L, ...FLAT_R, upperarm_l: [4, 0, 14], upperarm_r: [4, 0, -14], lowerarm_l: [20, 0, 0], lowerarm_r: [20, 0, 0] } };
-/** Crouched to the shafts: the hips let down, the trunk over the thighs, the head up. */
+/** Squatted down between the shafts: the hips let down nearly to the heels, the knees out, the back kept straight, the head up. */
 const CART_DOWN: KeyPose = {
   rot: {
-    ...ELBOWS, ...FIST_L, ...FIST_R, pelvis: [22, 0, 0], spine_01: [6, 0, 0], spine_02: [6, 0, 0], spine_03: [3, 0, 0], neck_01: [-10, 0, 0], head: [6, 0, 0],
-    thigh_l: [40, -4, 8], thigh_r: [40, 4, -8], calf_l: [-70, 0, 0], calf_r: [-70, 0, 0],
+    ...ELBOWS, ...FIST_L, ...FIST_R, pelvis: [40, 0, 0], spine_01: [6, 0, 0], spine_02: [4, 0, 0], spine_03: [2, 0, 0], neck_01: [-20, 0, 0], head: [-4, 0, 0],
+    thigh_l: [80, -6, 8], thigh_r: [80, 6, -8], calf_l: [-125, 0, 0], calf_r: [-125, 0, 0],
   },
-  move: [0, -0.1, 0.02],
+  move: [0, -0.3, 0.03],
 };
 /** Stood with the shafts at the hips: upright, the arms down along the sides. */
 const CART_UP: KeyPose = { rot: { ...ELBOWS, ...FIST_L, ...FIST_R, pelvis: [2, 0, 0], spine_02: [1, 0, 0], head: [2, 0, 0] }, move: [0, -0.006, 0] };
@@ -155,12 +167,12 @@ const CART_UP: KeyPose = { rot: { ...ELBOWS, ...FIST_L, ...FIST_R, pelvis: [2, 0
 const CART_LEANT: KeyPose = { rot: { ...ELBOWS, ...FIST_L, ...FIST_R, pelvis: [10, 0, 0], spine_01: [3, 0, 0], spine_02: [2, 0, 0], neck_01: [-6, 0, 0], head: [-4, 0, 0] }, move: [0, -0.014, 0.02] };
 const CART_BEATS: HandBeat[] = [
   { t: 0, pose: CART_STAND, ease: 'inOut', name: 'stood', hands: { r: HANG, l: across(HANG) } },
-  { t: 0.45, pose: CART_DOWN, ease: 'inOut', stage: 'key', name: 'down to the shafts', hands: { r: SHAFT_LOW, l: across(SHAFT_LOW) } },
-  { t: 0.7, pose: CART_DOWN, ease: 'linear', name: 'gripped', hands: { r: SHAFT_LOW, l: across(SHAFT_LOW) } },
-  { t: 1.1, pose: CART_UP, ease: 'inOut', stage: 'key', name: 'stood with them', hands: { r: SHAFT_UP, l: across(SHAFT_UP) } },
+  { t: 0.5, pose: CART_DOWN, ease: 'inOut', stage: 'key', name: 'down to the shafts', hands: { r: SHAFT_LOW, l: across(SHAFT_LOW) } },
+  { t: 0.75, pose: CART_DOWN, ease: 'linear', name: 'gripped', hands: { r: SHAFT_LOW, l: across(SHAFT_LOW) } },
+  { t: 1.15, pose: CART_UP, ease: 'inOut', stage: 'key', name: 'stood with them', hands: { r: SHAFT_UP, l: across(SHAFT_UP) } },
   { t: CART_LENGTH, pose: CART_LEANT, ease: 'inOut', stage: 'key', name: 'leant in', hands: { r: SHAFT_LEANT, l: across(SHAFT_LEANT) } },
 ];
-export const CART = handClip('cart', CART_LENGTH, CART_BEATS, { l: [0, 0, 1], r: [0, 0, 1] }, { loop: false, oneAGo: true, lag: { head: 0.06 }, stretch: [[0.45, 0.7]], bodies: { woman: { add: HER_FEET, hands: HER_SIDES } } });
+export const CART = handClip('cart', CART_LENGTH, CART_BEATS, { l: [0, 0, 1], r: [0, 0, 1] }, { loop: false, oneAGo: true, lag: { head: 0.06 }, stretch: [[0.5, 0.75]], bodies: { woman: { add: HER_FEET, move: [1, 1.12, 1], hands: HER_SIDES, tracks: { $hand_l: HER_LOW.map((k) => ({ ...k, v: [-k.v[0], k.v[1], k.v[2]] as Euler })), $hand_r: HER_LOW } } } });
 
 /* ---- C2 board: climbing aboard a vehicle ------------------------------------------------------------------------- */
 /** Seconds: hands to the rail and the foot up (0.35), on the step (0.6), pulled up (1.0), swung in toward the seat. */
@@ -209,26 +221,26 @@ export const BOARD = handClip('board', BOARD_LENGTH, BOARD_BEATS, { l: [0, 1, 0]
 });
 
 /* ---- B1 bell: a bell rope pulled ----------------------------------------------------------------------------------- */
-/** Seconds a pull: back (0.45), held (to 0.6), let forward with the rope. */
+/** Seconds a pull: down (0.45), held (to 0.6), carried back up by the rope. */
 const BELL_LENGTH = 1.3;
 /**
- * The bell's rope (hung from its clapper to below the waist, under a bell as wide as a body's height is half of) at its
- * end, reached for out ahead at the belt, and pulled back and down to the belly: the right fist's place, the left's a fist
- * nearer and below on the rope's slant.
+ * The bell's rope (hung from a lever out of the bell's strap down the front of its frame, `../../../render/kit/bell.ts`)
+ * gripped at the head's height a forearm ahead, and pulled down to the chest: the right fist's place, the left's a fist
+ * below it.
  */
-const ROPE_OUT: Euler = [-0.01, 0.54, 0.27], ROPE_IN: Euler = [-0.01, 0.5, 0.17], BELOW: Euler = [0.02, -0.035, -0.035];
+const ROPE_UP: Euler = [-0.01, 0.88, 0.17], ROPE_DOWN: Euler = [-0.01, 0.7, 0.19], BELOW: Euler = [0.02, -0.065, 0];
 const below = (v: Euler): Euler => [v[0] + BELOW[0], v[1] + BELOW[1], v[2] + BELOW[2]];
-/** Reached out to the rope: bent from the hips toward it, the head up to the bell. */
-const BELL_OUT: KeyPose = { rot: { ...ELBOWS, ...FIST_L, ...FIST_R, pelvis: [14, 0, 0], spine_01: [4, 0, 0], spine_02: [3, 0, 0], neck_01: [-10, 0, 0], head: [-10, 0, 0] }, move: [0, -0.02, 0.015] };
-/** Pulled: the weight back onto the heels, the knees given, the trunk upright over them. */
-const BELL_IN: KeyPose = { rot: { ...ELBOWS, ...FIST_L, ...FIST_R, pelvis: [2, 0, 0], spine_01: [0, 0, 0], spine_02: [-2, 0, 0], neck_01: [-6, 0, 0], head: [-8, 0, 0], thigh_l: [12, 0, 4], thigh_r: [12, 0, -4] }, move: [0, -0.045, -0.02] };
+/** Reached up the rope: stood tall, the head up to the bell. */
+const BELL_UP: KeyPose = { rot: { ...RAISED, ...FIST_L, ...FIST_R, spine_02: [-2, 0, 0], spine_03: [-3, 0, 0], neck_01: [-6, 0, 0], head: [-10, 0, 0] }, move: [0, 0.003, 0] };
+/** Pulled: the weight dropped onto the rope, the knees given, the trunk over it. */
+const BELL_DOWN: KeyPose = { rot: { ...ELBOWS, ...FIST_L, ...FIST_R, pelvis: [7, 0, 0], spine_01: [3, 0, 0], spine_02: [3, 0, 0], spine_03: [2, 0, 0], neck_01: [-4, 0, 0], head: [-6, 0, 0] }, move: [0, -0.035, 0.008] };
 const BELL_BEATS: HandBeat[] = [
-  { t: 0, pose: BELL_OUT, ease: 'out', stage: 'key', name: 'reached out', hands: { r: ROPE_OUT, l: below(ROPE_OUT) } },
-  { t: 0.45, pose: BELL_IN, ease: 'in', stage: 'key', name: 'pulled', hands: { r: ROPE_IN, l: below(ROPE_IN) } },
-  { t: 0.6, pose: BELL_IN, ease: 'out', name: 'held', hands: { r: [ROPE_IN[0], ROPE_IN[1] - 0.005, ROPE_IN[2] - 0.005], l: below([ROPE_IN[0], ROPE_IN[1] - 0.005, ROPE_IN[2] - 0.005]) } },
+  { t: 0, pose: BELL_UP, ease: 'out', stage: 'key', name: 'up', hands: { r: ROPE_UP, l: below(ROPE_UP) } },
+  { t: 0.45, pose: BELL_DOWN, ease: 'in', stage: 'key', name: 'pulled', hands: { r: ROPE_DOWN, l: below(ROPE_DOWN) } },
+  { t: 0.6, pose: BELL_DOWN, ease: 'out', name: 'held', hands: { r: [ROPE_DOWN[0], ROPE_DOWN[1] - 0.008, ROPE_DOWN[2]], l: below([ROPE_DOWN[0], ROPE_DOWN[1] - 0.008, ROPE_DOWN[2]]) } },
 ];
-/** Her arms shorter for her height: the rope's end nearer. */
-export const BELL = handClip('bell', BELL_LENGTH, BELL_BEATS, { l: [0, 0.6, 0.8], r: [0, 0.6, 0.8] }, { lag: { head: 0.08, spine_03: 0.04 }, bodies: { woman: { add: HER_FEET, hands: { l: [0, 0.01, -0.05], r: [0, 0.01, -0.05] } } } });
+/** Her arms shorter for her height: the rope nearer. */
+export const BELL = handClip('bell', BELL_LENGTH, BELL_BEATS, { l: [0, 1, 0], r: [0, 1, 0] }, { lag: { head: 0.08, spine_03: 0.04 }, bodies: { woman: { add: HER_FEET, hands: { l: [0, -0.01, -0.05], r: [0, -0.01, -0.05] } } } });
 
 /* ---- D1 totem: a settlement's stake driven in --------------------------------------------------------------------- */
 /** Seconds a drive: lifted overhead (0.8), held (to 1.0), driven down (1.25), let settle. */
