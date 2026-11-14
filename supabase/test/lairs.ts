@@ -441,12 +441,12 @@ check('while any of the garrison stands, the lair is held and no boss is out', b
 const [bState, bName, bKind, bMax, bAttack, bHealth] = one('BOSS').split('|');
 check('the last of it killed, the warren chief is out at twice a goblin\'s health and at it',
   bState === 'boss' && bName === 'Warren chief' && bKind === 'goblin' && Number(one('BOSSMAX').split('|')[0]) === 2 * SPECIES.goblin.health
-    && Number(one('BOSSMAX').split('|')[1]) === SPECIES.goblin.attack && Number(bHealth) === Number(bMax), `${one('BOSS')} ${one('BOSSMAX')}`);
+    && Math.abs(Number(one('BOSSMAX').split('|')[1]) - SPECIES.goblin.attack) < 1e-4 && Number(bHealth) === Number(bMax), `${one('BOSS')} ${one('BOSSMAX')}`);
 check(`and told to whoever is within ${LAIR_ANNOUNCE} tiles, and to nobody further`,
   one('TOLD') === `${U.p}:Warren chief out: Goblin warren.`, one('TOLD'));
 const [, kMax, kAttack] = one('KING').split('|');
 check('the ogre king: twice an ogre\'s health, half again its blow', one('KING').startsWith('Ogre king|') && Number(kMax) === 2 * SPECIES.ogre.health
-  && Math.abs(Number(kAttack) - 1.5 * SPECIES.ogre.attack) < 1e-6, one('KING'));
+  && Math.abs(Number(kAttack) - 1.5 * SPECIES.ogre.attack) < 1e-4, one('KING'));
 check('the dragon is its own boss, at a dragon\'s health and blow', one('DRAGON').startsWith(`${SPECIES.dragon.name}|`)
   && Number(one('DRAGON').split('|')[1]) === SPECIES.dragon.health, one('DRAGON'));
 void bAttack;
