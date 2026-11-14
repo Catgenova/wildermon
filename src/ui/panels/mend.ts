@@ -33,7 +33,7 @@ function stopSaid(g: Game, it: Item, stop: CycleStop, plan: CyclePlan, lock: Sto
 function stockSaid(it: Item): string {
   const made = madeOf(it);
   if (made) return made.toLowerCase();
-  const stock = improvable(it.id)?.material.stock ?? [];
+  const stock = improvable(it.id, it.extra)?.material.stock ?? [];
   return `${stock.filter((s) => !s.endsWith('_ingot')).slice(0, 4).map(lower).join(', ')}${stock.length > 4 ? ', …' : ''}`;
 }
 
@@ -307,7 +307,7 @@ export class MendPanel {
   /** The kind a piece is held to: the one chosen for its material where it takes it, else the first it would draw. */
   private lockFor(it: Item): StockLock | null {
     const kinds = stockKinds(this.game, it);
-    const want = this.locks.get(improvable(it.id)?.material.id ?? '');
+    const want = this.locks.get(improvable(it.id, it.extra)?.material.id ?? '');
     return (kinds.find((k) => lockKey(k.lock) === want) ?? kinds[0])?.lock ?? null;
   }
 
@@ -324,7 +324,7 @@ export class MendPanel {
       return;
     }
     const it = chosen[0];
-    const what = improvable(it.id);
+    const what = improvable(it.id, it.extra);
     if (!what) return;
 
     const pick = document.createElement('select');
@@ -404,7 +404,7 @@ export class MendPanel {
     const table = this.table(box, ['Item', 'QL', 'Top', 'Tools', 'Stock (at hand)', 'Improve now'], 'mend-each');
     const groups = new Map<string, { name: string; items: Item[] }>();
     for (const it of chosen) {
-      const what = improvable(it.id);
+      const what = improvable(it.id, it.extra);
       if (!what) continue;
       const tools = improveTools(g, it);
       const missing = tools.filter((t) => !t.held);

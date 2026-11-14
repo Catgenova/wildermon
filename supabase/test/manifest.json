@@ -1513,6 +1513,12 @@
     "why": "The Artisan's fourth trade, at a hot smelter: sand melted into lumps, a lump blown into the panel every window, bay and glasshouse roof is glazed with, a bottle, and a gem and sand fired into the panes a stained glass wall is leaded from. Each job the same on both sides and made on the island; a failed firing keeps its gem; the stained glass wall's bill, and a bottle's room, alike on both sides."
   },
   {
+    "file": "supabase/test/obsidian.ts",
+    "title": "Obsidian armour, knapped obsidian and obsidian glass, on both sides",
+    "shard": 3,
+    "why": "Asked for: \"Add obsidian armor set, unique obsidian models for tools and weapons, dark obsidian glass walls and floors with 80% opacity. Obsidian only drops from monsters killed on the volcano isle.\" Obsidian made and found by nothing; the five pieces, their class between plate and scale, best against cuts and burns and worst against crushing, each recipe the same on both sides and riveted only at an anvil; every knapped tool and weapon's recipe the same on both sides, Obsidian the keenest edge, truest bite and fastest wear on both, improved with obsidian; obsidian glass's bill, tool, skill, storeys and heft the same, a solid wall or a floor only, built on the island with a storey over it."
+  },
+  {
     "file": "supabase/test/arcane.ts",
     "title": "A stone, and what you can get out of it",
     "shard": 3,

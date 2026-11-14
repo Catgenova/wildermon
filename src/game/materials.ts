@@ -14,7 +14,7 @@ import { TREE_DEFS } from '../world/tiles';
  * it is.
  */
 /** `pelt`: a pelt rug's, the kind its fur came off (`adorn.ts`), named by no material: what the first input's label says. */
-export type MaterialKind = 'wood' | 'metal' | 'gem' | 'pelt';
+export type MaterialKind = 'wood' | 'metal' | 'gem' | 'pelt' | 'glass';
 
 export interface MaterialDef {
   id: string;
@@ -109,7 +109,19 @@ const gem = (g: GemDef): MaterialDef => ({ id: g.id, name: g.name, kind: 'gem', 
 export const WOODS: MaterialDef[] = TREE_DEFS.map((t) => wood(t.name));
 export const METAL_MATERIALS: MaterialDef[] = METALS.map((m) => metal(m.id, m.name));
 export const GEM_MATERIALS: MaterialDef[] = GEMS.map(gem);
-export const MATERIALS: MaterialDef[] = [...WOODS, ...METAL_MATERIALS, ...GEM_MATERIALS];
+/**
+ * Obsidian: a head or a blade knapped from it (`recipes.ts` knap_obsidian_*). The keenest edge and the truest bite there
+ * are, `OBSIDIAN_KEEN` over the best metal's of each, and it wears `OBSIDIAN_WEAR` times as fast as the softest metal.
+ */
+export const OBSIDIAN = 'Obsidian';
+export const OBSIDIAN_KEEN = 0.1;
+export const OBSIDIAN_WEAR = 1.5;
+const best = (k: 'edge' | 'bite' | 'wear'): number => Math.max(...Object.values(METAL_PROPS).map((p) => p[k]));
+export const OBSIDIAN_MATERIAL: MaterialDef = {
+  id: OBSIDIAN.toLowerCase(), name: OBSIDIAN, kind: 'glass', difficulty: 8, weight: 0.7, wear: +(best('wear') * OBSIDIAN_WEAR).toFixed(2), decay: 0.05,
+  edge: +(best('edge') + OBSIDIAN_KEEN).toFixed(2), soak: 1, bite: +(best('bite') + OBSIDIAN_KEEN).toFixed(2), hold: 1, note: '',
+};
+export const MATERIALS: MaterialDef[] = [...WOODS, ...METAL_MATERIALS, ...GEM_MATERIALS, OBSIDIAN_MATERIAL];
 /** Anything that carries its own light (an Embra, a dragon) takes this many times the blow from a bane metal's edge. */
 export const BANE_BONUS = 1.5;
 /** Each multiplier a material carries, by what it multiplies, in the order the examine line says them. */

@@ -7841,6 +7841,8 @@ export class Game {
     // An oven's own recipes want an oven, lit: a brazier is a hearth but bakes nothing (the island's `at_station`).
     if (station === 'oven') return this.litOvenNear() !== undefined;
     if (station === 'smelter') return this.hotSmelterNear() !== undefined;
+    // An anvil, set down (`anvil.ts`; the island's `at_station`).
+    if (station === 'anvil') return this.anvilNear() !== undefined;
     // A cauldron hearth, alight (`adorn.ts`; the island's `at_station`).
     if (station === CAULDRON_STATION) return this.litOvenNear(2.6, CAULDRON_HEARTH) !== undefined;
     return this.furnitureNear(station) !== undefined;
@@ -7880,6 +7882,17 @@ export class Game {
       if (best || !s.lit) return;
       const [cx, cy] = smelterCentre(s);
       if (Math.hypot(cx - this.player.x, cy - this.player.y) <= range) best = s;
+    }, this.player.level);
+    return best;
+  }
+
+  /** An anvil set down within reach of the work: the `anvil` station. */
+  anvilNear(range = 2.6): PlacedAnvil | undefined {
+    let best: PlacedAnvil | undefined;
+    this.placed.anvils.around(this.player.x, this.player.y, range + 1, (a) => {
+      if (best) return;
+      const [cx, cy] = anvilCentre(a);
+      if (Math.hypot(cx - this.player.x, cy - this.player.y) <= range) best = a;
     }, this.player.level);
     return best;
   }

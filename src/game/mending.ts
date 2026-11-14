@@ -79,17 +79,17 @@ export function repairCost(g: Game, it: Item): { goes: number; secs: number; ql:
 
 /** Every tool a piece's material asks for, and whether each is in the pack. Kept, not used up. */
 export const improveTools = (g: Game, it: Item): Array<{ id: string; held: boolean }> =>
-  (improvable(it.id)?.material.tools ?? []).map((id) => ({ id, held: g.inventory.has(id) }));
+  (improvable(it.id, it.extra)?.material.tools ?? []).map((id) => ({ id, held: g.inventory.has(id) }));
 
 /** The QL a pass may take this piece to: your skill's ceiling (`improveCeiling`), never past 99.9. */
 export const improveTop = (g: Game, it: Item): number => {
-  const what = improvable(it.id);
+  const what = improvable(it.id, it.extra);
   return what ? Math.min(99.9, improveCeiling(g, what.skill, it)) : it.ql;
 };
 
 /** The chance a pass at this QL comes off: `perform_item`'s skill check, at the best of the material's tools. */
 export function passChance(g: Game, it: Item, ql = it.ql): number {
-  const what = improvable(it.id);
+  const what = improvable(it.id, it.extra);
   if (!what) return 0;
   const toolQl = Math.max(0, ...what.material.tools.map((id) => g.toolQl(id)));
   return g.skillChance(what.skill, 12 + ql / 3 + matOf(it.extra).difficulty, toolQl, g.mindEase());
@@ -117,7 +117,7 @@ export interface PassRow {
  * Stops at the piece's top.
  */
 export function passesAhead(g: Game, it: Item, lock: StockLock): PassRow[] {
-  const what = improvable(it.id);
+  const what = improvable(it.id, it.extra);
   if (!what) return [];
   const top = improveTop(g, it);
   const have = lockAtHand(g, lock);
@@ -165,7 +165,7 @@ export const FAIL_DAMAGE_MEAN = IMPROVE_FAIL_LEAST + IMPROVE_FAIL_SPREAD / 2;
  * the run starts: all of it, or what the pieces before it in a run over several leave.
  */
 export function cyclePlan(g: Game, it: Item, lock: StockLock, count: number, upto?: number, stock = lockAtHand(g, lock)): CyclePlan {
-  const what = improvable(it.id);
+  const what = improvable(it.id, it.extra);
   const top = improveTop(g, it);
   const healed = repairHealed(g);
   const perPoint = repairQlPerPoint(g);
