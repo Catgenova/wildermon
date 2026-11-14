@@ -65,7 +65,7 @@ import { drawSteps, stepsFootAt } from './steps';
 import { seasonAt, type Season } from '../world/calendar';
 import { gardenAmbience, gardenTrim, hangCodeOf } from './gardenlook';
 import { decorTrim } from './decorlook';
-import { ARMOUR_STAND } from '../game/decordefs';
+import { ARMOUR_STAND, WOVEN_RUG } from '../game/decordefs';
 import { drawShine, shines } from './shine';
 import { NIGHT_WASH } from './nightwash';
 import { type Masonry, adobe, brickwork, cobble, goldwork, logwork, glasswork, marblework, planking, sandstone, silverwork, slatework, stonework, timbercraft } from './masonry';
@@ -512,6 +512,9 @@ export { type Pick } from './picking';
 import { drawPlinthRunes, plinthNight } from './plinth';
 import { plinthBusy } from '../game/plinth';
 import { ENCHANTERS_PLINTH } from '../game/enchant';
+
+/** How far ahead of its line a piece lying flat sorts (`DrawEnt.key`): ahead of anything standing in it. */
+const FLAT_FIRST = 1e6;
 
 /**
  * One piece of a plan over an area, drawn before it is asked for
@@ -4941,6 +4944,8 @@ export class Renderer {
             const fe = this.take('furniture', x, y, cam.worldToScreenX(wx, wy), cam.worldToScreenY(wx, wy, this.pieceBase(fu, wx, wy)), null);
             fe.piece = fu;
             fe.view = this.viewOf(fu);
+            // A rug lies flat on the floor: first among its line, under whoever stands on it (`decor.ts`).
+            if (fu.kind === WOVEN_RUG) fe.key = fe.sy - FLAT_FIRST;
             if (fu.rare) fe.rare = fu.rare;
             // On a bridge's deck, among its pieces (`deckKey`): a stall on an outer lane, a wagon crossing. Anything else is under it (`pieceOnDeck`).
             if (this.game.bridges.size && this.game.pieceOnDeck(fu, Math.floor(wx), Math.floor(wy))) this.onBridgeDeck(fe, wx, wy);
