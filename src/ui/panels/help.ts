@@ -180,6 +180,7 @@ import {
 import { statueName } from '../../game/patronlist';
 import { ALIGNMENT_NAMES, BAR_SLOTS, FAITH_SPELLS, FAITH_TIER_AT, PATRON_AT, PATRONS, SCHOOL_NAMES, slotsFor, SPELL_ON_WORDS, SPELL_ONS, SPELL_REACH, SPELLS_PER_TIER } from '../../game/patrons';
 import { BIND_BY_ID, keyName } from '../../game/keybinds';
+import { EMOTES } from '../../game/emotes';
 import {
   CLOSE_BARE, CLOSE_CLOTH, CLOSE_PACE, CLOSE_PER_SKILL, CLOSE_RIGHT, CLOSE_WRONG, DRESSING_RANK, FESTER_CLOTH, FESTER_WRONG, HERBS, WOUND_KINDS,
 } from '../../game/wounds';
@@ -1181,6 +1182,11 @@ export function helpText(): string {
       <li>Footer: herd count, hungry count, hurt count. Clicking a count lays the herd out flat, worst first, unfiltered; the attention count opens the Care tab.</li>
     </ul>
     <h3>Other people</h3>
+    <h4>Emotes</h4>
+    <ul>
+      <li>Menu: <kbd>${keyOf('emotes')}</kbd>; or the command in chat. Seen by everybody in view; a line in their log.</li>
+      ${EMOTES.map((e) => `<li><b>${e.label}</b> (<kbd>/${e.id}</kbd>): ${e.held ? `${e.seconds} s down; held until you move, swim, board or work` : `${e.seconds} s`}.</li>`).join('')}
+    </ul>
     <h4>Right-click a person</h4>
     <ul>
       <li><b>Invite to a settlement</b> (you founded it, or your rank there holds ${POWER.invite.label}); <b>Ask to be a friend</b>; <b>Write</b>.</li>
@@ -2509,7 +2515,7 @@ export function helpText(): string {
       and refunds itself. You cannot fill your own.</li>
       <li><b>A parcel</b> (neither present): letters (${LETTER_MAX} characters) carry things, posted at a <b>mailbox</b>, collected at any other. Both ends need a box;
       without one, words only. The recipient owns it once posted.</li>
-      <li><b>A wildermon</b> changes hands in its wildermon crate: in a deal, on a stall (no other store) and in the post. The new owner keeps it.
+      <li><b>A wildermon</b> changes hands in its wildermon crate: in a deal, a barter, on a stall (no other store) and in the post. The new owner keeps it.
       While on offer, on a stall or in the post the crate cannot be opened and its occupant cannot be released or culled.
       On a stall, a counter or a rack, the crate is listed with its wildermon's name.</li>
     </ul>
@@ -2522,6 +2528,10 @@ export function helpText(): string {
       <li>Refused (same words to both) when an item has left its owner's pack, is in a deal, worn, held or kept back, or somebody lacks the silver put in.
       Nothing is held out of the pack during a barter.</li>
       <li>Ends: either cancels; more than ${BARTER_REACH} tiles apart; somebody leaves; ${dur(BARTER_IDLE)} with no change.</li>
+      <li><b>A wildermon</b>: in its wildermon crate, from your pack (at heel, at work or in a crate set down: into a carried crate first). Shown to both under the crate:
+      name, sex, kind, age, level; rarity; colour and size form; each trait and what it gives (unread below the animal husbandry for it, as on its card);
+      dam, sire and line. The new owner keeps it: traits, forms, skills, stance and pedigree unchanged. An empty crate goes as a crate.</li>
+      <li>Wildermon refused: a dam carrying young; panniers loaded. Its crate's occupant changed (let out, swapped, renamed): both Accepts cleared, both told.</li>
       <li>Never refused for weight: an overloaded pack slows you, as picking up does.</li>
     </ul>
     <h3>Who may do what on a settlement</h3>
@@ -3427,7 +3437,7 @@ export function helpText(): string {
       <li>Set down on any spot: shown inside with its name. Open (beside it, or from the pack): <b>let it out to follow you</b> (the current follower goes into the crate), or
       <b>set it to work the settlement</b> (uses a working slot).</li>
       <li>No hunger inside. A young born while something follows you goes into a crate too (see breeding).</li>
-      <li>An occupied crate can only be carried, set down or opened: not dropped, bagged, stored, sold, posted or bartered.</li>
+      <li>An occupied crate can be carried, set down, opened or traded (deal, barter, stall, post): not dropped, bagged or stored.</li>
       <li><b>Take with you</b> on a settlement worker while a companion follows you: the companion takes its place on the settlement, or goes into an empty carried crate if the settlement has no room.</li>
     </ul>
     <h4>Crates and storage</h4>

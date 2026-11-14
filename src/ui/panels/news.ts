@@ -4423,7 +4423,7 @@ export const NEWS: News[] = [
     ],
   },
   {
-    n: 589,
+    n: 592,
     day: '2026-11-14',
     lines: () => [
       `New: hybrid wildermon, ${HYBRIDS.length} listed crosses of two kinds, e.g. ${listed(HYBRIDS.slice(0, 3).map((h) => `${h.name} (${SPECIES[h.a].name} × ${SPECIES[h.b].name})`))}. `
@@ -4433,6 +4433,44 @@ export const NEWS: News[] = [
         + `colour form ${percent(FORM_PASS)} per parent with one, in its own colours. Pedigree: Hybrid: (kind) × (kind).`,
       `New: Field guide: a page per hybrid, after the other wildermon and before the monsters, counted in seen, tamed and bred; a birth to a dam you keep marks it tamed and bred.`,
     ],
+  },
+  {
+    n: 591,
+    day: '2026-11-14',
+    lines: () => [
+      'New: a wildermon in the Barter window, in its wildermon crate from your pack. Shown to both under the crate: name, sex, kind, age, level; rarity; '
+        + 'colour and size form; each trait and what it gives (unread below the animal husbandry for it); dam, sire and line. The new owner keeps it: traits, forms, skills, stance and pedigree unchanged.',
+      'New: wildermon refused on a barter side: a dam carrying young; panniers loaded.',
+      'Fixed: a crate\'s occupant changed after an Accept (let out, swapped, renamed) went in the deal unseen. Now: both Accepts cleared, both told, the new occupant shown.',
+    ],
+  },
+  {
+    n: 590,
+    day: '2026-11-14',
+    lines: () => {
+      const jobs = (...clips: string[]): number => [...ACTION_BY_ID.keys()].filter((id) => clips.includes(clipOfJob(id) ?? '')).length;
+      const name = (id: string): string => itemDef(id).name.toLowerCase();
+      return [
+        `New: picking animated on the sculpted body (was: a placeholder gesture). Fruit and sprouts, one hand overhead: ${jobs('pick-high')} jobs. Grapes, both hands at the head: ${jobs('pick-grapes')}. Honey, crouched at the ${name('skep')}: ${jobs('take-honey')}.`,
+        `New: reading animated, the thing read in hand, jobs: ${name('book')} ${jobs('read-book')}, ${name('rune_tablet')} ${jobs('read-tablet')}, ${name('cooking_recipe')} and ${name('enchant_formula')} ${jobs('read-sheet')}, ${name('drawn_map')} ${jobs('read-map')} (was: a placeholder gesture).`,
+        `New: ${name('lamp_post')} and ${name('lamp_pillar')} animated, both hands overhead, on the toes: ${jobs('lamp-fit', 'lamp-take', 'lamp-candle', 'lamp-light', 'lamp-douse')} jobs; ${name('lantern')}, ${name('candle')} and a lit taper in hand (was: a placeholder gesture).`,
+      ];
+    },
+  },
+  {
+    n: 589,
+    day: '2026-11-14',
+    lines: () => {
+      const e = (id: string): string => {
+        const d = EMOTE_BY_ID.get(id);
+        return d ? `${d.label} (/${d.id}): ${d.held ? `${d.seconds} s down, held until you move, swim, board or work` : `${d.seconds} s`}` : id;
+      };
+      return [
+        `New: emotes (Emotes menu): ${['bow', 'cheer', 'point', 'clap', 'sit'].map(e).join('; ')}.`,
+        'New: Animations off: bow, cheer, point, clap: one still pose each; sit: sat.',
+        'Fixed: stood still after an emote: the idle (was: the emote\'s first pose held; after 6 7, the forearms out).',
+      ];
+    },
   },
   {
     n: 588,

@@ -7,9 +7,15 @@ CREATE OR REPLACE FUNCTION public.barter_side_refusal(b barter, p_owner uuid)
 AS $function$
 declare r record; why text; v_coins bigint := case when p_owner = b.asker then b.asker_coins else b.other_coins end;
 begin
-  for r in select * from barter_item where world_id = b.world_id and n = b.n and owner = p_owner order by ord loop
+  for r in select bi.*, i.creature as now_creature from barter_item bi
+             left join item i on i.world_id = bi.world_id and i.id = bi.item
+            where bi.world_id = b.world_id and bi.n = b.n and bi.owner = p_owner order by bi.ord loop
     why := barter_thing_refusal(b.world_id, p_owner, r.item, r.count, r.def);
     if why is not null then return why; end if;
+    if r.now_creature is distinct from r.creature
+       or (r.creature is not null and barter_beast(b.world_id, r.creature) is distinct from r.beast) then
+      return barter_said('changed');
+    end if;
   end loop;
   if v_coins > 0 and purse(b.world_id, p_owner) < v_coins then
     return barter_line('coins', folk_name(b.world_id, p_owner), null, v_coins);
