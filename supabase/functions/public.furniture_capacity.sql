@@ -5,12 +5,11 @@ CREATE OR REPLACE FUNCTION public.furniture_capacity(p placed)
  LANGUAGE plpgsql
  STABLE
 AS $function$
-declare v int;
 begin
-  v := room_for(coalesce((select coalesce(capacity, hive, pond, 0) from furniture_def where id = p.sub), 0)
-    * mat_hold(p.material) * mark_of(p.mark, 'hold') * room_mul(p.enchant), p.rare);
-  if p.driver is not null and is_boat(p) then
-    v := v + floor(v * (cargo_room(skill_of(p.world_id, p.driver, sailing_skill())) - 1))::int;
-  end if;
-  return v;
+  return (
+select r.v + case when p.driver is not null and is_boat(p)
+                  then floor(r.v * (cargo_room(skill_of(p.world_id, p.driver, sailing_skill())) - 1))::int else 0 end
+  from (select room_for(coalesce((select coalesce(capacity, hive, pond, 0) from furniture_def where id = p.sub), 0)
+          * mat_hold(p.material) * mark_of(p.mark, 'hold') * room_mul(p.enchant), p.rare) as v offset 0) r
+  );
 end $function$

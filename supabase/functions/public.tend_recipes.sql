@@ -29,5 +29,5 @@ AS $function$
     when 'cook' then array['cook_meat', 'bake_potato', 'roast_onion', 'roast_nuts', 'roast_lotus_seeds', 'make_compote',
                            'fry_meat', 'make_pottage', 'make_preserves', 'bake_bread', 'make_porridge', 'bake_pastry',
                            'make_apple_pie', 'make_stew', 'cook_minnow', 'cook_perch', 'cook_trout',
-                           'cook_pike', 'cook_sturgeon'] end
+                           'cook_pike', 'cook_sturgeon', 'cook_cod', 'cook_halibut', 'cook_bluefin'] end
 $function$

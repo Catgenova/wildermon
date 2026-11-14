@@ -6,10 +6,10 @@ CREATE OR REPLACE FUNCTION public.stage_of(c creature)
  STABLE
 AS $function$
 begin
-  if c.pedigree ? 'stage' then return greatest(0, least(2, (c.pedigree->>'stage')::int)); end if;
   return (
-select case when (select sd.stages from species_def sd where sd.id = c.species) is null then 0
-              else (select case when l.v >= evolve_at_2() then 2 when l.v >= evolve_at_1() then 1 else 0 end
-                      from (select creature_level(c.skills, c.species) as v offset 0) l) end
+select case when c.pedigree ? 'stage' then greatest(0, least(2, (c.pedigree->>'stage')::int))
+            when (select sd.stages from species_def sd where sd.id = c.species) is null then 0
+            else (select case when l.v >= evolve_at_2() then 2 when l.v >= evolve_at_1() then 1 else 0 end
+                    from (select creature_level(c.skills, c.species) as v offset 0) l) end
   );
 end $function$
