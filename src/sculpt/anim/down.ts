@@ -100,10 +100,13 @@ export function onTheWay(key: string, ms: number): boolean {
  * Whether a body is sat or lain on the ground, or on its way down onto it or up (by its key, and the clip it plays): put
  * where its clip puts it, not stood on its lowest sole (`../lowpoly.ts`).
  */
-export const onTheGround = (key: string, clip: string | undefined): boolean => GOT.has(key) || (clip !== undefined && DOWNS.has(clip));
+export const onTheGround = (key: string, clip: string | undefined): boolean => GOT.has(key) || (clip !== undefined && (DOWNS.has(clip) || PUT.has(clip)));
+/** The clips a body is put where they put it rather than stood on its lowest sole, by name: the climb, its feet on the rungs (`./clips/ladder.ts`). */
+const PUT = new Set<string>();
+export function putAsKeyed(name: string): void { PUT.add(name); }
 
-/** The clips played with the eyes shut: asleep, meditating, praying with the head bowed. */
-const SHUT = new Set(['sleep', 'meditate', 'pray']);
+/** The clips played with the eyes shut: asleep, meditating, praying with the head bowed, knocked down (`./clips/down-ko.ts`). */
+const SHUT = new Set(['sleep', 'meditate', 'pray', 'ko']);
 /** Whether a body's eyes are shut (by its key, and the clip it plays): in one of those, and down, not on its way down or up. */
 export const eyesShut = (key: string, clip: string | undefined, ms: number): boolean => clip !== undefined && SHUT.has(clip) && !onTheWay(key, ms);
 

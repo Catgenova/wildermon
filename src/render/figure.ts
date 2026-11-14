@@ -2429,6 +2429,23 @@ export interface FigurePose {
    * body is doing.
    */
   flinch?: { t: number; where?: string; from?: number };
+  /* ---- knocked down, on a ladder, a heavy blow (`../sculpt/anim/clips/down-ko.ts`, `ladder.ts`, `stumble.ts`) ---- */
+  /**
+   * Lain where it fell, its health gone to nought, until it wakes (`../game/fell.ts` lyingAt): crumpled down onto the
+   * ground and lain there (`../sculpt/anim/clips/down-ko.ts`), got up again as it wakes. Sculpted bodies only.
+   */
+  down?: boolean;
+  /**
+   * On a ladder (`./ladderbody.ts`): how far up it the feet are, the game's units from its foot. Faced to the ladder, the
+   * climb played over the rungs as the feet go up or down them (`../sculpt/anim/clips/ladder.ts`). Sculpted bodies only.
+   */
+  climb?: { h: number };
+  /**
+   * The flinch a heavy blow (`../game/fight` HEAVY_HIT): a stumble back of `STUMBLE_SECS` instead of the flinch, a foot
+   * stepped back to catch the body and stepped in again (`../sculpt/anim/clips/stumble.ts`), with `flinch`'s `t` its share.
+   * Sculpted bodies only.
+   */
+  heavy?: boolean;
   /**
    * The body veiled by a spell (`FxScene.veil` in ./spells/kit): `tint` of the way to `colour` over all of it, and
    * drawn `fade` of the way to nothing -- a shroud, a body gone to smoke. Laid over the picture as it is put down,
@@ -12745,7 +12762,9 @@ function drawStill(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: 
   const dev = was !== undefined && Math.abs(seen - was) < 0.05 * was ? was : Math.max(1, Math.round(seen * 16)) / 16;
   const look = pose.look ?? DEFAULT_LOOK;
   const key = [look.gender, look.skin, look.hair, look.hairColour, look.hairBright, pose.tunic, pose.trousers,
-    Math.round(facing * 100), zoom.toFixed(3), dev, doing(pose), pose.working ? pose.job ?? '' : '', pose.emote ?? '', gearKey(pose.gear), sculptKey()].join('|');
+    Math.round(facing * 100), zoom.toFixed(3), dev, doing(pose), pose.working ? pose.job ?? '' : '', pose.emote ?? '', gearKey(pose.gear), sculptKey(),
+    // (lain where it fell, on a ladder: the sculpted body's own clips, never a stride's or the idle's pictures)
+    pose.down ? 'down' : pose.climb ? 'climb' : ''].join('|');
   if (stride(ctx, sx, sy, zoom, pose, kit, facing, changing, ink, key, dev, id, now)) return;
   if (now - lately.since > 0.25 || now < lately.since) {
     lately.count = lately.ids.size;
@@ -12987,7 +13006,7 @@ const IDLE_LOOP = 16;
 /** Put down a body standing about from its loop's pictures, asking for the one it needs if it is new; false when it is not to be. */
 function idleLoop(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose, kit: Kit, r: Rig, facing: number, changing: boolean,
   ink: number, now: number, still: string, dev: number, id: string): boolean {
-  if (changing || doing(pose) !== 'idle' || pose.emote || pose.seat || !Number.isInteger(facing) || gearShines(pose.gear)) return false;
+  if (changing || doing(pose) !== 'idle' || pose.emote || pose.seat || !Number.isInteger(facing) || gearShines(pose.gear) || pose.down || pose.climb || pose.flinch) return false;
   const b = boxAt(zoom * dev);
   // With animations off, one picture: the still pose (`stillPose`), whatever share of the store the loops have.
   const { n, scale } = animationsOff() ? { n: 1, scale: 1 }
@@ -13034,7 +13053,7 @@ function clipLoop(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: n
 /** Put down a walking body from its stride's pictures, asking for the picture it needs if it is new; false when it is not walking steadily. */
 function stride(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose, kit: Kit, facing: number, changing: boolean,
   ink: number, still: string, dev: number, id: string, now: number): boolean {
-  if (changing || doing(pose) !== 'walk' || pose.emote || !Number.isInteger(facing) || gearShines(pose.gear) || !clearReady({ ...pose, facing }, kit.fr)) return false;
+  if (changing || doing(pose) !== 'walk' || pose.emote || pose.down || pose.climb || !Number.isInteger(facing) || gearShines(pose.gear) || !clearReady({ ...pose, facing }, kit.fr)) return false;
   const turn = (((pose.phase / TAU) % 1) + 1) % 1;
   const i = Math.min(WALK_FRAMES - 1, Math.floor(turn * WALK_FRAMES));
   const gait = Math.round(Math.max(0, Math.min(1, pose.gait ?? 0)) * GAIT_STEPS) / GAIT_STEPS;

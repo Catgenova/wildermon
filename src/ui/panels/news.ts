@@ -12,7 +12,9 @@ import { PLAN_AREA_MOST, PLAN_UNDO_SECONDS } from '../../game/planarea';
 import { UPDATE_CHECK_MS } from '../update';
 import { JOURNAL_TABS } from './journaltabs';
 import { RESPAWN_ARM_MS } from '../respawn';
-import { BLOCK_SECS, FLINCH_LIT, FLINCH_SECS } from '../../game/fight';
+import { BLOCK_SECS, FLINCH_LIT, FLINCH_SECS, STUMBLE_SECS } from '../../game/fight';
+import { FALL_SECS } from '../../game/fell';
+import { CLIMB_RUN, RUNG } from '../../game/ladderclimb';
 import { MAP_LEGEND, SETTLEMENT_BORDER_PX, MAP_ZOOM_MIN } from './minimap';
 import { FAST_DPR, LOW_POWER_FPS, SETTING_DEFAULTS } from '../../game/settings';
 import { BLOSSOM } from '../../audio/music/tracks/blossom';
@@ -4419,6 +4421,16 @@ export const NEWS: News[] = [
       `New: fishing net: ${LIFT_DROPS * NET_LIFT.length} drops off the net as it is lifted, ${SHAKE_DROPS} at each of ${NET_SHAKES.length} shakes.`,
       `New: rowing under way: ${OAR_DROPS} drops a blade at the catch; whirl pair a blade a stroke, ${SWIRL_SECS} s.`,
       'Without a graphics card: swimming strokes\' splashes, rings treading water, the float\'s strike and a catch only.',
+    ],
+  },
+  {
+    n: 589,
+    day: '2026-11-14',
+    lines: () => [
+      `New: knocked out at 0 health: fall to the ground, ${FALL_SECS} s; lying where you fell until you choose where to wake or step off the spawn; getting up on waking. Camera on where you fell. Other players see it.`,
+      `New: climbing a ladder: hands and feet on the rungs, ${CLIMB_RUN / RUNG} rungs a step, facing the ladder, up and down. Other players see it.`,
+      `New: heavy blow landing (×${HEAVY_HIT}): stumble back a step, ${STUMBLE_SECS} s (was: flinch, ${FLINCH_SECS} s). Other players see it.`,
+      'Animations Off: lying, and on a ladder, held in one pose.',
     ],
   },
   {

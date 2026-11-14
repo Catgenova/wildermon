@@ -69,7 +69,7 @@
  * (`metalShades`; iron's for none), lit as metal (`Material.metal`: `./gl.ts` METAL_CURVE, METAL_SHEEN); its gold, wood,
  * leather, collars, emblems, pommel and glow keep their own colours (`metalTint`).
  */
-import { FLINCH_LIT, FLINCH_SECS } from '../game/fight';
+import { FLINCH_LIT, FLINCH_SECS, STUMBLE_SECS } from '../game/fight';
 import { lessMotion } from '../engine/motion';
 import MALE_ASSET from './assets/lowmale.json';
 import FEMALE_ASSET from './assets/lowfemale.json';
@@ -1840,7 +1840,7 @@ export function lowScene(given: FigurePose, part: 'over' | 'under' = 'over'): Sc
   // astride, what of the body is behind the beast's barrel (the far leg down its flank) left out, as the flat figure's is
   const hide = seat?.astride ? { c: BARREL.c, r: BARREL.r } : undefined;
   // lit by a blow for its first moments (`FLINCH_LIT`), not under less motion
-  const struck = pose.flinch ? pose.flinch.t * FLINCH_SECS : Infinity, hit = struck >= 0 && struck < FLINCH_LIT && !lessMotion() ? 1 - struck / FLINCH_LIT : 0;
+  const struck = pose.flinch ? pose.flinch.t * (pose.heavy ? STUMBLE_SECS : FLINCH_SECS) : Infinity, hit = struck >= 0 && struck < FLINCH_LIT && !lessMotion() ? 1 - struck / FLINCH_LIT : 0;
   const water = pose.swimming || body.wet() > 0 ? { level: 0, keep: part } : undefined;
   // (the eyes shut asleep, meditating and praying: `./anim/down.ts` eyesShut)
   const blink = eyesShut(`${who}|${pose.id}`, clipFor(pose, who)?.clip.name, performance.now()) ? 1 : 0;

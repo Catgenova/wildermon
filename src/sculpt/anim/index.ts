@@ -36,6 +36,10 @@ import { NET, NET_LEFT } from './clips/net';
 import { TEND_CLIPS, TEND_LEFT } from './clips/tend';
 import { LIFE, LIFE_LEFT, LIFE_SETTLE } from './clips/life';
 import { gettingAbout, gettingDown } from './down';
+// knocked down, on a ladder, a heavy blow (./clips/down-ko.ts, ./clips/ladder.ts, ./clips/stumble.ts)
+import { KO, KO_DOWN } from './clips/down-ko';
+import { CLIMB, climbTime } from './clips/ladder';
+import { stumbleOver, stumbling } from './clips/stumble';
 import { ACTION_BY_ID } from '../../game/actions';
 import { animationsOff } from '../../engine/motion';
 import { clipOfJob } from './routes';
@@ -51,7 +55,9 @@ const qinv = ([w, x, y, z]: Q): Q => [w, -x, -y, -z];
  * maul); any other job (`work`); a fight with anything else in hand (`fight`); meditating (`meditate`); an emote
  * (`emote`); casting a spell (`cast`); in the water, swimming under way (`swim`) and treading water stopped (`tread`).
  */
-export type State = 'idle' | 'walk' | 'swing' | 'work' | 'fight' | 'meditate' | 'emote' | 'cast' | 'swim' | 'tread';
+export type State = 'idle' | 'walk' | 'swing' | 'work' | 'fight' | 'meditate' | 'emote' | 'cast' | 'swim' | 'tread'
+  // lain where it fell (`FigurePose.down`); on a ladder (`FigurePose.climb`)
+  | 'down' | 'climb';
 /** Every clip, by name (the authoring tools find a clip here, `tools/sculpt/lowanim.mjs --clip <name>`). */
 export const CLIPS: Record<string, Clip> = {
   idle: IDLE, walk: WALK, swing: SWING, sixseven: SIXSEVEN, work: WORK, 'work-left': mirrorClip(WORK, 'work-left'), hands: HANDS, ground: GROUND,
@@ -71,6 +77,8 @@ export const CLIPS: Record<string, Clip> = {
   ...LIFE,
   // the handwork (./clips/handwork.ts): sewing, brushing a wall, a floor and the work in hand, laying up a rope; each mirrored left-handed
   ...Object.fromEntries([SEW, BRUSH_WALL, BRUSH_FLOOR, BRUSH_ITEM, BRUSH_CLOTH, ROPE].flatMap((c) => [[c.name, c], [`${c.name}-left`, mirrorClip(c, `${c.name}-left`)]])),
+  // knocked down and its way down (./clips/down-ko.ts); the climb on a ladder (./clips/ladder.ts)
+  ko: KO, 'ko-down': KO_DOWN, climb: CLIMB,
 };
 /** The clip a state plays until its own is approved: the 6 7 gesture. */
 export const PLACEHOLDER = 'sixseven';
@@ -95,6 +103,8 @@ export const CLIP_OF: Record<State, string> = {
   cast: PLACEHOLDER,
   swim: 'swim',
   tread: 'tread',
+  down: 'ko',
+  climb: 'climb',
 };
 export { CLIP_OF_JOB, CLIP_OF_TOOL } from './routes';
 /**
@@ -238,6 +248,9 @@ const smoother = (u: number): number => { const x = Math.min(1, Math.max(0, u));
 
 /** The state a pose is in, of those a clip can play. */
 export function stateOf(pose: FigurePose): State | undefined {
+  // lain where it fell, whatever else it was doing; on a ladder, climbing it
+  if (pose.down) return 'down';
+  if (pose.climb && !pose.driving) return 'climb';
   if (pose.swimming) return pose.moving ? 'swim' : 'tread';
   if (pose.driving) return undefined;
   // (a hop is made on the spot, the legs its own, as the flat figure's; a wave over the walk, `clipFor`)
@@ -282,6 +295,8 @@ export function clipFor(pose: FigurePose, body: 'man' | 'woman' = pose.look?.gen
   // (the rings it leaves on the water are made where its hands are then, `../../render/figure.ts` ripple)
   if (s === 'swim') return { clip, t: ((((pose.phase / SWIM_STROKE) % 1) + 1) % 1) * clip.length };
   if (s === 'tread') return { clip, t: (((pose.phase / 6) % clip.length) + clip.length) % clip.length };
+  // on a ladder, a run of the climb to each two rungs the feet go up or down it (`climbTime`); held still with animations off
+  if (s === 'climb' && pose.climb) return { clip, t: animationsOff() ? 0 : climbTime(pose.climb.h, body) };
   // a go of a timed job: fitted to its length (the holds stretched, the blow kept: `fitTime`), a fight's swing one blow
   // a go (the placeholder as many runs as come nearest)
   if (pose.act && pose.act.length > 0) {
@@ -573,6 +588,8 @@ export function animate(sk: Skeleton, pose: FigurePose, figure: () => Array<M3 |
   // (and a blow landing over that: `flinchOver`; in the water or not kept as it was)
   const over = (o: Local): Local => {
     const b = blocking(pose) ? { ...blockOver(sk, o, pose.block as number, stood), wet: o.wet } : o;
+    // (a heavy blow's flinch a stumble back instead: `./clips/stumble.ts`)
+    if (stumbling(pose)) return { ...stumbleOver(sk, b, pose, stood), wet: o.wet };
     return flinching(pose) ? { ...flinchOver(sk, b, pose.flinch as NonNullable<FigurePose['flinch']>, stood), wet: o.wet } : b;
   };
   if (!pose.id) return over(now);

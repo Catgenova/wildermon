@@ -97,6 +97,8 @@ export interface Peer extends PeerState {
   hurtAt?: number;
   hurtWhere?: string;
   hurtBy?: number;
+  /** Whether that blow was a heavy one (`player.hurt_heavy`), drawn as a stumble (`FigurePose.heavy`). */
+  hurtHeavy?: boolean;
 }
 
 /**
@@ -354,7 +356,7 @@ export class Roster {
    * on arrival, as a block is; a blow within `FLINCH_SECS` of the last one heard is the same blow heard again, which only
    * says where and from what if the first did not.
    */
-  hurt(id: number, ms: number, where?: string, by?: number): void {
+  hurt(id: number, ms: number, where?: string, by?: number, heavy?: boolean): void {
     const p = this.peers.get(id);
     if (!p) return;
     const again = ms < (p.hurtMs ?? -Infinity) + FLINCH_SECS * 1000;
@@ -363,10 +365,12 @@ export class Roster {
       p.hurtAt = clock();
       p.hurtWhere = where;
       p.hurtBy = by;
+      p.hurtHeavy = heavy;
       return;
     }
     p.hurtWhere ??= where;
     p.hurtBy ??= by;
+    p.hurtHeavy ||= heavy;
   }
 
   /** Somebody said something out loud, for the bubble over their head. */
