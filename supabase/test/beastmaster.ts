@@ -475,7 +475,7 @@ check('and made with one', island('NEEDS:KIN') === 'ready' && island('NEEDS:WILD
 {
   const [ratio, line] = parts('SIC');
   check(`Sic: its own blow at ${pct(sfx('sic', 'more'))} at soul strength ${SOUL}, the same roll asked of two ogres alike`,
-    near(Number(ratio), sfx('sic', 'more'), 1e-4) && /^Sic: .+ hit ogre \d+\/170\.$/.test(line), island('SIC'));
+    near(Number(ratio), sfx('sic', 'more'), 1e-4) && new RegExp(`^Sic: .+ hit ogre \\d+/${SPECIES.ogre.health}\\.$`).test(line), island('SIC'));
   check('and only on what is within its reach', /: out of reach of the ogre\.$/.test(island('SIC:FAR')), island('SIC:FAR'));
 }
 {

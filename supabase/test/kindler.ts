@@ -406,7 +406,7 @@ const [A, B, C, E, G, H] = island('IDS').split(',');
 {
   const [ratio, line] = parts('FLASH');
   check(`Flash Fire: fire at ${pct(fx('flash_fire', 'fire'))}`,
-    near(Number(ratio), fx('flash_fire', 'fire'), 1e-4) && /^Flash Fire: ogre −\d+ fire, \d+\/170\.$/.test(line),
+    near(Number(ratio), fx('flash_fire', 'fire'), 1e-4) && new RegExp(`^Flash Fire: ogre −\\d+ fire, \\d+/${SPECIES.ogre.health}\\.$`).test(line),
     island('FLASH'));
   check(`and no further than ${fx('flash_fire', 'reach')} tiles`, island('FLASH:FAR') === `Too far: max ${fx('flash_fire', 'reach')} tiles.`,
     island('FLASH:FAR'));
@@ -454,7 +454,7 @@ check('the fire teaches the Kindler\'s trade, and the cast the school', island('
   const left = SPECIES[FOE].health * fx('immolate', 'each') * fx('immolate', 'secs');
   check(`Combust: ${pct(fx('combust', 'more'))} of what the burn had left (${left} of ${SPECIES[FOE].health}) at once, and out, bleeding and all`,
     near(Number(lost), left * fx('combust', 'more'), 1e-3) && bleed === 'none' && burning === 'false'
-      && /^Combust: burn spent at once, ogre −\d+, \d+\/170\.$/.test(line), island('COMBUST'));
+      && new RegExp(`^Combust: burn spent at once, ogre −\\d+, \\d+/${SPECIES.ogre.health}\\.$`).test(line), island('COMBUST'));
   check('and refused on one not burning', island('COMBUST:COLD') === 'The ogre: not burning.', island('COMBUST:COLD'));
 }
 {

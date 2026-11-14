@@ -143,13 +143,19 @@ export function mapQl(skill: number, toolQl: number, rand: () => number = Math.r
  * odds of the drop already use.
  */
 export function mapQlFromBeast(health: number, rand: () => number = Math.random): number {
-  return Math.max(1, Math.min(100, (12 + health / 8) * (0.8 + rand() * 0.4)));
+  return Math.max(1, Math.min(100, (12 + written(health) / 8) * (0.8 + rand() * 0.4)));
 }
 
 /** The odds of a map at all off a body of this size. */
 export function mapChanceFromBeast(health: number): number {
-  return Math.min(MAP_KILL_CAP, health / MAP_KILL_SCALE);
+  return Math.min(MAP_KILL_CAP, written(health) / MAP_KILL_SCALE);
 }
+
+/**
+ * A kind's health as its row writes it, before every kind's health was multiplied (`CREATURE_HEALTH_MUL`): the odds and
+ * the QL of a map off a body are what they were. The island's `map_chance_beast`, `map_ql_beast`.
+ */
+const written = (health: number): number => health / CREATURE_HEALTH_MUL;
 
 /* ------------------------------------------------------------------ the game */
 
@@ -160,6 +166,7 @@ import type { ActionDef } from './actions';
 import { HOARD_METALS, ITEM_DEFS, rollRarity, type Item } from './items';
 import { canImprove } from './improve';
 import { HOARD_HEAD, tryGain } from './learn';
+import { CREATURE_HEALTH_MUL } from './limits';
 
 /**
  * The ordinary things in a hoard, beside the lumps: a tool or a blade.

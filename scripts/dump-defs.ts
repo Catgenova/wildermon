@@ -105,7 +105,7 @@ import { BRIDGES, CLEARANCE, END_SLOP, HEAD_ROOM, RAMP_SLOPE, STALL_WIDTH, WAGON
 import { BREWS } from '../src/game/brewing';
 import { BOIL_DYE_RECIPE, BOIL_IN, BOIL_LITRES, DYE_RECIPE_SAID, DYE_SKILL, DYEABLE_ITEMS, MAKE_DYE_RECIPE } from '../src/game/dyes';
 import { PAIR_RANGE, GROOM_CAP, GROOM_HEAL, TIER_LEVEL } from '../src/game/husbandry';
-import { ALLOY_QL, BED_REST, DEN_HEALTH, REED_LEVELS, REST_FOR, SPECIALTY_AT, SPECIALTY_BONUS, TIRE_GOES, UNFED_PACE, UPKEEP_FOR, BLOW_SHARE, BREED_REST, COMB_INTO, EVOLVE_AT, PERK_STAGE, STAGE_PERKS, FILE_RARITY_ODDS, LEARN_PACE, POT_MOST, POT_STEP, FEAR_REST, FEAR_SECS, TAUNT_REACH, TAUNT_REST, TAUNT_SECS, FROST_BREATH_REST, GESTATION, LEARNS_GAIN, OUT_EVERY, seasonDay, SPAR_SLACK, SPAR_YIELD, STAGE_MUL, WARD_SKIN, type WildSeason, GUARD_LEARN, SPAR_REACH } from '../src/game/creatures';
+import { ALLOY_QL, BED_REST, DEN_HEALTH, REED_LEVELS, REST_FOR, SPECIALTY_AT, SPECIALTY_BONUS, TIRE_GOES, UNFED_PACE, UPKEEP_FOR, BLOW_SHARE, BREED_REST, COMB_INTO, EVOLVE_AT, PERK_STAGE, STAGE_PERKS, FILE_RARITY_ODDS, LEARN_PACE, POT_MOST, POT_STEP, FEAR_REST, FEAR_SECS, TAUNT_REACH, TAUNT_REST, TAUNT_SECS, FROST_BREATH_REST, GESTATION, LEARNS_GAIN, OUT_EVERY, seasonDay, SPAR_SLACK, SPAR_YIELD, STAGE_MUL, WARD_SKIN, type WildSeason, GUARD_LEARN, SPAR_REACH, CREATURE_HEALTH_MUL, CREATURE_ATTACK_MUL, REGEN_WILD, REGEN_KEPT, REGEN_AFTER } from '../src/game/creatures';
 import { SLEEP_BONUS_CAP, SLEEP_BONUS_MULT, SLEEP_BONUS_QL, SLEEP_BONUS_RATE, SLEEP_SAID } from '../src/game/sleep';
 import { DAWN, DUSK, DAY_SECONDS, CARRY_BASE, CARRY_PER_STRENGTH, CARRY_STOP } from '../src/game/game';
 import { BASE_SPEED, CARRY_CRAWL } from '../src/game/player';
@@ -1700,6 +1700,10 @@ for (const [fn, v] of [
   ['threat_hold', THREAT_HOLD],
   /* A sparring partner of yours: the share of its health it yields at, and how near that it has yielded. */
   ['spar_yield', SPAR_YIELD], ['spar_slack', SPAR_SLACK],
+  /* Every kind's base health and attack over the figures in its row (`species_def` has them applied), and the health a
+     creature gets back a second, wild and kept, once unhurt this many seconds. */
+  ['creature_health_mul', CREATURE_HEALTH_MUL], ['creature_attack_mul', CREATURE_ATTACK_MUL],
+  ['regen_wild', REGEN_WILD], ['regen_kept', REGEN_KEPT], ['regen_after', REGEN_AFTER],
   /* And a Sparra kept on a settlement: how near a guard comes to spar with it, and what a guard's attack on a wild
      creature, and a spar, teach its level skill. */
   ['spar_reach', SPAR_REACH], ['guard_learn', GUARD_LEARN],
