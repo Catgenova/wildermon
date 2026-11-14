@@ -84,6 +84,7 @@ import { furnitureAnchor, furnitureCapacity, furnitureDef, furnitureHeft, furnit
 import { DEED_ACTION_BY_ID, joinFromAfar, leaveQuestion, standingWord, upgradeProgress, upgradeReason } from '../game/deed';
 import { CROP_BY_SEED, cropDef, cropReady, describeCrop, emptyFields, FARM_ACTION_BY_ID, planterPace, sownPace, stageNote, type Crop, type CropDef } from '../game/farming';
 import { bedLevelOf } from '../game/gardenbed';
+import { armReading, armWords, destinations, destKey, FURNISH_SAID, onTableOk, POINT_ARM, postAt, TABLE_PUT } from '../game/furnish';
 import { PLANTER_GROWTH } from '../game/growth';
 import { describeWaterPlant } from '../game/watergarden';
 import { LIFE_MOTES_EACH, swirlName } from '../game/motes';
@@ -619,6 +620,8 @@ export class UI {
         return near.length ? [...all, ...near] : all;
       };
     }
+    // And the cairns on the settlements of yours, read with them (`furnish.ts`).
+    this.minimap.cairns = () => this.island?.cairns ?? [];
     /*
      * Who leads the island: each skill's highest, the best-bred wildermon and
      * the biggest settlements. Beside the other two windows about other people,
@@ -2951,6 +2954,8 @@ export class UI {
         });
       }
     }
+    // A signpost's arms, a settlement or a Runestone to a line; a side table's things, a thing in the pack to a line (`furnish.ts`).
+    entries.push(...this.furnishEntries(f));
     // A lantern post: its lantern, its candle and its light.
     entries.push(...lampEntries(g, f));
     for (const id of ['light_oven', 'put_out_oven', 'take_ashes_oven', 'sleep', 'set_home', 'pull_cart', 'drop_cart', 'board_vehicle', 'board_passenger', 'leave_vehicle', 'leave_passenger', 'unhitch_team', 'examine_vessel', 'drink_from_vessel', 'fill_barrel', 'leach_lye', 'empty_vessel', 'furniture_take_all', 'crate_follow', 'crate_work', 'scrub_moss', 'scrub_dye', 'pick_up_furniture']) {
@@ -2960,6 +2965,45 @@ export class UI {
       entries.push({ label: def.labelFor?.(ft, g) ?? def.label, hint: reason ?? undefined, disabled: !!reason, onSelect: () => g.requestAction(def, ft) });
     }
     return entries;
+  }
+
+  /**
+   * A signpost's Point an arm, to every Runestone and every settlement on the
+   * map (`rpc_settlements`), its bearing and distance from the post beside
+   * each; and a side table's Put on the table, every thing in the pack that
+   * goes on one (`furnish.ts`).
+   */
+  private furnishEntries(f: PlacedFurniture): MenuItem[] {
+    const g = this.game;
+    const ft: Target = { kind: 'furniture', id: f.id };
+    const out: MenuItem[] = [];
+    const point = ACTION_BY_ID.get(POINT_ARM);
+    if (point?.applies(ft, g)) {
+      const [px, py] = postAt(f);
+      out.push({
+        label: point.label,
+        children: destinations(g.world.w, this.minimap.settlements()).map((a) => {
+          const t = { ...ft, dest: destKey(a) } as Target;
+          const reason = point.check?.(t, g) ?? null;
+          return { label: a.name, note: armWords(a.name, armReading(px, py, a)).slice(a.name.length + 2), hint: reason ?? undefined, disabled: !!reason, onSelect: () => g.requestAction(point, t) };
+        }),
+      });
+    }
+    const put = ACTION_BY_ID.get(TABLE_PUT);
+    if (put?.applies(ft, g)) {
+      const things = g.inventory.items.filter((it) => onTableOk(g, it));
+      out.push({
+        label: put.label,
+        disabled: !things.length,
+        hint: things.length ? undefined : FURNISH_SAID.notOnTable,
+        children: things.length ? things.map((it) => {
+          const t = { ...ft, itemUid: it.uid } as Target;
+          const reason = put.check?.(t, g) ?? null;
+          return { label: it.count > 1 ? `${itemName(it)} (${it.count})` : itemName(it), hint: reason ?? undefined, disabled: !!reason, onSelect: () => g.requestAction(put, t) };
+        }) : undefined,
+      });
+    }
+    return out;
   }
 
   /** Fuelling, packing and unloading a kiln. */

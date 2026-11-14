@@ -128,6 +128,8 @@ export class MinimapPanel {
   private marksStale = false;
   /** Every settlement on the island (`rpc_settlements`), drawn as a square in `SETTLEMENT_CSS` at its token, and its border. */
   settlements: () => ReadonlyArray<MapSettlement> = () => [];
+  /** The cairns on the settlements of yours (`furnish.ts`), read with the settlements: a stone diamond and its name each. */
+  cairns: () => ReadonlyArray<{ name: string; x: number; y: number }> = () => [];
   /** Every stall and shop counter on the last market board read (`MarketPanel.stallsSeen`), drawn as a square each. */
   stalls: () => ReadonlyArray<{ x: number; y: number; mine: boolean }> = () => [];
 
@@ -867,6 +869,8 @@ export class MinimapPanel {
     ctx.restore();
     const marks: Array<{ x: number; y: number; label: string }> = stones.map((s) => ({ x: s.x, y: s.y, label: s.name }));
     for (const f of this.game.furniture.values()) if (furnitureDef(f.kind).landmark) marks.push({ x: f.x, y: f.y, label: furnitureName(f) });
+    // And the cairns on the settlements of yours, by their names (`furnish.ts`).
+    for (const c of this.cairns()) marks.push({ x: c.x, y: c.y, label: c.name || 'Cairn' });
     // And every lair you have seen, by its kind's name (`lairs.ts`).
     for (const l of this.game.lairsSeen) marks.push({ x: l.x, y: l.y, label: LAIR_BY_ID.get(l.kind)?.name ?? 'Lair' });
     for (const f of marks) {

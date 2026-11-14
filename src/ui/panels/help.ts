@@ -249,6 +249,11 @@ import {
 } from '../../game/gardendefs';
 import { GARDEN_SAID } from '../../game/garden';
 import { DECOR_PIECES } from '../../game/decor';
+import { FURNISH_PIECES, FURNISH_SAID, seatRest } from '../../game/furnish';
+import {
+  CAIRN_NAME_MAX, CAIRN_NAME_TIME, GARDEN_SWING, STONE_BENCH, HAY_A_DAY, HAY_FILL_TIME, HAY_HOLDS, HAY_REACH, PUT_TIME, SIGN_ARMS, SIT_TIME, TABLE_HOLDS, TROUGH_CARE, TROUGH_DRINK,
+  TROUGH_REACH, VASE_FRESH, VASE_HOLDS,
+} from '../../game/furnishdefs';
 import {
   COMPOST_BOOST, COMPOST_DAYS, COMPOST_EMPTY_TIME, COMPOST_FILL_TIME, COMPOST_HOLDS, DRESS_TIME, SPREAD_COST, SPREAD_SKILL, SPREAD_TIME, SWAP_TIME,
 } from '../../game/decordefs';
@@ -2225,6 +2230,19 @@ export function helpText(): string {
       <li><b>Add to compost</b> (${COMPOST_FILL_TIME} s base): one stack, to ${COMPOST_HOLDS}. <b>Take compost</b> (${COMPOST_EMPTY_TIME} s base): ${COMPOST_DAYS} days after the last thing in. <b>Spread compost</b> (${SPREAD_SKILL}, ${SPREAD_TIME} s base): ${SPREAD_COST} compost, a sown field or planter, next harvest QL +${COMPOST_BOOST}, once a crop.</li>
       <li><b>Put on stand</b>, <b>Take off</b> (${DRESS_TIME} s base): one piece a slot. <b>Swap with worn</b> (${SWAP_TIME} s base): every slot; kept on: anything not armour, anything locked. Whoever set it down, or a rank that may use the crates on its settlement. Not picked up with armour on it.</li>
       <li><b>Open</b>, <b>Close</b> curtains: anyone, seen by everyone.</li>
+    </ul>
+    <h3>Furnishings</h3>
+    <ul>
+      ${FURNISH_PIECES.map((id) => `<li><b>${itemDef(id).name}</b>: ${bill(`make_${id}`)} (${workedAt(`make_${id}`)}, ${recipe(`make_${id}`).baseTime} s base). `
+        + `${furnitureDef(id).w} by ${furnitureDef(id).h} subtiles. ${itemDef(id).description ?? ''}</li>`).join('')}
+      <li><b>Sit</b> (${SIT_TIME} s base): a stone bench, a garden swing, a gazebo, a footstool; seats full: <i>${FURNISH_SAID.seatsFull.replace('{name}', 'Stone bench').replaceAll('{n}', '2')}</i> Stamina back ×${seatRest(GARDEN_SWING)} standing still's in a swing, ×${seatRest(STONE_BENCH)} on the rest. Moving gets you up.</li>
+      <li><b>Add mixed grass</b> to a hay bale stack (${HAY_FILL_TIME} s base): to ${HAY_HOLDS}. Feeds kept wildermon within ${HAY_REACH} tiles, ${HAY_A_DAY} a day each, before your stores.</li>
+      <li>Water trough: water carriers fill it; within ${TROUGH_REACH} tiles a kept wildermon drinks ${TROUGH_DRINK} litre a day; care lasts ×${TROUGH_CARE}.</li>
+      <li><b>Point an arm</b> (${PUT_TIME} s base): a settlement or a Runestone on your map, up to ${SIGN_ARMS}. <b>Take down arm</b>. <b>Examine</b>: each arm's bearing and distance, read now.</li>
+      <li><b>Name</b> a cairn (${CAIRN_NAME_TIME} s base): up to ${CAIRN_NAME_MAX} characters; whoever set it down, or a citizen of its settlement.</li>
+      <li><b>Put in wildflowers</b>, <b>Take out wildflowers</b> (${PUT_TIME} s base): to ${VASE_HOLDS}; after ${VASE_FRESH} days wilted, thrown out.</li>
+      <li><b>Put on the table</b>, <b>Take</b> (${PUT_TIME} s base): to ${TABLE_HOLDS}. Not picked up with things on it.</li>
+      <li><b>Mount a fish</b> (${PUT_TIME * 2} s base): the fish is used up.</li>
     </ul>
     <h3>Calling things by name</h3>
     <ul>

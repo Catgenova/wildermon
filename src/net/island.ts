@@ -18,7 +18,7 @@ import { isFields, listOf, numbersIn, stringsIn } from './rows/read';
 import { changeRow, type ChangeRow } from './rows/land';
 import { playerRow } from './rows/player';
 import { itemRow } from './rows/item';
-import { chatRow, deedSpot, foragedRow } from './rows/said';
+import { cairnSpot, chatRow, deedSpot, foragedRow, type CairnSpot } from './rows/said';
 import type { IslandCreature } from '../game/creatures';
 import type { IslandSpring } from '../game/springs';
 import type { BredRecord } from '../game/boards';
@@ -4605,11 +4605,16 @@ export class Island {
       token: t && typeof t.x === 'number' && typeof t.y === 'number' ? { x: t.x, y: t.y, deed: String(t.deed ?? '') } : null };
   }
 
+  /** The cairns on the settlements of yours, named, as the last `settlements` read brought them (`furnish.ts`). */
+  cairns: CairnSpot[] = [];
+
   /** Every settlement on the island, for the map (`rpc_settlements`); null when the island did not answer. */
   async settlements(): Promise<Array<{ name: string; x: number; y: number; radius: number; mine: boolean }> | null> {
     if (!this.info) return null;
     const { data, error } = await rpc('rpc_settlements', { p_world: this.info.id });
     if (error || !data) return null;
+    // And the cairns on the settlements of yours, kept for the map (`furnish.ts`).
+    this.cairns = listOf(isFields(data) ? data.cairns : null, cairnSpot);
     return listOf(isFields(data) ? data.deeds : null, deedSpot);
   }
 
