@@ -367,6 +367,12 @@
     "why": "Solara stood under ten frames a second at any zoom: its wildermon's standing pictures came to five times what was kept, so each was drawn again just before it was wanted, and an altar in view after dark had the night mixed at four times the pixels. Then \"still massive fps drops\": every floor drawn afresh after dark, the shade round every wall cut to every tile every frame, and a wheel of the zoom making every crated wildermon and every piece again at every step. Drawn in Chrome on the page's own clock, on Solara as the island counted it: a second loop round must make next to no canvases, the night must be mixed at the lights' share, a settled frame must draw next to no floor or shade afresh, and a wheel of the zoom must stretch what it had rather than make it all again."
   },
   {
+    "file": "supabase/test/miscclips.ts",
+    "title": "Gates, carts, the bell, the settlement's stake, baubles and statues play their own clips on the sculpted body",
+    "shard": 1,
+    "why": "These jobs played the placeholder gesture. Each now plays its own clip (the winch turned both ways, the padlock's key, a cart's shafts, climbing aboard, the team's tack, the bell's rope, the stake driven in, a bauble set, palms out to a statue), from every facing on both bodies, the one-handed ones mirrored where worked left-handed; both hands where the clip puts them through every run; a go fitted to the job's length; and with Animations Off, the still pose."
+  },
+  {
     "file": "supabase/test/fxmarks.ts",
     "title": "A mark on a clip fires once as the body's clip time passes it",
     "shard": 1,
