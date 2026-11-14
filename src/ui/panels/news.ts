@@ -4422,6 +4422,16 @@ export const NEWS: News[] = [
     ],
   },
   {
+    n: 589,
+    day: '2026-11-14',
+    lines: () => [
+      'New: a wildermon in the Barter window, in its wildermon crate from your pack. Shown to both under the crate: name, sex, kind, age, level; rarity; '
+        + 'colour and size form; each trait and what it gives (unread below the animal husbandry for it); dam, sire and line. The new owner keeps it: traits, forms, skills, stance and pedigree unchanged.',
+      'New: wildermon refused on a barter side: a dam carrying young; panniers loaded.',
+      'Fixed: a crate\'s occupant changed after an Accept (let out, swapped, renamed) went in the deal unseen. Now: both Accepts cleared, both told, the new occupant shown.',
+    ],
+  },
+  {
     n: 588,
     day: '2026-11-14',
     lines: () => [
