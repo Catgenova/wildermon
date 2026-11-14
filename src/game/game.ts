@@ -6719,15 +6719,17 @@ export class Game {
   /**
    * The highest thing at a tile that somebody may stand on and a bridge may
    * land on: a finished floor of a building, or the ground and whatever is
-   * poured over it.
+   * poured over it. With `upTo`, no higher than that storey: the storey a
+   * bridge's end was picked on, else the highest finished floor under it
+   * (the island's `deck_level`).
    */
-  topDeck(x: number, y: number): { level: number; height: number } {
+  topDeck(x: number, y: number, upTo?: number): { level: number; height: number } {
     const base = this.surfaceHeight(x, y);
     // gates: and a jetty's floor out past the footprint, a floor of the storey it is out from, as the island's
     // `top_deck` has it: a bridge's end lands on it as on any finished floor (`frame.ts`).
     const b = this.buildings.buildingAt(x, y) ?? this.buildings.jettyAt(x, y);
     if (b) {
-      for (let l = b.levels - 1; l >= 1; l--) {
+      for (let l = Math.min(b.levels - 1, upTo ?? Infinity); l >= 1; l--) {
         if (this.standable(x, y, l)) return { level: l, height: base + l * WALL_HEIGHT };
       }
     }
@@ -6738,9 +6740,12 @@ export class Game {
    * Why a bridge of this sort, `width` lanes wide (its second on `side` at
    * two, `laneOffsets`), cannot be thrown between these two tiles, or null.
    * Every lane's ends land as the line's do, and every lane's deck is asked
-   * what the line's is. The island's `bridge_reason`, in the same order.
+   * what the line's is. Each end on the storey `upTo` names for it, else the
+   * highest finished floor under it; none named, the highest there is
+   * (`topDeck`). The island's `bridge_reason`, in the same order.
    */
-  bridgeReason(kind: BridgeKind, ax: number, ay: number, bx: number, by: number, width = 1, side = 1): string | null {
+  bridgeReason(kind: BridgeKind, ax: number, ay: number, bx: number, by: number, width = 1, side = 1,
+    upTo: [number | undefined, number | undefined] = [undefined, undefined]): string | null {
     const def = BRIDGES[kind];
     // An aqueduct is set out from where it pours (`plan_aqueduct`).
     if (kind === 'aqueduct') return AQ_NOT_THROWN;
@@ -6774,12 +6779,12 @@ export class Game {
      * another at the same is the thing two towers have always wanted and had
      * to do with a staircase down, a walk across the yard and a staircase up.
      */
-    const ends = [this.topDeck(ax, ay), this.topDeck(bx, by)];
+    const ends = [this.topDeck(ax, ay, upTo[0]), this.topDeck(bx, by, upTo[1])];
     for (const o of lanes) {
       for (const [i, [x0, y0]] of ([[ax, ay], [bx, by]] as Array<[number, number]>).entries()) {
         const x = x0 + o * px, y = y0 + o * py;
         if (!w.inBounds(x, y)) return 'Not there.';
-        const end = o ? this.topDeck(x, y) : ends[i];
+        const end = o ? this.topDeck(x, y, upTo[i]) : ends[i];
         // A deck on piers is landed on once it is built, and is dry, solid ground whatever is under it (`piers.ts`).
         if (this.pierBare(x, y)) return 'Needs a finished deck at that end.';
         // The bank of a ravine always shares a corner with the ravine, so what

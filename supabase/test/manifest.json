@@ -1450,6 +1450,12 @@
     "why": "A marble bridge three lanes wide, both ends on storey 4: every lane holds a body at storey 4 and nobody at storey 3, a walk along each lane stays on storey 4 (`rpc_move`), a walk on the ground under it is drawn under it, and a pinned storey's click on the deck ends on it."
   },
   {
+    "file": "supabase/test/bridgestorey.ts",
+    "title": "A bridge planned from a storey to a storey lands on those two storeys, on both sides",
+    "shard": 4,
+    "why": "Reported: planned from storey 4 to storey 4, planned and built storey 4 to storey 5. Each end landed on the highest finished floor of its tile, not the storey picked. From storey 4, with storey 4 picked at the far end: to a building with a storey 5 floor at its end, from under a storey 5 floor to a building on ground 8 higher, and to open ground. Both sides allow it, plan it on the storeys picked (or the ground under), with the same rise and height, and built, its deck holds a body at storey 4 and none at storey 5."
+  },
+  {
     "file": "supabase/test/underbridge.ts",
     "title": "Under a bridge on foot, mounted, in a cart and in a wagon, on both sides",
     "shard": 3,

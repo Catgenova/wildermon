@@ -9,6 +9,7 @@ declare v_took boolean; p player; pc placed; b bridge; d bridge_def; s bridge_sp
         v_kind text; v_id bigint; v_h int; v_n int; v_left int; v_want text; v_back jsonb;
         v_parts text[]; v_half int; e record; r record; v_skill double precision;
         v_care double precision; v_one bigint; v_stock item; v_ql double precision;
+        v_la int; v_lb int; v_ha double precision; v_hb double precision;
 begin
   select * into p from player where world_id = p_world and uid = p_uid;
 
@@ -69,20 +70,21 @@ begin
     v_kind := coalesce(p_target->>'material', 'rope');
     if bridge_reason(p_world, p_uid, v_kind, floor(p.x)::int, floor(p.y)::int,
          (p_target->>'x')::int, (p_target->>'y')::int, bridge_width_asked(p_target),
-         coalesce(nullif(bridge_side_step(floor(p.x)::int, floor(p.y)::int, (p_target->>'x')::int, (p_target->>'y')::int, p_target->>'side'), 0), 1))
+         coalesce(nullif(bridge_side_step(floor(p.x)::int, floor(p.y)::int, (p_target->>'x')::int, (p_target->>'y')::int, p_target->>'side'), 0), 1),
+         greatest(coalesce(p.level, 0), 0), bridge_storey_asked(p_target))
          is not null then return; end if;
     select * into d from bridge_def where id = v_kind;
-    v_h := round((deck_height(p_world, floor(p.x)::int, floor(p.y)::int)
-                + deck_height(p_world, (p_target->>'x')::int, (p_target->>'y')::int)) / 2);
+    -- Each end on the storey stood on and the storey picked, else the highest finished floor under it (`deck_level`).
+    v_la := deck_level(p_world, floor(p.x)::int, floor(p.y)::int, greatest(coalesce(p.level, 0), 0));
+    v_lb := deck_level(p_world, (p_target->>'x')::int, (p_target->>'y')::int, bridge_storey_asked(p_target));
+    v_ha := surface_height(p_world, floor(p.x)::int, floor(p.y)::int) + v_la * wall_height();
+    v_hb := surface_height(p_world, (p_target->>'x')::int, (p_target->>'y')::int) + v_lb * wall_height();
+    v_h := round((v_ha + v_hb) / 2);
     insert into bridge (world_id, kind, ax, ay, bx, by, height, material, made_by, level, level_b, rise, width, side)
     values (p_world, v_kind, floor(p.x)::int, floor(p.y)::int,
             (p_target->>'x')::int, (p_target->>'y')::int, v_h,
             case when d.material is not null then null else 'Oak' end, p_uid,
-            top_deck(p_world, floor(p.x)::int, floor(p.y)::int),
-            nullif(top_deck(p_world, (p_target->>'x')::int, (p_target->>'y')::int),
-                   top_deck(p_world, floor(p.x)::int, floor(p.y)::int)),
-            ramp_rise(deck_height(p_world, floor(p.x)::int, floor(p.y)::int),
-                      deck_height(p_world, (p_target->>'x')::int, (p_target->>'y')::int)),
+            v_la, nullif(v_lb, v_la), ramp_rise(v_ha, v_hb),
             bridge_width_asked(p_target),
             coalesce(nullif(bridge_side_step(floor(p.x)::int, floor(p.y)::int, (p_target->>'x')::int, (p_target->>'y')::int, p_target->>'side'), 0), 1))
     returning * into b;

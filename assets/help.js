@@ -1357,6 +1357,8 @@ import{$ as e,$C as t,$S as n,$_ as r,$g as i,$o as a,$v as ee,$x as o,A as te,A
       Cost: a span's bill per tile of deck, fitted piece by piece: a go fits any one material it needs that is to hand. Carries a cart only with both ends on the ground. Drawbridges are always level.</li>
       <li>Ends may also be a finished upper floor (jetty floors included) or a finished deck on piers. Not inside a building on a ground floor laid on the ground,
       not on another bridge's end, never through a wall (out through a doorway, archway or open side). Nothing is built on a landing tile.</li>
+      <li>End storeys: near end, the storey you stand on; far end, the storey pinned on the storey control (Auto: the highest finished floor there).
+      No finished floor at that storey: the highest finished floor under it, else the ground.</li>
       <li>Built a span at a time like a wall, one unit an action. Nothing crosses until the last span is decked.</li>
       <li><b>${_g?.label}</b>: half the materials back; within ${qa} tiles of the middle of either end. Either end on a settlement: founder and ranks with
       ${m.shape.label} only; elsewhere anybody. Boats pass underneath.</li>

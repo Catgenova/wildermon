@@ -56,7 +56,8 @@ begin
     v_kind := coalesce(p_target->>'material', 'rope');
     return bridge_reason(p_world, p_uid, v_kind, floor(p.x)::int, floor(p.y)::int,
       (p_target->>'x')::int, (p_target->>'y')::int, bridge_width_asked(p_target),
-      coalesce(nullif(bridge_side_step(floor(p.x)::int, floor(p.y)::int, (p_target->>'x')::int, (p_target->>'y')::int, p_target->>'side'), 0), 1));
+      coalesce(nullif(bridge_side_step(floor(p.x)::int, floor(p.y)::int, (p_target->>'x')::int, (p_target->>'y')::int, p_target->>'side'), 0), 1),
+      greatest(coalesce(p.level, 0), 0), bridge_storey_asked(p_target));
 
   elsif p_action in ('build_bridge', 'demolish_bridge') then
     select * into b from bridge where world_id = p_world and id = (p_target->>'id')::bigint;

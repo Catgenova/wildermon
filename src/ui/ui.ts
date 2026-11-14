@@ -2302,8 +2302,10 @@ export class UI {
    * A bridge from where you are standing to the tile under the cursor, by material and lanes: on the ground's list and
    * on a pinned storey's (`storeyMenu`), where a walkway between two towers is thrown from one roof to the other.
    */
-  private bridgeFromHere(pick: Pick, target: Extract<Target, { kind: 'tile' }>): MenuItem[] {
+  private bridgeFromHere(pick: Pick, at: Extract<Target, { kind: 'tile' }>): MenuItem[] {
     const planBridge = ACTION_BY_ID.get('plan_bridge');
+    // The far end on the storey picked, when one is pinned (`bridgeUpTo`).
+    const target = pick.level === undefined ? at : { ...at, level: pick.level };
     if (planBridge && (pick.x !== this.game.player.tileX || pick.y !== this.game.player.tileY)) {
       // An aqueduct is not thrown from a bank but led to where it pours (`aqueductMenu`).
       const g = this.game;

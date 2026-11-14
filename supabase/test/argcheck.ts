@@ -37,7 +37,7 @@ const targets: Array<[string, Target & Record<string, unknown>]> = [
   ['plan_wall', { kind: 'tile', x: AT, y: AT, cx: AT, cy: AT, side: 'n', wallType: 'solid', material: 'log', level: 0 }],
   ['plan_floor', { kind: 'tile', x: AT, y: AT, cx: AT, cy: AT, floorKind: 'roof', roofShape: 'gable', material: 'thatch', buildingId: 1, terrace: false }],
   ['plan_floor', { kind: 'tile', x: AT, y: AT, cx: AT, cy: AT, floorKind: 'stairs', side: 'e', hand: 'l', down: true }],
-  ['plan_bridge', { kind: 'tile', x: AT + 1, y: AT, cx: AT + 1, cy: AT, material: 'plank', width: 2, side: 'w' }],
+  ['plan_bridge', { kind: 'tile', x: AT + 1, y: AT, cx: AT + 1, cy: AT, material: 'plank', width: 2, side: 'w', level: 3 }],
   ['plan_aqueduct', { kind: 'tile', x: AT + 1, y: AT, cx: AT + 1, cy: AT, head: [AT, AT] }],
   ['place_furniture', { kind: 'tile', x: AT + 1, y: AT, cx: AT + 1, cy: AT, sx: 1, sy: 2, itemUid: 1, facing: 'e', level: 0 }],
   ['track', { kind: 'tile', x: AT, y: AT, cx: AT, cy: AT, species: 'roxxen' }],
