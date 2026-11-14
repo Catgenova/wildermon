@@ -4440,7 +4440,7 @@ export const NEWS: News[] = [
   },
   // Elementalism (`infusion.ts`, `infuseActions.ts`).
   {
-    n: 591,
+    n: 598,
     day: '2026-11-14',
     lines: () => [
       `New: Infuse into (a mote's menu, at an enchanter's plinth): ${INFUSE_MOTES} motes of one element into a thing, one element at a time, ${INFUSE_DAYS} days. `
@@ -4454,7 +4454,7 @@ export const NEWS: News[] = [
   },
   // Sailing (`sailing.ts`, `sailActions.ts`).
   {
-    n: 590,
+    n: 597,
     day: '2026-11-14',
     lines: () => [
       `Changed: closest to the wind: ${noGoDegrees(1)}° at Sailing 1 to ${noGoDegrees(100)}° at 100 (was: ${Math.round((NO_GO * 180) / Math.PI)}° for every helm). `
@@ -4470,7 +4470,7 @@ export const NEWS: News[] = [
   },
   // Ropemaking (`ropework.ts`).
   {
-    n: 589,
+    n: 596,
     day: '2026-11-14',
     lines: () => [
       `New: Ropemaking: rope per lay-up ${ropePerLayUp(0)}, +1 per ${LAY_UP_EVERY} levels (${ropePerLayUp(100)} at 100); ropemaking time per action −${percent(ROPE_TIME_PER_LEVEL)} per level (×${ropeTime(100)} at 100); `
