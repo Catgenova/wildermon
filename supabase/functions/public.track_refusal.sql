@@ -9,9 +9,8 @@ declare sd species_def;
 begin
   select * into sd from species_def d where d.id = p_target->>'species';
   if sd.id is null then return 'No such kind.'; end if;
-  if sd.monster then
-    return sd.name || ': not a wildermon, no trail.';
-  end if;
+  -- A monster's trail is its lair's, seen or not (`lair_track`).
+  if sd.monster then return null; end if;
   if not exists (select 1 from guide g where g.world_id = p_world and g.uid = p_uid and g.species = sd.id) then
     return sd.name || ' not seen yet: only kinds marked seen in your field guide can be tracked.';
   end if;

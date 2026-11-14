@@ -18,6 +18,7 @@ export type ItemCategory = 'tool' | 'material' | 'food' | 'plant' | 'misc';
 
 import type { Nutrient } from './nutrition';
 import { GEAR_ITEMS } from './wildgear';
+import { HOARD_SCALE_CAP } from './lairs';
 
 /** What a dish for a group gives out when it is served (`ItemDef.serve`). */
 export interface ServeDef {
@@ -522,7 +523,7 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   scale_boots: { name: 'Scale boots', category: 'tool', weight: 2.4 },
   tusk: { name: 'Tusk', category: 'material', weight: 1.6, stackable: true, raw: true, decay: 1, description: 'The belly of a composite bow.' },
   sinew: { name: 'Sinew', category: 'material', weight: 0.2, stackable: true, raw: true, decay: 4, description: 'The back of a composite bow.' },
-  dragon_scale: { name: 'Dragon scale', category: 'material', weight: 1.2, stackable: true, raw: true, decay: 0.2, description: 'Scale armour. From a dragon only.' },
+  dragon_scale: { name: 'Dragon scale', category: 'material', weight: 1.2, stackable: true, raw: true, decay: 0.2, description: 'Scale armour. From a dragon only. Hoard scales (a dragon roost\'s hoard): scale armour made of them alone has a QL cap of {hoardCap}× your skill.' },
   worm: { name: 'Worms', category: 'material', weight: 0.05, stackable: true, raw: true, decay: 90, description: 'Dug from damp dirt with a shovel. Fishing bait for small fish.' },
   fishing_net: { name: 'Fishing net', category: 'tool', weight: 3.5, decay: 5, description: 'Drag through shallow water: many small fish at once; big fish escape.' },
   creel: { name: 'Creel', category: 'misc', weight: 3, decay: 4, description: 'Trap: set in water and bait it.' },
@@ -694,6 +695,11 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   mailbox: { name: 'Mailbox', category: 'misc', weight: 8, decay: 4 },
   bell: { name: 'Bell', category: 'misc', weight: 24, decay: 3 },
   statue: { name: 'Statue', category: 'misc', weight: 50, decay: 3 },
+  // The trophies out of a lair's hoard (`lairs.ts`), each on its stone plinth: set down as decoration.
+  chief_ear: { name: 'Goblin chief\'s ear', category: 'misc', weight: 6, decay: 0, trophy: true, description: 'Trophy: set down anywhere. From a goblin warren\'s hoard only. Does not decay.' },
+  warlord_tusk: { name: 'Warlord\'s tusk', category: 'misc', weight: 8, decay: 0, trophy: true, description: 'Trophy: set down anywhere. From an orc camp\'s hoard only. Does not decay.' },
+  ogre_king_jaw: { name: 'Ogre king\'s jaw', category: 'misc', weight: 10, decay: 0, trophy: true, description: 'Trophy: set down anywhere. From an ogre cave\'s hoard only. Does not decay.' },
+  great_dragon_scale: { name: 'Great dragon scale', category: 'misc', weight: 8, decay: 0, trophy: true, description: 'Trophy: set down anywhere. From a dragon roost\'s hoard only. Does not decay.' },
   brazier: { name: 'Brazier', category: 'misc', weight: 30, decay: 3 },
   altar: { name: 'Altar', category: 'misc', weight: 64, decay: 3, description: 'Set down on your settlement; one per settlement.' },
   trash_crate: { name: 'Trash crate', category: 'misc', weight: 6, decay: 4, description: 'Contents rot {trash}× faster than in the rain.' },
@@ -875,6 +881,8 @@ for (const d of Object.values(ITEM_DEFS)) {
     cover: { overCloth: (CLOSE_RIGHT / CLOSE_CLOTH).toFixed(1) },
   });
 }
+// A hoard dragon scale's QL cap on scale armour (`lairs.ts`).
+describeFrom('dragon_scale', { hoardCap: HOARD_SCALE_CAP });
 
 
 // What a stone set in a piece gives, off the rule that gives it (`jewelGain`).

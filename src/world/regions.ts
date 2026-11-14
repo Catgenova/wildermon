@@ -68,15 +68,9 @@ export interface Region {
   /** Set where no tree grows of itself: none is laid down there, and none seeds there. */
   treeless?: boolean;
   /**
-   * Set where everything wild that stands up is a monster and never a
-   * wildermon. Each kind may number this many times its island-wide cap here,
-   * counted among those standing on this island and apart from the rest.
-   */
-  monsters?: number;
-  /**
    * The monsters that stand up here and on no other island, by species id: the dragon on Volcano Isle, the
    * northernmost. Asked for: "a dragon spawned on the crescent island, theyre only supposed to spawn on the
-   * northernmost island". Its cap is all there are of it, here. The island's `monster_isle`.
+   * northernmost island". Its lair is sited on this island's highest ground (`lairs.ts`). The island's `monster_isle`.
    */
   lair?: string[];
 }
@@ -119,7 +113,6 @@ export const REGIONS: Region[] = [
     trees: [],
     mountain: ['gold_ore'],
     treeless: true,
-    monsters: 3,
   },
   {
     key: 'Volcano',

@@ -133,6 +133,9 @@ const replay = (was: boolean): { lines: string[]; ms: number } => {
 begin;
 ${ISLAND}
 ${was ? STOCK_WAS : ''}
+-- The lairs (\`lair_tick\`) ride on the clock as it is and not on the clock as it was, and stand up their garrisons off the
+-- same dice: they have their own test (\`lairs.ts\`), and are left still in both runs so the stocking is what is compared.
+create or replace function lair_tick(p_world uuid) returns int language sql as $lt$ select 0 $lt$;
 create temp table turn (i int, said text, wild int, ms double precision);
 select setseed(0.25);
 do $$

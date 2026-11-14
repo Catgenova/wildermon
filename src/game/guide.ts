@@ -35,12 +35,13 @@ import { TACK } from './creatureActions';
 import { MILK_PART, milkLitres } from './dairy';
 import { BUCKET_LITRES } from './furniture';
 import {
-  EVOLVE_AT, favouriteSays, GATHER_DO, GATHER_SKILL, STAGE_MUL, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME, HERD_REACH, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF, MONSTER_SHARE, MONSTERS, ringKeepsOut,
+  EVOLVE_AT, favouriteSays, GATHER_DO, GATHER_SKILL, STAGE_MUL, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME, HERD_REACH, HUNT_SIGHT, ringKeepsOut,
   footing, HAUL_LEARN, HAUL_LEARN_STEEP, HAUL_SKILL, HAUL_STEEP_AT, LEARNS_SAYS, levelSkill, PULL_DEFAULT, RANGE_PER_STEP, seasonSays, SKILL_STEP, SPECIES, tracesSkill, WATER_RANGE, WILD_RANGE, WILD_SPECIES, type SpeciesDef, LEARN_PACE,
 } from './creatures';
 import { BANE_BONUS } from './gear';
 import { HOARD_METALS, itemDef } from './items';
 import { SAFE_RING } from './runestones';
+import { bossSays, garrisonSays, LAIR_KINDS, LAIR_LEASH, lairFoundSays, lairOfKind, restockSays, SITE_SAYS, type LairSeen } from './lairs';
 import { defaultKey } from './keybinds';
 import { MATERIALS } from './materials';
 import { SKILL_BY_ID } from './skills';
@@ -48,7 +49,7 @@ import { HUNTER_TRAPPED, TIMID_TRAPPED } from './traps';
 import { COMPANION_SIGHT as KEPT_EYES } from './vision';
 import { WOUND_KINDS } from './wounds';
 import { article, capital, listed, percent, timeWords } from './words';
-import { lairOf, REGIONS } from '../world/regions';
+import { lairOf } from '../world/regions';
 import { FORM_IDS, formGives, formKey, formName, formOdds, formOfKey } from './wildforms';
 import { PERK_STAGE, STAGE_PERKS } from './creatures';
 import { stageSlots, TRAIT_SLOTS } from './traits';
@@ -289,15 +290,12 @@ const skillName = (id: string): string => (SKILL_BY_ID.get(id)?.name ?? id).toLo
 
 /**
  * How often the wild's roll comes out as this kind, as a share of one: its
- * weight in the table, over the share of rolls that are wildermon at all; or,
- * for a monster, its weight among the monsters over the share that are
- * monsters. Nothing for a kind the wild never puts down.
+ * weight in the table. Nothing for a kind the wild never puts down, which a
+ * monster is: it stands up only at its lair (`lairs.ts`).
  */
 export function wildShare(def: SpeciesDef): number {
   const wild = WILD_SPECIES.find(([id]) => id === def.id)?.[1];
-  if (wild !== undefined) return (wild / WILD_SPECIES.reduce((n, [, w]) => n + w, 0)) * (1 - MONSTER_SHARE);
-  const bad = MONSTERS.find(([id]) => id === def.id)?.[1];
-  return bad !== undefined ? (bad / MONSTERS.reduce((n, [, w]) => n + w, 0)) * MONSTER_SHARE : 0;
+  return wild !== undefined ? wild / WILD_SPECIES.reduce((n, [, w]) => n + w, 0) : 0;
 }
 
 /**
@@ -314,6 +312,12 @@ export function whereItLives(def: SpeciesDef, onIsland = false): string[] {
   // A hybrid is never put down wild (`hybridlist.ts`).
   if (def.hybrid) return [`Never wild: bred only, ${SPECIES[def.hybrid[0]].name} × ${SPECIES[def.hybrid[1]].name}`];
   const lines: string[] = [];
+  // A monster stands up only at its lair (`lairs.ts`): its lair is where it lives.
+  if (def.monster) {
+    lines.push(...lairLines(def));
+    if (onIsland) lines.push(`Never within ${SAFE_RING} tiles of the island's spawn or a Runestone (safe ring)`);
+    return lines;
+  }
   // A kind of the deep water, out of a swimmer's depth (`deepTile`).
   if (def.deepWater) lines.push(`Spawns in: water over ${metres(SWIM_DEPTH)} m deep; keeps to it`);
   else if (def.onOre) lines.push('Spawns on: a vein or coal seam, bare or buried');
@@ -328,9 +332,6 @@ export function whereItLives(def: SpeciesDef, onIsland = false): string[] {
   if (near.length) lines.push(`Within ${WATER_RANGE} tiles of: ${listed(near)}`);
   if (def.nocturnal) lines.push('Spawns only at night');
   if (def.season) lines.push(`Wild only ${seasonSays(def.season)} (UTC); gone from the wild on other days`);
-  if (def.monster) {
-    lines.push(`Never within ${MONSTER_KEEP_OFF[def.id] ?? 0} tiles of a settlement totem`);
-  }
   if (onIsland && ringKeepsOut(def)) lines.push(`Never within ${SAFE_RING} tiles of the island's spawn or a Runestone (safe ring)`);
   lines.push(`Home range: ${WILD_RANGE} tiles`);
   lines.push(def.hunter
@@ -338,12 +339,28 @@ export function whereItLives(def: SpeciesDef, onIsland = false): string[] {
     : `Herds: one spawned within ${HERD_REACH} tiles of another's home shares that home`);
   const share = wildShare(def);
   if (share > 0) lines.push(`Spawn share: 1 in ${Math.round(1 / share)}`);
-  if (def.monster) {
-    lines.push(`Island cap: ${MONSTER_CAP[def.id] ?? 1} at once`);
-    const lair = lairOf(def.id);
-    if (lair) lines.push(`Only on ${lair.name}`);
-    for (const R of REGIONS) if (R.monsters && (lair ?? R) === R) lines.push(`Up to ${(MONSTER_CAP[def.id] ?? 1) * R.monsters} more on ${R.name}, where no other wild creature spawns`);
+  return lines;
+}
+
+/**
+ * Where a monster lives: only at a lair (`lairs.ts`). Its kind's lair, how many
+ * the island holds and on what ground, its garrison, boss and restock, how far
+ * from a settlement totem, the lairs whose garrison it is also in, and its leash.
+ */
+export function lairLines(def: SpeciesDef): string[] {
+  const lines: string[] = [];
+  const name = (id: string): string => SPECIES[id]?.name ?? id;
+  const k = lairOfKind(def.id);
+  if (k) {
+    lines.push(`Lair: ${k.name.toLowerCase()}, ${k.count} on the island, on ${SITE_SAYS[k.site]}`);
+    const isle = lairOf(def.id);
+    if (isle) lines.push(`Only on ${isle.name}`);
+    lines.push(`Garrison: ${garrisonSays(k, name)}; boss: ${bossSays(k, def.name)}`);
+    lines.push(`Restock: ${restockSays(k)}`);
+    lines.push(`Lair at least ${k.keepOff} tiles from a settlement totem`);
   }
+  for (const o of LAIR_KINDS) if (o !== k && o.garrison.some(([s]) => s === def.id)) lines.push(`Also in the garrison of: ${o.name.toLowerCase()}`);
+  lines.push(`Leash: ${LAIR_LEASH} tiles from its lair; stands up nowhere else`);
   return lines;
 }
 
@@ -505,7 +522,7 @@ function staging(def: SpeciesDef, stage: number): string[] {
 }
 
 /** A kind's whole page, under its headings, for a kind that has been seen; or one of its stages'. */
-export function guidePage(def: SpeciesDef, onIsland = false, stage = 0, guide?: FieldGuide): GuideSection[] {
+export function guidePage(def: SpeciesDef, onIsland = false, stage = 0, guide?: FieldGuide, lairs?: readonly LairSeen[]): GuideSection[] {
   if (stage > 0) {
     return [
       { head: 'Stage', lines: staging(def, stage) },
@@ -525,7 +542,8 @@ export function guidePage(def: SpeciesDef, onIsland = false, stage = 0, guide?: 
   }
   return [
     { head: 'Subspecies', lines: subspeciesLines(def) },
-    { head: 'Habitat', lines: whereItLives(def, onIsland) },
+    // And for a monster, whether you have seen its kind's lair (`lair_seen`).
+    { head: 'Habitat', lines: [...whereItLives(def, onIsland), ...(def.monster && lairs ? [lairFoundSays(def.id, lairs)].filter((l): l is string => !!l) : [])] },
     { head: def.monster ? 'Not a wildermon' : 'Taming', lines: taming(def) },
     ...(def.monster ? [] : [{ head: 'Kept', lines: keeping(def) }]),
     { head: 'Combat', lines: fighting(def) },

@@ -32,3 +32,22 @@ export class StaleBuild extends Error {
     super(STALE_BUILD);
   }
 }
+
+/**
+ * A module this page fetches when it is first wanted -- a wildermon line's models, a voice, the help -- that did not come.
+ *
+ * A deploy puts the new build's files at the same addresses, and a page loaded before it still holds the old build's
+ * hashes in its import map (scripts/sri.mjs): every module it had not loaded yet is refused from then on, and only a
+ * reload mends it. A line refused was drawn as its name and health bar and no body, in the world and the Field guide,
+ * with nothing said. Whoever is told (`whenModuleMissed`) asks the site which deploy it is on (`ui/update.ts`) and
+ * writes it down (`net/errors.ts`).
+ */
+const missedTold: ((what: string, e: unknown) => void)[] = [];
+/** How long a module that did not come is left before it is asked for again, in milliseconds: not every frame it is wanted. */
+export const MISSED_RETRY_MS = 30_000;
+export function whenModuleMissed(f: (what: string, e: unknown) => void): void {
+  missedTold.push(f);
+}
+export function moduleMissed(what: string, e: unknown): void {
+  for (const f of missedTold) f(what, e);
+}

@@ -98,6 +98,8 @@ export interface KitPiece {
   live?: (ctx: Ctx, sx: number, sy: number, zoom: number, view: KitView, night: number, t: number, air?: KitAir) => void;
   /** Where it takes the night back off itself this frame (`furnitureHoles`). */
   holes?: (sx: number, sy: number, zoom: number, view: KitView, t: number) => Array<{ x: number; y: number; r: number; a: number }>;
+  /** Takes the night off itself (`holes`) only while it is lit: a fire that is out gives no light. */
+  holesLit?: boolean;
   /** Its live drawing wants the wind (`clothInWind`). */
   wind?: boolean;
   /** Lit, how many flickers its fire is baked in (`KitLook.frame`), one every `FLICKER_MS` round and round, as the old models' fires were. Unlit, or unsaid, one bake. */

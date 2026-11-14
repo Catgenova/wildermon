@@ -5,7 +5,7 @@ CREATE OR REPLACE FUNCTION public.deed_refusal(p_world uuid, p_uid uuid, p_actio
  LANGUAGE plpgsql
  STABLE
 AS $function$
-declare p player; tx int; ty int; want int := 5; other deed; v_apart int := deed_spacing(); v_stone record;
+declare v_lair record; p player; tx int; ty int; want int := 5; other deed; v_apart int := deed_spacing(); v_stone record;
 begin
   select * into p from player where world_id = p_world and uid = p_uid;
   tx := floor(p.x)::int; ty := floor(p.y)::int;
@@ -41,6 +41,14 @@ begin
    order by 2 limit 1;
   if v_stone.gap is not null and v_stone.gap < deed_stone_gap() then
     return 'Too close to ' || v_stone.name || ': ' || floor(v_stone.gap)::int || ' tiles; ' || deed_stone_gap() || ' needed.';
+  end if;
+  -- And no nearer a lair than its kind keeps from a token (`lair_kinds.keep_off`).
+  select k.name, k.keep_off, sqrt((tx - l.x) ^ 2 + (ty - l.y) ^ 2) as d into v_lair
+    from lair l join lair_kinds() k on k.id = l.kind
+   where l.world_id = p_world and (tx - l.x) ^ 2 + (ty - l.y) ^ 2 < k.keep_off ^ 2
+   order by 3, l.id limit 1;
+  if v_lair.name is not null then
+    return 'Too close to a ' || lower(v_lair.name) || ': ' || floor(v_lair.d)::int || ' tiles; ' || v_lair.keep_off || ' needed.';
   end if;
   return null;
 end $function$

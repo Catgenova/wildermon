@@ -33,6 +33,8 @@
  *   * A herb box grows herbs only (`sow_planter`, `planter_refusal`) and is
  *     harvested at its share of a planter's yield (`reap_planter`, through
  *     `reap_what`), and says so when tended (`perform_planter`).
+ *   * A lair's trophy carries its slayer's name (`lair_hoard_give`), which a
+ *     trophy plaque shows under it.
  *   * A carved figure is carved as a kind its maker has seen in the field
  *     guide, chosen at the bench (`figure_refusal` in `craft_ran_out`, which
  *     is asked of a craft's go before anything else; `perform_craft` stamps it).
@@ -1629,7 +1631,7 @@ CREATE OR REPLACE FUNCTION public.perform_craft(p_world uuid, p_uid uuid, p_reci
  RETURNS void
  LANGUAGE plpgsql
 AS $function$
-declare r recipe; i record; v_n int; prefer bigint; mat text; hard double precision; tq double precision;
+declare v_scales int := 0; v_hoard int := 0; r recipe; i record; v_n int; prefer bigint; mat text; hard double precision; tq double precision;
         s double precision; made_ql double precision; rare text; total double precision := 0;
         v_made bigint; weight double precision := 0; one double precision; share double precision;
         only_mat boolean; was text; v_base int; spared boolean := false; v_mark jsonb;
@@ -1798,6 +1800,9 @@ begin
   v_kept := v_lye > 0 and random() < v_lye;
   -- The units used up, by their rarity, for what rare ones put on the chance of a rare one (`rarity_bands`):
   -- what was at hand before the go less what is after it.
+  -- The dragon scales at hand before the go, all and hoard (`hoard_scale`), for what it spends of each.
+  v_scales := craft_count(p_world, p_uid, 'dragon_scale', null, prefer);
+  v_hoard := craft_count(p_world, p_uid, 'dragon_scale', hoard_scale(), prefer);
   v_used := craft_units_held(p_world, p_uid, p_recipe, prefer);
   for i in select * from recipe_input where recipe = p_recipe order by ord loop
     continue when v_kept and exists (select 1 from vessel_def v where v.item = i.item);
@@ -1808,12 +1813,14 @@ begin
     if not craft_consume(p_world, p_uid, i.item, recipe_need(p_world, p_uid, p_recipe, i.count), prefer, mat) then return; end if;
   end loop;
   v_used := rarity_tally_less(v_used, craft_units_held(p_world, p_uid, p_recipe, prefer));
+  v_scales := v_scales - craft_count(p_world, p_uid, 'dragon_scale', null, prefer);
+  v_hoard := v_hoard - craft_count(p_world, p_uid, 'dragon_scale', hoard_scale(), prefer);
   perform craft_carry_on(p_world, p_uid, p_recipe, p_target, was, mat);
 
   if r.ql_from_inputs then
     made_ql := greatest(1, least(100, (case when weight > 0 then total / weight else 1 end) * (0.78 + s / 460)));
   else
-    made_ql := product_ql(s, tq);
+    made_ql := product_ql(case when v_scales > 0 and v_hoard = v_scales then s * hoard_scale_cap() else s end, tq);
   end if;
   -- And the rope's share of it, for a boat or a trap (`ropeBlend`).
   if v_rope is not null then made_ql := made_ql * (1 - r.rope_share) + v_rope * r.rope_share; end if;
@@ -1915,6 +1922,41 @@ begin
   -- Working a thing out with your hands is what sharpens the head.
   perform skill_raise(p_world, p_uid, 'mind_logic', try_gain(true, craft_head()));
   perform tell(p_world, p_uid, craft_made_said(r.result, v_base, mat, made_ql, r.done), 'event');
+end $function$;
+
+CREATE OR REPLACE FUNCTION public.lair_hoard_give(p_world uuid, p_uid uuid, p_lair integer, p_roll jsonb, p_ql double precision)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+AS $function$
+declare l lair; k record; v_said text[] := '{}'; v_book text; v_got text; v_title text; v_out jsonb := '{}'::jsonb;
+begin
+  select * into l from lair where world_id = p_world and id = p_lair;
+  select * into k from lair_kinds() lk where lk.id = l.kind;
+  if (p_roll->>'map')::boolean and bury_treasure(p_world, p_uid, p_ql, l.x + 0.5, l.y + 0.5) is not null then
+    v_said := v_said || 'treasure map'::text;
+    v_out := v_out || '{"map": true}';
+  end if;
+  -- Its slayer's name on it, which a trophy plaque shows under it (`garden.ts`).
+  perform give(p_world, p_uid, k.trophy, 1, p_ql, null, null, (select py.name from player py where py.world_id = p_world and py.uid = p_uid));
+  v_said := v_said || lower((select d.name from item_def d where d.id = k.trophy));
+  v_out := v_out || jsonb_build_object('trophy', k.trophy);
+  if k.scales > 0 then
+    perform give(p_world, p_uid, 'dragon_scale', k.scales, p_ql, hoard_scale());
+    v_said := v_said || (k.scales || ' hoard dragon scales');
+    v_out := v_out || jsonb_build_object('scales', k.scales);
+  end if;
+  if (p_roll->>'book')::boolean then
+    v_book := (select bd.book from book_drops() bd where bd.kind = k.species);
+    v_got := private.recipe_to_drop(p_world, p_uid, v_book);
+    if v_got is not null then
+      v_title := (select lr.title from locked_recipes() lr where lr.id = v_got);
+      perform give(p_world, p_uid, book_item(v_book), 1, p_ql, v_title);
+      v_said := v_said || (lower((select d.name from item_def d where d.id = book_item(v_book))) || ' (' || lower(v_title) || ')');
+      v_out := v_out || jsonb_build_object('book', v_got);
+    end if;
+  end if;
+  perform tell(p_world, p_uid, 'Hoard (' || lower(k.name) || '): ' || listed(v_said) || '.', 'event');
+  return v_out;
 end $function$;
 
 select private.lock_doors();

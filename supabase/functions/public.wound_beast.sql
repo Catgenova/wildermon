@@ -4,7 +4,7 @@ CREATE OR REPLACE FUNCTION public.wound_beast(p_world uuid, p_id integer, p_dmg 
  RETURNS boolean
  LANGUAGE plpgsql
 AS $function$
-declare c creature; d species_def; cx double precision; cy double precision; v_taken double precision;
+declare v_dealer uuid; c creature; d species_def; cx double precision; cy double precision; v_taken double precision;
         v_len double precision; v_size double precision; v_killer creature; v_fx double precision; v_fy double precision;
 begin
   perform creature_settle(p_world, p_id);
@@ -35,6 +35,15 @@ begin
       settled_at = now()
     where world_id = p_world and id = p_id;
 
+  -- A lair's boss: what each body dealt it, its companion's blows counted to its keeper, and no more than it had left.
+  if c.boss and c.lair is not null then
+    v_dealer := coalesce(p_teller, (select k.keeper from creature k where k.world_id = p_world and k.id = p_by and k.mode = 'active'));
+    if v_dealer is not null then
+      insert into lair_blow (world_id, lair, uid, dealt) values (p_world, c.lair, v_dealer, greatest(0, least(v_taken, c.health)))
+        on conflict (world_id, lair, uid) do update set dealt = lair_blow.dealt + excluded.dealt;
+    end if;
+  end if;
+
   if c.health - v_taken > 0 then
     -- A wild thing that stands and fights turns on a tame one that hurt it (`beast_threat`).
     if c.mode = 'wild' and not coalesce(d.timid, false) and p_by is not null then
@@ -59,6 +68,8 @@ begin
   update creature set enemy = null where world_id = p_world and enemy = p_id;
   perform drop_on_ground(p_world, floor(cx)::int, floor(cy)::int, 'corpse',
     (15 + random() * 35) * v_size, d.name);
+  -- One of a lair's: its boss clears it, the last of its garrison sends the boss out (`lair_lost`).
+  if c.lair is not null then perform lair_lost(p_world, c); end if;
 
   -- A hunter marks where its kill went down and comes back for it.
   if p_by is not null then
@@ -85,7 +96,7 @@ begin
    * health, which is the one number that says how big a thing was: a goblin
    * in thirty-five carries a scrap, a dragon in two carries a dragon's.
    */
-  if p_teller is not null and d.monster and random() < map_chance_beast(d.health) then
+  if p_teller is not null and d.monster and not c.boss and random() < map_chance_beast(d.health) then
     perform bury_treasure(p_world, p_teller, map_ql_beast(d.health), cx, cy);
   end if;
 
@@ -93,7 +104,7 @@ begin
     perform journal_note(p_world, p_teller, 'slew:' || c.species);
     if c.rare is not null then perform journal_note(p_world, p_teller, 'slewrare'); end if;
     if d.monster then
-      perform tell(p_world, p_teller, 'Killed: ' || lower(d.name)
+      perform tell(p_world, p_teller, 'Killed: ' || lower(case when c.boss then c.name else d.name end)
         || '. Butcher it before it rots.', 'fight');
     else
       perform tell(p_world, p_teller, 'Killed: wild ' || lower(d.name)

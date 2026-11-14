@@ -41,7 +41,8 @@ import { Game } from '../../src/game/game';
 import type { IslandGround } from '../../src/contract/ground';
 import { ACTION_BY_ID, type ActionDef } from '../../src/game/actions';
 import { FURNITURE_BY_ID, furnitureAnchor } from '../../src/game/furniture';
-import { ITEM_DEFS } from '../../src/game/items';
+import { ITEM_DEFS, itemDef } from '../../src/game/items';
+import { LAIR_KINDS } from '../../src/game/lairs';
 import { RECIPE_BY_ID } from '../../src/game/recipes';
 import {
   bloomStage, bonsaiGrowth, CLEAR_BLOOMS, CLIP_HEDGE, FIGURE_SAID, GARDEN_DONE, GARDEN_JOBS, GARDEN_SAID, gardenSaid, growsFromSet, hedgeGrowth, MOUNT_SAID,
@@ -384,6 +385,12 @@ begin
   perform act_perform(w, u, '${TAKE_SHOWN}', ${T('v_plq')});
   insert into said select 'PLQ:back', ${count('test_trophy_ear')} || '|' || coalesce((select maker from item where world_id = w and holder_uid = u and def = 'test_trophy_ear'), '-')
     || '|' || coalesce(jsonb_array_length(pl.garden->'held'), 0) from placed pl where pl.id = v_plq;
+  -- A lair's trophy, out of its hoard, carries the name of the body whose share it is.
+  insert into lair (world_id, id, kind, x, y) values (w, 9900, (select k.id from lair_kinds() k order by k.id limit 1), 30, 30);
+  perform lair_hoard_give(w, u, 9900, hoard_roll((select l.kind from lair l where l.world_id = w and l.id = 9900), 1, 1), 50);
+  insert into said select 'LAIR:trophy', it.def || '|' || coalesce(it.maker, '-') || '|' || (select py.name from player py where py.world_id = w and py.uid = u)
+    || '|' || (select d.trophy::text from item_def d where d.id = it.def)
+    from item it where it.world_id = w and it.holder_uid = u and it.def = (select k.trophy from lair_kinds() k join lair l on l.kind = k.id where l.world_id = w and l.id = 9900);
 
   -- 10. A plant stand: potted plants only, three of them.
   ${at(9, 7)}
@@ -488,6 +495,12 @@ check('the trophy hangs with its slayer\'s name, out of the pack', part('PLQ:hel
 is('PLQ:full', gardenSaid('full', 'trophy plaque'), 'one trophy to a plaque');
 is('PLQ:lift', GARDEN_SAID.showing, 'and a plaque with a trophy on it is not picked up');
 check('taken down, the trophy comes back with its slayer\'s name', said('PLQ:back') === '1|Hild|0', said('PLQ:back'));
+{
+  const [def, maker, name, flag] = said('LAIR:trophy').split('|');
+  check('a lair\'s trophy is a trophy on both sides, and comes out of the hoard with its slayer\'s name on it',
+    !!def && !!itemDef(def).trophy && flag === 'true' && maker === name, said('LAIR:trophy'));
+  check('every lair\'s trophy is one a trophy plaque holds', LAIR_KINDS.every((k) => !!itemDef(k.trophy).trophy), LAIR_KINDS.map((k) => k.trophy).join(','));
+}
 /* 10. */
 is('STD:none', GARDEN_SAID.noPot, 'a plant stand with no potted plant in the pack');
 is('STD:held', `${POTTED_FERN},${POTTED_PALM}`, 'a stand takes potted plants on its steps');

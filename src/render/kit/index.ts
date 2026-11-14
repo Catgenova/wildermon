@@ -16,6 +16,8 @@ import { CREATURE_CRATE } from './creature-crate';
 import { FIREWOOD_RACK } from './firewood';
 import { FOUNTAIN } from './fountain';
 import { GRAVE } from './grave';
+import { DRAGON_ROOST, GOBLIN_WARREN, OGRE_CAVE, ORC_CAMP } from './lairs';
+import { CHIEF_EAR, GREAT_DRAGON_SCALE, OGRE_KING_JAW, WARLORD_TUSK } from './trophies';
 import { LAMP_PILLAR, LAMP_POST } from './lamps';
 import { MAILBOX } from './mailbox';
 import { OVEN } from './oven';
@@ -126,4 +128,12 @@ export const KIT_PIECES: Readonly<Record<string, KitPiece>> = {
   // Ropemaking's pieces (`ropework.ts`).
   hammock: HAMMOCK,
   rope_walk: ROPE_WALK_PIECE,
+  goblin_warren: GOBLIN_WARREN,
+  orc_camp: ORC_CAMP,
+  ogre_cave: OGRE_CAVE,
+  dragon_roost: DRAGON_ROOST,
+  chief_ear: CHIEF_EAR,
+  warlord_tusk: WARLORD_TUSK,
+  ogre_king_jaw: OGRE_KING_JAW,
+  great_dragon_scale: GREAT_DRAGON_SCALE,
 };

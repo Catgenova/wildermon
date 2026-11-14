@@ -8,5 +8,6 @@ AS $function$
 declare v_size int; v_sx int; v_sy int;
 begin
   select w.size, w.spawn_x, w.spawn_y into v_size, v_sx, v_sy from world w where w.id = p_world;
-  return coalesce(safe_ring_on(v_size, v_sx, v_sy, p_x, p_y), false);
+  -- And round a cleared lair until it restocks (`lair_ring_on`).
+  return coalesce(safe_ring_on(v_size, v_sx, v_sy, p_x, p_y), false) or lair_ring_on(p_world, p_x, p_y);
 end $function$

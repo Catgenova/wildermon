@@ -765,6 +765,8 @@ export const kitHoles = (sx: number, sy: number, zoom: number, kind: string, vie
 /** Whether a kit piece has a live drawing that wants the wind, and whether it takes the night off itself. */
 export const kitWind = (kind: string): boolean => isKit(kind) && !!KIT_PIECES[kind].wind;
 export const kitGlows = (kind: string): boolean => isKit(kind) && !!KIT_PIECES[kind].holes;
+/** Whether a kit piece takes the night off itself only while it is lit (`KitPiece.holesLit`). */
+export const kitHolesLit = (kind: string): boolean => isKit(kind) && !!KIT_PIECES[kind].holesLit;
 
 /** What a kit piece covers and what it is clicked by, from its floor contact in pixels at zoom one: for a harness. */
 export function kitBoxes(kind: string, look: KitLook, view: KitView, zoom = 1): { bounds: Box; hit: Box } {

@@ -1,4 +1,5 @@
 import { Springs, type SpringSave } from './springs';
+import type { LairSeen } from './lairs';
 import { CHAR_START, DAMAGE_MAX, PLACED_REACH, PROSPECT_MARK_TIME, QL_BARE, QL_LOW, QL_SPAN, QL_TOP, wearPerUse, wornShare } from './limits';
 import { DEED_RADIUS, deedLevel, deedWorkersAt, MAX_DEED_LEVEL } from './deedsize';
 import { generateWorld } from '../world/generate';
@@ -2389,6 +2390,8 @@ export class Game {
    * where your friends are and no more.
    */
   folkAshore: Array<{ uid: string; name: string; online: boolean; x?: number; y?: number }> = [];
+  /** The monster lairs you have seen, wherever they are (`rpc_ground`'s `lairs`): pins on the map, "found" in the field guide. */
+  lairsSeen: LairSeen[] = [];
 
   /**
    * The neighbour whose settlement covers this tile, if one does.
@@ -9248,6 +9251,8 @@ export class Game {
     if (ground.folk !== undefined) this.folkAshore = ground.folk;
     // Your graves wherever they are, on the slow half, for the marks on your map.
     if (ground.graves !== undefined) this.markGraves(ground.graves);
+    // And the lairs you have seen, for their pins and the field guide (`lairs.ts`).
+    if (ground.lairs !== undefined) this.lairsSeen = ground.lairs;
     if (ground.deed !== undefined) {
       const d = ground.deed;
       const was = this.deed;

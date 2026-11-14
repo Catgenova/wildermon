@@ -21,9 +21,10 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Game } from '../../src/game/game';
 import {
-  attackOf, BLOW_SHARE, CREATURE_ATTACK_MUL, CREATURE_HEALTH_MUL, DEN_HEALTH, denClass, HEAL_BELOW, maxHealth, MONSTERS, REGEN_AFTER,
+  attackOf, BLOW_SHARE, CREATURE_ATTACK_MUL, CREATURE_HEALTH_MUL, DEN_HEALTH, denClass, HEAL_BELOW, maxHealth, MONSTER_KINDS, REGEN_AFTER,
   REGEN_KEPT, REGEN_WILD, SPAR_SLACK, SPECIES,
 } from '../../src/game/creatures';
+import { LAIR_KINDS } from '../../src/game/lairs';
 import { MAP_KILL_CAP, MAP_KILL_SCALE, mapChanceFromBeast, mapQlFromBeast } from '../../src/game/treasure';
 import { check, finish, psql } from './harness';
 
@@ -42,8 +43,8 @@ const wrong = Object.entries(WRITTEN).filter(([id, [h, a]]) => SPECIES[id].healt
 check('goblin, orc, ogre, dragon and four wildermon: health and blow ×3 and ×0.4 their rows',
   wrong.length === 0, Object.entries(WRITTEN).map(([id]) => `${id} ${SPECIES[id].health}/${SPECIES[id].attack}`).join(', '));
 check('the monsters: health 120, 285, 510, 2100; blow 5.6, 8.8, 13.6, 28',
-  MONSTERS.map(([id]) => `${SPECIES[id].health}/${SPECIES[id].attack}`).join(' ') === '120/5.6 285/8.8 510/13.6 2100/28',
-  MONSTERS.map(([id]) => `${id} ${SPECIES[id].health}/${SPECIES[id].attack}`).join(', '));
+  MONSTER_KINDS.map((id) => `${SPECIES[id].health}/${SPECIES[id].attack}`).join(' ') === '120/5.6 285/8.8 510/13.6 2100/28',
+  MONSTER_KINDS.map((id) => `${id} ${SPECIES[id].health}/${SPECIES[id].attack}`).join(', '));
 const kinds = Object.values(SPECIES);
 const weakest = kinds.reduce((a, b) => (b.attack < a.attack ? b : a));
 check('no kind does no damage: every blow over 0, kept to the hundredth',
@@ -63,6 +64,14 @@ const gob = plain('goblin');
 check('a plain goblin: health 120, blow 5.6, 6.72% of an unarmoured life a blow (was 16.8%)',
   maxHealth(gob, SPECIES.goblin) === 120 && near(attackOf(gob, SPECIES.goblin), 5.6) && near(attackOf(gob, SPECIES.goblin) * BLOW_SHARE, 0.0672),
   `${maxHealth(gob, SPECIES.goblin)} / ${attackOf(gob, SPECIES.goblin)}`);
+// A lair's boss (`lairs.ts`): its kind's multiples over its kind's figures, scaled once -- ×3 and ×0.4 its row, then
+// the boss's ×2 health (the ogre king's ×1.5 blow), not the boss's multiples over its row's unscaled figures.
+const bosses = LAIR_KINDS.map((k) => [k, maxHealth(Object.assign(plain(k.species), { boss: k.id }), SPECIES[k.species]),
+  attackOf(Object.assign(plain(k.species), { boss: k.id }), SPECIES[k.species])] as const);
+check('a lair\'s boss: its row\'s health ×3 and blow ×0.4, once, then the boss\'s own multiples',
+  bosses.every(([k, h, a]) => h === Math.round(WRITTEN[k.species][0] * 3 * k.bossHealth) && near(a, WRITTEN[k.species][1] * 0.4 * k.bossAttack))
+    && bosses.find(([k]) => k.id === 'ogre_cave')?.[1] === 1020 && near(bosses.find(([k]) => k.id === 'ogre_cave')?.[2] ?? 0, 20.4),
+  bosses.map(([k, h, a]) => `${k.id} ${h}/${a}`).join(', '));
 const life = 1;
 const blowsToKill = (id: string): number => Math.ceil(life / (SPECIES[id].attack * BLOW_SHARE));
 check('unarmoured blows to kill you: goblin 15 (was 6), orc 10 (was 4), ogre 7 (was 3), dragon 3 (was 2)',
@@ -76,10 +85,10 @@ const bedsMoved = kinds.filter((d) => !d.stages && denClass({ species: d.id, ski
 check('every kind that does not evolve sleeps in the bed it did: bands 75 and 120 (were 25 and 40)',
   bedsMoved.length === 0 && DEN_HEALTH[0] === 75 && DEN_HEALTH[1] === 120, bedsMoved.map((d) => d.id).join(', '));
 // A treasure map: the odds and the QL off the row's health, as before.
-const mapsMoved = MONSTERS.filter(([id]) => !near(mapChanceFromBeast(SPECIES[id].health), Math.min(MAP_KILL_CAP, WRITTEN[id][0] / MAP_KILL_SCALE)));
+const mapsMoved = MONSTER_KINDS.filter((id) => !near(mapChanceFromBeast(SPECIES[id].health), Math.min(MAP_KILL_CAP, WRITTEN[id][0] / MAP_KILL_SCALE)));
 check('a treasure map off a monster: odds as before, goblin 1 in 35, dragon 1 in 2', mapsMoved.length === 0
   && near(mapChanceFromBeast(SPECIES.goblin.health), 1 / 35) && near(mapChanceFromBeast(SPECIES.dragon.health), 0.5),
-  MONSTERS.map(([id]) => `${id} ${mapChanceFromBeast(SPECIES[id].health).toFixed(4)}`).join(', '));
+  MONSTER_KINDS.map((id) => `${id} ${mapChanceFromBeast(SPECIES[id].health).toFixed(4)}`).join(', '));
 check('and its QL as before: goblin 17 and dragon 99.5 at the middle of the roll',
   near(mapQlFromBeast(SPECIES.goblin.health, () => 0.5), 12 + 40 / 8) && near(mapQlFromBeast(SPECIES.dragon.health, () => 0.5), 12 + 700 / 8),
   `${mapQlFromBeast(SPECIES.goblin.health, () => 0.5)} / ${mapQlFromBeast(SPECIES.dragon.health, () => 0.5)}`);
@@ -219,8 +228,8 @@ const dens = ['rabba', 'roxxen', 'sparra', 'goblin', 'dragon'];
 check('the island beds every kind where the browser does', dens.every((id) => Number(said.get(`DEN|${id}`)) === denClass({ species: id, skills: {} })),
   dens.map((id) => `${id} ${said.get(`DEN|${id}`)}`).join(', '));
 check('a treasure map off a monster on the island: the odds as before',
-  MONSTERS.every(([id]) => near(Number(said.get(`MAP|${id}`)), Math.min(MAP_KILL_CAP, WRITTEN[id][0] / MAP_KILL_SCALE), 1e-5)),
-  MONSTERS.map(([id]) => `${id} ${said.get(`MAP|${id}`)}`).join(', '));
+  MONSTER_KINDS.every((id) => near(Number(said.get(`MAP|${id}`)), Math.min(MAP_KILL_CAP, WRITTEN[id][0] / MAP_KILL_SCALE), 1e-5)),
+  MONSTER_KINDS.map((id) => `${id} ${said.get(`MAP|${id}`)}`).join(', '));
 const ql = (said.get('MAPQL|goblin') ?? '').split('|').map(Number);
 check('and the QL as before, the roll held', ql.length === 2 && near(ql[0], ql[1], 1e-5), said.get('MAPQL|goblin'));
 

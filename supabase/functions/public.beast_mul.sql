@@ -18,6 +18,8 @@ AS $function$
        * case when p_channel in ('work', 'learn') then care_mul(c) else 1 end
        -- And its size form (`form_mul`).
        * case when c.form_size is null then 1 else form_mul(c, p_channel) end
+       -- And a lair's boss's (`lair_boss_mul`).
+       * case when not c.boss then 1 else lair_boss_mul(c, p_channel) end
        -- And a good meal's learning, while it lasts (`beast_fed`).
        * case when p_channel = 'learn' and c.fed_until > now() then 1 + coalesce(c.fed_bonus, 0) else 1 end
        -- And a Sworn Blade's Hamstring, for as long as it holds (`slow`).

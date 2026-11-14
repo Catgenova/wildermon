@@ -83,6 +83,7 @@ import { furnitureCentre, furnitureDef, hearthCapacity, type PlacedFurniture, fa
 import { UNSEEN, VISIBLE } from '../game/vision';
 import { darknessAt, DAWN, deedLevel, deedRadiusAt, DUSK, MAX_DEED_LEVEL } from '../game/game';
 import { boatSway, clothInWind, crewOrder, deviceOf, drawFurniture, drawFurnitureLive, driverOn, swayOnScreen, WHEELS, wheelBlur, wheelTrim, steeredByTiller, woodHex, furnitureHoles, helmSeat, reinsTo, rowedPiece, furnitureSpan, FURNITURE_HEIGHT, glowsAtNight, headingView, mossTrim, PIECE_STAGES, pieceView, planterTrim, roseTrim, vineTrim, VINE_VARIANTS, type Air, type Crew, type PieceView } from './furniture';
+import { kitHolesLit } from './kitpieces';
 import { roseStage } from '../game/roses';
 import { isTrellis, vineStage } from '../game/vineyard';
 import { fieldRate } from '../game/growth';
@@ -7186,7 +7187,8 @@ export class Renderer {
             }
           }
           // Not indoors: a roof or a wall stands in front of it there, and the night cut away at its stars would be cut out of that.
-          if (glowsAtNight(piece.kind) && !this.game.buildings.buildingAt(Math.floor(piece.x), Math.floor(piece.y))) {
+          // And a fire that is out (`kitHolesLit`) gives none.
+          if (glowsAtNight(piece.kind) && (!kitHolesLit(piece.kind) || !!piece.lit) && !this.game.buildings.buildingAt(Math.floor(piece.x), Math.floor(piece.y))) {
             /*
              * After dark, cut out of a copy of their own box at the screen's
              * pixels as the night goes down, as a runestone's runes are

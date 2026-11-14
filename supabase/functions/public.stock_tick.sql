@@ -69,6 +69,20 @@ begin
     v_put := v_put + 1;
   end loop;
 
+  -- And the lairs of every island it came round to (`lair_tick`), each on its own: a fault in one is noted and passed.
+  for i in 1 .. coalesce(v_worlds, 0) loop
+    begin
+      perform lair_tick(v_ids[i]);
+    exception
+      when lock_not_available or deadlock_detected or serialization_failure then null;
+      when others then
+        declare v_err text; v_state text; v_where text;
+        begin
+          get stacked diagnostics v_err = message_text, v_state = returned_sqlstate, v_where = pg_exception_context;
+          perform fault_note(v_ids[i], null, 'lairs', null, v_err, v_state, v_where);
+        end;
+    end;
+  end loop;
   perform pg_advisory_unlock(hashtext('stock_tick')::bigint);
   return jsonb_build_object('worlds', v_worlds, 'blocks', v_put);
 end $function$
