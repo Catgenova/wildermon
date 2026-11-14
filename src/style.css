@@ -3754,6 +3754,11 @@ body.dragging.drag-no, body.dragging.drag-no * { cursor: no-drop !important; }
   top: -6px;
   right: -6px;
   z-index: 1;
+  pointer-events: none;
+}
+
+/* Its look is Classic's own; Runecut's is the interior kit's count (`.rc-badge`). */
+:where(:root[data-ui='classic']) .log-count {
   min-width: 13px;
   padding: 0 3px;
   border-radius: 7px;
@@ -3766,7 +3771,6 @@ body.dragging.drag-no, body.dragging.drag-no * { cursor: no-drop !important; }
   text-align: center;
   text-transform: none;
   font-variant-numeric: tabular-nums;
-  pointer-events: none;
 }
 
 /* In the event log the tabs wrap, and the find box drops to a row of its own, rather than either running off the side. */
@@ -7301,10 +7305,8 @@ body.dragging.drag-no, body.dragging.drag-no * { cursor: no-drop !important; }
 
 /* Out in the gap between tabs, clear of the writing on either side. */
 [data-ui='runecut'] .log-count {
-  top: 0;
-  right: -7px;
-  background: var(--rc-rune-deep, var(--ui-accent));
-  color: var(--rc-stone);
+  top: -1px;
+  right: -8px;
 }
 
 [data-ui='runecut'] .log-tabs .log-search {

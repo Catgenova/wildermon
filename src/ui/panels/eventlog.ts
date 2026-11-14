@@ -192,7 +192,7 @@ export class EventLogPanel {
       el.textContent = t.label;
       if (n) {
         const count = document.createElement('span');
-        count.className = 'log-count';
+        count.className = 'log-count rc-badge';
         count.textContent = n > 99 ? '99+' : String(n);
         el.append(count);
       }
