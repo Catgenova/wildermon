@@ -90,13 +90,13 @@ const FISTS: Record<string, Euler> = {
 const ARMS_UP: Record<string, Euler> = {
   ...FISTS,
   clavicle_l: [0, 0, 10], clavicle_r: [0, 0, -10],
-  upperarm_l: [-6, -90, 135], upperarm_r: [-6, 90, -135], lowerarm_l: [14, 0, 0], lowerarm_r: [14, 0, 0], hand_l: [0, -20, 0], hand_r: [0, 20, 0],
+  upperarm_l: [-6, -90, 122], upperarm_r: [-6, 90, -122], lowerarm_l: [14, 0, 0], lowerarm_r: [14, 0, 0], hand_l: [0, -20, 0], hand_r: [0, 20, 0],
   spine_02: [-3, 0, 0], spine_03: [-4, 0, 0], neck_01: [-6, 0, 0], head: [-8, 0, 0],
 };
 /** Pumped: the elbows bent, the fists brought down beside the head. */
 const PUMPED: Record<string, Euler> = {
   ...ARMS_UP,
-  upperarm_l: [-6, -90, 100], upperarm_r: [-6, 90, -100], lowerarm_l: [95, 0, 0], lowerarm_r: [95, 0, 0],
+  upperarm_l: [-6, -90, 88], upperarm_r: [-6, 90, -88], lowerarm_l: [72, 0, 0], lowerarm_r: [72, 0, 0],
   head: [-4, 0, 0],
 };
 /** The dip before: the knees bent, the arms back. */
