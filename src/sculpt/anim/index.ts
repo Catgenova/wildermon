@@ -35,6 +35,7 @@ import { FISH, FISH_LEFT } from './clips/fish';
 import { NET, NET_LEFT } from './clips/net';
 import { TEND_CLIPS, TEND_LEFT } from './clips/tend';
 import { LIFE, LIFE_LEFT, LIFE_SETTLE } from './clips/life';
+import { REACH_CLIPS, REACH_SETTLE } from './clips/reach';
 import { EMOTES2, emote2Clip } from './clips/emotes2';
 import { gettingAbout, gettingDown } from './down';
 import { ACTION_BY_ID } from '../../game/actions';
@@ -72,6 +73,8 @@ export const CLIPS: Record<string, Clip> = {
   ...LIFE,
   // the handwork (./clips/handwork.ts): sewing, brushing a wall, a floor and the work in hand, laying up a rope; each mirrored left-handed
   ...Object.fromEntries([SEW, BRUSH_WALL, BRUSH_FLOOR, BRUSH_ITEM, BRUSH_CLOTH, ROPE].flatMap((c) => [[c.name, c], [`${c.name}-left`, mirrorClip(c, `${c.name}-left`)]])),
+  // reaching up to pick, reading what is held, the lanterns (./clips/reach.ts); each mirrored left-handed
+  ...Object.fromEntries(REACH_CLIPS.flatMap((c) => [[c.name, c], [`${c.name}-left`, mirrorClip(c, `${c.name}-left`)]])),
   // the bow, the cheer, the point, the clap and sat on the ground (`./clips/emotes2.ts`)
   ...EMOTES2,
 };
@@ -156,6 +159,8 @@ const LEFT_OF: Readonly<Record<string, string>> = {
   ...TEND_LEFT,
   ...LIFE_LEFT,
   ...Object.fromEntries(['sew', 'brush-wall', 'brush-floor', 'brush-item', 'brush-cloth', 'rope'].map((n) => [n, `${n}-left`])),
+  // reaching up to pick, reading, the lanterns (./clips/reach.ts)
+  ...Object.fromEntries(REACH_CLIPS.map((c) => [c.name, `${c.name}-left`])),
 };
 /** Whether work is done left-handed from where it is seen: as the flat figure (facings three and seven). */
 const lefty = (facing: number): boolean => { const f = ((Math.round(facing) % 8) + 8) % 8; return f === 3 || f === 7; };
@@ -224,6 +229,8 @@ const SETTLE: Readonly<Record<string, number>> = {
   ...LIFE_SETTLE,
   // the handwork's knelt scrub (./clips/handwork.ts)
   'brush-floor': 0.55, 'brush-floor-left': 0.55,
+  // the crouch at a skep (./clips/reach.ts)
+  ...REACH_SETTLE,
 };
 /**
  * The clips played in the water (`./clips/swim.ts`), and seconds a fade between them takes: from the stroke to treading

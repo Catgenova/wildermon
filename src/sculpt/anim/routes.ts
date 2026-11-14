@@ -101,6 +101,14 @@ export const CLIP_OF_JOB: Readonly<Record<string, string>> = Object.fromEntries(
   ...['paint_floor', 'scrub_floor_paint', 'scrub_moss'].map((job) => [job, 'brush-floor']),
   ...['glaze_item', 'restore_relic'].map((job) => [job, 'brush-item']),
   ['scrub_dye', 'brush-cloth'],
+  // reaching up to pick, reading what is held, the lanterns (./clips/reach.ts): fruit and a sprout off a tree overhead,
+  // grapes off a trellis at the head, a comb out of a skep; a book, a rune tablet, a written sheet, a map; a lantern
+  // hung, taken down, given a candle, lit and put out overhead
+  ...Object.entries({
+    pick_fruit: 'pick-high', pick_sprout: 'pick-high', pick_grapes: 'pick-grapes', take_honey: 'take-honey',
+    study_book: 'read-book', read_rune_tablet: 'read-tablet', read_recipe: 'read-sheet', read_formula: 'read-sheet', study_map: 'read-map',
+    fit_lamp: 'lamp-fit', take_lamp: 'lamp-take', candle_lamp: 'lamp-candle', light_lamp: 'lamp-light', douse_lamp: 'lamp-douse',
+  }),
 ]);
 /** Whether a job is a recipe made with no tool and not at a campfire (cooking there is done crouched at the fire). */
 const handsRecipe = (job: string): boolean => {
