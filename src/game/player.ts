@@ -3,6 +3,7 @@ import type { Wound } from './wounds';
 import type { PathId } from './meditation';
 import type { PatronId } from './patronlist';
 import type { BeltPin } from './belt';
+import type { Fell } from './fell';
 import { emptyNutrition, type Nutrient } from './nutrition';
 import { BELT_MAX } from './belt';
 import { UNITS_PER_TILE } from '../render/iso';
@@ -192,6 +193,12 @@ export class Player {
   hurtAt?: number;
   hurtWhere?: string;
   hurtBy?: number;
+  /** Whether that blow was a heavy one (`player.hurt_heavy`), drawn as a stumble back (`FigurePose.heavy`). */
+  hurtHeavy?: boolean;
+  /** Where the island says you fell (`player.fell`, `./fell.ts`): drawn lying there while you are on the spawn (`Game.lying`). */
+  fell?: Fell | null;
+  /** When you fell, on the clock the frames are drawn on (seconds), so the fall is drawn from where it has got to. */
+  fellAt = 0;
   /** Last movement direction in world space; the renderer turns it into a screen facing. */
   dirX = 1;
   dirY = 0;

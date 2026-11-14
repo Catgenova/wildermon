@@ -87,6 +87,8 @@ import { greenNow, mossyPiece } from './greening';
 import { WATER_PLANT_BY_ID, type WaterPlant, type WaterPlantKind } from '../world/waterplants';
 import { liveSettings, type Settings } from './settings';
 import { considerSays } from './consider';
+import { onLadder } from './ladderclimb';
+import { lyingAt, type Fell } from './fell';
 import { ARMOUR_VS, armsRefusal, blockChance, BLOCKED_SAID, WOUND_SAID, SHIELD_WEAR, BURN_WEAR, CROWD_BLOCK, DODGE_GAIN, dodgeChance, DRAW_WALK, FIGHT_QUIET, VENOM_DRAIN, VENOM_SECS, skillLine, type FightRecord, FIGHT_BACK_STILL, FIGHT_STANCE_NAMES, FLANK_HIT, legPace, FIGHT_TRIES, fightBase, fightWind, armPace, armourSwing, overburdenSwing, swingKgOf, swingBase, swingSeconds, SWING_FLOOR, tiredPace, FOLLOW_RANGE, inFightReach, isFightJob, nextStance, stanceSays, stanceTaken, TARGET_RANGE } from './fight';
 import { Skills, SKILL_BY_ID, SKILL_DEFS, isQuiet } from './skills';
 import { jewelGain } from './gems';
@@ -2326,6 +2328,11 @@ export class Game {
     // From a tile of the same deck, as it was; from one of its ends, onto it; from anywhere else, in under it.
     if (b && this.bridgeAt(x0, y0) === b) return was;
     return !(b && this.onBridge(b, x0, y0));
+  }
+
+  /** Where your body is drawn lying, while it lies where it fell (`./fell.ts` lyingAt): its fall said, the spawn under it. */
+  lying(): Fell | null {
+    return lyingAt(this.player.fell, this.player, this.spawn);
   }
 
   /** Height of the player's feet, storeys included: in a building on piers, from its deck. */
@@ -4664,6 +4671,9 @@ export class Game {
       const [fx, fy] = [p.tileX, p.tileY];
       // A deck on piers is walked dry and level, whatever is under it (`piers.ts`); up and down a spiral staircase on its tile (`liftRule`).
       moved = p.update(dt, this.world, rule, this.buildings.pierTiles.size || this.foundations.size ? this.onFloor : undefined, lift);
+      // On a ladder, drawn as far up its storey as the climb has got (`./ladderclimb.ts`), not eased up it at once.
+      const ladder = this.buildings.list.size ? onLadder(this.buildings, p.x, p.y, p.level) : null;
+      if (ladder) p.visualLevel = p.level - 1 + ladder.u;
       if (this.bridges.size && (fx !== p.tileX || fy !== p.tileY)) this.underDeck = this.walksUnder(fx, fy, p.tileX, p.tileY);
     }
     this.local.stepped = moved;

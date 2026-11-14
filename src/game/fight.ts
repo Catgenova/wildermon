@@ -476,6 +476,16 @@ export const WOUND_SAID = '. Wound: ';
 export function flinchAt(at: number | undefined, now: number): number | undefined {
   return phaseOf(at, now, FLINCH_SECS);
 }
+/** Seconds a body a heavy blow (`HEAVY_HIT`) lands on is drawn stumbling back (`src/sculpt/anim/clips/stumble.ts`) in place of the flinch. */
+export const STUMBLE_SECS = 1.1;
+/** How far through a heavy blow's stumble stamped at `at` on the drawing clock, nought to one, or undefined once over or before one. */
+export function stumbleAt(at: number | undefined, now: number): number | undefined {
+  return phaseOf(at, now, STUMBLE_SECS);
+}
+/** What the fight log says of a heavy blow that lands, after the creature's name (`hunt_settle`, `Creatures` in `./creatures.ts`). */
+export const HEAVY_LANDS = "'s heavy blow lands";
+/** Whether a fight line says a heavy blow landed (`HEAVY_LANDS`, before `WOUND_SAID`). */
+export const heavyOf = (text: string): boolean => { const at = text.indexOf(WOUND_SAID); return at > 0 && text.slice(0, at).includes(HEAVY_LANDS); };
 /**
  * Whether a fight line says a blow landed (`WOUND_SAID`), and where (a `HIT_LOCATIONS` slot, off the wound's
  * "to the <part>"): undefined for any other line, null for one landed somewhere not named.

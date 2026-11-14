@@ -12,7 +12,12 @@ import { PLAN_AREA_MOST, PLAN_UNDO_SECONDS } from '../../game/planarea';
 import { UPDATE_CHECK_MS } from '../update';
 import { JOURNAL_TABS } from './journaltabs';
 import { RESPAWN_ARM_MS } from '../respawn';
-import { BLOCK_SECS, FLINCH_LIT, FLINCH_SECS } from '../../game/fight';
+import { BLOCK_SECS, FLINCH_LIT, FLINCH_SECS, STUMBLE_SECS } from '../../game/fight';
+// ---- spellcasting (What's new 593) ----
+import { ALL_SPELL_IDS, spellInfo } from '../../render/spells/info';
+import { RELEASE_MOTES, RELEASE_SECS } from '../../render/fx/cast';
+import { FALL_SECS } from '../../game/fell';
+import { CLIMB_RUN, RUNG } from '../../game/ladderclimb';
 import { MAP_LEGEND, SETTLEMENT_BORDER_PX, MAP_ZOOM_MIN } from './minimap';
 import { FAST_DPR, LOW_POWER_FPS, SETTING_DEFAULTS } from '../../game/settings';
 import { BLOSSOM } from '../../audio/music/tracks/blossom';
@@ -4478,6 +4483,42 @@ export const NEWS: News[] = [
         + `Twine snare: holds up to taming ${TRAPS.twine_snare.holds}, used up by its first catch.`,
       `Changed: ringing a bell needs a bell rope; heard within ${BELL_HEARD_BASE} tiles + ${BELL_HEARD_PER_QL} per QL of the rope (${bellHeard(100)} at QL 100) (was: the whole settlement).`,
     ],
+  },
+  {
+    n: 595,
+    day: '2026-11-14',
+    lines: () => [
+      `New: knocked out at 0 health: fall to the ground, ${FALL_SECS} s; lying where you fell until you choose where to wake or step off the spawn; getting up on waking. Camera on where you fell. Other players see it.`,
+      `New: climbing a ladder: hands and feet on the rungs, ${CLIMB_RUN / RUNG} rungs a step, facing the ladder, up and down. Other players see it.`,
+      `New: heavy blow landing (×${HEAVY_HIT}): stumble back a step, ${STUMBLE_SECS} s (was: flinch, ${FLINCH_SECS} s). Other players see it.`,
+      'Animations Off: lying, and on a ladder, held in one pose.',
+    ],
+  },
+  {
+    n: 594,
+    day: '2026-11-14',
+    lines: () => {
+      const jobs = (...clips: string[]): number => [...ACTION_BY_ID.keys()].filter((id) => clips.includes(clipOfJob(id) ?? '')).length;
+      return [
+        `New: lifting and setting down animated on the sculpted body: ${jobs('lift', 'set-down')} jobs (furniture, crates, posts, water motes), squat lift, load at the chest; smelter, kiln and anvil: ${jobs('lift-heavy', 'set-down-heavy')} jobs, deeper squat, slower, load at the belly (was: a placeholder gesture).`,
+        `New: taking apart animated: hammer knocked in and levered back, ${jobs('pry')} jobs (walls, columns, storeys, bridges, aqueducts); floors squatted: ${jobs('pry-low')}; paint scraped off with a trowel: ${jobs('scrape')}; a piece turned, grip and twist: ${jobs('turn')} (was: a placeholder gesture).`,
+        `New: marking out, no plan and taking off the plan animated: ${jobs('mark', 'pull-stake')} jobs, a point or a stake pulled up. Bridges and aqueducts: ${jobs('work-out')} jobs, mallet and chisel leant out over the span (was: a placeholder gesture).`,
+      ];
+    },
+  },
+  {
+    n: 593,
+    day: '2026-11-14',
+    lines: () => {
+      const n: Record<string, number> = {};
+      for (const id of ALL_SPELL_IDS) { const k = spellInfo(id)?.kind ?? ''; n[k] = (n[k] ?? 0) + 1; }
+      return [
+        `New: spell casting animated on the sculpted body, charge then release on the spell's release (was: a placeholder gesture): bolt ${n.bolt} spells; curse ${n.curse}; on yourself ${n.buff}; on another ${n.ally}; all around ${n.nova}; on the ground ${n.ground}; companion command ${n.command}; prayer ${n.pray}; throw ${n.throw}, weapon in hand.`,
+        `New: blow ${n.strike}, thrust ${n.thrust} and shot ${n.shot} spells: the weapon's fight animation, weapon in hand, the blow or loose on the release.`,
+        `New: spell effects leave from the sculpted body's casting hand. Release flare at the hand: ${RELEASE_MOTES} motes, ${RELEASE_SECS * 1000} ms, in the spell's colours.`,
+        'New: casting while walking: arms and head cast over the walk. Facing left on screen: cast with the left hand.',
+      ];
+    },
   },
   {
     n: 592,

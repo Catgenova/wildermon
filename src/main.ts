@@ -44,6 +44,7 @@ import { warmMasonry } from './render/masonry';
 import { warmMeadow } from './render/meadow';
 import { Renderer, skyWash, sunAt, type Pick } from './render/renderer';
 import { FIGURE_TOP } from './render/figure';
+import { WALL_HEIGHT } from './game/building';
 import { Sound } from './audio/sound';
 import { Music } from './audio/music/music';
 import { tracksFor } from './audio/music/playlist';
@@ -658,7 +659,10 @@ const loop = new GameLoop(
 
     // The camera keeps to you unless it has been dragged off, or told not to.
     if (game.settings.follow && camera.follow) {
-      camera.focus(player.x, player.y, Math.max(-4, game.playerHeight()) + camera.bodyLift(FIGURE_TOP), dt);
+      // (lain where you fell, on where you fell: `src/game/fell.ts`)
+      const fell = game.lying();
+      if (fell) camera.focus(fell.x, fell.y, game.world.heightAt(fell.x, fell.y) + fell.level * WALL_HEIGHT + camera.bodyLift(FIGURE_TOP), dt);
+      else camera.focus(player.x, player.y, Math.max(-4, game.playerHeight()) + camera.bodyLift(FIGURE_TOP), dt);
     }
 
     sound.step();

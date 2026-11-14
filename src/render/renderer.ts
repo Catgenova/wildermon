@@ -48,7 +48,8 @@ import { drawWorkPost, drawWorkPostLive, drawWorkPostNight, workPostBounds, work
 import { isRuneLantern } from '../game/runelantern';
 import { isRuneGate } from '../game/runegate';
 import { HALF_H, HALF_W, HEIGHT_SCALE, UNITS_PER_TILE } from './iso';
-import { beastReach, blockAt, flinchAt, HUNT_REACH, inFightReach, isFightJob, WIND_UP } from '../game/fight';
+import { ladderBody } from './ladderbody';
+import { beastReach, blockAt, flinchAt, stumbleAt, HUNT_REACH, inFightReach, isFightJob, WIND_UP } from '../game/fight';
 import { depthOf, type View } from './view';
 import type { RoofModel } from './roofshape';
 import { isGlasshouse } from '../game/glasshouse';
@@ -4310,7 +4311,9 @@ export class Renderer {
     const hemmed = zoom >= RUFFLE_FROM;
     // Close enough to be picking things up rather than looking at the country.
     const player = this.game.player;
-    const playerDepth = depthOf(V, player.tileX, player.tileY);
+    // (lain where you fell, you are drawn there: `../game/fell.ts`)
+    const fellAt = this.game.lying();
+    const playerDepth = fellAt ? depthOf(V, Math.floor(fellAt.x), Math.floor(fellAt.y)) : depthOf(V, player.tileX, player.tileY);
     this.spiralSeen = null;
     // Everybody at the helm of a hull somebody else is steering, or aboard one, is drawn with her; see `takeAboard`.
     this.seated.clear();
@@ -4986,14 +4989,18 @@ export class Renderer {
               continue;
             }
             const flight = peer.level === 0 ? this.onFlight(px, py) : null;
+            // On a ladder, on it as far up as the climb has got (`ladderbody.ts`).
+            const lb = peer.down !== undefined ? null : ladderBody(this.game, px, py, peer.level);
             // Under a bridge's deck, at the ground's height or the water's, rather than on it (`bodyUnder`).
             const under = this.game.bridges.size > 0 && peer.level === 0
               && this.bodyUnder(`p${peer.id}`, Math.floor(px), Math.floor(py), [Math.floor(peer.fromX), Math.floor(peer.fromY)], peer.swimming);
             const onDeck = under ? null : this.peerDeck(px, py, peer.level);
-            const pe = this.take('peer', x, y, cam.worldToScreenX(px, py),
-              cam.worldToScreenY(px, py, flight ? flight.h : onDeck
-                ?? (this.game.deckBase(Math.floor(px), Math.floor(py), peer.level) ?? this.footOn(px, py, peer.level)) + peer.level * WALL_HEIGHT), null);
+            const pe = lb ? this.take('peer', x, y, cam.worldToScreenX(lb.x, lb.y), cam.worldToScreenY(lb.x, lb.y, lb.h), null)
+              : this.take('peer', x, y, cam.worldToScreenX(px, py),
+                cam.worldToScreenY(px, py, flight ? flight.h : onDeck
+                  ?? (this.game.deckBase(Math.floor(px), Math.floor(py), peer.level) ?? this.footOn(px, py, peer.level)) + peer.level * WALL_HEIGHT), null);
             pe.peer = peer;
+            if (lb) pe.ladder = lb;
             if (onDeck !== null) this.onBridgeDeck(pe, px, py);
             if (flight) pe.clip = flight.clip;
           }
@@ -5068,6 +5075,9 @@ export class Renderer {
         this.spiralLift = spiral;
         // On the head of a way down, in the hole on its tread.
         const flight = !spiral && piered === null && deck === null && player.level === 0 && !drivenBy && !up ? this.onFlight(player.x, player.y) : null;
+        // Lain where you fell, while you may still pick where to wake (`../game/fell.ts`); on a ladder, on it (`ladderbody.ts`).
+        const fell = this.game.lying();
+        const lb = !fell && !spiral && piered === null && deck === null && !drivenBy && !up ? ladderBody(this.game, player.x, player.y, player.level) : null;
         // Afloat in deep water, at the top of it: the sea's surface, or a pond's; on stepping stones, on their tops.
         const ph = piered !== null ? piered + player.visualLevel * WALL_HEIGHT
           : deck !== null ? deck : flight ? flight.h : this.footOn(player.x, player.y, player.level) + player.visualLevel * WALL_HEIGHT;
@@ -5080,7 +5090,10 @@ export class Renderer {
         // A rider sits where their mount stands, which is where they stand: a storey up too (`rideRule`).
         const seatBase = drivenBy ? this.pieceBase(drivenBy, vx, vy) : player.visualLevel > 0 ? this.footOn(vx, vy, player.level) + player.visualLevel * WALL_HEIGHT : world.heightAt(vx, vy);
         const sy = spiral ? cam.worldToScreenY(spiral.x, spiral.y, spiral.h) : drivenBy || up ? cam.worldToScreenY(vx, vy, seatBase) + 0.01 : cam.worldToScreenY(player.x, player.y, ph);
-        const pe = this.take('player', player.tileX, player.tileY, spiral ? cam.worldToScreenX(spiral.x, spiral.y) : cam.worldToScreenX(vx, vy), sy, null);
+        const pe = fell ? this.take('player', Math.floor(fell.x), Math.floor(fell.y), cam.worldToScreenX(fell.x, fell.y), cam.worldToScreenY(fell.x, fell.y, this.footOn(fell.x, fell.y, fell.level) + fell.level * WALL_HEIGHT), null)
+          : lb ? this.take('player', player.tileX, player.tileY, cam.worldToScreenX(lb.x, lb.y), cam.worldToScreenY(lb.x, lb.y, lb.h), null)
+            : this.take('player', player.tileX, player.tileY, spiral ? cam.worldToScreenX(spiral.x, spiral.y) : cam.worldToScreenX(vx, vy), sy, null);
+        if (lb) pe.ladder = lb;
         if (spiral) pe.key = spiral.key;
         this.spiralSeen = spiral ? { tx: player.tileX, ty: player.tileY, x: pe.sx, y: pe.sy, key: spiral.key } : null;
         pe.lift = this.driverSeat() * zoom;
@@ -6579,8 +6592,9 @@ export class Renderer {
    * how far through, where, and from where the creature that struck it stands, round from the body's front toward its
    * left, as the screen has the two; from ahead when nothing says what struck.
    */
-  private flinchOf(at: number | undefined, where: string | undefined, by: number | undefined, x: number, y: number, facing: number): FigurePose['flinch'] {
-    const t = flinchAt(at, performance.now() / 1000);
+  private flinchOf(at: number | undefined, where: string | undefined, by: number | undefined, x: number, y: number, facing: number, heavy = false): FigurePose['flinch'] {
+    // (a heavy blow's a stumble back, `STUMBLE_SECS` long: `FigurePose.heavy`)
+    const t = heavy ? stumbleAt(at, performance.now() / 1000) : flinchAt(at, performance.now() / 1000);
     if (t === undefined) return undefined;
     const c = by === undefined ? undefined : this.game.creatures.get(by);
     if (!c) return { t, where };
@@ -6831,7 +6845,8 @@ export class Renderer {
             // On a deck it is the hull that is going somewhere, not the feet.
             moving: player.moving && !ent.standing,
             gait: this.gaits.of('player', player.x, player.y, this.frameDt),
-            facing: ent.seatFacing ?? this.playerFacing,
+            // (on a ladder, faced to it: `ladderbody.ts`)
+            facing: ent.seatFacing ?? (ent.ladder?.climb !== undefined ? this.facingOnScreen(ent.ladder.dirX, ent.ladder.dirY, this.playerFacing) : this.playerFacing),
             swimming: player.swimming,
             working: this.game.action?.state === 'performing',
             // What at: meditating is done sat on the ground rather than at the bench (`FigurePose.job`).
@@ -6850,7 +6865,11 @@ export class Renderer {
             ...emoteNow(player.emote, player.emoteAt, performance.now() / 1000),
             cast: this.spells.poseOf(PLAYER_CASTS),
             block: blockAt(player.blockedAt, performance.now() / 1000),
-            flinch: this.flinchOf(player.hurtAt, player.hurtWhere, player.hurtBy, player.x, player.y, ent.seatFacing ?? this.playerFacing),
+            flinch: this.flinchOf(player.hurtAt, player.hurtWhere, player.hurtBy, player.x, player.y, ent.seatFacing ?? this.playerFacing, !!player.hurtHeavy),
+            // knocked down, on a ladder, a heavy blow (`../sculpt/anim/clips/down-ko.ts`, `ladder.ts`, `stumble.ts`)
+            ...(this.game.lying() ? { down: Math.max(0, performance.now() / 1000 - player.fellAt) } : {}),
+            ...(ent.ladder?.climb !== undefined ? { climb: { h: ent.ladder.climb } } : {}),
+            ...(player.hurtHeavy ? { heavy: true } : {}),
             veil: this.spells.veilOf(PLAYER_CASTS),
           }, this.seatedAt(ent, ex, ey, zoom))),
           undefined,
@@ -6875,7 +6894,7 @@ export class Renderer {
           const [hx, hy] = swayedAt(ent.sway, ex, ey);
           this.peerHits.push({ x: ent.x, y: ent.y, left: hx - 10 * zoom, top: hy - (FIGURE_TOP - 2) * zoom, w: 20 * zoom, h: FIGURE_TOP * zoom, peer: peer.uid });
         }
-        peer.facing = this.facingOnScreen(peer.dirX, peer.dirY, peer.facing);
+        peer.facing = ent.ladder?.climb !== undefined ? this.facingOnScreen(ent.ladder.dirX, ent.ladder.dirY, peer.facing) : this.facingOnScreen(peer.dirX, peer.dirY, peer.facing);
         this.clipTo(ctx, ent.clip);
         const peerBox: [number, number, number, number] = [ex - 34 * zoom, ey - (FIGURE_TOP + 14) * zoom, 68 * zoom, (FIGURE_TOP + 22) * zoom];
         this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ex, ey, (g, px, py) =>
@@ -6900,7 +6919,11 @@ export class Renderer {
             ...emoteNow(peer.emote, peer.emoteAt, performance.now() / 1000),
             cast: this.spells.poseOf({ kind: 'peer', id: peer.id }),
             block: blockAt(peer.blockedAt, performance.now() / 1000),
-            flinch: this.flinchOf(peer.hurtAt, peer.hurtWhere, peer.hurtBy, peer.x, peer.y, ent.seatFacing ?? peer.facing),
+            flinch: this.flinchOf(peer.hurtAt, peer.hurtWhere, peer.hurtBy, peer.x, peer.y, ent.seatFacing ?? peer.facing, !!peer.hurtHeavy),
+            // knocked down, on a ladder, a heavy blow (`../sculpt/anim/clips/down-ko.ts`, `ladder.ts`, `stumble.ts`)
+            ...(peer.down !== undefined ? { down: Math.max(0, performance.now() / 1000 - peer.down) } : {}),
+            ...(ent.ladder?.climb !== undefined ? { climb: { h: ent.ladder.climb } } : {}),
+            ...(peer.hurtHeavy ? { heavy: true } : {}),
             veil: this.spells.veilOf({ kind: 'peer', id: peer.id }),
           }, this.seatedAt(ent, ex, ey + (ent.lift ?? 0), zoom))),
           undefined,

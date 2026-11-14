@@ -1,4 +1,5 @@
 import type { PlacedAnvil } from '../game/anvil';
+import type { LadderBody } from './ladderbody';
 import type { Side, StairHand, Border } from '../game/building';
 import type { PlacedCampfire } from '../game/campfire';
 import type { Creature } from '../game/creatures';
@@ -77,6 +78,8 @@ export interface Entity {
    * over the top of its own driver.
    */
   lift?: number;
+  /** A body on a ladder: where it is drawn on it, how far up it its feet are and the way it faces (`./ladderbody.ts`). */
+  ladder?: LadderBody;
   /**
    * Where a body on a hull's deck is drawn, in pixels from where it sorts.
    * Everybody aboard sorts with the hull, a hair after it, so the deck is never
