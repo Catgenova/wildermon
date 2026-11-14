@@ -1179,6 +1179,12 @@
     "why": "Asked for: the blocking body plays a short block, and a body a blow lands on flinches, seen by the one struck and by every other player nearby. A blow blocked sets player.blocked_at to its instant with BLOCKED_SAID said and leaves hurt_at; a blow that lands, with a shield on or none, leaves blocked_at and sets hurt_at and hurt_where (a hit location, the one its line names: landedOf); a dodge or a ward taking it whole marks neither; the beat says them to the one struck (rpc_settle) and the roster reads them off the row."
   },
   {
+    "file": "supabase/test/fell.ts",
+    "title": "A body lies where it fell; a heavy blow is marked",
+    "shard": 2,
+    "why": "Asked for: a body whose health reaches nought falls and lies there until it respawns or gets up, seen by its player and everybody nearby; a heavy blow drawn as a stumble back. A death writes player.fell (where, which storey, when) as the body wakes on the spawn, the beat says it and fellIn reads it, lyingAt draws it lain only on the spawn tile; a stay, a stone picked or a step off the spawn takes it off; a plain blow that lands leaves player.hurt_heavy false, an ogre's heavy blow sets it, its line read by heavyOf."
+  },
+  {
     "file": "supabase/test/reach.ts",
     "title": "A weapon reaches as far as its family",
     "shard": 2,

@@ -24,6 +24,7 @@ begin
   end if;
   if p_at = 'stay' then
     delete from private.fallen where world_id = p_world and uid = me;
+  update player set fell = null where world_id = p_world and uid = me and fell is not null;
     select * into p from player where world_id = p_world and uid = me;
     return jsonb_build_object('x', p.x, 'y', p.y, 'level', coalesce(p.level, 0));
   end if;
@@ -44,6 +45,7 @@ begin
   update player set x = v_x + 0.5, y = v_y + 0.5, level = 0, moved_at = now(), seen_at = now(), away = false
    where world_id = p_world and uid = me;
   delete from private.fallen where world_id = p_world and uid = me;
+  update player set fell = null where world_id = p_world and uid = me and fell is not null;
   perform tell(p_world, me, 'Respawned: ' || v_name || '.', 'event');
   if private.here(p_world, me) then
     perform private.send('own:' || p_world || ':' || me, 'moved',

@@ -314,7 +314,7 @@ begin
    * live value. Nothing else in here reads it after this point.
    */
   -- And when and where, for the body drawn struck (`player.hurt_at`, `player.hurt_where`).
-  update player set wounds = out_w, hurt_at = now(), hurt_where = part,
+  update player set wounds = out_w, hurt_at = now(), hurt_where = part, hurt_heavy = false,
       stats = jsonb_set(jsonb_set(stats, '{health}', to_jsonb(health)),
                         '{hurtSettled}', to_jsonb(now()))
     where world_id = p_world and uid = p_uid;

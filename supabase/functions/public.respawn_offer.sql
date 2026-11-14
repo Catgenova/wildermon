@@ -10,6 +10,7 @@ begin
   f := private.respawn_fall(p_world, p_uid);
   if f.uid is null then
     delete from private.fallen where world_id = p_world and uid = p_uid;
+    update player set fell = null where world_id = p_world and uid = p_uid and fell is not null;
     return null;
   end if;
   return jsonb_build_object('x', f.x, 'y', f.y, 'deeds', coalesce((

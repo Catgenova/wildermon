@@ -36,7 +36,8 @@ import { packFog, unpackFog } from './fogpack';
 import { chartedSquare } from '../game/cartography';
 import { trackedArrow } from '../game/tracking';
 import { cachedSpot } from '../game/winter';
-import { BLOCK_FRESH, BLOCK_SECS, BLOCKED_SAID, FLINCH_SECS, landedOf } from '../game/fight';
+import { BLOCK_FRESH, BLOCK_SECS, BLOCKED_SAID, FLINCH_SECS, heavyOf, landedOf } from '../game/fight';
+import { fellIn, type Fell } from '../game/fell';
 import type { Away } from '../game/away';
 import type { WatchFlag, WatchFlags } from '../game/watch';
 import { isBarred, type Kept, type KeptBody, type KeptReport } from '../game/keeper';
@@ -460,7 +461,7 @@ interface GroundAsk {
  * queues -- to every browser on the island: the square of the people on it in kilobytes, 265 kB a read with 150
  * awake against 48 kB of this.
  */
-const PEOPLE_COLUMNS = 'world_id,uid,name,x,y,level,look,act,act_ends,act_tool,blocked_at,hurt_at,hurt_where';
+const PEOPLE_COLUMNS = 'world_id,uid,name,x,y,level,look,act,act_ends,act_tool,blocked_at,hurt_at,hurt_where,hurt_heavy,fell';
 
 const PACK_COLUMNS = 'id,def,ql,dmg,count,extra,holder,inside,gx,gy,charges,locked,issued,rare,dye,bless,'
   + 'maker,piece,creature,mark,enchant,engraving,lit,lit_at';
@@ -959,7 +960,9 @@ export interface IslandHooks {
    * A blow landed on us, as the island said it (`player.hurt_at`): where (`hurt_where`) and what struck (`stats.hurtBy`)
    * when said; `again` for the same blow said a second time (the beat after the line), which may say more of it.
    */
-  hurt?: (where: string | null, by: number | null, again: boolean) => void;
+  hurt?: (where: string | null, by: number | null, again: boolean, heavy: boolean) => void;
+  /** Where the island says we fell (`player.fell`, `../game/fell.ts`), on every beat; null when it says none. */
+  fell?: (fell: Fell | null) => void;
   /** What is in our hands changed. */
   pack: (items: ItemRow[]) => void;
   /**
@@ -2292,7 +2295,7 @@ export class Island {
       if (ticking && !error) this.ticked = this.ticked.slice(ticking.length);
       const said = (data ?? {}) as {
         settled?: number; act?: string | null; act_tool?: unknown; blocked_at?: string | null; ends?: string | null;
-        hurt_at?: string | null; hurt_where?: string | null;
+        hurt_at?: string | null; hurt_where?: string | null; hurt_heavy?: boolean | null; fell?: unknown;
         left?: number | null; secs?: number | null; total?: number | null; queued?: number;
         queue?: unknown; cap?: number | null;
         stats?: Record<string, number> | null; skills?: Record<string, number> | null;
@@ -2383,7 +2386,14 @@ export class Island {
       this.doingTool = said.act ? said.act_tool ?? null : null;
       if (typeof said.blocked_at === 'string') this.sawBlock(Date.parse(said.blocked_at));
       if (said.stats && typeof said.stats.hurtBy === 'number') this.hurtBy = said.stats.hurtBy;
-      if (typeof said.hurt_at === 'string') this.sawHurt(Date.parse(said.hurt_at), typeof said.hurt_where === 'string' ? said.hurt_where : null);
+      if (typeof said.hurt_at === 'string') this.sawHurt(Date.parse(said.hurt_at), typeof said.hurt_where === 'string' ? said.hurt_where : null, said.hurt_heavy === true);
+      // And where we fell, while the island says so (`../game/fell.ts`): carried on the body broadcast.
+      if (!error) {
+        const fell = fellIn(said.fell);
+        this.fellSaid = fell ? said.fell : null;
+        this.fellKey = fell ? `${fell.x},${fell.y},${fell.level},${fell.at}` : '';
+        this.hooks.fell?.(fell);
+      }
       this.hooks.doing?.({
         act: said.act ?? null,
         total: said.total ?? 0,
@@ -3048,7 +3058,7 @@ export class Island {
     if (e.kind === 'fight' && e.text === BLOCKED_SAID) this.sawBlock(whenSaid(e.at) ?? this.islandMs());
     // And one that landed, and where, off its line (`landedOf`), before the beat that says when and where.
     const landed = e.kind === 'fight' ? landedOf(e.text) : undefined;
-    if (landed !== undefined) this.sawHurt(whenSaid(e.at) ?? this.islandMs(), landed);
+    if (landed !== undefined) this.sawHurt(whenSaid(e.at) ?? this.islandMs(), landed, heavyOf(e.text));
     // And over the speaker's head, which only a line arriving live gets.
     if (e.kind === 'chat' && e.said_by) this.hooks.spoke?.(e.said_by, e.text);
     /*
@@ -3396,16 +3406,18 @@ export class Island {
    * Once a blow (one within `FLINCH_SECS` of the last is the same one heard again, which may say where); drawn here
    * (`hooks.hurt`) while it is fresh, and carried on the body broadcast with where and what struck (`hurtBy`).
    */
-  private sawHurt(ms: number, where: string | null): void {
+  private sawHurt(ms: number, where: string | null, heavy = false): void {
     if (!Number.isFinite(ms)) return;
     const again = ms < this.hurtMs + FLINCH_SECS * 1000;
-    if (again && (where === null || this.hurtWhere !== null)) return;
+    // (heard again, it may say more: where, or that it was a heavy one)
+    if (again && (where === null || this.hurtWhere !== null) && (!heavy || this.hurtHeavy)) return;
     if (!again) {
       this.hurtMs = ms;
       this.hurtSaid = new Date(ms).toISOString();
     }
     this.hurtWhere = where ?? (again ? this.hurtWhere : null);
-    if ((this.islandMs() - this.hurtMs) / 1000 < BLOCK_FRESH) this.hooks.hurt?.(this.hurtWhere, this.hurtBy, again);
+    this.hurtHeavy = heavy || (again && this.hurtHeavy);
+    if ((this.islandMs() - this.hurtMs) / 1000 < BLOCK_FRESH) this.hooks.hurt?.(this.hurtWhere, this.hurtBy, again, this.hurtHeavy);
   }
 
   async refreshPeople(): Promise<void> {
@@ -3492,7 +3504,7 @@ export class Island {
       if (stairs && `${Math.floor(x)},${Math.floor(y)},${level}` !== this.lastTile) return true;
     }
     if (!this.bodies || now - this.lastBody < BODY_EVERY) return false;
-    return !this.lastShown || `${said}|${this.doing ?? ''}|${JSON.stringify(this.doingTool)}|${this.blockedSaid ?? ''}|${this.hurtSaid ?? ''}|${this.hurtWhere ?? ''}` !== this.lastShownAt;
+    return !this.lastShown || `${said}|${this.doing ?? ''}|${JSON.stringify(this.doingTool)}|${this.blockedSaid ?? ''}|${this.hurtSaid ?? ''}|${this.hurtWhere ?? ''}|${this.hurtHeavy}|${this.fellKey}` !== this.lastShownAt;
   }
 
   /**
@@ -3545,7 +3557,7 @@ export class Island {
       this.wornWas = wearing;
       this.wornSaid = wearing ? JSON.stringify(wearing) : '';
     }
-    const at = `${said}|${this.doing ?? ''}|${JSON.stringify(this.doingTool)}|${this.blockedSaid ?? ''}|${this.hurtSaid ?? ''}|${this.hurtWhere ?? ''}`;
+    const at = `${said}|${this.doing ?? ''}|${JSON.stringify(this.doingTool)}|${this.blockedSaid ?? ''}|${this.hurtSaid ?? ''}|${this.hurtWhere ?? ''}|${this.hurtHeavy}|${this.fellKey}`;
     const shown = `${at}|${this.wornSaid}`;
     if (shown !== this.lastShown && now - this.lastBody >= BODY_EVERY && this.bodies) {
       this.lastBody = now;
@@ -3554,7 +3566,7 @@ export class Island {
       void this.bodies.send({
         type: 'broadcast', event: 'body',
         payload: { uid: this.uid, name: this.me?.name ?? '', x, y, level, look: this.me?.look, act: this.doing, act_tool: this.doingTool, blocked_at: this.blockedSaid,
-          hurt_at: this.hurtSaid, hurt_where: this.hurtWhere, hurt_by: this.hurtBy, gear: wearing },
+          hurt_at: this.hurtSaid, hurt_where: this.hurtWhere, hurt_by: this.hurtBy, hurt_heavy: this.hurtHeavy, fell: this.fellSaid, gear: wearing },
       });
     }
 
@@ -5071,6 +5083,11 @@ export class Island {
   private hurtSaid: string | null = null;
   private hurtWhere: string | null = null;
   private hurtBy: number | null = null;
+  /** Whether the last blow that landed on us was a heavy one (`player.hurt_heavy`, or its line: `heavyOf`). */
+  private hurtHeavy = false;
+  /** Where the island says we fell (`player.fell`), as it said it, for the body broadcast; and a key of it, for whether it changed. */
+  private fellSaid: unknown = null;
+  private fellKey = '';
 
   async leave(): Promise<void> {
     if (this.beat) clearTimeout(this.beat);

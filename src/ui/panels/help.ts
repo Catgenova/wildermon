@@ -188,6 +188,9 @@ import { ORE_DENSITY, seamShare } from '../../world/ore';
 import { lairOf, REGIONS } from '../../world/regions';
 import { ISLAND_ELEMENT, LIFE_MOTES_EACH, MOTE_ELEMENTS, MOTES_LEAST, STATUE_MOTES, MOTES_MOST, MOTES_STEP, POULTICE_HEAL, SEASON_ELEMENT, SWIRL_DARK, SWIRL_LIGHT, SWIRL_SEASON, SWIRLS_A_DAY, WATER_MOTES_EACH } from '../../game/motes';
 import { RESPAWN_GAP, RESPAWN_SPARE, STAY_SAID } from '../../game/respawn';
+import { FALL_SECS } from '../../game/fell';
+import { CLIMB_RUN, RUNG } from '../../game/ladderclimb';
+import { STUMBLE_SECS } from '../../game/fight';
 import { LANDING_STAND, RUNESTONES, SAFE_RING, START_GAP, START_SPARE, STONE_SPAN, TELE_FAR, TELE_FAST, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_RANGE_STEP, TELE_REST_STEP, TELE_SLOW, telestoneRange, telestoneRest } from '../../game/runestones';
 import {
   BURYABLE, BUSH_DEFS, groundRoll, ROCK_VARIANTS, SLAB_VARIANTS, STEPS_BRICKS, STEPS_LEAST, STEPS_MOST, STEPS_PLANKS, STEPS_SLABS, STEPS_TWIST, TILE_DEFS, TileType,
@@ -1897,7 +1900,7 @@ export function helpText(): string {
     </ul>
     <h4>Stairs</h4>
     <ul>
-      <li>On an upper storey, plan a <b>staircase</b> or <b>ladder</b> instead of a floor. Walk onto it from below: up. Step off it toward the ground: down.</li>
+      <li>On an upper storey, plan a <b>staircase</b> or <b>ladder</b> instead of a floor. Walk onto it from below: up. Step off it toward the ground: down. On a ladder: climbing, facing it, ${CLIMB_RUN / RUNG} rungs a step.</li>
       <li>Every flight material comes in both widths: wide (full tile), ${percent(STAIRS_SHARE)} of a solid wall's materials; <b>${SINGLE_STAIRS_NAME}</b> (half the tile),
       ${percent(SINGLE_STAIRS_SHARE)}. The ${SINGLE_STAIRS_NAME} runs up the left or right half; the other half is the stairwell.</li>
       <li><b>${capital(SPIRAL_STAIRS_NAME)}</b>: ${percent(SINGLE_STAIRS_SHARE)} of a solid wall's materials; a tile a storey, ${SPIRAL_TREADS} treads round a post; no climbing side, no Q/E.
@@ -2823,6 +2826,7 @@ export function helpText(): string {
       or a settlement you founded or are a member of (first free tile ${RESPAWN_GAP} to ${RESPAWN_GAP + RESPAWN_SPARE} tiles from its token: dry, no building,
       no more than ${metres(LANDING_STAND)} m between highest and lowest corner). Each card: distance in tiles from where you fell.
       <b>${STAY_SAID}</b>, a step or a closed tab: the spawn.</li>
+      <li>Until you choose or step off the spawn: lying where you fell (fall ${FALL_SECS} s), the camera there; other players see it. On waking: getting up.</li>
       <li><b>What you carried stays</b> in a <b>grave</b> where you fell: pack, held items, toolbelt, every bag and its contents.</li>
       <li>Kept on you: clothing, armour, jewel, starting kit, a crate with a wildermon in it, anything offered in a deal.</li>
       <li>Died in water too deep to stand: grave on the nearest dry ground within <b>${GRAVE_REACH} tiles</b>, else where you fell. Carrying nothing: no grave.</li>
@@ -3064,7 +3068,7 @@ export function helpText(): string {
     <h4>Blows</h4>
     <ul>
       <li><b>Heavy blow</b>: ${listed(Object.values(SPECIES).filter((d) => d.heavy).map((d) => `${d.name.toLowerCase()}s`))}, every ${HEAVY_EVERY} blows. A red ring shows its reach for
-      ${WIND_UP} second; lands at damage ${mul(HEAVY_HIT)} on anything still inside. Step out to avoid it.</li>
+      ${WIND_UP} second; lands at damage ${mul(HEAVY_HIT)} on anything still inside. Step out to avoid it. Landed on a player: stumble back, ${STUMBLE_SECS} s.</li>
       <li>Blow types: <b>cut</b> (${blowSays('cut')}), <b>puncture</b> (${blowSays('pierce')}), <b>crush</b> (${blowSays('crush')}).</li>
       <li>Hides: ${HIDES.map((h) => `${HIDE_NAMES[h].toLowerCase()} (${listed(Object.values(SPECIES).filter((d) => d.hide === h).map((d) => d.name.toLowerCase()))}) ${hideSays(h)}`).join('; ')}.</li>
       <li>Armour by type: ${(Object.keys(ARMOUR_CLASSES) as ArmourClass[]).map((c) => `${ARMOUR_CLASSES[c].name.toLowerCase()} ${armourSays(c)}`).join('; ')}.</li>
