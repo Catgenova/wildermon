@@ -398,7 +398,7 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   lantern: { name: 'Lantern', category: 'tool', weight: 1.4, decay: 3, description: 'Holds a candle; light it at a fire. Light: {light.lanternNear} tiles at lowest QL, {light.lanternFar} at best. A candle lasts {light.candleShort:time} at lowest QL, {light.candleLong:time} at best.' },
   torch: { name: 'Torch', category: 'tool', weight: 0.8, decay: 4, description: 'Light at a fire. Burns {light.torchShort:time} to {light.torchLong:time} and lights {light.torchNear} to {light.torchFar} tiles, by QL.' },
   candle: { name: 'Candle', category: 'misc', weight: 0.2, stackable: true, decay: 2, description: 'Burns in a lantern.' },
-  compost: { name: 'Compost', category: 'material', weight: 1.2, stackable: true, raw: true, decay: 2, description: 'From {compostMaker}. Spread on tilled ground.' },
+  compost: { name: 'Compost', category: 'material', weight: 1.2, stackable: true, raw: true, decay: 2, description: 'From {compostMaker} or a compost bin. Spread on a sown field or planter: next harvest QL +{boost}.' },
   saddle: { name: 'Saddle', category: 'material', weight: 7, stackable: true, decay: 8, description: 'Fit to a Thistlekit to ride it.' },
   bridle: { name: 'Bridle', category: 'material', weight: 2, stackable: true, decay: 8, description: 'Needed to steer a mount.' },
   thatch: { name: 'Thatch', category: 'material', weight: 0.5, stackable: true, decay: 60 },
@@ -679,6 +679,15 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   folding_screen: { name: 'Folding screen', category: 'misc', weight: 9, decay: 4, description: 'Seen through. Dyeable.' },
   plant_stand: { name: 'Tiered plant stand', category: 'misc', weight: 10, decay: 4, description: 'Holds {holds} potted plants ({pots}).' },
   wind_chime: { name: 'Wind chime', category: 'misc', weight: 2, decay: 4, description: '{where} Sways and chimes with the wind; silent under {still}% wind.' },
+  // The home pieces (`decor.ts`, `decordefs.ts`).
+  sundial: { name: 'Sundial', category: 'misc', weight: 30, decay: 3, description: 'Examine: {clock}, {season}.' },
+  compost_bin: { name: 'Compost bin', category: 'misc', weight: 18, decay: 4,
+    description: 'Takes {takes}; holds {holds}. Compost: what goes in ÷ {per}, rounded up, {days} after the last thing in. Spread on a sown field or planter: next harvest QL +{boost}.' },
+  stone_lantern: { name: 'Stone lantern', category: 'misc', weight: 40, decay: 3, description: 'Night light for everyone: {reach} tiles, any QL. Burns nothing. Greens with moss; scrub with a brush.' },
+  woven_rug: { name: 'Woven rug', category: 'misc', weight: 3, decay: 6, description: 'Pattern chosen at the loom: {patterns}. Dye up to {colours} times, a colour each. Lies flat.' },
+  curtains: { name: 'Curtains', category: 'misc', weight: 2, decay: 6, description: '{where} Open or close, for everyone. Dyeable.' },
+  armour_stand: { name: 'Armour stand', category: 'misc', weight: 14, decay: 4,
+    description: 'Holds {n} pieces of armour, one a slot ({slots}). Swap with worn: every slot in one go. Changed by whoever set it down, or a rank that may use the crates on its settlement.' },
   butter_churn: { name: 'Butter churn', category: 'misc', weight: 14, decay: 4, description: 'Churn a bucket of milk into {recipe.churn_butter.count} pats of butter (cooking), within {reach} tiles of one set on the ground; bucket returned empty.' },
   paper_press: { name: 'Paper press', category: 'misc', weight: 24, decay: 4, description: 'Press reed into papyrus, at one set on the ground.' },
   // Brick and mortar, carried flat-packed like everything else until it is set down.
@@ -990,6 +999,9 @@ export interface Item {
   engraving?: string;
   /** The kind a carved figure is carved as, chosen at the bench (`garden.ts`); the island's `item.garden -> figure`. */
   figure?: string;
+  /** A woven rug's pattern, chosen at the loom, and its second and third colours (`decor.ts`); the island's `item.garden`. */
+  pattern?: string;
+  tints?: string[];
 }
 
 /**
@@ -1690,6 +1702,8 @@ export function itemName(item: Item): string {
   if (item.occupant) name += ` (${item.occupant})`;
   // And the kind a carved figure is carved as (`garden.ts`): a Carved wildermon figure (oak) (rabba).
   if (item.figure) name += ` (${item.figure})`;
+  // And a woven rug's pattern (`decor.ts`): a Woven rug (diamond).
+  if (item.pattern) name += ` (${item.pattern})`;
   // And what is enchanted into it: a Sword (iron) (Emberbrand).
   return name + enchantMarker(item.enchant);
 }

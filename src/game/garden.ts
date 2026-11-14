@@ -83,7 +83,7 @@ export function gardenFrom(raw: unknown): GardenState | undefined {
 
 /** Whether a piece is one of the garden pieces, with a line of its own under its name. */
 export const isGardenPiece = (def: FurnitureDef): boolean =>
-  !!(def.bloom || def.hedge || def.topiary || def.bonsai || def.shows || def.figure || def.birds || def.chime || def.herbs || def.mount)
+  !!(def.bloom || def.hedge || def.topiary || def.bonsai || def.shows || def.figure || def.birds || def.chime || def.herbs || (def.mount && def.mount !== 'pane'))
   || def.climber === 'wisteria' || POTS.includes(def.id) || def.id === FOLDING_SCREEN || def.id === FLOWER_CART;
 /** Whether a piece grows from the moment it is set down, so the island hands every browser that moment (`furniture_def.roses`). */
 export const growsFromSet = (def: FurnitureDef): boolean => !!(def.climber || def.bloom || def.hedge || def.bonsai);
@@ -334,6 +334,7 @@ export const MOUNT_SAID = {
   get window(): string { return mountWords('window', trellisWallWords(), ''); },
   get wall(): string { return mountWords('wall', trellisWallWords(), ''); },
   get hang(): string { return mountWords('hang', trellisWallWords(), listedOr(HANG_FROM.map(wordOf))); },
+  get pane(): string { return mountWords('pane', trellisWallWords(), ''); },
   noWindow: 'No window on that side.',
   noWall: 'No solid wall on that side.',
   unfinished: 'Wall not finished.',
@@ -373,9 +374,10 @@ describeFrom('plant_stand', { holds: furnitureDef('plant_stand').shows?.n, pots:
  * on either face of a finished solid wall on that side, on its storey.
  */
 export function mountRefusal(g: Game, mount: Mount, x: number, y: number, facing: Side, level: number): string | null {
-  if (mount === 'wall') {
+  // Curtains on either face of a finished window, on their storey, as a plaque on a solid wall (`decor.ts`).
+  if (mount === 'wall' || mount === 'pane') {
     const w = g.buildings.wall(level, x, y, facing);
-    if (!w || g.buildings.seenType(w) !== 'solid') return MOUNT_SAID.noWall;
+    if (!w || g.buildings.seenType(w) !== (mount === 'pane' ? 'window' : 'solid')) return mount === 'pane' ? MOUNT_SAID.noWindow : MOUNT_SAID.noWall;
     return isDone(w) ? null : MOUNT_SAID.unfinished;
   }
   if (mount === 'hang' && g.furnitureOnTile(x, y).some((f) => HANG_FROM.includes(f.kind) && (f.level ?? 0) === level)) return null;

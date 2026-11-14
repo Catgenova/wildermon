@@ -213,9 +213,9 @@ export interface IslandGround {
    * hour somewhere a field clock never stood. `ago` is the wall seconds since
    * it began, which is all an island from before the year sent.
    */
-  crops?: Array<{ x: number; y: number; id: string; stage: number; ago?: number; grown?: number; tended: number; tendedNow: boolean; ql: number; pace?: number; glass?: boolean; hand?: boolean; level?: number; still?: boolean }>;
+  crops?: Array<{ x: number; y: number; id: string; stage: number; ago?: number; grown?: number; tended: number; tendedNow: boolean; ql: number; pace?: number; glass?: boolean; hand?: boolean; level?: number; still?: boolean; fed?: boolean }>;
   /** What grows in the planters within reach, by the planter's id and tile, on the slow half beside `crops`. */
-  planted?: Array<{ planter: number; x: number; y: number; id: string; stage: number; ago?: number; grown?: number; tended: number; tendedNow: boolean; ql: number; pace?: number }>;
+  planted?: Array<{ planter: number; x: number; y: number; id: string; stage: number; ago?: number; grown?: number; tended: number; tendedNow: boolean; ql: number; pace?: number; fed?: boolean }>;
   /** The island's wall clock as it answered, in epoch seconds: what `wallSkew` is set by. */
   now?: number;
   /**

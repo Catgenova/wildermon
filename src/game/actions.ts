@@ -68,6 +68,7 @@ import type { PatronId } from './patronlist';
 import { BAUBLE_ACTIONS } from './baubles';
 import { engravedItemSays, MEMORIAL_ACTIONS } from './memorial';
 import { GARDEN_ACTIONS } from './garden';
+import { DECOR_ACTIONS } from './decor';
 import { VINEYARD_ACTIONS } from './vineyard';
 import { CHART_ACTIONS, chartItemSays } from './cartography';
 import { makerSays, SIGN_ACTIONS, signableKind } from './signing';
@@ -3321,6 +3322,8 @@ export const ACTIONS: ActionDef[] = [
   ...MEMORIAL_ACTIONS,
   // The garden pieces' jobs: wildflowers planted, a shrub trimmed, a hedge clipped, a bonsai pruned, a trophy hung (`garden.ts`).
   ...GARDEN_ACTIONS,
+  // The home pieces' jobs: a sundial read, a compost bin filled and emptied, compost spread, curtains drawn, an armour stand dressed (`decor.ts`).
+  ...DECOR_ACTIONS,
   // A trellis's vine, and a cutting off a wild one (`vineyard.ts`).
   ...VINEYARD_ACTIONS,
   // A skep's honey, taken and looked at (`bees.ts`).

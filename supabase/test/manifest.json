@@ -2359,6 +2359,12 @@
     "why": "Eighteen pieces with real recipes (trade, tool, time, bill) and what each is on the island; wildflowers planted a kind to a slot in a bed, a window box and a basket, refused full and short, carried into the pack and back; a window box only under a window outside on the ground, in the middle of its row, not turned with no other window; a plaque only on a finished solid wall, either face; a basket and a chime hung from an eave or a lantern post; a herb box refusing a seed that is no herb's and harvested at its share of a planter's yield; a topiary shrub trimmed with a sickle and its trim's moment kept; a hedge outside, clipped once full and not twice the same way, shutting its border on the island's way and in the browser; a bonsai pruned by anybody a step a day to five; a carved figure only of a kind in the maker's field guide, chosen at the bench, kept through the pack and the ground; a plaque taking only a thing flagged a trophy (one defined in the test alone) with its slayer's name, by its owner or a citizen, not picked up with one on it; a stand's potted plants; growth by the moment set down and the season, at fixed moments in each season; every refusal and every line done in the same words on both sides."
   },
   {
+    "file": "supabase/test/decor.ts",
+    "title": "A sundial, a compost bin, a stone lantern, a woven rug, curtains and an armour stand, the same on both sides",
+    "shard": 5,
+    "why": "Six home pieces with real recipes (trade, tool, station, time, bill). A sundial says the island's clock and the season's days left as the browser does; a compost bin takes spoiled food, weeds and ash to its room and gives a compost per two after its days, and compost spread on a field or a planter lifts its next harvest ten QL, once, read by every browser; a stone lantern greens with moss a scurra scrubs and lights its fixed reach at night; a woven rug woven at a loom in the pattern chosen, dyed a colour a dyeing to three and not its last twice, set down and scrubbed with them; curtains only on a finished window, over its middle, drawn for everybody; an armour stand taking armour a slot, from the pack or worn, swapped slot by slot with what is worn and keeping on what does not fit in the same words on both sides, not picked up with armour on it, changed only by its owner or a rank that may use the crates."
+  },
+  {
     "file": "supabase/test/vineyard.ts",
     "title": "Vineyards and wine that ages, the same on both sides",
     "shard": 5,

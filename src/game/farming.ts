@@ -12,6 +12,7 @@ import { capital, timeWords } from './words';
 import { lacksTool, REAP_TOOL, TEND_TOOL } from './jobtools';
 import { BED_NAME, bedLevelOf, bedSowRefusal, cropHere, emptyBeds, farmLevel } from './gardenbed';
 import { HERB_BOX } from './gardendefs';
+import { COMPOST_BOOST } from './decordefs';
 
 /**
  * Farming: rake a field out of grass or dirt, sow a seed, tend it through
@@ -105,6 +106,8 @@ export interface Crop {
   tendedNow: boolean;
   /** Quality the harvest will carry, built up while tending. */
   ql: number;
+  /** Compost spread on it (`decor.ts`): its next harvest `COMPOST_BOOST` QL over, to at most 100. The island's `crop.fed`. */
+  fed?: boolean;
   /**
    * How long each of its stages takes, as a share of the crop's own: 1 for
    * anybody's, less for a Farmer's with Fast Growth, or Crop Rotation on a
@@ -318,21 +321,24 @@ export function describeCrop(c: Crop, per: number, now: number, wall: number, bu
   const ripe = c.stage < RIPE - 1 ? cropRipeLeft(c, per, now, wall) : null;
   const y = cropYield(c.tended, bumper);
   // The harvest's quality: the field's and the harvester's hand, halved (`harvestQl`), at the hand's best.
-  const ql = qlTop > 0 ? ` · harvest QL up to ${Math.ceil(harvestQl(c.ql, qlTop) - 1e-9)}` : '';
+  // Compost spread on it lifts it `COMPOST_BOOST` (`decor.ts`), to at most 100.
+  const ql = (qlTop > 0 ? ` · harvest QL up to ${Math.ceil(fedQl(harvestQl(c.ql, qlTop), !!c.fed) - 1e-9)}` : '') + (c.fed ? ` · composted: QL +${COMPOST_BOOST}` : '');
   const where = c.level !== undefined ? ` in a ${BED_NAME.toLowerCase()}` : c.glass ? ' under glass' : '';
   return `${def.name}${where}, ${cropStageName(c)} · ${when}${ripe !== null && Number.isFinite(ripe) ? ` · ripe in ${timeWords(ripe)}` : ''} · tended ${c.tended}/${RIPE}: yield ${y.produce} ${itemDef(def.produce).name.toLowerCase()}, ${seedSays()}${ql}`;
 }
 
 /** What a harvest comes out at: the field's own quality and the harvester's, halved (the island's `harvest_crop`). */
 export const harvestQl = (fieldQl: number, handQl: number): number => Math.max(1, Math.min(100, (fieldQl + handQl) / 2));
+/** And a harvest off ground compost was spread on (`Crop.fed`): `COMPOST_BOOST` over, to at most 100 (the island's `reap_what`). */
+export const fedQl = (ql: number, fed: boolean): number => (fed ? Math.min(100, ql + COMPOST_BOOST) : ql);
 
 // The planter says what it grows at, off the rule.
 describeFrom('planter', { growth: PLANTER_GROWTH });
 
 /** The planter a job is aimed at, when it is aimed at one. */
-const planterOf = (g: Game, t: Target): PlacedFurniture | undefined => (t.kind === 'furniture' ? g.planterPiece(t.id) : undefined);
+export const planterOf = (g: Game, t: Target): PlacedFurniture | undefined => (t.kind === 'furniture' ? g.planterPiece(t.id) : undefined);
 /** What a job is aimed at: the crop in a field or on the garden bed of the storey you stand on (`gardenbed.ts`), or the one in a planter. */
-const cropOf = (g: Game, t: Target): Crop | undefined =>
+export const cropOf = (g: Game, t: Target): Crop | undefined =>
   t.kind === 'tile' ? cropHere(g, t.x, t.y, bedLevelOf(g, t.x, t.y)) : t.kind === 'furniture' ? g.planted.get(t.id) : undefined;
 /** Whether a job on a tile is aimed at a finished garden bed on the storey you stand on. */
 const onBed = (g: Game, t: Target): boolean => t.kind === 'tile' && bedLevelOf(g, t.x, t.y) !== null;
@@ -439,7 +445,7 @@ function reapOne(g: Game, c: Crop): { produce: Item; got: number; seeds: number;
   const def = cropDef(c.id);
   const y = cropYield(c.tended, g.perk('bumper:harvest_crop', 0));
   // The field's own quality, lifted by the farmer's skill at harvest.
-  const ql = harvestQl(c.ql, g.productQl('farming'));
+  const ql = fedQl(harvestQl(c.ql, g.productQl('farming')), !!c.fed);
   // Love's Abundance takes more out of the same ground.
   const more = g.pathFx('harvest', 1);
   const got = Math.max(1, Math.round(y.produce * more)) + g.perk(`plus:${def.produce}`, 0);

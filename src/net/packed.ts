@@ -15,6 +15,16 @@ const figureOf = (g: unknown): string | undefined => {
   return typeof k === 'string' ? k : undefined;
 };
 
+/** A woven rug's pattern and tints off an item row's `garden` (`decor.ts`). */
+const rugOf = (g: unknown): { pattern?: string; tints?: string[] } => {
+  if (!g || typeof g !== 'object') return {};
+  const r = g as { pattern?: unknown; tints?: unknown };
+  return {
+    ...(typeof r.pattern === 'string' ? { pattern: r.pattern } : {}),
+    ...(Array.isArray(r.tints) ? { tints: r.tints.filter((x): x is string => typeof x === 'string' && /^#[0-9a-f]{6}$/i.test(x)) } : {}),
+  };
+};
+
 /** As much of an island as this needs: what its clock says about a stamp. */
 export interface Aged {
   since(stamp: string | null): number;
@@ -73,6 +83,8 @@ export function packed(it: ItemRow, island: Aged): Item {
     engraving: it.engraving ?? undefined,
     // And a carved figure's kind, which names it in the pack and carves it when it is set down (`garden.ts`).
     ...(figureOf(it.garden) ? { figure: figureOf(it.garden) } : {}),
+    // And a woven rug's pattern and its colours past the first (`decor.ts`).
+    ...rugOf(it.garden),
     // And the motes infused into it, while they last (`infusion.ts`).
     infuse: it.infuse ?? undefined,
   };

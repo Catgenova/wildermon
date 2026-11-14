@@ -576,6 +576,8 @@ const FURNITURE_RECIPES: Recipe[] = FURNITURE.filter((f) => !f.grave && !f.lair 
   material: f.material ?? (f.skill === 'masonry' || f.skill === 'tailoring' || f.skill === 'fishing' || f.skill === 'ropemaking' || f.skill === 'pottery' || f.skill === 'forestry' ? undefined : ('wood' as const)),
   ...(f.deed ? { deed: true } : {}),
   ...(f.perk ? { perk: f.perk } : {}),
+  // A woven rug at a loom (`decor.ts`).
+  ...(f.station ? { station: f.station } : {}),
   label: `Build ${f.name.toLowerCase()}`,
   verb: `building ${/^[aeiou]/i.test(f.name) ? 'an' : 'a'} ${f.name.toLowerCase()}`,
   baseTime: f.time,

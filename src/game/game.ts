@@ -113,6 +113,8 @@ import { ALTAR_CAST, ALTAR_CAST_ALPHA, ALTAR_GLOW, ALTAR_REACH, FIRE_REACH, held
 import { plinthBusy } from './plinth';
 import { MEMORIAL } from './memorial';
 import { gardenFrom, hedgeRefusal, mountRefusal, mountTurnsTo, MOUNT_SAID } from './garden';
+import { decorFrom, stoneLanternLight } from './decor';
+import { STONE_LANTERN } from './decordefs';
 import { counterFinished, counterInto, counterMiddle, Counters, type CountersJSON, type CounterWire } from './counters';
 import { burnLamps, isLampPiece, lampArmRefusal, lampBurning, lampFrom, lampLight, lampTurnsTo } from './lamps';
 import { settleTrellises, trellisShares, trellisTurnsTo, trellisWallRefusal, VINE_SAID } from './vineyard';
@@ -3936,6 +3938,11 @@ export class Game {
       // A rune lantern throws what a lantern of its quality throws, and needs nothing to (`runelantern.ts`).
       if (isRuneLantern(f)) {
         out.push(runeLanternLight(f));
+        continue;
+      }
+      // A stone lantern throws `STONE_LANTERN_REACH` tiles whatever its quality, and needs nothing to (`decor.ts`).
+      if (f.kind === STONE_LANTERN) {
+        out.push(stoneLanternLight(f));
         continue;
       }
       // A lantern post throws what its lantern throws, from under the lantern (`lamps.ts`).
@@ -9074,6 +9081,8 @@ export class Game {
           ...(typeof r.engraving === 'string' && r.engraving ? { engraving: r.engraving } : {}),
           // What a garden piece holds and how it was last shaped (`garden.ts`).
           ...(gardenFrom(r.garden) ? { garden: gardenFrom(r.garden) } : {}),
+          // And a home piece's: a rug's pattern and colours, curtains drawn, a bin's heap, what is on a stand (`decor.ts`).
+          ...(decorFrom(r.garden) ? { decor: decorFrom(r.garden) } : {}),
           // When a skep was set down or last emptied, which what it has made is worked out from (`bees.ts`).
           ...(typeof r.state?.skep_at === 'number' ? { skepAt: r.state.skep_at } : {}),
           /*
@@ -9340,6 +9349,8 @@ export class Game {
           ...(c.still ? { still: true } : {}),
           // And a Season's Hand's, on its clock (`hand`).
           ...(c.hand ? { hand: true } : {}),
+          // And compost spread on it (`decor.ts`).
+          ...(c.fed ? { fed: true } : {}),
         });
       }
     }
@@ -9353,6 +9364,8 @@ export class Game {
           stageAt: box - into(c),
           tended: c.tended, tendedNow: c.tendedNow, ql: c.ql,
           ...(c.pace !== undefined && c.pace !== 1 ? { pace: c.pace } : {}),
+          // And compost spread on it (`decor.ts`).
+          ...(c.fed ? { fed: true } : {}),
         });
       }
     }
