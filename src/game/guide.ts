@@ -74,8 +74,28 @@ export interface GuideBook {
  */
 export const GUIDE_LOOK = 1;
 
-/** Every kind there is a page for, in the book's order, which is the order the definitions are written in. */
-export const guidePages = (): SpeciesDef[] => Object.values(SPECIES);
+/**
+ * The book's order, by species id: asked for, "a new numbered order for wildermon on the field guide, ordering by
+ * gathering > crafting > content and by tame difficulty". Gathering (raw goods from the land, the water or the animal
+ * itself), then crafting (stored goods into other goods), then content (upkeep, care, building, guards, travel,
+ * training), each by its taming level, the higher tame chance first where they tie; the monsters last. A kind's stages
+ * follow it (`guideEntries`). The definitions themselves stay in the order they were written.
+ */
+export const GUIDE_ORDER: readonly string[] = [
+  'woola', 'grazza', 'dippa', 'wurla', 'rabba', 'vola', 'noot', 'seavic', 'sedra', 'grubba', 'plucka', 'brambo',
+  'sprigga', 'petta', 'bogga', 'bevere', 'crawler', 'mola', 'holla', 'ambra', 'vesp', 'quarra', 'dulla', 'wadd',
+  'rowl', 'bedda', 'quill', 'cudda', 'snout', 'middun', 'mudda', 'grista', 'potta', 'rippa', 'dowse', 'cindra',
+  'simma', 'chissa', 'tanna', 'hoppa', 'papra', 'siffa', 'flecha', 'glimmip', 'carra', 'glossa', 'awla', 'tinka',
+  'relka', 'crakka', 'frosta', 'leecha', 'ulva', 'whirla', 'scorcha', 'magga', 'scurra', 'embra', 'snedda', 'bura',
+  'sparra', 'sappa', 'kemma', 'sheela', 'cobbe', 'salva', 'wicka', 'lungra', 'roxxen', 'spitta', 'stona', 'thumpa',
+  'whispet', 'crumbud', 'warda', 'orse', 'springlet', 'goblin', 'orc', 'ogre', 'dragon',
+];
+
+/** Every kind there is a page for, in the book's order (`GUIDE_ORDER`); a kind left off it, after, in the definitions' order. */
+export const guidePages = (): SpeciesDef[] => [
+  ...GUIDE_ORDER.map((id) => SPECIES[id]).filter((def): def is SpeciesDef => !!def),
+  ...Object.values(SPECIES).filter((def) => !GUIDE_ORDER.includes(def.id)),
+];
 /** Whether a kind can be tamed and bred at all: everything but a monster. */
 export const keepable = (def: SpeciesDef): boolean => !def.monster;
 

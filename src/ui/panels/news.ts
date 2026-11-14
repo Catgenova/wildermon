@@ -4422,6 +4422,11 @@ export const NEWS: News[] = [
     ],
   },
   {
+    n: 587,
+    day: '2026-11-14',
+    lines: () => [`Changed: Field guide order, ${guidePages().length} kinds: gathering, then crafting, then everything else; each by taming level, the higher tame chance first; the monsters last. A kind's stages after it (was: the order the kinds were added).`],
+  },
+  {
     n: 586,
     day: '2026-11-14',
     lines: () => [
