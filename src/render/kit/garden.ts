@@ -476,6 +476,8 @@ export const HERB_BOX: KitPiece = {
 export const topiaryTrim = (shape: string | null, out: number): number => 1 +
   (shape ? 1 + Math.max(0, (TOPIARY_SHAPES as readonly string[]).indexOf(shape)) : 0) + 5 * Math.round(Math.max(0, Math.min(1, out)) * 10);
 const TUB = 3.6, TUB_H = 5.2;
+/** Clipped box: the hedge's greens, a step paler. */
+const TOPIARY_TONE: Tone = toneOf('#b4dca2', '#628f6c');
 
 function topiaryOf(look: KitLook): KitModel {
   const W = woodTone(look.material, look.tint, 0.75);
@@ -495,6 +497,19 @@ function topiaryOf(look: KitLook): KitModel {
   parts.push({ faces: rod([0, 0, z0], [0, 0, z0 + 2.4], 0.35, toneOf('#b39274', '#6e5658'), 6) });
   const H = 11;
   const fuzz = shape ? out : 1;
+  // Clipped, the shape is a solid of box, its leaves small and close: a ball, a cone, a cone with a spiral cut round it, or a wildermon.
+  const box = (seed: number) => (_k: number, _i: number, sd: Side): Partial<Face> => ({ paint: (g, k) => hedgeSkin(seed, 1.1)(g, k, sd), crease: 0.25 });
+  const ball = (x: number, y: number, z: number, r: number, seed: number): Face[] =>
+    lathe(x, y, Array.from({ length: 7 }, (_, i) => { const a = -Math.PI / 2 + (i / 6) * Math.PI; return [z + Math.sin(a) * r, Math.max(0.05, Math.cos(a) * r)] as [number, number]; }), 12, TOPIARY_TONE, 0.5, box(seed));
+  if (shape === 'ball') parts.push({ faces: ball(0, 0, z0 + 6.5, 4.2, 53) });
+  else if (shape === 'cone' || shape === 'spiral') parts.push({ faces: lathe(0, 0, [[z0 + 1.6, 0.6], [z0 + 2, 3.7], [z0 + H, 0.15]], 12, TOPIARY_TONE, 0.5, box(54)) });
+  else if (shape === 'wildermon') {
+    // A round body, a head, two pointed ears and a tail.
+    parts.push({ faces: ball(0, 0, z0 + 5.2, 3.4, 70) });
+    parts.push({ faces: ball(-2.4, -2.2, z0 + 5.4, 1.2, 74) });
+    parts.push({ faces: ball(0.9, 0.9, z0 + 9.6, 2.3, 71) });
+    for (const sd of [-1, 1]) parts.push({ faces: lathe(0.9 + sd * 1.3, 0.9 - sd * 1.3, [[z0 + 10.6, 0.8], [z0 + 13, 0.08]], 6, TOPIARY_TONE, 0.5, box(72 + sd)) });
+  }
   const reach: V3[] = [[-4, -4, z0 + 1], [4, 4, z0 + H + 2]];
   parts.push(loose(reach, (g, e) => {
     const c = (dz: number): V3 => [0, 0, z0 + dz];
@@ -503,21 +518,24 @@ function topiaryOf(look: KitLook): KitModel {
       // Bushy: an untidy mass, sprigs out of it every way.
       leafBlob(g, e, c(6), 4.4, BOX, 51, 0.9);
       leafBlob(g, e, c(9), 3.1, BOX, 52, 0.9);
-    } else if (shape === 'ball') {
-      leafBlob(g, e, c(6.5), 4.2, BOX, 53, 1);
-    } else if (shape === 'cone') {
-      for (let i = 0; i < 4; i++) leafBlob(g, e, c(3.6 + i * 2.4), 4 - i * 0.95, BOX, 54 + i, 0.75);
     } else if (shape === 'spiral') {
-      for (let i = 0; i < 5; i++) {
-        const a = i * 1.7;
-        leafBlob(g, e, [Math.cos(a) * 0.6, Math.sin(a) * 0.6, z0 + 3 + i * 1.9], 3.6 - i * 0.55, BOX, 60 + i, 0.55);
+      // The cut round the cone, three turns up it: its near half, a groove in shade with a lit lip over it.
+      const len = Math.hypot(e.uy, e.vy) || 1, ny = [e.uy / len, e.vy / len];
+      for (const [w, col, dz] of [[1.1, BOX[2], 0], [0.5, BOX[0], 0.35]] as Array<[number, RGB, number]>) {
+        g.strokeStyle = css(col);
+        g.lineWidth = w * R;
+        g.lineCap = 'round';
+        let on = false;
+        g.beginPath();
+        for (let i = 0; i <= 120; i++) {
+          const f = i / 120, a = f * 3 * TAU, z = 2.4 + f * (H - 3.4), r = 3.7 - (3.55 * (z - 2)) / (H - 2) + 0.1;
+          const near = Math.cos(a) * ny[0] + Math.sin(a) * ny[1] > -0.05;
+          const [x, y] = proj(e, [Math.cos(a) * r, Math.sin(a) * r, z0 + z + dz]);
+          if (near && on) g.lineTo(x, y); else if (near) g.moveTo(x, y);
+          on = near;
+        }
+        g.stroke();
       }
-    } else {
-      // A wildermon: a round body, a head, two pointed ears and a tail, clipped out of box.
-      leafBlob(g, e, c(5.2), 3.4, BOX, 70, 0.85);
-      leafBlob(g, e, [1.2, 1.2, z0 + 9], 2.3, BOX, 71, 0.95);
-      leafBlob(g, e, [-2.2, -2.2, z0 + 6.6], 1.3, BOX, 74, 0.9);
-      for (const s of [-1, 1]) leafBlob(g, e, [1.2 + s * 1.3, 1.2 - s * 1.3, z0 + 11.3], 0.8, BOX, 72 + s, 1.4);
     }
     // Grown out: sprigs standing out of the clipped shape.
     if (fuzz > 0) {
@@ -529,7 +547,7 @@ function topiaryOf(look: KitLook): KitModel {
         leaf(g, x, y, a, R * (0.9 + fuzz), BOX[Rn() < 0.5 ? 0 : 2]);
       }
     }
-  }));
+  }, !shape));
   return { parts, shade: shadeOf(-TUB, TUB, -TUB, TUB) };
 }
 
@@ -805,29 +823,71 @@ function bonsaiOf(look: KitLook): KitModel {
   // The pot: shallow, glazed, on little feet.
   parts.push({ faces: slab(-2.6, 2.6, -1.8, 1.8, 3.9, 5.1, GLAZE, { corner: 0.4, bevel: 0.2 }), edges: true });
   parts.push({ faces: slab(-2.3, 2.3, -1.5, 1.5, 5.0, 5.05, EARTH), solid: false });
-  // The tree: a trunk leaning and turning, and pads of foliage, more set apart the more it is shaped.
-  const k = grown;
-  const trunk: V3[] = [[0, 0, 5], [0.8 * k, 0.2, 5 + 2 * k], [-0.4 * k, -0.2, 5 + 4 * k], [0.6 * k, 0.1, 5 + 6 * k]];
-  parts.push(loose(trunk, (g, e) => {
+  /*
+   * The tree. Unshaped, a straight stem under one round mop. Each step of
+   * shaping leans and turns the trunk further and thickens it, and picks out
+   * one more branch: a flat pad of foliage on a bare limb, the pads further
+   * out the lower they are, alternating sides, the last a dome at the apex.
+   * Fully shaped, moss over the soil and a stone set in it.
+   */
+  const k = grown, lean = 0.4 + 0.3 * steps;
+  const trunk: V3[] = [[0, 0, 5], [1.2 * lean * k, 0.2, 5 + 2 * k], [-0.7 * lean * k, -0.2, 5 + 4 * k], [0.5 * lean * k, 0.1, 5 + 6 * k]];
+  const along = (z: number): V3 => {
+    const i = Math.max(0, Math.min(2, Math.floor((z - 5) / (2 * k))));
+    const f = Math.max(0, Math.min(1, (z - trunk[i][2]) / (trunk[i + 1][2] - trunk[i][2])));
+    return [trunk[i][0] + (trunk[i + 1][0] - trunk[i][0]) * f, trunk[i][1] + (trunk[i + 1][1] - trunk[i][1]) * f, z];
+  };
+  const pads: Array<[V3, number]> = [];
+  const limbs: Array<[V3, V3]> = [];
+  if (steps === 0) pads.push([[0.2 * k, 0, 5 + 5.6 * k], 2.7 * k]);
+  else {
+    for (let i = 0; i < steps; i++) {
+      const side = i % 2 ? -1 : 1, z = 5 + (2.2 + (i * 3.4) / steps) * k;
+      const from = along(z), out = (1.2 + 0.45 * steps) * (1 - i / (steps + 1)) * k;
+      const c: V3 = [from[0] + side * out, from[1] + ((i % 3) - 1) * 0.7, z + 0.5 * k];
+      limbs.push([from, c]);
+      pads.push([c, (1.35 - i * 0.08) * k]);
+    }
+    pads.push([[trunk[3][0], trunk[3][1], trunk[3][2] + 0.3 * k], (1.5 - steps * 0.06) * k]);
+  }
+  const wide = (0.6 + 0.6 * k) * (1 + 0.15 * steps);
+  parts.push(loose([...trunk, ...limbs.map(([, c]) => c)], (g, e) => {
     const pts = trunk.map((p) => proj(e, p));
     for (const [w, c] of [[0.9, hex('#4a3844')], [0.6, hex('#8a6a58')]] as Array<[number, RGB]>) {
       g.strokeStyle = css(c);
-      g.lineWidth = w * across(e) * (0.6 + 0.6 * k);
       g.lineCap = 'round';
       g.lineJoin = 'round';
+      g.lineWidth = w * across(e) * wide;
       g.beginPath();
       pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y)));
       g.stroke();
+      g.lineWidth = w * across(e) * wide * 0.45;
+      for (const [a, b] of limbs) {
+        const [x0, y0] = proj(e, a), [x1, y1] = proj(e, b);
+        g.beginPath(); g.moveTo(x0, y0); g.quadraticCurveTo((x0 + x1) / 2, y0, x1, y1); g.stroke();
+      }
     }
   }));
-  const pads: Array<[V3, number]> = steps === 0
-    ? [[[0.2 * k, 0, 5 + 5.5 * k], 2.6 * k]]
-    : Array.from({ length: Math.min(steps + 1, 5) }, (_, i) => {
-      const side = i % 2 ? -1 : 1;
-      return [[side * (1.6 - i * 0.2) * k, (i % 3 - 1) * 0.6, 5 + (2.6 + i * 1.2) * k], (1.5 - i * 0.12) * k] as [V3, number];
-    });
+  if (steps >= BONSAI_STEPS) {
+    parts.push(loose([[-2.2, -1.4, 5], [2.2, 1.4, 5.8]], (g, e) => {
+      const R = rand(341);
+      for (let i = 0; i < 9; i++) {
+        const [x, y] = proj(e, [(R() - 0.5) * 4, (R() - 0.5) * 2.4, 5.05]);
+        g.beginPath(); g.ellipse(x, y, 0.9, 0.5, 0, 0, TAU);
+        g.fillStyle = css(LEAF[i % 3]);
+        g.fill();
+      }
+      const [sx, sy] = proj(e, [-1.3, 0.5, 5.3]);
+      g.beginPath(); g.ellipse(sx, sy, 1.4, 0.9, -0.3, 0, TAU);
+      g.fillStyle = css(hex('#c9c3c6'));
+      g.fill();
+      g.strokeStyle = css(KIT_INK_RGB);
+      g.lineWidth = 0.4;
+      g.stroke();
+    }, false));
+  }
   parts.push(loose(pads.flatMap(([c, r]) => [[c[0] - r, c[1] - r, c[2] - r], [c[0] + r, c[1] + r, c[2] + r]] as V3[]), (g, e) => {
-    for (const [i, [c, r]] of pads.entries()) leafBlob(g, e, c, r, LEAF, 330 + i, steps ? 0.45 : 0.8);
+    for (const [i, [c, r]] of pads.entries()) leafBlob(g, e, c, r, LEAF, 330 + i, steps ? Math.max(0.32, 0.6 - 0.06 * steps) : 0.8);
   }, true, 3));
   return { parts, shade: shadeOf(-3.8, 3.8, -3.2, 3.2) };
 }
