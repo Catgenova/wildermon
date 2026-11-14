@@ -2360,8 +2360,8 @@ import{$ as e,$C as t,$_ as n,$b as r,$h as i,$o as a,$y as ee,A as o,AC as te,A
       <tr><td><b>${h.bevere.name}</b></td><td>Near water; eats vegetables and starches; placid. Fells trees, logs to the crate. Evolves: ${$(`bevere`)}.</td></tr>
       <tr><td><b>${h.seavic.name}</b></td><td>Among trees; eats acorns and nuts; placid. Farms: sows seed from the crate, tends every growth stage, carries the harvest back;
       unsown seed goes back to the settlement stores. Only works ground you tilled. Evolves: ${$(`seavic`)}.</td></tr>
-      <tr><td><b>${h.mola.name}</b></td><td>On metal; eats spices. Mines the nearest ore no other ${h.mola.name} has claimed, within its mining level
-      (iron from mining ${jg(`iron`)}); quality (QL) = its mining, capped by the seam. Works ${b(10)} m of water deep, as you do; a face it cannot stand on is worked from the bank
+      <tr><td><b>${h.mola.name}</b></td><td>On metal; eats spices. Mines the nearest bare seam no other ${h.mola.name} has claimed, any metal at any mining
+      (you: iron from mining ${jg(`iron`)}); quality (QL) = its mining, capped by the seam. Works ${b(10)} m of water deep, as you do; a face it cannot stand on is worked from the bank
       (shore seams, seabed under wading depth; the ${h.quarra.name} likewise for plain rock). Range +${h.mola.rangePerStep??10} tiles per 10 levels
       (usual 10). Evolves: ${$(`mola`)}.</td></tr>
       <tr><td><b>${h.crawler.name}</b></td><td>On sand; eats vegetables. Collects <b>sand</b> off the bed to the crate (ground height unchanged). Defensive: always hits back;
@@ -2495,7 +2495,8 @@ import{$ as e,$C as t,$_ as n,$b as r,$h as i,$o as a,$y as ee,A as o,AC as te,A
       (&ldquo;${M({why:`range`,n:h.sedra.workRange},`reed`)}&rdquo; for a new ${h.sedra.name}); all of it in range worked, until the soonest is off its 180 s cooldown
       (&ldquo;${M({why:`waiting`,n:180},`sand`)}&rdquo;); nothing in your settlement stores to work, naming what it needs
       (&ldquo;${M({why:`stock`,n:0},`mend`)}&rdquo;); no barrel with room for its water; a load with nowhere to put it; walking home when over 8 tiles past
-      its range, with the distance; no staircase up to its work's storey (&ldquo;${M({why:`stairs`,n:2},`hod`)}&rdquo;); no staircase down from where it stands (&ldquo;${M({why:`stranded`,n:2},`hod`)}&rdquo;): it stays on that storey until one is built.
+      its range, with the distance; a miner: a bare seam above its mining (&ldquo;${M({why:`seam`,n:4,what:[`iron_ore`]},`mine`,null,1)}&rdquo;),
+      bare rock with no seam (&ldquo;${M({why:`noseam`,n:h.mola.workRange},`mine`)}&rdquo;); no staircase up to its work's storey (&ldquo;${M({why:`stairs`,n:2},`hod`)}&rdquo;); no staircase down from where it stands (&ldquo;${M({why:`stranded`,n:2},`hod`)}&rdquo;): it stays on that storey until one is built.
       Island: no work while its keeper is away or no awake player is near enough; the card says which and how near.</li>
       <li><b>Storeys</b>: a store, station or planned work a storey up is walked to by the building's finished staircases: wide or ${Id} onto it from
       its foot, off at its head, down off its foot; ${ql} on its own tile. Over finished floors only, and a finished bridge's deck between floors
