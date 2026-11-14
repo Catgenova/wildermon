@@ -25,6 +25,10 @@ import { Renderer } from '../../src/render/renderer';
 import { FullscreenCanvas } from '../../src/engine/canvas';
 import { DAY_SECONDS } from '../../src/game/pace';
 import { packTreeData, TileType } from '../../src/world/tiles';
+import { FIRE_CAPACITY } from '../../src/game/campfire';
+import { tileKey } from '../../src/game/tileindex';
+import type { PlacedFurniture } from '../../src/game/furniture';
+import type { Item } from '../../src/game/items';
 import { SEASON_DAYS, SEASONS, YEAR_FROM, type Season } from '../../src/world/calendar';
 
 export interface Spec {
@@ -374,7 +378,7 @@ async function bench(spec: Spec): Promise<Bench> {
 /* ---- the world: the ground, the water, the sky across the day, the wash ----------------------- */
 
 const SIZE = 48;
-const SCENES: Record<string, { about: string; tile: (x: number, y: number) => number; height: (x: number, y: number) => number }> = {
+const SCENES: Record<string, { about: string; tile: (x: number, y: number) => number; height: (x: number, y: number) => number; dress?: (game: Game) => void }> = {
   terrains: {
     about: 'Every ground, a band each, with a tree and the player in the middle: the ground family in one place.',
     tile: (x, y) => {
@@ -385,6 +389,34 @@ const SCENES: Record<string, { about: string; tile: (x: number, y: number) => nu
   },
   meadow: { about: 'Grass, a few trees and bushes, the player: the island as it mostly is.', tile: () => TileType.Grass, height: (x, y) => 30 + 6 * Math.sin(x / 5) * Math.cos(y / 7) },
   shore: { about: 'Sand running down into the sea: the shore and the water.', tile: (x, y) => (y > 30 ? TileType.Sand : TileType.Grass), height: (_x, y) => Math.max(-14, 40 - (y - 10) * 2.2) },
+  camp: {
+    about: 'A camp on the grass: a campfire lit and one laid, sacks of what was dropped, a chest, a chair and a rune lantern beside them.',
+    tile: () => TileType.Grass,
+    height: () => 30,
+    dress: (game) => {
+      const fire = (id: number, x: number, y: number, lit: boolean, fuel: number): void => {
+        const f = { id, x, y, sx: 1, sy: 1, fuel, lit, ash: lit ? 1 : 0 };
+        game.campfires.set(id, f);
+        game.placed.campfires.add(f);
+      };
+      fire(9001, 25, 24, true, FIRE_CAPACITY);
+      fire(9002, 22, 26, false, FIRE_CAPACITY * 0.5);
+      const piece = (id: number, kind: string, x: number, y: number, facing: 'n' | 's' | 'e' | 'w'): void => {
+        const f = { id, kind, x, y, sx: 1, sy: 1, facing, ql: 50, items: [] } as unknown as PlacedFurniture;
+        game.furniture.set(id, f);
+        game.placed.furniture.add(f);
+      };
+      piece(9101, 'chest', 23, 23, 's');
+      piece(9102, 'chair', 26, 26, 'w');
+      piece(9103, 'rune_lantern', 27, 24, 's');
+      const lay = (x: number, y: number, items: Array<{ id: string; count: number; rare?: number }>): void => {
+        game.ground.set(tileKey(x, y), items.map((it) => ({ ...it, ql: 30 }) as unknown as Item));
+      };
+      lay(24, 26, [{ id: 'rock', count: 1 }]);
+      lay(23, 25, [{ id: 'rock', count: 6 }, { id: 'log', count: 2 }]);
+      lay(26, 23, [{ id: 'rock', count: 30 }, { id: 'plank', count: 4 }, { id: 'shaft', count: 3 }, { id: 'hatchet', count: 1, rare: 3 }]);
+    },
+  },
   rock: { about: 'A rock face and its steps: stone and the outcrops.', tile: (x, y) => (Math.abs(x - 24) < 6 || y < 18 ? TileType.Rock : TileType.Grass), height: (x, y) => (y < 18 ? 90 : Math.abs(x - 24) < 6 ? 60 : 30) },
 };
 
@@ -416,6 +448,7 @@ function buildWorld(scene: string): void {
   const trees: Array<[number, number, number]> = [[22, 22, 1], [27, 23, 5], [22, 27, 3], [26, 26, 2]];
   for (const [x, y, sp] of trees) if (S.tile(x, y) !== TileType.Rock && S.height(x, y) > 0) w.setTile(x, y, TileType.Tree, packTreeData(sp, (x * 7 + y) & 7));
   if (scene === 'meadow') for (const [x, y] of [[24, 22], [26, 24], [23, 26]]) w.setTile(x, y, TileType.Bush, 0);
+  S.dress?.(world.game);
   world.game.player.x = 24.5;
   world.game.player.y = 24.5;
   world.game.update(0.01);

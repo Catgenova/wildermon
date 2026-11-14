@@ -37,7 +37,7 @@ import { drawRuneLantern, RUNE_LANTERN_VARIANTS } from '../../src/render/runelan
 import { drawRuneGate } from '../../src/render/runegate';
 import { drawMemorial } from '../../src/render/memorial';
 import {
-  bushSprite, drawCampfire, drawCreature, drawDeck, drawPlayer, drawPortrait, drawTrap, spriteScaleFor, stumpSprite, treeSprite,
+  bushSprite, drawCampfire, drawCreature, drawDeck, drawPlayer, drawPortrait, drawTrap, lyingSprite, spriteScaleFor, stumpSprite, treeSprite,
   type CreaturePose, type PlayerPose, type PortraitMotion, type Sprite,
 } from '../../src/render/sprites';
 import { loadAllWildermon, modelled } from '../../src/render/wildermon';
@@ -48,6 +48,10 @@ import { FLOWER_COLOURS, flowerSprite } from '../../src/render/flowers';
 import { fieldBake } from '../../src/render/crops';
 import { spellSheet } from '../../src/render/spells/preview';
 import { visualOf } from '../../src/render/spells/index';
+import { drawShine, shines } from '../../src/render/shine';
+import { campfireHit, drawCampfireNight } from '../../src/render/kit/campfire';
+import { FIRE_CAPACITY } from '../../src/game/campfire';
+import { NIGHT_WASH } from '../../src/render/nightwash';
 
 export type Ctx = CanvasRenderingContext2D;
 export type Box = [number, number, number, number];
@@ -336,14 +340,37 @@ const rune: Family = {
 
 /* ---- devices on the ground: campfire, traps, decks --------------------------------------- */
 
+/** A campfire's states on its sheet: alight or not, its fuel as a share of what it holds, and lots of ashes in it. */
+const FIRE_STATES: Array<{ label: string; lit: boolean; fuel: number; ash: number }> = [
+  { label: 'laid', lit: false, fuel: 0.02, ash: 0 },
+  { label: 'stacked full', lit: false, fuel: 1, ash: 0 },
+  { label: 'out', lit: false, fuel: 0, ash: 0 },
+  { label: 'out, ashes', lit: false, fuel: 0, ash: 3 },
+  { label: 'dying', lit: true, fuel: 0.02, ash: 2 },
+  { label: 'lit, 1/4', lit: true, fuel: 0.15, ash: 2 },
+  { label: 'lit, half', lit: true, fuel: 0.4, ash: 1 },
+  { label: 'lit, 3/4', lit: true, fuel: 0.6, ash: 0 },
+  { label: 'lit, full', lit: true, fuel: 1, ash: 0 },
+];
+
+/** How many things lie in the sack on its sheet. */
+const SACK_COUNTS = [1, 4, 20];
+
 const device: Family = {
   id: 'device', register: 'line', ref: 4,
   about: 'Things laid on the ground and drawn flat each frame: the campfire, the traps and a bridge\'s deck pieces.',
   list: () => [
     {
-      family: 'device', kind: 'campfire', name: 'Campfire', register: 'line', style: 'flat', entry: 'drawCampfire', file: 'src/render/sprites.ts', views: 'none',
-      states: states(['unlit', 'lit']), variants: [0.2, 1].map((f) => ({ label: `fuel ${f}`, set: { variant: Math.round(f * 10) } })),
-      motions: [frames('fire', 'flames', 6, { state: 1 })], emissive: true, footprint: [1, 1], ref: 4,
+      family: 'device', kind: 'campfire', name: 'Campfire', register: 'line', style: 'kit', entry: 'drawCampfire', file: 'src/render/kit/campfire.ts', views: 'turns',
+      states: FIRE_STATES.map((f, state) => ({ label: f.label, set: { state } })),
+      variants: [],
+      motions: [frames('fire', 'flames, sparks and glow, full', 6, { state: 8 }, 1.2), frames('dying', 'dying embers', 6, { state: 4 }, 1.2)], emissive: true, footprint: [2, 2], ref: 4,
+    },
+    {
+      family: 'device', kind: 'sack', name: 'Dropped items sack', register: 'line', style: 'kit', entry: 'lyingSprite', file: 'src/render/kit/sack.ts', views: 'none',
+      states: SACK_COUNTS.map((n) => ({ label: `${n} item${n > 1 ? 's' : ''}`, set: { state: n } })),
+      variants: [1, 2, 3].map((r) => ({ label: `rare ${r}`, set: { variant: r } })),
+      motions: [frames('shine', 'rare shine, rare 3', 6, { variant: 3 }, 1.5)], emissive: false, footprint: [1, 1], ref: 4,
     },
     ...['snare', 'creel', 'deadfall'].map((k): Asset => ({
       family: 'device', kind: `trap_${k}`, name: `Trap: ${k}`, register: 'line', style: 'flat', entry: 'drawTrap', file: 'src/render/sprites.ts', views: 'none',
@@ -355,9 +382,25 @@ const device: Family = {
     })),
   ],
   draw: (ctx, sx, sy, zoom, a, o) => {
-    if (a.kind === 'campfire') { drawCampfire(ctx, sx, sy, zoom, o.state >= 1, o.variant ? o.variant / 10 : 1, o.t); return; }
+    if (a.kind === 'campfire') {
+      const f = FIRE_STATES[o.state] ?? FIRE_STATES[0];
+      drawCampfire(ctx, sx, sy, zoom, f.lit, f.fuel * FIRE_CAPACITY, o.t, o.turn, f.ash);
+      return campfireHit(f.lit, f.fuel * FIRE_CAPACITY, o.turn, f.ash).map((v) => v * zoom) as Box;
+    }
+    if (a.kind === 'sack') {
+      spriteScaleFor(zoom);
+      const spr = lyingSprite([{ id: 'rock', count: o.state || 1 }], 3, 4);
+      sprite(ctx, sx, sy, zoom, spr);
+      if (shines(o.variant)) drawShine(ctx, sx, sy, zoom, o.variant, 3 * 4099 + 4, o.t, spr.w * zoom, spr.ay * zoom);
+      return;
+    }
     if (a.kind.startsWith('trap_')) { drawTrap(ctx, sx, sy, zoom, a.kind.slice(5), o.state === 1, o.state === 2); return; }
     drawDeck(ctx, sx, sy, zoom, a.kind.slice(5), o.state >= 1, 0, undefined, o.variant / 10, 3);
+  },
+  night: (ctx, sx, sy, zoom, a, o) => {
+    // A lit campfire's fire laid again as light over the wash, as the renderer lays it.
+    const f = FIRE_STATES[o.state];
+    if (a.kind === 'campfire' && f?.lit) drawCampfireNight(ctx, sx, sy, zoom, f.fuel * FIRE_CAPACITY, o.night, o.t, NIGHT_WASH.alpha * o.night);
   },
 };
 

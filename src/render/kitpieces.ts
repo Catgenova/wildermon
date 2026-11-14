@@ -372,6 +372,26 @@ function layPart(g: Ctx, e: Eye, p: KitPart, salt: number): void {
   p.draw?.(g, e);
 }
 
+/**
+ * A model laid whole onto `g` from `e`, at zoom one from its footprint's
+ * middle, its soft shade on the floor under it: for a thing drawn in the kit
+ * that is not a piece of furniture and keeps its own pictures (the campfire,
+ * a sack of what lies on the ground). Its box on the screen comes back too,
+ * round all of it and round its solids, grown by `pad`.
+ */
+export function layKitModel(g: Ctx | null, m: KitModel, e: Eye, pad = 3 + KIT_INK_W * 2): { bounds: Box; hit: Box } {
+  const order = laid(m.parts, e);
+  const foot = m.shade ?? null;
+  if (g) {
+    if (foot) floorShade(g, e, foot);
+    order.forEach((p, i) => layPart(g, e, p, i * 31 + 5));
+  }
+  const all = [...order.flatMap(ptsOf), ...(foot ?? []).map((q) => [q[0] * 1.14, q[1] * 1.14, 0] as V3)];
+  const bounds = grownBy(screenBox(e, all, pad), order, e);
+  if (foot) { bounds[2] += 3; bounds[3] += 2; }
+  return { bounds, hit: screenBox(e, order.filter((p) => p.solid ?? !!p.faces).flatMap(ptsOf), 1) };
+}
+
 function bake(kind: string, look: KitLook, view: KitView, scale: number): KitBake {
   const piece = KIT_PIECES[kind];
   const m = modelOf(kind, look);

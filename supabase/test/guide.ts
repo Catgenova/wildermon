@@ -51,7 +51,7 @@ import { psql, ok, bad, check } from './harness';
 /** A Woolabee's level skill, which sets its stage (`creatureLevel`): a skill it does not level by sets none. */
 const WOOL_LEVEL = levelSkill(SPECIES.woola)!;
 import {
-  countsLine, FieldGuide, guideCounts, guideEntries, guideEntry, guideMarks, guidePage, guidePages, seenLine, stageKey, whereItLives, wildShare,
+  countsLine, FieldGuide, GUIDE_ORDER, guideCounts, guideEntries, guideEntry, guideMarks, guidePage, guidePages, seenLine, stageKey, whereItLives, wildShare,
 } from '../../src/game/guide';
 import { GUIDE_BATCH, MOBS_RANGE } from '../../src/game/keep';
 import { SAFE_RING } from '../../src/game/runestones';
@@ -65,11 +65,16 @@ const sorted = (xs: Iterable<string>): string => [...xs].sort().join(',');
 console.log('--- the pages');
 const KINDS = Object.values(SPECIES);
 const KEEPABLE = KINDS.filter((d) => !d.monster);
-check('a page for every kind there is, in the order they are written', sorted(guidePages().map((d) => d.id)) === sorted(Object.keys(SPECIES))
-  && guidePages().map((d) => d.id).join() === Object.keys(SPECIES).join(), `${guidePages().length} pages`);
+check('a page for every kind there is, once each, in the book\'s order (gathering, crafting, content, the monsters last)',
+  sorted(guidePages().map((d) => d.id)) === sorted(Object.keys(SPECIES)) && guidePages().length === KINDS.length
+  && guidePages().map((d) => d.id).join() === GUIDE_ORDER.join(), `${guidePages().length} pages`);
+check('the order names every kind there is and nothing else, once each',
+  sorted(GUIDE_ORDER) === sorted(Object.keys(SPECIES)) && new Set(GUIDE_ORDER).size === GUIDE_ORDER.length,
+  `${GUIDE_ORDER.length} named of ${KINDS.length}: ${GUIDE_ORDER.filter((id) => !SPECIES[id]).join(',')} / ${Object.keys(SPECIES).filter((id) => !GUIDE_ORDER.includes(id)).join(',')}`);
+check('the monsters last', guidePages().slice(-KINDS.filter((d) => d.monster).length).every((d) => d.monster));
 // And a page for each stage after its kind's, under `species:stage` (asked for: "so that every wildermon is shown").
 const ENTRIES = guideEntries();
-const STAGED = KINDS.flatMap((d) => [d.id, ...(d.stages ?? []).map((_, i) => `${d.id}:${i + 1}`)]);
+const STAGED = guidePages().flatMap((d) => [d.id, ...(d.stages ?? []).map((_, i) => `${d.id}:${i + 1}`)]);
 check('a page for every stage after its kind\'s, named for the stage', ENTRIES.map((e) => e.key).join() === STAGED.join()
   && ENTRIES.length > KINDS.length && guideEntry('woola:1')?.name === SPECIES.woola.stages?.[0].name && stageKey('woola', 0) === 'woola'
   && !guideEntry('woola:3') && !guideEntry('woola:0') && !guideEntry('nosuch:1'), `${ENTRIES.length} pages`);
