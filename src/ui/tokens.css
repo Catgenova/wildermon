@@ -121,3 +121,105 @@
   --frame-accent: var(--rc-rune);
   --frame-accent-ink: var(--rc-strong);
 }
+
+/*
+ * The pictures inside two windows, which are drawings and not the interior's
+ * chrome: the Health window's heart, blood, venom, the figure's stage and
+ * plinth, the wound pins and the small pictures of what a care takes; the
+ * Equipment window's oak alcove, plinth, iron sockets and plaques. Classic's
+ * colours first, then Runecut's by day and by night. Everything else in both
+ * windows is the interior kit's (src/ui/interior.css) and the `--t-*` set.
+ */
+:root {
+  --hp-heart: #d24b5a;
+  --hp-heart-lit: #ff9fab;
+  --hp-heart-deep: #7e2131;
+  --hp-heart-empty: rgba(210, 75, 90, 0.16);
+  --hp-blood: #e86a5f;
+  --hp-bad: #9cc055;
+  --hp-venom: #bf8ce6;
+  --hp-dress: #efe3c8;
+  --hp-dressed: #8a7a62;
+  --hp-pin-ink: #fff;
+  --hp-stage-top: #2d2a33;
+  --hp-stage-bottom: #1b1a20;
+  --hp-plinth: #4a4250;
+  /* What a care takes, as the small pictures draw it: the same in every look. */
+  --hp-i-water: #8cc3e0;
+  --hp-i-water-edge: #4f86a3;
+  --hp-i-ash: #a59f98;
+  --hp-i-ash-edge: #6d6760;
+  --hp-i-fluff: #fbf7ee;
+  --hp-i-fluff-edge: #a89e8a;
+  --hp-i-wax: #e9c55a;
+  --hp-i-wax-edge: #9a7a22;
+  --hp-i-blade: #d6dade;
+  --hp-i-blade-edge: #6f777e;
+  --hp-i-core: #d9cbb0;
+  --hp-i-weave: #b8a888;
+  --hp-i-leaf: #7fae5a;
+  --hp-i-leaf-edge: #3f6632;
+  --hp-i-handle: #6b5a48;
+  --hp-i-wood: #b98c5a;
+  --hp-i-wood-edge: #6b4a2c;
+  --hp-i-lye: #e7eef0;
+  --hp-i-lye-edge: #8fa3a8;
+  --hp-i-band: #5c5752;
+  --hp-i-tin: #c9b27a;
+  --hp-i-tin-edge: #6b5a33;
+  --hp-i-lid: #e3cf96;
+
+  --eq-gold: #d6963c;
+  --eq-metal: #a9b2c2;
+  --eq-iron: #5b6170;
+  --eq-iron-lit: #8d94a3;
+  --eq-plank: #3a2f26;
+  --eq-plank-lit: #4a3c30;
+  --eq-plinth: #4a4250;
+  --eq-socket: #2a2730;
+  --eq-plaque: #2f2a24;
+  --eq-pip-ink: #2a1d0c;
+}
+
+:root[data-ui='runecut'] {
+  --hp-heart: #c94755;
+  --hp-heart-lit: #f59aa4;
+  --hp-heart-deep: #7a2232;
+  --hp-heart-empty: color-mix(in srgb, #c94755 14%, var(--rc-field));
+  --hp-blood: #b23236;
+  --hp-bad: #557d24;
+  --hp-venom: #7a43a6;
+  --hp-dress: #fffaf0;
+  --hp-stage-top: color-mix(in srgb, var(--rc-field) 60%, #dfe8e4);
+  --hp-stage-bottom: color-mix(in srgb, var(--rc-deep) 70%, #c9b9a0);
+  --hp-plinth: color-mix(in srgb, var(--rc-shade) 70%, #8d7c6a);
+
+  --eq-gold: #b8742a;
+  --eq-metal: #7d8696;
+  --eq-iron: #4d5361;
+  --eq-iron-lit: #8e95a3;
+  --eq-plank: #a77a4f;
+  --eq-plank-lit: #c39566;
+  --eq-plinth: color-mix(in srgb, var(--rc-shade) 70%, #8d7c6a);
+  --eq-socket: color-mix(in srgb, var(--rc-field) 85%, #ffffff);
+  --eq-plaque: color-mix(in srgb, var(--rc-field) 80%, #fff8ea);
+}
+
+:root[data-ui='runecut'][data-rc='night'] {
+  --hp-blood: #ff9a8a;
+  --hp-bad: #b4d672;
+  --hp-venom: #d2a6f0;
+  --hp-heart-empty: color-mix(in srgb, #c94755 24%, var(--rc-field));
+  --hp-dress: #f3ead6;
+  --hp-stage-top: color-mix(in srgb, var(--rc-field) 80%, #2a3550);
+  --hp-stage-bottom: color-mix(in srgb, var(--rc-deep) 80%, #10172a);
+  --hp-plinth: color-mix(in srgb, var(--rc-shade) 80%, #20263a);
+
+  --eq-gold: #e6a85a;
+  --eq-metal: #b5bfd0;
+  --eq-plank: #5a4634;
+  --eq-plank-lit: #6e5640;
+  --eq-plinth: color-mix(in srgb, var(--rc-shade) 80%, #20263a);
+  --eq-socket: color-mix(in srgb, var(--rc-field) 90%, #0d1220);
+  --eq-plaque: color-mix(in srgb, var(--rc-field) 85%, #1a2034);
+}

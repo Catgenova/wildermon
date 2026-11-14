@@ -7,6 +7,7 @@ import { drawFigure, figureJoint, onScreen, viewOf, type FigurePose, type V3 } f
 import { svgOf, type Effect, type SpellsOnYou } from '../effects';
 import { clockWords, healthReport, type Care, type CareOption, type HealthReport, type RecipeView, type WoundState, type WoundView } from '../health';
 import type { UIWindow } from '../windows';
+import { fullness, kit, meaning, type Meaning } from '../kit';
 import { fixedAll, html, NO_MARKUP, setMarkup, type Markup } from '../html';
 import { WOUND_KINDS } from '../../game/wounds';
 
@@ -121,6 +122,11 @@ const PIN_GLYPH: Record<WoundState, Markup> = fixedAll<WoundState>({
   covered: '<path d="M2.5 9.5 C 3 5 6 2.5 9.5 2.5 C 9.5 6 7 9 2.5 9.5 Z"/>',
 });
 
+/** What a wound's state means, for its tag and its depth meter (src/ui/kit.ts): the art keeps each state's own colour. */
+const STATE_MEANS: Record<WoundState, Meaning | null> = { bleeding: 'bad', bad: 'bad', venom: 'bad', open: 'warn', dressed: null, covered: 'good' };
+/** A rate's chip, by what it says. */
+const RATE_MEANS = { bad: 'bad', good: 'good', still: null } as const;
+
 /** What a wound's state is called on the legend, in the order it is drawn. */
 const STATE_NAMES: Array<[WoundState, string]> = [
   ['bleeding', 'Bleeding'], ['bad', 'Infected'], ['venom', 'Venom'], ['open', 'Open'], ['dressed', 'Dressed'], ['covered', 'Right herb'],
@@ -148,7 +154,7 @@ export class HealthPanel {
   private readonly emptyIn: HTMLDivElement;
   private readonly emptyText: HTMLSpanElement;
   private readonly rate: HTMLDivElement;
-  private readonly pills = new Map<string, { fill: HTMLSpanElement; num: HTMLSpanElement; box: HTMLDivElement }>();
+  private readonly pills = new Map<string, { track: HTMLSpanElement; fill: HTMLSpanElement; num: HTMLSpanElement; box: HTMLDivElement }>();
   private readonly stage: HTMLDivElement;
   private readonly canvas: HTMLCanvasElement;
   private readonly pins: HTMLDivElement;
@@ -193,12 +199,14 @@ export class HealthPanel {
   private get still(): boolean { return lessMotion(); }
 
   constructor(private readonly win: UIWindow, private readonly game: Game, private readonly spells: SpellsOnYou) {
+    // The window is one page that scrolls as a whole: its body is its one scroll area.
+    kit(win.body, 'body', 'scroll');
     win.body.classList.add('hp-body');
     const root = el('div', 'hp');
     win.body.append(root);
 
     /* ---- along the top: the heart, the line under it, the bars ---------------------- */
-    const top = el('header', 'hp-top');
+    const top = kit(el('header', 'hp-top'), 'card');
     this.heart = el('div', 'hp-heart');
     const hs = svg('svg', { viewBox: '0 0 100 92', 'aria-hidden': 'true' });
     const defs = svg('defs');
@@ -232,12 +240,12 @@ export class HealthPanel {
       const head = el('div', 'hp-pill-head');
       const num = el('span', 'hp-pill-num');
       head.append(el('span', 'hp-pill-label', label), num);
-      const track = el('span', 'hp-pill-track');
-      const fill = el('span', 'hp-pill-fill');
+      const track = kit(el('span', 'hp-pill-track'), 'meter');
+      const fill = kit(el('span', 'hp-pill-fill'), 'fill');
       track.append(fill);
       box.append(head, track);
       pills.append(box);
-      this.pills.set(id, { fill, num, box });
+      this.pills.set(id, { track, fill, num, box });
     }
     top.append(this.heart, words, pills);
 
@@ -256,17 +264,17 @@ export class HealthPanel {
 
     /* ---- the tabs ------------------------------------------------------------------------- */
     const side = el('div', 'hp-side');
-    const bar = el('div', 'hp-tabs');
+    const bar = kit(el('div', 'hp-tabs'), 'tabs');
     bar.setAttribute('role', 'tablist');
     bar.setAttribute('aria-label', 'Health');
     const panes = el('div', 'hp-panes');
     for (const [id, label] of [['wounds', 'Wounds'], ['conditions', 'Conditions'], ['food', 'Nutrition']] as const) {
-      const btn = el('button', 'hp-tab');
+      const btn = kit(el('button', 'hp-tab'), 'tab');
       btn.type = 'button';
       btn.id = `hp-tab-${id}`;
       btn.setAttribute('role', 'tab');
       btn.setAttribute('aria-controls', `hp-pane-${id}`);
-      const badge = el('span', 'hp-badge');
+      const badge = kit(el('span', 'hp-badge'), 'badge');
       btn.append(el('span', 'hp-tab-label', label), badge);
       btn.addEventListener('click', () => this.show(id));
       btn.addEventListener('keydown', (e) => {
@@ -292,18 +300,19 @@ export class HealthPanel {
     this.tabs.get('wounds')?.pane.append(this.woundsPane);
     this.against = el('div', 'hp-cards');
     this.forYou = el('div', 'hp-cards');
-    this.forHead = el('div', 'hp-head', 'Buffs');
-    this.mendLine = el('div', 'hp-mend-rule');
-    this.tabs.get('conditions')?.pane.append(el('div', 'hp-head', 'Debuffs'), this.against, this.mendLine, this.forHead, this.forYou,
-      el('div', 'hp-head', 'Healing skills'), this.hands);
-    const foodHead = el('div', 'hp-head', 'Nutrition');
-    this.fedWord = el('span', 'hp-fed');
+    const section = (text: string): HTMLDivElement => kit(el('div', 'hp-head', text), 'section');
+    this.forHead = section('Buffs');
+    this.mendLine = kit(el('div', 'hp-mend-rule'), 'sunk');
+    this.tabs.get('conditions')?.pane.append(section('Debuffs'), this.against, this.mendLine, this.forHead, this.forYou,
+      section('Healing skills'), this.hands);
+    const foodHead = section('Nutrition');
+    this.fedWord = kit(el('span', 'hp-fed'), 'tag');
     this.foodBars = el('div', 'hp-food');
-    this.foodWords = el('ul', 'hp-food-words') as unknown as HTMLDivElement;
+    this.foodWords = kit(el('ul', 'hp-food-words'), 'sunk') as unknown as HTMLDivElement;
     this.tabs.get('food')?.pane.append(foodHead, this.fedWord, this.foodBars, this.foodWords);
     side.append(bar, panes);
     main.append(stageBox, side);
-    this.more = el('button', 'hp-more', 'More below');
+    this.more = kit(el('button', 'hp-more', 'More below'), 'btn');
     this.more.type = 'button';
     this.more.hidden = true;
     this.more.addEventListener('click', () => win.body.scrollBy({ top: win.body.clientHeight * 0.7, behavior: this.still ? 'auto' : 'smooth' }));
@@ -418,6 +427,7 @@ export class HealthPanel {
       b.textContent = n ? String(n) : '';
       b.hidden = !n;
       b.classList.toggle('hp-badge-hot', hot);
+      meaning(b, hot ? 'bad' : null);
     };
     set('wounds', r.wounds.length, r.wounds.some((v) => v.state === 'bad' || v.state === 'bleeding' || v.state === 'venom'));
     set('conditions', r.against.length, r.against.length > 0);
@@ -466,10 +476,10 @@ export class HealthPanel {
       if (x.parts) {
         const group = el('span', 'hp-rate-group');
         group.title = x.long;
-        group.append(el('span', 'hp-rate-label', 'Not mending'), ...x.parts.map((p) => el('span', `hp-rate-chip hp-rate-${x.kind}`, p)));
+        group.append(el('span', 'hp-rate-label', 'Not mending'), ...x.parts.map((p) => this.rateChip(x.kind, p)));
         return group;
       }
-      const chip = el('span', `hp-rate-chip hp-rate-${x.kind}`, x.short);
+      const chip = this.rateChip(x.kind, x.short);
       chip.title = x.long;
       return chip;
     }));
@@ -480,7 +490,15 @@ export class HealthPanel {
       p.fill.style.width = pct(v);
       p.num.textContent = pct(v);
       p.box.classList.toggle('hp-pill-low', v <= 0.2);
+      meaning(p.track, fullness(v));
     }
+  }
+
+  /** A chip of how fast health moves, or of why it does not. */
+  private rateChip(kind: 'bad' | 'good' | 'still', text: string): HTMLSpanElement {
+    const chip = kit(el('span', `hp-rate-chip hp-rate-${kind}`, text), 'tag');
+    meaning(chip, RATE_MEANS[kind]);
+    return chip;
   }
 
   private burst(): void {
@@ -742,7 +760,7 @@ export class HealthPanel {
     if (sig === this.drawn) return;
     this.drawn = sig;
     if (!r.wounds.length) {
-      const empty = el('div', 'hp-empty');
+      const empty = kit(el('div', 'hp-empty'), 'empty');
       empty.append(el('div', 'hp-empty-mark'), el('b', '', 'No wounds.'), el('div', '', r.rateWords.join(' ')));
       this.woundsPane.replaceChildren(empty);
       return;
@@ -762,7 +780,8 @@ export class HealthPanel {
 
   private woundRow(v: WoundView, now: number, doing: { id: string; k: number; left: number } | null): HTMLElement {
     const open = v.key === this.picked;
-    const box = el('div', `hp-wound hp-wound-${v.state}${open ? ' hp-wound-open' : ''}`);
+    const box = kit(el('div', `hp-wound hp-wound-${v.state}${open ? ' hp-wound-open' : ''}`), 'card');
+    box.classList.toggle('rc-on', open);
     box.dataset.key = v.key;
     box.setAttribute('role', 'listitem');
     const seen = this.seenAt.get(v.key);
@@ -773,10 +792,12 @@ export class HealthPanel {
     head.setAttribute('aria-expanded', String(open));
     const name = el('span', 'hp-wound-name');
     name.append(el('b', '', v.title), el('span', 'hp-wound-part', ` · ${v.part}`));
-    const state = el('span', `hp-chip hp-chip-${v.state}`, STATE_NAMES.find(([st]) => st === v.state)?.[1] ?? '');
+    const state = kit(el('span', `hp-chip hp-chip-${v.state}`, STATE_NAMES.find(([st]) => st === v.state)?.[1] ?? ''), 'tag');
+    meaning(state, STATE_MEANS[v.state]);
     const sev = el('span', 'hp-wound-depth');
-    const track = el('span', 'hp-wound-sev');
-    const sf = el('span', 'hp-wound-sev-fill');
+    const track = kit(el('span', 'hp-wound-sev'), 'meter');
+    meaning(track, STATE_MEANS[v.state] ?? 'info');
+    const sf = kit(el('span', 'hp-wound-sev-fill'), 'fill');
     sf.style.width = pct(v.severity);
     track.append(sf);
     const depth = el('span', 'hp-wound-depth-label', 'Depth ');
@@ -787,6 +808,9 @@ export class HealthPanel {
     if (!open && v.cares.length) {
       const c = v.cares[0];
       const next = el('span', `hp-wound-next ${c.why === null ? 'hp-wound-next-go' : 'hp-wound-next-need'}`);
+      // Ready, it reads as the press it leads to; wanting something, as a tag of what is wanting.
+      if (c.why === null) kit(next, 'btn');
+      else meaning(kit(next, 'tag'), 'bad');
       next.textContent = c.why === null ? `${c.button}: uses your ${c.uses?.label ?? 'dressing'}` : c.holding ? c.why : `${c.button}: needs ${c.options.length > 1 ? 'a dressing' : `a ${c.options[0].label.toLowerCase()}`}`;
       head.append(next);
     }
@@ -809,14 +833,15 @@ export class HealthPanel {
   }
 
   private careBox(c: Care, v: WoundView, doing: { k: number; left: number } | null): HTMLElement {
-    const box = el('section', `hp-care${c.why === null ? ' hp-care-ready' : ''}`);
+    const box = kit(el('section', `hp-care${c.why === null ? ' hp-care-ready' : ''}`), 'sunk');
+    meaning(box, c.why === null ? 'good' : null);
     const head = el('div', 'hp-care-head');
     const title = el('div', 'hp-care-title');
     title.append(el('b', '', c.title));
     if (c.uses) title.append(el('span', 'hp-care-uses', `Uses: ${c.uses.label}, QL ${c.uses.ql.toFixed(0)}`));
     // Locked for want of something: the button says what, since a tooltip is out of reach on a touch screen.
     const wants = c.why !== null && !c.holding ? `Needs ${c.options.length > 1 ? 'a dressing' : c.options[0].label.toLowerCase()}` : null;
-    const go = el('button', 'hp-go', doing ? 'Working…' : wants ?? c.button);
+    const go = kit(el('button', 'hp-go', doing ? 'Working…' : wants ?? c.button), 'btn', 'go');
     go.type = 'button';
     go.dataset.focus = `${v.key}|${c.id}`;
     go.disabled = c.why !== null || !c.target || !!doing;
@@ -834,10 +859,11 @@ export class HealthPanel {
     head.append(title, go);
     box.append(head);
     if (doing) {
-      const bar = el('div', 'hp-progress');
+      const bar = kit(el('div', 'hp-progress'), 'meter');
+      meaning(bar, 'accent');
       bar.setAttribute('role', 'progressbar');
       bar.setAttribute('aria-valuenow', String(Math.round(doing.k * 100)));
-      const f = el('span', 'hp-progress-fill');
+      const f = kit(el('span', 'hp-progress-fill'), 'fill');
       f.style.width = pct(doing.k);
       bar.append(f, el('span', 'hp-progress-left', `${Math.ceil(doing.left)}s`));
       box.append(bar);
@@ -856,14 +882,14 @@ export class HealthPanel {
       box.append(odds);
     }
     // Something other than a missing thing in the way: said once, here. A missing thing is said by its row.
-    if (c.why && c.holding) box.append(el('div', 'hp-why', c.why));
+    if (c.why && c.holding) box.append(meaning(kit(el('div', 'hp-why', c.why), 'sunk'), 'bad'));
     // What could be held for it, best first: what each does for this wound, and how many you carry.
     const table = el('div', 'hp-opts');
     table.setAttribute('role', 'table');
     const many = c.options.length > 1;
     const numbers = c.options.some((o) => o.closes);
     table.classList.toggle('hp-opts-numbers', numbers);
-    const cols = el('div', 'hp-opts-head');
+    const cols = kit(el('div', 'hp-opts-head'), 'colhead');
     cols.setAttribute('role', 'row');
     cols.append(el('span', 'hp-opts-what', 'Carried'));
     if (numbers) cols.append(el('span', 'hp-opts-num', 'Heals'), el('span', 'hp-opts-num', 'Closes in'), el('span', 'hp-opts-num', 'Fester'));
@@ -925,18 +951,18 @@ export class HealthPanel {
     const chips = el('div', 'hp-recipe-chips');
     for (const i of rv.inputs) {
       const ok = i.have >= i.need;
-      const chip = el('span', `hp-rchip ${ok ? 'hp-rchip-ok' : 'hp-rchip-no'}`);
+      const chip = meaning(kit(el('span', `hp-rchip ${ok ? 'hp-rchip-ok' : 'hp-rchip-no'}`), 'tag'), ok ? 'good' : 'bad');
       const pic = ITEM_ICONS[i.item] ?? (HERBS.has(i.item) ? ITEM_ICONS.herb : null);
       if (pic) chip.append(pictured('hp-rchip-icon', pic));
       chip.append(`${i.name} ${Math.min(i.have, 99)}/${i.need}`);
       chips.append(chip);
     }
     if (rv.tool) {
-      const chip = el('span', `hp-rchip ${rv.tool.have ? 'hp-rchip-ok' : 'hp-rchip-no'}`);
+      const chip = meaning(kit(el('span', `hp-rchip ${rv.tool.have ? 'hp-rchip-ok' : 'hp-rchip-no'}`), 'tag'), rv.tool.have ? 'good' : 'bad');
       chip.append(pictured('hp-rchip-icon', ITEM_ICONS.knife), `${rv.tool.name} ${rv.tool.have ? '✓' : '✗'}`);
       chips.append(chip);
     }
-    chips.append(el('span', 'hp-rchip hp-rchip-skill', `${rv.skill.name} ${rv.skill.level.toFixed(1)}`));
+    chips.append(kit(el('span', 'hp-rchip hp-rchip-skill', `${rv.skill.name} ${rv.skill.level.toFixed(1)}`), 'tag'));
     row.append(head, chips);
     if (rv.who) row.append(el('div', 'hp-recipe-who', `Made only by: ${rv.who}.`));
     return row;
@@ -948,7 +974,7 @@ export class HealthPanel {
     if (this.hands.dataset.sig === sig) return;
     this.hands.dataset.sig = sig;
     this.hands.replaceChildren(...r.hands.map((h) => {
-      const row = el('div', 'hp-hand');
+      const row = kit(el('div', 'hp-hand'), 'card');
       const head = el('div', 'hp-hand-head');
       head.append(el('span', '', h.name), el('b', '', h.level.toFixed(1)));
       row.append(head, el('div', 'hp-hand-does', h.does), el('div', 'hp-hand-next', h.next));
@@ -963,11 +989,11 @@ export class HealthPanel {
     if (into.dataset.sig === sig) return;
     into.dataset.sig = sig;
     if (!list.length) {
-      into.replaceChildren(el('div', 'hp-none', none));
+      into.replaceChildren(kit(el('div', 'hp-none', none), 'empty'));
       return;
     }
     into.replaceChildren(...list.map((e) => {
-      const row = el('div', `hp-card ${e.good ? 'hp-card-good' : 'hp-card-bad'}`);
+      const row = kit(el('div', `hp-card ${e.good ? 'hp-card-good' : 'hp-card-bad'}`), 'card');
       const ic = el('span', 'hp-card-icon');
       setMarkup(ic, svgOf(e.glyph as Parameters<typeof svgOf>[0]));
       const text = el('div', 'hp-card-text');
@@ -982,13 +1008,14 @@ export class HealthPanel {
 
   private drawFood(r: HealthReport): void {
     this.fedWord.textContent = r.fed;
+    meaning(this.fedWord, r.hungry ? 'warn' : null);
     const sig = r.nutrition.map((n) => n.value.toFixed(2)).join() + r.nutritionWords.join();
     if (this.foodBars.dataset.sig === sig) return;
     this.foodBars.dataset.sig = sig;
     this.foodBars.replaceChildren(...r.nutrition.map((n) => {
       const row = el('div', `hp-nut hp-nut-${n.id}`);
-      const track = el('span', 'hp-nut-track');
-      const fill = el('span', 'hp-nut-fill');
+      const track = meaning(kit(el('span', 'hp-nut-track'), 'meter'), fullness(n.value));
+      const fill = kit(el('span', 'hp-nut-fill'), 'fill');
       fill.style.width = pct(n.value);
       track.append(fill);
       row.append(el('span', 'hp-nut-name', n.name), track, el('span', 'hp-nut-num', pct(n.value)), el('span', 'hp-nut-note', n.note));

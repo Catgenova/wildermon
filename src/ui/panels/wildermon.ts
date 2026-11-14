@@ -215,14 +215,14 @@ export class WildermonPanel {
     this.cardsPage.className = 'pals-cards';
     this.cardsPage.append(this.search, bar, this.list, this.footer);
     const tabs = document.createElement('div');
-    tabs.className = 'log-tabs pals-tabs';
+    tabs.className = 'log-tabs rc-tabs pals-tabs';
     for (const [id, label, title] of [
       ['care', 'Care', 'Needs worst first, one-click fixes; the herd with its meters'],
       ['cards', 'Cards', 'A card each: stats, traits, pedigree, work'],
     ] as Array<['care' | 'cards', string, string]>) {
       const b = document.createElement('button');
       b.type = 'button';
-      b.className = 'tb-btn tb-small log-tab';
+      b.className = 'tb-btn tb-small log-tab rc-tab';
       b.textContent = label;
       b.title = title;
       b.addEventListener('click', () => this.show(id));

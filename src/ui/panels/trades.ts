@@ -102,9 +102,9 @@ export class TradesPanel {
   ) {
     win.body.classList.add('trade-body');
     const bar = document.createElement('div');
-    bar.className = 'trade-tabs log-tabs';
+    bar.className = 'trade-tabs log-tabs rc-tabs';
     for (const [id, label] of [['trades', 'Trades'], ['tree', 'Tree']] as Array<[Tab, string]>) {
-      const b = button(label, 'log-tab');
+      const b = button(label, 'log-tab rc-tab');
       b.addEventListener('click', () => this.show(id));
       this.tabs.set(id, b);
       bar.append(b);
