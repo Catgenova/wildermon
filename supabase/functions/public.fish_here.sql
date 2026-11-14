@@ -5,5 +5,5 @@ CREATE OR REPLACE FUNCTION public.fish_here(p_depth double precision, p_skill do
  LANGUAGE sql
  STABLE
 AS $function$
-  select * from fish_def where p_depth >= depth and p_skill >= level
+  select * from fish_def where not deep and p_depth >= depth and p_skill >= level
 $function$

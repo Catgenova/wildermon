@@ -20,6 +20,7 @@ import { matOfItem } from './materials';
 import { takeGear } from './wildgearActions';
 import { boundKey } from './keybinds';
 import { pannierExitRefusal } from './panniers';
+import { LEAD_ROPE, noTackSaid } from './ropework';
 
 /**
  * What one offering and one blow teach, landed or not.
@@ -1134,7 +1135,8 @@ export const CREATURE_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       const c = creatureOf(g, t);
       if (!c) return 'Gone.';
-      if (!c.tacked) return `${c.name}: no saddle and bridle.`;
+      // A lead rope in the pack stands in for the saddle and bridle (`ropework.ts`).
+      if (!c.tacked && !g.inventory.has(LEAD_ROPE)) return noTackSaid(c.name);
       if (!ageDef(c, g.time).works) return `${c.name} is not grown.`;
       if (c.hitchedTo !== null) return `${c.name} is in the traces.`;
       if (!nearPlayer(g, c)) return `Stand next to ${c.name}.`;

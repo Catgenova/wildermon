@@ -106,6 +106,8 @@ begin
     if not on_my_deed(p_world, p_uid, pc.x, pc.y) then
       return 'Only on your settlement.';
     end if;
+    -- Rung on a bell rope (`ropework.ts`).
+    if pack_count(p_world, p_uid, bell_rope_item()) < 1 then return no_bell_rope_said(); end if;
     return null;
 
   elsif p_action in ('sleep', 'set_home') then

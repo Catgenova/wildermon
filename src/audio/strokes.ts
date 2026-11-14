@@ -124,6 +124,8 @@ export const STROKE_BY_ID: Record<string, Stroke> = {
   scrub_dye: 'cloth', scrub_wall_paint: 'cloth', scrub_floor_paint: 'cloth',
   // A dye written down on a sheet of papyrus, as a map is (`dyes.ts`).
   make_dye_recipe: 'cloth',
+  // A lead line let down into the water, and a rigging set rove off on a hull (`sailActions.ts`).
+  sound_depth: 'water', fit_rigging: 'cloth',
 };
 
 const BY_SKILL: Record<string, Stroke> = {

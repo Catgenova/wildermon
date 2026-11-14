@@ -5,5 +5,7 @@ CREATE OR REPLACE FUNCTION public.placed_burn_rate(p placed)
  LANGUAGE sql
  STABLE
 AS $function$
-  select (case when is_brazier(p) then brazier_burn(p.ql) else 1 end) * (1 - placed_enchant(p, 'ember'))
+  select case when infuse_on(p.infuse, 'light') > 0 then 0::double precision
+              else (case when is_brazier(p) then brazier_burn(p.ql) else 1 end) * (1 - placed_enchant(p, 'ember'))
+                   / (1 + infuse_most('fire') * infuse_on(p.infuse, 'fire')) end
 $function$

@@ -127,7 +127,7 @@ const SHAPE_OF: Record<string, Shape> = Object.fromEntries(([
   ['loaf', 'bread loaf pie cake cheese dough butter pastry'],
   ['sack', 'flour cornmeal wheat corn seed sand dirt ash coal peat salt sugar compost'],
   ['trinkets', 'gem ring pendant circlet bauble mirror comb statuette coin fragment'],
-  ['basket', 'grape apple cherry plum peach pear fig lemon quince apricot pomegranate olive blueberry raspberry strawberry lingonberry carrot cabbage onion potato fish trout perch pike minnow sturgeon meat egg nuts acorn'],
+  ['basket', 'grape apple cherry plum peach pear fig lemon quince apricot pomegranate olive blueberry raspberry strawberry lingonberry carrot cabbage onion potato fish trout perch pike minnow sturgeon cod halibut bluefin meat egg nuts acorn'],
   ['crate', 'crate chest box coffer'],
 ] as Array<[Shape, string]>).flatMap(([shape, words]) => words.split(' ').map((w) => [w, shape])));
 
@@ -143,7 +143,7 @@ const COLOUR_OF: Record<string, string> = Object.fromEntries(([
   ['#9a3a4a', 'wine'], ['#e0a040', 'mead honey cider juice ale preserves'], ['#a8a040', 'oil olive'], ['#f5f2ea', 'milk'],
   ['#d6574a', 'apple cherry raspberry strawberry pomegranate'], ['#6a4a8a', 'plum blueberry lingonberry grape'],
   ['#e8b040', 'pear quince fig lemon apricot peach'], ['#e88a3a', 'carrot'], ['#8fb84a', 'cabbage basil mint sage thyme rosemary'],
-  ['#d8c098', 'onion potato egg nuts acorn'], ['#8fa8b8', 'fish trout perch pike minnow sturgeon'], ['#b8504a', 'meat'],
+  ['#d8c098', 'onion potato egg nuts acorn'], ['#8fa8b8', 'fish trout perch pike minnow sturgeon cod halibut bluefin'], ['#b8504a', 'meat'],
   ['#a890c8', 'lavender'], ['#e08aa0', 'rose petals'], ['#e6c75a', 'wildflowers flowers'], ['#c8b070', 'reed thatch papyrus'],
   ['#9cc8b8', 'bottle vial glass'], ['#b08850', 'crate chest box coffer'],
 ] as Array<[string, string]>).flatMap(([c, words]) => words.split(' ').map((w) => [w, c])));

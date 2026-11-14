@@ -65,6 +65,8 @@ export function packed(it: ItemRow, island: Aged): Item {
     enchant: it.enchant ?? undefined,
     // And the line cut into a memorial stone, which it carries as it stood (`memorial.ts`).
     engraving: it.engraving ?? undefined,
+    // And the motes infused into it, while they last (`infusion.ts`).
+    infuse: it.infuse ?? undefined,
   };
 }
 

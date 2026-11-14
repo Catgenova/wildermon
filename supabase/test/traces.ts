@@ -315,7 +315,8 @@ begin
     jsonb_build_object('kind', 'post', 'id', v_post, 'creature', v_pet)), 'none'));
   insert into said values ('unhitch-free', coalesce(act_refusal(w, a, 'unhitch_creature', jsonb_build_object('kind', 'creature', 'id', v_free)), 'none'));
 
-  -- The bell, rung beside Ivar.
+  -- The bell, rung beside Ivar, on a bell rope (ropework.ts).
+  perform give(w, a, 'bell_rope', 1, 50);
   insert into placed (world_id, kind, sub, x, y, cx, cy, ql, made_by)
     values (w, 'furniture', 'bell', 2045, 2045, 2045.5, 2045.5, 40, a) returning id into v_bell;
   insert into said values ('bell', coalesce(act_refusal(w, a, 'ring_bell', jsonb_build_object('kind', 'furniture', 'id', v_bell)), 'none'));

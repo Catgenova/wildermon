@@ -231,6 +231,18 @@ import {
 import { STEPS_BACK, stepsBack, STONE_STEPS_BILL, TIMBER_STEPS_BILL } from '../../game/steps';
 import { LAVENDER_RULE, ROSE_BUD, ROSE_FLOWER, ROSE_LEAFY, ROSES_RULE } from '../../game/roses';
 import { DEVICE_COUNT } from '../../render/furniture';
+import { TRAPS } from '../../game/trapdefs';
+import {
+  BELL_HEARD_BASE, BELL_HEARD_PER_QL, bellHeard, HAMMOCK_REST, LAY_UP_EVERY, LAY_UP_FAIL_SHARE, LAY_UP_SPARE_ABOVE, LEAD_PACE,
+  ROPE_SHARE_BOAT, ROPE_SHARE_TRAP, ROPE_TIME_PER_LEVEL, ROPE_WALK, ROPE_WALK_QL, ROPE_WALK_TIME, ropePerLayUp, ropeTime, TWINE_MADE,
+} from '../../game/ropework';
+import {
+  beamPace, cargoRoom, CLOSE_LEARN, DEEP_CATCH, DEEP_NET, DEEP_WATER, GALE, GALE_LEARN, GALE_SAFE_AT, GALE_TILES_PER_DAMAGE, noGoDegrees,
+  RIGGING_CLOSER, RIGGING_PACE, RIGGING_SET, SAIL_QL_TOP, SOUND_REACH, TACK_PACE, tackSecs,
+} from '../../game/sailing';
+import { ATTUNE_DAYS, ATTUNE_MOTES, ATTUNE_STRENGTH, INFUSE_DAYS, INFUSE_ELEMENTS, INFUSE_INTO, INFUSE_MOTES, SENSE_BASE, SENSE_PER_LEVEL } from '../../game/infusion';
+import { NO_GO } from '../../game/wind';
+import { FISH } from '../../game/fishing';
 import { FLOWER_MOST, FLOWER_SEASONS } from '../../world/flowers';
 import {
   colourWord, DYE_LITRES, DYE_LITRES_PER_KG, DYE_QL_BLACK, DYE_QL_PURE, DYE_QL_WHITE, dyeGrams, DYESTUFFS, dyeHex, kgSaid, LEGACY_DYES, LEGACY_POT_LITRES,
@@ -4425,6 +4437,52 @@ export const NEWS: News[] = [
       `New: fishing net: ${LIFT_DROPS * NET_LIFT.length} drops off the net as it is lifted, ${SHAKE_DROPS} at each of ${NET_SHAKES.length} shakes.`,
       `New: rowing under way: ${OAR_DROPS} drops a blade at the catch; whirl pair a blade a stroke, ${SWIRL_SECS} s.`,
       'Without a graphics card: swimming strokes\' splashes, rings treading water, the float\'s strike and a catch only.',
+    ],
+  },
+  // Elementalism (`infusion.ts`, `infuseActions.ts`).
+  {
+    n: 600,
+    day: '2026-11-14',
+    lines: () => [
+      `New: Infuse into (a mote's menu, at an enchanter's plinth): ${INFUSE_MOTES} motes of one element into a thing, one element at a time, ${INFUSE_DAYS} days. `
+        + `Strength: elementalism ÷ 100 × motes' QL ÷ 100 of the element's most:`,
+      ...INFUSE_ELEMENTS.map((el) => `${el[0].toUpperCase()}${el.slice(1)}: ${el === 'dark' ? 'weapon, armour or shield' : (INFUSE_INTO[el]?.into ?? []).map((id) => id.replace(/_/g, ' ')).join(', ')}; `
+        + `${(INFUSE_INTO[el]?.label ?? '').toLowerCase()} ${INFUSE_INTO[el]?.say(1) ?? ''} at 100%.`),
+      `New: attunement: the element collected most in ${ATTUNE_DAYS} days: +${ATTUNE_MOTES} mote a swirl, ×${1 + ATTUNE_STRENGTH} infusion strength.`,
+      `New: Sense mote swirls: once an hour, swirls within ${SENSE_BASE} + ${SENSE_PER_LEVEL} × elementalism tiles on the map.`,
+      'New: infused things: a small knot of their element\'s motes over them (Effects setting).',
+    ],
+  },
+  // Sailing (`sailing.ts`, `sailActions.ts`).
+  {
+    n: 599,
+    day: '2026-11-14',
+    lines: () => [
+      `Changed: closest to the wind: ${noGoDegrees(1)}° at Sailing 1 to ${noGoDegrees(100)}° at 100 (was: ${Math.round((NO_GO * 180) / Math.PI)}° for every helm). `
+        + `New: beam reach speed ×${beamPace(100)} at Sailing 100; a turn through the wind ${tackSecs(1)} s at ×${TACK_PACE} speed at Sailing 1, ${tackSecs(100)} s at 100.`,
+      `New: gale: wind over ${GALE}. Below Sailing ${GALE_SAFE_AT}: 1 hull damage per ${GALE_TILES_PER_DAMAGE} tiles in one. Rowing boats do not put out in a gale. `
+        + `Sailing per tile: gale ×${GALE_LEARN}, close-hauled ×${CLOSE_LEARN}.`,
+      `New: hold of the boat at your helm ×${cargoRoom(100)} at Sailing 100.`,
+      `New: rigging set (${recipeBill(`make_${RIGGING_SET}`)}): Fit the rigging to a sailing boat or caravel: speed +${percent(RIGGING_PACE)}, ${RIGGING_CLOSER}° closer to the wind. `
+        + `Sails: speed +${percent(SAIL_QL_TOP)} at sailcloth QL 100.`,
+      `New: from a boat over water deeper than ${DEEP_WATER / 10} m: ${listed(FISH.filter((f) => f.deep).map((f) => f.name.toLowerCase()))} only, chance a fish stays on ×${DEEP_CATCH}; `
+        + `a net there ×${DEEP_NET} the fish. Sound the depth: water depth within ${SOUND_REACH} tiles on the map; trains Sailing.`,
+    ],
+  },
+  // Ropemaking (`ropework.ts`).
+  {
+    n: 598,
+    day: '2026-11-14',
+    lines: () => [
+      `New: Ropemaking: rope per lay-up ${ropePerLayUp(0)}, +1 per ${LAY_UP_EVERY} levels (${ropePerLayUp(100)} at 100); ropemaking time per action −${percent(ROPE_TIME_PER_LEVEL)} per level (×${ropeTime(100)} at 100); `
+        + `above ${LAY_UP_SPARE_ABOVE} a failed lay-up damages ${percent(LAY_UP_FAIL_SHARE)} of its fibre.`,
+      `New: rope walk (${pieceBill(ROPE_WALK)}): a lay-up beside it: time ×${ROPE_WALK_TIME}, +${ROPE_WALK_QL} QL.`,
+      `New: rope QL into what it is built into, by mass of rope and thick rope: boats ${percent(ROPE_SHARE_BOAT)}, traps ${percent(ROPE_SHARE_TRAP)}.`,
+      `New: twine (${TWINE_MADE} from ${RECIPE_BY_ID.get('make_twine')?.inputs[0].count} wemp); sailcloth (${recipeBill('make_sailcloth')}, at a loom).`,
+      `Changed: sails: sailing boat ${Object.fromEntries(furnitureDef('sailing_boat').bill).sailcloth} sailcloth, caravel ${Object.fromEntries(furnitureDef('caravel').bill).sailcloth} (was: cloth).`,
+      `New: hammock: a bed, rest ${HAMMOCK_REST} (tent ${furnitureDef('tent').bed}). Lead rope: mount a tamed wildermon with no saddle and bridle, speed ×${LEAD_PACE}. `
+        + `Twine snare: holds up to taming ${TRAPS.twine_snare.holds}, used up by its first catch.`,
+      `Changed: ringing a bell needs a bell rope; heard within ${BELL_HEARD_BASE} tiles + ${BELL_HEARD_PER_QL} per QL of the rope (${bellHeard(100)} at QL 100) (was: the whole settlement).`,
     ],
   },
   {

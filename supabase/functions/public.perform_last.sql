@@ -170,6 +170,8 @@ begin
     for e in select cr.*, coalesce(sp.speed, 1) as pace
              from creature cr join species_def sp on sp.id = cr.species
              where cr.world_id = p_world and cr.mode = 'deed' and cr.hitched_to is null
+               -- Within hearing of the bell (`bell_heard_by`).
+               and sqrt(power(cr.to_x - pc.cx, 2) + power(cr.to_y - pc.cy, 2)) <= bell_heard_by(p_world, p_uid)
                and cr.keeper in (select m.uid from deed_member m
                                  where m.world_id = p_world and m.founder = r.founded_by
                                  union select r.founded_by)
@@ -186,13 +188,15 @@ begin
     for e in select m.uid from deed_member m where m.world_id = p_world and m.founder = r.founded_by
              union select r.founded_by
     loop
-      if e.uid <> p_uid then
+      if e.uid <> p_uid and exists (select 1 from player q where q.world_id = p_world and q.uid = e.uid
+                                      and sqrt(power(q.x - pc.cx, 2) + power(q.y - pc.cy, 2)) <= bell_heard_by(p_world, p_uid)) then
         perform tell(p_world, e.uid, 'The bell rings out over ' || r.name || ' from ' || pc.x || ', ' || pc.y || '.', 'system');
       end if;
     end loop;
     perform journal_note(p_world, p_uid, 'rang');
-    perform tell(p_world, p_uid, 'Rang: ' || lower(placed_name(pc)) || ' at ' || pc.x || ', ' || pc.y || '. Settlement workers called: '
-      || v_n || '. Citizens of ' || r.name || ' notified.', 'event');
+    perform tell(p_world, p_uid, 'Rang: ' || lower(placed_name(pc)) || ' at ' || pc.x || ', ' || pc.y || '. Heard within '
+      || floor(bell_heard_by(p_world, p_uid) + 0.5)::int || ' tiles. Settlement workers called: '
+      || v_n || '. Citizens of ' || r.name || ' in hearing notified.', 'event');
 
   elsif p_action = 'sleep' then
     select * into pc from placed where world_id = p_world and id = (p_target->>'id')::bigint;

@@ -12,7 +12,8 @@ import { rollsAt } from './forage';
 import { breedChance, groomGain } from './husbandry';
 import { inheritChance } from './traits';
 import { calmCap } from './meditation';
-import { motesFor } from './motes';
+import { MOTE_ELEMENTS, motesFor } from './motes';
+import { ATTUNE_DAYS, ATTUNE_MOTES, ATTUNE_STRENGTH, infuseShare, senseRange } from './infusion';
 import { sightedAt } from './sighted';
 import { trackErr, trackLevel, trackRange } from './tracking';
 import { cacheDraws, cacheSpotAt } from './winter';
@@ -30,6 +31,11 @@ import { furnitureDef } from './furniture';
 import { itemDef, type Item } from './items';
 import { percent } from './words';
 import { metres } from './piers';
+import { ROPEMAKING, ropeFailUnits, ropePerLayUp, ropeTime } from './ropework';
+import { beamPace, cargoRoom, GALE, GALE_SAFE_AT, GALE_TILES_PER_DAMAGE, noGoDegrees, RIGGING_CLOSER, TACK_PACE, tackSecs } from './sailing';
+
+/** The fibre a failed lay-up is shown with: the wemp of one rope (`make_rope`). */
+const layUpSample = (): number => RECIPES.find((r) => r.id === 'make_rope')?.inputs[0].count ?? 1;
 
 /**
  * What a skill's level changes, one entry per number, for the Skills window's
@@ -271,7 +277,15 @@ function buildEffects(): Record<string, SkillEffect[]> {
       { label: 'Stamina lost swimming', at: (g) => g.swimWind(), say: (v) => `${percent(v)} stamina/s` },
     ],
     driving: [{ label: 'Cart and wagon speed', at: (g) => drivingPace(g.skills.get('driving')), say: ofLevel(0) }],
-    sailing: [{ label: 'Boat speed', at: (g) => sailingPace(g.skills.get(SAILING)), say: ofLevel(0) }],
+    sailing: [
+      { label: 'Boat speed', at: (g) => sailingPace(g.skills.get(SAILING)), say: ofLevel(0) },
+      // What the helm makes of the wind, the hold and rough water (`sailing.ts`).
+      { label: 'Closest to the wind', at: (g) => noGoDegrees(g.skills.get(SAILING)), say: (v) => `${Math.round(v)}°`, note: `${RIGGING_CLOSER}° closer with a rigging set` },
+      { label: 'Beam reach speed', at: (g) => beamPace(g.skills.get(SAILING)), say: ofLevel(0) },
+      { label: 'Turn through the wind', at: (g) => tackSecs(g.skills.get(SAILING)), say: (v) => `${v.toFixed(1)} s at ×${TACK_PACE} speed` },
+      { label: 'Hold of the boat at your helm', at: (g) => cargoRoom(g.skills.get(SAILING)), say: ofLevel(0) },
+      { label: 'Hull damage in a gale', at: (g) => (g.skills.get(SAILING) < GALE_SAFE_AT ? 1 : 0), say: (v) => (v ? `1 per ${GALE_TILES_PER_DAMAGE} tiles` : 'none'), note: `Wind over ${GALE}` },
+    ],
     fighting: [
       { label: 'Hit chance', at: (g) => { const w = swungWith(g); return hitChance(g, w.def, w.item); }, say: percent },
       { label: 'Damage per blow', at: (g) => { const w = swungWith(g); return weaponDamage(g, w.def, w.item); }, say: damage },
@@ -328,7 +342,19 @@ function buildEffects(): Record<string, SkillEffect[]> {
       { label: 'Relics you can find', at: (g) => relicsWithin(g.skills.get('archaeology')).length, say: count('relic', 'relics') },
     ],
     restoration: [{ label: 'QL kept restoring', at: (g) => restoredQl(g, 100) / 100, say: percent }],
-    elementalism: [{ label: 'Motes per swirl', at: (g) => motesFor(g.skills.get('elementalism')), say: count('mote', 'motes') }],
+    // Ropemaking's own (`ropework.ts`): what a lay-up gives, its own pace, and what a failed lay-up damages.
+    ropemaking: [
+      { label: 'Rope per lay-up', at: (g) => ropePerLayUp(g.skills.get(ROPEMAKING)), say: count('rope', 'ropes') },
+      { label: 'Time per action, extra', at: (g) => ropeTime(g.skills.get(ROPEMAKING)), say: ofLevel(0), note: 'Ropemaking jobs, after the floor' },
+      { label: 'Failed lay-up: fibre damaged', at: (g) => ropeFailUnits(layUpSample(), g.skills.get(ROPEMAKING)) / layUpSample(), say: percent, note: `Lay up a rope, ${layUpSample()} wemp` },
+    ],
+    elementalism: [
+      { label: 'Motes per swirl', at: (g) => motesFor(g.skills.get('elementalism')), say: count('mote', 'motes'), note: `+${ATTUNE_MOTES} of the element you are attuned to` },
+      // Infusing, sensing and attunement (`infusion.ts`).
+      { label: 'Infusion strength', at: (g) => infuseShare(g.skills.get('elementalism'), EXAMPLE_QL, false), say: percent, note: `Motes QL ${EXAMPLE_QL}; ×${1 + ATTUNE_STRENGTH} attuned` },
+      { label: 'Sense range', at: (g) => senseRange(g.skills.get('elementalism')), say: tiles },
+      { label: 'Attuned to', at: (g) => (g.attuned ? MOTE_ELEMENTS.indexOf(g.attuned) : -1), say: (v) => MOTE_ELEMENTS[v] ?? 'none', note: `Most collected, last ${ATTUNE_DAYS} days` },
+    ],
     enchanting: [{ label: 'Enchantment takes', at: (g) => enchantChance(g.skills.get('enchanting'), EXAMPLE_QL), say: percent, note: `Scroll QL ${EXAMPLE_QL}` }],
   };
   for (const def of SKILL_BY_ID.values()) {

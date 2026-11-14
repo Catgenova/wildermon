@@ -7,7 +7,7 @@
  */
 import { world } from './pace';
 
-export type TrapKind = 'snare' | 'deadfall' | 'creel';
+export type TrapKind = 'snare' | 'deadfall' | 'creel' | 'twine_snare';
 
 export interface TrapDef {
   id: TrapKind;
@@ -29,6 +29,8 @@ export interface TrapDef {
   water?: boolean;
   /** The most fish one of these holds before it stops taking any. */
   hold?: number;
+  /** Used up by its first catch: gone once what it holds is taken or let go. The island's `trap_def.once`. */
+  once?: boolean;
   note: string;
 }
 
@@ -45,6 +47,21 @@ export const TRAPS: Record<TrapKind, TrapDef> = {
     lifeMin: world(20 * 60),
     lifeMax: world(90 * 60),
     note: 'A noose of rope on a bent shaft. It takes the small and the trusting; anything with weight in it walks off wearing the rope.',
+  },
+  // Ropemaking's small snare (`ropework.ts`): two twine and a shaft, one catch.
+  twine_snare: {
+    id: 'twine_snare',
+    name: 'Twine snare',
+    bill: [['twine', 2], ['shaft', 1]],
+    difficulty: 6,
+    time: 4,
+    holds: 10,
+    reach: 5,
+    odds: 0.3,
+    lifeMin: world(20 * 60),
+    lifeMax: world(90 * 60),
+    once: true,
+    note: '',
   },
   creel: {
     id: 'creel',

@@ -1377,7 +1377,9 @@ function deckMoss(ctx: CanvasRenderingContext2D, q: Array<[number, number]>, ker
 export function drawTrap(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, kind: string, baited: boolean, sprung: boolean): void {
   ctx.save();
   ctx.translate(sx, sy);
-  ctx.scale(zoom, zoom);
+  // A twine snare (`game/trapdefs.ts`) is a snare at two thirds the size, one shaft and a loop of pale twine.
+  const twine = kind === 'twine_snare';
+  ctx.scale(zoom * (twine ? 0.66 : 1), zoom * (twine ? 0.66 : 1));
   ctx.fillStyle = 'rgba(0,0,0,0.22)';
   ctx.beginPath();
   ctx.ellipse(0, 0, 6, 2.6, 0, 0, TAU);
@@ -1466,8 +1468,8 @@ export function drawTrap(ctx: CanvasRenderingContext2D, sx: number, sy: number, 
     if (sprung) ctx.quadraticCurveTo(-3.4, -8, -2, -10);
     else ctx.quadraticCurveTo(-2, -8, 3, -7);
     ctx.stroke();
-    ctx.strokeStyle = '#cfc3a4';
-    ctx.lineWidth = 0.7;
+    ctx.strokeStyle = twine ? '#e8dcb8' : '#cfc3a4';
+    ctx.lineWidth = twine ? 0.55 : 0.7;
     ctx.beginPath();
     if (sprung) ctx.ellipse(-2, -6, 1.1, 1.8, 0, 0, TAU);
     else ctx.ellipse(3, -2.2, 3.4, 1.5, 0, 0, TAU);

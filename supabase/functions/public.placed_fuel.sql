@@ -5,7 +5,7 @@ CREATE OR REPLACE FUNCTION public.placed_fuel(p placed)
  LANGUAGE sql
  STABLE
 AS $function$
-  select case when p.lit
-    then greatest(0, p.fuel - extract(epoch from (now() - p.since)) * placed_burn_rate(p))
-    else p.fuel end
+  select greatest(case when infuse_on(p.infuse, 'light') > 0 then 1 else 0 end,
+                  case when p.lit then greatest(0, p.fuel - extract(epoch from (now() - p.since)) * placed_burn_rate(p))
+                       else p.fuel end)
 $function$

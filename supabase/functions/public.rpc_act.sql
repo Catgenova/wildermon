@@ -107,7 +107,9 @@ begin
                  -- what it does of a job already down on it (a Mender's Quick Hands).
                  * perk_time(coalesce(p.class_mul, '{}'::jsonb), p_world, p_action, p_target)
                  -- And a piece standing near that speeds the trade: an Artisan's potter's wheel.
-                 * piece_pace(p_world, me, d.skill) * faith_steady(p_world, me, d.tool) end;
+                 * piece_pace(p_world, me, d.skill) * faith_steady(p_world, me, d.tool)
+                 -- And Ropemaking's own pace, and a rope walk for a lay-up (`rope_pace`).
+                 * rope_pace(p_world, me, p_action, d.skill) end;
   update player set
       act = p_action, act_target = p_target, act_started = now(),
       act_ends = now() + make_interval(secs => secs),

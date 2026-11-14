@@ -1,3 +1,4 @@
+import { MOTE_ELEMENTS } from '../game/motes';
 import { preloadTreesAt, type TreePreload } from '../render/preload';
 import { TREE_WAIT_MS, type BootPhase } from '../ui/bootsteps';
 import { gearFrom, toolFrom } from '../game/worn';
@@ -531,6 +532,9 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
       for (const k of ['health', 'stamina', 'hunger', 'thirst']) {
         if (typeof what.stats[k] === 'number') s[k] = what.stats[k];
       }
+      // The element you are attuned to, as the island last worked it out, and when you last sensed the swirls (`infusion.ts`).
+      if (typeof what.stats.attune === 'number') game.attuned = MOTE_ELEMENTS[what.stats.attune] ?? null;
+      if (typeof what.stats.sensedAt === 'number') game.sensedAt = what.stats.sensedAt;
       const took = tookOff(was, s.health);
       if (took) {
         game.events.emit('hit', game.player.x, game.player.y, took, 'taken');

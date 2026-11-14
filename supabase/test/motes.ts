@@ -230,6 +230,8 @@ begin
   -- 5. A collect at each band of Elementalism, from beside a fire swirl at 61, 60.
   foreach lvl in array array[${BANDS.join(', ')}]::double precision[] loop
     delete from mote_swirl where world_id = w;
+    -- Attuned to nothing, so that a collect gives what the band gives (attunement: supabase/test/infusion.ts).
+    delete from mote_take where world_id = w and uid = u;
     insert into mote_swirl (world_id, x, y, element, region) values (w, 61, 60, 'fire', region_of(61, 60)) returning id into v_id;
     update player set body_at = now(), x = 60.5, y = 60.5, level = 0 where world_id = w and uid = u;
     insert into skill (world_id, uid, id, value) values (w, u, 'elementalism', lvl)
@@ -265,6 +267,7 @@ begin
   insert into skill (world_id, uid, id, value) values (w, v, 'elementalism', 50)
     on conflict (world_id, uid, id) do update set value = excluded.value;
   update skill set value = 1 where world_id = w and uid = u and id = 'elementalism';
+  delete from mote_take where world_id = w and uid in (u, v);
   insert into said values ('RACEASK', coalesce(act_refusal(w, u, 'collect_motes', tgt), 'none') || '|' || coalesce(act_refusal(w, v, 'collect_motes', tgt), 'none'));
   v_before := coalesce((select sum(count) from item where world_id = w and holder_uid = u and def = 'fire_mote'), 0);
   perform act_perform(w, u, 'collect_motes', tgt);

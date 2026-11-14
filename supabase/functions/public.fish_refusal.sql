@@ -15,7 +15,8 @@ begin
     if spot.depth is null then
       return 'No fishable water in reach: walk to the bank.';
     end if;
-    if not exists (select 1 from fish_here(spot.depth, skill)) then
+    if (case when afloat_deep(p_world, p_uid, spot.depth) then not exists (select 1 from deep_fish_here(spot.depth, skill))
+             else not exists (select 1 from fish_here(spot.depth, skill)) end) then
       return 'No fish here at your fishing skill.';
     end if;
   elsif p_action = 'drag_net' then

@@ -64,6 +64,14 @@ begin
     perform perform_gate(p_world, p_uid, p_action, p_target);
     return;
   end if;
+  if mote_action(p_action) then
+    perform perform_infuse(p_world, p_uid, p_action, p_target);
+    return;
+  end if;
+  if sail_action(p_action) then
+    perform perform_sail(p_world, p_uid, p_action, p_target);
+    return;
+  end if;
   if last_action(p_action) then
     perform perform_last(p_world, p_uid, p_action, p_target);
     return;
@@ -216,7 +224,7 @@ begin
     yield := coalesce(t.dig_yield, 'dirt');
     -- Cleaner for a Terraformer's Clean Earth, and now and then rare.
     made_ql := least(100, product_ql(s, tq) * pkx('ql:dig', 1));
-    perform gather(p_world, p_uid, yield, 1, made_ql, null, perk_rare(pkx('rare:dig', 0)));
+    perform gather(p_world, p_uid, yield, 1 + earth_more(p_world, p_uid, d.tool), made_ql, null, perk_rare(pkx('rare:dig', 0)));
     -- And one spadeful in a thousand that is not dirt at all.
     perform maybe_map(p_world, p_uid, s, tq);
     perform skill_raise(p_world, p_uid, d.skill, 1);

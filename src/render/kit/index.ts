@@ -32,6 +32,7 @@ import { DESK, LONG_TABLE, TABLE } from './tables';
 import { TRASH_CRATE } from './trash';
 import { TRELLIS } from './trellis';
 import { WELL } from './well';
+import { HAMMOCK, ROPE_WALK_PIECE } from './ropework';
 
 /**
  * Every piece of furniture drawn in the kit, by its kind (`FurnitureDef.id`).
@@ -99,4 +100,7 @@ export const KIT_PIECES: Readonly<Record<string, KitPiece>> = {
   crate_shelf: CRATE_SHELF,
   creature_crate: CREATURE_CRATE,
   mailbox: MAILBOX,
+  // Ropemaking's pieces (`ropework.ts`).
+  hammock: HAMMOCK,
+  rope_walk: ROPE_WALK_PIECE,
 };
