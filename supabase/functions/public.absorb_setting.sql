@@ -9,6 +9,7 @@ begin
   select * into o_soul from item i where i.world_id = p_world and i.id = nullif(p_target->>'soul', '')::bigint
     and i.holder = 'player' and i.holder_uid = p_uid;
   if o_soul.id is null or o_soul.def <> 'soul' or o_soul.rare is null then o_why := 'Choose a soul to absorb.'; return; end if;
+  if o_soul.locked then o_why := 'Set aside: return it to the pack first.'; return; end if;
   select * into o_item from item i where i.world_id = p_world and i.id = target_item(p_target)
     and i.holder = 'player' and i.holder_uid = p_uid;
   if o_item.id is null then o_why := 'Choose an item.'; return; end if;

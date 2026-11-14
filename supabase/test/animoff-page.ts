@@ -16,11 +16,13 @@ import { TileType, packTreeData, TREE_DEFS } from '../../src/world/tiles';
 import { DAY_SECONDS } from '../../src/game/pace';
 import { HAIRSTYLES } from '../../src/game/look';
 import type { Animations } from '../../src/game/settings';
-import { figureStats } from '../../src/render/figure';
+import { bodyKnobs, figureStats } from '../../src/render/figure';
 import { beastStats } from '../../src/render/beasts';
 
 interface Driven { tick: (ms: number) => void; realNow: () => number }
 const driven = (window as unknown as { driven: Driven }).driven;
+// The bodies' time budget (`takeAsked` in `src/render/bodies.ts`) on the page's real clock: the game's own is driven.
+bodyKnobs.clock.now = driven.realNow;
 
 const game = Game.create(4242, 128);
 const world = game.world;

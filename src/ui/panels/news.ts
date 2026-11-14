@@ -3,6 +3,9 @@ import { MONSTER_GROWTH } from '../../render/monster-size';
 import { FORGET_AFTER, LOADING_AT_ONCE, SLICE_MS } from '../../render/wildermon';
 import { ACT_SECS } from '../../render/beasts';
 import { NAME_PX } from '../../render/namelabels';
+import { KNEES_EASED, KNEES_OUT } from '../../sculpt/anim/clips/seated';
+import { BODY_BUDGET_MS } from '../../render/bodybudget';
+import { QUALITY } from '../../render/bodies';
 import { COLOUR_FORM_ODDS, FORM_PASS, formGives, formName, SIZE_FORM_ODDS } from '../../game/wildforms';
 import { BUILD_COUNTS, MOST_GOES } from '../buildCounts';
 import { PLAN_AREA_MOST, PLAN_UNDO_SECONDS } from '../../game/planarea';
@@ -121,7 +124,7 @@ import { SPELL_VISUALS } from '../../render/spells';
 import { furnitureDef, liquidCapacity, POND_EVERY, STATION_REACH, WATER_AT_HAND, type PlacedFurniture } from '../../game/furniture';
 import { billWords, CHARGE_PER_QL, CHARGE_QL, chargesFor, countOf, DRINK_LITRES, LIQUID_NAME, LITRE_KG, lyeAshFor, LYE_ASH_PER_LITRE, RARITY_ROOM, TAN_LYE, type Item } from '../../game/items';
 import { RUNE_GATE, RUNE_GATE_FADE, RUNE_GATE_GLOW_REACH, RUNE_GATE_REACH, RUNE_GATE_RISE, runeGateName } from '../../game/runegate';
-import { COIN_METALS, METALS, coinPurity, INGOT_LUMPS, INGOT_WEIGHT, MOULD_BY_ID, MOULD_SKILL, SMITH_TOOL } from '../../game/metal';
+import { COIN_METALS, METALS, coinPurity, INGOT_LUMPS, INGOT_WEIGHT, MOULD_BY_ID, MOULD_SKILL, MOULDS, SMITH_TOOL } from '../../game/metal';
 import { meltFits, meltLumps, meltQl } from '../../game/melt';
 import { furnaceMadeSaid, meltingSaid } from '../../game/smelter';
 import { TOOL_JOBS } from '../../game/jobtools';
@@ -164,7 +167,7 @@ import { CLASS_LEARN_BLOW, CLASS_LEARN_KILL, CLASS_LEVEL_START, CLASS_SPELL_BY_I
 import { HUSBANDRY_ACTIONS, ODDS_BAND, ODDS_BANDS_AT, ODDS_EXACT_AT, ODDS_LIKELY, ODDS_PLACES } from '../../game/husbandry';
 import { BOON_BONUS, BOON_FOODS, knacksOf, skillWord, TINCTURE_BONUS, TINCTURE_SECONDS } from '../../game/boons';
 import { TINCTURE_NAMES } from '../../game/remedies';
-import { FED_SAID, SOUL_CHANCE } from '../../game/sacrifice';
+import { FED_SAID, SACRIFICE_SAID, SOUL_CHANCE } from '../../game/sacrifice';
 import { GRAVE_KEEPS, GRAVE_REACH } from '../../game/graves';
 import { DEATH_GRACE_HOURS, GRACE_SPARES, PLAYED_GAP } from '../../game/deathgrace';
 import { RESTORE_HARM, RESTORE_HARM_SPREAD, RESTORE_TOOL_NEED } from '../../game/archaeology';
@@ -180,7 +183,7 @@ import { foodFill, itemDef, RARITIES, rarityBands, rarityChance, rareInputSaid, 
 import { SIGHT_FORM_AT, SIGHT_RARITY_AT } from '../../game/sighted';
 import { improvable, IMPROVE_DAMAGE as MEND_DAMAGE, IMPROVE_FAIL_LEAST, IMPROVE_FAIL_SPREAD } from '../../game/improve';
 import { JOB_GOES_MOST } from '../../game/mending';
-import { SCULPT_REDRAWS, SCULPT_REDRAWS_SOFT, weaponCarry } from '../../render/figure';
+import { BODY_RATES, weaponCarry } from '../../render/figure';
 import { ACTION_SHARE, FEWER_SHARE, HIT_STOP_HEAVY } from '../../render/fx/actions';
 import { BLOCK_SPARKS, CRACK_SECS, HIT_PUFF, SHOCK_REACH, SPIRAL_MOTES, SPLINTERS, STREAK_SECS, TWANG_SECS } from '../../render/fx/combat';
 import { RUNE_SHARES } from '../../sculpt/anim/runes';
@@ -4331,7 +4334,7 @@ export const NEWS: News[] = [
     n: 541,
     day: '2026-11-12',
     lines: () => [
-      `Faster frames: other players' bodies redrawn at most ${SCULPT_REDRAWS} a frame (${SCULPT_REDRAWS_SOFT} without a graphics card); yours every frame.`,
+      'Faster frames: other players\' bodies redrawn at most 4 a frame (1 without a graphics card); yours every frame.',
       'Faster frames: buildings: pictures cut to what is drawn; off screen: skipped.',
       'Faster island reads: crates: sent when changed; companions at heel: not sent again; things on the ground: only their set fields.',
       'Faster: workers storing a load: stores checked nearest first, first with room taken; recipes from the stores: stock counted from four columns.',
@@ -4419,13 +4422,41 @@ export const NEWS: News[] = [
     ],
   },
   {
-    n: 582,
+    n: 586,
     day: '2026-11-14',
     lines: () => [
       'Changed: campfire and dropped items sack redrawn in the rune pastel kit.',
       `Campfire logs: ${CAMPFIRE_LOGS[1]} to ${CAMPFIRE_LOGS[CAMPFIRE_LOGS.length - 1]}, one more each ${frac(1 / (CAMPFIRE_LOGS.length - 1))} of fuel held.`,
       `Sack size: 1 thing; more; full at ${SACK_FULL.stacks} stacks or ${SACK_FULL.things} things.`,
     ],
+  },
+  {
+    n: 585,
+    day: '2026-11-14',
+    lines: () => [`Fixed: undergarment bottoms hidden on a seated body seen from the front. Knees parted ${KNEES_OUT}° each side at the reins and the oars, ${KNEES_EASED}° at the tiller (was: together).`],
+  },
+  {
+    n: 584,
+    day: '2026-11-14',
+    lines: () => [`Fixed: moulds could be repaired. Every mould (${MOULDS.length}): no Repair, repair kit, ancient whetstone or stores mender. Refused: "${unmendableSays({ id: 'nail_mould' })}"`],
+  },
+  {
+    n: 583,
+    day: '2026-11-14',
+    lines: () => [
+      'Changed: bodies drawn in one GL pass a frame, put down after one wait for the GL (was: one wait a body). Busy stretch of 30 at work and fighting, no graphics card: 36 to 14 ms a frame.',
+      `Changed: bodies drawn within ${BODY_BUDGET_MS} ms a frame on average, the most wanted first (was: 4 a frame, 1 without a graphics card; a body new in view or at a new size whatever the count). Zoom change over a crowd of 60, no graphics card: 900 to 20 ms a frame.`,
+      `Changed: a body not yet drawn at this size: its last picture stretched to it; never drawn: at half size first where a whole one costs over ${BODY_BUDGET_MS} ms. Fast camera sweep over 90 people, no graphics card: 46 to 22 ms a frame.`,
+      `New: work and fight clips kept as loops of ${BODY_RATES.work} pictures a second, shared by bodies dressed alike; a crowd or a close zoom keeps fewer or half-size pictures (was: each body drawn ${BODY_RATES.work} times a second).`,
+      `Changed: bodies under ${BODY_RATES.small} px tall or over ${BODY_RATES.near} tiles from you drawn less often: half as often at ${BODY_RATES.small / 2} px or ${BODY_RATES.far} tiles; at least ${BODY_RATES.least} a second. Turning while over budget: in eighths.`,
+      `New: body quality: pictures at ${QUALITY.scales.map((k) => `${Math.round(k * 100)}%`).join(', ')} of the screen's pixels and of their rates; a step down when the middle frame over ${QUALITY.over / 1000} s is over ${QUALITY.slow} ms with bodies a quarter of it; a step up after ${QUALITY.up / 1000} s under ${QUALITY.quick} ms.`,
+      'New: Show drawing times: a bodies line: ms a frame, bodies drawn a frame, bodies waiting a frame, quality step.',
+    ],
+  },
+  {
+    n: 582,
+    day: '2026-11-14',
+    lines: () => [`Fixed: a soul set aside could be absorbed again and again, and absorbing it spent another soul in the pack. Now refused: "${SACRIFICE_SAID.locked}"`],
   },
   {
     n: 581,

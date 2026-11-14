@@ -269,17 +269,22 @@ void main() {
 }`;
 
 const EDGE_VS = `#version 300 es
-in vec2 aP; out vec2 vUv; void main(){ vUv = aP * 0.5 + 0.5; gl_Position = vec4(aP, 0.0, 1.0); }`;
+in vec2 aP; void main(){ gl_Position = vec4(aP, 0.0, 1.0); }`;
 
 const EDGE_FS = `#version 300 es
 precision highp float;
-in vec2 vUv; uniform sampler2D uCol; uniform sampler2D uNd; uniform sampler2D uId; uniform vec2 uPx; uniform float uInk; uniform float uDepthStep; uniform float uShow; uniform float uNight; uniform float uInner; uniform float uFoam;
+uniform sampler2D uCol; uniform sampler2D uNd; uniform sampler2D uId; uniform vec2 uPx; uniform float uInk; uniform float uDepthStep; uniform float uShow; uniform float uNight; uniform float uInner; uniform float uFoam;
+// The body's own tile of the textures (glBatchBegin), as the texel middles at its edges: a sample past them is the edge's,
+// as from a texture the tile's own size clamped to its edge, and never a neighbour's.
+uniform vec4 uClamp;
 out vec4 o;
 vec3 inkOf(vec3 base) { return min(mix(base, vec3(0.157, 0.11, 0.102), 0.62), base * 0.5); }
+vec4 at(sampler2D t, vec2 p) { return texture(t, clamp(p, uClamp.xy, uClamp.zw)); }
 void main() {
-  vec4 c = texture(uCol, vUv);
-  vec4 nd = texture(uNd, vUv);
-  vec4 id = texture(uId, vUv);
+  vec2 vUv = gl_FragCoord.xy * uPx;
+  vec4 c = at(uCol, vUv);
+  vec4 nd = at(uNd, vUv);
+  vec4 id = at(uId, vUv);
   // The silhouette: an even band uInk px wide just outside the body, in a dark of the nearest body colour; outside the
   // band along the water's surface (a body in the water), the foam uFoam px wide instead.
   float sil = 0.0, foam = 0.0; vec3 near = vec3(0.0);
@@ -292,9 +297,9 @@ void main() {
       for (int k = 1; k <= 6; k++) {
         float t = float(k) / 6.0 * reach;
         if (t >= best) break;
-        vec4 sm = texture(uCol, vUv + dir * t);
+        vec4 sm = at(uCol, vUv + dir * t);
         if (sm.a > 0.5) {
-          float ia = texture(uId, vUv + dir * t).a;
+          float ia = at(uId, vUv + dir * t).a;
           if (ia > 0.125 && ia < 0.375) { if (t <= uFoam) { foam = 1.0; sil = 0.0; best = t; } }
           else if (t <= uInk && (ia > 0.75 || t <= uInk * 0.4)) { sil = 1.0; foam = 0.0; best = t; near = sm.rgb; }
           break;
@@ -305,11 +310,11 @@ void main() {
   // Inside: a thinner line where a part stands in front of another (a step away in depth to a pixel beside), or at a sharp crease.
   float inner = 0.0;
   if (c.a > 0.5 && uInner > 0.5) {
-    vec4 A = texture(uNd, vUv + vec2(uPx.x, 0.0)), B = texture(uNd, vUv - vec2(uPx.x, 0.0)), C = texture(uNd, vUv + vec2(0.0, uPx.y)), D = texture(uNd, vUv - vec2(0.0, uPx.y));
+    vec4 A = at(uNd, vUv + vec2(uPx.x, 0.0)), B = at(uNd, vUv - vec2(uPx.x, 0.0)), C = at(uNd, vUv + vec2(0.0, uPx.y)), D = at(uNd, vUv - vec2(0.0, uPx.y));
     float dz = max(max(A.w - nd.w, B.w - nd.w), max(C.w - nd.w, D.w - nd.w));
     vec3 n0 = nd.xyz * 2.0 - 1.0;
     float crease = min(min(dot(n0, A.xyz * 2.0 - 1.0), dot(n0, B.xyz * 2.0 - 1.0)), min(dot(n0, C.xyz * 2.0 - 1.0), dot(n0, D.xyz * 2.0 - 1.0)));
-    float aA = texture(uCol, vUv + vec2(uPx.x, 0.0)).a, aB = texture(uCol, vUv - vec2(uPx.x, 0.0)).a, aC = texture(uCol, vUv + vec2(0.0, uPx.y)).a, aD = texture(uCol, vUv - vec2(0.0, uPx.y)).a;
+    float aA = at(uCol, vUv + vec2(uPx.x, 0.0)).a, aB = at(uCol, vUv - vec2(uPx.x, 0.0)).a, aC = at(uCol, vUv + vec2(0.0, uPx.y)).a, aD = at(uCol, vUv - vec2(0.0, uPx.y)).a;
     bool rim = min(min(aA, aB), min(aC, aD)) < 0.5;
     if (rim) inner = 1.0;
     // A part with no ink of its own (an ear, a mitt) still takes a line where it stands well off what is behind it.
@@ -326,8 +331,8 @@ void main() {
       float a = float(d) * 0.7854;
       for (int k = 1; k <= 3; k++) {
         vec2 off = vec2(cos(a) * uPx.x, sin(a) * uPx.y) * float(k) * 1.4;
-        vec4 e = texture(uId, vUv + off);
-        if (e.g > 0.5) { float f = 1.0 - float(k) / 4.0; glow += texture(uCol, vUv + off).rgb * f; w += f; }
+        vec4 e = at(uId, vUv + off);
+        if (e.g > 0.5) { float f = 1.0 - float(k) / 4.0; glow += at(uCol, vUv + off).rgb * f; w += f; }
       }
     }
     if (w > 0.0) glow = glow / w * min(1.0, w / 6.0) * (0.35 + 0.45 * uNight);
@@ -400,7 +405,7 @@ function compile(gl: WebGL2RenderingContext, vs: string, fs: string): WebGLProgr
 
 /**
  * Whether the GL context is drawn by the processor rather than a graphics card (SwiftShader, llvmpipe): about 9 ms a
- * sculpted body there against well under one on a card, so the island redraws fewer of them a frame (`sculptMay`).
+ * sculpted body there against well under one on a card, so the island takes a body to cost more there before it has timed one (`../render/bodies.ts` takeAsked).
  */
 export function glSoftware(): boolean {
   const c = glContext();
@@ -436,11 +441,15 @@ export function glContext(): Ctx | null {
   const names = ['uBones', 'uEx', 'uEy', 'uHS', 'uT', 'uHalf', 'uDepth', 'uOff', 'uMat', 'uL', 'uGrain', 'uNight', 'uMode', 'uFlat', 'uBlink', 'uLow', 'uSH', 'uTone', 'uFit', 'uXv', 'uYv', 'uZv', 'uShapes', 'uShapeFrom', 'uShapeCount', 'uShapeK', 'uShapeW', 'uHideC', 'uHideR', 'uHit', 'uWater'];
   const u = Object.fromEntries(names.map((n) => [n, gl.getUniformLocation(prog, n)]));
   const wu = Object.fromEntries(names.map((n) => [n, gl.getUniformLocation(wire, n)]));
-  const eu = Object.fromEntries(['uCol', 'uNd', 'uId', 'uPx', 'uInk', 'uDepthStep', 'uShow', 'uNight', 'uInner', 'uFoam'].map((n) => [n, gl.getUniformLocation(edge, n)]));
+  const eu = Object.fromEntries(['uCol', 'uNd', 'uId', 'uPx', 'uInk', 'uDepthStep', 'uShow', 'uNight', 'uInner', 'uFoam', 'uClamp'].map((n) => [n, gl.getUniformLocation(edge, n)]));
   CTX = { gl, cv, prog, edge, wire, tBones, fbo: gl.createFramebuffer()!, tCol: gl.createTexture()!, tNd: gl.createTexture()!, tId: gl.createTexture()!, depth: gl.createRenderbuffer()!, quad, w: 0, h: 0, u, eu, wu };
   return CTX;
 }
 
+/**
+ * The canvas and its frame's textures at w by h device pixels: a body drawn alone uses its top-left corner (as much of it
+ * as the body needs, grown to fit and never shrunk for one), a batch of them a tile each (`glBatchBegin`).
+ */
 function size(C: Ctx, w: number, h: number): void {
   if (C.w === w && C.h === h) return;
   const { gl } = C;
@@ -582,10 +591,24 @@ export function drawSculptGL(ctx: CanvasRenderingContext2D, sx: number, sy: numb
   const { gl } = C;
   const dpr = o.dpr ?? (window.devicePixelRatio || 1);
   const box = boxOf(d), w = Math.ceil((box.right - box.left) * zoom * dpr), h = Math.ceil((box.bottom - box.top) * zoom * dpr);
-  size(C, w, h);
+  // Where on the canvas, its top-left corner (`x`, `top`) and GL's bottom-left (`y`): a batch's next tile, or the corner.
+  const B = BATCH;
+  let x = 0, top = 0;
+  if (B) {
+    if (B.n >= B.cols * B.rows || w > B.cw || h > B.ch) {
+      B.last = null;
+      return false;
+    }
+    x = (B.n % B.cols) * B.cw;
+    top = Math.floor(B.n / B.cols) * B.ch;
+    B.n++;
+  } else size(C, Math.max(C.w, w), Math.max(C.h, h));
+  const y = C.h - top - h;
   const bf = buffersOf(gl, d.baked);
   gl.bindFramebuffer(gl.FRAMEBUFFER, C.fbo);
-  gl.viewport(0, 0, w, h);
+  gl.viewport(x, y, w, h);
+  gl.enable(gl.SCISSOR_TEST);
+  gl.scissor(x, y, w, h);
   gl.clearColor(0, 0, 0, 0);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   gl.enable(gl.DEPTH_TEST);
@@ -669,7 +692,7 @@ export function drawSculptGL(ctx: CanvasRenderingContext2D, sx: number, sy: numb
   }
   // The edge pass onto the canvas itself.
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-  gl.viewport(0, 0, w, h);
+  gl.viewport(x, y, w, h);
   gl.disable(gl.DEPTH_TEST);
   gl.clear(gl.COLOR_BUFFER_BIT);
   gl.useProgram(C.edge);
@@ -680,7 +703,8 @@ export function drawSculptGL(ctx: CanvasRenderingContext2D, sx: number, sy: numb
   gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, C.tCol); gl.uniform1i(C.eu.uCol, 0);
   gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, C.tNd); gl.uniform1i(C.eu.uNd, 1);
   gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, C.tId); gl.uniform1i(C.eu.uId, 2);
-  gl.uniform2f(C.eu.uPx, 1 / w, 1 / h);
+  gl.uniform2f(C.eu.uPx, 1 / C.w, 1 / C.h);
+  gl.uniform4f(C.eu.uClamp, (x + 0.5) / C.w, (y + 0.5) / C.h, (x + w - 0.5) / C.w, (y + h - 0.5) / C.h);
   // The figure's ink: most of a pixel however far out, never more than a few however far in; in device pixels here.
   // A low-poly body's: LOW_INK's, round the silhouette only, as its facets carry the form.
   const ink = (o.ink ?? (low ? LOW_INK(zoom) : Math.min(3.2, Math.max(0.9, 0.55 * zoom)))) * dpr;
@@ -691,10 +715,91 @@ export function drawSculptGL(ctx: CanvasRenderingContext2D, sx: number, sy: numb
   gl.uniform1f(C.eu.uShow, o.debug === 'edges' ? 1 : 0);
   gl.uniform1f(C.eu.uNight, o.night ?? 0);
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-  if (d.trail && d.trail.n > 2) drawTrail(C, d, d.trail, w, h, o.night ?? 0);
-  gl.flush();
-  ctx.drawImage(C.cv, 0, 0, w, h, sx + box.left * zoom, sy + box.top * zoom, w / dpr, h / dpr);
+  if (d.trail && d.trail.n > 2) drawTrail(C, d, d.trail, C.w, C.h, o.night ?? 0);
+  gl.disable(gl.SCISSOR_TEST);
+  const tile: GlTile = { x, y: top, w, h, dx: sx + box.left * zoom, dy: sy + box.top * zoom, dw: w / dpr, dh: h / dpr };
+  // In a batch, put down later with the rest (`glBlit`); alone, now.
+  if (B) B.last = tile;
+  else {
+    gl.flush();
+    fromHeld = false;
+    glBlit(ctx, tile);
+  }
   return true;
+}
+
+/**
+ * A body drawn on the GL canvas: its tile there, in the canvas's own pixels from its top-left corner, and where it goes on
+ * the 2D context it was drawn for, in that context's units.
+ */
+export interface GlTile { x: number; y: number; w: number; h: number; dx: number; dy: number; dw: number; dh: number }
+
+/**
+ * A batch: every body drawn while it is open goes on a tile of its own of one canvas, `cols` by `rows` tiles of `cw` by
+ * `ch` device pixels, and nothing is put down on a 2D canvas until they are all drawn, so the wait for the GL to finish
+ * (a stall of the graphics chip, and a read-back where the picture they go on is not on the chip) comes once for the lot
+ * rather than once for each. `last` is the tile the body last drawn went on (null when it did not fit).
+ */
+let BATCH: { cols: number; rows: number; cw: number; ch: number; n: number; last: GlTile | null } | null = null;
+/** The tiles a batch's canvas may have, at most, in device pixels: about fifty-six megabytes with its frame's textures. */
+export const BATCH_PIXELS = 2_000_000;
+/** And on a side. */
+const BATCH_SIDE = 2048;
+/** When the batch's canvas was last wanted at its size, for letting it go back down (`glBatchBegin`). */
+let bigSince = 0;
+
+/**
+ * Open a batch of up to `count` bodies, each within `cw` by `ch` device pixels; how many it has room for (at least one,
+ * unless there is no GL), the rest for another batch. The canvas grows to fit and comes back down once it has been more
+ * than twice the size wanted for `SHRINK_MS`.
+ */
+export function glBatchBegin(count: number, cw: number, ch: number, now: number): number {
+  const C = glContext();
+  if (!C || count <= 0) return 0;
+  const cols = Math.max(1, Math.min(count, Math.floor(BATCH_SIDE / cw), Math.floor(BATCH_PIXELS / (cw * ch)) || 1));
+  const rows = Math.max(1, Math.min(Math.ceil(count / cols), Math.floor(BATCH_SIDE / ch), Math.floor(BATCH_PIXELS / (cols * cw * ch)) || 1));
+  const w = cols * cw, h = rows * ch;
+  if (C.w * C.h <= 2 * w * h) bigSince = now;
+  if (C.w < w || C.h < h) size(C, Math.max(C.w, w), Math.max(C.h, h));
+  else if (now - bigSince > SHRINK_MS) {
+    size(C, w, h);
+    bigSince = now;
+  }
+  BATCH = { cols, rows, cw, ch, n: 0, last: null };
+  return Math.min(count, cols * rows);
+}
+const SHRINK_MS = 3000;
+/** The tile the body last drawn in the open batch went on, or null where it did not fit. */
+export const glBatchLast = (): GlTile | null => BATCH?.last ?? null;
+/**
+ * Close the batch, its tiles copied off the GL canvas in one go onto a 2D canvas of their own (`held`), to be put down from
+ * there (`glBlit`) until the next batch. Each copy off a GL canvas waits for it and takes the whole of it: put down from it
+ * a tile at a time, a batch of n bodies was n waits and n copies of n tiles, which in a processor-drawn GL cost more than
+ * the bodies drawn one at a time; from the copy, one of each.
+ */
+export function glBatchEnd(): void {
+  const C = glContext(), B = BATCH;
+  BATCH = null;
+  if (!C || !B || !B.n) return;
+  const w = Math.min(B.n, B.cols) * B.cw, h = Math.ceil(B.n / B.cols) * B.ch;
+  held ??= document.createElement('canvas');
+  if (held.width < w || held.height < h) {
+    held.width = Math.max(held.width, w);
+    held.height = Math.max(held.height, h);
+    heldG = held.getContext('2d');
+  }
+  if (!heldG) return;
+  heldG.clearRect(0, 0, w, h);
+  heldG.drawImage(C.cv, 0, 0, w, h, 0, 0, w, h);
+  fromHeld = true;
+}
+/** The 2D canvas a batch's tiles are put down from (`glBatchEnd`), and whether the tiles in hand are there. */
+let held: HTMLCanvasElement | null = null, heldG: CanvasRenderingContext2D | null = null, fromHeld = false;
+/** A tile put down where its body was drawn for, on `ctx` (the transform it was drawn under). */
+export function glBlit(ctx: CanvasRenderingContext2D, t: GlTile): void {
+  const C = glContext();
+  if (!C) return;
+  ctx.drawImage(fromHeld && held ? held : C.cv, t.x, t.y, t.w, t.h, t.dx, t.dy, t.dw, t.dh);
 }
 
 /** The slash trail onto the canvas over the inked body, blended (premultiplied), the body's colour and depth textures still bound. */

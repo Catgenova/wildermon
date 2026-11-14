@@ -19,12 +19,24 @@ import type { FigurePose } from '../render/figure';
 import { bandOf, STRIDE } from './bake';
 import type { Band } from './sdf';
 import { drawSculptGL, forgetBuffers, glContext } from './gl';
-export { glSoftware } from './gl';
+export { glSoftware, glBatchBegin, glBatchEnd, glBatchLast, glBlit, type GlTile } from './gl';
 /** Whether this browser's GL draws the sculpted bodies at all: WebGL2, the float colour buffer, and shaders that fit it. */
 export const glDraws = (): boolean => !!glContext();
 export { SCULPT_FX } from './fxmarks';
 import { bakedAt, built, forgetBuilt, proportionsOf, sculptScene, type Built } from './index';
 import { hasLowBody, lowScene } from './lowpoly';
+import { clipFor, poseFading } from './anim';
+
+/**
+ * The clip a body plays and where in it (its name, seconds in, and its length), where it plays one alone; none with
+ * another over it (a wave over the walk) or none at all: what the island keeps a loop of pictures of (`clipLoop` in
+ * `../render/figure.ts`), with whether the body is between one thing and the next, when it is drawn as itself.
+ */
+export function clipNow(pose: FigurePose): { name: string; t: number; length: number; fading: boolean } | null {
+  const c = clipFor(pose);
+  if (!c || c.over || !(c.clip.length > 0)) return null;
+  return { name: c.clip.name, t: ((c.t % c.clip.length) + c.clip.length) % c.clip.length, length: c.clip.length, fading: poseFading(pose) };
+}
 
 /** Looks kept baked at once, and the bytes of bakes kept for them, before the least recently drawn goes. */
 const MAX_LOOKS = 12;

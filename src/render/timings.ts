@@ -25,7 +25,7 @@ export const LAYERS = {
   water: ['drawWater', 'drawPonds', 'drawWakes', 'seaShore', 'pondBank'],
   swell: ['drawSea'],
   trees: ['drawTree'],
-  figures: ['paint'],
+  figures: ['paint', 'drawBodies'],
   buildings: ['drawStructures', 'drawPitchedRoof', 'drawPiers', 'drawFoundation'],
   haze: ['drawHaze', 'drawAir', 'drawFloaters'],
   light: ['drawOverlays'],

@@ -106,3 +106,11 @@ export const onTheGround = (key: string, clip: string | undefined): boolean => G
 const SHUT = new Set(['sleep', 'meditate', 'pray']);
 /** Whether a body's eyes are shut (by its key, and the clip it plays): in one of those, and down, not on its way down or up. */
 export const eyesShut = (key: string, clip: string | undefined, ms: number): boolean => clip !== undefined && SHUT.has(clip) && !onTheWay(key, ms);
+
+/** Whether a body is getting down onto the ground or up off it at `ms`, by its key: a picture of it then is not one of its clip's loop. */
+export function gettingAbout(key: string, ms: number): boolean {
+  const g = GOT.get(key);
+  if (!g) return false;
+  const e = (ms - g.at) / 1000;
+  return g.up ? g.t0 - e * (g.rate ?? UP) > -FADE : g.t0 + e < g.D.length + LAND;
+}
