@@ -237,6 +237,15 @@ import BRUSH from './assets/brush.json';
 import WORK_POT from './assets/work_pot.json';
 import ROPE_TOOL from './assets/rope_tool.json';
 import ROPE_STRANDS from './assets/rope_strands.json';
+// the reading and lantern props (tools/sculpt/gear/reach.mjs): the open book, the rune tablet, the written sheet, the map;
+// the lantern, the candle and the lit taper
+import BOOK_OPEN from './assets/book_open.json';
+import RUNE_TABLET from './assets/rune_tablet.json';
+import RECIPE_SHEET from './assets/recipe_sheet.json';
+import CHART from './assets/chart.json';
+import LANTERN from './assets/lantern.json';
+import CANDLE from './assets/candle.json';
+import TAPER from './assets/taper.json';
 import HAIR_ASSET from './assets/lowhair.json';
 import MALE_LIGHT from '../../tools/sculpt/lowlight-male.json';
 import FEMALE_LIGHT from '../../tools/sculpt/lowlight-female.json';
@@ -405,6 +414,9 @@ const PROPS: readonly PropAsset[] = [SWORD, { ...(WARHAMMER as unknown as PropAs
   CUP as unknown as PropAsset, WATERSKIN as unknown as PropAsset, BREAD as unknown as PropAsset,
   // the handwork props, one in each fist (./anim/clips/handwork.ts): the needle and the cloth, the brush and the pot, the rope tool and the strands
   NEEDLE as unknown as PropAsset, CLOTH_PIECE as unknown as PropAsset, BRUSH as unknown as PropAsset, WORK_POT as unknown as PropAsset, ROPE_TOOL as unknown as PropAsset, ROPE_STRANDS as unknown as PropAsset,
+  // the reading props in the left fist (the book, the tablet, the sheet, the map: mirrored in the right) and the lantern props
+  // in the right (./anim/clips/reach.ts)
+  ...[BOOK_OPEN, RUNE_TABLET, RECIPE_SHEET, CHART, LANTERN, CANDLE, TAPER].map((p) => p as unknown as PropAsset),
 ];
 const PROP_OF = new Map(PROPS.map((p) => [p.id, p]));
 /**
