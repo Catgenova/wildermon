@@ -4422,7 +4422,7 @@ export const NEWS: News[] = [
     ],
   },
   {
-    n: 589,
+    n: 590,
     day: '2026-11-14',
     lines: () => {
       const jobs = (...clips: string[]): number => [...ACTION_BY_ID.keys()].filter((id) => clips.includes(clipOfJob(id) ?? '')).length;
@@ -4431,6 +4431,21 @@ export const NEWS: News[] = [
         `New: picking animated on the sculpted body (was: a placeholder gesture). Fruit and sprouts, one hand overhead: ${jobs('pick-high')} jobs. Grapes, both hands at the head: ${jobs('pick-grapes')}. Honey, crouched at the ${name('skep')}: ${jobs('take-honey')}.`,
         `New: reading animated, the thing read in hand, jobs: ${name('book')} ${jobs('read-book')}, ${name('rune_tablet')} ${jobs('read-tablet')}, ${name('cooking_recipe')} and ${name('enchant_formula')} ${jobs('read-sheet')}, ${name('drawn_map')} ${jobs('read-map')} (was: a placeholder gesture).`,
         `New: ${name('lamp_post')} and ${name('lamp_pillar')} animated, both hands overhead, on the toes: ${jobs('lamp-fit', 'lamp-take', 'lamp-candle', 'lamp-light', 'lamp-douse')} jobs; ${name('lantern')}, ${name('candle')} and a lit taper in hand (was: a placeholder gesture).`,
+      ];
+    },
+  },
+  {
+    n: 589,
+    day: '2026-11-14',
+    lines: () => {
+      const e = (id: string): string => {
+        const d = EMOTE_BY_ID.get(id);
+        return d ? `${d.label} (/${d.id}): ${d.held ? `${d.seconds} s down, held until you move, swim, board or work` : `${d.seconds} s`}` : id;
+      };
+      return [
+        `New: emotes (Emotes menu): ${['bow', 'cheer', 'point', 'clap', 'sit'].map(e).join('; ')}.`,
+        'New: Animations off: bow, cheer, point, clap: one still pose each; sit: sat.',
+        'Fixed: stood still after an emote: the idle (was: the emote\'s first pose held; after 6 7, the forearms out).',
       ];
     },
   },
