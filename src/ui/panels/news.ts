@@ -162,7 +162,7 @@ import { CLASS_LEARN_BLOW, CLASS_LEARN_KILL, CLASS_LEVEL_START, CLASS_SPELL_BY_I
 import { HUSBANDRY_ACTIONS, ODDS_BAND, ODDS_BANDS_AT, ODDS_EXACT_AT, ODDS_LIKELY, ODDS_PLACES } from '../../game/husbandry';
 import { BOON_BONUS, BOON_FOODS, knacksOf, skillWord, TINCTURE_BONUS, TINCTURE_SECONDS } from '../../game/boons';
 import { TINCTURE_NAMES } from '../../game/remedies';
-import { FED_SAID, SOUL_CHANCE } from '../../game/sacrifice';
+import { FED_SAID, SACRIFICE_SAID, SOUL_CHANCE } from '../../game/sacrifice';
 import { GRAVE_KEEPS, GRAVE_REACH } from '../../game/graves';
 import { DEATH_GRACE_HOURS, GRACE_SPARES, PLAYED_GAP } from '../../game/deathgrace';
 import { RESTORE_HARM, RESTORE_HARM_SPREAD, RESTORE_TOOL_NEED } from '../../game/archaeology';
@@ -4415,6 +4415,11 @@ export const NEWS: News[] = [
       `New: rowing under way: ${OAR_DROPS} drops a blade at the catch; whirl pair a blade a stroke, ${SWIRL_SECS} s.`,
       'Without a graphics card: swimming strokes\' splashes, rings treading water, the float\'s strike and a catch only.',
     ],
+  },
+  {
+    n: 582,
+    day: '2026-11-14',
+    lines: () => [`Fixed: a soul set aside could be absorbed again and again, and absorbing it spent another soul in the pack. Now refused: "${SACRIFICE_SAID.locked}"`],
   },
   {
     n: 581,
