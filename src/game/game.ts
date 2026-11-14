@@ -94,6 +94,7 @@ import { earnedBy, knackBonus, knackChance, knackLands, KNACK_CAP, TITLE_BY_ID }
 import { TileIndex, Tally, keyX, keyY, tileKey } from './tileindex';
 import { DARK_HIT, NIGHT_EYES_FROM, SOUL_PER_LEVEL, WORK_HAND, WORK_WIND, WORK_WIND_SPENT, HEAVY_SKILLS, WORK_BACK } from './learn';
 import { DRIVING, DRIVING_LEARN, drivingPace, SAILING, SAILING_LEARN, sailingPace, vehicleQlPace } from './travel';
+import { isLayUp, LEAD_PACE, ROPE_WALK, ROPE_WALK_TIME, ROPEMAKING, ropePerLayUp, ropeTime } from './ropework';
 import { laySwirls, swirlLight, type Swirl } from './motes';
 import { TRACKING, trackLevel, type Trail } from './tracking';
 import { hasRunestones, runestoneAt, RUNESTONES, stonePoint, stoneTiles } from './runestones';
@@ -6172,7 +6173,9 @@ export class Game {
       const { armour, over } = this.swingBurden();
       go = swingSeconds(fight, skill, control, armour * over);
     }
-    return go * this.perk(`time:${def.id}`, 1) * this.pieceSpeed(def.skill) * (def.tool ? 1 - this.toolEnchant(def.tool, 'work') : 1);
+    return go * this.perk(`time:${def.id}`, 1) * this.pieceSpeed(def.skill) * (def.tool ? 1 - this.toolEnchant(def.tool, 'work') : 1)
+      // And Ropemaking's own pace on its jobs, and a lay-up at a rope walk (`ropework.ts`, the island's `rope_pace`).
+      * ropePace(this, def);
   }
 
   /**
@@ -6259,8 +6262,10 @@ export class Game {
   }
 
   /** How many of a thing a go of this recipe makes for you: its own count, or a perk's (a Carpenter's Clean Sawing). */
-  madeAGo(r: { result: string; count?: number }): number {
-    return this.perk(`count:${r.result}`, r.count ?? 1);
+  madeAGo(r: { id?: string; result: string; count?: number }): number {
+    // A lay-up gives what Ropemaking makes of it (`ropePerLayUp`), as the count it starts from.
+    const own = r.id && isLayUp(r.id) ? (r.count ?? 1) * ropePerLayUp(this.skills.get(ROPEMAKING)) : r.count ?? 1;
+    return this.perk(`count:${r.result}`, own);
   }
 
   /**
@@ -8144,7 +8149,9 @@ export class Game {
     // Shod, it goes quicker on laid stone.
     const shod = isShod(this.time, c) && !!TILE_DEFS[this.world.getTile(x, y)].paved ? SHOE_PACE : 1;
     // And quicker again in tack its maker's hand is in (a Tailor's Saddler), past the cap, as a vehicle's mark is.
-    return Math.min(MAX_MOUNT_SPEED, (def.swimSpeed ?? def.speed) * ageDef(c, this.time).speed * this.creatures.speedMul(c) * footing(c.skills[HAUL_SKILL] ?? 0) * (0.6 + 0.4 * c.hunger) * shod) * tackSpeed(c);
+    return Math.min(MAX_MOUNT_SPEED, (def.swimSpeed ?? def.speed) * ageDef(c, this.time).speed * this.creatures.speedMul(c) * footing(c.skills[HAUL_SKILL] ?? 0) * (0.6 + 0.4 * c.hunger) * shod) * tackSpeed(c)
+      // Led on a lead rope rather than bridled (`LEAD_PACE`), as the island's `travel_speed` has it.
+      * (c.tacked ? 1 : LEAD_PACE);
   }
 
   /**
@@ -10779,3 +10786,13 @@ const sinceAgo = (ago: number | null | undefined): number | undefined =>
 
 /** An island clock for a ground read that comes without one: nothing lying about has been burning. */
 const UNLIT: Aged = { since: () => 0 };
+
+/**
+ * What Ropemaking makes of a go at one of its own jobs (`ropeTime`), and a
+ * rope walk within reach of a lay-up (`ROPE_WALK_TIME`), as a share of its
+ * time after the floor. The island's `rope_pace`.
+ */
+export function ropePace(g: Game, def: { id: string; skill?: string }): number {
+  if (def.skill !== ROPEMAKING) return 1;
+  return ropeTime(g.skills.get(ROPEMAKING)) * (isLayUp(def.id) && g.furnitureNear(ROPE_WALK) !== undefined ? ROPE_WALK_TIME : 1);
+}

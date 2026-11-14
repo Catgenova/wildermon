@@ -12,6 +12,7 @@ declare r recipe; i record; v_n int; prefer bigint; mat text; hard double precis
         v_keep double precision; v_spare recipe_input; v_spare_ql double precision;
         v_tool bigint; v_tool_mark jsonb; v_stone boolean := false;
         v_scroll boolean; v_sheet double precision; v_harm text; v_used int[]; v_hurt text[] := '{}';
+        v_rope double precision;
 begin
   select * into r from recipe where id = p_recipe;
   prefer := target_item(p_target);
@@ -76,7 +77,10 @@ begin
         if i.litres is not null then
           v_hurt := v_hurt || craft_fail_litres(p_world, p_uid, i.item, recipe_need(p_world, p_uid, p_recipe, i.litres));
         else
-          v_hurt := v_hurt || craft_fail_damage(p_world, p_uid, i.item, recipe_need(p_world, p_uid, p_recipe, i.count), prefer, mat);
+          -- Above Ropemaking 50 a failed lay-up damages half its fibre, the rest untouched (`rope_fail_units`).
+          v_hurt := v_hurt || craft_fail_damage(p_world, p_uid, i.item,
+            case when rope_lay_up(p_recipe) then rope_fail_units(recipe_need(p_world, p_uid, p_recipe, i.count), s)
+                 else recipe_need(p_world, p_uid, p_recipe, i.count) end, prefer, mat);
         end if;
       end loop;
       perform craft_carry_on(p_world, p_uid, p_recipe, p_target, was, mat);
@@ -91,6 +95,8 @@ begin
     return;
   end if;
 
+  -- The rope in it, by mass, for a boat's or a trap's share of its QL (`rope_ql`), read before it is spent.
+  if coalesce(r.rope_share, 0) > 0 then v_rope := rope_ql(p_world, p_uid, p_recipe, prefer, mat); end if;
   -- The quality of what is about to be used up, worked out before it is used
   -- up, since using it up changes the answer: off the stack each input would
   -- be spent from first, which is the clicked one where it is one of them.
@@ -178,12 +184,16 @@ begin
   else
     made_ql := product_ql(s, tq);
   end if;
+  -- And the rope's share of it, for a boat or a trap (`ropeBlend`).
+  if v_rope is not null then made_ql := made_ql * (1 - r.rope_share) + v_rope * r.rope_share; end if;
   -- And the tree, on the trade the recipe belongs to: the quality of what came
   -- off the bench, however it was arrived at. A hundred is still a hundred.
   made_ql := least(100, made_ql * class_mul(p_world, p_uid, 'fine', r.skill));
   -- And better for a perk on the recipe (a Cook's Fine Fare).
   -- And higher for a Masterwork on the station it is made at (`station_master`).
-  made_ql := least(100, made_ql * pk(p_world, p_uid, 'ql:' || p_recipe, 1) + station_master(p_world, p_uid, r.station));
+  -- And better at a rope walk, for a lay-up (`rope_walk_ql`).
+  made_ql := least(100, made_ql * pk(p_world, p_uid, 'ql:' || p_recipe, 1) + station_master(p_world, p_uid, r.station)
+                        + rope_walk_ql(p_world, p_uid, p_recipe));
   -- And a scroll never better than the sheet it was written on.
   if v_scroll and v_sheet is not null then made_ql := least(made_ql, v_sheet); end if;
   -- A Carpenter's Master Joiner: the first step of rarity at better odds on the joinery (`rare:` and the recipe).
@@ -191,7 +201,9 @@ begin
   rare := rarity_roll_from(v_used, press_stamp(p_world, p_uid, pk(p_world, p_uid, 'rare:' || p_recipe, (select d.odds from rarity_def d order by d.ord limit 1))));
   -- More, the go a bauble on the trade comes up in the altar of the settlement you work on.
   -- A Mason's Three from a Shard and Good Mix: more of it at a go (`count:` and what it makes).
-  v_base := pk(p_world, p_uid, 'count:' || r.result, r.count)::int;
+  -- A lay-up's count by Ropemaking (`rope_per_lay_up`), before a perk on it.
+  v_base := pk(p_world, p_uid, 'count:' || r.result,
+               r.count * case when rope_lay_up(p_recipe) then rope_per_lay_up(s) else 1 end)::int;
   -- And a serving more of a dish cooked in a pot or a bowl its maker had Deep Pot for, whoever cooks.
   if is_dish(r.result) then v_base := v_base + floor(coalesce((v_tool_mark->>'serve')::double precision, 0))::int; end if;
   -- But not on a dye boil, which fills the one bucket it is done in (`boiledDye`).

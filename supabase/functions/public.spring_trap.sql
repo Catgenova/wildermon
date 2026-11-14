@@ -10,5 +10,10 @@ begin
   if not found or p.caught is null then return; end if;
   update creature set trapped = null where world_id = p.world_id and id = p.caught;
   update placed set caught = null, bait = null, bait_ql = null where id = p_id;
+  -- Used up by its first catch, let go or walked off with (`trap_def.once`).
+  if coalesce((select t.once from trap_def t where t.id = p.sub), false) then
+    delete from placed where id = p_id;
+    perform land_announce(p.world_id, p.x, p.y);
+  end if;
   if p.made_by is not null then perform tell(p.world_id, p.made_by, p_why, 'system'); end if;
 end $function$

@@ -30,6 +30,10 @@ import { furnitureDef } from './furniture';
 import { itemDef, type Item } from './items';
 import { percent } from './words';
 import { metres } from './piers';
+import { ROPEMAKING, ropeFailUnits, ropePerLayUp, ropeTime } from './ropework';
+
+/** The fibre a failed lay-up is shown with: the wemp of one rope (`make_rope`). */
+const layUpSample = (): number => RECIPES.find((r) => r.id === 'make_rope')?.inputs[0].count ?? 1;
 
 /**
  * What a skill's level changes, one entry per number, for the Skills window's
@@ -328,6 +332,12 @@ function buildEffects(): Record<string, SkillEffect[]> {
       { label: 'Relics you can find', at: (g) => relicsWithin(g.skills.get('archaeology')).length, say: count('relic', 'relics') },
     ],
     restoration: [{ label: 'QL kept restoring', at: (g) => restoredQl(g, 100) / 100, say: percent }],
+    // Ropemaking's own (`ropework.ts`): what a lay-up gives, its own pace, and what a failed lay-up damages.
+    ropemaking: [
+      { label: 'Rope per lay-up', at: (g) => ropePerLayUp(g.skills.get(ROPEMAKING)), say: count('rope', 'ropes') },
+      { label: 'Time per action, extra', at: (g) => ropeTime(g.skills.get(ROPEMAKING)), say: ofLevel(0), note: 'Ropemaking jobs, after the floor' },
+      { label: 'Failed lay-up: fibre damaged', at: (g) => ropeFailUnits(layUpSample(), g.skills.get(ROPEMAKING)) / layUpSample(), say: percent, note: `Lay up a rope, ${layUpSample()} wemp` },
+    ],
     elementalism: [{ label: 'Motes per swirl', at: (g) => motesFor(g.skills.get('elementalism')), say: count('mote', 'motes') }],
     enchanting: [{ label: 'Enchantment takes', at: (g) => enchantChance(g.skills.get('enchanting'), EXAMPLE_QL), say: percent, note: `Scroll QL ${EXAMPLE_QL}` }],
   };

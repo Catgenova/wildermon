@@ -39,7 +39,9 @@ begin
       if not creature_in_reach(p_world, p_uid, c) then return 'Stand next to ' || c.name || '.'; end if;
 
     elsif p_action = 'mount_creature' then
-      if not c.tacked then return c.name || ': no saddle and bridle.'; end if;
+      if not c.tacked and pack_count(p_world, p_uid, lead_rope_item()) < 1 then
+        return c.name || ': no saddle and bridle, no lead rope.';
+      end if;
       if not (age_row(c.born, old_of(c), age_pace(c))).works then return c.name || ' is not grown.'; end if;
       if c.hitched_to is not null then return c.name || ' is in the traces.'; end if;
       -- From the ground floor only: nothing unridden stands a storey up (`Game.creatureStorey`).

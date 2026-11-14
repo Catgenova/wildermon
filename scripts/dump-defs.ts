@@ -133,6 +133,10 @@ import { LECTERN_GAIN, LECTERN_REACH, STUDY_WEAR, STUDY_WEAR_SPREAD } from '../s
 import { GLAZE_ASH, GLAZEABLE } from '../src/game/actions';
 import { TRADE_BOOK_AT } from '../src/game/recipes';
 import { TRAPS } from '../src/game/traps';
+import {
+  BELL_HEARD_BASE, BELL_HEARD_PER_QL, BELL_ROPE, LAY_UP_BASE, LAY_UP_EVERY, LAY_UP_FAIL_SHARE, LAY_UP_SPARE_ABOVE, LAY_UPS, LEAD_PACE, LEAD_ROPE,
+  NO_BELL_ROPE, ROPE_INPUTS, ROPE_TIME_PER_LEVEL, ROPE_WALK, ROPE_WALK_QL, ROPE_WALK_TIME, ROPEMAKING,
+} from '../src/game/ropework';
 import { DEFAULT_LOOK, LOOK_KINDS, LOOK_TABLES, LOOK_TONES, legacyLooks } from '../src/game/look';
 import { ACTION_FLOOR, ACTION_PACE, COTTON_SECONDS, COTTON_WEIGHT, MINING_SECONDS, MINING_WEIGHT, WORKER_WEIGHT, WORLD_PACE } from '../src/game/pace';
 import { DROWN_RATE, DROWN_WARN, EXHAUSTED, HEAL_FED, HEAL_RATE, HUNGER_RATE, SWIM_LEARN, SWIM_WIND, THIRST_RATE, STAMINA_BAR_PER_LEVEL, WIND_PER_LEVEL, WIND_REST, WIND_STARVING, WIND_WALK } from '../src/game/body';
@@ -535,6 +539,8 @@ out.push(`create table if not exists trap_def (
   reach real not null, odds real not null, life_min real not null, life_max real not null,
   water boolean not null default false, hold int, note text not null
 );`);
+/* Used up by its first catch (`TrapDef.once`): a twine snare. */
+out.push(`alter table trap_def add column if not exists once boolean not null default false;`);
 /*
  * What a wildermon is for besides eating: a back to sit on and a shoulder to
  * pull with.
@@ -936,6 +942,8 @@ out.push(`create table if not exists recipe (
 );`);
 /* Worked only by somebody standing on a settlement of theirs: `Recipe.deed`, which `craft_refusal` reads. */
 out.push(`alter table recipe add column if not exists deed boolean not null default false;`);
+/* The share of what it is made at taken from the QL of the rope in it, by mass (`Recipe.ropeShare`, `ropework.ts`): a boat's, a trap's. */
+out.push(`alter table recipe add column if not exists rope_share real;`);
 /*
  * Baubles (`src/game/baubles.ts`): their three tiers, the skills a minor and a
  * major one may speak for, how each kind is written and how far it adds up,
@@ -2469,6 +2477,7 @@ MAP_BANDS.forEach((b, ord) => out.push(
 for (const t of Object.values(TRAPS)) {
   out.push(`insert into trap_def values (${q(t.id)}, ${q(t.name)}, ${q(t.difficulty)}, ${q(t.holds)}, `
     + `${q(t.reach)}, ${q(t.odds)}, ${q(t.lifeMin)}, ${q(t.lifeMax)}, ${q(!!t.water)}, ${q(t.hold ?? null)}, ${q(t.note)});`);
+  if (t.once) out.push(`update trap_def set once = true where id = ${q(t.id)};`);
 }
 BUSH_DEFS.forEach((b, i) => {
   out.push(`insert into bush_def values (${q(i)}, ${q(b.name)});`);
@@ -2605,6 +2614,7 @@ for (const r of RECIPES) {
      q(r.baseTime), q(r.stamina), q(r.difficulty === undefined ? null : r.difficulty),
      q(!!r.qlFromInputs), q(r.material), q(r.wood), q(r.extra), q(r.done), q(r.fail)].join(', ') + `);`);
   if (r.deed) out.push(`update recipe set deed = true where id = ${q(r.id)};`);
+  if (r.ropeShare) out.push(`update recipe set rope_share = ${q(r.ropeShare)} where id = ${q(r.id)};`);
   r.inputs.forEach((i, n) => {
     out.push(`insert into recipe_input (recipe, ord, item, count, litres) values (${q(r.id)}, ${n}, ${q(i.item)}, ${q(i.count ?? 1)}, ${q(i.litres ?? null)});`);
   });
@@ -2923,4 +2933,24 @@ for (const [fn, v] of [
 }
 out.push(`create or replace function settle_said(p_key text) returns text language sql immutable as $fn$ select case p_key ${
   Object.entries(SETTLE_SAID).map(([k, v]) => `when ${q(k)} then ${q(v)} `).join('')}end $fn$;`);
+/*
+ * Ropemaking (`ropework.ts`): the lay-ups and what the skill makes of them,
+ * its pace on its own jobs, the rope walk, the bell rope and the lead rope.
+ * The rules that read them are `rope_*`, `bell_heard` and `lead_pace` in the
+ * migrations.
+ */
+out.push(`create or replace function rope_input(p_item text) returns boolean language sql immutable as $fn$ select p_item = any (array[${ROPE_INPUTS.map(q).join(', ')}]::text[]) $fn$;`);
+out.push(`create or replace function rope_lay_up(p_recipe text) returns boolean language sql immutable as $fn$ select p_recipe = any (array[${LAY_UPS.map(q).join(', ')}]::text[]) $fn$;`);
+for (const [fn, v] of [
+  ['lay_up_base', LAY_UP_BASE], ['lay_up_every', LAY_UP_EVERY], ['rope_time_per_level', ROPE_TIME_PER_LEVEL],
+  ['lay_up_spare_above', LAY_UP_SPARE_ABOVE], ['lay_up_fail_share', LAY_UP_FAIL_SHARE],
+  ['rope_walk_time', ROPE_WALK_TIME], ['rope_walk_ql_more', ROPE_WALK_QL],
+  ['bell_heard_base', BELL_HEARD_BASE], ['bell_heard_per_ql', BELL_HEARD_PER_QL], ['lead_pace', LEAD_PACE],
+] as Array<[string, number]>) {
+  out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);
+}
+for (const [fn, v] of [['ropemaking_skill', ROPEMAKING], ['rope_walk_kind', ROPE_WALK], ['bell_rope_item', BELL_ROPE], ['lead_rope_item', LEAD_ROPE],
+  ['no_bell_rope_said', NO_BELL_ROPE]] as Array<[string, string]>) {
+  out.push(`create or replace function ${fn}() returns text language sql immutable as $fn$ select ${q(v)} $fn$;`);
+}
 console.log(out.join('\n'));

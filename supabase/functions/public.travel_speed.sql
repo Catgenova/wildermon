@@ -36,7 +36,9 @@ begin
     -- The cap comes after the shoes, as the browser has it: a mount at the cap is at the cap.
     -- And quicker again in tack its maker's hand is in (a Tailor's Saddler), past the cap, as a vehicle's mark is.
     return least(max_mount_speed(), case when v_swim is null then mount_speed(c) else mount_speed(c, v_swim) end * case when shod(c) and paved(land_tile(p_world, floor(pl.x)::int, floor(pl.y)::int))
-                                                          then shoe_pace() else 1 end) * tack_speed(c);
+                                                          then shoe_pace() else 1 end) * tack_speed(c)
+      -- Led on a lead rope rather than bridled (`lead_pace`).
+      * case when c.tacked then 1 else lead_pace() end;
   end if;
   -- On foot, and on a made road, a Terraformer's Road Legs; and quicker while a Skirmisher's Hit and Run holds.
   select * into pl from player where world_id = p_world and uid = p_uid;

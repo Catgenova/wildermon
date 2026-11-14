@@ -96,6 +96,10 @@ import { GLASSHOUSE_GROWTH, PLANTER_GROWTH, SEASON_GROWTH, SEASON_SECONDS, YEAR_
 import { FAVOUR_TRICKLE, favourCap, PRAYER_BASE, PRAYER_GAIN, PRAYER_LIFT, PRAYER_PEAKS, PRAYER_REST, PRAYER_TAPER, prayerWorth } from '../../game/faith';
 import { tryGain } from '../../game/learn';
 import { DRIVING_LEARN, DRIVING_TOP, drivingPace, SAILING_LEARN, SAILING_TOP, sailingPace, TRAVEL_TOP_AT, VEHICLE_QL_TOP, vehicleQlPace } from '../../game/travel';
+import {
+  BELL_HEARD_BASE, BELL_HEARD_PER_QL, BELL_ROPE, bellHeard, HAMMOCK_REST, LAY_UP_EVERY, LAY_UP_FAIL_SHARE, LAY_UP_SPARE_ABOVE, LAY_UPS, LEAD_PACE, LEAD_ROPE,
+  ROPE_SHARE_BOAT, ROPE_SHARE_TRAP, ROPE_TIME_PER_LEVEL, ROPE_WALK, ROPE_WALK_QL, ROPE_WALK_TIME, ropePerLayUp, ropeTime, TWINE_MADE,
+} from '../../game/ropework';
 import { ANCIENT_EFFECTS, ANCIENT_PLUS, BAUBLE_HIGH, BAUBLE_KINDS, BAUBLE_LOW, BAUBLE_SHARE, BAUBLE_TIERS, baubleTimes, MAJOR_SKILLS, MINOR_SKILLS, REGRET_SHARE, YIELD_TIMES } from '../../game/baubles';
 import { SOUL_CHANCE } from '../../game/sacrifice';
 import { FIRST_AID_ACTION_BY_ID, HERB_HEAL, healAmount, SUITS_HEAL } from '../../game/firstaid';
@@ -330,6 +334,23 @@ export const dur = (seconds: number): string => {
 };
 /** "3 sand", "a gem": a count of a thing in figures (`countOf`). */
 const countIn = (id: string, n: number): string => countOf(id, n, true);
+
+/** Ropemaking past its recipes (`ropework.ts`): every number off the rule that plays it. */
+function ropeHelp(): string {
+  const lay = LAY_UPS.map((id) => RECIPE_BY_ID.get(id)?.label.toLowerCase()).join(', ');
+  return `<li>Rope per lay-up (${lay}): ${ropePerLayUp(0)}, +1 per ${LAY_UP_EVERY} levels of ropemaking (${ropePerLayUp(100)} at 100).</li>
+      <li>Ropemaking jobs: time per action ×${ropeTime(100).toFixed(2)} at 100 (−${percent(ROPE_TIME_PER_LEVEL)} per level), after the floor.</li>
+      <li>Failed lay-up above ropemaking ${LAY_UP_SPARE_ABOVE}: ${percent(LAY_UP_FAIL_SHARE)} of its fibre damaged (rounded up), the rest untouched.</li>
+      <li><b>Rope walk</b> (${bill(`make_${ROPE_WALK}`)}; ${furnitureDef(ROPE_WALK).w}×${furnitureDef(ROPE_WALK).h} subtiles): a lay-up within ${STATION_REACH} tiles of it: time ×${ROPE_WALK_TIME}, +${ROPE_WALK_QL} QL.</li>
+      <li>Rope QL into what it is built into, by mass of rope and thick rope: boats ${percent(ROPE_SHARE_BOAT)}, traps ${percent(ROPE_SHARE_TRAP)}.</li>
+      <li><b>Twine</b>: ${bill('make_twine')}, ${TWINE_MADE} a go. <b>Sailcloth</b>: ${bill('make_sailcloth')} at a loom; the sails of a sailing boat
+      (${need('make_sailing_boat', 'sailcloth')}) and a caravel (${need('make_caravel', 'sailcloth')}).</li>
+      <li><b>Hammock</b> (${bill('make_hammock')}): a bed, rest ${HAMMOCK_REST} (bed ${furnitureDef('bed').bed}, tent ${furnitureDef('tent').bed}).</li>
+      <li><b>Bell rope</b> (${bill(`make_${BELL_ROPE}`)}): carried, needed to ring a bell; heard within ${BELL_HEARD_BASE} tiles + ${BELL_HEARD_PER_QL} per QL
+      (${bellHeard(100)} at QL 100): workers further off are not called, citizens further off not told.</li>
+      <li><b>Lead rope</b> (${bill(`make_${LEAD_ROPE}`)}): carried, mount a tamed wildermon with no saddle and bridle; speed ×${LEAD_PACE}.</li>
+      <li><b>Twine snare</b> (${bill('make_twine_snare')}): holds up to taming ${TRAPS.twine_snare.holds}, reach ${TRAPS.twine_snare.reach} tiles; used up by its first catch.</li>`;
+}
 /** A bill in figures (`billWords`). */
 const billIn = (b: ReadonlyArray<readonly [string, number]>): string => billWords(b, true);
 
@@ -3000,6 +3021,7 @@ export function helpText(): string {
       <b>ropemaking</b>. ${capital(countIn('rope', need('make_thick_rope', 'rope')))}: a <b>thick rope</b>.</li>
       <li>Used by: <b>bridle</b> ${need('make_bridle', 'rope')}; <b>rowing boat</b> ${need('make_rowing_boat', 'rope')}; <b>sailing boat</b> ${need('make_sailing_boat', 'rope')} and
       ${need('make_sailing_boat', 'thick_rope')} thick ropes; <b>well</b> ${countIn('thick_rope', need('make_well', 'thick_rope'))}.</li>
+      ${ropeHelp()}
     </ul>
     <h3>Wool, cloth and the loom</h3>
     <ul>

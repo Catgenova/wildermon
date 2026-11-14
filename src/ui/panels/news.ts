@@ -225,6 +225,11 @@ import {
 import { STEPS_BACK, stepsBack, STONE_STEPS_BILL, TIMBER_STEPS_BILL } from '../../game/steps';
 import { LAVENDER_RULE, ROSE_BUD, ROSE_FLOWER, ROSE_LEAFY, ROSES_RULE } from '../../game/roses';
 import { DEVICE_COUNT } from '../../render/furniture';
+import { TRAPS } from '../../game/trapdefs';
+import {
+  BELL_HEARD_BASE, BELL_HEARD_PER_QL, bellHeard, HAMMOCK_REST, LAY_UP_EVERY, LAY_UP_FAIL_SHARE, LAY_UP_SPARE_ABOVE, LEAD_PACE,
+  ROPE_SHARE_BOAT, ROPE_SHARE_TRAP, ROPE_TIME_PER_LEVEL, ROPE_WALK, ROPE_WALK_QL, ROPE_WALK_TIME, ropePerLayUp, ropeTime, TWINE_MADE,
+} from '../../game/ropework';
 import { FLOWER_MOST, FLOWER_SEASONS } from '../../world/flowers';
 import {
   colourWord, DYE_LITRES, DYE_LITRES_PER_KG, DYE_QL_BLACK, DYE_QL_PURE, DYE_QL_WHITE, dyeGrams, DYESTUFFS, dyeHex, kgSaid, LEGACY_DYES, LEGACY_POT_LITRES,
@@ -4419,6 +4424,22 @@ export const NEWS: News[] = [
       `New: fishing net: ${LIFT_DROPS * NET_LIFT.length} drops off the net as it is lifted, ${SHAKE_DROPS} at each of ${NET_SHAKES.length} shakes.`,
       `New: rowing under way: ${OAR_DROPS} drops a blade at the catch; whirl pair a blade a stroke, ${SWIRL_SECS} s.`,
       'Without a graphics card: swimming strokes\' splashes, rings treading water, the float\'s strike and a catch only.',
+    ],
+  },
+  // Ropemaking (`ropework.ts`).
+  {
+    n: 589,
+    day: '2026-11-14',
+    lines: () => [
+      `New: Ropemaking: rope per lay-up ${ropePerLayUp(0)}, +1 per ${LAY_UP_EVERY} levels (${ropePerLayUp(100)} at 100); ropemaking time per action −${percent(ROPE_TIME_PER_LEVEL)} per level (×${ropeTime(100)} at 100); `
+        + `above ${LAY_UP_SPARE_ABOVE} a failed lay-up damages ${percent(LAY_UP_FAIL_SHARE)} of its fibre.`,
+      `New: rope walk (${pieceBill(ROPE_WALK)}): a lay-up beside it: time ×${ROPE_WALK_TIME}, +${ROPE_WALK_QL} QL.`,
+      `New: rope QL into what it is built into, by mass of rope and thick rope: boats ${percent(ROPE_SHARE_BOAT)}, traps ${percent(ROPE_SHARE_TRAP)}.`,
+      `New: twine (${TWINE_MADE} from ${RECIPE_BY_ID.get('make_twine')?.inputs[0].count} wemp); sailcloth (${recipeBill('make_sailcloth')}, at a loom).`,
+      `Changed: sails: sailing boat ${Object.fromEntries(furnitureDef('sailing_boat').bill).sailcloth} sailcloth, caravel ${Object.fromEntries(furnitureDef('caravel').bill).sailcloth} (was: cloth).`,
+      `New: hammock: a bed, rest ${HAMMOCK_REST} (tent ${furnitureDef('tent').bed}). Lead rope: mount a tamed wildermon with no saddle and bridle, speed ×${LEAD_PACE}. `
+        + `Twine snare: holds up to taming ${TRAPS.twine_snare.holds}, used up by its first catch.`,
+      `Changed: ringing a bell needs a bell rope; heard within ${BELL_HEARD_BASE} tiles + ${BELL_HEARD_PER_QL} per QL of the rope (${bellHeard(100)} at QL 100) (was: the whole settlement).`,
     ],
   },
   {

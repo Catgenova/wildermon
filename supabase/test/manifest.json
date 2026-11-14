@@ -3031,5 +3031,11 @@
     "title": "Sleeves are shawls, and the plate shawl takes fur",
     "shard": 6,
     "why": "Asked for: \"Change the 'sleeves' equipment type to 'shawl' type. All existing crafted sleeves become shawls. Amend the plate shawl to include metal, fur in ingredients.\" The slot Shawl where Arms was, the five shawls in it, a blow to the arms on it at the arms' share, on both sides. 20261120000011 over a world planted with the old ids in a transaction it rolls back -- sleeves worn, in the pack, in a crate and on a stall, plate arms, their mould and castings of them in the pack and a smelter, a sleeves recipe queued, known, on the toolbelt, in the ledger and tally, a sale, an order and a count -- leaves shawls in every one of those places, worn in the shawl slot, every other column of every row as it was, nothing on the island naming an old id; run again, nothing changes. A blow to the arms damages the shawl worn, the shawl weighs in what you wear and stays on the body at a death. A plate shawl casting is refused at the anvil one fur short in the browser's words, a failed go spends no fur, a go that lands gives a shawl of the casting's metal and spends the fur."
+  },
+  {
+    "file": "supabase/test/ropework.ts",
+    "title": "Ropemaking: lay-ups, the rope walk, rope QL carried, bell, lead and twine snare",
+    "shard": 4,
+    "why": "Every Ropemaking rule is the island's: the count and QL a lay-up makes, its pace, what a failed one damages, the rope's share in a boat or a trap, and who hears a bell."
   }
 ]

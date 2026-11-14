@@ -550,6 +550,14 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   stone_lavender_arch: { name: 'Stone lavender arch', category: 'misc', weight: 60, decay: 3, description: 'One tile across; walk through it. {rule}' },
   rope: { name: 'Rope', category: 'material', weight: 0.6, stackable: true, decay: 6, description: '{recipe.make_rope.wemp} wemp fibres, laid on a rope tool.' },
   thick_rope: { name: 'Thick rope', category: 'material', weight: 2.4, stackable: true, decay: 4, description: '{recipe.make_thick_rope.rope} ropes. Moors a hull, hangs a bucket down a shaft, carries a bridge span.' },
+  // Ropemaking's own makes (`ropework.ts`); the numbers in their words are filled from it in `recipes.ts`.
+  twine: { name: 'Twine', category: 'material', weight: 0.05, stackable: true, decay: 8, description: '{made} per {wemp} wemp fibres. Used in: {uses}.' },
+  sailcloth: { name: 'Sailcloth', category: 'material', weight: 0.4, stackable: true, decay: 10, description: 'Woven at a loom. Sails: sailing boat {sailing}, caravel {caravel}.' },
+  hammock: { name: 'Hammock', category: 'misc', weight: 5, decay: 5, description: 'Sleep: {ofBed:pct} of the sleep bonus per hour asleep, and of the health back, of a bed of the same QL.' },
+  rope_walk: { name: 'Rope walk', category: 'misc', weight: 40, decay: 4, description: 'Stand at it: rope and thick rope laid up in {time:pct} of the time, +{ql} QL.' },
+  bell_rope: { name: 'Bell rope', category: 'tool', weight: 1.8, decay: 4, description: 'Carried: needed to ring a bell. Heard within {base} tiles + {per} per QL ({top} at QL 100).' },
+  lead_rope: { name: 'Lead rope', category: 'tool', weight: 1.2, decay: 4, description: 'Carried: mount a tamed wildermon with no saddle and bridle; it goes at {pace:pct} of its speed.' },
+  twine_snare: { name: 'Twine snare', category: 'misc', weight: 0.3, decay: 6, description: 'Trap: set on land and bait it. Holds up to taming {holds}; used up by its first catch.' },
   onion: { name: 'Onion', category: 'food', weight: 0.15, stackable: true, food: 0.06, feeds: { greens: 0.04 } },
   corpse: { name: 'Corpse', category: 'misc', weight: 12, decay: 90, description: 'Butcher before it rots. Wildermon: meat, fur, leather, bone, glands. Monsters: tusk, sinew and more.' },
   // Furniture, carried flat-packed and set down on the subtile grid.
