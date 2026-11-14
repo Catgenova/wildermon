@@ -8,7 +8,11 @@ declare c planter_crop; p placed; r record;
 begin
   select * into c from planter_crop where placed = p_placed and world_id = p_world;
   if c.placed is null then return; end if;
+  -- A herb box gives its share of a planter's yield (`garden.ts`).
+  select * into p from placed where id = p_placed;
+  perform set_config('wildermon.reap_share', coalesce((select f.herbs from furniture_def f where f.id = p.sub), 1)::text, true);
   select * into r from reap_what(p_world, p_uid, c.id, c.tended, c.ql, p_skill);
+  perform set_config('wildermon.reap_share', '', true);
   o_produce := r.o_produce; o_got := r.o_got; o_seed := r.o_seed; o_seeds := r.o_seeds; o_ql := r.o_ql; o_rare := r.o_rare;
   delete from planter_crop where placed = p_placed;
   select * into p from placed where id = p_placed;

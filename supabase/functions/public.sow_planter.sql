@@ -13,6 +13,8 @@ begin
   if not found then return null; end if;
   select * into cd from crop_def where seed = it.def;
   if cd.id is null then return null; end if;
+  -- A herb box grows herbs and nothing else (`garden.ts`).
+  if (select f.herbs from furniture_def f where f.id = p.sub) is not null and not (cd.id = any (herb_crops())) then return null; end if;
   v_kept := random() < pk(p_world, p_uid, 'keep:plant_seed', 0);
   if not v_kept then
     if not consume(p_world, p_uid, it.def, 1, it.id) then return null; end if;

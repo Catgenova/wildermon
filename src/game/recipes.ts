@@ -12,7 +12,8 @@ import {
 import { QL_PER_LOOP } from './belt';
 import { campfireFood, describeGoals } from './journal';
 import { cookedDishes } from './journal-b';
-import { fill, listed } from './words';
+import { fill, listed, listedOr } from './words';
+import { CARVED_FIGURE, figureRefusal, HANG_FROM, HEDGE_WHERE, mountWords } from './gardendefs';
 import { FURNITURE, LIQUID_NAME, ONE_ALTAR, VESSELS } from './furniture';
 import { litresAtHand, litreSources, takeLitres } from './placeables';
 import { trellisWallWords } from './building';
@@ -572,7 +573,7 @@ const FURNITURE_RECIPES: Recipe[] = FURNITURE.filter((f) => !f.grave && !f.lair 
   tool: f.tool ?? 'mallet',
   skill: f.skill ?? 'fine_carpentry',
   // A carpenter's piece is of the wood it is built from; a mason's is brick, and a tailor's cloth.
-  material: f.material ?? (f.skill === 'masonry' || f.skill === 'tailoring' || f.skill === 'fishing' || f.skill === 'ropemaking' ? undefined : ('wood' as const)),
+  material: f.material ?? (f.skill === 'masonry' || f.skill === 'tailoring' || f.skill === 'fishing' || f.skill === 'ropemaking' || f.skill === 'pottery' || f.skill === 'forestry' ? undefined : ('wood' as const)),
   ...(f.deed ? { deed: true } : {}),
   ...(f.perk ? { perk: f.perk } : {}),
   label: `Build ${f.name.toLowerCase()}`,
@@ -582,10 +583,13 @@ const FURNITURE_RECIPES: Recipe[] = FURNITURE.filter((f) => !f.grave && !f.lair 
   difficulty: f.difficulty,
   // A boat takes a share of its rope's QL into its own (`ropework.ts`).
   ...(f.boat && f.bill.some(([id]) => ROPE_INPUTS.includes(id)) ? { ropeShare: ROPE_SHARE_BOAT } : {}),
-  // A trellis goes against a wall, along the whole of a side of its tile (`vineyard.ts`); everything else anywhere on a tile.
+  // A trellis goes against a wall, along the whole of a side of its tile (`vineyard.ts`); a hedge along a side, and a
+  // piece fixed to a wall or hung where it is fixed (`garden.ts`); everything else anywhere on a tile.
   done: [f.done, f.vine
     ? `Set down outside a building, against the outer face of a finished ${trellisWallWords()}: takes the ${SUBTILES} spots along that side of its tile.`
-    : 'Set down on any spot of a tile.'].filter(Boolean).join(' '),
+    : f.mount ? mountWords(f.mount, trellisWallWords(), listedOr(HANG_FROM.map(lower)))
+      : f.hedge ? HEDGE_WHERE
+        : 'Set down on any spot of a tile.'].filter(Boolean).join(' '),
 }));
 
 RECIPES.push(...FURNITURE_RECIPES);
@@ -1414,7 +1418,10 @@ export function recipeAction(r: Recipe): ActionDef {
     // the pack, a bag on your back, or a store within `CRAFT_REACH`.
     // Or a run that has used up the last of its material, which `check` stops in its words.
     applies: (t, g) => t.kind === 'item' && (ranOut(t, g) !== null || materials.includes(g.craftItem(t.uid, reachFor(g, r))?.id ?? '')),
-    check: (t, g) => ranOut(t, g) ?? recipeReason(r, g, t.kind === 'item' ? t.uid : undefined),
+    // A carved figure is of a kind seen in the field guide, chosen at the bench (`garden.ts`; the island's `craft_ran_out`).
+    check: (t, g) => ranOut(t, g)
+      ?? (r.result === CARVED_FIGURE ? figureRefusal((k) => g.guide.has(k, 'seen'), (t as { species?: string }).species) : null)
+      ?? recipeReason(r, g, t.kind === 'item' ? t.uid : undefined),
     // Counted with the stack it was started on, which may be one the settings would not have picked.
     maxRepeat: (t, g) => recipeStatus(r, g, undefined, g.craftStock(t.kind === 'item' ? t.uid : undefined, false, reachFor(g, r))).max,
     perform: (t, g) => {

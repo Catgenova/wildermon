@@ -11,6 +11,7 @@ import type { Building, Buildings } from './building';
 import { capital, timeWords } from './words';
 import { lacksTool, REAP_TOOL, TEND_TOOL } from './jobtools';
 import { BED_NAME, bedLevelOf, bedSowRefusal, cropHere, emptyBeds, farmLevel } from './gardenbed';
+import { HERB_BOX } from './gardendefs';
 
 /**
  * Farming: rake a field out of grass or dirt, sow a seed, tend it through
@@ -80,6 +81,8 @@ export const CROPS: Record<string, CropDef> = {
 };
 
 export const CROP_LIST = Object.values(CROPS);
+/** What a herb box says to a seed that is no herb's (`garden.ts`); the island's `herbs_only_said`. */
+export const HERBS_ONLY = (): string => `Herb box: herbs only (${CROP_LIST.filter((c) => c.kind === 'spice').map((c) => c.name.toLowerCase()).join(', ')}).`;
 /** Seed item id to the crop it grows. */
 export const CROP_BY_SEED = new Map(CROP_LIST.map((c) => [c.seed, c]));
 
@@ -513,6 +516,8 @@ export const FARM_ACTIONS: ActionDef[] = [
       const uid = t.kind === 'tile' || t.kind === 'furniture' ? t.itemUid : undefined;
       const seed = uid !== undefined ? g.inventory.get(uid) : undefined;
       if (!seed || !CROP_BY_SEED.has(seed.id)) return 'Choose a seed.';
+      // A herb box grows herbs and nothing else (`garden.ts`).
+      if (box?.kind === HERB_BOX && CROP_BY_SEED.get(seed.id)?.kind !== 'spice') return HERBS_ONLY();
       return null;
     },
     perform: (t, g) => {

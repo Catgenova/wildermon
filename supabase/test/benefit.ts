@@ -367,10 +367,12 @@ check('and none left in the journal', goalsLeft.length === 0, goalsLeft.join(' '
  * and `{what}` a trade's other party and the thing it is about (`barter_said`),
  * filled by the island when it says them. `{deed}` is the settlement a
  * notice, a work or a delivery is at (`settle_said`, filled by `settle_line`),
- * which uses `{who}`, `{what}` and `{n}` the same way.
+ * which uses `{who}`, `{what}` and `{n}` the same way. `{name}` is a garden
+ * piece's own name in a refusal (`garden_said`) and `{of}` how many a job's
+ * count is out of (`garden_done`, with `{what}` and `{n}`).
  */
 const state = readFileSync('supabase/defs-state.sql', 'utf8');
-const ISLANDS_OWN = new Set(['{n}', '{t}', '{food}', '{v}', '{w}', '{who}', '{what}', '{deed}']);
+const ISLANDS_OWN = new Set(['{n}', '{t}', '{food}', '{v}', '{w}', '{who}', '{what}', '{deed}', '{name}', '{of}']);
 const unfilled = [...state.matchAll(PLACEHOLDER)].map((m) => m[0]).filter((p) => !ISLANDS_OWN.has(p));
 check('the definitions the island reads have no placeholder in them', unfilled.length === 0, [...new Set(unfilled)].join(' '));
 

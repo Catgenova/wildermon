@@ -12,7 +12,8 @@ begin
     v_said := v_said || 'treasure map'::text;
     v_out := v_out || '{"map": true}';
   end if;
-  perform give(p_world, p_uid, k.trophy, 1, p_ql);
+  -- Its slayer's name on it, which a trophy plaque shows under it (`garden.ts`).
+  perform give(p_world, p_uid, k.trophy, 1, p_ql, null, null, (select py.name from player py where py.world_id = p_world and py.uid = p_uid));
   v_said := v_said || lower((select d.name from item_def d where d.id = k.trophy));
   v_out := v_out || jsonb_build_object('trophy', k.trophy);
   if k.scales > 0 then

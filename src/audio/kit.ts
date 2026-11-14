@@ -176,7 +176,7 @@ export function footfall(ctx: BaseAudioContext, dest: AudioNode, at: number, foo
  * because there are seven kinds of thing to hit. Mining marble and cutting a
  * slab out of it are the same noise made by different people.
  */
-export const STROKES = ['earth', 'stone', 'wood', 'metal', 'cloth', 'water', 'fire'] as const;
+export const STROKES = ['earth', 'stone', 'wood', 'metal', 'cloth', 'water', 'fire', 'snip'] as const;
 export type Stroke = (typeof STROKES)[number];
 
 export function stroke(ctx: BaseAudioContext, dest: AudioNode, at: number, kind: Stroke, v: number): void {
@@ -215,6 +215,29 @@ export function stroke(ctx: BaseAudioContext, dest: AudioNode, at: number, kind:
       // Bellows and a hearth: a wash with a slow breath in it.
       burst(ctx, dest, at, { dur: 0.42, freq: 620 + v * 240, to: 1400, q: 0.35, gain: 0.16, attack: 0.12 });
       break;
+    case 'snip':
+      // Blades through twigs: two quick bright cuts, the second a hair after, a faint ring of steel under them.
+      burst(ctx, dest, at, { dur: 0.04, freq: 5200 + v * 900, q: 1.6, gain: 0.22, attack: 0.002 });
+      burst(ctx, dest, at + 0.11, { dur: 0.05, freq: 4600 + v * 700, q: 1.4, gain: 0.18, attack: 0.002 });
+      ring(ctx, dest, at, { freq: 2600 + v * 300, dur: 0.08, gain: 0.04, type: 'sine' });
+      break;
+  }
+}
+
+/**
+ * A wind chime (`garden.ts`): wooden tubes knocking, soft and short, two or
+ * three notes off a five-note scale with a hollow knock under them. Rare and
+ * quiet on purpose -- `CHIME_GAP` between any two the ear hears -- so a
+ * settlement of them is a garden and not a bell tower.
+ */
+const CHIME_NOTES = [523.25, 587.33, 659.25, 783.99, 880];
+export function windChime(ctx: BaseAudioContext, dest: AudioNode, at: number, v: number): void {
+  const n = 2 + (v > 0.6 ? 1 : 0);
+  for (let i = 0; i < n; i++) {
+    const f = CHIME_NOTES[Math.floor((v * 7 + i * 3) % CHIME_NOTES.length)];
+    const t = at + i * (0.09 + v * 0.07);
+    burst(ctx, dest, t, { dur: 0.03, freq: 1800, q: 0.9, gain: 0.05, attack: 0.002 });
+    ring(ctx, dest, t, { freq: f, dur: 0.9, gain: 0.035, type: 'sine', partials: [[1, 0.7], [2.76, 0.2], [5.4, 0.1]] });
   }
 }
 

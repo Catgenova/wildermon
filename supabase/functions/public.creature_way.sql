@@ -88,6 +88,14 @@ begin
     k := (r.level * h + (r.y - by0)) * w + (r.x - bx0) + 1;
     if r.dir = 'h' then bh[k] := true; else bv[k] := true; end if;
   end loop;
+  -- And the borders a hedge stands along, on the ground, as a fence's (`hedge_between`, `garden.ts`).
+  for r in select 0 as level, bd.dir, bd.x, bd.y from placed pl join furniture_def f on f.id = pl.sub and f.hedge
+             cross join lateral border_of(pl.x, pl.y, pl.facing) bd
+            where pl.world_id = p_world and pl.kind = 'furniture' and coalesce(pl.level, 0) = 0
+              and bd.x between bx0 and bx1 and bd.y between by0 and by1 loop
+    k := (r.level * h + (r.y - by0)) * w + (r.x - bx0) + 1;
+    if r.dir = 'h' then bh[k] := true; else bv[k] := true; end if;
+  end loop;
 
   -- Where it is going: the tile, if there is something to stand on there, and otherwise those beside it there are.
   if p_l1 > 0 then

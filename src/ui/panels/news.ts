@@ -95,7 +95,7 @@ import { BAG_CARRY as BAG_CARRY_293 } from '../../game/gear';
 import { OLD_AT as OLD_AT_287, OLD_FOR as OLD_FOR_287, YOUNG_FOR as YOUNG_FOR_287 } from '../../game/creatures';
 import { AROUND_LEASH as AROUND_LEASH_602, AROUND_LEFT as AROUND_LEFT_602 } from '../../game/creatures';
 import { PIER_SHOO as PIER_SHOO_602 } from '../../game/piers';
-import { RANGE_PER_STEP as RANGE_PER_STEP_604, SKILL_STEP as SKILL_STEP_604 } from '../../game/creatures';
+import { RANGE_PER_STEP as RANGE_PER_STEP_605, SKILL_STEP as SKILL_STEP_605 } from '../../game/creatures';
 import { HAUL_LEARN as HAUL_LEARN_290, HAUL_LEARN_RISE as HAUL_LEARN_RISE_290, HAUL_LEARN_STEEP as HAUL_LEARN_STEEP_290 } from '../../game/creatures';
 import { HAUL_LEARN as HAUL_LEARN_450, HAUL_LEARN_STEEP as HAUL_LEARN_STEEP_450, HAUL_STEEP_AT as HAUL_STEEP_AT_450 } from '../../game/creatures';
 import { SEASON_DAYS, SHORT_SEASON_DAYS, YEAR_DAYS, YEAR_FROM } from '../../world/calendar';
@@ -273,6 +273,17 @@ import { CHAT_KEEP_DAYS, EVENT_KEEP_DAYS, TALK_LOG } from '../../game/events';
 import { gemFound } from '../../game/gems';
 import { BRAZIER_CAPACITY, DEPLOY_REACH, OVEN_CAPACITY } from '../../game/furniture';
 import { SLEEP_BONUS_CAP, SLEEP_BONUS_MULT, SLEEP_BONUS_QL, SLEEP_BONUS_RATE, sleepHm } from '../../game/sleep';
+import {
+  ARBOUR_BENCH, BASKET_SLOTS, BED_SLOTS, BIRDHOUSE, BIRDS_AWAY, BIRDS_MOST, BLOOM_COST, BLOOM_KINDS, BONSAI, BONSAI_GROWN, BONSAI_STEPS, BOX_SLOTS, CARVED_FIGURE,
+  CHIME_GAP, CHIME_STILL, CLIP_TIME, FLOWER_BED, FLOWER_CART, FOLDING_SCREEN, HANGING_BASKET, HEDGE, HEDGE_CLIPS, HEDGE_FULL, HERB_BOX, HERB_SHARE, PLANT_STAND,
+  POTTED_FERN, POTTED_PALM, PRUNE_REST, PRUNE_SKILL, PRUNE_TIME, PRUNE_TOOL, TOPIARY_GROWS_OUT, TOPIARY_SHAPES, TOPIARY_TUB, TRIM_SKILL, TRIM_TIME, TRIM_TOOL,
+  TROPHY_PLAQUE, WIND_CHIME, WINDOW_BOX, WISTERIA_PERGOLA, type Mount,
+} from '../../game/gardendefs';
+import { MOUNT_SAID } from '../../game/garden';
+import { CLIMBER_BARE, CLIMBER_BLOOMS, ROSE_SEASONS } from '../../game/roses';
+
+/** Where a piece fixed in this way goes, as the help says it (`garden.ts`). */
+const GARDEN_MOUNT = (m: Mount): string => MOUNT_SAID[m];
 
 /**
  * What's new: what changed on the island, a line each, shown once as you come
@@ -4451,20 +4462,41 @@ export const NEWS: News[] = [
   },
   // The Ironemole line takes any seam; a miner's idle line; a kind's own range per step (`anySeam`, `mine_idle`, `range_per_step`).
   {
-    n: 604,
+    n: 605,
     day: '2026-11-14',
     lines: () => {
       const seams = ROCK_VARIANTS.filter((r) => r.level && !r.yields.endsWith('_shards'));
       const levels = [...new Set(seams.map((r) => r.level ?? 0))].sort((a, b) => a - b);
       const was = levels.map((lv) => `${seams.filter((r) => r.level === lv).map((r) => r.name.replace(/ (vein|seam)$/, '').toLowerCase()).join(' and ')} at ${lv}`).join(', ');
       const line = [SPECIES.mola.name, ...(SPECIES.mola.stages ?? []).map((s) => s.name)].join(', ');
-      const own = Object.values(SPECIES).filter((d) => d.rangePerStep !== undefined && d.rangePerStep !== RANGE_PER_STEP_604)
+      const own = Object.values(SPECIES).filter((d) => d.rangePerStep !== undefined && d.rangePerStep !== RANGE_PER_STEP_605)
         .map((d) => `${d.name} ${d.rangePerStep}`).join(', ');
       return [
         `Changed: ${line}: any bare seam, any mining level (was: ${was}). Yours and every other kind's: unchanged.`,
         `Fixed: an idle miner's card: a bare seam above its mining ("${idleSays({ why: 'seam', n: 4, what: ['iron_ore'] }, 'mine', null, 1)}"); `
           + `bare rock with no seam ("${idleSays({ why: 'noseam', n: SPECIES.mola.workRange }, 'mine')}") (was: "${idleSays({ why: 'range', n: SPECIES.mola.workRange }, 'mine')}" for both).`,
-        `Fixed: work range per ${SKILL_STEP_604} levels of task skill, on the island as on the card: ${own} tiles (was: ${RANGE_PER_STEP_604} on the island for every kind).`,
+        `Fixed: work range per ${SKILL_STEP_605} levels of task skill, on the island as on the card: ${own} tiles (was: ${RANGE_PER_STEP_605} on the island for every kind).`,
+      ];
+    },
+  },
+  // The garden pieces (`garden.ts`).
+  {
+    n: 604,
+    day: '2026-11-14',
+    lines: () => {
+      const made = (id: string): string => `${itemDef(id).name} (${pieceBill(id)}; ${skillOf(`make_${id}`)})`;
+      const word = (id: string): string => itemDef(id).name.toLowerCase();
+      return [
+        `New: ${made(FLOWER_BED)}, ${BED_SLOTS} wildflower kinds; ${made(WINDOW_BOX)}, ${BOX_SLOTS}; ${made(HANGING_BASKET)}, ${BASKET_SLOTS}. `
+          + `Kinds: ${listed([...BLOOM_KINDS])}, ${BLOOM_COST} wildflowers each, chosen per slot (Plant). Leaf ${ROSE_LEAFY} day after set down, bud ${ROSE_BUD} days, flower ${ROSE_FLOWER} days, in ${listed(ROSE_SEASONS)}.`,
+        `New: wall placement. ${word(WINDOW_BOX)}: ${GARDEN_MOUNT('window')} ${word(TROPHY_PLAQUE)}: ${GARDEN_MOUNT('wall')} ${word(HANGING_BASKET)} and ${word(WIND_CHIME)}: ${GARDEN_MOUNT('hang')}`,
+        `New: ${made(HERB_BOX)}: one herb, as a planter, ×${HERB_SHARE} yield. ${made(TOPIARY_TUB)}: trim (${TRIM_SKILL}, ${word(TRIM_TOOL)}, ${TRIM_TIME} s base) into a ${listedOr([...TOPIARY_SHAPES])}; bushy ${TOPIARY_GROWS_OUT} days after.`,
+        `New: ${made(HEDGE)}: one tile side, blocks it; full ${HEDGE_FULL} days after set down; clip ${listedOr([...HEDGE_CLIPS])} (${CLIP_TIME} s base).`,
+        `New: ${made(WISTERIA_PERGOLA)}: wisteria flowers in ${listed([...CLIMBER_BLOOMS.wisteria])}, bare in ${listed([...CLIMBER_BARE.wisteria])}. ${made(ARBOUR_BENCH)}: roses, as a rose arch.`,
+        `New: ${made(BONSAI)}: grown ${BONSAI_GROWN} days after set down; Prune (${PRUNE_SKILL}, ${word(PRUNE_TOOL)}, ${PRUNE_TIME} s base, anyone): 1 step of shaping, ${BONSAI_STEPS} max, 1 prune per ${PRUNE_REST} day.`,
+        `New: ${made(CARVED_FIGURE)}: kind chosen at the bench, from those seen in your field guide. ${made(TROPHY_PLAQUE)}: holds ${furnitureDef(TROPHY_PLAQUE).shows?.n} trophy and its slayer's name.`,
+        `New: ${made(POTTED_FERN)}, ${made(POTTED_PALM)}, ${made(PLANT_STAND)} (holds ${furnitureDef(PLANT_STAND).shows?.n}), ${made(FOLDING_SCREEN)} (dyeable), ${made(FLOWER_CART)}, ${made(BIRDHOUSE)} (up to ${BIRDS_MOST} birds by day, none in ${listed([...BIRDS_AWAY])}).`,
+        `New: ${made(WIND_CHIME)}: sways with the wind, chimes over ${Math.round(CHIME_STILL * 100)}% wind; at most 1 chime heard per ${CHIME_GAP} s.`,
       ];
     },
   },

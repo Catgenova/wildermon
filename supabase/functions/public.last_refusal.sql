@@ -43,6 +43,10 @@ begin
   if dye_recipe_action(p_action) then
     return dye_recipe_refusal(p_world, p_uid, p_action, p_target);
   end if;
+  -- The garden pieces' jobs (`garden.ts`).
+  if garden_action(p_action) then
+    return garden_refusal(p_world, p_uid, p_action, p_target);
+  end if;
 
   if p_action = 'plan_bridge' then
     v_kind := coalesce(p_target->>'material', 'rope');
