@@ -9,6 +9,7 @@ import { itemName, type Item } from '../../game/items';
 import { purse } from '../../game/money';
 import { makeDropZone } from '../dragdrop';
 import type { UIWindow } from '../windows';
+import { kitBody, meaning } from '../kit';
 
 /**
  * The Trade window: two columns, what you give and what they give, each a
@@ -44,9 +45,9 @@ export class BarterPanel {
     private readonly game: Game,
     private readonly island: Island | null,
   ) {
-    win.body.classList.add('skills-body');
+    kitBody(win.body, 'skills-body');
     this.page = document.createElement('div');
-    this.page.className = 'barter-page';
+    this.page.className = 'barter-page rc-scroll';
     win.body.append(this.page);
     win.onOpen = () => void this.refresh();
     if (island) {
@@ -124,7 +125,7 @@ export class BarterPanel {
   private draw(): void {
     this.page.replaceChildren();
     if (!this.island) {
-      this.note('Bartering: island only.');
+      this.page.append(this.line('Bartering: island only.', 'market-note barter-note rc-empty'));
       return;
     }
     const b = this.shown;
@@ -158,7 +159,7 @@ export class BarterPanel {
       b.mine.ok ? `Waiting for ${them}` : `Accept: get ${sideWords(b.theirs)} for ${sideWords(b.mine)}`,
       () => void this.act(this.island!.barterAccept(b.n, b.rev)));
     accept.disabled = b.mine.ok;
-    accept.classList.add('barter-accept');
+    accept.classList.add('barter-accept', 'rc-go');
     this.bar(accept, this.button('Cancel', 'Cancel the barter. Nothing changes hands.', () => void this.act(this.island!.barterCancel(b.n))));
     this.note(b.mine.ok && b.theirs.ok ? '' : b.mine.ok ? `Accepted. Waiting for ${them}.`
       : b.theirs.ok ? `${them} accepted.` : 'Not accepted. Any change resets both Accepts.',
@@ -169,17 +170,19 @@ export class BarterPanel {
   /** One side: its things, its silver and whether it has accepted; on yours, the ways to change it. */
   private column(title: string, side: BarterSide, mine: boolean, b: Barter): HTMLDivElement {
     const col = document.createElement('div');
-    col.className = `barter-col${side.ok ? ' barter-ok' : ''}`;
+    col.className = `barter-col rc-sunk${side.ok ? ' barter-ok' : ''}`;
+    meaning(col, side.ok ? 'good' : null);
     const head = document.createElement('div');
-    head.className = 'deed-head barter-head';
+    head.className = 'deed-head rc-section barter-head';
     head.textContent = side.ok ? `${title} · accepted` : title;
     col.append(head);
     const list = document.createElement('div');
     list.className = 'barter-list';
-    if (!side.things.length) list.append(this.line('No things.', 'barter-none'));
+    if (!side.things.length) list.append(this.line('No things.', 'barter-none rc-empty'));
     for (const t of side.things) {
       const row = document.createElement('div');
-      row.className = `barter-thing${t.has < t.count ? ' barter-gone' : ''}`;
+      row.className = `barter-thing rc-row${t.has < t.count ? ' barter-gone' : ''}`;
+      meaning(row, t.has < t.count ? 'bad' : null);
       const name = document.createElement('span');
       name.className = 'barter-name';
       name.textContent = `${t.count > 1 ? `${t.count} × ` : ''}${thingName(t)}`;
@@ -223,7 +226,7 @@ export class BarterPanel {
       this.count = pack[0]?.count ?? 1;
     }
     const sel = document.createElement('select');
-    sel.className = 'panel-select barter-pick';
+    sel.className = 'panel-select rc-field barter-pick';
     sel.title = 'Item from your pack, or drag from Inventory';
     for (const it of pack) {
       const o = document.createElement('option');
@@ -236,7 +239,7 @@ export class BarterPanel {
     const n = document.createElement('input');
     n.type = 'number';
     n.min = '1';
-    n.className = 'panel-select barter-count';
+    n.className = 'panel-select rc-field barter-count';
     n.title = 'Count';
     n.value = String(this.count);
     sel.addEventListener('change', () => {
@@ -258,7 +261,7 @@ export class BarterPanel {
     const coins = document.createElement('input');
     coins.type = 'number';
     coins.min = '0';
-    coins.className = 'panel-select barter-silver';
+    coins.className = 'panel-select rc-field barter-silver';
     coins.value = String(side.coins);
     const have = purse(this.game.inventory.items);
     coins.title = `Silver to give (have ${have}).`;
@@ -311,7 +314,7 @@ export class BarterPanel {
 
   private bar(...buttons: HTMLButtonElement[]): void {
     const el = document.createElement('div');
-    el.className = 'panel-bar barter-bar';
+    el.className = 'panel-bar rc-bar barter-bar';
     el.append(...buttons);
     this.page.append(el);
   }
@@ -319,7 +322,7 @@ export class BarterPanel {
   private button(label: string, title: string, go: () => void): HTMLButtonElement {
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = 'tb-btn tb-small market-do';
+    b.className = 'tb-btn rc-btn tb-small market-do';
     b.textContent = label;
     b.title = title;
     b.addEventListener('click', go);

@@ -14,6 +14,7 @@ import { bridgeName } from '../../game/bridges';
 import { postName } from '../../game/posts';
 import { BAUBLE_TIERS, baubleSummary, socketsOf } from '../../game/baubles';
 import type { UIWindow } from '../windows';
+import { kit, kitBody, meaning } from '../kit';
 import {
   andList, deedMay, isFounder, lacks, POWER, powerBit, RANK_CAP, STORE_LOG_CAP, RANK_NAME_MAX, RANK_POWERS, rankAddRefusal, rankDropRefusal, rankMay,
   rankMoveRefusal, rankName, rankNameRefusal, type PowerId, type RankDef,
@@ -192,7 +193,7 @@ export class DeedPanel {
     /** Who lives on it and at what rank; absent off an island. */
     private readonly roll?: DeedRoll,
   ) {
-    win.body.classList.add('deed-body');
+    kitBody(win.body, 'deed-body');
     // Notices and work are the island's: alone there is one page and no tabs.
     if (roll) {
       const bar = document.createElement('div');
@@ -210,8 +211,8 @@ export class DeedPanel {
       win.body.append(bar);
     }
     this.body = document.createElement('div');
-    this.body.className = 'deed-list';
-    this.boardHead.className = 'deed-head';
+    this.body.className = 'deed-list rc-scroll';
+    this.boardHead.className = 'deed-head rc-section';
     win.body.append(this.body);
     // Drawn at once while it shows; shut, when it is next opened.
     game.events.on('world', () => this.soon());
@@ -367,7 +368,7 @@ export class DeedPanel {
 
   private head(text: string): HTMLDivElement {
     const el = document.createElement('div');
-    el.className = 'deed-head';
+    el.className = 'deed-head rc-section';
     el.textContent = text;
     return el;
   }
@@ -375,7 +376,7 @@ export class DeedPanel {
   /** One line: something said on the left, the figure on the right. */
   private row(label: string, value: string, title?: string): HTMLDivElement {
     const el = document.createElement('div');
-    el.className = 'deed-row';
+    el.className = 'deed-row rc-row';
     const a = document.createElement('span');
     a.textContent = label;
     const b = document.createElement('span');
@@ -389,12 +390,12 @@ export class DeedPanel {
   /** A thing standing on the land, which one click walks you to. */
   private place(name: string, x: number, y: number): HTMLDivElement {
     const el = document.createElement('div');
-    el.className = 'deed-row deed-place';
+    el.className = 'deed-row rc-row deed-place';
     const a = document.createElement('span');
     a.textContent = name;
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = 'tb-btn tb-small';
+    b.className = 'tb-btn rc-btn tb-small';
     const away = Math.round(Math.hypot(x + 0.5 - this.game.player.x, y + 0.5 - this.game.player.y));
     b.textContent = away ? `${away} away` : 'here';
     b.title = `Walk to (${x}, ${y})`;
@@ -417,7 +418,7 @@ export class DeedPanel {
     this.body.append(this.row('You', rankName(asRanked(here))));
     for (const who of here.folk) {
       const el = document.createElement('div');
-      el.className = 'deed-row deed-citizen';
+      el.className = 'deed-row rc-row deed-citizen';
       const name = document.createElement('span');
       name.className = 'deed-who';
       name.textContent = who.name;
@@ -432,7 +433,7 @@ export class DeedPanel {
         el.append(v);
       } else {
         const pick = document.createElement('select');
-        pick.className = 'panel-select deed-pick';
+        pick.className = 'panel-select rc-field deed-pick';
         pick.title = `${who.name}'s rank at ${here.name}. Lists only ranks you can give.`;
         for (const r of give) {
           const o = document.createElement('option');
@@ -474,7 +475,7 @@ export class DeedPanel {
     this.body.append(this.head('Ranks'));
     for (const [i, r] of defs.entries()) {
       const row = document.createElement('div');
-      row.className = 'deed-row deed-rank';
+      row.className = 'deed-row rc-row deed-rank';
       const name = document.createElement('span');
       name.className = 'deed-rank-name';
       name.textContent = r.name;
@@ -482,7 +483,7 @@ export class DeedPanel {
       // The one an invitation puts newcomers on, marked where the list is read.
       if (r.newcomer) {
         const tag = document.createElement('span');
-        tag.className = 'deed-rank-tag';
+        tag.className = 'deed-rank-tag rc-tag';
         tag.textContent = 'newcomers';
         tag.title = 'Newcomer rank.';
         name.append(tag);
@@ -499,7 +500,7 @@ export class DeedPanel {
           const b = document.createElement('button');
           b.type = 'button';
           // An arrow or a cross is drawn larger than a word, so it reads at the same size.
-          b.className = 'tb-btn tb-small deed-tool' + ([...text].length === 1 ? ' deed-glyph' : '') + (danger ? ' tb-danger' : '');
+          b.className = 'tb-btn rc-btn tb-small deed-tool' + ([...text].length === 1 ? ' deed-glyph' : '') + (danger ? ' tb-danger rc-danger' : '');
           b.textContent = text;
           b.title = why ?? tip;
           b.setAttribute('aria-label', tip);
@@ -529,11 +530,11 @@ export class DeedPanel {
     if (!edits) return;
     // Newcomers, and a new rank.
     const join = document.createElement('div');
-    join.className = 'deed-row';
+    join.className = 'deed-row rc-row';
     const label = document.createElement('span');
     label.textContent = 'Newcomer rank';
     const pick = document.createElement('select');
-    pick.className = 'panel-select deed-pick';
+    pick.className = 'panel-select rc-field deed-pick';
     pick.title = 'Rank given on accepting an invitation.';
     for (const r of defs) {
       const o = document.createElement('option');
@@ -550,7 +551,7 @@ export class DeedPanel {
     this.body.append(join);
     const add = document.createElement('button');
     add.type = 'button';
-    add.className = 'tb-btn deed-leave';
+    add.className = 'tb-btn rc-btn deed-leave';
     add.textContent = 'New rank';
     const full = rankAddRefusal(here.name, defs, 'x');
     add.disabled = !!full;
@@ -573,9 +574,9 @@ export class DeedPanel {
    */
   private matrix(defs: readonly RankDef[], edits: boolean, roll: DeedRoll): HTMLDivElement {
     const wrap = document.createElement('div');
-    wrap.className = 'deed-matrix-wrap';
+    wrap.className = 'deed-matrix-wrap rc-wide';
     const table = document.createElement('table');
-    table.className = 'deed-matrix';
+    table.className = 'deed-matrix rc-table';
     const head = document.createElement('tr');
     const corner = document.createElement('th');
     corner.className = 'deed-matrix-corner';
@@ -606,7 +607,7 @@ export class DeedPanel {
         const td = document.createElement('td');
         const box = document.createElement('input');
         box.type = 'checkbox';
-        box.className = 'deed-matrix-box';
+        box.className = 'deed-matrix-box rc-check';
         box.dataset.rank = String(r.id);
         box.dataset.power = p.id;
         box.checked = (r.perms & powerBit(p.id)) !== 0;
@@ -681,7 +682,7 @@ export class DeedPanel {
     this.body.replaceChildren();
     if (!d) {
       const none = document.createElement('div');
-      none.className = 'deed-none';
+      none.className = 'deed-none rc-empty';
       none.textContent = 'No settlement. Plant a settlement totem to found one.';
       this.body.append(none);
       return;
@@ -732,12 +733,13 @@ export class DeedPanel {
       for (const r of done) {
         const el = this.row(`${r.met ? '✓' : '✗'} ${r.label}`, '');
         el.classList.add(r.met ? 'deed-met' : 'deed-unmet');
+        meaning(el, r.met ? 'good' : 'dim');
         this.body.append(el);
       }
       const why = upgradeReason(g, d);
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'tb-btn deed-upgrade';
+      btn.className = 'tb-btn rc-btn deed-upgrade';
       btn.textContent = `Upgrade · border ${d.radius + DEED_RADIUS_PER_LEVEL}, ${deedWorkersAt(level + 1)} workers`;
       btn.disabled = !!why;
       btn.title = why ?? 'Requirements met: level up.';
@@ -836,7 +838,7 @@ export class DeedPanel {
       if (!def || (id === 'rename_deed' ? lacks(d, 'rename') : !isFounder(d))) continue;
       const b = document.createElement('button');
       b.type = 'button';
-      b.className = 'tb-btn tb-small' + (id === 'disband_deed' ? ' tb-danger' : '');
+      b.className = 'tb-btn rc-btn tb-small' + (id === 'disband_deed' ? ' tb-danger rc-danger' : '');
       b.textContent = def.label;
       b.addEventListener('click', () => g.requestAction(def, { kind: 'tile', x: d.x, y: d.y, cx: d.x, cy: d.y }));
       tail.append(b);
@@ -847,7 +849,7 @@ export class DeedPanel {
         const leave = this.leave;
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'tb-btn tb-small tb-danger';
+        btn.className = 'tb-btn rc-btn tb-small tb-danger rc-danger';
         btn.textContent = `Leave ${d.name}`;
         btn.title = 'Leave (asks to confirm).';
         btn.addEventListener('click', () => leave(d));
@@ -862,7 +864,7 @@ export class DeedPanel {
   /** A line that says how things stand on another tab, and turns to it. */
   private jump(tab: DeedTab, label: string, value: string): HTMLDivElement {
     const el = document.createElement('div');
-    el.className = 'deed-row deed-jump';
+    el.className = 'deed-row rc-row deed-jump';
     const a = document.createElement('span');
     a.className = 'deed-who';
     a.textContent = label;
@@ -871,7 +873,7 @@ export class DeedPanel {
     v.textContent = value;
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = 'tb-btn tb-small deed-tool';
+    b.className = 'tb-btn rc-btn tb-small deed-tool';
     b.textContent = DEED_TABS.find((t) => t[0] === tab)?.[1] ?? tab;
     b.title = DEED_TABS.find((t) => t[0] === tab)?.[2] ?? '';
     b.addEventListener('click', () => this.show(tab));
@@ -887,7 +889,7 @@ export class DeedPanel {
   /** Nothing to show: no settlement, or the island's answer not in yet. */
   private bare(text: string): void {
     const none = document.createElement('div');
-    none.className = 'deed-none';
+    none.className = 'deed-none rc-empty';
     none.textContent = text;
     this.body.replaceChildren(none);
   }
@@ -981,13 +983,13 @@ export class DeedPanel {
   /** A wildermon of yours, and the button that assigns it to the settlement at a trade. */
   private assignRow(c: Creature, job: GatherKind): HTMLDivElement {
     const el = document.createElement('div');
-    el.className = 'deed-row deed-candidate';
+    el.className = 'deed-row rc-row deed-candidate';
     const name = document.createElement('span');
     name.className = 'deed-who';
     name.textContent = `${c.name} · ${c.post !== null ? 'at a post' : c.mode === 'active' ? 'following' : c.mode}`;
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = 'tb-btn tb-small deed-tool';
+    b.className = 'tb-btn rc-btn tb-small deed-tool';
     b.textContent = 'Assign';
     const why = this.assignWhy(c, job);
     b.disabled = !!why;
@@ -1015,13 +1017,14 @@ export class DeedPanel {
       const value = unfedNow(c) ? `unfed · pace ${percent(UNFED_PACE)}` : `fed ${percent(c.hunger)} · unfed in ${waitWords(left(c))}`;
       const el = this.row(c.name, value, `${c.name}: ${unfedNow(c) ? `unfed for ${timeWords(c.unfed ?? 0)}` : `${timeWords(c.unfed ?? 0)} at work since its last meal`}.`);
       el.classList.add(unfedNow(c) ? 'deed-unmet' : 'deed-upkeep');
+      meaning(el, unfedNow(c) ? 'dim' : null);
       this.body.append(el);
     }
     const care = this.roll?.care;
     if (care) {
       const b = document.createElement('button');
       b.type = 'button';
-      b.className = 'tb-btn tb-small';
+      b.className = 'tb-btn rc-btn tb-small';
       b.textContent = 'Care tab';
       b.title = 'Wildermon window, Care tab: feed, brush, beds.';
       b.addEventListener('click', () => care());
@@ -1056,6 +1059,7 @@ export class DeedPanel {
       const el = this.row(capital(GATHER_VERB[t]), n >= SPECIALTY_AT ? `${n} · +${percent(SPECIALTY_BONUS)}` : `${n}/${SPECIALTY_AT}`,
         n >= SPECIALTY_AT ? `Specialty: task speed +${percent(SPECIALTY_BONUS)}.` : `${SPECIALTY_AT - n} more for task speed +${percent(SPECIALTY_BONUS)}.`);
       el.classList.add('deed-trade', n >= SPECIALTY_AT ? 'deed-met' : 'deed-trade-short');
+      meaning(el, n >= SPECIALTY_AT ? 'good' : null);
       this.body.append(el);
       const at = mine.filter((c) => (c.trade ?? SPECIES[c.species]?.gathers) === t).map((c) => c.name);
       if (at.length) this.body.append(this.note(`Yours: ${andList(at)}.`));
@@ -1091,7 +1095,7 @@ export class DeedPanel {
     for (const st of ORDER_STANCES) {
       const b = document.createElement('button');
       b.type = 'button';
-      b.className = 'tb-btn tb-small' + (st === w.orders ? ' tb-on' : '');
+      b.className = 'tb-btn rc-btn tb-small' + (st === w.orders ? ' tb-on' : '');
       b.textContent = STANCE_NAMES[st];
       b.dataset.stance = st;
       b.disabled = !!refusal;
@@ -1141,7 +1145,7 @@ export class DeedPanel {
       return;
     }
     const head = document.createElement('div');
-    head.className = 'deed-row deed-visit-head';
+    head.className = 'deed-row rc-colhead deed-visit-head';
     for (const t of ['Visitor', 'Last', 'Hours']) {
       const c = document.createElement('span');
       c.textContent = t;
@@ -1150,7 +1154,7 @@ export class DeedPanel {
     this.body.append(head);
     for (const v of w.visitors) {
       const el = document.createElement('div');
-      el.className = 'deed-row deed-visit';
+      el.className = 'deed-row rc-row deed-visit';
       el.title = `${v.name}: first ${when(v.first)}, last ${when(v.last)}, ${v.hours} h seen.`;
       const name = document.createElement('span');
       name.className = 'deed-who';
@@ -1179,7 +1183,7 @@ export class DeedPanel {
     const roll = this.roll!;
     if (!d) {
       const none = document.createElement('div');
-      none.className = 'deed-none';
+      none.className = 'deed-none rc-empty';
       none.textContent = 'No settlement. Found one (settlement totem) or accept an invitation.';
       this.body.replaceChildren(none);
       this.listKey = '';
@@ -1242,7 +1246,7 @@ export class DeedPanel {
     const form = document.createElement('div');
     form.className = 'deed-form';
     const text = document.createElement('textarea');
-    text.className = 'panel-select deed-text';
+    text.className = 'panel-select rc-field deed-text';
     text.rows = 3;
     text.maxLength = NOTICE_MAX;
     text.placeholder = `Notice to all citizens (max ${NOTICE_MAX} characters)`;
@@ -1252,7 +1256,7 @@ export class DeedPanel {
     left.className = 'deed-note';
     const post = document.createElement('button');
     post.type = 'button';
-    post.className = 'tb-btn tb-small';
+    post.className = 'tb-btn rc-btn tb-small';
     post.textContent = 'Post';
     post.title = `To all citizens: ashore, in the log now; away over ${NOTICE_MAIL_DAYS} day${NOTICE_MAIL_DAYS === 1 ? '' : 's'}, by letter; others, on next arrival. Keeps ${NOTICE_KEEP}; oldest dropped.`;
     const count = (): void => {
@@ -1288,7 +1292,7 @@ export class DeedPanel {
     }
     for (const n of b.notices) {
       const el = document.createElement('div');
-      el.className = 'deed-notice';
+      el.className = 'deed-notice rc-card';
       const head = document.createElement('div');
       head.className = 'deed-row';
       const who = document.createElement('span');
@@ -1299,7 +1303,7 @@ export class DeedPanel {
       if (b.post) {
         const down = document.createElement('button');
         down.type = 'button';
-        down.className = 'tb-btn tb-small deed-tool tb-danger';
+        down.className = 'tb-btn rc-btn tb-small deed-tool tb-danger rc-danger';
         down.textContent = 'Take down';
         down.title = 'Remove for everyone.';
         down.addEventListener('click', () => this.boardDo(this.roll!.unpost(b.founder, n.n)));
@@ -1326,19 +1330,19 @@ export class DeedPanel {
       list.append(o);
     }
     const thing = document.createElement('input');
-    thing.className = 'panel-select deed-input';
+    thing.className = 'panel-select rc-field deed-input';
     thing.setAttribute('list', list.id);
     thing.placeholder = 'Item wanted';
     thing.title = 'Anything a settlement crate takes (not coins or crates).';
     const count = document.createElement('input');
-    count.className = 'panel-select deed-input deed-num';
+    count.className = 'panel-select rc-field deed-input deed-num';
     count.type = 'number';
     count.min = '1';
     count.max = String(WORK_COUNT_MAX);
     count.placeholder = 'Count';
     count.title = `1 to ${WORK_COUNT_MAX}.`;
     const ql = document.createElement('input');
-    ql.className = 'panel-select deed-input deed-num';
+    ql.className = 'panel-select rc-field deed-input deed-num';
     ql.type = 'number';
     ql.min = '0';
     ql.max = String(WORK_QL_TOP);
@@ -1347,7 +1351,7 @@ export class DeedPanel {
     for (const el of [thing, count, ql]) el.addEventListener('keydown', (e) => e.stopPropagation());
     const set = document.createElement('button');
     set.type = 'button';
-    set.className = 'tb-btn tb-small';
+    set.className = 'tb-btn rc-btn tb-small';
     set.textContent = 'Set work';
     set.title = `Post for all citizens. Max ${WORK_OPEN_MAX} open.`;
     set.addEventListener('click', () => {
@@ -1388,7 +1392,7 @@ export class DeedPanel {
     for (const w of open) {
       const i = b.work.indexOf(w);
       const el = document.createElement('div');
-      el.className = 'deed-work';
+      el.className = 'deed-work rc-card';
       const head = document.createElement('div');
       head.className = 'deed-row';
       const label = document.createElement('span');
@@ -1400,8 +1404,9 @@ export class DeedPanel {
       got.textContent = `${w.got} of ${w.want}`;
       head.append(label, got);
       const bar = document.createElement('div');
-      bar.className = 'deed-work-bar';
-      const fill = document.createElement('div');
+      bar.className = 'deed-work-bar rc-meter';
+      meaning(bar, w.got >= w.want ? 'good' : 'accent');
+      const fill = kit(document.createElement('div'), 'fill');
       fill.style.width = `${Math.min(100, (w.got / w.want) * 100)}%`;
       bar.append(fill);
       const tools = document.createElement('div');
@@ -1409,7 +1414,7 @@ export class DeedPanel {
       const going = Math.min(held[i], w.want - w.got, b.room ?? 0);
       const give = document.createElement('button');
       give.type = 'button';
-      give.className = 'tb-btn tb-small';
+      give.className = 'tb-btn rc-btn tb-small';
       give.textContent = reasons[i] ? 'Deliver' : `Deliver ${going}`;
       give.disabled = !!reasons[i];
       give.title = reasons[i] ?? `Deliver ${going} × ${thingName(w.def)} to the settlement crate, lowest QL first.`;
@@ -1418,7 +1423,7 @@ export class DeedPanel {
       if (b.set) {
         const down = document.createElement('button');
         down.type = 'button';
-        down.className = 'tb-btn tb-small tb-danger';
+        down.className = 'tb-btn rc-btn tb-small tb-danger rc-danger';
         down.textContent = 'Take down';
         down.title = 'Close it. Deliveries stay in the settlement crate.';
         down.addEventListener('click', () => {
@@ -1438,6 +1443,7 @@ export class DeedPanel {
       for (const w of closed) {
         const el = this.row(workLabel(w), w.how === 'done' ? 'done' : `taken down at ${w.got}`, w.closed ? when(w.closed) : undefined);
         el.classList.add(w.how === 'done' ? 'deed-met' : 'deed-unmet');
+        meaning(el, w.how === 'done' ? 'good' : 'dim');
         this.listHost.append(el);
       }
     }
@@ -1445,7 +1451,7 @@ export class DeedPanel {
     if (!b.ledger.length) this.listHost.append(this.note('Empty. Logs work set, deliveries, work done and work closed.'));
     for (const l of b.ledger) {
       const el = document.createElement('div');
-      el.className = 'deed-ledger';
+      el.className = 'deed-ledger rc-row';
       const at = document.createElement('span');
       at.className = 'deed-ledger-at';
       at.textContent = when(l.at);

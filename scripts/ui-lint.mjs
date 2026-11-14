@@ -1,6 +1,8 @@
 /**
- * The interior kit's guard (src/ui/interior.css), in warn mode: it prints what
- * is still hand-rolled inside a window's rim, window by window, and exits 0.
+ * The interior kit's guard (src/ui/interior.css): it prints what is still
+ * hand-rolled inside a window's rim, window by window. The build runs it with
+ * `--strict`, so a new finding fails the build; the few kept on purpose are
+ * named in `KEPT` with the reason.
  *
  *   * a font size written as a number that is not on the scale (`--rc-fs-1`
  *     to `--rc-fs-5`: 10, 11, 12, 13 and 15 px);
@@ -10,6 +12,8 @@
  *     (`.rc-scroll`);
  *   * a `[data-frame]` rule that reaches inside the rim: a frame may dress its
  *     window's band, title, title buttons and niche, and nothing else.
+ *
+ * A picture's own rule (`ART`) is art, and its colours are not counted.
  *
  * A rule is a window's when a class in its selector is written in that
  * window's code (`WINDOWS` below): the class with the fewest windows decides,
@@ -26,6 +30,30 @@ import { join } from 'node:path';
 const ROOT = new URL('..', import.meta.url).pathname;
 const STYLES = ['src/style.css', 'src/phone.css', 'src/ui/creator.css', 'src/ui/interior.css'];
 const SCALE = new Set([10, 11, 12, 13, 15]);
+
+/**
+ * Pictures inside a window, which are art and keep their own colours: the
+ * map (`.minimap`), the treasure map and its ground (`.hoard-view`), and the
+ * field guide's drawings (`.guide-picture`). A hex in a rule of theirs is the
+ * picture's, not the interior's.
+ */
+const ART = new Set(['minimap', 'hoard-view', 'guide-picture']);
+const isArt = (selector) => parts(selector).every((s) => [...s.matchAll(/\.([a-z][\w-]*)/g)].some((m) => ART.has(m[1])));
+
+/**
+ * Findings kept on purpose, each with its reason, by kind and the exact selector.
+ *   * The craft queue scrolls on its own: it must stay in view at the foot of the
+ *     craft window while the recipe list scrolls above it.
+ *   * Its drag grip on a narrow screen is a 16px touch target, not text.
+ *   * `#ui.phone .hud-bar-row` is the HUD's own phone rule (the wildermon cards
+ *     borrow the class), outside every window.
+ */
+const KEPT = [
+  ['overflow', '.cq-list'],
+  ['font', '#ui.narrow .cq-grip'],
+  ['font', '#ui.phone .hud-bar-row'],
+];
+const kept = (kind, selector) => KEPT.some(([k, s]) => k === kind && selector.replace(/\s+/g, ' ').trim() === s);
 
 /** Each window's code: what it is made in, so its classes can be found. */
 const WINDOWS = {
@@ -173,6 +201,7 @@ const onRim = (sel) => {
 
 const findings = [];
 const add = (kind, file, r, what) => {
+  if (kept(kind, r.selector)) return;
   for (const w of windowsOf(r.selector).wins) findings.push({ kind, win: w, where: `${file}:${r.line}`, selector: r.selector.replace(/\s+/g, ' ').slice(0, 110), what });
 };
 
@@ -198,7 +227,7 @@ for (const file of STYLES) {
       }
       // Hex colours, not counting Classic's fallbacks inside a var().
       const bare = noFallbacks(value).replace(/url\([^)]*\)/g, '');
-      if (/#[0-9a-fA-F]{3,8}\b/.test(bare)) add('hex', file, r, `${p}: ${value.slice(0, 60)}`);
+      if (/#[0-9a-fA-F]{3,8}\b/.test(bare) && !isArt(r.selector)) add('hex', file, r, `${p}: ${value.slice(0, 60)}`);
       // Scrolling outside the kit's one scroll area.
       if (/^overflow(-x|-y)?$/.test(p) && /\b(auto|scroll)\b/.test(value) && !kit) add('overflow', file, r, `${p}: ${value}`);
     }
@@ -214,7 +243,7 @@ for (const f of findings) {
 const order = [...Object.keys(WINDOWS), 'shared', 'stone'].filter((w) => per.has(w));
 const total = Object.fromEntries(KINDS.map((k) => [k, findings.filter((f) => f.kind === k).length]));
 const pad = (s, n) => String(s).padEnd(n);
-console.log(`ui lint (warn): ${findings.length} findings: font sizes off the scale ${total.font}, hex colours ${total.hex}, overflow outside .rc-scroll ${total.overflow}, frame rules inside the rim ${total.frame}`);
+console.log(`ui lint${process.argv.includes('--strict') ? '' : ' (warn)'}: ${findings.length} findings: font sizes off the scale ${total.font}, hex colours ${total.hex}, overflow outside .rc-scroll ${total.overflow}, frame rules inside the rim ${total.frame}`);
 console.log(`  ${pad('window', 11)}${KINDS.map((k) => pad(k, 9)).join('')}`);
 for (const w of order) console.log(`  ${pad(w, 11)}${KINDS.map((k) => pad(per.get(w)[k], 9)).join('')}`);
 if (process.argv.includes('--list')) for (const f of findings) console.log(`  ${f.kind} ${f.win} ${f.where} ${f.selector} { ${f.what} }`);

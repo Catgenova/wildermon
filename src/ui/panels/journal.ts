@@ -7,6 +7,7 @@ import { PathPanel } from './path';
 
 /** The journal's tabs: what there is to do, what you have made, how any of it works, what has changed, who stands highest, every kind of creature, and the trades you are watching. */
 import { JOURNAL_TABS, type JournalTab } from './journaltabs';
+import { kitBody, meaning } from '../kit';
 
 export { JOURNAL_TAB_BIND, JOURNAL_TABS, type JournalTab } from './journaltabs';
 
@@ -57,7 +58,7 @@ export class JournalPanel {
   onShow: ((tab: JournalTab) => void) | null = null;
 
   constructor(private readonly win: UIWindow, private readonly game: Game) {
-    win.body.classList.add('settings-body', 'journal-body');
+    kitBody(win.body, 'settings-body', 'journal-body');
     const bar = document.createElement('div');
     bar.className = 'log-tabs rc-tabs journal-tabs';
     for (const [id, label, title] of JOURNAL_TABS) {
@@ -71,7 +72,7 @@ export class JournalPanel {
       bar.append(b);
     }
     const goals = document.createElement('div');
-    goals.className = 'settings-page skills-body';
+    goals.className = 'settings-page rc-scroll skills-body';
     const made = document.createElement('div');
     made.className = 'journal-ledger';
     made.hidden = true;
@@ -81,32 +82,32 @@ export class JournalPanel {
     this.pages.set('goals', goals);
     this.pages.set('ledger', made);
     const news = document.createElement('div');
-    news.className = 'settings-page';
+    news.className = 'settings-page rc-scroll';
     news.hidden = true;
     this.news = new NewsPanel(news);
     this.boardsPage = document.createElement('div');
-    this.boardsPage.className = 'settings-page';
+    this.boardsPage.className = 'settings-page rc-scroll';
     this.boardsPage.hidden = true;
     this.pages.set('help', this.helpPage);
     this.pages.set('news', news);
     this.guidePage = document.createElement('div');
-    this.guidePage.className = 'settings-page';
+    this.guidePage.className = 'settings-page rc-scroll';
     this.guidePage.hidden = true;
     this.pages.set('boards', this.boardsPage);
     this.trackerPage = document.createElement('div');
-    this.trackerPage.className = 'settings-page';
+    this.trackerPage.className = 'settings-page rc-scroll';
     this.trackerPage.hidden = true;
     this.pages.set('guide', this.guidePage);
     this.pages.set('tracker', this.trackerPage);
     const pathPage = document.createElement('div');
-    pathPage.className = 'settings-page skills-body';
+    pathPage.className = 'settings-page rc-scroll skills-body';
     pathPage.hidden = true;
     this.pages.set('path', pathPage);
     win.body.append(bar, goals, pathPage, made, this.helpPage, news, this.boardsPage, this.guidePage, this.trackerPage);
     this.path = new PathPanel(pathPage, game, () => win.isOpen && this.tab === 'path');
     this.ledger = new LedgerPanel(made, game, () => win.isOpen && this.tab === 'ledger');
     this.count = document.createElement('div');
-    this.count.className = 'skill-group';
+    this.count.className = 'skill-group rc-section';
     /*
      * What to do next, above the eighty-five.
      *
@@ -118,26 +119,26 @@ export class JournalPanel {
      * question has become "what else".
      */
     this.next = document.createElement('div');
-    this.next.className = 'goal-next';
+    this.next.className = 'goal-next rc-sunk';
     // Every how-to at once, or none: the list read as a manual rather than a checklist.
     const tools = document.createElement('div');
     tools.className = 'goal-tools';
     this.allBtn = document.createElement('button');
     this.allBtn.type = 'button';
-    this.allBtn.className = 'tb-btn tb-small goal-all';
+    this.allBtn.className = 'tb-btn rc-btn tb-small goal-all';
     this.allBtn.addEventListener('click', () => this.openAll(![...this.hows.values()].every((h) => !h.hidden)));
     tools.append(this.count, this.allBtn);
     goals.append(tools, this.next);
     for (const chapter of JOURNAL) {
       const head = document.createElement('div');
-      head.className = 'skill-group';
+      head.className = 'skill-group rc-section';
       head.textContent = chapter.name;
       goals.append(head);
       for (const goal of chapter.goals) {
         // The row opens and shuts its how-to: what to do, where, with what, in the game's own words.
         const row = document.createElement('button');
         row.type = 'button';
-        row.className = 'skill-row goal-row';
+        row.className = 'skill-row rc-row goal-row';
         const tick = document.createElement('span');
         tick.className = 'goal-tick';
         const text = document.createElement('span');
@@ -231,6 +232,7 @@ export class JournalPanel {
     for (const [id, row] of this.rows) {
       const met = done.has(id);
       row.classList.toggle('goal-done', met);
+      meaning(row, met ? 'good' : null);
       const tick = row.firstElementChild as HTMLElement;
       tick.textContent = met ? '✔' : '·';
     }
@@ -243,7 +245,7 @@ export class JournalPanel {
       return;
     }
     const head = document.createElement('div');
-    head.className = 'goal-next-head';
+    head.className = 'goal-next-head rc-section';
     head.textContent = `Next \u00b7 ${chapterOf(up[0].id)}`;
     this.next.append(head);
     up.forEach((goal, i) => {

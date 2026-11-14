@@ -13,6 +13,7 @@ import { DEEP_WATER, SOUND_SHOWN } from '../../game/sailing';
 import { SENSE_SHOWN } from '../../game/infusion';
 import { SWIRL_CAST } from '../../game/motes';
 import { metres } from '../../game/piers';
+import { kitBody } from '../kit';
 
 /** How wide the drawn map is, whatever size the island is. */
 const VIEW_SIZE = 512;
@@ -155,25 +156,25 @@ export class MinimapPanel {
     this.view.width = VIEW_SIZE;
     this.view.height = VIEW_SIZE;
     this.viewCtx = this.view.getContext('2d') as CanvasRenderingContext2D;
-    win.body.classList.add('map-body');
+    kitBody(win.body, 'map-body');
     // A row of controls over the map, and the marks listed under it.
     const bar = document.createElement('div');
-    bar.className = 'panel-bar map-bar';
+    bar.className = 'panel-bar rc-bar map-bar';
     const dropBtn = document.createElement('button');
     dropBtn.type = 'button';
-    dropBtn.className = 'tb-btn tb-small';
+    dropBtn.className = 'tb-btn rc-btn tb-small';
     dropBtn.textContent = 'Mark here';
     dropBtn.title = 'Mark your tile with a name';
     dropBtn.addEventListener('click', () => this.drop(game.player.tileX, game.player.tileY));
     const homeBtn = document.createElement('button');
     homeBtn.type = 'button';
-    homeBtn.className = 'tb-btn tb-small';
+    homeBtn.className = 'tb-btn rc-btn tb-small';
     homeBtn.textContent = 'Walk home';
     homeBtn.title = 'Walk to the settlement totem or the last bed slept in (Home). Double-click the map: walk there.';
     homeBtn.addEventListener('click', () => game.walkHome());
     const nameBtn = document.createElement('button');
     nameBtn.type = 'button';
-    nameBtn.className = 'tb-btn tb-small tb-on';
+    nameBtn.className = 'tb-btn rc-btn tb-small tb-on';
     nameBtn.textContent = 'Names';
     nameBtn.title = 'Show or hide mark names';
     nameBtn.addEventListener('click', () => {
@@ -182,7 +183,7 @@ export class MinimapPanel {
     });
     this.fitBtn = document.createElement('button');
     this.fitBtn.type = 'button';
-    this.fitBtn.className = 'tb-btn tb-small';
+    this.fitBtn.className = 'tb-btn rc-btn tb-small';
     this.fitBtn.textContent = 'Fit';
     this.fitBtn.title = 'Fit the map to the land seen. Wheel or pinch: zoom. Drag: pan.';
     this.fitBtn.disabled = true;
@@ -201,7 +202,7 @@ export class MinimapPanel {
       legend.append(row);
     }
     this.marksEl = document.createElement('div');
-    this.marksEl.className = 'map-marks';
+    this.marksEl.className = 'map-marks rc-scroll';
     win.body.append(bar, this.view, legend, this.marksEl);
     new ResizeObserver(() => {
       this.shown = Math.min(this.view.clientWidth, this.view.clientHeight);
@@ -374,7 +375,7 @@ export class MinimapPanel {
     this.marksEl.replaceChildren();
     if (!g.marks.length) {
       const none = document.createElement('div');
-      none.className = 'map-none';
+      none.className = 'map-none rc-empty';
       none.textContent = 'No marks. Right-click the map or press “Mark here”.';
       this.marksEl.append(none);
       return;
@@ -382,7 +383,7 @@ export class MinimapPanel {
     const near = [...g.marks].sort((a, b) => Math.hypot(a.x - g.player.x, a.y - g.player.y) - Math.hypot(b.x - g.player.x, b.y - g.player.y));
     for (const m of near) {
       const row = document.createElement('div');
-      row.className = 'map-mark';
+      row.className = 'map-mark rc-row';
       // Buttons, so a keyboard can reach them as well as a pointer.
       const pip = document.createElement('button');
       pip.type = 'button';
@@ -413,14 +414,14 @@ export class MinimapPanel {
       dist.title = `${away} tiles from you`;
       const go = document.createElement('button');
       go.type = 'button';
-      go.className = 'tb-btn tb-small';
+      go.className = 'tb-btn rc-btn tb-small';
       go.textContent = 'Go';
       go.title = `Walk to (${m.x}, ${m.y}), in legs of up to ${TRAVEL_LEG} tiles`;
       // However far: a long walk goes in legs (`travelTo`), where one path was all there was.
       go.addEventListener('click', () => g.travelTo(m.x, m.y, m.name));
       const off = document.createElement('button');
       off.type = 'button';
-      off.className = 'tb-btn tb-small tb-danger';
+      off.className = 'tb-btn rc-btn tb-small tb-danger rc-danger';
       off.textContent = '×';
       off.title = 'Delete mark';
       // Asked first: a mark is a place you found and named, and nothing brings it back.

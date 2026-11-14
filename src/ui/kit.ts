@@ -29,6 +29,7 @@ export const KIT = {
   search: 'rc-search',
   check: 'rc-check',
   table: 'rc-table',
+  wide: 'rc-wide',
   empty: 'rc-empty',
   badge: 'rc-badge',
   tag: 'rc-tag',
@@ -41,8 +42,8 @@ export const KIT = {
 
 export type KitPart = keyof typeof KIT;
 
-/** What a status line, a tag or a meter says by its colour (and a meter by its stripes too). */
-export type Meaning = 'good' | 'warn' | 'bad' | 'info' | 'accent';
+/** What a status line, a row, a tag or a meter says by its colour (and a meter by its stripes too); dim is not met, not yet, or off. */
+export type Meaning = 'good' | 'warn' | 'bad' | 'info' | 'accent' | 'dim';
 
 /** Put the kit's part on an element that is already made, beside what it wears. */
 export function kit<E extends Element>(el: E, ...parts: KitPart[]): E {

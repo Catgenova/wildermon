@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run typecheck && node scripts/emit-icons.mjs && vite build && node scripts/copy-site.mjs && node scripts/sri.mjs && node scripts/emit-wildermon.mjs && node scripts/ui-lint.mjs && node scripts/boot-check.mjs",
+    "build": "npm run typecheck && node scripts/emit-icons.mjs && vite build && node scripts/copy-site.mjs && node scripts/sri.mjs && node scripts/emit-wildermon.mjs && node scripts/ui-lint.mjs --strict && node scripts/boot-check.mjs",
     "check:boot": "node scripts/boot-check.mjs",
     "check:ui": "node scripts/ui-lint.mjs --list",
     "ui:sheet": "node scripts/ui-sheet.mjs",

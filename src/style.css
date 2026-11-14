@@ -1120,8 +1120,12 @@ button.goal-row:focus-visible {
   padding: 4px 8px;
   border-left: 2px solid color-mix(in srgb, var(--ui-accent) 55%, transparent);
   color: var(--ui-dim);
-  font-size: 11.5px;
+  font-size: var(--rc-fs-2);
   line-height: 1.45;
+}
+
+[data-ui='classic'] .goal-how {
+  font-size: 11.5px;
 }
 
 .goal-tools {
@@ -1546,10 +1550,14 @@ button.goal-row:focus-visible {
 .market-pick {
   display: grid;
   gap: 2px;
-  max-height: 170px;
   margin: 4px 0;
-  overflow-y: auto;
   font-size: 12px;
+}
+
+/* Classic scrolls the pack in a box of its own; Runecut's market page is the one scroll area. */
+[data-ui='classic'] .market-pick {
+  max-height: 170px;
+  overflow-y: auto;
 }
 
 .market-pick label {
@@ -1806,9 +1814,13 @@ button.goal-row:focus-visible {
 .barter-list {
   display: grid;
   gap: 2px;
+  font-size: 12px;
+}
+
+/* Classic scrolls a side's things in a box of their own; Runecut's barter page is the one scroll area. */
+[data-ui='classic'] .barter-list {
   max-height: 320px;
   overflow-y: auto;
-  font-size: 12px;
 }
 
 .barter-thing {
@@ -2370,6 +2382,10 @@ button.goal-row:focus-visible {
 
 .faith-meter-fill {
   display: block;
+}
+
+/* Runecut's is the kit's meter fill (src/ui/interior.css). */
+[data-ui='classic'] .faith-meter-fill {
   background: linear-gradient(color-mix(in srgb, var(--ui-accent) 65%, #fff), var(--ui-accent));
 }
 
@@ -7119,7 +7135,7 @@ body.dragging.drag-no, body.dragging.drag-no * { cursor: no-drop !important; }
   color: var(--rc-carve);
 }
 
-[data-ui='runecut'] :is(.hud-name, .help-body h3, .guide-title, .deed-head, .trade-tree-head, .hud-target-name) {
+[data-ui='runecut'] :is(.hud-name, .guide-title, .hud-target-name) {
   font-family: var(--rc-title-font);
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -7130,10 +7146,6 @@ body.dragging.drag-no, body.dragging.drag-no * { cursor: no-drop !important; }
   font-size: 18px;
   line-height: 1;
   margin-bottom: 8px;
-}
-
-[data-ui='runecut'] :is(.help-body h3, .deed-head) {
-  font-size: 16px;
 }
 
 /* Toolbar and buttons ------------------------------------------------------ */
@@ -7251,6 +7263,52 @@ body.dragging.drag-no, body.dragging.drag-no * { cursor: no-drop !important; }
   background: var(--t-hover);
 }
 
+/*
+ * What a window on the kit keeps of its own (deed, trades, faith, mend, market,
+ * social, keeper, care, barter, wildermon, settings, help, map, shopping,
+ * hoard, skills, the journal's pages, While you were away, Notices).
+ */
+
+/* The help's contents: a folding index of links, a row of them wrapping, over the pages. */
+:root[data-ui='runecut'] .help-contents.rc-scroll {
+  flex: 0 1 auto;
+  flex-flow: row wrap;
+  max-height: 168px;
+}
+
+:root[data-ui='runecut'] .help-link.rc-btn {
+  min-height: 20px;
+  font-size: var(--rc-fs-2);
+}
+
+/* A stall's heading: its name, the rule, then Walk and Pin at the end. */
+:root[data-ui='runecut'] .market-stall.rc-section > span:first-child {
+  flex: 0 1 auto;
+}
+
+:root[data-ui='runecut'] .market-stall.rc-section::after {
+  order: 1;
+}
+
+:root[data-ui='runecut'] .market-stall.rc-section > .market-acts {
+  order: 2;
+}
+
+/* A row of several lines: its notch at the first line, not halfway down. */
+:root[data-ui='runecut'] :is(.care-need, .setting-row, .keys-row).rc-row::before {
+  top: 12px;
+}
+
+/* A meter in a line of its own words keeps the width the line gives it. */
+:root[data-ui='runecut'] .shop-bar.rc-meter {
+  flex: 0 0 64px;
+}
+
+:root[data-ui='runecut'] .faith-meter.rc-meter {
+  flex: 1 1 60px;
+}
+
+
 /* Fields to write in: cut into the stone, a step down, with an edge of shade. */
 [data-ui='runecut'] :is(.panel-search, .log-input, .palette-input, .ask-input, .layout-name) {
   border: 0;
@@ -7312,12 +7370,6 @@ body.dragging.drag-no, body.dragging.drag-no * { cursor: no-drop !important; }
 [data-ui='runecut'] .log-tabs .log-search {
   margin: 3px 0;
   padding: 4px 6px;
-}
-
-[data-ui='runecut'] .log-list {
-  margin: 6px 8px 0;
-  background: var(--rc-stone-2);
-  box-shadow: inset 0 1px 2px color-mix(in srgb, var(--rc-edge-ink) 25%, transparent);
 }
 
 /* Context menu and tooltip ------------------------------------------------- */
@@ -7549,21 +7601,10 @@ body.dragging.drag-no, body.dragging.drag-no * { cursor: no-drop !important; }
   font-weight: 700;
 }
 
-[data-ui='runecut'] .setting-row small {
+[data-ui='runecut'] :is(.setting-row, .keys-what) small {
   color: var(--rc-carve);
+  font-size: var(--rc-fs-2);
   line-height: 1.4;
-}
-
-/* Cards in the trades and the companions: a recess, where Classic had a faint lift. */
-[data-ui='runecut'] :is(.trade-card, .trade-rite, .trade-node, .pal-card, .goal-next, .guide-card) {
-  border-color: var(--rc-shade);
-  border-radius: 0;
-  background: var(--rc-stone-2);
-  box-shadow: inset 0 1px 2px color-mix(in srgb, var(--rc-edge-ink) 14%, transparent);
-}
-
-[data-ui='runecut'] :is(.trade-mine, .trade-node-taken, .trade-node-asked, .trade-rite-ready, .trade-confirm) {
-  border-color: var(--rc-rune-deep);
 }
 
 [data-ui='runecut'] :is(.spell-slot, .belt-loop) {
@@ -9599,7 +9640,8 @@ img:is(.rc-plate, .rc-niche, .ui-frame, .ui-frame-edge):not([src]) {
 .mend-acts .tb-btn { margin: 0 0 0 3px; padding-left: 6px; padding-right: 6px; }
 .mend-wide { overflow-x: auto; min-width: 0; }
 
-.mend-passes {
+/* Classic scrolls the passes in a box of their own; Runecut's window is the one scroll area. */
+[data-ui='classic'] .mend-passes {
   max-height: 180px;
   overflow-y: auto;
 }

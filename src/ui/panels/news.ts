@@ -4506,6 +4506,10 @@ export const NEWS: News[] = [
       'Changed: windows, Runecut: one scrollbar; one row, heading, button, tab, field, badge and meter style. First: pack, crates, stores, tile, crafting, ledger.',
       "Changed: windows, Runecut: selected row and open tab: the frame's own colour (pack: twine; crates and stores: brass; crafting: cherry; tile: moss; journal: ribbon blue).",
       'Changed: Settings, Frames: Stone: inside of windows unchanged (was: pack and crates plainer).',
+      "Changed: windows, Runecut: on the same rows, headings, buttons, fields, tables, badges and meters: settlement, trades, faith, improve and repair, market, events, social, island keeper, wildermon and its Care tab, barter, settings, help, map, shopping list, treasure map, skills, the journal's pages, While you were away, Notices.",
+      'Changed: windows, Runecut: one scroll area each (was: a second in improve and repair, market and barter).',
+      `Changed: Wildermon and Care, Runecut: fed, rest, health and care meters: green; amber under ${percent(METER_WARN)}; red at ${percent(METER_BAD)} or less.`,
+      'Changed: Runecut: Plan, Undo plan, Yes and Dig up: gold button.',
       'Changed: windows, Runecut: Health, Equipment on the kit: tabs, buttons, tags, meters, cards, headings; one scroll area each (Equipment: pack shelf no longer scrolls by itself).',
       `Changed: Health, Runecut: stamina, food, water, nutrient meters: green; amber under ${percent(METER_WARN)}; red at ${percent(METER_BAD)} or less.`,
       "Changed: windows, Runecut: tabs, every window: one style; open tab: the frame's colour (events, faith, journal, market, settings, trades, wildermon, boards, settlement, social).",
@@ -6448,7 +6452,7 @@ export class NewsPanel {
       if (e.day !== day) {
         day = e.day;
         const h = document.createElement('h4');
-        h.className = 'news-day';
+        h.className = 'news-day rc-section';
         h.textContent = DAY_WORDS(day);
         body.append(h);
       }

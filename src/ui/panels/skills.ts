@@ -21,6 +21,7 @@ const SLOW_GO = 100;
 /** A multiplier to two places, trailing zeros dropped. */
 const two = (x: number): number => +x.toFixed(2);
 import { awarenessReach, BASE_SIGHT } from '../../game/vision';
+import { KIT, kitBody } from '../kit';
 
 /** The thinking skills mind logic eases, by name. */
 const MIND_EASED_SAID = listed(MIND_EASED_SKILLS.map((id) => (SKILL_BY_ID.get(id)?.name ?? id).toLowerCase()));
@@ -43,33 +44,35 @@ export class SkillsPanel {
   private readonly risen = new Set<string>();
 
   constructor(private readonly win: UIWindow, private readonly game: Game) {
-    win.body.classList.add('skills-body', 'skill-book');
+    // One long page: the body is its one scroll area.
+    kitBody(win.body, 'skills-body', 'skill-book', KIT.scroll);
+    const list = win.body;
     // The sleep bonus: how much is stored, and the switch.
     const sleepHead = document.createElement('div');
-    sleepHead.className = 'skill-group';
+    sleepHead.className = 'skill-group rc-section';
     sleepHead.textContent = 'Sleep bonus';
     this.sleepBtn = document.createElement('button');
     this.sleepBtn.type = 'button';
-    this.sleepBtn.className = 'skill-sleep';
+    this.sleepBtn.className = 'skill-sleep rc-btn';
     this.sleepBtn.addEventListener('click', () => game.toggleSleepBonus());
     this.sleepNote = document.createElement('div');
     this.sleepNote.className = 'skill-sleep-note';
-    win.body.append(sleepHead, this.sleepBtn, this.sleepNote);
+    list.append(sleepHead, this.sleepBtn, this.sleepNote);
     // What the trades have earned you the right to be called.
     const head = document.createElement('div');
-    head.className = 'skill-group';
+    head.className = 'skill-group rc-section';
     head.textContent = 'Titles';
     this.titleBox = document.createElement('div');
     this.titleBox.className = 'title-box';
-    win.body.append(head, this.titleBox);
+    list.append(head, this.titleBox);
     for (const group of ['Characteristics', 'Fighting', 'Skills'] as const) {
       const header = document.createElement('div');
-      header.className = 'skill-group';
+      header.className = 'skill-group rc-section';
       header.textContent = group;
-      win.body.append(header);
+      list.append(header);
       for (const def of SKILL_DEFS.filter((d) => d.group === group)) {
         const row = document.createElement('div');
-        row.className = 'skill-row';
+        row.className = 'skill-row rc-row';
         const name = document.createElement('span');
         name.textContent = def.name;
         const note = document.createElement('span');
@@ -91,7 +94,7 @@ export class SkillsPanel {
         });
         this.tablets.set(def.id, tablet);
         row.append(name, note, value, tablet);
-        win.body.append(row);
+        list.append(row);
         // A skill with numbers behind it opens onto a slider for each (`skilleffects.ts`).
         if (hasEffects(def.id)) {
           const box = document.createElement('div');
@@ -112,7 +115,7 @@ export class SkillsPanel {
             e.preventDefault();
             toggle();
           });
-          win.body.append(box);
+          list.append(box);
           this.effects.set(def.id, box);
         }
         this.values.set(def.id, value);
@@ -170,6 +173,7 @@ export class SkillsPanel {
     const label = sleepBonusLabel(p.sleepOn, p.rested);
     if (this.sleepBtn.textContent !== label) this.sleepBtn.textContent = label;
     this.sleepBtn.classList.toggle('skill-sleep-on', p.sleepOn);
+    this.sleepBtn.classList.toggle(KIT.on, p.sleepOn);
     this.sleepBtn.title = `${p.sleepOn ? 'Switch off' : 'Switch on'} (${boundKey('sleep_bonus')}).`;
     const note = `On: skill gain ×${SLEEP_BONUS_MULT} while any is stored; drains in real time on the island. Off: kept. `
       + `Gained logged off asleep in a bed: +${sleepHm(3600 * SLEEP_BONUS_RATE)} per hour asleep (bed, QL 0; QL +${percent(1 / SLEEP_BONUS_QL)} per point), max ${sleepHm(SLEEP_BONUS_CAP)}.`;
@@ -190,6 +194,7 @@ export class SkillsPanel {
     const open = this.open.has(id);
     box.hidden = !open;
     row.classList.toggle('skill-open', open);
+    row.classList.toggle(KIT.on, open);
     row.setAttribute('aria-expanded', String(open));
     if (!open) return;
     box.replaceChildren(...effectTracks(this.game, id).map((t) => this.track(t)));
@@ -244,7 +249,7 @@ export class SkillsPanel {
     this.titleBox.replaceChildren();
     if (!earned.length) {
       const none = document.createElement('div');
-      none.className = 'title-none';
+      none.className = 'title-none rc-empty';
       none.textContent = `None. First title at ${Math.min(...[...TITLE_BY_ID.values()].map((t) => t.at))} in any skill.`;
       this.titleBox.append(none);
       return;
@@ -254,7 +259,7 @@ export class SkillsPanel {
       if (!t) continue;
       const chip = document.createElement('button');
       chip.type = 'button';
-      chip.className = `title-chip${id === worn ? ' title-worn' : ''}`;
+      chip.className = `title-chip rc-btn${id === worn ? ' title-worn rc-on' : ''}`;
       chip.setAttribute('aria-pressed', String(id === worn));
       chip.textContent = t.name;
       chip.title = id === worn ? 'Worn. Click to remove.' : `Earned at ${SKILL_DEFS.find((d) => d.id === t.skill)?.name.toLowerCase() ?? t.skill} ${t.at}. Click to wear.`;

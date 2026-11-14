@@ -47,7 +47,7 @@ export class KeeperFlags {
     this.el.replaceChildren();
     const got = this.seen;
     const head = document.createElement('div');
-    head.className = 'deed-head keeper-flags-head';
+    head.className = 'deed-head rc-section keeper-flags-head';
     head.textContent = got ? `Flags (${got.open} open)` : 'Flags';
     if (got && got.open > 0) {
       head.append(this.button('All seen', 'Mark every open flag seen', () => void this.mark(null)));
@@ -60,7 +60,7 @@ export class KeeperFlags {
     if (this.failed) this.note('No answer just now: showing the last answer.', true);
     if (!got.flags.length) {
       const el = document.createElement('div');
-      el.className = 'inv-empty';
+      el.className = 'inv-empty rc-empty';
       el.textContent = 'No flags.';
       this.el.append(el);
       return;
@@ -70,7 +70,7 @@ export class KeeperFlags {
 
   private row(f: WatchFlag): HTMLDivElement {
     const el = document.createElement('div');
-    el.className = `social-row keeper-row keeper-flag${f.seen ? ' keeper-flag-seen' : ''}`;
+    el.className = `social-row rc-row keeper-row keeper-flag${f.seen ? ' keeper-flag-seen' : ''}`;
     const dot = document.createElement('span');
     dot.className = `social-dot${f.seen ? '' : ' social-on'}`;
     dot.title = f.seen ? 'Seen' : 'Open';
@@ -100,7 +100,7 @@ export class KeeperFlags {
   private button(label: string, title: string, go: () => void): HTMLButtonElement {
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = 'tb-btn tb-small social-do';
+    b.className = 'tb-btn rc-btn tb-small social-do';
     b.textContent = label;
     b.title = title;
     b.addEventListener('click', go);

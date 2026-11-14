@@ -94,7 +94,10 @@ const crates = (ui as unknown as { cratePanel: CratePanel }).cratePanel;
 for (const [id, n, best, rare] of [['plank', 40, 31.2, 0], ['bucket', 3, 22.5, 1], ['brush', 1, 18, 0], ['nail', 120, 44.8, 2]] as const) {
   game.ledger[id] = { n, best, rare, first: day0, bestAt: day0 };
 }
-const TABS: JournalTab[] = ['goals', 'path', 'ledger', 'news', 'boards', 'guide', 'tracker', 'help'];
+// A settlement of yours to show the settlement window's overview, and a shopping list with something on it.
+game.deed = { name: 'Thornhold', x: game.spawn.x, y: game.spawn.y, radius: 5, level: 2, mine: true, role: 'founder' };
+(ui as unknown as { shopping: { add: (recipe: string, count: number) => void } }).shopping.add('make_bucket', 2);
+const TABS: JournalTab[] =['goals', 'path', 'ledger', 'news', 'boards', 'guide', 'tracker', 'help'];
 const ids = [...ui.windows.windows.keys()];
 seen.keys = [...ids.filter((id) => id !== 'journal'), ...TABS.map((t) => `journal:${t}`)];
 const sizes = new Map(ids.map((id) => [id, [ui.windows.get(id)!.el.style.width, ui.windows.get(id)!.el.style.height]]));

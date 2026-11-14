@@ -14,6 +14,7 @@ import { perksOf } from '../../game/perks';
 import { CLASS_LEVEL_START } from '../../game/talents';
 import { listed } from '../../game/words';
 import type { UIWindow } from '../windows';
+import { kitBody } from '../kit';
 
 /**
  * The trades: which one is yours, the nine nodes behind it, and its rite.
@@ -100,7 +101,7 @@ export class TradesPanel {
     /** Told after every choice made here: a fighting trade's spell taken, or the trade put down, changes the spell bar. */
     private readonly changed: () => void = () => {},
   ) {
-    win.body.classList.add('trade-body');
+    kitBody(win.body, 'trade-body');
     const bar = document.createElement('div');
     bar.className = 'trade-tabs log-tabs rc-tabs';
     for (const [id, label] of [['trades', 'Trades'], ['tree', 'Tree']] as Array<[Tab, string]>) {
@@ -110,7 +111,7 @@ export class TradesPanel {
       bar.append(b);
     }
     this.page = document.createElement('div');
-    this.page.className = 'trade-page';
+    this.page.className = 'trade-page rc-scroll';
     win.body.append(bar, this.page);
 
     win.onOpen = () => {
@@ -220,7 +221,7 @@ export class TradesPanel {
 
   private group(title: string): HTMLDivElement {
     const group = document.createElement('div');
-    group.className = 'trade-group';
+    group.className = 'trade-group rc-section';
     group.textContent = title;
     return group;
   }
@@ -286,7 +287,7 @@ export class TradesPanel {
    */
   private card(c: ClassCard, mine: boolean, said: ClassesSaid | null, shared: string | null = null): HTMLDivElement {
     const row = document.createElement('div');
-    row.className = `trade-card${mine ? ' trade-mine' : ''}${c.open || mine ? '' : ' trade-shut'}`;
+    row.className = `trade-card rc-card${mine ? ' trade-mine rc-on' : ''}${c.open || mine ? '' : ' trade-shut'}`;
 
     const top = document.createElement('div');
     top.className = 'trade-card-top';
@@ -437,7 +438,7 @@ export class TradesPanel {
    */
   private confirm(ask: string, lines: string[], yes: string, act: () => Promise<string | null>): HTMLDivElement {
     const box = document.createElement('div');
-    box.className = 'trade-confirm';
+    box.className = 'trade-confirm rc-sunk';
     box.setAttribute('role', 'group');
     const q = document.createElement('div');
     q.className = 'trade-confirm-ask';
@@ -451,7 +452,7 @@ export class TradesPanel {
     }
     const acts = document.createElement('div');
     acts.className = 'trade-acts';
-    const go = button(yes, 'trade-take trade-go');
+    const go = button(yes, 'trade-take trade-go rc-go');
     go.addEventListener('click', () => {
       go.disabled = true;
       this.confirming = null;
@@ -489,7 +490,7 @@ export class TradesPanel {
         const cap = document.createElement('div');
         cap.className = 'trade-card-top';
         const says = document.createElement('span');
-        says.className = 'trade-col-head';
+        says.className = 'trade-col-head rc-section';
         const word = combat ? 'Class tier' : 'Perk tier';
         says.textContent = i === 0 ? `${word} ${i + 1} · on taking`
           : combat ? `${word} ${i + 1} · class level ${at}` : `${word} ${i + 1} · ${skillName(c.main).toLowerCase()} ${at}`;
@@ -526,7 +527,7 @@ export class TradesPanel {
       const column = document.createElement('div');
       column.className = 'trade-col';
       const head = document.createElement('div');
-      head.className = 'trade-col-head';
+      head.className = 'trade-col-head rc-section';
       head.textContent = CHANNELS[col.channel].name;
       head.title = CHANNELS[col.channel].note;
       column.append(head);
@@ -542,7 +543,7 @@ export class TradesPanel {
   /** A trade's rite as the rulebook has it, to be read and not called. */
   private riteRead(r: (typeof RITES)[number]): HTMLDivElement {
     const rite = document.createElement('div');
-    rite.className = 'trade-rite';
+    rite.className = 'trade-rite rc-card';
     const top = document.createElement('div');
     top.className = 'trade-card-top';
     const name = document.createElement('span');
@@ -561,7 +562,7 @@ export class TradesPanel {
 
   private caption(text: string): HTMLDivElement {
     const cap = document.createElement('div');
-    cap.className = 'trade-col-head';
+    cap.className = 'trade-col-head rc-section';
     cap.textContent = text;
     return cap;
   }
@@ -569,7 +570,7 @@ export class TradesPanel {
   /** A perk or a node as the rulebook has it: its name, what it does, and what it costs. */
   private shown(name: string, note: string, cost?: string): HTMLDivElement {
     const box = document.createElement('div');
-    box.className = 'trade-node';
+    box.className = 'trade-node rc-card';
     const top = document.createElement('div');
     top.className = 'trade-card-top';
     const n = document.createElement('span');
@@ -620,7 +621,7 @@ export class TradesPanel {
 
   private tierHead(t: TreeTrade): HTMLDivElement {
     const head = document.createElement('div');
-    head.className = 'trade-tree-head';
+    head.className = 'trade-tree-head rc-section';
     const name = document.createElement('span');
     name.className = 'trade-name';
     name.textContent = t.name;
@@ -646,7 +647,7 @@ export class TradesPanel {
     const box = document.createElement('div');
     box.className = `trade-tier${tier.open ? '' : ' trade-tier-shut'}`;
     const cap = document.createElement('div');
-    cap.className = 'trade-col-head';
+    cap.className = 'trade-col-head rc-section';
     const main = classDef(t.class)?.main;
     const word = t.kind === 'combat' ? 'Class tier' : 'Perk tier';
     cap.textContent = tier.tier === 1 ? `${word} ${tier.tier} · on taking`
@@ -669,7 +670,7 @@ export class TradesPanel {
   private perk(p: TreePerk, quiet = false): HTMLDivElement {
     const asked = this.confirming === `perk:${p.id}` && !p.taken && !p.why;
     const box = document.createElement('div');
-    box.className = `trade-node${p.taken ? ' trade-node-taken' : ''}${!p.taken && p.why ? ' trade-node-shut' : ''}${asked ? ' trade-node-asked' : ''}`;
+    box.className = `trade-node rc-card${p.taken ? ' trade-node-taken rc-on' : ''}${!p.taken && p.why ? ' trade-node-shut' : ''}${asked ? ' trade-node-asked rc-on' : ''}`;
     const top = document.createElement('div');
     top.className = 'trade-card-top';
     const name = document.createElement('span');
@@ -709,7 +710,7 @@ export class TradesPanel {
 
   private trade(t: TreeTrade): HTMLDivElement {
     const head = document.createElement('div');
-    head.className = 'trade-tree-head';
+    head.className = 'trade-tree-head rc-section';
     const name = document.createElement('span');
     name.className = 'trade-name';
     name.textContent = t.name;
@@ -731,7 +732,7 @@ export class TradesPanel {
    */
   private rite(r: RiteCard): HTMLDivElement {
     const box = document.createElement('div');
-    box.className = `trade-rite${r.why ? '' : ' trade-rite-ready'}`;
+    box.className = `trade-rite rc-card${r.why ? '' : ' trade-rite-ready rc-on'}`;
     const top = document.createElement('div');
     top.className = 'trade-card-top';
     const name = document.createElement('span');
@@ -765,7 +766,7 @@ export class TradesPanel {
       const nodes = t.nodes.filter((n) => n.col === col).sort((a, b) => a.rank - b.rank);
       const ch = nodes.length ? chans.get(nodes[0].channel) : undefined;
       const cap = document.createElement('div');
-      cap.className = 'trade-col-head';
+      cap.className = 'trade-col-head rc-section';
       cap.textContent = ch ? ch.name : '';
       if (ch) cap.title = ch.note;
       column.append(cap);
@@ -777,7 +778,7 @@ export class TradesPanel {
 
   private node(n: TreeNode): HTMLDivElement {
     const box = document.createElement('div');
-    box.className = `trade-node${n.taken ? ' trade-node-taken' : ''}${!n.taken && n.why ? ' trade-node-shut' : ''}`;
+    box.className = `trade-node rc-card${n.taken ? ' trade-node-taken rc-on' : ''}${!n.taken && n.why ? ' trade-node-shut' : ''}`;
     const top = document.createElement('div');
     top.className = 'trade-card-top';
     const name = document.createElement('span');
@@ -821,7 +822,8 @@ export class TradesPanel {
 function button(label: string, extra = ''): HTMLButtonElement {
   const b = document.createElement('button');
   b.type = 'button';
-  b.className = `tb-btn tb-small${extra ? ` ${extra}` : ''}`;
+  // A tab is the tab bar's, not a button of the kit's.
+  b.className = `tb-btn${/\blog-tab\b/.test(extra) ? '' : ' rc-btn'} tb-small${extra ? ` ${extra}` : ''}`;
   b.textContent = label;
   return b;
 }

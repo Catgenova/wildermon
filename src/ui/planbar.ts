@@ -50,7 +50,7 @@ export class PlanBar {
     this.el.dataset.mode = 'plan';
     const rows: HTMLElement[] = [el('div', 'plan-bar-title', v.title)];
     if (v.totals.length) {
-      const table = el('table', 'plan-bar-totals');
+      const table = el('table', 'plan-bar-totals rc-table');
       const head = el('tr', 'plan-bar-head');
       for (const h of ['', 'Need', 'Carried', 'Stored', 'Short']) head.append(el('th', '', h));
       table.append(head);
@@ -67,11 +67,11 @@ export class PlanBar {
     }
     for (const r of v.refused.slice(0, 3)) rows.push(el('div', 'plan-bar-refused', `Refused ${r.n}: ${r.why}`));
     const buttons = el('div', 'plan-bar-buttons');
-    const plan = el('button', 'tb-btn plan-bar-go', `Plan ${v.count}`);
+    const plan = el('button', 'tb-btn rc-btn rc-go plan-bar-go', `Plan ${v.count}`);
     plan.type = 'button';
     plan.disabled = v.count === 0;
     plan.addEventListener('click', () => this.on.plan());
-    const cancel = el('button', 'tb-btn', 'Cancel (Esc)');
+    const cancel = el('button', 'tb-btn rc-btn', 'Cancel (Esc)');
     cancel.type = 'button';
     cancel.addEventListener('click', () => this.on.cancel());
     buttons.append(plan, cancel);
@@ -86,10 +86,10 @@ export class PlanBar {
     this.undoUntil = until;
     this.el.dataset.mode = 'undo';
     const buttons = el('div', 'plan-bar-buttons');
-    const undo = el('button', 'tb-btn plan-bar-go', 'Undo (Ctrl+Z)');
+    const undo = el('button', 'tb-btn rc-btn rc-go plan-bar-go', 'Undo (Ctrl+Z)');
     undo.type = 'button';
     undo.addEventListener('click', () => this.on.undo());
-    const close = el('button', 'tb-btn', 'Close');
+    const close = el('button', 'tb-btn rc-btn', 'Close');
     close.type = 'button';
     close.addEventListener('click', () => this.hide());
     buttons.append(undo, close);
