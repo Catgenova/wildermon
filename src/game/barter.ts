@@ -16,7 +16,10 @@
  * Called a barter in the code, because a "trade" in this game is the craft
  * you follow (`classes.ts`, the Trades window); the window itself says Trade.
  */
-import { itemDef } from './items';
+import { itemDef, rarityStep } from './items';
+import { creatureLevel, kindName, lineLines, pedigreeLine, rarityLine, SEX_NAMES, SPECIES, type Age, type Pedigree, type Sex } from './creatures';
+import { traitOf, traitSays } from './traits';
+import { formLabels, type SizeForm } from './wildforms';
 
 /**
  * How far apart two people may stand and trade, in tiles, measured as the
@@ -77,6 +80,14 @@ export const BARTER_SAID = {
   most: `Max ${BARTER_MOST} items per side.`,
   /** An Accept sent against a side that has changed since it was drawn. */
   changed: 'Barter changed before your Accept: check it, then accept.',
+  /** A crated wildermon: a dam carrying young (`creature.due`). */
+  young: 'Carrying young: {who}\'s {what}.',
+  /** A crated wildermon whose panniers carry things, which would go unseen with it. */
+  loaded: 'Panniers loaded: {who}\'s {what}. Empty them first.',
+  /** A crate that names a wildermon not shut in it, or not its holder's. */
+  loose: 'Not in its crate: {who}\'s {what}.',
+  /** The wildermon in a crate on a side changed (let out, another in, renamed, aged): told to both. */
+  stirred: 'Changed on {who}\'s side: {what}. Both Accepts taken back.',
   /** What each is told along the way. */
   asked: 'Barter request from {who}: answer in the Barter window.',
   asking: 'Barter request sent: {who}.',
@@ -104,6 +115,55 @@ export function barterSaid(key: BarterKey, fill: { who?: string; what?: string; 
 /** A kind of thing as a refusal names it: the island's `lower(item_def.name)`. */
 export const barterThing = (def: string): string => itemDef(def).name.toLowerCase();
 
+/**
+ * The wildermon in a crate on a side, as the island sends it (`barter_beast`):
+ * what the other side reads before pressing Accept. Its pedigree is whole to
+ * its keeper and, to anybody else, says where a trait came from only for the
+ * traits they can read (`pedigree_seen`), as its card does.
+ */
+export interface BarterBeast {
+  id: number;
+  name: string;
+  species: string;
+  variant: number;
+  sex: Sex;
+  /** Its age stage, by its keeper's pace (`age_of`). */
+  age: Age;
+  level: number;
+  skills: Record<string, number>;
+  traits: string[];
+  formColour: boolean;
+  formSize: SizeForm | null;
+  rare: string | null;
+  pedigree: Pedigree | null;
+  /** Carrying young: refused on a side (`young`). */
+  due: boolean;
+}
+
+/**
+ * A crated wildermon as the Trade window lists it: labels and numbers, a line
+ * each. `reads` is whether the viewer reads a trait (`readsTrait`), as on its
+ * card: one they cannot is not named.
+ */
+export function beastLines(b: BarterBeast, reads: (trait: string) => boolean): string[] {
+  const def = SPECIES[b.species] ?? SPECIES.rabba;
+  const lines = [`${b.name} · ${SEX_NAMES[b.sex]} ${kindName(b)} · ${b.age} · Lv ${creatureLevel(b)}`];
+  const rare = rarityStep(b.rare) ?? 0;
+  if (rare) lines.push(rarityLine({ rare }));
+  lines.push(...formLabels(b, def));
+  if (!b.traits.length) lines.push('Traits: none');
+  for (const id of b.traits) {
+    const t = traitOf(id);
+    if (!t) continue;
+    if (!reads(id)) lines.push('Trait: unread');
+    else lines.push(`Trait: ${t.name}${t.tier === 'common' || t.family ? '' : ` (${t.tier})`}: ${traitSays(t)}`);
+  }
+  if (b.pedigree) lines.push(pedigreeLine(b.pedigree), ...lineLines(b));
+  else lines.push('Pedigree: none');
+  if (b.due) lines.push('Carrying young');
+  return lines;
+}
+
 /** One thing on a side, as the island sends it. */
 export interface BarterThing {
   id: number;
@@ -116,6 +176,8 @@ export interface BarterThing {
   has: number;
   extra: string | null;
   rare: string | null;
+  /** The wildermon in it, for a wildermon crate with one in it; null otherwise. */
+  beast?: BarterBeast | null;
 }
 
 /** One side of a trade. */
@@ -154,12 +216,15 @@ export interface Barter {
 export function barterPutRefusal(
   it: { id: string; locked?: boolean; issued?: boolean; count: number },
   worn: boolean, count: number, who: string,
+  /** The wildermon in it, for an occupied wildermon crate: its name and whether it carries young. */
+  beast?: { name: string; due: boolean } | null,
 ): string | null {
   if (it.id === 'coin') return barterSaid('coin');
   if (it.issued) return barterSaid('starter');
   if (worn) return barterSaid('worn', { who, what: barterThing(it.id) });
   if (it.locked) return barterSaid('locked', { who, what: barterThing(it.id) });
   if (count > it.count) return barterSaid('fewer', { who, what: barterThing(it.id) });
+  if (beast?.due) return barterSaid('young', { who, what: beast.name });
   return null;
 }
 
