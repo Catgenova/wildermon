@@ -250,6 +250,11 @@ import {
 import { GARDEN_SAID } from '../../game/garden';
 import { DECOR_PIECES } from '../../game/decor';
 import { FURNISH_PIECES, FURNISH_SAID, seatRest } from '../../game/furnish';
+import { benchTreeWords, FITTING_PIECES, poleBurn, practiceSkillWords } from '../../game/fitting';
+import {
+  ARROW_BREAK_IN, BOULDER_MOSS_DAYS, CARVE_TIME, FIT_TIME, MOOR_REACH, MOOR_TIME, POLE_LANTERNS, POLE_REACH, PRACTICE_GAIN, PULL_TIME, SHELF_HOLDS, TARGET_HOLDS,
+  TREE_BENCH_SEATS, WINDOW_SEATS,
+} from '../../game/fittingdefs';
 import {
   CAIRN_NAME_MAX, CAIRN_NAME_TIME, GARDEN_SWING, STONE_BENCH, HAY_A_DAY, HAY_FILL_TIME, HAY_HOLDS, HAY_REACH, PUT_TIME, SIGN_ARMS, SIT_TIME, TABLE_HOLDS, TROUGH_CARE, TROUGH_DRINK,
   TROUGH_REACH, VASE_FRESH, VASE_HOLDS,
@@ -2265,6 +2270,19 @@ export function helpText(): string {
       <li><b>Put in wildflowers</b>, <b>Take out wildflowers</b> (${PUT_TIME} s base): to ${VASE_HOLDS}; after ${VASE_FRESH} days wilted, thrown out.</li>
       <li><b>Put on the table</b>, <b>Take</b> (${PUT_TIME} s base): to ${TABLE_HOLDS}. Not picked up with things on it.</li>
       <li><b>Mount a fish</b> (${PUT_TIME * 2} s base): the fish is used up.</li>
+    </ul>
+    <h3>Fittings</h3>
+    <ul>
+      ${FITTING_PIECES.map((id) => `<li><b>${itemDef(id).name}</b>: ${bill(`make_${id}`)} (${workedAt(`make_${id}`)}, ${recipe(`make_${id}`).baseTime} s base). `
+        + `${furnitureDef(id).w} by ${furnitureDef(id).h} subtiles. ${itemDef(id).description ?? ''}</li>`).join('')}
+      <li><b>Put in candles</b> (${FIT_TIME} s base): ${POLE_LANTERNS} candles; burn ${timeWords(poleBurn(QL_LOW))} at QL ${QL_LOW}, ${timeWords(poleBurn(QL_TOP))} at QL ${QL_TOP}. <b>Strike a light</b>: a flame in hand or within reach. <b>Put it out</b>: the candles kept. Light: ${POLE_REACH} tiles at night. Dye: one lantern a dyeing, first to last, up to ${POLE_LANTERNS}.</li>
+      <li>Moss boulder: <b>Scrub the moss</b> (a brush) back to bare; fully green again in ${BOULDER_MOSS_DAYS} days. <b>Keep moss</b>, <b>Let workers scrub it</b>: whoever set it down; kept, a worker's scrub skips it.</li>
+      <li>Tree bench: on the tile of a ${benchTreeWords()} tree; <b>Cut down</b> refused while it stands. <b>Sit</b>: ${TREE_BENCH_SEATS} seats. Window seat: <b>Sit</b>: ${WINDOW_SEATS} seats.</li>
+      <li><b>Put on the shelf</b>, <b>Take</b> a herb (${FIT_TIME} s base): to ${SHELF_HOLDS} herbs. Not picked up with herbs on it.</li>
+      <li><b>Practise</b> at a training dummy: a melee weapon in hand; swing time and stamina as a fight's; its skill gain ×${PRACTICE_GAIN} a landed blow's (${practiceSkillWords()}); no damage either way.</li>
+      <li><b>Shoot</b> at an archery target: a bow in hand and arrows, within its range; draw time and stamina as a fight's; archery gain ×${PRACTICE_GAIN} a landed shot's. To ${TARGET_HOLDS} arrows. <b>Pull arrows</b> (${PULL_TIME} s base): one in ${ARROW_BREAK_IN} broken, the rest back.</li>
+      <li><b>Tie up</b>, <b>Untie</b> (${MOOR_TIME} s base): a boat within ${MOOR_REACH} tile of the post, one at a time; by whoever set the boat down or holds its key. Tied: <b>Take the helm</b> and <b>Pick it up</b> refused to anyone else; rowed further than ${MOOR_REACH} tile off, the tie holds nothing.</li>
+      <li><b>Carve</b> a stone bust (${CARVE_TIME} s base): a citizen of the settlement it stands on, from its roll (Social window); whoever set it down, or a citizen.</li>
     </ul>
     <h3>Calling things by name</h3>
     <ul>

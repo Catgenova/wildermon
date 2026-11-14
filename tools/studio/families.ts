@@ -319,6 +319,8 @@ function kitFile(kind: string): string {
     sundial: 'decor', compost_bin: 'decor', stone_lantern: 'decor', woven_rug: 'decor', curtains: 'decor', armour_stand: 'decor',
     birdbath: 'furnish', stone_bench: 'furnish', garden_swing: 'furnish', gazebo: 'furnish', hay_bale: 'furnish', water_trough: 'furnish', signpost: 'furnish',
     cairn: 'furnish', fireplace: 'furnish', four_poster_bed: 'furnish', vase: 'furnish', side_table: 'furnish', footstool: 'furnish', fish_mount: 'furnish',
+    lantern_pole: 'fittings', moss_boulder: 'fittings', tree_bench: 'fittings', spice_shelf: 'fittings', window_seat: 'fittings', training_dummy: 'fittings',
+    archery_target: 'fittings', mooring_post: 'fittings', stone_bust: 'fittings',
   };
   return by[kind] ?? kind;
 }

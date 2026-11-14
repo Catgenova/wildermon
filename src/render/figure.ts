@@ -2460,10 +2460,18 @@ export interface FigurePose {
    * undergarment alike, wearing only its gear (`MANNEQUIN_WOOD`).
    */
   mannequin?: boolean;
+  /**
+   * A bust (a stone bust's, `../game/fitting.ts`): every colour of the body taken most of the way to the stone it is
+   * carved in (`BUST_STONE`), so its own skin, hair and cloth show only as the stone's tones.
+   */
+  stone?: boolean;
 }
 
 /** A mannequin's wood, in the light and turned from it: the kit's oak, a step paler (`woodTone`). */
 export const MANNEQUIN_WOOD = '#efcda4';
+/** A bust's stone, and how far each of the body's own colours goes to it. */
+export const BUST_STONE = '#e2d8cc';
+export const BUST_STONE_K = 0.78;
 
 /** A body veiled: see `FigurePose.veil`. `colour` is '#rrggbb'; `tint` and `fade` nought to one. */
 export interface FigureVeil {
@@ -6228,6 +6236,12 @@ export const BEAST_BASE: Record<BeastMat, RGB> = {
 };
 
 function paletteOf(p: FigurePose, look: Look): Palette {
+  // A bust all in its stone, its own colours a breath under it (`FigurePose.stone`).
+  if (p.stone) {
+    const st = hex(BUST_STONE);
+    const own = paletteOf({ ...p, stone: false }, look);
+    return Object.fromEntries(Object.entries(own).map(([k, c]) => [k, mixRGB(c, st, BUST_STONE_K)])) as Palette;
+  }
   // A mannequin all of its wood: no face, no hair, no cloth of its own (`FigurePose.mannequin`).
   if (p.mannequin) {
     const w = hex(MANNEQUIN_WOOD), d = mixRGB(w, [110, 80, 70], 0.25);

@@ -4076,8 +4076,8 @@ export class Game {
       out.push({ x: cx, y: cy, heat: 0.7 });
     }
     for (const f of this.furniture.values()) {
-      // A candle behind glass is not a fire, and sends up no smoke.
-      if (!f.lit || isLampPiece(f) || !near(f.x, f.y)) continue;
+      // A candle behind glass or paper is not a fire, and sends up no smoke.
+      if (!f.lit || isLampPiece(f) || f.kind === LANTERN_POLE || !near(f.x, f.y)) continue;
       const [cx, cy] = furnitureCentre(f);
       out.push({ x: cx, y: cy, heat: 0.62 });
     }

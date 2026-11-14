@@ -66,6 +66,11 @@ import { seasonAt, type Season } from '../world/calendar';
 import { gardenAmbience, gardenTrim, hangCodeOf } from './gardenlook';
 import { decorTrim } from './decorlook';
 import { furnishTrim } from './furnishlook';
+import { fittingTrim } from './fittinglook';
+import { LANTERN_POLE, PRACTISE, SHOOT_TARGET, STONE_BUST } from '../game/fittingdefs';
+
+/** The job a body is drawn at: a practice swing or shot at a dummy or a target as a fight's, its clip and its weapon in hand (`fitting.ts`). */
+const poseJob = (id: string | null | undefined): string | undefined => (id === PRACTISE || id === SHOOT_TARGET ? 'attack_creature' : id ?? undefined);
 import { ARMOUR_STAND, WOVEN_RUG } from '../game/decordefs';
 import { drawShine, shines } from './shine';
 import { NIGHT_WASH } from './nightwash';
@@ -6669,7 +6674,7 @@ export class Renderer {
       const [x, y] = game.roster.drawnAt(peer);
       const z = this.footOn(x, y, peer.level) + peer.level * WALL_HEIGHT;
       return personBody(x, y, z, peer.facing, 'peer', {
-        id: 'o' + peer.id, phase: peer.moving ? peer.stepPhase : this.anim * 6, moving: peer.moving, facing: peer.facing, swimming: peer.swimming, working: !!peer.working, job: peer.act,
+        id: 'o' + peer.id, phase: peer.moving ? peer.stepPhase : this.anim * 6, moving: peer.moving, facing: peer.facing, swimming: peer.swimming, working: !!peer.working, job: poseJob(peer.act),
         look: peer.look, gear: peer.gear,
       });
     }
@@ -6862,7 +6867,7 @@ export class Renderer {
             swimming: player.swimming,
             working: this.game.action?.state === 'performing',
             // What at: meditating is done sat on the ground rather than at the bench (`FigurePose.job`).
-            job: this.game.action?.def.id,
+            job: poseJob(this.game.action?.def.id),
             // How far into its go, and how long a go takes, for a clip fitted to it (`FigurePose.act`).
             act: this.game.action?.state === 'performing' ? { t: this.game.wallNow() - (this.game.action.began ?? this.game.wallNow()), length: this.game.action.duration } : undefined,
             driving: (ent.lift ?? 0) > 0 && !ent.standing,
@@ -6919,7 +6924,7 @@ export class Renderer {
             facing: ent.seatFacing ?? peer.facing,
             swimming: peer.swimming,
             working: peer.working,
-            job: peer.act,
+            job: poseJob(peer.act),
             driving: (ent.lift ?? 0) > 0 && !ent.standing,
             seat: ent.seat,
             tunic: peer.tunic,
@@ -7180,7 +7185,7 @@ export class Renderer {
           // ring under the pointer: a ring round a bloom of light is a blot.
           // (an armour stand's mannequin by which stand it is: `decorlook.ts`)
           drawFurnitureLive(ctx, ent.sx, ent.sy, zoom, piece.kind, view, this.game.darkness(),
-            clothInWind(piece.kind) || piece.kind === ARMOUR_STAND ? this.airOf(piece) : undefined);
+            clothInWind(piece.kind) || piece.kind === ARMOUR_STAND || piece.kind === STONE_BUST || piece.kind === LANTERN_POLE ? this.airOf(piece) : undefined);
           // A lantern burning on a post or a pillar blooms as the dark comes on (`lamps.ts`).
           if (lampBurning(piece)) drawLampBloom(ctx, ent.sx, ent.sy, zoom, piece.kind, view, this.game.darkness());
           /*
@@ -11314,6 +11319,9 @@ export class Renderer {
     // A furnishing: a swing sat in, a stack's bales, a trough's water, a post's arms, a vase's flowers, a table's things, a mount's fish (`furnish.ts`, `furnishlook.ts`).
     const furnish = furnishTrim(f, this.game);
     if (furnish !== undefined) return furnish;
+    // A fitting: a pole's lanterns and candles, a bench's tree, a shelf's jars, a target's arrows, a post's rope (`fitting.ts`, `fittinglook.ts`).
+    const fitting = fittingTrim(f, this.game);
+    if (fitting !== undefined) return fitting;
     // An arch's roses or lavender: the variety, which is its place's, and how far it has grown (`roses.ts`).
     if (FURNITURE_BY_ID.get(f.kind)?.climber) {
       const r = roseStage(f.setAt, this.game.wallNow());
