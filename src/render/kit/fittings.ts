@@ -2,7 +2,7 @@ import { WALL_THICK } from '../../game/building';
 import { HEIGHT_SCALE, UNITS_PER_TILE } from '../iso';
 import { rand } from '../ivy';
 import {
-  clothTone, css, deeper, grain, hex, lathe, mix, paler, prism, proj, slab, TAU, toneOf, turned, warped, woodTone,
+  clothTone, css, deeper, grain, halfOf, hex, lathe, mix, paler, prism, proj, slab, TAU, toneOf, turned, warped, woodTone,
   type Ctx, type Face, type KitLook, type KitModel, type KitPart, type KitPiece, type KitView, type PaintCtx, type RGB, type Side, type Tone, type V3,
 } from './core';
 import { leg, rod, woodSides, woodSide } from './woodwork';
@@ -191,32 +191,32 @@ function treeBenchOf(look: KitLook): KitModel {
   const W = woodTone(look.material, look.tint, 0.5);
   const parts: KitPart[] = [];
   const at = (r: number, a: number): [number, number] => [Math.cos(a) * r, Math.sin(a) * r];
-  // Six sides of seat round the trunk, each a trapezoid of boards, its back against the tree and its legs under it.
+  // Six sides of seat round the trunk, each a trapezoid of boards, its back against the tree and its legs under it. Each
+  // side is in the far half of the ring or the near half by which way it is seen (`halfOf`): the renderer draws the tree
+  // between the two, so the trunk stands up through the ring.
   for (let i = 0; i < 6; i++) {
-    const a0 = (i / 6) * TAU + TAU / 12, a1 = ((i + 1) / 6) * TAU + TAU / 12;
+    const a0 = (i / 6) * TAU + TAU / 12, a1 = ((i + 1) / 6) * TAU + TAU / 12, mid = (a0 + a1) / 2;
+    const layer = halfOf(...at(TB_OUT, mid));
+    const add = (faces: Face[], edges = true): void => { parts.push({ faces, edges, layer }); };
     const r0 = TB_IN / Math.cos(TAU / 12), r1 = TB_OUT / Math.cos(TAU / 12);
-    const seat: KitPart = {
-      faces: block([at(r0, a0), at(r0, a1), at(r1, a1), at(r1, a0)], TB_SEAT - 0.7, TB_SEAT, paler(W, 0.05), (g, k, s) => grain(g, k.fill, s.w, s.h, 801 + i, 'x', 0.6)),
-      edges: true,
-    };
-    parts.push(seat);
+    add(block([at(r0, a0), at(r0, a1), at(r1, a1), at(r1, a0)], TB_SEAT - 0.7, TB_SEAT, paler(W, 0.05), (g, k, s) => grain(g, k.fill, s.w, s.h, 801 + i, 'x', 0.6)));
     // The back: two rails against the trunk on short posts, open between, so the tree shows through.
     const rb = (TB_IN - 0.5) / Math.cos(TAU / 12);
     for (const [z0, z1] of [[TB_BACK - 1.0, TB_BACK], [TB_SEAT + 1.6, TB_SEAT + 2.4]]) {
-      parts.push({ faces: block([at(rb, a0), at(rb, a1), at(rb + 0.45, a1), at(rb + 0.45, a0)], z0, z1, W, (g, k, s) => grain(g, k.fill, s.w, s.h, 821 + i, 'x', 0.6)), edges: true });
+      add(block([at(rb, a0), at(rb, a1), at(rb + 0.45, a1), at(rb + 0.45, a0)], z0, z1, W, (g, k, s) => grain(g, k.fill, s.w, s.h, 821 + i, 'x', 0.6)));
     }
     const [px, py] = at(TB_IN - 0.3, a0);
-    parts.push({ faces: slab(px - 0.3, px + 0.3, py - 0.3, py + 0.3, TB_SEAT, TB_BACK, deeper(W, 0.08)), edges: true });
-    const mid = (a0 + a1) / 2;
+    add(slab(px - 0.3, px + 0.3, py - 0.3, py + 0.3, TB_SEAT, TB_BACK, deeper(W, 0.08)));
     for (const r of [TB_IN + 0.6, TB_OUT - 0.7]) {
       const [x, y] = at(r, mid);
-      parts.push({ faces: leg(x, y, 0, TB_SEAT - 0.7, deeper(W, 0.12), 841 + i, 0.7) });
+      add(leg(x, y, 0, TB_SEAT - 0.7, deeper(W, 0.12), 841 + i, 0.7), false);
     }
   }
   return { parts, shade: shadeOf(-TB_OUT, TB_OUT, -TB_OUT, TB_OUT) };
 }
 
-export const TREE_BENCH: KitPiece = { model: (look) => treeBenchOf(look), uses: { material: true, tint: true } };
+/** A tree bench in two layers, its far half and its near half, the tree drawn between them (`Renderer`, `TREE_BENCH`). */
+export const TREE_BENCH: KitPiece = { model: (look) => treeBenchOf(look), uses: { material: true, tint: true }, layers: 2 };
 
 /* ---- 4. the spice shelf --------------------------------------------------------------------------- */
 

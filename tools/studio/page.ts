@@ -427,8 +427,8 @@ const SCENES: Record<string, { about: string; tile: (x: number, y: number) => nu
         game.furniture.set(id, f);
         game.placed.furniture.add(f);
       };
-      game.world.setTile(23, 23, TileType.Tree, packTreeData(1, 1));
-      piece(9201, 'tree_bench', 23, 23);
+      game.world.setTile(24, 23, TileType.Tree, packTreeData(1, 1));
+      piece(9201, 'tree_bench', 24, 23);
       piece(9202, 'lantern_pole', 25, 23, { sx: 1, sy: 1, lit: true, fuel: 3600, dye: '#e07a7a', fitting: { tints: ['#7aa8e0', '#f0d060'] } });
       game.greenFrom = 0;
       piece(9203, 'moss_boulder', 23, 25, { sx: 1, sy: 1, greenSince: 0 });

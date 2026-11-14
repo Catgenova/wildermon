@@ -67,7 +67,10 @@ import { gardenAmbience, gardenTrim, hangCodeOf } from './gardenlook';
 import { decorTrim } from './decorlook';
 import { furnishTrim } from './furnishlook';
 import { fittingTrim } from './fittinglook';
-import { LANTERN_POLE, PRACTISE, SHOOT_TARGET, STONE_BUST } from '../game/fittingdefs';
+import { LANTERN_POLE, PRACTISE, SHOOT_TARGET, STONE_BUST, TREE_BENCH } from '../game/fittingdefs';
+
+/** Pixels at zoom one a tree bench's two halves are sorted either side of the tree on its tile: its far half before, its near half after. */
+const BENCH_ROUND = 2;
 
 /** The job a body is drawn at: a practice swing or shot at a dummy or a target as a fight's, its clip and its weapon in hand (`fitting.ts`). */
 const poseJob = (id: string | null | undefined): string | undefined => (id === PRACTISE || id === SHOOT_TARGET ? 'attack_creature' : id ?? undefined);
@@ -4952,6 +4955,16 @@ export class Renderer {
             fe.view = this.viewOf(fu);
             // A rug lies flat on the floor: first among its line, under whoever stands on it (`decor.ts`).
             if (fu.kind === WOVEN_RUG) fe.key = fe.sy - FLAT_FIRST;
+            // A tree bench in two halves round its tree (`fitting.ts`): the far half before the tree on its tile, the near half after it.
+            if (fu.kind === TREE_BENCH) {
+              fe.layer = 0;
+              fe.key = fe.sy - BENCH_ROUND * zoom;
+              const near = this.take('furniture', x, y, fe.sx, fe.sy, null);
+              near.piece = fu;
+              near.view = fe.view;
+              near.layer = 1;
+              near.key = fe.sy + BENCH_ROUND * zoom;
+            }
             if (fu.rare) fe.rare = fu.rare;
             // On a bridge's deck, among its pieces (`deckKey`): a stall on an outer lane, a wagon crossing. Anything else is under it (`pieceOnDeck`).
             if (this.game.bridges.size && this.game.pieceOnDeck(fu, Math.floor(wx), Math.floor(wy))) this.onBridgeDeck(fe, wx, wy);
@@ -7127,6 +7140,12 @@ export class Renderer {
             });
           }, undefined, pieceBox);
           drawn = box;
+        } else if (piece.kind === TREE_BENCH && ent.layer !== undefined) {
+          // One half of a tree bench, the far or the near, as it was taken round its tree (`BENCH_ROUND`).
+          const layer = ent.layer;
+          this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => {
+            drawn = drawFurniture(g, px, py, zoom, piece.kind, false, dyeOf(piece) ?? undefined, layer, view, piece.material);
+          }, undefined, pieceBox);
         } else if (isDen(piece.kind)) {
           /*
            * A wildermon bed (`dens.ts`): its bake under the pointer's ring, and
