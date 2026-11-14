@@ -153,21 +153,38 @@ check('none of that went on a side', read(IVAR).barter?.mine.things.length === 0
 
 /* ---- shown ------------------------------------------------------------------- */
 console.log('--- shown to both');
+// Zed back out of the way: a wildermon at heel is what a crate swaps in when one is let out of it.
+psql(`delete from creature where world_id = '${W}' and id = ${ZED};`);
 offer(IVAR, n, [PIP_CRATE, EMPTY]);
 const hers = offer(HILD, n, [WREN_CRATE]).barter;
-const seen = hers?.theirs.things.find((t) => t.id === PIP_CRATE)?.beast ?? null;
-check('Hild sees Pip in the crate on Ivar\'s side', !!seen && seen.id === PIP && seen.name === 'Pip' && seen.species === 'rabba', JSON.stringify(seen));
-check('its sex, age, level, traits, forms and rarity', !!seen && seen.sex === 'female' && seen.age === 'grown' && seen.level === 23
-  && seen.traits.join() === 'fleet,curious' && seen.formColour && seen.formSize === 'large' && seen.rare === 'rare' && !seen.due, JSON.stringify(seen));
-check('and its dam and sire', seen?.pedigree?.dam.name === 'Snow' && seen.pedigree.sire.name === 'Horn', JSON.stringify(seen?.pedigree));
+const pipOf = (b: Barter | null | undefined) => b?.theirs.things.find((t) => t.id === PIP_CRATE)?.beast ?? null;
+/** The same, whatever order the keys came in. */
+const same = (a: unknown, b: unknown): boolean => {
+  const sorted = (v: unknown): unknown => (Array.isArray(v) ? v.map(sorted) : v && typeof v === 'object'
+    ? Object.fromEntries(Object.entries(v as Record<string, unknown>).sort(([x], [y]) => x.localeCompare(y)).map(([k, x]) => [k, sorted(x)])) : v);
+  return JSON.stringify(sorted(a)) === JSON.stringify(sorted(b));
+};
+const low = pipOf(hers);
+check('Hild sees Pip in the crate on Ivar\'s side', !!low && low.id === PIP && low.name === 'Pip' && low.species === 'rabba', JSON.stringify(low));
+check('its sex, age, level, traits, forms and rarity', !!low && low.sex === 'female' && low.age === 'grown' && low.level === 23
+  && low.traits.join() === 'fleet,curious' && low.formColour && low.formSize === 'large' && low.rare === 'rare' && !low.due, JSON.stringify(low));
+check('and its dam and sire', low?.pedigree?.dam.name === 'Snow' && low.pedigree.sire.name === 'Horn', JSON.stringify(low?.pedigree));
+check('reading no rare trait, she is told where only the common one came from, and no line, as on its card',
+  same(low?.pedigree?.from, { curious: 'sire' }) && same(low?.pedigree?.line, {}), JSON.stringify(low?.pedigree));
+const lowLines = low ? beastLines(low, (id) => traitOf(id)?.tier === 'common') : [];
+check('and the window names the rare trait to her as unread', lowLines.includes('Trait: unread') && lowLines.includes(`Trait: curious: ${traitSays(traitOf('curious')!)}`)
+  && !lowLines.some((l) => l.startsWith('Line')), lowLines.join(' | '));
 check('the empty crate shows no wildermon', hers?.theirs.things.find((t) => t.id === EMPTY)?.beast == null);
 const mineSeen = read(IVAR).barter;
 check('Ivar sees Wren on Hild\'s side', mineSeen?.theirs.things[0]?.beast?.name === 'Wren' && mineSeen.theirs.things[0].beast.sex === 'male',
   JSON.stringify(mineSeen?.theirs.things[0]));
-check('and Pip on his own, with its whole pedigree', JSON.stringify(mineSeen?.mine.things[0]?.beast?.pedigree) === JSON.stringify(PEDIGREE),
+check('and Pip on his own, with its whole pedigree', same(mineSeen?.mine.things[0]?.beast?.pedigree, PEDIGREE),
   JSON.stringify(mineSeen?.mine.things[0]?.beast?.pedigree));
 
-// The window's lines.
+// Hild learns her husbandry: now she reads all of it.
+psql(`insert into skill (world_id, uid, id, value) values ('${W}', '${HILD}', 'animal_husbandry', 40);`);
+const seen = pipOf(read(HILD).barter);
+check('with the husbandry for it, Hild reads its whole pedigree', same(seen?.pedigree, PEDIGREE), JSON.stringify(seen?.pedigree));
 const all = (): boolean => true;
 const lines = seen ? beastLines(seen, all) : [];
 const pipLike = { species: 'rabba', skills: { foraging: 23.5 }, variant: seen?.variant ?? 0 };
@@ -176,15 +193,11 @@ check('the window: name, sex, kind, age and level on one line', lines[0] === `Pi
 check('each trait with its tier and what it gives', lines.includes(`Trait: fleet (rare): ${traitSays(fleet)}`) && lines.includes(`Trait: curious: ${traitSays(traitOf('curious')!)}`),
   lines.join(' | '));
 check('both forms with what they give', formLabels({ formColour: true, formSize: 'large' }, SPECIES.rabba).every((l) => lines.includes(l)), lines.join(' | '));
-check('the dam and sire, and the line', lines.includes(pedigreeLine(PEDIGREE)) && lineLines({ traits: ['fleet', 'curious'], pedigree: PEDIGREE }).every((l) => lines.includes(l))
-  && lineLines({ traits: ['fleet', 'curious'], pedigree: PEDIGREE }).length === 1, lines.join(' | '));
-const unread = seen ? beastLines(seen, () => false).filter((l) => l.startsWith('Trait')) : [];
-check('a trait the viewer cannot read is not named', unread.length === 2 && unread.every((l) => l === 'Trait: unread'), unread.join(' | '));
-check('no pedigree on one not bred', wrenLines().includes('Pedigree: none'), wrenLines().join(' | '));
-function wrenLines(): string[] {
-  const w = mineSeen?.theirs.things[0]?.beast;
-  return w ? beastLines(w, all) : [];
-}
+const lineOf = lineLines({ traits: ['fleet', 'curious'], pedigree: PEDIGREE });
+check('the dam and sire, and the line', lines.includes(pedigreeLine(PEDIGREE)) && lineOf.length === 1 && lineOf.every((l) => lines.includes(l)), lines.join(' | '));
+const wren = mineSeen?.theirs.things[0]?.beast;
+const wrenLines = wren ? beastLines(wren, all) : [];
+check('no pedigree on one not bred', wrenLines.includes('Pedigree: none'), wrenLines.join(' | '));
 
 /* ---- the crate's wildermon changed under the trade ----------------------------- */
 console.log('--- changed under the trade');

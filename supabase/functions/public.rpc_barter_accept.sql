@@ -36,12 +36,17 @@ begin
 
   /*
    * Both have accepted. Both bodies, every thing on both sides and every coin
-   * in both purses held, in that order, and every one of them asked again
-   * under the lock.
+   * in both purses held, in that order, then the wildermon in any crate on a
+   * side, and every one of them asked again under the lock.
    */
   perform 1 from player where world_id = p_world and uid in (b.asker, b.other) order by uid for update;
   perform 1 from item where world_id = p_world and holder = 'player' and holder_uid in (b.asker, b.other)
      and (def = 'coin' or id in (select item from barter_item where world_id = p_world and n = b.n))
+   order by id for update;
+  perform 1 from creature where world_id = p_world
+     and id in (select i.creature from barter_item bi join item i on i.world_id = bi.world_id and i.id = bi.item
+                 where bi.world_id = p_world and bi.n = b.n and i.creature is not null
+                union select bi.creature from barter_item bi where bi.world_id = p_world and bi.n = b.n and bi.creature is not null)
    order by id for update;
   why := coalesce(barter_side_refusal(b, b.asker), barter_side_refusal(b, b.other));
   if why is null then
