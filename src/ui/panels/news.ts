@@ -11,6 +11,7 @@ import { COLOUR_FORM_ODDS, FORM_PASS, formGives, formName, SIZE_FORM_ODDS } from
 import { BUILD_COUNTS, MOST_GOES } from '../buildCounts';
 import { PLAN_AREA_MOST, PLAN_UNDO_SECONDS } from '../../game/planarea';
 import { UPDATE_CHECK_MS } from '../update';
+import { STALE_BUILD } from '../../version';
 import { JOURNAL_TABS } from './journaltabs';
 import { RESPAWN_ARM_MS } from '../respawn';
 import { BLOCK_SECS, FLINCH_LIT, FLINCH_SECS, STUMBLE_SECS } from '../../game/fight';
@@ -4465,6 +4466,13 @@ export const NEWS: News[] = [
       `New: Track on a monster's field guide page: its kind's nearest lair within ${LAIR_TRACK} tiles.`,
       'Changed: no settlement founded nearer a lair than its kind\'s distance.',
       'Removed: monsters in the wild\'s roll and the Northeast Tundra\'s monster-only wild (its wild now the usual mix); every monster roaming when lairs landed.',
+    ],
+  },
+  {
+    n: 601,
+    day: '2026-11-14',
+    lines: () => [
+      `Fixed: wildermon drawn as name and health bar only, in the world and the Field guide, on a page opened before a site update. Update button: "${STALE_BUILD}" at the first refused (was: "Update to v…", checked every ${UPDATE_CHECK_MS / 60_000} minutes).`,
     ],
   },
   // Elementalism (`infusion.ts`, `infuseActions.ts`).
