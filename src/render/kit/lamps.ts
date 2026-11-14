@@ -122,6 +122,8 @@ function lantern(parts: KitPart[], at: V3, k: number, lit: boolean, frame = 0): 
 /** The arm just over the lantern's ring, and the post's head just over the arm: under the eaves of one storey (`LAMP_HANG`). */
 const RING_TOP = LAMP_HANG.arm + lanternTop(LAMP_GLASS);
 const POST = 0.8, ARM_Z = RING_TOP + 0.3, HEAD = ARM_Z + 0.6, OUT = LAMP_ARM + 0.4;
+/** The hook off the end of a post's arm, in its own frame, for what is hung there in place of the lantern (`HANG_HOOKS` in garden.ts). */
+export const POST_HOOK: V3 = [0, LAMP_ARM, ARM_Z - 0.6];
 
 /** A side of the post, its grain running up it. */
 const upGrain = (seed: number) => (g: Ctx, k: PaintCtx, s: Side): void => grain(g, k.fill, s.w, s.h, seed, 'y', 0.8);

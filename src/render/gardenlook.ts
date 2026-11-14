@@ -5,22 +5,51 @@
  * setting (`gardenAmbience`); and a carved figure, which is the kind's own
  * model recoloured to the wood it was carved from (`carving`).
  */
-import { furnitureDef, type PlacedFurniture } from '../game/furniture';
+import { ACROSS_OF, facingOf, furnitureCentre, furnitureDef, type PlacedFurniture } from '../game/furniture';
+import type { Side } from '../game/building';
+import { UNITS_PER_TILE } from './iso';
 import { bloomStage, bonsaiGrowth, FIGURE_KINDS, hedgeGrowth, topiaryOut, topiaryShows } from '../game/garden';
 import type { Effects } from '../game/settings';
 import { CLIMBER_BARE, CLIMBER_BLOOMS, roseStage } from '../game/roses';
 import { seasonAt } from '../world/calendar';
 import { FEWER_SHARE } from './fx/actions';
-import { bloomTrim, BLOOM_STAGES, bonsaiTrim, carving, figureTrim, gardenFx, hedgeTrim, standTrim, topiaryTrim, trophyTrim, wisteriaTrim } from './kit/garden';
+import {
+  bloomTrim, BLOOM_STAGES, bonsaiTrim, carving, figureTrim, gardenFx, hangCode, HANG_HOOKS, hedgeTrim, standTrim, topiaryTrim, trophyTrim, wisteriaTrim, withHang,
+} from './kit/garden';
 import { drawBeastPortrait } from './beasts';
 import { wildermonKind } from './wildermon';
 import { css, mix, type RGB } from './runestone';
 
-/** A garden piece's trim, or undefined for a piece that is none of them (or, a herb box, is drawn as a planter is). */
-export function gardenTrim(f: PlacedFurniture, now: number): number | undefined {
+/** Which way a piece's front points in the world, as `ACROSS_OF` its width. */
+const FRONT_OF: Record<Side, readonly [number, number]> = { s: [0, 1], e: [1, 0], n: [0, -1], w: [-1, 0] };
+
+/**
+ * Where the post a hung piece hangs from stands from it (`hangCode`): the
+ * first thing on its tile and storey it may hang from. Nought for a piece
+ * hung off a wall, or not hung.
+ */
+export function hangCodeOf(f: PlacedFurniture, onTile: readonly PlacedFurniture[]): number {
+  if (furnitureDef(f.kind).mount !== 'hang') return 0;
+  const post = onTile.find((o) => o.id !== f.id && !!HANG_HOOKS[o.kind] && (o.level ?? 0) === (f.level ?? 0));
+  if (!post) return 0;
+  const [px, py] = furnitureCentre(post), [hx, hy] = furnitureCentre(f);
+  const d = [(px - hx) * UNITS_PER_TILE, (py - hy) * UNITS_PER_TILE] as const;
+  const across = ACROSS_OF[facingOf(f)], front = FRONT_OF[facingOf(f)], theirs = FRONT_OF[facingOf(post)];
+  const dot = (a: readonly [number, number], b: readonly [number, number]): number => a[0] * b[0] + a[1] * b[1];
+  return hangCode(post.kind, [dot(theirs, across), dot(theirs, front)], dot(d, across), dot(d, front));
+}
+
+/**
+ * A garden piece's trim, or undefined for a piece that is none of them (or, a
+ * herb box, is drawn as a planter is). `onTile` is what stands on its tile, for
+ * a hung piece's post.
+ */
+export function gardenTrim(f: PlacedFurniture, now: number, onTile: readonly PlacedFurniture[] = []): number | undefined {
   const def = furnitureDef(f.kind);
   const g = f.garden;
-  if (def.bloom) return bloomTrim(BLOOM_STAGES.indexOf(bloomStage(f.setAt, now).stage), g?.bloom ?? []);
+  const hang = def.mount === 'hang' ? hangCodeOf(f, onTile) : 0;
+  if (def.chime) return withHang(0, hang);
+  if (def.bloom) return withHang(bloomTrim(BLOOM_STAGES.indexOf(bloomStage(f.setAt, now).stage), g?.bloom ?? []), hang);
   if (def.hedge) return hedgeTrim(hedgeGrowth(f.setAt, now), g?.clip ?? null);
   if (def.topiary) return topiaryTrim(topiaryShows(g, now), topiaryOut(g, now));
   if (def.bonsai) return bonsaiTrim(bonsaiGrowth(f.setAt, now), g?.prunes ?? 0);

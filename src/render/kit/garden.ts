@@ -13,6 +13,7 @@ import {
 import { leg, rod, woodSides } from './woodwork';
 import { gableRoof, strut } from './outdoor';
 import { benchOf } from './seating';
+import { POST_HOOK } from './lamps';
 import { climbingRoses, jit, leaf, roseOf, roseTrim } from './rosearch';
 
 /**
@@ -333,20 +334,92 @@ function bracket(y: number, z: number, wood: Tone = woodTone()): KitPart[] {
   return parts;
 }
 
+/*
+ * Hung from a post rather than off a wall: the hook it hangs from, in the
+ * frame of the thing it hangs from, and where an iron arm out to the hook
+ * leaves that thing (none where the thing has an arm of its own, a lantern
+ * post's).
+ */
+export const HANG_HOOKS: Readonly<Record<string, { at: V3; from?: V3 }>> = {
+  lamp_post: { at: POST_HOOK },
+  lamp_pillar: { at: [0, 4.4, 15.6], from: [0, 1.6, 15.6] },
+  flagpole: { at: [0, 3.6, 23], from: [0, 0.4, 23] },
+};
+const HOOK_KINDS = Object.keys(HANG_HOOKS);
+/** How far off a hung piece's middle the post it hangs from may stand, in units: a tile and a half. */
+const HOOK_SPAN = 60;
+/** The part of a hung piece's trim under this is its own (flowers); above it, the post it hangs from (`hangCode`). */
+const HANG_BASE = 4096;
+
+/**
+ * Where a hung piece's post stands from it, as one number: which kind of
+ * post, which way the post turns against the piece (by where the post's front
+ * points in the piece's frame), and how far off the post's middle is in the
+ * piece's frame, in whole units. Nought off a wall.
+ */
+export function hangCode(post: string, front: readonly [number, number], dx: number, dy: number): number {
+  const k = HOOK_KINDS.indexOf(post);
+  if (k < 0) return 0;
+  const r = front[1] > 0.5 ? 0 : front[0] > 0.5 ? 1 : front[1] < -0.5 ? 2 : 3;
+  const span = 2 * HOOK_SPAN + 1;
+  const ox = Math.max(-HOOK_SPAN, Math.min(HOOK_SPAN, Math.round(dx))) + HOOK_SPAN, oy = Math.max(-HOOK_SPAN, Math.min(HOOK_SPAN, Math.round(dy))) + HOOK_SPAN;
+  return 1 + ((k * 4 + r) * span + oy) * span + ox;
+}
+
+/** The hook a hung piece hangs from in its own frame, and the arm out to it, from its `hangCode`; null off a wall. */
+function hookOf(code: number): { at: V3; arm: [V3, V3] | null } | null {
+  if (code <= 0) return null;
+  const span = 2 * HOOK_SPAN + 1;
+  let c = code - 1;
+  const ox = (c % span) - HOOK_SPAN; c = Math.floor(c / span);
+  const oy = (c % span) - HOOK_SPAN; c = Math.floor(c / span);
+  const r = c % 4, def = HANG_HOOKS[HOOK_KINDS[Math.floor(c / 4)]];
+  if (!def) return null;
+  // The post's front in this frame, and its width at a right angle to it, as `ACROSS` is to `FRONT` (kitpieces.ts).
+  const [fx, fy] = ([[0, 1], [1, 0], [0, -1], [-1, 0]] as const)[r];
+  const turn = (p: V3): V3 => [ox + p[0] * fy + p[1] * fx, oy - p[0] * fx + p[1] * fy, p[2]];
+  return { at: turn(def.at), arm: def.from ? [turn(def.from), turn(def.at)] : null };
+}
+
+/** What a hung piece hangs from: off a wall, a bracket at `wallY`, `wallZ` up; off a post, the post's hook and an arm out to it if it needs one. */
+function hangFrom(code: number, wallY: number, wallZ: number, wood: Tone): { parts: KitPart[]; at: V3 } {
+  const hook = hookOf(code);
+  if (!hook) return { parts: bracket(wallY, wallZ, wood), at: [0, wallY, wallZ] };
+  const parts: KitPart[] = [];
+  if (hook.arm) {
+    const [a, b] = hook.arm;
+    parts.push({ faces: rod(a, b, 0.22, IRON, 5) });
+    parts.push({ faces: rod([a[0], a[1], a[2] - 2], [a[0] + (b[0] - a[0]) * 0.5, a[1] + (b[1] - a[1]) * 0.5, a[2]], 0.15, IRON, 4) });
+  }
+  const [x, y, z] = hook.at;
+  parts.push({ faces: rod([x, y, z + 0.4], [x, y, z - 0.3], 0.12, IRON, 4) });
+  return { parts, at: [x, y, z] };
+}
+
+/** A hung piece's own part of its trim, and its post's. */
+const hungTrim = (trim: number | undefined): { own: number | undefined; code: number } =>
+  trim === undefined ? { own: undefined, code: 0 } : { own: trim % HANG_BASE, code: Math.floor(trim / HANG_BASE) };
+/** A hung piece's trim: its own, and the post it hangs from (`hangCode`). */
+export const withHang = (own: number, code: number): number => own + HANG_BASE * code;
+
 function hangingBasketOf(look: KitLook): KitModel {
   const parts: KitPart[] = [];
-  const y = FACE_Y - 3.2;
-  parts.push(...bracket(y, HANG_Z, woodTone(look.material, look.tint, 0.6)));
+  const { own, code } = hungTrim(look.trim);
+  const hung = hangFrom(code, FACE_Y - 3.2, HANG_Z, woodTone(look.material, look.tint, 0.6));
+  parts.push(...hung.parts);
+  // Everything below the hook, the drop the same off a post as off a wall.
+  const [x, y, top] = hung.at;
+  const bz = top - (HANG_Z - BASKET_Z);
   // The ropes from the hook to the rim, three of them.
   for (let i = 0; i < 3; i++) {
     const a = (i / 3) * TAU + 0.5;
-    parts.push({ faces: rod([0, y, HANG_Z - 0.3], [Math.cos(a) * BASKET_R * 0.95, y + Math.sin(a) * BASKET_R * 0.95, BASKET_Z + 2.3], 0.1, ROPE, 4) });
+    parts.push({ faces: rod([x, y, top - 0.3], [x + Math.cos(a) * BASKET_R * 0.95, y + Math.sin(a) * BASKET_R * 0.95, bz + 2.3], 0.1, ROPE, 4) });
   }
   // The pot, round-bottomed, in a net of rope.
-  parts.push({ faces: lathe(0, y, [[BASKET_Z - 0.4, 0.3], [BASKET_Z, BASKET_R * 0.7], [BASKET_Z + 1.4, BASKET_R], [BASKET_Z + 2.4, BASKET_R * 1.02], [BASKET_Z + 2.4, BASKET_R * 0.86]], 10, CLAY, 0.5,
+  parts.push({ faces: lathe(x, y, [[bz - 0.4, 0.3], [bz, BASKET_R * 0.7], [bz + 1.4, BASKET_R], [bz + 2.4, BASKET_R * 1.02], [bz + 2.4, BASKET_R * 0.86]], 10, CLAY, 0.5,
     () => ({ crease: 0.25 })) });
-  const z = BASKET_Z + 2.3;
-  parts.push(...bloomRow([[-1.3, y, z], [1.3, y + 0.3, z]], look.trim, 1.25, 3, 1.4));
+  const z = bz + 2.3;
+  parts.push(...bloomRow([[x - 1.3, y, z], [x + 1.3, y + 0.3, z]], own, 1.25, 3, 1.4));
   // Hung up: no shade on the floor under it.
   return { parts, shade: null };
 }
@@ -1100,14 +1173,22 @@ export const PLANT_STAND: KitPiece = {
 const CHIME_HOOK = 24, CHIME_DISC = 21.6;
 const TUBES: Array<[number, number]> = [[0, 4.2], [1.2, 3.4], [2.4, 4.8], [3.6, 2.9], [4.8, 3.8]];
 
+/** Where a chime's disc hangs, off the wall or off a post's hook: the hook's point and the disc's height. */
+function chimeAt(code: number): { x: number; y: number; disc: number } {
+  const hook = hookOf(code);
+  return hook ? { x: hook.at[0], y: hook.at[1], disc: hook.at[2] - (CHIME_HOOK - CHIME_DISC) } : { x: 0, y: FACE_Y - 3, disc: CHIME_DISC };
+}
+
 function chimeOf(look: KitLook): KitModel {
   const W = woodTone(look.material, look.tint, 0.6);
-  const y = FACE_Y - 3;
-  const parts: KitPart[] = [...bracket(y, CHIME_HOOK, W)];
+  const { code } = hungTrim(look.trim);
+  const hung = hangFrom(code, FACE_Y - 3, CHIME_HOOK, W);
+  const { x, y, disc } = chimeAt(code);
+  const parts: KitPart[] = [...hung.parts];
   // Room for its tubes, drawn over the bake as the wind swings them (`chimeTubes`).
-  parts.push(loose([[-3.4, y - 3.4, CHIME_DISC - 9], [3.4, y + 3.4, CHIME_DISC]], () => undefined));
-  parts.push({ faces: rod([0, y, CHIME_HOOK - 0.2], [0, y, CHIME_DISC + 0.3], 0.08, ROPE, 4) });
-  parts.push({ faces: lathe(0, y, [[CHIME_DISC, 1.4], [CHIME_DISC + 0.4, 1.4], [CHIME_DISC + 0.4, 0.01]], 10, W), edges: true });
+  parts.push(loose([[x - 3.4, y - 3.4, disc - 9], [x + 3.4, y + 3.4, disc]], () => undefined));
+  parts.push({ faces: rod([x, y, hung.at[2] - 0.2], [x, y, disc + 0.3], 0.08, ROPE, 4) });
+  parts.push({ faces: lathe(x, y, [[disc, 1.4], [disc + 0.4, 1.4], [disc + 0.4, 0.01]], 10, W), edges: true });
   return { parts, shade: null };
 }
 
@@ -1120,7 +1201,7 @@ function chimeTubes(ctx: Ctx, sx: number, sy: number, zoom: number, view: KitVie
   const e = eyeOfView(view);
   const f = Math.max(0, air?.force ?? 0);
   const t = air?.t ?? 0;
-  const y = FACE_Y - 3;
+  const { x: hx, y, disc } = chimeAt(air?.hang ?? 0);
   const W = woodTone();
   const sway = f < CHIME_STILL ? 0.04 : 0.12 + f * 0.5;
   const wind = air ? Math.atan2(air.y, air.x) : 0;
@@ -1130,8 +1211,8 @@ function chimeTubes(ctx: Ctx, sx: number, sy: number, zoom: number, view: KitVie
   ctx.lineCap = 'round';
   const hang = (ax: number, ay: number, len: number, w: number, ph: number, fill: RGB): void => {
     const a = Math.sin(t * (2.2 + ph * 0.3) + ph) * sway + (f >= CHIME_STILL ? Math.cos(wind) * f * 0.25 : 0);
-    const top: V3 = [ax, y + ay, CHIME_DISC - 0.1];
-    const bot: V3 = [ax + Math.sin(a) * len * 0.45, y + ay + Math.cos(wind + ph) * Math.sin(a) * len * 0.3, CHIME_DISC - 0.1 - len * Math.cos(a)];
+    const top: V3 = [hx + ax, y + ay, disc - 0.1];
+    const bot: V3 = [hx + ax + Math.sin(a) * len * 0.45, y + ay + Math.cos(wind + ph) * Math.sin(a) * len * 0.3, disc - 0.1 - len * Math.cos(a)];
     const [x0, y0] = proj(e, top), [x1, y1] = proj(e, bot);
     ctx.strokeStyle = css(mix(KIT_INK_RGB, fill, 0.15));
     ctx.lineWidth = w + INK * 1.6;
@@ -1150,7 +1231,7 @@ function chimeTubes(ctx: Ctx, sx: number, sy: number, zoom: number, view: KitVie
 }
 
 export const WIND_CHIME: KitPiece = {
-  model: (look) => chimeOf(look), uses: { material: true, tint: true }, wind: true,
+  model: (look) => chimeOf(look), uses: { trim: true, material: true, tint: true }, wind: true,
   live: (ctx, sx, sy, zoom, view, _night, _t, air) => chimeTubes(ctx, sx, sy, zoom, view, air),
 };
 

@@ -107,7 +107,7 @@ export interface KitPiece {
 /** A piece's turn on the screen (`PieceView`). */
 export interface KitView { ux: number; uy: number; vx: number; vy: number }
 /** The wind on a piece's cloth (`Air` in furniture.ts). */
-export interface KitAir { x: number; y: number; force: number; t: number; tint?: Tint; device?: number; seed?: number }
+export interface KitAir { x: number; y: number; force: number; t: number; tint?: Tint; device?: number; seed?: number; hang?: number }
 
 /* ---- the palette ----------------------------------------------------------------- */
 

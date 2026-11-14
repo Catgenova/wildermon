@@ -1474,6 +1474,8 @@ export interface Air {
   device?: number;
   /** Which piece it is, for what moves on it on a clock of its own (a birdhouse's birds). */
   seed?: number;
+  /** For a piece hung from a post, where the post stands from it (`hangCode` in kit/garden.ts). */
+  hang?: number;
 }
 /** Cloth with no weather on it: what a piece being set down is drawn with. */
 const STILL: Air = { x: 1, y: 0, force: 0, t: 0 };
