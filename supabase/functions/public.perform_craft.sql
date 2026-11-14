@@ -263,6 +263,11 @@ begin
     if r.result = carved_figure_kind() then
       update item set garden = jsonb_build_object('figure', p_target->>'species') where id = v_made;
     end if;
+    -- A woven rug, in the pattern chosen at the loom, the first when none is (`decor.ts`).
+    if r.result = woven_rug_kind() then
+      update item set garden = jsonb_build_object('pattern',
+        case when p_target->>'pattern' = any (rug_patterns()) then p_target->>'pattern' else (rug_patterns())[1] end) where id = v_made;
+    end if;
   end if;
   -- A boil leaves its dye in the bucket it was boiled in (`boiledDye`).
   if r.result = 'dye_bucket' then perform dye_boiled(p_world, p_uid, v_made, p_recipe); end if;

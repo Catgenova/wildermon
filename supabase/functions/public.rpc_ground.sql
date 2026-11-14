@@ -311,7 +311,9 @@ begin
         || case when c.hand then '{"hand": true}'::jsonb else '{}'::jsonb end
         -- And one on a garden bed, by its storey, standing still while it is covered (`gardenbed.ts`).
         || case when c.level is not null then jsonb_build_object('level', c.level) else '{}'::jsonb end
-        || case when c.still then '{"still": true}'::jsonb else '{}'::jsonb end)
+        || case when c.still then '{"still": true}'::jsonb else '{}'::jsonb end
+        -- And compost spread on it (`decor.ts`).
+        || case when c.fed then '{"fed": true}'::jsonb else '{}'::jsonb end)
       from crop c
       where c.world_id = p_world
         and c.x between floor(p.x - p_range)::int - 1 and floor(p.x + p_range)::int + 1
@@ -322,7 +324,8 @@ begin
         'planter', c.placed, 'x', pl.x, 'y', pl.y, 'id', c.id, 'stage', c.stage,
         'grown', v_box - crop_clock(true, c.stage_at),
         'ago', extract(epoch from (now() - c.stage_at)),
-        'tended', c.tended, 'tendedNow', c.tended_now, 'ql', c.ql, 'pace', c.pace) order by c.placed)
+        'tended', c.tended, 'tendedNow', c.tended_now, 'ql', c.ql, 'pace', c.pace)
+        || case when c.fed then '{"fed": true}'::jsonb else '{}'::jsonb end order by c.placed)
       from placed pl join planter_crop c on c.placed = pl.id
       where pl.world_id = p_world
         and pl.x between floor(p.x - p_range)::int - 1 and floor(p.x + p_range)::int + 1

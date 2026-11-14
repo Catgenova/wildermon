@@ -8,7 +8,10 @@ declare c crop; r record;
 begin
   select * into c from crop cr where cr.world_id = p_world and cr.x = p_x and cr.y = p_y;
   if c.id is null then return; end if;
+  -- Compost spread on it (`decor.ts`).
+  perform set_config('wildermon.reap_boost', case when c.fed then compost_boost()::text else '' end, true);
   select * into r from reap_what(p_world, p_uid, c.id, c.tended, c.ql, p_skill);
+  perform set_config('wildermon.reap_boost', '', true);
   o_produce := r.o_produce; o_got := r.o_got; o_seed := r.o_seed; o_seeds := r.o_seeds; o_ql := r.o_ql; o_rare := r.o_rare;
   if c.glass then perform journal_note(p_world, p_uid, 'harvest:glass'); end if;
   perform journal_note(p_world, p_uid, 'harvest:' || r.o_produce);

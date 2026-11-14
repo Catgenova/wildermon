@@ -20,4 +20,6 @@ AS $function$
       or dye_recipe_action(p_action)
       -- The garden pieces' jobs: wildflowers, a trim, a clip, a prune, what is on show (`garden.ts`).
       or garden_action(p_action)
+      -- The home pieces' jobs: a sundial, a compost bin, compost spread, curtains, an armour stand (`decor.ts`).
+      or decor_action(p_action)
 $function$
