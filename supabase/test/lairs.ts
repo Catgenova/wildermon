@@ -146,6 +146,10 @@ begin
     select pick_wild(wd.id, floor(r.x * wd.size)::int, floor(r.y * wd.size)::int) as got
       from (select * from world order by size desc limit 1) wd, (values (0.8378, 0.2728), (0.5039, 0.1258)) r (x, y), generate_series(1, 150)) p
    where p.got in (select id from species_def where monster);
+  -- And on the Northeast Tundra, monster country until lairs: what the wild puts down there is a wildermon, every roll.
+  insert into said select 'TUNDRAWILD', count(*) || '|' || count(*) filter (where p.got in (select id from species_def where not monster)) from (
+    select pick_wild(wd.id, floor(0.8378 * wd.size)::int, floor(0.2728 * wd.size)::int) as got
+      from (select * from world order by size desc limit 1) wd, generate_series(1, 150)) p;
   select coalesce(max(id), 0) into v_max from creature where world_id = w;
   for i in 0 .. 3 loop for j in 0 .. 3 loop perform creature_stock_block(w, i, j); end loop; end loop;
   insert into said select 'STOCKED', count(*) || '|' || count(*) filter (where s2.monster) from creature c2 join species_def s2 on s2.id = c2.species
@@ -404,7 +408,8 @@ for (const g of said('GARR')) {
 /* ---- no monster out of the wild --------------------------------------------------------------------------------------- */
 
 check('the wild\'s roll puts down no monster anywhere on this island', one('WILDPICK') === '-', one('WILDPICK'));
-check('nor in the monster country that was, nor on Volcano Isle', one('COUNTRY') === '-', one('COUNTRY'));
+check('nor on the Northeast Tundra (monster country until lairs), nor on Volcano Isle', one('COUNTRY') === '-', one('COUNTRY'));
+check('on the Northeast Tundra the wild\'s roll is a wildermon every time', one('TUNDRAWILD') === '150|150', one('TUNDRAWILD'));
 check('and the stocking stands up wildermon and no monster', Number(one('STOCKED').split('|')[0]) > 0 && one('STOCKED').split('|')[1] === '0', one('STOCKED'));
 
 /* ---- the leash ------------------------------------------------------------------------------------------------------- */
