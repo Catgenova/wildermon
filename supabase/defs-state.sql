@@ -10393,3 +10393,18 @@ create or replace function open_slope() returns double precision language sql im
 create or replace function hill_slope() returns double precision language sql immutable as $fn$ select 24::double precision $fn$;
 create or replace function lair_ring_want() returns int language sql immutable as $fn$ select 4 $fn$;
 create or replace function hoard_scale() returns text language sql immutable as $fn$ select 'hoard' $fn$;
+create or replace function thepath_steps() returns text[] language sql immutable as $fn$ select array['cheese', 'forage', 'track', 'tame', 'around', 'tree', 'shafts', 'fish', 'cook', 'walk', 'site', 'found', 'assign', 'crate', 'campfire', 'up2', 'clay', 'chiptail', 'bricks', 'mortar', 'smelter', 'up3', 'prospect', 'ironemole', 'lumps', 'anvil', 'up4', 'snailglow', 'pack', 'plan', 'walls', 'workers', 'up5', 'chestkit']::text[] $fn$;
+create or replace function thepath_detours() returns text[] language sql immutable as $fn$ select array['snufflet', 'finlet', 'puddlehop', 'mudlet', 'sandpip', 'botanize', 'mine']::text[] $fn$;
+create or replace function thepath_kinds() returns text[] language sql immutable as $fn$ select array['bevere', 'quarra', 'mola', 'embra', 'magga', 'rabba', 'wadd', 'holla', 'noot', 'crawler']::text[] $fn$;
+create or replace function thepath_tames() returns table (step text, species text) language sql immutable as $fn$ select * from (values ('tame', 'bevere'), ('chiptail', 'quarra'), ('ironemole', 'mola'), ('snailglow', 'embra'), ('chestkit', 'magga')) v (step, species) $fn$;
+create or replace function thepath_sure() returns double precision language sql immutable as $fn$ select 0.9::double precision $fn$;
+create or replace function thepath_skilled() returns double precision language sql immutable as $fn$ select 5::double precision $fn$;
+create or replace function thepath_site_trees() returns double precision language sql immutable as $fn$ select 10::double precision $fn$;
+create or replace function thepath_site_tree_reach() returns double precision language sql immutable as $fn$ select 10::double precision $fn$;
+create or replace function thepath_site_water() returns double precision language sql immutable as $fn$ select 15::double precision $fn$;
+create or replace function thepath_site_rock() returns double precision language sql immutable as $fn$ select 20::double precision $fn$;
+create or replace function thepath_site_count() returns double precision language sql immutable as $fn$ select 3::double precision $fn$;
+create or replace function thepath_site_reach() returns double precision language sql immutable as $fn$ select 64::double precision $fn$;
+create or replace function thepath_site_every() returns double precision language sql immutable as $fn$ select 4::double precision $fn$;
+create or replace function thepath_site_apart() returns double precision language sql immutable as $fn$ select 12::double precision $fn$;
+create or replace function thepath_need(p_step text) returns int language sql immutable as $fn$ select case p_step when 'forage' then 3 when 'fish' then 1 when 'clay' then 1 when 'bricks' then 48 when 'mortar' then 24 when 'workers' then 3 when 'lumps' then 40 else 1 end $fn$;

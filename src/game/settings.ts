@@ -137,6 +137,8 @@ export const SETTING_DEFAULTS = {
   animations: 'on' as Animations,
   /** Under the frame rate, the milliseconds a frame spends drawing each layer (`Timings`). */
   timings: false,
+  /** The Path's line at the top of the screen folded to its step number (`src/ui/pathstrip.ts`). */
+  pathFolded: false,
   /**
    * Phone only (`lowPowerOn`): at most `LOW_POWER_FPS` frames a second, the
    * fast graphics, and no wakes or dust.

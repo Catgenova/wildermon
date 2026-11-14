@@ -11,7 +11,9 @@ begin
   if sd.id is null then return 'No such kind.'; end if;
   -- A monster's trail is its lair's, seen or not (`lair_track`).
   if sd.monster then return null; end if;
-  if not exists (select 1 from guide g where g.world_id = p_world and g.uid = p_uid and g.species = sd.id) then
+  -- A kind the Path noted (`guide_noted`) is tracked as if seen.
+  if not exists (select 1 from guide g where g.world_id = p_world and g.uid = p_uid and g.species = sd.id)
+     and not exists (select 1 from guide_noted n where n.world_id = p_world and n.uid = p_uid and n.species = sd.id) then
     return sd.name || ' not seen yet: only kinds marked seen in your field guide can be tracked.';
   end if;
   return null;

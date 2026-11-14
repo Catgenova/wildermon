@@ -108,6 +108,8 @@ export type GameEvents = {
   journal: [];
   /** The island's record of the goals done has come in holding one or more this side did not: redraw, but nothing is news. */
   goals: [];
+  /** The Path (`path.ts`) has moved: a step done or said back, its state from the island, or its sites. */
+  path: [];
   action: [];
   stats: [];
   /** Lain down in a bed and logged off asleep in it, by its name (`Game.fallAsleep`). */

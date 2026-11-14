@@ -18,5 +18,8 @@ begin
       'seen', coalesce(jsonb_agg(g.species order by g.species), '[]'::jsonb),
       'tamed', coalesce(jsonb_agg(g.species order by g.species) filter (where g.tamed), '[]'::jsonb),
       'bred', coalesce(jsonb_agg(g.species order by g.species) filter (where g.bred), '[]'::jsonb))
-    from guide g where g.world_id = p_world and g.uid = me);
+    from guide g where g.world_id = p_world and g.uid = me)
+    -- And the kinds the Path noted (`guide_noted`): Track takes them; nothing counts them.
+    || jsonb_build_object('noted', coalesce((select jsonb_agg(n.species order by n.species) from guide_noted n
+                                             where n.world_id = p_world and n.uid = me), '[]'::jsonb));
 end $function$

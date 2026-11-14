@@ -68,7 +68,15 @@ export interface GuideBook {
   seen: string[];
   tamed: string[];
   bred: string[];
+  /**
+   * The kinds noted by the Path (`path.ts`, the island's `guide_noted`): Track takes them as if seen, and nothing
+   * else does. Not a mark: no count, goal or title reads it, and a page noted and not seen is still its shape.
+   */
+  noted?: string[];
 }
+
+/** What a page noted and not seen says under its shape. */
+export const NOTED_SAYS = 'Noted (Path)';
 
 /**
  * How often what is in view is looked over for a kind the book has not got,
@@ -168,6 +176,8 @@ export class FieldGuide {
   readonly seen = new Set<string>();
   readonly tamed = new Set<string>();
   readonly bred = new Set<string>();
+  /** Kinds the Path has noted (`GuideBook.noted`): tracked as if seen, counted nowhere. */
+  readonly noted = new Set<string>();
 
   /**
    * Mark a kind, and say which marks are new. Taming or breeding one marks it
@@ -204,10 +214,13 @@ export class FieldGuide {
         if (typeof id === 'string' && guideMarks(id).includes(m)) this.mark(id, m);
       }
     }
+    if (Array.isArray(book?.noted)) {
+      for (const id of book.noted) if (typeof id === 'string' && SPECIES[id] && keepable(SPECIES[id])) this.noted.add(id);
+    }
   }
 
   toJSON(): GuideBook {
-    return { seen: [...this.seen].sort(), tamed: [...this.tamed].sort(), bred: [...this.bred].sort() };
+    return { seen: [...this.seen].sort(), tamed: [...this.tamed].sort(), bred: [...this.bred].sort(), noted: [...this.noted].sort() };
   }
 
   static fromJSON(book: Partial<GuideBook> | null | undefined): FieldGuide {

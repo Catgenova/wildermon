@@ -178,6 +178,7 @@ export const TABLES: Record<string, Read> = {
   faith_zone: 'none',
   green_since: 'none',
   guide: 'none',
+  guide_noted: 'none',
   // The monster lairs (`lairs.ts`): where each is, what each body dealt its boss, who has seen it, when one was looked for.
   lair: 'none',
   lair_blow: 'none',
@@ -375,6 +376,10 @@ export const EXECUTE: Record<'anon' | 'authenticated', readonly string[]> = {
     "rpc_take_perk(uuid,text)",
     "rpc_take_seat()",
     "rpc_takings(uuid,bigint)",
+    "rpc_thepath(uuid,boolean)",
+    "rpc_thepath_sites(uuid)",
+    "rpc_thepath_skip(uuid,text,boolean)",
+    "rpc_thepath_supply(uuid,text)",
     "rpc_treasure_map(uuid,bigint)",
     "rpc_treasure_warm(uuid,bigint)",
     "rpc_tree(uuid)",

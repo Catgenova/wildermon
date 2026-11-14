@@ -281,6 +281,7 @@ import {
 } from '../../game/gardendefs';
 import { MOUNT_SAID } from '../../game/garden';
 import { CLIMBER_BARE, CLIMBER_BLOOMS, ROSE_SEASONS } from '../../game/roses';
+import { PATH_DETOURS, PATH_KINDS, PATH_SITE, PATH_SKILLS, PATH_STEPS, PATH_SURE } from '../../game/path';
 
 /** Where a piece fixed in this way goes, as the help says it (`garden.ts`). */
 const GARDEN_MOUNT = (m: Mount): string => MOUNT_SAID[m];
@@ -4458,6 +4459,19 @@ export const NEWS: News[] = [
       `New: fishing net: ${LIFT_DROPS * NET_LIFT.length} drops off the net as it is lifted, ${SHAKE_DROPS} at each of ${NET_SHAKES.length} shakes.`,
       `New: rowing under way: ${OAR_DROPS} drops a blade at the catch; whirl pair a blade a stroke, ${SWIRL_SECS} s.`,
       'Without a graphics card: swimming strokes\' splashes, rings treading water, the float\'s strike and a catch only.',
+    ],
+  },
+  // The Path: steps from the runestone to a settlement at its last level (`src/game/path.ts`).
+  {
+    n: 609,
+    day: '2026-11-14',
+    lines: () => [
+      `New: Path: ${PATH_STEPS.length} steps, runestone to settlement level ${MAX_DEED_LEVEL}; ${PATH_DETOURS.length} detours; ${PATH_SKILLS.length} skills. Optional.`,
+      'New: Path: On, first runestone card (new character). Settings, Interface: Path. Kept on the island.',
+      `New: Path line, top of the screen: step, bait, taming; arrow to the place; fold. Journal, Path tab (${defaultKey('win_path')}): steps by phase, Skip, detours.`,
+      `New: Path on: ${PATH_KINDS.length} kinds noted in the field guide, Noted (Path): Track as if seen. Not counted as seen.`,
+      `New: Path suggested sites: ${PATH_SITE.count} nearest founding tiles, trees ${PATH_SITE.trees}+ within ${PATH_SITE.treeReach}, water within ${PATH_SITE.water}, rock within ${PATH_SITE.rock}.`,
+      `New: Path supply: a tame step with nothing in season: favourite food, ${percent(PATH_SURE)} to tame; issued; once a step.`,
     ],
   },
   // The Ironemole line takes any seam; a miner's idle line; a kind's own range per step (`anySeam`, `mine_idle`, `range_per_step`).

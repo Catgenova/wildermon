@@ -273,7 +273,10 @@ function playingElsewhere(stop?: () => void): void {
 watchErrors();
 // This tab's seat on the account, before the first call (`holdSeat`).
 holdSeat();
-const started = await startIsland(params, boot.say, (stones) => pickStone(document.querySelector('#boot .boot-card'), stones)).catch((e: unknown) => {
+const started = await startIsland(params, boot.say, (stones) => {
+  const path = { on: true };
+  return pickStone(document.querySelector('#boot .boot-card'), stones, path).then((stone) => ({ stone, path: path.on }));
+}).catch((e: unknown) => {
   boot.stop();
   if (e instanceof Error && e.message.includes(SEAT_ELSEWHERE)) {
     playingElsewhere();
@@ -491,6 +494,7 @@ const PRESSES: Record<string, () => void> = {
   win_map: () => ui.toggleWindow('map'),
   win_wildermon: () => ui.toggleWindow('wildermon'),
   win_guide: () => ui.toggleJournal('guide'),
+  win_path: () => ui.toggleJournal('path'),
   win_deed: () => ui.toggleWindow('deed'),
   win_ledger: () => ui.toggleJournal('ledger'),
   win_stores: () => ui.toggleWindow('stores'),

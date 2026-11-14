@@ -34,7 +34,7 @@
  *     somebody keeps write their marks, and a birth to a wild dam or one
  *     turned loose writes none;
  *   * `rpc_guide` hands back exactly the book, and only its owner's, which the
- *     browser takes as it comes;
+ *     browser takes as it comes (and the kinds the Path noted, none here: `path.ts`);
  *   * and nobody reads or writes the table but through those two doors, which
  *     are a signed-in browser's to call while the mark itself is nobody's.
  *
@@ -465,10 +465,10 @@ check('a birth to a dam he keeps marks the kind bred; to a wild dam or one of hi
 check('one of his reaching its second stage marks that stage\'s page tamed, and its third the third\'s; a wild one evolving marks nothing, and bred is never a stage\'s',
   answer('EVOLVED1') === 'woola:1:true' && answer('EVOLVED') === 'woola:1:true:false,woola:2:true:false', `${answer('EVOLVED1')} / ${answer('EVOLVED')}`);
 const book = JSON.parse(answer('BOOK')) as { seen: string[]; tamed: string[]; bred: string[] };
-check('rpc_guide hands back exactly the book', answer('BOOK') === '{"bred": ["cudda"], "seen": ["cudda", "rabba", "vola", "woola"], "tamed": ["rabba", "vola"]}',
+check('rpc_guide hands back exactly the book', answer('BOOK') === '{"bred": ["cudda"], "seen": ["cudda", "rabba", "vola", "woola"], "noted": [], "tamed": ["rabba", "vola"]}',
   answer('BOOK'));
 check('and only its owner\'s: somebody else on the island reads theirs, and neither reads the other\'s',
-  answer('THEIRS') === '{"bred": [], "seen": ["dragon"], "tamed": []}', answer('THEIRS'));
+  answer('THEIRS') === '{"bred": [], "seen": ["dragon"], "noted": [], "tamed": []}', answer('THEIRS'));
 const read = FieldGuide.fromJSON(book);
 check('and the browser takes it as it comes', sorted(read.seen) === 'cudda,rabba,vola,woola' && sorted(read.tamed) === 'rabba,vola' && sorted(read.bred) === 'cudda'
   && countsLine(read) === `Seen 4 of ${ENTRIES.length} · Tamed 2 of ${KEEPABLE.length} · Bred 1 of ${KEEPABLE.length}`, countsLine(read));

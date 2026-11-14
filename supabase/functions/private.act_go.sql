@@ -4,12 +4,15 @@ CREATE OR REPLACE FUNCTION private.act_go(p_world uuid, p_uid uuid, p_action tex
  RETURNS void
  LANGUAGE plpgsql
 AS $function$
-declare v_tool text;
+declare v_tool text; v_path jsonb;
 begin
   -- Asked before the go changes what it is asked of: a wall's material, as the wall is finished.
   v_tool := private.job_tool(p_world, p_uid, p_action, p_target);
   perform set_config('wildermon.worn', '', true);
+  -- The Path's goes (`private.thepath_before`): null, and nothing more read, unless it is on and counts this one.
+  v_path := private.thepath_before(p_world, p_uid, p_action, p_target);
   perform act_perform(p_world, p_uid, p_action, p_target);
+  if v_path is not null then perform private.thepath_after(p_world, p_uid, p_action, p_target, v_path); end if;
   if v_tool is not null and position(',' || v_tool || ',' in ',' || coalesce(current_setting('wildermon.worn', true), '')) = 0 then
     perform wear_tool(held_tool(p_world, p_uid, v_tool), private.job_wear(p_action));
   end if;

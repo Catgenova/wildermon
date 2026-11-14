@@ -10,6 +10,7 @@ import { whoAmI } from './accounts';
 import { supabase } from './supabase';
 import { toldOf, toldWire } from './told';
 import { PRESENCE_FRESH_MS } from './presence';
+import { takePath, wirePath } from './pathwire';
 import { ACT_MANY_JOBS, Island, rowSaid, type CastMore, type CastWire, type HeldSaid, type ItemRow, type PlayerRow, type SkinSaid } from './island';
 import { nutritionSaid } from '../game/nutrition';
 import { heldFrom } from '../ui/effects';
@@ -100,8 +101,11 @@ async function homeIsland(): Promise<string | null> {
   return ((data ?? {}) as { island?: string | null }).island ?? null;
 }
 
-/** How a first join is shown the Runestones and answers with the one it starts beside (`pickStone`). */
-export type StonePick = (stones: readonly Runestone[]) => Promise<RunestoneId | null>;
+/**
+ * How a first join is shown the Runestones and answers with the one it starts beside (`pickStone`), and whether the
+ * Path is on for the new body (the card's Path switch, on unless turned off).
+ */
+export type StonePick = (stones: readonly Runestone[]) => Promise<{ stone: RunestoneId | null; path: boolean }>;
 
 export async function startIsland(params: URLSearchParams, tell: Telling, pick?: StonePick): Promise<Started> {
   const founding = params.get('found');
@@ -235,12 +239,17 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
    * starts beside (`startChoices`); somebody coming back never sees it.
    */
   let stone: RunestoneId | null = null;
+  // The Path, for a new body: on unless the card turned it off (`src/game/path.ts`).
+  let pathOn = false;
   if (pick) {
     const { first, size } = await island.firstJoin(id);
     const stones = startChoices(first, size);
+    pathOn = first;
     if (stones.length) {
       tell('join', 'Runestone');
-      stone = await pick(stones);
+      const choice = await pick(stones);
+      stone = choice.stone;
+      pathOn = choice.path;
     }
   }
   try {
@@ -363,6 +372,9 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
   // And the record of what has been ticked off, which is the island's to keep:
   // nothing on this side is ever written down on an island.
   game.tickedGoal = (id) => island.tickGoal(id);
+  // And the Path (`src/game/path.ts`), whose steps tick the same way; switched on now for a new body that kept it on.
+  wirePath(game, island);
+  if (pathOn) void game.pathDoor?.turn(true);
   /*
    * And the pins on your map, which an island game has nowhere to keep: it
    * never saves, and the island holds no pins. Kept in this browser, one set
@@ -652,6 +664,8 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
       Object.assign(game.ledger, what.ledger);
     }
     if (what.ticked) game.heardTicked(what.ticked);
+    // And the Path's record (`pathwire.ts`), every beat.
+    if (what.thepath !== undefined) takePath(game, what.thepath);
   };
   // And the same off the join's row, so a refreshed page holds them from the first frame, not the first beat (`rowSaid`).
   island.hooks.mine(rowSaid(me));

@@ -142,7 +142,7 @@ export function stoneCards(groups: readonly CardGroup[], picked: (key: string) =
  * Show the stones on `card` and wait for one to be clicked: its id. With no
  * stones to pick between, nothing is shown and the answer is null at once.
  */
-export function pickStone(card: Element | null, stones: readonly Runestone[]): Promise<RunestoneId | null> {
+export function pickStone(card: Element | null, stones: readonly Runestone[], path?: { on: boolean }): Promise<RunestoneId | null> {
   if (!card || !stones.length) return Promise.resolve(null);
   return new Promise((done) => {
     const box = stoneCards([{ head: STONE_PICK_HEAD, cards: stones.map((s) => ({ key: s.id, pic: { stone: s.id }, name: s.name, place: s.place })) }], (key) => {
@@ -150,10 +150,35 @@ export function pickStone(card: Element | null, stones: readonly Runestone[]): P
       card.classList.remove('boot-picking');
       done(stones.find((s) => s.id === key)?.id ?? null);
     });
+    // The Path (`src/game/path.ts`): on for a new body unless switched off here; Settings switches it later.
+    if (path) box.prepend(pathSwitch(path));
     card.classList.add('boot-picking');
     card.append(box);
     (box.querySelector('button') as HTMLButtonElement | null)?.focus();
   });
+}
+
+/** What the Path switch on the card says, on and off. */
+export const PATH_SWITCH_SAYS = (on: boolean): string => `Path: ${on ? 'On' : 'Off'}`;
+export const PATH_SWITCH_TIP = 'Path: step-by-step goals, runestone to a level 5 settlement; Journal, Path tab';
+
+/** The card's Path switch: a button that turns `path.on` over and says which it is. */
+function pathSwitch(path: { on: boolean }): HTMLElement {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'tb-btn tb-small boot-path';
+  b.title = PATH_SWITCH_TIP;
+  const say = (): void => {
+    b.textContent = PATH_SWITCH_SAYS(path.on);
+    b.setAttribute('aria-pressed', String(path.on));
+    b.classList.toggle('tb-on', path.on);
+  };
+  b.addEventListener('click', () => {
+    path.on = !path.on;
+    say();
+  });
+  say();
+  return b;
 }
 
 /**

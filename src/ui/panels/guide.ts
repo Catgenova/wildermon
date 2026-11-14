@@ -1,6 +1,6 @@
 import type { Game } from '../../game/game';
 import { LAIR_TRACK, lairOfKind } from '../../game/lairs';
-import { countsLine, entryTameLevel, guideEntries, guideEntry, GUIDE_MARKS, guideMarks, guidePage, keepable, MARK_NAMES, type GuideEntry, type GuideMark } from '../../game/guide';
+import { countsLine, entryTameLevel, guideEntries, guideEntry, GUIDE_MARKS, guideMarks, guidePage, keepable, MARK_NAMES, NOTED_SAYS, type GuideEntry, type GuideMark } from '../../game/guide';
 import type { Island } from '../../net/island';
 import { recordSaid, RECORD_STATS, type BredRecord } from '../../game/boards';
 import { ACTION_BY_ID } from '../../game/actions';
@@ -131,7 +131,7 @@ export class GuidePanel {
   private draw(): void {
     const g = this.game.guide;
     // And the Tracking the Track button's hover is read at.
-    const key = `${this.page}|${this.failed}|${JSON.stringify(this.records)}|${trackLevel(this.game.skills.get(TRACKING))}|${this.taming()}|${[...g.seen].sort()}|${[...g.tamed].sort()}|${[...g.bred].sort()}`;
+    const key = `${this.page}|${this.failed}|${JSON.stringify(this.records)}|${trackLevel(this.game.skills.get(TRACKING))}|${this.taming()}|${[...g.seen].sort()}|${[...g.tamed].sort()}|${[...g.bred].sort()}|${[...g.noted].sort()}`;
     if (key === this.drawn) return;
     this.drawn = key;
     this.counts.textContent = countsLine(g);
@@ -261,8 +261,20 @@ export class GuidePanel {
     side.className = 'guide-side';
     const name = document.createElement('div');
     name.className = 'guide-title';
-    name.textContent = seen ? entry.name : 'Not seen yet';
+    // A kind the Path noted (`guide_noted`), not seen yet: its name and the note, so Track has something to name.
+    const noted = !seen && !entry.stage && this.game.guide.noted.has(def.id);
+    name.textContent = seen ? entry.name : noted ? def.name : 'Not seen yet';
     side.append(name);
+    if (noted) {
+      const note = document.createElement('div');
+      note.className = 'guide-marks';
+      const chip = document.createElement('span');
+      chip.className = 'guide-mark guide-mark-on';
+      chip.textContent = NOTED_SAYS;
+      chip.title = `${NOTED_SAYS}: Track only; not seen`;
+      note.append(chip);
+      side.append(note);
+    }
     if (seen) {
       const marks = document.createElement('div');
       marks.className = 'guide-marks';
@@ -280,7 +292,7 @@ export class GuidePanel {
     }
     // Track: a wildermon whose page is marked seen, read back to the nearest wild one, or a monster's lair (`tracking.ts`).
     const track = ACTION_BY_ID.get(TRACK);
-    if (track && !entry.stage && trackable(def, this.game.guide.seen)) {
+    if (track && !entry.stage && trackable(def, this.game.guide.seen, this.game.guide.noted)) {
       const L = trackLevel(this.game.skills.get(TRACKING));
       const go = document.createElement('button');
       go.type = 'button';

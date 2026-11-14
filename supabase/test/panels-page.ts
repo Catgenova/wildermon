@@ -110,7 +110,7 @@ for (const [id, win] of ui.windows.windows) {
   frame();
   seen.opened.push(id);
 }
-const TABS: JournalTab[] = ['goals', 'ledger', 'news', 'boards', 'guide', 'tracker', 'help'];
+const TABS: JournalTab[] = ['goals', 'path', 'ledger', 'news', 'boards', 'guide', 'tracker', 'help'];
 for (const tab of TABS) {
   const t0 = performance.now();
   ui.toggleJournal(tab);

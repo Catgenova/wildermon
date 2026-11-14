@@ -58,6 +58,9 @@ const workers = (n: number): DeedRequirement => ({
     : [...g.creatures.list.values()].filter((c) => c.mode === 'deed' && c.post === null && inside(d, Math.floor(c.x), Math.floor(c.y)))).length >= n,
 });
 
+/** The wildermon working the settlement the last upgrade asks for (the island's `upgrade_wants`). */
+export const UPGRADE_WORKERS = 3;
+
 /**
  * What each level beyond the first asks for. Upgrades are taken in order, so
  * each level's own requirement is the new thing the settlement has to show;
@@ -67,7 +70,7 @@ export const DEED_UPGRADES: Record<number, DeedRequirement[]> = {
   2: [crates(1), campfires(1)],
   3: [smelters(1)],
   4: [anvils(1)],
-  5: [buildings(1), workers(3)],
+  5: [buildings(1), workers(UPGRADE_WORKERS)],
 };
 
 export const nextDeedLevel = (d: Deed | null): number | null => (d && deedLevel(d) < MAX_DEED_LEVEL ? deedLevel(d) + 1 : null);
