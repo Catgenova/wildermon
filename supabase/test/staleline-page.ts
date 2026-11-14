@@ -69,6 +69,6 @@ async function frames(n: number): Promise<void> {
   put, frames,
   /** Whether a line's models are in. */
   drawn: (species: string): boolean => !!wildermonKind(species),
-  button: (): { hidden: boolean; text: string } => ({ hidden: button.hidden, text: button.textContent ?? '' }),
+  button: (): { hidden: boolean; text: string } => ({ hidden: button.hidden === true, text: button.textContent ?? '' }),
   shot: (): string => canvasEl.toDataURL('image/png'),
 };
