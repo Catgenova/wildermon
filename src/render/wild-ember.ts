@@ -32,7 +32,7 @@ import { joint, mesh, onScreen, place, ROOT, type Mat, type Mesh, type RGB, type
 /** Rings along a body: where each is along it and how high, how wide and how deep. */
 interface Rings { y: number[]; z: number[]; w: number[]; h: number[] }
 
-interface Ember {
+export interface Ember {
   stage: 0 | 1 | 2;
   /** The barrel's rings, rump to chest, about its middle. */
   body: Rings;
@@ -87,7 +87,7 @@ interface Ember {
 }
 
 /** An Emberkit: small and slim on short legs, a big head, tall ears, a slim muzzle, a big curled tail of fluff. */
-const EMBERKIT_LOOK: Ember = {
+export const EMBERKIT_LOOK: Ember = {
   stage: 0,
   body: { y: [-0.9, -0.8, -0.46, 0, 0.42, 0.72, 0.86], z: [0.07, 0.06, 0.03, 0, 0.03, 0.08, 0.12], w: [0.26, 0.4, 0.44, 0.43, 0.45, 0.42, 0.28], h: [0.27, 0.41, 0.45, 0.44, 0.47, 0.44, 0.3] },
   len: 1.3, hip: 0.66, drop: 0.32,
@@ -1393,7 +1393,7 @@ function evolveSwirl(g: CanvasRenderingContext2D, view: View, s: Ember, b: Bones
 
 /* ---- the kinds ----------------------------------------------------------------------------- */
 
-function emberKind(s: Ember): Kind {
+export function emberKind(s: Ember): Kind {
   const R = restOf(s);
   return {
     bones: emberBones(s),

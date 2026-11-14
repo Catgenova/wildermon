@@ -143,6 +143,97 @@ function scaleOf(): KitModel {
   return { parts, shade: [[-BASE, -BASE, 0], [BASE, -BASE, 0], [BASE, BASE, 0], [-BASE, BASE, 0]] };
 }
 
+/* ---- Volcano Isle's vents' trophies ---------------------------------------------------------- */
+
+/** An ash lord's veil, a magma core's crust, a cinder alpha's fang, and the fire in them. */
+const VEIL: Tone = toneOf('#d2c8cc', '#7a6c7e');
+const CRUST: Tone = toneOf('#9a8a9c', '#4a3c54');
+const FANG: Tone = toneOf('#f2e6d6', '#a69296');
+const MOLTEN = '#ff9a3c';
+const EMBER = '#f0603c';
+
+/** The ash lord's veil: a hood of ash-grey cloth stood upright, its two eye slits burning. */
+function veilOf(): KitModel {
+  const parts: KitPart[] = [];
+  const cap = plinth(parts);
+  const hood: Pt[] = [[-1.5, Z + 0.3], [1.5, Z + 0.3], [1.3, Z + 2.2], [0.9, Z + 3.6], [0.3, Z + 4.5], [-0.2, Z + 4.7], [-0.8, Z + 3.9], [-1.3, Z + 2.4]];
+  parts.push({
+    faces: upright(hood, 0.6, VEIL, 0.2, (g, k) => {
+      // Folds down it, and the eye slits.
+      g.strokeStyle = css(mix(k.fill, hex('#5a4a5e'), 0.4), 0.7);
+      g.lineWidth = 0.14;
+      for (const x of [-0.8, 0, 0.8]) {
+        g.beginPath();
+        g.moveTo(x * 0.6, Z + 3.2);
+        g.quadraticCurveTo(x * 0.9, Z + 1.6, x * 1.1, Z + 0.4);
+        g.stroke();
+      }
+      g.fillStyle = MOLTEN;
+      for (const x of [-0.42, 0.42]) {
+        g.beginPath();
+        g.ellipse(x, Z + 3.0, 0.26, 0.1, x * 0.3, 0, TAU);
+        g.fill();
+      }
+    }),
+    after: [cap],
+    edges: true,
+  });
+  return { parts, shade: [[-BASE, -BASE, 0], [BASE, -BASE, 0], [BASE, BASE, 0], [-BASE, BASE, 0]] };
+}
+
+/** A magma core: a ball of basalt crust on a ring, cracked through to the fire inside. */
+function coreOf(): KitModel {
+  const parts: KitPart[] = [];
+  const cap = plinth(parts);
+  const ring: KitPart = { faces: lathe(0, 0, [[Z, 1.0], [Z + 0.35, 1.05], [Z + 0.5, 0.7]], 8, deeper(DRESSED, 0.15)), after: [cap], edges: true };
+  parts.push(ring);
+  const prof: Array<[number, number]> = [[Z + 0.3, 0.3], [Z + 0.8, 1.2], [Z + 1.6, 1.6], [Z + 2.5, 1.55], [Z + 3.2, 1.05], [Z + 3.55, 0.2]];
+  parts.push({
+    faces: lathe(0, 0, prof, 9, CRUST, 0.3, (k, i, sd) => ({
+      paint: (g: Ctx, kk: PaintCtx) => {
+        if ((i + k) % 3 === 2) return;
+        g.beginPath();
+        g.moveTo(sd.w * 0.2, sd.h * 0.1);
+        g.lineTo(sd.w * 0.5, sd.h * 0.5);
+        g.lineTo(sd.w * 0.35, sd.h * 0.9);
+        g.strokeStyle = MOLTEN;
+        g.lineWidth = 0.34;
+        g.stroke();
+      },
+    })),
+    after: [ring],
+    edges: true,
+  });
+  return { parts, shade: [[-BASE, -BASE, 0], [BASE, -BASE, 0], [BASE, BASE, 0], [-BASE, BASE, 0]] };
+}
+
+/** A cinder alpha's fang: long and curved, stood up in a socket, its tip burnt to an ember. */
+function fangOf(): KitModel {
+  const parts: KitPart[] = [];
+  const cap = plinth(parts);
+  const socket: KitPart = { faces: slab(-0.8, 0.8, -0.6, 0.6, Z, Z + 0.5, deeper(DRESSED, 0.12), { corner: 0.2, bevel: 0.1 }), after: [cap], edges: true };
+  parts.push(socket);
+  const fang: Pt[] = [[-0.6, Z + 0.5], [0.6, Z + 0.5], [0.7, Z + 1.8], [0.5, Z + 3.0], [0.1, Z + 4.1], [-0.5, Z + 4.8], [-0.3, Z + 3.6], [-0.4, Z + 2.2]];
+  parts.push({
+    faces: upright(fang, 0.7, FANG, 0.22, (g) => {
+      g.beginPath();
+      g.moveTo(-0.5, Z + 4.8);
+      g.lineTo(-0.15, Z + 3.9);
+      g.lineTo(0.25, Z + 4.0);
+      g.closePath();
+      g.fillStyle = EMBER;
+      g.fill();
+    }),
+    after: [socket],
+    edges: true,
+  });
+  return { parts, shade: [[-BASE, -BASE, 0], [BASE, -BASE, 0], [BASE, BASE, 0], [-BASE, BASE, 0]] };
+}
+
+export const ASH_LORD_VEIL: KitPiece = { model: () => veilOf(), uses: {} };
+export const MAGMA_CORE: KitPiece = { model: () => coreOf(), uses: {} };
+export const CINDER_ALPHA_FANG: KitPiece = { model: () => fangOf(), uses: {} };
+
 export const CHIEF_EAR: KitPiece = { model: () => earOf(), uses: {} };
 export const WARLORD_TUSK: KitPiece = { model: () => tuskOf(), uses: {} };
 export const OGRE_KING_JAW: KitPiece = { model: () => jawOf(), uses: {} };

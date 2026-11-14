@@ -25,7 +25,7 @@ import { joint, mesh, onScreen, place, ROOT, type Face, type Mat, type Mesh, typ
 /** How an arm is held: forward, out to its side, the elbow bent, and the upper arm turned about itself (degrees). */
 type Hold = readonly [number, number, number, number];
 
-interface Golem {
+export interface Golem {
   stage: 0 | 1 | 2;
   /** The legs: the hip on the right, thigh, shin and the drop to the sole, how they stand (thigh forward, knee), how thick at the thigh and the shin, and the foot's length. */
   leg: { at: V3; len: [number, number, number]; rest: [number, number]; w: [number, number]; foot: number };
@@ -110,7 +110,7 @@ const BRICKORN_LOOK: Golem = {
 };
 
 /** A Fortigran: huge and hunched, a brick watchtower in its back, cream bands round its upper arms, moss in its joints. */
-const FORTIGRAN_LOOK: Golem = {
+export const FORTIGRAN_LOOK: Golem = {
   stage: 2,
   leg: { at: [0.9, 0.0, -0.12], len: [0.38, 0.34, 0.22], rest: [4, -8], w: [0.62, 0.58], foot: 0.86 },
   hips: [1.32, 0.86, 0.66],
@@ -823,7 +823,7 @@ function chips(g: CanvasRenderingContext2D, view: View, s: Golem, b: Bones, a: A
 
 const AMBER: RGB = [255, 214, 84];
 
-function golemKind(s: Golem): Kind {
+export function golemKind(s: Golem): Kind {
   const bones = golemBones(s);
   let tones = { light: [236, 222, 196] as RGB, dark: [168, 150, 128] as RGB };
   return {

@@ -184,6 +184,12 @@ import {
   bossSays, garrisonSays, HOARD_SCALE, HOARD_SCALE_CAP, HOARD_SHARE, hoardBook, hoardSays, LAIR_ANNOUNCE, LAIR_KINDS, LAIR_LEASH, LAIR_MOVE_CLEARS, LAIR_MOVE_DAYS,
   LAIR_RING, LAIR_RING_WILD, LAIR_SIGHT, LAIR_TRACK, lairRingUsual, lairRingWant, restockSays, SITE_SAYS,
 } from '../../game/lairs';
+import { lairOfKind } from '../../game/lairs';
+import {
+  ASH_BLIND_HIT, ASH_BLIND_SECS, FIRE_STEEL_CAP, FIRE_STEEL_NAME, FIRE_STEEL_RECIPE, FROST_WEAK, obsidianOf, SULFUR_SLATE, summonSays,
+  VOLCANO_KINDS, volcanoName,
+} from '../../game/volcano';
+import { ICE_WEAPON_ENCHANTS } from '../../game/enchant';
 import { DODGE_MOST } from '../../game/fight';
 import { CONTROL_HIT } from '../../game/gear';
 import { BACK_PACE, BACK_SLACK, CIRCLE_ARC, CIRCLE_R, COWARD_AT, COWARD_DRAG, DRAW_WALK, FALL_BACK, FLEE_SECS, GUARD_RANGE, HUNTER_TURN, KEEP_OFF, MONSTER_TURN, PACK_CALL, PACK_MOST, PACK_RANGE, THROW_HIT, THROW_REACH } from '../../game/fight';
@@ -512,7 +518,7 @@ function enchantingHelp(): string {
     <ul>
       <li>Written at the crafting window with <b>enchanting</b>, one recipe per enchantment, at ${workedAt(`make_${first.scroll}`)}.</li>
       <li>Every scroll shut until its <b>Formula</b> is read: greyed, padlocked, "${needRecipeSays(RECIPE_BY_ID.get(`make_${first.scroll}`)!)}".
-      A Formula: per butchering, ${listed(bookDrops('formula').map((d) => `${d.kind} ${percent(d.odds)}`))}; one not read first.
+      A Formula: per butchering, ${listed(bookDrops('formula').map((d) => `${SPECIES[d.kind]?.name.toLowerCase() ?? d.kind} ${percent(d.odds)}`))}; one not read first.
       <b>${BOOKS.formula.label}</b>: opens it for good, Formula used up; already open: not read ("${BOOKS.formula.known}").</li>
       <li>Quality (QL): the usual craft check, capped at the papyrus sheet's QL.</li>
       <li>Failure: motes lost; the sheet takes ${SCROLL_HARM} damage (spread over its pile's sheets); a sheet that would reach ${BROKEN_AT} is used up.</li>
@@ -1885,7 +1891,7 @@ export function helpText(): string {
       roast onions and nuts; with a <b>clay bowl</b>: berry compote, meat and vegetable stew.</li>
       <li><b>Cottage pie</b> (${workedAt('make_cottage_pie')}, clay bowl, lit fire, its Recipe read): ${bill('make_cottage_pie')}; makes ${made('make_cottage_pie')}, ${percent(itemDef('cottage_pie').food ?? 0)} food each.</li>
       <li><b>Recipes</b>: ${listed(lockedRecipes('recipe').map((r) => recipeTitle(r).toLowerCase()))}: shut until read. Crafting window: greyed, padlocked, "${needRecipeSays(lockedRecipes('recipe')[0])}".
-      A Recipe: ${percent(RECIPE_DROP_ODDS)} per butchering of a ${listedOr([...RECIPE_DROPPERS])} carcass; one not read first. <b>Read recipe</b>: opens it for good, Recipe used up; already open: not read.
+      A Recipe: ${percent(RECIPE_DROP_ODDS)} per butchering of a ${listedOr(RECIPE_DROPPERS.map((id) => SPECIES[id]?.name.toLowerCase() ?? id))} carcass; one not read first. <b>Read recipe</b>: opens it for good, Recipe used up; already open: not read.
       Simma: does not cook them.</li>
       <li><b>Oven</b> recipes: a ${STATION_NAME.oven} within reach; a brazier does not count. Campfire recipes: a lit fire, oven or brazier.</li>
       <li><b>Ferments</b>: a go seals a <b>${itemDef(SEALED_ITEM).name.toLowerCase()}</b>, named for what it makes, at the go's QL and rarity; its vessel used up.
@@ -3716,18 +3722,15 @@ export function helpText(): string {
     </ul>
     <h3>The things that are not wildermon</h3>
     <ul>
-      <li>${MONSTER_SORTS.length} untameable kinds: <b>goblin</b>, <b>orc</b>, <b>ogre</b>, <b>dragon</b>.</li>
-      <li>Ogre subspecies, 1 in ${SPECIES.ogre.subspecies!.length} wild each, same health, blow and speed: ${listed(SPECIES.ogre.subspecies!.map((n) => `<b>${n}</b>`))}.</li>
-      <li>Orc subspecies, 1 in ${SPECIES.orc.subspecies!.length} wild each, same health, blow and speed: ${listed(SPECIES.orc.subspecies!.map((n) => `<b>${n}</b>`))}.</li>
-      <li>Dragon subspecies, 1 in ${SPECIES.dragon.subspecies!.length} wild each, same health, blow and speed: ${listed(SPECIES.dragon.subspecies!.map((n) => `<b>${n}</b>`))}.</li>
-      <li>Goblin subspecies, 1 in ${SPECIES.goblin.subspecies!.length} wild each, same health, blow and speed: ${listed(SPECIES.goblin.subspecies!.map((n) => `<b>${n}</b>`))}.</li>
+      <li>${MONSTER_SORTS.length} untameable kinds: ${listed(MONSTER_SORTS.map((d) => `<b>${d.name.toLowerCase()}</b>`))}.</li>
+      ${MONSTER_SORTS.filter((d) => d.subspecies?.length).map((d) => `<li>${d.name} subspecies, 1 in ${d.subspecies!.length} wild each, same health, blow and speed: ${listed(d.subspecies!.map((n) => `<b>${n}</b>`))}.</li>`).join('')}
       <li>Notice range ${NOTICED[0]} to ${NOTICED[NOTICED.length - 1]} tiles (other hunters ${HUNT_SIGHT}); they come straight at you and chase far.</li>
       <li>Cannot be tamed, trapped, bred or brushed.</li>
       <li>Health: ${listed(MONSTER_KINDS.map((id) => `${SPECIES[id].name.toLowerCase()} ${SPECIES[id].health}`))}. Blow: ${listed(MONSTER_KINDS.map((id) => `${SPECIES[id].name.toLowerCase()} ${SPECIES[id].attack}`))} damage.</li>
       <li>Blow against an unarmoured life: ${listed(MONSTER_SORTS.map((d) => `${d.name.toLowerCase()} ${percent(Math.round(d.attack * BLOW_SHARE * 100) / 100)}`))}.</li>
       ${REGIONS.filter((R) => R.lair?.length).map((R) => `<li>${capital(listed(R.lair!.map((id) => `${SPECIES[id].name.toLowerCase()}`)))}: only on ${islandName(R.name)}.</li>`).join('')}
-      <li>Butchering a ${listedOr([...RECIPE_DROPPERS])}: ${percent(RECIPE_DROP_ODDS)} chance of a <b>Recipe</b> (${listed(lockedRecipes('recipe').map((r) => recipeTitle(r).toLowerCase()))}).</li>
-      <li>Butchering: ${listed(bookDrops('formula').map((d) => `${d.kind} ${percent(d.odds)}`))} chance of a <b>Formula</b> (one of the ${lockedRecipes('formula').length} enchantment scrolls; Enchanting).</li>
+      <li>Butchering a ${listedOr(RECIPE_DROPPERS.map((id) => SPECIES[id]?.name.toLowerCase() ?? id))}: ${percent(RECIPE_DROP_ODDS)} chance of a <b>Recipe</b> (${listed(lockedRecipes('recipe').map((r) => recipeTitle(r).toLowerCase()))}).</li>
+      <li>Butchering: ${listed(bookDrops('formula').map((d) => `${SPECIES[d.kind]?.name.toLowerCase() ?? d.kind} ${percent(d.odds)}`))} chance of a <b>Formula</b> (one of the ${lockedRecipes('formula').length} enchantment scrolls; Enchanting).</li>
       <li>Butchering: the usual yields, plus <b>tusk</b> and <b>sinew</b> (orc, ogre); dragon: ${SPECIES.dragon.butcher.scale ?? 0} <b>dragon scales</b> and a <b>hoard</b> of ${HOARD_LUMPS} to
       ${HOARD_LUMPS + HOARD_MORE} lumps (by carcass kept) of the ${HOARD_DEEP.length} deep metals and ${HOARD_METALS.length - HOARD_DEEP.length} precious ones; the only source of them together.</li>
       <li><b>Composite bow</b>: ${bill('make_composite_bow')}, ${workedAt('make_composite_bow')}. Range <b>${COMPOSITE.range ?? 0}</b> tiles, ${COMPOSITE.damage} damage
@@ -3746,7 +3749,7 @@ export function helpText(): string {
       <li><b>Hoard</b> (the boss's kill): a share for everybody who dealt <b>${percent(HOARD_SHARE)}</b> of its health or more, their companions' blows counted.
       Each share: ${listed(LAIR_KINDS.map((k) => `${k.name.toLowerCase()}: ${hoardSays(k, itemDef(k.trophy).name, itemDef(BOOKS[hoardBook(k)].item).name)}`))}.
       No silver, never rare. The boss's carcass butchers as usual.</li>
-      <li>Hoard book: the one its boss's kind carries when butchered (${listed(LAIR_KINDS.map((k) => `${k.species} ${itemDef(BOOKS[hoardBook(k)].item).name}`))}), a shut one you have not read first.</li>
+      <li>Hoard book: the one its boss's kind carries when butchered (${listed(LAIR_KINDS.map((k) => `${SPECIES[k.species].name.toLowerCase()} ${itemDef(BOOKS[hoardBook(k)].item).name}`))}), a shut one you have not read first.</li>
       <li>Hoard dragon scales (<b>Dragon scale (${HOARD_SCALE})</b>): scale armour made of them alone, QL cap <b>${mul(HOARD_SCALE_CAP)}</b> your skill.</li>
       <li>Trophies (${listed(LAIR_KINDS.map((k) => itemDef(k.trophy).name.toLowerCase()))}): set down anywhere as decoration; do not decay.</li>
       <li>Cleared: empty until its restock. Its <b>${LAIR_RING}</b>-tile ring counts as the safe ring and holds ${lairRingWant(PER_REGION, WILD_SQUARE)} wildermon
@@ -3755,6 +3758,18 @@ export function helpText(): string {
       <li>Seen (within ${LAIR_SIGHT} tiles): pinned on your map; "Lair: found" on its kind's field guide page.</li>
       <li><b>Track</b> on a monster's field guide page: its kind's nearest lair within ${LAIR_TRACK} tiles, way and distance at your Tracking's band.</li>
       <li>Settlement: none founded nearer a lair than its kind's distance.</li>
+    </ul>
+    <h3>${volcanoName()}</h3>
+    <ul>
+      ${VOLCANO_KINDS.map((id) => SPECIES[id]).map((d) => `<li><b>${d.name}</b> (${lairOfKind(d.id)?.name.toLowerCase()}): health ${d.health}, blow ${d.attack}, speed ${d.speed}`
+        + `${d.hide ? `, ${HIDE_NAMES[d.hide].toLowerCase()}` : ''}${d.pack ? ', pack' : ''}${d.blinds ? `; blow that lands: your hit chance ${mul(ASH_BLIND_HIT)}, ${ASH_BLIND_SECS} s` : ''}`
+        + `${d.fireproof ? '; burns: no damage' : ''}${d.frostWeak ? `; ${listedOr(ICE_WEAPON_ENCHANTS)} on the weapon: damage ${mul(FROST_WEAK)}` : ''}.</li>`).join('')}
+      <li><b>Obsidian</b>: butchering a monster killed on ${volcanoName()}, times the butchering share: ${listed(MONSTER_KINDS.map((id) => `${SPECIES[id].name.toLowerCase()} ${obsidianOf(id)}`))}.
+      None off one killed anywhere else.</li>
+      <li><b>Seryll vein</b> on ${volcanoName()}: ${summonSays(VOLCANO_KINDS.map((id) => SPECIES[id].name.toLowerCase()))}.</li>
+      <li><b>Sulfur</b>: butchering ${listed(MONSTER_KINDS.filter((id) => SPECIES[id].butcher.sulfur).map((id) => `${SPECIES[id].name.toLowerCase()} ${SPECIES[id].butcher.sulfur}`))};
+      mining slate on ${volcanoName()}, ${percent(SULFUR_SLATE)} a go.</li>
+      <li><b>${FIRE_STEEL_NAME}</b>: ${bill(FIRE_STEEL_RECIPE)}, ${workedAt(FIRE_STEEL_RECIPE)}, on ${volcanoName()} only. Weapons and tools of it: improve QL cap <b>+${FIRE_STEEL_CAP}</b> over your skill.</li>
     </ul>
     <h3>Traps</h3>
     <ul>
