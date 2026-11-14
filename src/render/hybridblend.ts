@@ -1,4 +1,4 @@
-import type { Anim, Kind, Piece } from './beasts';
+import { kitOf, type Anim, type Kind, type Piece } from './beasts';
 import { place, type Mat, type Mesh, type Palette, type V3, type Xf } from './figure';
 import { HYBRID_LOOKS } from './hybridlooks';
 
@@ -81,6 +81,26 @@ function anchor(kit: readonly Piece[], bones: Record<string, Xf>, keys: readonly
   }
   return null;
 }
+/**
+ * A parent's pieces at a level of detail, and its bones standing, made once however many hybrids it is a parent of
+ * (a Sapgnaw is three hybrids' body): the field guide draws every hybrid at once, and each build is a parent's whole body.
+ */
+const builds = new WeakMap<Kind, Map<number, Piece[]>>();
+const built = (k: Kind, lod: number, key?: string): Piece[] => {
+  // Under the parent's own key, its pieces are the ones its own drawing keeps (`kitOf`), built once for both.
+  if (key) return kitOf(key, k, lod);
+  let byLod = builds.get(k);
+  if (!byLod) builds.set(k, (byLod = new Map()));
+  let kit = byLod.get(lod);
+  if (!kit) byLod.set(lod, (kit = k.build(lod)));
+  return kit;
+};
+const stood = new WeakMap<Kind, Record<string, Xf>>();
+const still = (k: Kind): Record<string, Xf> => {
+  let b = stood.get(k);
+  if (!b) stood.set(k, (b = k.bones(STILL)));
+  return b;
+};
 /** The most across a head thing is carried at, against the head it goes on (corner to corner). */
 const HEAD_MOST = 1.5;
 /** All of a kind standing, every piece on a bone. */
@@ -180,7 +200,7 @@ function carry(taken: readonly Piece[], mb: Record<string, Xf>, onto: Xf, bone: 
  */
 function region(body: Kind, marks: Kind, bodyKit: readonly Piece[], markKit: readonly Piece[], at: 'head' | 'body' | 'tail', takes: (p: Piece) => boolean,
   recolour: (m: Mat) => Mat, part?: HybridPart): Piece[] {
-  const bb = body.bones(STILL), mb = marks.bones(STILL);
+  const bb = still(body), mb = still(marks);
   const keys = at === 'head' ? ['head'] : BODY_KEYS;
   const to = anchor(bodyKit, bb, keys), from = anchor(markKit, mb, keys);
   if (!to || !from) return [];
@@ -265,13 +285,15 @@ const matsOf = (kit: readonly Piece[]): Set<Mat> => {
  * A hybrid's model at one stage: `body`'s, with `marks`'s head things on its head and its back on its back (`graft`), and each parent's
  * palette for its own pieces.
  */
-export function hybridKind(body: Kind, marks: Kind, look: HybridLook = {}): Kind {
-  // Worked out once, off the finest build of each: which of the markings' colours the body uses too, and where they go.
+export function hybridKind(body: Kind, marks: Kind, look: HybridLook = {}, keys: readonly [string?, string?] = []): Kind {
+  const [bodyKey, marksKey] = keys;
+  // Worked out once, off the first build asked for: which of the markings' colours the body uses too, and where they go.
   let moved: Map<Mat, Mat> | null = null;
   let given: Set<Mat> = new Set();
+  let lastLod = 0;
   const recolouring = (): Map<Mat, Mat> => {
     if (moved) return moved;
-    const bodyKit = body.build(1), markKit = marks.build(1);
+    const bodyKit = built(body, lastLod, bodyKey), markKit = built(marks, lastLod, marksKey);
     const used = matsOf(bodyKit.filter((p) => !marking(p) || p.key === 'head'));
     const wanted = new Set((look.parts ?? []).flatMap((p) => p.keys));
     given = matsOf(markKit.filter((p) => marking(p) || wanted.has(p.key)));
@@ -284,8 +306,9 @@ export function hybridKind(body: Kind, marks: Kind, look: HybridLook = {}): Kind
   return {
     ...body,
     build: (lod) => {
-      const bodyKit = body.build(lod);
-      const g = graft(body, marks, bodyKit, marks.build(lod), recolour, look);
+      lastLod = lod;
+      const bodyKit = built(body, lod, bodyKey);
+      const g = graft(body, marks, bodyKit, built(marks, lod, marksKey), recolour, look);
       return [...bodyKit.filter((p) => !g.drop.has(p.key)), ...g.pieces];
     },
     palette: (coat, mark) => {
@@ -300,12 +323,16 @@ export function hybridKind(body: Kind, marks: Kind, look: HybridLook = {}): Kind
 }
 
 /** A hybrid's models at each of its stages, from its parents' at the same stage, put together as its look says. */
-export function hybridStages(body: { kind: Kind; stages?: readonly [Kind, Kind] }, marks: { kind: Kind; stages?: readonly [Kind, Kind] }, look: HybridLook = {}): { kind: Kind; stages?: readonly [Kind, Kind] } {
+export function hybridStages(body: { kind: Kind; stages?: readonly [Kind, Kind] }, marks: { kind: Kind; stages?: readonly [Kind, Kind] }, look: HybridLook = {},
+  ids: readonly [string?, string?] = []): { kind: Kind; stages?: readonly [Kind, Kind] } {
   const at = (l: { kind: Kind; stages?: readonly [Kind, Kind] }, s: number): Kind => (s > 0 ? l.stages?.[s - 1] ?? l.kind : l.kind);
-  const kind = hybridKind(body.kind, marks.kind, look);
-  return { kind, stages: [hybridKind(at(body, 1), at(marks, 1), look), hybridKind(at(body, 2), at(marks, 2), look)] };
+  // Each parent's pieces under the key its own drawing keeps them under at that stage (`wildermonKind`).
+  const key = (l: { stages?: readonly [Kind, Kind] }, id: string | undefined, s: number): string | undefined =>
+    (id === undefined ? undefined : s > 0 && l.stages ? `${id}@${s}` : id);
+  const one = (s: number): Kind => hybridKind(at(body, s), at(marks, s), look, [key(body, ids[0], s), key(marks, ids[1], s)]);
+  return { kind: one(0), stages: [one(1), one(2)] };
 }
 
 /** A hybrid's models at each stage, by its id, as its look says (`HYBRID_LOOKS`). */
-export const hybridLine = (id: string, body: { kind: Kind; stages?: readonly [Kind, Kind] }, marks: { kind: Kind; stages?: readonly [Kind, Kind] }) =>
-  hybridStages(body, marks, HYBRID_LOOKS[id]);
+export const hybridLine = (id: string, body: { kind: Kind; stages?: readonly [Kind, Kind] }, marks: { kind: Kind; stages?: readonly [Kind, Kind] }, a?: string, b?: string) =>
+  hybridStages(body, marks, HYBRID_LOOKS[id], [a, b]);

@@ -130,7 +130,7 @@ const LINES: Record<string, () => Promise<Line>> = {
 for (const h of HYBRIDS) {
   LINES[h.id] = () => Promise.all([LINES[h.a](), LINES[h.b](), import('./hybridblend')])
     .then(([body, marks, m]) => {
-      const made = m.hybridLine(h.id, body, marks);
+      const made = m.hybridLine(h.id, body, marks, h.a, h.b);
       return line(made.kind, made.stages);
     });
 }
