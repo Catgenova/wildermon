@@ -249,7 +249,7 @@ import TAPER from './assets/taper.json';
 import HAIR_ASSET from './assets/lowhair.json';
 import MALE_LIGHT from '../../tools/sculpt/lowlight-male.json';
 import FEMALE_LIGHT from '../../tools/sculpt/lowlight-female.json';
-import { BARREL, DRAGON_SCALE, gemTone, isMetalTone, metalShades, sculptRig, seatOf, viewOf, woodTone, type ChainPiece, type FigurePose, type DyedPiece, type GearPiece, type PlatePiece, type Rig } from '../render/figure';
+import { BARREL, MANNEQUIN_WOOD, DRAGON_SCALE, gemTone, isMetalTone, metalShades, sculptRig, seatOf, viewOf, woodTone, type ChainPiece, type FigurePose, type DyedPiece, type GearPiece, type PlatePiece, type Rig } from '../render/figure';
 import { DEFAULT_LOOK, type Look } from '../game/look';
 import { ANCIENT_SWORD } from '../game/gear';
 import { STRIDE, type Baked } from './bake';
@@ -1846,7 +1846,9 @@ export function lowScene(given: FigurePose, part: 'over' | 'under' = 'over'): Sc
   const piece: GearPiece | undefined = held === SWING_TOOL || (held !== undefined && held === pose.tool?.id) ? pose.tool : weapon;
   const lit = piece?.enchanted ? 'enchanted' : 'plain';
   const baked = body.baked(worn, sword, hairStyle(pose, look.hair), enchanted, drops, drawn?.id, tools, hands?.up, nockOf(pose, who, inHand ? prop : undefined), castOut(pose, who, tools));
-  const materials = materialsOf(look, drawn, lit, piece?.material, pieces, pose.outfit?.metal, pose.outfit?.dye, USED.get(baked), kitOf(pose)), low: LowLight = { sh: SH[who], tone: toneOf(materials), fit: FIT_SKIN };
+  const dressedIn = materialsOf(look, drawn, lit, piece?.material, pieces, pose.outfit?.metal, pose.outfit?.dye, USED.get(baked), kitOf(pose));
+  // (a mannequin's body all of its wood, face, hair and undergarment alike: `FigurePose.mannequin`)
+  const materials = pose.mannequin ? woodenBody(dressedIn) : dressedIn, low: LowLight = { sh: SH[who], tone: toneOf(materials), fit: FIT_SKIN };
   const bones = body.bones(pose, worn), trail = (inHand && prop && trails(prop)) || fight ? body.trail(pose, lit === 'enchanted') : undefined;
   const shapes = body.shapes();
   // astride, what of the body is behind the beast's barrel (the far leg down its flank) left out, as the flat figure's is
@@ -1857,6 +1859,18 @@ export function lowScene(given: FigurePose, part: 'over' | 'under' = 'over'): Sc
   // (the eyes shut asleep, meditating and praying: `./anim/down.ts` eyesShut)
   const blink = eyesShut(`${who}|${pose.id}`, clipFor(pose, who)?.clip.name, performance.now()) ? 1 : 0;
   return { baked, bones, materials, view: viewOf(facing), blink, low, ...(trail ? { trail } : {}), ...(shapes.some((w) => w > 0) ? { shapes } : {}), ...(hide ? { hide } : {}), ...(hit > 0 ? { hit } : {}), ...(water ? { water } : {}) };
+}
+
+/** A body's own materials (`M`) all of a mannequin's wood, what it wears as it was (`FigurePose.mannequin`). */
+const WOODEN = new WeakMap<Material[], Material[]>();
+function woodenBody(of: Material[]): Material[] {
+  let out = WOODEN.get(of);
+  if (!out) {
+    out = [...of];
+    for (const i of Object.values(M)) out[i] = { colour: MANNEQUIN_WOOD, skin: true };
+    WOODEN.set(of, out);
+  }
+  return out;
 }
 
 /** Local turns by bone name, [rx, ry, rz] degrees (as `tools/sculpt/lowrig.mjs` posed). */

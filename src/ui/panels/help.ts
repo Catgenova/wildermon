@@ -248,6 +248,10 @@ import {
   TRIM_TOOL, TROPHY_PLAQUE, WIND_CHIME, WINDOW_BOX, WISTERIA_PERGOLA,
 } from '../../game/gardendefs';
 import { GARDEN_SAID } from '../../game/garden';
+import { DECOR_PIECES } from '../../game/decor';
+import {
+  COMPOST_BOOST, COMPOST_DAYS, COMPOST_EMPTY_TIME, COMPOST_FILL_TIME, COMPOST_HOLDS, DRESS_TIME, SPREAD_COST, SPREAD_SKILL, SPREAD_TIME, SWAP_TIME,
+} from '../../game/decordefs';
 
 /** The garden pieces, in the order the help lists them (`garden.ts`). */
 const GARDEN_PIECES = [FLOWER_BED, WINDOW_BOX, HANGING_BASKET, HERB_BOX, TOPIARY_TUB, POTTED_FERN, POTTED_PALM, PLANT_STAND, HEDGE, WISTERIA_PERGOLA, ARBOUR_BENCH,
@@ -2213,6 +2217,14 @@ export function helpText(): string {
       <b>Prune</b> (${PRUNE_SKILL}, ${itemDef(PRUNE_TOOL).name.toLowerCase()}, ${PRUNE_TIME} s base): anyone.</li>
       <li><b>Hang</b> a trophy, <b>Set down</b> a potted plant, <b>Take down</b> (${SHOW_TIME} s base): whoever set the piece down, or a citizen of its settlement. A trophy: ${listedOr(Object.entries(ITEM_DEFS).filter(([, d]) => d.trophy).map(([, d]) => d.name.toLowerCase()))}, shown with its slayer's name; none in the pack: <i>${GARDEN_SAID.noTrophy}</i> Not picked up with something on it.</li>
       <li>Growth for everybody alike: off the moment it was set down and the season. Picked up and set down again: grows again from then; keeps its flowers, shape, clip, prunes and kind.</li>
+    </ul>
+    <h3>Home pieces</h3>
+    <ul>
+      ${DECOR_PIECES.map((id) => `<li><b>${itemDef(id).name}</b>: ${bill(`make_${id}`)} (${workedAt(`make_${id}`)}, ${recipe(`make_${id}`).baseTime} s base). `
+        + `${furnitureDef(id).w} by ${furnitureDef(id).h} subtiles. ${itemDef(id).description ?? ''}</li>`).join('')}
+      <li><b>Add to compost</b> (${COMPOST_FILL_TIME} s base): one stack, to ${COMPOST_HOLDS}. <b>Take compost</b> (${COMPOST_EMPTY_TIME} s base): ${COMPOST_DAYS} days after the last thing in. <b>Spread compost</b> (${SPREAD_SKILL}, ${SPREAD_TIME} s base): ${SPREAD_COST} compost, a sown field or planter, next harvest QL +${COMPOST_BOOST}, once a crop.</li>
+      <li><b>Put on stand</b>, <b>Take off</b> (${DRESS_TIME} s base): one piece a slot. <b>Swap with worn</b> (${SWAP_TIME} s base): every slot; kept on: anything not armour, anything locked. Whoever set it down, or a rank that may use the crates on its settlement. Not picked up with armour on it.</li>
+      <li><b>Open</b>, <b>Close</b> curtains: anyone, seen by everyone.</li>
     </ul>
     <h3>Calling things by name</h3>
     <ul>
