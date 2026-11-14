@@ -23,6 +23,7 @@
  * it, on this browser and on everybody else's watching (`Island.castSeen`).
  */
 import { FIGURE_TOP, figureJoint, weaponSpan, type FigurePose } from '../figure';
+import { sculptedJoint } from './onbody';
 import { HALF_H, HALF_W, HEIGHT_SCALE, TILE_W, UNITS_PER_TILE } from '../iso';
 import { depthOf, type View } from '../view';
 import { castLefty, lingerSecs, visualOf, type CastAim, type CastClose, type CastNow, type CastTarget, type CastTravel, type SpellVisual } from './index';
@@ -589,7 +590,8 @@ export class SpellStage {
     const key = `${b.x.toFixed(3)},${b.y.toFixed(3)},${bone},${at ? at.join(',') : ''}`;
     const had = this.joints.get(key);
     if (had) return had;
-    const j = figureJoint({ ...f, facing: b.facing }, bone, at);
+    // (on the sculpted body where it plays a casting clip: `./onbody.ts`)
+    const j = sculptedJoint({ ...f, facing: b.facing }, bone) ?? figureJoint({ ...f, facing: b.facing }, bone, at);
     const p = this.k.local(b, j[0], j[1], j[2]);
     this.joints.set(key, p);
     return p;

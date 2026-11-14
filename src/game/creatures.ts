@@ -332,6 +332,14 @@ function milkers(): string {
 }
 /** The share of its health under which a salva dresses one of yours; a bleeding one it dresses whatever its health. */
 export const HEAL_BELOW = 0.75;
+/**
+ * The health a creature gets back a second once nothing has hurt it for `REGEN_AFTER` seconds, before its blood's
+ * `mend`: a wild one, and one of yours. Scaled with every kind's health (`CREATURE_HEALTH_MUL`), so hurt to whole takes
+ * as long as before. The island's `regen_wild`, `regen_kept`.
+ */
+export const REGEN_WILD = creatureHealth(0.25);
+export const REGEN_KEPT = creatureHealth(0.6);
+export const REGEN_AFTER = 6;
 /** What a salva puts a dressing on: cloth, or a herb cover. */
 export const DRESSINGS = ['bandage', 'cover'];
 /** A worker's chance of something in the pan, at no skill and at a hundred: a Miner's who has learned to pan (`pan` perk) to twice it. */
@@ -993,10 +1001,10 @@ const restOrRule = (c: Creature | Pick<Creature, 'worn'>, inBed: boolean): numbe
 export const staminaOf = (c: Creature | Pick<Creature, 'worn'>): number => Math.max(0, 1 - (c.worn ?? 0) / tireOrRule(c));
 /**
  * The base health under which a kind that does not evolve sleeps in a small bed, and then in a medium one; at the
- * second and over, a large one. One that evolves sleeps in the bed of its stage. The island's `den_health_1` and
- * `den_health_2`.
+ * second and over, a large one. One that evolves sleeps in the bed of its stage. Scaled with every kind's health
+ * (`CREATURE_HEALTH_MUL`), so the same kinds are in each. The island's `den_health_1` and `den_health_2`.
  */
-export const DEN_HEALTH = [25, 40] as const;
+export const DEN_HEALTH = [creatureHealth(25), creatureHealth(40)] as const;
 /**
  * The bed it fits, by `FurnitureDef.den`: for a kind that evolves the stage it is at (`stageOf`), and for one that does
  * not the band its kind's base health is in (`DEN_HEALTH`). It sleeps in a bed of exactly this and no other. The
@@ -4139,6 +4147,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     defaultStance: 'aggressive',
   },
 };
+// Every kind's health and attack as the game uses them, over the figures written in its row (`CREATURE_HEALTH_MUL`,
+// `CREATURE_ATTACK_MUL`), once and before anything else reads them.
+for (const def of Object.values(SPECIES)) {
+  def.health = creatureHealth(def.health);
+  def.attack = creatureAttack(def.attack);
+}
 // Asked for: a Springlet "operates same speed as a hare mount when swimming in water": in water, a Thistlekit's pace.
 SPECIES.springlet.swimSpeed = SPECIES.orse.speed;
 /**
@@ -4349,6 +4363,8 @@ export function kindNamed(c: Pick<Creature, 'species' | 'name'>): boolean {
  */
 export const renamedKind = (c: Pick<Creature, 'species' | 'name' | 'skills'> & { variant?: number }): string => (kindNamed(c) ? kindName(c) : c.name);
 
+/** The monsters, by id, in the order they are written: none is in the wild's roll; each stands up only at a lair (`lairs.ts`). */
+export const MONSTER_KINDS: readonly string[] = Object.keys(SPECIES).filter((id) => SPECIES[id].monster);
 /** Which species roam wild, by weight. A monster is not among them: it stands up only at its lair (`lairs.ts`). */
 export const WILD_SPECIES: Array<[string, number]> = [
   ['rabba', 27],
@@ -5087,8 +5103,8 @@ export const bossMul = (c: Pick<Creature, 'boss'>, channel: 'hardy' | 'tough'): 
   return !k ? 1 : channel === 'hardy' ? k.bossHealth : k.bossAttack;
 };
 // What a creature's attack takes off a player, as a share of a life: kept in `limits.ts`, a leaf, so that what reads it as it loads (enchanting's words) never waits on this.
-import { BLOW_SHARE } from './limits';
-export { BLOW_SHARE };
+import { BLOW_SHARE, CREATURE_ATTACK_MUL, CREATURE_HEALTH_MUL, creatureAttack, creatureHealth } from './limits';
+export { BLOW_SHARE, CREATURE_ATTACK_MUL, CREATURE_HEALTH_MUL };
 
 /** What a set of traits is worth, written out for a log line. */
 export const TRAIT_COUNT = TRAIT_SLOTS;
@@ -7117,7 +7133,7 @@ export class Creatures {
     const top = maxHealth(c, def);
     if (c.health > top) c.health = top;
     // Its blood and its herd's communal healing (`aura`), as the island's `beast_mul`.
-    else if (c.health < top && game.time - c.attackedAt > 6) c.health = Math.min(top, c.health + elapsed * (c.mode === 'wild' ? 0.25 : 0.6) * bloodMul(c, 'mend') * this.aura(c, 'mend'));
+    else if (c.health < top && game.time - c.attackedAt > REGEN_AFTER) c.health = Math.min(top, c.health + elapsed * (c.mode === 'wild' ? REGEN_WILD : REGEN_KEPT) * bloodMul(c, 'mend') * this.aura(c, 'mend'));
     // A yearling grows no fleece and gives no milk; an old one is slower at both.
     const growth = ageDef(c, game.time).growth;
     if (def.fleece && growth > 0 && c.fleece < 1) c.fleece = Math.min(1, c.fleece + elapsed * def.fleece * growth * bloodMul(c, 'grow'));

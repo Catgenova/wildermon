@@ -23,6 +23,7 @@
  * Runs against the database the suite leaves behind, and puts it back.
  */
 import { CLASS_TIER_AT } from '../../src/game/classes';
+import { SPECIES } from '../../src/game/creatures';
 import { CRIT_HIT, KNIFE_BLEED, KNIFE_BLEED_SECS, reachOf, STAGGER_MAUL } from '../../src/game/fight';
 import { WEAPON_BY_ID } from '../../src/game/gear';
 import { SPELL_BAR } from '../../src/game/patrons';
@@ -484,7 +485,7 @@ for (const th of THROWS) {
   const [first, glance, spared, line] = parts('RICOCHET');
   check(`Ricochet: a throw at ${pct(fx('ricochet', 'more'))}, glancing on at ${pct(fx('ricochet', 'glance'))} to the nearest other within `
     + `${fx('ricochet', 'reach')} tiles, and no further`,
-  near(Number(first), 1, 1e-9) && near(Number(glance), 1, 1e-5) && spared === 'true' && / Glance: ogre \d+\/170\.$/.test(line), island('RICOCHET'));
+  near(Number(first), 1, 1e-9) && near(Number(glance), 1, 1e-5) && spared === 'true' && new RegExp(` Glance: ogre \\d+/${SPECIES.ogre.health}\\.$`).test(line), island('RICOCHET'));
 }
 {
   const [ratio, hit, line] = parts('FAN');

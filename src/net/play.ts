@@ -21,6 +21,7 @@ import { swirlIn, type Swirl } from '../game/motes';
 import { startChoices, TELESTONE_KEY, type Runestone, type RunestoneId } from '../game/runestones';
 import { runeGatesHeld, sawGateFolk } from '../game/runegate';
 import { BLOCK_FRESH, isFightJob, isFightStance } from '../game/fight';
+import { fellIn, lyingAt } from '../game/fell';
 import { FIGHT_BACK_GOES } from '../game/creatures';
 import { saidWords } from '../game/roster';
 import { skillRises, tookOff } from './felt';
@@ -823,11 +824,17 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
   island.hooks.people = (people: PlayerRow[]) => {
     game.roster.sawAll(people
       .filter((p) => p.uid !== island.uid)
-      .map((p) => ({
-        id: hashId(p.uid), uid: p.uid, name: p.name, x: p.x, y: p.y, dirX: 0, dirY: 1,
-        level: p.level, moving: false, swimming: false, working: !!p.act,
-        act: p.act ?? undefined, look: cleanLook(p.look), gear: gearFrom(p.gear), tool: p.act ? toolFrom(p.act_tool, ACTION_BY_ID.get(p.act)?.tool) : undefined,
-      })));
+      .map((p) => {
+        // Lain where they fell while they may still pick where to wake (`../game/fell.ts`): drawn there, down.
+        const lying = lyingAt(fellIn(p.fell), p, game.spawn);
+        return {
+          id: hashId(p.uid), uid: p.uid, name: p.name, x: lying?.x ?? p.x, y: lying?.y ?? p.y, dirX: 0, dirY: 1,
+          level: lying?.level ?? p.level, moving: false, swimming: false, working: !lying && !!p.act,
+          act: lying ? undefined : p.act ?? undefined, look: cleanLook(p.look), gear: gearFrom(p.gear), tool: p.act && !lying ? toolFrom(p.act_tool, ACTION_BY_ID.get(p.act)?.tool) : undefined,
+          // (and when, on this page's clock, so its fall is drawn from where it has got to: none once up)
+          down: lying ? performance.now() / 1000 - island.since(new Date(lying.at).toISOString()) : undefined,
+        };
+      }));
     // And a blow somebody took on their shield, drawn on them while it is fresh (`Roster.blocked`).
     for (const p of people) {
       if (p.uid === island.uid || typeof p.blocked_at !== 'string') continue;
@@ -839,7 +846,7 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
       if (p.uid === island.uid || typeof p.hurt_at !== 'string') continue;
       const ms = Date.parse(p.hurt_at);
       if (Number.isFinite(ms) && island.since(p.hurt_at) < BLOCK_FRESH) {
-        game.roster.hurt(hashId(p.uid), ms, typeof p.hurt_where === 'string' ? p.hurt_where : undefined, typeof p.hurt_by === 'number' ? p.hurt_by : undefined);
+        game.roster.hurt(hashId(p.uid), ms, typeof p.hurt_where === 'string' ? p.hurt_where : undefined, typeof p.hurt_by === 'number' ? p.hurt_by : undefined, p.hurt_heavy === true);
       }
     }
   };
@@ -848,10 +855,16 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
     game.player.blockedAt = performance.now() / 1000;
   };
   // And a blow landing on you (`FigurePose.flinch`): stamped once a blow, where and from what as soon as they are said.
-  island.hooks.hurt = (where, by, again) => {
+  island.hooks.hurt = (where, by, again, heavy) => {
     if (!again) game.player.hurtAt = performance.now() / 1000;
     game.player.hurtWhere = where ?? undefined;
     game.player.hurtBy = by ?? undefined;
+    game.player.hurtHeavy = heavy;
+  };
+  // And where you fell, while the island says so: drawn lying there while you are on the spawn (`Game.lying`).
+  island.hooks.fell = (fell) => {
+    if (fell && fell.at !== game.player.fell?.at) game.player.fellAt = performance.now() / 1000 - island.since(new Date(fell.at).toISOString());
+    game.player.fell = fell;
   };
   for (const [text, kind, at] of log) game.write(text, kind as Parameters<Game['write']>[1], at);
   game.write(`You are on ${info.name}. Send somebody this page's address and they can join you.`, 'system');

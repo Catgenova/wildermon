@@ -233,6 +233,8 @@ begin
         -- With less of its extra weight on Power's Unshaken (`heavyOn`).
         perform hurt_player(p_world, p.uid, attack_of(c) * 0.012 * (1 + (heavy_hit() - 1) * path_fx(p_world, p.uid, 'heavy', 1)),
           'The ' || lower(d.name) || '''s heavy blow lands', coalesce(d.wound, 'bite'));
+        -- Landed (its `hurt_at` this transaction's): a heavy one, for the body drawn stumbling (`player.hurt_heavy`).
+        update player set hurt_heavy = true where world_id = p_world and uid = p.uid and hurt_at = now() and not hurt_heavy;
       else
         perform tell(p_world, p.uid, d.name || ' heavy blow: missed.', 'fight');
       end if;

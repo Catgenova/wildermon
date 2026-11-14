@@ -37,14 +37,24 @@ import { TEND_CLIPS, TEND_LEFT } from './clips/tend';
 import { LIFE, LIFE_LEFT, LIFE_SETTLE } from './clips/life';
 import { MISC_CLIPS, MISC_LEFT } from './clips/misc';
 import { REACH_CLIPS, REACH_SETTLE } from './clips/reach';
+import { BUILD_CLIPS, BUILD_LEFT, BUILD_SETTLE } from './clips/build';
 import { EMOTES2, emote2Clip } from './clips/emotes2';
 import { gettingAbout, gettingDown } from './down';
+// knocked down, on a ladder, a heavy blow (./clips/down-ko.ts, ./clips/ladder.ts, ./clips/stumble.ts)
+import { KO, KO_DOWN } from './clips/down-ko';
+import { CLIMB, climbTime } from './clips/ladder';
+import { stumbleOver, stumbling } from './clips/stumble';
 import { ACTION_BY_ID } from '../../game/actions';
 import { animationsOff } from '../../engine/motion';
 import { clipOfJob } from './routes';
 import { strideAt } from '../../game/player';
 import { SHIELDS, WEAPON_BY_ID } from '../../game/gear';
 import { UNITS_PER_TILE } from '../../render/iso';
+// ---- spellcasting (./clips/cast.ts) ----
+import { CAST_CLIPS, CAST_LEFT, CAST_LEFT_FACINGS, CAST_OF_KIND, castTime } from './clips/cast';
+import { spellInfo } from '../../render/spells/info';
+import { visualOf } from '../../render/spells/index';
+// ---- end spellcasting ----
 /** A unit quaternion's inverse. */
 const qinv = ([w, x, y, z]: Q): Q => [w, -x, -y, -z];
 
@@ -54,7 +64,9 @@ const qinv = ([w, x, y, z]: Q): Q => [w, -x, -y, -z];
  * maul); any other job (`work`); a fight with anything else in hand (`fight`); meditating (`meditate`); an emote
  * (`emote`); casting a spell (`cast`); in the water, swimming under way (`swim`) and treading water stopped (`tread`).
  */
-export type State = 'idle' | 'walk' | 'swing' | 'work' | 'fight' | 'meditate' | 'emote' | 'cast' | 'swim' | 'tread';
+export type State = 'idle' | 'walk' | 'swing' | 'work' | 'fight' | 'meditate' | 'emote' | 'cast' | 'swim' | 'tread'
+  // lain where it fell (`FigurePose.down`); on a ladder (`FigurePose.climb`)
+  | 'down' | 'climb';
 /** Every clip, by name (the authoring tools find a clip here, `tools/sculpt/lowanim.mjs --clip <name>`). */
 export const CLIPS: Record<string, Clip> = {
   idle: IDLE, walk: WALK, swing: SWING, sixseven: SIXSEVEN, work: WORK, 'work-left': mirrorClip(WORK, 'work-left'), hands: HANDS, ground: GROUND,
@@ -76,10 +88,16 @@ export const CLIPS: Record<string, Clip> = {
   ...Object.fromEntries([SEW, BRUSH_WALL, BRUSH_FLOOR, BRUSH_ITEM, BRUSH_CLOTH, ROPE].flatMap((c) => [[c.name, c], [`${c.name}-left`, mirrorClip(c, `${c.name}-left`)]])),
   // the gates, the carts and a few jobs of their own (./clips/misc.ts): the one-handed ones mirrored
   ...MISC_CLIPS,
+  // casting a spell (./clips/cast.ts), each with its mirror
+  ...CAST_CLIPS,
   // reaching up to pick, reading what is held, the lanterns (./clips/reach.ts); each mirrored left-handed
   ...Object.fromEntries(REACH_CLIPS.flatMap((c) => [[c.name, c], [`${c.name}-left`, mirrorClip(c, `${c.name}-left`)]])),
+  // lifting, setting down, taking apart, bridges and aqueducts (./clips/build.ts), the handed ones mirrored left-handed
+  ...BUILD_CLIPS,
   // the bow, the cheer, the point, the clap and sat on the ground (`./clips/emotes2.ts`)
   ...EMOTES2,
+  // knocked down and its way down (./clips/down-ko.ts); the climb on a ladder (./clips/ladder.ts)
+  ko: KO, 'ko-down': KO_DOWN, climb: CLIMB,
 };
 /** The clip a state plays until its own is approved: the 6 7 gesture. */
 export const PLACEHOLDER = 'sixseven';
@@ -90,7 +108,8 @@ export const PLACEHOLDER = 'sixseven';
  * any other fight the state's own; an emote plays its own clip where it has one (`emoteClipOf`), the state's otherwise.
  * (Running, and walking or running while casting, emoting or at work, keep the figure's pose: a stood clip would slide its
  * planted feet over the ground. But a hop, made on the spot moving or not as the flat figure's is; and a wave while
- * walking, the walk with the waving arm the wave's. Swimming plays the stroke and treading water its own (`./clips/swim.ts`); sat
+ * walking, the walk with the waving arm the wave's; and a spell cast walking with the hands alone, the walk with the arms and the head the
+ * cast's (`castClipOf`). Swimming plays the stroke and treading water its own (`./clips/swim.ts`); sat
  * driving plays its seat's clip, `seatClipOf`, put on the seat by `seatedLocal`.)
  */
 export const CLIP_OF: Record<State, string> = {
@@ -101,9 +120,11 @@ export const CLIP_OF: Record<State, string> = {
   fight: PLACEHOLDER,
   meditate: 'meditate',
   emote: PLACEHOLDER,
-  cast: PLACEHOLDER,
+  cast: 'cast-bolt',
   swim: 'swim',
   tread: 'tread',
+  down: 'ko',
+  climb: 'climb',
 };
 export { CLIP_OF_JOB, CLIP_OF_TOOL } from './routes';
 /**
@@ -164,8 +185,10 @@ const LEFT_OF: Readonly<Record<string, string>> = {
   ...Object.fromEntries(['sew', 'brush-wall', 'brush-floor', 'brush-item', 'brush-cloth', 'rope'].map((n) => [n, `${n}-left`])),
   // the padlock's key and the bauble (./clips/misc.ts)
   ...MISC_LEFT,
+  ...CAST_LEFT,
   // reaching up to pick, reading, the lanterns (./clips/reach.ts)
   ...Object.fromEntries(REACH_CLIPS.map((c) => [c.name, `${c.name}-left`])),
+  ...BUILD_LEFT,
 };
 /** Whether work is done left-handed from where it is seen: as the flat figure (facings three and seven). */
 const lefty = (facing: number): boolean => { const f = ((Math.round(facing) % 8) + 8) % 8; return f === 3 || f === 7; };
@@ -174,7 +197,7 @@ const lefty = (facing: number): boolean => { const f = ((Math.round(facing) % 8)
  * right side away from the viewer (it faces left: five, six and seven), so what is worked at with the right hand (the saw
  * and its sawhorse, the rod, the net) stays on the side seen.
  */
-const LEFT_FACINGS: Readonly<Record<string, readonly number[]>> = { saw: [5, 6, 7], fish: [5, 6, 7], net: [5, 6, 7] };
+const LEFT_FACINGS: Readonly<Record<string, readonly number[]>> = { saw: [5, 6, 7], fish: [5, 6, 7], net: [5, 6, 7], ...CAST_LEFT_FACINGS };
 const leftyFor = (name: string, facing: number): boolean => { const at = LEFT_FACINGS[name]; return at ? at.includes(((Math.round(facing) % 8) + 8) % 8) : lefty(facing); };
 
 /** The jobs done with the overhead swing whatever is in hand: the pickaxe's (mining, and those its tool routes to the swing: `./routes.ts`). */
@@ -190,7 +213,7 @@ const FIGHT = 'attack_creature';
 /** The weapons the game swings in one hand that are drawn in both in a fight's overhead swing: a long shaft is held in two. */
 const BOTH_HANDS = new Set(['spear', 'javelin']);
 /** The weapon a fight is fought with, if the pose is in one. */
-const fightWeapon = (pose: FigurePose) => (pose.job === FIGHT && pose.gear?.weapon ? WEAPON_BY_ID.get(pose.gear.weapon.id) : undefined);
+const fightWeapon = (pose: FigurePose) => ((pose.job === FIGHT || castArmed(pose)) && pose.gear?.weapon ? WEAPON_BY_ID.get(pose.gear.weapon.id) : undefined);
 /** Whether a pose is a fight with a bow in hand (an archery weapon: one that shoots arrows): it plays the shot (`SHOOT`). */
 const shoots = (pose: FigurePose): boolean => !!fightWeapon(pose)?.ammo;
 /** Whether a pose's job is swung overhead in both hands. */
@@ -206,8 +229,40 @@ const swings = (pose: FigurePose): boolean => {
  */
 export const ONE_HAND = (pose: FigurePose): boolean => {
   const w = fightWeapon(pose);
-  return !!w && !w.twoHanded && !w.ammo && !BOTH_HANDS.has(w.id);
+  // (a throw cast: whatever is thrown, in the one fist: `./clips/cast.ts` THROW)
+  return !!w && !w.twoHanded && !w.ammo && (!BOTH_HANDS.has(w.id) || castKind(pose) === 'throw');
 };
+// ---- spellcasting (./clips/cast.ts) ----
+/** The ways of casting made with the weapon in hand: a blow, a pole's thrust, a shot, a throw. */
+const WEAPON_CASTS = new Set(['strike', 'thrust', 'shot', 'throw']);
+const THROW_PREFIX = 'cast-throw';
+/** How a pose's spell is cast (`CastKind`), if it is casting one. */
+const castKind = (pose: FigurePose): string | undefined => (pose.cast ? spellInfo(pose.cast.id)?.kind : undefined);
+/** Whether a pose casts a spell made with the weapon in hand, stood: the weapon drawn in hand as a fight's (`heldIn`, `toolsIn`). */
+const castArmed = (pose: FigurePose): boolean => !!pose.cast && !pose.moving && !pose.swimming && !pose.driving && !!pose.gear?.weapon && WEAPON_CASTS.has(castKind(pose) ?? '');
+/** Whether a cast is made walking, over the walk (`clipFor`): one made with the hands alone. */
+const castWalks = (pose: FigurePose): boolean => !WEAPON_CASTS.has(castKind(pose) ?? 'strike');
+/** The bones besides the arms a cast over the walk takes from its own clip. */
+const CAST_TRUNK = new Set(['spine_03', 'neck_01', 'neck_02', 'head']);
+/**
+ * The clip a spell's cast plays (`./clips/cast.ts`), by how it is cast (`CastKind`): a blow, a thrust or a shot with the
+ * weapon in hand the fight's own (the shot's, the one-handed fight's, the overhead swing's: as a fight with it plays); a
+ * throw the throw, with the weapon in the right fist; a spell on somebody cast on oneself the ward's; every other its kind's.
+ * A blow or a shot with nothing in hand is sent from the hand as a bolt is.
+ */
+export function castClipOf(pose: FigurePose): string {
+  const kind = castKind(pose), w = pose.gear?.weapon ? WEAPON_BY_ID.get(pose.gear.weapon.id) : undefined;
+  if (w && (kind === 'strike' || kind === 'thrust' || kind === 'shot')) return w.ammo ? SHOOT.name : (w.twoHanded || BOTH_HANDS.has(w.id)) ? SWING.name : 'fight';
+  if (kind === 'ally' && (pose.cast as { at?: string } | undefined)?.at === 'self') return CAST_OF_KIND.buff as string;
+  return CAST_OF_KIND[kind as keyof typeof CAST_OF_KIND] ?? CLIP_OF.cast;
+}
+/** A cast's clip at the cast's share (`FigurePose.cast.t`), its release on the spell's own (`castTime`, `CastTiming.release`). */
+function castAt(pose: FigurePose, clip: Clip): { clip: Clip; t: number } {
+  const cast = pose.cast as NonNullable<FigurePose['cast']>;
+  return { clip, t: castTime(clip, cast.t, visualOf(cast.id)?.cast.timing.release ?? 0.5) };
+}
+// ---- end spellcasting ----
+
 /** The most of the way from a walk to a run (`FigurePose.gait`) still drawn as the walk; faster keeps the figure's pose. */
 const WALK_GAIT = 0.15;
 const TAU = Math.PI * 2;
@@ -236,6 +291,8 @@ const SETTLE: Readonly<Record<string, number>> = {
   'brush-floor': 0.55, 'brush-floor-left': 0.55,
   // the crouch at a skep (./clips/reach.ts)
   ...REACH_SETTLE,
+  // the squat at the floor and at a piece turned (./clips/build.ts)
+  ...BUILD_SETTLE,
 };
 /**
  * The clips played in the water (`./clips/swim.ts`), and seconds a fade between them takes: from the stroke to treading
@@ -255,12 +312,15 @@ const smoother = (u: number): number => { const x = Math.min(1, Math.max(0, u));
 
 /** The state a pose is in, of those a clip can play. */
 export function stateOf(pose: FigurePose): State | undefined {
+  // lain where it fell, whatever else it was doing; on a ladder, climbing it
+  if (pose.down !== undefined) return 'down';
+  if (pose.climb && !pose.driving) return 'climb';
   if (pose.swimming) return pose.moving ? 'swim' : 'tread';
   if (pose.driving) return undefined;
   // (a hop is made on the spot, the legs its own, as the flat figure's; a wave over the walk, `clipFor`)
   if (pose.moving) {
     if (pose.emote === 'hop' && !pose.working && !pose.cast) return 'emote';
-    return !pose.working && (!pose.emote || pose.emote === 'wave') && !pose.cast && (pose.gait ?? 0) <= WALK_GAIT ? 'walk' : undefined;
+    return !pose.working && (!pose.emote || pose.emote === 'wave') && (!pose.cast || castWalks(pose)) && (pose.gait ?? 0) <= WALK_GAIT ? 'walk' : undefined;
   }
   if (pose.cast) return 'cast';
   if (pose.emote) return 'emote';
@@ -285,9 +345,12 @@ export const walkPhase = (c: Clip, t: number, body: 'man' | 'woman', gait = 0): 
  */
 export function clipFor(pose: FigurePose, body: 'man' | 'woman' = pose.look?.gender === 'woman' ? 'woman' : 'man'): { clip: Clip; t: number; over?: { clip: Clip; t: number } } | undefined {
   const s = ON ? stateOf(pose) : undefined, emote = s === 'emote' || s === 'walk' ? emoteClipOf(pose) : undefined;
-  const name = s === 'work' ? workClipOf(pose.job) : s === 'fight' && shoots(pose) ? SHOOT.name : s === 'fight' && ONE_HAND(pose) ? 'fight' : s === 'emote' ? emote ?? CLIP_OF.emote : s && CLIP_OF[s];
+  const name = s === 'work' ? workClipOf(pose.job) : s === 'fight' && shoots(pose) ? SHOOT.name : s === 'fight' && ONE_HAND(pose) ? 'fight' : s === 'emote' ? emote ?? CLIP_OF.emote : s === 'cast' ? castClipOf(pose) : s && CLIP_OF[s];
   const clip = name ? CLIPS[(leftyFor(name, pose.facing) && LEFT_OF[name]) || name] : undefined;
   if (!clip) return undefined;
+  // a spell's cast: played once over it, its release on the spell's (`castAt`); walking, over the walk's arms
+  if (s === 'cast') return castAt(pose, clip);
+  if (s === 'walk' && pose.cast && !emote) { const c = CLIPS[castClipOf(pose)]; if (c) return { clip, t: walkTime(clip, pose.phase, body, pose.gait ?? 0), over: castAt(pose, CLIPS[(leftyFor(c.name, pose.facing) && LEFT_OF[c.name]) || c.name]) }; }
   // an emote's own clip: played once over the emote, its time the emote's (a looping one, the 6 7, run over and over for the
   // emote's seconds)
   const own = emote ? CLIPS[emote] : undefined, k = Math.max(0, Math.min(1, pose.emoteT ?? 0));
@@ -301,6 +364,8 @@ export function clipFor(pose: FigurePose, body: 'man' | 'woman' = pose.look?.gen
   // (the rings it leaves on the water are made where its hands are then, `../../render/figure.ts` ripple)
   if (s === 'swim') return { clip, t: ((((pose.phase / SWIM_STROKE) % 1) + 1) % 1) * clip.length };
   if (s === 'tread') return { clip, t: (((pose.phase / 6) % clip.length) + clip.length) % clip.length };
+  // on a ladder, a run of the climb to each two rungs the feet go up or down it (`climbTime`); held still with animations off
+  if (s === 'climb' && pose.climb) return { clip, t: animationsOff() ? 0 : climbTime(pose.climb.h, body) };
   // a go of a timed job: fitted to its length (the holds stretched, the blow kept: `fitTime`), a fight's swing one blow
   // a go (the placeholder as many runs as come nearest)
   if (pose.act && pose.act.length > 0) {
@@ -320,7 +385,7 @@ export const SWING_TOOL = 'pickaxe';
 export function heldIn(pose: FigurePose): string | undefined {
   const c = clipFor(pose);
   if (!c?.clip.grip && !c?.clip.wields) return undefined;
-  return pose.job === FIGHT ? pose.gear?.weapon?.id : swingJob(pose.job) ? SWING_TOOL : undefined;
+  return pose.job === FIGHT || castArmed(pose) ? pose.gear?.weapon?.id : swingJob(pose.job) ? SWING_TOOL : undefined;
 }
 
 /**
@@ -347,9 +412,10 @@ const toolOfPose = (pose: FigurePose): string | undefined => pose.tool?.id ?? (p
 export function toolsIn(pose: FigurePose, body: 'man' | 'woman' = pose.look?.gender === 'woman' ? 'woman' : 'man'): { tools: NonNullable<Clip['tools']>; up: Partial<Record<'l' | 'r', number>> } | undefined {
   const c = clipFor(pose, body)?.clip;
   if (!c?.tools) return undefined;
-  const side = c.strike?.side ?? 'r', other = side === 'r' ? 'l' : 'r';
+  // (the striking hand, else the one hand the clip holds a tool in: a throw mirrored, left-handed)
+  const side = c.strike?.side ?? (c.tools.l && !c.tools.r ? 'l' : 'r'), other = side === 'r' ? 'l' : 'r';
   // a fight: the weapon in the striking fist, nothing in the other
-  if (pose.job === FIGHT) return { tools: pose.gear?.weapon ? { [side]: pose.gear.weapon.id } : {}, up: {} };
+  if (pose.job === FIGHT || castArmed(pose) || c.name.startsWith(THROW_PREFIX)) return { tools: pose.gear?.weapon ? { [side]: pose.gear.weapon.id } : {}, up: {} };
   const own = TOOLS_OF[toolOfPose(pose) ?? ''];
   const tools = own ? { [side]: own.strike, ...(own.hold ? { [other]: own.hold } : {}) } : c.tools;
   const grip = c.bodies?.[body]?.grip ?? {}, up = Object.fromEntries(Object.entries(grip).filter(([s]) => LONG.has(tools[s as 'l' | 'r'] ?? '')));
@@ -564,8 +630,9 @@ export function animate(sk: Skeleton, pose: FigurePose, figure: () => Array<M3 |
   const play = (p: { clip: Clip; t: number; over?: { clip: Clip; t: number } }): Local => {
     if (p.over) {
       // a wave over the walk: the walk, the waving arm's bones the wave's, the head turned as the wave turns it
-      const walk = play({ clip: p.clip, t: p.t }), wave = play(p.over), side = WAVES[p.over.clip.name];
-      walk.local.forEach((_, i) => { const m = ARM_BONE.exec(sk.bones[i]?.name ?? ''); if (m && m[2] === side) walk.local[i] = wave.local[i]; });
+      // (a cast over the walk: both arms, the chest, the neck and the head the cast's)
+      const walk = play({ clip: p.clip, t: p.t }), wave = play(p.over), side = WAVES[p.over.clip.name], cast = p.over.clip.name in CAST_CLIPS;
+      walk.local.forEach((_, i) => { const n = sk.bones[i]?.name ?? '', m = ARM_BONE.exec(n); if ((m && (cast || m[2] === side)) || (cast && CAST_TRUNK.has(n))) walk.local[i] = wave.local[i]; });
       return looked(walk, p.over);
     }
     const hold = p.clip.tools ? toolsIn(pose, sk.body) : undefined, side = p.clip.strike?.side ?? 'r', other = side === 'r' ? 'l' : 'r';
@@ -592,6 +659,8 @@ export function animate(sk: Skeleton, pose: FigurePose, figure: () => Array<M3 |
   // (and a blow landing over that: `flinchOver`; in the water or not kept as it was)
   const over = (o: Local): Local => {
     const b = blocking(pose) ? { ...blockOver(sk, o, pose.block as number, stood), wet: o.wet } : o;
+    // (a heavy blow's flinch a stumble back instead: `./clips/stumble.ts`)
+    if (stumbling(pose)) return { ...stumbleOver(sk, b, pose, stood), wet: o.wet };
     return flinching(pose) ? { ...flinchOver(sk, b, pose.flinch as NonNullable<FigurePose['flinch']>, stood), wet: o.wet } : b;
   };
   if (!pose.id) return over(now);
@@ -612,7 +681,7 @@ export function animate(sk: Skeleton, pose: FigurePose, figure: () => Array<M3 |
   if (KEPT.size > MAX_KEPT) KEPT.delete(KEPT.keys().next().value as string);
   let out = now;
   // sat or lain down, or got up again: the clip's own way down onto the ground and up off it (`./down.ts`)
-  const down = gettingDown(sk, key, k, fresh, now, ms);
+  const down = gettingDown(sk, key, k, fresh, now, ms, pose.down);
   if (down) out = down;
   else if (k.from) {
     const span = k.span ?? FADE, u = (ms - k.at) / 1000 / span, settle = span > FADE && !!k.was && !!c && !!plantBetween(sk, k.was, c, 0);

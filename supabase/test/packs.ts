@@ -137,7 +137,7 @@ begin
   -- And another, at seven tenths of itself, beside the one that ran; and a third, whole.
   a := creature_spawn(w.world_id, 'goblin', v_px + 5, v_py + 1, 'wild', now() - interval '2 hours');
   b := creature_spawn(w.world_id, 'goblin', v_px + 5, v_py - 1, 'wild', now() - interval '2 hours');
-  update creature set traits = '{}', health = case when id = a then 0.7 else 0.95 end * 40,
+  update creature set traits = '{}', health = case when id = a then 0.7 else 0.95 end * species_health('goblin'),
       hunting = w.uid, pack_lead = null, hunt_x = to_x, hunt_y = to_y, hunt_again = null,
       until = now() - interval '1 second', settled_at = now() - interval '1 second'
     where world_id = w.world_id and id in (a, b);
@@ -381,7 +381,7 @@ const lines = (g: Game): string[] => g.log.map((l) => l.text);
   const backed = Math.hypot(gob.x - 20.5, gob.y - 20.5);
   check('a thrower throws from where it stands, and backs away when you close',
     thrown >= 1 && near(stood, 5, 0.01) && backed > 1.6, `${thrown} thrown from ${stood.toFixed(2)}, backed to ${backed.toFixed(2)}`);
-  gob.health = 0.4 * 40;
+  gob.health = 0.4 * SPECIES.goblin.health;
   gob.x = 24.5;
   step(g, 0.2);
   check(`a coward turns tail below ${COWARD_AT} of itself, runs, and rests`,
@@ -389,8 +389,8 @@ const lines = (g: Game): string[] => g.log.map((l) => l.text);
     `enemy ${gob.enemy}, state ${gob.state}`);
   const hurt = beast(g, 'goblin', 25, 21.5);
   const whole = beast(g, 'goblin', 25, 19.5);
-  hurt.health = 0.7 * 40;
-  whole.health = 0.95 * 40;
+  hurt.health = 0.7 * SPECIES.goblin.health;
+  whole.health = 0.95 * SPECIES.goblin.health;
   g.creatures.engage(g, hurt);
   g.creatures.engage(g, whole);
   step(g, 0.2);

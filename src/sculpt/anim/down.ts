@@ -48,18 +48,21 @@ const MAX_GOT = 256;
 /**
  * A body's pose while it gets down into its clip or up out of it (`now` the pose of what it does now; `k` what it is
  * drawn from, since when, and from what pose), or none: what it does now is drawn as it is. `fresh`: the body is seen for
- * the first time, so it is drawn already sat or lying.
+ * the first time, so it is drawn already sat or lying. `since`: seconds since it went down, where that is known (a body
+ * knocked down, `./clips/down-ko.ts`): the way down drawn from that far into it, a body first seen too.
  */
-export function gettingDown(sk: Skeleton, key: string, k: { source: string; from: Local | null; at: number }, fresh: boolean, now: Local, ms: number): Local | undefined {
+export function gettingDown(sk: Skeleton, key: string, k: { source: string; from: Local | null; at: number }, fresh: boolean, now: Local, ms: number, since?: number): Local | undefined {
   let g = GOT.get(key);
   const D = DOWNS.get(k.source);
   const from = (st: Got, e: number, pose: Local): Local => (st.from && e < FADE ? blendLocal(st.from, pose, smooth(e / FADE)) : pose);
   if (D) {
-    if (fresh) { set(key, { name: k.source, D, up: false, at: k.at, t0: D.length + LAND, from: null }); return undefined; }
-    if (!g || g.name !== k.source || g.at !== k.at) {
+    // (from as far into the way down as it has been since it went down, where that is known)
+    const into = since === undefined ? undefined : Math.min(D.length + LAND, Math.max(0, since - Math.max(0, ms - k.at) / 1000));
+    if (fresh && (into === undefined || into >= D.length + LAND)) { set(key, { name: k.source, D, up: false, at: k.at, t0: D.length + LAND, from: null }); return undefined; }
+    if (fresh || !g || g.name !== k.source || g.at !== k.at) {
       // going down: from the start, or from as far as a getting up had got back to
       const back = g && g.up && g.D === D ? Math.max(0, g.t0 - ((ms - g.at) / 1000) * UP) : 0;
-      g = set(key, { name: k.source, D, up: false, at: k.at, t0: back, from: k.from });
+      g = set(key, { name: k.source, D, up: false, at: k.at, t0: Math.max(back, into ?? 0), from: fresh ? null : k.from });
     }
     const e = (ms - g.at) / 1000, t = g.t0 + e;
     if (t >= D.length + LAND) { k.from = null; return undefined; }
@@ -100,10 +103,13 @@ export function onTheWay(key: string, ms: number): boolean {
  * Whether a body is sat or lain on the ground, or on its way down onto it or up (by its key, and the clip it plays): put
  * where its clip puts it, not stood on its lowest sole (`../lowpoly.ts`).
  */
-export const onTheGround = (key: string, clip: string | undefined): boolean => GOT.has(key) || (clip !== undefined && DOWNS.has(clip));
+export const onTheGround = (key: string, clip: string | undefined): boolean => GOT.has(key) || (clip !== undefined && (DOWNS.has(clip) || PUT.has(clip)));
+/** The clips a body is put where they put it rather than stood on its lowest sole, by name: the climb, its feet on the rungs (`./clips/ladder.ts`). */
+const PUT = new Set<string>();
+export function putAsKeyed(name: string): void { PUT.add(name); }
 
-/** The clips played with the eyes shut: asleep, meditating, praying with the head bowed. */
-const SHUT = new Set(['sleep', 'meditate', 'pray']);
+/** The clips played with the eyes shut: asleep, meditating, praying with the head bowed, knocked down (`./clips/down-ko.ts`). */
+const SHUT = new Set(['sleep', 'meditate', 'pray', 'ko']);
 /** Whether a body's eyes are shut (by its key, and the clip it plays): in one of those, and down, not on its way down or up. */
 export const eyesShut = (key: string, clip: string | undefined, ms: number): boolean => clip !== undefined && SHUT.has(clip) && !onTheWay(key, ms);
 

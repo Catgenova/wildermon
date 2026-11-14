@@ -111,6 +111,8 @@ begin
     'blocked_at', p.blocked_at,
     'hurt_at', p.hurt_at,
     'hurt_where', p.hurt_where,
+    'hurt_heavy', p.hurt_heavy,
+    'fell', p.fell,
     'ends', p.act_ends,
     'left', p.act_left,
     -- And how many were asked for, which nothing wrote down until now. The bar

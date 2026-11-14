@@ -5,5 +5,5 @@ CREATE OR REPLACE FUNCTION public.map_chance_beast(p_health double precision)
  LANGUAGE sql
  STABLE
 AS $function$
-  select least(map_kill_cap(), p_health / map_kill_scale())
+  select least(map_kill_cap(), p_health / creature_health_mul() / map_kill_scale())
 $function$

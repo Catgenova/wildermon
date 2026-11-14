@@ -45,6 +45,10 @@ export interface PlayerRow {
   hurt_where?: string | null;
   /** What struck it, a creature's id: their body broadcast only (their `stats.hurtBy`). */
   hurt_by?: number | null;
+  /** Whether that blow was a heavy one (`player.hurt_heavy`): drawn as a stumble back (`src/sculpt/anim/clips/stumble.ts`). */
+  hurt_heavy?: boolean | null;
+  /** Where they fell, while they may lie there (`player.fell`: `{ x, y, level, at }`, `src/game/fell.ts`); null when not. */
+  fell?: unknown;
   [key: string]: unknown;
 }
 

@@ -1,0 +1,309 @@
+-- Every creature's health ×3 and blow ×0.4, wild and yours (`CREATURE_HEALTH_MUL`, `CREATURE_ATTACK_MUL`).
+--
+-- Asked for: "PvE combat is out of balance. Both sides do way too much damage and have too little health. Reduce
+-- monster base damage figures by 60% but increase monster base hp by 3x", for every creature. `species_def` carries the
+-- new figures from the definitions before this; here, what reads a flat amount of a creature's health:
+--   * health back a second (`creature_settle`): ×3 with the health (`regen_wild`, `regen_kept`), so hurt to whole
+--     takes as long;
+--   * a treasure map off a monster (`map_chance_beast`, `map_ql_beast`): off its health as its row writes it, before
+--     the multiplier, so the odds and the QL are what they were;
+--   * every creature on the island, wild, out, on a settlement or crated: its health kept as the same share of its
+--     full health, so none wakes at a third of it and the heal task does not dress every one of yours.
+
+set local lock_timeout = '3s';
+
+create or replace function map_chance_beast(p_health double precision) returns double precision language sql stable as $fn$
+  select least(map_kill_cap(), p_health / creature_health_mul() / map_kill_scale())
+$fn$;
+
+create or replace function map_ql_beast(p_health double precision) returns double precision language sql as $fn$
+  select greatest(1, least(100, (12 + p_health / creature_health_mul() / 8) * (0.8 + random() * 0.4)))
+$fn$;
+
+CREATE OR REPLACE FUNCTION public.creature_settle(p_world uuid, p_id integer)
+ RETURNS boolean
+ LANGUAGE plpgsql
+AS $function$
+declare c creature; d species_def; a age_def; elapsed double precision; top double precision;
+        guard int := 0; n int; i int; nx double precision; ny double precision;
+        dist double precision; secs double precision; pace double precision; ok boolean;
+        home record; ax double precision; ay double precision; v_rig placed; v_bled double precision;
+        v_stunned boolean; c0 creature; v_learning boolean := false;
+begin
+  select * into c from creature where world_id = p_world and id = p_id for update;
+  if not found then return false; end if;
+  c0 := c;
+  -- In a crate: nothing but where the crate is, once an island day. Its age is counted from its birth (`age_row`).
+  if c.mode = 'stored' then
+    select pl.cx as x, pl.cy as y into home from placed pl where pl.world_id = p_world and pl.creature = p_id limit 1;
+    if not found then
+      select py.x, py.y into home from player py where py.world_id = p_world and py.uid = c.keeper;
+    end if;
+    update creature set
+        from_x = coalesce(home.x, c.to_x), from_y = coalesce(home.y, c.to_y),
+        to_x = coalesce(home.x, c.to_x), to_y = coalesce(home.y, c.to_y),
+        leg_at = now(), leg_ends = now(), until = now() + make_interval(secs => stored_settle()), settled_at = now()
+      where world_id = p_world and id = p_id;
+    return true;
+  end if;
+  select * into d from species_def where id = c.species;
+  a := age_row(c.born, old_of(c), age_pace(c));
+  /*
+   * In the traces until somebody takes it out.
+   *
+   * A hitch was a column and nothing else read it: the settle below went on
+   * walking a companion to its keeper's feet and sending a worker out to its
+   * trade, so an animal backed into a yoke was at its owner's heels a second
+   * later, still hitched to a wagon it was nowhere near. It stands at the
+   * vehicle now, thinks nothing, and does not get hungry, until `unhitch_one`
+   * or `unhitch_all` takes it out -- or what it was hitched to is gone, in
+   * which case there is nothing left to be in the traces of.
+   */
+  if c.hitched_to is not null then
+    select * into v_rig from placed where world_id = p_world and id = c.hitched_to;
+    if not found then
+      update creature set hitched_to = null where world_id = p_world and id = p_id;
+      c.hitched_to := null;
+    end if;
+  end if;
+  elapsed := extract(epoch from (now() - c.settled_at));
+  if elapsed <= 0 then
+    -- Nothing has passed for the body — but a worker's day is not its body,
+    -- and the trips it is owed are still owed. One in the traces owes none.
+    if c.hitched_to is not null then return false; end if;
+    if c.mode = 'deed' then perform worker_settle(p_world, p_id);
+    elsif c.mode = 'active' then perform companion_settle(p_world, p_id); end if;
+    return false;
+  end if;
+
+  -- The body: hunger falling, wounds closing, fleece coming back, and a
+  -- brushing wearing off. None of it needs a step; it is all just elapsed time.
+  top := max_health(c);
+  /*
+   * A knife's bleeding, for the part of the time since the last settle that it
+   * ran, and never the last of it: what finishes a thing is a blow. While it
+   * bleeds it is hurt, so it mends nothing (`KNIFE_BLEED`).
+   */
+  if c.bleed_until is not null then
+    v_bled := extract(epoch from (least(now(), c.bleed_until) - c.settled_at));
+    if v_bled > 0 then
+      if c.health > 1 then c.health := greatest(1, c.health - coalesce(c.bleed_rate, 0) * beast_mul(c, 'bleed') * v_bled); end if;
+      c.hurt_at := greatest(coalesce(c.hurt_at, c.settled_at), least(now(), c.bleed_until));
+    end if;
+    if c.bleed_until <= now() then c.bleed_until := null; c.bleed_rate := null; end if;
+  end if;
+  -- Except in the traces, where the belly holds where it was when it went in.
+  if c.hitched_to is null then
+    -- Hungry slower for its keeper's Light Eaters.
+    c.hunger := greatest(0, c.hunger - elapsed * hunger_rate(c.mode) * beast_mul(c, 'appetite')
+                                   * coalesce((c.kept->>'kept:hunger')::double precision, 1));
+  end if;
+  if c.health > top then
+    c.health := top;
+  elsif c.health < top and (c.hurt_at is null or now() - c.hurt_at > make_interval(secs => regen_after())) then
+    -- Health back a second, wild and kept (`REGEN_WILD`, `REGEN_KEPT`): scaled with every kind's health.
+    c.health := least(top, c.health + elapsed * case when c.mode = 'wild' then regen_wild() else regen_kept() end * beast_mul(c, 'mend'));
+  end if;
+  if d.fleece is not null and a.growth > 0 and c.fleece < 1 then
+    c.fleece := least(1, c.fleece + elapsed * d.fleece * a.growth * beast_mul(c, 'grow'));
+  end if;
+  -- A brushing wears off over a few hours: longer for its keeper's Lasting Care.
+  if c.mode in ('active', 'deed') and d.learns is not null and (d.learns_by = 'out' or (d.learns_by = 'dark' and is_night(p_world))) then
+    n := floor(elapsed / out_every())::int + case when random() < elapsed / out_every() - floor(elapsed / out_every()) then 1 else 0 end;
+    -- Its chance of a lesson is over the time since the row was written, so this one is always written.
+    v_learning := true;
+    for i in 1 .. least(n, 960) loop perform beast_learns(p_world, p_id, d.learns_by); end loop;
+  end if;
+  c.care := greatest(0, c.care - elapsed * case when c.care > 0 then beast_mul(c, 'carefade') else 1 end / (coalesce((c.kept->>'kept:care_hours')::double precision, care_hours()) * 3600));
+  /*
+   * And a hungry one on a deed goes to the stores.
+   *
+   * Written on the row rather than on `c`, so the settle below does not carry
+   * the old belly back over it. Only when it is actually hungry, which for a
+   * worker is an hour or so apart — this is not a cost anybody pays on a beat.
+   */
+  -- Its time at work since it last ate (`upkeep_for`), for a worker.
+  if c.mode = 'deed' then c.unfed := c.unfed + elapsed; end if;
+  if c.mode <> 'wild' and c.hitched_to is null and c.hunger < graze_hungry() then
+    if worker_feed(p_world, p_id, c.care) is not null then
+      c.unfed := 0;
+      c.hunger := least(1, c.hunger + graze_fill());
+      select cr.care into c.care from creature cr where cr.world_id = p_world and cr.id = p_id;
+    end if;
+  end if;
+
+  -- And no further: it stands at the vehicle, the body settled and nothing else.
+  if c.hitched_to is not null then
+    update creature set
+        from_x = v_rig.cx, from_y = v_rig.cy, to_x = v_rig.cx, to_y = v_rig.cy,
+        leg_at = now(), leg_ends = now(), until = now(),
+        health = c.health, fleece = c.fleece, care = c.care,
+        enemy = null, hunting = null, settled_at = now()
+      where world_id = p_world and id = p_id;
+    return true;
+  end if;
+
+  /*
+   * Stunned (`enchant_stun`, the browser's `stunUntil`): it thinks nothing
+   * until the stun runs out. The body above goes on -- it bleeds, it burns, it
+   * gets hungry -- and nothing below does: it does not hunt, brawl, wander,
+   * give up a chase and walk home, follow its keeper or go to work, and a
+   * hunter whose nerve has gone does not turn tail until it can move again.
+   * The hold under the stun (`class_hold`) already stops it striking and its
+   * legs; this is what stopped a thinking creature writing itself new ones.
+   */
+  v_stunned := stun_left(p_world, p_id) is not null;
+
+  if c.mode <> 'wild' then
+    c.hunting := null;
+    c.brawl := null;
+  elsif not v_stunned then
+    -- A hunter looks for you; anything else you struck that stands and fights is after you already (`engage_beast`).
+    -- A tame thing that hurt it, first, while it is on one (`brawl_settle`).
+    if c.brawl is not null then c := brawl_settle(p_world, c, d, a); end if;
+    if c.id is not null and c.brawl is null and (d.hunter or c.hunting is not null) then c := hunt_settle(p_world, c, d, a); end if;
+  end if;
+
+  if v_stunned then
+    -- Where the stun caught it, until it runs out.
+    null;
+  elsif c.mode = 'wild' and c.hunting is null and c.brawl is null then
+    -- In water, a kind with a water pace of its own goes at that (`swim_speed`, `water_over`).
+    pace := case when d.swim_speed is not null and water_over(p_world, floor(c.to_x)::int, floor(c.to_y)::int)
+                 then d.swim_speed else d.speed end * a.speed * beast_mul(c, 'speed') * 0.7;
+    while c.until <= now() and guard < catch_up_legs() loop
+      guard := guard + 1;
+      n := c.leg + 1;
+      ok := false;
+      -- A step about its own country rather than a step from wherever it
+      -- last got to. Past the edge of its range it draws towards home
+      -- instead, which is what keeps an island's wildlife somewhere in
+      -- particular. A creature from before homes existed takes where it
+      -- stands, which is what it would have had anyway.
+      if c.home_x is null then c.home_x := c.to_x; c.home_y := c.to_y; end if;
+      -- A pack keeps closer to home, so that it is met together (`pack_range`).
+      if (c.to_x - c.home_x) ^ 2 + (c.to_y - c.home_y) ^ 2 > (case when d.pack then pack_range() else wild_range() end) ^ 2 then
+        ax := c.home_x; ay := c.home_y;
+      else
+        ax := c.to_x; ay := c.to_y;
+      end if;
+      for i in 0..7 loop
+        nx := ax + (hash_tile(p_id, n, 7001 + i) * 2 - 1) * wild_reach();
+        ny := ay + (hash_tile(p_id, n, 9001 + i) * 2 - 1) * wild_reach();
+        -- A kind of the deep water keeps to it, the whole way (`deep_line`).
+        if (case when d.deep_water then deep_line(p_world, c.to_x, c.to_y, nx, ny)
+                 else creature_tile_ok(p_world, floor(nx)::int, floor(ny)::int)
+                      and line_clear(p_world, c.to_x, c.to_y, nx, ny) end) then ok := true; exit; end if;
+      end loop;
+      c.leg := n;
+      if not ok then
+        -- Hemmed in: stand where it is and look again in a moment.
+        c.from_x := c.to_x; c.from_y := c.to_y;
+        c.leg_at := c.until; c.leg_ends := c.until;
+        c.until := c.until + interval '2 seconds';
+        continue;
+      end if;
+      -- It feeds itself on the way. The browser walks it to a forage bed,
+      -- grazes for a few seconds and tops the belly up; out here the leg that
+      -- ends on ground worth grazing is the same thing without the detail.
+      if c.hunger < graze_hungry() and coalesce((select forage from tile_def
+            where id = land_tile(p_world, floor(nx)::int, floor(ny)::int)), false) then
+        c.hunger := least(1, c.hunger + graze_fill());
+      end if;
+      -- No further than a Root or a Tether lets it (`class_leash_point`).
+      select lp.x, lp.y into nx, ny from class_leash_point(p_world, p_id, nx, ny) lp;
+      dist := sqrt((nx - c.to_x) ^ 2 + (ny - c.to_y) ^ 2);
+      secs := greatest(0.2, dist / greatest(0.1, pace));
+      c.from_x := c.to_x; c.from_y := c.to_y;
+      c.to_x := nx; c.to_y := ny;
+      c.leg_at := c.until;
+      c.leg_ends := c.leg_at + make_interval(secs => secs);
+      c.until := c.leg_ends + make_interval(secs => wild_rest() + hash_tile(p_id, n, 11001) * wild_rest_spread());
+    end loop;
+    /*
+     * And past the cap it is where it got to, and the clock catches up with
+     * it. This line is the whole reason the cap can come down: it was already
+     * here, and it was already the answer for anything more than forty legs
+     * behind. Forty was doing an eighth of a second of arithmetic to reach an
+     * answer this line gives for nothing.
+     *
+     * Measured, on a creature an hour behind: 109.10 ms with the cap at forty,
+     * against 4.78 ms for one a second behind. Every one of those legs is a
+     * random step inside a home range nobody was standing in.
+     */
+    if c.until <= now() then
+      c.from_x := c.to_x; c.from_y := c.to_y;
+      c.leg_at := now(); c.leg_ends := now();
+      c.until := now() + make_interval(secs => 1 + hash_tile(p_id, c.leg, 11001) * 5);
+    end if;
+  elsif c.mode = 'active' and c.keeper is not null and c.enemy is null then
+    -- A companion is wherever its keeper is; following is not a walk of its own.
+    -- A fight is, and one with something in its teeth keeps the legs it has:
+    -- `companion_settle`, below, walks it, strikes, and brings it back to heel.
+    select p.x, p.y into home from player p where p.world_id = p_world and p.uid = c.keeper;
+    -- Piers: but not onto a tile on piers, where it does not go: it waits where it is (`creature_tile_ok`).
+    -- Already standing there: nothing moved.
+    if found and not on_piers(p_world, floor(home.x)::int, floor(home.y)::int)
+       and ((c.from_x, c.from_y, c.to_x, c.to_y) is distinct from (home.x, home.y, home.x, home.y)
+            or c.leg_ends > now() or c.until > now()) then
+      c.from_x := home.x; c.from_y := home.y; c.to_x := home.x; c.to_y := home.y;
+      c.leg_at := now(); c.leg_ends := now(); c.until := now();
+    end if;
+  elsif c.mode = 'stored' then
+    -- In a crate: where the crate stands, or at the feet of whoever carries it.
+    select pl.cx as x, pl.cy as y into home from placed pl where pl.world_id = p_world and pl.creature = p_id limit 1;
+    if not found then
+      select py.x, py.y into home from player py where py.world_id = p_world and py.uid = c.keeper;
+    end if;
+    if found then
+      c.from_x := home.x; c.from_y := home.y; c.to_x := home.x; c.to_y := home.y;
+      -- A crated one never walks, so it is not asked every round.
+      c.leg_at := now(); c.leg_ends := now(); c.until := now() + make_interval(secs => stored_settle());
+    end if;
+  end if;
+
+  update creature set
+      from_x = c.from_x, from_y = c.from_y, to_x = c.to_x, to_y = c.to_y,
+      leg_at = c.leg_at, leg_ends = c.leg_ends, until = c.until, leg = c.leg,
+      health = c.health, hunger = c.hunger, fleece = c.fleece, care = c.care, unfed = c.unfed,
+      hunting = c.hunting, hunt_x = c.hunt_x, hunt_y = c.hunt_y, hunt_again = c.hunt_again,
+      fight_blows = c.fight_blows, windup_at = c.windup_at, bleed_rate = c.bleed_rate, bleed_until = c.bleed_until,
+      hurt_at = c.hurt_at, pack_lead = c.pack_lead, brawl = c.brawl, threat_at = c.threat_at,
+      home_x = c.home_x, home_y = c.home_y,
+      settled_at = now()
+    where world_id = p_world and id = p_id
+      -- A companion at heel with nothing but its body's slow straight lines to write is left for a minute, so its row
+      -- is not sent again on every read (`rpc_creatures`); the next write carries the time since.
+      and not coalesce(c.mode = 'active' and not v_learning and elapsed < 60
+        and (c.from_x, c.from_y, c.to_x, c.to_y, c.leg_at, c.leg_ends, c.until, c.leg, c.unfed,
+             c.hunting, c.hunt_x, c.hunt_y, c.hunt_again, c.fight_blows, c.windup_at, c.bleed_rate, c.bleed_until,
+             c.hurt_at, c.pack_lead, c.brawl, c.threat_at, c.home_x, c.home_y)
+            is not distinct from
+            (c0.from_x, c0.from_y, c0.to_x, c0.to_y, c0.leg_at, c0.leg_ends, c0.until, c0.leg, c0.unfed,
+             c0.hunting, c0.hunt_x, c0.hunt_y, c0.hunt_again, c0.fight_blows, c0.windup_at, c0.bleed_rate, c0.bleed_until,
+             c0.hurt_at, c0.pack_lead, c0.brawl, c0.threat_at, c0.home_x, c0.home_y)
+        and abs(c.health - c0.health) < 0.02 * top
+        and abs(c.hunger - c0.hunger) < 0.01 and abs(c.care - c0.care) < 0.01 and abs(c.fleece - c0.fleece) < 0.01, false);
+  -- And then the day's work, for whichever of them is on a deed rather than
+  -- out in the country. The row goes down first because the work reads it back.
+  -- Not while it is stunned, which is no time to work or to walk.
+  if v_stunned then null;
+  elsif c.mode = 'deed' then perform worker_settle(p_world, p_id);
+  -- And a companion's company, which is the one thing at heel that is a walk of its own.
+  elsif c.mode = 'active' then perform companion_settle(p_world, p_id); end if;
+  -- And what a Retribution dealt back to it while it struck, now that it is written down (`faith_owed_pay`).
+  perform faith_owed_pay(p_world, p_id);
+  -- And a Brace for the Charge waiting for it at the edge of somebody's reach (`class_owed_pay`).
+  perform class_owed_pay(p_world, p_id);
+  return true;
+end $function$;
+
+-- Its health as the same share of its full health as before: full health then is full health now. Full health before
+-- was this one's full health off its row's own figure (`max_health` with the multiplier undone).
+update creature c
+   set health = least(max_health(c), c.health * max_health(c) / greatest(1, round(
+         species_health(c.species) / creature_health_mul() * beast_mul(c, 'hardy')
+         * class_mul(c.world_id, c.keeper, 'hide', 'soul_strength'))))
+ where c.health > 0;
+
+select private.lock_doors();

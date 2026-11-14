@@ -12,7 +12,12 @@ import { PLAN_AREA_MOST, PLAN_UNDO_SECONDS } from '../../game/planarea';
 import { UPDATE_CHECK_MS } from '../update';
 import { JOURNAL_TABS } from './journaltabs';
 import { RESPAWN_ARM_MS } from '../respawn';
-import { BLOCK_SECS, FLINCH_LIT, FLINCH_SECS } from '../../game/fight';
+import { BLOCK_SECS, FLINCH_LIT, FLINCH_SECS, STUMBLE_SECS } from '../../game/fight';
+// ---- spellcasting (What's new 593) ----
+import { ALL_SPELL_IDS, spellInfo } from '../../render/spells/info';
+import { RELEASE_MOTES, RELEASE_SECS } from '../../render/fx/cast';
+import { FALL_SECS } from '../../game/fell';
+import { CLIMB_RUN, RUNG } from '../../game/ladderclimb';
 import { MAP_LEGEND, SETTLEMENT_BORDER_PX, MAP_ZOOM_MIN } from './minimap';
 import { FAST_DPR, LOW_POWER_FPS, SETTING_DEFAULTS } from '../../game/settings';
 import { BLOSSOM } from '../../audio/music/tracks/blossom';
@@ -104,7 +109,7 @@ import { CHART_LEAST, CHART_QL_PER_TILE, CHART_SHEET } from '../../game/cartogra
 import { MEAD_AGE_CAP, MEAD_AGE_RATE } from '../../game/ageing';
 import { WHEY_FEED } from '../../game/dairy';
 import { GATHER_SKILL, LEARN_PACE as PACE_258, LEARN_PACE, PULL_PACE_TIMES, sparTaskSays } from '../../game/creatures';
-import { BED_REST, DEN_HEALTH, restFor, SPECIALTY_AT, SPECIALTY_BONUS, STANCE_NAMES, TIRE_GOES, UNFED_PACE, UPKEEP_FOR, workDuration } from '../../game/creatures';
+import { BED_REST, BLOW_SHARE, CREATURE_ATTACK_MUL, CREATURE_HEALTH_MUL, DEN_HEALTH, REGEN_KEPT, REGEN_WILD, restFor, SPECIALTY_AT, SPECIALTY_BONUS, STANCE_NAMES, TIRE_GOES, UNFED_PACE, UPKEEP_FOR, workDuration } from '../../game/creatures';
 import { BARDING_CUT, GEAR_FLOOR, GEAR_QL_LEAST, GEAR_SIZES, HARNESS_PACE, PACK_LOADS } from '../../game/wildgear';
 import { favouriteOf, fedBonus, FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, levelSkill, stageLevels, TAME_HARD, tameLearn, tameNeeds, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME } from '../../game/creatures';
 import { type AbilityId, type FightStyle, abilityName, abilitySays, BASE_STATS, EVOLVE_AT, FILE_RARITY_ODDS, POT_MOST, POT_STEP, GATHER_DO, GATHER_VERB, GRAZE_FILL, LEARNS_SAYS, seasonSays, stageSays, STYLE_SAYS, learnPaceSays, STAGE_LOADS, stageWorkSays, TEND_REACH, workerSkipsTools } from '../../game/creatures';
@@ -208,7 +213,7 @@ import {
   bossSays, garrisonSays, HOARD_SCALE, HOARD_SCALE_CAP, HOARD_SHARE, hoardBook, hoardSays, LAIR_ANNOUNCE, LAIR_KINDS, LAIR_LEASH, LAIR_MOVE_CLEARS,
   LAIR_MOVE_DAYS, LAIR_RING, LAIR_RING_WILD, LAIR_SIGHT, LAIR_TRACK, lairRingWant, restockSays, SITE_SAYS,
 } from '../../game/lairs';
-import { PER_REGION, REGION as WILD_SQUARE } from '../../game/creatures';
+import { MONSTER_KINDS, PER_REGION, REGION as WILD_SQUARE } from '../../game/creatures';
 import {
   CACHE_DEED_GAP, CACHE_DRAW_EVERY, CACHE_DRAWS, CACHE_EVERY, CACHE_LOOT, CACHE_SPOT_BASE, CACHE_SPOT_EVERY, cacheOddsSays, lootSays, WINTER_FUR, WINTER_FUR_PART,
 } from '../../game/winter';
@@ -4428,7 +4433,7 @@ export const NEWS: News[] = [
     ],
   },
   {
-    n: 593,
+    n: 597,
     day: '2026-11-14',
     lines: () => [
       'New: monster lairs. A goblin, orc, ogre or dragon stands up only at its kind\'s lair; none in the wild, none raids a settlement.',
@@ -4447,6 +4452,62 @@ export const NEWS: News[] = [
       'Changed: no settlement founded nearer a lair than its kind\'s distance.',
       'Removed: monsters in the wild\'s roll and the Northeast Tundra\'s monster-only wild (its wild now the usual mix); every monster roaming when lairs landed.',
     ],
+  },
+  {
+    n: 596,
+    day: '2026-11-14',
+    lines: () => {
+      // Each figure before the change, off the one in force: the multiplier undone.
+      const was = (x: number, mul: number): number => Math.round((x / mul) * 100) / 100;
+      const hp = (n: number): string => `${n} (was ${was(n, CREATURE_HEALTH_MUL)})`;
+      const hit = (n: number): string => `${n} (was ${was(n, CREATURE_ATTACK_MUL)})`;
+      const life = (n: number): string => `${percent(Math.round(n * BLOW_SHARE * 100) / 100)} (was ${percent(Math.round(was(n, CREATURE_ATTACK_MUL) * BLOW_SHARE * 100) / 100)})`;
+      const name = (id: string): string => SPECIES[id].name.toLowerCase();
+      return [
+        `Changed: every creature's base health ×${CREATURE_HEALTH_MUL}, base blow damage ×${CREATURE_ATTACK_MUL}: wildermon and monsters, wild and yours. Yours keep their share of health.`,
+        `Monster health: ${listed(MONSTER_KINDS.map((id) => `${name(id)} ${hp(SPECIES[id].health)}`))}.`,
+        `Monster blow: ${listed(MONSTER_KINDS.map((id) => `${name(id)} ${hit(SPECIES[id].attack)}`))}; on an unarmoured life ${listed(MONSTER_KINDS.map((id) => `${name(id)} ${life(SPECIES[id].attack)}`))}.`,
+        `Changed: creature health back per second, unhurt: wild ${hp(REGEN_WILD)}, yours ${hp(REGEN_KEPT)}; time to heal unchanged.`,
+        `Changed: wildermon bed size bands, non-evolving kinds: small under ${hp(DEN_HEALTH[0])} health, medium under ${hp(DEN_HEALTH[1])}; same kinds in each.`,
+        'Unchanged: treasure map chance and map QL off a monster; your health, weapons, spells, traps and armour.',
+      ];
+    },
+  },
+  {
+    n: 595,
+    day: '2026-11-14',
+    lines: () => [
+      `New: knocked out at 0 health: fall to the ground, ${FALL_SECS} s; lying where you fell until you choose where to wake or step off the spawn; getting up on waking. Camera on where you fell. Other players see it.`,
+      `New: climbing a ladder: hands and feet on the rungs, ${CLIMB_RUN / RUNG} rungs a step, facing the ladder, up and down. Other players see it.`,
+      `New: heavy blow landing (×${HEAVY_HIT}): stumble back a step, ${STUMBLE_SECS} s (was: flinch, ${FLINCH_SECS} s). Other players see it.`,
+      'Animations Off: lying, and on a ladder, held in one pose.',
+    ],
+  },
+  {
+    n: 594,
+    day: '2026-11-14',
+    lines: () => {
+      const jobs = (...clips: string[]): number => [...ACTION_BY_ID.keys()].filter((id) => clips.includes(clipOfJob(id) ?? '')).length;
+      return [
+        `New: lifting and setting down animated on the sculpted body: ${jobs('lift', 'set-down')} jobs (furniture, crates, posts, water motes), squat lift, load at the chest; smelter, kiln and anvil: ${jobs('lift-heavy', 'set-down-heavy')} jobs, deeper squat, slower, load at the belly (was: a placeholder gesture).`,
+        `New: taking apart animated: hammer knocked in and levered back, ${jobs('pry')} jobs (walls, columns, storeys, bridges, aqueducts); floors squatted: ${jobs('pry-low')}; paint scraped off with a trowel: ${jobs('scrape')}; a piece turned, grip and twist: ${jobs('turn')} (was: a placeholder gesture).`,
+        `New: marking out, no plan and taking off the plan animated: ${jobs('mark', 'pull-stake')} jobs, a point or a stake pulled up. Bridges and aqueducts: ${jobs('work-out')} jobs, mallet and chisel leant out over the span (was: a placeholder gesture).`,
+      ];
+    },
+  },
+  {
+    n: 593,
+    day: '2026-11-14',
+    lines: () => {
+      const n: Record<string, number> = {};
+      for (const id of ALL_SPELL_IDS) { const k = spellInfo(id)?.kind ?? ''; n[k] = (n[k] ?? 0) + 1; }
+      return [
+        `New: spell casting animated on the sculpted body, charge then release on the spell's release (was: a placeholder gesture): bolt ${n.bolt} spells; curse ${n.curse}; on yourself ${n.buff}; on another ${n.ally}; all around ${n.nova}; on the ground ${n.ground}; companion command ${n.command}; prayer ${n.pray}; throw ${n.throw}, weapon in hand.`,
+        `New: blow ${n.strike}, thrust ${n.thrust} and shot ${n.shot} spells: the weapon's fight animation, weapon in hand, the blow or loose on the release.`,
+        `New: spell effects leave from the sculpted body's casting hand. Release flare at the hand: ${RELEASE_MOTES} motes, ${RELEASE_SECS * 1000} ms, in the spell's colours.`,
+        'New: casting while walking: arms and head cast over the walk. Facing left on screen: cast with the left hand.',
+      ];
+    },
   },
   {
     n: 592,
