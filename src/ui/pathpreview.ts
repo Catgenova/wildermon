@@ -17,7 +17,7 @@ import { DEFAULT_LOOK } from '../game/look';
 import type { PathShow } from '../game/path';
 import { gearFrom, wornWire } from '../game/worn';
 import { animationsOff, lessMotion, setAnimations } from '../engine/motion';
-import { drawFigure, flatFigures, sculptedReady, sculptSoft, type FigurePose } from '../render/figure';
+import { drawFigure, figureJoint, flatFigures, onScreen, sculptedReady, sculptSoft, viewOf, type FigurePose } from '../render/figure';
 import { drawCreaturePortrait } from '../render/sprites';
 import { drawWildermonPortrait, loadWildermon, modelled } from '../render/wildermon';
 
@@ -28,8 +28,9 @@ export const PREVIEW_H = 112;
 const PREVIEW_FPS = 24;
 /** And the most of the page's time it takes: the next frame waits this many times as long as the last took to draw. */
 const PREVIEW_SHARE = 12;
-/** The figure's height in its own units to the top of the head, with a little room over it (`drawPortrait`'s `PORTRAIT_TOP`). */
-const FIGURE_ROOM = 39;
+/** Pixels left over the crown and under the feet. */
+const ROOM_OVER = 16;
+const ROOM_UNDER = 9;
 /** A kind's breaths, drawn as this many pictures and kept (`drawBeastPortrait` keeps each), and seconds a breath. */
 const BREATHS = 8;
 const BREATH_SECS = 2.4;
@@ -172,15 +173,18 @@ export class PathPreview {
       }
     }
     // You, feet near the bottom, as tall as the canvas allows.
-    const zoom = (H - 16) / FIGURE_ROOM;
+    const pose = this.pose(show, at);
+    // As tall as the canvas allows: the crown of you standing (as the Equipment window measures it) at the top.
+    const crown = onScreen(viewOf(pose.facing), figureJoint({ ...pose, working: false, job: undefined, act: undefined, emote: undefined, moving: false }, 'head', [0, 0, 2.6]));
+    const zoom = (H - ROOM_OVER - ROOM_UNDER) / Math.max(1, -crown[1]);
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const fx = show.kind ? (W - kindW) * 0.7 : W / 2, fy = H - 8;
+    const fx = show.kind ? (W - kindW) * 0.7 : W / 2, fy = H - ROOM_UNDER;
     const body = flatFigures() || sculptedReady();
     // Animations off holds every body still in the world (`stillPose`); here the one frame is the job at its work.
     const held = still && animationsOff();
     if (held) setAnimations(true);
     try {
-      drawFigure(g, fx, fy, zoom, this.pose(show, at), { ink: 1.2 });
+      drawFigure(g, fx, fy, zoom, pose, { ink: 1.2 });
     } finally {
       if (held) setAnimations(false);
     }
