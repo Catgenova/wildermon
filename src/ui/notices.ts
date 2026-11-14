@@ -49,12 +49,14 @@ const REACH = 180;
  * that crosses the middle of the screen near its top. Measured each time,
  * since every one of those can be moved or can grow.
  */
-export function underTopBars(root: HTMLElement, skip?: Element): number {
+export function underTopBars(root: HTMLElement, skip?: Element, side: 'middle' | 'right' = 'middle'): number {
   const mid = root.offsetWidth / 2;
+  // The column it stands in: down the middle, or (a card in the corner, `pathcard.ts`) as wide as it is at the right.
+  const [x0, x1] = side === 'right' && skip instanceof HTMLElement ? [root.offsetWidth - skip.offsetWidth - EDGE, root.offsetWidth] : [mid - REACH, mid + REACH];
   let y = EDGE;
   for (const el of root.querySelectorAll<HTMLElement>(TOP_BARS)) {
     if (el === skip || el.hidden || !el.offsetWidth || el.offsetTop > TOP_BAND) continue;
-    if (el.offsetLeft > mid + REACH || el.offsetLeft + el.offsetWidth < mid - REACH) continue;
+    if (el.offsetLeft > x1 || el.offsetLeft + el.offsetWidth < x0) continue;
     y = Math.max(y, el.offsetTop + el.offsetHeight + GAP);
   }
   return y;

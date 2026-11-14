@@ -110,6 +110,10 @@ export type GameEvents = {
   goals: [];
   /** The Path (`path.ts`) has moved: a step done or said back, its state from the island, or its sites. */
   path: [];
+  /** A look over the Path's steps (`pathCheck`), with the steps it ticked at once and whether it was the first since the Path came on: the card's cue. */
+  pathTicked: [ticked: string[], first: boolean];
+  /** The Path was turned on or off at your asking, and the island said so (`src/net/pathwire.ts`). */
+  pathTurned: [on: boolean];
   action: [];
   stats: [];
   /** Lain down in a bed and logged off asleep in it, by its name (`Game.fallAsleep`). */

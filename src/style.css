@@ -6710,6 +6710,85 @@ body.dragging.drag-no, body.dragging.drag-no * { cursor: no-drop !important; }
   margin-left: auto;
 }
 
+/* The Path's card as a step ticks (src/ui/pathcard.ts): in the top right corner, under the bars along the top. */
+.path-card {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 440px;
+  max-width: calc(100% - 24px);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 7px 9px;
+  border: 1px solid var(--ui-border);
+  border-radius: 3px;
+  background: var(--ui-bg-2);
+  box-shadow: 0 3px 10px var(--t-shadow, rgba(0, 0, 0, 0.45));
+  color: var(--ui-text);
+  font-size: 12px;
+  line-height: 1.35;
+  z-index: 91;
+}
+
+.path-card[hidden] {
+  display: none;
+}
+
+.path-card-done {
+  color: var(--ui-accent);
+  font-weight: 600;
+}
+
+.path-card-mid {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.path-pic {
+  flex: none;
+  width: 152px;
+  height: 112px;
+  border: 1px solid var(--ui-border);
+  border-radius: 2px;
+  background: var(--ui-bg);
+}
+
+.path-pic[hidden] {
+  display: none;
+}
+
+.path-card-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.path-card-next {
+  font-weight: 600;
+}
+
+.path-card-lines {
+  overflow-wrap: anywhere;
+}
+
+.path-card-why {
+  color: var(--ui-dim);
+}
+
+.path-card-foot {
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+/* Narrow: the picture over the words. */
+#ui.narrow .path-card-mid {
+  flex-direction: column;
+}
+
 /* A settlement's name as you cross into it, and "Leaving" as you go (src/ui/deedbanner.ts). Under every window. */
 .deed-banner {
   position: absolute;
