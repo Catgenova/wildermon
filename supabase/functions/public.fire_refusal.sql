@@ -135,6 +135,9 @@ begin
       -- down somewhere else is taking it, padlock and all.
       v_shut := lock_refusal(p_world, p_uid, p.lock, p.x, p.y);
       if v_shut is not null then return v_shut; end if;
+      -- A boat tied to a mooring post, by whoever may move it (`fitting.ts`).
+      v_shut := moored_refusal(p_world, p_uid, p);
+      if v_shut is not null then return v_shut; end if;
       -- What is inside it, and what is in front of it.
       if exists (select 1 from item i where i.holder = 'furniture' and i.placed = p.id) then
         return 'Empty it first.';
@@ -143,6 +146,12 @@ begin
       if coalesce(jsonb_array_length(p.garden->'held'), 0) > 0 then return garden_said('showing', ''); end if;
       -- And armour on a stand (`decor.ts`).
       if coalesce(p.garden->'worn', '{}'::jsonb) <> '{}'::jsonb then return garden_said('showing', ''); end if;
+      -- And things on a side table (`furnish.ts`).
+      if coalesce(jsonb_array_length(p.garden->'on'), 0) > 0 then return garden_said('showing', ''); end if;
+      -- And herbs on a spice shelf, arrows in a target (`fitting.ts`).
+      if coalesce(jsonb_array_length(p.garden->'jars'), 0) > 0 or coalesce((p.garden->>'stuck')::int, 0) > 0 then
+        return garden_said('showing', '');
+      end if;
       -- A crop is not carried about in a box of earth: it is harvested, or turned back into the soil.
       if exists (select 1 from planter_crop pc where pc.placed = p.id) then
         return planter_growing_said();

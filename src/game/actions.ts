@@ -69,6 +69,9 @@ import { BAUBLE_ACTIONS } from './baubles';
 import { engravedItemSays, MEMORIAL_ACTIONS } from './memorial';
 import { GARDEN_ACTIONS } from './garden';
 import { DECOR_ACTIONS } from './decor';
+import { FURNISH_ACTIONS } from './furnish';
+import { FITTING_ACTIONS, FITTING_SAID } from './fitting';
+import { TREE_BENCH } from './fittingdefs';
 import { VINEYARD_ACTIONS } from './vineyard';
 import { CHART_ACTIONS, chartItemSays } from './cartography';
 import { makerSays, SIGN_ACTIONS, signableKind } from './signing';
@@ -162,6 +165,14 @@ export type Target =
       brew?: string;
       /** Which socket of its tier a bauble goes into, when one is asked for (`set_bauble`). */
       slot?: number;
+      /** Where a signpost's arm is pointed (`point_arm`, `furnish.ts`): `stone:<id>` or `deed:<x>,<y>`, a settlement's token. */
+      dest?: string;
+      /** A cairn's name, asked before it is cut (`name_cairn`). */
+      name?: string;
+      /** The citizen a bust is carved as, by uid (`carve_bust`, `fitting.ts`). */
+      who?: string;
+      /** The arrows a shot at an archery target takes, as at a creature (`shoot_target`). */
+      arrow?: string;
       /** The scroll going into it where it stands, for `enchant` (`enchanting.ts`). */
       scroll?: number;
     }
@@ -1781,6 +1792,8 @@ export const ACTIONS: ActionDef[] = [
       // The tree may have come down since this was asked for; do not swing at air.
       const type = tile(t, g);
       if (type !== TileType.Tree && type !== TileType.Bush) return 'No tree or bush here.';
+      // Not with a tree bench round it (`fitting.ts`; the island's `gather_refusal`).
+      if (t.kind === 'tile' && g.furnitureOnTile(t.x, t.y).some((f) => f.kind === TREE_BENCH)) return FITTING_SAID.benchRound;
       return g.inventory.has('hatchet') ? null : 'Need a hatchet.';
     },
     perform: (t, g) => {
@@ -3324,6 +3337,10 @@ export const ACTIONS: ActionDef[] = [
   ...GARDEN_ACTIONS,
   // The home pieces' jobs: a sundial read, a compost bin filled and emptied, compost spread, curtains drawn, an armour stand dressed (`decor.ts`).
   ...DECOR_ACTIONS,
+  // The furnishings' jobs: a seat sat in, a hay stack filled, a signpost's arms, a cairn named, a vase, a side table, a fish mounted (`furnish.ts`).
+  ...FURNISH_ACTIONS,
+  // The fittings' jobs: a pole's candles, a boulder's moss kept, a shelf's herbs, practice at a dummy and a target, a boat tied up, a bust carved (`fitting.ts`).
+  ...FITTING_ACTIONS,
   // A trellis's vine, and a cutting off a wild one (`vineyard.ts`).
   ...VINEYARD_ACTIONS,
   // A skep's honey, taken and looked at (`bees.ts`).

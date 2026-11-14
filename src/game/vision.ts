@@ -8,6 +8,9 @@ import { heldReachOf } from './light';
 import { isLampPiece, lampAt, lampBurning, lampReach } from './lamps';
 import { isRuneLantern, runeLanternReach } from './runelantern';
 import { STONE_LANTERN, STONE_LANTERN_REACH } from './decordefs';
+import { FIREPLACE, FIREPLACE_REACH } from './furnishdefs';
+import { LANTERN_POLE, POLE_REACH } from './fittingdefs';
+import { poleBurning } from './fitting';
 import { furnitureCentre } from './furniture';
 import { ANCIENT_HELM, ANCIENT_HELM_SIGHT } from './gear';
 
@@ -298,7 +301,10 @@ export class Vision {
         if (night && (f.level ?? 0) >= 0) this.cast(next, ...furnitureCentre(f), STONE_LANTERN_REACH, mark);
       } else if (isLampPiece(f)) {
         if (lampBurning(f)) this.cast(next, ...lampAt(f), lampReach(f), mark);
-      } else if (f.lit) this.cast(next, f.x + 0.5, f.y + 0.5, FIRE_SIGHT, mark);
+      } else if (f.kind === LANTERN_POLE) {
+        // A paper lantern pole out to its own reach while its candles burn (`fitting.ts`).
+        if (night && poleBurning(f) && (f.level ?? 0) >= 0) this.cast(next, ...furnitureCentre(f), POLE_REACH, mark);
+      } else if (f.lit) this.cast(next, f.x + 0.5, f.y + 0.5, f.kind === FIREPLACE ? FIREPLACE_REACH : FIRE_SIGHT, mark);
     }
 
     // Only the ground that was in sight last time or is in sight now can have

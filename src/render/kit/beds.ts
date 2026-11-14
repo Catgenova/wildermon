@@ -70,7 +70,7 @@ const HEAD_TOP = 10.1, FOOT_TOP = 6.3, RAIL_Z0 = 2.2, RAIL_Z1 = 3.6;
 /** The mattress and blanket: where the blanket starts from the head, its underside and top, and the mattress's top. */
 const BLANKET_X = -L + 5, BED_Z0 = 3.0, MAT_Z1 = 5.25, BLANKET_Z1 = 5.6;
 
-function bedOf(look: KitLook): KitModel {
+export function bedOf(look: KitLook): KitModel {
   const WOOD = woodTone(look.material);
   const TOP = paler(WOOD, 0.1);
   const END = deeper(WOOD, 0.12);

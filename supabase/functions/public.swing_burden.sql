@@ -7,7 +7,7 @@ CREATE OR REPLACE FUNCTION public.swing_burden(p_world uuid, p_uid uuid, p_actio
 AS $function$
 declare v_kg double precision;
 begin
-  if not is_fight(p_action) then return 1; end if;
+  if not is_fight(practice_as(p_action)) then return 1; end if;
   -- Armour where armour is worn, and a shield in the off hand, at the make's weight times
   -- what its family makes of it (`armour_swing_by`, `shield_swing_by`; `Game.armourCounted`).
   select coalesce(sum(idf.weight * case when s.slot = 'offhand' then shield_swing_by() else armour_swing_by(a.cls) end), 0)

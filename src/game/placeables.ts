@@ -27,10 +27,12 @@ import {
   teamOf,
   vehicleOf,
   VESSELS,
+  LIFT_REFUSALS,
   type LiquidKind,
   type PlacedFurniture,
 } from './furniture';
 import type { Game } from './game';
+import { TROUGH_WATER_ONLY, WATER_TROUGH } from './furnishdefs';
 import { describeWith, itemDef, litresOf, lyeAshFor, LYE_DIFFICULTY, markOf, type Item } from './items';
 import { damageDrawn, failDamagedSaid } from './faildamage';
 import { tryGain } from './learn';
@@ -64,6 +66,8 @@ export function leachLyeReason(g: Game, f: PlacedFurniture | undefined): string 
   if (!f) return 'It is gone.';
   if (!nearPiece(g, f)) return 'Stand next to it.';
   if (!holdsLiquid(f) || isWell(f)) return 'Not a barrel.';
+  // A water trough keeps its water (`furnish.ts`).
+  if (f.kind === WATER_TROUGH) return TROUGH_WATER_ONLY;
   if (isWorking(f)) return 'Still fermenting.';
   if (f.liquid !== 'water' || litresIn(f) <= 0) return 'Needs water.';
   const need = lyeAshFor(litresIn(f));
@@ -112,6 +116,8 @@ export function barrelFor(g: Game, kind: LiquidKind): PlacedFurniture | undefine
   let best: PlacedFurniture | undefined;
   for (const f of g.furnitureWithin(4)) {
     if (!holdsLiquid(f) || isWell(f)) continue;
+    // A water trough takes water only (`furnish.ts`).
+    if (f.kind === WATER_TROUGH && kind !== 'water') continue;
     if (litresIn(f) > 0 && f.liquid !== kind) continue;
     if (litresIn(f) >= liquidCapacity(f)) continue;
     if (!nearPiece(g, f, 2.6)) continue;
@@ -520,6 +526,11 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       // A padlock on her keeps her helm, or the reins, to whoever has its key.
       const shut = g.lockRefusal(f);
       if (shut) return shut;
+      // And a tie to a mooring post keeps it to whoever set her down, or her key (`fitting.ts`).
+      for (const why of LIFT_REFUSALS) {
+        const no = why(g, f);
+        if (no) return no;
+      }
       // A rowing boat does not put out in a gale (`sailing.ts`).
       if (isBoat(f) && !furnitureDef(f.kind).boat?.sail && isGale(g.wind().force)) return GALE_ROW_SAID;
       // A hull asks nothing but that she is still floating.

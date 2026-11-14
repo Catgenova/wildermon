@@ -2371,6 +2371,18 @@
     "why": "Six home pieces with real recipes (trade, tool, station, time, bill). A sundial says the island's clock and the season's days left as the browser does; a compost bin takes spoiled food, weeds and ash to its room and gives a compost per two after its days, and compost spread on a field or a planter lifts its next harvest ten QL, once, read by every browser; a stone lantern greens with moss a scurra scrubs and lights its fixed reach at night; a woven rug woven at a loom in the pattern chosen, dyed a colour a dyeing to three and not its last twice, set down and scrubbed with them; curtains only on a finished window, over its middle, drawn for everybody; an armour stand taking armour a slot, from the pack or worn, swapped slot by slot with what is worn and keeping on what does not fit in the same words on both sides, not picked up with armour on it, changed only by its owner or a rank that may use the crates."
   },
   {
+    "file": "supabase/test/furnish.ts",
+    "title": "A birdbath, a stone bench, a garden swing, a gazebo, a hay bale stack, a water trough, a signpost, a cairn, a fireplace, a four-poster bed, a vase, a side table, a footstool and a trophy fish mount, the same on both sides",
+    "shard": 5,
+    "why": "Fourteen furnishings with real recipes. Seats seat no more than they say, and sat in give the wind back as standing still, a swing more; a gazebo's tile decays as under a roof; a hay bale stack feeds a grass eater in reach once a day before the stores; a water trough takes water only, is a water carrier's barrel, and a wildermon in reach drinks from it and its care holds longer; a signpost's arms read bearing and distance live; a cairn named is on its settlement's map only; a fireplace against a solid wall inside only; a four-poster sleeps more than a bed; a vase keeps wildflowers fresh for days then throws them out; a side table shows what is set on it and is its owner's; a trophy mount keeps the heaviest fish of its kind, its owner's to replace. In the same words on both sides."
+  },
+  {
+    "file": "supabase/test/fittings.ts",
+    "title": "A paper lantern pole, a moss boulder, a tree bench, a spice shelf, a window seat, a training dummy, an archery target, a mooring post and a stone bust, the same on both sides",
+    "shard": 5,
+    "why": "Nine fittings with real recipes. A pole takes its candles three at once, burns a candle's time, is lit off a flame and lights its reach, its lanterns dyed one a dyeing; a boulder greens over five days by the moss rule and its owner keeps the moss from a worker's scrub; a tree bench stands only round a grown tree, which is not felled under it; a spice shelf holds herbs to its room on a wall and is its owner's; a window seat goes in a window from inside; practice at a dummy and a target is timed and costed as a fight and teaches half a fight's gain, arrows pulled with one in four broken; a boat tied to a post is moved only by whoever may; a bust is carved as a citizen of its settlement with their look. In the same words on both sides."
+  },
+  {
     "file": "supabase/test/vineyard.ts",
     "title": "Vineyards and wine that ages, the same on both sides",
     "shard": 5,
@@ -3164,5 +3176,19 @@
       "typescript"
     ],
     "why": "Asked for: an optional step-by-step tutorial from the runestone to a level 5 settlement. Each step met on the island's own state and not before; a path tick kept only when on the list and met, so the browser cannot tick one; labels off the rules' numbers; noted kinds tracked and not counted as seen; suggested sites passing every founding check and their own criteria, inside a time budget on a 4096 island; in every season a tame step has food in season or a supply sized to tame at 90%, handed out issued and once."
+  },
+  {
+    "file": "supabase/test/pathcard.ts",
+    "title": "The Path card: Done, Next, How and Why as a step ticks, with a moving picture of the action",
+    "shard": 5,
+    "external": [
+      "typescript",
+      "esbuild",
+      "playwright-core"
+    ],
+    "env": {
+      "PATHCARD_STRICT": "1"
+    },
+    "why": "Asked for: \"Path needs to also display as a popup as each task is completed, with no-prose description of what to do next, how, and why\", with a moving picture of the action. Every step's how and why built from the rules (no figure written into their text; menu labels, tools, skills, a kind's spawn ground, bait and taming, an upgrade's requirements and the numbers each why names, the rules' own); every picture a clip of its own; one card a look, naming every step it ticked; none on the first look of a page opened with the Path on; turned on mid-game, one card with the next step. Drawn in Chrome: the card up on a tick, its buttons, its picture drawn and moving, Skip next, the Path tab, a job started after the hold taking it down, Path pop-ups Off, Animations Off a still frame."
   }
 ]

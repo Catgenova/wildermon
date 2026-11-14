@@ -84,6 +84,8 @@ import { furnitureAnchor, furnitureCapacity, furnitureDef, furnitureHeft, furnit
 import { DEED_ACTION_BY_ID, joinFromAfar, leaveQuestion, standingWord, upgradeProgress, upgradeReason } from '../game/deed';
 import { CROP_BY_SEED, cropDef, cropReady, describeCrop, emptyFields, FARM_ACTION_BY_ID, planterPace, sownPace, stageNote, type Crop, type CropDef } from '../game/farming';
 import { bedLevelOf } from '../game/gardenbed';
+import { armReading, armWords, destinations, destKey, FURNISH_SAID, onTableOk, POINT_ARM, postAt, TABLE_PUT } from '../game/furnish';
+import { CARVE_BUST, FITTING_SAID, SHELF_HERBS, SHELF_PUT } from '../game/fitting';
 import { PLANTER_GROWTH } from '../game/growth';
 import { describeWaterPlant } from '../game/watergarden';
 import { LIFE_MOTES_EACH, swirlName } from '../game/motes';
@@ -134,6 +136,7 @@ import { Notices } from './notices';
 import { PointerRing } from './pointerring';
 import { DeedBanner } from './deedbanner';
 import { PathStrip } from './pathstrip';
+import { PathCard } from './pathcard';
 import type { HelpPages } from './panels/help';
 import { BINDS, keyName, type Keybinds } from '../game/keybinds';
 import { Hud, WINDOWS } from './hud';
@@ -409,6 +412,8 @@ export class UI {
   private readonly deedBanner: DeedBanner;
   /** The Path's line at the top of the screen (`pathstrip.ts`). */
   private readonly pathStrip: PathStrip;
+  /** The Path's card as a step ticks (`pathcard.ts`). */
+  readonly pathCard: PathCard;
   /** Find anything (`palette`, Ctrl+K). */
   private readonly palette: Palette;
   /** The help, built into its window the first time anything asks for it. */
@@ -622,6 +627,8 @@ export class UI {
         return near.length ? [...all, ...near] : all;
       };
     }
+    // And the cairns on the settlements of yours, read with them (`furnish.ts`).
+    this.minimap.cairns = () => this.island?.cairns ?? [];
     /*
      * Who leads the island: each skill's highest, the best-bred wildermon and
      * the biggest settlements. Beside the other two windows about other people,
@@ -691,6 +698,7 @@ export class UI {
     this.pointerRing = new PointerRing(root, game, canvas);
     this.deedBanner = new DeedBanner(root, game);
     this.pathStrip = new PathStrip(root, game, () => this.journalPanel.open('path'));
+    this.pathCard = new PathCard(root, game, () => this.journalPanel.open('path'));
 
     /*
      * While you were away: what the island counted for you, shown once as you
@@ -1104,6 +1112,7 @@ export class UI {
     this.pointerRing.update(performance.now());
     this.deedBanner.update(performance.now());
     this.pathStrip.update(performance.now(), this.renderer.camera.northAngle());
+    this.pathCard.update(performance.now());
     this.hud.update(this.renderer, fps);
     this.renderer.selected = this.tilePanel.target ? { x: this.tilePanel.target.x, y: this.tilePanel.target.y, down: this.tilePanel.target.down, level: this.tilePanel.target.level } : null;
     this.minimap.update();
@@ -2958,6 +2967,10 @@ export class UI {
         });
       }
     }
+    // A signpost's arms, a settlement or a Runestone to a line; a side table's things, a thing in the pack to a line (`furnish.ts`).
+    entries.push(...this.furnishEntries(f));
+    // A spice shelf's herbs, a herb in the pack to a line; a bust's citizens, one to a line (`fitting.ts`).
+    entries.push(...this.fittingEntries(f));
     // A lantern post: its lantern, its candle and its light.
     entries.push(...lampEntries(g, f));
     for (const id of ['light_oven', 'put_out_oven', 'take_ashes_oven', 'sleep', 'set_home', 'pull_cart', 'drop_cart', 'board_vehicle', 'board_passenger', 'leave_vehicle', 'leave_passenger', 'unhitch_team', 'examine_vessel', 'drink_from_vessel', 'fill_barrel', 'leach_lye', 'empty_vessel', 'furniture_take_all', 'crate_follow', 'crate_work', 'scrub_moss', 'scrub_dye', 'pick_up_furniture']) {
@@ -2967,6 +2980,90 @@ export class UI {
       entries.push({ label: def.labelFor?.(ft, g) ?? def.label, hint: reason ?? undefined, disabled: !!reason, onSelect: () => g.requestAction(def, ft) });
     }
     return entries;
+  }
+
+  /**
+   * A signpost's Point an arm, to every Runestone and every settlement on the
+   * map (`rpc_settlements`), its bearing and distance from the post beside
+   * each; and a side table's Put on the table, every thing in the pack that
+   * goes on one (`furnish.ts`).
+   */
+  private furnishEntries(f: PlacedFurniture): MenuItem[] {
+    const g = this.game;
+    const ft: Target = { kind: 'furniture', id: f.id };
+    const out: MenuItem[] = [];
+    const point = ACTION_BY_ID.get(POINT_ARM);
+    if (point?.applies(ft, g)) {
+      const [px, py] = postAt(f);
+      out.push({
+        label: point.label,
+        children: destinations(g.world.w, this.minimap.settlements()).map((a) => {
+          const t = { ...ft, dest: destKey(a) } as Target;
+          const reason = point.check?.(t, g) ?? null;
+          return { label: a.name, note: armWords(a.name, armReading(px, py, a)).slice(a.name.length + 2), hint: reason ?? undefined, disabled: !!reason, onSelect: () => g.requestAction(point, t) };
+        }),
+      });
+    }
+    const put = ACTION_BY_ID.get(TABLE_PUT);
+    if (put?.applies(ft, g)) {
+      const things = g.inventory.items.filter((it) => onTableOk(g, it));
+      out.push({
+        label: put.label,
+        disabled: !things.length,
+        hint: things.length ? undefined : FURNISH_SAID.notOnTable,
+        children: things.length ? things.map((it) => {
+          const t = { ...ft, itemUid: it.uid } as Target;
+          const reason = put.check?.(t, g) ?? null;
+          return { label: it.count > 1 ? `${itemName(it)} (${it.count})` : itemName(it), hint: reason ?? undefined, disabled: !!reason, onSelect: () => g.requestAction(put, t) };
+        }) : undefined,
+      });
+    }
+    return out;
+  }
+
+  /**
+   * A spice shelf's Put on the shelf, every herb in the pack; and a stone
+   * bust's Carve, every citizen of the settlement it stands on as the Social
+   * window last read its roll, you among them (`fitting.ts`).
+   */
+  private fittingEntries(f: PlacedFurniture): MenuItem[] {
+    const g = this.game;
+    const ft: Target = { kind: 'furniture', id: f.id };
+    const out: MenuItem[] = [];
+    const put = ACTION_BY_ID.get(SHELF_PUT);
+    if (put?.applies(ft, g)) {
+      const herbs = g.inventory.items.filter((it) => SHELF_HERBS.includes(it.id) && !it.locked);
+      out.push({
+        label: put.label,
+        disabled: !herbs.length,
+        hint: herbs.length ? undefined : FITTING_SAID.noHerb,
+        children: herbs.length ? herbs.map((it) => {
+          const t = { ...ft, itemUid: it.uid } as Target;
+          const reason = put.check?.(t, g) ?? null;
+          return { label: it.count > 1 ? `${itemName(it)} (${it.count})` : itemName(it), hint: reason ?? undefined, disabled: !!reason, onSelect: () => g.requestAction(put, t) };
+        }) : undefined,
+      });
+    }
+    const carve = ACTION_BY_ID.get(CARVE_BUST);
+    if (carve?.applies(ft, g)) {
+      this.social.prime();
+      const known = this.social.known();
+      const deed = known?.deeds.find((d) => Math.abs(f.x - d.x) <= d.radius && Math.abs(f.y - d.y) <= d.radius);
+      const me = this.island?.uid ?? '';
+      const roll = deed ? [{ uid: me, name: g.player.name }, ...deed.folk.filter((p) => p.uid !== me)] : [];
+      const why = carve.check?.(ft, g) ?? null;
+      out.push({
+        label: carve.label,
+        disabled: !roll.length,
+        hint: roll.length ? undefined : why === FITTING_SAID.pickCitizen ? FITTING_SAID.noDeed : why ?? FITTING_SAID.noDeed,
+        children: roll.length ? roll.map((p) => {
+          const t = { ...ft, who: p.uid } as Target;
+          const reason = carve.check?.(t, g) ?? null;
+          return { label: p.name, hint: reason ?? undefined, disabled: !!reason, onSelect: () => g.requestAction(carve, t) };
+        }) : undefined,
+      });
+    }
+    return out;
   }
 
   /** Fuelling, packing and unloading a kiln. */

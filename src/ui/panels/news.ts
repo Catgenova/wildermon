@@ -282,6 +282,17 @@ import {
 } from '../../game/gardendefs';
 import { MOUNT_SAID } from '../../game/garden';
 import { STAND_SLOTS } from '../../game/decor';
+import { grassEaters, seatsOf } from '../../game/furnish';
+import { benchTreeWords } from '../../game/fitting';
+import {
+  ARCHERY_TARGET, ARROW_BREAK_IN, BOULDER_MOSS_DAYS, LANTERN_POLE, MOOR_REACH, MOORING_POST, MOSS_BOULDER, POLE_LANTERNS, POLE_REACH, PRACTICE_GAIN, SHELF_HOLDS, SPICE_SHELF,
+  STONE_BUST, TARGET_HOLDS, TRAINING_DUMMY, TREE_BENCH, TREE_BENCH_SEATS, WINDOW_SEAT, WINDOW_SEATS,
+} from '../../game/fittingdefs';
+import {
+  BIRDBATH, CAIRN, FIREPLACE, FIREPLACE_REACH, FISH_MOUNT, FOOTSTOOL, FOUR_POSTER, FOUR_POSTER_REST, GARDEN_SWING, GAZEBO, HAY_A_DAY, HAY_BALE, HAY_HOLDS, HAY_REACH,
+  SIDE_TABLE, SIGN_ARMS, SIGNPOST, STONE_BENCH, SWING_REST, TABLE_HOLDS, TROUGH_CARE, TROUGH_DRINK, TROUGH_HOLDS, TROUGH_REACH, VASE, VASE_FRESH, VASE_HOLDS,
+  WATER_TROUGH,
+} from '../../game/furnishdefs';
 import {
   ARMOUR_STAND, COMPOST_BIN, COMPOST_BOOST, COMPOST_DAYS, COMPOST_HOLDS, COMPOST_PER, COMPOST_SPOILED, CURTAINS, RUG_COLOURS, RUG_PATTERNS, STONE_LANTERN,
   STONE_LANTERN_REACH, SUNDIAL, WOVEN_RUG,
@@ -4467,6 +4478,25 @@ export const NEWS: News[] = [
       'Without a graphics card: swimming strokes\' splashes, rings treading water, the float\'s strike and a catch only.',
     ],
   },
+  // The fittings (`fitting.ts`).
+  {
+    n: 612,
+    day: '2026-11-14',
+    lines: () => {
+      const made = (id: string): string => `${itemDef(id).name} (${skillOf(`make_${id}`)}; ${pieceBill(id)})`;
+      return [
+        `New: ${made(LANTERN_POLE)}: ${POLE_LANTERNS} lanterns, dyed one a dyeing; ${POLE_LANTERNS} candles at once; lit, light ${POLE_REACH} tiles at night.`,
+        `New: ${made(MOSS_BOULDER)}: mossed over ${BOULDER_MOSS_DAYS} days; Keep moss: worker scrubs skip it.`,
+        `New: ${made(TREE_BENCH)}: round a ${benchTreeWords()} tree, not felled while it stands; seats ${TREE_BENCH_SEATS}.`,
+        `New: ${made(SPICE_SHELF)}: on a wall; ${SHELF_HOLDS} herbs, a jar each.`,
+        `New: ${made(WINDOW_SEAT)}: in a window, inside; seats ${WINDOW_SEATS}; cushion dyeable.`,
+        `New: ${made(TRAINING_DUMMY)}: Practise, a melee weapon's skill gain ×${PRACTICE_GAIN} a fight's, no damage.`,
+        `New: ${made(ARCHERY_TARGET)}: Shoot, archery gain ×${PRACTICE_GAIN} a fight's; ${TARGET_HOLDS} arrows; Pull arrows, one in ${ARROW_BREAK_IN} broken.`,
+        `New: ${made(MOORING_POST)}: at the water's edge; Tie up a boat within ${MOOR_REACH} tile: helm and lifting its owner's or key holder's only.`,
+        `New: ${made(STONE_BUST)}: Carve, a citizen of its settlement, their head and hair in stone.`,
+      ];
+    },
+  },
   // One interior kit for every window (src/ui/interior.css, src/ui/kit.ts); the first windows moved onto it.
   {
     n: 611,
@@ -4480,6 +4510,29 @@ export const NEWS: News[] = [
       "Changed: windows, Runecut: tabs, every window: one style; open tab: the frame's colour (events, faith, journal, market, settings, trades, wildermon, boards, settlement, social).",
     ],
   },
+  // The furnishings (`furnish.ts`).
+  {
+    n: 610,
+    day: '2026-11-14',
+    lines: () => {
+      const made = (id: string): string => `${itemDef(id).name} (${skillOf(`make_${id}`)}; ${pieceBill(id)})`;
+      return [
+        `New: ${made(BIRDBATH)}: water always full; songbirds by day.`,
+        `New: ${made(STONE_BENCH)}: seats ${seatsOf(STONE_BENCH)}; does not rot.`,
+        `New: ${made(GARDEN_SWING)}, own frame: seats ${seatsOf(GARDEN_SWING)}; sat in, stamina back ×${SWING_REST} standing still's.`,
+        `New: ${made(GAZEBO)}: seats ${seatsOf(GAZEBO)}; its tile decays ×${INDOORS_DECAY}, as under a roof.`,
+        `New: ${made(HAY_BALE)}: holds ${HAY_HOLDS} mixed grass; ${listed(grassEaters())} within ${HAY_REACH} tiles eat ${HAY_A_DAY} a day each.`,
+        `New: ${made(WATER_TROUGH)}: ${TROUGH_HOLDS} litres of water, filled by water carriers; wildermon within ${TROUGH_REACH} tiles drink ${TROUGH_DRINK} litre a day, care ×${TROUGH_CARE} as long.`,
+        `New: ${made(SIGNPOST)}: up to ${SIGN_ARMS} arms, a settlement or a Runestone each, bearing and distance in tiles.`,
+        `New: ${made(CAIRN)}: named; on the map of its settlement's citizens.`,
+        `New: ${made(FIREPLACE)}: against a solid wall inside; a hearth; light ${FIREPLACE_REACH} tiles lit.`,
+        `New: ${made(FOUR_POSTER)}: sleep ×${FOUR_POSTER_REST} a bed's; canopy dyeable.`,
+        `New: ${made(VASE)}: ${VASE_HOLDS} wildflowers, fresh ${VASE_FRESH} days; glaze dyeable.`,
+        `New: ${made(SIDE_TABLE)}: ${TABLE_HOLDS} things on top, shown. ${made(FOOTSTOOL)}: seats ${seatsOf(FOOTSTOOL)}.`,
+        `New: ${made(FISH_MOUNT)}: on a wall; a fish with its weight and who mounted it; replaced by its owner with a heavier one of its kind.`,
+      ];
+    },
+  },
   // The Path: steps from the runestone to a settlement at its last level (`src/game/path.ts`).
   {
     n: 609,
@@ -4491,6 +4544,8 @@ export const NEWS: News[] = [
       `New: Path on: ${PATH_KINDS.length} kinds noted in the field guide, Noted (Path): Track as if seen. Not counted as seen.`,
       `New: Path suggested sites: ${PATH_SITE.count} nearest founding tiles, trees ${PATH_SITE.trees}+ within ${PATH_SITE.treeReach}, water within ${PATH_SITE.water}, rock within ${PATH_SITE.rock}.`,
       `New: Path supply: a tame step with nothing in season: favourite food, ${percent(PATH_SURE)} to tame; issued; once a step.`,
+      'New: Path card, top right, as a step ticks: Done (every step ticked at once), Next, How (right-click, menu label, tool, skill; a kind\'s spawn ground, bait, taming), Why (what it unlocks or feeds, by step). Close, Skip next, Path tab.',
+      `New: Path card picture: you at the next step's job, its clip and tool; a tame step's kind beside you. Still frame with Animations off. Path turned on: one card, the next step. Settings, Interface: Path pop-ups (On).`,
     ],
   },
   // A bridge's ends on the storey stood on and the storey picked (`bridgeUpTo`, `deck_level`).

@@ -8,6 +8,7 @@ import { itemDef } from './items';
 import { lacks } from './ranks';
 import { PAVED } from '../world/tiles';
 import { greenNow } from './pace';
+import { BOULDER_MOSS_DAYS, MOSS_BOULDER } from './fittingdefs';
 
 /**
  * Stone that ages.
@@ -54,6 +55,18 @@ export function greenDays(since: number, now: number): number {
   return Math.max(0, Math.min(GREEN_DAYS, Math.floor((now - since) / GREEN_DAY)));
 }
 
+/**
+ * The moss rule's days (`greenDays`) for a piece that has been greening
+ * `secs` seconds: a moss boulder's over `BOULDER_MOSS_DAYS`, every other
+ * piece's over `GREEN_DAYS` (`fitting.ts`). The island's `piece_green_days`.
+ */
+export function pieceGreenDays(kind: string, secs: number): number {
+  return Math.max(0, Math.min(GREEN_DAYS, Math.floor(kind === MOSS_BOULDER ? (secs * GREEN_DAYS) / (BOULDER_MOSS_DAYS * GREEN_DAY) : secs / GREEN_DAY)));
+}
+/** A boulder's moss back after a scrub, and nothing grown on it yet: the island's `boulder_again`, `boulder_nothing_yet`. */
+export const BOULDER_AGAIN = `Fully green again in ${BOULDER_MOSS_DAYS} days.`;
+export const BOULDER_NOTHING_YET = `Nothing grown yet. Greens over ${BOULDER_MOSS_DAYS} days from when set down or last scrubbed.`;
+
 /** When a thing began to green: when it says, and never before greening came in (`from`). The island's `green_start`. */
 export const greenStart = (since: number | undefined, from: number): number => Math.max(since ?? from, from);
 
@@ -98,7 +111,7 @@ export function wallGreen(g: Game, w: Wall, now: number): number | null {
 }
 /** The days a statue has been greening, or null for a piece that gathers no moss. */
 export function pieceGreen(g: Game, f: PlacedFurniture, now: number): number | null {
-  return mossyPiece(f) ? greenDays(greenStart(f.greenSince, g.greenFrom), now) : null;
+  return mossyPiece(f) ? pieceGreenDays(f.kind, now - greenStart(f.greenSince, g.greenFrom)) : null;
 }
 /** The days the paving on a tile has been greening, or null where it is not paved. */
 export function pavingGreen(g: Game, x: number, y: number, now: number): number | null {
@@ -212,7 +225,8 @@ export function greenRefusal(g: Game, def: ActionDef, t: Target, now = greenNow(
     days = m.days;
     [x, y] = [m.x, m.y];
   }
-  return toolRefusal(g, def) ?? notYours(g, def, x, y) ?? (days <= 0 ? NOTHING_YET : null);
+  const boulder = t.kind === 'furniture' && g.furniture.get(t.id)?.kind === MOSS_BOULDER;
+  return toolRefusal(g, def) ?? notYours(g, def, x, y) ?? (days <= 0 ? (boulder ? BOULDER_NOTHING_YET : NOTHING_YET) : null);
 }
 
 const CLEAR_IVY: ActionDef = {
@@ -253,7 +267,7 @@ const SCRUB_MOSS: ActionDef = {
     if (m.slab) m.slab.greenSince = now;
     if (m.piece) m.piece.greenSince = now;
     if (m.bridge) m.bridge.greenSince = now;
-    g.logMsg(`Moss scrubbed: ${mossWords(m)}. ${GREEN_AGAIN}`, 'event');
+    g.logMsg(`Moss scrubbed: ${mossWords(m)}. ${m.piece?.kind === MOSS_BOULDER ? BOULDER_AGAIN : GREEN_AGAIN}`, 'event');
     g.events.emit('world', m.x, m.y);
   },
 };
@@ -274,7 +288,8 @@ function greenThings(g: Game, x: number, y: number): { paving: boolean; slab?: F
   return {
     paving: PAVED.has(g.world.getTile(x, y)),
     slab: slab && foundationDone(slab) ? slab : undefined,
-    pieces: [...g.furniture.values()].filter((f) => f.x === x && f.y === y && mossyPiece(f)),
+    // Not a moss boulder its owner keeps mossy (`fitting.ts`).
+    pieces: [...g.furniture.values()].filter((f) => f.x === x && f.y === y && mossyPiece(f) && !(f.kind === MOSS_BOULDER && f.fitting?.keep)),
     walls: [...ivyWalls(g, x, y, 'n'), ...ivyWalls(g, x, y, 'w')],
   };
 }

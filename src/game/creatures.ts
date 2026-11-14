@@ -6,6 +6,7 @@ import { mapFromBeast } from './treasure';
 import { BOTANIZE_TABLE, FORAGE_TABLE, rollTable } from './forage';
 import { fruitsAt, inSeason } from './fruiting';
 import type { DeedStore, Game } from './game';
+import { TROUGH_CARE, TROUGH_DRINK, TROUGH_REACH, WATER_TROUGH } from './furnishdefs';
 import { DAY_SECONDS } from './pace';
 import { CROP_BY_SEED, cropDef, cropReady, cropYield, harvestSeeds } from './farming';
 import { MINE_COLLAPSE, MINE_DEPTH } from './worksites';
@@ -7309,7 +7310,8 @@ export class Creatures {
     const growth = ageDef(c, game.time).growth;
     if (def.fleece && growth > 0 && c.fleece < 1) c.fleece = Math.min(1, c.fleece + elapsed * def.fleece * growth * bloodMul(c, 'grow'));
     // A brushing wears off over a few hours of being left to itself: longer for a Herdsman's Lasting Care.
-    if (c.care > 0) c.care = Math.max(0, c.care - elapsed * bloodMul(c, 'carefade') / (keptOf(c, 'kept:care_hours', CARE_HOURS) * 3600));
+    // Longer with a water trough with water in it in reach (`furnish.ts`; the island's `trough_visit`).
+    if (c.care > 0) c.care = Math.max(0, c.care - elapsed * bloodMul(c, 'carefade') / (keptOf(c, 'kept:care_hours', CARE_HOURS) * troughCare(game, c) * 3600));
     return def;
   }
 
@@ -11677,4 +11679,18 @@ for (const d of [SPECIES.brambo]) {
   if (!d) continue;
   d.description = `${d.description} ${bushVineSays()}`.trim();
   for (const st of d.stages ?? []) st.description = `${st.description} ${bushVineSays()}`.trim();
+}
+
+/**
+ * How much longer a kept wildermon's care holds (`TROUGH_CARE`), with a water
+ * trough holding water within `TROUGH_REACH` tiles of it; one otherwise. The
+ * island's `trough_visit`, which has it drink there too.
+ */
+export function troughCare(game: Game, c: Pick<Creature, 'x' | 'y' | 'mode'>): number {
+  if (c.mode === 'wild') return 1;
+  for (const f of game.furniture.values()) {
+    if (f.kind !== WATER_TROUGH || (f.litres ?? 0) < TROUGH_DRINK) continue;
+    if (Math.hypot(f.x + 0.5 - c.x, f.y + 0.5 - c.y) <= TROUGH_REACH) return TROUGH_CARE;
+  }
+  return 1;
 }

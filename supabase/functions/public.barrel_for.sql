@@ -7,7 +7,7 @@ CREATE OR REPLACE FUNCTION public.barrel_for(p_world uuid, p_uid uuid, p_kind te
 AS $function$
   select p.* from placed p
   where p.world_id = p_world and p.kind = 'furniture'
-    and holds_liquid(p) and not is_well(p)
+    and holds_liquid(p) and not is_well(p) and (p_kind = 'water' or p.sub <> water_trough_kind())
     and (placed_litres(p) <= 0 or placed_liquid(p) = p_kind)
     and placed_litres(p) < liquid_capacity(p)
     and near_piece(p_world, p_uid, p, 2.6)

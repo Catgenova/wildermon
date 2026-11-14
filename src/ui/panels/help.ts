@@ -249,6 +249,16 @@ import {
 } from '../../game/gardendefs';
 import { GARDEN_SAID } from '../../game/garden';
 import { DECOR_PIECES } from '../../game/decor';
+import { FURNISH_PIECES, FURNISH_SAID, seatRest } from '../../game/furnish';
+import { benchTreeWords, FITTING_PIECES, poleBurn, practiceSkillWords } from '../../game/fitting';
+import {
+  ARROW_BREAK_IN, BOULDER_MOSS_DAYS, CARVE_TIME, FIT_TIME, MOOR_REACH, MOOR_TIME, POLE_LANTERNS, POLE_REACH, PRACTICE_GAIN, PULL_TIME, SHELF_HOLDS, TARGET_HOLDS,
+  TREE_BENCH_SEATS, WINDOW_SEATS,
+} from '../../game/fittingdefs';
+import {
+  CAIRN_NAME_MAX, CAIRN_NAME_TIME, GARDEN_SWING, STONE_BENCH, HAY_A_DAY, HAY_FILL_TIME, HAY_HOLDS, HAY_REACH, PUT_TIME, SIGN_ARMS, SIT_TIME, TABLE_HOLDS, TROUGH_CARE, TROUGH_DRINK,
+  TROUGH_REACH, VASE_FRESH, VASE_HOLDS,
+} from '../../game/furnishdefs';
 import {
   COMPOST_BOOST, COMPOST_DAYS, COMPOST_EMPTY_TIME, COMPOST_FILL_TIME, COMPOST_HOLDS, DRESS_TIME, SPREAD_COST, SPREAD_SKILL, SPREAD_TIME, SWAP_TIME,
 } from '../../game/decordefs';
@@ -263,7 +273,7 @@ import { ALL_TRACKS, playlistSays } from '../../audio/music/playlist';
 import { CUT_POLL_MS, CUT_QUIET_MS, RECONNECT_RETRY_MOST_MS, RECONNECT_RETRY_MS, RECONNECTING } from '../phone';
 import { WATCH_AWAKE_HOURS, WATCH_BREAK_MINS, WATCH_KEEP_DAYS, WATCH_SKILL_MINS, WATCH_SKILL_TIMES, WATCH_STOCK_PER_MILLE } from '../../game/watch';
 import { fixed, setMarkup } from '../html';
-import { PATH_DETOURS, PATH_KINDS, PATH_PHASES, PATH_SITE, PATH_SKILLS, PATH_STEPS, PATH_SURE } from '../../game/path';
+import { PATH_CARD_HOLD, PATH_DETOURS, PATH_KINDS, PATH_PHASES, PATH_SITE, PATH_SKILLS, PATH_STEPS, PATH_SURE } from '../../game/path';
 
 /** What a cellar's rock gives, by the stone: every stone's own shards. */
 const CELLAR_SHARDS = listed(ROCK_VARIANTS.filter((r) => r.yields.endsWith('_shards')).map((r) => itemDef(r.yields).name.toLowerCase()));
@@ -1188,6 +1198,7 @@ function pathHelp(): string {
       <li><b>On, off</b>: first coming ashore, the runestone card: <b>Path: On</b> unless switched. After: Settings (<kbd>${keyOf('win_settings')}</kbd>), Interface, <b>Path</b>; or the Path tab. Turned on later: starts at the first step not done.</li>
       <li><b>Line at the top</b>: step number of ${PATH_STEPS.length}, the step, its bait and taming. Arrow: away from the stone to ${DEED_STONE_GAP} tiles, to a suggested site, or the last track on a tame step. <b>−</b>: folded to the step number. Click: the Path tab.</li>
       <li><b>Path tab</b>: Journal (<kbd>${keyOf('win_path')}</kbd>): every step by phase, the current one marked, <b>Skip</b> per step (<b>Unskip</b> back), detours under their step.</li>
+      <li><b>Path card</b>: top right, as a step ticks: <b>Done</b>, <b>Next</b>, <b>How</b>, <b>Why</b>, a picture of you at the job; <b>Close</b>, <b>Skip next</b>, <b>Path tab</b>. Down on Close or the first job started after ${PATH_CARD_HOLD} s. Settings (<kbd>${keyOf('win_settings')}</kbd>), Interface, <b>Path pop-ups</b>: On.</li>
       <li><b>Ticks</b>: a step done ticks itself, early or late, once the island's own record shows it done.</li>
       <li><b>Field guide</b>: Path on notes ${PATH_KINDS.length} kinds (${listed(kinds)}): <b>Noted (Path)</b>; Track as if seen. Noted: no seen count, goal or title.</li>
       <li><b>Suggested sites</b>: ${PATH_SITE.count} nearest, every ${PATH_SITE.every} tiles within ${PATH_SITE.reach} of you, ${PATH_SITE.apart} apart: every founding check; trees ${PATH_SITE.trees}+ within ${PATH_SITE.treeReach}; water within ${PATH_SITE.water}; bare rock within ${PATH_SITE.rock}.</li>
@@ -2247,6 +2258,32 @@ export function helpText(): string {
       <li><b>Add to compost</b> (${COMPOST_FILL_TIME} s base): one stack, to ${COMPOST_HOLDS}. <b>Take compost</b> (${COMPOST_EMPTY_TIME} s base): ${COMPOST_DAYS} days after the last thing in. <b>Spread compost</b> (${SPREAD_SKILL}, ${SPREAD_TIME} s base): ${SPREAD_COST} compost, a sown field or planter, next harvest QL +${COMPOST_BOOST}, once a crop.</li>
       <li><b>Put on stand</b>, <b>Take off</b> (${DRESS_TIME} s base): one piece a slot. <b>Swap with worn</b> (${SWAP_TIME} s base): every slot; kept on: anything not armour, anything locked. Whoever set it down, or a rank that may use the crates on its settlement. Not picked up with armour on it.</li>
       <li><b>Open</b>, <b>Close</b> curtains: anyone, seen by everyone.</li>
+    </ul>
+    <h3>Furnishings</h3>
+    <ul>
+      ${FURNISH_PIECES.map((id) => `<li><b>${itemDef(id).name}</b>: ${bill(`make_${id}`)} (${workedAt(`make_${id}`)}, ${recipe(`make_${id}`).baseTime} s base). `
+        + `${furnitureDef(id).w} by ${furnitureDef(id).h} subtiles. ${itemDef(id).description ?? ''}</li>`).join('')}
+      <li><b>Sit</b> (${SIT_TIME} s base): a stone bench, a garden swing, a gazebo, a footstool; seats full: <i>${FURNISH_SAID.seatsFull.replace('{name}', 'Stone bench').replaceAll('{n}', '2')}</i> Stamina back ×${seatRest(GARDEN_SWING)} standing still's in a swing, ×${seatRest(STONE_BENCH)} on the rest. Moving gets you up.</li>
+      <li><b>Add mixed grass</b> to a hay bale stack (${HAY_FILL_TIME} s base): to ${HAY_HOLDS}. Feeds kept wildermon within ${HAY_REACH} tiles, ${HAY_A_DAY} a day each, before your stores.</li>
+      <li>Water trough: water carriers fill it; within ${TROUGH_REACH} tiles a kept wildermon drinks ${TROUGH_DRINK} litre a day; care lasts ×${TROUGH_CARE}.</li>
+      <li><b>Point an arm</b> (${PUT_TIME} s base): a settlement or a Runestone on your map, up to ${SIGN_ARMS}. <b>Take down arm</b>. <b>Examine</b>: each arm's bearing and distance, read now.</li>
+      <li><b>Name</b> a cairn (${CAIRN_NAME_TIME} s base): up to ${CAIRN_NAME_MAX} characters; whoever set it down, or a citizen of its settlement.</li>
+      <li><b>Put in wildflowers</b>, <b>Take out wildflowers</b> (${PUT_TIME} s base): to ${VASE_HOLDS}; after ${VASE_FRESH} days wilted, thrown out.</li>
+      <li><b>Put on the table</b>, <b>Take</b> (${PUT_TIME} s base): to ${TABLE_HOLDS}. Not picked up with things on it.</li>
+      <li><b>Mount a fish</b> (${PUT_TIME * 2} s base): the fish is used up.</li>
+    </ul>
+    <h3>Fittings</h3>
+    <ul>
+      ${FITTING_PIECES.map((id) => `<li><b>${itemDef(id).name}</b>: ${bill(`make_${id}`)} (${workedAt(`make_${id}`)}, ${recipe(`make_${id}`).baseTime} s base). `
+        + `${furnitureDef(id).w} by ${furnitureDef(id).h} subtiles. ${itemDef(id).description ?? ''}</li>`).join('')}
+      <li><b>Put in candles</b> (${FIT_TIME} s base): ${POLE_LANTERNS} candles; burn ${timeWords(poleBurn(QL_LOW))} at QL ${QL_LOW}, ${timeWords(poleBurn(QL_TOP))} at QL ${QL_TOP}. <b>Strike a light</b>: a flame in hand or within reach. <b>Put it out</b>: the candles kept. Light: ${POLE_REACH} tiles at night. Dye: one lantern a dyeing, first to last, up to ${POLE_LANTERNS}.</li>
+      <li>Moss boulder: <b>Scrub the moss</b> (a brush) back to bare; fully green again in ${BOULDER_MOSS_DAYS} days. <b>Keep moss</b>, <b>Let workers scrub it</b>: whoever set it down; kept, a worker's scrub skips it.</li>
+      <li>Tree bench: on the tile of a ${benchTreeWords()} tree; <b>Cut down</b> refused while it stands. <b>Sit</b>: ${TREE_BENCH_SEATS} seats. Window seat: <b>Sit</b>: ${WINDOW_SEATS} seats.</li>
+      <li><b>Put on the shelf</b>, <b>Take</b> a herb (${FIT_TIME} s base): to ${SHELF_HOLDS} herbs. Not picked up with herbs on it.</li>
+      <li><b>Practise</b> at a training dummy: a melee weapon in hand; swing time and stamina as a fight's; its skill gain ×${PRACTICE_GAIN} a landed blow's (${practiceSkillWords()}); no damage either way.</li>
+      <li><b>Shoot</b> at an archery target: a bow in hand and arrows, within its range; draw time and stamina as a fight's; archery gain ×${PRACTICE_GAIN} a landed shot's. To ${TARGET_HOLDS} arrows. <b>Pull arrows</b> (${PULL_TIME} s base): one in ${ARROW_BREAK_IN} broken, the rest back.</li>
+      <li><b>Tie up</b>, <b>Untie</b> (${MOOR_TIME} s base): a boat within ${MOOR_REACH} tile of the post, one at a time; by whoever set the boat down or holds its key. Tied: <b>Take the helm</b> and <b>Pick it up</b> refused to anyone else; rowed further than ${MOOR_REACH} tile off, the tie holds nothing.</li>
+      <li><b>Carve</b> a stone bust (${CARVE_TIME} s base): a citizen of the settlement it stands on, from its roll (Social window); whoever set it down, or a citizen.</li>
     </ul>
     <h3>Calling things by name</h3>
     <ul>

@@ -115,6 +115,11 @@ import { plinthBusy } from './plinth';
 import { MEMORIAL } from './memorial';
 import { gardenFrom, hedgeRefusal, mountRefusal, mountTurnsTo, MOUNT_SAID } from './garden';
 import { decorFrom, stoneLanternLight } from './decor';
+import { furnishFrom } from './furnish';
+import { fittingFrom, FITTING_SAID, poleBurning, poleLight, BENCH_TREE_AGES } from './fitting';
+import { LANTERN_POLE, MOORING_POST, TREE_BENCH } from './fittingdefs';
+import { atWaterEdge } from './watergarden';
+import { FIREPLACE, FIREPLACE_REACH, GAZEBO } from './furnishdefs';
 import { STONE_LANTERN } from './decordefs';
 import { counterFinished, counterInto, counterMiddle, Counters, type CountersJSON, type CounterWire } from './counters';
 import { burnLamps, isLampPiece, lampArmRefusal, lampBurning, lampFrom, lampLight, lampTurnsTo } from './lamps';
@@ -3975,6 +3980,11 @@ export class Game {
         if (lampBurning(f)) out.push(lampLight(f));
         continue;
       }
+      // A paper lantern pole `POLE_REACH` tiles while its candles burn (`fitting.ts`).
+      if (f.kind === LANTERN_POLE) {
+        if (poleBurning(f)) out.push(poleLight(f));
+        continue;
+      }
       // An enchanter's plinth's runes, brighter while somebody enchants at it (`plinth.ts`).
       // Where it stands, worked out only for what lights from there: every piece in the settlement is looked at every frame.
       if (f.kind !== ENCHANTERS_PLINTH && f.kind !== MEMORIAL && !f.lit && !furnitureDef(f.kind).altar) continue;
@@ -3988,7 +3998,8 @@ export class Game {
         out.push(memorialLight(cx, cy));
         continue;
       }
-      if (f.lit) out.push({ x: cx, y: cy, radius: OVEN_REACH, strength: 0.8 });
+      // A fireplace throws `FIREPLACE_REACH` tiles while it burns (`furnish.ts`).
+      if (f.lit) out.push({ x: cx, y: cy, radius: f.kind === FIREPLACE ? FIREPLACE_REACH : OVEN_REACH, strength: 0.8 });
       else if (furnitureDef(f.kind).altar) out.push({ x: cx, y: cy, radius: ALTAR_REACH, strength: ALTAR_GLOW, steady: true, cast: ALTAR_CAST, castAlpha: ALTAR_CAST_ALPHA });
     }
     // A kiln's and a smelter's from the middle of its block, where its mouth and its vent or stack are.
@@ -4065,8 +4076,8 @@ export class Game {
       out.push({ x: cx, y: cy, heat: 0.7 });
     }
     for (const f of this.furniture.values()) {
-      // A candle behind glass is not a fire, and sends up no smoke.
-      if (!f.lit || isLampPiece(f) || !near(f.x, f.y)) continue;
+      // A candle behind glass or paper is not a fire, and sends up no smoke.
+      if (!f.lit || isLampPiece(f) || f.kind === LANTERN_POLE || !near(f.x, f.y)) continue;
       const [cx, cy] = furnitureCentre(f);
       out.push({ x: cx, y: cy, heat: 0.62 });
     }
@@ -5034,8 +5045,13 @@ export class Game {
   decayMultiplier(x: number, y: number, level = 0): number {
     const out = this.onDeed(x, y) ? DEED_DECAY : 1;
     if (level < 0) return out * CELLAR_DECAY;
-    // Under a roof on walls, or on columns: an open hall keeps as a room does (`Buildings.sheltered`).
-    return this.buildings.sheltered(0, x, y) ? out * INDOORS_DECAY : out;
+    // Under a roof on walls, or on columns: an open hall keeps as a room does (`Buildings.sheltered`); and under a gazebo (`furnish.ts`).
+    return this.buildings.sheltered(0, x, y) || this.underGazebo(x, y) ? out * INDOORS_DECAY : out;
+  }
+
+  /** Whether a gazebo stands on the ground of tile (x, y): its tile counts as under a roof (`furnish.ts`; the island's `gazebo_over`). */
+  underGazebo(x: number, y: number): boolean {
+    return this.furnitureOnTile(x, y).some((f) => f.kind === GAZEBO && (f.level ?? 0) === 0);
   }
 
   private updateAction(dt: number): void {
@@ -9113,6 +9129,10 @@ export class Game {
           ...(gardenFrom(r.garden) ? { garden: gardenFrom(r.garden) } : {}),
           // And a home piece's: a rug's pattern and colours, curtains drawn, a bin's heap, what is on a stand (`decor.ts`).
           ...(decorFrom(r.garden) ? { decor: decorFrom(r.garden) } : {}),
+          // And a furnishing's: a hay stack's grass, a signpost's arms, a vase's flowers, a side table's things, a mount's fish (`furnish.ts`).
+          ...(furnishFrom(r.garden) ? { furnish: furnishFrom(r.garden) } : {}),
+          // And a fitting's: a pole's colours, a boulder's moss kept, a shelf's jars, a target's arrows, a post's boat, a bust's citizen (`fitting.ts`).
+          ...(fittingFrom(r.garden) ? { fitting: fittingFrom(r.garden) } : {}),
           // When a skep was set down or last emptied, which what it has made is worked out from (`bees.ts`).
           ...(typeof r.state?.skep_at === 'number' ? { skepAt: r.state.skep_at } : {}),
           /*
@@ -9736,7 +9756,13 @@ export class Game {
     }
     // On the deck, the deck is the footing; under it, the ground.
     const deck = bridged && deckLane(over, x, y) ? true : this.deckFooting(x, y);
-    if (deck === false || (deck === null && (!this.world.isPassable(x, y) || this.world.hasWater(x, y)))) return 'Furniture needs dry, solid ground.';
+    // A tree bench round a grown tree, on its tile, which nothing else stands on (`fitting.ts`; the island's `piece_fixed_refusal`).
+    if (kind === TREE_BENCH) {
+      const grown = this.world.getTile(x, y) === TileType.Tree && BENCH_TREE_AGES.includes(treeAge(this.world.getData(x, y)));
+      if (!grown) return FITTING_SAID.noTree;
+    } else if (deck === false || (deck === null && (!this.world.isPassable(x, y) || this.world.hasWater(x, y)))) return 'Furniture needs dry, solid ground.';
+    // A mooring post at the water's edge (`fitting.ts`).
+    if (kind === MOORING_POST && !atWaterEdge(this, x, y)) return FITTING_SAID.notShore;
     const steepest = 16;
     if (deck === null && this.world.slope(x, y) > steepest) return `Too uneven: slope over ${metres(steepest)} m.`;
     if (this.isToken(x, y)) return 'Not on the totem.';

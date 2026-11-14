@@ -7,6 +7,8 @@ CREATE OR REPLACE FUNCTION public.act_wind(p_world uuid, p_uid uuid, p_action te
 AS $function$
 declare v_kg double precision; v_kind text; v_free boolean;
 begin
+  -- And costs what the fight's would (`fitting.ts`).
+  p_action := practice_as(p_action);
   if not is_fight(p_action) then return p_cost; end if;
   -- Nothing at all while a Sworn Blade's Measured Breathing or a Berserker's Adrenaline holds.
   select coalesce((pl.blessings->'breathing'->>'until')::timestamptz > now(), false)

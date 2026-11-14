@@ -230,6 +230,14 @@ export class SettingsPanel {
       () => game.thePath?.on ?? false,
       (v) => void game.pathDoor?.turn(v),
     );
+    add(
+      'Path pop-ups',
+      'Card in the corner as each Path step ticks: done, next, how, why; a moving picture of the action. Close, Skip next, Path tab.',
+      () => game.settings.pathPopups,
+      (v) => {
+        game.settings.pathPopups = v;
+      },
+    );
     /** The slider, kept so a preset can move it. */
     let sizeSlider: HTMLInputElement | null = null;
     let sizeSay: (() => void) | null = null;

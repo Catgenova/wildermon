@@ -139,6 +139,8 @@ export const SETTING_DEFAULTS = {
   timings: false,
   /** The Path's line at the top of the screen folded to its step number (`src/ui/pathstrip.ts`). */
   pathFolded: false,
+  /** A card in the corner each time a Path step ticks: what was done, and the next step's how and why (`src/ui/pathcard.ts`). */
+  pathPopups: true,
   /**
    * Phone only (`lowPowerOn`): at most `LOW_POWER_FPS` frames a second, the
    * fast graphics, and no wakes or dust.

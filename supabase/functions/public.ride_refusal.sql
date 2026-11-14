@@ -130,6 +130,9 @@ begin
     -- A padlock on her keeps her helm, or the reins, to whoever has its key.
     v_shut := lock_refusal(p_world, p_uid, p.lock, p.x, p.y);
     if v_shut is not null then return v_shut; end if;
+    -- And a tie to a mooring post keeps it to whoever set her down, or her key (`fitting.ts`).
+    v_shut := moored_refusal(p_world, p_uid, p);
+    if v_shut is not null then return v_shut; end if;
     -- A rowing boat does not put out in a gale (`sailing.ts`).
     if is_boat(p) and not coalesce((select b.sail from boat_def b where b.id = p.sub), false)
        and is_gale((world_wind(p_world)).force) then

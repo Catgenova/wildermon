@@ -19,5 +19,7 @@ begin
       'mine', d.founded_by = me or exists (select 1 from deed_member m where m.world_id = p_world
                                              and m.uid = me and m.founder = d.founded_by))
     order by d.founded_at, d.name)
-    from deed d where d.world_id = p_world), '[]'::jsonb));
+    from deed d where d.world_id = p_world), '[]'::jsonb),
+    -- And the cairns on the settlements of yours, named (`furnish.ts`).
+    'cairns', cairns_of(p_world, me));
 end $function$

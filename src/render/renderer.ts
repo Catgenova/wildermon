@@ -65,6 +65,15 @@ import { drawSteps, stepsFootAt } from './steps';
 import { seasonAt, type Season } from '../world/calendar';
 import { gardenAmbience, gardenTrim, hangCodeOf } from './gardenlook';
 import { decorTrim } from './decorlook';
+import { furnishTrim } from './furnishlook';
+import { fittingTrim } from './fittinglook';
+import { LANTERN_POLE, PRACTISE, SHOOT_TARGET, STONE_BUST, TREE_BENCH } from '../game/fittingdefs';
+
+/** Pixels at zoom one a tree bench's two halves are sorted either side of the tree on its tile: its far half before, its near half after. */
+const BENCH_ROUND = 2;
+
+/** The job a body is drawn at: a practice swing or shot at a dummy or a target as a fight's, its clip and its weapon in hand (`fitting.ts`). */
+const poseJob = (id: string | null | undefined): string | undefined => (id === PRACTISE || id === SHOOT_TARGET ? 'attack_creature' : id ?? undefined);
 import { ARMOUR_STAND, WOVEN_RUG } from '../game/decordefs';
 import { drawShine, shines } from './shine';
 import { NIGHT_WASH } from './nightwash';
@@ -4946,6 +4955,16 @@ export class Renderer {
             fe.view = this.viewOf(fu);
             // A rug lies flat on the floor: first among its line, under whoever stands on it (`decor.ts`).
             if (fu.kind === WOVEN_RUG) fe.key = fe.sy - FLAT_FIRST;
+            // A tree bench in two halves round its tree (`fitting.ts`): the far half before the tree on its tile, the near half after it.
+            if (fu.kind === TREE_BENCH) {
+              fe.layer = 0;
+              fe.key = fe.sy - BENCH_ROUND * zoom;
+              const near = this.take('furniture', x, y, fe.sx, fe.sy, null);
+              near.piece = fu;
+              near.view = fe.view;
+              near.layer = 1;
+              near.key = fe.sy + BENCH_ROUND * zoom;
+            }
             if (fu.rare) fe.rare = fu.rare;
             // On a bridge's deck, among its pieces (`deckKey`): a stall on an outer lane, a wagon crossing. Anything else is under it (`pieceOnDeck`).
             if (this.game.bridges.size && this.game.pieceOnDeck(fu, Math.floor(wx), Math.floor(wy))) this.onBridgeDeck(fe, wx, wy);
@@ -6668,7 +6687,7 @@ export class Renderer {
       const [x, y] = game.roster.drawnAt(peer);
       const z = this.footOn(x, y, peer.level) + peer.level * WALL_HEIGHT;
       return personBody(x, y, z, peer.facing, 'peer', {
-        id: 'o' + peer.id, phase: peer.moving ? peer.stepPhase : this.anim * 6, moving: peer.moving, facing: peer.facing, swimming: peer.swimming, working: !!peer.working, job: peer.act,
+        id: 'o' + peer.id, phase: peer.moving ? peer.stepPhase : this.anim * 6, moving: peer.moving, facing: peer.facing, swimming: peer.swimming, working: !!peer.working, job: poseJob(peer.act),
         look: peer.look, gear: peer.gear,
       });
     }
@@ -6861,7 +6880,7 @@ export class Renderer {
             swimming: player.swimming,
             working: this.game.action?.state === 'performing',
             // What at: meditating is done sat on the ground rather than at the bench (`FigurePose.job`).
-            job: this.game.action?.def.id,
+            job: poseJob(this.game.action?.def.id),
             // How far into its go, and how long a go takes, for a clip fitted to it (`FigurePose.act`).
             act: this.game.action?.state === 'performing' ? { t: this.game.wallNow() - (this.game.action.began ?? this.game.wallNow()), length: this.game.action.duration } : undefined,
             driving: (ent.lift ?? 0) > 0 && !ent.standing,
@@ -6918,7 +6937,7 @@ export class Renderer {
             facing: ent.seatFacing ?? peer.facing,
             swimming: peer.swimming,
             working: peer.working,
-            job: peer.act,
+            job: poseJob(peer.act),
             driving: (ent.lift ?? 0) > 0 && !ent.standing,
             seat: ent.seat,
             tunic: peer.tunic,
@@ -7121,6 +7140,12 @@ export class Renderer {
             });
           }, undefined, pieceBox);
           drawn = box;
+        } else if (piece.kind === TREE_BENCH && ent.layer !== undefined) {
+          // One half of a tree bench, the far or the near, as it was taken round its tree (`BENCH_ROUND`).
+          const layer = ent.layer;
+          this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => {
+            drawn = drawFurniture(g, px, py, zoom, piece.kind, false, dyeOf(piece) ?? undefined, layer, view, piece.material);
+          }, undefined, pieceBox);
         } else if (isDen(piece.kind)) {
           /*
            * A wildermon bed (`dens.ts`): its bake under the pointer's ring, and
@@ -7179,7 +7204,7 @@ export class Renderer {
           // ring under the pointer: a ring round a bloom of light is a blot.
           // (an armour stand's mannequin by which stand it is: `decorlook.ts`)
           drawFurnitureLive(ctx, ent.sx, ent.sy, zoom, piece.kind, view, this.game.darkness(),
-            clothInWind(piece.kind) || piece.kind === ARMOUR_STAND ? this.airOf(piece) : undefined);
+            clothInWind(piece.kind) || piece.kind === ARMOUR_STAND || piece.kind === STONE_BUST || piece.kind === LANTERN_POLE ? this.airOf(piece) : undefined);
           // A lantern burning on a post or a pillar blooms as the dark comes on (`lamps.ts`).
           if (lampBurning(piece)) drawLampBloom(ctx, ent.sx, ent.sy, zoom, piece.kind, view, this.game.darkness());
           /*
@@ -11310,6 +11335,12 @@ export class Renderer {
     // A home piece: a bin's heap, a rug's pattern and colours, curtains drawn, what a stand wears (`decor.ts`, `decorlook.ts`).
     const decor = decorTrim(f, this.game.wallNow());
     if (decor !== undefined) return decor;
+    // A furnishing: a swing sat in, a stack's bales, a trough's water, a post's arms, a vase's flowers, a table's things, a mount's fish (`furnish.ts`, `furnishlook.ts`).
+    const furnish = furnishTrim(f, this.game);
+    if (furnish !== undefined) return furnish;
+    // A fitting: a pole's lanterns and candles, a bench's tree, a shelf's jars, a target's arrows, a post's rope (`fitting.ts`, `fittinglook.ts`).
+    const fitting = fittingTrim(f, this.game);
+    if (fitting !== undefined) return fitting;
     // An arch's roses or lavender: the variety, which is its place's, and how far it has grown (`roses.ts`).
     if (FURNITURE_BY_ID.get(f.kind)?.climber) {
       const r = roseStage(f.setAt, this.game.wallNow());

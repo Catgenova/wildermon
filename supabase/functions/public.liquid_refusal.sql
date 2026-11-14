@@ -57,6 +57,7 @@ begin
 
   elsif p_action = 'leach_lye' then
     if not holds_liquid(p) or is_well(p) then return 'Not a barrel.'; end if;
+    if p.sub = water_trough_kind() then return furnish_said('troughWater', null, null, null); end if;
     if is_working(p) then return 'Still fermenting.'; end if;
     if coalesce(placed_liquid(p), '') <> 'water' or placed_litres(p) <= 0 then return 'Needs water.'; end if;
     if craft_count(p_world, p_uid, 'ash') < private.lye_ash_for(placed_litres(p)) then

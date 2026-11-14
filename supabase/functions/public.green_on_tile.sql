@@ -17,9 +17,9 @@ begin
     v_days := greatest(v_days, green_days(green_start((select g.since from green_since g where g.world_id = p_world
                 and g.thing = 'slab' and g.x = p_x and g.y = p_y and g.k = 0), v_from), now()));
   end if;
-  v_days := greatest(v_days, coalesce((select max(green_days(green_start(greatest(pc.made_at, (select g.since from green_since g
+  v_days := greatest(v_days, coalesce((select max(piece_green_days(pc.sub, green_start(greatest(pc.made_at, (select g.since from green_since g
                 where g.world_id = p_world and g.thing = 'piece' and g.x = pc.x and g.y = pc.y and g.k = pc.id)), v_from), now()))
-      from placed pc join furniture_def f on f.id = pc.sub and f.mossy
+      from placed pc join furniture_def f on f.id = pc.sub and f.mossy and not moss_kept(pc)
      where pc.world_id = p_world and pc.kind = 'furniture' and pc.x = p_x and pc.y = p_y), 0));
   v_days := greatest(v_days, coalesce((select max(green_days(green_start(g.since, v_from), now()))
       from (select * from border_of(p_x, p_y, 'n') union all select * from border_of(p_x, p_y, 'w')) bo
