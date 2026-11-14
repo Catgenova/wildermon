@@ -39,6 +39,7 @@ import {
   TOPIARY_TUB, TROPHY_PLAQUE, WIND_CHIME, WINDOW_BOX, WISTERIA_PERGOLA,
 } from './garden';
 import { HAMMOCK, ROPE_WALK_PIECE } from './ropework';
+import { ARMOUR_STAND, COMPOST_BIN, CURTAINS, STONE_LANTERN, SUNDIAL, WOVEN_RUG } from './decor';
 
 /**
  * Every piece of furniture drawn in the kit, by its kind (`FurnitureDef.id`).
@@ -125,6 +126,13 @@ export const KIT_PIECES: Readonly<Record<string, KitPiece>> = {
   folding_screen: FOLDING_SCREEN,
   plant_stand: PLANT_STAND,
   wind_chime: WIND_CHIME,
+  // The home pieces (`decor.ts`).
+  sundial: SUNDIAL,
+  compost_bin: COMPOST_BIN,
+  stone_lantern: STONE_LANTERN,
+  woven_rug: WOVEN_RUG,
+  curtains: CURTAINS,
+  armour_stand: ARMOUR_STAND,
   // Ropemaking's pieces (`ropework.ts`).
   hammock: HAMMOCK,
   rope_walk: ROPE_WALK_PIECE,

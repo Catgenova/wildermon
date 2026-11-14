@@ -7,6 +7,7 @@ import type { Game } from './game';
 import { heldReachOf } from './light';
 import { isLampPiece, lampAt, lampBurning, lampReach } from './lamps';
 import { isRuneLantern, runeLanternReach } from './runelantern';
+import { STONE_LANTERN, STONE_LANTERN_REACH } from './decordefs';
 import { furnitureCentre } from './furniture';
 import { ANCIENT_HELM, ANCIENT_HELM_SIGHT } from './gear';
 
@@ -292,6 +293,9 @@ export class Vision {
       // A rune lantern shows the ground out to a lantern's reach of its quality; a lantern post out to its lantern's (`lamps.ts`); anything else alight, a fire's.
       if (isRuneLantern(f)) {
         if (night && (f.level ?? 0) >= 0) this.cast(next, ...furnitureCentre(f), runeLanternReach(f), mark);
+      } else if (f.kind === STONE_LANTERN) {
+        // A stone lantern out to its own reach, whatever its quality (`decor.ts`).
+        if (night && (f.level ?? 0) >= 0) this.cast(next, ...furnitureCentre(f), STONE_LANTERN_REACH, mark);
       } else if (isLampPiece(f)) {
         if (lampBurning(f)) this.cast(next, ...lampAt(f), lampReach(f), mark);
       } else if (f.lit) this.cast(next, f.x + 0.5, f.y + 0.5, FIRE_SIGHT, mark);

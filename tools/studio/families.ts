@@ -15,6 +15,8 @@ import '../../src/game/actions';
 import { SPECIES, type SpeciesDef } from '../../src/game/creatures';
 import { FURNITURE, furnitureDef } from '../../src/game/furniture';
 import '../../src/render/gardenlook';
+import { MANNEQUIN_KEPT, STAND_GEAR } from '../../src/render/decorlook';
+import { gearFrom } from '../../src/game/worn';
 import { dyeTint } from '../../src/game/dyestuffs';
 import { ENCHANTERS_PLINTH } from '../../src/game/enchant';
 import { DEFAULT_LOOK, randomLook, type Look } from '../../src/game/look';
@@ -43,7 +45,7 @@ import {
 } from '../../src/render/sprites';
 import { loadAllWildermon, modelled } from '../../src/render/wildermon';
 import { ACT_SECS } from '../../src/render/beasts';
-import type { GearLook } from '../../src/render/figure';
+import { drawFigure, sculptedFigures, sculptedReady, type GearLook } from '../../src/render/figure';
 import { BUSH3D_SPECIES, log3dSprite, STUMP3D_SPECIES, TREE3D_SPECIES, tree3dFrame, tree3dIdle, type TreeView } from '../../src/render/trees3d/index';
 import { FLOWER_COLOURS, flowerSprite } from '../../src/render/flowers';
 import { fieldBake } from '../../src/render/crops';
@@ -207,6 +209,8 @@ const furniture: Family = {
     const plinth = f.id === ENCHANTERS_PLINTH;
     const style: Style = kit || den || plinth ? 'kit' : 'old';
     const st: Variant[] = kit?.states ? kit.states.map((s) => ({ label: s.label, set: { state: s.trim } })) : plinth ? states(['bare', 'runed 1', 'runed 2']) : [];
+    // An armour stand's mannequin bare and in a full set (`decorlook.ts`): drawn over its bake, by the state.
+    if (f.id === 'armour_stand') st.push({ label: 'empty', set: { state: STAND_EMPTY } }, { label: 'full set', set: { state: STAND_DRESSED } });
     if (kit?.layers) for (let i = 0; i < kit.layers; i++) st.push({ label: `layer ${i}`, set: { state: i } });
     // The dye and the woods only for a piece whose model takes them: a kit piece that says what it uses and leaves them out
     // (a lair, a trophy, a brazier) draws the same whatever it is given.
@@ -230,7 +234,11 @@ const furniture: Family = {
     };
   }),
   // A carved figure is drawn from its kind's model (`gardenlook.ts`): every line in before it is drawn.
-  prepare: async (a) => { if (a.kind === 'carved_figure') await loadAllWildermon(); },
+  prepare: async (a) => {
+    if (a.kind === 'carved_figure') await loadAllWildermon();
+    // An armour stand's mannequin is a sculpted body (`decorlook.ts`): the bodies on, and its bakes in, before it is drawn.
+    if (a.kind === 'armour_stand') await mannequinBaked();
+  },
   draw: (ctx, sx, sy, zoom, a, o) => {
     const view = pieceView(o.side, o.turn);
     const t = o.t;
@@ -242,6 +250,7 @@ const furniture: Family = {
     const trim = wheels && o.motion === 'wheels' ? o.frame : o.state;
     kitBypass(false);
     const box = withClock(t, () => drawFurniture(ctx, sx, sy, zoom, a.kind, o.lit, o.tint ? dyeTint(o.tint) ?? undefined : undefined, trim, view, o.material));
+    if (a.kind === 'armour_stand' && o.motion !== 'live') withClock(t, () => drawFurnitureLive(ctx, sx, sy, zoom, a.kind, view, o.night, { x: 0, y: 0, force: 0, t, seed: o.state === STAND_DRESSED ? STAND_DRESSED : STAND_EMPTY }));
     if (o.motion === 'live' || o.motion === 'wind') {
       const air = { x: Math.cos(t * 0.7), y: Math.sin(t * 0.7), force: 0.8, t };
       withClock(t, () => drawFurnitureLive(ctx, sx, sy, zoom, a.kind, view, o.night, air));
@@ -260,6 +269,41 @@ const furniture: Family = {
   },
 };
 
+/** The sculpted bodies on and a mannequin's bakes landed: drawn over and over off the sheet until it shows, and a while more for its finer bands. */
+let mannequinDone: Promise<void> | null = null;
+const mannequinBaked = (): Promise<void> => (mannequinDone ??= bakeMannequin());
+async function bakeMannequin(): Promise<void> {
+  sculptedFigures(true);
+  const c = document.createElement('canvas');
+  c.width = 160; c.height = 220;
+  const g = c.getContext('2d', { willReadFrequently: true });
+  if (!g) return;
+  const shows = (): boolean => {
+    g.clearRect(0, 0, c.width, c.height);
+    for (const zoom of [1, 2, 4]) {
+      for (let facing = 0; facing < 8; facing++) {
+        drawFigure(g, 80, 200, zoom, { phase: 0, moving: false, facing, swimming: false, working: false, look: { ...DEFAULT_LOOK, hair: 'bald' }, gear: STAND_GEAR.get(STAND_DRESSED), mannequin: true });
+      }
+    }
+    const px = g.getImageData(0, 0, c.width, c.height).data;
+    for (let i = 3; i < px.length; i += 4) if (px[i] > 0) return true;
+    return false;
+  };
+  const wait = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
+  for (let i = 0; i < 60 && !(sculptedReady() && shows()); i++) await wait(250);
+  for (let i = 0; i < 12; i++) { shows(); await wait(250); }
+  console.error(`mannequin: sculpted ${sculptedReady()}, shows ${shows()}`);
+}
+
+/** The studio's two stands, under ids no piece has: bare, and in a full set of every class and a dye (`STAND_GEAR`). */
+const STAND_EMPTY = -1, STAND_DRESSED = -2;
+MANNEQUIN_KEPT.on = false;
+STAND_GEAR.set(STAND_EMPTY, {});
+STAND_GEAR.set(STAND_DRESSED, gearFrom({
+  head: ['helm', 0, 'Iron', null], chest: ['plate_breastplate', 0, 'Iron', null], shawl: ['cloth_shawl', 0, null, '#8a2f3a'],
+  legs: ['chain_leggings', 0, 'Iron', null], feet: ['leather_boots', 0, null, '#5a3a28'],
+}) ?? {});
+
 /** Which file a kit piece's model is in, by the registry's imports. */
 function kitFile(kind: string): string {
   const by: Record<string, string> = {
@@ -272,6 +316,7 @@ function kitFile(kind: string): string {
     lavender_arch: 'rosearch', rose_arch: 'rosearch', stone_lavender_arch: 'rosearch', stone_rose_arch: 'rosearch', bench: 'seating', stool: 'seating',
     bookshelf: 'shelving', crate_shelf: 'shelving', shelves: 'shelving', great_sign: 'signs', sign: 'signs', stall: 'stall', coat_rack: 'stands',
     lectern: 'stands', statue: 'statue', table: 'tables', long_table: 'tables', desk: 'tables', trash_crate: 'trash', trellis: 'trellis', well: 'turnery',
+    sundial: 'decor', compost_bin: 'decor', stone_lantern: 'decor', woven_rug: 'decor', curtains: 'decor', armour_stand: 'decor',
   };
   return by[kind] ?? kind;
 }

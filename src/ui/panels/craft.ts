@@ -8,6 +8,7 @@ import { isFurniture, ONE_ALTAR } from '../../game/furniture';
 import { SKILL_DEFS } from '../../game/skills';
 import type { Target } from '../../game/actions';
 import { CARVED_FIGURE } from '../../game/gardendefs';
+import { RUG_PATTERNS, WOVEN_RUG, type RugPattern } from '../../game/decordefs';
 import { FIGURE_KINDS } from '../../game/garden';
 import { SPECIES } from '../../game/creatures';
 import type { UIWindow } from '../windows';
@@ -74,6 +75,8 @@ export class CraftPanel {
   private readonly wants = new Map<string, string>();
   /** The kind a carved figure is to be carved as, chosen on its row among those in the field guide (`garden.ts`). */
   private figure = '';
+  /** The pattern a woven rug is to be woven in, chosen on its row (`decor.ts`). */
+  private pattern: RugPattern = RUG_PATTERNS[0];
   /**
    * Make until you hold so many: the recipe, the count wanted, and what was
    * held when the last run was asked for, to see the next one get nearer.
@@ -510,6 +513,8 @@ export class CraftPanel {
     }
     // A carved figure's kind, out of those seen in the field guide (`garden.ts`): the island refuses any other.
     if (r.result === CARVED_FIGURE) parts.push(this.figurePick());
+    // A woven rug's pattern (`decor.ts`).
+    if (r.result === WOVEN_RUG) parts.push(this.patternPick());
     // What it would come out made of, since the same bill in two woods makes
     // two different things; and a choice of them, when more than one kind is
     // carried. Asked for: an oak chest from a pack that holds pine too.
@@ -722,9 +727,28 @@ export class CraftPanel {
     // inside the target as `count`, where the island reads it as "how many of
     // the stack" and a craft reads it not at all.
     // And a carved figure's kind, chosen on its row (`garden.ts`).
-    const kind = r.result === CARVED_FIGURE ? { species: this.figureKind() } : {};
+    const kind = r.result === CARVED_FIGURE ? { species: this.figureKind() } : r.result === WOVEN_RUG ? { pattern: this.pattern } : {};
     this.game.requestAction(def, { kind: 'item', uid: material.uid, ...kind } as Target, times);
     return true;
+  }
+
+  /** The choice of pattern on a woven rug's row. */
+  private patternPick(): HTMLElement {
+    const pick = document.createElement('select');
+    pick.className = 'craft-of';
+    pick.title = 'Pattern';
+    for (const k of RUG_PATTERNS) {
+      const o = document.createElement('option');
+      o.value = k;
+      o.textContent = k;
+      o.selected = k === this.pattern;
+      pick.append(o);
+    }
+    pick.addEventListener('change', () => {
+      this.pattern = pick.value as RugPattern;
+      this.render();
+    });
+    return pick;
   }
 
   /** The kinds a figure may be carved as: those seen in the field guide, in its order. */

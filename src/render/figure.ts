@@ -2455,7 +2455,15 @@ export interface FigurePose {
   veil?: FigureVeil;
   /** A rod's line and float drawn by the action effects while they are out over the water (`./fx/fishing.ts`): the rod's own left out then. */
   line?: boolean;
+  /**
+   * A mannequin (an armour stand's, `../game/decor.ts`): the body all of one turned wood, skin, face, hair and
+   * undergarment alike, wearing only its gear (`MANNEQUIN_WOOD`).
+   */
+  mannequin?: boolean;
 }
+
+/** A mannequin's wood, in the light and turned from it: the kit's oak, a step paler (`woodTone`). */
+export const MANNEQUIN_WOOD = '#efcda4';
 
 /** A body veiled: see `FigurePose.veil`. `colour` is '#rrggbb'; `tint` and `fade` nought to one. */
 export interface FigureVeil {
@@ -6220,6 +6228,12 @@ export const BEAST_BASE: Record<BeastMat, RGB> = {
 };
 
 function paletteOf(p: FigurePose, look: Look): Palette {
+  // A mannequin all of its wood: no face, no hair, no cloth of its own (`FigurePose.mannequin`).
+  if (p.mannequin) {
+    const w = hex(MANNEQUIN_WOOD), d = mixRGB(w, [110, 80, 70], 0.25);
+    return { ...paletteOf({ ...p, mannequin: false }, look), skin: w, lip: w, hair: w, brow: w, eye: w, glint: w, white: w, tunic: w, trim: d, trousers: w,
+      boot: d, cuff: d, sole: d, belt: d, buckle: d, shaved: w, stubble: w, edge: d };
+  }
   const skin = hex(skinColour(look)), hair = hex(hairColour(look)), tunic = hex(p.tunic ?? shirtColour(look));
   return {
     skin,

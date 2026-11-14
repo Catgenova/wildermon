@@ -7,9 +7,12 @@ CREATE OR REPLACE FUNCTION public.mount_refusal(p_world uuid, p_uid uuid, p_moun
 AS $function$
 declare w wall; v_seen text; v_miss text;
 begin
-  if p_mount = 'wall' then
+  -- Curtains on either face of a finished window, on their storey, as a plaque on a solid wall (`decor.ts`).
+  if p_mount in ('wall', 'pane') then
     w := wall_on_side(p_world, p_x, p_y, p_facing, p_level);
-    if w.x is null or wall_seen_type(p_world, p_uid, w) <> 'solid' then return mount_said('noWall'); end if;
+    if w.x is null or wall_seen_type(p_world, p_uid, w) <> (case when p_mount = 'pane' then 'window' else 'solid' end) then
+      return case when p_mount = 'pane' then mount_said('noWindow') else mount_said('noWall') end;
+    end if;
     return case when bill_done(w.needed) then null else mount_said('unfinished') end;
   end if;
   if p_mount = 'hang' and exists (select 1 from placed o where o.world_id = p_world and o.kind = 'furniture'

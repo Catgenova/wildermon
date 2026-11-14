@@ -141,6 +141,8 @@ begin
       end if;
       -- A trophy on a plaque, potted plants on a stand: taken down first (`garden.ts`).
       if coalesce(jsonb_array_length(p.garden->'held'), 0) > 0 then return garden_said('showing', ''); end if;
+      -- And armour on a stand (`decor.ts`).
+      if coalesce(p.garden->'worn', '{}'::jsonb) <> '{}'::jsonb then return garden_said('showing', ''); end if;
       -- A crop is not carried about in a box of earth: it is harvested, or turned back into the soil.
       if exists (select 1 from planter_crop pc where pc.placed = p.id) then
         return planter_growing_said();

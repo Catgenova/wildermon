@@ -4,6 +4,7 @@
  * them. Every number here reaches the island as a def (`scripts/dump-defs.ts`).
  */
 import type { Season } from '../world/calendar';
+import { CURTAIN_WHERE } from './decordefs';
 
 /* ---- the pieces ------------------------------------------------------------------------- */
 
@@ -119,7 +120,7 @@ export const CHIME_GAP = 3;
  * (`hang`). Each goes in the row of spots along the side of the tile it faces,
  * as a trellis does.
  */
-export type Mount = 'window' | 'wall' | 'hang';
+export type Mount = 'window' | 'wall' | 'hang' | 'pane';
 /** The pieces a hung one hangs from, standing on its tile. */
 export const HANG_FROM: readonly string[] = ['lamp_post', 'lamp_pillar', 'flagpole'];
 
@@ -128,7 +129,7 @@ export const HANG_FROM: readonly string[] = ['lamp_post', 'lamp_pillar', 'flagpo
  * one hangs from (`trellisWallWords`) and the pieces it hangs from: for its
  * item, its recipe and the help.
  */
-export const mountWords = (mount: Mount, wallWords: string, hangFrom: string): string => (mount === 'window'
+export const mountWords = (mount: Mount, wallWords: string, hangFrom: string): string => (mount === 'pane' ? CURTAIN_WHERE : mount === 'window'
   ? 'Under a window: the outer face of a finished window, ground level, outside a building.'
   : mount === 'wall'
     ? 'On a wall: either face of a finished solid wall, on your storey.'

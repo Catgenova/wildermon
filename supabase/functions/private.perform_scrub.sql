@@ -9,13 +9,14 @@ begin
   if private.scrub_refusal(p_world, p_uid, p_target) is not null then return; end if;
   if p_target->>'kind' = 'furniture' then
     pc := target_placed(p_world, p_target);
-    update placed set dye = null where world_id = p_world and id = pc.id;
+    -- And a woven rug's further colours with its first (`decor.ts`).
+    update placed set dye = null, garden = nullif(coalesce(garden, '{}'::jsonb) - 'tints', '{}'::jsonb) where world_id = p_world and id = pc.id;
     perform tell(p_world, p_uid, 'Dye removed: plain '
       || lower(coalesce((select f.name from furniture_def f where f.id = pc.sub), pc.sub)) || '.', 'event');
     return;
   end if;
   select * into it from item where world_id = p_world and id = target_item(p_target);
-  update item set dye = null where id = it.id;
+  update item set dye = null, garden = nullif(coalesce(garden, '{}'::jsonb) - 'tints', '{}'::jsonb) where id = it.id;
   perform tell(p_world, p_uid, 'Dye removed: plain '
     || lower((select coalesce(name, it.def) from item_def where id = it.def)) || '.', 'event');
 end $function$

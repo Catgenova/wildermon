@@ -59,6 +59,11 @@ begin
     perform perform_garden(p_world, p_uid, p_action, p_target);
     return;
   end if;
+  -- The home pieces' jobs (`decor.ts`).
+  if decor_action(p_action) then
+    perform perform_decor(p_world, p_uid, p_action, p_target);
+    return;
+  end if;
 
   if p_action = 'plan_bridge' then
     v_kind := coalesce(p_target->>'material', 'rope');
@@ -265,8 +270,12 @@ begin
     if v_from is null then return; end if;
     v_want := dye_source_hex(p_world, p_uid, v_from);
     if not dye_spend(v_from, v_n) then return; end if;
+    -- A woven rug already dyed takes the colour as its next (`decor.ts`).
+    if it.def = woven_rug_kind() and it.dye is not null then
+      update item set garden = jsonb_set(coalesce(garden, '{}'::jsonb), '{tints}', coalesce(garden->'tints', '[]'::jsonb) || to_jsonb(v_want))
+       where id = it.id;
     -- A stack is split so the rest stays as it was.
-    if it.count > 1 then
+    elsif it.count > 1 then
       update item set count = count - 1 where id = it.id;
       insert into item (world_id, holder, holder_uid, def, ql, dmg, count, extra, rare, dye)
       values (p_world, it.holder, it.holder_uid, it.def, it.ql, it.dmg, 1, it.extra, it.rare, v_want);
@@ -285,7 +294,8 @@ begin
     select * into dye from item i where i.world_id = p_world and i.holder = 'player'
       and i.holder_uid = p_uid and i.def = 'lye_bucket' order by i.id limit 1;
     if dye.id is null or not take_litres(p_world, p_uid, 'lye_bucket', lye_use(), false) then return; end if;
-    update item set dye = null where id = it.id;
+    -- And a woven rug's further colours with its first (`decor.ts`).
+    update item set dye = null, garden = nullif(coalesce(garden, '{}'::jsonb) - 'tints', '{}'::jsonb) where id = it.id;
     perform skill_raise(p_world, p_uid, 'alchemy', 0.2);
     perform tell(p_world, p_uid, 'Dye removed: plain '
       || lower((select coalesce(name, it.def) from item_def where id = it.def)) || '.', 'event');

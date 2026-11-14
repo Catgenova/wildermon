@@ -1,4 +1,6 @@
 import type { ActionDef, Target } from './actions';
+import { CURTAINS, RUG_COLOURS, WOVEN_RUG } from './decordefs';
+import { DECOR_SAID, rugColours } from './decor';
 import type { Game } from './game';
 import { ARMOUR_BY_ID } from './gear';
 import { describeFrom, describeWith, ITEM_DEFS, itemDef, type Item } from './items';
@@ -36,7 +38,7 @@ import {
  * tool you are going to get dirty.
  */
 const DYEABLE_ARMOUR = new Set(['cloth', 'leather']);
-export const DYEABLE_ITEMS = new Set(['cloth', 'sack', 'satchel', 'backpack', 'saddle', 'bridle', 'banner', 'flagpole', 'sailing_boat', 'caravel', 'glass', 'folding_screen']);
+export const DYEABLE_ITEMS = new Set(['cloth', 'sack', 'satchel', 'backpack', 'saddle', 'bridle', 'banner', 'flagpole', 'sailing_boat', 'caravel', 'glass', 'folding_screen', CURTAINS, WOVEN_RUG]);
 
 /**
  * The pane a window and a bay window are glazed with, which takes a dye.
@@ -466,6 +468,12 @@ export const DYE_ACTIONS: ActionDef[] = [
       const it = itemOf(g, t);
       if (!it) return 'It is gone.';
       if (!takesDye(it.id)) return 'Cannot be dyed.';
+      // A woven rug takes a colour a dyeing, up to `RUG_COLOURS`, and not its last again (`decor.ts`; the island's `last_refusal`).
+      if (it.id === WOVEN_RUG) {
+        const cs = rugColours(it);
+        if (cs.length >= RUG_COLOURS) return DECOR_SAID.rugFull;
+        return dyeReason(g, dyeLitresFor(it.id), dyeChoice(t), cs[cs.length - 1], g.dyeReach());
+      }
       return dyeReason(g, dyeLitresFor(it.id), dyeChoice(t), it.dye, g.dyeReach());
     },
     perform: (t, g) => {
@@ -477,7 +485,9 @@ export const DYE_ACTIONS: ActionDef[] = [
       // A stack is split so the rest stays the colour it was.
       const one = it.count > 1 ? g.inventory.take(it.uid, 1) : it;
       if (!one) return;
-      one.dye = d.hex;
+      // A woven rug already dyed takes the colour as its next (`decor.ts`).
+      if (one.id === WOVEN_RUG && one.dye) one.tints = [...(one.tints ?? []), d.hex];
+      else one.dye = d.hex;
       if (one !== it) g.inventory.addItem(one);
       g.gainSkill('alchemy', 0.3);
       g.note('dyed');
@@ -570,6 +580,7 @@ export const DYE_ACTIONS: ActionDef[] = [
       const it = itemOf(g, t);
       if (!it || !takeLitres(lyeCarried(g), LYE_USE)) return;
       delete it.dye;
+      delete it.tints;
       g.gainSkill('alchemy', 0.2);
       g.logMsg(dyeRemovedSaid(itemDef(it.id).name), 'event');
       g.events.emit('inventory');
@@ -600,6 +611,7 @@ export const DYE_ACTIONS: ActionDef[] = [
       const it = itemOf(g, t);
       if (!it) return;
       delete it.dye;
+      delete it.tints;
       g.inventory.onChange?.();
       g.logMsg(dyeRemovedSaid(itemDef(it.id).name), 'event');
       g.events.emit('inventory');

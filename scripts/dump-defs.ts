@@ -209,6 +209,11 @@ import {
 import { EFFECT_HEAD, EFFECT_SAID, EFFECT_TAIL, ENCHANT, ENCHANT_BURN, enchantLine, FITS, MELEE_WEAPONS } from '../src/game/enchanting';
 import { STATION_NAME, scrollHarmSaid } from '../src/game/recipes';
 import { FIGURE_SAID, GARDEN_DONE, GARDEN_JOBS, GARDEN_SAID, growsFromSet, isGardenPiece, MOUNT_SAID, type GardenSaid } from '../src/game/garden';
+import { DECOR_DONE, DECOR_JOBS, DECOR_SAID, KEPT_WHY, STAND_SLOTS, type DecorSaid } from '../src/game/decor';
+import {
+  ARMOUR_STAND, COMPOST, COMPOST_BIN, COMPOST_BOOST, COMPOST_DAYS, COMPOST_HOLDS, COMPOST_PER, COMPOST_SPOILED, COMPOST_TAKES, CURTAINS, RUG_COLOURS, RUG_PATTERNS,
+  SPREAD_COST, SPREAD_SKILL, STONE_LANTERN, SUNDIAL, WOVEN_RUG,
+} from '../src/game/decordefs';
 import {
   BLOOM_COST, BLOOM_KINDS, BLOOM_SKILL, BONSAI_GROWN, BONSAI_STEPS, CARVED_FIGURE, HANG_FROM, HEDGE_CLIPS, HEDGE_FULL, HERB_BOX, POTS, PRUNE_REST,
   PRUNE_SKILL, PRUNE_TOOL, TOPIARY_GROWS_OUT, TOPIARY_SHAPES, TRIM_SKILL, TRIM_TOOL,
@@ -3038,6 +3043,30 @@ out.push(`create or replace function mount_said(p_key text) returns text languag
   (['noWindow', 'noWall', 'unfinished', 'inside', 'upstairs', 'noHook', 'turn'] as const).map((k) => `when ${q(k)} then ${q(MOUNT_SAID[k])} `).join('')}end $fn$;`);
 out.push(`create or replace function figure_said(p_key text) returns text language sql immutable as $fn$ select case p_key ${
   (Object.keys(FIGURE_SAID) as Array<keyof typeof FIGURE_SAID>).map((k) => `when ${q(k)} then ${q(FIGURE_SAID[k])} `).join('')}end $fn$;`);
+/*
+ * The home pieces (`decor.ts`, `decordefs.ts`): their jobs, every number the
+ * island's rules read, and every sentence they say.
+ */
+out.push(`create or replace function decor_action(p_action text) returns boolean language sql immutable as $fn$ select p_action = any (array[${DECOR_JOBS.map(q).join(', ')}]::text[]) $fn$;`);
+for (const [fn, v] of [
+  ['sundial_kind', SUNDIAL], ['compost_bin_kind', COMPOST_BIN], ['stone_lantern_kind', STONE_LANTERN], ['woven_rug_kind', WOVEN_RUG],
+  ['curtains_kind', CURTAINS], ['armour_stand_kind', ARMOUR_STAND], ['compost_item', COMPOST], ['spread_skill', SPREAD_SKILL],
+] as Array<[string, string]>) out.push(`create or replace function ${fn}() returns text language sql immutable as $fn$ select ${q(v)} $fn$;`);
+for (const [fn, v] of [
+  ['compost_spoiled', COMPOST_SPOILED], ['compost_holds', COMPOST_HOLDS], ['compost_per', COMPOST_PER], ['spread_cost', SPREAD_COST], ['rug_colours', RUG_COLOURS],
+] as Array<[string, number]>) out.push(`create or replace function ${fn}() returns int language sql immutable as $fn$ select ${q(v)}::int $fn$;`);
+for (const [fn, v] of [
+  ['compost_days', COMPOST_DAYS], ['compost_boost', COMPOST_BOOST],
+] as Array<[string, number]>) out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);
+out.push(`create or replace function compost_takes() returns text[] language sql immutable as $fn$ select array[${COMPOST_TAKES.map(q).join(', ')}]::text[] $fn$;`);
+out.push(`create or replace function rug_patterns() returns text[] language sql immutable as $fn$ select array[${RUG_PATTERNS.map(q).join(', ')}]::text[] $fn$;`);
+out.push(`create or replace function stand_slots() returns text[] language sql immutable as $fn$ select array[${STAND_SLOTS.map(q).join(', ')}]::text[] $fn$;`);
+out.push(`create or replace function decor_said(p_key text, p_slot text) returns text language sql immutable as $fn$ select replace(case p_key ${
+  (Object.keys(DECOR_SAID) as DecorSaid[]).map((k) => `when ${q(k)} then ${q(DECOR_SAID[k])} `).join('')}end, '{slot}', upper(left(coalesce(p_slot, ''), 1)) || substr(coalesce(p_slot, ''), 2)) $fn$;`);
+out.push(`create or replace function decor_done(p_key text, p_what text, p_n int, p_held int, p_of int) returns text language sql immutable as $fn$ select replace(replace(replace(replace(case p_key ${
+  (Object.keys(DECOR_DONE) as Array<keyof typeof DECOR_DONE>).map((k) => `when ${q(k)} then ${q(DECOR_DONE[k])} `).join('')}end, '{what}', coalesce(p_what, '')), '{n}', coalesce(p_n::text, '')), '{held}', coalesce(p_held::text, '')), '{of}', coalesce(p_of::text, '')) $fn$;`);
+out.push(`create or replace function kept_why(p_key text) returns text language sql immutable as $fn$ select case p_key ${
+  (Object.keys(KEPT_WHY) as Array<keyof typeof KEPT_WHY>).map((k) => `when ${q(k)} then ${q(KEPT_WHY[k])} `).join('')}end $fn$;`);
 /*
  * Ropemaking (`ropework.ts`): the lay-ups and what the skill makes of them,
  * its pace on its own jobs, the rope walk, the bell rope and the lead rope.

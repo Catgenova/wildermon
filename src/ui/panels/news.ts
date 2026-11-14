@@ -280,6 +280,11 @@ import {
   TROPHY_PLAQUE, WIND_CHIME, WINDOW_BOX, WISTERIA_PERGOLA, type Mount,
 } from '../../game/gardendefs';
 import { MOUNT_SAID } from '../../game/garden';
+import { STAND_SLOTS } from '../../game/decor';
+import {
+  ARMOUR_STAND, COMPOST_BIN, COMPOST_BOOST, COMPOST_DAYS, COMPOST_HOLDS, COMPOST_PER, COMPOST_SPOILED, CURTAINS, RUG_COLOURS, RUG_PATTERNS, STONE_LANTERN,
+  STONE_LANTERN_REACH, SUNDIAL, WOVEN_RUG,
+} from '../../game/decordefs';
 import { CLIMBER_BARE, CLIMBER_BLOOMS, ROSE_SEASONS } from '../../game/roses';
 
 /** Where a piece fixed in this way goes, as the help says it (`garden.ts`). */
@@ -4459,6 +4464,22 @@ export const NEWS: News[] = [
       `New: rowing under way: ${OAR_DROPS} drops a blade at the catch; whirl pair a blade a stroke, ${SWIRL_SECS} s.`,
       'Without a graphics card: swimming strokes\' splashes, rings treading water, the float\'s strike and a catch only.',
     ],
+  },
+  // The home pieces (`decor.ts`).
+  {
+    n: 607,
+    day: '2026-11-14',
+    lines: () => {
+      const made = (id: string): string => `${itemDef(id).name} (${skillOf(`make_${id}`)}; ${pieceBill(id)})`;
+      return [
+        `New: ${made(SUNDIAL)}: examine, island hour and season days left.`,
+        `New: ${made(COMPOST_BIN)}: spoiled food (${COMPOST_SPOILED}% damage+), mixed grass, moss, ashes; holds ${COMPOST_HOLDS}; compost ÷${COMPOST_PER} after ${COMPOST_DAYS} days. Spread on a sown field or planter: next harvest QL +${COMPOST_BOOST}.`,
+        `New: ${made(STONE_LANTERN)}: night light ${STONE_LANTERN_REACH} tiles, any QL; moss, scrubbed by a scurra.`,
+        `New: ${made(WOVEN_RUG)}, at a loom: ${listedOr([...RUG_PATTERNS])}; up to ${RUG_COLOURS} dye colours. Lies flat.`,
+        `New: ${made(CURTAINS)}: on a window, either face; open or close for everyone; dyeable.`,
+        `New: ${made(ARMOUR_STAND)}: ${STAND_SLOTS.length} armour slots, drawn on a mannequin; Swap with worn, every slot at once. Owner, or a rank that may use the settlement's crates.`,
+      ];
+    },
   },
   // The Ironemole line takes any seam; a miner's idle line; a kind's own range per step (`anySeam`, `mine_idle`, `range_per_step`).
   {

@@ -22,6 +22,8 @@ import {
   WISTERIA_PERGOLA, SHOWING_SAID, type Mount,
 } from './gardendefs';
 import type { GardenState } from './garden';
+import type { DecorState } from './decor';
+import { ARMOUR_STAND, COMPOST_BIN, CURTAINS, STONE_LANTERN, SUNDIAL, WOVEN_RUG } from './decordefs';
 import { HAMMOCK_REST, ROPE_WALK, ROPE_WALK_QL, ROPE_WALK_TIME, ROPEMAKING } from './ropework';
 import { LAIR_KINDS } from './lairs';
 
@@ -251,6 +253,8 @@ export interface FurnitureDef {
   birds?: boolean;
   /** Chimes in the wind, silent in still air (`garden.ts`). */
   chime?: boolean;
+  /** Made standing at this station rather than anywhere (a woven rug at a loom: `decor.ts`). */
+  station?: 'loom';
 }
 
 /**
@@ -576,6 +580,17 @@ export const FURNITURE: FurnitureDef[] = [
   piece(FOLDING_SCREEN, 'Folding screen', 1, 1, [['plank', 6], ['shaft', 3], ['cloth', 4], ['nail', 8]], 14, 9, '', undefined, { skill: 'fine_carpentry' }),
   piece(PLANT_STAND, 'Tiered plant stand', 1, 1, [['plank', 8], ['nail', 10]], 12, 7, '', undefined, { skill: 'fine_carpentry', shows: { what: 'pot', n: STAND_HOLDS } }),
   piece(WIND_CHIME, 'Wind chime', 1, 1, [['plank', 2], ['shaft', 2], ['rope', 1], ['nail', 4]], 12, 6, '', undefined, { skill: 'fine_carpentry', mount: 'hang', chime: true }),
+  /*
+   * The home pieces (`decor.ts`; their numbers in `decordefs.ts`): a sundial,
+   * a compost bin, a stone lantern, a woven rug, curtains and an armour stand.
+   */
+  piece(SUNDIAL, 'Sundial', 1, 1, [['stone_slab', 1], ['stone_brick', 4], ['mortar', 2], ['brass_lump', 1]], 16, 14, '', undefined, { skill: 'masonry', tool: 'trowel' }),
+  piece(COMPOST_BIN, 'Compost bin', 1, 1, [['plank', 12], ['nail', 16]], 8, 10, '', undefined, { skill: 'carpentry' }),
+  piece(STONE_LANTERN, 'Stone lantern', 1, 1, [['stone_brick', 6], ['mortar', 2], ['stone_slab', 1], ['light_mote', 1]], 18, 16, '', undefined,
+    { skill: 'masonry', tool: 'trowel', mossy: true }),
+  piece(WOVEN_RUG, 'Woven rug', 2, 2, [['yarn', 12]], 14, 16, '', undefined, { skill: 'tailoring', tool: 'needle', station: 'loom' }),
+  piece(CURTAINS, 'Curtains', 2, 1, [['cloth', 4], ['shaft', 1], ['nail', 2]], 10, 10, '', undefined, { skill: 'tailoring', tool: 'needle', mount: 'pane' }),
+  piece(ARMOUR_STAND, 'Armour stand', 1, 1, [['plank', 10], ['timber', 1], ['nail', 12]], 12, 12, '', undefined, { skill: 'carpentry' }),
   piece('well', 'Well', 2, 2, [['stone_brick', 48], ['mortar', 16], ['shaft', 4], ['thick_rope', 1], ['nail', 16], [WATER_MOTE, WATER_MOTES_EACH]], 30, 24, '', undefined, { skill: 'masonry', tool: 'trowel', well: WELL_HOLDS }),
   /*
    * A tiered fountain: basins of cut slab, each smaller than the one under
@@ -867,6 +882,8 @@ export interface PlacedFurniture {
    * `placed.garden`, read by every browser off the ground read.
    */
   garden?: GardenState;
+  /** A home piece's: a rug's pattern and colours, curtains drawn, a bin's heap, what is on a stand (`decor.ts`), off the same `placed.garden`. */
+  decor?: DecorState;
   /**
    * For a skep: when it was set down or last emptied, in epoch seconds, which
    * what it has made is worked out from (`bees.ts`); on the island
@@ -1053,7 +1070,7 @@ export function furnitureAnchor(kind: string, sx: number, sy: number, facing: Si
   let ax = Math.max(0, Math.min(SUBTILES - w, sx)), ay = Math.max(0, Math.min(SUBTILES - h, sy));
   if (!alongSide(def)) return [ax, ay];
   // A window box under the middle of its window, where the window is drawn (`garden.ts`).
-  if (def.mount === 'window') {
+  if (def.mount === 'window' || def.mount === 'pane') {
     if (facing === 'n' || facing === 's') ax = Math.floor((SUBTILES - w) / 2);
     else ay = Math.floor((SUBTILES - h) / 2);
   }
@@ -1422,6 +1439,8 @@ export const FURNITURE_ACTIONS: ActionDef[] = [
       if (f.items.length) return 'Empty it first.';
       // A trophy on a plaque, potted plants on a stand: taken down first (`garden.ts`; the island's `fire_refusal`).
       if (f.garden?.held?.length) return SHOWING_SAID;
+      // And armour on a stand (`decor.ts`).
+      if (f.decor?.worn && Object.keys(f.decor.worn).length) return SHOWING_SAID;
       // A crop is not carried about in a box of earth: it is harvested, or turned back into the soil.
       if (g.planted.has(f.id)) return PLANTER_GROWING;
       // A rack holds nothing of its own, so `items` is empty however loaded it

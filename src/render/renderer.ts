@@ -64,6 +64,8 @@ import { storeyHeight } from '../game/storeyview';
 import { drawSteps, stepsFootAt } from './steps';
 import { seasonAt, type Season } from '../world/calendar';
 import { gardenAmbience, gardenTrim, hangCodeOf } from './gardenlook';
+import { decorTrim } from './decorlook';
+import { ARMOUR_STAND, WOVEN_RUG } from '../game/decordefs';
 import { drawShine, shines } from './shine';
 import { NIGHT_WASH } from './nightwash';
 import { type Masonry, adobe, brickwork, cobble, goldwork, logwork, glasswork, marblework, planking, sandstone, silverwork, slatework, stonework, timbercraft } from './masonry';
@@ -510,6 +512,9 @@ export { type Pick } from './picking';
 import { drawPlinthRunes, plinthNight } from './plinth';
 import { plinthBusy } from '../game/plinth';
 import { ENCHANTERS_PLINTH } from '../game/enchant';
+
+/** How far ahead of its line a piece lying flat sorts (`DrawEnt.key`): ahead of anything standing in it. */
+const FLAT_FIRST = 1e6;
 
 /**
  * One piece of a plan over an area, drawn before it is asked for
@@ -4939,6 +4944,8 @@ export class Renderer {
             const fe = this.take('furniture', x, y, cam.worldToScreenX(wx, wy), cam.worldToScreenY(wx, wy, this.pieceBase(fu, wx, wy)), null);
             fe.piece = fu;
             fe.view = this.viewOf(fu);
+            // A rug lies flat on the floor: first among its line, under whoever stands on it (`decor.ts`).
+            if (fu.kind === WOVEN_RUG) fe.key = fe.sy - FLAT_FIRST;
             if (fu.rare) fe.rare = fu.rare;
             // On a bridge's deck, among its pieces (`deckKey`): a stall on an outer lane, a wagon crossing. Anything else is under it (`pieceOnDeck`).
             if (this.game.bridges.size && this.game.pieceOnDeck(fu, Math.floor(wx), Math.floor(wy))) this.onBridgeDeck(fe, wx, wy);
@@ -7170,7 +7177,9 @@ export class Renderer {
           }, undefined, pieceBox);
           // What on it moves -- an altar's stars, a banner's cloth -- over it, and outside the
           // ring under the pointer: a ring round a bloom of light is a blot.
-          drawFurnitureLive(ctx, ent.sx, ent.sy, zoom, piece.kind, view, this.game.darkness(), clothInWind(piece.kind) ? this.airOf(piece) : undefined);
+          // (an armour stand's mannequin by which stand it is: `decorlook.ts`)
+          drawFurnitureLive(ctx, ent.sx, ent.sy, zoom, piece.kind, view, this.game.darkness(),
+            clothInWind(piece.kind) || piece.kind === ARMOUR_STAND ? this.airOf(piece) : undefined);
           // A lantern burning on a post or a pillar blooms as the dark comes on (`lamps.ts`).
           if (lampBurning(piece)) drawLampBloom(ctx, ent.sx, ent.sy, zoom, piece.kind, view, this.game.darkness());
           /*
@@ -11298,6 +11307,9 @@ export class Renderer {
     // A garden piece: its flowers, its shape, how far it has grown, what it holds (`garden.ts`, `gardenlook.ts`).
     const garden = gardenTrim(f, this.game.wallNow(), this.game.furnitureOnTile(f.x, f.y));
     if (garden !== undefined) return garden;
+    // A home piece: a bin's heap, a rug's pattern and colours, curtains drawn, what a stand wears (`decor.ts`, `decorlook.ts`).
+    const decor = decorTrim(f, this.game.wallNow());
+    if (decor !== undefined) return decor;
     // An arch's roses or lavender: the variety, which is its place's, and how far it has grown (`roses.ts`).
     if (FURNITURE_BY_ID.get(f.kind)?.climber) {
       const r = roseStage(f.setAt, this.game.wallNow());
