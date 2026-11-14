@@ -32,9 +32,9 @@
  * hands where the clip has them (`../../../render/spells/stage.ts` jointOf). Played mirrored, left-handed, from the facings
  * that turn the right side away from whoever is looking (five, six and seven: `CAST_LEFT_FACINGS`).
  */
-import type { Clip, FxMark, HandReach, Key } from '../clip';
+import { eased, type Clip, type FxMark, type HandReach, type Key } from '../clip';
 import { merge, mirrorClip, poseToPose, type Beat, type KeyPose } from '../author';
-import type { Euler } from '../math';
+import { cross, dot, len, qmat, quat, scl, slerp, sub, unit, type Euler, type Q } from '../math';
 import type { CastKind } from '../../../render/spells/info';
 
 /** The feet where the idle stands them (`./idle.ts`); hers closer together. */
@@ -67,10 +67,34 @@ const REST_POSE: KeyPose = { rot: { ...HANG, pelvis: [0, 0, 0], spine_01: [0, 0,
 /** A beat of a cast: a key pose and where each hand is. */
 interface CastBeat extends Beat { hands: Record<'l' | 'r', HandAt> }
 
-/** The hand keys from the beats, eased as each beat is. */
+/** Seconds between the keys of a hand's turn (`reachOf`). */
+const TURN_STEP = 1 / 30;
+/** A hand's frame from its grip's way and its knuckles' way (the knuckles squared to the grip), as a turn. */
+function frameOf(h: HandAt): Q {
+  const y = unit(h.way), k = sub(h.k, scl(y, dot(h.k, y))), x = len(k) > 1e-6 ? unit(k) : unit(cross(y, [0, 0, 1])), z = cross(x, y);
+  return quat([x[0], y[0], z[0], x[1], y[1], z[1], x[2], y[2], z[2]]);
+}
+/**
+ * The hand keys from the beats, eased as each beat is: its place keyed at each beat; its turn (the grip's way and the
+ * knuckles') keyed every `TURN_STEP`, the whole hand turned from one beat's to the next the shortest way round (not each
+ * way blended on its own, which can pass through nothing or lay the knuckles along the grip on the way).
+ */
 function reachOf(beats: CastBeat[], s: 'l' | 'r'): HandReach {
   const key = (b: CastBeat, v: Euler): Key<Euler> => ({ t: b.t, v, ...(b.ease ? { ease: b.ease } : {}), ...(b.back !== undefined ? { back: b.back } : {}) });
-  return { at: beats.map((b) => key(b, b.hands[s].at)), way: beats[0].hands[s].way, ways: beats.map((b) => key(b, b.hands[s].way)), knuckles: beats.map((b) => key(b, b.hands[s].k)) };
+  const ways: Array<Key<Euler>> = [], knuckles: Array<Key<Euler>> = [];
+  const put = (t: number, q: Q): void => {
+    const m = qmat(q);
+    ways.push({ t: +t.toFixed(4), v: [m[1], m[4], m[7]], ease: 'linear' });
+    knuckles.push({ t: +t.toFixed(4), v: [m[0], m[3], m[6]], ease: 'linear' });
+  };
+  beats.forEach((b, i) => {
+    const q0 = frameOf(b.hands[s]), next = beats[i + 1];
+    put(b.t, q0);
+    if (!next) return;
+    const q1 = frameOf(next.hands[s]), n = Math.max(1, Math.round((next.t - b.t) / TURN_STEP));
+    for (let j = 1; j < n; j++) put(b.t + ((next.t - b.t) * j) / n, slerp(q0, q1, eased(j / n, next)));
+  });
+  return { at: beats.map((b) => key(b, b.hands[s].at)), way: beats[0].hands[s].way, ways, knuckles };
 }
 
 /** Seconds into each clip its spell leaves the hand: the release (`castTime` puts the spell's own there). */

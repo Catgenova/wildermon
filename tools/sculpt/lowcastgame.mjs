@@ -73,7 +73,7 @@ window.sheet = (S, rows) => {
   rows.forEach((r, i) => r.forEach((c, j) => G.drawImage(cell(S, W, H, ...c), j * (W + gap), i * (H + gap))));
   return all.toDataURL('image/png');
 };
-window.fxSheet = (S) => { globalThis.NO_ONBODY = !!S.noOnbody;
+window.fxSheet = (S) => {
   const v = visualOf(S.spell), rel = v.cast.timing.secs * v.cast.timing.release, N = S.frames ?? 5, k = Math.max(1, Math.round((N - 1) * 0.5));
   DEFAULT_LOOK.gender = S.gender ?? 'man';
   const cv = spellSheet({ spell: S.spell, facing: S.facing ?? 1, frames: N, zoom: S.zoom ?? 4, secs: (rel * (N - 1)) / k, ...(S.weapon ? { weapon: S.weapon } : {}), ...(S.target ? { target: S.target } : {}), cols: S.cols ?? N });
@@ -125,8 +125,8 @@ try {
         console.log('retry', S.name, String(e.message).split('\n')[0]);
         await p?.close().catch(() => {});
         p = null;
-        if (tries >= 6) { failed++; console.log('FAILED', S.name); break; }
-        await new Promise((r) => setTimeout(r, 10000));
+        if (tries >= 2) { failed++; console.log('FAILED', S.name); break; }
+        await new Promise((r) => setTimeout(r, 5000));
       }
     }
   }

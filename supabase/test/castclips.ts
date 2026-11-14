@@ -15,7 +15,7 @@
 import { CLIPS, clipFor, castClipOf, heldIn, toolsIn, PLACEHOLDER } from '../../src/sculpt/anim';
 import { fxTrack } from '../../src/sculpt/fxmarks';
 import { CAST_CLIPS, castTime, releaseOf } from '../../src/sculpt/anim/clips/cast';
-import { sampleClip } from '../../src/sculpt/anim/clip';
+import { handsAt, sampleClip } from '../../src/sculpt/anim/clip';
 import { ALL_SPELL_IDS, spellInfo, visualOf } from '../../src/render/spells/index';
 import { stillPose, type FigurePose, type GearLook } from '../../src/render/figure';
 import { check, finish } from './harness';
@@ -59,6 +59,21 @@ const WEAPON_CLIPS = new Set(['fight', 'fight-left', 'swing', 'shoot']);
     if (!clip.fx?.some((m) => m.kind === 'cast')) bad.push(`${name}: no release mark`);
   }
   check('each casting clip starts and ends stood, the arms hanging, and carries its release mark', bad.length === 0 && !!rest, bad.slice(0, 6).join('; '));
+}
+{
+  // each hand's turn turned whole from beat to beat (`reachOf`): its grip's way and its knuckles' never shrunk to nothing
+  // or laid along each other on the way, which turns the hand about at random (and made a degenerate frame once)
+  const bad: string[] = [];
+  for (const [name, clip] of Object.entries(CAST_CLIPS)) for (let t = 0; t <= clip.length + 1e-9; t += 0.005) {
+    const h = handsAt(clip, t);
+    for (const s of ['l', 'r'] as const) {
+      const w = h?.[s]?.way, k = h?.[s]?.knuckles;
+      if (!w || !k) { bad.push(`${name} ${s}: no turn`); continue; }
+      const lw = Math.hypot(...w), lk = Math.hypot(...k), along = Math.abs(w[0] * k[0] + w[1] * k[1] + w[2] * k[2]) / (lw * lk);
+      if (lw < 0.3 || lk < 0.3 || along > 0.9) bad.push(`${name} ${s} at ${t.toFixed(3)}: ${lw.toFixed(2)} ${lk.toFixed(2)} ${along.toFixed(2)}`);
+    }
+  }
+  check('each hand\'s turn through each casting clip stays a turn (its ways never shrunk to nothing or laid along each other)', bad.length === 0, bad.slice(0, 4).join('; '));
 }
 {
   const bad: string[] = [];
