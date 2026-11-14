@@ -373,6 +373,12 @@
     "why": "Action effects fire from marks on the clips, worked out on every screen from the body's own clip time with nothing sent. Followed per body: once a run of a loop; a frame drawn again or a clock put right fires nothing twice; a new go fires again; a leap, a change of clip or a body unseen starts afresh with no storm of effects; a timed go fitted to its length fires once a run; the mirrored clip fires from the other hand; the point is on the weapon and the same each time."
   },
   {
+    "file": "supabase/test/buildclips.ts",
+    "title": "Lifting, taking apart, bridges and aqueducts play their own clips, hands at their places and feet still",
+    "shard": 1,
+    "why": "Twenty-eight jobs (pieces taken up and set down, turned; walls, columns, storeys, floors, bridges and aqueducts taken down; paint scraped off; sides marked out and taken off the plan; bridges and aqueducts worked on) played the placeholder gesture. Each plays its own clip from every facing on both bodies, mirrored from the left-handed facings; a smelter, kiln or anvil lifts slower and deeper than a chair; on the game's skeleton every reached hand gets to its place and the feet do not slide through a run; the leant-out strike's mallet lands on the chisel; Animations Off holds them stood."
+  },
+  {
     "file": "supabase/test/actionfx.ts",
     "title": "Action effects with thirty at work, thirty in a fight, and thirty on the water keep to their share of the particles and cost little",
     "shard": 1,

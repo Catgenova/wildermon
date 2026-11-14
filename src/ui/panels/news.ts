@@ -4422,6 +4422,18 @@ export const NEWS: News[] = [
     ],
   },
   {
+    n: 589,
+    day: '2026-11-14',
+    lines: () => {
+      const jobs = (...clips: string[]): number => [...ACTION_BY_ID.keys()].filter((id) => clips.includes(clipOfJob(id) ?? '')).length;
+      return [
+        `New: lifting and setting down animated on the sculpted body: ${jobs('lift', 'set-down')} jobs (furniture, crates, posts, water motes), squat lift, load at the chest; smelter, kiln and anvil: ${jobs('lift-heavy', 'set-down-heavy')} jobs, deeper squat, slower, load at the belly (was: a placeholder gesture).`,
+        `New: taking apart animated: hammer knocked in and levered back, ${jobs('pry')} jobs (walls, columns, storeys, bridges, aqueducts); floors squatted: ${jobs('pry-low')}; paint scraped off with a trowel: ${jobs('scrape')}; a piece turned, grip and twist: ${jobs('turn')} (was: a placeholder gesture).`,
+        `New: marking out, no plan and taking off the plan animated: ${jobs('mark', 'pull-stake')} jobs, a point or a stake pulled up. Bridges and aqueducts: ${jobs('work-out')} jobs, mallet and chisel leant out over the span (was: a placeholder gesture).`,
+      ];
+    },
+  },
+  {
     n: 588,
     day: '2026-11-14',
     lines: () => [

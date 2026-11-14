@@ -43,6 +43,24 @@ const TEND_JOBS: ReadonlyArray<[string, string]> = [
   ...['bind_wound', 'dress_poultice', 'clean_wound', 'apply_salve'].map((job): [string, string] => [job, 'heal-self']),
 ];
 /**
+ * The jobs done to a placed piece, a building's side or a span (`./clips/build.ts`), by the clip each plays: a piece taken
+ * up (`lift`) or put down (`set-down`), the heavy ones (a smelter, a kiln, an anvil) slower and deeper (`lift-heavy`,
+ * `set-down-heavy`); a piece turned (`turn`); a wall, a column, a storey, a bridge or an aqueduct taken down (`pry`), a
+ * floor (`pry-low`); paint taken off (`scrape`); a side marked out or left with no plan (`mark`), taken off the plan
+ * (`pull-stake`); a bridge or an aqueduct thrown across and worked on (`work-out`), a water mote set at its head (`set-down`).
+ */
+const BUILD_JOBS: ReadonlyArray<[string, string]> = Object.entries({
+  pick_up_furniture: 'lift', pick_up_crate: 'lift', pick_up_post: 'lift',
+  pick_up_smelter: 'lift-heavy', pick_up_kiln: 'lift-heavy', pick_up_anvil: 'lift-heavy',
+  place_furniture: 'set-down', place_crate: 'set-down', place_post: 'set-down', set_aqueduct_mote: 'set-down',
+  place_smelter: 'set-down-heavy', place_kiln: 'set-down-heavy', place_anvil: 'set-down-heavy',
+  turn_furniture: 'turn',
+  remove_wall: 'pry', remove_column: 'pry', remove_storey: 'pry', demolish_bridge: 'pry', demolish_aqueduct: 'pry',
+  remove_floor: 'pry-low', strip_wall_paint: 'scrape',
+  mark_out: 'mark', no_plan: 'mark', remove_from_plan: 'pull-stake',
+  plan_bridge: 'work-out', build_bridge: 'work-out', plan_aqueduct: 'work-out', build_aqueduct: 'work-out',
+});
+/**
  * The clip a job in the `work` state plays, by the job (its action's id), before its tool (`CLIP_OF_TOOL`):
  * - the strike (`work`) for a job whose tool is chosen each go (`ActionDef.toolFor`) or is a list (improving: the
  *   material's tools): planning (the mallet), building a wall, a floor or a column (the mallet or the trowel, by material),
@@ -101,6 +119,8 @@ export const CLIP_OF_JOB: Readonly<Record<string, string>> = Object.fromEntries(
   ...['paint_floor', 'scrub_floor_paint', 'scrub_moss'].map((job) => [job, 'brush-floor']),
   ...['glaze_item', 'restore_relic'].map((job) => [job, 'brush-item']),
   ['scrub_dye', 'brush-cloth'],
+  // lifting, setting down, taking apart, bridges and aqueducts (./clips/build.ts)
+  ...BUILD_JOBS,
 ]);
 /** Whether a job is a recipe made with no tool and not at a campfire (cooking there is done crouched at the fire). */
 const handsRecipe = (job: string): boolean => {
