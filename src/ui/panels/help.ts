@@ -105,6 +105,7 @@ import {
   RIGGING_CLOSER, RIGGING_PACE, RIGGING_SET, SAIL_QL_TOP, SOUND_REACH, SOUND_SHOWN, TACK_PACE, tackSecs,
 } from '../../game/sailing';
 import { SOUND_DEPTH } from '../../game/sailActions';
+import { ATTUNE_DAYS, ATTUNE_MOTES, ATTUNE_STRENGTH, INFUSE_DAYS, INFUSE_ELEMENTS, INFUSE_INTO, INFUSE_MOTES, SENSE_BASE, SENSE_PER_LEVEL, SENSE_SHOWN, senseRange } from '../../game/infusion';
 import { ANCIENT_EFFECTS, ANCIENT_PLUS, BAUBLE_HIGH, BAUBLE_KINDS, BAUBLE_LOW, BAUBLE_SHARE, BAUBLE_TIERS, baubleTimes, MAJOR_SKILLS, MINOR_SKILLS, REGRET_SHARE, YIELD_TIMES } from '../../game/baubles';
 import { SOUL_CHANCE } from '../../game/sacrifice';
 import { FIRST_AID_ACTION_BY_ID, HERB_HEAL, healAmount, SUITS_HEAL } from '../../game/firstaid';
@@ -339,6 +340,22 @@ export const dur = (seconds: number): string => {
 };
 /** "3 sand", "a gem": a count of a thing in figures (`countOf`). */
 const countIn = (id: string, n: number): string => countOf(id, n, true);
+
+/** Elementalism past the swirls (`infusion.ts`): every number off the rule that plays it. */
+function infuseHelp(): string {
+  const what = INFUSE_ELEMENTS.map((el) => {
+    const d = INFUSE_INTO[el];
+    const into = el === 'dark' ? 'a weapon, armour or a shield (wielded or worn)' : listedOr((d?.into ?? []).map((id) => id.replace(/_/g, ' ')));
+    return `<li><b>${capital(el)}</b> into ${into}: ${(d?.label ?? '').toLowerCase()} ${d?.say(1) ?? ''} at strength 100%.</li>`;
+  }).join('\n      ');
+  return `<li><b>Infuse into</b> (a mote's menu, at an enchanter's plinth): ${INFUSE_MOTES} motes of one element into a thing it goes into, one element at a time, for ${INFUSE_DAYS} days;
+      trains elementalism a full action. Strength = elementalism ÷ 100 × motes' QL ÷ 100 (×${1 + ATTUNE_STRENGTH} for the element you are attuned to) of each element's most:</li>
+      ${what}
+      <li>Ice: into nothing (nothing held in a larder, barrel or crate decays).</li>
+      <li><b>Attunement</b>: the element you collected most of over the last ${ATTUNE_DAYS} days: +${ATTUNE_MOTES} mote a swirl of it, +${percent(ATTUNE_STRENGTH)} strength infusing it.</li>
+      <li><b>Sense mote swirls</b> (a tile's menu, once an hour): swirls within ${SENSE_BASE} + ${SENSE_PER_LEVEL} × elementalism tiles (${senseRange(100)} at 100) on the map for
+      ${SENSE_SHOWN / 60} minutes; trains elementalism.</li>`;
+}
 
 /** Sailing past the pace it gives (`sailing.ts`, `sailActions.ts`): every number off the rule that plays it. */
 function sailHelp(): string {
@@ -2410,7 +2427,8 @@ export function helpText(): string {
       Quality (QL) = your elementalism.</li>
       <li>Then gone for everybody: the first to finish gets it; others are told it is gone.</li>
       <li><b>Water mote</b> spent on: ${WATER_MOTE_USES.map(([what, n]) => `${what} ${n}`).join(', ')}.</li>
-      <li>Trains <b>elementalism</b> (only source): about ${listed([1, 20, 50].map((v) => `+${playerGain(v, 1, 1).toFixed(2)} at ${v}`))}.</li>
+      <li>Trains <b>elementalism</b>: about ${listed([1, 20, 50].map((v) => `+${playerGain(v, 1, 1).toFixed(2)} at ${v}`))}.</li>
+      ${infuseHelp()}
     </ul>
     <h3>Runestones and the Telestone</h3>
     <ul>

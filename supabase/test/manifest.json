@@ -3043,5 +3043,11 @@
     "title": "Sailing: the closest to the wind, gales, the hold, rigging, sails and deep water",
     "shard": 5,
     "why": "The island holds a hull to the top of the points of sail its helm can sail, damages one in a gale below Sailing 30, keeps rowing boats in, widens the hold, fits rigging, reads sails' QL, and gives deep-water fish only to a line from a boat."
+  },
+  {
+    "file": "supabase/test/infusion.ts",
+    "title": "Elementalism: infusing, attunement and sensing",
+    "shard": 6,
+    "why": "Every infusion's strength, refusal and effect is the island's: fire's fuel, earth's yield, wind's pace, water's fill, life's growth, light's candle and dark's misses; attunement's extra mote and strength; sensing's reach and its hour."
   }
 ]

@@ -143,6 +143,10 @@ import {
 } from '../src/game/sailing';
 import { FIT_RIGGING, SAIL_ACTION_IDS, SAIL_SAID, SOUND_DEPTH } from '../src/game/sailActions';
 import { CLOSE } from '../src/game/wind';
+import {
+  ATTUNE_DAYS, ATTUNE_MOTES, ATTUNE_STRENGTH, darkInto, INFUSE, INFUSE_ELEMENTS, INFUSE_INTO, INFUSE_MOTES, INFUSE_SAID, INFUSE_SECS, SENSE, SENSE_BASE,
+  SENSE_EVERY, SENSE_LEARN, SENSE_PER_LEVEL, SENSED,
+} from '../src/game/infusion';
 import { DEFAULT_LOOK, LOOK_KINDS, LOOK_TABLES, LOOK_TONES, legacyLooks } from '../src/game/look';
 import { ACTION_FLOOR, ACTION_PACE, COTTON_SECONDS, COTTON_WEIGHT, MINING_SECONDS, MINING_WEIGHT, WORKER_WEIGHT, WORLD_PACE } from '../src/game/pace';
 import { DROWN_RATE, DROWN_WARN, EXHAUSTED, HEAL_FED, HEAL_RATE, HUNGER_RATE, SWIM_LEARN, SWIM_WIND, THIRST_RATE, STAMINA_BAR_PER_LEVEL, WIND_PER_LEVEL, WIND_REST, WIND_STARVING, WIND_WALK } from '../src/game/body';
@@ -2985,6 +2989,33 @@ for (const [fn, v] of [
   ['sound_depth_action', SOUND_DEPTH], ['fit_rigging_action', FIT_RIGGING],
   ['sail_said_not_afloat', SAIL_SAID.notAfloat], ['sail_said_no_sail', SAIL_SAID.noSail], ['sail_said_rigged', SAIL_SAID.rigged],
   ['sail_said_no_set', SAIL_SAID.noSet], ['sail_said_far', SAIL_SAID.far],
+] as Array<[string, string]>) {
+  out.push(`create or replace function ${fn}() returns text language sql immutable as $fn$ select ${q(v)} $fn$;`);
+}
+/*
+ * Elementalism past the swirls (`infusion.ts`, `infuseActions.ts`): what each
+ * element goes into and its most, how long an infusion lasts and what it
+ * takes, attunement, sensing, and every word they say. The rules that read
+ * them are `infuse_*`, `mote_attuned` and `perform_sense` in the migrations.
+ */
+out.push(`create or replace function mote_action(p_action text) returns boolean language sql immutable as $fn$ select p_action = any (array[${q(INFUSE)}, ${q(SENSE)}]::text[]) $fn$;`);
+{
+  const pairs = INFUSE_ELEMENTS.flatMap((el) => (el === 'dark' ? darkInto() : INFUSE_INTO[el]?.into ?? []).map((id) => `(${q(el)}, ${q(id)})`));
+  out.push(`create or replace function infuse_fits(p_el text, p_def text) returns boolean language sql immutable as $fn$ select (p_el, p_def) in (values ${pairs.join(', ')}) $fn$;`);
+  out.push(`create or replace function infuse_most(p_el text) returns double precision language sql immutable as $fn$ select case p_el ${
+    INFUSE_ELEMENTS.map((el) => `when ${q(el)} then ${q(INFUSE_INTO[el]?.most ?? 0)}::double precision `).join('')}else 0::double precision end $fn$;`);
+  out.push(`create or replace function infuse_fits_said(p_el text) returns text language sql immutable as $fn$ select case p_el ${
+    MOTE_ELEMENTS.map((el) => `when ${q(el)} then ${q(INFUSE_SAID.fits(el))} `).join('')}end $fn$;`);
+}
+for (const [fn, v] of [
+  ['infuse_motes', INFUSE_MOTES], ['infuse_secs', INFUSE_SECS], ['attune_strength', ATTUNE_STRENGTH], ['attune_motes', ATTUNE_MOTES], ['attune_days', ATTUNE_DAYS],
+  ['sense_every', SENSE_EVERY], ['sense_base', SENSE_BASE], ['sense_per_level', SENSE_PER_LEVEL], ['sense_learn', SENSE_LEARN],
+] as Array<[string, number]>) {
+  out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);
+}
+for (const [fn, v] of [
+  ['infuse_action', INFUSE], ['sense_action', SENSE], ['infuse_said_motes', INFUSE_SAID.motes], ['infuse_said_plinth', INFUSE_SAID.plinth],
+  ['infuse_said_gone', INFUSE_SAID.gone], ['infuse_said_reach', INFUSE_SAID.reach], ['sensed_word', SENSED],
 ] as Array<[string, string]>) {
   out.push(`create or replace function ${fn}() returns text language sql immutable as $fn$ select ${q(v)} $fn$;`);
 }

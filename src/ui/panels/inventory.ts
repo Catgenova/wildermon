@@ -17,6 +17,8 @@ import { ACTION_BY_ID, type ActionDef, type Target } from '../../game/actions';
 import { DEPLOY_SAID, deploySpot, isDriveable, isFurniture } from '../../game/furniture';
 import { ABSORB_SAID, absorbable, SOUL } from '../../game/sacrifice';
 import { ENCHANT, enchantable, fitsOn } from '../../game/enchanting';
+import { ELEMENTALISM_SKILL, INFUSE, INFUSE_INTO, INFUSE_MOTES, INFUSE_SAID, infuseShare } from '../../game/infusion';
+import { infusable, moteElement } from '../../game/infuseActions';
 import { ENCHANT_SAID, enchantChance, ENCHANTERS_PLINTH, ENCHANTING, scrollOf, wrongKind } from '../../game/enchant';
 import { percent } from '../../game/words';
 import { ENCHANT_STATUE } from '../../game/relicuse';
@@ -383,6 +385,28 @@ export class InventoryPanel {
             return { label: placed.name, note: `QL ${placed.thing.ql.toFixed(1)}, standing`, hint: why ?? undefined, disabled: !!why, onSelect: () => this.game.requestAction(enchant, t) };
           }),
         ],
+      });
+    }
+    /*
+     * And motes go into what their element goes into, chosen here: in the pack, or standing within reach, at an
+     * enchanter's plinth (`infusion.ts`), with the strength they would have.
+     */
+    const element = moteElement(item.id);
+    const infuse = element && INFUSE_INTO[element] ? ACTION_BY_ID.get(INFUSE) : undefined;
+    if (infuse && element) {
+      const into = infusable(this.game, element);
+      const away = this.game.atStation(ENCHANTERS_PLINTH) ? undefined : INFUSE_SAID.plinth;
+      const share = infuseShare(this.game.skills.get(ELEMENTALISM_SKILL), item.ql, this.game.attuned === element);
+      entries.push({
+        label: 'Infuse into',
+        note: `${INFUSE_MOTES} motes, strength ${Math.round(share * 100)}%`,
+        hint: away ?? (item.count < INFUSE_MOTES ? INFUSE_SAID.motes : into.length ? undefined : INFUSE_SAID.fits(element)),
+        disabled: !!away || item.count < INFUSE_MOTES || !into.length,
+        children: into.map(({ label, target }) => {
+          const t = { ...target, item: item.uid } as Target;
+          const why = infuse.check?.(t, this.game) ?? null;
+          return { label, hint: why ?? undefined, disabled: !!why, onSelect: () => this.game.requestAction(infuse, t) };
+        }),
       });
     }
     /*

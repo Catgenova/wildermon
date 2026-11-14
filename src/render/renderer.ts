@@ -117,6 +117,13 @@ import { drawPlantsFlat, drawPlantUpright, plantFoot, standsUp, type PlantFrame 
 import type { WaterPlant } from '../world/waterplants';
 import type { Swirl } from '../game/motes';
 import { drawSwirl, glowSwirl } from './swirls';
+import { activeInfusion } from '../game/infusion';
+import { MOTE_ELEMENTS, type MoteElement } from '../game/motes';
+/** An infused thing's knot of motes, as a share of a swirl's; the least zoom one is drawn at; how far from you and how many. */
+const INFUSED_SCALE = 0.5;
+const INFUSED_ZOOM = 0.6;
+const INFUSED_REACH = 24;
+const INFUSED_MOST = 16;
 import { runestoneAt, stoneCentre, type Runestone } from '../game/runestones';
 import type { WaterField } from '../world/springs';
 import { Dust, dustTone } from './dust';
@@ -1363,6 +1370,32 @@ export class Renderer {
   private glows: Array<{ sx: number; sy: number; kind: string; view: PieceView }> = [];
   /** The mote swirls drawn this frame and where, for their light to be added over the night (`glowSwirl`). */
   private swirlsSeen: Array<{ s: Swirl; x: number; y: number }> = [];
+  /**
+   * What stands infused this frame (`game/infusion.ts`), by tile: a small knot of its element's motes turning over it,
+   * as a swirl turns (`./swirls`), at `INFUSED_SCALE` of one, while the Effects setting is on and the zoom is close
+   * enough to see one; the nearest `INFUSED_MOST` to you, and none at all past them.
+   */
+  private infusedSeen = new Map<number, Swirl & { lift: number }>();
+  private infusedThings(): Map<number, Swirl & { lift: number }> {
+    const out = new Map<number, Swirl & { lift: number }>();
+    if (this.game.settings.effects === 'off' || this.camera.zoom < INFUSED_ZOOM) return out;
+    const now = Date.now() / 1000, px = this.game.player.x, py = this.game.player.y;
+    const all: Array<{ d: number; key: number; s: Swirl & { lift: number } }> = [];
+    const add = (thing: { infuse?: { el: string; until: number } }, x: number, y: number, lift: number, id: number): void => {
+      const i = activeInfusion(thing, now);
+      if (!i || !(MOTE_ELEMENTS as readonly string[]).includes(i.el)) return;
+      const d = Math.hypot(x + 0.5 - px, y + 0.5 - py);
+      if (d > INFUSED_REACH) return;
+      all.push({ d, key: y * this.game.world.w + x, s: { id: -id, x, y, element: i.el as MoteElement, lift } });
+    };
+    for (const f of this.game.furniture.values()) if (f.infuse) add(f, f.x, f.y, 16, f.id);
+    for (const f of this.game.smelters.values()) if (f.infuse) add(f, f.x, f.y, 18, f.id);
+    for (const f of this.game.kilns.values()) if (f.infuse) add(f, f.x, f.y, 18, f.id);
+    for (const f of this.game.campfires.values()) if (f.infuse) add(f, f.x, f.y, 8, f.id);
+    all.sort((a, b) => a.d - b.d);
+    for (const a of all.slice(0, INFUSED_MOST)) if (!out.has(a.key)) out.set(a.key, a.s);
+    return out;
+  }
   /**
    * The night taken off the runestones in view, in their runes' shapes and
    * kept off whatever stands in front of them (`RunestoneNight`). Opened at
@@ -4346,6 +4379,7 @@ export class Renderer {
     this.hitSeq = 0;
     this.glows.length = 0;
     this.swirlsSeen.length = 0;
+    this.infusedSeen = this.infusedThings();
     // After dark; and for an altar's stars, whenever the night layer is laid at all (`drawOverlays`), so it can be mixed small.
     const dark0 = this.game.darkness();
     this.runeNight.begin(dark0 > 0.02, skyWash(this.game.hourOfDay(), dark0).length > 0);
@@ -4747,6 +4781,12 @@ export class Renderer {
               this.take('waterplant', x, y, px, py, null).plant = plant;
             }
           }
+        }
+        // A thing infused here: a small knot of its element over it (`infusedThings`).
+        const infused = this.infusedSeen.size ? this.infusedSeen.get(y * world.w + x) : undefined;
+        if (infused) {
+          const avg = (c[0] + c[1] + c[2] + c[3]) / 4;
+          this.take('swirl', x, y, cam.worldToScreenX(x + 0.5, y + 0.5), cam.worldToScreenY(x + 0.5, y + 0.5, avg) - infused.lift * cam.zoom, null).swirl = infused;
         }
         // A mote swirl turning over the middle of the tile: over the water's surface where there is water (`./swirls`).
         if (this.game.swirls.size) {
@@ -7339,7 +7379,8 @@ export class Renderer {
         continue;
       }
       if (ent.kind === 'swirl' && ent.swirl) {
-        drawSwirl(ctx, ent.sx, ent.sy, zoom, ent.swirl.element, this.anim, ent.swirl.id);
+        // An infused thing's knot (a negative id) is a smaller one (`infusedThings`).
+        drawSwirl(ctx, ent.sx, ent.sy, ent.swirl.id < 0 ? zoom * INFUSED_SCALE : zoom, ent.swirl.element, this.anim, ent.swirl.id);
         // And its light over the night, once the night is laid (`glowSwirl`).
         this.swirlsSeen.push({ s: ent.swirl, x: ent.sx, y: ent.sy });
         continue;

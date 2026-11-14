@@ -95,7 +95,7 @@ import { TileIndex, Tally, keyX, keyY, tileKey } from './tileindex';
 import { DARK_HIT, NIGHT_EYES_FROM, SOUL_PER_LEVEL, WORK_HAND, WORK_WIND, WORK_WIND_SPENT, HEAVY_SKILLS, WORK_BACK } from './learn';
 import { DRIVING, DRIVING_LEARN, drivingPace, SAILING, SAILING_LEARN, sailingPace, vehicleQlPace } from './travel';
 import { isLayUp, LEAD_PACE, ROPE_WALK, ROPE_WALK_TIME, ROPEMAKING, ropePerLayUp, ropeTime } from './ropework';
-import { laySwirls, swirlLight, type Swirl } from './motes';
+import { laySwirls, swirlLight, type MoteElement, type Swirl } from './motes';
 import { TRACKING, trackLevel, type Trail } from './tracking';
 import { hasRunestones, runestoneAt, RUNESTONES, stonePoint, stoneTiles } from './runestones';
 import { AWARENESS, Vision } from './vision';
@@ -119,6 +119,7 @@ import { lockRefusal, type Lockable } from './locks';
 import { REACH_FORCE, sailFactor, sailWord, windAt, windFrom, windSide, windWord, type Wind } from './wind';
 import { beamPace, cargoRoom, isRigged, noGoAt, riggingPace, sailsPace, TACK_PACE, tackSecs } from './sailing';
 import { SOUNDED, soundings } from './sailActions';
+import { infusedShare, SENSED, windPace } from './infusion';
 import { festerChance, PART_NAMES, woundClose, woundDrain, WOUND_KINDS, woundText, type Wound, type WoundKind } from './wounds';
 import { baubleLearn, baublePace, baublePlus, baublesFrom, baublesServe, baubleTwice, YIELD_TIMES, type DeedBauble } from './baubles';
 import { orderRefusal, queueDropped, seenOf, type SeenJob } from './jobqueue';
@@ -1826,8 +1827,17 @@ export class Game {
     // And a Fair Wind set into her, on every point of sail (`enchanting.ts`), which only a boat with a sail takes.
     return hullSpeed(def, f.ql, body, weather, load) * markOf(f, 'speed') * sailingPace(sailing) * (1 + swingEnchant(f, 'sail'))
       // Under sail: her rigging, her sails' QL, and a turn through the wind while she comes round (`sailing.ts`).
-      * (def.sail ? riggingPace(rigged) * sailsPace(f) * this.tackPace(sailing) : 1);
+      * (def.sail ? riggingPace(rigged) * sailsPace(f) * this.tackPace(sailing) : 1)
+      // And wind infused in her (`infusion.ts`).
+      * windPace(infusedShare(f, 'wind'));
   }
+
+  /** The element you are attuned to, as the island last said it (`infusion.ts`); null for none. */
+  attuned: MoteElement | null = null;
+  /** When you last sensed the swirls, in epoch seconds, as the island said it. */
+  sensedAt = 0;
+  /** The last sensing of the swirls (`infusion.ts`): when, in real seconds, and how far it reached; drawn on the map a while. */
+  sensed: { real: number; x: number; y: number; range: number } | null = null;
 
   /** The last sounding of the depth from a boat (`sailActions.ts`): when, in real seconds, and the water it read; drawn on the map a while. */
   sounded: { real: number; tiles: Array<{ x: number; y: number; depth: number }> } | null = null;
@@ -4569,6 +4579,9 @@ export class Game {
     trimLog(this.log);
     // The island's word of a sounding of yours: the water round you, read off the land here, on the map a while (`sailActions.ts`).
     if (kind === 'event' && text.startsWith(SOUNDED)) this.sounded = { real: Date.now() / 1000, tiles: soundings(this) };
+    // And of a sensing of yours: the swirls round you, off the ones this machine has, on the map a while (`infusion.ts`).
+    const sensed = kind === 'event' && text.startsWith(SENSED) ? /within (\d+) tiles/.exec(text) : null;
+    if (sensed) this.sensed = { real: Date.now() / 1000, x: this.player.x, y: this.player.y, range: Number(sensed[1]) };
     this.events.emit('log', entry);
   }
 
@@ -4838,6 +4851,8 @@ export class Game {
      */
     for (const it of this.inventory.items) {
       if (!it.lit || !(HELD_LIGHTS as readonly string[]).includes(it.id)) continue;
+      // Light infused in it burns none (`infusion.ts`).
+      if (infusedShare(it, 'light') > 0) continue;
       it.charges = Math.max(0, (it.charges ?? 0) - dt);
       if (it.charges > 0) continue;
       it.lit = false;
@@ -8940,12 +8955,14 @@ export class Game {
        */
       const at = { id: r.id, x: r.x, y: r.y, sx: r.sx, sy: r.sy, mine: r.mine };
       // An enchantment set into it where it stands, and the wear a scroll that did not take left on it (`enchanting.ts`).
-      const kept = { ...(r.enchant ? { enchant: r.enchant } : {}), ...(r.dmg ? { dmg: r.dmg } : {}) };
+      const kept = { ...(r.enchant ? { enchant: r.enchant } : {}), ...(r.dmg ? { dmg: r.dmg } : {}),
+        // And the motes infused into it, while they last (`infusion.ts`).
+        ...(r.infuse ? { infuse: r.infuse } : {}) };
       // Down in a cellar: only furniture goes down there, and says so.
       // Down in a cellar, or a storey up: a wagon driven up a wide staircase (`driveStorey`).
       const down = (r.level ?? 0) < 0 ? { level: CELLAR_LEVEL } : (r.level ?? 0) > 0 ? { level: r.level as number } : {};
       if (r.kind === 'campfire' || r.kind === 'fire') {
-        built.campfires.set(r.id, { ...at, fuel: r.fuel ?? 0, lit: !!r.lit, ash: r.ash ?? 0 });
+        built.campfires.set(r.id, { ...at, fuel: r.fuel ?? 0, lit: !!r.lit, ash: r.ash ?? 0, ...(r.infuse ? { infuse: r.infuse } : {}) });
       } else if (r.kind === 'smelter') {
         built.smelters.set(r.id, {
           ...at, ...kept, ql: r.ql ?? 20, rare: rarityStep(r.rare), fuel: r.fuel ?? 0, lit: !!r.lit, ash: r.ash ?? 0,

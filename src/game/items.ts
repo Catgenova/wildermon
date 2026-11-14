@@ -949,6 +949,8 @@ export interface Item {
    * an Emberbrand sword. One to a thing. The island keeps the same column.
    */
   enchant?: Enchant;
+  /** Motes infused into it at an enchanter's plinth, while they last (`infusion.ts`): element, share of its most, end in epoch seconds. */
+  infuse?: { el: string; str: number; until: number };
   /**
    * The line cut into a memorial stone, carried in the pack as it stood on
    * the ground (`memorial.ts`). The island keeps the same column.

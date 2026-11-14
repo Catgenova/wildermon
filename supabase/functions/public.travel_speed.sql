@@ -19,7 +19,7 @@ begin
            -- Under sail: a reach as the helm sails it, her rigging and her sails' QL (`sailing.ts`).
            * case when coalesce((select b.sail from boat_def b where b.id = p.sub), false)
                   then beam_pace(skill_of(p_world, p_uid, sailing_skill()))
-                       * case when hull_rigged(p) then 1 + rigging_pace() else 1 end * mark_of(p.mark, sails_mark())
+                       * case when hull_rigged(p) then 1 + rigging_pace() else 1 end * mark_of(p.mark, sails_mark()) * (1 + infuse_most('wind') * infuse_on(p.infuse, 'wind'))
                   else 1 end;
     end if;
     v := vehicle_speed(p_world, p.id);

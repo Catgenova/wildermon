@@ -596,6 +596,8 @@ export interface PlacedFurniture {
   id: number;
   /** The enchantment set into it where it stands (`enchanting.ts`), which it keeps through being picked up and set down. */
   enchant?: Enchant;
+  /** Motes infused into it at an enchanter's plinth, while they last (`infusion.ts`): element, share of its most, end in epoch seconds. */
+  infuse?: { el: string; str: number; until: number };
   /** How far gone it is, out of a hundred: a scroll that did not take on it (`enchanting.ts`). Absent is none. */
   dmg?: number;
   /** A boat's hold, as a share of its own, by the Sailing of whoever here has her helm (`cargoRoom`, `sailing.ts`); unsaid, its own. */

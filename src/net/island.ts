@@ -461,7 +461,7 @@ interface GroundAsk {
 const PEOPLE_COLUMNS = 'world_id,uid,name,x,y,level,look,act,act_ends,act_tool,blocked_at,hurt_at,hurt_where';
 
 const PACK_COLUMNS = 'id,def,ql,dmg,count,extra,holder,inside,gx,gy,charges,locked,issued,rare,dye,bless,'
-  + 'maker,piece,creature,mark,enchant,engraving,lit,lit_at';
+  + 'maker,piece,creature,mark,enchant,engraving,lit,lit_at,infuse';
 
 /** Somebody, as the social window draws them. */
 export interface Folk {

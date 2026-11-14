@@ -9,6 +9,8 @@ import type { UIWindow } from '../windows';
 import { waterRgb } from '../../render/water';
 import type { WaterField } from '../../world/springs';
 import { DEEP_WATER, SOUND_SHOWN } from '../../game/sailing';
+import { SENSE_SHOWN } from '../../game/infusion';
+import { SWIRL_CAST } from '../../game/motes';
 import { metres } from '../../game/piers';
 
 /** How wide the drawn map is, whatever size the island is. */
@@ -785,6 +787,26 @@ export class MinimapPanel {
         ctx.stroke();
       });
       if (this.names) this.tag(kx, ky, k, 9, 0, m.kind === 'seek' ? 'Seek: mote swirl' : 'Trace: hoard', ink);
+    }
+    // A sensing (`infusion.ts`): every swirl within its reach of where it was done, a ring in the element's colour, while it is fresh.
+    const sensed = this.game.sensed;
+    if (sensed && Date.now() / 1000 - sensed.real < SENSE_SHOWN) {
+      for (const sw of this.game.swirls.values()) {
+        if (Math.hypot(sw.x - Math.floor(sensed.x), sw.y - Math.floor(sensed.y)) > sensed.range) continue;
+        const tx = (sw.x + 0.5 - ox) * scale;
+        const ty = (sw.y + 0.5 - oy) * scale;
+        if (tx < -8 || ty < -8 || tx > this.view.width + 8 || ty > this.view.height + 8) continue;
+        this.at(tx, ty, k, () => {
+          ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(0, 0, 3.5, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.strokeStyle = `rgb(${SWIRL_CAST[sw.element]})`;
+          ctx.lineWidth = 1.6;
+          ctx.stroke();
+        });
+      }
     }
     // A sounding (`sailActions.ts`): the depth of every tile of water it read, in metres, while it is fresh.
     const sounded = this.game.sounded;

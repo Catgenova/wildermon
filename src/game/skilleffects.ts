@@ -12,7 +12,8 @@ import { rollsAt } from './forage';
 import { breedChance, groomGain } from './husbandry';
 import { inheritChance } from './traits';
 import { calmCap } from './meditation';
-import { motesFor } from './motes';
+import { MOTE_ELEMENTS, motesFor } from './motes';
+import { ATTUNE_DAYS, ATTUNE_MOTES, ATTUNE_STRENGTH, infuseShare, senseRange } from './infusion';
 import { sightedAt } from './sighted';
 import { trackErr, trackLevel, trackRange } from './tracking';
 import { cacheDraws, cacheSpotAt } from './winter';
@@ -347,7 +348,13 @@ function buildEffects(): Record<string, SkillEffect[]> {
       { label: 'Time per action, extra', at: (g) => ropeTime(g.skills.get(ROPEMAKING)), say: ofLevel(0), note: 'Ropemaking jobs, after the floor' },
       { label: 'Failed lay-up: fibre damaged', at: (g) => ropeFailUnits(layUpSample(), g.skills.get(ROPEMAKING)) / layUpSample(), say: percent, note: `Lay up a rope, ${layUpSample()} wemp` },
     ],
-    elementalism: [{ label: 'Motes per swirl', at: (g) => motesFor(g.skills.get('elementalism')), say: count('mote', 'motes') }],
+    elementalism: [
+      { label: 'Motes per swirl', at: (g) => motesFor(g.skills.get('elementalism')), say: count('mote', 'motes'), note: `+${ATTUNE_MOTES} of the element you are attuned to` },
+      // Infusing, sensing and attunement (`infusion.ts`).
+      { label: 'Infusion strength', at: (g) => infuseShare(g.skills.get('elementalism'), EXAMPLE_QL, false), say: percent, note: `Motes QL ${EXAMPLE_QL}; ×${1 + ATTUNE_STRENGTH} attuned` },
+      { label: 'Sense range', at: (g) => senseRange(g.skills.get('elementalism')), say: tiles },
+      { label: 'Attuned to', at: (g) => (g.attuned ? MOTE_ELEMENTS.indexOf(g.attuned) : -1), say: (v) => MOTE_ELEMENTS[v] ?? 'none', note: `Most collected, last ${ATTUNE_DAYS} days` },
+    ],
     enchanting: [{ label: 'Enchantment takes', at: (g) => enchantChance(g.skills.get('enchanting'), EXAMPLE_QL), say: percent, note: `Scroll QL ${EXAMPLE_QL}` }],
   };
   for (const def of SKILL_BY_ID.values()) {

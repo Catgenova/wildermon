@@ -234,6 +234,7 @@ import {
   beamPace, cargoRoom, CLOSE_LEARN, DEEP_CATCH, DEEP_NET, DEEP_WATER, GALE, GALE_LEARN, GALE_SAFE_AT, GALE_TILES_PER_DAMAGE, noGoDegrees,
   RIGGING_CLOSER, RIGGING_PACE, RIGGING_SET, SAIL_QL_TOP, SOUND_REACH, TACK_PACE, tackSecs,
 } from '../../game/sailing';
+import { ATTUNE_DAYS, ATTUNE_MOTES, ATTUNE_STRENGTH, INFUSE_DAYS, INFUSE_ELEMENTS, INFUSE_INTO, INFUSE_MOTES, SENSE_BASE, SENSE_PER_LEVEL } from '../../game/infusion';
 import { NO_GO } from '../../game/wind';
 import { FISH } from '../../game/fishing';
 import { FLOWER_MOST, FLOWER_SEASONS } from '../../world/flowers';
@@ -4430,6 +4431,20 @@ export const NEWS: News[] = [
       `New: fishing net: ${LIFT_DROPS * NET_LIFT.length} drops off the net as it is lifted, ${SHAKE_DROPS} at each of ${NET_SHAKES.length} shakes.`,
       `New: rowing under way: ${OAR_DROPS} drops a blade at the catch; whirl pair a blade a stroke, ${SWIRL_SECS} s.`,
       'Without a graphics card: swimming strokes\' splashes, rings treading water, the float\'s strike and a catch only.',
+    ],
+  },
+  // Elementalism (`infusion.ts`, `infuseActions.ts`).
+  {
+    n: 591,
+    day: '2026-11-14',
+    lines: () => [
+      `New: Infuse into (a mote's menu, at an enchanter's plinth): ${INFUSE_MOTES} motes of one element into a thing, one element at a time, ${INFUSE_DAYS} days. `
+        + `Strength: elementalism ÷ 100 × motes' QL ÷ 100 of the element's most:`,
+      ...INFUSE_ELEMENTS.map((el) => `${el[0].toUpperCase()}${el.slice(1)}: ${el === 'dark' ? 'weapon, armour or shield' : (INFUSE_INTO[el]?.into ?? []).map((id) => id.replace(/_/g, ' ')).join(', ')}; `
+        + `${(INFUSE_INTO[el]?.label ?? '').toLowerCase()} ${INFUSE_INTO[el]?.say(1) ?? ''} at 100%.`),
+      `New: attunement: the element collected most in ${ATTUNE_DAYS} days: +${ATTUNE_MOTES} mote a swirl, ×${1 + ATTUNE_STRENGTH} infusion strength.`,
+      `New: Sense mote swirls: once an hour, swirls within ${SENSE_BASE} + ${SENSE_PER_LEVEL} × elementalism tiles on the map.`,
+      'New: infused things: a small knot of their element\'s motes over them (Effects setting).',
     ],
   },
   // Sailing (`sailing.ts`, `sailActions.ts`).

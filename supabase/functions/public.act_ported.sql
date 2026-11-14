@@ -12,6 +12,8 @@ AS $function$
       or flower_action(p_action)
       -- Collecting a mote swirl (`motes.ts`).
       or swirl_action(p_action)
+      -- Infusing motes, and sensing swirls (`infuseActions.ts`).
+      or mote_action(p_action)
       -- Sounding the depth and fitting a rigging set (`sailActions.ts`).
       or sail_action(p_action)
       -- Reading a trail from the field guide (`tracking.ts`).

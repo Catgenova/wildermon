@@ -45,6 +45,13 @@ begin
       return;
     end if;
   end if;
+  -- A creature's blow misses more for dark infused in what you wield or wear (`dark_miss`); no roll without it.
+  if v_from.id is not null and dark_miss(p_world, p_uid) > 0 and random() < dark_miss(p_world, p_uid) then
+    perform tell(p_world, p_uid, 'Missed: ' || coalesce((select lower(name) from species_def where id = v_from.species), 'blow')
+      || ', dark infusion.', 'fight');
+    perform fight_back(p_world, p_uid, (p.stats->>'hurtBy')::int);
+    return;
+  end if;
   -- No roll at all while there is no chance, so nothing else's luck moves.
   v_dodge := dodge_chance(skill_of(p_world, p_uid, 'body_control'), worn_kg(p_world, p_uid));
   if v_dodge > 0 and random() < v_dodge then
