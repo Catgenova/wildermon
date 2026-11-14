@@ -21,6 +21,8 @@ import {
 } from '../../src/game/infusion';
 import { infuseName } from '../../src/game/infuseActions';
 import { MOTE_ELEMENTS, motesFor } from '../../src/game/motes';
+import { CLIPS, clipFor, PLACEHOLDER, workClipOf } from '../../src/sculpt/anim';
+import type { FigurePose } from '../../src/render/figure';
 import { psql, check, finish } from './harness';
 
 const near = (a: number, b: number, eps = 1e-6): boolean => Math.abs(a - b) <= eps;
@@ -257,5 +259,13 @@ check(`sensing at ${SKILL} counts the swirls within ${senseRange(SKILL)} tiles, 
   `${get('SENSED')} / ${get('SENSEWAIT')}`);
 check('an infusion says its element, strength, what it does and its time left',
   infuseSays({ el: 'wind', str: 0.5, until: 1000 + 3 * 86400 + 5 * 3600 + 120 }, 1000) === 'Infused: wind, strength 50%. Speed: +4%. 3 d 5 h left.');
+
+// the clips: infusing as a spell on somebody else is cast, sensing as one on everything round oneself
+for (const [job, name] of [['infuse_motes', 'cast-ally'], ['sense_swirls', 'cast-nova']]) {
+  const pose = { id: undefined, phase: 0, moving: false, facing: 0, swimming: false, working: true, job, act: { t: 0.3, length: 4 } } as unknown as FigurePose;
+  const at = clipFor(pose);
+  check(`${job} plays ${name}, fitted to the go`, workClipOf(job) === name && name !== PLACEHOLDER && !!CLIPS[name] && at?.clip.name === name && at.t >= 0 && at.t <= CLIPS[name].length,
+    `${workClipOf(job)} ${at?.clip.name} ${at?.t}`);
+}
 
 finish('Elementalism');
