@@ -50,7 +50,7 @@ begin;
 create temp table said (k text, v text);
 select set_config('request.jwt.claims', json_build_object('sub', ${IVAR})::text, true) \\g /dev/null
 do $t$
-declare w uuid; u uuid; gx int; gy int; v_boat bigint; v_cart bigint; v_beast int;
+declare w uuid; u uuid; gx int; gy int; v_boat bigint; v_cart bigint; v_beast int; v_mul double precision;
 begin
   select id into w from world where name = 'Faraway';
   select uid into u from player where world_id = w and name = 'Ivar';
@@ -71,7 +71,8 @@ begin
   insert into skill (world_id, uid, id, value) values (w, u, sailing_skill(), 100);
   insert into said values ('BOAT100', travel_speed(w, u)::text);
   delete from skill where world_id = w and uid = u and id = sailing_skill();
-  -- And three tiles east under way, from Sailing 1.
+  -- And three tiles east under way, from Sailing 1, at what the wind of the hour makes a tile teach (×2 in a gale).
+  v_mul := sail_learn_mul(w, u, (select p from placed p where p.id = v_boat), 20.5, 21.5, 23.5, 21.5);
   perform rpc_move(w, 23.5, 21.5, 0);
   insert into said select 'SAILED', skill_of(w, u, sailing_skill()) || '|' || skill_of(w, u, driving_skill())
     || '|' || x from player where world_id = w and uid = u;
@@ -103,7 +104,7 @@ begin
   perform rpc_move(w, 23.5, 21.5, 0);
   insert into said select 'IDLE', skill_of(w, u, driving_skill())::text;
   insert into said select 'BOUNDS', string_agg(b, '|' order by r) from (
-    select r, (1 + early_gain(1, skill_gain_of(1, sailing_learn() * skill_mult(w, u, sailing_skill()), r)))::text as b
+    select r, (1 + early_gain(1, skill_gain_of(1, sailing_learn() * v_mul * skill_mult(w, u, sailing_skill()), r)))::text as b
       from unnest(array[0.6, 1.4]) r) x;
 end $t$;
 select k || '=' || v from said order by k;

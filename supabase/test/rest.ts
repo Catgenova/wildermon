@@ -244,9 +244,15 @@ check(`a kind that does not evolve sleeps by its health: under ${DEN_HEALTH[0]} 
   denClass({ species: LARGE, skills: {} }) === 2 && SPECIES[LARGE].health >= DEN_HEALTH[1]
   && STILLS.every(([sp, , cls]) => denClass({ species: sp, skills: {} }) === cls
     && (cls === 0 ? SPECIES[sp].health < DEN_HEALTH[0] : SPECIES[sp].health >= DEN_HEALTH[0] && SPECIES[sp].health < DEN_HEALTH[1])));
-// Where no kind without stages is of a smaller bed's health, say so, so the rule is exercised again the day one is.
-check('the kinds without stages of a small or a medium bed\'s health are tried, or there are none',
-  STILLS.length === Object.values(SPECIES).filter((d) => !d.stages && d.health < DEN_HEALTH[1]).length);
+// One kind of each smaller bed's health is tried where there is one, so the rule is exercised again the day one is.
+const stageless = Object.values(SPECIES).filter((d) => !d.stages);
+check('a kind without stages of a small and of a medium bed\'s health is tried, where there is one',
+  !!SMALL === stageless.some((d) => d.health < DEN_HEALTH[0])
+  && !!MEDIUM === stageless.some((d) => d.health >= DEN_HEALTH[0] && d.health < DEN_HEALTH[1]),
+  STILLS.map(([sp]) => sp).join(', '));
+check('every kind without stages sleeps by its health',
+  stageless.every((d) => denClass({ species: d.id, skills: {} }) === (d.health < DEN_HEALTH[0] ? 0 : d.health < DEN_HEALTH[1] ? 1 : 2)),
+  stageless.filter((d) => denClass({ species: d.id, skills: {} }) !== (d.health < DEN_HEALTH[0] ? 0 : d.health < DEN_HEALTH[1] ? 1 : 2)).map((d) => d.id).join(', '));
 
 /* ---- on the island ----------------------------------------------------------------------------------------------- */
 

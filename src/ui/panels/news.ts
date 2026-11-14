@@ -168,7 +168,7 @@ import { DEED_UPGRADES } from '../../game/deed';
 import { LYE_USE, SHORE_REACH } from '../../game/placeables';
 import { DEFAULT_RANKS, lacksSaid, NEWCOMER_RANK, permsOf, POWER, RANK_CAP, RANK_NAME_MAX, RANK_POWERS, rankMay } from '../../game/ranks';
 import { DRESSING_RANK } from '../../game/wounds';
-import { ANCIENT_EFFECTS, ANCIENT_PLUS, BAUBLE_HIGH, BAUBLE_LOW, BAUBLE_SHARE, BAUBLE_TIERS, baubleTimes, REGRET_SHARE, YIELD_TIMES } from '../../game/baubles';
+import { ANCIENT_EFFECTS, ANCIENT_PLUS, BAUBLE_HIGH, BAUBLE_LOW, BAUBLE_SHARE, BAUBLE_TIERS, baubleTimes, MINOR_SKILLS, REGRET_SHARE, YIELD_TIMES } from '../../game/baubles';
 import { CLASS_AT, CLASS_TIER_AT, CLASSES, PERK_CLASSES, PERK_TIER_AT, PERKS_PER_TIER, tiersAtFor } from '../../game/classes';
 import { spellDef, spellForce, spellsOf } from '../../game/arcane';
 import { PERK_BY_ID, perksOf } from '../../game/perks';
@@ -4457,6 +4457,14 @@ export const NEWS: News[] = [
       `New: fishing net: ${LIFT_DROPS * NET_LIFT.length} drops off the net as it is lifted, ${SHAKE_DROPS} at each of ${NET_SHAKES.length} shakes.`,
       `New: rowing under way: ${OAR_DROPS} drops a blade at the catch; whirl pair a blade a stroke, ${SWIRL_SECS} s.`,
       'Without a graphics card: swimming strokes\' splashes, rings treading water, the float\'s strike and a catch only.',
+    ],
+  },
+  {
+    n: 605,
+    day: '2026-11-14',
+    lines: () => [
+      `Changed: ${SPECIES.simma.name} cooks ${listed(['cook_cod', 'cook_halibut', 'cook_bluefin'].map((id) => itemDef(RECIPE_BY_ID.get(id)!.inputs[0].item).name.toLowerCase()))} (was: none of the three).`,
+      `Changed: minor baubles: Sailing added, ${MINOR_SKILLS.length} skills.`,
     ],
   },
   // The garden pieces (`garden.ts`).

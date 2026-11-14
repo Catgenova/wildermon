@@ -10063,6 +10063,7 @@ insert into bauble_skill values ('fine_carpentry', true, true);
 insert into bauble_skill values ('pottery', true, true);
 insert into bauble_skill values ('tailoring', true, true);
 insert into bauble_skill values ('ropemaking', true, true);
+insert into bauble_skill values ('sailing', true, false);
 insert into bauble_skill values ('cooking', true, true);
 insert into bauble_skill values ('milling', true, true);
 insert into bauble_skill values ('smelting', true, true);
