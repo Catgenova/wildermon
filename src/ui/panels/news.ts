@@ -4422,6 +4422,21 @@ export const NEWS: News[] = [
     ],
   },
   {
+    n: 589,
+    day: '2026-11-14',
+    lines: () => {
+      const e = (id: string): string => {
+        const d = EMOTE_BY_ID.get(id);
+        return d ? `${d.label} (/${d.id}): ${d.held ? `${d.seconds} s down, held until you move, swim, board or work` : `${d.seconds} s`}` : id;
+      };
+      return [
+        `New: emotes (Emotes menu): ${['bow', 'cheer', 'point', 'clap', 'sit'].map(e).join('; ')}.`,
+        'Changed: Animations off: bow, cheer, point and clap shown in one still pose; sat shown sat.',
+        'Fixed: stood still after an emote: the idle (was: the emote\'s first pose held; after 6 7, the forearms out).',
+      ];
+    },
+  },
+  {
     n: 588,
     day: '2026-11-14',
     lines: () => [
