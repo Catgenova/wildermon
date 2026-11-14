@@ -1,5 +1,6 @@
 import { darker, drawBeast, drawBeastPortrait, extentOf, forgetBeast, headOf, kitOf, topOf, type Anim, type BeastPose, type Kind } from './beasts';
 import type { V3 } from './figure';
+import { MISSED_RETRY_MS, moduleMissed } from '../version';
 
 /**
  * The wildermon, each as a body of its own (`./beasts` for what they are all
@@ -169,21 +170,32 @@ export function drawSoon(f: () => void): void {
   nextSlice();
 }
 
+/** When each line whose module did not come last failed, by species, on `performance.now()`'s clock. */
+const refused = new Map<string, number>();
+
 /**
- * A line's models, fetched if they are not yet. Resolves to nothing for a kind with none, or when the fetch fails (asked
- * again, it is tried again).
+ * A line's models, fetched if they are not yet. Resolves to nothing for a kind with none, or when the fetch fails: then
+ * the page is told (`moduleMissed`), and asked again, it is tried again once `MISSED_RETRY_MS` has gone by. It was
+ * tried again at once, every frame a body of the line was in view, and said nothing.
  */
 export function loadWildermon(species: string): Promise<Line | undefined> {
   const had = lines.get(species);
   if (had) return Promise.resolve(had);
   const load = LINES[species];
   if (!load) return Promise.resolve(undefined);
+  const failed = refused.get(species);
+  if (failed !== undefined && performance.now() - failed < MISSED_RETRY_MS) return Promise.resolve(undefined);
   let p = fetching.get(species);
   if (!p) {
     p = inTurn(load, !asking).then((l) => {
       lines.set(species, l);
+      refused.delete(species);
       return l;
-    }, () => undefined).finally(() => {
+    }, (e: unknown) => {
+      refused.set(species, performance.now());
+      moduleMissed(`wildermon ${species}`, e);
+      return undefined;
+    }).finally(() => {
       fetching.delete(species);
       const due = owed.get(species) ?? [];
       owed.delete(species);

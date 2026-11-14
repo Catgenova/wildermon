@@ -10,7 +10,7 @@
  * Only on an island: the game you play by yourself has nobody to tell. What
  * goes wrong before the island is joined waits for it, up to `REPORTS_A_SESSION`.
  */
-import { VERSION } from '../version';
+import { VERSION, whenModuleMissed } from '../version';
 
 /** Distinct errors one session will send. A loop that throws every frame is one error, not sixty a second. */
 export const REPORTS_A_SESSION = 10;
@@ -72,6 +72,8 @@ export function watchErrors(): void {
     if (!worthReporting(message)) return;
     queueReport(message, reason instanceof Error ? reason.stack : undefined);
   });
+  // A module fetched when first wanted that did not come, which is caught where it is asked for and so throws nothing here.
+  whenModuleMissed((what, e) => queueReport(`${what}: ${e instanceof Error ? e.message : String(e)}`, e instanceof Error ? e.stack : undefined));
 }
 
 /** Where reports go from now on, with whatever went wrong before there was anywhere to send them. */

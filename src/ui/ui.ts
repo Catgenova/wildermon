@@ -167,6 +167,7 @@ import { capital } from '../game/words';
 import { applyLook, runeFor } from './theme';
 import { RunecutArt } from './runecut-dress';
 import { FRAME_RIM, RIMS } from './runecut-art';
+import { moduleMissed } from '../version';
 
 export interface UICallbacks {
   /** Quarter-turn the camera: +1 or -1. */
@@ -775,6 +776,11 @@ export class UI {
         const pages = m.buildHelp(this.journalPanel.helpPage);
         this.helpTitles = pages.titles;
         return pages;
+      }, (e: unknown) => {
+        // Refused, as after a deploy (`moduleMissed`): asked for again next time.
+        this.helpBuilt = null;
+        moduleMissed('help', e);
+        throw e;
       });
     }
     return this.helpBuilt;
