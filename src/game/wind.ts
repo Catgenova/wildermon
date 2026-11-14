@@ -95,27 +95,32 @@ export function offWind(heading: number, w: Wind): number {
  * the side — is the fastest point of sail there is; hard on the wind is slow;
  * inside the no-go zone she is in irons and barely moves at all.
  */
-export function pointOfSail(heading: number, w: Wind): number {
+export function pointOfSail(heading: number, w: Wind, noGo = NO_GO, beam = 1): number {
   const upwind = offWind(heading, w);
   if (Number.isNaN(upwind)) return 0.85;
-  return pointAt(upwind);
+  return pointAt(upwind, noGo, beam);
 }
 
-/** The same, off the angle to the wind's eye itself: zero is straight into it, pi dead before it. */
-export function pointAt(upwind: number): number {
+/**
+ * The same, off the angle to the wind's eye itself: zero is straight into it,
+ * pi dead before it. `noGo` is how close she will sail to it, which the helm's
+ * Sailing and a rigging set decide (`noGoAt`, `sailing.ts`), and `beam` what
+ * the helm makes of a reach (`beamPace`).
+ */
+export function pointAt(upwind: number, noGo = NO_GO, beam = 1): number {
   // In irons: the sail shakes and she will not go.
-  if (upwind < NO_GO) return 0.12 + (upwind / NO_GO) * 0.18;
+  if (upwind < noGo) return 0.12 + (upwind / noGo) * 0.18;
   // Close-hauled: hard work, and the only way to get anywhere upwind.
-  if (upwind < CLOSE) return 0.55 + ((upwind - NO_GO) / (CLOSE - NO_GO)) * 0.3;
+  if (upwind < CLOSE) return 0.55 + ((upwind - noGo) / Math.max(1e-6, CLOSE - noGo)) * 0.3;
   // A reach: everything a hull has, best a little abaft the beam.
-  if (upwind < RUN) return 0.85 + Math.sin(((upwind - CLOSE) / (RUN - CLOSE)) * Math.PI) * 0.35;
+  if (upwind < RUN) return (0.85 + Math.sin(((upwind - CLOSE) / (RUN - CLOSE)) * Math.PI) * 0.35) * beam;
   // Running before it: steady, and not the quickest.
   return 0.9;
 }
 
 /** The whole of what the weather is worth to a sail, this heading, this hour. */
-export function sailFactor(heading: number, w: Wind): number {
-  return windWorth(w.force) * pointOfSail(heading, w);
+export function sailFactor(heading: number, w: Wind, noGo = NO_GO, beam = 1): number {
+  return windWorth(w.force) * pointOfSail(heading, w, noGo, beam);
 }
 
 /** What a wind of this strength is worth to a sail: even a flat calm leaves steerage way. */
@@ -132,9 +137,9 @@ export const WEATHER_MOST = windWorth(1) * pointAt((CLOSE + RUN) / 2);
  * Which side the wind is on and how full the sail is: negative to port,
  * positive to starboard, and near nothing when she is pointed into it.
  */
-export function sailTrim(heading: number, w: Wind): number {
+export function sailTrim(heading: number, w: Wind, noGo = NO_GO): number {
   const wrapped = (((heading - w.dir) % (Math.PI * 2)) + Math.PI * 3) % (Math.PI * 2) - Math.PI;
-  if (offWind(heading, w) < NO_GO) return 0.1;
+  if (offWind(heading, w) < noGo) return 0.1;
   return (wrapped < 0 ? -1 : 1) * Math.max(0.3, Math.min(1, Math.abs(wrapped) / (Math.PI / 2)));
 }
 
@@ -142,10 +147,20 @@ export function sailTrim(heading: number, w: Wind): number {
 export const REACH_FORCE = 0.5;
 
 /** How the point of sail reads on the hud. */
-export function sailWord(heading: number, w: Wind): string {
+export function sailWord(heading: number, w: Wind, noGo = NO_GO): string {
   const upwind = offWind(heading, w);
-  if (upwind < NO_GO) return 'in irons';
+  if (upwind < noGo) return 'in irons';
   if (upwind < CLOSE) return 'close-hauled';
   if (upwind < RUN) return 'reaching';
   return 'running';
 }
+
+/**
+ * Which side the wind is on her, -1 to port and 1 to starboard: a turn that
+ * changes it has gone through the wind, a tack through its eye or a gybe
+ * through dead astern (`tackSecs`, `sailing.ts`).
+ */
+export const windSide = (heading: number, w: Wind): number => {
+  const wrapped = (((heading - w.dir) % (Math.PI * 2)) + Math.PI * 3) % (Math.PI * 2) - Math.PI;
+  return wrapped < 0 ? -1 : 1;
+};

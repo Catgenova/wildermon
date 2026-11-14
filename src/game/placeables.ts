@@ -38,6 +38,7 @@ import type { CraftStock } from './recipes';
 import { bedRest, SLEEP_SAID, sleepNotYours } from './sleep';
 import { DYE_BUCKET, dyeIn, dyeSays, dyeText, mixDye, readDye, type DyeLiquid } from './dyestuffs';
 import { BELL_ROPE, bellHeard, bellRangSaid, NO_BELL_ROPE } from './ropework';
+import { GALE_ROW_SAID, isGale } from './sailing';
 
 /**
  * The placed things that do something of their own: an oven that burns, a well
@@ -519,6 +520,8 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       // A padlock on her keeps her helm, or the reins, to whoever has its key.
       const shut = g.lockRefusal(f);
       if (shut) return shut;
+      // A rowing boat does not put out in a gale (`sailing.ts`).
+      if (isBoat(f) && !furnitureDef(f.kind).boat?.sail && isGale(g.wind().force)) return GALE_ROW_SAID;
       // A hull asks nothing but that she is still floating.
       if (isBoat(f)) return g.launchSpot(f.kind, f.x, f.y) ? null : 'Aground: push off first.';
       const v = vehicleOf(f);

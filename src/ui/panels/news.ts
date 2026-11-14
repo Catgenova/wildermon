@@ -230,6 +230,12 @@ import {
   BELL_HEARD_BASE, BELL_HEARD_PER_QL, bellHeard, HAMMOCK_REST, LAY_UP_EVERY, LAY_UP_FAIL_SHARE, LAY_UP_SPARE_ABOVE, LEAD_PACE,
   ROPE_SHARE_BOAT, ROPE_SHARE_TRAP, ROPE_TIME_PER_LEVEL, ROPE_WALK, ROPE_WALK_QL, ROPE_WALK_TIME, ropePerLayUp, ropeTime, TWINE_MADE,
 } from '../../game/ropework';
+import {
+  beamPace, cargoRoom, CLOSE_LEARN, DEEP_CATCH, DEEP_NET, DEEP_WATER, GALE, GALE_LEARN, GALE_SAFE_AT, GALE_TILES_PER_DAMAGE, noGoDegrees,
+  RIGGING_CLOSER, RIGGING_PACE, RIGGING_SET, SAIL_QL_TOP, SOUND_REACH, TACK_PACE, tackSecs,
+} from '../../game/sailing';
+import { NO_GO } from '../../game/wind';
+import { FISH } from '../../game/fishing';
 import { FLOWER_MOST, FLOWER_SEASONS } from '../../world/flowers';
 import {
   colourWord, DYE_LITRES, DYE_LITRES_PER_KG, DYE_QL_BLACK, DYE_QL_PURE, DYE_QL_WHITE, dyeGrams, DYESTUFFS, dyeHex, kgSaid, LEGACY_DYES, LEGACY_POT_LITRES,
@@ -4424,6 +4430,22 @@ export const NEWS: News[] = [
       `New: fishing net: ${LIFT_DROPS * NET_LIFT.length} drops off the net as it is lifted, ${SHAKE_DROPS} at each of ${NET_SHAKES.length} shakes.`,
       `New: rowing under way: ${OAR_DROPS} drops a blade at the catch; whirl pair a blade a stroke, ${SWIRL_SECS} s.`,
       'Without a graphics card: swimming strokes\' splashes, rings treading water, the float\'s strike and a catch only.',
+    ],
+  },
+  // Sailing (`sailing.ts`, `sailActions.ts`).
+  {
+    n: 590,
+    day: '2026-11-14',
+    lines: () => [
+      `Changed: closest to the wind: ${noGoDegrees(1)}° at Sailing 1 to ${noGoDegrees(100)}° at 100 (was: ${Math.round((NO_GO * 180) / Math.PI)}° for every helm). `
+        + `New: beam reach speed ×${beamPace(100)} at Sailing 100; a turn through the wind ${tackSecs(1)} s at ×${TACK_PACE} speed at Sailing 1, ${tackSecs(100)} s at 100.`,
+      `New: gale: wind over ${GALE}. Below Sailing ${GALE_SAFE_AT}: 1 hull damage per ${GALE_TILES_PER_DAMAGE} tiles in one. Rowing boats do not put out in a gale. `
+        + `Sailing per tile: gale ×${GALE_LEARN}, close-hauled ×${CLOSE_LEARN}.`,
+      `New: hold of the boat at your helm ×${cargoRoom(100)} at Sailing 100.`,
+      `New: rigging set (${recipeBill(`make_${RIGGING_SET}`)}): Fit the rigging to a sailing boat or caravel: speed +${percent(RIGGING_PACE)}, ${RIGGING_CLOSER}° closer to the wind. `
+        + `Sails: speed +${percent(SAIL_QL_TOP)} at sailcloth QL 100.`,
+      `New: from a boat over water deeper than ${DEEP_WATER / 10} m: ${listed(FISH.filter((f) => f.deep).map((f) => f.name.toLowerCase()))} only, chance a fish stays on ×${DEEP_CATCH}; `
+        + `a net there ×${DEEP_NET} the fish. Sound the depth: water depth within ${SOUND_REACH} tiles on the map; trains Sailing.`,
     ],
   },
   // Ropemaking (`ropework.ts`).

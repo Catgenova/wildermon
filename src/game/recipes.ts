@@ -20,6 +20,7 @@ import { SUBTILES } from './crates';
 import { castWhole, INGOT_LUMPS, ingotOf, METAL_BY_LUMP, MOULD_BY_MAKES, MOULD_SKILL, MOULDS, SMITH_TOOL } from './metal';
 import { FIT_TOOL, MORTAR_TOOL, SEW_TOOL } from './jobtools';
 import { FISH } from './fishing';
+import { DEEP_WATER, RIGGING_CLOSER, RIGGING_PACE, RIGGING_SET } from './sailing';
 import { BOIL_IN, boilCount, boilCountPlain, boiledDye, boilRefusal, BOIL_LITRES, DYE_BOIL_TIME, DYE_BOIL_WIND, DYE_SKILL, isBoilStuff } from './dyes';
 import { DYE_BUCKET, DYESTUFFS, dyeRecipeId } from './dyestuffs';
 import { HERBS, WOUND_KINDS } from './wounds';
@@ -600,6 +601,8 @@ RECIPES.push(
   { id: 'make_sailcloth', category: 'Cloth', result: 'sailcloth', inputs: [{ item: 'yarn', count: 6 }, { item: 'twine', count: 1 }], station: 'loom', skill: ROPEMAKING, label: 'Weave sailcloth', verb: 'weaving sailcloth', baseTime: 14, stamina: 0.04, difficulty: 20, done: '', spareOnFail: true },
   { id: 'make_bell_rope', category: 'Cloth', result: BELL_ROPE, inputs: [{ item: 'rope', count: 3 }], tool: 'rope_tool', skill: ROPEMAKING, label: 'Braid a bell rope', verb: 'braiding a bell rope', baseTime: 10, stamina: 0.03, difficulty: 16, done: '', spareOnFail: true },
   { id: 'make_lead_rope', category: 'Cloth', result: LEAD_ROPE, inputs: [{ item: 'rope', count: 2 }], skill: ROPEMAKING, label: 'Splice a lead rope', verb: 'splicing a lead rope', baseTime: 6, stamina: 0.02, difficulty: 10, done: '', spareOnFail: true },
+  // Sailing's rigging set (`sailing.ts`): laid up here, fitted to a hull where she lies (`sailActions.ts`).
+  { id: 'make_rigging_set', category: 'Cloth', result: RIGGING_SET, inputs: [{ item: 'rope', count: 12 }, { item: 'thick_rope', count: 4 }, { item: 'twine', count: 6 }], tool: 'rope_tool', skill: ROPEMAKING, label: 'Lay up a rigging set', verb: 'laying up rigging', baseTime: 40, stamina: 0.06, difficulty: 30, done: '', spareOnFail: true },
   { id: 'make_twine_snare', category: 'Cloth', result: 'twine_snare', inputs: TRAPS.twine_snare.bill.map(([item, count]) => ({ item, count })), skill: ROPEMAKING, label: 'Tie a twine snare', verb: 'tying a snare', baseTime: TRAPS.twine_snare.time, stamina: 0.02, difficulty: TRAPS.twine_snare.difficulty, done: '', spareOnFail: true },
 );
 
@@ -607,7 +610,7 @@ RECIPES.push(
  * Every fish goes over the fire the same way; how much comes off it is the
  * only difference, and a sturgeon is ten times a perch.
  */
-const FISH_PORTIONS: Record<string, number> = { minnow: 1, perch: 1, trout: 2, pike: 4, sturgeon: 10 };
+const FISH_PORTIONS: Record<string, number> = { minnow: 1, perch: 1, trout: 2, pike: 4, sturgeon: 10, cod: 3, halibut: 6, bluefin: 12 };
 const FISH_RECIPES: Recipe[] = FISH.map((f) => ({
   id: `cook_${f.id}`,
   category: 'Cooking' as RecipeCategory,
@@ -821,6 +824,9 @@ for (const r of RECIPES) {
   if (Object.prototype.hasOwnProperty.call(TRAPS, r.result) && r.inputs.some((i) => ROPE_INPUTS.includes(i.item))) r.ropeShare = ROPE_SHARE_TRAP;
 }
 
+// The deep-water fish, off their own depths (`fishing.ts`), in metres.
+for (const f of FISH) if (f.deep) describeFrom(f.id, { depth: (Math.max(f.depth, DEEP_WATER) / 10).toFixed(1) });
+
 // Ropemaking's makes, off their recipes and `ropework.ts`.
 describeFrom('twine', {
   made: TWINE_MADE,
@@ -829,6 +835,7 @@ describeFrom('twine', {
 });
 describeFrom(BELL_ROPE, { base: BELL_HEARD_BASE, per: BELL_HEARD_PER_QL, top: bellHeard(100) });
 describeFrom(LEAD_ROPE, { pace: LEAD_PACE });
+describeFrom(RIGGING_SET, { pace: RIGGING_PACE, closer: RIGGING_CLOSER });
 describeFrom('twine_snare', { holds: TRAPS.twine_snare.holds });
 
 // What a hammer is for, off the recipes that ask for one, so its text cannot name one that does not.

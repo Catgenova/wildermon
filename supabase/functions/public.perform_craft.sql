@@ -12,7 +12,7 @@ declare r recipe; i record; v_n int; prefer bigint; mat text; hard double precis
         v_keep double precision; v_spare recipe_input; v_spare_ql double precision;
         v_tool bigint; v_tool_mark jsonb; v_stone boolean := false;
         v_scroll boolean; v_sheet double precision; v_harm text; v_used int[]; v_hurt text[] := '{}';
-        v_rope double precision;
+        v_rope double precision; v_sail double precision;
 begin
   select * into r from recipe where id = p_recipe;
   prefer := target_item(p_target);
@@ -97,6 +97,12 @@ begin
 
   -- The rope in it, by mass, for a boat's or a trap's share of its QL (`rope_ql`), read before it is spent.
   if coalesce(r.rope_share, 0) > 0 then v_rope := rope_ql(p_world, p_uid, p_recipe, prefer, mat); end if;
+  -- And a hull's sailcloth, for her sails' pace (`sail_ql_pace`).
+  if exists (select 1 from boat_def b where b.id = r.result)
+     and exists (select 1 from recipe_input ri where ri.recipe = p_recipe and ri.item = 'sailcloth') then
+    select st.ql into v_sail from craft_stock(p_world, p_uid, prefer) st
+     where st.def = 'sailcloth' order by (st.id = prefer) desc, st.draw limit 1;
+  end if;
   -- The quality of what is about to be used up, worked out before it is used
   -- up, since using it up changes the answer: off the stack each input would
   -- be spent from first, which is the clicked one where it is one of them.
@@ -228,6 +234,7 @@ begin
   if v_tool_mark ? 'keeps' then
     v_mark := v_mark || jsonb_build_object('rot', mark_of(v_mark, 'rot') * mark_of(v_tool_mark, 'keeps'));
   end if;
+  if v_sail is not null then v_mark := coalesce(v_mark, '{}'::jsonb) || jsonb_build_object(sails_mark(), sail_ql_pace(v_sail)); end if;
   v_mark := nullif(v_mark, '{}'::jsonb);
   -- Set going rather than made: sealed in its vessel, to be opened when ready (`sealFerment`).
   if exists (select 1 from ferment_recipes() f where f.id = p_recipe) then

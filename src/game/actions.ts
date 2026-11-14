@@ -49,6 +49,7 @@ import { CREATURE_CRATE_ACTIONS } from './creaturecrate';
 import { HUSBANDRY_ACTIONS } from './husbandry';
 import { DYE_ACTIONS, recipeSays } from './dyes';
 import { TRAP_ACTIONS } from './traps';
+import { SAIL_ACTIONS } from './sailActions';
 import { BRIDGE_ACTIONS } from './bridges';
 import { AQ_OVER, AQUEDUCT_ACTIONS, AQUEDUCT_MOTE_USE } from './aqueducts';
 import { SPRING_ACTIONS } from './springs';
@@ -3335,6 +3336,8 @@ export const ACTIONS: ActionDef[] = [
   ...FIRST_AID_ACTIONS,
   ...REMEDY_ACTIONS,
   ...PLACEABLE_ACTIONS,
+  // Sounding the depth from a boat, and fitting a rigging set (`sailActions.ts`).
+  ...SAIL_ACTIONS,
   ...CRATE_ACTIONS,
   // A pack beast's panniers (`panniers.ts`).
   ...PANNIER_ACTIONS,

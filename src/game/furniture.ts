@@ -598,6 +598,8 @@ export interface PlacedFurniture {
   enchant?: Enchant;
   /** How far gone it is, out of a hundred: a scroll that did not take on it (`enchanting.ts`). Absent is none. */
   dmg?: number;
+  /** A boat's hold, as a share of its own, by the Sailing of whoever here has her helm (`cargoRoom`, `sailing.ts`); unsaid, its own. */
+  cargo?: number;
   /**
    * Whose this is, on an island. Absent in the game you play by yourself,
    * where everything on the ground is yours because there is only you.
@@ -860,8 +862,11 @@ export const furnitureUnits = (f: PlacedFurniture): number => f.items.reduce((n,
 export const furnitureSpare = (f: PlacedFurniture): number => Math.max(0, furnitureCapacity(f) - furnitureUnits(f));
 /** What it holds: its build, how strong a wood it was built out of, and its maker's mark. */
 // And more for a Deep Hold, a True Axle or a Bag of Holding set into it (`roomMul`), in all three measures.
-export const furnitureCapacity = (f: PlacedFurniture): number =>
-  roomFor((furnitureDef(f.kind).capacity ?? furnitureDef(f.kind).hive ?? furnitureDef(f.kind).pond ?? 0) * matOf(f.material).hold * markOf(f, 'hold') * roomMul(f), f);
+export const furnitureCapacity = (f: PlacedFurniture): number => {
+  const own = roomFor((furnitureDef(f.kind).capacity ?? furnitureDef(f.kind).hive ?? furnitureDef(f.kind).pond ?? 0) * matOf(f.material).hold * markOf(f, 'hold') * roomMul(f), f);
+  // And a boat's hold, the share more the Sailing at her helm makes in whole things (`cargoRoom`), while there is a helm to say so.
+  return own + (f.driven ? Math.floor(own * ((f.cargo ?? 1) - 1)) : 0);
+};
 /** Kilograms it holds, for a piece measured that way. Nought for the rest. */
 export const furnitureHeft = (f: PlacedFurniture): number =>
   roomFor((furnitureDef(f.kind).heft ?? 0) * matOf(f.material).hold * markOf(f, 'hold') * roomMul(f), f);

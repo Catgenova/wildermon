@@ -31,6 +31,7 @@ import { itemDef, type Item } from './items';
 import { percent } from './words';
 import { metres } from './piers';
 import { ROPEMAKING, ropeFailUnits, ropePerLayUp, ropeTime } from './ropework';
+import { beamPace, cargoRoom, GALE, GALE_SAFE_AT, GALE_TILES_PER_DAMAGE, noGoDegrees, RIGGING_CLOSER, TACK_PACE, tackSecs } from './sailing';
 
 /** The fibre a failed lay-up is shown with: the wemp of one rope (`make_rope`). */
 const layUpSample = (): number => RECIPES.find((r) => r.id === 'make_rope')?.inputs[0].count ?? 1;
@@ -275,7 +276,15 @@ function buildEffects(): Record<string, SkillEffect[]> {
       { label: 'Stamina lost swimming', at: (g) => g.swimWind(), say: (v) => `${percent(v)} stamina/s` },
     ],
     driving: [{ label: 'Cart and wagon speed', at: (g) => drivingPace(g.skills.get('driving')), say: ofLevel(0) }],
-    sailing: [{ label: 'Boat speed', at: (g) => sailingPace(g.skills.get(SAILING)), say: ofLevel(0) }],
+    sailing: [
+      { label: 'Boat speed', at: (g) => sailingPace(g.skills.get(SAILING)), say: ofLevel(0) },
+      // What the helm makes of the wind, the hold and rough water (`sailing.ts`).
+      { label: 'Closest to the wind', at: (g) => noGoDegrees(g.skills.get(SAILING)), say: (v) => `${Math.round(v)}°`, note: `${RIGGING_CLOSER}° closer with a rigging set` },
+      { label: 'Beam reach speed', at: (g) => beamPace(g.skills.get(SAILING)), say: ofLevel(0) },
+      { label: 'Turn through the wind', at: (g) => tackSecs(g.skills.get(SAILING)), say: (v) => `${v.toFixed(1)} s at ×${TACK_PACE} speed` },
+      { label: 'Hold of the boat at your helm', at: (g) => cargoRoom(g.skills.get(SAILING)), say: ofLevel(0) },
+      { label: 'Hull damage in a gale', at: (g) => (g.skills.get(SAILING) < GALE_SAFE_AT ? 1 : 0), say: (v) => (v ? `1 per ${GALE_TILES_PER_DAMAGE} tiles` : 'none'), note: `Wind over ${GALE}` },
+    ],
     fighting: [
       { label: 'Hit chance', at: (g) => { const w = swungWith(g); return hitChance(g, w.def, w.item); }, say: percent },
       { label: 'Damage per blow', at: (g) => { const w = swungWith(g); return weaponDamage(g, w.def, w.item); }, say: damage },

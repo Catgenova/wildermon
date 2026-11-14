@@ -3037,5 +3037,11 @@
     "title": "Ropemaking: lay-ups, the rope walk, rope QL carried, bell, lead and twine snare",
     "shard": 4,
     "why": "Every Ropemaking rule is the island's: the count and QL a lay-up makes, its pace, what a failed one damages, the rope's share in a boat or a trap, and who hears a bell."
+  },
+  {
+    "file": "supabase/test/sailing.ts",
+    "title": "Sailing: the closest to the wind, gales, the hold, rigging, sails and deep water",
+    "shard": 5,
+    "why": "The island holds a hull to the top of the points of sail its helm can sail, damages one in a gale below Sailing 30, keeps rowing boats in, widens the hold, fits rigging, reads sails' QL, and gives deep-water fish only to a line from a boat."
   }
 ]

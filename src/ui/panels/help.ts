@@ -100,6 +100,11 @@ import {
   BELL_HEARD_BASE, BELL_HEARD_PER_QL, BELL_ROPE, bellHeard, HAMMOCK_REST, LAY_UP_EVERY, LAY_UP_FAIL_SHARE, LAY_UP_SPARE_ABOVE, LAY_UPS, LEAD_PACE, LEAD_ROPE,
   ROPE_SHARE_BOAT, ROPE_SHARE_TRAP, ROPE_TIME_PER_LEVEL, ROPE_WALK, ROPE_WALK_QL, ROPE_WALK_TIME, ropePerLayUp, ropeTime, TWINE_MADE,
 } from '../../game/ropework';
+import {
+  beamPace, CARGO_TOP, cargoRoom, CLOSE_LEARN, DEEP_CATCH, DEEP_NET, DEEP_WATER, GALE, GALE_LEARN, GALE_SAFE_AT, GALE_TILES_PER_DAMAGE, noGoDegrees,
+  RIGGING_CLOSER, RIGGING_PACE, RIGGING_SET, SAIL_QL_TOP, SOUND_REACH, SOUND_SHOWN, TACK_PACE, tackSecs,
+} from '../../game/sailing';
+import { SOUND_DEPTH } from '../../game/sailActions';
 import { ANCIENT_EFFECTS, ANCIENT_PLUS, BAUBLE_HIGH, BAUBLE_KINDS, BAUBLE_LOW, BAUBLE_SHARE, BAUBLE_TIERS, baubleTimes, MAJOR_SKILLS, MINOR_SKILLS, REGRET_SHARE, YIELD_TIMES } from '../../game/baubles';
 import { SOUL_CHANCE } from '../../game/sacrifice';
 import { FIRST_AID_ACTION_BY_ID, HERB_HEAL, healAmount, SUITS_HEAL } from '../../game/firstaid';
@@ -334,6 +339,22 @@ export const dur = (seconds: number): string => {
 };
 /** "3 sand", "a gem": a count of a thing in figures (`countOf`). */
 const countIn = (id: string, n: number): string => countOf(id, n, true);
+
+/** Sailing past the pace it gives (`sailing.ts`, `sailActions.ts`): every number off the rule that plays it. */
+function sailHelp(): string {
+  const deepFish = FISH.filter((f) => f.deep);
+  return `<li>Beam reach: speed ×${beamPace(0)} at Sailing 0, ×${beamPace(100)} at 100. A turn through the wind (a tack or a gybe): ${tackSecs(1)} s at ×${TACK_PACE} speed at Sailing 1,
+      ${tackSecs(100)} s at 100.</li>
+      <li>Gale: wind over ${GALE}. Below Sailing ${GALE_SAFE_AT} a hull takes 1 damage per ${GALE_TILES_PER_DAMAGE} tiles sailed or rowed in one. A rowing boat does not put out in a gale.</li>
+      <li>Training: per tile at the helm; a gale tile ×${GALE_LEARN}, a close-hauled tile ×${CLOSE_LEARN}.</li>
+      <li>Hold of the boat at your helm: ×${cargoRoom(100)} at Sailing 100 (×(1 + ${CARGO_TOP} × Sailing ÷ 100), in whole things).</li>
+      <li><b>Rigging set</b> (${bill(`make_${RIGGING_SET}`)}): <b>Fit the rigging</b> to a sailing boat or caravel: speed +${percent(RIGGING_PACE)}, ${RIGGING_CLOSER}° closer to the wind.</li>
+      <li>Sails: the QL of the sailcloth they were made of: speed +${percent(SAIL_QL_TOP)} at QL 100, in proportion below.</li>
+      <li>From a boat over water deeper than ${metres(DEEP_WATER)} m: a line brings up only ${listed(deepFish.map((f) => `${f.name.toLowerCase()} (${metres(f.depth)} m, fishing ${f.level})`))};
+      chance a fish stays on ×${DEEP_CATCH}. A net there: ×${DEEP_NET} the fish of one from the shore.</li>
+      <li><b>Sound the depth</b> (from a boat, ${dur(goSeconds(ACTION_BY_ID.get(SOUND_DEPTH)?.baseTime ?? 0, CHAR_START))}): depth of every water tile within ${SOUND_REACH} tiles, on the map for
+      ${SOUND_SHOWN / 60} minutes; trains Sailing.</li>`;
+}
 
 /** Ropemaking past its recipes (`ropework.ts`): every number off the rule that plays it. */
 function ropeHelp(): string {
@@ -2310,13 +2331,15 @@ export function helpText(): string {
       Step ashore and Go over the side work as for the helm.</li>
       <li><b>Take the helm</b>: anybody aboard, when nobody holds it or its holder has gone away at sea; never from somebody present.</li>
       <li>Not picked up or turned with anybody aboard.</li>
-      <li>A line cast from a boat in deep water reaches every fish, pike and sturgeon included.</li>
+      <li>A line cast from a boat reaches deeper water than the shore: pike and sturgeon.</li>
+      ${sailHelp()}
     </ul>
     <h3>Wind, and how a sail uses it</h3>
     <ul>
       <li>Direction and strength both wander (calm to gale within a day); computed from the clock: the same for everybody at that hour, different per island.</li>
       <li>Rowing boats ignore it. Sailing boats depend on the <b>angle</b> more than the strength: across the wind fastest; downwind steady and slower; close-hauled slow.</li>
-      <li>Within ${Math.round((NO_GO * 180) / Math.PI)} degrees of the wind: <b>in irons</b>, almost no way. Upwind: <b>tack</b> (close-hauled on one side, then the other).</li>
+      <li>Closer to the wind than the helm can sail: <b>in irons</b>, almost no way. Closest to the wind: ${noGoDegrees(1)}° at Sailing 1 to ${noGoDegrees(100)}° at 100;
+      ${RIGGING_CLOSER}° closer with a rigging set. Upwind: <b>tack</b> (close-hauled on one side, then the other).</li>
       <li>Example: quality (QL) ${SAIL_EXAMPLE.ql} sailing boat, body control ${CHAR_START}, ${windWord(SAIL_EXAMPLE.force)}: ${sailSpeeds} tiles a second on a beam reach, running,
       close-hauled and in irons.</li>
       <li>Under sail the bars show the wind: arrow, name, direction it is from, point of sail.</li>

@@ -137,6 +137,12 @@ import {
   BELL_HEARD_BASE, BELL_HEARD_PER_QL, BELL_ROPE, LAY_UP_BASE, LAY_UP_EVERY, LAY_UP_FAIL_SHARE, LAY_UP_SPARE_ABOVE, LAY_UPS, LEAD_PACE, LEAD_ROPE,
   NO_BELL_ROPE, ROPE_INPUTS, ROPE_TIME_PER_LEVEL, ROPE_WALK, ROPE_WALK_QL, ROPE_WALK_TIME, ROPEMAKING,
 } from '../src/game/ropework';
+import {
+  BEAM_TOP, CARGO_TOP, CLOSE_LEARN, DEEP_CATCH, DEEP_NET, DEEP_WATER, GALE, GALE_LEARN, GALE_ROW_SAID, GALE_SAFE_AT, GALE_TILES_PER_DAMAGE,
+  NO_GO_AT_ONE, NO_GO_AT_TOP, RIG_MARK, RIGGING_CLOSER, RIGGING_PACE, RIGGING_SET, SAIL_QL_TOP, SAIL_TOP_AT, SAILS_MARK, SOUND_LEARN, SOUND_REACH,
+} from '../src/game/sailing';
+import { FIT_RIGGING, SAIL_ACTION_IDS, SAIL_SAID, SOUND_DEPTH } from '../src/game/sailActions';
+import { CLOSE } from '../src/game/wind';
 import { DEFAULT_LOOK, LOOK_KINDS, LOOK_TABLES, LOOK_TONES, legacyLooks } from '../src/game/look';
 import { ACTION_FLOOR, ACTION_PACE, COTTON_SECONDS, COTTON_WEIGHT, MINING_SECONDS, MINING_WEIGHT, WORKER_WEIGHT, WORLD_PACE } from '../src/game/pace';
 import { DROWN_RATE, DROWN_WARN, EXHAUSTED, HEAL_FED, HEAL_RATE, HUNGER_RATE, SWIM_LEARN, SWIM_WIND, THIRST_RATE, STAMINA_BAR_PER_LEVEL, WIND_PER_LEVEL, WIND_REST, WIND_STARVING, WIND_WALK } from '../src/game/body';
@@ -1028,6 +1034,8 @@ out.push(`create table if not exists crop_def (
 out.push(`create table if not exists fish_def (
   id text primary key, name text not null, depth real not null, level real not null, weight real not null
 );`);
+/* A deep-water fish, off a line from a boat over deep water only (`FishDef.deep`, `sailing.ts`). */
+out.push(`alter table fish_def add column if not exists deep boolean not null default false;`);
 out.push(`create table if not exists bait_def (id text primary key, note text not null);`);
 /* Ordered: a bait's first favourite bites hardest. */
 out.push(`create table if not exists bait_favours (
@@ -2434,7 +2442,10 @@ for (const m of BUILD_MATERIALS) {
     out.push(`update build_material_def set only_walls = ${arr(m.only.walls)}, only_floors = ${arr(m.only.floors)}, only_said = ${q(onlySaid(m))} where id = ${q(m.id)};`);
   }
 }
-for (const f of FISH) out.push(`insert into fish_def values (${q(f.id)}, ${q(f.name)}, ${q(f.depth)}, ${q(f.level)}, ${q(f.weight)});`);
+for (const f of FISH) {
+  out.push(`insert into fish_def values (${q(f.id)}, ${q(f.name)}, ${q(f.depth)}, ${q(f.level)}, ${q(f.weight)});`);
+  if (f.deep) out.push(`update fish_def set deep = true where id = ${q(f.id)};`);
+}
 for (const b of BAITS) {
   out.push(`insert into bait_def values (${q(b.id)}, ${q(b.note)});`);
   b.favours.forEach((fish, rank) => out.push(`insert into bait_favours values (${q(b.id)}, ${q(rank)}, ${q(fish)});`));
@@ -2951,6 +2962,30 @@ for (const [fn, v] of [
 }
 for (const [fn, v] of [['ropemaking_skill', ROPEMAKING], ['rope_walk_kind', ROPE_WALK], ['bell_rope_item', BELL_ROPE], ['lead_rope_item', LEAD_ROPE],
   ['no_bell_rope_said', NO_BELL_ROPE]] as Array<[string, string]>) {
+  out.push(`create or replace function ${fn}() returns text language sql immutable as $fn$ select ${q(v)} $fn$;`);
+}
+/*
+ * Sailing (`sailing.ts`, `sailActions.ts`): the closest a hull sails to the
+ * wind and what a reach is worth, a turn through it, a gale, the hold, the
+ * rigging set and the sails' QL, work from a boat over deep water, and what a
+ * gale or a close-hauled tile teaches. The rules that read them are `sail_*`
+ * in the migrations.
+ */
+out.push(`create or replace function sail_action(p_action text) returns boolean language sql immutable as $fn$ select p_action = any (array[${SAIL_ACTION_IDS.map(q).join(', ')}]::text[]) $fn$;`);
+for (const [fn, v] of [
+  ['no_go_at_one', NO_GO_AT_ONE], ['no_go_at_top', NO_GO_AT_TOP], ['sail_top_at', SAIL_TOP_AT], ['rigging_closer', RIGGING_CLOSER],
+  ['beam_top', BEAM_TOP], ['wind_close', CLOSE], ['gale', GALE], ['gale_safe_at', GALE_SAFE_AT], ['gale_tiles_per_damage', GALE_TILES_PER_DAMAGE],
+  ['cargo_top', CARGO_TOP], ['rigging_pace', RIGGING_PACE], ['sail_ql_top', SAIL_QL_TOP], ['deep_water', DEEP_WATER], ['deep_catch', DEEP_CATCH],
+  ['deep_net', DEEP_NET], ['sound_reach', SOUND_REACH], ['sound_learn', SOUND_LEARN], ['gale_learn', GALE_LEARN], ['close_learn', CLOSE_LEARN],
+] as Array<[string, number]>) {
+  out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);
+}
+for (const [fn, v] of [
+  ['rigging_set_item', RIGGING_SET], ['sails_mark', SAILS_MARK], ['rig_mark', RIG_MARK], ['gale_row_said', GALE_ROW_SAID],
+  ['sound_depth_action', SOUND_DEPTH], ['fit_rigging_action', FIT_RIGGING],
+  ['sail_said_not_afloat', SAIL_SAID.notAfloat], ['sail_said_no_sail', SAIL_SAID.noSail], ['sail_said_rigged', SAIL_SAID.rigged],
+  ['sail_said_no_set', SAIL_SAID.noSet], ['sail_said_far', SAIL_SAID.far],
+] as Array<[string, string]>) {
   out.push(`create or replace function ${fn}() returns text language sql immutable as $fn$ select ${q(v)} $fn$;`);
 }
 console.log(out.join('\n'));

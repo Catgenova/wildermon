@@ -64,6 +64,10 @@ begin
     perform perform_gate(p_world, p_uid, p_action, p_target);
     return;
   end if;
+  if sail_action(p_action) then
+    perform perform_sail(p_world, p_uid, p_action, p_target);
+    return;
+  end if;
   if last_action(p_action) then
     perform perform_last(p_world, p_uid, p_action, p_target);
     return;

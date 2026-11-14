@@ -8,6 +8,8 @@ import { UNSEEN, VISIBLE } from '../../game/vision';
 import type { UIWindow } from '../windows';
 import { waterRgb } from '../../render/water';
 import type { WaterField } from '../../world/springs';
+import { DEEP_WATER, SOUND_SHOWN } from '../../game/sailing';
+import { metres } from '../../game/piers';
 
 /** How wide the drawn map is, whatever size the island is. */
 const VIEW_SIZE = 512;
@@ -783,6 +785,31 @@ export class MinimapPanel {
         ctx.stroke();
       });
       if (this.names) this.tag(kx, ky, k, 9, 0, m.kind === 'seek' ? 'Seek: mote swirl' : 'Trace: hoard', ink);
+    }
+    // A sounding (`sailActions.ts`): the depth of every tile of water it read, in metres, while it is fresh.
+    const sounded = this.game.sounded;
+    if (sounded && Date.now() / 1000 - sounded.real < SOUND_SHOWN) {
+      ctx.save();
+      ctx.font = `${Math.max(8, Math.min(13, scale * 0.42))}px system-ui, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      for (const r of sounded.tiles) {
+        const tx = (r.x + 0.5 - ox) * scale;
+        const ty = (r.y + 0.5 - oy) * scale;
+        if (tx < -10 || ty < -10 || tx > this.view.width + 10 || ty > this.view.height + 10) continue;
+        const deep = r.depth > DEEP_WATER;
+        if (scale >= 18) {
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = 'rgba(0,0,0,0.75)';
+          ctx.strokeText(metres(r.depth), tx, ty);
+          ctx.fillStyle = deep ? '#9fd4ff' : '#e8f4ff';
+          ctx.fillText(metres(r.depth), tx, ty);
+        } else {
+          ctx.fillStyle = deep ? 'rgba(80,160,240,0.85)' : 'rgba(220,240,255,0.7)';
+          ctx.fillRect(tx - 1.5 * k, ty - 1.5 * k, 3 * k, 3 * k);
+        }
+      }
+      ctx.restore();
     }
     // Landmarks: a statue is on the map from the day it is set up, a stone
     // diamond with its name, drawn under the people and over the marks.

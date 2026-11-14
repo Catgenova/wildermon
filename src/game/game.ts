@@ -116,7 +116,9 @@ import { isRuneLantern, runeLanternLight } from './runelantern';
 import { helpingOf, NUTRIENTS, NUTRIENT_DECAY, NUTRIENT_NAMES, TABLE_BEST, tableMul, upkeepMul, type Nutrient } from './nutrition';
 import { strokeOf } from '../audio/strokes';
 import { lockRefusal, type Lockable } from './locks';
-import { REACH_FORCE, sailFactor, sailWord, windAt, windFrom, windWord, type Wind } from './wind';
+import { REACH_FORCE, sailFactor, sailWord, windAt, windFrom, windSide, windWord, type Wind } from './wind';
+import { beamPace, cargoRoom, isRigged, noGoAt, riggingPace, sailsPace, TACK_PACE, tackSecs } from './sailing';
+import { SOUNDED, soundings } from './sailActions';
 import { festerChance, PART_NAMES, woundClose, woundDrain, WOUND_KINDS, woundText, type Wound, type WoundKind } from './wounds';
 import { baubleLearn, baublePace, baublePlus, baublesFrom, baublesServe, baubleTwice, YIELD_TIMES, type DeedBauble } from './baubles';
 import { orderRefusal, queueDropped, seenOf, type SeenJob } from './jobqueue';
@@ -1808,7 +1810,12 @@ export class Game {
     // Oars are worked by the body; a sail is worked by the weather, and the
     // best you can do is hold the angle that suits her.
     const body = this.skills.get(def.sail ? 'body_control' : 'body_strength');
-    const weather = def.sail ? sailFactor(this.heading(), this.wind()) : 1;
+    // How close to the wind she sails and what the helm makes of a reach, off the helm's Sailing and her rigging (`sailing.ts`).
+    const sailing = this.skills.get(SAILING);
+    const rigged = isRigged(f);
+    const weather = def.sail ? sailFactor(this.heading(), this.wind(), noGoAt(sailing, rigged), beamPace(sailing)) : 1;
+    // And her hold, as the helm's Sailing makes it (`cargoRoom`), while it is your hands on her helm.
+    f.cargo = cargoRoom(sailing);
     // What is in the hold rides on the hull, and the hull feels it: a boat
     // loaded to her marks is `BOAT_LOAD_DRAG` slower than one running empty.
     const heft = furnitureHeft(f);
@@ -1817,7 +1824,30 @@ export class Game {
     // And her builder's hand in her, for a hull a Carpenter laid the keel of,
     // and the hand at her helm: Sailing (`sailingPace`).
     // And a Fair Wind set into her, on every point of sail (`enchanting.ts`), which only a boat with a sail takes.
-    return hullSpeed(def, f.ql, body, weather, load) * markOf(f, 'speed') * sailingPace(this.skills.get(SAILING)) * (1 + swingEnchant(f, 'sail'));
+    return hullSpeed(def, f.ql, body, weather, load) * markOf(f, 'speed') * sailingPace(sailing) * (1 + swingEnchant(f, 'sail'))
+      // Under sail: her rigging, her sails' QL, and a turn through the wind while she comes round (`sailing.ts`).
+      * (def.sail ? riggingPace(rigged) * sailsPace(f) * this.tackPace(sailing) : 1);
+  }
+
+  /** The last sounding of the depth from a boat (`sailActions.ts`): when, in real seconds, and the water it read; drawn on the map a while. */
+  sounded: { real: number; tiles: Array<{ x: number; y: number; depth: number }> } | null = null;
+
+  /** Which side of her the wind was on, and until when a turn through it slows her (`tackSecs`), in real seconds. */
+  private tackSide = 0;
+  private tackUntil = 0;
+  /** What a turn through the wind makes of her pace now: `TACK_PACE` for `tackSecs` after the wind changes sides. */
+  private tackPace(sailing: number): number {
+    const side = windSide(this.heading(), this.wind());
+    const now = Date.now() / 1000;
+    if (this.tackSide !== 0 && side !== this.tackSide) this.tackUntil = now + tackSecs(sailing);
+    this.tackSide = side;
+    return now < this.tackUntil ? TACK_PACE : 1;
+  }
+
+  /** How close to the wind the hull under you sails, in radians: your Sailing and her rigging (`noGoAt`). */
+  noGoNow(): number {
+    const boat = this.afloat();
+    return noGoAt(this.skills.get(SAILING), !!boat && isRigged(boat));
   }
 
   /**
@@ -2159,7 +2189,7 @@ export class Game {
     const boat = this.afloat();
     const def = boat && furnitureDef(boat.kind).boat;
     if (!def?.sail) return from;
-    return `${from} \u00b7 ${sailWord(this.heading(), w)}`;
+    return `${from} \u00b7 ${sailWord(this.heading(), w, this.noGoNow())}`;
   }
 
   /** Water deep enough to float this hull, near where the player is standing. */
@@ -4537,6 +4567,8 @@ export class Game {
     const entry: LogEntry = { time: at ?? Date.now(), text, kind };
     this.log.push(entry);
     trimLog(this.log);
+    // The island's word of a sounding of yours: the water round you, read off the land here, on the map a while (`sailActions.ts`).
+    if (kind === 'event' && text.startsWith(SOUNDED)) this.sounded = { real: Date.now() / 1000, tiles: soundings(this) };
     this.events.emit('log', entry);
   }
 
@@ -4657,7 +4689,7 @@ export class Game {
     }
     if (boat && furnitureDef(boat.kind).boat?.sail && moved > 0) {
       const w = this.wind();
-      if (w.force >= REACH_FORCE && sailWord(this.heading(), w) === 'reaching') this.note('reach');
+      if (w.force >= REACH_FORCE && sailWord(this.heading(), w, this.noGoNow()) === 'reaching') this.note('reach');
       const cap = furnitureCapacity(boat);
       if (cap && furnitureUnits(boat) > cap / 2) this.note('laden');
     }

@@ -557,6 +557,7 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   rope_walk: { name: 'Rope walk', category: 'misc', weight: 40, decay: 4, description: 'Stand at it: rope and thick rope laid up in {time:pct} of the time, +{ql} QL.' },
   bell_rope: { name: 'Bell rope', category: 'tool', weight: 1.8, decay: 4, description: 'Carried: needed to ring a bell. Heard within {base} tiles + {per} per QL ({top} at QL 100).' },
   lead_rope: { name: 'Lead rope', category: 'tool', weight: 1.2, decay: 4, description: 'Carried: mount a tamed wildermon with no saddle and bridle; it goes at {pace:pct} of its speed.' },
+  rigging_set: { name: 'Rigging set', category: 'misc', weight: 40, decay: 4, description: 'Fit to a sailing boat or a caravel: speed +{pace:pct}; {closer}° closer to the wind.' },
   twine_snare: { name: 'Twine snare', category: 'misc', weight: 0.3, decay: 6, description: 'Trap: set on land and bait it. Holds up to taming {holds}; used up by its first catch.' },
   onion: { name: 'Onion', category: 'food', weight: 0.15, stackable: true, food: 0.06, feeds: { greens: 0.04 } },
   corpse: { name: 'Corpse', category: 'misc', weight: 12, decay: 90, description: 'Butcher before it rots. Wildermon: meat, fur, leather, bone, glands. Monsters: tusk, sinew and more.' },
@@ -612,6 +613,10 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   trout: { name: 'Trout', category: 'food', weight: 1.2, stackable: true, food: 0.34, decay: 8, description: 'In deep water.', feeds: { flesh: 0.13 } },
   pike: { name: 'Pike', category: 'food', weight: 3, stackable: true, food: 0.55, decay: 7, feeds: { flesh: 0.18 } },
   sturgeon: { name: 'Sturgeon', category: 'food', weight: 9, stackable: true, food: 0.85, decay: 6, description: 'In deep water. Rare.', feeds: { flesh: 0.24 } },
+  // Deep-water fish, from a boat only (`sailing.ts`).
+  cod: { name: 'Cod', category: 'food', weight: 2.5, stackable: true, food: 0.45, decay: 7, description: 'From a boat, water over {depth} m deep.', feeds: { flesh: 0.15 } },
+  halibut: { name: 'Halibut', category: 'food', weight: 6, stackable: true, food: 0.7, decay: 6, description: 'From a boat, water over {depth} m deep.', feeds: { flesh: 0.21 } },
+  bluefin: { name: 'Bluefin', category: 'food', weight: 12, stackable: true, food: 0.9, decay: 6, description: 'From a boat, water over {depth} m deep. Rare.', feeds: { flesh: 0.26 } },
   cooked_fish: { name: 'Cooked fish', category: 'food', weight: 0.6, stackable: true, food: 0.52, decay: 4, feeds: { flesh: 0.28, fat: 0.1 } },
   apple: { name: 'Apple', category: 'food', weight: 0.2, stackable: true, food: 0.16, decay: 2, description: 'Bakes into a pie; presses into cider.', feeds: { greens: 0.07 } },
   // Off a vine on a trellis, in its season (`vineyard.ts`).
