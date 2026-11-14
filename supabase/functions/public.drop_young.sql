@@ -8,7 +8,8 @@ declare v_dam creature := p_dam; v_d species_def; v_nx double precision; v_ny do
         v_born int; v_coming jsonb := p_coming; v_traits text[]; v_home record;
         v_mode text; v_where text := ''; v_crate bigint; v_placed bigint;
 begin
-  select * into v_d from species_def where id = v_dam.species;
+  -- A cross's young is its hybrid kind (`pair_them`).
+  select * into v_d from species_def where id = coalesce(p_coming->>'species', v_dam.species);
   v_nx := creature_x(v_dam); v_ny := creature_y(v_dam);
   /*
    * Where it goes, now that nothing is kept at the token: where a tamed one
@@ -44,7 +45,7 @@ begin
       end if;
     end if;
   end if;
-  v_born := creature_spawn(p_world, v_dam.species, v_nx, v_ny,
+  v_born := creature_spawn(p_world, v_d.id, v_nx, v_ny,
     case when v_mode = 'stored' then 'active' else v_mode end, now(),
     case when v_mode = 'wild' then null else v_dam.keeper end);
   select array_agg(t) into v_traits from jsonb_array_elements_text(v_coming->'traits') t;
@@ -61,17 +62,21 @@ begin
         'dam', jsonb_build_object('id', v_dam.id, 'name', v_dam.name),
         'sire', v_coming->'sire',
         'from', coalesce(v_coming->'from', '{}'::jsonb))
+        -- A hybrid's stage, for good (`stage_of`).
+        || case when v_coming ? 'stage' then jsonb_build_object('stage', (v_coming->>'stage')::int) else '{}'::jsonb end
         || case when v_coming ? 'line' then jsonb_build_object('line', v_coming->'line') else '{}'::jsonb end end
     where world_id = p_world and id = v_born;
   update creature c set health = max_health(c) where c.world_id = p_world and c.id = v_born;
   if v_mode = 'stored' then perform crate_shut_in(p_world, v_born, v_crate, v_placed); end if;
   if v_dam.keeper is not null then
     perform away_count(p_world, v_dam.keeper, case when v_mode = 'wild' then 'strayed' else 'born' end,
-                       v_dam.species, 1);
+                       v_d.id, 1);
     perform journal_note(p_world, v_dam.keeper, 'bred');
     -- A page of the field guide, for a young one born to a dam somebody keeps:
     -- one turned loose before her hour drops hers in the wild, and it is nobody's.
-    if v_dam.mode <> 'wild' then perform guide_mark(p_world, v_dam.keeper, v_dam.species, 'bred'); end if;
+    if v_dam.mode <> 'wild' then perform guide_mark(p_world, v_dam.keeper, v_d.id, 'bred'); end if;
+    -- A hybrid is never wild, so never tamed: one born to a dam you keep marks its page tamed as well.
+    if v_dam.mode <> 'wild' and v_d.hybrid_a is not null then perform guide_mark(p_world, v_dam.keeper, v_d.id, 'tamed'); end if;
     -- And the island's bred records, where it beats one.
     if v_dam.mode <> 'wild' then perform bred_record_note(p_world, v_born, v_dam.keeper); end if;
     -- Blood worth keeping, which is the whole point of putting two together.

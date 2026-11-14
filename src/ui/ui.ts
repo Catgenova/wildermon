@@ -3071,7 +3071,7 @@ export class UI {
         hint: reason ?? undefined,
         children: choices.length
           ? choices.slice(0, 12).map((it) => {
-              const comers = Object.values(SPECIES).filter((sp) => isBaitFor(sp, it.id) && sp.tameLevel <= trapHolds(t));
+              const comers = Object.values(SPECIES).filter((sp) => !sp.hybrid && isBaitFor(sp, it.id) && sp.tameLevel <= trapHolds(t));
               const fishy = BAIT_BY_ID.get(it.id);
               return {
                 label: itemName(it),
@@ -3429,7 +3429,7 @@ export class UI {
     {
       const def = CREATURE_ACTION_BY_ID.get('assign_deed');
       const trades = SPECIES[c.species]?.trades;
-      if (def && trades && trades.length > 1 && def.applies(target, g)) {
+      if (def && trades && trades.length > 1 && !SPECIES[c.species]?.hybrid && def.applies(target, g)) {
         entries.push({
           label: def.label,
           children: trades.map((trade) => {

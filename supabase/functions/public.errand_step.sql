@@ -13,7 +13,7 @@ begin
   select * into d from species_def where id = c.species;
   select * into dd from my_deed(p_world, c.keeper) md where md.world_id is not null;
   if not found and c.around is null then return; end if;
-  kind := coalesce(p_kind, d.gathers);
+  kind := coalesce(p_kind, c.job, d.gathers);
   if c.around is not null and not around_trade(kind) then return; end if;
   rng := work_range(c);
 

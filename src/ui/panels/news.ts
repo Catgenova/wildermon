@@ -1,5 +1,6 @@
 import { PICK_SLACK, PICK_SLACK_TOUCH } from '../../render/pickslack';
 import { MONSTER_GROWTH } from '../../render/monster-size';
+import { CROSS_CARE, CROSS_CHANCE, CROSS_SKILL, HYBRID_HARDY, HYBRID_WORK, HYBRIDS } from '../../game/hybridlist';
 import { FORGET_AFTER, LOADING_AT_ONCE, SLICE_MS } from '../../render/wildermon';
 import { ACT_SECS } from '../../render/beasts';
 import { NAME_PX } from '../../render/namelabels';
@@ -4419,6 +4420,18 @@ export const NEWS: News[] = [
       `New: fishing net: ${LIFT_DROPS * NET_LIFT.length} drops off the net as it is lifted, ${SHAKE_DROPS} at each of ${NET_SHAKES.length} shakes.`,
       `New: rowing under way: ${OAR_DROPS} drops a blade at the catch; whirl pair a blade a stroke, ${SWIRL_SECS} s.`,
       'Without a graphics card: swimming strokes\' splashes, rings treading water, the float\'s strike and a catch only.',
+    ],
+  },
+  {
+    n: 589,
+    day: '2026-11-14',
+    lines: () => [
+      `New: hybrid wildermon, ${HYBRIDS.length} listed crosses of two kinds, e.g. ${listed(HYBRIDS.slice(0, 3).map((h) => `${h.name} (${SPECIES[h.a].name} × ${SPECIES[h.b].name})`))}. `
+        + `Cross: animal husbandry ${CROSS_SKILL}+, each parent care ${percent(CROSS_CARE)}+, success ${percent(CROSS_CHANCE)} of a pairing's. Mate: own kind first, then a listed cross.`,
+      `New: a hybrid works both parents' tasks in one worker place, the first parent's first; task speed ${percent(HYBRID_WORK)} of a pure-bred's in each; level: mean of the two tasks' skills.`,
+      `New: a hybrid: health +${percent(HYBRID_HARDY - 1)}; infertile; never wild; stage of its less-evolved parent, no evolution; ${TRAIT_SLOTS} traits from either parent; `
+        + `colour form ${percent(FORM_PASS)} per parent with one, in its own colours. Pedigree: Hybrid: (kind) × (kind).`,
+      `New: Field guide: a page per hybrid, after the other wildermon and before the monsters, counted in seen, tamed and bred; a birth to a dam you keep marks it tamed and bred.`,
     ],
   },
   {

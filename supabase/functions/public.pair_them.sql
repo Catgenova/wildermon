@@ -50,6 +50,9 @@ begin
         'from', v_bred->'from',
         'line', bred_line(array(select jsonb_array_elements_text(v_bred->'traits')),
                           dam.traits, dam.pedigree->'line', sire.traits, sire.pedigree->'line'))
+        -- A listed cross's young: its hybrid kind, at its less-evolved parent's stage for good (`cross_of`, `stage_of`).
+        || coalesce((select jsonb_build_object('species', x.id, 'stage', least(stage_of(dam), stage_of(sire)))
+                       from species_def x where x.id = cross_of(dam.species, sire.species)), '{}'::jsonb)
         -- And its parents' forms, at `form_pass` for each that has one (`bred_form`).
         || (select jsonb_strip_nulls(jsonb_build_object('formColour', case when f.form_colour then true end, 'formSize', f.form_size))
               from bred_form(dam.form_colour, dam.form_size, sire.form_colour, sire.form_size, random(), random()) f)

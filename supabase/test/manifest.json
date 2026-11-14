@@ -2706,6 +2706,15 @@
     "why": "The Glimmip line melts sand from the stores into glass lumps at a lit smelter of yours in reach, charged or not, and not at an unlit one or one out of reach; idle with no sand or no smelter, and says why; learns glassblowing; its third stage makes a lump more a batch: each the same on both sides."
   },
   {
+    "file": "supabase/test/hybrids.ts",
+    "title": "Hybrid wildermon: fifty listed crosses, bred, kept and worked",
+    "shard": 6,
+    "external": [
+      "typescript"
+    ],
+    "why": "Fifty listed crosses of two kinds, each its own kind, a field guide page each between the content kinds and the monsters, none wild. A cross is its own kind first, a listed cross second; refused short of animal husbandry 50 or either parent's care 80%, in the browser's words on both sides; takes at 25% of the pairing's chance through the door; its young is the hybrid at the less-evolved parent's stage for good, three traits, health x1.05, its page tamed and bred; a parent's colour form passes at 25%. A hybrid is infertile. At work its first trade first, its second where only that has work, both in a window, at 75% of a pure-bred's pace, one worker, its level the mean of its trades' skills. The Stud Book's cross line the same on both sides."
+  },
+  {
     "file": "supabase/test/repurpose.ts",
     "title": "Twelve kinds take up new settlement tasks; the ten old guards are gone",
     "shard": 6,

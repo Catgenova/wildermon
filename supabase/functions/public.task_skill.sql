@@ -7,7 +7,8 @@ CREATE OR REPLACE FUNCTION public.task_skill(c creature)
 AS $function$
 begin
   return (
-select coalesce((c.skills->>(select skill from gather_def where id =
-    (select gathers from species_def where id = c.species)))::double precision, 1)
+select coalesce((c.skills->>(select g.skill from gather_def g where g.id =
+    (select case when sd.hybrid_a is not null then coalesce(c.job, sd.gathers) else sd.gathers end
+       from species_def sd where sd.id = c.species)))::double precision, 1)
   );
 end $function$

@@ -5,7 +5,13 @@ CREATE OR REPLACE FUNCTION public.creature_level(p_skills jsonb, p_species text)
  LANGUAGE plpgsql
  STABLE
 AS $function$
+declare v_sk text[];
 begin
+  select array(select g.skill from unnest(d.trades) with ordinality t(id, n) join gather_def g on g.id = t.id order by t.n)
+    into v_sk from species_def d where d.id = p_species and d.hybrid_a is not null;
+  if coalesce(array_length(v_sk, 1), 0) = 2 then
+    return greatest(1, floor((coalesce((p_skills->>v_sk[1])::numeric, 1) + coalesce((p_skills->>v_sk[2])::numeric, 1)) / 2))::int;
+  end if;
   return (
 select greatest(1, floor(coalesce(case when ls.skill is null then (select max(value::numeric) from jsonb_each_text(p_skills))
                                          else (p_skills->>ls.skill)::numeric end, 0)))::int

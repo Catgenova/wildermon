@@ -51,9 +51,11 @@ import { article, capital, listed, percent, timeWords } from './words';
 import { lairOf, REGIONS } from '../world/regions';
 import { FORM_IDS, formGives, formKey, formName, formOdds, formOfKey } from './wildforms';
 import { PERK_STAGE, STAGE_PERKS } from './creatures';
-import { stageSlots } from './traits';
+import { stageSlots, TRAIT_SLOTS } from './traits';
 import { SWIM_DEPTH } from './player';
 import { CRAFT_REACH } from './recipes';
+import { CROSS_CARE, CROSS_CHANCE, CROSS_SKILL, HYBRID_HARDY, HYBRID_WORK, HYBRIDS } from './hybridlist';
+import { FORM_PASS } from './wildforms';
 
 export type GuideMark = 'seen' | 'tamed' | 'bred';
 export const GUIDE_MARKS: GuideMark[] = ['seen', 'tamed', 'bred'];
@@ -78,7 +80,8 @@ export const GUIDE_LOOK = 1;
  * The book's order, by species id: asked for, "a new numbered order for wildermon on the field guide, ordering by
  * gathering > crafting > content and by tame difficulty". Gathering (raw goods from the land, the water or the animal
  * itself), then crafting (stored goods into other goods), then content (upkeep, care, building, guards, travel,
- * training), each by its taming level, the higher tame chance first where they tie; the monsters last. A kind's stages
+ * training), each by its taming level, the higher tame chance first where they tie; then the hybrids
+ * (`hybridlist.ts`); the monsters last. A kind's stages
  * follow it (`guideEntries`). The definitions themselves stay in the order they were written.
  */
 export const GUIDE_ORDER: readonly string[] = [
@@ -88,7 +91,10 @@ export const GUIDE_ORDER: readonly string[] = [
   'simma', 'chissa', 'tanna', 'hoppa', 'papra', 'siffa', 'flecha', 'glimmip', 'carra', 'glossa', 'awla', 'tinka',
   'relka', 'crakka', 'frosta', 'leecha', 'ulva', 'whirla', 'scorcha', 'magga', 'scurra', 'embra', 'snedda', 'bura',
   'sparra', 'sappa', 'kemma', 'sheela', 'cobbe', 'salva', 'wicka', 'lungra', 'roxxen', 'spitta', 'stona', 'thumpa',
-  'whispet', 'crumbud', 'warda', 'orse', 'springlet', 'goblin', 'orc', 'ogre', 'dragon',
+  'whispet', 'crumbud', 'warda', 'orse', 'springlet',
+  // The hybrids, in their list's order (asked for: "a Hybrids group after Content and before the four monsters").
+  ...HYBRIDS.map((h) => h.id),
+  'goblin', 'orc', 'ogre', 'dragon',
 ];
 
 /** Every kind there is a page for, in the book's order (`GUIDE_ORDER`); a kind left off it, after, in the definitions' order. */
@@ -257,6 +263,8 @@ export function formLines(def: SpeciesDef, guide?: FieldGuide): string[] {
   return FORM_IDS.map((f) => {
     const key = formKey(def.id, f);
     const marks = guide ? ` · ${(['seen', 'tamed'] as const).map((m) => (guide.has(key, m) ? MARK_NAMES[m].toLowerCase() : `not ${MARK_NAMES[m].toLowerCase()} yet`)).join(' · ')}` : '';
+    // A hybrid's, never wild: from a parent with that form, at `FORM_PASS` each; its colour form in its own palette.
+    if (def.hybrid) return `${formName(def, f)}: ${percent(FORM_PASS)} per parent with ${f === 'colour' ? 'its colour form, in the hybrid\'s own colours' : `a ${f} form`}, ${formGives(f)}${marks}`;
     return `${formName(def, f)}: 1 in ${formOdds(f)} wild, ${formGives(f)}${marks}`;
   });
 }
@@ -303,6 +311,8 @@ export function wildShare(def: SpeciesDef): number {
  * put down inside the safe ring round the spawn and the Runestones (`SAFE_RING`, `at_peace`).
  */
 export function whereItLives(def: SpeciesDef, onIsland = false): string[] {
+  // A hybrid is never put down wild (`hybridlist.ts`).
+  if (def.hybrid) return [`Never wild: bred only, ${SPECIES[def.hybrid[0]].name} × ${SPECIES[def.hybrid[1]].name}`];
   const lines: string[] = [];
   // A kind of the deep water, out of a swimmer's depth (`deepTile`).
   if (def.deepWater) lines.push(`Spawns in: water over ${metres(SWIM_DEPTH)} m deep; keeps to it`);
@@ -343,6 +353,19 @@ export interface GuideSection {
   lines: string[];
 }
 
+/** A hybrid's cross: its parents, what it takes to throw one, and what it is not (`hybridlist.ts`). */
+function crossing(def: SpeciesDef): string[] {
+  const [a, b] = def.hybrid!;
+  return [
+    `Parents: ${SPECIES[a].name} (body, first task) × ${SPECIES[b].name} (markings and colours, second task), either as dam`,
+    `Breeder: animal husbandry ${CROSS_SKILL}+; each parent care ${percent(CROSS_CARE)}+`,
+    `Success: ${percent(CROSS_CHANCE)} of a pairing's chance`,
+    'Stage: its less-evolved parent\'s at birth, for good; no evolution',
+    `Trait slots: ${TRAIT_SLOTS}, each from either parent at the pairing's inheritance chance`,
+    'Infertile',
+  ];
+}
+
 /** Winning one over: what it asks, what it takes from the hand, and how it takes to a trap. */
 function taming(def: SpeciesDef): string[] {
   if (def.monster) return ['Cannot be tamed, trapped, bred or kept'];
@@ -365,7 +388,13 @@ function taming(def: SpeciesDef): string[] {
 /** What one is for once it is yours: its trade, what it gives, what it carries and pulls, and what it sees. */
 function keeping(def: SpeciesDef): string[] {
   const lines: string[] = [];
-  if (def.gathers) {
+  if (def.hybrid) {
+    const [ta, tb] = def.trades!;
+    lines.push(`Settlement tasks: ${GATHER_DO[ta]} (first); ${GATHER_DO[tb]} (when the first has none in reach). One worker place`);
+    lines.push(`Learns ${skillName(GATHER_SKILL[ta])} and ${skillName(GATHER_SKILL[tb])}; level: their mean`);
+    lines.push(`Task speed: ${percent(HYBRID_WORK)} of a pure-bred's in each`);
+    lines.push(`Range: ${def.workRange} tiles from its orders, +${def.rangePerStep ?? RANGE_PER_STEP} per ${SKILL_STEP} levels of the task's skill`);
+  } else if (def.gathers) {
     const skill = skillName(GATHER_SKILL[def.gathers]);
     lines.push(`Settlement task: ${GATHER_DO[def.gathers]}. Learns ${skill}`
       // At its trade's own pace, which evens out every trade's time to level (`LEARN_PACE`).
@@ -428,14 +457,16 @@ function fighting(def: SpeciesDef, stage = 0): string[] {
   // And its line's own skill on one of them, at the stage that has it (`perkBlood`).
   const own = stage >= PERK_STAGE ? STAGE_PERKS[def.id] : undefined;
   const at = (ch: 'hardy' | 'tough' | 'speed'): number => (STAGE_MUL[ch] ?? 1) ** stage * (own?.kind === 'blood' && own.channel === ch ? own.n : 1);
-  const health = Math.round(def.health * at('hardy'));
+  // And a hybrid's vigour (`HYBRID_HARDY`).
+  const health = Math.round(def.health * at('hardy') * (def.hybrid ? HYBRID_HARDY : 1));
   const blow = +(def.attack * at('tough')).toFixed(1);
   const speed = +(def.speed * at('speed')).toFixed(2);
   // And its pace in water, for a kind with one of its own (`swimSpeed`).
   const swim = def.swimSpeed !== undefined ? `, ${+(def.swimSpeed * at('speed')).toFixed(2)} in water` : '';
   const lines = [`Grown: ${health} health, blow ${blow} damage, speed ${speed} ${speed === 1 ? 'tile' : 'tiles'} a second${swim}`];
+  if (def.hybrid) lines.push(`Hybrid vigour: health +${percent(HYBRID_HARDY - 1)}, at its stage ×${STAGE_MUL.hardy} a stage`);
   if (def.hunter) lines.push(`${def.monster ? 'Attacks' : 'Wild: attacks'} on sight from ${def.notice ?? HUNT_SIGHT} tiles`);
-  if (def.timid) lines.push('Wild: flees when struck');
+  if (def.timid && !def.hybrid) lines.push('Wild: flees when struck');
   if (def.defensive) lines.push('Strikes back every time');
   lines.push(`Wound: ${WOUND_KINDS[def.wound ?? 'bite'].name}`);
   // A light of its own, wild or kept, and the one metal that bites what carries one.
@@ -480,6 +511,16 @@ export function guidePage(def: SpeciesDef, onIsland = false, stage = 0, guide?: 
       { head: 'Stage', lines: staging(def, stage) },
       { head: 'Habitat', lines: whereItLives(def, onIsland) },
       { head: 'Combat', lines: fighting(def, stage) },
+    ].filter((s) => s.lines.length);
+  }
+  if (def.hybrid) {
+    return [
+      { head: 'Habitat', lines: whereItLives(def, onIsland) },
+      { head: 'Cross', lines: crossing(def) },
+      { head: 'Kept', lines: keeping(def) },
+      { head: 'Combat', lines: fighting(def) },
+      { head: 'Butchered', lines: carcass(def) },
+      { head: 'Forms', lines: formLines(def, guide) },
     ].filter((s) => s.lines.length);
   }
   return [

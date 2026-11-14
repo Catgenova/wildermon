@@ -140,13 +140,14 @@ begin
     end if;
     if not creature_in_reach(p_world, p_uid, c, 2.4) then return 'Stand next to ' || c.name || '.'; end if;
     if c.due is not null then return c.name || ' is already pregnant.'; end if;
+    if hybrid_kind(c.species) then return infertile_said(c.name); end if;
     mate := mate_for(p_world, c);
     if mate.id is null then
       return 'No ' || lower((select name from species_def where id = c.species))
         || ' of the other sex within ' || round(pair_range()) || ' tiles. ' || c.name
         || ' is ' || c.sex || '.';
     end if;
-    return pair_refuses(p_world, c, mate);
+    return coalesce(pair_refuses(p_world, c, mate), cross_refuses(p_world, p_uid, c, mate));
 
   elsif p_action in ('dye_item', 'strip_dye') then
     select * into it from item where world_id = p_world and id = target_item(p_target)

@@ -58,6 +58,7 @@ import { HERBS, WOUND_KINDS, type WoundKind } from './wounds';
 import { WORKER_REST_FIRST } from './keep';
 import { auraMul, BLOOD_CHANNELS, bredLine, breedTraits, channelOf, LAMP_TIER_ODDS, lineMul, lineSaid, mirrorTrait, mutationOf, pct, rollTraits, slotDraw, SLOTS_PER_STAGE, stageSlots, TIERS, traitList, traitMul, traitName, traitAdd, traitSays, traitOf, traitTier, TRAIT_SLOTS, type Line, type PairBlood, type TraitChannel, type TraitSource } from './traits';
 import { ACTION_FLOOR, ACTION_PACE, WORKER_WEIGHT } from './pace';
+import { HYBRID_HARDY, HYBRID_WORK, HYBRIDS, type HybridCross } from './hybridlist';
 import { world } from './pace';
 import { emptyCrate, shutIn, standingCrate } from './crating';
 import { IDLE_WANTS, IDLE_WHYS, ledgerAdd, ledgerRoll, type Idle, type IdleWhy, type WorkLedger } from './workerledger';
@@ -102,6 +103,8 @@ export interface Pedigree {
    * one on every channel it carries a trait on.
    */
   line?: Line;
+  /** A hybrid's stage, for good: its less-evolved parent's at the covering (`hybridStage`). None on anything else. */
+  stage?: number;
 }
 
 /** What is coming, settled at the covering so no sire need survive to the birth. */
@@ -120,8 +123,14 @@ export interface Unborn {
   twin?: { traits: string[]; sex: Sex; from?: Record<string, TraitSource>; line?: Line; formColour?: boolean; formSize?: SizeForm };
 }
 
-/** What a card and a tooltip say of a pedigree: "Dam Snow · sire Horn". */
-export const pedigreeLine = (p: Pedigree): string => `Dam ${p.dam.name} · sire ${p.sire.name}`;
+/**
+ * What a card and a tooltip say of a pedigree: "Dam Snow · sire Horn"; of a hybrid's, its cross before them:
+ * "Hybrid: Wheatley × Pigroot · Dam Snow · sire Horn".
+ */
+export const pedigreeLine = (p: Pedigree, species?: string): string => {
+  const cross = species ? SPECIES[species]?.hybrid : undefined;
+  return `${cross ? `Hybrid: ${SPECIES[cross[0]].name} × ${SPECIES[cross[1]].name} · ` : ''}Dam ${p.dam.name} · sire ${p.sire.name}`;
+};
 /** And how deep its line runs, a line a channel it runs past one on: "Line: 4 generations bred for damage, +6% damage". */
 export const lineLines = (c: Pick<Creature, 'traits' | 'pedigree'>): string[] => lineSaid(c.traits, c.pedigree?.line);
 
@@ -708,6 +717,12 @@ export interface SpeciesDef {
   subspecies?: readonly string[];
   /** What the kind used to be called, which a carcass or a crate from before can still say. */
   was?: readonly string[];
+  /**
+   * For a hybrid (`hybridlist.ts`), its two parent kinds: the first its body and first trade, the second its markings,
+   * colours and second trade. A hybrid works both (`trades`), is never wild, cannot breed and does not evolve. The
+   * island's `species_def.hybrid_a` and `hybrid_b`.
+   */
+  hybrid?: readonly [string, string];
 }
 
 /**
@@ -758,14 +773,16 @@ const STAGE_QUICKER = 1.15;
  */
 export const STAGE_MUL: Partial<Record<TraitChannel, number>> = { hardy: 1.2, tough: 1.2, speed: 1.2, work: STAGE_QUICKER, grow: STAGE_QUICKER };
 /** Which stage it is at: nought below the first of `EVOLVE_AT`, and so on; nought always for a kind that does not evolve. The island's `stage_of`. */
-export function stageOf(c: Pick<Creature, 'species' | 'skills'>): 0 | 1 | 2 {
+export function stageOf(c: Pick<Creature, 'species' | 'skills'> & { pedigree?: Pedigree | null }): 0 | 1 | 2 {
+  // A hybrid stays at the stage it was born at (`hybridStage`), whatever its level.
+  if (SPECIES[c.species]?.hybrid) return hybridStageOf(c);
   if (!SPECIES[c.species]?.stages) return 0;
   const level = creatureLevel(c);
   return level >= EVOLVE_AT[1] ? 2 : level >= EVOLVE_AT[0] ? 1 : 0;
 }
 /** What its stage makes of one channel of its blood. */
-export const evoMul = (c: Pick<Creature, 'species' | 'skills'>, channel: TraitChannel): number =>
-  (STAGE_MUL[channel] ?? 1) ** stageOf(c) * perkBlood(c, channel);
+export const evoMul = (c: Pick<Creature, 'species' | 'skills'> & { pedigree?: Pedigree | null }, channel: TraitChannel): number =>
+  (STAGE_MUL[channel] ?? 1) ** stageOf(c) * perkBlood(c, channel) * hybridMul(c, channel);
 /**
  * What each stage lets a deed worker do at once, by the stage it is at (`stageOf`): a trade that carries a load
  * between where it gets it and where it goes carries this many loads a trip, and a trade worked in place on things in
@@ -4142,6 +4159,61 @@ export const SPECIES: Record<string, SpeciesDef> = {
 };
 // Asked for: a Springlet "operates same speed as a hare mount when swimming in water": in water, a Thistlekit's pace.
 SPECIES.springlet.swimSpeed = SPECIES.orse.speed;
+
+/* ---- Hybrids (`hybridlist.ts`) ------------------------------------------------------------------------------------ */
+
+/**
+ * A hybrid's colours: for each of its body parent's variants, that coat this share of the way to its markings parent's
+ * coat, with its markings parent's accent and belly colour, so it is a palette of its own (and so is its colour form,
+ * `formCoat`), unlike either parent's.
+ */
+export const HYBRID_COAT_MIX = 0.35;
+const mixHex = (a: string, b: string, k: number): string => {
+  const ch = (h: string, i: number): number => parseInt(h.slice(1 + 2 * i, 3 + 2 * i), 16);
+  return `#${[0, 1, 2].map((i) => Math.round(ch(a, i) + (ch(b, i) - ch(a, i)) * k).toString(16).padStart(2, '0')).join('')}`;
+};
+/** What a hybrid's card and page say of it, every number read off the rule it names. */
+export function hybridSays(def: SpeciesDef): string {
+  const [a, b] = def.hybrid!;
+  const [ta, tb] = def.trades!;
+  const skills = [...new Set([GATHER_SKILL[ta], GATHER_SKILL[tb]])].map((k) => k.replace(/_/g, ' '));
+  return `Hybrid: ${SPECIES[a].name} × ${SPECIES[b].name}. Tasks: ${GATHER_DO[ta]}; ${GATHER_DO[tb]}. `
+    + `Order: ${GATHER_VERB[ta]} first, ${GATHER_VERB[tb]} when it has none in reach. `
+    + `Task speed: ${percent(HYBRID_WORK)} of a pure-bred's in each. Health +${percent(HYBRID_HARDY - 1)}. `
+    + `Level: ${skills.length > 1 ? `mean of ${listed(skills)}` : skills[0]}. Stage: its less-evolved parent's, for good. Infertile. Never wild.`;
+}
+function hybridSpecies(h: HybridCross): SpeciesDef {
+  const A = SPECIES[h.a], B = SPECIES[h.b];
+  const def: SpeciesDef = {
+    id: h.id,
+    name: h.name,
+    description: '',
+    health: Math.round((A.health + B.health) / 2),
+    attack: +((A.attack + B.attack) / 2).toFixed(1),
+    speed: +((A.speed + B.speed) / 2).toFixed(2),
+    tameLevel: Math.max(A.tameLevel, B.tameLevel),
+    // Never wild, so never tamed: bred only.
+    tameChance: 0,
+    diet: [...new Set([...A.diet, ...B.diet])],
+    baitHint: A.baitHint,
+    timid: A.timid,
+    gathers: A.gathers,
+    trades: [A.gathers!, B.gathers!],
+    workRange: Math.max(A.workRange, B.workRange),
+    variants: A.variants.map(([coat], i) => {
+      const [theirs, mark] = B.variants[i % B.variants.length];
+      return [mixHex(coat, theirs, HYBRID_COAT_MIX), mark] as [string, string];
+    }),
+    butcher: { ...A.butcher },
+    ...(A.defaultStance ? { defaultStance: A.defaultStance } : {}),
+    ...(A.wound ? { wound: A.wound } : {}),
+    ...(A.hide ? { hide: A.hide } : {}),
+    hybrid: [h.a, h.b],
+  };
+  def.description = hybridSays(def);
+  return def;
+}
+for (const h of HYBRIDS) SPECIES[h.id] = hybridSpecies(h);
 /**
  * Cooked meat, to a kind that eats it, takes in cooked fish and the dishes
  * cooked from meat or fish (stew, cottage pie): fed and offered alike. The
@@ -4627,7 +4699,8 @@ export const RANGE_PER_STEP = 10;
 export const rangeSteps = (skill: number): number => Math.floor(skill / SKILL_STEP);
 /** A worker's task skill, or 0 for a species with no job. */
 export function taskSkill(c: Creature, species: SpeciesDef): number {
-  const id = workSkill(species);
+  // A hybrid's is the skill of the trade it is at (`Creature.trade`, its first when unset).
+  const id = species.hybrid ? GATHER_SKILL[c.trade ?? species.gathers!] : workSkill(species);
   return id ? (c.skills[id] ?? 1) : 0;
 }
 /** A guard's level line: what teaches it, wild creatures and a Sparra's line on the settlement. */
@@ -4718,6 +4791,29 @@ describeFrom('compost', { compostMaker: `${article(SPECIES.middun.name)} ${SPECI
 // And the Sparra, which does not evolve: how it fights, its settlement task, and its level (`sparTaskSays`).
 sayLine('sparra', `Tamed: ${STYLE_SAYS.spar}. ${sparTaskSays()}`, `Level: fighting, learned ${LEARNS_SAYS.spar}.`);
 
+/* ---- A hybrid's rules (`hybridlist.ts`) ----------------------------------------------------------------------------- */
+
+/** A hybrid's stage: the one its pedigree was born with (`Pedigree.stage`), nought without one. The island's `stage_of`. */
+export function hybridStageOf(c: { pedigree?: Pedigree | null }): 0 | 1 | 2 {
+  const s = c.pedigree?.stage ?? 0;
+  return s >= 2 ? 2 : s >= 1 ? 1 : 0;
+}
+/** The stage a cross's young is born at and stays at: its less-evolved parent's (`stageOf`). The island's `pair_them`. */
+export const hybridStage = (dam: Creature, sire: Creature): number => Math.min(stageOf(dam), stageOf(sire));
+/** What being a hybrid does to its blood: health ×`HYBRID_HARDY` (hybrid vigour), task speed ×`HYBRID_WORK`. The island's `hybrid_mul`. */
+export function hybridMul(c: Pick<Creature, 'species'>, channel: TraitChannel): number {
+  if (!SPECIES[c.species]?.hybrid) return 1;
+  return channel === 'hardy' ? HYBRID_HARDY : channel === 'work' ? HYBRID_WORK : 1;
+}
+/** A hybrid's two trades as a label: "Tasks: milling first, farming second; task speed 75% each". */
+export const hybridTasksSays = (def: SpeciesDef): string =>
+  `Tasks: ${GATHER_VERB[def.trades![0]]} first, ${GATHER_VERB[def.trades![1]]} second; task speed ${percent(HYBRID_WORK)} each`;
+/** A hybrid's level: the mean of its two trades' skills, one for a skill it has none of yet, floored. The island's `creature_level`. */
+export function hybridLevel(def: SpeciesDef, skills: Record<string, number>): number {
+  const [x, y] = (def.trades ?? []).map((t) => skills[GATHER_SKILL[t]] ?? 1);
+  return Math.max(1, Math.floor(((x ?? 1) + (y ?? x ?? 1)) / 2));
+}
+
 /** How far from the token this worker may range right now. */
 export function workRangeOf(c: Creature, species: SpeciesDef): number {
   const earned = species.workRange + rangeSteps(taskSkill(c, species)) * (species.rangePerStep ?? RANGE_PER_STEP);
@@ -4747,6 +4843,8 @@ export const siteRange = (c: Creature, species: SpeciesDef, site: WorkSite): num
 const startSkills = (species: SpeciesDef): Record<string, number> => {
   const id = workSkill(species);
   const skills: Record<string, number> = id ? { [id]: 1 } : {};
+  // A hybrid learns both its trades' skills.
+  for (const t of species.hybrid ? species.trades ?? [] : []) skills[GATHER_SKILL[t]] = 1;
   // A kind with no trade learns its own (`LearnsBy`).
   if (species.learns) skills[species.learns.skill] = 1;
   // A beast bred to pull starts knowing nothing about hills and learns in the
@@ -5909,6 +6007,8 @@ const ERRAND_FETCH = 0.5;
  */
 export function creatureLevel(c: Pick<Creature, 'species' | 'skills'>): number {
   const def = SPECIES[c.species];
+  // A hybrid's: the mean of its two trades' skills (`hybridLevel`).
+  if (def?.hybrid) return hybridLevel(def, c.skills);
   const skill = def ? levelSkill(def) : null;
   return Math.max(1, Math.floor(skill ? c.skills[skill] ?? 0 : Math.max(0, ...Object.values(c.skills))));
 }

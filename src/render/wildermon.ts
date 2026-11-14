@@ -1,5 +1,6 @@
 import { darker, drawBeast, drawBeastPortrait, extentOf, forgetBeast, headOf, kitOf, topOf, type Anim, type BeastPose, type Kind } from './beasts';
 import type { V3 } from './figure';
+import { HYBRIDS } from '../game/hybridlist';
 
 /**
  * The wildermon, each as a body of its own (`./beasts` for what they are all
@@ -121,6 +122,18 @@ const LINES: Record<string, () => Promise<Line>> = {
   springlet: () => import('./wild-tide').then((m) => line(m.SPRINGLET, [m.SPRINGSAIL, m.TIDECOURSER], { kinds: m.TIDE_TACKED, seat: m.tideSeat, grip: m.tideGrip, tuck: m.TIDE_TUCK })),
   glimmip: () => import('./wild-glass').then((m) => line(m.GLIMMIP, [m.GLASCADE, m.PRISMETAIL])),
 };
+
+/*
+ * The hybrids (`game/hybridlist.ts`): each one's models made from its two parents' at each stage (`./hybridblend`), so
+ * a hybrid's line is fetched with both of theirs.
+ */
+for (const h of HYBRIDS) {
+  LINES[h.id] = () => Promise.all([LINES[h.a](), LINES[h.b](), import('./hybridblend')])
+    .then(([body, marks, m]) => {
+      const made = m.hybridLine(h.id, body, marks);
+      return line(made.kind, made.stages);
+    });
+}
 
 /** The kinds drawn as a model here, rather than by hand. */
 export const WILDERMON_SPECIES: readonly string[] = Object.keys(LINES);
