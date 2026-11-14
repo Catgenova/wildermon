@@ -9,6 +9,7 @@ import { finePercent, listed, percent } from './words';
 import { PART_NAMES, WOUND_BY_WEAPON, type Wound, type WoundKind } from './wounds';
 import { ACTION_FLOOR, ACTION_PACE } from './pace';
 import { QL_TOP } from './limits';
+import { practiceAs } from './fittingdefs';
 
 /**
  * The fight itself: how long a swing takes and what it costs, which way you
@@ -47,7 +48,7 @@ function heftOf(g: Game, def: Pick<ActionDef, 'id'>): number {
   const held = g.worn('weapon');
   if (!held) return 0;
   const w = WEAPON_BY_ID.get(held.id);
-  if (!w || (def.id === 'attack_creature') === !!w.ammo) return 0;
+  if (!w || (practiceAs(def.id) === 'attack_creature') === !!w.ammo) return 0;
   return itemDef(held.id)?.weight ?? 0;
 }
 
@@ -70,6 +71,8 @@ export function swingBase(g: Game, w: WeaponDef, item: Item | null): number {
  * keeps its own base time.
  */
 export function fightBase(g: Game, def: Pick<ActionDef, 'id' | 'baseTime'>): number | null {
+  // A practice swing at a training dummy is a swing, a shot at an archery target a draw (`fitting.ts`).
+  def = { ...def, id: practiceAs(def.id) };
   if (def.id === 'attack_creature') {
     const { def: w, item } = swungWith(g);
     return swingBase(g, w, item);
@@ -209,6 +212,8 @@ export const overburdenSwingSays = (): string =>
 
 /** What a go of a fight costs in stamina, before the body's own share; null for every other job. */
 export function fightWind(g: Game, def: Pick<ActionDef, 'id'>): number | null {
+  // A practice swing or shot costs what the fight's would (`fitting.ts`).
+  def = { id: practiceAs(def.id) };
   if (def.id !== 'attack_creature' && def.id !== 'shoot_creature') return null;
   /*
    * Less for a sword in a Sworn Blade's hand (Light Sword) or a polearm in a

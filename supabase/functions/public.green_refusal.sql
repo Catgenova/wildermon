@@ -44,7 +44,7 @@ begin
       return 'No moss grows on that.';
     end if;
     tx := pc.x; ty := pc.y;
-    v_days := green_days(green_start(greatest(pc.made_at, (select g.since from green_since g where g.world_id = p_world
+    v_days := piece_green_days(pc.sub, green_start(greatest(pc.made_at, (select g.since from green_since g where g.world_id = p_world
                 and g.thing = 'piece' and g.x = pc.x and g.y = pc.y and g.k = pc.id)), v_from));
   elsif p_target->>'kind' = 'bridge' then
     select * into br from bridge b where b.world_id = p_world and b.id = (p_target->>'id')::bigint;
@@ -71,6 +71,6 @@ begin
   if v_name is not null then
     return coalesce(v_rank, 'Part of ' || v_name || ': only builders may ' || lower(d.label) || ' there.');
   end if;
-  if v_days <= 0 then return green_nothing_yet(); end if;
+  if v_days <= 0 then return case when pc.sub = moss_boulder_kind() then boulder_nothing_yet() else green_nothing_yet() end; end if;
   return null;
 end $function$

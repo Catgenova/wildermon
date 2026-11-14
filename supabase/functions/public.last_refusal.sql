@@ -55,6 +55,10 @@ begin
   if furnish_action(p_action) then
     return furnish_refusal(p_world, p_uid, p_action, p_target);
   end if;
+  -- The fittings' jobs (`fitting.ts`).
+  if fitting_action(p_action) then
+    return fitting_refusal(p_world, p_uid, p_action, p_target);
+  end if;
 
   if p_action = 'plan_bridge' then
     v_kind := coalesce(p_target->>'material', 'rope');
@@ -171,6 +175,13 @@ begin
       if not found then return 'It is gone.'; end if;
       if not takes_dye(it.def) then return 'Cannot be dyed.'; end if;
       -- A woven rug takes a colour a dyeing, up to `rug_colours`, and not its last again (`decor.ts`).
+      -- And a paper lantern pole, a lantern a dyeing, up to `pole_lanterns` (`fitting.ts`).
+      if it.def = lantern_pole_kind() then
+        if (case when it.dye is null then 0 else 1 end) + coalesce(jsonb_array_length(it.garden->'tints'), 0) >= pole_lanterns() then
+          return fitting_said('poleColours', null, null);
+        end if;
+        return dye_reason(p_world, p_uid, dye_litres_for(it.def), p_target, coalesce(it.garden->'tints'->>-1, it.dye));
+      end if;
       if it.def = woven_rug_kind() then
         if (case when it.dye is null then 0 else 1 end) + coalesce(jsonb_array_length(it.garden->'tints'), 0) >= rug_colours() then
           return decor_said('rugFull', null);

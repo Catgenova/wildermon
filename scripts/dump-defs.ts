@@ -211,6 +211,11 @@ import { STATION_NAME, scrollHarmSaid } from '../src/game/recipes';
 import { FIGURE_SAID, GARDEN_DONE, GARDEN_JOBS, GARDEN_SAID, growsFromSet, isGardenPiece, MOUNT_SAID, type GardenSaid } from '../src/game/garden';
 import { DECOR_DONE, DECOR_JOBS, DECOR_SAID, KEPT_WHY, STAND_SLOTS, type DecorSaid } from '../src/game/decor';
 import { FURNISH_DONE, FURNISH_JOBS, FURNISH_SAID, type FurnishDone, type FurnishSaid } from '../src/game/furnish';
+import { BOULDER_AGAIN, BOULDER_NOTHING_YET, FITTING_DONE, FITTING_JOBS, FITTING_SAID, SHELF_HERBS, type FittingDone, type FittingSaid } from '../src/game/fitting';
+import {
+  ARCHERY_TARGET, ARROW_BREAK_IN, BOULDER_MOSS_DAYS, LANTERN_POLE, MOOR_REACH, MOORING_POST, MOSS_BOULDER, POLE_LANTERNS, POLE_REACH, PRACTICE_GAIN, PRACTISE, practiceAs,
+  SHELF_HOLDS, SHOOT_TARGET, SPICE_SHELF, STONE_BUST, TARGET_HOLDS, TRAINING_DUMMY, TREE_BENCH, WINDOW_SEAT,
+} from '../src/game/fittingdefs';
 import {
   BIRDBATH, CAIRN, CAIRN_NAME_MAX, FIREPLACE, FIREPLACE_REACH, FISH_KG_STEP, FISH_MOUNT, FISH_SIZE_LEAST, FISH_SIZE_PER, FOOTSTOOL, FOUR_POSTER, GARDEN_SWING, GAZEBO,
   HAY, HAY_A_DAY, HAY_BALE, HAY_HOLDS, HAY_REACH, SIDE_TABLE, SIGN_ARMS, SIGNPOST, STONE_BENCH, SWING_REST, TABLE_HOLDS, TROUGH_CARE, TROUGH_DRINK, TROUGH_REACH, VASE,
@@ -3099,6 +3104,29 @@ out.push(`create or replace function furnish_said(p_key text, p_name text, p_n i
   (Object.keys(FURNISH_SAID) as FurnishSaid[]).map((k) => `when ${q(k)} then ${q(FURNISH_SAID[k])} `).join('')}end, '{name}', upper(left(coalesce(p_name, ''), 1)) || substr(coalesce(p_name, ''), 2)), '{n}', coalesce(p_n::text, '')), '{what}', coalesce(p_what, '')) $fn$;`);
 out.push(`create or replace function furnish_done(p_key text, p_what text, p_n int, p_held int, p_of int) returns text language sql immutable as $fn$ select replace(replace(replace(replace(case p_key ${
   (Object.keys(FURNISH_DONE) as FurnishDone[]).map((k) => `when ${q(k)} then ${q(FURNISH_DONE[k])} `).join('')}end, '{what}', coalesce(p_what, '')), '{n}', coalesce(p_n::text, '')), '{held}', coalesce(p_held::text, '')), '{of}', coalesce(p_of::text, '')) $fn$;`);
+/*
+ * The fittings (`fitting.ts`, `fittingdefs.ts`): their jobs, every number the
+ * island's rules read, the herbs a spice shelf takes, and every sentence they say.
+ */
+out.push(`create or replace function fitting_action(p_action text) returns boolean language sql immutable as $fn$ select p_action = any (array[${FITTING_JOBS.map(q).join(', ')}]::text[]) $fn$;`);
+for (const [fn, v] of [
+  ['lantern_pole_kind', LANTERN_POLE], ['moss_boulder_kind', MOSS_BOULDER], ['tree_bench_kind', TREE_BENCH], ['spice_shelf_kind', SPICE_SHELF], ['window_seat_kind', WINDOW_SEAT],
+  ['training_dummy_kind', TRAINING_DUMMY], ['archery_target_kind', ARCHERY_TARGET], ['mooring_post_kind', MOORING_POST], ['stone_bust_kind', STONE_BUST],
+  ['boulder_again', BOULDER_AGAIN], ['boulder_nothing_yet', BOULDER_NOTHING_YET],
+] as Array<[string, string]>) out.push(`create or replace function ${fn}() returns text language sql immutable as $fn$ select ${q(v)} $fn$;`);
+for (const [fn, v] of [
+  ['pole_lanterns', POLE_LANTERNS], ['shelf_holds', SHELF_HOLDS], ['target_holds', TARGET_HOLDS], ['arrow_break_in', ARROW_BREAK_IN], ['moor_reach', MOOR_REACH],
+] as Array<[string, number]>) out.push(`create or replace function ${fn}() returns int language sql immutable as $fn$ select ${q(v)}::int $fn$;`);
+for (const [fn, v] of [
+  ['pole_reach', POLE_REACH], ['boulder_moss_days', BOULDER_MOSS_DAYS], ['practice_gain', PRACTICE_GAIN],
+] as Array<[string, number]>) out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);
+out.push(`create or replace function shelf_herbs() returns text[] language sql immutable as $fn$ select array[${SHELF_HERBS.map(q).join(', ')}]::text[] $fn$;`);
+out.push(`create or replace function practice_as(p_action text) returns text language sql immutable as $fn$ select case p_action ${
+  [PRACTISE, SHOOT_TARGET].map((id) => `when ${q(id)} then ${q(practiceAs(id))} `).join('')}else p_action end $fn$;`);
+out.push(`create or replace function fitting_said(p_key text, p_name text, p_what text) returns text language sql immutable as $fn$ select replace(replace(case p_key ${
+  (Object.keys(FITTING_SAID) as FittingSaid[]).map((k) => `when ${q(k)} then ${q(FITTING_SAID[k])} `).join('')}end, '{name}', upper(left(coalesce(p_name, ''), 1)) || substr(coalesce(p_name, ''), 2)), '{what}', coalesce(p_what, '')) $fn$;`);
+out.push(`create or replace function fitting_done(p_key text, p_what text, p_n int, p_held int, p_of int) returns text language sql immutable as $fn$ select replace(replace(replace(replace(case p_key ${
+  (Object.keys(FITTING_DONE) as FittingDone[]).map((k) => `when ${q(k)} then ${q(FITTING_DONE[k])} `).join('')}end, '{what}', coalesce(p_what, '')), '{n}', coalesce(p_n::text, '')), '{held}', coalesce(p_held::text, '')), '{of}', coalesce(p_of::text, '')) $fn$;`);
 /*
  * Ropemaking (`ropework.ts`): the lay-ups and what the skill makes of them,
  * its pace on its own jobs, the rope walk, the bell rope and the lead rope.

@@ -1,6 +1,7 @@
 import type { ActionDef, Target } from './actions';
 import { CURTAINS, RUG_COLOURS, WOVEN_RUG } from './decordefs';
 import { FOUR_POSTER, VASE } from './furnishdefs';
+import { LANTERN_POLE, POLE_COLOURS_SAID, POLE_LANTERNS, WINDOW_SEAT } from './fittingdefs';
 import { DECOR_SAID, rugColours } from './decor';
 import type { Game } from './game';
 import { ARMOUR_BY_ID } from './gear';
@@ -39,7 +40,7 @@ import {
  * tool you are going to get dirty.
  */
 const DYEABLE_ARMOUR = new Set(['cloth', 'leather']);
-export const DYEABLE_ITEMS = new Set(['cloth', 'sack', 'satchel', 'backpack', 'saddle', 'bridle', 'banner', 'flagpole', 'sailing_boat', 'caravel', 'glass', 'folding_screen', CURTAINS, WOVEN_RUG, FOUR_POSTER, VASE]);
+export const DYEABLE_ITEMS = new Set(['cloth', 'sack', 'satchel', 'backpack', 'saddle', 'bridle', 'banner', 'flagpole', 'sailing_boat', 'caravel', 'glass', 'folding_screen', CURTAINS, WOVEN_RUG, FOUR_POSTER, VASE, LANTERN_POLE, WINDOW_SEAT]);
 
 /**
  * The pane a window and a bay window are glazed with, which takes a dye.
@@ -475,6 +476,12 @@ export const DYE_ACTIONS: ActionDef[] = [
         if (cs.length >= RUG_COLOURS) return DECOR_SAID.rugFull;
         return dyeReason(g, dyeLitresFor(it.id), dyeChoice(t), cs[cs.length - 1], g.dyeReach());
       }
+      // A paper lantern pole the same, a lantern a dyeing, up to `POLE_LANTERNS` (`fitting.ts`).
+      if (it.id === LANTERN_POLE) {
+        const cs = rugColours(it);
+        if (cs.length >= POLE_LANTERNS) return POLE_COLOURS_SAID;
+        return dyeReason(g, dyeLitresFor(it.id), dyeChoice(t), cs[cs.length - 1], g.dyeReach());
+      }
       return dyeReason(g, dyeLitresFor(it.id), dyeChoice(t), it.dye, g.dyeReach());
     },
     perform: (t, g) => {
@@ -487,7 +494,7 @@ export const DYE_ACTIONS: ActionDef[] = [
       const one = it.count > 1 ? g.inventory.take(it.uid, 1) : it;
       if (!one) return;
       // A woven rug already dyed takes the colour as its next (`decor.ts`).
-      if (one.id === WOVEN_RUG && one.dye) one.tints = [...(one.tints ?? []), d.hex];
+      if ((one.id === WOVEN_RUG || one.id === LANTERN_POLE) && one.dye) one.tints = [...(one.tints ?? []), d.hex];
       else one.dye = d.hex;
       if (one !== it) g.inventory.addItem(one);
       g.gainSkill('alchemy', 0.3);

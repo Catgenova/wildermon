@@ -282,6 +282,11 @@ import {
 import { MOUNT_SAID } from '../../game/garden';
 import { STAND_SLOTS } from '../../game/decor';
 import { grassEaters, seatsOf } from '../../game/furnish';
+import { benchTreeWords } from '../../game/fitting';
+import {
+  ARCHERY_TARGET, ARROW_BREAK_IN, BOULDER_MOSS_DAYS, LANTERN_POLE, MOOR_REACH, MOORING_POST, MOSS_BOULDER, POLE_LANTERNS, POLE_REACH, PRACTICE_GAIN, SHELF_HOLDS, SPICE_SHELF,
+  STONE_BUST, TARGET_HOLDS, TRAINING_DUMMY, TREE_BENCH, TREE_BENCH_SEATS, WINDOW_SEAT, WINDOW_SEATS,
+} from '../../game/fittingdefs';
 import {
   BIRDBATH, CAIRN, FIREPLACE, FIREPLACE_REACH, FISH_MOUNT, FOOTSTOOL, FOUR_POSTER, FOUR_POSTER_REST, GARDEN_SWING, GAZEBO, HAY_A_DAY, HAY_BALE, HAY_HOLDS, HAY_REACH,
   SIDE_TABLE, SIGN_ARMS, SIGNPOST, STONE_BENCH, SWING_REST, TABLE_HOLDS, TROUGH_CARE, TROUGH_DRINK, TROUGH_HOLDS, TROUGH_REACH, VASE, VASE_FRESH, VASE_HOLDS,
@@ -4471,6 +4476,25 @@ export const NEWS: News[] = [
       `New: rowing under way: ${OAR_DROPS} drops a blade at the catch; whirl pair a blade a stroke, ${SWIRL_SECS} s.`,
       'Without a graphics card: swimming strokes\' splashes, rings treading water, the float\'s strike and a catch only.',
     ],
+  },
+  // The fittings (`fitting.ts`).
+  {
+    n: 612,
+    day: '2026-11-14',
+    lines: () => {
+      const made = (id: string): string => `${itemDef(id).name} (${skillOf(`make_${id}`)}; ${pieceBill(id)})`;
+      return [
+        `New: ${made(LANTERN_POLE)}: ${POLE_LANTERNS} lanterns, dyed one a dyeing; ${POLE_LANTERNS} candles at once; lit, light ${POLE_REACH} tiles at night.`,
+        `New: ${made(MOSS_BOULDER)}: mossed over ${BOULDER_MOSS_DAYS} days; Keep moss: worker scrubs skip it.`,
+        `New: ${made(TREE_BENCH)}: round a ${benchTreeWords()} tree, not felled while it stands; seats ${TREE_BENCH_SEATS}.`,
+        `New: ${made(SPICE_SHELF)}: on a wall; ${SHELF_HOLDS} herbs, a jar each.`,
+        `New: ${made(WINDOW_SEAT)}: in a window, inside; seats ${WINDOW_SEATS}; cushion dyeable.`,
+        `New: ${made(TRAINING_DUMMY)}: Practise, a melee weapon's skill gain ×${PRACTICE_GAIN} a fight's, no damage.`,
+        `New: ${made(ARCHERY_TARGET)}: Shoot, archery gain ×${PRACTICE_GAIN} a fight's; ${TARGET_HOLDS} arrows; Pull arrows, one in ${ARROW_BREAK_IN} broken.`,
+        `New: ${made(MOORING_POST)}: at the water's edge; Tie up a boat within ${MOOR_REACH} tile: helm and lifting its owner's or key holder's only.`,
+        `New: ${made(STONE_BUST)}: Carve, a citizen of its settlement, their head and hair in stone.`,
+      ];
+    },
   },
   // The furnishings (`furnish.ts`).
   {

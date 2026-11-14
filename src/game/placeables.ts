@@ -27,6 +27,7 @@ import {
   teamOf,
   vehicleOf,
   VESSELS,
+  LIFT_REFUSALS,
   type LiquidKind,
   type PlacedFurniture,
 } from './furniture';
@@ -525,6 +526,11 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       // A padlock on her keeps her helm, or the reins, to whoever has its key.
       const shut = g.lockRefusal(f);
       if (shut) return shut;
+      // And a tie to a mooring post keeps it to whoever set her down, or her key (`fitting.ts`).
+      for (const why of LIFT_REFUSALS) {
+        const no = why(g, f);
+        if (no) return no;
+      }
       // A rowing boat does not put out in a gale (`sailing.ts`).
       if (isBoat(f) && !furnitureDef(f.kind).boat?.sail && isGale(g.wind().force)) return GALE_ROW_SAID;
       // A hull asks nothing but that she is still floating.

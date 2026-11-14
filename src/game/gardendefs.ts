@@ -120,7 +120,7 @@ export const CHIME_GAP = 3;
  * (`hang`). Each goes in the row of spots along the side of the tile it faces,
  * as a trellis does.
  */
-export type Mount = 'window' | 'wall' | 'hang' | 'pane' | 'hearth';
+export type Mount = 'window' | 'wall' | 'hang' | 'pane' | 'hearth' | 'sill';
 /** The pieces a hung one hangs from, standing on its tile. */
 export const HANG_FROM: readonly string[] = ['lamp_post', 'lamp_pillar', 'flagpole'];
 
@@ -129,13 +129,15 @@ export const HANG_FROM: readonly string[] = ['lamp_post', 'lamp_pillar', 'flagpo
  * one hangs from (`trellisWallWords`) and the pieces it hangs from: for its
  * item, its recipe and the help.
  */
-export const mountWords = (mount: Mount, wallWords: string, hangFrom: string): string => (mount === 'pane' ? CURTAIN_WHERE : mount === 'hearth' ? HEARTH_WHERE : mount === 'window'
+export const mountWords = (mount: Mount, wallWords: string, hangFrom: string): string => (mount === 'pane' ? CURTAIN_WHERE : mount === 'hearth' ? HEARTH_WHERE : mount === 'sill' ? SILL_WHERE : mount === 'window'
   ? 'Under a window: the outer face of a finished window, ground level, outside a building.'
   : mount === 'wall'
     ? 'On a wall: either face of a finished solid wall, on your storey.'
     : `Hung from an eave or a post: the outer face of a finished ${wallWords} at ground level outside a building, or a tile with a ${hangFrom} on it.`);
 /** Where a fireplace goes, in words (`furnish.ts`). */
 export const HEARTH_WHERE = 'Against a wall, inside a building: either face of a finished solid wall, on your storey.';
+/** Where a window seat goes, in words (`fitting.ts`). */
+export const SILL_WHERE = 'In a window, inside a building: the inner face of a finished window, on your storey.';
 /** Where a hedge goes, in words. */
 export const HEDGE_WHERE = 'Along one side of its tile, outside a building, ground level.';
 /** Why a plaque or a stand with something on show is not picked up (`garden_said('showing')`). */

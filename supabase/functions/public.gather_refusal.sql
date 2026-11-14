@@ -14,6 +14,10 @@ begin
   if p_action = 'cut_down' then
     -- It may have come down since this was asked for; do not swing at air.
     if here not in (tile_id('Tree'), tile_id('Bush')) then return 'No tree or bush here.'; end if;
+    -- Not with a tree bench round it (`fitting.ts`).
+    if exists (select 1 from placed b where b.world_id = p_world and b.kind = 'furniture' and b.sub = tree_bench_kind() and b.x = tx and b.y = ty) then
+      return fitting_said('benchRound', null, null);
+    end if;
   elsif p_action = 'forage' then
     if not t.forage then return 'Nothing grows here worth looking through.'; end if;
     if is_foraged(p_world, tx, ty, 'forage') then return 'Already searched. ' || ready_in(p_world, tx, ty, 'forage'); end if;

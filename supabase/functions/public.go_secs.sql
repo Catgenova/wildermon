@@ -5,7 +5,7 @@ CREATE OR REPLACE FUNCTION public.go_secs(p_action text, p_base double precision
  LANGUAGE sql
  IMMUTABLE
 AS $function$
-  select case when is_fight(p_action)
+  select case when is_fight(practice_as(p_action))
               then greatest(action_floor() / action_pace(), p_base * (1 - p_skill / 140) * p_control) * p_burden
               else act_duration(p_base, p_skill, p_tool_ql, p_control) end
 $function$
