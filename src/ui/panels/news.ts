@@ -4422,7 +4422,7 @@ export const NEWS: News[] = [
     ],
   },
   {
-    n: 590,
+    n: 591,
     day: '2026-11-14',
     lines: () => {
       const said = (...clips: string[]): string => listed([...ACTION_BY_ID.values()].filter((a) => clips.includes(clipOfJob(a.id) ?? '') && a.id !== 'unhitch_team').map((a) => (a.id === 'enchant_statue' ? `${a.label} (statue)` : a.label)));
@@ -4430,6 +4430,19 @@ export const NEWS: News[] = [
         `New: animated on the sculpted body (was: a placeholder gesture). Winch handle, both hands: ${said('crank', 'crank-back')}. Key turned in the lock: ${said('key')}. Shafts taken up: ${said('cart')}. Step up onto the vehicle: ${said('board')}. Bell rope pulled: ${said('bell')}. Stake overhead, driven in: ${said('totem')}. Hand to the altar: ${said('bauble')}. Palms out: ${said('enchant')}.`,
         `Changed: ${ACTION_BY_ID.get('unhitch_team')?.label}: the tack clip (was: a placeholder gesture).`,
         'Changed: bell: rope hung from a lever down the front of the frame (was: from the clapper, under the bell).',
+      ];
+    },
+  },
+  {
+    n: 590,
+    day: '2026-11-14',
+    lines: () => {
+      const jobs = (...clips: string[]): number => [...ACTION_BY_ID.keys()].filter((id) => clips.includes(clipOfJob(id) ?? '')).length;
+      const name = (id: string): string => itemDef(id).name.toLowerCase();
+      return [
+        `New: picking animated on the sculpted body (was: a placeholder gesture). Fruit and sprouts, one hand overhead: ${jobs('pick-high')} jobs. Grapes, both hands at the head: ${jobs('pick-grapes')}. Honey, crouched at the ${name('skep')}: ${jobs('take-honey')}.`,
+        `New: reading animated, the thing read in hand, jobs: ${name('book')} ${jobs('read-book')}, ${name('rune_tablet')} ${jobs('read-tablet')}, ${name('cooking_recipe')} and ${name('enchant_formula')} ${jobs('read-sheet')}, ${name('drawn_map')} ${jobs('read-map')} (was: a placeholder gesture).`,
+        `New: ${name('lamp_post')} and ${name('lamp_pillar')} animated, both hands overhead, on the toes: ${jobs('lamp-fit', 'lamp-take', 'lamp-candle', 'lamp-light', 'lamp-douse')} jobs; ${name('lantern')}, ${name('candle')} and a lit taper in hand (was: a placeholder gesture).`,
       ];
     },
   },

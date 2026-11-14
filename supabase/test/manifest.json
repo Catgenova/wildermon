@@ -373,6 +373,12 @@
     "why": "These jobs played the placeholder gesture. Each now plays its own clip (the winch turned both ways, the padlock's key, a cart's shafts, climbing aboard, the team's tack, the bell's rope, the stake driven in, a bauble set, palms out to a statue), from every facing on both bodies, the one-handed ones mirrored where worked left-handed; both hands where the clip puts them through every run; a go fitted to the job's length; and with Animations Off, the still pose."
   },
   {
+    "file": "supabase/test/reachclips.ts",
+    "title": "Picking, reading and the lanterns: each job plays its clip, the feet planted, the hands on what they reach and hold",
+    "shard": 1,
+    "why": "Fourteen jobs played the placeholder gesture: picking fruit, a sprout, grapes and honey, reading a book, a rune tablet, a recipe, a formula and a map, and the five jobs at a lantern post. Each now plays its own clip, from every facing (its mirror from the left-handed ones), on both bodies: the feet do not slide, the other hand stays on the book's page, the tablet's runes or the sheet's and the map's far edge, no hand goes behind the chest, and his hands reach up to the foot of a lantern on a post."
+  },
+  {
     "file": "supabase/test/fxmarks.ts",
     "title": "A mark on a clip fires once as the body's clip time passes it",
     "shard": 1,
