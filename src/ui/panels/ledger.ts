@@ -1,6 +1,7 @@
 import type { Game } from '../../game/game';
 import { itemDef, ITEM_DEFS, rarityOf } from '../../game/items';
 import { Repaint } from '../repaint';
+import { kit, kitBody, kitEmpty, kitSearch } from '../kit';
 
 /** How the ledger may be put in order. */
 type SortKey = 'best' | 'made' | 'name' | 'rare' | 'recent';
@@ -34,11 +35,9 @@ export class LedgerPanel {
     private readonly game: Game,
     private readonly showing: () => boolean,
   ) {
-    host.classList.add('inv-body');
-    this.search = document.createElement('input');
-    this.search.type = 'search';
-    this.search.className = 'panel-search';
-    this.search.placeholder = 'Search made items';
+    kitBody(host, 'inv-body');
+    const search = kitSearch('Search made items');
+    this.search = search.input;
     this.search.addEventListener('input', () => {
       this.query = this.search.value.trim().toLowerCase();
       this.repaint.force();
@@ -52,10 +51,10 @@ export class LedgerPanel {
       this.repaint.force();
       this.render();
     });
-    const bar = document.createElement('div');
-    bar.className = 'panel-bar';
-    const sel = document.createElement('select');
-    sel.className = 'panel-select';
+    const bar = kit(document.createElement('div'), 'bar');
+    bar.classList.add('panel-bar');
+    const sel = kit(document.createElement('select'), 'field');
+    sel.classList.add('panel-select');
     sel.title = 'Sort order';
     for (const [key, label] of SORTS) {
       const opt = document.createElement('option');
@@ -74,7 +73,7 @@ export class LedgerPanel {
     order.append('Sort', sel);
     bar.append(order);
     const head = document.createElement('div');
-    head.className = 'inv-head ledger-head';
+    head.className = 'inv-head ledger-head rc-colhead';
     for (const [label, title] of [
       ['Thing', 'Item made'],
       ['Made', 'Count made'],
@@ -87,10 +86,10 @@ export class LedgerPanel {
       head.append(cell);
     }
     this.list = document.createElement('div');
-    this.list.className = 'inv-list';
+    this.list.className = 'inv-list rc-scroll';
     this.footer = document.createElement('div');
-    this.footer.className = 'inv-footer';
-    host.append(this.search, bar, head, this.list, this.footer);
+    this.footer.className = 'inv-footer rc-foot';
+    host.append(search.el, bar, head, this.list, this.footer);
     game.events.on('inventory', () => this.repaint.ask());
     game.events.on('skill', () => this.repaint.ask());
     this.render();
@@ -128,19 +127,13 @@ export class LedgerPanel {
     if (!this.repaint.changed(now, sig)) return;
     this.list.replaceChildren();
     if (!Object.keys(led).length) {
-      const empty = document.createElement('div');
-      empty.className = 'inv-empty';
-      empty.textContent = 'Nothing made yet. Lists everything crafted.';
-      this.list.append(empty);
+      this.list.append(kitEmpty('Nothing made yet. Lists everything crafted.'));
       this.footer.textContent = '';
       return;
     }
     for (const id of ids) this.list.append(this.row(id));
     if (!ids.length) {
-      const none = document.createElement('div');
-      none.className = 'inv-empty';
-      none.textContent = `No match: “${this.search.value.trim()}”. Esc clears.`;
-      this.list.append(none);
+      this.list.append(kitEmpty(`No match: “${this.search.value.trim()}”. Esc clears.`));
     }
     this.footer.textContent = `${totals.kinds} kinds · ${totals.made} things · ${totals.rare} rare · best ever QL ${totals.best.toFixed(1)}`;
   }
@@ -148,7 +141,7 @@ export class LedgerPanel {
   private row(id: string): HTMLDivElement {
     const rec = this.game.ledger[id];
     const row = document.createElement('div');
-    row.className = 'inv-row ledger-row';
+    row.className = 'inv-row ledger-row rc-row';
     const name = document.createElement('span');
     name.className = 'inv-name';
     name.textContent = ITEM_DEFS[id]?.name ?? id;

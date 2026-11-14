@@ -12,6 +12,7 @@ import { RUG_PATTERNS, WOVEN_RUG, type RugPattern } from '../../game/decordefs';
 import { FIGURE_KINDS } from '../../game/garden';
 import { SPECIES } from '../../game/creatures';
 import type { UIWindow } from '../windows';
+import { kitBody, kitButton, kitEmpty, kitPressed, kitSearch, kitSection, made } from '../kit';
 import { Repaint } from '../repaint';
 
 /** The most goes one ask runs to: the island's `rpc_act` takes no more than this at once. */
@@ -104,11 +105,9 @@ export class CraftPanel {
   private readonly queue: QueueView;
 
   constructor(private readonly win: UIWindow, private readonly game: Game) {
-    win.body.classList.add('inv-body', 'craft-body');
-    this.search = document.createElement('input');
-    this.search.type = 'search';
-    this.search.className = 'panel-search';
-    this.search.placeholder = 'Search recipes: item, skill, material…';
+    kitBody(win.body, 'inv-body', 'craft-body');
+    const search = kitSearch('Search recipes: item, skill, material…');
+    this.search = search.input;
     this.search.addEventListener('input', () => {
       this.query = this.search.value.trim().toLowerCase();
       this.only = null;
@@ -122,14 +121,13 @@ export class CraftPanel {
       this.only = null;
       this.render();
     });
-    const head = document.createElement('div');
-    head.className = 'craft-head';
+    const head = made('div', 'bar', 'craft-head');
     // What the counts count, set with each draw since Settings can change it.
     const hint = document.createElement('span');
     hint.className = 'craft-hint';
     this.hint = hint;
     const toggle = document.createElement('label');
-    const box = document.createElement('input');
+    const box = made('input', 'check');
     box.type = 'checkbox';
     box.id = 'craft-ready-only';
     this.readyBox = box;
@@ -139,7 +137,7 @@ export class CraftPanel {
     });
     toggle.append(box, document.createTextNode('Makeable only'));
     const lockToggle = document.createElement('label');
-    const lockBox = document.createElement('input');
+    const lockBox = made('input', 'check');
     lockBox.type = 'checkbox';
     lockBox.id = 'craft-show-locked';
     lockBox.checked = !!this.kept.showLocked;
@@ -147,13 +145,11 @@ export class CraftPanel {
     lockBox.addEventListener('change', () => this.setShowLocked(lockBox.checked));
     lockToggle.append(lockBox, document.createTextNode('Show locked'));
     head.append(hint, toggle, lockToggle);
-    this.list = document.createElement('div');
-    this.list.className = 'inv-list';
-    this.footer = document.createElement('div');
-    this.footer.className = 'inv-footer';
+    this.list = made('div', 'scroll', 'inv-list');
+    this.footer = made('div', 'foot', 'inv-footer');
     this.tree = new RecipeTree(game, recipesMaking, (item) => this.jump(item));
     this.queue = new QueueView(game);
-    win.body.append(this.search, head, this.list, this.queue.el, this.footer);
+    win.body.append(search.el, head, this.list, this.queue.el, this.footer);
     // Scrolled out from under it, or the window shut, a part's tree goes with it.
     this.list.addEventListener('scroll', () => this.tree.hide(), { passive: true });
     // Every action gains a skill, so this fires several times a second while
@@ -320,10 +316,7 @@ export class CraftPanel {
       for (const [title, ids] of [['Pinned', this.kept.pinned], ['Recent', this.kept.recent.filter((id) => !this.kept.pinned.includes(id))]] as Array<[string, string[]]>) {
         const rows = ids.map((id) => RECIPE_BY_ID.get(id)).filter((r): r is Recipe => !!r && wanted(r));
         if (!rows.length) continue;
-        const header = document.createElement('div');
-        header.className = 'inv-group craft-kept';
-        header.textContent = title;
-        this.list.append(header);
+        this.list.append(kitSection(title, 'inv-group craft-kept'));
         for (const r of rows) this.list.append(this.row(r, statuses.get(r)!, stockOf(r)));
       }
     }
@@ -332,10 +325,7 @@ export class CraftPanel {
       // What can be made now sits above what still needs gathering.
       rows.sort((a, b) => Number(statuses.get(b)?.ready ?? false) - Number(statuses.get(a)?.ready ?? false));
       if (!rows.length) continue;
-      const header = document.createElement('div');
-      header.className = 'inv-group';
-      header.textContent = cat;
-      this.list.append(header);
+      this.list.append(kitSection(cat));
       for (const r of rows) {
         const st = statuses.get(r)!;
         this.list.append(this.row(r, st, stockOf(r)));
@@ -344,12 +334,9 @@ export class CraftPanel {
       }
     }
     if (!shown) {
-      const empty = document.createElement('div');
-      empty.className = 'inv-empty';
-      empty.textContent = this.query || this.only
+      this.list.append(kitEmpty(this.query || this.only
         ? `No recipe matches “${this.search.value.trim()}”${this.readyOnly ? ' (makeable only)' : ''}. Esc clears.`
-        : `Nothing makeable with ${atHand}. Untick "Makeable only" to see requirements.`;
-      this.list.append(empty);
+        : `Nothing makeable with ${atHand}. Untick "Makeable only" to see requirements.`));
     }
     if (hiddenLocked) {
       const more = document.createElement('button');
@@ -381,7 +368,7 @@ export class CraftPanel {
 
   private row(r: Recipe, st: RecipeStatus, stock: readonly CraftStock[]): HTMLDivElement {
     const row = document.createElement('div');
-    row.className = 'craft-row' + (st.ready ? '' : ' locked') + (st.unread ? ' craft-unread' : '');
+    row.className = 'craft-row rc-row' + (st.ready ? '' : ' locked') + (st.unread ? ' craft-unread' : '');
     row.dataset.recipe = r.id;
     const name = document.createElement('div');
     name.className = 'craft-name';
@@ -520,8 +507,7 @@ export class CraftPanel {
     // carried. Asked for: an oak chest from a pack that holds pine too.
     const choices = materialChoices(this.game, r, stock);
     if (st.material && choices.length > 1) {
-      const pick = document.createElement('select');
-      pick.className = 'craft-of';
+      const pick = made('select', 'field', 'craft-of');
       pick.title = 'Material';
       for (const m of choices) {
         const o = document.createElement('option');
@@ -549,47 +535,31 @@ export class CraftPanel {
     const buttons = document.createElement('div');
     buttons.className = 'craft-btns';
     const pinned = this.kept.pinned.includes(r.id);
-    const pin = document.createElement('button');
-    pin.type = 'button';
-    pin.className = 'tb-btn tb-small craft-pin' + (pinned ? ' tb-on' : '');
-    pin.textContent = pinned ? '★' : '☆';
-    pin.title = pinned ? 'Unpin' : 'Pin to top';
-    pin.setAttribute('aria-pressed', String(pinned));
-    pin.addEventListener('click', () => this.togglePin(r.id));
+    const pin = kitButton(pinned ? '★' : '☆', { kind: 'icon', also: 'tb-btn tb-small craft-pin', title: pinned ? 'Unpin' : 'Pin to top', onClick: () => this.togglePin(r.id) });
+    if (pinned) kitPressed(pin, true);
+    else pin.setAttribute('aria-pressed', 'false');
     buttons.append(pin);
-    const craft = document.createElement('button');
-    craft.type = 'button';
-    craft.className = 'tb-btn tb-small';
-    craft.textContent = 'Craft';
+    const craft = kitButton('Craft', { kind: 'go' });
     craft.disabled = !st.ready;
     // Greyed, it says why in the island's own words.
     if (!st.ready) craft.title = recipeReason(r, this.game, undefined, stock) ?? '';
     craft.addEventListener('click', () => this.craft(r, 1));
     buttons.append(craft);
     // On the shopping list: everything it takes, down to what is gathered, against what is at hand.
-    const listBtn = document.createElement('button');
-    listBtn.type = 'button';
-    listBtn.className = 'tb-btn tb-small';
-    listBtn.textContent = 'List';
-    listBtn.title = `Add to shopping list: full bill down to raw materials, against pack and stores within ${CRAFT_REACH} tiles`;
-    listBtn.addEventListener('click', () => void this.askList(r));
+    const listBtn = kitButton('List', {
+      title: `Add to shopping list: full bill down to raw materials, against pack and stores within ${CRAFT_REACH} tiles`,
+      onClick: () => void this.askList(r),
+    });
     buttons.append(listBtn);
     if (st.ready) {
-      const to = document.createElement('button');
-      to.type = 'button';
-      to.className = 'tb-btn tb-small';
-      to.textContent = 'To…';
-      to.title = `Make until you hold N ${lower(r.result)} (pack, bags and stores within ${reachFor(this.game, r)} tiles); stops when materials run out`;
-      to.addEventListener('click', () => void this.askTarget(r));
+      const to = kitButton('To…', {
+        title: `Make until you hold N ${lower(r.result)} (pack, bags and stores within ${reachFor(this.game, r)} tiles); stops when materials run out`,
+        onClick: () => void this.askTarget(r),
+      });
       buttons.append(to);
     }
     if (st.max > 1) {
-      const all = document.createElement('button');
-      all.type = 'button';
-      all.className = 'tb-btn tb-small';
-      all.textContent = `× ${st.max}`;
-      all.title = `Make ${st.max} in a row`;
-      all.addEventListener('click', () => this.craft(r, st.max));
+      const all = kitButton(`× ${st.max}`, { title: `Make ${st.max} in a row`, onClick: () => this.craft(r, st.max) });
       buttons.append(all);
     }
     row.append(name, buttons, needs);
@@ -734,8 +704,7 @@ export class CraftPanel {
 
   /** The choice of pattern on a woven rug's row. */
   private patternPick(): HTMLElement {
-    const pick = document.createElement('select');
-    pick.className = 'craft-of';
+    const pick = made('select', 'field', 'craft-of');
     pick.title = 'Pattern';
     for (const k of RUG_PATTERNS) {
       const o = document.createElement('option');
@@ -771,8 +740,7 @@ export class CraftPanel {
       none.textContent = 'No kind seen (field guide)';
       return none;
     }
-    const pick = document.createElement('select');
-    pick.className = 'craft-of';
+    const pick = made('select', 'field', 'craft-of');
     pick.title = 'Kind: seen in your field guide';
     const chosen = this.figureKind();
     for (const k of kinds) {

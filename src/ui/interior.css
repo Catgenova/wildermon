@@ -1,0 +1,593 @@
+/*
+ * The inside of every window: one kit.
+ *
+ * A window's frame (src/ui/runecut-frames.ts) is its own: the band round it,
+ * its title bar and title buttons, and its niche. Everything inside the rim is
+ * made of the classes below, the same in every window, so a row, a heading, a
+ * button, a tab, a field, a table, an empty list, a badge and a meter read the
+ * same in the pack as in the ledger. The frame lends the interior one colour,
+ * `--frame-accent` (src/ui/tokens.css; each frame's own in `FRAME_ACCENT`),
+ * and it is used for two things only: the wash behind the selected row and the
+ * marker under the active tab. Plain-stone frames (Settings, Frames) change
+ * nothing in here.
+ *
+ * Sizes are the scale's (`--rc-fs-1` to `--rc-fs-5`), gaps the spacing's
+ * (`--rc-sp-1` to `--rc-sp-4`), writing the semantic set (`--t-text`,
+ * `--t-dim`, `--t-accent-ink`, `--t-good`, `--t-bad`, `--t-warn`, `--t-info`).
+ *
+ * Built by src/ui/kit.ts, whose helpers put a kit class beside the class the
+ * element had (`inv-row rc-row`). Every rule here is Runecut's: Classic has
+ * none of them, and reads the element's own class as it always did, so it is
+ * the same to the pixel. The one exception is `.rc-search`'s wrapper, which
+ * Classic lays out as if it were not there.
+ */
+
+/* One scroll area, one scrollbar ------------------------------------------------ */
+
+/*
+ * Thin, a thumb of the lilac shade in a groove of the recessed stone. The
+ * standard properties are what Chrome and Firefox draw; Safari draws the
+ * `::-webkit-scrollbar` ones, the same colours.
+ */
+:root[data-ui='runecut'] * {
+  scrollbar-width: thin;
+  scrollbar-color: var(--rc-shade) var(--rc-stone-2);
+}
+
+:root[data-ui='runecut'] ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+:root[data-ui='runecut'] ::-webkit-scrollbar-track,
+:root[data-ui='runecut'] ::-webkit-scrollbar-corner {
+  background: var(--rc-stone-2);
+  box-shadow: inset 1px 1px 2px color-mix(in srgb, var(--rc-edge-ink) 30%, transparent);
+}
+
+:root[data-ui='runecut'] ::-webkit-scrollbar-thumb {
+  border: 2px solid var(--rc-stone-2);
+  border-radius: 4px;
+  background: var(--rc-shade);
+}
+
+/*
+ * The window's body: the one padding inside the rim, and nothing of its own
+ * that scrolls. Across, the padding is on what is in it rather than on the
+ * body, so a body that is a size container (`.items-body`'s columns) measures
+ * the window's full width (`.rc-body > *`, last in this file so that it
+ * stands over each part's own margin).
+ */
+:root[data-ui='runecut'] .rc-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rc-sp-2);
+  padding: var(--rc-pad) 0;
+  overflow: hidden;
+  color: var(--t-text);
+  font-size: var(--rc-fs-4);
+}
+
+/* The one element in a window that scrolls: room kept for its bar whether or not it shows, so columns stay put. */
+:root[data-ui='runecut'] .rc-scroll {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--rc-sp-1);
+  min-height: 0;
+  margin: 0;
+  padding: var(--rc-sp-2);
+  overflow: hidden auto;
+  scrollbar-gutter: stable;
+  background: color-mix(in srgb, var(--rc-deep) 35%, transparent);
+  box-shadow: inset 0 1px 2px color-mix(in srgb, var(--rc-edge-ink) 25%, transparent);
+}
+
+:root[data-ui='runecut'] .rc-scroll > * {
+  flex-shrink: 0;
+}
+
+/* A strip of controls: search, order, buttons. */
+:root[data-ui='runecut'] .rc-bar {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--rc-sp-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+:root[data-ui='runecut'] .rc-bar > .rc-search {
+  flex: 1 1 120px;
+}
+
+/* The status line at a window's foot: counts and totals. */
+:root[data-ui='runecut'] .rc-foot {
+  flex: 0 0 auto;
+  padding: var(--rc-sp-1) var(--rc-sp-2) 0;
+  border: 0;
+  background: none;
+  box-shadow: inset 0 1px 0 var(--rc-shade);
+  color: var(--t-dim);
+  font-size: var(--rc-fs-2);
+}
+
+/* Meaning, for writing: `data-meaning` on a foot, a tag or a meter (`meaning` in src/ui/kit.ts). */
+:root[data-ui='runecut'] :is(.rc-foot, .rc-tag)[data-meaning='good'] { color: var(--t-good); }
+:root[data-ui='runecut'] :is(.rc-foot, .rc-tag)[data-meaning='warn'] { color: var(--t-warn); font-weight: 600; }
+:root[data-ui='runecut'] :is(.rc-foot, .rc-tag)[data-meaning='bad'] { color: var(--t-bad); font-weight: 600; }
+:root[data-ui='runecut'] :is(.rc-foot, .rc-tag)[data-meaning='info'] { color: var(--t-info); }
+:root[data-ui='runecut'] :is(.rc-foot, .rc-tag)[data-meaning='accent'] { color: var(--t-accent-ink); }
+
+/* Rows ------------------------------------------------------------------------ */
+
+/*
+ * A row sits one step down, on the recessed stone, with a small diamond notch
+ * at its head. A rare thing's notch is in its rarity's colour and a size
+ * larger at each step, so rarity is not told by the colour of its name alone.
+ */
+:root[data-ui='runecut'] .rc-row {
+  position: relative;
+  min-height: 24px;
+  padding: var(--rc-sp-1) var(--rc-sp-3) var(--rc-sp-1) 14px;
+  border: 0;
+  border-radius: 0;
+  background: var(--rc-stone-2);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--rc-shade) 55%, transparent), inset 0 -1px 0 var(--rc-stone-hi);
+  color: var(--t-text);
+  font-size: var(--rc-fs-4);
+  line-height: 1.35;
+}
+
+:root[data-ui='runecut'] .rc-row::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  background: var(--rc-shade);
+  opacity: 0.7;
+  transform: translateY(-50%) rotate(45deg);
+}
+
+:root[data-ui='runecut'] .rc-row:has([data-rare='rare'])::before {
+  background: var(--rc-rare);
+  opacity: 1;
+}
+
+:root[data-ui='runecut'] .rc-row:has([data-rare='supreme'])::before {
+  width: 6px;
+  height: 6px;
+  background: var(--rc-supreme);
+  opacity: 1;
+}
+
+:root[data-ui='runecut'] .rc-row:has([data-rare='fantastic'])::before {
+  width: 7px;
+  height: 7px;
+  background: var(--rc-fantastic);
+  box-shadow: 0 0 0 1px var(--rc-stone-hi);
+  opacity: 1;
+}
+
+:root[data-ui='runecut'] .rc-row [data-rare] {
+  font-weight: 700;
+}
+
+:root[data-ui='runecut'] .rc-row:hover {
+  background: linear-gradient(90deg, var(--t-hover), transparent 80%), var(--rc-stone-2);
+}
+
+/* Selected: the frame's accent, washed behind the row and as a bar at its head. */
+:root[data-ui='runecut'] .rc-row:is(.selected, .rc-on) {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--frame-accent) 34%, transparent), color-mix(in srgb, var(--frame-accent) 12%, transparent)),
+    var(--rc-stone-2);
+  box-shadow: inset 3px 0 0 var(--frame-accent), inset 0 1px 0 color-mix(in srgb, var(--rc-shade) 55%, transparent);
+}
+
+/* Picked (several at once, src/ui/picking.ts), or the one under way now (`rc-now`): the info colour the width of the row, the same in every window. */
+:root[data-ui='runecut'] .rc-row:is(.picked, .rc-now) {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--t-info) 28%, transparent), color-mix(in srgb, var(--t-info) 12%, transparent)),
+    var(--rc-stone-2);
+  box-shadow: inset 3px 0 0 var(--t-info), inset 0 1px 0 color-mix(in srgb, var(--rc-shade) 55%, transparent);
+}
+
+/* Headings -------------------------------------------------------------------- */
+
+/* Column names over a list: its columns line up with the rows' (the scroll area's padding and gutter, the row's). */
+:root[data-ui='runecut'] .rc-colhead {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: var(--rc-sp-1) calc(var(--rc-sp-2) + var(--rc-sp-3)) var(--rc-sp-1) calc(var(--rc-sp-2) + 14px);
+  overflow: hidden;
+  scrollbar-gutter: stable;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  color: var(--t-dim);
+  font-family: var(--rc-label-font);
+  font-size: var(--rc-fs-2);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: none;
+}
+
+/* A section's name, ruled across to the edge. */
+:root[data-ui='runecut'] .rc-section {
+  display: flex;
+  align-items: center;
+  gap: var(--rc-sp-3);
+  margin: 0;
+  padding: var(--rc-sp-3) var(--rc-sp-2) var(--rc-sp-1);
+  border: 0;
+  background: none;
+  box-shadow: none;
+  color: var(--t-accent-ink);
+  font-family: var(--rc-label-font);
+  font-size: var(--rc-fs-3);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: none;
+}
+
+:root[data-ui='runecut'] .rc-section::after {
+  content: '';
+  flex: 1 1 auto;
+  height: 1px;
+  background: linear-gradient(90deg, var(--rc-shade), transparent);
+}
+
+/* Buttons --------------------------------------------------------------------- */
+
+/*
+ * A small tile cut from the stone, corners cut and edged with shade; pointing
+ * at it lights the groove along its foot. On: the rune's gold warming it. Go:
+ * the one thing a window is for, lit through. Danger: written in bad's colour.
+ * Icon: square.
+ */
+:root[data-ui='runecut'] .rc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--rc-sp-2);
+  min-height: 22px;
+  margin: 0;
+  padding: 0 var(--rc-sp-3);
+  border: 0;
+  border-radius: 0;
+  background: linear-gradient(var(--rc-stone-hi), var(--rc-stone-2) 30%);
+  box-shadow: inset 0 0 0 1px var(--rc-shade);
+  clip-path: polygon(4px 0, calc(100% - 4px) 0, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0 calc(100% - 4px), 0 4px);
+  color: var(--t-text);
+  font-family: inherit;
+  font-size: var(--rc-fs-3);
+  font-weight: 500;
+  line-height: 1;
+  filter: none;
+  cursor: pointer;
+}
+
+:root[data-ui='runecut'] .rc-btn:focus-visible {
+  outline-offset: -4px;
+}
+
+:root[data-ui='runecut'] .rc-btn:hover:not(:disabled) {
+  box-shadow: inset 0 0 0 1px var(--rc-shade), inset 0 -2px 0 var(--rc-rune);
+  color: var(--rc-strong);
+}
+
+:root[data-ui='runecut'] .rc-btn:is(.rc-on, .tb-on) {
+  background: linear-gradient(var(--rc-stone-hi), color-mix(in srgb, var(--rc-rune-gold) 30%, var(--rc-stone-2)) 80%);
+  box-shadow: inset 0 0 0 1px var(--rc-shade), inset 0 -2px 0 var(--rc-rune);
+  color: var(--t-text);
+}
+
+:root[data-rc='night'][data-ui='runecut'] .rc-btn:is(.rc-on, .tb-on) {
+  background: linear-gradient(var(--rc-stone-hi), color-mix(in srgb, var(--rc-rune) 22%, var(--rc-stone-2)) 80%);
+}
+
+:root[data-ui='runecut'] .rc-btn.rc-go {
+  background: linear-gradient(var(--rc-rune-gold), var(--rc-rune));
+  box-shadow: inset 0 0 0 1px var(--rc-rune-deep);
+  color: var(--rc-edge-ink);
+  font-weight: 700;
+}
+
+:root[data-ui='runecut'] .rc-btn.rc-go:hover:not(:disabled) {
+  box-shadow: inset 0 0 0 1px var(--rc-rune-deep), inset 0 -2px 0 var(--rc-rune-deep);
+  color: var(--rc-edge-ink);
+}
+
+:root[data-ui='runecut'] .rc-btn.rc-danger {
+  color: var(--t-bad);
+}
+
+:root[data-ui='runecut'] .rc-btn.rc-danger:hover:not(:disabled) {
+  box-shadow: inset 0 0 0 1px var(--rc-shade), inset 0 -2px 0 var(--t-bad-line);
+  color: var(--t-bad);
+}
+
+:root[data-ui='runecut'] .rc-btn.rc-icon {
+  width: 22px;
+  padding: 0;
+}
+
+:root[data-ui='runecut'] .rc-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* A button in a row is the row's height. */
+:root[data-ui='runecut'] .rc-row .rc-btn {
+  min-height: 18px;
+  padding-inline: var(--rc-sp-2);
+  font-size: var(--rc-fs-2);
+}
+
+/* Tabs ------------------------------------------------------------------------ */
+
+/* Set into a line across the window; the open one a step down, the frame's accent along its foot. */
+:root[data-ui='runecut'] .rc-tabs {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: var(--rc-sp-1);
+  margin: 0;
+  padding: 0 var(--rc-sp-2);
+  border: 0;
+  background: none;
+  box-shadow: inset 0 -1px 0 var(--rc-shade), 0 1px 0 var(--rc-stone-hi);
+}
+
+:root[data-ui='runecut'] .rc-tab {
+  margin: 0;
+  padding: var(--rc-sp-2) var(--rc-sp-3) calc(var(--rc-sp-2) + 1px);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  clip-path: none;
+  color: var(--t-dim);
+  font-family: var(--rc-label-font);
+  font-size: var(--rc-fs-4);
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  text-transform: none;
+  cursor: pointer;
+}
+
+:root[data-ui='runecut'] .rc-tab:hover:not(:disabled) {
+  box-shadow: inset 0 -2px 0 var(--rc-shade);
+  color: var(--t-text);
+}
+
+:root[data-ui='runecut'] .rc-tab:is(.rc-on, .tb-on, [aria-selected='true']) {
+  background: var(--rc-stone-2);
+  box-shadow: inset 0 -2px 0 var(--frame-accent), inset 1px 0 0 var(--rc-shade), inset -1px 0 0 var(--rc-shade);
+  color: var(--t-text);
+}
+
+/* Fields ---------------------------------------------------------------------- */
+
+/* Cut into the stone, a step down, with an edge of shade: text, number and a choice alike. */
+:root[data-ui='runecut'] .rc-field {
+  min-width: 0;
+  min-height: 24px;
+  margin: 0;
+  padding: var(--rc-sp-1) var(--rc-sp-3);
+  border: 0;
+  border-radius: 0;
+  background: var(--rc-stone-2);
+  box-shadow:
+    inset 0 1px 2px color-mix(in srgb, var(--rc-edge-ink) 35%, transparent),
+    inset 0 0 0 1px var(--rc-shade),
+    0 1px 0 var(--rc-stone-hi);
+  color: var(--t-text);
+  font-family: inherit;
+  font-size: var(--rc-fs-4);
+  outline-offset: -2px;
+}
+
+:root[data-ui='runecut'] .rc-field:focus {
+  background: color-mix(in srgb, var(--rc-stone-2) 60%, var(--rc-stone-hi));
+}
+
+:root[data-ui='runecut'] .rc-field::placeholder {
+  color: var(--t-dim);
+  opacity: 0.8;
+}
+
+:root[data-ui='runecut'] select.rc-field {
+  padding-inline: var(--rc-sp-2);
+}
+
+/* A search box: a field with the one glass at its end. Classic lays the wrapper out as though it were not there. */
+.rc-search {
+  display: contents;
+}
+
+:root[data-ui='runecut'] .rc-search {
+  position: relative;
+  display: flex;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+:root[data-ui='runecut'] .rc-search > .rc-field {
+  flex: 1 1 auto;
+  padding-right: 26px;
+}
+
+:root[data-ui='runecut'] .rc-search > .rc-field::-webkit-search-cancel-button {
+  display: none;
+}
+
+:root[data-ui='runecut'] .rc-search::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: var(--rc-sp-3);
+  width: 13px;
+  height: 13px;
+  background: var(--t-dim);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='6.5' cy='6.5' r='4.6' fill='none' stroke='black' stroke-width='1.8'/%3E%3Cpath d='M10 10l4.2 4.2' stroke='black' stroke-width='2.2' stroke-linecap='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+:root[data-ui='runecut'] .rc-check {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: var(--rc-rune-deep);
+}
+
+/* Tables ---------------------------------------------------------------------- */
+
+:root[data-ui='runecut'] .rc-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 var(--rc-sp-1);
+  color: var(--t-text);
+  font-size: var(--rc-fs-4);
+  font-variant-numeric: tabular-nums;
+}
+
+:root[data-ui='runecut'] .rc-table th {
+  padding: var(--rc-sp-1) var(--rc-sp-3);
+  box-shadow: inset 0 -1px 0 var(--rc-shade);
+  color: var(--t-dim);
+  font-family: var(--rc-label-font);
+  font-size: var(--rc-fs-2);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-align: left;
+}
+
+:root[data-ui='runecut'] .rc-table td {
+  padding: var(--rc-sp-1) var(--rc-sp-3);
+  background: var(--rc-stone-2);
+}
+
+:root[data-ui='runecut'] .rc-table tr:hover td {
+  background: linear-gradient(var(--t-hover), var(--t-hover)), var(--rc-stone-2);
+}
+
+/* An empty list, and a list with nothing that matches. */
+:root[data-ui='runecut'] .rc-empty {
+  margin: 0;
+  padding: var(--rc-sp-4) var(--rc-sp-3);
+  background: none;
+  box-shadow: none;
+  color: var(--t-dim);
+  font-size: var(--rc-fs-4);
+  font-style: italic;
+}
+
+/* Badges ---------------------------------------------------------------------- */
+
+/* A count: a pill of the rune's deep amber. */
+:root[data-ui='runecut'] .rc-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 var(--rc-sp-2);
+  border-radius: 8px;
+  background: var(--rc-rune-deep);
+  color: var(--rc-stone);
+  font-family: var(--rc-label-font);
+  font-size: var(--rc-fs-1);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* A tag: a word on a chip of the recessed stone, in its meaning's colour. */
+:root[data-ui='runecut'] .rc-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 16px;
+  padding: 0 var(--rc-sp-2);
+  border-radius: 0;
+  background: var(--rc-stone-2);
+  box-shadow: inset 0 0 0 1px var(--rc-shade);
+  color: var(--t-dim);
+  font-family: var(--rc-label-font);
+  font-size: var(--rc-fs-1);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+/* Meters ---------------------------------------------------------------------- */
+
+/*
+ * One bar for every measure: a channel cut into the stone, pointed at its
+ * ends, and what it measures as light lying in it, coloured by what it means.
+ * Warn is striped and bad cross-hatched, so it reads without its colour.
+ */
+:root[data-ui='runecut'] .rc-meter {
+  position: relative;
+  flex: 0 0 auto;
+  height: 9px;
+  margin: 0;
+  padding: 1px 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: var(--rc-stone-2);
+  box-shadow:
+    inset 0 1px 1px color-mix(in srgb, var(--rc-edge-ink) 45%, transparent),
+    0 1px 0 var(--rc-stone-hi);
+  clip-path: polygon(3px 0, calc(100% - 3px) 0, 100% 50%, calc(100% - 3px) 100%, 3px 100%, 0 50%);
+}
+
+:root[data-ui='runecut'] .rc-meter-fill {
+  height: 100%;
+  border-radius: 0;
+  background: var(--t-good-fill);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--rc-rune-white) 45%, transparent);
+}
+
+:root[data-ui='runecut'] .rc-meter[data-meaning='warn'] .rc-meter-fill {
+  background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--rc-edge-ink) 30%, transparent) 0 2px, transparent 2px 6px), var(--t-warn-fill);
+}
+
+:root[data-ui='runecut'] .rc-meter[data-meaning='bad'] .rc-meter-fill {
+  background:
+    repeating-linear-gradient(135deg, color-mix(in srgb, var(--rc-edge-ink) 35%, transparent) 0 2px, transparent 2px 4px),
+    repeating-linear-gradient(45deg, color-mix(in srgb, var(--rc-edge-ink) 35%, transparent) 0 2px, transparent 2px 4px),
+    var(--t-bad-fill);
+}
+
+:root[data-ui='runecut'] .rc-meter[data-meaning='info'] .rc-meter-fill {
+  background: var(--rc-teal);
+}
+
+:root[data-ui='runecut'] .rc-meter[data-meaning='accent'] .rc-meter-fill {
+  background: var(--rc-rune);
+}
+
+/* A mark across the channel: where something starts. */
+:root[data-ui='runecut'] .rc-meter-mark {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--rc-edge-ink);
+}
+
+/* What is in a window's body stands the one padding in from the rim (`.rc-body`). */
+:root[data-ui='runecut'] .rc-body > * {
+  margin-inline: var(--rc-pad);
+}

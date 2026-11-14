@@ -96,7 +96,8 @@ export function qualityCell(game: Game, item: Item): HTMLSpanElement {
  */
 export function headRow(last: { label: string; title?: string; className?: string }): HTMLDivElement {
   const head = document.createElement('div');
-  head.className = 'inv-head';
+  // The kit's column names (src/ui/interior.css) over the kit's rows.
+  head.className = 'inv-head rc-colhead';
   const cols: Array<[string, string, string]> = [
     ['Item', '', 'Name and stack count'],
     ['QL', 'inv-ql', 'Quality (QL, max 100). Tools: effective quality after the arrow.'],

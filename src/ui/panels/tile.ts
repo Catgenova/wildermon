@@ -6,6 +6,7 @@ import { Repaint } from '../repaint';
 import { groundReading, tileUses, yieldLines } from '../tileinfo';
 import type { Tooltip } from '../tooltip';
 import type { UIWindow } from '../windows';
+import { kit, kitBody, kitEmpty, made } from '../kit';
 
 /** What the window is looking at, and everything that could be done to it. */
 export type TileMenuSource = (pick: Pick) => { title: string; facts?: string[]; entries: MenuItem[] };
@@ -59,15 +60,14 @@ export class TilePanel {
     private readonly source: TileMenuSource,
     private readonly tooltip: Tooltip,
   ) {
-    win.body.classList.add('inv-body');
+    kitBody(win.body, 'inv-body');
     this.head = document.createElement('div');
     this.head.className = 'tile-head';
-    this.titleEl = document.createElement('span');
-    this.titleEl.className = 'tile-head-name';
+    this.titleEl = made('span', 'section', 'tile-head-name');
     // What the thing is *for*, which is a different question from what can be
     // done to it this moment — and the list below already answers that one.
-    this.info = document.createElement('button');
-    this.info.className = 'tile-info';
+    this.info = made('button', 'btn', 'tile-info');
+    this.info.classList.add('rc-icon');
     this.info.type = 'button';
     this.info.textContent = 'i';
     this.info.title = 'Uses';
@@ -100,9 +100,8 @@ export class TilePanel {
     this.factsEl.className = 'tile-head-facts';
     this.factsEl.hidden = true;
     this.head.append(this.titleEl, this.info, this.factsEl);
-    this.list = document.createElement('div');
     // `tile-list`: every label on one edge whether or not its row has a key, and every reason read in full.
-    this.list.className = 'inv-list tile-list';
+    this.list = made('div', 'scroll', 'inv-list tile-list');
     win.body.append(this.head, this.list);
     // The list is only as good as the world it was built from, so rebuild it
     // whenever the world, the pack or the job in hand changes.
@@ -186,10 +185,7 @@ export class TilePanel {
       this.info.hidden = true;
       this.reading = null;
       this.factsEl.hidden = true;
-      const empty = document.createElement('div');
-      empty.className = 'inv-empty';
-      empty.textContent = 'Click a tile to list its actions.';
-      this.list.append(empty);
+      this.list.append(kitEmpty('Click a tile to list its actions.'));
       return;
     }
     const { title, facts, entries } = this.source(this.pick);
@@ -208,10 +204,7 @@ export class TilePanel {
     }));
     this.factsEl.hidden = !facts?.length;
     if (!entries.length) {
-      const none = document.createElement('div');
-      none.className = 'inv-empty';
-      none.textContent = 'No actions.';
-      this.list.append(none);
+      this.list.append(kitEmpty('No actions.'));
       return;
     }
     // The first ten things that can actually be done get a number key, in the
@@ -219,7 +212,8 @@ export class TilePanel {
     // one of them, and neither is one that says why it cannot be done.
     this.keyed = entries.filter((e) => !e.disabled && e.onSelect).slice(0, KEYS.length);
     const keyFor = new Map(this.keyed.map((e, i) => [e, KEYS[i]]));
-    this.list.append(...buildMenuRows(entries, 0, { keyOf: (item) => keyFor.get(item), folds: this.folds }));
+    // The menu's own rows, each a row of the kit here (src/ui/interior.css).
+    this.list.append(...buildMenuRows(entries, 0, { keyOf: (item) => keyFor.get(item), folds: this.folds }).map((r) => kit(r, 'row')));
     // Its figures move while you watch — a beast's trade climbs as it works,
     // and ground is picked clean and grows back.
     if (this.noteOpen) this.showNote();

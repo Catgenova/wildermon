@@ -6,33 +6,16 @@
  * all of which starts by nailing the body down at `overflow: hidden` so that a
  * canvas can have the screen. A sign-up form wants to scroll on a phone.
  *
- * So the page wears Runecut by day, the game's own look: the colours below
- * are src/style.css's `--rc-*` tokens and its answers for the `--ui-*` and
- * `--t-*` names that src/ui/creator.css reads, restated; the box is the Faith
+ * So the page wears Runecut by day, the game's own look: its `--rc-*` colours
+ * are the game's own, from src/ui/tokens.css (linked before this), and below
+ * are its answers for the `--ui-*` and `--t-*` names that src/ui/creator.css
+ * reads, restated; the box is the Faith
  * window, its slab, frame and niche painted by Runecut's own painters
  * (src/landing/faithbox.ts); its title, tabs, fields and buttons are cut as
  * the game's lintel, `.log-tab` and `.tb-btn` are. Behind it all is the cove,
  * drawn by the game's renderer (src/landing/backdrop.ts).
  */
 :root {
-  --rc-stone: #f2e7d3;
-  --rc-stone-2: #e8dcc6;
-  --rc-stone-hi: #fffcf4;
-  --rc-shade: #aa9fac;
-  --rc-shade-2: #8f879c;
-  --rc-carve: #5d5464;
-  --rc-ink: #463d50;
-  --rc-edge-ink: #5f5148;
-  --rc-rune: #d68c34;
-  --rc-rune-deep: #a7631a;
-  --rc-rune-ink: #824c0f;
-  --rc-rune-gold: #ffd98c;
-  --rc-moss-ink: #3f6632;
-  --rc-ember: #933f30;
-  --rc-deep: #d8cbb5;
-  --rc-field: #fbf6ec;
-  --rc-shadow: rgba(70, 61, 80, 0.3);
-  --rc-strong: #2b2333;
   --rc-title-font: 'Cormorant Unicase', 'Cormorant SC', Georgia, 'Times New Roman', serif;
   --rc-label-font: 'Alegreya Sans SC', 'Alegreya Sans', 'Segoe UI', system-ui, sans-serif;
 

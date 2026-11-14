@@ -6,6 +6,7 @@ import { STORE_SEEN } from '../../game/keep';
 import { CRAFT_REACH } from '../../game/recipes';
 import { pannierCap, pannierName, panniersOffered, pannierUnits } from '../../game/panniers';
 import type { UIWindow } from '../windows';
+import { kitBody, kitButton, kitEmpty, kitPressed, kitSearch, made, meaning } from '../kit';
 
 /**
  * Where everything is.
@@ -58,11 +59,9 @@ export class StoresPanel {
     /** A pack beast's panniers (`panniers.ts`). */
     private readonly openPannier?: (id: number) => void,
   ) {
-    win.body.classList.add('inv-body');
-    this.search = document.createElement('input');
-    this.search.type = 'search';
-    this.search.className = 'panel-search';
-    this.search.placeholder = 'Search stores';
+    kitBody(win.body, 'inv-body');
+    const search = kitSearch('Search stores');
+    this.search = search.input;
     this.search.addEventListener('input', () => {
       this.query = this.search.value.trim().toLowerCase();
       this.render();
@@ -74,26 +73,20 @@ export class StoresPanel {
       this.query = '';
       this.render();
     });
-    const bar = document.createElement('div');
-    bar.className = 'panel-bar';
-    this.nearBtn = document.createElement('button');
-    this.nearBtn.type = 'button';
-    this.nearBtn.className = 'tb-btn tb-small';
-    this.nearBtn.textContent = `Within ${CRAFT_REACH} tiles`;
-    this.nearBtn.title = `Only stores within ${CRAFT_REACH} tiles (what crafting uses with Use stores within reach on)`;
-    this.nearBtn.setAttribute('aria-pressed', 'false');
-    this.nearBtn.addEventListener('click', () => {
-      this.near = !this.near;
-      this.nearBtn.classList.toggle('tb-on', this.near);
-      this.nearBtn.setAttribute('aria-pressed', String(this.near));
-      this.render();
+    const bar = made('div', 'bar', 'panel-bar');
+    this.nearBtn = kitButton(`Within ${CRAFT_REACH} tiles`, {
+      title: `Only stores within ${CRAFT_REACH} tiles (what crafting uses with Use stores within reach on)`,
+      onClick: () => {
+        this.near = !this.near;
+        kitPressed(this.nearBtn, this.near);
+        this.render();
+      },
     });
+    this.nearBtn.setAttribute('aria-pressed', 'false');
     bar.append(this.nearBtn);
-    this.list = document.createElement('div');
-    this.list.className = 'inv-list';
-    this.footer = document.createElement('div');
-    this.footer.className = 'inv-footer';
-    win.body.append(this.search, bar, this.list, this.footer);
+    this.list = made('div', 'scroll', 'inv-list');
+    this.footer = made('div', 'foot', 'inv-footer');
+    win.body.append(search.el, bar, this.list, this.footer);
     // Drawn at once while it shows; shut, when it is next opened.
     game.events.on('crate', () => this.soon());
     game.events.on('world', () => this.soon());
@@ -170,19 +163,14 @@ export class StoresPanel {
     shown.sort((a, b) => this.far(a) - this.far(b));
     this.list.replaceChildren();
     if (!all.length) {
-      const empty = document.createElement('div');
-      empty.className = 'inv-empty';
-      empty.textContent = 'No placed crate, chest or cart. Placed stores are listed here with contents and distance.';
-      this.list.append(empty);
+      this.list.append(kitEmpty('No placed crate, chest or cart. Placed stores are listed here with contents and distance.'));
       this.footer.textContent = '';
+      meaning(this.footer, null);
       return;
     }
     if (!shown.length) {
-      const empty = document.createElement('div');
-      empty.className = 'inv-empty';
-      empty.textContent = `No match in ${this.near ? `${pool.length} stores within ${CRAFT_REACH} tiles` : `${all.length} stores`}: “${this.search.value.trim()}”.`
-        + `${this.game.ask && !this.near ? ` Island: contents shown only within ${STORE_SEEN} tiles.` : ''} Esc clears.`;
-      this.list.append(empty);
+      this.list.append(kitEmpty(`No match in ${this.near ? `${pool.length} stores within ${CRAFT_REACH} tiles` : `${all.length} stores`}: “${this.search.value.trim()}”.`
+        + `${this.game.ask && !this.near ? ` Island: contents shown only within ${STORE_SEEN} tiles.` : ''} Esc clears.`));
     }
     for (const h of shown.slice(0, 60)) this.list.append(this.row(h));
     const held = all.reduce((n, h) => n + h.units, 0);
@@ -194,11 +182,12 @@ export class StoresPanel {
       ? `${found} matching in ${shown.length} ${shown.length === 1 ? 'store' : 'stores'}${this.near ? ` within ${CRAFT_REACH} tiles` : ''}`
       : `${all.length} stores · ${held} of ${room} things${full ? ` · ${full} full` : ''}`;
     this.footer.classList.toggle('inv-over', full > 0 && full === all.length);
+    meaning(this.footer, full > 0 && full === all.length ? 'bad' : null);
   }
 
   private row(h: Holder): HTMLDivElement {
     const row = document.createElement('div');
-    row.className = 'store-row';
+    row.className = 'store-row rc-row';
     const name = document.createElement('div');
     name.className = 'store-name';
     const d = this.far(h);
@@ -217,10 +206,7 @@ export class StoresPanel {
       ? `${hits.length ? '' : 'holds '}${list.map((it) => `${it.count} × ${itemName(it).toLowerCase()}`).join(', ')}${(hits.length ? hits : h.items).length > 6 ? ' …' : ''}`
       : 'Empty';
     if (hits.length) what.classList.add('store-hit');
-    const go = document.createElement('button');
-    go.type = 'button';
-    go.className = 'tb-btn tb-small';
-    go.textContent = d < 2.4 ? 'Open' : 'Walk there';
+    const go = kitButton(d < 2.4 ? 'Open' : 'Walk there');
     go.title = d < 2.4 ? `Open the ${h.name.toLowerCase()}` : `Walk to the ${h.name.toLowerCase()}, ${Math.round(d)} tiles`;
     go.addEventListener('click', (e) => {
       e.stopPropagation();

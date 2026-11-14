@@ -75,14 +75,14 @@ export class QueueView {
     this.head.className = 'cq-head';
     this.fold = document.createElement('button');
     this.fold.type = 'button';
-    this.fold.className = 'inv-group cq-fold';
+    this.fold.className = 'inv-group cq-fold rc-section';
     this.title = document.createElement('span');
     this.title.className = 'cq-title';
     this.fold.append(this.title);
     this.fold.addEventListener('click', () => this.setFolded(!this.folded));
     this.go = document.createElement('button');
     this.go.type = 'button';
-    this.go.className = 'tb-btn tb-small';
+    this.go.className = 'tb-btn tb-small rc-btn rc-go';
     this.go.textContent = 'Resume';
     this.go.title = 'Resume the actions paused by walking, from the top';
     this.go.addEventListener('click', () => this.game.resumeQueue());
@@ -244,7 +244,7 @@ export class QueueView {
   /** A row: `at` is its place among the jobs waiting, or -1 for the job in hand. */
   private row(def: ActionDef, goes: number, use: { uses: Use[]; tool?: string } | undefined, at: number, of?: number): HTMLLIElement {
     const li = document.createElement('li');
-    li.className = at < 0 ? 'cq-row cq-now' : 'cq-row';
+    li.className = at < 0 ? 'cq-row cq-now rc-row rc-now' : 'cq-row rc-row';
     const grip = document.createElement('span');
     grip.className = 'cq-grip';
     grip.setAttribute('aria-hidden', 'true');
@@ -310,7 +310,7 @@ export class QueueView {
       const btn = (cls: 'up' | 'down' | 'drop', text: string, label: string, off: boolean, order: () => number[]): void => {
         const b = document.createElement('button');
         b.type = 'button';
-        b.className = `tb-btn tb-small cq-${cls}`;
+        b.className = `tb-btn tb-small rc-btn rc-icon cq-${cls}`;
         b.textContent = text;
         b.title = label;
         b.setAttribute('aria-label', label);

@@ -6528,3 +6528,50 @@ export function paintFrame(g: Ctx, w: number, h: number, kind: string, o: FrameO
   }
 }
 
+
+/* ---- the accent a frame lends its interior ------------------------------------- */
+
+/**
+ * The one colour each frame lends the inside of its window (src/ui/interior.css):
+ * the wash behind the selected row and the marker under the active tab, and
+ * nothing else. Each is one of the frame's own materials, as painted above:
+ * the sack's twine, the crate's brass, the bench's cherry, the pillars' gem and
+ * so on. A frame not named here, and plain stone, lend stone's own rune amber
+ * (`--frame-accent` in src/ui/tokens.css).
+ */
+export const FRAME_ACCENT: Record<string, RGB> = {
+  burlap: H('#a7834f'),
+  crate: BRASS.body,
+  bench: WOOD.cherry,
+  runestone: GEM.body,
+  guild: IRON.body,
+  altar: GLASS.deep,
+  parchment: SKY.deep,
+  treasure: X_RED,
+  stall: AWNING.green,
+  scroll: BLUE_MARBLE.body,
+  book: RIBBON.body,
+  letter: SKETCH,
+  palisade: BANNER_BLUE.body,
+  wicker: WILD_WOOD.body,
+  linen: SAGE.body,
+  armoury: METAL_TONE.steel,
+  turf: TURF_MOSS.body,
+  ironbound: GOLD,
+  chain: METAL_TONE.iron,
+  strap: H(GEM_FACETS.blue[1]),
+  toolbelt: BLUE_MARBLE.deep,
+};
+
+/** Writing laid on a frame's accent: the darker or the paler of the stone's two strongest inks, whichever stands further from it. */
+export function accentInk(c: RGB): string {
+  const lum = (v: RGB): number => {
+    const ch = v.map((x) => {
+      const s = x / 255;
+      return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2];
+  };
+  const ratio = (a: RGB, b: RGB): number => (Math.max(lum(a), lum(b)) + 0.05) / (Math.min(lum(a), lum(b)) + 0.05);
+  return ratio(c, H('#2b2333')) >= ratio(c, H('#fffbea')) ? '#2b2333' : '#fffbea';
+}

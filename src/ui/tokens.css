@@ -1,0 +1,123 @@
+/*
+ * The interface's tokens, for every page that wears Runecut: the game
+ * (src/index.html) and the landing page (src/account.html) both link this
+ * before their own stylesheet, so the stone is one stone on both.
+ *
+ * The `--rc-*` colours are Runecut's stone by day and by night. Below them,
+ * the interior kit's scale (src/ui/interior.css): its five font sizes, four
+ * spacings, the one padding inside a window's rim, and the accent a frame
+ * lends its interior. Nothing in Classic reads the kit's tokens: Classic's
+ * rules keep their own literals, so it looks as it always has.
+ */
+
+/*
+ * Runecut: the stone of the runestones, the plinth, the rune gate and the rune
+ * lantern, as the interface. Each value is traced to the colour it is drawn
+ * with in src/render, so a window and a stone beside it are the same stone.
+ *
+ * Day is the lit face. `--rc-rune` is the light in the grooves and is for
+ * fills and glows only: as text on stone it is 2.2:1. Amber writing uses
+ * `--rc-rune-ink` (5.7:1 on the panel face, 4.9:1 on the darkest of its
+ * painted mottling), and focus rings `--rc-rune-deep`.
+ */
+:root {
+  --rc-stone: #f2e7d3;
+  --rc-stone-2: #e8dcc6;
+  --rc-stone-hi: #fffcf4;
+  --rc-shade: #aa9fac;
+  --rc-shade-2: #8f879c;
+  --rc-carve: #5d5464;
+  --rc-ink: #463d50;
+  --rc-edge-ink: #5f5148;
+  --rc-rune: #d68c34;
+  --rc-rune-deep: #a7631a;
+  --rc-rune-ink: #824c0f;
+  --rc-rune-gold: #ffd98c;
+  --rc-rune-white: #fffbea;
+  --rc-moss: #7fa36c;
+  --rc-moss-ink: #3f6632;
+  --rc-moss-pale: #c3dea6;
+  --rc-lichen: #b8bfa4;
+  --rc-teal: #425c66;
+  --rc-rose: #c4a2a7;
+  --rc-rose-ink: #7a4a6a;
+  --rc-ember: #933f30;
+  --rc-ember-fill: #b4584a;
+  --rc-rare: #285d84;
+  --rc-supreme: #6b4699;
+  --rc-fantastic: #7a4e08;
+  --rc-backdrop: rgba(70, 61, 80, 0.1);
+  --rc-glow: 0 0 0 rgba(255, 217, 140, 0);
+  /* Day-only shapes of the same stone: the floor of a groove, a field cut to write in, and the shadow a plate throws. */
+  --rc-deep: #d8cbb5;
+  --rc-field: #fbf6ec;
+  --rc-shadow: rgba(70, 61, 80, 0.3);
+  --rc-strong: #2b2333;
+  --rc-fat: #c9b47a;
+}
+
+/*
+ * Night: the same stone under the island's night, as the renderer lays it
+ * (`NIGHT_WASH` in src/render/nightwash.ts: rgb(12, 20, 44) at 68%), so the
+ * windows after dark are the stones after dark. The surfaces are the day's
+ * mixed into the wash; the writing is chosen to read on them, at least 4.5:1
+ * on the face and on the recessed rows.
+ */
+:root[data-rc='night'] {
+  --rc-stone: color-mix(in srgb, #f2e7d3, rgb(12 20 44) 68%);
+  --rc-stone-2: color-mix(in srgb, #e8dcc6, rgb(12 20 44) 68%);
+  --rc-stone-hi: color-mix(in srgb, #fffcf4, rgb(12 20 44) 68%);
+  --rc-shade: color-mix(in srgb, #aa9fac, rgb(12 20 44) 68%);
+  --rc-shade-2: color-mix(in srgb, #8f879c, rgb(12 20 44) 50%);
+  --rc-deep: color-mix(in srgb, #d8cbb5, rgb(12 20 44) 74%);
+  --rc-field: color-mix(in srgb, #fbf6ec, rgb(12 20 44) 72%);
+  --rc-carve: #e2dae8;
+  --rc-ink: #fbf6ea;
+  --rc-edge-ink: #1f1a24;
+  --rc-rune: #e7a14a;
+  --rc-rune-deep: #f2b968;
+  --rc-rune-ink: #f9cf93;
+  --rc-moss: #9cc488;
+  --rc-moss-ink: #c2e4ae;
+  --rc-lichen: #8d947c;
+  --rc-teal: #b5dde3;
+  --rc-rose: #d8b6ba;
+  --rc-rose-ink: #efd6d9;
+  --rc-ember: #fbcabf;
+  --rc-ember-fill: #e07a68;
+  --rc-rare: #b8dcf5;
+  --rc-supreme: #e2cff7;
+  --rc-fantastic: #f8d68e;
+  --rc-backdrop: rgba(10, 8, 14, 0.35);
+  --rc-glow: 0 0 10px rgba(255, 217, 140, 0.55);
+  --rc-shadow: rgba(0, 0, 0, 0.55);
+  --rc-strong: #fffbea;
+  --rc-fat: #e0d9a8;
+}
+
+/*
+ * The interior kit's scale (src/ui/interior.css). Every font size inside a
+ * window is one of five; every gap one of four; and a window's content stands
+ * `--rc-pad` in from its rim.
+ */
+:root {
+  --rc-fs-1: 10px;
+  --rc-fs-2: 11px;
+  --rc-fs-3: 12px;
+  --rc-fs-4: 13px;
+  --rc-fs-5: 15px;
+  --rc-sp-1: 2px;
+  --rc-sp-2: 4px;
+  --rc-sp-3: 8px;
+  --rc-sp-4: 12px;
+  --rc-pad: var(--rc-sp-3);
+  /*
+   * The one colour a frame lends its interior: the wash behind the selected
+   * row and the marker under the active tab, and nothing else. Stone's own
+   * rune amber unless the window's frame sets its own (`FRAME_ACCENT` in
+   * src/ui/runecut-frames.ts, put on the window by src/ui/runecut-dress.ts).
+   * `--frame-accent-ink` is writing laid on the accent itself.
+   */
+  --frame-accent: var(--rc-rune);
+  --frame-accent-ink: var(--rc-strong);
+}

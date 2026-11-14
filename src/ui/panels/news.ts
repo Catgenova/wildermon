@@ -4496,6 +4496,16 @@ export const NEWS: News[] = [
       ];
     },
   },
+  // One interior kit for every window (src/ui/interior.css, src/ui/kit.ts); the first windows moved onto it.
+  {
+    n: 611,
+    day: '2026-11-14',
+    lines: () => [
+      'Changed: windows, Runecut: one scrollbar; one row, heading, button, tab, field, badge and meter style. First: pack, crates, stores, tile, crafting, ledger.',
+      "Changed: windows, Runecut: selected row and open tab: the frame's own colour (pack: twine; crates and stores: brass; crafting: cherry; tile: moss; journal: ribbon blue).",
+      'Changed: Settings, Frames: Stone: inside of windows unchanged (was: pack and crates plainer).',
+    ],
+  },
   // The furnishings (`furnish.ts`).
   {
     n: 610,
