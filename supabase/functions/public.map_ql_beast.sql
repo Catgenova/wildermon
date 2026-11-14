@@ -4,5 +4,5 @@ CREATE OR REPLACE FUNCTION public.map_ql_beast(p_health double precision)
  RETURNS double precision
  LANGUAGE sql
 AS $function$
-  select greatest(1, least(100, (12 + p_health / 8) * (0.8 + random() * 0.4)))
+  select greatest(1, least(100, (12 + p_health / creature_health_mul() / 8) * (0.8 + random() * 0.4)))
 $function$

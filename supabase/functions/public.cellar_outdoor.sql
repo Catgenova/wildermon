@@ -4,4 +4,4 @@ CREATE OR REPLACE FUNCTION public.cellar_outdoor(p_sub text)
  RETURNS boolean
  LANGUAGE sql
  IMMUTABLE
-AS $function$ select coalesce(p_sub = any(array['stall', 'mailbox', 'creature_crate', 'planter', 'trellis', 'hive', 'skep', 'fish_pond', 'lamp_post', 'lamp_pillar', 'rune_lantern', 'flagpole', 'rose_arch', 'stone_rose_arch', 'lavender_arch', 'stone_lavender_arch', 'herb_box', 'wisteria_pergola', 'arbour_bench', 'well', 'fountain', 'trash_crate', 'grave']::text[]), false) $function$
+AS $function$ select coalesce(p_sub = any(array['stall', 'mailbox', 'creature_crate', 'planter', 'trellis', 'hive', 'skep', 'fish_pond', 'lamp_post', 'lamp_pillar', 'rune_lantern', 'flagpole', 'rose_arch', 'stone_rose_arch', 'lavender_arch', 'stone_lavender_arch', 'window_box', 'hanging_basket', 'herb_box', 'hedge', 'wisteria_pergola', 'arbour_bench', 'trophy_plaque', 'wind_chime', 'well', 'fountain', 'trash_crate', 'grave']::text[]), false) $function$

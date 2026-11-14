@@ -28,6 +28,19 @@ export const wornShare = (dmg: number): number => Math.max(WORN_FLOOR, 1 - dmg /
 /** What a creature's attack takes off a player it lands on, as a share of a life, before armour (`creatures.ts`). */
 export const BLOW_SHARE = 0.012;
 /**
+ * Every kind's base health and base attack, over the figures written in its row of `SPECIES`: wild and tamed, wildermon
+ * and monster alike. Asked for: "Reduce monster base damage figures by 60% but increase monster base hp by 3x", for
+ * every creature. Applied once, where `SPECIES` is built (`creatures.ts`), so everything that reads a kind's `health` or
+ * `attack` -- the island's `species_def` among them -- has the figure in force. The island's `creature_health_mul`,
+ * `creature_attack_mul`.
+ */
+export const CREATURE_HEALTH_MUL = 3;
+export const CREATURE_ATTACK_MUL = 0.4;
+/** A row's base health as the game uses it, and any amount of a creature's health written against it, to the hundredth. */
+export const creatureHealth = (written: number): number => Math.round(written * CREATURE_HEALTH_MUL * 100) / 100;
+/** A row's base attack as the game uses it, to the hundredth (the island keeps it as a `real`). */
+export const creatureAttack = (written: number): number => Math.round(written * CREATURE_ATTACK_MUL * 100) / 100;
+/**
  * How near the middle of a thing standing on the ground you must be to work
  * on it where it stands, in tiles: the island's `placed_in_reach` default.
  */

@@ -35,6 +35,8 @@ export interface IslandPlaced {
   ash: number | null;
   /** The enchantment set into it where it stands (`enchanting.ts`), absent for none. */
   enchant?: Enchant | null;
+  /** Motes infused into it where it stands (`infusion.ts`), absent for none. */
+  infuse?: { el: string; str: number; until: number } | null;
   lit: boolean | null;
   dmg: number | null;
   name: string | null;

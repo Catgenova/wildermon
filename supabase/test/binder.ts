@@ -455,7 +455,7 @@ check(`Lock: held at ${pct(fx('lock', 'hold'))} of a Snare's hold`, near(Number(
   const [ratio, line] = parts('SHATTER');
   check(`Shatter: shatter at ${pct(fx('shatter', 'shatter'))}, and ${pct(fx('shatter', 'held'))} on one held`,
     near(Number(ratio), fx('shatter', 'shatter'), 1e-4) && near(Number(island('SHATTER:HELD')), fx('shatter', 'held'), 1e-4)
-      && /^Shatter: ogre −\d+, \d+\/170\.$/.test(line),
+      && new RegExp(`^Shatter: ogre −\\d+, \\d+/${SPECIES.ogre.health}\\.$`).test(line),
     `${island('SHATTER')} / ${island('SHATTER:HELD')}`);
 }
 check('the casts teach the Binder\'s trade and binding', island('LEARN') === 'true|true', island('LEARN'));
@@ -495,7 +495,7 @@ check('the casts teach the Binder\'s trade and binding', island('LEARN') === 'tr
   const [ratio, took, line] = parts('BRITTLE:SAID');
   check(`and a shatter on it says what came off, ${pct(fx('brittle', 'taken') - 1)} more included, and what it is down to`,
     near(Number(ratio), fx('brittle', 'taken'), 1e-4)
-      && line === `Shatter: ${OX} −${Math.round(Number(took))}, ${Math.ceil(80 - Number(took))}/80.`,
+      && line === `Shatter: ${OX} −${Math.round(Number(took))}, ${Math.ceil(SPECIES.roxxen.health - Number(took))}/${SPECIES.roxxen.health}.`,
     island('BRITTLE:SAID'));
   const [left, health, dmg] = parts('BRITTLE:BLOW');
   check('and so does a blow: what it is down to is what it has left, not what the blow was', left === health && Number(dmg) > 0,

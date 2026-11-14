@@ -45,7 +45,7 @@ begin
      * moment they were standing. Both are on the item being consumed here,
      * and both come across now.
      */
-    insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by, facing, rare, material, creature, mark, dye, enchant, dmg, engraving, garden)
+    insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by, facing, rare, material, creature, mark, dye, enchant, dmg, engraving, infuse, garden)
     values (p_world, case p_action when 'place_smelter' then 'smelter'
                                    when 'place_kiln' then 'kiln' else 'furniture' end, sub,
             (p_target->>'x')::int, (p_target->>'y')::int, ax, ay,
@@ -60,7 +60,7 @@ begin
             -- And its enchantment and its wear, which it keeps standing and takes up again (`enchanting.ts`).
             it.enchant, it.dmg,
             -- And a memorial stone's line, which it reads standing as it did in the pack.
-            it.engraving,
+            it.engraving, it.infuse,
             -- And a garden piece's flowers, shape or kind, as they were in the pack (`garden.ts`).
             it.garden)
     returning id into made;
@@ -174,7 +174,7 @@ begin
     -- And its colour, back on the thing in the pack.
     if p.dye is not null then update item set dye = p.dye where id = made; end if;
     -- And its enchantment and its wear, back on the thing in the pack.
-    update item set enchant = p.enchant, dmg = p.dmg where id = made;
+    update item set enchant = p.enchant, dmg = p.dmg, infuse = p.infuse where id = made;
     -- And a memorial stone's line, carried in the pack as it stood.
     if p.engraving is not null then update item set engraving = p.engraving where id = made; end if;
     -- And a garden piece's flowers, shape or kind, carried in the pack as it stood (`garden.ts`).

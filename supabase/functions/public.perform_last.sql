@@ -175,6 +175,8 @@ begin
     for e in select cr.*, coalesce(sp.speed, 1) as pace
              from creature cr join species_def sp on sp.id = cr.species
              where cr.world_id = p_world and cr.mode = 'deed' and cr.hitched_to is null
+               -- Within hearing of the bell (`bell_heard_by`).
+               and sqrt(power(cr.to_x - pc.cx, 2) + power(cr.to_y - pc.cy, 2)) <= bell_heard_by(p_world, p_uid)
                and cr.keeper in (select m.uid from deed_member m
                                  where m.world_id = p_world and m.founder = r.founded_by
                                  union select r.founded_by)
@@ -191,13 +193,15 @@ begin
     for e in select m.uid from deed_member m where m.world_id = p_world and m.founder = r.founded_by
              union select r.founded_by
     loop
-      if e.uid <> p_uid then
+      if e.uid <> p_uid and exists (select 1 from player q where q.world_id = p_world and q.uid = e.uid
+                                      and sqrt(power(q.x - pc.cx, 2) + power(q.y - pc.cy, 2)) <= bell_heard_by(p_world, p_uid)) then
         perform tell(p_world, e.uid, 'The bell rings out over ' || r.name || ' from ' || pc.x || ', ' || pc.y || '.', 'system');
       end if;
     end loop;
     perform journal_note(p_world, p_uid, 'rang');
-    perform tell(p_world, p_uid, 'Rang: ' || lower(placed_name(pc)) || ' at ' || pc.x || ', ' || pc.y || '. Settlement workers called: '
-      || v_n || '. Citizens of ' || r.name || ' notified.', 'event');
+    perform tell(p_world, p_uid, 'Rang: ' || lower(placed_name(pc)) || ' at ' || pc.x || ', ' || pc.y || '. Heard within '
+      || floor(bell_heard_by(p_world, p_uid) + 0.5)::int || ' tiles. Settlement workers called: '
+      || v_n || '. Citizens of ' || r.name || ' in hearing notified.', 'event');
 
   elsif p_action = 'sleep' then
     select * into pc from placed where world_id = p_world and id = (p_target->>'id')::bigint;
@@ -223,11 +227,12 @@ begin
   elsif p_action = 'pair_creature' then
     c := target_creature(p_world, p_target);
     mate := mate_for(p_world, c);
-    if c.world_id is null or mate.id is null or pair_refuses(p_world, c, mate) is not null then return; end if;
+    if c.world_id is null or mate.id is null or pair_refuses(p_world, c, mate) is not null
+       or cross_refuses(p_world, p_uid, c, mate) is not null then return; end if;
     if c.sex = 'female' then dam := c; sire := mate; else dam := mate; sire := c; end if;
     v_skill := skill_of(p_world, p_uid, 'animal_husbandry');
     v_care := (dam.care + sire.care) / 2;
-    v_took := random() < breed_chance(v_skill, v_care);
+    v_took := random() < pair_chance(v_skill, v_care, cross_of(dam.species, sire.species) is not null);
     perform skill_raise(p_world, p_uid, 'animal_husbandry', try_gain(v_took, breed_gain()));
     if not v_took then
       -- A failed pairing costs both of them a rest, but only half of one.
@@ -240,6 +245,7 @@ begin
     perform pair_them(p_world, dam.id, sire.id, v_skill, p_uid, p_target->>'sex');
     perform journal_note(p_world, p_uid, 'paired');
     perform wtell(p_world, p_uid, 'Paired: ' || sire.name || ' with ' || dam.name
+      || coalesce(' (cross: ' || (select x.name from species_def x where x.id = cross_of(dam.species, sire.species)) || ')', '')
       || '. Due in ' || clock_left(gestation_of(pk(p_world, p_uid, 'breed:gestation', 1), dam))
       || '. Traits between them: '
       || trait_names((select array_agg(distinct t) from unnest(sire.traits || dam.traits) t))

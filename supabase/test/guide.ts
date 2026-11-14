@@ -48,6 +48,7 @@ import {
   EVOLVE_AT, footing, HERD_REACH, levelSkill, MONSTER_CAP, MONSTER_KEEP_OFF, PULL_DEFAULT, seasonSays, SPECIES, WATER_RANGE, WILD_RANGE, type Creature, type SpeciesDef,
 } from '../../src/game/creatures';
 import { psql, ok, bad, check } from './harness';
+import { HYBRID_HARDY } from '../../src/game/hybridlist';
 /** A Woolabee's level skill, which sets its stage (`creatureLevel`): a skill it does not level by sets none. */
 const WOOL_LEVEL = levelSkill(SPECIES.woola)!;
 import {
@@ -65,13 +66,18 @@ const sorted = (xs: Iterable<string>): string => [...xs].sort().join(',');
 console.log('--- the pages');
 const KINDS = Object.values(SPECIES);
 const KEEPABLE = KINDS.filter((d) => !d.monster);
-check('a page for every kind there is, once each, in the book\'s order (gathering, crafting, content, the monsters last)',
+check('a page for every kind there is, once each, in the book\'s order (gathering, crafting, content, the hybrids, the monsters last)',
   sorted(guidePages().map((d) => d.id)) === sorted(Object.keys(SPECIES)) && guidePages().length === KINDS.length
   && guidePages().map((d) => d.id).join() === GUIDE_ORDER.join(), `${guidePages().length} pages`);
 check('the order names every kind there is and nothing else, once each',
   sorted(GUIDE_ORDER) === sorted(Object.keys(SPECIES)) && new Set(GUIDE_ORDER).size === GUIDE_ORDER.length,
   `${GUIDE_ORDER.length} named of ${KINDS.length}: ${GUIDE_ORDER.filter((id) => !SPECIES[id]).join(',')} / ${Object.keys(SPECIES).filter((id) => !GUIDE_ORDER.includes(id)).join(',')}`);
 check('the monsters last', guidePages().slice(-KINDS.filter((d) => d.monster).length).every((d) => d.monster));
+// Asked for: the hybrids "as a Hybrids group after Content and before the four monsters".
+const HYBRID_PAGES = KINDS.filter((d) => d.hybrid).length;
+check('the hybrids just before the monsters, after every other kind', HYBRID_PAGES > 0
+  && guidePages().slice(-KINDS.filter((d) => d.monster).length - HYBRID_PAGES, -KINDS.filter((d) => d.monster).length).every((d) => d.hybrid)
+  && guidePages().slice(0, -KINDS.filter((d) => d.monster).length - HYBRID_PAGES).every((d) => !d.hybrid && !d.monster), `${HYBRID_PAGES} hybrids`);
 // And a page for each stage after its kind's, under `species:stage` (asked for: "so that every wildermon is shown").
 const ENTRIES = guideEntries();
 const STAGED = guidePages().flatMap((d) => [d.id, ...(d.stages ?? []).map((_, i) => `${d.id}:${i + 1}`)]);
@@ -90,6 +96,11 @@ const GRAZING = Object.values(TILE_DEFS).filter((t) => t.forage).map((t) => t.na
 const where: string[] = [];
 for (const d of KINDS) {
   const lines = whereItLives(d).join(' | ');
+  // A hybrid is never wild, and its page says that and nothing of where the wild puts one (`hybridlist.ts`).
+  if (d.hybrid) {
+    if (lines !== `Never wild: bred only, ${SPECIES[d.hybrid[0]].name} × ${SPECIES[d.hybrid[1]].name}` || whereItLives(d, true).join(' | ') !== lines) where.push(`${d.id} is not said to be never wild`);
+    continue;
+  }
   const want: Array<[string, boolean, boolean]> = [
     ['over a seam', !!d.onOre, lines.includes('vein or coal seam')],
     ['on sand', !!d.onSand, /on: sand/.test(lines)],
@@ -136,9 +147,12 @@ for (const d of KINDS) {
     ['panniers', !!d.pannier, !!d.pannier && text.includes(`Panniers: ${d.pannier.map((n, s) => `${[d.name, ...(d.stages ?? []).map((st) => st.name)][s]} ${n}`).join(', ')} items`)],
     ['a watcher\'s eyes', !!d.sight, text.includes(`Sight for you: ${d.sight} tiles`)],
     ['a light', !!d.glow, text.includes(`Lights ${d.glow} tiles round itself`)],
-    ['its taming', !d.monster, text.includes(`Taming ${d.tameLevel}, base chance ${percent(d.tameChance)} per offering`)],
+    ['its taming', !d.monster && !d.hybrid, text.includes(`Taming ${d.tameLevel}, base chance ${percent(d.tameChance)} per offering`)],
+    // A hybrid's cross in its taming's place (`hybridlist.ts`).
+    ['its cross', !!d.hybrid, !!d.hybrid && text.includes(`Parents: ${SPECIES[d.hybrid[0]].name} (body, first task) × ${SPECIES[d.hybrid[1]].name}`) && text.includes('Infertile')],
     ['that it is not a wildermon', !!d.monster, text.includes('Cannot be tamed, trapped, bred or kept')],
-    ['its body', true, text.includes(`Grown: ${d.health} health, blow ${d.attack} damage`)],
+    // A hybrid's at its vigour (`HYBRID_HARDY`).
+    ['its body', true, text.includes(`Grown: ${d.hybrid ? Math.round(d.health * HYBRID_HARDY) : d.health} health, blow ${d.attack} damage`)],
     ['its carcass', Object.values(d.butcher).some((n) => !!n), Object.entries(d.butcher).filter(([p]) => p !== 'hoard').every(([, n]) => text.includes(`${n} × `))],
   ];
   for (const [what, should, is] of want) if (should !== is) kept.push(`${d.id} ${should ? 'lacks' : 'has'} ${what}`);

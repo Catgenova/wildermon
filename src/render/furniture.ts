@@ -2549,6 +2549,8 @@ interface Build {
   frame: number;
   /** Somebody is at her helm, with her tiller in hand: the tiller is drawn with them (`Seat.pivot` in `./figure`), not in her. */
   manned?: boolean;
+  /** A rigging set is fitted to her (`game/sailing.ts`): her shrouds rattled down and backstays rove (`rigLines`). */
+  rigged?: boolean;
 }
 
 /** A timber rose arch (`rose_arch`), or the same frame with lavender up it (`lavender_arch`). */
@@ -4304,7 +4306,7 @@ const MODELS: Record<string, Model> = {
       }
     });
   },
-  sailing_boat: ({ sc, hw, hd, trim, tint, manned, material }) => {
+  sailing_boat: ({ sc, hw, hd, trim, tint, manned, material, rigged }) => {
     const { wood, tone } = vehicleKit(sc, material);
     sc.shadows = [];
     const { xs, xb, B, S, thwarts, thwart, tiller, rudder } = HULLS.sailing_boat(hw, hd);
@@ -4373,6 +4375,19 @@ const MODELS: Record<string, Model> = {
     };
     for (const sg of [-1, 1]) rope([xm, 0, zt - 0.6], [xm - 2, sg * B * 0.85, S], 0.6, sc.ink * 0.6, 4);
     rope(clew, [xs + 1.2, 0, sheer(0) + 0.4], 0.85, sc.ink * 0.7, 4);
+    /*
+     * Rigged (`game/sailing.ts`): a second shroud a side forward of the first, rattled down to it in five rungs, a
+     * backstay from the masthead to her transom and a topping lift to the end of the boom.
+     */
+    if (rigged) {
+      for (const sg of [-1, 1]) {
+        const head: V3 = [xm, 0, zt - 0.6], aftFoot: V3 = [xm - 2, sg * B * 0.85, S], foreFoot: V3 = [xm + 1.4, sg * B * 0.85, S];
+        rope(head, foreFoot, 0.6, sc.ink * 0.55, 4);
+        for (const t of [0.42, 0.54, 0.66, 0.78, 0.9]) rope(lerp(head, aftFoot, t), lerp(head, foreFoot, t), 0.7, sc.ink * 0.45, 1);
+      }
+      rope([xm, 0, zt - 0.3], [xs + 0.5, 0, sheer(0) + 0.7], 0.7, sc.ink * 0.55, 5);
+      rope([xm, 0, zt - 0.9], clew, 0.55, sc.ink * 0.45, 4);
+    }
     // The rudder, hung off the transom, strapped in iron.
     const straps = kitDeco(sc, (g, k, w, h) => { for (const t of [h * 0.35, h * 0.75]) kitBand(g, k, -0.1, w + 0.1, t - 0.3, t + 0.3, 1, false); });
     sc.box(xs - 0.9, xs - 0.3, -0.35, 0.35, 0, sheer(0) + 0.8, wood, { left: straps, right: straps });
@@ -4395,7 +4410,7 @@ const MODELS: Record<string, Model> = {
    * says, as the sailing boat's does: the square yards are braced round, the
    * lee arm aft, and the lateen is swung out over the lee quarter.
    */
-  caravel: ({ sc, trim, tint, material }) => {
+  caravel: ({ sc, trim, tint, material, rigged }) => {
     const { wood, tone } = vehicleKit(sc, material);
     /** The groove between two planks, on a face catching `k` of the light. */
     const seamOf = (k: number, a: number): string => rgb(mix(kitShade(tone, k), hex('#4a3640'), 0.5), 1, a);
@@ -4711,6 +4726,13 @@ const MODELS: Record<string, Model> = {
         ...shrouds.map((e) => rope([xm, 0, 42.9], e)),
         ...[-1, 1].flatMap((sg) => [0, 1].map((k) => rope([xm, 0, head - 1], [xm - 0.6 - 0.8 * k, sg * 2.2, 45.6], 0.45))),
         rope(course[3][0], sheet, 0.7),
+        // Rigged (`game/sailing.ts`): her main shrouds rattled down in rungs, and a backstay a side from the main top aft.
+        ...(rigged ? [-1, 1].flatMap((sg) => {
+          const [a, , c] = [0, 1, 2].map((k) => railAt(xm - 1.3 - 1.7 * k, sg, waistRail));
+          const lerp3 = (p: V3, q: V3, t: number): V3 => [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t, p[2] + (q[2] - p[2]) * t];
+          const from: V3 = [xm, 0, 42.9];
+          return [...[0.3, 0.45, 0.6, 0.75, 0.88].map((t) => rope(lerp3(from, a, t), lerp3(from, c, t), 0.5)), rope([xm, 0, head - 1.5], railAt(xm - 12, sg, waistRail), 0.55)];
+        }) : []),
       ];
       // The topsail sheeted home to the arms of the course's yard.
       const home = [tie(topsail[3][0], yard[0]), tie(topsail[3][6], yard[1])];
@@ -4984,11 +5006,11 @@ export function furnitureSpan(kind: string): [number, number] {
 }
 
 /** Build a piece into a scene: its model, or a plain box for a piece nobody has modelled. */
-function build(sc: Scene, kind: string, lit: boolean, tint: Tint | undefined, trim: number | undefined, material: string | undefined, frame: number, manned = false): void {
+function build(sc: Scene, kind: string, lit: boolean, tint: Tint | undefined, trim: number | undefined, material: string | undefined, frame: number, manned = false, rigged = false): void {
   const def = furnitureDef(kind);
   const hw = def.w * 5, hd = def.h * 5;
   const model = MODELS[kind];
-  if (model) model({ sc, wood: woodOf(material), material, hw, hd, lit, tint, trim, frame, manned });
+  if (model) model({ sc, wood: woodOf(material), material, hw, hd, lit, tint, trim, frame, manned, rigged });
   else sc.box(-hw * 0.7, hw * 0.7, -hd * 0.7, hd * 0.7, 0, 5, woodOf(material));
   // The floor it shades: what the model said, or its footprint drawn in a little.
   sc.shadows ??= [[-hw * 0.78, hw * 0.78, -hd * 0.78, hd * 0.78]];
@@ -5082,9 +5104,9 @@ const BAKED_BUDGET = 16e6;
 const baked = new Map<string, Baked>();
 let bakedArea = 0;
 
-function bake(kind: string, lit: boolean, tint: Tint | undefined, trim: number | undefined, view: PieceView, material: string | undefined, frame: number, scale: number, zoom: number, crew?: Crew, manned = false, rolling = false): Baked {
+function bake(kind: string, lit: boolean, tint: Tint | undefined, trim: number | undefined, view: PieceView, material: string | undefined, frame: number, scale: number, zoom: number, crew?: Crew, manned = false, rolling = false, rigged = false): Baked {
   const sc = new Scene(null as unknown as CanvasRenderingContext2D, view, zoom);
-  build(sc, kind, lit, tint, trim, material, frame, manned);
+  build(sc, kind, lit, tint, trim, material, frame, manned, rigged);
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   const take = (x: number, y: number, z: number): void => {
     const [px, py] = sc.P(x, y, z);
@@ -5339,7 +5361,7 @@ const wheelBlock = (at: Array<[number, number, number, number]>, i: number): num
  * tiller in hand, which is drawn with them rather than in her.
  */
 export function drawFurniture(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, kind: string, lit = false, tint?: Tint, trim?: number, view: PieceView = pieceView('s', 0), material?: string,
-  crew?: Crew, layer: number | 'all' = 'all', live = true, seeHelm: Silhouette | null = null, manned = false): [number, number, number, number] {
+  crew?: Crew, layer: number | 'all' = 'all', live = true, seeHelm: Silhouette | null = null, manned = false, rigged = false): [number, number, number, number] {
   // Built of the Runestones' kit rather than of boxes: its stone, and its runes at rest over it unless the caller lays them (`plinth.ts`).
   if (kind === ENCHANTERS_PLINTH) {
     const box = drawPlinth(ctx, sx, sy, zoom, view, trim);
@@ -5351,7 +5373,7 @@ export function drawFurniture(ctx: CanvasRenderingContext2D, sx: number, sy: num
   // Redrawn in the same kit, whatever the piece (`kitpieces.ts`): its model there, not in `MODELS`. A layered one lays the layer `trim` names.
   if (isKit(kind)) return drawKit(ctx, sx, sy, zoom, kind, { lit, tint, trim, material }, view, live, 0, tint ? { ...STILL, tint } : undefined);
   const rolling = !crew && !!WHEELS[kind];
-  const b = bakedFor(zoom, kind, lit, tint, rolling ? undefined : trim, view, material, crew, manned, rolling);
+  const b = bakedFor(zoom, kind, lit, tint, rolling ? undefined : trim, view, material, crew, manned, rolling, rigged);
   const k = zoom / b.scale;
   const sheets = [b.canvas, ...(b.layers ?? [])];
   if (b.rolled && b.wheelAt && b.sheets) {
@@ -5537,13 +5559,13 @@ export function piecesFrame(settled: boolean): void {
 }
 
 /** A piece's bake for this zoom, turn and trim, from the ones kept or new. */
-function bakedFor(zoom: number, kind: string, lit: boolean, tint: Tint | undefined, trim: number | undefined, view: PieceView, material: string | undefined, crew?: Crew, manned = false, rolling = false): Baked {
+function bakedFor(zoom: number, kind: string, lit: boolean, tint: Tint | undefined, trim: number | undefined, view: PieceView, material: string | undefined, crew?: Crew, manned = false, rolling = false, rigged = false): Baked {
   const scale = BAKE_STEPS.find((s) => s >= zoom - 1e-3) ?? zoom;
   // The ink is a pixel wide on the screen until the zoom is under one, when it is held at a pixel and so is its own bake.
   const inkZoom = zoom < 0.95 ? Math.round(zoom * 20) / 20 : 1;
   const frame = lit && !animationsOff() ? Math.floor(performance.now() / 150) % 4 : 0;
   const set = trim === undefined || Number.isInteger(trim) ? trim : Math.round(trim * 20) / 20;
-  const aboard = (crew ? `|${crew.tall}:${crew.at.map((a) => a.join(',')).join(';')}` : '') + (manned ? '|manned' : '') + (rolling ? '|rolling' : '');
+  const aboard = (crew ? `|${crew.tall}:${crew.at.map((a) => a.join(',')).join(';')}` : '') + (manned ? '|manned' : '') + (rolling ? '|rolling' : '') + (rigged ? '|rigged' : '');
   const piece = `${kind}|${material ?? ''}|${lit ? frame : '-'}|${tint?.colour ?? ''}|${set ?? ''}|${view.ux.toFixed(3)},${view.uy.toFixed(3)},${view.vx.toFixed(3)},${view.vy.toFixed(3)}${aboard}`;
   const key = `${piece}|${scale}|${inkZoom}`;
   let b = baked.get(key);
@@ -5555,7 +5577,7 @@ function bakedFor(zoom: number, kind: string, lit: boolean, tint: Tint | undefin
     const other = was === undefined ? undefined : baked.get(was);
     if (other && bakesLeft <= 0 && other.scale * PIECE_STAND_MOST >= scale && scale * PIECE_STAND_MOST >= other.scale) return other;
     if (other) bakesLeft--;
-    b = bake(kind, lit, tint, set, view, material, frame, scale, inkZoom, crew, manned, rolling);
+    b = bake(kind, lit, tint, set, view, material, frame, scale, inkZoom, crew, manned, rolling, rigged);
     baked.set(key, b);
     lastBake.set(piece, key);
     bakedArea += areaOf(b);

@@ -1,5 +1,6 @@
 import { PICK_SLACK, PICK_SLACK_TOUCH } from '../../render/pickslack';
 import { MONSTER_GROWTH } from '../../render/monster-size';
+import { CROSS_CARE, CROSS_CHANCE, CROSS_SKILL, HYBRID_HARDY, HYBRID_WORK, HYBRIDS } from '../../game/hybridlist';
 import { FORGET_AFTER, LOADING_AT_ONCE, SLICE_MS } from '../../render/wildermon';
 import { ACT_SECS } from '../../render/beasts';
 import { NAME_PX } from '../../render/namelabels';
@@ -12,7 +13,12 @@ import { PLAN_AREA_MOST, PLAN_UNDO_SECONDS } from '../../game/planarea';
 import { UPDATE_CHECK_MS } from '../update';
 import { JOURNAL_TABS } from './journaltabs';
 import { RESPAWN_ARM_MS } from '../respawn';
-import { BLOCK_SECS, FLINCH_LIT, FLINCH_SECS } from '../../game/fight';
+import { BLOCK_SECS, FLINCH_LIT, FLINCH_SECS, STUMBLE_SECS } from '../../game/fight';
+// ---- spellcasting (What's new 593) ----
+import { ALL_SPELL_IDS, spellInfo } from '../../render/spells/info';
+import { RELEASE_MOTES, RELEASE_SECS } from '../../render/fx/cast';
+import { FALL_SECS } from '../../game/fell';
+import { CLIMB_RUN, RUNG } from '../../game/ladderclimb';
 import { MAP_LEGEND, SETTLEMENT_BORDER_PX, MAP_ZOOM_MIN } from './minimap';
 import { FAST_DPR, LOW_POWER_FPS, SETTING_DEFAULTS } from '../../game/settings';
 import { BLOSSOM } from '../../audio/music/tracks/blossom';
@@ -104,7 +110,7 @@ import { CHART_LEAST, CHART_QL_PER_TILE, CHART_SHEET } from '../../game/cartogra
 import { MEAD_AGE_CAP, MEAD_AGE_RATE } from '../../game/ageing';
 import { WHEY_FEED } from '../../game/dairy';
 import { GATHER_SKILL, LEARN_PACE as PACE_258, LEARN_PACE, PULL_PACE_TIMES, sparTaskSays } from '../../game/creatures';
-import { BED_REST, DEN_HEALTH, restFor, SPECIALTY_AT, SPECIALTY_BONUS, STANCE_NAMES, TIRE_GOES, UNFED_PACE, UPKEEP_FOR, workDuration } from '../../game/creatures';
+import { BED_REST, BLOW_SHARE, CREATURE_ATTACK_MUL, CREATURE_HEALTH_MUL, DEN_HEALTH, REGEN_KEPT, REGEN_WILD, restFor, SPECIALTY_AT, SPECIALTY_BONUS, STANCE_NAMES, TIRE_GOES, UNFED_PACE, UPKEEP_FOR, workDuration } from '../../game/creatures';
 import { BARDING_CUT, GEAR_FLOOR, GEAR_QL_LEAST, GEAR_SIZES, HARNESS_PACE, PACK_LOADS } from '../../game/wildgear';
 import { favouriteOf, fedBonus, FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, levelSkill, stageLevels, TAME_HARD, tameLearn, tameNeeds, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME } from '../../game/creatures';
 import { type AbilityId, type FightStyle, abilityName, abilitySays, BASE_STATS, EVOLVE_AT, FILE_RARITY_ODDS, POT_MOST, POT_STEP, GATHER_DO, GATHER_VERB, GRAZE_FILL, LEARNS_SAYS, seasonSays, stageSays, STYLE_SAYS, learnPaceSays, STAGE_LOADS, stageWorkSays, TEND_REACH, workerSkipsTools } from '../../game/creatures';
@@ -225,6 +231,18 @@ import {
 import { STEPS_BACK, stepsBack, STONE_STEPS_BILL, TIMBER_STEPS_BILL } from '../../game/steps';
 import { LAVENDER_RULE, ROSE_BUD, ROSE_FLOWER, ROSE_LEAFY, ROSES_RULE } from '../../game/roses';
 import { DEVICE_COUNT } from '../../render/furniture';
+import { TRAPS } from '../../game/trapdefs';
+import {
+  BELL_HEARD_BASE, BELL_HEARD_PER_QL, bellHeard, HAMMOCK_REST, LAY_UP_EVERY, LAY_UP_FAIL_SHARE, LAY_UP_SPARE_ABOVE, LEAD_PACE,
+  ROPE_SHARE_BOAT, ROPE_SHARE_TRAP, ROPE_TIME_PER_LEVEL, ROPE_WALK, ROPE_WALK_QL, ROPE_WALK_TIME, ropePerLayUp, ropeTime, TWINE_MADE,
+} from '../../game/ropework';
+import {
+  beamPace, cargoRoom, CLOSE_LEARN, DEEP_CATCH, DEEP_NET, DEEP_WATER, GALE, GALE_LEARN, GALE_SAFE_AT, GALE_TILES_PER_DAMAGE, noGoDegrees,
+  RIGGING_CLOSER, RIGGING_PACE, RIGGING_SET, SAIL_QL_TOP, SOUND_REACH, TACK_PACE, tackSecs,
+} from '../../game/sailing';
+import { ATTUNE_DAYS, ATTUNE_MOTES, ATTUNE_STRENGTH, INFUSE_DAYS, INFUSE_ELEMENTS, INFUSE_INTO, INFUSE_MOTES, SENSE_BASE, SENSE_PER_LEVEL } from '../../game/infusion';
+import { NO_GO } from '../../game/wind';
+import { FISH } from '../../game/fishing';
 import { FLOWER_MOST, FLOWER_SEASONS } from '../../world/flowers';
 import {
   colourWord, DYE_LITRES, DYE_LITRES_PER_KG, DYE_QL_BLACK, DYE_QL_PURE, DYE_QL_WHITE, dyeGrams, DYESTUFFS, dyeHex, kgSaid, LEGACY_DYES, LEGACY_POT_LITRES,
@@ -4432,8 +4450,9 @@ export const NEWS: News[] = [
       'Without a graphics card: swimming strokes\' splashes, rings treading water, the float\'s strike and a catch only.',
     ],
   },
+  // The garden pieces (`garden.ts`).
   {
-    n: 592,
+    n: 601,
     day: '2026-11-14',
     lines: () => {
       const made = (id: string): string => `${itemDef(id).name} (${pieceBill(id)}; ${skillOf(`make_${id}`)})`;
@@ -4449,6 +4468,132 @@ export const NEWS: News[] = [
         `New: ${made(CARVED_FIGURE)}: kind chosen at the bench, from those seen in your field guide. ${made(TROPHY_PLAQUE)}: holds ${furnitureDef(TROPHY_PLAQUE).shows?.n} trophy and its slayer's name.`,
         `New: ${made(POTTED_FERN)}, ${made(POTTED_PALM)}, ${made(PLANT_STAND)} (holds ${furnitureDef(PLANT_STAND).shows?.n}), ${made(FOLDING_SCREEN)} (dyeable), ${made(FLOWER_CART)}, ${made(BIRDHOUSE)} (up to ${BIRDS_MOST} birds by day, none in ${listed([...BIRDS_AWAY])}).`,
         `New: ${made(WIND_CHIME)}: sways with the wind, chimes over ${Math.round(CHIME_STILL * 100)}% wind; at most 1 chime heard per ${CHIME_GAP} s.`,
+      ];
+    },
+  },
+  // Elementalism (`infusion.ts`, `infuseActions.ts`).
+  {
+    n: 600,
+    day: '2026-11-14',
+    lines: () => [
+      `New: Infuse into (a mote's menu, at an enchanter's plinth): ${INFUSE_MOTES} motes of one element into a thing, one element at a time, ${INFUSE_DAYS} days. `
+        + `Strength: elementalism ÷ 100 × motes' QL ÷ 100 of the element's most:`,
+      ...INFUSE_ELEMENTS.map((el) => `${el[0].toUpperCase()}${el.slice(1)}: ${el === 'dark' ? 'weapon, armour or shield' : (INFUSE_INTO[el]?.into ?? []).map((id) => id.replace(/_/g, ' ')).join(', ')}; `
+        + `${(INFUSE_INTO[el]?.label ?? '').toLowerCase()} ${INFUSE_INTO[el]?.say(1) ?? ''} at 100%.`),
+      `New: attunement: the element collected most in ${ATTUNE_DAYS} days: +${ATTUNE_MOTES} mote a swirl, ×${1 + ATTUNE_STRENGTH} infusion strength.`,
+      `New: Sense mote swirls: once an hour, swirls within ${SENSE_BASE} + ${SENSE_PER_LEVEL} × elementalism tiles on the map.`,
+      'New: infused things: a small knot of their element\'s motes over them (Effects setting).',
+    ],
+  },
+  // Sailing (`sailing.ts`, `sailActions.ts`).
+  {
+    n: 599,
+    day: '2026-11-14',
+    lines: () => [
+      `Changed: closest to the wind: ${noGoDegrees(1)}° at Sailing 1 to ${noGoDegrees(100)}° at 100 (was: ${Math.round((NO_GO * 180) / Math.PI)}° for every helm). `
+        + `New: beam reach speed ×${beamPace(100)} at Sailing 100; a turn through the wind ${tackSecs(1)} s at ×${TACK_PACE} speed at Sailing 1, ${tackSecs(100)} s at 100.`,
+      `New: gale: wind over ${GALE}. Below Sailing ${GALE_SAFE_AT}: 1 hull damage per ${GALE_TILES_PER_DAMAGE} tiles in one. Rowing boats do not put out in a gale. `
+        + `Sailing per tile: gale ×${GALE_LEARN}, close-hauled ×${CLOSE_LEARN}.`,
+      `New: hold of the boat at your helm ×${cargoRoom(100)} at Sailing 100.`,
+      `New: rigging set (${recipeBill(`make_${RIGGING_SET}`)}): Fit the rigging to a sailing boat or caravel: speed +${percent(RIGGING_PACE)}, ${RIGGING_CLOSER}° closer to the wind. `
+        + `Sails: speed +${percent(SAIL_QL_TOP)} at sailcloth QL 100.`,
+      `New: from a boat over water deeper than ${DEEP_WATER / 10} m: ${listed(FISH.filter((f) => f.deep).map((f) => f.name.toLowerCase()))} only, chance a fish stays on ×${DEEP_CATCH}; `
+        + `a net there ×${DEEP_NET} the fish. Sound the depth: water depth within ${SOUND_REACH} tiles on the map; trains Sailing.`,
+    ],
+  },
+  // Ropemaking (`ropework.ts`).
+  {
+    n: 598,
+    day: '2026-11-14',
+    lines: () => [
+      `New: Ropemaking: rope per lay-up ${ropePerLayUp(0)}, +1 per ${LAY_UP_EVERY} levels (${ropePerLayUp(100)} at 100); ropemaking time per action −${percent(ROPE_TIME_PER_LEVEL)} per level (×${ropeTime(100)} at 100); `
+        + `above ${LAY_UP_SPARE_ABOVE} a failed lay-up damages ${percent(LAY_UP_FAIL_SHARE)} of its fibre.`,
+      `New: rope walk (${pieceBill(ROPE_WALK)}): a lay-up beside it: time ×${ROPE_WALK_TIME}, +${ROPE_WALK_QL} QL.`,
+      `New: rope QL into what it is built into, by mass of rope and thick rope: boats ${percent(ROPE_SHARE_BOAT)}, traps ${percent(ROPE_SHARE_TRAP)}.`,
+      `New: twine (${TWINE_MADE} from ${RECIPE_BY_ID.get('make_twine')?.inputs[0].count} wemp); sailcloth (${recipeBill('make_sailcloth')}, at a loom).`,
+      `Changed: sails: sailing boat ${Object.fromEntries(furnitureDef('sailing_boat').bill).sailcloth} sailcloth, caravel ${Object.fromEntries(furnitureDef('caravel').bill).sailcloth} (was: cloth).`,
+      `New: hammock: a bed, rest ${HAMMOCK_REST} (tent ${furnitureDef('tent').bed}). Lead rope: mount a tamed wildermon with no saddle and bridle, speed ×${LEAD_PACE}. `
+        + `Twine snare: holds up to taming ${TRAPS.twine_snare.holds}, used up by its first catch.`,
+      `Changed: ringing a bell needs a bell rope; heard within ${BELL_HEARD_BASE} tiles + ${BELL_HEARD_PER_QL} per QL of the rope (${bellHeard(100)} at QL 100) (was: the whole settlement).`,
+    ],
+  },
+  {
+    n: 597,
+    day: '2026-11-14',
+    lines: () => [
+      `New: hybrid wildermon, ${HYBRIDS.length} listed crosses of two kinds, e.g. ${listed(HYBRIDS.slice(0, 3).map((h) => `${h.name} (${SPECIES[h.a].name} × ${SPECIES[h.b].name})`))}. `
+        + `Cross: animal husbandry ${CROSS_SKILL}+, each parent care ${percent(CROSS_CARE)}+, success ${percent(CROSS_CHANCE)} of a pairing's. Mate: own kind first, then a listed cross.`,
+      `New: a hybrid works both parents' tasks in one worker place, the first parent's first; task speed ${percent(HYBRID_WORK)} of a pure-bred's in each; level: mean of the two tasks' skills.`,
+      `New: a hybrid: health +${percent(HYBRID_HARDY - 1)}; infertile; never wild; stage of its less-evolved parent, no evolution; ${TRAIT_SLOTS} traits from either parent; `
+        + `colour form ${percent(FORM_PASS)} per parent with one, in its own colours. Pedigree: Hybrid: (kind) × (kind).`,
+      `New: Field guide: a page per hybrid, after the other wildermon and before the monsters, counted in seen, tamed and bred; a birth to a dam you keep marks it tamed and bred.`,
+    ],
+  },
+  {
+    n: 596,
+    day: '2026-11-14',
+    lines: () => {
+      // Each figure before the change, off the one in force: the multiplier undone.
+      const was = (x: number, mul: number): number => Math.round((x / mul) * 100) / 100;
+      const hp = (n: number): string => `${n} (was ${was(n, CREATURE_HEALTH_MUL)})`;
+      const hit = (n: number): string => `${n} (was ${was(n, CREATURE_ATTACK_MUL)})`;
+      const life = (n: number): string => `${percent(Math.round(n * BLOW_SHARE * 100) / 100)} (was ${percent(Math.round(was(n, CREATURE_ATTACK_MUL) * BLOW_SHARE * 100) / 100)})`;
+      const name = (id: string): string => SPECIES[id].name.toLowerCase();
+      return [
+        `Changed: every creature's base health ×${CREATURE_HEALTH_MUL}, base blow damage ×${CREATURE_ATTACK_MUL}: wildermon and monsters, wild and yours. Yours keep their share of health.`,
+        `Monster health: ${listed(MONSTERS.map(([id]) => `${name(id)} ${hp(SPECIES[id].health)}`))}.`,
+        `Monster blow: ${listed(MONSTERS.map(([id]) => `${name(id)} ${hit(SPECIES[id].attack)}`))}; on an unarmoured life ${listed(MONSTERS.map(([id]) => `${name(id)} ${life(SPECIES[id].attack)}`))}.`,
+        `Changed: creature health back per second, unhurt: wild ${hp(REGEN_WILD)}, yours ${hp(REGEN_KEPT)}; time to heal unchanged.`,
+        `Changed: wildermon bed size bands, non-evolving kinds: small under ${hp(DEN_HEALTH[0])} health, medium under ${hp(DEN_HEALTH[1])}; same kinds in each.`,
+        'Unchanged: treasure map chance and map QL off a monster; your health, weapons, spells, traps and armour.',
+      ];
+    },
+  },
+  {
+    n: 595,
+    day: '2026-11-14',
+    lines: () => [
+      `New: knocked out at 0 health: fall to the ground, ${FALL_SECS} s; lying where you fell until you choose where to wake or step off the spawn; getting up on waking. Camera on where you fell. Other players see it.`,
+      `New: climbing a ladder: hands and feet on the rungs, ${CLIMB_RUN / RUNG} rungs a step, facing the ladder, up and down. Other players see it.`,
+      `New: heavy blow landing (×${HEAVY_HIT}): stumble back a step, ${STUMBLE_SECS} s (was: flinch, ${FLINCH_SECS} s). Other players see it.`,
+      'Animations Off: lying, and on a ladder, held in one pose.',
+    ],
+  },
+  {
+    n: 594,
+    day: '2026-11-14',
+    lines: () => {
+      const jobs = (...clips: string[]): number => [...ACTION_BY_ID.keys()].filter((id) => clips.includes(clipOfJob(id) ?? '')).length;
+      return [
+        `New: lifting and setting down animated on the sculpted body: ${jobs('lift', 'set-down')} jobs (furniture, crates, posts, water motes), squat lift, load at the chest; smelter, kiln and anvil: ${jobs('lift-heavy', 'set-down-heavy')} jobs, deeper squat, slower, load at the belly (was: a placeholder gesture).`,
+        `New: taking apart animated: hammer knocked in and levered back, ${jobs('pry')} jobs (walls, columns, storeys, bridges, aqueducts); floors squatted: ${jobs('pry-low')}; paint scraped off with a trowel: ${jobs('scrape')}; a piece turned, grip and twist: ${jobs('turn')} (was: a placeholder gesture).`,
+        `New: marking out, no plan and taking off the plan animated: ${jobs('mark', 'pull-stake')} jobs, a point or a stake pulled up. Bridges and aqueducts: ${jobs('work-out')} jobs, mallet and chisel leant out over the span (was: a placeholder gesture).`,
+      ];
+    },
+  },
+  {
+    n: 593,
+    day: '2026-11-14',
+    lines: () => {
+      const n: Record<string, number> = {};
+      for (const id of ALL_SPELL_IDS) { const k = spellInfo(id)?.kind ?? ''; n[k] = (n[k] ?? 0) + 1; }
+      return [
+        `New: spell casting animated on the sculpted body, charge then release on the spell's release (was: a placeholder gesture): bolt ${n.bolt} spells; curse ${n.curse}; on yourself ${n.buff}; on another ${n.ally}; all around ${n.nova}; on the ground ${n.ground}; companion command ${n.command}; prayer ${n.pray}; throw ${n.throw}, weapon in hand.`,
+        `New: blow ${n.strike}, thrust ${n.thrust} and shot ${n.shot} spells: the weapon's fight animation, weapon in hand, the blow or loose on the release.`,
+        `New: spell effects leave from the sculpted body's casting hand. Release flare at the hand: ${RELEASE_MOTES} motes, ${RELEASE_SECS * 1000} ms, in the spell's colours.`,
+        'New: casting while walking: arms and head cast over the walk. Facing left on screen: cast with the left hand.',
+      ];
+    },
+  },
+  {
+    n: 592,
+    day: '2026-11-14',
+    lines: () => {
+      const said = (...clips: string[]): string => listed([...ACTION_BY_ID.values()].filter((a) => clips.includes(clipOfJob(a.id) ?? '') && a.id !== 'unhitch_team').map((a) => (a.id === 'enchant_statue' ? `${a.label} (statue)` : a.label)));
+      return [
+        `New: animated on the sculpted body (was: a placeholder gesture). Winch handle, both hands: ${said('crank', 'crank-back')}. Key turned in the lock: ${said('key')}. Shafts taken up: ${said('cart')}. Step up onto the vehicle: ${said('board')}. Bell rope pulled: ${said('bell')}. Stake overhead, driven in: ${said('totem')}. Hand to the altar: ${said('bauble')}. Palms out: ${said('enchant')}.`,
+        `Changed: ${ACTION_BY_ID.get('unhitch_team')?.label}: the tack clip (was: a placeholder gesture).`,
+        'Changed: bell: rope hung from a lever down the front of the frame (was: from the clapper, under the bell).',
       ];
     },
   },

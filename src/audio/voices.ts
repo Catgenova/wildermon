@@ -1,4 +1,5 @@
 import type { BeastAct } from '../game/events';
+import { HYBRIDS } from '../game/hybridlist';
 
 /**
  * Wildermon voices.
@@ -170,6 +171,28 @@ const VOICES: Partial<Record<string, () => Promise<Voice>>> = {
   // The Padbloom, the Lilyback and the Lotushell.
   spitta: () => import('./voice-lily').then((m) => m.LILY_VOICE),
 };
+
+/*
+ * The hybrids (`game/hybridlist.ts`): each one's voice is its two parents' at once, its body parent's leading and its
+ * markings parent's under it a beat after, so it is fetched with both of theirs.
+ */
+/** How loud each parent's cue is in a hybrid's, its body parent's and its markings parent's, and how far after the second comes in seconds. */
+export const HYBRID_VOICE = { lead: 0.7, under: 0.45, after: 0.05 } as const;
+const blendVoice = (body: Voice, marks: Voice): Voice => {
+  const out: Voice = {};
+  for (const act of new Set([...Object.keys(body), ...Object.keys(marks)]) as Set<BeastAct>) {
+    const a = body[act], b = marks[act];
+    out[act] = (ctx, dest, at, stage, v) => {
+      a?.(ctx, dest, at, stage, v * HYBRID_VOICE.lead);
+      b?.(ctx, dest, at + HYBRID_VOICE.after, stage, v * HYBRID_VOICE.under);
+    };
+  }
+  return out;
+};
+for (const h of HYBRIDS) {
+  const a = VOICES[h.a], b = VOICES[h.b];
+  if (a && b) VOICES[h.id] = () => Promise.all([a(), b()]).then(([body, marks]) => blendVoice(body, marks));
+}
 
 /** Each voice that is in, by species; nothing for one that failed to come, until it is asked for again. */
 const heard = new Map<string, Voice | null>();

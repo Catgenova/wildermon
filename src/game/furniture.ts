@@ -22,6 +22,7 @@ import {
   WISTERIA_PERGOLA, SHOWING_SAID, type Mount,
 } from './gardendefs';
 import type { GardenState } from './garden';
+import { HAMMOCK_REST, ROPE_WALK, ROPE_WALK_QL, ROPE_WALK_TIME, ROPEMAKING } from './ropework';
 
 /**
  * What a store takes, for the five that take one sort of thing: raw materials,
@@ -365,6 +366,9 @@ export const FURNITURE: FurnitureDef[] = [
     '', undefined,
     { skill: 'carpentry', tool: 'carving_knife', den: 2 }),
   piece('tent', 'Tent', 2, 2, [['cloth', 8], ['rope', 2], ['shaft', 3]], 16, 14, '', undefined, { bed: 0.5, skill: 'tailoring', tool: 'needle', perk: 'tent' }),
+  // Ropemaking's pieces (`ropework.ts`): a hammock to sleep in, and the rope walk a lay-up is quicker and better at.
+  piece('hammock', 'Hammock', 3, 1, [['rope', 6], ['cloth', 2]], 14, 12, '', undefined, { bed: HAMMOCK_REST, skill: ROPEMAKING, tool: 'needle' }),
+  piece(ROPE_WALK, 'Rope walk', 1, 4, [['plank', 20], ['shaft', 8], ['rope', 4], ['nail', 30]], 18, 24, '', undefined, { skill: 'carpentry' }),
   piece('chest', 'Chest', 2, 2, [['plank', 32], ['timber', 8], ['nail', 36]], 16, 12, '', 60),
   piece('coffer', 'Coffer', 1, 1, [['plank', 16], ['nail', 20]], 14, 8, '', 25),
   piece('cupboard', 'Cupboard', 2, 1, [['plank', 40], ['timber', 8], ['nail', 44]], 20, 14, '', 80),
@@ -617,13 +621,13 @@ export const FURNITURE: FurnitureDef[] = [
   // couple of feet under it; they carry their load and their crew and will
   // not be dragged up a beach.
   piece('rowing_boat', 'Rowing boat', 3, 2, [['plank', 200], ['timber', 60], ['shaft', 2], ['rope', 4], ['nail', 150]], 28, 34, '', 300, { skill: 'carpentry', boat: { speed: 1.9, draught: 2, seat: 9 } }),
-  piece('sailing_boat', 'Sailing boat', 4, 3, [['plank', 480], ['timber', 168], ['shaft', 6], ['cloth', 72], ['rope', 24], ['thick_rope', 6], ['ribbon', 24], ['nail', 420]], 42, 70, '', 1500, { skill: 'carpentry', boat: { speed: 3.4, draught: 4, seat: 13, sail: true } }),
+  piece('sailing_boat', 'Sailing boat', 4, 3, [['plank', 480], ['timber', 168], ['shaft', 6], ['sailcloth', 72], ['rope', 24], ['thick_rope', 6], ['ribbon', 24], ['nail', 420]], 42, 70, '', 1500, { skill: 'carpentry', boat: { speed: 3.4, draught: 4, seat: 13, sail: true } }),
   /*
    * And the ship. Every line of her bill is at least three times the sailing
    * boat's, she takes the whole of a tile, she wants deeper water under her,
    * and she is the one hull that carries anybody besides whoever is steering.
    */
-  piece('caravel', 'Caravel', 4, 4, [['plank', 1500], ['timber', 520], ['shaft', 18], ['cloth', 220], ['rope', 80], ['thick_rope', 20], ['ribbon', 80], ['nail', 1300]], 60, 180, '', 5000, { skill: 'carpentry', boat: { speed: 4, draught: 5, seat: 33, helm: [-0.65, 0], waist: 18, sail: true, passengers: 3, deck: [[-0.3, 0], [-0.05, 0], [0.3, 0]] } }),
+  piece('caravel', 'Caravel', 4, 4, [['plank', 1500], ['timber', 520], ['shaft', 18], ['sailcloth', 220], ['rope', 80], ['thick_rope', 20], ['ribbon', 80], ['nail', 1300]], 60, 180, '', 5000, { skill: 'carpentry', boat: { speed: 4, draught: 5, seat: 33, helm: [-0.65, 0], waist: 18, sail: true, passengers: 3, deck: [[-0.3, 0], [-0.05, 0], [0.3, 0]] } }),
   // Barrels hold liquid and nothing else, in three sizes.
   piece('small_barrel', 'Small barrel', 1, 1, [['plank', 12], ['shaft', 1], ['nail', 12]], 12, 7, '', undefined, { liquid: 30 }),
   piece('large_barrel', 'Large barrel', 2, 2, [['plank', 56], ['shaft', 4], ['nail', 52]], 26, 20, '', undefined, { liquid: 250 }),
@@ -654,8 +658,12 @@ export interface PlacedFurniture {
   id: number;
   /** The enchantment set into it where it stands (`enchanting.ts`), which it keeps through being picked up and set down. */
   enchant?: Enchant;
+  /** Motes infused into it at an enchanter's plinth, while they last (`infusion.ts`): element, share of its most, end in epoch seconds. */
+  infuse?: { el: string; str: number; until: number };
   /** How far gone it is, out of a hundred: a scroll that did not take on it (`enchanting.ts`). Absent is none. */
   dmg?: number;
+  /** A boat's hold, as a share of its own, by the Sailing of whoever here has her helm (`cargoRoom`, `sailing.ts`); unsaid, its own. */
+  cargo?: number;
   /**
    * Whose this is, on an island. Absent in the game you play by yourself,
    * where everything on the ground is yours because there is only you.
@@ -897,6 +905,10 @@ describeFrom('butter_churn', { reach: STATION_REACH });
 describeFrom('fountain', { least: (WELL_TRICKLE * 60).toFixed(1), most: ((WELL_TRICKLE + WELL_TRICKLE_QL) * 60).toFixed(1), top: WELL_TRICKLE_AT });
 // A tent's sleep measured against a bed's, off the two pieces.
 describeFrom('tent', { ofBed: (furnitureDef('tent').bed ?? 0) / (furnitureDef('bed').bed ?? 1) });
+describeFrom('hammock', { ofBed: (furnitureDef('hammock').bed ?? 0) / (furnitureDef('bed').bed ?? 1) });
+describeFrom(ROPE_WALK, { time: ROPE_WALK_TIME, ql: ROPE_WALK_QL });
+// What sails take of sailcloth, off the two hulls' own bills.
+describeFrom('sailcloth', Object.fromEntries(['sailing', 'caravel'].map((k) => [k, Object.fromEntries(furnitureDef(k === 'sailing' ? 'sailing_boat' : k).bill).sailcloth])));
 // How the roses or lavender on an arch grow, off the rule that grows them.
 for (const d of FURNITURE) if (d.climber) describeFrom(d.id, { rule: climberRule(d.climber) });
 
@@ -921,8 +933,11 @@ export const furnitureUnits = (f: PlacedFurniture): number => f.items.reduce((n,
 export const furnitureSpare = (f: PlacedFurniture): number => Math.max(0, furnitureCapacity(f) - furnitureUnits(f));
 /** What it holds: its build, how strong a wood it was built out of, and its maker's mark. */
 // And more for a Deep Hold, a True Axle or a Bag of Holding set into it (`roomMul`), in all three measures.
-export const furnitureCapacity = (f: PlacedFurniture): number =>
-  roomFor((furnitureDef(f.kind).capacity ?? furnitureDef(f.kind).hive ?? furnitureDef(f.kind).pond ?? 0) * matOf(f.material).hold * markOf(f, 'hold') * roomMul(f), f);
+export const furnitureCapacity = (f: PlacedFurniture): number => {
+  const own = roomFor((furnitureDef(f.kind).capacity ?? furnitureDef(f.kind).hive ?? furnitureDef(f.kind).pond ?? 0) * matOf(f.material).hold * markOf(f, 'hold') * roomMul(f), f);
+  // And a boat's hold, the share more the Sailing at her helm makes in whole things (`cargoRoom`), while there is a helm to say so.
+  return own + (f.driven ? Math.floor(own * ((f.cargo ?? 1) - 1)) : 0);
+};
 /** Kilograms it holds, for a piece measured that way. Nought for the rest. */
 export const furnitureHeft = (f: PlacedFurniture): number =>
   roomFor((furnitureDef(f.kind).heft ?? 0) * matOf(f.material).hold * markOf(f, 'hold') * roomMul(f), f);

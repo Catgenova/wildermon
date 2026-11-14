@@ -1,3 +1,4 @@
+import { infusedShare } from './infusion';
 import type { ActionDef, Target } from './actions';
 import type { Game } from './game';
 import { billWords, itemDef, itemName, type Item } from './items';
@@ -33,7 +34,9 @@ const lightOf = (g: Game, t: Target): Item | undefined => {
 };
 
 /** Seconds of burning left in it. */
-export const candleLeft = (it: Item): number => Math.max(0, it.charges ?? 0);
+export const candleLeft = (it: Item): number =>
+  // A lantern with light infused in it burns none of its candle and lights with none (`infusion.ts`, the island's `candle_left`).
+  (infusedShare(it, 'light') > 0 ? Math.max(1, it.charges ?? 0) : Math.max(0, it.charges ?? 0));
 
 /** How it reads: dark, lit with so long left, or spent. */
 export function lanternState(it: Item): string {

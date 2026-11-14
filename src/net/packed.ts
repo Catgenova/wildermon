@@ -73,6 +73,8 @@ export function packed(it: ItemRow, island: Aged): Item {
     engraving: it.engraving ?? undefined,
     // And a carved figure's kind, which names it in the pack and carves it when it is set down (`garden.ts`).
     ...(figureOf(it.garden) ? { figure: figureOf(it.garden) } : {}),
+    // And the motes infused into it, while they last (`infusion.ts`).
+    infuse: it.infuse ?? undefined,
   };
 }
 

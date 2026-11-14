@@ -21,10 +21,12 @@ import { SUBTILES } from './crates';
 import { castWhole, INGOT_LUMPS, ingotOf, METAL_BY_LUMP, MOULD_BY_MAKES, MOULD_SKILL, MOULDS, SMITH_TOOL } from './metal';
 import { FIT_TOOL, MORTAR_TOOL, SEW_TOOL } from './jobtools';
 import { FISH } from './fishing';
+import { DEEP_WATER, RIGGING_CLOSER, RIGGING_PACE, RIGGING_SET } from './sailing';
 import { BOIL_IN, boilCount, boilCountPlain, boiledDye, boilRefusal, BOIL_LITRES, DYE_BOIL_TIME, DYE_BOIL_WIND, DYE_SKILL, isBoilStuff } from './dyes';
 import { DYE_BUCKET, DYESTUFFS, dyeRecipeId } from './dyestuffs';
 import { HERBS, WOUND_KINDS } from './wounds';
 import { TRAPS } from './trapdefs';
+import { BELL_HEARD_BASE, BELL_HEARD_PER_QL, BELL_ROPE, bellHeard, isLayUp, LEAD_PACE, LEAD_ROPE, ROPE_INPUTS, ROPE_SHARE_BOAT, ROPE_SHARE_TRAP, ROPE_WALK, ROPE_WALK_QL, ropeBlend, ropeFailUnits, ROPEMAKING, TWINE_MADE } from './ropework';
 import { BREWS } from './brewing';
 import { isMaterialKind, matOf, type MaterialKind } from './materials';
 import { TREE_DEFS } from '../world/tiles';
@@ -193,6 +195,12 @@ export interface Recipe {
    * `seconds` have passed. The island's `ferment_recipes`.
    */
   ferment?: Ferment;
+  /**
+   * The share of what it comes out at taken from the QL of the rope and thick
+   * rope that go into it, by their mass, the rest from the hands as before: a
+   * boat's or a trap's (`ropework.ts`). The island's `recipe.rope_share`.
+   */
+  ropeShare?: number;
 }
 
 /**
@@ -573,6 +581,8 @@ const FURNITURE_RECIPES: Recipe[] = FURNITURE.filter((f) => !f.grave).map((f) =>
   baseTime: f.time,
   stamina: 0.05,
   difficulty: f.difficulty,
+  // A boat takes a share of its rope's QL into its own (`ropework.ts`).
+  ...(f.boat && f.bill.some(([id]) => ROPE_INPUTS.includes(id)) ? { ropeShare: ROPE_SHARE_BOAT } : {}),
   // A trellis goes against a wall, along the whole of a side of its tile (`vineyard.ts`); a hedge along a side, and a
   // piece fixed to a wall or hung where it is fixed (`garden.ts`); everything else anywhere on a tile.
   done: [f.done, f.vine
@@ -584,11 +594,27 @@ const FURNITURE_RECIPES: Recipe[] = FURNITURE.filter((f) => !f.grave).map((f) =>
 
 RECIPES.push(...FURNITURE_RECIPES);
 
+/*
+ * Ropemaking's own makes (`ropework.ts`): twine, sailcloth at a loom, a bell
+ * rope, a lead rope and a twine snare; the hammock and the rope walk are
+ * pieces above. Ahead of the traps built below, which skip a trap that has a
+ * recipe of its own.
+ */
+RECIPES.push(
+  { id: 'make_twine', category: 'Cloth', result: 'twine', count: TWINE_MADE, inputs: [{ item: 'wemp', count: 2 }], tool: 'rope_tool', skill: ROPEMAKING, label: 'Twist twine', verb: 'twisting twine', baseTime: 6, stamina: 0.02, difficulty: 8, done: '', spareOnFail: true },
+  { id: 'make_sailcloth', category: 'Cloth', result: 'sailcloth', inputs: [{ item: 'yarn', count: 6 }, { item: 'twine', count: 1 }], station: 'loom', skill: ROPEMAKING, label: 'Weave sailcloth', verb: 'weaving sailcloth', baseTime: 14, stamina: 0.04, difficulty: 20, done: '', spareOnFail: true },
+  { id: 'make_bell_rope', category: 'Cloth', result: BELL_ROPE, inputs: [{ item: 'rope', count: 3 }], tool: 'rope_tool', skill: ROPEMAKING, label: 'Braid a bell rope', verb: 'braiding a bell rope', baseTime: 10, stamina: 0.03, difficulty: 16, done: '', spareOnFail: true },
+  { id: 'make_lead_rope', category: 'Cloth', result: LEAD_ROPE, inputs: [{ item: 'rope', count: 2 }], skill: ROPEMAKING, label: 'Splice a lead rope', verb: 'splicing a lead rope', baseTime: 6, stamina: 0.02, difficulty: 10, done: '', spareOnFail: true },
+  // Sailing's rigging set (`sailing.ts`): laid up here, fitted to a hull where she lies (`sailActions.ts`).
+  { id: 'make_rigging_set', category: 'Cloth', result: RIGGING_SET, inputs: [{ item: 'rope', count: 12 }, { item: 'thick_rope', count: 4 }, { item: 'twine', count: 6 }], tool: 'rope_tool', skill: ROPEMAKING, label: 'Lay up a rigging set', verb: 'laying up rigging', baseTime: 40, stamina: 0.06, difficulty: 30, done: '', spareOnFail: true },
+  { id: 'make_twine_snare', category: 'Cloth', result: 'twine_snare', inputs: TRAPS.twine_snare.bill.map(([item, count]) => ({ item, count })), skill: ROPEMAKING, label: 'Tie a twine snare', verb: 'tying a snare', baseTime: TRAPS.twine_snare.time, stamina: 0.02, difficulty: TRAPS.twine_snare.difficulty, done: '', spareOnFail: true },
+);
+
 /**
  * Every fish goes over the fire the same way; how much comes off it is the
  * only difference, and a sturgeon is ten times a perch.
  */
-const FISH_PORTIONS: Record<string, number> = { minnow: 1, perch: 1, trout: 2, pike: 4, sturgeon: 10 };
+const FISH_PORTIONS: Record<string, number> = { minnow: 1, perch: 1, trout: 2, pike: 4, sturgeon: 10, cod: 3, halibut: 6, bluefin: 12 };
 const FISH_RECIPES: Recipe[] = FISH.map((f) => ({
   id: `cook_${f.id}`,
   category: 'Cooking' as RecipeCategory,
@@ -797,6 +823,24 @@ const TRAP_RECIPES: Recipe[] = Object.values(TRAPS)
   }));
 
 RECIPES.push(...TRAP_RECIPES);
+// A trap takes a share of its rope's QL into its own (`ropework.ts`), built or woven.
+for (const r of RECIPES) {
+  if (Object.prototype.hasOwnProperty.call(TRAPS, r.result) && r.inputs.some((i) => ROPE_INPUTS.includes(i.item))) r.ropeShare = ROPE_SHARE_TRAP;
+}
+
+// The deep-water fish, off their own depths (`fishing.ts`), in metres.
+for (const f of FISH) if (f.deep) describeFrom(f.id, { depth: (Math.max(f.depth, DEEP_WATER) / 10).toFixed(1) });
+
+// Ropemaking's makes, off their recipes and `ropework.ts`.
+describeFrom('twine', {
+  made: TWINE_MADE,
+  wemp: RECIPES.find((r) => r.id === 'make_twine')!.inputs[0].count,
+  uses: listed(RECIPES.filter((r) => r.inputs.some((i) => i.item === 'twine')).map((r) => lower(r.result))),
+});
+describeFrom(BELL_ROPE, { base: BELL_HEARD_BASE, per: BELL_HEARD_PER_QL, top: bellHeard(100) });
+describeFrom(LEAD_ROPE, { pace: LEAD_PACE });
+describeFrom(RIGGING_SET, { pace: RIGGING_PACE, closer: RIGGING_CLOSER });
+describeFrom('twine_snare', { holds: TRAPS.twine_snare.holds });
 
 // What a hammer is for, off the recipes that ask for one, so its text cannot name one that does not.
 describeFrom('hammer', {
@@ -1205,6 +1249,24 @@ export function recipeNeeds(r: Recipe): string {
  * where it is one of them, and otherwise the first `drawFor` reaches -- so the
  * number the window gives is the number the bench makes.
  */
+/** The QL of the rope and thick rope a go would spend, by mass, off the stacks it spends first; null with none at hand. The island's `rope_blend`. */
+function ropeQl(stock: readonly CraftStock[], r: Recipe, preferUid?: number, mat?: string): number | null {
+  let total = 0;
+  let mass = 0;
+  for (const i of r.inputs) {
+    if (!ROPE_INPUTS.includes(i.item)) continue;
+    const stack = drawFor(stock, i.item, i.count ?? 1, preferUid, mat)?.[0]?.item ?? stock.find((s) => s.item.id === i.item)?.item;
+    if (!stack) continue;
+    const share = itemDef(i.item).weight * (i.count ?? 1);
+    total += stack.ql * share;
+    mass += share;
+  }
+  return mass ? total / mass : null;
+}
+
+/** What a rope walk within reach adds to a lay-up's QL. The island's `rope_walk_ql`. */
+export const ropeWalkQl = (g: Game, recipe: string): number => (isLayUp(recipe) && g.furnitureNear(ROPE_WALK) !== undefined ? ROPE_WALK_QL : 0);
+
 function inputQl(stock: readonly CraftStock[], r: Recipe, preferUid?: number, mat?: string): number {
   let total = 0;
   let mass = 0;
@@ -1408,7 +1470,9 @@ export function recipeAction(r: Recipe): ActionDef {
               if (litresAtHand(from) >= need) hurt.push(failLitresSaid(liquidWord(i.item), need, failLitres(from, need)));
               continue;
             }
-            hurt.push(...damageDrawn(drawFor(stock, i.item, need, t.uid, mat, strict.get(i.item)) ?? [], need));
+            // Above Ropemaking 50 a failed lay-up damages half its fibre, the rest untouched (`ropeFailUnits`).
+            const hit = isLayUp(r.id) ? ropeFailUnits(need, g.skills.get(r.skill)) : need;
+            hurt.push(...damageDrawn(drawFor(stock, i.item, need, t.uid, mat, strict.get(i.item)) ?? [], hit));
           }
           g.events.emit('inventory');
           carryOn(t, g, was, mat);
@@ -1421,6 +1485,8 @@ export function recipeAction(r: Recipe): ActionDef {
         return more(t, g);
       }
       const fromInputs = r.qlFromInputs ? inputQl(stock, r, t.uid, mat) : 0;
+      // The rope in it, by mass, off the stacks a go spends first, for a boat's or a trap's share (`ropework.ts`).
+      const rope = r.ropeShare ? ropeQl(stock, r, t.uid, mat) : null;
       // A scroll is never better than the sheet it is written on, read off the sheet a go spends first.
       const sheet = scrollOf(r.result) ? drawFor(stock, 'papyrus', SCROLL_SHEETS, t.uid)?.[0]?.item.ql : undefined;
       // What the parts the anvil beat out carry of their makers' marks, read
@@ -1475,10 +1541,12 @@ export function recipeAction(r: Recipe): ActionDef {
        * of that survives -- 78% of it at no skill and 99.7% at a hundred. The
        * ceiling is the parts; nothing is finer than what it is made of.
        */
-      const rolled = r.qlFromInputs ? Math.max(1, Math.min(100, fromInputs * inputKeep(g, r))) : g.productQl(r.skill, toolQl(g) + (oven ? oven.ql * 0.3 : 0));
+      const handed = r.qlFromInputs ? Math.max(1, Math.min(100, fromInputs * inputKeep(g, r))) : g.productQl(r.skill, toolQl(g) + (oven ? oven.ql * 0.3 : 0));
+      const rolled = rope === null ? handed : ropeBlend(handed, rope, r.ropeShare ?? 0);
       // And better for a perk on the recipe (a Cook's Fine Fare), and for a Masterwork on the station it is made at
       // (`Game.masterAt`), and a scroll never better than its sheet, whatever made it.
-      const better = Math.min(100, rolled * g.perk(`ql:${r.id}`, 1) + (r.station ? g.masterAt(r.station) : 0));
+      // And better at a rope walk, for a lay-up (`ROPE_WALK_QL`).
+      const better = Math.min(100, rolled * g.perk(`ql:${r.id}`, 1) + (r.station ? g.masterAt(r.station) : 0) + ropeWalkQl(g, r.id));
       const ql = sheet === undefined ? better : Math.min(better, sheet);
       // More, the go a bauble on the trade comes up in the altar of the settlement
       // you work on, and more again for a perk (a Carpenter's Clean Sawing).

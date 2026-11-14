@@ -209,6 +209,12 @@ begin
   if farm_action(p_action) then
     return farm_refusal(p_world, p_uid, p_action, p_target);
   end if;
+  if mote_action(p_action) then
+    return infuse_refusal(p_world, p_uid, p_action, p_target);
+  end if;
+  if sail_action(p_action) then
+    return sail_refusal(p_world, p_uid, p_action, p_target);
+  end if;
   if p_action in ('fish', 'drag_net') then
     return fish_refusal(p_world, p_uid, p_action, p_target);
   end if;

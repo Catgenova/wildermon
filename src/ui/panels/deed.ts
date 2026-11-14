@@ -960,7 +960,12 @@ export class DeedPanel {
       .sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  /** Its trades: the one its kind does, or the ones it may be set to. */
+  /** Whether it is set to one of its trades by name: a kind of more than one, but a hybrid, which works both (`hybridlist.ts`). */
+  private chooses(c: Creature): boolean {
+    return this.tradesOf(c).length > 1 && !SPECIES[c.species]?.hybrid;
+  }
+
+  /** Its trades: the one its kind does, or the ones it may be set to; a hybrid's two. */
   private tradesOf(c: Creature): GatherKind[] {
     const def = SPECIES[c.species];
     return (def?.trades ?? (def?.gathers ? [def.gathers] : [])) as GatherKind[];
@@ -970,7 +975,7 @@ export class DeedPanel {
   private assignWhy(c: Creature, job: GatherKind | null): string | null {
     const def = ACTION_BY_ID.get('assign_deed');
     if (!def) return 'No settlement.';
-    return def.check?.({ kind: 'creature', id: c.id, ...(job && this.tradesOf(c).length > 1 ? { job } : {}) }, this.game) ?? null;
+    return def.check?.({ kind: 'creature', id: c.id, ...(job && this.chooses(c) ? { job } : {}) }, this.game) ?? null;
   }
 
   /** A wildermon of yours, and the button that assigns it to the settlement at a trade. */
@@ -989,7 +994,7 @@ export class DeedPanel {
     b.title = why ?? `Assign ${c.name} to the settlement: ${GATHER_VERB[job]}.`;
     b.addEventListener('click', () => {
       const def = ACTION_BY_ID.get('assign_deed');
-      if (def) this.game.requestAction(def, { kind: 'creature', id: c.id, ...(this.tradesOf(c).length > 1 ? { job } : {}) });
+      if (def) this.game.requestAction(def, { kind: 'creature', id: c.id, ...(this.chooses(c) ? { job } : {}) });
     });
     el.append(name, b);
     return el;

@@ -28,6 +28,8 @@ begin
                                  'hunger', greatest(0.6, case when v_grace is null then 0 else coalesce((stats->>'hunger')::double precision, 1) end),
                                  'thirst', greatest(0.6, case when v_grace is null then 0 else coalesce((stats->>'thirst')::double precision, 1) end),
                                  'hurtSettled', to_jsonb(now())),
+      -- And where it fell, from the row as it was, for the body drawn lain there (`player.fell`).
+      fell = jsonb_build_object('x', x, 'y', y, 'level', coalesce(level, 0), 'at', now()),
       wounds = '[]'::jsonb, x = w.spawn_x + 0.5, y = w.spawn_y + 0.5, level = 0,
       act = null, act_target = null, act_started = null, act_ends = null, act_left = null, act_goes = null,
       act_queue = '[]'::jsonb, moved_at = now(), aboard = null, seat = null

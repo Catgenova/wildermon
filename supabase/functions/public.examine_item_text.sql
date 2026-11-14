@@ -35,6 +35,8 @@ begin
   v_out := v_out || mark_says(it.mark);
   -- And what is enchanted into it, at its quality (`enchantSays`).
   v_out := v_out || enchant_says(it.enchant);
+  -- And the motes infused into it, while they last (`infuseSays`).
+  v_out := v_out || coalesce(nullif(' ' || infuse_says(it.infuse), ' '), '');
   -- And the line cut into a memorial stone (`engravedItemSays`).
   if not signable_kind(it.def) then v_out := v_out || engraved_item_says(it.engraving); end if;
   -- And the square a map holds (`cartography.ts`).

@@ -14,8 +14,11 @@ import {
   pairBlood,
   SEX_NAMES,
   SPECIES,
+  hybridStage,
   type Creature,
+  type SpeciesDef,
 } from './creatures';
+import { CROSS_CARE, CROSS_CHANCE, CROSS_SKILL, crossOf } from './hybridlist';
 import type { Game } from './game';
 import { awareTraitEase } from './limits';
 import { clockLeft } from './boons';
@@ -57,30 +60,70 @@ export const GROOM_CAP = 1;
 // What a brushing is worth lives in the leaf (`carerates.ts`), for a worker that brushes to ask as well.
 export { GROOM_HEAL, groomGain } from './carerates';
 
+/** A chance as a whole percentage, as the island rounds it. */
+const wholePct = (x: number): string => `${Math.round(x * 100)}%`;
+
 /** The odds a pairing takes. */
 export const breedChance = (skill: number, care: number): number =>
   Math.min(0.97, 0.35 + (Math.max(0, Math.min(100, skill)) / 100) * 0.5 + Math.max(0, Math.min(1, care)) * 0.15);
 
 /**
  * The mate standing nearest this one: same species, the other sex, tamed,
- * grown, fed, and rested since its last covering.
+ * grown, fed, and rested since its last covering. With none of its own kind in
+ * reach, the nearest of a kind it makes a listed cross with (`crossOf`); a
+ * hybrid has none (infertile). The island's `mate_for`.
  */
 export function mateFor(g: Game, c: Creature): Creature | undefined {
+  if (SPECIES[c.species]?.hybrid) return undefined;
   let best: Creature | undefined;
   let bestD = Infinity;
+  let bestOwn = false;
   for (const o of g.creatures.list.values()) {
-    if (o.id === c.id || o.species !== c.species || o.sex === c.sex) continue;
+    if (o.id === c.id || o.sex === c.sex) continue;
+    const own = o.species === c.species;
+    if (!own && !crossOf(c.species, o.species)) continue;
     if (!outWithYou(o) || o.due > 0) continue;
     const d = Math.hypot(o.x - c.x, o.y - c.y);
-    if (d > PAIR_RANGE || d >= bestD) continue;
+    if (d > PAIR_RANGE) continue;
+    // Its own kind before a cross, and the nearer of two of the same.
+    if (best && ((bestOwn && !own) || (bestOwn === own && d >= bestD))) continue;
     best = o;
     bestD = d;
+    bestOwn = own;
   }
   return best;
 }
 
+/* ---- Crossing two kinds (`hybridlist.ts`) --------------------------------------------------------------------------- */
+
+/** What a hybrid says when it is put to a mate. */
+export const infertileSays = (c: Pick<Creature, 'name'>): string => `${c.name}: hybrid, infertile.`;
+/** The hybrid a pair would throw, for a listed cross; none for a pair of one kind. */
+export const crossFor = (a: Creature, b: Creature): SpeciesDef | undefined => {
+  const h = crossOf(a.species, b.species);
+  return h ? SPECIES[h.id] : undefined;
+};
+/** Why a listed cross will not be tried, or null: the breeder's husbandry and each parent's care (`CROSS_SKILL`, `CROSS_CARE`). The island's `cross_refuses`. */
+export function crossRefuses(g: Game, a: Creature, b: Creature): string | null {
+  if (!crossFor(a, b)) return null;
+  const skill = g.skills.get(HUSBANDRY);
+  if (skill < CROSS_SKILL) return `Cross: animal husbandry ${CROSS_SKILL} needed, yours ${Math.floor(skill)}.`;
+  for (const c of [a, b]) if (c.care < CROSS_CARE) return `Cross: care ${wholePct(CROSS_CARE)} each needed, ${c.name} ${wholePct(c.care)}.`;
+  return null;
+}
+/** The odds a pairing takes: `breedChance`, and `CROSS_CHANCE` of it for a listed cross. The island's `pair_chance`. */
+export const pairChance = (skill: number, care: number, cross: boolean): number => breedChance(skill, care) * (cross ? CROSS_CHANCE : 1);
+/** "Cross: Millhog (Wheatley × Pigroot), success 21% (25% of 84%)", for the Stud Book and a preview. */
+export function crossLine(skill: number, care: number, a: Creature, b: Creature): string {
+  const def = crossFor(a, b);
+  if (!def) return '';
+  return `Cross: ${def.name} (${SPECIES[def.hybrid![0]].name} × ${SPECIES[def.hybrid![1]].name}), success ${wholePct(pairChance(skill, care, true))} `
+    + `(${wholePct(CROSS_CHANCE)} of ${wholePct(breedChance(skill, care))}); born at stage ${hybridStage(a, b) + 1}, stays there`;
+}
+
 /** Why these two will not be put together, or null. */
 export function pairRefuses(g: Game, a: Creature, b: Creature): string | null {
+  for (const c of [a, b]) if (SPECIES[c.species]?.hybrid) return infertileSays(c);
   for (const c of [a, b]) {
     if (ageOf(c, g.time) !== 'grown') {
       return ageOf(c, g.time) === 'young' ? `${c.name} is not grown.` : `${c.name} is too old.`;
@@ -89,11 +132,10 @@ export function pairRefuses(g: Game, a: Creature, b: Creature): string | null {
     if (g.time - c.bredAt < BREED_REST) return `${c.name} bred recently: ${clockLeft(BREED_REST - (g.time - c.bredAt))} left.`;
     if (c.due > 0) return `${c.name} is already pregnant.`;
   }
-  return null;
+  // And a listed cross's own gates.
+  return crossRefuses(g, a, b);
 }
 
-/** A chance as a whole percentage, as the island rounds it. */
-const wholePct = (x: number): string => `${Math.round(x * 100)}%`;
 
 /**
  * What a Herdsman's Stud Book says of one of yours and the mate it would be
@@ -110,7 +152,9 @@ export function studBook(g: Game, c: Creature): string {
   const care = (c.care + mate.care) / 2;
   const keep = keepChance(skill, care, g.perk('breed:inherit', 0), pairBlood(c, mate).fresh);
   const up = Math.min(1, upgradeChance(skill, care) + g.perk('breed:upgrade', 0));
-  return ` Paired with ${mate.name}: success ${wholePct(breedChance(skill, care))}; each of ${TRAIT_SLOTS} traits `
+  // A listed cross says what it throws and its own odds (`crossLine`).
+  const cross = crossLine(skill, care, c, mate);
+  return ` Paired with ${mate.name}: ${cross ? `${cross};` : `success ${wholePct(breedChance(skill, care))};`} each of ${TRAIT_SLOTS} traits `
     + `inherited ${wholePct(keep)}, rarity-up ${wholePct(up)}.`;
 }
 
@@ -205,7 +249,7 @@ export function breedPreview(g: Game, dam: Creature, sire: Creature): string {
   const lines = [
     `Pair ${sire.name} with ${dam.name} (animal husbandry ${Math.floor(skill)}, care ${wholePct(care)}):`,
     `${oddsDetailSaid(g)}.`,
-    `Success: ${wholePct(breedChance(skill, care))}.`,
+    crossFor(dam, sire) ? `${crossLine(skill, care, dam, sire)}.` : `Success: ${wholePct(breedChance(skill, care))}.`,
     `Each of ${TRAIT_SLOTS} traits: inherited ${wholePct(keepChance(skill, care, keepPlus, pb.fresh))}`
       + `, rarity-up ${wholePct(Math.min(1, upgradeChance(skill, care) + upPlus))}.`,
     `Born carrying: ${theirs.filter(readable).map((id) => `${traitName(id)} ${said(odds.carry[id])}`).join(', ') || 'none readable'}`
@@ -291,7 +335,9 @@ export const HUSBANDRY_ACTIONS: ActionDef[] = [
     labelFor: (t, g) => {
       const c = creatureOf(g, t);
       const mate = c && mateFor(g, c);
-      return mate ? `Breed with ${mate.name}` : 'Breed with a mate';
+      // A listed cross names the hybrid it throws (`crossFor`).
+      const cross = mate && crossFor(c, mate);
+      return mate ? (cross ? `Cross with ${mate.name}: ${cross.name}` : `Breed with ${mate.name}`) : 'Breed with a mate';
     },
     // What it would throw, before it is done (`breedPreview`); nothing where it would be refused, which says why instead.
     confirms: (t, g) => {
@@ -308,6 +354,7 @@ export const HUSBANDRY_ACTIONS: ActionDef[] = [
       if (!nearPlayer(g, c, 2.4)) return `Stand next to ${c.name}.`;
       if (c.due > 0) return `${c.name} is already pregnant.`;
       const mate = mateFor(g, c);
+      if (SPECIES[c.species]?.hybrid) return infertileSays(c);
       if (!mate) {
         const def = SPECIES[c.species];
         return `No ${def.name.toLowerCase()} of the other sex within ${PAIR_RANGE} tiles. ${c.name} is ${SEX_NAMES[c.sex]}.`;
@@ -323,7 +370,7 @@ export const HUSBANDRY_ACTIONS: ActionDef[] = [
       const sire = dam === c ? mate : c;
       const skill = g.skills.get(HUSBANDRY);
       const care = (dam.care + sire.care) / 2;
-      const took = g.rand() < breedChance(skill, care);
+      const took = g.rand() < pairChance(skill, care, !!crossFor(dam, sire));
       g.gainSkill(HUSBANDRY, tryGain(took, BREED_GAIN));
       if (!took) {
         // A failed pairing costs both of them a rest, but only half of one: half a shorter one for Short Rest.

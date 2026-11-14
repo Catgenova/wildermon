@@ -30,5 +30,7 @@ begin
     -- And its shod beasts, on laid stone, at half a mount's shoes (`shoeTeam`).
     * case when paved(land_tile(p_world, p.x, p.y)) then 1 + (shoe_pace() - 1) * haul_shoe_share() * shod_share(p_world, p_id) else 1 end)
     * mark_of(p.mark, 'speed')
-    * vehicle_ql_pace(p.ql) * bridle_team(p_world, p_id) * harness_team(p_world, p_id);
+    * vehicle_ql_pace(p.ql) * bridle_team(p_world, p_id) * harness_team(p_world, p_id)
+    -- And wind infused in it (`infusion.ts`).
+    * (1 + infuse_most('wind') * infuse_on(p.infuse, 'wind'));
 end $function$

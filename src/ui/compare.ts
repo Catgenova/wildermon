@@ -1,3 +1,4 @@
+import { activeInfusion, infuseSays } from '../game/infusion';
 import type { Game } from '../game/game';
 import { ARMOUR_BY_ID, ARMOUR_CLASSES, hitChance, pieceBurden, pieceSoak, SHIELDS, SLOT_NAMES, slotOf, WEAPON_BY_ID, weaponDamage } from '../game/gear';
 import { armourSwingKg, blockChance, blockNote, reachOf, SWING_FLOOR, swingByOf, swingKgOf, THROWN_PAST } from '../game/fight';
@@ -121,6 +122,12 @@ function statsOf(g: Game, item: Item): Stat[] | null {
  * what is on you in that place when something is.
  */
 export function compareLines(g: Game, item: Item): TipLine[] | null {
+  const lines = compared(g, item);
+  // And the motes infused into it, while they last (`infusion.ts`).
+  const infused = activeInfusion(item);
+  return lines && infused ? [...lines, infuseSays(infused)] : lines;
+}
+function compared(g: Game, item: Item): TipLine[] | null {
   const mine = statsOf(g, item);
   const slot = slotOf(item.id);
   if (!mine || !slot) return null;
@@ -211,5 +218,8 @@ export function itemCard(g: Game, item: Item): TipLine[] {
     if (feeds.length) lines.push({ text: `Feeds ${listed(feeds)}` });
   }
   if (item.locked) lines.push('Kept back: never spent, dropped or fed away.');
+  // The motes infused into it, while they last (`infusion.ts`).
+  const infused = activeInfusion(item);
+  if (infused) lines.push(infuseSays(infused));
   return lines;
 }

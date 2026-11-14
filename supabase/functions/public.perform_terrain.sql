@@ -40,7 +40,9 @@ begin
     -- Two coal a go off a seam for a Coal Hand, now and then one more of
     -- anything for a Rich Seam, and now and then rare for a Rare Ore.
     v_n := case when yields = 'coal' then greatest(1, pk(p_world, p_uid, 'count:coal', 1)::int) else 1 end
-         + case when random() < pk(p_world, p_uid, 'more:mine', 0) then 1 else 0 end;
+         + case when random() < pk(p_world, p_uid, 'more:mine', 0) then 1 else 0 end
+         -- And one more, now and then, for earth infused in the pickaxe (`earth_more`).
+         + earth_more(p_world, p_uid, d.tool);
     perform gather(p_world, p_uid, yields, v_n, made_ql, null, perk_rare(pk(p_world, p_uid, 'rare:mine', 0)));
     -- And one swing in a thousand that brings out something nobody quarried.
     perform maybe_map(p_world, p_uid, s, tq);

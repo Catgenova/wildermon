@@ -1,5 +1,6 @@
 import { GENDERS, HAIR_FADE, HAIRSTYLES } from '../../game/look';
 import { OUTFITS } from '../creator';
+import { CROSS_CARE, CROSS_CHANCE, CROSS_SKILL, HYBRID_HARDY, HYBRID_WORK, HYBRIDS } from '../../game/hybridlist';
 import { MAP_LEGEND, MAP_ZOOM_MIN, MAP_ZOOM_STEP, SETTLEMENT_BORDER_PX } from './minimap';
 import { BAG_CARRY } from '../../game/gear';
 import { BUILD_COUNTS, MOST_GOES } from '../buildCounts';
@@ -96,6 +97,16 @@ import { GLASSHOUSE_GROWTH, PLANTER_GROWTH, SEASON_GROWTH, SEASON_SECONDS, YEAR_
 import { FAVOUR_TRICKLE, favourCap, PRAYER_BASE, PRAYER_GAIN, PRAYER_LIFT, PRAYER_PEAKS, PRAYER_REST, PRAYER_TAPER, prayerWorth } from '../../game/faith';
 import { tryGain } from '../../game/learn';
 import { DRIVING_LEARN, DRIVING_TOP, drivingPace, SAILING_LEARN, SAILING_TOP, sailingPace, TRAVEL_TOP_AT, VEHICLE_QL_TOP, vehicleQlPace } from '../../game/travel';
+import {
+  BELL_HEARD_BASE, BELL_HEARD_PER_QL, BELL_ROPE, bellHeard, HAMMOCK_REST, LAY_UP_EVERY, LAY_UP_FAIL_SHARE, LAY_UP_SPARE_ABOVE, LAY_UPS, LEAD_PACE, LEAD_ROPE,
+  ROPE_SHARE_BOAT, ROPE_SHARE_TRAP, ROPE_TIME_PER_LEVEL, ROPE_WALK, ROPE_WALK_QL, ROPE_WALK_TIME, ropePerLayUp, ropeTime, TWINE_MADE,
+} from '../../game/ropework';
+import {
+  beamPace, CARGO_TOP, cargoRoom, CLOSE_LEARN, DEEP_CATCH, DEEP_NET, DEEP_WATER, GALE, GALE_LEARN, GALE_SAFE_AT, GALE_TILES_PER_DAMAGE, noGoDegrees,
+  RIGGING_CLOSER, RIGGING_PACE, RIGGING_SET, SAIL_QL_TOP, SOUND_REACH, SOUND_SHOWN, TACK_PACE, tackSecs,
+} from '../../game/sailing';
+import { SOUND_DEPTH } from '../../game/sailActions';
+import { ATTUNE_DAYS, ATTUNE_MOTES, ATTUNE_STRENGTH, INFUSE_DAYS, INFUSE_ELEMENTS, INFUSE_INTO, INFUSE_MOTES, SENSE_BASE, SENSE_PER_LEVEL, SENSE_SHOWN, senseRange } from '../../game/infusion';
 import { ANCIENT_EFFECTS, ANCIENT_PLUS, BAUBLE_HIGH, BAUBLE_KINDS, BAUBLE_LOW, BAUBLE_SHARE, BAUBLE_TIERS, baubleTimes, MAJOR_SKILLS, MINOR_SKILLS, REGRET_SHARE, YIELD_TIMES } from '../../game/baubles';
 import { SOUL_CHANCE } from '../../game/sacrifice';
 import { FIRST_AID_ACTION_BY_ID, HERB_HEAL, healAmount, SUITS_HEAL } from '../../game/firstaid';
@@ -188,6 +199,9 @@ import { ORE_DENSITY, seamShare } from '../../world/ore';
 import { lairOf, REGIONS } from '../../world/regions';
 import { ISLAND_ELEMENT, LIFE_MOTES_EACH, MOTE_ELEMENTS, MOTES_LEAST, STATUE_MOTES, MOTES_MOST, MOTES_STEP, POULTICE_HEAL, SEASON_ELEMENT, SWIRL_DARK, SWIRL_LIGHT, SWIRL_SEASON, SWIRLS_A_DAY, WATER_MOTES_EACH } from '../../game/motes';
 import { RESPAWN_GAP, RESPAWN_SPARE, STAY_SAID } from '../../game/respawn';
+import { FALL_SECS } from '../../game/fell';
+import { CLIMB_RUN, RUNG } from '../../game/ladderclimb';
+import { STUMBLE_SECS } from '../../game/fight';
 import { LANDING_STAND, RUNESTONES, SAFE_RING, START_GAP, START_SPARE, STONE_SPAN, TELE_FAR, TELE_FAST, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_RANGE_STEP, TELE_REST_STEP, TELE_SLOW, telestoneRange, telestoneRest } from '../../game/runestones';
 import {
   BURYABLE, BUSH_DEFS, groundRoll, ROCK_VARIANTS, SLAB_VARIANTS, STEPS_BRICKS, STEPS_LEAST, STEPS_MOST, STEPS_PLANKS, STEPS_SLABS, STEPS_TWIST, TILE_DEFS, TileType,
@@ -341,6 +355,55 @@ export const dur = (seconds: number): string => {
 };
 /** "3 sand", "a gem": a count of a thing in figures (`countOf`). */
 const countIn = (id: string, n: number): string => countOf(id, n, true);
+
+/** Elementalism past the swirls (`infusion.ts`): every number off the rule that plays it. */
+function infuseHelp(): string {
+  const what = INFUSE_ELEMENTS.map((el) => {
+    const d = INFUSE_INTO[el];
+    const into = el === 'dark' ? 'a weapon, armour or a shield (wielded or worn)' : listedOr((d?.into ?? []).map((id) => id.replace(/_/g, ' ')));
+    return `<li><b>${capital(el)}</b> into ${into}: ${(d?.label ?? '').toLowerCase()} ${d?.say(1) ?? ''} at strength 100%.</li>`;
+  }).join('\n      ');
+  return `<li><b>Infuse into</b> (a mote's menu, at an enchanter's plinth): ${INFUSE_MOTES} motes of one element into a thing it goes into, one element at a time, for ${INFUSE_DAYS} days;
+      trains elementalism a full action. Strength = elementalism ÷ 100 × motes' QL ÷ 100 (×${1 + ATTUNE_STRENGTH} for the element you are attuned to) of each element's most:</li>
+      ${what}
+      <li>Ice: into nothing (nothing held in a larder, barrel or crate decays).</li>
+      <li><b>Attunement</b>: the element you collected most of over the last ${ATTUNE_DAYS} days: +${ATTUNE_MOTES} mote a swirl of it, +${percent(ATTUNE_STRENGTH)} strength infusing it.</li>
+      <li><b>Sense mote swirls</b> (a tile's menu, once an hour): swirls within ${SENSE_BASE} + ${SENSE_PER_LEVEL} × elementalism tiles (${senseRange(100)} at 100) on the map for
+      ${SENSE_SHOWN / 60} minutes; trains elementalism.</li>`;
+}
+
+/** Sailing past the pace it gives (`sailing.ts`, `sailActions.ts`): every number off the rule that plays it. */
+function sailHelp(): string {
+  const deepFish = FISH.filter((f) => f.deep);
+  return `<li>Beam reach: speed ×${beamPace(0)} at Sailing 0, ×${beamPace(100)} at 100. A turn through the wind (a tack or a gybe): ${tackSecs(1)} s at ×${TACK_PACE} speed at Sailing 1,
+      ${tackSecs(100)} s at 100.</li>
+      <li>Gale: wind over ${GALE}. Below Sailing ${GALE_SAFE_AT} a hull takes 1 damage per ${GALE_TILES_PER_DAMAGE} tiles sailed or rowed in one. A rowing boat does not put out in a gale.</li>
+      <li>Training: per tile at the helm; a gale tile ×${GALE_LEARN}, a close-hauled tile ×${CLOSE_LEARN}.</li>
+      <li>Hold of the boat at your helm: ×${cargoRoom(100)} at Sailing 100 (×(1 + ${CARGO_TOP} × Sailing ÷ 100), in whole things).</li>
+      <li><b>Rigging set</b> (${bill(`make_${RIGGING_SET}`)}): <b>Fit the rigging</b> to a sailing boat or caravel: speed +${percent(RIGGING_PACE)}, ${RIGGING_CLOSER}° closer to the wind.</li>
+      <li>Sails: the QL of the sailcloth they were made of: speed +${percent(SAIL_QL_TOP)} at QL 100, in proportion below.</li>
+      <li>From a boat over water deeper than ${metres(DEEP_WATER)} m: a line brings up only ${listed(deepFish.map((f) => `${f.name.toLowerCase()} (${metres(f.depth)} m, fishing ${f.level})`))};
+      chance a fish stays on ×${DEEP_CATCH}. A net there: ×${DEEP_NET} the fish of one from the shore.</li>
+      <li><b>Sound the depth</b> (from a boat, ${dur(goSeconds(ACTION_BY_ID.get(SOUND_DEPTH)?.baseTime ?? 0, CHAR_START))}): depth of every water tile within ${SOUND_REACH} tiles, on the map for
+      ${SOUND_SHOWN / 60} minutes; trains Sailing.</li>`;
+}
+
+/** Ropemaking past its recipes (`ropework.ts`): every number off the rule that plays it. */
+function ropeHelp(): string {
+  const lay = LAY_UPS.map((id) => RECIPE_BY_ID.get(id)?.label.toLowerCase()).join(', ');
+  return `<li>Rope per lay-up (${lay}): ${ropePerLayUp(0)}, +1 per ${LAY_UP_EVERY} levels of ropemaking (${ropePerLayUp(100)} at 100).</li>
+      <li>Ropemaking jobs: time per action ×${ropeTime(100).toFixed(2)} at 100 (−${percent(ROPE_TIME_PER_LEVEL)} per level), after the floor.</li>
+      <li>Failed lay-up above ropemaking ${LAY_UP_SPARE_ABOVE}: ${percent(LAY_UP_FAIL_SHARE)} of its fibre damaged (rounded up), the rest untouched.</li>
+      <li><b>Rope walk</b> (${bill(`make_${ROPE_WALK}`)}; ${furnitureDef(ROPE_WALK).w}×${furnitureDef(ROPE_WALK).h} subtiles): a lay-up within ${STATION_REACH} tiles of it: time ×${ROPE_WALK_TIME}, +${ROPE_WALK_QL} QL.</li>
+      <li>Rope QL into what it is built into, by mass of rope and thick rope: boats ${percent(ROPE_SHARE_BOAT)}, traps ${percent(ROPE_SHARE_TRAP)}.</li>
+      <li><b>Twine</b>: ${bill('make_twine')}, ${TWINE_MADE} a go. <b>Sailcloth</b>: ${bill('make_sailcloth')} at a loom; the sails of a sailing boat
+      (${need('make_sailing_boat', 'sailcloth')}) and a caravel (${need('make_caravel', 'sailcloth')}).</li>
+      <li><b>Hammock</b> (${bill('make_hammock')}): a bed, rest ${HAMMOCK_REST} (bed ${furnitureDef('bed').bed}, tent ${furnitureDef('tent').bed}).</li>
+      <li><b>Bell rope</b> (${bill(`make_${BELL_ROPE}`)}): carried, needed to ring a bell; heard within ${BELL_HEARD_BASE} tiles + ${BELL_HEARD_PER_QL} per QL
+      (${bellHeard(100)} at QL 100): workers further off are not called, citizens further off not told.</li>
+      <li><b>Lead rope</b> (${bill(`make_${LEAD_ROPE}`)}): carried, mount a tamed wildermon with no saddle and bridle; speed ×${LEAD_PACE}.</li>
+      <li><b>Twine snare</b> (${bill('make_twine_snare')}): holds up to taming ${TRAPS.twine_snare.holds}, reach ${TRAPS.twine_snare.reach} tiles; used up by its first catch.</li>`;
+}
 /** A bill in figures (`billWords`). */
 const billIn = (b: ReadonlyArray<readonly [string, number]>): string => billWords(b, true);
 
@@ -1907,7 +1970,7 @@ export function helpText(): string {
     </ul>
     <h4>Stairs</h4>
     <ul>
-      <li>On an upper storey, plan a <b>staircase</b> or <b>ladder</b> instead of a floor. Walk onto it from below: up. Step off it toward the ground: down.</li>
+      <li>On an upper storey, plan a <b>staircase</b> or <b>ladder</b> instead of a floor. Walk onto it from below: up. Step off it toward the ground: down. On a ladder: climbing, facing it, ${CLIMB_RUN / RUNG} rungs a step.</li>
       <li>Every flight material comes in both widths: wide (full tile), ${percent(STAIRS_SHARE)} of a solid wall's materials; <b>${SINGLE_STAIRS_NAME}</b> (half the tile),
       ${percent(SINGLE_STAIRS_SHARE)}. The ${SINGLE_STAIRS_NAME} runs up the left or right half; the other half is the stairwell.</li>
       <li><b>${capital(SPIRAL_STAIRS_NAME)}</b>: ${percent(SINGLE_STAIRS_SHARE)} of a solid wall's materials; a tile a storey, ${SPIRAL_TREADS} treads round a post; no climbing side, no Q/E.
@@ -2315,13 +2378,15 @@ export function helpText(): string {
       Step ashore and Go over the side work as for the helm.</li>
       <li><b>Take the helm</b>: anybody aboard, when nobody holds it or its holder has gone away at sea; never from somebody present.</li>
       <li>Not picked up or turned with anybody aboard.</li>
-      <li>A line cast from a boat in deep water reaches every fish, pike and sturgeon included.</li>
+      <li>A line cast from a boat reaches deeper water than the shore: pike and sturgeon.</li>
+      ${sailHelp()}
     </ul>
     <h3>Wind, and how a sail uses it</h3>
     <ul>
       <li>Direction and strength both wander (calm to gale within a day); computed from the clock: the same for everybody at that hour, different per island.</li>
       <li>Rowing boats ignore it. Sailing boats depend on the <b>angle</b> more than the strength: across the wind fastest; downwind steady and slower; close-hauled slow.</li>
-      <li>Within ${Math.round((NO_GO * 180) / Math.PI)} degrees of the wind: <b>in irons</b>, almost no way. Upwind: <b>tack</b> (close-hauled on one side, then the other).</li>
+      <li>Closer to the wind than the helm can sail: <b>in irons</b>, almost no way. Closest to the wind: ${noGoDegrees(1)}° at Sailing 1 to ${noGoDegrees(100)}° at 100;
+      ${RIGGING_CLOSER}° closer with a rigging set. Upwind: <b>tack</b> (close-hauled on one side, then the other).</li>
       <li>Example: quality (QL) ${SAIL_EXAMPLE.ql} sailing boat, body control ${CHAR_START}, ${windWord(SAIL_EXAMPLE.force)}: ${sailSpeeds} tiles a second on a beam reach, running,
       close-hauled and in irons.</li>
       <li>Under sail the bars show the wind: arrow, name, direction it is from, point of sail.</li>
@@ -2392,7 +2457,8 @@ export function helpText(): string {
       Quality (QL) = your elementalism.</li>
       <li>Then gone for everybody: the first to finish gets it; others are told it is gone.</li>
       <li><b>Water mote</b> spent on: ${WATER_MOTE_USES.map(([what, n]) => `${what} ${n}`).join(', ')}.</li>
-      <li>Trains <b>elementalism</b> (only source): about ${listed([1, 20, 50].map((v) => `+${playerGain(v, 1, 1).toFixed(2)} at ${v}`))}.</li>
+      <li>Trains <b>elementalism</b>: about ${listed([1, 20, 50].map((v) => `+${playerGain(v, 1, 1).toFixed(2)} at ${v}`))}.</li>
+      ${infuseHelp()}
     </ul>
     <h3>Runestones and the Telestone</h3>
     <ul>
@@ -2843,6 +2909,7 @@ export function helpText(): string {
       or a settlement you founded or are a member of (first free tile ${RESPAWN_GAP} to ${RESPAWN_GAP + RESPAWN_SPARE} tiles from its token: dry, no building,
       no more than ${metres(LANDING_STAND)} m between highest and lowest corner). Each card: distance in tiles from where you fell.
       <b>${STAY_SAID}</b>, a step or a closed tab: the spawn.</li>
+      <li>Until you choose or step off the spawn: lying where you fell (fall ${FALL_SECS} s), the camera there; other players see it. On waking: getting up.</li>
       <li><b>What you carried stays</b> in a <b>grave</b> where you fell: pack, held items, toolbelt, every bag and its contents.</li>
       <li>Kept on you: clothing, armour, jewel, starting kit, a crate with a wildermon in it, anything offered in a deal.</li>
       <li>Died in water too deep to stand: grave on the nearest dry ground within <b>${GRAVE_REACH} tiles</b>, else where you fell. Carrying nothing: no grave.</li>
@@ -3030,6 +3097,7 @@ export function helpText(): string {
       <b>ropemaking</b>. ${capital(countIn('rope', need('make_thick_rope', 'rope')))}: a <b>thick rope</b>.</li>
       <li>Used by: <b>bridle</b> ${need('make_bridle', 'rope')}; <b>rowing boat</b> ${need('make_rowing_boat', 'rope')}; <b>sailing boat</b> ${need('make_sailing_boat', 'rope')} and
       ${need('make_sailing_boat', 'thick_rope')} thick ropes; <b>well</b> ${countIn('thick_rope', need('make_well', 'thick_rope'))}.</li>
+      ${ropeHelp()}
     </ul>
     <h3>Wool, cloth and the loom</h3>
     <ul>
@@ -3084,7 +3152,7 @@ export function helpText(): string {
     <h4>Blows</h4>
     <ul>
       <li><b>Heavy blow</b>: ${listed(Object.values(SPECIES).filter((d) => d.heavy).map((d) => `${d.name.toLowerCase()}s`))}, every ${HEAVY_EVERY} blows. A red ring shows its reach for
-      ${WIND_UP} second; lands at damage ${mul(HEAVY_HIT)} on anything still inside. Step out to avoid it.</li>
+      ${WIND_UP} second; lands at damage ${mul(HEAVY_HIT)} on anything still inside. Step out to avoid it. Landed on a player: stumble back, ${STUMBLE_SECS} s.</li>
       <li>Blow types: <b>cut</b> (${blowSays('cut')}), <b>puncture</b> (${blowSays('pierce')}), <b>crush</b> (${blowSays('crush')}).</li>
       <li>Hides: ${HIDES.map((h) => `${HIDE_NAMES[h].toLowerCase()} (${listed(Object.values(SPECIES).filter((d) => d.hide === h).map((d) => d.name.toLowerCase()))}) ${hideSays(h)}`).join('; ')}.</li>
       <li>Armour by type: ${(Object.keys(ARMOUR_CLASSES) as ArmourClass[]).map((c) => `${ARMOUR_CLASSES[c].name.toLowerCase()} ${armourSays(c)}`).join('; ')}.</li>
@@ -3551,6 +3619,7 @@ export function helpText(): string {
       <li>Max alive: ${listed(MONSTERS.map(([id]) => `${MONSTER_CAP[id] ?? 1} ${SPECIES[id].name.toLowerCase()}${(MONSTER_CAP[id] ?? 1) === 1 ? '' : 's'}`))}.
       Distance kept from your settlement totem: ${listed(MONSTERS.map(([id]) => `${SPECIES[id].name.toLowerCase()} ${MONSTER_KEEP_OFF[id] ?? 0} tiles`))}.</li>
       <li>Cannot be tamed, trapped, bred or brushed.</li>
+      <li>Health: ${listed(MONSTERS.map(([id]) => `${SPECIES[id].name.toLowerCase()} ${SPECIES[id].health}`))}. Blow: ${listed(MONSTERS.map(([id]) => `${SPECIES[id].name.toLowerCase()} ${SPECIES[id].attack}`))} damage.</li>
       <li>Blow against an unarmoured life: ${listed(MONSTERS.map(([id]) => `${SPECIES[id].name.toLowerCase()} ${percent(Math.round(SPECIES[id].attack * BLOW_SHARE * 100) / 100)}`))}.</li>
       ${REGIONS.filter((R) => R.monsters).map((R) => `<li>${capital(islandName(R.name))}: monster country: every wild spawn is one of these; holds ${mul(R.monsters ?? 1)} the number the rest of the chart shares
       (${listed(MONSTERS.filter(([id]) => (lairOf(id) ?? R) === R).map(([id]) => `${(MONSTER_CAP[id] ?? 1) * (R.monsters ?? 1)} ${SPECIES[id].name.toLowerCase()}${(MONSTER_CAP[id] ?? 1) * (R.monsters ?? 1) === 1 ? '' : 's'}`))}).</li>`).join('')}
@@ -3628,6 +3697,19 @@ export function helpText(): string {
       Unread: <i>something</i>.</li>
       <li>Only females give milk. Young and old ones do not breed.</li>
       <li><b>Pedigree</b> (card and hover): <b>dam</b>, <b>sire</b>, and each readable trait's source: ${PEDIGREE_SOURCES}.</li>
+    </ul>
+    <h4>Hybrids</h4>
+    <ul>
+      <li><b>Listed crosses</b> (${HYBRIDS.length}): ${HYBRIDS.map((h) => `${h.name} (${SPECIES[h.a].name} × ${SPECIES[h.b].name})`).join(', ')}. Either parent may be the dam.</li>
+      <li>Mate: one of its own sort first, else one of a listed cross within ${PAIR_RANGE} tiles: <b>Cross with</b> (name): (hybrid).</li>
+      <li>Cross: animal husbandry ${CROSS_SKILL}+; each parent care ${percent(CROSS_CARE)}+; success ${percent(CROSS_CHANCE)} of a pairing's.</li>
+      <li>Young: the hybrid; stage: the less-evolved parent's, for good (no evolution); ${TRAIT_SLOTS} trait slots from either parent at the usual inheritance chance;
+      colour form ${percent(FORM_PASS)} per parent with one, in the hybrid's own colours; size form as any young.</li>
+      <li>Hybrid: health +${percent(HYBRID_HARDY - 1)}; <b>infertile</b>; never wild; body and first task from the first parent, markings, colours and second task from the second.</li>
+      <li>At work: one worker place; the first parent's task first, the second's when the first has none in reach; task speed ${percent(HYBRID_WORK)} of a pure-bred's in each;
+      level: mean of the two tasks' skills.</li>
+      <li>Pedigree: <i>Hybrid: ${SPECIES[HYBRIDS[0].a].name} × ${SPECIES[HYBRIDS[0].b].name} · Dam … · sire …</i>.</li>
+      <li>Field guide: a page each, after the other wildermon; marked seen, and tamed and bred at a birth to a dam you keep.</li>
     </ul>
     <h4>Lines and mutations</h4>
     <ul>

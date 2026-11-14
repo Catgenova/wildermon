@@ -1,3 +1,4 @@
+import { DEEP_CATCH, DEEP_WATER } from './sailing';
 import { tryGain } from './learn';
 import type { ActionDef } from './actions';
 import type { Game } from './game';
@@ -25,6 +26,12 @@ export interface FishDef {
   level: number;
   /** How readily it takes a hook, against the others that could. */
   weight: number;
+  /**
+   * A deep-water fish: caught only on a line cast from a boat over water deeper
+   * than `DEEP_WATER` (`sailing.ts`), and then nothing else is. The island's
+   * `fish_def.deep`.
+   */
+  deep?: boolean;
 }
 
 export const FISH: FishDef[] = [
@@ -33,6 +40,10 @@ export const FISH: FishDef[] = [
   { id: 'trout', name: 'Trout', depth: 8, level: 15, weight: 16 },
   { id: 'pike', name: 'Pike', depth: 16, level: 35, weight: 9 },
   { id: 'sturgeon', name: 'Sturgeon', depth: 28, level: 60, weight: 3 },
+  // Deep water, from a boat only (`sailing.ts`).
+  { id: 'cod', name: 'Cod', depth: 40, level: 20, weight: 14, deep: true },
+  { id: 'halibut', name: 'Halibut', depth: 55, level: 45, weight: 7, deep: true },
+  { id: 'bluefin', name: 'Bluefin', depth: 70, level: 70, weight: 2, deep: true },
 ];
 
 export const FISH_BY_ID = new Map(FISH.map((f) => [f.id, f]));
@@ -112,7 +123,14 @@ export const waterKind = (g: Game, x: number, y: number): 'sea' | 'pond' => (g.w
 export const fishable = (g: Game, x: number, y: number): boolean => g.world.inBounds(x, y) && waterDepth(g, x, y) >= 1;
 
 /** What could be caught here by someone who knows this much. */
-export const fishHere = (depth: number, skill: number): FishDef[] => FISH.filter((f) => depth >= f.depth && skill >= f.level);
+export const fishHere = (depth: number, skill: number): FishDef[] => FISH.filter((f) => !f.deep && depth >= f.depth && skill >= f.level);
+/** Whether a line from here is cast from a boat over deep water (`DEEP_WATER`): at her helm or aboard her. The island's `afloat_deep`. */
+export const fromBoatDeep = (g: Game, depth: number): boolean => depth > DEEP_WATER && (g.afloat() !== undefined || g.player.aboard !== null);
+/** What a line cast here could bring up for this fisher: the deep-water fish from a boat over deep water, the rest anywhere else. */
+export const castPool = (g: Game, depth: number): FishDef[] =>
+  (fromBoatDeep(g, depth) ? deepFishHere : fishHere)(depth, g.skills.get('fishing'));
+/** And what a line cast from a boat over deep water could bring up: the deep-water fish, and only those. The island's `deep_fish_here`. */
+export const deepFishHere = (depth: number, skill: number): FishDef[] => FISH.filter((f) => f.deep && depth >= f.depth && skill >= f.level);
 
 /**
  * What comes up, or null for a bite that came off. Deeper water and a better
@@ -121,10 +139,11 @@ export const fishHere = (depth: number, skill: number): FishDef[] => FISH.filter
  */
 export function catchFish(g: Game, depth: number, rodQl: number, bait?: string | null): FishDef | null {
   const skill = g.skills.get('fishing');
-  const pool = fishHere(depth, skill);
+  const pool = castPool(g, depth);
   if (!pool.length) return null;
   const perk: PerkOf = (k, d) => g.perk(k, d);
-  if (g.rand() > staysOn(skill, rodQl, !!bait, perk('hook:fish', 0))) return null;
+  // From a boat over deep water a fish stays on `DEEP_CATCH` times as well (`sailing.ts`).
+  if (g.rand() > Math.min(1, staysOn(skill, rodQl, !!bait, perk('hook:fish', 0)) * (fromBoatDeep(g, depth) ? DEEP_CATCH : 1))) return null;
   return pickFish(g, pool, bait ? BAIT_BY_ID.get(bait) : undefined, perk);
 }
 
@@ -358,7 +377,7 @@ export const FISHING_ACTIONS: ActionDef[] = [
       const bait = spot ? baitFor(g, spot.depth) : null;
       const label = bait ? `Fish with ${itemDef(bait.id).name.toLowerCase()}` : 'Fish';
       // The chance a bite stays on and the most quality a fish comes up at (`yields.ts`), where any fish can be had.
-      return spot && fishHere(spot.depth, g.skills.get('fishing')).length ? taggedWith(g, 'fishing_rod', label, ...castOdds(g, spot.depth)) : label;
+      return spot && castPool(g, spot.depth).length ? taggedWith(g, 'fishing_rod', label, ...castOdds(g, spot.depth)) : label;
     },
     skill: 'fishing',
     tool: 'fishing_rod',
@@ -379,7 +398,7 @@ export const FISHING_ACTIONS: ActionDef[] = [
       if (!g.inventory.has('fishing_rod')) return 'Need a fishing rod.';
       const spot = castAt(g, t.x, t.y);
       if (!spot) return 'No fishable water in reach: walk to the bank.';
-      if (!fishHere(spot.depth, g.skills.get('fishing')).length) return 'No fish here at your fishing skill.';
+      if (!castPool(g, spot.depth).length) return 'No fish here at your fishing skill.';
       return null;
     },
     perform: (t, g) => {
@@ -433,7 +452,7 @@ export const FISHING_ACTION_BY_ID = new Map(FISHING_ACTIONS.map((a) => [a.id, a]
 /** What a line in water of this depth can bring up for this fisher, and the fish that want more skill for it. */
 export function fishFor(g: Game, depth: number): { pool: FishDef[]; later: FishDef[] } {
   const skill = g.skills.get('fishing');
-  return { pool: fishHere(depth, skill), later: FISH.filter((f) => depth >= f.depth && skill < f.level) };
+  return { pool: castPool(g, depth), later: FISH.filter((f) => !!f.deep === fromBoatDeep(g, depth) && depth >= f.depth && skill < f.level) };
 }
 
 /**

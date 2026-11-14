@@ -87,6 +87,8 @@ import { greenNow, mossyPiece } from './greening';
 import { WATER_PLANT_BY_ID, type WaterPlant, type WaterPlantKind } from '../world/waterplants';
 import { liveSettings, type Settings } from './settings';
 import { considerSays } from './consider';
+import { onLadder } from './ladderclimb';
+import { lyingAt, type Fell } from './fell';
 import { ARMOUR_VS, armsRefusal, blockChance, BLOCKED_SAID, WOUND_SAID, SHIELD_WEAR, BURN_WEAR, CROWD_BLOCK, DODGE_GAIN, dodgeChance, DRAW_WALK, FIGHT_QUIET, VENOM_DRAIN, VENOM_SECS, skillLine, type FightRecord, FIGHT_BACK_STILL, FIGHT_STANCE_NAMES, FLANK_HIT, legPace, FIGHT_TRIES, fightBase, fightWind, armPace, armourSwing, overburdenSwing, swingKgOf, swingBase, swingSeconds, SWING_FLOOR, tiredPace, FOLLOW_RANGE, inFightReach, isFightJob, nextStance, stanceSays, stanceTaken, TARGET_RANGE } from './fight';
 import { Skills, SKILL_BY_ID, SKILL_DEFS, isQuiet } from './skills';
 import { jewelGain } from './gems';
@@ -94,7 +96,8 @@ import { earnedBy, knackBonus, knackChance, knackLands, KNACK_CAP, TITLE_BY_ID }
 import { TileIndex, Tally, keyX, keyY, tileKey } from './tileindex';
 import { DARK_HIT, NIGHT_EYES_FROM, SOUL_PER_LEVEL, WORK_HAND, WORK_WIND, WORK_WIND_SPENT, HEAVY_SKILLS, WORK_BACK } from './learn';
 import { DRIVING, DRIVING_LEARN, drivingPace, SAILING, SAILING_LEARN, sailingPace, vehicleQlPace } from './travel';
-import { laySwirls, swirlLight, type Swirl } from './motes';
+import { isLayUp, LEAD_PACE, ROPE_WALK, ROPE_WALK_TIME, ROPEMAKING, ropePerLayUp, ropeTime } from './ropework';
+import { laySwirls, swirlLight, type MoteElement, type Swirl } from './motes';
 import { TRACKING, trackLevel, type Trail } from './tracking';
 import { hasRunestones, runestoneAt, RUNESTONES, stonePoint, stoneTiles } from './runestones';
 import { AWARENESS, Vision } from './vision';
@@ -116,7 +119,10 @@ import { isRuneLantern, runeLanternLight } from './runelantern';
 import { helpingOf, NUTRIENTS, NUTRIENT_DECAY, NUTRIENT_NAMES, TABLE_BEST, tableMul, upkeepMul, type Nutrient } from './nutrition';
 import { strokeOf } from '../audio/strokes';
 import { lockRefusal, type Lockable } from './locks';
-import { REACH_FORCE, sailFactor, sailWord, windAt, windFrom, windWord, type Wind } from './wind';
+import { REACH_FORCE, sailFactor, sailWord, windAt, windFrom, windSide, windWord, type Wind } from './wind';
+import { beamPace, cargoRoom, isRigged, noGoAt, riggingPace, sailsPace, TACK_PACE, tackSecs } from './sailing';
+import { SOUNDED, soundings } from './sailActions';
+import { infusedShare, SENSED, windPace } from './infusion';
 import { festerChance, PART_NAMES, woundClose, woundDrain, WOUND_KINDS, woundText, type Wound, type WoundKind } from './wounds';
 import { baubleLearn, baublePace, baublePlus, baublesFrom, baublesServe, baubleTwice, YIELD_TIMES, type DeedBauble } from './baubles';
 import { orderRefusal, queueDropped, seenOf, type SeenJob } from './jobqueue';
@@ -1810,7 +1816,12 @@ export class Game {
     // Oars are worked by the body; a sail is worked by the weather, and the
     // best you can do is hold the angle that suits her.
     const body = this.skills.get(def.sail ? 'body_control' : 'body_strength');
-    const weather = def.sail ? sailFactor(this.heading(), this.wind()) : 1;
+    // How close to the wind she sails and what the helm makes of a reach, off the helm's Sailing and her rigging (`sailing.ts`).
+    const sailing = this.skills.get(SAILING);
+    const rigged = isRigged(f);
+    const weather = def.sail ? sailFactor(this.heading(), this.wind(), noGoAt(sailing, rigged), beamPace(sailing)) : 1;
+    // And her hold, as the helm's Sailing makes it (`cargoRoom`), while it is your hands on her helm.
+    f.cargo = cargoRoom(sailing);
     // What is in the hold rides on the hull, and the hull feels it: a boat
     // loaded to her marks is `BOAT_LOAD_DRAG` slower than one running empty.
     const heft = furnitureHeft(f);
@@ -1819,7 +1830,39 @@ export class Game {
     // And her builder's hand in her, for a hull a Carpenter laid the keel of,
     // and the hand at her helm: Sailing (`sailingPace`).
     // And a Fair Wind set into her, on every point of sail (`enchanting.ts`), which only a boat with a sail takes.
-    return hullSpeed(def, f.ql, body, weather, load) * markOf(f, 'speed') * sailingPace(this.skills.get(SAILING)) * (1 + swingEnchant(f, 'sail'));
+    return hullSpeed(def, f.ql, body, weather, load) * markOf(f, 'speed') * sailingPace(sailing) * (1 + swingEnchant(f, 'sail'))
+      // Under sail: her rigging, her sails' QL, and a turn through the wind while she comes round (`sailing.ts`).
+      * (def.sail ? riggingPace(rigged) * sailsPace(f) * this.tackPace(sailing) : 1)
+      // And wind infused in her (`infusion.ts`).
+      * windPace(infusedShare(f, 'wind'));
+  }
+
+  /** The element you are attuned to, as the island last said it (`infusion.ts`); null for none. */
+  attuned: MoteElement | null = null;
+  /** When you last sensed the swirls, in epoch seconds, as the island said it. */
+  sensedAt = 0;
+  /** The last sensing of the swirls (`infusion.ts`): when, in real seconds, and how far it reached; drawn on the map a while. */
+  sensed: { real: number; x: number; y: number; range: number } | null = null;
+
+  /** The last sounding of the depth from a boat (`sailActions.ts`): when, in real seconds, and the water it read; drawn on the map a while. */
+  sounded: { real: number; tiles: Array<{ x: number; y: number; depth: number }> } | null = null;
+
+  /** Which side of her the wind was on, and until when a turn through it slows her (`tackSecs`), in real seconds. */
+  private tackSide = 0;
+  private tackUntil = 0;
+  /** What a turn through the wind makes of her pace now: `TACK_PACE` for `tackSecs` after the wind changes sides. */
+  private tackPace(sailing: number): number {
+    const side = windSide(this.heading(), this.wind());
+    const now = Date.now() / 1000;
+    if (this.tackSide !== 0 && side !== this.tackSide) this.tackUntil = now + tackSecs(sailing);
+    this.tackSide = side;
+    return now < this.tackUntil ? TACK_PACE : 1;
+  }
+
+  /** How close to the wind the hull under you sails, in radians: your Sailing and her rigging (`noGoAt`). */
+  noGoNow(): number {
+    const boat = this.afloat();
+    return noGoAt(this.skills.get(SAILING), !!boat && isRigged(boat));
   }
 
   /**
@@ -2161,7 +2204,7 @@ export class Game {
     const boat = this.afloat();
     const def = boat && furnitureDef(boat.kind).boat;
     if (!def?.sail) return from;
-    return `${from} \u00b7 ${sailWord(this.heading(), w)}`;
+    return `${from} \u00b7 ${sailWord(this.heading(), w, this.noGoNow())}`;
   }
 
   /** Water deep enough to float this hull, near where the player is standing. */
@@ -2288,6 +2331,11 @@ export class Game {
     // From a tile of the same deck, as it was; from one of its ends, onto it; from anywhere else, in under it.
     if (b && this.bridgeAt(x0, y0) === b) return was;
     return !(b && this.onBridge(b, x0, y0));
+  }
+
+  /** Where your body is drawn lying, while it lies where it fell (`./fell.ts` lyingAt): its fall said, the spawn under it. */
+  lying(): Fell | null {
+    return lyingAt(this.player.fell, this.player, this.spawn);
   }
 
   /** Height of the player's feet, storeys included: in a building on piers, from its deck. */
@@ -4539,6 +4587,11 @@ export class Game {
     const entry: LogEntry = { time: at ?? Date.now(), text, kind };
     this.log.push(entry);
     trimLog(this.log);
+    // The island's word of a sounding of yours: the water round you, read off the land here, on the map a while (`sailActions.ts`).
+    if (kind === 'event' && text.startsWith(SOUNDED)) this.sounded = { real: Date.now() / 1000, tiles: soundings(this) };
+    // And of a sensing of yours: the swirls round you, off the ones this machine has, on the map a while (`infusion.ts`).
+    const sensed = kind === 'event' && text.startsWith(SENSED) ? /within (\d+) tiles/.exec(text) : null;
+    if (sensed) this.sensed = { real: Date.now() / 1000, x: this.player.x, y: this.player.y, range: Number(sensed[1]) };
     this.events.emit('log', entry);
   }
 
@@ -4621,6 +4674,9 @@ export class Game {
       const [fx, fy] = [p.tileX, p.tileY];
       // A deck on piers is walked dry and level, whatever is under it (`piers.ts`); up and down a spiral staircase on its tile (`liftRule`).
       moved = p.update(dt, this.world, rule, this.buildings.pierTiles.size || this.foundations.size ? this.onFloor : undefined, lift);
+      // On a ladder, drawn as far up its storey as the climb has got (`./ladderclimb.ts`), not eased up it at once.
+      const ladder = this.buildings.list.size ? onLadder(this.buildings, p.x, p.y, p.level) : null;
+      if (ladder) p.visualLevel = p.level - 1 + ladder.u;
       if (this.bridges.size && (fx !== p.tileX || fy !== p.tileY)) this.underDeck = this.walksUnder(fx, fy, p.tileX, p.tileY);
     }
     this.local.stepped = moved;
@@ -4661,7 +4717,7 @@ export class Game {
     }
     if (boat && furnitureDef(boat.kind).boat?.sail && moved > 0) {
       const w = this.wind();
-      if (w.force >= REACH_FORCE && sailWord(this.heading(), w) === 'reaching') this.note('reach');
+      if (w.force >= REACH_FORCE && sailWord(this.heading(), w, this.noGoNow()) === 'reaching') this.note('reach');
       const cap = furnitureCapacity(boat);
       if (cap && furnitureUnits(boat) > cap / 2) this.note('laden');
     }
@@ -4810,6 +4866,8 @@ export class Game {
      */
     for (const it of this.inventory.items) {
       if (!it.lit || !(HELD_LIGHTS as readonly string[]).includes(it.id)) continue;
+      // Light infused in it burns none (`infusion.ts`).
+      if (infusedShare(it, 'light') > 0) continue;
       it.charges = Math.max(0, (it.charges ?? 0) - dt);
       if (it.charges > 0) continue;
       it.lit = false;
@@ -6177,7 +6235,9 @@ export class Game {
       const { armour, over } = this.swingBurden();
       go = swingSeconds(fight, skill, control, armour * over);
     }
-    return go * this.perk(`time:${def.id}`, 1) * this.pieceSpeed(def.skill) * (def.tool ? 1 - this.toolEnchant(def.tool, 'work') : 1);
+    return go * this.perk(`time:${def.id}`, 1) * this.pieceSpeed(def.skill) * (def.tool ? 1 - this.toolEnchant(def.tool, 'work') : 1)
+      // And Ropemaking's own pace on its jobs, and a lay-up at a rope walk (`ropework.ts`, the island's `rope_pace`).
+      * ropePace(this, def);
   }
 
   /**
@@ -6264,8 +6324,10 @@ export class Game {
   }
 
   /** How many of a thing a go of this recipe makes for you: its own count, or a perk's (a Carpenter's Clean Sawing). */
-  madeAGo(r: { result: string; count?: number }): number {
-    return this.perk(`count:${r.result}`, r.count ?? 1);
+  madeAGo(r: { id?: string; result: string; count?: number }): number {
+    // A lay-up gives what Ropemaking makes of it (`ropePerLayUp`), as the count it starts from.
+    const own = r.id && isLayUp(r.id) ? (r.count ?? 1) * ropePerLayUp(this.skills.get(ROPEMAKING)) : r.count ?? 1;
+    return this.perk(`count:${r.result}`, own);
   }
 
   /**
@@ -8163,7 +8225,9 @@ export class Game {
     // Shod, it goes quicker on laid stone.
     const shod = isShod(this.time, c) && !!TILE_DEFS[this.world.getTile(x, y)].paved ? SHOE_PACE : 1;
     // And quicker again in tack its maker's hand is in (a Tailor's Saddler), past the cap, as a vehicle's mark is.
-    return Math.min(MAX_MOUNT_SPEED, (def.swimSpeed ?? def.speed) * ageDef(c, this.time).speed * this.creatures.speedMul(c) * footing(c.skills[HAUL_SKILL] ?? 0) * (0.6 + 0.4 * c.hunger) * shod) * tackSpeed(c);
+    return Math.min(MAX_MOUNT_SPEED, (def.swimSpeed ?? def.speed) * ageDef(c, this.time).speed * this.creatures.speedMul(c) * footing(c.skills[HAUL_SKILL] ?? 0) * (0.6 + 0.4 * c.hunger) * shod) * tackSpeed(c)
+      // Led on a lead rope rather than bridled (`LEAD_PACE`), as the island's `travel_speed` has it.
+      * (c.tacked ? 1 : LEAD_PACE);
   }
 
   /**
@@ -8920,12 +8984,14 @@ export class Game {
        */
       const at = { id: r.id, x: r.x, y: r.y, sx: r.sx, sy: r.sy, mine: r.mine };
       // An enchantment set into it where it stands, and the wear a scroll that did not take left on it (`enchanting.ts`).
-      const kept = { ...(r.enchant ? { enchant: r.enchant } : {}), ...(r.dmg ? { dmg: r.dmg } : {}) };
+      const kept = { ...(r.enchant ? { enchant: r.enchant } : {}), ...(r.dmg ? { dmg: r.dmg } : {}),
+        // And the motes infused into it, while they last (`infusion.ts`).
+        ...(r.infuse ? { infuse: r.infuse } : {}) };
       // Down in a cellar: only furniture goes down there, and says so.
       // Down in a cellar, or a storey up: a wagon driven up a wide staircase (`driveStorey`).
       const down = (r.level ?? 0) < 0 ? { level: CELLAR_LEVEL } : (r.level ?? 0) > 0 ? { level: r.level as number } : {};
       if (r.kind === 'campfire' || r.kind === 'fire') {
-        built.campfires.set(r.id, { ...at, fuel: r.fuel ?? 0, lit: !!r.lit, ash: r.ash ?? 0 });
+        built.campfires.set(r.id, { ...at, fuel: r.fuel ?? 0, lit: !!r.lit, ash: r.ash ?? 0, ...(r.infuse ? { infuse: r.infuse } : {}) });
       } else if (r.kind === 'smelter') {
         built.smelters.set(r.id, {
           ...at, ...kept, ql: r.ql ?? 20, rare: rarityStep(r.rare), fuel: r.fuel ?? 0, lit: !!r.lit, ash: r.ash ?? 0,
@@ -10813,3 +10879,13 @@ const sinceAgo = (ago: number | null | undefined): number | undefined =>
 
 /** An island clock for a ground read that comes without one: nothing lying about has been burning. */
 const UNLIT: Aged = { since: () => 0 };
+
+/**
+ * What Ropemaking makes of a go at one of its own jobs (`ropeTime`), and a
+ * rope walk within reach of a lay-up (`ROPE_WALK_TIME`), as a share of its
+ * time after the floor. The island's `rope_pace`.
+ */
+export function ropePace(g: Game, def: { id: string; skill?: string }): number {
+  if (def.skill !== ROPEMAKING) return 1;
+  return ropeTime(g.skills.get(ROPEMAKING)) * (isLayUp(def.id) && g.furnitureNear(ROPE_WALK) !== undefined ? ROPE_WALK_TIME : 1);
+}

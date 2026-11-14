@@ -129,6 +129,8 @@ export const STROKE_BY_ID: Record<string, Stroke> = {
   ...Object.fromEntries([...TOPIARY_SHAPES.map((s) => `trim_topiary_${s}`), ...HEDGE_CLIPS.map((c) => `clip_hedge_${c}`), 'prune_bonsai'].map((id) => [id, 'snip' as Stroke])),
   // A trophy hung on its plaque, a pot set on its stand, and taken down: wood on wood (`garden.ts`).
   show_on_piece: 'wood', take_from_show: 'wood',
+  // A lead line let down into the water, and a rigging set rove off on a hull (`sailActions.ts`).
+  sound_depth: 'water', fit_rigging: 'cloth',
 };
 
 const BY_SKILL: Record<string, Stroke> = {

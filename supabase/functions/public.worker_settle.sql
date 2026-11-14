@@ -12,6 +12,7 @@ declare c creature; d species_def; kind text; guard int := 0; done int := 0;
         v_day int; v_held jsonb; v_left int; v_bed placed; v_sort record; v_spar creature; v_hive placed; v_trip record; v_made int[]; v_did jsonb; v_tire int; v_put jsonb; -- made log
         v_lv int; v_once int; v_routed boolean := true; -- storeys
         v_vine boolean := false; -- a bush picker planting vines
+        v_hy_tried boolean := false; -- a hybrid that has looked for its second trade's work
 begin
   select * into c from creature where world_id = p_world and id = p_id for update;
   if not found or c.mode <> 'deed' then return 0; end if;
@@ -71,6 +72,14 @@ begin
     end if;
     v_lv := null; v_routed := false;
     for v_once in 1..1 loop
+    if d.hybrid_a is not null then
+      if c.phase <> 'idle' or c.carrying is not null or c.fetching is not null then
+        v_hy_tried := false;
+      elsif not v_hy_tried and kind is distinct from d.trades[1] then
+        kind := d.trades[1]; c.job := kind;
+        update creature set job = kind where world_id = p_world and id = p_id;
+      end if;
+    end if;
     /*
      * A bush picker from `bush_vines_at()` on: on the vine planter's errand while it holds grape cuttings with a trellis
      * for them, or walks to the stores for them (`fetching`). Holding them with no trellis left, back to the stores.
@@ -495,6 +504,12 @@ begin
       else
         select * into step from errand_step(p_world, p_id, case when v_vine then 'vine' end);
         if step.gx is null then
+          if d.hybrid_a is not null and not v_hy_tried and c.carrying is null and not v_vine then
+            v_hy_tried := true;
+            kind := case when kind = d.trades[1] then d.trades[2] else d.trades[1] end; c.job := kind;
+            update creature set job = kind where world_id = p_world and id = p_id;
+            continue;
+          end if;
           -- Nothing to run. Replaying an afternoon of that produces nothing.
           c.from_x := cx; c.from_y := cy;
           c.idle_what := step.why_what; c.idle_why := step.why; c.idle_n := step.why_n;
@@ -771,6 +786,12 @@ begin
           c.phase := 'home';
           continue;
         end if;
+      end if;
+      if spot.x is null and d.hybrid_a is not null and not v_hy_tried and c.carrying is null then
+        v_hy_tried := true;
+        kind := case when kind = d.trades[1] then d.trades[2] else d.trades[1] end; c.job := kind;
+        update creature set job = kind where world_id = p_world and id = p_id;
+        continue;
       end if;
       if spot.x is null then
         -- Nothing of its trade anywhere it can reach. It wanders a few tiles

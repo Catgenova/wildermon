@@ -10,6 +10,7 @@ import {
   kindName,
   GATHER_VERB,
   growsAt,
+  hybridTasksSays,
   maxHealth,
   lineLines,
   pedigreeLine,
@@ -71,6 +72,8 @@ const wrapList = (text: string, width = 64): string[] => {
 /** Its settlement task in a few words: "Settlement task: foraging". Null for a kind with none. */
 export function taskLine(c: Pick<Creature, 'species' | 'trade'>): string | null {
   const def = SPECIES[c.species] ?? SPECIES.rabba;
+  // A hybrid's two, in the order it takes them up (`hybridTasksSays`).
+  if (def.hybrid) return `Settlement ${hybridTasksSays(def).charAt(0).toLowerCase()}${hybridTasksSays(def).slice(1)}`;
   const kind = c.trade ?? def.gathers;
   if (kind) return `Settlement task: ${GATHER_VERB[kind]}`;
   return def.style === 'spar' ? 'Settlement task: sparring' : null;
@@ -101,7 +104,7 @@ export function creatureLines(g: Game, c: Creature): string[] {
   // A monster is not a wildermon and nothing about it is negotiable.
   if (def.monster) {
     lines.push(`${kindName(c)} · hostile`);
-    lines.push(`Health ${Math.ceil(c.health)}/${maxHealth(c, def)} ${bar(c.health / maxHealth(c, def))} · blow ${attackOf(c, def).toFixed(0)} damage`);
+    lines.push(`Health ${Math.ceil(c.health)}/${maxHealth(c, def)} ${bar(c.health / maxHealth(c, def))} · blow ${+attackOf(c, def).toFixed(1)} damage`);
     lines.push('Cannot be tamed.');
     return lines;
   }
@@ -153,6 +156,8 @@ export function creatureLines(g: Game, c: Creature): string[] {
     const role = c.around ? 'Working around you' : 'Settlement worker';
     const doing = c.trade ?? def.gathers;
     if (doing) lines.push(`${role} · ${GATHER_VERB[doing]} ${taskSkill(c, def).toFixed(1)} · range ${workRangeOf(c, def)} tiles`);
+    // And a hybrid's two trades, the one it is at above (`hybridTasksSays`).
+    if (def.hybrid) lines.push(hybridTasksSays(def));
     else lines.push(`${role} · ${def.style === 'spar' ? 'sparring' : 'no task'}`);
     // Who it is sparring with on the settlement (`sparTaskSays`).
     const partner = c.sparWith != null ? g.creatures.get(c.sparWith) : undefined;
@@ -169,7 +174,7 @@ export function creatureLines(g: Game, c: Creature): string[] {
     // Why it is standing about, and what it did this island day and the one before.
     if (c.idle) lines.push(idleSays(c.idle, c.trade ?? def.gathers, c.carrying ? itemDef(c.carrying.id).name : null));
     lines.push(...ledgerLines(c.ledger, g.islandDay()));
-  } else lines.push(`Companion · ${STANCE_NAMES[c.stance].toLowerCase()} · blow ${attackOf(c, def).toFixed(0)} damage`);
+  } else lines.push(`Companion · ${STANCE_NAMES[c.stance].toLowerCase()} · blow ${+attackOf(c, def).toFixed(1)} damage`);
   // Not at work: the task it would do on a settlement.
   if (c.mode !== 'deed') {
     const task = taskLine(c);
@@ -188,7 +193,7 @@ export function creatureLines(g: Game, c: Creature): string[] {
   }).filter(Boolean);
   if (traits.length) lines.push(`Traits: ${traits.join(', ')}`);
   // Who it was bred from, and how deep its line runs; anything not bred says nothing about it.
-  if (c.pedigree) lines.push(pedigreeLine(c.pedigree), ...lineLines(c));
+  if (c.pedigree) lines.push(pedigreeLine(c.pedigree, c.species), ...lineLines(c));
   // "Pregnant", as the Wildermon card says it: a vola does not carry a calf.
   if (c.due > 0) lines.push(`Pregnant · due in ${clockLeft(c.due - g.time)}`);
   return lines;

@@ -48,7 +48,8 @@ import { drawWorkPost, drawWorkPostLive, drawWorkPostNight, workPostBounds, work
 import { isRuneLantern } from '../game/runelantern';
 import { isRuneGate } from '../game/runegate';
 import { HALF_H, HALF_W, HEIGHT_SCALE, UNITS_PER_TILE } from './iso';
-import { beastReach, blockAt, flinchAt, HUNT_REACH, inFightReach, isFightJob, WIND_UP } from '../game/fight';
+import { ladderBody } from './ladderbody';
+import { beastReach, blockAt, flinchAt, stumbleAt, HUNT_REACH, inFightReach, isFightJob, WIND_UP } from '../game/fight';
 import { depthOf, type View } from './view';
 import type { RoofModel } from './roofshape';
 import { isGlasshouse } from '../game/glasshouse';
@@ -118,6 +119,14 @@ import { drawPlantsFlat, drawPlantUpright, plantFoot, standsUp, type PlantFrame 
 import type { WaterPlant } from '../world/waterplants';
 import type { Swirl } from '../game/motes';
 import { drawSwirl, glowSwirl } from './swirls';
+import { activeInfusion } from '../game/infusion';
+import { isRigged } from '../game/sailing';
+import { MOTE_ELEMENTS, type MoteElement } from '../game/motes';
+/** An infused thing's knot of motes, as a share of a swirl's; the least zoom one is drawn at; how far from you and how many. */
+const INFUSED_SCALE = 0.5;
+const INFUSED_ZOOM = 0.6;
+const INFUSED_REACH = 24;
+const INFUSED_MOST = 16;
 import { runestoneAt, stoneCentre, type Runestone } from '../game/runestones';
 import type { WaterField } from '../world/springs';
 import { Dust, dustTone } from './dust';
@@ -1364,6 +1373,32 @@ export class Renderer {
   private glows: Array<{ sx: number; sy: number; kind: string; view: PieceView }> = [];
   /** The mote swirls drawn this frame and where, for their light to be added over the night (`glowSwirl`). */
   private swirlsSeen: Array<{ s: Swirl; x: number; y: number }> = [];
+  /**
+   * What stands infused this frame (`game/infusion.ts`), by tile: a small knot of its element's motes turning over it,
+   * as a swirl turns (`./swirls`), at `INFUSED_SCALE` of one, while the Effects setting is on and the zoom is close
+   * enough to see one; the nearest `INFUSED_MOST` to you, and none at all past them.
+   */
+  private infusedSeen = new Map<number, Swirl & { lift: number }>();
+  private infusedThings(): Map<number, Swirl & { lift: number }> {
+    const out = new Map<number, Swirl & { lift: number }>();
+    if (this.game.settings.effects === 'off' || this.camera.zoom < INFUSED_ZOOM) return out;
+    const now = Date.now() / 1000, px = this.game.player.x, py = this.game.player.y;
+    const all: Array<{ d: number; key: number; s: Swirl & { lift: number } }> = [];
+    const add = (thing: { infuse?: { el: string; str: number; until: number } }, x: number, y: number, lift: number, id: number): void => {
+      const i = activeInfusion(thing, now);
+      if (!i || !(MOTE_ELEMENTS as readonly string[]).includes(i.el)) return;
+      const d = Math.hypot(x + 0.5 - px, y + 0.5 - py);
+      if (d > INFUSED_REACH) return;
+      all.push({ d, key: y * this.game.world.w + x, s: { id: -id, x, y, element: i.el as MoteElement, lift } });
+    };
+    for (const f of this.game.furniture.values()) if (f.infuse) add(f, f.x, f.y, 16, f.id);
+    for (const f of this.game.smelters.values()) if (f.infuse) add(f, f.x, f.y, 18, f.id);
+    for (const f of this.game.kilns.values()) if (f.infuse) add(f, f.x, f.y, 18, f.id);
+    for (const f of this.game.campfires.values()) if (f.infuse) add(f, f.x, f.y, 8, f.id);
+    all.sort((a, b) => a.d - b.d);
+    for (const a of all.slice(0, INFUSED_MOST)) if (!out.has(a.key)) out.set(a.key, a.s);
+    return out;
+  }
   /**
    * The night taken off the runestones in view, in their runes' shapes and
    * kept off whatever stands in front of them (`RunestoneNight`). Opened at
@@ -4279,7 +4314,9 @@ export class Renderer {
     const hemmed = zoom >= RUFFLE_FROM;
     // Close enough to be picking things up rather than looking at the country.
     const player = this.game.player;
-    const playerDepth = depthOf(V, player.tileX, player.tileY);
+    // (lain where you fell, you are drawn there: `../game/fell.ts`)
+    const fellAt = this.game.lying();
+    const playerDepth = fellAt ? depthOf(V, Math.floor(fellAt.x), Math.floor(fellAt.y)) : depthOf(V, player.tileX, player.tileY);
     this.spiralSeen = null;
     // Everybody at the helm of a hull somebody else is steering, or aboard one, is drawn with her; see `takeAboard`.
     this.seated.clear();
@@ -4349,6 +4386,7 @@ export class Renderer {
     this.hitSeq = 0;
     this.glows.length = 0;
     this.swirlsSeen.length = 0;
+    this.infusedSeen = this.infusedThings();
     // After dark; and for an altar's stars, whenever the night layer is laid at all (`drawOverlays`), so it can be mixed small.
     const dark0 = this.game.darkness();
     this.runeNight.begin(dark0 > 0.02, skyWash(this.game.hourOfDay(), dark0).length > 0);
@@ -4751,6 +4789,12 @@ export class Renderer {
             }
           }
         }
+        // A thing infused here: a small knot of its element over it (`infusedThings`).
+        const infused = this.infusedSeen.size ? this.infusedSeen.get(y * world.w + x) : undefined;
+        if (infused) {
+          const avg = (c[0] + c[1] + c[2] + c[3]) / 4;
+          this.take('swirl', x, y, cam.worldToScreenX(x + 0.5, y + 0.5), cam.worldToScreenY(x + 0.5, y + 0.5, avg) - infused.lift * cam.zoom, null).swirl = infused;
+        }
         // A mote swirl turning over the middle of the tile: over the water's surface where there is water (`./swirls`).
         if (this.game.swirls.size) {
           const swirl = this.game.swirlAt(x, y);
@@ -4948,14 +4992,18 @@ export class Renderer {
               continue;
             }
             const flight = peer.level === 0 ? this.onFlight(px, py) : null;
+            // On a ladder, on it as far up as the climb has got (`ladderbody.ts`).
+            const lb = peer.down !== undefined ? null : ladderBody(this.game, px, py, peer.level);
             // Under a bridge's deck, at the ground's height or the water's, rather than on it (`bodyUnder`).
             const under = this.game.bridges.size > 0 && peer.level === 0
               && this.bodyUnder(`p${peer.id}`, Math.floor(px), Math.floor(py), [Math.floor(peer.fromX), Math.floor(peer.fromY)], peer.swimming);
             const onDeck = under ? null : this.peerDeck(px, py, peer.level);
-            const pe = this.take('peer', x, y, cam.worldToScreenX(px, py),
-              cam.worldToScreenY(px, py, flight ? flight.h : onDeck
-                ?? (this.game.deckBase(Math.floor(px), Math.floor(py), peer.level) ?? this.footOn(px, py, peer.level)) + peer.level * WALL_HEIGHT), null);
+            const pe = lb ? this.take('peer', x, y, cam.worldToScreenX(lb.x, lb.y), cam.worldToScreenY(lb.x, lb.y, lb.h), null)
+              : this.take('peer', x, y, cam.worldToScreenX(px, py),
+                cam.worldToScreenY(px, py, flight ? flight.h : onDeck
+                  ?? (this.game.deckBase(Math.floor(px), Math.floor(py), peer.level) ?? this.footOn(px, py, peer.level)) + peer.level * WALL_HEIGHT), null);
             pe.peer = peer;
+            if (lb) pe.ladder = lb;
             if (onDeck !== null) this.onBridgeDeck(pe, px, py);
             if (flight) pe.clip = flight.clip;
           }
@@ -5030,6 +5078,9 @@ export class Renderer {
         this.spiralLift = spiral;
         // On the head of a way down, in the hole on its tread.
         const flight = !spiral && piered === null && deck === null && player.level === 0 && !drivenBy && !up ? this.onFlight(player.x, player.y) : null;
+        // Lain where you fell, while you may still pick where to wake (`../game/fell.ts`); on a ladder, on it (`ladderbody.ts`).
+        const fell = this.game.lying();
+        const lb = !fell && !spiral && piered === null && deck === null && !drivenBy && !up ? ladderBody(this.game, player.x, player.y, player.level) : null;
         // Afloat in deep water, at the top of it: the sea's surface, or a pond's; on stepping stones, on their tops.
         const ph = piered !== null ? piered + player.visualLevel * WALL_HEIGHT
           : deck !== null ? deck : flight ? flight.h : this.footOn(player.x, player.y, player.level) + player.visualLevel * WALL_HEIGHT;
@@ -5042,7 +5093,10 @@ export class Renderer {
         // A rider sits where their mount stands, which is where they stand: a storey up too (`rideRule`).
         const seatBase = drivenBy ? this.pieceBase(drivenBy, vx, vy) : player.visualLevel > 0 ? this.footOn(vx, vy, player.level) + player.visualLevel * WALL_HEIGHT : world.heightAt(vx, vy);
         const sy = spiral ? cam.worldToScreenY(spiral.x, spiral.y, spiral.h) : drivenBy || up ? cam.worldToScreenY(vx, vy, seatBase) + 0.01 : cam.worldToScreenY(player.x, player.y, ph);
-        const pe = this.take('player', player.tileX, player.tileY, spiral ? cam.worldToScreenX(spiral.x, spiral.y) : cam.worldToScreenX(vx, vy), sy, null);
+        const pe = fell ? this.take('player', Math.floor(fell.x), Math.floor(fell.y), cam.worldToScreenX(fell.x, fell.y), cam.worldToScreenY(fell.x, fell.y, this.footOn(fell.x, fell.y, fell.level) + fell.level * WALL_HEIGHT), null)
+          : lb ? this.take('player', player.tileX, player.tileY, cam.worldToScreenX(lb.x, lb.y), cam.worldToScreenY(lb.x, lb.y, lb.h), null)
+            : this.take('player', player.tileX, player.tileY, spiral ? cam.worldToScreenX(spiral.x, spiral.y) : cam.worldToScreenX(vx, vy), sy, null);
+        if (lb) pe.ladder = lb;
         if (spiral) pe.key = spiral.key;
         this.spiralSeen = spiral ? { tx: player.tileX, ty: player.tileY, x: pe.sx, y: pe.sy, key: spiral.key } : null;
         pe.lift = this.driverSeat() * zoom;
@@ -6541,8 +6595,9 @@ export class Renderer {
    * how far through, where, and from where the creature that struck it stands, round from the body's front toward its
    * left, as the screen has the two; from ahead when nothing says what struck.
    */
-  private flinchOf(at: number | undefined, where: string | undefined, by: number | undefined, x: number, y: number, facing: number): FigurePose['flinch'] {
-    const t = flinchAt(at, performance.now() / 1000);
+  private flinchOf(at: number | undefined, where: string | undefined, by: number | undefined, x: number, y: number, facing: number, heavy = false): FigurePose['flinch'] {
+    // (a heavy blow's a stumble back, `STUMBLE_SECS` long: `FigurePose.heavy`)
+    const t = heavy ? stumbleAt(at, performance.now() / 1000) : flinchAt(at, performance.now() / 1000);
     if (t === undefined) return undefined;
     const c = by === undefined ? undefined : this.game.creatures.get(by);
     if (!c) return { t, where };
@@ -6793,7 +6848,8 @@ export class Renderer {
             // On a deck it is the hull that is going somewhere, not the feet.
             moving: player.moving && !ent.standing,
             gait: this.gaits.of('player', player.x, player.y, this.frameDt),
-            facing: ent.seatFacing ?? this.playerFacing,
+            // (on a ladder, faced to it: `ladderbody.ts`)
+            facing: ent.seatFacing ?? (ent.ladder?.climb !== undefined ? this.facingOnScreen(ent.ladder.dirX, ent.ladder.dirY, this.playerFacing) : this.playerFacing),
             swimming: player.swimming,
             working: this.game.action?.state === 'performing',
             // What at: meditating is done sat on the ground rather than at the bench (`FigurePose.job`).
@@ -6812,7 +6868,11 @@ export class Renderer {
             ...emoteNow(player.emote, player.emoteAt, performance.now() / 1000),
             cast: this.spells.poseOf(PLAYER_CASTS),
             block: blockAt(player.blockedAt, performance.now() / 1000),
-            flinch: this.flinchOf(player.hurtAt, player.hurtWhere, player.hurtBy, player.x, player.y, ent.seatFacing ?? this.playerFacing),
+            flinch: this.flinchOf(player.hurtAt, player.hurtWhere, player.hurtBy, player.x, player.y, ent.seatFacing ?? this.playerFacing, !!player.hurtHeavy),
+            // knocked down, on a ladder, a heavy blow (`../sculpt/anim/clips/down-ko.ts`, `ladder.ts`, `stumble.ts`)
+            ...(this.game.lying() ? { down: Math.max(0, performance.now() / 1000 - player.fellAt) } : {}),
+            ...(ent.ladder?.climb !== undefined ? { climb: { h: ent.ladder.climb } } : {}),
+            ...(player.hurtHeavy ? { heavy: true } : {}),
             veil: this.spells.veilOf(PLAYER_CASTS),
           }, this.seatedAt(ent, ex, ey, zoom))),
           undefined,
@@ -6837,7 +6897,7 @@ export class Renderer {
           const [hx, hy] = swayedAt(ent.sway, ex, ey);
           this.peerHits.push({ x: ent.x, y: ent.y, left: hx - 10 * zoom, top: hy - (FIGURE_TOP - 2) * zoom, w: 20 * zoom, h: FIGURE_TOP * zoom, peer: peer.uid });
         }
-        peer.facing = this.facingOnScreen(peer.dirX, peer.dirY, peer.facing);
+        peer.facing = ent.ladder?.climb !== undefined ? this.facingOnScreen(ent.ladder.dirX, ent.ladder.dirY, peer.facing) : this.facingOnScreen(peer.dirX, peer.dirY, peer.facing);
         this.clipTo(ctx, ent.clip);
         const peerBox: [number, number, number, number] = [ex - 34 * zoom, ey - (FIGURE_TOP + 14) * zoom, 68 * zoom, (FIGURE_TOP + 22) * zoom];
         this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ex, ey, (g, px, py) =>
@@ -6862,7 +6922,11 @@ export class Renderer {
             ...emoteNow(peer.emote, peer.emoteAt, performance.now() / 1000),
             cast: this.spells.poseOf({ kind: 'peer', id: peer.id }),
             block: blockAt(peer.blockedAt, performance.now() / 1000),
-            flinch: this.flinchOf(peer.hurtAt, peer.hurtWhere, peer.hurtBy, peer.x, peer.y, ent.seatFacing ?? peer.facing),
+            flinch: this.flinchOf(peer.hurtAt, peer.hurtWhere, peer.hurtBy, peer.x, peer.y, ent.seatFacing ?? peer.facing, !!peer.hurtHeavy),
+            // knocked down, on a ladder, a heavy blow (`../sculpt/anim/clips/down-ko.ts`, `ladder.ts`, `stumble.ts`)
+            ...(peer.down !== undefined ? { down: Math.max(0, performance.now() / 1000 - peer.down) } : {}),
+            ...(ent.ladder?.climb !== undefined ? { climb: { h: ent.ladder.climb } } : {}),
+            ...(peer.hurtHeavy ? { heavy: true } : {}),
             veil: this.spells.veilOf({ kind: 'peer', id: peer.id }),
           }, this.seatedAt(ent, ex, ey + (ent.lift ?? 0), zoom))),
           undefined,
@@ -6971,7 +7035,7 @@ export class Renderer {
         const piece = ent.piece;
         const helm = this.helming === piece ? 'player' : piece.helm ? this.game.roster.list().find((p) => p.uid === piece.helm) : undefined;
         const hb = drawFurniture(ctx, ent.sx, ent.sy + (ent.drawDy ?? 0), zoom, piece.kind, !!piece.lit, dyeOf(piece) ?? undefined, this.pieceTrim(piece), ent.view, piece.material, crewOf(piece.kind) ?? undefined, ent.layer, true,
-          helm ? figurePicture(helm === 'player' ? helm : 'o' + helm.id) : null, this.manned(piece));
+          helm ? figurePicture(helm === 'player' ? helm : 'o' + helm.id) : null, this.manned(piece), isRigged(piece));
         // A hull is drawn in layers round her crew, not to be drawn again: in front of a runestone's runes, her box is kept off them.
         if (this.runeNight.keeping) this.runeNight.occludeRect(ctx, ent.sx + hb[0], ent.sy + (ent.drawDy ?? 0) + hb[1], hb[2] - hb[0], hb[3] - hb[1], this.occClips);
         continue;
@@ -7101,7 +7165,7 @@ export class Renderer {
            */
           const crew = ent.layer === 0 ? crewOf(piece.kind) ?? undefined : undefined;
           this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => {
-            drawn = drawFurniture(g, px, py, zoom, piece.kind, !!piece.lit, dyeOf(piece) ?? undefined, this.pieceTrim(piece), view, piece.material, crew, crew && !hovering ? 0 : 'all', false, null, this.manned(piece));
+            drawn = drawFurniture(g, px, py, zoom, piece.kind, !!piece.lit, dyeOf(piece) ?? undefined, this.pieceTrim(piece), view, piece.material, crew, crew && !hovering ? 0 : 'all', false, null, this.manned(piece), isRigged(piece));
           }, undefined, pieceBox);
           // What on it moves -- an altar's stars, a banner's cloth -- over it, and outside the
           // ring under the pointer: a ring round a bloom of light is a blot.
@@ -7340,7 +7404,8 @@ export class Renderer {
         continue;
       }
       if (ent.kind === 'swirl' && ent.swirl) {
-        drawSwirl(ctx, ent.sx, ent.sy, zoom, ent.swirl.element, this.anim, ent.swirl.id);
+        // An infused thing's knot (a negative id) is a smaller one (`infusedThings`).
+        drawSwirl(ctx, ent.sx, ent.sy, ent.swirl.id < 0 ? zoom * INFUSED_SCALE : zoom, ent.swirl.element, this.anim, ent.swirl.id);
         // And its light over the night, once the night is laid (`glowSwirl`).
         this.swirlsSeen.push({ s: ent.swirl, x: ent.sx, y: ent.sy });
         continue;

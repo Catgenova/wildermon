@@ -49,6 +49,9 @@ import { CREATURE_CRATE_ACTIONS } from './creaturecrate';
 import { HUSBANDRY_ACTIONS } from './husbandry';
 import { DYE_ACTIONS, recipeSays } from './dyes';
 import { TRAP_ACTIONS } from './traps';
+import { SAIL_ACTIONS } from './sailActions';
+import { INFUSE_ACTIONS } from './infuseActions';
+import { activeInfusion, infuseSays } from './infusion';
 import { BRIDGE_ACTIONS } from './bridges';
 import { AQ_OVER, AQUEDUCT_ACTIONS, AQUEDUCT_MOTE_USE } from './aqueducts';
 import { SPRING_ACTIONS } from './springs';
@@ -2454,7 +2457,9 @@ export const ACTIONS: ActionDef[] = [
       // And the line cut into a memorial stone (`memorial.ts`): the island's `engraved_item_says`.
       // And the square a map holds (`cartography.ts`): the island's `chart_item_says`.
       const cut = signableKind(item.id) ? '' : engravedItemSays(item);
-      const by = `${makerSays(item)}${markSays(item.mark)}${enchantSays(item)}${cut}${chartItemSays(item)}`;
+      // And the motes infused into it, while they last (`infusion.ts`): the island's `infuse_says`.
+      const infused = activeInfusion(item);
+      const by = `${makerSays(item)}${markSays(item.mark)}${enchantSays(item)}${infused ? ` ${infuseSays(infused)}` : ''}${cut}${chartItemSays(item)}`;
       // A dish off a shut recipe says its knack, at this helping's quality, for the same things the eating does.
       const knack = knackSays(item.id);
       const favours = (knack ? ` ${knack}, ${clockLeft(boonTime(item.id, item.ql, markOf(item, 'knack')))}.` : '')
@@ -3338,6 +3343,10 @@ export const ACTIONS: ActionDef[] = [
   ...FIRST_AID_ACTIONS,
   ...REMEDY_ACTIONS,
   ...PLACEABLE_ACTIONS,
+  // Sounding the depth from a boat, and fitting a rigging set (`sailActions.ts`).
+  ...SAIL_ACTIONS,
+  // Infusing motes into a thing, and sensing the swirls round you (`infuseActions.ts`).
+  ...INFUSE_ACTIONS,
   ...CRATE_ACTIONS,
   // A pack beast's panniers (`panniers.ts`).
   ...PANNIER_ACTIONS,
