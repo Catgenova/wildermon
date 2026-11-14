@@ -11,11 +11,14 @@ import { gableRoof, strut } from './outdoor';
  * cast of (bronze when it does not say), hung from an iron strap in a timber
  * frame -- two posts on sills, braced at their feet, a header beam across
  * their heads under a little shingled gable roof -- its clapper showing under
- * the lip and the rope hanging from it.
+ * the lip, and an iron lever out from its strap to the front, the rope hanging
+ * from the lever's end down the front of the frame, where it is rung from.
  */
 
 /** The posts: how far out, and their head. */
 const X = 3.9, H = 16.4;
+/** The lever's end out to the front (+y) and its height; the rope's foot, a hand's span off the ground. */
+const LEVER: V3 = [0, 2.5, 14.9], ROPE_FOOT: V3 = [0, 2.8, 3.6];
 /** Hemp rope. */
 const ROPE: Tone = toneOf('#ead2a4', '#9a7e6c');
 
@@ -61,11 +64,12 @@ function bellOf(look: KitLook): KitModel {
       }
     },
   })), { edges: true });
-  // The clapper under the lip, and the rope down from it.
-  const clapper = add(lathe(0, 0, [[7.75, 0.3], [7.95, 0.58], [8.4, 0.58], [8.65, 0.3]], 10, IRON));
-  const top: V3 = [0, 0, 7.75], foot: V3 = [0, 0.8, 3.4];
+  // The clapper under the lip; the lever out from the strap to the front, and the rope down from its end.
+  add(lathe(0, 0, [[7.75, 0.3], [7.95, 0.58], [8.4, 0.58], [8.65, 0.3]], 10, IRON));
+  const lever = add(slab(-0.22, 0.22, 0.3, LEVER[1] + 0.25, LEVER[2] - 0.22, LEVER[2] + 0.22, IRON));
+  const top: V3 = LEVER, foot: V3 = ROPE_FOOT;
   parts.push({
-    reach: [top, foot], solid: false, after: [clapper],
+    reach: [top, foot], solid: false, after: [lever],
     draw: (g, e) => {
       const [ax, ay] = proj(e, top), [bx, by] = proj(e, foot);
       g.lineCap = 'round';
