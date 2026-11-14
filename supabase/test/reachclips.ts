@@ -18,7 +18,7 @@
  */
 import { CLIPS, clipFor, PLACEHOLDER, workClipOf } from '../../src/sculpt/anim';
 import { clipLocal, plantAt } from '../../src/sculpt/anim/player';
-import { secondAt, type Clip, type Side } from '../../src/sculpt/anim/clip';
+import { secondAt, type Side } from '../../src/sculpt/anim/clip';
 import { lowSkeleton, lowToolHeld } from '../../src/sculpt/lowpoly';
 import { LAMP_GLASS, LAMP_HANG } from '../../src/game/lamps';
 import type { FigurePose } from '../../src/render/figure';
