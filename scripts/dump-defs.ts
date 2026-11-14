@@ -210,6 +210,12 @@ import { EFFECT_HEAD, EFFECT_SAID, EFFECT_TAIL, ENCHANT, ENCHANT_BURN, enchantLi
 import { STATION_NAME, scrollHarmSaid } from '../src/game/recipes';
 import { FIGURE_SAID, GARDEN_DONE, GARDEN_JOBS, GARDEN_SAID, growsFromSet, isGardenPiece, MOUNT_SAID, type GardenSaid } from '../src/game/garden';
 import { DECOR_DONE, DECOR_JOBS, DECOR_SAID, KEPT_WHY, STAND_SLOTS, type DecorSaid } from '../src/game/decor';
+import { FURNISH_DONE, FURNISH_JOBS, FURNISH_SAID, type FurnishDone, type FurnishSaid } from '../src/game/furnish';
+import {
+  BIRDBATH, CAIRN, CAIRN_NAME_MAX, FIREPLACE, FIREPLACE_REACH, FISH_KG_STEP, FISH_MOUNT, FISH_SIZE_LEAST, FISH_SIZE_PER, FOOTSTOOL, FOUR_POSTER, GARDEN_SWING, GAZEBO,
+  HAY, HAY_A_DAY, HAY_BALE, HAY_HOLDS, HAY_REACH, SIDE_TABLE, SIGN_ARMS, SIGNPOST, STONE_BENCH, SWING_REST, TABLE_HOLDS, TROUGH_CARE, TROUGH_DRINK, TROUGH_REACH, VASE,
+  VASE_FLOWER, VASE_FRESH, VASE_HOLDS, WATER_TROUGH,
+} from '../src/game/furnishdefs';
 import {
   ARMOUR_STAND, COMPOST, COMPOST_BIN, COMPOST_BOOST, COMPOST_DAYS, COMPOST_HOLDS, COMPOST_PER, COMPOST_SPOILED, COMPOST_TAKES, CURTAINS, RUG_COLOURS, RUG_PATTERNS,
   SPREAD_COST, SPREAD_SKILL, STONE_LANTERN, SUNDIAL, WOVEN_RUG,
@@ -693,6 +699,8 @@ out.push(`alter table furniture_def add column if not exists bonsai boolean not 
 out.push(`alter table furniture_def add column if not exists shows text;`);
 out.push(`alter table furniture_def add column if not exists shows_n int;`);
 out.push(`alter table furniture_def add column if not exists figure boolean not null default false;`);
+/* A seat's bodies (`furnish.ts`). */
+out.push(`alter table furniture_def add column if not exists seats int;`);
 /* What a barrel of water becomes if you leave it alone. */
 out.push(`create table if not exists brew_def (
   id text primary key, name text not null, input text not null, count int not null,
@@ -2574,6 +2582,7 @@ for (const f of FURNITURE as unknown as A[]) {
   if (f.hive !== undefined) out.push(`update furniture_def set hive = ${q(f.hive)} where id = ${q(f.id)};`);
   if (f.pond !== undefined) out.push(`update furniture_def set pond = ${q(f.pond)} where id = ${q(f.id)};`);
   if (f.trash !== undefined) out.push(`update furniture_def set trash = ${q(f.trash)} where id = ${q(f.id)};`);
+  if (f.seats !== undefined) out.push(`update furniture_def set seats = ${q(f.seats)} where id = ${q(f.id)};`);
   if (f.bed !== undefined) out.push(`update furniture_def set bed = ${q(f.bed)} where id = ${q(f.id)};`);
   if (f.den !== undefined) out.push(`update furniture_def set den = ${q(f.den)} where id = ${q(f.id)};`);
   // What grows from the moment it is set down: what climbs it, its wildflowers, a hedge, a bonsai (`growsFromSet`).
@@ -3040,7 +3049,7 @@ out.push(`create or replace function garden_said(p_key text, p_name text) return
 out.push(`create or replace function garden_done(p_key text, p_what text, p_n int, p_of int) returns text language sql immutable as $fn$ select replace(replace(replace(case p_key ${
   (Object.keys(GARDEN_DONE) as Array<keyof typeof GARDEN_DONE>).map((k) => `when ${q(k)} then ${q(GARDEN_DONE[k])} `).join('')}end, '{what}', coalesce(p_what, '')), '{n}', coalesce(p_n::text, '')), '{of}', coalesce(p_of::text, '')) $fn$;`);
 out.push(`create or replace function mount_said(p_key text) returns text language sql immutable as $fn$ select case p_key ${
-  (['noWindow', 'noWall', 'unfinished', 'inside', 'upstairs', 'noHook', 'turn'] as const).map((k) => `when ${q(k)} then ${q(MOUNT_SAID[k])} `).join('')}end $fn$;`);
+  (['noWindow', 'noWall', 'unfinished', 'inside', 'outside', 'upstairs', 'noHook', 'turn'] as const).map((k) => `when ${q(k)} then ${q(MOUNT_SAID[k])} `).join('')}end $fn$;`);
 out.push(`create or replace function figure_said(p_key text) returns text language sql immutable as $fn$ select case p_key ${
   (Object.keys(FIGURE_SAID) as Array<keyof typeof FIGURE_SAID>).map((k) => `when ${q(k)} then ${q(FIGURE_SAID[k])} `).join('')}end $fn$;`);
 /*
@@ -3067,6 +3076,27 @@ out.push(`create or replace function decor_done(p_key text, p_what text, p_n int
   (Object.keys(DECOR_DONE) as Array<keyof typeof DECOR_DONE>).map((k) => `when ${q(k)} then ${q(DECOR_DONE[k])} `).join('')}end, '{what}', coalesce(p_what, '')), '{n}', coalesce(p_n::text, '')), '{held}', coalesce(p_held::text, '')), '{of}', coalesce(p_of::text, '')) $fn$;`);
 out.push(`create or replace function kept_why(p_key text) returns text language sql immutable as $fn$ select case p_key ${
   (Object.keys(KEPT_WHY) as Array<keyof typeof KEPT_WHY>).map((k) => `when ${q(k)} then ${q(KEPT_WHY[k])} `).join('')}end $fn$;`);
+/*
+ * The furnishings (`furnish.ts`, `furnishdefs.ts`): their jobs, every number
+ * the island's rules read, and every sentence they say.
+ */
+out.push(`create or replace function furnish_action(p_action text) returns boolean language sql immutable as $fn$ select p_action = any (array[${FURNISH_JOBS.map(q).join(', ')}]::text[]) $fn$;`);
+for (const [fn, v] of [
+  ['birdbath_kind', BIRDBATH], ['stone_bench_kind', STONE_BENCH], ['garden_swing_kind', GARDEN_SWING], ['gazebo_kind', GAZEBO], ['hay_bale_kind', HAY_BALE],
+  ['water_trough_kind', WATER_TROUGH], ['signpost_kind', SIGNPOST], ['cairn_kind', CAIRN], ['fireplace_kind', FIREPLACE], ['four_poster_kind', FOUR_POSTER],
+  ['vase_kind', VASE], ['side_table_kind', SIDE_TABLE], ['footstool_kind', FOOTSTOOL], ['fish_mount_kind', FISH_MOUNT], ['hay_item', HAY], ['vase_flower', VASE_FLOWER],
+] as Array<[string, string]>) out.push(`create or replace function ${fn}() returns text language sql immutable as $fn$ select ${q(v)} $fn$;`);
+for (const [fn, v] of [
+  ['hay_holds', HAY_HOLDS], ['hay_a_day', HAY_A_DAY], ['sign_arms', SIGN_ARMS], ['cairn_name_max', CAIRN_NAME_MAX], ['vase_holds', VASE_HOLDS], ['table_holds', TABLE_HOLDS],
+] as Array<[string, number]>) out.push(`create or replace function ${fn}() returns int language sql immutable as $fn$ select ${q(v)}::int $fn$;`);
+for (const [fn, v] of [
+  ['hay_reach', HAY_REACH], ['trough_reach', TROUGH_REACH], ['trough_drink', TROUGH_DRINK], ['trough_care', TROUGH_CARE], ['vase_fresh', VASE_FRESH],
+  ['swing_rest', SWING_REST], ['fish_size_least', FISH_SIZE_LEAST], ['fish_size_per', FISH_SIZE_PER], ['fish_kg_step', FISH_KG_STEP], ['fireplace_reach', FIREPLACE_REACH],
+] as Array<[string, number]>) out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);
+out.push(`create or replace function furnish_said(p_key text, p_name text, p_n int, p_what text) returns text language sql immutable as $fn$ select replace(replace(replace(case p_key ${
+  (Object.keys(FURNISH_SAID) as FurnishSaid[]).map((k) => `when ${q(k)} then ${q(FURNISH_SAID[k])} `).join('')}end, '{name}', upper(left(coalesce(p_name, ''), 1)) || substr(coalesce(p_name, ''), 2)), '{n}', coalesce(p_n::text, '')), '{what}', coalesce(p_what, '')) $fn$;`);
+out.push(`create or replace function furnish_done(p_key text, p_what text, p_n int, p_held int, p_of int) returns text language sql immutable as $fn$ select replace(replace(replace(replace(case p_key ${
+  (Object.keys(FURNISH_DONE) as FurnishDone[]).map((k) => `when ${q(k)} then ${q(FURNISH_DONE[k])} `).join('')}end, '{what}', coalesce(p_what, '')), '{n}', coalesce(p_n::text, '')), '{held}', coalesce(p_held::text, '')), '{of}', coalesce(p_of::text, '')) $fn$;`);
 /*
  * Ropemaking (`ropework.ts`): the lay-ups and what the skill makes of them,
  * its pace on its own jobs, the rope walk, the bell rope and the lead rope.

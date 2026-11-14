@@ -133,6 +133,10 @@ export const STROKE_BY_ID: Record<string, Stroke> = {
   // A compost bin filled and emptied, and compost spread: earth; an armour stand dressed, undressed and swapped: metal (`decor.ts`).
   fill_compost: 'earth', empty_compost: 'earth', spread_compost: 'earth',
   stand_put: 'metal', stand_swap: 'metal', ...Object.fromEntries(ARMOUR_SLOTS.map((s) => [`stand_take_${s}`, 'metal' as Stroke])),
+  // The furnishings (`furnish.ts`): sat down on cloth; hay and flowers handled; a signpost's arm, a table's things and a fish set on wood; a cairn's name cut in stone.
+  sit_seat: 'cloth', fill_hay: 'cloth', vase_put: 'cloth', vase_take: 'cloth', name_cairn: 'stone', point_arm: 'wood', mount_fish: 'wood', table_put: 'wood',
+  ...Object.fromEntries([0, 1, 2, 3].map((i) => [`drop_arm_${i}`, 'wood' as Stroke])),
+  ...Object.fromEntries([0, 1].map((i) => [`table_take_${i}`, 'wood' as Stroke])),
   // A lead line let down into the water, and a rigging set rove off on a hull (`sailActions.ts`).
   sound_depth: 'water', fit_rigging: 'cloth',
 };

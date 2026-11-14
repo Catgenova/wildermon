@@ -31,6 +31,7 @@ import {
   type PlacedFurniture,
 } from './furniture';
 import type { Game } from './game';
+import { TROUGH_WATER_ONLY, WATER_TROUGH } from './furnishdefs';
 import { describeWith, itemDef, litresOf, lyeAshFor, LYE_DIFFICULTY, markOf, type Item } from './items';
 import { damageDrawn, failDamagedSaid } from './faildamage';
 import { tryGain } from './learn';
@@ -64,6 +65,8 @@ export function leachLyeReason(g: Game, f: PlacedFurniture | undefined): string 
   if (!f) return 'It is gone.';
   if (!nearPiece(g, f)) return 'Stand next to it.';
   if (!holdsLiquid(f) || isWell(f)) return 'Not a barrel.';
+  // A water trough keeps its water (`furnish.ts`).
+  if (f.kind === WATER_TROUGH) return TROUGH_WATER_ONLY;
   if (isWorking(f)) return 'Still fermenting.';
   if (f.liquid !== 'water' || litresIn(f) <= 0) return 'Needs water.';
   const need = lyeAshFor(litresIn(f));
@@ -112,6 +115,8 @@ export function barrelFor(g: Game, kind: LiquidKind): PlacedFurniture | undefine
   let best: PlacedFurniture | undefined;
   for (const f of g.furnitureWithin(4)) {
     if (!holdsLiquid(f) || isWell(f)) continue;
+    // A water trough takes water only (`furnish.ts`).
+    if (f.kind === WATER_TROUGH && kind !== 'water') continue;
     if (litresIn(f) > 0 && f.liquid !== kind) continue;
     if (litresIn(f) >= liquidCapacity(f)) continue;
     if (!nearPiece(g, f, 2.6)) continue;

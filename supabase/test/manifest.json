@@ -2365,6 +2365,12 @@
     "why": "Six home pieces with real recipes (trade, tool, station, time, bill). A sundial says the island's clock and the season's days left as the browser does; a compost bin takes spoiled food, weeds and ash to its room and gives a compost per two after its days, and compost spread on a field or a planter lifts its next harvest ten QL, once, read by every browser; a stone lantern greens with moss a scurra scrubs and lights its fixed reach at night; a woven rug woven at a loom in the pattern chosen, dyed a colour a dyeing to three and not its last twice, set down and scrubbed with them; curtains only on a finished window, over its middle, drawn for everybody; an armour stand taking armour a slot, from the pack or worn, swapped slot by slot with what is worn and keeping on what does not fit in the same words on both sides, not picked up with armour on it, changed only by its owner or a rank that may use the crates."
   },
   {
+    "file": "supabase/test/furnish.ts",
+    "title": "A birdbath, a stone bench, a garden swing, a gazebo, a hay bale stack, a water trough, a signpost, a cairn, a fireplace, a four-poster bed, a vase, a side table, a footstool and a trophy fish mount, the same on both sides",
+    "shard": 5,
+    "why": "Fourteen furnishings with real recipes. Seats seat no more than they say, and sat in give the wind back as standing still, a swing more; a gazebo's tile decays as under a roof; a hay bale stack feeds a grass eater in reach once a day before the stores; a water trough takes water only, is a water carrier's barrel, and a wildermon in reach drinks from it and its care holds longer; a signpost's arms read bearing and distance live; a cairn named is on its settlement's map only; a fireplace against a solid wall inside only; a four-poster sleeps more than a bed; a vase keeps wildflowers fresh for days then throws them out; a side table shows what is set on it and is its owner's; a trophy mount keeps the heaviest fish of its kind, its owner's to replace. In the same words on both sides."
+  },
+  {
     "file": "supabase/test/vineyard.ts",
     "title": "Vineyards and wine that ages, the same on both sides",
     "shard": 5,
