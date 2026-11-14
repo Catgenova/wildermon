@@ -237,7 +237,7 @@ export class MarketPanel {
   private draw(): void {
     this.page.replaceChildren();
     if (!this.island) {
-      this.say('Market: island only (board, buy orders, deals, stalls, post).');
+      this.say('Market: island only (board, buy orders, deals, stalls, post).').classList.add('rc-empty');
       return;
     }
     if (this.tab === 'board') this.drawBoard();
@@ -264,7 +264,7 @@ export class MarketPanel {
       .filter((r): r is { def: string; days: SaleDay[]; s: SaleSummary } => !!r.s)
       .sort((a, b) => b.s.n - a.s.n || itemDef(a.def).name.localeCompare(itemDef(b.def).name));
     if (!rows.length) {
-      this.say(`No sales in the last ${SALE_DAYS} days${this.query.trim() ? `: ${this.query.trim()}` : ''}.`);
+      this.say(`No sales in the last ${SALE_DAYS} days${this.query.trim() ? `: ${this.query.trim()}` : ''}.`).classList.add('rc-empty');
       return;
     }
     this.say(`Stall, counter and buy-order sales, last ${SALE_DAYS} days. One bar per day, oldest left; height: that day's price vs its highest; gap: no sale.`);
@@ -444,7 +444,7 @@ export class MarketPanel {
     const mine = this.deals.filter((d) => d.mine);
     const theirs = this.deals.filter((d) => !d.mine);
     this.head('Received');
-    if (!theirs.length) this.say('None. Offers stand until taken or refused.');
+    if (!theirs.length) this.say('None. Offers stand until taken or refused.').classList.add('rc-empty');
     for (const d of theirs) {
       const row = document.createElement('div');
       row.className = 'skill-row rc-row market-row';
@@ -455,7 +455,7 @@ export class MarketPanel {
     }
 
     this.head('Sent');
-    if (!mine.length) this.say('None.');
+    if (!mine.length) this.say('None.').classList.add('rc-empty');
     for (const d of mine) {
       const row = document.createElement('div');
       row.className = 'skill-row rc-row market-row';
@@ -470,7 +470,7 @@ export class MarketPanel {
     this.head('New offer');
     const people = this.folk();
     if (!people.length) {
-      this.say('No contacts. Fellow citizens and letter contacts can receive offers.');
+      this.say('No contacts. Fellow citizens and letter contacts can receive offers.').classList.add('rc-empty');
       return;
     }
     this.pick(this.picked, 'Offer');
@@ -512,7 +512,7 @@ export class MarketPanel {
      */
     const stalls = this.market.stalls.filter((st) => st.mine);
     if (!stalls.length) {
-      this.say(`No stall. Build one: ${billWords(furnitureDef('stall').bill, true)}.`);
+      this.say(`No stall. Build one: ${billWords(furnitureDef('stall').bill, true)}.`).classList.add('rc-empty');
       return;
     }
     for (const st of stalls) {
@@ -587,7 +587,7 @@ export class MarketPanel {
   private drawStalls(stalls: readonly Stall[]): void {
     const me = this.game.player;
     const theirs = stalls.filter((st) => st.goods.length).sort((a, b) => tilesTo(a, me) - tilesTo(b, me));
-    if (!theirs.length) this.say('Nothing for sale.');
+    if (!theirs.length) this.say('Nothing for sale.').classList.add('rc-empty');
     for (const st of theirs) {
       const far = tilesTo(st, me);
       const spot = stallSpot(st);
@@ -622,7 +622,7 @@ export class MarketPanel {
     const typed = kindNamed(this.query);
     if (typed && !kinds.includes(typed)) kinds.unshift(typed);
     this.head(`For sale: ${found.length}`);
-    if (!found.length) this.say(`None for sale: ${this.query.trim()}.`);
+    if (!found.length) this.say(`None for sale: ${this.query.trim()}.`).classList.add('rc-empty');
     for (const o of found.slice(0, FIND_SHOWN)) {
       const spot = stallSpot(o.stall);
       const cost = document.createElement('span');
@@ -697,7 +697,7 @@ export class MarketPanel {
    */
   private drawWanted(orders: readonly Order[], live: boolean): void {
     this.head('Wanted');
-    if (!orders.length) this.say('No orders.');
+    if (!orders.length) this.say('No orders.').classList.add('rc-empty');
     for (const o of orders) {
       const left = o.want - o.got;
       const have = couldBring(this.game.inventory.items, o, (uid) => this.game.isEquipped(uid));
@@ -738,7 +738,7 @@ export class MarketPanel {
   private drawOrders(): void {
     this.head('Your orders');
     const mine = this.orders.orders.filter((o) => o.mine);
-    if (!mine.length) this.say('None.');
+    if (!mine.length) this.say('None.').classList.add('rc-empty');
     for (const o of mine) {
       const left = o.want - o.got;
       const row = document.createElement('div');
@@ -848,7 +848,7 @@ export class MarketPanel {
   private drawPost(): void {
     this.head('Waiting');
     if (!this.waiting.things.length) {
-      this.say('No parcels. Send at any mailbox; collect at any mailbox.');
+      this.say('No parcels. Send at any mailbox; collect at any mailbox.').classList.add('rc-empty');
     }
     for (const t of this.waiting.things) {
       const row = document.createElement('div');
@@ -877,7 +877,7 @@ export class MarketPanel {
     }
     const people = this.folk();
     if (!people.length) {
-      this.say('No contacts. Fellow citizens and letter contacts can receive parcels.');
+      this.say('No contacts. Fellow citizens and letter contacts can receive parcels.').classList.add('rc-empty');
       return;
     }
     this.pick(this.posting, 'Send');

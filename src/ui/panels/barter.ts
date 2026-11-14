@@ -125,7 +125,7 @@ export class BarterPanel {
   private draw(): void {
     this.page.replaceChildren();
     if (!this.island) {
-      this.note('Bartering: island only.');
+      this.page.append(this.line('Bartering: island only.', 'market-note barter-note rc-empty'));
       return;
     }
     const b = this.shown;
