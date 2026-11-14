@@ -1,5 +1,6 @@
 import type { ActionDef, Target } from './actions';
 import { CURTAINS, RUG_COLOURS, WOVEN_RUG } from './decordefs';
+import { FOUR_POSTER, VASE } from './furnishdefs';
 import { DECOR_SAID, rugColours } from './decor';
 import type { Game } from './game';
 import { ARMOUR_BY_ID } from './gear';
@@ -38,7 +39,7 @@ import {
  * tool you are going to get dirty.
  */
 const DYEABLE_ARMOUR = new Set(['cloth', 'leather']);
-export const DYEABLE_ITEMS = new Set(['cloth', 'sack', 'satchel', 'backpack', 'saddle', 'bridle', 'banner', 'flagpole', 'sailing_boat', 'caravel', 'glass', 'folding_screen', CURTAINS, WOVEN_RUG]);
+export const DYEABLE_ITEMS = new Set(['cloth', 'sack', 'satchel', 'backpack', 'saddle', 'bridle', 'banner', 'flagpole', 'sailing_boat', 'caravel', 'glass', 'folding_screen', CURTAINS, WOVEN_RUG, FOUR_POSTER, VASE]);
 
 /**
  * The pane a window and a bay window are glazed with, which takes a dye.

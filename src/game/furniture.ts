@@ -24,6 +24,11 @@ import {
 import type { GardenState } from './garden';
 import type { DecorState } from './decor';
 import { ARMOUR_STAND, COMPOST_BIN, CURTAINS, STONE_LANTERN, SUNDIAL, WOVEN_RUG } from './decordefs';
+import type { FurnishState } from './furnish';
+import {
+  BENCH_SEATS, BIRDBATH, CAIRN, FIREPLACE, FISH_MOUNT, FOOTSTOOL, FOUR_POSTER, FOUR_POSTER_REST, GARDEN_SWING, GAZEBO, GAZEBO_SEATS, HAY, HAY_BALE, HAY_HOLDS, SIDE_TABLE, SIGNPOST,
+  STONE_BENCH, STOOL_SEATS, SWING_SEATS, TROUGH_HOLDS, VASE, WATER_TROUGH,
+} from './furnishdefs';
 import { HAMMOCK_REST, ROPE_WALK, ROPE_WALK_QL, ROPE_WALK_TIME, ROPEMAKING } from './ropework';
 import { LAIR_KINDS } from './lairs';
 
@@ -255,6 +260,8 @@ export interface FurnitureDef {
   chime?: boolean;
   /** Made standing at this station rather than anywhere (a woven rug at a loom: `decor.ts`). */
   station?: 'loom';
+  /** A seat: bodies sat in it at once (`furnish.ts`, `sit_seat`). */
+  seats?: number;
 }
 
 /**
@@ -591,6 +598,26 @@ export const FURNITURE: FurnitureDef[] = [
   piece(WOVEN_RUG, 'Woven rug', 2, 2, [['yarn', 12]], 14, 16, '', undefined, { skill: 'tailoring', tool: 'needle', station: 'loom' }),
   piece(CURTAINS, 'Curtains', 2, 1, [['cloth', 4], ['shaft', 1], ['nail', 2]], 10, 10, '', undefined, { skill: 'tailoring', tool: 'needle', mount: 'pane' }),
   piece(ARMOUR_STAND, 'Armour stand', 1, 1, [['plank', 10], ['timber', 1], ['nail', 12]], 12, 12, '', undefined, { skill: 'carpentry' }),
+  /*
+   * The furnishings (`furnish.ts`; their numbers in `furnishdefs.ts`): a
+   * birdbath, a stone bench, a garden swing in its own frame, a gazebo, a hay
+   * bale stack, a water trough, a signpost, a cairn, a fireplace, a
+   * four-poster bed, a vase, a side table, a footstool and a trophy fish mount.
+   */
+  piece(BIRDBATH, 'Birdbath', 1, 1, [['stone_slab', 1], ['stone_brick', 6], ['mortar', 2]], 14, 12, '', undefined, { skill: 'masonry', tool: 'trowel' }),
+  piece(STONE_BENCH, 'Stone bench', 2, 1, [['stone_slab', 2], ['stone_brick', 4], ['mortar', 2]], 14, 12, '', undefined, { skill: 'masonry', tool: 'trowel', seats: BENCH_SEATS }),
+  piece(GARDEN_SWING, 'Garden swing', 3, 2, [['plank', 12], ['timber', 4], ['rope', 4], ['nail', 20]], 16, 16, '', undefined, { skill: 'carpentry', seats: SWING_SEATS }),
+  piece(GAZEBO, 'Gazebo', 3, 3, [['plank', 40], ['timber', 12], ['shaft', 6], ['thatch', 16], ['nail', 48]], 22, 30, '', undefined, { skill: 'carpentry', seats: GAZEBO_SEATS }),
+  piece(HAY_BALE, 'Hay bale stack', 2, 2, [[HAY, HAY_HOLDS]], 6, 12, '', undefined, { skill: 'farming', tool: 'sickle' }),
+  piece(WATER_TROUGH, 'Water trough', 2, 1, [['plank', 16], ['barrel', 1], ['nail', 16]], 14, 12, '', undefined, { skill: 'carpentry', liquid: TROUGH_HOLDS }),
+  piece(SIGNPOST, 'Signpost', 1, 1, [['shaft', 2], ['plank', 4], ['nail', 8]], 10, 8, '', undefined, { skill: 'carpentry' }),
+  piece(CAIRN, 'Cairn', 1, 1, [['rock_shards', 12]], 8, 10, '', undefined, { skill: 'masonry', tool: 'trowel' }),
+  piece(FIREPLACE, 'Fireplace', 2, 1, [['stone_brick', 30], ['mortar', 12]], 22, 20, '', undefined, { skill: 'masonry', tool: 'trowel', hearth: true, mount: 'hearth' }),
+  piece(FOUR_POSTER, 'Four-poster bed', 3, 2, [['plank', 32], ['timber', 20], ['cloth', 16], ['nail', 48]], 24, 22, '', undefined, { bed: FOUR_POSTER_REST }),
+  piece(VASE, 'Vase', 1, 1, [['clay', 2]], 10, 8, '', undefined, { skill: 'pottery', tool: 'trowel' }),
+  piece(SIDE_TABLE, 'Side table', 1, 1, [['plank', 6], ['nail', 8]], 10, 7, '', undefined, { skill: 'carpentry' }),
+  piece(FOOTSTOOL, 'Footstool', 1, 1, [['plank', 3], ['nail', 4]], 6, 5, '', undefined, { skill: 'carpentry', seats: STOOL_SEATS }),
+  piece(FISH_MOUNT, 'Trophy fish mount', 1, 1, [['plank', 4], ['nail', 4]], 12, 8, '', undefined, { skill: 'fishing', tool: 'carving_knife', mount: 'wall' }),
   piece('well', 'Well', 2, 2, [['stone_brick', 48], ['mortar', 16], ['shaft', 4], ['thick_rope', 1], ['nail', 16], [WATER_MOTE, WATER_MOTES_EACH]], 30, 24, '', undefined, { skill: 'masonry', tool: 'trowel', well: WELL_HOLDS }),
   /*
    * A tiered fountain: basins of cut slab, each smaller than the one under
@@ -884,6 +911,8 @@ export interface PlacedFurniture {
   garden?: GardenState;
   /** A home piece's: a rug's pattern and colours, curtains drawn, a bin's heap, what is on a stand (`decor.ts`), off the same `placed.garden`. */
   decor?: DecorState;
+  /** A furnishing's: a hay stack's grass, a signpost's arms, a vase's flowers, a side table's things, a mount's fish (`furnish.ts`), off the same `placed.garden`. */
+  furnish?: FurnishState;
   /**
    * For a skep: when it was set down or last emptied, in epoch seconds, which
    * what it has made is worked out from (`bees.ts`); on the island
@@ -943,6 +972,7 @@ describeFrom('fountain', { least: (WELL_TRICKLE * 60).toFixed(1), most: ((WELL_T
 // A tent's sleep measured against a bed's, off the two pieces.
 describeFrom('tent', { ofBed: (furnitureDef('tent').bed ?? 0) / (furnitureDef('bed').bed ?? 1) });
 describeFrom('hammock', { ofBed: (furnitureDef('hammock').bed ?? 0) / (furnitureDef('bed').bed ?? 1) });
+describeFrom(FOUR_POSTER, { ofBed: (furnitureDef(FOUR_POSTER).bed ?? 0) / (furnitureDef('bed').bed ?? 1) });
 describeFrom(ROPE_WALK, { time: ROPE_WALK_TIME, ql: ROPE_WALK_QL });
 // What sails take of sailcloth, off the two hulls' own bills.
 describeFrom('sailcloth', Object.fromEntries(['sailing', 'caravel'].map((k) => [k, Object.fromEntries(furnitureDef(k === 'sailing' ? 'sailing_boat' : k).bill).sailcloth])));
@@ -1439,8 +1469,9 @@ export const FURNITURE_ACTIONS: ActionDef[] = [
       if (f.items.length) return 'Empty it first.';
       // A trophy on a plaque, potted plants on a stand: taken down first (`garden.ts`; the island's `fire_refusal`).
       if (f.garden?.held?.length) return SHOWING_SAID;
-      // And armour on a stand (`decor.ts`).
+      // And armour on a stand (`decor.ts`), and things on a side table (`furnish.ts`).
       if (f.decor?.worn && Object.keys(f.decor.worn).length) return SHOWING_SAID;
+      if (f.furnish?.on?.length) return SHOWING_SAID;
       // A crop is not carried about in a box of earth: it is harvested, or turned back into the soil.
       if (g.planted.has(f.id)) return PLANTER_GROWING;
       // A rack holds nothing of its own, so `items` is empty however loaded it

@@ -6,5 +6,5 @@ CREATE OR REPLACE FUNCTION public.decay_multiplier(p_world uuid, p_x integer, p_
  STABLE
 AS $function$
   select (case when on_deed(p_world, p_x, p_y) then 0.1 else 1 end)
-       * (case when sheltered(p_world, 0, p_x, p_y) then indoors_decay() else 1 end)
+       * (case when (sheltered(p_world, 0, p_x, p_y) or gazebo_over(p_world, p_x, p_y)) then indoors_decay() else 1 end)
 $function$

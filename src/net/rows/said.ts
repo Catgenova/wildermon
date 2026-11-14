@@ -16,6 +16,14 @@ export function foragedRow(r: Fields): ForagedRow | null {
 /** A settlement on the map (`rpc_settlements`): its name, its token, how far it reaches, whether it is yours. */
 export interface DeedSpot { name: string; x: number; y: number; radius: number; mine: boolean }
 
+/** A cairn on a settlement of yours, for the map (`rpc_settlements`, `cairns_of`): its name and its tile. */
+export interface CairnSpot { name: string; x: number; y: number }
+export function cairnSpot(r: Fields): CairnSpot | null {
+  const { x, y } = r;
+  if (!isNum(x) || !isNum(y)) return null;
+  return { name: String(r.name ?? ''), x, y };
+}
+
 export function deedSpot(r: Fields): DeedSpot | null {
   const { x, y, radius } = r;
   if (!isNum(x) || !isNum(y) || !isNum(radius)) return null;

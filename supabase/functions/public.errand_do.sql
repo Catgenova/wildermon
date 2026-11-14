@@ -357,7 +357,7 @@ begin
       v_b := brew_in_stores(p_world, c.keeper);
       if v_b.id is null then return false; end if;
       select p.* into v_p from placed p where p.world_id = p_world and p.kind = 'furniture' and p.x = c.work_x and p.y = c.work_y
-        and holds_liquid(p) and not is_well(p) and not is_working(p) and coalesce(placed_liquid(p), '') = 'water'
+        and holds_liquid(p) and not is_well(p) and not is_working(p) and coalesce(placed_liquid(p), '') = 'water' and p.sub <> water_trough_kind()
         and placed_litres(p) >= v_b.litres and on_home_deed(p_world, c.keeper, p.x, p.y) order by p.id limit 1;
       if v_p.id is null then return false; end if;
       for v_i in 1..v_b.count loop

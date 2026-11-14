@@ -69,6 +69,7 @@ import { BAUBLE_ACTIONS } from './baubles';
 import { engravedItemSays, MEMORIAL_ACTIONS } from './memorial';
 import { GARDEN_ACTIONS } from './garden';
 import { DECOR_ACTIONS } from './decor';
+import { FURNISH_ACTIONS } from './furnish';
 import { VINEYARD_ACTIONS } from './vineyard';
 import { CHART_ACTIONS, chartItemSays } from './cartography';
 import { makerSays, SIGN_ACTIONS, signableKind } from './signing';
@@ -162,6 +163,10 @@ export type Target =
       brew?: string;
       /** Which socket of its tier a bauble goes into, when one is asked for (`set_bauble`). */
       slot?: number;
+      /** Where a signpost's arm is pointed (`point_arm`, `furnish.ts`): `stone:<id>` or `deed:<x>,<y>`, a settlement's token. */
+      dest?: string;
+      /** A cairn's name, asked before it is cut (`name_cairn`). */
+      name?: string;
       /** The scroll going into it where it stands, for `enchant` (`enchanting.ts`). */
       scroll?: number;
     }
@@ -3324,6 +3329,8 @@ export const ACTIONS: ActionDef[] = [
   ...GARDEN_ACTIONS,
   // The home pieces' jobs: a sundial read, a compost bin filled and emptied, compost spread, curtains drawn, an armour stand dressed (`decor.ts`).
   ...DECOR_ACTIONS,
+  // The furnishings' jobs: a seat sat in, a hay stack filled, a signpost's arms, a cairn named, a vase, a side table, a fish mounted (`furnish.ts`).
+  ...FURNISH_ACTIONS,
   // A trellis's vine, and a cutting off a wild one (`vineyard.ts`).
   ...VINEYARD_ACTIONS,
   // A skep's honey, taken and looked at (`bees.ts`).

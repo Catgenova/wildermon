@@ -65,6 +65,7 @@ import { drawSteps, stepsFootAt } from './steps';
 import { seasonAt, type Season } from '../world/calendar';
 import { gardenAmbience, gardenTrim, hangCodeOf } from './gardenlook';
 import { decorTrim } from './decorlook';
+import { furnishTrim } from './furnishlook';
 import { ARMOUR_STAND, WOVEN_RUG } from '../game/decordefs';
 import { drawShine, shines } from './shine';
 import { NIGHT_WASH } from './nightwash';
@@ -11310,6 +11311,9 @@ export class Renderer {
     // A home piece: a bin's heap, a rug's pattern and colours, curtains drawn, what a stand wears (`decor.ts`, `decorlook.ts`).
     const decor = decorTrim(f, this.game.wallNow());
     if (decor !== undefined) return decor;
+    // A furnishing: a swing sat in, a stack's bales, a trough's water, a post's arms, a vase's flowers, a table's things, a mount's fish (`furnish.ts`, `furnishlook.ts`).
+    const furnish = furnishTrim(f, this.game);
+    if (furnish !== undefined) return furnish;
     // An arch's roses or lavender: the variety, which is its place's, and how far it has grown (`roses.ts`).
     if (FURNITURE_BY_ID.get(f.kind)?.climber) {
       const r = roseStage(f.setAt, this.game.wallNow());

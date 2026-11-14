@@ -115,6 +115,8 @@ import { plinthBusy } from './plinth';
 import { MEMORIAL } from './memorial';
 import { gardenFrom, hedgeRefusal, mountRefusal, mountTurnsTo, MOUNT_SAID } from './garden';
 import { decorFrom, stoneLanternLight } from './decor';
+import { furnishFrom } from './furnish';
+import { FIREPLACE, FIREPLACE_REACH, GAZEBO } from './furnishdefs';
 import { STONE_LANTERN } from './decordefs';
 import { counterFinished, counterInto, counterMiddle, Counters, type CountersJSON, type CounterWire } from './counters';
 import { burnLamps, isLampPiece, lampArmRefusal, lampBurning, lampFrom, lampLight, lampTurnsTo } from './lamps';
@@ -3988,7 +3990,8 @@ export class Game {
         out.push(memorialLight(cx, cy));
         continue;
       }
-      if (f.lit) out.push({ x: cx, y: cy, radius: OVEN_REACH, strength: 0.8 });
+      // A fireplace throws `FIREPLACE_REACH` tiles while it burns (`furnish.ts`).
+      if (f.lit) out.push({ x: cx, y: cy, radius: f.kind === FIREPLACE ? FIREPLACE_REACH : OVEN_REACH, strength: 0.8 });
       else if (furnitureDef(f.kind).altar) out.push({ x: cx, y: cy, radius: ALTAR_REACH, strength: ALTAR_GLOW, steady: true, cast: ALTAR_CAST, castAlpha: ALTAR_CAST_ALPHA });
     }
     // A kiln's and a smelter's from the middle of its block, where its mouth and its vent or stack are.
@@ -5034,8 +5037,13 @@ export class Game {
   decayMultiplier(x: number, y: number, level = 0): number {
     const out = this.onDeed(x, y) ? DEED_DECAY : 1;
     if (level < 0) return out * CELLAR_DECAY;
-    // Under a roof on walls, or on columns: an open hall keeps as a room does (`Buildings.sheltered`).
-    return this.buildings.sheltered(0, x, y) ? out * INDOORS_DECAY : out;
+    // Under a roof on walls, or on columns: an open hall keeps as a room does (`Buildings.sheltered`); and under a gazebo (`furnish.ts`).
+    return this.buildings.sheltered(0, x, y) || this.underGazebo(x, y) ? out * INDOORS_DECAY : out;
+  }
+
+  /** Whether a gazebo stands on the ground of tile (x, y): its tile counts as under a roof (`furnish.ts`; the island's `gazebo_over`). */
+  underGazebo(x: number, y: number): boolean {
+    return this.furnitureOnTile(x, y).some((f) => f.kind === GAZEBO && (f.level ?? 0) === 0);
   }
 
   private updateAction(dt: number): void {
@@ -9113,6 +9121,8 @@ export class Game {
           ...(gardenFrom(r.garden) ? { garden: gardenFrom(r.garden) } : {}),
           // And a home piece's: a rug's pattern and colours, curtains drawn, a bin's heap, what is on a stand (`decor.ts`).
           ...(decorFrom(r.garden) ? { decor: decorFrom(r.garden) } : {}),
+          // And a furnishing's: a hay stack's grass, a signpost's arms, a vase's flowers, a side table's things, a mount's fish (`furnish.ts`).
+          ...(furnishFrom(r.garden) ? { furnish: furnishFrom(r.garden) } : {}),
           // When a skep was set down or last emptied, which what it has made is worked out from (`bees.ts`).
           ...(typeof r.state?.skep_at === 'number' ? { skepAt: r.state.skep_at } : {}),
           /*

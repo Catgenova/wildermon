@@ -4,4 +4,4 @@ CREATE OR REPLACE FUNCTION public.mount_said(p_key text)
  RETURNS text
  LANGUAGE sql
  IMMUTABLE
-AS $function$ select case p_key when 'noWindow' then 'No window on that side.' when 'noWall' then 'No solid wall on that side.' when 'unfinished' then 'Wall not finished.' when 'inside' then 'Inside a building.' when 'upstairs' then 'Ground level only.' when 'noHook' then 'No eave or post to hang it from.' when 'turn' then 'No other side of this tile takes it.' end $function$
+AS $function$ select case p_key when 'noWindow' then 'No window on that side.' when 'noWall' then 'No solid wall on that side.' when 'unfinished' then 'Wall not finished.' when 'inside' then 'Inside a building.' when 'outside' then 'Outside a building.' when 'upstairs' then 'Ground level only.' when 'noHook' then 'No eave or post to hang it from.' when 'turn' then 'No other side of this tile takes it.' end $function$

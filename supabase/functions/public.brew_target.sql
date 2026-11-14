@@ -7,7 +7,7 @@ CREATE OR REPLACE FUNCTION public.brew_target(p_world uuid, c creature, b brew_d
 AS $function$
   select p.* from placed p, my_deed(p_world, c.keeper) dd
    where dd.world_id is not null and p.world_id = p_world and p.kind = 'furniture'
-     and holds_liquid(p) and not is_well(p) and not is_working(p)
+     and holds_liquid(p) and not is_well(p) and not is_working(p) and p.sub <> water_trough_kind()
      and coalesce(placed_liquid(p), '') = 'water' and placed_litres(p) >= b.litres
      and p.x between dd.x - work_range(c) and dd.x + work_range(c) and p.y between dd.y - work_range(c) and dd.y + work_range(c)
      and greatest(abs(p.x - dd.x), abs(p.y - dd.y)) <= work_range(c) and on_home_deed(p_world, c.keeper, p.x, p.y)

@@ -3,6 +3,7 @@ import { damageDrawn, failDamagedSaid, failLitresOf, failLitresSaid } from './fa
 import type { ActionDef, Target } from './actions';
 import { furnitureCentre, furnitureName, holdsLiquid, isWell, LIQUID_NAME, litresIn, type LiquidKind, type PlacedFurniture } from './furniture';
 import type { Game } from './game';
+import { TROUGH_WATER_ONLY, WATER_TROUGH } from './furnishdefs';
 import { describeWith, itemDef } from './items';
 import { WATER_MOTE, WATER_MOTE_NEED, WATER_MOTES_EACH } from './motes';
 import { world } from './pace';
@@ -127,7 +128,7 @@ const pieceOf = (g: Game, t: Target): PlacedFurniture | undefined => (t.kind ===
 export const BREW_NOT_WELL = 'Not a barrel.';
 export function brewBarrel(g: Game, t: Target): PlacedFurniture | undefined {
   const f = pieceOf(g, t);
-  return f && holdsLiquid(f) && !isWell(f) ? f : undefined;
+  return f && holdsLiquid(f) && !isWell(f) && f.kind !== WATER_TROUGH ? f : undefined;
 }
 
 /** Why this brew cannot be set going in this barrel, or null. */
@@ -136,6 +137,8 @@ export function brewReason(g: Game, f: PlacedFurniture | undefined, brew: BrewDe
   if (!holdsLiquid(f)) return 'That holds no liquid.';
   // Not in a well or a fountain: in a barrel (`brewBarrel`). The island's `brew_reason`.
   if (isWell(f)) return BREW_NOT_WELL;
+  // A water trough keeps its water (`furnish.ts`).
+  if (f.kind === WATER_TROUGH) return TROUGH_WATER_ONLY;
   if (isWorking(f)) return 'Already brewing.';
   if (f.liquid !== 'water') return `Needs water: empty the ${furnitureName(f).toLowerCase()} and fill it from a well.`;
   if (litresIn(f) < brew.litres) return `Need ${brew.litres} litres of water; has ${litresIn(f).toFixed(0)}.`;

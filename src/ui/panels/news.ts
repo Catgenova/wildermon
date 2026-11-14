@@ -281,6 +281,12 @@ import {
 } from '../../game/gardendefs';
 import { MOUNT_SAID } from '../../game/garden';
 import { STAND_SLOTS } from '../../game/decor';
+import { grassEaters, seatsOf } from '../../game/furnish';
+import {
+  BIRDBATH, CAIRN, FIREPLACE, FIREPLACE_REACH, FISH_MOUNT, FOOTSTOOL, FOUR_POSTER, FOUR_POSTER_REST, GARDEN_SWING, GAZEBO, HAY_A_DAY, HAY_BALE, HAY_HOLDS, HAY_REACH,
+  SIDE_TABLE, SIGN_ARMS, SIGNPOST, STONE_BENCH, SWING_REST, TABLE_HOLDS, TROUGH_CARE, TROUGH_DRINK, TROUGH_HOLDS, TROUGH_REACH, VASE, VASE_FRESH, VASE_HOLDS,
+  WATER_TROUGH,
+} from '../../game/furnishdefs';
 import {
   ARMOUR_STAND, COMPOST_BIN, COMPOST_BOOST, COMPOST_DAYS, COMPOST_HOLDS, COMPOST_PER, COMPOST_SPOILED, CURTAINS, RUG_COLOURS, RUG_PATTERNS, STONE_LANTERN,
   STONE_LANTERN_REACH, SUNDIAL, WOVEN_RUG,
@@ -4465,6 +4471,29 @@ export const NEWS: News[] = [
       `New: rowing under way: ${OAR_DROPS} drops a blade at the catch; whirl pair a blade a stroke, ${SWIRL_SECS} s.`,
       'Without a graphics card: swimming strokes\' splashes, rings treading water, the float\'s strike and a catch only.',
     ],
+  },
+  // The furnishings (`furnish.ts`).
+  {
+    n: 610,
+    day: '2026-11-14',
+    lines: () => {
+      const made = (id: string): string => `${itemDef(id).name} (${skillOf(`make_${id}`)}; ${pieceBill(id)})`;
+      return [
+        `New: ${made(BIRDBATH)}: water always full; songbirds by day.`,
+        `New: ${made(STONE_BENCH)}: seats ${seatsOf(STONE_BENCH)}; does not rot.`,
+        `New: ${made(GARDEN_SWING)}, own frame: seats ${seatsOf(GARDEN_SWING)}; sat in, stamina back ×${SWING_REST} standing still's.`,
+        `New: ${made(GAZEBO)}: seats ${seatsOf(GAZEBO)}; its tile decays ×${INDOORS_DECAY}, as under a roof.`,
+        `New: ${made(HAY_BALE)}: holds ${HAY_HOLDS} mixed grass; ${listed(grassEaters())} within ${HAY_REACH} tiles eat ${HAY_A_DAY} a day each.`,
+        `New: ${made(WATER_TROUGH)}: ${TROUGH_HOLDS} litres of water, filled by water carriers; wildermon within ${TROUGH_REACH} tiles drink ${TROUGH_DRINK} litre a day, care ×${TROUGH_CARE} as long.`,
+        `New: ${made(SIGNPOST)}: up to ${SIGN_ARMS} arms, a settlement or a Runestone each, bearing and distance in tiles.`,
+        `New: ${made(CAIRN)}: named; on the map of its settlement's citizens.`,
+        `New: ${made(FIREPLACE)}: against a solid wall inside; a hearth; light ${FIREPLACE_REACH} tiles lit.`,
+        `New: ${made(FOUR_POSTER)}: sleep ×${FOUR_POSTER_REST} a bed's; canopy dyeable.`,
+        `New: ${made(VASE)}: ${VASE_HOLDS} wildflowers, fresh ${VASE_FRESH} days; glaze dyeable.`,
+        `New: ${made(SIDE_TABLE)}: ${TABLE_HOLDS} things on top, shown. ${made(FOOTSTOOL)}: seats ${seatsOf(FOOTSTOOL)}.`,
+        `New: ${made(FISH_MOUNT)}: on a wall; a fish with its weight and who mounted it; replaced by its owner with a heavier one of its kind.`,
+      ];
+    },
   },
   // The Path: steps from the runestone to a settlement at its last level (`src/game/path.ts`).
   {

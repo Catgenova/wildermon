@@ -10,6 +10,7 @@ begin
   if p.id is null then return 'Stand at a barrel.'; end if;
   if not holds_liquid(p) then return 'That holds no liquid.'; end if;
   if is_well(p) then return 'Not a barrel.'; end if;
+  if p.sub = water_trough_kind() then return furnish_said('troughWater', null, null, null); end if;
   if is_working(p) then return 'Already brewing.'; end if;
   if coalesce(placed_liquid(p), '') <> 'water' then
     return 'Needs water: empty the ' || lower(placed_name(p))

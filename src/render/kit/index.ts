@@ -40,6 +40,9 @@ import {
 } from './garden';
 import { HAMMOCK, ROPE_WALK_PIECE } from './ropework';
 import { ARMOUR_STAND, COMPOST_BIN, CURTAINS, STONE_LANTERN, SUNDIAL, WOVEN_RUG } from './decor';
+import {
+  BIRDBATH, CAIRN, FIREPLACE, FISH_MOUNT, FOOTSTOOL, FOUR_POSTER, GARDEN_SWING, GAZEBO, HAY_BALE, SIDE_TABLE, SIGNPOST, STONE_BENCH, VASE, WATER_TROUGH,
+} from './furnish';
 
 /**
  * Every piece of furniture drawn in the kit, by its kind (`FurnitureDef.id`).
@@ -133,6 +136,21 @@ export const KIT_PIECES: Readonly<Record<string, KitPiece>> = {
   woven_rug: WOVEN_RUG,
   curtains: CURTAINS,
   armour_stand: ARMOUR_STAND,
+  // The furnishings (`furnish.ts`).
+  birdbath: BIRDBATH,
+  stone_bench: STONE_BENCH,
+  garden_swing: GARDEN_SWING,
+  gazebo: GAZEBO,
+  hay_bale: HAY_BALE,
+  water_trough: WATER_TROUGH,
+  signpost: SIGNPOST,
+  cairn: CAIRN,
+  fireplace: FIREPLACE,
+  four_poster_bed: FOUR_POSTER,
+  vase: VASE,
+  side_table: SIDE_TABLE,
+  footstool: FOOTSTOOL,
+  fish_mount: FISH_MOUNT,
   // Ropemaking's pieces (`ropework.ts`).
   hammock: HAMMOCK,
   rope_walk: ROPE_WALK_PIECE,

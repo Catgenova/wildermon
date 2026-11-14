@@ -317,6 +317,8 @@ function kitFile(kind: string): string {
     bookshelf: 'shelving', crate_shelf: 'shelving', shelves: 'shelving', great_sign: 'signs', sign: 'signs', stall: 'stall', coat_rack: 'stands',
     lectern: 'stands', statue: 'statue', table: 'tables', long_table: 'tables', desk: 'tables', trash_crate: 'trash', trellis: 'trellis', well: 'turnery',
     sundial: 'decor', compost_bin: 'decor', stone_lantern: 'decor', woven_rug: 'decor', curtains: 'decor', armour_stand: 'decor',
+    birdbath: 'furnish', stone_bench: 'furnish', garden_swing: 'furnish', gazebo: 'furnish', hay_bale: 'furnish', water_trough: 'furnish', signpost: 'furnish',
+    cairn: 'furnish', fireplace: 'furnish', four_poster_bed: 'furnish', vase: 'furnish', side_table: 'furnish', footstool: 'furnish', fish_mount: 'furnish',
   };
   return by[kind] ?? kind;
 }

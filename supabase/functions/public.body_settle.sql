@@ -104,7 +104,8 @@ begin
       swim_from := swim_from + make_interval(secs => swum);
     end if;
   else
-    if p.act is null then
+    -- Or sat in a seat (`furnish.ts`): as standing still, a garden swing `swing_rest` times that.
+    if p.act is null or p.act = 'sit_seat' then
       /*
        * And your wind, which comes back slower on the move.
        *
@@ -115,7 +116,7 @@ begin
        * this is settling. Moved in it, walked through it.
        */
       w := least(1, w + secs
-             * (case when p.moved_at > p.body_at then wind_walk() else wind_rest() end)
+             * (case when p.moved_at > p.body_at then wind_walk() else wind_rest() * seat_wind(p) end)
              * (1 + greatest(0, skill_of(p_world, p_uid, 'body_stamina') - char_start()) * wind_per_level())
              -- And faster for a Steady Heart worn (`Game.windMul`).
              * (1 + worn_enchant(p_world, p_uid, 'wind'))

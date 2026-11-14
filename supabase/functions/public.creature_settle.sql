@@ -94,7 +94,7 @@ begin
     v_learning := true;
     for i in 1 .. least(n, 960) loop perform beast_learns(p_world, p_id, d.learns_by); end loop;
   end if;
-  c.care := greatest(0, c.care - elapsed * case when c.care > 0 then beast_mul(c, 'carefade') else 1 end / (coalesce((c.kept->>'kept:care_hours')::double precision, care_hours()) * 3600));
+  c.care := greatest(0, c.care - elapsed * case when c.care > 0 then beast_mul(c, 'carefade') else 1 end / (coalesce((c.kept->>'kept:care_hours')::double precision, care_hours()) * trough_visit(p_world, c) * 3600));
   /*
    * And a hungry one on a deed goes to the stores.
    *
