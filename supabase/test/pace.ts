@@ -19,6 +19,7 @@
  * the island, up to a second behind the channel, were laid over what it had
  * said, pulling everybody on the move back to where they had been.
  */
+import { beamPace } from '../../src/game/sailing';
 import { furnitureDef } from '../../src/game/furniture';
 import { hullSpeed } from '../../src/game/game';
 import { Roster, WALK_SLACK, walkSpan } from '../../src/game/roster';
@@ -68,7 +69,8 @@ check('the island takes the weather at its best as the browser does', near(said.
   `${said.get('weather')} against ${WEATHER_MOST}`);
 const caravel = furnitureDef('caravel').boat;
 const rower = furnitureDef('rowing_boat').boat;
-const sailed = caravel ? hullSpeed(caravel, 95, CONTROL, WEATHER_MOST, 0) * sailingPace(SAILED_AT) : NaN;
+// And what the helm's Sailing makes of a reach (`beamPace`, `sailing.ts`), which the island holds a sail to.
+const sailed = caravel ? hullSpeed(caravel, 95, CONTROL, WEATHER_MOST, 0) * sailingPace(SAILED_AT) * beamPace(SAILED_AT) : NaN;
 const rowed = rower ? hullSpeed(rower, 60, STRENGTH, 1, 0) * sailingPace(SAILED_AT) : NaN;
 check(`a caravel of 95 under a helm of ${CONTROL} body control and ${SAILED_AT} sailing is allowed what she makes on a reach in a gale`,
   near(said.get('caravel') ?? NaN, sailed), `${said.get('caravel')} tiles a second, and she makes ${sailed.toFixed(3)}`);
