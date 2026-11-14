@@ -215,7 +215,7 @@ import { BOULDER_AGAIN, BOULDER_NOTHING_YET, FITTING_DONE, FITTING_JOBS, FITTING
 import { ADORN_DONE, ADORN_JOBS, ADORN_SAID, PEA_NAMES, SPIRAL_SEEDS, type AdornDone, type AdornSaid } from '../src/game/adorn';
 import {
   BUOY, CAULDRON_HEARTH, CHEESE, CHEESE_AGEING, CHEESE_RACK, GAME_TABLE, GARDEN_OBELISK, GEM_LAMP, HERB_SPIRAL, IVY_CUTTING, IVY_CUTTINGS, IVY_PANEL, IVY_PANEL_DAYS, LILY_POND,
-  NAMEPLATE, PEDIGREE_BOARD, PELT_RUG, PLUSH, PLUSH_SAID, POND_LILIES, RACK_HOLDS, SPIRAL_PICK, SPIRAL_SLOTS, STONES_GOAL, STONES_SIDES,
+  NAMEPLATE, PEDIGREE_BOARD, PELT_RUG, PLUSH, PLUSH_SAID, POND_LILIES, RACK_HOLDS, SPIRAL_PICK, SPIRAL_SLOTS, STONES_GOAL, STONES_LEAST, STONES_SIDES,
 } from '../src/game/adorndefs';
 import {
   ARCHERY_TARGET, ARROW_BREAK_IN, BOULDER_MOSS_DAYS, LANTERN_POLE, MOOR_REACH, MOORING_POST, MOSS_BOULDER, POLE_LANTERNS, POLE_REACH, PRACTICE_GAIN, PRACTISE, practiceAs,
@@ -3144,7 +3144,7 @@ for (const [fn, v] of [
 ] as Array<[string, string]>) out.push(`create or replace function ${fn}() returns text language sql immutable as $fn$ select ${q(v)} $fn$;`);
 for (const [fn, v] of [
   ['pond_lilies', POND_LILIES], ['ivy_cuttings', IVY_CUTTINGS], ['spiral_slots', SPIRAL_SLOTS], ['spiral_pick', SPIRAL_PICK], ['rack_holds', RACK_HOLDS],
-  ['stones_goal', STONES_GOAL], ['stones_sides', STONES_SIDES], ['spiral_ripe', RIPE],
+  ['stones_goal', STONES_GOAL], ['stones_sides', STONES_SIDES], ['stones_least', STONES_LEAST], ['spiral_ripe', RIPE],
 ] as Array<[string, number]>) out.push(`create or replace function ${fn}() returns int language sql immutable as $fn$ select ${q(v)}::int $fn$;`);
 for (const [fn, v] of [
   ['ivy_panel_days', IVY_PANEL_DAYS], ['cheese_age_rate', CHEESE_AGEING.rate], ['cheese_age_cap', CHEESE_AGEING.cap],

@@ -67,6 +67,14 @@ import { gardenAmbience, gardenTrim, hangCodeOf } from './gardenlook';
 import { decorTrim } from './decorlook';
 import { furnishTrim } from './furnishlook';
 import { fittingTrim } from './fittinglook';
+import { ADORN_LIVE, adornTrim } from './adornlook';
+import { BUOY } from '../game/adorndefs';
+import { BUOY_BOB, PLATE_BOARD } from './kit/adorn';
+import { NAMEPLATE } from '../game/adorndefs';
+import { plateWorker } from '../game/adorn';
+import type { KitView } from './kit/core';
+/** The zoom from which a nameplate's worker's name is painted on it. */
+const PLATE_TEXT_ZOOM = 1.5;
 import { LANTERN_POLE, MOOR_REACH, MOORING_POST, PRACTISE, SHOOT_TARGET, STONE_BUST, TREE_BENCH } from '../game/fittingdefs';
 
 /** Pixels at zoom one a tree bench's two halves are sorted either side of the tree on its tile: its far half before, its near half after. */
@@ -6433,7 +6441,33 @@ export class Renderer {
     if (up > 0) return this.footOn(wx, wy, up) + up * WALL_HEIGHT;
     const h = this.game.world.heightAt(wx, wy);
     // On a bridge's deck, or on the ground under it (`pieceOnDeck`).
+    // A buoy rides the water as a hull does, bobbing on it (`adorn.ts`, `BUOY_BOB`).
+    if (f.kind === BUOY) return Math.max(h, 0) + Math.sin((this.anim * 2 * Math.PI) / BUOY_BOB[1] + wx * 1.7 + wy) * BUOY_BOB[0];
     return furnitureDef(f.kind).boat ? Math.max(h, 0) : this.standTop(wx, wy, this.game.bridges.size > 0 && this.game.pieceOnDeck(f, Math.floor(wx), Math.floor(wy)));
+  }
+
+  /**
+   * A wildermon bed's nameplate (`adorn.ts`): a board on a stake at the bed's
+   * front edge, and from `PLATE_TEXT_ZOOM` in, the name of the worker asleep
+   * in it or headed to it painted on the board (`plateWorker`); the line under
+   * the bed's name says it in full.
+   */
+  private drawNameplate(ctx: CanvasRenderingContext2D, bed: PlacedFurniture, sx: number, sy: number, zoom: number, view: KitView): void {
+    const hd = (furnitureDef(bed.kind).h * UNITS_PER_TILE) / 8 + 1.2;
+    const at = (p: readonly [number, number, number]): [number, number] => [sx + (p[0] * view.ux + p[1] * view.vx) * zoom, sy + (p[0] * view.uy + p[1] * view.vy - p[2] * HEIGHT_SCALE) * zoom];
+    const [px, py] = at([0, hd, 0]);
+    drawKit(ctx, px, py, zoom, NAMEPLATE, { lit: false }, view);
+    const c = plateWorker(this.game, bed);
+    if (!c || zoom < PLATE_TEXT_ZOOM || view.vy < 0) return;
+    const [bc, bw] = PLATE_BOARD;
+    const [tx, ty] = at([bc[0], hd + bc[1] - 0.3, bc[2]]);
+    ctx.save();
+    ctx.font = `${Math.max(6, 1.25 * zoom * HEIGHT_SCALE).toFixed(1)}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(74, 56, 62, 0.92)';
+    ctx.fillText(c.name, tx, ty, bw * 2 * zoom * 0.9);
+    ctx.restore();
   }
 
   /** How far out a tree bench on a tile is built, round the trunk of the tree on it (`benchRound`): its own, with no tree drawn as a solid there. */
@@ -7263,6 +7297,8 @@ export class Renderer {
           drawn = [hl * zoom, ht * zoom, hr * zoom, hb * zoom];
           // Its bells' light turned up by what the wash will take off it there, their own pool of light having taken some (`denPools`).
           drawDenLive(ctx, ent.sx, ent.sy, zoom, piece.kind, view, look, this.anim, dark, dark > 0.02 ? this.nightOver(ent.sx, ent.sy - 24 * zoom, dark) : 0);
+          // A nameplate hung on it (`adorn.ts`): staked at its front, and close in, its worker's name on it.
+          if (piece.adorn?.plate !== undefined) this.drawNameplate(ctx, piece, ent.sx, ent.sy, zoom, view);
           // The turns either side of this one baked ahead while the browser is idle, so turning the camera finds them made.
           const rot = this.camera.rotation, facing = pieceFacing(piece);
           prewarmDen(piece.kind, [pieceView(facing, rot + 1), pieceView(facing, rot - 1)], zoom, look);
@@ -7300,7 +7336,7 @@ export class Renderer {
           // ring under the pointer: a ring round a bloom of light is a blot.
           // (an armour stand's mannequin by which stand it is: `decorlook.ts`)
           drawFurnitureLive(ctx, ent.sx, ent.sy, zoom, piece.kind, view, this.game.darkness(),
-            clothInWind(piece.kind) || piece.kind === ARMOUR_STAND || piece.kind === STONE_BUST || piece.kind === LANTERN_POLE ? this.airOf(piece) : undefined);
+            clothInWind(piece.kind) || piece.kind === ARMOUR_STAND || piece.kind === STONE_BUST || piece.kind === LANTERN_POLE || ADORN_LIVE.includes(piece.kind) ? this.airOf(piece) : undefined);
           // A lantern burning on a post or a pillar blooms as the dark comes on (`lamps.ts`).
           if (lampBurning(piece)) drawLampBloom(ctx, ent.sx, ent.sy, zoom, piece.kind, view, this.game.darkness());
           /*
@@ -11440,6 +11476,9 @@ export class Renderer {
     // A fitting: a pole's lanterns and candles, a bench's tree, a shelf's jars, a target's arrows, a post's rope (`fitting.ts`, `fittinglook.ts`).
     const fitting = fittingTrim(f, this.game);
     if (fitting !== undefined) return fitting;
+    // An adornment: a pond's lilies, a panel's ivy, an obelisk's sweet peas, a spiral's herbs, a rack's cheese, a rug's kind, a plush, a table's round, a lamp's gem, a board (`adorn.ts`, `adornlook.ts`).
+    const adorn = adornTrim(f, this.game);
+    if (adorn !== undefined) return adorn;
     // An arch's roses or lavender: the variety, which is its place's, and how far it has grown (`roses.ts`).
     if (FURNITURE_BY_ID.get(f.kind)?.climber) {
       const r = roseStage(f.setAt, this.game.wallNow());

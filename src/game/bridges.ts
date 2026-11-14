@@ -199,7 +199,7 @@ export const BRIDGES: Record<BridgeKind, BridgeDef> = {
     skill: 'carpentry',
     difficulty: 14,
     carts: false,
-    note: 'Deck: {span} tile, arched; 1 lane. Foot traffic only.',
+    note: 'Deck: {span} tile, arched. Foot traffic only.',
   },
 };
 

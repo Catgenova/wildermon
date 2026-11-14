@@ -149,7 +149,9 @@ begin
       -- And things on a side table (`furnish.ts`).
       if coalesce(jsonb_array_length(p.garden->'on'), 0) > 0 then return garden_said('showing', ''); end if;
       -- And herbs on a spice shelf, arrows in a target (`fitting.ts`).
-      if coalesce(jsonb_array_length(p.garden->'jars'), 0) > 0 or coalesce((p.garden->>'stuck')::int, 0) > 0 then
+      if coalesce(jsonb_array_length(p.garden->'jars'), 0) > 0 or coalesce((p.garden->>'stuck')::int, 0) > 0
+         -- And cheese on a rack (`adorn.ts`).
+         or coalesce(jsonb_array_length(p.garden->'cheese'), 0) > 0 then
         return garden_said('showing', '');
       end if;
       -- A crop is not carried about in a box of earth: it is harvested, or turned back into the soil.

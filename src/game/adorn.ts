@@ -29,7 +29,7 @@ import type { ActionDef, Target } from './actions';
 import {
   ADORN_TIME, BUOY, BUOY_REACH, CAULDRON_HEARTH, CAULDRON_SERVINGS, CHEESE, CHEESE_AGEING, CHEESE_RACK, GAME_TABLE, GARDEN_OBELISK, GEM_LAMP, GEM_LAMP_REACH, HERB_SPIRAL,
   IVY_CUTTING, IVY_CUTTINGS, IVY_PANEL, IVY_PANEL_DAYS, LILY_POND, LINEAGE_TIME, NAMEPLATE, PEA_BY_SEASON, PEA_COLOURS, PEDIGREE_BOARD, PELT_RUG, PLUSH, POND_LILIES, RACK_HOLDS,
-  PLUSH_SAID, SPIRAL_PICK, SPIRAL_SLOTS, STONES_GOAL, STONES_SIDES, THROW_TIME,
+  PLUSH_SAID, SPIRAL_PICK, SPIRAL_SLOTS, STONES_GOAL, STONES_LEAST, STONES_SIDES, TABLE_SEATS, THROW_TIME,
 } from './adorndefs';
 import { denStage, furnitureCentre, furnitureDef, type PlacedFurniture } from './furniture';
 import type { Game } from './game';
@@ -531,5 +531,5 @@ describeFrom(HERB_SPIRAL, { slots: SPIRAL_SLOTS, herbs: listed(SPIRAL_HERBS.map(
 describeFrom(BUOY, { max: CAIRN_NAME_MAX, reach: plural(BUOY_REACH, 'tile', 'tiles') });
 describeFrom(CAULDRON_HEARTH, { n: CAULDRON_SERVINGS, dishes: potDishWords() });
 describeFrom(CHEESE_RACK, { holds: RACK_HOLDS, rate: CHEESE_AGEING.rate, cap: CHEESE_AGEING.cap, cellar: CELLAR_AGEING });
-describeFrom(GAME_TABLE, { seat: seatWords(GAME_TABLE), goal: STONES_GOAL, sides: STONES_SIDES });
+describeFrom(GAME_TABLE, { seat: seatWords(GAME_TABLE), players: TABLE_SEATS, least: STONES_LEAST, goal: STONES_GOAL, sides: STONES_SIDES });
 describeFrom(GEM_LAMP, { reach: plural(GEM_LAMP_REACH, 'tile', 'tiles'), gems: GEMS.length });

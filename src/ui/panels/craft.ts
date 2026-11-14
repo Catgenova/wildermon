@@ -8,6 +8,7 @@ import { isFurniture, ONE_ALTAR } from '../../game/furniture';
 import { SKILL_DEFS } from '../../game/skills';
 import type { Target } from '../../game/actions';
 import { CARVED_FIGURE } from '../../game/gardendefs';
+import { PLUSH } from '../../game/adorndefs';
 import { RUG_PATTERNS, WOVEN_RUG, type RugPattern } from '../../game/decordefs';
 import { FIGURE_KINDS } from '../../game/garden';
 import { SPECIES } from '../../game/creatures';
@@ -499,7 +500,9 @@ export class CraftPanel {
       parts.push(span);
     }
     // A carved figure's kind, out of those seen in the field guide (`garden.ts`): the island refuses any other.
-    if (r.result === CARVED_FIGURE) parts.push(this.figurePick());
+    if (r.result === CARVED_FIGURE) parts.push(this.figurePick('seen'));
+    // A plush's kind, out of those tamed (`adorn.ts`): the island refuses any other.
+    if (r.result === PLUSH) parts.push(this.figurePick('tamed'));
     // A woven rug's pattern (`decor.ts`).
     if (r.result === WOVEN_RUG) parts.push(this.patternPick());
     // What it would come out made of, since the same bill in two woods makes
@@ -697,7 +700,8 @@ export class CraftPanel {
     // inside the target as `count`, where the island reads it as "how many of
     // the stack" and a craft reads it not at all.
     // And a carved figure's kind, chosen on its row (`garden.ts`).
-    const kind = r.result === CARVED_FIGURE ? { species: this.figureKind() } : r.result === WOVEN_RUG ? { pattern: this.pattern } : {};
+    const kind = r.result === CARVED_FIGURE ? { species: this.figureKind('seen') } : r.result === PLUSH ? { species: this.figureKind('tamed') }
+      : r.result === WOVEN_RUG ? { pattern: this.pattern } : {};
     this.game.requestAction(def, { kind: 'item', uid: material.uid, ...kind } as Target, times);
     return true;
   }
@@ -720,29 +724,29 @@ export class CraftPanel {
     return pick;
   }
 
-  /** The kinds a figure may be carved as: those seen in the field guide, in its order. */
-  private figureKinds(): string[] {
-    return FIGURE_KINDS().filter((k) => this.game.guide.has(k, 'seen'));
+  /** The kinds a figure may be carved as, or a plush sewn as: those seen (or tamed) in the field guide, in its order. */
+  private figureKinds(mark: 'seen' | 'tamed'): string[] {
+    return FIGURE_KINDS().filter((k) => this.game.guide.has(k, mark));
   }
 
-  /** The kind chosen, or the first seen when none is. */
-  private figureKind(): string | undefined {
-    const kinds = this.figureKinds();
+  /** The kind chosen, or the first seen (or tamed) when none is. */
+  private figureKind(mark: 'seen' | 'tamed'): string | undefined {
+    const kinds = this.figureKinds(mark);
     return kinds.includes(this.figure) ? this.figure : kinds[0];
   }
 
-  /** The choice of kind on a carved figure's row: every kind seen in the field guide, or a word that there is none. */
-  private figurePick(): HTMLElement {
-    const kinds = this.figureKinds();
+  /** The choice of kind on a carved figure's row or a plush's: every kind seen (or tamed) in the field guide, or a word that there is none. */
+  private figurePick(mark: 'seen' | 'tamed'): HTMLElement {
+    const kinds = this.figureKinds(mark);
     if (!kinds.length) {
       const none = document.createElement('span');
       none.className = 'have short';
-      none.textContent = 'No kind seen (field guide)';
+      none.textContent = `No kind ${mark} (field guide)`;
       return none;
     }
     const pick = made('select', 'field', 'craft-of');
-    pick.title = 'Kind: seen in your field guide';
-    const chosen = this.figureKind();
+    pick.title = `Kind: ${mark} in your field guide`;
+    const chosen = this.figureKind(mark);
     for (const k of kinds) {
       const o = document.createElement('option');
       o.value = k;

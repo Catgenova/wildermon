@@ -92,12 +92,13 @@ export const plushRefusal = (tamed: (kind: string) => boolean, kind: string | un
 
 /* ---- a game table ----------------------------------------------------------------------- */
 
-/** Bodies a game table seats (`FurnitureDef.seats`). */
+/** Bodies a game table seats (`FurnitureDef.seats`): the players of a round of stones. */
 export const TABLE_SEATS = 2;
 /** Stones: a race between two players to this many points. */
 export const STONES_GOAL = 12;
-/** A throw: one to this many points. */
+/** A throw: `STONES_LEAST` to this many points, each as likely. */
 export const STONES_SIDES = 6;
+export const STONES_LEAST = 1;
 /** Seconds: a throw. */
 export const THROW_TIME = 2;
 

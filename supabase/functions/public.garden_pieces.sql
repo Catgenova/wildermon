@@ -4,4 +4,4 @@ CREATE OR REPLACE FUNCTION public.garden_pieces()
  RETURNS text[]
  LANGUAGE sql
  IMMUTABLE
-AS $function$ select array['flower_bed', 'window_box', 'hanging_basket', 'herb_box', 'topiary_tub', 'potted_fern', 'potted_palm', 'hedge', 'wisteria_pergola', 'bonsai', 'flower_cart', 'birdhouse', 'carved_figure', 'trophy_plaque', 'folding_screen', 'plant_stand', 'wind_chime']::text[] $function$
+AS $function$ select array['flower_bed', 'window_box', 'hanging_basket', 'herb_box', 'topiary_tub', 'potted_fern', 'potted_palm', 'hedge', 'wisteria_pergola', 'bonsai', 'flower_cart', 'birdhouse', 'carved_figure', 'trophy_plaque', 'folding_screen', 'plant_stand', 'wind_chime', 'ivy_panel']::text[] $function$

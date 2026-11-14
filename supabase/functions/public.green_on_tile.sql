@@ -27,6 +27,6 @@ begin
       join build_material_def m on m.id = wl.material and m.kind = 'stone'
       left join green_since g on g.world_id = p_world and g.thing = 'wall' and g.x = wl.x and g.y = wl.y
                              and g.k = green_wall_k(wl.level, wl.dir)
-     where bill_done(wl.needed)), 0));
+     where bill_done(wl.needed) and not wall_paneled(p_world, wl)), 0));
   return v_days;
 end $function$

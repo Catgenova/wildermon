@@ -75,6 +75,11 @@ begin
     perform perform_fitting(p_world, p_uid, p_action, p_target);
     return;
   end if;
+  -- The adornments' jobs (`adorn.ts`).
+  if adorn_action(p_action) then
+    perform perform_adorn(p_world, p_uid, p_action, p_target);
+    return;
+  end if;
 
   if p_action = 'plan_bridge' then
     v_kind := coalesce(p_target->>'material', 'rope');

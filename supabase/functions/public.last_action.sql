@@ -26,4 +26,6 @@ AS $function$
       or furnish_action(p_action)
       -- The fittings' jobs: a pole, a boulder, a shelf, a dummy, a target, a mooring post, a bust (`fitting.ts`).
       or fitting_action(p_action)
+      -- The adornments' jobs: a pond, an obelisk, a spiral, a buoy, a rack, a table, a board, a nameplate (`adorn.ts`).
+      or adorn_action(p_action)
 $function$

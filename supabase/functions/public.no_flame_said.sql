@@ -4,4 +4,4 @@ CREATE OR REPLACE FUNCTION public.no_flame_said()
  RETURNS text
  LANGUAGE sql
  IMMUTABLE
-AS $function$ select 'Nothing burning nearby. Light it at a burning campfire, kiln, smelter, oven, brazier, lantern post, lantern pillar or fireplace, or from a light in your hand.' $function$
+AS $function$ select 'Nothing burning nearby. Light it at a burning campfire, kiln, smelter, oven, brazier, lantern post, lantern pillar, fireplace or cauldron hearth, or from a light in your hand.' $function$

@@ -6,7 +6,7 @@ import { counterHeld, counterSeat, streetOf, COUNTER_HOLDS } from '../game/count
 import type { Game } from '../game/game';
 import { hingeKey } from '../game/gates';
 import { GLASS } from '../game/glasshouse';
-import { wallGreen, greenShows, GREEN_WET_REACH, wetFrom } from '../game/greening';
+import { wallGreen, greenShows, GREEN_WET_REACH, panelOn, wetFrom } from '../game/greening';
 import type { LightSource } from '../game/light';
 import { isRuneGate, gateMiddle, runeGateLit, RUNE_GATE_RISE, gateTiles } from '../game/runegate';
 import { hash2 } from '../world/noise';
@@ -2029,7 +2029,8 @@ export class WallPainter {
     const strands = ivyLayout({
       seed: Math.floor(hashOf(wall.x, wall.y, wall.dir === 'h' ? 0 : 1, (ox + oy > 0 ? 1 : 0) + wall.level * 2) * 2 ** 31),
       grown: greenShows(days, shade, wet),
-      vigour: vigour(wall.x + (wall.dir === 'h' ? 0.5 : 0), wall.y + (wall.dir === 'v' ? 0.5 : 0)),
+      // On an ivy wall panel's wall, as vigorous as ivy grows (`adorn.ts`): the panel is what it is planted on.
+      vigour: panelOn(this.r.game, wall) ? 1 : vigour(wall.x + (wall.dir === 'h' ? 0.5 : 0), wall.y + (wall.dir === 'v' ? 0.5 : 0)),
       shade, wet, height,
       top: low || !roofed,
       ground: wall.level === 0,

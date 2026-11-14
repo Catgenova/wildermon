@@ -251,6 +251,14 @@ import { GARDEN_SAID } from '../../game/garden';
 import { DECOR_PIECES } from '../../game/decor';
 import { FURNISH_PIECES, FURNISH_SAID, seatRest } from '../../game/furnish';
 import { benchTreeWords, FITTING_PIECES, poleBurn, practiceSkillWords } from '../../game/fitting';
+import { ADORN_PIECES, PEA_NAMES, watersideWords } from '../../game/adorn';
+import {
+  ADORN_TIME, BUOY_REACH, CAULDRON_SERVINGS, CHEESE_AGEING, GEM_LAMP_REACH, IVY_CUTTINGS, IVY_PANEL_DAYS, LINEAGE_TIME, NAMEPLATE, PEA_BY_SEASON, POND_LILIES, RACK_HOLDS,
+  SPIRAL_PICK, SPIRAL_SLOTS, STONES_GOAL, STONES_LEAST, STONES_SIDES, TABLE_SEATS as ADORN_SEATS, THROW_TIME,
+} from '../../game/adorndefs';
+import { POT_DISHES } from '../../game/recipes';
+import { BRIDGES as ADORN_BRIDGES, FOOTBRIDGE_SPAN } from '../../game/bridges';
+import { CELLAR_AGEING as ADORN_CELLAR } from '../../game/ageing';
 import {
   ARROW_BREAK_IN, BOULDER_MOSS_DAYS, CARVE_TIME, FIT_TIME, MOOR_REACH, MOOR_TIME, POLE_LANTERNS, POLE_REACH, PRACTICE_GAIN, PULL_TIME, SHELF_HOLDS, TARGET_HOLDS,
   TREE_BENCH_SEATS, WINDOW_SEATS,
@@ -2284,6 +2292,24 @@ export function helpText(): string {
       <li><b>Shoot</b> at an archery target: a bow in hand and arrows, within its range; draw time and stamina as a fight's; archery gain ×${PRACTICE_GAIN} a landed shot's. To ${TARGET_HOLDS} arrows. <b>Pull arrows</b> (${PULL_TIME} s base): one in ${ARROW_BREAK_IN} broken, the rest back.</li>
       <li><b>Tie up</b>, <b>Untie</b> (${MOOR_TIME} s base): a boat within ${MOOR_REACH} tile of the post, one at a time; by whoever set the boat down or holds its key. Tied: <b>Take the helm</b> and <b>Pick it up</b> refused to anyone else; rowed further than ${MOOR_REACH} tile off, the tie holds nothing.</li>
       <li><b>Carve</b> a stone bust (${CARVE_TIME} s base): a citizen of the settlement it stands on, from its roll (Social window); whoever set it down, or a citizen.</li>
+    </ul>
+    <h3>Adornments</h3>
+    <ul>
+      ${ADORN_PIECES.map((id) => `<li><b>${itemDef(id).name}</b>: ${bill(`make_${id}`)} (${workedAt(`make_${id}`)}, ${recipe(`make_${id}`).baseTime} s base). `
+        + `${furnitureDef(id).w} by ${furnitureDef(id).h} subtiles. ${itemDef(id).description ?? ''}</li>`).join('')}
+      <li><b>${itemDef(NAMEPLATE).name}</b>: ${bill(`make_${NAMEPLATE}`)} (${workedAt(`make_${NAMEPLATE}`)}, ${recipe(`make_${NAMEPLATE}`).baseTime} s base). ${itemDef(NAMEPLATE).description ?? ''} <b>Hang a nameplate</b>, <b>Take down the nameplate</b> (${ADORN_TIME} s base): whoever set the bed down.</li>
+      <li><b>${ADORN_BRIDGES.footbridge.name}</b>: <b>Throw a bridge across</b>, ${ADORN_BRIDGES.footbridge.name.toLowerCase()}: ${ADORN_BRIDGES.footbridge.bill.map(([i, n]) => `${n} ${itemDef(i).name.toLowerCase()}`).join(', ')} a tile of deck (${ADORN_BRIDGES.footbridge.skill}). Deck: ${FOOTBRIDGE_SPAN} tile, ends on the banks either side; walked, not driven.</li>
+      <li><b>Plant a water lily</b> (${ADORN_TIME} s base): a water lily root, up to ${POND_LILIES}. Botanize on a lily pond's tile or a tile beside it: the water's-edge finds (${watersideWords()}).</li>
+      <li><b>Clear the ivy</b>: ${IVY_CUTTINGS} ivy cutting a wall cleared. Ivy wall panel: its wall's ivy bare to full in ${IVY_PANEL_DAYS} days, any finished wall; worker scrubs skip that wall.</li>
+      <li><b>Sweet peas</b>: ${listed(PEA_NAMES)}, or by season (${PEA_BY_SEASON.spring} in spring, ${PEA_BY_SEASON.summer} in summer).</li>
+      <li><b>Sow</b> a herb spiral's slot (${ADORN_TIME} s base): a herb seed, ${SPIRAL_SLOTS} slots. <b>Pick</b> a ripe slot (${ADORN_TIME} s base): ${SPIRAL_PICK} herbs at your farming; regrows from sown.</li>
+      <li><b>Name</b> a buoy (${CAIRN_NAME_TIME} s base): up to ${CAIRN_NAME_MAX} characters; whoever set it down, or a citizen of its settlement. Map: whoever set it down; and citizens of the settlement it floats on. Light: ${BUOY_REACH} tiles at night.</li>
+      <li>Cauldron hearth, lit: ${POT_DISHES.map((r) => `${r.label} ×${CAULDRON_SERVINGS}`).join(', ')}: inputs ×${CAULDRON_SERVINGS}, servings ×${CAULDRON_SERVINGS}, the go's base time; no pot or bowl.</li>
+      <li><b>Put on the rack</b>, <b>Take the cheese</b> (${ADORN_TIME} s base): to ${RACK_HOLDS} cheeses; each +${CHEESE_AGEING.rate} QL a day, ×${ADORN_CELLAR} in a cellar, to +${CHEESE_AGEING.cap}. Not picked up with cheese on it.</li>
+      <li>Fur: labelled with the kind it was butchered off. Pelt rug: the kind of its first fur, its body and belly colours.</li>
+      <li><b>Throw the stones</b> at a game table (${THROW_TIME} s base): ${STONES_LEAST} to ${STONES_SIDES} points a throw; ${ADORN_SEATS} players, seated or beside it, in turn; first to ${STONES_GOAL} wins. Winner: in both logs, a win on the table's tally.</li>
+      <li>Gem lamp: light ${GEM_LAMP_REACH} tiles at night, in its gem's colour.</li>
+      <li><b>Show lineage</b> on a pedigree board (${LINEAGE_TIME} s base): a wildermon of yours; whoever set it down. <b>Examine</b>: it, its dam and sire, their dams and sires: names and kinds.</li>
     </ul>
     <h3>Calling things by name</h3>
     <ul>

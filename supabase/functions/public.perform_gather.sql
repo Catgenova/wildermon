@@ -135,7 +135,7 @@ begin
       if random() < forage_empty() * pk(p_world, p_uid, 'empty:' || p_action, 1)
          or not skill_check(s, find_check(), 0) then continue; end if;
       -- At the water's edge the botany table has water lily roots and lotus seeds in it too.
-      got := roll_table(case when p_action = 'botanize' and water_edge(p_world, tx, ty) then 'botanize_water'
+      got := roll_table(case when p_action = 'botanize' and (water_edge(p_world, tx, ty) or pond_near(p_world, tx, ty)) then 'botanize_water'
                              else p_action end, random());
       made_ql := product_ql(s, 0);
       -- And now and then a rare one, for a Naturalist's Rare Find.

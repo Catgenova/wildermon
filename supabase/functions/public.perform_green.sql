@@ -20,6 +20,18 @@ begin
        where bill_done(wl.needed)
     on conflict (world_id, thing, x, y, k) do update set since = excluded.since;
     perform tell(p_world, p_uid, 'Ivy cleared: ' || side_name(v_side) || ' wall. ' || green_again(), 'event');
+    -- Its cuttings, for an ivy wall panel (`adorn.ts`).
+    if exists (select 1 from border_of(tx, ty, v_side) bo
+                 join wall wl on wl.world_id = p_world and wl.dir = bo.dir and wl.x = bo.x and wl.y = bo.y
+                 join build_material_def m on m.id = wl.material and m.kind = 'stone'
+                where bill_done(wl.needed)) then
+      perform give(p_world, p_uid, ivy_cutting_item(),
+        ivy_cuttings() * (select count(*)::int from border_of(tx, ty, v_side) bo
+                           join wall wl on wl.world_id = p_world and wl.dir = bo.dir and wl.x = bo.x and wl.y = bo.y
+                           join build_material_def m on m.id = wl.material and m.kind = 'stone'
+                          where bill_done(wl.needed)),
+        product_ql(skill_of(p_world, p_uid, 'forestry'), 0));
+    end if;
     return;
   end if;
   if p_target->>'kind' = 'tile' then

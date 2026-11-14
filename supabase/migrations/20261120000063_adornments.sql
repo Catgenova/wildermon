@@ -421,7 +421,7 @@ begin
   elsif p_action = 'throw_stones' then
     select * into me from player where world_id = p_world and uid = p_uid;
     r := coalesce(g->'round', '{}'::jsonb);
-    v_n := 1 + floor(random() * stones_sides())::int;
+    v_n := stones_least() + floor(random() * (stones_sides() - stones_least() + 1))::int;
     if r->>'a' is null then
       r := jsonb_build_object('a', p_uid::text, 'an', me.name, 'as', v_n, 'last', p_uid::text);
     elsif r->>'a' = p_uid::text then

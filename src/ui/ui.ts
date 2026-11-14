@@ -86,6 +86,8 @@ import { CROP_BY_SEED, cropDef, cropReady, describeCrop, emptyFields, FARM_ACTIO
 import { bedLevelOf } from '../game/gardenbed';
 import { armReading, armWords, destinations, destKey, FURNISH_SAID, onTableOk, POINT_ARM, postAt, TABLE_PUT } from '../game/furnish';
 import { CARVE_BUST, FITTING_SAID, SHELF_HERBS, SHELF_PUT } from '../game/fitting';
+import { ADORN_SAID, PEA_NAMES, PEA_PICK, PEA_SEASON, RACK_PUT, SET_LINEAGE, SLOTS, SPIRAL_HERBS, SPIRAL_SEEDS, SPIRAL_SOW } from '../game/adorn';
+import { CHEESE } from '../game/adorndefs';
 import { PLANTER_GROWTH } from '../game/growth';
 import { describeWaterPlant } from '../game/watergarden';
 import { LIFE_MOTES_EACH, swirlName } from '../game/motes';
@@ -2971,6 +2973,8 @@ export class UI {
     entries.push(...this.furnishEntries(f));
     // A spice shelf's herbs, a herb in the pack to a line; a bust's citizens, one to a line (`fitting.ts`).
     entries.push(...this.fittingEntries(f));
+    // An obelisk's sweet peas, a colour to a line; a spiral's slots, a seed in the pack to a line; a rack's cheese; a board's wildermon (`adorn.ts`).
+    entries.push(...this.adornEntries(f));
     // A lantern post: its lantern, its candle and its light.
     entries.push(...lampEntries(g, f));
     for (const id of ['light_oven', 'put_out_oven', 'take_ashes_oven', 'sleep', 'set_home', 'pull_cart', 'drop_cart', 'board_vehicle', 'board_passenger', 'leave_vehicle', 'leave_passenger', 'unhitch_team', 'examine_vessel', 'drink_from_vessel', 'fill_barrel', 'leach_lye', 'empty_vessel', 'furniture_take_all', 'crate_follow', 'crate_work', 'scrub_moss', 'scrub_dye', 'pick_up_furniture']) {
@@ -3061,6 +3065,64 @@ export class UI {
           const reason = carve.check?.(t, g) ?? null;
           return { label: p.name, hint: reason ?? undefined, disabled: !!reason, onSelect: () => g.requestAction(carve, t) };
         }) : undefined,
+      });
+    }
+    return out;
+  }
+
+  /**
+   * An obelisk's Sweet peas, a colour to a line and the season's; a herb
+   * spiral's Sow, an empty slot to a line and every herb seed in the pack
+   * under it; a cheese rack's Put on the rack, every cheese in the pack; a
+   * pedigree board's Show lineage, every wildermon of yours this browser
+   * knows (`adorn.ts`).
+   */
+  private adornEntries(f: PlacedFurniture): MenuItem[] {
+    const g = this.game;
+    const ft: Target = { kind: 'furniture', id: f.id };
+    const out: MenuItem[] = [];
+    const line = (id: string, t: Target, label: string): MenuItem | null => {
+      const a = ACTION_BY_ID.get(id);
+      if (!a?.applies(t, g)) return null;
+      const reason = a.check?.(t, g) ?? null;
+      return { label, hint: reason ?? undefined, disabled: !!reason, onSelect: () => g.requestAction(a, t) };
+    };
+    const peas = [...PEA_NAMES.map((c) => line(PEA_PICK(c), ft, c)), line(PEA_SEASON, ft, 'by season')].filter((m): m is MenuItem => !!m);
+    if (peas.length) out.push({ label: 'Sweet peas', children: peas });
+    const sow = ACTION_BY_ID.get(SPIRAL_SOW);
+    if (sow?.applies(ft, g)) {
+      const seeds = g.inventory.items.filter((it) => SPIRAL_SEEDS.includes(it.id) && !it.locked);
+      const open = SLOTS.filter((i) => !f.adorn?.herbs?.[i]);
+      out.push({
+        label: sow.label,
+        disabled: !seeds.length || !open.length,
+        hint: !open.length ? 'Every slot sown.' : seeds.length ? undefined : ADORN_SAID.noSeed,
+        children: seeds.length && open.length ? open.map((i) => ({
+          label: `Slot ${i + 1}`,
+          children: seeds.map((it) => line(SPIRAL_SOW, { ...ft, slot: i, itemUid: it.uid } as Target,
+            `${SPIRAL_HERBS.find((c) => c.seed === it.id)?.name ?? itemName(it)} (${it.count})`)).filter((m): m is MenuItem => !!m),
+        })) : undefined,
+      });
+    }
+    const put = ACTION_BY_ID.get(RACK_PUT);
+    if (put?.applies(ft, g)) {
+      const cheeses = g.inventory.items.filter((it) => it.id === CHEESE && !it.locked);
+      out.push({
+        label: put.label,
+        disabled: !cheeses.length,
+        hint: cheeses.length ? undefined : ADORN_SAID.noCheese,
+        children: cheeses.length ? cheeses.map((it) => line(RACK_PUT, { ...ft, itemUid: it.uid } as Target, `${itemName(it)} (${it.count}, QL ${it.ql.toFixed(1)})`))
+          .filter((m): m is MenuItem => !!m) : undefined,
+      });
+    }
+    const lineage = ACTION_BY_ID.get(SET_LINEAGE);
+    if (lineage?.applies(ft, g)) {
+      const mine = [...g.creatures.list.values()].filter((c) => c.mine !== false && c.mode !== 'wild').sort((a, b) => (a.name < b.name ? -1 : 1));
+      out.push({
+        label: lineage.label,
+        disabled: !mine.length,
+        hint: mine.length ? undefined : ADORN_SAID.pickCreature,
+        children: mine.length ? mine.map((c) => line(SET_LINEAGE, { ...ft, creature: c.id } as Target, c.name)).filter((m): m is MenuItem => !!m) : undefined,
       });
     }
     return out;

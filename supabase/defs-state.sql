@@ -8043,7 +8043,7 @@ insert into bridge_winch values ('draw', 'timber', 6);
 insert into bridge_winch values ('draw', 'hinge', 4);
 insert into bridge_winch values ('draw', 'ribbon', 8);
 update bridge_def set grounded = true where id = 'draw';
-insert into bridge_def values ('footbridge', 'Garden footbridge', 1, 'mallet', 'carpentry', 14, false, 'Deck: 1 tile, arched; 1 lane. Foot traffic only.');
+insert into bridge_def values ('footbridge', 'Garden footbridge', 1, 'mallet', 'carpentry', 14, false, 'Deck: 1 tile, arched. Foot traffic only.');
 insert into bridge_bill values ('footbridge', 'plank', 10);
 insert into bridge_bill values ('footbridge', 'shaft', 4);
 insert into bridge_bill values ('footbridge', 'nail', 12);
@@ -10886,6 +10886,7 @@ create or replace function spiral_pick() returns int language sql immutable as $
 create or replace function rack_holds() returns int language sql immutable as $fn$ select 8::int $fn$;
 create or replace function stones_goal() returns int language sql immutable as $fn$ select 12::int $fn$;
 create or replace function stones_sides() returns int language sql immutable as $fn$ select 6::int $fn$;
+create or replace function stones_least() returns int language sql immutable as $fn$ select 1::int $fn$;
 create or replace function spiral_ripe() returns int language sql immutable as $fn$ select 3::int $fn$;
 create or replace function ivy_panel_days() returns double precision language sql immutable as $fn$ select 7::double precision $fn$;
 create or replace function cheese_age_rate() returns double precision language sql immutable as $fn$ select 1::double precision $fn$;

@@ -745,7 +745,7 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   pelt_rug: { name: 'Pelt rug', category: 'misc', weight: 6, decay: 6, description: 'Colours: the kind its fur came off.' },
   plush_wildermon: { name: 'Plush wildermon', category: 'misc', weight: 0.5, decay: 6, description: 'Kind: one you have tamed, chosen at the needle. Dyeable.' },
   game_table: { name: 'Game table', category: 'misc', weight: 14, decay: 5,
-    description: '{seat} Stones: 2 players, seated or beside it, in turn; a throw 1 to {sides} points; first to {goal} wins. Wins: tallied a player.' },
+    description: '{seat} Stones: {players} players, seated or beside it, in turn; a throw {least} to {sides} points; first to {goal} wins. Wins: tallied a player.' },
   gem_lamp: { name: 'Gem lamp', category: 'misc', weight: 30, decay: 0, description: 'Light: {reach} at night, its gem\'s colour. Does not rot.' },
   pedigree_board: { name: 'Pedigree board', category: 'misc', weight: 6, decay: 4,
     description: 'Show lineage: a wildermon of yours, chosen by whoever set it down. Names and kinds: it, its dam and sire, and theirs.' },

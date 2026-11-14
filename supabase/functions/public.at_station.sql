@@ -13,6 +13,9 @@ AS $function$
     -- An oven, alight: no other hearth (`Game.litOvenNear`).
     when 'oven' then
       exists (select 1 from placed_near(p_world, p_uid, 'furniture', 'oven', 2.6) p where placed_lit(p))
+    -- A cauldron hearth, alight (`adorn.ts`).
+    when 'cauldron_hearth' then
+      exists (select 1 from placed_near(p_world, p_uid, 'furniture', cauldron_hearth_kind(), 2.6) p where placed_lit(p))
     when 'smelter' then
       exists (select 1 from placed_near(p_world, p_uid, 'smelter', null, 2.6) p where placed_lit(p))
     else
