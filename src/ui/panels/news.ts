@@ -4424,7 +4424,7 @@ export const NEWS: News[] = [
     ],
   },
   {
-    n: 589,
+    n: 590,
     day: '2026-11-14',
     lines: () => [
       `New: knocked out at 0 health: fall to the ground, ${FALL_SECS} s; lying where you fell until you choose where to wake or step off the spawn; getting up on waking. Camera on where you fell. Other players see it.`,
@@ -4432,6 +4432,21 @@ export const NEWS: News[] = [
       `New: heavy blow landing (×${HEAVY_HIT}): stumble back a step, ${STUMBLE_SECS} s (was: flinch, ${FLINCH_SECS} s). Other players see it.`,
       'Animations Off: lying, and on a ladder, held in one pose.',
     ],
+  },
+  {
+    n: 589,
+    day: '2026-11-14',
+    lines: () => {
+      const e = (id: string): string => {
+        const d = EMOTE_BY_ID.get(id);
+        return d ? `${d.label} (/${d.id}): ${d.held ? `${d.seconds} s down, held until you move, swim, board or work` : `${d.seconds} s`}` : id;
+      };
+      return [
+        `New: emotes (Emotes menu): ${['bow', 'cheer', 'point', 'clap', 'sit'].map(e).join('; ')}.`,
+        'New: Animations off: bow, cheer, point, clap: one still pose each; sit: sat.',
+        'Fixed: stood still after an emote: the idle (was: the emote\'s first pose held; after 6 7, the forearms out).',
+      ];
+    },
   },
   {
     n: 588,

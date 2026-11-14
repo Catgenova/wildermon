@@ -373,6 +373,12 @@
     "why": "Action effects fire from marks on the clips, worked out on every screen from the body's own clip time with nothing sent. Followed per body: once a run of a loop; a frame drawn again or a clock put right fires nothing twice; a new go fires again; a leap, a change of clip or a body unseen starts afresh with no storm of effects; a timed go fitted to its length fires once a run; the mirrored clip fires from the other hand; the point is on the weapon and the same each time."
   },
   {
+    "file": "supabase/test/emotes.ts",
+    "title": "Bow, cheer, point, clap and sit: their own clips, held and ended as they say",
+    "shard": 1,
+    "why": "Asked for: five more emotes on the sculpted bodies. Each plays a clip of its own, never the placeholder, the point with the arm that reads from where it is seen; the one-shots start and end stood; the clap's hands meet at every clap on both bodies; an emote is drawn only while it runs, the idle after; the sit is held until the body moves, swims or works, a peer's too; sat is on the ground; with Animations Off each is its still pose."
+  },
+  {
     "file": "supabase/test/actionfx.ts",
     "title": "Action effects with thirty at work, thirty in a fight, and thirty on the water keep to their share of the particles and cost little",
     "shard": 1,

@@ -3,7 +3,7 @@ import { sunAt } from './sun';
 import { gearFrom, wornWire } from '../game/worn';
 import { materialOf } from '../game/materials';
 import { Camera, MAX_ZOOM, SCULPTED_MAX_ZOOM } from '../engine/camera';
-import { emoteAt } from '../game/emotes';
+import { emoteNow } from '../game/emotes';
 import { ACTION_BY_ID } from '../game/actions';
 import type { FullscreenCanvas } from '../engine/canvas';
 import { onPhone } from '../engine/device';
@@ -6821,8 +6821,7 @@ export class Renderer {
             tool: this.game.action?.state === 'performing' && this.game.action.def.tool ? toolPiece(this.game.inventory.tool(this.game.action.def.tool)) : undefined,
             // Both clocks here are `performance.now()`: the one the emote was
             // stamped on and the one the frames are drawn on.
-            emote: player.emote,
-            emoteT: emoteAt(player.emote, player.emoteAt, performance.now() / 1000) ?? undefined,
+            ...emoteNow(player.emote, player.emoteAt, performance.now() / 1000),
             cast: this.spells.poseOf(PLAYER_CASTS),
             block: blockAt(player.blockedAt, performance.now() / 1000),
             flinch: this.flinchOf(player.hurtAt, player.hurtWhere, player.hurtBy, player.x, player.y, ent.seatFacing ?? this.playerFacing, !!player.hurtHeavy),
@@ -6876,8 +6875,7 @@ export class Renderer {
             gear: peer.gear,
             // The tool their job in hand uses, in its own metal, as the island took it from their pack (`toolFrom`).
             tool: peer.working ? peer.tool : undefined,
-            emote: peer.emote,
-            emoteT: emoteAt(peer.emote, peer.emoteAt, performance.now() / 1000) ?? undefined,
+            ...emoteNow(peer.emote, peer.emoteAt, performance.now() / 1000),
             cast: this.spells.poseOf({ kind: 'peer', id: peer.id }),
             block: blockAt(peer.blockedAt, performance.now() / 1000),
             flinch: this.flinchOf(peer.hurtAt, peer.hurtWhere, peer.hurtBy, peer.x, peer.y, ent.seatFacing ?? peer.facing, !!peer.hurtHeavy),
