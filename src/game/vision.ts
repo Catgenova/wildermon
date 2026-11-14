@@ -11,6 +11,8 @@ import { STONE_LANTERN, STONE_LANTERN_REACH } from './decordefs';
 import { FIREPLACE, FIREPLACE_REACH } from './furnishdefs';
 import { LANTERN_POLE, POLE_REACH } from './fittingdefs';
 import { poleBurning } from './fitting';
+import { BLACK_LANTERN, BLACK_LANTERN_REACH, EMBER_ORB, LAVA_LAMP, LAVA_LAMP_REACH } from './obsidiandefs';
+import { blackLanternBurning, orbReach } from './obsidian';
 import { furnitureCentre } from './furniture';
 import { ANCIENT_HELM, ANCIENT_HELM_SIGHT } from './gear';
 
@@ -304,6 +306,10 @@ export class Vision {
       } else if (f.kind === LANTERN_POLE) {
         // A paper lantern pole out to its own reach while its candles burn (`fitting.ts`).
         if (night && poleBurning(f) && (f.level ?? 0) >= 0) this.cast(next, ...furnitureCentre(f), POLE_REACH, mark);
+      } else if (f.kind === BLACK_LANTERN || f.kind === LAVA_LAMP || f.kind === EMBER_ORB) {
+        // A black glass lantern while its candle burns, a lava lamp column always, an ember orb by how dark it is (`obsidian.ts`).
+        if (!night || (f.level ?? 0) < 0 || (f.kind === BLACK_LANTERN && !blackLanternBurning(f))) continue;
+        this.cast(next, ...furnitureCentre(f), f.kind === BLACK_LANTERN ? BLACK_LANTERN_REACH : f.kind === LAVA_LAMP ? LAVA_LAMP_REACH : orbReach(g.darkness()), mark);
       } else if (f.lit) this.cast(next, f.x + 0.5, f.y + 0.5, f.kind === FIREPLACE ? FIREPLACE_REACH : FIRE_SIGHT, mark);
     }
 

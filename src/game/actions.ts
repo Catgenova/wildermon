@@ -71,6 +71,7 @@ import { GARDEN_ACTIONS } from './garden';
 import { DECOR_ACTIONS } from './decor';
 import { FURNISH_ACTIONS } from './furnish';
 import { FITTING_ACTIONS, FITTING_SAID } from './fitting';
+import { OBSIDIAN_ACTIONS } from './obsidian';
 import { ADORN_ACTIONS, pondNear } from './adorn';
 import { TREE_BENCH } from './fittingdefs';
 import { VINEYARD_ACTIONS } from './vineyard';
@@ -3345,6 +3346,8 @@ export const ACTIONS: ActionDef[] = [
   ...FURNISH_ACTIONS,
   // The fittings' jobs: a pole's candles, a boulder's moss kept, a shelf's herbs, practice at a dummy and a target, a boat tied up, a bust carved (`fitting.ts`).
   ...FITTING_ACTIONS,
+  // The obsidian pieces' jobs: a black glass lantern's candle, a throne examined, an obelisk named (`obsidian.ts`).
+  ...OBSIDIAN_ACTIONS,
   // The adornments' jobs: a pond's lilies, an obelisk's sweet peas, a spiral's herbs, a buoy named, a rack's cheese, stones at a table, a board's lineage, a bed's nameplate (`adorn.ts`).
   ...ADORN_ACTIONS,
   // A trellis's vine, and a cutting off a wild one (`vineyard.ts`).

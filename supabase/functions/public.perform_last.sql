@@ -80,6 +80,11 @@ begin
     perform perform_adorn(p_world, p_uid, p_action, p_target);
     return;
   end if;
+  -- The obsidian pieces' jobs (`obsidian.ts`).
+  if obsidian_action(p_action) then
+    perform perform_obsidian(p_world, p_uid, p_action, p_target);
+    return;
+  end if;
 
   if p_action = 'plan_bridge' then
     v_kind := coalesce(p_target->>'material', 'rope');

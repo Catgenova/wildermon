@@ -34,7 +34,7 @@ import { anvilAnchor, anvilCentre, anvilCovers, anvilName, ANVIL_SUBTILES, type 
 import { fireAnchor, fireCentre, fireCovers, FIRE_SUBTILES, type PlacedCampfire } from './campfire';
 import { furnaceMadeSaid, smelterAnchor, smelterCentre, smelterCovers, smelterName, SMELTER_H, SMELTER_PLUME, SMELTER_PLUME_WORKING, SMELTER_STACK_BACK, SMELTER_STACK_UP, SMELTER_W, type PlacedSmelter, type Plume } from './smelter';
 import { kilnAnchor, kilnCentre, kilnCovers, kilnName, KILN_GLOW, KILN_GLOW_FIRING, KILN_PLUME, KILN_PLUME_FIRING, KILN_SUBTILES, KILN_VENT_BACK, KILN_VENT_UP, type PlacedKiln } from './kiln';
-import { WELL_TRICKLE, WELL_TRICKLE_AT, WELL_TRICKLE_QL, ACROSS_OF, DEED_PLACE, FURNITURE, ONE_ALTAR, deckSpot, isPlanter, furnitureAnchor, furnitureCapacity, furnitureCentre, furnitureCovers, furnitureDef, furnitureHeft, furnitureHolds, furnitureKg, furnitureRefuses, furnitureRoom, furnitureUnits, hiveRoom, POND_EVERY, rackDeck, rackSpots, teamOf, vehicleOf, type LiquidKind, type PlacedFurniture, furnitureName, facingOf, LIQUID_NAME, isBoat, furnitureFootprint, holdsLiquid, WATER_AT_HAND, STATION_REACH, type BoatDef, pieceShut } from './furniture';
+import { WELL_TRICKLE, WELL_TRICKLE_AT, WELL_TRICKLE_QL, ACROSS_OF, DEED_PLACE, FURNITURE, ONE_ALTAR, deckSpot, isPlanter, furnitureAnchor, furnitureCapacity, furnitureCentre, furnitureCovers, furnitureDef, furnitureHeft, furnitureHolds, furnitureKg, furnitureRefuses, furnitureRoom, furnitureUnits, hiveRoom, POND_EVERY, rackDeck, rackSpots, teamOf, vehicleOf, type LiquidKind, type PlacedFurniture, furnitureName, facingOf, LIQUID_NAME, isBoat, furnitureFootprint, holdsLiquid, WATER_AT_HAND, STATION_REACH, type BoatDef, pieceShut, isFountain } from './furniture';
 import { hiveTakes } from './bees';
 import { crateTheRest, CREATURE_CRATE, emptyCrate, occupiedRefusal, shutIn, teamOut, teamOutRefusal } from './creaturecrate';
 import { bury, crumble, graveAt, graveRefusal, graveSays, GRAVE_MARK } from './graves';
@@ -54,7 +54,7 @@ import { ENCHANTERS_PLINTH, ENCHANTMENTS, furnaceBurn, moreSaid, NETMENDER_WEAR,
 import { BASE_SPEED, CARRY_CRAWL, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER_LEVEL, groundStep, MAX_STAND, MAX_STEP, pathOptions, Player, readPlayer, type LiftRule, standsOn, walkKey, SWIM_DEPTH, SWIM_SPEED } from './player';
 import { findPath } from '../world/pathfinding';
 import { randomLook, type Look } from './look';
-import { ACTION_FLOOR, ACTION_PACE, DAY_SECONDS } from './pace';
+import { ACTION_FLOOR, ACTION_PACE, DAY_SECONDS, DAWN, DUSK, TWILIGHT } from './pace';
 import { ARMOUR_BY_ID, ARMOUR_CLASSES, ARMOUR_SLOTS, bagCarry, COVERS, HIT_LOCATIONS, type HitPart, type Part, pieceBurden, pieceSoak, SHIELDS, WEAPON_BY_ID, type Slot, SLOTS, type WeaponDef } from './gear';
 import { asleepIn, SLEEP_BONUS_MULT, SLEEP_FOOD, SLEEP_HEAL, SLEEP_WATER } from './sleep';
 import { boonTime, BOON_BONUS, clockLeft, knacksOf, knackSays, type Boon } from './boons';
@@ -118,6 +118,8 @@ import { decorFrom, stoneLanternLight } from './decor';
 import { furnishFrom } from './furnish';
 import { fittingFrom, FITTING_SAID, poleBurning, poleLight, BENCH_TREE_AGES } from './fitting';
 import { ADORN_GAME, ADORN_SAID, adornFrom, buoyLight, gemLampLight } from './adorn';
+import { blackLanternBurning, blackLanternLight, lavaLampLight, orbLight } from './obsidian';
+import { BLACK_LANTERN, EMBER_ORB, LAVA_LAMP } from './obsidiandefs';
 import { BUOY, CAULDRON_HEARTH, CAULDRON_STATION, GEM_LAMP } from './adorndefs';
 import { LANTERN_POLE, MOORING_POST, TREE_BENCH } from './fittingdefs';
 import { atWaterEdge } from './watergarden';
@@ -508,10 +510,8 @@ export { DAY_SECONDS };
  * moves the ramps, the sun's arc, the wash over the sky, what a nocturnal
  * thing comes out for and how long a sleeper skips, all at once.
  */
-export const DAWN = 3;
-export const DUSK = 21;
-/** Game hours either side of sundown and of sunrise that the light takes to go, and to come back. */
-export const TWILIGHT = 1;
+// The hours themselves are data in a leaf (`pace.ts`), so a rule that reads them need not import the game.
+export { DAWN, DUSK, TWILIGHT };
 /** How dark it is at an hour of the day, 0 to 1 (`Game.darkness`). */
 export function darknessAt(h: number): number {
   if (h >= DAWN + TWILIGHT && h <= DUSK - TWILIGHT) return 0;
@@ -3998,6 +3998,19 @@ export class Game {
         if (poleBurning(f)) out.push(poleLight(f));
         continue;
       }
+      // A black glass lantern while its candle burns; a lava lamp column always; an ember orb by how dark it is (`obsidian.ts`).
+      if (f.kind === BLACK_LANTERN) {
+        if (blackLanternBurning(f)) out.push(blackLanternLight(f));
+        continue;
+      }
+      if (f.kind === LAVA_LAMP) {
+        out.push(lavaLampLight(f));
+        continue;
+      }
+      if (f.kind === EMBER_ORB) {
+        out.push(orbLight(f, this.darkness()));
+        continue;
+      }
       // An enchanter's plinth's runes, brighter while somebody enchants at it (`plinth.ts`).
       // Where it stands, worked out only for what lights from there: every piece in the settlement is looked at every frame.
       if (f.kind !== ENCHANTERS_PLINTH && f.kind !== MEMORIAL && !f.lit && !furnitureDef(f.kind).altar) continue;
@@ -4090,7 +4103,7 @@ export class Game {
     }
     for (const f of this.furniture.values()) {
       // A candle behind glass or paper is not a fire, and sends up no smoke.
-      if (!f.lit || isLampPiece(f) || f.kind === LANTERN_POLE || !near(f.x, f.y)) continue;
+      if (!f.lit || isLampPiece(f) || f.kind === LANTERN_POLE || f.kind === BLACK_LANTERN || !near(f.x, f.y)) continue;
       const [cx, cy] = furnitureCentre(f);
       out.push({ x: cx, y: cy, heat: 0.62 });
     }
@@ -7980,7 +7993,7 @@ export class Game {
         const before = f.litres ?? 0;
         if (before < def.well) {
           // A fountain an aqueduct pours into takes the channel's water on top of its own (`AQUEDUCT_LPS`).
-          const fed = f.kind === 'fountain' && this.springs.feeds(f.x, f.y) ? AQUEDUCT_LPS : 0;
+          const fed = isFountain(f.kind) && this.springs.feeds(f.x, f.y) ? AQUEDUCT_LPS : 0;
           f.litres = Math.min(def.well, before + (this.wellRate(f) + fed) * dt);
           f.liquid = 'water';
           if (Math.floor(f.litres) !== Math.floor(before)) this.events.emit('crate');
@@ -9708,7 +9721,7 @@ export class Game {
     this.furniture.set(f.id, f);
     this.placed.furniture.add(f);
     // A fountain set down where an aqueduct pours keeps its water from now (`./aqueducts`).
-    if (kind === 'fountain') this.springs.channelChanged({ from: [x, y], to: [x, y] });
+    if (isFountain(kind)) this.springs.channelChanged({ from: [x, y], to: [x, y] });
     if (furnitureDef(kind).hedge) this.reindexBars();
     this.events.emit('crate');
     return f;
@@ -9721,7 +9734,7 @@ export class Game {
     // A planter goes with whatever was in it, though nothing lifts one that has anything in it.
     this.planted.delete(id);
     // And a fountain an aqueduct poured into leaves its water to run away downhill.
-    if (f?.kind === 'fountain') this.springs.channelChanged({ from: [f.x, f.y], to: [f.x, f.y] });
+    if (f && isFountain(f.kind)) this.springs.channelChanged({ from: [f.x, f.y], to: [f.x, f.y] });
     if (f && furnitureDef(f.kind).hedge) this.reindexBars();
     this.events.emit('crate');
   }

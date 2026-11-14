@@ -47,6 +47,7 @@ import { bearingTo, pointName } from './tracking';
 import { BIRDS_AWAY } from './gardendefs';
 import { INDOORS_DECAY } from './building';
 import { STORE_REACH } from './limits';
+import { OBSIDIAN_VASE } from './obsidiandefs';
 
 const DAY = DAY_SECONDS;
 const days = (n: number): string => `${n} ${n === 1 ? 'day' : 'days'}`;
@@ -103,6 +104,14 @@ export const seatsOf = (kind: string): number => furnitureDef(kind).seats ?? 0;
 export const seatRest = (kind: string): number => (kind === GARDEN_SWING ? SWING_REST : 1);
 /** Mixed grass left in a hay bale stack: unsaid, full. */
 export const hayLeft = (f: { furnish?: FurnishState }): number => f.furnish?.hay ?? HAY_HOLDS;
+/** Whether a piece is a vase, by the vase's rule: the clay one and an obsidian one (`obsidian.ts`). */
+export const isVase = (kind: string): boolean => kind === VASE || kind === OBSIDIAN_VASE;
+/**
+ * Why a seat is not yours to sit in, asked after its room: rules that live
+ * elsewhere put theirs here (an obsidian throne its settlement's founder's:
+ * `obsidian.ts`). The island's `furnish_refusal`.
+ */
+export const SEAT_REFUSALS: Array<(g: Game, f: PlacedFurniture) => string | null> = [];
 /** Whether wildflowers in a vase are still fresh. */
 export const posyFresh = (p: Posy | undefined, now: number): boolean => !!p && now - p.at < VASE_FRESH * DAY;
 /** A fish's weight on a mount, kg, by its kind and QL: the island's `fish_kg`. */
@@ -212,7 +221,7 @@ export function furnishTail(f: PlacedFurniture, now = Date.now() / 1000): string
       break;
     }
     case CAIRN: out.push(f.engraving ? `“${f.engraving}”` : 'unnamed'); break;
-    case VASE: {
+    case VASE: case OBSIDIAN_VASE: {
       const p = d?.vase;
       out.push(!p ? 'empty' : posyFresh(p, now) ? `wildflowers ×${p.n}, fresh` : `wildflowers ×${p.n}, wilted`);
       break;
@@ -231,7 +240,7 @@ export function furnishTail(f: PlacedFurniture, now = Date.now() / 1000): string
 export const FURNISH_PIECES: readonly string[] = [
   BIRDBATH, STONE_BENCH, GARDEN_SWING, GAZEBO, HAY_BALE, WATER_TROUGH, SIGNPOST, CAIRN, FIREPLACE, FOUR_POSTER, VASE, SIDE_TABLE, FOOTSTOOL, FISH_MOUNT,
 ];
-STATE_TAILS.push((f) => (FURNISH_PIECES.includes(f.kind) ? furnishTail(f) : ''));
+STATE_TAILS.push((f) => (FURNISH_PIECES.includes(f.kind) || f.kind === OBSIDIAN_VASE ? furnishTail(f) : ''));
 
 /* ---- the jobs ---------------------------------------------------------------------------- */
 
@@ -263,7 +272,7 @@ const kindIs = (kind: string) => (k: string): boolean => k === kind;
 /** The piece each job is done at, by its kind. */
 const KIND_OF: Record<string, (kind: string) => boolean> = {
   [SIT_SEAT]: (k) => seatsOf(k) > 0, [FILL_HAY]: kindIs(HAY_BALE), [POINT_ARM]: kindIs(SIGNPOST), [READ_SIGNPOST]: kindIs(SIGNPOST), [NAME_CAIRN]: kindIs(CAIRN),
-  [VASE_PUT]: kindIs(VASE), [VASE_TAKE]: kindIs(VASE), [TABLE_PUT]: kindIs(SIDE_TABLE), [MOUNT_FISH]: kindIs(FISH_MOUNT),
+  [VASE_PUT]: isVase, [VASE_TAKE]: isVase, [TABLE_PUT]: kindIs(SIDE_TABLE), [MOUNT_FISH]: kindIs(FISH_MOUNT),
   ...Object.fromEntries(ARM_SLOTS.map((i) => [DROP_ARM(i), kindIs(SIGNPOST)])),
   ...Object.fromEntries(TABLE_SLOTS.map((i) => [TABLE_TAKE(i), kindIs(SIDE_TABLE)])),
 };
@@ -299,7 +308,12 @@ export function furnishRefusal(g: Game, id: string, t: Target): string | null {
   const now = g.wallNow();
   if (id === SIT_SEAT) {
     const n = seatsOf(f.kind);
-    return sittersBeside(g, f) >= n ? furnishSaid('seatsFull', { name: nameOf(f.kind), n }) : null;
+    if (sittersBeside(g, f) >= n) return furnishSaid('seatsFull', { name: nameOf(f.kind), n });
+    for (const why of SEAT_REFUSALS) {
+      const no = why(g, f);
+      if (no) return no;
+    }
+    return null;
   }
   if (id === FILL_HAY) {
     if (hayLeft(f) >= HAY_HOLDS) return FURNISH_SAID.hayFull;
@@ -409,15 +423,15 @@ export const FURNISH_ACTIONS: ActionDef[] = [
   },
   job({
     id: VASE_PUT, label: 'Put in wildflowers', verb: 'arranging flowers', baseTime: PUT_TIME,
-    applies: (t, g) => !!pieceOf(g, t, kindIs(VASE)),
+    applies: (t, g) => !!pieceOf(g, t, isVase),
   }),
   job({
     id: VASE_TAKE, label: 'Take out wildflowers', verb: 'emptying the vase', baseTime: PUT_TIME,
     labelFor: (t, g) => {
-      const f = pieceOf(g, t, kindIs(VASE));
+      const f = pieceOf(g, t, isVase);
       return f?.furnish?.vase && !posyFresh(f.furnish.vase, g.wallNow()) ? 'Throw out wilted wildflowers' : 'Take out wildflowers';
     },
-    applies: (t, g) => !!pieceOf(g, t, kindIs(VASE))?.furnish?.vase,
+    applies: (t, g) => !!pieceOf(g, t, isVase)?.furnish?.vase,
   }),
   job({
     // The menu offers it, a thing in the pack to a line (`Put on the table`).

@@ -5,6 +5,7 @@ import { BRIDGES, bridgeDone, CLEARANCE, PULL_REACH, pullDownRefusal, spanTiles,
 import type { Game } from './game';
 import { greenNow } from './greening';
 import { itemDef } from './items';
+import { isFountain } from './furniture';
 import { lacks } from './ranks';
 import { WATER_MOTE, WATER_MOTE_NEED, WATER_MOTES_EACH } from './motes';
 import type { Spring } from './springs';
@@ -136,7 +137,7 @@ export function aqueductPlan(g: Game, sx: number, sy: number, tx: number, ty: nu
   if (fs?.pool) {
     foot = 'pool';
     level = poolLevel(fs.top);
-  } else if (g.furnitureOnTile(tx, ty).some((f) => f.kind === 'fountain')) {
+  } else if (g.furnitureOnTile(tx, ty).some((f) => isFountain(f.kind))) {
     foot = 'fountain';
     // To the nearest unit, as a pond's and a pool's water stand.
     level = Math.floor(g.surfaceHeight(tx, ty) + FOUNTAIN_RIM + 0.5);
@@ -252,7 +253,7 @@ export function fitIntoChannel(g: Game, b: Bridge, s: BridgeSpan, id: string): v
 /** An aqueduct as the springs see it, finished and pouring into what stands at its foot now. */
 export const channelOf = (g: Game, b: Bridge): Channel => ({
   id: b.id, from: [b.ax, b.ay], to: [b.bx, b.by], height: b.height, along: b.spans.length,
-  fountain: g.furnitureOnTile(b.bx, b.by).some((f) => f.kind === 'fountain'),
+  fountain: g.furnitureOnTile(b.bx, b.by).some((f) => isFountain(f.kind)),
 });
 
 /** The stream a spring's water takes along an aqueduct, the chain it is in and how its ponds rose, when any spring's does: the first spring by id. */

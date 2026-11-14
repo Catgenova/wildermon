@@ -571,11 +571,12 @@ const FURNITURE_RECIPES: Recipe[] = FURNITURE.filter((f) => !f.grave && !f.lair 
   category: 'Furniture' as RecipeCategory,
   result: f.id,
   inputs: f.bill.map(([item, count]) => ({ item, count })),
-  tool: f.tool ?? 'mallet',
+  // Blown at a smelter, a piece takes no tool, as glass does (`obsidian.ts`).
+  ...(f.tool || f.station !== 'smelter' ? { tool: f.tool ?? 'mallet' } : {}),
   skill: f.skill ?? 'fine_carpentry',
   // A carpenter's piece is of the wood it is built from; a mason's is brick, and a tailor's cloth.
   material: f.material ?? (f.skill === 'masonry' || f.skill === 'tailoring' || f.skill === 'fishing' || f.skill === 'ropemaking' || f.skill === 'pottery' || f.skill === 'forestry' || f.skill === 'stonecutting'
-    || f.skill === 'blacksmithing' ? undefined : ('wood' as const)),
+    || f.skill === 'blacksmithing' || f.skill === 'glassblowing' || f.skill === 'jewellery' ? undefined : ('wood' as const)),
   ...(f.deed ? { deed: true } : {}),
   ...(f.perk ? { perk: f.perk } : {}),
   // A woven rug at a loom (`decor.ts`).

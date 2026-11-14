@@ -139,6 +139,8 @@ export const STROKE_BY_ID: Record<string, Stroke> = {
   ...Object.fromEntries([0, 1].map((i) => [`table_take_${i}`, 'wood' as Stroke])),
   // The fittings (`fitting.ts`): candles set in paper, herbs on a shelf, a blow into straw, arrows into and out of a target, a rope round a post, a bust cut in stone.
   pole_candles: 'cloth', shelf_put: 'wood', practise_dummy: 'cloth', shoot_target: 'wood', pull_arrows: 'wood', moor_boat: 'cloth', unmoor_boat: 'cloth', carve_bust: 'stone',
+  // The obsidian pieces (`obsidian.ts`): a candle set behind glass, a name cut in stone.
+  black_lantern_candle: 'cloth', name_obelisk: 'stone',
   ...Object.fromEntries(['sage', 'basil', 'thyme', 'mint', 'rosemary'].map((h) => [`shelf_take_${h}`, 'wood' as Stroke])),
   // The adornments (`adorn.ts`): a lily into a pond's water, seeds and herbs in a spiral's earth, a buoy's name cut in wood, cheese on a rack, stones thrown on a table, a board's lineage, a bed's nameplate.
   pond_lily: 'water', spiral_sow: 'cloth', name_buoy: 'wood', cheese_put: 'wood', cheese_take: 'wood', throw_stones: 'stone', set_lineage: 'wood', hang_plate: 'wood', take_plate: 'wood',

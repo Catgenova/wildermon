@@ -108,5 +108,10 @@ export const worldRate = (perSecond: number): number => perSecond / WORLD_PACE;
  */
 export const DAY_SECONDS = world(1440);
 
+/** When the sun comes up and goes down, in game hours, and the game hours either side of each the light takes to go and come back (`darknessAt` in `game.ts`). */
+export const DAWN = 3;
+export const DUSK = 21;
+export const TWILIGHT = 1;
+
 /** Now, on the clock stone greens over by (`greening.ts`, its `greenSince`): real seconds. */
 export const greenNow = (): number => Date.now() / 1000;
