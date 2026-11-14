@@ -35,6 +35,7 @@ import { COAX_LAPSE, COAX_STEP, HERD_REACH, WILD_STAY, HUNT_HOME, HUNT_LEASH, HU
          COMPANION_SIGHT, COMPANION_LEASH, COMPANION_REACH, COMPANION_BLOW, COMPANION_PACE, BLOW_MEMORY, FIGHT_BACK_GOES } from '../src/game/creatures';
 import { FAMILY_OF, KNACK_BONUS, KNACK_BY_LEARNING, KNACK_CAP, KNACK_GO, KNACK_HOME, KNACK_ODDS, TITLES } from '../src/game/titles';
 import { KEPT_BEST, NUTRIENT_DECAY, TABLE_BEST } from '../src/game/nutrition';
+import { CROSS_CARE, CROSS_CHANCE, CROSS_SKILL, HYBRID_HARDY, HYBRID_WORK } from '../src/game/hybridlist';
 import { SPECIES, WILD_SPECIES, MONSTERS, MONSTER_CAP, MONSTER_SHARE, AGES,
          GATHER_SKILL, GATHER_VERB, GATHER_DO, SMITH_TRADES, smithLumps, STOKE_FIRST, STOKE_SMELTS_AT, BUSH_VINES_AT, type GatherKind } from '../src/game/creatures';
 import { CHANNELS, TRAITS, WILD_ODDS, TRAIT_SLOTS, SLOTS_PER_STAGE, FIGHT_SHARE, GRADE_STEP, LAMP_TIER_ODDS, MUTATION_ODDS, PEDIGREE_MOST, PEDIGREE_STEP, TIERS } from '../src/game/traits';
@@ -133,6 +134,20 @@ import { LECTERN_GAIN, LECTERN_REACH, STUDY_WEAR, STUDY_WEAR_SPREAD } from '../s
 import { GLAZE_ASH, GLAZEABLE } from '../src/game/actions';
 import { TRADE_BOOK_AT } from '../src/game/recipes';
 import { TRAPS } from '../src/game/traps';
+import {
+  BELL_HEARD_BASE, BELL_HEARD_PER_QL, BELL_ROPE, LAY_UP_BASE, LAY_UP_EVERY, LAY_UP_FAIL_SHARE, LAY_UP_SPARE_ABOVE, LAY_UPS, LEAD_PACE, LEAD_ROPE,
+  NO_BELL_ROPE, ROPE_INPUTS, ROPE_TIME_PER_LEVEL, ROPE_WALK, ROPE_WALK_QL, ROPE_WALK_TIME, ROPEMAKING,
+} from '../src/game/ropework';
+import {
+  BEAM_TOP, CARGO_TOP, CLOSE_LEARN, DEEP_CATCH, DEEP_NET, DEEP_WATER, GALE, GALE_LEARN, GALE_ROW_SAID, GALE_SAFE_AT, GALE_TILES_PER_DAMAGE,
+  NO_GO_AT_ONE, NO_GO_AT_TOP, RIG_MARK, RIGGING_CLOSER, RIGGING_PACE, RIGGING_SET, SAIL_QL_TOP, SAIL_TOP_AT, SAILS_MARK, SOUND_LEARN, SOUND_REACH,
+} from '../src/game/sailing';
+import { FIT_RIGGING, SAIL_ACTION_IDS, SAIL_SAID, SOUND_DEPTH } from '../src/game/sailActions';
+import { CLOSE } from '../src/game/wind';
+import {
+  ATTUNE_DAYS, ATTUNE_MOTES, ATTUNE_STRENGTH, darkInto, INFUSE, INFUSE_ELEMENTS, INFUSE_INTO, INFUSE_MOTES, INFUSE_SAID, INFUSE_SECS, SENSE, SENSE_BASE,
+  SENSE_EVERY, SENSE_LEARN, SENSE_PER_LEVEL, SENSED,
+} from '../src/game/infusion';
 import { DEFAULT_LOOK, LOOK_KINDS, LOOK_TABLES, LOOK_TONES, legacyLooks } from '../src/game/look';
 import { ACTION_FLOOR, ACTION_PACE, COTTON_SECONDS, COTTON_WEIGHT, MINING_SECONDS, MINING_WEIGHT, WORKER_WEIGHT, WORLD_PACE } from '../src/game/pace';
 import { DROWN_RATE, DROWN_WARN, EXHAUSTED, HEAL_FED, HEAL_RATE, HUNGER_RATE, SWIM_LEARN, SWIM_WIND, THIRST_RATE, STAMINA_BAR_PER_LEVEL, WIND_PER_LEVEL, WIND_REST, WIND_STARVING, WIND_WALK } from '../src/game/body';
@@ -535,6 +550,8 @@ out.push(`create table if not exists trap_def (
   reach real not null, odds real not null, life_min real not null, life_max real not null,
   water boolean not null default false, hold int, note text not null
 );`);
+/* Used up by its first catch (`TrapDef.once`): a twine snare. */
+out.push(`alter table trap_def add column if not exists once boolean not null default false;`);
 /*
  * What a wildermon is for besides eating: a back to sit on and a shoulder to
  * pull with.
@@ -589,6 +606,9 @@ out.push(`alter table species_def add column if not exists season_to int;`);
 /* Its pace in water, for a kind with one of its own (`SpeciesDef.swimSpeed`), and whether it lives only in deep water (`deepWater`). */
 out.push(`alter table species_def add column if not exists swim_speed real;`);
 out.push(`alter table species_def add column if not exists deep_water boolean not null default false;`);
+/* ---- Hybrids (`hybridlist.ts`): a hybrid's two parent kinds, its body's and its markings', the first its first trade. ---- */
+out.push(`alter table species_def add column if not exists hybrid_a text;`);
+out.push(`alter table species_def add column if not exists hybrid_b text;`);
 /* A cart is pulled by hand; a vehicle is driven from a seat with a team in
  * front of it; a boat is neither and wants water under it. */
 out.push(`alter table furniture_def add column if not exists cart boolean not null default false;`);
@@ -936,6 +956,8 @@ out.push(`create table if not exists recipe (
 );`);
 /* Worked only by somebody standing on a settlement of theirs: `Recipe.deed`, which `craft_refusal` reads. */
 out.push(`alter table recipe add column if not exists deed boolean not null default false;`);
+/* The share of what it is made at taken from the QL of the rope in it, by mass (`Recipe.ropeShare`, `ropework.ts`): a boat's, a trap's. */
+out.push(`alter table recipe add column if not exists rope_share real;`);
 /*
  * Baubles (`src/game/baubles.ts`): their three tiers, the skills a minor and a
  * major one may speak for, how each kind is written and how far it adds up,
@@ -1020,6 +1042,8 @@ out.push(`create table if not exists crop_def (
 out.push(`create table if not exists fish_def (
   id text primary key, name text not null, depth real not null, level real not null, weight real not null
 );`);
+/* A deep-water fish, off a line from a boat over deep water only (`FishDef.deep`, `sailing.ts`). */
+out.push(`alter table fish_def add column if not exists deep boolean not null default false;`);
 out.push(`create table if not exists bait_def (id text primary key, note text not null);`);
 /* Ordered: a bait's first favourite bites hardest. */
 out.push(`create table if not exists bait_favours (
@@ -1373,6 +1397,9 @@ for (const d of Object.values(SPECIES) as unknown as S[]) {
   if (favourite) out.push(`update species_def set favourite = ${q(favourite)} where id = ${q(d.id)};`);
   const trades = (d as unknown as { trades?: string[] }).trades;
   if (trades) out.push(`update species_def set trades = array[${trades.map(q).join(', ')}]::text[] where id = ${q(d.id)};`);
+  // A hybrid's parents (`SpeciesDef.hybrid`).
+  const hybrid = (d as unknown as { hybrid?: readonly [string, string] }).hybrid;
+  if (hybrid) out.push(`update species_def set hybrid_a = ${q(hybrid[0])}, hybrid_b = ${q(hybrid[1])} where id = ${q(d.id)};`);
 }
 for (const id of [...unnamed].sort()) {
   out.push(`insert into item_def values (${q(id)}, ${q(id)}, 'misc', 1, false, null, null);`);
@@ -1740,6 +1767,9 @@ for (const [fn, v] of [
      lifetime at work: how many kinds of thing it counts. */
   ['colour_form_odds', COLOUR_FORM_ODDS], ['size_form_odds', SIZE_FORM_ODDS], ['large_health', LARGE_HEALTH], ['small_speed', SMALL_SPEED],
   ['form_pass', FORM_PASS], ['work_items', WORK_ITEMS],
+  /* Hybrids (`hybridlist.ts`): a listed cross's share of a pairing's chance, the husbandry and each parent's care it
+     needs, and a hybrid's task speed in each of its trades and its health over its blood's (hybrid vigour). */
+  ['cross_chance', CROSS_CHANCE], ['cross_skill', CROSS_SKILL], ['cross_care', CROSS_CARE], ['hybrid_work', HYBRID_WORK], ['hybrid_hardy', HYBRID_HARDY],
   /* A deed worker's rest: the goes it has in it, how long it rests, what a bed of its size makes of that, and the
      health bands that size a kind that does not evolve (`den_class`). Its upkeep: how long at work without a meal
      before it slows, and to what share of its pace. A settlement's specialty: the workers of a trade that make one,
@@ -2430,7 +2460,10 @@ for (const m of BUILD_MATERIALS) {
     out.push(`update build_material_def set only_walls = ${arr(m.only.walls)}, only_floors = ${arr(m.only.floors)}, only_said = ${q(onlySaid(m))} where id = ${q(m.id)};`);
   }
 }
-for (const f of FISH) out.push(`insert into fish_def values (${q(f.id)}, ${q(f.name)}, ${q(f.depth)}, ${q(f.level)}, ${q(f.weight)});`);
+for (const f of FISH) {
+  out.push(`insert into fish_def values (${q(f.id)}, ${q(f.name)}, ${q(f.depth)}, ${q(f.level)}, ${q(f.weight)});`);
+  if (f.deep) out.push(`update fish_def set deep = true where id = ${q(f.id)};`);
+}
 for (const b of BAITS) {
   out.push(`insert into bait_def values (${q(b.id)}, ${q(b.note)});`);
   b.favours.forEach((fish, rank) => out.push(`insert into bait_favours values (${q(b.id)}, ${q(rank)}, ${q(fish)});`));
@@ -2473,6 +2506,7 @@ MAP_BANDS.forEach((b, ord) => out.push(
 for (const t of Object.values(TRAPS)) {
   out.push(`insert into trap_def values (${q(t.id)}, ${q(t.name)}, ${q(t.difficulty)}, ${q(t.holds)}, `
     + `${q(t.reach)}, ${q(t.odds)}, ${q(t.lifeMin)}, ${q(t.lifeMax)}, ${q(!!t.water)}, ${q(t.hold ?? null)}, ${q(t.note)});`);
+  if (t.once) out.push(`update trap_def set once = true where id = ${q(t.id)};`);
 }
 BUSH_DEFS.forEach((b, i) => {
   out.push(`insert into bush_def values (${q(i)}, ${q(b.name)});`);
@@ -2609,6 +2643,7 @@ for (const r of RECIPES) {
      q(r.baseTime), q(r.stamina), q(r.difficulty === undefined ? null : r.difficulty),
      q(!!r.qlFromInputs), q(r.material), q(r.wood), q(r.extra), q(r.done), q(r.fail)].join(', ') + `);`);
   if (r.deed) out.push(`update recipe set deed = true where id = ${q(r.id)};`);
+  if (r.ropeShare) out.push(`update recipe set rope_share = ${q(r.ropeShare)} where id = ${q(r.id)};`);
   r.inputs.forEach((i, n) => {
     out.push(`insert into recipe_input (recipe, ord, item, count, litres) values (${q(r.id)}, ${n}, ${q(i.item)}, ${q(i.count ?? 1)}, ${q(i.litres ?? null)});`);
   });
@@ -2927,4 +2962,75 @@ for (const [fn, v] of [
 }
 out.push(`create or replace function settle_said(p_key text) returns text language sql immutable as $fn$ select case p_key ${
   Object.entries(SETTLE_SAID).map(([k, v]) => `when ${q(k)} then ${q(v)} `).join('')}end $fn$;`);
+/*
+ * Ropemaking (`ropework.ts`): the lay-ups and what the skill makes of them,
+ * its pace on its own jobs, the rope walk, the bell rope and the lead rope.
+ * The rules that read them are `rope_*`, `bell_heard` and `lead_pace` in the
+ * migrations.
+ */
+out.push(`create or replace function rope_input(p_item text) returns boolean language sql immutable as $fn$ select p_item = any (array[${ROPE_INPUTS.map(q).join(', ')}]::text[]) $fn$;`);
+out.push(`create or replace function rope_lay_up(p_recipe text) returns boolean language sql immutable as $fn$ select p_recipe = any (array[${LAY_UPS.map(q).join(', ')}]::text[]) $fn$;`);
+for (const [fn, v] of [
+  ['lay_up_base', LAY_UP_BASE], ['lay_up_every', LAY_UP_EVERY], ['rope_time_per_level', ROPE_TIME_PER_LEVEL],
+  ['lay_up_spare_above', LAY_UP_SPARE_ABOVE], ['lay_up_fail_share', LAY_UP_FAIL_SHARE],
+  ['rope_walk_time', ROPE_WALK_TIME], ['rope_walk_ql_more', ROPE_WALK_QL],
+  ['bell_heard_base', BELL_HEARD_BASE], ['bell_heard_per_ql', BELL_HEARD_PER_QL], ['lead_pace', LEAD_PACE],
+] as Array<[string, number]>) {
+  out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);
+}
+for (const [fn, v] of [['ropemaking_skill', ROPEMAKING], ['rope_walk_kind', ROPE_WALK], ['bell_rope_item', BELL_ROPE], ['lead_rope_item', LEAD_ROPE],
+  ['no_bell_rope_said', NO_BELL_ROPE]] as Array<[string, string]>) {
+  out.push(`create or replace function ${fn}() returns text language sql immutable as $fn$ select ${q(v)} $fn$;`);
+}
+/*
+ * Sailing (`sailing.ts`, `sailActions.ts`): the closest a hull sails to the
+ * wind and what a reach is worth, a turn through it, a gale, the hold, the
+ * rigging set and the sails' QL, work from a boat over deep water, and what a
+ * gale or a close-hauled tile teaches. The rules that read them are `sail_*`
+ * in the migrations.
+ */
+out.push(`create or replace function sail_action(p_action text) returns boolean language sql immutable as $fn$ select p_action = any (array[${SAIL_ACTION_IDS.map(q).join(', ')}]::text[]) $fn$;`);
+for (const [fn, v] of [
+  ['no_go_at_one', NO_GO_AT_ONE], ['no_go_at_top', NO_GO_AT_TOP], ['sail_top_at', SAIL_TOP_AT], ['rigging_closer', RIGGING_CLOSER],
+  ['beam_top', BEAM_TOP], ['wind_close', CLOSE], ['gale', GALE], ['gale_safe_at', GALE_SAFE_AT], ['gale_tiles_per_damage', GALE_TILES_PER_DAMAGE],
+  ['cargo_top', CARGO_TOP], ['rigging_pace', RIGGING_PACE], ['sail_ql_top', SAIL_QL_TOP], ['deep_water', DEEP_WATER], ['deep_catch', DEEP_CATCH],
+  ['deep_net', DEEP_NET], ['sound_reach', SOUND_REACH], ['sound_learn', SOUND_LEARN], ['gale_learn', GALE_LEARN], ['close_learn', CLOSE_LEARN],
+] as Array<[string, number]>) {
+  out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);
+}
+for (const [fn, v] of [
+  ['rigging_set_item', RIGGING_SET], ['sails_mark', SAILS_MARK], ['rig_mark', RIG_MARK], ['gale_row_said', GALE_ROW_SAID],
+  ['sound_depth_action', SOUND_DEPTH], ['fit_rigging_action', FIT_RIGGING],
+  ['sail_said_not_afloat', SAIL_SAID.notAfloat], ['sail_said_no_sail', SAIL_SAID.noSail], ['sail_said_rigged', SAIL_SAID.rigged],
+  ['sail_said_no_set', SAIL_SAID.noSet], ['sail_said_far', SAIL_SAID.far],
+] as Array<[string, string]>) {
+  out.push(`create or replace function ${fn}() returns text language sql immutable as $fn$ select ${q(v)} $fn$;`);
+}
+/*
+ * Elementalism past the swirls (`infusion.ts`, `infuseActions.ts`): what each
+ * element goes into and its most, how long an infusion lasts and what it
+ * takes, attunement, sensing, and every word they say. The rules that read
+ * them are `infuse_*`, `mote_attuned` and `perform_sense` in the migrations.
+ */
+out.push(`create or replace function mote_action(p_action text) returns boolean language sql immutable as $fn$ select p_action = any (array[${q(INFUSE)}, ${q(SENSE)}]::text[]) $fn$;`);
+{
+  const pairs = INFUSE_ELEMENTS.flatMap((el) => (el === 'dark' ? darkInto() : INFUSE_INTO[el]?.into ?? []).map((id) => `(${q(el)}, ${q(id)})`));
+  out.push(`create or replace function infuse_fits(p_el text, p_def text) returns boolean language sql immutable as $fn$ select (p_el, p_def) in (values ${pairs.join(', ')}) $fn$;`);
+  out.push(`create or replace function infuse_most(p_el text) returns double precision language sql immutable as $fn$ select case p_el ${
+    INFUSE_ELEMENTS.map((el) => `when ${q(el)} then ${q(INFUSE_INTO[el]?.most ?? 0)}::double precision `).join('')}else 0::double precision end $fn$;`);
+  out.push(`create or replace function infuse_fits_said(p_el text) returns text language sql immutable as $fn$ select case p_el ${
+    MOTE_ELEMENTS.map((el) => `when ${q(el)} then ${q(INFUSE_SAID.fits(el))} `).join('')}end $fn$;`);
+}
+for (const [fn, v] of [
+  ['infuse_motes', INFUSE_MOTES], ['infuse_secs', INFUSE_SECS], ['attune_strength', ATTUNE_STRENGTH], ['attune_motes', ATTUNE_MOTES], ['attune_days', ATTUNE_DAYS],
+  ['sense_every', SENSE_EVERY], ['sense_base', SENSE_BASE], ['sense_per_level', SENSE_PER_LEVEL], ['sense_learn', SENSE_LEARN],
+] as Array<[string, number]>) {
+  out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);
+}
+for (const [fn, v] of [
+  ['infuse_action', INFUSE], ['sense_action', SENSE], ['infuse_said_motes', INFUSE_SAID.motes], ['infuse_said_plinth', INFUSE_SAID.plinth],
+  ['infuse_said_gone', INFUSE_SAID.gone], ['infuse_said_reach', INFUSE_SAID.reach], ['sensed_word', SENSED],
+] as Array<[string, string]>) {
+  out.push(`create or replace function ${fn}() returns text language sql immutable as $fn$ select ${q(v)} $fn$;`);
+}
 console.log(out.join('\n'));

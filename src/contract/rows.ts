@@ -92,6 +92,8 @@ export interface ItemRow {
   enchant?: Enchant | null;
   /** The line cut into a memorial stone (`memorial.ts`). Null for everything else. */
   engraving?: string | null;
+  /** Motes infused into it (`infusion.ts`). Null for most things. */
+  infuse?: { el: string; str: number; until: number } | null;
   /** Alight, for the things that burn, and when it was set going. */
   lit: boolean;
   lit_at: string | null;

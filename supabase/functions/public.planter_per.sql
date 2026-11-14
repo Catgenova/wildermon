@@ -6,5 +6,5 @@ CREATE OR REPLACE FUNCTION public.planter_per(c planter_crop, p placed)
  STABLE
 AS $function$
 begin
-  return crop_per(c.world_id, c.id, c.pace, p.x, p.y);
+  return crop_per(c.world_id, c.id, c.pace, p.x, p.y) * (1 - infuse_most('life') * infuse_on(p.infuse, 'life'));
 end $function$

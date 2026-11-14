@@ -95,6 +95,13 @@ begin
         || ', into the wildermon crate in your pack.', 'event');
     end if;
 
+    -- Used up by its first catch, taken (`trap_def.once`).
+    if d.once then
+      delete from placed where id = p.id;
+      perform tell(p_world, p_uid, 'Used up: ' || lower(trap_name(p)) || '.', 'event');
+      perform land_announce(p_world, p.x, p.y);
+    end if;
+
   elsif p_action = 'free_catch' then
     perform spring_trap(p.id,
       coalesce((select 'Released: ' || lower(sd.name) || '.' from creature q join species_def sd on sd.id = q.species

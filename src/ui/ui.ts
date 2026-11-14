@@ -1,3 +1,4 @@
+import { activeInfusion, infuseSays } from '../game/infusion';
 import type { Bill } from '../game/building';
 import { drawsFast } from '../game/settings';
 import { onPhone } from '../engine/device';
@@ -1532,6 +1533,8 @@ export class UI {
       lines.push('Stone smelter');
       lines.push(smelterState(sm));
       if (sm.jobs.length) lines.push(`Working: ${itemDef(sm.jobs[0].makes).name.toLowerCase()}, ${Math.ceil(sm.jobs[0].left)}s left`);
+      const smInfused = activeInfusion(sm);
+      if (smInfused) lines.push(infuseSays(smInfused));
       this.tooltip.show(sx, sy, lines);
       return;
     }
@@ -1548,6 +1551,9 @@ export class UI {
       if (rackSpots(fu)) lines.push(this.rackLine(fu));
       if (furnitureHolds(fu)) lines.push('Storage: use from adjacent.');
       if (isPlanter(fu)) lines.push(this.planterLine(fu));
+      // The motes infused into it, while they last (`infusion.ts`).
+      const fuInfused = activeInfusion(fu);
+      if (fuInfused) lines.push(infuseSays(fuInfused));
       this.tooltip.show(sx, sy, lines);
       return;
     }
@@ -1556,6 +1562,8 @@ export class UI {
       lines.push('Kiln');
       lines.push(kilnState(kl));
       if (kl.jobs.length) lines.push(`Firing: ${itemDef(kl.jobs[0].makes).name.toLowerCase()}, ${Math.ceil(kl.jobs[0].left)}s left`);
+      const klInfused = activeInfusion(kl);
+      if (klInfused) lines.push(infuseSays(klInfused));
       this.tooltip.show(sx, sy, lines);
       return;
     }
@@ -1571,6 +1579,8 @@ export class UI {
       lines.push('Campfire');
       lines.push(fireState(fire));
       if (fire.lit) lines.push('Lit: cook here.');
+      const fireInfused = activeInfusion(fire);
+      if (fireInfused) lines.push(infuseSays(fireInfused));
       this.tooltip.show(sx, sy, lines);
       return;
     }
@@ -3077,7 +3087,7 @@ export class UI {
         hint: reason ?? undefined,
         children: choices.length
           ? choices.slice(0, 12).map((it) => {
-              const comers = Object.values(SPECIES).filter((sp) => isBaitFor(sp, it.id) && sp.tameLevel <= trapHolds(t));
+              const comers = Object.values(SPECIES).filter((sp) => !sp.hybrid && isBaitFor(sp, it.id) && sp.tameLevel <= trapHolds(t));
               const fishy = BAIT_BY_ID.get(it.id);
               return {
                 label: itemName(it),
@@ -3435,7 +3445,7 @@ export class UI {
     {
       const def = CREATURE_ACTION_BY_ID.get('assign_deed');
       const trades = SPECIES[c.species]?.trades;
-      if (def && trades && trades.length > 1 && def.applies(target, g)) {
+      if (def && trades && trades.length > 1 && !SPECIES[c.species]?.hybrid && def.applies(target, g)) {
         entries.push({
           label: def.label,
           children: trades.map((trade) => {

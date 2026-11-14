@@ -117,6 +117,9 @@ const disagree = kinds.filter((d) => {
 });
 check(`the island's species_def has the same health and blow as the browser for every one of the ${kinds.length} kinds`,
   disagree.length === 0 && island.size === kinds.length, disagree.map((d) => `${d.id} ${island.get(d.id)} vs ${d.health}/${d.attack}`).join(', '));
+const hybrids = kinds.filter((d) => d.hybrid);
+check(`those kinds include the ${hybrids.length} hybrids, each on the island at the browser's health and blow`,
+  hybrids.length === 50 && hybrids.every((d) => island.has(d.id) && !disagree.includes(d)), hybrids.filter((d) => !island.has(d.id)).map((d) => d.id).join(', '));
 check('and no kind on the island does no damage', [...island.values()].every(([, a]) => a > 0));
 const fns = psql(`select creature_health_mul() || '|' || creature_attack_mul() || '|' || regen_wild() || '|' || regen_kept() || '|' || regen_after()
   || '|' || den_health_1() || '|' || den_health_2() || '|' || spar_slack();`);

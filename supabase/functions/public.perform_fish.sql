@@ -25,7 +25,9 @@ begin
     bait := bait_for(p_world, p_uid, spot.depth, skill);
     if bait is not null and pack_count(p_world, p_uid, bait) < 1 then return; end if;
 
-    got := catch_fish(spot.depth, skill, rod_ql, bait, v_mul);
+    -- From a boat over deep water: deep-water fish only, each staying on `deep_catch` times as well (`sailing.ts`).
+    got := case when afloat_deep(p_world, p_uid, spot.depth) then catch_deep_fish(spot.depth, skill, rod_ql, bait, v_mul)
+                else catch_fish(spot.depth, skill, rod_ql, bait, v_mul) end;
     -- The bait goes with a landed fish, and with one that comes off unless a
     -- Fisher's Bait Saver keeps it on the hook.
     if bait is not null and (got is not null
@@ -87,6 +89,11 @@ begin
     -- And a Netmender in it, the same way.
     if mark_of(v_net, 'catch') <> 1 or v_mend > 0 then
       v_more := haul * mark_of(v_net, 'catch') * (1 + v_mend);
+      haul := floor(v_more)::int + case when random() < v_more - floor(v_more) then 1 else 0 end;
+    end if;
+    -- And a net cast from a boat over deep water hauls `deep_net` times as much, the share over a whole fish a chance at one more.
+    if afloat_deep(p_world, p_uid, spot.depth) then
+      v_more := haul * deep_net();
       haul := floor(v_more)::int + case when random() < v_more - floor(v_more) then 1 else 0 end;
     end if;
     for i in 1..haul loop

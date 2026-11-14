@@ -7,6 +7,6 @@ CREATE OR REPLACE FUNCTION public.kind_name_at(c creature)
 AS $function$
 begin
   return (
-select case when stage_of(c) = 0 then sd.name else sd.stages[stage_of(c)] end from species_def sd where sd.id = c.species
+select case when stage_of(c) = 0 or sd.stages is null then sd.name else sd.stages[stage_of(c)] end from species_def sd where sd.id = c.species
   );
 end $function$

@@ -18,6 +18,10 @@ begin
   v_skill := skill_of(p_world, p_uid, elementalism_skill());
   -- And another for a reader's Elemental Lore.
   v_n := motes_for(v_skill) + path_fx(p_world, p_uid, 'motes', 0)::int;
+  -- And one more of the element you are attuned to (`mote_attuned`), and the swirl noted for attunement after.
+  v_n := v_n + case when mote_attuned(p_world, p_uid) = s.element then attune_motes()::int else 0 end;
+  insert into mote_take (world_id, uid, element, n) values (p_world, p_uid, s.element, v_n);
+  perform mote_attune_kept(p_world, p_uid);
   perform gather(p_world, p_uid, s.element || '_mote', v_n, product_ql(v_skill));
   perform journal_note(p_world, p_uid, 'swirl');
   perform skill_raise(p_world, p_uid, elementalism_skill(), 1);

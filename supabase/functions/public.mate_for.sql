@@ -6,9 +6,12 @@ CREATE OR REPLACE FUNCTION public.mate_for(p_world uuid, c creature)
  STABLE
 AS $function$
   select o.* from creature o
-  where o.world_id = p_world and o.id <> c.id and o.species = c.species and o.sex <> c.sex
+  where o.world_id = p_world and o.id <> c.id and o.sex <> c.sex
+    and not hybrid_kind(c.species)
+    and (o.species = c.species or cross_of(c.species, o.species) is not null)
     and o.mode in ('active', 'deed') and o.due is null
     and sqrt((creature_x(o) - creature_x(c)) ^ 2 + (creature_y(o) - creature_y(c)) ^ 2) <= pair_range()
-  order by sqrt((creature_x(o) - creature_x(c)) ^ 2 + (creature_y(o) - creature_y(c)) ^ 2), o.id
+  order by (o.species <> c.species),
+           sqrt((creature_x(o) - creature_x(c)) ^ 2 + (creature_y(o) - creature_y(c)) ^ 2), o.id
   limit 1
 $function$

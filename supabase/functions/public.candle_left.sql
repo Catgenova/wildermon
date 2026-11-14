@@ -5,7 +5,8 @@ CREATE OR REPLACE FUNCTION public.candle_left(it item)
  LANGUAGE sql
  STABLE
 AS $function$
-  select greatest(0, case when it.lit and it.lit_at is not null
-                          then coalesce(it.charges, 0) - extract(epoch from (now() - it.lit_at))
-                          else coalesce(it.charges, 0) end)
+  select case when infuse_on(it.infuse, 'light') > 0 then greatest(1, coalesce(it.charges, 0))
+              else greatest(0, case when it.lit and it.lit_at is not null
+                                    then coalesce(it.charges, 0) - extract(epoch from (now() - it.lit_at))
+                                    else coalesce(it.charges, 0) end) end
 $function$

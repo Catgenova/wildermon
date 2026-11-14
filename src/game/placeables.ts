@@ -37,6 +37,8 @@ import { tryGain } from './learn';
 import type { CraftStock } from './recipes';
 import { bedRest, SLEEP_SAID, sleepNotYours } from './sleep';
 import { DYE_BUCKET, dyeIn, dyeSays, dyeText, mixDye, readDye, type DyeLiquid } from './dyestuffs';
+import { BELL_ROPE, bellHeard, bellRangSaid, NO_BELL_ROPE } from './ropework';
+import { GALE_ROW_SAID, isGale } from './sailing';
 
 /**
  * The placed things that do something of their own: an oven that burns, a well
@@ -518,6 +520,8 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       // A padlock on her keeps her helm, or the reins, to whoever has its key.
       const shut = g.lockRefusal(f);
       if (shut) return shut;
+      // A rowing boat does not put out in a gale (`sailing.ts`).
+      if (isBoat(f) && !furnitureDef(f.kind).boat?.sail && isGale(g.wind().force)) return GALE_ROW_SAID;
       // A hull asks nothing but that she is still floating.
       if (isBoat(f)) return g.launchSpot(f.kind, f.x, f.y) ? null : 'Aground: push off first.';
       const v = vehicleOf(f);
@@ -1066,6 +1070,8 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       if (!f || !furnitureDef(f.kind).bell) return 'Not a bell.';
       if (!nearPiece(g, f)) return 'Stand next to it.';
       if (!g.onDeed(f.x, f.y)) return 'Only on your settlement.';
+      // Rung on a bell rope, whose QL sets how far it is heard (`ropework.ts`).
+      if (!g.inventory.has(BELL_ROPE)) return NO_BELL_ROPE;
       return null;
     },
     perform: (t, g) => {
@@ -1075,14 +1081,16 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       // whoever rang, the way one called over does — except one in the traces,
       // which stays hitched until somebody takes it out.
       let came = 0;
+      const [bx, by] = furnitureCentre(f);
+      const heard = bellHeard(Math.max(0, ...g.inventory.items.filter((it) => it.id === BELL_ROPE).map((it) => it.ql)));
       for (const c of g.creatures.list.values()) {
-        if (c.mode !== 'deed' || c.hitchedTo !== null) continue;
+        if (c.mode !== 'deed' || c.hitchedTo !== null || Math.hypot(c.x - bx, c.y - by) > heard) continue;
         c.calledAt = g.time;
         c.enemy = null;
         came++;
       }
       g.note('rang');
-      g.logMsg(`Rang: ${furnitureName(f).toLowerCase()} at ${f.x}, ${f.y}. Settlement workers called: ${came}. Citizens of ${g.deed.name} notified.`, 'event');
+      g.logMsg(bellRangSaid(furnitureName(f), f.x, f.y, came, g.deed.name, heard), 'event');
     },
   },
 ];

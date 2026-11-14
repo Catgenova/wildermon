@@ -8,6 +8,9 @@ AS $function$
 declare c creature; stage text;
 begin
   foreach c in array array[a, b] loop
+    if hybrid_kind(c.species) then return infertile_said(c.name); end if;
+  end loop;
+  foreach c in array array[a, b] loop
     stage := age_of(c.born, old_of(c), age_pace(c));
     if stage <> 'grown' then
       return c.name || case when stage = 'young' then ' is not grown.' else ' is too old.' end;

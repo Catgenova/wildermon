@@ -10,7 +10,7 @@ declare c creature; d species_def; kind text; skill_id text; skill double precis
 begin
   select * into c from creature where world_id = p_world and id = p_id;
   select * into d from species_def where id = c.species;
-  kind := coalesce(p_kind, d.gathers);
+  kind := coalesce(p_kind, c.job, d.gathers);
   select g.skill into skill_id from gather_def g where g.id = kind;
   skill := task_skill(c);
 

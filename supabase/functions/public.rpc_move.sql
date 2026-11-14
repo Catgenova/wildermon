@@ -259,8 +259,11 @@ begin
     if v_tiles > 0 and (is_boat(cart) or vehicle_speed(p_world, cart.id) > 0) then
       for i in 1 .. v_tiles loop
         perform skill_raise(p_world, me, case when is_boat(cart) then sailing_skill() else driving_skill() end,
-                            case when is_boat(cart) then sailing_learn() else driving_learn() end);
+                            case when is_boat(cart) then sailing_learn() * sail_learn_mul(p_world, me, cart, p.x, p.y, p_x, p_y)
+                                 else driving_learn() end);
       end loop;
+      -- And a hull below Sailing 30 takes damage in a gale (`sail_gale_damage`).
+      if is_boat(cart) then perform sail_gale_damage(p_world, me, cart.id, v_tiles); end if;
       /*
        * And each of the same tiles is a go for every beast in the cart's traces whose kind learns its own skill by
        * pulling, a Roxxen its driving (`beast_learns` 'pull', `learns_gain_pull`), as the browser pays it in a game

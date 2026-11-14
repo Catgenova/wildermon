@@ -13,4 +13,6 @@ AS $function$
     when p_channel = 'speed' then stage_mul_speed() ^ stage_of(c) * case when stage_of(c) >= perk_stage() then evo_perk(c, p_channel) else 1 end
     else case when stage_of(c) >= perk_stage() then evo_perk(c, p_channel) else 1 end
   end::double precision
+  -- And a hybrid's vigour and pace (`hybrid_mul`).
+  * case when c.pedigree ? 'stage' then hybrid_mul(p_channel) else 1 end
 $function$

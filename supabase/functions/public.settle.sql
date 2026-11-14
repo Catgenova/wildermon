@@ -119,7 +119,8 @@ begin
                  swing_burden(p_world, p_uid, d.id))
                  -- And a perk on the job's time, after the floor.
                  * perk_time(coalesce(p.class_mul, '{}'::jsonb), p_world, d.id, p.act_target)
-                 * piece_pace(p_world, p_uid, d.skill) * faith_steady(p_world, p_uid, d.tool))
+                 * piece_pace(p_world, p_uid, d.skill) * faith_steady(p_world, p_uid, d.tool)
+                 * rope_pace(p_world, p_uid, d.id, d.skill))
           where world_id = p_world and uid = p_uid returning * into p;
       else
         -- A fight was never a count: it ends when it is over or out of reach, and says nothing of goes.
@@ -191,7 +192,8 @@ begin
                                    act_scope(p_world, p_uid, d.skill)) * bauble_pace(p_world, p_uid, d.skill),
                      swing_burden(p_world, p_uid, d.id))
                      * perk_time(coalesce(p.class_mul, '{}'::jsonb), p_world, d.id, nxt->'target')
-                     * piece_pace(p_world, p_uid, d.skill) * faith_steady(p_world, p_uid, d.tool)),
+                     * piece_pace(p_world, p_uid, d.skill) * faith_steady(p_world, p_uid, d.tool)
+                     * rope_pace(p_world, p_uid, d.id, d.skill)),
                    act_queue = act_queue - 0
               where world_id = p_world and uid = p_uid returning * into p;
             perform tell(p_world, p_uid, upper(left(d.verb, 1)) || substr(d.verb, 2) || '.', 'info');

@@ -23,6 +23,8 @@ export interface PlacedCampfire {
   lit: boolean;
   /** Ashes waiting to be raked out. */
   ash?: number;
+  /** Motes infused into it at an enchanter's plinth, while they last (`infusion.ts`): element, share of its most, end in epoch seconds. */
+  infuse?: { el: string; str: number; until: number };
 }
 
 /** Anything that burns fuel and leaves ashes behind. */
