@@ -7642,20 +7642,21 @@ body.dragging.drag-no, body.dragging.drag-no * { cursor: no-drop !important; }
   font-weight: 700;
 }
 
-[data-ui='runecut'] .setting-row small {
+[data-ui='runecut'] :is(.setting-row, .keys-what) small {
   color: var(--rc-carve);
+  font-size: var(--rc-fs-2);
   line-height: 1.4;
 }
 
-/* Cards in the trades and the companions: a recess, where Classic had a faint lift. */
-[data-ui='runecut'] :is(.trade-card, .trade-rite, .trade-node, .pal-card, .goal-next, .guide-card) {
+/* The journal's next goals and the field guide's cards: a recess, where Classic had a faint lift. Trades and wildermon cards are the kit's rows. */
+[data-ui='runecut'] :is(.goal-next, .guide-card) {
   border-color: var(--rc-shade);
   border-radius: 0;
   background: var(--rc-stone-2);
   box-shadow: inset 0 1px 2px color-mix(in srgb, var(--rc-edge-ink) 14%, transparent);
 }
 
-[data-ui='runecut'] :is(.trade-mine, .trade-node-taken, .trade-node-asked, .trade-rite-ready, .trade-confirm) {
+[data-ui='runecut'] .trade-confirm {
   border-color: var(--rc-rune-deep);
 }
 

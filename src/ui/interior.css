@@ -528,6 +528,7 @@
   min-width: 16px;
   height: 16px;
   padding: 0 var(--rc-sp-2);
+  border: 0;
   border-radius: 8px;
   background: var(--rc-rune-deep);
   color: var(--rc-stone);
@@ -544,6 +545,7 @@
   align-items: center;
   height: 16px;
   padding: 0 var(--rc-sp-2);
+  border: 0;
   border-radius: 0;
   background: var(--rc-stone-2);
   box-shadow: inset 0 0 0 1px var(--rc-shade);
@@ -553,6 +555,8 @@
   font-weight: 500;
   letter-spacing: 0.04em;
   line-height: 1;
+  text-transform: none;
+  white-space: nowrap;
 }
 
 /* Meters ---------------------------------------------------------------------- */
