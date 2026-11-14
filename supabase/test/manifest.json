@@ -385,6 +385,12 @@
     "why": "Action effects fire from marks on the clips, worked out on every screen from the body's own clip time with nothing sent. Followed per body: once a run of a loop; a frame drawn again or a clock put right fires nothing twice; a new go fires again; a leap, a change of clip or a body unseen starts afresh with no storm of effects; a timed go fitted to its length fires once a run; the mirrored clip fires from the other hand; the point is on the weapon and the same each time."
   },
   {
+    "file": "supabase/test/castclips.ts",
+    "title": "Every spell cast on the sculpted body plays a casting clip, released on the spell's own release",
+    "shard": 1,
+    "why": "Asked for: every spell played the placeholder gesture on the sculpted body. Every spell, both bodies, all eight facings, plays a casting clip by how it is cast (or its weapon's fight clip for a blow, a thrust or a shot), never the placeholder; each starts and ends stood with the arms hanging; run through a cast in frames, the release mark fires once on the frame the spell is let go, from the sending hand (the left where played mirrored); walking, a spell cast with the hands is laid over the walk; a throw, a blow and a shot hold the weapon; Animations Off stands idle."
+  },
+  {
     "file": "supabase/test/emotes.ts",
     "title": "Bow, cheer, point, clap and sit: their own clips, held and ended as they say",
     "shard": 1,
