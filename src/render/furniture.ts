@@ -1,8 +1,9 @@
 import { FACINGS, FURNITURE, furnitureDef } from '../game/furniture';
 import { animationsOff, animNow } from '../engine/motion';
 import { planterHolds, planterTrim } from './plantertrim';
+import { RIPE } from '../game/farming';
 import type { Seat } from './figure';
-import { cropPlant } from './crops';
+import { cropPlant, DAMP_SOIL, DRY_SOIL, WATER_LINE, WEED } from './crops';
 import { materialOf } from '../game/materials';
 import { WALL_HEIGHT, WALL_THICK, type Side } from '../game/building';
 import { SUBTILES } from '../game/crates';
@@ -3280,6 +3281,29 @@ const MODELS: Record<string, Model> = {
           const [a, b] = [F(0.4, k * hh), F(w - 0.4, k * hh)];
           sc.g.beginPath(); sc.g.moveTo(a[0], a[1]); sc.g.lineTo(b[0], b[1]); sc.g.stroke();
         }
+        if (holds && holds.stage < RIPE) {
+          // A stage the Tend action takes: pale with weeds still to tend, dark with water along the rake's marks tended.
+          sc.g.fillStyle = holds.tended ? DAMP_SOIL : DRY_SOIL;
+          const c = [F(0, 0), F(w, 0), F(w, hh), F(0, hh)];
+          sc.g.beginPath(); c.forEach(([px, py], i) => (i ? sc.g.lineTo(px, py) : sc.g.moveTo(px, py))); sc.g.closePath(); sc.g.fill();
+          if (holds.tended) {
+            sc.g.strokeStyle = WATER_LINE;
+            sc.g.lineWidth = sc.ink * 0.5;
+            for (const k of [0.3, 0.7]) {
+              const [a, b] = [F(0.4, k * hh + 0.15), F(w - 0.4, k * hh + 0.15)];
+              sc.g.beginPath(); sc.g.moveTo(a[0], a[1]); sc.g.lineTo(b[0], b[1]); sc.g.stroke();
+            }
+          } else {
+            for (let i = 0; i < 8; i++) {
+              const [px, py] = F(0.6 + ((i * 0.37) % 1) * (w - 1.2), (i % 2 ? 0.15 : 0.85) * hh);
+              for (const [col, lw] of [['rgba(46,40,56,0.6)', sc.ink * 1.4], [WEED, sc.ink * 0.6]] as const) {
+                sc.g.strokeStyle = col;
+                sc.g.lineWidth = lw;
+                for (const d of [-1, 0, 1]) { sc.g.beginPath(); sc.g.moveTo(px, py); sc.g.lineTo(px + d * 1.2, py - 2 + Math.abs(d) * 0.5); sc.g.stroke(); }
+              }
+            }
+          }
+        }
         if (holds?.stage !== 0) return;
         // Sown: a drill down the middle, and the seed in it.
         const [a, b] = [F(0.6, hh / 2), F(w - 0.6, hh / 2)];
@@ -5350,7 +5374,14 @@ export function drawFurniture(ctx: CanvasRenderingContext2D, sx: number, sy: num
 }
 
 /** A picture of somebody as it was last put down: what it was put down on, and where, in that context's own units. */
-export interface Silhouette { ctx: CanvasRenderingContext2D; canvas: CanvasImageSource & { width: number; height: number }; x: number; y: number; w: number; h: number; ver?: number }
+/**
+ * A helmsman's picture as put down (`figurePicture` in `./figure`): on `ctx` at x, y, w, h; the picture `canvas`'s `sx`,
+ * `sy`, `sw`, `sh` (the whole of it, left out), and what names it (`key`, else the canvas).
+ */
+export interface Silhouette {
+  ctx: CanvasRenderingContext2D; canvas: CanvasImageSource & { width: number; height: number }; x: number; y: number; w: number; h: number; ver?: number;
+  sx?: number; sy?: number; sw?: number; sh?: number; key?: object;
+}
 
 /**
  * A helmsman seen through what is in front of him. Sailing toward
@@ -5382,8 +5413,9 @@ function seeThrough(ctx: CanvasRenderingContext2D, c: HTMLCanvasElement, at: [nu
   // Drawn on another picture than this one -- a flash or a ring round him under the pointer -- it is nowhere here to see through.
   if (helm.ctx !== ctx) { ctx.drawImage(c, x, y, w, h); return; }
   const k = c.width / w, hx = (helm.x - x) * k, hy = (helm.y - y) * k;
-  let his = seen.get(helm.canvas);
-  if (!his) seen.set(helm.canvas, (his = new WeakMap()));
+  const named = helm.key ?? helm.canvas;
+  let his = seen.get(named);
+  if (!his) seen.set(named, (his = new WeakMap()));
   let kept = his.get(c);
   if (!kept || helm.ver === undefined || kept.ver !== helm.ver || Math.abs(kept.x - hx) > 1 || Math.abs(kept.y - hy) > 1 || Math.abs(kept.w - helm.w * k) > 1) {
     const pad = kept?.pad ?? document.createElement('canvas');
@@ -5401,7 +5433,7 @@ function seeThrough(ctx: CanvasRenderingContext2D, c: HTMLCanvasElement, at: [nu
     g.globalCompositeOperation = 'destination-out';
     g.globalAlpha = HELM_SEEN.most;
     g.filter = `blur(${(HELM_SEEN.soft * k).toFixed(2)}px)`;
-    g.drawImage(helm.canvas, 0, 0, helm.canvas.width, helm.canvas.height, hx, hy, helm.w * k, helm.h * k);
+    g.drawImage(helm.canvas, helm.sx ?? 0, helm.sy ?? 0, helm.sw ?? helm.canvas.width, helm.sh ?? helm.canvas.height, hx, hy, helm.w * k, helm.h * k);
     g.filter = 'none';
     g.globalAlpha = 1;
     g.globalCompositeOperation = 'source-over';

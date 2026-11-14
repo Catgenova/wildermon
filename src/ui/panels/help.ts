@@ -1719,6 +1719,7 @@ export function helpText(): string {
       <li>${STAGE_NAMES.length} growth stages: ${listed(STAGE_NAMES)}. Time per growth stage by crop (mint fastest, corn slowest).</li>
       <li><b>Tend</b>: once per growth stage. Untended: ${cropYield(0).produce} crop. Tended every growth stage: <b>${cropYield(RIPE).produce} crops</b>.
       Seed, either way: ${seedSays()} per harvest (settlement workers too).</li>
+      <li>Crop look, ${listed(STAGE_NAMES.slice(0, RIPE))}: not tended this growth stage: pale soil, weeds. Tended: dark soil, water in the furrows.</li>
       <li>Tending and tilling train <b>Farming</b>; farming sets harvest quality (QL).</li>
       <li>Harvesting leaves the field tilled (resowable; a ${SPECIES.seavic.name} can run one alone).</li>
       <li><b>${GARDEN_BED.name}</b>: a floor that farms as a field, ${growthWords(GLASSHOUSE_GROWTH)} in every season while open to the sky or under glass (see Building).</li>

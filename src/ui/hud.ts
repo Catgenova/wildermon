@@ -12,6 +12,7 @@ import { itemName } from '../game/items';
 import { ACTION_BY_ID } from '../game/actions';
 import { BELT_MAX, pinLabel } from '../game/belt';
 import type { Renderer } from '../render/renderer';
+import { bodiesLine } from '../render/bodies';
 import { VERSION } from '../version';
 import { updateButton } from './update';
 import { fixed, html, setMarkup } from './html';
@@ -857,7 +858,8 @@ export class Hud {
     // And, asked for, a frame's length beside the time it spent drawing: much longer than its drawing is a frame waiting on the graphics chip.
     const t = renderer.timings;
     const timed = !this.game.settings.timings ? ''
-      : (t.line && fps > 0 ? `\nframe ${(1000 / fps).toFixed(1)} ms · ${t.line}` : '') + (t.measuring ?? t.measured ? `\n${t.measuring ?? t.measured}` : '');
+      : (t.line && fps > 0 ? `\nframe ${(1000 / fps).toFixed(1)} ms · ${t.line}` : '') + (bodiesLine() ? `\n${bodiesLine()}` : '')
+        + (t.measuring ?? t.measured ? `\n${t.measuring ?? t.measured}` : '');
     this.say(this.fpsEl, `${VERSION} · ${fps} fps · ${renderer.tilesDrawn} tiles${watched} · ${renderer.camera.zoom.toFixed(2)}×${timed}`);
     const svg = this.compass.firstElementChild as HTMLElement | null;
     if (svg) svg.style.transform = `rotate(${renderer.camera.northAngle().toFixed(1)}deg)`;

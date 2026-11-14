@@ -28,7 +28,9 @@ import { RELICS } from '../../src/game/archaeology';
 import { fightBase } from '../../src/game/fight';
 import { ANCIENT_HELM, ANCIENT_HELM_SIGHT, ANCIENT_SWORD, ANCIENT_SWORD_SWING, ARMOUR_BY_ID, reachOf, WEAPON_BY_ID } from '../../src/game/gear';
 import { canImprove } from '../../src/game/improve';
-import { itemDef, UNMENDABLE, unmendableSays, type Item } from '../../src/game/items';
+import { itemDef, UNMENDABLE, unmendable, unmendableSays, type Item } from '../../src/game/items';
+import { MOULDS } from '../../src/game/metal';
+import { honeable } from '../../src/game/mending';
 import { psql, ok, bad, check } from './harness';
 
 const near = (a: number, b: number): boolean => Math.abs(a - b) < 1e-6 * Math.max(1, Math.abs(b));
@@ -143,6 +145,13 @@ begin
   insert into said values ('STORES:ancient', coalesce((damaged_in_stores(w, u)).def, 'nothing'));
   insert into said values ('ERRAND', (pg_get_functiondef('errand_do'::regproc) like '%not unrestored(i.def) and not unmendable(i.def)%')::text);
 
+  -- And a mould, worn by its fillings: past mending too.
+  h := give(w, u, 'nail_mould', 1, ${QL});
+  update item set dmg = 30 where id = h;
+  insert into said values ('MOULD', (select string_agg(coalesce(act_refusal(w, u, a, jsonb_build_object('kind', 'item', 'uid', h)), 'allowed'), '|' order by a)
+    from unnest(array['mend_kit', 'repair_item']) a));
+  insert into said values ('MOULDS', (select count(*) from mould_def m where not unmendable(m.id))::text);
+
   -- A swing of each, in a fresh body's hands.
   for r in select d from unnest(array['ancient_short_sword', 'short_sword']) d loop
     update player set equipped = jsonb_build_object('weapon', (ids->>r.d)::bigint) where world_id = w and uid = u;
@@ -203,6 +212,12 @@ for (const { id } of GEAR) {
     at(`SAYS:${id}`) === unmendableSays({ id }) && unmendableSays({ id }) === `${itemDef(id).name}: cannot be improved or repaired.`, at(`SAYS:${id}`));
 }
 check('neither is improvable on the island, and the plain ones are', at('IMPROVABLE') === 'helm,short_sword', at('IMPROVABLE'));
+check('every mould is past mending on the island', at('MOULDS') === '0', at('MOULDS'));
+check('a worn mould is refused Repair and a repair kit on the island, in the browser\'s words',
+  at('MOULD') === [0, 1].map(() => unmendableSays({ id: 'nail_mould' })).join('|'), at('MOULD'));
+check('and in the browser: every mould past mending, and no ancient whetstone hones one',
+  MOULDS.every((m) => unmendable({ id: m.id })) && !unmendable({ id: 'helm' })
+    && !honeable({ uid: 1, id: 'nail_mould', ql: 40, dmg: 30, count: 1 }));
 
 const pieces: Record<string, Item> = {};
 for (const id of [ANCIENT_HELM, ANCIENT_SWORD, 'helm', 'short_sword']) {

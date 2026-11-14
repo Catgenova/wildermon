@@ -12,6 +12,26 @@
  */
 import type { Clip } from '../clip';
 import { mirrorClip, poseToPose, type Beat, type KeyPose } from '../author';
+import { axisAngle, euler, mm, type Euler } from '../math';
+
+/**
+ * A pair of thighs, left then right: the left turned `rot` (the clip's turns, `euler`: z · x · y) and then
+ * swung `out` degrees out about the upright (its own length at rest), the right its mirror. A thigh flexed forward is not
+ * spread by its own z, which turns it about its length: the shin swings out and the knee stays in front of the crotch.
+ */
+function apart(rot: Euler, out: number): { thigh_l: Euler; thigh_r: Euler } {
+  const m = mm(axisAngle([0, 1, 0], -out), euler(rot)), deg = 180 / Math.PI;
+  const l: Euler = [Math.asin(Math.max(-1, Math.min(1, m[7]))) * deg, Math.atan2(-m[6], m[8]) * deg, Math.atan2(-m[1], m[4]) * deg];
+  return { thigh_l: l, thigh_r: [l[0], -l[1], -l[2]] };
+}
+/**
+ * How far the knees are parted sat on a bench or a thwart, each thigh's swing out, degrees: on a seat as low as a cart's
+ * box or a thwart the knees come up as high as the hips or higher, and together they hide the lap and the crotch from in front
+ * (the camera looks down at a body only some twenty degrees); parted, the crotch shows between them.
+ */
+export const KNEES_OUT = 25;
+/** At the tiller, sat back at ease: the knees parted further, the near shin clear of the crotch from the front quarters. */
+export const KNEES_EASED = 35;
 
 /** Seconds a run: one breath's slow wander of the head and the shoulders, as the idle's. */
 const LENGTH = 6;
@@ -39,40 +59,40 @@ function held(name: string, pose: KeyPose, look: number): { clip: Clip } {
 }
 
 /**
- * On the box: sat square on the bench, the thighs along it a little apart, the shins down to the boards a little ahead of
- * the knees; leant back a touch from the hips, the head up over the team; the forearms out over the knees, the elbows in
- * at the sides.
+ * On the box: sat square on the bench, the thighs along it, the knees parted (`KNEES_OUT`), the shins down to the
+ * boards a little ahead of the knees; leant back a touch from the hips, the head up over the team; the forearms out over
+ * the knees, the elbows in at the sides.
  */
 export const REINS_POSE: KeyPose = {
   rot: {
     ...FISTS,
     pelvis: [-6, 0, 0], spine_01: [4, 0, 0], spine_02: [4, 0, 0], spine_03: [2, 0, 0], neck_01: [2, 0, 0], neck_02: [0, 0, 0], head: [2, 0, 0],
-    thigh_l: [84, 0, 7], thigh_r: [84, 0, -7], calf_l: [-100, 0, 0], calf_r: [-100, 0, 0], foot_l: [10, 0, 0], foot_r: [10, 0, 0],
+    ...apart([84, 0, 7], KNEES_OUT), calf_l: [-100, 0, 0], calf_r: [-100, 0, 0], foot_l: [10, 0, 0], foot_r: [10, 0, 0],
     upperarm_l: [26, 0, 10], upperarm_r: [26, 0, -10], lowerarm_l: [60, 0, 0], lowerarm_r: [60, 0, 0],
   },
 };
 
 /**
- * At the oars: sat low on the thwart, the legs out along the boards to the stretcher and the knees up, the back upright
- * and the head up looking over the stern; the arms forward, the elbows down by the ribs.
+ * At the oars: sat low on the thwart, the legs out along the boards to the stretcher and the knees up and parted
+ * (`KNEES_OUT`), the back upright and the head up looking over the stern; the arms forward, the elbows down by the ribs.
  */
 export const OARS_POSE: KeyPose = {
   rot: {
     ...FISTS,
     pelvis: [-4, 0, 0], spine_01: [3, 0, 0], spine_02: [3, 0, 0], spine_03: [2, 0, 0], neck_01: [2, 0, 0], head: [2, 0, 0],
-    thigh_l: [70, 0, 10], thigh_r: [70, 0, -10], calf_l: [-50, 0, 0], calf_r: [-50, 0, 0], foot_l: [-14, 0, 0], foot_r: [-14, 0, 0],
+    ...apart([70, 0, 10], KNEES_OUT), calf_l: [-50, 0, 0], calf_r: [-50, 0, 0], foot_l: [-14, 0, 0], foot_r: [-14, 0, 0],
     upperarm_l: [30, 0, 12], upperarm_r: [30, 0, -12], lowerarm_l: [50, 0, 0], lowerarm_r: [50, 0, 0],
   },
 };
 
 /**
- * At the tiller: sat aft on the stern sheets beside it, the thighs along the seat and the shins straight down; the right
- * hand out to it at its side, the left flat on its thigh half way to the knee.
+ * At the tiller: sat aft on the stern sheets beside it, the thighs along the seat, the knees parted (`KNEES_EASED`) and
+ * the shins straight down; the right hand out to it at its side, the left flat on its thigh half way to the knee.
  */
 export const TILLER_POSE: KeyPose = {
   rot: {
     pelvis: [-4, 0, 0], spine_01: [4, 0, 0], spine_02: [4, 0, 0], spine_03: [2, 0, 0], neck_01: [2, 0, 0], head: [2, 0, 0],
-    thigh_l: [84, 0, 9], thigh_r: [84, 0, -9], calf_l: [-86, 0, 0], calf_r: [-86, 0, 0],
+    ...apart([84, 0, 9], KNEES_EASED), calf_l: [-86, 0, 0], calf_r: [-86, 0, 0],
     upperarm_r: [20, 0, -22], lowerarm_r: [50, 0, 0], fingers_01_r: [70, 0, 0], fingers_02_r: [80, 0, 0], thumb_02_r: [20, 0, 0],
     upperarm_l: [22, 0, 8], lowerarm_l: [48, 0, 0], hand_l: [12, -70, 0], fingers_01_l: [6, 0, 0], fingers_02_l: [8, 0, 0],
   },

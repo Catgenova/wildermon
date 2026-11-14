@@ -23,6 +23,8 @@ import { BUSH3D_SPECIES, STUMP3D_SPECIES, TREE3D_SPECIES } from '../../render/tr
 import { FRAME_REACH, FRAME_REACHES, FRAME_RIM, FRAMES, frameLabel, frameOddities, RIM, RIMS } from '../runecut-art';
 import { lifeWords } from '../runecut-life';
 import { LAYERS, TIMING_WINDOW, TRIAL_SECONDS } from '../../render/timings';
+import { BODY_BUDGET_MS } from '../../render/bodybudget';
+import { QUALITY_STEPS } from '../../render/bodies';
 import { burnsFor, listed, percent } from '../../game/words';
 import { DONE_AFTER, NOTICE_MS } from '../notices';
 import { RING_FADE_MS } from '../pointerring';
@@ -478,7 +480,8 @@ export class SettingsPanel {
     add(
       'Show drawing times',
       `Under the frame rate: frame time and ms per layer (ground, ${listed(Object.keys(LAYERS))}), `
-        + `averaged over ${TIMING_WINDOW * 1000} ms. Frame time far above draw time: GPU-bound.`,
+        + `averaged over ${TIMING_WINDOW * 1000} ms. Frame time far above draw time: GPU-bound. `
+        + `Bodies: ms a frame on bodies (budget ${BODY_BUDGET_MS} ms), bodies drawn a frame, bodies waiting a frame, quality step (${QUALITY_STEPS}/${QUALITY_STEPS} best).`,
       () => game.settings.timings,
       (v) => (game.settings.timings = v),
     );

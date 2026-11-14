@@ -399,6 +399,19 @@
     "why": "Asked for: a performance setting that turns off all animation, for slow machines. Drawn in Chrome on the page's own clock with thirty people at work and in a fight, eight wildermon (three walking), trees, the sea with a swimmer and a lit fire, three rounds of On and Off in turn: Off draws bodies afresh next to never once nothing changes and ten times fewer than On or better, makes no wildermon pictures once their still poses are drawn, and a frame is no slower than On."
   },
   {
+    "file": "supabase/test/bodies.ts",
+    "title": "Sculpted bodies keep to their time budget in a crowd, a fast sweep and a zoom",
+    "shard": 2,
+    "external": [
+      "esbuild",
+      "playwright-core"
+    ],
+    "env": {
+      "BODIES_STRICT": "1"
+    },
+    "why": "Asked for: with animations on, busy places and fast movement ran at 1-5 frames a second. Drawn in Chrome on the page's own clock: the busy stretch animoff.ts draws, a crowd of sixty at work and in a fight, the camera swept fast across both (everybody dressed afresh each round, so new to the view), and the zoom eased in and out over the crowd, three rounds of Animations On and Off each: On's middle frame within 2.5 times Off's and 4 ms; the bodies within their budget (BODY_BUDGET_MS) and 2 ms a frame over every round; no frame of the sweep or the zoom longer than Off's longest and two and a half times the longest frame's bodies in the busy stretch."
+  },
+  {
     "file": "supabase/test/access.ts",
     "title": "Low-end graphics draw the wood flat, less motion stops its sway, and every key is a row",
     "shard": 1,
@@ -410,6 +423,19 @@
       "CROWD_STRICT": "1"
     },
     "why": "Settings for the person at the screen, drawn in Chrome on a wood of solid oaks and rose bushes: Low-end graphics, and Low power on a phone, draw every tree and bush flat, Full and Fast draw them solid; Motion Reduced, or System under prefers-reduced-motion, stops the sway on every frame and leaves a 2 s transition at next to nothing; a Text size preset scales the interface by its share; every row of the Keys tab takes a new key and goes back with its reset; no key is under two things out of the box, and a kept table with one is mended; every key main.ts handles is a row."
+  },
+  {
+    "file": "supabase/test/croptend.ts",
+    "title": "A crop still to tend and a tended one look different at every stage before ripe",
+    "shard": 1,
+    "external": [
+      "esbuild",
+      "playwright-core"
+    ],
+    "env": {
+      "CROPTEND_STRICT": "1"
+    },
+    "why": "Asked for: \"a distinct Tendable/Tended difference on each crop model for the cycles pre harvest\". Tend goes on a crop not ripe and not tended at its stage, in a winter too. Drawn in Chrome, every crop at sown, sprouting and growing, by day, in a winter and at night, as a field tile and drawn flat: still to tend and tended are pictures of their own a quarter of their pixels or more apart; ripe is one picture either way; a planter's trim keeps tended before ripe only."
   },
   {
     "file": "supabase/test/saddle.ts",
@@ -980,6 +1006,12 @@
     "title": "Looks for the sculpted bodies, the same on both sides",
     "shard": 2,
     "why": "\"revamp the character customization screen for the new models. It will only have the 2 body types, 3 hairstyles (2+bald). It needs sliders for hair color and skin tone.\" The bodies and the hairstyles there is a mesh for; the skin, hair colour and grey as numbers clamped to nought to one; every old id to the nearest of now; look_clean as cleanLook; the doors, the old rows rewritten."
+  },
+  {
+    "file": "supabase/test/seatedbriefs.ts",
+    "title": "The undergarment shows on a body sat down",
+    "shard": 2,
+    "why": "Reported with a picture: \"this angle is missing bottoms\", a woman in her undergarment at a cart's reins seen from in front, her briefs hidden behind her knees. Each body with nothing on, sat at a cart's and a wagon's reins, a rowing boat's oars, a sailing boat's tiller (where driverOn puts the driver, every way round), in a saddle and meditating, drawn as the GPU draws it: the briefs, and her band, win at least 1.25 screen pixels at zoom one from every facing, and every triangle of the undergarment is in the bake."
   },
   {
     "file": "supabase/test/nearby.ts",
