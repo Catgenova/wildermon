@@ -125,6 +125,7 @@ import { COLOUR_FORM_ODDS, FORM_PASS, LARGE_HEALTH, SIZE_FORM_ODDS, SMALL_SPEED 
 import { WORK_ITEMS } from '../src/game/workstats';
 import { CARE_BONUS, CARE_HOURS, GRAZE_FILL, GRAZE_HUNGRY, PER_REGION, REGION as WILD_SQUARE, WILD_TARGET } from '../src/game/creatures';
 import { BRACE_MOST, BRACE_STEP, BRIDLE_PACE, COLLAR_CUT } from '../src/game/creatures';
+import { RANGE_PER_STEP, SKILL_STEP } from '../src/game/creatures';
 import { BARDING_CUT, GEAR_FLOOR, HARNESS_PACE, PACK_LOADS } from '../src/game/wildgear';
 import { WORN_FLOOR, WORN_SPAN } from '../src/game/limits';
 import { SEED_CHANCE } from '../src/game/farming';
@@ -613,6 +614,15 @@ out.push(`alter table species_def add column if not exists deep_water boolean no
 /* ---- Hybrids (`hybridlist.ts`): a hybrid's two parent kinds, its body's and its markings', the first its first trade. ---- */
 out.push(`alter table species_def add column if not exists hybrid_a text;`);
 out.push(`alter table species_def add column if not exists hybrid_b text;`);
+/*
+ * Work range: tiles a kind earns per `SKILL_STEP` levels of its task skill (`SpeciesDef.rangePerStep`, null for the usual
+ * `RANGE_PER_STEP`), which the island's `work_range` reads; and a miner that takes any bare seam whatever its mining
+ * (`SpeciesDef.anySeam`), which `worker_gatherable` and `mine_idle` read.
+ */
+out.push(`alter table species_def add column if not exists range_per_step real;`);
+out.push(`alter table species_def add column if not exists any_seam boolean not null default false;`);
+out.push(`create or replace function range_per_step() returns real language sql immutable as $fn$ select ${q(RANGE_PER_STEP)}::real $fn$;`);
+out.push(`create or replace function skill_step() returns real language sql immutable as $fn$ select ${q(SKILL_STEP)}::real $fn$;`);
 /* A cart is pulled by hand; a vehicle is driven from a seat with a team in
  * front of it; a boat is neither and wants water under it. */
 out.push(`alter table furniture_def add column if not exists cart boolean not null default false;`);
@@ -1404,6 +1414,8 @@ for (const d of Object.values(SPECIES) as unknown as S[]) {
   // A hybrid's parents (`SpeciesDef.hybrid`).
   const hybrid = (d as unknown as { hybrid?: readonly [string, string] }).hybrid;
   if (hybrid) out.push(`update species_def set hybrid_a = ${q(hybrid[0])}, hybrid_b = ${q(hybrid[1])} where id = ${q(d.id)};`);
+  if (d.rangePerStep !== undefined) out.push(`update species_def set range_per_step = ${q(d.rangePerStep)} where id = ${q(d.id)};`);
+  if (d.anySeam) out.push(`update species_def set any_seam = true where id = ${q(d.id)};`);
 }
 for (const id of [...unnamed].sort()) {
   out.push(`insert into item_def values (${q(id)}, ${q(id)}, 'misc', 1, false, null, null);`);

@@ -172,7 +172,7 @@ export function creatureLines(g: Game, c: Creature): string[] {
     const unfed = unfedSays(c);
     if (unfed) lines.push(unfed);
     // Why it is standing about, and what it did this island day and the one before.
-    if (c.idle) lines.push(idleSays(c.idle, c.trade ?? def.gathers, c.carrying ? itemDef(c.carrying.id).name : null));
+    if (c.idle) lines.push(idleSays(c.idle, c.trade ?? def.gathers, c.carrying ? itemDef(c.carrying.id).name : null, taskSkill(c, def)));
     lines.push(...ledgerLines(c.ledger, g.islandDay()));
   } else lines.push(`Companion · ${STANCE_NAMES[c.stance].toLowerCase()} · blow ${+attackOf(c, def).toFixed(1)} damage`);
   // Not at work: the task it would do on a settlement.

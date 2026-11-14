@@ -3280,8 +3280,8 @@ export function helpText(): string {
       <tr><td><b>${SPECIES.bevere.name}</b></td><td>Near water; eats vegetables and starches; placid. Fells trees, logs to the crate. Evolves: ${evolves('bevere')}.</td></tr>
       <tr><td><b>${SPECIES.seavic.name}</b></td><td>Among trees; eats acorns and nuts; placid. Farms: sows seed from the crate, tends every growth stage, carries the harvest back;
       unsown seed goes back to the settlement stores. Only works ground you tilled. Evolves: ${evolves('seavic')}.</td></tr>
-      <tr><td><b>${SPECIES.mola.name}</b></td><td>On metal; eats spices. Mines the nearest ore no other ${SPECIES.mola.name} has claimed, within its mining level
-      (iron from mining ${METAL_LEVEL('iron')}); quality (QL) = its mining, capped by the seam. Works ${metres(MINE_DEPTH)} m of water deep, as you do; a face it cannot stand on is worked from the bank
+      <tr><td><b>${SPECIES.mola.name}</b></td><td>On metal; eats spices. Mines the nearest bare seam no other ${SPECIES.mola.name} has claimed, any metal at any mining
+      (you: iron from mining ${METAL_LEVEL('iron')}); quality (QL) = its mining, capped by the seam. Works ${metres(MINE_DEPTH)} m of water deep, as you do; a face it cannot stand on is worked from the bank
       (shore seams, seabed under wading depth; the ${SPECIES.quarra.name} likewise for plain rock). Range +${SPECIES.mola.rangePerStep ?? RANGE_PER_STEP} tiles per ${SKILL_STEP} levels
       (usual ${RANGE_PER_STEP}). Evolves: ${evolves('mola')}.</td></tr>
       <tr><td><b>${SPECIES.crawler.name}</b></td><td>On sand; eats vegetables. Collects <b>sand</b> off the bed to the crate (ground height unchanged). Defensive: always hits back;
@@ -3434,7 +3434,8 @@ export function helpText(): string {
       (&ldquo;${idleSays({ why: 'range', n: SPECIES.sedra.workRange }, 'reed')}&rdquo; for a new ${SPECIES.sedra.name}); all of it in range worked, until the soonest is off its ${FORAGE_COOLDOWN} s cooldown
       (&ldquo;${idleSays({ why: 'waiting', n: FORAGE_COOLDOWN }, 'sand')}&rdquo;); nothing in your settlement stores to work, naming what it needs
       (&ldquo;${idleSays({ why: 'stock', n: 0 }, 'mend')}&rdquo;); no barrel with room for its water; a load with nowhere to put it; walking home when over ${HOME_SLACK} tiles past
-      its range, with the distance; no staircase up to its work's storey (&ldquo;${idleSays({ why: 'stairs', n: 2 }, 'hod')}&rdquo;); no staircase down from where it stands (&ldquo;${idleSays({ why: 'stranded', n: 2 }, 'hod')}&rdquo;): it stays on that storey until one is built.
+      its range, with the distance; a miner: a bare seam above its mining (&ldquo;${idleSays({ why: 'seam', n: 4, what: ['iron_ore'] }, 'mine', null, 1)}&rdquo;),
+      bare rock with no seam (&ldquo;${idleSays({ why: 'noseam', n: SPECIES.mola.workRange }, 'mine')}&rdquo;); no staircase up to its work's storey (&ldquo;${idleSays({ why: 'stairs', n: 2 }, 'hod')}&rdquo;); no staircase down from where it stands (&ldquo;${idleSays({ why: 'stranded', n: 2 }, 'hod')}&rdquo;): it stays on that storey until one is built.
       Island: no work while its keeper is away or no awake player is near enough; the card says which and how near.</li>
       <li><b>Storeys</b>: a store, station or planned work a storey up is walked to by the building's finished staircases: wide or ${SINGLE_STAIRS_NAME} onto it from
       its foot, off at its head, down off its foot; ${SPIRAL_STAIRS_NAME} on its own tile. Over finished floors only, and a finished bridge's deck between floors

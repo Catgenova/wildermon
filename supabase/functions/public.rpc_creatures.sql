@@ -186,7 +186,7 @@ begin
               when c.phase = 'bed' then jsonb_build_object('idleWhy', 'tired', 'idleN', 0, 'idlePost', c.post is not null,
                 'idleBed', (select b.sub from placed b where b.id = c.bed))
               else jsonb_build_object('idleWhy', c.idle_why, 'idleN', c.idle_n, 'idlePost', c.post is not null, 'idleAround', c.around is not null,
-                'idleWhat', case when c.idle_why = 'stock' then to_jsonb(c.idle_what) end) end
+                'idleWhat', case when c.idle_why in ('stock', 'seam') then to_jsonb(c.idle_what) end) end
       -- What is in its panniers, to whoever they open for (`pannier_sent`): only a kept one of a kind that carries any
       -- can have them open to anybody (`pannier_shut`), so nothing else is asked, which was half of this read.
       || case when c.keeper is not null and c.species = any (array(select d.id from species_def d where d.panniers is not null))

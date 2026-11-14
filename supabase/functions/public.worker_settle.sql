@@ -13,6 +13,7 @@ declare c creature; d species_def; kind text; guard int := 0; done int := 0;
         v_lv int; v_once int; v_routed boolean := true; -- storeys
         v_vine boolean := false; -- a bush picker planting vines
         v_hy_tried boolean := false; -- a hybrid that has looked for its second trade's work
+        v_mi record; -- a miner's why (`mine_idle`)
         v_behind boolean; v_lost boolean := false; -- round its keeper and left behind (`around_leash`)
 begin
   select * into c from creature where world_id = p_world and id = p_id for update;
@@ -822,6 +823,11 @@ begin
         -- hour of it before it says anything, so that a trade which has run
         -- dry for the day is not mistaken for one that is stuck.
         c.idle_since := coalesce(c.idle_since, now()); c.idle_what := null; c.idle_why := 'range'; c.idle_n := v_site.radius;
+        -- A miner says what is wrong with the bare rock it has (`mine_idle`).
+        if kind = 'mine' then
+          select * into v_mi from mine_idle(p_world, v_site.x, v_site.y, v_site.radius, c);
+          if v_mi.why is not null then c.idle_why := v_mi.why; c.idle_n := v_mi.n; c.idle_what := v_mi.what; end if;
+        end if;
         -- All of it in reach worked and on its wait: the seconds till the soonest is back (`worker_wait_left`).
         if worker_wait_left(p_world, v_site.x, v_site.y, v_site.radius, kind) is not null then
           c.idle_why := 'waiting'; c.idle_n := ceil(worker_wait_left(p_world, v_site.x, v_site.y, v_site.radius, kind));

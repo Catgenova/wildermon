@@ -678,7 +678,7 @@ export class WildermonPanel {
       const said = parts.join(' · ');
       if (info.textContent !== said) info.textContent = said;
       const job = c.trade ?? def.gathers;
-      const idle = (place === 'deed' || place === 'around') && c.idle ? idleSays(c.idle, job, c.carrying ? itemDef(c.carrying.id).name : null) : '';
+      const idle = (place === 'deed' || place === 'around') && c.idle ? idleSays(c.idle, job, c.carrying ? itemDef(c.carrying.id).name : null, taskSkill(c, def)) : '';
       if (idleLine.textContent !== idle) idleLine.textContent = idle;
       hide(idleLine, !idle);
       const ledger = c.mode === 'deed' ? ledgerLines(c.ledger, this.game.islandDay()).join('\n') : '';

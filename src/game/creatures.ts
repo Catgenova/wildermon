@@ -632,8 +632,13 @@ export interface SpeciesDef {
   defensive?: boolean;
   /** Chance a tamed one turns on the player when it has the chance. */
   unruly?: number;
-  /** Tiles of working range earned per ten levels of skill; ten by default. */
+  /** Tiles of working range earned per ten levels of skill; ten by default. The island's `species_def.range_per_step`. */
   rangePerStep?: number;
+  /**
+   * A miner that mines any bare seam in range whatever its mining: no seam's mining level asked of it (`ore.level`).
+   * The island's `species_def.any_seam`.
+   */
+  anySeam?: boolean;
   /** Stance a newly tamed one takes; defensive unless it is a gentle sort. */
   defaultStance?: Stance;
   /**
@@ -1965,6 +1970,8 @@ export const SPECIES: Record<string, SpeciesDef> = {
     gathers: 'mine',
     workRange: 8,
     rangePerStep: 5,
+    // Asked for: "Remove ore level requirements for oremander line".
+    anySeam: true,
     // Its fur and its crystals: umber with copper, charcoal with slate, tawny with gold, and near black with rust.
     variants: [
       ['#4a3a30', '#c96a3a'],
@@ -4734,7 +4741,7 @@ sayLine('quill', `Pluck with a carving knife from ${percent(SHEAR_FROM)} feather
 sayLine('seavic', `Settlement task: sow, tend and harvest your tilled fields ${reach('seavic')}; seed from the crate, harvest and unused seed back to it. Does not till.`,
   'Level: farming.');
 sayLine('quarra', `Settlement task: cut rock shards from bare rock with no seam ${reach('quarra')}; output home.`, 'Level: mining.');
-sayLine('mola', `Settlement task: mine the nearest ore seam ${reach('mola')}, QL up to its mining and the seam's; output home. Skips metals above its mining: ${listed(METALS.filter((m) => m.level > 1).map((m) => `${m.name.toLowerCase()} ${m.level}`))}.`,
+sayLine('mola', `Settlement task: mine the nearest bare seam ${reach('mola')}, any metal at any mining; QL up to its mining and the seam's; output home.`,
   'Level: mining.');
 sayLine('bevere', `Settlement task: fell trees ${reach('bevere')}, as many bites a tree as a person's swings; a stump is left where the tree had timber. Log QL: ${yieldQl('woodcutting')}. Every log of the tree to your settlement stores.`,
   'Level: woodcutting.');
@@ -6783,6 +6790,36 @@ export class Creatures {
     if (c.idle?.why === 'far') c.idle = null;
   }
 
+  /**
+   * Why a miner with no seam to work in `range` of its ground is idle, past "no bare rock with a seam in it": a bare
+   * seam above its mining (`seam`: the softest, then the nearest, as `what` its yield and `n` its tiles off; not for a
+   * kind that takes any seam, `anySeam`), or bare rock with no seam in any of it (`noseam`, `n` the range). Null for
+   * neither. The tiles asked are bare rock no other worker is at, on ground it may work. The island's `mine_idle`.
+   */
+  private mineIdle(game: Game, c: Creature, site: { x: number; y: number }, range: number): { why: IdleWhy; n: number; what?: string[] } | null {
+    const w = game.world;
+    const any = !!this.species(c).anySeam;
+    const skill = c.skills[GATHER_SKILL.mine] ?? 1;
+    let bare = false, seam = false;
+    let best: { level: number; d: number; yields: string } | null = null;
+    for (let dy = -range; dy <= range; dy++) {
+      for (let dx = -range; dx <= range; dx++) {
+        const x = site.x + dx, y = site.y + dy;
+        if (!w.inBounds(x, y) || w.getTile(x, y) !== TileType.Rock || this.claimed(x, y, c)) continue;
+        if (c.mode === 'deed' && !game.workerGround(x, y)) continue;
+        bare = true;
+        const rock = bedrockAt(w, x, y);
+        if (!isSeam(rock)) continue;
+        seam = true;
+        if (any || rock.level <= skill || w.rockHeight(x, y) <= -MINE_DEPTH || !this.reachableFace(game, x, y)) continue;
+        const d = Math.max(Math.abs(dx), Math.abs(dy));
+        if (!best || rock.level < best.level || (rock.level === best.level && d < best.d)) best = { level: rock.level, d, yields: rock.yields };
+      }
+    }
+    if (best) return { why: 'seam', n: best.d, what: [best.yields] };
+    return bare && !seam ? { why: 'noseam', n: range } : null;
+  }
+
   /** The nearest tile to (x, y) a creature may walk, `reach` tiles off at most, ring by ring, rows from the north; or null. */
   nearestOk(game: Game, x: number, y: number, reach: number): [number, number] | null {
     for (let r = 1; r <= reach; r++) {
@@ -7457,7 +7494,7 @@ export class Creatures {
     if (kind === 'mine') {
       // One seam to a miner, and only metal its skill can work.
       const ore = oreAt(game.world, x, y);
-      if (!ore || (c && (c.skills[GATHER_SKILL.mine] ?? 1) < ore.level)) return false;
+      if (!ore || (c && !this.species(c).anySeam && (c.skills[GATHER_SKILL.mine] ?? 1) < ore.level)) return false;
       return game.world.rockHeight(x, y) > -MINE_DEPTH && this.reachableFace(game, x, y) && !this.claimed(x, y, c);
     }
     if (kind === 'sand' || kind === 'clay') {
@@ -10955,7 +10992,13 @@ export class Creatures {
     }
     // Nothing of its trade within its range of the token: the island's `find_work_tile` coming back empty. An errand
     // trade has said its own why already.
-    if (kind && !ERRAND_JOBS.has(kind) && kind !== 'stoke') this.why(c, 'range', siteRange(c, def, deed));
+    if (kind && !ERRAND_JOBS.has(kind) && kind !== 'stoke') {
+      const range = siteRange(c, def, deed);
+      // A miner says what is wrong with the bare rock it has (`mineIdle`).
+      const mine = kind === 'mine' ? this.mineIdle(game, c, deed, range) : null;
+      if (mine) this.why(c, mine.why, mine.n, mine.what);
+      else this.why(c, 'range', range);
+    }
     // Nothing to do right now: potter about near the token.
     this.wanderTarget(game, c, 3, deed.x + 0.5, deed.y + 0.5);
     c.until = game.time + this.idleRest(c);
