@@ -356,7 +356,6 @@ const one = (k: string): string => said(k)[0] ?? '';
 
 /* ---- both sides' numbers ------------------------------------------------------------------------------------------- */
 
-const num = (n: number): string => String(n);
 check('every lair kind is the same on both sides: name, kind, site, count, boss, restock, distance and hoard',
   one('KINDS') === [...LAIR_KINDS].sort((a, b) => (a.id < b.id ? -1 : 1)).map((k) => [k.id, k.name, k.species, k.site, k.count, k.boss ?? '-', k.bossHealth, k.bossAttack,
     k.restock, k.keepOff, k.map, k.trophy, k.scales].join(':')).join('|'), one('KINDS'));

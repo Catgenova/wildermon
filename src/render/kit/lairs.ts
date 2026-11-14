@@ -1,9 +1,9 @@
 import { HEIGHT_SCALE } from '../iso';
 import { rand } from '../ivy';
 import { flame, glow, speckle } from './hearthstone';
-import { stoneSkin, strut } from './outdoor';
+import { strut } from './outdoor';
 import {
-  css, deeper, extrude, grain, hex, lathe, mix, paler, prism, proj, slab, TAU, toneOf,
+  css, deeper, extrude, grain, hex, lathe, mix, paler, prism, proj, TAU, toneOf,
   type Ctx, type Face, type KitLook, type KitModel, type KitPart, type KitPiece, type PaintCtx, type Pt, type Side, type Tone, type V3,
 } from './core';
 
