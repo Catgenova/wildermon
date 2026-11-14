@@ -124,6 +124,8 @@ export interface Opts {
   gear?: GearLook;
   pose?: string;
   dormant?: boolean;
+  /** A crop's stage tended (`Crop.tendedNow`). */
+  tended?: boolean;
 }
 
 export const DEFAULTS: Opts = {
@@ -581,12 +583,12 @@ const crop: Family = {
   about: 'Crops in a field by stage of growth, a tile\'s bake at each turn of the camera and step of the sun (fieldBake).',
   list: () => Object.values(CROPS).map((c): Asset => ({
     family: 'crop', kind: c.id, name: c.name, register: 'paint', style: 'flat', entry: 'fieldBake', file: 'src/render/crops.ts', views: 'turns',
-    states: states(['sown', 'sprouting', 'growing', 'ripe']), variants: [{ label: 'dormant', set: { dormant: true } }], motions: [frames('sun', 'the sun\'s steps', 8)], emissive: false, ref: 2,
+    states: states(['sown', 'sprouting', 'growing', 'ripe']), variants: [{ label: 'tended', set: { tended: true } }, { label: 'dormant', set: { dormant: true } }, { label: 'dormant, tended', set: { dormant: true, tended: true } }], motions: [frames('sun', 'the sun\'s steps', 8)], emissive: false, ref: 2,
   })),
   draw: (ctx, sx, sy, zoom, a, o) => {
     const c = CROPS[a.kind];
     const step = o.motion === 'sun' ? o.frame : 3;
-    const b = fieldBake(c.id, o.state, c.colors[0], c.colors[1], !!o.dormant, o.turn, step, zoom, 0);
+    const b = fieldBake(c.id, o.state, c.colors[0], c.colors[1], !!o.dormant, !!o.tended, o.turn, step, zoom, 0);
     ctx.drawImage(b.canvas, sx - b.ax, sy - b.ay, b.w, b.h);
   },
 };

@@ -1,8 +1,9 @@
 import { FACINGS, FURNITURE, furnitureDef } from '../game/furniture';
 import { animationsOff, animNow } from '../engine/motion';
 import { planterHolds, planterTrim } from './plantertrim';
+import { RIPE } from '../game/farming';
 import type { Seat } from './figure';
-import { cropPlant } from './crops';
+import { cropPlant, DAMP_SOIL, DRY_SOIL, WATER_LINE, WEED } from './crops';
 import { materialOf } from '../game/materials';
 import { WALL_HEIGHT, WALL_THICK, type Side } from '../game/building';
 import { SUBTILES } from '../game/crates';
@@ -3279,6 +3280,29 @@ const MODELS: Record<string, Model> = {
         for (const k of [0.3, 0.7]) {
           const [a, b] = [F(0.4, k * hh), F(w - 0.4, k * hh)];
           sc.g.beginPath(); sc.g.moveTo(a[0], a[1]); sc.g.lineTo(b[0], b[1]); sc.g.stroke();
+        }
+        if (holds && holds.stage < RIPE) {
+          // A stage the Tend action takes: pale with weeds still to tend, dark with water along the rake's marks tended.
+          sc.g.fillStyle = holds.tended ? DAMP_SOIL : DRY_SOIL;
+          const c = [F(0, 0), F(w, 0), F(w, hh), F(0, hh)];
+          sc.g.beginPath(); c.forEach(([px, py], i) => (i ? sc.g.lineTo(px, py) : sc.g.moveTo(px, py))); sc.g.closePath(); sc.g.fill();
+          if (holds.tended) {
+            sc.g.strokeStyle = WATER_LINE;
+            sc.g.lineWidth = sc.ink * 0.5;
+            for (const k of [0.3, 0.7]) {
+              const [a, b] = [F(0.4, k * hh + 0.15), F(w - 0.4, k * hh + 0.15)];
+              sc.g.beginPath(); sc.g.moveTo(a[0], a[1]); sc.g.lineTo(b[0], b[1]); sc.g.stroke();
+            }
+          } else {
+            for (let i = 0; i < 8; i++) {
+              const [px, py] = F(0.6 + ((i * 0.37) % 1) * (w - 1.2), (i % 2 ? 0.15 : 0.85) * hh);
+              for (const [col, lw] of [['rgba(46,40,56,0.6)', sc.ink * 1.4], [WEED, sc.ink * 0.6]] as const) {
+                sc.g.strokeStyle = col;
+                sc.g.lineWidth = lw;
+                for (const d of [-1, 0, 1]) { sc.g.beginPath(); sc.g.moveTo(px, py); sc.g.lineTo(px + d * 1.2, py - 2 + Math.abs(d) * 0.5); sc.g.stroke(); }
+              }
+            }
+          }
         }
         if (holds?.stage !== 0) return;
         // Sown: a drill down the middle, and the seed in it.

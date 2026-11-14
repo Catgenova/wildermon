@@ -15,7 +15,8 @@ import { BUSH3D_SPECIES, bush3dSprite, forgetTrees3d, log3dSprite, STUMP3D_SPECI
 import { inkOf, READ_BACK } from './ink';
 import { woodOf } from './trees3d/stump';
 import type { Season } from '../world/calendar';
-import { cropPlant, DORMANT_FRUIT, DORMANT_LEAF, fieldBake } from './crops';
+import { cropPlant, DAMP_SOIL, DORMANT_FRUIT, DORMANT_LEAF, DRY_SOIL, fieldBake, WATER_LINE, WEED } from './crops';
+import { RIPE } from '../game/farming';
 import { SACK_EYE, sackModel, sackSize } from './kit/sack';
 import { layKitModel } from './kitpieces';
 
@@ -1032,10 +1033,13 @@ const frosted = (c: string, into: string, k: number): string => {
  * A crop on a tilled field drawn flat, for the low-end graphics (`drawsLow`):
  * each of the four stages its own model, each family of crop its own shape
  * (`cropPlant`), nine plants to the tile. `dormant` dulls its green and rimes
- * its furrows.
+ * its furrows. Before ripe, `tended` (`Crop.tendedNow`) darkens and waters its
+ * soil, and untended it is pale and weedy.
  */
-export function cropFlatSprite(cropId: string, stage: number, look: string, leaf: string, fruit: string, dormant = false, rect = false): Sprite {
-  const key = `${SPRITE_SCALE}|cropflat:${cropId}:${stage}${dormant ? ':dormant' : ''}${rect ? ':rect' : ''}`;
+export function cropFlatSprite(cropId: string, stage: number, look: string, leaf: string, fruit: string, dormant: boolean, tended: boolean, rect = false): Sprite {
+  // Tended or not shows before ripe, as on a solid field (`fieldBake`): dry and weedy still to tend, dark and watered tended.
+  const care = stage >= 0 && stage < RIPE ? (tended ? 2 : 1) : 0;
+  const key = `${SPRITE_SCALE}|cropflat:${cropId}:${stage}${dormant ? ':dormant' : ''}${rect ? ':rect' : ''}:${care}`;
   let spr = cache.get(key);
   if (spr) return spr;
   if (dormant) {
@@ -1060,6 +1064,17 @@ export function cropFlatSprite(cropId: string, stage: number, look: string, leaf
       ? (u: number, v: number): [number, number] => [cx + u * 44 * Math.SQRT2, cy + v * 22 * Math.SQRT2]
       : (u: number, v: number): [number, number] => [cx + (u - v) * 44, cy + (u + v) * 22];
     ctx.lineCap = 'round';
+    if (care) {
+      // The soil: pale and dry still to tend, dark and damp tended.
+      ctx.fillStyle = care === 1 ? DRY_SOIL : DAMP_SOIL;
+      ctx.beginPath();
+      for (const [k, [u, v]] of [[-1, -1], [1, -1], [1, 1], [-1, 1]].entries()) {
+        const [px, py] = iso(u * (rect ? 0.4 : EDGE), v * (rect ? 0.4 : EDGE));
+        if (k) ctx.lineTo(px, py); else ctx.moveTo(px, py);
+      }
+      ctx.closePath();
+      ctx.fill();
+    }
     /*
      * Furrows run across the field under the plants. The ground they have to
      * stay on is a diamond, so a furrow further from the middle is a shorter
@@ -1080,6 +1095,17 @@ export function cropFlatSprite(cropId: string, stage: number, look: string, leaf
       ctx.moveTo(ax, ay);
       ctx.lineTo(bx, by);
       ctx.stroke();
+      if (care === 2 && !dormant) {
+        // Tended: water along the furrow.
+        ctx.strokeStyle = WATER_LINE;
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(ax, ay + 0.6);
+        ctx.lineTo(bx, by + 0.6);
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(70,50,32,0.45)';
+        ctx.lineWidth = 2;
+      }
       // A winter's rime along the middle of the ridge of each furrow.
       if (dormant) {
         ctx.strokeStyle = 'rgba(236,240,244,0.45)';
@@ -1090,6 +1116,27 @@ export function cropFlatSprite(cropId: string, stage: number, look: string, leaf
         ctx.stroke();
         ctx.strokeStyle = 'rgba(70,50,32,0.45)';
         ctx.lineWidth = 2;
+      }
+    }
+    if (care === 1) {
+      // Still to tend: weeds in the furrows, yellow-green tufts no crop is.
+      const wr = mulberry32(hashString(cropId) + 4409);
+      for (let i = 0; i < 12; i++) {
+        const f = (Math.floor(wr() * 5) - 2) * (rect ? 0.17 : 0.19) + 0.095 * (rect ? 0.9 : 1);
+        const half = rect ? 0.36 : EDGE - Math.abs(f) - 0.04;
+        if (half <= 0.05) continue;
+        const t = (wr() * 2 - 1) * half;
+        const [px, py] = rect ? iso(t, f) : iso(f + t, f - t);
+        for (const [col, lw] of [['rgba(46,40,56,0.5)', 1.8], [dormant ? frosted(WEED, DORMANT_LEAF, 0.55) : WEED, 0.9]] as const) {
+          ctx.strokeStyle = col;
+          ctx.lineWidth = lw;
+          for (const d of [-2, -1, 0, 1, 2]) {
+            ctx.beginPath();
+            ctx.moveTo(px + d * 0.3, py);
+            ctx.quadraticCurveTo(px + d * 0.7, py - 3, px + d * 1.5, py - 5 + Math.abs(d) * 0.9);
+            ctx.stroke();
+          }
+        }
       }
     }
     if (stage === 0) {
@@ -1131,10 +1178,11 @@ function hashString(s: string): number {
  * stage, built and lit as the solid trees are (`fieldBake`) from the camera's
  * `turn` under the sun's `step`, laid out the `layout`th way (`FIELD_LAYOUTS`).
  * `dormant` is a field waiting out a winter,
- * which grows nothing: its green gone dull and a rime on it.
+ * which grows nothing: its green gone dull and a rime on it. `tended`: its
+ * stage tended (`Crop.tendedNow`), shown before ripe.
  */
-export function cropSprite(cropId: string, stage: number, leaf: string, fruit: string, dormant: boolean, turn: number, step: number, layout = 0): Sprite {
-  return fieldBake(cropId, stage, leaf, fruit, dormant, turn, step, SPRITE_SCALE, layout);
+export function cropSprite(cropId: string, stage: number, leaf: string, fruit: string, dormant: boolean, tended: boolean, turn: number, step: number, layout = 0): Sprite {
+  return fieldBake(cropId, stage, leaf, fruit, dormant, tended, turn, step, SPRITE_SCALE, layout);
 }
 
 /** The campfire, in the kit (`kit/campfire.ts`). */

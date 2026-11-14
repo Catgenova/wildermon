@@ -1,4 +1,5 @@
-import { planterRow, planterTall } from '../crops';
+import { RIPE } from '../../game/farming';
+import { DAMP_SOIL, DRY_SOIL, planterRow, planterTall, WATER_LINE } from '../crops';
 import { planterHolds as holds, planterTrim as trimOf } from '../plantertrim';
 import { rand } from '../ivy';
 import {
@@ -16,7 +17,9 @@ import {
  *
  * Its `trim` is what it holds (`planterTrim`, plantertrim.ts): nought for
  * bare earth, otherwise one more than the crop's place in `CROP_LIST` times
- * `CROP_STAGES`, plus the stage. Read back with `planterHolds`.
+ * `CROP_STAGES`, plus the stage, and more once a stage before ripe is tended.
+ * Read back with `planterHolds`. Before ripe, untended earth is pale with
+ * weeds in it, and tended earth dark and watered.
  */
 
 /** How big a crop's plant is drawn in a planter, against one in a field, and the tallest one stands, in model units: corn and wemp come down to it. */
@@ -32,9 +35,21 @@ const EARTH = toneOf('#866650', '#4a3844');
 /** Half its length and depth, the top of its feet and of its walls, how thick they are, and the earth's top. */
 const X = 9.2, Y = 4, FEET = 0.6, H = 4.4, T = 0.6, SOIL = H - 0.25;
 
-/** The earth's top: crumbs darker and paler, the marks of a rake along it; sown, the drill down its middle and the seed in it. */
-function earth(sown: boolean) {
+/** Weeds in a planter still to tend: along its walls, either side of the row. */
+const WEEDS: V3[] = [[-6.6, -2.3, SOIL], [-2.4, 2.4, SOIL], [1.2, -2.4, SOIL], [4.6, 2.3, SOIL], [7, -2.2, SOIL], [-7.4, 2.2, SOIL]];
+
+/**
+ * The earth's top: crumbs darker and paler, the marks of a rake along it; sown,
+ * the drill down its middle and the seed in it. At a stage the Tend action
+ * takes, `care` 1 still to tend: pale and dry (its weeds stand in it, `WEEDS`);
+ * 2 tended: dark and damp, water along the rake's marks.
+ */
+function earth(sown: boolean, care: number) {
   return (g: Ctx, k: PaintCtx, s: Side): void => {
+    if (care) {
+      g.fillStyle = care === 1 ? DRY_SOIL : DAMP_SOIL;
+      g.fillRect(-s.w / 2, -s.h / 2, s.w, s.h);
+    }
     const R = rand(41);
     for (let i = 0; i < 34; i++) {
       g.fillStyle = i % 2 ? css(mix(k.fill, hex('#3e3040'), 0.35), 0.6) : css(mix(k.fill, [255, 236, 210], 0.25), 0.6);
@@ -50,6 +65,11 @@ function earth(sown: boolean) {
       g.strokeStyle = css(mix(k.fill, [255, 236, 210], 0.3), 0.45);
       g.lineWidth = 0.08;
       g.beginPath(); g.moveTo(-s.w / 2 + 0.4, y * s.h - 0.14); g.lineTo(s.w / 2 - 0.4, y * s.h - 0.14); g.stroke();
+    }
+    if (care === 2) {
+      g.strokeStyle = WATER_LINE;
+      g.lineWidth = 0.1;
+      for (const y of [-0.3, 0.3]) { g.beginPath(); g.moveTo(-s.w / 2 + 0.4, y * s.h + 0.1); g.lineTo(s.w / 2 - 0.4, y * s.h + 0.1); g.stroke(); }
     }
     if (!sown) return;
     g.strokeStyle = css(mix(k.fill, hex('#2e2430'), 0.55), 0.8);
@@ -101,19 +121,20 @@ function planterOf(look: KitLook): KitModel {
   wall(X - T, X, -Y + T, Y - T, 'right', 'left', 24);
 
   // The earth.
-  parts.push({ faces: slab(-X + T, X - T, -Y + T, Y - T, FEET, SOIL, EARTH, { paint: { top: earth(has?.stage === 0) } }), solid: false });
+  parts.push({ faces: slab(-X + T, X - T, -Y + T, Y - T, FEET, SOIL, EARTH, { paint: { top: earth(has?.stage === 0, has && has.stage < RIPE ? (has.tended ? 2 : 1) : 0) } }), solid: false });
 
-  // What grows in it: a row along its middle, at its stage, nearest last.
-  if (has && has.stage > 0) {
+  // What grows in it: a row along its middle, at its stage, nearest last; and still to tend, weeds along its walls.
+  const weeds = has && has.stage < RIPE && !has.tended ? WEEDS : [];
+  if (has && (has.stage > 0 || weeds.length)) {
     const [leaf, fruit] = has.crop.colors;
     const at: V3[] = Array.from({ length: ROW }, (_, i) => [-X + T + 1.5 + (i * (2 * (X - T) - 3)) / (ROW - 1), ((((i * 37) % 5) - 2) * 0.16), SOIL]);
     const size = Math.min(PLANT, PLANT_TALL / Math.max(1, planterTall(has.crop.id, has.stage, 1)));
-    const tall = planterTall(has.crop.id, has.stage, size);
+    const tall = has.stage > 0 ? planterTall(has.crop.id, has.stage, size) : 2;
     parts.push({
       reach: at.flatMap(([x, y, z]) => [[x - 1.4, y - 1.4, z], [x + 1.4, y + 1.4, z + tall]] as V3[]),
       // Clicked by too: the box it is clicked by grows with what grows in it.
       solid: true,
-      draw: (g, e) => planterRow(g, e, at, has.crop.id, has.stage, leaf, fruit, size),
+      draw: (g, e) => planterRow(g, e, at, has.crop.id, has.stage, leaf, fruit, size, weeds),
     });
   }
   return { parts, shade: [[-X, -Y, 0], [X, -Y, 0], [X, Y, 0], [-X, Y, 0]] };
@@ -125,8 +146,11 @@ export const PLANTER: KitPiece = {
   states: [
     { trim: 0, label: 'bare' },
     { trim: trimOf('wheat', 0), label: 'wheat sown' },
+    { trim: trimOf('wheat', 0, true), label: 'wheat sown, tended' },
     { trim: trimOf('carrot', 1), label: 'carrot sprouting' },
+    { trim: trimOf('carrot', 1, true), label: 'carrot sprouting, tended' },
     { trim: trimOf('cabbage', 2), label: 'cabbage growing' },
+    { trim: trimOf('cabbage', 2, true), label: 'cabbage growing, tended' },
     { trim: trimOf('wheat', 3), label: 'wheat ripe' },
     { trim: trimOf('cotton', 3), label: 'cotton ripe' },
     { trim: trimOf('basil', 3), label: 'basil ripe' },

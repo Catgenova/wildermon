@@ -137,7 +137,7 @@ import { BANNER_MS, LEAVING_MS } from '../deedbanner';
 import { JAR_SEEDS, SEED_JAR, STAMP, STAMP_GOES, STAMP_RARE, TABLET, TABLET_BELOW, TABLET_GAIN, WHETSTONE } from '../../game/relicuse';
 import { RELICS } from '../../game/archaeology';
 import { BRACE_MOST, BRACE_STEP, BRIDLE_PACE, COLLAR_CUT } from '../../game/creatures';
-import { cropYield, RIPE, seedSays } from '../../game/farming';
+import { cropYield, RIPE, seedSays, STAGE_NAMES } from '../../game/farming';
 import { SEAT_ELSEWHERE, SEAT_STALE_S } from '../../net/supabase';
 import { HEARTBEAT, IDLE_LOGOUT, LAND_STEP, LAND_UNFOGGED_EVERY, RECONCILE_EVERY, WORKER_REST_EVERY, WORKER_REST_FIRST, WORKER_REST_MOST, UNSTICK_REACH, UNSTICK_SEARCH } from '../../game/keep';
 import { REPORTS_A_SESSION } from '../../net/errors';
@@ -4419,12 +4419,19 @@ export const NEWS: News[] = [
     ],
   },
   {
-    n: 581,
+    n: 582,
     day: '2026-11-14',
     lines: () => [
       'Changed: campfire and dropped items sack redrawn in the rune pastel kit.',
       `Campfire logs: ${CAMPFIRE_LOGS[1]} to ${CAMPFIRE_LOGS[CAMPFIRE_LOGS.length - 1]}, one more each ${frac(1 / (CAMPFIRE_LOGS.length - 1))} of fuel held.`,
       `Sack size: 1 thing; more; full at ${SACK_FULL.stacks} stacks or ${SACK_FULL.things} things.`,
+    ],
+  },
+  {
+    n: 581,
+    day: '2026-11-13',
+    lines: () => [
+      `New: crop look at ${listed(STAGE_NAMES.slice(0, RIPE))}, on fields, garden beds and planters, winter included. Not tended this growth stage: pale soil, weeds. Tended: dark soil, water in the furrows. Ripe: unchanged.`,
     ],
   },
   {
