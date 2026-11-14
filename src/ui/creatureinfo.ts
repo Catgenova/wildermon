@@ -101,7 +101,7 @@ export function creatureLines(g: Game, c: Creature): string[] {
   // A monster is not a wildermon and nothing about it is negotiable.
   if (def.monster) {
     lines.push(`${kindName(c)} · hostile`);
-    lines.push(`Health ${Math.ceil(c.health)}/${maxHealth(c, def)} ${bar(c.health / maxHealth(c, def))} · blow ${attackOf(c, def).toFixed(0)} damage`);
+    lines.push(`Health ${Math.ceil(c.health)}/${maxHealth(c, def)} ${bar(c.health / maxHealth(c, def))} · blow ${+attackOf(c, def).toFixed(1)} damage`);
     lines.push('Cannot be tamed.');
     return lines;
   }
@@ -169,7 +169,7 @@ export function creatureLines(g: Game, c: Creature): string[] {
     // Why it is standing about, and what it did this island day and the one before.
     if (c.idle) lines.push(idleSays(c.idle, c.trade ?? def.gathers, c.carrying ? itemDef(c.carrying.id).name : null));
     lines.push(...ledgerLines(c.ledger, g.islandDay()));
-  } else lines.push(`Companion · ${STANCE_NAMES[c.stance].toLowerCase()} · blow ${attackOf(c, def).toFixed(0)} damage`);
+  } else lines.push(`Companion · ${STANCE_NAMES[c.stance].toLowerCase()} · blow ${+attackOf(c, def).toFixed(1)} damage`);
   // Not at work: the task it would do on a settlement.
   if (c.mode !== 'deed') {
     const task = taskLine(c);

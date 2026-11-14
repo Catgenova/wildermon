@@ -52,7 +52,7 @@ const blows = (key: string, trait: string): string => `
   a := creature_spawn(w, 'ulva', 16.5, 16.5, 'active', now() - interval '60 days', u);
   t := creature_spawn(w, 'ulva', 17.5, 16.5, 'wild', now() - interval '60 days', null);
   update creature set traits = ${arr([trait])}, skills = '{}'::jsonb, rare = null where world_id = w and id = a;
-  update creature set traits = '{}', rare = null, health = 1000000, bleed_rate = null, bleed_until = null where world_id = w and id = t;
+  update creature set traits = '{}', rare = null, health = 10000, bleed_rate = null, bleed_until = null where world_id = w and id = t;
   select * into c from creature where world_id = w and id = a;
   insert into said values ('${key}:BASE', attack_of(c)::text);
   insert into said values ('${key}:CHANCE', beast_chance(c, '${key === 'HEAVY' ? 'heavy' : 'rip'}')::text);
@@ -61,7 +61,7 @@ const blows = (key: string, trait: string): string => `
     perform creature_attack(w, a, t);
     select * into q from creature where world_id = w and id = t;
     insert into said values ('${key}:' || i, (v_h - q.health)::text || '|' || coalesce(q.bleed_rate::text, '-'));
-    update creature set health = 1000000, bleed_rate = null, bleed_until = null where world_id = w and id = t;
+    update creature set health = 10000, bleed_rate = null, bleed_until = null where world_id = w and id = t;
   end loop;
   delete from creature where world_id = w; delete from class_mark where world_id = w;`;
 

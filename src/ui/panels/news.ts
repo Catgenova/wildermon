@@ -109,7 +109,7 @@ import { CHART_LEAST, CHART_QL_PER_TILE, CHART_SHEET } from '../../game/cartogra
 import { MEAD_AGE_CAP, MEAD_AGE_RATE } from '../../game/ageing';
 import { WHEY_FEED } from '../../game/dairy';
 import { GATHER_SKILL, LEARN_PACE as PACE_258, LEARN_PACE, PULL_PACE_TIMES, sparTaskSays } from '../../game/creatures';
-import { BED_REST, DEN_HEALTH, restFor, SPECIALTY_AT, SPECIALTY_BONUS, STANCE_NAMES, TIRE_GOES, UNFED_PACE, UPKEEP_FOR, workDuration } from '../../game/creatures';
+import { BED_REST, BLOW_SHARE, CREATURE_ATTACK_MUL, CREATURE_HEALTH_MUL, DEN_HEALTH, REGEN_KEPT, REGEN_WILD, restFor, SPECIALTY_AT, SPECIALTY_BONUS, STANCE_NAMES, TIRE_GOES, UNFED_PACE, UPKEEP_FOR, workDuration } from '../../game/creatures';
 import { BARDING_CUT, GEAR_FLOOR, GEAR_QL_LEAST, GEAR_SIZES, HARNESS_PACE, PACK_LOADS } from '../../game/wildgear';
 import { favouriteOf, fedBonus, FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, levelSkill, stageLevels, TAME_HARD, tameLearn, tameNeeds, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME } from '../../game/creatures';
 import { type AbilityId, type FightStyle, abilityName, abilitySays, BASE_STATS, EVOLVE_AT, FILE_RARITY_ODDS, POT_MOST, POT_STEP, GATHER_DO, GATHER_VERB, GRAZE_FILL, LEARNS_SAYS, seasonSays, stageSays, STYLE_SAYS, learnPaceSays, STAGE_LOADS, stageWorkSays, TEND_REACH, workerSkipsTools } from '../../game/creatures';
@@ -4425,6 +4425,26 @@ export const NEWS: News[] = [
       `New: rowing under way: ${OAR_DROPS} drops a blade at the catch; whirl pair a blade a stroke, ${SWIRL_SECS} s.`,
       'Without a graphics card: swimming strokes\' splashes, rings treading water, the float\'s strike and a catch only.',
     ],
+  },
+  {
+    n: 596,
+    day: '2026-11-14',
+    lines: () => {
+      // Each figure before the change, off the one in force: the multiplier undone.
+      const was = (x: number, mul: number): number => Math.round((x / mul) * 100) / 100;
+      const hp = (n: number): string => `${n} (was ${was(n, CREATURE_HEALTH_MUL)})`;
+      const hit = (n: number): string => `${n} (was ${was(n, CREATURE_ATTACK_MUL)})`;
+      const life = (n: number): string => `${percent(Math.round(n * BLOW_SHARE * 100) / 100)} (was ${percent(Math.round(was(n, CREATURE_ATTACK_MUL) * BLOW_SHARE * 100) / 100)})`;
+      const name = (id: string): string => SPECIES[id].name.toLowerCase();
+      return [
+        `Changed: every creature's base health ×${CREATURE_HEALTH_MUL}, base blow damage ×${CREATURE_ATTACK_MUL}: wildermon and monsters, wild and yours. Yours keep their share of health.`,
+        `Monster health: ${listed(MONSTERS.map(([id]) => `${name(id)} ${hp(SPECIES[id].health)}`))}.`,
+        `Monster blow: ${listed(MONSTERS.map(([id]) => `${name(id)} ${hit(SPECIES[id].attack)}`))}; on an unarmoured life ${listed(MONSTERS.map(([id]) => `${name(id)} ${life(SPECIES[id].attack)}`))}.`,
+        `Changed: creature health back per second, unhurt: wild ${hp(REGEN_WILD)}, yours ${hp(REGEN_KEPT)}; time to heal unchanged.`,
+        `Changed: wildermon bed size bands, non-evolving kinds: small under ${hp(DEN_HEALTH[0])} health, medium under ${hp(DEN_HEALTH[1])}; same kinds in each.`,
+        'Unchanged: treasure map chance and map QL off a monster; your health, weapons, spells, traps and armour.',
+      ];
+    },
   },
   {
     n: 595,

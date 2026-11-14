@@ -3535,6 +3535,7 @@ export function helpText(): string {
       <li>Max alive: ${listed(MONSTERS.map(([id]) => `${MONSTER_CAP[id] ?? 1} ${SPECIES[id].name.toLowerCase()}${(MONSTER_CAP[id] ?? 1) === 1 ? '' : 's'}`))}.
       Distance kept from your settlement totem: ${listed(MONSTERS.map(([id]) => `${SPECIES[id].name.toLowerCase()} ${MONSTER_KEEP_OFF[id] ?? 0} tiles`))}.</li>
       <li>Cannot be tamed, trapped, bred or brushed.</li>
+      <li>Health: ${listed(MONSTERS.map(([id]) => `${SPECIES[id].name.toLowerCase()} ${SPECIES[id].health}`))}. Blow: ${listed(MONSTERS.map(([id]) => `${SPECIES[id].name.toLowerCase()} ${SPECIES[id].attack}`))} damage.</li>
       <li>Blow against an unarmoured life: ${listed(MONSTERS.map(([id]) => `${SPECIES[id].name.toLowerCase()} ${percent(Math.round(SPECIES[id].attack * BLOW_SHARE * 100) / 100)}`))}.</li>
       ${REGIONS.filter((R) => R.monsters).map((R) => `<li>${capital(islandName(R.name))}: monster country: every wild spawn is one of these; holds ${mul(R.monsters ?? 1)} the number the rest of the chart shares
       (${listed(MONSTERS.filter(([id]) => (lairOf(id) ?? R) === R).map(([id]) => `${(MONSTER_CAP[id] ?? 1) * (R.monsters ?? 1)} ${SPECIES[id].name.toLowerCase()}${(MONSTER_CAP[id] ?? 1) * (R.monsters ?? 1) === 1 ? '' : 's'}`))}).</li>`).join('')}

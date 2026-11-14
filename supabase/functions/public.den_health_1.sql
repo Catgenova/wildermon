@@ -4,4 +4,4 @@ CREATE OR REPLACE FUNCTION public.den_health_1()
  RETURNS double precision
  LANGUAGE sql
  IMMUTABLE
-AS $function$ select 25::double precision $function$
+AS $function$ select 75::double precision $function$

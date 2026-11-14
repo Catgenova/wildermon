@@ -80,8 +80,9 @@ begin
   end if;
   if c.health > top then
     c.health := top;
-  elsif c.health < top and (c.hurt_at is null or now() - c.hurt_at > interval '6 seconds') then
-    c.health := least(top, c.health + elapsed * case when c.mode = 'wild' then 0.25 else 0.6 end * beast_mul(c, 'mend'));
+  elsif c.health < top and (c.hurt_at is null or now() - c.hurt_at > make_interval(secs => regen_after())) then
+    -- Health back a second, wild and kept (`REGEN_WILD`, `REGEN_KEPT`): scaled with every kind's health.
+    c.health := least(top, c.health + elapsed * case when c.mode = 'wild' then regen_wild() else regen_kept() end * beast_mul(c, 'mend'));
   end if;
   if d.fleece is not null and a.growth > 0 and c.fleece < 1 then
     c.fleece := least(1, c.fleece + elapsed * d.fleece * a.growth * beast_mul(c, 'grow'));
