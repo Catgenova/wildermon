@@ -68,9 +68,9 @@ export class FaithPanel {
   ) {
     win.body.classList.add('trade-body');
     const bar = document.createElement('div');
-    bar.className = 'trade-tabs log-tabs';
+    bar.className = 'trade-tabs log-tabs rc-tabs';
     for (const t of [...PATRONS.map((p): [Tab, string] => [p.id, p.name]), ['path', 'Path'] as [Tab, string]]) {
-      const b = button(t[1], 'log-tab');
+      const b = button(t[1], 'log-tab rc-tab');
       b.addEventListener('click', () => {
         const moved = this.viewing !== t[0];
         this.viewing = t[0];

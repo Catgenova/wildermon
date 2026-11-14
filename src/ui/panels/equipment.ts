@@ -10,6 +10,7 @@ import { drawFigure, figureJoint, onScreen, viewOf, type FigurePose, type V3 } f
 import { makeDraggable, makeDropZone, type DragPayload } from '../dragdrop';
 import { EMPTY_SAYS, equipReport, fitsSlot, pc, type EquipReport, type ShelfView, type SkillView, type Stat } from '../equipment';
 import type { UIWindow } from '../windows';
+import { kit, meaning, type Meaning } from '../kit';
 import { fixedAll, NO_MARKUP, setMarkup, type Markup } from '../html';
 
 /**
@@ -128,6 +129,15 @@ interface Socket {
   uid: number | null;
 }
 
+
+/** A section's name in a tab. */
+const sub = (text: string): HTMLDivElement => kit(el('div', 'eq-sub', text), 'section');
+/** A bar and its fill, and what its fill means (src/ui/kit.ts). */
+const meter = (also: string, m: Meaning): { bar: HTMLSpanElement; fill: HTMLSpanElement } => ({
+  bar: meaning(kit(el('span', also ? `eq-bar ${also}` : 'eq-bar'), 'meter'), m),
+  fill: kit(el('span', 'eq-bar-fill'), 'fill'),
+});
+
 export class EquipmentPanel {
   private readonly heads = new Map<string, { box: HTMLElement; num: HTMLElement; value: number }>();
   private readonly title: HTMLDivElement;
@@ -159,16 +169,18 @@ export class EquipmentPanel {
   private get still(): boolean { return lessMotion(); }
 
   constructor(private readonly win: UIWindow, private readonly game: Game) {
+    // The window is one page that scrolls as a whole: its body is its one scroll area.
+    kit(win.body, 'body', 'scroll');
     win.body.classList.add('eq-body');
     const root = el('div', 'eq');
     win.body.append(root);
 
     /* ---- along the top: what is in your hands, your stance, and the four numbers that say how a fight goes ---- */
-    const top = el('header', 'eq-top');
+    const top = kit(el('header', 'eq-top'), 'card');
     const id = el('div', 'eq-id');
     this.title = el('div', 'eq-title');
     this.kind = el('span', 'eq-kind');
-    this.stances = el('div', 'eq-stances');
+    this.stances = kit(el('div', 'eq-stances'), 'bar');
     this.stances.setAttribute('role', 'radiogroup');
     this.stances.setAttribute('aria-label', 'Stance');
     this.stanceSays = el('span', 'eq-stance-says');
@@ -220,7 +232,7 @@ export class EquipmentPanel {
     }
     // Turn the figure: a button at each side of its plinth, or drag it.
     const turn = (cls: string, text: string, label: string, by: number): HTMLButtonElement => {
-      const b = el('button', `eq-turn-btn ${cls}`, text);
+      const b = kit(el('button', `eq-turn-btn ${cls}`, text), 'btn', 'icon');
       b.type = 'button';
       b.title = label;
       b.setAttribute('aria-label', label);
@@ -244,8 +256,8 @@ export class EquipmentPanel {
     this.canvas.addEventListener('pointerleave', up);
 
     /* ---- the shelf: what in the pack could go on ---- */
-    this.shelfBox = el('section', 'eq-shelf-box');
-    this.shelfHead = el('div', 'eq-shelf-head');
+    this.shelfBox = kit(el('section', 'eq-shelf-box'), 'sunk');
+    this.shelfHead = kit(el('div', 'eq-shelf-head'), 'section');
     this.shelf = el('div', 'eq-shelf');
     this.shelf.setAttribute('role', 'list');
     this.shelfBox.append(this.shelfHead, this.shelf);
@@ -256,13 +268,13 @@ export class EquipmentPanel {
 
     /* ---- the tabs ---- */
     const side = el('section', 'eq-side');
-    const bar = el('div', 'eq-tabs');
+    const bar = kit(el('div', 'eq-tabs'), 'tabs');
     bar.setAttribute('role', 'tablist');
     bar.setAttribute('aria-label', 'Equipment');
     const panes = el('div', 'eq-panes');
     const order: Array<[Tab, string]> = [['offence', 'Offence'], ['defence', 'Defence'], ['skills', 'Skills']];
     for (const [t, label] of order) {
-      const btn = el('button', 'eq-tab', label);
+      const btn = kit(el('button', 'eq-tab', label), 'tab');
       btn.type = 'button';
       btn.id = `eq-tab-${t}`;
       btn.setAttribute('role', 'tab');
@@ -295,7 +307,8 @@ export class EquipmentPanel {
       if (narrow !== root.classList.contains('eq-narrow')) {
         root.classList.toggle('eq-narrow', narrow);
       }
-      if (narrow) this.shelf.style.removeProperty('max-height');
+      // Held to what the window shows only where the shelf scrolls by itself (Classic); in Runecut the body is the one scroll area.
+      if (narrow || getComputedStyle(this.shelf).overflowY !== 'auto') this.shelf.style.removeProperty('max-height');
       else {
         const shows = win.body.clientHeight - (this.shelf.offsetTop - win.body.offsetTop) - 22;
         this.shelf.style.maxHeight = `${Math.max(SHELF_LEAST, shows)}px`;
@@ -475,7 +488,8 @@ export class EquipmentPanel {
     if (this.stances.dataset.sig === r.stance.now) return;
     this.stances.dataset.sig = r.stance.now;
     this.stances.replaceChildren(...r.stance.all.map((s) => {
-      const b = el('button', `eq-stance${s.id === r.stance.now ? ' eq-stance-on' : ''}`);
+      const b = kit(el('button', `eq-stance${s.id === r.stance.now ? ' eq-stance-on' : ''}`), 'btn');
+      b.classList.toggle('rc-on', s.id === r.stance.now);
       b.append(el('span', 'eq-stance-name', s.name), el('span', 'eq-stance-by', `deals ×${+s.dealt.toFixed(2)}`), el('span', 'eq-stance-by', `takes ×${+s.taken.toFixed(2)}`));
       b.type = 'button';
       b.setAttribute('role', 'radio');
@@ -502,12 +516,12 @@ export class EquipmentPanel {
       if (v.item) what.append(el('span', 'eq-shelf-does', `QL ${v.item.ql.toFixed(0)}, ${v.wearSays}.`));
       const acts = el('div', 'eq-shelf-acts');
       if (v.item) {
-        const off = el('button', 'eq-pill', 'Take off');
+        const off = kit(el('button', 'eq-pill', 'Take off'), 'btn');
         off.type = 'button';
         off.addEventListener('click', () => this.takeOff(v.slot));
         acts.append(off);
       }
-      const all = el('button', 'eq-pill', 'Show all');
+      const all = kit(el('button', 'eq-pill', 'Show all'), 'btn');
       all.type = 'button';
       all.addEventListener('click', () => this.pick(v.slot));
       acts.append(all);
@@ -516,13 +530,13 @@ export class EquipmentPanel {
       this.shelfHead.append(el('b', '', 'In your pack'), el('span', 'eq-shelf-n', `${list.length} wearable · drag onto a socket or the figure`));
     }
     if (!list.length) {
-      this.shelf.replaceChildren(el('div', 'eq-shelf-none', this.picked ? `Nothing in your pack for: ${placeName(this.picked)}.` : 'Nothing wearable in your pack.'));
+      this.shelf.replaceChildren(kit(el('div', 'eq-shelf-none', this.picked ? `Nothing in your pack for: ${placeName(this.picked)}.` : 'Nothing wearable in your pack.'), 'empty'));
     } else this.shelf.replaceChildren(...list.map((s) => this.shelfCard(s)));
     this.fade();
   }
 
   private shelfCard(s: ShelfView): HTMLElement {
-    const card = el('button', `eq-card${s.why ? ' eq-card-no' : ''}`);
+    const card = kit(el('button', `eq-card${s.why ? ' eq-card-no' : ''}`), 'card');
     card.type = 'button';
     card.setAttribute('role', 'listitem');
     card.style.setProperty('--eq-tint', s.tint ?? 'var(--eq-metal)');
@@ -537,7 +551,7 @@ export class EquipmentPanel {
     // What it does in its place, and beside it what else moves.
     const fx = el('span', 'eq-card-fx');
     if (s.main) fx.append(el('span', `eq-card-main ${s.main.better ? 'eq-good' : 'eq-bad'}`, s.main.text));
-    for (const e of s.effects) fx.append(el('span', `eq-fx ${e.better ? 'eq-fx-good' : 'eq-fx-bad'}`, e.text));
+    for (const e of s.effects) fx.append(meaning(kit(el('span', `eq-fx ${e.better ? 'eq-fx-good' : 'eq-fx-bad'}`, e.text), 'tag'), e.better ? 'good' : 'bad'));
     if (fx.childElementCount) text.append(fx);
     if (s.why) text.append(el('span', 'eq-card-why', s.why));
     card.append(text);
@@ -564,7 +578,7 @@ export class EquipmentPanel {
 
   private drawOffence(pane: HTMLElement, r: EquipReport): void {
     // What the blow is against what it meets, and what else it does.
-    const card = el('div', 'eq-weapon');
+    const card = kit(el('div', 'eq-weapon'), 'card');
     const pic = el('span', 'eq-weapon-pic');
     pic.append(glyph('weapon', this.game.worn('weapon')?.id));
     const words = el('div', 'eq-weapon-words');
@@ -583,12 +597,11 @@ export class EquipmentPanel {
   private drawDefence(pane: HTMLElement, r: EquipReport): void {
     // A blow on its way to you: what each thing takes off, and how much is left after it.
     const chain = el('div', 'eq-chain');
-    chain.append(el('div', 'eq-sub', 'Incoming blow'));
+    chain.append(sub('Incoming blow'));
     let prev = 1;
     for (const [i, st] of r.chain.entries()) {
       const row = el('div', `eq-step${i ? '' : ' eq-step-first'}`);
-      const bar = el('span', 'eq-bar eq-bar-step');
-      const fill = el('span', 'eq-bar-fill');
+      const { bar, fill } = meter('eq-bar-step', i ? 'bad' : 'info');
       fill.style.width = `${Math.round(st.left * 1000) / 10}%`;
       // What this step took off, left standing as a pale stub beyond what is left.
       const off = el('span', 'eq-bar-off');
@@ -601,11 +614,10 @@ export class EquipmentPanel {
     }
     // Where a blow lands, how often, and what is turned aside there.
     const map = el('div', 'eq-map');
-    map.append(el('div', 'eq-sub', 'Hit location'));
+    map.append(sub('Hit location'));
     for (const v of r.slots.filter((x) => x.struck !== null)) {
       const row = el('div', `eq-loc${v.soak === null ? ' eq-loc-bare' : ''}`);
-      const bar = el('span', 'eq-bar');
-      const fill = el('span', 'eq-bar-fill');
+      const { bar, fill } = meter('', 'info');
       fill.style.width = `${Math.round((v.soak ?? 0) * 100)}%`;
       bar.append(fill);
       row.append(el('span', 'eq-loc-name', v.name), el('span', 'eq-loc-odds', `${Math.round((v.struck ?? 0) * 100)}% of blows`), bar,
@@ -616,37 +628,35 @@ export class EquipmentPanel {
     for (const s of r.defence) rows.append(this.statRow(s));
     // Of each kind of blow, what reaches you.
     const thru = el('div', 'eq-thru');
-    thru.append(el('div', 'eq-sub', 'Damage taken by blow type'));
+    thru.append(sub('Damage taken by blow type'));
     for (const t of r.through) {
       const row = el('div', 'eq-thru-row');
-      const bar = el('span', 'eq-bar eq-bar-thru');
-      const fill = el('span', 'eq-bar-fill');
+      const { bar, fill } = meter('eq-bar-thru', 'bad');
       fill.style.width = `${Math.round(t.share * 1000) / 10}%`;
       bar.append(fill);
       row.append(el('span', 'eq-thru-name', t.name[0].toUpperCase() + t.name.slice(1)), bar, el('b', 'eq-thru-val', pc(t.share)));
       thru.append(row);
     }
     const carry = el('div', 'eq-stats eq-carry');
-    carry.append(el('div', 'eq-sub', 'Burden'));
+    carry.append(sub('Burden'));
     for (const s of r.burden) carry.append(this.statRow(s));
     pane.replaceChildren(chain, map, rows, thru, carry);
   }
 
   private drawSkills(pane: HTMLElement, r: EquipReport): void {
-    pane.replaceChildren(el('div', 'eq-sub', 'Now and at next level'), ...r.skills.map((s) => this.skillRow(s)));
+    pane.replaceChildren(sub('Now and at next level'), ...r.skills.map((s) => this.skillRow(s)));
   }
 
   private skillRow(s: SkillView): HTMLElement {
-    const row = el('div', 'eq-skill');
+    const row = kit(el('div', 'eq-skill'), 'card');
     const head = el('div', 'eq-skill-head');
     head.append(el('b', '', s.name), el('span', 'eq-skill-level', s.level.toFixed(1)));
-    const bar = el('span', 'eq-bar eq-bar-skill');
-    const fill = el('span', 'eq-bar-fill');
+    const { bar, fill } = meter('eq-bar-skill', 'accent');
     fill.style.width = `${Math.round(s.toNext * 100)}%`;
     bar.append(fill);
     bar.title = `${Math.round(s.toNext * 100)}% to ${Math.floor(s.level) + 1}`;
     const gives = el('div', 'eq-gives');
-    if (!s.gives.length) gives.append(el('span', 'eq-give-none', 'No effect on what you wear now.'));
+    if (!s.gives.length) gives.append(kit(el('span', 'eq-give-none', 'No effect on what you wear now.'), 'empty'));
     for (const g of s.gives) {
       const line = el('span', 'eq-give');
       line.append(el('span', 'eq-give-what', g.what), el('b', '', g.now), el('span', 'eq-give-next', g.next ?? ''));

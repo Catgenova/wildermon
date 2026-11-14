@@ -165,6 +165,7 @@ import { GENDERS, HAIR_FADE, HAIRSTYLES } from '../../game/look';
 import { OUTFITS } from '../creator';
 import { MAX_ZOOM, SCULPTED_MAX_ZOOM } from '../../engine/camera';
 import { article, burnsFor, capital, finePercent, listed, listedOr, numberWord, percent, readyIn, timeWords } from '../../game/words';
+import { METER_BAD, METER_WARN } from '../kit';
 import { DEED_UPGRADES } from '../../game/deed';
 import { LYE_USE, SHORE_REACH } from '../../game/placeables';
 import { DEFAULT_RANKS, lacksSaid, NEWCOMER_RANK, permsOf, POWER, RANK_CAP, RANK_NAME_MAX, RANK_POWERS, rankMay } from '../../game/ranks';
@@ -4474,6 +4475,9 @@ export const NEWS: News[] = [
       'Changed: windows, Runecut: one scrollbar; one row, heading, button, tab, field, badge and meter style. First: pack, crates, stores, tile, crafting, ledger.',
       "Changed: windows, Runecut: selected row and open tab: the frame's own colour (pack: twine; crates and stores: brass; crafting: cherry; tile: moss; journal: ribbon blue).",
       'Changed: Settings, Frames: Stone: inside of windows unchanged (was: pack and crates plainer).',
+      'Changed: windows, Runecut: Health, Equipment on the kit: tabs, buttons, tags, meters, cards, headings; one scroll area each (Equipment: pack shelf no longer scrolls by itself).',
+      `Changed: Health, Runecut: stamina, food, water, nutrient meters: green; amber under ${percent(METER_WARN)}; red at ${percent(METER_BAD)} or less.`,
+      "Changed: windows, Runecut: tabs, every window: one style; open tab: the frame's colour (events, faith, journal, market, settings, trades, wildermon, boards, settlement, social).",
     ],
   },
   // The Path: steps from the runestone to a settlement at its last level (`src/game/path.ts`).

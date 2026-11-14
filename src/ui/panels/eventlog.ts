@@ -60,11 +60,11 @@ export class EventLogPanel {
     win.body.classList.add('log-body');
     // Which lines are kept, and a box to look through them.
     const bar = document.createElement('div');
-    bar.className = 'log-tabs';
+    bar.className = 'log-tabs rc-tabs';
     for (const t of TABS) {
       const b = document.createElement('button');
       b.type = 'button';
-      b.className = 'tb-btn tb-small log-tab' + (t === this.tab ? ' tb-on' : '');
+      b.className = 'tb-btn tb-small log-tab rc-tab' + (t === this.tab ? ' tb-on' : '');
       b.textContent = t.label;
       b.title = t.title;
       b.dataset.tab = t.id;

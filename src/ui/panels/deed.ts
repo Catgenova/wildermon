@@ -196,11 +196,11 @@ export class DeedPanel {
     // Notices and work are the island's: alone there is one page and no tabs.
     if (roll) {
       const bar = document.createElement('div');
-      bar.className = 'log-tabs deed-tabs';
+      bar.className = 'log-tabs rc-tabs deed-tabs';
       for (const [id, label, title] of DEED_TABS) {
         const b = document.createElement('button');
         b.type = 'button';
-        b.className = `tb-btn tb-small log-tab${id === this.tab ? ' tb-on' : ''}`;
+        b.className = `tb-btn tb-small log-tab rc-tab${id === this.tab ? ' tb-on' : ''}`;
         b.textContent = label;
         b.title = title;
         b.addEventListener('click', () => this.show(id));

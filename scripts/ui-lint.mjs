@@ -117,6 +117,10 @@ for (const files of Object.values(WINDOWS)) {
     for (const m of text.matchAll(/made\('\w+', '\w+', '([^']*)'\)|['"`]([^'"`\n]*\brc-[a-z-]+[^'"`\n]*)['"`]/g)) {
       for (const word of (m[1] ?? m[2]).split(/\s+/)) if (/^[a-z][\w-]*$/.test(word) && !word.startsWith('rc-')) kitted.add(word);
     }
+    // And a made element given its kit part after (`kit(el('span', 'hp-chip ...'), 'tag')`): its classes, up to any `${`.
+    for (const m of text.matchAll(/kit\(el\('\w+', ['`]([^'`$]*)/g)) {
+      for (const word of m[1].split(/\s+/)) if (/^[a-z][\w-]*$/.test(word)) kitted.add(word);
+    }
   }
 }
 
