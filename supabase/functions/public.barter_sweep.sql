@@ -4,7 +4,7 @@ CREATE OR REPLACE FUNCTION public.barter_sweep(b barter)
  RETURNS barter
  LANGUAGE plpgsql
 AS $function$
-declare v_apart double precision;
+declare v_apart double precision; r record; v_said text;
 begin
   if b.closed_at is not null then return b; end if;
   if not barter_ashore(b.world_id, b.asker) or not barter_ashore(b.world_id, b.other) then
@@ -13,5 +13,25 @@ begin
   v_apart := barter_apart(b.world_id, b.asker, b.other);
   if v_apart is null or v_apart > barter_reach() then return barter_close(b, 'apart'); end if;
   if b.at < now() - make_interval(secs => barter_idle()) then return barter_close(b, 'lapsed'); end if;
+  for r in select bi.item, bi.owner, bi.def, i.creature as now_creature from barter_item bi
+             join item i on i.world_id = bi.world_id and i.id = bi.item
+            where bi.world_id = b.world_id and bi.n = b.n
+              and i.holder = 'player' and i.holder_uid = bi.owner
+              and (i.creature is distinct from bi.creature
+                   or (i.creature is not null and barter_beast(b.world_id, i.creature) is distinct from bi.beast))
+            order by bi.owner = b.asker desc, bi.ord loop
+    update barter_item set creature = r.now_creature,
+           beast = case when r.now_creature is not null then barter_beast(b.world_id, r.now_creature) end
+     where world_id = b.world_id and n = b.n and item = r.item;
+    v_said := coalesce(v_said, barter_line('stirred', folk_name(b.world_id, r.owner),
+                                            lower(coalesce((select name from item_def where id = r.def), 'thing'))));
+  end loop;
+  if v_said is not null then
+    update barter set asker_ok = false, other_ok = false, rev = rev + 1, at = now()
+     where world_id = b.world_id and n = b.n returning * into b;
+    perform tell(b.world_id, b.asker, v_said, 'event');
+    perform tell(b.world_id, b.other, v_said, 'event');
+    perform barter_send(b);
+  end if;
   return b;
 end $function$

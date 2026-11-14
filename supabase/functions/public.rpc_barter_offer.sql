@@ -52,9 +52,11 @@ begin
     return jsonb_build_object('barter', barter_view(b, me));
   end if;
   delete from barter_item where world_id = p_world and n = b.n and owner = me;
-  insert into barter_item (world_id, n, item, owner, def, count, ord)
-    select p_world, b.n, p_items[k], me, (select def from item where id = p_items[k]), p_counts[k], k
-      from generate_series(1, v_len) k;
+  insert into barter_item (world_id, n, item, owner, def, count, ord, creature, beast)
+    select p_world, b.n, p_items[k], me, x.def, p_counts[k], k, x.creature,
+           case when x.creature is not null then barter_beast(p_world, x.creature) end
+      from generate_series(1, v_len) k
+      left join lateral (select t.def, t.creature from item t where t.world_id = p_world and t.id = p_items[k]) x on true;
   update barter set asker_coins = case when me = asker then v_coins else asker_coins end,
                     other_coins = case when me = other then v_coins else other_coins end,
                     asker_ok = false, other_ok = false, rev = rev + 1, at = now()

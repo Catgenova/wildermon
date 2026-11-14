@@ -5,7 +5,7 @@ CREATE OR REPLACE FUNCTION public.barter_thing_refusal(p_world uuid, p_owner uui
  LANGUAGE plpgsql
  STABLE
 AS $function$
-declare it item; v_who text := folk_name(p_world, p_owner); v_what text;
+declare it item; c creature; v_who text := folk_name(p_world, p_owner); v_what text;
 begin
   select * into it from item where world_id = p_world and id = p_item;
   v_what := lower(coalesce((select name from item_def where id = coalesce(p_def, it.def)), 'thing'));
@@ -20,5 +20,13 @@ begin
   end if;
   if it.locked then return barter_line('locked', v_who, v_what); end if;
   if coalesce(p_count, 0) > it.count then return barter_line('fewer', v_who, v_what); end if;
+  if it.creature is not null then
+    select * into c from creature where world_id = p_world and id = it.creature;
+    if c.id is null or c.mode <> 'stored' or c.keeper is distinct from p_owner then
+      return barter_line('loose', v_who, coalesce(c.name, v_what));
+    end if;
+    if c.due is not null then return barter_line('young', v_who, c.name); end if;
+    if pannier_units(p_world, c.id) > 0 then return barter_line('loaded', v_who, c.name); end if;
+  end if;
   return null;
 end $function$

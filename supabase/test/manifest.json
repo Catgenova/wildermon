@@ -367,10 +367,28 @@
     "why": "Solara stood under ten frames a second at any zoom: its wildermon's standing pictures came to five times what was kept, so each was drawn again just before it was wanted, and an altar in view after dark had the night mixed at four times the pixels. Then \"still massive fps drops\": every floor drawn afresh after dark, the shade round every wall cut to every tile every frame, and a wheel of the zoom making every crated wildermon and every piece again at every step. Drawn in Chrome on the page's own clock, on Solara as the island counted it: a second loop round must make next to no canvases, the night must be mixed at the lights' share, a settled frame must draw next to no floor or shade afresh, and a wheel of the zoom must stretch what it had rather than make it all again."
   },
   {
+    "file": "supabase/test/miscclips.ts",
+    "title": "Gates, carts, the bell, the settlement's stake, baubles and statues play their own clips on the sculpted body",
+    "shard": 1,
+    "why": "These jobs played the placeholder gesture. Each now plays its own clip (the winch turned both ways, the padlock's key, a cart's shafts, climbing aboard, the team's tack, the bell's rope, the stake driven in, a bauble set, palms out to a statue), from every facing on both bodies, the one-handed ones mirrored where worked left-handed; both hands where the clip puts them through every run; a go fitted to the job's length; and with Animations Off, the still pose."
+  },
+  {
+    "file": "supabase/test/reachclips.ts",
+    "title": "Picking, reading and the lanterns: each job plays its clip, the feet planted, the hands on what they reach and hold",
+    "shard": 1,
+    "why": "Fourteen jobs played the placeholder gesture: picking fruit, a sprout, grapes and honey, reading a book, a rune tablet, a recipe, a formula and a map, and the five jobs at a lantern post. Each now plays its own clip, from every facing (its mirror from the left-handed ones), on both bodies: the feet do not slide, the other hand stays on the book's page, the tablet's runes or the sheet's and the map's far edge, no hand goes behind the chest, and his hands reach up to the foot of a lantern on a post."
+  },
+  {
     "file": "supabase/test/fxmarks.ts",
     "title": "A mark on a clip fires once as the body's clip time passes it",
     "shard": 1,
     "why": "Action effects fire from marks on the clips, worked out on every screen from the body's own clip time with nothing sent. Followed per body: once a run of a loop; a frame drawn again or a clock put right fires nothing twice; a new go fires again; a leap, a change of clip or a body unseen starts afresh with no storm of effects; a timed go fitted to its length fires once a run; the mirrored clip fires from the other hand; the point is on the weapon and the same each time."
+  },
+  {
+    "file": "supabase/test/emotes.ts",
+    "title": "Bow, cheer, point, clap and sit: their own clips, held and ended as they say",
+    "shard": 1,
+    "why": "Asked for: five more emotes on the sculpted bodies. Each plays a clip of its own, never the placeholder, the point with the arm that reads from where it is seen; the one-shots start and end stood; the clap's hands meet at every clap on both bodies; an emote is drawn only while it runs, the idle after; the sit is held until the body moves, swims or works, a peer's too; sat is on the ground; with Animations Off each is its still pose."
   },
   {
     "file": "supabase/test/actionfx.ts",
@@ -542,6 +560,12 @@
     "title": "A trade window between two people",
     "shard": 1,
     "why": "Two people standing together ask, say yes, put things and silver on their sides and both accept; then everything changes hands in one transaction or nothing does. Every refusal -- a thing gone from the pack, worn, kept back, short of silver, too far apart, gone -- is held to the browser's words and told to both. A change takes both Accepts back, an Accept sent twice or four at once moves nothing twice, and nobody outside a trade can read or touch it."
+  },
+  {
+    "file": "supabase/test/tradewildermon.ts",
+    "title": "A wildermon traded in its crate through the Trade window",
+    "shard": 1,
+    "why": "Asked for: \"Trading wildermon. A secure trade window between two players, with the pedigree shown.\" A crated wildermon on either side is shown to both in full (name, kind, sex, age, level, traits, forms, rarity, dam, sire and line) and written in labels by the browser; a dam carrying young, loaded panniers and a crate whose wildermon is not shut in it are refused in the browser's words; a crate's wildermon changing after an Accept takes both Accepts back and is told to both, and the deal's own check refuses a crate not as accepted; on the deal the wildermon is the receiver's with its blood untouched, she can let it out, and both creature reads and her pack follow."
   },
   {
     "file": "supabase/test/letters.ts",

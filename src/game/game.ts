@@ -3,7 +3,7 @@ import type { LairSeen } from './lairs';
 import { CHAR_START, DAMAGE_MAX, PLACED_REACH, PROSPECT_MARK_TIME, QL_BARE, QL_LOW, QL_SPAN, QL_TOP, wearPerUse, wornShare } from './limits';
 import { DEED_RADIUS, deedLevel, deedWorkersAt, MAX_DEED_LEVEL } from './deedsize';
 import { generateWorld } from '../world/generate';
-import { EMOTES, EMOTE_BY_ID } from './emotes';
+import { EMOTES, EMOTE_BY_ID, emoteLeft } from './emotes';
 import { deedMay, lacks, type DeedRole } from './ranks';
 import { storeUse } from './stores';
 import { boundKey } from './keybinds';
@@ -4624,6 +4624,8 @@ export class Game {
       if (this.bridges.size && (fx !== p.tileX || fy !== p.tileY)) this.underDeck = this.walksUnder(fx, fy, p.tileX, p.tileY);
     }
     this.local.stepped = moved;
+    // Sat on the ground (a held emote): got up from by walking off, swimming, a seat or a job (`emoteLeft`).
+    if (emoteLeft(p.emote, p.moving || p.swimming || p.carried || this.action?.state === 'performing')) p.emote = undefined;
     /*
      * And the ground under a step on your own feet wears (`WEARS`), in a game
      * of your own. On an island the island counts it, off the walk it is told
