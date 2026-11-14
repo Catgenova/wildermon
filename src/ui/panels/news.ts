@@ -284,6 +284,12 @@ import { MOUNT_SAID } from '../../game/garden';
 import { STAND_SLOTS } from '../../game/decor';
 import { grassEaters, seatsOf } from '../../game/furnish';
 import { benchTreeWords } from '../../game/fitting';
+import { PEA_NAMES, potDishWords, watersideWords } from '../../game/adorn';
+import {
+  BUOY, BUOY_REACH, CAULDRON_HEARTH, CAULDRON_SERVINGS, CHEESE_AGEING, CHEESE_RACK, GAME_TABLE, GARDEN_OBELISK, GEM_LAMP, GEM_LAMP_REACH, HERB_SPIRAL, IVY_CUTTINGS, IVY_PANEL,
+  IVY_PANEL_DAYS, LILY_POND, NAMEPLATE, PEDIGREE_BOARD, PELT_RUG, PLUSH, POND_LILIES, RACK_HOLDS, SPIRAL_PICK, SPIRAL_SLOTS, STONES_GOAL, TABLE_SEATS,
+} from '../../game/adorndefs';
+import { BRIDGES as ADORN_BRIDGES, FOOTBRIDGE_SPAN } from '../../game/bridges';
 import {
   ARCHERY_TARGET, ARROW_BREAK_IN, BOULDER_MOSS_DAYS, LANTERN_POLE, MOOR_REACH, MOORING_POST, MOSS_BOULDER, POLE_LANTERNS, POLE_REACH, PRACTICE_GAIN, SHELF_HOLDS, SPICE_SHELF,
   STONE_BUST, TARGET_HOLDS, TRAINING_DUMMY, TREE_BENCH, TREE_BENCH_SEATS, WINDOW_SEAT, WINDOW_SEATS,
@@ -4477,6 +4483,30 @@ export const NEWS: News[] = [
       `New: rowing under way: ${OAR_DROPS} drops a blade at the catch; whirl pair a blade a stroke, ${SWIRL_SECS} s.`,
       'Without a graphics card: swimming strokes\' splashes, rings treading water, the float\'s strike and a catch only.',
     ],
+  },
+  // The adornments (`adorn.ts`).
+  {
+    n: 613,
+    day: '2026-11-14',
+    lines: () => {
+      const made = (id: string): string => `${itemDef(id).name} (${skillOf(`make_${id}`)}; ${pieceBill(id)})`;
+      return [
+        `New: ${made(LILY_POND)}: botanizing on or beside it, the water's-edge finds (${watersideWords()}); up to ${POND_LILIES} water lilies.`,
+        `New: ${made(IVY_PANEL)}: on a wall; its wall's ivy full in ${IVY_PANEL_DAYS} days; worker scrubs skip that wall. Clear the ivy: ${IVY_CUTTINGS} ivy cutting a wall.`,
+        `New: ${made(GARDEN_OBELISK)}: sweet peas in leaf, bud and flower by the climbers' rule; colour ${listed(PEA_NAMES)} or by season.`,
+        `New: ${ADORN_BRIDGES.footbridge.name} (${ADORN_BRIDGES.footbridge.skill}; ${ADORN_BRIDGES.footbridge.bill.map(([i, n]) => `${n} ${itemDef(i).name.toLowerCase()}`).join(', ')}): a bridge of ${FOOTBRIDGE_SPAN} tile of deck, walked.`,
+        `New: ${made(HERB_SPIRAL)}: ${SPIRAL_SLOTS} herbs at once, each sown and picked on its own, ${SPIRAL_PICK} a pick.`,
+        `New: ${made(BUOY)}: on water; named; on its maker's map; light ${BUOY_REACH} tiles at night.`,
+        `New: ${made(CAULDRON_HEARTH)}: lit, pot dishes ×${CAULDRON_SERVINGS} in one go's time (${potDishWords()}).`,
+        `New: ${made(CHEESE_RACK)}: ${RACK_HOLDS} cheeses, +${CHEESE_AGEING.rate} QL a day to +${CHEESE_AGEING.cap}.`,
+        `New: ${made(PELT_RUG)}: its fur's kind's colours. Fur: labelled with its kind.`,
+        `New: ${made(PLUSH)}: a kind you have tamed; dyeable.`,
+        `New: ${made(GAME_TABLE)}: stones, ${TABLE_SEATS} players in turn, first to ${STONES_GOAL}; wins tallied; seats ${TABLE_SEATS}.`,
+        `New: ${made(GEM_LAMP)}: light ${GEM_LAMP_REACH} tiles at night, its gem's colour.`,
+        `New: ${made(PEDIGREE_BOARD)}: a wildermon of yours, its parents and grandparents, names and kinds.`,
+        `New: ${itemDef(NAMEPLATE).name} (${skillOf(`make_${NAMEPLATE}`)}): on a wildermon bed; its worker's name, kind and level.`,
+      ];
+    },
   },
   // The fittings (`fitting.ts`).
   {

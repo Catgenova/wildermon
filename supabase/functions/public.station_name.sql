@@ -4,4 +4,4 @@ CREATE OR REPLACE FUNCTION public.station_name(p_station text)
  RETURNS text
  LANGUAGE sql
  IMMUTABLE
-AS $function$ select case p_station when 'campfire' then 'lit campfire' when 'oven' then 'lit oven' when 'smelter' then 'hot smelter' when 'spindle' then 'spindle' when 'loom' then 'loom' when 'paper_press' then 'paper press' when 'enchanters_plinth' then 'enchanter''s plinth' when 'butter_churn' then 'butter churn' else p_station end $function$
+AS $function$ select case p_station when 'campfire' then 'lit campfire' when 'oven' then 'lit oven' when 'smelter' then 'hot smelter' when 'spindle' then 'spindle' when 'loom' then 'loom' when 'paper_press' then 'paper press' when 'enchanters_plinth' then 'enchanter''s plinth' when 'butter_churn' then 'butter churn' when 'cauldron_hearth' then 'lit cauldron hearth' else p_station end $function$

@@ -227,8 +227,10 @@ begin
       if r.part = 'gland' and v_n > 0 and random() > 0.35 * (0.5 + v_share) then v_n := 0; end if;
       if v_n <= 0 then continue; end if;
       -- Better for a perk on the part (a Cook's Prime Cuts and Hide Keeper).
+      -- Fur labelled with the kind it came off, for a pelt rug (`adorn.ts`).
       perform gather(p_world, p_uid, r.item, v_n,
-        least(100, greatest(1, least(100, made_ql)) * pk(p_world, p_uid, 'ql:' || r.item, 1)));
+        least(100, greatest(1, least(100, made_ql)) * pk(p_world, p_uid, 'ql:' || r.item, 1)),
+        case when r.part = 'fur' then sp.name end);
       taken := taken || (case when v_n > 1 then v_n || ' × ' else '' end
         || lower((select name from item_def where id = r.item)));
     end loop;

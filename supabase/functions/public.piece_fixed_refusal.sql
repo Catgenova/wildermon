@@ -9,6 +9,8 @@ AS $function$
               when f.hedge then hedge_refusal(p_world, p_x, p_y, p_level)
               -- A tree bench round a grown tree; a mooring post at the water's edge (`fitting.ts`).
               when f.id = tree_bench_kind() then tree_bench_refusal(p_world, p_x, p_y)
+              -- A buoy on a water tile (`adorn.ts`).
+              when f.id = buoy_kind() then case when has_water(p_world, p_x, p_y) then null else adorn_said('notWater', null, null, null) end
               when f.id = mooring_post_kind() then case when water_edge(p_world, p_x, p_y) then null else fitting_said('notShore', null, null) end end
     from furniture_def f where f.id = p_sub
 $function$

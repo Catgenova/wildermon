@@ -134,7 +134,8 @@ export const BUTCHER_ACTIONS: ActionDef[] = [
         if (part === 'gland' && count > 0 && g.rand() > GLAND_CHANCE * (0.5 + share)) count = 0;
         if (count <= 0) continue;
         // Better for a perk on the part (a Cook's Prime Cuts and Hide Keeper).
-        const made = g.gather(id, { count, ql: Math.min(100, ql * g.perk(`ql:${id}`, 1)) });
+        // Fur labelled with the kind it came off, for a pelt rug (`adorn.ts`; the island's `perform_fight`).
+        const made = g.gather(id, { count, ql: Math.min(100, ql * g.perk(`ql:${id}`, 1)), ...(part === 'fur' ? { extra: def.name } : {}) });
         taken.push(made.count > 1 && count > 1 ? `${count} × ${itemDef(id).name.toLowerCase()}` : itemDef(id).name.toLowerCase());
       }
       // And bait for the hook out of what is left (a Cook's Bait Maker), into the pack.

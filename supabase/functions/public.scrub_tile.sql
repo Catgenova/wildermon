@@ -18,6 +18,6 @@ begin
       from (select * from border_of(p_x, p_y, 'n') union all select * from border_of(p_x, p_y, 'w')) bo
       join wall wl on wl.world_id = p_world and wl.dir = bo.dir and wl.x = bo.x and wl.y = bo.y
       join build_material_def m on m.id = wl.material and m.kind = 'stone'
-     where bill_done(wl.needed)
+     where bill_done(wl.needed) and not wall_paneled(p_world, wl)
   on conflict (world_id, thing, x, y, k) do update set since = excluded.since;
 end $function$

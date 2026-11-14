@@ -6,6 +6,6 @@ CREATE OR REPLACE FUNCTION public.age_gain(p_liquid text, p_age double precision
  IMMUTABLE
 AS $function$
 begin
-  if not coalesce(brew_ages(p_liquid), false) or p_age is null or not (p_age > 0) then return 0; end if;
+  if not (coalesce(brew_ages(p_liquid), false) or p_liquid = cheese_item()) or p_age is null or not (p_age > 0) then return 0; end if;
   return least(age_cap(p_liquid), age_rate(p_liquid) * (case when p_cellar then cellar_ageing() else 1 end) * (p_age / day_seconds()));
 end $function$

@@ -1207,6 +1207,10 @@ export interface DeckShape { q: Array<[number, number]>; along: 'x' | 'y' }
 /** The lozenge a deck was before it had corners: the tile at the first turn, spanning west to east. */
 const LOZENGE: DeckShape = { q: [[0, -24], [48, 0], [0, 24], [-48, 0]], along: 'x' };
 
+/** How far a garden footbridge's deck humps up in its middle, and its rail stands over it, in pixels at zoom one (`adorn.ts`). */
+const FOOT_ARCH = 4;
+const FOOT_RAIL = 6;
+
 /**
  * One tile of bridge deck, drawn at the height the deck is carried at. The
  * unfinished part is drawn as bare stringers so you can see what is left.
@@ -1300,6 +1304,38 @@ export function drawDeck(
     ctx.stroke();
   }
   const kerbs = sides.map(([a, b]) => inset(a, b, 0.08));
+  if (kind === 'footbridge') {
+    // A garden footbridge (`adorn.ts`): its deck humped over the ditch, its boards across it, a rail on balusters each side, arched with it.
+    const A = FOOT_ARCH;
+    const mid = (a: [number, number], b: [number, number]): [number, number] => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2 - A * 2];
+    ctx.fillStyle = '#c99a6a';
+    ctx.beginPath();
+    const [[s0, s1], [t0, t1]] = sides;
+    const m0 = mid(s0, s1), m1 = mid(t0, t1);
+    ctx.moveTo(s0[0], s0[1]); ctx.quadraticCurveTo(m0[0], m0[1], s1[0], s1[1]);
+    ctx.lineTo(t1[0], t1[1]); ctx.quadraticCurveTo(m1[0], m1[1], t0[0], t0[1]);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(90, 64, 70, 0.3)'; ctx.lineWidth = 0.7;
+    for (let i = 1; i < 8; i++) {
+      const k = i / 8, hump = 4 * k * (1 - k) * A;
+      const [x0, y0] = lerp(s0, s1, k), [x1, y1] = lerp(t0, t1, k);
+      ctx.beginPath(); ctx.moveTo(x0, y0 - hump); ctx.lineTo(x1, y1 - hump); ctx.stroke();
+    }
+    for (const [a, b] of kerbs) {
+      const top = (k: number): [number, number] => { const [x, y] = lerp(a, b, k); return [x, y - 4 * k * (1 - k) * A - FOOT_RAIL]; };
+      ctx.strokeStyle = '#8a6448'; ctx.lineWidth = 1;
+      for (const k of [0.04, 0.27, 0.5, 0.73, 0.96]) {
+        const [x, y] = lerp(a, b, k);
+        ctx.beginPath(); ctx.moveTo(x, y - 4 * k * (1 - k) * A); ctx.lineTo(...top(k)); ctx.stroke();
+      }
+      ctx.strokeStyle = '#a87c58'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(...top(0));
+      for (let i = 1; i <= 10; i++) ctx.lineTo(...top(i / 10));
+      ctx.stroke();
+    }
+    ctx.restore();
+    return;
+  }
   if (kind === 'rope') {
     // Handropes along both sides, which is all that is between you and the drop.
     ctx.strokeStyle = '#cfc3a4';

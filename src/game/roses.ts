@@ -18,9 +18,9 @@ import { DAY_SECONDS } from './pace';
 import { capital, listed, spanWords } from './words';
 
 /** What is planted at an arch's feet and climbs it; wisteria over a pergola (`garden.ts`). */
-export type Climber = 'rose' | 'lavender' | 'wisteria';
+export type Climber = 'rose' | 'lavender' | 'wisteria' | 'sweet_pea';
 /** What it is called on the arch, for the line under its name and the rule. */
-export const CLIMBER_NAME: Record<Climber, string> = { rose: 'roses', lavender: 'lavender', wisteria: 'wisteria' };
+export const CLIMBER_NAME: Record<Climber, string> = { rose: 'roses', lavender: 'lavender', wisteria: 'wisteria', sweet_pea: 'sweet peas' };
 
 /** Days of the island's year after it is set down that an arch's roses are in leaf, in bud and in flower. */
 export const ROSE_LEAFY = 1;
@@ -29,9 +29,9 @@ export const ROSE_FLOWER = 3;
 /** The seasons roses and lavender bud and flower in (`FRUITING`, both cut in the same two); the rest of the year a grown arch is in leaf. */
 export const ROSE_SEASONS: readonly Season[] = ['spring', 'summer'];
 /** The seasons each climber buds and flowers in: wisteria in spring alone. */
-export const CLIMBER_BLOOMS: Record<Climber, readonly Season[]> = { rose: ROSE_SEASONS, lavender: ROSE_SEASONS, wisteria: ['spring'] };
-/** And the seasons a grown one stands bare in: wisteria drops its leaves in winter; roses and lavender never. */
-export const CLIMBER_BARE: Record<Climber, readonly Season[]> = { rose: [], lavender: [], wisteria: ['winter'] };
+export const CLIMBER_BLOOMS: Record<Climber, readonly Season[]> = { rose: ROSE_SEASONS, lavender: ROSE_SEASONS, wisteria: ['spring'], sweet_pea: ROSE_SEASONS };
+/** And the seasons a grown one stands bare in: wisteria drops its leaves in winter, sweet peas die back; roses and lavender never. */
+export const CLIMBER_BARE: Record<Climber, readonly Season[]> = { rose: [], lavender: [], wisteria: ['winter'], sweet_pea: ['winter'] };
 
 const DAY = DAY_SECONDS;
 
@@ -86,3 +86,4 @@ export const climberRule = (climber: Climber): string => {
 export const ROSES_RULE = climberRule('rose');
 export const LAVENDER_RULE = climberRule('lavender');
 export const WISTERIA_RULE = climberRule('wisteria');
+export const SWEET_PEA_RULE = climberRule('sweet_pea');

@@ -140,6 +140,9 @@ export const STROKE_BY_ID: Record<string, Stroke> = {
   // The fittings (`fitting.ts`): candles set in paper, herbs on a shelf, a blow into straw, arrows into and out of a target, a rope round a post, a bust cut in stone.
   pole_candles: 'cloth', shelf_put: 'wood', practise_dummy: 'cloth', shoot_target: 'wood', pull_arrows: 'wood', moor_boat: 'cloth', unmoor_boat: 'cloth', carve_bust: 'stone',
   ...Object.fromEntries(['sage', 'basil', 'thyme', 'mint', 'rosemary'].map((h) => [`shelf_take_${h}`, 'wood' as Stroke])),
+  // The adornments (`adorn.ts`): a lily into a pond's water, seeds and herbs in a spiral's earth, a buoy's name cut in wood, cheese on a rack, stones thrown on a table, a board's lineage, a bed's nameplate.
+  pond_lily: 'water', spiral_sow: 'cloth', name_buoy: 'wood', cheese_put: 'wood', cheese_take: 'wood', throw_stones: 'stone', set_lineage: 'wood', hang_plate: 'wood', take_plate: 'wood',
+  ...Object.fromEntries([0, 1, 2, 3].map((i) => [`spiral_pick_${i}`, 'cloth' as Stroke])),
   // A lead line let down into the water, and a rigging set rove off on a hull (`sailActions.ts`).
   sound_depth: 'water', fit_rigging: 'cloth',
 };

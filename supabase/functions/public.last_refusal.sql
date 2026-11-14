@@ -59,6 +59,10 @@ begin
   if fitting_action(p_action) then
     return fitting_refusal(p_world, p_uid, p_action, p_target);
   end if;
+  -- The adornments' jobs (`adorn.ts`).
+  if adorn_action(p_action) then
+    return adorn_refusal(p_world, p_uid, p_action, p_target);
+  end if;
 
   if p_action = 'plan_bridge' then
     v_kind := coalesce(p_target->>'material', 'rope');

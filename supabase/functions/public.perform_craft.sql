@@ -260,6 +260,10 @@ begin
     v_made := give(p_world, p_uid, r.result, v_n, made_ql, coalesce(r.extra, mat), rare, made_by(p_world, p_uid, rare, r.result, made_ql));
     if v_mark is not null then update item set mark = v_mark where id = v_made; end if;
     -- A carved figure, carved as the kind chosen at the bench (`garden.ts`).
+    -- A plush, sewn as the kind chosen at the needle (`adorn.ts`).
+    if r.result = plush_kind() then
+      update item set garden = jsonb_build_object('plush', p_target->>'species') where id = v_made;
+    end if;
     if r.result = carved_figure_kind() then
       update item set garden = jsonb_build_object('figure', p_target->>'species') where id = v_made;
     end if;

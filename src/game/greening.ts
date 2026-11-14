@@ -2,13 +2,14 @@ import type { ActionDef, Target } from './actions';
 import { borderOf, isDone, MATERIAL_BY_ID, SIDE_NAMES, type Side, type Wall } from './building';
 import { BRIDGES, bridgeDone, type Bridge } from './bridges';
 import { foundationDone, type Foundation } from './foundations';
-import { furnitureDef, type PlacedFurniture } from './furniture';
+import { facingOf, furnitureDef, type PlacedFurniture } from './furniture';
 import type { Game } from './game';
 import { itemDef } from './items';
 import { lacks } from './ranks';
 import { PAVED } from '../world/tiles';
 import { greenNow } from './pace';
 import { BOULDER_MOSS_DAYS, MOSS_BOULDER } from './fittingdefs';
+import { IVY_PANEL, IVY_PANEL_DAYS } from './adorndefs';
 
 /**
  * Stone that ages.
@@ -105,9 +106,33 @@ export const mossyPiece = (f: { kind: string }): boolean => !!furnitureDef(f.kin
 /** A bridge moss gathers on: a finished one of stone, brick or earth (`BridgeDef.stone`), or a finished aqueduct, which is a stone arch. */
 export const mossyBridge = (b: Bridge): boolean => (!!BRIDGES[b.kind]?.stone || b.kind === 'aqueduct') && bridgeDone(b);
 
-/** The days a wall has been greening, or null for a wall ivy does not climb. */
+/**
+ * The ivy wall panel hung on a wall (`adorn.ts`): one on either tile beside
+ * it, facing it, on its storey; none on a wall not finished.
+ */
+export function panelOn(g: Game, w: Wall): PlacedFurniture | undefined {
+  if (!isDone(w)) return undefined;
+  const sides: Array<[number, number, Side]> = w.dir === 'h' ? [[w.x, w.y, 'n'], [w.x, w.y - 1, 's']] : [[w.x, w.y, 'w'], [w.x - 1, w.y, 'e']];
+  for (const [x, y, side] of sides) {
+    const f = g.furnitureOnTile(x, y).find((p) => p.kind === IVY_PANEL && facingOf(p) === side && (p.level ?? 0) === w.level);
+    if (f) return f;
+  }
+  return undefined;
+}
+/**
+ * The moss rule's days for the ivy a panel puts on its wall, `secs` after it
+ * was set down: bare to `GREEN_DAYS` over `IVY_PANEL_DAYS`, as a boulder
+ * greens over its own (`pieceGreenDays`). The island's `panel_green_days`.
+ */
+export const panelGreenDays = (secs: number): number =>
+  Math.max(0, Math.min(GREEN_DAYS, Math.floor((secs * GREEN_DAYS) / (IVY_PANEL_DAYS * GREEN_DAY))));
+
+/** The days a wall has been greening, or null for a wall ivy does not climb: a stone one's own, and a panel's on any (`adorn.ts`), the more. */
 export function wallGreen(g: Game, w: Wall, now: number): number | null {
-  return ivied(w) ? greenDays(greenStart(w.greenSince, g.greenFrom), now) : null;
+  const own = ivied(w) ? greenDays(greenStart(w.greenSince, g.greenFrom), now) : null;
+  const panel = panelOn(g, w);
+  if (!panel) return own;
+  return Math.max(own ?? 0, panel.setAt === undefined ? GREEN_DAYS : panelGreenDays(now - panel.setAt));
 }
 /** The days a statue has been greening, or null for a piece that gathers no moss. */
 export function pieceGreen(g: Game, f: PlacedFurniture, now: number): number | null {
@@ -290,7 +315,8 @@ function greenThings(g: Game, x: number, y: number): { paving: boolean; slab?: F
     slab: slab && foundationDone(slab) ? slab : undefined,
     // Not a moss boulder its owner keeps mossy (`fitting.ts`).
     pieces: [...g.furniture.values()].filter((f) => f.x === x && f.y === y && mossyPiece(f) && !(f.kind === MOSS_BOULDER && f.fitting?.keep)),
-    walls: [...ivyWalls(g, x, y, 'n'), ...ivyWalls(g, x, y, 'w')],
+    // Not a wall an ivy wall panel hangs on (`adorn.ts`).
+    walls: [...ivyWalls(g, x, y, 'n'), ...ivyWalls(g, x, y, 'w')].filter((w) => !panelOn(g, w)),
   };
 }
 

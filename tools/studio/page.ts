@@ -441,6 +441,43 @@ const SCENES: Record<string, { about: string; tile: (x: number, y: number) => nu
       piece(9209, 'mooring_post', 24, 26, { sx: 1, sy: 1, fitting: { tied: 9210 } });
     },
   },
+  adorn: {
+    about: 'The adornments in place: a lily pond with lilies, ivy wall panels on a plank and a stone fence, a garden obelisk in flower, a herb spiral full, a cauldron hearth alight, a cheese rack full, pelt rugs of three kinds, plushes of three kinds, a game table with a round on, gem lamps of three gems, a pedigree board, a wildermon bed with its nameplate, a buoy on the water and a garden footbridge over a ditch.',
+    tile: (_x, y) => (y >= 28 ? TileType.Sand : TileType.Grass),
+    height: (x, y) => (y >= 29 ? -6 : x >= 28 && x <= 29 && y >= 24 && y <= 25 ? -2 : 4),
+    dress: (game) => {
+      const now = Date.now() / 1000, long = now - 30 * DAY_SECONDS;
+      const piece = (id: number, kind: string, x: number, y: number, more: Partial<PlacedFurniture> = {}): void => {
+        const f = { id, kind, x, y, sx: 0, sy: 0, facing: 's', ql: 50, items: [], ...more } as unknown as PlacedFurniture;
+        game.furniture.set(id, f);
+        game.placed.furniture.add(f);
+      };
+      const fence = (x: number, y: number, material: string): void => {
+        const w = game.buildings.setFence(x, y, 'n', 'solid', material);
+        for (const k of Object.keys(w.needed)) w.needed[k] = 0;
+        w.greenSince = now;
+      };
+      game.greenFrom = 0;
+      // The scenes' trees off the tiles the pieces stand on; the body stands at 24, 24.
+      for (const [x, y] of [[22, 22], [27, 23], [22, 27], [26, 26]]) game.world.setTile(x, y, TileType.Grass, 0);
+      piece(9301, 'lily_pond', 22, 22, { sx: 1, sy: 1, adorn: { lilies: 3 } });
+      fence(23, 24, 'plank'); fence(25, 24, 'stone_brick');
+      piece(9302, 'ivy_panel', 23, 24, { sx: 1, sy: 0, facing: 'n', setAt: now - 7 * 86400 } as Partial<PlacedFurniture>);
+      piece(9303, 'ivy_panel', 25, 24, { sx: 1, sy: 0, facing: 'n', setAt: now - 3.5 * 86400 } as Partial<PlacedFurniture>);
+      piece(9304, 'garden_obelisk', 27, 22, { sx: 1, sy: 1, setAt: long, adorn: { pea: 'pink' } } as Partial<PlacedFurniture>);
+      piece(9305, 'herb_spiral', 22, 24, { sx: 0, sy: 0, adorn: { herbs: [['sage', long], ['basil', long], ['thyme', long], ['mint', long]] } });
+      piece(9307, 'cheese_rack', 23, 22, { sx: 1, sy: 1, adorn: { cheese: Array.from({ length: 8 }, (): [number, number] => [40, now]) } });
+      piece(9330, 'game_table', 26, 24, { sx: 1, sy: 1, adorn: { round: { a: 'a', an: 'Mira', as: 6, last: 'a' } } });
+      piece(9350, 'pedigree_board', 27, 25, { sx: 1, sy: 1, adorn: { tree: { id: 1, n: 'Snow', k: 'rabba', d: { n: 'Briar', k: 'rabba' }, s: { n: 'Horn' } } } });
+      piece(9306, 'cauldron_hearth', 22, 26, { sx: 1, sy: 1, lit: true, fuel: 3600 });
+      ['Ruby', 'Sapphire', 'Emerald'].forEach((m, i) => piece(9340 + i, 'gem_lamp', 24 + i, 26, { sx: 1, sy: 1, material: m }));
+      piece(9351, 'den_medium', 27, 26, { sx: 1, sy: 1, adorn: { plate: 40 } });
+      ['Rabba', 'Vola', 'Bevere'].forEach((m, i) => piece(9310 + i, 'pelt_rug', 22 + i, 27, { sx: 1, sy: 1, material: m }));
+      ['rabba', 'vola', 'bevere'].forEach((k, i) => piece(9320 + i, 'plush_wildermon', 25 + i, 27, { sx: 1, sy: 1, adorn: { plush: k } }));
+      piece(9360, 'buoy', 25, 30, { sx: 1, sy: 1, engraving: 'Bell Rock' } as Partial<PlacedFurniture>);
+      game.bridges.set(9370, { id: 9370, kind: 'footbridge', ax: 28, ay: 23, bx: 28, by: 25, height: 4, spans: [{ x: 28, y: 24, needed: { plank: 0 }, total: { plank: 10 } }] } as never);
+    },
+  },
   rock: { about: 'A rock face and its steps: stone and the outcrops.', tile: (x, y) => (Math.abs(x - 24) < 6 || y < 18 ? TileType.Rock : TileType.Grass), height: (x, y) => (y < 18 ? 90 : Math.abs(x - 24) < 6 ? 60 : 30) },
 };
 

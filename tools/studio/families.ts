@@ -237,7 +237,7 @@ const furniture: Family = {
   }),
   // A carved figure is drawn from its kind's model (`gardenlook.ts`): every line in before it is drawn.
   prepare: async (a) => {
-    if (a.kind === 'carved_figure') await loadAllWildermon();
+    if (a.kind === 'carved_figure' || a.kind === 'plush_wildermon') await loadAllWildermon();
     // An armour stand's mannequin is a sculpted body (`decorlook.ts`): the bodies on, and its bakes in, before it is drawn.
     if (a.kind === 'armour_stand') await mannequinBaked();
   },
@@ -325,6 +325,8 @@ function kitFile(kind: string): string {
     cairn: 'furnish', fireplace: 'furnish', four_poster_bed: 'furnish', vase: 'furnish', side_table: 'furnish', footstool: 'furnish', fish_mount: 'furnish',
     lantern_pole: 'fittings', moss_boulder: 'fittings', tree_bench: 'fittings', spice_shelf: 'fittings', window_seat: 'fittings', training_dummy: 'fittings',
     archery_target: 'fittings', mooring_post: 'fittings', stone_bust: 'fittings',
+    lily_pond: 'adorn', ivy_panel: 'adorn', garden_obelisk: 'adorn', herb_spiral: 'adorn', buoy: 'adorn', cauldron_hearth: 'adorn', cheese_rack: 'adorn',
+    pelt_rug: 'adorn', plush_wildermon: 'adorn', game_table: 'adorn', gem_lamp: 'adorn', pedigree_board: 'adorn', worker_nameplate: 'adorn',
   };
   return by[kind] ?? kind;
 }

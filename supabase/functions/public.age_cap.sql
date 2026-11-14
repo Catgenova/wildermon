@@ -4,4 +4,4 @@ CREATE OR REPLACE FUNCTION public.age_cap(p_liquid text)
  RETURNS double precision
  LANGUAGE sql
  IMMUTABLE
-AS $function$ select case p_liquid when 'mead' then 12::double precision when 'wine' then 10::double precision when 'grape_wine' then 10::double precision end $function$
+AS $function$ select case p_liquid when 'mead' then 12::double precision when 'wine' then 10::double precision when 'grape_wine' then 10::double precision when 'cheese' then 20::double precision end $function$

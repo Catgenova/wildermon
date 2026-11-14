@@ -46,6 +46,9 @@ import {
 import {
   ARCHERY_TARGET, LANTERN_POLE, MOORING_POST, MOSS_BOULDER, SPICE_SHELF, STONE_BUST, TRAINING_DUMMY, TREE_BENCH, WINDOW_SEAT,
 } from './fittings';
+import {
+  BUOY, CAULDRON_HEARTH, CHEESE_RACK, GAME_TABLE, GARDEN_OBELISK, GEM_LAMP, HERB_SPIRAL, IVY_PANEL, LILY_POND, NAMEPLATE, PEDIGREE_BOARD, PELT_RUG, PLUSH,
+} from './adorn';
 
 /**
  * Every piece of furniture drawn in the kit, by its kind (`FurnitureDef.id`).
@@ -164,6 +167,20 @@ export const KIT_PIECES: Readonly<Record<string, KitPiece>> = {
   archery_target: ARCHERY_TARGET,
   mooring_post: MOORING_POST,
   stone_bust: STONE_BUST,
+  // The adornments (`adorn.ts`), and the nameplate a wildermon bed wears.
+  lily_pond: LILY_POND,
+  ivy_panel: IVY_PANEL,
+  garden_obelisk: GARDEN_OBELISK,
+  herb_spiral: HERB_SPIRAL,
+  buoy: BUOY,
+  cauldron_hearth: CAULDRON_HEARTH,
+  cheese_rack: CHEESE_RACK,
+  pelt_rug: PELT_RUG,
+  plush_wildermon: PLUSH,
+  game_table: GAME_TABLE,
+  gem_lamp: GEM_LAMP,
+  pedigree_board: PEDIGREE_BOARD,
+  worker_nameplate: NAMEPLATE,
   // Ropemaking's pieces (`ropework.ts`).
   hammock: HAMMOCK,
   rope_walk: ROPE_WALK_PIECE,

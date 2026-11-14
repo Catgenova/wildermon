@@ -7,8 +7,9 @@ CREATE OR REPLACE FUNCTION public.cairns_of(p_world uuid, p_uid uuid)
 AS $function$
   select coalesce(jsonb_agg(jsonb_build_object('name', coalesce(pl.engraving, ''), 'x', pl.x, 'y', pl.y) order by pl.id), '[]'::jsonb)
     from placed pl
-   where pl.world_id = p_world and pl.kind = 'furniture' and pl.sub = cairn_kind() and coalesce(pl.level, 0) >= 0
-     and exists (select 1 from deed d where d.world_id = p_world and deed_covers(d, pl.x, pl.y)
-                   and (d.founded_by = p_uid or exists (select 1 from deed_member m where m.world_id = p_world
-                                                          and m.uid = p_uid and m.founder = d.founded_by)))
+   where pl.world_id = p_world and pl.kind = 'furniture' and pl.sub in (cairn_kind(), buoy_kind()) and coalesce(pl.level, 0) >= 0
+     and ((pl.sub = buoy_kind() and pl.made_by = p_uid)
+          or exists (select 1 from deed d where d.world_id = p_world and deed_covers(d, pl.x, pl.y)
+                       and (d.founded_by = p_uid or exists (select 1 from deed_member m where m.world_id = p_world
+                                                              and m.uid = p_uid and m.founder = d.founded_by))))
 $function$

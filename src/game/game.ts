@@ -117,6 +117,8 @@ import { gardenFrom, hedgeRefusal, mountRefusal, mountTurnsTo, MOUNT_SAID } from
 import { decorFrom, stoneLanternLight } from './decor';
 import { furnishFrom } from './furnish';
 import { fittingFrom, FITTING_SAID, poleBurning, poleLight, BENCH_TREE_AGES } from './fitting';
+import { ADORN_GAME, ADORN_SAID, adornFrom, buoyLight, gemLampLight } from './adorn';
+import { BUOY, CAULDRON_HEARTH, CAULDRON_STATION, GEM_LAMP } from './adorndefs';
 import { LANTERN_POLE, MOORING_POST, TREE_BENCH } from './fittingdefs';
 import { atWaterEdge } from './watergarden';
 import { FIREPLACE, FIREPLACE_REACH, GAZEBO } from './furnishdefs';
@@ -1305,6 +1307,8 @@ export class Game {
   constructor(init: GameInit) {
     this.seed = init.seed;
     this.world = init.world;
+    // The line under a bed's nameplate reads this game's wildermon (`adorn.ts`).
+    ADORN_GAME.g = this;
     // The Runestones stand on this world, laid over it by scale, and nothing walks through them (`runestones.ts`).
     this.world.solid = stoneTiles(this.world.w);
     this.spawn = init.spawn;
@@ -3978,6 +3982,15 @@ export class Game {
       // A lantern post throws what its lantern throws, from under the lantern (`lamps.ts`).
       if (isLampPiece(f)) {
         if (lampBurning(f)) out.push(lampLight(f));
+        continue;
+      }
+      // A buoy `BUOY_REACH` tiles, a gem lamp `GEM_LAMP_REACH` in its gem's colour, needing nothing to (`adorn.ts`).
+      if (f.kind === BUOY) {
+        out.push(buoyLight(f));
+        continue;
+      }
+      if (f.kind === GEM_LAMP) {
+        out.push(gemLampLight(f));
         continue;
       }
       // A paper lantern pole `POLE_REACH` tiles while its candles burn (`fitting.ts`).
@@ -7828,6 +7841,8 @@ export class Game {
     // An oven's own recipes want an oven, lit: a brazier is a hearth but bakes nothing (the island's `at_station`).
     if (station === 'oven') return this.litOvenNear() !== undefined;
     if (station === 'smelter') return this.hotSmelterNear() !== undefined;
+    // A cauldron hearth, alight (`adorn.ts`; the island's `at_station`).
+    if (station === CAULDRON_STATION) return this.litOvenNear(2.6, CAULDRON_HEARTH) !== undefined;
     return this.furnitureNear(station) !== undefined;
   }
 
@@ -7870,10 +7885,10 @@ export class Game {
   }
 
   /** An oven, and no other hearth, alight and within reach of the work: the `oven` station. */
-  litOvenNear(range = 2.6): PlacedFurniture | undefined {
+  litOvenNear(range = 2.6, kind = 'oven'): PlacedFurniture | undefined {
     let best: PlacedFurniture | undefined;
     this.placed.furniture.around(this.player.x, this.player.y, range + 2, (f) => {
-      if (best || !f.lit || f.kind !== 'oven') return;
+      if (best || !f.lit || f.kind !== kind) return;
       const [cx, cy] = furnitureCentre(f);
       if (Math.hypot(cx - this.player.x, cy - this.player.y) <= range) best = f;
     }, this.player.level);
@@ -9133,6 +9148,8 @@ export class Game {
           ...(furnishFrom(r.garden) ? { furnish: furnishFrom(r.garden) } : {}),
           // And a fitting's: a pole's colours, a boulder's moss kept, a shelf's jars, a target's arrows, a post's boat, a bust's citizen (`fitting.ts`).
           ...(fittingFrom(r.garden) ? { fitting: fittingFrom(r.garden) } : {}),
+          // And an adornment's: a pond's lilies, an obelisk's colour, a spiral's herbs, a rack's cheese, a plush's kind, a table's stones, a board's lineage, a bed's nameplate (`adorn.ts`).
+          ...(adornFrom(r.garden) ? { adorn: adornFrom(r.garden) } : {}),
           // When a skep was set down or last emptied, which what it has made is worked out from (`bees.ts`).
           ...(typeof r.state?.skep_at === 'number' ? { skepAt: r.state.skep_at } : {}),
           /*
@@ -9760,6 +9777,9 @@ export class Game {
     if (kind === TREE_BENCH) {
       const grown = this.world.getTile(x, y) === TileType.Tree && BENCH_TREE_AGES.includes(treeAge(this.world.getData(x, y)));
       if (!grown) return FITTING_SAID.noTree;
+    } else if (kind === BUOY) {
+      // A buoy on a water tile, and nowhere else (`adorn.ts`; the island's `piece_fixed_refusal`).
+      if (!this.world.hasWater(x, y)) return ADORN_SAID.notWater;
     } else if (deck === false || (deck === null && (!this.world.isPassable(x, y) || this.world.hasWater(x, y)))) return 'Furniture needs dry, solid ground.';
     // A mooring post at the water's edge (`fitting.ts`).
     if (kind === MOORING_POST && !atWaterEdge(this, x, y)) return FITTING_SAID.notShore;
