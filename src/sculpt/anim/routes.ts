@@ -89,8 +89,9 @@ const BUILD_JOBS: ReadonlyArray<[string, string]> = Object.entries({
 export const CLIP_OF_JOB: Readonly<Record<string, string>> = Object.fromEntries([
   // Sailing's jobs (`sailActions.ts`): a lead line let down as a line is cast; a rigging set rove off as rope is laid up.
   ['sound_depth', 'fish'], ['fit_rigging', 'rope'],
-  // Elementalism's (`infuseActions.ts`): motes worked into a thing and the swirls felt for, as an enchanting is, with the hands.
-  ['infuse_motes', 'hands'], ['sense_swirls', 'hands'],
+  // Elementalism's (`infuseActions.ts`): motes pushed into a thing as a spell on somebody else is cast (`cast-ally`); the
+  // swirls felt for all round as a spell on everything round oneself (`cast-nova`) (`./clips/cast.ts`).
+  ['infuse_motes', 'cast-ally'], ['sense_swirls', 'cast-nova'],
   ...[
     'plan_building', 'add_to_building', 'plan_wall', 'plan_fence', 'plan_floor', 'plan_column',
     'build_wall', 'change_wall', 'add_floor', 'build_floor', 'build_column', 'improve_item',
