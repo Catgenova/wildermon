@@ -20,7 +20,8 @@ begin
   if v_coming is null then return 0; end if;
   v_born := drop_young(p_world, v_dam, v_coming - 'twin');
   if v_coming ? 'twin' then
-    perform drop_young(p_world, v_dam, (v_coming->'twin') || jsonb_build_object('sire', v_coming->'sire'));
+    perform drop_young(p_world, v_dam, (v_coming->'twin') || jsonb_build_object('sire', v_coming->'sire')
+      || jsonb_strip_nulls(jsonb_build_object('species', v_coming->'species', 'stage', v_coming->'stage')));
   end if;
   return v_born;
 end $function$

@@ -35,6 +35,7 @@ import { COAX_LAPSE, COAX_STEP, HERD_REACH, WILD_STAY, HUNT_HOME, HUNT_LEASH, HU
          COMPANION_SIGHT, COMPANION_LEASH, COMPANION_REACH, COMPANION_BLOW, COMPANION_PACE, BLOW_MEMORY, FIGHT_BACK_GOES } from '../src/game/creatures';
 import { FAMILY_OF, KNACK_BONUS, KNACK_BY_LEARNING, KNACK_CAP, KNACK_GO, KNACK_HOME, KNACK_ODDS, TITLES } from '../src/game/titles';
 import { KEPT_BEST, NUTRIENT_DECAY, TABLE_BEST } from '../src/game/nutrition';
+import { CROSS_CARE, CROSS_CHANCE, CROSS_SKILL, HYBRID_HARDY, HYBRID_WORK } from '../src/game/hybridlist';
 import { SPECIES, WILD_SPECIES, MONSTERS, MONSTER_CAP, MONSTER_SHARE, AGES,
          GATHER_SKILL, GATHER_VERB, GATHER_DO, SMITH_TRADES, smithLumps, STOKE_FIRST, STOKE_SMELTS_AT, BUSH_VINES_AT, type GatherKind } from '../src/game/creatures';
 import { CHANNELS, TRAITS, WILD_ODDS, TRAIT_SLOTS, SLOTS_PER_STAGE, FIGHT_SHARE, GRADE_STEP, LAMP_TIER_ODDS, MUTATION_ODDS, PEDIGREE_MOST, PEDIGREE_STEP, TIERS } from '../src/game/traits';
@@ -589,6 +590,9 @@ out.push(`alter table species_def add column if not exists season_to int;`);
 /* Its pace in water, for a kind with one of its own (`SpeciesDef.swimSpeed`), and whether it lives only in deep water (`deepWater`). */
 out.push(`alter table species_def add column if not exists swim_speed real;`);
 out.push(`alter table species_def add column if not exists deep_water boolean not null default false;`);
+/* ---- Hybrids (`hybridlist.ts`): a hybrid's two parent kinds, its body's and its markings', the first its first trade. ---- */
+out.push(`alter table species_def add column if not exists hybrid_a text;`);
+out.push(`alter table species_def add column if not exists hybrid_b text;`);
 /* A cart is pulled by hand; a vehicle is driven from a seat with a team in
  * front of it; a boat is neither and wants water under it. */
 out.push(`alter table furniture_def add column if not exists cart boolean not null default false;`);
@@ -1373,6 +1377,9 @@ for (const d of Object.values(SPECIES) as unknown as S[]) {
   if (favourite) out.push(`update species_def set favourite = ${q(favourite)} where id = ${q(d.id)};`);
   const trades = (d as unknown as { trades?: string[] }).trades;
   if (trades) out.push(`update species_def set trades = array[${trades.map(q).join(', ')}]::text[] where id = ${q(d.id)};`);
+  // A hybrid's parents (`SpeciesDef.hybrid`).
+  const hybrid = (d as unknown as { hybrid?: readonly [string, string] }).hybrid;
+  if (hybrid) out.push(`update species_def set hybrid_a = ${q(hybrid[0])}, hybrid_b = ${q(hybrid[1])} where id = ${q(d.id)};`);
 }
 for (const id of [...unnamed].sort()) {
   out.push(`insert into item_def values (${q(id)}, ${q(id)}, 'misc', 1, false, null, null);`);
@@ -1740,6 +1747,9 @@ for (const [fn, v] of [
      lifetime at work: how many kinds of thing it counts. */
   ['colour_form_odds', COLOUR_FORM_ODDS], ['size_form_odds', SIZE_FORM_ODDS], ['large_health', LARGE_HEALTH], ['small_speed', SMALL_SPEED],
   ['form_pass', FORM_PASS], ['work_items', WORK_ITEMS],
+  /* Hybrids (`hybridlist.ts`): a listed cross's share of a pairing's chance, the husbandry and each parent's care it
+     needs, and a hybrid's task speed in each of its trades and its health over its blood's (hybrid vigour). */
+  ['cross_chance', CROSS_CHANCE], ['cross_skill', CROSS_SKILL], ['cross_care', CROSS_CARE], ['hybrid_work', HYBRID_WORK], ['hybrid_hardy', HYBRID_HARDY],
   /* A deed worker's rest: the goes it has in it, how long it rests, what a bed of its size makes of that, and the
      health bands that size a kind that does not evolve (`den_class`). Its upkeep: how long at work without a meal
      before it slows, and to what share of its pace. A settlement's specialty: the workers of a trade that make one,

@@ -8,7 +8,7 @@ AS $function$
 declare v_kind text; dd deed; v_job record; v_h placed; n int := stage_loads(c);
 begin
   if n <= 1 then return 1; end if;
-  v_kind := (select sd.gathers from species_def sd where sd.id = c.species);
+  v_kind := coalesce(c.job, (select sd.gathers from species_def sd where sd.id = c.species));
   select * into dd from my_deed(p_world, c.keeper) md where md.world_id is not null;
   if v_kind = 'hod' then
     select * into v_job from hod_needing_stocked(p_world, c.keeper, dd.x, dd.y, work_range(c));

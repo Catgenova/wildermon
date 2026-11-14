@@ -615,7 +615,7 @@ export class WildermonPanel {
       // Who it was bred from, over the traits it had from them, and how deep its
       // line runs on each channel it runs past one on (`lineLines`). Nothing at
       // all for anything that was not bred, or was born before pedigrees were kept.
-      const bred = c.pedigree ? [pedigreeLine(c.pedigree), ...lineLines(c)].join('\n') : '';
+      const bred = c.pedigree ? [pedigreeLine(c.pedigree, c.species), ...lineLines(c)].join('\n') : '';
       if (pedigree.textContent !== bred) pedigree.textContent = bred;
       hide(pedigree, !bred);
       const b = this.blood(c);

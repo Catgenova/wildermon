@@ -13,7 +13,7 @@ begin
                                  or coalesce((c.carrying->>'count')::int, 1) > coalesce((was->>'count')::int, 1)) then
     return true;
   end if;
-  v_kind := coalesce(p_kind, (select sd.gathers from species_def sd where sd.id = c.species));
+  v_kind := coalesce(p_kind, c.job, (select sd.gathers from species_def sd where sd.id = c.species));
   if hands_trade(v_kind) and v_kind <> 'mend' then
     for v_n in 2..stage_loads(c) loop
       exit when not errand_do(p_world, p_id, true, p_kind);

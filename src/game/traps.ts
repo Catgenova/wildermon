@@ -153,7 +153,7 @@ export const baitInPack = (g: Game, t?: PlacedTrap): Item[] => {
     if (baits.length || g.perk('bait:food', 0) <= 0) return baits;
     return g.inventory.items.filter((it) => !it.locked && isFood(it.id));
   }
-  return g.inventory.items.filter((it) => Object.values(SPECIES).some((s) => isBaitFor(s, it.id)));
+  return g.inventory.items.filter((it) => Object.values(SPECIES).some((s) => !s.hybrid && isBaitFor(s, it.id)));
 };
 
 export const TRAP_ACTIONS: ActionDef[] = [
@@ -227,7 +227,7 @@ export const TRAP_ACTIONS: ActionDef[] = [
         const b = BAIT_BY_ID.get(one.id);
         g.logMsg(`Baited: creel, ${itemName(one).toLowerCase()}.${b ? ` ${b.note}` : ''}`, 'event');
       } else {
-        const comers = Object.values(SPECIES).filter((s) => isBaitFor(s, one.id) && s.tameLevel <= trapHolds(trap));
+        const comers = Object.values(SPECIES).filter((s) => !s.hybrid && isBaitFor(s, one.id) && s.tameLevel <= trapHolds(trap));
         g.logMsg(
           `Baited: ${trapName(trap).toLowerCase()}, ${itemName(one).toLowerCase()}. ${comers.length ? `Kinds it draws: ${comers.length}.` : 'No kind this trap holds eats it.'}`,
           'event',

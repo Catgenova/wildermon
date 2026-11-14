@@ -5,7 +5,7 @@ CREATE OR REPLACE FUNCTION public.stud_book(p_world uuid, p_uid uuid, c creature
  LANGUAGE plpgsql
  STABLE
 AS $function$
-declare mate creature; v_skill double precision; v_care double precision;
+declare mate creature; v_skill double precision; v_care double precision; x species_def;
 begin
   if pk(p_world, p_uid, 'stud_book', 0) <= 0 or c.keeper is distinct from p_uid or c.mode not in ('active', 'deed') then
     return '';
@@ -14,8 +14,15 @@ begin
   if mate.id is null then return ''; end if;
   v_skill := skill_of(p_world, p_uid, 'animal_husbandry');
   v_care := (c.care + mate.care) / 2;
-  return ' Paired with ' || mate.name || ': success ' || round((breed_chance(v_skill, v_care) * 100)::numeric)::int
-    || '%; each of ' || trait_slots() || ' traits inherited '
+  select * into x from species_def where id = cross_of(c.species, mate.species);
+  return ' Paired with ' || mate.name || ': '
+    || case when x.id is null then 'success ' || round((breed_chance(v_skill, v_care) * 100)::numeric)::int || '%'
+            else 'Cross: ' || x.name || ' (' || (select a.name from species_def a where a.id = x.hybrid_a) || ' × '
+              || (select b.name from species_def b where b.id = x.hybrid_b) || '), success '
+              || round((pair_chance(v_skill, v_care, true) * 100)::numeric)::int || '% ('
+              || round((cross_chance() * 100)::numeric)::int || '% of ' || round((breed_chance(v_skill, v_care) * 100)::numeric)::int
+              || '%); born at stage ' || (least(stage_of(c), stage_of(mate)) + 1) || ', stays there' end
+    || '; each of ' || trait_slots() || ' traits inherited '
     || round((keep_chance(v_skill, v_care, pk(p_world, p_uid, 'breed:inherit', 0), pair_fresh(c, mate)) * 100)::numeric)::int
     || '%, rarity-up '
     || round((least(1, upgrade_chance(v_skill, v_care) + pk(p_world, p_uid, 'breed:upgrade', 0)) * 100)::numeric)::int

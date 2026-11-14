@@ -218,11 +218,12 @@ begin
   elsif p_action = 'pair_creature' then
     c := target_creature(p_world, p_target);
     mate := mate_for(p_world, c);
-    if c.world_id is null or mate.id is null or pair_refuses(p_world, c, mate) is not null then return; end if;
+    if c.world_id is null or mate.id is null or pair_refuses(p_world, c, mate) is not null
+       or cross_refuses(p_world, p_uid, c, mate) is not null then return; end if;
     if c.sex = 'female' then dam := c; sire := mate; else dam := mate; sire := c; end if;
     v_skill := skill_of(p_world, p_uid, 'animal_husbandry');
     v_care := (dam.care + sire.care) / 2;
-    v_took := random() < breed_chance(v_skill, v_care);
+    v_took := random() < pair_chance(v_skill, v_care, cross_of(dam.species, sire.species) is not null);
     perform skill_raise(p_world, p_uid, 'animal_husbandry', try_gain(v_took, breed_gain()));
     if not v_took then
       -- A failed pairing costs both of them a rest, but only half of one.
@@ -235,6 +236,7 @@ begin
     perform pair_them(p_world, dam.id, sire.id, v_skill, p_uid, p_target->>'sex');
     perform journal_note(p_world, p_uid, 'paired');
     perform wtell(p_world, p_uid, 'Paired: ' || sire.name || ' with ' || dam.name
+      || coalesce(' (cross: ' || (select x.name from species_def x where x.id = cross_of(dam.species, sire.species)) || ')', '')
       || '. Due in ' || clock_left(gestation_of(pk(p_world, p_uid, 'breed:gestation', 1), dam))
       || '. Traits between them: '
       || trait_names((select array_agg(distinct t) from unnest(sire.traits || dam.traits) t))

@@ -1,5 +1,6 @@
 import { GENDERS, HAIR_FADE, HAIRSTYLES } from '../../game/look';
 import { OUTFITS } from '../creator';
+import { CROSS_CARE, CROSS_CHANCE, CROSS_SKILL, HYBRID_HARDY, HYBRID_WORK, HYBRIDS } from '../../game/hybridlist';
 import { MAP_LEGEND, MAP_ZOOM_MIN, MAP_ZOOM_STEP, SETTLEMENT_BORDER_PX } from './minimap';
 import { BAG_CARRY } from '../../game/gear';
 import { BUILD_COUNTS, MOST_GOES } from '../buildCounts';
@@ -3613,6 +3614,19 @@ export function helpText(): string {
       Unread: <i>something</i>.</li>
       <li>Only females give milk. Young and old ones do not breed.</li>
       <li><b>Pedigree</b> (card and hover): <b>dam</b>, <b>sire</b>, and each readable trait's source: ${PEDIGREE_SOURCES}.</li>
+    </ul>
+    <h4>Hybrids</h4>
+    <ul>
+      <li><b>Listed crosses</b> (${HYBRIDS.length}): ${HYBRIDS.map((h) => `${h.name} (${SPECIES[h.a].name} × ${SPECIES[h.b].name})`).join(', ')}. Either parent may be the dam.</li>
+      <li>Mate: one of its own sort first, else one of a listed cross within ${PAIR_RANGE} tiles: <b>Cross with</b> (name): (hybrid).</li>
+      <li>Cross: animal husbandry ${CROSS_SKILL}+; each parent care ${percent(CROSS_CARE)}+; success ${percent(CROSS_CHANCE)} of a pairing's.</li>
+      <li>Young: the hybrid; stage: the less-evolved parent's, for good (no evolution); ${TRAIT_SLOTS} trait slots from either parent at the usual inheritance chance;
+      colour form ${percent(FORM_PASS)} per parent with one, in the hybrid's own colours; size form as any young.</li>
+      <li>Hybrid: health +${percent(HYBRID_HARDY - 1)}; <b>infertile</b>; never wild; body and first task from the first parent, markings, colours and second task from the second.</li>
+      <li>At work: one worker place; the first parent's task first, the second's when the first has none in reach; task speed ${percent(HYBRID_WORK)} of a pure-bred's in each;
+      level: mean of the two tasks' skills.</li>
+      <li>Pedigree: <i>Hybrid: ${SPECIES[HYBRIDS[0].a].name} × ${SPECIES[HYBRIDS[0].b].name} · Dam … · sire …</i>.</li>
+      <li>Field guide: a page each, after the other wildermon; marked seen, and tamed and bred at a birth to a dam you keep.</li>
     </ul>
     <h4>Lines and mutations</h4>
     <ul>
