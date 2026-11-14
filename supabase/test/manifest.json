@@ -391,6 +391,12 @@
     "why": "Asked for: every spell played the placeholder gesture on the sculpted body. Every spell, both bodies, all eight facings, plays a casting clip by how it is cast (or its weapon's fight clip for a blow, a thrust or a shot), never the placeholder; each starts and ends stood with the arms hanging; run through a cast in frames, the release mark fires once on the frame the spell is let go, from the sending hand (the left where played mirrored); walking, a spell cast with the hands is laid over the walk; a throw, a blow and a shot hold the weapon; Animations Off stands idle."
   },
   {
+    "file": "supabase/test/buildclips.ts",
+    "title": "Lifting, taking apart, bridges and aqueducts play their own clips, hands at their places and feet still",
+    "shard": 1,
+    "why": "Twenty-eight jobs (pieces taken up and set down, turned; walls, columns, storeys, floors, bridges and aqueducts taken down; paint scraped off; sides marked out and taken off the plan; bridges and aqueducts worked on) played the placeholder gesture. Each plays its own clip from every facing on both bodies, mirrored from the left-handed facings; a smelter, kiln or anvil lifts slower and deeper than a chair; on the game's skeleton every reached hand gets to its place and the feet do not slide through a run; the leant-out strike's mallet lands on the chisel; Animations Off holds them stood."
+  },
+  {
     "file": "supabase/test/emotes.ts",
     "title": "Bow, cheer, point, clap and sit: their own clips, held and ended as they say",
     "shard": 1,
