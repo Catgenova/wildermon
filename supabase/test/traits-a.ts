@@ -15,7 +15,7 @@
  * Runs against the database the suite leaves behind, in one transaction that is rolled back.
  */
 import { Game } from '../../src/game/game';
-import { bloodMul, type Creature } from '../../src/game/creatures';
+import { bloodMul, REGEN_KEPT, type Creature } from '../../src/game/creatures';
 import {
   CHANNELS, FIGHTING, gradeId, rollTrait, TIERS, traitMul, traitOf, traitSays, type TraitDef, type TraitTier,
 } from '../../src/game/traits';
@@ -186,7 +186,8 @@ const browserHerd = g.creatures.aura(hurt, 'mend');
 const healed = heal();
 lead.traits = [];
 const healed0 = heal();
-const per = Math.round(10 * 0.6 * bloodMul(hurt, 'mend') * 10000) / 10000;
+// The kept rate of healing a second (`REGEN_KEPT`), read off the rule rather than written out, so a change to it is followed.
+const per = Math.round(10 * REGEN_KEPT * bloodMul(hurt, 'mend') * 10000) / 10000;
 check(`hearth-bred: +${Math.round((herd - 1) * 100)}% healing to every wildermon working its settlement, itself included, on the island (deed_aura)`,
   // The bearer's own blood and the herd's, as every communal trait counts for the one carrying it.
   at('HERD') === String(herd) && at('OWN') === String(Math.round(herd * herd * 10000) / 10000), `herd ${at('HERD')}, its own ${at('OWN')}`);
