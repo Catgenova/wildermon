@@ -118,6 +118,7 @@ import type { WaterPlant } from '../world/waterplants';
 import type { Swirl } from '../game/motes';
 import { drawSwirl, glowSwirl } from './swirls';
 import { activeInfusion } from '../game/infusion';
+import { isRigged } from '../game/sailing';
 import { MOTE_ELEMENTS, type MoteElement } from '../game/motes';
 /** An infused thing's knot of motes, as a share of a swirl's; the least zoom one is drawn at; how far from you and how many. */
 const INFUSED_SCALE = 0.5;
@@ -1381,7 +1382,7 @@ export class Renderer {
     if (this.game.settings.effects === 'off' || this.camera.zoom < INFUSED_ZOOM) return out;
     const now = Date.now() / 1000, px = this.game.player.x, py = this.game.player.y;
     const all: Array<{ d: number; key: number; s: Swirl & { lift: number } }> = [];
-    const add = (thing: { infuse?: { el: string; until: number } }, x: number, y: number, lift: number, id: number): void => {
+    const add = (thing: { infuse?: { el: string; str: number; until: number } }, x: number, y: number, lift: number, id: number): void => {
       const i = activeInfusion(thing, now);
       if (!i || !(MOTE_ELEMENTS as readonly string[]).includes(i.el)) return;
       const d = Math.hypot(x + 0.5 - px, y + 0.5 - py);
@@ -7010,7 +7011,7 @@ export class Renderer {
         const piece = ent.piece;
         const helm = this.helming === piece ? 'player' : piece.helm ? this.game.roster.list().find((p) => p.uid === piece.helm) : undefined;
         const hb = drawFurniture(ctx, ent.sx, ent.sy + (ent.drawDy ?? 0), zoom, piece.kind, !!piece.lit, dyeOf(piece) ?? undefined, this.pieceTrim(piece), ent.view, piece.material, crewOf(piece.kind) ?? undefined, ent.layer, true,
-          helm ? figurePicture(helm === 'player' ? helm : 'o' + helm.id) : null, this.manned(piece));
+          helm ? figurePicture(helm === 'player' ? helm : 'o' + helm.id) : null, this.manned(piece), isRigged(piece));
         // A hull is drawn in layers round her crew, not to be drawn again: in front of a runestone's runes, her box is kept off them.
         if (this.runeNight.keeping) this.runeNight.occludeRect(ctx, ent.sx + hb[0], ent.sy + (ent.drawDy ?? 0) + hb[1], hb[2] - hb[0], hb[3] - hb[1], this.occClips);
         continue;
@@ -7140,7 +7141,7 @@ export class Renderer {
            */
           const crew = ent.layer === 0 ? crewOf(piece.kind) ?? undefined : undefined;
           this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => {
-            drawn = drawFurniture(g, px, py, zoom, piece.kind, !!piece.lit, dyeOf(piece) ?? undefined, this.pieceTrim(piece), view, piece.material, crew, crew && !hovering ? 0 : 'all', false, null, this.manned(piece));
+            drawn = drawFurniture(g, px, py, zoom, piece.kind, !!piece.lit, dyeOf(piece) ?? undefined, this.pieceTrim(piece), view, piece.material, crew, crew && !hovering ? 0 : 'all', false, null, this.manned(piece), isRigged(piece));
           }, undefined, pieceBox);
           // What on it moves -- an altar's stars, a banner's cloth -- over it, and outside the
           // ring under the pointer: a ring round a bloom of light is a blot.

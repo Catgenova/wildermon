@@ -403,7 +403,7 @@ export class InventoryPanel {
         hint: away ?? (item.count < INFUSE_MOTES ? INFUSE_SAID.motes : into.length ? undefined : INFUSE_SAID.fits(element)),
         disabled: !!away || item.count < INFUSE_MOTES || !into.length,
         children: into.map(({ label, target }) => {
-          const t = { ...target, item: item.uid } as Target;
+          const t = { ...target, item: item.uid } as unknown as Target;
           const why = infuse.check?.(t, this.game) ?? null;
           return { label, hint: why ?? undefined, disabled: !!why, onSelect: () => this.game.requestAction(infuse, t) };
         }),
