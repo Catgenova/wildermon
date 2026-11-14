@@ -3,6 +3,7 @@ import { MONSTER_GROWTH } from '../../render/monster-size';
 import { FORGET_AFTER, LOADING_AT_ONCE, SLICE_MS } from '../../render/wildermon';
 import { ACT_SECS } from '../../render/beasts';
 import { NAME_PX } from '../../render/namelabels';
+import { KNEES_EASED, KNEES_OUT } from '../../sculpt/anim/clips/seated';
 import { BODY_BUDGET_MS } from '../../render/bodybudget';
 import { QUALITY } from '../../render/bodies';
 import { COLOUR_FORM_ODDS, FORM_PASS, formGives, formName, SIZE_FORM_ODDS } from '../../game/wildforms';
@@ -4417,6 +4418,11 @@ export const NEWS: News[] = [
       `New: rowing under way: ${OAR_DROPS} drops a blade at the catch; whirl pair a blade a stroke, ${SWIRL_SECS} s.`,
       'Without a graphics card: swimming strokes\' splashes, rings treading water, the float\'s strike and a catch only.',
     ],
+  },
+  {
+    n: 585,
+    day: '2026-11-14',
+    lines: () => [`Fixed: undergarment bottoms hidden on a seated body seen from the front. Knees parted ${KNEES_OUT}° each side at the reins and the oars, ${KNEES_EASED}° at the tiller (was: together).`],
   },
   {
     n: 584,

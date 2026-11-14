@@ -1008,6 +1008,12 @@
     "why": "\"revamp the character customization screen for the new models. It will only have the 2 body types, 3 hairstyles (2+bald). It needs sliders for hair color and skin tone.\" The bodies and the hairstyles there is a mesh for; the skin, hair colour and grey as numbers clamped to nought to one; every old id to the nearest of now; look_clean as cleanLook; the doors, the old rows rewritten."
   },
   {
+    "file": "supabase/test/seatedbriefs.ts",
+    "title": "The undergarment shows on a body sat down",
+    "shard": 2,
+    "why": "Reported with a picture: \"this angle is missing bottoms\", a woman in her undergarment at a cart's reins seen from in front, her briefs hidden behind her knees. Each body with nothing on, sat at a cart's and a wagon's reins, a rowing boat's oars, a sailing boat's tiller (where driverOn puts the driver, every way round), in a saddle and meditating, drawn as the GPU draws it: the briefs, and her band, win at least 1.25 screen pixels at zoom one from every facing, and every triangle of the undergarment is in the bake."
+  },
+  {
     "file": "supabase/test/nearby.ts",
     "title": "Bodies go to the blocks round you, not to the whole island",
     "shard": 2,
