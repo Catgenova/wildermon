@@ -1183,7 +1183,7 @@ export function helpText(): string {
     <h3>Other people</h3>
     <h4>Emotes</h4>
     <ul>
-      <li>Menu: <kbd>${keyOf('emotes')}</kbd>; or type the command in chat. Seen by everybody in view; said in the log.</li>
+      <li>Menu: <kbd>${keyOf('emotes')}</kbd>; or the command in chat. Seen by everybody in view; a line in their log.</li>
       ${EMOTES.map((e) => `<li><b>${e.label}</b> (<kbd>/${e.id}</kbd>): ${e.held ? `${e.seconds} s down; held until you move, swim, board or work` : `${e.seconds} s`}.</li>`).join('')}
     </ul>
     <h4>Right-click a person</h4>

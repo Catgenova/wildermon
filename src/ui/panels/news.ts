@@ -4431,7 +4431,7 @@ export const NEWS: News[] = [
       };
       return [
         `New: emotes (Emotes menu): ${['bow', 'cheer', 'point', 'clap', 'sit'].map(e).join('; ')}.`,
-        'Changed: Animations off: bow, cheer, point and clap shown in one still pose; sat shown sat.',
+        'New: Animations off: bow, cheer, point, clap: one still pose each; sit: sat.',
         'Fixed: stood still after an emote: the idle (was: the emote\'s first pose held; after 6 7, the forearms out).',
       ];
     },
