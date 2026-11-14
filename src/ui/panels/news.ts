@@ -4422,7 +4422,7 @@ export const NEWS: News[] = [
     ],
   },
   {
-    n: 589,
+    n: 590,
     day: '2026-11-14',
     lines: () => {
       const jobs = (...clips: string[]): number => [...ACTION_BY_ID.keys()].filter((id) => clips.includes(clipOfJob(id) ?? '')).length;
@@ -4430,6 +4430,21 @@ export const NEWS: News[] = [
         `New: lifting and setting down animated on the sculpted body: ${jobs('lift', 'set-down')} jobs (furniture, crates, posts, water motes), squat lift, load at the chest; smelter, kiln and anvil: ${jobs('lift-heavy', 'set-down-heavy')} jobs, deeper squat, slower, load at the belly (was: a placeholder gesture).`,
         `New: taking apart animated: hammer knocked in and levered back, ${jobs('pry')} jobs (walls, columns, storeys, bridges, aqueducts); floors squatted: ${jobs('pry-low')}; paint scraped off with a trowel: ${jobs('scrape')}; a piece turned, grip and twist: ${jobs('turn')} (was: a placeholder gesture).`,
         `New: marking out, no plan and taking off the plan animated: ${jobs('mark', 'pull-stake')} jobs, a point or a stake pulled up. Bridges and aqueducts: ${jobs('work-out')} jobs, mallet and chisel leant out over the span (was: a placeholder gesture).`,
+      ];
+    },
+  },
+  {
+    n: 589,
+    day: '2026-11-14',
+    lines: () => {
+      const e = (id: string): string => {
+        const d = EMOTE_BY_ID.get(id);
+        return d ? `${d.label} (/${d.id}): ${d.held ? `${d.seconds} s down, held until you move, swim, board or work` : `${d.seconds} s`}` : id;
+      };
+      return [
+        `New: emotes (Emotes menu): ${['bow', 'cheer', 'point', 'clap', 'sit'].map(e).join('; ')}.`,
+        'New: Animations off: bow, cheer, point, clap: one still pose each; sit: sat.',
+        'Fixed: stood still after an emote: the idle (was: the emote\'s first pose held; after 6 7, the forearms out).',
       ];
     },
   },

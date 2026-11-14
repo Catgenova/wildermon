@@ -3,6 +3,7 @@ import { tileKey } from './tileindex';
 import { phasePerTile, RIDE_CADENCE } from './player';
 import { BODY_EVERY } from './keep';
 import { BLOCK_SECS, FLINCH_SECS } from './fight';
+import { emoteLeft } from './emotes';
 
 /** Handed back for a tile nobody is standing on, so the common answer is free. */
 const NOBODY: readonly Peer[] = [];
@@ -299,6 +300,8 @@ export class Roster {
         if (t >= 1) p.span = 0;
       }
       if (p.moving) p.walkPhase += dt * RIDE_CADENCE;
+      // Sat on the ground (a held emote) until they walk off, swim or work (`emoteLeft`).
+      if (emoteLeft(p.emote, p.moving || p.swimming || p.working)) p.emote = undefined;
       // A frame's walk, and not a jump to where somebody turned up after a gap in the word.
       const [x, y] = this.drawnAt(p);
       const gone = Math.hypot(x - p.drawnX, y - p.drawnY);

@@ -379,6 +379,12 @@
     "why": "Twenty-eight jobs (pieces taken up and set down, turned; walls, columns, storeys, floors, bridges and aqueducts taken down; paint scraped off; sides marked out and taken off the plan; bridges and aqueducts worked on) played the placeholder gesture. Each plays its own clip from every facing on both bodies, mirrored from the left-handed facings; a smelter, kiln or anvil lifts slower and deeper than a chair; on the game's skeleton every reached hand gets to its place and the feet do not slide through a run; the leant-out strike's mallet lands on the chisel; Animations Off holds them stood."
   },
   {
+    "file": "supabase/test/emotes.ts",
+    "title": "Bow, cheer, point, clap and sit: their own clips, held and ended as they say",
+    "shard": 1,
+    "why": "Asked for: five more emotes on the sculpted bodies. Each plays a clip of its own, never the placeholder, the point with the arm that reads from where it is seen; the one-shots start and end stood; the clap's hands meet at every clap on both bodies; an emote is drawn only while it runs, the idle after; the sit is held until the body moves, swims or works, a peer's too; sat is on the ground; with Animations Off each is its still pose."
+  },
+  {
     "file": "supabase/test/actionfx.ts",
     "title": "Action effects with thirty at work, thirty in a fight, and thirty on the water keep to their share of the particles and cost little",
     "shard": 1,
