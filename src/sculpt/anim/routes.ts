@@ -4,6 +4,10 @@
  */
 import { ACTION_BY_ID } from '../../game/actions';
 import { RECIPE_BY_ID } from '../../game/recipes';
+import { BLOOM_KINDS } from '../../game/gardendefs';
+
+/** The garden pieces' jobs done with the hands at waist height (`garden.ts`); a trim and a clip are the sickle's cut (`CLIP_OF_TOOL`). */
+const GARDEN_HANDS = [...BLOOM_KINDS.map((k) => `plant_${k}_flowers`), 'clear_flowers', 'prune_bonsai', 'show_on_piece', 'take_from_show'];
 
 /**
  * The clip a job in the `work` state plays, by the tool it is done with (its action's `tool`, `../../game/actions.ts`):
@@ -71,6 +75,9 @@ export const CLIP_OF_JOB: Readonly<Record<string, string>> = Object.fromEntries(
     'fill_bucket', 'fill_skin', 'pour_into_barrel', 'empty_vessel',
     'fuel_smelter', 'light_smelter', 'damp_smelter', 'pour_ingot', 'smelter_take_all', 'fuel_kiln', 'light_kiln', 'damp_kiln', 'kiln_take_all',
     'fuel_oven', 'light_oven', 'put_out_oven', 'furniture_take_all', 'crate_take_all', 'start_brew', 'set_brew_spring',
+    // a garden piece at waist height (`garden.ts`): wildflowers planted in a bed, a box or a basket and pulled up, a bonsai
+    // pruned on its stand, a trophy hung on its plaque or a pot set on its stand and taken down
+    ...GARDEN_HANDS,
   ].map((job) => [job, 'hands']),
   ...[
     // a tile or a plant

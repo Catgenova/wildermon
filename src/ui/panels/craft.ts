@@ -6,6 +6,10 @@ import { CRAFT_REACH, DEED_ONLY, liquidWord, needRecipeSays, RECIPE_BY_ID, recip
 import { lockedHiddenSays, recipeSearch } from '../../game/craftsearch';
 import { isFurniture, ONE_ALTAR } from '../../game/furniture';
 import { SKILL_DEFS } from '../../game/skills';
+import type { Target } from '../../game/actions';
+import { CARVED_FIGURE } from '../../game/gardendefs';
+import { FIGURE_KINDS } from '../../game/garden';
+import { SPECIES } from '../../game/creatures';
 import type { UIWindow } from '../windows';
 import { Repaint } from '../repaint';
 
@@ -68,6 +72,8 @@ export class CraftPanel {
   private readyOnly = false;
   /** What each recipe is to be made of, where the row was set to a wood or a metal: recipe id to material. */
   private readonly wants = new Map<string, string>();
+  /** The kind a carved figure is to be carved as, chosen on its row among those in the field guide (`garden.ts`). */
+  private figure = '';
   /**
    * Make until you hold so many: the recipe, the count wanted, and what was
    * held when the last run was asked for, to see the next one get nearer.
@@ -502,6 +508,8 @@ export class CraftPanel {
       if (i.have < i.need) this.findable(span, i.item, { need: i.need, tool: false, r });
       parts.push(span);
     }
+    // A carved figure's kind, out of those seen in the field guide (`garden.ts`): the island refuses any other.
+    if (r.result === CARVED_FIGURE) parts.push(this.figurePick());
     // What it would come out made of, since the same bill in two woods makes
     // two different things; and a choice of them, when more than one kind is
     // carried. Asked for: an oak chest from a pack that holds pine too.
@@ -713,8 +721,48 @@ export class CraftPanel {
     // The number of goes, which is the island's `p_times`. It used to ride
     // inside the target as `count`, where the island reads it as "how many of
     // the stack" and a craft reads it not at all.
-    this.game.requestAction(def, { kind: 'item', uid: material.uid }, times);
+    // And a carved figure's kind, chosen on its row (`garden.ts`).
+    const kind = r.result === CARVED_FIGURE ? { species: this.figureKind() } : {};
+    this.game.requestAction(def, { kind: 'item', uid: material.uid, ...kind } as Target, times);
     return true;
+  }
+
+  /** The kinds a figure may be carved as: those seen in the field guide, in its order. */
+  private figureKinds(): string[] {
+    return FIGURE_KINDS().filter((k) => this.game.guide.has(k, 'seen'));
+  }
+
+  /** The kind chosen, or the first seen when none is. */
+  private figureKind(): string | undefined {
+    const kinds = this.figureKinds();
+    return kinds.includes(this.figure) ? this.figure : kinds[0];
+  }
+
+  /** The choice of kind on a carved figure's row: every kind seen in the field guide, or a word that there is none. */
+  private figurePick(): HTMLElement {
+    const kinds = this.figureKinds();
+    if (!kinds.length) {
+      const none = document.createElement('span');
+      none.className = 'have short';
+      none.textContent = 'No kind seen (field guide)';
+      return none;
+    }
+    const pick = document.createElement('select');
+    pick.className = 'craft-of';
+    pick.title = 'Kind: seen in your field guide';
+    const chosen = this.figureKind();
+    for (const k of kinds) {
+      const o = document.createElement('option');
+      o.value = k;
+      o.textContent = SPECIES[k]?.name ?? k;
+      o.selected = k === chosen;
+      pick.append(o);
+    }
+    pick.addEventListener('change', () => {
+      this.figure = pick.value;
+      this.render();
+    });
+    return pick;
   }
 }
 

@@ -9,6 +9,12 @@
 import { RARITIES, type Item } from '../game/items';
 import type { ItemRow } from '../contract/rows';
 
+/** A carved figure's kind off an item row's `garden` (`garden.ts`), or undefined. */
+const figureOf = (g: unknown): string | undefined => {
+  const k = g && typeof g === 'object' ? (g as { figure?: unknown }).figure : undefined;
+  return typeof k === 'string' ? k : undefined;
+};
+
 /** As much of an island as this needs: what its clock says about a stamp. */
 export interface Aged {
   since(stamp: string | null): number;
@@ -65,6 +71,8 @@ export function packed(it: ItemRow, island: Aged): Item {
     enchant: it.enchant ?? undefined,
     // And the line cut into a memorial stone, which it carries as it stood (`memorial.ts`).
     engraving: it.engraving ?? undefined,
+    // And a carved figure's kind, which names it in the pack and carves it when it is set down (`garden.ts`).
+    ...(figureOf(it.garden) ? { figure: figureOf(it.garden) } : {}),
   };
 }
 

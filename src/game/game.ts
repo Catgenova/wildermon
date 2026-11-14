@@ -24,7 +24,7 @@ import { furnaceJobs, furnaceOutput } from '../net/rows/furnace';
 import { storedThing } from '../net/rows/stored';
 import { DROWN_RATE, DROWN_WARN, EXHAUSTED, HEAL_FED, HEAL_RATE, HUNGER_RATE, staminaBarAbove, SWIM_LEARN, SWIM_WIND, THIRST_RATE, WIND_PER_LEVEL, WIND_REST, WIND_STARVING, WIND_WALK } from './body';
 import { markName, MARK_CAP, MARK_COLOURS, type Marker } from './marks';
-import { acrossSide, Buildings, OPPOSITE_SIDE, type FloorTile, CELLAR_DECAY, CELLAR_FLOOR, CELLAR_LEVEL, connectsDown, floorKind, floorOf, INDOORS_DECAY, isDone, isSpiral, keepJobLevel, SPIRAL_FOOT_SAID, progressOf, roofShapeDef, TOP_LEVELS, WALL_HEIGHT, walkableKind, workLevel, type BuildingsJSON, type Building, type Wall, type Side, type Bill, type Column } from './building';
+import { acrossSide, borderOf, Buildings, OPPOSITE_SIDE, type FloorTile, CELLAR_DECAY, CELLAR_FLOOR, CELLAR_LEVEL, connectsDown, floorKind, floorOf, INDOORS_DECAY, isDone, isSpiral, keepJobLevel, SPIRAL_FOOT_SAID, progressOf, roofShapeDef, TOP_LEVELS, WALL_HEIGHT, walkableKind, workLevel, type BuildingsJSON, type Building, type Wall, type Side, type Bill, type Column } from './building';
 import { CELLAR_DAYLIGHT, cellarGate, cellarPieceOk, targetFloor } from './cellar';
 import { jettyBase } from './frame';
 import { UNDONE_PLANS, type PlanAnswer } from './planarea';
@@ -108,6 +108,7 @@ import { ledgerTotals, record, type Ledger } from './ledger';
 import { ALTAR_CAST, ALTAR_CAST_ALPHA, ALTAR_GLOW, ALTAR_REACH, FIRE_REACH, heldReachOf, HELD_LIGHTS, memorialLight, MOTH_LIGHT, OVEN_REACH, plinthLight, runestoneLight, type LightSource } from './light';
 import { plinthBusy } from './plinth';
 import { MEMORIAL } from './memorial';
+import { gardenFrom, hedgeRefusal, mountRefusal, mountTurnsTo, MOUNT_SAID } from './garden';
 import { counterFinished, counterInto, counterMiddle, Counters, type CountersJSON, type CounterWire } from './counters';
 import { burnLamps, isLampPiece, lampArmRefusal, lampBurning, lampFrom, lampLight, lampTurnsTo } from './lamps';
 import { settleTrellises, trellisShares, trellisTurnsTo, trellisWallRefusal, VINE_SAID } from './vineyard';
@@ -768,6 +769,8 @@ export class Game {
   private deckIndex = new Map<string, number>();
   /** The hinge of every drawbridge drawn up, by `hingeKey`, to the bridge: a border shut to everything (`gates.ts`). */
   readonly hinges = new Map<string, number>();
+  /** The borders a hedge stands along, by `hingeKey` (`reindexBars`). */
+  readonly hedgeBars = new Set<string>();
   /** Concrete slabs poured over sloping tiles, one to a tile. */
   readonly foundations = new Map<number, Foundation>();
   nextFoundationId = 1;
@@ -6507,7 +6510,21 @@ export class Game {
       // A drawbridge drawn up stands on end over its hinge, which is shut to everything (`gates.ts`).
       if (isDrawbridge(b) && b.raised) this.hinges.set(hingeKey(b.level ?? 0, hingeOf(b)), b.id);
     }
-    this.buildings.barred = this.hinges.size ? (level, br) => this.hinges.has(hingeKey(level, br)) : undefined;
+    this.reindexBars();
+  }
+
+  /**
+   * What shuts a border that no wall does: a drawbridge drawn up over its
+   * hinge (`gates.ts`), and a hedge along the side of its tile (`garden.ts`,
+   * the island's `creature_way` the same), each on its storey.
+   */
+  reindexBars(): void {
+    this.hedgeBars.clear();
+    for (const f of this.furniture.values()) {
+      if (furnitureDef(f.kind).hedge) this.hedgeBars.add(hingeKey(f.level ?? 0, borderOf(f.x, f.y, facingOf(f))));
+    }
+    this.buildings.barred = this.hinges.size || this.hedgeBars.size
+      ? (level, br) => this.hinges.has(hingeKey(level, br)) || this.hedgeBars.has(hingeKey(level, br)) : undefined;
   }
 
   /** The bridge whose deck covers this tile, finished or not. */
@@ -8986,6 +9003,8 @@ export class Game {
           ...lampFrom(r.state),
           // A memorial stone's line (`memorial.ts`).
           ...(typeof r.engraving === 'string' && r.engraving ? { engraving: r.engraving } : {}),
+          // What a garden piece holds and how it was last shaped (`garden.ts`).
+          ...(gardenFrom(r.garden) ? { garden: gardenFrom(r.garden) } : {}),
           // When a skep was set down or last emptied, which what it has made is worked out from (`bees.ts`).
           ...(typeof r.state?.skep_at === 'number' ? { skepAt: r.state.skep_at } : {}),
           /*
@@ -9023,6 +9042,8 @@ export class Game {
       kilns: layOver(this.kilns, built.kilns), furniture: layOver(this.furniture, built.furniture),
       anvils: layOver(this.anvils, built.anvils), posts: layOver(this.posts, built.posts), traps: layOver(this.traps, built.traps),
     };
+    // A hedge shuts the side of its tile it stands along (`garden.ts`).
+    this.reindexBars();
     if (!same(counterRows, built.counters)) news = true;
     built.counters = counterRows;
     /*
@@ -9537,6 +9558,7 @@ export class Game {
     this.placed.furniture.add(f);
     // A fountain set down where an aqueduct pours keeps its water from now (`./aqueducts`).
     if (kind === 'fountain') this.springs.channelChanged({ from: [x, y], to: [x, y] });
+    if (furnitureDef(kind).hedge) this.reindexBars();
     this.events.emit('crate');
     return f;
   }
@@ -9549,6 +9571,7 @@ export class Game {
     this.planted.delete(id);
     // And a fountain an aqueduct poured into leaves its water to run away downhill.
     if (f?.kind === 'fountain') this.springs.channelChanged({ from: [f.x, f.y], to: [f.x, f.y] });
+    if (f && furnitureDef(f.kind).hedge) this.reindexBars();
     this.events.emit('crate');
   }
 
@@ -9611,6 +9634,12 @@ export class Game {
       const why = trellisWallRefusal(this, x, y, facing, except === undefined ? this.player.level : (this.furniture.get(except)?.level ?? 0));
       if (why) return why;
     }
+    // Fixed to a wall or hung, where it is fixed; a hedge along a side, outside, from the ground (`garden.ts`).
+    if (def.mount || def.hedge) {
+      const lv = except === undefined ? this.player.level : (this.furniture.get(except)?.level ?? 0);
+      const why = def.mount ? mountRefusal(this, def.mount, x, y, facing, lv) : hedgeRefusal(this, x, y, lv);
+      if (why) return why;
+    }
     // A trellis shares the corner spot of its row with one at right angles to it (`trellisShares`).
     const shares = def.vine ? (f: PlacedFurniture): boolean => trellisShares(kind, facing, f) : undefined;
     for (let dy = 0; dy < fh; dy++) {
@@ -9632,11 +9661,14 @@ export class Game {
    */
   pieceTurnsTo(f: PlacedFurniture): Side {
     if (furnitureDef(f.kind).vine) return trellisTurnsTo(this, f) ?? facingOf(f);
+    // A piece fixed to a wall or hung goes round to the next side it is fixed on (`garden.ts`).
+    if (furnitureDef(f.kind).mount) return mountTurnsTo(this, f) ?? facingOf(f);
     return lampTurnsTo(this, f);
   }
 
   /** Why a trellis will not turn, or null: no other side of its tile has a wall it stands against (`VINE_SAID.turn`). */
   trellisTurnRefusal(f: PlacedFurniture): string | null {
+    if (furnitureDef(f.kind).mount && !mountTurnsTo(this, f)) return MOUNT_SAID.turn;
     return furnitureDef(f.kind).vine && !trellisTurnsTo(this, f) ? VINE_SAID.turn : null;
   }
 

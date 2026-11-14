@@ -16,6 +16,12 @@ import { ENCHANTERS_PLINTH } from './enchant';
 import { lanternReach } from './light';
 import { storeMoveRefusal, storeUse } from './stores';
 import { WATER_MOTE, WATER_MOTES_EACH } from './motes';
+import {
+  ARBOUR_BENCH, BASKET_SLOTS, BED_SLOTS, BIRDHOUSE, BONSAI, BOX_SLOTS, CARVED_FIGURE, FLOWER_BED, FLOWER_CART, FOLDING_SCREEN, HANGING_BASKET, HEDGE,
+  HERB_BOX, HERB_SHARE, PLANT_STAND, PLAQUE_HOLDS, POTTED_FERN, POTTED_PALM, STAND_HOLDS, TOPIARY_TUB, TROPHY_PLAQUE, WIND_CHIME, WINDOW_BOX,
+  WISTERIA_PERGOLA, SHOWING_SAID, type Mount,
+} from './gardendefs';
+import type { GardenState } from './garden';
 
 /**
  * What a store takes, for the five that take one sort of thing: raw materials,
@@ -207,6 +213,34 @@ export interface FurnitureDef {
    * `PlacedFurniture.sleeper` while it does.
    */
   den?: 0 | 1 | 2;
+  /**
+   * Wildflowers are planted in it, a kind to a slot, this many slots, chosen
+   * as each is planted; they leaf, bud and flower from the moment it is set
+   * down by the rose arch's rule (`garden.ts`).
+   */
+  bloom?: number;
+  /** Fixed to a wall or hung, in the row of spots along the side it faces (`Mount`, `garden.ts`). */
+  mount?: Mount;
+  /**
+   * A hedge along a side of its tile, in the row of spots along it as a
+   * trellis is: full `HEDGE_FULL` days after it is set down, and nothing walks
+   * through the side it stands on (`garden.ts`).
+   */
+  hedge?: boolean;
+  /** A planter that grows herbs only, harvested at this share of a planter's yield (`garden.ts`). */
+  herbs?: number;
+  /** A clipped shrub, trimmed to a shape that it grows out of (`garden.ts`). */
+  topiary?: boolean;
+  /** A bonsai: grows over `BONSAI_GROWN` days, shaped a step a prune (`garden.ts`). */
+  bonsai?: boolean;
+  /** Holds things on show, this many: a trophy on a plaque, potted plants on a stand (`garden.ts`). */
+  shows?: { what: 'trophy' | 'pot'; n: number };
+  /** Carved as a kind of wildermon the maker has seen, chosen at the bench (`garden.ts`). */
+  figure?: boolean;
+  /** Small birds come and go round it by day, none in winter (`garden.ts`). */
+  birds?: boolean;
+  /** Chimes in the wind, silent in still air (`garden.ts`). */
+  chime?: boolean;
 }
 
 /**
@@ -501,6 +535,34 @@ export const FURNITURE: FurnitureDef[] = [
         { skill: 'masonry', tool: 'trowel', climber }),
     ];
   }),
+  /*
+   * The garden pieces (`garden.ts`; their numbers in `gardendefs.ts`): beds,
+   * boxes and a basket of wildflowers, a herb box, a topiary tub, two potted
+   * plants and a stand for them, a hedge, a wisteria pergola, a bonsai, a
+   * flower cart, a birdhouse, an arbour bench, a carved figure, a trophy
+   * plaque, a folding screen and a wind chime.
+   */
+  piece(FLOWER_BED, 'Raised flower bed', 2, 1, [['plank', 12], ['nail', 12], ['dirt', 2]], 12, 9, '', undefined, { skill: 'fine_carpentry', bloom: BED_SLOTS }),
+  piece(WINDOW_BOX, 'Window box', 2, 1, [['plank', 6], ['nail', 8], ['dirt', 1]], 10, 7, '', undefined, { skill: 'fine_carpentry', bloom: BOX_SLOTS, mount: 'window' }),
+  piece(HANGING_BASKET, 'Hanging basket', 1, 1, [['rope', 2], ['clay_pot', 1], ['dirt', 1]], 10, 7, '', undefined,
+    { skill: 'ropemaking', tool: 'carving_knife', bloom: BASKET_SLOTS, mount: 'hang' }),
+  piece(HERB_BOX, 'Herb box', 1, 1, [['plank', 8], ['nail', 8], ['dirt', 1]], 10, 7, '', undefined, { skill: 'fine_carpentry', planter: true, herbs: HERB_SHARE }),
+  piece(TOPIARY_TUB, 'Topiary tub', 1, 1, [['plank', 8], ['nail', 8], ['dirt', 1], ['sprout', 1]], 14, 9, '', undefined, { skill: 'fine_carpentry', topiary: true }),
+  piece(POTTED_FERN, 'Potted fern', 1, 1, [['clay_pot', 1], ['dirt', 1], ['sprout', 1]], 8, 5, '', undefined, { skill: 'pottery', tool: 'trowel' }),
+  piece(POTTED_PALM, 'Potted palm', 1, 1, [['clay_pot', 1], ['dirt', 1], ['sprout', 1]], 10, 6, '', undefined, { skill: 'pottery', tool: 'trowel' }),
+  piece(HEDGE, 'Hedge', SUBTILES, 1, [['sprout', 4]], 10, 10, '', undefined, { skill: 'forestry', tool: 'shovel', hedge: true }),
+  piece(WISTERIA_PERGOLA, 'Wisteria pergola', 2, 2, [['plank', 24], ['timber', 8], ['shaft', 4], ['nail', 32], ['sprout', 2]], 18, 16, '', undefined,
+    { skill: 'carpentry', climber: 'wisteria' }),
+  piece(BONSAI, 'Bonsai on a stand', 1, 1, [['plank', 4], ['nail', 4], ['clay_pot', 1], ['sprout', 1]], 16, 9, '', undefined, { skill: 'fine_carpentry', bonsai: true }),
+  piece(FLOWER_CART, 'Flower cart', 2, 1, [['plank', 20], ['shaft', 4], ['nail', 24], ['clay_pot', 3], ['wildflowers', 6]], 14, 12, '', undefined, { skill: 'carpentry' }),
+  piece(BIRDHOUSE, 'Birdhouse', 1, 1, [['plank', 6], ['shaft', 1], ['nail', 8]], 12, 7, '', undefined, { skill: 'fine_carpentry', birds: true }),
+  piece(ARBOUR_BENCH, 'Arbour bench', 2, 1, [['plank', 16], ['shaft', 10], ['nail', 36], ['rose_petals', 8]], 16, 14, '', undefined, { skill: 'carpentry', climber: 'rose' }),
+  piece(CARVED_FIGURE, 'Carved wildermon figure', 1, 1, [['plank', 2]], 18, 10, '', undefined, { skill: 'fine_carpentry', tool: 'carving_knife', figure: true }),
+  piece(TROPHY_PLAQUE, 'Trophy plaque', 1, 1, [['plank', 4], ['nail', 4]], 12, 6, '', undefined,
+    { skill: 'fine_carpentry', mount: 'wall', shows: { what: 'trophy', n: PLAQUE_HOLDS } }),
+  piece(FOLDING_SCREEN, 'Folding screen', 1, 1, [['plank', 6], ['shaft', 3], ['cloth', 4], ['nail', 8]], 14, 9, '', undefined, { skill: 'fine_carpentry' }),
+  piece(PLANT_STAND, 'Tiered plant stand', 1, 1, [['plank', 8], ['nail', 10]], 12, 7, '', undefined, { skill: 'fine_carpentry', shows: { what: 'pot', n: STAND_HOLDS } }),
+  piece(WIND_CHIME, 'Wind chime', 1, 1, [['plank', 2], ['shaft', 2], ['rope', 1], ['nail', 4]], 12, 6, '', undefined, { skill: 'fine_carpentry', mount: 'hang', chime: true }),
   piece('well', 'Well', 2, 2, [['stone_brick', 48], ['mortar', 16], ['shaft', 4], ['thick_rope', 1], ['nail', 16], [WATER_MOTE, WATER_MOTES_EACH]], 30, 24, '', undefined, { skill: 'masonry', tool: 'trowel', well: WELL_HOLDS }),
   /*
    * A tiered fountain: basins of cut slab, each smaller than the one under
@@ -771,6 +833,13 @@ export interface PlacedFurniture {
   /** The line cut into a memorial stone (`memorial.ts`); on the island the placed row's `engraving`. */
   engraving?: string;
   /**
+   * What a garden piece holds and how it was last shaped (`garden.ts`): its
+   * wildflowers, its topiary shape and last trim, a hedge's clip, a bonsai's
+   * prunes, a figure's kind, a trophy or pots on show. The island's
+   * `placed.garden`, read by every browser off the ground read.
+   */
+  garden?: GardenState;
+  /**
    * For a skep: when it was set down or last emptied, in epoch seconds, which
    * what it has made is worked out from (`bees.ts`); on the island
    * `state -> skep_at`.
@@ -945,10 +1014,23 @@ export function rackDeck(f: { kind: string; sx: number; sy: number; facing?: Sid
  */
 export function furnitureAnchor(kind: string, sx: number, sy: number, facing: Side = 's'): [number, number] {
   const [w, h] = furnitureFootprint(kind, facing);
-  const ax = Math.max(0, Math.min(SUBTILES - w, sx)), ay = Math.max(0, Math.min(SUBTILES - h, sy));
-  if (!furnitureDef(kind).vine) return [ax, ay];
+  const def = furnitureDef(kind);
+  let ax = Math.max(0, Math.min(SUBTILES - w, sx)), ay = Math.max(0, Math.min(SUBTILES - h, sy));
+  if (!alongSide(def)) return [ax, ay];
+  // A window box under the middle of its window, where the window is drawn (`garden.ts`).
+  if (def.mount === 'window') {
+    if (facing === 'n' || facing === 's') ax = Math.floor((SUBTILES - w) / 2);
+    else ay = Math.floor((SUBTILES - h) / 2);
+  }
   return [facing === 'w' ? 0 : facing === 'e' ? SUBTILES - w : ax, facing === 'n' ? 0 : facing === 's' ? SUBTILES - h : ay];
 }
+
+/**
+ * Whether a piece goes in the row of spots along the side of its tile it
+ * faces: a trellis, a hedge, and anything fixed to a wall or hung
+ * (`FurnitureDef.mount`). The island's `piece_along_side`.
+ */
+export const alongSide = (def: FurnitureDef): boolean => !!def.vine || !!def.hedge || !!def.mount;
 
 /** The vehicle a piece is, if it is one. */
 export const vehicleOf = (f: { kind: string }): VehicleDef | undefined => furnitureDef(f.kind).vehicle;
@@ -1303,6 +1385,8 @@ export const FURNITURE_ACTIONS: ActionDef[] = [
       // lit or not -- the island asks this next, after the lock (`lamp_lift_refusal`).
       if (f.lamp) return LAMP_TAKE_FIRST;
       if (f.items.length) return 'Empty it first.';
+      // A trophy on a plaque, potted plants on a stand: taken down first (`garden.ts`; the island's `fire_refusal`).
+      if (f.garden?.held?.length) return SHOWING_SAID;
       // A crop is not carried about in a box of earth: it is harvested, or turned back into the soil.
       if (g.planted.has(f.id)) return PLANTER_GROWING;
       // A rack holds nothing of its own, so `items` is empty however loaded it

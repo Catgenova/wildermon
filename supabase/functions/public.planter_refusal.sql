@@ -22,6 +22,11 @@ begin
     select * into it from item
       where id = target_item(p_target) and world_id = p_world and holder = 'player' and holder_uid = p_uid;
     if not found or not exists (select 1 from crop_def where seed = it.def) then return 'Choose a seed.'; end if;
+    -- A herb box grows herbs and nothing else (`garden.ts`).
+    if (select f.herbs from furniture_def f where f.id = p.sub) is not null
+       and not ((select cd.id from crop_def cd where cd.seed = it.def) = any (herb_crops())) then
+      return herbs_only_said();
+    end if;
   elsif p_action = 'tend_crop' then
     if c.placed is null then return 'No crop there.'; end if;
     if v_stage >= crop_ripe() then return 'Ripe: harvest it.'; end if;

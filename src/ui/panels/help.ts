@@ -223,6 +223,16 @@ import { DAMAGE_MAX as BROKEN_AT, PLACED_REACH, QL_TOP as ENCHANT_TOP } from '..
 import { TRY_LEARN } from '../../game/learn';
 import { raisedBySays } from '../raisedBy';
 import { ENGRAVE_MAX, ENGRAVE_SKILL, ENGRAVE_TOOL, MEMORIAL } from '../../game/memorial';
+import {
+  ARBOUR_BENCH, BIRDHOUSE, BLOOM_COST, BLOOM_SKILL, BLOOM_TIME, BONSAI, CARVED_FIGURE, CLIP_TIME, FLOWER_BED, FLOWER_CART, FOLDING_SCREEN, HANGING_BASKET, HEDGE,
+  HEDGE_CLIPS, HERB_BOX, PLANT_STAND, POTTED_FERN, POTTED_PALM, PRUNE_SKILL, PRUNE_TIME, PRUNE_TOOL, SHOW_TIME, TOPIARY_SHAPES, TOPIARY_TUB, TRIM_SKILL, TRIM_TIME,
+  TRIM_TOOL, TROPHY_PLAQUE, WIND_CHIME, WINDOW_BOX, WISTERIA_PERGOLA,
+} from '../../game/gardendefs';
+import { GARDEN_SAID } from '../../game/garden';
+
+/** The garden pieces, in the order the help lists them (`garden.ts`). */
+const GARDEN_PIECES = [FLOWER_BED, WINDOW_BOX, HANGING_BASKET, HERB_BOX, TOPIARY_TUB, POTTED_FERN, POTTED_PALM, PLANT_STAND, HEDGE, WISTERIA_PERGOLA, ARBOUR_BENCH,
+  BONSAI, FLOWER_CART, BIRDHOUSE, CARVED_FIGURE, TROPHY_PLAQUE, FOLDING_SCREEN, WIND_CHIME];
 import { HOUR as SKEP_HOUR, SKEP, SKEP_CLUMP_HOURS, SKEP_HOLDS, SKEP_IDLE, SKEP_REACH, SKEP_SKILL, SKEP_WAX_EVERY, skepRate, skepRateSaid, skepWax } from '../../game/bees';
 import { keepControlKeys } from '../controlkeys';
 import { FAST_DPR, LOW_POWER_FPS, SETTING_DEFAULTS } from '../../game/settings';
@@ -2126,6 +2136,16 @@ export function helpText(): string {
       <li>Who may engrave: whoever set it down and anybody of the settlement it stands on; nobody muted by a keeper.</li>
       <li><b>Examine</b> reads the line in quotes. Keeps its line in the pack (its Examine shows it) and when set down again. No decay.</li>
       <li>After dark: runes and line glow; light ${MEMORIAL_REACH} tiles round its middle.</li>
+    </ul>
+    <h3>Garden pieces</h3>
+    <ul>
+      ${GARDEN_PIECES.map((id) => `<li><b>${itemDef(id).name}</b>: ${bill(`make_${id}`)} (${workedAt(`make_${id}`)}, ${recipe(`make_${id}`).baseTime} s base). `
+        + `${furnitureDef(id).w} by ${furnitureDef(id).h} subtiles. ${itemDef(id).description ?? ''}</li>`).join('')}
+      <li><b>Plant pink, white, yellow or blue wildflowers</b> (${(SKILL_BY_ID.get(BLOOM_SKILL)?.name ?? BLOOM_SKILL).toLowerCase()}, ${BLOOM_TIME} s base): ${BLOOM_COST} wildflowers, one slot. <b>Pull up flowers</b>: empties every slot.</li>
+      <li><b>Trim into a ${listedOr([...TOPIARY_SHAPES])}</b> (${TRIM_SKILL}, ${itemDef(TRIM_TOOL).name.toLowerCase()}, ${TRIM_TIME} s base). <b>Clip ${listedOr([...HEDGE_CLIPS])}</b> (${CLIP_TIME} s base): a full hedge.
+      <b>Prune</b> (${PRUNE_SKILL}, ${itemDef(PRUNE_TOOL).name.toLowerCase()}, ${PRUNE_TIME} s base): anyone.</li>
+      <li><b>Hang</b> a trophy, <b>Set down</b> a potted plant, <b>Take down</b> (${SHOW_TIME} s base): whoever set the piece down, or a citizen of its settlement. A trophy: any thing flagged a trophy, shown with its slayer's name; none in the pack: <i>${GARDEN_SAID.noTrophy}</i> Not picked up with something on it.</li>
+      <li>Growth for everybody alike: off the moment it was set down and the season. Picked up and set down again: grows again from then; keeps its flowers, shape, clip, prunes and kind.</li>
     </ul>
     <h3>Calling things by name</h3>
     <ul>

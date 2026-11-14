@@ -235,6 +235,10 @@ begin
     -- One thing made at the signing QL carries its maker's name, as rare work does (`made_by`).
     v_made := give(p_world, p_uid, r.result, v_n, made_ql, coalesce(r.extra, mat), rare, made_by(p_world, p_uid, rare, r.result, made_ql));
     if v_mark is not null then update item set mark = v_mark where id = v_made; end if;
+    -- A carved figure, carved as the kind chosen at the bench (`garden.ts`).
+    if r.result = carved_figure_kind() then
+      update item set garden = jsonb_build_object('figure', p_target->>'species') where id = v_made;
+    end if;
   end if;
   -- A boil leaves its dye in the bucket it was boiled in (`boiledDye`).
   if r.result = 'dye_bucket' then perform dye_boiled(p_world, p_uid, v_made, p_recipe); end if;

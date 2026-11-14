@@ -35,6 +35,8 @@ begin
     if c.tended >= crop_ripe() then
       yld[2] := yld[2] + floor(pk(p_world, p_uid, 'bumper:harvest_crop', 0))::int;
     end if;
+    -- A herb box's share of it (`garden.ts`).
+    yld[2] := greatest(1, floor(yld[2] * coalesce((select f.herbs from furniture_def f where f.id = p.sub), 1) + 0.5)::int);
     perform tell(p_world, p_uid, 'Tended: ' || lower(cd.name) || '. Expected yield: '
       || yld[2] || ' ' || lower((select coalesce(name, cd.produce) from item_def where id = cd.produce))
       || ', ' || seed_says() || '.', 'event');

@@ -88,6 +88,8 @@ export interface ItemRow {
   enchant?: Enchant | null;
   /** The line cut into a memorial stone (`memorial.ts`). Null for everything else. */
   engraving?: string | null;
+  /** What a garden piece carries in the pack (`garden.ts`): a carved figure's kind. Null for everything else. */
+  garden?: unknown;
   /** Alight, for the things that burn, and when it was set going. */
   lit: boolean;
   lit_at: string | null;

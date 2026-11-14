@@ -45,7 +45,7 @@ begin
      * moment they were standing. Both are on the item being consumed here,
      * and both come across now.
      */
-    insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by, facing, rare, material, creature, mark, dye, enchant, dmg, engraving)
+    insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by, facing, rare, material, creature, mark, dye, enchant, dmg, engraving, garden)
     values (p_world, case p_action when 'place_smelter' then 'smelter'
                                    when 'place_kiln' then 'kiln' else 'furniture' end, sub,
             (p_target->>'x')::int, (p_target->>'y')::int, ax, ay,
@@ -60,7 +60,9 @@ begin
             -- And its enchantment and its wear, which it keeps standing and takes up again (`enchanting.ts`).
             it.enchant, it.dmg,
             -- And a memorial stone's line, which it reads standing as it did in the pack.
-            it.engraving)
+            it.engraving,
+            -- And a garden piece's flowers, shape or kind, as they were in the pack (`garden.ts`).
+            it.garden)
     returning id into made;
     delete from item where id = it.id;
     -- And whoever is shut in it stands where it stands, and is seen in it.
@@ -131,6 +133,9 @@ begin
     -- A quarter turn to the right, walked to the nearest spot the turned block fits.
     -- On round past a facing a post's arm would go into a wall (`lamps.ts`); a trellis to the next side with its wall (`vineyard.ts`).
     back := case when p.sub = vine_kind() then coalesce(trellis_turns_to(p_world, p_uid, p), p.facing)
+                 -- And a piece fixed to a wall or hung, to the next side it is fixed on (`garden.ts`).
+                 when exists (select 1 from furniture_def f where f.id = p.sub and f.mount is not null)
+                   then coalesce(mount_turns_to(p_world, p_uid, p), p.facing)
                  else lamp_turns_to(p_world, p) end;
     sz := placed_size(p.kind, p.sub, back);
     v_at := piece_anchor(p.sub, back, p.sx, p.sy, sz);
@@ -172,6 +177,8 @@ begin
     update item set enchant = p.enchant, dmg = p.dmg where id = made;
     -- And a memorial stone's line, carried in the pack as it stood.
     if p.engraving is not null then update item set engraving = p.engraving where id = made; end if;
+    -- And a garden piece's flowers, shape or kind, carried in the pack as it stood (`garden.ts`).
+    if p.garden is not null then update item set garden = p.garden where id = made; end if;
     if p.creature is not null then
       update item set creature = p.creature where id = made;
       update creature c set from_x = py.x, from_y = py.y, to_x = py.x, to_y = py.y,

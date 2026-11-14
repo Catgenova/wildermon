@@ -83,6 +83,8 @@ export interface IslandPlaced {
   dye?: string | null;
   /** The line cut into a memorial stone (`memorial.ts`); null uncut. */
   engraving?: string | null;
+  /** What a garden piece holds and how it was last shaped (`garden.ts`, `placed.garden`); null for none. */
+  garden?: unknown;
   /**
    * When it was set down, in epoch seconds, for a piece with roses or
    * lavender on it (`furniture_def.roses`): what they grow from (`roses.ts`).

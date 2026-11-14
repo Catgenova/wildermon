@@ -2,7 +2,8 @@ import type { Game } from '../game/game';
 import { TileType, stepsTimber } from '../world/tiles';
 import { MATERIAL_BY_ID } from '../game/building';
 import { BRIDGES } from '../game/bridges';
-import { blow, chime, footfall, stroke, type Footing, type Stroke } from './kit';
+import { blow, chime, footfall, stroke, windChime, type Footing, type Stroke } from './kit';
+import { CHIME_GAP, CHIME_RATE, CHIME_STILL, WIND_CHIME } from '../game/gardendefs';
 import { voiceOf } from './voices';
 import { stageOf } from '../game/creatures';
 
@@ -44,6 +45,9 @@ const EARSHOT = 2.4;
 /** Voices allowed to start in one window, so a herd cannot deafen anybody. */
 const VOICE_CAP = 10;
 const VOICE_WINDOW = 0.12;
+
+/** Seconds between one look for the wind chimes in earshot and the next. */
+const CHIME_LOOK = 0.5;
 
 /** Tiles between one footfall and the next. The dust uses the same stride. */
 const STRIDE = 0.58;
@@ -146,6 +150,11 @@ export class Sound {
   private started: number[] = [];
   private levels = new Map<string, number>();
   private vary = 0;
+  /** The wind chimes in earshot, looked for every `CHIME_LOOK` seconds; when one was last heard; and the clock at the last frame. */
+  private chimes: Array<{ x: number; y: number }> = [];
+  private chimesAt = -Infinity;
+  private chimed = -Infinity;
+  private chimeTick = 0;
 
   constructor(private readonly game: Game, private readonly ear: Ear) {
     this.listen();
@@ -300,10 +309,39 @@ export class Sound {
     for (const other of g.roster.list()) {
       if (heard(other.x, other.y)) foot(EARS_PEER - other.id, other.x, other.y, other.level);
     }
+    this.windChimes(heard);
     // And the pairs of feet nobody has heard in a while, which otherwise pile
     // up for as long as the tab is open.
     if (this.feet.size > FEET_KEEP) {
       for (const [id, was] of this.feet) if (now - was.at > FEET_STALE) this.feet.delete(id);
+    }
+  }
+
+  /**
+   * A wind chime now and then (`garden.ts`): silent under `CHIME_STILL` of
+   * wind, and at most `CHIME_RATE` a second from one in the strongest; and
+   * never two within `CHIME_GAP` of each other whatever hangs in earshot, so
+   * a street of them is one soft chime at a time.
+   */
+  private windChimes(heard: (x: number, y: number) => boolean): void {
+    const ctx = this.ctx;
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const dt = Math.min(0.25, Math.max(0, now - this.chimeTick));
+    this.chimeTick = now;
+    if (now - this.chimesAt > CHIME_LOOK) {
+      this.chimesAt = now;
+      this.chimes = [];
+      for (const f of this.game.furniture.values()) if (f.kind === WIND_CHIME && heard(f.x + 0.5, f.y + 0.5)) this.chimes.push({ x: f.x + 0.5, y: f.y + 0.5 });
+    }
+    if (!this.chimes.length || now - this.chimed < CHIME_GAP) return;
+    const force = this.game.wind().force;
+    if (force < CHIME_STILL) return;
+    for (const c of this.chimes) {
+      if (this.next() >= CHIME_RATE * force * dt) continue;
+      this.chimed = now;
+      this.say(c.x, c.y, (a, node, at) => windChime(a, node, at, this.next()));
+      return;
     }
   }
 
