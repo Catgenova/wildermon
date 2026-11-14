@@ -154,7 +154,7 @@ export function posesOf(AN, rig, body, group, n, at = 0) {
   return Array.from({ length: n }, (_, k) => clipPose(AN, rig, body, name, ((k + at) / n) * AN.CLIPS[name].length));
 }
 /** The groups the refinement goes through, and how many frames of each. */
-export const REFINE = { rest: 1, idle: 16, walk: 32, fight: 24, swing: 16, kneel: 24, work: 16, seat: 16, hop: 32 };
+export const REFINE = { rest: 1, idle: 32, walk: 64, fight: 48, swing: 32, kneel: 48, work: 32, seat: 32, hop: 64 };
 
 /**
  * A game asset (lowgarment.mjs garmentAsset) back as a garment the rig skins: its own bones as garmentBone's; its

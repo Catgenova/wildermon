@@ -13,7 +13,7 @@
 //    body's normal from the point's closest point on the body (within `near` past it) or out from the hips' vertical
 //    axis, plus `clr`, is its need; each vertex is pushed out from the axis by the most need near it, less `slope` a
 //    unit of distance, so each plate with its rim and edge moves together. Again (`rounds`) until none is left.
-// 3. The liner (o.liner: { top, low, mat }): a band round the hips in the chest's own under-layer (`mat`) from `top` down
+// 3. The liner (o.liner: { top, low, mat, arc }): a band round the hips (or, `arc`, at the sides only) in the chest's own under-layer (`mat`) from `top` down
 //    to `low` (a height, or heights by azimuth), at the reach of the body and every legs piece round the axis (the hull of
 //    their points in a slab) out by `clr`, but never out past the chest's innermost layer there (less `eps`), nor in to
 //    the body. Under the plates it is out of sight; in the chest's gaps (between its plates and panels, at its back's
@@ -109,7 +109,7 @@ function hipsAxis(rig) {
 }
 
 /* ---- 3. the liner -------------------------------------------------------------------------------------------------- */
-function addLiner(rig, G, chestKey, arm, { top, low, mat, cols = 72, step = 0.08, clr = 0.04, eps = 0.025, tag = 'liner' }) {
+function addLiner(rig, G, chestKey, arm, { top, low, mat, arc = null, cols = 72, step = 0.08, clr = 0.04, eps = 0.025, tag = 'liner' }) {
   // (`low`: a height, or [[azimuth, height], ...] by the azimuth's size (0 the front, 180 the back), between them in line)
   const lowAt = Array.isArray(low) ? (az) => { const a = Math.abs(((az + 540) % 360) - 180); let k = 0; while (k + 2 < low.length && low[k + 1][0] < a) k++; const [[a0, y0], [a1, y1]] = [low[k], low[k + 1]]; return y0 + (y1 - y0) * Math.min(1, Math.max(0, (a - a0) / (a1 - a0))); } : () => low, z0 = hipsAxis(rig);
   const dir = (az) => [Math.sin(az * Math.PI / 180), 0, Math.cos(az * Math.PI / 180)];
@@ -134,8 +134,11 @@ function addLiner(rig, G, chestKey, arm, { top, low, mat, cols = 72, step = 0.08
   const rows = Math.max(2, Math.ceil((top - Math.min(...lows)) / step) + 1);
   const ys = (j) => Array.from({ length: rows }, (_, r) => top + ((lows[j] - top) * r) / (rows - 1));
   const inner = Array.from({ length: cols }, (_, j) => ys(j).map((y) => { const az = (j * 360) / cols; return nearest(C, [0, y, z0], dir(az), 0, 2.5); }));
-  const base = G.verts.length, idx = (j, r) => base + (j % cols) * rows + r;
-  for (let j = 0; j < cols; j++) {
+  // (`arc`: [a0, a1], only between a0 and a1 degrees from the front, either side)
+  const inArc = (j) => { const a = Math.abs((((j * 360) / cols + 540) % 360) - 180); return !arc || (a >= arc[0] - 1e-9 && a <= arc[1] + 1e-9); };
+  const kept = Array.from({ length: cols }, (_, j) => j).filter(inArc), at = new Map(kept.map((j, k) => [j, k]));
+  const base = G.verts.length, idx = (j, r) => base + at.get(j % cols) * rows + r;
+  for (const j of kept) {
     const az = (j * 360) / cols, d = dir(az);
     ys(j).forEach((y, r) => {
       // (the chest's innermost layer, the least near: a column either side, a row above and below)
@@ -148,6 +151,7 @@ function addLiner(rig, G, chestKey, arm, { top, low, mat, cols = 72, step = 0.08
   }
   const p0 = G.polys.length;
   for (let j = 0; j < cols; j++) for (let r = 0; r + 1 < rows; r++) {
+    if (!inArc(j) || !inArc(j + 1)) continue;
     // (outward: a, b round the axis toward the body's left, then down)
     const a = idx(j, r), b = idx(j + 1, r), c = idx(j + 1, r + 1), e = idx(j, r + 1);
     G.polys.push({ v: [a, e, c], mat, part: tag, tag }, { v: [a, c, b], mat, part: tag, tag });
@@ -214,12 +218,14 @@ function fit(rig, G, chestKey, arm, frame, { top, clr = 0.04, slope = 0.35, roun
 }
 
 /* ---- 1. the follow ------------------------------------------------------------------------------------------------- */
-function follow(rig, G, arm, { top, full, smooth = 2 }) {
+function follow(rig, G, arm, { top, full, smooth = 2, arc = null }) {
+  // (`arc`: [a0, a1], wholly within a0 degrees of the front, none past a1: the back left as the chest has it)
+  const z0 = hipsAxis(rig), round = (p) => (arc ? ramp(-Math.abs(Math.atan2(p[0], p[2] - z0) * 180 / Math.PI), -arc[1], -arc[0]) : 1);
   const sel = (i) => !arm[i] && G.verts[i][1] < top;
   const W = transferWeights(rig, G, { only: sel, smooth, keep: (i) => TRUNK.has(rig.B.part[i]) });
   G.verts.forEach((p, i) => {
     if (!sel(i)) return;
-    const s = ramp(-p[1], -top, -full), acc = new Map();
+    const s = ramp(-p[1], -top, -full) * round(p), acc = new Map();
     for (const [b, w] of G.vw[i]) acc.set(b, (acc.get(b) ?? 0) + w * (1 - s));
     for (const [b, w] of W[i]) acc.set(b, (acc.get(b) ?? 0) + w * s);
     const l = [...acc].filter(([, w]) => w > 1e-4).sort((a, b) => b[1] - a[1]).slice(0, 4), sum = l.reduce((a, [, w]) => a + w, 0);
@@ -234,10 +240,12 @@ function follow(rig, G, arm, { top, full, smooth = 2 }) {
  */
 const FOLLOW = { male: { top: -5.0, full: -5.8 }, female: { top: -3.8, full: -4.5 } };
 export const OVER_LEGS = {
-  tunic: { male: { follow: FOLLOW.male }, female: { follow: FOLLOW.female } },
+  // (her tunic as it was: fitted, it crossed the plate and scale leggings more when sat and hopping)
+  tunic: { male: { follow: FOLLOW.male }, female: null },
   leatherChest: {
     male: { liner: { top: -4.1, low: -4.95, mat: 'dark' }, follow: FOLLOW.male },
-    female: { liner: { top: -3.9, low: -4.55, mat: 'dark' }, follow: FOLLOW.female },
+    // (her jerkin's weights as they were: following her thighs, it crossed the plate leggings' faulds more when sat)
+    female: { liner: { top: -3.9, low: -4.55, mat: 'dark', arc: [45, 125] }, follow: { top: -4.1, full: -5.0 } },
   },
   plateChest: {
     male: { liner: { top: -3.9, low: -4.75, mat: 'under' }, follow: FOLLOW.male },
@@ -247,11 +255,13 @@ export const OVER_LEGS = {
     male: { liner: { top: -3.9, low: -4.9, mat: 'under' }, follow: FOLLOW.male },
     female: { liner: { top: -3.2, low: -4.4, mat: 'under' }, follow: FOLLOW.female },
   },
-  chainChest: { male: { follow: FOLLOW.male }, female: { follow: FOLLOW.female } },
+  // (his hauberk's back as it was: following his thighs, its hem crossed his calves kneeling)
+  chainChest: { male: { follow: { ...FOLLOW.male, arc: [80, 130] } }, female: { follow: FOLLOW.female } },
 };
 
 /** The chest G (its verts, polys, tris and weights `vw`) fitted over every legs piece worn under it (as above). */
 export function overLegs(rig, G, chestKey, o = OVER_LEGS[chestKey][rig.who]) {
+  if (!o) return G;
   const arm = armOf(rig, G), frame = bodyFrame(rig);
   const top = o.top ?? Math.max(...legsWorn(rig, chestKey).flatMap(([, A, drops]) => legsTris(A, drops).flatMap((t) => t.map((p) => p[1])))) + 0.3;
   if (o.follow) follow(rig, G, arm, o.follow);
