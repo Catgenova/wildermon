@@ -162,7 +162,7 @@ import { KeeperPanel } from './panels/keeper';
 import { TrackerPanel } from './panels/tracker';
 import { Tooltip } from './tooltip';
 import { LAYOUT_SLOTS, WindowManager, type UIWindow } from './windows';
-import { kitBody, made } from './kit';
+import { KIT, kitBody } from './kit';
 import { CELL } from './snapgrid';
 import { seasonAt } from '../world/calendar';
 import type { Island } from '../net/island';
@@ -711,9 +711,9 @@ export class UI {
       const awayWin = this.windows.create({ id: 'away', title: 'While you were away', x: 0, y: 0, width: 380, height: 240, open: true, fresh: true });
       awayWin.el.style.left = `${Math.max(0, (uiBox().w - 380) / 2)}px`;
       awayWin.el.style.top = `${Math.max(0, uiBox().h / 4)}px`;
-      kitBody(awayWin.body);
-      const lines = made('div', 'scroll', 'away-list');
-      awayWin.body.append(lines);
+      // One page: the body is its one scroll area.
+      kitBody(awayWin.body, KIT.scroll);
+      const lines = awayWin.body;
       for (const line of away) {
         const p = document.createElement('p');
         p.className = 'away-line';
@@ -734,9 +734,8 @@ export class UI {
       const win = this.windows.create({ id: 'notices-ashore', title: 'Notices', x: 0, y: 0, width: 380, height: 260, open: true, fresh: true });
       win.el.style.left = `${Math.max(0, (uiBox().w - 380) / 2)}px`;
       win.el.style.top = `${Math.max(0, uiBox().h / 3)}px`;
-      kitBody(win.body);
-      const lines = made('div', 'scroll', 'away-list');
-      win.body.append(lines);
+      kitBody(win.body, KIT.scroll);
+      const lines = win.body;
       for (const n of list) {
         const head = document.createElement('p');
         head.className = 'away-line deed-notice-by';

@@ -169,7 +169,7 @@ export class GuidePanel {
       const seen = g.seen.has(entry.key);
       const card = document.createElement('button');
       card.type = 'button';
-      card.className = `guide-card${seen ? '' : ' guide-unseen'}${entry.stage ? ' guide-stage' : ''}`;
+      card.className = `guide-card rc-card${seen ? '' : ' guide-unseen'}${entry.stage ? ' guide-stage' : ''}`;
       card.append(this.picture(entry, seen, CARD.w, CARD.h));
       const name = document.createElement('span');
       name.className = 'guide-name';

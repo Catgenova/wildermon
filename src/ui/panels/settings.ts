@@ -84,7 +84,7 @@ export class SettingsPanel {
     // A slot waiting for a key takes Tab, Enter and Space as keys to bind.
     keepControlKeys(win.body, 'button, select, summary, input[type="checkbox"]', () => this.grabbing !== null);
     const bar = document.createElement('div');
-    bar.className = 'log-tabs';
+    bar.className = 'log-tabs rc-tabs';
     for (const [id, label, title] of [
       ['display', 'Display', 'Graphics and interface'],
       ['windows', 'Windows', 'Window layouts and see-through windows'],
@@ -94,7 +94,7 @@ export class SettingsPanel {
     ] as Array<[string, string, string]>) {
       const b = document.createElement('button');
       b.type = 'button';
-      b.className = 'tb-btn tb-small log-tab' + (id === this.tab ? ' tb-on' : '');
+      b.className = 'tb-btn tb-small log-tab rc-tab' + (id === this.tab ? ' tb-on' : '');
       b.textContent = label;
       b.title = title;
       b.addEventListener('click', () => this.show(id));
@@ -103,7 +103,7 @@ export class SettingsPanel {
     }
     // The island's Discord server, opened in a new tab.
     const discord = document.createElement('a');
-    discord.className = 'tb-btn tb-small log-tab';
+    discord.className = 'tb-btn tb-small log-tab rc-tab';
     discord.href = DISCORD_URL;
     discord.target = '_blank';
     discord.rel = 'noopener noreferrer';

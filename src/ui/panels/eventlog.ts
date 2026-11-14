@@ -61,11 +61,11 @@ export class EventLogPanel {
     kitBody(win.body, 'log-body');
     // Which lines are kept, and a box to look through them.
     const bar = document.createElement('div');
-    bar.className = 'log-tabs';
+    bar.className = 'log-tabs rc-tabs';
     for (const t of TABS) {
       const b = document.createElement('button');
       b.type = 'button';
-      b.className = 'tb-btn tb-small log-tab' + (t === this.tab ? ' tb-on' : '');
+      b.className = 'tb-btn tb-small log-tab rc-tab' + (t === this.tab ? ' tb-on' : '');
       b.textContent = t.label;
       b.title = t.title;
       b.dataset.tab = t.id;
@@ -193,7 +193,7 @@ export class EventLogPanel {
       el.textContent = t.label;
       if (n) {
         const count = document.createElement('span');
-        count.className = 'log-count';
+        count.className = 'log-count rc-badge';
         count.textContent = n > 99 ? '99+' : String(n);
         el.append(count);
       }

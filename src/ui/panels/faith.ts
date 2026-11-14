@@ -69,9 +69,9 @@ export class FaithPanel {
   ) {
     kitBody(win.body, 'trade-body');
     const bar = document.createElement('div');
-    bar.className = 'trade-tabs log-tabs';
+    bar.className = 'trade-tabs log-tabs rc-tabs';
     for (const t of [...PATRONS.map((p): [Tab, string] => [p.id, p.name]), ['path', 'Path'] as [Tab, string]]) {
-      const b = button(t[1], 'log-tab');
+      const b = button(t[1], 'log-tab rc-tab');
       b.addEventListener('click', () => {
         const moved = this.viewing !== t[0];
         this.viewing = t[0];
@@ -168,7 +168,7 @@ export class FaithPanel {
   private patronCard(p: PatronDef): HTMLDivElement {
     const s = this.book.said;
     const card = document.createElement('div');
-    card.className = 'trade-card rc-row';
+    card.className = 'trade-card rc-card';
     if (s?.patron === p.id) card.classList.add('trade-mine', 'rc-on');
     const top = document.createElement('div');
     top.className = 'trade-card-top';
@@ -243,7 +243,7 @@ export class FaithPanel {
   private spellCard(p: PatronDef, sp: FaithSpellDef, quiet = false): HTMLDivElement {
     const s = this.book.said;
     const card = document.createElement('div');
-    card.className = 'trade-node rc-row';
+    card.className = 'trade-node rc-card';
     const taken = !!s?.taken.includes(sp.id);
     if (taken) card.classList.add('trade-node-taken', 'rc-on');
     const top = document.createElement('div');
@@ -329,7 +329,7 @@ export class FaithPanel {
   /** A path still on its steps: what each step gives, at the meditation it takes. */
   private stepsCard(path: PathDef, med: number): HTMLDivElement {
     const card = document.createElement('div');
-    card.className = 'trade-card rc-row trade-mine rc-on';
+    card.className = 'trade-card rc-card trade-mine rc-on';
     const top = document.createElement('div');
     top.className = 'trade-card-top';
     const name = document.createElement('span');
@@ -345,7 +345,7 @@ export class FaithPanel {
 
   private pathCard(path: PathDef, ps: PathSaid | null): HTMLDivElement {
     const card = document.createElement('div');
-    card.className = 'trade-card rc-row';
+    card.className = 'trade-card rc-card';
     if (ps?.way === path.id) card.classList.add('trade-mine', 'rc-on');
     const top = document.createElement('div');
     top.className = 'trade-card-top';
@@ -390,7 +390,7 @@ export class FaithPanel {
   /** One pick of a path's tier. `quiet`: its tier already says why it cannot be taken. */
   private pickCard(k: PathPickDef, ps: PathSaid | null, quiet = false): HTMLDivElement {
     const card = document.createElement('div');
-    card.className = 'trade-node rc-row';
+    card.className = 'trade-node rc-card';
     const taken = !!ps?.taken.includes(k.id);
     if (taken) card.classList.add('trade-node-taken', 'rc-on');
     const top = document.createElement('div');
@@ -497,7 +497,7 @@ export class FaithPanel {
   /** The second press, and the way out of it. */
   private confirm(ask: string, lines: string[], yes: string, act: () => Promise<string | null>): HTMLDivElement {
     const box = document.createElement('div');
-    box.className = 'trade-confirm';
+    box.className = 'trade-confirm rc-sunk';
     box.setAttribute('role', 'group');
     box.setAttribute('aria-label', ask);
     const q = document.createElement('div');

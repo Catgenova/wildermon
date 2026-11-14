@@ -48,7 +48,7 @@ const sizeOf = (kind: string): { hw: number; hd: number } => {
 function lookKey(piece: KitPiece, look: KitLook): string {
   const u = piece.uses ?? { lit: true, tint: true, trim: true, material: true };
   const trim = piece.layers || !u.trim || look.trim === undefined ? '' : Number.isInteger(look.trim) ? look.trim : Math.round(look.trim * 20) / 20;
-  const key = `${u.lit && look.lit ? 1 : 0}|${u.tint ? look.tint?.colour ?? '' : ''}|${trim}|${u.material ? (look.material ?? '').toLowerCase() : ''}`;
+  const key = `${u.lit && look.lit ? 1 : 0}|${u.tint ? look.tint?.colour ?? '' : ''}|${trim}|${u.material ? (look.material ?? '').toLowerCase() : ''}${look.round === undefined ? '' : `|r${look.round}`}`;
   // A burning piece's flicker, only when it is lit and flickers: every other look keeps the one key it always had.
   return look.frame === undefined ? key : `${key}|f${look.frame}`;
 }
@@ -545,7 +545,7 @@ const pieceKey = (kind: string, look: KitLook, view: KitView): string => `${kind
  * scale last asked, with the turns either side (`neighbours`) at it.
  */
 interface Keys {
-  lit: boolean; tint: string | undefined; trim: number | undefined; material: string | undefined; frame: number | undefined;
+  lit: boolean; tint: string | undefined; trim: number | undefined; material: string | undefined; frame: number | undefined; round: number | undefined;
   ux: number; uy: number; vx: number; vy: number;
   piece: string; scale: number; at: string; turns: Array<[KitView, string]> | null;
 }
@@ -558,12 +558,12 @@ function keysOf(kind: string, look: KitLook, view: KitView, scale: number): Keys
   const tint = look.tint?.colour;
   for (const k of list) {
     if (k.ux !== view.ux || k.uy !== view.uy || k.vx !== view.vx || k.vy !== view.vy || k.lit !== look.lit || k.tint !== tint
-      || k.trim !== look.trim || k.material !== look.material || k.frame !== look.frame) continue;
+      || k.trim !== look.trim || k.material !== look.material || k.frame !== look.frame || k.round !== look.round) continue;
     if (k.scale !== scale) { k.scale = scale; k.at = `${k.piece}|${scale}`; k.turns = null; }
     return k;
   }
   const piece = pieceKey(kind, look, view);
-  const k: Keys = { lit: look.lit, tint, trim: look.trim, material: look.material, frame: look.frame, ux: view.ux, uy: view.uy, vx: view.vx, vy: view.vy, piece, scale, at: `${piece}|${scale}`, turns: null };
+  const k: Keys = { lit: look.lit, tint, trim: look.trim, material: look.material, frame: look.frame, round: look.round, ux: view.ux, uy: view.uy, vx: view.vx, vy: view.vy, piece, scale, at: `${piece}|${scale}`, turns: null };
   list.push(k);
   if (list.length > KEYS_KEPT) list.shift();
   return k;

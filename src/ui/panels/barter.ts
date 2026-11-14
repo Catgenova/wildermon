@@ -170,7 +170,8 @@ export class BarterPanel {
   /** One side: its things, its silver and whether it has accepted; on yours, the ways to change it. */
   private column(title: string, side: BarterSide, mine: boolean, b: Barter): HTMLDivElement {
     const col = document.createElement('div');
-    col.className = `barter-col${side.ok ? ' barter-ok' : ''}`;
+    col.className = `barter-col rc-sunk${side.ok ? ' barter-ok' : ''}`;
+    meaning(col, side.ok ? 'good' : null);
     const head = document.createElement('div');
     head.className = 'deed-head rc-section barter-head';
     head.textContent = side.ok ? `${title} · accepted` : title;

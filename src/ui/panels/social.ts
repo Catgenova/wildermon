@@ -268,7 +268,7 @@ export class SocialPanel {
   ) {
     kitBody(win.body, 'social-body');
     this.bar = document.createElement('div');
-    this.bar.className = 'log-tabs';
+    this.bar.className = 'log-tabs rc-tabs';
     for (const [id, label, title] of [
       ['waiting', 'Waiting', 'Invitations and requests to answer'],
       ['friends', 'Friends', 'Friends and locations'],
@@ -276,7 +276,7 @@ export class SocialPanel {
     ] as Array<['waiting' | 'friends' | 'letters', string, string]>) {
       const b = document.createElement('button');
       b.type = 'button';
-      b.className = `tb-btn tb-small log-tab${id === this.tab ? ' tb-on' : ''}`;
+      b.className = `tb-btn tb-small log-tab rc-tab${id === this.tab ? ' tb-on' : ''}`;
       b.textContent = label;
       b.title = title;
       b.addEventListener('click', () => {

@@ -21,7 +21,7 @@ const SLOW_GO = 100;
 /** A multiplier to two places, trailing zeros dropped. */
 const two = (x: number): number => +x.toFixed(2);
 import { awarenessReach, BASE_SIGHT } from '../../game/vision';
-import { KIT, kitBody, made } from '../kit';
+import { KIT, kitBody } from '../kit';
 
 /** The thinking skills mind logic eases, by name. */
 const MIND_EASED_SAID = listed(MIND_EASED_SKILLS.map((id) => (SKILL_BY_ID.get(id)?.name ?? id).toLowerCase()));
@@ -44,10 +44,9 @@ export class SkillsPanel {
   private readonly risen = new Set<string>();
 
   constructor(private readonly win: UIWindow, private readonly game: Game) {
-    kitBody(win.body, 'skills-body', 'skill-book');
-    // The one scroll area, everything below in it.
-    const list = made('div', 'scroll', 'skill-list');
-    win.body.append(list);
+    // One long page: the body is its one scroll area.
+    kitBody(win.body, 'skills-body', 'skill-book', KIT.scroll);
+    const list = win.body;
     // The sleep bonus: how much is stored, and the switch.
     const sleepHead = document.createElement('div');
     sleepHead.className = 'skill-group rc-section';

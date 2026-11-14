@@ -60,6 +60,14 @@ game.ask = () => {};
 game.putBody(game.spawn.x + 0.5, game.spawn.y + 0.5, 0);
 game.settings.motion = 'less';
 game.settings.uiLife = false;
+// Wounds for the Health window: one bleeding, one gone bad, one dressed, and two bandages carried for them.
+game.player.wounds = [
+  { id: 1, kind: 'cut', part: 'arms', severity: 0.22, bleeding: true, infected: false, dressing: null, at: game.time - 50 },
+  { id: 2, kind: 'pierce', part: 'legs', severity: 0.31, bleeding: false, infected: true, dressing: null, at: game.time - 400 },
+  { id: 3, kind: 'crush', part: 'chest', severity: 0.12, bleeding: false, infected: false, dressing: '', at: game.time - 900 },
+];
+game.player.stats.health = 0.62;
+game.inventory.add('bandage', { ql: 40, count: 2 });
 
 const canvas = new FullscreenCanvas(canvasEl);
 const renderer = new Renderer(canvas, game);

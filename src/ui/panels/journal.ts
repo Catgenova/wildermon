@@ -60,11 +60,11 @@ export class JournalPanel {
   constructor(private readonly win: UIWindow, private readonly game: Game) {
     kitBody(win.body, 'settings-body', 'journal-body');
     const bar = document.createElement('div');
-    bar.className = 'log-tabs journal-tabs';
+    bar.className = 'log-tabs rc-tabs journal-tabs';
     for (const [id, label, title] of JOURNAL_TABS) {
       const b = document.createElement('button');
       b.type = 'button';
-      b.className = 'tb-btn tb-small log-tab' + (id === this.tab ? ' tb-on' : '');
+      b.className = 'tb-btn tb-small log-tab rc-tab' + (id === this.tab ? ' tb-on' : '');
       b.textContent = label;
       b.title = title;
       b.addEventListener('click', () => this.show(id));
@@ -119,7 +119,7 @@ export class JournalPanel {
      * question has become "what else".
      */
     this.next = document.createElement('div');
-    this.next.className = 'goal-next';
+    this.next.className = 'goal-next rc-sunk';
     // Every how-to at once, or none: the list read as a manual rather than a checklist.
     const tools = document.createElement('div');
     tools.className = 'goal-tools';

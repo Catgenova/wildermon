@@ -607,7 +607,7 @@ export class CarePanel {
   private herdRow(id: number): { el: HTMLDivElement; refresh: (c: Creature, needs: Need[]) => void } {
     let cur: Creature | null = null;
     const el = document.createElement('div');
-    el.className = 'care-row rc-row';
+    el.className = 'care-row rc-card';
     el.dataset.id = String(id);
     const head = document.createElement('div');
     head.className = 'care-row-head';
@@ -690,6 +690,7 @@ export class CarePanel {
         }));
       }
       el.classList.toggle('care-row-wants', needs.some((n) => n.urgency >= 500));
+      meaning(el, needs.some((n) => n.urgency >= 500) ? 'bad' : null);
       if (tick.checked !== this.selected.has(c.id)) tick.checked = this.selected.has(c.id);
       const gear = GEAR_SLOTS.filter((s) => c.gear?.[s]).map((s) => slotName(s));
       say(job, [kindName(c), jobOf(c), stageSays(g, c), gear.length ? `Gear: ${gear.join(', ')}` : ''].filter(Boolean).join(' · '));

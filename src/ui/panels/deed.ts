@@ -197,11 +197,11 @@ export class DeedPanel {
     // Notices and work are the island's: alone there is one page and no tabs.
     if (roll) {
       const bar = document.createElement('div');
-      bar.className = 'log-tabs deed-tabs';
+      bar.className = 'log-tabs rc-tabs deed-tabs';
       for (const [id, label, title] of DEED_TABS) {
         const b = document.createElement('button');
         b.type = 'button';
-        b.className = `tb-btn tb-small log-tab${id === this.tab ? ' tb-on' : ''}`;
+        b.className = `tb-btn tb-small log-tab rc-tab${id === this.tab ? ' tb-on' : ''}`;
         b.textContent = label;
         b.title = title;
         b.addEventListener('click', () => this.show(id));
@@ -1292,7 +1292,7 @@ export class DeedPanel {
     }
     for (const n of b.notices) {
       const el = document.createElement('div');
-      el.className = 'deed-notice rc-row';
+      el.className = 'deed-notice rc-card';
       const head = document.createElement('div');
       head.className = 'deed-row';
       const who = document.createElement('span');
@@ -1392,7 +1392,7 @@ export class DeedPanel {
     for (const w of open) {
       const i = b.work.indexOf(w);
       const el = document.createElement('div');
-      el.className = 'deed-work rc-row';
+      el.className = 'deed-work rc-card';
       const head = document.createElement('div');
       head.className = 'deed-row';
       const label = document.createElement('span');

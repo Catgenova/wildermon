@@ -33,6 +33,8 @@ export const KIT = {
   empty: 'rc-empty',
   badge: 'rc-badge',
   tag: 'rc-tag',
+  card: 'rc-card',
+  sunk: 'rc-sunk',
   meter: 'rc-meter',
   fill: 'rc-meter-fill',
   mark: 'rc-meter-mark',
@@ -42,11 +44,6 @@ export type KitPart = keyof typeof KIT;
 
 /** What a status line, a row, a tag or a meter says by its colour (and a meter by its stripes too); dim is not met, not yet, or off. */
 export type Meaning = 'good' | 'warn' | 'bad' | 'info' | 'accent' | 'dim';
-
-/** A share full, as a meter's meaning: from `FULL_GOOD` up good, from `FULL_WARN` a warning, under it bad. */
-export const FULL_GOOD = 0.5;
-export const FULL_WARN = 0.25;
-export const fullness = (v: number): Meaning => (v >= FULL_GOOD ? 'good' : v >= FULL_WARN ? 'warn' : 'bad');
 
 /** Put the kit's part on an element that is already made, beside what it wears. */
 export function kit<E extends Element>(el: E, ...parts: KitPart[]): E {
@@ -61,10 +58,11 @@ export function made<K extends keyof HTMLElementTagNameMap>(tag: K, part: KitPar
   return el;
 }
 
-/** Say what a status line, a tag or a meter means; null says nothing. */
-export function meaning(el: HTMLElement, m: Meaning | null): void {
+/** Say what a status line, a tag, a card or a meter means; null says nothing. */
+export function meaning<E extends HTMLElement>(el: E, m: Meaning | null): E {
   if (m) el.dataset.meaning = m;
   else delete el.dataset.meaning;
+  return el;
 }
 
 /** A window's body on the kit: the one padding inside the rim, nothing of its own that scrolls. */
@@ -129,6 +127,15 @@ export function kitBadge(text: string, kind: 'count' | 'tag', also = '', m: Mean
   el.textContent = text;
   if (kind === 'tag') meaning(el, m);
   return el;
+}
+
+/** At or under this a meter of something it is good to have more of is bad; under `METER_WARN`, warn. */
+export const METER_BAD = 0.2;
+export const METER_WARN = 0.5;
+
+/** What a fraction says by its colour, for a meter of something it is good to have more of. */
+export function fullness(frac: number): Meaning {
+  return frac <= METER_BAD ? 'bad' : frac < METER_WARN ? 'warn' : 'good';
 }
 
 /** A meter: a channel and its fill, with marks where something starts; `set` fills it to a fraction, by what it means. */

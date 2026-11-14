@@ -165,6 +165,7 @@ import { GENDERS, HAIR_FADE, HAIRSTYLES } from '../../game/look';
 import { OUTFITS } from '../creator';
 import { MAX_ZOOM, SCULPTED_MAX_ZOOM } from '../../engine/camera';
 import { article, burnsFor, capital, finePercent, listed, listedOr, numberWord, percent, readyIn, timeWords } from '../../game/words';
+import { METER_BAD, METER_WARN } from '../kit';
 import { DEED_UPGRADES } from '../../game/deed';
 import { LYE_USE, SHORE_REACH } from '../../game/placeables';
 import { DEFAULT_RANKS, lacksSaid, NEWCOMER_RANK, permsOf, POWER, RANK_CAP, RANK_NAME_MAX, RANK_POWERS, rankMay } from '../../game/ranks';
@@ -298,7 +299,6 @@ import {
 } from '../../game/decordefs';
 import { CLIMBER_BARE, CLIMBER_BLOOMS, ROSE_SEASONS } from '../../game/roses';
 import { PATH_DETOURS, PATH_KINDS, PATH_SITE, PATH_SKILLS, PATH_STEPS, PATH_SURE } from '../../game/path';
-import { FULL_GOOD, FULL_WARN } from '../kit';
 
 /** Where a piece fixed in this way goes, as the help says it (`garden.ts`). */
 const GARDEN_MOUNT = (m: Mount): string => MOUNT_SAID[m];
@@ -4494,6 +4494,7 @@ export const NEWS: News[] = [
         `New: ${made(ARCHERY_TARGET)}: Shoot, archery gain ×${PRACTICE_GAIN} a fight's; ${TARGET_HOLDS} arrows; Pull arrows, one in ${ARROW_BREAK_IN} broken.`,
         `New: ${made(MOORING_POST)}: at the water's edge; Tie up a boat within ${MOOR_REACH} tile: helm and lifting its owner's or key holder's only.`,
         `New: ${made(STONE_BUST)}: Carve, a citizen of its settlement, their head and hair in stone.`,
+        `Fixed: ${itemDef(TREE_BENCH).name} sized to its trunk; ${itemDef(MOORING_POST).name}: rope to the tied boat.`,
       ];
     },
   },
@@ -4507,8 +4508,11 @@ export const NEWS: News[] = [
       'Changed: Settings, Frames: Stone: inside of windows unchanged (was: pack and crates plainer).',
       "Changed: windows, Runecut: on the same rows, headings, buttons, fields, tables, badges and meters: settlement, trades, faith, improve and repair, market, events, social, island keeper, wildermon and its Care tab, barter, settings, help, map, shopping list, treasure map, skills, the journal's pages, While you were away, Notices.",
       'Changed: windows, Runecut: one scroll area each (was: a second in improve and repair, market and barter).',
-      `Changed: Runecut, wildermon and Care meters: ${Math.round(FULL_GOOD * 100)}%+ plain, ${Math.round(FULL_WARN * 100)}–${Math.round(FULL_GOOD * 100)}% striped, under ${Math.round(FULL_WARN * 100)}% hatched.`,
+      `Changed: Wildermon and Care, Runecut: fed, rest, health and care meters: green; amber under ${percent(METER_WARN)}; red at ${percent(METER_BAD)} or less.`,
       'Changed: Runecut: Plan, Undo plan, Yes and Dig up: gold button.',
+      'Changed: windows, Runecut: Health, Equipment on the kit: tabs, buttons, tags, meters, cards, headings; one scroll area each (Equipment: pack shelf no longer scrolls by itself).',
+      `Changed: Health, Runecut: stamina, food, water, nutrient meters: green; amber under ${percent(METER_WARN)}; red at ${percent(METER_BAD)} or less.`,
+      "Changed: windows, Runecut: tabs, every window: one style; open tab: the frame's colour (events, faith, journal, market, settings, trades, wildermon, boards, settlement, social).",
     ],
   },
   // The furnishings (`furnish.ts`).

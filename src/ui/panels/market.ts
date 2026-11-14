@@ -142,7 +142,7 @@ export class MarketPanel {
   ) {
     kitBody(win.body, 'skills-body');
     this.bar = document.createElement('div');
-    this.bar.className = 'log-tabs market-tabs';
+    this.bar.className = 'log-tabs rc-tabs market-tabs';
     for (const [id, label, title] of [
       ['board', 'Board', 'All stalls and buy orders; read at a settlement totem or mailbox'],
       ['prices', 'Prices', `Sale prices, last ${SALE_DAYS} days`],
@@ -153,7 +153,7 @@ export class MarketPanel {
     ] as Array<[Tab, string, string]>) {
       const b = document.createElement('button');
       b.type = 'button';
-      b.className = 'tb-btn tb-small log-tab' + (id === this.tab ? ' tb-on' : '');
+      b.className = 'tb-btn tb-small log-tab rc-tab' + (id === this.tab ? ' tb-on' : '');
       b.textContent = label;
       b.title = title;
       b.addEventListener('click', () => this.show(id));

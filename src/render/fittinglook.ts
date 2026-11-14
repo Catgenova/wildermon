@@ -7,11 +7,11 @@
 import type { PlacedFurniture } from '../game/furniture';
 import type { Game } from '../game/game';
 import { ARCHERY_TARGET, LANTERN_POLE, MOORING_POST, SPICE_SHELF, STONE_BUST, TRAINING_DUMMY, TREE_BENCH, WINDOW_SEAT } from '../game/fittingdefs';
-import { poleBurning, poleColours, postOf, SHELF_HERBS } from '../game/fitting';
+import { poleBurning, poleColours, SHELF_HERBS } from '../game/fitting';
 import type { Look } from '../game/look';
 import { HEIGHT_SCALE } from './iso';
 import { drawFigure } from './figure';
-import { bust, POLES_LIT, postTrim, poleTrim, shelfTrim, targetTrim } from './kit/fittings';
+import { bust, POLES_LIT, poleTrim, shelfTrim, targetTrim } from './kit/fittings';
 
 /** Who each bust is carved as, by the piece's id, as the renderer last worked it out (`fittingTrim`). */
 export const BUST_LOOK = new Map<number, Look>();
@@ -31,14 +31,11 @@ export function fittingTrim(f: PlacedFurniture, game: Game): number | undefined 
       return shelfTrim(jars);
     }
     case ARCHERY_TARGET: return targetTrim(d?.stuck ?? 0);
-    case MOORING_POST: {
-      const boat = d?.tied !== undefined ? game.furniture.get(d.tied) : undefined;
-      return postTrim(!!boat && postOf(game, boat)?.id === f.id);
-    }
     case STONE_BUST:
       if (d?.bust) BUST_LOOK.set(f.id, d.bust.look); else BUST_LOOK.delete(f.id);
       return d?.bust ? 1 : 0;
-    case TREE_BENCH: case WINDOW_SEAT: case TRAINING_DUMMY: return 0;
+    // A post's rope to the boat tied to it is the renderer's (`Renderer.drawMooring`), not its bake's.
+    case TREE_BENCH: case WINDOW_SEAT: case TRAINING_DUMMY: case MOORING_POST: return 0;
     default: return undefined;
   }
 }

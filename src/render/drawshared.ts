@@ -31,7 +31,7 @@ import type { Sprite, DeckShape } from './sprites';
 export interface Swayed { ox: number; oy: number; a: number; b: number; c: number; d: number; up: number }
 
 export interface Entity {
-  kind: 'tree' | 'bush' | 'stump' | 'player' | 'peer' | 'pile' | 'token' | 'crate' | 'creature' | 'campfire' | 'crop' | 'smelter' | 'kiln' | 'furniture' | 'hull' | 'anvil' | 'post' | 'trap' | 'deck' | 'life' | 'waterplant' | 'spell' | 'swirl' | 'runestone' | 'spiral';
+  kind: 'tree' | 'bush' | 'stump' | 'player' | 'peer' | 'pile' | 'token' | 'crate' | 'creature' | 'campfire' | 'crop' | 'smelter' | 'kiln' | 'furniture' | 'hull' | 'anvil' | 'post' | 'trap' | 'deck' | 'life' | 'waterplant' | 'spell' | 'swirl' | 'runestone' | 'spiral' | 'rope';
   x: number;
   y: number;
   sx: number;
@@ -105,6 +105,8 @@ export interface Entity {
   mote?: Mote;
   /** A piece of a spell standing in the world: an orb, a bolt, a shell, a puff of its smoke (`./spells`). */
   fx?: SpellRec;
+  /** The rope from a mooring post to the boat tied to it, sorted between the two (`Renderer.drawMooring`). */
+  rope?: { post: PlacedFurniture; boat: PlacedFurniture };
   /** A piece of an aqueduct: a bay's insides or its face and water, the spout at its foot, or the cut at its head (`./aqueducts`). */
   aq?: AqueductPart;
   /** The part of the screen a body shows in, for one down a hole: the ground in front of the hole hides the rest (`onFlight`). */

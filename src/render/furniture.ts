@@ -2261,6 +2261,16 @@ function hull(sc: Scene, wood: Paint, xs: number, xb: number, B: number, S: numb
 const shipBreadth = (t: number): number =>
   (t < 0.45 ? 0.72 + 0.28 * Math.sin((t / 0.45) * (Math.PI / 2)) : Math.cos(((t - 0.45) / 0.55) * (Math.PI / 2)) ** 0.6);
 
+/**
+ * The caravel's lines, her own rather than her footprint's: transom and stem, half her beam, how far her sides lean
+ * in for each unit they rise above the wale, her waist's deck, and where her sterncastle and forecastle end.
+ */
+const CARAVEL = { xs: -31, xb: 33, B: 14, LEAN: 0.015, D: 18 / HEIGHT_SCALE, xc: -14, xf: 20 };
+/** The height of her wale at `t` of the way from her transom to her stem. */
+const caravelWale = (t: number): number => CARAVEL.D + 0.5 * (2 * t - 1) ** 2 + 0.8 * t ** 6;
+/** How high her waist's rail stands over her wale. */
+const WAIST_RAIL = 3;
+
 /** One thing in a ship's rig -- a panel of sail, a spar, a rope -- with how near it is, to be laid in order with the rest. */
 type RigItem = { d: number; draw: () => void };
 
@@ -4420,17 +4430,17 @@ const MODELS: Record<string, Model> = {
     const SPAR = kitPaint(paler(tone, 0.12));
     sc.shadows = [];
     // Her lines, which are her own rather than her footprint's: transom and stem, half her beam, and how far her sides lean in for each unit they rise above the wale.
-    const xs = -31, xb = 33, L = xb - xs, B = 14, LEAN = 0.015;
+    const { xs, xb, B, LEAN } = CARAVEL, L = xb - xs;
     /*
      * Her three decks -- the waist, the sterncastle and the forecastle -- each
      * a whole number of pixels up, so that whoever is lifted onto one by that
      * many stands on it; and where each castle ends.
      */
-    const D = 18 / HEIGHT_SCALE, Dc = 33 / HEIGHT_SCALE, Df = 27 / HEIGHT_SCALE, xc = -14, xf = 20;
+    const { D, xc, xf } = CARAVEL, Dc = 33 / HEIGHT_SCALE, Df = 27 / HEIGHT_SCALE;
     const tc = (xc - xs) / L, tf = (xf - xs) / L;
-    const wale = (t: number): number => D + 0.5 * (2 * t - 1) ** 2 + 0.8 * t ** 6;
+    const wale = caravelWale;
     const castleRail = (t: number): number => Dc + 3 + 0.9 * (1 - t / tc) ** 2;
-    const waistRail = (t: number): number => wale(t) + 3;
+    const waistRail = (t: number): number => wale(t) + WAIST_RAIL;
     const foreRail = (t: number): number => Df + 2.8 + 1.5 * ((t - tf) / (1 - tf)) ** 2;
     type Stn = { t: number; x: number; w: number; b: number; zw: number; top: number; rake: number };
     const stn = (t: number, top: (t: number) => number): Stn => {
@@ -4925,6 +4935,28 @@ function placeOf(kind: string): DriverPlace | null {
   places.set(kind, p);
   return p;
 }
+
+/**
+ * The top of a boat's sides all round, in her own frame (along her toward the bow, across her to starboard, up):
+ * where a rope from outside her comes over them (`Renderer.drawMooring`). A caravel's along her waist, between her
+ * castles. Null for anything that is no boat.
+ */
+export function gunwaleOf(kind: string): readonly V3[] | null {
+  let g = gunwales.get(kind);
+  if (g !== undefined) return g;
+  g = placeOf(kind)?.rim ?? null;
+  if (kind === 'caravel') {
+    const { xs, xb, B, LEAN, xc, xf } = CARAVEL, t0 = (xc - xs) / (xb - xs), t1 = (xf - xs) / (xb - xs);
+    const st = Array.from({ length: 9 }, (_, i) => {
+      const t = t0 + ((t1 - t0) * i) / 8;
+      return { x: xs + (xb - xs) * t, b: B * shipBreadth(t) * (1 - LEAN * WAIST_RAIL), z: caravelWale(t) + WAIST_RAIL };
+    });
+    g = [...st.map((q): V3 => [q.x, q.b, q.z]), ...[...st].reverse().map((q): V3 => [q.x, -q.b, q.z])];
+  }
+  gunwales.set(kind, g);
+  return g;
+}
+const gunwales = new Map<string, readonly V3[] | null>();
 
 /** Where the reins of a piece's team go to over it, in its own frame, for the team's reins to come to: null for one nobody drives with reins. */
 export const reinsTo = (kind: string): V3 | null => {

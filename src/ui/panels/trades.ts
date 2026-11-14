@@ -103,9 +103,9 @@ export class TradesPanel {
   ) {
     kitBody(win.body, 'trade-body');
     const bar = document.createElement('div');
-    bar.className = 'trade-tabs log-tabs';
+    bar.className = 'trade-tabs log-tabs rc-tabs';
     for (const [id, label] of [['trades', 'Trades'], ['tree', 'Tree']] as Array<[Tab, string]>) {
-      const b = button(label, 'log-tab');
+      const b = button(label, 'log-tab rc-tab');
       b.addEventListener('click', () => this.show(id));
       this.tabs.set(id, b);
       bar.append(b);
@@ -287,7 +287,7 @@ export class TradesPanel {
    */
   private card(c: ClassCard, mine: boolean, said: ClassesSaid | null, shared: string | null = null): HTMLDivElement {
     const row = document.createElement('div');
-    row.className = `trade-card rc-row${mine ? ' trade-mine rc-on' : ''}${c.open || mine ? '' : ' trade-shut'}`;
+    row.className = `trade-card rc-card${mine ? ' trade-mine rc-on' : ''}${c.open || mine ? '' : ' trade-shut'}`;
 
     const top = document.createElement('div');
     top.className = 'trade-card-top';
@@ -438,7 +438,7 @@ export class TradesPanel {
    */
   private confirm(ask: string, lines: string[], yes: string, act: () => Promise<string | null>): HTMLDivElement {
     const box = document.createElement('div');
-    box.className = 'trade-confirm';
+    box.className = 'trade-confirm rc-sunk';
     box.setAttribute('role', 'group');
     const q = document.createElement('div');
     q.className = 'trade-confirm-ask';
@@ -543,7 +543,7 @@ export class TradesPanel {
   /** A trade's rite as the rulebook has it, to be read and not called. */
   private riteRead(r: (typeof RITES)[number]): HTMLDivElement {
     const rite = document.createElement('div');
-    rite.className = 'trade-rite rc-row';
+    rite.className = 'trade-rite rc-card';
     const top = document.createElement('div');
     top.className = 'trade-card-top';
     const name = document.createElement('span');
@@ -570,7 +570,7 @@ export class TradesPanel {
   /** A perk or a node as the rulebook has it: its name, what it does, and what it costs. */
   private shown(name: string, note: string, cost?: string): HTMLDivElement {
     const box = document.createElement('div');
-    box.className = 'trade-node rc-row';
+    box.className = 'trade-node rc-card';
     const top = document.createElement('div');
     top.className = 'trade-card-top';
     const n = document.createElement('span');
@@ -670,7 +670,7 @@ export class TradesPanel {
   private perk(p: TreePerk, quiet = false): HTMLDivElement {
     const asked = this.confirming === `perk:${p.id}` && !p.taken && !p.why;
     const box = document.createElement('div');
-    box.className = `trade-node rc-row${p.taken ? ' trade-node-taken rc-on' : ''}${!p.taken && p.why ? ' trade-node-shut' : ''}${asked ? ' trade-node-asked rc-now' : ''}`;
+    box.className = `trade-node rc-card${p.taken ? ' trade-node-taken rc-on' : ''}${!p.taken && p.why ? ' trade-node-shut' : ''}${asked ? ' trade-node-asked rc-on' : ''}`;
     const top = document.createElement('div');
     top.className = 'trade-card-top';
     const name = document.createElement('span');
@@ -732,7 +732,7 @@ export class TradesPanel {
    */
   private rite(r: RiteCard): HTMLDivElement {
     const box = document.createElement('div');
-    box.className = `trade-rite rc-row${r.why ? '' : ' trade-rite-ready rc-on'}`;
+    box.className = `trade-rite rc-card${r.why ? '' : ' trade-rite-ready rc-on'}`;
     const top = document.createElement('div');
     top.className = 'trade-card-top';
     const name = document.createElement('span');
@@ -778,7 +778,7 @@ export class TradesPanel {
 
   private node(n: TreeNode): HTMLDivElement {
     const box = document.createElement('div');
-    box.className = `trade-node rc-row${n.taken ? ' trade-node-taken rc-on' : ''}${!n.taken && n.why ? ' trade-node-shut' : ''}`;
+    box.className = `trade-node rc-card${n.taken ? ' trade-node-taken rc-on' : ''}${!n.taken && n.why ? ' trade-node-shut' : ''}`;
     const top = document.createElement('div');
     top.className = 'trade-card-top';
     const name = document.createElement('span');
