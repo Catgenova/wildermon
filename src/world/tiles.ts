@@ -756,10 +756,8 @@ export const BUSH_DEFS: BushDef[] = [
 export interface RockVariantDef {
   name: string;
   color: RGB;
-  /** Item produced by mining a corner of it. */
+  /** Item produced by mining a corner of it. What mining and prospecting it need is its gate (`skillgates.ts`, by `yields`). */
   yields: string;
-  /** Mining skill a seam of this needs before it can be worked at all. */
-  level?: number;
 }
 
 /** Kinds of rock; stored in the data byte of a Rock tile. */
@@ -793,25 +791,45 @@ export const ROCK_VARIANTS: RockVariantDef[] = [
   { name: 'Marble', color: [220, 217, 211], yields: 'marble_shards' },
   { name: 'Sandstone', color: [201, 190, 172], yields: 'sandstone_shards' },
   // Metal, in order of the skill it takes to work.
-  { name: 'Copper vein', color: [180, 143, 110], yields: 'copper_ore', level: 1 },
-  { name: 'Coal seam', color: [88, 85, 90], yields: 'coal', level: 1 },
-  { name: 'Tin vein', color: [190, 191, 188], yields: 'tin_ore', level: 10 },
-  { name: 'Zinc vein', color: [172, 181, 186], yields: 'zinc_ore', level: 20 },
-  { name: 'Lead vein', color: [137, 140, 151], yields: 'lead_ore', level: 30 },
-  { name: 'Silver vein', color: [196, 199, 205], yields: 'silver_ore', level: 40 },
-  { name: 'Gold vein', color: [202, 181, 125], yields: 'gold_ore', level: 50 },
-  { name: 'Adamantine vein', color: [129, 152, 171], yields: 'adamantine_ore', level: 60 },
-  { name: 'Glimmersteel vein', color: [212, 219, 229], yields: 'glimmersteel_ore', level: 70 },
-  { name: 'Mithril vein', color: [162, 181, 216], yields: 'mithril_ore', level: 80 },
-  { name: 'Seryll vein', color: [215, 202, 159], yields: 'seryll_ore', level: 90 },
+  { name: 'Copper vein', color: [180, 143, 110], yields: 'copper_ore' },
+  { name: 'Coal seam', color: [88, 85, 90], yields: 'coal' },
+  { name: 'Tin vein', color: [190, 191, 188], yields: 'tin_ore' },
+  { name: 'Zinc vein', color: [172, 181, 186], yields: 'zinc_ore' },
+  { name: 'Lead vein', color: [137, 140, 151], yields: 'lead_ore' },
+  { name: 'Silver vein', color: [196, 199, 205], yields: 'silver_ore' },
+  { name: 'Gold vein', color: [202, 181, 125], yields: 'gold_ore' },
+  { name: 'Adamantine vein', color: [129, 152, 171], yields: 'adamantine_ore' },
+  { name: 'Glimmersteel vein', color: [212, 219, 229], yields: 'glimmersteel_ore' },
+  { name: 'Mithril vein', color: [162, 181, 216], yields: 'mithril_ore' },
+  { name: 'Seryll vein', color: [215, 202, 159], yields: 'seryll_ore' },
   // Iron belongs at mining 5, between copper and tin, and sits here at the end
   // of the list instead. Which rock lies under which tile is written down per
   // tile as an index into this array, so putting a metal in the middle would
   // quietly turn every saved coal seam into iron, every tin vein into coal, and
-  // so on down the line. The order of this list is storage; `level` is the
-  // ladder.
-  { name: 'Iron vein', color: [158, 112, 104], yields: 'iron_ore', level: 5 },
+  // so on down the line. The order of this list is storage; the ladder is
+  // its gate (`SEAM_GATE`, skillgates.ts).
+  { name: 'Iron vein', color: [158, 112, 104], yields: 'iron_ore' },
 ];
+/**
+ * The rock kind the island sends for a seam over the reader's prospecting gate (`VEIN_GATE`, skillgates.ts): neither
+ * its look nor its name reaches the browser, only that it is a vein. Past the sixteen kinds a tile may hold, so no rock
+ * is ever stored as it; a renderer keys on it to draw a plain vein. The island's `unidentified_rock`.
+ */
+export const UNIDENTIFIED_ROCK = 255;
+/** What a vein of `UNIDENTIFIED_ROCK` is called and washed as: a seam (`isSeam`), with no gate of its own. */
+export const UNIDENTIFIED_VEIN: RockVariantDef = { name: 'Unidentified metal', color: [168, 160, 150], yields: 'unidentified_metal' };
+/** A rock kind's def: its own, or `UNIDENTIFIED_VEIN` for one the island would not name. */
+export const rockDef = (kind: number): RockVariantDef =>
+  (kind === UNIDENTIFIED_ROCK ? UNIDENTIFIED_VEIN : ROCK_VARIANTS[Math.min(ROCK_VARIANTS.length - 1, kind)]);
+/**
+ * A tile's data byte as the island sends it (`rpc_land_window`, `tile_change`): a bare Rock tile's repeats its rock
+ * kind, so a seam's goes with its low four bits clear; what a face shows is read off the rock, never off that byte.
+ * The island's `rock_data_sent`.
+ */
+export const rockDataSent = (tile: number, data: number): number => {
+  const rock = ROCK_VARIANTS[data & 15];
+  return tile === TileType.Rock && isSeam(rock) ? data & 240 : data;
+};
 /**
  * Four bits of the data byte, which is sixteen kinds of rock and no more —
  * and the list above now holds exactly sixteen. A seventeenth needs another

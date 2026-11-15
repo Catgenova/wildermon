@@ -30,6 +30,7 @@ import { Game } from '../../src/game/game';
 import { furnitureCentre, furnitureDef, furnitureFootprint, passengerPlaces, ridersOf } from '../../src/game/furniture';
 import { RECIPES } from '../../src/game/recipes';
 import { TileType } from '../../src/world/tiles';
+import { gateOf } from '../../src/game/skillgates';
 import { psql, ok, bad, check } from './harness';
 
 /* ---- her bill, her hold and her places -------------------------------------- */
@@ -60,6 +61,8 @@ check('and knows her places, her hold and her water',
 /* ---- the browser ------------------------------------------------------------ */
 console.log('--- the browser');
 const game = Game.create(4242);
+// Her helm is taken at her sailing gate (`skillgates.ts`); a passenger needs none.
+game.skills.values.set('sailing', gateOf('boat', 'caravel')!.level);
 const W0 = 100, WY = 100;
 // Corners west of the line are dry ground and east of it deep water.
 for (let x = W0 - 6; x <= W0 + 9; x++) {
@@ -230,6 +233,10 @@ begin
     (w, '${COLL}', 'Coll', 48.5, 58.5), (w, '${DUNN}', 'Dunn', 48.5, 58.5);
   update player set body_at = now(), x = 48.5, y = 58.5, stats = '{"health":1,"stamina":1,"hunger":1,"thirst":1}'::jsonb
     where world_id = w and uid = dane;
+  -- Her helm is taken at her sailing gate (\`skillgates.ts\`).
+  insert into skill (world_id, uid, id, value)
+    select w, who, 'sailing', ${gateOf('boat', 'caravel')!.level} from unnest(array[dane, '${ANNA}', '${BRAN}', '${COLL}', '${DUNN}']::uuid[]) who
+    on conflict (world_id, uid, id) do update set value = excluded.value;
 
   insert into said values ('FAR', coalesce(act_refusal(w, '${ANNA}', 'board_passenger',
     jsonb_build_object('kind', 'furniture', 'id', v_ship)), 'ALLOWED'));

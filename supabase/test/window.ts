@@ -24,6 +24,9 @@ import { execFileSync } from 'node:child_process';
 import { generateWorld } from '../../src/world/generate';
 import { rowsOf, layRows, layChange, blankWorld, type LandRow, type TileChange } from '../../src/net/landpack';
 import { LAND_NEAR } from '../../src/game/keep';
+import { seenRock } from '../../src/game/skillgates';
+import { SKILL_BY_ID } from '../../src/game/skills';
+import { rockDataSent, UNIDENTIFIED_ROCK } from '../../src/world/tiles';
 import { ok, bad, check } from './harness';
 
 const SIZE = 96;
@@ -129,8 +132,22 @@ const same = (a: ArrayLike<number>, b: ArrayLike<number>, what: string): void =>
 same(replayed.heights, readWorld.heights, 'heights');
 same(replayed.dirt, readWorld.dirt, 'soil   ');
 same(replayed.tiles, readWorld.tiles, 'tiles  ');
-same(replayed.data, readWorld.data, 'data   ');
-same(replayed.rock, readWorld.rock, 'rock   ');
+// A bare seam's data byte, which repeats its rock kind, is not sent (`rockDataSent`; the island's `rock_data_sent`).
+same(replayed.data.map((d, i) => rockDataSent(replayed.tiles[i], d)), readWorld.data, 'data, a bare seam\'s rock kind not sent,');
+// A seam over the reader's prospecting is sent unidentified (`seenRock`; the island's `rock_unseen`, `mask_rock`):
+// the reader here has the prospecting everybody starts with.
+const fresh = { skills: { get: (skill: string): number => SKILL_BY_ID.get(skill)?.start ?? 1 } };
+const seenAtStart = replayed.rock.map((k) => seenRock(k, fresh));
+const hidden = seenAtStart.filter((k) => k === UNIDENTIFIED_ROCK).length;
+same(seenAtStart, readWorld.rock, 'rock, every seam over prospecting 1 sent unidentified,');
+check(`and there are such seams on it to hide (${hidden} tiles), none of them named`, hidden > 0
+  && [...readWorld.rock].every((k, i) => k === UNIDENTIFIED_ROCK ? seenAtStart[i] === k : k === replayed.rock[i]), `${hidden}`);
+// At prospecting 90 every seam is named: the same rock as the history's.
+psql(`insert into skill (world_id, uid, id, value) values ('${id}', '${WHO}', 'prospecting', 90)`);
+const named = blankWorld(SIZE, SEED);
+layRows(named, (JSON.parse(psql(`select rpc_land_window('${id}', 0, 0, ${SIZE - 1}, ${SIZE - 1})::text`)) as { rows: LandRow[] }).rows);
+same(replayed.rock, named.rock, 'rock at prospecting 90, every seam named,');
+psql(`delete from skill where world_id = '${id}' and uid = '${WHO}' and id = 'prospecting'`);
 
 /* ---- A box rather than a band ------------------------------------------ */
 

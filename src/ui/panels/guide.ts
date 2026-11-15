@@ -198,7 +198,7 @@ export class GuidePanel {
     this.findCards();
   }
 
-  /** Your Taming, whole, as an offering is refused under it (`Need taming N`). */
+  /** Your Taming, whole, as an offering is refused under it (`tameRefusal`). */
   private taming(): number {
     return Math.floor(this.game.skills.get('taming'));
   }

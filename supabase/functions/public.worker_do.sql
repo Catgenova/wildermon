@@ -157,6 +157,7 @@ begin
 
   elsif kind in ('mine', 'quarry') then
     rock := bedrock_at(p_world, wx, wy);
+    if kind = 'quarry' and not worker_gate_open(c, stone_gate(p_world, wx, wy)) then return null; end if;
     got := case when kind = 'mine' and rock.seam then rock.yields
                 when kind = 'quarry' and not rock.seam then coalesce(rock.yields, 'rock_shards') else 'rock_shards' end;
     made_ql := least(ore_max_ql((select seed from world where id = p_world), wx, wy), made_ql);

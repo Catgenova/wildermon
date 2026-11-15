@@ -1,5 +1,6 @@
 import { mulberry32, Noise2D } from './noise';
-import { isSeam, ROCK_VARIANTS, TileType } from './tiles';
+import { isSeam, rockDef, ROCK_VARIANTS, TileType } from './tiles';
+import { rockGate } from '../game/skillgates';
 import type { World } from './world';
 
 /**
@@ -117,7 +118,7 @@ export interface OreInfo {
   yields: string;
   /** The best quality this rock will ever give up. */
   maxQl: number;
-  /** Mining skill needed to work it at all. */
+  /** Mining skill needed to work it at all: its seam's or its plain face's gate (`skillgates.ts`). */
   level: number;
   /** Whether it is metal rather than plain stone. */
   ore: boolean;
@@ -134,9 +135,10 @@ export function oreMaxQl(seed: number, x: number, y: number): number {
  */
 export function bedrockAt(world: World, x: number, y: number): OreInfo {
   // The world holds a kind for every tile, settled when it was made.
-  const kind = Math.min(ROCK_VARIANTS.length - 1, world.rockKind(x, y));
-  const def = ROCK_VARIANTS[kind];
-  return { kind, name: def.name, yields: def.yields, maxQl: oreMaxQl(world.seed, x, y), level: def.level ?? 1, ore: isOreKind(kind) };
+  // A vein the island would not name to this reader comes as `UNIDENTIFIED_ROCK`: a seam, and no more.
+  const kind = world.rockFace(x, y);
+  const def = rockDef(kind);
+  return { kind, name: def.name, yields: def.yields, maxQl: oreMaxQl(world.seed, x, y), level: rockGate(def)?.level ?? 1, ore: isOreKind(kind) };
 }
 
 /** The ore in a tile whose rock is already bare, or null. */

@@ -1,4 +1,4 @@
-import { TileType, TILE_DEFS, TREE_DEFS, BUSH_DEFS, ROCK_VARIANTS, SLAB_VARIANTS, treeSpecies, bushSpecies, slabVariant, stepsName, stonesKind } from './tiles';
+import { TileType, TILE_DEFS, TREE_DEFS, BUSH_DEFS, ROCK_VARIANTS, rockDef, UNIDENTIFIED_ROCK, SLAB_VARIANTS, treeSpecies, bushSpecies, slabVariant, stepsName, stonesKind } from './tiles';
 import type { WaterField } from './springs';
 
 export type WorldListener = (x: number, y: number) => void;
@@ -508,7 +508,9 @@ export class World {
    * every island already standing (`supabase/test/ground.ts`).
    */
   rockFace(x: number, y: number): number {
-    return Math.min(ROCK_VARIANTS.length - 1, this.rockKind(x, y));
+    const kind = this.rockKind(x, y);
+    // A vein the island would not name to you is drawn as one, and nothing more (`UNIDENTIFIED_ROCK`).
+    return kind === UNIDENTIFIED_ROCK ? kind : Math.min(ROCK_VARIANTS.length - 1, kind);
   }
 
   setRockKind(x: number, y: number, kind: number): void {
@@ -572,7 +574,7 @@ export class World {
     if (TILE_DEFS[t as TileType]?.bed) return;
     const bare = this.allBare(x, y);
     if (bare && t !== TileType.Rock && t !== TileType.Snow) {
-      this.setTile(x, y, TileType.Rock, this.rockKind(x, y));
+      this.setTile(x, y, TileType.Rock, this.rockKind(x, y) === UNIDENTIFIED_ROCK ? 0 : this.rockKind(x, y));
     } else if (!bare && t === TileType.Rock) {
       this.setTile(x, y, TileType.Dirt);
     }
@@ -958,7 +960,7 @@ export class World {
     if (t === TileType.Tree) return `${TREE_DEFS[treeSpecies(this.getData(x, y))].name} tree`;
     if (t === TileType.Bush) return BUSH_DEFS[bushSpecies(this.getData(x, y))].name;
     if (t === TileType.Stump) return `${TREE_DEFS[treeSpecies(this.getData(x, y))].name} stump`;
-    if (t === TileType.Rock) return ROCK_VARIANTS[this.rockFace(x, y)].name;
+    if (t === TileType.Rock) return rockDef(this.rockFace(x, y)).name;
     if (t === TileType.Slabs) return SLAB_VARIANTS[slabVariant(this.getData(x, y))].name;
     if (t === TileType.Steps) return stepsName(this.getData(x, y));
     if (t === TileType.SteppingStones) return SLAB_VARIANTS[stonesKind(this.getData(x, y))].stones;

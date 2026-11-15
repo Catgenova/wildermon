@@ -20,7 +20,7 @@ import { ACTION_BY_ID } from '../../src/game/actions';
 import { GATHER_SKILL, type Creature } from '../../src/game/creatures';
 import { idleSays } from '../../src/game/workerlog';
 import { creatureLines } from '../../src/ui/creatureinfo';
-import { GATE_LADDER, gateOf, skillGateRefusal, nextUnlockSaid, SKILL_GATES, unlocksOf } from '../../src/game/skillgates';
+import { GATE_LADDER, gateOf, KEPT_OFF_LADDER, skillGateRefusal, nextUnlockSaid, SKILL_GATES, unlocksOf } from '../../src/game/skillgates';
 import { packTreeData, TileType, TREE_AGES, TREE_DEFS } from '../../src/world/tiles';
 import { psql, check, finish } from './harness';
 
@@ -137,7 +137,7 @@ const said = (k: string): string => isle.get(k) ?? '';
   check(`pine least (${lv('Pine')}), willow most (${lv('Willow')}), alone at each end`,
     trees.filter((g) => g!.level <= lv('Pine')).length === 1 && trees.filter((g) => g!.level >= most).length === 1 && lv('Willow') === most);
   check(`birch ${lv('Birch')}, oak ${lv('Oak')} and maple ${lv('Maple')}: early (20 or under)`, ['Birch', 'Oak', 'Maple'].every((n) => lv(n) <= 20 && lv(n) > lv('Pine')));
-  check(`every gate on the ladder (${GATE_LADDER.join(', ')})`, SKILL_GATES.every((g) => (GATE_LADDER as readonly number[]).includes(g.level)));
+  check(`every gate on the ladder (${GATE_LADDER.join(', ')})`, SKILL_GATES.every((g) => KEPT_OFF_LADDER.has(g.kind) || (GATE_LADDER as readonly number[]).includes(g.level)));
 }
 
 /* ---- you ------------------------------------------------------------------- */

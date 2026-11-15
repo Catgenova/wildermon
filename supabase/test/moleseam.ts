@@ -20,13 +20,14 @@ import { GATHER_SKILL, RANGE_PER_STEP, SKILL_STEP, SPECIES, workRangeOf, type Cr
 import { idleSays } from '../../src/game/workerlog';
 import { creatureLines } from '../../src/ui/creatureinfo';
 import { ROCK_VARIANTS, TileType } from '../../src/world/tiles';
+import { SEAM_GATE } from '../../src/game/skillgates';
 import { psql, check, finish } from './harness';
 
 const U = '7e5b0000-0000-4000-8000-0000000a0e01';
 const T = 40;
 const IRON = ROCK_VARIANTS.findIndex((r) => r.yields === 'iron_ore');
 const PLAIN = ROCK_VARIANTS.findIndex((r) => r.yields === 'rock_shards');
-const IRON_LEVEL = ROCK_VARIANTS[IRON].level ?? 0;
+const IRON_LEVEL = SEAM_GATE.iron_ore;
 // The other miner: a Quarra set to mining; any kind but the Ironemole's line.
 const OTHER = 'quarra';
 

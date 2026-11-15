@@ -38,6 +38,7 @@ import {
   EVOLVE_AT, kindName, levelSkill, maxHealth, SPECIES, stageLevels, stageOf, tameNeeds, WILD_STAGE_CHANCE, WILD_STAGE_ODDS,
   WILD_SPECIES, WILD_STAGE_SPAN, WILD_STAGE_TAME, wildStageRoll, type Creature, type IslandCreature,
 } from '../../src/game/creatures';
+import { skillGateRefusal } from '../../src/game/skillgates';
 import { psql, ok, bad, check } from './harness';
 
 const near = (a: number, b: number, by = 1e-6): boolean => Math.abs(a - b) <= by * Math.max(1, Math.abs(b));
@@ -295,10 +296,11 @@ for (let i = 0; i < 3; i++) {
     needs.level === def.tameLevel + WILD_STAGE_TAME * i && near(needs.chance, def.tameChance * WILD_STAGE_CHANCE ** i) && near(lv, needs.level) && near(ch, needs.chance),
     at(`NEEDS:${i}`));
   check(`and an offering at taming ${TAMING} is ${(chance * 100).toFixed(2)}% on both sides`, near(chance, isleChance, 1e-5), `browser ${chance}, island ${isleChance}`);
-  const want = i ? `Need taming ${needs.level}.` : null;
+  // In the one gate's words, by its stage's name (`tameRefusal`): "Logchewer: needs taming 16; have 1.0."
+  const want = i ? skillGateRefusal(kindName(c), 'taming', def.tameLevel, needs.level) : null;
   const isleRefusal = at(`REFUSE:${i}`);
-  check(`at the kind's own taming, ${i ? 'it is refused, saying what it asks' : 'a first-stage one is not refused for its taming'}, on both sides`,
-    i ? refusal === want && isleRefusal === want : !String(refusal ?? '').startsWith('Need taming') && !isleRefusal.startsWith('Need taming'),
+  check(`at the kind's own taming, ${i ? `it is refused, saying what it asks: "${want}"` : 'a first-stage one is not refused for its taming'}, on both sides`,
+    i ? refusal === want && isleRefusal === want : !String(refusal ?? '').includes('needs taming') && !isleRefusal.includes('needs taming'),
     `browser ${refusal}, island ${isleRefusal}`);
   game.creatures.remove(c.id);
 }

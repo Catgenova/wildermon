@@ -6,9 +6,9 @@ import { BURYABLE, BUSH_DEFS, SLAB_BY_ITEM, SLAB_VARIANTS, TILE_DEFS, TREE_AGES,
 import { FLOWER_ACTIONS, groundSays } from './wildflowers';
 import { MOTE_ACTIONS, WATER_MOTE, WATER_MOTES_EACH } from './motes';
 import { hasRunestones, RUNESTONES, STONE_GUARDED, stoneGap, stoneGroundRefusal, TELESTONE, TELESTONE_ACTIONS, telestoneSays } from './runestones';
-import { DAILY_RESET, isSeam, metres } from '../world/tiles';
+import { DAILY_RESET, isSeam, metres, rockDef } from '../world/tiles';
 import type { World } from '../world/world';
-import { bedrockAt, oreAt } from '../world/ore';
+import { bedrockAt } from '../world/ore';
 import { BUILD_ACTIONS } from './buildActions';
 import { CELLAR_ACTIONS, cellarFloorSaid, dropRefusal } from './cellar';
 import { FRAME_ACTIONS, frameSays } from './frameActions';
@@ -102,7 +102,7 @@ import { capital, listed } from './words';
 import { pct, pickedSaid, qlTag, searchOdds, searchPasses, tagged, taggedWith } from './yields';
 import { fruitRefusal, fruitSeason, fruitingSays, inSeason } from './fruiting';
 import { RECIPE_ACTIONS } from './recipes';
-import { skillGateRefusal, treeGate } from './skillgates';
+import { rockGate, seenVein, skillGateRefusal, treeGate, veinTip } from './skillgates';
 import { BRUSH_TOOL, lacksTool, MORTAR_TOOL, REAP_TOOL, TOOL_JOBS } from './jobtools';
 
 /**
@@ -686,6 +686,20 @@ export const prospectReach = (g: Game): number =>
 export const mineDepth = (g: Game): number => g.perk('depth:mine', MINE_DEPTH);
 /** The mining an ore wants of this body before it can be worked: a Miner's Ore Sense wants less (`ore:below`). */
 export const oreNeeds = (g: Game, level: number): number => Math.max(0, level - g.perk('ore:below', 0));
+/**
+ * A bare face's mining gate for you, or null (`skillgates.ts`): a seam's by its mining, less a Miner's Ore Sense
+ * (`oreNeeds`); a plain stone's (rock, sandstone, slate, marble) by its quarrying. The island's `face_gate_refusal`.
+ */
+export const faceGateRefusal = (g: Game, x: number, y: number): string | null => {
+  if (g.world.getTile(x, y) !== TileType.Rock) return null;
+  const rock = bedrockAt(g.world, x, y);
+  const gate = rockGate(rock);
+  if (!gate) return null;
+  return skillGateRefusal(rock.name, gate.skill, g.skills.get(gate.skill), gate.kind === 'seam' ? oreNeeds(g, gate.level) : gate.level);
+};
+/** A tile's name as you see it: a bare vein over your prospecting is "Unidentified metal" (`seenVein`). */
+export const tileSeen = (g: Game, x: number, y: number): string =>
+  (g.world.getTile(x, y) === TileType.Rock ? seenVein(rockDef(g.world.rockFace(x, y)), g) : g.world.tileName(x, y));
 /** A tree's felling gate for you (`skillgates.ts`), or null: none, met, or a tree with no logs in it. The island's `tree_gate_refusal`. */
 export const treeGateRefusal = (g: Game, data: number): string | null => {
   const gate = treeGate(data);
@@ -998,7 +1012,7 @@ export const ACTIONS: ActionDef[] = [
       const type = w.getTile(t.x, t.y);
       const c = w.corners(t.x, t.y, [0, 0, 0, 0]);
       const avg = (c[0] + c[1] + c[2] + c[3]) / 4;
-      let text = `${w.tileName(t.x, t.y)} at (${t.x}, ${t.y}).`;
+      let text = `${tileSeen(g, t.x, t.y)} at (${t.x}, ${t.y}).`;
       if (type === TileType.Tree) {
         const data = w.getData(t.x, t.y);
         const age = treeAge(data);
@@ -1613,8 +1627,9 @@ export const ACTIONS: ActionDef[] = [
       const under = cornerUnderBuilding(g, t.cx, t.cy);
       if (under) return under;
       if (g.world.getHeight(t.cx, t.cy) < -mineDepth(g)) return 'Water too deep.';
-      const ore = oreAt(g.world, t.x, t.y);
-      if (ore && g.skills.get('mining') < oreNeeds(g, ore.level)) return `${ore.name}: needs mining ${oreNeeds(g, ore.level)}; have ${g.skills.get('mining').toFixed(1)}.`;
+      // A bare face's gate: its seam's, less Ore Sense, or its plain stone's (`skillgates.ts`; the island's `terrain_refusal`).
+      const gated = faceGateRefusal(g, t.x, t.y);
+      if (gated) return gated;
       return null;
     },
     perform: (t, g) => {
@@ -1671,8 +1686,9 @@ export const ACTIONS: ActionDef[] = [
       const under = cornerUnderBuilding(g, t.cx, t.cy);
       if (under) return under;
       if (g.world.getHeight(t.cx, t.cy) < -mineDepth(g)) return 'Water too deep.';
-      const ore = oreAt(g.world, t.x, t.y);
-      if (ore && g.skills.get('mining') < oreNeeds(g, ore.level)) return `${ore.name}: needs mining ${oreNeeds(g, ore.level)}; have ${g.skills.get('mining').toFixed(1)}.`;
+      // A bare face's gate: its seam's, less Ore Sense, or its plain stone's (`skillgates.ts`; the island's `terrain_refusal`).
+      const gated = faceGateRefusal(g, t.x, t.y);
+      if (gated) return gated;
       return levelStop(g, t.cx, t.cy, -1);
     },
     perform: (t, g) => {
@@ -1722,7 +1738,8 @@ export const ACTIONS: ActionDef[] = [
           // a coal seam yields plain `coal` and so fails the `_ore` test.
           if (!isSeam(rock)) continue;
           tiles.push(y * w.w + x);
-          found.push(rock.name.toLowerCase());
+          // Named only at or over its prospecting gate: "unidentified metal" under it (`seenVein`).
+          found.push(seenVein(rock, g).toLowerCase());
         }
       }
       g.markProspected(tiles);
@@ -1731,7 +1748,10 @@ export const ACTIONS: ActionDef[] = [
       // Sampling where you stand tells you what that particular rock holds.
       const here = bedrockAt(w, t.x, t.y);
       const buried = w.getTile(t.x, t.y) === TileType.Rock ? '' : ` Under ${Math.max(1, w.getDirt(t.x, t.y))} of ground.`;
-      if (isSeam(here)) {
+      const unread = veinTip(here, g);
+      if (isSeam(here) && unread) {
+        g.logMsg(`Here: ${seenVein(here, g).toLowerCase()}. ${unread} Max QL ${here.maxQl}.${buried}`, 'event');
+      } else if (isSeam(here)) {
         const can = g.skills.get('mining') >= here.level;
         g.logMsg(
           `Here: ${here.name.toLowerCase()}. Needs mining ${here.level}${can ? ' (you have it)' : ''}. Max QL ${here.maxQl}.${buried}`,

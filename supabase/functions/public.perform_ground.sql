@@ -588,7 +588,7 @@ begin
     v_rad := prospect_radius(v_skill) + pk(p_world, p_uid, 'further:prospect', 0)::int + path_fx(p_world, p_uid, 'further', 0)::int;
     v_size := (select size from world where id = p_world);
     -- Metal counts wherever it lies: bare, under soil, or below water.
-    for v_row in select x, y, (bedrock_at(p_world, x, y)).name as nm
+    for v_row in select x, y, seen_vein(p_world, p_uid, bedrock_at(p_world, x, y)) as nm
       from generate_series(greatest(0, tx - v_rad), least(v_size - 1, tx + v_rad)) x
       cross join generate_series(greatest(0, ty - v_rad), least(v_size - 1, ty + v_rad)) y
       -- Anything worth mining, not only what is metal: a coal seam is a
@@ -606,7 +606,10 @@ begin
     v_ql := ore_max_ql((select seed from world where id = p_world), tx, ty);
     v_buried := case when here = 4 then ''
       else ' Under ' || greatest(1, land_dirt(p_world, tx, ty)) || ' of ground.' end;
-    if v_rock.seam then
+    if v_rock.seam and vein_tip(p_world, p_uid, v_rock) is not null then
+      perform tell(p_world, p_uid, 'Here: ' || lower(seen_vein(p_world, p_uid, v_rock)) || '. '
+        || vein_tip(p_world, p_uid, v_rock) || ' Max QL ' || to_char(v_ql, 'FM990') || '.' || v_buried, 'event');
+    elsif v_rock.seam then
       perform tell(p_world, p_uid, 'Here: ' || lower(v_rock.name)
         || '. Needs mining ' || to_char(case when v_rock.ore
                                                 then greatest(0, v_rock.level - pk(p_world, p_uid, 'ore:below', 0))

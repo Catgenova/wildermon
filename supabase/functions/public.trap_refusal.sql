@@ -40,9 +40,8 @@ begin
     select * into c from creature where world_id = p_world and id = p.caught;
     if not found then return 'Catch gone.'; end if;
     select * into s from species_def where id = c.species;
-    if skill_of(p_world, p_uid, 'taming') < (tame_needs(c)).level then
-      return 'Need taming ' || to_char((tame_needs(c)).level, 'FM990')
-        || ' to handle a ' || lower(s.name) || '. Still held.';
+    if tame_gate_refusal(c, skill_of(p_world, p_uid, 'taming')) is not null then
+      return tame_gate_refusal(c, skill_of(p_world, p_uid, 'taming'));
     end if;
     -- The same rule as taming: the first follows you, and every one after that goes into a crate.
     if tame_room_refusal(p_world, p_uid) is not null then return tame_room_refusal(p_world, p_uid); end if;

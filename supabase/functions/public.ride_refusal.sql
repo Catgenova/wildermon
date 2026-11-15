@@ -127,6 +127,8 @@ begin
       return 'Stand beside it.';
     end if;
     if (driving(p_world, p_uid)).id is not null then return 'Already driving.'; end if;
+    -- A wagon's reins at its driving, a boat's helm or oars at its sailing (`skillgates.ts`).
+    if helm_gate_refusal(p_world, p_uid, p) is not null then return helm_gate_refusal(p_world, p_uid, p); end if;
     -- A padlock on her keeps her helm, or the reins, to whoever has its key.
     v_shut := lock_refusal(p_world, p_uid, p.lock, p.x, p.y);
     if v_shut is not null then return v_shut; end if;

@@ -3,7 +3,7 @@ import { enchantTail, swingEnchant, type Enchant } from './enchant';
 import type { ActionDef, Target } from './actions';
 import { SUBTILES } from './crates';
 import type { Game } from './game';
-import { isBaitFor, SPECIES, tameLearn, tameNeeds, type Creature } from './creatures';
+import { isBaitFor, SPECIES, tameLearn, tameNeeds, tameRefusal, type Creature } from './creatures';
 import { emptyCrate, shutIn } from './creaturecrate';
 import { tameRoomRefusal } from './creatureActions';
 import { itemDef, itemName, markOf, type Item, type Mark } from './items';
@@ -256,9 +256,9 @@ export const TRAP_ACTIONS: ActionDef[] = [
       const c = g.creatures.get(trap.caught);
       if (!c) return 'Catch gone.';
       if (!nearTrap(g, trap)) return 'Stand at the trap.';
-      const s = SPECIES[c.species];
-      const needs = tameNeeds(c).level;
-      if (s && g.skills.get('taming') < needs) return `Need taming ${needs} to handle a ${s.name.toLowerCase()}. Still held.`;
+      // Handled only at its taming gate, as taming it is (`tameRefusal`; the island's `tame_gate_refusal`).
+      const gated = SPECIES[c.species] ? tameRefusal(c, g.skills.get('taming')) : null;
+      if (gated) return gated;
       // The same rule as taming: the first follows you, and every one after that goes into a crate.
       return tameRoomRefusal(g);
     },

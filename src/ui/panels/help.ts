@@ -180,7 +180,7 @@ import { AWARE_PER_LEVEL, AWARE_TRAIT_STEP, awareShareAbove, awareTraitEase, DEE
 import { NIGHT_EYES_FROM } from '../../game/learn';
 import { NO_GO, pointAt, windWord, windWorth } from '../../game/wind';
 import { article, capital, finePercent, listed, listedOr, percent, timeWords } from '../../game/words';
-import { GATE_LADDER, GATE_STOPS, GATED_SKILLS, skillGateRefusal, SKILL_GATES, unlocksSaid } from '../../game/skillgates';
+import { GATE_LADDER, GATE_STOPS, GATED_SKILLS, SEAM_GATE, skillGateRefusal, SKILL_GATES, unlocksSaid } from '../../game/skillgates';
 import {
   bossSays, garrisonSays, HOARD_SCALE, HOARD_SCALE_CAP, HOARD_SHARE, hoardBook, hoardSays, LAIR_ANNOUNCE, LAIR_KINDS, LAIR_LEASH, LAIR_MOVE_CLEARS, LAIR_MOVE_DAYS,
   LAIR_RING, LAIR_RING_WILD, LAIR_SIGHT, LAIR_TRACK, lairRingUsual, lairRingWant, restockSays, SITE_SAYS,
@@ -885,7 +885,8 @@ const TIER_SPAN = Object.fromEntries(TIERS.map((tier) => {
   return [tier, [Math.min(...most), Math.max(...most)]];
 })) as Record<TraitTier, [number, number]>;
 /** The seams in the rock, by the mining each asks, and what one is called in a list. */
-const SEAMS = ROCK_VARIANTS.filter((r) => r.level).sort((a, b) => (a.level ?? 0) - (b.level ?? 0));
+const SEAMS = ROCK_VARIANTS.filter((r) => SEAM_GATE[r.yields] !== undefined).map((r) => ({ ...r, level: SEAM_GATE[r.yields] }))
+  .sort((a, b) => a.level - b.level);
 const seamName = (name: string): string => name.replace(/ (vein|seam)$/, '').toLowerCase();
 /** What an ordinary go teaches at a level, and the levels worth showing it at. */
 const GAIN_AT = [1, 50, 90, 99];

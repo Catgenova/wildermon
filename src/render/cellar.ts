@@ -3,7 +3,7 @@ import { CELLAR_DEPTH, FLOOR_DEEP, MATERIAL_BY_ID, type CellarTile, type Side } 
 import { cellarSoil } from '../game/cellar';
 import type { Game } from '../game/game';
 import { bedrockAt } from '../world/ore';
-import { ROCK_VARIANTS, TILE_DEFS, TileType } from '../world/tiles';
+import { rockDef, ROCK_VARIANTS, TILE_DEFS, TileType } from '../world/tiles';
 import type { World } from '../world/world';
 import { depthOf, type View } from './view';
 
@@ -178,7 +178,7 @@ export interface EarthFace {
  */
 export function stoneOf(w: World, x: number, y: number): { stone: RGB; ore: RGB | null; metal: boolean } {
   const r = bedrockAt(w, x, y);
-  const colour = ROCK_VARIANTS[r.kind].color;
+  const colour = rockDef(r.kind).color;
   return r.ore ? { stone: underground(ROCK_VARIANTS[0].color), ore: colour, metal: r.yields.endsWith('_ore') }
     : { stone: underground(colour), ore: null, metal: false };
 }
