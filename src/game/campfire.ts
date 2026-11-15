@@ -25,6 +25,8 @@ export interface PlacedCampfire {
   ql?: number;
   /** Damage, out of a hundred (`stations.ts`). */
   dmg?: number;
+  /** When `dmg` was last charged for decay, in epoch seconds (the island's `placed.decay_at`, `stationDmg`); absent for none owed. */
+  decayAt?: number;
   /** Whose this is, on an island. */
   mine?: boolean;
   /** Seconds of burning left in it. */

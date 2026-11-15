@@ -82,7 +82,7 @@ export const stationCostSaid = (kind: StationKind): string =>
   kind === 'campfire' ? `${FIRE_COST} × ${itemDef('shaft').name.toLowerCase()}` : itemDef(STATIONS[kind].item ?? kind).name;
 
 /** Anything standing that is a station, as the decay rule reads it. */
-export interface StationThing { x: number; y: number; ql?: number; rare?: number; dmg?: number; metal?: string }
+export interface StationThing { x: number; y: number; ql?: number; rare?: number; dmg?: number; decayAt?: number; metal?: string }
 
 /** Its item, as the ground's decay rule reads one (`groundDecayRate`): its kind's item, quality, rarity and, for an anvil, its metal. */
 const decayItem = (kind: StationKind, s: StationThing): Item =>
@@ -100,10 +100,20 @@ export function stationDecayRate(g: Game, kind: StationKind, s: StationThing): n
   return groundDecayRate(decayItem(kind, s)) * g.decayMultiplier(s.x, s.y);
 }
 
-/** Its condition, as a label: its damage, what it decays at, and when it is gone. */
-export function stationCondition(g: Game, kind: StationKind, s: StationThing): string {
+/**
+ * Its damage now: what was last charged (`dmg`, at `decayAt`), and its rate since, to `DAMAGE_MAX`. The island's
+ * `station_dmg`; the ground read sends the two columns, which stand still between charges, and this works out the rest.
+ */
+export function stationDmg(g: Game, kind: StationKind, s: StationThing, rate = stationDecayRate(g, kind, s)): number {
   const dmg = s.dmg ?? 0;
+  if (s.decayAt === undefined || rate <= 0) return dmg;
+  return Math.min(DAMAGE_MAX, dmg + (rate * Math.max(0, g.wallNow() - s.decayAt)) / 3600);
+}
+
+/** Its condition, as a label: its damage now, what it decays at, and when it is gone. */
+export function stationCondition(g: Game, kind: StationKind, s: StationThing): string {
   const rate = stationDecayRate(g, kind, s);
+  const dmg = stationDmg(g, kind, s, rate);
   if (rate <= 0) return `Damage: ${dmg.toFixed(1)} · Decay: none on a settlement`;
   const secs = (Math.max(0, DAMAGE_MAX - dmg) / rate) * 3600;
   return `Damage: ${dmg.toFixed(1)} · Decay: ${rate.toFixed(2)}/h off a settlement · Gone in: ${rotSaid(secs)}`;

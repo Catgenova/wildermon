@@ -11367,6 +11367,7 @@ create or replace function lb_lava() returns int language sql immutable as $fn$ 
 create or replace function lb_opens() returns int language sql immutable as $fn$ select 2 $fn$;
 create or replace function lb_way() returns int language sql immutable as $fn$ select 16 $fn$;
 create or replace function lava_reach_past() returns int language sql immutable as $fn$ select 12 $fn$;
+create or replace function lava_min_size() returns int language sql immutable as $fn$ select 1024 $fn$;
 create or replace function lava_burn() returns double precision language sql immutable as $fn$ select 0.04::double precision $fn$;
 create or replace function heat_fill() returns double precision language sql immutable as $fn$ select 0.004166666666666667::double precision $fn$;
 create or replace function heat_near() returns double precision language sql immutable as $fn$ select 2::double precision $fn$;

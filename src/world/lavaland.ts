@@ -2,7 +2,7 @@
  * Where Volcano Isle's labyrinth of lava lies, and its heart: the ground's half of `src/game/lava.ts`, a leaf so the
  * generator can read it (seryll lies in the heart and nowhere else, `rockKindFor`).
  *
- * Written for the island, 4096 tiles a side, and laid over any other world by scale as the chart is: the centre
+ * Written for the island, 4096 tiles a side, and laid over any other world of `LAVA_MIN_SIZE` or more by scale as the chart is: the centre
  * (`LAVA_CENTRE`, the caldera's middle on the chart), the labyrinth out to `LAVA_RADIUS` tiles round it, and its heart
  * within `LAVA_HEART`, which no lava ever lies on. The island's `lava_centre`, `lava_radius_at`, `lava_heart_at`.
  */
@@ -10,6 +10,8 @@ import { LAVA_CHART } from './lavachart';
 
 /** The size of world the numbers below are written for: the island's. */
 export const LAVA_SIZE = 4096;
+/** The least size of world the labyrinth is laid on, a side in tiles: none below it (`lavaAt`, the island's `lava_on`). */
+export const LAVA_MIN_SIZE = 1024;
 /** The labyrinth's centre, in ten-thousandths of the map across and down: the middle of the caldera, measured. */
 export const LAVA_CENTRE = [5090, 1074] as const;
 /** How far the labyrinth reaches round its centre, in tiles of the island. */

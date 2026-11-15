@@ -6,6 +6,7 @@
  * own made for the purpose (1024 a side, its land where the chart puts Volcano Isle's, a cone over it), and of the
  * browser's rules over the same ground:
  *
+ *   * no lava on an island under `LAVA_MIN_SIZE` a side;
  *   * the chart's table of the island's land the same as the chart works out; every one of the ten designs the same on
  *     both sides, block for block, with the same ways in and out; and each with exactly three true paths, at this size
  *     and the live island's: shut all three ways in and the heart is out of reach, open one and it is in reach, and
@@ -34,7 +35,7 @@ import { readAtlas } from '../../tools/atlas-node';
 import { lavaChartOf } from '../../tools/lava-chart-of';
 import {
   DRAUGHT_DROP, DRAUGHT_FILL, DRAUGHT_NOT, DRAUGHT_SECS, draughtSaid, HEAT_BURN, HEAT_DRAIN, HEAT_FILL, HEAT_ICE, HEAT_NEAR, HEAT_SAID, HEAT_SCALE, heatMul,
-  heatStep, inLavaHeart, LAVA_BAND, LAVA_BURN, LAVA_CELL, LAVA_CENTRE, LAVA_DESIGNS, LAVA_FROM_DAY, LAVA_HEART, LAVA_ISLE, LAVA_PATHS, LAVA_RADIUS,
+  heatStep, inLavaHeart, LAVA_BAND, LAVA_BURN, LAVA_CELL, LAVA_CENTRE, LAVA_DESIGNS, LAVA_FROM_DAY, LAVA_HEART, LAVA_ISLE, LAVA_MIN_SIZE, LAVA_PATHS, LAVA_RADIUS,
   LAVA_SAID, LAVA_SEAM, LAVA_SPARED_TILES, lavaAt, lavaBlock, lavaByte, lavaChartAt, lavaDay, lavaDesign, lavaDesignOf, lavaGeometry, type LavaDesign,
   type LavaLand, lavaSalt, LB_LAVA, LB_OPENS, LB_WAY, ROOM_HEART, ROOM_IN,
 } from '../../src/game/lava';
@@ -179,6 +180,7 @@ begin
     || lava_designs() || '|' || lava_paths() || '|' || lava_from_day() || '|' || lava_isle() || '|' || lava_seam() || '|' || lava_burn() || '|'
     || array_to_string(lava_spared_tiles(), ',') || '|' || heat_fill() || '|' || heat_near() || '|' || heat_drain() || '|'
     || heat_burn() || '|' || heat_scale() || '|' || heat_ice() || '|' || draught_fill() || '|' || draught_secs() || '|' || draught_drop());
+  insert into said values ('MIN', lava_min_size()::text);
   insert into said select 'GEOM', g.cx || '|' || g.cy || '|' || g.radius || '|' || g.heart || '|' || b.bxa || '|' || b.bya || '|' || b.nbx || '|' || b.nby
     from lava_geometry(${SIZE}) g, lava_box(${SIZE}) b;
   insert into said values ('CHART', encode(lava_chart_cells(), 'hex'));
@@ -335,6 +337,21 @@ console.log('--- numbers');
 check('every number the same on both sides', one('NUMS') === [LAVA_CELL, LAVA_BAND.foot, LAVA_CENTRE.join(','), LAVA_RADIUS, LAVA_HEART, LAVA_DESIGNS, LAVA_PATHS,
   LAVA_FROM_DAY, LAVA_ISLE, LAVA_SEAM, LAVA_BURN, LAVA_SPARED_TILES.join(','), HEAT_FILL, HEAT_NEAR, HEAT_DRAIN, HEAT_BURN, HEAT_SCALE, HEAT_ICE, DRAUGHT_FILL,
   DRAUGHT_SECS, DRAUGHT_DROP].join('|'), one('NUMS'));
+check(`the least size of island with lava the same on both sides (${LAVA_MIN_SIZE})`, one('MIN') === String(LAVA_MIN_SIZE), one('MIN'));
+{
+  // Dry land over the whole box: lava at the least size, none on an island under it.
+  const lavaOver = (size: number): number => {
+    const flat: LavaLand = { ...land, size, height: () => 100 };
+    const D = lavaDesign(size, lavaDesignOf(SEED, TODAY));
+    let n = 0;
+    for (let y = Math.max(0, D.bya * LAVA_CELL); y < (D.bya + D.nby) * LAVA_CELL; y++) {
+      for (let x = Math.max(0, D.bxa * LAVA_CELL); x < (D.bxa + D.nbx) * LAVA_CELL; x++) if (lavaAt(flat, TODAY, x, y)) n++;
+    }
+    return n;
+  };
+  const at = lavaOver(LAVA_MIN_SIZE), under = lavaOver(LAVA_MIN_SIZE / 2);
+  check(`lava on an island of ${LAVA_MIN_SIZE}, none on one of ${LAVA_MIN_SIZE / 2}`, at > 0 && under === 0, `${at} / ${under}`);
+}
 check('the centre, reach, heart and box the same on both sides', one('GEOM') === [G.cx, G.cy, G.radius, G.heart, D0.bxa, D0.bya, D0.nbx, D0.nby].join('|'), one('GEOM'));
 check('the salt the same on both sides, a negative seed and a long one too', one('SALT') === [lavaSalt(SEED), lavaSalt(-5), lavaSalt(9876543210)].join('|'), one('SALT'));
 check('every word the same on both sides', one('WORDS') === [LAVA_SAID, draughtSaid, DRAUGHT_NOT, HEAT_SAID.full, HEAT_SAID.lava].join('|'), one('WORDS'));

@@ -102,7 +102,7 @@ import { DARK_HIT, NIGHT_EYES_FROM, SOUL_PER_LEVEL, WORK_HAND, WORK_WIND, WORK_W
 import { DRIVING, DRIVING_LEARN, drivingPace, SAILING, SAILING_LEARN, sailingPace, vehicleQlPace } from './travel';
 import { isLayUp, LEAD_PACE, ROPE_WALK, ROPE_WALK_TIME, ROPEMAKING, ropePerLayUp, ropeTime } from './ropework';
 import { laySwirls, swirlLight, type MoteElement, type Swirl } from './motes';
-import { gameLava, LAVA_CELL, LAVA_SPARED_TILES, LB_LAVA, LB_OPENS, LB_WAY, lavaBlockIn, lavaByte, lavaDay, lavaDesign, lavaDesignOf, lavaLights, type LavaDesign, type LavaLand } from './lava';
+import { gameLava, LAVA_CELL, LAVA_MIN_SIZE, LAVA_SPARED_TILES, LB_LAVA, LB_OPENS, LB_WAY, lavaBlockIn, lavaByte, lavaDay, lavaDesign, lavaDesignOf, lavaLights, type LavaDesign, type LavaLand } from './lava';
 import { TRACKING, trackLevel, type Trail } from './tracking';
 import { hasRunestones, runestoneAt, RUNESTONES, stonePoint, stoneTiles } from './runestones';
 import { AWARENESS, Vision } from './vision';
@@ -9161,6 +9161,8 @@ export class Game {
       const at = { id: r.id, x: r.x, y: r.y, sx: r.sx, sy: r.sy, mine: r.mine };
       // An enchantment set into it where it stands, and the wear a scroll that did not take left on it (`enchanting.ts`).
       const kept = { ...(r.enchant ? { enchant: r.enchant } : {}), ...(r.dmg ? { dmg: r.dmg } : {}),
+        // And when that damage was last charged, for a station's decay since (`stationDmg`).
+        ...(typeof r.decay_at === 'number' ? { decayAt: r.decay_at } : {}),
         // And the motes infused into it, while they last (`infusion.ts`).
         ...(r.infuse ? { infuse: r.infuse } : {}) };
       // Down in a cellar: only furniture goes down there, and says so.
@@ -9169,7 +9171,7 @@ export class Game {
       // Which way a station was set down (`stations.ts`): south for one set down before it could be turned.
       const facing = (r.facing ?? 's') as Side;
       if (r.kind === 'campfire' || r.kind === 'fire') {
-        built.campfires.set(r.id, { ...at, facing, ql: r.ql ?? 20, ...(r.dmg ? { dmg: r.dmg } : {}), fuel: r.fuel ?? 0, lit: !!r.lit, ash: r.ash ?? 0, ...(r.infuse ? { infuse: r.infuse } : {}) });
+        built.campfires.set(r.id, { ...at, facing, ql: r.ql ?? 20, ...(r.dmg ? { dmg: r.dmg } : {}), ...(typeof r.decay_at === 'number' ? { decayAt: r.decay_at } : {}), fuel: r.fuel ?? 0, lit: !!r.lit, ash: r.ash ?? 0, ...(r.infuse ? { infuse: r.infuse } : {}) });
       } else if (r.kind === 'smelter') {
         built.smelters.set(r.id, {
           ...at, ...kept, facing, ql: r.ql ?? 20, rare: rarityStep(r.rare), fuel: r.fuel ?? 0, lit: !!r.lit, ash: r.ash ?? 0,
@@ -10420,6 +10422,7 @@ export class Game {
 
   /** Whether a whole block of the labyrinth is lava today (`lavaBlockIn`): its design's byte, and what a lair or a seam opens. */
   lavaBlockAt(bx: number, by: number): boolean {
+    if (this.world.w < LAVA_MIN_SIZE) return false;
     const m = this.lavaNow();
     const b = lavaByte(m.design, bx, by);
     if (!(b & LB_LAVA)) return false;

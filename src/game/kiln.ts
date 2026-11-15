@@ -34,6 +34,8 @@ export interface PlacedKiln {
   infuse?: { el: string; str: number; until: number };
   /** How far gone it is, out of a hundred: a scroll that did not take on it (`enchanting.ts`). Absent is none. */
   dmg?: number;
+  /** When `dmg` was last charged for decay, in epoch seconds (the island's `placed.decay_at`, `stationDmg`); absent for none owed. */
+  decayAt?: number;
   /** 1 rare, 2 supreme, 3 fantastic; absent for the ordinary run of things. */
   rare?: number;
   id: number;

@@ -7,7 +7,7 @@ AS $function$
 declare v_day int := lava_day_of(now()); w world; v_n int := 0; d int; v_design int;
 begin
   select * into w from world where id = p_world;
-  if not found then return 0; end if;
+  if not found or w.size < lava_min_size() then return 0; end if;
   for d in v_day .. v_day + 1 loop
     select ld.design into v_design from lava_day ld where ld.world_id = p_world and ld.day = d;
     if v_design is null then

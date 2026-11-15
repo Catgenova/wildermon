@@ -187,7 +187,7 @@ import {
 import { CANDLE_BURN, TORCH_BURN } from '../src/game/light';
 import {
   COOLING_DRAUGHT, DRAUGHT_DROP, DRAUGHT_FILL, DRAUGHT_NOT, DRAUGHT_SECS, draughtSaid, HEAT_BURN, HEAT_DRAIN, HEAT_FILL, HEAT_ICE, HEAT_NEAR, HEAT_SAID, HEAT_SCALE,
-  HEAT_SCALE_PIECES, HEAT_WARN, LAVA_BAND, LAVA_BURN, LAVA_CELL, LAVA_CENTRE, LAVA_DESIGNS, LAVA_FROM_DAY, LAVA_GUARDED, LAVA_HEART, LAVA_ISLE, LAVA_PATHS,
+  HEAT_SCALE_PIECES, HEAT_WARN, LAVA_BAND, LAVA_BURN, LAVA_CELL, LAVA_CENTRE, LAVA_DESIGNS, LAVA_FROM_DAY, LAVA_GUARDED, LAVA_HEART, LAVA_ISLE, LAVA_MIN_SIZE, LAVA_PATHS,
   LAVA_RADIUS, LAVA_REACH_PAST, LAVA_SAID, LAVA_SALT, LAVA_SEAM, LAVA_SIZE, LAVA_SPARED_TILES, LB_LAVA, LB_OPENS, LB_WAY, lavaRays,
 } from '../src/game/lava';
 import { LAVA_CHART } from '../src/world/lavachart';
@@ -3368,6 +3368,7 @@ for (const [fn, v] of [
   ['lava_cell', LAVA_CELL], ['lava_foot', LAVA_BAND.foot], ['lava_isle', LAVA_ISLE], ['lava_seam', LAVA_SEAM], ['lava_size', LAVA_SIZE],
   ['lava_radius', LAVA_RADIUS], ['lava_heart', LAVA_HEART], ['lava_designs', LAVA_DESIGNS], ['lava_paths', LAVA_PATHS], ['lava_wall_salt', LAVA_SALT],
   ['lava_from_day', LAVA_FROM_DAY], ['lb_lava', LB_LAVA], ['lb_opens', LB_OPENS], ['lb_way', LB_WAY], ['lava_reach_past', LAVA_REACH_PAST],
+  ['lava_min_size', LAVA_MIN_SIZE],
 ] as Array<[string, number]>) {
   out.push(`create or replace function ${fn}() returns int language sql immutable as $fn$ select ${v} $fn$;`);
 }

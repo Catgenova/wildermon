@@ -2,7 +2,7 @@
  * Volcano Isle's labyrinth of lava, one of ten laid each dawn, and the heat of being up there.
  *
  * The labyrinth. Round the caldera (`LAVA_CENTRE`), out to `LAVA_RADIUS` tiles and on Volcano Isle's own land kept
- * `LAVA_INLAND` chart texels in from the water (`lavaChartAt`), lies a labyrinth of lava walls with three true paths
+ * `LAVA_INLAND` chart texels in from the water (`lavaChartAt`), on a world of `LAVA_MIN_SIZE` a side or more, lies a labyrinth of lava walls with three true paths
  * through it to its heart (`LAVA_HEART` round the centre: the caldera, the summit's lair and every seryll seam, which
  * lies there and nowhere else, `rockKindFor`). There are `LAVA_DESIGNS` of them, each fixed for a size of world, and
  * each daily reset (`TREE_DAWN_UTC`) the world's seed and the day pick which one lies (`lavaDesignOf`): never the same
@@ -44,14 +44,14 @@ import { REGIONS } from '../world/regions';
 import { chartRegion } from '../world/chart';
 import { hashTile } from '../world/ore';
 import { ROAD_TILES, ROCK_VARIANTS, TileType, TREE_DAWN_UTC } from '../world/tiles';
-import { lavaChartAt, lavaGeometry } from '../world/lavaland';
+import { LAVA_MIN_SIZE, lavaChartAt, lavaGeometry } from '../world/lavaland';
 import { INFUSE_INTO, infusedShare, type Infusable } from './infusion';
 import { ARMOUR } from './gear';
 import { LAIR_BY_ID } from './lairs';
 import { percent, waitWords } from './words';
 import { describeFrom } from './items';
 
-export { LAVA_CENTRE, LAVA_HEART, LAVA_INLAND, LAVA_RADIUS, LAVA_SIZE, SERYLL_HEART, inLavaHeart, lavaChartAt, lavaGeometry } from '../world/lavaland';
+export { LAVA_CENTRE, LAVA_HEART, LAVA_INLAND, LAVA_MIN_SIZE, LAVA_RADIUS, LAVA_SIZE, SERYLL_HEART, inLavaHeart, lavaChartAt, lavaGeometry } from '../world/lavaland';
 
 /* ---- The labyrinth --------------------------------------------------------------------------------------------- */
 
@@ -425,6 +425,7 @@ export function lavaMustReach(L: LavaLand, bx: number, by: number): boolean {
  * must be reached, or is the way out of a pillar that does. The island's `lava_block`.
  */
 export function lavaBlockIn(L: LavaLand, D: LavaDesign, bx: number, by: number): boolean {
+  if (D.size < LAVA_MIN_SIZE) return false;
   const b = lavaByte(D, bx, by);
   if (!(b & LB_LAVA)) return false;
   if (b & LB_WAY) return !lavaMustReach(L, bx, by);
@@ -444,9 +445,9 @@ export function lavaBlockIn(L: LavaLand, D: LavaDesign, bx: number, by: number):
 export const lavaBlock = (L: LavaLand, day: number, bx: number, by: number): boolean =>
   lavaBlockIn(L, lavaDesign(L.size, lavaDesignOf(L.seed, day)), bx, by);
 
-/** Whether a tile is lava on a day: in a block of it, not on water and not where lava is spared. The island's `lava_at`. */
+/** Whether a tile is lava on a day: on a world of `LAVA_MIN_SIZE` or more, in a block of it, not on water and not where lava is spared. The island's `lava_at`. */
 export function lavaAt(L: LavaLand, day: number, x: number, y: number): boolean {
-  if (x < 0 || y < 0 || x >= L.size || y >= L.size || !lavaInReach(L.size, x, y)) return false;
+  if (L.size < LAVA_MIN_SIZE || x < 0 || y < 0 || x >= L.size || y >= L.size || !lavaInReach(L.size, x, y)) return false;
   if (!lavaBlock(L, day, Math.floor(x / LAVA_CELL), Math.floor(y / LAVA_CELL))) return false;
   return !LAVA_SPARED_TILES.includes(L.tile(x, y) as TileType) && !L.spared(x, y) && sum4(L, x, y) >= 0;
 }

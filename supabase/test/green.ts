@@ -375,6 +375,9 @@ begin
   delete from foundation where world_id = w and x between 40 and 60 and y between 40 and 58;
   delete from placed where world_id = w and x between 40 and 60 and y between 40 and 58;
   delete from bridge where world_id = w and ax between 40 and 60 and ay between 40 and 58;
+  -- And no settlement over it but Ivy's: island.sql stakes Latecomer where a hoard was buried, which moves with the
+  -- hour the suite ran, and over this corner the island and the browser each answered for a different one.
+  delete from deed where world_id = w and x + radius >= 40 and x - radius <= 60 and y + radius >= 40 and y - radius <= 58;
   delete from green_since where world_id = w;
   update world set green_from = ${interval(GREEN_FROM_AGO)} where id = w;
   select green_from into v_from from world where id = w;

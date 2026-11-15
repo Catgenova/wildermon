@@ -47,7 +47,10 @@ const NOT_MADE = new Map<string, string>([
 ]);
 
 const madeBy = new Map<string, string>();
-for (const r of RECIPES) if (!madeBy.has(r.result)) madeBy.set(r.result, `the bench, as ${r.id}`);
+// A way that wants the very tool it makes (a chisel knapped from obsidian with a chisel) replaces none: the one it
+// wants is the one gone. Only the others count.
+const needsItself = (r: (typeof RECIPES)[number]): boolean => r.tool === r.result || r.inputs.some((i) => i.item === r.result);
+for (const r of RECIPES) if (!madeBy.has(r.result) && !needsItself(r)) madeBy.set(r.result, `the bench, as ${r.id}`);
 for (const m of MOULDS) {
   if (!madeBy.has(m.id)) madeBy.set(m.id, 'fired from sand at a smelter');
   if (!madeBy.has(m.makes)) madeBy.set(m.makes, `poured into a ${m.name.toLowerCase()}`);

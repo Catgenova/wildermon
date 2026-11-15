@@ -9,7 +9,8 @@ declare c int := lava_cell(); cx int := (lava_centre())[1] * p_size / 10000; cy 
         rad int := (2 * lava_radius() * p_size + lava_size()) / (2 * lava_size());
         v_design int; v_bxa int; v_bya int; v_bytes bytea; v_byte int; u int; v_day int;
 begin
-  if p_x < 0 or p_y < 0 or p_x >= p_size or p_y >= p_size
+  -- None on a world under `lava_min_size` a side (`LAVA_MIN_SIZE`).
+  if p_size < lava_min_size() or p_x < 0 or p_y < 0 or p_x >= p_size or p_y >= p_size
      or (p_x - cx)::bigint * (p_x - cx) + (p_y - cy)::bigint * (p_y - cy) > (rad + lava_reach_past())::bigint * (rad + lava_reach_past()) then
     return false;
   end if;
