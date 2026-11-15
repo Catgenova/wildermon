@@ -2,7 +2,8 @@
  * The solid trees, bushes and stumps round where you come ashore, baked while the island is
  * still being read (`preloadTreesAt`), so the first frame finds them made:
  * as the camera will first see them, at the scale it first draws at, under
- * the sun as it is and then its next step.
+ * the sun as it is and then its next step. With the low-end graphics, their
+ * flat pictures, one a kind (`preloadFlats`).
  */
 import { darknessAt } from '../game/game';
 import { DAY_SECONDS } from '../game/pace';
@@ -12,7 +13,7 @@ import type { World } from '../world/world';
 import { bushSpecies, TileType, treeSpecies, treeVariant } from '../world/tiles';
 import { yearAt } from './foliage';
 import { spriteScaleNow } from './sprites';
-import { BUSH3D_SPECIES, nextSunStep, preloadTrees3d, TREE3D_SPECIES } from './trees3d';
+import { BUSH3D_SPECIES, nextSunStep, preloadFlats, preloadTrees3d, TREE3D_SPECIES } from './trees3d';
 import { NEAR_REACH } from '../ui/bootsteps';
 
 /** How far round the spawn, in tiles, the trees are baked: more than a screen at zoom one. */
@@ -52,9 +53,9 @@ export function preloadTreesAt(
 ): TreePreload {
   try {
     if (!TREE3D_SPECIES.size && !BUSH3D_SPECIES.size) return DONE;
-    // The low-end graphics draw every tree, bush and stump flat: nothing to bake.
+    // The low-end graphics draw every tree, bush and stump flat: one picture a kind (`preloadFlats`).
     const settings = liveSettings();
-    if (drawsLow(settings, onPhone())) return DONE;
+    const low = drawsLow(settings, onPhone());
     const tiles: Array<{ bush: boolean; stump: boolean; species: number; variant: number; x: number; y: number; d: number }> = [];
     const cx = Math.floor(x), cy = Math.floor(y);
     for (let ty = cy - REACH; ty <= cy + REACH; ty++) {
@@ -74,12 +75,12 @@ export function preloadTreesAt(
     const { near, far } = nearFirst(tiles);
     const close = (async () => {
       for (let i = 0; i < near.length; i++) {
-        await preloadTrees3d(near[i], at);
+        await (low ? preloadFlats(near[i], at) : preloadTrees3d(near[i], at));
         step?.(i + 1, near.length);
       }
     })().catch(() => {});
     // What is already made is passed over (`preloadTrees3d`), so the far run bakes only the far trees.
-    const all = close.then(() => preloadTrees3d(far, at)).catch(() => {});
+    const all = close.then(() => (low ? preloadFlats(far, at) : preloadTrees3d(far, at))).catch(() => {});
     return { near: close, all };
   } catch {
     return DONE;

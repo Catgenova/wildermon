@@ -414,6 +414,15 @@ const FAIL_EXAMPLE = failFactorSaid(failFactor({ ...FAIL_EXAMPLE_AT, difficulty:
 const SCRUBS_LATER = new Set(['scrub_wall_paint', 'scrub_floor_paint']);
 
 export const NEWS: News[] = [
+  // The low-end graphics' trees, bushes and stumps: the solids in one view (`flatTree3d`).
+  {
+    n: 645,
+    day: '2026-11-15',
+    lines: () => [
+      `Changed: trees, bushes, stumps on low-end graphics: drawn as the 3D trees, one view, light from the left; ${TREE_DEFS.length} trees, ${BUSH_DEFS.length} bushes, stumps; every season, age, day and night.`,
+      'Changed: a 3D tree before its own picture is made: the same species, age and season in another shape, not the old flat drawing.',
+    ],
+  },
   // A Decor tab in the crafting window (`craftTabOf`, `isDecor`).
   {
     n: 639,

@@ -131,6 +131,8 @@ export interface Opts {
   dormant?: boolean;
   /** A crop's stage tended (`Crop.tendedNow`). */
   tended?: boolean;
+  /** A tree, bush or stump drawn flat, as the low-end graphics draw it (`flatTree3d`). */
+  flat?: boolean;
 }
 
 export const DEFAULTS: Opts = {
@@ -559,7 +561,16 @@ const portrait: Family = {
 
 const AGES = TREE_AGES.map((a, i) => ({ label: `age ${i}`, set: { variant: i } }));
 const seasonsOf = (): Variant[] => SEASONS.map((s) => ({ label: s, set: { season: s } }));
-const treeView = (o: Opts): TreeView => ({ x: 20, y: 20, turn: o.turn, hour: o.hour, dark: o.night, sway: o.motion === 'sway' ? o.frame % 4 : 0 });
+const treeView = (o: Opts): TreeView => ({ x: 20, y: 20, turn: o.turn, hour: o.hour, dark: o.night, sway: o.motion === 'sway' ? o.frame % 4 : 0, flat: o.flat });
+/** An asset's own options: a `_flat` kind is drawn flat (`flatTree3d`), whatever the cell asks. */
+const flatOf = (a: Asset, o: Opts): Opts => (a.kind.endsWith('_flat') ? { ...o, flat: true, turn: 0 } : o);
+const plainKind = (kind: string): string => kind.replace(/_flat$/, '');
+/** A flat kind beside each solid one: the same solid in one view, as the low-end graphics draw it, by day and by night. */
+function withFlat(list: Asset[], entry: string): Asset[] {
+  return list.flatMap((a) => (a.style !== 'model' || a.kind.endsWith('_logs') ? [a] : [a, {
+    ...a, kind: `${a.kind}_flat`, name: `${a.name}, flat`, style: 'flat' as const, entry, file: 'src/render/trees3d/index.ts', views: 'none' as const, motions: [],
+  }]));
+}
 
 /** Bake a solid until it is there: the renderer's frame and its idle, over and over. */
 async function bake(want: () => Sprite | null | undefined): Promise<void> {
@@ -574,39 +585,39 @@ async function bake(want: () => Sprite | null | undefined): Promise<void> {
 
 const tree: Family = {
   id: 'tree', register: 'paint', ref: 2,
-  about: 'Trees by species and age: grown as solids and baked for each turn, sun step and wind frame (trees3d), or drawn flat (treeSprite).',
-  list: () => TREE_DEFS.map((d, i): Asset => ({
+  about: 'Trees by species and age: grown as solids and baked for each turn, sun step and wind frame (trees3d); and each flat (`_flat`), the solid in one view as the low-end graphics draw it (flatTree3d).',
+  list: () => withFlat(TREE_DEFS.map((d, i): Asset => ({
     family: 'tree', kind: d.name.toLowerCase(), name: d.name, register: 'paint', style: TREE3D_SPECIES.has(i) ? 'model' : 'flat',
     entry: TREE3D_SPECIES.has(i) ? 'tree3dSprite' : 'treeSprite (paintTree)', file: TREE3D_SPECIES.has(i) ? `src/render/trees3d/species/${d.name.toLowerCase()}.ts` : 'src/render/trees/',
     views: 'turns', states: AGES, variants: seasonsOf(), motions: TREE3D_SPECIES.has(i) ? [frames('sway', 'wind, 4 baked frames', 4), frames('sun', 'the sun\'s steps', 8)] : [], emissive: false, ref: 2,
-  })),
-  prepare: async (a, o) => { await bake(() => treeSprite(speciesIndex(a.kind), o.variant, o.season, o.day, treeView(o))); },
+  })), 'flatTree3d'),
+  prepare: async (a, o) => { await bake(() => treeSprite(speciesIndex(a.kind), o.variant, o.season, o.day, treeView(flatOf(a, o)))); },
   draw: (ctx, sx, sy, zoom, a, o) => {
     spriteScaleFor(zoom);
-    const v = treeView(o);
+    const v = treeView(flatOf(a, o));
     if (o.motion === 'sun') v.hour = 4 + (o.frame / 7) * 16;
     sprite(ctx, sx, sy, zoom, treeSprite(speciesIndex(a.kind), o.variant, o.season, o.day, v));
   },
 };
-const speciesIndex = (kind: string): number => Math.max(0, TREE_DEFS.findIndex((d) => d.name.toLowerCase() === kind));
-const bushIndex = (kind: string): number => Math.max(0, BUSH_DEFS.findIndex((d) => d.name.toLowerCase().replace(/ /g, '_') === kind));
+const speciesIndex = (kind: string): number => Math.max(0, TREE_DEFS.findIndex((d) => d.name.toLowerCase() === plainKind(kind)));
+const bushIndex = (kind: string): number => Math.max(0, BUSH_DEFS.findIndex((d) => d.name.toLowerCase().replace(/ /g, '_') === plainKind(kind)));
 
 const bush: Family = {
   id: 'bush', register: 'paint', ref: 2,
-  about: 'Bushes by species through the year: solids (rose, thorn, lavender) or flat.',
-  list: () => BUSH_DEFS.map((d, i): Asset => ({
+  about: 'Bushes by species through the year: solids (rose, thorn, lavender), and each flat (`_flat`) as the low-end graphics draw it.',
+  list: () => withFlat(BUSH_DEFS.map((d, i): Asset => ({
     family: 'bush', kind: d.name.toLowerCase().replace(/ /g, '_'), name: d.name, register: 'paint', style: BUSH3D_SPECIES.has(i) ? 'model' : 'flat',
     entry: BUSH3D_SPECIES.has(i) ? 'bush3dSprite' : 'bushSprite', file: BUSH3D_SPECIES.has(i) ? 'src/render/trees3d/species/' : 'src/render/sprites.ts',
     views: 'turns', states: [], variants: seasonsOf(), motions: BUSH3D_SPECIES.has(i) ? [frames('sway', 'wind, 4 baked frames', 4)] : [], emissive: false, ref: 2,
-  })),
-  prepare: async (a, o) => { await bake(() => bushSprite(bushIndex(a.kind), o.season, o.day, treeView(o))); },
-  draw: (ctx, sx, sy, zoom, a, o) => { spriteScaleFor(zoom); sprite(ctx, sx, sy, zoom, bushSprite(bushIndex(a.kind), o.season, o.day, treeView(o))); },
+  })), 'flatBush3d'),
+  prepare: async (a, o) => { await bake(() => bushSprite(bushIndex(a.kind), o.season, o.day, treeView(flatOf(a, o)))); },
+  draw: (ctx, sx, sy, zoom, a, o) => { spriteScaleFor(zoom); sprite(ctx, sx, sy, zoom, bushSprite(bushIndex(a.kind), o.season, o.day, treeView(flatOf(a, o)))); },
 };
 
 const stump: Family = {
   id: 'stump', register: 'paint', ref: 2,
-  about: 'What a felled tree leaves: the stump and the logs, in the species\' bark.',
-  list: () => TREE_DEFS.flatMap((d, i): Asset[] => [
+  about: 'What a felled tree leaves: the stump and the logs, in the species\' bark; each stump flat (`_flat`) as the low-end graphics draw it.',
+  list: () => withFlat(TREE_DEFS.flatMap((d, i): Asset[] => [
     {
       family: 'stump', kind: d.name.toLowerCase(), name: `${d.name} stump`, register: 'paint', style: STUMP3D_SPECIES.has(i) ? 'model' : 'flat', entry: 'stumpSprite / stump3dSprite',
       file: 'src/render/trees3d/stump.ts', views: 'turns', states: [], variants: seasonsOf(), motions: [], emissive: false, ref: 2,
@@ -615,17 +626,17 @@ const stump: Family = {
       family: 'stump', kind: `${d.name.toLowerCase()}_logs`, name: `${d.name} logs`, register: 'paint', style: 'model', entry: 'log3dSprite',
       file: 'src/render/trees3d/stump.ts', views: 'turns', states: states(['1 log', '2 logs', '3 logs']), variants: seasonsOf(), motions: [], emissive: false, ref: 2,
     },
-  ]),
+  ]), 'flatStump3d'),
   prepare: async (a, o) => {
     const logs = a.kind.endsWith('_logs');
     const sp = speciesIndex(logs ? a.kind.slice(0, -5) : a.kind);
-    await bake(() => (logs ? log3dSprite(sp, o.state + 1, o.season, treeView(o), 2, false) : stumpSprite(sp, o.season, o.day, treeView(o))));
+    await bake(() => (logs ? log3dSprite(sp, o.state + 1, o.season, treeView(o), 2, false) : stumpSprite(sp, o.season, o.day, treeView(flatOf(a, o)))));
   },
   draw: (ctx, sx, sy, zoom, a, o) => {
     spriteScaleFor(zoom);
     const logs = a.kind.endsWith('_logs');
     const sp = speciesIndex(logs ? a.kind.slice(0, -5) : a.kind);
-    sprite(ctx, sx, sy, zoom, logs ? log3dSprite(sp, o.state + 1, o.season, treeView(o), 2, false) : stumpSprite(sp, o.season, o.day, treeView(o)));
+    sprite(ctx, sx, sy, zoom, logs ? log3dSprite(sp, o.state + 1, o.season, treeView(o), 2, false) : stumpSprite(sp, o.season, o.day, treeView(flatOf(a, o))));
   },
 };
 
