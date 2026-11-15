@@ -424,10 +424,12 @@ export const NEWS: News[] = [
     n: 642,
     day: '2026-11-15',
     lines: () => [
-      `Changed: wildflowers (${FLOWER_COLOURS.map((c) => c.name).join(', ')}; ${num(FLOWER_KINDS.length)} kinds a colour: ${FLOWER_KINDS.map((k) => `${k}s`).join(', ')}): new look.`,
+      `Changed: wildflowers (${FLOWER_COLOURS.map((c) => c.name).join(', ')}; ${num(FLOWER_KINDS.length)} kinds a colour: ${FLOWER_KINDS.map((k) => k.replace(/y$/, 'ie') + 's').join(', ')}): new look.`,
       `Changed: crop fields (${num(CROP_LIST.length)} crops, ${STAGE_NAMES.join(', ')}), garden beds, planters, herb boxes, low-end graphics: new look.`,
       'Fixed: crop on a garden bed: ridges, weeds and plants over its frame. Now: inside the frame.',
       'Fixed: planter: ripe potato tubers and thyme through the end walls; weeds through the side walls.',
+    ],
+  },
   // The low-end graphics' trees, bushes and stumps: the solids in one view (`flatTree3d`).
   {
     n: 645,
@@ -435,6 +437,8 @@ export const NEWS: News[] = [
     lines: () => [
       `Changed: trees, bushes, stumps on low-end graphics: drawn as the 3D trees, one view, light from the left; ${TREE_DEFS.length} trees, ${BUSH_DEFS.length} bushes, stumps; every season, age, day and night.`,
       'Changed: a 3D tree before its own picture is made: the same species, age and season in another shape, not the old flat drawing.',
+    ],
+  },
   // Free roofing: a roof on any tile, over the tile's own top storey or the storey pinned (`roofLevelFor`, `roof_level`, `roof_plan_refusal`).
   {
     n: 640,
