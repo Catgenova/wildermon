@@ -629,8 +629,9 @@ check(`Examine says what it is and does: "${glassExamine().trim()}", and of the 
 check('with fields in it, a roof tile taken off goes back on in glass and in nothing else, and no storey goes over it',
   say('SLATE') === FIELD_GLASS_ONLY && say('GLASSAGAIN') === 'ALLOWED' && say('STOREY') === FIELD_NO_STOREY,
   `${say('SLATE')} / ${say('GLASSAGAIN')} / ${say('STOREY')}`);
-check('and its fields clear back to packed earth, crops and all, as those refusals say to, and then any roof goes on',
-  say('CLEARASK') === 'ALLOWED' && say('CLEARED') === '0:0:true' && say('SLATECLEAR') === 'ALLOWED' && say('STOREYCLEAR') === 'Remove the roof first.'
+// A storey more with its fields gone: the roof tile taken off leaves a tile open to the sky, so the roof refuses it no longer (`freeroof.ts`).
+check('and its fields clear back to packed earth, crops and all, as those refusals say to, and then any roof goes on, and a storey over the tile open to the sky',
+  say('CLEARASK') === 'ALLOWED' && say('CLEARED') === '0:0:true' && say('SLATECLEAR') === 'ALLOWED' && say('STOREYCLEAR') === 'ALLOWED'
     && say('CLEARSAID') === clearedSaid('wheat', true),
   `${say('CLEARASK')} / ${say('CLEARED')} / ${say('SLATECLEAR')} / ${say('STOREYCLEAR')} / ${say('CLEARSAID')}`);
 check('a wall taken down takes it off the glass clock as far along and refuses Till in the island\'s words; a fence in the gap is too low to make it a glasshouse; and a full wall built back up a unit a go puts it back',

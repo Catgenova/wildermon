@@ -34,7 +34,7 @@ import { SEAM_GATE, STONE_GATE, VEIN_GATE } from './rockgates';
 export { SEAM_GATE, STONE_GATE, VEIN_GATE };
 
 /** The steps a gate's level is chosen from. */
-export const GATE_LADDER = [1, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90] as const;
+export const GATE_LADDER = [1, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 99] as const;
 export type GateLevel = (typeof GATE_LADDER)[number];
 
 /**
@@ -71,7 +71,7 @@ export const GATE_STOPS: Readonly<Record<GateKind, string>> = {
   metal: 'pouring it: Pour a mould, Cast an anvil; a nail or ribbon smith\'s work',
   graft: 'grafting a fruit sprout onto a tree: Graft',
   water_plant: 'planting it: in still water, in a lily pond; a water planter\'s work; a lily root unidentified under it',
-  hoard: 'Read and Dig it up on a treasure map of the tier; unidentified under it',
+  hoard: 'Dig it up on a treasure map of the tier; the map unidentified under it, still read',
   bridge: 'planning and building it: a hod carrier\'s work',
   smelt: 'smelting its ore: Smelt, a smelter worker\'s and a stoker\'s work',
   casting: 'working a casting of the metal at the anvil: Smith; a nail or ribbon smith\'s work',
@@ -128,10 +128,10 @@ export const stepBelow = (level: GateLevel): GateLevel => GATE_LADDER[Math.max(0
 export const stepsAbove = (level: GateLevel, n: number): GateLevel =>
   GATE_LADDER[Math.min(GATE_LADDER.length - 1, GATE_LADDER.indexOf(level) + n)];
 
-/** The ladder step at or below `at`, 1 at the least. */
-export const ladderAt = (at: number): GateLevel => {
+/** The ladder step at or below `at`, 1 at the least, `top` at the most. */
+export const ladderAt = (at: number, top: GateLevel = GATE_LADDER[GATE_LADDER.length - 1]): GateLevel => {
   let level: GateLevel = 1;
-  for (const step of GATE_LADDER) if (step <= at) level = step;
+  for (const step of GATE_LADDER) if (step <= Math.min(at, top)) level = step;
   return level;
 };
 
@@ -159,7 +159,7 @@ export const CROP_GATE: Readonly<Record<string, GateLevel>> = {
   cotton: 20,
   mint: 20,
   sage: 20,
-  wemp: 30,
+  wemp: 1,
   basil: 30,
   rosemary: 40,
 };
@@ -182,7 +182,19 @@ export const CRAFT_GATE_SAID: Readonly<Record<string, { skill: string; level: Ga
   papyrus: { skill: 'papyrusmaking', level: 1 },
   paper_press: { skill: 'carpentry', level: 1 },
   rope: { skill: 'ropemaking', level: 1 },
+  // And the everyday makings under them (decided, batch G): the bucket papyrus's water comes in, the lye leather is tanned in.
+  bucket: { skill: 'carpentry', level: 1 },
+  lye_bucket: { skill: 'alchemy', level: 1 },
 };
+
+/**
+ * Anything made with obsidian, or built of it (decided, batch G): the top of the ladder, in its own making skill.
+ * Obsidian gear, knapped tools and weapons, the obsidian pieces and lamps, the dragon-glass fountain, obsidian glass
+ * building (`craftgates.ts`, `OBSIDIAN`).
+ */
+export const OBSIDIAN_LEVEL: GateLevel = 99;
+/** The highest step a craft reaches by its difficulty alone (`craftLevel`): 99 is obsidian's. */
+export const CRAFT_TOP: GateLevel = 90;
 
 /** A crop's seed item: its id and `_seed` (`farming.ts`). */
 export const cropSeed = (crop: string): string => `${crop}_seed`;

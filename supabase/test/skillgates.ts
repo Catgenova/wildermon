@@ -15,10 +15,10 @@
  *     woodcutting 90; have 12.4."; at 90, allowed; a willow sapling, with no logs, anybody clears;
  *   * a Sapgnaw at woodcutting 1 by a mature willow does not take it and says why; by a pine as well, it takes the pine;
  *   * a hod carrier at masonry 90 reads a woodcutting gate at its woodcutting, 1, not its trade's 90, on both sides;
- *   * wemp seeds in a crate, seen by a player at farming 20 and one at 40: "Unidentified seed" and "Wemp seeds",
- *     the tooltip "30 farming required to identify this seed." and nothing else for the first, on both sides; picked
- *     up, "Picked up: 2 × unidentified seed." and "Picked up: 2 × wemp seeds."; examined, the tooltip's words;
- *   * sowing them at farming 20: "Unidentified seed: needs farming 30; have 20.0." on both sides, at 40 allowed; an
+ *   * the lowest crop still gated above farming 1's seeds in a crate (wemp was the example; it came down to 1, batch G),
+ *     the tooltip "5 farming required to identify this seed." and nothing else for the first, on both sides; picked
+ *     up, "Picked up: 2 × unidentified seed." and "Picked up: 2 × cabbage seeds."; examined, the tooltip's words;
+ *   * sowing them under the gate: "Unidentified seed: needs farming 5; have 1.0." on both sides, at it allowed; an
  *     onion at 1 allowed; a ripe wemp crop harvested at farming 1: allowed;
  *   * a willow sprout at forestry 1: picking off a willow and planting one refused on both sides, a pine's allowed;
  *   * a farmer at farming 1 sows onion and passes wemp by, a sprout picker passes a willow by and says why;
@@ -43,6 +43,7 @@ import { packTreeData, TileType, TREE_AGES, TREE_DEFS } from '../../src/world/ti
 import { fellsSaid, PATH_STEP_BY_ID } from '../../src/game/path';
 import type { PathSite } from '../../src/game/pathstate';
 import { psql, check, finish } from './harness';
+import { itemDef } from '../../src/game/items';
 
 const U = '7e5b0000-0000-4000-8000-0000000a7e01';
 const U2 = '7e5b0000-0000-4000-8000-0000000a7e02';
@@ -54,8 +55,13 @@ const MATURE = TREE_AGES.findIndex((a) => a.name === 'Mature');
 const SAPLING = TREE_AGES.findIndex((a) => a.logs === 0 && a.alive);
 const NEED = gateOf('tree', 'willow')!.level;
 const SPROUT_NEED = gateOf('sprout', 'willow')!.level;
-const WEMP = cropSeed('wemp');
-const WEMP_NEED = gateOf('crop', 'wemp')!.level;
+/** The seed the unidentified checks ask of: the lowest crop sown above farming 1 (wemp came down to 1, batch G), by name. */
+const GATED_CROP = Object.entries(CROP_GATE).filter(([, lv]) => lv > 1).sort((a, b) => a[1] - b[1] || (a[0] < b[0] ? -1 : 1))[0][0];
+const WEMP = cropSeed(GATED_CROP);
+const WEMP_NEED = gateOf('crop', GATED_CROP)!.level;
+/** Under it, and its seed's name as somebody at it reads it. */
+const UNDER = 1;
+const SEEDS = itemDef(WEMP).name;
 
 /* ---- the island ----------------------------------------------------------- */
 
@@ -194,9 +200,9 @@ begin
   -- Nothing named: the pine, which your forestry plants, before the willow.
   insert into said values ('PLANT_ANY', coalesce(act_refusal(w, u, 'plant', jsonb_build_object('kind', 'tile', 'x', ${T + 2}, 'y', ${T + 2})), 'none'));
 
-  -- Wemp seeds in a crate on the settlement, seen by you at farming 20 and the other at 40.
-  perform pg_temp.skill(w, u, 'farming', 20);
-  perform pg_temp.skill(w, u2, 'farming', 40);
+  -- The lowest gated crop's seeds in a crate on the settlement, seen by you under its gate and by the other at it.
+  perform pg_temp.skill(w, u, 'farming', ${UNDER});
+  perform pg_temp.skill(w, u2, 'farming', ${WEMP_NEED});
   select coalesce(max(id), 0) + 1 into box from crate where world_id = w;
   insert into crate (world_id, id, kind, x, y, sx, sy, deed) values (w, box, 'plank', ${T}, ${T + 2}, 0, 0, true);
   v_it := give(w, u, '${WEMP}', 3, 20, null);
@@ -215,12 +221,12 @@ begin
   perform perform_hands(w, u2, 'pick_up', jsonb_build_object('kind', 'ground', 'x', ${T}, 'y', ${T + 1}, 'uid', v_it));
   insert into said values ('PICKED_40', pg_temp.said_last(w, u2));
 
-  -- Sowing it, beside a field: at 20 and at 40; an onion at 1.
+  -- Sowing it, beside a field: under its gate and at it; an onion at 1.
   perform land_set_tile(w, ${T + 1}, ${T + 2}, tile_id('Field'));
   update player set x = ${T + 1}.5, y = ${T + 1}.5 where world_id = w and uid in (u, u2);
   select id into v_seed from item where world_id = w and holder = 'player' and holder_uid = u and def = '${WEMP}' order by id limit 1;
   insert into said values ('SOW_20', coalesce(act_refusal(w, u, 'plant_seed', jsonb_build_object('kind', 'tile', 'x', ${T + 1}, 'y', ${T + 2}, 'itemUid', v_seed)), 'none'));
-  perform pg_temp.skill(w, u, 'farming', 40);
+  perform pg_temp.skill(w, u, 'farming', ${WEMP_NEED});
   insert into said values ('SOW_40', coalesce(act_refusal(w, u, 'plant_seed', jsonb_build_object('kind', 'tile', 'x', ${T + 1}, 'y', ${T + 2}, 'itemUid', v_seed)), 'none'));
   perform pg_temp.skill(w, u, 'farming', 1);
   v_onion := give(w, u, 'onion_seed', 1, 20, null);
@@ -254,7 +260,7 @@ const said = (k: string): string => isle.get(k) ?? '';
     lv('Birch') === 1 && lv('Pine') === 1 && lv('Willow') === 90 && trees.filter((g) => g!.level >= most).length === 1);
   check(`oak ${lv('Oak')} and maple ${lv('Maple')}: early (10 or under)`, ['Oak', 'Maple'].every((n) => lv(n) <= 10));
   // Decided since: no empty step from 1 to 90; pine and birch 1, oak 5, maple 10 and willow 90 kept; cedar 70, olive 80.
-  const empty = GATE_LADDER.filter((l) => !trees.some((g) => g!.level === l));
+  const empty = GATE_LADDER.filter((l) => l <= 90 && !trees.some((g) => g!.level === l));
   check(`every ladder step from 1 to 90 has a tree (${GATE_LADDER.map((l) => `${l}: ${TREE_DEFS.filter((t) => lv(t.name) === l).map((t) => t.name).join(', ')}`).join('; ')})`,
     !empty.length && lv('Oak') === 5 && lv('Maple') === 10 && lv('Pomegranate') === 60 && lv('Cedar') === 70 && lv('Olive') === 80,
     empty.join(', '));
@@ -263,8 +269,8 @@ const said = (k: string): string => isle.get(k) ?? '';
   check('every species\' sprout one ladder step under its felling (pine and birch 1, willow 80)',
     TREE_DEFS.every((t) => gateOf('sprout', t.name.toLowerCase())?.level === step(lv(t.name)) && gateOf('sprout', t.name.toLowerCase())?.skill === 'forestry')
       && gateOf('sprout', 'willow')!.level === 80);
-  const asked: Record<string, number> = { onion: 1, carrot: 1, potato: 1, cabbage: 5, wheat: 5, corn: 10, thyme: 10, cotton: 20, mint: 20, sage: 20, wemp: 30, basil: 30, rosemary: 40 };
-  check('the crops as asked: onion, carrot, potato 1; cabbage, wheat 5; corn, thyme 10; cotton, mint, sage 20; wemp, basil 30; rosemary 40',
+  const asked: Record<string, number> = { onion: 1, carrot: 1, potato: 1, wemp: 1, cabbage: 5, wheat: 5, corn: 10, thyme: 10, cotton: 20, mint: 20, sage: 20, basil: 30, rosemary: 40 };
+  check('the crops as asked: onion, carrot, potato and wemp (decided, batch G) 1; cabbage, wheat 5; corn, thyme 10; cotton, mint, sage 20; basil 30; rosemary 40',
     Object.entries(asked).every(([id, n]) => gateOf('crop', id)?.level === n && gateOf('crop', id)?.skill === 'farming') && Object.keys(CROP_GATE).length === 13);
   check('a wagon at driving 30, a large cart open', gateOf('vehicle', 'wagon')?.level === 30 && gateOf('vehicle', 'wagon')?.skill === 'driving' && !gateOf('vehicle', 'large_cart'));
   check(`every gate on the ladder (${GATE_LADDER.join(', ')})`, SKILL_GATES.every((g) => KEPT_OFF_LADDER.has(g.kind) || (GATE_LADDER as readonly number[]).includes(g.level)));
@@ -342,22 +348,22 @@ const fresh = (): Game => {
 {
   const at20 = fresh();
   const at40 = fresh();
-  at20.skills.values.set('farming', 20);
-  at40.skills.values.set('farming', 40);
+  at20.skills.values.set('farming', UNDER);
+  at40.skills.values.set('farming', WEMP_NEED);
   // The same crate's stack, seen by each.
   const stack = { uid: 1, id: WEMP, ql: 20, dmg: 0, count: 3 };
   const tip = `${WEMP_NEED} farming required to identify this seed.`;
-  check(`wemp seeds in a crate at farming 20: "${seenName(stack, at20)}", tooltip "${tip}", on both sides`,
+  check(`${SEEDS} in a crate at farming ${UNDER}: "${seenName(stack, at20)}", tooltip "${tip}", on both sides`,
     seenName(stack, at20) === 'Unidentified seed' && said('CRATE_20') === 'Unidentified seed'
       && identifySaid(stack, at20) === tip && said('TIP_20') === tip,
     `island ${said('CRATE_20')} "${said('TIP_20')}" / browser ${seenName(stack, at20)} "${identifySaid(stack, at20)}"`);
   check('the same crate at farming 40: "Wemp seeds", no tooltip of it, on both sides',
-    seenName(stack, at40) === 'Wemp seeds' && said('CRATE_40') === 'Wemp seeds' && identifySaid(stack, at40) === null && said('TIP_40') === 'none',
+    seenName(stack, at40) === SEEDS && said('CRATE_40') === SEEDS && identifySaid(stack, at40) === null && said('TIP_40') === 'none',
     `island ${said('CRATE_40')} ${said('TIP_40')} / browser ${seenName(stack, at40)}`);
   const card = itemCard(at20, stack);
   check('the tooltip is that line and nothing else; examined on the island, the same words',
     card.length === 1 && card[0] === tip && said('EXAMINE_20') === tip, `${JSON.stringify(card)} / ${said('EXAMINE_20')}`);
-  check('and at farming 40 the card names it', (itemCard(at40, stack)[0] as string).startsWith('Wemp seeds'));
+  check(`and at farming ${WEMP_NEED} the card names it`, (itemCard(at40, stack)[0] as string).startsWith(SEEDS));
 
   // Picked up off the ground, by each.
   const heard = (g: Game): string[] => {
@@ -372,14 +378,14 @@ const fresh = (): Game => {
     g.dropOnGround(T, T + 1, { uid: g.inventory.nextUid++, id: WEMP, ql: 20, dmg: 0, count: 2 });
     up.perform({ kind: 'ground', x: T, y: T + 1, uid: null } as Parameters<typeof up.perform>[0], g);
   }
-  check('picked up at 20: "Picked up: 2 × unidentified seed." on both sides',
+  check(`picked up at ${UNDER}: "Picked up: 2 × unidentified seed." on both sides`,
     said20.at(-1) === 'Picked up: 2 × unidentified seed.' && said('PICKED_20') === 'Picked up: 2 × unidentified seed.',
     `island "${said('PICKED_20')}" / browser "${said20.at(-1)}"`);
-  check('and at 40: "Picked up: 2 × wemp seeds." on both sides',
-    said40.at(-1) === 'Picked up: 2 × wemp seeds.' && said('PICKED_40') === 'Picked up: 2 × wemp seeds.',
+  check(`and at ${WEMP_NEED}: "Picked up: 2 × ${SEEDS.toLowerCase()}." on both sides`,
+    said40.at(-1) === `Picked up: 2 × ${SEEDS.toLowerCase()}.` && said('PICKED_40') === `Picked up: 2 × ${SEEDS.toLowerCase()}.`,
     `island "${said('PICKED_40')}" / browser "${said40.at(-1)}"`);
 
-  // Sown at 20 and at 40, beside a field.
+  // Sown under its gate and at it, beside a field.
   const sow = FARM_ACTION_BY_ID.get('plant_seed')!;
   for (const g of [at20, at40]) {
     g.world.setTile(T + 1, T + 2, TileType.Field);
@@ -387,13 +393,13 @@ const fresh = (): Game => {
     g.player.y = T + 1.5;
   }
   const seed20 = at20.inventory.items.find((it) => it.id === WEMP)!;
-  const words = skillGateRefusal('Unidentified seed', 'farming', 20, WEMP_NEED)!;
+  const words = skillGateRefusal('Unidentified seed', 'farming', UNDER, WEMP_NEED)!;
   const s20 = sow.check?.({ kind: 'tile', x: T + 1, y: T + 2, itemUid: seed20.uid } as Parameters<NonNullable<typeof sow.check>>[0], at20) ?? 'none';
-  check(`sowing it at farming 20: "${words}" on both sides (the seed named as you see it)`,
+  check(`sowing it at farming ${UNDER}: "${words}" on both sides (the seed named as you see it)`,
     s20 === words && said('SOW_20') === words && itemGateRefusal(seed20, at20) === words, `island "${said('SOW_20')}" / browser "${s20}"`);
   const seed40 = at40.inventory.items.find((it) => it.id === WEMP)!;
   const s40 = sow.check?.({ kind: 'tile', x: T + 1, y: T + 2, itemUid: seed40.uid } as Parameters<NonNullable<typeof sow.check>>[0], at40) ?? 'none';
-  check('and at 40, allowed on both sides', s40 === 'none' && said('SOW_40') === 'none', `island ${said('SOW_40')} / browser ${s40}`);
+  check(`and at ${WEMP_NEED}, allowed on both sides`, s40 === 'none' && said('SOW_40') === 'none', `island ${said('SOW_40')} / browser ${s40}`);
   const at1 = fresh();
   at1.world.setTile(T + 1, T + 2, TileType.Field);
   at1.player.x = T + 1.5;
@@ -487,7 +493,7 @@ const run = (g: Game, c: Creature, secs: number): void => {
   const wemp = g.creatures.farmJobAt(g, c, T + 6, T + 6);
   c.pouch = { uid: g.inventory.nextUid++, id: cropSeed('onion'), ql: 20, dmg: 0, count: 2 };
   const onion = g.creatures.farmJobAt(g, c, T + 6, T + 6);
-  check('with wemp seed to hand it does not sow; with onion it sows, on both sides',
+  check(`with ${SEEDS.toLowerCase()} to hand it does not sow; with onion it sows, on both sides`,
     wemp === null && onion === 'sow' && said('FARM_WEMP') === 'none' && said('FARM_ONION') === 'onion_seed',
     `island ${said('FARM_WEMP')} ${said('FARM_ONION')} / browser ${wemp} ${onion}`);
 }

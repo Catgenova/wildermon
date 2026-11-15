@@ -22,8 +22,7 @@ const REFRESH = 5;
 /**
  * Where goods change hands.
  *
- * Coins have existed since there was an anvil to strike them on and have
- * never bought anything, because there was nothing to buy them with and
+ * Coins had never bought anything before this, because there was nothing to buy them with and
  * nobody to buy from. Six tabs, because they answer six different
  * questions:
  *

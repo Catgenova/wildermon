@@ -71,7 +71,7 @@ import { POST_LIFE_MAX, POST_LIFE_MIN } from './posts';
 import { billWords, countOf, ITEM_DEFS, RARITY_ODDS, TAN_LYE, type Item } from './items';
 import { MELT_KEEP, MELT_SHARE, meltLumps } from './melt';
 import {
-  castWhole, COIN_DIFFICULTY, FORGE_WORK, INGOT_LUMPS, INGOT_WEIGHT, METALS, MOULD_BY_ID, MOULD_BY_MAKES, MOULD_DENT, mouldLumps, MOULDS,
+  castWhole, FORGE_WORK, INGOT_LUMPS, INGOT_WEIGHT, METALS, MOULD_BY_ID, MOULD_BY_MAKES, MOULD_DENT, mouldLumps, MOULDS,
   mouldUsesLeft,
 } from './metal';
 import { MAP_ODDS } from './treasure';
@@ -812,10 +812,9 @@ const SMITH: Seed[] = [
   },
   {
     num: 16, name: 'Sure Hammer',
-    fx: { 'fail:smith': 0.5, 'fail:strike_coins': 0.5 },
-    note: (fx) => `${label('smith')} and ${label('strike_coins')} failure chance ${mul(fx['fail:smith'])} `
-      + `(base: check at difficulty ${range(BEATEN.map((m) => m.difficulty))} for a piece, ${COIN_DIFFICULTY} for coins, `
-      + 'more for hard metals).',
+    fx: { 'fail:smith': 0.5 },
+    note: (fx) => `${label('smith')} failure chance ${mul(fx['fail:smith'])} `
+      + `(base: check at difficulty ${range(BEATEN.map((m) => m.difficulty))} for a piece, more for hard metals).`,
   },
   {
     num: 20, name: 'Second Heat',

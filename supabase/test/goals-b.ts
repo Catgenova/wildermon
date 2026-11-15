@@ -1,5 +1,5 @@
 /**
- * Thirty-six more goals in the crafts, the land and the water (`journal-b.ts`).
+ * Thirty-five more goals in the crafts, the land and the water (`journal-b.ts`).
  *
  * The island: each count a new goal reads is noted for whoever does the thing,
  * where it is done -- a shearing, a milking, a glaze, a pass that takes a
@@ -327,7 +327,7 @@ const tallied: Record<string, Record<string, number>> = {
   bottle: { 'made:bottle': 1 }, tinted: { 'dyed:glass': n('dyed:glass') }, glazed: { glazed: n('glazed') },
   bricks: { 'fired:clay_brick': n('fired:clay_brick') }, signed: { signed: n('signed') }, jewel: { 'made:jewelled_pendant': 1 },
   arrows: { 'made:arrow': 30, 'made:bodkin_arrow': 20 }, rope: { 'made:rope': 1 }, charted: { charted: n('charted') },
-  melted: { melted: n('melted') }, tanned: { 'made:leather': 1 }, improve70: { improved70: 10 }, coins: { minted: 1 },
+  melted: { melted: n('melted') }, tanned: { 'made:leather': 1 }, improve70: { improved70: 10 },
   flour: { 'made:flour': 1 },
   crops: Object.fromEntries(CROP_LIST.map((c) => [`harvest:${c.produce}`, 1])),
   flowers: Object.fromEntries(FLOWER_SEASONS.map((s) => [`flowers:${s}`, 1])),
@@ -421,10 +421,10 @@ for (const [id, kind, fill] of [['larder', 'larder', 'bread'], ['fishpond', 'fis
 
 // Every count these goals read is noted somewhere on the island.
 const keys = ['sheared', 'milked:', 'glazed', 'improved70', 'melted', 'fired:', 'dyed:', 'harvest:', 'fruit:', 'reeds', 'flowers:', 'skep:', 'grapes',
-  'charted', 'signed', 'fished:', 'catch:', 'sailed', 'circled', 'landed:dragon', 'cartbridge', 'made:', 'minted'];
+  'charted', 'signed', 'fished:', 'catch:', 'sailed', 'circled', 'landed:dragon', 'cartbridge', 'made:'];
 const defs = psql(`select string_agg(pg_get_functiondef(p.oid), ' ') from pg_proc p join pg_namespace n on n.oid = p.pronamespace
   where n.nspname = 'public' and p.prokind = 'f' and pg_get_functiondef(p.oid) like '%journal_note%'`);
 const unnoted = keys.filter((k) => !defs.includes(`'${k}'`));
 check(`every count these goals read is noted on the island (${keys.length})`, unnoted.length === 0, unnoted.join(', '));
 
-finish('thirty-six goals in the crafts, the land and the water');
+finish('thirty-five goals in the crafts, the land and the water');

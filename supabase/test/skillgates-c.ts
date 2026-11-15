@@ -21,7 +21,7 @@
  *     at its seam's mining gate, an alloy at its highest metal's): Pour a mould and Cast an anvil refused in the one
  *     rule's words on both sides, a nail or ribbon smith pours only what its own blacksmithing may and is idle `gate`
  *     naming the metal; cooking's and carpentry's long Unlocks one row a level;
- *   * decided since: pouring iron at blacksmithing 1 (steel, its alloy, with it), for you and a fresh nail smith.
+ *   * decided since: pouring iron at blacksmithing 1, for you and a fresh nail smith; an alloy at its mixing recipe's level.
  *
  * The island half makes its own island and rolls it back.
  */
@@ -222,8 +222,8 @@ const said = (k: string): string => isle.get(k) ?? '';
   const steps: Array<[number | undefined, number]> = [[undefined, 1], [6, 1], [8, 1], [10, 5], [12, 10], [14, 10], [16, 20], [20, 20], [22, 30], [26, 40], [30, 40], [32, 50], [36, 60], [42, 70], [46, 80], [51, 90], [60, 90]];
   check('a recipe\'s level: the ladder step at or below 2 × (difficulty − 6), 1 for none',
     steps.every(([d, lv]) => craftLevel(d) === lv), steps.map(([d]) => `${d}:${craftLevel(d)}`).join(' '));
-  const off = RECIPES.filter((r) => !CRAFT_GATE_SAID[r.result] && !scrollOf(r.result) && gateOf('recipe', r.id)?.level !== craftLevel(r.difficulty));
-  check(`every one of the ${RECIPES.length} recipes at that step in its own skill, but the named and the scrolls`,
+  const off = RECIPES.filter((r) => !CRAFT_GATE_SAID[r.result] && !scrollOf(r.result) && !r.inputs.some((i) => i.item === 'obsidian') && gateOf('recipe', r.id)?.level !== craftLevel(r.difficulty));
+  check(`every one of the ${RECIPES.length} recipes at that step in its own skill, but the named, the scrolls and obsidian's (99)`,
     !off.length && RECIPES.every((r) => gateOf('recipe', r.id)?.skill === r.skill), off.map((r) => r.id).join(', '));
   check('the smelter at masonry 1, the wagon at carpentry 70, the caravel at carpentry 90, as decided',
     gateOf('recipe', 'make_smelter')?.level === 1 && gateOf('recipe', 'make_smelter')?.skill === 'masonry'
@@ -243,8 +243,12 @@ const said = (k: string): string => isle.get(k) ?? '';
   check(`pouring a mined metal at its seam's mining gate, in ${MOULD_SKILL}, but iron at 1 as decided (${mined.map((m) => `${m.id} ${METAL_GATE[m.id]}`).join(', ')})`,
     mined.every((m) => gateOf('metal', m.id)?.level === (POUR_GATE_SAID[m.id] ?? SEAM_GATE[m.ore!]) && gateOf('metal', m.id)?.skill === MOULD_SKILL && gateOf('metal', m.id)?.name === `${m.name} pouring`)
       && METAL_GATE.copper === 1 && METAL_GATE.iron === 1 && SEAM_GATE.iron_ore === 5 && METAL_GATE.tin === 10 && METAL_GATE.gold === 50 && METAL_GATE.seryll === 90);
-  check('an alloy at its highest metal\'s: steel 1 (iron and coal: iron\'s), bronze 10, brass 20, pewter 30, electrum 50',
-    METAL_GATE.bronze === 10 && METAL_GATE.steel === 1 && METAL_GATE.brass === 20 && METAL_GATE.pewter === 30 && METAL_GATE.electrum === 50,
+  // Decided since (batch G): an alloy at the level of the recipe that mixes it.
+  const mixedAt = (lump: string): number => recipeLevel(RECIPES.find((r) => r.category === 'Smelting' && r.result === lump)!);
+  check('an alloy at the level of the recipe that mixes it: pewter 5, bronze and brass 10, steel and electrum 20, fire-tempered steel 40',
+    METALS.filter((m) => !m.ore).every((m) => METAL_GATE[m.id] === mixedAt(m.lump))
+      && METAL_GATE.pewter === 5 && METAL_GATE.bronze === 10 && METAL_GATE.brass === 10 && METAL_GATE.steel === 20 && METAL_GATE.electrum === 20
+      && METAL_GATE.firesteel === 40,
     METALS.filter((m) => !m.ore).map((m) => `${m.id} ${METAL_GATE[m.id]}`).join(', '));
   check('casting a mould stays its own recipe\'s gate: the shovel head mould by its difficulty',
     gateOf('recipe', 'make_shovel_head_mould')?.level === craftLevel(RECIPE_BY_ID.get('make_shovel_head_mould')?.difficulty));
@@ -457,9 +461,9 @@ const isGate = (s: string): boolean => /: needs [a-z ]+ \d+; have \d+\.\d\.$/.te
     `island ${said('POUR_IRON1')} ${said('ANVIL_IRON1')} / browser ${i1} ${ia1}`);
   const ribbon = (lv: number): string => smithLumps('ribbon').filter((id) => workerMetalOpen({ skills: { blacksmithing: lv } }, id)).join(',');
   const nail = (lv: number): string => smithLumps('nail').filter((id) => workerMetalOpen({ skills: { blacksmithing: lv } }, id)).join(',');
-  check(`a ribbon smith at blacksmithing 1 pours copper, iron, steel and fire-tempered steel (${ribbon(1)}), at 20 the metals to 20 (${ribbon(20)}); on both sides`,
-    ribbon(1) === 'copper_lump,iron_lump,steel_lump,firesteel_lump' && said('RIBBON1') === ribbon(1) && said('RIBBON20') === ribbon(20)
-      && ribbon(20) === 'copper_lump,iron_lump,tin_lump,zinc_lump,bronze_lump,brass_lump,steel_lump,firesteel_lump',
+  check(`a ribbon smith at blacksmithing 1 pours copper and iron (${ribbon(1)}), at 20 the metals to 20 (${ribbon(20)}); on both sides`,
+    ribbon(1) === 'copper_lump,iron_lump' && said('RIBBON1') === ribbon(1) && said('RIBBON20') === ribbon(20)
+      && ribbon(20) === smithLumps('ribbon').filter((id) => METAL_GATE[METALS.find((m) => m.lump === id)!.id] <= 20).join(','),
     `island ${said('RIBBON1')} / ${said('RIBBON20')} — browser ${ribbon(1)} / ${ribbon(20)}`);
   check(`a fresh nail smith (blacksmithing 1) pours iron (${nail(1)}), on both sides`,
     nail(1) === 'iron_lump' && said('NAIL1') === 'iron_lump' && workerMetalOpen({ skills: { blacksmithing: 1 } }, 'iron_lump'),

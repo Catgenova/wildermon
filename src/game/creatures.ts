@@ -9440,6 +9440,10 @@ export class Creatures {
       return true;
     }
     if (!job) {
+      // Only bridge spans over its own level within reach: `gate`, naming the lowest bridge, then the nearest (the
+      // island's `hod_span_gate`).
+      const gated = game.hodGatedSpan(near, deed, (t) => hodMay(c, t));
+      if (gated) return this.why(c, 'gate', gated.n, ['bridge', gated.kind]);
       // Work within reach wanting only what the stores do not hold: `stock`, naming it. None at all: `range`.
       const wanted = game.hodWanted(near, deed);
       return wanted.n > 0 ? this.why(c, 'stock', wanted.n, wanted.items.slice(0, IDLE_WANTS)) : this.why(c, 'range', range);

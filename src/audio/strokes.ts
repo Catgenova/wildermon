@@ -84,7 +84,7 @@ export const STROKE_BY_ID: Record<string, Stroke> = {
   lay_timber_steps: 'wood',
   take_apart_campfire: 'wood', set_trap: 'wood', pick_up_trap: 'wood',
   // Metal on metal, which is the loudest thing anybody does here.
-  smith: 'metal', strike_coins: 'metal', improve_item: 'metal', shoe_creature: 'metal', ring_bell: 'metal',
+  smith: 'metal', improve_item: 'metal', shoe_creature: 'metal', ring_bell: 'metal',
   fit_lock: 'metal', take_off_lock: 'metal',
   // A lantern hung on a post's iron hook or set in a pillar's iron cage, and lifted off it (`lamps.ts`).
   fit_lamp: 'metal', take_lamp: 'metal',

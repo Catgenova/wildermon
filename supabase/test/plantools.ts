@@ -25,7 +25,7 @@
  * And drawn in Chromium (`plantools-page.ts`), at desktop and phone width: the ghost of a storey's walls all
  * round, every piece passing; the bar with its totals, inside the screen; Plan asking for every piece on the
  * storey shown, and Undo offered after; pinned on a shed's roof, its menu is the roof's (Plan roof: every tile)
- * with no storey work, the top storey offers Plan roof (greyed while open) and not the whole roof, a planned pitched roof is picked on its
+ * with no storey work, the top storey offers Plan roof (no walls asked, `freeroof.ts`) and the roof over its whole tier, a planned pitched roof is picked on its
  * slope and is no place to walk; a footprint's ghost follows the cursor. Needs a Chromium as `storeyview.ts`
  * does; without one the drawing is skipped, unless `STOREY_STRICT` is set.
  *
@@ -301,7 +301,7 @@ check('rpc_plan_area plans all ten in one call', planned.planned === 10 && plann
 
 /* ---- a whole roof ------------------------------------------------------------ */
 {
-  // Walls all round first, finished, on both sides: a roof goes over a storey closed in.
+  // Walls all round first, finished, on both sides (a roof asks none now: `freeroof.ts`).
   for (const a of asks) finish(bld.setWall(tower, 0, a.target.x, a.target.y, a.target.side as Side, 'solid', 'log'));
   sql(`insert into wall (world_id, level, dir, x, y, building, type, material, needed, total) values
     ${asks.map((a) => `(w, 0, '${dirOf(a.target.side as Side)}', ${bx(a.target.x, a.target.side as Side)}, ${by(a.target.y, a.target.side as Side)}, ${ID}, 'solid', 'log', '{"log": 0}', '{"log": 16}')`).join(', ')};`);
@@ -373,8 +373,10 @@ if (!options) {
       const menu = await run<Menu>('return p.menu(1, p.hx + 1, p.hy + 1, 1, false);');
       check(`${at}: storey 2's menu offers its walls all round and its floor is whole`, menu.rows.some((r) => r.startsWith('Plan walls all round (storey 2)'))
         && !menu.rows.some((r) => r.startsWith('Plan floor: every tile')), menu.rows.filter((r) => !r.includes(' > ')).join(' / '));
-      check(`${at}: and the top storey offers Plan roof while pinned, greyed while its sides are bare, and not the whole roof`,
-        menu.rows.includes('Plan roof') && !menu.rows.some((r) => r.startsWith('Plan roof >') || r.startsWith('Plan roof: every tile')), menu.rows.filter((r) => !r.includes(' > ')).join(' / '));
+      // Free roofing (`freeroof.ts`): no walls asked of a roof, and the whole of this storey's tier offered from it.
+      check(`${at}: and the top storey offers Plan roof while pinned, its sides bare and all, and the roof over its whole tier`,
+        menu.rows.includes('Plan roof') && menu.rows.some((r) => r.startsWith('Plan roof >')) && menu.rows.some((r) => r.startsWith('Plan roof: every tile (over storey 2)')),
+        menu.rows.filter((r) => !r.includes(' > ')).join(' / '));
       await run('p.choose(1, p.hx + 1, p.hy + 1, 1, ["Plan walls all round", "Solid", "Log"]); p.frame(1);');
       const laid = await run<State>('return p.state();');
       check(`${at}: laid out, the ghost is the hall's fourteen sides on storey 2, every one passing`,

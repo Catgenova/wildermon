@@ -80,9 +80,34 @@ working a casting should have requirements equal to the smelting gate parallels.
 3. **Working a casting is gated by its metal** (replaces "beating a casting stays open"): at the anvil (Smith), in the
    trade the casting's mould is worked in (blacksmithing, weaponsmithing, armorsmithing, chainsmithing, platesmithing,
    jewellery), at exactly the level smelting that metal takes: one table (`METAL_GATE`) read by smelting, pouring and
-   working a casting. An alloy's casting at its alloy level (the highest smelting gate of the mined metals in it).
+   working a casting. An alloy's casting at its alloy level (then the highest smelting gate of the mined metals in it;
+   its mixing recipe's level since batch G).
 4. **Coin striking is removed** from the game on `main` by a separate change; it is not gated here, and §11's
    "Striking coins" proposal is dropped.
+
+Decided since (the user, on batch F's questions 16–24, built in batch G):
+
+1. **Wemp is sown at farming 1** (was 30), so rope's chain starts at 1. The unidentified-seed examples (the help, the
+   tests) use the lowest crop still gated above 1, by name: cabbage seeds at 5.
+2. **The bucket at carpentry 1** (was 10), the paper press kept at 1.
+3. **Lye at alchemy 1** (was 10).
+4. **An alloy is poured and its casting worked at the level of the recipe that mixes it**, derived from the recipe:
+   pewter 5, bronze and brass 10, steel and electrum 20, fire-tempered steel 40 (smelting's, its recipe). A mined metal
+   keeps its smelting level. Steel was 1 by the old alloy rule; it is 20 now, so a ribbon smith at 1 beats copper and
+   iron only.
+5. **Ore stays identified**, and an idle worker names the metal or the plant, not the item: agreed, no change.
+6. **An unidentified treasure map is read**; only Dig it up is gated (and the warmth it says).
+7. **A hod carrier whose only work within reach is bridge spans over its level names the gate** in the one wording
+   ("Idle: Drawbridge 4 tiles from the totem needs carpentry 50 (yours 1.0)."), not "no work" (`hodGatedSpan`,
+   `hod_span_gate`). Question 8 (walls and floors over its level) stays open.
+8. **Fire-tempered steel** at its recipe's level, 40, by 4.
+9. **Everything of obsidian at 99** (`OBSIDIAN_LEVEL`, a new top step on the ladder; a craft by its difficulty alone
+   still stops at 90, `CRAFT_TOP`): every recipe with obsidian as an input, in its own making skill (the obsidian
+   armour in platesmithing; the knapped tools and weapons, the throne, obelisk and bust in stonecutting; the vase, wind
+   chime, black-glass lantern and lava lamp in glassblowing; the dragon-glass fountain, the shard garden and the glass
+   shard path in masonry; the ember orb in jewellery), and obsidian glass building (masonry). Workers follow their own
+   level through the recipe and material gates. Raw obsidian is not gated: it comes off monsters killed on Volcano
+   Isle, by butchering (`carcass_obsidian`), which has no gate.
 
 ## 1. What is gated today
 
@@ -364,9 +389,11 @@ Pour a mould and Cast an anvil (`pour_mould`, `cast_anvil`, `firing_refusal`), a
 (`worker_smith_lumps`), in blacksmithing (`MOULD_SKILL`), by the metal poured (`METAL_GATE`, kind `metal`, named
 "Iron pouring"):
 
-| Copper, Iron, Steel | Tin, Bronze | Zinc, Brass | Lead, Pewter | Silver | Gold, Electrum | Adamantine | Glimmersteel | Mithril | Seryll |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 10 | 20 | 30 | 40 | 50 | 60 | 70 | 80 | 90 |
+| Copper, Iron | Pewter | Tin, Bronze, Brass | Zinc, Steel, Electrum | Lead | Silver, Fire-tempered steel | Gold | Adamantine | Glimmersteel | Mithril | Seryll |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | 5 | 10 | 20 | 30 | 40 | 50 | 60 | 70 | 80 | 90 |
+
+(An alloy at its mixing recipe's level since batch G; it was the highest of its mined metals.)
 
 A mined metal at its seam's mining gate (`SEAM_GATE`), but iron at 1 (decided, batch E: `POUR_GATE_SAID`); an alloy at
 the highest of the mined metals in its mix (bronze: copper and tin; steel: iron and coal, so iron's 1; brass: copper and
@@ -381,12 +408,14 @@ only metal over its level in the stores, idle `gate`: "Idle: Tin pouring in your
 One table, `METAL_GATE`, read three ways: smelting a metal's ore (kind `smelt`, in smelting), pouring it (kind `metal`,
 in blacksmithing, above) and working a casting of it at the anvil (kind `casting`, in the trade the casting's mould is
 worked in: blacksmithing, weaponsmithing, armorsmithing, chainsmithing, platesmithing, jewellery; id
-`weaponsmithing:tin`). A mined metal's casting is at its smelting gate; an alloy's at its alloy level (the highest
-smelting gate of the mined metals in it). A piece cast whole (a bell, a statue) has no casting gate.
+`weaponsmithing:tin`). A mined metal's casting is at its smelting gate; an alloy's at the level of the recipe that
+mixes it (batch G). A piece cast whole (a bell, a statue) has no casting gate.
 
-| Copper, Iron, Steel | Tin, Bronze | Zinc, Brass | Lead, Pewter | Silver | Gold, Electrum | Adamantine | Glimmersteel | Mithril | Seryll |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 10 | 20 | 30 | 40 | 50 | 60 | 70 | 80 | 90 |
+| Copper, Iron | Pewter | Tin, Bronze, Brass | Zinc, Steel, Electrum | Lead | Silver, Fire-tempered steel | Gold | Adamantine | Glimmersteel | Mithril | Seryll |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | 5 | 10 | 20 | 30 | 40 | 50 | 60 | 70 | 80 | 90 |
+
+(An alloy at its mixing recipe's level since batch G; it was the highest of its mined metals.)
 
 Smelt (`smelt_ore`, `firing_refusal`): "Tin smelting: needs smelting 10; have 2.3." Smith (`smith`, `forge_refusal`,
 `casting_gate_refusal`): "Tin casting: needs weaponsmithing 10; have 2.3." Workers: a smelter worker and a stoker take
@@ -402,7 +431,7 @@ down, alloys).
 | --- | --- | --- | --- | --- | --- |
 | Graft (kind `graft`) | forestry | 50 (`GRAFT_LEVEL`) | Graft | — | — |
 | Water plant (`water_plant`) | botanizing | Water lily 10 · lotus 20 (`WATER_PLANT_GATE`) | Plant a water lily or a lotus; a lily pond's Plant a water lily | Water planters (`lily`) | A lily root ("Unidentified root"); lotus seeds never (food) |
-| Treasure map (`hoard`) | digging | Worn 1 · sound 20 · fine 40 · grand 60 (`MAP_GATE_PER_TIER` 20 a tier) | Read, Dig it up | — | The map, by its tier ("Unidentified map") |
+| Treasure map (`hoard`) | digging | Worn 1 · sound 20 · fine 40 · grand 60 (`MAP_GATE_PER_TIER` 20 a tier) | Dig it up (the map read under it, batch G) | — | The map, by its tier ("Unidentified map") |
 | Bridge (`bridge`) | the bridge's trade | A material bridge at its material's gate (log 1, plank 10, timbercraft 20; cobblestone 1, clay adobe 5, clay bricks and stone brick 10, sandstone 30, slate 40, marble 50); garden footbridge 10, rope bridge 20, drawbridge 50, aqueduct 70 by difficulty (`bridgeLevel`) | Throw a bridge across, Work on the bridge, Lead an aqueduct here, Work on the aqueduct | Hod carriers fitting a span (`hod_may`, `hodMay`) | — |
 | Stone in a circlet (`gem`) | jewellery | Topaz, garnet, onyx, amber 30 · emerald, peridot, amethyst, jasper 40 · ruby, sapphire, opal 50 · diamond 60 (`gemLevel`: the circlet's own level, a ladder step a rarer weight) | Set in circlet | — | — (gems have other uses) |
 | A listed cross (`cross`) | animal husbandry | 50 (`CROSS_SKILL`) | Putting a cross to a mate | — | — |
@@ -459,10 +488,10 @@ drive: no worker gate. Built (`helmGate`, `helm_gate_refusal`).
   `identifySaid`, `itemGateRefusal`, `workerItemOpen`; `unlocksOf`, `nextUnlockSaid`, `unlocksSaid`, `GATE_STOPS`.
 * `skill_gate` and `skill_gate_item` emitted by `scripts/dump-defs.ts`; read by anybody, as the rulebook is
   (permissions.allow.ts).
-* Island, the pilot (`20261120000090_skill_gates.sql`): `skill_gate_refusal`, `skill_gate_of`, `tree_gate`,
+* Island, the pilot (`20261120000094_skill_gates.sql`): `skill_gate_refusal`, `skill_gate_of`, `tree_gate`,
   `tree_gate_refusal`, `gate_idle`; patched `gather_refusal` (cut down), `ground_refusal` (coppice),
   `worker_gatherable`, `worker_do`, `worker_settle`, `worker_idle`, `rpc_creatures`.
-* Island, batch A (`20261120000091_skill_gates_a.sql`): `worker_level`, `worker_gate_open` (the gate's own skill),
+* Island, batch A (`20261120000095_skill_gates_a.sql`): `worker_level`, `worker_gate_open` (the gate's own skill),
   `sprout_gate`, `sprout_gate_refusal`, `item_gate`, `unidentified_name`, `seen_name` (an item; a def with the line's own
   name), `identify_said`, `item_gate_refusal`, `worker_item_open`, `worker_seeds`, `seen_pile_text`, `sprout_to_hand`,
   `stocked_for`, `take_usable_stored`, `sow_seed`; `gate_idle` for sprouts; patched `ground_refusal` (pick sprout,
@@ -482,7 +511,7 @@ drive: no worker gate. Built (`helmGate`, `helm_gate_refusal`).
   `VEHICLE_GATE`, `BOAT_GATE`; `KEPT_OFF_LADDER` (tame, fish); `rockGate`, `helmGate`, `seenVein`, `veinTip`,
   `UNIDENTIFIED_METAL`; `nameGates` (a kind, a fish and a piece are named by the module holding them, so this one stays
   a leaf). `ROCK_VARIANTS`, `SPECIES` and `FISH` read their levels from it.
-* Island (`20261120000092_skill_gates_b.sql`): `helm_gate_refusal` (in `ride_refusal`), `face_gate_refusal` (in
+* Island (`20261120000096_skill_gates_b.sql`): `helm_gate_refusal` (in `ride_refusal`), `face_gate_refusal` (in
   `terrain_refusal`), `stone_gate`, `stone_idle`; `tame_needs` reads the gate; `tame_gate_refusal` (in
   `creature_refusal`, `trap_refusal`); `seen_vein`, `vein_tip` (in `perform_ground`'s Prospect, `read_ground`); patched
   `worker_gatherable` and `worker_do` (quarry), `worker_settle` (`stone_idle`).
@@ -501,7 +530,7 @@ drive: no worker gate. Built (`helmGate`, `helm_gate_refusal`).
   `buildGateRefusal`, `workerBuildOpen`, `workerRecipeOpen`, `hodMay`, `pavingGateRefusal`. Items: a shut recipe's
   Recipe or Formula (by its title), a relic's fragments (by relic: `gateExtra` reads "old pot" off "old pot 1/2"), a
   tarnished bauble (by tier). `nextUnlockBar`: "10: Maple", the Skills window's line beside each level.
-* Island (`20261120000094_skill_gates_c.sql`): `recipe_gate_refusal` (in `craft_refusal` after a perk, a trade book's
+* Island (`20261120000098_skill_gates_c.sql`): `recipe_gate_refusal` (in `craft_refusal` after a perk, a trade book's
   trade and a shut recipe's book, before the tool, the station and the makings, as `recipeReason`), `worker_recipes` and
   `recipe_gate_idle` (every store trade in `errand_step`/`errand_do`, idle `gate` naming the recipe), `gate_item_extra`
   (in `item_gate`, `identify_said`, `unidentified_name`), Restore at the gate in `dig_refusal`, finds told unidentified
@@ -524,7 +553,7 @@ drive: no worker gate. Built (`helmGate`, `helm_gate_refusal`).
   `UNLOCKS_GROUPED_OVER`, `UNLOCK_ROW_NAMES`.
 * `craftgates.ts`: `MATERIAL_GATE.stone_brick` 10; `METAL_GATE` (derived from `SEAM_GATE` and the alloys' mixes), the
   `metal` rows, `metalGate`, `metalGateRefusal`, `workerMetalOpen`.
-* Island (`20261120000095_skill_gates_d.sql`): `metal_gate_refusal` (in `firing_refusal`'s
+* Island (`20261120000099_skill_gates_d.sql`): `metal_gate_refusal` (in `firing_refusal`'s
   Pour a mould and Cast an anvil, after the metal and before its lumps), `worker_smith_lumps` (nail and ribbon smiths in
   `errand_step`/`errand_do`, idle `gate` naming the metal; `worker_idle` "in your settlement stores"); `vein_tip` with
   no level, `vein_tip_at`, `seen_vein_at` (Prospect's tally and reading, `read_ground`); `mask_rock(rock, tiles, hide)`
@@ -541,7 +570,7 @@ drive: no worker gate. Built (`helmGate`, `helm_gate_refusal`).
   steel at 1. `skillgates.ts`: `rockGateRefusal(rock, viewer, below)`, the one check for cutting a rock, bare or under a
   building. `path.ts`: `fellsSaid` (the trees your woodcutting fells, from the gates), in the site step's lines and
   `siteSays`.
-* Island (iron and steel pouring at 1; `20261120000096_skill_gates_e.sql`): `read_ground`
+* Island (iron and steel pouring at 1; `20261120000100_skill_gates_e.sql`): `read_ground`
   reads every seam in its circle, buried ones too (`seam`, any tile), each named by the keeper (`seen_vein_at`);
   `tree_fells` and `thepath_sites` counting a tree tile only where its species' gate is at or under the player's
   woodcutting; `rock_gate_refusal`, read by `face_gate_refusal` and by `cellar_refusal`'s Mine out the cellar.
@@ -564,7 +593,7 @@ drive: no worker gate. Built (`helmGate`, `helm_gate_refusal`).
   "root"; not a seed that is food), a treasure map by tier (`hoard`, noun "map"); readers `castingGate`,
   `castingGateRefusal`, `smeltGate`, `smeltGateRefusal`, `workerSmeltOpen`, `workerSmithOpen`, `waterPlantGateRefusal`,
   `waterPlantFrom`, `workerWaterPlantOpen`, `bridgeGateRefusal`, `gemGateRefusal`; `hodMay` reads a span's bridge.
-* Island (`20261120000097_skill_gates_f.sql`):
+* Island (`20261120000101_skill_gates_f.sql`):
   `kind_gate_refusal` in `ground_refusal` (Graft), `cross_refuses`, `spell_refusal`, `last_refusal` (Throw a bridge
   across, Work on the bridge), `aqueduct_refusal` (Lead an aqueduct here, Work on the aqueduct), `firing_refusal`
   (Smelt), `item_refusal` (Set in circlet); `water_plant_gate_refusal` in `water_garden_refusal` and `adorn_refusal`
@@ -582,12 +611,12 @@ drive: no worker gate. Built (`helmGate`, `helm_gate_refusal`).
 * Merged with `main` (batch F): the branch's migrations now follow `main`'s, so the island applies them after what it
   already has. `main`'s and the branch's definitions files shared three names (`…064_defs`, `…073_defs`, `…075_defs`),
   so the branch's definitions files are gone and one delta from `main`'s rulebook to the merged one stands in for them
-  (`20261120000089_defs.sql`: `skill_gate`, `skill_gate_item` and every row the gates changed), followed by the hand
-  migrations in their order: `…090_skill_gates`, `…091_skill_gates_a`, `…092_skill_gates_b`, `…093_unidentified_rock`,
-  `…094_skill_gates_c`, `…095_skill_gates_d`, `…096_skill_gates_e`, `…097_skill_gates_f`.
-* From `main`, on the rule: fire-tempered steel (an alloy of steel and sulfur) is poured and its castings worked at steel's
-  level, 1 (the alloy rule reads an alloy's own alloys); obsidian glass building at masonry 60, beside stained glass;
-  obsidian's knapped tools and the Volcano Isle recipes by their difficulty.
+  (`20261120000093_defs.sql`, written by `npm run defs` against `main`'s rulebook: `skill_gate`, `skill_gate_item` and
+  `rock_def`), followed by the hand migrations in their order: `…094_skill_gates`, `…095_skill_gates_a`,
+  `…096_skill_gates_b`, `…097_unidentified_rock`, `…098_skill_gates_c`, `…099_skill_gates_d`, `…100_skill_gates_e`,
+  `…101_skill_gates_f`. Merged twice: the second time after `main`'s `…089_free_roofing`, `…091_no_coinsmithing`
+  (coin striking removed: nothing gated refers to it) and `…092_defs`.
+* From `main`, on the rule: fire-tempered steel and obsidian, as batch G decided (below).
 * CI fixes on the branch: `dyes.ts` gives its player the alchemy of every boil's gate on both sides; `seasons.ts` gives
   the browser the farming the island's player sows wheat at; `skillgates-c.ts` reads the named crafts off
   `CRAFT_GATE_SAID` and counts fire-tempered steel among a ribbon smith's metals at 1. `adorn.ts` and `motes.ts` came
@@ -596,6 +625,20 @@ drive: no worker gate. Built (`helmGate`, `helm_gate_refusal`).
   `bridgestorey`, `bridgewidth`, `buildstores` (bridges), `pondlife` and `repurpose` (water plants), `head` (a worn
   map's dig); from `main`: `obsidiangear` (obsidian armour), `stairbuild` (timber and stone floors), `upperbed`
   (sowing); `newplayer` reads a first tame's refusal in the one wording.
+
+### Seventh set (built): the answers to batch F's questions
+
+* `skillgates.ts`: `GATE_LADDER` with 99; `OBSIDIAN_LEVEL` 99; `CRAFT_TOP` 90 (`ladderAt` takes a top); `CROP_GATE.wemp`
+  1; `CRAFT_GATE_SAID` with the bucket (carpentry 1) and lye (`lye_bucket`, alchemy 1).
+* `craftgates.ts`: `OBSIDIAN`; `recipeLevel` puts any recipe with obsidian in it at `OBSIDIAN_LEVEL`; a material whose
+  bill has obsidian the same; `METAL_GATE` reads an alloy's mixing recipe (`alloyRecipe`, `recipeLevel`).
+* Island: the rows (`20261120000093_defs.sql`); `20261120000101_skill_gates_f.sql` no longer gates `rpc_treasure_map`;
+  `20261120000102_skill_gates_g.sql`: `hod_span_gate` in `errand_step` (idle `gate` naming the bridge).
+* Browser: `Game.hodGatedSpan` in a hod carrier's step; the pack's Read open under the gate; the help's alloy and seed
+  lines.
+* Tests: `supabase/test/skillgates-g.ts`; `skillgates.ts` asks its unidentified seed of cabbage; `skillgates-c.ts` and
+  `skillgates-f.ts` read alloys at their recipe's level and a map read under its gate; `obsidiangear.ts` works at 99;
+  `noplan.ts` (main's free roofing) gives the island's builder the plank roof's carpentry for its one ask.
 
 ## 10. Open questions
 
@@ -621,28 +664,7 @@ sees), stone brick in 6, the forge's casting in 7 (pouring gated by metal), 10 (
 15. A prospector's find now counts every seam, coal too, as Prospect always did (it counted only metal ores before).
     Keep coal in "found ore", or leave it out of a worker's find?
 
-From batch F:
-
-16. Ropemaking's first steps: rope is at 1 now (was 5) and twine and the torch were already 1, but rope's wemp fibre
-    comes off wemp, a crop sown at farming 30 (wild wemp seed is foraged, the fibre is not). Bring wemp's sowing down,
-    or leave rope's chain to start at farming 30?
-17. Papyrus's step before it is the paper press (carpentry, brought from 20 to 1 with papyrus); its water comes in a
-    bucket, carpentry 10. Keep the press at carpentry 1, and is the bucket an everyday thing for §10's question 6?
-18. Leather at 1 still needs lye (alchemy 10, question 6). Bring lye down too?
-19. An alloy's casting is at its alloy level (bronze 10, brass 20, pewter 30, electrum 50, steel 1), the highest
-    smelting gate of the mined metals in it, as pouring reads it. Alloys are never smelted from ore, so "the smelting
-    level" of one is that rule; or should an alloy's casting follow its mixing recipe's level (bronze and brass 10,
-    pewter 5, steel and electrum 20)?
-20. A smelter worker with only gated ore says `gate` naming the lowest metal; a water planter the same. Ore and lily
-    roots are named there by the plant or the metal, not the item, so nothing unidentified is named to a keeper under
-    it (as question 3 asks of seed). Ore is not unidentified at all: mining already names it. Agree?
-21. The treasure map is unidentified and neither read nor dug up under its tier; a worn map is known to everybody.
-    Its warmth (`rpc_treasure_warm`, "Hoard within 25 tiles.") reads Dig it up's refusal, so it now says the gate under
-    it. Keep reading closed, or let anybody read the picture and gate only the dig?
-22. A hod carrier with only spans over its level says "no work" (question 8 again, for bridges).
-23. Fire-tempered steel, made only on Volcano Isle at smelting 40 (its recipe), pours and is worked at 1 by the alloy
-    rule (steel's, and so iron's). Put it at its recipe's level instead?
-24. Obsidian glass building is placed at masonry 60 beside stained glass (both see-through, the same heft). Keep?
+From batch F: 16 to 24, all answered (batch G, above). Still open from them: none.
 
 ## 11. Sweep: proposals
 
@@ -688,7 +710,7 @@ marked "brought down" are built (batch F, §9); the rest stay proposals.
 
 **Digging**. Gated: none.
 
-1. ★ Built (batch F; reading the map too). Unearthing a treasure map by its tier · worn 1, sound 20, fine 40, grand 60 (the map unidentified under it) · the
+1. ★ Built (batch F; reading the map open, batch G). Unearthing a treasure map by its tier · worn 1, sound 20, fine 40, grand 60 (the map unidentified under it) · the
    map's guards and loot already climb the same tiers; a found map becomes a goal.
 2. Dig a spring · 10 (its difficulty 12, §5.2) · a water source anywhere is a step past the shore and the well's
    bucket.

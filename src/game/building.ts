@@ -874,6 +874,8 @@ const columnKey = (level: number, x: number, y: number): string => `${level}:${x
 const cornerNumber = (x: number, y: number): number => x * 65536 + y;
 /** The four sides of a tile and the step across each, in the order the island asks them. */
 const STEPS: ReadonlyArray<readonly [Side, number, number]> = [['n', 0, -1], ['e', 1, 0], ['s', 0, 1], ['w', -1, 0]];
+/** A building with no roof, part by part (`roofParts`). */
+const NO_ROOF: ReadonlyMap<number, ReadonlyArray<[number, number]>> = new Map();
 
 export interface BuildingsJSON {
   nextId: number;
@@ -1173,9 +1175,107 @@ export class Buildings {
     return f && floorKind(f) === 'roof' ? f : undefined;
   }
 
+  /** Whether any of a building's roof is over its top storey: what is taken off before the top storey is (`has_roof`). */
   hasRoof(b: Building): boolean {
-    for (const f of this.floors.values()) if (f.building === b.id && floorKind(f) === 'roof') return true;
-    return false;
+    const top = this.roofParts(b).get(b.levels);
+    return !!top && top.length > 0;
+  }
+
+  /**
+   * Whether no storey more goes on a building for its roof: a jetty roofed, or every tile of the footprint roofed, at
+   * whatever height. With a tile of it open to the sky, the storey goes up and is floored where nothing roofs it.
+   */
+  topRoofed(b: Building): boolean {
+    const top = this.roofParts(b).get(b.levels) ?? [];
+    if (top.some(([x, y]) => this.tileIndex.get(tileKey(x, y)) !== b.id)) return true;
+    return b.tiles.length > 0 && b.tiles.every((k) => {
+      const [xs, ys] = k.split(',');
+      return !!this.roofOn(Number(xs), Number(ys));
+    });
+  }
+
+  /** Each building's roofs by level, and every roof by its tile, worked out once a revision. */
+  private roofIndex: { rev: number; parts: Map<number, Map<number, Array<[number, number]>>>; tiles: Map<string, FloorTile> } | null = null;
+
+  private roofs(): { parts: Map<number, Map<number, Array<[number, number]>>>; tiles: Map<string, FloorTile> } {
+    if (this.roofIndex && this.roofIndex.rev === this.revision) return this.roofIndex;
+    const parts = new Map<number, Map<number, Array<[number, number]>>>();
+    const tiles = new Map<string, FloorTile>();
+    for (const f of this.floors.values()) {
+      if (floorKind(f) !== 'roof' || f.level < 1) continue;
+      let byLevel = parts.get(f.building);
+      if (!byLevel) parts.set(f.building, (byLevel = new Map()));
+      let at = byLevel.get(f.level);
+      if (!at) byLevel.set(f.level, (at = []));
+      at.push([f.x, f.y]);
+      const was = tiles.get(tileKey(f.x, f.y));
+      if (!was || was.level < f.level) tiles.set(tileKey(f.x, f.y), f);
+    }
+    for (const byLevel of parts.values()) for (const at of byLevel.values()) at.sort((p, q) => p[1] - q[1] || p[0] - q[0]);
+    this.roofIndex = { rev: this.revision, parts, tiles };
+    return this.roofIndex;
+  }
+
+  /**
+   * A building's roof, part by part: the tiles roofed at each level. A tier's roof sits over its own top storey,
+   * and is drawn, shaped and picked as a roof of its own at that height.
+   */
+  roofParts(b: Building): ReadonlyMap<number, ReadonlyArray<[number, number]>> {
+    return this.roofs().parts.get(b.id) ?? NO_ROOF;
+  }
+
+  /** The roof on a tile, at whatever level: one roof a tile. */
+  roofOn(x: number, y: number): FloorTile | undefined {
+    return this.floors.size ? this.roofs().tiles.get(tileKey(x, y)) : undefined;
+  }
+
+  /**
+   * The storey a roof planned on a tile sits over, unless the job names one (0 for storey 1): the highest storey with
+   * a floor on the tile, or with a wall on a side of it whose other side has no floor of that storey. A tile walled
+   * round with no floor (an open well) is roofed with its storey; the outside wall of storey 2 over a tier is storey
+   * 2's, and the tier is roofed over storey 1. Out past the footprint (a jetty), the top storey. The island's
+   * `roof_storey_at`.
+   */
+  roofStoreyAt(b: Building, x: number, y: number): number {
+    if (this.tileIndex.get(tileKey(x, y)) !== b.id) return b.levels - 1;
+    for (let level = b.levels - 1; level >= 1; level--) {
+      const f = this.floor(level, x, y);
+      if (f && f.building === b.id && floorKind(f) !== 'roof') return level;
+      for (const [side, dx, dy] of STEPS) {
+        const w = this.wall(level, x, y, side);
+        if (!w || w.building !== b.id) continue;
+        const q = this.floor(level, x + dx, y + dy);
+        if (!q || floorKind(q) === 'roof') return level;
+      }
+    }
+    return 0;
+  }
+
+  /**
+   * The level a roof job's roof is at: over the storey the job names, of the building's (a pinned storey's menu writes
+   * it in); else the roof on the tile; else over the tile's top storey (`roofStoreyAt`). Out past the footprint, over
+   * the top storey. The island's `roof_level`.
+   */
+  roofLevelFor(b: Building, t: { x: number; y: number; level?: number }): number {
+    if (this.tileIndex.get(tileKey(t.x, t.y)) !== b.id) return b.levels;
+    const l = t.level;
+    if (typeof l === 'number' && Number.isInteger(l) && l >= 0 && l <= b.levels - 1) return l + 1;
+    const on = this.roofOn(t.x, t.y);
+    return on ? on.level : this.roofStoreyAt(b, t.x, t.y) + 1;
+  }
+
+  /**
+   * Why a roof is not planned at `level` on a tile, or null: one roof a tile, and none under a floor or a wall of a
+   * higher storey of it, where it would be inside the building. The island's `roof_plan_refusal`.
+   */
+  roofPlanRefusal(b: Building, level: number, x: number, y: number): string | null {
+    const here = this.floor(level, x, y);
+    if (here && floorKind(here) === 'roof') return 'Roof already planned here.';
+    const on = this.roofOn(x, y);
+    if (on) return `Roof already planned here, over storey ${on.level}.`;
+    const top = this.roofStoreyAt(b, x, y);
+    if (top >= level) return `Under storey ${top + 1} on this tile.`;
+    return null;
   }
 
   removeFloor(level: number, x: number, y: number): void {
@@ -1411,7 +1511,9 @@ export class Buildings {
   }
 
   /**
-   * Whether anything stands over a tile on a storey: a floor, or a roof.
+   * Whether anything stands over a tile on a storey: a floor, or a roof, on
+   * any storey over it -- a roof over an open well covers the room under the
+   * well as much as a floor right over it would. The island's `covered_at`.
    *
    * A floor above your head is a roof as far as the weather is concerned,
    * which is why this asks for a finished slot of any kind rather than for a
@@ -1419,7 +1521,14 @@ export class Buildings {
    */
   coveredAt(level: number, x: number, y: number): boolean {
     const f = this.floor(level + 1, x, y);
-    return !!f && isDone(f);
+    if (f && isDone(f)) return true;
+    const b = this.buildingAt(x, y);
+    if (!b) return false;
+    for (let l = level + 2; l <= b.levels; l++) {
+      const over = this.floor(l, x, y);
+      if (over && isDone(over)) return true;
+    }
+    return false;
   }
 
   /**

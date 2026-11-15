@@ -30,6 +30,8 @@ import { FORAGE_TABLE, BOTANIZE_TABLE, BOTANIZE_WATER_TABLE } from '../../src/ga
 import { PAN_ORES } from '../../src/game/actions';
 import { BUSH_DEFS, ROCK_VARIANTS } from '../../src/world/tiles';
 import { psql, ok, bad, check } from './harness';
+// Anything of obsidian is made and built at 99 (decided, batch G).
+import { OBSIDIAN_LEVEL } from '../../src/game/skillgates';
 
 void ACTIONS.length;
 
@@ -160,7 +162,7 @@ begin
          stats = coalesce(stats, '{}'::jsonb) || jsonb_build_object('hunger', 1, 'thirst', 1, 'health', 1, 'stamina', 1)
    where world_id = w and uid = u;
   perform set_config('request.jwt.claims', json_build_object('sub', u)::text, true);
-  insert into skill (world_id, uid, id, value) values (w, u, 'platesmithing', 90), (w, u, 'stonecutting', 90)
+  insert into skill (world_id, uid, id, value) values (w, u, 'platesmithing', ${OBSIDIAN_LEVEL}), (w, u, 'stonecutting', ${OBSIDIAN_LEVEL})
     on conflict (world_id, uid, id) do update set value = excluded.value;
   create or replace function skill_check(p_skill double precision, p_difficulty double precision,
      p_tool_ql double precision default 0, p_ease double precision default 0) returns boolean language sql as 'select true';
@@ -193,8 +195,8 @@ const got = (k: string): string => out.split('\n').find((l) => l.startsWith(`${k
 
 const game = Game.create(4242);
 // The island's player's (above): obsidian armour and knapping are gated by their difficulty (`craftgates.ts`).
-game.skills.values.set('platesmithing', 90);
-game.skills.values.set('stonecutting', 90);
+game.skills.values.set('platesmithing', OBSIDIAN_LEVEL);
+game.skills.values.set('stonecutting', OBSIDIAN_LEVEL);
 game.player.x = 9.5;
 game.player.y = 9.5;
 game.inventory.add('hammer', { ql: 40, extra: 'Iron' });
@@ -261,7 +263,7 @@ begin
   update player set body_at = now(), x = 5.5, y = 5.5, act = null, act_target = null, act_queue = '[]', craft_from_stores = false
    where world_id = w and uid = u;
   perform set_config('request.jwt.claims', json_build_object('sub', u)::text, true);
-  insert into skill (world_id, uid, id, value) values (w, u, 'masonry', 90) on conflict (world_id, uid, id) do update set value = excluded.value;
+  insert into skill (world_id, uid, id, value) values (w, u, 'masonry', ${OBSIDIAN_LEVEL}) on conflict (world_id, uid, id) do update set value = excluded.value;
   insert into building (world_id, id, name, levels, work_level, planned_by) values (w, 77, 'Glasshouse', 1, 0, u);
   insert into building_tile (world_id, building, x, y) values (w, 77, 5, 5);
   perform give(w, u, 'trowel', 1, 40, 'Iron', null, null, null, null);
@@ -309,7 +311,7 @@ const addFloor = ACTIONS.find((a) => a.id === 'add_floor')!;
 const ask = (): string => addFloor.check?.({ kind: 'tile', x: 5, y: 5, cx: 5, cy: 5 } as never, home) ?? 'ALLOWED';
 home.skills.values.set('masonry', 5);
 const lowMine = ask();
-home.skills.values.set('masonry', 90);
+home.skills.values.set('masonry', OBSIDIAN_LEVEL);
 const highMine = ask();
 check('the island plans a solid wall and a floor of obsidian glass', b('PLANWALL') === 'ALLOWED' && b('PLANFLOOR') === 'ALLOWED', `${b('PLANWALL')} / ${b('PLANFLOOR')}`);
 check('and asks for obsidian and mortar to build the wall', /obsidian/i.test(b('NOSTOCK')) && /mortar/i.test(b('NOSTOCK')), b('NOSTOCK'));

@@ -11,7 +11,7 @@
  *     smelting gate is its pouring gate, and its casting gate in each trade is the same number;
  *   * each refused in the one rule's words on both sides under its level, and past the gate at it: Graft at forestry
  *     49, tin smelting at 2.3, a tin sword blade casting at weaponsmithing 2.3, a drawbridge and a stone brick bridge,
- *     an aqueduct, a diamond in a circlet, a sound map dug up and read; a cross and Pyre in the same words;
+ *     an aqueduct, a diamond in a circlet, a sound map dug up (and read under it: decided, batch G); a cross and Pyre in the same words;
  *   * a lily root and a treasure map unidentified under their gate, with what identifies them; lotus seeds never;
  *   * the bowstring, the short bow, the awl, leather, papyrus, the paper press and rope open at 1;
  *   * workers at their own level in the gate's skill: a smelter worker's ore, a water planter's roots, a hod carrier's
@@ -258,7 +258,7 @@ const said = (k: string): string => isle.get(k) ?? '';
       && gateOf('casting', castingGateId(s, m.id))?.skill === s
       && (!m.ore || gateOf('casting', castingGateId(s, m.id))?.level === gateOf('smelt', m.id)?.level)))
       && ['weaponsmithing', 'armorsmithing', 'chainsmithing', 'platesmithing', MOULD_SKILL, 'jewellery'].every((s) => CASTING_SKILLS.includes(s))
-      && gateOf('casting', 'weaponsmithing:bronze')?.level === 10 && gateOf('casting', 'platesmithing:electrum')?.level === 50,
+      && gateOf('casting', 'weaponsmithing:bronze')?.level === 10 && gateOf('casting', 'platesmithing:electrum')?.level === 20 && gateOf('casting', 'blacksmithing:steel')?.level === 20,
     CASTING_SKILLS.join(','));
   const castIds = [castingGate('sword_blade', 'Tin')?.id, castingGate('chain_coif', 'bronze')?.id, castingGate('bell_casting', 'Iron')?.id, castingGate('nail', 'Iron')?.id]
     .map((x) => x ?? 'none').join(',');
@@ -374,9 +374,9 @@ const isGate = (s: string): boolean => /: needs [a-z ]+ \d+; have \d+\.\d\.$/.te
   const no = 'Unidentified map: needs digging 20; have 4.0.';
   const tip = '20 digging required to identify this map.';
   const d4 = ask(g, 'unearth', { kind: 'item', uid: map.uid } as Target);
-  check(`a sound map at digging 4: "Unidentified map", "${tip}", Dig it up and Read "${no}", on both sides`,
+  check(`a sound map at digging 4: "Unidentified map", "${tip}", Dig it up "${no}" on both sides; Read not refused by it (batch G)`,
     seenName(map, g) === 'Unidentified map' && said('MAP4_NAME') === 'Unidentified map' && identifySaid(map, g) === tip && said('MAP4_TIP') === tip
-      && d4 === no && said('MAP4_DIG') === no && said('MAP4_READ') === no,
+      && d4 === no && said('MAP4_DIG') === no && said('MAP4_READ') !== no && !said('MAP4_READ').includes('needs digging'),
     `island ${said('MAP4_NAME')} "${said('MAP4_TIP')}" "${said('MAP4_DIG')}" "${said('MAP4_READ')}" / browser ${seenName(map, g)} "${d4}"`);
   set(g, 'digging', 20);
   const d20 = ask(g, 'unearth', { kind: 'item', uid: map.uid } as Target);

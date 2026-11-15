@@ -80,7 +80,7 @@ import {
   type TrapKind,
 } from './traps';
 import { BAIT_BY_ID, FISH, fishHere, pickFish, waterDepth } from './fishing';
-import { across, BRIDGES, sideStep, bridgeDone, deckLane, bridgeLevels, CLEARANCE, deckFurnitureRefusal, deckHeight, deckTiles, deckWheels, END_SLOP, endTiles, isMaterialBridge, laneOffsets, pierSpans, pierStoreys, RAMP_SLOPE, rampDeck, rampRefusal, rampRise, fitIntoSpan, openSpan, spanBill, spanTiles, WIDEST, type Bridge, type BridgeKind, type BridgeSpan } from './bridges';
+import { across, BRIDGES, sideStep, bridgeDone, deckLane, bridgeLevels, CLEARANCE, deckFurnitureRefusal, deckHeight, deckTiles, deckWalk, deckWheels, END_SLOP, endTiles, isMaterialBridge, laneOffsets, pierSpans, pierStoreys, RAMP_SLOPE, rampDeck, rampRefusal, rampRise, fitIntoSpan, openSpan, spanBill, spanTiles, WIDEST, type Bridge, type BridgeKind, type BridgeSpan } from './bridges';
 import { AQ_NOT_THROWN, AQ_OVER, channelOf, fitIntoChannel } from './aqueducts';
 import { AQUEDUCT_LPS, aqueductShut, type Channel } from '../world/aqueducts';
 import { BRIDGE_END_HERE, bridgeEndAt, bridgeEndRefusal, deckDown, hingeKey, hingeOf, isDrawbridge, keepHiddenAsks } from './gates';
@@ -101,7 +101,7 @@ import { jewelGain } from './gems';
 import { earnedBy, knackBonus, knackChance, knackLands, KNACK_CAP, TITLE_BY_ID } from './titles';
 import { TileIndex, Tally, cropKey, keyX, keyY, tileKey } from './tileindex';
 import { DARK_HIT, NIGHT_EYES_FROM, SOUL_PER_LEVEL, WORK_HAND, WORK_WIND, WORK_WIND_SPENT, HEAVY_SKILLS, WORK_BACK } from './learn';
-import { seenVein } from './skillgates';
+import { gateOf, seenVein } from './skillgates';
 import { DRIVING, DRIVING_LEARN, drivingPace, SAILING, SAILING_LEARN, sailingPace, vehicleQlPace } from './travel';
 import { isLayUp, LEAD_PACE, ROPE_WALK, ROPE_WALK_TIME, ROPEMAKING, ropePerLayUp, ropeTime } from './ropework';
 import { laySwirls, swirlLight, type MoteElement, type Swirl } from './motes';
@@ -6806,13 +6806,13 @@ export class Game {
 
   /**
    * The height of finished deck at a point, or null for open ground: up its
-   * slope on a ramp (`deckHeight`), which is where a body walking it stands.
-   * The island's `deck_height_at`.
+   * slope on a ramp (`deckHeight`) and over a garden footbridge's arch (`deckWalk`), which is where a body walking it stands.
+   * The island's `deck_height_at`, the arch aside: where a body is drawn standing, which the island does not ask.
    */
   deckHeightAt(x: number, y: number): number | null {
     const b = this.bridgeAt(Math.floor(x), Math.floor(y));
     // A drawbridge drawn up has no deck: what is under it is what there is (`gates.ts`).
-    return b && deckDown(b) && b.kind !== 'aqueduct' ? deckHeight(b, x, y) : null;
+    return b && deckDown(b) && b.kind !== 'aqueduct' ? deckWalk(b, x, y) : null;
   }
 
   /** Whether a tile is walked on a bridge's deck rather than on the ground: under an aqueduct it is the ground, worn and climbed as ever. */
@@ -7854,7 +7854,7 @@ export class Game {
    * tiles". So whatever a smelter, a kiln, a fire, an oven, an anvil, a
    * barrel or an improvement uses up comes from the same stock a craft does,
    * in the same order and by the same rules (see `craftStock`). The tools --
-   * a mould, a coin die, a file -- are still the ones you carry.
+   * a mould, a file -- are still the ones you carry.
    */
   stockEntry(uid: number, reach = CRAFT_REACH): CraftStock | undefined {
     return this.craftStock(uid, false, reach).find((s) => s.item.uid === uid);
@@ -8655,6 +8655,37 @@ export class Game {
     for (const foundation of this.foundations.values()) if (!foundationDone(foundation)) consider(foundation, foundation.x, foundation.y);
     const items = [...nearest].sort((a, b) => a[1] - b[1] || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)).map(([item]) => item);
     return { items, n: items.length };
+  }
+
+  /**
+   * A hod carrier's only work within reach being bridge spans over its level (`may`): the lowest such bridge's kind,
+   * then the nearest, and how many tiles (rings) from `from` it is; undefined where anything it may fit wants
+   * something, or no span is gated. Its idle reason, `gate` (decided, batch G). The island's `hod_span_gate`.
+   */
+  hodGatedSpan(
+    near: (x: number, y: number, dir?: string) => boolean,
+    from: { x: number; y: number },
+    may: (target: HodTarget) => boolean,
+  ): { kind: string; n: number } | undefined {
+    const wants = (bill: Bill): boolean => Object.values(bill.needed).some((n) => n > 0);
+    const open = (target: HodTarget, bill: Bill, x: number, y: number, dir?: string): boolean => near(x, y, dir) && wants(bill) && may(target);
+    for (const wall of this.buildings.walls.values()) if (!isDone(wall) && open({ kind: 'wall', wall }, wall, wall.x, wall.y, wall.dir)) return undefined;
+    for (const floor of this.buildings.floors.values()) if (!isDone(floor) && open({ kind: 'floor', floor }, floor, floor.x, floor.y)) return undefined;
+    for (const column of this.buildings.columns.values()) if (!isDone(column) && open({ kind: 'column', column }, column, column.x, column.y)) return undefined;
+    for (const foundation of this.foundations.values()) {
+      if (!foundationDone(foundation) && open({ kind: 'foundation', foundation }, foundation, foundation.x, foundation.y)) return undefined;
+    }
+    let best: { kind: string; n: number; level: number } | undefined;
+    for (const bridge of this.bridges.values()) {
+      const span = openSpan(bridge);
+      if (!span || !near(span.x, span.y) || !wants(span)) continue;
+      const target: HodTarget = { kind: 'span', bridge, span };
+      if (may(target)) return undefined;
+      const level = gateOf('bridge', bridge.kind)?.level ?? 0;
+      const n = Math.max(Math.abs(span.x - Math.floor(from.x)), Math.abs(span.y - Math.floor(from.y)));
+      if (!best || level < best.level || (level === best.level && (n < best.n || (n === best.n && bridge.kind < best.kind)))) best = { kind: bridge.kind, n, level };
+    }
+    return best && { kind: best.kind, n: best.n };
   }
 
   /**

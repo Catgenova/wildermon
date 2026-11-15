@@ -92,7 +92,7 @@ import { OWN_FRUIT_SHARE, REGIONS } from '../../world/regions';
 import { TREASURE_TIERS } from '../../game/treasure';
 import { ISLAND_ELEMENT, MOTES_LEAST, MOTES_MOST, MOTES_MOST_AT, MOTES_STEP, SEASON_ELEMENT, SWIRL_DARK, SWIRL_LIGHT, SWIRL_SEASON, SWIRLS_A_DAY } from '../../game/motes';
 import { HEMS_A_FRAME, LIGHT_RES, RING_REACH, THREAT_SHADE, THREAT_SHADE_HUNTING } from '../../render/renderer';
-import { FLOWER_COLOURS } from '../../render/flowers';
+import { FLOWER_COLOURS, FLOWER_KINDS } from '../../render/flowers';
 import { BUSH3D_SPECIES, LOGS_DRAWN, STUMP3D_SPECIES, SUN_STEPS, SWAY_MS, TREE3D_SPECIES } from '../../render/trees3d';
 import { FIELD_LAYOUTS } from '../../render/crops';
 import { TURNS } from '../../render/view';
@@ -143,7 +143,7 @@ import { SPELL_VISUALS } from '../../render/spells';
 import { furnitureDef, liquidCapacity, POND_EVERY, STATION_REACH, WATER_AT_HAND, type PlacedFurniture } from '../../game/furniture';
 import { billWords, CHARGE_PER_QL, CHARGE_QL, chargesFor, countOf, DRINK_LITRES, LIQUID_NAME, LITRE_KG, lyeAshFor, LYE_ASH_PER_LITRE, RARITY_ROOM, TAN_LYE, type Item } from '../../game/items';
 import { RUNE_GATE, RUNE_GATE_FADE, RUNE_GATE_GLOW_REACH, RUNE_GATE_REACH, RUNE_GATE_RISE, runeGateName } from '../../game/runegate';
-import { COIN_METALS, METALS, coinPurity, INGOT_LUMPS, INGOT_WEIGHT, MOULD_BY_ID, MOULD_SKILL, MOULDS, SMITH_TOOL } from '../../game/metal';
+import { METALS, INGOT_LUMPS, INGOT_WEIGHT, MOULD_BY_ID, MOULD_SKILL, MOULDS, SMITH_TOOL } from '../../game/metal';
 import { meltFits, meltLumps, meltQl } from '../../game/melt';
 import { furnaceMadeSaid, meltingSaid, SMELTER_H, SMELTER_W } from '../../game/smelter';
 import { STATION_KINDS, STATIONS, stationDecayAt } from '../../game/stations';
@@ -245,6 +245,8 @@ import { FIRST_LAIRS } from '../../game/lairs';
 const FIRST_LAIR_KINDS = LAIR_KINDS.filter((k) => FIRST_LAIRS.includes(k.id));
 const MONSTERS_BEFORE_VOLCANO = MONSTER_KINDS.filter((id) => !VOLCANO_KINDS.includes(id));
 const METALS_BEFORE_VOLCANO = METALS.filter((m) => m.id !== FIRE_STEEL);
+/** The share of strikes QL 0 gold took the die (n 103), as it was before coins stopped being struck (n 646). */
+const COIN_PURITY_FLOOR_WAS = 0.5;
 import {
   CACHE_DEED_GAP, CACHE_DRAW_EVERY, CACHE_DRAWS, CACHE_EVERY, CACHE_LOOT, CACHE_SPOT_BASE, CACHE_SPOT_EVERY, cacheOddsSays, lootSays, WINTER_FUR, WINTER_FUR_PART,
 } from '../../game/winter';
@@ -320,7 +322,7 @@ import {
   BUOY, BUOY_REACH, CAULDRON_HEARTH, CAULDRON_SERVINGS, CHEESE_AGEING, CHEESE_RACK, GAME_TABLE, GARDEN_OBELISK, GEM_LAMP, GEM_LAMP_REACH, HERB_SPIRAL, IVY_CUTTINGS, IVY_PANEL,
   IVY_PANEL_DAYS, LILY_POND, NAMEPLATE, PEDIGREE_BOARD, PELT_RUG, PLUSH, POND_LILIES, RACK_HOLDS, SPIRAL_PICK, SPIRAL_SLOTS, STONES_GOAL, TABLE_SEATS,
 } from '../../game/adorndefs';
-import { BRIDGES as ADORN_BRIDGES, FOOTBRIDGE_SPAN } from '../../game/bridges';
+import { BRIDGES as ADORN_BRIDGES, FOOT_RISE, FOOTBRIDGE_SPAN } from '../../game/bridges';
 import {
   ARCHERY_TARGET, ARROW_BREAK_IN, BOULDER_MOSS_DAYS, LANTERN_POLE, MOOR_REACH, MOORING_POST, MOSS_BOULDER, POLE_LANTERNS, POLE_REACH, PRACTICE_GAIN, SHELF_HOLDS, SPICE_SHELF,
   STONE_BUST, TARGET_HOLDS, TRAINING_DUMMY, TREE_BENCH, TREE_BENCH_SEATS, WINDOW_SEAT, WINDOW_SEATS,
@@ -420,6 +422,73 @@ const VEINS = VEIN_LOOKS.filter((l): l is VeinLook => l !== null);
 const veinsOf = (family: VeinLook['family']): string => listed(VEINS.filter((l) => l.family === family).map((l) => l.name.toLowerCase()));
 
 export const NEWS: News[] = [
+  // The rope bridge and the garden footbridge in the bridge kit (`kit/bridge/rope.ts`, `footbridge.ts`), the footbridge walked over its arch (`deckWalk`).
+  {
+    n: 643,
+    day: '2026-11-15',
+    lines: () => {
+      const foot = new Map(ADORN_BRIDGES.footbridge.bill);
+      return [
+        `Changed: ${ADORN_BRIDGES.rope.name.toLowerCase()} model: plank slats, posts each tile, hand ropes, tie cords. Building stages: posts and stringers; slats as planks go in; hand ropes as rope goes in.`,
+        `Changed: ${ADORN_BRIDGES.footbridge.name.toLowerCase()} model: deck arched ${metres(FOOT_RISE)} m at its middle, less on a ramp, ${foot.get('plank')} boards, ${foot.get('shaft')} corner posts, top and low rails. Building stages: stringers; boards as planks go in; posts as shafts go in.`,
+        `Changed: ${ADORN_BRIDGES.footbridge.name.toLowerCase()} walked at its arch's height.`,
+      ];
+    },
+  },
+  // The crates and the carcasses in the kit (`kit/storecrate.ts`, `carcassSprite`), and the site icon (`scripts/emit-icons.mjs`).
+  {
+    n: 641,
+    day: '2026-11-15',
+    lines: () => [
+      `Changed: ${listed(Object.values(CRATE_DEFS).map((c) => c.name.toLowerCase()))}: new look, 8 facings, in their wood.`,
+      `Changed: ${itemDef('corpse').name.toLowerCase()}s on the ground: new look, the kind's own model and colours lying down, at its stage's size, 8 facings; other items on the tile: dropped items sack behind it.`,
+      'Changed: site icon: wildermon crate.',
+    ],
+  },
+  // No coinsmithing (`20261120000091_no_coinsmithing.sql`): a die held anywhere came back as its two lumps.
+  {
+    n: 646,
+    day: '2026-11-15',
+    lines: () => [
+      'Removed: Strike coins, coin die, coin die mould.',
+      'Removed: journal goal Strike coins.',
+      'Refunded: coin die as 2 lumps of its metal, same QL. Coin die mould: deleted.',
+    ],
+  },
+  // The wildflowers and the crops painted in the rune pastel kit (`flowers.ts`, `crops.ts`, `cropFlatSprite`); a bed's crop inside its frame.
+  {
+    n: 642,
+    day: '2026-11-15',
+    lines: () => [
+      `Changed: wildflowers (${FLOWER_COLOURS.map((c) => c.name).join(', ')}; ${num(FLOWER_KINDS.length)} kinds a colour: ${FLOWER_KINDS.map((k) => k.replace(/y$/, 'ie') + 's').join(', ')}): new look.`,
+      `Changed: crop fields (${num(CROP_LIST.length)} crops, ${STAGE_NAMES.join(', ')}), garden beds, planters, herb boxes, low-end graphics: new look.`,
+      'Fixed: crop on a garden bed: ridges, weeds and plants over its frame. Now: inside the frame.',
+      'Fixed: planter: ripe potato tubers and thyme through the end walls; weeds through the side walls.',
+    ],
+  },
+  // The low-end graphics' trees, bushes and stumps: the solids in one view (`flatTree3d`).
+  {
+    n: 645,
+    day: '2026-11-15',
+    lines: () => [
+      `Changed: trees, bushes, stumps on low-end graphics: drawn as the 3D trees, one view, light from the left; ${TREE_DEFS.length} trees, ${BUSH_DEFS.length} bushes, stumps; every season, age, day and night.`,
+      'Changed: a 3D tree before its own picture is made: the same species, age and season in another shape, not the old flat drawing.',
+    ],
+  },
+  // Free roofing: a roof on any tile, over the tile's own top storey or the storey pinned (`roofLevelFor`, `roof_level`, `roof_plan_refusal`).
+  {
+    n: 640,
+    day: '2026-11-15',
+    lines: () => [
+      'Changed: roofs: no enclosed storey needed; any tile of the footprint.',
+      'New: roof over each tier at its own height: over the tile\'s top storey (floor on the tile, or a wall on a side with no floor across); else over storey 1.',
+      'New: storey pinned: Plan roof over that storey on a tile with no roof and no storey over it; Plan roof: every tile, that tier.',
+      'New: Plan roof: every tile, on Auto: every tier at its own height. Hipped and gabled roofs: shaped over each tier\'s own tiles.',
+      'Changed: refused: a second roof on a tile, "Roof already planned here, over storey N."; a roof under a storey of the tile, "Under storey N on this tile."',
+      'Changed: floor, staircase, ladder or wall on a roofed tile at or over the roof: "Remove the roof first.", that tile only. Add storey: refused only while every tile is roofed.',
+      `Changed: covered: a finished floor or roof on any storey over the tile. Indoors and decay ×${INDOORS_DECAY} under a roof over an open well.`,
+    ],
+  },
   // Every seam a recess cut into its own tile, one model a tile (`seams/runecut.ts`), and the prospector's mark (`prospectMark`).
   {
     n: 633,
@@ -1845,9 +1914,10 @@ export const NEWS: News[] = [
     n: 103,
     day: '2026-10-08',
     lines: () => [
-      `Changed: new coins struck from ${COIN_METALS.join(' or ')} only. Silver coins still circulate and come back as change.`,
+      // As it was then; coins are no longer struck (n 646).
+      'Changed: new coins struck from gold only. Silver coins still circulate and come back as change.',
       `Changed: a failed coin strike loses its lump. Past the smith's check, gold purity decides: takes the die always at QL ${QL_TOP}, `
-        + `${percent(coinPurity(0))} at the bottom of the scale, linear between.`,
+        + `${percent(COIN_PURITY_FLOOR_WAS)} at the bottom of the scale, linear between.`,
       `Changed: gold only from under the mountain of the ${REGIONS.filter((R) => R.mountain?.includes('gold_ore')).map((R) => R.name.replace(/^The /, '')).join(' and ')}. `
         + 'Removed: gold from panning, hoards and chests. Gold seams elsewhere are now iron.',
       `Added: foraging finds a gold coin 1 action in ${num(COIN_FIND_ONE_IN)}, up to ${num(COIN_FINDS_A_DAY)} a day per person. `
@@ -6357,7 +6427,7 @@ export const NEWS: News[] = [
       // Cutting a vine took its sickle already (`CUTTING_TOOL`); it is newly worn, below.
       ...Object.entries(TOOL_JOBS).map(([tool, ids]) => `Changed: ${itemDef(tool).name.toLowerCase()} needed for ${listed([...new Set(ids.filter((id) => id !== CUT_VINE)
         .map((id) => ACTION_BY_ID.get(id)?.verb ?? id))])} (was: none).`),
-      `Changed: tool wear on every go of a job that needs one, success or failure; improving: each tool its material needs. Newly worn: ${listed([...new Set(['smith', 'strike_coins',
+      `Changed: tool wear on every go of a job that needs one, success or failure; improving: each tool its material needs. Newly worn: ${listed([...new Set(['smith', 'striking coins',
         'pour_mould', 'cast_anvil', 'fit_lock', 'shoe_creature', 'cut_vine', 'plan_building', 'add_to_building', 'plan_wall', 'plan_fence', 'build_wall', 'change_wall',
         'add_floor', 'plan_floor', 'build_floor', 'plan_column', 'build_column', 'improve_item'].map((id) => ACTION_BY_ID.get(id)?.verb ?? id))])} (was: no wear).`,
     ],

@@ -13,7 +13,7 @@
  *   * a relic and a bauble tier by its restoring difficulty, the same rule;
  *   * a material, a wall type, a floor type and a paving by tier, the cheapest at 1 (`MATERIAL_GATE`, `WALL_GATE`,
  *     `FLOOR_GATE`, `PAVING_GATE`);
- *   * pouring a metal by its seam's mining gate (iron at 1, `POUR_GATE_SAID`), an alloy by its metals' (`METAL_GATE`). A wall type's and a floor type's gate is in its material's skill: carpentry for
+ *   * pouring a metal by its seam's mining gate (iron at 1, `POUR_GATE_SAID`), an alloy by the recipe that mixes it (`METAL_GATE`); anything of obsidian at 99 (`OBSIDIAN_LEVEL`). A wall type's and a floor type's gate is in its material's skill: carpentry for
  *     timber, masonry for stone, a row each; a wall or a floor needs both its material's gate and its type's.
  *
  *   * batch F: grafting (forestry 50) and a listed cross (animal husbandry 50) as they were; a water plant (lily 10,
@@ -26,7 +26,7 @@
  * treasure map by its tier's.
  */
 import {
-  addGates, gateOf, GRAFT_LEVEL, kindGateRefusal, ladderAt, SKILL_GATES, gateOpen, seenDefName, skillGateRefusal, stepsAbove, unidentified,
+  addGates, CRAFT_TOP, gateOf, GRAFT_LEVEL, kindGateRefusal, OBSIDIAN_LEVEL, ladderAt, SKILL_GATES, gateOpen, seenDefName, skillGateRefusal, stepsAbove, unidentified,
   workerGateOpen, CRAFT_GATE_SAID, type GateLevel, type SkillGate, type Viewer,
 } from './skillgates';
 import { bookOf, RECIPES, recipeTitle, type Recipe } from './recipes';
@@ -42,7 +42,7 @@ import { SLAB_VARIANTS } from '../world/tiles';
 import { capital } from './words';
 import type { HodTarget } from './game';
 import { itemDef } from './items';
-import { castWhole, METAL_BY_ID, METAL_BY_LUMP, METALS, MOULD_BY_MAKES, MOULD_SKILL, MOULDS, metalOfBar, type MetalDef } from './metal';
+import { castWhole, METALS, MOULD_BY_MAKES, MOULD_SKILL, MOULDS, metalOfBar, type MetalDef } from './metal';
 import { SEAM_GATE } from './rockgates';
 import { WATER_PLANTS, type WaterPlantDef } from '../world/waterplants';
 import { TREASURE_TIERS } from './treasure';
@@ -55,7 +55,11 @@ import { schoolOf, SPELLS, type SpellDef } from './arcane';
 export const CRAFT_PER = 2;
 export const CRAFT_FROM = 6;
 /** A craft's level by its difficulty: the ladder step at or below 2 × (difficulty − 6); 1 for none. */
-export const craftLevel = (difficulty: number | undefined): GateLevel => ladderAt(CRAFT_PER * ((difficulty ?? 0) - CRAFT_FROM));
+export const craftLevel = (difficulty: number | undefined): GateLevel => ladderAt(CRAFT_PER * ((difficulty ?? 0) - CRAFT_FROM), CRAFT_TOP);
+
+/** What makes a recipe or a building material obsidian's (`OBSIDIAN_LEVEL`): an input of it, or a bill with it. */
+export const OBSIDIAN = 'obsidian';
+const ofObsidian = (items: ReadonlyArray<string>): boolean => items.includes(OBSIDIAN);
 
 /**
  * A Formula's scroll, by what its enchantment goes on: a weapon, a bow, armour, a shield, a tool or a light 20;
@@ -70,8 +74,12 @@ export const FORMULA_GATE: Readonly<Record<EnchantOn, GateLevel>> = {
 /** A scroll written with two elements. */
 export const FORMULA_TWO_ELEMENTS: GateLevel = 50;
 
-/** A recipe's level: named (`CRAFT_GATE_SAID`), a Formula's scroll's (`FORMULA_GATE`), else by its difficulty. */
+/**
+ * A recipe's level: obsidian's for anything made with it (`OBSIDIAN_LEVEL`), named (`CRAFT_GATE_SAID`), a Formula's
+ * scroll's (`FORMULA_GATE`), else by its difficulty.
+ */
 export const recipeLevel = (r: Recipe): GateLevel => {
+  if (ofObsidian(r.inputs.map((i) => i.item))) return OBSIDIAN_LEVEL;
   const said = CRAFT_GATE_SAID[r.result];
   if (said && said.skill === r.skill) return said.level;
   const scroll = scrollOf(r.result);
@@ -83,7 +91,7 @@ export const recipeLevel = (r: Recipe): GateLevel => {
 export const MATERIAL_GATE: Readonly<Record<string, GateLevel>> = {
   log: 1, garden_bed: 1, plank: 10, timbercraft: 20, glass: 40,
   cobblestone: 1, clay_adobe: 5, clay_bricks: 10, stone_brick: 10, sandstone: 30, slate: 40, marble: 50, ornate_silver: 60,
-  stained_glass: 60, obsidian_glass: 60, ornate_gold: 70,
+  stained_glass: 60, ornate_gold: 70,
 };
 
 /** Planning and building a wall type, in its material's skill. */
@@ -108,25 +116,22 @@ export const PAVING_GATE: Readonly<Record<string, GateLevel>> = { [COBBLESTONES]
 /**
  * Pouring a metal (Pour a mould, Cast an anvil; a nail or ribbon smith's work), in the trade that pours moulds
  * (`MOULD_SKILL`), by the metal: a mined one at its seam's mining gate (`SEAM_GATE`: copper 1, tin 10 … seryll 90) but
- * the ones named (`POUR_GATE_SAID`: iron 1, as decided, so a fresh nail smith pours), an alloy at the highest of the
- * mined metals mixed into it (steel 1, bronze 10, brass 20, pewter 30, electrum 50). Forming the mould is its own
- * recipe's gate; ingots are not a mould and stay open.
+ * the ones named (`POUR_GATE_SAID`: iron 1, as decided, so a fresh nail smith pours); an alloy at the level of the
+ * recipe that mixes it (decided, batch G: pewter 5, bronze and brass 10, steel and electrum 20, fire-tempered steel
+ * 40). Forming the mould is its own recipe's gate; ingots are not a mould and stay open.
  */
 export const POUR_GATE_SAID: Readonly<Record<string, GateLevel>> = { iron: 1 };
-const alloyOf = (m: MetalDef): string[] => {
-  const mix = RECIPES.find((r) => r.category === 'Smelting' && r.result === m.lump);
-  return (mix?.inputs ?? []).map((i) => METAL_BY_LUMP.get(i.item)?.id).filter((id): id is string => !!id);
-};
+/** The recipe that mixes an alloy at the smelter. */
+const alloyRecipe = (m: MetalDef): Recipe | undefined => RECIPES.find((r) => r.category === 'Smelting' && r.result === m.lump);
 const metalLevel = (m: MetalDef): GateLevel => {
   if (m.ore) {
     const level = POUR_GATE_SAID[m.id] ?? SEAM_GATE[m.ore];
     if (level === undefined) throw new Error(`${m.id}: no seam gate`);
     return level;
   }
-  // An alloy of an alloy (fire-tempered steel, of steel) reads the mined metals under it, through its parts' levels.
-  const parts = alloyOf(m).map((id) => METAL_BY_ID.get(id)!);
-  if (!parts.length) throw new Error(`${m.id}: no metals mixed into it`);
-  return Math.max(...parts.map(metalLevel)) as GateLevel;
+  const mix = alloyRecipe(m);
+  if (!mix) throw new Error(`${m.id}: no recipe mixes it`);
+  return recipeLevel(mix);
 };
 export const METAL_GATE: Readonly<Record<string, GateLevel>> = Object.fromEntries(METALS.map((m) => [m.id, metalLevel(m)]));
 
@@ -134,8 +139,8 @@ export const METAL_GATE: Readonly<Record<string, GateLevel>> = Object.fromEntrie
  * Batch F (docs/gating.md §11): a metal's one table, read three ways. `METAL_GATE` is a metal's level in the furnace
  * and at the anvil: smelting its ore (kind `smelt`, in smelting), pouring it (kind `metal`, in blacksmithing) and
  * working a casting of it at the anvil (kind `casting`, in the trade the casting's mould is worked in). A mined metal's
- * casting is at its smelting gate; an alloy's at the highest smelting gate of the mined metals in it, the same table's
- * alloy rule. No copy: every row reads `METAL_GATE`.
+ * casting is at its smelting gate; an alloy's at the level of the recipe that mixes it (batch G), which pouring reads
+ * too. No copy: every row reads `METAL_GATE`.
  */
 
 /** Smelting a metal's ore (Smelt; a smelter worker's and a stoker's work), in smelting, at the metal's level. */
@@ -224,7 +229,8 @@ const OTHER_ROWS: SkillGate[] = [
   ...RELICS.map((r): SkillGate => ({ kind: 'relic', id: relicId(r), name: capital(r.name), skill: 'restoration', level: craftLevel(r.difficulty) })),
   ...BAUBLE_TIERS.map((t): SkillGate => ({ kind: 'bauble', id: t.id, name: `${t.name} bauble`, skill: 'restoration', level: craftLevel(t.difficulty) })),
   ...[...MATERIALS, GLASS_ROOF, GARDEN_BED].map((m): SkillGate => {
-    const level = MATERIAL_GATE[m.id];
+    // Obsidian glass and anything else built of obsidian: obsidian's level.
+    const level = ofObsidian(m.bill.map(([item]) => item)) ? OBSIDIAN_LEVEL : MATERIAL_GATE[m.id];
     if (level === undefined) throw new Error(`${m.id}: no material gate`);
     return { kind: 'material', id: m.id, name: `${m.name} building`, skill: m.skill, level };
   }),

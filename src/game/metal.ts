@@ -78,31 +78,12 @@ export const lumpsIn = (it: { id: string; count: number }): number =>
   METAL_BY_INGOT.has(it.id) ? it.count * INGOT_LUMPS : METAL_BY_LUMP.has(it.id) ? it.count : 0;
 
 /**
- * Coins: a lump of gold struck into twenty under a die, at the anvil. A
- * compact store of metal that goes in a pocket, and comes back out of the
- * fire as a lump when it is melted down. The die wears with every strike.
- * The island reads the same three.
+ * Coins: twenty to a lump of their metal, the metal Melt down reckons a coin holds.
+ * The island reads the same number (`coins_per_lump`).
  */
 export const COINS_PER_LUMP = 20;
-export const DIE_WEAR = 2;
-export const COIN_DIFFICULTY = 12;
-/**
- * The metals a coin is struck from: gold alone. Silver coins still change
- * hands and are given as change, and nobody strikes new ones.
- */
-export const COIN_METALS = ['gold'];
 /** Silver and gold: the two metals that are worth something without being deep. */
 export const PRECIOUS_METALS = ['silver', 'gold'];
-/**
- * How much a strike leans on the quality of the gold under the die. A strike
- * that passes the smith's check still comes good only `coinPurity` of the
- * time: every time on gold at QL 100, and this much less often at QL 0. A
- * strike that fails either way loses the lump.
- */
-export const COIN_QL_WEIGHT = 0.5;
-/** What the anvil says to a lump coins are not struck from. */
-export const COIN_REFUSAL = `Coins: ${COIN_METALS.join(' or ')} only.`;
-export const coinPurity = (ql: number): number => 1 - COIN_QL_WEIGHT * (1 - Math.min(100, Math.max(0, ql)) / 100);
 /**
  * Nails: five to a filling of the nail mould, asked for, down from a hundred.
  * A nail still weighs ten grams on the item table; how far a lump goes is a
@@ -172,7 +153,7 @@ export interface MouldDef {
 export const MOULD_SKILL = 'blacksmithing';
 /**
  * What every blacksmithing job is done with: firing a mould, pouring one, casting an anvil, smithing
- * a casting, striking coins and fitting a padlock. Asked: "All smithing" needs a hammer.
+ * a casting and fitting a padlock. Asked: "All smithing" needs a hammer.
  */
 export const SMITH_TOOL = 'hammer';
 
@@ -223,7 +204,6 @@ export const MOULDS: MouldDef[] = [
   { id: 'chisel_mould', name: 'Chisel mould', makes: 'chisel', skill: 'blacksmithing', sand: 2, difficulty: 10, lumps: 1 },
   { id: 'saw_blade_mould', name: 'Saw blade mould', makes: 'saw_blade', skill: 'blacksmithing', sand: 2, difficulty: 16, lumps: 1 },
   { id: 'trowel_blade_mould', name: 'Trowel blade mould', makes: 'trowel_blade', skill: 'blacksmithing', sand: 2, difficulty: 10, lumps: 1 },
-  { id: 'coin_die_mould', name: 'Coin die mould', makes: 'coin_die', skill: 'blacksmithing', sand: 2, difficulty: 16, lumps: 2 },
   { id: 'horseshoe_mould', name: 'Horseshoe mould', makes: 'horseshoe', skill: 'blacksmithing', sand: 2, difficulty: 10, lumps: 1, per: 4 },
   // Fittings for building: hinges for anything that swings, brackets to bind a gate.
   { id: 'hinge_mould', name: 'Hinge mould', makes: 'hinge', skill: 'blacksmithing', sand: 2, difficulty: 8, lumps: 1, per: 2 },
@@ -290,7 +270,7 @@ export const MOULD_DENT = 0.5;
  * island asks the same list in `forge_work`.
  */
 export const FORGE_WORK: readonly string[] = [
-  'smelt_ore', 'melt_down', 'cast_anvil', 'pour_mould', 'pour_ingot', 'fuel_smelter', 'smith', 'strike_coins',
+  'smelt_ore', 'melt_down', 'cast_anvil', 'pour_mould', 'pour_ingot', 'fuel_smelter', 'smith',
 ];
 
 /** Seconds to smelt one ore, slower for stubborn metal and fine ore, faster in a good smelter. */

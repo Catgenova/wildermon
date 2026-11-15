@@ -6,6 +6,6 @@ CREATE OR REPLACE FUNCTION public.forge_work(p_action text)
  STABLE
 AS $function$
   select coalesce(p_action in ('smelt_ore', 'melt_down', 'cast_anvil', 'pour_mould', 'pour_ingot', 'fuel_smelter',
-                               'smith', 'strike_coins')
+                               'smith')
       or exists (select 1 from recipe r where r.id = p_action and r.station = 'smelter'), false)
 $function$

@@ -1,11 +1,11 @@
 -- Skill gates, the sixth set (batch F): the sweep's recommended gates, and a trade's first steps brought down.
 --
---   * Rows of `skill_gate` (`20261120000089_defs.sql`, `npm run defs`): Graft (forestry 50) and a listed cross (animal
+--   * Rows of `skill_gate` (`20261120000093_defs.sql`, `npm run defs`): Graft (forestry 50) and a listed cross (animal
 --     husbandry 50) onto the rule; the water lily 10 and the lotus 20 (botanizing); a treasure map by its tier (digging:
 --     worn 1, sound 20, fine 40, grand 60); every bridge (a material bridge at its material's gate, the garden
 --     footbridge 10, the rope bridge 20, the drawbridge 50, the aqueduct 70); smelting an ore and working a casting at
---     the anvil by the metal, both off the pouring table (`METAL_GATE`: copper, iron and steel 1, tin and bronze 10 …
---     seryll 90), a casting in the trade its mould is worked in; a stone set in a circlet by its rarity (jewellery
+--     the anvil by the metal, both off the pouring table (`METAL_GATE`: copper and iron 1, tin 10 …; an alloy at its mixing recipe's,
+--     batch G), a casting in the trade its mould is worked in; a stone set in a circlet by its rarity (jewellery
 --     30/40/50/60); the six spells at their levels (1 and 30). A lily root and a treasure map are unidentified under
 --     their gate (`skill_gate_item`). The bowstring, the short bow, the awl, leather, papyrus, the paper press and rope
 --     come down to 1.
@@ -142,16 +142,6 @@ $o$  if v_map.def <> 'treasure_map' then return 'Not a map.'; end if;$o$,
 $n$  if v_map.def <> 'treasure_map' then return 'Not a map.'; end if;
   -- Its tier's gate (kind `hoard`): "Unidentified map: needs digging 20; have 4.0."
   if item_gate_refusal(p_world, p_uid, v_map) is not null then return item_gate_refusal(p_world, p_uid, v_map); end if;$n$);
-
--- Read: the same.
-select pg_temp.patch_fn('rpc_treasure_map(uuid,bigint)',
-$o$    return jsonb_build_object('why', 'You are not holding a map.');
-  end if;$o$,
-$n$    return jsonb_build_object('why', 'You are not holding a map.');
-  end if;
-  if item_gate_refusal(p_world, me, v_map) is not null then
-    return jsonb_build_object('why', item_gate_refusal(p_world, me, v_map));
-  end if;$n$);
 
 -- Found: named as the finder sees it.
 select pg_temp.patch_fn('bury_treasure(uuid,uuid,double precision,double precision,double precision)',

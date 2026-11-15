@@ -34,7 +34,8 @@ begin
   if p_action = 'remove_storey' then
     if p_b.id is null or p_b.levels <= 1 or has_roof(p_world, p_b.id)
        or exists (select 1 from wall where world_id = p_world and building = p_b.id and level = p_b.levels - 1)
-       or exists (select 1 from floor_tile where world_id = p_world and building = p_b.id and level = p_b.levels - 1) then
+       or exists (select 1 from floor_tile where world_id = p_world and building = p_b.id and level = p_b.levels - 1
+                    and floor_tile.kind <> 'roof') then
       return null;
     end if;
     if exists (select 1 from building_column c where c.world_id = p_world and c.building = p_b.id

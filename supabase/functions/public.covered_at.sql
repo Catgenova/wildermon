@@ -8,4 +8,8 @@ AS $function$
   select exists (select 1 from floor_tile f
                   where f.world_id = p_world and f.level = p_level + 1
                     and f.x = p_x and f.y = p_y and bill_done(f.needed))
+      or exists (select 1 from generate_series(p_level + 2,
+                   coalesce((select b.levels from building b where b.world_id = p_world and b.id = building_at(p_world, p_x, p_y)), 0)) l
+                   join floor_tile f on f.world_id = p_world and f.level = l and f.x = p_x and f.y = p_y
+                  where bill_done(f.needed))
 $function$

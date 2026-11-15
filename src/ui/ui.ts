@@ -79,7 +79,7 @@ import { FED_SAID, SACRIFICE_SAID, sacrificeable } from '../game/sacrifice';
 import { abilitiesOf, CHOOSE_AT, MEDITATION, nextStep, PATH_PICK_BY_ID, PATH_TIER_AT, PATHS, PATH_LIST, picksOf, sittingWorth } from '../game/meditation';
 import { brewTime, BREWS } from '../game/brewing';
 import { fireState, FIRE_COST, isFuel, type PlacedCampfire } from '../game/campfire';
-import { COIN_METALS, COIN_REFUSAL, DIE_WEAR, INGOT_LUMPS, MOULD_BY_ID, MOULD_BY_MAKES, isCasting, isIngot, isLump, isMetalStock, isMould, isOreItem, lumpsIn, metalOfBar, mouldLumps, mouldUsesLeft } from '../game/metal';
+import { INGOT_LUMPS, MOULD_BY_ID, MOULD_BY_MAKES, isCasting, isIngot, isLump, isMetalStock, isMould, isOreItem, lumpsIn, metalOfBar, mouldLumps, mouldUsesLeft } from '../game/metal';
 import { meltable } from '../game/melt';
 import { jobName, smelterState, type PlacedSmelter } from '../game/smelter';
 import { isGreenware, kilnState, type PlacedKiln } from '../game/kiln';
@@ -1377,14 +1377,15 @@ export class UI {
     const ghostKind = plan.kind === 'walls' ? 'wall' : plan.kind === 'footprint' ? 'tile' : plan.kind;
     this.renderer.planGhost = pieces.map((q) => ({
       kind: ghostKind, x: q.target.x, y: q.target.y, side: q.target.side,
-      level: plan.kind === 'roof' ? plan.level + 1 : plan.level, ok: !q.why,
+      level: plan.kind === 'roof' ? (q.target.level ?? plan.level) + 1 : plan.level, ok: !q.why,
     }));
     const ok = passing(pieces).length;
     const b = plan.buildingId !== undefined ? this.game.buildings.list.get(plan.buildingId) : undefined;
     const what = plan.kind === 'walls' ? `${WALL_TYPE_BY_ID.get(plan.wallType ?? 'solid')?.name ?? 'Wall'}, ${MATERIAL_BY_ID.get(plan.material ?? '')?.name.toLowerCase() ?? ''}`
       : plan.kind === 'footprint' ? (b ? `Add to ${b.name}` : plan.name ?? 'New building')
         : `${plan.material === GLASS_ROOF.id ? GLASS_ROOF.name : MATERIAL_BY_ID.get(plan.material ?? '')?.name ?? ''}`;
-    const where = plan.kind === 'roof' ? ' · roof' : plan.kind === 'footprint' ? '' : ` · storey ${plan.level + 1}`;
+    const where = plan.kind === 'roof' ? (plan.tiers || !b || b.levels === 1 ? ' · roof' : ` · roof over storey ${plan.level + 1}`)
+      : plan.kind === 'footprint' ? '' : ` · storey ${plan.level + 1}`;
     this.planBar.show({
       title: `Plan: ${areaCount(plan, ok)} · ${what}${where}`,
       count: ok,
@@ -1745,7 +1746,9 @@ export class UI {
       } else {
         lines.push(`${SIDE_NAMES[side]} side: no wall`);
       }
-      const floor = onRoof ? undefined : this.game.buildings.floor(level, pick.x, pick.y);
+      const slot = onRoof ? undefined : this.game.buildings.floor(level, pick.x, pick.y);
+      // A tier's roof at this storey's floor is said below, as a roof.
+      const floor = slot && floorKind(slot) !== 'roof' ? slot : undefined;
       if (floor) {
         // By its material's name, as the island names it (`build_material_def.name`): "Garden bed floor", "Plank floor".
         lines.push(`${floorSaid(floor)}${isDone(floor) ? '' : ` · ${Math.round(progressOf(floor) * 100)}% built`}`);
@@ -1753,11 +1756,13 @@ export class UI {
         const bedCrop = level > 0 ? this.game.cropAt(pick.x, pick.y, level) : undefined;
         if (bedCrop) lines.push(this.cropLine(bedCrop));
       }
-      // The roof: on Auto, and on its own level when that is pinned (`storeyview.ts`); not on a storey under it.
-      const roof = this.game.buildings.floor(b.levels, pick.x, pick.y);
-      if (pinned === null || onRoof) {
-        const shape = onRoof ? `${roofShapeDef(b).name.toLowerCase()} ` : '';
-        if (roof) lines.push(`${shape}${roof.material === GLASS_ROOF.id ? 'glass roof' : 'roof'}${isDone(roof) ? '' : ` · ${Math.round(progressOf(roof) * 100)}% built`}`);
+      // The roof: on Auto, and on its own level when that is pinned (`storeyview.ts`); not on a storey under it. A tier's
+      // roof is at its own level, over its own top storey, and says which.
+      const roof = this.game.buildings.roofOn(pick.x, pick.y);
+      if (pinned === null || onRoof || (roof && roof.level === pick.level)) {
+        const shape = pinned !== null ? `${roofShapeDef(b).name.toLowerCase()} ` : '';
+        const over = b.levels > 1 && roof ? ` over storey ${roof.level}` : '';
+        if (roof) lines.push(`${shape}${roof.material === GLASS_ROOF.id ? 'glass roof' : 'roof'}${over}${isDone(roof) ? '' : ` · ${Math.round(progressOf(roof) * 100)}% built`}`);
         else if (onRoof) lines.push('roof: not planned');
       }
     }
@@ -3328,10 +3333,9 @@ export class UI {
     const at: Target = { kind: 'anvil', id: a.id };
     const entries: MenuItem[] = [];
     const smithDef = ACTION_BY_ID.get('smith');
-    // Castings poured at the smelter, each named for the piece it is of, and
-    // the metal for coins: from the pack, a bag, or a store within reach.
+    // Castings poured at the smelter, each named for the piece it is of: from
+    // the pack, a bag, or a store within reach.
     const castings = g.stockChoices(isCasting, g.forgeReach());
-    const lumps = g.stockChoices((it) => isMetalStock(it.id), g.forgeReach());
     // Pieces to a filling, and more of them for a Smith's Nail Maker.
     const per = (def: { makes: string; per?: number }): number => g.perk(`count:${def.makes}`, def.per ?? 1);
     if (smithDef) {
@@ -3355,27 +3359,6 @@ export class UI {
               };
             })
           : undefined,
-      });
-    }
-    // Coins: a die in the pack, and a lump of gold named off the menu.
-    const strikeDef = ACTION_BY_ID.get('strike_coins');
-    const die = g.inventory.find('coin_die');
-    const precious = lumps.filter((s) => COIN_METALS.includes(metalOfBar(s.item.id)?.id ?? ''));
-    if (strikeDef) {
-      entries.push({
-        label: 'Strike coins',
-        disabled: !die || !precious.length,
-        hint: !die ? 'Need a coin die.' : !precious.length ? COIN_REFUSAL : undefined,
-        note: die ? `${Math.ceil((100 - die.dmg) / DIE_WEAR)} strikes left in the die` : undefined,
-        children:
-          die && precious.length
-            ? precious.map((s) => {
-                const lump = s.item;
-                const t: Target = { ...at, itemUid: lump.uid };
-                const reason = strikeDef.check?.(t, g) ?? null;
-                return { label: metalLabel(lump), note: storedIn(s), hint: reason ?? undefined, disabled: !!reason, onSelect: () => g.requestAction(strikeDef, t) };
-              })
-            : undefined,
       });
     }
     const up = ACTION_BY_ID.get('pick_up_anvil');
@@ -4074,7 +4057,7 @@ export class UI {
     // A pinned storey's own menu, on its roof's level: the roof, its railing and a storey more, and nothing else.
     if (storey !== undefined && storey >= b.levels) {
       base.level = b.levels - 1;
-      entries.push(...roofEntries(g, b, base, act, item, build, (plan) => this.startPlanArea(plan)));
+      entries.push(...roofEntries(g, b, base, act, item, build, (plan) => this.startPlanArea(plan), b.levels - 1));
       entries.push(...frameRoofEntries(g, pick, b));
       entries.push(item(act('add_floor'), base));
       entries.push(...this.undoRows());
@@ -4176,6 +4159,8 @@ export class UI {
     const deck = level === 0 && bld.onPiers(x, y);
     if (flightDown) {
       // Below.
+    } else if (floor && floorKind(floor) === 'roof') {
+      // A tier's roof at this storey's floor: its own rows, with the roof's (`roofEntries`).
     } else if (floor) {
       const what = deck ? 'deck' : floorKind(floor) === 'floor' && level === 0 ? 'flooring' : floorName(floor);
       if (!isDone(floor)) entries.push(build(act('build_floor'), base, `Build ${what} · needs ${describeNeeds(floor, materialName)}`, floor));
@@ -4253,10 +4238,19 @@ export class UI {
     if (pinned !== null && level + 1 < b.levels && !bld.floor(level + 1, x, y)) entries.push(...stairsUpEntries(g, base, level + 1, side,
       (at, lv, material, kind, sd, hand) => this.startPlacingStairs(at, lv, material, kind, sd, false, hand)));
     if (storey === undefined) entries.push(...cellarEntries(g, base, side, (material, kind, hand) => this.startPlacingStairs(base, 0, material, kind, side, true, hand)));
-    // Pinned, the storeys are the top storey's work, and the roof its own level's (`storeyview.ts`); the top storey plans the roof over it.
+    /*
+     * The roof. On Auto, the tile's own, over its own top storey: a tier's under storey 2's eaves, storey 2's over it.
+     * Pinned, the roof over this storey on this tile; or the roof at this storey's floor, a tier's under it, which is
+     * drawn on this storey and worked from it (`storeyview.ts`).
+     */
+    const area = (plan: AreaPlan): void => this.startPlanArea(plan);
+    if (pinned === null) entries.push(...roofEntries(g, b, base, act, item, build, area));
+    else {
+      const on = bld.roofOn(x, y);
+      entries.push(...roofEntries(g, b, base, act, item, build, area, on && level >= 1 && on.level === level ? level - 1 : level));
+    }
+    // Pinned, the storeys are the top storey's work (`storeyview.ts`).
     if (pinned === null || level === b.levels - 1) {
-      if (pinned === null) entries.push(...roofEntries(g, b, base, act, item, build, (plan) => this.startPlanArea(plan)));
-      else entries.push(...roofEntries(g, b, base, act, item, build, undefined, true));
       entries.push(item(act('add_floor'), base));
       if (b.levels > 1) entries.push(item(act('remove_storey'), base));
     }
@@ -4309,20 +4303,27 @@ function stairsUpEntries(g: Game, base: Extract<Target, { kind: 'tile' }>, level
 }
 
 /**
- * The roof's rows for a tile of a building: building or taking out the one there, or planning one. `planOnly`, on the
- * top storey's own menu while it is pinned: Plan roof on a tile with none, greyed with the refusal when there is one.
+ * The roof's rows for a tile of a building: building or taking out the one there, or planning one, greyed with the
+ * refusal when there is one. `over` (a pinned storey's menu): the roof over that storey on this tile, and no Plan roof
+ * where the tile has a roof already or a storey over that one. Without it (Auto): the tile's own roof, over its own top
+ * storey (`Buildings.roofLevelFor`), its job naming no storey so the island finds the same one.
  */
 function roofEntries(g: Game, b: Building, base: Extract<Target, { kind: 'tile' }>, act: (id: string) => ActionDef,
   item: (def: ActionDef, target: Target, label?: string) => MenuItem,
   build: (def: ActionDef, target: Target, label: string, bill: Bill) => MenuItem,
-  area?: (plan: AreaPlan) => void, planOnly = false): MenuItem[] {
+  area?: (plan: AreaPlan) => void, over?: number): MenuItem[] {
   const bld = g.buildings;
   const { x, y } = base;
   const entries: MenuItem[] = [];
   const plan = act('plan_floor');
-  const roof = bld.floor(b.levels, x, y);
-  const roofTarget: Target = { ...base, floorKind: 'roof' };
-  if (roof && planOnly) return entries;
+  const { level: _named, ...auto } = base;
+  const at: Extract<Target, { kind: 'tile' }> = over === undefined ? auto : { ...base, level: over };
+  const level = bld.roofLevelFor(b, at);
+  const slot = bld.floor(level, x, y);
+  const roof = slot && floorKind(slot) === 'roof' ? slot : undefined;
+  const roofTarget: Target = { ...at, floorKind: 'roof' };
+  const said = b.levels > 1 ? `over storey ${level}` : undefined;
+  if (!roof && over !== undefined && (bld.roofOn(x, y) || bld.roofStoreyAt(b, x, y) > over)) return roofAreaRows(g, b, base, area, over);
   if (roof) {
     if (!isDone(roof)) entries.push(build(act('build_floor'), roofTarget, `Build roof · needs ${describeNeeds(roof, materialName)}`, roof));
     entries.push(item(act('remove_floor'), roofTarget, 'Remove roof'));
@@ -4333,7 +4334,7 @@ function roofEntries(g: Game, b: Building, base: Extract<Target, { kind: 'tile' 
     const glassWhy = cellarReason(g, plan, glassTarget);
     // Over a field it is the one roof there is (`glasshouse.ts`): the rest are offered, and say why not.
     const glassOnly = probe === FIELD_GLASS_ONLY;
-    if (probe && (!glassOnly || glassWhy)) entries.push({ label: 'Plan roof', hint: (glassOnly ? glassWhy : probe) ?? undefined, disabled: true });
+    if (probe && (!glassOnly || glassWhy)) entries.push({ label: 'Plan roof', note: said, hint: (glassOnly ? glassWhy : probe) ?? undefined, disabled: true });
     else {
       /** A roof's materials, glass among them, in a shape the first tile chooses, or in the building's. */
       const roofRows = (shape?: RoofShape): MenuItem[] => {
@@ -4362,6 +4363,7 @@ function roofEntries(g: Game, b: Building, base: Extract<Target, { kind: 'tile' 
       };
       entries.push({
         label: 'Plan roof',
+        note: said,
         /*
          * The first tile of a roof chooses its shape as well: gabled, hipped,
          * or flat, which is a terrace, and which glass is not. After that the
@@ -4371,26 +4373,27 @@ function roofEntries(g: Game, b: Building, base: Extract<Target, { kind: 'tile' 
       });
     }
   }
-  entries.push(...roofAreaRows(g, b, base, area));
+  entries.push(...roofAreaRows(g, b, base, area, over));
   return entries;
 }
 
 /**
  * The whole roof at once: every tile of it not yet planned, in one material and, for the first, one shape, laid
  * out before it is asked for with its totals (`planarea.ts`). Offered while two or more tiles are left to plan.
+ * On Auto, every tier, each tile over its own top storey; pinned (`over`), the tier of that storey alone.
  */
-function roofAreaRows(g: Game, b: Building, base: Extract<Target, { kind: 'tile' }>, area?: (plan: AreaPlan) => void): MenuItem[] {
+function roofAreaRows(g: Game, b: Building, base: Extract<Target, { kind: 'tile' }>, area?: (plan: AreaPlan) => void, over?: number): MenuItem[] {
   if (!area) return [];
   const bld = g.buildings;
-  const left = bld.roofTiles(b).filter(([x, y]) => !bld.floor(b.levels, x, y)).length;
+  const left = bld.roofTiles(b).filter(([x, y]) => !bld.roofOn(x, y) && (over === undefined || bld.roofStoreyAt(b, x, y) === over)).length;
   if (left < 2) return [];
   const rows = (shape?: RoofShape): MenuItem[] => [...MATERIALS.filter((m) => takesAs(m, { floor: 'roof' })), GLASS_ROOF].map((m) => ({
     label: m.name,
     note: `${describeNeeds(floorBill(m.id, 'roof', shape ?? roofShapeOf(b)), materialName)} each`,
-    onSelect: () => area({ kind: 'roof', buildingId: b.id, level: b.levels - 1, material: m.id, roofShape: shape, anchor: { x: base.x, y: base.y } }),
+    onSelect: () => area({ kind: 'roof', buildingId: b.id, level: over ?? b.levels - 1, tiers: over === undefined, material: m.id, roofShape: shape, anchor: { x: base.x, y: base.y } }),
   }));
   return [{
-    label: 'Plan roof: every tile',
+    label: over === undefined || b.levels === 1 ? 'Plan roof: every tile' : `Plan roof: every tile (over storey ${over + 1})`,
     note: `${left} tiles`,
     children: b.roof ? rows() : ROOF_SHAPES.map((r) => ({ label: r.name, note: r.note, children: rows(r.id as RoofShape) })),
   }];

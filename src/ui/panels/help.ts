@@ -153,7 +153,7 @@ import { MARK_CAP } from '../../game/marks';
 import { TOOL_JOBS } from '../../game/jobtools';
 import { MATERIAL_BY_ID, OBSIDIAN, type MaterialDef } from '../../game/materials';
 import { calmCap, CHOOSE_AT, PATH_LIST, PATH_TIER_AT, PICKS_PER_TIER, picksOf, SIT_CALM, SIT_REST, SIT_WORTH } from '../../game/meditation';
-import { COIN_METALS, COIN_QL_WEIGHT, COINS_PER_LUMP, coinPurity, INGOT_LUMPS, INGOT_WEIGHT, METAL_BY_ID, METALS, MOULD_BY_ID, MOULD_SKILL, MOULDS, NAILS_PER_LUMP, PRECIOUS_METALS, RARE_METALS, SMITH_TOOL } from '../../game/metal';
+import { COINS_PER_LUMP, INGOT_LUMPS, INGOT_WEIGHT, METAL_BY_ID, METALS, MOULD_BY_ID, MOULD_SKILL, MOULDS, NAILS_PER_LUMP, PRECIOUS_METALS, RARE_METALS, SMITH_TOOL } from '../../game/metal';
 import { COIN_WORTH } from '../../game/money';
 import { ORDER_LIFE } from '../../game/orders';
 import { KEPT_BEST, NUTRIENT_HOURS, NUTRIENT_NAMES, NUTRIENTS, TABLE_BEST } from '../../game/nutrition';
@@ -187,12 +187,14 @@ import { article, capital, finePercent, listed, listedOr, percent, timeWords } f
 import { bridgeLevel, CASTING_SKILLS, CRAFT_FROM, CRAFT_PER, craftLevel, FORMULA_GATE, FORMULA_TWO_ELEMENTS, gemLevel, METAL_GATE, POUR_GATE_SAID, SMELT_SKILL } from '../../game/craftgates';
 import { TREASURE_TIERS } from '../../game/treasure';
 import {
-  CRAFT_GATE_SAID, cropSeed, GATE_LADDER, GATE_STOPS, GATED_ITEMS, GATED_SKILLS, gateOf, identifySaid, SEAM_GATE, seenName, skillGateRefusal, SKILL_GATES, UNIDENTIFIED_METAL,
+  CRAFT_GATE_SAID, CROP_GATE, cropSeed, GATE_LADDER, GATE_STOPS, GATED_ITEMS, GATED_SKILLS, gateOf, identifySaid, SEAM_GATE, seenName, skillGateRefusal, SKILL_GATES, UNIDENTIFIED_METAL,
   unlocksSaid, VEIN_UNREAD, type Viewer,
 } from '../../game/skillgates';
 
 /** Somebody at 1 in every skill, for the help's examples of what is unidentified. */
 const FRESH: Viewer = { skills: { get: () => 1 } };
+/** The help's unidentified seed: the lowest crop sown above farming 1 (`CROP_GATE`), by name. */
+const SEED_SHOWN = cropSeed(Object.entries(CROP_GATE).filter(([, lv]) => lv > 1).sort((a, b) => a[1] - b[1] || (a[0] < b[0] ? -1 : 1))[0][0]);
 import { FAIL_EXAMPLE_AT, FAIL_FACTORS, FAIL_LEAST, FAIL_WHY_JOBS, failFactor, failFactorSaid } from '../../game/failwhy';
 import {
   bossSays, garrisonSays, HOARD_SCALE, HOARD_SCALE_CAP, HOARD_SHARE, hoardBook, hoardSays, LAIR_ANNOUNCE, LAIR_KINDS, LAIR_LEASH, LAIR_MOVE_CLEARS, LAIR_MOVE_DAYS,
@@ -904,7 +906,7 @@ const lowerFirst = (t: string): string => (t ? `${t[0].toLowerCase()}${t.slice(1
 /** The things that are not wildermon, how far off they notice you, and how their weights add up. */
 const MONSTER_SORTS = Object.values(SPECIES).filter((s) => s.monster);
 const NOTICED = MONSTER_SORTS.map((s) => s.notice ?? HUNT_SIGHT).sort((a, b) => a - b);
-/** A hoard's deep metals: the ones nobody strikes a coin from. */
+/** A hoard's deep metals: all but silver and gold. */
 const HOARD_DEEP = HOARD_METALS.filter((id) => !PRECIOUS_METALS.some((m) => id === `${m}_lump`));
 /** The composite bow, the best of the wooden ones, and what a suit of scale takes. */
 const COMPOSITE = WEAPONS.find((w) => w.id === 'composite_bow') ?? WEAPONS[0];
@@ -1008,7 +1010,7 @@ const DEED_ACROSS = DEED_RADIUS * 2 + 1;
 /** What a gold coin is worth in silver, and a handful of small change for the example. */
 const GOLD = (COIN_WORTH.Gold ?? 0) / (COIN_WORTH.Silver ?? 1);
 const POCKET = 5;
-/** The metals out of the deep seams: the rare ones nobody strikes a coin from. */
+/** The metals out of the deep seams: the rare ones other than silver and gold. */
 const DEEP_METALS = [...RARE_METALS].filter((m) => !PRECIOUS_METALS.includes(m));
 /** A quality to show a hatchet at, and a helping at. */
 const HATCHET_QL = 40;
@@ -1721,16 +1723,16 @@ export function helpText(): string {
       ${FAIL_DAMAGE_SAID}, straight line between.</li>
       <li>Only the units it would have used: a pile's damage rises by that over its count. Reaching ${BROKEN_AT} damage: those units gone.</li>
       <li>Litre inputs: that damage as a share of the litres it would have taken, lost, to the whole litre; the vessel undamaged.</li>
-      <li>Every recipe with a skill check, smelting, alloys, cooking, kilns and glass included; the anvil, coins, brewing and dye recipes the same.
+      <li>Every recipe with a skill check, smelting, alloys, cooking, kilns and glass included; the anvil, brewing and dye recipes the same.
       Scrolls: their own rule (Enchanting).</li>
     </ul>
     <h4>What is at hand</h4>
     <ul>
       <li>Crafts and station work that use materials take from: pack, then bags on your back, then your stores within <b>${CRAFT_REACH} tiles</b>, nearest first.</li>
       <li>A run of goes started on a stack: the next stack of the same thing and wood or metal once it is used up; stops when none is left (${ranOutSaid(1, 'log', 'Pine')}), not on in another wood or metal.</li>
-      <li>At stations: mould or anvil metal, smelter ore and scrap, kiln clay, fuel for a campfire, smelter, kiln or oven, casting or coin metal at an anvil,
+      <li>At stations: mould or anvil metal, smelter ore and scrap, kiln clay, fuel for a campfire, smelter, kiln or oven, a casting at an anvil,
       improving stock, brew ingredients. Stacks in a store are marked with the store's name on the station's menu.</li>
-      <li>Tools must be carried (moulds, coin die, files and so on).</li>
+      <li>Tools must be carried (moulds, files and so on).</li>
       <li>Never taken from: a store behind a padlock you have no key to, one set down off your settlement by somebody else, a trash crate, a market stall,
       or anything put by. Carts, wagons and boats are anybody's store.</li>
       <li>Settings, <b>Crafting</b>: <i>Use stores within reach</i> unticked: pack and back bags only. <i>Keep rare materials out of crafting</i>: no automatic pick of a
@@ -1976,7 +1978,7 @@ export function helpText(): string {
       <li>Every mould: <b>${SKILL_BY_ID.get(MOULD_SKILL)?.name.toLowerCase()}</b>; QL = your ${SKILL_BY_ID.get(MOULD_SKILL)?.name.toLowerCase()}, not the sand's; pouring
       also trains ${SKILL_BY_ID.get(MOULD_SKILL)?.name.toLowerCase()}.</li>
       <li>Wears on every filling; <b>cannot be mended</b>; higher QL lasts more fillings.</li>
-      <li><b>${itemDef(SMITH_TOOL).name}</b> needed: firing a mould, pouring one, casting an anvil, smithing a casting, striking coins, fitting a padlock.</li>
+      <li><b>${itemDef(SMITH_TOOL).name}</b> needed: firing a mould, pouring one, casting an anvil, smithing a casting, fitting a padlock.</li>
       <li><b>Anvil mould</b>, poured at the smelter: an anvil of that metal from ${MOULD_BY_ID.get('anvil_mould')!.lumps} lumps; set down on ${ANVIL_SUBTILES * ANVIL_SUBTILES} spots of a tile.</li>
       <li>Other moulds, <b>poured at the smelter</b> in any metal: a <b>casting</b> (shovel head casting, nail casting…) out with the lumps.</li>
       <li>Pouring, a mould or an anvil: ${skillWord(MOULD_SKILL)} at the metal's level, ${METALS.map((m) => `${m.name.toLowerCase()} ${METAL_GATE[m.id]}`).join(', ')}. Smelting its ore: the same level in ${skillWord(SMELT_SKILL)}.</li>
@@ -2026,7 +2028,9 @@ export function helpText(): string {
       building work, <i>Plan staircase up</i> and <i>Build … up</i> (the staircase or ladder planned over it), furniture set down on it. Label <i>1st</i>, <i>2nd</i>…; click for <i>Auto</i> (every storey).
       <kbd>Page Up</kbd> / <kbd>Page Down</kbd> do the same.</li>
       <li>Pinned one above a building's top storey: its <b>roof</b>, alone. Unplanned roof tiles marked out; a pitched roof picked on its slopes, not walked onto;
-      its menu: the roof's work only. A storey under it: no roof drawn; the top storey's menu: <i>Plan roof</i> on that tile.</li>
+      its menu: the roof's work only. A storey under it: no roof drawn.</li>
+      <li>A tier's roof (over a lower storey beside a taller one): drawn, marked out and picked on the level it sits at, the next storey's. Any storey's menu:
+      <i>Plan roof</i> over that storey on a tile with no roof and no storey over it; the tier roof at its floor's level: <i>Build roof</i>, <i>Remove roof</i>.</li>
       <li>Once any cellar is dug: <i>Cellar</i>, below the ground floor: every nearby cellar as dug, buildings over them removed. Contents and people in a cellar
       show only to somebody in it, within their sight.</li>
       <li><b>◪</b>, <kbd>X</kbd> or the Settings box: <b>hides the walls facing you</b>; far walls stay. Always on while a storey is pinned.</li>
@@ -2052,16 +2056,19 @@ export function helpText(): string {
       <li>2nd storey: needs every side of the ground storey finished as a wall, or with a finished column at each end. 3rd and up: planned over a storey still going up. Max ${MAX_LEVELS} storeys.</li>
       <li>Actions go to the storey you are working on (<b>Work on storey N</b> on its menu).</li>
       <li><b>No plan</b>, storey ${NO_PLAN_FROM + 1} and up, on a bare outside side: no plan model drawn there. No tool, no materials. The side still counts as open
-      (next storey, roof, glasshouse). <b>Mark out</b>: the model back. Cleared by a wall planned on it, or the storey or building removed.</li>
+      (next storey, glasshouse). <b>Mark out</b>: the model back. Cleared by a wall planned on it, or the storey or building removed.</li>
       <li>A finished full-height wall with a wall of the storey above on the same side (once any of that wall's materials are in) cannot come down until that upper
       wall does, or a finished column stands at each end; likewise the last wall a jetty rests on. To turn one into a door: <b>Change wall</b>.</li>
       <li><b>Change wall</b> on a wall of a building: wall type, then material, at its bill; mallet. Finished wall: stands, shut and carrying, until the change is
       built (<b>Build change</b>, as Build wall); with the last material, the new wall. Still going up: replanned in place, new bill. Refused: fence, half wall or
       railing on a wall something rests on; a material lighter than the heaviest wall above, glass excepted; a counter with goods or takings; a padlocked portcullis. The standing
       type and material again: change dropped.</li>
-      <li>Roof: <b>Plan roof</b> tile by tile once the top storey's walls are done; neighbours join into ridges and hips. Any tile of the footprint, floor or not.
-      A tile over the ground storey with no floor: an open well, no walls asked on its sides. Every wall planned on the top storey: finished first.</li>
-      <li>Plans over an area, max ${PLAN_AREA_MOST} pieces: <b>Plan walls all round</b>, <b>Plan floor: every tile</b> (the storey shown), <b>Plan roof: every tile</b>;
+      <li>Roof: <b>Plan roof</b> on any tile of the footprint; no walls needed. Height: over the tile's top storey, the highest with a floor on the tile or a wall
+      on a side of it with no floor of that storey across; else over the ground storey. A storey pinned: over that storey. Neighbours at the same height join into ridges and hips;
+      each tier its own roof.</li>
+      <li>Roof refused: a roof on the tile already, at any height; under a floor or wall of a higher storey of the tile. A floor, staircase, ladder or wall on a roofed
+      tile at or over the roof: "Remove the roof first." A storey more: refused only while every tile is roofed, or a jetty is.</li>
+      <li>Plans over an area, max ${PLAN_AREA_MOST} pieces: <b>Plan walls all round</b>, <b>Plan floor: every tile</b> (the storey shown), <b>Plan roof: every tile</b> (every tier at its own height; a storey pinned: that tier);
       <b>Plan building over an area</b>, <b>Add an area to</b>, <b>Extend over an area</b> (rectangle to the cursor). Ghost of every piece first; red: refused.</li>
       <li>Plan bar: each material summed over the plan; Need, Carried, Stored (crates on its tiles, stores within building reach), Short. Plan or click: planned,
       walked to first. Esc or Cancel: dropped.</li>
@@ -2207,7 +2214,7 @@ export function helpText(): string {
       <li>Ground under it: nothing planned or planted; no bridge or aqueduct; corners not dug or raised.</li>
       <li>The last wall it rests on stays up until the jetty is removed or a finished column stands at each end of it.</li>
       <li>Removed only after the walls, railings and columns on it, the floor above and the roof over it are down.</li>
-      <li>Open to its storey, it <b>is part of that storey</b>: its open sides need a wall, railing or columns before the storey counts as closed for a 2nd storey or a roof.</li>
+      <li>Open to its storey, it <b>is part of that storey</b>: its open sides need a wall, railing or columns before the storey counts as closed for a 2nd storey.</li>
       <li><b>Plan roof over the jetty</b>: only on <b>walls or columns</b>; every side out from the storey needs a finished full-height wall, or at each end a finished column or
       a finished full-height wall's end (railings carry nothing). The refusal names the corner missing a column.</li>
       <li>Under a jetty roof: its wall stays until a column at each end carries the roof; a wall end that alone carries a side stays until a column stands on that corner;
@@ -2751,12 +2758,11 @@ export function helpText(): string {
     <ul>
       <li><b>A gold coin = ${GOLD} silver</b>. Prices are in silver; change comes in silver.</li>
       <li>Paying uses your largest coins first (${GOLD + 1} silver from a gold and ${POCKET} silver leaves ${POCKET - 1}).</li>
-      <li><b>Struck from ${COIN_METALS.join(' or ')} only</b>, ${COINS_PER_LUMP} per lump, at an anvil with a coin die in the pack. One lump spent a strike that comes off; a failure damages it by its QL (${FAIL_DAMAGE_SAID}).</li>
-      <li>After the smith's check, gold quality (QL): takes the die every time at QL ${QL_TOP}, ${percent(coinPurity(QL_TOP / 2))} at QL ${QL_TOP / 2}, ${percent(1 - COIN_QL_WEIGHT)} at the bottom; linear between.</li>
+      <li>Metal: ${COINS_PER_LUMP} coins to a lump (<b>Melt down</b>).</li>
       <li>Gold ore: only under the mountain of ${REGIONS.filter((R) => R.mountain?.includes('gold_ore')).map((R) => islandName(R.name)).join(' and ')}; never panned or in a hoard.</li>
       <li>Gold coins in the grass: a <b>foraging</b> action finds one one time in ${COIN_FIND_ONE_IN}, max ${COIN_FINDS_A_DAY} a day per person (daily reset (${hudHour(TREE_DAWN_UTC)} UTC) to the next).
       Your own foraging only, never a settlement worker's.</li>
-      <li>Silver coins: circulate and come back as change; none are struck.</li>
+      <li>Silver coins: circulate and come back as change.</li>
     </ul>
     <h4>Market</h4>
     <ul>
@@ -4031,18 +4037,18 @@ export function helpText(): string {
       <li>Under a thing's level in its skill: refused, greyed in the menu with the need (&ldquo;${skillGateRefusal('Willow', 'woodcutting', 12.4, gateOf('tree', 'willow')!.level)}&rdquo;).
       A worker skips it at its own level in that skill. Levels: ${GATE_LADDER.join(', ')}. Skills window: each skill's gates, ticked when met.</li>
       <li>Unidentified: ${listed([...new Set(GATED_ITEMS.map((x) => x.noun))].map((n) => `${n}s`))} under the level of their use, named
-      &ldquo;${seenName({ id: cropSeed('wemp') }, FRESH)}&rdquo;; tooltip &ldquo;${identifySaid({ id: cropSeed('wemp') }, FRESH)}&rdquo;
+      &ldquo;${seenName({ id: SEED_SHOWN }, FRESH)}&rdquo;; tooltip &ldquo;${identifySaid({ id: SEED_SHOWN }, FRESH)}&rdquo;
       Picked up, carried, stored and traded as any item.</li>
       <li>Recipe level: the ladder step at or below ${CRAFT_PER} × (difficulty − ${CRAFT_FROM}); no difficulty: ${craftLevel(undefined)}. Named: ${Object.entries(CRAFT_GATE_SAID).map(([id, g]) => `${itemDef(id).name} ${skillWord(g.skill)} ${g.level}`).join(', ')}.
       Formula scrolls by target: weapon, bow, armour, shield, tool, light ${FORMULA_GATE.melee}; jewellery, clothing, gear ${FORMULA_GATE.ring}; vessel, cart, store, furnace, station ${FORMULA_GATE.ship}; mixed elements ${FORMULA_TWO_ELEMENTS}.
       Relics and baubles: their restoring difficulty, the same rule.</li>
-      <li>Pouring a metal (Pour a mould, Cast an anvil; nail and ribbon smiths), in ${skillWord(MOULD_SKILL)}: a mined metal at its seam's mining level, but ${Object.entries(POUR_GATE_SAID).map(([id, lv]) => `${METAL_BY_ID.get(id)?.name.toLowerCase() ?? id} ${lv}`).join(', ')}; an alloy at its highest metal's
+      <li>Pouring a metal (Pour a mould, Cast an anvil; nail and ribbon smiths), in ${skillWord(MOULD_SKILL)}: a mined metal at its seam's mining level, but ${Object.entries(POUR_GATE_SAID).map(([id, lv]) => `${METAL_BY_ID.get(id)?.name.toLowerCase() ?? id} ${lv}`).join(', ')}; an alloy at the level of the recipe that mixes it
       (${METALS.filter((m) => !m.ore).map((m) => `${m.name.toLowerCase()} ${METAL_GATE[m.id]}`).join(', ')}). Forming the mould: its own recipe's level.</li>
       <li>The same level a metal: smelting its ore, in ${skillWord(SMELT_SKILL)} (Smelt; smelter workers and stokers); working its casting at the anvil, in the casting's own trade
       (${listed(CASTING_SKILLS.map(skillWord))}; nail and ribbon smiths).</li>
       <li>Bridges: a material bridge at its material's level; ${listed(Object.values(BRIDGES).filter((b) => !b.material).map((b) => `${b.name.toLowerCase()} ${bridgeLevel(b)}`))}, by difficulty. Planning, and adding to a plan; hod carriers at their own level.</li>
       <li>Stones in a circlet: ${listed(GEMS.slice().sort((a, b) => gemLevel(a) - gemLevel(b)).map((s) => `${s.name.toLowerCase()} ${gemLevel(s)}`))}, in ${skillWord('jewellery')}.</li>
-      <li>Treasure maps, read and dug up, in ${skillWord('digging')}: ${listed(TREASURE_TIERS.map((t) => `${t.name} ${gateOf('hoard', t.id)!.level}`))}; unidentified under it.</li>
+      <li>Treasure maps, dug up, in ${skillWord('digging')}: ${listed(TREASURE_TIERS.map((t) => `${t.name} ${gateOf('hoard', t.id)!.level}`))}; unidentified under it, still read.</li>
       <li>Veins: bare, always named; buried, &ldquo;${UNIDENTIFIED_METAL}&rdquo; under its mining level in prospecting; tooltip &ldquo;${VEIN_UNREAD}&rdquo;</li>
       <li>Walls, floors, roofs: the material's gate and the wall or floor type's, both in the material's skill (carpentry or masonry). Planning, and adding to a plan.</li>
       ${GATED_SKILLS.map((id) => `<li><b>${SKILL_BY_ID.get(id)?.name ?? id}</b> (${listed([...new Set(SKILL_GATES.filter((g) => g.skill === id).map((g) => GATE_STOPS[g.kind]))])}): ${unlocksSaid(id)}.</li>`).join('\n      ')}

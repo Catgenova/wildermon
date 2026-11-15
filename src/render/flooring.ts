@@ -1000,6 +1000,9 @@ function bedded(ink: string, a = 0.16): (g: Ctx, x: number, y: number, w: number
   };
 }
 
+/** A garden bed's frame, each rail as a share of the tile across: what a crop on it is drawn inside (`fieldBake`). */
+export const BED_RAIL = 0.11;
+
 /** What each material lays a floor in, and whether it runs one way. */
 /**
  * A garden bed (`gardenbed.ts`): a tile of tilled soil in its own frame of
@@ -1012,7 +1015,7 @@ function gardenBed(seed: number): HTMLCanvasElement {
   const [c, g] = canvas(S, S);
   const R = rand(seed);
   const T = FLOOR_PPT;
-  const rail = T * 0.11;
+  const rail = T * BED_RAIL;
   const soil = ['#4a3222', '#523826', '#45301f', '#583c28'];
   for (let j = 0; j < FLOOR_TILES; j++) {
     for (let i = 0; i < FLOOR_TILES; i++) {

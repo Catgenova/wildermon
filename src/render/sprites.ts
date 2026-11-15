@@ -1,24 +1,33 @@
 import type { BeastAct } from '../game/events';
 import { animationsOff } from '../engine/motion';
 import { hash2, mulberry32 } from '../world/noise';
-import { cushions, hashOf, type Cushion } from './ivy';
 import { inkOr } from './inks';
 import type { Look } from '../game/look';
 import { EMOTE_BY_ID, HOPS, emotePose } from '../game/emotes';
-import { drawBust, drawFigure, figureJoints, figureStance, shineOver, stillPose, viewOf, type FigurePose } from './figure';
+import { drawBust, drawFigure, figureJoints, figureStance, shineOver, stillPose, viewOf, viewOf as beastView, type FigurePose } from './figure';
 import { BUSH_DEFS, TREE_AGES, TREE_DEFS } from '../world/tiles';
-import { drawWildermon, drawWildermonPortrait, modelled, wildermonTop } from './wildermon';
+import { drawWildermon, drawWildermonPortrait, modelled, wildermonKind, wildermonTop } from './wildermon';
 import { BUSH_WOOD, bushYear, leafageOf } from './foliage';
 import { LIT, contact, wob } from './trees/kit';
 import { paintTree } from './trees';
-import { BUSH3D_SPECIES, bush3dSprite, forgetTrees3d, log3dSprite, STUMP3D_SPECIES, stump3dSprite, TREE3D_SPECIES, tree3dSprite, type TreeView } from './trees3d';
+import { BUSH3D_SPECIES, bush3dSprite, flatBush3d, flatStump3d, flatTree3d, forgetTrees3d, log3dSprite, STUMP3D_SPECIES, stump3dSprite, TREE3D_SPECIES, tree3dSprite, type TreeView } from './trees3d';
 import { inkOf, READ_BACK } from './ink';
 import { woodOf } from './trees3d/stump';
 import type { Season } from '../world/calendar';
-import { cropPlant, DAMP_SOIL, DORMANT_FRUIT, DORMANT_LEAF, DRY_SOIL, fieldBake, WATER_LINE, WEED } from './crops';
+import { cropPlant, DAMP_SOIL, DORMANT_FRUIT, DORMANT_LEAF, DRY_SOIL, fieldBake, ripeShows, WATER_LINE, WEED } from './crops';
+import { BED_RAIL } from './flooring';
 import { RIPE } from '../game/farming';
 import { SACK_EYE, sackModel, sackSize } from './kit/sack';
 import { layKitModel } from './kitpieces';
+import { storeCrateModel } from './kit/storecrate';
+import { eyeOf } from './runestone';
+import { VIEWS } from './view';
+import { HALF_H, HALF_W } from './iso';
+import { SPECIES, type SpeciesDef } from '../game/creatures';
+import { corpseSpecies } from '../game/butcher';
+import type { Item } from '../game/items';
+import { beastInk, drawLying, kitOf, lyingExtent, paletteFor, type Kind } from './beasts';
+import type { Palette } from './figure';
 
 /** A pre-rendered sprite. Sizes are in zoom-1 pixels; the canvas is drawn at SPRITE_SCALE for crispness. */
 export interface Sprite {
@@ -30,6 +39,8 @@ export interface Sprite {
   ay: number;
   /** A tree or a bush drawn as a solid (`./trees3d`): a bake of one view of it, which its tile's pictures follow from bake to bake. */
   solid?: boolean;
+  /** Stood on the middle of its tile with its foot at the model's, as a solid is: a tree, bush or stump drawn flat (`flatTree3d`). */
+  centred?: boolean;
   /** Where in it there is anything, as `inkOf` reads it, when that is already known. */
   ink?: [number, number, number, number];
 }
@@ -65,6 +76,7 @@ export const spriteScaleNow = (): number => SPRITE_SCALE;
  * renderer; does nothing at all unless the step has actually changed.
  */
 export function spriteScaleFor(zoom: number): void {
+  newSpent = 0;
   let want = SPRITE_STEPS[0];
   for (const step of SPRITE_STEPS) {
     // A nudge past the step going up and a nudge under it coming back down,
@@ -129,11 +141,6 @@ function makeSprite(w: number, h: number, ax: number, ay: number, draw: (ctx: Ca
   // A tree's or a bush's, whose pictures are cut to where there is anything in it (`Renderer.treePicture`): read here, off a canvas in memory, not later off the graphics chip.
   if (inked) spr.ink = inkOf(canvas);
   return spr;
-}
-
-/** The same, for everything that is not a tree. */
-function shadow(ctx: CanvasRenderingContext2D, x: number, y: number, rx: number, ry: number): void {
-  contact(ctx, x, y, rx, ry);
 }
 
 /**
@@ -614,11 +621,11 @@ export function forgetTrees(): void {
  * look the season does not touch is the one picture all year.
  */
 export function treeSprite(species: number, variant: number, season: Season = 'summer', day = 1, at?: TreeView): Sprite {
-  // A species drawn as a solid, seen from where the camera is and lit as the hour has it.
-  // None yet, and none to stand in: drawn flat this frame.
-  if (at && TREE3D_SPECIES.has(species)) {
-    const solid = tree3dSprite(species, variant, season, day, at, SPRITE_SCALE);
-    if (solid) return solid;
+  // A species drawn as a solid, seen from where the camera is and lit as the hour has it; with the low-end graphics, or seen
+  // from nowhere, the same solid in one view (`flatTree3d`).
+  if (TREE3D_SPECIES.has(species)) {
+    const solid = at && !at.flat ? tree3dSprite(species, variant, season, day, at, SPRITE_SCALE) : null;
+    return solid ?? flatTree3d(species, variant, season, day, at ?? null, SPRITE_SCALE);
   }
   const look = leafageOf(species, variant, season, day);
   const key = `${SPRITE_SCALE}|tree:${species}:${variant}${look.key ? `:${look.key}` : ''}`;
@@ -638,10 +645,9 @@ export function treeSprite(species: number, variant: number, season: Season = 's
  * hour has it, with its season's moss and snow.
  */
 export function stumpSprite(species: number, season: Season = 'summer', day = 1, at?: TreeView): Sprite {
-  // None yet, and none to stand in: drawn flat this frame.
-  if (at && STUMP3D_SPECIES.has(species)) {
-    const solid = stump3dSprite(species, season, day, at, SPRITE_SCALE);
-    if (solid) return solid;
+  if (STUMP3D_SPECIES.has(species)) {
+    const solid = at && !at.flat ? stump3dSprite(species, season, day, at, SPRITE_SCALE) : null;
+    return solid ?? flatStump3d(species, season, at ?? null, SPRITE_SCALE);
   }
   const key = `${SPRITE_SCALE}|stump:${species}`;
   let spr = cache.get(key);
@@ -691,10 +697,9 @@ export function stumpSprite(species: number, season: Season = 'summer', day = 1,
  * solid is seen from where the camera is and lit as the hour has it.
  */
 export function bushSprite(species: number, season: Season = 'summer', day = 1, at?: TreeView): Sprite {
-  // None yet, and none to stand in: drawn flat this frame.
-  if (at && BUSH3D_SPECIES.has(species)) {
-    const solid = bush3dSprite(species, season, day, at, SPRITE_SCALE);
-    if (solid) return solid;
+  if (BUSH3D_SPECIES.has(species)) {
+    const solid = at && !at.flat ? bush3dSprite(species, season, day, at, SPRITE_SCALE) : null;
+    return solid ?? flatBush3d(species, season, day, at ?? null, SPRITE_SCALE);
   }
   const def = BUSH_DEFS[species];
   const look = bushYear(def, species, season, day);
@@ -757,284 +762,197 @@ export function pileSprite(size = 1): Sprite {
   return spr;
 }
 
+/** How far a dead body's colours go toward a dull mauve: its own coat and marks still, gone over. */
+const DEAD_DULL = 0.2;
+const DEAD_GREY: [number, number, number] = [170, 154, 164];
+/** How far its shade on the ground reaches past the body, either way. */
+const SHADE_K = 0.9;
+const deadPalettes = new Map<string, Palette>();
+/** A kind's palette dead: every colour of it a step toward a dull mauve. */
+function deadPalette(key: string, kind: Kind, colors: [string, string]): Palette {
+  const k = `${key}|${colors[0]}|${colors[1]}`;
+  let pal = deadPalettes.get(k);
+  if (!pal) {
+    const live = paletteFor(key, kind, colors);
+    pal = {} as Palette;
+    for (const m of Object.keys(live) as Array<keyof Palette>) {
+      const c = live[m];
+      pal[m] = [c[0] + (DEAD_GREY[0] - c[0]) * DEAD_DULL, c[1] + (DEAD_GREY[1] - c[1]) * DEAD_DULL, c[2] + (DEAD_GREY[2] - c[2]) * DEAD_DULL];
+    }
+    deadPalettes.set(k, pal);
+  }
+  return pal;
+}
+
+/** A carcass's facing on the screen: its own way round on the ground (`facing`, an eighth of a turn each) as the camera's `turn` sees it. */
+export function carcassFacing(facing: number, turn: number): number {
+  const { cos, sin } = VIEWS[((turn % 8) + 8) % 8];
+  const a = (facing * TAU) / 8, dx = Math.sin(a), dy = Math.cos(a);
+  const u = dx * cos + dy * sin, v = dy * cos - dx * sin;
+  return facingOf((u - v) * HALF_W, (u + v) * HALF_H);
+}
+
 /**
- * A carcass on the ground: its hide heaped up in folds with a leg of it hanging
- * out, ribs standing up out of the heap, the skull against it and the long
- * bones crossed in front. One for every kind, drawn the other way round on
- * alternate tiles. With anything else lying there too, the heap sits behind.
+ * A carcass on the ground: the body of the kind it was, at the stage it died
+ * at (`corpseSpecies`, `corpseKind`), in its first variant's coat gone dull,
+ * lying on its side with its eyes shut and its legs out (`lyingBones`), at
+ * its facing on the screen (`carcassFacing`). With anything else lying there
+ * too, the sack of it (`kit/sack.ts`) behind. Nothing while its line is still
+ * on its way: the sack stands in, and is not kept.
  */
-export function carcassSprite(flip: boolean, heap: boolean): Sprite {
-  const key = `${SPRITE_SCALE}|carcass|${flip ? 1 : 0}|${heap ? 1 : 0}`;
+export function carcassSprite(species: string | undefined, stage: number, facing: number, heap = -1): Sprite {
+  const key = `${SPRITE_SCALE}|carcass|${species ?? ''}|${stage}|${facing}|${heap}`;
   let spr = cache.get(key);
   if (spr) return spr;
-  spr = makeSprite(48, 34, 24, 30, (ctx) => {
-    const bx = 24;
-    const by = 30;
-    if (flip) {
-      ctx.translate(bx * 2, 0);
-      ctx.scale(-1, 1);
+  const def = species ? SPECIES[species] : undefined;
+  const m = def && modelled(def.id) ? wildermonKind(def.id, stage) : null;
+  if (!m || !def) return pileSprite(Math.max(0, heap));
+  // This frame's share of new pictures spent (`NEW_MS`): the same body at another facing stands in if there is one, else the sack.
+  if (newSpent >= NEW_MS) {
+    for (let f = 1; f < 8; f++) {
+      const other = cache.get(`${SPRITE_SCALE}|carcass|${species}|${stage}|${(facing + f) % 8}|${heap}`);
+      if (other) return other;
     }
-    const ink = '#3a2a1c';
-    const bone = '#ece3cc';
-    const boneShade = '#bdb093';
-    const fur = '#8a5b3b';
-    const furDark = '#5f3c25';
-    const furLight = '#ab7750';
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    const stroke2 = (draw: () => void, w: number, colour: string): void => {
-      ctx.beginPath();
-      draw();
-      ctx.lineWidth = w + 1.5;
-      ctx.strokeStyle = ink;
-      ctx.stroke();
-      ctx.lineWidth = w;
-      ctx.strokeStyle = colour;
-      ctx.stroke();
-    };
-    const knobbed = (a: [number, number], b: [number, number], w: number, colour = bone): void => {
-      stroke2(() => {
-        ctx.moveTo(a[0], a[1]);
-        ctx.lineTo(b[0], b[1]);
-      }, w, colour);
-      const n = Math.hypot(b[0] - a[0], b[1] - a[1]);
-      const px = (-(b[1] - a[1]) / n) * w * 0.42;
-      const py = ((b[0] - a[0]) / n) * w * 0.42;
-      for (const [x, y] of [a, b]) {
-        ctx.beginPath();
-        ctx.arc(x + px, y + py, w * 0.7, 0, TAU);
-        ctx.arc(x - px, y - py, w * 0.7, 0, TAU);
-        ctx.fillStyle = colour;
-        ctx.fill();
-        ctx.lineWidth = 0.9;
-        ctx.strokeStyle = ink;
-        ctx.stroke();
-      }
-    };
+    return pileSprite(Math.max(0, heap));
+  }
+  const t0 = performance.now();
+  try {
+    return bakeCarcass(key, def, m, facing, heap);
+  } finally {
+    newSpent += performance.now() - t0;
+  }
+}
 
-    if (heap) {
-      // What else lies here, a small heap behind the carcass.
+/**
+ * Milliseconds a frame may spend drawing new carcasses and crates, and what it has spent: a hunting ground or a storage
+ * yard come into view, or the camera turned over one, drew every one of them in the one frame. Past it, another picture
+ * of the same thing stands in until a later frame draws its own.
+ */
+const NEW_MS = 6;
+let newSpent = 0;
+
+function bakeCarcass(key: string, def: SpeciesDef, m: { key: string; kind: Kind }, facing: number, heap: number): Sprite {
+  const kind = m.kind;
+  const kit = kitOf(m.key, kind, 1);
+  const pal = deadPalette(m.key, kind, def.variants[0]);
+  const size = kind.size ?? 1;
+  const e = lyingExtent(kind, kit, facing);
+  const view = beastView(facing);
+  const P = 3;
+  // The sack behind it, up and to the left of its middle, clear of a small body and half way out along a big one.
+  const sack = heap >= 0 ? sackModel(heap) : null;
+  const sb = sack ? layKitModel(null, sack, SACK_EYE).bounds : null;
+  const sackAt: [number, number] = [Math.min(-7, e.x0 * size * 0.6), -6];
+  let x0 = e.x0 * size - P, y0 = e.y0 * size - P, x1 = e.x1 * size + P, y1 = Math.max(e.y1 * size, 0) + P + 2;
+  // Its shade on the ground: an ellipse the length and breadth of it as it lies, as the screen has it.
+  const [hx, hy] = [e.half[0] * SHADE_K, e.half[1] * SHADE_K];
+  for (let i = 0; i < 16; i++) {
+    const a = (i / 16) * TAU, gx = Math.cos(a) * hx, gy = Math.sin(a) * hy;
+    const px = (gx * view.ex[0] + gy * view.ey[0]) * size, py = (gx * view.ex[1] + gy * view.ey[1]) * size;
+    x0 = Math.min(x0, px - 1); x1 = Math.max(x1, px + 1); y0 = Math.min(y0, py - 1); y1 = Math.max(y1, py + 1);
+  }
+  if (sb) {
+    x0 = Math.min(x0, sackAt[0] + sb[0]); y0 = Math.min(y0, sackAt[1] + sb[1]);
+    x1 = Math.max(x1, sackAt[0] + sb[2]); y1 = Math.max(y1, sackAt[1] + sb[3]);
+  }
+  x0 = Math.floor(x0); y0 = Math.floor(y0); x1 = Math.ceil(x1); y1 = Math.ceil(y1);
+  const spr = makeSprite(x1 - x0, y1 - y0, -x0, -y0, (ctx) => {
+    ctx.translate(-x0, -y0);
+    if (sack) {
       ctx.save();
-      ctx.translate(bx - 13, by - 10);
-      ctx.scale(0.6, 0.6);
-      ctx.fillStyle = '#8a6a42';
-      ctx.beginPath();
-      ctx.moveTo(-9, 0);
-      ctx.quadraticCurveTo(-10, -12, -3, -14);
-      ctx.quadraticCurveTo(1, -18, 4, -14);
-      ctx.quadraticCurveTo(11, -11, 9, 0);
-      ctx.closePath();
-      ctx.fill();
-      ctx.lineWidth = 1.6;
-      ctx.strokeStyle = ink;
-      ctx.stroke();
-      ctx.fillStyle = '#5e4630';
-      ctx.fillRect(-3, -15, 7, 2.5);
+      ctx.translate(sackAt[0], sackAt[1]);
+      layKitModel(ctx, sack, SACK_EYE);
       ctx.restore();
     }
-    shadow(ctx, bx, by - 3, 17, 5);
-
-    // The ribs at the back, standing up out of the heap and curving over towards the front.
-    for (const [x, h, lean] of [[-5, 12, 3.2], [-1.5, 13.5, 3.6], [2, 12.5, 3.4], [5.2, 10.5, 2.8]] as const) {
-      stroke2(() => {
-        ctx.moveTo(bx + x - 1, by - 8);
-        ctx.bezierCurveTo(bx + x - 1.5, by - 8 - h, bx + x + lean + 1.5, by - 8 - h * 0.95, bx + x + lean, by - 8 - h * 0.45);
-      }, 1.6, x === 2 ? boneShade : bone);
-    }
-
-    // The hide, heaped: a low mound of fur with folds in it, and a leg of it lying out on the ground to the left.
-    const mound = (): void => {
-      ctx.beginPath();
-      ctx.moveTo(bx - 14, by - 2);
-      ctx.quadraticCurveTo(bx - 16, by - 7, bx - 11, by - 9.5);
-      ctx.quadraticCurveTo(bx - 7, by - 13, bx - 1, by - 11.5);
-      ctx.quadraticCurveTo(bx + 4, by - 14, bx + 8.5, by - 10.5);
-      ctx.quadraticCurveTo(bx + 13.5, by - 9, bx + 13, by - 4);
-      ctx.quadraticCurveTo(bx + 12, by - 0.5, bx + 5, by - 0.2);
-      ctx.quadraticCurveTo(bx - 4, by + 0.6, bx - 14, by - 2);
-      ctx.closePath();
-    };
-    // The leg, out under the mound.
-    ctx.beginPath();
-    ctx.moveTo(bx - 12, by - 3.5);
-    ctx.quadraticCurveTo(bx - 18, by - 2.5, bx - 21.5, by - 0.5);
-    ctx.lineTo(bx - 21, by + 1.6);
-    ctx.quadraticCurveTo(bx - 16, by + 0.8, bx - 10, by);
-    ctx.closePath();
-    ctx.fillStyle = furDark;
-    ctx.fill();
-    ctx.lineWidth = 1.1;
-    ctx.strokeStyle = ink;
-    ctx.stroke();
-    mound();
-    ctx.fillStyle = fur;
-    ctx.fill();
-    ctx.lineWidth = 1.2;
-    ctx.strokeStyle = ink;
-    ctx.stroke();
+    // Its shade on the ground under it, the length and breadth of it as it lies, cool rather than dark.
     ctx.save();
-    mound();
-    ctx.clip();
-    ctx.fillStyle = 'rgba(40,20,8,0.3)';
-    ctx.beginPath();
-    ctx.ellipse(bx + 6, by + 1, 13, 6, -0.2, 0, TAU);
-    ctx.fill();
-    ctx.fillStyle = furLight;
-    ctx.beginPath();
-    ctx.ellipse(bx - 6, by - 9.5, 5.5, 2, -0.3, 0, TAU);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(bx + 3.5, by - 11, 4, 1.5, 0.25, 0, TAU);
-    ctx.fill();
-    // Folds.
-    ctx.strokeStyle = furDark;
-    ctx.lineWidth = 0.9;
-    for (const [x0, y0, cx, cy, x1, y1] of [[-11, -5, -6, -8, -1, -6.5], [-2, -3, 3, -7, 8, -6], [-8, -1.5, -3, -3.5, 2, -2]]) {
-      ctx.beginPath();
-      ctx.moveTo(bx + x0, by + y0);
-      ctx.quadraticCurveTo(bx + cx, by + cy, bx + x1, by + y1);
-      ctx.stroke();
-    }
-    ctx.restore();
-    // Tufts of fur along the top and at the foot of it.
-    ctx.strokeStyle = furLight;
-    ctx.lineWidth = 0.8;
-    for (const [x, y, dx, dy] of [[-12, -9, -1, -1.2], [-6, -12, -0.4, -1.4], [-0.5, -11.8, 0.4, -1.4], [6, -11.6, 0.8, -1.2], [12.6, -6, 1.4, -0.4], [-17, -1.2, -0.6, 1.1], [-20, 0.6, -0.8, 1]]) {
-      ctx.beginPath();
-      ctx.moveTo(bx + x, by + y);
-      ctx.lineTo(bx + x + dx, by + y + dy);
-      ctx.stroke();
-    }
-
-    // The skull, set down against the right of the heap, its snout to the ground: two sockets, a long face, the jaw
-    // lying open under it.
+    ctx.scale(size, size);
     ctx.save();
-    ctx.translate(bx + 13, by - 6);
-    ctx.rotate(0.35);
-    stroke2(() => {
-      ctx.moveTo(-2.2, 3.6);
-      ctx.quadraticCurveTo(2, 6.2, 6.6, 5);
-    }, 1.2, boneShade);
-    ctx.fillStyle = bone;
-    ctx.strokeStyle = ink;
-    ctx.lineWidth = 1.05;
+    ctx.transform(view.ex[0], view.ex[1], view.ey[0], view.ey[1], 0, 0);
+    ctx.fillStyle = 'rgba(44,74,78,0.22)';
     ctx.beginPath();
-    ctx.moveTo(-4, 0);
-    ctx.quadraticCurveTo(-4.2, -4.4, 0, -4.4);
-    ctx.quadraticCurveTo(3.4, -4.4, 4.2, -1.8);
-    ctx.lineTo(7.4, 1.6);
-    ctx.quadraticCurveTo(8, 3, 6.6, 3.4);
-    ctx.lineTo(2.2, 3.4);
-    ctx.quadraticCurveTo(-3.4, 3.6, -4, 0);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-    ctx.fillStyle = boneShade;
-    ctx.beginPath();
-    ctx.moveTo(-3.4, 1.4);
-    ctx.quadraticCurveTo(0, 3.6, 6.8, 3.2);
-    ctx.lineTo(2.2, 3.4);
-    ctx.quadraticCurveTo(-2.4, 3.4, -3.4, 1.4);
-    ctx.fill();
-    ctx.fillStyle = ink;
-    ctx.beginPath();
-    ctx.ellipse(-1.4, -1.6, 1.3, 1.1, 0, 0, TAU);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(1.6, -1.7, 1.1, 1, 0, 0, TAU);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(6.6, 2.3, 0.45, 0, TAU);
+    ctx.ellipse(0, 0, hx, hy, 0, 0, TAU);
     ctx.fill();
     ctx.restore();
-
-    // The long bones crossed in front, and a knuckle of spine.
-    knobbed([bx - 11, by - 3.2], [bx + 1.5, by + 0.6], 1.9);
-    knobbed([bx - 5, by + 0.8], [bx + 4.5, by - 3.6], 1.5, boneShade);
-    for (const [x, y] of [[bx + 6.5, by + 0.8], [bx + 9, by + 1.2]]) {
-      ctx.beginPath();
-      ctx.ellipse(x, y, 1.2, 0.85, 0, 0, TAU);
-      ctx.fillStyle = bone;
-      ctx.fill();
-      ctx.lineWidth = 0.9;
-      ctx.strokeStyle = ink;
-      ctx.stroke();
-    }
-  });
+    const step = SPRITE_SCALE * size;
+    drawLying(ctx, kind, kit, pal, facing, beastInk(step, size), 1 / step);
+    ctx.restore();
+  }, 1);
   cache.set(key, spr);
   return spr;
 }
 
-/** What lies on a tile: a carcass if there is one there, felled logs drawn as solids if that is all there is, the heap otherwise. */
-export function lyingSprite(items: readonly { id: string; count?: number; extra?: string }[], x: number, y: number, at?: TreeView, season: Season = 'summer', beside = false): Sprite {
+/**
+ * What lies on a tile: a carcass if there is one there, felled logs drawn as solids if that is all there is, the sack
+ * otherwise. `turn` is the camera's, which a carcass is seen by.
+ */
+export function lyingSprite(items: readonly { id: string; count?: number; extra?: string }[], x: number, y: number, at?: TreeView, season: Season = 'summer', beside = false, turn = at?.turn ?? 0): Sprite {
   // Felled logs, and nothing else: lying as solids, in their species' bark, beside the stump they came off if it is there.
   if (at && items.length && items.every((it) => it.id === 'log')) {
     const species = TREE_DEFS.findIndex((d) => d.name === items[0].extra);
     const solid = STUMP3D_SPECIES.has(species) ? log3dSprite(species, items.reduce((n, it) => n + (it.count ?? 1), 0), season, at, SPRITE_SCALE, beside) : null;
     if (solid) return solid;
   }
-  if (!items.some((it) => it.id === 'corpse')) return pileSprite(sackSize(items));
-  return carcassSprite(((x + y) & 1) === 1, items.some((it) => it.id !== 'corpse'));
+  const corpse = items.find((it) => it.id === 'corpse');
+  if (!corpse) return pileSprite(sackSize(items));
+  const [species, stage] = carcassOf(corpse.extra);
+  const rest = items.filter((it) => it !== corpse);
+  // Its way round on the ground by its tile.
+  return carcassSprite(species, stage, carcassFacing(Math.floor(hash2(x, y, 7) * 8), turn), rest.length ? sackSize(rest) : -1);
 }
 
-/** A crate sized to one subtile (a quarter of a tile each way). */
-export function crateSprite(kind: 'log' | 'plank' = 'plank'): Sprite {
-  const key = `${SPRITE_SCALE}|crate:${kind}`;
-  let spr = cache.get(key);
+/** The kind and the stage a carcass is of, by the name it carries (`corpseSpecies`, `corpseKind`), worked out once for each name. */
+const carcassKinds = new Map<string, [string | undefined, number]>();
+function carcassOf(extra?: string): [string | undefined, number] {
+  const named = (extra ?? '').toLowerCase();
+  let k = carcassKinds.get(named);
+  if (!k) {
+    const def = corpseSpecies({ extra } as Item);
+    k = [def?.id, def?.stages ? def.stages.findIndex((st) => st.name.toLowerCase() === named) + 1 : 0];
+    carcassKinds.set(named, k);
+  }
+  return k;
+}
+
+/**
+ * A crate (`PlacedCrate`) in the kit (`kit/storecrate.ts`): a plank crate or
+ * a log crate in the wood it was built of, as the camera's `turn` sees it,
+ * a quarter turn round on the ground for every `quarter`.
+ */
+export function crateSprite(kind: 'log' | 'plank' = 'plank', material?: string, turn = 0, quarter = 0): Sprite {
+  // A square crate turned a quarter on the ground is the camera turned two eighths.
+  const view = (((turn + 2 * quarter) % 8) + 8) % 8;
+  const wood = (material ?? '').toLowerCase();
+  const key = `${SPRITE_SCALE}|crate:${kind}|${wood}|${view}`;
+  const spr = cache.get(key);
   if (spr) return spr;
-  const left = kind === 'log' ? '#7d5c38' : '#8a6a42';
-  const right = kind === 'log' ? '#5c4228' : '#6a4f30';
-  const top = kind === 'log' ? '#a17a4a' : '#b08850';
-  spr = makeSprite(30, 32, 15, 29, (ctx) => {
-    const bx = 15;
-    const by = 29;
-    shadow(ctx, bx, by, 11, 5);
-    const w = 11;
-    const h = 11;
-    // left face, right face, top
-    ctx.fillStyle = left;
-    ctx.beginPath();
-    ctx.moveTo(bx - w, by - w / 2);
-    ctx.lineTo(bx, by);
-    ctx.lineTo(bx, by - h);
-    ctx.lineTo(bx - w, by - w / 2 - h);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = right;
-    ctx.beginPath();
-    ctx.moveTo(bx, by);
-    ctx.lineTo(bx + w, by - w / 2);
-    ctx.lineTo(bx + w, by - w / 2 - h);
-    ctx.lineTo(bx, by - h);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = top;
-    ctx.beginPath();
-    ctx.moveTo(bx - w, by - w / 2 - h);
-    ctx.lineTo(bx, by - h);
-    ctx.lineTo(bx + w, by - w / 2 - h);
-    ctx.lineTo(bx, by - w - h);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = '#4a3520';
-    ctx.lineWidth = 1;
-    const bands = kind === 'log' ? [0.25, 0.5, 0.75] : [0.35, 0.7];
-    for (const k of bands) {
-      ctx.beginPath();
-      ctx.moveTo(bx - w, by - w / 2 - h * k);
-      ctx.lineTo(bx, by - h * k);
-      ctx.lineTo(bx + w, by - w / 2 - h * k);
-      ctx.stroke();
+  // This frame's share spent (`NEW_MS`): the same crate seen another way stands in, or another wood's seen this way.
+  if (newSpent >= NEW_MS) {
+    for (let d = 1; d < 8; d++) {
+      const other = cache.get(`${SPRITE_SCALE}|crate:${kind}|${wood}|${(view + d) % 8}`);
+      if (other) return other;
     }
-    ctx.beginPath();
-    ctx.moveTo(bx, by);
-    ctx.lineTo(bx, by - h);
-    ctx.stroke();
+    for (const [k, other] of cache) if (k.startsWith(`${SPRITE_SCALE}|crate:${kind}|`) && k.endsWith(`|${view}`)) return other;
+  }
+  const t0 = performance.now();
+  const m = storeCrateModel(kind, material);
+  const e = eyeOf(0, view);
+  const [x0, y0, x1, y1] = layKitModel(null, m, e).bounds;
+  const made = makeSprite(x1 - x0, y1 - y0, -x0, -y0, (ctx) => {
+    ctx.translate(-x0, -y0);
+    layKitModel(ctx, m, e);
   }, 1);
-  cache.set(key, spr);
-  return spr;
+  cache.set(key, made);
+  newSpent += performance.now() - t0;
+  return made;
 }
 
+/** A flat field's tones, as a solid one's (`fieldBake`): a furrow (plum-brown, not black), a crest's light, a clod and a seed sown, a plant's shade. */
+const FLAT_FURROW = 'rgba(96,70,88,0.42)';
+const FLAT_CREST = 'rgba(255,240,208,0.32)';
+const FLAT_CLOD = '#8a6656';
+const FLAT_SEED = '#ead7a2';
+const FLAT_SHADE = 'rgba(40,62,96,0.16)';
 /** A crop's colours gone over for a winter it is waiting out, drawn flat. */
 const frosted = (c: string, into: string, k: number): string => {
   const a = parseInt(c.slice(1), 16), b = parseInt(into.slice(1), 16);
@@ -1050,10 +968,10 @@ const frosted = (c: string, into: string, k: number): string => {
  * its furrows. Before ripe, `tended` (`Crop.tendedNow`) darkens and waters its
  * soil, and untended it is pale and weedy.
  */
-export function cropFlatSprite(cropId: string, stage: number, look: string, leaf: string, fruit: string, dormant: boolean, tended: boolean, rect = false): Sprite {
+export function cropFlatSprite(cropId: string, stage: number, look: string, leaf: string, fruit: string, dormant: boolean, tended: boolean, rect = false, bed = false): Sprite {
   // Tended or not shows before ripe, as on a solid field (`fieldBake`): dry and weedy still to tend, dark and watered tended.
   const care = stage >= 0 && stage < RIPE ? (tended ? 2 : 1) : 0;
-  const key = `${SPRITE_SCALE}|cropflat:${cropId}:${stage}${dormant ? ':dormant' : ''}${rect ? ':rect' : ''}:${care}`;
+  const key = `${SPRITE_SCALE}|cropflat:${cropId}:${stage}${dormant ? ':dormant' : ''}${rect ? ':rect' : ''}${bed ? ':bed' : ''}:${care}`;
   let spr = cache.get(key);
   if (spr) return spr;
   if (dormant) {
@@ -1063,7 +981,9 @@ export function cropFlatSprite(cropId: string, stage: number, look: string, leaf
   const rng = mulberry32(hashString(cropId) + stage * 7919);
   // How far out of the tile centre anything drawn on the field may reach, as a
   // share of the tile. A hair inside the half-tile, so nothing touches the edge.
-  const EDGE = 0.46;
+  // On a garden bed, inside its frame (`BED_RAIL`): its soil and furrows never over the rails.
+  const EDGE = bed ? 0.5 - BED_RAIL - 0.03 : 0.46;
+  const BOX = bed ? Math.min(0.4, EDGE) : 0.4, RUN = bed ? Math.min(0.36, EDGE - 0.02) : 0.36;
   // A tile's worth of furrows, anchored at the tile centre.
   spr = makeSprite(96, 72, 48, 54, (ctx) => {
     const cx = 48;
@@ -1083,7 +1003,7 @@ export function cropFlatSprite(cropId: string, stage: number, look: string, leaf
       ctx.fillStyle = care === 1 ? DRY_SOIL : DAMP_SOIL;
       ctx.beginPath();
       for (const [k, [u, v]] of [[-1, -1], [1, -1], [1, 1], [-1, 1]].entries()) {
-        const [px, py] = iso(u * (rect ? 0.4 : EDGE), v * (rect ? 0.4 : EDGE));
+        const [px, py] = iso(u * (rect ? BOX : EDGE), v * (rect ? BOX : EDGE));
         if (k) ctx.lineTo(px, py); else ctx.moveTo(px, py);
       }
       ctx.closePath();
@@ -1096,12 +1016,12 @@ export function cropFlatSprite(cropId: string, stage: number, look: string, leaf
      * before the corner barely more than a nick. Drawing them all the same
      * length ran them a third of a tile out over the grass on either side.
      */
-    ctx.strokeStyle = 'rgba(70,50,32,0.45)';
+    ctx.strokeStyle = FLAT_FURROW;
     ctx.lineWidth = 2;
     for (let i = -2; i <= 2; i++) {
       // Across a rectangle every furrow is the whole width of it, and no wider: the sides of one are edges, not corners.
       const f = i * (rect ? 0.17 : 0.19);
-      const half = rect ? 0.36 : EDGE - Math.abs(f);
+      const half = rect ? RUN : EDGE - Math.abs(f);
       if (half <= 0.03) continue;
       const [ax, ay] = rect ? iso(-half, f) : iso(f - half, f + half);
       const [bx, by] = rect ? iso(half, f) : iso(f + half, f - half);
@@ -1109,6 +1029,15 @@ export function cropFlatSprite(cropId: string, stage: number, look: string, leaf
       ctx.moveTo(ax, ay);
       ctx.lineTo(bx, by);
       ctx.stroke();
+      // The ridge's crest beside it, catching the light, kept in off the tile's edge.
+      ctx.strokeStyle = FLAT_CREST;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(ax + (bx - ax) * 0.12, ay + (by - ay) * 0.12 - 2.4);
+      ctx.lineTo(ax + (bx - ax) * 0.88, ay + (by - ay) * 0.88 - 2.4);
+      ctx.stroke();
+      ctx.strokeStyle = FLAT_FURROW;
+      ctx.lineWidth = 2;
       if (care === 2 && !dormant) {
         // Tended: water along the furrow.
         ctx.strokeStyle = WATER_LINE;
@@ -1117,18 +1046,18 @@ export function cropFlatSprite(cropId: string, stage: number, look: string, leaf
         ctx.moveTo(ax, ay + 0.6);
         ctx.lineTo(bx, by + 0.6);
         ctx.stroke();
-        ctx.strokeStyle = 'rgba(70,50,32,0.45)';
+        ctx.strokeStyle = FLAT_FURROW;
         ctx.lineWidth = 2;
       }
       // A winter's rime along the middle of the ridge of each furrow.
       if (dormant) {
-        ctx.strokeStyle = 'rgba(236,240,244,0.45)';
+        ctx.strokeStyle = 'rgba(222,232,248,0.5)';
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(ax + (bx - ax) * 0.2, ay + (by - ay) * 0.2 - 1.2);
         ctx.lineTo(ax + (bx - ax) * 0.8, ay + (by - ay) * 0.8 - 1.2);
         ctx.stroke();
-        ctx.strokeStyle = 'rgba(70,50,32,0.45)';
+        ctx.strokeStyle = FLAT_FURROW;
         ctx.lineWidth = 2;
       }
     }
@@ -1137,11 +1066,11 @@ export function cropFlatSprite(cropId: string, stage: number, look: string, leaf
       const wr = mulberry32(hashString(cropId) + 4409);
       for (let i = 0; i < 12; i++) {
         const f = (Math.floor(wr() * 5) - 2) * (rect ? 0.17 : 0.19) + 0.095 * (rect ? 0.9 : 1);
-        const half = rect ? 0.36 : EDGE - Math.abs(f) - 0.04;
-        if (half <= 0.05) continue;
+        const half = rect ? RUN : EDGE - Math.abs(f) - 0.04;
+        if (half <= 0.05 || (bed && Math.abs(f) > EDGE - 0.03)) continue;
         const t = (wr() * 2 - 1) * half;
         const [px, py] = rect ? iso(t, f) : iso(f + t, f - t);
-        for (const [col, lw] of [['rgba(46,40,56,0.5)', 1.8], [dormant ? frosted(WEED, DORMANT_LEAF, 0.55) : WEED, 0.9]] as const) {
+        for (const [col, lw] of [['rgba(92,110,52,0.45)', 1.8], [dormant ? frosted(WEED, DORMANT_LEAF, 0.55) : WEED, 0.9]] as const) {
           ctx.strokeStyle = col;
           ctx.lineWidth = lw;
           for (const d of [-2, -1, 0, 1, 2]) {
@@ -1154,12 +1083,16 @@ export function cropFlatSprite(cropId: string, stage: number, look: string, leaf
       }
     }
     if (stage === 0) {
-      // Sown: only the seed and the disturbed earth show.
-      ctx.fillStyle = 'rgba(58,42,26,0.7)';
+      // Sown: only the seed and the disturbed earth show, a clod of turned earth and a pale seed by it.
       for (let i = 0; i < 14; i++) {
         const [px, py] = iso((rng() - 0.5) * 0.8, (rng() - 0.5) * 0.8);
+        ctx.fillStyle = FLAT_CLOD;
         ctx.beginPath();
         ctx.ellipse(px, py, 1.5, 1, 0, 0, TAU);
+        ctx.fill();
+        ctx.fillStyle = FLAT_SEED;
+        ctx.beginPath();
+        ctx.ellipse(px - 0.5, py - 0.4, 0.7, 0.45, 0, 0, TAU);
         ctx.fill();
       }
       cache.set(key, spr!);
@@ -1169,9 +1102,19 @@ export function cropFlatSprite(cropId: string, stage: number, look: string, leaf
     for (let u = -1; u <= 1; u++) for (let v = -1; v <= 1; v++) plants.push([u * 0.26 + (rng() - 0.5) * 0.08, v * 0.26 + (rng() - 0.5) * 0.08]);
     // Back to front: down the diamond, or down the rectangle.
     plants.sort((a, b) => (rect ? a[1] - b[1] : a[0] + a[1] - (b[0] + b[1])));
+    // Each plant's shade on the soil, down and to the right of its foot, as the key over the viewer's left shoulder throws it: all under every plant.
+    ctx.fillStyle = FLAT_SHADE;
+    ctx.beginPath();
     for (const [u, v] of plants) {
       const [px, py] = iso(u, v);
-      cropPlant(ctx, px, py, look, stage, leaf, fruit, u);
+      ctx.moveTo(px + 1.6 + 4 + stage, py + 0.6);
+      ctx.ellipse(px + 1.6, py + 0.6, 4 + stage, 1.6 + stage * 0.3, 0, 0, TAU);
+    }
+    ctx.fill();
+    const shows = ripeShows(cropId, look, fruit);
+    for (const [u, v] of plants) {
+      const [px, py] = iso(u, v);
+      cropPlant(ctx, px, py, look, stage, leaf, shows, u);
     }
   });
   cache.set(key, spr);
@@ -1193,10 +1136,10 @@ function hashString(s: string): number {
  * `turn` under the sun's `step`, laid out the `layout`th way (`FIELD_LAYOUTS`).
  * `dormant` is a field waiting out a winter,
  * which grows nothing: its green gone dull and a rime on it. `tended`: its
- * stage tended (`Crop.tendedNow`), shown before ripe.
+ * stage tended (`Crop.tendedNow`), shown before ripe. `bed`: on a garden bed, drawn inside its frame.
  */
-export function cropSprite(cropId: string, stage: number, leaf: string, fruit: string, dormant: boolean, tended: boolean, turn: number, step: number, layout = 0): Sprite {
-  return fieldBake(cropId, stage, leaf, fruit, dormant, tended, turn, step, SPRITE_SCALE, layout);
+export function cropSprite(cropId: string, stage: number, leaf: string, fruit: string, dormant: boolean, tended: boolean, turn: number, step: number, layout = 0, bed = false): Sprite {
+  return fieldBake(cropId, stage, leaf, fruit, dormant, tended, turn, step, SPRITE_SCALE, layout, bed);
 }
 
 /** The campfire, in the kit (`kit/campfire.ts`). */
@@ -1204,222 +1147,6 @@ export { drawCampfire } from './kit/campfire';
 
 /** The traps, in the kit (`kit/traps.ts`). */
 export { drawTrap } from './kit/traps';
-
-/**
- * Where one tile of deck lies on the screen: its four corners in the world's
- * order -- north, east, south, west -- at the height it is carried at, in
- * pixels at zoom one from its middle, and which way the span runs. The deck
- * was a lozenge of the one shape whatever the view, with its kerbs ruled in
- * a V that stood out past both ends of it; from the corners it is the tile
- * it spans at every turn, with its kerbs down its two sides.
- */
-export interface DeckShape { q: Array<[number, number]>; along: 'x' | 'y' }
-
-/** The lozenge a deck was before it had corners: the tile at the first turn, spanning west to east. */
-const LOZENGE: DeckShape = { q: [[0, -24], [48, 0], [0, 24], [-48, 0]], along: 'x' };
-
-/** How far a garden footbridge's deck humps up in its middle, and its rail stands over it, in pixels at zoom one (`adorn.ts`). */
-const FOOT_ARCH = 4;
-const FOOT_RAIL = 6;
-
-/**
- * One tile of bridge deck, drawn at the height the deck is carried at. The
- * unfinished part is drawn as bare stringers so you can see what is left.
- */
-export function drawDeck(
-  ctx: CanvasRenderingContext2D,
-  sx: number,
-  sy: number,
-  zoom: number,
-  kind: string,
-  done: boolean,
-  drop: number,
-  shape: DeckShape = LOZENGE,
-  /** How far the moss on a stone arch has got, nought to one (`greening.ts`), and a number off where this span is. */
-  green = 0,
-  seed = 0,
-): void {
-  ctx.save();
-  ctx.translate(sx, sy);
-  ctx.scale(zoom, zoom);
-  const q = shape.q;
-  const stone = kind === 'stone';
-  const top = stone ? '#9a968c' : kind === 'rope' ? '#8a7550' : '#7d6243';
-  const side = stone ? '#6f6b62' : '#523d28';
-  const lerp = (a: [number, number], b: [number, number], t: number): [number, number] => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
-  // Its two sides, the edges that run the way the span does, each from the end nearer its start: and its two ends.
-  const sides: Array<[[number, number], [number, number]]> = shape.along === 'x' ? [[q[0], q[1]], [q[3], q[2]]] : [[q[0], q[3]], [q[1], q[2]]];
-  // A side drawn in toward the middle of the tile by a share `k` of the way: where a kerb or a stringer runs.
-  const inset = (a: [number, number], b: [number, number], k: number): [[number, number], [number, number]] => {
-    const c = [(q[0][0] + q[2][0]) / 2, (q[0][1] + q[2][1]) / 2];
-    return [[a[0] + (c[0] - a[0]) * k, a[1] + (c[1] - a[1]) * k], [b[0] + (c[0] - b[0]) * k, b[1] + (c[1] - b[1]) * k]];
-  };
-  // What holds it up: piers for stone and wood, two hawsers for a rope bridge.
-  if (drop > 2 && kind !== 'rope') {
-    // A pier down into whatever is underneath, cut off before it gets silly.
-    const h = Math.min(34, drop * 0.8);
-    ctx.fillStyle = side;
-    ctx.beginPath();
-    ctx.moveTo(-5, 2);
-    ctx.lineTo(5, 2);
-    ctx.lineTo(5, 2 + h);
-    ctx.lineTo(-5, 2 + h);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = 'rgba(0,0,0,0.2)';
-    ctx.fillRect(1, 2, 4, h);
-  }
-  if (!done) {
-    // Stringers only: a beam down each side and nothing to walk on.
-    ctx.strokeStyle = side;
-    ctx.lineWidth = 1.6;
-    for (const [a, b] of sides) {
-      const [c, d] = inset(a, b, 0.16);
-      ctx.beginPath();
-      ctx.moveTo(c[0], c[1]);
-      ctx.lineTo(d[0], d[1]);
-      ctx.stroke();
-    }
-    ctx.restore();
-    return;
-  }
-  // The lip on the near edges: an edge whose outside looks down the screen.
-  const T = 2.5;
-  ctx.fillStyle = side;
-  for (let i = 0; i < 4; i++) {
-    const a = q[i], b = q[(i + 1) % 4];
-    if (b[0] - a[0] <= 0) continue;
-    ctx.beginPath();
-    ctx.moveTo(a[0], a[1]);
-    ctx.lineTo(b[0], b[1]);
-    ctx.lineTo(b[0], b[1] + T);
-    ctx.lineTo(a[0], a[1] + T);
-    ctx.closePath();
-    ctx.fill();
-  }
-  // The deck itself, the tile it spans.
-  ctx.fillStyle = top;
-  ctx.beginPath();
-  q.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
-  ctx.closePath();
-  ctx.fill();
-  // Planking across the run, or the courses of an arch.
-  ctx.strokeStyle = 'rgba(0,0,0,0.14)';
-  ctx.lineWidth = 0.8;
-  const [[a0, b0], [a1, b1]] = sides;
-  for (let i = 1; i < 8; i++) {
-    const [x0, y0] = lerp(a0, b0, i / 8), [x1, y1] = lerp(a1, b1, i / 8);
-    ctx.beginPath();
-    ctx.moveTo(x0, y0);
-    ctx.lineTo(x1, y1);
-    ctx.stroke();
-  }
-  const kerbs = sides.map(([a, b]) => inset(a, b, 0.08));
-  if (kind === 'footbridge') {
-    // A garden footbridge (`adorn.ts`): its deck humped over the ditch, its boards across it, a rail on balusters each side, arched with it.
-    const A = FOOT_ARCH;
-    const mid = (a: [number, number], b: [number, number]): [number, number] => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2 - A * 2];
-    ctx.fillStyle = '#c99a6a';
-    ctx.beginPath();
-    const [[s0, s1], [t0, t1]] = sides;
-    const m0 = mid(s0, s1), m1 = mid(t0, t1);
-    ctx.moveTo(s0[0], s0[1]); ctx.quadraticCurveTo(m0[0], m0[1], s1[0], s1[1]);
-    ctx.lineTo(t1[0], t1[1]); ctx.quadraticCurveTo(m1[0], m1[1], t0[0], t0[1]);
-    ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = 'rgba(90, 64, 70, 0.3)'; ctx.lineWidth = 0.7;
-    for (let i = 1; i < 8; i++) {
-      const k = i / 8, hump = 4 * k * (1 - k) * A;
-      const [x0, y0] = lerp(s0, s1, k), [x1, y1] = lerp(t0, t1, k);
-      ctx.beginPath(); ctx.moveTo(x0, y0 - hump); ctx.lineTo(x1, y1 - hump); ctx.stroke();
-    }
-    for (const [a, b] of kerbs) {
-      const top = (k: number): [number, number] => { const [x, y] = lerp(a, b, k); return [x, y - 4 * k * (1 - k) * A - FOOT_RAIL]; };
-      ctx.strokeStyle = '#8a6448'; ctx.lineWidth = 1;
-      for (const k of [0.04, 0.27, 0.5, 0.73, 0.96]) {
-        const [x, y] = lerp(a, b, k);
-        ctx.beginPath(); ctx.moveTo(x, y - 4 * k * (1 - k) * A); ctx.lineTo(...top(k)); ctx.stroke();
-      }
-      ctx.strokeStyle = '#a87c58'; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.moveTo(...top(0));
-      for (let i = 1; i <= 10; i++) ctx.lineTo(...top(i / 10));
-      ctx.stroke();
-    }
-    ctx.restore();
-    return;
-  }
-  if (kind === 'rope') {
-    // Handropes along both sides, which is all that is between you and the drop.
-    ctx.strokeStyle = '#cfc3a4';
-    ctx.lineWidth = 1;
-    for (const [a, b] of kerbs) {
-      ctx.beginPath();
-      ctx.moveTo(a[0], a[1] - 5);
-      ctx.quadraticCurveTo((a[0] + b[0]) / 2, (a[1] + b[1]) / 2 - 3, b[0], b[1] - 5);
-      ctx.stroke();
-    }
-  } else {
-    // A kerb along both sides so the deck reads as something you stay on.
-    ctx.strokeStyle = side;
-    ctx.lineWidth = 1.4;
-    for (const [a, b] of kerbs) {
-      ctx.beginPath();
-      ctx.moveTo(a[0], a[1] - 1);
-      ctx.lineTo(b[0], b[1] - 1);
-      ctx.stroke();
-    }
-  }
-  // Its moss, where the view is close enough in to see a cushion of it.
-  if (stone && green > 0 && zoom >= 0.6) deckMoss(ctx, q, kerbs, drop, green, seed);
-  ctx.restore();
-}
-
-/**
- * The moss a stone arch gathers (`greening.ts`): cushions along its kerbs,
- * a row along its near lip with a trail or two hanging off it, and the foot
- * of its pier green where the water keeps it damp. In clumps along the span,
- * the same clumps at every age, spreading as it ages.
- */
-function deckMoss(ctx: CanvasRenderingContext2D, q: Array<[number, number]>, kerbs: Array<[[number, number], [number, number]]>,
-  drop: number, green: number, seed: number): void {
-  const cs: Cushion[] = [];
-  /*
-   * Along an edge in patches: two places on it, the same at every age, each a
-   * clump that widens as the moss gets on, cushions biggest at its heart and
-   * a speck or two at its edge -- rather than a bead to every step.
-   */
-  const along = (a: [number, number], b: [number, number], step: number, salt: number, r: number, lift = 0): void => {
-    const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
-    const hearts = [0, 1].map((k) => ({ at: hashOf(seed, salt, k, 91), wide: (0.1 + 0.32 * hashOf(seed, salt, k + 2, 91)) * green * (k ? 0.7 : 1) }));
-    for (let d = step / 2, i = 0; d < len; d += step, i++) {
-      const t = d / len;
-      const patch = Math.max(...hearts.map((h) => (h.wide > 0 ? 1 - Math.abs(t - h.at) / h.wide : 0)));
-      if (patch <= 0 || hashOf(seed, salt, i, 81) > 0.3 + patch) continue;
-      cs.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t - lift, r * (0.55 + 0.85 * patch)]);
-    }
-  };
-  kerbs.forEach(([a, b], k) => along(a, b, 3.6, k + 1, 1.5, 1));
-  for (let i = 0; i < 4; i++) {
-    const a = q[i], b = q[(i + 1) % 4];
-    if (b[0] - a[0] <= 0) continue;
-    along(a, b, 3.4, 10 + i, 1.3, -0.5);
-    // And what hangs off the lip: a trail of cushions straight down, off the heaviest of it.
-    for (let k = 0; k < 2; k++) {
-      if (hashOf(seed, i, 20 + k, 81) > green * 0.7) continue;
-      const [x, y] = [a[0] + (b[0] - a[0]) * (0.2 + 0.6 * hashOf(seed, i, 30 + k, 81)), a[1] + (b[1] - a[1]) * (0.2 + 0.6 * hashOf(seed, i, 30 + k, 81))];
-      const n = 1 + Math.round(green * 3 * hashOf(seed, i, 40 + k, 81));
-      for (let j = 1; j <= n; j++) cs.push([x + (hashOf(seed, i, 50 + j, 83) - 0.5) * 1.4, y + 2 + j * 2.4, 1.25 - j * 0.14]);
-    }
-  }
-  // The foot of the pier, down where the water keeps it damp.
-  if (drop > 2) {
-    const h = Math.min(34, drop * 0.8);
-    for (let i = 0; i < 6; i++) {
-      if (hashOf(seed, i, 17, 81) > green) continue;
-      cs.push([-4 + 8 * hashOf(seed, i, 18, 81), 2 + h - 2 - hashOf(seed, i, 19, 81) * h * 0.35 * green, 1.4 + green]);
-    }
-  }
-  cushions(ctx, cs);
-}
 
 /** The same colour taken down or brought up, for a far leg or a lit back. */
 function shade(hex: string, by: number): string {

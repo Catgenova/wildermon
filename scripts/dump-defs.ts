@@ -95,7 +95,7 @@ import {
 import { FIND_BASE, FIND_CAP, FIND_PER_SKILL, FIND_PER_TOOL, RESTORE_AGE, RESTORE_HARM, RESTORE_HARM_SPREAD } from '../src/game/archaeology';
 import { POST_LIFE_MAX, POST_LIFE_MIN } from '../src/game/posts';
 import { MELT_HEAT, MELT_KEEP, MELT_SHARE, METAL_CONTENT } from '../src/game/melt';
-import { COIN_DIFFICULTY, COIN_METALS, COIN_QL_WEIGHT, COINS_PER_LUMP, DIE_WEAR } from '../src/game/metal';
+import { COINS_PER_LUMP } from '../src/game/metal';
 import { ORDER_LIFE } from '../src/game/orders';
 import { VESSELS, LIQUID_NAME, type LiquidKind } from '../src/game/furniture';
 import { isBrew, drinkable } from '../src/game/brewing';
@@ -973,8 +973,6 @@ out.push(`create table if not exists metal_def (
 );`);
 /* The six that come out of the same charge of ore as a tenth of a lump. */
 out.push(`alter table metal_def add column if not exists rare boolean not null default false;`);
-/* Which metals a coin is struck from. */
-out.push(`alter table metal_def add column if not exists coins boolean not null default false;`);
 out.push(`create table if not exists pottery_def (
   unfired text primary key, fired text not null, seconds real not null
 );`);
@@ -1578,7 +1576,6 @@ for (const [cat, per] of Object.entries(CATEGORY_DECAY)) out.push(`insert into c
 for (const m of METALS) {
   out.push(`insert into metal_def values (${q(m.id)}, ${q(m.name)}, ${q(m.ore)}, ${q(m.lump)}, ${q(m.level)}, ${q(m.work)}, ${q(RARE_METALS.has(m.id))});`);
 }
-out.push(`update metal_def set coins = (id = any(array[${COIN_METALS.map(q).join(', ')}]::text[]));`);
 for (const d of POTTERY) out.push(`insert into pottery_def values (${q(d.unfired)}, ${q(d.fired)}, ${q(d.seconds)});`);
 for (const d of MOULDS) {
   out.push(`insert into mould_def values (${q(d.id)}, ${q(d.name)}, ${q(d.makes)}, ${q(d.skill)}, ${q(d.sand)}, ${q(d.difficulty)}, ${q(d.lumps)}, ${q(d.per ?? 1)}, ${
@@ -1934,10 +1931,8 @@ for (const [fn, v] of [
   ['find_base', FIND_BASE], ['find_per_skill', FIND_PER_SKILL], ['find_per_tool', FIND_PER_TOOL], ['find_cap', FIND_CAP],
   /* What the fire gives back of a thing melted down, and the heat it takes. */
   ['melt_share', MELT_SHARE], ['melt_keep', MELT_KEEP], ['melt_heat', MELT_HEAT],
-  /* Coins: how many a lump strikes, what a strike costs the die, and how hard a strike is. */
-  ['coins_per_lump', COINS_PER_LUMP], ['die_wear', DIE_WEAR], ['coin_difficulty', COIN_DIFFICULTY],
-  /* How much a strike leans on the gold's quality, and how often foraging turns up a gold coin and how many a day. */
-  ['coin_ql_weight', COIN_QL_WEIGHT], ['coin_find_one_in', COIN_FIND_ONE_IN], ['coin_finds_a_day', COIN_FINDS_A_DAY],
+  /* Coins: how many melt down to a lump, and how often foraging turns up a gold coin and how many a day. */
+  ['coins_per_lump', COINS_PER_LUMP], ['coin_find_one_in', COIN_FIND_ONE_IN], ['coin_finds_a_day', COIN_FINDS_A_DAY],
   /* And how long a buy order stands before it lapses and gives back what it still holds. */
   ['order_life', ORDER_LIFE],
   /* Horseshoes: four to a mount, a week on, a share quicker on stone and a step higher. */

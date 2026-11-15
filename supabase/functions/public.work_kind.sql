@@ -15,7 +15,7 @@ begin
     if v_building is null then return null; end if;
     select f.material into v_mat from floor_tile f
      where f.world_id = p_world and f.x = tx and f.y = ty
-       and f.level = floor_level(p_world, v_building, coalesce(p_target->>'floorKind', 'floor'));
+       and f.level = frame_floor_level(p_world, v_building, coalesce(p_target->>'floorKind', 'floor'), p_target);
   elsif p_action = 'build_bridge' then
     return (select 'bridge_' || case when d.material is null then b.kind when d.stone then 'stone' else 'wood' end
               from bridge b left join bridge_def d on d.id = b.kind

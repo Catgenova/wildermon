@@ -139,10 +139,6 @@ export const CRAFTS_B: Goal[] = [
     how: `Inventory: "Improve" an item until a pass of yours takes it to QL ${IMPROVED_TO} or past. Items made or bought at QL ${IMPROVED_TO}+ do not count.`,
   },
   {
-    id: 'coins', text: 'Strike coins', met: did('minted'),
-    how: 'At an anvil with a metal lump in the pack: "Strike coins".',
-  },
-  {
     id: 'flour', text: 'Grind flour in a quern', met: did('made:flour'),
     how: 'Crafting (R): "Dress a quern" ({recipe.make_quern.rock_shards} rock shards, a chisel), then "Grind into flour" ({recipe.make_flour.wheat} wheat).',
   },

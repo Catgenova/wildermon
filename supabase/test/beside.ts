@@ -6,13 +6,13 @@
  *
  * A craft has reached into the stores around you since it was asked to; the
  * stations did not. So a smelter, a kiln, a campfire, an oven, an anvil and a
- * barrel of water are set round the body, with a mould, an anvil mould, a coin
- * die, a file, a whetstone and an iron hatchet carried, and nothing else to
+ * barrel of water are set round the body, with a mould, an anvil mould, a
+ * file, a whetstone and an iron hatchet carried, and nothing else to
  * work with in the pack. What is used up is in the stores:
  *
  *   * a wagon two tiles off that somebody else set down, off any settlement:
- *     iron lumps, iron ore, an iron shovel, shovel head castings, gold
- *     lumps, unfired bowls and apples -- a vehicle is anybody's to load and
+ *     iron lumps, iron ore, an iron shovel, shovel head castings, unfired
+ *     bowls and apples -- a vehicle is anybody's to load and
  *     to empty, so it is anybody's to use;
  *   * a crate of logs of your own;
  *   * and three that are not to be reached: a chest somebody else set down,
@@ -25,7 +25,7 @@
  *   * a mould is poured, an anvil cast, ore charged and scrap melted out of
  *     the wagon, and the smelter, the campfire, the kiln and the oven are fed
  *     out of the crate;
- *   * clay is packed into the kiln, a casting beaten out and coins struck,
+ *   * clay is packed into the kiln, a casting beaten out,
  *     a hatchet bettered and a brew set going, all out of the wagon;
  *   * bettering works in what you carry before anything stored;
  *   * and the chest, the padlocked wagon and the far wagon are never touched,
@@ -74,7 +74,7 @@ for (const c of [...game.crates.values()]) game.removeCrate(c.id);
 for (const f of [...game.furniture.values()]) game.removeFurniture(f.id);
 
 const pack = game.inventory;
-const USED = ['iron_lump', 'iron_ore', 'log', 'shovel_head_mould', 'anvil_mould', 'casting', 'gold_lump', 'coin_die',
+const USED = ['iron_lump', 'iron_ore', 'log', 'shovel_head_mould', 'anvil_mould', 'casting', 'gold_lump',
   'file', 'whetstone', 'hatchet', 'apple', 'unfired_clay_bowl', 'shovel', 'coin', 'plank', 'shaft', 'thatch', 'peat', 'coal', 'timber'];
 for (const it of [...pack.items]) if (USED.includes(it.id) || it.inside) pack.remove(it.uid, it.count);
 /* The lumps in the wagon: what an anvil takes off its mould, and ten over for the rest of it. */
@@ -97,7 +97,7 @@ barrel.litres = 20;
 
 const wagon = game.addFurniture('wagon', px + 2, py, 0, 0, 40, [
   stack('iron_lump', LUMPS, 45, 'Iron'), stack('iron_ore', 5, 35), stack('shovel', 1, 30, 'Iron'),
-  stack('casting', 2, 50, 'Iron', 'shovel_head'), stack('gold_lump', 2, 100, 'Gold'),
+  stack('casting', 2, 50, 'Iron', 'shovel_head'),
   stack('unfired_clay_bowl', 3, 30), stack('apple', 20, 30),
 ], 'Pine');
 // Somebody else's, off any settlement: a vehicle is anybody's all the same.
@@ -111,7 +111,6 @@ const far = game.addFurniture('wagon', px + 5, py, 0, 0, 40, [stack('iron_lump',
 
 const mould = pack.add('shovel_head_mould', { ql: 50 });
 const anvilMould = pack.add('anvil_mould', { ql: 50 });
-pack.add('coin_die', { ql: 50 });
 pack.add('file', { ql: 50 });
 pack.add('whetstone', { ql: 50 });
 const hatchet = pack.add('hatchet', { ql: 5, extra: 'Iron' });
@@ -129,7 +128,7 @@ const go = (id: string, t: Target): string => {
   return 'done';
 };
 
-// Every check comes off, and the gold is fine enough to take the die every time: a failed go uses
+// Every check comes off: a failed go uses
 // nothing up now (`faildamage.ts`), and what is asked here is where a go takes its stock from.
 game.skillCheck = () => true;
 console.log('--- the browser');
@@ -181,9 +180,6 @@ check('clay is packed into the kiln out of the wagon',
 check('a casting is beaten out at the anvil out of the wagon',
   go('smith', { kind: 'anvil', id: anvil.id, itemUid: first(wagon.items, 'casting').uid } as Target) === 'done'
   && count(wagon.items, 'casting') === 1, `${count(wagon.items, 'casting')} castings left`);
-check('and coins are struck out of it',
-  go('strike_coins', { kind: 'anvil', id: anvil.id, itemUid: first(wagon.items, 'gold_lump').uid } as Target) === 'done'
-  && count(wagon.items, 'gold_lump') === 1, `${count(wagon.items, 'gold_lump')} gold left`);
 
 const better = { kind: 'item', uid: hatchet.uid } as Target;
 check('a hatchet is bettered with a lump out of the wagon',
@@ -234,7 +230,7 @@ begin
    where world_id = w and uid = me;
   delete from item i where i.world_id = w and i.holder = 'player' and i.holder_uid = me
     and (i.def in ('iron_lump', 'iron_ore', 'log', 'shovel_head_mould', 'anvil_mould', 'casting', 'gold_lump',
-                   'coin_die', 'file', 'whetstone', 'hatchet', 'apple', 'unfired_clay_bowl', 'shovel', 'coin',
+                   'file', 'whetstone', 'hatchet', 'apple', 'unfired_clay_bowl', 'shovel', 'coin',
                    'plank', 'shaft', 'thatch', 'peat', 'coal', 'timber') or is_bag(i.def));
   -- Past every pouring and recipe gate (craftgates.ts): this is about where the stock comes from.
   ${handsSql('w', 'me', CRAFT_HANDS)};
@@ -267,7 +263,6 @@ begin
     (w, 'furniture', v_wagon, 'iron_ore', 35, 5, null, null),
     (w, 'furniture', v_wagon, 'shovel', 30, 1, 'Iron', null),
     (w, 'furniture', v_wagon, 'casting', 50, 2, 'Iron', 'shovel_head'),
-    (w, 'furniture', v_wagon, 'gold_lump', 100, 2, 'Gold', null),
     (w, 'furniture', v_wagon, 'unfired_clay_bowl', 30, 3, null, null),
     (w, 'furniture', v_wagon, 'apple', 30, 20, null, null);
   select coalesce(max(id), 0) + 1 into v_crate from crate where world_id = w;
@@ -289,7 +284,6 @@ begin
 
   v_mould := give(w, me, 'shovel_head_mould', 1, 50);
   perform give(w, me, 'anvil_mould', 1, 50);
-  perform give(w, me, 'coin_die', 1, 50);
   perform give(w, me, 'file', 1, 50);
   perform give(w, me, 'whetstone', 1, 50);
   v_hatchet := give(w, me, 'hatchet', 1, 5, 'Iron');
@@ -361,11 +355,6 @@ begin
   perform act_perform(w, me, 'smith', jsonb_build_object('kind', 'anvil', 'id', v_anvil,
     'itemUid', (select id from item where placed = v_wagon and def = 'casting')));
   insert into said values ('SMITH|' || (select coalesce(sum(count), 0) from item where placed = v_wagon and def = 'casting'));
-  insert into said values ('COIN?|' || coalesce(act_refusal(w, me, 'strike_coins', jsonb_build_object('kind', 'anvil', 'id', v_anvil,
-    'itemUid', (select id from item where placed = v_wagon and def = 'gold_lump'))), 'none'));
-  perform act_perform(w, me, 'strike_coins', jsonb_build_object('kind', 'anvil', 'id', v_anvil,
-    'itemUid', (select id from item where placed = v_wagon and def = 'gold_lump')));
-  insert into said values ('COIN|' || (select coalesce(sum(count), 0) from item where placed = v_wagon and def = 'gold_lump'));
   insert into said values ('BETTER?|' || coalesce(act_refusal(w, me, 'improve_item',
     jsonb_build_object('kind', 'item', 'uid', v_hatchet)), 'none'));
   perform act_perform(w, me, 'improve_item', jsonb_build_object('kind', 'item', 'uid', v_hatchet));
@@ -410,7 +399,6 @@ check('the smelter, the campfire, the kiln and the oven are fed out of the crate
 check('a fire fed with nothing named burns what is carried before anything stored', said('ARMFUL') === '0,5', said('ARMFUL'));
 check('clay is packed into the kiln out of the wagon', said('CLAY?') === 'none' && said('CLAY') === '0,3', `${said('CLAY?')}; ${said('CLAY')}`);
 check('a casting is beaten out at the anvil out of the wagon', said('SMITH?') === 'none' && said('SMITH') === '1', `${said('SMITH?')}; ${said('SMITH')}`);
-check('and coins are struck out of it', said('COIN?') === 'none' && said('COIN') === '1', `${said('COIN?')}; ${said('COIN')}`);
 check('a hatchet is bettered with a lump out of the wagon', said('BETTER?') === 'none' && said('BETTER') === '8', `${said('BETTER?')}; ${said('BETTER')}`);
 check('and with lumps in the pack as well, the pack\'s go first, however good they are',
   said('CARRIED?') === 'none' && said('CARRIED') === '1,8', `${said('CARRIED?')}; ${said('CARRIED')}`);

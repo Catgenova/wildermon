@@ -175,8 +175,6 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   circlet: { name: 'Circlet', category: 'misc', weight: 0.2, decay: 1, description: 'Head slot, in place of a helm. Up to {stones} gems, each set from the gem\'s menu. Worn: each gives {share:pct} of a ring\'s bonus, {each:pct} more skill per action in its skill.' },
   horseshoe: { name: 'Horseshoes', category: 'material', weight: 0.25, stackable: true, decay: 1, description: '{per} per lump; {shoes.perMount} per mount or draught beast, nailed on by a farrier with a mallet. Lasts {shoes.days} days. Mount speed on laid stone: +{shoes.quicker:pct}. Climbs a step {shoes.step:m} steeper. Draught beast in the traces, at its share of the team: speed on laid stone +{shoes.haulQuicker:pct}; step {shoes.haulStep:m} steeper.' },
   horseshoe_mould: { name: 'Horseshoe mould', category: 'tool', weight: 1.2, decay: 1 },
-  coin_die: { name: 'Coin die', category: 'tool', weight: 1.5, description: 'Strike a gold lump at an anvil: {coinsPerLump} coins. Wears each strike.' },
-  coin_die_mould: { name: 'Coin die mould', category: 'tool', weight: 1.2, decay: 1 },
   // What a poured mould cools into, named for its piece by `itemName` and
   // stacked by it: a shovel head casting is not a hatchet head casting.
   casting: { name: 'Casting', category: 'material', weight: 1, stackable: true, decay: 3, description: 'Poured at a smelter. Smith it at an anvil into its piece.' },
@@ -184,7 +182,7 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   statue_casting: { name: 'Statue casting', category: 'misc', weight: 24, description: 'Set on a slab to stand.' },
   bell_mould: { name: 'Bell mould', category: 'tool', weight: 3, decay: 1, description: 'Casts a bell. Wears each filling; cannot be mended.' },
   statue_mould: { name: 'Statue mould', category: 'tool', weight: 4, decay: 1, description: 'Casts a statue. Wears each filling; cannot be mended.' },
-  coin: { name: 'Coins', category: 'misc', weight: 0.005, stackable: true, description: '{coinsPerLump} per gold lump, struck at an anvil with a coin die. Melts back into a lump.' },
+  coin: { name: 'Coins', category: 'misc', weight: 0.005, stackable: true, description: 'Currency. Metal: {coinsPerLump} coins to a lump.' },
   needle: { name: 'Needle', category: 'tool', weight: 0.05, description: 'Needed to improve cloth and leather. Also: {jobs}.' },
   awl: { name: 'Awl', category: 'tool', weight: 0.2, description: 'Needed to improve leather.' },
   mallet: { name: 'Mallet', category: 'tool', weight: 1.5, description: 'Plans buildings; builds wooden walls.' },

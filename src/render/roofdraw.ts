@@ -21,6 +21,18 @@ const ROOF_VERGE = 0.1;
 /** How far down the wall under an eave its shade reaches, in height units: further than any eave's board is deep (`EAVE_DEEP`). */
 const EAVE_SHADE = 10;
 
+/**
+ * One part of a building's roof: its tiles roofed at one level (`Buildings.roofParts`). A tier's roof sits over its
+ * own top storey, and is shaped, drawn and picked as a roof of its own, hipped or gabled over its own tiles.
+ */
+export interface RoofPart {
+  b: Building;
+  level: number;
+}
+
+/** A roof part's number, for what is kept of it between frames: its building's and its level's. */
+export const roofKey = (b: Building, level: number): number => b.id * 64 + level;
+
 /** What RoofPainter needs of the renderer (`renderer.ts` builds it). */
 export interface RoofHost {
   readonly bakeEpoch: number;
@@ -36,7 +48,7 @@ export interface RoofHost {
   masonryOf(wall: { material: string; dye?: string }): Masonry | undefined;
   occludeLine(box: [number, number, number, number] | null, draw: () => void): void;
   painted(mat: MaterialDef, dye: string | undefined): MaterialDef;
-  readonly roofQueue: Map<number, Building[]>;
+  readonly roofQueue: Map<number, RoofPart[]>;
   readonly roofShapes: Map<number, { sig: string; model: RoofModel }>;
   readonly roomTiles: Set<string> | null;
   seeThroughCtx(box?: [number, number, number, number]): CanvasRenderingContext2D;
@@ -78,25 +90,27 @@ export class RoofPainter {
   queueRoofs(V: View, dLo: number, dHi: number): void {
     this.r.roofQueue.clear();
     const bld = this.r.game.buildings;
-    // A building pulled down takes its roof's shape with it.
-    for (const id of this.r.roofShapes.keys()) if (!bld.list.has(id)) this.r.roofShapes.delete(id);
+    // A building pulled down takes its roof's shape with it, and a part of it taken off its part's.
+    for (const key of this.r.roofShapes.keys()) {
+      const b = bld.list.get(Math.floor(key / 64));
+      if (!b || !bld.roofParts(b).has(key % 64)) this.r.roofShapes.delete(key);
+    }
     for (const b of bld.list.values()) {
       if (roofShapeOf(b) === 'flat') continue;
-      // Looking at one storey lifts everything over it off, the roof with it; and looking into a cellar, the building over it.
-      // Pinned on a storey, a roof is shown only from its own level (`storeyview.ts`).
-      if (this.r.storeyHidden(b.levels)) continue;
       if (this.r.cut.has(b.id)) continue;
-      let front = -Infinity;
-      // Its jetties' tiles too, where the roof goes out over them (`roofTiles`).
-      for (const [x, y] of bld.roofTiles(b)) {
-        const f = bld.floor(b.levels, x, y);
-        if (f && floorKind(f) === 'roof') front = Math.max(front, depthOf(V, x, y));
+      // Each part at its own level: a tier's under storey 2's eaves, storey 2's over it (`roofParts`), its jetties' tiles too.
+      for (const [level, tiles] of bld.roofParts(b)) {
+        // Looking at one storey lifts everything over it off, the roof with it; and looking into a cellar, the building over it.
+        // Pinned on a storey, a roof is shown only from its own level (`storeyview.ts`).
+        if (this.r.storeyHidden(level)) continue;
+        let front = -Infinity;
+        for (const [x, y] of tiles) front = Math.max(front, depthOf(V, x, y));
+        if (front === -Infinity || front + 1 < dLo) continue;
+        const d = Math.min(front + 1, dHi);
+        const line = this.r.roofQueue.get(d);
+        if (line) line.push({ b, level });
+        else this.r.roofQueue.set(d, [{ b, level }]);
       }
-      if (front === -Infinity || front + 1 < dLo) continue;
-      const d = Math.min(front + 1, dHi);
-      const line = this.r.roofQueue.get(d);
-      if (line) line.push(b);
-      else this.r.roofQueue.set(d, [b]);
     }
   }
 
@@ -183,14 +197,15 @@ export class RoofPainter {
    * one standing further down the screen is the one in front. The shade its
    * eaves throw on the walls under them goes on first, under all of it.
    */
-  drawPitchedRoof(b: Building): void {
+  drawPitchedRoof(part: RoofPart): void {
+    const { b, level } = part;
     const bld = this.r.game.buildings;
-    const level = b.levels;
+    const id = roofKey(b, level);
     // Standing under it: as it always was.
-    const roofTiles = bld.roofTiles(b);
+    const roofTiles = bld.roofParts(b).get(level) ?? [];
     if (this.r.roomTiles && roofTiles.some(([x, y]) => this.r.roomTiles?.has(`${x},${y}`))) {
-      this.drawPitchedRoofNow(b);
-      this.r.occludeLine(null, () => this.drawPitchedRoofNow(b));
+      this.drawPitchedRoofNow(b, level);
+      this.r.occludeLine(null, () => this.drawPitchedRoofNow(b, level));
       return;
     }
     const cam = this.r.camera;
@@ -218,7 +233,7 @@ export class RoofPainter {
      * every eave, up to as high as the widest roof of its footprint could
      * stand: most of a roof's picture was nothing, and made and copied the same.
      */
-    const frame = this.roofFrame(b);
+    const frame = this.roofFrame(b, level);
     if (!frame) return;
     let wx0 = Infinity, wy0 = Infinity, wx1 = -Infinity, wy1 = -Infinity, rise = 0;
     for (const f of frame.model.faces) {
@@ -243,7 +258,7 @@ export class RoofPainter {
     const key = `r|${b.id}|${level}|${b.deck ?? ''}|${roofShapeOf(b)}|${sig}`;
     const ax = cam.worldToScreenX(fx, fy), ay = cam.worldToScreenY(fx, fy, lowest);
     // What it reads is its own building and what stands round it: `REACH` round the tiles it covers (`StructureWatch`).
-    this.r.baked(key, ax, ay, [x0, y0, x1, y1], () => this.drawPitchedRoofNow(b, { key, ax, ay }), this.r.structs.version(fx, fy, gx, gy));
+    this.r.baked(key, ax, ay, [x0, y0, x1, y1], () => this.drawPitchedRoofNow(b, level, { key, ax, ay }), this.r.structs.version(fx, fy, gx, gy));
     /*
      * With a light burning under it after dark, its glass glows over the
      * night (`drawGlassGlow`): from the faces of glass kept when its picture
@@ -251,36 +266,39 @@ export class RoofPainter {
      * drawn afresh every frame of the night for that.
      */
     if (this.r.game.darkness() < LAMP_DARK) return;
-    const burning = this.lightsUnder(b);
+    const burning = this.lightsUnder(b, level);
     if (!burning.length) return;
-    const kept = this.roofGlass.get(b.id);
+    const kept = this.roofGlass.get(id);
     if (kept && kept.key === key && kept.epoch === this.r.bakeEpoch) {
       if (kept.faces.length) this.noteGlassGlow(kept.faces, kept.box, burning, kept.height, false, ax - kept.ax, ay - kept.ay);
     } else {
-      this.drawPitchedRoofNow(b, { key, ax, ay }, true);
-      const now = this.roofGlass.get(b.id);
+      this.drawPitchedRoofNow(b, level, { key, ax, ay }, true);
+      const now = this.roofGlass.get(id);
       if (now?.faces.length) this.noteGlassGlow(now.faces, now.box, burning, now.height, false);
     }
   }
 
-  /** A building's roof tiles, its roof's shape (kept while its tiles are the same) and the height of its eaves; null with no roof. */
-  roofFrame(b: Building): { roofs: FloorTile[]; model: RoofModel; eave: number } | null {
+  /**
+   * A roof part's tiles (its building's roof at one level, `roofParts`), its shape (kept while its tiles are the same)
+   * and the height of its eaves; null with no roof there. A tier's roof is shaped over its own tiles alone: hipped or
+   * gabled over the run of them at its level, its eaves over its own top storey.
+   */
+  roofFrame(b: Building, level = b.levels): { roofs: FloorTile[]; model: RoofModel; eave: number } | null {
     const bld = this.r.game.buildings;
     const world = this.r.game.world;
-    const level = b.levels;
     const roofs: FloorTile[] = [];
-    // Over its jetties as well as its footprint (`roofTiles`).
-    for (const [x, y] of bld.roofTiles(b)) {
+    // Over its jetties as well as its footprint.
+    for (const [x, y] of bld.roofParts(b).get(level) ?? []) {
       const f = bld.floor(level, x, y);
       if (f && floorKind(f) === 'roof') roofs.push(f);
     }
     if (!roofs.length) return null;
     const shape = roofShapeOf(b) === 'gable' ? 'gable' : 'hip';
     const sig = `${shape}:${roofs.map((f) => `${f.x},${f.y}`).join(';')}`;
-    let kept = this.r.roofShapes.get(b.id);
+    let kept = this.r.roofShapes.get(roofKey(b, level));
     if (!kept || kept.sig !== sig) {
       kept = { sig, model: roofModel(roofs.map((f): [number, number] => [f.x, f.y]), shape, ROOF_OVER, ROOF_VERGE, ROOF_CAP) };
-      this.r.roofShapes.set(b.id, kept);
+      this.r.roofShapes.set(roofKey(b, level), kept);
     }
     let eave = -Infinity;
     // A jetty's ground is not the building's: the eaves are over the footprint's.
@@ -297,13 +315,12 @@ export class RoofPainter {
    * (`roofGlass`) rather than laying it on this frame's night; `glassOnly`
    * finds those faces and draws nothing.
    */
-  private drawPitchedRoofNow(b: Building, keep?: { key: string; ax: number; ay: number }, glassOnly = false): void {
+  private drawPitchedRoofNow(b: Building, level: number, keep?: { key: string; ax: number; ay: number }, glassOnly = false): void {
     const main = this.r.canvas.ctx;
     const cam = this.r.camera;
     const bld = this.r.game.buildings;
     const zoom = cam.zoom;
-    const level = b.levels;
-    const frame = this.roofFrame(b);
+    const frame = this.roofFrame(b, level);
     if (!frame) return;
     const { roofs, model, eave } = frame;
     const pitch = ROOF_PITCH * roofShapeDef(b).rise;
@@ -494,7 +511,7 @@ export class RoofPainter {
       return rv <= 0 ? 0 : Math.min(1, rv ** 6 * 1.2) * (1 - this.r.game.darkness());
     };
     // A light burning under the glass, for the glow the night lays on it.
-    const burning = this.lightsUnder(b);
+    const burning = this.lightsUnder(b, level);
     /** Fill what has been outlined with the face's picture, laid on its plane. */
     const fillAs = (f: (typeof model.faces)[number]): void => {
       const tile = roofs[f.tile];
@@ -536,7 +553,7 @@ export class RoofPainter {
       }
     });
     if (keep) {
-      this.roofGlass.set(b.id, { ...keep, epoch: this.r.bakeEpoch, faces: glowing, box: glowBox, height: eave + pitch * 0.5 });
+      this.roofGlass.set(roofKey(b, level), { ...keep, epoch: this.r.bakeEpoch, faces: glowing, box: glowBox, height: eave + pitch * 0.5 });
       if (glassOnly) return;
     } else if (glowing.length) this.noteGlassGlow(glowing, glowBox, burning, eave + pitch * 0.5, under);
     for (const f of roofs) if (!isDone(f)) plan.push(f);
@@ -662,7 +679,9 @@ export class RoofPainter {
        * not an eave: its last bar along it, and no gutter.
        */
       const edgeTile = roofs[e.tile];
-      if (glassy(edgeTile) && bld.buildingAt(edgeTile.x + ox, edgeTile.y + oy)?.id === b.id) {
+      // A tier's edge against a taller storey of its building is no hole: the roof there is the storey's, higher up.
+      const nx = edgeTile.x + ox, ny = edgeTile.y + oy;
+      if (glassy(edgeTile) && bld.buildingAt(nx, ny)?.id === b.id && bld.roofStoreyAt(b, nx, ny) + 1 <= level) {
         items.push({ d: after(e.a, e.b) + 0.002, draw: () => {
           ctx.lineCap = 'round';
           ctx.strokeStyle = cov.cap.dark;
@@ -844,17 +863,23 @@ export class RoofPainter {
   }
 
   /**
-   * What is burning under a building's roof after dark with nothing finished
+   * What is burning under a roof part after dark with nothing finished
    * between it and the roof: the lights a glass roof glows with. A fire on the
-   * ground floor of a house of two storeys has a ceiling over it.
+   * ground floor of a house of two storeys has a ceiling over it; one under
+   * storey 2 glows on storey 2's roof and not on a tier's beside it.
    */
-  private lightsUnder(b: Building): LightSource[] {
+  private lightsUnder(b: Building, level: number): LightSource[] {
     if (!this.r.lightsNow.length) return [];
     const bld = this.r.game.buildings;
     return this.r.lightsNow.filter((l) => {
       const x = Math.floor(l.x), y = Math.floor(l.y);
-      if (bld.buildingAt(x, y)?.id !== b.id) return false;
-      for (let k = l.level ?? 0; k < b.levels - 1; k++) if (bld.coveredAt(k, x, y)) return false;
+      if (bld.buildingAt(x, y)?.id !== b.id || bld.roofOn(x, y)?.level !== level) return false;
+      const from = l.level ?? 0;
+      if (from >= level) return false;
+      for (let k = from + 1; k < level; k++) {
+        const over = bld.floor(k, x, y);
+        if (over && isDone(over)) return false;
+      }
       return true;
     });
   }
