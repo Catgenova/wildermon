@@ -31,7 +31,7 @@ import { BOOT_PHASES, NEAR_REACH, TREE_WAIT_MS } from '../bootsteps';
 import { POST_FOLLOW_REACH } from '../../game/posts';
 import { AROUND_MOST, aroundStoreTrades } from '../../game/around';
 import { AUTO_EAT_AT } from '../../game/autoeat';
-import { CRATE_KINDS_SAID, rackPutLine, STORE_REACH } from '../../game/crates';
+import { CRATE_DEFS, CRATE_KINDS_SAID, rackPutLine, STORE_REACH } from '../../game/crates';
 import { BASE_QUEUE, DEED_GAP, DEED_SPACING, DEED_STONE_GAP, DAMAGE_WARN, QUEUE_PER_MIND, FORAGE_COOLDOWN, KIT_LEFT_OUT, KIT_QL, SPROUT_COOLDOWN, STARTER_FOOD, STARTER_FOOD_COUNT, STARTER_KIT, TRAVEL_LEG, deedLevel } from '../../game/game';
 import { ROT_SOON } from '../../game/rot';
 import { FAIL_EXAMPLE_AT, FAIL_FACTORS, FAIL_LEAST, FAIL_WHY_JOBS, failFactor, failFactorSaid } from '../../game/failwhy';
@@ -414,6 +414,12 @@ const FAIL_EXAMPLE = failFactorSaid(failFactor({ ...FAIL_EXAMPLE_AT, difficulty:
 const SCRUBS_LATER = new Set(['scrub_wall_paint', 'scrub_floor_paint']);
 
 export const NEWS: News[] = [
+  // A crate in the crafting preview, drawn as the island draws it set down (`craftpreview.ts`, `sprited`).
+  {
+    n: 638,
+    day: '2026-11-15',
+    lines: () => [`Fixed: Crafting preview: ${listed(Object.values(CRATE_DEFS).map((c) => c.name.toLowerCase()))}: no picture. Now: drawn as set down.`],
+  },
   // A roof over a storey with floor tiles taken up (`levelGaps`, `level_gap`), and Plan roof on the top storey pinned (`roofEntries`).
   {
     n: 634,

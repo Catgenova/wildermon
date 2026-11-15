@@ -93,6 +93,20 @@ export function spriteScaleFor(zoom: number): void {
   }
 }
 
+/**
+ * A sprite made at the step that holds `zoom` (the most there is, past it), whatever step the island's camera is at:
+ * for a picture drawn closer than the camera is (the crafting preview). Made and kept as at that step.
+ */
+export function spriteAt<T>(zoom: number, make: () => T): T {
+  const was = SPRITE_SCALE;
+  SPRITE_SCALE = SPRITE_STEPS.find((s) => s >= zoom) ?? SPRITE_STEPS[SPRITE_STEPS.length - 1];
+  try {
+    return make();
+  } finally {
+    SPRITE_SCALE = was;
+  }
+}
+
 /** The scale tags with sprites still cached under them, oldest first. */
 const LIVE: string[] = [`${SPRITE_STEPS[0]}|`];
 
