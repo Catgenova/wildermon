@@ -755,12 +755,10 @@
   background: none;
 }
 
-:root[data-ui='runecut'] .rc-preview[hidden] {
-  display: none;
-}
 
 :root[data-ui='runecut'] .rc-preview > canvas {
   flex: none;
+  color: var(--t-dim);
   border: 0;
   border-radius: 0;
   background: color-mix(in srgb, var(--rc-deep) 55%, transparent);
@@ -780,6 +778,34 @@
 :root[data-ui='runecut'] .rc-preview-text small {
   color: var(--t-dim);
   font-size: var(--rc-fs-2);
+}
+
+/* The crafting window's tabs: closer set, so the five sit on one line in the window as it opens. */
+:root[data-ui='runecut'] .craft-tabs {
+  gap: 0;
+  padding-inline: 0;
+}
+
+:root[data-ui='runecut'] .craft-tabs .rc-tab {
+  padding-inline: var(--rc-sp-2);
+  font-size: var(--rc-fs-3);
+  letter-spacing: 0;
+}
+
+:root[data-ui='runecut'] .craft-tabs .craft-tab-count {
+  font-size: var(--rc-fs-2);
+}
+
+/* Its stage, in the frame's accent; and its empty state, its name dim. */
+:root[data-ui='runecut'] .rc-preview-text .rc-preview-stage {
+  color: var(--frame-accent, var(--t-dim));
+  font-family: var(--rc-label-font);
+  letter-spacing: 0.03em;
+}
+
+:root[data-ui='runecut'] .rc-preview-empty .rc-preview-text b {
+  color: var(--t-dim);
+  font-weight: 500;
 }
 
 /* What is in a window's body stands the one padding in from the rim (`.rc-body`). */

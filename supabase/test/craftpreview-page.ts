@@ -14,8 +14,10 @@ import { RECIPES } from '../../src/game/recipes';
 import type { UiLight, UiStyle } from '../../src/game/settings';
 import { setAnimations } from '../../src/engine/motion';
 import { sculptedFigures, sculptedReady, sculptSoft, flatFigures } from '../../src/render/figure';
-import { craftPreviewKnobs, previewOf, type PreviewKind } from '../../src/ui/craftpreview';
-import type { CraftPanel } from '../../src/ui/panels/craft';
+import { CraftPreview, craftPreviewKnobs, previewOf, type PreviewKind, type Stage } from '../../src/ui/craftpreview';
+import { CRAFT_TABS, craftTabOf, type CraftPanel as Panel, type CraftTab } from '../../src/ui/panels/craft';
+import { itemDef } from '../../src/game/items';
+import { kitSync } from '../../src/render/kitpieces';
 import { followScreen } from '../../src/ui/screen';
 
 document.getElementById('boot')?.remove();
@@ -51,7 +53,7 @@ const renderer = new Renderer(canvas, game);
 const ui = new UI(game, renderer, uiRoot, canvasEl, { turn: () => {}, keys: new Keybinds(), island: null });
 canvasEl.style.visibility = 'hidden';
 document.body.style.background = '#6f7f73';
-const panel = (ui as unknown as { craftPanel: CraftPanel }).craftPanel;
+const panel = (ui as unknown as { craftPanel: Panel }).craftPanel;
 // A phone's screen: fitted to it as the game page fits it (narrow, a phone), so the windows are a phone's.
 if (window.innerWidth <= 720) followScreen(uiRoot);
 const win = ui.windows.get('craft')!;
@@ -89,7 +91,44 @@ export interface PreviewState {
   share: number;
   sum: number;
   chosen: boolean;
+  /** The pane in its empty state, and the stage label on it. */
+  empty: boolean;
+  stage: string;
 }
+
+/** Where a box is on the page. */
+export interface Rect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+const rectOf = (el: Element | null): Rect => {
+  const r = el?.getBoundingClientRect();
+  return r ? { x: r.left, y: r.top, w: r.width, h: r.height } : { x: 0, y: 0, w: 0, h: 0 };
+};
+
+/** The share of the canvas on the page that is drawn on. */
+function shareNow(): number {
+  const c = panel.preview.el;
+  const g = c.getContext('2d');
+  if (!g || !c.width) return 0;
+  const d = g.getImageData(0, 0, c.width, c.height).data;
+  let on = 0;
+  for (let i = 3; i < d.length; i += 4) if (d[i] > 8) on++;
+  return on / (d.length / 4);
+}
+
+/** Watching the canvas on the page every frame: the least of it ever drawn on, the stage labels seen, the frames looked at. */
+const watching = { on: false, least: 1, labels: [] as string[], looks: 0 };
+const watchStep = (): void => {
+  if (!watching.on) return;
+  watching.least = Math.min(watching.least, shareNow());
+  watching.looks++;
+  const l = panel.preview.stageSays ?? '';
+  if (watching.labels[watching.labels.length - 1] !== l) watching.labels.push(l);
+  requestAnimationFrame(watchStep);
+};
 
 function state(id = ''): PreviewState {
   const strip = win.body.querySelector<HTMLElement>('.craft-preview');
@@ -109,6 +148,7 @@ function state(id = ''): PreviewState {
     shown: !!strip && !strip.hidden, name: strip?.querySelector('b')?.textContent ?? '', line: strip?.querySelector('small')?.textContent ?? '',
     kind: s?.kind ?? null, item: s?.what.item ?? '', material: s?.what.material ?? '', running: panel.preview.running, frames: panel.preview.frames,
     share: on / n, sum, chosen: !!id && !!rowOf(id)?.classList.contains('rc-on'),
+    empty: !!strip?.classList.contains('rc-preview-empty'), stage: strip?.querySelector('.rc-preview-stage')?.textContent ?? '',
   };
 }
 
@@ -171,6 +211,79 @@ const api = {
   },
   choices: (id: string): string[] => [...(rowOf(id)?.querySelectorAll<HTMLOptionElement>('select.craft-of option') ?? [])].map((o) => o.value),
   state,
+  /** The preview pane's box, and its picture's. */
+  pane: (): { pane: Rect; pic: Rect; parts: string } => ({
+    pane: rectOf(win.body.querySelector('.craft-preview')), pic: rectOf(panel.preview.el),
+    parts: [...win.body.children].map((el) => `${el.className.split(' ')[0]}:${Math.round(rectOf(el).y * 10) / 10}+${Math.round(rectOf(el).h * 10) / 10}`).join(' '),
+  }),
+  /** Nothing chosen: the chosen row clicked again, and the pointer off the list. */
+  async unchoose(): Promise<PreviewState> {
+    const on = win.body.querySelector<HTMLElement>('.craft-row.rc-on .craft-name');
+    on?.click();
+    await rest(50);
+    return api.away();
+  },
+  watch(): void {
+    Object.assign(watching, { on: true, least: 1, labels: [], looks: 0 });
+    requestAnimationFrame(watchStep);
+  },
+  unwatch(): { least: number; labels: string[]; looks: number } {
+    watching.on = false;
+    return { least: watching.least, labels: watching.labels, looks: watching.looks };
+  },
+  /** Every recipe's thing set down, and the stages its preview shows it at (only those with more than one). */
+  stages(): Record<string, string[]> {
+    const p = new CraftPreview(game, () => true) as unknown as { stagesOf: (w: { item: string }) => Stage[] };
+    const out: Record<string, string[]> = {};
+    // Each bake made when it is wanted, as the preview has them made (`drawPiece`).
+    kitSync(true);
+    for (const id of new Set(RECIPES.map((r) => r.result))) {
+      if (previewOf(id) !== 'furniture') continue;
+      const st = p.stagesOf({ item: id });
+      if (st.length > 1) out[id] = st.map((s) => s.name ?? '·');
+    }
+    kitSync(false);
+    return out;
+  },
+  /** A tab opened as a player opens it: each tab's count as its button says it, and the recipes listed under it, their things and the heading each is under. */
+  async tab(t: CraftTab): Promise<{ counts: Record<string, number>; on: string; rows: Array<{ recipe: string; result: string; tab: string | null; section: string }>; inAll: string }> {
+    win.body.querySelector<HTMLButtonElement>(`.craft-tab[data-tab="${t}"]`)?.click();
+    await rest(60);
+    return api.tabState();
+  },
+  tabState(): { counts: Record<string, number>; on: string; rows: Array<{ recipe: string; result: string; tab: string | null; section: string }>; inAll: string } {
+    const counts: Record<string, number> = {};
+    let on = '';
+    for (const b of win.body.querySelectorAll<HTMLButtonElement>('.craft-tab')) {
+      counts[b.dataset.tab ?? ''] = Number(/(\d+)$/.exec(b.textContent ?? '')?.[1] ?? -1);
+      if (b.getAttribute('aria-selected') === 'true') on = b.dataset.tab ?? '';
+    }
+    const rows: Array<{ recipe: string; result: string; tab: string | null; section: string }> = [];
+    let section = '';
+    for (const el of win.body.querySelector('.inv-list')!.children) {
+      if (el.classList.contains('rc-section')) section = el.textContent ?? '';
+      const id = (el as HTMLElement).dataset.recipe;
+      const result = RECIPES.find((r) => r.id === id)?.result ?? '';
+      if (id) rows.push({ recipe: id, result, tab: craftTabOf(result), section });
+    }
+    return { counts, on, rows, inAll: win.body.querySelector('.craft-in-all')?.textContent ?? '' };
+  },
+  /** Clicked: the "In All" button an empty tab offers. */
+  async inAll(): Promise<string> {
+    win.body.querySelector<HTMLButtonElement>('.craft-in-all')?.click();
+    await rest(60);
+    return api.tabState().on;
+  },
+  /** What is kept in this browser of the window: the tab. */
+  keptTab: (): string => {
+    try {
+      return (JSON.parse(localStorage.getItem('wildermon-iso-recipes') ?? '{}') as { tab?: string }).tab ?? '';
+    } catch {
+      return '';
+    }
+  },
+  /** Each tab's things made, by name, for the report. */
+  tabItems: (): Record<string, string[]> => Object.fromEntries(CRAFT_TABS.map(([t]) => [t, [...new Set(RECIPES.filter((r) => craftTabOf(r.result) === t).map((r) => itemDef(r.result).name))]])),
   /** Typed into the search: the rows in order, each its recipe, its thing, and the heading it is under. */
   async search(q: string): Promise<Array<{ recipe: string; result: string; section: string }>> {
     const box = win.body.querySelector<HTMLInputElement>('input[type="search"]')!;

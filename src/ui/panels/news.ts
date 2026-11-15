@@ -49,8 +49,8 @@ import { lifeWords } from '../runecut-life';
 import { islandTime, LOCAL_NIGHT_ENDS, LOCAL_NIGHT_STARTS } from '../theme';
 import { FRAME_REACH, FRAME_REACHES, FRAME_RIM, FRAMES, frameLabel, frameOddities, RIM } from '../runecut-art';
 import { SALE_DAYS, SALES_SHOWN } from '../../game/prices';
-import { MAKES_SECTION, RECENT } from './craft';
-import { PREVIEW_FPS } from '../craftpreview';
+import { CRAFT_TABS, craftTabOf, MAKES_SECTION, RECENT } from './craft';
+import { PREVIEW_FPS, PREVIEW_H, PREVIEW_W, STAGE_SECS } from '../craftpreview';
 import { CAMPFIRE_LOGS } from '../../render/kit/campfire';
 import { SACK_FULL } from '../../render/kit/sack';
 import { STANDING_A, WILDERMON_A } from '../../game/journal-a';
@@ -411,6 +411,19 @@ const WAS_DYE = { boil: 3, garment: 1, banner: 2, sail: 3, ship: 5, wall: 1, flo
 const SCRUBS_LATER = new Set(['scrub_wall_paint', 'scrub_floor_paint']);
 
 export const NEWS: News[] = [
+  // The crafting window's preview pane, always there, its stages cycled and its flicker gone (`craftpreview.ts`); and its tabs (`craftTabOf`).
+  {
+    n: 630,
+    day: '2026-11-15',
+    lines: () => [
+      `Changed: Crafting window: preview pane always shown, fixed place and size: ${PREVIEW_W} × ${PREVIEW_H} px; narrow window or phone: thumbnail. Nothing chosen, or no model: "No preview".`,
+      `New: Crafting preview: stages cycled, ${STAGE_SECS} s each, while turning. Growth: hedge, bonsai, arches, pergola, trellis vine. Lit: lamp posts and pillars (empty, unlit, lit), oven, brazier, fireplace. Smelter, kiln: unlit, lit, working. Traps: set, baited, sprung. Settlement stake: levels 1–${MAX_DEED_LEVEL}.`,
+      'New: Crafting preview: stage label: its name, or "Stage 2/5". Animations Off or less motion: last stage, still.',
+      'Fixed: Crafting preview flicker: blank frame between two pictures; pane hidden and shown as the pointer crossed rows.',
+      `New: Crafting window: tabs ${CRAFT_TABS.map(([, label]) => label).join(' · ')}, each with its recipe count. Search: within the tab open; none found: "In All: N". Tab kept in this browser.`,
+      `New: Crafting window: Stations tab: ${listed([...new Set(RECIPES.filter((r) => craftTabOf(r.result) === 'stations').map((r) => itemDef(r.result).name.toLowerCase()))])}.`,
+    ],
+  },
   // Parts drawn through each other, at every facing (`kit/fittings.ts`, `obsidian.ts`, `adorn.ts`, `furnish.ts`, `lamps.ts`, `stands.ts`).
   {
     n: 631,

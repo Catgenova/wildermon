@@ -40,6 +40,8 @@ export const KIT = {
   mark: 'rc-meter-mark',
   preview: 'rc-preview',
   previewText: 'rc-preview-text',
+  previewStage: 'rc-preview-stage',
+  previewEmpty: 'rc-preview-empty',
 } as const;
 
 export type KitPart = keyof typeof KIT;
@@ -191,22 +193,35 @@ export function kitCheck(label: string, also = ''): { el: HTMLLabelElement; inpu
   return { el, input };
 }
 
-/** A picture of a thing beside its name and a line under it (the crafting window's preview): `set` names it, or hides the lot. */
-export function kitPreview(pic: HTMLElement, also = '', textAlso = ''): { el: HTMLDivElement; set: (name: string | null, line?: string) => void } {
+/**
+ * A pane with a picture of a thing beside its name, a line under it and a stage label (the crafting window's
+ * preview). Always there, at the one size: `set` names what it shows, or with `empty` its empty state (dimmed);
+ * `stage` labels the stage shown, or holds its place blank.
+ */
+export function kitPreview(pic: HTMLElement, also = '', textAlso = ''): {
+  el: HTMLDivElement;
+  set: (name: string, line?: string, empty?: boolean) => void;
+  stage: (label: string | null) => void;
+} {
   const el = made('div', 'preview', also);
   const text = made('div', 'previewText', textAlso);
   const name = document.createElement('b');
   const line = document.createElement('small');
-  text.append(name, line);
+  const step = made('small', 'previewStage');
+  step.style.visibility = 'hidden';
+  text.append(name, line, step);
   el.append(pic, text);
-  el.hidden = true;
   return {
     el,
-    set: (n, l = '') => {
-      el.hidden = n === null;
-      name.textContent = n ?? '';
+    set: (n, l = '', empty = false) => {
+      el.classList.toggle(KIT.previewEmpty, empty);
+      name.textContent = n;
       line.textContent = l;
       line.hidden = !l;
+    },
+    stage: (label) => {
+      step.textContent = label ?? '';
+      step.style.visibility = label ? '' : 'hidden';
     },
   };
 }
