@@ -33,7 +33,7 @@ begin
       act_ends = now() + make_interval(secs => secs),
       act_left = fight_back_goes()::int, act_goes = fight_back_goes()::int
     where world_id = p_world and uid = p_uid;
-  select lower(sd.name) into v_species from species_def sd where sd.id = c.species;
+  v_species := lower(kind_name_at(c));
   perform tell(p_world, p_uid, 'Fighting back: ' || coalesce(v_species, 'thing') || '.', 'fight');
   return true;
 end $function$

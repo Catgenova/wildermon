@@ -11,6 +11,8 @@ begin
   select * into c from creature where world_id = p_world and id = p_id for update;
   if not found then return false; end if;
   select * into d from species_def where id = c.species;
+  -- Named at its stage, in every line and on its carcass (`kind_name_at`).
+  d.name := kind_name_at(c);
   cx := creature_x(c); cy := creature_y(c);
   -- What a blow costs it is its blood's to say, and its herd's.
   -- Nothing is struck inside a Truce, nor from one (`faith_truce`).

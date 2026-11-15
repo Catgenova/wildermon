@@ -1,5 +1,5 @@
 import { ACTION_BY_ID } from './actions';
-import { attackOf, BLOW_SHARE, bloodMul, type Creature } from './creatures';
+import { attackOf, BLOW_SHARE, bloodMul, stageName, type Creature } from './creatures';
 import {
   ARROWS, blowEvery, blowOf, CONSIDER_EASY, CONSIDER_HARD, critMul, myCritChance, headBlow, headHide, hideTakes, nockedArrow,
   stanceDealt, swungWith,
@@ -66,6 +66,6 @@ export function consider(g: Game, c: Creature): Consider {
 /** The same, in the words the log and the target panel use. */
 export function considerSays(g: Game, c: Creature): string {
   const k = consider(g, c);
-  const name = g.creatures.species(c).name.toLowerCase();
+  const name = stageName(c).toLowerCase();
   return `${capital(name)}: about ${k.mine} of your blows to kill it; about ${k.its} of its to kill you. ${k.rating === 'easy' ? 'Easy' : k.rating === 'even' ? 'Even' : 'Hard'}.`;
 }

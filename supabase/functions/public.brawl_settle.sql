@@ -33,7 +33,7 @@ begin
     c.leg_ends := now() + make_interval(secs => greatest(0.2, sqrt((c.to_x - v_cx) ^ 2 + (c.to_y - v_cy) ^ 2)
                                                / greatest(0.1, d.speed * a.speed * beast_mul(c, 'speed') * flee_pace())));
     c.until := greatest(c.leg_ends, now() + make_interval(secs => flee_secs()));
-    if q.keeper is not null then perform tell(p_world, q.keeper, d.name || ' fled.', 'fight'); end if;
+    if q.keeper is not null then perform tell(p_world, q.keeper, kind_name_at(c) || ' fled.', 'fight'); end if;
     return c;
   end if;
   -- Only the last few seconds of the gap were spent on it.

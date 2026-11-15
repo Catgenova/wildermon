@@ -1163,6 +1163,15 @@ export function kindName(c: Pick<Creature, 'species' | 'skills'> & { variant?: n
   const stage = stageOf(c);
   return stage && def?.stages ? def.stages[stage - 1].name : subspeciesName(c) ?? def?.name ?? c.species;
 }
+/**
+ * What it is called at the stage it is at, and its kind's name at its first stage, with no subspecies: what a fight
+ * line and a carcass name it as (a carcass's kind is read back off it, `corpseSpecies`). The island's `kind_name_at`.
+ */
+export function stageName(c: Pick<Creature, 'species' | 'skills'> & { pedigree?: Pedigree | null }): string {
+  const def = SPECIES[c.species];
+  const stage = stageOf(c);
+  return stage && def?.stages ? def.stages[stage - 1].name : def?.name ?? c.species;
+}
 /** The subspecies it is, by its variant, for a kind of subspecies (`SpeciesDef.subspecies`); nothing for any other. */
 export function subspeciesName(c: { species: string; variant?: number }): string | null {
   const names = SPECIES[c.species]?.subspecies;
@@ -9710,7 +9719,7 @@ export class Creatures {
     }
     if (!best) return false;
     c.enemy = best.id;
-    game.logMsg(`${c.name} attacks: ${this.species(best).name.toLowerCase()} on the settlement.`, 'fight');
+    game.logMsg(`${c.name} attacks: ${stageName(best).toLowerCase()} on the settlement.`, 'fight');
     return true;
   }
 
@@ -10235,7 +10244,7 @@ export class Creatures {
      * on that, and comes for you after.
      */
     if (c.brawl === null || game.time - c.threatAt >= THREAT_HOLD) {
-      if (c.brawl !== null) game.logMsg(`${this.species(c).name} attacks you again.`, 'fight');
+      if (c.brawl !== null) game.logMsg(`${stageName(c)} attacks you again.`, 'fight');
       c.brawl = null;
       c.threatAt = game.time;
     }
@@ -10495,7 +10504,7 @@ export class Creatures {
     c.tx = c.x + ((c.x - p.x) / d) * run;
     c.ty = c.y + ((c.y - p.y) / d) * run;
     c.until = game.time + FLEE_SECS;
-    game.logMsg(`${def.name} fled.`, 'fight');
+    game.logMsg(`${stageName(c)} fled.`, 'fight');
   }
 
   /**
@@ -10571,7 +10580,7 @@ export class Creatures {
       }
       if (found) {
         c.enemy = found.id;
-        game.logMsg(`${c.name} attacks: ${this.species(found).name.toLowerCase()}.`, 'fight');
+        game.logMsg(`${c.name} attacks: ${stageName(found).toLowerCase()}.`, 'fight');
       }
     }
     if (c.enemy !== null) {
@@ -11579,7 +11588,7 @@ export class Creatures {
         o.brawl = a.id;
         o.threatAt = game.time;
         o.windup = 0;
-        if (a.mode === 'active') game.logMsg(`${this.species(o).name} attacks ${a.name}.`, 'fight');
+        if (a.mode === 'active') game.logMsg(`${stageName(o)} attacks ${a.name}.`, 'fight');
       }
     }
   }
@@ -11599,7 +11608,7 @@ export class Creatures {
     t.brawl = by.id;
     t.threatAt = game.time;
     t.windup = 0;
-    if (by.mode === 'active') game.logMsg(`${this.species(t).name} attacks ${by.name}.`, 'fight');
+    if (by.mode === 'active') game.logMsg(`${stageName(t)} attacks ${by.name}.`, 'fight');
   }
 
   /** A use's wear on the wildermon gear in a slot (`wearGear`), said to its keeper when it falls apart. The island's `gear_wear`. */
@@ -11634,7 +11643,7 @@ export class Creatures {
       t.state = 'flee';
       t.until = game.time + 3;
     }
-    if (t.mode === 'active' && by !== 'player' && game.time - (t.busyUntil ?? 0) > 0) game.logMsg(`${t.name} hurt by a ${this.species(by).name.toLowerCase()}.`, 'fight');
+    if (t.mode === 'active' && by !== 'player' && game.time - (t.busyUntil ?? 0) > 0) game.logMsg(`${t.name} hurt by a ${stageName(by).toLowerCase()}.`, 'fight');
     if (t.health <= 0) this.kill(game, t, by);
   }
 
@@ -11671,7 +11680,8 @@ export class Creatures {
     const y = Math.floor(t.y);
     // What the carcass is worth follows the size of the thing that left it.
     const size = ageDef(t, game.time).yield;
-    game.dropOnGround(x, y, { uid: game.inventory.nextUid++, id: 'corpse', ql: Math.max(1, Math.min(100, (15 + game.rand() * 35) * size)), dmg: 0, count: 1, extra: def.name });
+    // Named for the stage it died at (`kindName`), as the island's `wound_beast` names it.
+    game.dropOnGround(x, y, { uid: game.inventory.nextUid++, id: 'corpse', ql: Math.max(1, Math.min(100, (15 + game.rand() * 35) * size)), dmg: 0, count: 1, extra: stageName(t) });
     /*
      * And what it was keeping, which is the other half of where a map comes
      * from. Only a monster, and only to whoever struck it down: the odds and

@@ -15,5 +15,5 @@ begin
   if e.effect = 'flame' then perform class_burn(p_world, p_uid, p_id, enchant_burn_each(), enchant_burn_secs());
   else perform enchant_frost(p_world, p_id); end if;
   perform tell(p_world, p_uid, e.name || ': '
-    || replace(enchant_hit_said(e.effect), '{t}', lower((select s.name from species_def s where s.id = c.species))), 'fight');
+    || replace(enchant_hit_said(e.effect), '{t}', lower(kind_name_at(c))), 'fight');
 end $function$

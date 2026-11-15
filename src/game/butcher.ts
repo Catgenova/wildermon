@@ -64,6 +64,13 @@ export const corpseSpecies = (item: Item): (typeof SPECIES)[string] | undefined 
   return kind ?? SPECIES[Object.values(REMOVED_KINDS).find((r) => r.name.toLowerCase() === name)?.becomes ?? ''];
 };
 
+/** What a carcass is of, by the name it carries: the stage's, when it carries one, or its kind's. The island's `corpse_kind`. */
+export const corpseKind = (item: Item): string | undefined => {
+  const def = corpseSpecies(item);
+  const name = (item.extra ?? '').toLowerCase();
+  return def && ((def.stages ?? []).find((s) => s.name.toLowerCase() === name)?.name ?? def.name);
+};
+
 /**
  * The quality what comes off a carcass is taken at: the Butchering skill's,
  * with the knife, as every trade's skill decides what it makes. It used to be
@@ -161,8 +168,9 @@ export const BUTCHER_ACTIONS: ActionDef[] = [
       removeCorpse(g, t, item);
       // And a Recipe, maybe, off a goblin or an orc, at the carcass's QL (`recipebook.ts`), however the butchering went.
       const found = dropRecipe(g, def.id, item.ql);
-      if (!taken.length) g.logMsg(`Butchering failed: ${def.name.toLowerCase()} carcass lost.`, 'event');
-      else g.logMsg(`Butchered: ${def.name.toLowerCase()}. Got ${taken.join(', ')}, QL ${ql.toFixed(1)}.${knife ? '' : ' No knife: most of the carcass wasted.'}`, 'event');
+      const kind = (corpseKind(item) ?? def.name).toLowerCase();
+      if (!taken.length) g.logMsg(`Butchering failed: ${kind} carcass lost.`, 'event');
+      else g.logMsg(`Butchered: ${kind}. Got ${taken.join(', ')}, QL ${ql.toFixed(1)}.${knife ? '' : ' No knife: most of the carcass wasted.'}`, 'event');
       if (found) g.logMsg(found, 'event');
     },
   },

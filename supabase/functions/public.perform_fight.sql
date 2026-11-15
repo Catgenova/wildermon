@@ -46,6 +46,7 @@ begin
     c := target_creature(p_world, p_target);
     if c.world_id is null then return; end if;
     select * into d from species_def where id = c.species;
+    d.name := kind_name_at(c);
     w := swung_with(p_world, p_uid);
     v_spar := c.mode <> 'wild';
     held := swung_item(p_world, p_uid);
@@ -116,6 +117,7 @@ begin
     c := target_creature(p_world, p_target);
     if c.world_id is null then return; end if;
     select * into d from species_def where id = c.species;
+    d.name := kind_name_at(c);
     held := worn(p_world, p_uid, 'weapon');
     select bw.* into bow from weapon_def bw where bw.id = held.def and bw.ammo is not null;
     if not found then return; end if;
@@ -248,10 +250,10 @@ begin
     end if;
     delete from item where id = corpse.id;
     if array_length(taken, 1) is null then
-      perform tell(p_world, p_uid, 'Butchering failed: ' || lower(sp.name)
+      perform tell(p_world, p_uid, 'Butchering failed: ' || lower(corpse_kind(corpse.extra))
         || ' carcass lost.', 'event');
     else
-      perform tell(p_world, p_uid, 'Butchered: ' || lower(sp.name) || '. Got '
+      perform tell(p_world, p_uid, 'Butchered: ' || lower(corpse_kind(corpse.extra)) || '. Got '
         || array_to_string(taken, ', ') || ', QL ' || to_char(greatest(1, least(100, made_ql)), 'FM990.0') || '.'
         || case when knife_ql is null then ' No knife: most of the carcass wasted.' else '' end, 'event');
     end if;

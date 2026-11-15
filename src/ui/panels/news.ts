@@ -409,6 +409,15 @@ const WAS_DYE = { boil: 3, garment: 1, banner: 2, sail: 3, ship: 5, wall: 1, flo
 const SCRUBS_LATER = new Set(['scrub_wall_paint', 'scrub_floor_paint']);
 
 export const NEWS: News[] = [
+  // An evolved wildermon named for its stage in a fight and on its carcass (`kind_name_at`, `corpse_kind`).
+  {
+    n: 628,
+    day: '2026-11-15',
+    lines: () => [
+      `Fixed: evolved wildermon named as their first stage in fight lines and on carcasses, e.g. a ${SPECIES.orse.stages![0].name}'s corpse: "Corpse (${SPECIES.orse.name.toLowerCase()})". Now: its stage's name, "Corpse (${SPECIES.orse.stages![0].name.toLowerCase()})".`,
+      'Fixed: stage name in hit, miss, shot, kill, flee, fight back, dodge, riposte, enchantment, spell and companion lines, both directions; carcass in pack, on the ground, Examine and Butchered. Carcasses from before: their first stage\'s name.',
+    ],
+  },
   // A walk up to a storey whose staircase is only planned (`Game.unbuiltWayUp`).
   {
     n: 625,

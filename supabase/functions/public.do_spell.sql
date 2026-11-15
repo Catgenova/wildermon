@@ -21,7 +21,7 @@ begin
     if d.at_what = 'creature' then
       select * into c from creature where world_id = p_world and id = (p_target->>'id')::int;
       if not found then return 'There is nothing there.'; end if;
-      v_name := lower((select name from species_def where id = c.species));
+      v_name := lower(kind_name_at(c));
       perform wound_beast(p_world, c.id, v_force, p.x, p.y, p_uid, null);
       perform fx_beast(c.id);
       v_n := round(v_force);
@@ -45,7 +45,7 @@ begin
     if d.at_what = 'creature' then
       select * into c from creature where world_id = p_world and id = (p_target->>'id')::int;
       if not found then return 'There is nothing there.'; end if;
-      v_name := lower((select name from species_def where id = c.species));
+      v_name := lower(kind_name_at(c));
       v_cx := creature_x(c); v_cy := creature_y(c);
       update creature set until = now() + make_interval(secs => v_secs),
              from_x = v_cx, from_y = v_cy, to_x = v_cx, to_y = v_cy,

@@ -1034,6 +1034,12 @@
     "why": "Reported: old names after the visual overhauls, and stages not named for what they evolved into once tamed. One that goes only by one of its kind's own names is called its kind at its stage on any change to it; one its keeper named keeps the name."
   },
   {
+    "file": "supabase/test/stagename.ts",
+    "title": "An evolved wildermon is named for its stage in a fight and on its carcass",
+    "shard": 2,
+    "why": "Reported: \"evolved forms of wildermon appear as their base form in combat logs and corpses, eg a bunnycourser's corpse is shown as a thistlekit\". A second-stage Thistlekit, a third-stage Sparra line and a first stage, fought to the death on the island and in the browser: every fight line both ways, the kill, a companion's kill, and the carcass on the ground, in the pack, Examine and Butchered name the stage; a carcass left by old age, a blow taken for its keeper and a cull, the same; a first stage keeps its line's name."
+  },
+  {
     "file": "supabase/test/tamelearn.ts",
     "title": "A harder tame teaches more taming",
     "shard": 2,

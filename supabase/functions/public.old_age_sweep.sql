@@ -15,7 +15,7 @@ begin
     delete from class_mark where world_id = p_world and creature_id = c.id;
     delete from faith_mark where world_id = p_world and creature_id = c.id;
     delete from faith_weak where world_id = p_world and creature_id = c.id;
-    select name into v_kind from species_def where id = c.species;
+    v_kind := kind_name_at(c);
     if c.mode <> 'stored' then
       perform drop_on_ground(p_world, floor(creature_x(c))::int, floor(creature_y(c))::int, 'corpse',
         (15 + random() * 35) * (age_row(c.born, old_of(c), age_pace(c))).yield, v_kind);
