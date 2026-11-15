@@ -15,6 +15,8 @@
 import { Game, wayUpSaid } from '../../src/game/game';
 import { floorBill, type BuildingsJSON, type FloorTile } from '../../src/game/building';
 import { TileType } from '../../src/world/tiles';
+import { UI } from '../../src/ui/ui';
+import type { MenuItem } from '../../src/ui/contextmenu';
 
 let bad = 0;
 let good = 0;
@@ -71,6 +73,10 @@ function house(stairDone: boolean): Game {
 }
 
 const said = (g: Game): string => g.log[g.log.length - 1]?.text ?? '';
+/** The building rows of the staircase's tile on storey 1, as the window lists them (`buildingEntries`). */
+const storey1Rows = (g: Game): string[] => (UI.prototype as unknown as { buildingEntries(this: unknown, pick: unknown): MenuItem[] }).buildingEntries
+  .call(Object.assign(Object.create(UI.prototype), { game: g, startPlacingStairs() {} }), { x: SX, y: SY, cx: SX, cy: SY, wx: SX + 0.5, wy: SY + 0.5 })
+  .map((r) => r.label);
 
 /* ---- planned, not built ---------------------------------------------------- */
 {
@@ -85,6 +91,11 @@ const said = (g: Game): string => g.log[g.log.length - 1]?.text ?? '';
     const ok = g.moveTo(x - OX, y - OY, false, false, 1);
     check(`a click on ${name}, storey 2 pinned: no walk, and the staircase said`, !ok && said(g) === want, `${ok} "${said(g)}"`);
   }
+  // "There's no option to work on that planned staircase": storey 1's menu on its tile builds it, up on storey 2 (`wayUpPlanned`).
+  g.settings.viewLevel = 0;
+  const up = storey1Rows(g).find((l) => l.startsWith('Build single staircase up'));
+  check('storey 1 pinned: its menu on the staircase\'s tile builds it', up === 'Build single staircase up (storey 2) · needs 4 planks, 4 thatch, 4 timbers', storey1Rows(g).join(' | '));
+  g.settings.viewLevel = 1;
   // Half of it built: the bill as it stands now.
   stair.needed = { plank: 0, thatch: 2, timber: 4 };
   g.moveTo(2512 - OX, 2255 - OY, false, false, 1);

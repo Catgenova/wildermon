@@ -1370,7 +1370,13 @@
     "file": "supabase/test/stairplanned.ts",
     "title": "A walk up to a storey whose staircase is only planned says so",
     "shard": 3,
-    "why": "\"cant walk up these stairs\": Vinyard's single staircase to storey 2 was planned and never built, and every click on storey 2 said only no path. A walk up refused for want of a way up names the planned staircase or ladder, where it is and what it still needs; built, the same click walks up it; a finished way up off the storey leaves the planned one unnamed."
+    "why": "\"cant walk up these stairs\": Vinyard's single staircase to storey 2 was planned and never built, and every click on storey 2 said only no path. A walk up refused for want of a way up names the planned staircase or ladder, where it is and what it still needs; built, the same click walks up it; a finished way up off the storey leaves the planned one unnamed; and storey 1's menu on its tile builds it."
+  },
+  {
+    "file": "supabase/test/stairbuild.ts",
+    "title": "A staircase or a ladder planned on storey 2, built from storey 1",
+    "shard": 3,
+    "why": "\"There's no option to work on that planned staircase\": Vinyard's single staircase to storey 2 was planned from storey 1, and storey 1's menu on its tile had no Build for it, while storey 2 cannot be stood on until it is built. A single, a wide and a spiral staircase and a ladder planned on storey 2: each offered on storey 1's menu on its tile (Auto and pinned), its row asking for storey 2's slot, built to the end from its foot by the browser and by the island, the builder still on storey 1; built from storey 2 as before; a floor planned on storey 2 and a finished staircase not offered from storey 1."
   },
   {
     "file": "supabase/test/mountstairs.ts",
