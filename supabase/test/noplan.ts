@@ -174,7 +174,8 @@ for (const [x, y, s] of OUTSIDE) both('no_plan', side(x, y, s), 'No plan');
   check('and storey 2 is as open as it was, in the same words on both sides',
     mine === openMine && theirs === openTheirs && mine === theirs && mine.includes('6 sides with no wall or columns'),
     `before "${openMine}" / "${openTheirs}", after "${mine}" / "${theirs}"`);
-  same('a roof over it is refused as before', 'plan_floor', { x: TX, y: TY, material: 'plank', floorKind: 'roof' }, openMine);
+  // A roof needs no enclosed storey under it (free roofing): marked sides or not, it is planned the same.
+  same('and a roof over it is allowed, marked or not, on both sides', 'plan_floor', { x: TX, y: TY, material: 'plank', floorKind: 'roof' }, 'ALLOWED');
 }
 
 /* ---- and a fresh browser is handed the marks -------------------------------- */
