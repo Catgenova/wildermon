@@ -14,7 +14,7 @@
 import { STARTER_KIT, type IslandGround } from '../../src/game/game';
 import { Island } from '../../src/net/island';
 import { generateAtlasWorld } from '../../src/world/atlas-world';
-import { TILE_DEFS } from '../../src/world/tiles';
+import { isSeam, rockDef, TILE_DEFS, UNIDENTIFIED_ROCK } from '../../src/world/tiles';
 import { supabase, signIn, PROJECT } from '../../src/net/supabase';
 import { createAccount, nameEmail } from '../../src/net/accounts';
 import { readAtlas } from '../../tools/atlas-node';
@@ -345,9 +345,14 @@ async function main(): Promise<void> {
 
     // The island that came back, against the island that went out.
     const back = island.world!;
-    const same = (a: ArrayLike<number>, b: ArrayLike<number>): number => {
+    // A seam the reader cannot name comes back as `UNIDENTIFIED_ROCK` (the island's `mask_rock`), not its kind.
+    const same = (a: ArrayLike<number>, b: ArrayLike<number>, rock = false): number => {
       if (a.length !== b.length) return -1;
-      for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return i;
+      for (let i = 0; i < a.length; i++) {
+        if (a[i] === b[i]) continue;
+        if (rock && b[i] === UNIDENTIFIED_ROCK && isSeam(rockDef(a[i]))) continue;
+        return i;
+      }
       return -2;
     };
     for (const [what, mine, theirs] of [
@@ -356,8 +361,8 @@ async function main(): Promise<void> {
       ['tiles', gen.world.tiles, back.tiles],
       ['rock', gen.world.rock, back.rock],
     ] as Array<[string, ArrayLike<number>, ArrayLike<number>]>) {
-      const at = same(mine, theirs);
-      check(`the ${what} that came back are the ${what} that went out`, at === -2,
+      const at = same(mine, theirs, what === 'rock');
+      check(`the ${what} that came back are the ${what} that went out${what === 'rock' ? ', a seam we cannot name as unidentified' : ''}`, at === -2,
         at === -2 ? `all ${mine.length}` : at === -1 ? 'lengths differ' : `differs at ${at}`);
     }
 
