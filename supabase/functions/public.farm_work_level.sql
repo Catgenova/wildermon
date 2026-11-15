@@ -6,7 +6,13 @@ CREATE OR REPLACE FUNCTION public.farm_work_level(p_world uuid, p_x integer, p_y
  STABLE
 AS $function$
   select coalesce(
-    (select coalesce(cr.level, 0) from crop cr where cr.world_id = p_world and cr.x = p_x and cr.y = p_y),
-    case when land_tile(p_world, p_x, p_y) = tile_id('Field') then 0 end,
-    worker_bed(p_world, p_x, p_y), 0)
+    (select cr.storey from crop cr where cr.world_id = p_world and cr.x = p_x and cr.y = p_y
+        and storey_reached(p_world, p_x, p_y, cr.storey) and (cr.stage >= crop_ripe() or not cr.tended_now)
+      order by cr.storey limit 1),
+    case when land_tile(p_world, p_x, p_y) = tile_id('Field')
+          and not exists (select 1 from crop cr where cr.world_id = p_world and cr.x = p_x and cr.y = p_y and cr.storey = 0) then 0 end,
+    worker_bed(p_world, p_x, p_y),
+    (select cr.storey from crop cr where cr.world_id = p_world and cr.x = p_x and cr.y = p_y
+        and storey_reached(p_world, p_x, p_y, cr.storey) order by cr.storey limit 1),
+    0)
 $function$

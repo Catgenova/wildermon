@@ -4,24 +4,24 @@ CREATE OR REPLACE FUNCTION public.bed_resync(p_world uuid, p_x integer, p_y inte
  RETURNS void
  LANGUAGE plpgsql
 AS $function$
-declare c crop; v_open boolean;
+declare c crop; v_open boolean; v_settled boolean := false;
 begin
-  select * into c from crop cr where cr.world_id = p_world and cr.x = p_x and cr.y = p_y;
-  if c.level is null then return; end if;
-  if not bed_at(p_world, c.level, p_x, p_y) then
-    delete from crop cr where cr.world_id = p_world and cr.x = p_x and cr.y = p_y;
+  for c in select * from crop cr where cr.world_id = p_world and cr.x = p_x and cr.y = p_y and cr.level is not null loop
+    if not bed_at(p_world, c.level, p_x, p_y) then
+      delete from crop cr where cr.world_id = p_world and cr.x = p_x and cr.y = p_y and cr.storey = c.storey;
+      perform land_announce(p_world, p_x, p_y);
+      continue;
+    end if;
+    v_open := bed_open(p_world, c.level, p_x, p_y);
+    continue when v_open = not c.still;
+    if not v_open then
+      if not v_settled then perform crop_settle(p_world, p_x, p_y); v_settled := true; end if;
+      update crop cr set still = true, stage_at = crop_rebased(cr.stage_at, 'glass', 'still')
+       where cr.world_id = p_world and cr.x = p_x and cr.y = p_y and cr.storey = c.storey;
+    else
+      update crop cr set still = false, glass = true, stage_at = crop_rebased(cr.stage_at, 'still', 'glass')
+       where cr.world_id = p_world and cr.x = p_x and cr.y = p_y and cr.storey = c.storey;
+    end if;
     perform land_announce(p_world, p_x, p_y);
-    return;
-  end if;
-  v_open := bed_open(p_world, c.level, p_x, p_y);
-  if v_open = not c.still then return; end if;
-  if not v_open then
-    perform crop_settle(p_world, p_x, p_y);
-    update crop cr set still = true, stage_at = crop_rebased(cr.stage_at, 'glass', 'still')
-     where cr.world_id = p_world and cr.x = p_x and cr.y = p_y;
-  else
-    update crop cr set still = false, glass = true, stage_at = crop_rebased(cr.stage_at, 'still', 'glass')
-     where cr.world_id = p_world and cr.x = p_x and cr.y = p_y;
-  end if;
-  perform land_announce(p_world, p_x, p_y);
+  end loop;
 end $function$

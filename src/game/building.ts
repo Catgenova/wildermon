@@ -562,6 +562,31 @@ export const isSpiral = (f: FloorTile | undefined | null): boolean => !!f && f.k
 export const floorNameOf = (kind: FloorKind, hand?: StairHand | null): string =>
   kind === 'stairs' && hand === SPIRAL ? SPIRAL_STAIRS_NAME : kind === 'stairs' && hand ? SINGLE_STAIRS_NAME : FLOOR_KIND_NAMES[kind];
 export const floorName = (f: FloorTile): string => floorNameOf(floorKind(f), f.hand);
+/**
+ * A building material by its name, lower case, as the island says it (`build_material_def.name`): a garden bed and a
+ * glass roof, which are not in `MATERIALS`, by theirs too, and never by an id.
+ */
+export const materialSaid = (id: string): string => (MATERIAL_BY_ID.get(id)?.name ?? id.replace(/_/g, ' ')).toLowerCase();
+/** A floor tile in words, its material and its kind: "garden bed floor", "plank spiral staircase", or "ladder". The island's words in `perform_building`. */
+export const floorWords = (f: FloorTile): string => (floorKind(f) === 'ladder' ? 'ladder' : `${materialSaid(f.material)} ${floorName(f)}`);
+/** The same as a label, for the line over a tile: "Garden bed floor". */
+export const floorSaid = (f: FloorTile): string => {
+  const w = floorWords(f);
+  return w.charAt(0).toUpperCase() + w.slice(1);
+};
+/**
+ * What Examine says is laid on a building's tile, storey by storey from the ground: each finished floor, staircase
+ * or ladder by its material's name -- " Storey 1: Plank floor. Storey 2: Garden bed floor." -- and nothing of the
+ * roof. The island's `floors_said`.
+ */
+export function floorsSaid(bld: Buildings, b: Building, x: number, y: number): string {
+  let out = '';
+  for (let level = 0; level < b.levels; level++) {
+    const f = bld.floor(level, x, y);
+    if (f && f.building === b.id && isDone(f) && floorKind(f) !== 'roof') out += ` Storey ${level + 1}: ${floorSaid(f)}.`;
+  }
+  return out;
+}
 
 export interface FloorTile extends Bill {
   building: number;

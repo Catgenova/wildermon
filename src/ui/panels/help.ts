@@ -47,7 +47,7 @@ import { MINE_JOB, OUTCROP_CLEAR, OUTCROP_KINDS, OUTCROP_MINE, OUTCROP_QL, OUTCR
 import { CELLAR_ACTION_BY_ID, CELLAR_DAYLIGHT, cellarOutdoor } from '../../game/cellar';
 import { SPIRAL_TREADS } from '../../game/spiral';
 import { materialName } from '../../game/buildActions';
-import { BED_COVERED, BED_ONE_CROP } from '../../game/gardenbed';
+import { BED_COVERED, bedStoreySaid } from '../../game/gardenbed';
 import { COUNTER_HOLDS, COUNTER_REACH, COUNTER_SEEN, COUNTER_WALL } from '../../game/counters';
 import { SALE_DAYS, SALES_SHOWN } from '../../game/prices';
 import { FIND_SHOWN } from '../../game/marketfind';
@@ -2085,10 +2085,10 @@ export function helpText(): string {
     <ul>
       <li><b>Plan floor</b> offers <b>${GARDEN_BED.name.toLowerCase()}</b>, any storey: ${bedTile()} per tile; mallet; trains carpentry. ${onlySaid(GARDEN_BED)}</li>
       <li>Ribbons: ${bedMake()} only. Hod carriers: timber and dirt only.</li>
-      <li>Finished: a field, no tilling. Sow, tend, harvest and patches from the storey you stand on (all field rules and Farmer perks included).</li>
+      <li>Finished: a field, no tilling. Sow, tend, harvest and patches from the bed's storey (all field rules and Farmer perks included). Picked on a pinned storey: walks you up to it first. Asked from another storey: "${bedStoreySaid(1)}"</li>
       <li>Growth: <b>${growthWords(GLASSHOUSE_GROWTH)} in every season</b>, winter included, while open: nothing finished above it, or the nearest finished thing above a glass roof.</li>
       <li>Covered (floor, staircase or roof not of glass above): "${BED_COVERED}" Growing crop: holds its progress until uncovered.</li>
-      <li>One crop per tile, any storey: "${BED_ONE_CROP}"</li>
+      <li>One crop per storey of a tile: a bed over another bed or a field grows its own crop.</li>
       <li>Removed or relaid in another material: its crop goes with it. Settlement farm workers: beds on any storey a finished staircase reaches.</li>
     </ul>
     <h4>Fences, gates, half walls</h4>

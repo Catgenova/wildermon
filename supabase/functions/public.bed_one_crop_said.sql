@@ -4,4 +4,4 @@ CREATE OR REPLACE FUNCTION public.bed_one_crop_said()
  RETURNS text
  LANGUAGE sql
  IMMUTABLE
-AS $function$ select 'Crop on another storey of this tile: one crop per tile.' $function$
+AS $function$ select 'Crop in the field here: one crop per storey.' $function$

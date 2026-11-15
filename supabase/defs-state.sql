@@ -10940,7 +10940,7 @@ insert into build_material_bill (material, ord, item, n, extra) values ('garden_
 update build_material_def set only_walls = array[]::text[], only_floors = array['floor']::text[], only_said = 'Garden bed: only as a floor.' where id = 'garden_bed';
 create or replace function bed_material() returns text language sql immutable as $fn$ select 'garden_bed' $fn$;
 create or replace function bed_covered_said() returns text language sql immutable as $fn$ select 'Covered: garden beds need open sky or a glass roof.' $fn$;
-create or replace function bed_one_crop_said() returns text language sql immutable as $fn$ select 'Crop on another storey of this tile: one crop per tile.' $fn$;
+create or replace function bed_one_crop_said() returns text language sql immutable as $fn$ select 'Crop in the field here: one crop per storey.' $fn$;
 create or replace function bed_name() returns text language sql immutable as $fn$ select 'Garden bed' $fn$;
 create or replace function bed_still_said() returns text language sql immutable as $fn$ select 'covered: no growth' $fn$;
 create or replace function bed_no_deck_said() returns text language sql immutable as $fn$ select 'Garden bed: not a deck on piers.' $fn$;

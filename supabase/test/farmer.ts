@@ -73,7 +73,7 @@ const field = (x: number, y: number): string => `perform land_set_tile(w, ${x}, 
 const crop = (x: number, y: number, id: string, stage: number, tended: number, now = false): string =>
   `${field(x, y)}; insert into crop (world_id, x, y, id, stage, stage_at, tended, tended_now, ql, pace)
      values (w, ${x}, ${y}, '${id}', ${stage}, now(), ${tended}, ${now}, ${HANDS}, 1)
-     on conflict (world_id, x, y) do update set id = excluded.id, stage = excluded.stage, stage_at = excluded.stage_at,
+     on conflict (world_id, x, y, storey) do update set id = excluded.id, stage = excluded.stage, stage_at = excluded.stage_at,
        tended = excluded.tended, tended_now = excluded.tended_now, ql = excluded.ql, pace = 1`;
 const unsow = (x: number, y: number): string => `delete from crop where world_id = w and x = ${x} and y = ${y}`;
 const paceAt = (x: number, y: number): string =>
