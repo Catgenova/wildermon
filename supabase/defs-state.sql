@@ -2700,7 +2700,7 @@ insert into species_diet values ('ulva', 'cooked_fish');
 insert into species_diet values ('ulva', 'stew');
 insert into species_diet values ('ulva', 'cottage_pie');
 update species_def set favourite = 'meat' where id = 'ulva';
-insert into species_def values ('magga', 'Chestkit', 'Settlement task: carry items lying on the settlement home; sort raw and worked materials from the settlement stores into raw and craft material bins. Level: foraging. Evolves at level 25: Lootvent.', 48, 1.2, 2, 1, 0.14, 'a berry or a handful of nuts', true, 'fetch', 12, 4, false, true, false, false, false, false, false, false, false, false, false, false, null, null, null, null, 'cut', null, null);
+insert into species_def values ('magga', 'Chestkit', 'Settlement task: carry items lying on the settlement home; move items from other containers into a container named for the item; sort raw and worked materials from the settlement stores into raw and craft material bins. Level: foraging. Evolves at level 25: Lootvent.', 48, 1.2, 2, 1, 0.14, 'a berry or a handful of nuts', true, 'fetch', 12, 4, false, true, false, false, false, false, false, false, false, false, false, false, null, null, null, null, 'cut', null, null);
 update species_def set stages = array['Lootvent', 'Hoardback']::text[] where id = 'magga';
 update species_def set perk = 'loads', perk_n = 1, perk_channel = null where id = 'magga';
 update species_def set was = array['Magga']::text[] where id = 'magga';
@@ -6110,7 +6110,7 @@ insert into gather_def values ('sand', 'digging', 'collecting sand', 'collect sa
 insert into gather_def values ('clay', 'digging', 'collecting clay', 'collect clay');
 insert into gather_def values ('quarry', 'mining', 'cutting stone', 'cut stone');
 insert into gather_def values ('stoke', 'smelting', 'stoking', 'keep your campfires, ovens, braziers, smelters and kilns fuelled');
-insert into gather_def values ('fetch', 'foraging', 'fetching', 'pick up dropped items; sort raw and worked materials from your settlement stores into your raw and craft material bins');
+insert into gather_def values ('fetch', 'foraging', 'fetching', 'pick up dropped items; move items from your other containers into a container named for the item; sort raw and worked materials from your settlement stores into your raw and craft material bins');
 insert into gather_def values ('guard', 'body_strength', 'guarding', 'guard the settlement');
 insert into gather_def values ('hunt', 'fighting', 'hunting', 'hunt round the settlement and bring carcasses home');
 insert into gather_def values ('peat', 'digging', 'collecting peat and tar', 'collect peat and tar');

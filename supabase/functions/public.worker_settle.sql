@@ -9,7 +9,7 @@ declare c creature; d species_def; kind text; guard int := 0; done int := 0;
         secs double precision; load jsonb; cx double precision; cy double precision;
         ax double precision; ay double precision; v_foe creature; v_corpse item;
         v_step record; v_site record; v_store record; v_in boolean;
-        v_day int; v_held jsonb; v_left int; v_bed placed; v_sort record; v_spar creature; v_hive placed; v_trip record; v_made int[]; v_did jsonb; v_tire int; v_put jsonb; -- made log
+        v_day int; v_held jsonb; v_left int; v_bed placed; v_sort record; v_hoard record; v_spar creature; v_hive placed; v_trip record; v_made int[]; v_did jsonb; v_tire int; v_put jsonb; -- made log
         v_lv int; v_once int; v_routed boolean := true; -- storeys
         v_vine boolean := false; -- a bush picker planting vines
         v_hy_tried boolean := false; -- a hybrid that has looked for its second trade's work
@@ -763,7 +763,10 @@ begin
       end if;
       select * into spot from find_work_tile(p_world, v_site.x, v_site.y, v_site.radius, kind, c);
       if spot.x is null and kind = 'fetch' and v_site.post is null and c.around is null then
-        select * into v_sort from sort_stack(p_world, c, cx, cy);
+        -- First a stack to a container named for it (`private.hoard_move`), then the bins (`sort_stack`).
+        select * into v_hoard from private.hoard_move(p_world, c, cx, cy);
+        if v_hoard.iid is not null then v_sort := v_hoard;
+        else select * into v_sort from sort_stack(p_world, c, cx, cy); end if;
         if v_sort.iid is not null then
           c.work_x := v_sort.x; c.work_y := v_sort.y;
           c.idle_since := null; c.idle_what := null; c.idle_why := null; c.idle_n := null;
@@ -834,6 +837,11 @@ begin
         if kind = 'quarry' then
           select * into v_mi from stone_idle(p_world, v_site.x, v_site.y, v_site.radius, c);
           if v_mi.why is not null then c.idle_why := v_mi.why; c.idle_n := v_mi.n; c.idle_what := v_mi.what; end if;
+        end if;
+        -- A Chestkit on its settlement: why nothing moved to a container named for it (`private.hoard_move`), asked
+        -- only of one, which asked for it above.
+        if kind = 'fetch' and v_site.post is null and c.around is null then
+          if v_hoard.why is not null then c.idle_why := v_hoard.why; end if;
         end if;
         -- All of it in reach worked and on its wait: the seconds till the soonest is back (`worker_wait_left`).
         if worker_wait_left(p_world, v_site.x, v_site.y, v_site.radius, kind) is not null then

@@ -224,6 +224,8 @@ import { KNACK_BY_LEARNING, KNACK_GO, KNACK_ODDS } from '../../game/titles';
 import { ALL_GOALS, JOURNAL } from '../../game/journal';
 import { ISLAND_GOALS, TRADE_GOALS, WILDERMON_GOALS_C } from '../../game/journal-c';
 import { IDLE_WANTS, idleSays, LEDGER_ITEMS, LEDGER_SHOWN, workDoneLine } from '../../game/workerlog';
+import { IDLE_LABEL } from '../../game/workstats';
+import { NAME_MAX } from '../../game/naming';
 import { type GatherKind, bushVineSays, CULL_RANGE, COMPANION_SIGHT, FORMER_NAME, HUNT_REST, kindNameOf, REMOVED_KINDS, HEARTH_FULL, HOME_LEG, HOME_SLACK, REED_LEVELS, ringKeepsOut, SPECIES, WILD_RESET_DAYS, WILD_SPECIES, WILD_STAY } from '../../game/creatures';
 import { TRACK_RANGE_BASE, TRACK_RANGE_PER, TRACK_SHOW, trackBandsSays, trackErrSays, trackRange } from '../../game/tracking';
 import {
@@ -422,6 +424,24 @@ const VEINS = VEIN_LOOKS.filter((l): l is VeinLook => l !== null);
 const veinsOf = (family: VeinLook['family']): string => listed(VEINS.filter((l) => l.family === family).map((l) => l.name.toLowerCase()));
 
 export const NEWS: News[] = [
+  // Containers named for an item, the Chestkit line moving it into them (`20261120000104_named_containers.sql`, `hoard.ts`).
+  {
+    n: 648,
+    day: '2026-11-15',
+    lines: () => {
+      const line = SPECIES.magga.name;
+      const idle = (why: 'noname' | 'nomove' | 'namedfull'): string => IDLE_LABEL[why];
+      return [
+        `New: ${line}: moves items from other containers on its settlement into a container named for the item. Name: the item's name, plural or id; any case; max ${NAME_MAX} characters.`,
+        `New: ${line}: nearest container first; stack split to the room; full: the next named for it. Never out of a named container; nothing else into one.`,
+        `New: ${line} idle: ${idle('noname')}; ${idle('nomove')}; ${idle('namedfull')}.`,
+        'New: Examine on crates and storage furniture: name, what it is named for, moved in or out.',
+        'New: hover on a named crate or storage piece: what it is; what its name is for.',
+        `Changed: ${line} bin sort: not out of a named container; not into a bin named for another item.`,
+        'Changed: Give it a name on furniture: only one you may use (yours, Crates and stores rank, settlement store rank, padlock key).',
+      ];
+    },
+  },
   // Change wall built and shown (`20261120000103_change_wall_built.sql`, `BUILDS` in net/island.ts, `Game.changeBuilt`).
   {
     n: 647,

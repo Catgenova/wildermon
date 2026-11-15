@@ -33,6 +33,11 @@ begin
     return query select * from private.worker_store_round(p_world, c, p_def, p_count, v_site.x, v_site.y, v_site.radius, 0.5, false);
     if found then return; end if;
   end if;
+  -- A Chestkit on its settlement: a container named for the load first (`private.hoard_into`).
+  if private.hoard_trade(c) then
+    return query select * from private.hoard_into(p_world, c, p_def, p_count);
+    if found then return; end if;
+  end if;
   -- Then home: the settlement's own crate while it has room, and the nearest thing on the deed that will take it after.
   select * into v_d from my_deed(p_world, c.keeper) md where md.world_id is not null;
   if v_d.world_id is null then return; end if;

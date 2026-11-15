@@ -2241,6 +2241,15 @@
     "why": "Asked: the Magga \"now also sorts raw material bins and craft material bins\". With nothing lying about it takes a stack out of a settlement store into the bin that takes it and has room, never out of a bin or a padlocked or marked store, and says why when idle."
   },
   {
+    "file": "supabase/test/hoardnamed.ts",
+    "title": "A Chestkit moves an item into a container named for it",
+    "shard": 4,
+    "external": [
+      "typescript"
+    ],
+    "why": "Asked: \"If a player names an eligible container on their settlement, the wildermon will transport items to that container from any unmatched or unnamed containers.\" A name matches by the item's name, plural or id, any case; naming is refused to whoever may not use the piece; the moves split a stack to the room, fill one target then the next, never take out of a target or a padlocked chest, and are the same loads in the same order on both sides; idle, it says which of no named container, nothing to move or every target full."
+  },
+  {
     "file": "supabase/test/turnover.ts",
     "title": "A wild thing goes after its span and the stretch is stocked afresh",
     "shard": 4,

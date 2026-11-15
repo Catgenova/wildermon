@@ -81,6 +81,7 @@ import { FLIGHT_TILES, idleSays, LEDGER_ITEMS, LEDGER_SHOWN, workDoneLine } from
 import { IDLE_STALE, WORK_ITEMS, WORK_SHOWN } from '../../game/workstats';
 import { COLOUR_FORM_ODDS, FORM_PASS, formGives, formName, PALE_AT, SIZE_FORM_ODDS } from '../../game/wildforms';
 import { BANNER_AGAIN, BANNER_DEPTH, BANNER_MS, LEAVING_MS } from '../deedbanner';
+import { NAME_MAX } from '../../game/naming';
 import { DEFAULT_RANKS, NEWCOMER_RANK, permsOf, POWER, RANK_CAP, RANK_NAME_MAX, RANK_POWERS, rankMay, STORE_LOG_CAP } from '../../game/ranks';
 import { storeMarkable } from '../../game/stores';
 import {
@@ -3494,9 +3495,15 @@ export function helpText(): string {
       <tr><td><b>${SPECIES.quarra.name}</b></td><td>On bare rock; eats clay. Cuts rock, slate, marble and sandstone shards. Evolves: ${evolves('quarra')}.</td></tr>
       <tr><td><b>${SPECIES.embra.name}</b></td><td>Marsh peat and tar; eats cooked food only. Keeps every campfire, oven, brazier, smelter and kiln on the settlement fuelled and lit from the stores, whole pieces that fit only. ${STOKE_SAYS} ${STOKE_SMELTS_AT > 0 ? `${SPECIES.embra.stages![STOKE_SMELTS_AT - 1].name} on: ` : ''}${STOKE_SMELT_SAYS}
       Evolves: ${evolves('embra')}.</td></tr>
-      <tr><td><b>${SPECIES.magga.name}</b></td><td>Collects everything dropped on the settlement into the crate. With nothing dropped in range, sorts: a stack a load
-      from a settlement crate, chest or other store into the raw or craft material bin that takes it, up to the bin's room; not from bins, padlocked or marked stores or locked items,
-      and not off a work post. Card when idle: &ldquo;${idleSays({ why: 'range', n: SPECIES.magga.workRange }, 'fetch')}&rdquo; Wild ones steal items left near their trees. Evolves: ${evolves('magga')}.</td></tr>
+      <tr><td><b>${SPECIES.magga.name}</b></td><td>Collects everything dropped on the settlement into the crate. With nothing dropped in range:
+      <b>named containers</b> first, then the bins; on its settlement only, not off a work post.<br>
+      Named container: a crate or storage piece on the settlement named for an item (Give it a name: the item's name, plural or id; any case; spaces round it ignored; max ${NAME_MAX} characters).
+      Moves: that item from the other containers, nearest first; to the nearest named for it with room; a stack a load, split to the room;
+      that one full: the next named for it. Never out of a named container, a padlocked or marked store, or a locked item; nothing else into a named container.
+      Stacks a trip: ${STAGE_LOADS.join(', ')} by stage; ${perkLine('magga').toLowerCase()} (${STAGE_LOADS[2]} to ${STAGE_LOADS[2] + STAGE_PERKS.magga.n}). Pace: its speed and work time.<br>
+      Bins: a stack a load from a settlement crate, chest or other store into the raw or craft material bin that takes it, up to the bin's room; not from bins, named containers, padlocked or marked stores or locked items.<br>
+      Card when idle: ${(['noname', 'nomove', 'namedfull'] as const).map((why) => `&ldquo;${idleSays({ why, n: SPECIES.magga.workRange }, 'fetch')}&rdquo;`).join(' ')}
+      Off a work post: &ldquo;${idleSays({ why: 'range', n: SPECIES.magga.workRange, post: true }, 'fetch')}&rdquo; Wild ones steal items left near their trees. Evolves: ${evolves('magga')}.</td></tr>
       <tr><td><b>${SPECIES.woola.name}</b></td><td>No task. <b>Shear</b> with a knife for <b>wool</b> once grown; regrows in ${dur(1 / (SPECIES.woola.fleece ?? 1))}.
       Evolves: ${evolves('woola')}.</td></tr>
       <tr><td><b>${SPECIES.ulva.name}</b></td><td>Fights back when struck. Taming ${SPECIES.ulva.tameLevel}. Settlement task: ${GATHER_VERB.spin} at your spindles (<b>The settlement's hands</b>). Evolves: ${evolves('ulva')}.</td></tr>
