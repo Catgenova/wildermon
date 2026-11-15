@@ -1,7 +1,7 @@
 import { mix, tone } from '../../trees/kit';
 import { cedar as flat } from '../../trees/species/cedar';
 import { fresh, wintry } from '../../foliage';
-import { STONE } from '../../seams/kit';
+import { ROCK_VARIANTS } from '../../../world/tiles';
 import type { Build, Ramp, Species3D, Whorls } from '../types';
 
 /**
@@ -58,7 +58,8 @@ export const cedar: Species3D = {
   },
   buttress: true,
   snowLine: true,
-  undergrowth: { stone: STONE },
+  // The rock it grows out of, as the ground draws it.
+  undergrowth: { stone: [...ROCK_VARIANTS[0].color] as [number, number, number] },
   leaf: {
     summer: rampOf(flat.leaf),
     spring: rampOf(fresh(flat.leaf)),

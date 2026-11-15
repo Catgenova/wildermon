@@ -335,6 +335,7 @@ import {
 } from '../../game/decordefs';
 import { CLIMBER_BARE, CLIMBER_BLOOMS, ROSE_SEASONS } from '../../game/roses';
 import { PATH_DETOURS, PATH_KINDS, PATH_SITE, PATH_SKILLS, PATH_STEPS, PATH_SURE } from '../../game/path';
+import { SEAM_FROM, VEIN_LOOKS, type VeinLook } from '../../render/seams/runecut';
 
 /** Where a piece fixed in this way goes, as the help says it (`garden.ts`). */
 const GARDEN_MOUNT = (m: Mount): string => MOUNT_SAID[m];
@@ -413,8 +414,24 @@ const WAS_DYE = { boil: 3, garment: 1, banner: 2, sail: 3, ship: 5, wall: 1, flo
 const FAIL_EXAMPLE = failFactorSaid(failFactor({ ...FAIL_EXAMPLE_AT, difficulty: ACTION_BY_ID.get('cut_down')?.difficulty ?? 0 }));
 /** The jobs that scrub paint off with a brush (423), which came after the storey jobs were named (332). */
 const SCRUBS_LATER = new Set(['scrub_wall_paint', 'scrub_floor_paint']);
+/** The seams as they are cut into the rock (`seams/runecut.ts`), named as a list says them. */
+const VEINS = VEIN_LOOKS.filter((l): l is VeinLook => l !== null);
+const veinsOf = (family: VeinLook['family']): string => listed(VEINS.filter((l) => l.family === family).map((l) => l.name.toLowerCase()));
 
 export const NEWS: News[] = [
+  // Every seam a recess cut into its own tile, one model a tile (`seams/runecut.ts`), and the prospector's mark (`prospectMark`).
+  {
+    n: 633,
+    day: '2026-11-15',
+    lines: () => [
+      'Changed: veins and seams: a recess cut into each tile, one per tile (was: bands running across tiles).',
+      `Changed: recess by kind. ${capital(veinsOf('stone'))}: stepped square cut. ${capital(veinsOf('fuel'))}: stepped cut, ember cracks. ${capital(veinsOf('base'))}: rounded pocket, ore chips, band of the ore's colour round the lip. ${capital(veinsOf('precious'))}: wider, deeper pocket lined with ore, glints. ${capital(veinsOf('rare'))}: the mark cut as a lit fissure, crystals at its ends, glints.`,
+      `New: marks: ${listed(VEINS.map((l) => `${l.name.toLowerCase()} ${l.markName}`))}.`,
+      `New: lit at night: ${listed(VEINS.filter((l) => l.emit > 0).map((l) => `${l.name.toLowerCase()} ${percent(l.emit)}`))}.`,
+      `Changed: below zoom ${SEAM_FROM}: tile colour only, as before.`,
+      'Changed: prospected veins: four corner marks in the vein\'s light; bare: its mark lit, with a glow; buried: its mark in a ring on the ground (was: yellow tile).',
+    ],
+  },
   // The job in hand's × in the queue list (`QueueView`, `Game.skipAction`, `rpc_skip`).
   {
     n: 636,
