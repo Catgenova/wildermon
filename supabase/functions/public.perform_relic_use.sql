@@ -62,8 +62,9 @@ begin
 
   elsif p_action = 'open_seed_jar' then
     -- `jar_seeds` seeds of one crop at random, at the jar's QL.
+    v_it := seed_jar_opened(p_world, p_uid, p_target);
     select c.seed into v_seed from crop_def c order by random() limit 1;
-    if not spend_stack(p_world, p_uid, v_it.id, 1) then return; end if;
+    if v_it.id is null or not spend_stack(p_world, p_uid, v_it.id, 1) then return; end if;
     perform give(p_world, p_uid, v_seed, jar_seeds()::int, v_it.ql);
     perform tell(p_world, p_uid, 'Seed jar opened: ' || jar_seeds()::int || ' × '
       || lower(seen_name(p_world, p_uid, v_seed, null, (select d.name from item_def d where d.id = v_seed))) || ', QL ' || round(v_it.ql::numeric, 1) || '.', 'event');

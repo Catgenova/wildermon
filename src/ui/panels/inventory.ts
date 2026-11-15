@@ -11,7 +11,7 @@ import { dragging, makeDraggable, makeDropZone, type DragPayload } from '../drag
 import { Picking } from '../picking';
 import { nextFrame } from '../repaint';
 import type { UIWindow } from '../windows';
-import { COUNTS, pinEntry, pinnable } from '../beltmenu';
+import { allOfKindEntry, COUNTS, pinEntry, pinnable } from '../beltmenu';
 import { orderBy, sortSelect, type SortKey } from '../sorting';
 import { kit, kitBody, kitButton, kitEmpty, kitMeter, kitPressed, kitSearch, kitSection, made, meaning, type Meaning } from '../kit';
 import { ACTION_BY_ID, type ActionDef, type Target } from '../../game/actions';
@@ -467,6 +467,8 @@ export class InventoryPanel {
           ],
         };
       }
+      const ofKind = reason ? null : allOfKindEntry(this.game, def, target, item.id);
+      if (ofKind) return ofKind;
       if (def.repeat && !reason) {
         return {
           label: def.label,

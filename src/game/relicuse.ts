@@ -65,6 +65,16 @@ export function pressStamp(g: Game, first: number): number {
 type ItemTarget = Extract<Target, { kind: 'item' }>;
 const held = (g: Game, t: Target): Item | undefined => (t.kind === 'item' ? g.inventory.get(t.uid) : undefined);
 
+/**
+ * The seed jar an Open opens: the one named while it is carried, else the first other loose one in the pack, lowest
+ * uid first, so each go of Open All (N) opens the next. The island's `seed_jar_opened`.
+ */
+export const seedJarOpened = (g: Game, t: Target): Item | undefined => {
+  const named = held(g, t);
+  if (named?.id === SEED_JAR) return named;
+  return g.inventory.items.filter((it) => it.id === SEED_JAR && !it.locked).sort((a, b) => a.uid - b.uid)[0];
+};
+
 /** Why a whetstone will not hone this, or null. The island's `relic_use_refusal`, word for word. */
 export function honeRefusal(g: Game, t: Target): string | null {
   const it = held(g, t);
@@ -165,11 +175,12 @@ export const RELIC_USE_ACTIONS: ActionDef[] = [
     verb: 'opening the jar',
     stamina: 0.01,
     baseTime: 2,
+    allOfKind: true,
     applies: (t, g) => held(g, t)?.id === SEED_JAR,
-    check: (t, g) => (held(g, t)?.id === SEED_JAR ? null : 'It is gone.'),
+    check: (t, g) => (seedJarOpened(g, t) ? null : 'It is gone.'),
     perform: (t, g) => {
-      const jar = held(g, t);
-      if (!jar || jar.id !== SEED_JAR) return;
+      const jar = seedJarOpened(g, t);
+      if (!jar) return;
       const crop = CROP_LIST[Math.floor(g.rand() * CROP_LIST.length)];
       const ql = jar.ql;
       if (!g.inventory.remove(jar.uid, 1)) return;

@@ -424,6 +424,14 @@ const VEINS = VEIN_LOOKS.filter((l): l is VeinLook => l !== null);
 const veinsOf = (family: VeinLook['family']): string => listed(VEINS.filter((l) => l.family === family).map((l) => l.name.toLowerCase()));
 
 export const NEWS: News[] = [
+  // Ancient seed jars opened all at once (`20261120000106_seed_jars_all.sql`, `seedJarOpened`, `allOfKindEntry`).
+  {
+    n: 649,
+    day: '2026-11-15',
+    lines: () => [
+      `New: ancient seed jar: Open, All (N): one jar a go, N: jars carried, up to ${JOB_GOES_MOST}.`,
+    ],
+  },
   // Containers named for an item, the Chestkit line moving it into them (`20261120000104_named_containers.sql`, `hoard.ts`).
   {
     n: 648,
