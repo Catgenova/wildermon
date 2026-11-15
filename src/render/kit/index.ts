@@ -16,8 +16,8 @@ import { CREATURE_CRATE } from './creature-crate';
 import { FIREWOOD_RACK } from './firewood';
 import { FOUNTAIN } from './fountain';
 import { GRAVE } from './grave';
-import { DRAGON_ROOST, GOBLIN_WARREN, OGRE_CAVE, ORC_CAMP } from './lairs';
-import { CHIEF_EAR, GREAT_DRAGON_SCALE, OGRE_KING_JAW, WARLORD_TUSK } from './trophies';
+import { ASH_VENT, CINDER_VENT, DRAGON_ROOST, GOBLIN_WARREN, MAGMA_VENT, OGRE_CAVE, ORC_CAMP } from './lairs';
+import { ASH_LORD_VEIL, CHIEF_EAR, CINDER_ALPHA_FANG, GREAT_DRAGON_SCALE, MAGMA_CORE, OGRE_KING_JAW, WARLORD_TUSK } from './trophies';
 import { LAMP_PILLAR, LAMP_POST } from './lamps';
 import { MAILBOX } from './mailbox';
 import { OVEN } from './oven';
@@ -192,4 +192,11 @@ export const KIT_PIECES: Readonly<Record<string, KitPiece>> = {
   warlord_tusk: WARLORD_TUSK,
   ogre_king_jaw: OGRE_KING_JAW,
   great_dragon_scale: GREAT_DRAGON_SCALE,
+  // Volcano Isle's vents and their trophies (`volcano.ts`).
+  ash_vent: ASH_VENT,
+  magma_vent: MAGMA_VENT,
+  cinder_vent: CINDER_VENT,
+  ash_lord_veil: ASH_LORD_VEIL,
+  magma_core: MAGMA_CORE,
+  cinder_alpha_fang: CINDER_ALPHA_FANG,
 };

@@ -74,6 +74,10 @@ const LINES: Record<string, () => Promise<Line>> = {
   ogre: () => import('./wild-ogre').then((m) => ({ kind: m.OGRES[0], subspecies: m.OGRES })),
   vesp: () => import('./wild-bee').then((m) => line(m.BUZZLET, [m.COMBWORKER, m.HIVEMASTER])),
   dragon: () => import('./wild-dragon').then((m) => ({ kind: m.DRAGONS[0], subspecies: m.DRAGONS })),
+  // Volcano Isle's (`game/volcano.ts`), on the ghost's, the golem's and the ember fox's bones.
+  ash_wraith: () => import('./wild-volcano').then((m) => ({ kind: m.ASH_WRAITHS[0], subspecies: m.ASH_WRAITHS })),
+  magma_golem: () => import('./wild-volcano').then((m) => ({ kind: m.MAGMA_GOLEMS[0], subspecies: m.MAGMA_GOLEMS })),
+  cinder_hound: () => import('./wild-volcano').then((m) => ({ kind: m.CINDER_HOUNDS[0], subspecies: m.CINDER_HOUNDS })),
   kemma: () => import('./wild-owl').then((m) => line(m.WHISPLING, [m.HUSHWING, m.SONGROOST])),
   sheela: () => import('./wild-shear').then((m) => line(m.SHEARLING, [m.CLIPPEROO, m.SHEARLORD])),
   // The Herbpup, the Herbfox and the Herbwarden.

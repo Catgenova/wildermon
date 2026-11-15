@@ -4,15 +4,26 @@ CREATE OR REPLACE FUNCTION public.lair_site(p_world uuid, p_kind text, p_self in
  RETURNS record
  LANGUAGE plpgsql
 AS $function$
-declare k record; v_size int; v_step int; v_fine int; i int; gx int; gy int; c record; f record; v_isle int;
+declare v_cells int[]; v_c int; k record; v_size int; v_step int; v_fine int; i int; gx int; gy int; c record; f record; v_isle int;
 begin
   select * into k from lair_kinds() lk where lk.id = p_kind;
   select w.size into v_size from world w where w.id = p_world;
   if k.id is null or v_size is null then return; end if;
   if k.site <> 'peak' then
     for i in 1 .. p_looks loop
-      gx := 2 + floor(random() * (v_size - 4))::int;
-      gy := 2 + floor(random() * (v_size - 4))::int;
+      -- On its island's chart cells (`monster_isle`), for a kind kept to one; anywhere for any other.
+      if i = 1 and monster_isle(k.species) is not null then
+        v_cells := array(select r.cy * 256 + a from chart_region r cross join generate_series(0, 255) a
+                          where get_byte(r.cells, a) = monster_isle(k.species));
+      end if;
+      if cardinality(v_cells) > 0 then
+        v_c := v_cells[1 + floor(random() * cardinality(v_cells))::int];
+        gx := least(v_size - 3, greatest(2, floor(((v_c % 256) + random()) * v_size / 256)::int));
+        gy := least(v_size - 3, greatest(2, floor(((v_c / 256) + random()) * v_size / 256)::int));
+      else
+        gx := 2 + floor(random() * (v_size - 4))::int;
+        gy := 2 + floor(random() * (v_size - 4))::int;
+      end if;
       if lair_site_ok(p_world, p_kind, gx, gy, p_self) then x := gx; y := gy; return; end if;
     end loop;
     return;

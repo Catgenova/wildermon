@@ -4,7 +4,7 @@ CREATE OR REPLACE FUNCTION public.wound_beast(p_world uuid, p_id integer, p_dmg 
  RETURNS boolean
  LANGUAGE plpgsql
 AS $function$
-declare v_dealer uuid; c creature; d species_def; cx double precision; cy double precision; v_taken double precision;
+declare v_corpse bigint; v_dealer uuid; c creature; d species_def; cx double precision; cy double precision; v_taken double precision;
         v_len double precision; v_size double precision; v_killer creature; v_fx double precision; v_fy double precision;
 begin
   perform creature_settle(p_world, p_id);
@@ -66,8 +66,12 @@ begin
   delete from creature where world_id = p_world and id = p_id;
   -- Nothing goes on fighting something that is no longer there.
   update creature set enemy = null where world_id = p_world and enemy = p_id;
-  perform drop_on_ground(p_world, floor(cx)::int, floor(cy)::int, 'corpse',
+  v_corpse := drop_on_ground(p_world, floor(cx)::int, floor(cy)::int, 'corpse',
     (15 + random() * 35) * v_size, d.name);
+  -- A monster's carries the island it was killed on, for its obsidian (`carcass_obsidian`).
+  if d.monster then
+    update item set mark = jsonb_build_object(died_on_key(), region_at(p_world, cx, cy)) where id = v_corpse;
+  end if;
   -- One of a lair's: its boss clears it, the last of its garrison sends the boss out (`lair_lost`).
   if c.lair is not null then perform lair_lost(p_world, c); end if;
 

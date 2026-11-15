@@ -5,6 +5,7 @@ import { productQlRange } from './limits';
 import { HOARD_METALS, itemDef, itemName, type Item } from './items';
 import { WINTER_FUR, WINTER_FUR_PART, winterFurSays, winterNow } from './winter';
 import { dropRecipe } from './recipebook';
+import { diedOnVolcano, OBSIDIAN, obsidianOf } from './volcano';
 
 /**
  * Butchering a corpse. The Butchering skill decides how much of a carcass is
@@ -23,6 +24,8 @@ export const BUTCHER_PARTS: Array<[ButcherPart, string]> = [
   ['tusk', 'tusk'],
   ['sinew', 'sinew'],
   ['scale', 'dragon_scale'],
+  // Volcano Isle's kinds' (`volcano.ts`).
+  ['sulfur', 'sulfur'],
 ];
 
 /** What a Cook's Bait Maker cuts from a carcass for the hook. */
@@ -70,6 +73,15 @@ export const corpseSpecies = (item: Item): (typeof SPECIES)[string] | undefined 
 export const butcherQl = (g: Game, knifeQl: number | null): number =>
   g.productQl('butchering', knifeQl ?? 0);
 
+/**
+ * The obsidian a carcass holds before the butchering share: its kind's (`OBSIDIAN_BY_KIND`) for a monster killed on Volcano
+ * Isle, which its `mark` says (`DIED_ON`), and none for any other. The island's `carcass_obsidian`.
+ */
+export const carcassObsidian = (item: Item): number => {
+  const def = corpseSpecies(item);
+  return def?.monster && diedOnVolcano(item.mark) ? obsidianOf(def.id) : 0;
+};
+
 /** What a corpse would give right now, for the menu and the log. */
 export function butcherPreview(g: Game, item: Item): string {
   const def = corpseSpecies(item);
@@ -80,6 +92,8 @@ export function butcherPreview(g: Game, item: Item): string {
   const winter = winterNow(g.wallNow());
   const parts = BUTCHER_PARTS.filter(([p]) => (def.butcher[p] ?? 0) > 0)
     .map(([p, id]) => (winter && p === WINTER_FUR_PART ? winterFurSays() : itemDef(id).name.toLowerCase()));
+  // And obsidian, off a monster killed on Volcano Isle (`volcano.ts`).
+  if (carcassObsidian(item) > 0) parts.push(itemDef(OBSIDIAN).name.toLowerCase());
   const [lo, hi] = productQlRange(g.skills.get('butchering'), knife ? knife.ql : 0);
   const ql = Math.round(lo) === Math.round(hi) ? `QL ${Math.round(hi)}` : `QL ${Math.round(lo)}–${Math.round(hi)}`;
   return `about ${Math.round(share * 100)}% of its ${parts.join(', ')}, ${ql}`;

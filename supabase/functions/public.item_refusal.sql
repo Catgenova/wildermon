@@ -135,7 +135,7 @@ begin
       return 'Need ' || lower(coalesce(v_made, v_mat.name))
         || ' to work into it.';
     end if;
-    v_ceiling := improve_ceiling(p_world, p_uid, v_what.skill, v_it.rare);
+    v_ceiling := improve_ceiling(p_world, p_uid, v_what.skill, v_it.rare) + fire_steel_cap(v_it.def, v_it.extra);
     if v_it.ql >= v_ceiling then
       return 'QL capped by your ' || replace(v_what.skill, '_', ' ') || '.';
     end if;

@@ -20,6 +20,10 @@ export const BOOK_DROPS: ReadonlyArray<{ kind: string; book: BookKind; odds: num
   { kind: 'orc', book: 'recipe', odds: 0.05 },
   { kind: 'ogre', book: 'formula', odds: 0.05 },
   { kind: 'dragon', book: 'formula', odds: 0.25 },
+  // Volcano Isle's (`volcano.ts`).
+  { kind: 'ash_wraith', book: 'formula', odds: 0.05 },
+  { kind: 'magma_golem', book: 'formula', odds: 0.05 },
+  { kind: 'cinder_hound', book: 'recipe', odds: 0.05 },
 ];
 
 /** The drops of one kind of book. */

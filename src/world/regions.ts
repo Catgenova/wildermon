@@ -128,7 +128,8 @@ export const REGIONS: Region[] = [
     stone: 'slate_shards',
     ores: ['seryll_ore'],
     trees: [LEMON],
-    lair: ['dragon'],
+    // And its vents' kinds (`volcano.ts`).
+    lair: ['dragon', 'ash_wraith', 'magma_golem', 'cinder_hound'],
   },
   {
     key: 'MiddleIsle',

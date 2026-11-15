@@ -4,4 +4,4 @@ CREATE OR REPLACE FUNCTION public.smith_lumps(p_kind text)
  RETURNS text[]
  LANGUAGE sql
  IMMUTABLE
-AS $function$ select case p_kind when 'nail' then array['iron_lump']::text[] when 'ribbon' then array['copper_lump', 'iron_lump', 'tin_lump', 'zinc_lump', 'lead_lump', 'bronze_lump', 'brass_lump', 'pewter_lump', 'electrum_lump', 'steel_lump']::text[] end $function$
+AS $function$ select case p_kind when 'nail' then array['iron_lump']::text[] when 'ribbon' then array['copper_lump', 'iron_lump', 'tin_lump', 'zinc_lump', 'lead_lump', 'bronze_lump', 'brass_lump', 'pewter_lump', 'electrum_lump', 'steel_lump', 'firesteel_lump']::text[] end $function$

@@ -36,7 +36,7 @@ import {
   BODKIN_HIDE, BURN_WEAR, CONSIDER_EASY, CONSIDER_HARD, CRIT_BASE, CRIT_HIT, CRIT_KNIFE, CRIT_PER_SKILL, DODGE_FROM, DODGE_PER_CONTROL, DODGE_PER_KG, KNIFE_BLEED,
   KNIFE_BLEED_SECS, STAGGER_MAUL, THREAT_HOLD, VENOM_DRAIN, VENOM_SECS,
 } from '../../game/fight';
-import { ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, ENCHANT_SAID, ENCHANTERS_PLINTH, enchantHitChance, ENCHANTMENT_LIST, ENCHANTMENTS, ON_WORDS, SCROLL_HARM, wrongKind } from '../../game/enchant';
+import { ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, ENCHANT_SAID, ENCHANTERS_PLINTH, enchantHitChance, ENCHANTMENT_LIST, ENCHANTMENTS, ICE_WEAPON_ENCHANTS, ON_WORDS, SCROLL_HARM, wrongKind } from '../../game/enchant';
 import { EFFECT_HEAD, EFFECT_TAIL, enchantLineAt } from '../../game/enchanting';
 import { STUN_SECS } from '../../game/fight';
 import { LAYOUT_NAMES } from '../../game/keybinds';
@@ -220,6 +220,20 @@ import {
   LAIR_MOVE_DAYS, LAIR_RING, LAIR_RING_WILD, LAIR_SIGHT, LAIR_TRACK, lairRingWant, restockSays, SITE_SAYS,
 } from '../../game/lairs';
 import { MONSTER_KINDS, PER_REGION, REGION as WILD_SQUARE } from '../../game/creatures';
+import {
+  ASH_BLIND_HIT, ASH_BLIND_SECS, FIRE_STEEL, FIRE_STEEL_CAP, FIRE_STEEL_NAME, FIRE_STEEL_RECIPE, FROST_WEAK, obsidianOf, SULFUR_SLATE, summonSays, VOLCANO_KINDS,
+  volcanoName,
+} from '../../game/volcano';
+/** A recipe's inputs and what it makes: "2 steel lump, 1 sulfur → 2 fire-tempered steel lump". */
+const recipeInputsSaid = (id: string): string => {
+  const r = RECIPE_BY_ID.get(id)!;
+  return `${r.inputs.map((i) => `${i.count ?? 1} ${itemDef(i.item).name.toLowerCase()}`).join(', ')} → ${r.count ?? 1} ${itemDef(r.result).name.toLowerCase()}`;
+};
+import { FIRST_LAIRS } from '../../game/lairs';
+/** As they were before Volcano Isle's kinds, vents and fire-tempered steel (n 615), for what was said of them then. */
+const FIRST_LAIR_KINDS = LAIR_KINDS.filter((k) => FIRST_LAIRS.includes(k.id));
+const MONSTERS_BEFORE_VOLCANO = MONSTER_KINDS.filter((id) => !VOLCANO_KINDS.includes(id));
+const METALS_BEFORE_VOLCANO = METALS.filter((m) => m.id !== FIRE_STEEL);
 import {
   CACHE_DEED_GAP, CACHE_DRAW_EVERY, CACHE_DRAWS, CACHE_EVERY, CACHE_LOOT, CACHE_SPOT_BASE, CACHE_SPOT_EVERY, cacheOddsSays, lootSays, WINTER_FUR, WINTER_FUR_PART,
 } from '../../game/winter';
@@ -4357,7 +4371,7 @@ export const NEWS: News[] = [
     lines: () => {
       const swing = ['mine', 'chip_corner', 'mine_cellar'].map((id) => ACTION_BY_ID.get(id)?.label).filter((l): l is string => !!l);
       return [
-        `New: ${itemDef('long_sword').name.toLowerCase()} blade, ${itemDef('maul').name.toLowerCase()} head and ${itemDef('pickaxe').name.toLowerCase()} head in their metal (${listed(METALS.map((m) => m.name.toLowerCase()))}); no metal: iron.`,
+        `New: ${itemDef('long_sword').name.toLowerCase()} blade, ${itemDef('maul').name.toLowerCase()} head and ${itemDef('pickaxe').name.toLowerCase()} head in their metal (${listed(METALS_BEFORE_VOLCANO.map((m) => m.name.toLowerCase()))}); no metal: iron.`,
         `New: ${listed(swing)}: ${itemDef('pickaxe').name.toLowerCase()} in both hands, overhead swing, in the metal of the best ${itemDef('pickaxe').name.toLowerCase()} in the pack; enchanted: glows.`,
         `New: other players at ${listedOr(swing)}: their own ${itemDef('pickaxe').name.toLowerCase()}'s metal and enchantment (was: iron).`,
         `New: ${itemDef('maul').name.toLowerCase()} on the back when wielded, head up; slash trail in a fight.`,
@@ -4410,7 +4424,7 @@ export const NEWS: News[] = [
     day: '2026-11-12',
     lines: () => [
       'New: worn armour on the sculpted body, as equipped: cloth, leather and plate (was: starter clothes on everyone).',
-      `New: plate in its metal, piece by piece (${METALS.length} metals); cloth and leather in their dye; your enchanted pieces glow.`,
+      `New: plate in its metal, piece by piece (${METALS_BEFORE_VOLCANO.length} metals); cloth and leather in their dye; your enchanted pieces glow.`,
       'Chain and scale: starter clothes until modelled.',
     ],
   },
@@ -4484,6 +4498,29 @@ export const NEWS: News[] = [
       `New: rowing under way: ${OAR_DROPS} drops a blade at the catch; whirl pair a blade a stroke, ${SWIRL_SECS} s.`,
       'Without a graphics card: swimming strokes\' splashes, rings treading water, the float\'s strike and a catch only.',
     ],
+  },
+  // Volcano Isle, part one (`volcano.ts`): its monsters, obsidian, a seryll vein's summons, sulfur, fire-tempered steel.
+  {
+    n: 615,
+    day: '2026-11-14',
+    lines: () => {
+      const named = (id: string): string => SPECIES[id].name.toLowerCase();
+      return [
+        ...VOLCANO_KINDS.map((id) => {
+          const d = SPECIES[id];
+          const k = LAIR_KINDS.find((x) => x.species === id)!;
+          return `New: ${named(id)}, ${volcanoName()} only: health ${d.health}, blow ${d.attack}, speed ${d.speed}`
+            + `${d.blinds ? `; blow that lands: your hit chance ×${ASH_BLIND_HIT}, ${ASH_BLIND_SECS} s` : ''}${d.fireproof ? '; burns: no damage' : ''}`
+            + `${d.frostWeak ? `; ${listed(ICE_WEAPON_ENCHANTS)} on the weapon: damage ×${FROST_WEAK}` : ''}. `
+            + `${k.name} ×${k.count} (${SITE_SAYS[k.site]}): garrison ${garrisonSays(k, (s) => SPECIES[s]?.name ?? s)}; boss ${bossSays(k, d.name)}; restock ${restockSays(k)}; `
+            + `hoard: ${hoardSays(k, itemDef(k.trophy).name, itemDef(BOOKS[hoardBook(k)].item).name)}.`;
+        }),
+        `New: obsidian, butchering a monster killed on ${volcanoName()}: ${listed(MONSTER_KINDS.map((id) => `${named(id)} ${obsidianOf(id)}`))}, times the butchering share. None elsewhere.`,
+        `New: seryll vein on ${volcanoName()}: ${summonSays(VOLCANO_KINDS.map(named))}.`,
+        `New: sulfur: butchering ${listed(MONSTER_KINDS.filter((id) => SPECIES[id].butcher.sulfur).map((id) => `${named(id)} ${SPECIES[id].butcher.sulfur}`))}; mining slate on ${volcanoName()}, ${percent(SULFUR_SLATE)} a go.`,
+        `New: ${FIRE_STEEL_NAME.toLowerCase()}: ${recipeInputsSaid(FIRE_STEEL_RECIPE)} at a smelter on ${volcanoName()} only. Weapons and tools of it: improve QL cap +${FIRE_STEEL_CAP} over your skill.`,
+      ];
+    },
   },
   // Trees and wildermon back on the Northeast Tundra (`regions.ts`, `tools/move-ground.ts`).
   {
@@ -4681,14 +4718,14 @@ export const NEWS: News[] = [
     day: '2026-11-14',
     lines: () => [
       'New: monster lairs. A goblin, orc, ogre or dragon stands up only at its kind\'s lair; none in the wild, none raids a settlement.',
-      ...LAIR_KINDS.map((k) => `New: ${k.name.toLowerCase()} ×${k.count}, on ${SITE_SAYS[k.site]}: garrison ${garrisonSays(k, (id) => SPECIES[id]?.name ?? id)}; `
+      ...FIRST_LAIR_KINDS.map((k) => `New: ${k.name.toLowerCase()} ×${k.count}, on ${SITE_SAYS[k.site]}: garrison ${garrisonSays(k, (id) => SPECIES[id]?.name ?? id)}; `
         + `boss ${bossSays(k, SPECIES[k.species].name)}; restock ${restockSays(k)}; at least ${k.keepOff} tiles from a settlement totem.`),
       `New: leash ${LAIR_LEASH} tiles from its lair; a hunt past it dropped, back to the lair.`,
       `New: boss out once its garrison is dead; told to everybody within ${LAIR_ANNOUNCE} tiles.`,
       `New: hoard on the boss's kill: a share for everybody who dealt ${percent(HOARD_SHARE)} of its health or more, companions' blows counted. `
-        + `${listed(LAIR_KINDS.map((k) => `${k.name}: ${hoardSays(k, itemDef(k.trophy).name, itemDef(BOOKS[hoardBook(k)].item).name)}`))}. No silver, never rare.`,
+        + `${listed(FIRST_LAIR_KINDS.map((k) => `${k.name}: ${hoardSays(k, itemDef(k.trophy).name, itemDef(BOOKS[hoardBook(k)].item).name)}`))}. No silver, never rare.`,
       `New: hoard dragon scales, "Dragon scale (${HOARD_SCALE})": scale armour made of them alone, QL cap ${mult(HOARD_SCALE_CAP)} your skill.`,
-      `New: trophies, set down anywhere as decoration: ${listed(LAIR_KINDS.map((k) => itemDef(k.trophy).name.toLowerCase()))}.`,
+      `New: trophies, set down anywhere as decoration: ${listed(FIRST_LAIR_KINDS.map((k) => itemDef(k.trophy).name.toLowerCase()))}.`,
       `New: cleared lair: empty until its restock; its ${LAIR_RING}-tile ring counts as the safe ring and holds ${lairRingWant(PER_REGION, WILD_SQUARE)} wildermon (${mult(LAIR_RING_WILD)} the usual).`,
       `New: a lair cleared ${LAIR_MOVE_CLEARS} times in ${LAIR_MOVE_DAYS} days restocks at a new site.`,
       `New: a lair seen (within ${LAIR_SIGHT} tiles): pinned on your map; "Lair: found" on its kind's field guide page.`,
@@ -4774,8 +4811,8 @@ export const NEWS: News[] = [
       const name = (id: string): string => SPECIES[id].name.toLowerCase();
       return [
         `Changed: every creature's base health ×${CREATURE_HEALTH_MUL}, base blow damage ×${CREATURE_ATTACK_MUL}: wildermon and monsters, wild and yours. Yours keep their share of health.`,
-        `Monster health: ${listed(MONSTER_KINDS.map((id) => `${name(id)} ${hp(SPECIES[id].health)}`))}.`,
-        `Monster blow: ${listed(MONSTER_KINDS.map((id) => `${name(id)} ${hit(SPECIES[id].attack)}`))}; on an unarmoured life ${listed(MONSTER_KINDS.map((id) => `${name(id)} ${life(SPECIES[id].attack)}`))}.`,
+        `Monster health: ${listed(MONSTERS_BEFORE_VOLCANO.map((id) => `${name(id)} ${hp(SPECIES[id].health)}`))}.`,
+        `Monster blow: ${listed(MONSTERS_BEFORE_VOLCANO.map((id) => `${name(id)} ${hit(SPECIES[id].attack)}`))}; on an unarmoured life ${listed(MONSTERS_BEFORE_VOLCANO.map((id) => `${name(id)} ${life(SPECIES[id].attack)}`))}.`,
         `Changed: creature health back per second, unhurt: wild ${hp(REGEN_WILD)}, yours ${hp(REGEN_KEPT)}; time to heal unchanged.`,
         `Changed: wildermon bed size bands, non-evolving kinds: small under ${hp(DEN_HEALTH[0])} health, medium under ${hp(DEN_HEALTH[1])}; same kinds in each.`,
         'Unchanged: treasure map chance and map QL off a monster; your health, weapons, spells, traps and armour.',
@@ -5396,7 +5433,7 @@ export const NEWS: News[] = [
     n: 502,
     day: '2026-11-05',
     lines: () => [
-      `Added: Formula, per butchering: ${listed(bookDrops('formula').map((d) => `${d.kind} ${percent(d.odds)}`))}; one not read first. ${BOOKS.formula.label}: opens it for good, Formula used up; already open: not read.`,
+      `Added: Formula, per butchering: ${listed(bookDrops('formula').filter((d) => !VOLCANO_KINDS.includes(d.kind)).map((d) => `${d.kind} ${percent(d.odds)}`))}; one not read first. ${BOOKS.formula.label}: opens it for good, Formula used up; already open: not read.`,
       `Changed: all ${lockedRecipes('formula').length} enchantment scrolls: shut until its Formula is read (was: open to all). Crafting window: greyed, padlocked.`,
     ],
   },
@@ -5406,7 +5443,7 @@ export const NEWS: News[] = [
     lines: () => {
       const shut = lockedRecipes('recipe').map((r) => recipeTitle(r).toLowerCase());
       return [
-        `Added: Recipe, ${percent(RECIPE_DROP_ODDS)} per butchering of a ${listedOr([...RECIPE_DROPPERS])} carcass; one not read first. Read recipe: opens it for good, Recipe used up; already open: not read.`,
+        `Added: Recipe, ${percent(RECIPE_DROP_ODDS)} per butchering of a ${listedOr(RECIPE_DROPPERS.filter((id) => !VOLCANO_KINDS.includes(id)))} carcass; one not read first. Read recipe: opens it for good, Recipe used up; already open: not read.`,
         `Changed: ${listed(shut)}: shut until its Recipe is read (was: open to all). Crafting window: greyed, padlocked. Simma: does not cook them.`,
       ];
     },

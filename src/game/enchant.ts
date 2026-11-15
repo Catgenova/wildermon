@@ -33,6 +33,7 @@
  */
 import { QL_TOP } from './limits';
 import { percent } from './words';
+import { ICE_MOTE } from './volcano';
 
 /** The skill, trained by writing a scroll and by putting one into a weapon, a go each. */
 export const ENCHANTING = 'enchanting';
@@ -313,6 +314,8 @@ export const ENCHANTMENT_LIST: readonly EnchantmentDef[] = [
   row('fleetfoot', 'Fleetfoot', 'wind', 'saddle', 'fleet', FLEETFOOT_PER_QL),
   row('tamers_bridle', 'Tamer\'s Bridle', 'life', 'bridle', 'tame', TAMERS_BRIDLE_PER_QL),
 ];
+/** The enchantments on a weapon written with ice (`ICE_MOTE`), which bite a magma golem harder (`volcano.ts`, the island's `frost_bane`). */
+export const ICE_WEAPON_ENCHANTS: readonly string[] = ENCHANTMENT_LIST.filter((e) => e.mote === ICE_MOTE && (e.on === 'melee' || e.on === 'bow')).map((e) => e.name);
 /**
  * The ones with a second figure, `{w}` in the line: this many times the first.
  * Netmender's wear. The island's `enchant_second`.

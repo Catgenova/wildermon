@@ -30,7 +30,7 @@ export const LINEN_PAINT = { body: '#efe9dc', ink: '#9a8f7e' } as const;
  * each a colour nobody could take for iron.
  */
 export const METAL_TONE: Record<string, [number, number, number]> = {
-  iron: [138, 147, 164], steel: [160, 170, 188], copper: [188, 128, 104], bronze: [180, 148, 106], brass: [200, 180, 120],
+  iron: [138, 147, 164], steel: [160, 170, 188], firesteel: [184, 158, 164], copper: [188, 128, 104], bronze: [180, 148, 106], brass: [200, 180, 120],
   tin: [196, 200, 204], zinc: [176, 188, 198], lead: [124, 130, 148], silver: [212, 218, 228], gold: [222, 190, 112],
   electrum: [222, 204, 142], pewter: [164, 168, 172], adamantine: [104, 136, 166], glimmersteel: [210, 226, 240],
   mithril: [170, 198, 232], seryll: [214, 198, 152],
