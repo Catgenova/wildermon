@@ -323,31 +323,105 @@ const strawPaint = (seed: number) => (g: Ctx, k: PaintCtx, s: Side): void => {
   for (let i = 0; i < s.w * 3; i++) { const x = T() * s.w; g.beginPath(); g.moveTo(x, 0); g.lineTo(x + (T() - 0.5) * 0.4, s.h); g.stroke(); }
 };
 
+/** The dummy's straw body, [height, radius] from its foot up, twelve-sided: a flat face square to each arm and to its front. */
+const DUMMY_BODY: ReadonlyArray<[number, number]> = [[6.4, 1.6], [7.2, 2.5], [10.5, 2.7], [13.4, 2.3], [14.2, 1.3]];
+const DUMMY_SIDES = 12;
+/** Its shoulders: the height of its arms and their radius. */
+const DUMMY_ARM_Z = 12.2, DUMMY_ARM_R = 0.9;
+/** The target painted on its chest: its middle's height, and its rings. */
+const DUMMY_TARGET_Z = 9.2;
+const DUMMY_RINGS: Array<[number, string]> = [[1.1, '#d05a5a'], [0.7, '#f4ead8'], [0.32, '#d05a5a']];
+/** How far out from its axis the body is at a height, to its corners. */
+const bodyRadius = (z: number): number => {
+  for (let i = 0; i + 1 < DUMMY_BODY.length; i++) {
+    const [z0, r0] = DUMMY_BODY[i], [z1, r1] = DUMMY_BODY[i + 1];
+    if (z <= z1) return r0 + ((r1 - r0) * Math.max(0, z - z0)) / (z1 - z0);
+  }
+  return DUMMY_BODY[DUMMY_BODY.length - 1][1];
+};
+/** And at a bearing, on its faces. */
+const bodySurface = (a: number, z: number): number => {
+  const step = TAU / DUMMY_SIDES;
+  return (bodyRadius(z) * Math.cos(step / 2)) / Math.cos(a - Math.round(a / step) * step);
+};
+
+/** Straw bound along an arm: the stalks along the frame's `x`, whichever way the face is turned. */
+const strawAlong = (seed: number) => (g: Ctx, k: PaintCtx): void => {
+  g.fillStyle = css(k.fill); g.fillRect(-8, -8, 16, 16);
+  const T = rand(seed);
+  g.strokeStyle = css(mix(k.fill, hex('#8a6a40'), 0.35), 0.6); g.lineWidth = 0.07;
+  for (let i = 0; i < 24; i++) { const y = -2 + T() * 4; g.beginPath(); g.moveTo(-8, y); g.lineTo(8, y + (T() - 0.5) * 0.4); g.stroke(); }
+};
+
+/**
+ * The target on one face of the chest (`s`): each ring a circle wrapped round the body, laid on the face's plane and
+ * clipped to the face, so it bends round the straw and turns away with it.
+ */
+const targetOn = (s: Side) => (g: Ctx): void => {
+  const len = Math.hypot(...s.n);
+  const n: V3 = [s.n[0] / len, s.n[1] / len, s.n[2] / len];
+  const front = bodySurface(Math.PI / 2, DUMMY_TARGET_Z);
+  for (const [r, colour] of DUMMY_RINGS) {
+    g.beginPath();
+    for (let i = 0; i <= 32; i++) {
+      const w = (i / 32) * TAU;
+      const z = DUMMY_TARGET_Z + Math.sin(w) * r;
+      const a = Math.PI / 2 + (Math.cos(w) * r) / front;
+      const d = [Math.cos(a), Math.sin(a)];
+      const along = n[0] * d[0] + n[1] * d[1];
+      if (along <= 1e-6) return;
+      const t = (n[0] * s.o[0] + n[1] * s.o[1] + n[2] * (s.o[2] - z)) / along;
+      const x = (d[0] * t - s.o[0]) * s.a[0] + (d[1] * t - s.o[1]) * s.a[1] + (z - s.o[2]) * s.a[2];
+      if (i) g.lineTo(x, z - s.o[2]); else g.moveTo(x, z - s.o[2]);
+    }
+    g.closePath();
+    g.fillStyle = colour; g.fill();
+  }
+};
+
+/** An arm out of one side of the body, `dir` one or minus one along `x`: its root a ring on the body's faces, its end capped. */
+function dummyArm(dir: number): Face[] {
+  const N = 8;
+  const ringAt = (x: number | null, r: number): V3[] => Array.from({ length: N }, (_, j) => {
+    const w = ((j + 0.5) / N) * TAU;
+    const y = Math.cos(w) * r, z = DUMMY_ARM_Z + Math.sin(w) * r;
+    if (x !== null) return [dir * x, y, z];
+    // Where the arm meets the straw, a hair inside it.
+    let ax = bodyRadius(z);
+    for (let k = 0; k < 6; k++) ax = Math.sqrt(Math.max(0, bodySurface(Math.atan2(y, ax), z) ** 2 - y * y));
+    return [dir * (ax - 0.04), y, z];
+  });
+  return prism([ringAt(null, DUMMY_ARM_R), ringAt(5.0, DUMMY_ARM_R), ringAt(5.4, 0.7)], STRAW, (_k, i) => ({ crease: 0.16, paint: strawAlong(1141 + i) }), { paint: strawAlong(1149) });
+}
+
 function dummyOf(look: KitLook): KitModel {
   const W = woodTone(look.material, undefined, 0.55);
   const parts: KitPart[] = [];
-  // A cross foot, a post, a straw body bound with cord, a straw head, and a straw-bound arm across it.
+  // A cross foot (its second board in two, either side of the first), a post, a straw body bound with cord, a straw
+  // head on its shoulders, and a straw-bound arm out of either side.
   parts.push({ faces: slab(-4.4, 4.4, -0.6, 0.6, 0, 0.9, deeper(W, 0.12), { corner: 0.2, paint: woodSides(1101, 'x') }), edges: true });
-  parts.push({ faces: slab(-0.6, 0.6, -4.4, 4.4, 0, 0.9, deeper(W, 0.12), { corner: 0.2, paint: woodSides(1105, 'y') }), edges: true });
+  for (const [y0, y1] of [[-4.4, -0.6], [0.6, 4.4]]) parts.push({ faces: slab(-0.6, 0.6, y0, y1, 0, 0.9, deeper(W, 0.12), { corner: 0.2, paint: woodSides(1105, 'y') }), edges: true });
   const post: KitPart = { faces: slab(-0.6, 0.6, -0.6, 0.6, 0.9, 16.5, W, { corner: 0.15, paint: woodSides(1111, 'y') }), edges: true };
   parts.push(post);
-  const body: KitPart = { faces: lathe(0, 0, [[6.4, 1.6], [7.2, 2.5], [10.5, 2.7], [13.4, 2.3], [14.2, 1.3]], 10, STRAW, 0.5, (_k, i, s) => ({ crease: 0.16, paint: (g: Ctx, k: PaintCtx) => strawPaint(1121 + i)(g, k, s) })), edges: true };
+  // The body round the post, the target painted on the faces of its chest.
+  const body: KitPart = {
+    faces: lathe(0, 0, DUMMY_BODY, DUMMY_SIDES, STRAW, 0.5, (_k, i, s) => {
+      const chest = s.n[1] > 0.5 * Math.hypot(s.n[0], s.n[1]) && Math.abs(s.n[2]) < 0.5 * Math.hypot(...s.n);
+      return { crease: 0.16, paint: (g: Ctx, k: PaintCtx) => { strawPaint(1121 + i)(g, k, s); if (chest) targetOn(s)(g); } };
+    }),
+    edges: true,
+    after: [post],
+  };
   parts.push(body);
-  for (const z of [8.0, 12.4]) parts.push({ faces: lathe(0, 0, [[z, 2.62], [z + 0.35, 2.62]], 10, ROPE), after: [body] });
-  const arm: KitPart = { faces: lathe(0, 0, [[-5.4, 0.7], [-5.0, 0.9], [5.0, 0.9], [5.4, 0.7]], 8, STRAW, 0.5, (_k, i, s) => ({ crease: 0.16, paint: (g: Ctx, k: PaintCtx) => strawPaint(1141 + i)(g, k, s) })), edges: true };
-  parts.push({ ...arm, faces: turned(arm.faces ?? [], [0, 0, 0], [0, 1, 0], Math.PI / 2).map((f) => ({ ...f, pts: f.pts.map(([x, y, z]): V3 => [x, y, z + 12.2]) })) });
-  parts.push({ faces: lathe(0, 0, [[14.4, 1.0], [15.0, 1.7], [16.6, 1.8], [17.8, 1.2], [18.3, 0.3]], 10, paler(STRAW, 0.05), 0.5, (_k, i, s) => ({ crease: 0.16, paint: (g: Ctx, k: PaintCtx) => strawPaint(1161 + i)(g, k, s) })), edges: true });
-  // A target painted on its chest: rings to aim the blade at.
-  parts.push({
-    ...loose([-2.8, 2.4, 9], [2.8, 2.9, 12], (g, e) => {
-      const [x, y] = proj(e, [0, 2.75, 10.8]);
-      const u = across(e);
-      for (const [r, c] of [[1.1, '#d05a5a'], [0.7, '#f4ead8'], [0.32, '#d05a5a']] as Array<[number, string]>) {
-        g.fillStyle = c; g.beginPath(); g.ellipse(x, y, r * u, r * u * 1.1, 0, 0, TAU); g.fill();
-      }
-    }, false, 1),
-    after: [body],
-  });
+  // Each cord its outside only, a hair out from the straw: its top, a disc, would lie through the body. The upper one
+  // reaches up past the foot of the arms, so nothing lays them after the body: each goes by its own nearness.
+  for (const z of [7.4, 11.05]) {
+    const band: Array<[number, number]> = [[z, bodyRadius(z) + 0.1], [z + 0.35, bodyRadius(z + 0.35) + 0.1]];
+    parts.push({ faces: lathe(0, 0, band, DUMMY_SIDES, ROPE).filter((f) => f.pts.some((p) => p[2] !== f.pts[0][2])), after: [body] });
+  }
+  // The arms, each laid by its own nearness: the far one before the body, the near one after it.
+  for (const dir of [-1, 1]) parts.push({ faces: dummyArm(dir), edges: true });
+  parts.push({ faces: lathe(0, 0, [[14.2, 1.0], [15.0, 1.7], [16.6, 1.8], [17.8, 1.2], [18.3, 0.3]], 10, paler(STRAW, 0.05), 0.5, (_k, i, s) => ({ crease: 0.16, paint: (g: Ctx, k: PaintCtx) => strawPaint(1161 + i)(g, k, s) })), edges: true, after: [post] });
   return { parts, shade: shadeOf(-4.4, 4.4, -4.4, 4.4) };
 }
 
@@ -363,14 +437,18 @@ const RINGS = ['#f4ead8', '#5a6a8a', '#7ab0e0', '#e06a5a', '#f2c84a'];
 function targetOf(look: KitLook): KitModel {
   const W = woodTone(look.material, undefined, 0.55);
   const parts: KitPart[] = [];
-  // An easel of three legs, leaned back; the straw butt on its pegs, its face painted in rings.
-  for (const x of [-4.6, 4.6]) parts.push({ faces: strut([x, TG_Y + 1.6, 0], [x * 0.8, TG_Y - 0.4, TG_Z + TG_R + 0.6], 0.8, 0.8, W, woodSide(1201, 'y')), edges: true });
-  parts.push({ faces: strut([0, -4.6, 0], [0, TG_Y - 1.6, TG_Z + TG_R - 0.6], 0.7, 0.7, deeper(W, 0.1), woodSide(1205, 'y')), edges: true });
-  const butt: Face[] = turned(lathe(0, 0, [[-1.3, TG_R - 0.4], [-1.0, TG_R], [1.0, TG_R], [1.3, TG_R - 0.4]], 18, STRAW, 0.5, (_k, i, s) => ({ crease: 0.12, paint: (g: Ctx, k: PaintCtx) => strawPaint(1211 + i)(g, k, s) })), [0, 0, 0], [1, 0, 0], -Math.PI / 2)
+  // An easel of three legs, leaned back, the butt in front of them; the straw butt on a ledge between them, its face
+  // painted in rings.
+  for (const x of [-4.6, 4.6]) parts.push({ faces: strut([x, TG_Y - 2.1, 0], [x * 0.8, TG_Y - 3.6, TG_Z + TG_R + 0.6], 0.8, 0.8, W, woodSide(1201, 'y')), edges: true });
+  parts.push({ faces: strut([0, -4.6, 0], [0, TG_Y - 3.0, TG_Z + TG_R - 0.6], 0.7, 0.7, deeper(W, 0.1), woodSide(1205, 'y')), edges: true });
+  // Closed at the back as at the front: seen from behind, the straw, not through it.
+  const profile: Array<[number, number]> = [[-1.3, TG_R - 0.4], [-1.0, TG_R], [1.0, TG_R], [1.3, TG_R - 0.4]];
+  const rear = lathe(0, 0, profile.slice().reverse(), 18, STRAW).slice(-1);
+  const butt: Face[] = turned([...lathe(0, 0, profile, 18, STRAW, 0.5, (_k, i, s) => ({ crease: 0.12, paint: (g: Ctx, k: PaintCtx) => strawPaint(1211 + i)(g, k, s) })), ...rear], [0, 0, 0], [1, 0, 0], -Math.PI / 2)
     .map((f) => ({ ...f, pts: f.pts.map(([x, y, z]): V3 => [x, y + TG_Y, z + TG_Z]) }));
   const face: KitPart = { faces: butt, edges: true };
   parts.push(face);
-  parts.push({ faces: slab(-5.6, 5.6, TG_Y - 0.4, TG_Y + 0.4, TG_Z - TG_R - 0.6, TG_Z - TG_R + 0.4, W, { paint: woodSides(1231, 'x') }), edges: true });
+  parts.push({ faces: slab(-3.9, 3.9, TG_Y - 2.0, TG_Y + 0.4, TG_Z - TG_R - 1.0, TG_Z - TG_R, W, { paint: woodSides(1231, 'x') }), edges: true });
   const n = Math.max(0, Math.floor(look.trim ?? 0));
   parts.push({
     ...loose([-TG_R, TG_Y + 1.3, TG_Z - TG_R], [TG_R, TG_Y + 5, TG_Z + TG_R], (g, e) => {

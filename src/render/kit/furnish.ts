@@ -3,8 +3,8 @@ import { HEIGHT_SCALE, UNITS_PER_TILE } from '../iso';
 import { rand } from '../ivy';
 import { eyeOfView } from '../runestone';
 import {
-  BRASS, clothTone, css, deeper, grain, hex, lathe, mix, paler, proj, slab, TAU, toneOf, woodTone,
-  type Ctx, type Face, type KitLook, type KitModel, type KitPart, type KitPiece, type KitView, type PaintCtx, type RGB, type Side, type Tone, type V3,
+  BRASS, clothTone, css, deeper, grain, halfOf, hex, lathe, mix, paler, proj, slab, TAU, toneOf, woodTone,
+  type Ctx, type Eye, type Face, type KitLook, type KitModel, type KitPart, type KitPiece, type KitView, type PaintCtx, type RGB, type Side, type Tone, type V3,
 } from './core';
 import { leg, rod, woodSides, woodSide } from './woodwork';
 import { BLOCK, DRESSED, stoneSkin, strut } from './outdoor';
@@ -121,9 +121,9 @@ export const BIRDBATH: KitPiece = {
 
 function stoneBenchOf(): KitModel {
   const parts: KitPart[] = [];
-  // Two slab ends, cut with a notch under, and the long slab over them.
+  // Two slab ends, cut with a notch under, each stood on its plinth, and the long slab over them.
   for (const [i, x] of [-6.6, 6.6].entries()) {
-    parts.push({ faces: slab(x - 1.1, x + 1.1, -2.2, 2.2, 0, 3.6, BLOCK, { corner: 0.3, bevel: 0.15, paint: stoneSides(41 + i * 4) }), edges: true });
+    parts.push({ faces: slab(x - 1.1, x + 1.1, -2.2, 2.2, 0.5, 3.6, BLOCK, { corner: 0.3, bevel: 0.15, paint: stoneSides(41 + i * 4) }), edges: true });
     parts.push({ faces: slab(x - 1.5, x + 1.5, -2.6, 2.6, 0, 0.5, deeper(BLOCK, 0.12), { corner: 0.3, paint: stoneSides(61 + i * 4) }), edges: true });
   }
   parts.push({ faces: slab(-9.2, 9.2, -2.9, 2.9, 3.6, 4.7, DRESSED, { corner: 0.5, bevel: 0.3, paint: { ...stoneSides(51), top: (g, k, s) => { g.save(); g.translate(-s.w / 2, -s.h / 2); stoneSkin(g, k.fill, s.w, s.h, 55, 0.8); g.restore(); } } }), edges: true });
@@ -314,13 +314,27 @@ export const SIGN_STEPS = 16;
 export const signTrim = (angles: readonly number[]): number =>
   angles.slice(0, 4).reduce((n, a, i) => n + (1 + ((Math.round((a / TAU) * SIGN_STEPS) % SIGN_STEPS) + SIGN_STEPS) % SIGN_STEPS) * 32 ** i, 0);
 const SP_TOP = 22;
+/** The post's half width and its corners' cut. */
+const SP_HALF = 0.65, SP_CORNER = 0.18;
+/** How far out from the middle of the post its side is along a bearing: where an arm's root lies on it. */
+const postSide = (ca: number, sa: number): number => {
+  const diag = (2 * SP_HALF - SP_CORNER) / Math.SQRT2;
+  const sides: Array<[number, number, number]> = [[1, 0, SP_HALF], [0, 1, SP_HALF], [-1, 0, SP_HALF], [0, -1, SP_HALF],
+    ...[[1, 1], [1, -1], [-1, 1], [-1, -1]].map(([x, y]): [number, number, number] => [x / Math.SQRT2, y / Math.SQRT2, diag])];
+  return Math.min(...sides.map(([x, y, d]) => { const k = x * ca + y * sa; return k > 1e-6 ? d / k : Infinity; }));
+};
 
 function signpostOf(look: KitLook): KitModel {
   const W = woodTone(look.material, look.tint, 0.5);
   const parts: KitPart[] = [];
   const t = Math.max(0, Math.floor(look.trim ?? 0));
   parts.push({ faces: slab(-1.2, 1.2, -1.2, 1.2, 0, 0.8, deeper(W, 0.2), { corner: 0.3 }), edges: true });
-  const post: KitPart = { faces: slab(-0.65, 0.65, -0.65, 0.65, 0, SP_TOP, W, { corner: 0.18, bevel: 0.25, paint: woodSides(231, 'y') }), edges: true };
+  // The post after the arms on its far side, each arm after it on its near side (`halfOf`): an arm's root lies on its side.
+  const arms: Array<{ part: KitPart; near: (e: Eye) => number }> = [];
+  const post: KitPart = {
+    faces: slab(-SP_HALF, SP_HALF, -SP_HALF, SP_HALF, 0.8, SP_TOP, W, { corner: SP_CORNER, bevel: 0.25, paint: woodSides(231, 'y') }), edges: true,
+    after: (e) => arms.filter((a) => !a.near(e)).map((a) => a.part),
+  };
   parts.push(post);
   parts.push({ faces: lathe(0, 0, [[SP_TOP, 0.8], [SP_TOP + 0.5, 0.95], [SP_TOP + 1.2, 0.5], [SP_TOP + 1.5, 0.05]], 8, deeper(W, 0.1)), edges: true });
   const board = (seed: number) => (g: Ctx, k: PaintCtx, s: Side): void => {
@@ -335,7 +349,8 @@ function signpostOf(look: KitLook): KitModel {
     const a = ((code - 1) / SIGN_STEPS) * TAU, ca = Math.cos(a), sa = Math.sin(a);
     const z = SP_TOP - 2.2 - i * 2.6, len = 8.6, h = 2.0;
     // A board out from the post, pointed at its far end, turned to its bearing.
-    const pts = (y: number): V3[] => [[0.4, y, z - h / 2], [len - 1, y, z - h / 2], [len, y, z], [len - 1, y, z + h / 2], [0.4, y, z + h / 2]];
+    const r0 = postSide(ca, sa);
+    const pts = (y: number): V3[] => [[r0, y, z - h / 2], [len - 1, y, z - h / 2], [len, y, z], [len - 1, y, z + h / 2], [r0, y, z + h / 2]];
     const turn = (p: V3): V3 => [p[0] * ca - p[1] * sa, p[0] * sa + p[1] * ca, p[2]];
     const front = pts(0.22).map(turn), back = pts(-0.22).map(turn);
     const faces: Face[] = [
@@ -349,7 +364,10 @@ function signpostOf(look: KitLook): KitModel {
       const m = Math.hypot(...outward) || 1;
       faces.push({ pts: [front[j], front[k2], back[k2], back[j]], n: [outward[0] / m, outward[1] / m, outward[2] / m], tone: W, crease: 0.4 });
     }
-    parts.push({ faces, edges: true, after: [post] });
+    const near = halfOf(ca, sa);
+    const arm: KitPart = { faces, edges: true, after: (e) => (near(e) ? [post] : []) };
+    parts.push(arm);
+    arms.push({ part: arm, near });
   }
   parts.push(loose([-8, -8, 0], [8, 8, SP_TOP + 1.5], () => undefined));
   return { parts, shade: shadeOf(-1.2, 1.2, -1.2, 1.2) };

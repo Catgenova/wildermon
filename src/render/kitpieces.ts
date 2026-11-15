@@ -142,7 +142,8 @@ function laid(parts: readonly KitPart[], e: Eye, loops?: (left: KitPart[]) => vo
   const hard = ps.map(() => new Set<number>());
   const index = new Map(ps.map((p, i) => [p, i]));
   const told = new Set<string>();
-  for (let j = 0; j < n; j++) for (const q of ps[j].after ?? []) {
+  const afterOf = (p: KitPart): readonly KitPart[] => (typeof p.after === 'function' ? p.after(e) : p.after ?? []);
+  for (let j = 0; j < n; j++) for (const q of afterOf(ps[j])) {
     const i = index.get(q);
     if (i === undefined) continue;
     after[i].push(j); need[j]++; must[j]++; hard[i].add(j); told.add(`${i},${j}`); told.add(`${j},${i}`);

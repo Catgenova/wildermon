@@ -409,6 +409,14 @@ const WAS_DYE = { boil: 3, garment: 1, banner: 2, sail: 3, ship: 5, wall: 1, flo
 const SCRUBS_LATER = new Set(['scrub_wall_paint', 'scrub_floor_paint']);
 
 export const NEWS: News[] = [
+  // Parts drawn through each other, at every facing (`kit/fittings.ts`, `obsidian.ts`, `adorn.ts`, `furnish.ts`, `lamps.ts`, `stands.ts`).
+  {
+    n: 631,
+    day: '2026-11-15',
+    lines: () => [
+      'Fixed: clipping: training dummy, archery target, obsidian throne, shard garden, glass shard path, signpost, pedigree board, cheese rack, lamp post, coat rack, stone bench.',
+    ],
+  },
   // A walk up to a storey whose staircase is only planned (`Game.unbuiltWayUp`).
   {
     n: 625,

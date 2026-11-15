@@ -65,11 +65,11 @@ const glassy = (seed: number, ember = true) => (g: Ctx, k: PaintCtx, s: Side): v
 };
 const glassSides = (seed: number, ember = true) => ({ front: glassy(seed, ember), back: glassy(seed + 1, ember), left: glassy(seed + 2, ember), right: glassy(seed + 3, ember), top: glassy(seed + 4, false) });
 const lathed = (seed: number) => (_k: number, i: number, s: Side): Partial<Face> => ({ crease: 0.2, paint: (g: Ctx, kk: PaintCtx) => glassy(seed + i, false)(g, kk, s) });
-/** A shard: a three- or four-sided spike of glass from a ring at the foot to a point, leaning. */
-function shard(x: number, y: number, r: number, h: number, lean: [number, number], sides: number, turn: number, seed: number): Face[] {
+/** A shard: a three- or four-sided spike of glass from a ring at the foot (at height `z0`, on what it stands out of) to a point at `h`, leaning. */
+function shard(x: number, y: number, r: number, h: number, lean: [number, number], sides: number, turn: number, seed: number, z0 = 0): Face[] {
   const foot = Array.from({ length: sides }, (_, i): V3 => {
     const a = turn + (i / sides) * TAU;
-    return [x + Math.cos(a) * r, y + Math.sin(a) * r, 0];
+    return [x + Math.cos(a) * r, y + Math.sin(a) * r, z0];
   });
   const tip: V3 = [x + lean[0], y + lean[1], h];
   return prism([foot, foot.map(() => tip)], GLASS, (_k, i, s) => ({ crease: 0.3, paint: (g: Ctx, kk: PaintCtx) => glassy(seed + i)(g, kk, s) }));
@@ -149,10 +149,10 @@ function throneOf(): KitModel {
   for (const s of [-1, 1]) {
     parts.push({ faces: slab(s * 6.6 - (s > 0 ? 0 : 1.8), s * 6.6 + (s > 0 ? 1.8 : 0), -5.6, 6.8, 1.2, 9.2, GLASS, { corner: 0.3, bevel: 0.4, paint: g(3231 + s) }), edges: true, inkColour: GLASS_INK });
   }
-  // The shards over the back: a tall one in the middle and two leaning out.
-  parts.push({ faces: shard(0, -7.1, 1.9, 25.5, [0, 0.2], 4, TAU / 8, 3241), edges: true, inkColour: GLASS_INK, after: [back] });
-  parts.push({ faces: shard(-4.6, -7.1, 1.5, 21.6, [-1.2, 0.2], 4, TAU / 8, 3251), edges: true, inkColour: GLASS_INK, after: [back] });
-  parts.push({ faces: shard(4.6, -7.1, 1.5, 21.6, [1.2, 0.2], 4, TAU / 8, 3261), edges: true, inkColour: GLASS_INK, after: [back] });
+  // The shards over the back, out of its top: a tall one in the middle and two leaning out.
+  parts.push({ faces: shard(0, -7.1, 1.4, 25.5, [0, 0.2], 4, TAU / 8, 3241, 17.0), edges: true, inkColour: GLASS_INK });
+  parts.push({ faces: shard(-4.6, -7.1, 1.2, 21.6, [-1.2, 0.2], 4, TAU / 8, 3251, 17.0), edges: true, inkColour: GLASS_INK });
+  parts.push({ faces: shard(4.6, -7.1, 1.2, 21.6, [1.2, 0.2], 4, TAU / 8, 3261, 17.0), edges: true, inkColour: GLASS_INK });
   parts.push({ faces: slab(-5.8, 5.8, -5.0, 6.4, 5.0, 5.9, CUSHION, { corner: 0.8, bevel: 0.4 }), after: [seat] });
   return { parts, shade: shadeOf(-9.4, 9.4, -9.4, 9.4) };
 }
@@ -324,7 +324,7 @@ function shardGardenOf(): KitModel {
     const a = (i / 14) * TAU, r = 8.6;
     parts.push({ faces: slab(-0.7, 0.7, -0.5, 0.5, 0, 1.3 + T() * 0.5, GLASS_DEEP, { corner: 0.2, bevel: 0.3 }).map((f) => ({ ...f, pts: f.pts.map(([x, y, z]): V3 => [x * Math.cos(a + Math.PI / 2) - y * Math.sin(a + Math.PI / 2) + Math.cos(a) * r * 0.92, x * Math.sin(a + Math.PI / 2) + y * Math.cos(a + Math.PI / 2) + Math.sin(a) * r * 0.92, z]) })), inkColour: GLASS_INK });
   }
-  SPIKES.forEach(([x, y, r, h, lean, n], i) => parts.push({ faces: shard(x, y, r, h, lean, n, i * 0.7, 3521 + i * 7), edges: true, inkColour: GLASS_INK, after: [bed] }));
+  SPIKES.forEach(([x, y, r, h, lean, n], i) => parts.push({ faces: shard(x, y, r, h, lean, n, i * 0.7, 3521 + i * 7, 0.8), edges: true, inkColour: GLASS_INK, after: [bed] }));
   return { parts, shade: shadeOf(-8.6, 8.6, -8.6, 8.6) };
 }
 
@@ -423,7 +423,7 @@ function shardPathOf(): KitModel {
   const T = rand(3801);
   for (let i = 0; i < PATH_SHARDS; i++) {
     const x = -17.6 + (i * 35.2) / (PATH_SHARDS - 1) + (T() - 0.5) * 1.2;
-    parts.push({ faces: shard(x, PATH_Y + (T() - 0.5) * 0.8, 0.9 + T() * 0.4, 2.2 + T() * 1.8, [(T() - 0.5) * 0.8, (T() - 0.5) * 0.6], 3, T() * TAU, 3811 + i * 5), edges: true, inkColour: GLASS_INK, after: [bed] });
+    parts.push({ faces: shard(x, PATH_Y + (T() - 0.5) * 0.8, 0.9 + T() * 0.4, 2.2 + T() * 1.8, [(T() - 0.5) * 0.8, (T() - 0.5) * 0.6], 3, T() * TAU, 3811 + i * 5, 0.35), edges: true, inkColour: GLASS_INK, after: [bed] });
   }
   parts.push(loose([-19.6, PATH_Y - 2.2, 0], [19.6, PATH_Y + 2.2, 4.6], () => undefined));
   return { parts, shade: null };
