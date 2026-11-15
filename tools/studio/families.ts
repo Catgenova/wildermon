@@ -64,7 +64,6 @@ import { prospectMark, seam, UNIDENTIFIED_FACE, veinGlints, veinLit, veinLook, V
 import { bridgeNight, drawBridgePiece, piecesAt, type BridgeFrame, type BridgePieceAt } from '../../src/render/bridgekit';
 import { BRIDGES, spanBill, type Bridge, type BridgeKind } from '../../src/game/bridges';
 import { VIEWS } from '../../src/render/view';
-import { HALF_H, HALF_W, HEIGHT_SCALE } from '../../src/render/iso';
 
 export type Ctx = CanvasRenderingContext2D;
 export type Box = [number, number, number, number];
