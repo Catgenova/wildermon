@@ -31,7 +31,7 @@ import { BOOT_PHASES, NEAR_REACH, TREE_WAIT_MS } from '../bootsteps';
 import { POST_FOLLOW_REACH } from '../../game/posts';
 import { AROUND_MOST, aroundStoreTrades } from '../../game/around';
 import { AUTO_EAT_AT } from '../../game/autoeat';
-import { CRATE_KINDS_SAID, rackPutLine, STORE_REACH } from '../../game/crates';
+import { CRATE_DEFS, CRATE_KINDS_SAID, rackPutLine, STORE_REACH } from '../../game/crates';
 import { BASE_QUEUE, DEED_GAP, DEED_SPACING, DEED_STONE_GAP, DAMAGE_WARN, QUEUE_PER_MIND, FORAGE_COOLDOWN, KIT_LEFT_OUT, KIT_QL, SPROUT_COOLDOWN, STARTER_FOOD, STARTER_FOOD_COUNT, STARTER_KIT, TRAVEL_LEG, deedLevel } from '../../game/game';
 import { ROT_SOON } from '../../game/rot';
 import { FAIL_EXAMPLE_AT, FAIL_FACTORS, FAIL_LEAST, FAIL_WHY_JOBS, failFactor, failFactorSaid } from '../../game/failwhy';
@@ -414,6 +414,16 @@ const FAIL_EXAMPLE = failFactorSaid(failFactor({ ...FAIL_EXAMPLE_AT, difficulty:
 const SCRUBS_LATER = new Set(['scrub_wall_paint', 'scrub_floor_paint']);
 
 export const NEWS: News[] = [
+  // The crates and the carcasses in the kit (`kit/storecrate.ts`, `carcassSprite`), and the site icon (`scripts/emit-icons.mjs`).
+  {
+    n: 641,
+    day: '2026-11-15',
+    lines: () => [
+      `Changed: ${listed(Object.values(CRATE_DEFS).map((c) => c.name.toLowerCase()))}: new look, 8 facings, in their wood.`,
+      `Changed: ${itemDef('corpse').name.toLowerCase()}s on the ground: new look, the kind's own model and colours lying down, at its stage's size, 8 facings; other items on the tile: dropped items sack behind it.`,
+      'Changed: site icon: wildermon crate.',
+    ],
+  },
   // A Decor tab in the crafting window (`craftTabOf`, `isDecor`).
   {
     n: 639,

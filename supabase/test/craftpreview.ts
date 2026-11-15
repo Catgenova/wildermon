@@ -6,7 +6,7 @@
  * Chromium, of the window as players get it (the built page's head, its stylesheets and policy):
  *
  *   * which things have one, read off the models (`previewOf`): every recipe's thing that is a piece with a model, a
- *     hull or a vehicle, what else is set down (a work post, a trap), a piece the figure draws worn, a weapon, a tool
+ *     hull or a vehicle, what else is set down (a work post, a trap, a crate), a piece the figure draws worn, a weapon, a tool
  *     the figure works with, or a thing with a model of its own (a loaf, a candle) has the kind it should, and what
  *     has no model (a stew, a plank, a scroll) has none;
  *   * a row clicked shows its thing's preview, of the right kind, drawn, the row lit; a recipe with no model shows the
@@ -126,7 +126,7 @@ if (!browser) {
     const kinds = await call<Record<string, string | null>>('kinds');
     const want: Record<string, string | null> = {
       barrel: 'furniture', chair: 'furniture', chest: 'furniture', smelter: 'furniture', kiln: 'furniture', memorial_stone: 'furniture',
-      work_post: 'furniture', snare: 'furniture', deed_stake: 'furniture', bread: 'model', candle: 'model', lantern: 'model',
+      work_post: 'furniture', snare: 'furniture', deed_stake: 'furniture', crate_log: 'furniture', crate_plank: 'furniture', bread: 'model', candle: 'model', lantern: 'model',
       rowing_boat: 'vehicle', sailing_boat: 'vehicle', cart: 'vehicle', wagon: 'vehicle',
       leather_jerkin: 'gear', scale_helm: 'gear', cloth_tunic: 'gear', wooden_shield: 'gear', toolbelt: 'gear', jewelled_ring: 'gear',
       sword: 'held', long_bow: 'held', battle_axe: 'held', mallet: 'held', saw: 'held', shovel: 'held', needle: 'held',

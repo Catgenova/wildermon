@@ -4838,7 +4838,7 @@ export class Renderer {
         if (stone && !aloft) this.takeStone(stone, x, y, V);
         // A stump with felled logs on its tile drawn as solids is drawn with them, in their picture (`log3dSprite`).
         const logged = t === TileType.Stump && !cutHere && !aloft && this.game.ground.size > 0 && this.game.groundAt(x, y).length > 0
-          && !this.still && lyingSprite(this.game.groundAt(x, y), x, y, this.solidAt(x, y), this.year.season, true).solid === true;
+          && !this.still && lyingSprite(this.game.groundAt(x, y), x, y, this.solidAt(x, y), this.year.season, true, this.camera.rotation).solid === true;
         if (!stone && !logged && (t === TileType.Tree || t === TileType.Bush || t === TileType.Stump)) {
           const data = world.getData(x, y);
           const spr = t === TileType.Tree ? treeSprite(treeSpecies(data), treeVariant(data), this.year.season, this.year.day, this.treeAt(treeSpecies(data), x, y)) : t === TileType.Bush ? bushSprite(bushSpecies(data), this.year.season, this.year.day, this.bushAt(bushSpecies(data), x, y)) : stumpSprite(treeSpecies(data), this.year.season, this.year.day, this.stumpAt(treeSpecies(data), x, y));
@@ -4847,7 +4847,7 @@ export class Renderer {
         }
         if (!cutHere && !aloft && this.game.ground.size && this.game.groundAt(x, y).length) {
           const avg = (this.game.buildings.pierTiles.size ? this.game.pierDeckAt(x, y) : null) ?? (c[0] + c[1] + c[2] + c[3]) / 4;
-          const lying = lyingSprite(this.game.groundAt(x, y), x, y, this.logsAt(x, y), this.year.season, t === TileType.Stump);
+          const lying = lyingSprite(this.game.groundAt(x, y), x, y, this.logsAt(x, y), this.year.season, t === TileType.Stump, this.camera.rotation);
           const pile = this.take('pile', x, y, baseX + (lying.solid ? solidX : 0), baseY + hh - avg * hs + (lying.solid ? solidY : 0), lying);
           // A heap shines for the best thing in it: one fantastic hatchet under
           // a hundred rocks is still a fantastic hatchet lying in the grass.
@@ -5068,7 +5068,7 @@ export class Renderer {
             if ((crate.level ?? 0) < 0 || this.game.rackAt(crate.x, crate.y, crate.sx, crate.sy, crate.level)) continue;
             if (this.pinned !== null && (crate.level ?? 0) !== this.pinned) continue;
             const [wx, wy] = crateCentre(crate);
-            const ce = this.take('crate', x, y, cam.worldToScreenX(wx, wy), cam.worldToScreenY(wx, wy, this.standTop(wx, wy)), crateSprite(crate.kind));
+            const ce = this.take('crate', x, y, cam.worldToScreenX(wx, wy), cam.worldToScreenY(wx, wy, this.standTop(wx, wy)), crateSprite(crate.kind, crate.material, this.camera.rotation, (crate.sx + crate.sy) & 3));
             ce.crateId = crate.id;
             if (crate.rare) ce.rare = crate.rare;
           }
