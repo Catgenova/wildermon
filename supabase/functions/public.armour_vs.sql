@@ -11,5 +11,6 @@ AS $function$
     when 'chain' then case p_kind when 'cut' then 1.25 when 'pierce' then 0.75 when 'crush' then 0.7 when 'bite' then 1.1 when 'burn' then 1 end
     when 'plate' then case p_kind when 'cut' then 1.15 when 'pierce' then 1.1 when 'crush' then 0.85 when 'bite' then 1.1 when 'burn' then 1 end
     when 'scale' then case p_kind when 'cut' then 1.15 when 'pierce' then 0.9 when 'crush' then 1 when 'bite' then 1 when 'burn' then 1.25 end
+    when 'obsidian' then case p_kind when 'cut' then 1.3 when 'pierce' then 1.05 when 'crush' then 0.6 when 'bite' then 1.1 when 'burn' then 1.3 end
   end, 1)::double precision
 $function$

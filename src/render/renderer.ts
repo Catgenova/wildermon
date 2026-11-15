@@ -10199,7 +10199,8 @@ export class Renderer {
        * between it and the next tile of it -- except seen through, where the
        * hair laid twice is a line across the ceiling.
        */
-      const cx = fx(0.5, 0.5), cy = fy(0.5, 0.5), grow = alpha < 1 ? 0 : 0.5;
+      // Nor glass seen through all over (`MaterialDef.opacity`), which the hair laid twice would line at every joint.
+      const cx = fx(0.5, 0.5), cy = fy(0.5, 0.5), grow = alpha < 1 || (bare.opacity ?? 1) < 1 ? 0 : 0.5;
       ctx.beginPath();
       for (const [u, v] of corners) {
         const px = fx(u, v), py = fy(u, v), l = Math.hypot(px - cx, py - cy) || 1;
@@ -10258,6 +10259,8 @@ export class Renderer {
     const decked = floor.level === 0 && bld.pierTiles.size > 0 && bld.onPiers(x, y);
     if (done && (floor.level > 0 || decked)) {
       const st = stairStyle(floor.material);
+      // Its edge as seen through as its deck (`MaterialDef.opacity`).
+      ctx.globalAlpha = alpha * (bare.opacity ?? 1);
       const lum = (c: readonly [number, number, number]): number => 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2];
       const C = (c: readonly [number, number, number], k: number, a = 1): string =>
         paint ? rgb(paint, k * Math.max(0.6, Math.min(1.3, lum(c) / Math.max(1, lum(st.string)))), a) : rgb(c, k, a);

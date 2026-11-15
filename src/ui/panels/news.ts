@@ -58,7 +58,7 @@ import { SPIRAL_TREADS } from '../../game/spiral';
 import { BACK_PACE, BACK_SLACK, CIRCLE_R, COWARD_AT, COWARD_DRAG, DRAW_WALK, FALL_BACK, GUARD_RANGE, HUNTER_TURN, KEEP_OFF, MONSTER_TURN, PACK_CALL, PACK_MOST, THROW_HIT, THROW_REACH } from '../../game/fight';
 import { FIGHT_QUIET, ARM_SLOW_MOST, ARMOUR_VS, armourSays, BLINDSIDE, blowSays, CROWD_BLOCK, FLANK_HIT, HEAVY_EVERY, HEAVY_HIT, HIDE_NAMES, HIDES, hideSays, LEG_SLOW_MOST, sideOf, WIND_UP, BLOW_DEFENSIVE, BLOW_HUNTER, BLOW_PREY, FIGHT_BACK_STILL, FIGHT_GIVE_UP, FIGHT_LEASH, FIGHT_STANCE_NAMES, FIGHT_STANCES, FIST, FOLLOW_RANGE, stanceSays, SWING_FLOOR, SWING_WIND, SWING_WIND_KG, swingSeconds, TARGET_RANGE, TIRED_AT, TIRED_SLOW, armourSwingSays, overburdenSwingSays } from '../../game/fight';
 import {
-  CELLAR_DECAY, CELLAR_DEPTH, CELLAR_SOIL, COLUMN_SHARE, SINGLE_STAIRS_NAME, SINGLE_STAIRS_SHARE, SPIRAL_STAIRS_NAME, STAIRS_SHARE, columnBill, floorBill, GLASS_ROOF, heftWord, onlySaid, takesAs, INDOORS_DECAY, INDOORS_REST, JETTY_REACH, MATERIAL_BY_ID, MATERIALS as WALL_MATERIALS, RAILING_HEIGHT,
+  CELLAR_DECAY, CELLAR_DEPTH, CELLAR_SOIL, COLUMN_SHARE, SINGLE_STAIRS_NAME, SINGLE_STAIRS_SHARE, SPIRAL_STAIRS_NAME, STAIRS_SHARE, columnBill, floorBill, GLASS_ROOF, heftWord, OBSIDIAN_GLASS, OBSIDIAN_GLASS_OPACITY, onlySaid, takesAs, INDOORS_DECAY, INDOORS_REST, JETTY_REACH, MATERIAL_BY_ID, MATERIALS as WALL_MATERIALS, RAILING_HEIGHT,
   NO_PLAN_FROM, OUTSIDE_STAIR_LEVEL, roofShapeDef, roofShapeOf, WALL_HEIGHT, WALL_TYPE_BY_ID, wallBill as typeBill,
   STOREY_JOBS, describeNeeds, GARDEN_BED,
 } from '../../game/building';
@@ -145,7 +145,7 @@ import { ORDER_LIFE } from '../../game/orders';
 import { POST_LIFE_MIN } from '../../game/posts';
 import { ACTION_BY_ID, deedAcrossAt, DROP_RAISE, PACKED_FIRST, SPADEFUL, GLAZE_ASH, GRASS_PER_CUT, GRASS_PLANT, KIT_MEND, MOSS_PER_CUT, MOSS_PLANT, WATER_MOTE_USES, WEAR_PER_GO } from '../../game/actions';
 import { CIRCLET_SHARE, CIRCLET_STONES, GEMS } from '../../game/gems';
-import { CRAFT_REACH, lockedRecipes, ranOutSaid, RECIPE_BY_ID, RECIPES, recipeTitle, TRADE_BOOK_AT } from '../../game/recipes';
+import { CRAFT_REACH, KNAPPED, knapRecipeId, lockedRecipes, ranOutSaid, RECIPE_BY_ID, RECIPES, recipeTitle, TRADE_BOOK_AT } from '../../game/recipes';
 import { BOOKS, bookDrops, RECIPE_DROP_ODDS, RECIPE_DROPPERS } from '../../game/recipebook';
 import { BOARD_TOP, RECORD_STATS } from '../../game/boards';
 import { BANNER_MS, LEAVING_MS } from '../deedbanner';
@@ -167,6 +167,7 @@ import { GENDERS, HAIR_FADE, HAIRSTYLES } from '../../game/look';
 import { OUTFITS } from '../creator';
 import { MAX_ZOOM, SCULPTED_MAX_ZOOM } from '../../engine/camera';
 import { article, burnsFor, capital, finePercent, listed, listedOr, numberWord, percent, readyIn, timeWords } from '../../game/words';
+import { OBSIDIAN_MATERIAL } from '../../game/materials';
 import { METER_BAD, METER_WARN } from '../kit';
 import { DEED_UPGRADES } from '../../game/deed';
 import { LYE_USE, SHORE_REACH } from '../../game/placeables';
@@ -190,7 +191,7 @@ import { defaultKey } from '../../game/keybinds';
 import { guideEntries, guidePages, wildShare } from '../../game/guide';
 import { MUTE_FOR, MUTE_SHUTS, NEW_BODIES_A_DAY, REPORT_REASONS, REPORTS_A_DAY } from '../../game/keeper';
 import { awayFor } from '../../game/away';
-import { ANCIENT_HELM, ANCIENT_HELM_SIGHT, ANCIENT_SWORD, ANCIENT_SWORD_SWING, ARMOUR, BANE_BONUS, SHIELDS, SLOT_NAMES, SLOTS, WEAPON_BY_ID, WEAPONS } from '../../game/gear';
+import { ANCIENT_HELM, ANCIENT_HELM_SIGHT, ANCIENT_SWORD, ANCIENT_SWORD_SWING, ARMOUR, ARMOUR_CLASSES, BANE_BONUS, OBSIDIAN_PIECES, SHIELDS, SLOT_NAMES, SLOTS, WEAPON_BY_ID, WEAPONS } from '../../game/gear';
 import { JEWEL_PIECES } from '../../game/gems';
 import { foodFill, itemDef, RARITIES, rarityBands, rarityChance, rareInputSaid, unmendableSays } from '../../game/items';
 import { SIGHT_FORM_AT, SIGHT_RARITY_AT } from '../../game/sighted';
@@ -4505,6 +4506,23 @@ export const NEWS: News[] = [
       `New: rowing under way: ${OAR_DROPS} drops a blade at the catch; whirl pair a blade a stroke, ${SWIRL_SECS} s.`,
       'Without a graphics card: swimming strokes\' splashes, rings treading water, the float\'s strike and a catch only.',
     ],
+  },
+  // Obsidian gear and obsidian glass (`gear.ts` OBSIDIAN_PIECES, `recipes.ts` KNAPPED, `building.ts` OBSIDIAN_GLASS).
+  {
+    n: 617,
+    day: '2026-11-14',
+    lines: () => {
+      const C = ARMOUR_CLASSES, glass = MATERIAL_BY_ID.get(OBSIDIAN_GLASS);
+      return [
+        `New: obsidian armour, ${listed(OBSIDIAN_PIECES.map((id) => `${itemDef(id).name.toLowerCase()} (${recipeBill(`make_${id}`)})`))}: platesmithing at an anvil, hammer.`
+          + ` Soak ${pct(C.obsidian.soak)} (plate ${pct(C.plate.soak)}, scale ${pct(C.scale.soak)}); ${armourSays('obsidian')}; full set burden ${pct(C.obsidian.burden)} (plate ${pct(C.plate.burden)}).`,
+        `New: knapped obsidian, chisel, stonecutting: ${listed(Object.keys(KNAPPED).map((id) => `${itemDef(id).name.toLowerCase()} (${recipeBill(knapRecipeId(id))})`))}.`
+          + ` Obsidian: ${OBSIDIAN_MATERIAL.note.toLowerCase()}`,
+        `New: obsidian glass, solid wall (${wallBill(OBSIDIAN_GLASS)}) or floor; trowel, masonry; ${glass?.storeys ?? 0} storeys; opacity ${pct(OBSIDIAN_GLASS_OPACITY)}; sight passes through.`,
+        'New: obsidian pieces, tools and weapons improved with obsidian; chisel and hammer.',
+        'New: models: obsidian set; knapped heads and blades; obsidian glass walls and floors.',
+      ];
+    },
   },
   // Volcano Isle's lava and heat (`lava.ts`).
   {

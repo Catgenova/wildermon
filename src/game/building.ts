@@ -208,6 +208,8 @@ export interface MaterialDef {
   only?: { walls: readonly WallType[]; floors: readonly FloorKind[] };
   /** Glass, and seen through: a wall of it does not stop the eye (`vision.ts`), as a window does not. */
   seeThrough?: boolean;
+  /** Drawn this opaque, a wall or a floor of it: what is behind or under it shows through at the rest (`OBSIDIAN_GLASS`). */
+  opacity?: number;
   /**
    * Bill items taken only of one make: the `Item.extra` an item of that id
    * must carry, as a metal ribbon carries its metal's name -- a garden bed's
@@ -248,8 +250,16 @@ export const MATERIALS: MaterialDef[] = [
    * melt colours a batch of panes, and a solid wall takes one batch.
    */
   { id: 'stained_glass', name: 'Stained glass', kind: 'stone', tool: 'trowel', skill: 'masonry', color: [214, 196, 226], trim: [232, 224, 206], floor: [238, 228, 214], courses: 4, bill: [['stone_brick', 24], ['mortar', 12], ['stained_glass_pane', 20]], storeys: 10, heft: 3, only: { walls: ['solid'], floors: ['floor', 'roof'] }, seeThrough: true },
+  /*
+   * Obsidian set in mortar: a solid wall or a floor of dark glass, drawn
+   * `OBSIDIAN_GLASS_OPACITY` opaque (`render/obsidianglass.ts`).
+   */
+  { id: 'obsidian_glass', name: 'Obsidian glass', kind: 'stone', tool: 'trowel', skill: 'masonry', color: [30, 26, 36], trim: [120, 46, 38], floor: [26, 23, 31], courses: 2, bill: [['obsidian', 16], ['mortar', 8]], storeys: 10, heft: 3, only: { walls: ['solid'], floors: ['floor'] }, seeThrough: true, opacity: 0.8 },
 ];
+/** Obsidian glass (`MATERIALS`): its id, and how opaque a wall or a floor of it is drawn. */
+export const OBSIDIAN_GLASS = 'obsidian_glass';
 export const MATERIAL_BY_ID = new Map(MATERIALS.map((m) => [m.id, m]));
+export const OBSIDIAN_GLASS_OPACITY = MATERIAL_BY_ID.get(OBSIDIAN_GLASS)?.opacity ?? 1;
 /**
  * Glass: panes set in timber, put up with the mallet and trained as carpentry.
  * A solid wall -- the panes between a timber sill and head -- and a pitched
