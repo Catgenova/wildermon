@@ -3763,15 +3763,15 @@ export function helpText(): string {
     <h3>Volcano Isle: lava and heat</h3>
     <ul>
       <li><b>Lava</b>: a labyrinth on Volcano Isle, <b>${LAVA_RADIUS}</b> tiles round the caldera, on its land ${LAVA_INLAND * LAVA_SIZE / LAVA_CHART.n} tiles in from the water; one of
-      <b>${LAVA_DESIGNS}</b> designs, a new one at each daily reset (${hudHour(TREE_DAWN_UTC)} UTC), never the same two days running.
+      <b>${LAVA_DESIGNS}</b> designs, a new one at each daily reset (${hudHour(TREE_DAWN_UTC)} UTC), not repeated on consecutive days.
       Corridors ${LAVA_CELL} tiles wide, walls ${LAVA_CELL} tiles thick.</li>
-      <li><b>${LAVA_PATHS}</b> ways in, one a third of the way round: each the only way through to the heart; every other corridor ends.</li>
+      <li><b>${LAVA_PATHS}</b> ways in, about ${Math.round(360 / LAVA_PATHS)}° apart: each the only way through to the heart; every other corridor ends.</li>
       <li><b>Heart</b>: ${LAVA_HEART} tiles round the caldera; no lava. Seryll: in the heart only, ${percent(SERYLL_HEART)} of its dry ground.</li>
       <li>On lava: health <b>−${percent(LAVA_BURN)}/s</b>. No digging, building, setting down or founding on it. No creature steps on it.</li>
       <li>Never on: a settlement, ${listed(LAVA_SPARED_TILES.map((t) => TILE_DEFS[t].name.toLowerCase()))}, a building, a foundation, anything set down.</li>
       <li><b>Heat</b> (hud, on Volcano Isle): at ${metres(LAVA_BAND.foot)} m and up +${percent(HEAT_FILL)}/s, ×${HEAT_NEAR} with lava on or beside your tile;
       full: health <b>−${percent(HEAT_BURN)}/s</b>; below: −${percent(HEAT_DRAIN)}/s.</li>
-      <li>Heat fill: ×${1 - HEAT_SCALE} per dragon-scale piece worn; ×(1 − ${HEAT_ICE} × strength) per piece infused with <b>ice</b> (armour);
+      <li>Heat fill: ×${1 - HEAT_SCALE} per dragon-scale piece worn; −${percent(HEAT_ICE)} × strength per piece infused with <b>ice</b> (armour);
       <b>${itemDef(COOLING_DRAUGHT).name}</b> (alchemy: ${draughtBill()}): heat −${percent(DRAUGHT_DROP)}, fill ×${DRAUGHT_FILL} for ${DRAUGHT_SECS / 60} min.</li>
     </ul>
     <h3>Traps</h3>

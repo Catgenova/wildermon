@@ -91,11 +91,22 @@ const hot = (bx: number, by: number): boolean => H(bx * LAVA_CELL + 1, by * LAVA
 // What must be reached: a lair's piece in a pillar with a way out, a seam in a wall a seam may open, a seam in the heart.
 const lairPillar = take(blocks((bx, by) => (lavaByte(DTODAY, bx, by) & LB_WAY) !== 0 && hot(bx, by)));
 const seamWall = take(blocks((bx, by) => (lavaByte(DTODAY, bx, by) & (LB_LAVA | LB_OPENS)) === (LB_LAVA | LB_OPENS) && hot(bx, by)));
-const SEAMS: Array<[number, number]> = [[seamWall[0] * LAVA_CELL + 2, seamWall[1] * LAVA_CELL], [G.cx + 7, G.cy - 5]];
+/** The heart's dry ground, nearest the centre first: the crater's lake at the centre is water. */
+const HEARTLAND: Array<[number, number]> = [];
+for (let y = G.cy - G.heart; y <= G.cy + G.heart; y++) {
+  for (let x = G.cx - G.heart; x <= G.cx + G.heart; x++) {
+    if (inLavaHeart(x, y, SIZE) && [[0, 0], [1, 0], [0, 1], [1, 1]].every(([dx, dy]) => H(x + dx, y + dy) >= LAVA_BAND.foot)) HEARTLAND.push([x, y]);
+  }
+}
+HEARTLAND.sort((a, b) => (a[0] - G.cx) ** 2 + (a[1] - G.cy) ** 2 - ((b[0] - G.cx) ** 2 + (b[1] - G.cy) ** 2) || a[1] - b[1] || a[0] - b[0]);
+/** The summit lair on the heart's ground nearest the centre; a seam beside it; the heart asked at its far edge. */
+const ROOST = HEARTLAND[0];
+const HEART = HEARTLAND[HEARTLAND.length - 1];
+const SEAMS: Array<[number, number]> = [[seamWall[0] * LAVA_CELL + 2, seamWall[1] * LAVA_CELL], HEARTLAND[Math.floor(HEARTLAND.length / 2)]];
 for (const [x, y] of SEAMS) rock[key(x, y)] = LAVA_SEAM;
 const OGRE: [number, number] = [lairPillar[0] * LAVA_CELL, lairPillar[1] * LAVA_CELL + 1];
 lairs.add(key(OGRE[0], OGRE[1]));
-lairs.add(key(G.cx, G.cy));
+lairs.add(key(ROOST[0], ROOST[1]));
 // Blocks of lava today, plain walls and pillars, in the heat: for what lava spares and for a body to stand on.
 const lavaToday = blocks((bx, by) => (lavaByte(DTODAY, bx, by) & (LB_LAVA | LB_OPENS | LB_WAY)) === LB_LAVA && hot(bx, by));
 const [ROAD, HUT, CHEST, DEED, HOT, DUG] = [0, 1, 2, 3, 4, 5].map(() => mid(take(lavaToday)));
@@ -116,8 +127,8 @@ const FOOT: [number, number] = (() => {
   }
   throw new Error('no land outside');
 })();
-check('the heart is Volcano Isle\'s, the foot below the heat, the room in it', H(G.cx + 10, G.cy) >= LAVA_BAND.foot && H(FOOT[0], FOOT[1]) < LAVA_BAND.foot
-  && H(FOOT[0], FOOT[1]) > 0 && H(ROOM[0], ROOM[1]) >= LAVA_BAND.foot, `${H(G.cx, G.cy)} ${H(FOOT[0], FOOT[1])} ${H(ROOM[0], ROOM[1])}`);
+check(`the heart is Volcano Isle's (${HEARTLAND.length} dry tiles), the foot below the heat, the room in it`, HEARTLAND.length > 100 && H(FOOT[0], FOOT[1]) < LAVA_BAND.foot
+  && H(FOOT[0], FOOT[1]) > 0 && H(ROOM[0], ROOM[1]) >= LAVA_BAND.foot, `${HEARTLAND.length} ${H(FOOT[0], FOOT[1])} ${H(ROOM[0], ROOM[1])}`);
 
 /* ---- the island ------------------------------------------------------------------------------------------------------ */
 
@@ -143,6 +154,8 @@ discard temp;
 begin;
 create temp table said (k text, v text);
 create temp table rows_in (y int, hex text);
+create schema dice;
+create function dice.random() returns double precision language sql volatile as $f$ select coalesce(nullif(current_setting('wildermon.dice', true), ''), '0.5')::double precision $f$;
 insert into rows_in values
 ${rowsSql};
 do $t$
@@ -150,14 +163,14 @@ declare w uuid; v_t timestamptz; v_n int; v_id bigint; v_ids bigint[]; c record;
 begin
   insert into world (name, seed, size, spawn_x, spawn_y, ready) values ('Lava', ${SEED}, ${SIZE}, ${ROOM[0]}, ${ROOM[1]}, true) returning id into w;
   perform land_blank(w, ${SIZE});
-  update land_corner c set heights = decode(r.hex, 'hex') from rows_in r where c.world_id = w and c.y = r.y;
+  update land_corner lc set heights = decode(r.hex, 'hex') from rows_in r where lc.world_id = w and lc.y = r.y;
   ${SEAMS.map(([x, y]) => tileSql(x, y, 'rock', LAVA_SEAM)).join('\n  ')}
   ${tileSql(ROAD[0], ROAD[1], 'tiles', TileType.Cobblestone)}
   insert into deed (world_id, name, x, y, radius, level, founded_by) values (w, 'Ash', ${DEED[0]}, ${DEED[1]}, 1, 1, '${U}');
   insert into building (world_id, id, name, levels, planned_by) values (w, 1, 'Hut', 1, '${U}');
   insert into building_tile (world_id, building, x, y) values (w, 1, ${HUT[0]}, ${HUT[1]});
   insert into placed (world_id, kind, sub, x, y, cx, cy) values (w, 'furniture', 'chest', ${CHEST[0]}, ${CHEST[1]}, ${CHEST[0]}.5, ${CHEST[1]}.5);
-  perform lair_piece(w, 'dragon_roost', ${G.cx}, ${G.cy});
+  perform lair_piece(w, 'dragon_roost', ${ROOST[0]}, ${ROOST[1]});
   perform lair_piece(w, 'ogre_cave', ${OGRE[0]}, ${OGRE[1]});
   insert into said values ('DAY', v_day::text);
 
@@ -180,12 +193,13 @@ begin
   insert into said select 'WAY', w2.design || '|' || w2.wedge || '|' || array_to_string(w2.entrance, ',') || '|' || array_to_string(w2.exit, ',')
     from lava_design_way w2 where w2.size = ${SIZE};
   insert into said select 'OF', d || '|' || lava_design_of(${SEED}, d) from generate_series(v_day - 3, v_day + ${DAYS}) d;
-  insert into said select 'READY', lava_ready(w) || '|' || (select string_agg(day || ':' || design, ',' order by day) from lava_day where world_id = w);
+  v_n := lava_ready(w);
+  insert into said select 'READY', v_n || '|' || (select string_agg(day || ':' || design, ',' order by day) from lava_day where world_id = w);
   insert into said select 'BOX0', ${boxBits('v_day')};
   insert into said select 'BOX1', ${boxBits('v_day + 1')};
   insert into said select 'OFFBOX', count(*) filter (where lava_on(w, ${SIZE}, x, y)) from generate_series(0, ${SIZE - 1}, 7) x, generate_series(0, ${SIZE - 1}, 7) y
    where not lava_in_box(${SIZE}, x, y);
-  insert into said values ('SPARED', ${[ROAD, HUT, CHEST, DEED, OGRE, [G.cx, G.cy]].map(([x, y]) => `lava_at(w, ${x}, ${y})::text || ':' || lava_block(w, ${SIZE}, lava_design_on(w, v_day), ${Math.floor(x / LAVA_CELL)}, ${Math.floor(y / LAVA_CELL)})::text`).join(` || '|' || `)});
+  insert into said values ('SPARED', ${[ROAD, HUT, CHEST, DEED, OGRE, ROOST].map(([x, y]) => `lava_at(w, ${x}, ${y})::text || ':' || lava_block(w, ${SIZE}, lava_design_on(w, v_day), ${Math.floor(x / LAVA_CELL)}, ${Math.floor(y / LAVA_CELL)})::text`).join(` || '|' || `)});
 
   -- ---- Creatures ------------------------------------------------------------------------------------------------------
   insert into said select 'CREATURE', string_agg(case when creature_tile_ok(w, x, y) then '1' else '0' end, '' order by y, x)
@@ -295,8 +309,8 @@ begin
   perform lava_design_make(4096, lava_design_on(w, v_day));
   insert into said values ('T_MAKE4096', round((extract(epoch from clock_timestamp() - v_t) * 1000)::numeric, 0)::text);
   insert into said select 'WAY4096', w2.design || '|' || w2.wedge || '|' || array_to_string(w2.entrance, ',') || '|' || array_to_string(w2.exit, ',')
-    from lava_design_way w2 where w2.size = 4096;
-  insert into said select 'ROW4096', d.design || '|' || d.by || '|' || encode(d.bytes, 'hex') from lava_design d where d.size = 4096 and d.by % 37 = 0;
+    from lava_design_way w2 where w2.size = 4096 and w2.design = lava_design_on(w, v_day);
+  insert into said select 'ROW4096', d.design || '|' || d.by || '|' || encode(d.bytes, 'hex') from lava_design d where d.size = 4096 and d.design = lava_design_on(w, v_day) and d.by % 37 = 0;
   v_t := clock_timestamp();
   select count(*) filter (where lava_on(w, ${SIZE}, x, y)) into v_n from generate_series(${Y0}, ${Y1 - 1}) y, generate_series(${X0}, ${X1 - 1}) x;
   insert into said values ('T_BOX', round((extract(epoch from clock_timestamp() - v_t) * 1e6 / ${(X1 - X0) * (Y1 - Y0)})::numeric, 1)::text);
@@ -446,7 +460,7 @@ check('no lava off the box', one('OFFBOX') === '0', one('OFFBOX'));
     for (let x = X0; x < X1; x++) {
       if (box0[(y - Y0) * (X1 - X0) + (x - X0)] !== '1') continue;
       lava++;
-      if (H(x, y) < 0 || inLavaHeart(x, y, SIZE)) water++;
+      if (H(x, y) + H(x + 1, y) + H(x, y + 1) + H(x + 1, y + 1) < 0 || inLavaHeart(x, y, SIZE)) water++;
     }
   }
   check('lava lies on the land, never on water or in the heart', lava > 1000 && water === 0, `${lava} tiles, ${water} wrong`);
@@ -473,15 +487,29 @@ const reach = (L: LavaLand, day: number, from: [number, number], box: [number, n
   }
   return seen;
 };
-const goals: Array<[string, [number, number]]> = [['the heart', [G.cx + 12, G.cy + 3]], ['the summit lair', [G.cx, G.cy]], ['the lair in the labyrinth', OGRE],
+const goals: Array<[string, [number, number]]> = [['the heart', HEART], ['the summit lair', ROOST], ['the lair in the labyrinth', OGRE],
   ...SEAMS.map((s, i): [string, [number, number]] => [`seam ${i + 1}`, s])];
+/**
+ * Whether what is in a block of the labyrinth can be reached on a day: the block open ground that day, or a wall or a
+ * pillar that day's design lets open. On a wall between two ways, or a pillar with none, it is reached over lava.
+ */
+const openable = (day: number, [x, y]: [number, number]): boolean => {
+  const D = lavaDesign(SIZE, lavaDesignOf(SEED, day));
+  const b = lavaByte(D, Math.floor(x / LAVA_CELL), Math.floor(y / LAVA_CELL));
+  return !(b & LB_LAVA) || (b & (LB_OPENS | LB_WAY)) !== 0;
+};
 {
   const missed: string[] = [];
+  let shut = 0;
   for (let d = DAY; d < DAY + DAYS; d++) {
     const r = reach(land, d, FOOT, [X0 - 1, Y0, X1, Y1]);
-    for (const [name, [x, y]] of goals) if (!r.has(y * SIZE + x)) missed.push(`${d}:${name}`);
+    for (const [name, at] of goals) {
+      if (!openable(d, at)) { shut++; continue; }
+      if (!r.has(at[1] * SIZE + at[0])) missed.push(`${d}:${name}`);
+    }
   }
-  check(`from the land outside to the heart, the summit lair, a lair in the labyrinth and both seams, ${DAYS} days running`, !missed.length, missed.slice(0, 8).join(', '));
+  check(`from the land outside to the heart, the summit lair, a lair in the labyrinth and both seams, ${DAYS} days running`
+    + ` (${shut} times one lay in a block that day's design keeps shut)`, !missed.length && shut < DAYS * 2, missed.slice(0, 8).join(', '));
 }
 
 /* ---- what lava spares ------------------------------------------------------------------------------------------------- */
@@ -492,7 +520,7 @@ console.log('--- spared');
   const names = ['a road', 'a building', 'a piece set down', 'a settlement', 'the lair in the labyrinth', 'the summit lair'];
   names.forEach((n, i) => {
     const [at, block] = s[i]?.split(':') ?? [];
-    const t = [ROAD, HUT, CHEST, DEED, OGRE, [G.cx, G.cy] as [number, number]][i];
+    const t = [ROAD, HUT, CHEST, DEED, OGRE, ROOST][i];
     const ts = lavaAt(land, DAY, t[0], t[1]);
     check(`no lava on ${n}${i < 4 ? ', its block lava' : ', its block open'}`, at === 'false' && !ts && block === (i < 4 ? 'true' : 'false')
       && lavaBlock(land, DAY, Math.floor(t[0] / LAVA_CELL), Math.floor(t[1] / LAVA_CELL)) === (i < 4), s[i]);
@@ -619,6 +647,6 @@ console.log('--- refused');
   console.log(`  timings, the browser: a design made at 4096 ${made.toFixed(0)} ms (${D.nbx} × ${D.nby} blocks, ${n} of lava); a block asked ${per.toFixed(3)} µs`);
 }
 console.log(`  timings, the island: a design made at ${SIZE} ${one('T_MAKE1024')} ms, at 4096 ${one('T_MAKE4096')} ms; a tile of the box asked ${one('T_BOX')} µs; a tile off it ${one('T_OFF')} µs; a body settled ${one('T_SETTLE')} ms`);
-check('the island asks a tile off the box in under 50 µs', Number(one('T_OFF')) < 50, one('T_OFF'));
+check('the island asks a tile past the labyrinth\'s reach in under 50 µs', Number(one('T_OFF')) < 50, one('T_OFF'));
 
 finish('The labyrinth of lava and the heat on Volcano Isle');

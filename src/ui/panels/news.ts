@@ -4491,11 +4491,11 @@ export const NEWS: News[] = [
     day: '2026-11-14',
     lines: () => [
       `New: lava on Volcano Isle: a labyrinth ${LAVA_RADIUS} tiles round the caldera, on its land; ${LAVA_DESIGNS} designs, a new one at each daily reset, never twice running; corridors ${LAVA_CELL} tiles wide; on the map.`,
-      `${LAVA_PATHS} ways in, each the only way through to the heart (${LAVA_HEART} tiles round the caldera, no lava); every other corridor ends.`,
+      `${LAVA_PATHS} ways in, about ${Math.round(360 / LAVA_PATHS)}° apart, each the only way through to the heart (${LAVA_HEART} tiles round the caldera, no lava); every other corridor ends.`,
       `Changed: seryll lies in the labyrinth's heart only, on ${percent(SERYLL_HEART)} of its dry ground (was: anywhere on Volcano Isle).`,
       `On lava: health −${percent(LAVA_BURN)}/s; no digging, building, setting down or founding; no creature steps on it. Never on a settlement, a road, a building or anything set down.`,
       `New: heat meter (hud, Volcano Isle): +${percent(HEAT_FILL)}/s at ${metres(LAVA_BAND.foot)} m and up, ×${HEAT_NEAR} beside lava; full: health −${percent(HEAT_BURN)}/s; below: −${percent(HEAT_DRAIN)}/s.`,
-      `Heat fill: ×${1 - HEAT_SCALE} per dragon-scale piece; ×(1 − ${HEAT_ICE} × strength) per ice-infused piece (ice now infuses armour); ${itemDef(COOLING_DRAUGHT).name} (alchemy; mint, water, ice mote): heat −${percent(DRAUGHT_DROP)}, fill ×${DRAUGHT_FILL} for ${DRAUGHT_SECS / 60} min.`,
+      `Heat fill: ×${1 - HEAT_SCALE} per dragon-scale piece; −${percent(HEAT_ICE)} × strength per ice-infused piece (ice now infuses armour); ${itemDef(COOLING_DRAUGHT).name} (alchemy; mint, water, ice mote): heat −${percent(DRAUGHT_DROP)}, fill ×${DRAUGHT_FILL} for ${DRAUGHT_SECS / 60} min.`,
     ],
   },
   // The adornments (`adorn.ts`).

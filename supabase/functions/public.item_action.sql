@@ -6,5 +6,7 @@ CREATE OR REPLACE FUNCTION public.item_action(p_action text)
  IMMUTABLE
 AS $function$
   select p_action in ('improve_item', 'repair_item', 'patch_item', 'eat', 'drink', 'drink_skin', 'quench_item',
-                      'drink_tea', 'take_tincture', 'apply_salve', 'mend_kit', 'seal_item', 'set_in_circlet', 'glaze_item')
+                      'drink_tea', 'take_tincture', 'apply_salve', 'mend_kit', 'seal_item', 'set_in_circlet', 'glaze_item',
+                      -- A cooling draught (`lava.ts`).
+                      'drink_draught')
 $function$

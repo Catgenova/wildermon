@@ -6,6 +6,8 @@ CREATE OR REPLACE FUNCTION public.lair_tick(p_world uuid)
 AS $function$
 declare k record; v_l record; v_stood int := 0;
 begin
+  -- Today's and tomorrow's lava kept (`lava_ready`).
+  perform lava_ready(p_world);
   for k in select * from lair_kinds() order by keep_off desc loop
     continue when (select count(*) from lair where world_id = p_world and kind = k.id) >= k.count;
     continue when exists (select 1 from lair_look lk where lk.world_id = p_world and lk.kind = k.id

@@ -83,11 +83,16 @@ const marks = {
  * `rock` moved once more when gold became the Northeast Tundra's alone: a gold
  * seam anywhere else is iron, and the move tool's third move writes that into
  * every island already founded.
+ *
+ * `rock` moved on 15 November, when seryll went to the heart of Volcano Isle's
+ * labyrinth of lava and nowhere else (`rockKindFor`, `lavaland.ts`): a seryll
+ * seam anywhere else is iron, and the heart lays its own. `seryllHome` in
+ * `tools/move-ground.ts` writes that into every island already founded.
  */
 const PINNED: Record<keyof typeof marks, string> = {
   tiles: 'd5d42e470e6f2bfb',
   data: '24435ee0a65a8797',
-  rock: '3e048a98cb7bcb9c',
+  rock: 'd4d6752047eb7b94',
   heights: '561c219755d4479c',
   dirt: '2c0887dc7256457a',
 };

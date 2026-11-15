@@ -11,7 +11,8 @@
  *
  *   * The ground is cut into blocks of `LAVA_CELL` tiles a side. Every other block both ways is a room; between two
  *     rooms is a wall block; where four walls meet, a pillar. A room is the labyrinth's where its middle is on its
- *     land and within its reach, the heart's within `LAVA_HEART`, and outside otherwise.
+ *     land and within its reach, the heart's where `LAVA_HEART` reaches into it or a wall or pillar round it, and
+ *     outside otherwise.
  *   * Three rays from the centre, turned by the design (`lavaRays`), part the labyrinth into three wedges. Each
  *     wedge's rooms are joined into trees by Kruskal's rule over walls weighed by `hashTile(wall, design)`; nothing
  *     joins two wedges. In each wedge one room beside the heart is opened into it, the one nearest the wedge's middle
@@ -26,7 +27,7 @@
  * Standing on lava costs `LAVA_BURN` of your health a second; nothing can be dug, built, set down or founded on it
  * (`LAVA_GUARDED`, `LAVA_SAID`); no creature steps on it (`creature_tile_ok`).
  *
- * The heat. While you are on Volcano Isle, in the labyrinth's box, at `LAVA_BAND.foot` or above, a heat meter fills at
+ * The heat. While you are on Volcano Isle, within the labyrinth's reach, at `LAVA_BAND.foot` or above, a heat meter fills at
  * `HEAT_FILL` a second, `HEAT_NEAR` times that with lava on your tile or one beside it; full, it takes `HEAT_BURN` of
  * your health a second. Below it drains at `HEAT_DRAIN` a second. What you wear and drink slows the filling
  * (`heatMul`): every dragon-scale piece by `HEAT_SCALE`, every piece infused with ice by its share of
@@ -144,6 +145,15 @@ export function lavaInBox(size: number, x: number, y: number): boolean {
   return x >= b.bxa * LAVA_CELL && y >= b.bya * LAVA_CELL && x < (b.bxa + b.nbx) * LAVA_CELL && y < (b.bya + b.nby) * LAVA_CELL;
 }
 
+/** Tiles past the labyrinth's radius a wall or a pillar of it can reach, and past which no lava lies: two blocks' worth. */
+export const LAVA_REACH_PAST = 4 * LAVA_CELL;
+/** Whether a tile is within the labyrinth's reach (`LAVA_REACH_PAST` past its radius). The island's `lava_in_reach`. */
+export function lavaInReach(size: number, x: number, y: number): boolean {
+  const g = lavaGeometry(size);
+  const r = g.radius + LAVA_REACH_PAST;
+  return (x - g.cx) ** 2 + (y - g.cy) ** 2 <= r * r;
+}
+
 /** What a block's byte holds: lava; a wall a lair or a seam may open; a pillar's way out, and which wall it is (E, S, W, N). */
 export const LB_LAVA = 1;
 export const LB_OPENS = 2;
@@ -197,7 +207,10 @@ export function lavaDesign(size: number, design: number): LavaDesign {
       py[r] = dy;
       const d2 = dx * dx + dy * dy;
       const chart = lavaChartAt(tx, ty, size);
-      room[r] = d2 < g.heart * g.heart ? ROOM_HEART : chart === 2 && d2 <= g.radius * g.radius ? ROOM_IN : chart >= 1 ? ROOM_LAND : ROOM_OFF;
+      // The heart's rooms: those the heart reaches into, or into a wall or a pillar round them, so none of it is lava.
+      const hx = Math.min(Math.max(g.cx, tx - 1 - LAVA_CELL), tx - 2 + 2 * LAVA_CELL) - g.cx;
+      const hy = Math.min(Math.max(g.cy, ty - 1 - LAVA_CELL), ty - 2 + 2 * LAVA_CELL) - g.cy;
+      room[r] = hx * hx + hy * hy < g.heart * g.heart ? ROOM_HEART : chart === 2 && d2 <= g.radius * g.radius ? ROOM_IN : chart >= 1 ? ROOM_LAND : ROOM_OFF;
       if (room[r] !== ROOM_IN) continue;
       for (let k = 0; k < LAVA_PATHS; k++) {
         const a = rays[k], b = rays[(k + 1) % LAVA_PATHS];
@@ -394,9 +407,9 @@ export interface LavaLand {
 /** A tile's middle height, four times over: the sum of its corners. */
 const sum4 = (L: LavaLand, x: number, y: number): number => L.height(x, y) + L.height(x + 1, y) + L.height(x + 1, y + 1) + L.height(x, y + 1);
 
-/** Whether a tile is in the heat: in the box, on Volcano Isle at the band's foot or above it. The island's `lava_heat_on`. */
+/** Whether a tile is in the heat: in the labyrinth's reach, on Volcano Isle at the band's foot or above it. The island's `lava_heat_on`. */
 export const inHeat = (L: LavaLand, x: number, y: number): boolean =>
-  lavaInBox(L.size, x, y) && chartRegion(x + 0.5, y + 0.5, L.size) === LAVA_ISLE && sum4(L, x, y) >= 4 * LAVA_BAND.foot;
+  lavaInReach(L.size, x, y) && chartRegion(x + 0.5, y + 0.5, L.size) === LAVA_ISLE && sum4(L, x, y) >= 4 * LAVA_BAND.foot;
 
 /** Whether a block holds what must be reached: a lair's piece or a seryll seam. The island's `lava_must_reach`. */
 export function lavaMustReach(L: LavaLand, bx: number, by: number): boolean {
@@ -433,7 +446,7 @@ export const lavaBlock = (L: LavaLand, day: number, bx: number, by: number): boo
 
 /** Whether a tile is lava on a day: in a block of it, not on water and not where lava is spared. The island's `lava_at`. */
 export function lavaAt(L: LavaLand, day: number, x: number, y: number): boolean {
-  if (x < 0 || y < 0 || x >= L.size || y >= L.size || !lavaInBox(L.size, x, y)) return false;
+  if (x < 0 || y < 0 || x >= L.size || y >= L.size || !lavaInReach(L.size, x, y)) return false;
   if (!lavaBlock(L, day, Math.floor(x / LAVA_CELL), Math.floor(y / LAVA_CELL))) return false;
   return !LAVA_SPARED_TILES.includes(L.tile(x, y) as TileType) && !L.spared(x, y) && sum4(L, x, y) >= 0;
 }

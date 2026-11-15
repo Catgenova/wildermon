@@ -2137,7 +2137,6 @@ update item_def set description = 'Enchant (on the scroll): into bridles in your
 update item_def set drink = 0.3 where id = 'whey_bucket';
 update item_def set description = '5 litres of whey (left over from pressing a bucket of milk into cheese). Feed to any wildermon you keep: hunger +40%; bucket emptied. Can be poured into a barrel or emptied.' where id = 'whey_bucket';
 update item_def set description = 'Becomes a bucket of milk at 5 litres (excess lost). Not drinkable until full.' where id = 'milk_part';
-create or replace function region_treeless(p_region int) returns boolean language sql immutable as $fn$ select coalesce(p_region = any(array[2]::int[]), false) $fn$;
 insert into class_perk values ('terraformer_quick_level', 'terraformer', 1, 10, 'Quick Level', 'Flatten time −35% (base 3.5 s).', '{"time:flatten":0.65}');
 insert into class_perk values ('terraformer_bed_worker', 'terraformer', 1, 17, 'Bed Worker', 'Collect time −30% (base 7 s).', '{"time:collect":0.7}');
 insert into class_perk values ('terraformer_quick_paver', 'terraformer', 1, 25, 'Quick Paver', 'Pack, Pave (cobblestone) and Pave (slabs) time −35%.', '{"time:pack":0.65,"time:pave_cobble":0.65,"time:pave_slabs":0.65}');
@@ -4105,6 +4104,7 @@ create or replace function lava_from_day() returns int language sql immutable as
 create or replace function lb_lava() returns int language sql immutable as $fn$ select 1 $fn$;
 create or replace function lb_opens() returns int language sql immutable as $fn$ select 2 $fn$;
 create or replace function lb_way() returns int language sql immutable as $fn$ select 16 $fn$;
+create or replace function lava_reach_past() returns int language sql immutable as $fn$ select 12 $fn$;
 create or replace function lava_burn() returns double precision language sql immutable as $fn$ select 0.04::double precision $fn$;
 create or replace function heat_fill() returns double precision language sql immutable as $fn$ select 0.004166666666666667::double precision $fn$;
 create or replace function heat_near() returns double precision language sql immutable as $fn$ select 2::double precision $fn$;

@@ -20,7 +20,7 @@
 -- (`lava_ground_refusal`), and no creature steps onto it (`creature_tile_ok`).
 --
 -- The heat, held on the player (`stats.heat`) and settled with the body: filling at `heat_fill` a second in the heat
--- (`lava_heat_on`: the labyrinth's box, Volcano Isle at `lava_foot` and up), `heat_near` times that beside lava,
+-- (`lava_heat_on`: the labyrinth's reach, Volcano Isle at `lava_foot` and up), `heat_near` times that beside lava,
 -- `heat_burn` of your health a second when full, draining at `heat_drain` below; slowed by every dragon-scale piece and
 -- ice infusion worn and by a cooling draught (`heat_mul`), which also takes `draught_drop` off as it goes down.
 --
@@ -77,6 +77,12 @@ create or replace function lava_b36(p text) returns int language sql immutable a
     from generate_series(1, length(p)) i
 $$;
 
+/** Whether a tile is within the labyrinth's reach: its radius and `lava_reach_past` more, past which no lava lies (`lavaInReach`). */
+create or replace function lava_in_reach(p_size int, p_x int, p_y int) returns boolean language sql immutable as $$
+  select (p_x - g.cx)::bigint * (p_x - g.cx) + (p_y - g.cy)::bigint * (p_y - g.cy) <= (g.radius + lava_reach_past())::bigint * (g.radius + lava_reach_past())
+    from lava_geometry(p_size) g
+$$;
+
 /** The chart's table unpacked: a byte a texel, row by row (`lavaChartAt`'s). */
 create or replace function lava_chart_cells() returns bytea language plpgsql immutable as $$
 declare v_row text; v_run text; v_out text[] := '{}'; v_line text;
@@ -130,7 +136,7 @@ declare g record; b record; nrx int; nry int; n int; i int; j int; r int; s int;
         rays int[] := lava_rays(p_design); mids int[] := lava_mids(p_design); ax bigint; ay bigint; cx2 bigint; cy2 bigint;
         walls int[] := '{}'; weights bigint[] := '{}'; a int; bb int; ra int; rb int; v_rec record;
         opened int[] := '{}'; first_in int[]; ex int; en int; u int; v int; bytes int[]; way int; v_n int := 0;
-        o1 int; o2 int; o3 int; o4 int;
+        o1 int; o2 int; o3 int; o4 int; hx bigint; hy bigint;
 begin
   if exists (select 1 from lava_design d where d.size = p_size and d.design = p_design) then return 0; end if;
   select * into g from lava_geometry(p_size);
@@ -147,7 +153,10 @@ begin
       a := floor((tx::bigint * f[1])::numeric / p_size)::int - f[2];
       bb := floor((ty::bigint * f[1])::numeric / p_size)::int - f[3];
       v_c := case when a < 0 or bb < 0 or a >= f[4] or bb >= f[5] then 0 else get_byte(v_chart, bb * f[4] + a) end;
-      room[r] := case when dx * dx + dy * dy < g.heart * g.heart then 2
+      -- The heart's rooms: those the heart reaches into, or into a wall or a pillar round them, so none of it is lava.
+      hx := least(greatest(g.cx, tx - 1 - lava_cell()), tx - 2 + 2 * lava_cell()) - g.cx;
+      hy := least(greatest(g.cy, ty - 1 - lava_cell()), ty - 2 + 2 * lava_cell()) - g.cy;
+      room[r] := case when hx * hx + hy * hy < g.heart * g.heart then 2
                       when v_c = 2 and dx * dx + dy * dy <= g.radius * g.radius then 3
                       when v_c >= 1 then 1 else 0 end;
       continue when room[r] <> 3;
@@ -353,9 +362,9 @@ create or replace function lava_sum4(p_world uuid, p_x int, p_y int) returns int
    where h0.world_id = p_world and h0.y = p_y
 $$;
 
-/** Whether a tile is in the heat: in the box, Volcano Isle at the band's foot or above (`inHeat`). */
+/** Whether a tile is in the heat: in the labyrinth's reach, Volcano Isle at the band's foot or above (`inHeat`). */
 create or replace function lava_heat_on(p_world uuid, p_x int, p_y int) returns boolean language sql stable as $$
-  select coalesce((select lava_in_box(w.size, p_x, p_y) from world w where w.id = p_world), false)
+  select coalesce((select lava_in_reach(w.size, p_x, p_y) from world w where w.id = p_world), false)
      and coalesce(region_at(p_world, p_x + 0.5, p_y + 0.5) = lava_isle() and lava_sum4(p_world, p_x, p_y) >= 4 * lava_foot(), false)
 $$;
 
@@ -405,15 +414,32 @@ create or replace function lava_spared(p_world uuid, p_x int, p_y int) returns b
                    and pl.kind in ('crate', 'campfire', 'smelter', 'kiln', 'furniture', 'anvil', 'post', 'trap'))
 $$;
 
-/** Whether a tile of a world this size is lava on a day, today unless told (`lavaAt`): off the box at once. */
+/**
+ * Whether a tile of a world this size is lava on a day, today unless told (`lavaAt`). Asked of every tile a creature
+ * steps to, so in its own arithmetic: off the labyrinth's reach at once, then the day's design and one row's byte, and
+ * only then what opens a block or spares a tile.
+ */
 create or replace function lava_on(p_world uuid, p_size int, p_x int, p_y int, p_day int default null) returns boolean
 language plpgsql stable as $$
-declare c int := lava_cell();
+declare c int := lava_cell(); cx int := (lava_centre())[1] * p_size / 10000; cy int := (lava_centre())[2] * p_size / 10000;
+        rad int := (2 * lava_radius() * p_size + lava_size()) / (2 * lava_size());
+        v_design int; v_bxa int; v_bya int; v_bytes bytea; v_byte int; u int; v_day int;
 begin
-  if p_x < 0 or p_y < 0 or p_x >= p_size or p_y >= p_size or not lava_in_box(p_size, p_x, p_y) then return false; end if;
-  if not lava_block(p_world, p_size, lava_design_on(p_world, coalesce(p_day, lava_day_of(now()))), floor(p_x::numeric / c)::int, floor(p_y::numeric / c)::int) then
+  if p_x < 0 or p_y < 0 or p_x >= p_size or p_y >= p_size
+     or (p_x - cx)::bigint * (p_x - cx) + (p_y - cy)::bigint * (p_y - cy) > (rad + lava_reach_past())::bigint * (rad + lava_reach_past()) then
     return false;
   end if;
+  v_day := coalesce(p_day, lava_day_of(now()));
+  select ld.design into v_design from lava_day ld where ld.world_id = p_world and ld.day = v_day;
+  if v_design is null then v_design := lava_design_on(p_world, v_day); end if;
+  v_bxa := floor((cx - rad)::float8 / c)::int - 2;
+  v_bxa := v_bxa - ((v_bxa % 2) + 2) % 2;
+  select d.bytes into v_bytes from lava_design d where d.size = p_size and d.design = v_design and d.by = p_y / c;
+  u := p_x / c - v_bxa;
+  if v_bytes is null or u < 0 or u >= length(v_bytes) then return false; end if;
+  v_byte := get_byte(v_bytes, u);
+  if v_byte & lb_lava() = 0 then return false; end if;
+  if v_byte & (lb_opens() | lb_way()) <> 0 and not lava_block(p_world, p_size, v_design, p_x / c, p_y / c) then return false; end if;
   if coalesce(lava_sum4(p_world, p_x, p_y), -1) < 0 then return false; end if;
   return not lava_spared(p_world, p_x, p_y);
 end $$;

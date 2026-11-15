@@ -4,4 +4,4 @@ CREATE OR REPLACE FUNCTION public.infuse_most(p_el text)
  RETURNS double precision
  LANGUAGE sql
  IMMUTABLE
-AS $function$ select case p_el when 'earth' then 0.2::double precision when 'wind' then 0.08::double precision when 'fire' then 0.5::double precision when 'dark' then 0.1::double precision when 'light' then 1::double precision when 'water' then 1::double precision when 'life' then 0.25::double precision else 0::double precision end $function$
+AS $function$ select case p_el when 'earth' then 0.2::double precision when 'wind' then 0.08::double precision when 'fire' then 0.5::double precision when 'ice' then 0.15::double precision when 'dark' then 0.1::double precision when 'light' then 1::double precision when 'water' then 1::double precision when 'life' then 0.25::double precision else 0::double precision end $function$

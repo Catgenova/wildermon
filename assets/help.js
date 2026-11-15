@@ -2761,15 +2761,15 @@ import{$S as e,$T as t,$_ as n,$a as r,$c as i,$d as a,$g as o,$l as s,$u as ee,
     <h3>Volcano Isle: lava and heat</h3>
     <ul>
       <li><b>Lava</b>: a labyrinth on Volcano Isle, <b>500</b> tiles round the caldera, on its land ${5*Ml/dl.n} tiles in from the water; one of
-      <b>10</b> designs, a new one at each daily reset (${G(13)} UTC), never the same two days running.
+      <b>10</b> designs, a new one at each daily reset (${G(13)} UTC), not repeated on consecutive days.
       Corridors 3 tiles wide, walls 3 tiles thick.</li>
-      <li><b>3</b> ways in, one a third of the way round: each the only way through to the heart; every other corridor ends.</li>
+      <li><b>3</b> ways in, about 120° apart: each the only way through to the heart; every other corridor ends.</li>
       <li><b>Heart</b>: 120 tiles round the caldera; no lava. Seryll: in the heart only, ${b(Ol)} of its dry ground.</li>
       <li>On lava: health <b>−${b(Sn)}/s</b>. No digging, building, setting down or founding on it. No creature steps on it.</li>
       <li>Never on: a settlement, ${T(Yn.map(e=>ud[e].name.toLowerCase()))}, a building, a foundation, anything set down.</li>
       <li><b>Heat</b> (hud, on Volcano Isle): at ${E(vo.foot)} m and up +${b(Ve)}/s, ×2 with lava on or beside your tile;
       full: health <b>−${b(Lr)}/s</b>; below: −${b(nt)}/s.</li>
-      <li>Heat fill: ×${1-se} per dragon-scale piece worn; ×(1 − ${zn} × strength) per piece infused with <b>ice</b> (armour);
+      <li>Heat fill: ×${1-se} per dragon-scale piece worn; −${b(zn)} × strength per piece infused with <b>ice</b> (armour);
       <b>${g(Cr).name}</b> (alchemy: ${Pg()}): heat −${b(je)}, fill ×${yc} for 10 min.</li>
     </ul>
     <h3>Traps</h3>
