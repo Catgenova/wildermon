@@ -44,12 +44,12 @@ export class PathPanel {
     count.className = 'skill-group rc-section';
     const done = PATH_STEPS.filter((s) => g.pathDone.has(s.id)).length;
     const skipped = PATH_STEPS.filter((s) => !g.pathDone.has(s.id) && g.thePath?.skip.includes(s.id)).length;
-    count.textContent = `Path: ${on ? 'On' : 'Off'} · ${done}/${PATH_STEPS.length} done · ${skipped} skipped`;
+    count.textContent = `Guiding Light: ${on ? 'On' : 'Off'} · ${done}/${PATH_STEPS.length} done · ${skipped} skipped`;
     const turn = document.createElement('button');
     turn.type = 'button';
     turn.className = 'tb-btn rc-btn tb-small';
     turn.textContent = on ? 'Turn off' : 'Turn on';
-    turn.title = on ? 'Path off: no line at the top, no ticks' : `Path on: the line at the top, steps tick themselves; notes ${PATH_KINDS.length} kinds in the field guide for Track`;
+    turn.title = on ? 'Guiding Light off: no line at the top, no ticks' : `Guiding Light on: the line at the top, steps tick themselves; notes ${PATH_KINDS.length} kinds in the field guide for Track`;
     turn.disabled = !g.pathDoor;
     turn.addEventListener('click', () => {
       turn.disabled = true;
@@ -98,7 +98,7 @@ export class PathPanel {
       skip.type = 'button';
       skip.className = 'tb-btn rc-btn tb-small path-skip';
       skip.textContent = isSkipped ? 'Unskip' : 'Skip';
-      skip.title = isSkipped ? 'Back on the Path' : 'Skip: the next step is current; done later, it still ticks';
+      skip.title = isSkipped ? 'Unskip: a Guiding Light step again' : 'Skip: the next step is current; done later, it still ticks';
       skip.disabled = this.asking.has(s.id) || !g.pathDoor;
       skip.addEventListener('click', () => {
         this.asking.add(s.id);

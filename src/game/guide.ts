@@ -76,7 +76,7 @@ export interface GuideBook {
 }
 
 /** What a page noted and not seen says under its shape. */
-export const NOTED_SAYS = 'Noted (Path)';
+export const NOTED_SAYS = 'Noted (Guiding Light)';
 
 /**
  * How often what is in view is looked over for a kind the book has not got,

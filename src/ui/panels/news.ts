@@ -4485,6 +4485,14 @@ export const NEWS: News[] = [
       'Without a graphics card: swimming strokes\' splashes, rings treading water, the float\'s strike and a catch only.',
     ],
   },
+  // The Path renamed the Guiding Light (`src/game/path.ts`).
+  {
+    n: 623,
+    day: '2026-11-15',
+    lines: () => [
+      'Renamed: Path → Guiding Light.',
+    ],
+  },
   // Trees and wildermon back on the Northeast Tundra (`regions.ts`, `tools/move-ground.ts`).
   {
     n: 614,

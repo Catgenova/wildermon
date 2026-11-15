@@ -3,7 +3,7 @@ export type JournalTab = 'goals' | 'path' | 'ledger' | 'help' | 'news' | 'boards
 /** The journal's tabs, in order: id, label, what it holds. The tab bar and the UI Menu list them from here. */
 export const JOURNAL_TABS: ReadonlyArray<readonly [JournalTab, string, string]> = [
   ['goals', 'Goals', 'Goals, ticked off when done'],
-  ['path', 'Path', 'The Path: steps runestone to settlement, Skip, detours'],
+  ['path', 'Guiding Light', 'Guiding Light: steps runestone to settlement, Skip, detours'],
   ['ledger', 'Ledger', 'Everything made: count, rare count, best QL'],
   ['help', 'Help', 'Rules and numbers'],
   ['news', "What's new", 'Changes, newest first; unread marked'],
