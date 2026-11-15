@@ -111,7 +111,7 @@ begin
 
   elsif p_action = 'improve_item' then
     if unmendable(v_it.def) then return unmendable_says(v_it.def); end if;
-    select * into v_what from improvable_def where item = v_it.def;
+    select * into v_what from improvable_of(v_it.def, v_it.extra);
     if not found then return 'Cannot be improved.'; end if;
     if v_it.holder = 'bag' then return 'Take it out of the bag first.'; end if;
     if v_it.issued then

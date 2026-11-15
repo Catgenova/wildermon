@@ -116,9 +116,10 @@ check('Obsidian: the keenest edge and the truest bite of anything, by OBSIDIAN_K
 check('and the same numbers on both sides',
   sql1(`select name || '|' || edge || '|' || bite || '|' || wear || '|' || difficulty from material_def where id = 'obsidian';`) === `${M.name}|${M.edge}|${M.bite}|${M.wear}|${M.difficulty}`,
   sql1(`select name || '|' || edge || '|' || bite || '|' || wear || '|' || difficulty from material_def where id = 'obsidian';`));
-check('a knapped edge works out on the island as in the browser: damage, tool QL and wear',
-  sql1(`select mat_edge('${OBSIDIAN}') || '|' || working_ql(50, '${OBSIDIAN}');`) === `${M.edge}|${workingQl(50, OBSIDIAN)}`,
-  sql1(`select mat_edge('${OBSIDIAN}') || '|' || working_ql(50, '${OBSIDIAN}');`));
+// (the island keeps a material's numbers as `real`: the same to six figures)
+const [edgeThere, qlThere] = sql1(`select mat_edge('${OBSIDIAN}') || '|' || working_ql(50, '${OBSIDIAN}');`).split('|').map(Number);
+check('a knapped edge works out on the island as in the browser: damage and tool QL',
+  Math.abs(edgeThere - M.edge) < 1e-6 && Math.abs(qlThere - workingQl(50, OBSIDIAN)) < 1e-4, `island ${edgeThere} and ${qlThere}`);
 const MAIN_TOOLS = ['hatchet', 'pickaxe', 'shovel', 'saw', 'carving_knife', 'butchering_knife', 'sickle', 'hammer', 'chisel'];
 const kinds = new Set(Object.keys(KNAPPED).filter(isWeapon).map((id) => WEAPON_BY_ID.get(id)!.kind));
 check('every main tool, and every weapon kind with a head or a blade, knapped',
@@ -251,6 +252,9 @@ begin
   delete from item where world_id = w and holder = 'player' and holder_uid = u;
   delete from wall where world_id = w; delete from floor_tile where world_id = w;
   delete from building_tile where world_id = w; delete from building where world_id = w;
+  -- (plain ground under it, not the field the suite leaves there)
+  perform land_set_tile(w, 5, 5, tile_id('Dirt')); perform land_set_data(w, 5, 5, 0);
+  delete from placed where world_id = w and x between 3 and 7 and y between 3 and 7;
   update player set body_at = now(), x = 5.5, y = 5.5, act = null, act_target = null, act_queue = '[]', craft_from_stores = false
    where world_id = w and uid = u;
   perform set_config('request.jwt.claims', json_build_object('sub', u)::text, true);

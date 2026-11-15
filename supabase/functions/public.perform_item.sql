@@ -164,7 +164,7 @@ begin
     end if;
 
   elsif p_action = 'improve_item' then
-    select * into v_what from improvable_def where item = v_it.def;
+    select * into v_what from improvable_of(v_it.def, v_it.extra);
     if not found then return; end if;
     select * into v_mat from improve_material_def where id = v_what.material;
     v_made := (mat_of(v_it.extra)).name;

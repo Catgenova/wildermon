@@ -16,6 +16,9 @@ AS $function$
     -- A cauldron hearth, alight (`adorn.ts`).
     when 'cauldron_hearth' then
       exists (select 1 from placed_near(p_world, p_uid, 'furniture', cauldron_hearth_kind(), 2.6) p where placed_lit(p))
+    -- An anvil set down (`anvil.ts`, `Game.anvilNear`).
+    when 'anvil' then
+      exists (select 1 from placed_near(p_world, p_uid, 'anvil', null, 2.6))
     when 'smelter' then
       exists (select 1 from placed_near(p_world, p_uid, 'smelter', null, 2.6) p where placed_lit(p))
     else
