@@ -38,6 +38,8 @@ export const KIT = {
   meter: 'rc-meter',
   fill: 'rc-meter-fill',
   mark: 'rc-meter-mark',
+  preview: 'rc-preview',
+  previewText: 'rc-preview-text',
 } as const;
 
 export type KitPart = keyof typeof KIT;
@@ -187,4 +189,24 @@ export function kitCheck(label: string, also = ''): { el: HTMLLabelElement; inpu
   input.type = 'checkbox';
   el.append(input, document.createTextNode(` ${label}`));
   return { el, input };
+}
+
+/** A picture of a thing beside its name and a line under it (the crafting window's preview): `set` names it, or hides the lot. */
+export function kitPreview(pic: HTMLElement, also = '', textAlso = ''): { el: HTMLDivElement; set: (name: string | null, line?: string) => void } {
+  const el = made('div', 'preview', also);
+  const text = made('div', 'previewText', textAlso);
+  const name = document.createElement('b');
+  const line = document.createElement('small');
+  text.append(name, line);
+  el.append(pic, text);
+  el.hidden = true;
+  return {
+    el,
+    set: (n, l = '') => {
+      el.hidden = n === null;
+      name.textContent = n ?? '';
+      line.textContent = l;
+      line.hidden = !l;
+    },
+  };
 }

@@ -1673,6 +1673,8 @@ function toneOf(materials: Material[]): [number, number, number] {
   return [a[0] / b[0], a[1] / b[1], a[2] / b[2]];
 }
 
+/** The things a body holds that have a model of their own (`PROPS`), by id. */
+export const lowPropIds = (): string[] => [...PROP_OF.keys()];
 /** A bow's string's ends and its arrow's rest, its own frame (game units), by the bow's id: none for what is not a bow (`./fxmarks.ts`). */
 export const lowBowOf = (id: string): { tips: [V, V]; rest: V } | undefined => { const d = PROP_OF.get(id)?.draw; return d && { tips: d.tips, rest: d.rest }; };
 /** A body's skeleton, props as held, lift onto its soles and the figure's frame: for a point of it found apart from a draw (`./fxmarks.ts`). */

@@ -3,7 +3,7 @@ import { ACTION_BY_ID } from '../../game/actions';
 import type { Game } from '../../game/game';
 import { itemDef } from '../../game/items';
 import { CRAFT_REACH, DEED_ONLY, liquidWord, needRecipeSays, RECIPE_BY_ID, recipeNow, RECIPE_CATEGORIES, RECIPES, materialChoices, prospect, reachFor, recipeReason, recipeStatus, recipeUnread, stationName, type CraftStock, type Recipe, type RecipeStatus } from '../../game/recipes';
-import { lockedHiddenSays, recipeSearch } from '../../game/craftsearch';
+import { lockedHiddenSays, RANK_ROW, recipeRank, recipeSearch } from '../../game/craftsearch';
 import { isFurniture, ONE_ALTAR } from '../../game/furniture';
 import { SKILL_DEFS } from '../../game/skills';
 import type { Target } from '../../game/actions';
@@ -13,7 +13,8 @@ import { RUG_PATTERNS, WOVEN_RUG, type RugPattern } from '../../game/decordefs';
 import { FIGURE_KINDS } from '../../game/garden';
 import { SPECIES } from '../../game/creatures';
 import type { UIWindow } from '../windows';
-import { kitBody, kitButton, kitEmpty, kitPressed, kitSearch, kitSection, made } from '../kit';
+import { KIT, kitBody, kitButton, kitEmpty, kitPressed, kitPreview, kitSearch, kitSection, made } from '../kit';
+import { CraftPreview, previewOf, type PreviewOf } from '../craftpreview';
 import { Repaint } from '../repaint';
 
 /** The most goes one ask runs to: the island's `rpc_act` takes no more than this at once. */
@@ -23,6 +24,10 @@ import { QueueView } from './craftqueue';
 
 const skillName = (id: string): string => SKILL_DEFS.find((s) => s.id === id)?.name ?? id;
 const lower = (id: string): string => itemDef(id).name.toLowerCase();
+/** The heading over the recipes that make what was searched for. */
+export const MAKES_SECTION = 'Makes';
+/** How long the pointer rests on a row before the preview shows what it makes, ms. */
+const HOVER_MS = 140;
 /** The button on a box that asks how many to make. */
 const QUANTITY = 'Select Quantity';
 
@@ -104,6 +109,19 @@ export class CraftPanel {
   private readonly tree: RecipeTree;
   /** Everything queued, the job in hand first, at the foot of the book (`craftqueue.ts`). */
   private readonly queue: QueueView;
+  /** What the recipe chosen (clicked) or pointed at makes, drawn (`craftpreview.ts`); its strip, and what names it. */
+  readonly preview: CraftPreview;
+  private readonly previewStrip: HTMLDivElement;
+  private readonly previewSays: (name: string | null, line?: string) => void;
+  /** The recipe chosen by a click on its row, and the one the pointer or the keyboard is on, whose preview stands in for it. */
+  private chosen: string | null = null;
+  private pointed: string | null = null;
+  private pointing: string | null = null;
+  private pointTimer = 0;
+  /** The preview was stopped by the window shutting. */
+  private shut = false;
+  /** What each recipe would be made of now, as its row says (`RecipeStatus.material`), from the last draw. */
+  private readonly madeOf = new Map<string, string | undefined>();
 
   constructor(private readonly win: UIWindow, private readonly game: Game) {
     kitBody(win.body, 'inv-body', 'craft-body');
@@ -150,7 +168,12 @@ export class CraftPanel {
     this.footer = made('div', 'foot', 'inv-footer');
     this.tree = new RecipeTree(game, recipesMaking, (item) => this.jump(item));
     this.queue = new QueueView(game);
-    win.body.append(search.el, head, this.list, this.queue.el, this.footer);
+    this.preview = new CraftPreview(game, () => this.win.isOpen);
+    const strip = kitPreview(this.preview.el, 'craft-preview', 'craft-preview-text');
+    this.previewStrip = strip.el;
+    this.previewSays = strip.set;
+    win.body.append(search.el, head, this.list, this.previewStrip, this.queue.el, this.footer);
+    this.watchPointer();
     // Scrolled out from under it, or the window shut, a part's tree goes with it.
     this.list.addEventListener('scroll', () => this.tree.hide(), { passive: true });
     // Every action gains a skill, so this fires several times a second while
@@ -258,8 +281,17 @@ export class CraftPanel {
   update(now: number): void {
     if (!this.win.isOpen) {
       this.tree.hide();
+      if (this.preview.active) {
+        this.preview.stop();
+        this.shut = true;
+      }
       return;
     }
+    // Opened again: what was shown, from the start.
+    if (this.shut) {
+      this.shut = false;
+      this.showPreview();
+    } else this.preview.wake();
     this.queue.update(now);
     const tile = `${this.game.player.tileX},${this.game.player.tileY}`;
     if (tile !== this.tile) {
@@ -282,6 +314,7 @@ export class CraftPanel {
       return found;
     };
     const statuses = new Map<Recipe, RecipeStatus>(RECIPES.map((r) => [r, recipeStatus(r, this.game, this.wants.get(r.id), stockOf(r))]));
+    for (const [r, st] of statuses) this.madeOf.set(r.id, st.material);
     // What the book would say. Standing at an anvil hammering, this is the
     // same from one second to the next, so nothing is touched.
     const { fromStores, spareRare } = this.game.settings;
@@ -289,7 +322,10 @@ export class CraftPanel {
       const st = statuses.get(r);
       return `${r.id}${st?.ready ? 1 : 0}${st?.unread ? 1 : 0}${st?.max ?? 0}${st?.inputs.map((i) => `.${i.have}.${i.carried}`).join('') ?? ''}`;
     }).join('')}`;
-    if (!this.repaint.changed(now, sig) && !force) return;
+    if (!this.repaint.changed(now, sig) && !force) {
+      this.showPreview();
+      return;
+    }
     // What the counts count, which Settings decides.
     const atHand = fromStores ? `what you carry and what is in your stores within ${CRAFT_REACH} tiles` : 'what you carry';
     this.hint.textContent = fromStores ? `At hand: pack, bags, stores within ${CRAFT_REACH} tiles` : 'At hand: pack and bags';
@@ -313,7 +349,8 @@ export class CraftPanel {
      * below as well, under their craft. Not while the book is opened onto one
      * thing, which is a question with one answer.
      */
-    if (!this.only) {
+    // Searching, the book is one answer in order: what makes the thing first (`recipeRank`), and the pinned and the lately made are not put above it.
+    if (!this.only && !this.query) {
       for (const [title, ids] of [['Pinned', this.kept.pinned], ['Recent', this.kept.recent.filter((id) => !this.kept.pinned.includes(id))]] as Array<[string, string[]]>) {
         const rows = ids.map((id) => RECIPE_BY_ID.get(id)).filter((r): r is Recipe => !!r && wanted(r));
         if (!rows.length) continue;
@@ -321,12 +358,22 @@ export class CraftPanel {
         for (const r of rows) this.list.append(this.row(r, statuses.get(r)!, stockOf(r)));
       }
     }
+    /*
+     * Searching: what makes the thing typed first (`recipeRank`: named exactly, from the start, anywhere in its name,
+     * a mould for what it casts), under "Makes", best first; then the book as ever, by craft, with what only takes it.
+     */
+    const ready1st = (a: Recipe, b: Recipe): number => Number(statuses.get(b)?.ready ?? false) - Number(statuses.get(a)?.ready ?? false);
+    const rank = new Map<Recipe, number>(this.query ? RECIPES.filter(wanted).map((r) => [r, recipeRank(r, this.query)]) : []);
+    const makers = [...rank].filter(([, k]) => k < RANK_ROW).sort(([a, j], [b, k]) => j - k || ready1st(a, b)).map(([r]) => r);
+    const making = new Set(makers);
+    const groups: Array<[string, Recipe[]]> = makers.length ? [[MAKES_SECTION, makers]] : [];
     for (const cat of RECIPE_CATEGORIES) {
-      const rows = RECIPES.filter((r) => r.category === cat && wanted(r));
       // What can be made now sits above what still needs gathering.
-      rows.sort((a, b) => Number(statuses.get(b)?.ready ?? false) - Number(statuses.get(a)?.ready ?? false));
+      groups.push([cat, RECIPES.filter((r) => r.category === cat && wanted(r) && !making.has(r)).sort(ready1st)]);
+    }
+    for (const [title, rows] of groups) {
       if (!rows.length) continue;
-      this.list.append(kitSection(cat));
+      this.list.append(kitSection(title, title === MAKES_SECTION ? 'inv-group craft-makes' : undefined));
       for (const r of rows) {
         const st = statuses.get(r)!;
         this.list.append(this.row(r, st, stockOf(r)));
@@ -353,6 +400,8 @@ export class CraftPanel {
       : this.query
         ? `${shown} ${shown === 1 ? 'recipe matches' : 'recipes match'} · ${ready} you can make now`
         : `${ready} of ${RECIPES.length} recipes you can make now`;
+    this.markChosen();
+    this.showPreview();
     // Opened onto one recipe: the last row of it drawn (the one in the book, under its craft) is brought into view and lit.
     if (this.reveal) {
       const rows = this.list.querySelectorAll<HTMLElement>(`.craft-row[data-recipe="${this.reveal}"]`);
@@ -365,6 +414,73 @@ export class CraftPanel {
         row.classList.add('found-flash');
       }
     }
+  }
+
+  /**
+   * The preview follows the pointer: resting on a row whose thing has a preview shows it, and off the list (but not
+   * onto the preview itself, which is under the list and which the pointer crosses) the chosen one again. A click on
+   * a row, but not on its buttons, its choices or a part to look up, chooses it, and again lets it go. The keyboard
+   * on a row's buttons is the pointer resting on it.
+   */
+  private watchPointer(): void {
+    const rowOf = (t: EventTarget | null): string | null => {
+      const row = t instanceof Element ? t.closest<HTMLElement>('.craft-row') : null;
+      const r = row?.dataset.recipe ? RECIPE_BY_ID.get(row.dataset.recipe) : undefined;
+      return r && previewOf(r.result) ? r.id : null;
+    };
+    const point = (id: string | null, wait: number): void => {
+      if (id === this.pointing) return;
+      this.pointing = id;
+      window.clearTimeout(this.pointTimer);
+      const go = (): void => {
+        this.pointed = this.pointing;
+        this.showPreview();
+      };
+      if (wait) this.pointTimer = window.setTimeout(go, wait);
+      else go();
+    };
+    const off = (e: PointerEvent | FocusEvent): void => {
+      const to = e.relatedTarget;
+      if (to instanceof Node && (this.list.contains(to) || this.previewStrip.contains(to))) return;
+      point(null, 0);
+    };
+    this.list.addEventListener('pointerover', (e) => {
+      const id = rowOf(e.target);
+      // Over a row with none, the one shown stays.
+      if (id) point(id, HOVER_MS);
+    });
+    this.list.addEventListener('pointerleave', off);
+    this.previewStrip.addEventListener('pointerleave', off);
+    this.list.addEventListener('focusin', (e) => point(rowOf(e.target), 0));
+    this.list.addEventListener('focusout', off);
+    this.list.addEventListener('click', (e) => {
+      const t = e.target instanceof Element ? e.target : null;
+      const row = t?.closest<HTMLElement>('.craft-row');
+      if (!row?.dataset.recipe || t?.closest('button, select, input, label, .craft-find')) return;
+      this.chosen = this.chosen === row.dataset.recipe ? null : row.dataset.recipe;
+      this.markChosen();
+      this.showPreview();
+    });
+  }
+
+  /** The chosen recipe's rows lit (the kit's selected row; Classic has no rule for it). */
+  private markChosen(): void {
+    for (const row of this.list.querySelectorAll<HTMLElement>('.craft-row')) row.classList.toggle(KIT.on, row.dataset.recipe === this.chosen);
+  }
+
+  /** Show what the recipe pointed at, else the one chosen, makes, in what its row says it would be made of; or nothing. */
+  private showPreview(): void {
+    const id = this.pointed ?? this.chosen;
+    const r = id && this.win.isOpen ? RECIPE_BY_ID.get(id) : undefined;
+    const what: PreviewOf | null = r ? {
+      item: r.result, material: this.madeOf.get(r.id),
+      figure: r.result === CARVED_FIGURE ? this.figureKind('seen') : r.result === PLUSH ? this.figureKind('tamed') : undefined,
+      pattern: r.result === WOVEN_RUG ? this.pattern : undefined,
+    } : null;
+    this.preview.show(what);
+    const on = this.preview.showing;
+    const kind = on?.what.figure ? SPECIES[on.what.figure]?.name : on?.what.pattern;
+    this.previewSays(on ? itemDef(on.what.item).name : null, on ? [on.what.material ? capital(on.what.material.toLowerCase()) : '', kind ?? ''].filter(Boolean).join(' · ') : '');
   }
 
   private row(r: Recipe, st: RecipeStatus, stock: readonly CraftStock[]): HTMLDivElement {

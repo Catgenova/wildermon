@@ -47,7 +47,8 @@ import { lifeWords } from '../runecut-life';
 import { islandTime, LOCAL_NIGHT_ENDS, LOCAL_NIGHT_STARTS } from '../theme';
 import { FRAME_REACH, FRAME_REACHES, FRAME_RIM, FRAMES, frameLabel, frameOddities, RIM } from '../runecut-art';
 import { SALE_DAYS, SALES_SHOWN } from '../../game/prices';
-import { RECENT } from './craft';
+import { MAKES_SECTION, RECENT } from './craft';
+import { PREVIEW_FPS } from '../craftpreview';
 import { CAMPFIRE_LOGS } from '../../render/kit/campfire';
 import { SACK_FULL } from '../../render/kit/sack';
 import { STANDING_A, WILDERMON_A } from '../../game/journal-a';
@@ -4483,6 +4484,19 @@ export const NEWS: News[] = [
       `New: fishing net: ${LIFT_DROPS * NET_LIFT.length} drops off the net as it is lifted, ${SHAKE_DROPS} at each of ${NET_SHAKES.length} shakes.`,
       `New: rowing under way: ${OAR_DROPS} drops a blade at the catch; whirl pair a blade a stroke, ${SWIRL_SECS} s.`,
       'Without a graphics card: swimming strokes\' splashes, rings treading water, the float\'s strike and a catch only.',
+    ],
+  },
+  // The crafting window's preview (`craftpreview.ts`) and its search's order (`recipeRank`).
+  {
+    n: 620,
+    day: '2026-11-14',
+    lines: () => [
+      'New: Crafting window: preview of a recipe\'s result: row clicked, or pointed at.',
+      'Preview: furniture, stations, posts, traps, carts, wagons, boats: set down, turning, by day.',
+      'Preview: worn gear on your figure, nothing else worn; weapons in a fight; tools at their job; loaf, candle, lantern alone.',
+      'Preview: in the row\'s chosen material, kind or pattern; changes with it.',
+      `Preview: at most ${PREVIEW_FPS} frames a second. Animations Off, less motion, or no graphics card: one still frame.`,
+      `Changed: Crafting search: recipes making what was typed first, under ${MAKES_SECTION}: exact name, then name start, then name contains; moulds by what they cast. Pinned and Recent hidden while searching.`,
     ],
   },
   // Trees and wildermon back on the Northeast Tundra (`regions.ts`, `tools/move-ground.ts`).

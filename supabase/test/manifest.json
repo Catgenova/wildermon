@@ -3205,5 +3205,18 @@
       "PATHCARD_STRICT": "1"
     },
     "why": "Asked for: \"Path needs to also display as a popup as each task is completed, with no-prose description of what to do next, how, and why\", with a moving picture of the action. Every step's how and why built from the rules (no figure written into their text; menu labels, tools, skills, a kind's spawn ground, bait and taming, an upgrade's requirements and the numbers each why names, the rules' own); every picture a clip of its own; one card a look, naming every step it ticked; none on the first look of a page opened with the Path on; turned on mid-game, one card with the next step. Drawn in Chrome: the card up on a tick, its buttons, its picture drawn and moving, Skip next, the Path tab, a job started after the hold taking it down, Path pop-ups Off, Animations Off a still frame."
+  },
+  {
+    "file": "supabase/test/craftpreview.ts",
+    "title": "The crafting window: a preview of what a recipe makes, in its material; search puts what makes the thing first",
+    "shard": 3,
+    "external": [
+      "esbuild",
+      "playwright-core"
+    ],
+    "env": {
+      "CRAFTPREVIEW_STRICT": "1"
+    },
+    "why": "Asked for: \"the crafting menu should show a preview of the item for anything that has one, e.g. gear or furniture\", then \"that gear should update when changing material selection, e.g. pine to cedar barrel\", and the recipe that makes what was typed first in the search. Which things have a preview is read off the models; this asks the kinds of a spread of things and none for a plank, a stew or a scroll; in Chrome, a row clicked shows its preview drawn and lit, a row with no model no strip, the pointer on another row that one's and off the window the chosen one's; a barrel in pine and in cedar two pictures and pine again the pine one, a sword in iron and in gold two; \"plank\" the plank first and \"nail\" the nail mould first under Makes, before every recipe that takes nails; the window shut stops the drawing and opened again starts it; Animations Off one still frame."
   }
 ]
