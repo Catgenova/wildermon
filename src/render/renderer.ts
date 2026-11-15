@@ -481,15 +481,15 @@ import { clumpOf, FLOWER_COLOURS, flowerSprite, swayFrame, tileColour } from './
 import { flowerSeason, flowersOn } from '../world/flowers';
 import { drawFace, EDGES, ROCK_MOSS, sprigOf, topEdges, type Face } from './outcrops';
 import { cropFrame, FIELD_LAYOUTS } from './crops';
-import { forgetTrees, grownAt, stumpGrown, spriteScaleFor, bushSprite, crateSprite, cropFlatSprite, cropSprite, drawCampfire, drawCreature, creatureTop, type CreaturePose, drawPlayer, facingOf, lyingSprite, treeSprite, type Sprite, drawTrap, drawDeck, stumpSprite } from './sprites';
+import { forgetTrees, grownAt, stumpGrown, spriteScaleFor, bushSprite, crateSprite, cropFlatSprite, cropSprite, drawCampfire, drawCreature, creatureTop, type CreaturePose, drawPlayer, facingOf, lyingSprite, treeSprite, type Sprite, drawTrap, stumpSprite } from './sprites';
 import { inkOf, READ_BACK } from './ink';
 import { wildermonHead, wildermonSaddle, wildermonSeat, wildermonTop } from './wildermon';
 import {
   drawDrawbridgeSpan,
 } from './gates';
 import { hingeKey, hingeOf, isDrawbridge, landingOf } from '../game/gates';
-import { bridgeDone, bridgeLevels, deckHeight, type Bridge } from '../game/bridges';
-import { bridgeNight, deckKey, drawBridgePiece, kitBridge, piecesAt, ropeKey, type BridgeFrame } from './bridgekit';
+import { bridgeDone, bridgeLevels, type Bridge } from '../game/bridges';
+import { bridgeNight, deckKey, drawBridgePiece, kitBridge, piecesAt, type BridgeFrame } from './bridgekit';
 import { SmallLife } from './life';
 import { personBody, SpellStage, type Aim, type Told, type Who } from './spells/stage';
 import { ActionFx } from './fx/actions';
@@ -924,32 +924,6 @@ const clamp255 = (v: number): number => (v < 0 ? 0 : v > 255 ? 255 : v | 0);
 
 /** The crops whose plants flower, which a butterfly will come to in a planter: the herbs and the fibre crops. */
 const FLOWERING_LOOKS: ReadonlySet<CropLook> = new Set<CropLook>(['herb', 'fibre']);
-
-/** How deep the lip `drawDeck` lays under a deck's edges that run left to right is, in zoom-one pixels. */
-const DECK_EDGE = 2.5;
-
-/**
- * The outlines a bridge's deck is drawn in on the screen, each as x, y
- * pairs: its tile at the deck's height (`q`, from the deck's middle in
- * zoom-one pixels), a tile's diamond where it has no shape, and the lip
- * `drawDeck` lays under each of its edges that runs left to right.
- */
-function deckOutline(q: ReadonlyArray<readonly [number, number]> | undefined, sx: number, sy: number, zoom: number): Float64Array[] {
-  const top = q ?? [[0, -24], [48, 0], [0, 24], [-48, 0]];
-  const out = [new Float64Array(top.flatMap(([x, y]) => [sx + x * zoom, sy + y * zoom]))];
-  top.forEach(([x, y], i) => {
-    const [nx, ny] = top[(i + 1) % top.length];
-    if (nx - x <= 0) return;
-    const ax = sx + x * zoom, ay = sy + y * zoom, bx = sx + nx * zoom, by = sy + ny * zoom;
-    out.push(Float64Array.of(ax, ay, bx, by, bx, by + DECK_EDGE * zoom, ax, ay + DECK_EDGE * zoom));
-  });
-  return out;
-}
-
-/** How far down the pier `drawDeck` stands a deck on reaches from just under its middle, in zoom-one pixels: nought for none. */
-function deckPier(kind: string, drop: number): number {
-  return drop > 2 && kind !== 'rope' ? Math.min(34, drop * 0.8) : 0;
-}
 
 /** You, as the spell stage names whoever casts. */
 const PLAYER_CASTS: Who = { kind: 'player' };
@@ -4960,30 +4934,12 @@ export class Renderer {
                 { kind: 'draw', done: Object.values(bridge.spans[i].needed).every((n) => n <= 0), drop: 0, id: bridge.id, span: i };
             }
           } else if (bridge && kitBridge(bridge)) {
-            // A material bridge in its pieces, each sorted round whoever is under or on the deck (`bridgekit.ts`).
+            // A material bridge, a rope bridge or a garden footbridge in its pieces, each sorted round whoever is under or on the deck (`bridgekit.ts`).
             for (const p of piecesAt(bridge, x, y, this.bridgeFrame())) {
               const be = this.take('deck', x, y, p.sx, p.sy, null);
               be.bp = p;
               be.key = p.key;
             }
-          } else if (bridge && bridge.kind !== 'aqueduct') {
-            const span = bridge.spans.find((sp) => sp.x === x && sp.y === y);
-            const wx = x + 0.5;
-            const wy = y + 0.5;
-            // On a ramp the deck is at its own height at every point along it, up its slope (`deckHeight`).
-            const mid = deckHeight(bridge, wx, wy);
-            const dx = cam.worldToScreenX(wx, wy), dy = cam.worldToScreenY(wx, wy, mid);
-            // The tile it spans, corner by corner at the deck's height there, so it is that tile at every turn of the view.
-            const q = ([[x, y], [x + 1, y], [x + 1, y + 1], [x, y + 1]] as Array<[number, number]>)
-              .map(([a, b]): [number, number] => [(cam.worldToScreenX(a, b) - dx) / zoom, (cam.worldToScreenY(a, b, deckHeight(bridge, a, b)) - dy) / zoom]);
-            const re = this.take('deck', x, y, dx, dy, null);
-            // In front of anybody under it, behind anybody on it (`ropeKey`).
-            re.key = ropeKey(this.bridgeFrame(), x, y);
-            re.deck =
-              { kind: bridge.kind, done: !!span && Object.values(span.needed).every((n) => n <= 0), drop: mid - world.centerHeight(x, y), id: bridge.id,
-                shape: { q, along: bridge.ay === bridge.by ? 'x' : 'y' },
-                // How far the moss on a stone arch has got (`greening.ts`): over water, always by it.
-                green: greenShows(bridgeGreen(this.game, bridge, this.greenAt) ?? 0, 0, this.walls.wetness(x, y)) };
           }
         }
         /*
@@ -7689,26 +7645,6 @@ export class Renderer {
           if (this.runeNight.keeping) this.runeNight.occludeDraw(ctx, ent.sx - 120 * zoom, ent.sy - 160 * zoom, 240 * zoom, 220 * zoom, span, this.occClips);
         }
         this.deckHits.push({ x: ent.x, y: ent.y, left: ent.sx - 40 * zoom, top: ent.sy - 22 * zoom, w: 80 * zoom, h: 44 * zoom, bridge: ent.deck.id });
-        continue;
-      }
-      if (ent.kind === 'deck' && ent.deck) {
-        const deck = ent.deck;
-        this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => drawDeck(g, px, py, zoom, deck.kind, deck.done, deck.drop, deck.shape, deck.green, ent.x * 31 + ent.y * 17));
-        // The deck as it is laid: the tile at the deck's height and its edge under it, not a box round it.
-        const poly = deckOutline(deck.shape?.q, ent.sx, ent.sy, zoom);
-        let l = Infinity, t = Infinity, r = -Infinity, b = -Infinity;
-        for (const o of poly) {
-          for (let k = 0; k < o.length; k += 2) {
-            l = Math.min(l, o[k]);
-            r = Math.max(r, o[k]);
-            t = Math.min(t, o[k + 1]);
-            b = Math.max(b, o[k + 1]);
-          }
-        }
-        // And the pier under it, which the deck is laid over.
-        const pier = deckPier(deck.kind, deck.drop);
-        if (pier > 0) this.deckHits.push({ x: ent.x, y: ent.y, left: ent.sx - 5 * zoom, top: ent.sy + 2 * zoom, w: 10 * zoom, h: pier * zoom, bridge: deck.id });
-        this.deckHits.push({ x: ent.x, y: ent.y, left: l, top: t, w: r - l, h: b - t, bridge: deck.id, poly });
         continue;
       }
       if (ent.kind === 'trap' && ent.trap) {

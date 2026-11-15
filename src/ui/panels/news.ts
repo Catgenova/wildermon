@@ -318,7 +318,7 @@ import {
   BUOY, BUOY_REACH, CAULDRON_HEARTH, CAULDRON_SERVINGS, CHEESE_AGEING, CHEESE_RACK, GAME_TABLE, GARDEN_OBELISK, GEM_LAMP, GEM_LAMP_REACH, HERB_SPIRAL, IVY_CUTTINGS, IVY_PANEL,
   IVY_PANEL_DAYS, LILY_POND, NAMEPLATE, PEDIGREE_BOARD, PELT_RUG, PLUSH, POND_LILIES, RACK_HOLDS, SPIRAL_PICK, SPIRAL_SLOTS, STONES_GOAL, TABLE_SEATS,
 } from '../../game/adorndefs';
-import { BRIDGES as ADORN_BRIDGES, FOOTBRIDGE_SPAN } from '../../game/bridges';
+import { BRIDGES as ADORN_BRIDGES, FOOT_RISE, FOOTBRIDGE_SPAN } from '../../game/bridges';
 import {
   ARCHERY_TARGET, ARROW_BREAK_IN, BOULDER_MOSS_DAYS, LANTERN_POLE, MOOR_REACH, MOORING_POST, MOSS_BOULDER, POLE_LANTERNS, POLE_REACH, PRACTICE_GAIN, SHELF_HOLDS, SPICE_SHELF,
   STONE_BUST, TARGET_HOLDS, TRAINING_DUMMY, TREE_BENCH, TREE_BENCH_SEATS, WINDOW_SEAT, WINDOW_SEATS,
@@ -414,6 +414,19 @@ const FAIL_EXAMPLE = failFactorSaid(failFactor({ ...FAIL_EXAMPLE_AT, difficulty:
 const SCRUBS_LATER = new Set(['scrub_wall_paint', 'scrub_floor_paint']);
 
 export const NEWS: News[] = [
+  // The rope bridge and the garden footbridge in the bridge kit (`kit/bridge/rope.ts`, `footbridge.ts`), the footbridge walked over its arch (`deckWalk`).
+  {
+    n: 643,
+    day: '2026-11-15',
+    lines: () => {
+      const foot = new Map(ADORN_BRIDGES.footbridge.bill);
+      return [
+        `Changed: ${ADORN_BRIDGES.rope.name.toLowerCase()} model: plank slats, posts each tile, hand ropes, tie cords. Building stages: posts and stringers; slats as planks go in; hand ropes as rope goes in.`,
+        `Changed: ${ADORN_BRIDGES.footbridge.name.toLowerCase()} model: deck arched ${metres(FOOT_RISE)} m at its middle, less on a ramp, ${foot.get('plank')} boards, ${foot.get('shaft')} corner posts, top and low rails. Building stages: stringers; boards as planks go in; posts as shafts go in.`,
+        `Changed: ${ADORN_BRIDGES.footbridge.name.toLowerCase()} walked at its arch's height.`,
+      ];
+    },
+  },
   // A Decor tab in the crafting window (`craftTabOf`, `isDecor`).
   {
     n: 639,
