@@ -46,7 +46,8 @@ import { helpText } from '../../src/ui/panels/help';
 import { BUSH_DEFS, TileType } from '../../src/world/tiles';
 import { fruitsAt } from '../../src/game/fruiting';
 import { DAY_SECONDS } from '../../src/game/pace';
-import { check, finish, psql, WORKER_HANDS, workerHands, workerHandsJson } from './harness';
+import { check, finish, psql, WORKER_HANDS, workerHands } from './harness';
+import { gateOf } from '../../src/game/skillgates';
 
 /** Each kind, its new trade, and the action your own hands do it by (for the skill it trains). */
 const KINDS: Array<[id: string, trade: GatherKind]> = [
@@ -160,6 +161,8 @@ const SLAG_PUT: Array<[string, number]> = SLAG_RECIPE.inputs.map((i) => [i.item,
 const slagWants = (): string => `${SLAG_RECIPE.result} ${(SLAG_RECIPE.count ?? 1) + STAGE_PERKS.scorcha.n}`;
 /** A Lotushell carries its third stage's roots or seeds a trip and its line's one more (`STAGE_LOADS`, `STAGE_PERKS`). */
 const LILY_SKILLS = { [GATHER_SKILL.lily]: EVOLVE_AT[1] };
+/** Botanizing enough for every water plant's gate (`skillgates.ts`): the water lily's and the lotus's. */
+const PLANTS_OPEN = { [GATHER_SKILL.lily]: Math.max(...WATER_PLANTS.map((d) => gateOf('water_plant', d.id)?.level ?? 1)) };
 const LILY_GO = STAGE_LOADS[2] + STAGE_PERKS.spitta.n;
 /** What a stack is called in the stores: its id, and what is stamped on it ("cover/Thyme"). */
 const key = (id: string, extra?: string | null): string => (extra ? `${id}/${extra}` : id);
@@ -208,14 +211,14 @@ const stocked = (put: Array<[string, number]>): string => put.map(([id, n]) => (
 const held = `coalesce((select string_agg(k || ' ' || n, ',' order by k) from (select def || coalesce('/' || extra, '') as k, sum(count) as n
   from item where world_id = w and holder = 'crate' and crate = ${CRATE} and def <> 'corpse' group by 1
   union all select 'corpse', sum(count) from item where world_id = w and holder = 'crate' and crate = ${CRATE} and def = 'corpse' having sum(count) > 0) q), '-')`;
-const ready = (who: string): string => `
+const ready = (who: string, extra: Record<string, number> = {}): string => `
   -- Rolled at its spawn, a rarity or a bigger form would multiply what it makes (beast_mul): pinned, so both sides make the same.
   update creature set mode = 'deed', carrying = null, skills = '{}'::jsonb, traits = '{}'::text[], rare = null, form_size = null, stance = 'passive', hunger = 1,
          until = now() - interval '600 seconds', settled_at = now() - interval '600 seconds', phase = 'idle', idle_why = null,
          work_x = null, work_y = null, from_x = 16.6, from_y = 16.6, to_x = 16.6, to_y = 16.6
    where world_id = w and id = (select id from hand where species = '${who}');
   -- And at every recipe's level up to a first stage's (craftgates.ts): this is about the trade, not its gate.
-  update creature set skills = '${workerHandsJson()}'::jsonb || skills where world_id = w and id = (select id from hand where species = '${who}');
+  update creature set skills = '${JSON.stringify({ ...workerHands(), ...extra })}'::jsonb || skills where world_id = w and id = (select id from hand where species = '${who}');
   perform worker_settle(w, (select id from hand where species = '${who}'));`;
 const after = (who: string): string => `update creature set mode = 'stored' where world_id = w and id = (select id from hand where species = '${who}');
   delete from item where world_id = w and holder = 'crate' and crate = ${CRATE};
@@ -402,7 +405,8 @@ ${CASES.map((c) => `
   -- LILY: a pool of sea five deep, tiles 20..22 by 18..20 whole, its rim shallow; a lily root and lotus seeds.
   perform land_set_height(w, x, y, -5) from generate_series(20, 23) x, generate_series(18, 21) y;
   ${stocked(WATER_PLANTS.map((d) => [d.from, 1] as [string, number]))}
-  ${ready('spitta')}
+  -- At the lotus's botanizing (skillgates.ts, kind water_plant), so it plants both.
+  ${ready('spitta', PLANTS_OPEN)}
   insert into said select 'LILY', ${held} || '|' || coalesce((select string_agg(x || ',' || y, ' ' order by y, x) from water_plant where world_id = w), '-')
       || '|' || coalesce((select string_agg(kind, ',' order by kind) from water_plant where world_id = w), '-')
       || '|' || coalesce((select bool_and(planted_by = u)::text from water_plant where world_id = w), '-')
@@ -1067,7 +1071,8 @@ for (const k of CASES) {
   const g = body();
   for (let y = 18; y <= 21; y++) for (let x = 20; x <= 23; x++) g.world.setHeight(x, y, -5);
   const crate = stock(g, WATER_PLANTS.map((d) => [d.from, 1] as [string, number]));
-  worker(g, 'spitta');
+  const spitta = worker(g, 'spitta');
+  spitta.skills = { ...spitta.skills, ...PLANTS_OPEN };
   run(g, 180);
   const planted: string[] = [];
   const kinds: string[] = [];

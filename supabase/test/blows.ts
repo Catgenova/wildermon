@@ -64,7 +64,7 @@ begin
   insert into said select 'HIDE:' || h || ':' || b, hide_takes(h, b)::text
     from unnest(array['thick', 'shell', 'scaled', 'soft']) h, unnest(array['cut', 'pierce', 'crush']) b;
   insert into said select 'ARMOUR:' || c || ':' || k, armour_vs(c, k)::text
-    from unnest(array['cloth', 'leather', 'chain', 'plate', 'scale']) c, unnest(array['cut', 'pierce', 'crush', 'bite', 'burn']) k;
+    from unnest(array[${Object.keys(ARMOUR_VS).map((c) => `'${c}'`).join(', ')}]) c, unnest(array['cut', 'pierce', 'crush', 'bite', 'burn']) k;
   insert into said select 'KIND:' || id, coalesce(hide, 'soft') || '|' || heavy from species_def;
 
   -- A wounded arm, swinging a sword.

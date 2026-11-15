@@ -363,13 +363,15 @@ g.growTrees(Date.now() / 1000);
 const day = [...g.swirls.values()];
 const w = g.world;
 const islandOf = (s: Swirl): MoteElement | null => landElement(chartRegion(s.x + 0.5, s.y + 0.5, w.w));
+// The season of the dawn the day's swirls were laid for, which a season's turn since that dawn leaves behind now's.
+const DAY_ELEMENT = SEASON_ELEMENT[seasonAt(g.swirlDawn ?? Date.now() / 1000).season];
 check(`a game of your own has the day's ${SWIRLS_A_DAY} swirls from its first frame, one to a tile, on the map`,
   day.length === SWIRLS_A_DAY && new Set(day.map((s) => s.y * w.w + s.x)).size === SWIRLS_A_DAY && day.every((s) => w.inBounds(s.x, s.y)),
   `${day.length}`);
 check('none on a tree or in a building, water exactly on water, and on land only the element of the island of the chart it is on, the season\'s, dark or light',
   day.every((s) => !TILE_DEFS[w.getTile(s.x, s.y)].blocks && w.getTile(s.x, s.y) !== TileType.Tree && !g.buildings.buildingAt(s.x, s.y))
     && day.every((s) => (s.element === 'water') === w.hasWater(s.x, s.y))
-    && day.every((s) => s.element === 'water' || s.element === 'dark' || s.element === 'light' || s.element === NOW_ELEMENT || s.element === islandOf(s)),
+    && day.every((s) => s.element === 'water' || s.element === 'dark' || s.element === 'light' || s.element === DAY_ELEMENT || s.element === islandOf(s)),
   [...new Set(day.filter((s) => s.element !== 'water').map((s) => s.element))].join(', '));
 {
   const rand = mulberry32(31);

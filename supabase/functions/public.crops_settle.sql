@@ -7,7 +7,7 @@ AS $function$
 declare n int;
 begin
   with near as (
-    select c.x, c.y, c.stage, c.stage_at, c.glass, c.hand,
+    select c.x, c.y, c.storey, c.stage, c.stage_at, c.glass, c.hand,
            /*
             * The gardener's path, which is the one effect of a path belonging
             * to somebody who is not here. A crop grows for whoever founded the
@@ -26,23 +26,23 @@ begin
        and greatest(abs(c.x + 0.5 - p_x), abs(c.y + 0.5 - p_y)) <= p_range
   ), due as (
     -- On the field clock: a winter adds nothing, and a stage is still its own length added on.
-    select n.x, n.y, s.o_stage, s.o_stage_at, s.o_steps
+    select n.x, n.y, n.storey, s.o_stage, s.o_stage_at, s.o_steps
       from near n cross join lateral crop_settled(n.stage, n.stage_at, n.per, false) s
      where not n.glass and not n.hand
     -- And a field sown with Love's Season's Hand on its clock, which a winter does not stop (`hand_clock`).
     union all
-    select n.x, n.y, s.o_stage, s.o_stage_at, s.o_steps
+    select n.x, n.y, n.storey, s.o_stage, s.o_stage_at, s.o_steps
       from near n cross join lateral crop_settled_on(n.stage, n.stage_at, n.per, 'hand') s
      where not n.glass and n.hand
     -- And under glass on the glass clock, which runs in every season (`glasshouse.ts`).
     union all
-    select n.x, n.y, s.o_stage, s.o_stage_at, s.o_steps
+    select n.x, n.y, n.storey, s.o_stage, s.o_stage_at, s.o_steps
       from near n cross join lateral crop_settled_on(n.stage, n.stage_at, n.per, 'glass') s
      where n.glass
   )
   update crop c set stage = due.o_stage, stage_at = due.o_stage_at, tended_now = false
     from due
-   where c.world_id = p_world and c.x = due.x and c.y = due.y and due.o_steps > 0;
+   where c.world_id = p_world and c.x = due.x and c.y = due.y and c.storey = due.storey and due.o_steps > 0;
   get diagnostics n = row_count;
   return n;
 end $function$

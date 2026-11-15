@@ -193,10 +193,9 @@ begin
       return 'Tree is dead.';
     end if;
     if (select fruit from tree_def where id = tree_species(v_data)) is not null then return 'Already bears fruit.'; end if;
-    -- Grafting is the forester's finest work, and a beginner's graft is a
-    -- sprout thrown away.
-    if skill_of(p_world, p_uid, 'forestry') < graft_skill() then
-      return 'Needs forestry ' || graft_skill() || '.';
+    -- Its gate (kind `graft`): "Graft: needs forestry 50; have 12.0."
+    if kind_gate_refusal(p_world, p_uid, 'graft', 'graft') is not null then
+      return kind_gate_refusal(p_world, p_uid, 'graft', 'graft');
     end if;
     -- The sprout named, or any of the three that bear.
     if target_item(p_target) is not null and not exists (

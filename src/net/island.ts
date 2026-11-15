@@ -462,7 +462,10 @@ interface GroundAsk {
  * queues -- to every browser on the island: the square of the people on it in kilobytes, 265 kB a read with 150
  * awake against 48 kB of this.
  */
-const PEOPLE_COLUMNS = 'world_id,uid,name,x,y,level,look,act,act_ends,act_tool,blocked_at,hurt_at,hurt_where,hurt_heavy,fell';
+export const PEOPLE_COLUMNS = 'world_id,uid,name,x,y,level,look,act,act_ends,act_tool,blocked_at,hurt_at,hurt_where,hurt_heavy,fell,craft_class,combat_class,joined_at';
+
+/** Somebody's trade, class and day ashore (`src/game/badges.ts`), off their `player` row: for a speaker or a friend not ashore. */
+const BADGE_COLUMNS = 'uid,craft_class,combat_class,joined_at';
 
 const PACK_COLUMNS = 'id,def,ql,dmg,count,extra,holder,inside,gx,gy,charges,locked,issued,rare,dye,bless,'
   + 'maker,piece,creature,mark,enchant,engraving,lit,lit_at,infuse';
@@ -950,7 +953,12 @@ export interface IslandHooks {
    * A line for the log. `at` is when the island wrote it, in milliseconds —
    * left out only for a line this browser came up with itself.
    */
-  say: (text: string, kind: string, at?: number) => void;
+  say: (text: string, kind: string, at?: number, by?: string) => void;
+  /**
+   * Everybody ashore's trade and class, off the roster's read of their rows (`refreshPeople`): the island's word,
+   * never a body broadcast's, which another browser writes (`src/game/badges.ts`).
+   */
+  badges?: (rows: PlayerRow[]) => void;
   /** The ground changed under somebody's feet, possibly ours. */
   ground: (x: number, y: number) => void;
   /** Somebody moved, arrived or left. */
@@ -1038,6 +1046,8 @@ export interface IslandHooks {
     skin?: SkinSaid;
     /** Seconds of the death grace left (`rpc_settle`'s `grace`), null once it is over (`deathgrace.ts`); every beat says it. */
     grace?: number | null;
+    /** Whether your next tame is your first, and sure (`rpc_settle`'s `first_tame`, `firsttame.ts`); every beat says it. */
+    firstTame?: boolean;
     /**
      * And the journal, which on an island could not tick a single one of its
      * eighty-five goals: forty-six of them count things done, the counting was
@@ -2327,6 +2337,7 @@ export class Island {
         land_from?: number;
         fallen?: unknown;
         grace?: number | null;
+        first_tame?: boolean | null;
       };
       if (typeof said.land_from === 'number') this.landFrom = Math.max(this.landFrom, said.land_from);
       // The hour, on the beat every browser makes anyway. Nothing else has to
@@ -2380,6 +2391,8 @@ export class Island {
         thepath: said.thepath,
         // Not said (the beat leaves nulls out) once it is over.
         grace: graceIn(said.grace),
+        // Not said by an island from before it: what was known stands.
+        firstTame: typeof said.first_tame === 'boolean' ? said.first_tame : undefined,
       });
       // After a death, where to wake, while the body may still pick: shown over the world (`src/ui/respawn.ts`).
       if (!error) this.hooks.fallen?.(fallenIn(said.fallen));
@@ -3015,14 +3028,15 @@ export class Island {
   }
 
   /** A line into the log; logged on or off goes into Talk, and to the banner. */
-  private sayLine(text: string, kind: string, at: unknown): void {
+  private sayLine(text: string, kind: string, at: unknown, by?: string | null): void {
     if (kind === 'presence') {
       const p = presenceOf(text);
       if (p) this.hooks.presence?.(p.name, p.on, whenSaid(at));
       this.hooks.say(text, 'system', whenSaid(at));
       return;
     }
-    this.hooks.say(text, kind, whenSaid(at));
+    // A line of talk says who said it, for their trade and class before it (`src/game/badges.ts`).
+    this.hooks.say(text, kind, whenSaid(at), kind === 'chat' && typeof by === 'string' ? by : undefined);
   }
 
   /** A line the island said, from either way of listening. */
@@ -3066,7 +3080,7 @@ export class Island {
       if (spot !== undefined) this.hooks.cached?.(spot);
       return;
     }
-    this.sayLine(e.text, e.kind, e.at);
+    this.sayLine(e.text, e.kind, e.at, e.said_by);
     // A blow taken on the shield: drawn, before the beat that says when (`sawBlock`).
     if (e.kind === 'fight' && e.text === BLOCKED_SAID) this.sawBlock(whenSaid(e.at) ?? this.islandMs());
     // And one that landed, and where, off its line (`landedOf`), before the beat that says when and where.
@@ -3450,7 +3464,9 @@ export class Island {
     const was = new Map(this.people);
     this.people.clear();
     const now = performance.now() / 1000;
-    for (const p of listOf(data, playerRow)) {
+    const rows = listOf(data, playerRow);
+    this.hooks.badges?.(rows);
+    for (const p of rows) {
       // Not in what the island says is worn: nothing on (it lists only those with something), not not known.
       p.gear = wearing ? (wearing[p.uid] ?? {}) : was.get(p.uid)?.gear;
       // Somebody heard from over the channel lately is where the channel said,
@@ -4983,6 +4999,26 @@ export class Island {
   }
 
   /**
+   * Stop the job in hand and start the next one waiting, the rest of the queue
+   * kept: the × on the job in hand. The same beat and pulse as `stop`;
+   * `rpc_skip` drops every go left of the job in hand and starts the next as
+   * `settle` starts one when a job ends, and answers with the list as it now
+   * is, in `rpc_act`'s shape.
+   */
+  async skip(): Promise<void> {
+    if (!this.info) return;
+    if (this.beat) clearTimeout(this.beat);
+    this.beat = null;
+    const { data, error } = await rpc('rpc_skip', { p_world: this.info.id });
+    if (error) this.hooks.say(refusedSaid(error.message), 'error');
+    else {
+      const said = (data ?? {}) as { queue?: unknown; capacity?: number | null };
+      this.hooks.mine?.({ queue: lineUp(said.queue), cap: said.capacity ?? null });
+    }
+    await this.pulse();
+  }
+
+  /**
    * The jobs waiting put in another order, or some taken out (`jobqueue.ts`).
    * The island checks the list it was seen as and says the list back either
    * way, so a refusal puts the browser's list back to what is really there.
@@ -5021,14 +5057,25 @@ export class Island {
   }
 
   /** What has been said lately, oldest first, for somebody just arriving. */
-  async recentChat(limit = TALK_LOG): Promise<Array<{ n: number; text: string; at?: number }>> {
+  async recentChat(limit = TALK_LOG): Promise<Array<{ n: number; text: string; at?: number; by?: string }>> {
     if (!this.info) return [];
     const { data } = await rpc('rpc_chat', { p_world: this.info.id, p_limit: limit });
     // `rpc_chat` has sent `at` since the day it was written and nothing read it.
     // Only what was said before we came ashore: anything after it comes down with the other lines (`HeardLines`).
     return listOf(data, chatRow)
       .filter((l) => !(l.n > this.lines.floor && this.lines.floor > 0))
-      .map((l) => ({ n: l.n, text: l.text, at: whenSaid(l.at) }));
+      .map((l) => ({ n: l.n, text: l.text, at: whenSaid(l.at), by: l.by }));
+  }
+
+  /**
+   * The trade and class of these people, off their rows (`src/game/badges.ts`): a speaker or a friend who is not
+   * ashore, whom the roster's read does not carry. Nothing on a read that failed: asked again later.
+   */
+  async badgeRows(uids: string[]): Promise<PlayerRow[]> {
+    if (!this.info || !uids.length) return [];
+    const { data, error } = await supabase().from('player').select(BADGE_COLUMNS).eq('world_id', this.info.id).in('uid', uids);
+    if (error || !Array.isArray(data)) return [];
+    return (data as unknown[]).filter((r): r is PlayerRow => isFields(r) && typeof r.uid === 'string');
   }
 
   /**

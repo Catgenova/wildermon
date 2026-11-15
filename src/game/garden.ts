@@ -87,7 +87,7 @@ export function gardenFrom(raw: unknown): GardenState | undefined {
 /** Whether a piece is one of the garden pieces, with a line of its own under its name. */
 export const isGardenPiece = (def: FurnitureDef): boolean =>
   !!(def.bloom || def.hedge || def.topiary || def.bonsai || def.shows || def.figure || def.birds || def.chime || def.herbs
-    || (def.mount && def.mount !== 'pane' && def.mount !== 'hearth' && def.mount !== 'sill' && def.id !== FISH_MOUNT && def.id !== SPICE_SHELF))
+    || (def.mount && def.mount !== 'pane' && def.mount !== 'hearth' && def.mount !== 'sill' && def.mount !== 'edge' && def.id !== FISH_MOUNT && def.id !== SPICE_SHELF))
   || def.climber === 'wisteria' || POTS.includes(def.id) || def.id === FOLDING_SCREEN || def.id === FLOWER_CART;
 /** Whether a piece grows from the moment it is set down, so the island hands every browser that moment (`furniture_def.roses`). */
 export const growsFromSet = (def: FurnitureDef): boolean => !!(def.climber || def.bloom || def.hedge || def.bonsai || def.id === IVY_PANEL);
@@ -341,6 +341,7 @@ export const MOUNT_SAID = {
   get pane(): string { return mountWords('pane', trellisWallWords(), ''); },
   get hearth(): string { return mountWords('hearth', trellisWallWords(), ''); },
   get sill(): string { return mountWords('sill', trellisWallWords(), ''); },
+  get edge(): string { return mountWords('edge', trellisWallWords(), ''); },
   noWindow: 'No window on that side.',
   noWall: 'No solid wall on that side.',
   unfinished: 'Wall not finished.',
@@ -391,6 +392,8 @@ export function mountRefusal(g: Game, mount: Mount, x: number, y: number, facing
     if (!g.buildings.buildingAt(x, y)) return MOUNT_SAID.outside;
     return mountRefusal(g, 'pane', x, y, facing, level);
   }
+  // A glass shard path along a side, from the ground, outside a building, as a hedge (`obsidian.ts`).
+  if (mount === 'edge') return hedgeRefusal(g, x, y, level);
   // Curtains on either face of a finished window, on their storey, as a plaque on a solid wall (`decor.ts`).
   if (mount === 'wall' || mount === 'pane') {
     const w = g.buildings.wall(level, x, y, facing);

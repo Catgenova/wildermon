@@ -7,7 +7,7 @@ AS $function$
 declare v_name text;
 begin
   if p_kind = 'mauls' then
-    select lower(sd.name) into v_name from creature c join species_def sd on sd.id = c.species
+    select lower(kind_name_at(c)) into v_name from creature c
       where c.world_id = p_world and c.id = p_id and c.windup_at is not null;
     if v_name is not null then perform tell(p_world, p_uid, 'Heavy blow broken: ' || v_name || '.', 'fight'); end if;
     update creature set windup_at = null, until = greatest(until, now()) + make_interval(secs => stagger_maul())

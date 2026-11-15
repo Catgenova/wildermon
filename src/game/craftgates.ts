@@ -83,7 +83,7 @@ export const recipeLevel = (r: Recipe): GateLevel => {
 export const MATERIAL_GATE: Readonly<Record<string, GateLevel>> = {
   log: 1, garden_bed: 1, plank: 10, timbercraft: 20, glass: 40,
   cobblestone: 1, clay_adobe: 5, clay_bricks: 10, stone_brick: 10, sandstone: 30, slate: 40, marble: 50, ornate_silver: 60,
-  stained_glass: 60, ornate_gold: 70,
+  stained_glass: 60, obsidian_glass: 60, ornate_gold: 70,
 };
 
 /** Planning and building a wall type, in its material's skill. */
@@ -123,7 +123,8 @@ const metalLevel = (m: MetalDef): GateLevel => {
     if (level === undefined) throw new Error(`${m.id}: no seam gate`);
     return level;
   }
-  const parts = alloyOf(m).map((id) => METAL_BY_ID.get(id)!).filter((p) => p.ore);
+  // An alloy of an alloy (fire-tempered steel, of steel) reads the mined metals under it, through its parts' levels.
+  const parts = alloyOf(m).map((id) => METAL_BY_ID.get(id)!);
   if (!parts.length) throw new Error(`${m.id}: no metals mixed into it`);
   return Math.max(...parts.map(metalLevel)) as GateLevel;
 };

@@ -1,1 +1,1 @@
-import{a as e,i as t,r as n}from"./wild-ghost2.js";export{n as HALLOWMIRE,t as LANTERNVEIL,e as WHISPET};
+import{a as e,o as t,r as n}from"./wild-ghost2.js";export{n as HALLOWMIRE,e as LANTERNVEIL,t as WHISPET};

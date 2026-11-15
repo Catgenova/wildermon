@@ -10,11 +10,15 @@ begin
   here := land_tile(p_world, tx, ty);
   -- Anything that reads a crop reads it up to date.
   perform crop_settle(p_world, tx, ty);
-  select * into c from crop cr where cr.world_id = p_world and cr.x = tx and cr.y = ty;
   -- The garden bed of the storey you stand on (`bed_level_of`), or the field; a crop on another storey is none of this job's.
   v_lvl := farm_level(p_world, p_uid);
+  -- A job naming a garden bed's storey is done from that storey (`bedStoreySaid`): the browser walks there first.
+  if farm_named_level(p_target) is not null and farm_named_level(p_target) <> v_lvl
+     and bed_at(p_world, farm_named_level(p_target), tx, ty) then
+    return bed_storey_said(farm_named_level(p_target));
+  end if;
   v_bed := bed_level_of(p_world, p_uid, tx, ty);
-  if c.id is not null and c.level is distinct from v_bed and p_action <> 'plant_seed' then c := null; end if;
+  select * into c from crop cr where cr.world_id = p_world and cr.x = tx and cr.y = ty and cr.level is not distinct from v_bed;
 
   if p_action = 'till' then
     -- In a building, only a glasshouse's ground, where no floor is planned on it (`glass_till_refusal`).

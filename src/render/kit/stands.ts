@@ -1,6 +1,6 @@
 import {
-  clothTone, css, extrude, grain, hex, lathe, mix, prism, slab, stud, warped, woodTone,
-  type Ctx, type Face, type KitLook, type KitModel, type KitPart, type KitPiece, type PaintCtx, type Pt, type Side, type Tone, type V3,
+  clothTone, css, extrude, grain, halfOf, hex, lathe, mix, prism, slab, stud, warped, woodTone,
+  type Ctx, type Eye, type Face, type KitLook, type KitModel, type KitPart, type KitPiece, type PaintCtx, type Pt, type Side, type Tone, type V3,
 } from './core';
 import { FELT, LEATHER, PAPER, round, rod, woodSides, woodTones, writing } from './woodwork';
 
@@ -99,18 +99,26 @@ function coatRackOf(look: KitLook): KitModel {
     parts.push(p);
     return p;
   };
-  // The feet, splayed out from the foot of the pole, their toes on the floor.
+  // The feet, splayed out from the foot of the pole, their toes on the floor, their roots against its side: each laid
+  // after the pole on its near side and before it on its far side (`halfOf`).
   const footSide = (seed: number) => (g: Ctx, k: PaintCtx): void => grain(g, k.fill, 4, 2.7, seed, 'x', 0.5);
+  const feet: Array<{ part: KitPart; near: (e: Eye) => number }> = [];
+  let pole: KitPart | null = null;
   for (const [i, [dx, dy]] of ([[1, 0], [-1, 0], [0, 1], [0, -1]] as Pt[]).entries()) {
     const U: V3 = [dx, dy, 0], A: V3 = [-dy, dx, 0];
-    add(extrude([0, 0, 0], U, [0, 0, 1], A, [[0.5, 0], [3.8, 0], [3.8, 0.42], [0.5, 2.1]], -0.42, 0.42, WOOD, 0.12, { front: footSide(41 + i), back: footSide(45 + i) }));
+    const near = halfOf(dx, dy);
+    const part = add(extrude([0, 0, 0], U, [0, 0, 1], A, [[0.8, 0], [3.8, 0], [3.8, 0.42], [0.7, 2.1]], -0.42, 0.42, WOOD, 0.12, { front: footSide(41 + i), back: footSide(45 + i) }),
+      { after: (e) => (near(e) && pole ? [pole] : []) });
+    feet.push({ part, near });
   }
   // The pole, turned: a collar over the feet, the long shaft, a collar under the pegs and a finial.
-  add(lathe(0, 0, [[0, 0.82], [1.2, 0.78], [2.8, 0.62], [3.15, 0.72], [3.45, 0.5], [PEG_Z0 - 0.3, 0.44], [PEG_Z1 + 0.35, 0.46], [PEG_Z1 + 0.55, 0.74], [PEG_Z1 + 1.05, 0.7], [PEG_Z1 + 1.5, 0.4], [PEG_Z1 + 2.0, 0.08]], 10, WOOD, 0.5,
-    (kk, i, s) => (kk === 4 ? { paint: (g: Ctx, k: PaintCtx) => grain(g, k.fill, s.w, s.h, 51 + i, 'y', 0.4) } : undefined)), { edges: true });
-  // The pegs, rising a little as they leave it, each with a knob.
+  pole = add(lathe(0, 0, [[0, 0.82], [1.2, 0.78], [2.8, 0.62], [3.15, 0.72], [3.45, 0.5], [PEG_Z0 - 0.3, 0.44], [PEG_Z1 + 0.35, 0.46], [PEG_Z1 + 0.55, 0.74], [PEG_Z1 + 1.05, 0.7], [PEG_Z1 + 1.5, 0.4], [PEG_Z1 + 2.0, 0.08]], 10, WOOD, 0.5,
+    (kk, i, s) => (kk === 4 ? { paint: (g: Ctx, k: PaintCtx) => grain(g, k.fill, s.w, s.h, 51 + i, 'y', 0.4) } : undefined)), { edges: true, after: (e) => feet.filter((f) => !f.near(e)).map((f) => f.part) });
+  // The pegs, rising a little as they leave it, each with a knob: from its side, laid by the side of it they are on as the feet are.
   for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as Pt[]) {
-    add(rod([dx * 0.3, dy * 0.3, PEG_Z0], [dx * PEG_R, dy * PEG_R, PEG_Z1], 0.24, WOOD, 6));
+    const r0 = 0.42, z0 = PEG_Z0 + ((r0 - 0.3) / (PEG_R - 0.3)) * (PEG_Z1 - PEG_Z0);
+    const near = halfOf(dx, dy);
+    feet.push({ part: add(rod([dx * r0, dy * r0, z0], [dx * PEG_R, dy * PEG_R, PEG_Z1], 0.24, WOOD, 6), { after: (e) => (near(e) && pole ? [pole] : []) }), near });
     add(lathe(dx * (PEG_R + 0.05), dy * (PEG_R + 0.05), [[PEG_Z1 - 0.15, 0.2], [PEG_Z1, 0.36], [PEG_Z1 + 0.2, 0.38], [PEG_Z1 + 0.35, 0.22], [PEG_Z1 + 0.4, 0.04]], 8, TOP), { edges: true });
   }
   // The cloak, hung by its hood from the front peg: gathered at the top, falling open in folds to its hem.

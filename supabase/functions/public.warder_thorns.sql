@@ -9,7 +9,7 @@ begin
   select * into pl from player where world_id = p_world and uid = p_uid;
   select * into c from creature where world_id = p_world and id = p_id and health > 0;
   if pl.uid is null or c.id is null or p_dmg <= 0 then return; end if;
-  v_name := coalesce((select lower(name) from species_def where id = c.species), 'creature');
+  v_name := coalesce(lower(kind_name_at(c)), 'creature');
   v_died := wound_beast(p_world, p_id, p_dmg, pl.x, pl.y, p_uid, null);
   v_left := coalesce((select health from creature where world_id = p_world and id = p_id), 0);
   perform tell(p_world, p_uid, (select name from class_perk where id = 'warder_thorns') || ': ' || v_name || ' −'

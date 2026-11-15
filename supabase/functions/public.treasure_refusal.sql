@@ -13,6 +13,8 @@ begin
   v_map := carried(p_world, p_uid, target_item(p_target));
   if v_map.id is null then return 'You are not holding a map.'; end if;
   if v_map.def <> 'treasure_map' then return 'Not a map.'; end if;
+  -- Its tier's gate (kind `hoard`): "Unidentified map: needs digging 20; have 4.0."
+  if item_gate_refusal(p_world, p_uid, v_map) is not null then return item_gate_refusal(p_world, p_uid, v_map); end if;
   v_t := treasure_at(v_map.id);
   if v_t.item_id is null then
     return 'Map is blank: its hoard is gone.';

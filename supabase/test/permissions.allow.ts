@@ -188,6 +188,11 @@ export const TABLES: Record<string, Read> = {
   lair_seen: 'none',
   land_chunk: 'none',
   land_move: 'none',
+  // Volcano Isle's maze of lava a day at a time (`lava.ts`): the island's own; every browser works it out from the seed.
+  lava_day: 'none',
+  // Each labyrinth design laid over a world of a size, and its ways in and out (`lava.ts`): the rulebook's, worked out once.
+  lava_design: 'rules',
+  lava_design_way: 'rules',
   mote_day: 'none',
   mote_swirl: 'none',
   // Every swirl collected, for attunement (`infusion.ts`): the island's own.
@@ -361,6 +366,7 @@ export const EXECUTE: Record<'anon' | 'authenticated', readonly string[]> = {
     "rpc_settle(bigint,uuid,bigint,boolean,jsonb)",
     "rpc_settlement(uuid,uuid,boolean)",
     "rpc_settlements(uuid)",
+    "rpc_skip(uuid)",
     "rpc_sleep_bonus(uuid,boolean)",
     "rpc_social(uuid)",
     "rpc_spell(uuid,text,jsonb)",

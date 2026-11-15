@@ -22,6 +22,7 @@
  * and shade rather than in colour, for the ground's own colour to show
  * through: see `slabbing` and `concrete`.
  */
+import { OBSIDIAN_GLASS, OBSIDIAN_GLASS_OPACITY } from '../game/building';
 
 /** Picture pixels to a tile, at the finest of the three. */
 export const FLOOR_PPT = 256;
@@ -893,6 +894,56 @@ export function leadedGlass(seed: number): HTMLCanvasElement {
   return c;
 }
 
+/**
+ * Obsidian glass laid flat (`building.ts` OBSIDIAN_GLASS): a slab of dark glass to every tile, bevelled where it meets
+ * the next, a sheen across it from the light's corner, and a few conchoidal ripples where it was dressed. The whole
+ * picture at `opacity`, so a floor of it shows what is under it at the rest.
+ */
+export function obsidianGlass(seed: number, opacity: number): HTMLCanvasElement {
+  const [c, g] = canvas(S, S), [slab, sg] = canvas(S, S);
+  const R = rand(seed);
+  const T = S / FLOOR_TILES, joint = 3;
+  sg.fillStyle = '#3b1f22';
+  sg.fillRect(0, 0, S, S);
+  for (let ty = 0; ty < FLOOR_TILES; ty++) {
+    for (let tx = 0; tx < FLOOR_TILES; tx++) {
+      const x = tx * T + joint, y = ty * T + joint, w = T - joint * 2, h = T - joint * 2;
+      sg.save();
+      sg.beginPath(); sg.rect(x, y, w, h); sg.clip();
+      sg.fillStyle = ['#17141c', '#1a1620', '#15131a'][Math.floor(R() * 3)];
+      sg.fillRect(x, y, w, h);
+      // The sheen: the corner toward the light paler, a band across it, the far corner the glass's own black.
+      const lit = sg.createLinearGradient(x, y, x + w, y + h);
+      lit.addColorStop(0, 'rgba(150, 140, 176, 0.32)');
+      lit.addColorStop(0.35, 'rgba(90, 82, 112, 0.1)');
+      lit.addColorStop(0.5, 'rgba(200, 196, 224, 0.16)');
+      lit.addColorStop(0.58, 'rgba(60, 54, 80, 0.04)');
+      lit.addColorStop(1, 'rgba(0, 0, 0, 0.18)');
+      sg.fillStyle = lit; sg.fillRect(x, y, w, h);
+      // Conchoidal ripples: shallow arcs, each a dark line with a lit one beside it.
+      for (let i = 0; i < 3 + Math.floor(R() * 3); i++) {
+        const cx = x + R() * w, cy = y + R() * h, rad = w * (0.12 + R() * 0.28), a0 = R() * Math.PI * 2, span = 0.6 + R() * 1.2;
+        for (let k = 0; k < 3; k++) {
+          const r = rad * (1 + k * 0.16);
+          sg.strokeStyle = `rgba(8, 6, 12, ${0.5 - k * 0.12})`; sg.lineWidth = 1.4;
+          sg.beginPath(); sg.arc(cx, cy, r, a0, a0 + span); sg.stroke();
+          sg.strokeStyle = `rgba(170, 160, 200, ${0.18 - k * 0.04})`; sg.lineWidth = 1;
+          sg.beginPath(); sg.arc(cx, cy, r + 1.6, a0, a0 + span); sg.stroke();
+        }
+      }
+      sg.restore();
+      // The bevel: lit along the two edges toward the light, dark along the other two, an ember glint in the corner.
+      sg.fillStyle = 'rgba(214, 206, 236, 0.42)'; sg.fillRect(x, y, w, 2); sg.fillRect(x, y, 2, h);
+      sg.fillStyle = 'rgba(0, 0, 0, 0.55)'; sg.fillRect(x, y + h - 2, w, 2); sg.fillRect(x + w - 2, y, 2, h);
+      sg.fillStyle = 'rgba(214, 92, 60, 0.5)'; sg.fillRect(x + w - 10, y + h - 2, 10, 2); sg.fillRect(x + w - 2, y + h - 10, 2, 10);
+    }
+  }
+  g.globalAlpha = opacity;
+  g.drawImage(slab, 0, 0);
+  g.globalAlpha = 1;
+  return c;
+}
+
 /* ---- the floors ------------------------------------------------------------- */
 
 /** A slate's face: riven, split along its bed so it lies in shallow steps, one edge of each catching the light. */
@@ -1161,6 +1212,8 @@ function laid(material: string): { img: HTMLCanvasElement; runs: boolean } | nul
       };
     case 'stained_glass':
       return { runs: false, img: leadedGlass(277) };
+    case OBSIDIAN_GLASS:
+      return { runs: false, img: obsidianGlass(281, OBSIDIAN_GLASS_OPACITY) };
     case 'ornate_silver':
       return { runs: false, img: panels({ unit: 128, bed: '#626882', field: '#c6cad6', hi: '#eef1f6', lo: '#8e92a3', ink: '#626882', boss: '#dfe2ea', seed: 269 }) };
     case 'ornate_gold':

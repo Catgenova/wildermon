@@ -6,6 +6,7 @@ CREATE OR REPLACE FUNCTION public.worker_smith_lumps(c creature, p_kind text)
  STABLE
 AS $function$
   select coalesce(array_agg(u.l order by u.o), '{}')
-    from unnest(smith_lumps(p_kind)) with ordinality u(l, o)
-   where worker_gate_open(c, skill_gate_of('metal', (select md.id from metal_def md where md.lump = u.l)))
+    from unnest(smith_lumps(p_kind)) with ordinality u(l, o) join metal_def md on md.lump = u.l
+   where worker_gate_open(c, skill_gate_of('metal', md.id))
+     and worker_gate_open(c, casting_gate((select d.makes from mould_def d where d.id = smith_mould(p_kind)), md.name))
 $function$

@@ -45,5 +45,9 @@ begin
     when 'open_grass' then v_t in (tile_id('Grass'), tile_id('Steppe'))
                            and not near_tile(p_world, p_x, p_y, 'trees', open_clear()::int) and v_hi - v_lo <= open_slope()
     when 'hillside' then v_t = tile_id('Rock') and v_hi - v_lo >= hill_slope()
+    when 'vent' then not near_tile(p_world, p_x, p_y, 'trees', vent_clear()::int)
+                     and not exists (select 1 from generate_series(0, 7) q
+                                      where region_at(p_world, p_x + 0.5 + cos(q * pi() / 4) * lair_leash(), p_y + 0.5 + sin(q * pi() / 4) * lair_leash())
+                                            is distinct from monster_isle(k.species))
     else true end;
 end $function$

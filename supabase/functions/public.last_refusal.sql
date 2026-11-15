@@ -63,9 +63,17 @@ begin
   if adorn_action(p_action) then
     return adorn_refusal(p_world, p_uid, p_action, p_target);
   end if;
+  -- The obsidian pieces' jobs (`obsidian.ts`).
+  if obsidian_action(p_action) then
+    return obsidian_refusal(p_world, p_uid, p_action, p_target);
+  end if;
 
   if p_action = 'plan_bridge' then
     v_kind := coalesce(p_target->>'material', 'rope');
+    -- Its gate (kind `bridge`): "Drawbridge: needs carpentry 50; have 12.0."
+    if kind_gate_refusal(p_world, p_uid, 'bridge', v_kind) is not null then
+      return kind_gate_refusal(p_world, p_uid, 'bridge', v_kind);
+    end if;
     return bridge_reason(p_world, p_uid, v_kind, floor(p.x)::int, floor(p.y)::int,
       (p_target->>'x')::int, (p_target->>'y')::int, bridge_width_asked(p_target),
       coalesce(nullif(bridge_side_step(floor(p.x)::int, floor(p.y)::int, (p_target->>'x')::int, (p_target->>'y')::int, p_target->>'side'), 0), 1),
@@ -79,6 +87,10 @@ begin
       select * into s from bridge_span sp where sp.world_id = p_world and sp.bridge = b.id
         and not span_done(sp.needed) order by sp.n limit 1;
       if not found then return 'Finished.'; end if;
+      -- Adding to it, under its gate as planning it is.
+      if kind_gate_refusal(p_world, p_uid, 'bridge', b.kind) is not null then
+        return kind_gate_refusal(p_world, p_uid, 'bridge', b.kind);
+      end if;
       if tool_ql(p_world, p_uid, d.tool) <= 0 then
         return 'Need a ' || lower((select coalesce(name, d.tool) from item_def where id = d.tool)) || '.';
       end if;

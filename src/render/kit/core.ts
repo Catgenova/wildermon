@@ -59,8 +59,11 @@ export interface KitPart {
   edges?: boolean;
   /** Laid before everything else whatever its place: a rug, a plinth sunk in the floor. */
   first?: boolean;
-  /** Laid after these whatever the boxes say: a strap over a lid, a lock plate on a front. */
-  after?: KitPart[];
+  /**
+   * Laid after these whatever the boxes say: a strap over a lid, a lock plate on a front. Or from the eye: a sign's
+   * arm after its post when it is on the near side of it, and the post after the arms on its far side.
+   */
+  after?: KitPart[] | ((e: Eye) => KitPart[]);
   /**
    * For a piece drawn in layers (`KitPiece.layers`), which one it is in: a
    * number, or from the eye -- a crate's side is in its far half or its near

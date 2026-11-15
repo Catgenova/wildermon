@@ -26,7 +26,7 @@ begin
     if not perk_pass(skill_check(s, d.difficulty, tq), pk(p_world, p_uid, 'fail:mine', 1)) then
       -- The swing happened. It taught nothing at all until now.
       perform skill_raise(p_world, p_uid, d.skill, try_gain(false));
-      perform tell(p_world, p_uid, 'Mining failed.', 'event');
+      perform tell(p_world, p_uid, 'Mining failed.' || fail_why(), 'event');
       return;
     end if;
     r := bedrock_at(p_world, tx, ty);
@@ -54,6 +54,8 @@ begin
       || ', QL ' || to_char(made_ql, 'FM990.0') || '.', 'event');
     -- And one more, now and then, for a Lodestone on the pickaxe.
     perform enchant_more(p_world, p_uid, 'pickaxe', 'lode', yields, made_ql);
+    -- And on Volcano Isle, a seryll vein's summons and sulfur out of its slate (`volcano_mined`).
+    perform volcano_mined(p_world, p_uid, tx, ty, yields, made_ql);
     -- Cutting the face back is its own job. Now and again one comes down anyway.
     if random() < mine_collapse() then
       perform land_set_height(p_world, cx, cy, land_height(p_world, cx, cy) - 1);

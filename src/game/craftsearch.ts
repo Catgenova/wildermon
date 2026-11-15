@@ -1,4 +1,5 @@
 import { itemDef } from './items';
+import { MOULD_BY_ID } from './metal';
 import { recipeTitle, stationName, type Recipe } from './recipes';
 import { SKILL_DEFS } from './skills';
 
@@ -36,6 +37,34 @@ export function recipeSearch(r: Recipe, query: string, unread: boolean, showLock
   const named = !query || recipeNameWords(r).includes(query);
   if (!named) return 'no';
   return showLocked ? 'listed' : 'hidden';
+}
+
+/** What a recipe makes, for the search's order: its thing, and for a mould the thing it casts too (`MOULDS`). */
+export const recipeMakes = (r: Recipe): string[] => {
+  const m = MOULD_BY_ID.get(r.result);
+  return m ? [r.result, m.makes] : [r.result];
+};
+
+/** The search's tiers, best first: what it makes named exactly (or that and an s), named from the start, named anywhere in its name; anything else on its row. */
+export const RANK_EXACT = 0;
+export const RANK_STARTS = 1;
+export const RANK_NAMED = 2;
+export const RANK_ROW = 3;
+
+/**
+ * How a recipe answers what has been typed, best first (`RANK_*`): the recipe
+ * that makes the thing, or the mould that casts it, ahead of every recipe that
+ * only takes it. "plank": the plank first, not the hundred things built of
+ * planks.
+ */
+export function recipeRank(r: Recipe, query: string): number {
+  if (!query) return RANK_ROW;
+  let best = RANK_ROW;
+  for (const id of recipeMakes(r)) {
+    const n = itemDef(id).name.toLowerCase();
+    best = Math.min(best, n === query || n === `${query}s` || n === `${query}es` ? RANK_EXACT : n.startsWith(query) ? RANK_STARTS : n.includes(query) ? RANK_NAMED : RANK_ROW);
+  }
+  return best;
 }
 
 /** The line at the foot of a search that matched shut recipes left off the page: "Locked recipes: 3 · Show". */

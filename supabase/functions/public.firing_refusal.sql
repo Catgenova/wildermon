@@ -26,6 +26,10 @@ begin
 
   if p_action = 'smelt_ore' then
     if not found or (metal_by_ore(v_it.def)).id is null then return 'Ore only.'; end if;
+    -- Its metal's gate (kind `smelt`, off the pouring table): "Tin smelting: needs smelting 10; have 2.3."
+    if kind_gate_refusal(p_world, p_uid, 'smelt', (metal_by_ore(v_it.def)).id) is not null then
+      return kind_gate_refusal(p_world, p_uid, 'smelt', (metal_by_ore(v_it.def)).id);
+    end if;
     -- A charge is twenty kilograms of ore, which is `ore_per_lump` of them.
     if v_it.count < ore_per_lump() then
       return 'Need ' || ore_per_lump()::int || ' ore; have ' || v_it.count || '.';

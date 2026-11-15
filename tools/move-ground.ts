@@ -9,7 +9,7 @@
  * new answer instead, which is what a change meant for the islands people are
  * already on needs.
  *
- * Three moves, each carrying only what it changed:
+ * The moves, each carrying only what it changed:
  *
  *  - `move`: the rock under the Northeast Tundra and West Skerry, written as the
  *    generator has it now (nothing writes rock after founding, so every
@@ -18,6 +18,10 @@
  *  - `clearTrees`: on an island where no tree grows of itself, the trees nobody
  *    has touched come off and the tile goes back to what the generator lays
  *    there now. Planted ones are in `tile_change` and stay.
+ *  - `regrowTrees`: `clearTrees` undone on 14 November, when the Northeast
+ *    Tundra grew trees again: where the generator lays a tree there now, a
+ *    tile nobody has touched that still holds what the treeless generator
+ *    laid gets the tree back.
  *  - `goldOff`: gold seams anywhere but under the Northeast Tundra's mountain
  *    become what the generator lays there now (iron, as any seam that belongs
  *    to another island does).
@@ -26,6 +30,9 @@
  *    an island founded before it holds the apple or olive the old generator
  *    grew there. Those trees, on tiles nobody has touched, become the island's
  *    fruit, keeping their age.
+ *  - `seryllHome`: seryll seams outside the heart of Volcano Isle's labyrinth of
+ *    lava become what the generator lays there now (iron), and the heart takes
+ *    the seams the generator lays in it, on tiles nobody has changed.
  *  - `fruitByKind`: the same move by kind rather than by tile. The woods turn
  *    over every six days (`TREE_AGES`), a dead tree seeding its own kind round
  *    it, so after a month and more nothing stands where founding day put it and
@@ -45,7 +52,7 @@
  *     npx tsx tools/move-ground.ts
  */
 import { execFileSync } from 'node:child_process';
-import { generateAtlasWindow, regionAt } from '../src/world/atlas-world';
+import { generateAtlasWindow, regionAt, type Atlas } from '../src/world/atlas-world';
 import { OWN_FRUIT_SHARE, REGIONS } from '../src/world/regions';
 import { ISLAND_FRUIT, packTreeData, ROCK_VARIANTS, TileType, TREE_DEFS, treeSpecies, treeVariant } from '../src/world/tiles';
 import { readAtlas } from './atlas-node';
@@ -86,6 +93,7 @@ export interface World { id: string; name: string; seed: number; size: number }
 const regionNamed = (key: string): number => REGIONS.findIndex((R) => R.key === key);
 const PLUM = TREE_DEFS.findIndex((t) => t.name === 'Plum');
 const GOLD = ROCK_VARIANTS.findIndex((r) => r.yields === 'gold_ore');
+const SERYLL = ROCK_VARIANTS.findIndex((r) => r.yields === 'seryll_ore');
 
 /** The rows of land from y0 for h rows, by y: the columns asked for, unpacked. */
 function readBand(sql: Sql, world: World, y0: number, h: number, cols: Array<'tiles' | 'data' | 'rock'>): Map<number, Record<string, Uint8Array>> {
@@ -209,6 +217,63 @@ export function clearTrees(sql: Sql, world: World): string {
   return `${world.name}: ${cleared} trees taken off where none grow of themselves`;
 }
 
+/**
+ * The ground the generator laid on a region while it was `treeless` (8 October to 14 November): the flag set back on
+ * that region for the one call, so the tiles `clearTrees` wrote are worked out by the same rule that wrote them.
+ */
+export function treelessWindow(seed: number, atlas: Atlas, region: number, x0: number, y0: number, w: number, h: number, size: number) {
+  const R = REGIONS[region];
+  const was = R.treeless;
+  R.treeless = true;
+  try {
+    return generateAtlasWindow(seed, atlas, x0, y0, w, h, size);
+  } finally {
+    R.treeless = was;
+  }
+}
+
+/**
+ * `clearTrees` undone: the Northeast Tundra grows trees again (14 November). Where the generator lays a tree there
+ * now and laid none while the island was treeless, a tile nobody has touched that still holds what the treeless
+ * generator laid (tundra or grass, data nought) gets the tree the generator lays there now, through
+ * `land_regrow_face`, which writes a tile only while it still holds what was read. Anything in `tile_change` (dug,
+ * built, paved, planted, felled, or turned over by the woods) stays as it is.
+ */
+export const REGROW = '2026-11-14 trees back on the Northeast Tundra';
+export function regrowTrees(sql: Sql, world: World): string {
+  const TUNDRA = regionNamed('NortheastTundra');
+  const b = boundsOf(world, new Set([TUNDRA]));
+  let grown = 0;
+  if (b) {
+    const atlas = readAtlas();
+    const S = world.size;
+    const told = touched(sql, world);
+    const w = b.xHi - b.xLo + 1;
+    for (let y0 = b.yLo; y0 <= b.yHi; y0 += BAND) {
+      const h = Math.min(BAND, b.yHi + 1 - y0);
+      const land = readBand(sql, world, y0, h, ['tiles', 'data']);
+      const now = generateAtlasWindow(world.seed, atlas, b.xLo, y0, w, h, S);
+      const then = treelessWindow(world.seed, atlas, TUNDRA, b.xLo, y0, w, h, S);
+      const statements: string[] = [];
+      for (const [y, row] of land) {
+        const j = y - y0;
+        const xs: number[] = [], fromT: number[] = [], fromD: number[] = [], toT: number[] = [], toD: number[] = [];
+        for (let x = b.xLo; x <= b.xHi; x++) {
+          const k = j * w + (x - b.xLo);
+          if (now.tiles[k] !== TileType.Tree || then.tiles[k] === TileType.Tree) continue;
+          if (row.tiles[x] !== then.tiles[k] || row.data[x] !== then.data[k]) continue;
+          if (told.has(y * S + x) || regionAt(atlas, x, y, S) !== TUNDRA) continue;
+          xs.push(x); fromT.push(then.tiles[k]); fromD.push(then.data[k]); toT.push(now.tiles[k]); toD.push(now.data[k]);
+        }
+        if (xs.length) statements.push(`select land_regrow_face(${lit(world.id)}, ${y}, ${arr(xs)}, ${arr(fromT)}, ${arr(fromD)}, ${arr(toT)}, ${arr(toD)})`);
+      }
+      grown += writeBand(sql, statements);
+    }
+  }
+  finish(sql, world, REGROW, 0, grown);
+  return `${world.name}: ${grown} trees back on the Northeast Tundra, on tiles nobody has touched`;
+}
+
 export const GOLD_MOVE = '2026-10-08 gold only under the Northeast Tundra';
 export function goldOff(sql: Sql, world: World): string {
   const atlas = readAtlas();
@@ -234,6 +299,45 @@ export function goldOff(sql: Sql, world: World): string {
   }
   finish(sql, world, GOLD_MOVE, moved, 0);
   return `${world.name}: ${moved} gold seams off the islands that no longer hold gold`;
+}
+
+export const SERYLL_MOVE = '2026-11-15 seryll in the heart of the labyrinth of lava only';
+/**
+ * Seryll seams outside the heart of Volcano Isle's labyrinth of lava become what the generator lays there now (iron),
+ * and the heart's dry ground takes the seams the generator now lays there (`rockKindFor`, `lavaland.ts`): on tiles
+ * nobody has changed (`tile_change`), so nothing dug, mined or built moves.
+ */
+export function seryllHome(sql: Sql, world: World): string {
+  const b = boundsOf(world, new Set([regionNamed('Volcano')]));
+  let off = 0, on = 0;
+  if (b) {
+    const atlas = readAtlas();
+    const S = world.size;
+    const told = touched(sql, world);
+    const w = b.xHi - b.xLo + 1;
+    for (let y0 = b.yLo; y0 <= b.yHi; y0 += BAND) {
+      const h = Math.min(BAND, b.yHi + 1 - y0);
+      const land = readBand(sql, world, y0, h, ['rock']);
+      const win = generateAtlasWindow(world.seed, atlas, b.xLo, y0, w, h, S);
+      const statements: string[] = [];
+      for (const [y, { rock }] of land) {
+        const j = y - y0;
+        const xs: number[] = [], to: number[] = [];
+        for (let x = b.xLo; x <= b.xHi; x++) {
+          const now = win.rock[j * w + (x - b.xLo)];
+          if ((rock[x] === SERYLL) === (now === SERYLL) || told.has(y * S + x)) continue;
+          xs.push(x);
+          to.push(now);
+          if (now === SERYLL) on++;
+          else off++;
+        }
+        if (xs.length) statements.push(`select land_regrow_row(${lit(world.id)}, ${y}, ${arr(xs)}, ${arr(to)}, ${arr([])}, ${arr([])}, ${arr([])}, ${TileType.Tree})`);
+      }
+      writeBand(sql, statements);
+    }
+  }
+  finish(sql, world, SERYLL_MOVE, off + on, 0);
+  return `${world.name}: ${off} seryll seams outside the labyrinth's heart made what the ground lays there now, ${on} laid in it`;
 }
 
 /**
@@ -340,6 +444,7 @@ export function fruitByKind(sql: Sql, world: World): string {
 
 export const MOVES: Array<[string, (sql: Sql, world: World) => string]> = [
   [MOVE, move], [CLEAR, clearTrees], [GOLD_MOVE, goldOff], [FRUIT_MOVE, fruitHome], [FRUIT_KIND_MOVE, fruitByKind],
+  [REGROW, regrowTrees], [SERYLL_MOVE, seryllHome],
 ];
 
 /** Every move not yet made, on every island that is open. */

@@ -14,7 +14,7 @@ begin
                     when p_action = 'practise_dummy' then training_dummy_kind()
                     when p_action in ('shoot_target', 'pull_arrows') then archery_target_kind()
                     when p_action in ('moor_boat', 'unmoor_boat') then mooring_post_kind()
-                    when p_action = 'carve_bust' then stone_bust_kind() end;
+                    when p_action = 'carve_bust' then case when sub = obsidian_bust_kind() then sub else stone_bust_kind() end end;
   if not found then return 'It is gone.'; end if;
   v_name := lower((select f.name from furniture_def f where f.id = pl.sub));
   g := coalesce(pl.garden, '{}'::jsonb);

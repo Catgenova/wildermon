@@ -6,7 +6,7 @@ CREATE OR REPLACE FUNCTION public.patch_sowable(p_world uuid, p_level integer, p
  STABLE
 AS $function$
   select in_bounds(p_world, p_x, p_y)
-     and not exists (select 1 from crop cr where cr.world_id = p_world and cr.x = p_x and cr.y = p_y)
+     and not exists (select 1 from crop cr where cr.world_id = p_world and cr.x = p_x and cr.y = p_y and cr.storey = p_level)
      and ((bed_at(p_world, p_level, p_x, p_y) and bed_open(p_world, p_level, p_x, p_y))
           or (p_level = 0 and land_tile(p_world, p_x, p_y) = tile_id('Field')))
 $function$

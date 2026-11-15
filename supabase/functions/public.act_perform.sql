@@ -36,6 +36,11 @@ begin
     perform perform_swirl(p_world, p_uid, p_action, p_target);
     return;
   end if;
+  -- Mine, at an outcropping (`outcrops.ts`).
+  if outcrop_action(p_action) then
+    perform perform_outcrop(p_world, p_uid, p_action, p_target);
+    return;
+  end if;
   -- Reading a trail from the field guide (`tracking.ts`).
   if track_action(p_action) then
     perform perform_track(p_world, p_uid, p_action, p_target);
@@ -208,7 +213,7 @@ begin
     if tool_id is not null then perform wear_tool(tool_id); end if;
     if not skill_check(s, d.difficulty, tq) then
       perform skill_raise(p_world, p_uid, d.skill, try_gain(false));
-      perform tell(p_world, p_uid, 'Dig failed.', 'event');
+      perform tell(p_world, p_uid, 'Dig failed.' || fail_why(), 'event');
       return;
     end if;
     perform land_set_height(p_world, cx, cy, land_height(p_world, cx, cy) - 1);

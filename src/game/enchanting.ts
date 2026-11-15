@@ -12,7 +12,7 @@
  * words; `supabase/test/enchant.ts` holds the two to each other.
  */
 import type { ActionDef, Target } from './actions';
-import { maxHealth, SPECIES, type Creature } from './creatures';
+import { maxHealth, SPECIES, stageName, type Creature } from './creatures';
 import type { Game, PlacedEnchantable } from './game';
 import { QL_BARE, QL_LOW, QL_SPAN } from './limits';
 import { describeWith, ITEM_DEFS, itemDef, itemName, type Item } from './items';
@@ -461,7 +461,7 @@ export function enchantWorks(g: Game, e: EnchantmentDef, ql: number, c: Creature
     case 'frost': frost(g, c); break;
     default: break;
   }
-  const said = enchantHitSaid(e, SPECIES[c.species]?.name.toLowerCase() ?? 'thing');
+  const said = enchantHitSaid(e, stageName(c).toLowerCase());
   if (said) g.logMsg(said, 'fight');
 }
 

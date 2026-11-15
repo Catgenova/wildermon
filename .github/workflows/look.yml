@@ -15,6 +15,9 @@ on:
       bridge_near:
         description: 'A tile as x,y: every bridge with an end within 12 tiles of it, its ends and its spans (blank skips it)'
         default: ''
+      stairs_near:
+        description: 'A tile as x,y: floors, stairs, walls, footprints, piers and heights within 4 tiles of it (blank skips it)'
+        default: ''
 
 # Reads the repository and nothing else; the project is reached with the AI environment's secrets.
 permissions:
@@ -241,6 +244,51 @@ jobs:
             from nb cross join lateral (values ('a', nb.ax, nb.ay), ('b', nb.bx, nb.by)) e(end_, x, y) order by nb.id, e.end_"
           ask "their spans (60 at most)" "$near select s.bridge, s.n, s.x, s.y, s.needed::text as needed, s.total::text as total
             from bridge_span s join nb on nb.world_id = s.world_id and nb.id = s.bridge order by s.bridge, s.n limit 60"
+
+      - name: Stairs and floors near a tile
+        # Asked about: "cant walk up these stairs" (2510, 2258, Vinyard). For the tile in the `stairs_near` input: every
+        # floor slot within 4 tiles on every storey, the walls on their borders, the buildings they belong to and their
+        # footprints and piers, the slabs, the ground and deck heights, and who stands near. Selects only, of STABLE
+        # functions, which cannot write; every list capped.
+        if: inputs.stairs_near != ''
+        continue-on-error: true
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF || 'glebtboagnafcgwjjvfy' }}
+          NEAR: ${{ inputs.stairs_near }}
+        run: |
+          supabase link --project-ref "$PROJECT_REF"
+          ask() { echo "== $1"; supabase db query --linked "$2" || echo "::warning::could not read: $1"; }
+          if ! [[ "$NEAR" =~ ^[0-9]+,[0-9]+$ ]]; then echo "::warning::stairs_near is not x,y"; exit 0; fi
+          nx=${NEAR%,*}; ny=${NEAR#*,}
+          w="world_id::text like 'f3a88670%'"
+          box="x between $((nx - 4)) and $((nx + 4)) and y between $((ny - 4)) and $((ny + 4))"
+          ask "floor slots within 4 tiles of $NEAR" "select f.level, f.x, f.y, f.kind, f.hand, f.facing, f.material, bill_done(f.needed) as done, f.needed::text as needed,
+                 f.building, exists (select 1 from building_tile t where t.world_id = f.world_id and t.x = f.x and t.y = f.y and t.building = f.building) as in_footprint,
+                 frame_stands(f.world_id, f.x, f.y, f.level) as stands
+            from floor_tile f where f.$w and f.$box order by f.level, f.y, f.x limit 200"
+          ask "walls within 4 tiles of $NEAR" "select wl.level, wl.x, wl.y, wl.dir, wl.type, wl.building, bill_done(wl.needed) as done, wl.lowered, t.passable
+            from wall wl left join wall_type_def t on t.id = wl.type where wl.$w and wl.$box order by wl.level, wl.y, wl.x, wl.dir limit 200"
+          ask "the buildings there" "select b.id, b.name, b.levels, b.work_level, b.roof, b.deck,
+                 (select count(*) from building_tile t where t.world_id = b.world_id and t.building = b.id) as tiles
+            from building b where b.$w and b.id in (select building from floor_tile where $w and $box
+                                                    union select building from building_tile where $w and $box) order by b.id"
+          ask "footprint tiles within 4 tiles of $NEAR" "select t.building, t.x, t.y, t.pier from building_tile t where t.$w and t.$box order by t.y, t.x limit 120"
+          ask "cellar tiles within 4 tiles of $NEAR" "select c.building, c.x, c.y, c.dug, cellar_depth() as depth from cellar_tile c where c.$w and c.$box order by c.y, c.x"
+          ask "slabs within 4 tiles of $NEAR" "select f.x, f.y, f.top, f.pool, bill_done(f.needed) as done from foundation f where f.$w and f.$box order by f.y, f.x"
+          ask "heights within 2 tiles of $NEAR" "select gx.x, gy.y, round(surface_height(wd.id, gx.x, gy.y)::numeric, 1) as surface,
+                 top_deck(wd.id, gx.x, gy.y) as top_deck, round(deck_height(wd.id, gx.x, gy.y)::numeric, 1) as deck_height, wall_height() as storey_height
+            from world wd cross join generate_series($((nx - 2)), $((nx + 2))) gx(x) cross join generate_series($((ny - 2)), $((ny + 2))) gy(y)
+           where wd.id::text like 'f3a88670%' order by gy.y, gx.x"
+          ask "who stands within 8 tiles of $NEAR" "select p.name, round(p.x::numeric, 2) as x, round(p.y::numeric, 2) as y, p.level,
+                 to_char(p.moved_at, 'MM-DD HH24:MI:SS') as moved_at
+            from player p where p.$w and greatest(abs(p.x - $nx), abs(p.y - $ny)) <= 8 order by p.moved_at desc limit 20"
+          ask "their last 30 messages that name a stair, a storey or a step" "select to_char(e.at, 'MM-DD HH24:MI:SS') as at, p.name, e.kind, left(e.text, 200) as text
+            from event e join player p on p.world_id = e.world_id and p.uid = e.uid
+           where e.$w and greatest(abs(p.x - $nx), abs(p.y - $ny)) <= 8
+             and (e.text ilike '%stair%' or e.text ilike '%storey%' or e.text ilike '%step%' or e.text ilike '%climb%')
+           order by e.n desc limit 30"
 
       - name: Look
         env:

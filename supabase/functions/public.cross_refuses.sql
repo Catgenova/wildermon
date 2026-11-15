@@ -8,9 +8,9 @@ AS $function$
 declare v_skill double precision; c creature;
 begin
   if cross_of(a.species, b.species) is null then return null; end if;
-  v_skill := skill_of(p_world, p_uid, 'animal_husbandry');
-  if v_skill < cross_skill() then
-    return 'Cross: animal husbandry ' || cross_skill()::int || ' needed, yours ' || floor(v_skill)::int || '.';
+  -- Its gate (kind `cross`): "Cross: needs animal husbandry 50; have 12.0."
+  if kind_gate_refusal(p_world, p_uid, 'cross', 'cross') is not null then
+    return kind_gate_refusal(p_world, p_uid, 'cross', 'cross');
   end if;
   foreach c in array array[a, b] loop
     if c.care < cross_care() then

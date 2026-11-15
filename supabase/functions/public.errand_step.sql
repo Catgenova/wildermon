@@ -193,8 +193,8 @@ begin
     end;
 
   elsif kind in ('smelt', 'kiln') then
-    declare v_p placed; v_s record; v_fits text[] := furnace_fits(kind);
-            v_hold boolean := coalesce(c.carrying->>'def' = any(furnace_fits(kind)), false);
+    declare v_p placed; v_s record; v_fits text[] := worker_furnace_fits(c, kind);
+            v_hold boolean := coalesce(c.carrying->>'def' = any(worker_furnace_fits(c, kind)), false);
     begin
       -- What it has made, out first, while its arms are empty.
       if c.carrying is null then
@@ -217,7 +217,17 @@ begin
       if v_p.id is null then why := 'range'; why_n := rng; return next; return; end if;
       if not v_hold then
         select * into v_s from store_holding(p_world, c.keeper, v_fits, c.to_x, c.to_y);
-        if v_s.x is null then why := 'stock'; why_n := null; return next; return; end if;
+        if v_s.x is null then
+          why := 'stock'; why_n := null;
+          -- Only ore over its own smelting in the stores: `gate`, naming the lowest.
+          if kind = 'smelt' then
+            select array['smelt', g.id] into why_what
+              from metal_def m join skill_gate g on g.kind = 'smelt' and g.id = m.id
+             where m.ore is not null and stores_count(p_world, c.keeper, m.ore) > 0 order by g.level, g.id collate "C" limit 1;
+            if why_what is not null then why := 'gate'; end if;
+          end if;
+          return next; return;
+        end if;
         gx := v_s.cx; gy := v_s.cy; want := null; wx := v_s.x; wy := v_s.y;
       else
         gx := v_p.cx; gy := v_p.cy; want := null; wx := v_p.x; wy := v_p.y;
@@ -442,8 +452,8 @@ begin
     end;
 
   elsif kind = 'lily' then
-    declare v_s record; v_at record; v_roots text[] := array(select w.from_item from water_plant_def w order by w.id);
-            v_hold boolean := coalesce(c.carrying->>'def' = any(array(select w.from_item from water_plant_def w)), false);
+    declare v_s record; v_at record; v_roots text[] := worker_roots(c);
+            v_hold boolean := coalesce(c.carrying->>'def' = any(worker_roots(c)), false);
     begin
       if c.carrying is not null and not v_hold then
         select * into v_s from worker_store(p_world, c, c.carrying->>'def', (c.carrying->>'count')::int);
@@ -456,7 +466,14 @@ begin
       if v_at.x is null then why := 'range'; why_n := rng; return next; return; end if;
       if not v_hold then
         select * into v_s from store_holding(p_world, c.keeper, v_roots, c.to_x, c.to_y);
-        if v_s.x is null then why := 'stock'; why_n := null; return next; return; end if;
+        if v_s.x is null then
+          why := 'stock'; why_n := null;
+          select array['water_plant', g.id] into why_what
+            from water_plant_def w join skill_gate g on g.kind = 'water_plant' and g.id = w.id
+           where stores_count(p_world, c.keeper, w.from_item) > 0 order by g.level, g.id collate "C" limit 1;
+          if why_what is not null then why := 'gate'; end if;
+          return next; return;
+        end if;
         gx := v_s.cx; gy := v_s.cy; want := null; wx := v_s.x; wy := v_s.y;
       else
         gx := v_at.sx + 0.5; gy := v_at.sy + 0.5; want := null; wx := v_at.x; wy := v_at.y;

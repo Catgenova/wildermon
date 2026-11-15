@@ -34,7 +34,7 @@ import { joint, mesh, onScreen, place, ROOT, type Face, type Mat, type Mesh, typ
 
 /* ---- a stage, as numbers ------------------------------------------------------------- */
 
-interface Ghost {
+export interface Ghost {
   stage: 0 | 1 | 2;
   size: number;
   /** How high the middle of the body (its bone) floats over the ground at rest. */
@@ -158,7 +158,7 @@ const LANTERNVEIL_LOOK: Ghost = {
  * its hem and two long tendrils spread out wide at its sides, curling at their ends; under a huge torn witch's hat with a band of
  * leaves and three jack-o'-lanterns, brass lanterns hanging from the brim on chains and one longer, lower down beside it.
  */
-const HALLOWMIRE_LOOK: Ghost = {
+export const HALLOWMIRE_LOOK: Ghost = {
   stage: 2,
   size: 2.2,
   high: 4.3,
@@ -1557,7 +1557,7 @@ const richer = (c: RGB, k = 1.2): RGB => {
   return c.map((x) => clamp(m + (x - m) * k, 0, 255)) as RGB;
 };
 
-function ghostKind(s: Ghost): Kind {
+export function ghostKind(s: Ghost): Kind {
   const bones = ghostBones(s);
   return {
     bones,

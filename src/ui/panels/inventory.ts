@@ -288,7 +288,7 @@ export class InventoryPanel {
    */
   private upToEntry(item: Item, def: ActionDef): MenuItem {
     const rungs = [20, 40, 60, 70, 80, 90, 95];
-    const reach = improveCeiling(this.game, improvable(item.id)?.skill ?? '', item);
+    const reach = improveCeiling(this.game, improvable(item.id, item.extra)?.skill ?? '', item);
     const worth = rungs.filter((q) => q > item.ql + 0.05);
     if (!worth.length) return { label: 'Up to…', hint: 'Above every target QL.', disabled: true };
     return {

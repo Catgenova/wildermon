@@ -1,5 +1,6 @@
 import { GEMS, tradeName, type GemDef } from './gems';
 import { METAL_BY_INGOT, METAL_BY_LUMP, METALS } from './metal';
+import { FIRE_STEEL_CAP } from './volcano';
 import { TREE_DEFS } from '../world/tiles';
 
 /**
@@ -14,7 +15,7 @@ import { TREE_DEFS } from '../world/tiles';
  * it is.
  */
 /** `pelt`: a pelt rug's, the kind its fur came off (`adorn.ts`), named by no material: what the first input's label says. */
-export type MaterialKind = 'wood' | 'metal' | 'gem' | 'pelt';
+export type MaterialKind = 'wood' | 'metal' | 'gem' | 'pelt' | 'glass';
 
 export interface MaterialDef {
   id: string;
@@ -86,6 +87,8 @@ const METAL_PROPS: Record<string, Props> = {
   copper: { difficulty: 0, weight: 1, wear: 1, decay: 1, edge: 0.85, soak: 0.9, bite: 0.9, hold: 1, note: '' },
   iron: { difficulty: 2, weight: 1.1, wear: 0.75, decay: 1.35, edge: 1.12, soak: 1.12, bite: 1.1, hold: 1, note: '' },
   steel: { difficulty: 5, weight: 1.05, wear: 0.5, decay: 0.95, edge: 1.28, soak: 1.22, bite: 1.24, hold: 1, note: '' },
+  // Steel's own numbers: what it adds is its weapons' and tools' improve cap (`FIRE_STEEL_CAP`), said in its note.
+  firesteel: { difficulty: 6, weight: 1.05, wear: 0.5, decay: 0.95, edge: 1.28, soak: 1.22, bite: 1.24, hold: 1, note: `Weapons and tools: improve QL cap +${FIRE_STEEL_CAP} over your skill.` },
   tin: { difficulty: -2, weight: 0.85, wear: 1.5, decay: 1.1, edge: 0.5, soak: 0.55, bite: 0.6, hold: 1, note: '' },
   zinc: { difficulty: -1, weight: 0.9, wear: 1.4, decay: 1.05, edge: 0.55, soak: 0.6, bite: 0.65, hold: 1, note: '' },
   lead: { difficulty: -3, weight: 1.95, wear: 1.6, decay: 0.7, edge: 0.45, soak: 0.72, bite: 0.5, hold: 1, note: '' },
@@ -109,7 +112,19 @@ const gem = (g: GemDef): MaterialDef => ({ id: g.id, name: g.name, kind: 'gem', 
 export const WOODS: MaterialDef[] = TREE_DEFS.map((t) => wood(t.name));
 export const METAL_MATERIALS: MaterialDef[] = METALS.map((m) => metal(m.id, m.name));
 export const GEM_MATERIALS: MaterialDef[] = GEMS.map(gem);
-export const MATERIALS: MaterialDef[] = [...WOODS, ...METAL_MATERIALS, ...GEM_MATERIALS];
+/**
+ * Obsidian: a head or a blade knapped from it (`recipes.ts` knap_obsidian_*). The keenest edge and the truest bite there
+ * are, `OBSIDIAN_KEEN` over the best metal's of each, and it wears `OBSIDIAN_WEAR` times as fast as the softest metal.
+ */
+export const OBSIDIAN = 'Obsidian';
+export const OBSIDIAN_KEEN = 0.1;
+export const OBSIDIAN_WEAR = 1.5;
+const best = (k: 'edge' | 'bite' | 'wear'): number => Math.max(...Object.values(METAL_PROPS).map((p) => p[k]));
+export const OBSIDIAN_MATERIAL: MaterialDef = {
+  id: OBSIDIAN.toLowerCase(), name: OBSIDIAN, kind: 'glass', difficulty: 8, weight: 0.7, wear: +(best('wear') * OBSIDIAN_WEAR).toFixed(2), decay: 0.05,
+  edge: +(best('edge') + OBSIDIAN_KEEN).toFixed(2), soak: 1, bite: +(best('bite') + OBSIDIAN_KEEN).toFixed(2), hold: 1, note: '',
+};
+export const MATERIALS: MaterialDef[] = [...WOODS, ...METAL_MATERIALS, ...GEM_MATERIALS, OBSIDIAN_MATERIAL];
 /** Anything that carries its own light (an Embra, a dragon) takes this many times the blow from a bane metal's edge. */
 export const BANE_BONUS = 1.5;
 /** Each multiplier a material carries, by what it multiplies, in the order the examine line says them. */

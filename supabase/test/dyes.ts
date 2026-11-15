@@ -51,6 +51,7 @@ import {
   BOIL_LITRES, boilCountPlain, boilRefusal, boilSaid, countForGrams, DYEABLE_ITEMS, dyedAlready, dyeGone, gramsOf, noDye, takesDye, tooLittleDye,
 } from '../../src/game/dyes';
 import { PERK_BY_ID } from '../../src/game/perks';
+import { gateOf } from '../../src/game/skillgates';
 import { CRAFT_REACH } from '../../src/game/recipes';
 import { BUCKET_LITRES, type PlacedFurniture } from '../../src/game/furniture';
 import { noMixing, vesselSays } from '../../src/game/placeables';
@@ -198,6 +199,8 @@ const PURPLE5 = dyeText(readDye(PURPLE4)!.liquid, BUCKET_LITRES);
 const SHORT = 32;
 const RASP = dyeRecipeId('raspberry');
 const DOUBLE = PERK_BY_ID.get('naturalist_double_boil')!.fx['litres:dye'];
+/** Alchemy enough for every boil's gate (`skillgates.ts`), so the checks reach what this asks of a boil. */
+const ALCHEMY = Math.max(...DYESTUFFS.map((d) => gateOf('recipe', dyeRecipeId(d.from))?.level ?? 1));
 /** The litres in the barrel within reach, short of a caravel; and in one further off, enough for it. */
 const NEAR_LITRES = 40, FAR_LITRES = 200;
 const RED5 = dyeText(pureDye('red', 50), BUCKET_LITRES), BLUE5 = dyeText(pureDye('blue', 50), BUCKET_LITRES);
@@ -222,6 +225,8 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', u)::text, true);
   perform rpc_join(w, 'Mira');
   update player set body_at = now(), x = 30.5, y = 30.5, level = 0 where world_id = w and uid = u;
+  insert into skill (world_id, uid, id, value) values (w, u, 'alchemy', ${ALCHEMY})
+    on conflict (world_id, uid, id) do update set value = excluded.value;
 
   -- 1. A boil of each dyestuff.
   for d in select * from dyestuff_def order by recipe loop
@@ -398,6 +403,7 @@ for (const d of DYESTUFFS) {
 /* ---- the browser, on a game of its own, the same way --------------------------------- */
 
 const g = Game.create(4245);
+g.skills.values.set('alchemy', ALCHEMY);
 g.rand = mulberry32(4245);
 g.sureCheck = () => true;
 const said = (fn: () => void): string => {

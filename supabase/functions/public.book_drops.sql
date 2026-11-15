@@ -4,4 +4,4 @@ CREATE OR REPLACE FUNCTION public.book_drops()
  RETURNS TABLE(kind text, book text, odds double precision)
  LANGUAGE sql
  IMMUTABLE
-AS $function$ select * from (values ('goblin', 'recipe', 0.05::double precision), ('orc', 'recipe', 0.05::double precision), ('ogre', 'formula', 0.05::double precision), ('dragon', 'formula', 0.25::double precision)) v (kind, book, odds) $function$
+AS $function$ select * from (values ('goblin', 'recipe', 0.05::double precision), ('orc', 'recipe', 0.05::double precision), ('ogre', 'formula', 0.05::double precision), ('dragon', 'formula', 0.25::double precision), ('ash_wraith', 'formula', 0.05::double precision), ('magma_golem', 'formula', 0.05::double precision), ('cinder_hound', 'recipe', 0.05::double precision)) v (kind, book, odds) $function$

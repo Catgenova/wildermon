@@ -161,7 +161,7 @@ begin
     -- A Mason's Concrete Hand never fails (`fail:raise_rock`).
     if not perk_pass(skill_check(v_skill, d.difficulty, v_tool), pk(p_world, p_uid, 'fail:raise_rock', 1)) then
       perform skill_raise(p_world, p_uid, 'masonry', try_gain(false));
-      perform tell(p_world, p_uid, 'Concrete failed: concrete lost.', 'event');
+      perform tell(p_world, p_uid, 'Concrete failed: concrete lost.' || fail_why(), 'event');
       return;
     end if;
     -- The rock rises: the height goes up and the soil over it stays nought --
@@ -195,7 +195,7 @@ begin
     if v_id is not null then perform wear_tool(v_id); end if;
     if not skill_check(v_skill, d.difficulty, v_tool) then
       perform skill_raise(p_world, p_uid, 'masonry', try_gain(false));
-      perform tell(p_world, p_uid, 'Rubble failed: shards lost.', 'event');
+      perform tell(p_world, p_uid, 'Rubble failed: shards lost.' || fail_why(), 'event');
       return;
     end if;
     perform land_set_height(p_world, cx, cy, land_height(p_world, cx, cy) + 1);
@@ -215,7 +215,7 @@ begin
     if v_id is not null then perform wear_tool(v_id); end if;
     if not skill_check(v_skill, d.difficulty, v_tool) then
       perform skill_raise(p_world, p_uid, 'digging', try_gain(false));
-      perform tell(p_world, p_uid, 'Dredge failed.', 'event');
+      perform tell(p_world, p_uid, 'Dredge failed.' || fail_why(), 'event');
       return;
     end if;
     -- The bottom comes up a spadeful at a time, exactly as a corner ashore
@@ -369,7 +369,7 @@ begin
     if not skill_check(v_skill, d.difficulty, v_tool) then
       perform skill_raise(p_world, p_uid, 'forestry', try_gain(false));
       perform tell(p_world, p_uid, 'Prune failed: ' || lower(v_tree.name)
-        || '.', 'event');
+        || '.' || fail_why(), 'event');
       return;
     end if;
     /*
@@ -427,7 +427,7 @@ begin
     -- A Forester's Master Grafter's graft always takes (`fail:graft`).
     if not perk_pass(skill_check(v_skill, d.difficulty, v_tool), pk(p_world, p_uid, 'fail:graft', 1)) then
       perform skill_raise(p_world, p_uid, 'forestry', try_gain(false));
-      perform tell(p_world, p_uid, 'Graft failed: ' || lower(v_sprout.extra) || ' sprout lost.', 'event');
+      perform tell(p_world, p_uid, 'Graft failed: ' || lower(v_sprout.extra) || ' sprout lost.' || fail_why(), 'event');
       return;
     end if;
     -- The species and nothing else: the age stays, and so does any notch.
@@ -474,7 +474,7 @@ begin
     if v_id is not null then perform wear_tool(v_id); end if;
     if not skill_check(v_skill, d.difficulty, v_tool) then
       perform skill_raise(p_world, p_uid, 'woodcutting', try_gain(false));
-      perform tell(p_world, p_uid, 'Cut failed.', 'event');
+      perform tell(p_world, p_uid, 'Cut failed.' || fail_why(), 'event');
       return;
     end if;
     -- A fresh trunk off the stool: whatever notch was in the old one went with it.
@@ -539,7 +539,7 @@ begin
     if not skill_check(v_skill, d.difficulty, v_tool) then
       perform skill_raise(p_world, p_uid, 'digging', try_gain(false));
       perform tell(p_world, p_uid, 'Dig failed: ' || lower(v_tree.name)
-        || ' stump.', 'event');
+        || ' stump.' || fail_why(), 'event');
       return;
     end if;
     -- Bare dirt where it stood: the roots came out with it.

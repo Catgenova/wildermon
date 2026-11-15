@@ -38,6 +38,8 @@ import { psql, ok, bad, check } from './harness';
 
 /** Digging, where the hoard is dug from: low enough that a full go and a missed one cannot be mistaken. */
 const DIG_AT = 20;
+/** A worn map's QL: under the sound tier's, whose dig is gated at digging 20 (`skillgates.ts`, kind `hoard`). */
+const WORN_QL = 20;
 /** The shovel it is dug with, whose wear is held against the browser's. */
 const SHOVEL_QL = 30;
 
@@ -191,7 +193,8 @@ const raised = (g: Game): number => g.skills.get('mind_logic') - CHAR_START;
   g.skills.values.set('body_control', CHAR_START);
   g.skills.values.set('body_strength', CHAR_START);
   const shovel = g.inventory.add('shovel', { ql: SHOVEL_QL });
-  const map = buryTreasure(g, 50, g.player.x, g.player.y);
+  // A worn map, as the island's is: dug up at any digging (its tier's gate is 1).
+  const map = buryTreasure(g, WORN_QL, g.player.x, g.player.y);
   if (!map) throw new Error('nowhere to bury a hoard');
   const mult = g.skillMult('digging');
   g.requestAction(act('unearth'), { kind: 'item', uid: map.uid });

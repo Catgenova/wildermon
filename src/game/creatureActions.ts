@@ -4,7 +4,7 @@ import { ENCHANT_BURN, enchantRoll, enchantWorks, shotRoll } from './enchanting'
 import { swingEnchant, type Enchant } from './enchant';
 import type { ActionDef, Target } from './actions';
 import { perkN } from './creatures';
-import { fedOn, tameLearn, tameNeeds, tameRefusal, BASE_STATS, BRACE_MOST, BRACE_STEP, bracePoints, BRIDLE_PACE, COLLAR_CUT, fitted, mirrored, mirrorNames, combedBorn, FILE_RARITY_ODDS, POT_MOST, POT_STEP, potPoints, potRoom, type BaseStat, kindDescription, kindName, markOn, sparFloor, sparring, sparSaid, yielded, isShod, shoeable, SHOE_DAYS, SHOES_PER_MOUNT, TACK, AGES, ageDef, ageOf, attackOf, bloodMul, careWord, PLAYER_ATTACKER, coaxBonus, COAX_STEP, creatureLevel, GRAZE_FILL, forgetCoaxing, isBaitFor, maxHealth, raritySays, SEX_NAMES, SPECIES, STANCE_NAMES, COMPANION_LEASH, MOUNT_STOREY_SAID, mountGroundSaid, workRangeOf, type Creature, type SpeciesDef, type Stance, type GatherKind, takeArms } from './creatures';
+import { fedOn, tameLearn, tameNeeds, tameRefusal, BASE_STATS, BRACE_MOST, BRACE_STEP, bracePoints, BRIDLE_PACE, COLLAR_CUT, fitted, mirrored, mirrorNames, combedBorn, FILE_RARITY_ODDS, POT_MOST, POT_STEP, potPoints, potRoom, type BaseStat, kindDescription, kindName, markOn, stageName, sparFloor, sparring, sparSaid, yielded, isShod, shoeable, SHOE_DAYS, SHOES_PER_MOUNT, TACK, AGES, ageDef, ageOf, attackOf, bloodMul, careWord, PLAYER_ATTACKER, coaxBonus, COAX_STEP, creatureLevel, GRAZE_FILL, forgetCoaxing, isBaitFor, maxHealth, raritySays, SEX_NAMES, SPECIES, STANCE_NAMES, COMPANION_LEASH, MOUNT_STOREY_SAID, mountGroundSaid, workRangeOf, type Creature, type SpeciesDef, type Stance, type GatherKind, takeArms } from './creatures';
 import { studBook } from './husbandry';
 import { article, capital, percent } from './words';
 import { bestTier, LAMP_TIER_ODDS, mirrorTrait, nextTier, pct, rekindle, traitList, traitName, traitOf, traitSays, traitTier, type Rekindled } from './traits';
@@ -201,7 +201,7 @@ export function classDealt(g: Game, c: Creature): number {
  */
 function sideBlow(g: Game, c: Creature, kind: string, dmg: number): void {
   if (kind === 'mauls') {
-    if (c.windup > 0) g.logMsg(`Heavy blow broken: ${SPECIES[c.species]?.name.toLowerCase() ?? 'thing'}.`, 'fight');
+    if (c.windup > 0) g.logMsg(`Heavy blow broken: ${stageName(c).toLowerCase()}.`, 'fight');
     c.windup = 0;
     c.cooldown = Math.max(0, c.cooldown) + STAGGER_MAUL;
   } else if (kind === 'polearms') c.cooldown = Math.max(0, c.cooldown) + STAGGER_POLE;
@@ -223,7 +223,7 @@ export function riposte(g: Game, c: Creature, share: number): void {
   const def = SPECIES[c.species];
   const { def: usable, item } = swungWith(g);
   if (g.rand() > hitChance(g, usable, item) * bloodMul(c, 'evade')) {
-    g.logMsg(`Riposte missed: ${def.name.toLowerCase()}.`, 'fight');
+    g.logMsg(`Riposte missed: ${stageName(c).toLowerCase()}.`, 'fight');
     return;
   }
   const bane = banes(item) && def.glow ? BANE_BONUS : 1;
@@ -235,8 +235,8 @@ export function riposte(g: Game, c: Creature, share: number): void {
   if (c.health > 0 && usable.id !== FIST.id) sideBlow(g, c, usable.kind, dmg);
   if (item) g.damageItem(item, 0.35 * g.perk('worn:weapon', 1));
   g.logMsg(c.health > 0
-    ? `Riposte${crit ? ', critical' : ''}: ${def.name.toLowerCase()} ${Math.ceil(c.health)}/${maxHealth(c, def)}.`
-    : `Riposte: ${def.name.toLowerCase()} killed.`, 'fight');
+    ? `Riposte${crit ? ', critical' : ''}: ${stageName(c).toLowerCase()} ${Math.ceil(c.health)}/${maxHealth(c, def)}.`
+    : `Riposte: ${stageName(c).toLowerCase()} killed.`, 'fight');
 }
 
 /**
@@ -402,12 +402,12 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       const def = SPECIES[c.species];
       if (c.mode === 'wild') {
         if (def.monster) {
-          g.logMsg(`${def.name}: ${def.description ? `${def.description} ` : ''}Health ${Math.ceil(c.health)}/${maxHealth(c, def)}, blow ${attackOf(c, def).toFixed(0)} damage. Cannot be tamed.`, 'error');
+          g.logMsg(`${stageName(c)}: ${def.description ? `${def.description} ` : ''}Health ${Math.ceil(c.health)}/${maxHealth(c, def)}, blow ${attackOf(c, def).toFixed(0)} damage. Cannot be tamed.`, 'error');
           return;
         }
         const warm = coaxBonus(c, g.time, coaxStep(g));
         const used = warm > 0 ? ` Offerings taken: ${c.coaxed}, next +${(warm * 100).toFixed(0)}% chance.` : '';
-        g.logMsg(`Wild ${c.rare ? `${rarityOf(c).name} ` : ''}${def.name.toLowerCase()}: ${def.description ? `${def.description} ` : ''}Eats: ${dietText(c)}.${used}${raritySays(c)}${formSays(c, def)}`, 'wildermon');
+        g.logMsg(`Wild ${c.rare ? `${rarityOf(c).name} ` : ''}${stageName(c).toLowerCase()}: ${def.description ? `${def.description} ` : ''}Eats: ${dietText(c)}.${used}${raritySays(c)}${formSays(c, def)}`, 'wildermon');
         return;
       }
       const mood = c.hunger < 0.3 ? 'Hungry.' : c.hunger < 0.6 ? 'Peckish.' : 'Fed.';
@@ -631,7 +631,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       if (!c || !foe) return;
       c.enemy = foe.id;
       c.heelUntil = -1e9;
-      g.logMsg(`${c.name} attacks: ${SPECIES[foe.species].name.toLowerCase()}.`, 'fight');
+      g.logMsg(`${c.name} attacks: ${stageName(foe).toLowerCase()}.`, 'fight');
     },
   },
   {
@@ -787,7 +787,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       let dealt = 0;
       const spar = c.mode !== 'wild';
       if (!landed) {
-        g.logMsg(`Missed: ${spar ? c.name : def.name.toLowerCase()}.`, 'fight');
+        g.logMsg(`Missed: ${spar ? c.name : stageName(c).toLowerCase()}.`, 'fight');
         if (spar) return Math.hypot(c.x - g.player.x, c.y - g.player.y) <= meleeReach(g);
       } else {
         // Silver's old virtue: what carries its own light hates a silver edge.
@@ -819,7 +819,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
         // Less for a Mender's Armour Care, as `perform_fight` has it.
         if (item) g.damageItem(item, 0.35 * g.perk('worn:weapon', 1));
         g.logMsg(
-          `Hit${crit ? ', critical' : ''}: ${def.name.toLowerCase()}${before > c.health ? ` ${Math.max(0, Math.ceil(c.health))}/${maxHealth(c, def)}` : ''}.`,
+          `Hit${crit ? ', critical' : ''}: ${stageName(c).toLowerCase()}${before > c.health ? ` ${Math.max(0, Math.ceil(c.health))}/${maxHealth(c, def)}` : ''}.`,
           'fight',
         );
       }
@@ -897,7 +897,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       g.gainSkill('fighting', tryGain(landed, SHOT_FIGHT));
       g.gainSkill('archery', tryGain(landed, SHOT_ARCHERY));
       if (!landed) {
-        g.logMsg(`Arrow missed: ${def.name.toLowerCase()}.`, 'fight');
+        g.logMsg(`Arrow missed: ${stageName(c).toLowerCase()}.`, 'fight');
       } else {
         // The stave throws it; the head is what goes in. Both have a say.
         const head = matOfItem(arrow);
@@ -921,7 +921,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
         // And what is enchanted into the bow, now and then (`shotRoll`): a Flamearrow's burn, a Frostbite's slow.
         const e = c.health > 0 ? shotRoll(g, held, c) : null;
         if (e && held.enchant) enchantWorks(g, e, held.enchant.ql, c, dmg, { burn: () => g.burn(c, ENCHANT_BURN.each, ENCHANT_BURN.secs), bleed: () => {} });
-        g.logMsg(`Arrow hit${crit ? ', critical' : ''}: ${def.name.toLowerCase()} ${Math.max(0, Math.ceil(c.health))}/${maxHealth(c, def)}.`, 'fight');
+        g.logMsg(`Arrow hit${crit ? ', critical' : ''}: ${stageName(c).toLowerCase()} ${Math.max(0, Math.ceil(c.health))}/${maxHealth(c, def)}.`, 'fight');
       }
       if (c.health <= 0) return false;
       // Shot at, it comes for you, as anything struck does.
@@ -1305,7 +1305,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       if (c.pouch) g.dropOnGround(x, y, c.pouch);
       c.pouch = null;
       const name = c.name;
-      const what = SPECIES[c.species].name.toLowerCase();
+      const what = stageName(c).toLowerCase();
       g.creatures.kill(g, c, 'player', true);
       g.logMsg(`Culled: ${name}. ${capital(what)} carcass left.`, 'fight');
     },

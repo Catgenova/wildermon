@@ -25,6 +25,9 @@ import { EffectRow } from './effects';
 import { TRACK_SHOW } from '../game/tracking';
 import type { Tooltip } from './tooltip';
 import { nextFrame } from './repaint';
+import { kitMeter, type Meaning } from './kit';
+import { chartRegion } from '../world/chart';
+import { HEAT_SAID, heatGear, heatMul, LAVA_ISLE } from '../game/lava';
 
 export interface HudCallbacks {
   toggle: (id: string) => void;
@@ -164,6 +167,10 @@ export class Hud {
   private aroundText = document.createElement('span');
   private aroundStop!: HTMLButtonElement;
   private gearEl: HTMLDivElement;
+  /** The surveyor's level, while one is set: its height and a button that clears it. */
+  private levelEl = document.createElement('div');
+  private levelText = document.createElement('span');
+  private levelClear = document.createElement('button');
   private eatBtn!: HTMLButtonElement;
   private stanceBtn!: HTMLButtonElement;
   /** The sleep bonus switch: "Sleep bonus: on · 2 h 5 m left" (`sleep.ts`). */
@@ -197,6 +204,10 @@ export class Hud {
   private stopBtn: HTMLButtonElement;
   private beltDue = 0;
   private foodEl: HTMLDivElement;
+  /** Volcano Isle's heat (`lava.ts`): its row, the interior kit's meter, and its value; shown on Volcano Isle only. */
+  private heatRow: HTMLDivElement;
+  private heatMeter: ReturnType<typeof kitMeter>;
+  private heatValue: HTMLSpanElement;
   private foodBars = new Map<string, HTMLDivElement>();
   private numbersTaken: () => boolean;
 
@@ -233,6 +244,18 @@ export class Hud {
       status.append(row);
       this.bars[id] = { fill, value };
     }
+    // Volcano Isle's heat (`lava.ts`), under the four: on Volcano Isle only.
+    this.heatRow = document.createElement('div');
+    this.heatRow.className = 'hud-bar-row hud-heat';
+    const heatName = document.createElement('span');
+    heatName.className = 'hud-bar-label';
+    heatName.textContent = HEAT_SAID.label;
+    this.heatMeter = kitMeter('hud-heat-meter', 'hud-heat-fill');
+    this.heatValue = document.createElement('span');
+    this.heatValue.className = 'hud-bar-value';
+    this.heatRow.append(heatName, this.heatMeter.el, this.heatValue);
+    this.heatRow.hidden = true;
+    status.append(this.heatRow);
     /*
      * What is actually in you: four thin bars under the food bar. Eating well
      * holds hunger and thirst off; eating well in all four teaches you more,
@@ -345,6 +368,32 @@ export class Hud {
     this.aroundStop.addEventListener('click', () => this.stopAround());
     this.aroundEl.append(this.aroundText, this.aroundStop);
     status.append(this.aroundEl);
+    /*
+     * The level, while one is set (`take_level`): its height, and × to clear
+     * it as Clear level does. Drawn when the island's level changes
+     * (`Game.sawLevel` says `level`), not on the next tick.
+     */
+    this.levelEl.className = 'hud-companion hud-level';
+    this.levelEl.hidden = true;
+    const levelMark = document.createElement('span');
+    levelMark.className = 'hud-level-mark';
+    setMarkup(levelMark, fixed(
+      '<svg viewBox="0 0 16 10" width="16" height="10" aria-hidden="true"><rect x="0.5" y="2.5" width="15" height="5" rx="2.5" class="hud-level-tube"/><circle cx="8" cy="5" r="1.6" class="hud-level-bubble"/><path d="M5.5 2.5v5M10.5 2.5v5" class="hud-level-line"/></svg>'));
+    this.levelText.className = 'hud-level-text';
+    this.levelClear.type = 'button';
+    this.levelClear.className = 'hud-mini hud-level-clear';
+    this.levelClear.textContent = '\u00d7';
+    this.levelClear.title = 'Clear level';
+    this.levelClear.setAttribute('aria-label', 'Clear level');
+    this.levelClear.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.clearLevel();
+    });
+    this.levelEl.append(levelMark, this.levelText, this.levelClear);
+    status.append(this.levelEl);
+    this.game.events.on('level', () => this.drawLevel());
+    this.game.events.on('reset', () => this.drawLevel());
+    this.drawLevel();
     root.append(status);
     /*
      * On a phone the status panel is the bars at the foot of the screen, and a
@@ -728,6 +777,23 @@ export class Hud {
     if (first && def) this.game.requestAction(def, { kind: 'creature', id: first.id });
   }
 
+  /** Clear the level, as its menu entry does: asked of the island, at your own tile. */
+  private clearLevel(): void {
+    const def = ACTION_BY_ID.get('clear_level');
+    const p = this.game.player;
+    if (def && this.game.level !== null) this.game.requestAction(def, { kind: 'tile', x: p.tileX, y: p.tileY, cx: p.tileX, cy: p.tileY });
+  }
+
+  /** The level's chip: shown while one is set, with its height and, set from here, its corner. */
+  private drawLevel(): void {
+    const level = this.game.level;
+    this.levelEl.hidden = level === null;
+    if (level === null) return;
+    this.say(this.levelText, `Level ${metres(level)} m`);
+    const at = this.game.levelAt;
+    this.tip(this.levelEl, `Level ${metres(level)} m${at ? ` · set at corner ${at.cx}, ${at.cy}` : ''} · Flatten: to it · Dig, Chip corner: down to it · Drop dirt, concrete: up to it · Corner marks: green at, amber above, blue below`);
+  }
+
   private feedCompanion(): void {
     const c = this.game.creatures.active();
     if (!c) return;
@@ -790,6 +856,29 @@ export class Hud {
    * anybody reads, and nothing is written at all unless it differs from what
    * is already on the screen.
    */
+  /** The heat meter (`lava.ts`): shown on Volcano Isle, filled to what the island said, its rule and what slows it in its title. */
+  private heatUpdate(): void {
+    const g = this.game;
+    const p = g.player;
+    const on = chartRegion(p.x, p.y, g.world.w) === LAVA_ISLE;
+    if (this.heatRow.hidden === on) this.heatRow.hidden = !on;
+    if (!on) return;
+    const v = Math.max(0, Math.min(1, g.heat));
+    const m: Meaning = v >= 1 ? 'bad' : v >= 0.5 ? 'warn' : 'good';
+    const pct = `${Math.round(v * 100)}%`;
+    if (this.said.get(this.heatValue) !== pct) {
+      this.said.set(this.heatValue, pct);
+      this.heatMeter.set(v, m);
+      this.heatValue.textContent = pct;
+    }
+    const now = g.wallNow();
+    const gear = heatGear(Object.values(p.equipped).map((uid) => (uid === null || uid === undefined ? null : g.inventory.get(uid))), now);
+    const draught = g.cooledUntil > now;
+    const mul = heatMul(gear.scale, gear.ice, draught);
+    const tip = `${HEAT_SAID.rule}\n${HEAT_SAID.cool}\nFill now ×${mul.toFixed(2)}: ${gear.scale} dragon-scale, ${gear.ice.length} ice-infused${draught ? `, draught ${Math.ceil((g.cooledUntil - now) / 60)} min` : ''}.`;
+    if (this.heatRow.title !== tip) this.heatRow.title = tip;
+  }
+
   update(renderer: Renderer, fps: number): void {
     const now = performance.now();
     if (now - this.lastAt < HUD_EVERY) return;
@@ -805,6 +894,7 @@ export class Hud {
       bar.fill.style.width = pct;
       bar.value.textContent = pct;
     }
+    this.heatUpdate();
     // How big the stamina bar is: body stamina grows it (`staminaBar`).
     const size = `Stamina bar ×${this.game.staminaBar().toFixed(2)} of level ${CHAR_START}`;
     const row = this.bars.stamina?.value.parentElement;

@@ -7,6 +7,7 @@
 export const ANVIL_METALS: Readonly<Record<string, readonly [string, string]>> = {
   iron: ['#a6b2c6', '#535d78'],
   steel: ['#c6ccd8', '#5e6476'],
+  firesteel: ['#dcc0bc', '#74505c'],
   copper: ['#eba48a', '#8c4c4a'],
   bronze: ['#d8a878', '#7a5440'],
   brass: ['#e6cf86', '#87703c'],

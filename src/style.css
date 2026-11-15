@@ -1007,6 +1007,29 @@ kbd {
   background: var(--t-fill-water, linear-gradient(#5fa8e6, #2c6aa5));
 }
 
+/* Volcano Isle's heat (`lava.ts`): the interior kit's meter in the hud's row; warn striped, full cross-hatched. */
+.hud-heat-meter {
+  position: relative;
+  height: 9px;
+  overflow: hidden;
+  border: 1px solid var(--t-groove-edge, #000);
+  background: var(--t-track, #1a1612);
+}
+
+.hud-heat-fill {
+  height: 100%;
+  background: var(--t-fill-heat, linear-gradient(#f0a24a, #b8551f));
+  transition: width 0.2s;
+}
+
+.hud-heat-meter[data-meaning='warn'] .hud-heat-fill {
+  background: repeating-linear-gradient(135deg, rgba(0, 0, 0, 0.3) 0 2px, transparent 2px 6px), var(--t-fill-heat, linear-gradient(#f0a24a, #b8551f));
+}
+
+.hud-heat-meter[data-meaning='bad'] .hud-heat-fill {
+  background: repeating-linear-gradient(135deg, rgba(0, 0, 0, 0.35) 0 2px, transparent 2px 4px), repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.35) 0 2px, transparent 2px 4px), var(--t-bad-fill, #c0503a);
+}
+
 .hud-bar-value {
   text-align: right;
   color: var(--ui-dim);
@@ -1150,6 +1173,40 @@ button.goal-row:focus-visible {
   border-top: 1px solid var(--t-line-2, #3a3128);
   color: var(--ui-accent);
   font-size: 11px;
+}
+
+/* The surveyor's level, while one is set (`Hud.drawLevel`): a spirit level, the height, and × to clear it. */
+.hud-level {
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-level-mark {
+  display: inline-flex;
+  flex: none;
+}
+
+.hud-level-tube {
+  fill: var(--t-well, #1c1712);
+  stroke: var(--ui-accent);
+}
+
+.hud-level-bubble {
+  fill: var(--t-good, #9ccf7c);
+}
+
+.hud-level-line {
+  stroke: var(--ui-accent);
+  stroke-width: 0.8;
+}
+
+.hud-level-text {
+  flex: 1 1 auto;
+}
+
+.hud-level-clear {
+  padding: 0 5px;
+  font-size: 11px;
+  line-height: 14px;
 }
 
 .pals-body {
@@ -3358,6 +3415,118 @@ body.dragging.drag-no, body.dragging.drag-no * { cursor: no-drop !important; }
   }
 }
 
+/*
+ * What the recipe chosen or pointed at makes, drawn (`craftpreview.ts`): its picture, its name and material beside
+ * it, and its stage. Always there at the one height, the picture's: nothing chosen, its empty state, dimmed.
+ */
+.craft-preview {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-top: 1px solid var(--ui-border);
+}
+
+.craft-preview-pic {
+  flex: none;
+  width: 136px;
+  height: 96px;
+  border: 1px solid var(--ui-border);
+  border-radius: 2px;
+  background: var(--ui-bg);
+  color: var(--ui-text);
+}
+
+.craft-preview-text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-self: stretch;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ui-text);
+}
+
+.craft-preview-text > * {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.craft-preview-text small {
+  color: var(--t-dim, #9a9a9a);
+}
+
+.craft-preview.rc-preview-empty .craft-preview-text b {
+  color: var(--t-dim, #9a9a9a);
+  font-weight: 500;
+}
+
+/* Narrow, and on a phone: a thumbnail beside the name, at the thumbnail's one height. */
+@container (max-width: 280px) {
+  .craft-preview-pic {
+    width: 68px;
+    height: 48px;
+  }
+}
+
+#ui.phone .craft-preview-pic {
+  width: 68px;
+  height: 48px;
+}
+
+/* The tabs over the book: All, and what is made by what it is (`craftTabOf`), each with its count. */
+:where(:root[data-ui='classic']) .craft-tabs {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 0;
+  padding: 4px 4px 0;
+  border-bottom: 1px solid var(--ui-border);
+}
+
+:where(:root[data-ui='classic']) .craft-tab {
+  margin-bottom: -1px;
+  padding: 4px 5px;
+  border: 1px solid transparent;
+  border-radius: 3px 3px 0 0;
+  background: none;
+  color: var(--ui-dim);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+:where(:root[data-ui='classic']) .craft-tab:hover {
+  color: var(--ui-text);
+}
+
+:where(:root[data-ui='classic']) .craft-tab.tb-on {
+  border-color: var(--ui-border);
+  border-bottom-color: var(--ui-bg);
+  background: var(--ui-bg);
+  color: var(--ui-text);
+}
+
+:where(:root[data-ui='classic']) .craft-tab:focus-visible {
+  outline: 2px solid var(--ui-accent);
+  outline-offset: -2px;
+}
+
+.craft-in-all {
+  margin: 6px 0 2px;
+}
+
+/* A tab's count, smaller and dim beside its name. */
+.craft-tab-count {
+  color: var(--t-dim, #9a9a9a);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Skills ----------------------------------------------------------------- */
 
 .skill-group {
@@ -3834,6 +4003,31 @@ body.dragging.drag-no, body.dragging.drag-no * { cursor: no-drop !important; }
 .log-line {
   margin: 1px 0;
   line-height: 1.35;
+}
+
+/* Classic's trade and class icons before a name (`src/ui/nameicons.ts`); Runecut's are the kit's `.rc-emblem`. */
+:root:not([data-ui='runecut']) .name-icons {
+  display: inline-flex;
+  gap: 2px;
+  margin-right: 3px;
+  vertical-align: -0.22em;
+}
+
+:root:not([data-ui='runecut']) .name-icons:empty {
+  display: none;
+}
+
+:root:not([data-ui='runecut']) .name-icon {
+  display: inline-flex;
+  flex: none;
+  width: 1.2em;
+  height: 1.2em;
+}
+
+:root:not([data-ui='runecut']) .name-icon > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .log-time {
@@ -7249,6 +7443,29 @@ body.dragging.drag-no, body.dragging.drag-no * { cursor: no-drop !important; }
   border-radius: 0;
   background: var(--rc-stone-2);
   color: var(--rc-carve);
+}
+
+[data-ui='runecut'] .hud-level-text {
+  color: var(--rc-carve);
+  font-size: var(--rc-fs-2);
+}
+
+[data-ui='runecut'] .hud-level-tube {
+  fill: var(--rc-stone-2);
+  stroke: var(--rc-shade);
+}
+
+[data-ui='runecut'] .hud-level-bubble {
+  fill: var(--rc-moss);
+}
+
+[data-ui='runecut'] .hud-level-line {
+  stroke: var(--rc-rune);
+}
+
+[data-ui='runecut'] .hud-level-clear:hover {
+  background: var(--rc-stone-hi);
+  color: var(--rc-ink);
 }
 
 /* Lists of things: rows, column names and scroll areas are the interior kit's (src/ui/interior.css). */

@@ -23,7 +23,7 @@ begin
   if p_action = 'dig_cellar' then
     if not skill_check(s, d.difficulty, tq) then
       perform skill_raise(p_world, p_uid, d.skill, try_gain(false));
-      perform tell(p_world, p_uid, 'Dig failed.', 'event');
+      perform tell(p_world, p_uid, 'Dig failed.' || fail_why(), 'event');
       return;
     end if;
     v_b := building_at(p_world, v_x, v_y);
@@ -47,7 +47,7 @@ begin
   elsif p_action = 'mine_cellar' then
     if not skill_check(s, d.difficulty, tq) then
       perform skill_raise(p_world, p_uid, d.skill, try_gain(false));
-      perform tell(p_world, p_uid, 'Mining failed.', 'event');
+      perform tell(p_world, p_uid, 'Mining failed.' || fail_why(), 'event');
       return;
     end if;
     v_b := building_at(p_world, v_x, v_y);

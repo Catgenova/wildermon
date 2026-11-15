@@ -5,6 +5,7 @@ import { productQlRange } from './limits';
 import { HOARD_METALS, itemDef, itemName, type Item } from './items';
 import { WINTER_FUR, WINTER_FUR_PART, winterFurSays, winterNow } from './winter';
 import { dropRecipe } from './recipebook';
+import { diedOnVolcano, OBSIDIAN, obsidianOf } from './volcano';
 
 /**
  * Butchering a corpse. The Butchering skill decides how much of a carcass is
@@ -23,6 +24,8 @@ export const BUTCHER_PARTS: Array<[ButcherPart, string]> = [
   ['tusk', 'tusk'],
   ['sinew', 'sinew'],
   ['scale', 'dragon_scale'],
+  // Volcano Isle's kinds' (`volcano.ts`).
+  ['sulfur', 'sulfur'],
 ];
 
 /** What a Cook's Bait Maker cuts from a carcass for the hook. */
@@ -61,6 +64,13 @@ export const corpseSpecies = (item: Item): (typeof SPECIES)[string] | undefined 
   return kind ?? SPECIES[Object.values(REMOVED_KINDS).find((r) => r.name.toLowerCase() === name)?.becomes ?? ''];
 };
 
+/** What a carcass is of, by the name it carries: the stage's, when it carries one, or its kind's. The island's `corpse_kind`. */
+export const corpseKind = (item: Item): string | undefined => {
+  const def = corpseSpecies(item);
+  const name = (item.extra ?? '').toLowerCase();
+  return def && ((def.stages ?? []).find((s) => s.name.toLowerCase() === name)?.name ?? def.name);
+};
+
 /**
  * The quality what comes off a carcass is taken at: the Butchering skill's,
  * with the knife, as every trade's skill decides what it makes. It used to be
@@ -69,6 +79,15 @@ export const corpseSpecies = (item: Item): (typeof SPECIES)[string] | undefined 
  */
 export const butcherQl = (g: Game, knifeQl: number | null): number =>
   g.productQl('butchering', knifeQl ?? 0);
+
+/**
+ * The obsidian a carcass holds before the butchering share: its kind's (`OBSIDIAN_BY_KIND`) for a monster killed on Volcano
+ * Isle, which its `mark` says (`DIED_ON`), and none for any other. The island's `carcass_obsidian`.
+ */
+export const carcassObsidian = (item: Item): number => {
+  const def = corpseSpecies(item);
+  return def?.monster && diedOnVolcano(item.mark) ? obsidianOf(def.id) : 0;
+};
 
 /** What a corpse would give right now, for the menu and the log. */
 export function butcherPreview(g: Game, item: Item): string {
@@ -80,6 +99,8 @@ export function butcherPreview(g: Game, item: Item): string {
   const winter = winterNow(g.wallNow());
   const parts = BUTCHER_PARTS.filter(([p]) => (def.butcher[p] ?? 0) > 0)
     .map(([p, id]) => (winter && p === WINTER_FUR_PART ? winterFurSays() : itemDef(id).name.toLowerCase()));
+  // And obsidian, off a monster killed on Volcano Isle (`volcano.ts`).
+  if (carcassObsidian(item) > 0) parts.push(itemDef(OBSIDIAN).name.toLowerCase());
   const [lo, hi] = productQlRange(g.skills.get('butchering'), knife ? knife.ql : 0);
   const ql = Math.round(lo) === Math.round(hi) ? `QL ${Math.round(hi)}` : `QL ${Math.round(lo)}–${Math.round(hi)}`;
   return `about ${Math.round(share * 100)}% of its ${parts.join(', ')}, ${ql}`;
@@ -147,8 +168,9 @@ export const BUTCHER_ACTIONS: ActionDef[] = [
       removeCorpse(g, t, item);
       // And a Recipe, maybe, off a goblin or an orc, at the carcass's QL (`recipebook.ts`), however the butchering went.
       const found = dropRecipe(g, def.id, item.ql);
-      if (!taken.length) g.logMsg(`Butchering failed: ${def.name.toLowerCase()} carcass lost.`, 'event');
-      else g.logMsg(`Butchered: ${def.name.toLowerCase()}. Got ${taken.join(', ')}, QL ${ql.toFixed(1)}.${knife ? '' : ' No knife: most of the carcass wasted.'}`, 'event');
+      const kind = (corpseKind(item) ?? def.name).toLowerCase();
+      if (!taken.length) g.logMsg(`Butchering failed: ${kind} carcass lost.`, 'event');
+      else g.logMsg(`Butchered: ${kind}. Got ${taken.join(', ')}, QL ${ql.toFixed(1)}.${knife ? '' : ' No knife: most of the carcass wasted.'}`, 'event');
       if (found) g.logMsg(found, 'event');
     },
   },

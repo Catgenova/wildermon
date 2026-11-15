@@ -124,9 +124,9 @@ begin
     -- `worker_settle`: once, rather than once for each tile looked at. And
     -- the crop is read once here rather than three times over below, since
     -- this is asked of every tile of the ground, and most have no crop at all.
-    select * into v_crop from crop cr where cr.world_id = p_world and cr.x = p_x and cr.y = p_y;
-    -- On a bed up a storey, only by the stairs.
-    if found and coalesce(v_crop.level, 0) > 0 and not storey_reached(p_world, p_x, p_y, v_crop.level) then return false; end if;
+    -- The crop on the storey it would work (`farm_work_level`): on a bed up a storey, only by the stairs.
+    select * into v_crop from crop cr where cr.world_id = p_world and cr.x = p_x and cr.y = p_y
+      and cr.storey = farm_work_level(p_world, p_x, p_y) and storey_reached(p_world, p_x, p_y, cr.storey);
     if found and (v_crop.stage >= crop_ripe() or not v_crop.tended_now) then return true; end if;
     /*
      * And a field with nothing in it, which was never work at all: the island

@@ -30,11 +30,11 @@ export function deedSpot(r: Fields): DeedSpot | null {
   return { name: String(r.name ?? ''), x, y, radius, mine: !!r.mine };
 }
 
-/** A line of talk from before you came ashore (`rpc_chat`): its number in the log, what was said and when. */
-export interface ChatRow { n: number; text: string; at?: string }
+/** A line of talk from before you came ashore (`rpc_chat`): its number in the log, what was said, when, and by whom (a uid). */
+export interface ChatRow { n: number; text: string; at?: string; by?: string }
 
 export function chatRow(r: Fields): ChatRow | null {
-  const { n, text, at } = r;
+  const { n, text, at, by } = r;
   if (!isNum(n) || typeof text !== 'string') return null;
-  return typeof at === 'string' ? { n, text, at } : { n, text };
+  return { n, text, ...(typeof at === 'string' ? { at } : {}), ...(typeof by === 'string' ? { by } : {}) };
 }

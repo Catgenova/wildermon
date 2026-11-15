@@ -34,6 +34,9 @@ export interface PlacedPost {
   material?: string;
 }
 
+/** The item a work post is driven in from. */
+export const WORK_POST = 'work_post';
+
 /**
  * How long a post stands, at the roughest and at the finest. The shortest is
  * a world duration and the longest is not, so the two are what the text says:
@@ -116,13 +119,13 @@ export const POST_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       if (t.kind !== 'tile' || t.sx === undefined || t.sy === undefined) return 'Choose a spot.';
       const item = t.itemUid !== undefined ? g.inventory.get(t.itemUid) : g.inventory.find('work_post');
-      if (!item || item.id !== 'work_post') return 'Need a work post.';
+      if (!item || item.id !== WORK_POST) return 'Need a work post.';
       return g.postPlaceReason(t.x, t.y, t.sx, t.sy);
     },
     perform: (t, g) => {
       if (t.kind !== 'tile' || t.sx === undefined || t.sy === undefined) return;
       const item = t.itemUid !== undefined ? g.inventory.get(t.itemUid) : g.inventory.find('work_post');
-      if (!item || item.id !== 'work_post' || !g.inventory.remove(item.uid, 1)) return;
+      if (!item || item.id !== WORK_POST || !g.inventory.remove(item.uid, 1)) return;
       const p = g.addPost(t.x, t.y, t.sx, t.sy, item.ql, item.extra);
       g.logMsg(
         `Work post placed: lasts about ${Math.round(postLife(p.ql) * postKeep(g) / 60)} minutes, reach ${postRadius(p.ql)} tiles. Assign a wildermon to it.`,

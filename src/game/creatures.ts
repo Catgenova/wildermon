@@ -554,7 +554,7 @@ export const GATHER_DO: Record<GatherKind, string> = { forage: 'forage', botaniz
 };
 const GATHER_TABLE: Record<GatherKind, Array<[string, number]>> = { forage: FORAGE_TABLE, botanize: BOTANIZE_TABLE, woodcut: [], farm: [], mine: [], sand: [], clay: [], quarry: [], stoke: [], fetch: [], guard: [], hunt: [], peat: [], reed: [], water: [], prospect: [], plant: [], hod: [], mend: [], compost: [], seek: [], fish: [], prune: [], stump: [], fruit: [] , hive: [], groom: [], dairy: [], heal: [], tan: [], mill: [], lamp: [], bush: [], grass: [], pan: [], smelt: [], kiln: [], ash: [], brew: [], cook: [], restore: [], patch: [], worm: [], sprout: [], resin: [], flower: [], scrub: [], saw: [], chisel: [], brick: [], fletch: [], paper: [], fill: [], spin: [], nail: [], ribbon: [], glass: [],
   moss: [], vine: [], lily: [], concrete: [], mortar: [], timber: [], shaft: [], bandage: [], cheese: [], churn: [], alloy: [] };
-export type ButcherPart = 'meat' | 'fur' | 'leather' | 'bone' | 'gland' | 'feather' | 'clay' | 'tusk' | 'sinew' | 'scale' | 'hoard';
+export type ButcherPart = 'meat' | 'fur' | 'leather' | 'bone' | 'gland' | 'feather' | 'clay' | 'tusk' | 'sinew' | 'scale' | 'hoard' | 'sulfur';
 /** Marks a creature as last hurt by the player rather than another creature. */
 export const PLAYER_ATTACKER = -1;
 
@@ -719,6 +719,12 @@ export interface SpeciesDef {
   coward?: boolean;
   /** Its bite leaves venom in the wound (`VENOM_DRAIN`, `VENOM_SECS`). */
   venom?: boolean;
+  /** A blow of its that lands puts your hit chance at `ASH_BLIND_HIT` for `ASH_BLIND_SECS` (`volcano.ts`). The island's `species_def.blinds`. */
+  blinds?: boolean;
+  /** Burns do nothing to it: a Scorch, an Emberbrand, a Flamearrow (`volcano.ts`). The island's `species_def.fireproof`. */
+  fireproof?: boolean;
+  /** A weapon carrying an ice enchantment lands `FROST_WEAK` times its blow on it (`volcano.ts`). The island's `species_def.frost_weak`. */
+  frostWeak?: boolean;
   /** How one of yours fights another creature, besides its blow (`FightStyle`). */
   style?: FightStyle;
   /** What one of yours does in a fight once every so often instead of a blow (`AbilityId`). */
@@ -1163,6 +1169,15 @@ export function kindName(c: Pick<Creature, 'species' | 'skills'> & { variant?: n
   const def = SPECIES[c.species];
   const stage = stageOf(c);
   return stage && def?.stages ? def.stages[stage - 1].name : subspeciesName(c) ?? def?.name ?? c.species;
+}
+/**
+ * What it is called at the stage it is at, and its kind's name at its first stage, with no subspecies: what a fight
+ * line and a carcass name it as (a carcass's kind is read back off it, `corpseSpecies`). The island's `kind_name_at`.
+ */
+export function stageName(c: Pick<Creature, 'species' | 'skills'> & { pedigree?: Pedigree | null }): string {
+  const def = SPECIES[c.species];
+  const stage = stageOf(c);
+  return stage && def?.stages ? def.stages[stage - 1].name : def?.name ?? c.species;
 }
 /** The subspecies it is, by its variant, for a kind of subspecies (`SpeciesDef.subspecies`); nothing for any other. */
 export function subspeciesName(c: { species: string; variant?: number }): string | null {
@@ -4126,6 +4141,107 @@ export const SPECIES: Record<string, SpeciesDef> = withTameGates({
     glow: 5,
     defaultStance: 'aggressive',
   },
+
+  // ---- Volcano Isle's (`volcano.ts`) ----
+  //
+  // Each harder than an ogre and none as hard as the dragon, each at a vent of its own on Volcano Isle and nowhere
+  // else (`lairs.ts`, `Region.lair`), and each with sulfur on it as well as obsidian (`obsidianOf`).
+  ash_wraith: {
+    id: 'ash_wraith',
+    monster: true,
+    notice: 15,
+    wound: 'burn',
+    name: 'Ash wraith',
+    description: '',
+    health: 200,
+    attack: 38,
+    speed: 2.7,
+    tameLevel: 999,
+    tameChance: 0,
+    diet: [],
+    baitHint: 'nothing you would offer it',
+    timid: false,
+    gathers: null,
+    workRange: 0,
+    // One shroud each for its three subspecies, in their order: ash grey, soot, ember.
+    variants: [
+      ['#8e8890', '#e8a070'],
+      ['#5e5866', '#d88a5e'],
+      ['#9a7a78', '#f0b45c'],
+    ],
+    subspecies: ['Cinderveil Wraith', 'Soot Wraith', 'Ember-eyed Wraith'],
+    butcher: { bone: 3, sulfur: 3 },
+    hunter: true,
+    defensive: true,
+    blinds: true,
+    glow: 3,
+    defaultStance: 'aggressive',
+  },
+  magma_golem: {
+    id: 'magma_golem',
+    hide: 'thick',
+    heavy: true,
+    monster: true,
+    notice: 12,
+    wound: 'burn',
+    name: 'Magma golem',
+    description: '',
+    health: 360,
+    attack: 46,
+    speed: 1.5,
+    tameLevel: 999,
+    tameChance: 0,
+    diet: [],
+    baitHint: 'nothing you would offer it',
+    timid: false,
+    gathers: null,
+    workRange: 0,
+    // One crust each for its three subspecies, in their order: basalt, slag, obsidian.
+    variants: [
+      ['#6e6068', '#f08a4a'],
+      ['#8a6a5a', '#f4a83c'],
+      ['#4e4a5c', '#e8604a'],
+    ],
+    subspecies: ['Basalt Golem', 'Slag Golem', 'Glassback Golem'],
+    butcher: { sulfur: 6 },
+    hunter: true,
+    defensive: true,
+    fireproof: true,
+    frostWeak: true,
+    glow: 4,
+    defaultStance: 'aggressive',
+  },
+  cinder_hound: {
+    id: 'cinder_hound',
+    monster: true,
+    notice: 16,
+    wound: 'burn',
+    name: 'Cinder hound',
+    description: '',
+    health: 180,
+    attack: 36,
+    speed: 3.6,
+    tameLevel: 999,
+    tameChance: 0,
+    diet: [],
+    baitHint: 'nothing you would offer it',
+    timid: false,
+    gathers: null,
+    workRange: 0,
+    // One coat each for its three subspecies, in their order: charcoal, rust, ash.
+    variants: [
+      ['#5a5058', '#f09048'],
+      ['#8a5a4e', '#f4b050'],
+      ['#7e7882', '#ee7a50'],
+    ],
+    subspecies: ['Charcoal Hound', 'Rust Hound', 'Ashpelt Hound'],
+    butcher: { meat: 4, leather: 4, bone: 3, sinew: 2, sulfur: 2 },
+    hunter: true,
+    pack: true,
+    defensive: true,
+    glow: 2,
+    defaultStance: 'aggressive',
+  },
 });
 // Asked for: a Springlet "operates same speed as a hare mount when swimming in water": in water, a Thistlekit's pace.
 SPECIES.springlet.swimSpeed = SPECIES.orse.speed;
@@ -6679,12 +6795,13 @@ export class Creatures {
    * Whether a tile is somewhere a creature can walk: passable, dry, in
    * bounds, and no steeper than anything stands on -- and not a tile on
    * piers, under a deck or on one, where nothing goes but a body on its own
-   * two feet (`piers.ts`, the island's `creature_tile_ok`).
+   * two feet (`piers.ts`, the island's `creature_tile_ok`) -- and not the day's lava (`lava.ts`).
    */
   tileOk(game: Game, x: number, y: number): boolean {
     const w = game.world;
     if (game.buildings.pierTiles.size && game.buildings.onPiers(x, y)) return false;
-    return w.inBounds(x, y) && w.isPassable(x, y) && w.centerHeight(x, y) >= -1 && standsOn(w, x, y);
+    // Nor onto the day's lava on Volcano Isle (`lava.ts`).
+    return w.inBounds(x, y) && w.isPassable(x, y) && w.centerHeight(x, y) >= -1 && standsOn(w, x, y) && !game.lavaAt(x, y);
   }
 
   /**
@@ -9652,7 +9769,7 @@ export class Creatures {
     }
     if (!best) return false;
     c.enemy = best.id;
-    game.logMsg(`${c.name} attacks: ${this.species(best).name.toLowerCase()} on the settlement.`, 'fight');
+    game.logMsg(`${c.name} attacks: ${stageName(best).toLowerCase()} on the settlement.`, 'fight');
     return true;
   }
 
@@ -10177,7 +10294,7 @@ export class Creatures {
      * on that, and comes for you after.
      */
     if (c.brawl === null || game.time - c.threatAt >= THREAT_HOLD) {
-      if (c.brawl !== null) game.logMsg(`${this.species(c).name} attacks you again.`, 'fight');
+      if (c.brawl !== null) game.logMsg(`${stageName(c)} attacks you again.`, 'fight');
       c.brawl = null;
       c.threatAt = game.time;
     }
@@ -10437,7 +10554,7 @@ export class Creatures {
     c.tx = c.x + ((c.x - p.x) / d) * run;
     c.ty = c.y + ((c.y - p.y) / d) * run;
     c.until = game.time + FLEE_SECS;
-    game.logMsg(`${def.name} fled.`, 'fight');
+    game.logMsg(`${stageName(c)} fled.`, 'fight');
   }
 
   /**
@@ -10513,7 +10630,7 @@ export class Creatures {
       }
       if (found) {
         c.enemy = found.id;
-        game.logMsg(`${c.name} attacks: ${this.species(found).name.toLowerCase()}.`, 'fight');
+        game.logMsg(`${c.name} attacks: ${stageName(found).toLowerCase()}.`, 'fight');
       }
     }
     if (c.enemy !== null) {
@@ -11534,7 +11651,7 @@ export class Creatures {
         o.brawl = a.id;
         o.threatAt = game.time;
         o.windup = 0;
-        if (a.mode === 'active') game.logMsg(`${this.species(o).name} attacks ${a.name}.`, 'fight');
+        if (a.mode === 'active') game.logMsg(`${stageName(o)} attacks ${a.name}.`, 'fight');
       }
     }
   }
@@ -11554,7 +11671,7 @@ export class Creatures {
     t.brawl = by.id;
     t.threatAt = game.time;
     t.windup = 0;
-    if (by.mode === 'active') game.logMsg(`${this.species(t).name} attacks ${by.name}.`, 'fight');
+    if (by.mode === 'active') game.logMsg(`${stageName(t)} attacks ${by.name}.`, 'fight');
   }
 
   /** A use's wear on the wildermon gear in a slot (`wearGear`), said to its keeper when it falls apart. The island's `gear_wear`. */
@@ -11589,7 +11706,7 @@ export class Creatures {
       t.state = 'flee';
       t.until = game.time + 3;
     }
-    if (t.mode === 'active' && by !== 'player' && game.time - (t.busyUntil ?? 0) > 0) game.logMsg(`${t.name} hurt by a ${this.species(by).name.toLowerCase()}.`, 'fight');
+    if (t.mode === 'active' && by !== 'player' && game.time - (t.busyUntil ?? 0) > 0) game.logMsg(`${t.name} hurt by a ${stageName(by).toLowerCase()}.`, 'fight');
     if (t.health <= 0) this.kill(game, t, by);
   }
 
@@ -11626,7 +11743,8 @@ export class Creatures {
     const y = Math.floor(t.y);
     // What the carcass is worth follows the size of the thing that left it.
     const size = ageDef(t, game.time).yield;
-    game.dropOnGround(x, y, { uid: game.inventory.nextUid++, id: 'corpse', ql: Math.max(1, Math.min(100, (15 + game.rand() * 35) * size)), dmg: 0, count: 1, extra: def.name });
+    // Named for the stage it died at (`kindName`), as the island's `wound_beast` names it.
+    game.dropOnGround(x, y, { uid: game.inventory.nextUid++, id: 'corpse', ql: Math.max(1, Math.min(100, (15 + game.rand() * 35) * size)), dmg: 0, count: 1, extra: stageName(t) });
     /*
      * And what it was keeping, which is the other half of where a map comes
      * from. Only a monster, and only to whoever struck it down: the odds and

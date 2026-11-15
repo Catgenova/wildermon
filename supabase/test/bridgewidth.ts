@@ -36,6 +36,11 @@ import { WALL_HEIGHT } from '../../src/game/building';
 import { Game } from '../../src/game/game';
 import { metres, TileType } from '../../src/world/tiles';
 import { psql, ok, bad, check } from './harness';
+import { SKILL_GATES } from '../../src/game/skillgates';
+
+/** The level that opens every gate of a kind in a skill (`skillgates.ts`): what this test's builder works at. */
+const gatesOpen = (kind: string, skill: string): number =>
+  Math.max(1, ...SKILL_GATES.filter((g) => g.kind === kind && g.skill === skill).map((g) => g.level));
 
 const ALLOWED = 'ALLOWED';
 const q = (s: string): string => `'${s.replace(/'/g, "''")}'`;
@@ -43,6 +48,8 @@ const q = (s: string): string => `'${s.replace(/'/g, "''")}'`;
 /* ---- the ground: corners set the same on both sides --------------------------------- */
 const BASE = 400;
 const game = Game.create(4246);
+game.skills.values.set('carpentry', gatesOpen('bridge', 'carpentry'));
+game.skills.values.set('masonry', gatesOpen('bridge', 'masonry'));
 const world = game.world;
 for (const it of [...game.inventory.items]) game.inventory.remove(it.uid, it.count);
 const corners = new Map<string, number>();
@@ -178,6 +185,8 @@ begin
   select id into w from world where name = 'Hoarding';
   select uid into u from player where world_id = w and name = 'Dane';
   delete from placed where world_id = w;
+  insert into skill (world_id, uid, id, value) values (w, u, 'carpentry', ${gatesOpen('bridge', 'carpentry')}), (w, u, 'masonry', ${gatesOpen('bridge', 'masonry')})
+    on conflict (world_id, uid, id) do update set value = greatest(skill.value, excluded.value);
   delete from wall where world_id = w;
   delete from floor_tile where world_id = w;
   delete from building_column where world_id = w;

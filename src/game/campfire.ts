@@ -1,6 +1,7 @@
 import type { ActionDef, Target } from './actions';
 import { SUBTILES } from './crates';
 import type { Game } from './game';
+import type { Side } from './building';
 import { itemDef, itemName, type Item } from './items';
 import { world } from './pace';
 import { burnsFor, heatSaid } from './words';
@@ -18,6 +19,16 @@ export interface PlacedCampfire {
   /** Subtile of the top-left corner of its two by two block, 0..2. */
   sx: number;
   sy: number;
+  /** Which way it was laid; south when unsaid. */
+  facing?: Side;
+  /** Quality it was laid at: the island's `placed.ql`. */
+  ql?: number;
+  /** Damage, out of a hundred (`stations.ts`). */
+  dmg?: number;
+  /** When `dmg` was last charged for decay, in epoch seconds (the island's `placed.decay_at`, `stationDmg`); absent for none owed. */
+  decayAt?: number;
+  /** Whose this is, on an island. */
+  mine?: boolean;
   /** Seconds of burning left in it. */
   fuel: number;
   lit: boolean;
@@ -174,7 +185,7 @@ export const CAMPFIRE_ACTIONS: ActionDef[] = [
     perform: (t, g) => {
       if (t.kind !== 'tile' || t.sx === undefined || t.sy === undefined) return;
       if (!g.inventory.consume('shaft', FIRE_COST)) return;
-      const fire = g.addCampfire(t.x, t.y, t.sx, t.sy, FIRE_LAID_FUEL);
+      const fire = g.addCampfire(t.x, t.y, t.sx, t.sy, FIRE_LAID_FUEL, false, t.facing);
       g.logMsg(`Campfire built: ${FIRE_COST} × shaft. Unlit.`, 'event');
       g.events.emit('world', fire.x, fire.y);
     },

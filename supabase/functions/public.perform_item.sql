@@ -46,6 +46,15 @@ begin
     perform tell(p_world, p_uid, 'Drank: ' || v_name || '. Stamina +' || whole_pct(v_up)
       || '.', 'event');
 
+  -- A cooling draught (`lava.ts`): the heat down by `draught_drop`, and its fill ×`draught_fill` for `draught_secs`.
+  elsif p_action = 'drink_draught' then
+    if not consume(p_world, p_uid, v_it.def, 1, v_it.id) then return; end if;
+    update player set stats = coalesce(stats, '{}'::jsonb)
+        || jsonb_build_object('heat', greatest(0, coalesce((v_p.stats->>'heat')::double precision, 0) - draught_drop()),
+                              'cool', extract(epoch from now()) + draught_secs())
+      where world_id = p_world and uid = p_uid;
+    perform tell(p_world, p_uid, draught_said(), 'event');
+
   -- A tincture is taken no more: it gave a meal boost, and only a dish off a shut recipe gives one.
   elsif p_action = 'take_tincture' then
     return;
@@ -164,7 +173,7 @@ begin
     end if;
 
   elsif p_action = 'improve_item' then
-    select * into v_what from improvable_def where item = v_it.def;
+    select * into v_what from improvable_of(v_it.def, v_it.extra);
     if not found then return; end if;
     select * into v_mat from improve_material_def where id = v_what.material;
     v_made := (mat_of(v_it.extra)).name;
@@ -186,11 +195,11 @@ begin
     if not v_ok then
       perform damage_item(v_it.id, 3 + random() * 5);
       perform tell(p_world, p_uid, 'Improve failed: ' || v_name || ', '
-        || to_char((select dmg from item where id = v_it.id), 'FM990.0') || ' damage.', 'event');
+        || to_char((select dmg from item where id = v_it.id), 'FM990.0') || ' damage.' || fail_why(v_it.extra, skill_of(p_world, p_uid, 'mind_logic')), 'event');
       return;
     end if;
     v_was := v_it.ql;
-    v_ceiling := least(99.9, improve_ceiling(p_world, p_uid, v_what.skill, v_it.rare));
+    v_ceiling := least(99.9, improve_ceiling(p_world, p_uid, v_what.skill, v_it.rare) + fire_steel_cap(v_it.def, v_it.extra));
     -- And the tree, on the trade that would have made the thing: a smith's
     -- temper is worth as much at the file as at the anvil. The ceiling is
     -- untouched, so this buys passes rather than a higher top.

@@ -19,6 +19,7 @@ export type ItemCategory = 'tool' | 'material' | 'food' | 'plant' | 'misc';
 import type { Nutrient } from './nutrition';
 import { GEAR_ITEMS } from './wildgear';
 import { HOARD_SCALE_CAP } from './lairs';
+import { FIRE_STEEL, FIRE_STEEL_CAP, SULFUR, SULFUR_SLATE, summonSays, VOLCANO_KINDS, volcanoName } from './volcano';
 
 /** What a dish for a group gives out when it is served (`ItemDef.serve`). */
 export interface ServeDef {
@@ -143,6 +144,9 @@ const STATUETTE_DEF: ItemDef = {
   name: 'Statuette', category: 'misc', weight: 1.4, decay: 2,
   description: `Enchant (pack): ${STATUE_MOTES} mote${STATUE_MOTES === 1 ? '' : 's'} of each of the ${MOTE_ELEMENTS.length} elements, used up → ${listedOr(PATRONS.map(statueName))}, QL kept.`,
 };
+
+/** An obsidian piece's line, its numbers filled in by the fight rules (`fight.ts`, off `ARMOUR_CLASSES.obsidian` and `ARMOUR_VS.obsidian`). */
+const OBSIDIAN_SAYS = 'Soak {soak:pct}; {says}. Full set: burden {burden:pct}.';
 
 export const ITEM_DEFS: Record<string, ItemDef> = {
   shovel: { name: 'Shovel', category: 'tool', weight: 3, description: 'Digs, flattens and packs dirt.' },
@@ -269,6 +273,8 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   tar: { name: 'Tar', category: 'material', weight: 2, stackable: true, raw: true },
   rock_shards: { name: 'Rock shards', category: 'material', weight: 20, stackable: true, raw: true, decay: 5, description: 'Builds cobblestone walls; chiselled into bricks.' },
   slate_shards: { name: 'Slate shards', category: 'material', weight: 20, stackable: true, raw: true, decay: 5 },
+  sulfur: { name: 'Sulfur', category: 'material', weight: 0.2, stackable: true, raw: true, decay: 0,
+    description: 'Fire-tempered steel (smelter on {isle}). Butchering: {kinds}. Mining slate on {isle}: {slate} a go.' },
   marble_shards: { name: 'Marble shards', category: 'material', weight: 20, stackable: true, raw: true, decay: 5 },
   sandstone_shards: { name: 'Sandstone shards', category: 'material', weight: 20, stackable: true, raw: true, decay: 5 },
   stone_brick: { name: 'Stone brick', category: 'material', weight: 15, stackable: true, decay: 3 },
@@ -299,7 +305,8 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   adamantine_ore: { name: 'Adamantine ore', category: 'material', weight: 2, stackable: true, raw: true, decay: 2 },
   glimmersteel_ore: { name: 'Glimmersteel ore', category: 'material', weight: 2, stackable: true, raw: true, decay: 2 },
   mithril_ore: { name: 'Mithril ore', category: 'material', weight: 2, stackable: true, raw: true, decay: 2 },
-  seryll_ore: { name: 'Seryll ore', category: 'material', weight: 2, stackable: true, raw: true, decay: 2 },
+  seryll_ore: { name: 'Seryll ore', category: 'material', weight: 2, stackable: true, raw: true, decay: 2,
+    description: 'Mining a vein of it: {summon}.' },
   copper_lump: { name: 'Copper lump', category: 'material', weight: 1, stackable: true, decay: 2 },
   iron_lump: { name: 'Iron lump', category: 'material', weight: 1, stackable: true, decay: 3 },
   coal: { name: 'Coal', category: 'material', weight: 1, stackable: true, raw: true, decay: 3, description: 'Fuel for a campfire.' },
@@ -318,6 +325,8 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   brass_lump: { name: 'Brass lump', category: 'material', weight: 1, stackable: true, decay: 1 },
   pewter_lump: { name: 'Pewter lump', category: 'material', weight: 1, stackable: true, decay: 1 },
   electrum_lump: { name: 'Electrum lump', category: 'material', weight: 1, stackable: true, decay: 1 },
+  firesteel_lump: { name: 'Fire-tempered steel lump', category: 'material', weight: 1, stackable: true, decay: 1,
+    description: 'Weapons and tools of it: improve QL cap +{cap} over your skill. Made at a smelter on {isle} only.' },
   // Moulds, fired from sand, and the pieces beaten out of them.
   anvil_mould: { name: 'Anvil mould', category: 'tool', weight: 1.2, decay: 1 },
   nail_mould: { name: 'Nail mould', category: 'tool', weight: 1.2, decay: 1, description: '{per} nails per filling. Wears each filling; cannot be mended.' },
@@ -384,6 +393,7 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   offal: { name: 'Offal', category: 'material', weight: 0.2, stackable: true, raw: true, decay: 90, description: 'Fishing bait.' },
   broth: { name: 'Broth', category: 'food', weight: 0.4, stackable: true, food: 0.25, decay: 60, description: 'Feeds every food group.', feeds: { flesh: 0.08, starch: 0.08, greens: 0.08, fat: 0.08 } },
   gland: { name: 'Gland', category: 'material', weight: 0.2, stackable: true, raw: true, decay: 90, description: 'Ink ingredient. Rare butchering drop.' },
+  obsidian: { name: 'Obsidian', category: 'material', weight: 0.5, stackable: true, raw: true, decay: 0, description: 'From monsters killed on Volcano Isle.' },
   shaft: { name: 'Shaft', category: 'material', weight: 1, stackable: true, decay: 20, description: 'Tool handles and fence rails.' },
   ribbon: { name: 'Metal ribbon', category: 'material', weight: 0.4, stackable: true, decay: 1, description: 'One lump each.' },
   big_axle: { name: 'Big axle', category: 'material', weight: 8, stackable: true, decay: 1, description: 'Large cart: {recipe.make_large_cart.big_axle}. Wagon: {recipe.make_wagon.big_axle}.' },
@@ -521,6 +531,12 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   scale_shawl: { name: 'Scale shawl', category: 'tool', weight: 3 },
   scale_leggings: { name: 'Scale leggings', category: 'tool', weight: 4 },
   scale_boots: { name: 'Scale boots', category: 'tool', weight: 2.4 },
+  // Obsidian armour (`gear.ts` OBSIDIAN): knapped plates on a leather backing, riveted at an anvil.
+  obsidian_helm: { name: 'Obsidian helm', category: 'tool', weight: 2.2, description: OBSIDIAN_SAYS },
+  obsidian_cuirass: { name: 'Obsidian cuirass', category: 'tool', weight: 8, description: OBSIDIAN_SAYS },
+  obsidian_shawl: { name: 'Obsidian shawl', category: 'tool', weight: 3.8, description: OBSIDIAN_SAYS },
+  obsidian_leggings: { name: 'Obsidian leggings', category: 'tool', weight: 5.6, description: OBSIDIAN_SAYS },
+  obsidian_boots: { name: 'Obsidian boots', category: 'tool', weight: 3.4, description: OBSIDIAN_SAYS },
   tusk: { name: 'Tusk', category: 'material', weight: 1.6, stackable: true, raw: true, decay: 1, description: 'The belly of a composite bow.' },
   sinew: { name: 'Sinew', category: 'material', weight: 0.2, stackable: true, raw: true, decay: 4, description: 'The back of a composite bow.' },
   dragon_scale: { name: 'Dragon scale', category: 'material', weight: 1.2, stackable: true, raw: true, decay: 0.2, description: 'Scale armour. From a dragon only. Hoard scales (a dragon roost\'s hoard): scale armour made of them alone has a QL cap of {hoardCap}× your skill.' },
@@ -532,6 +548,8 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   herb_tea: { name: 'Herb tea', category: 'misc', weight: 0.3, stackable: true, decay: 30, stamina: 0.2, description: 'Drink: +{stamina:pct} stamina.' },
   salve: { name: 'Salve', category: 'misc', weight: 0.1, stackable: true, decay: 6, description: 'Rub in over a dressing: the wound cannot go bad until it closes.' },
   tincture: { name: 'Tincture', category: 'misc', weight: 0.1, stackable: true, decay: 3, description: 'Effect: none.' },
+  // Drunk against Volcano Isle's heat (`lava.ts`, where its numbers are filled in).
+  cooling_draught: { name: 'Cooling draught', category: 'misc', weight: 0.3, stackable: true, decay: 30, description: 'Drink: heat −{drop:pct}; heat fill ×{fill} for {mins} min.' },
   cover: { name: 'Healing cover', category: 'tool', weight: 0.2, stackable: true, decay: 12, description: 'On the wound it suits: stops bleeding, keeps dirt out, closes it {cover.overCloth} times as fast as cloth.' },
   dye_bucket: { name: 'Bucket of dye', category: 'tool', weight: 6, decay: 10,
     description: 'Up to {bucketLitres} litres of one mix of red, yellow and blue at one QL, in the lye bucket it was boiled in. A boil: {dyeBoil} litres of one primary, {perKg} litre per kg of dyestuff. '
@@ -751,6 +769,25 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
     description: 'Show lineage: a wildermon of yours, chosen by whoever set it down. Names and kinds: it, its dam and sire, and theirs.' },
   worker_nameplate: { name: 'Worker nameplate', category: 'misc', weight: 0.4, decay: 4,
     description: 'Hang a nameplate: on a wildermon bed. Shows: the worker asleep in it or headed to it, name, kind and level.' },
+  // The obsidian pieces (`obsidian.ts`, `obsidiandefs.ts`).
+  black_glass_lantern: { name: 'Black glass lantern', category: 'misc', weight: 3, decay: 0,
+    description: 'Put in a candle: {n}, burning {burn} at QL {ql}. Lit off a flame: light {reach} tiles at night, ember red. Does not rot.' },
+  obsidian_throne: { name: 'Obsidian throne', category: 'misc', weight: 80, decay: 0,
+    description: 'Seats {seats}: Sit, its settlement\'s founder only. Examine: its settlement\'s level, citizens and workers, now. Does not rot.' },
+  obsidian_obelisk: { name: 'Obsidian obelisk', category: 'misc', weight: 120, decay: 0,
+    description: 'Name: up to {max} characters, by whoever set it down or a citizen of its settlement. Glint: {glint}, island clock. Does not rot.' },
+  dragon_glass_fountain: { name: 'Dragon-glass fountain', category: 'misc', weight: 70, decay: 0,
+    description: 'A fountain: draws {least} litres a minute at the least, {most} at QL {top}; holds {holds} litres; fill a bucket or waterskin, or drink; the foot of an aqueduct. Does not rot.' },
+  shard_garden: { name: 'Shard garden', category: 'misc', weight: 40, decay: 0, description: 'Decor. Does not rot.' },
+  obsidian_vase: { name: 'Obsidian vase', category: 'misc', weight: 2, decay: 0, description: 'Holds {holds} wildflowers: fresh {fresh} after the last put in, wilted after. Does not rot.' },
+  lava_lamp: { name: 'Lava lamp column', category: 'misc', weight: 6, decay: 0, description: 'Light: {reach} tiles at night, always on. Does not rot.' },
+  obsidian_wind_chime: { name: 'Obsidian wind chime', category: 'misc', weight: 2, decay: 0,
+    description: '{where} Chimes with the wind: silent under {still}% wind; volume ×{least} at {still}% wind, rising evenly to ×{most} at {full}%. Does not rot.' },
+  obsidian_bust: { name: 'Obsidian bust', category: 'misc', weight: 50, decay: 0,
+    description: 'Carve: a citizen of the settlement it stands on, chosen from its roll; their head and hair in obsidian. Whoever set it down, or a citizen. Does not rot.' },
+  glass_shard_path: { name: 'Glass shard path', category: 'misc', weight: 4, decay: 0, description: '{where} Decor: glints at night. Does not rot.' },
+  ember_orb: { name: 'Ember orb on a stand', category: 'misc', weight: 8, decay: 0,
+    description: 'Light: {day} tile by day to {night} tiles at full night, by how dark it is; always on. Does not rot.' },
   butter_churn: { name: 'Butter churn', category: 'misc', weight: 14, decay: 4, description: 'Churn a bucket of milk into {recipe.churn_butter.count} pats of butter (cooking), within {reach} tiles of one set on the ground; bucket returned empty.' },
   paper_press: { name: 'Paper press', category: 'misc', weight: 24, decay: 4, description: 'Press reed into papyrus, at one set on the ground.' },
   // Brick and mortar, carried flat-packed like everything else until it is set down.
@@ -772,6 +809,9 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   warlord_tusk: { name: 'Warlord\'s tusk', category: 'misc', weight: 8, decay: 0, trophy: true, description: 'Trophy: set down anywhere. From an orc camp\'s hoard only. Does not decay.' },
   ogre_king_jaw: { name: 'Ogre king\'s jaw', category: 'misc', weight: 10, decay: 0, trophy: true, description: 'Trophy: set down anywhere. From an ogre cave\'s hoard only. Does not decay.' },
   great_dragon_scale: { name: 'Great dragon scale', category: 'misc', weight: 8, decay: 0, trophy: true, description: 'Trophy: set down anywhere. From a dragon roost\'s hoard only. Does not decay.' },
+  ash_lord_veil: { name: 'Ash lord\'s veil', category: 'misc', weight: 4, decay: 0, trophy: true, description: 'Trophy: set down anywhere. From an ash vent\'s hoard only. Does not decay.' },
+  magma_core: { name: 'Magma core', category: 'misc', weight: 12, decay: 0, trophy: true, description: 'Trophy: set down anywhere. From a magma vent\'s hoard only. Does not decay.' },
+  cinder_alpha_fang: { name: 'Cinder alpha\'s fang', category: 'misc', weight: 3, decay: 0, trophy: true, description: 'Trophy: set down anywhere. From a cinder vent\'s hoard only. Does not decay.' },
   brazier: { name: 'Brazier', category: 'misc', weight: 30, decay: 3 },
   altar: { name: 'Altar', category: 'misc', weight: 64, decay: 3, description: 'Set down on your settlement; one per settlement.' },
   trash_crate: { name: 'Trash crate', category: 'misc', weight: 6, decay: 4, description: 'Contents rot {trash}× faster than in the rain.' },
@@ -955,6 +995,13 @@ for (const d of Object.values(ITEM_DEFS)) {
 }
 // A hoard dragon scale's QL cap on scale armour (`lairs.ts`).
 describeFrom('dragon_scale', { hoardCap: HOARD_SCALE_CAP });
+// Volcano Isle's (`volcano.ts`): the seryll's summons, sulfur, and fire-tempered steel's cap.
+{
+  const kinds = VOLCANO_KINDS.map((k) => k.replace(/_/g, ' '));
+  describeFrom('seryll_ore', { summon: summonSays(kinds) });
+  describeFrom(SULFUR, { isle: volcanoName(), kinds: kinds.join(', '), slate: percent(SULFUR_SLATE) });
+  describeFrom(`${FIRE_STEEL}_lump`, { isle: volcanoName(), cap: FIRE_STEEL_CAP });
+}
 
 
 // What a stone set in a piece gives, off the rule that gives it (`jewelGain`).

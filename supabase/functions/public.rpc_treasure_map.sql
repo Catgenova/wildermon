@@ -15,6 +15,9 @@ begin
   if v_map.id is null or v_map.def <> 'treasure_map' then
     return jsonb_build_object('why', 'You are not holding a map.');
   end if;
+  if item_gate_refusal(p_world, me, v_map) is not null then
+    return jsonb_build_object('why', item_gate_refusal(p_world, me, v_map));
+  end if;
   v_t := treasure_at(v_map.id);
   if v_t.item_id is null then
     return jsonb_build_object('why', 'Map is blank: its hoard is gone.');

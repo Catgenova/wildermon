@@ -292,7 +292,7 @@ if (!browser) {
     check('drawn: a tick puts the card up: Done, Next, How, Why',
       v.open && v.done.startsWith('Done: ') && v.done.includes('Track') && v.next.startsWith(`Next ${stepNumber(PATH_STEP_BY_ID.get('tame')!)}/`)
       && v.how[0]?.startsWith('How: ') && v.why[0]?.startsWith('Why: '), JSON.stringify(v));
-    check('drawn: Close, Skip next, the Path tab', v.buttons.join('|') === 'Close|Skip next|Path tab (End)', v.buttons.join('|'));
+    check('drawn: Close, Skip next, the Path tab', v.buttons.join('|') === 'Close|Skip next|Guiding Light tab (End)', v.buttons.join('|'));
     // (on this machine's software GL a frame of a body this size costs over a tenth of a second, so the next waits for it)
     await call('wait', 1500);
     const p1 = await call<{ share: number; sum: number }>('picture');
@@ -324,7 +324,7 @@ if (!browser) {
     await call('wait', 50);
     const after = await call<CardView>('view');
     check('drawn: Skip next, the step after it next', skipped.open && after.next.includes(`${stepNumber(PATH_STEP_BY_ID.get('clay')!)}/`), after.next);
-    const tabbed = await call<CardView>('click', `Path tab (End)`);
+    const tabbed = await call<CardView>('click', `Guiding Light tab (End)`);
     check('drawn: the Path tab button opens the tab and takes the card down', !tabbed.open && tabbed.tabOpened === 1);
 
     // Animations off: one still frame, then nothing.
@@ -350,7 +350,7 @@ if (!browser) {
     await call('look');
     const later = await call<CardView>('view');
     check('drawn: turned on mid-game, one card with the next step and no Done',
-      on.open && on.shown === before + 1 && on.done === 'Path' && later.shown === before + 1, JSON.stringify(on));
+      on.open && on.shown === before + 1 && on.done === 'Guiding Light' && later.shown === before + 1, JSON.stringify(on));
     await shot('turned-on.png');
     await call('click', 'Close');
 

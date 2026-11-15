@@ -35,6 +35,7 @@ import {
 } from '../game/creatures';
 import { baitHint, coaxStep, tameChance } from '../game/creatureActions';
 import { crateOf } from '../game/creaturecrate';
+import { FIRST_TAME_SAYS, firstTameSure } from '../game/firsttame';
 import type { Game } from '../game/game';
 import { traitOf } from '../game/traits';
 import { traitReadNeeds } from '../game/husbandry';
@@ -120,7 +121,8 @@ export function creatureLines(g: Game, c: Creature): string[] {
     const taming = g.skills.get('taming');
     const needs = tameNeeds(c).level;
     if (taming < needs) lines.push(`Taming needed ${needs} · yours ${taming.toFixed(1)}`);
-    else lines.push(`Taming needed ${needs} · yours ${taming.toFixed(1)} · ${pct(tameChance(g, c))}% chance per offering`);
+    // First tame: sure, in place of the odds (`firsttame.ts`).
+    else lines.push(`Taming needed ${needs} · yours ${taming.toFixed(1)} · ${firstTameSure(g.player.firstTame, c.species) ? FIRST_TAME_SAYS : `${pct(tameChance(g, c))}% chance per offering`}`);
     const evolved = stageTameSays(c);
     if (evolved) lines.push(evolved);
     // At the step the chance itself is worked out with, a Herdsman's Patient Coax and all.

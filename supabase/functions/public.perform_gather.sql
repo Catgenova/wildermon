@@ -29,7 +29,7 @@ begin
     -- A Forester's Sure Hatchet glances off half as often (`fail:cut_down`).
     if not perk_pass(skill_check(s, d.difficulty, tq), pk(p_world, p_uid, 'fail:cut_down', 1)) then
       perform skill_raise(p_world, p_uid, 'woodcutting', try_gain(false));
-      perform tell(p_world, p_uid, 'Cut failed.', 'event');
+      perform tell(p_world, p_uid, 'Cut failed.' || fail_why(), 'event');
       return;
     end if;
     if here = tile_id('Bush') then
@@ -182,7 +182,7 @@ begin
     if not skill_check(s, d.difficulty, tq) then
       perform skill_raise(p_world, p_uid, 'digging', try_gain(false));
       perform tell(p_world, p_uid, 'Collect failed: '
-        || lower(t.name) || '.', 'event');
+        || lower(t.name) || '.' || fail_why(), 'event');
       return;
     end if;
     made_ql := least(100, product_ql(s, tq) * pk(p_world, p_uid, 'ql:collect', 1));

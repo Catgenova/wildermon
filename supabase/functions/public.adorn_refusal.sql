@@ -24,7 +24,8 @@ begin
   if p_action = 'pond_lily' then
     if coalesce((g->>'lilies')::int, 0) >= pond_lilies() then return adorn_said('pondFull', null, null, null); end if;
     return case when exists (select 1 from item i where i.world_id = p_world and i.holder = 'player' and i.holder_uid = p_uid
-                                and i.def = 'lily_root' and not i.locked) then null else adorn_said('noLily', null, null, null) end;
+                                and i.def = 'lily_root' and not i.locked) then water_plant_gate_refusal(p_world, p_uid, 'lily')
+                else adorn_said('noLily', null, null, null) end;
   elsif p_action = 'pea_season' then
     return case when g->>'pea' is null then adorn_said('samePea', null, null, 'by season') end;
   elsif p_action like 'pea\_%' then

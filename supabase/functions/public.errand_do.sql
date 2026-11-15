@@ -253,7 +253,7 @@ begin
     end;
 
   elsif kind in ('smelt', 'kiln') then
-    declare v_p placed; v_fits text[] := furnace_fits(kind); v_hold boolean := coalesce(c.carrying->>'def' = any(furnace_fits(kind)), false);
+    declare v_p placed; v_fits text[] := worker_furnace_fits(c, kind); v_hold boolean := coalesce(c.carrying->>'def' = any(worker_furnace_fits(c, kind)), false);
             v_jobs jsonb; v_one jsonb; v_n int; v_secs double precision; v_metal metal_def; v_i int; v_makes text; v_room int;
             v_furnace text := case when kind = 'smelt' then 'smelter' else 'kiln' end;
     begin
@@ -683,7 +683,7 @@ begin
   elsif kind = 'lily' then
     -- Water on your settlement a water plant takes: a water lily root or lotus seeds planted in it, as your own hands
     -- plant one (`perform_water_garden`). At the stores: its stage's roots or seeds into its arms.
-    declare v_kind text; v_hold boolean := coalesce(c.carrying->>'def' = any(array(select w.from_item from water_plant_def w)), false);
+    declare v_kind text; v_hold boolean := coalesce(c.carrying->>'def' = any(worker_roots(c)), false);
     begin
       if v_hold then
         select w.id into v_kind from water_plant_def w where w.from_item = c.carrying->>'def';
@@ -700,7 +700,7 @@ begin
         update creature set carrying = null where world_id = p_world and id = p_id;
         return true;
       end if;
-      update creature set carrying = take_some_stored(p_world, c.keeper, array(select w.from_item from water_plant_def w order by w.id),
+      update creature set carrying = take_some_stored(p_world, c.keeper, worker_roots(c),
                                                       stage_loads(c), c.work_x, c.work_y)
        where world_id = p_world and id = p_id;
       return true;

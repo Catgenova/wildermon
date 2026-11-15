@@ -72,6 +72,8 @@ begin
       v_extra := v_extra || glass_examine(p_world, b.id);
       -- Piers: and its deck, if the tile stands on piers (`pier_says`).
       v_extra := v_extra || pier_says(p_world, p_x, p_y);
+      -- And what is laid on each storey of it, by its material's name (`floors_said`).
+      v_extra := v_extra || floors_said(p_world, b, p_x, p_y);
     end if;
     v_extra := v_extra || cellar_said(p_world, p_x, p_y); -- cellar: what is dug out under it, after the glass and the deck
   end if;
@@ -82,5 +84,7 @@ begin
   if n >= 1 then v_extra := v_extra || ' Crates: ' || n || '.'; end if;
   -- And the lair it is by (`lair_says`).
   v_extra := v_extra || lair_says(p_world, p_x, p_y);
+  -- And an outcropping on it, with its uses left (`outcrop_says`).
+  v_extra := v_extra || outcrop_says(p_world, p_x, p_y);
   return v_out || v_extra;
 end $function$

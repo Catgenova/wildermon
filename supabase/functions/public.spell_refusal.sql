@@ -16,9 +16,9 @@ begin
   if v_mine is distinct from (select id from class_def where main = sc.skill) then
     return d.name || ' is ' || lower(sc.name) || ', and you are not of it.';
   end if;
-  if skill_of(p_world, p_uid, sc.skill) < d.level then
-    return d.name || ' takes ' || d.level::int || ' ' || sc.id || '; you have '
-        || floor(skill_of(p_world, p_uid, sc.skill))::int || '.';
+  -- Its gate (kind `spell`): "Pyre: needs kindling 30; have 12.0."
+  if kind_gate_refusal(p_world, p_uid, 'spell', d.id) is not null then
+    return kind_gate_refusal(p_world, p_uid, 'spell', d.id);
   end if;
   it := focus_for(p_world, p_uid, d.gem);
   if it.id is null then

@@ -8,6 +8,7 @@ import {
   scaledBill,
   FLOOR_KIND_NAMES,
   floorName,
+  floorWords,
   floorKind,
   connectsDown,
   isDone,
@@ -29,6 +30,7 @@ import {
   type WallChange,
   type WallType,
   type FloorKind,
+  type FloorTile,
   isLowWall,
   wallBill,
   type MaterialDef,
@@ -285,6 +287,18 @@ const topLevel = (b: Building, t: TileTarget): number => jobLevel(b, t);
  * or the one being worked (`jobLevel`).
  */
 const slotLevel = (t: TileTarget, b: Building): number => (t.floorKind === 'roof' ? b.levels : t.down ? 0 : topLevel(b, t));
+/**
+ * The staircase or ladder planned and not finished on the floor slot of the storey over `level` at a tile, built from
+ * `level`, the storey it is climbed from: its target names the storey it is on (`level + 1`), which `build_floor` and
+ * the island's `build_refusal` both read, and neither asks which storey the builder stands on. A floor upstairs is
+ * not one: undefined. Reported on Vinyard: a single staircase to storey 2 planned from storey 1 had no Build there,
+ * and storey 2 cannot be stood on until it is built.
+ */
+export function wayUpPlanned(g: Game, b: Building, level: number, x: number, y: number): FloorTile | undefined {
+  if (level < 0 || level + 1 >= b.levels) return undefined;
+  const f = g.buildings.floor(level + 1, x, y);
+  return f && f.building === b.id && connectsDown(floorKind(f)) && !isDone(f) ? f : undefined;
+}
 /**
  * Whether a flight or a ladder down planned here goes in where the ground
  * floor is floored: it takes the flooring up, as taking the flooring up
@@ -1204,7 +1218,7 @@ export const BUILD_ACTIONS: ActionDef[] = [
       // Floors are paving, but a garden bed, which is joinery; stairs, ladders and roofs are carpentry or masonry by material.
       g.gainSkill(kind === 'floor' && mat?.id !== GARDEN_BED.id ? 'paving' : kind === 'ladder' ? 'carpentry' : (mat?.skill ?? 'carpentry'), 0.4);
       g.events.emit('world', t.x, t.y);
-      const what = kind === 'ladder' ? 'ladder' : `${mat?.name.toLowerCase()} ${floorName(floor)}`;
+      const what = floorWords(floor);
       if (isDone(floor)) {
         // A floor finished on a second storey or higher, for the journal (the island's `perform_building` the same).
         if (kind === 'floor' && slotLevel(t, b) >= 1) g.note('storey');

@@ -78,6 +78,11 @@ begin
   if r.station is not null and not at_station(p_world, p_uid, r.station) then
     return 'Need: ' || station_name(r.station) || '.';
   end if;
+  -- And on its island, for one kept to an island (`Recipe.isle`).
+  if r.isle is not null and (select region_at(p_world, pl.x, pl.y) from player pl where pl.world_id = p_world and pl.uid = p_uid)
+       is distinct from r.isle then
+    return 'Need: ' || coalesce(station_name(r.station), 'to be') || ' on ' || isle_name(r.isle) || '.';
+  end if;
   -- A ferment that wants a cellar, set going only under the ground (`fermentPlaceOk`).
   if exists (select 1 from ferment_recipes() f where f.id = p_recipe and f.cellar)
      and coalesce((select pl.level from player pl where pl.world_id = p_world and pl.uid = p_uid), 0) >= 0 then

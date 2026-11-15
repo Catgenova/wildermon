@@ -98,6 +98,12 @@ const STAIRS: Record<string, StairStyle> = {
     string: hex('#d9bf85'), stringHi: hex('#ecd8a4'), line: hex('#7d6440'),
     rail: 'gilt', post: hex('#e0c792'), bar: hex('#e0c792'), barHi: hex('#f6e8c0'),
   },
+  // Obsidian glass is laid as a floor only (`building.ts` OBSIDIAN_GLASS): this is its deck's edge.
+  obsidian_glass: {
+    build: 'solid', tread: hex('#2a2532'), nose: hex('#4a4258'), proud: true,
+    riser: hex('#1c1922'), joint: hex('#3b1f22'), courses: 1, across: 1, slabs: 1,
+    string: hex('#211d28'), stringHi: hex('#8e84a8'), line: hex('#0e0c12'), ...IRON,
+  },
   plank: {
     build: 'string', tread: hex('#c9b395'), nose: hex('#dcc9ad'), proud: true,
     riser: hex('#b49e81'), joint: hex('#a18a6d'), courses: 0, across: 0, slabs: 2,

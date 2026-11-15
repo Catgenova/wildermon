@@ -50,7 +50,7 @@ begin
   end if;
   if fs.id is not null then
     v_foot := 'pool'; v_level := fs.top - pool_lip();
-  elsif exists (select 1 from placed q where q.world_id = p_world and q.kind = 'furniture' and q.sub = 'fountain'
+  elsif exists (select 1 from placed q where q.world_id = p_world and q.kind = 'furniture' and is_fountain(q.sub)
                   and q.x = p_tx and q.y = p_ty) then
     -- To the nearest unit, as a pond's and a pool's water stand.
     v_foot := 'fountain'; v_level := floor(surface_height(p_world, p_tx, p_ty) + fountain_rim() + 0.5)::int;

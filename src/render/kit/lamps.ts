@@ -149,10 +149,12 @@ function postOf(look: KitLook): KitModel {
     paint: { front: upGrain(11), back: upGrain(12), left: upGrain(13), right: upGrain(14) },
   }));
   add(slab(-POST - 0.3, POST + 0.3, -POST - 0.3, POST + 0.3, HEAD, HEAD + 0.75, paler(WOOD, 0.08), { corner: 0.2, bevel: 0.3 }), { edges: true });
-  // The arm off its head, the strut under it, and the hook off its end.
-  add(slab(-0.26, 0.26, POST, OUT, ARM_Z - 0.32, ARM_Z + 0.32, IRON, { corner: 0.08, paint: { left: ironSide(21), right: ironSide(22), top: (g, k, s) => sheen(g, k.fill, s.w, s.h, 23) } }), { edges: true });
+  // The arm off its head, the strut under it, and the hook off its end: each from the post's face at its foot, which
+  // is the widest of it, so no part of either lies inside the post to be laid over it.
+  const face = POST + 0.06;
+  add(slab(-0.26, 0.26, face, OUT, ARM_Z - 0.32, ARM_Z + 0.32, IRON, { corner: 0.08, paint: { left: ironSide(21), right: ironSide(22), top: (g, k, s) => sheen(g, k.fill, s.w, s.h, 23) } }), { edges: true });
   add(slab(-0.32, 0.32, OUT - 0.1, OUT + 0.45, ARM_Z - 0.42, ARM_Z + 0.42, deeper(IRON, 0.1), { corner: 0.1 }));
-  add(extrude([0, 0, 0], [0, 1, 0], [0, 0, 1], [1, 0, 0], [[POST, ARM_Z - 3.9], [POST, ARM_Z - 3.1], [4.0, ARM_Z - 0.32], [3.1, ARM_Z - 0.32]], -0.2, 0.2, IRON, 0.05));
+  add(extrude([0, 0, 0], [0, 1, 0], [0, 0, 1], [1, 0, 0], [[face, ARM_Z - 3.9], [face, ARM_Z - 3.1], [4.0, ARM_Z - 0.32], [3.1, ARM_Z - 0.32]], -0.2, 0.2, IRON, 0.05));
   add(slab(-0.18, 0.18, LAMP_ARM - 0.18, LAMP_ARM + 0.18, RING_TOP, ARM_Z - 0.32, IRON));
   if (Math.round(look.trim ?? 0) === 1) lantern(parts, [0, LAMP_ARM, LAMP_HANG.arm], LAMP_GLASS, look.lit, look.frame);
   return { parts, shade: [[-1.9, -1.9, 0], [1.9, -1.9, 0], [1.9, 1.9, 0], [-1.9, 1.9, 0]] };

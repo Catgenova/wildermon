@@ -29,7 +29,7 @@ export const HUSHED: ReadonlySet<string> = new Set([
   // swing twice.
   'attack_creature', 'shoot_creature',
   // Eating, drinking and sleeping. A body doing something to itself.
-  'eat', 'drink', 'drink_skin', 'drink_from_vessel', 'sleep', 'study_book', 'study_map', 'read_recipe', 'read_formula', 'open_ferment', 'serve_dish', 'drink_tea',
+  'eat', 'drink', 'drink_skin', 'drink_from_vessel', 'sleep', 'study_book', 'study_map', 'read_recipe', 'read_formula', 'open_ferment', 'serve_dish', 'drink_tea', 'drink_draught',
   // Faith and the paths, which are the two things on this island done by
   // sitting still; and what is given up at the altar, and what it gives back.
   'pray', 'meditate', 'sacrifice', 'absorb_soul',
@@ -58,6 +58,8 @@ export const STROKE_BY_ID: Record<string, Stroke> = {
   drop_dirt: 'earth', drop_dirt_here: 'earth', change_tile: 'earth', dig_stump: 'earth',
   // A critter cache dug out of the winter ground by hand (`winter.ts`).
   dig_cache: 'earth',
+  // A pick into an outcropping (`outcrops.ts`), as into a face.
+  mine_outcrop: 'stone',
   take_ashes_oven: 'earth', take_ashes_fire: 'earth', take_ashes_smelter: 'earth', take_ashes_kiln: 'earth',
   // Stone, whether it is being cut or merely shifted.
   pave_cobble: 'stone', pave_slabs: 'stone', remove_paving: 'stone',
@@ -139,6 +141,8 @@ export const STROKE_BY_ID: Record<string, Stroke> = {
   ...Object.fromEntries([0, 1].map((i) => [`table_take_${i}`, 'wood' as Stroke])),
   // The fittings (`fitting.ts`): candles set in paper, herbs on a shelf, a blow into straw, arrows into and out of a target, a rope round a post, a bust cut in stone.
   pole_candles: 'cloth', shelf_put: 'wood', practise_dummy: 'cloth', shoot_target: 'wood', pull_arrows: 'wood', moor_boat: 'cloth', unmoor_boat: 'cloth', carve_bust: 'stone',
+  // The obsidian pieces (`obsidian.ts`): a candle set behind glass, a name cut in stone.
+  black_lantern_candle: 'cloth', name_obelisk: 'stone',
   ...Object.fromEntries(['sage', 'basil', 'thyme', 'mint', 'rosemary'].map((h) => [`shelf_take_${h}`, 'wood' as Stroke])),
   // The adornments (`adorn.ts`): a lily into a pond's water, seeds and herbs in a spiral's earth, a buoy's name cut in wood, cheese on a rack, stones thrown on a table, a board's lineage, a bed's nameplate.
   pond_lily: 'water', spiral_sow: 'cloth', name_buoy: 'wood', cheese_put: 'wood', cheese_take: 'wood', throw_stones: 'stone', set_lineage: 'wood', hang_plate: 'wood', take_plate: 'wood',

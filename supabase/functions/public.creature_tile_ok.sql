@@ -9,6 +9,8 @@ AS $function$
      and not coalesce(q.blocks, true)
      -- Nor onto a Runestone (`runestone_on`).
      and runestone_on(q.size, p_x, p_y) is null
+     -- Nor onto the day's lava (`lava_on`).
+     and not lava_on(p_world, q.size, p_x, p_y)
      and (q.a + q.b + q.c + q.d) / 4.0 >= -1
      and greatest(q.a, q.b, q.c, q.d) - least(q.a, q.b, q.c, q.d) <= stand_cap(q.tile, max_stand())
      -- Piers: and not a tile on piers, asked only on an island that has had one (`world.piers`).

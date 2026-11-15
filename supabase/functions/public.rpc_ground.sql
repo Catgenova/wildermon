@@ -98,7 +98,8 @@ begin
     v_reach := v_reach or v_was_n <> m[4]::int;
   end if;
   select coalesce(jsonb_agg(
-        (to_jsonb(pl) - 'world_id' - 'made_by' - 'since' - 'made_at' - 'cx' - 'cy' - 'crumbles_at')
+        (to_jsonb(pl) - 'world_id' - 'made_by' - 'since' - 'made_at' - 'cx' - 'cy' - 'crumbles_at' - 'decay_at'
+         || case when station_kind(pl.kind) then jsonb_build_object('decay_at', extract(epoch from pl.decay_at)) else '{}'::jsonb end)
         -- How much water is in it is asked only of a well, which is the only one it is not the column's (`placed_litres`).
         || jsonb_build_object('fuel', placed_fuel(pl), 'ash', placed_ash(pl), 'ferment', ferment_left(pl),
                               'litres', case when pl.sub = any (v_wells) then placed_litres(pl) else pl.litres end,

@@ -2,8 +2,10 @@ import type { Game } from '../game/game';
 import { TileType, stepsTimber } from '../world/tiles';
 import { MATERIAL_BY_ID } from '../game/building';
 import { BRIDGES } from '../game/bridges';
-import { blow, chime, footfall, stroke, windChime, type Footing, type Stroke } from './kit';
+import { blow, chime, footfall, glassChime, stroke, windChime, type Footing, type Stroke } from './kit';
 import { CHIME_GAP, CHIME_RATE, CHIME_STILL, WIND_CHIME } from '../game/gardendefs';
+import { OBSIDIAN_CHIME } from '../game/obsidiandefs';
+import { glassChimeLoud } from '../game/obsidian';
 import { voiceOf } from './voices';
 import { stageOf } from '../game/creatures';
 
@@ -151,7 +153,7 @@ export class Sound {
   private levels = new Map<string, number>();
   private vary = 0;
   /** The wind chimes in earshot, looked for every `CHIME_LOOK` seconds; when one was last heard; and the clock at the last frame. */
-  private chimes: Array<{ x: number; y: number }> = [];
+  private chimes: Array<{ x: number; y: number; glass: boolean }> = [];
   private chimesAt = -Infinity;
   private chimed = -Infinity;
   private chimeTick = 0;
@@ -332,7 +334,10 @@ export class Sound {
     if (now - this.chimesAt > CHIME_LOOK) {
       this.chimesAt = now;
       this.chimes = [];
-      for (const f of this.game.furniture.values()) if (f.kind === WIND_CHIME && heard(f.x + 0.5, f.y + 0.5)) this.chimes.push({ x: f.x + 0.5, y: f.y + 0.5 });
+      // And an obsidian chime, its glass louder the harder the wind (`obsidian.ts`).
+      for (const f of this.game.furniture.values()) {
+        if ((f.kind === WIND_CHIME || f.kind === OBSIDIAN_CHIME) && heard(f.x + 0.5, f.y + 0.5)) this.chimes.push({ x: f.x + 0.5, y: f.y + 0.5, glass: f.kind === OBSIDIAN_CHIME });
+      }
     }
     if (!this.chimes.length || now - this.chimed < CHIME_GAP) return;
     const force = this.game.wind().force;
@@ -340,7 +345,8 @@ export class Sound {
     for (const c of this.chimes) {
       if (this.next() >= CHIME_RATE * force * dt) continue;
       this.chimed = now;
-      this.say(c.x, c.y, (a, node, at) => windChime(a, node, at, this.next()));
+      const v = this.next();
+      this.say(c.x, c.y, (a, node, at) => (c.glass ? glassChime(a, node, at, v, glassChimeLoud(force)) : windChime(a, node, at, v)));
       return;
     }
   }

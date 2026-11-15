@@ -14,6 +14,13 @@ begin
   if p_action = 'build_campfire' then
     if p_target->>'sx' is null or p_target->>'sy' is null then return 'Choose a spot.'; end if;
     if pack_count(p_world, p_uid, 'shaft') < 2 then return 'A campfire takes 2 shafts.'; end if;
+    if has_water(p_world, (p_target->>'x')::int, (p_target->>'y')::int) then return 'Fire needs dry, open ground.'; end if;
+    sz := placed_size('campfire', null);
+    if block_taken(p_world, (p_target->>'x')::int, (p_target->>'y')::int,
+                   least(subtiles() - sz[1], greatest(0, (p_target->>'sx')::int)),
+                   least(subtiles() - sz[2], greatest(0, (p_target->>'sy')::int)), sz[1], sz[2]) then
+      return 'Something is already standing there.';
+    end if;
     return null;
   end if;
 
@@ -23,6 +30,9 @@ begin
         and holder = 'player' and holder_uid = p_uid;
     if not found then return 'You are not carrying that.'; end if;
     if p_action = 'place_smelter' and it.def <> 'smelter' then return 'That is not a smelter.'; end if;
+    if p_action = 'place_smelter' and not on_my_deed(p_world, p_uid, (p_target->>'x')::int, (p_target->>'y')::int) then
+      return 'Set down only on a settlement of yours.';
+    end if;
     if p_action = 'place_kiln' and it.def <> 'kiln' then return 'That is not a kiln.'; end if;
     if p_action = 'place_furniture' then
       sub := replace(it.def, 'furniture_', '');

@@ -18,7 +18,8 @@
  *     already in it stands still on the still clock, as far into its stage as
  *     it had grown, until it is uncovered, when it grows on from there; a glass
  *     roof over it does not stop it;
- *   * a tile keeps one crop whatever storey it is on; the bed taken up takes its
+ *   * each storey of a tile keeps a crop of its own: the jetty bed over a sown
+ *     field is sown too (`upperbed.ts` works both); the bed taken up takes its
  *     crop with it; a farm worker sows a bed on storey 2 up the stairs and reaps
  *     it, the tile's ground as it was;
  *   * and a glasshouse's field and a planter go on as they did.
@@ -32,7 +33,7 @@ import {
 } from '../../src/game/building';
 import { materialName } from '../../src/game/buildActions';
 import { BED_STILL, CROPS, cropWhen, describeCrop, sownSaid, STAGE_NAMES } from '../../src/game/farming';
-import { BED, BED_COVERED, BED_NAME, BED_NO_DECK, BED_ONE_CROP, bedOpen } from '../../src/game/gardenbed';
+import { BED, BED_COVERED, BED_NAME, BED_NO_DECK, bedOpen } from '../../src/game/gardenbed';
 import { Game, type IslandGround } from '../../src/game/game';
 import { GLASSHOUSE_GROWTH, STILL_CLOCK } from '../../src/game/growth';
 import { glassPlanRefusal, glassResync } from '../../src/game/glasshouse';
@@ -244,7 +245,7 @@ begin
   insert into said values ('GLAZED', pg_temp.crop(w, 11, 10) || '|'
     || round((crop_clock_on('glass', now()) - crop_clock_on('glass', (select stage_at from crop where world_id = w and x = 11 and y = 10)))::numeric, 3));
 
-  /* ---- One crop a tile: a field under the jetty bed, sown from the ground ---- */
+  /* ---- A crop a storey: a field under the jetty bed, sown from the ground, and the bed over it still to be sown ---- */
   perform pg_temp.at(w, u, 13, 10, 0);
   perform act_perform(w, u, 'plant_seed', ${tile(13, 10)}::jsonb || jsonb_build_object('itemUid', v_seed));
   insert into said values ('FIELDUNDER', pg_temp.crop(w, 13, 10));
@@ -343,8 +344,8 @@ check(`and it stands still through a settling, Bounty and a night's sleep, and i
 check('the floor taken up: back on the glass clock, 100 seconds into its stage', at('UNFLOORED') === 'wheat:0:0:true:false|100.000', at('UNFLOORED'));
 check('a plank roof over it stops it; relaid in glass, it grows on, 100 seconds in', at('ROOFED') === 'wheat:0:0:true:true' && at('GLAZED') === 'wheat:0:0:true:false|100.000',
   `${at('ROOFED')} / ${at('GLAZED')}`);
-check(`one crop a tile: a field under a jetty bed sown, and the bed over it refused, "${BED_ONE_CROP}"`,
-  at('FIELDUNDER') === 'wheat:0:-:false:false' && at('ONECROP') === BED_ONE_CROP, `${at('FIELDUNDER')} / ${at('ONECROP')}`);
+check('a crop a storey: a field under a jetty bed sown, and the bed over it still sown from storey 2',
+  at('FIELDUNDER') === 'wheat:0:-:false:false' && at('ONECROP') === 'none', `${at('FIELDUNDER')} / ${at('ONECROP')}`);
 check('the field\'s crop is not the bed\'s to tend from storey 2, and is the field\'s from the ground', at('NOTMINE') === 'No crop there.' && at('MINE') === 'none',
   `${at('NOTMINE')} / ${at('MINE')}`);
 check('the bed taken up takes its crop; the field beside it keeps its own', at('UPROOTED') === 'none|wheat:1:-:false:false', at('UPROOTED'));
@@ -413,7 +414,7 @@ mine.UPASK = ask('plant_seed', tgt(15, 10, { itemUid: seed.uid }));
 check('on storey 2, from storey 2: offered and allowed', offered('plant_seed', tgt(15, 10, { itemUid: seed.uid })) && mine.UPASK === 'none', mine.UPASK);
 stand(15, 10, 0);
 check('from the ground floor under it, it is the plank floor there, and Sow is not offered', !offered('plant_seed', tgt(15, 10, { itemUid: seed.uid })));
-// A field under the jetty bed, sown; from storey 2 the bed over it refused, and its crop not the bed's.
+// A field under the jetty bed, sown; from storey 2 the bed over it sown all the same, and the field's crop not the bed's.
 w.setTile(13, 10, TileType.Field);
 game.plantCrop(13, 10, 'wheat', 40);
 stand(13, 10, 1);
@@ -422,8 +423,8 @@ const tendUp = offered('tend_crop', tgt(13, 10));
 mine.NOTMINE = ask('tend_crop', tgt(13, 10));
 stand(13, 10, 0);
 mine.MINE = ask('tend_crop', tgt(13, 10));
-check('one crop a tile in the browser too; Tend not offered from storey 2 on the field\'s crop under the bed, and offered from the ground',
-  mine.ONECROP === BED_ONE_CROP && !tendUp && offered('tend_crop', tgt(13, 10)), mine.ONECROP);
+check('a crop a storey in the browser too; Tend not offered from storey 2 on the field\'s crop under the bed, and offered from the ground',
+  mine.ONECROP === 'none' && !tendUp && offered('tend_crop', tgt(13, 10)), mine.ONECROP);
 // Copper ribbons will not do.
 const planned = bld.setFloor(yard, 0, 11, 10, BED);
 planned.needed.timber = 0;

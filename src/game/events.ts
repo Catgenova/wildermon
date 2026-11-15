@@ -28,6 +28,8 @@ export interface LogEntry {
   time: number;
   text: string;
   kind: LogKind;
+  /** Who said a line of talk, by uid, for their trade and class icons (`badges.ts`); absent for any other line. */
+  by?: string;
 }
 
 /**
@@ -102,6 +104,8 @@ export type GameEvents = {
   /** Something of a spell's fired after its cast, by you or by somebody in sight: see `CastFired`. */
   castFired: [fired: CastFired];
   log: [entry: LogEntry];
+  /** Somebody's trade or class icons are known or changed, by uid (`BadgeBook`); null for everybody's (Name icons turned on or off). */
+  badges: [uids: string[] | null];
   inventory: [];
   skill: [id: string, gain: number];
   /** A journal goal has just been ticked off. */
@@ -115,6 +119,8 @@ export type GameEvents = {
   /** The Path was turned on or off at your asking, and the island said so (`src/net/pathwire.ts`). */
   pathTurned: [on: boolean];
   action: [];
+  /** The surveyor's level was set, moved or cleared (`Game.sawLevel`). */
+  level: [];
   stats: [];
   /** Lain down in a bed and logged off asleep in it, by its name (`Game.fallAsleep`). */
   asleep: [what: string];

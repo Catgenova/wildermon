@@ -42,8 +42,13 @@ import { SPECIES, WILD_SPECIES, AGES,
          GATHER_SKILL, GATHER_VERB, GATHER_DO, SMITH_TRADES, smithLumps, STOKE_FIRST, STOKE_SMELTS_AT, BUSH_VINES_AT, type GatherKind } from '../src/game/creatures';
 import {
   EDGE_TREES, HILL_SLOPE, HOARD_BOOK, HOARD_SCALE, HOARD_SCALE_CAP, HOARD_SHARE, LAIR_ANNOUNCE, LAIR_APART, LAIR_KINDS, LAIR_LEASH, LAIR_LOOK_EVERY, LAIR_MOVE_CLEARS,
-  LAIR_MOVE_DAYS, LAIR_RING, LAIR_RING_WILD, LAIR_SIGHT, LAIR_TRACK, lairRingWant, OPEN_CLEAR, OPEN_SLOPE,
+  LAIR_MOVE_DAYS, LAIR_RING, LAIR_RING_WILD, LAIR_SIGHT, LAIR_TRACK, lairRingWant, OPEN_CLEAR, OPEN_SLOPE, VENT_CLEAR,
 } from '../src/game/lairs';
+import {
+  ASH_BLIND_HIT, ASH_BLIND_SECS, DIED_ON, FIRE_STEEL_CAP, FIRE_STEEL_NAME, FROST_WEAK, ICE_MOTE, OBSIDIAN_BY_KIND, SERYLL_ORE, SERYLL_SUMMON,
+  SULFUR_SLATE, SULFUR_STONE, SUMMON_LEAST, SUMMON_MOST, SUMMON_NEAR, SUMMON_SECS, SUMMON_SPREAD, VOLCANO_ISLE, VOLCANO_KINDS,
+} from '../src/game/volcano';
+import { OUTCROP_CLEAR, OUTCROP_DRAWS, OUTCROP_KINDS, OUTCROP_MINE, OUTCROP_QL, OUTCROP_SAID, OUTCROP_USES, OUTCROPS_A_RING } from '../src/game/outcrops';
 import { CHANNELS, TRAITS, WILD_ODDS, TRAIT_SLOTS, SLOTS_PER_STAGE, FIGHT_SHARE, GRADE_STEP, LAMP_TIER_ODDS, MUTATION_ODDS, PEDIGREE_MOST, PEDIGREE_STEP, TIERS } from '../src/game/traits';
 import { BOARD_TOP } from '../src/game/boards';
 import { CRAFT_HEAD, CRAFT_REACH } from '../src/game/recipes';
@@ -183,6 +188,12 @@ import {
 } from '../src/game/lamps';
 import { CANDLE_BURN, TORCH_BURN } from '../src/game/light';
 import {
+  COOLING_DRAUGHT, DRAUGHT_DROP, DRAUGHT_FILL, DRAUGHT_NOT, DRAUGHT_SECS, draughtSaid, HEAT_BURN, HEAT_DRAIN, HEAT_FILL, HEAT_ICE, HEAT_NEAR, HEAT_SAID, HEAT_SCALE,
+  HEAT_SCALE_PIECES, HEAT_WARN, LAVA_BAND, LAVA_BURN, LAVA_CELL, LAVA_CENTRE, LAVA_DESIGNS, LAVA_FROM_DAY, LAVA_GUARDED, LAVA_HEART, LAVA_ISLE, LAVA_MIN_SIZE, LAVA_PATHS,
+  LAVA_RADIUS, LAVA_REACH_PAST, LAVA_SAID, LAVA_SALT, LAVA_SEAM, LAVA_SIZE, LAVA_SPARED_TILES, LB_LAVA, LB_OPENS, LB_WAY, lavaRays,
+} from '../src/game/lava';
+import { LAVA_CHART } from '../src/world/lavachart';
+import {
   ELEMENTALISM, ISLAND_ELEMENT, LAND_ELEMENTS, MOTE_ELEMENTS, MOTES_LEAST, MOTES_MOST, MOTES_STEP, SEASON_ELEMENT, SWIRL_DARK, SWIRL_LIGHT, SWIRL_DRAWS, SWIRL_SAID, SWIRL_SEASON, SWIRL_TRIES, SWIRLS_A_DAY,
   WATER_MOTE, WATER_MOTE_NEED, WATER_MOTES_EACH, LIFE_MOTE, LIFE_MOTE_NEED, LIFE_MOTES_EACH, POULTICE_HEAL, STATUE_MOTES,
 } from '../src/game/motes';
@@ -215,6 +226,12 @@ import { DECOR_DONE, DECOR_JOBS, DECOR_SAID, KEPT_WHY, STAND_SLOTS, type DecorSa
 import { FURNISH_DONE, FURNISH_JOBS, FURNISH_SAID, type FurnishDone, type FurnishSaid } from '../src/game/furnish';
 import { BOULDER_AGAIN, BOULDER_NOTHING_YET, FITTING_DONE, FITTING_JOBS, FITTING_SAID, SHELF_HERBS, type FittingDone, type FittingSaid } from '../src/game/fitting';
 import { ADORN_DONE, ADORN_JOBS, ADORN_SAID, PEA_NAMES, SPIRAL_SEEDS, type AdornDone, type AdornSaid } from '../src/game/adorn';
+import { OBSIDIAN_DONE, OBSIDIAN_JOBS, OBSIDIAN_SAID, type ObsidianDone, type ObsidianSaid } from '../src/game/obsidian';
+import {
+  BLACK_LANTERN, BLACK_LANTERN_REACH, DRAGON_FOUNTAIN, EMBER_ORB, GLASS_CHIME_LEAST, LANTERN_CANDLES, LAVA_LAMP, LAVA_LAMP_REACH, OBELISK_GLINT, OBSIDIAN, OBSIDIAN_BUST,
+  OBSIDIAN_OBELISK, OBSIDIAN_THRONE, OBSIDIAN_VASE, ORB_DAY_REACH, ORB_NIGHT_REACH, SHARD_PATH, THRONE_SEATS,
+} from '../src/game/obsidiandefs';
+import { FOUNTAINS } from '../src/game/furniture';
 import {
   BUOY, CAULDRON_HEARTH, CHEESE, CHEESE_AGEING, CHEESE_RACK, GAME_TABLE, GARDEN_OBELISK, GEM_LAMP, HERB_SPIRAL, IVY_CUTTING, IVY_CUTTINGS, IVY_PANEL, IVY_PANEL_DAYS, LILY_POND,
   NAMEPLATE, PEDIGREE_BOARD, PELT_RUG, PLUSH, PLUSH_SAID, POND_LILIES, RACK_HOLDS, SPIRAL_PICK, SPIRAL_SLOTS, STONES_GOAL, STONES_LEAST, STONES_SIDES,
@@ -622,6 +639,10 @@ out.push(`alter table species_def add column if not exists throws boolean not nu
 out.push(`alter table species_def add column if not exists coward boolean not null default false;`);
 /* Its bite leaves venom in the wound (\`fight.ts\`). */
 out.push(`alter table species_def add column if not exists venom boolean not null default false;`);
+/* Volcano Isle's kinds' own (\`volcano.ts\`): a blow that blinds, burns that do nothing, ice enchantments that bite harder. */
+out.push(`alter table species_def add column if not exists blinds boolean not null default false;`);
+out.push(`alter table species_def add column if not exists fireproof boolean not null default false;`);
+out.push(`alter table species_def add column if not exists frost_weak boolean not null default false;`);
 /* How one of yours fights another creature, besides its blow (\`FightStyle\`). */
 out.push(`alter table species_def add column if not exists style text;`);
 /* What one of yours does in a fight once every so often (\`AbilityId\`): a fighting trade's spell's id, or a frost breath. */
@@ -1021,6 +1042,8 @@ out.push(`create table if not exists recipe (
 );`);
 /* Worked only by somebody standing on a settlement of theirs: `Recipe.deed`, which `craft_refusal` reads. */
 out.push(`alter table recipe add column if not exists deed boolean not null default false;`);
+/* Worked only on this island, by its index in REGIONS: `Recipe.isle` (`volcano.ts`), which `craft_refusal` reads. */
+out.push(`alter table recipe add column if not exists isle int;`);
 /* The share of what it is made at taken from the QL of the rope in it, by mass (`Recipe.ropeShare`, `ropework.ts`): a boat's, a trap's. */
 out.push(`alter table recipe add column if not exists rope_share real;`);
 /*
@@ -1293,7 +1316,7 @@ for (const r of RECIPES) {
   for (const i of r.inputs) if (i.item && !NAMED.has(i.item)) unnamed.add(i.item);
 }
 // A piece of furniture with no row was called by its id and weighed a kilo in a pack: "altar needs a capital".
-const unnamedPieces = FURNITURE.filter((f) => !NAMED.has(f.id) && !f.grave && !f.lair).map((f) => f.id);
+const unnamedPieces = FURNITURE.filter((f) => !NAMED.has(f.id) && !f.grave && !f.lair && !f.outcrop).map((f) => f.id);
 if (unnamedPieces.length) throw new Error(`furniture with no item definition: ${unnamedPieces.join(', ')}`);
 for (const [id, d] of Object.entries(ITEM_DEFS)) {
   out.push(`insert into item_def values (${q(id)}, ${q(d.name)}, ${q(d.category)}, ${q(d.weight)}, ${q(!!d.stackable)}, ${q(d.decay)}, ${q(d.charges)});`);
@@ -1458,6 +1481,9 @@ for (const d of Object.values(SPECIES) as unknown as S[]) {
   if (d.throws) out.push(`update species_def set throws = true where id = ${q(d.id)};`);
   if (d.coward) out.push(`update species_def set coward = true where id = ${q(d.id)};`);
   if (d.venom) out.push(`update species_def set venom = true where id = ${q(d.id)};`);
+  if (d.blinds) out.push(`update species_def set blinds = true where id = ${q(d.id)};`);
+  if (d.fireproof) out.push(`update species_def set fireproof = true where id = ${q(d.id)};`);
+  if (d.frostWeak) out.push(`update species_def set frost_weak = true where id = ${q(d.id)};`);
   if (d.style) out.push(`update species_def set style = ${q(d.style)} where id = ${q(d.id)};`);
   if (d.ability) out.push(`update species_def set ability = ${q(d.ability)} where id = ${q(d.id)};`);
   const learns = (d as unknown as { learns?: { skill: string; by: string } }).learns;
@@ -2734,6 +2760,7 @@ for (const r of RECIPES) {
      q(r.baseTime), q(r.stamina), q(r.difficulty === undefined ? null : r.difficulty),
      q(!!r.qlFromInputs), q(r.material), q(r.wood), q(r.extra), q(r.done), q(r.fail)].join(', ') + `);`);
   if (r.deed) out.push(`update recipe set deed = true where id = ${q(r.id)};`);
+  if (r.isle) out.push(`update recipe set isle = ${REGIONS.findIndex((R) => R.key === r.isle)} where id = ${q(r.id)};`);
   if (r.ropeShare) out.push(`update recipe set rope_share = ${q(r.ropeShare)} where id = ${q(r.id)};`);
   r.inputs.forEach((i, n) => {
     out.push(`insert into recipe_input (recipe, ord, item, count, litres) values (${q(r.id)}, ${n}, ${q(i.item)}, ${q(i.count ?? 1)}, ${q(i.litres ?? null)});`);
@@ -3178,6 +3205,28 @@ out.push(`create or replace function adorn_said(p_key text, p_name text, p_n int
 out.push(`create or replace function adorn_done(p_key text, p_what text, p_n int, p_held text, p_of int) returns text language sql immutable as $fn$ select replace(replace(replace(replace(case p_key ${
   (Object.keys(ADORN_DONE) as AdornDone[]).map((k) => `when ${q(k)} then ${q(ADORN_DONE[k])} `).join('')}end, '{what}', coalesce(p_what, '')), '{n}', coalesce(p_n::text, '')), '{held}', coalesce(p_held, '')), '{of}', coalesce(p_of::text, '')) $fn$;`);
 /*
+ * The obsidian pieces (`obsidian.ts`, `obsidiandefs.ts`): their jobs, every
+ * number the island's rules read, the fountains, and every sentence they say.
+ */
+out.push(`create or replace function obsidian_action(p_action text) returns boolean language sql immutable as $fn$ select p_action = any (array[${OBSIDIAN_JOBS.map(q).join(', ')}]::text[]) $fn$;`);
+for (const [fn, v] of [
+  ['obsidian_item', OBSIDIAN], ['black_lantern_kind', BLACK_LANTERN], ['obsidian_throne_kind', OBSIDIAN_THRONE], ['obsidian_obelisk_kind', OBSIDIAN_OBELISK],
+  ['dragon_fountain_kind', DRAGON_FOUNTAIN], ['obsidian_vase_kind', OBSIDIAN_VASE], ['lava_lamp_kind', LAVA_LAMP], ['obsidian_bust_kind', OBSIDIAN_BUST],
+  ['shard_path_kind', SHARD_PATH], ['ember_orb_kind', EMBER_ORB],
+] as Array<[string, string]>) out.push(`create or replace function ${fn}() returns text language sql immutable as $fn$ select ${q(v)} $fn$;`);
+for (const [fn, v] of [['lantern_candles', LANTERN_CANDLES], ['throne_seats', THRONE_SEATS]] as Array<[string, number]>) {
+  out.push(`create or replace function ${fn}() returns int language sql immutable as $fn$ select ${q(v)}::int $fn$;`);
+}
+for (const [fn, v] of [
+  ['black_lantern_reach', BLACK_LANTERN_REACH], ['lava_lamp_reach', LAVA_LAMP_REACH], ['orb_night_reach', ORB_NIGHT_REACH], ['orb_day_reach', ORB_DAY_REACH],
+  ['obelisk_glint', OBELISK_GLINT], ['glass_chime_least', GLASS_CHIME_LEAST],
+] as Array<[string, number]>) out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);
+out.push(`create or replace function is_fountain(p_sub text) returns boolean language sql immutable as $fn$ select coalesce(p_sub = any (array[${FOUNTAINS.map(q).join(', ')}]::text[]), false) $fn$;`);
+out.push(`create or replace function obsidian_said(p_key text) returns text language sql immutable as $fn$ select case p_key ${
+  (Object.keys(OBSIDIAN_SAID) as ObsidianSaid[]).map((k) => `when ${q(k)} then ${q(OBSIDIAN_SAID[k])} `).join('')}end $fn$;`);
+out.push(`create or replace function obsidian_done(p_key text, p_what text, p_n int, p_held int, p_of int) returns text language sql immutable as $fn$ select replace(replace(replace(replace(case p_key ${
+  (Object.keys(OBSIDIAN_DONE) as ObsidianDone[]).map((k) => `when ${q(k)} then ${q(OBSIDIAN_DONE[k])} `).join('')}end, '{what}', coalesce(p_what, '')), '{n}', coalesce(p_n::text, '')), '{held}', coalesce(p_held::text, '')), '{of}', coalesce(p_of::text, '')) $fn$;`);
+/*
  * Ropemaking (`ropework.ts`): the lay-ups and what the skill makes of them,
  * its pace on its own jobs, the rope walk, the bell rope and the lead rope.
  * The rules that read them are `rope_*`, `bell_heard` and `lead_pace` in the
@@ -3269,6 +3318,46 @@ for (const [fn, v] of [
 }
 out.push(`create or replace function lair_ring_want() returns int language sql immutable as $fn$ select ${lairRingWant(PER_REGION, WILD_SQUARE)} $fn$;`);
 out.push(`create or replace function hoard_scale() returns text language sql immutable as $fn$ select ${q(HOARD_SCALE)} $fn$;`);
+out.push(`create or replace function vent_clear() returns double precision language sql immutable as $fn$ select ${q(VENT_CLEAR)}::double precision $fn$;`);
+/*
+ * Volcano Isle (`volcano.ts`): the island, its kinds, obsidian off a monster killed there, a seryll vein's summons,
+ * sulfur off slate there, fire-tempered steel's cap, and what an ash wraith's blow and an ice enchantment on a magma
+ * golem do. And every island's name, for a refusal that names one.
+ */
+out.push(`create or replace function isle_name(p_isle int) returns text language sql immutable as $fn$ select case p_isle ${REGIONS.map((R, i) => `when ${i} then ${q(R.name)} `).join('')}end $fn$;`);
+out.push(`create or replace function volcano_isle() returns int language sql immutable as $fn$ select ${VOLCANO_ISLE} $fn$;`);
+out.push(`create or replace function volcano_kinds() returns text[] language sql immutable as $fn$ select ${arr([...VOLCANO_KINDS])} $fn$;`);
+out.push(`create or replace function obsidian_of(p_species text) returns int language sql immutable as $fn$ select case p_species ${Object.entries(OBSIDIAN_BY_KIND).map(([k, n]) => `when ${q(k)} then ${n} `).join('')}else 0 end $fn$;`);
+for (const [fn, v] of [
+  ['seryll_summon', SERYLL_SUMMON], ['summon_least', SUMMON_LEAST], ['summon_most', SUMMON_MOST],
+  ['summon_near', SUMMON_NEAR], ['summon_spread', SUMMON_SPREAD], ['summon_secs', SUMMON_SECS], ['sulfur_slate', SULFUR_SLATE],
+  ['fire_steel_cap', FIRE_STEEL_CAP], ['ash_blind_hit', ASH_BLIND_HIT], ['ash_blind_secs', ASH_BLIND_SECS], ['frost_weak', FROST_WEAK],
+] as Array<[string, number]>) {
+  out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);
+}
+for (const [fn, v] of [
+  ['died_on_key', DIED_ON], ['seryll_ore_id', SERYLL_ORE], ['sulfur_stone', SULFUR_STONE], ['fire_steel_name', FIRE_STEEL_NAME], ['ice_mote_id', ICE_MOTE],
+] as Array<[string, string]>) {
+  out.push(`create or replace function ${fn}() returns text language sql immutable as $fn$ select ${q(v)} $fn$;`);
+}
+/*
+ * Outcroppings (`outcrops.ts`): each kind, what it yields and how many the island sets down round each centre of the
+ * safe ring at a daily reset; the job; and the numbers every outcropping keeps to.
+ */
+out.push(`create or replace function outcrop_kinds() returns table (id text, name text, yields text, per_ring int) language sql immutable as $fn$ select * from (values ${
+  OUTCROP_KINDS.map((k) => `(${q(k.id)}, ${q(k.name)}, ${q(k.yields)}, ${k.perRing})`).join(', ')
+}) v (id, name, yields, per_ring) $fn$;`);
+for (const [fn, v] of [
+  ['outcrop_uses', OUTCROP_USES], ['outcrop_ql', OUTCROP_QL], ['outcrop_clear', OUTCROP_CLEAR], ['outcrop_draws', OUTCROP_DRAWS],
+  ['outcrops_a_ring', OUTCROPS_A_RING],
+] as Array<[string, number]>) {
+  out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);
+}
+for (const [fn, v] of [
+  ['outcrop_mine', OUTCROP_MINE], ['outcrop_said_gone', OUTCROP_SAID.gone], ['outcrop_said_only', OUTCROP_SAID.only],
+] as Array<[string, string]>) {
+  out.push(`create or replace function ${fn}() returns text language sql immutable as $fn$ select ${q(v)} $fn$;`);
+}
 /*
  * The Path (`src/game/path.ts`): its steps and detours in order, the only ids a `path:` tick may carry
  * (`rpc_settle`); the kinds turning it on notes (`guide_noted`); each tame step's kind; what a supply is sized for;
@@ -3290,4 +3379,41 @@ for (const [fn, v] of [
 out.push(`create or replace function thepath_need(p_step text) returns int language sql immutable as $fn$ select case p_step ${
   ([['forage', PATH_FORAGE], ['fish', PATH_FISH], ['clay', PATH_CLAY], ['bricks', SMELTER_BRICKS()], ['mortar', SMELTER_MORTAR()],
     ['workers', UPGRADE_WORKERS], ['lumps', ANVIL_LUMPS]] as Array<[string, number]>).map(([k, n]) => `when ${q(k)} then ${n} `).join('')}else 1 end $fn$;`);
+/*
+ * Volcano Isle's lava and heat (`lava.ts`): the maze's blocks, band, box, island, seam and burn; the ground it spares
+ * and the jobs it refuses, in its words; the heat meter's rates, what slows it, and the draught. The rules that read
+ * them are `lava_*` and `heat_*` in the migrations.
+ */
+for (const [fn, v] of [
+  ['lava_cell', LAVA_CELL], ['lava_foot', LAVA_BAND.foot], ['lava_isle', LAVA_ISLE], ['lava_seam', LAVA_SEAM], ['lava_size', LAVA_SIZE],
+  ['lava_radius', LAVA_RADIUS], ['lava_heart', LAVA_HEART], ['lava_designs', LAVA_DESIGNS], ['lava_paths', LAVA_PATHS], ['lava_wall_salt', LAVA_SALT],
+  ['lava_from_day', LAVA_FROM_DAY], ['lb_lava', LB_LAVA], ['lb_opens', LB_OPENS], ['lb_way', LB_WAY], ['lava_reach_past', LAVA_REACH_PAST],
+  ['lava_min_size', LAVA_MIN_SIZE],
+] as Array<[string, number]>) {
+  out.push(`create or replace function ${fn}() returns int language sql immutable as $fn$ select ${v} $fn$;`);
+}
+for (const [fn, v] of [
+  ['lava_burn', LAVA_BURN], ['heat_fill', HEAT_FILL], ['heat_near', HEAT_NEAR], ['heat_drain', HEAT_DRAIN], ['heat_burn', HEAT_BURN],
+  ['heat_scale', HEAT_SCALE], ['heat_ice', HEAT_ICE], ['draught_fill', DRAUGHT_FILL], ['draught_secs', DRAUGHT_SECS], ['draught_drop', DRAUGHT_DROP],
+  ['heat_warn', HEAT_WARN],
+] as Array<[string, number]>) {
+  out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);
+}
+out.push(`create or replace function lava_centre() returns int[] language sql immutable as $fn$ select array[${LAVA_CENTRE.join(', ')}]::int[] $fn$;`);
+/* Each design's three rays and its wedges' middle lines, as whole vectors (`lavaRays`): x0, y0, x1, y1, x2, y2. */
+out.push(`create or replace function lava_rays(p_design int) returns int[] language sql immutable as $fn$ select case p_design ${
+  Array.from({ length: LAVA_DESIGNS }, (_, d) => `when ${d} then array[${lavaRays(d).rays.flat().join(', ')}]::int[] `).join('')}end $fn$;`);
+out.push(`create or replace function lava_mids(p_design int) returns int[] language sql immutable as $fn$ select case p_design ${
+  Array.from({ length: LAVA_DESIGNS }, (_, d) => `when ${d} then array[${lavaRays(d).mids.flat().join(', ')}]::int[] `).join('')}end $fn$;`);
+/* Volcano Isle's land as the labyrinth reads it off the chart (`lavachart.ts`): where, how big, and its rows. */
+out.push(`create or replace function lava_chart_frame() returns int[] language sql immutable as $fn$ select array[${[LAVA_CHART.n, LAVA_CHART.x0, LAVA_CHART.y0, LAVA_CHART.w, LAVA_CHART.h].join(', ')}]::int[] $fn$;`);
+out.push(`create or replace function lava_chart_rows() returns text[] language sql immutable as $fn$ select ${arr([...LAVA_CHART.rows])} $fn$;`);
+out.push(`create or replace function lava_spared_tiles() returns int[] language sql immutable as $fn$ select array[${LAVA_SPARED_TILES.join(', ')}]::int[] $fn$;`);
+out.push(`create or replace function lava_guarded(p_action text) returns boolean language sql immutable as $fn$ select p_action = any (${arr([...LAVA_GUARDED])}) $fn$;`);
+out.push(`create or replace function heat_scale_pieces() returns text[] language sql immutable as $fn$ select ${arr(HEAT_SCALE_PIECES)} $fn$;`);
+for (const [fn, v] of [
+  ['lava_said', LAVA_SAID], ['cooling_draught', COOLING_DRAUGHT], ['draught_not_said', DRAUGHT_NOT], ['draught_said', draughtSaid], ['heat_full_said', HEAT_SAID.full], ['heat_lava_said', HEAT_SAID.lava],
+] as Array<[string, string]>) {
+  out.push(`create or replace function ${fn}() returns text language sql immutable as $fn$ select ${q(v)} $fn$;`);
+}
 console.log(out.join('\n'));

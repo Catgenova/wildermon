@@ -459,10 +459,10 @@ drive: no worker gate. Built (`helmGate`, `helm_gate_refusal`).
   `identifySaid`, `itemGateRefusal`, `workerItemOpen`; `unlocksOf`, `nextUnlockSaid`, `unlocksSaid`, `GATE_STOPS`.
 * `skill_gate` and `skill_gate_item` emitted by `scripts/dump-defs.ts`; read by anybody, as the rulebook is
   (permissions.allow.ts).
-* Island, the pilot (`20261120000065_skill_gates.sql`): `skill_gate_refusal`, `skill_gate_of`, `tree_gate`,
+* Island, the pilot (`20261120000090_skill_gates.sql`): `skill_gate_refusal`, `skill_gate_of`, `tree_gate`,
   `tree_gate_refusal`, `gate_idle`; patched `gather_refusal` (cut down), `ground_refusal` (coppice),
   `worker_gatherable`, `worker_do`, `worker_settle`, `worker_idle`, `rpc_creatures`.
-* Island, batch A (`20261120000067_skill_gates_a.sql`): `worker_level`, `worker_gate_open` (the gate's own skill),
+* Island, batch A (`20261120000091_skill_gates_a.sql`): `worker_level`, `worker_gate_open` (the gate's own skill),
   `sprout_gate`, `sprout_gate_refusal`, `item_gate`, `unidentified_name`, `seen_name` (an item; a def with the line's own
   name), `identify_said`, `item_gate_refusal`, `worker_item_open`, `worker_seeds`, `seen_pile_text`, `sprout_to_hand`,
   `stocked_for`, `take_usable_stored`, `sow_seed`; `gate_idle` for sprouts; patched `ground_refusal` (pick sprout,
@@ -482,7 +482,7 @@ drive: no worker gate. Built (`helmGate`, `helm_gate_refusal`).
   `VEHICLE_GATE`, `BOAT_GATE`; `KEPT_OFF_LADDER` (tame, fish); `rockGate`, `helmGate`, `seenVein`, `veinTip`,
   `UNIDENTIFIED_METAL`; `nameGates` (a kind, a fish and a piece are named by the module holding them, so this one stays
   a leaf). `ROCK_VARIANTS`, `SPECIES` and `FISH` read their levels from it.
-* Island (`20261120000069_skill_gates_b.sql`): `helm_gate_refusal` (in `ride_refusal`), `face_gate_refusal` (in
+* Island (`20261120000092_skill_gates_b.sql`): `helm_gate_refusal` (in `ride_refusal`), `face_gate_refusal` (in
   `terrain_refusal`), `stone_gate`, `stone_idle`; `tame_needs` reads the gate; `tame_gate_refusal` (in
   `creature_refusal`, `trap_refusal`); `seen_vein`, `vein_tip` (in `perform_ground`'s Prospect, `read_ground`); patched
   `worker_gatherable` and `worker_do` (quarry), `worker_settle` (`stone_idle`).
@@ -501,7 +501,7 @@ drive: no worker gate. Built (`helmGate`, `helm_gate_refusal`).
   `buildGateRefusal`, `workerBuildOpen`, `workerRecipeOpen`, `hodMay`, `pavingGateRefusal`. Items: a shut recipe's
   Recipe or Formula (by its title), a relic's fragments (by relic: `gateExtra` reads "old pot" off "old pot 1/2"), a
   tarnished bauble (by tier). `nextUnlockBar`: "10: Maple", the Skills window's line beside each level.
-* Island (`20261120000072_skill_gates_c.sql`): `recipe_gate_refusal` (in `craft_refusal` after a perk, a trade book's
+* Island (`20261120000094_skill_gates_c.sql`): `recipe_gate_refusal` (in `craft_refusal` after a perk, a trade book's
   trade and a shut recipe's book, before the tool, the station and the makings, as `recipeReason`), `worker_recipes` and
   `recipe_gate_idle` (every store trade in `errand_step`/`errand_do`, idle `gate` naming the recipe), `gate_item_extra`
   (in `item_gate`, `identify_said`, `unidentified_name`), Restore at the gate in `dig_refusal`, finds told unidentified
@@ -524,7 +524,7 @@ drive: no worker gate. Built (`helmGate`, `helm_gate_refusal`).
   `UNLOCKS_GROUPED_OVER`, `UNLOCK_ROW_NAMES`.
 * `craftgates.ts`: `MATERIAL_GATE.stone_brick` 10; `METAL_GATE` (derived from `SEAM_GATE` and the alloys' mixes), the
   `metal` rows, `metalGate`, `metalGateRefusal`, `workerMetalOpen`.
-* Island (`20261120000073_defs.sql`, `20261120000074_skill_gates_d.sql`): `metal_gate_refusal` (in `firing_refusal`'s
+* Island (`20261120000095_skill_gates_d.sql`): `metal_gate_refusal` (in `firing_refusal`'s
   Pour a mould and Cast an anvil, after the metal and before its lumps), `worker_smith_lumps` (nail and ribbon smiths in
   `errand_step`/`errand_do`, idle `gate` naming the metal; `worker_idle` "in your settlement stores"); `vein_tip` with
   no level, `vein_tip_at`, `seen_vein_at` (Prospect's tally and reading, `read_ground`); `mask_rock(rock, tiles, hide)`
@@ -541,7 +541,7 @@ drive: no worker gate. Built (`helmGate`, `helm_gate_refusal`).
   steel at 1. `skillgates.ts`: `rockGateRefusal(rock, viewer, below)`, the one check for cutting a rock, bare or under a
   building. `path.ts`: `fellsSaid` (the trees your woodcutting fells, from the gates), in the site step's lines and
   `siteSays`.
-* Island (`20261120000075_defs.sql`: iron and steel pouring at 1; `20261120000076_skill_gates_e.sql`): `read_ground`
+* Island (iron and steel pouring at 1; `20261120000096_skill_gates_e.sql`): `read_ground`
   reads every seam in its circle, buried ones too (`seam`, any tile), each named by the keeper (`seen_vein_at`);
   `tree_fells` and `thepath_sites` counting a tree tile only where its species' gate is at or under the player's
   woodcutting; `rock_gate_refusal`, read by `face_gate_refusal` and by `cellar_refusal`'s Mine out the cellar.
@@ -564,7 +564,7 @@ drive: no worker gate. Built (`helmGate`, `helm_gate_refusal`).
   "root"; not a seed that is food), a treasure map by tier (`hoard`, noun "map"); readers `castingGate`,
   `castingGateRefusal`, `smeltGate`, `smeltGateRefusal`, `workerSmeltOpen`, `workerSmithOpen`, `waterPlantGateRefusal`,
   `waterPlantFrom`, `workerWaterPlantOpen`, `bridgeGateRefusal`, `gemGateRefusal`; `hodMay` reads a span's bridge.
-* Island (`20261120000085_defs.sql`: the rows and the lowered recipes; `20261120000086_skill_gates_f.sql`):
+* Island (`20261120000097_skill_gates_f.sql`):
   `kind_gate_refusal` in `ground_refusal` (Graft), `cross_refuses`, `spell_refusal`, `last_refusal` (Throw a bridge
   across, Work on the bridge), `aqueduct_refusal` (Lead an aqueduct here, Work on the aqueduct), `firing_refusal`
   (Smelt), `item_refusal` (Set in circlet); `water_plant_gate_refusal` in `water_garden_refusal` and `adorn_refusal`
@@ -579,6 +579,23 @@ drive: no worker gate. Built (`helmGate`, `helm_gate_refusal`).
 * Not written: no What's new line. The gating branch's batches add none (they roll out together); batch A–E's only
   touch on `news.ts` kept an existing entry compiling.
 * Test: `supabase/test/skillgates-f.ts`; `hybrids.ts` reads a cross's refusal in the one wording.
+* Merged with `main` (batch F): the branch's migrations now follow `main`'s, so the island applies them after what it
+  already has. `main`'s and the branch's definitions files shared three names (`…064_defs`, `…073_defs`, `…075_defs`),
+  so the branch's definitions files are gone and one delta from `main`'s rulebook to the merged one stands in for them
+  (`20261120000089_defs.sql`: `skill_gate`, `skill_gate_item` and every row the gates changed), followed by the hand
+  migrations in their order: `…090_skill_gates`, `…091_skill_gates_a`, `…092_skill_gates_b`, `…093_unidentified_rock`,
+  `…094_skill_gates_c`, `…095_skill_gates_d`, `…096_skill_gates_e`, `…097_skill_gates_f`.
+* From `main`, on the rule: fire-tempered steel (an alloy of steel and sulfur) is poured and its castings worked at steel's
+  level, 1 (the alloy rule reads an alloy's own alloys); obsidian glass building at masonry 60, beside stained glass;
+  obsidian's knapped tools and the Volcano Isle recipes by their difficulty.
+* CI fixes on the branch: `dyes.ts` gives its player the alchemy of every boil's gate on both sides; `seasons.ts` gives
+  the browser the farming the island's player sows wheat at; `skillgates-c.ts` reads the named crafts off
+  `CRAFT_GATE_SAID` and counts fire-tempered steel among a ribbon smith's metals at 1. `adorn.ts` and `motes.ts` came
+  right with `main`; `skillgates.ts` and `skillgates-b.ts` pass on the merged branch.
+* Tests whose players the new gates stopped, given the gate's level on both sides (derived from the table): `aqueduct`,
+  `bridgestorey`, `bridgewidth`, `buildstores` (bridges), `pondlife` and `repurpose` (water plants), `head` (a worn
+  map's dig); from `main`: `obsidiangear` (obsidian armour), `stairbuild` (timber and stone floors), `upperbed`
+  (sowing); `newplayer` reads a first tame's refusal in the one wording.
 
 ## 10. Open questions
 
@@ -623,6 +640,9 @@ From batch F:
     Its warmth (`rpc_treasure_warm`, "Hoard within 25 tiles.") reads Dig it up's refusal, so it now says the gate under
     it. Keep reading closed, or let anybody read the picture and gate only the dig?
 22. A hod carrier with only spans over its level says "no work" (question 8 again, for bridges).
+23. Fire-tempered steel, made only on Volcano Isle at smelting 40 (its recipe), pours and is worked at 1 by the alloy
+    rule (steel's, and so iron's). Put it at its recipe's level instead?
+24. Obsidian glass building is placed at masonry 60 beside stained glass (both see-through, the same heft). Keep?
 
 ## 11. Sweep: proposals
 

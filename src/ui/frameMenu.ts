@@ -17,6 +17,7 @@ import {
   floorKind,
   isDone,
   MATERIAL_BY_ID,
+  materialSaid,
   MATERIALS,
   FLOOR_MATERIALS,
   MATERIALS_WITH_GLASS,
@@ -355,7 +356,7 @@ export function frameJettyEntries(g: Game, pick: Pick, place?: PlaceStairs, stor
 }
 
 /** "plank", "· 40% built": a bill's stuff and how far it has gone. */
-const stuffOf = (id: string): string => MATERIAL_BY_ID.get(id)?.name.toLowerCase() ?? id;
+const stuffOf = materialSaid;
 const built = (b: Parameters<typeof isDone>[0]): string => (isDone(b) ? '' : ` · ${Math.round(progressOf(b) * 100)}% built`);
 
 /**

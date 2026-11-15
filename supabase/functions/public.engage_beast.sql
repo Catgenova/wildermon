@@ -8,7 +8,7 @@ declare c creature; v_timid boolean; v_pack boolean; cx double precision; cy dou
 begin
   select * into c from creature where world_id = p_world and id = p_id for update;
   if not found or c.mode <> 'wild' or c.health <= 0 then return; end if;
-  select sd.timid, sd.pack, lower(sd.name) into v_timid, v_pack, v_name from species_def sd where sd.id = c.species;
+  select sd.timid, sd.pack, lower(kind_name_at(c)) into v_timid, v_pack, v_name from species_def sd where sd.id = c.species;
   if coalesce(v_timid, false) then return; end if;
   /*
    * Threat: it goes for whatever hurt it last, once what it is on has not

@@ -44,6 +44,7 @@ import { cleanLook, type Look } from './look';
 import { TREE_AGES } from '../world/tiles';
 import { SHOT_ARCHERY, SWING_ARM } from './creatureActions';
 import { bowReach, nockedArrow } from './fight';
+import { OBSIDIAN_BUST } from './obsidiandefs';
 
 const wordOf = (id: string): string => (itemDef(id)?.name ?? id).toLowerCase();
 const nameOf = (kind: string): string => furnitureDef(kind).name.toLowerCase();
@@ -242,7 +243,7 @@ export function fittingTail(f: PlacedFurniture): string {
     case SPICE_SHELF: out.push(`${jarsHeld(f)} of ${SHELF_HOLDS} herbs${d?.jars?.length ? `: ${d.jars.map(([id, n]) => `${wordOf(id)} ×${n}`).join(', ')}` : ''}`); break;
     case ARCHERY_TARGET: out.push(`${d?.stuck ?? 0} of ${TARGET_HOLDS} arrows`); break;
     case MOORING_POST: out.push(d?.tied !== undefined ? 'a boat tied' : 'no boat'); break;
-    case STONE_BUST: out.push(bustLabel(d?.bust)); break;
+    case STONE_BUST: case OBSIDIAN_BUST: out.push(bustLabel(d?.bust)); break;
     default: break;
   }
   return out.length ? ` · ${out.join(' · ')}` : '';
@@ -250,7 +251,7 @@ export function fittingTail(f: PlacedFurniture): string {
 export const FITTING_PIECES: readonly string[] = [
   LANTERN_POLE, MOSS_BOULDER, TREE_BENCH, SPICE_SHELF, WINDOW_SEAT, TRAINING_DUMMY, ARCHERY_TARGET, MOORING_POST, STONE_BUST,
 ];
-STATE_TAILS.push((f) => (FITTING_PIECES.includes(f.kind) ? fittingTail(f) : ''));
+STATE_TAILS.push((f) => (FITTING_PIECES.includes(f.kind) || f.kind === OBSIDIAN_BUST ? fittingTail(f) : ''));
 
 /* ---- the jobs ---------------------------------------------------------------------------- */
 
@@ -271,15 +272,17 @@ export const FITTING_JOBS: readonly string[] = [
 ];
 
 type PieceTarget = Extract<Target, { kind: 'furniture' }>;
-const pieceOf = (g: Game, t: Target, kind: string): PlacedFurniture | undefined => {
+/** The busts carved as a citizen, by the stone bust's rule: the stone one and an obsidian one (`obsidian.ts`). */
+export const BUSTS: readonly string[] = [STONE_BUST, OBSIDIAN_BUST];
+const pieceOf = (g: Game, t: Target, kind: string | readonly string[]): PlacedFurniture | undefined => {
   if (t.kind !== 'furniture') return undefined;
   const f = g.furniture.get((t as PieceTarget).id);
-  return f && f.kind === kind ? f : undefined;
+  return f && (typeof kind === 'string' ? f.kind === kind : kind.includes(f.kind)) ? f : undefined;
 };
 /** The piece each job is done at, by its kind. */
-const KIND_OF: Record<string, string> = {
+const KIND_OF: Record<string, string | readonly string[]> = {
   [POLE_CANDLES]: LANTERN_POLE, [POLE_LIGHT]: LANTERN_POLE, [POLE_DOUSE]: LANTERN_POLE, [KEEP_MOSS]: MOSS_BOULDER, [SHELF_PUT]: SPICE_SHELF,
-  [PRACTISE]: TRAINING_DUMMY, [SHOOT_TARGET]: ARCHERY_TARGET, [PULL_ARROWS]: ARCHERY_TARGET, [MOOR_BOAT]: MOORING_POST, [UNMOOR_BOAT]: MOORING_POST, [CARVE_BUST]: STONE_BUST,
+  [PRACTISE]: TRAINING_DUMMY, [SHOOT_TARGET]: ARCHERY_TARGET, [PULL_ARROWS]: ARCHERY_TARGET, [MOOR_BOAT]: MOORING_POST, [UNMOOR_BOAT]: MOORING_POST, [CARVE_BUST]: BUSTS,
   ...Object.fromEntries(SHELF_HERBS.map((h) => [SHELF_TAKE(h), SPICE_SHELF])),
 };
 
@@ -366,7 +369,7 @@ const job = (o: Omit<ActionDef, 'perform' | 'check' | 'stamina'> & { stamina?: n
   // The island's (`perform_fitting`).
   perform: () => undefined,
 });
-const at = (kind: string) => (t: Target, g: Game): boolean => !!pieceOf(g, t, kind);
+const at = (kind: string | readonly string[]) => (t: Target, g: Game): boolean => !!pieceOf(g, t, kind);
 
 export const FITTING_ACTIONS: ActionDef[] = [
   job({ id: POLE_CANDLES, label: 'Put in candles', verb: 'setting candles', baseTime: FIT_TIME, applies: at(LANTERN_POLE) }),
@@ -403,7 +406,7 @@ export const FITTING_ACTIONS: ActionDef[] = [
   job({ id: UNMOOR_BOAT, label: 'Untie', verb: 'untying a boat', baseTime: MOOR_TIME, applies: (t, g) => pieceOf(g, t, MOORING_POST)?.fitting?.tied !== undefined }),
   job({
     // The menu offers it, a citizen to a line (`Carve`).
-    id: CARVE_BUST, label: 'Carve', verb: 'carving a bust', skill: 'stonecutting', baseTime: CARVE_TIME, stamina: 0.03, hidden: true, applies: at(STONE_BUST),
+    id: CARVE_BUST, label: 'Carve', verb: 'carving a bust', skill: 'stonecutting', baseTime: CARVE_TIME, stamina: 0.03, hidden: true, applies: at(BUSTS),
   }),
 ];
 

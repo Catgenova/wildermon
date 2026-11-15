@@ -17,6 +17,9 @@ src/ui/panels/health.ts	const PIN_GLYPH: Record<WoundState, Markup> = fixedAll<W
 # Compass: a fixed SVG literal.
 src/ui/hud.ts	setMarkup(this.compass, fixed(
 
+# The level chip's spirit level: a fixed SVG literal.
+src/ui/hud.ts	setMarkup(levelMark, fixed(
+
 # Help: helpText() is built from this source's constants and rule tables only.
 src/ui/panels/help.ts	setMarkup(holder, fixed(helpText()));
 

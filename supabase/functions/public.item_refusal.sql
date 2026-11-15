@@ -39,6 +39,11 @@ begin
     if coalesce((v_p.stats->>'stamina')::double precision, 1) >= 0.999 then return 'Stamina already full.'; end if;
     return null;
 
+  -- A cooling draught (`lava.ts`), which anybody may drink.
+  elsif p_action = 'drink_draught' then
+    if v_it.def <> cooling_draught() then return draught_not_said(); end if;
+    return null;
+
   elsif p_action = 'take_tincture' then
     if v_it.def <> 'tincture' then return 'That is not a tincture.'; end if;
     return null;
@@ -82,6 +87,10 @@ begin
     if (circlet_with_room(p_world, p_uid)).id is null then
       return 'Need a circlet with an empty setting (' || circlet_stones() || ' per circlet).';
     end if;
+    -- The stone's gate, by its rarity (kind `gem`): "Diamond setting: needs jewellery 60; have 31.0."
+    if kind_gate_refusal(p_world, p_uid, 'gem', (select g.id from gem_def g where lower(g.name) = lower(v_it.extra))) is not null then
+      return kind_gate_refusal(p_world, p_uid, 'gem', (select g.id from gem_def g where lower(g.name) = lower(v_it.extra)));
+    end if;
     if tool_ql(p_world, p_uid, 'file') <= 0 then return 'Need a file.'; end if;
     return null;
 
@@ -111,7 +120,7 @@ begin
 
   elsif p_action = 'improve_item' then
     if unmendable(v_it.def) then return unmendable_says(v_it.def); end if;
-    select * into v_what from improvable_def where item = v_it.def;
+    select * into v_what from improvable_of(v_it.def, v_it.extra);
     if not found then return 'Cannot be improved.'; end if;
     if v_it.holder = 'bag' then return 'Take it out of the bag first.'; end if;
     if v_it.issued then
@@ -135,7 +144,7 @@ begin
       return 'Need ' || lower(coalesce(v_made, v_mat.name))
         || ' to work into it.';
     end if;
-    v_ceiling := improve_ceiling(p_world, p_uid, v_what.skill, v_it.rare);
+    v_ceiling := improve_ceiling(p_world, p_uid, v_what.skill, v_it.rare) + fire_steel_cap(v_it.def, v_it.extra);
     if v_it.ql >= v_ceiling then
       return 'QL capped by your ' || replace(v_what.skill, '_', ' ') || '.';
     end if;

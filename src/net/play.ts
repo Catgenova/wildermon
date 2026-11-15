@@ -117,9 +117,9 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
    */
   const charting = loadAtlas();
   charting.catch(() => undefined);
-  const log: Array<[string, string, number | undefined]> = [];
+  const log: Array<[string, string, number | undefined, string | undefined]> = [];
   const island = new Island({
-    say: (text, kind, at) => log.push([text, kind, at]),
+    say: (text, kind, at, by) => log.push([text, kind, at, by]),
     ground: () => {},
     people: () => {},
     pack: () => {},
@@ -331,6 +331,10 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
     lastTarget = null;
     void island.hold();
   };
+  game.skip = () => {
+    lastTarget = null;
+    void island.skip();
+  };
   game.reorder = (seen, order) => void island.queueOrder(seen, order);
   // A plan over an area, and the last plan taken back: one call each (`planarea.ts`).
   game.planArea = (asks) => island.planArea(asks);
@@ -520,6 +524,8 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
     game.player.graceEnds = left === null ? null : Date.now() / 1000 + left;
   };
   if (typeof me.played === 'number') sawGrace(graceLeft(me.played));
+  // And whether your first tame is still to come (`firsttame.ts`): no tame on your row yet, until the first beat says it.
+  game.player.firstTame = 'tamed_at' in me && me.tamed_at === null;
 
   /*
    * The rest of you, which the browser had no way of hearing about.
@@ -548,6 +554,9 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
       // The element you are attuned to, as the island last worked it out, and when you last sensed the swirls (`infusion.ts`).
       if (typeof what.stats.attune === 'number') game.attuned = MOTE_ELEMENTS[what.stats.attune] ?? null;
       if (typeof what.stats.sensedAt === 'number') game.sensedAt = what.stats.sensedAt;
+      // Volcano Isle's heat, and a cooling draught's end (`lava.ts`).
+      if (typeof what.stats.heat === 'number') game.heat = what.stats.heat;
+      if (typeof what.stats.cool === 'number') game.cooledUntil = what.stats.cool;
       const took = tookOff(was, s.health);
       if (took) {
         game.events.emit('hit', game.player.x, game.player.y, took, 'taken');
@@ -630,6 +639,8 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
     else if (what.stats && typeof what.stats.aegis === 'number') sawSkin(skinOfStats(what.stats));
     // And the death grace left, which every beat says (`deathgrace.ts`).
     if (what.grace !== undefined) sawGrace(what.grace);
+    // And whether your next tame is your first (`firsttame.ts`).
+    if (what.firstTame !== undefined) game.player.firstTame = what.firstTame;
     if (what.boons) game.player.boons = what.boons as typeof game.player.boons;
     if (what.knacks) game.player.knacks = what.knacks;
     if (what.titles) game.player.titles = what.titles;
@@ -685,7 +696,10 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
 
   // Everything the island says, said here. The lines that arrived while the
   // land was still coming down go up first, in the order they were said.
-  island.hooks.say = (text, kind) => game.write(text, kind as Parameters<Game['write']>[1]);
+  island.hooks.say = (text, kind, _at, by) => game.write(text, kind as Parameters<Game['write']>[1], undefined, by);
+  // Everybody's trade and class, off the island's rows: those ashore with the roster, anybody else as they are wanted.
+  island.hooks.badges = (rows) => game.badges.saw(rows);
+  game.badges.ask = (uids) => island.badgeRows(uids);
 
   /*
    * Talking, which the island keeps for everybody.
@@ -714,7 +728,7 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
     // With the hour each was said at, which the island has always sent and
     // this line used to drop: sixty lines stamped with the second you opened
     // the page is not a chat you can scroll back through.
-    for (const line of lines) game.write(line.text, 'chat', line.at);
+    for (const line of lines) game.write(line.text, 'chat', line.at, line.by);
   });
   island.hooks.ground = (x, y) => game.events.emit('world', x, y);
   island.hooks.pack = (items: ItemRow[]) => {
@@ -887,7 +901,7 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
     if (fell && fell.at !== game.player.fell?.at) game.player.fellAt = performance.now() / 1000 - island.since(new Date(fell.at).toISOString());
     game.player.fell = fell;
   };
-  for (const [text, kind, at] of log) game.write(text, kind as Parameters<Game['write']>[1], at);
+  for (const [text, kind, at, by] of log) game.write(text, kind as Parameters<Game['write']>[1], at, by);
   game.write(`You are on ${info.name}. Send somebody this page's address and they can join you.`, 'system');
   game.write(
     account

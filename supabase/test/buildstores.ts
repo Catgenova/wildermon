@@ -27,10 +27,17 @@ import { Game } from '../../src/game/game';
 import type { Item } from '../../src/game/items';
 import { CRAFT_REACH } from '../../src/game/recipes';
 import { psql, check, finish } from './harness';
+import { SKILL_GATES } from '../../src/game/skillgates';
+
+/** The level that opens every gate of a kind in a skill (`skillgates.ts`): what this test's builder works at. */
+const gatesOpen = (kind: string, skill: string): number =>
+  Math.max(1, ...SKILL_GATES.filter((g) => g.kind === kind && g.skill === skill).map((g) => g.level));
 
 /* ---- the browser --------------------------------------------------------- */
 
 const game = Game.create(4242);
+game.skills.values.set('carpentry', gatesOpen('bridge', 'carpentry'));
+game.skills.values.set('masonry', gatesOpen('bridge', 'masonry'));
 let spot: [number, number] | null = null;
 for (let r = 0; r < 80 && !spot; r++) {
   for (let dx = -r; dx <= r && !spot; dx++) {
@@ -114,6 +121,8 @@ declare w uuid; me uuid; them uuid := gen_random_uuid(); v_x int; v_y int; v_b i
 begin
   select id into w from world where name = 'Hoarding';
   select uid into me from player where world_id = w and name = 'Dane';
+  insert into skill (world_id, uid, id, value) values (w, me, 'carpentry', ${gatesOpen('bridge', 'carpentry')}), (w, me, 'masonry', ${gatesOpen('bridge', 'masonry')})
+    on conflict (world_id, uid, id) do update set value = greatest(skill.value, excluded.value);
   -- Somewhere no settlement covers, with room round it.
   select gx, gy into v_x, v_y
     from generate_series(20, 200, 7) gx, generate_series(20, 200, 7) gy

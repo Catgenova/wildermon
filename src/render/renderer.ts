@@ -1,4 +1,5 @@
 import { actOf, beastFrame } from './beasts';
+import { LEVEL_ABOVE, LEVEL_AT, LEVEL_BELOW, LEVEL_REACH } from './levelmarks';
 import { sunAt } from './sun';
 import { gearFrom, wornWire } from '../game/worn';
 import { materialOf } from '../game/materials';
@@ -68,6 +69,9 @@ import { decorTrim } from './decorlook';
 import { furnishTrim } from './furnishlook';
 import { fittingTrim } from './fittinglook';
 import { ADORN_LIVE, adornTrim } from './adornlook';
+import { OBSIDIAN_LIVE, obsidianTrim } from './obsidianlook';
+import { dragonShimmer } from './kit/obsidian';
+import { DRAGON_FOUNTAIN, OBSIDIAN_BUST } from '../game/obsidiandefs';
 import { BUOY } from '../game/adorndefs';
 import { BUOY_BOB, PLATE_BOARD } from './kit/adorn';
 import { NAMEPLATE } from '../game/adorndefs';
@@ -95,7 +99,9 @@ import { ageDef, stageOf } from '../game/creatures';
 import { CRATE_DOOR, CREATURE_CRATE } from '../game/creaturecrate';
 import { FIRE_CAPACITY, fireCentre } from '../game/campfire';
 import { drawCampfireNight } from './kit/campfire';
-import { SMELTER_H, SMELTER_W, smelterCentre } from '../game/smelter';
+import { TRAP_WORN, trapTurn } from './kit/traps';
+import { smelterCentre, smelterSize } from '../game/smelter';
+import { stationCentreAt, stationFootprint, stationTurn } from '../game/stations';
 import { anvilBounds, anvilHit, anvilNight, anvilTone, anvilVariant, drawAnvil, drawAnvilLive, drawAnvilNight, drawKiln, drawKilnLive, drawKilnNight, drawSmelter, drawSmelterLive, drawSmelterNight, kilnBounds, kilnHit, smelterBounds, smelterHit } from './forge';
 import { KILN_SUBTILES, kilnCentre } from '../game/kiln';
 import { furnitureCentre, furnitureDef, hearthCapacity, isBoat, type PlacedFurniture, facingOf as pieceFacing, furnitureFootprint } from '../game/furniture';
@@ -110,7 +116,7 @@ import { fieldRate } from '../game/growth';
 import { dyeOf, dyeTint } from '../game/dyestuffs';
 import { castAt, netReach } from '../game/fishing';
 import { sailTrim } from '../game/wind';
-import { FURNITURE_BY_ID, isPlanter, rackDeck, rackSpots } from '../game/furniture';
+import { FURNITURE_BY_ID, isFountain, isPlanter, rackDeck, rackSpots } from '../game/furniture';
 import { isLampPiece, lampBurning } from '../game/lamps';
 import { drawLampBloom, piecesFrame } from './furniture';
 import { zoomHeld } from './settle';
@@ -140,6 +146,11 @@ import { drawPlantsFlat, drawPlantUpright, plantFoot, standsUp, type PlantFrame 
 import type { WaterPlant } from '../world/waterplants';
 import type { Swirl } from '../game/motes';
 import { drawSwirl, glowSwirl } from './swirls';
+import { drawLava, glowLava } from './lava';
+/** How far from the lava's box it can still be in view, in tiles. */
+const LAVA_VIEW = 160;
+import { isOutcropKind, outcropStage } from '../game/outcrops';
+import { OUTCROP_VARIANTS, outcropTrim } from './kit/outcropping';
 import { activeInfusion } from '../game/infusion';
 import { isRigged } from '../game/sailing';
 import { MOTE_ELEMENTS, type MoteElement } from '../game/motes';
@@ -458,11 +469,12 @@ function drawStill(g: CanvasRenderingContext2D, px: number, py: number, zoom: nu
 import { FLOAT_COLOURS, Floaters } from './floaters';
 import { inkOr, WORLD_INK } from './inks';
 import { NameLabels } from './namelabels';
+import { badgeIds } from '../game/badges';
 import { drawSpeech } from './bubble';
 import { SKILL_BY_ID } from '../game/skills';
 import { PUFFS, PUFF_DRIFT, PUFF_RISE, puffAge, puffOf } from './smoke';
 import { CROWD, DROWNS, hemOf, ruffle, strew, strewLook, WADES, WADE_DEPTH, type Lobe } from './meadow';
-import { SEAM_FROM, seam, seamWash } from './seams';
+import { prospectMark, SEAM_FROM, seam, seamWash, veinGlints, veinLit, VeinNight } from './seams/runecut';
 import { Timings } from './timings';
 import { ColourPages, MarkPages } from './pages';
 import { trailMask, trailShape, type TrailShape } from './trails';
@@ -533,6 +545,15 @@ export { type Pick } from './picking';
 import { drawPlinthRunes, plinthNight } from './plinth';
 import { plinthBusy } from '../game/plinth';
 import { ENCHANTERS_PLINTH } from '../game/enchant';
+
+/** The face and shade an anvil of a metal is drawn in: its own (`anvilTone`), or else its ore's. */
+function anvilColours(metal: string): [string, string] {
+  const own = anvilTone(metal);
+  if (own) return [own[0], own[1]];
+  const rock = ROCK_VARIANTS.find((r) => r.yields === `${metal}_ore`);
+  const c = rock ? rock.color : ([150, 150, 156] as const);
+  return [`rgb(${c[0]},${c[1]},${c[2]})`, `rgb(${Math.round(c[0] * 0.68)},${Math.round(c[1] * 0.68)},${Math.round(c[2] * 0.68)})`];
+}
 
 /** How far ahead of its line a piece lying flat sorts (`DrawEnt.key`): ahead of anything standing in it. */
 const FLAT_FIRST = 1e6;
@@ -1399,6 +1420,13 @@ export class Renderer {
    * painted over it.
    */
   private glows: Array<{ sx: number; sy: number; kind: string; view: PieceView }> = [];
+  /** The lava drawn this frame, ten numbers a tile (its four corners on screen, then the tile), and how many (`glowLava`). */
+  private lavaSeen: number[] = [];
+  private lavaN = 0;
+  /** The seams in sight this frame that light the night (`VeinNight`). */
+  private veinNight = new VeinNight();
+  /** Whether the day's lava can be in view this frame: you are within `LAVA_VIEW` tiles of its box. */
+  private lavaNear = false;
   /** The mote swirls drawn this frame and where, for their light to be added over the night (`glowSwirl`). */
   private swirlsSeen: Array<{ s: Swirl; x: number; y: number }> = [];
   /**
@@ -4322,15 +4350,10 @@ export class Renderer {
     // The squeezed pictures (`atSize`) and the trees' (`drawTree`) are no longer emptied when the zoom changes: each knows the zoom it was made at.
     const paved = zoom >= 0.75;
     /*
-     * A seam is shapes in the stone, and below this a band of it is a few
-     * pixels wide: the wash of the metal through the tile's own colour is what
-     * says there is ore in that hillside from further out than this.
-     *
-     * It is also where the ground pass is dearest. Every band is pixels filled
-     * two or three times over, and a hillside that is ore the whole way across
-     * -- which takes some doing, but a miner can make one -- costs twenty-odd
-     * milliseconds a frame at zoom one against one and a half for the rich
-     * hillside that actually occurs. Below here it costs nothing at all.
+     * A seam is a recess cut into its tile (`seams/runecut.ts`), and below
+     * this it is a few pixels across: the wash of the metal through the
+     * tile's own colour is what says there is ore in that hillside from
+     * further out than this. Above it a seam is one picture laid on its tile.
      */
     const seamed = zoom >= SEAM_FROM;
     // Grass is flat colour with things growing in it, and a clump of grass
@@ -4419,6 +4442,14 @@ export class Renderer {
     this.hitSeq = 0;
     this.glows.length = 0;
     this.swirlsSeen.length = 0;
+    // The lava drawn this frame, for its glow over the night (`glowLava`), and whether any can be in view at all.
+    this.lavaN = 0;
+    this.veinNight.begin(this.game.darkness() > 0.02);
+    {
+      const b = this.game.lavaBox();
+      const p = this.game.player;
+      this.lavaNear = p.x > b[0] - LAVA_VIEW && p.y > b[1] - LAVA_VIEW && p.x < b[2] + LAVA_VIEW && p.y < b[3] + LAVA_VIEW;
+    }
     this.infusedSeen = this.infusedThings();
     // After dark; and for an altar's stars, whenever the night layer is laid at all (`drawOverlays`), so it can be mixed small.
     const dark0 = this.game.darkness();
@@ -4452,7 +4483,7 @@ export class Renderer {
         mist: (placed) => this.springWater.mistOf(placed),
         moss: (b, x, y, shade) => Math.round(greenShows(bridgeGreen(this.game, b, this.greenAt) ?? 0, shade, this.walls.wetness(x, y)) * PAVE_STAGES),
         fountain: (x, y) => {
-          const fu = this.game.furnitureOnTile(x, y).find((p) => p.kind === 'fountain');
+          const fu = this.game.furnitureOnTile(x, y).find((p) => isFountain(p.kind));
           if (!fu) return null;
           const [fx, fy] = furnitureCentre(fu);
           return { x: fx, y: fy, base: this.pieceBase(fu, fx, fy) };
@@ -4748,11 +4779,39 @@ export class Renderer {
         if (!wet && t0 === TileType.Steps) {
           drawSteps({ ctx, cam, world, zoom, season: this.season, light: this.stepsLight, dpr: this.canvas.dpr }, x, y);
         }
-        // And the metal in the stone, where there is any. Plain rock is plain.
-        // It keeps to its own tile without a clip: see `seams/paint.ts`.
-        if (seamed && !wet && !run && t0 === TileType.Rock) {
+        /*
+         * And the seam cut into the stone, where there is one; plain rock is
+         * plain. Laid from its block's picture with the rest of the run, or
+         * drawn now. What moves on it (its glints) and what lights the night
+         * (`VeinNight`) is drawn or gathered every frame, from a block or not.
+         */
+        if (seamed && !wet && t0 === TileType.Rock) {
           const kind = world.rockFace(x, y);
-          if (kind > 0) seam(ctx, x, y, kind, pts, paveRot, zoom, this.canvas.dpr);
+          if (kind > 0) {
+            if (!run) seam(ctx, x, y, kind, pts, paveRot, zoom, this.canvas.dpr);
+            if (lit) {
+              veinGlints(ctx, x, y, kind, pts, zoom, this.canvas.dpr, this.anim);
+              this.veinNight.add(x, y, kind, pts);
+            }
+          }
+        }
+
+        // The day's lava on Volcano Isle (`./lava`), over its ground: crusted where it stops; glowing after dark (`glowLava`).
+        if (this.lavaNear && !wet && this.game.lavaAt(x, y)) {
+          let open = 0;
+          for (let k = 0; k < 4; k++) {
+            const a = co[k], b = co[(k + 1) & 3];
+            const across = a[0] === b[0];
+            if (!this.game.lavaAt(across ? x + (a[0] === 0 ? -1 : 1) : x, across ? y : y + (a[1] === 0 ? -1 : 1))) open |= 1 << k;
+          }
+          drawLava(ctx, pts, co, open, x, y, this.anim, lit, this.still, this.calm);
+          if (lit) {
+            const o = this.lavaN * 10;
+            for (let k = 0; k < 8; k++) this.lavaSeen[o + k] = pts[k];
+            this.lavaSeen[o + 8] = x;
+            this.lavaSeen[o + 9] = y;
+            this.lavaN++;
+          }
         }
 
         // What stands on a line behind and reaches out over this tile's ground: drawn again over the part of it under its feet.
@@ -4837,9 +4896,8 @@ export class Renderer {
             this.take('swirl', x, y, cam.worldToScreenX(x + 0.5, y + 0.5), cam.worldToScreenY(x + 0.5, y + 0.5, h), null).swirl = swirl;
           }
         }
-        // A crop on a garden bed, on whatever storey the bed is: at the bed's soil, as a field's crop stands on its ground.
-        const bedCrop = this.game.crops.size && !cutHere ? this.game.cropAt(x, y) : undefined;
-        if (bedCrop && bedCrop.level !== undefined) this.takeBedCrop(bedCrop, x, y, cam.rotation);
+        // A crop on a garden bed, on whatever storey the bed is, each storey's its own: at the bed's soil, as a field's crop stands on its ground.
+        if (this.game.crops.size && !cutHere) for (const bedCrop of this.game.cropsAt(x, y)) if (bedCrop.level !== undefined) this.takeBedCrop(bedCrop, x, y, cam.rotation);
         if (t === TileType.Field && !aloft) {
           const fieldCrop = this.game.crops.size ? this.game.cropAt(x, y) : undefined;
           // Only the field's own: one on a bed over it is drawn up there.
@@ -7112,6 +7170,8 @@ export class Renderer {
           text: peer.name,
           note: peer.act ? ACTION_BY_ID.get(peer.act)?.verb : undefined,
           ink: 'player',
+          // Their trade and class before the name, off the island's row of them (`../game/badges.ts`).
+          icons: badgeIds(this.game.badges.get(peer.uid), this.game.settings.nameIcons),
           x: nx,
           head: ny,
           z: swayedAt(ent.sway, ex, ey)[1],
@@ -7248,7 +7308,7 @@ export class Renderer {
             drawn = drawMemorial(g, px, py, zoom, facing, turn, piece.engraving, dark, this.anim);
           }, undefined, pieceBox);
           this.runeNight.source(ctx, ent.sx, ent.sy, zoom, memorialNight(facing, turn, zoom, piece.engraving), this.anim);
-        } else if (piece.kind === 'fountain') {
+        } else if (isFountain(piece.kind)) {
           /*
            * A tiered fountain: its stone in three layers with its water drawn
            * live in between them, running while it holds a litre or more to
@@ -7268,6 +7328,8 @@ export class Renderer {
               const b = drawFurniture(g, px, py, zoom, piece.kind, false, undefined, layer, view, piece.material, undefined, 'all', false);
               box = box ? [Math.min(box[0], b[0]), Math.min(box[1], b[1]), Math.max(box[2], b[2]), Math.max(box[3], b[3])] : b;
             });
+            // A dragon-glass fountain's shimmer over its glass and water (`kit/obsidian.ts`).
+            if (piece.kind === DRAGON_FOUNTAIN) dragonShimmer(g, px, py, zoom, view, this.anim, dark);
           }, undefined, pieceBox);
           drawn = box;
         } else if (piece.kind === TREE_BENCH && ent.layer !== undefined) {
@@ -7336,7 +7398,8 @@ export class Renderer {
           // ring under the pointer: a ring round a bloom of light is a blot.
           // (an armour stand's mannequin by which stand it is: `decorlook.ts`)
           drawFurnitureLive(ctx, ent.sx, ent.sy, zoom, piece.kind, view, this.game.darkness(),
-            clothInWind(piece.kind) || piece.kind === ARMOUR_STAND || piece.kind === STONE_BUST || piece.kind === LANTERN_POLE || ADORN_LIVE.includes(piece.kind) ? this.airOf(piece) : undefined);
+            clothInWind(piece.kind) || piece.kind === ARMOUR_STAND || piece.kind === STONE_BUST || piece.kind === LANTERN_POLE || ADORN_LIVE.includes(piece.kind)
+              || piece.kind === OBSIDIAN_BUST || OBSIDIAN_LIVE.includes(piece.kind) ? this.airOf(piece) : undefined);
           // A lantern burning on a post or a pillar blooms as the dark comes on (`lamps.ts`).
           if (lampBurning(piece)) drawLampBloom(ctx, ent.sx, ent.sy, zoom, piece.kind, view, this.game.darkness());
           /*
@@ -7420,7 +7483,7 @@ export class Renderer {
          * turned up by what the wash will take off them (`nightOver`).
          * Clicked by its solids.
          */
-        const kiln = ent.kiln, turn = this.camera.rotation, dark = this.game.darkness();
+        const kiln = ent.kiln, turn = this.camera.rotation + stationTurn(kiln.facing), dark = this.game.darkness();
         const look = { lit: kiln.lit, firing: kiln.lit && kiln.jobs.length > 0 };
         const [bl, bt, br, bb] = kilnBounds(turn, zoom);
         const box: [number, number, number, number] = [ent.sx + bl * zoom, ent.sy + bt * zoom, (br - bl) * zoom, (bb - bt) * zoom];
@@ -7446,7 +7509,7 @@ export class Renderer {
          * off them (`nightOver`) -- not the runestones' keeping, which costs a
          * frame a box of everything drawn after it. Clicked by its solids.
          */
-        const sm = ent.smelter, turn = this.camera.rotation, dark = this.game.darkness();
+        const sm = ent.smelter, turn = this.camera.rotation + stationTurn(sm.facing), dark = this.game.darkness();
         const look = { lit: sm.lit, working: sm.lit && sm.jobs.length > 0 };
         const [bl, bt, br, bb] = smelterBounds(turn, zoom);
         const box: [number, number, number, number] = [ent.sx + bl * zoom, ent.sy + bt * zoom, (br - bl) * zoom, (bb - bt) * zoom];
@@ -7458,21 +7521,15 @@ export class Renderer {
         if (look.lit && dark > 0.02) drawSmelterNight(ctx, ent.sx, ent.sy, zoom, turn, look, dark, this.anim, this.nightOver(ent.sx, ent.sy - 30 * zoom, dark));
         const [hl, ht, hr, hb] = smelterHit(turn, zoom);
         this.smelterHits.push({ ...this.shaped(), x: ent.x, y: ent.y, left: ent.sx + hl * zoom, top: ent.sy + ht * zoom, w: (hr - hl) * zoom, h: (hb - ht) * zoom, smelter: sm.id });
-        if (!behind) this.standsOn(...smelterCentre(sm), ent.sy, this.footReach(SMELTER_W, SMELTER_H, hl, hr), zoom);
+        if (!behind) this.standsOn(...smelterCentre(sm), ent.sy, this.footReach(...smelterSize(sm.facing), hl, hr), zoom);
         if (shines(ent.rare)) drawShine(ctx, ent.sx, ent.sy, zoom, ent.rare as number, sm.id, this.anim, (hr - hl) * zoom, (hb - ht) * 0.75 * zoom);
         continue;
       }
       if (ent.kind === 'anvil' && ent.anvil) {
         // An anvil takes the colour of the metal it was cast from, on a block with a rune cut in it (`forge.ts`), lit over the night after dark.
-        const an = ent.anvil, turn = this.camera.rotation, dark = this.game.darkness();
-        let [face, shade] = anvilTone(an.metal) ?? ['', ''];
-        if (!face) {
-          // A metal with no colour of its own drawn: its ore's.
-          const rock = ROCK_VARIANTS.find((r) => r.yields === `${an.metal}_ore`);
-          const c = rock ? rock.color : ([150, 150, 156] as const);
-          face = `rgb(${c[0]},${c[1]},${c[2]})`;
-          shade = `rgb(${Math.round(c[0] * 0.68)},${Math.round(c[1] * 0.68)},${Math.round(c[2] * 0.68)})`;
-        }
+        // Turned the way it was set down (`stationTurn`).
+        const an = ent.anvil, turn = this.camera.rotation + stationTurn(an.facing), dark = this.game.darkness();
+        const [face, shade] = anvilColours(an.metal);
         const variant = anvilVariant(an.x, an.y, an.sx, an.sy);
         const [bl, bt, br, bb] = anvilBounds(face, shade, variant, turn, zoom);
         const box: [number, number, number, number] = [ent.sx + bl * zoom, ent.sy + bt * zoom, (br - bl) * zoom, (bb - bt) * zoom];
@@ -7664,13 +7721,16 @@ export class Renderer {
       }
       if (ent.kind === 'trap' && ent.trap) {
         const trap = ent.trap;
-        this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => drawTrap(g, px, py, zoom, trap.kind, !!trap.bait, trap.caught !== null));
-        this.trapHits.push({ ...this.shaped(), x: ent.x, y: ent.y, left: ent.sx - 8 * zoom, top: ent.sy - 12 * zoom, w: 16 * zoom, h: 14 * zoom, trap: trap.id });
+        // Turned with the camera and a way of its own by where it stands; worn once most of its life is gone (`TRAP_WORN`).
+        const turn = this.camera.rotation + trapTurn(trap), worn = trap.dmg >= TRAP_WORN;
+        let box: [number, number, number, number] = [-8 * zoom, -12 * zoom, 8 * zoom, 2 * zoom];
+        this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => { box = drawTrap(g, px, py, zoom, trap.kind, !!trap.bait, trap.caught !== null, turn, worn); });
+        this.trapHits.push({ ...this.shaped(), x: ent.x, y: ent.y, left: ent.sx + box[0], top: ent.sy + box[1], w: box[2] - box[0], h: box[3] - box[1], trap: trap.id });
         continue;
       }
       if (ent.kind === 'campfire' && ent.fire) {
         const fire = ent.fire;
-        this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => drawCampfire(g, px, py, zoom, fire.lit, fire.fuel, this.anim, this.camera.rotation, fire.ash ?? 0));
+        this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => drawCampfire(g, px, py, zoom, fire.lit, fire.fuel, this.anim, this.camera.rotation + stationTurn(fire.facing), fire.ash ?? 0));
         // Its fire after dark, added as light in its own place (`kit/campfire.ts`), as a smelter's is.
         const dark = fire.lit ? this.game.darkness() : 0;
         if (dark > 0.02) drawCampfireNight(ctx, ent.sx, ent.sy, zoom, fire.fuel, dark, this.anim, this.nightOver(ent.sx, ent.sy - 12 * zoom, dark));
@@ -8470,11 +8530,31 @@ export class Renderer {
      * top, a way down is the hole it would go down through.
      */
     const below = this.cellarFrame && this.game.buildings.cellarDone(ghost.x, ghost.y)
-      && (ghost.kind === 'furniture' || ghost.level === 0);
+      && (ghost.kind === 'furniture' || (ghost.kind === 'stairs' && ghost.level === 0));
     if (below !== this.inCellarPass) return;
     ctx.save();
     ctx.globalAlpha = 0.6;
-    if (ghost.kind === 'furniture') {
+    if (ghost.kind === 'station') {
+      // A station as itself, cold, turned the way it would be set down (`stations.ts`).
+      const [wx, wy] = stationCentreAt(ghost.station, ghost.x, ghost.y, ghost.sx, ghost.sy, ghost.facing);
+      const px = cam.worldToScreenX(wx, wy);
+      const py = cam.worldToScreenY(wx, wy, this.standTop(wx, wy));
+      const turn = cam.rotation + stationTurn(ghost.facing);
+      if (ghost.station === 'campfire') drawCampfire(ctx, px, py, zoom, false, 0, this.anim, turn, 0);
+      else if (ghost.station === 'smelter') drawSmelter(ctx, px, py, zoom, turn, { lit: false, working: false }, 0, this.anim, false);
+      else if (ghost.station === 'kiln') drawKiln(ctx, px, py, zoom, turn, { lit: false, firing: false }, 0, this.anim, false);
+      else {
+        const [face, shade] = anvilColours(ghost.metal ?? 'copper');
+        drawAnvil(ctx, px, py, zoom, face, shade, turn, anvilVariant(ghost.x, ghost.y, ghost.sx, ghost.sy), 0, this.anim, false);
+      }
+      if (!ghost.ok) {
+        const [w, h] = stationFootprint(ghost.station, ghost.facing);
+        ctx.fillStyle = 'rgba(214, 58, 42, 0.5)';
+        ctx.beginPath();
+        ctx.ellipse(px, py, 9 * Math.max(w, h) * zoom, 4.5 * Math.max(w, h) * zoom, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (ghost.kind === 'furniture') {
       const [w, h] = furnitureFootprint(ghost.piece, ghost.facing);
       const wx = ghost.x + (ghost.sx + w / 2) / SUBTILES;
       const wy = ghost.y + (ghost.sy + h / 2) / SUBTILES;
@@ -10156,7 +10236,8 @@ export class Renderer {
        * between it and the next tile of it -- except seen through, where the
        * hair laid twice is a line across the ceiling.
        */
-      const cx = fx(0.5, 0.5), cy = fy(0.5, 0.5), grow = alpha < 1 ? 0 : 0.5;
+      // Nor glass seen through all over (`MaterialDef.opacity`), which the hair laid twice would line at every joint.
+      const cx = fx(0.5, 0.5), cy = fy(0.5, 0.5), grow = alpha < 1 || (bare.opacity ?? 1) < 1 ? 0 : 0.5;
       ctx.beginPath();
       for (const [u, v] of corners) {
         const px = fx(u, v), py = fy(u, v), l = Math.hypot(px - cx, py - cy) || 1;
@@ -10215,6 +10296,8 @@ export class Renderer {
     const decked = floor.level === 0 && bld.pierTiles.size > 0 && bld.onPiers(x, y);
     if (done && (floor.level > 0 || decked)) {
       const st = stairStyle(floor.material);
+      // Its edge as seen through as its deck (`MaterialDef.opacity`).
+      ctx.globalAlpha = alpha * (bare.opacity ?? 1);
       const lum = (c: readonly [number, number, number]): number => 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2];
       const C = (c: readonly [number, number, number], k: number, a = 1): string =>
         paint ? rgb(paint, k * Math.max(0.6, Math.min(1.3, lum(c) / Math.max(1, lum(st.string)))), a) : rgb(c, k, a);
@@ -10646,31 +10729,39 @@ export class Renderer {
     [this.camera.worldToScreenX(x, y), this.camera.worldToScreenY(x, y, h)];
 
   /** The deed's boundary as a line that follows the ground. */
-  /** Ore a prospector has read, glowing until the marks fade. */
+  /**
+   * Ore a prospector has read, until the marks fade (`prospectMark`): four
+   * brackets at the tile's corners in the seam's light; on bare rock its own
+   * mark lit, on buried ground its mark in a ring.
+   */
   private drawProspected(ctx: CanvasRenderingContext2D): void {
     const p = this.game.prospected;
     if (!p || this.game.time >= p.until) return;
     const w = this.game.world;
+    const cam = this.camera;
+    const co = cam.view.corners;
+    const pts = this.prospectPts;
     // Fade out over the last few seconds rather than blinking off.
     const left = p.until - this.game.time;
-    const pulse = this.calm ? 0.85 : 0.72 + Math.sin(this.anim * 3) * 0.22;
+    const pulse = this.calm ? 0.85 : 0.8 + Math.sin(this.anim * 3) * 0.15;
     ctx.save();
-    ctx.globalAlpha = Math.min(1, left / 8) * pulse;
+    ctx.globalAlpha = Math.min(1, left / 8);
     for (const key of p.tiles) {
       const x = key % w.w;
       const y = (key - x) / w.w;
-      this.tilePath(ctx, x, y);
-      ctx.fillStyle = '#ffcf3d';
-      ctx.fill();
-      ctx.lineWidth = 4;
-      ctx.strokeStyle = '#5a3c00';
-      ctx.stroke();
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = '#fff3c0';
-      ctx.stroke();
+      for (let k = 0; k < 4; k++) {
+        const cx = x + co[k][0], cy = y + co[k][1];
+        pts[k * 2] = cam.worldToScreenX(cx, cy);
+        pts[k * 2 + 1] = cam.worldToScreenY(cx, cy, w.getHeight(cx, cy));
+      }
+      const bare = w.getTile(x, y) === TileType.Rock;
+      const kind = w.rockFace(x, y);
+      if (bare) veinLit(ctx, x, y, kind, pts, cam.zoom, this.canvas.dpr);
+      prospectMark(ctx, pts, cam.zoom, kind, bare, pulse);
     }
     ctx.restore();
   }
+  private readonly prospectPts = new Float64Array(8);
 
   /**
    * Your border, and your neighbours'.
@@ -11180,6 +11271,67 @@ export class Renderer {
     ctx.fill();
   }
 
+  /**
+   * The level's marks on the ground, while one is set: each corner within
+   * `LEVEL_REACH` of the cursor's corner (your own, with no cursor) a short
+   * dash, green at the level, amber above it with a stem down, blue below it
+   * with a stem up; fainter further out. And a ring where it was set, when it
+   * was set from here (`Game.levelAt`). A path a colour a ring: at most twelve.
+   */
+  private drawLevelMarks(ctx: CanvasRenderingContext2D, zoom: number, level: number): void {
+    const game = this.game;
+    const w = game.world;
+    const cam = this.camera;
+    const s = Math.max(0.8, zoom);
+    const set = game.levelAt;
+    if (set && w.cornerInBounds(set.cx, set.cy)) {
+      const sx = cam.worldToScreenX(set.cx, set.cy), sy = cam.worldToScreenY(set.cx, set.cy, level);
+      ctx.lineWidth = 1.25 * s;
+      ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+      ctx.beginPath();
+      ctx.ellipse(sx, sy, 7 * s, 3.5 * s, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    const hover = this.hover;
+    const ox = hover && !hover.down ? hover.cx : Math.round(game.player.x);
+    const oy = hover && !hover.down ? hover.cy : Math.round(game.player.y);
+    const R = LEVEL_REACH;
+    const half = 4 * s, stem = 3 * s;
+    for (const [rgb, sign] of [[LEVEL_AT, 0], [LEVEL_ABOVE, 1], [LEVEL_BELOW, -1]] as const) {
+      // Faded by distance, a ring at a time (the square of corners `ring` out), each ring one path.
+      for (let ring = 0; ring <= R; ring++) {
+        let any = false;
+        ctx.beginPath();
+        for (let dy = -ring; dy <= ring; dy++) for (let dx = -ring; dx <= ring; dx++) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== ring) continue;
+          const cx = ox + dx, cy = oy + dy;
+          if (!w.cornerInBounds(cx, cy)) continue;
+          const h = w.getHeight(cx, cy);
+          if (Math.sign(h - level) !== sign) continue;
+          const sx = cam.worldToScreenX(cx, cy), sy = cam.worldToScreenY(cx, cy, h);
+          ctx.moveTo(sx - half, sy);
+          ctx.lineTo(sx + half, sy);
+          if (sign !== 0) {
+            ctx.moveTo(sx, sy);
+            ctx.lineTo(sx, sy + sign * stem);
+          }
+          any = true;
+        }
+        if (!any) continue;
+        const a = 0.95 - (0.5 * ring) / R;
+        ctx.lineCap = 'round';
+        ctx.lineWidth = 3 * s;
+        ctx.strokeStyle = `rgba(20,16,12,${(a * 0.55).toFixed(2)})`;
+        ctx.stroke();
+        ctx.lineWidth = 1.5 * s;
+        ctx.strokeStyle = `rgba(${rgb},${a.toFixed(2)})`;
+        ctx.stroke();
+      }
+    }
+    ctx.lineCap = 'butt';
+    ctx.lineWidth = 1;
+  }
+
   private drawOverlays(ctx: CanvasRenderingContext2D, zoom: number): void {
     const game = this.game;
     const w = game.world;
@@ -11304,6 +11456,10 @@ export class Renderer {
     if (!this.fast) this.life.glow(ctx);
     // And the mote swirls' glow and glints, the same way (`glowSwirl`).
     if (dark > 0.02) for (const w of this.swirlsSeen) glowSwirl(ctx, w.x, w.y, zoom, w.s.element, this.anim, w.s.id, dark);
+    // And the lava, burning through the night (`glowLava`).
+    if (dark > 0.02 && this.lavaN) glowLava(ctx, this.lavaSeen, this.lavaN, dark, this.anim, this.calm);
+    // And what of the seams lights, over the night (`VeinNight`).
+    if (dark > 0.02) this.veinNight.glow(ctx, zoom, this.canvas.dpr, dark);
     // And the spells' light, over the night too, and the screen's tint for a great one of your own over that.
     this.spells.glowPass(ctx);
     this.spells.screenPass(ctx, this.canvas.width, this.canvas.height);
@@ -11327,6 +11483,8 @@ export class Renderer {
 
     const hover = this.hover;
     this.drawProspected(ctx);
+    // The level's marks round the cursor, while one is set (`drawLevelMarks`); not down in a cellar.
+    if (game.level !== null && !this.cellarFrame) this.drawLevelMarks(ctx, zoom, game.level);
     // A settlement previewed draws the borders already standing beside it, as your own being on does.
     const previewed = this.previewShown();
     if ((game.deed && (game.settings.deedBorder || (hover && game.isMyToken(hover.x, hover.y)))) || previewed) this.drawDeedBorder(ctx);
@@ -11439,6 +11597,8 @@ export class Renderer {
   }
 
   private pieceTrim(f: PlacedFurniture): number | undefined {
+    // An outcropping: how far it is mined down, and its shape off its tile (`outcrops.ts`).
+    if (isOutcropKind(f.kind)) return outcropTrim(outcropStage(f.uses), Math.floor(hash2(f.x, f.y, 89) * OUTCROP_VARIANTS));
     // A cart's or a wagon's wheels, as far round as she has rolled.
     if (WHEELS[f.kind]) return this.wheelTurn(f);
     // A rowing boat somebody is rowing has her oars out in their hands, not shipped in her.
@@ -11479,6 +11639,9 @@ export class Renderer {
     // An adornment: a pond's lilies, a panel's ivy, an obelisk's sweet peas, a spiral's herbs, a rack's cheese, a rug's kind, a plush, a table's round, a lamp's gem, a board (`adorn.ts`, `adornlook.ts`).
     const adorn = adornTrim(f, this.game);
     if (adorn !== undefined) return adorn;
+    // An obsidian piece: a lantern's candle, an obelisk's glint, a vase's flowers (`obsidian.ts`, `obsidianlook.ts`).
+    const obsidian = obsidianTrim(f, this.game);
+    if (obsidian !== undefined) return obsidian;
     // An arch's roses or lavender: the variety, which is its place's, and how far it has grown (`roses.ts`).
     if (FURNITURE_BY_ID.get(f.kind)?.climber) {
       const r = roseStage(f.setAt, this.game.wallNow());

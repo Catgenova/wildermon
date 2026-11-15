@@ -4,7 +4,7 @@
  * Asked for: "Change the 'sleeves' equipment type to 'shawl' type. All existing crafted sleeves become shawls. Amend
  * the plate shawl to include metal, fur in ingredients." So:
  *
- *   * the rulebook: the slot `shawl` ("Shawl") where `arms` was, the five pieces in it, a blow to the arms on it
+ *   * the rulebook: the slot `shawl` ("Shawl") where `arms` was, the six pieces in it (the five renamed and the obsidian shawl), a blow to the arms on it
  *     (`hit_location.worn`, `COVERS`) at the arms' share, and the recipes and moulds under their new ids;
  *   * a world planted with the old ids, inside a transaction it rolls back -- chain sleeves worn, leather sleeves in
  *     the pack, scale sleeves in a crate, cloth sleeves for sale on a stall, plate arms and their mould in the pack,
@@ -42,13 +42,14 @@ const said = (out: string): Map<string, string> =>
 
 /* ---- the rulebook, both sides ---------------------------------------------------------------------------- */
 
-const SHAWLS = ['cloth_shawl', 'leather_shawl', 'chain_shawl', 'plate_shawl', 'scale_shawl'];
+/** The five sleeves renamed, and the obsidian shawl (`OBSIDIAN_PIECES`) since. */
+const SHAWLS = ['cloth_shawl', 'leather_shawl', 'chain_shawl', 'plate_shawl', 'scale_shawl', 'obsidian_shawl'];
 check('the slot is shawl, called Shawl, and arms is no slot', SLOTS.includes('shawl') && SLOT_NAMES.shawl === 'Shawl' && !(SLOTS as string[]).includes('arms'));
 check('a blow to the arms lands on the shawl, at the share it had', COVERS.arms === 'shawl' && HIT_LOCATIONS.find(([p]) => p === 'arms')?.[1] === 0.16);
-check('the five shawls are worn in it, and nothing else is',
+check('the six shawls are worn in it, and nothing else is',
   ARMOUR.filter((a) => a.slot === 'shawl').map((a) => a.id).sort().join() === [...SHAWLS].sort().join());
-check('called Cloth shawl, Leather shawl, Chain shawl, Plate shawl, Scale shawl',
-  SHAWLS.map((id) => itemDef(id).name).join() === 'Cloth shawl,Leather shawl,Chain shawl,Plate shawl,Scale shawl');
+check('called Cloth shawl, Leather shawl, Chain shawl, Plate shawl, Scale shawl, Obsidian shawl',
+  SHAWLS.map((id) => itemDef(id).name).join() === 'Cloth shawl,Leather shawl,Chain shawl,Plate shawl,Scale shawl,Obsidian shawl');
 check('every recipe renamed is a recipe under its new id and none under its old',
   Object.entries(RECIPE_RENAMED).every(([was, now]) => RECIPE_BY_ID.has(now) && !RECIPE_BY_ID.has(was) && recipeNow(was) === now)
     && recipeNow('make_cloth_tunic') === 'make_cloth_tunic');
@@ -66,7 +67,7 @@ select 'OLD=' || count(*) from item_def where id ~ '${OLD}';
 select 'OLDR=' || count(*) from recipe where id ~ '${OLD}' or result ~ '${OLD}';
 select 'NEWR=' || string_agg(id, ',' order by id) from recipe where id = any (array[${Object.values(RECIPE_RENAMED).map(q).join(', ')}]);
 `));
-check('the island wears the five in the shawl slot', rules.get('SLOTS') === SHAWLS.slice().sort().map((id) => `${id}:shawl`).join(','), rules.get('SLOTS'));
+check('the island wears the six in the shawl slot', rules.get('SLOTS') === SHAWLS.slice().sort().map((id) => `${id}:shawl`).join(','), rules.get('SLOTS'));
 check('the island lands a blow where the browser does, each on the slot over it',
   rules.get('COVER') === HIT_LOCATIONS.map(([p, s]) => `${p}:${COVERS[p]}:${s}`).join(','), rules.get('COVER'));
 check('the island casts the plate shawl from the same lumps and asks the same fur',

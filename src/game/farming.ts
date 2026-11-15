@@ -11,7 +11,7 @@ import { clearedSaid, clearedTo, glassTillRefusal, glazing, isGlasshouse } from 
 import type { Building, Buildings } from './building';
 import { capital, timeWords } from './words';
 import { lacksTool, REAP_TOOL, TEND_TOOL } from './jobtools';
-import { BED_NAME, bedLevelOf, bedSowRefusal, cropHere, emptyBeds, farmLevel } from './gardenbed';
+import { BED_NAME, bedLevelOf, bedSowRefusal, cropHere, emptyBeds, jobFarmLevel } from './gardenbed';
 import { HERB_BOX } from './gardendefs';
 import { COMPOST_BOOST } from './decordefs';
 
@@ -338,13 +338,16 @@ describeFrom('planter', { growth: PLANTER_GROWTH });
 
 /** The planter a job is aimed at, when it is aimed at one. */
 export const planterOf = (g: Game, t: Target): PlacedFurniture | undefined => (t.kind === 'furniture' ? g.planterPiece(t.id) : undefined);
-/** What a job is aimed at: the crop in a field or on the garden bed of the storey you stand on (`gardenbed.ts`), or the one in a planter. */
+/** The storey of the garden bed a job on a tile is aimed at -- the storey its target names, or the one you stand on -- or null for the field. */
+export const bedOfJob = (g: Game, t: Target): number | null => (t.kind === 'tile' ? bedLevelOf(g, t.x, t.y, t.level) : null);
+/** What a job is aimed at: the crop in a field or on the garden bed of the storey it is for (`gardenbed.ts`), or the one in a planter. */
 export const cropOf = (g: Game, t: Target): Crop | undefined =>
-  t.kind === 'tile' ? cropHere(g, t.x, t.y, bedLevelOf(g, t.x, t.y)) : t.kind === 'furniture' ? g.planted.get(t.id) : undefined;
-/** Whether a job on a tile is aimed at a finished garden bed on the storey you stand on. */
-const onBed = (g: Game, t: Target): boolean => t.kind === 'tile' && bedLevelOf(g, t.x, t.y) !== null;
-/** Whether a tile is a field a job is aimed at: tilled ground, and no garden bed on the storey you stand on over it. */
-const onField = (g: Game, t: Target): boolean => t.kind === 'tile' && !onBed(g, t) && g.world.getTile(t.x, t.y) === TileType.Field;
+  t.kind === 'tile' ? cropHere(g, t.x, t.y, bedOfJob(g, t)) : t.kind === 'furniture' ? g.planted.get(t.id) : undefined;
+/** Whether a job on a tile is aimed at a finished garden bed on the storey it is for. */
+const onBed = (g: Game, t: Target): boolean => bedOfJob(g, t) !== null;
+/** Whether a tile is a field a job is aimed at: tilled ground, no garden bed on the storey the job is for, and no storey over the ground named. */
+const onField = (g: Game, t: Target): boolean => t.kind === 'tile' && !((t.level ?? 0) > 0) && !onBed(g, t)
+  && g.world.getTile(t.x, t.y) === TileType.Field;
 /** Why a planter is out of reach, as the island says it (`fire_refusal`), or null. */
 const planterReach = (g: Game, f: PlacedFurniture): string | null => (g.besidePiece(f) ? null : 'Stand next to the planter.');
 
@@ -373,26 +376,24 @@ const patchOf = (job: { baseTime: number; stamina: number }): { baseTime: number
  * row by row, with the open garden beds of the ground floor among them, and
  * on a storey its open garden beds (`gardenbed.ts`).
  */
-export const emptyFields = (g: Game, x: number, y: number, r: number): Array<[number, number]> => {
-  const level = farmLevel(g);
+export const emptyFields = (g: Game, x: number, y: number, r: number, at?: number): Array<[number, number]> => {
+  const level = jobFarmLevel(g, at);
   const tiles = patchAround(g, x, y, r);
   const beds = new Set(emptyBeds(g, tiles, level).map(([tx, ty]) => `${tx},${ty}`));
   return tiles.filter(([tx, ty]) => beds.has(`${tx},${ty}`)
     || (level === 0 && g.world.getTile(tx, ty) === TileType.Field && !g.cropAt(tx, ty)));
 };
-/** Whether a crop in a patch is on the storey a patch job is worked from: a field's and a ground-floor bed's on the ground. */
-const onStorey = (g: Game, c: Crop): boolean => (c.level ?? 0) === farmLevel(g);
-/** The crops in a patch that want tending: not ripe, and not tended at the stage they are at. */
-export const wantTending = (g: Game, x: number, y: number, r: number): Crop[] =>
+/** The crops in a patch that want tending, on the storey the patch job is for: not ripe, and not tended at the stage they are at. */
+export const wantTending = (g: Game, x: number, y: number, r: number, at?: number): Crop[] =>
   patchAround(g, x, y, r).flatMap(([tx, ty]) => {
-    const c = g.cropAt(tx, ty);
-    return c && onStorey(g, c) && !cropReady(c) && !c.tendedNow ? [c] : [];
+    const c = g.cropAt(tx, ty, jobFarmLevel(g, at));
+    return c && !cropReady(c) && !c.tendedNow ? [c] : [];
   });
-/** The ripe crops in a patch. */
-export const ripeIn = (g: Game, x: number, y: number, r: number): Crop[] =>
+/** The ripe crops in a patch, on the storey the patch job is for. */
+export const ripeIn = (g: Game, x: number, y: number, r: number, at?: number): Crop[] =>
   patchAround(g, x, y, r).flatMap(([tx, ty]) => {
-    const c = g.cropAt(tx, ty);
-    return c && onStorey(g, c) && cropReady(c) ? [c] : [];
+    const c = g.cropAt(tx, ty, jobFarmLevel(g, at));
+    return c && cropReady(c) ? [c] : [];
   });
 
 /**
@@ -514,9 +515,9 @@ export const FARM_ACTIONS: ActionDef[] = [
         if (g.planted.has(box.id)) return 'Already growing a crop.';
       } else {
         if (t.kind !== 'tile') return 'Choose a field.';
-        const bed = bedLevelOf(g, t.x, t.y);
-        if (bed === null && g.world.getTile(t.x, t.y) !== TileType.Field) return 'Needs a tilled field.';
-        // Covered, or a crop on the tile already, on this storey or another.
+        const bed = bedOfJob(g, t);
+        if (bed === null && ((t.level ?? 0) > 0 || g.world.getTile(t.x, t.y) !== TileType.Field)) return 'Needs a tilled field.';
+        // Covered, or a crop on this storey of the tile already.
         const why = bedSowRefusal(g, t.x, t.y, bed);
         if (why) return why;
       }
@@ -536,10 +537,10 @@ export const FARM_ACTIONS: ActionDef[] = [
       const seed = g.inventory.get(uid);
       const def = seed && CROP_BY_SEED.get(seed.id);
       if (!seed || !def) return;
-      const bed = t.kind === 'tile' ? bedLevelOf(g, t.x, t.y) : null;
+      const bed = bedOfJob(g, t);
       const sown = sowOne(g, box ?? { x: t.kind === 'tile' ? t.x : 0, y: t.kind === 'tile' ? t.y : 0, ...(bed !== null ? { level: bed } : {}) }, seed, def);
       if (!sown) return;
-      const c = box ? g.planted.get(box.id) : t.kind === 'tile' ? g.cropAt(t.x, t.y) : undefined;
+      const c = box ? g.planted.get(box.id) : t.kind === 'tile' ? g.cropAt(t.x, t.y, bed ?? 0) : undefined;
       // When it will be sprouting, in real time, from the season it was sown in -- or in any, in a planter, under glass or on a garden bed.
       const clock: CropClock = c ? cropClockOf(c) : box ? 'planter' : 'field';
       const when = c ? cropWhen(STAGE_NAMES[1], g.cropPer(c), clock, g.wallNow()) : `${STAGE_NAMES[1]} soon`;
@@ -641,7 +642,7 @@ export const FARM_ACTIONS: ActionDef[] = [
         return;
       }
       const c = cropOf(g, t);
-      if (c) g.removeCrop(t.x, t.y);
+      if (c) g.uproot(c);
       // Broken up, it is not a field any more, and has no last crop.
       g.forgetSown(t.x, t.y);
       // Inside a footprint, packed flat again as the rest of it is (`glasshouse.ts`).
@@ -666,7 +667,7 @@ export const FARM_ACTIONS: ActionDef[] = [
       if (!seed || !CROP_BY_SEED.has(seed.id)) return 'Choose a seed.';
       const gated = itemGateRefusal(seed, g);
       if (gated) return gated;
-      if (!emptyFields(g, t.x, t.y, g.perk('sow_patch', 0)).length) return 'No empty field in the patch.';
+      if (!emptyFields(g, t.x, t.y, g.perk('sow_patch', 0), t.level).length) return 'No empty field in the patch.';
       return null;
     },
     perform: (t, g) => {
@@ -676,10 +677,10 @@ export const FARM_ACTIONS: ActionDef[] = [
       if (!first || !def) return;
       let sown = 0;
       let kept = 0;
-      for (const [x, y] of emptyFields(g, t.x, t.y, g.perk('sow_patch', 0))) {
+      for (const [x, y] of emptyFields(g, t.x, t.y, g.perk('sow_patch', 0), t.level)) {
         const seed = g.inventory.get(t.itemUid);
         if (!seed) break;
-        const bed = bedLevelOf(g, x, y);
+        const bed = bedLevelOf(g, x, y, t.level);
         const how = sowOne(g, { x, y, ...(bed !== null ? { level: bed } : {}) }, seed, def);
         if (!how) break;
         sown += 1;
@@ -703,12 +704,12 @@ export const FARM_ACTIONS: ActionDef[] = [
       if (rake) return rake;
       if (t.kind !== 'tile') return 'Choose a field.';
       if (g.perk('tend_patch', 0) <= 0) return unlearned('Tend a Patch');
-      if (!wantTending(g, t.x, t.y, g.perk('tend_patch', 0)).length) return 'Nothing in the patch needs tending.';
+      if (!wantTending(g, t.x, t.y, g.perk('tend_patch', 0), t.level).length) return 'Nothing in the patch needs tending.';
       return null;
     },
     perform: (t, g) => {
       if (t.kind !== 'tile') return;
-      const crops = wantTending(g, t.x, t.y, g.perk('tend_patch', 0));
+      const crops = wantTending(g, t.x, t.y, g.perk('tend_patch', 0), t.level);
       for (const c of crops) tendOne(g, c);
       if (crops.length) g.logMsg(`Tended: ${crops.length} ${crops.length === 1 ? 'crop' : 'crops'}.`, 'event');
     },
@@ -726,12 +727,12 @@ export const FARM_ACTIONS: ActionDef[] = [
       if (sickle) return sickle;
       if (t.kind !== 'tile') return 'Choose a field.';
       if (g.perk('harvest_patch', 0) <= 0) return unlearned('Harvest a Patch');
-      if (!ripeIn(g, t.x, t.y, g.perk('harvest_patch', 0)).length) return 'Nothing in the patch is ripe.';
+      if (!ripeIn(g, t.x, t.y, g.perk('harvest_patch', 0), t.level).length) return 'Nothing in the patch is ripe.';
       return null;
     },
     perform: (t, g) => {
       if (t.kind !== 'tile') return;
-      const crops = ripeIn(g, t.x, t.y, g.perk('harvest_patch', 0));
+      const crops = ripeIn(g, t.x, t.y, g.perk('harvest_patch', 0), t.level);
       // What came up, by the thing, in the order it first came up.
       const tally = new Map<string, number>();
       for (const c of crops) {

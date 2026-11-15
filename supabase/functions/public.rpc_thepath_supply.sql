@@ -11,22 +11,22 @@ begin
   perform private.pace(auth.uid(), 'act');
   perform private.once();
   if p_step is null or not exists (select 1 from thepath_tames() t where t.step = p_step) then
-    perform private.bad_request('rpc_thepath_supply', 'p_step: not a tame step of the Path');
+    perform private.bad_request('rpc_thepath_supply', 'p_step: not a tame step of the Guiding Light');
   end if;
   if me is null then raise exception 'not signed in'; end if;
   if too_fast(me) then raise exception 'you are asking too quickly; slow down'; end if;
   select * into p from player where world_id = p_world and uid = me for update;
   if not found then raise exception 'not on this island'; end if;
   v := thepath_state(p.thepath);
-  if not (v->>'on')::boolean then raise exception 'Path: off.'; end if;
-  if v->'supply' ? p_step then raise exception 'Path supply: already handed out for this step.'; end if;
+  if not (v->>'on')::boolean then raise exception 'Guiding Light: off.'; end if;
+  if v->'supply' ? p_step then raise exception 'Guiding Light supply: already handed out for this step.'; end if;
   -- Open: every step before it ticked or skipped.
   select bool_and(coalesce(p.ticked, '[]'::jsonb) ? ('path:' || s) or v->'skip' ? s) into v_open
     from unnest(thepath_steps()) with ordinality u(s, o)
    where u.o < (select u2.o from unnest(thepath_steps()) with ordinality u2(s, o) where u2.s = p_step);
-  if not coalesce(v_open, true) then raise exception 'Path supply: not this step yet.'; end if;
+  if not coalesce(v_open, true) then raise exception 'Guiding Light supply: not this step yet.'; end if;
   select d.* into sd from species_def d where d.id = (select t.species from thepath_tames() t where t.step = p_step);
-  if thepath_in_season(sd.id) then raise exception 'Path supply: % eats what is in season now.', sd.name; end if;
+  if thepath_in_season(sd.id) then raise exception 'Guiding Light supply: % eats what is in season now.', sd.name; end if;
   v_n := thepath_supply_size(sd.tame_chance);
   v_season := coalesce(fruit_season(), '');
   insert into item (world_id, holder, holder_uid, def, ql, count, issued)
@@ -34,7 +34,7 @@ begin
   update player set thepath = v || jsonb_build_object('supply', v->'supply'
       || jsonb_build_object(p_step, jsonb_build_object('item', sd.favourite, 'n', v_n, 'season', v_season)))
     where world_id = p_world and uid = me;
-  perform tell(p_world, me, 'Path supply: ' || lower((select i.name from item_def i where i.id = sd.favourite)) || ' ×' || v_n
+  perform tell(p_world, me, 'Guiding Light supply: ' || lower((select i.name from item_def i where i.id = sd.favourite)) || ' ×' || v_n
     || ' (' || v_season || '), issued.', 'event');
   return thepath_said(p_world, me);
 end $function$

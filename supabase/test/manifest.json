@@ -240,6 +240,19 @@
     "why": "Reported: \"cant plan roof on when conditions are met. make sure that doors and window walls etc count as elligible walls if completed.\" They do; what was wrong was a refusal that named neither the storey it meant nor the side that was short."
   },
   {
+    "file": "supabase/test/roofwell.ts",
+    "title": "A roof over an open well",
+    "shard": 1,
+    "external": [
+      "esbuild",
+      "playwright-core"
+    ],
+    "env": {
+      "STOREY_STRICT": "1"
+    },
+    "why": "Reported: \"if previously removing a floor, the option to make a roof disappears. fix\". A storey-2 tile with no floor takes no wall, and its outside sides were asked one before a roof; pinned on the top storey, the menu had no Plan roof."
+  },
+  {
     "file": "supabase/test/thick.ts",
     "title": "A wall is a box, and the face you see is the one you are standing on",
     "shard": 1,
@@ -768,6 +781,19 @@
     "why": "\"trails do not appear to draw over tiles with water\": the island wears trails into ground a pond or the sea covers, and the renderer left the path out on every wet tile. Drawn in Chrome, a trail through a pond and one down a beach into the sea, each tile worn against the same tile as grass: the path on a tile the pond's edge crosses and under its shallows, less of it under its deepest middle, up to the sea's edge and on the first tile under it."
   },
   {
+    "file": "supabase/test/levelmark.ts",
+    "title": "The level, shown while set",
+    "shard": 2,
+    "external": [
+      "esbuild",
+      "playwright-core"
+    ],
+    "env": {
+      "LEVELMARK_STRICT": "1"
+    },
+    "why": "\"a potential helper would be adding a visual somewhere on screen if you currently have a level set\": drawn in Chrome with the interface over the world, the island's level coming in with a ground read shows the Level chip at once with its height; corners above it amber, below it blue, at it green; Set level here answered at its corner names the corner; x on the chip asks the island for Clear level; the level cleared hides the chip and the marks."
+  },
+  {
     "file": "supabase/test/flowers.ts",
     "title": "Wildflowers bloom in the same places on both sides",
     "shard": 2,
@@ -819,7 +845,20 @@
     "file": "supabase/test/gardenbed.ts",
     "title": "A garden bed is a field on any storey, open to the sky or under glass",
     "shard": 6,
-    "why": "A floor of garden bed, laid as a floor and nothing else, at its bill through `floorBill` and with iron ribbons only; finished, sown, tended and harvested on the ground and on storey 2 from the storey stood on, on the glass clock in a winter, open to the sky or under glass; covered by a floor or a roof not of glass, refused a sowing, its crop held on the still clock and grown on from there when uncovered; one crop a tile; taken up with its bed; worked by a farm worker up the stairs; a glasshouse field and a planter as they were."
+    "why": "A floor of garden bed, laid as a floor and nothing else, at its bill through `floorBill` and with iron ribbons only; finished, sown, tended and harvested on the ground and on storey 2 from the storey stood on, on the glass clock in a winter, open to the sky or under glass; covered by a floor or a roof not of glass, refused a sowing, its crop held on the still clock and grown on from there when uncovered; a crop to each storey of a tile; taken up with its bed; worked by a farm worker up the stairs; a glasshouse field and a planter as they were."
+  },
+  {
+    "file": "supabase/test/upperbed.ts",
+    "title": "A garden bed up a storey: named, sown, tended and harvested over a crop under it",
+    "shard": 6,
+    "external": [
+      "esbuild",
+      "playwright-core"
+    ],
+    "env": {
+      "STOREY_STRICT": "1"
+    },
+    "why": "Reported from the island: a storey-2 garden bed floor named \"garden_bed floor\" and not sown. Its floor named \"Garden bed floor\" over the tile and in Examine on both sides; a storey-2 bed sown, tended, grown on the glass clock under a glass roof and harvested from storey 2 over a still crop on the storey-1 bed under it, which stays its own; a job naming storey 2 refused from the ground on the island and walked up to by the browser; the ground read carrying both crops by storey; and drawn in Chromium: the tooltip and the menu of a storey-2 bed."
   },
   {
     "file": "supabase/test/changewall.ts",
@@ -1019,6 +1058,12 @@
     "title": "A wildermon nobody has named is called what it is",
     "shard": 2,
     "why": "Reported: old names after the visual overhauls, and stages not named for what they evolved into once tamed. One that goes only by one of its kind's own names is called its kind at its stage on any change to it; one its keeper named keeps the name."
+  },
+  {
+    "file": "supabase/test/stagename.ts",
+    "title": "An evolved wildermon is named for its stage in a fight and on its carcass",
+    "shard": 2,
+    "why": "Reported: \"evolved forms of wildermon appear as their base form in combat logs and corpses, eg a bunnycourser's corpse is shown as a thistlekit\". A second-stage Thistlekit, a third-stage Sparra line and a first stage, fought to the death on the island and in the browser: every fight line both ways, the kill, a companion's kill, and the carcass on the ground, in the pack, Examine and Butchered name the stage; a carcass left by old age, a blow taken for its keeper and a cull, the same; a first stage keeps its line's name."
   },
   {
     "file": "supabase/test/tamelearn.ts",
@@ -1354,6 +1399,18 @@
     "why": "Off a flight across its foot is down to the storey under it, a floor over the foot or none; off its head or sides, the storey."
   },
   {
+    "file": "supabase/test/stairplanned.ts",
+    "title": "A walk up to a storey whose staircase is only planned says so",
+    "shard": 3,
+    "why": "\"cant walk up these stairs\": Vinyard's single staircase to storey 2 was planned and never built, and every click on storey 2 said only no path. A walk up refused for want of a way up names the planned staircase or ladder, where it is and what it still needs; built, the same click walks up it; a finished way up off the storey leaves the planned one unnamed; and storey 1's menu on its tile builds it."
+  },
+  {
+    "file": "supabase/test/stairbuild.ts",
+    "title": "A staircase or a ladder planned on storey 2, built from storey 1",
+    "shard": 3,
+    "why": "\"There's no option to work on that planned staircase\": Vinyard's single staircase to storey 2 was planned from storey 1, and storey 1's menu on its tile had no Build for it, while storey 2 cannot be stood on until it is built. A single, a wide and a spiral staircase and a ladder planned on storey 2: each offered on storey 1's menu on its tile (Auto and pinned), its row asking for storey 2's slot, built to the end from its foot by the browser and by the island, the builder still on storey 1; built from storey 2 as before; a floor planned on storey 2 and a finished staircase not offered from storey 1."
+  },
+  {
     "file": "supabase/test/mountstairs.ts",
     "title": "Mounts up wide staircases",
     "shard": 3,
@@ -1513,6 +1570,12 @@
     "why": "The Artisan's fourth trade, at a hot smelter: sand melted into lumps, a lump blown into the panel every window, bay and glasshouse roof is glazed with, a bottle, and a gem and sand fired into the panes a stained glass wall is leaded from. Each job the same on both sides and made on the island; a failed firing keeps its gem; the stained glass wall's bill, and a bottle's room, alike on both sides."
   },
   {
+    "file": "supabase/test/obsidiangear.ts",
+    "title": "Obsidian armour, knapped obsidian and obsidian glass, on both sides",
+    "shard": 3,
+    "why": "Asked for: \"Add obsidian armor set, unique obsidian models for tools and weapons, dark obsidian glass walls and floors with 80% opacity. Obsidian only drops from monsters killed on the volcano isle.\" Obsidian made and found by nothing; the five pieces, their class between plate and scale, best against cuts and burns and worst against crushing, each recipe the same on both sides and riveted only at an anvil; every knapped tool and weapon's recipe the same on both sides, Obsidian the keenest edge, truest bite and fastest wear on both, improved with obsidian; obsidian glass's bill, tool, skill, storeys and heft the same, a solid wall or a floor only, built on the island with a storey over it."
+  },
+  {
     "file": "supabase/test/arcane.ts",
     "title": "A stone, and what you can get out of it",
     "shard": 3,
@@ -1559,6 +1622,19 @@
     "title": "A queue put in order",
     "shard": 3,
     "why": "Asked for: the jobs queued listed in the crafting window, dragged into another order and taken out with a cross. The jobs waiting go into the order asked and the job in hand stays in hand; a job left out is put out of mind and said so; a list that changed since it was seen, or an order that is not one, is refused and nothing moves; a job put down by a walk moves like any other. Both sides, in the same words."
+  },
+  {
+    "file": "supabase/test/queuestop.ts",
+    "title": "The job in hand's × in the queue list",
+    "shard": 3,
+    "external": [
+      "esbuild",
+      "playwright-core"
+    ],
+    "env": {
+      "QUEUESTOP_STRICT": "1"
+    },
+    "why": "Asked for: \"add an x to stop the current process and begin next in queue\". Stop empties the queue; the × on the job in hand stops it, every go left of it, and starts the next job waiting at once, the rest kept, as a job ending would start it: a job that cannot be done told and put out, the one behind it started. With nothing waiting it only stops. Both sides, in the same words; and the window in Runecut and Classic, the × pressed by mouse, Enter, Space and a tap."
   },
   {
     "file": "supabase/test/market.ts",
@@ -1928,6 +2004,15 @@
       "--max-old-space-size=4096"
     ],
     "why": "Reported: with the fog off the map drew lemons on Volcano Isle, and walking there found none. The live island's land is from 15 September and the fruit trees were held to their islands on the 18th; the move tool's fruit move (tools/move-ground.ts `fruitHome`) grows them there. Lemons on Volcano Isle only, ages kept, a tile in tile_change and a planted oak left alone, written down once, a second run a no-op."
+  },
+  {
+    "file": "supabase/test/tundralife.ts",
+    "title": "Trees and wildermon on the Northeast Tundra again",
+    "shard": 6,
+    "node": [
+      "--max-old-space-size=4096"
+    ],
+    "why": "Asked for: \"Allow vegetation and wildermon spawning again on the marble island.\" The Northeast Tundra was treeless from 8 October: the generator laid no tree there, tree_day let nothing seed there, and the move tool took the untouched trees off the live island. The generator lays trees there again (some on tundra ground, none on snow), the move tool's regrowTrees puts them back only on tiles still holding what the treeless generator laid (tile_change, changed ground and planted trees kept, written down once, a second run a no-op), a tree that dies there seeds there, and a block of it is stocked with wildermon and no monster."
   },
   {
     "file": "supabase/test/fruitkind.ts",
@@ -2411,6 +2496,12 @@
     "title": "A lily pond, an ivy wall panel, a garden obelisk, a garden footbridge, a herb spiral, a buoy, a cauldron hearth, a cheese rack, a pelt rug, a plush wildermon, a game table, a gem lamp, a pedigree board and a worker nameplate, the same on both sides",
     "shard": 5,
     "why": "Fourteen adornments with real recipes, each on a rule the island already keeps. Botanizing by a pond rolls the water's edge; an ivy panel greens its wall over seven days and a worker's scrub passes that wall by, and Clear the ivy gives the cuttings it is made of; sweet peas climb an obelisk by the climbers' rule in a colour chosen; a footbridge is a bridge kind of one tile; a herb spiral's four slots grow on the field clock; a buoy floats, named as a cairn and on its maker's map; a lit cauldron hearth makes a pot dish four times over in one go's time; cheese on a rack ages by the wine rule; fur keeps the kind it came off and a pelt rug takes it; a plush is of a kind tamed; stones at a table go in turn between two players and the winner is tallied; a gem lamp is of its gem; a board shows a wildermon's line; a nameplate names a bed's worker. In the same words on both sides."
+  },
+  {
+    "file": "supabase/test/obsidian.ts",
+    "title": "A black glass lantern, an obsidian throne, an obsidian obelisk, a dragon-glass fountain, a shard garden, an obsidian vase, a lava lamp column, an obsidian wind chime, an obsidian bust, a glass shard path and an ember orb, the same on both sides",
+    "shard": 5,
+    "why": "Eleven pieces of obsidian with real recipes, each on a rule the island already keeps. A black glass lantern takes a candle, lit off a flame, as a paper lantern pole; a throne is a seat for its settlement's founder alone, and Examine reads the settlement's level, citizens and workers now; an obelisk is named as a cairn; a dragon-glass fountain is a fountain to every rule, a well and an aqueduct's foot; an obsidian vase holds wildflowers by the vase's rule; an obsidian bust is carved as a citizen by the stone bust's rule; a chime hangs as a wind chime and rings louder in harder wind; a shard path lies along a side, a side a piece, outside; a lava lamp column and an ember orb light the night. In the same words on both sides."
   },
   {
     "file": "supabase/test/vineyard.ts",
@@ -3199,6 +3290,30 @@
     "why": "Asked for: monsters come only from lairs, with no wandering spawns and no raiding patrols. Every lair kind and number the same on both sides; each sited on its ground, kept from every token and every other lair, the dragon on Volcano Isle's highest ground, and no settlement founded that near one; its garrison up, no monster out of the wild, none past its leash however it is moved, none hunting past it; the boss out after the garrison and told round; a hoard share for each who dealt a tenth of its health, never silver or rare, the map and the book at their odds held at their lines and over a seeded draw; the cleared ring safe and stocked half again; every restock a second either side of its time, the dragon's day; three clears in seven days and it moves; Track to the nearest lair; hoard scales' raised cap. Every clock moved on the lair, never the wall's."
   },
   {
+    "file": "supabase/test/volcano.ts",
+    "title": "Volcano Isle's monsters at their vents, obsidian killed there and nowhere else, a seryll vein's summons, sulfur and fire-tempered steel",
+    "shard": 3,
+    "why": "Asked for: new harder monsters that live only on Volcano Isle, each at a vent with a boss and a hoard; obsidian only off monsters killed there; mining seryll with a chance to summon monsters, never in a settlement or the safe ring, gone after their time; sulfur, and fire-tempered steel made only at a smelter there with a raised QL cap. Every number the same on both sides; the vents sited on the island and nowhere else, their kinds standing nowhere else; a carcass's island read at the butchering; the chance held either side of its line; the summons' leash, refusals and going; the smelter refused off the island in the browser's words; the cap on both sides; the blinding, the burns and the frost."
+  },
+  {
+    "file": "supabase/test/lava.ts",
+    "title": "Volcano Isle's labyrinth of lava: ten designs, one a day, three true paths each, and its heat held off",
+    "shard": 3,
+    "why": "Asked for: a labyrinth of lava radius 500 round the caldera with only 3 true paths from outside to its heart, 10 designs, one chosen daily; and heat to prepare for. The chart's table of the island's land as the chart works it out; every design the same on both sides block for block, with the same ways in and out, and each with exactly three true paths at 1024 and at 4096: all shut, the heart out of reach; one open, in reach, through its own wedge only; the day's design the same both sides for sixty days, never twice running, all ten coming round; every tile of the box the same lava today and tomorrow; a way with no lava to the heart, both lairs and both seams on sixty days; no lava on water, the heart, a settlement, a road, a building, a piece or a lair; health off on lava, nothing planted, dug, set down or founded on it in the same words, no creature on it; the heat filling, twice beside lava, burning at full only for the part of a stretch it was full, draining below; each of dragon scale, an ice infusion and a cooling draught slowing it by its stated amount; the draught brewed, drunk and refused; and a design made and a tile asked, timed."
+  },
+  {
+    "file": "supabase/test/seryllhome.ts",
+    "title": "Seryll lies in the heart of the labyrinth and nowhere else, on the generator and on an island moved",
+    "shard": 3,
+    "why": "Asked for: seryll only within the labyrinth's interior safe area. The generator at 4096 on two seeds lays none outside the heart and about its share inside; an island founded on the old ground, seryll scattered and none in the heart, moved by seryllHome: none outside but on a tile somebody changed, exactly the generator's in the heart, nothing else changed, written down, and a second run changes nothing."
+  },
+  {
+    "file": "supabase/test/outcrops.ts",
+    "title": "Outcroppings set down daily on grass in the safe ring, mined twenty times at QL 5, gone until the next reset",
+    "shard": 3,
+    "why": "Asked for: iron and rock outcroppings that spawn at random within the Runestone safe zones on grass daily, mined 20 times before breaking and gone until the next daily reset; everything off one at QL 5. Every kind and number the same on both sides; Mine at one is mining's job; a reset sets each kind's count round the spawn and every Runestone, each on dry grass inside its ring, clear of the centres, off settlements, roads, dirt, water and other pieces; the daily tick runs it; Examine says its uses; nothing but Mine is done to one; twenty swings at QL 5, each a use, the last removing it, Mine refused after; the next reset sets a whole new set."
+  },
+  {
     "file": "supabase/test/path.ts",
     "title": "The Path: steps the island confirms, sites, supplies and noted kinds",
     "shard": 5,
@@ -3220,5 +3335,56 @@
       "PATHCARD_STRICT": "1"
     },
     "why": "Asked for: \"Path needs to also display as a popup as each task is completed, with no-prose description of what to do next, how, and why\", with a moving picture of the action. Every step's how and why built from the rules (no figure written into their text; menu labels, tools, skills, a kind's spawn ground, bait and taming, an upgrade's requirements and the numbers each why names, the rules' own); every picture a clip of its own; one card a look, naming every step it ticked; none on the first look of a page opened with the Path on; turned on mid-game, one card with the next step. Drawn in Chrome: the card up on a tick, its buttons, its picture drawn and moving, Skip next, the Path tab, a job started after the hold taking it down, Path pop-ups Off, Animations Off a still frame."
+  },
+  {
+    "file": "supabase/test/nameicons.ts",
+    "title": "Trade and class icons before players' names, from what the island sends",
+    "shard": 3,
+    "external": [
+      "esbuild",
+      "playwright-core"
+    ],
+    "env": {
+      "NAMEICONS_STRICT": "1"
+    },
+    "why": "\"Create runecut trade and class icons to display next to player names in chat and in game.\" Every trade and class has an icon of its own, trades on a round stone and classes on a shield, edged in the stones' ink. On an island of its own: the roster's columns carry each player's trade and class to an islander, and every line of talk from before you came says who said it (`rpc_chat`'s `by`). Then, in Chrome, the event window's talk, the Social window and the name plates over people's heads show each player's trade and class, titled, none for a player with neither; a trade changed on the island changes the lines already drawn; Settings, Name icons, takes them all away and puts them back."
+  },
+  {
+    "file": "supabase/test/newplayer.ts",
+    "title": "First tame sure, and a New sprout before a name for the first week ashore",
+    "shard": 4,
+    "external": [
+      "esbuild",
+      "playwright-core"
+    ],
+    "env": {
+      "NEWPLAYER_STRICT": "1"
+    },
+    "why": "Asked for: a new player's first tame cannot fail on the roll, and a New badge for 7 days. On the island: a body just ashore has tamed nothing and the beat says its first tame is to come; its first offering is taken with the roll pinned to fail, the second at the same roll refused; the same out of a trap; the taming a kind asks, the taming past a wild one's first stage, the offering, reach and room still refuse a first tame and spend nothing; a monster is refused and never a first tame. In the browser: First tame: sure on the card, beside Tame and on the Guiding Light's tame step, and the odds once it is spent. An islander reads everybody's day ashore off the roster's columns; in Chrome a player on their third day has the sprout, titled New: day 3 of 7, in chat, in Social and over their head by day and night, one ashore eight days none; Settings, Name icons, takes it away and puts it back."
+  },
+  {
+    "file": "supabase/test/stations.ts",
+    "title": "A campfire, a smelter, a kiln and an anvil set down as furniture is, and decaying off a settlement",
+    "shard": 5,
+    "why": "Set down from the furniture placement: a smelter's block turns with its facing on both sides and stands where the browser anchored it; a campfire, a kiln and an anvil keep the way they face; refused where anything stands, a smelter off a settlement of yours, in the browser's words. Off a settlement a station takes its item's damage an hour (a campfire its shafts'), the same number on both sides, charged by the world's round and gone at a hundred; on a settlement none; picked up, its damage goes into the pack."
+  },
+  {
+    "file": "supabase/test/craftpreview.ts",
+    "title": "The crafting window: a preview of what a recipe makes, in its material; search puts what makes the thing first",
+    "shard": 3,
+    "external": [
+      "esbuild",
+      "playwright-core"
+    ],
+    "env": {
+      "CRAFTPREVIEW_STRICT": "1"
+    },
+    "why": "Asked for: \"the crafting menu should show a preview of the item for anything that has one, e.g. gear or furniture\", then \"that gear should update when changing material selection, e.g. pine to cedar barrel\", and the recipe that makes what was typed first in the search. Which things have a preview is read off the models; this asks the kinds of a spread of things and none for a plank, a stew or a scroll; in Chrome, a row clicked shows its preview drawn and lit, a row with no model no strip, the pointer on another row that one's and off the window the chosen one's; a barrel in pine and in cedar two pictures and pine again the pine one, a sword in iron and in gold two; \"plank\" the plank first and \"nail\" the nail mould first under Makes, before every recipe that takes nails; the window shut stops the drawing and opened again starts it; Animations Off one still frame."
+  },
+  {
+    "file": "supabase/test/failwhy.ts",
+    "title": "Why it failed: a failed skill check's line names the term that cost it most",
+    "shard": 2,
+    "why": "Asked for: \"a failed action's log line names the biggest factor against it, e.g. 'Missed: tool QL 12 (−18%)', so players learn that quality matters.\" The dice pinned to fail, a craft and a felling each name the tool QL, the skill or the material that cost them most; nothing costing a point says nothing more; stamina is not a term; a perk's share scales the cost; and the browser's reckoning is the island's over a grid, word for word."
   }
 ]

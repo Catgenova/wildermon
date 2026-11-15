@@ -69,6 +69,8 @@ begin
     -- It is held, not willing. Getting it out without being bitten is the skill.
     v_clean := skill_check(skill_of(p_world, p_uid, 'taming'), (tame_needs(c)).level + 10, p.ql,
                            mind_ease(p_world, p_uid));
+    -- First tame: sure (`firstTameSure`).
+    if not v_clean and first_tame(p_world, p_uid, c) then v_clean := true; end if;
     perform skill_raise(p_world, p_uid, 'taming', try_gain(v_clean, free_gain() * tame_learn(c)));
     if not v_clean then
       perform tell(p_world, p_uid, 'Handling failed: ' || lower(s.name)

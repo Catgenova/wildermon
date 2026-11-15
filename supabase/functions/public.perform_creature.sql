@@ -21,6 +21,7 @@ begin
   c := target_creature(p_world, p_target);
   if c.world_id is null then return; end if;
   select * into d from species_def where id = c.species;
+  d.name := kind_name_at(c);
   a := age_row(c.born, old_of(c), age_pace(c));
 
   -- An ancient comb, file or pot (`perform_artifact`).
@@ -69,6 +70,8 @@ begin
     end if;
     if not consume(p_world, p_uid, food, 1) then return; end if;
     chance := tame_chance(p_world, p_uid, c);
+    -- First tame: sure (`firstTameSure`).
+    if first_tame(p_world, p_uid, c) then chance := 1; end if;
     perform faith_kinship_spent(p_world, p_uid, c.id);
     update creature set hunger = least(1, hunger + 0.25) where world_id = p_world and id = c.id;
     if random() < chance then
@@ -176,8 +179,8 @@ begin
 
   elsif p_action = 'order_attack' then
     update creature set enemy = (p_target->>'foe')::int, heel_until = null where world_id = p_world and id = c.id;
-    perform wtell(p_world, p_uid, c.name || ' attacks: ' || lower((select sd.name from creature q
-      join species_def sd on sd.id = q.species where q.world_id = p_world and q.id = (p_target->>'foe')::int)) || '.', 'fight');
+    perform wtell(p_world, p_uid, c.name || ' attacks: ' || lower((select kind_name_at(q) from creature q
+      where q.world_id = p_world and q.id = (p_target->>'foe')::int)) || '.', 'fight');
 
   elsif p_action = 'order_heel' then
     update creature set enemy = null, heel_until = now() + make_interval(secs => fall_back())

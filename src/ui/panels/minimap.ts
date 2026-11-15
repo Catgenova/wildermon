@@ -14,6 +14,7 @@ import { SENSE_SHOWN } from '../../game/infusion';
 import { SWIRL_CAST } from '../../game/motes';
 import { metres } from '../../game/piers';
 import { kitBody } from '../kit';
+import { LAVA_CELL, lavaLine } from '../../game/lava';
 
 /** How wide the drawn map is, whatever size the island is. */
 const VIEW_SIZE = 512;
@@ -72,6 +73,11 @@ export const MAP_LEGEND: ReadonlyArray<{ kind: 'settlement' | 'stone' | 'ring'; 
   { kind: 'ring', label: `No new settlement: within ${DEED_STONE_GAP} tiles of a Runestone` },
 ];
 
+/** The day's lava on the map (`lava.ts`): its colour, and how often its picture is made again while the map shows, in ms. */
+const LAVA_CSS = '#ff6a1a';
+const LAVA_RGBA = 0xff1a6aff;
+const LAVA_MAP_EVERY = 5000;
+
 export const MAP_ZOOM_MIN = 16;
 /** How much a notch of the wheel zooms the map: this many times wider or narrower. */
 export const MAP_ZOOM_STEP = 1.25;
@@ -88,6 +94,10 @@ const MAP_EVERY = 60;
 export class MinimapPanel {
   /** When the map last drew itself, so it does so a few times a second. */
   private lastDraw = -1e9;
+  /** The day's lava (`lava.ts`): a pixel a block of the maze over its box, where the ground is known; when it was made; the legend's line. */
+  private lavaPic: HTMLCanvasElement | null = null;
+  private lavaMade = -1e9;
+  private lavaLabel!: HTMLSpanElement;
   private base: HTMLCanvasElement;
   /** Tiles to a base pixel, and the size of the base picture in pixels. */
   private readonly step: number;
@@ -199,6 +209,18 @@ export class MinimapPanel {
       sw.className = `map-legend-swatch map-legend-${l.kind}`;
       sw.style.setProperty('--ink', l.kind === 'settlement' ? SETTLEMENT_CSS : STONE_CSS);
       row.append(sw, l.label);
+      legend.append(row);
+    }
+    // And the day's lava, with when it changes (`lavaLine`).
+    {
+      const row = document.createElement('span');
+      row.className = 'map-legend-row';
+      const sw = document.createElement('span');
+      sw.className = 'map-legend-swatch';
+      sw.style.setProperty('--ink', LAVA_CSS);
+      this.lavaLabel = document.createElement('span');
+      this.lavaLabel.textContent = lavaLine(game.wallNow());
+      row.append(sw, this.lavaLabel);
       legend.append(row);
     }
     this.marksEl = document.createElement('div');
@@ -677,6 +699,7 @@ export class MinimapPanel {
     corners.forEach((c, i) => (i === 0 ? ctx.moveTo((c.x - ox) * scale, (c.y - oy) * scale) : ctx.lineTo((c.x - ox) * scale, (c.y - oy) * scale)));
     ctx.closePath();
     ctx.stroke();
+    this.drawLava(ctx, ox, oy, scale);
     const deed = this.game.deed;
     if (deed) {
       ctx.strokeStyle = 'rgba(96, 230, 110, 0.95)';
@@ -933,6 +956,47 @@ export class MinimapPanel {
       ctx.lineWidth = 1;
       ctx.stroke();
     });
+  }
+
+  /** The day's lava over the map (`lava.ts`), its picture made again every `LAVA_MAP_EVERY`; and the legend's line. */
+  private drawLava(ctx: CanvasRenderingContext2D, ox: number, oy: number, scale: number): void {
+    const line = lavaLine(this.game.wallNow());
+    if (this.lavaLabel.textContent !== line) this.lavaLabel.textContent = line;
+    const now = performance.now();
+    if (!this.lavaPic || now - this.lavaMade > LAVA_MAP_EVERY) {
+      this.lavaMade = now;
+      this.paintLava();
+    }
+    if (!this.lavaPic) return;
+    const b = this.game.lavaBox();
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(this.lavaPic, (b[0] - ox) * scale, (b[1] - oy) * scale, (b[2] - b[0]) * scale, (b[3] - b[1]) * scale);
+  }
+
+  /** A pixel for every block of today's maze that is lava, where its middle has been seen (or everywhere, with the fog off). */
+  private paintLava(): void {
+    const g = this.game;
+    const w = g.world;
+    const b = g.lavaBox();
+    const bx0 = b[0] / LAVA_CELL, by0 = b[1] / LAVA_CELL;
+    const cols = (b[2] - b[0]) / LAVA_CELL, rows = (b[3] - b[1]) / LAVA_CELL;
+    if (cols <= 0 || rows <= 0) return;
+    const cv = this.lavaPic ?? document.createElement('canvas');
+    cv.width = cols;
+    cv.height = rows;
+    const c2 = cv.getContext('2d') as CanvasRenderingContext2D;
+    const img = c2.createImageData(cols, rows);
+    const px = new Uint32Array(img.data.buffer);
+    const fog = g.settings.fog;
+    for (let j = 0; j < rows; j++) {
+      for (let i = 0; i < cols; i++) {
+        const x = (bx0 + i) * LAVA_CELL + 1, y = (by0 + j) * LAVA_CELL + 1;
+        if (!w.inBounds(x, y) || !w.grownAt(x, y) || (fog && !w.isKnown(x, y))) continue;
+        if (g.lavaBlockAt(bx0 + i, by0 + j)) px[j * cols + i] = LAVA_RGBA;
+      }
+    }
+    c2.putImageData(img, 0, 0);
+    this.lavaPic = cv;
   }
 
   /** Draw something about a point on the map, in units `k` canvas pixels across. */

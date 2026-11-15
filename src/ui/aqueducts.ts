@@ -4,6 +4,7 @@ import { isDone } from '../game/building';
 import { spanWants, type Bridge } from '../game/bridges';
 import type { Game } from '../game/game';
 import { itemDef } from '../game/items';
+import { isFountain } from '../game/furniture';
 import { AQUEDUCT_FLOW, pondCovers } from '../world/aqueducts';
 import { settleChain, springCorner } from '../world/springs';
 import { metres } from '../world/tiles';
@@ -19,7 +20,7 @@ const BILL = AQUEDUCT.bill.map(([id, n]) => `${n} ${itemDef(id).name.toLowerCase
  */
 function isFoot(g: Game, x: number, y: number): boolean {
   if (g.slabAt(x, y)?.pool) return true;
-  if (g.furnitureOnTile(x, y).some((f) => f.kind === 'fountain')) return true;
+  if (g.furnitureOnTile(x, y).some((f) => isFountain(f.kind))) return true;
   if (g.world.water?.pondsAt(x, y).length) return true;
   if (g.slabAt(x, y) || g.world.hasWater(x, y)) return false;
   const w = g.world;

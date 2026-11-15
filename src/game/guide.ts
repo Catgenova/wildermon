@@ -48,7 +48,9 @@ import { SKILL_BY_ID } from './skills';
 import { HUNTER_TRAPPED, TIMID_TRAPPED } from './traps';
 import { COMPANION_SIGHT as KEPT_EYES } from './vision';
 import { WOUND_KINDS } from './wounds';
-import { article, capital, listed, percent, timeWords } from './words';
+import { article, capital, listed, listedOr, percent, timeWords } from './words';
+import { ASH_BLIND_HIT, ASH_BLIND_SECS, FROST_WEAK, OBSIDIAN, obsidianOf, volcanoName } from './volcano';
+import { ICE_WEAPON_ENCHANTS } from './enchant';
 import { lairOf } from '../world/regions';
 import { FORM_IDS, formGives, formKey, formName, formOdds, formOfKey } from './wildforms';
 import { PERK_STAGE, STAGE_PERKS } from './creatures';
@@ -76,7 +78,7 @@ export interface GuideBook {
 }
 
 /** What a page noted and not seen says under its shape. */
-export const NOTED_SAYS = 'Noted (Path)';
+export const NOTED_SAYS = 'Noted (Guiding Light)';
 
 /**
  * How often what is in view is looked over for a kind the book has not got,
@@ -104,6 +106,8 @@ export const GUIDE_ORDER: readonly string[] = [
   // The hybrids, in their list's order (asked for: "a Hybrids group after Content and before the four monsters").
   ...HYBRIDS.map((h) => h.id),
   'goblin', 'orc', 'ogre', 'dragon',
+  // Volcano Isle's (`volcano.ts`).
+  'ash_wraith', 'magma_golem', 'cinder_hound',
 ];
 
 /** Every kind there is a page for, in the book's order (`GUIDE_ORDER`); a kind left off it, after, in the definitions' order. */
@@ -505,6 +509,10 @@ function fighting(def: SpeciesDef, stage = 0): string[] {
     const bane = MATERIALS.filter((m) => m.bane).map((m) => m.name.toLowerCase());
     lines.push(`${capital(either(bane))} edge: damage ×${BANE_BONUS}`);
   }
+  // Volcano Isle's kinds' own (`volcano.ts`).
+  if (def.blinds) lines.push(`Blow that lands: your hit chance ×${ASH_BLIND_HIT}, ${ASH_BLIND_SECS} s`);
+  if (def.fireproof) lines.push('Burns: no damage');
+  if (def.frostWeak) lines.push(`${listedOr(ICE_WEAPON_ENCHANTS)} on the weapon: damage ×${FROST_WEAK}`);
   return lines;
 }
 
@@ -513,6 +521,8 @@ function carcass(def: SpeciesDef): string[] {
   // Counted as the butcher's own line counts them: "3 × meat".
   const parts = BUTCHER_PARTS.filter(([p]) => (def.butcher[p] ?? 0) > 0).map(([p, id]) => `${def.butcher[p]} \u00d7 ${itemName(id)}`);
   const lines = parts.length ? [`Butchered whole, grown: up to ${listed(parts)}`] : [];
+  // Obsidian, off a monster killed on Volcano Isle (`volcano.ts`).
+  if (obsidianOf(def.id)) lines.push(`Killed on ${volcanoName()}: up to ${obsidianOf(def.id)} \u00d7 ${itemName(OBSIDIAN)}`);
   if (def.butcher.hoard) {
     lines.push(`Hoard: ${HOARD_LUMPS}–${HOARD_LUMPS + HOARD_MORE} lumps by how much of the carcass is kept, each `
       + either(HOARD_METALS.map((id) => `${article(itemName(id))} ${itemName(id)}`)));

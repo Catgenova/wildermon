@@ -1,4 +1,6 @@
 import { PICK_SLACK, PICK_SLACK_TOUCH } from '../../render/pickslack';
+import { FIRST_TAME_SAYS } from '../../game/firsttame';
+import { NEW_DAYS, newTitle } from '../../game/badges';
 import { MONSTER_GROWTH } from '../../render/monster-size';
 import { CROSS_CARE, CROSS_CHANCE, CROSS_SKILL, HYBRID_HARDY, HYBRID_WORK, HYBRIDS } from '../../game/hybridlist';
 import { FORGET_AFTER, LOADING_AT_ONCE, SLICE_MS } from '../../render/wildermon';
@@ -29,14 +31,15 @@ import { BOOT_PHASES, NEAR_REACH, TREE_WAIT_MS } from '../bootsteps';
 import { POST_FOLLOW_REACH } from '../../game/posts';
 import { AROUND_MOST, aroundStoreTrades } from '../../game/around';
 import { AUTO_EAT_AT } from '../../game/autoeat';
-import { CRATE_KINDS_SAID, rackPutLine, STORE_REACH } from '../../game/crates';
+import { CRATE_DEFS, CRATE_KINDS_SAID, rackPutLine, STORE_REACH } from '../../game/crates';
 import { BASE_QUEUE, DEED_GAP, DEED_SPACING, DEED_STONE_GAP, DAMAGE_WARN, QUEUE_PER_MIND, FORAGE_COOLDOWN, KIT_LEFT_OUT, KIT_QL, SPROUT_COOLDOWN, STARTER_FOOD, STARTER_FOOD_COUNT, STARTER_KIT, TRAVEL_LEG, deedLevel } from '../../game/game';
 import { ROT_SOON } from '../../game/rot';
+import { FAIL_EXAMPLE_AT, FAIL_FACTORS, FAIL_LEAST, FAIL_WHY_JOBS, failFactor, failFactorSaid } from '../../game/failwhy';
 import {
   BODKIN_HIDE, BURN_WEAR, CONSIDER_EASY, CONSIDER_HARD, CRIT_BASE, CRIT_HIT, CRIT_KNIFE, CRIT_PER_SKILL, DODGE_FROM, DODGE_PER_CONTROL, DODGE_PER_KG, KNIFE_BLEED,
   KNIFE_BLEED_SECS, STAGGER_MAUL, THREAT_HOLD, VENOM_DRAIN, VENOM_SECS,
 } from '../../game/fight';
-import { ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, ENCHANT_SAID, ENCHANTERS_PLINTH, enchantHitChance, ENCHANTMENT_LIST, ENCHANTMENTS, ON_WORDS, SCROLL_HARM, wrongKind } from '../../game/enchant';
+import { ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, ENCHANT_SAID, ENCHANTERS_PLINTH, enchantHitChance, ENCHANTMENT_LIST, ENCHANTMENTS, ICE_WEAPON_ENCHANTS, ON_WORDS, SCROLL_HARM, wrongKind } from '../../game/enchant';
 import { EFFECT_HEAD, EFFECT_TAIL, enchantLineAt } from '../../game/enchanting';
 import { STUN_SECS } from '../../game/fight';
 import { LAYOUT_NAMES } from '../../game/keybinds';
@@ -47,23 +50,26 @@ import { lifeWords } from '../runecut-life';
 import { islandTime, LOCAL_NIGHT_ENDS, LOCAL_NIGHT_STARTS } from '../theme';
 import { FRAME_REACH, FRAME_REACHES, FRAME_RIM, FRAMES, frameLabel, frameOddities, RIM } from '../runecut-art';
 import { SALE_DAYS, SALES_SHOWN } from '../../game/prices';
-import { RECENT } from './craft';
+import { CRAFT_TABS, craftTabOf, MAKES_SECTION, RECENT } from './craft';
+import { PREVIEW_FPS, PREVIEW_H, PREVIEW_W, STAGE_SECS } from '../craftpreview';
 import { CAMPFIRE_LOGS } from '../../render/kit/campfire';
 import { SACK_FULL } from '../../render/kit/sack';
 import { STANDING_A, WILDERMON_A } from '../../game/journal-a';
+import { LEVEL_REACH } from '../../render/levelmarks';
 import { DAMAGE_MAX as NEWS_DAMAGE_MAX, PLACED_REACH, QL_TOP as NEWS_QL_TOP } from '../../game/limits';
 import { FAIL_DAMAGE_SAID } from '../../game/faildamage';
 import { SPIRAL_TREADS } from '../../game/spiral';
 import { BACK_PACE, BACK_SLACK, CIRCLE_R, COWARD_AT, COWARD_DRAG, DRAW_WALK, FALL_BACK, GUARD_RANGE, HUNTER_TURN, KEEP_OFF, MONSTER_TURN, PACK_CALL, PACK_MOST, THROW_HIT, THROW_REACH } from '../../game/fight';
 import { FIGHT_QUIET, ARM_SLOW_MOST, ARMOUR_VS, armourSays, BLINDSIDE, blowSays, CROWD_BLOCK, FLANK_HIT, HEAVY_EVERY, HEAVY_HIT, HIDE_NAMES, HIDES, hideSays, LEG_SLOW_MOST, sideOf, WIND_UP, BLOW_DEFENSIVE, BLOW_HUNTER, BLOW_PREY, FIGHT_BACK_STILL, FIGHT_GIVE_UP, FIGHT_LEASH, FIGHT_STANCE_NAMES, FIGHT_STANCES, FIST, FOLLOW_RANGE, stanceSays, SWING_FLOOR, SWING_WIND, SWING_WIND_KG, swingSeconds, TARGET_RANGE, TIRED_AT, TIRED_SLOW, armourSwingSays, overburdenSwingSays } from '../../game/fight';
 import {
-  CELLAR_DECAY, CELLAR_DEPTH, CELLAR_SOIL, COLUMN_SHARE, SINGLE_STAIRS_NAME, SINGLE_STAIRS_SHARE, SPIRAL_STAIRS_NAME, STAIRS_SHARE, columnBill, floorBill, GLASS_ROOF, heftWord, onlySaid, takesAs, INDOORS_DECAY, INDOORS_REST, JETTY_REACH, MATERIAL_BY_ID, MATERIALS as WALL_MATERIALS, RAILING_HEIGHT,
+  CELLAR_DECAY, CELLAR_DEPTH, CELLAR_SOIL, COLUMN_SHARE, SINGLE_STAIRS_NAME, SINGLE_STAIRS_SHARE, SPIRAL_STAIRS_NAME, STAIRS_SHARE, columnBill, floorBill, GLASS_ROOF, heftWord, OBSIDIAN_GLASS, OBSIDIAN_GLASS_OPACITY, onlySaid, takesAs, INDOORS_DECAY, INDOORS_REST, JETTY_REACH, MATERIAL_BY_ID, MATERIALS as WALL_MATERIALS, RAILING_HEIGHT,
   NO_PLAN_FROM, OUTSIDE_STAIR_LEVEL, roofShapeDef, roofShapeOf, WALL_HEIGHT, WALL_TYPE_BY_ID, wallBill as typeBill,
-  STOREY_JOBS, describeNeeds, GARDEN_BED,
+  STOREY_JOBS, describeNeeds, GARDEN_BED, floorSaid,
 } from '../../game/building';
 import { CELLAR_DAYLIGHT } from '../../game/cellar';
+import { wayUpSaid } from '../../game/game';
 import { materialName } from '../../game/buildActions';
-import { BED_COVERED } from '../../game/gardenbed';
+import { BED, BED_COVERED, bedStoreySaid } from '../../game/gardenbed';
 import { LIFE_MOTES_EACH, MOTE_ELEMENTS, POULTICE_HEAL, STATUE_MOTES, WATER_MOTE_NEED, WATER_MOTES_EACH } from '../../game/motes';
 import { COUNTER_HOLDS, COUNTER_REACH, COUNTER_WALL } from '../../game/counters';
 import { candleBurn, lanternReach, PLINTH_BUSY_REACH, PLINTH_REACH, torchBurn } from '../../game/light';
@@ -78,6 +84,7 @@ import {
 import { tryGain } from '../../game/learn';
 import { DRIVING_LEARN, DRIVING_TOP, drivingPace, SAILING_LEARN, SAILING_TOP, sailingPace, TRAVEL_TOP_AT, VEHICLE_QL_TOP, vehicleQlPace } from '../../game/travel';
 import { deckBill, metres, PIER_CLEAR, PIER_DROP, PIER_WALL_DROP, PIER_WATER } from '../../game/piers';
+import { COOLING_DRAUGHT, DRAUGHT_DROP, DRAUGHT_FILL, DRAUGHT_SECS, HEAT_BURN, HEAT_DRAIN, HEAT_FILL, HEAT_ICE, HEAT_NEAR, HEAT_SCALE, LAVA_BAND, LAVA_BURN, LAVA_CELL, LAVA_DESIGNS, LAVA_HEART, LAVA_PATHS, LAVA_RADIUS, SERYLL_HEART } from '../../game/lava';
 import { COIN_FIND_ONE_IN, COIN_FINDS_A_DAY } from '../../game/forage';
 import { BURYABLE, BUSH_DEFS, ISLAND_FRUIT, ROCK_VARIANTS, TILE_DEFS, TileType, TREE_AGES, TREE_DAWN_UTC, TREE_DEFS } from '../../world/tiles';
 import { SEAM_GATE } from '../../game/skillgates';
@@ -110,6 +117,7 @@ import { CELLAR_AGEING, WINE_AGE_CAP, WINE_AGE_RATE } from '../../game/ageing';
 import { CUT_VINE, GRAPE_SEASON, TRELLIS_RULE, VINE_BEARS } from '../../game/vineyard';
 import { SEASONS } from '../../world/calendar';
 import { ARTIFACT_FOR, SHEAR_FROM, SHEAR_WOOL } from '../../game/creatureActions';
+import { MINE_JOB, OUTCROP_KINDS, OUTCROP_MINE, OUTCROP_QL, OUTCROP_USES } from '../../game/outcrops';
 import { BREW_SPRING, BREW_SPRING_ALREADY, BREW_SPRING_MUL, BREWING_ACTION_BY_ID, BREWS, GRAPE_WINE_GRAPES, UNDRINKABLE } from '../../game/brewing';
 import { CHART_LEAST, CHART_QL_PER_TILE, CHART_SHEET } from '../../game/cartography';
 import { MEAD_AGE_CAP, MEAD_AGE_RATE } from '../../game/ageing';
@@ -137,14 +145,15 @@ import { billWords, CHARGE_PER_QL, CHARGE_QL, chargesFor, countOf, DRINK_LITRES,
 import { RUNE_GATE, RUNE_GATE_FADE, RUNE_GATE_GLOW_REACH, RUNE_GATE_REACH, RUNE_GATE_RISE, runeGateName } from '../../game/runegate';
 import { COIN_METALS, METALS, coinPurity, INGOT_LUMPS, INGOT_WEIGHT, MOULD_BY_ID, MOULD_SKILL, MOULDS, SMITH_TOOL } from '../../game/metal';
 import { meltFits, meltLumps, meltQl } from '../../game/melt';
-import { furnaceMadeSaid, meltingSaid } from '../../game/smelter';
+import { furnaceMadeSaid, meltingSaid, SMELTER_H, SMELTER_W } from '../../game/smelter';
+import { STATION_KINDS, STATIONS, stationDecayAt } from '../../game/stations';
 import { TOOL_JOBS } from '../../game/jobtools';
 import { CLIP_OF_TOOL, clipOfJob } from '../../sculpt/anim/routes';
 import { ORDER_LIFE } from '../../game/orders';
 import { POST_LIFE_MIN } from '../../game/posts';
 import { ACTION_BY_ID, deedAcrossAt, DROP_RAISE, PACKED_FIRST, SPADEFUL, GLAZE_ASH, GRASS_PER_CUT, GRASS_PLANT, KIT_MEND, MOSS_PER_CUT, MOSS_PLANT, WATER_MOTE_USES, WEAR_PER_GO } from '../../game/actions';
 import { CIRCLET_SHARE, CIRCLET_STONES, GEMS } from '../../game/gems';
-import { CRAFT_REACH, lockedRecipes, ranOutSaid, RECIPE_BY_ID, RECIPES, recipeTitle, TRADE_BOOK_AT } from '../../game/recipes';
+import { CRAFT_REACH, KNAPPED, knapRecipeId, lockedRecipes, ranOutSaid, RECIPE_BY_ID, RECIPES, recipeTitle, TRADE_BOOK_AT } from '../../game/recipes';
 import { BOOKS, bookDrops, RECIPE_DROP_ODDS, RECIPE_DROPPERS } from '../../game/recipebook';
 import { BOARD_TOP, RECORD_STATS } from '../../game/boards';
 import { BANNER_MS, LEAVING_MS } from '../deedbanner';
@@ -166,6 +175,7 @@ import { GENDERS, HAIR_FADE, HAIRSTYLES } from '../../game/look';
 import { OUTFITS } from '../creator';
 import { MAX_ZOOM, SCULPTED_MAX_ZOOM } from '../../engine/camera';
 import { article, burnsFor, capital, finePercent, listed, listedOr, numberWord, percent, readyIn, timeWords } from '../../game/words';
+import { OBSIDIAN_MATERIAL } from '../../game/materials';
 import { METER_BAD, METER_WARN } from '../kit';
 import { DEED_UPGRADES } from '../../game/deed';
 import { LYE_USE, SHORE_REACH } from '../../game/placeables';
@@ -189,7 +199,7 @@ import { defaultKey } from '../../game/keybinds';
 import { guideEntries, guidePages, wildShare } from '../../game/guide';
 import { MUTE_FOR, MUTE_SHUTS, NEW_BODIES_A_DAY, REPORT_REASONS, REPORTS_A_DAY } from '../../game/keeper';
 import { awayFor } from '../../game/away';
-import { ANCIENT_HELM, ANCIENT_HELM_SIGHT, ANCIENT_SWORD, ANCIENT_SWORD_SWING, ARMOUR, BANE_BONUS, SHIELDS, SLOT_NAMES, SLOTS, WEAPON_BY_ID, WEAPONS } from '../../game/gear';
+import { ANCIENT_HELM, ANCIENT_HELM_SIGHT, ANCIENT_SWORD, ANCIENT_SWORD_SWING, ARMOUR, ARMOUR_CLASSES, BANE_BONUS, OBSIDIAN_PIECES, SHIELDS, SLOT_NAMES, SLOTS, WEAPON_BY_ID, WEAPONS } from '../../game/gear';
 import { JEWEL_PIECES } from '../../game/gems';
 import { foodFill, itemDef, RARITIES, rarityBands, rarityChance, rareInputSaid, unmendableSays } from '../../game/items';
 import { SIGHT_FORM_AT, SIGHT_RARITY_AT } from '../../game/sighted';
@@ -222,6 +232,20 @@ import {
 } from '../../game/lairs';
 import { MONSTER_KINDS, PER_REGION, REGION as WILD_SQUARE } from '../../game/creatures';
 import {
+  ASH_BLIND_HIT, ASH_BLIND_SECS, FIRE_STEEL, FIRE_STEEL_CAP, FIRE_STEEL_NAME, FIRE_STEEL_RECIPE, FROST_WEAK, obsidianOf, SULFUR_SLATE, summonSays, VOLCANO_KINDS,
+  volcanoName,
+} from '../../game/volcano';
+/** A recipe's inputs and what it makes: "2 steel lump, 1 sulfur → 2 fire-tempered steel lump". */
+const recipeInputsSaid = (id: string): string => {
+  const r = RECIPE_BY_ID.get(id)!;
+  return `${r.inputs.map((i) => `${i.count ?? 1} ${itemDef(i.item).name.toLowerCase()}`).join(', ')} → ${r.count ?? 1} ${itemDef(r.result).name.toLowerCase()}`;
+};
+import { FIRST_LAIRS } from '../../game/lairs';
+/** As they were before Volcano Isle's kinds, vents and fire-tempered steel (n 615), for what was said of them then. */
+const FIRST_LAIR_KINDS = LAIR_KINDS.filter((k) => FIRST_LAIRS.includes(k.id));
+const MONSTERS_BEFORE_VOLCANO = MONSTER_KINDS.filter((id) => !VOLCANO_KINDS.includes(id));
+const METALS_BEFORE_VOLCANO = METALS.filter((m) => m.id !== FIRE_STEEL);
+import {
   CACHE_DEED_GAP, CACHE_DRAW_EVERY, CACHE_DRAWS, CACHE_EVERY, CACHE_LOOT, CACHE_SPOT_BASE, CACHE_SPOT_EVERY, cacheOddsSays, lootSays, WINTER_FUR, WINTER_FUR_PART,
 } from '../../game/winter';
 import { betterThanCommon, BLOOD_CHANNELS, husbandryOdds, LAMP_TIER_ODDS, pct as cardPct, TIERS, TRAIT_SLOTS, depthMul, MUTATION_ODDS, PEDIGREE_MOST, PEDIGREE_STEP } from '../../game/traits';
@@ -243,6 +267,7 @@ import { STEPS_BACK, stepsBack, STONE_STEPS_BILL, TIMBER_STEPS_BILL } from '../.
 import { LAVENDER_RULE, ROSE_BUD, ROSE_FLOWER, ROSE_LEAFY, ROSES_RULE } from '../../game/roses';
 import { DEVICE_COUNT } from '../../render/furniture';
 import { TRAPS } from '../../game/trapdefs';
+import { TRAP_WORN } from '../../render/kit/traps';
 import {
   BELL_HEARD_BASE, BELL_HEARD_PER_QL, bellHeard, HAMMOCK_REST, LAY_UP_EVERY, LAY_UP_FAIL_SHARE, LAY_UP_SPARE_ABOVE, LEAD_PACE,
   ROPE_SHARE_BOAT, ROPE_SHARE_TRAP, ROPE_TIME_PER_LEVEL, ROPE_WALK, ROPE_WALK_QL, ROPE_WALK_TIME, ropePerLayUp, ropeTime, TWINE_MADE,
@@ -286,6 +311,11 @@ import { STAND_SLOTS } from '../../game/decor';
 import { grassEaters, seatsOf } from '../../game/furnish';
 import { benchTreeWords } from '../../game/fitting';
 import { PEA_NAMES, potDishWords, watersideWords } from '../../game/adorn';
+import { FULL_WIND, glassChimeLoud, glintWords } from '../../game/obsidian';
+import {
+  BLACK_LANTERN, BLACK_LANTERN_REACH, DRAGON_FOUNTAIN, EMBER_ORB, GLASS_CHIME_LEAST, LANTERN_CANDLES, LAVA_LAMP, LAVA_LAMP_REACH, OBSIDIAN_BUST, OBSIDIAN_CHIME,
+  OBSIDIAN_OBELISK, OBSIDIAN_THRONE, OBSIDIAN_VASE, ORB_DAY_REACH, ORB_NIGHT_REACH, SHARD_GARDEN, SHARD_PATH, THRONE_SEATS,
+} from '../../game/obsidiandefs';
 import {
   BUOY, BUOY_REACH, CAULDRON_HEARTH, CAULDRON_SERVINGS, CHEESE_AGEING, CHEESE_RACK, GAME_TABLE, GARDEN_OBELISK, GEM_LAMP, GEM_LAMP_REACH, HERB_SPIRAL, IVY_CUTTINGS, IVY_PANEL,
   IVY_PANEL_DAYS, LILY_POND, NAMEPLATE, PEDIGREE_BOARD, PELT_RUG, PLUSH, POND_LILIES, RACK_HOLDS, SPIRAL_PICK, SPIRAL_SLOTS, STONES_GOAL, TABLE_SEATS,
@@ -298,7 +328,7 @@ import {
 import {
   BIRDBATH, CAIRN, FIREPLACE, FIREPLACE_REACH, FISH_MOUNT, FOOTSTOOL, FOUR_POSTER, FOUR_POSTER_REST, GARDEN_SWING, GAZEBO, HAY_A_DAY, HAY_BALE, HAY_HOLDS, HAY_REACH,
   SIDE_TABLE, SIGN_ARMS, SIGNPOST, STONE_BENCH, SWING_REST, TABLE_HOLDS, TROUGH_CARE, TROUGH_DRINK, TROUGH_HOLDS, TROUGH_REACH, VASE, VASE_FRESH, VASE_HOLDS,
-  WATER_TROUGH,
+  WATER_TROUGH, CAIRN_NAME_MAX,
 } from '../../game/furnishdefs';
 import {
   ARMOUR_STAND, COMPOST_BIN, COMPOST_BOOST, COMPOST_DAYS, COMPOST_HOLDS, COMPOST_PER, COMPOST_SPOILED, CURTAINS, RUG_COLOURS, RUG_PATTERNS, STONE_LANTERN,
@@ -306,6 +336,7 @@ import {
 } from '../../game/decordefs';
 import { CLIMBER_BARE, CLIMBER_BLOOMS, ROSE_SEASONS } from '../../game/roses';
 import { PATH_DETOURS, PATH_KINDS, PATH_SITE, PATH_SKILLS, PATH_STEPS, PATH_SURE } from '../../game/path';
+import { SEAM_FROM, VEIN_LOOKS, type VeinLook } from '../../render/seams/runecut';
 
 /** Where a piece fixed in this way goes, as the help says it (`garden.ts`). */
 const GARDEN_MOUNT = (m: Mount): string => MOUNT_SAID[m];
@@ -380,10 +411,177 @@ const RESET = `daily reset (${hudHour(TREE_DAWN_UTC)} UTC)`;
 
 /** What a boil made and a dyeing took the day dye became a liquid (111), before it went by weight (117). */
 const WAS_DYE = { boil: 3, garment: 1, banner: 2, sail: 3, ship: 5, wall: 1, floor: 1 } as const;
+/** A failed Cut down at `FAIL_EXAMPLE_AT`: the line's factor (`fail_why`). */
+const FAIL_EXAMPLE = failFactorSaid(failFactor({ ...FAIL_EXAMPLE_AT, difficulty: ACTION_BY_ID.get('cut_down')?.difficulty ?? 0 }));
 /** The jobs that scrub paint off with a brush (423), which came after the storey jobs were named (332). */
 const SCRUBS_LATER = new Set(['scrub_wall_paint', 'scrub_floor_paint']);
+/** The seams as they are cut into the rock (`seams/runecut.ts`), named as a list says them. */
+const VEINS = VEIN_LOOKS.filter((l): l is VeinLook => l !== null);
+const veinsOf = (family: VeinLook['family']): string => listed(VEINS.filter((l) => l.family === family).map((l) => l.name.toLowerCase()));
 
 export const NEWS: News[] = [
+  // Every seam a recess cut into its own tile, one model a tile (`seams/runecut.ts`), and the prospector's mark (`prospectMark`).
+  {
+    n: 633,
+    day: '2026-11-15',
+    lines: () => [
+      'Changed: veins and seams: a recess cut into each tile, one per tile (was: bands running across tiles).',
+      `Changed: recess by kind. ${capital(veinsOf('stone'))}: stepped square cut. ${capital(veinsOf('fuel'))}: stepped cut, ember cracks. ${capital(veinsOf('base'))}: rounded pocket, ore chips, band of the ore's colour round the lip. ${capital(veinsOf('precious'))}: wider, deeper pocket lined with ore, glints. ${capital(veinsOf('rare'))}: the mark cut as a lit fissure, crystals at its ends, glints.`,
+      `New: marks: ${listed(VEINS.map((l) => `${l.name.toLowerCase()} ${l.markName}`))}.`,
+      `New: lit at night: ${listed(VEINS.filter((l) => l.emit > 0).map((l) => `${l.name.toLowerCase()} ${percent(l.emit)}`))}.`,
+      `Changed: below zoom ${SEAM_FROM}: tile colour only, as before.`,
+      'Changed: prospected veins: four corner marks in the vein\'s light; bare: its mark lit, with a glow; buried: its mark in a ring on the ground (was: yellow tile).',
+    ],
+  },
+  // The job in hand's × in the queue list (`QueueView`, `Game.skipAction`, `rpc_skip`).
+  {
+    n: 636,
+    day: '2026-11-15',
+    lines: () => [
+      'New: Action queue: × on the running action: stops it and its remaining repeats, starts the next in queue. Rest of the queue kept. Queue empty: stop only.',
+    ],
+  },
+  // A floor named by its material's name, and a garden bed up a storey sown, tended and harvested (`floorSaid`, `gardenbed.ts`, `crop.storey`).
+  {
+    n: 632,
+    day: '2026-11-15',
+    lines: () => [
+      `Fixed: tile tooltip floor line: material id, e.g. "${BED} floor". Now: its name, "${floorSaid({ building: 0, level: 0, x: 0, y: 0, material: BED, needed: {}, total: {} })}".`,
+      'Fixed: garden bed on storey 2 and up over a crop on the storey under it: no Sow; "one crop per tile". Now: one crop per storey of a tile.',
+      `Fixed: garden bed on a pinned storey, picked from another storey: no Sow, Tend or Harvest. Now: offered; walks you to that storey first. Asked from another storey: "${bedStoreySaid(1)}"`,
+      'Fixed: tile tooltip over a garden bed on a pinned storey: no crop line. Now: its crop, stage and time.',
+      `Fixed: Examine on a building tile: no floor names. Now: each storey's finished floor, e.g. "Storey 2: ${floorSaid({ building: 0, level: 1, x: 0, y: 0, material: BED, needed: {}, total: {} })}."`,
+    ],
+  },
+  // The traps redrawn in the kit (`kit/traps.ts`).
+  {
+    n: 637,
+    day: '2026-11-15',
+    lines: () => [
+      `Changed: traps: ${listed(Object.values(TRAPS).map((t) => t.name.toLowerCase()))}: new look, 8 facings.`,
+      `New: trap look: worn at ${TRAP_WORN}% of its life gone.`,
+      'Changed: Crafting preview: traps: set, baited, sprung, worn.',
+    ],
+  },
+  // A crate in the crafting preview, drawn as the island draws it set down (`craftpreview.ts`, `sprited`).
+  {
+    n: 638,
+    day: '2026-11-15',
+    lines: () => [`Fixed: Crafting preview: ${listed(Object.values(CRATE_DEFS).map((c) => c.name.toLowerCase()))}: no picture. Now: drawn as set down.`],
+  },
+  // A roof over a storey with floor tiles taken up (`levelGaps`, `level_gap`), and Plan roof on the top storey pinned (`roofEntries`).
+  {
+    n: 634,
+    day: '2026-11-15',
+    lines: () => [
+      'Fixed: Plan roof after a floor tile of the top storey was removed on the building\'s edge: "N sides with no wall or columns", no wall plannable on them. Now: allowed once every other outside side and every planned wall is finished.',
+      'Changed: tile of storey 2 and up with no floor: open well, no walls asked on its sides. Roof: any tile of the footprint, floor or not. Storey with no floor at all: every side asked.',
+      'Changed: "not enclosed" refusal: nearest wall still going up named inside the storey too, e.g. walls planned round a well.',
+      'Fixed: top storey pinned: no Plan roof. Now: Plan roof on a tile with none; refused: greyed, with the reason.',
+    ],
+  },
+  // A Decor tab in the crafting window (`craftTabOf`, `isDecor`).
+  {
+    n: 639,
+    day: '2026-11-15',
+    lines: () => [`New: Crafting window: Decor tab, ${RECIPES.filter((r) => craftTabOf(r.result) === 'decor').length} recipes: pieces set down to be looked at, out of Furniture.`],
+  },
+  // A citizen's rank off the tile hover (`ui.ts`).
+  {
+    n: 635,
+    day: '2026-11-15',
+    lines: () => ['Changed: tile hover on your own settlement: no rank line (in the Settlement window).'],
+  },
+  // An evolved wildermon named for its stage in a fight and on its carcass (`kind_name_at`, `corpse_kind`).
+  {
+    n: 628,
+    day: '2026-11-15',
+    lines: () => [
+      `Fixed: evolved wildermon named as their first stage in fight lines and on carcasses, e.g. a ${SPECIES.orse.stages![0].name}'s corpse: "Corpse (${SPECIES.orse.name.toLowerCase()})". Now: its stage's name, "Corpse (${SPECIES.orse.stages![0].name.toLowerCase()})".`,
+      'Fixed: stage name in hit, miss, shot, kill, flee, fight back, dodge, riposte, enchantment, spell and companion lines, both directions; carcass in pack, on the ground, Examine and Butchered. Carcasses from before: their first stage\'s name.',
+    ],
+  },
+  // A failed skill check names its biggest factor (`failwhy.ts`, `fail_why`).
+  {
+    n: 627,
+    day: '2026-11-15',
+    lines: () => [
+      `New: failed action log line: biggest factor, its cost in success chance. Example: "Cut failed.${FAIL_EXAMPLE}"`,
+      `Factors, each against its best, the others held: ${listed(FAIL_FACTORS.map((f) => `${f.label} ${f.top}`))}. Named at ${FAIL_LEAST * 100}+ percentage points; perk share of failures counted; one factor.`,
+      `On: crafts with a difficulty, ${listed(FAIL_WHY_JOBS.map((id) => (ACTION_BY_ID.get(id)?.label ?? id).toLowerCase()))}.`,
+      'New: Skills window, digging and mining hover: the same factor for Dig and Mine.',
+    ],
+  },
+  // A staircase or a ladder planned on the storey over, built from the one it is climbed from (`wayUpPlanned`).
+  {
+    n: 629,
+    day: '2026-11-15',
+    lines: () => [
+      'Fixed: staircase, single staircase, spiral staircase or ladder planned on storey 2 and up: no Build on the storey under it. Now: "Build … up (storey N)" in that storey\'s menu on its tile.',
+    ],
+  },
+  // The crafting window's preview pane, always there, its stages cycled and its flicker gone (`craftpreview.ts`); and its tabs (`craftTabOf`).
+  {
+    n: 630,
+    day: '2026-11-15',
+    lines: () => [
+      `Changed: Crafting window: preview pane always shown, fixed place and size: ${PREVIEW_W} × ${PREVIEW_H} px; narrow window or phone: thumbnail. Nothing chosen, or no model: "No preview".`,
+      `New: Crafting preview: stages cycled, ${STAGE_SECS} s each, while turning. Growth: hedge, bonsai, arches, pergola, trellis vine. Lit: lamp posts and pillars (empty, unlit, lit), oven, brazier, fireplace. Smelter, kiln: unlit, lit, working. Traps: set, baited, sprung. Settlement stake: levels 1–${MAX_DEED_LEVEL}.`,
+      'New: Crafting preview: stage label: its name, or "Stage 2/5". Animations Off or less motion: last stage, still.',
+      'Fixed: Crafting preview flicker: blank frame between two pictures; pane hidden and shown as the pointer crossed rows.',
+      `New: Crafting window: tabs ${CRAFT_TABS.map(([, label]) => label).join(' · ')}, each with its recipe count. Search: within the tab open; none found: "In All: N". Tab kept in this browser.`,
+      `New: Crafting window: Stations tab: ${listed([...new Set(RECIPES.filter((r) => craftTabOf(r.result) === 'stations').map((r) => itemDef(r.result).name.toLowerCase()))])}.`,
+    ],
+  },
+  // Parts drawn through each other, at every facing (`kit/fittings.ts`, `obsidian.ts`, `adorn.ts`, `furnish.ts`, `lamps.ts`, `stands.ts`).
+  {
+    n: 631,
+    day: '2026-11-15',
+    lines: () => [
+      'Fixed: clipping: training dummy, archery target, obsidian throne, shard garden, glass shard path, signpost, pedigree board, cheese rack, lamp post, coat rack, stone bench.',
+    ],
+  },
+  // First tame sure, and New before a name for a week (`firsttame.ts`, `badges.ts`).
+  {
+    n: 626,
+    day: '2026-11-15',
+    lines: () => [
+      `New: ${FIRST_TAME_SAYS}. A player's first tame of a wildermon (offering, or out of a trap): roll cannot fail. Once per player; monsters never. Still asked: taming needed, offering, reach, room.`,
+      `New: ${FIRST_TAME_SAYS} on the creature card, the Tame entry, the trap's take-out entry and the Guiding Light's tame steps, until that first tame.`,
+      `New: sprout after a player's name, first ${NEW_DAYS} days ashore: chat lines, names over players, Social lists. Hover: ${newTitle(3)}. Off: Settings, Interface, Name icons.`,
+    ],
+  },
+  // A walk up to a storey whose staircase is only planned (`Game.unbuiltWayUp`).
+  {
+    n: 625,
+    day: '2026-11-15',
+    lines: () => [
+      `Fixed: walk up to a storey whose staircase or ladder is planned, not built: "No path to storey 2". Now: its name, tile and bill left, e.g. "${wayUpSaid({ building: 0, level: 1, x: 2508, y: 2256, kind: 'stairs', hand: 'l', facing: 's', material: 'timbercraft', ...floorBill('timbercraft', 'stairs', 'hip', 'l') })}"`,
+    ],
+  },
+  // The stations set down as furniture is, and decaying off a settlement (`stations.ts`).
+  {
+    n: 622,
+    day: '2026-11-15',
+    lines: () => [
+      `Changed: ${listed(STATION_KINDS.map((k) => STATIONS[k].name.toLowerCase()))}: Set furniture down (ground menu); ghost follows the cursor; Q/E rotate; click to place; red: refused (was: Build campfire here, Set the smelter, kiln or anvil down here).`,
+      `New: smelter facing east or west: ${SMELTER_H} by ${SMELTER_W} spots (was: ${SMELTER_W} by ${SMELTER_H} only).`,
+      'Changed: campfire: refused where anything stands (was: a crate or a fire only); refused on water.',
+      'Changed: smelter: refused off a settlement of yours by the island too.',
+      `New: station decay off any settlement, damage an hour at QL 50: ${listed(STATION_KINDS.map((k) => `${STATIONS[k].name.toLowerCase()} ${stationDecayAt(k, 50).toFixed(2)}`))}; under a roof ×${INDOORS_DECAY}; gone at ${DAMAGE_MAX}. On a settlement: none.`,
+      'New: station menu, hover and Examine: damage, decay an hour, time left.',
+    ],
+  },
+  // Iron and rock outcroppings (`outcrops.ts`).
+  {
+    n: 624,
+    day: '2026-11-15',
+    lines: () => [
+      `New: outcroppings. At each ${RESET}: per safe ring (${SAFE_RING} tiles round the spawn and each Runestone), ${listed(OUTCROP_KINDS.map((k) => `${k.perRing} ${k.name.toLowerCase()}s`))}, on random dry grass; the day's before removed.`,
+      `${ACTION_BY_ID.get(OUTCROP_MINE)?.label ?? 'Mine'} (right-click): pickaxe, ${MINE_JOB.skill}; time, stamina and success chance as at a rock face. Per success: ${listed(OUTCROP_KINDS.map((k) => `${k.name.toLowerCase()} 1 ${itemDef(k.yields).name.toLowerCase()}`))}, QL ${OUTCROP_QL} (skill and pickaxe QL do not change it).`,
+      `${OUTCROP_USES} uses each; at 0: broken, removed until the next ${RESET}. Examine its tile: uses left.`,
+    ],
+  },
   {
     n: 1,
     day: '2026-09-25',
@@ -1636,7 +1834,8 @@ export const NEWS: News[] = [
     n: 102,
     day: '2026-10-08',
     lines: () => [
-      ...REGIONS.filter((R) => R.treeless).map((R) => `Changed: no trees grow or seed by themselves on the ${R.name.replace(/^The /, '')}.`),
+      // As it was then: trees grow and seed there again since 14 November (What's new 614).
+      'Changed: no trees grow or seed by themselves on the Northeast Tundra.',
       // As it was then: monsters come only from lairs since (\`lairs.ts\`), and the numbers it named are gone with the free spawn.
       'Changed: every wild creature that fights back on the Northeast Tundra is a monster, never a wildermon, at ×3 the rest of the chart\'s count of each: '
         + '18 goblins, 9 orcs, 6 ogres and 3 dragons.',
@@ -4357,7 +4556,7 @@ export const NEWS: News[] = [
     lines: () => {
       const swing = ['mine', 'chip_corner', 'mine_cellar'].map((id) => ACTION_BY_ID.get(id)?.label).filter((l): l is string => !!l);
       return [
-        `New: ${itemDef('long_sword').name.toLowerCase()} blade, ${itemDef('maul').name.toLowerCase()} head and ${itemDef('pickaxe').name.toLowerCase()} head in their metal (${listed(METALS.map((m) => m.name.toLowerCase()))}); no metal: iron.`,
+        `New: ${itemDef('long_sword').name.toLowerCase()} blade, ${itemDef('maul').name.toLowerCase()} head and ${itemDef('pickaxe').name.toLowerCase()} head in their metal (${listed(METALS_BEFORE_VOLCANO.map((m) => m.name.toLowerCase()))}); no metal: iron.`,
         `New: ${listed(swing)}: ${itemDef('pickaxe').name.toLowerCase()} in both hands, overhead swing, in the metal of the best ${itemDef('pickaxe').name.toLowerCase()} in the pack; enchanted: glows.`,
         `New: other players at ${listedOr(swing)}: their own ${itemDef('pickaxe').name.toLowerCase()}'s metal and enchantment (was: iron).`,
         `New: ${itemDef('maul').name.toLowerCase()} on the back when wielded, head up; slash trail in a fight.`,
@@ -4410,7 +4609,7 @@ export const NEWS: News[] = [
     day: '2026-11-12',
     lines: () => [
       'New: worn armour on the sculpted body, as equipped: cloth, leather and plate (was: starter clothes on everyone).',
-      `New: plate in its metal, piece by piece (${METALS.length} metals); cloth and leather in their dye; your enchanted pieces glow.`,
+      `New: plate in its metal, piece by piece (${METALS_BEFORE_VOLCANO.length} metals); cloth and leather in their dye; your enchanted pieces glow.`,
       'Chain and scale: starter clothes until modelled.',
     ],
   },
@@ -4483,6 +4682,135 @@ export const NEWS: News[] = [
       `New: fishing net: ${LIFT_DROPS * NET_LIFT.length} drops off the net as it is lifted, ${SHAKE_DROPS} at each of ${NET_SHAKES.length} shakes.`,
       `New: rowing under way: ${OAR_DROPS} drops a blade at the catch; whirl pair a blade a stroke, ${SWIRL_SECS} s.`,
       'Without a graphics card: swimming strokes\' splashes, rings treading water, the float\'s strike and a catch only.',
+    ],
+  },
+  // The crafting window's preview (`craftpreview.ts`) and its search's order (`recipeRank`).
+  {
+    n: 620,
+    day: '2026-11-14',
+    lines: () => [
+      'New: Crafting window: preview of a recipe\'s result: row clicked, or pointed at.',
+      'Preview: furniture, stations, posts, traps, carts, wagons, boats: set down, turning, by day.',
+      'Preview: worn gear on your figure, nothing else worn; weapons in a fight; tools at their job; loaf, candle, lantern alone.',
+      'Preview: in the row\'s chosen material, kind or pattern; changes with it.',
+      `Preview: at most ${PREVIEW_FPS} frames a second. Animations Off, less motion, or no graphics card: one still frame.`,
+      `Changed: Crafting search: recipes making what was typed first, under ${MAKES_SECTION}: exact name, then name start, then name contains; moulds by what they cast. Pinned and Recent hidden while searching.`,
+    ],
+  },
+  // The Path renamed the Guiding Light (`src/game/path.ts`).
+  {
+    n: 623,
+    day: '2026-11-15',
+    lines: () => [
+      'Renamed: Path → Guiding Light.',
+    ],
+  },
+  // Obsidian gear and obsidian glass (`gear.ts` OBSIDIAN_PIECES, `recipes.ts` KNAPPED, `building.ts` OBSIDIAN_GLASS).
+  {
+    n: 617,
+    day: '2026-11-14',
+    lines: () => {
+      const C = ARMOUR_CLASSES, glass = MATERIAL_BY_ID.get(OBSIDIAN_GLASS);
+      return [
+        `New: obsidian armour, ${listed(OBSIDIAN_PIECES.map((id) => `${itemDef(id).name.toLowerCase()} (${recipeBill(`make_${id}`)})`))}: platesmithing at an anvil, hammer.`
+          + ` Soak ${pct(C.obsidian.soak)} (plate ${pct(C.plate.soak)}, scale ${pct(C.scale.soak)}); ${armourSays('obsidian')}; full set burden ${pct(C.obsidian.burden)} (plate ${pct(C.plate.burden)}).`,
+        `New: knapped obsidian, chisel, stonecutting: ${listed(Object.keys(KNAPPED).map((id) => `${itemDef(id).name.toLowerCase()} (${recipeBill(knapRecipeId(id))})`))}.`
+          + ` Obsidian: ${OBSIDIAN_MATERIAL.note.toLowerCase()}`,
+        `New: obsidian glass, solid wall (${wallBill(OBSIDIAN_GLASS)}) or floor; trowel, masonry; ${glass?.storeys ?? 0} storeys; opacity ${pct(OBSIDIAN_GLASS_OPACITY)}; sight passes through.`,
+        'New: obsidian pieces, tools and weapons improved with obsidian; chisel and hammer.',
+        'New: models: obsidian set; knapped heads and blades; obsidian glass walls and floors.',
+      ];
+    },
+  },
+  // Volcano Isle's lava and heat (`lava.ts`).
+  {
+    n: 616,
+    day: '2026-11-14',
+    lines: () => [
+      `New: lava on Volcano Isle: a labyrinth ${LAVA_RADIUS} tiles round the caldera, on its land; ${LAVA_DESIGNS} designs, a new one at each daily reset, never twice running; corridors ${LAVA_CELL} tiles wide; on the map.`,
+      `${LAVA_PATHS} ways in, about ${Math.round(360 / LAVA_PATHS)}° apart, each the only way through to the heart (${LAVA_HEART} tiles round the caldera, no lava); every other corridor ends.`,
+      `Changed: seryll lies in the labyrinth's heart only, on ${percent(SERYLL_HEART)} of its dry ground (was: anywhere on Volcano Isle).`,
+      `On lava: health −${percent(LAVA_BURN)}/s; no digging, building, setting down or founding; no creature steps on it. Never on a settlement, a road, a building or anything set down.`,
+      `New: heat meter (hud, Volcano Isle): +${percent(HEAT_FILL)}/s at ${metres(LAVA_BAND.foot)} m and up, ×${HEAT_NEAR} beside lava; full: health −${percent(HEAT_BURN)}/s; below: −${percent(HEAT_DRAIN)}/s.`,
+      `Heat fill: ×${1 - HEAT_SCALE} per dragon-scale piece; −${percent(HEAT_ICE)} × strength per ice-infused piece (ice now infuses armour); ${itemDef(COOLING_DRAUGHT).name} (alchemy; mint, water, ice mote): heat −${percent(DRAUGHT_DROP)}, fill ×${DRAUGHT_FILL} for ${DRAUGHT_SECS / 60} min.`,
+    ],
+  },
+  // The level shown while set: the HUD's chip and the corners' marks (`Hud.drawLevel`, `Renderer.drawLevelMarks`).
+  {
+    n: 621,
+    day: '2026-11-15',
+    lines: () => [
+      'New: status panel Level chip while a level is set: its height; × clears it (Clear level).',
+      `New: corner marks while a level is set, up to ${LEVEL_REACH} corners from the cursor's corner (no cursor: yours): green at the level, amber above (stem down), blue below (stem up).`,
+      'New: ring at the corner the level was set at, set from this browser.',
+      'Fixed: help: Set level here, Clear level (was: Take the level here, Clear the level).',
+    ],
+  },
+  // Trade and class icons before players' names (`badges.ts`, `../../render/emblems.ts`).
+  {
+    n: 619,
+    day: '2026-11-14',
+    lines: () => {
+      const trades = CLASSES.filter((c) => c.kind === 'craft').length;
+      return [
+        `New: name icons: trade (round stone, ${trades}), class (shield, ${CLASSES.length - trades}), before player names: chat lines, names over players, Social lists. Hover: trade or class name.`,
+        'New: Settings, Interface: Name icons, On.',
+      ];
+    },
+  },
+  // The obsidian pieces (`obsidian.ts`).
+  {
+    n: 618,
+    day: '2026-11-14',
+    lines: () => {
+      const made = (id: string): string => `${itemDef(id).name} (${skillOf(`make_${id}`)}; ${pieceBill(id)})`;
+      const chimeStill = Math.round(CHIME_STILL * 100);
+      return [
+        `New: ${made(BLACK_LANTERN)}: ${LANTERN_CANDLES} candle; lit, light ${BLACK_LANTERN_REACH} tiles at night.`,
+        `New: ${made(OBSIDIAN_THRONE)}: seats ${THRONE_SEATS}, its settlement's founder only; Examine: the settlement's level, citizens and workers, now.`,
+        `New: ${made(OBSIDIAN_OBELISK)}: named, up to ${CAIRN_NAME_MAX} characters; glint ${glintWords()}.`,
+        `New: ${made(DRAGON_FOUNTAIN)}: a fountain: a well of ${furnitureDef(DRAGON_FOUNTAIN).well} litres, the foot of an aqueduct.`,
+        `New: ${made(SHARD_GARDEN)}: decor, ${furnitureDef(SHARD_GARDEN).w} by ${furnitureDef(SHARD_GARDEN).h} subtiles.`,
+        `New: ${made(OBSIDIAN_VASE)}: ${VASE_HOLDS} wildflowers, fresh ${VASE_FRESH} days.`,
+        `New: ${made(LAVA_LAMP)}: light ${LAVA_LAMP_REACH} tiles at night, always on.`,
+        `New: ${made(OBSIDIAN_CHIME)}: hung; silent under ${chimeStill}% wind; volume ×${GLASS_CHIME_LEAST} at ${chimeStill}%, rising evenly to ×${glassChimeLoud(FULL_WIND)} at ${Math.round(FULL_WIND * 100)}%.`,
+        `New: ${made(OBSIDIAN_BUST)}: a citizen of its settlement, head and hair.`,
+        `New: ${made(SHARD_PATH)}: along one side of a tile, one a side, any length; decor.`,
+        `New: ${made(EMBER_ORB)}: light ${ORB_DAY_REACH} tile by day to ${ORB_NIGHT_REACH} at full night.`,
+      ];
+    },
+  },
+  // Volcano Isle, part one (`volcano.ts`): its monsters, obsidian, a seryll vein's summons, sulfur, fire-tempered steel.
+  {
+    n: 615,
+    day: '2026-11-14',
+    lines: () => {
+      const named = (id: string): string => SPECIES[id].name.toLowerCase();
+      return [
+        ...VOLCANO_KINDS.map((id) => {
+          const d = SPECIES[id];
+          const k = LAIR_KINDS.find((x) => x.species === id)!;
+          return `New: ${named(id)}, ${volcanoName()} only: health ${d.health}, blow ${d.attack}, speed ${d.speed}`
+            + `${d.blinds ? `; blow that lands: your hit chance ×${ASH_BLIND_HIT}, ${ASH_BLIND_SECS} s` : ''}${d.fireproof ? '; burns: no damage' : ''}`
+            + `${d.frostWeak ? `; ${listed(ICE_WEAPON_ENCHANTS)} on the weapon: damage ×${FROST_WEAK}` : ''}. `
+            + `${k.name} ×${k.count} (${SITE_SAYS[k.site]}): garrison ${garrisonSays(k, (s) => SPECIES[s]?.name ?? s)}; boss ${bossSays(k, d.name)}; restock ${restockSays(k)}; `
+            + `hoard: ${hoardSays(k, itemDef(k.trophy).name, itemDef(BOOKS[hoardBook(k)].item).name)}.`;
+        }),
+        `New: obsidian, butchering a monster killed on ${volcanoName()}: ${listed(MONSTER_KINDS.map((id) => `${named(id)} ${obsidianOf(id)}`))}, times the butchering share. None elsewhere.`,
+        `New: seryll vein on ${volcanoName()}: ${summonSays(VOLCANO_KINDS.map(named))}.`,
+        `New: sulfur: butchering ${listed(MONSTER_KINDS.filter((id) => SPECIES[id].butcher.sulfur).map((id) => `${named(id)} ${SPECIES[id].butcher.sulfur}`))}; mining slate on ${volcanoName()}, ${percent(SULFUR_SLATE)} a go.`,
+        `New: ${FIRE_STEEL_NAME.toLowerCase()}: ${recipeInputsSaid(FIRE_STEEL_RECIPE)} at a smelter on ${volcanoName()} only. Weapons and tools of it: improve QL cap +${FIRE_STEEL_CAP} over your skill.`,
+      ];
+    },
+  },
+  // Trees and wildermon back on the Northeast Tundra (`regions.ts`, `tools/move-ground.ts`).
+  {
+    n: 614,
+    day: '2026-11-14',
+    lines: () => [
+      'Changed: Northeast Tundra: trees grow and seed (was: treeless).',
+      'Changed: Northeast Tundra: wildermon wild by habitat and season, as on every island (was: none).',
+      'Changed: islands founded before today: Northeast Tundra trees back on tiles nobody has changed.',
     ],
   },
   // The adornments (`adorn.ts`).
@@ -4671,14 +4999,14 @@ export const NEWS: News[] = [
     day: '2026-11-14',
     lines: () => [
       'New: monster lairs. A goblin, orc, ogre or dragon stands up only at its kind\'s lair; none in the wild, none raids a settlement.',
-      ...LAIR_KINDS.map((k) => `New: ${k.name.toLowerCase()} ×${k.count}, on ${SITE_SAYS[k.site]}: garrison ${garrisonSays(k, (id) => SPECIES[id]?.name ?? id)}; `
+      ...FIRST_LAIR_KINDS.map((k) => `New: ${k.name.toLowerCase()} ×${k.count}, on ${SITE_SAYS[k.site]}: garrison ${garrisonSays(k, (id) => SPECIES[id]?.name ?? id)}; `
         + `boss ${bossSays(k, SPECIES[k.species].name)}; restock ${restockSays(k)}; at least ${k.keepOff} tiles from a settlement totem.`),
       `New: leash ${LAIR_LEASH} tiles from its lair; a hunt past it dropped, back to the lair.`,
       `New: boss out once its garrison is dead; told to everybody within ${LAIR_ANNOUNCE} tiles.`,
       `New: hoard on the boss's kill: a share for everybody who dealt ${percent(HOARD_SHARE)} of its health or more, companions' blows counted. `
-        + `${listed(LAIR_KINDS.map((k) => `${k.name}: ${hoardSays(k, itemDef(k.trophy).name, itemDef(BOOKS[hoardBook(k)].item).name)}`))}. No silver, never rare.`,
+        + `${listed(FIRST_LAIR_KINDS.map((k) => `${k.name}: ${hoardSays(k, itemDef(k.trophy).name, itemDef(BOOKS[hoardBook(k)].item).name)}`))}. No silver, never rare.`,
       `New: hoard dragon scales, "Dragon scale (${HOARD_SCALE})": scale armour made of them alone, QL cap ${mult(HOARD_SCALE_CAP)} your skill.`,
-      `New: trophies, set down anywhere as decoration: ${listed(LAIR_KINDS.map((k) => itemDef(k.trophy).name.toLowerCase()))}.`,
+      `New: trophies, set down anywhere as decoration: ${listed(FIRST_LAIR_KINDS.map((k) => itemDef(k.trophy).name.toLowerCase()))}.`,
       `New: cleared lair: empty until its restock; its ${LAIR_RING}-tile ring counts as the safe ring and holds ${lairRingWant(PER_REGION, WILD_SQUARE)} wildermon (${mult(LAIR_RING_WILD)} the usual).`,
       `New: a lair cleared ${LAIR_MOVE_CLEARS} times in ${LAIR_MOVE_DAYS} days restocks at a new site.`,
       `New: a lair seen (within ${LAIR_SIGHT} tiles): pinned on your map; "Lair: found" on its kind's field guide page.`,
@@ -4764,8 +5092,8 @@ export const NEWS: News[] = [
       const name = (id: string): string => SPECIES[id].name.toLowerCase();
       return [
         `Changed: every creature's base health ×${CREATURE_HEALTH_MUL}, base blow damage ×${CREATURE_ATTACK_MUL}: wildermon and monsters, wild and yours. Yours keep their share of health.`,
-        `Monster health: ${listed(MONSTER_KINDS.map((id) => `${name(id)} ${hp(SPECIES[id].health)}`))}.`,
-        `Monster blow: ${listed(MONSTER_KINDS.map((id) => `${name(id)} ${hit(SPECIES[id].attack)}`))}; on an unarmoured life ${listed(MONSTER_KINDS.map((id) => `${name(id)} ${life(SPECIES[id].attack)}`))}.`,
+        `Monster health: ${listed(MONSTERS_BEFORE_VOLCANO.map((id) => `${name(id)} ${hp(SPECIES[id].health)}`))}.`,
+        `Monster blow: ${listed(MONSTERS_BEFORE_VOLCANO.map((id) => `${name(id)} ${hit(SPECIES[id].attack)}`))}; on an unarmoured life ${listed(MONSTERS_BEFORE_VOLCANO.map((id) => `${name(id)} ${life(SPECIES[id].attack)}`))}.`,
         `Changed: creature health back per second, unhurt: wild ${hp(REGEN_WILD)}, yours ${hp(REGEN_KEPT)}; time to heal unchanged.`,
         `Changed: wildermon bed size bands, non-evolving kinds: small under ${hp(DEN_HEALTH[0])} health, medium under ${hp(DEN_HEALTH[1])}; same kinds in each.`,
         'Unchanged: treasure map chance and map QL off a monster; your health, weapons, spells, traps and armour.',
@@ -5386,7 +5714,7 @@ export const NEWS: News[] = [
     n: 502,
     day: '2026-11-05',
     lines: () => [
-      `Added: Formula, per butchering: ${listed(bookDrops('formula').map((d) => `${d.kind} ${percent(d.odds)}`))}; one not read first. ${BOOKS.formula.label}: opens it for good, Formula used up; already open: not read.`,
+      `Added: Formula, per butchering: ${listed(bookDrops('formula').filter((d) => !VOLCANO_KINDS.includes(d.kind)).map((d) => `${d.kind} ${percent(d.odds)}`))}; one not read first. ${BOOKS.formula.label}: opens it for good, Formula used up; already open: not read.`,
       `Changed: all ${lockedRecipes('formula').length} enchantment scrolls: shut until its Formula is read (was: open to all). Crafting window: greyed, padlocked.`,
     ],
   },
@@ -5396,7 +5724,7 @@ export const NEWS: News[] = [
     lines: () => {
       const shut = lockedRecipes('recipe').map((r) => recipeTitle(r).toLowerCase());
       return [
-        `Added: Recipe, ${percent(RECIPE_DROP_ODDS)} per butchering of a ${listedOr([...RECIPE_DROPPERS])} carcass; one not read first. Read recipe: opens it for good, Recipe used up; already open: not read.`,
+        `Added: Recipe, ${percent(RECIPE_DROP_ODDS)} per butchering of a ${listedOr(RECIPE_DROPPERS.filter((id) => !VOLCANO_KINDS.includes(id)))} carcass; one not read first. Read recipe: opens it for good, Recipe used up; already open: not read.`,
         `Changed: ${listed(shut)}: shut until its Recipe is read (was: open to all). Crafting window: greyed, padlocked. Simma: does not cook them.`,
       ];
     },

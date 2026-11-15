@@ -476,6 +476,161 @@ function roostOf(): KitModel {
   return { parts, shade: [[-6.8, -6.8, 0], [6.8, -6.8, 0], [6.8, 6.8, 0], [-6.8, 6.8, 0]] };
 }
 
+/* ---- Volcano Isle's vents ----------------------------------------------------------------- */
+
+/** Basalt: a deep lilac-grey, the kit's slate taken toward plum, never black. */
+const BASALT: Tone = toneOf('#ac8c9a', '#563a5a');
+/** Ash: a pale warm grey. */
+const ASH: Tone = toneOf('#d6c4c2', '#86707e');
+/** Clinker: a rusty brown-red. */
+const CLINKER: Tone = toneOf('#c09080', '#5e3c48');
+/** The splash: molten orange, its bright heart, and ember red. */
+const MOLTEN = '#ff9a3c';
+const MOLTEN_HOT = '#ffe08a';
+const EMBER = '#f0603c';
+
+type VentKind = 'ash' | 'magma' | 'cinder';
+/** Each vent's cone, its crater and how much light it gives: an ash vent pale and smoking, a magma vent's crater a lake of fire, a cinder vent's clinker studded with embers. */
+const VENT_LOOK: Record<VentKind, { cone: Tone; crust: Tone; light: number; smoke: number; embers: number }> = {
+  ash: { cone: ASH, crust: BASALT, light: 0.35, smoke: 5, embers: 2 },
+  magma: { cone: BASALT, crust: CLINKER, light: 0.85, smoke: 2, embers: 5 },
+  cinder: { cone: CLINKER, crust: BASALT, light: 0.55, smoke: 3, embers: 9 },
+};
+/** The crater's middle and its height, where the glow and the smoke come from. */
+const CRATER: V3 = [0, -0.6, 9.2];
+
+/** A crater's floor, painted on the cone's top: the kind's fire or ash in a dark rim. */
+const craterFloor = (kind: VentKind, seed: number) => (g: Ctx, kk: PaintCtx, s: Side): void => {
+  g.save();
+  g.translate(-s.w / 2, -s.h / 2);
+  g.beginPath();
+  g.ellipse(s.w / 2, s.h / 2, s.w * 0.42, s.h * 0.42, 0, 0, TAU);
+  g.fillStyle = css(mix(kk.fill, hex('#3e2c44'), 0.55));
+  g.fill();
+  const T = rand(seed);
+  if (kind === 'magma') {
+    g.beginPath();
+    g.ellipse(s.w / 2, s.h / 2, s.w * 0.34, s.h * 0.34, 0, 0, TAU);
+    g.fillStyle = MOLTEN;
+    g.fill();
+    for (let i = 0; i < 9; i++) {
+      g.beginPath();
+      g.ellipse(s.w / 2 + (T() - 0.5) * s.w * 0.4, s.h / 2 + (T() - 0.5) * s.h * 0.4, 0.5 + T() * 0.5, 0.3 + T() * 0.3, T(), 0, TAU);
+      g.fillStyle = i % 3 ? MOLTEN_HOT : css(hex('#a8443c'), 0.8);
+      g.fill();
+    }
+  } else if (kind === 'ash') {
+    g.beginPath();
+    g.ellipse(s.w / 2, s.h / 2, s.w * 0.3, s.h * 0.3, 0, 0, TAU);
+    g.fillStyle = css(hex('#d8ccd0'));
+    g.fill();
+    g.beginPath();
+    g.ellipse(s.w / 2, s.h / 2, s.w * 0.12, s.h * 0.12, 0, 0, TAU);
+    g.fillStyle = css(hex(MOLTEN), 0.75);
+    g.fill();
+  } else {
+    for (let i = 0; i < 16; i++) {
+      const a = T() * TAU, r = Math.sqrt(T()) * s.w * 0.34;
+      g.beginPath();
+      g.ellipse(s.w / 2 + Math.cos(a) * r, s.h / 2 + Math.sin(a) * r, 0.42, 0.32, T(), 0, TAU);
+      g.fillStyle = i % 2 ? EMBER : MOLTEN_HOT;
+      g.fill();
+    }
+  }
+  g.restore();
+};
+
+/** Cracks of fire run down a face of the cone, for a kind that glows through its crust. */
+const fireCracks = (seed: number, n: number) => (g: Ctx, k: PaintCtx, s: Side): void => {
+  rockSkin(seed)(g, k, s);
+  const T = rand(seed + 3);
+  g.lineCap = 'round';
+  for (let i = 0; i < n; i++) {
+    let x = T() * s.w, y = s.h * (0.55 + T() * 0.4);
+    g.beginPath();
+    g.moveTo(x, y);
+    for (let j = 0; j < 3; j++) { x += (T() - 0.5) * 1.2; y -= 0.5 + T() * 0.8; g.lineTo(x, y); }
+    g.strokeStyle = css(hex(i % 2 ? MOLTEN : EMBER), 0.85);
+    g.lineWidth = 0.22;
+    g.stroke();
+  }
+};
+
+/**
+ * A volcano vent: a squat cone of rock with its crater at the top -- an ash
+ * vent pale and ashen with a smoking mouth, a magma vent of basalt with a lake
+ * of fire in it and fire in its cracks, a cinder vent of rusty clinker with
+ * embers in it -- broken rocks round its foot, and a slab of basalt leant
+ * against its flank. Its glow, smoke and embers are drawn over it (`live`).
+ */
+function ventOf(kind: VentKind): KitModel {
+  const L = VENT_LOOK[kind];
+  const parts: KitPart[] = [];
+  const add = (faces: Face[], more: Partial<KitPart> = {}): KitPart => {
+    const p: KitPart = { faces, ...more };
+    parts.push(p);
+    return p;
+  };
+  const seed = kind === 'ash' ? 51 : kind === 'magma' ? 52 : 53;
+  const cracks = kind === 'ash' ? 0 : kind === 'magma' ? 3 : 2;
+  const cone = add(prism(mound(14, 0, -0.6, 7.6, 7.0, [[1, 0], [0.9, 3.0], [0.64, 6.6], [0.44, 9.2]], seed, 0.1), L.cone,
+    (k, i, sd) => ({ crease: 0.3, paint: (g: Ctx, kk: PaintCtx) => (cracks && (i + k) % 3 === 0 ? fireCracks(seed * 10 + k * 7 + i, cracks)(g, kk, sd) : rockSkin(seed * 10 + k * 7 + i)(g, kk, sd)) }),
+    (sd) => ({ tone: L.crust, crease: 0.3, paint: (g: Ctx, kk: PaintCtx) => craterFloor(kind, seed)(g, kk, sd) })), { edges: true });
+  // Rocks round its foot, and a slab leant on its flank.
+  for (const [x, y, r, sd] of [[-6.6, 5.0, 1.3, 61], [6.2, 4.4, 1.0, 62], [-1.4, 7.6, 0.8, 63], [6.8, -4.0, 1.2, 64]] as Array<[number, number, number, number]>) {
+    add(rockMass(x, y, r * 1.2, r, r * 1.3, 5, sd + seed, false).map((f) => ({ ...f, tone: BASALT })), { edges: true });
+  }
+  add(rockMass(-5.4, -3.6, 1.6, 1.2, 5.4, 4, seed + 70, false).map((f) => ({ ...f, tone: BASALT })), { after: [cone], edges: true });
+  // The room its glow and smoke rise into, so the piece is as tall as it is drawn.
+  parts.push({
+    reach: [[-5, -5, CRATER[2]], [5, 4, CRATER[2]], [-5, -5, CRATER[2] + 11], [5, 4, CRATER[2] + 11]],
+    pad: 6,
+    solid: true,
+    after: [cone],
+    draw: () => undefined,
+  });
+  return { parts, shade: [[-7.4, -7.0, 0], [7.4, -7.0, 0], [7.4, 6.0, 0], [-7.4, 6.0, 0]] };
+}
+
+/** Over a vent each frame: its crater's glow, smoke rising and drifting off it, and embers thrown up and falling back. */
+const ventLive = (kind: VentKind) => (ctx: Ctx, sx: number, sy: number, zoom: number, view: { ux: number; uy: number; vx: number; vy: number }, night: number, t: number): void => {
+  const L = VENT_LOOK[kind];
+  const at = (p: V3): [number, number] => [sx + (p[0] * view.ux + p[1] * view.vx) * zoom, sy + (p[0] * view.uy + p[1] * view.vy - p[2] * HEIGHT_SCALE) * zoom];
+  const [cx, cy] = at(CRATER);
+  const breath = 0.85 + 0.15 * Math.sin(t * 1.7);
+  glow(ctx, cx, cy, (5 + 4 * L.light) * zoom, (0.25 + 0.45 * night) * L.light * breath, '255, 150, 70');
+  // Smoke: soft puffs rising, growing and going.
+  for (let i = 0; i < L.smoke; i++) {
+    const k = (t / 6 + i / L.smoke) % 1;
+    const [x, y] = at([Math.sin(i * 2.1 + t * 0.3) * 1.2 + k * 2.4, CRATER[1], CRATER[2] + 0.6 + k * 8]);
+    ctx.beginPath();
+    ctx.arc(x, y, (0.8 + k * 2.2) * zoom, 0, TAU);
+    ctx.fillStyle = kind === 'ash' ? `rgba(196, 186, 196, ${(0.5 * (1 - k)).toFixed(3)})` : `rgba(150, 132, 150, ${(0.38 * (1 - k)).toFixed(3)})`;
+    ctx.fill();
+  }
+  // Embers: thrown up, falling back, fading.
+  for (let i = 0; i < L.embers; i++) {
+    const per = 1.6 + (i % 3) * 0.4;
+    const k = ((t + i * 0.37) / per) % 1;
+    const a = i * 2.4;
+    const h = 4.2 * k * (1 - k) * 4;
+    const [x, y] = at([CRATER[0] + Math.cos(a) * k * 2.6, CRATER[1] + Math.sin(a) * k * 2.0, CRATER[2] + h]);
+    ctx.beginPath();
+    ctx.arc(x, y, Math.max(0.6, 0.22 * zoom), 0, TAU);
+    ctx.fillStyle = i % 2 ? `rgba(255, 224, 138, ${(1 - k * 0.6).toFixed(3)})` : `rgba(240, 96, 60, ${(1 - k * 0.6).toFixed(3)})`;
+    ctx.fill();
+  }
+};
+/** Where a vent takes the night back off itself: its crater, always. */
+const ventHoles = (kind: VentKind) => (sx: number, sy: number, zoom: number, view: { ux: number; uy: number; vx: number; vy: number }) => {
+  const x = sx + (CRATER[0] * view.ux + CRATER[1] * view.vx) * zoom, y = sy + (CRATER[0] * view.uy + CRATER[1] * view.vy - CRATER[2] * HEIGHT_SCALE) * zoom;
+  return [{ x, y, r: 5 * zoom, a: 0.9 * VENT_LOOK[kind].light }, { x, y, r: 14 * zoom, a: 0.3 * VENT_LOOK[kind].light }];
+};
+const vent = (kind: VentKind): KitPiece => ({ model: () => ventOf(kind), uses: {}, live: ventLive(kind), holes: ventHoles(kind) });
+export const ASH_VENT: KitPiece = vent('ash');
+export const MAGMA_VENT: KitPiece = vent('magma');
+export const CINDER_VENT: KitPiece = vent('cinder');
+
 export const GOBLIN_WARREN: KitPiece = { model: () => warrenOf(), uses: {} };
 export const ORC_CAMP: KitPiece = {
   model: (look) => campOf(look),

@@ -38,12 +38,14 @@ check('every kind\'s health ×3 and blow ×0.4: the multipliers asked for', CREA
 // The rows as they were written, before the multipliers: the four monsters and a few wildermon.
 const WRITTEN: Record<string, [number, number]> = {
   goblin: [40, 14], orc: [95, 22], ogre: [170, 34], dragon: [700, 70], rabba: [20, 3], roxxen: [80, 11], spitta: [24, 6], sparra: [60, 2],
+  // Volcano Isle's (`volcano.ts`), written on top of the same multipliers.
+  ash_wraith: [200, 38], magma_golem: [360, 46], cinder_hound: [180, 36],
 };
 const wrong = Object.entries(WRITTEN).filter(([id, [h, a]]) => SPECIES[id].health !== h * 3 || !near(SPECIES[id].attack, a * 0.4));
-check('goblin, orc, ogre, dragon and four wildermon: health and blow ×3 and ×0.4 their rows',
+check('goblin, orc, ogre, dragon, Volcano Isle\'s three and four wildermon: health and blow ×3 and ×0.4 their rows',
   wrong.length === 0, Object.entries(WRITTEN).map(([id]) => `${id} ${SPECIES[id].health}/${SPECIES[id].attack}`).join(', '));
-check('the monsters: health 120, 285, 510, 2100; blow 5.6, 8.8, 13.6, 28',
-  MONSTER_KINDS.map((id) => `${SPECIES[id].health}/${SPECIES[id].attack}`).join(' ') === '120/5.6 285/8.8 510/13.6 2100/28',
+check('the monsters: health 120, 285, 510, 2100, and Volcano Isle\'s 600, 1080, 540; blow 5.6, 8.8, 13.6, 28, 15.2, 18.4, 14.4',
+  MONSTER_KINDS.map((id) => `${SPECIES[id].health}/${SPECIES[id].attack}`).join(' ') === '120/5.6 285/8.8 510/13.6 2100/28 600/15.2 1080/18.4 540/14.4',
   MONSTER_KINDS.map((id) => `${id} ${SPECIES[id].health}/${SPECIES[id].attack}`).join(', '));
 const kinds = Object.values(SPECIES);
 const weakest = kinds.reduce((a, b) => (b.attack < a.attack ? b : a));

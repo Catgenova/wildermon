@@ -208,6 +208,8 @@ export interface MaterialDef {
   only?: { walls: readonly WallType[]; floors: readonly FloorKind[] };
   /** Glass, and seen through: a wall of it does not stop the eye (`vision.ts`), as a window does not. */
   seeThrough?: boolean;
+  /** Drawn this opaque, a wall or a floor of it: what is behind or under it shows through at the rest (`OBSIDIAN_GLASS`). */
+  opacity?: number;
   /**
    * Bill items taken only of one make: the `Item.extra` an item of that id
    * must carry, as a metal ribbon carries its metal's name -- a garden bed's
@@ -248,8 +250,16 @@ export const MATERIALS: MaterialDef[] = [
    * melt colours a batch of panes, and a solid wall takes one batch.
    */
   { id: 'stained_glass', name: 'Stained glass', kind: 'stone', tool: 'trowel', skill: 'masonry', color: [214, 196, 226], trim: [232, 224, 206], floor: [238, 228, 214], courses: 4, bill: [['stone_brick', 24], ['mortar', 12], ['stained_glass_pane', 20]], storeys: 10, heft: 3, only: { walls: ['solid'], floors: ['floor', 'roof'] }, seeThrough: true },
+  /*
+   * Obsidian set in mortar: a solid wall or a floor of dark glass, drawn
+   * `OBSIDIAN_GLASS_OPACITY` opaque (`render/obsidianglass.ts`).
+   */
+  { id: 'obsidian_glass', name: 'Obsidian glass', kind: 'stone', tool: 'trowel', skill: 'masonry', color: [30, 26, 36], trim: [120, 46, 38], floor: [26, 23, 31], courses: 2, bill: [['obsidian', 16], ['mortar', 8]], storeys: 10, heft: 3, only: { walls: ['solid'], floors: ['floor'] }, seeThrough: true, opacity: 0.8 },
 ];
+/** Obsidian glass (`MATERIALS`): its id, and how opaque a wall or a floor of it is drawn. */
+export const OBSIDIAN_GLASS = 'obsidian_glass';
 export const MATERIAL_BY_ID = new Map(MATERIALS.map((m) => [m.id, m]));
+export const OBSIDIAN_GLASS_OPACITY = MATERIAL_BY_ID.get(OBSIDIAN_GLASS)?.opacity ?? 1;
 /**
  * Glass: panes set in timber, put up with the mallet and trained as carpentry.
  * A solid wall -- the panes between a timber sill and head -- and a pitched
@@ -552,6 +562,31 @@ export const isSpiral = (f: FloorTile | undefined | null): boolean => !!f && f.k
 export const floorNameOf = (kind: FloorKind, hand?: StairHand | null): string =>
   kind === 'stairs' && hand === SPIRAL ? SPIRAL_STAIRS_NAME : kind === 'stairs' && hand ? SINGLE_STAIRS_NAME : FLOOR_KIND_NAMES[kind];
 export const floorName = (f: FloorTile): string => floorNameOf(floorKind(f), f.hand);
+/**
+ * A building material by its name, lower case, as the island says it (`build_material_def.name`): a garden bed and a
+ * glass roof, which are not in `MATERIALS`, by theirs too, and never by an id.
+ */
+export const materialSaid = (id: string): string => (MATERIAL_BY_ID.get(id)?.name ?? id.replace(/_/g, ' ')).toLowerCase();
+/** A floor tile in words, its material and its kind: "garden bed floor", "plank spiral staircase", or "ladder". The island's words in `perform_building`. */
+export const floorWords = (f: FloorTile): string => (floorKind(f) === 'ladder' ? 'ladder' : `${materialSaid(f.material)} ${floorName(f)}`);
+/** The same as a label, for the line over a tile: "Garden bed floor". */
+export const floorSaid = (f: FloorTile): string => {
+  const w = floorWords(f);
+  return w.charAt(0).toUpperCase() + w.slice(1);
+};
+/**
+ * What Examine says is laid on a building's tile, storey by storey from the ground: each finished floor, staircase
+ * or ladder by its material's name -- " Storey 1: Plank floor. Storey 2: Garden bed floor." -- and nothing of the
+ * roof. The island's `floors_said`.
+ */
+export function floorsSaid(bld: Buildings, b: Building, x: number, y: number): string {
+  let out = '';
+  for (let level = 0; level < b.levels; level++) {
+    const f = bld.floor(level, x, y);
+    if (f && f.building === b.id && isDone(f) && floorKind(f) !== 'roof') out += ` Storey ${level + 1}: ${floorSaid(f)}.`;
+  }
+  return out;
+}
 
 export interface FloorTile extends Bill {
   building: number;
@@ -1242,10 +1277,19 @@ export class Buildings {
      */
     const area = this.storeyArea(b, level);
     const outline = new Set<string>();
+    /*
+     * A tile of an upper storey with nothing on its floor slot is an open well over the storey under it: no wall can
+     * be planned on its sides (`plan_wall`: "Build this storey's floor first"), so none is asked for there. A wall
+     * planned round it all the same is counted below, still going up until it is finished. A storey with no floor
+     * at all is a storey not started, and every side of it is asked for.
+     */
+    const floored = (key: string): boolean => this.floors.has(`${level}:${key}`);
+    const wells = level > 0 && [...area].some(floored);
     for (const key of area) {
       const [xs, ys] = key.split(',');
       const x = Number(xs);
       const y = Number(ys);
+      if (wells && !floored(key)) continue;
       const sides: Array<[Side, number, number]> = [
         ['n', x, y - 1],
         ['e', x + 1, y],
@@ -1264,6 +1308,15 @@ export class Buildings {
         holes.push({ x, y, side });
       }
     }
+    // And anything inside it that was planned and never finished, which stops
+    // a storey being closed in just as surely as a hole in the outside wall:
+    // named by the tile its border is the north or west side of.
+    for (const w of this.walls.values()) {
+      if (w.building !== b.id || w.level !== level || isDone(w)) continue;
+      if (outline.has(wallKey(level, w))) continue;
+      gap.unfinished++;
+      holes.push({ x: w.x, y: w.y, side: w.dir === 'h' ? 'n' : 'w' });
+    }
     // Nearest to whoever asked, and the same one the island would name: the
     // tie is broken the same way on both sides, so the two sentences match
     // even on a square building with a hole at each corner.
@@ -1271,13 +1324,6 @@ export class Buildings {
       (p.x + 0.5 - fromX) ** 2 + (p.y + 0.5 - fromY) ** 2 - ((q.x + 0.5 - fromX) ** 2 + (q.y + 0.5 - fromY) ** 2)
       || p.x - q.x || p.y - q.y || 'nesw'.indexOf(p.side) - 'nesw'.indexOf(q.side));
     gap.at = holes[0];
-    // And anything inside it that was planned and never finished, which stops
-    // a storey being closed in just as surely as a hole in the outside wall.
-    for (const w of this.walls.values()) {
-      if (w.building !== b.id || w.level !== level || isDone(w)) continue;
-      if (outline.has(wallKey(level, w))) continue;
-      gap.unfinished++;
-    }
     return gap;
   }
 

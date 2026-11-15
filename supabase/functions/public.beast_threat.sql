@@ -16,7 +16,7 @@ begin
   if b.stance <> 'guard' and c.threat_at > now() - make_interval(secs => threat_hold()) then return; end if;
   update creature set brawl = p_by, threat_at = now(), windup_at = null where world_id = p_world and id = p_id;
   if b.mode = 'active' and b.keeper is not null then
-    perform tell(p_world, b.keeper, (select name from species_def where id = c.species)
+    perform tell(p_world, b.keeper, kind_name_at(c)
       || ' attacks ' || b.name || '.', 'fight');
   end if;
 end $function$

@@ -15,7 +15,7 @@ begin
     values (v_id, p_world, v_spot.x, v_spot.y, v_tier.id, p_uid);
   perform journal_note(p_world, p_uid, 'map');
   perform tell(p_world, p_uid, 'Found: '
-    || v_tier.name || ', QL ' || to_char(p_ql, 'FM990.0')
+    || lower(seen_name(p_world, p_uid, 'treasure_map', v_tier.id, v_tier.name)) || ', QL ' || to_char(p_ql, 'FM990.0')
     || '. Read it for the distance to its hoard.', 'skill');
   return v_id;
 end $function$

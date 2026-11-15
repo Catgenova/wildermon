@@ -288,7 +288,7 @@ export const LAMP_SAYS = {
 export function burnLamps(g: Game, dt: number, say: boolean): void {
   for (const f of g.furniture.values()) {
     // And a paper lantern pole's candles (`fitting.ts`).
-    if (!f.lit || !(isLampPiece(f) || f.kind === 'lantern_pole')) continue;
+    if (!f.lit || !(isLampPiece(f) || f.kind === 'lantern_pole' || f.kind === 'black_glass_lantern')) continue;
     f.fuel = Math.max(0, (f.fuel ?? 0) - dt);
     if (f.fuel > 0) continue;
     f.lit = false;

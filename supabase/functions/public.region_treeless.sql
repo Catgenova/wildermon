@@ -4,4 +4,4 @@ CREATE OR REPLACE FUNCTION public.region_treeless(p_region integer)
  RETURNS boolean
  LANGUAGE sql
  IMMUTABLE
-AS $function$ select coalesce(p_region = any(array[2]::int[]), false) $function$
+AS $function$ select coalesce(p_region = any(array[-1]::int[]), false) $function$

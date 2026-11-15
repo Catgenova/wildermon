@@ -46,6 +46,7 @@ begin
     c := target_creature(p_world, p_target);
     if c.world_id is null then return; end if;
     select * into d from species_def where id = c.species;
+    d.name := kind_name_at(c);
     w := swung_with(p_world, p_uid);
     v_spar := c.mode <> 'wild';
     held := swung_item(p_world, p_uid);
@@ -72,7 +73,7 @@ begin
       v_crit := random() < my_crit_chance(p_world, p_uid, w) * class_marked(p_world, c.id) or class_crit(p_world, p_uid);
       dmg := weapon_damage(p_world, p_uid, w, held) * bane * my_stance_dealt(p_world, p_uid, p.fight_stance)
              * hide_takes(d.hide, blow_of(w.id, w.kind)) * blindside_of(c, p_uid) * (0.75 + random() * 0.5)
-             * case when v_crit then crit_mul(p_world, p_uid, w) else 1 end * faith_arms(p_world, p_uid, d)
+             * case when v_crit then crit_mul(p_world, p_uid, w) else 1 end * faith_arms(p_world, p_uid, d) * frost_bane(held, d)
              -- And what a fighting trade makes of it: a Battle Rage, an Executioner, Pain Fuels (`class_dealt`).
              * class_dealt(p_world, p_uid, c);
       if v_spar then
@@ -116,6 +117,7 @@ begin
     c := target_creature(p_world, p_target);
     if c.world_id is null then return; end if;
     select * into d from species_def where id = c.species;
+    d.name := kind_name_at(c);
     held := worn(p_world, p_uid, 'weapon');
     select bw.* into bow from weapon_def bw where bw.id = held.def and bw.ammo is not null;
     if not found then return; end if;
@@ -149,7 +151,7 @@ begin
              * case when v_head = 'bodkin' and d.hide is not null then bodkin_hide() else 1 end
              * blindside_of(c, p_uid)
              * (0.6 + arrow.ql / 140) * (0.8 + random() * 0.4)
-             * case when v_crit then crit_mul(p_world, p_uid, bow) else 1 end * faith_arms(p_world, p_uid, d)
+             * case when v_crit then crit_mul(p_world, p_uid, bow) else 1 end * faith_arms(p_world, p_uid, d) * frost_bane(held, d)
              -- And what a fighting trade makes of it: a Battle Rage, an Executioner, Pain Fuels (`class_dealt`),
              * class_dealt(p_world, p_uid, c)
              -- and an Archer's Ambush on one not after you (`class_ambush`).
@@ -234,6 +236,12 @@ begin
       taken := taken || (case when v_n > 1 then v_n || ' × ' else '' end
         || lower((select name from item_def where id = r.item)));
     end loop;
+    -- And obsidian, off a monster killed on Volcano Isle (`carcass_obsidian`), at the share a part is taken at.
+    v_n := share_cut(carcass_obsidian(corpse), v_share, random());
+    if v_n > 0 then
+      perform gather(p_world, p_uid, 'obsidian', v_n, greatest(1, least(100, made_ql)));
+      taken := taken || (case when v_n > 1 then v_n || ' × ' else '' end || lower((select name from item_def where id = 'obsidian')));
+    end if;
     -- And bait for the hook out of what is left (a Cook's Bait Maker), into the pack.
     v_bait := floor(pk(p_world, p_uid, 'bait:butcher', 0))::int;
     if v_bait > 0 then
@@ -242,10 +250,10 @@ begin
     end if;
     delete from item where id = corpse.id;
     if array_length(taken, 1) is null then
-      perform tell(p_world, p_uid, 'Butchering failed: ' || lower(sp.name)
+      perform tell(p_world, p_uid, 'Butchering failed: ' || lower(corpse_kind(corpse.extra))
         || ' carcass lost.', 'event');
     else
-      perform tell(p_world, p_uid, 'Butchered: ' || lower(sp.name) || '. Got '
+      perform tell(p_world, p_uid, 'Butchered: ' || lower(corpse_kind(corpse.extra)) || '. Got '
         || array_to_string(taken, ', ') || ', QL ' || to_char(greatest(1, least(100, made_ql)), 'FM990.0') || '.'
         || case when knife_ql is null then ' No knife: most of the carcass wasted.' else '' end, 'event');
     end if;

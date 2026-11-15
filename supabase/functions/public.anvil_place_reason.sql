@@ -8,9 +8,7 @@ AS $function$
 begin
   if not in_bounds(p_world, p_x, p_y) then return 'That is off the edge of the world.'; end if;
   if has_water(p_world, p_x, p_y) then return 'Not in the water.'; end if;
-  if exists (select 1 from placed pl where pl.world_id = p_world and pl.x = p_x and pl.y = p_y
-               and pl.sx < p_sx + anvil_subtiles() and pl.sx + (placed_size(pl.kind, pl.sub, pl.facing))[1] > p_sx
-               and pl.sy < p_sy + anvil_subtiles() and pl.sy + (placed_size(pl.kind, pl.sub, pl.facing))[2] > p_sy) then
+  if block_taken(p_world, p_x, p_y, p_sx, p_sy, anvil_subtiles(), anvil_subtiles()) then
     return 'Something is already standing there.';
   end if;
   return null;

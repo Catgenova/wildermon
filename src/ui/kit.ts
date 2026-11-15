@@ -38,6 +38,10 @@ export const KIT = {
   meter: 'rc-meter',
   fill: 'rc-meter-fill',
   mark: 'rc-meter-mark',
+  preview: 'rc-preview',
+  previewText: 'rc-preview-text',
+  previewStage: 'rc-preview-stage',
+  previewEmpty: 'rc-preview-empty',
 } as const;
 
 export type KitPart = keyof typeof KIT;
@@ -187,4 +191,37 @@ export function kitCheck(label: string, also = ''): { el: HTMLLabelElement; inpu
   input.type = 'checkbox';
   el.append(input, document.createTextNode(` ${label}`));
   return { el, input };
+}
+
+/**
+ * A pane with a picture of a thing beside its name, a line under it and a stage label (the crafting window's
+ * preview). Always there, at the one size: `set` names what it shows, or with `empty` its empty state (dimmed);
+ * `stage` labels the stage shown, or holds its place blank.
+ */
+export function kitPreview(pic: HTMLElement, also = '', textAlso = ''): {
+  el: HTMLDivElement;
+  set: (name: string, line?: string, empty?: boolean) => void;
+  stage: (label: string | null) => void;
+} {
+  const el = made('div', 'preview', also);
+  const text = made('div', 'previewText', textAlso);
+  const name = document.createElement('b');
+  const line = document.createElement('small');
+  const step = made('small', 'previewStage');
+  step.style.visibility = 'hidden';
+  text.append(name, line, step);
+  el.append(pic, text);
+  return {
+    el,
+    set: (n, l = '', empty = false) => {
+      el.classList.toggle(KIT.previewEmpty, empty);
+      name.textContent = n;
+      line.textContent = l;
+      line.hidden = !l;
+    },
+    stage: (label) => {
+      step.textContent = label ?? '';
+      step.style.visibility = label ? '' : 'hidden';
+    },
+  };
 }

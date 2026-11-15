@@ -23,11 +23,10 @@ begin
   tx := (p_target->>'x')::int; ty := (p_target->>'y')::int;
   s := skill_of(p_world, p_uid, 'farming');
   perform crop_settle(p_world, tx, ty);
-  select * into c from crop cr where cr.world_id = p_world and cr.x = tx and cr.y = ty;
   -- The garden bed of the storey you stand on (`bed_level_of`), or the field; a crop on another storey is none of this job's.
   v_lvl := farm_level(p_world, p_uid);
   v_bed := bed_level_of(p_world, p_uid, tx, ty);
-  if c.id is not null and c.level is distinct from v_bed then c := null; end if;
+  select * into c from crop cr where cr.world_id = p_world and cr.x = tx and cr.y = ty and cr.level is not distinct from v_bed;
   if c.id is not null then select * into cd from crop_def where id = c.id; end if;
 
   if p_action = 'till' then
@@ -59,7 +58,7 @@ begin
     select * into cd from crop_def where seed = it.def;
     v_how := sow_one(p_world, p_uid, tx, ty, it.id, v_bed);
     if v_how is null then return; end if;
-    select * into c from crop cr where cr.world_id = p_world and cr.x = tx and cr.y = ty;
+    select * into c from crop cr where cr.world_id = p_world and cr.x = tx and cr.y = ty and cr.level is not distinct from v_bed;
     -- When it will be sprouting, in real time, from the season it was sown in -- or in any, under glass or on a bed: the browser's words.
     perform tell(p_world, p_uid, sown_said_on(cd.name, case when v_bed is not null then 'bed' else crop_kind(c.glass, c.hand) end,
         crop_when_on(crop_stage_name(1), crop_per(p_world, c.id, c.pace, tx, ty), crop_kind(c.glass, c.hand)))
@@ -67,8 +66,8 @@ begin
 
   elsif p_action = 'tend_crop' then
     if c.id is null then return; end if;
-    perform tend_one(p_world, p_uid, tx, ty, s);
-    select * into c from crop cr where cr.world_id = p_world and cr.x = tx and cr.y = ty;
+    perform tend_one(p_world, p_uid, tx, ty, s, v_bed);
+    select * into c from crop cr where cr.world_id = p_world and cr.x = tx and cr.y = ty and cr.level is not distinct from v_bed;
     yld := crop_yield(c.tended);
     -- What it should give the one tending it, with their own Bumper Crop.
     if c.tended >= crop_ripe() then
@@ -81,7 +80,7 @@ begin
 
   elsif p_action = 'harvest_crop' then
     if c.id is null then return; end if;
-    select * into r from reap_one(p_world, p_uid, tx, ty, s);
+    select * into r from reap_one(p_world, p_uid, tx, ty, s, v_bed);
     if r.o_produce is null then return; end if;
     perform tell(p_world, p_uid, 'Harvested: ' || r.o_got || ' × ' || coalesce(r.o_rare || ' ', '')
       || lower((select coalesce(name, r.o_produce) from item_def where id = r.o_produce))
@@ -97,7 +96,7 @@ begin
     -- A garden bed's crop pulled up, and the bed a bed still.
     if v_bed is not null then
       if c.id is null then return; end if;
-      delete from crop cr where cr.world_id = p_world and cr.x = tx and cr.y = ty;
+      delete from crop cr where cr.world_id = p_world and cr.x = tx and cr.y = ty and cr.level = v_bed;
       perform land_announce(p_world, tx, ty);
       perform tell(p_world, p_uid, 'Cleared: ' || lower(cd.name) || '.', 'event');
       return;
@@ -145,11 +144,11 @@ begin
     v_r := floor(pk(p_world, p_uid, 'tend_patch', 0))::int;
     perform crops_settle(p_world, tx + 0.5, ty + 0.5, v_r);
     v_n := 0;
-    for v_row in select cr.x, cr.y from crop cr
+    for v_row in select cr.x, cr.y, cr.level from crop cr
                   where cr.world_id = p_world and cr.x between tx - v_r and tx + v_r and cr.y between ty - v_r and ty + v_r
                     and coalesce(cr.level, 0) = v_lvl and cr.stage < crop_ripe() and not cr.tended_now
                   order by cr.y, cr.x loop
-      perform tend_one(p_world, p_uid, v_row.x, v_row.y, s);
+      perform tend_one(p_world, p_uid, v_row.x, v_row.y, s, v_row.level);
       v_n := v_n + 1;
     end loop;
     if v_n = 0 then return; end if;
@@ -162,11 +161,11 @@ begin
     v_r := floor(pk(p_world, p_uid, 'harvest_patch', 0))::int;
     perform crops_settle(p_world, tx + 0.5, ty + 0.5, v_r);
     v_n := 0;
-    for v_row in select cr.x, cr.y from crop cr
+    for v_row in select cr.x, cr.y, cr.level from crop cr
                   where cr.world_id = p_world and cr.x between tx - v_r and tx + v_r and cr.y between ty - v_r and ty + v_r
                     and coalesce(cr.level, 0) = v_lvl and cr.stage >= crop_ripe()
                   order by cr.y, cr.x loop
-      select * into r from reap_one(p_world, p_uid, v_row.x, v_row.y, s);
+      select * into r from reap_one(p_world, p_uid, v_row.x, v_row.y, s, v_row.level);
       continue when r.o_produce is null;
       v_n := v_n + 1;
       v_ix := array_position(v_ids, r.o_produce);

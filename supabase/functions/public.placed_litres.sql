@@ -8,7 +8,7 @@ AS $function$
   select case when not is_well(p) then p.litres
               else least(liquid_capacity(p),
                          p.litres + (well_rate(p.ql) * (1 + infuse_most('water') * infuse_on(p.infuse, 'water'))
-                                     + case when p.sub = 'fountain'
+                                     + case when is_fountain(p.sub)
                                              and exists (select 1 from aqueduct_feed f where f.world_id = p.world_id
                                                            and f.x = p.x and f.y = p.y and f.fountain)
                                             then aqueduct_lps() else 0 end)

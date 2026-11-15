@@ -10,7 +10,7 @@ import type { Pick, Renderer } from '../render/renderer';
 import { TileType, TREE_DEFS, treeAge, treeSpecies, SLAB_BY_ITEM } from '../world/tiles';
 import { ACTION_BY_ID, type ActionDef, type Target, deedAcrossAt, foundingPreview, fruitSprout, SPOIL_ORDER, SPOIL_TILE, tileSeen } from '../game/actions';
 import { BARTER_REACH, BARTER_SAID } from '../game/barter';
-import { BUILD_ACTION_BY_ID, layingBill, materialName } from '../game/buildActions';
+import { BUILD_ACTION_BY_ID, layingBill, materialName, wayUpPlanned } from '../game/buildActions';
 import {
   describeNeeds,
   FENCE_TYPES,
@@ -21,6 +21,8 @@ import {
   type StairHand,
   floorBill,
   floorKind,
+  floorSaid,
+  materialSaid,
   GLASS_ROOF,
   heftWord,
   MATERIAL_BY_ID,
@@ -55,6 +57,7 @@ import { FIELD_GLASS_ONLY, glassDone, glazing, isGlasshouse, underGlass } from '
 import { GLASSHOUSE_GROWTH } from '../game/growth';
 import { crateLine, crateOf, CREATURE_CRATE, CREATURE_CRATE_ACTION_BY_ID, occupiedRefusal } from '../game/creaturecrate';
 import { graveLine, graveName, graveSays, graveUnits, isGrave } from '../game/graves';
+import { isOutcropKind, OUTCROP_MINE } from '../game/outcrops';
 import { COMPANION_STANCES, isBaitFor, SPECIES, tameNeeds, STANCE_HINTS, STANCE_NAMES, GATHER_VERB, GATHER_DO } from '../game/creatures';
 import { itemDef, itemName, markOf, storedLine, type Item } from '../game/items';
 import { LYE_USE } from '../game/placeables';
@@ -62,7 +65,7 @@ import { nearestSide } from '../render/renderer';
 import { crateHolds, crateKindOfItem, crateName, crateCapacity, crateUnits, rackSpotOf, subtileOf } from '../game/crates';
 import { trellisFacing } from '../game/vineyard';
 import { butcherPreview } from '../game/butcher';
-import { anvilAnchor, anvilName, type PlacedAnvil } from '../game/anvil';
+import { anvilName, type PlacedAnvil } from '../game/anvil';
 import { postCandidates, postKeep, postLife, postName, postRadius, postState, type PlacedPost } from '../game/posts';
 import { baitInPack, creelHold, trapDef, trapHolds, trapKeep, trapLife, trapName, TRAPS, trapState, type PlacedTrap } from '../game/traps';
 import { BAIT_BY_ID } from '../game/fishing';
@@ -75,14 +78,15 @@ import { BAUBLE_SAID, BAUBLE_TIER_BY_ID, BAUBLE_TIERS, readBauble, socketsOf, so
 import { FED_SAID, SACRIFICE_SAID, sacrificeable } from '../game/sacrifice';
 import { abilitiesOf, CHOOSE_AT, MEDITATION, nextStep, PATH_PICK_BY_ID, PATH_TIER_AT, PATHS, PATH_LIST, picksOf, sittingWorth } from '../game/meditation';
 import { brewTime, BREWS } from '../game/brewing';
-import { fireAnchor, fireState, FIRE_COST, isFuel, type PlacedCampfire } from '../game/campfire';
+import { fireState, FIRE_COST, isFuel, type PlacedCampfire } from '../game/campfire';
 import { COIN_METALS, COIN_REFUSAL, DIE_WEAR, INGOT_LUMPS, MOULD_BY_ID, MOULD_BY_MAKES, isCasting, isIngot, isLump, isMetalStock, isMould, isOreItem, lumpsIn, metalOfBar, mouldLumps, mouldUsesLeft } from '../game/metal';
 import { meltable } from '../game/melt';
-import { jobName, smelterAnchor, smelterState, type PlacedSmelter } from '../game/smelter';
-import { isGreenware, kilnAnchor, kilnState, type PlacedKiln } from '../game/kiln';
+import { jobName, smelterState, type PlacedSmelter } from '../game/smelter';
+import { isGreenware, kilnState, type PlacedKiln } from '../game/kiln';
+import { stationAnchor, stationCondition, stationCostSaid, stationOfItem, stationPlaceReason, STATIONS, type StationKind, type StationThing } from '../game/stations';
 import { furnitureAnchor, furnitureCapacity, furnitureDef, furnitureHeft, furnitureHolds, furnitureKg, furnitureName, furnitureState, furnitureUnits, isFurniture, isPlanter, rackDeck, rackSpots, type PlacedFurniture, teamOf, turnedFacing, vehicleOf } from '../game/furniture';
 import { DEED_ACTION_BY_ID, joinFromAfar, leaveQuestion, standingWord, upgradeProgress, upgradeReason } from '../game/deed';
-import { CROP_BY_SEED, cropDef, cropReady, describeCrop, emptyFields, FARM_ACTION_BY_ID, planterPace, sownPace, stageNote, type Crop, type CropDef } from '../game/farming';
+import { bedOfJob, CROP_BY_SEED, cropDef, cropOf, cropReady, describeCrop, emptyFields, FARM_ACTION_BY_ID, planterPace, sownPace, stageNote, type Crop, type CropDef } from '../game/farming';
 import { bedLevelOf } from '../game/gardenbed';
 import { armReading, armWords, destinations, destKey, FURNISH_SAID, onTableOk, POINT_ARM, postAt, TABLE_PUT } from '../game/furnish';
 import { CARVE_BUST, FITTING_SAID, SHELF_HERBS, SHELF_PUT } from '../game/fitting';
@@ -125,6 +129,7 @@ import { areaAsk, areaCount, areaPieces, areaRefusals, areaTotals, passing, PLAN
 import { PlanBar } from './planbar';
 import { jobEntry, pinEntry, pinnable } from './beltmenu';
 import { creatureLines } from './creatureinfo';
+import { FIRST_TAME_SAYS, firstTameSure } from '../game/firsttame';
 import { MARK_COLOURS } from '../game/marks';
 import type { MapSettlement } from './panels/minimap';
 /** How often the map asks the island where every settlement is, in ms, while it is open. */
@@ -319,6 +324,8 @@ function cellarEntries(g: Game, base: Extract<Target, { kind: 'tile' }>, side: S
  */
 type Placing =
   | { kind: 'furniture'; itemUid: number; piece: string; material?: string; facing: Side }
+  /** A campfire, a smelter, a kiln or an anvil (`stations.ts`), set down as a piece is: the item carried, none for a campfire. */
+  | { kind: 'station'; station: StationKind; itemUid?: number; metal?: string; facing: Side }
   | { kind: 'stairs'; x: number; y: number; cx: number; cy: number; level: number; material: string; floorKind: 'stairs' | 'ladder'; side: Side; down?: boolean; hand?: StairHand; buildingId?: number }
   /** A plan over an area (`planarea.ts`): its ghost and its totals while it is laid out, a click plans it. */
   | { kind: 'area'; plan: AreaPlan };
@@ -1220,6 +1227,19 @@ export class UI {
       : `Placing ${seenName(item, this.game).toLowerCase()}: Q/E rotate. Click: place. Esc: cancel.`, 'info');
   }
 
+  /** Pick up a station to set down, as a piece is: it follows the cursor from here, and Q and E turn it. */
+  startPlacingStation(station: StationKind, item?: Item): void {
+    this.cancelPlacing();
+    this.placing = { kind: 'station', station, itemUid: item?.uid, metal: item?.extra, facing: 's' };
+    this.game.logMsg(`Placing ${STATIONS[station].name.toLowerCase()}: Q/E rotate. Click: place. Esc: cancel.`, 'info');
+  }
+
+  /** The job a station being placed asks for, with the cursor on `pick`: its block's top-left spot, the way it faces, and the item it is. */
+  private stationTarget(p: Extract<Placing, { kind: 'station' }>, pick: Pick): Extract<Target, { kind: 'tile' }> {
+    const [ax, ay] = stationAnchor(p.station, ...subtileOf(pick.x, pick.y, pick.wx, pick.wy), p.facing);
+    return { kind: 'tile', x: pick.x, y: pick.y, cx: pick.cx, cy: pick.cy, sx: ax, sy: ay, facing: p.facing, ...(p.itemUid !== undefined ? { itemUid: p.itemUid } : {}) };
+  }
+
   /**
    * Which way a piece being placed faces: the way Q and E have turned it, or
    * for a trellis the side of the tile under the cursor it would stand
@@ -1302,7 +1322,7 @@ export class UI {
   rotatePlacing(step: number): void {
     const p = this.placing;
     if (!p || p.kind === 'area') return;
-    if (p.kind === 'furniture') p.facing = turnedFacing(p.facing, step);
+    if (p.kind === 'furniture' || p.kind === 'station') p.facing = turnedFacing(p.facing, step);
     // A spiral staircase has no side it is climbed from.
     else if (p.hand === SPIRAL) return;
     else if (p.hand) {
@@ -1465,6 +1485,14 @@ export class UI {
       this.renderer.ghost = null;
       return;
     }
+    if (p.kind === 'station') {
+      // On the ground under the cursor, washed red where the job would be refused (`stationPlaceReason`).
+      const t = this.stationTarget(p, pick);
+      const [ax, ay] = [t.sx ?? 0, t.sy ?? 0];
+      this.renderer.ghost = { kind: 'station', station: p.station, metal: p.metal, x: t.x, y: t.y, sx: ax, sy: ay, facing: p.facing,
+        ok: !stationPlaceReason(this.game, p.station, t.x, t.y, ax, ay, p.facing, p.itemUid) };
+      return;
+    }
     const [s0, t0] = subtileOf(pick.x, pick.y, pick.wx, pick.wy);
     const facing = this.placingFacing(p, pick);
     const [ax, ay] = furnitureAnchor(p.piece, s0, t0, facing);
@@ -1499,6 +1527,19 @@ export class UI {
       return;
     }
     if (!pick) return;
+    if (p.kind === 'station') {
+      // The job it always had, asked of the island where the ghost stands.
+      const job = ACTION_BY_ID.get(STATIONS[p.station].action);
+      const target = this.stationTarget(p, pick);
+      const why = job?.check?.(target, this.game) ?? null;
+      if (why) {
+        this.game.logMsg(why, 'error');
+        return;
+      }
+      if (job) this.game.requestAction(job, target);
+      this.cancelPlacing();
+      return;
+    }
     const def = ACTION_BY_ID.get('place_furniture');
     const [s0, t0] = subtileOf(pick.x, pick.y, pick.wx, pick.wy);
     const facing = this.placingFacing(p, pick);
@@ -1558,6 +1599,7 @@ export class UI {
       if (sm.jobs.length) lines.push(`Working: ${itemDef(sm.jobs[0].makes).name.toLowerCase()}, ${Math.ceil(sm.jobs[0].left)}s left`);
       const smInfused = activeInfusion(sm);
       if (smInfused) lines.push(infuseSays(smInfused));
+      lines.push(stationCondition(this.game, 'smelter', sm));
       this.tooltip.show(sx, sy, lines);
       return;
     }
@@ -1587,6 +1629,7 @@ export class UI {
       if (kl.jobs.length) lines.push(`Firing: ${itemDef(kl.jobs[0].makes).name.toLowerCase()}, ${Math.ceil(kl.jobs[0].left)}s left`);
       const klInfused = activeInfusion(kl);
       if (klInfused) lines.push(infuseSays(klInfused));
+      lines.push(stationCondition(this.game, 'kiln', kl));
       this.tooltip.show(sx, sy, lines);
       return;
     }
@@ -1594,6 +1637,7 @@ export class UI {
     if (an) {
       lines.push(anvilName(an));
       lines.push(`QL ${an.ql.toFixed(1)} · bring a mould and metal`);
+      lines.push(stationCondition(this.game, 'anvil', an));
       this.tooltip.show(sx, sy, lines);
       return;
     }
@@ -1604,6 +1648,7 @@ export class UI {
       if (fire.lit) lines.push('Lit: cook here.');
       const fireInfused = activeInfusion(fire);
       if (fireInfused) lines.push(infuseSays(fireInfused));
+      lines.push(stationCondition(this.game, 'campfire', fire));
       this.tooltip.show(sx, sy, lines);
       return;
     }
@@ -1664,7 +1709,8 @@ export class UI {
       const who = 'holder' in here && here.holder ? `, ${here.holder}\u2019s` : '';
       const level = here.level && here.level > 1 ? ` \u00b7 level ${here.level}` : '';
       lines.push(`${token ? 'Settlement totem of' : 'Part of'} ${here.name}${who}${level}`);
-      lines.push(mine ? standingWord(mine) : 'Not a citizen: walk only, no building or terraforming.');
+      // Your rank and its powers are in the settlement's window, not on every tile's hover.
+      if (!mine) lines.push('Not a citizen: walk only, no building or terraforming.');
     }
     // A drawbridge says whether it is up (`gates.ts`).
     const span = pick.bridge !== undefined ? this.game.bridges.get(pick.bridge) : undefined;
@@ -1693,7 +1739,7 @@ export class UI {
         // What it is to you: a hidden door you hold no key to is the solid wall it looks like (`gates.ts`).
         const seen = this.game.buildings.seenType(wall);
         const type = WALL_TYPE_BY_ID.get(seen)?.name.toLowerCase() ?? seen;
-        const mat = MATERIALS.find((m) => m.id === wall.material)?.name.toLowerCase() ?? wall.material;
+        const mat = materialSaid(wall.material);
         const gate = seen === 'portcullis' && isDone(wall) ? ` · ${portcullisState(wall)}` : '';
         lines.push(`${SIDE_NAMES[side]} wall: ${type} ${mat}${isDone(wall) ? '' : ` · ${Math.round(progressOf(wall) * 100)}% built`}${gate}`);
       } else {
@@ -1701,9 +1747,11 @@ export class UI {
       }
       const floor = onRoof ? undefined : this.game.buildings.floor(level, pick.x, pick.y);
       if (floor) {
-        const k = floorKind(floor);
-        const mat = MATERIALS.find((m) => m.id === floor.material)?.name.toLowerCase() ?? floor.material;
-        lines.push(`${k === 'ladder' ? 'ladder' : `${mat} ${floorName(floor)}`}${isDone(floor) ? '' : ` · ${Math.round(progressOf(floor) * 100)}% built`}`);
+        // By its material's name, as the island names it (`build_material_def.name`): "Garden bed floor", "Plank floor".
+        lines.push(`${floorSaid(floor)}${isDone(floor) ? '' : ` · ${Math.round(progressOf(floor) * 100)}% built`}`);
+        // And what grows on a garden bed there, on that storey (`gardenbed.ts`); the ground's field is said above.
+        const bedCrop = level > 0 ? this.game.cropAt(pick.x, pick.y, level) : undefined;
+        if (bedCrop) lines.push(this.cropLine(bedCrop));
       }
       // The roof: on Auto, and on its own level when that is pinned (`storeyview.ts`); not on a storey under it.
       const roof = this.game.buildings.floor(b.levels, pick.x, pick.y);
@@ -1872,11 +1920,13 @@ export class UI {
       return { title: crateName(crate), entries };
     }
     const fire = pick.fire !== undefined ? this.game.campfires.get(pick.fire) : undefined;
-    if (fire) return { title: `Campfire (${fireState(fire)})`, entries: this.campfireEntries(fire) };
+    if (fire) return { title: `Campfire (${fireState(fire)})`, facts: [stationCondition(this.game, 'campfire', fire)], entries: [...this.campfireEntries(fire), this.examineStation('campfire', fire)] };
     const smelter = pick.smelter !== undefined ? this.game.smelters.get(pick.smelter) : undefined;
-    if (smelter) return { title: `Smelter (${smelterState(smelter)})`, entries: this.smelterEntries(smelter) };
+    if (smelter) return { title: `Smelter (${smelterState(smelter)})`, facts: [stationCondition(this.game, 'smelter', smelter)], entries: [...this.smelterEntries(smelter), this.examineStation('smelter', smelter)] };
     const piece = pick.furniture !== undefined ? this.game.furniture.get(pick.furniture) : undefined;
     if (piece && isGrave(piece)) return { title: `${graveName(this.game, piece)} (${graveLine(this.game, piece)})`, entries: this.graveEntries(piece) };
+    // An outcropping: Mine and Examine, and its uses left (`outcrops.ts`).
+    if (piece && isOutcropKind(piece.kind)) return { title: `${furnitureName(piece)} (${furnitureState(piece)})`, entries: this.outcropEntries(piece) };
     if (piece) {
       const state = rackSpots(piece) ? `${furnitureState(piece)} · ${this.rackLine(piece)}`
         : piece.kind === CREATURE_CRATE ? `${furnitureState(piece)} · ${crateLine(this.game, piece)}`
@@ -1884,9 +1934,9 @@ export class UI {
       return { title: `${furnitureName(piece)} (${state})`, entries: [...this.furnitureEntries(piece), ...this.nameEntry({ kind: 'furniture', id: piece.id })] };
     }
     const kilnHere = pick.kiln !== undefined ? this.game.kilns.get(pick.kiln) : undefined;
-    if (kilnHere) return { title: `Kiln (${kilnState(kilnHere)})`, entries: this.kilnEntries(kilnHere) };
+    if (kilnHere) return { title: `Kiln (${kilnState(kilnHere)})`, facts: [stationCondition(this.game, 'kiln', kilnHere)], entries: [...this.kilnEntries(kilnHere), this.examineStation('kiln', kilnHere)] };
     const anvilHere = pick.anvil !== undefined ? this.game.anvils.get(pick.anvil) : undefined;
-    if (anvilHere) return { title: `${anvilName(anvilHere)} (QL ${anvilHere.ql.toFixed(0)})`, entries: this.anvilEntries(anvilHere) };
+    if (anvilHere) return { title: `${anvilName(anvilHere)} (QL ${anvilHere.ql.toFixed(0)})`, facts: [stationCondition(this.game, 'anvil', anvilHere)], entries: [...this.anvilEntries(anvilHere), this.examineStation('anvil', anvilHere)] };
     const postHere = pick.post !== undefined ? this.game.posts.get(pick.post) : undefined;
     if (postHere) return { title: `${postName(postHere)} (${postState(postHere, postKeep(this.game))})`, entries: [...this.postEntries(postHere), ...this.nameEntry({ kind: 'post', id: postHere.id })] };
     const trapHere = pick.trap !== undefined ? this.game.traps.get(pick.trap) : undefined;
@@ -1913,20 +1963,6 @@ export class UI {
     if (settled) entries.push(isFounder(settled) ? this.deedEntry() : this.citizenEntry(settled));
     // Somebody else's settlement, at its token: asking to live there.
     if (!settled) entries.push(...this.askToJoinEntry(pick.x, pick.y));
-    // Laying a campfire on the block of subtiles under the cursor.
-    const fireDef = ACTION_BY_ID.get('build_campfire');
-    if (fireDef && this.game.inventory.count('shaft') >= FIRE_COST) {
-      const [ax, ay] = fireAnchor(...subtileOf(pick.x, pick.y, pick.wx, pick.wy));
-      const ft: Target = { ...target, sx: ax, sy: ay };
-      const reason = fireDef.check?.(ft, this.game) ?? null;
-      entries.push({
-        label: `Build campfire here (spots ${ax + 1},${ay + 1} to ${ax + 2},${ay + 2})`,
-        hint: reason ?? undefined,
-        note: reason ? undefined : `Uses ${FIRE_COST} shafts`,
-        disabled: !!reason,
-        onSelect: () => this.game.requestAction(fireDef, ft),
-      });
-    }
     // Placing a carried crate on the subtile under the cursor.
     const crateItems = this.game.inventory.items.filter((it) => crateKindOfItem(it.id));
     const placeDef = ACTION_BY_ID.get('place_crate');
@@ -2059,47 +2095,7 @@ export class UI {
     entries.push(...this.furnitureDownEntries());
     // Sowing on a tilled field or a garden bed (`sowEntries`).
     entries.push(...this.sowEntries(pick, target));
-    const smelterDef = ACTION_BY_ID.get('place_smelter');
-    const smelterItem = this.game.inventory.find('smelter');
-    if (smelterDef && smelterItem) {
-      const [ax, ay] = smelterAnchor(...subtileOf(pick.x, pick.y, pick.wx, pick.wy));
-      const st: Target = { ...target, sx: ax, sy: ay, itemUid: smelterItem.uid };
-      const reason = smelterDef.check?.(st, this.game) ?? null;
-      entries.push({
-        label: `Set the smelter down here (spots ${ax + 1},${ay + 1} to ${ax + 3},${ay + 2})`,
-        note: reason ? undefined : `QL ${smelterItem.ql.toFixed(0)}`,
-        hint: reason ?? undefined,
-        disabled: !!reason,
-        onSelect: () => this.game.requestAction(smelterDef, st),
-      });
-    }
-    const kilnDef = ACTION_BY_ID.get('place_kiln');
-    const kilnItem = this.game.inventory.find('kiln');
-    if (kilnDef && kilnItem) {
-      const [ax, ay] = kilnAnchor(...subtileOf(pick.x, pick.y, pick.wx, pick.wy));
-      const st: Target = { ...target, sx: ax, sy: ay, itemUid: kilnItem.uid };
-      const reason = kilnDef.check?.(st, this.game) ?? null;
-      entries.push({
-        label: `Set the kiln down here (spots ${ax + 1},${ay + 1} to ${ax + 2},${ay + 2})`,
-        note: reason ? undefined : `QL ${kilnItem.ql.toFixed(0)}`,
-        hint: reason ?? undefined,
-        disabled: !!reason,
-        onSelect: () => this.game.requestAction(kilnDef, st),
-      });
-    }
-    const anvilDef = ACTION_BY_ID.get('place_anvil');
-    const anvilItem = this.game.inventory.find('anvil');
-    if (anvilDef && anvilItem) {
-      const [ax, ay] = anvilAnchor(...subtileOf(pick.x, pick.y, pick.wx, pick.wy));
-      const st: Target = { ...target, sx: ax, sy: ay, itemUid: anvilItem.uid };
-      const reason = anvilDef.check?.(st, this.game) ?? null;
-      entries.push({
-        label: `Set the anvil down here (spots ${ax + 1},${ay + 1} to ${ax + 2},${ay + 2})`,
-        hint: reason ?? undefined,
-        disabled: !!reason,
-        onSelect: () => this.game.requestAction(anvilDef, st),
-      });
-    }
+
     const pile = this.game.groundAt(pick.x, pick.y);
     const pickUp = ACTION_BY_ID.get('pick_up');
     if (pile.length && pickUp) {
@@ -2278,19 +2274,20 @@ export class UI {
       });
     };
     const sowDef = ACTION_BY_ID.get('plant_seed');
-    if (sowDef && sowDef.applies(target, this.game) && !this.game.cropAt(pick.x, pick.y)) {
+    // Not where the storey it is aimed at has a crop already: that crop's own jobs are offered instead.
+    if (sowDef && sowDef.applies(target, this.game) && !cropOf(this.game, target)) {
       // At the pace this sowing would grow at: a Farmer's Fast Growth and Crop Rotation.
       // Under glass at the glasshouse's share in any season, and in the open at the season's (`glasshouse.ts`).
       // And on a Season's Hand's clock for a sower with Love's Season's Hand, which a winter does not stop.
       // And on a garden bed on the glass clock, as under glass (`gardenbed.ts`).
-      const onBed = bedLevelOf(this.game, pick.x, pick.y) !== null;
+      const onBed = bedOfJob(this.game, target) !== null;
       const clock = onBed || underGlass(this.game.buildings, pick.x, pick.y) ? 'glass' : this.game.pathFx('winter', 0) > 0 ? 'hand' : 'field';
       sowMenu(sowDef, 'Sow', (crop) => stageNote(crop.name, crop.stageSeconds * sownPace(this.game, pick.x, pick.y, crop.id), clock, this.game.wallNow()));
     }
     const patchDef = ACTION_BY_ID.get('sow_patch');
     if (patchDef && patchDef.applies(target, this.game)) {
       const r = this.game.perk('sow_patch', 0);
-      const empty = emptyFields(this.game, pick.x, pick.y, r).length;
+      const empty = emptyFields(this.game, pick.x, pick.y, r, target.level).length;
       sowMenu(patchDef, 'Sow a patch', (crop) => `${crop.name} on ${empty} empty ${empty === 1 ? 'field' : 'fields'} of the ${2 * r + 1}×${2 * r + 1}`);
     }
     return entries;
@@ -2306,9 +2303,10 @@ export class UI {
     const host = g.buildings.buildingAt(pick.x, pick.y) ?? storeyHost(g, pick.x, pick.y, level);
     const onRoof = !!host && g.buildings.buildingAt(pick.x, pick.y) === host && level >= host.levels;
     const entries: MenuItem[] = [...this.buildingEntries(pick, level)];
-    // A garden bed on it, worked from it (`gardenbed.ts`): sown, tended, harvested and pulled up.
-    if (bedLevelOf(g, pick.x, pick.y) === level) {
-      const bedAt = { kind: 'tile' as const, x: pick.x, y: pick.y, cx: pick.cx, cy: pick.cy };
+    // A garden bed on it, worked from it (`gardenbed.ts`): sown, tended, harvested and pulled up, the jobs naming its storey,
+    // so they walk you up to it from wherever you stand.
+    if (bedLevelOf(g, pick.x, pick.y, level) === level) {
+      const bedAt = { kind: 'tile' as const, x: pick.x, y: pick.y, cx: pick.cx, cy: pick.cy, level };
       entries.push(...this.sowEntries(pick, bedAt));
       for (const { def, reason } of g.actionsFor(bedAt)) {
         if (FARM_ACTION_BY_ID.has(def.id)) entries.push(this.jobEntry(def, bedAt, reason, def.labelFor?.(bedAt, g) ?? def.label));
@@ -2375,18 +2373,30 @@ export class UI {
     return [];
   }
 
-  /** Setting a carried piece of furniture down: it follows the cursor from here, Q and E turn it, a click sets it down. */
+  /**
+   * Setting a carried piece of furniture down, or a station: a campfire from
+   * the shafts in the pack, or a smelter, a kiln or an anvil carried. It
+   * follows the cursor from here, Q and E turn it, a click sets it down.
+   */
   private furnitureDownEntries(): MenuItem[] {
-    const carried = this.game.inventory.items.filter((it) => isFurniture(it.id));
-    if (!ACTION_BY_ID.get('place_furniture') || !carried.length) return [];
-    return [{
-      label: 'Set furniture down',
-      children: carried.map((it) => ({
-        label: it.count > 1 ? `${seenName(it, this.game)} (${it.count})` : seenName(it, this.game),
-        note: 'follows the cursor · Q/E rotate · click to place',
-        onSelect: () => this.startPlacing(it),
-      })),
-    }];
+    const g = this.game;
+    const carried = g.inventory.items.filter((it) => isFurniture(it.id));
+    const rows: MenuItem[] = ACTION_BY_ID.get('place_furniture') ? carried.map((it) => ({
+      label: it.count > 1 ? `${seenName(it, g)} (${it.count})` : seenName(it, g),
+      note: 'follows the cursor · Q/E rotate · click to place',
+      onSelect: () => this.startPlacing(it),
+    })) : [];
+    // A campfire, laid from the shafts it takes.
+    if (ACTION_BY_ID.get('build_campfire') && g.inventory.count('shaft') >= FIRE_COST) {
+      rows.push({ label: STATIONS.campfire.name, note: `${stationCostSaid('campfire')} · Q/E rotate · click to place`, onSelect: () => this.startPlacingStation('campfire') });
+    }
+    // A smelter, a kiln or an anvil carried: each one, by its QL.
+    for (const it of g.inventory.items) {
+      const station = stationOfItem(it.id);
+      if (!station || !ACTION_BY_ID.get(STATIONS[station].action)) continue;
+      rows.push({ label: seenName(it, g), note: `QL ${it.ql.toFixed(0)} · Q/E rotate · click to place`, onSelect: () => this.startPlacingStation(station, it) });
+    }
+    return rows.length ? [{ label: 'Set furniture down', children: rows }] : [];
   }
 
   /** Pinning a name to a spot on the map, or the one there renamed, recoloured or rubbed off. */
@@ -2491,6 +2501,14 @@ export class UI {
   }
 
   /** Feeding, lighting and cooking at a campfire. */
+  /** Examine on a station: what it is, its QL and its condition (`stationCondition`), off what the island last said of it. */
+  private examineStation(kind: StationKind, s: StationThing): MenuItem {
+    return {
+      label: 'Examine',
+      onSelect: () => this.game.logMsg(`${STATIONS[kind].name}: QL ${(s.ql ?? 20).toFixed(1)} · ${stationCondition(this.game, kind, s)}.`, 'event'),
+    };
+  }
+
   private campfireEntries(fire: PlacedCampfire): MenuItem[] {
     const g = this.game;
     const ft: Target = { kind: 'campfire', id: fire.id };
@@ -2744,6 +2762,21 @@ export class UI {
    * Picking it up is listed for the one reason it is refused, which says so
    * plainly, as does every entry to somebody whose grave it is not.
    */
+  /** An outcropping's menu: Mine, which the island answers (`outcrop_refusal`), and Examine of its tile. */
+  private outcropEntries(f: PlacedFurniture): MenuItem[] {
+    const g = this.game;
+    const ft: Target = { kind: 'furniture', id: f.id };
+    const entries: MenuItem[] = [];
+    const mine = ACTION_BY_ID.get(OUTCROP_MINE);
+    if (mine) {
+      const reason = mine.check?.(ft, g) ?? null;
+      entries.push({ label: mine.labelFor?.(ft, g) ?? mine.label, hint: reason ?? undefined, disabled: !!reason, onSelect: () => g.requestAction(mine, ft) });
+    }
+    const look = ACTION_BY_ID.get('examine');
+    if (look) entries.push({ label: look.label, onSelect: () => g.requestAction(look, { kind: 'tile', x: f.x, y: f.y, cx: f.x, cy: f.y }) });
+    return entries;
+  }
+
   private graveEntries(f: PlacedFurniture): MenuItem[] {
     const g = this.game;
     const ft: Target = { kind: 'furniture', id: f.id };
@@ -3282,7 +3315,10 @@ export class UI {
       const a = ACTION_BY_ID.get(id);
       if (!a || !a.applies(tt, g)) continue;
       const reason = a.check?.(tt, g) ?? null;
-      entries.push({ label: a.labelFor?.(tt, g) ?? a.label, hint: reason ?? undefined, disabled: !!reason, onSelect: () => g.requestAction(a, tt) });
+      // First tame: sure, beside Take out, where it is not refused (`firsttame.ts`).
+      const caught = id === 'take_catch' && t.caught !== null ? g.creatures.get(t.caught) : undefined;
+      const sure = !reason && !!caught && firstTameSure(g.player.firstTame, caught.species);
+      entries.push({ label: a.labelFor?.(tt, g) ?? a.label, hint: reason ?? undefined, ...(sure ? { note: FIRST_TAME_SAYS } : {}), disabled: !!reason, onSelect: () => g.requestAction(a, tt) });
     }
     return entries;
   }
@@ -3529,7 +3565,10 @@ export class UI {
       if (m) entries.push(m);
     };
     push(item('examine_creature'));
-    push(item('tame', target, `Tame (uses ${baitHint(c)})`));
+    // First tame: sure, beside it, where it is not refused (`firsttame.ts`).
+    const tame = item('tame', target, `Tame (uses ${baitHint(c)})`);
+    if (tame && !tame.disabled && firstTameSure(g.player.firstTame, c.species)) tame.note = FIRST_TAME_SAYS;
+    push(tame);
     // One in a crate is let out by opening the crate it is in, standing or carried.
     if (c.mode === 'stored') {
       const h = crateOf(g, c.id);
@@ -4204,13 +4243,20 @@ export class UI {
     }
     // Every tile of the storey with no floor at once, laid out before it is asked for (`planarea.ts`).
     entries.push(...this.areaFloorRows(b, level, x, y));
+    // The way up to the next storey planned on the floor slot over it, built from here, where it is climbed from (`wayUpPlanned`).
+    const wayUp = wayUpPlanned(g, b, level, x, y);
+    if (wayUp) {
+      entries.push(build(act('build_floor'), { ...base, level: level + 1 },
+        `Build ${floorName(wayUp)} up (storey ${level + 2}) · needs ${describeNeeds(wayUp, materialName)}`, wayUp));
+    }
     // Pinned on a storey, the way up to the next from its floor: a flight or a ladder on the floor slot over it.
     if (pinned !== null && level + 1 < b.levels && !bld.floor(level + 1, x, y)) entries.push(...stairsUpEntries(g, base, level + 1, side,
       (at, lv, material, kind, sd, hand) => this.startPlacingStairs(at, lv, material, kind, sd, false, hand)));
     if (storey === undefined) entries.push(...cellarEntries(g, base, side, (material, kind, hand) => this.startPlacingStairs(base, 0, material, kind, side, true, hand)));
-    // Pinned, the storeys are the top storey's work, and the roof its own level's (`storeyview.ts`).
+    // Pinned, the storeys are the top storey's work, and the roof its own level's (`storeyview.ts`); the top storey plans the roof over it.
     if (pinned === null || level === b.levels - 1) {
       if (pinned === null) entries.push(...roofEntries(g, b, base, act, item, build, (plan) => this.startPlanArea(plan)));
+      else entries.push(...roofEntries(g, b, base, act, item, build, undefined, true));
       entries.push(item(act('add_floor'), base));
       if (b.levels > 1) entries.push(item(act('remove_storey'), base));
     }
@@ -4262,17 +4308,21 @@ function stairsUpEntries(g: Game, base: Extract<Target, { kind: 'tile' }>, level
   ];
 }
 
-/** The roof's rows for a tile of a building: building or taking out the one there, or planning one. */
+/**
+ * The roof's rows for a tile of a building: building or taking out the one there, or planning one. `planOnly`, on the
+ * top storey's own menu while it is pinned: Plan roof on a tile with none, greyed with the refusal when there is one.
+ */
 function roofEntries(g: Game, b: Building, base: Extract<Target, { kind: 'tile' }>, act: (id: string) => ActionDef,
   item: (def: ActionDef, target: Target, label?: string) => MenuItem,
   build: (def: ActionDef, target: Target, label: string, bill: Bill) => MenuItem,
-  area?: (plan: AreaPlan) => void): MenuItem[] {
+  area?: (plan: AreaPlan) => void, planOnly = false): MenuItem[] {
   const bld = g.buildings;
   const { x, y } = base;
   const entries: MenuItem[] = [];
   const plan = act('plan_floor');
   const roof = bld.floor(b.levels, x, y);
   const roofTarget: Target = { ...base, floorKind: 'roof' };
+  if (roof && planOnly) return entries;
   if (roof) {
     if (!isDone(roof)) entries.push(build(act('build_floor'), roofTarget, `Build roof · needs ${describeNeeds(roof, materialName)}`, roof));
     entries.push(item(act('remove_floor'), roofTarget, 'Remove roof'));

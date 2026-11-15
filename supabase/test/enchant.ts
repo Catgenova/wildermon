@@ -565,7 +565,10 @@ const failHere = lastHere();
 check(`a scroll that fails loses its ${SCROLL_MOTES} motes and puts ${SCROLL_HARM} damage on a sheet as one of its pile of four, and says so, the same on both sides`,
   part('FAIL', 0) === '0' && held(EMBER.scroll) === 0 && part('FAIL', 1) === String(10 - SCROLL_MOTES) && held('fire_mote') === 10 - SCROLL_MOTES
     && part('FAIL', 2) === '4' && held('papyrus') === 4 && near(Number(part('FAIL', 3)), SCROLL_HARM / 4) && near(pap.dmg, SCROLL_HARM / 4)
-    && part('FAIL', 4) === failHere && failHere === `${RECIPE_BY_ID.get(`make_${EMBER.scroll}`)?.fail} ${scrollHarmSaid('harmed')}`,
+    // The failure line, then what cost it most (`failwhy.ts`, said only by a check that was rolled), then the sheet's harm.
+    && part('FAIL', 4) === failHere && failHere.startsWith(`${RECIPE_BY_ID.get(`make_${EMBER.scroll}`)?.fail}`)
+    && failHere.endsWith(` ${scrollHarmSaid('harmed')}`)
+    && /^( Biggest factor: [^.]+\.)?$/.test(failHere.slice(`${RECIPE_BY_ID.get(`make_${EMBER.scroll}`)?.fail}`.length, -` ${scrollHarmSaid('harmed')}`.length)),
   `${isle.get('FAIL')} / ${held('fire_mote')} ${held('papyrus')} ${pap.dmg} ${failHere}`);
 clear('papyrus');
 pap = thing('papyrus', 50, 80, undefined, 1);

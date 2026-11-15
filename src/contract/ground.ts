@@ -38,7 +38,10 @@ export interface IslandPlaced {
   /** Motes infused into it where it stands (`infusion.ts`), absent for none. */
   infuse?: { el: string; str: number; until: number } | null;
   lit: boolean | null;
+  /** Damage out of a hundred, as last charged: for a station, at `decay_at`, and its decay since is the browser's to add (`stationDmg`). */
   dmg: number | null;
+  /** For a station (`stations.ts`), when its `dmg` was last charged, in epoch seconds; absent for everything else. */
+  decay_at?: number | null;
   name: string | null;
   material: string | null;
   /** Which way a piece faces, for furniture; absent from older islands. */
@@ -61,7 +64,7 @@ export interface IslandPlaced {
   bait_ql: number | null;
   caught: number | null;
   /** A furnace's queue and what it has made; a planter's last crop (`sown`), for a Farmer's Crop Rotation. */
-  state: { jobs?: unknown[]; output?: unknown[]; sown?: string; skep_at?: number; spring?: boolean } | null;
+  state: { jobs?: unknown[]; output?: unknown[]; sown?: string; skep_at?: number; spring?: boolean; uses?: number } | null;
   mine: boolean;
   /** The padlock fitted to it, by the number it shares with its key. */
   lock?: number | null;

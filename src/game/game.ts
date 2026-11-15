@@ -17,6 +17,7 @@ import { seasonAt, yearOf } from '../world/calendar';
 import { bedrockAt } from '../world/ore';
 import { World } from '../world/world';
 import { ACTIONS, ACTION_BY_ID, SPOIL_ORDER, spoilFrom, TEACHES_NOTHING, TRY_LEARN, WEAR_PER_GO, type ActionDef, type Target } from './actions';
+import { needsText } from './buildActions';
 import { feedable, feedFill, riposte } from './creatureActions';
 import { aimPin, BELT_MAX, loopsFor, pinLabel, type BeltPin } from './belt';
 import { bodyForward } from '../net/felt';
@@ -26,36 +27,37 @@ import { furnaceJobs, furnaceOutput } from '../net/rows/furnace';
 import { storedThing } from '../net/rows/stored';
 import { DROWN_RATE, DROWN_WARN, EXHAUSTED, HEAL_FED, HEAL_RATE, HUNGER_RATE, staminaBarAbove, SWIM_LEARN, SWIM_WIND, THIRST_RATE, WIND_PER_LEVEL, WIND_REST, WIND_STARVING, WIND_WALK } from './body';
 import { markName, MARK_CAP, MARK_COLOURS, type Marker } from './marks';
-import { acrossSide, borderOf, Buildings, OPPOSITE_SIDE, type FloorTile, CELLAR_DECAY, CELLAR_FLOOR, CELLAR_LEVEL, connectsDown, floorKind, floorOf, INDOORS_DECAY, isDone, isSpiral, keepJobLevel, SPIRAL_FOOT_SAID, progressOf, roofShapeDef, TOP_LEVELS, WALL_HEIGHT, walkableKind, workLevel, type BuildingsJSON, type Building, type Wall, type Side, type Bill, type Column } from './building';
+import { acrossSide, borderOf, Buildings, OPPOSITE_SIDE, type FloorTile, CELLAR_DECAY, CELLAR_FLOOR, CELLAR_LEVEL, connectsDown, floorKind, floorName, floorOf, INDOORS_DECAY, isDone, isSpiral, keepJobLevel, SPIRAL_FOOT_SAID, progressOf, roofShapeDef, TOP_LEVELS, WALL_HEIGHT, walkableKind, workLevel, type BuildingsJSON, type Building, type Wall, type Side, type Bill, type Column } from './building';
 import { CELLAR_DAYLIGHT, cellarGate, cellarPieceOk, targetFloor } from './cellar';
 import { jettyBase } from './frame';
 import { UNDONE_PLANS, type PlanAnswer } from './planarea';
 import { CRATE_DEFS, crateCentre, crateName, crateCapacity, crateShut, crateUnits, STORE_REACH, SUBTILES, subtileOf, type CrateKind, type PlacedCrate } from './crates';
 import { anvilAnchor, anvilCentre, anvilCovers, anvilName, ANVIL_SUBTILES, type PlacedAnvil } from './anvil';
 import { fireAnchor, fireCentre, fireCovers, FIRE_SUBTILES, type PlacedCampfire } from './campfire';
-import { furnaceMadeSaid, smelterAnchor, smelterCentre, smelterCovers, smelterName, SMELTER_H, SMELTER_PLUME, SMELTER_PLUME_WORKING, SMELTER_STACK_BACK, SMELTER_STACK_UP, SMELTER_W, type PlacedSmelter, type Plume } from './smelter';
+import { backOf, furnaceMadeSaid, smelterAnchor, smelterCentre, smelterCovers, smelterName, smelterSize, SMELTER_PLUME, SMELTER_PLUME_WORKING, SMELTER_STACK_BACK, SMELTER_STACK_UP, type PlacedSmelter, type Plume } from './smelter';
 import { kilnAnchor, kilnCentre, kilnCovers, kilnName, KILN_GLOW, KILN_GLOW_FIRING, KILN_PLUME, KILN_PLUME_FIRING, KILN_SUBTILES, KILN_VENT_BACK, KILN_VENT_UP, type PlacedKiln } from './kiln';
-import { WELL_TRICKLE, WELL_TRICKLE_AT, WELL_TRICKLE_QL, ACROSS_OF, DEED_PLACE, FURNITURE, ONE_ALTAR, deckSpot, isPlanter, furnitureAnchor, furnitureCapacity, furnitureCentre, furnitureCovers, furnitureDef, furnitureHeft, furnitureHolds, furnitureKg, furnitureRefuses, furnitureRoom, furnitureUnits, hiveRoom, POND_EVERY, rackDeck, rackSpots, teamOf, vehicleOf, type LiquidKind, type PlacedFurniture, furnitureName, facingOf, LIQUID_NAME, isBoat, furnitureFootprint, holdsLiquid, WATER_AT_HAND, STATION_REACH, type BoatDef, pieceShut } from './furniture';
+import { WELL_TRICKLE, WELL_TRICKLE_AT, WELL_TRICKLE_QL, ACROSS_OF, DEED_PLACE, FURNITURE, ONE_ALTAR, deckSpot, isPlanter, furnitureAnchor, furnitureCapacity, furnitureCentre, furnitureCovers, furnitureDef, furnitureHeft, furnitureHolds, furnitureKg, furnitureRefuses, furnitureRoom, furnitureUnits, hiveRoom, POND_EVERY, rackDeck, rackSpots, teamOf, vehicleOf, type LiquidKind, type PlacedFurniture, furnitureName, facingOf, LIQUID_NAME, isBoat, furnitureFootprint, holdsLiquid, WATER_AT_HAND, STATION_REACH, type BoatDef, pieceShut, isFountain } from './furniture';
 import { hiveTakes } from './bees';
 import { crateTheRest, CREATURE_CRATE, emptyCrate, occupiedRefusal, shutIn, teamOut, teamOutRefusal } from './creaturecrate';
 import { bury, crumble, graveAt, graveRefusal, graveSays, GRAVE_MARK } from './graves';
-import { cropStageSeconds, RIPE, settleCrop, type Crop } from './farming';
+import { cropStageSeconds, FARM_ACTION_BY_ID, RIPE, settleCrop, type Crop } from './farming';
 import { fieldClock, fieldRate, GLASSHOUSE_GROWTH, handClock, handRate, PLANTER_GROWTH, STILL_CLOCK } from './growth';
 import { glassResync, underGlass } from './glasshouse';
 import { pannierName, pannierRefusal, panniersOffered, pannierTake } from './panniers';
-import { ageDef, inWorld, kindName, stageOf, bridleTeam, harnessTeam, tameNeeds, attackOf, bloodMul, BLOW_SHARE, markOn, CALL_WINDOW, Creatures, setLocalKept, FIGHT_BACK_GOES, footing, HAUL_SKILL, haulLearn, MAX_MOUNT_SPEED, MOUNT_STAIRS_SAID, isBaitFor, tracesSkill, isShod, landRidden, maxHealth, PLAYER_ATTACKER, PULL_DEFAULT, SHOE_PACE, SHOE_STEP, shoeTeam, shoeTeamStep, tackSpeed, type Creature, type CreatureJSON, type WorkSite } from './creatures';
+import { ageDef, inWorld, kindName, stageName, stageOf, bridleTeam, harnessTeam, tameNeeds, attackOf, bloodMul, BLOW_SHARE, markOn, CALL_WINDOW, Creatures, setLocalKept, FIGHT_BACK_GOES, footing, HAUL_SKILL, haulLearn, MAX_MOUNT_SPEED, MOUNT_STAIRS_SAID, isBaitFor, tracesSkill, isShod, landRidden, maxHealth, PLAYER_ATTACKER, PULL_DEFAULT, SHOE_PACE, SHOE_STEP, shoeTeam, shoeTeamStep, tackSpeed, type Creature, type CreatureJSON, type WorkSite } from './creatures';
 import { CRAFT_REACH, type CraftStock, type Station } from './recipes';
 import { Actor, type ActiveAction } from './actor';
 import { HOST_ID } from '../net/protocol';
 import { Roster } from './roster';
 import { runeGateLights } from './runegate';
 import { GameEmitter, isTalk, TALK_LOG, type LogEntry, type LogKind } from './events';
+import { BadgeBook } from './badges';
 import { bagTake, DEED_DECAY, describeWith, foldInto, foodFill, groundDecayRate, Inventory, ITEM_DEFS, itemName, type Item, markOf, rarityOf, rarityStep, itemDef, sameMark, sameStack, spendOut, unmendable, unrestored } from './items';
 import { ENCHANTERS_PLINTH, ENCHANTMENTS, furnaceBurn, moreSaid, NETMENDER_WEAR, swingEnchant, wornEnchant, type Enchant, type EnchantEffect } from './enchant';
 import { BASE_SPEED, CARRY_CRAWL, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER_LEVEL, groundStep, MAX_STAND, MAX_STEP, pathOptions, Player, readPlayer, type LiftRule, standsOn, walkKey, SWIM_DEPTH, SWIM_SPEED } from './player';
 import { findPath } from '../world/pathfinding';
 import { randomLook, type Look } from './look';
-import { ACTION_FLOOR, ACTION_PACE, DAY_SECONDS } from './pace';
+import { ACTION_FLOOR, ACTION_PACE, DAY_SECONDS, DAWN, DUSK, TWILIGHT } from './pace';
 import { ARMOUR_BY_ID, ARMOUR_CLASSES, ARMOUR_SLOTS, bagCarry, COVERS, HIT_LOCATIONS, type HitPart, type Part, pieceBurden, pieceSoak, SHIELDS, WEAPON_BY_ID, type Slot, SLOTS, type WeaponDef } from './gear';
 import { asleepIn, SLEEP_BONUS_MULT, SLEEP_FOOD, SLEEP_HEAL, SLEEP_WATER } from './sleep';
 import { boonTime, BOON_BONUS, clockLeft, knacksOf, knackSays, type Boon } from './boons';
@@ -94,14 +96,16 @@ import { onLadder } from './ladderclimb';
 import { lyingAt, type Fell } from './fell';
 import { ARMOUR_VS, armsRefusal, blockChance, BLOCKED_SAID, WOUND_SAID, SHIELD_WEAR, BURN_WEAR, CROWD_BLOCK, DODGE_GAIN, dodgeChance, DRAW_WALK, FIGHT_QUIET, VENOM_DRAIN, VENOM_SECS, skillLine, type FightRecord, FIGHT_BACK_STILL, FIGHT_STANCE_NAMES, FLANK_HIT, legPace, FIGHT_TRIES, fightBase, fightWind, armPace, armourSwing, overburdenSwing, swingKgOf, swingBase, swingSeconds, SWING_FLOOR, tiredPace, FOLLOW_RANGE, inFightReach, isFightJob, nextStance, stanceSays, stanceTaken, TARGET_RANGE } from './fight';
 import { Skills, SKILL_BY_ID, SKILL_DEFS, isQuiet } from './skills';
+import { type CheckAt, failFactor, failFactorSaid, mindEaseAt, skillOdds } from './failwhy';
 import { jewelGain } from './gems';
 import { earnedBy, knackBonus, knackChance, knackLands, KNACK_CAP, TITLE_BY_ID } from './titles';
-import { TileIndex, Tally, keyX, keyY, tileKey } from './tileindex';
+import { TileIndex, Tally, cropKey, keyX, keyY, tileKey } from './tileindex';
 import { DARK_HIT, NIGHT_EYES_FROM, SOUL_PER_LEVEL, WORK_HAND, WORK_WIND, WORK_WIND_SPENT, HEAVY_SKILLS, WORK_BACK } from './learn';
 import { seenVein } from './skillgates';
 import { DRIVING, DRIVING_LEARN, drivingPace, SAILING, SAILING_LEARN, sailingPace, vehicleQlPace } from './travel';
 import { isLayUp, LEAD_PACE, ROPE_WALK, ROPE_WALK_TIME, ROPEMAKING, ropePerLayUp, ropeTime } from './ropework';
 import { laySwirls, swirlLight, type MoteElement, type Swirl } from './motes';
+import { gameLava, LAVA_CELL, LAVA_MIN_SIZE, LAVA_SPARED_TILES, LB_LAVA, LB_OPENS, LB_WAY, lavaBlockIn, lavaByte, lavaDay, lavaDesign, lavaDesignOf, lavaLights, type LavaDesign, type LavaLand } from './lava';
 import { TRACKING, trackLevel, type Trail } from './tracking';
 import { hasRunestones, runestoneAt, RUNESTONES, stonePoint, stoneTiles } from './runestones';
 import { AWARENESS, Vision } from './vision';
@@ -120,6 +124,8 @@ import { decorFrom, stoneLanternLight } from './decor';
 import { furnishFrom } from './furnish';
 import { fittingFrom, FITTING_SAID, poleBurning, poleLight, BENCH_TREE_AGES } from './fitting';
 import { ADORN_GAME, ADORN_SAID, adornFrom, buoyLight, gemLampLight } from './adorn';
+import { blackLanternBurning, blackLanternLight, lavaLampLight, orbLight } from './obsidian';
+import { BLACK_LANTERN, EMBER_ORB, LAVA_LAMP } from './obsidiandefs';
 import { BUOY, CAULDRON_HEARTH, CAULDRON_STATION, GEM_LAMP } from './adorndefs';
 import { LANTERN_POLE, MOORING_POST, TREE_BENCH } from './fittingdefs';
 import { atWaterEdge } from './watergarden';
@@ -317,6 +323,9 @@ export const FOLLOW_LOSE = 40;
  * more than half full under way. Everything else on an island is the island's
  * to count (`Game.tallyFromIsland`).
  */
+/** Why a walk up a storey stops short: the staircase or ladder it needs is only planned (`Game.unbuiltWayUp`). */
+export const wayUpSaid = (f: FloorTile): string => `${capital(floorName(f))} at ${f.x}, ${f.y} not built: needs ${needsText(f)}.`;
+
 export const BROWSER_TALLY: ReadonlySet<string> = new Set(['reach', 'laden']);
 
 // The journal's goals of the wildermon and of a settlement read these, handed over now the game is running (`journal-a.ts`).
@@ -439,6 +448,8 @@ export { wearPerUse };
 /** No team takes a vehicle faster than this, whatever is in the traces. */
 export const MAX_VEHICLE_SPEED = 4;
 /** How far ahead of the shafts a hitched team walks. */
+/** How long a block of the day's lava is believed before it is asked of the ground again, in ms (`Game.lavaBlockAt`). */
+const LAVA_MEMO_MS = 5000;
 const TRACE_LENGTH = 1.6;
 /** How fast a mount works its dinner off under a rider. One in the traces does not. */
 const HAUL_HUNGER = 0.0006;
@@ -510,10 +521,8 @@ export { DAY_SECONDS };
  * moves the ramps, the sun's arc, the wash over the sky, what a nocturnal
  * thing comes out for and how long a sleeper skips, all at once.
  */
-export const DAWN = 3;
-export const DUSK = 21;
-/** Game hours either side of sundown and of sunrise that the light takes to go, and to come back. */
-export const TWILIGHT = 1;
+// The hours themselves are data in a leaf (`pace.ts`), so a rule that reads them need not import the game.
+export { DAWN, DUSK, TWILIGHT };
 /** How dark it is at an hour of the day, 0 to 1 (`Game.darkness`). */
 export function darknessAt(h: number): number {
   if (h >= DAWN + TWILIGHT && h <= DUSK - TWILIGHT) return 0;
@@ -600,9 +609,7 @@ export const ORDINARY_GAIN = 0.45;
  * skill and tool behind it and the body doing it. `Game.duration` asks it of
  * whoever is acting, and the help asks it of somebody new to the work.
  */
-/** Difficulty mind logic takes off a thinking check for every level over the starting mark (`mind_ease`); never more than half the check's. */
-export const MIND_EASE_PER_LEVEL = 0.2;
-export const mindEaseAt = (mind: number): number => Math.max(0, (mind - CHAR_START) * MIND_EASE_PER_LEVEL);
+export { MIND_EASE_PER_LEVEL, mindEaseAt } from './failwhy';
 /** The thinking checks mind logic eases, and only these: every one passes `mindEase()` to its check. */
 export const MIND_EASED_SKILLS: readonly string[] = ['blacksmithing', 'brewing', 'first_aid', 'restoration', 'jewellery'];
 
@@ -756,6 +763,8 @@ export class Game {
    * everything that reads it can ask once and skip.
    */
   readonly roster = new Roster();
+  /** Everybody's trade and class, for the icons before their names (`badges.ts`). */
+  readonly badges = new BadgeBook((uids) => this.events.emit('badges', uids));
   /**
    * Hoards in the ground, by the map that points at each.
    *
@@ -1180,6 +1189,34 @@ export class Game {
    * mark in every browser you open.
    */
   level: number | null = null;
+  /**
+   * The corner the level was set at, for its mark on the ground: this
+   * browser's own asking, kept once the island's level comes back at that
+   * corner's height (`sawLevel`). Null for a level set in another browser or
+   * before this page opened. Not saved.
+   */
+  levelAt: { cx: number; cy: number } | null = null;
+  /** The corner `take_level` was last asked at, until the island's level answers it. */
+  private levelAsked: { cx: number; cy: number } | null = null;
+
+  /**
+   * The level as the island has it, and the corner it was set at when this
+   * browser asked: says `level` when either changes, for the HUD's chip and
+   * the marks on the ground.
+   */
+  sawLevel(level: number | null): void {
+    const was = this.level, wasAt = this.levelAt;
+    const asked = this.levelAsked;
+    if (level === null) {
+      this.levelAt = null;
+      this.levelAsked = null;
+    } else if (asked && this.world.getHeight(asked.cx, asked.cy) === level) {
+      this.levelAt = asked;
+      this.levelAsked = null;
+    } else if (level !== was) this.levelAt = null;
+    this.level = level;
+    if (level !== was || this.levelAt !== wasAt) this.events.emit('level');
+  }
 
   /**
    * The last track read (`tracking.ts`), for the arrow on the screen while it
@@ -1366,7 +1403,7 @@ export class Game {
       this.campfires.set(f.id, f);
       if (f.id >= this.nextFireId) this.nextFireId = f.id + 1;
     }
-    for (const c of init.crops ?? []) this.crops.set(tileKey(c.x, c.y), c);
+    for (const c of init.crops ?? []) this.crops.set(cropKey(c.x, c.y, c.level ?? 0), c);
     // A save from before the year has no field clock: it starts where the game clock stands, so nothing growing jumps.
     this.fieldTime = init.fieldTime ?? this.time;
     this.handTime = init.handTime ?? this.fieldTime;
@@ -1880,6 +1917,9 @@ export class Game {
   attuned: MoteElement | null = null;
   /** When you last sensed the swirls, in epoch seconds, as the island said it. */
   sensedAt = 0;
+  /** Volcano Isle's heat on you, 0 to 1, and until when a cooling draught slows it (epoch seconds), as the island said them (`lava.ts`). */
+  heat = 0;
+  cooledUntil = 0;
   /** The last sensing of the swirls (`infusion.ts`): when, in real seconds, and how far it reached; drawn on the map a while. */
   sensed: { real: number; x: number; y: number; range: number } | null = null;
 
@@ -3507,7 +3547,7 @@ export class Game {
     if (dodge > 0 && this.rand() < dodge) {
       this.gainSkill('body_control', DODGE_GAIN);
       this.player.attackedAt = this.time;
-      this.logMsg(`Dodged: ${from ? this.creatures.species(from).name.toLowerCase() : 'blow'}.`, 'fight');
+      this.logMsg(`Dodged: ${from ? stageName(from).toLowerCase() : 'blow'}.`, 'fight');
       // And answer it, for a Skirmisher's Riposte (`class_riposte`).
       const share = this.perk('riposte:blow', 0);
       if (share > 0 && from) riposte(this, from, share);
@@ -3648,7 +3688,7 @@ export class Game {
     const target: Target = { kind: 'creature', id };
     if (this.action) this.queue.unshift({ def: this.action.def, target: this.action.target, goes: this.action.left });
     this.action = null;
-    this.logMsg(`Fighting back: ${this.creatures.species(c).name.toLowerCase()}.`, 'fight');
+    this.logMsg(`Fighting back: ${stageName(c).toLowerCase()}.`, 'fight');
     this.fightTarget = id;
     this.startAction(def, target, FIGHT_BACK_GOES);
   }
@@ -3736,7 +3776,7 @@ export class Game {
     if (a && isFightJob(a.def.id) && a.state === 'performing') this.fightTries = 0;
     if (a || this.queue.length || this.time < this.fightNext) return;
     const p = this.player;
-    const name = this.creatures.species(c).name.toLowerCase();
+    const name = stageName(c).toLowerCase();
     if (Math.hypot(c.x - p.x, c.y - p.y) > FOLLOW_RANGE) {
       this.fightTarget = null;
       this.logMsg(`${capital(name)} out of range.`, 'fight');
@@ -3770,7 +3810,7 @@ export class Game {
     if (!this.fightRec) {
       this.fightRec = {
         foe: c ? c.id : null,
-        foeName: c ? this.creatures.species(c).name.toLowerCase() : 'it',
+        foeName: c ? stageName(c).toLowerCase() : 'it',
         foeAt: c ? c.health : 0,
         youAt: this.player.stats.health,
         started: this.time,
@@ -3779,7 +3819,7 @@ export class Game {
       };
     } else if (this.fightRec.foe === null && c) {
       this.fightRec.foe = c.id;
-      this.fightRec.foeName = this.creatures.species(c).name.toLowerCase();
+      this.fightRec.foeName = stageName(c).toLowerCase();
       this.fightRec.foeAt = c.health;
     }
     this.fightRec.last = this.time;
@@ -4000,6 +4040,19 @@ export class Game {
         if (poleBurning(f)) out.push(poleLight(f));
         continue;
       }
+      // A black glass lantern while its candle burns; a lava lamp column always; an ember orb by how dark it is (`obsidian.ts`).
+      if (f.kind === BLACK_LANTERN) {
+        if (blackLanternBurning(f)) out.push(blackLanternLight(f));
+        continue;
+      }
+      if (f.kind === LAVA_LAMP) {
+        out.push(lavaLampLight(f));
+        continue;
+      }
+      if (f.kind === EMBER_ORB) {
+        out.push(orbLight(f, this.darkness()));
+        continue;
+      }
       // An enchanter's plinth's runes, brighter while somebody enchants at it (`plinth.ts`).
       // Where it stands, worked out only for what lights from there: every piece in the settlement is looked at every frame.
       if (f.kind !== ENCHANTERS_PLINTH && f.kind !== MEMORIAL && !f.lit && !furnitureDef(f.kind).altar) continue;
@@ -4040,6 +4093,8 @@ export class Game {
     for (const l of this.spellLights) out.push(l);
     // A mote swirl's own small glow, soft as a spell's (`swirlLight`).
     if (this.swirls.size) for (const s of this.swirls.values()) if (near(s.x, s.y)) out.push(swirlLight(s));
+    // The day's lava on Volcano Isle, round you (`lavaLights`).
+    for (const l of lavaLights(this, px, py)) out.push(l);
     // The runestones' runes, round the middle of each (`runestoneLight`).
     if (hasRunestones(this.world.w)) {
       for (const s of RUNESTONES) {
@@ -4092,7 +4147,7 @@ export class Game {
     }
     for (const f of this.furniture.values()) {
       // A candle behind glass or paper is not a fire, and sends up no smoke.
-      if (!f.lit || isLampPiece(f) || f.kind === LANTERN_POLE || !near(f.x, f.y)) continue;
+      if (!f.lit || isLampPiece(f) || f.kind === LANTERN_POLE || f.kind === BLACK_LANTERN || !near(f.x, f.y)) continue;
       const [cx, cy] = furnitureCentre(f);
       out.push({ x: cx, y: cy, heat: 0.62 });
     }
@@ -4100,12 +4155,14 @@ export class Game {
     for (const k of this.kilns.values()) {
       if (!k.lit || !near(k.x, k.y)) continue;
       const [cx, cy] = kilnCentre(k);
-      out.push({ x: cx, y: cy - KILN_VENT_BACK, heat: 0.85, lift: KILN_VENT_UP, plume: k.jobs.length ? KILN_PLUME_FIRING : KILN_PLUME });
+      const [bx, by] = backOf(k.facing);
+      out.push({ x: cx + bx * KILN_VENT_BACK, y: cy + by * KILN_VENT_BACK, heat: 0.85, lift: KILN_VENT_UP, plume: k.jobs.length ? KILN_PLUME_FIRING : KILN_PLUME });
     }
     for (const sm of this.smelters.values()) {
       if (!sm.lit || !near(sm.x, sm.y)) continue;
       const [cx, cy] = smelterCentre(sm);
-      out.push({ x: cx, y: cy - SMELTER_STACK_BACK, heat: 1, lift: SMELTER_STACK_UP, plume: sm.jobs.length ? SMELTER_PLUME_WORKING : SMELTER_PLUME });
+      const [bx, by] = backOf(sm.facing);
+      out.push({ x: cx + bx * SMELTER_STACK_BACK, y: cy + by * SMELTER_STACK_BACK, heat: 1, lift: SMELTER_STACK_UP, plume: sm.jobs.length ? SMELTER_PLUME_WORKING : SMELTER_PLUME });
     }
     return out;
   }
@@ -4631,7 +4688,7 @@ export class Game {
    * the moment it arrived, so a conversation from this morning read back as
    * sixty lines all said at once, at the second somebody opened the page.
    */
-  write(text: string, kind: LogKind = 'info', at?: number): void {
+  write(text: string, kind: LogKind = 'info', at?: number, by?: string): void {
     // A fight is going on from its first blow until `FIGHT_QUIET` seconds pass without one.
     if (kind === 'fight') this.fightGoing();
     // And a critical one is drawn larger, when the island's word of it comes before its number (`critPending`).
@@ -4645,7 +4702,7 @@ export class Game {
         return;
       }
     }
-    const entry: LogEntry = { time: at ?? Date.now(), text, kind };
+    const entry: LogEntry = by ? { time: at ?? Date.now(), text, kind, by } : { time: at ?? Date.now(), text, kind };
     this.log.push(entry);
     trimLog(this.log);
     // The island's word of a sounding of yours: the water round you, read off the land here, on the map a while (`sailActions.ts`).
@@ -5417,6 +5474,31 @@ export class Game {
     this.events.emit('action');
   }
 
+  /**
+   * Stop the job in hand, every go of it left, and start the next one waiting,
+   * as it would start had the job finished: the × on the job in hand in the
+   * queue window. Unlike `cancelAction` the jobs behind it stay where they are.
+   * On an island the island does it (`rpc_skip`) and the beat that follows
+   * says what is in hand now; here the next comes off the queue at once.
+   */
+  skipAction(): void {
+    const a = this.action;
+    if (!a) return;
+    this.travel = null;
+    this.fightTarget = null;
+    this.held = false;
+    this.action = null;
+    if (this.skip) this.skip();
+    else {
+      if (a.state === 'performing') this.logMsg(`Stopped ${a.def.verb}.`, 'info');
+      this.nextInQueue();
+    }
+    this.events.emit('action');
+  }
+
+  /** Said to the island by `skipAction` (`rpc_skip`); filled in by `play.ts`. */
+  skip: (() => void) | null = null;
+
   /** Actions that apply to a target, with the reason each may be unavailable. */
   actionsFor(target: Target): Array<{ def: ActionDef; reason: string | null }> {
     const out: Array<{ def: ActionDef; reason: string | null }> = [];
@@ -5621,6 +5703,8 @@ export class Game {
     target = keepJobLevel(this.buildings, def.id, target);
     const named = target.kind === 'item' ? target.uid : 'itemUid' in target ? target.itemUid : undefined;
     this.lastAsked = { def, target, goes, was: named !== undefined ? this.inventory.get(named)?.id : undefined };
+    // The corner a level is asked at, for its mark once the island's level answers (`sawLevel`).
+    if (def.id === 'take_level' && target.kind === 'tile') this.levelAsked = { cx: target.cx, cy: target.cy };
     // A wall or a floor planned by hand is your last plan, to undo (`planarea.ts`).
     if (UNDONE_PLANS.has(def.id)) this.plannedAt = Date.now();
     // gates: a hidden door asked for is kept only while a plan of a wall on its border is in hand or lined up (`keepHiddenAsks`).
@@ -5979,14 +6063,45 @@ export class Game {
       for (const c of candidates) if (p.walkTo(this.world, c.x, c.y, rule, levels, below, aim === CELLAR_LEVEL && !this.buildings.cellarDone(c.x, c.y) ? undefined : aim, lift)) return true;
     }
     if (!quiet) {
+      const unbuilt = floor !== undefined && floor > p.level ? this.unbuiltWayUp(x, y, p.level, floor) : undefined;
       if (floor !== undefined && floor > 0 && !candidates.length) this.logMsg(`No floor on storey ${floor + 1}.`, 'error');
       // Mounted, where your own feet would get there: a single staircase, a ladder or a narrow doorway in the way (`rideRule`).
       else if (floor !== undefined && floor > 0 && this.mounted() && this.onFootTo(x, y, floor)) this.logMsg(MOUNT_STAIRS_SAID, 'error');
+      // Up to a storey whose way up is still only planned: that staircase or ladder, and what it needs (`unbuiltWayUp`).
+      else if (unbuilt) this.logMsg(wayUpSaid(unbuilt), 'error');
       // Pinned on another storey than yours: every click is a walk to that one (`pinnedStorey`).
       else if (floor !== undefined && floor !== p.level && floor === this.pinnedStorey()) this.logMsg(`No path to storey ${floor + 1} (pinned on the storey control).`, 'error');
       else this.logMsg(aim === CELLAR_LEVEL ? this.noWay(x, y, 'No path there.') : 'No path there.', 'error');
     }
     return false;
+  }
+
+  /**
+   * The staircase or ladder of the building at a tile that a walk from storey
+   * `from` up to storey `to` is still waiting on: one planned and not yet
+   * built, climbing to a storey over `from` and no higher than `to`, the
+   * lowest of them and of those the nearest. Undefined where there is none,
+   * no building there, or a finished one up off storey `from` already. A flight planned is drawn faint, and it was walked
+   * to and refused as "no path" with nothing to say what was missing.
+   */
+  unbuiltWayUp(x: number, y: number, from: number, to: number): FloorTile | undefined {
+    const bld = this.buildings;
+    const id = bld.buildingAt(x, y)?.id ?? bld.floor(to, x, y)?.building ?? bld.jettyAt(x, y)?.id;
+    if (id === undefined) return undefined;
+    const p = this.player;
+    let best: FloorTile | undefined;
+    let bestD = Infinity;
+    // A finished way up off the storey you are on is no planned one's to answer for.
+    for (const f of bld.floors.values()) if (f.building === id && f.level === from + 1 && connectsDown(floorKind(f)) && isDone(f)) return undefined;
+    for (const f of bld.floors.values()) {
+      if (f.building !== id || f.level <= from || f.level > to || !connectsDown(floorKind(f)) || isDone(f)) continue;
+      const d = f.level * 1e6 + Math.hypot(f.x + 0.5 - p.x, f.y + 0.5 - p.y);
+      if (d < bestD) {
+        best = f;
+        bestD = d;
+      }
+    }
+    return best;
   }
 
   /**
@@ -6210,9 +6325,14 @@ export class Game {
     return Math.max(Math.abs(px - tile.x), Math.abs(py - tile.y)) <= (def.rangeFor?.(this) ?? def.range ?? 1);
   }
 
-  /** The storey a piece is being set down on, picked on a pinned storey (`storeyview.ts`); undefined for any other job. */
+  /**
+   * The storey a job is done from, where it names one: a piece set down on a pinned storey (`storeyview.ts`), and a
+   * farming job on a garden bed of a pinned storey, which is worked from its own storey (`gardenbed.ts`). Undefined
+   * for any other job.
+   */
   private setsDownOn(def: ActionDef, target: Target): number | undefined {
-    return def.id === 'place_furniture' && target.kind === 'tile' && typeof target.level === 'number' && target.level >= 0 ? target.level : undefined;
+    if (target.kind !== 'tile' || typeof target.level !== 'number' || target.level < 0) return undefined;
+    return def.id === 'place_furniture' || FARM_ACTION_BY_ID.has(def.id) ? target.level : undefined;
   }
 
   private walkToward(def: ActionDef, target: Target): boolean {
@@ -6503,24 +6623,42 @@ export class Game {
   sureCheck(job: string, skill: string, difficulty = 10, toolQl = 0, ease = 0): boolean {
     const ok = this.skillCheck(skill, difficulty, toolQl, ease);
     const fail = this.perk(`fail:${job}`, 1);
-    return ok || (fail < 1 && this.rand() >= fail);
+    if (ok) return true;
+    // A perk's second chance (the island's `perk_pass`): a failure it lets stand keeps its share for the line.
+    if (fail < 1 && this.rand() >= fail) {
+      this.failOdds = null;
+      return true;
+    }
+    if (this.failOdds) this.failOdds = { ...this.failOdds, fail: fail * (this.failOdds.fail ?? 1) };
+    return false;
+  }
+
+  /** What the last failed check was rolled at, for its line to name the term that cost it most (the island's `wildermon.fail_odds`). */
+  failOdds: CheckAt | null = null;
+
+  /** The failed check's biggest factor, said once (the island's `fail_why`): "" when no check failed. */
+  failWhy(material = 0): string {
+    const at = this.failOdds;
+    this.failOdds = null;
+    return at ? failFactorSaid(failFactor({ ...at, material })) : '';
   }
 
   skillCheck(skill: string, difficulty = 10, toolQl = 0, ease = 0): boolean {
+    this.failOdds = null;
     // A Foreknow's goes cannot fail: the roll is taken as a success, and the go is spent when it is done (`completeAction`).
     if (this.player.foreknow > 0) {
       this.foreknown = true;
       return true;
     }
-    return this.rand() < this.skillChance(skill, difficulty, toolQl, ease);
+    const ok = this.rand() < this.skillChance(skill, difficulty, toolQl, ease);
+    if (!ok) this.failOdds = { skill: this.skills.get(skill), difficulty, tool: toolQl, ease, fail: 1 };
+    return ok;
   }
 
   /** The chance a `skillCheck` comes off: better skill and tools help, difficulty hurts, between 30% and 98%. */
   skillChance(skill: string, difficulty = 10, toolQl = 0, ease = 0): number {
-    const s = this.skills.get(skill);
     // A clear head makes a hard piece of work easier, but never simple.
-    const d = ease > 0 ? Math.max(difficulty * 0.5, difficulty - ease) : difficulty;
-    return Math.min(0.98, Math.max(0.3, 0.6 + (s / 100) * 0.38 + toolQl / 500 - d / 150));
+    return skillOdds(this.skills.get(skill), difficulty, toolQl, ease);
   }
 
   /**
@@ -7779,9 +7917,9 @@ export class Game {
     return undefined;
   }
 
-  addCampfire(x: number, y: number, sx: number, sy: number, fuel = 0, lit = false): PlacedCampfire {
+  addCampfire(x: number, y: number, sx: number, sy: number, fuel = 0, lit = false, facing: Side = 's'): PlacedCampfire {
     const [ax, ay] = fireAnchor(sx, sy);
-    const fire: PlacedCampfire = { id: this.nextFireId++, x, y, sx: ax, sy: ay, fuel, lit };
+    const fire: PlacedCampfire = { id: this.nextFireId++, x, y, sx: ax, sy: ay, fuel, lit, facing };
     this.campfires.set(fire.id, fire);
     this.placed.campfires.add(fire);
     this.events.emit('crate');
@@ -7812,12 +7950,13 @@ export class Game {
     if (this.world.slope(x, y) > steepest) return `Too steep: slope over ${metres(steepest)} m.`;
     if (this.isToken(x, y)) return 'Not on the totem.';
     if (this.buildings.buildingAt(x, y)) return 'Not inside a building.';
+    // Whatever stands there, as for any piece set down (the island's `piece_block_taken`).
     for (let dy = 0; dy < FIRE_SUBTILES; dy++) {
       for (let dx = 0; dx < FIRE_SUBTILES; dx++) {
-        if (this.crateAt(x, y, ax + dx, ay + dy)) return 'A crate is in the way.';
-        if (this.campfireAt(x, y, ax + dx, ay + dy)) return 'Already a fire there.';
+        if (this.occupiedSubtile(x, y, ax + dx, ay + dy)) return 'Something is already standing there.';
       }
     }
+    if (this.columnInBlock(x, y, ax, ay, FIRE_SUBTILES, FIRE_SUBTILES)) return 'Something is already standing there.';
     return null;
   }
 
@@ -7843,6 +7982,8 @@ export class Game {
     // An oven's own recipes want an oven, lit: a brazier is a hearth but bakes nothing (the island's `at_station`).
     if (station === 'oven') return this.litOvenNear() !== undefined;
     if (station === 'smelter') return this.hotSmelterNear() !== undefined;
+    // An anvil, set down (`anvil.ts`; the island's `at_station`).
+    if (station === 'anvil') return this.anvilNear() !== undefined;
     // A cauldron hearth, alight (`adorn.ts`; the island's `at_station`).
     if (station === CAULDRON_STATION) return this.litOvenNear(2.6, CAULDRON_HEARTH) !== undefined;
     return this.furnitureNear(station) !== undefined;
@@ -7882,6 +8023,17 @@ export class Game {
       if (best || !s.lit) return;
       const [cx, cy] = smelterCentre(s);
       if (Math.hypot(cx - this.player.x, cy - this.player.y) <= range) best = s;
+    }, this.player.level);
+    return best;
+  }
+
+  /** An anvil set down within reach of the work: the `anvil` station. */
+  anvilNear(range = 2.6): PlacedAnvil | undefined {
+    let best: PlacedAnvil | undefined;
+    this.placed.anvils.around(this.player.x, this.player.y, range + 1, (a) => {
+      if (best) return;
+      const [cx, cy] = anvilCentre(a);
+      if (Math.hypot(cx - this.player.x, cy - this.player.y) <= range) best = a;
     }, this.player.level);
     return best;
   }
@@ -7982,7 +8134,7 @@ export class Game {
         const before = f.litres ?? 0;
         if (before < def.well) {
           // A fountain an aqueduct pours into takes the channel's water on top of its own (`AQUEDUCT_LPS`).
-          const fed = f.kind === 'fountain' && this.springs.feeds(f.x, f.y) ? AQUEDUCT_LPS : 0;
+          const fed = isFountain(f.kind) && this.springs.feeds(f.x, f.y) ? AQUEDUCT_LPS : 0;
           f.litres = Math.min(def.well, before + (this.wellRate(f) + fed) * dt);
           f.liquid = 'water';
           if (Math.floor(f.litres) !== Math.floor(before)) this.events.emit('crate');
@@ -9064,22 +9216,26 @@ export class Game {
       const at = { id: r.id, x: r.x, y: r.y, sx: r.sx, sy: r.sy, mine: r.mine };
       // An enchantment set into it where it stands, and the wear a scroll that did not take left on it (`enchanting.ts`).
       const kept = { ...(r.enchant ? { enchant: r.enchant } : {}), ...(r.dmg ? { dmg: r.dmg } : {}),
+        // And when that damage was last charged, for a station's decay since (`stationDmg`).
+        ...(typeof r.decay_at === 'number' ? { decayAt: r.decay_at } : {}),
         // And the motes infused into it, while they last (`infusion.ts`).
         ...(r.infuse ? { infuse: r.infuse } : {}) };
       // Down in a cellar: only furniture goes down there, and says so.
       // Down in a cellar, or a storey up: a wagon driven up a wide staircase (`driveStorey`).
       const down = (r.level ?? 0) < 0 ? { level: CELLAR_LEVEL } : (r.level ?? 0) > 0 ? { level: r.level as number } : {};
+      // Which way a station was set down (`stations.ts`): south for one set down before it could be turned.
+      const facing = (r.facing ?? 's') as Side;
       if (r.kind === 'campfire' || r.kind === 'fire') {
-        built.campfires.set(r.id, { ...at, fuel: r.fuel ?? 0, lit: !!r.lit, ash: r.ash ?? 0, ...(r.infuse ? { infuse: r.infuse } : {}) });
+        built.campfires.set(r.id, { ...at, facing, ql: r.ql ?? 20, ...(r.dmg ? { dmg: r.dmg } : {}), ...(typeof r.decay_at === 'number' ? { decayAt: r.decay_at } : {}), fuel: r.fuel ?? 0, lit: !!r.lit, ash: r.ash ?? 0, ...(r.infuse ? { infuse: r.infuse } : {}) });
       } else if (r.kind === 'smelter') {
         built.smelters.set(r.id, {
-          ...at, ...kept, ql: r.ql ?? 20, rare: rarityStep(r.rare), fuel: r.fuel ?? 0, lit: !!r.lit, ash: r.ash ?? 0,
+          ...at, ...kept, facing, ql: r.ql ?? 20, rare: rarityStep(r.rare), fuel: r.fuel ?? 0, lit: !!r.lit, ash: r.ash ?? 0,
           jobs: furnaceJobs(r.state?.jobs),
           output: furnaceOutput(r.id, r.state?.output),
         });
       } else if (r.kind === 'kiln') {
         built.kilns.set(r.id, {
-          ...at, ...kept, ql: r.ql ?? 20, rare: rarityStep(r.rare), fuel: r.fuel ?? 0, lit: !!r.lit, ash: r.ash ?? 0,
+          ...at, ...kept, facing, ql: r.ql ?? 20, rare: rarityStep(r.rare), fuel: r.fuel ?? 0, lit: !!r.lit, ash: r.ash ?? 0,
           jobs: furnaceJobs(r.state?.jobs),
           output: furnaceOutput(r.id, r.state?.output),
         });
@@ -9089,7 +9245,7 @@ export class Game {
         // `anvil_ql` read it back from there; `material` is never written for
         // one. Reported as "made a copper anvil and placed down an iron anvil":
         // this read `material`, found nothing, and called every anvil iron.
-        built.anvils.set(r.id, { ...at, ...kept, ql: r.ql ?? 20, metal: r.sub ?? 'copper', rare: rarityStep(r.rare) });
+        built.anvils.set(r.id, { ...at, ...kept, facing, ql: r.ql ?? 20, metal: r.sub ?? 'copper', rare: rarityStep(r.rare) });
       } else if (r.kind === 'post') {
         const p: PlacedPost = { ...at, ql: r.ql ?? 20, dmg: r.dmg ?? 0, worker: null, name: r.name ?? undefined, material: r.material ?? undefined };
         built.posts.set(r.id, p);
@@ -9160,6 +9316,8 @@ export class Game {
           ...(adornFrom(r.garden) ? { adorn: adornFrom(r.garden) } : {}),
           // When a skep was set down or last emptied, which what it has made is worked out from (`bees.ts`).
           ...(typeof r.state?.skep_at === 'number' ? { skepAt: r.state.skep_at } : {}),
+          // An outcropping's swings left before it breaks (`outcrops.ts`).
+          ...(typeof r.state?.uses === 'number' ? { uses: r.state.uses } : {}),
           /*
            * The reins and the shafts, which the island has always sent and
            * this dropped: somebody who took the reins on an island walked
@@ -9382,7 +9540,7 @@ export class Game {
     if (ground.treesAgo !== undefined && Number.isFinite(ground.treesAgo)) this.treesAt = Date.now() / 1000 - ground.treesAgo;
     // The level is the island's when you are on one: taking it is an ask
     // like any other, and this is the answer coming back.
-    if (ground.level !== undefined) this.level = ground.level;
+    if (ground.level !== undefined) this.sawLevel(ground.level);
     /*
      * The island's wall clock, which the year is read off: a field's clock is
      * the year's integral to the second, so this machine's being a few
@@ -9412,7 +9570,7 @@ export class Game {
       const glass = this.glassNow();
       const hand = this.handNow();
       for (const c of ground.crops) {
-        this.crops.set(tileKey(c.x, c.y), {
+        this.crops.set(cropKey(c.x, c.y, typeof c.level === 'number' ? c.level : 0), {
           x: c.x, y: c.y, id: c.id, stage: c.stage,
           // On a covered garden bed, on the still clock (`STILL_CLOCK`), which `grown` is below.
           stageAt: (c.still ? STILL_CLOCK : c.glass ? glass : c.hand ? hand : field) - into(c),
@@ -9630,9 +9788,9 @@ export class Game {
     return p.tiles.has(y * this.world.w + x);
   }
 
-  addSmelter(x: number, y: number, sx: number, sy: number, ql: number): PlacedSmelter {
-    const [ax, ay] = smelterAnchor(sx, sy);
-    const s: PlacedSmelter = { id: this.nextSmelterId++, x, y, sx: ax, sy: ay, ql, fuel: 0, lit: false, jobs: [], output: [] };
+  addSmelter(x: number, y: number, sx: number, sy: number, ql: number, facing: Side = 's'): PlacedSmelter {
+    const [ax, ay] = smelterAnchor(sx, sy, facing);
+    const s: PlacedSmelter = { id: this.nextSmelterId++, x, y, sx: ax, sy: ay, facing, ql, fuel: 0, lit: false, jobs: [], output: [] };
     this.smelters.set(s.id, s);
     this.placed.smelters.add(s);
     this.events.emit('smelter');
@@ -9651,26 +9809,27 @@ export class Game {
   }
 
   /** Why a smelter cannot stand on this block of subtiles, or null. */
-  smelterPlaceReason(x: number, y: number, sx: number, sy: number): string | null {
-    const [ax, ay] = smelterAnchor(sx, sy);
+  smelterPlaceReason(x: number, y: number, sx: number, sy: number, facing: Side = 's'): string | null {
+    const [ax, ay] = smelterAnchor(sx, sy, facing);
+    const [w, h] = smelterSize(facing);
     const deck = this.deckFooting(x, y);
     if (deck === false || (deck === null && (!this.world.isPassable(x, y) || this.world.hasWater(x, y)))) return 'Smelter needs dry, solid ground.';
     const steepest = 12;
     if (deck === null && this.world.slope(x, y) > steepest) return `Too uneven: slope over ${metres(steepest)} m.`;
     if (this.isToken(x, y)) return 'Not on the totem.';
-    for (let dy = 0; dy < SMELTER_H; dy++) {
-      for (let dx = 0; dx < SMELTER_W; dx++) {
+    for (let dy = 0; dy < h; dy++) {
+      for (let dx = 0; dx < w; dx++) {
         if (this.occupiedSubtile(x, y, ax + dx, ay + dy)) return 'Something is already standing there.';
       }
     }
     // Nor in the corner a column stands in (`columnInBlock`).
-    if (this.columnInBlock(x, y, ax, ay, SMELTER_W, SMELTER_H)) return 'Something is already standing there.';
+    if (this.columnInBlock(x, y, ax, ay, w, h)) return 'Something is already standing there.';
     return null;
   }
 
-  addKiln(x: number, y: number, sx: number, sy: number, ql: number): PlacedKiln {
+  addKiln(x: number, y: number, sx: number, sy: number, ql: number, facing: Side = 's'): PlacedKiln {
     const [ax, ay] = kilnAnchor(sx, sy);
-    const k: PlacedKiln = { id: this.nextKilnId++, x, y, sx: ax, sy: ay, ql, fuel: 0, lit: false, jobs: [], output: [] };
+    const k: PlacedKiln = { id: this.nextKilnId++, x, y, sx: ax, sy: ay, facing, ql, fuel: 0, lit: false, jobs: [], output: [] };
     this.kilns.set(k.id, k);
     this.placed.kilns.add(k);
     this.events.emit('smelter');
@@ -9716,7 +9875,7 @@ export class Game {
     this.furniture.set(f.id, f);
     this.placed.furniture.add(f);
     // A fountain set down where an aqueduct pours keeps its water from now (`./aqueducts`).
-    if (kind === 'fountain') this.springs.channelChanged({ from: [x, y], to: [x, y] });
+    if (isFountain(kind)) this.springs.channelChanged({ from: [x, y], to: [x, y] });
     if (furnitureDef(kind).hedge) this.reindexBars();
     this.events.emit('crate');
     return f;
@@ -9729,7 +9888,7 @@ export class Game {
     // A planter goes with whatever was in it, though nothing lifts one that has anything in it.
     this.planted.delete(id);
     // And a fountain an aqueduct poured into leaves its water to run away downhill.
-    if (f?.kind === 'fountain') this.springs.channelChanged({ from: [f.x, f.y], to: [f.x, f.y] });
+    if (f && isFountain(f.kind)) this.springs.channelChanged({ from: [f.x, f.y], to: [f.x, f.y] });
     if (f && furnitureDef(f.kind).hedge) this.reindexBars();
     this.events.emit('crate');
   }
@@ -10072,9 +10231,9 @@ export class Game {
     return item;
   }
 
-  addAnvil(x: number, y: number, sx: number, sy: number, metal: string, ql: number): PlacedAnvil {
+  addAnvil(x: number, y: number, sx: number, sy: number, metal: string, ql: number, facing: Side = 's'): PlacedAnvil {
     const [ax, ay] = anvilAnchor(sx, sy);
-    const a: PlacedAnvil = { id: this.nextAnvilId++, x, y, sx: ax, sy: ay, metal, ql };
+    const a: PlacedAnvil = { id: this.nextAnvilId++, x, y, sx: ax, sy: ay, facing, metal, ql };
     this.anvils.set(a.id, a);
     this.placed.anvils.add(a);
     this.events.emit('smelter');
@@ -10104,6 +10263,8 @@ export class Game {
         if (this.occupiedSubtile(x, y, ax + dx, ay + dy)) return 'Something is already standing there.';
       }
     }
+    // Nor in the corner a column stands in (the island's `block_taken`).
+    if (this.columnInBlock(x, y, ax, ay, ANVIL_SUBTILES, ANVIL_SUBTILES)) return 'Something is already standing there.';
     return null;
   }
 
@@ -10270,8 +10431,20 @@ export class Game {
     }
   }
 
-  cropAt(x: number, y: number): Crop | undefined {
-    return this.crops.get(tileKey(x, y));
+  /** The crop on a storey of a tile (a field's, or a ground-floor bed's, on the ground's): one a storey (`cropKey`). */
+  cropAt(x: number, y: number, storey = 0): Crop | undefined {
+    return this.crops.size ? this.crops.get(cropKey(x, y, storey)) : undefined;
+  }
+
+  /** Every crop on a tile, a storey's each, from the ground up. */
+  cropsAt(x: number, y: number): Crop[] {
+    const out: Crop[] = [];
+    if (!this.crops.size) return out;
+    for (let l = 0; l <= TOP_LEVELS; l++) {
+      const c = this.crops.get(cropKey(x, y, l));
+      if (c) out.push(c);
+    }
+    return out;
   }
 
   /** The water lily or lotus planted on a tile, if there is one. */
@@ -10290,6 +10463,61 @@ export class Game {
   /** Pull up whatever is planted on a tile. */
   pullWater(x: number, y: number): void {
     if (this.waterPlants.delete(tileKey(x, y))) this.events.emit('world', x, y);
+  }
+
+  /** The lava's ground as this browser holds it (`gameLava`); today's design, and what its blocks a lair or a seam may open came to. */
+  private lavaLand: LavaLand | null = null;
+  private lavaMemo: { day: number; made: number; design: LavaDesign; box: [number, number, number, number]; opens: Map<number, boolean> } | null = null;
+
+  /** The day today's lava was laid for (`lavaDay`). */
+  lavaToday(): number {
+    return lavaDay(this.wallNow());
+  }
+
+  /** Today's design of the labyrinth (`lavaDesignOf`), asked again every few seconds: the day turns, and what is on its blocks can change. */
+  lavaNow(): NonNullable<Game['lavaMemo']> {
+    const now = performance.now();
+    const had = this.lavaMemo;
+    if (had && now - had.made <= LAVA_MEMO_MS) return had;
+    const day = this.lavaToday();
+    const design = lavaDesign(this.world.w, lavaDesignOf(this.world.seed, day));
+    const box: [number, number, number, number] = [design.bxa * LAVA_CELL, design.bya * LAVA_CELL, (design.bxa + design.nbx) * LAVA_CELL, (design.bya + design.nby) * LAVA_CELL];
+    const m = { day, made: now, design, box, opens: new Map<number, boolean>() };
+    this.lavaMemo = m;
+    return m;
+  }
+
+  /** Whether a whole block of the labyrinth is lava today (`lavaBlockIn`): its design's byte, and what a lair or a seam opens. */
+  lavaBlockAt(bx: number, by: number): boolean {
+    if (this.world.w < LAVA_MIN_SIZE) return false;
+    const m = this.lavaNow();
+    const b = lavaByte(m.design, bx, by);
+    if (!(b & LB_LAVA)) return false;
+    if (!(b & (LB_OPENS | LB_WAY))) return true;
+    const key = bx * 65536 + by;
+    let v = m.opens.get(key);
+    if (v === undefined) {
+      this.lavaLand ??= gameLava(this);
+      v = lavaBlockIn(this.lavaLand, m.design, bx, by);
+      m.opens.set(key, v);
+    }
+    return v;
+  }
+
+  /** Whether lava lies on a tile today (`lava.ts`, the island's `lava_at`): its block's, not on water and not where lava is spared. */
+  lavaAt(x: number, y: number): boolean {
+    const m = this.lavaNow();
+    if (x < m.box[0] || y < m.box[1] || x >= m.box[2] || y >= m.box[3] || !this.world.inBounds(x, y)) return false;
+    if (!this.lavaBlockAt(Math.floor(x / LAVA_CELL), Math.floor(y / LAVA_CELL))) return false;
+    this.lavaLand ??= gameLava(this);
+    const w = this.world;
+    if (w.getHeight(x, y) + w.getHeight(x + 1, y) + w.getHeight(x + 1, y + 1) + w.getHeight(x, y + 1) < 0) return false;
+    return !LAVA_SPARED_TILES.includes(w.getTile(x, y)) && !this.lavaLand.spared(x, y);
+  }
+
+  /** The box today's labyrinth lies in, in tiles: west, north, east, south. */
+  lavaBox(): readonly [number, number, number, number] {
+    return this.lavaNow().box;
   }
 
   /** The mote swirl turning over a tile, if there is one (`motes.ts`). */
@@ -10337,7 +10565,7 @@ export class Game {
     if (glass) c.glass = true;
     if (hand) c.hand = true;
     if (level !== undefined) c.level = level;
-    this.crops.set(tileKey(x, y), c);
+    this.crops.set(cropKey(x, y, level ?? 0), c);
     this.sown.set(tileKey(x, y), id);
     this.events.emit('world', x, y);
     return c;
@@ -10358,7 +10586,7 @@ export class Game {
     if (c.planter !== undefined) {
       this.planted.delete(c.planter);
       this.events.emit('world', c.x, c.y);
-    } else this.removeCrop(c.x, c.y);
+    } else this.removeCrop(c.x, c.y, c.level ?? 0);
   }
 
   /** The planter a piece's id names, or nothing when it names anything else. */
@@ -10427,8 +10655,8 @@ export class Game {
     this.sown.delete(tileKey(x, y));
   }
 
-  removeCrop(x: number, y: number): void {
-    this.crops.delete(tileKey(x, y));
+  removeCrop(x: number, y: number, storey = 0): void {
+    this.crops.delete(cropKey(x, y, storey));
     this.events.emit('world', x, y);
   }
 

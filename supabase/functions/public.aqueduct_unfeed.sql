@@ -6,7 +6,7 @@ CREATE OR REPLACE FUNCTION public.aqueduct_unfeed(p_world uuid, p_spring bigint)
 AS $function$
 begin
   perform well_settle(q.id) from placed q
-   where q.world_id = p_world and q.kind = 'furniture' and q.sub = 'fountain'
+   where q.world_id = p_world and q.kind = 'furniture' and is_fountain(q.sub)
      and exists (select 1 from aqueduct_feed f where f.spring_id = p_spring and f.fountain and f.x = q.x and f.y = q.y);
   delete from aqueduct_feed where spring_id = p_spring;
 end $function$

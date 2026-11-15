@@ -1,7 +1,7 @@
 import type { Camera } from '../engine/camera';
 import type { FullscreenCanvas } from '../engine/canvas';
 import { type Bridge, bridgeDone } from '../game/bridges';
-import { type Wall, type Border, borderPoints, isDone, WALL_TYPE_BY_ID, FENCE_THICK, WALL_THICK, WALL_HEIGHT, MATERIAL_BY_ID, borderOf, progressOf, type MaterialDef } from '../game/building';
+import { type Wall, type Border, borderPoints, isDone, WALL_TYPE_BY_ID, FENCE_THICK, WALL_THICK, WALL_HEIGHT, MATERIAL_BY_ID, OBSIDIAN_GLASS, borderOf, progressOf, type MaterialDef } from '../game/building';
 import { counterHeld, counterSeat, streetOf, COUNTER_HOLDS } from '../game/counters';
 import type { Game } from '../game/game';
 import { hingeKey } from '../game/gates';
@@ -15,6 +15,7 @@ import { type Entity, rgb, PLAN_COLOR, scatterOf, LAMP_DARK, type BakeAs } from 
 import { type RailEnds, PILASTER_PROUD, drawRailing } from './framing';
 import { type Motion, gatewayArch, drawGrooves, gatewayPicture, GATEWAY, gatewayClear, drawHiddenMark, moveTo, type WallFace, type ArchShape, PORTCULLIS_DROP, PORTCULLIS_RISE, drawGrille, DRAWBRIDGE_RISE, DRAWBRIDGE_FALL, type DrawbridgeGeom, drawStandingDeck, drawHingeCrib, drawGallows, drawChains, gallowsTop, drawLandingCrib, drawGatewayDressing } from './gates';
 import { drawGlassWall } from './glasswall';
+import { drawObsidianWall } from './obsidianglass';
 import { UNITS_PER_TILE } from './iso';
 import { capMoss, hashOf, PAVE_STAGES, CAP_W, CAP_D, type Keep, ivyLayout, vigour, PPM, strandPic } from './ivy';
 import { WINDOW, FENCE_GAP, DOOR, DOUBLE, BAY, ARCH, type Masonry } from './masonry';
@@ -1888,6 +1889,34 @@ export class WallPainter {
         near: [faceEnd(-1), faceEnd(1)], far: [backEnd(-1), backEnd(1)], top: [capEnd(-1), capEnd(1)],
         ends: [endShows(-1), endShows(1)], joints: [pane(-1), pane(1)], corners: [turns(-1), turns(1)], capped: true,
         lit, topLit, endLit, zoom, glow: this.lampBehind(wall, border), seed: border.x * 31 + border.y * 17 + wall.level * 7,
+      });
+      ctx.globalAlpha = 1;
+      return;
+    }
+    /*
+     * A solid wall of obsidian glass is a slab of near-black glass the whole wall's box (`obsidianglass.ts`), seen
+     * through at its material's opacity: its far face's edges stop where the near face would on the far side.
+     */
+    if (wall.material === OBSIDIAN_GLASS) {
+      const backEnd = (i: -1 | 1): number => {
+        const edge = i < 0 ? 0 : 1, { n, P, Q, up, past } = joinAt(i);
+        if (past) return edge + i * past;
+        if (up) return edge - i * up;
+        if (n) return edge;
+        if (Q) return edge - i * Q.h;
+        if (P) return edge + i * P.h;
+        return edge;
+      };
+      /** Obsidian glass carrying on in line past the `i` end, finished and as tall: a joint there. */
+      const joined = (i: -1 | 1): boolean => {
+        const b: Border = border.dir === 'h' ? { dir: 'h', x: border.x + i, y: border.y } : { dir: 'v', x: border.x, y: border.y + i };
+        const w = this.r.game.buildings.wallOnBorder(wall.level, b);
+        return !!w && w.material === OBSIDIAN_GLASS && isDone(w) && this.r.standing(w, b) >= tall - 1e-6;
+      };
+      drawObsidianWall(ctx, { px, py }, {
+        near: [faceEnd(-1), faceEnd(1)], far: [backEnd(-1), backEnd(1)], top: [capEnd(-1), capEnd(1)],
+        ends: [endShows(-1), endShows(1)], joints: [joined(-1), joined(1)], capped: !this.r.game.buildings.wallOnBorder(wall.level + 1, border) || this.r.storeyHidden(wall.level + 1),
+        lit, topLit, endLit, zoom, glow: this.lampBehind(wall, border), seed: border.x * 31 + border.y * 17 + wall.level * 7, opacity: bare.opacity ?? 1,
       });
       ctx.globalAlpha = 1;
       return;

@@ -8,7 +8,7 @@ declare c creature; d species_def; kind text; skill_id text; skill double precis
         wx int; wy int; here int; data int; tree tree_def; rock rock_def; logs int;
         v_age tree_age_def; v_cuts int;
         made_ql double precision; got text; careful double precision; chance double precision;
-        cr crop; yld int[]; depth double precision; v_seed item; v_cd crop_def; v_bed int;
+        cr crop; yld int[]; depth double precision; v_seed item; v_cd crop_def; v_bed int; v_fl int;
 begin
   select * into c from creature where world_id = p_world and id = p_id;
   if not found or c.work_x is null then return null; end if;
@@ -244,14 +244,16 @@ begin
 
   elsif kind = 'farm' then
     perform crop_settle(p_world, wx, wy);
-    select * into cr from crop where world_id = p_world and x = wx and y = wy;
+    -- The storey of the tile it works (`farm_work_level`), and the crop on that storey.
+    v_fl := farm_work_level(p_world, wx, wy);
+    select * into cr from crop where world_id = p_world and x = wx and y = wy and storey = v_fl;
     if not found then
       -- Nothing growing here. Sow it, if this is a field and there is a seed
       -- to be had: one lying where the last harvest left it, or one out of the
       -- settlement's stores.
       -- A field on the ground, or else an open bed it reaches (`worker_bed`).
-      v_bed := case when land_tile(p_world, wx, wy) = tile_id('Field') then null else worker_bed(p_world, wx, wy) end;
-      if land_tile(p_world, wx, wy) <> tile_id('Field') and v_bed is null then return null; end if;
+      v_bed := case when v_fl = 0 and land_tile(p_world, wx, wy) = tile_id('Field') then null else worker_bed(p_world, wx, wy) end;
+      if not (v_fl = 0 and land_tile(p_world, wx, wy) = tile_id('Field')) and v_bed is null then return null; end if;
       select * into v_seed from sow_seed(p_world, c, wx, wy);
       if v_seed.id is null then return null; end if;
       if not item_take_units(v_seed, 1) then return null; end if;
@@ -259,7 +261,7 @@ begin
       if v_cd.id is null then return null; end if;
       insert into crop (world_id, x, y, id, ql, sown_by, level)
       values (p_world, wx, wy, v_cd.id, v_seed.ql, c.keeper, v_bed)
-      on conflict (world_id, x, y) do update set id = v_cd.id, stage = 0, stage_at = excluded.stage_at,
+      on conflict (world_id, x, y, storey) do update set id = v_cd.id, stage = 0, stage_at = excluded.stage_at,
         tended = 0, tended_now = false, ql = v_seed.ql, sown_by = c.keeper, pace = 1,
         level = excluded.level, glass = excluded.glass, still = excluded.still;
       perform crop_sown(p_world, wx, wy, v_cd.id);
@@ -272,7 +274,7 @@ begin
       if not cr.tended_now then
         update crop set tended = tended + 1, tended_now = true,
             ql = least(100, ql + greatest(1, skill * 0.2))
-          where world_id = p_world and x = wx and y = wy;
+          where world_id = p_world and x = wx and y = wy and storey = cr.storey;
         return null;
       end if;
       /*
@@ -291,7 +293,7 @@ begin
     end if;
     yld := crop_yield(cr.tended);
     select produce into got from crop_def where id = cr.id;
-    delete from crop where world_id = p_world and x = wx and y = wy;
+    delete from crop where world_id = p_world and x = wx and y = wy and storey = cr.storey;
     -- A field stays a field; a bed is a bed, and its tile's ground is not touched.
     if cr.level is null then perform land_set_tile(p_world, wx, wy, tile_id('Field')); end if;
     perform land_announce(p_world, wx, wy);
