@@ -38,10 +38,11 @@ import { percent } from '../../src/game/words';
 import { check, finish, psql } from './harness';
 
 const U = { p: '701c0000-0000-4000-8000-0000000000a1' };
-const SIZE = 512;
-/** Volcano Isle on a 512 island, and somewhere that is not. */
-const ON = { x: 230, y: 70 };
-const OFF = { x: 300, y: 330 };
+/** Big enough that six vents, fifty tiles apart with their leashes on the island, always find room on Volcano Isle. */
+const SIZE = 768;
+/** Volcano Isle on it, and somewhere that is not. */
+const ON = { x: 345, y: 105 };
+const OFF = { x: 450, y: 495 };
 const VENTS = LAIR_KINDS.filter((k) => k.site === 'vent');
 
 const out = psql(`
@@ -57,11 +58,11 @@ do $t$
 declare w uuid; w2 uuid; l lair; k record; c creature; v_id int; v_n int; i int; v_max bigint; v_corpse item; v_sword bigint; v_steel bigint;
         v_ench bigint; v_ids int[]; v_sp text;
 begin
-  insert into world (name, seed, size, spawn_x, spawn_y, ready) values ('Volcano', 4343, ${SIZE}, 20, 500, true) returning id into w;
+  insert into world (name, seed, size, spawn_x, spawn_y, ready) values ('Volcano', 4343, ${SIZE}, 20, ${SIZE - 12}, true) returning id into w;
   perform land_blank(w, ${SIZE});
   update land_corner set heights = decode(repeat('6400', ${SIZE + 1}), 'hex') where world_id = w;
   -- Trees down every eighth column of the west, grass everywhere else.
-  update land_tile t set tiles = (select decode(string_agg(lpad(to_hex(case when gx < 200 and gx % 8 = 0 then 16 else 0 end), 2, '0'), '' order by gx), 'hex')
+  update land_tile t set tiles = (select decode(string_agg(lpad(to_hex(case when gx < 300 and gx % 8 = 0 then 16 else 0 end), 2, '0'), '' order by gx), 'hex')
     from generate_series(0, ${SIZE - 1}) gx) where t.world_id = w;
 
   -- ---- Both sides' numbers ------------------------------------------------------------------------------------------
@@ -170,8 +171,8 @@ begin
   insert into said select 'HELD', round(sqrt((to_x - leash_x) ^ 2 + (to_y - leash_y) ^ 2)::numeric, 3) from creature where world_id = w and id = c.id;
 
   -- Nowhere refused: the safe ring at the spawn, a settlement, a Sanctuary, and a runestone's ring on an island big enough for one.
-  update player set x = 20.5, y = 500.5 where world_id = w and uid = '${U.p}';
-  insert into said values ('REFUSED', 'spawn|' || summon_refused(w, 20.5, 500.5) || '|' || seryll_summon_at(w, '${U.p}', 'ash_wraith', 3));
+  update player set x = 20.5, y = ${SIZE - 11.5} where world_id = w and uid = '${U.p}';
+  insert into said values ('REFUSED', 'spawn|' || summon_refused(w, 20.5, ${SIZE - 11.5}) || '|' || seryll_summon_at(w, '${U.p}', 'ash_wraith', 3));
   update player set x = ${ON.x + 0.5}, y = ${ON.y + 0.5} where world_id = w and uid = '${U.p}';
   insert into deed (world_id, name, x, y, radius, level, founded_by) values (w, 'Ash', ${ON.x}, ${ON.y}, 5, 1, '${U.p}');
   insert into said values ('REFUSED', 'deed|' || summon_refused(w, ${ON.x + 0.5}, ${ON.y + 0.5}) || '|' || seryll_summon_at(w, '${U.p}', 'ash_wraith', 3));

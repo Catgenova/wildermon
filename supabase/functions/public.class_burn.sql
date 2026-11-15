@@ -8,7 +8,9 @@ declare pl player; c creature; v_rate double precision; v_secs double precision;
 begin
   select * into pl from player where world_id = p_world and uid = p_uid;
   select * into c from creature where world_id = p_world and id = p_id and health > 0;
-  if c.id is null or pl.uid is null or p_each <= 0 or p_secs <= 0 or faith_truce(p_world, creature_x(c), creature_y(c)) then
+  if c.id is null or pl.uid is null or p_each <= 0 or p_secs <= 0 or faith_truce(p_world, creature_x(c), creature_y(c))
+     -- Nor on a kind that burns do nothing to (`species_def.fireproof`).
+     or coalesce((select sd.fireproof from species_def sd where sd.id = c.species), false) then
     return null;
   end if;
   v_rate := max_health(c) * p_each * pk(pl.class_mul, 'burn:rate', 1);

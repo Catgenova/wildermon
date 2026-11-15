@@ -327,6 +327,8 @@ begin
     where world_id = p_world and uid = p_uid;
   -- And a sitting it lands in is over, with nothing come of it (`sitting_struck`), before anything turns to fight.
   perform sitting_struck(p_world, p_uid);
+  -- And an ash wraith's blinding, from a kind that blinds (`ash_blind_put`).
+  perform ash_blind_put(p_world, p_uid, v_from);
   perform tell(p_world, p_uid, p_what || note || '. Wound: ' || wound_text(w) || '.', 'fight');
   -- And a Second Life, which the killing blow spends instead of you (`faith_second_life`).
   -- Undying holds you at its floor and is not spent; a Second Life is.

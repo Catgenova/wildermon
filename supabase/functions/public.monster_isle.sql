@@ -4,4 +4,4 @@ CREATE OR REPLACE FUNCTION public.monster_isle(p_species text)
  RETURNS integer
  LANGUAGE sql
  IMMUTABLE
-AS $function$ select case p_species when 'dragon' then 3 else null end $function$
+AS $function$ select case p_species when 'dragon' then 3 when 'ash_wraith' then 3 when 'magma_golem' then 3 when 'cinder_hound' then 3 else null end $function$

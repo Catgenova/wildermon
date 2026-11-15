@@ -4,4 +4,4 @@ CREATE OR REPLACE FUNCTION public.recipe_droppers()
  RETURNS text[]
  LANGUAGE sql
  IMMUTABLE
-AS $function$ select array['goblin', 'orc']::text[] $function$
+AS $function$ select array['goblin', 'orc', 'cinder_hound']::text[] $function$

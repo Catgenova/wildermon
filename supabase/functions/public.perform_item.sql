@@ -190,7 +190,7 @@ begin
       return;
     end if;
     v_was := v_it.ql;
-    v_ceiling := least(99.9, improve_ceiling(p_world, p_uid, v_what.skill, v_it.rare));
+    v_ceiling := least(99.9, improve_ceiling(p_world, p_uid, v_what.skill, v_it.rare) + fire_steel_cap(v_it.def, v_it.extra));
     -- And the tree, on the trade that would have made the thing: a smith's
     -- temper is worth as much at the file as at the anvil. The ceiling is
     -- untouched, so this buys passes rather than a higher top.

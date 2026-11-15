@@ -20,6 +20,8 @@ AS $function$
     * class_mul(p_world, p_uid, 'aim', p_kind)
     -- And what the weapon's maker put into it (a Smith's Balanced), inside the ceiling too.
     * coalesce(p_aim, 1)
+    -- And an ash wraith's blinding (`ash_blind_of`), inside the ceiling too.
+    * ash_blind_of(p_world, p_uid)
     -- And awareness in the dark (`aware_dark`), inside the ceiling too.
     + aware_share(p_world, p_uid) * aware_dark(p_world, p_uid))
 $function$

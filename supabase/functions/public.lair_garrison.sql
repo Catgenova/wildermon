@@ -4,4 +4,4 @@ CREATE OR REPLACE FUNCTION public.lair_garrison()
  RETURNS TABLE(kind text, ord integer, species text, least_n integer, most_n integer)
  LANGUAGE sql
  IMMUTABLE
-AS $function$ select * from (values ('goblin_warren', 0, 'goblin', 3, 5), ('orc_camp', 0, 'orc', 2, 3), ('ogre_cave', 0, 'ogre', 1, 1), ('ogre_cave', 1, 'goblin', 2, 2)) v (kind, ord, species, least_n, most_n) where v.kind is not null $function$
+AS $function$ select * from (values ('goblin_warren', 0, 'goblin', 3, 5), ('orc_camp', 0, 'orc', 2, 3), ('ogre_cave', 0, 'ogre', 1, 1), ('ogre_cave', 1, 'goblin', 2, 2), ('ash_vent', 0, 'ash_wraith', 2, 3), ('magma_vent', 0, 'magma_golem', 1, 2), ('cinder_vent', 0, 'cinder_hound', 3, 3)) v (kind, ord, species, least_n, most_n) where v.kind is not null $function$
