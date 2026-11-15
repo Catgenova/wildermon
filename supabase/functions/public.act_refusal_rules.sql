@@ -22,6 +22,9 @@ begin
   -- A Runestone's nine tiles, which no job changes or puts anything on, before whose ground it is (`stone_ground_refusal`).
   aimed := stone_ground_refusal(p_world, p_uid, p_action, p_target);
   if aimed is not null then return aimed; end if;
+  -- And the day's lava on Volcano Isle, which nothing digs, builds, sets down or founds on (`lava_ground_refusal`).
+  aimed := lava_ground_refusal(p_world, p_uid, p_action, p_target);
+  if aimed is not null then return aimed; end if;
   aimed := p_target->>'kind';
   -- Whose ground it is, before anything about what it is made of.
   aimed := ground_deed_refusal(p_world, p_uid, p_action, p_target);

@@ -1007,6 +1007,29 @@ kbd {
   background: var(--t-fill-water, linear-gradient(#5fa8e6, #2c6aa5));
 }
 
+/* Volcano Isle's heat (`lava.ts`): the interior kit's meter in the hud's row; warn striped, full cross-hatched. */
+.hud-heat-meter {
+  position: relative;
+  height: 9px;
+  overflow: hidden;
+  border: 1px solid var(--t-groove-edge, #000);
+  background: var(--t-track, #1a1612);
+}
+
+.hud-heat-fill {
+  height: 100%;
+  background: var(--t-fill-heat, linear-gradient(#f0a24a, #b8551f));
+  transition: width 0.2s;
+}
+
+.hud-heat-meter[data-meaning='warn'] .hud-heat-fill {
+  background: repeating-linear-gradient(135deg, rgba(0, 0, 0, 0.3) 0 2px, transparent 2px 6px), var(--t-fill-heat, linear-gradient(#f0a24a, #b8551f));
+}
+
+.hud-heat-meter[data-meaning='bad'] .hud-heat-fill {
+  background: repeating-linear-gradient(135deg, rgba(0, 0, 0, 0.35) 0 2px, transparent 2px 4px), repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.35) 0 2px, transparent 2px 4px), var(--t-bad-fill, #c0503a);
+}
+
 .hud-bar-value {
   text-align: right;
   color: var(--ui-dim);

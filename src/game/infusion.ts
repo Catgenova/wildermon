@@ -58,11 +58,13 @@ export interface InfuseDef {
 
 const pct = (v: number): string => `${Math.round(v * 1000) / 10}%`;
 const times = (v: number): string => `×${Math.round(v * 100) / 100}`;
+/** What a piece worn infused with ice takes off Volcano Isle's heat fill at a share of one (`lava.ts`, `HEAT_ICE`). */
+const ICE_HEAT = 0.15;
 
 /**
  * Every element that goes into something, with what it does at its most.
- * Ice is not among them: nothing held in a larder, a barrel or a crate decays
- * (`rot.ts`), so there is nothing for it to slow.
+ * Ice goes into armour, against Volcano Isle's heat (`lava.ts`, `heatMul`):
+ * the meter's fill ×(1 − most × share) for each piece worn.
  */
 export const INFUSE_INTO: Partial<Record<MoteElement, InfuseDef>> = {
   fire: { into: ['campfire', 'oven', 'smelter', 'kiln'], most: 0.5, label: 'Fuel lasts', say: (s) => times(1 + 0.5 * s) },
@@ -72,6 +74,7 @@ export const INFUSE_INTO: Partial<Record<MoteElement, InfuseDef>> = {
   life: { into: ['planter'], most: 0.25, label: 'Growth stage time', say: (s) => times(1 - 0.25 * s) },
   light: { into: ['lantern', 'lamp_post', 'lamp_pillar'], most: 1, label: 'Candle', say: () => 'not needed' },
   dark: { into: [], most: 0.1, label: 'Blows on the wearer or wielder: miss chance', say: (s) => `+${pct(0.1 * s)}` },
+  ice: { into: ARMOUR.map((a) => a.id), most: ICE_HEAT, label: 'Heat fill on Volcano Isle, worn', say: (s) => times(1 - ICE_HEAT * s) },
 };
 /** The fire element's fuel life at a share, the earth's chance of one more, wind's pace, water's fill, life's stage time, dark's miss. */
 export const fireLife = (share: number): number => 1 + (INFUSE_INTO.fire?.most ?? 0) * share;
@@ -119,7 +122,7 @@ export const INFUSE_SAID = {
   plinth: 'Stand at an enchanter\'s plinth.',
   gone: 'It is gone.',
   reach: 'Too far: stand within reach of it.',
-  fits: (el: MoteElement): string => `${el[0].toUpperCase()}${el.slice(1)}: ${el === 'dark' ? 'goes into weapons, armour or shields only' : INFUSE_INTO[el]?.into.length ? `goes into ${INFUSE_INTO[el]?.into.join(', ').replace(/_/g, ' ')} only` : 'goes into nothing'}.`,
+  fits: (el: MoteElement): string => `${el[0].toUpperCase()}${el.slice(1)}: ${el === 'dark' ? 'goes into weapons, armour or shields only' : el === 'ice' ? 'goes into armour only' : INFUSE_INTO[el]?.into.length ? `goes into ${INFUSE_INTO[el]?.into.join(', ').replace(/_/g, ' ')} only` : 'goes into nothing'}.`,
   already: (el: string): string => `Already infused: ${el}.`,
 } as const;
 /** What an infusion that went says. */

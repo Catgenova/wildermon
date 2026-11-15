@@ -807,6 +807,16 @@ const REMEDY_RECIPES: Recipe[] = HERBS.flatMap((herb): Recipe[] => [
 RECIPES.push(...REMEDY_RECIPES);
 
 /**
+ * A cooling draught (`lava.ts`): mint, water and an ice mote, against Volcano Isle's heat. Anybody may brew it.
+ */
+RECIPES.push({
+  id: 'brew_cooling_draught', category: 'Alchemy', result: 'cooling_draught', count: 2,
+  inputs: [{ item: 'mint', count: 2 }, { item: 'water_bucket', litres: 1 }, { item: 'ice_mote' }], skill: 'alchemy',
+  label: 'Brew a cooling draught', verb: 'brewing a draught', baseTime: 10, stamina: 0.02, difficulty: 25,
+  done: '', spareOnFail: true,
+});
+
+/**
  * The traps that are *built*, out of the same book the game reads them from.
  *
  * Not all of them are. A creel is reed and rope rather than plank and nail,

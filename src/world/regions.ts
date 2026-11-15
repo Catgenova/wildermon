@@ -1,5 +1,6 @@
 import { ROCK_VARIANTS, TREE_DEFS } from './tiles';
-import { oreKindFor, stoneKindAt } from './ore';
+import { hashTile, ORE_DENSITY, oreKindFor, stoneKindAt } from './ore';
+import { inLavaHeart, SERYLL_HEART } from './lavaland';
 
 /**
  * Which island you are standing on, and what that means for the ground.
@@ -14,7 +15,8 @@ import { oreKindFor, stoneKindAt } from './ore';
  * Exclusivity is structural, not a rarity tweak. Every restricted material is
  * owned by exactly one region in REGIONS, and `rockKindFor` turns a seam that
  * belongs to another island into iron, so there is no seed and no amount of
- * prospecting that finds seryll off the volcano.
+ * prospecting that finds seryll off the volcano -- nor, on it, outside the heart
+ * of its labyrinth of lava (`lavaland.ts`).
  */
 
 /**
@@ -190,6 +192,12 @@ REGIONS.forEach((R, i) => {
   for (const ore of [...R.ores, ...(R.mountain ?? [])]) OWNER.set(ore, i);
 });
 
+/** The seryll seam, and the salt of the roll that lays it in the labyrinth's heart. */
+const SERYLL = kindOf('seryll_ore');
+const SERYLL_SALT = 977;
+/** The size of world a caller that does not say is asking about: the island's. */
+const SERYLL_SIZE = 4096;
+
 /** Whether this material is restricted at all, and to whom. */
 export const ownerOf = (yields: string): number | undefined => OWNER.get(yields);
 
@@ -201,11 +209,16 @@ export const ownerOf = (yields: string): number | undefined => OWNER.get(yields)
  * turns up at the rate it always did. A seam owned elsewhere becomes iron,
  * which is what the ground would otherwise mostly have been anyway. On an
  * island with a `mountain`, it is the stone instead: the seams it keeps, and
- * its own stone, only under the mountain, and plain rock everywhere else.
+ * its own stone, only under the mountain, and plain rock everywhere else. And
+ * seryll only in the heart of Volcano Isle's labyrinth, on a world `size` across.
  */
-export function rockKindFor(seed: number, region: number, x: number, y: number, density: number, mountain = false): number {
+export function rockKindFor(seed: number, region: number, x: number, y: number, density: number, mountain = false, size = SERYLL_SIZE): number {
   const R = REGIONS[region];
+  // Seryll lies in the heart of Volcano Isle's labyrinth of lava and nowhere else (`lavaland.ts`): there on `SERYLL_HEART`
+  // of the dry ground, and anywhere else a seam of it is iron, as a seam owned elsewhere is.
+  if (region === OWNER.get('seryll_ore') && density === ORE_DENSITY.land && inLavaHeart(x, y, size) && hashTile(x, y, seed + SERYLL_SALT) < SERYLL_HEART) return SERYLL;
   const ore = oreKindFor(seed, x, y, density);
+  if (ore === SERYLL) return IRON;
   if (R?.mountain) {
     if (!mountain) return PLAIN_ROCK;
     return ore >= 0 && R.mountain.includes(ROCK_VARIANTS[ore].yields) ? ore : kindOf(R.stone);

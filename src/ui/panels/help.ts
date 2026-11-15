@@ -208,6 +208,8 @@ import {
 import { TURNS } from '../../render/view';
 import { ORE_DENSITY, seamShare } from '../../world/ore';
 import { lairOf, REGIONS } from '../../world/regions';
+import { COOLING_DRAUGHT, DRAUGHT_DROP, DRAUGHT_FILL, DRAUGHT_SECS, HEAT_BURN, HEAT_DRAIN, HEAT_FILL, HEAT_ICE, HEAT_NEAR, HEAT_SCALE, LAVA_BAND, LAVA_BURN, LAVA_CELL, LAVA_DESIGNS, LAVA_HEART, LAVA_INLAND, LAVA_PATHS, LAVA_RADIUS, LAVA_SIZE, LAVA_SPARED_TILES, SERYLL_HEART } from '../../game/lava';
+import { LAVA_CHART } from '../../world/lavachart';
 import { ISLAND_ELEMENT, LIFE_MOTES_EACH, MOTE_ELEMENTS, MOTES_LEAST, STATUE_MOTES, MOTES_MOST, MOTES_STEP, POULTICE_HEAL, SEASON_ELEMENT, SWIRL_DARK, SWIRL_LIGHT, SWIRL_SEASON, SWIRLS_A_DAY, WATER_MOTES_EACH } from '../../game/motes';
 import { RESPAWN_GAP, RESPAWN_SPARE, STAY_SAID } from '../../game/respawn';
 import { FALL_SECS } from '../../game/fell';
@@ -401,13 +403,12 @@ const countIn = (id: string, n: number): string => countOf(id, n, true);
 function infuseHelp(): string {
   const what = INFUSE_ELEMENTS.map((el) => {
     const d = INFUSE_INTO[el];
-    const into = el === 'dark' ? 'a weapon, armour or a shield (wielded or worn)' : listedOr((d?.into ?? []).map((id) => id.replace(/_/g, ' ')));
+    const into = el === 'dark' ? 'a weapon, armour or a shield (wielded or worn)' : el === 'ice' ? 'armour (worn)' : listedOr((d?.into ?? []).map((id) => id.replace(/_/g, ' ')));
     return `<li><b>${capital(el)}</b> into ${into}: ${(d?.label ?? '').toLowerCase()} ${d?.say(1) ?? ''} at strength 100%.</li>`;
   }).join('\n      ');
   return `<li><b>Infuse into</b> (a mote's menu, at an enchanter's plinth): ${INFUSE_MOTES} motes of one element into a thing it goes into, one element at a time, for ${INFUSE_DAYS} days;
       trains elementalism a full action. Strength = elementalism ÷ 100 × motes' QL ÷ 100 (×${1 + ATTUNE_STRENGTH} for the element you are attuned to) of each element's most:</li>
       ${what}
-      <li>Ice: into nothing (nothing held in a larder, barrel or crate decays).</li>
       <li><b>Attunement</b>: the element you collected most of over the last ${ATTUNE_DAYS} days: +${ATTUNE_MOTES} mote a swirl of it, +${percent(ATTUNE_STRENGTH)} strength infusing it.</li>
       <li><b>Sense mote swirls</b> (a tile's menu, once an hour): swirls within ${SENSE_BASE} + ${SENSE_PER_LEVEL} × elementalism tiles (${senseRange(100)} at 100) on the map for
       ${SENSE_SHOWN / 60} minutes; trains elementalism.</li>`;
@@ -754,6 +755,9 @@ const LOW_QL = 1;
 /** Seconds in an hour of the clock on the wall. */
 const HOUR = 3600;
 /** An hour of the island's clock as the hud shows it: "21:00". */
+/** What a cooling draught is brewed from (`brew_cooling_draught`): "2 mint, 1 L from a bucket of water and an ice mote". */
+const draughtBill = (): string =>
+  listed((RECIPE_BY_ID.get('brew_cooling_draught')?.inputs ?? []).map((i) => (i.litres ? `${i.litres} L from a ${itemDef(i.item).name.toLowerCase()}` : countOf(i.item, i.count ?? 1, true))));
 const hudHour = (h: number): string =>
   `${String(Math.floor(h)).padStart(2, '0')}:${String(Math.round((h % 1) * 60)).padStart(2, '0')}`;
 
@@ -3796,6 +3800,20 @@ export function helpText(): string {
       <li><b>Sulfur</b>: butchering ${listed(MONSTER_KINDS.filter((id) => SPECIES[id].butcher.sulfur).map((id) => `${SPECIES[id].name.toLowerCase()} ${SPECIES[id].butcher.sulfur}`))};
       mining slate on ${volcanoName()}, ${percent(SULFUR_SLATE)} a go.</li>
       <li><b>${FIRE_STEEL_NAME}</b>: ${bill(FIRE_STEEL_RECIPE)}, ${workedAt(FIRE_STEEL_RECIPE)}, on ${volcanoName()} only. Weapons and tools of it: improve QL cap <b>+${FIRE_STEEL_CAP}</b> over your skill.</li>
+    </ul>
+    <h3>Volcano Isle: lava and heat</h3>
+    <ul>
+      <li><b>Lava</b>: a labyrinth on Volcano Isle, <b>${LAVA_RADIUS}</b> tiles round the caldera, on its land ${LAVA_INLAND * LAVA_SIZE / LAVA_CHART.n} tiles in from the water; one of
+      <b>${LAVA_DESIGNS}</b> designs, a new one at each daily reset (${hudHour(TREE_DAWN_UTC)} UTC), not repeated on consecutive days.
+      Corridors ${LAVA_CELL} tiles wide, walls ${LAVA_CELL} tiles thick.</li>
+      <li><b>${LAVA_PATHS}</b> ways in, about ${Math.round(360 / LAVA_PATHS)}° apart: each the only way through to the heart; every other corridor ends.</li>
+      <li><b>Heart</b>: ${LAVA_HEART} tiles round the caldera; no lava. Seryll: in the heart only, ${percent(SERYLL_HEART)} of its dry ground.</li>
+      <li>On lava: health <b>−${percent(LAVA_BURN)}/s</b>. No digging, building, setting down or founding on it. No creature steps on it.</li>
+      <li>Never on: a settlement, ${listed(LAVA_SPARED_TILES.map((t) => TILE_DEFS[t].name.toLowerCase()))}, a building, a foundation, anything set down.</li>
+      <li><b>Heat</b> (hud, on Volcano Isle): at ${metres(LAVA_BAND.foot)} m and up +${percent(HEAT_FILL)}/s, ×${HEAT_NEAR} with lava on or beside your tile;
+      full: health <b>−${percent(HEAT_BURN)}/s</b>; below: −${percent(HEAT_DRAIN)}/s.</li>
+      <li>Heat fill: ×${1 - HEAT_SCALE} per dragon-scale piece worn; −${percent(HEAT_ICE)} × strength per piece infused with <b>ice</b> (armour);
+      <b>${itemDef(COOLING_DRAUGHT).name}</b> (alchemy: ${draughtBill()}): heat −${percent(DRAUGHT_DROP)}, fill ×${DRAUGHT_FILL} for ${DRAUGHT_SECS / 60} min.</li>
     </ul>
     <h3>Traps</h3>
     <ul>

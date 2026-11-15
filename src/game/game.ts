@@ -101,6 +101,7 @@ import { DARK_HIT, NIGHT_EYES_FROM, SOUL_PER_LEVEL, WORK_HAND, WORK_WIND, WORK_W
 import { DRIVING, DRIVING_LEARN, drivingPace, SAILING, SAILING_LEARN, sailingPace, vehicleQlPace } from './travel';
 import { isLayUp, LEAD_PACE, ROPE_WALK, ROPE_WALK_TIME, ROPEMAKING, ropePerLayUp, ropeTime } from './ropework';
 import { laySwirls, swirlLight, type MoteElement, type Swirl } from './motes';
+import { gameLava, LAVA_CELL, LAVA_SPARED_TILES, LB_LAVA, LB_OPENS, LB_WAY, lavaBlockIn, lavaByte, lavaDay, lavaDesign, lavaDesignOf, lavaLights, type LavaDesign, type LavaLand } from './lava';
 import { TRACKING, trackLevel, type Trail } from './tracking';
 import { hasRunestones, runestoneAt, RUNESTONES, stonePoint, stoneTiles } from './runestones';
 import { AWARENESS, Vision } from './vision';
@@ -440,6 +441,8 @@ export { wearPerUse };
 /** No team takes a vehicle faster than this, whatever is in the traces. */
 export const MAX_VEHICLE_SPEED = 4;
 /** How far ahead of the shafts a hitched team walks. */
+/** How long a block of the day's lava is believed before it is asked of the ground again, in ms (`Game.lavaBlockAt`). */
+const LAVA_MEMO_MS = 5000;
 const TRACE_LENGTH = 1.6;
 /** How fast a mount works its dinner off under a rider. One in the traces does not. */
 const HAUL_HUNGER = 0.0006;
@@ -1909,6 +1912,9 @@ export class Game {
   attuned: MoteElement | null = null;
   /** When you last sensed the swirls, in epoch seconds, as the island said it. */
   sensedAt = 0;
+  /** Volcano Isle's heat on you, 0 to 1, and until when a cooling draught slows it (epoch seconds), as the island said them (`lava.ts`). */
+  heat = 0;
+  cooledUntil = 0;
   /** The last sensing of the swirls (`infusion.ts`): when, in real seconds, and how far it reached; drawn on the map a while. */
   sensed: { real: number; x: number; y: number; range: number } | null = null;
 
@@ -4082,6 +4088,8 @@ export class Game {
     for (const l of this.spellLights) out.push(l);
     // A mote swirl's own small glow, soft as a spell's (`swirlLight`).
     if (this.swirls.size) for (const s of this.swirls.values()) if (near(s.x, s.y)) out.push(swirlLight(s));
+    // The day's lava on Volcano Isle, round you (`lavaLights`).
+    for (const l of lavaLights(this, px, py)) out.push(l);
     // The runestones' runes, round the middle of each (`runestoneLight`).
     if (hasRunestones(this.world.w)) {
       for (const s of RUNESTONES) {
@@ -10328,6 +10336,60 @@ export class Game {
   /** Pull up whatever is planted on a tile. */
   pullWater(x: number, y: number): void {
     if (this.waterPlants.delete(tileKey(x, y))) this.events.emit('world', x, y);
+  }
+
+  /** The lava's ground as this browser holds it (`gameLava`); today's design, and what its blocks a lair or a seam may open came to. */
+  private lavaLand: LavaLand | null = null;
+  private lavaMemo: { day: number; made: number; design: LavaDesign; box: [number, number, number, number]; opens: Map<number, boolean> } | null = null;
+
+  /** The day today's lava was laid for (`lavaDay`). */
+  lavaToday(): number {
+    return lavaDay(this.wallNow());
+  }
+
+  /** Today's design of the labyrinth (`lavaDesignOf`), asked again every few seconds: the day turns, and what is on its blocks can change. */
+  lavaNow(): NonNullable<Game['lavaMemo']> {
+    const now = performance.now();
+    const had = this.lavaMemo;
+    if (had && now - had.made <= LAVA_MEMO_MS) return had;
+    const day = this.lavaToday();
+    const design = lavaDesign(this.world.w, lavaDesignOf(this.world.seed, day));
+    const box: [number, number, number, number] = [design.bxa * LAVA_CELL, design.bya * LAVA_CELL, (design.bxa + design.nbx) * LAVA_CELL, (design.bya + design.nby) * LAVA_CELL];
+    const m = { day, made: now, design, box, opens: new Map<number, boolean>() };
+    this.lavaMemo = m;
+    return m;
+  }
+
+  /** Whether a whole block of the labyrinth is lava today (`lavaBlockIn`): its design's byte, and what a lair or a seam opens. */
+  lavaBlockAt(bx: number, by: number): boolean {
+    const m = this.lavaNow();
+    const b = lavaByte(m.design, bx, by);
+    if (!(b & LB_LAVA)) return false;
+    if (!(b & (LB_OPENS | LB_WAY))) return true;
+    const key = bx * 65536 + by;
+    let v = m.opens.get(key);
+    if (v === undefined) {
+      this.lavaLand ??= gameLava(this);
+      v = lavaBlockIn(this.lavaLand, m.design, bx, by);
+      m.opens.set(key, v);
+    }
+    return v;
+  }
+
+  /** Whether lava lies on a tile today (`lava.ts`, the island's `lava_at`): its block's, not on water and not where lava is spared. */
+  lavaAt(x: number, y: number): boolean {
+    const m = this.lavaNow();
+    if (x < m.box[0] || y < m.box[1] || x >= m.box[2] || y >= m.box[3] || !this.world.inBounds(x, y)) return false;
+    if (!this.lavaBlockAt(Math.floor(x / LAVA_CELL), Math.floor(y / LAVA_CELL))) return false;
+    this.lavaLand ??= gameLava(this);
+    const w = this.world;
+    if (w.getHeight(x, y) + w.getHeight(x + 1, y) + w.getHeight(x + 1, y + 1) + w.getHeight(x, y + 1) < 0) return false;
+    return !LAVA_SPARED_TILES.includes(w.getTile(x, y)) && !this.lavaLand.spared(x, y);
+  }
+
+  /** The box today's labyrinth lies in, in tiles: west, north, east, south. */
+  lavaBox(): readonly [number, number, number, number] {
+    return this.lavaNow().box;
   }
 
   /** The mote swirl turning over a tile, if there is one (`motes.ts`). */

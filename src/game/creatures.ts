@@ -6828,12 +6828,13 @@ export class Creatures {
    * Whether a tile is somewhere a creature can walk: passable, dry, in
    * bounds, and no steeper than anything stands on -- and not a tile on
    * piers, under a deck or on one, where nothing goes but a body on its own
-   * two feet (`piers.ts`, the island's `creature_tile_ok`).
+   * two feet (`piers.ts`, the island's `creature_tile_ok`) -- and not the day's lava (`lava.ts`).
    */
   tileOk(game: Game, x: number, y: number): boolean {
     const w = game.world;
     if (game.buildings.pierTiles.size && game.buildings.onPiers(x, y)) return false;
-    return w.inBounds(x, y) && w.isPassable(x, y) && w.centerHeight(x, y) >= -1 && standsOn(w, x, y);
+    // Nor onto the day's lava on Volcano Isle (`lava.ts`).
+    return w.inBounds(x, y) && w.isPassable(x, y) && w.centerHeight(x, y) >= -1 && standsOn(w, x, y) && !game.lavaAt(x, y);
   }
 
   /**

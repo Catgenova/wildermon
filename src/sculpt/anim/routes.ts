@@ -135,7 +135,7 @@ export const CLIP_OF_JOB: Readonly<Record<string, string>> = Object.fromEntries(
   // daily life (`./clips/life.ts`): lain asleep, sat meditating, knelt at prayer and at a sacrifice, eating and drinking
   ...Object.entries({
     sleep: 'sleep', meditate: 'meditate', sit_seat: 'meditate', pray: 'pray', pray_statue: 'pray-statue', sacrifice: 'sacrifice',
-    eat: 'eat', drink_tea: 'drink-cup', drink_from_vessel: 'drink-cup', drink_skin: 'drink-skin',
+    eat: 'eat', drink_tea: 'drink-cup', drink_draught: 'drink-cup', drink_from_vessel: 'drink-cup', drink_skin: 'drink-skin',
   }),
   // the brush's jobs by what is brushed (./clips/handwork.ts): a wall, a floor or the ground, the work held in the other hand
   ...['paint_wall', 'scrub_wall_paint'].map((job) => [job, 'brush-wall']),

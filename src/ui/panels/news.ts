@@ -79,6 +79,7 @@ import {
 import { tryGain } from '../../game/learn';
 import { DRIVING_LEARN, DRIVING_TOP, drivingPace, SAILING_LEARN, SAILING_TOP, sailingPace, TRAVEL_TOP_AT, VEHICLE_QL_TOP, vehicleQlPace } from '../../game/travel';
 import { deckBill, metres, PIER_CLEAR, PIER_DROP, PIER_WALL_DROP, PIER_WATER } from '../../game/piers';
+import { COOLING_DRAUGHT, DRAUGHT_DROP, DRAUGHT_FILL, DRAUGHT_SECS, HEAT_BURN, HEAT_DRAIN, HEAT_FILL, HEAT_ICE, HEAT_NEAR, HEAT_SCALE, LAVA_BAND, LAVA_BURN, LAVA_CELL, LAVA_DESIGNS, LAVA_HEART, LAVA_PATHS, LAVA_RADIUS, SERYLL_HEART } from '../../game/lava';
 import { COIN_FIND_ONE_IN, COIN_FINDS_A_DAY } from '../../game/forage';
 import { BURYABLE, BUSH_DEFS, ISLAND_FRUIT, ROCK_VARIANTS, TILE_DEFS, TileType, TREE_AGES, TREE_DAWN_UTC, TREE_DEFS } from '../../world/tiles';
 import { OWN_FRUIT_SHARE, REGIONS } from '../../world/regions';
@@ -4503,6 +4504,19 @@ export const NEWS: News[] = [
       `New: fishing net: ${LIFT_DROPS * NET_LIFT.length} drops off the net as it is lifted, ${SHAKE_DROPS} at each of ${NET_SHAKES.length} shakes.`,
       `New: rowing under way: ${OAR_DROPS} drops a blade at the catch; whirl pair a blade a stroke, ${SWIRL_SECS} s.`,
       'Without a graphics card: swimming strokes\' splashes, rings treading water, the float\'s strike and a catch only.',
+    ],
+  },
+  // Volcano Isle's lava and heat (`lava.ts`).
+  {
+    n: 616,
+    day: '2026-11-14',
+    lines: () => [
+      `New: lava on Volcano Isle: a labyrinth ${LAVA_RADIUS} tiles round the caldera, on its land; ${LAVA_DESIGNS} designs, a new one at each daily reset, never twice running; corridors ${LAVA_CELL} tiles wide; on the map.`,
+      `${LAVA_PATHS} ways in, about ${Math.round(360 / LAVA_PATHS)}° apart, each the only way through to the heart (${LAVA_HEART} tiles round the caldera, no lava); every other corridor ends.`,
+      `Changed: seryll lies in the labyrinth's heart only, on ${percent(SERYLL_HEART)} of its dry ground (was: anywhere on Volcano Isle).`,
+      `On lava: health −${percent(LAVA_BURN)}/s; no digging, building, setting down or founding; no creature steps on it. Never on a settlement, a road, a building or anything set down.`,
+      `New: heat meter (hud, Volcano Isle): +${percent(HEAT_FILL)}/s at ${metres(LAVA_BAND.foot)} m and up, ×${HEAT_NEAR} beside lava; full: health −${percent(HEAT_BURN)}/s; below: −${percent(HEAT_DRAIN)}/s.`,
+      `Heat fill: ×${1 - HEAT_SCALE} per dragon-scale piece; −${percent(HEAT_ICE)} × strength per ice-infused piece (ice now infuses armour); ${itemDef(COOLING_DRAUGHT).name} (alchemy; mint, water, ice mote): heat −${percent(DRAUGHT_DROP)}, fill ×${DRAUGHT_FILL} for ${DRAUGHT_SECS / 60} min.`,
     ],
   },
   // The level shown while set: the HUD's chip and the corners' marks (`Hud.drawLevel`, `Renderer.drawLevelMarks`).

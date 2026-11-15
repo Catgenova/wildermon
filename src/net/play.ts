@@ -547,6 +547,9 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
       // The element you are attuned to, as the island last worked it out, and when you last sensed the swirls (`infusion.ts`).
       if (typeof what.stats.attune === 'number') game.attuned = MOTE_ELEMENTS[what.stats.attune] ?? null;
       if (typeof what.stats.sensedAt === 'number') game.sensedAt = what.stats.sensedAt;
+      // Volcano Isle's heat, and a cooling draught's end (`lava.ts`).
+      if (typeof what.stats.heat === 'number') game.heat = what.stats.heat;
+      if (typeof what.stats.cool === 'number') game.cooledUntil = what.stats.cool;
       const took = tookOff(was, s.health);
       if (took) {
         game.events.emit('hit', game.player.x, game.player.y, took, 'taken');

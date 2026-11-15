@@ -5,7 +5,8 @@ import { PROSPECT_HEAD, tryGain } from './learn';
 import { BURYABLE, BUSH_DEFS, SLAB_BY_ITEM, SLAB_VARIANTS, TILE_DEFS, TREE_AGES, TREE_DEFS, TileType, bushSpecies, packTreeData, slabVariant, treeAge, treeSpecies, treeVariant, lastDawn, nextDawn, type TreeAge, LAWN_AFTER, MOWN_TODAY, MOWING, mownDays, mownToday } from '../world/tiles';
 import { FLOWER_ACTIONS, groundSays } from './wildflowers';
 import { MOTE_ACTIONS, WATER_MOTE, WATER_MOTES_EACH } from './motes';
-import { hasRunestones, RUNESTONES, STONE_GUARDED, stoneGap, stoneGroundRefusal, TELESTONE, TELESTONE_ACTIONS, telestoneSays } from './runestones';
+import { hasRunestones, RUNESTONES, STONE_GUARDED, stoneGap, stoneGroundRefusal, stoneJobTiles, TELESTONE, TELESTONE_ACTIONS, telestoneSays } from './runestones';
+import { LAVA_ACTIONS, LAVA_GUARDED, lavaGroundRefusal } from './lava';
 import { DAILY_RESET, isSeam, metres } from '../world/tiles';
 import type { World } from '../world/world';
 import { bedrockAt, oreAt } from '../world/ore';
@@ -3378,6 +3379,8 @@ export const ACTIONS: ActionDef[] = [
   ...SIGN_ACTIONS,
   ...FIRST_AID_ACTIONS,
   ...REMEDY_ACTIONS,
+  // A cooling draught drunk (`lava.ts`).
+  ...LAVA_ACTIONS,
   ...PLACEABLE_ACTIONS,
   // Sounding the depth from a boat, and fitting a rigging set (`sailActions.ts`).
   ...SAIL_ACTIONS,
@@ -3464,6 +3467,15 @@ for (const def of ACTIONS) {
   if (!STONE_GUARDED.has(def.id)) continue;
   const was = def.check;
   def.check = (t, g) => stoneGroundRefusal(g, def, t) ?? was?.(t, g) ?? null;
+}
+/*
+ * And the day's lava on Volcano Isle (`lava.ts`), which nothing digs, builds, sets down or founds on: asked of the
+ * same tiles a stone's ground is, after the stone. The island asks the same in `lava_ground_refusal`.
+ */
+for (const def of ACTIONS) {
+  if (!LAVA_GUARDED.has(def.id)) continue;
+  const was = def.check;
+  def.check = (t, g) => (g ? lavaGroundRefusal(g, stoneJobTiles(g, def, t)) : null) ?? was?.(t, g) ?? null;
 }
 
 export const ACTION_BY_ID = new Map(ACTIONS.map((a) => [a.id, a]));

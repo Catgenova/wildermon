@@ -185,6 +185,12 @@ import {
 } from '../src/game/lamps';
 import { CANDLE_BURN, TORCH_BURN } from '../src/game/light';
 import {
+  COOLING_DRAUGHT, DRAUGHT_DROP, DRAUGHT_FILL, DRAUGHT_NOT, DRAUGHT_SECS, draughtSaid, HEAT_BURN, HEAT_DRAIN, HEAT_FILL, HEAT_ICE, HEAT_NEAR, HEAT_SAID, HEAT_SCALE,
+  HEAT_SCALE_PIECES, HEAT_WARN, LAVA_BAND, LAVA_BURN, LAVA_CELL, LAVA_CENTRE, LAVA_DESIGNS, LAVA_FROM_DAY, LAVA_GUARDED, LAVA_HEART, LAVA_ISLE, LAVA_PATHS,
+  LAVA_RADIUS, LAVA_REACH_PAST, LAVA_SAID, LAVA_SALT, LAVA_SEAM, LAVA_SIZE, LAVA_SPARED_TILES, LB_LAVA, LB_OPENS, LB_WAY, lavaRays,
+} from '../src/game/lava';
+import { LAVA_CHART } from '../src/world/lavachart';
+import {
   ELEMENTALISM, ISLAND_ELEMENT, LAND_ELEMENTS, MOTE_ELEMENTS, MOTES_LEAST, MOTES_MOST, MOTES_STEP, SEASON_ELEMENT, SWIRL_DARK, SWIRL_LIGHT, SWIRL_DRAWS, SWIRL_SAID, SWIRL_SEASON, SWIRL_TRIES, SWIRLS_A_DAY,
   WATER_MOTE, WATER_MOTE_NEED, WATER_MOTES_EACH, LIFE_MOTE, LIFE_MOTE_NEED, LIFE_MOTES_EACH, POULTICE_HEAL, STATUE_MOTES,
 } from '../src/game/motes';
@@ -3334,4 +3340,40 @@ for (const [fn, v] of [
 out.push(`create or replace function thepath_need(p_step text) returns int language sql immutable as $fn$ select case p_step ${
   ([['forage', PATH_FORAGE], ['fish', PATH_FISH], ['clay', PATH_CLAY], ['bricks', SMELTER_BRICKS()], ['mortar', SMELTER_MORTAR()],
     ['workers', UPGRADE_WORKERS], ['lumps', ANVIL_LUMPS]] as Array<[string, number]>).map(([k, n]) => `when ${q(k)} then ${n} `).join('')}else 1 end $fn$;`);
+/*
+ * Volcano Isle's lava and heat (`lava.ts`): the maze's blocks, band, box, island, seam and burn; the ground it spares
+ * and the jobs it refuses, in its words; the heat meter's rates, what slows it, and the draught. The rules that read
+ * them are `lava_*` and `heat_*` in the migrations.
+ */
+for (const [fn, v] of [
+  ['lava_cell', LAVA_CELL], ['lava_foot', LAVA_BAND.foot], ['lava_isle', LAVA_ISLE], ['lava_seam', LAVA_SEAM], ['lava_size', LAVA_SIZE],
+  ['lava_radius', LAVA_RADIUS], ['lava_heart', LAVA_HEART], ['lava_designs', LAVA_DESIGNS], ['lava_paths', LAVA_PATHS], ['lava_wall_salt', LAVA_SALT],
+  ['lava_from_day', LAVA_FROM_DAY], ['lb_lava', LB_LAVA], ['lb_opens', LB_OPENS], ['lb_way', LB_WAY], ['lava_reach_past', LAVA_REACH_PAST],
+] as Array<[string, number]>) {
+  out.push(`create or replace function ${fn}() returns int language sql immutable as $fn$ select ${v} $fn$;`);
+}
+for (const [fn, v] of [
+  ['lava_burn', LAVA_BURN], ['heat_fill', HEAT_FILL], ['heat_near', HEAT_NEAR], ['heat_drain', HEAT_DRAIN], ['heat_burn', HEAT_BURN],
+  ['heat_scale', HEAT_SCALE], ['heat_ice', HEAT_ICE], ['draught_fill', DRAUGHT_FILL], ['draught_secs', DRAUGHT_SECS], ['draught_drop', DRAUGHT_DROP],
+  ['heat_warn', HEAT_WARN],
+] as Array<[string, number]>) {
+  out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);
+}
+out.push(`create or replace function lava_centre() returns int[] language sql immutable as $fn$ select array[${LAVA_CENTRE.join(', ')}]::int[] $fn$;`);
+/* Each design's three rays and its wedges' middle lines, as whole vectors (`lavaRays`): x0, y0, x1, y1, x2, y2. */
+out.push(`create or replace function lava_rays(p_design int) returns int[] language sql immutable as $fn$ select case p_design ${
+  Array.from({ length: LAVA_DESIGNS }, (_, d) => `when ${d} then array[${lavaRays(d).rays.flat().join(', ')}]::int[] `).join('')}end $fn$;`);
+out.push(`create or replace function lava_mids(p_design int) returns int[] language sql immutable as $fn$ select case p_design ${
+  Array.from({ length: LAVA_DESIGNS }, (_, d) => `when ${d} then array[${lavaRays(d).mids.flat().join(', ')}]::int[] `).join('')}end $fn$;`);
+/* Volcano Isle's land as the labyrinth reads it off the chart (`lavachart.ts`): where, how big, and its rows. */
+out.push(`create or replace function lava_chart_frame() returns int[] language sql immutable as $fn$ select array[${[LAVA_CHART.n, LAVA_CHART.x0, LAVA_CHART.y0, LAVA_CHART.w, LAVA_CHART.h].join(', ')}]::int[] $fn$;`);
+out.push(`create or replace function lava_chart_rows() returns text[] language sql immutable as $fn$ select ${arr([...LAVA_CHART.rows])} $fn$;`);
+out.push(`create or replace function lava_spared_tiles() returns int[] language sql immutable as $fn$ select array[${LAVA_SPARED_TILES.join(', ')}]::int[] $fn$;`);
+out.push(`create or replace function lava_guarded(p_action text) returns boolean language sql immutable as $fn$ select p_action = any (${arr([...LAVA_GUARDED])}) $fn$;`);
+out.push(`create or replace function heat_scale_pieces() returns text[] language sql immutable as $fn$ select ${arr(HEAT_SCALE_PIECES)} $fn$;`);
+for (const [fn, v] of [
+  ['lava_said', LAVA_SAID], ['cooling_draught', COOLING_DRAUGHT], ['draught_not_said', DRAUGHT_NOT], ['draught_said', draughtSaid], ['heat_full_said', HEAT_SAID.full], ['heat_lava_said', HEAT_SAID.lava],
+] as Array<[string, string]>) {
+  out.push(`create or replace function ${fn}() returns text language sql immutable as $fn$ select ${q(v)} $fn$;`);
+}
 console.log(out.join('\n'));

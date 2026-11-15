@@ -82,16 +82,22 @@ const marks = {
  *
  * `rock` moved once more when gold became the Northeast Tundra's alone: a gold
  * seam anywhere else is iron, and the move tool's third move writes that into
- * every island already founded. *
+ * every island already founded.
+ *
  * `tiles` and `data` moved back on 14 November, when the Northeast Tundra grew
  * trees again: the two marks are the ones from before it was made treeless.
  * `tools/move-ground.ts`'s `regrowTrees` puts the trees back on islands
  * already founded, on tiles that still hold what the treeless generator laid.
+ *
+ * `rock` moved on 15 November, when seryll went to the heart of Volcano Isle's
+ * labyrinth of lava and nowhere else (`rockKindFor`, `lavaland.ts`): a seryll
+ * seam anywhere else is iron, and the heart lays its own. `seryllHome` in
+ * `tools/move-ground.ts` writes that into every island already founded.
  */
 const PINNED: Record<keyof typeof marks, string> = {
   tiles: '07fcda3bbd161f34',
   data: '27c4f8f76a3cc0d6',
-  rock: '3e048a98cb7bcb9c',
+  rock: 'd4d6752047eb7b94',
   heights: '561c219755d4479c',
   dirt: '2c0887dc7256457a',
 };
