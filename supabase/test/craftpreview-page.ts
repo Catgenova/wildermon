@@ -14,7 +14,9 @@ import { RECIPES } from '../../src/game/recipes';
 import type { UiLight, UiStyle } from '../../src/game/settings';
 import { setAnimations } from '../../src/engine/motion';
 import { sculptedFigures, sculptedReady, sculptSoft, flatFigures } from '../../src/render/figure';
-import { CraftPreview, craftPreviewKnobs, previewOf, type PreviewKind, type Stage } from '../../src/ui/craftpreview';
+import { CraftPreview, craftPreviewKnobs, previewOf, setDownPiece, type PreviewKind, type Stage } from '../../src/ui/craftpreview';
+import { isFurniture } from '../../src/game/furniture';
+import { crateKindOfItem } from '../../src/game/crates';
 import { CRAFT_TABS, craftTabOf, type CraftPanel as Panel, type CraftTab } from '../../src/ui/panels/craft';
 import { itemDef } from '../../src/game/items';
 import { kitSync } from '../../src/render/kitpieces';
@@ -178,6 +180,8 @@ const api = {
   recipeOf,
   /** Every recipe's thing, and the preview it has. */
   kinds: (): Record<string, PreviewKind | null> => Object.fromEntries(RECIPES.map((r) => [r.result, previewOf(r.result)])),
+  /** Every recipe's thing that is set down in the world (a piece, a station, a trap, a stake, a crate) and has no preview. */
+  setDownUnshown: (): string[] => [...new Set(RECIPES.map((r) => r.result))].filter((id) => (isFurniture(id) || setDownPiece(id) || !!crateKindOfItem(id)) && !previewOf(id)),
   /** A recipe's row brought into view and clicked on its name, as a player chooses one. */
   async choose(id: string): Promise<PreviewState> {
     panel.showRecipe(id);

@@ -6,9 +6,18 @@ CREATE OR REPLACE FUNCTION public.level_gap(p_world uuid, p_building integer, p_
  STABLE
 AS $function$
   with area as (select * from frame_storey(p_world, p_building, p_level)),
+  floored as (
+    select t.x, t.y from area t
+    where exists (select 1 from floor_tile f where f.world_id = p_world and f.level = p_level and f.x = t.x and f.y = t.y)),
+  -- An open well: a tile of storey 2 and up with nothing on its floor slot takes no wall, and none is asked of it.
+  -- A storey with no floor at all is a storey not started, and every side of it is asked for.
+  asked as (
+    select t.x, t.y from area t
+    where p_level < 1 or not exists (select 1 from floored)
+       or exists (select 1 from floored q where q.x = t.x and q.y = t.y)),
   sides as (
     select t.x, t.y, s.side, b.dir, b.x as bx, b.y as by
-    from area t
+    from asked t
     cross join lateral (values ('n'), ('e'), ('s'), ('w')) as s(side)
     cross join lateral across(t.x, t.y, s.side) a
     cross join lateral border_of(t.x, t.y, s.side) b
@@ -21,20 +30,24 @@ AS $function$
     where (w.type is null and not frame_carried(p_world, p_level, s.dir, s.bx, s.by))
        or (w.type is not null and not bill_done(w.needed))),
   -- And anything planned inside it and never finished, which stops a storey
-  -- being closed in just as surely as a hole in the outside wall.
+  -- being closed in just as surely as a hole in the outside wall: named by the
+  -- tile its border is the north or west side of.
   within as (
-    select count(*)::int as n from wall w
+    select w.x, w.y, case when w.dir = 'h' then 'n' else 'w' end as side from wall w
     where w.world_id = p_world and w.building = p_building and w.level = p_level
       and not bill_done(w.needed)
       and not exists (select 1 from sides s where s.dir = w.dir and s.bx = w.x and s.by = w.y)),
+  named as (
+    select h.x, h.y, h.side from holes h
+    union all
+    select i.x, i.y, i.side from within i),
   tally as (
-    select count(*) filter (where bare)::int as bare,
-           count(*) filter (where not bare)::int + (select n from within) as going,
-           (select ', nearest the ' || side_name(h.side) || ' side of ' || h.x || ',' || h.y
-              from holes h
-             order by (h.x + 0.5 - p_x) ^ 2 + (h.y + 0.5 - p_y) ^ 2, h.x, h.y, strpos('nesw', h.side)
-             limit 1) as at
-    from holes)
+    select (select count(*) filter (where bare) from holes)::int as bare,
+           ((select count(*) filter (where not bare) from holes) + (select count(*) from within))::int as going,
+           (select ', nearest the ' || side_name(n.side) || ' side of ' || n.x || ',' || n.y
+              from named n
+             order by (n.x + 0.5 - p_x) ^ 2 + (n.y + 0.5 - p_y) ^ 2, n.x, n.y, strpos('nesw', n.side)
+             limit 1) as at)
   select case when bare = 0 and going = 0 then null else
     'Storey ' || (p_level + 1) || ' not enclosed: '
       || array_to_string(array_remove(array[

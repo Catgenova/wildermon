@@ -39,7 +39,7 @@ import { WELL_TRICKLE, WELL_TRICKLE_AT, WELL_TRICKLE_QL, ACROSS_OF, DEED_PLACE, 
 import { hiveTakes } from './bees';
 import { crateTheRest, CREATURE_CRATE, emptyCrate, occupiedRefusal, shutIn, teamOut, teamOutRefusal } from './creaturecrate';
 import { bury, crumble, graveAt, graveRefusal, graveSays, GRAVE_MARK } from './graves';
-import { cropStageSeconds, RIPE, settleCrop, type Crop } from './farming';
+import { cropStageSeconds, FARM_ACTION_BY_ID, RIPE, settleCrop, type Crop } from './farming';
 import { fieldClock, fieldRate, GLASSHOUSE_GROWTH, handClock, handRate, PLANTER_GROWTH, STILL_CLOCK } from './growth';
 import { glassResync, underGlass } from './glasshouse';
 import { pannierName, pannierRefusal, panniersOffered, pannierTake } from './panniers';
@@ -98,7 +98,7 @@ import { Skills, SKILL_BY_ID, SKILL_DEFS, isQuiet } from './skills';
 import { type CheckAt, failFactor, failFactorSaid, mindEaseAt, skillOdds } from './failwhy';
 import { jewelGain } from './gems';
 import { earnedBy, knackBonus, knackChance, knackLands, KNACK_CAP, TITLE_BY_ID } from './titles';
-import { TileIndex, Tally, keyX, keyY, tileKey } from './tileindex';
+import { TileIndex, Tally, cropKey, keyX, keyY, tileKey } from './tileindex';
 import { DARK_HIT, NIGHT_EYES_FROM, SOUL_PER_LEVEL, WORK_HAND, WORK_WIND, WORK_WIND_SPENT, HEAVY_SKILLS, WORK_BACK } from './learn';
 import { DRIVING, DRIVING_LEARN, drivingPace, SAILING, SAILING_LEARN, sailingPace, vehicleQlPace } from './travel';
 import { isLayUp, LEAD_PACE, ROPE_WALK, ROPE_WALK_TIME, ROPEMAKING, ropePerLayUp, ropeTime } from './ropework';
@@ -1401,7 +1401,7 @@ export class Game {
       this.campfires.set(f.id, f);
       if (f.id >= this.nextFireId) this.nextFireId = f.id + 1;
     }
-    for (const c of init.crops ?? []) this.crops.set(tileKey(c.x, c.y), c);
+    for (const c of init.crops ?? []) this.crops.set(cropKey(c.x, c.y, c.level ?? 0), c);
     // A save from before the year has no field clock: it starts where the game clock stands, so nothing growing jumps.
     this.fieldTime = init.fieldTime ?? this.time;
     this.handTime = init.handTime ?? this.fieldTime;
@@ -5472,6 +5472,31 @@ export class Game {
     this.events.emit('action');
   }
 
+  /**
+   * Stop the job in hand, every go of it left, and start the next one waiting,
+   * as it would start had the job finished: the × on the job in hand in the
+   * queue window. Unlike `cancelAction` the jobs behind it stay where they are.
+   * On an island the island does it (`rpc_skip`) and the beat that follows
+   * says what is in hand now; here the next comes off the queue at once.
+   */
+  skipAction(): void {
+    const a = this.action;
+    if (!a) return;
+    this.travel = null;
+    this.fightTarget = null;
+    this.held = false;
+    this.action = null;
+    if (this.skip) this.skip();
+    else {
+      if (a.state === 'performing') this.logMsg(`Stopped ${a.def.verb}.`, 'info');
+      this.nextInQueue();
+    }
+    this.events.emit('action');
+  }
+
+  /** Said to the island by `skipAction` (`rpc_skip`); filled in by `play.ts`. */
+  skip: (() => void) | null = null;
+
   /** Actions that apply to a target, with the reason each may be unavailable. */
   actionsFor(target: Target): Array<{ def: ActionDef; reason: string | null }> {
     const out: Array<{ def: ActionDef; reason: string | null }> = [];
@@ -6298,9 +6323,14 @@ export class Game {
     return Math.max(Math.abs(px - tile.x), Math.abs(py - tile.y)) <= (def.rangeFor?.(this) ?? def.range ?? 1);
   }
 
-  /** The storey a piece is being set down on, picked on a pinned storey (`storeyview.ts`); undefined for any other job. */
+  /**
+   * The storey a job is done from, where it names one: a piece set down on a pinned storey (`storeyview.ts`), and a
+   * farming job on a garden bed of a pinned storey, which is worked from its own storey (`gardenbed.ts`). Undefined
+   * for any other job.
+   */
   private setsDownOn(def: ActionDef, target: Target): number | undefined {
-    return def.id === 'place_furniture' && target.kind === 'tile' && typeof target.level === 'number' && target.level >= 0 ? target.level : undefined;
+    if (target.kind !== 'tile' || typeof target.level !== 'number' || target.level < 0) return undefined;
+    return def.id === 'place_furniture' || FARM_ACTION_BY_ID.has(def.id) ? target.level : undefined;
   }
 
   private walkToward(def: ActionDef, target: Target): boolean {
@@ -9532,7 +9562,7 @@ export class Game {
       const glass = this.glassNow();
       const hand = this.handNow();
       for (const c of ground.crops) {
-        this.crops.set(tileKey(c.x, c.y), {
+        this.crops.set(cropKey(c.x, c.y, typeof c.level === 'number' ? c.level : 0), {
           x: c.x, y: c.y, id: c.id, stage: c.stage,
           // On a covered garden bed, on the still clock (`STILL_CLOCK`), which `grown` is below.
           stageAt: (c.still ? STILL_CLOCK : c.glass ? glass : c.hand ? hand : field) - into(c),
@@ -10393,8 +10423,20 @@ export class Game {
     }
   }
 
-  cropAt(x: number, y: number): Crop | undefined {
-    return this.crops.get(tileKey(x, y));
+  /** The crop on a storey of a tile (a field's, or a ground-floor bed's, on the ground's): one a storey (`cropKey`). */
+  cropAt(x: number, y: number, storey = 0): Crop | undefined {
+    return this.crops.size ? this.crops.get(cropKey(x, y, storey)) : undefined;
+  }
+
+  /** Every crop on a tile, a storey's each, from the ground up. */
+  cropsAt(x: number, y: number): Crop[] {
+    const out: Crop[] = [];
+    if (!this.crops.size) return out;
+    for (let l = 0; l <= TOP_LEVELS; l++) {
+      const c = this.crops.get(cropKey(x, y, l));
+      if (c) out.push(c);
+    }
+    return out;
   }
 
   /** The water lily or lotus planted on a tile, if there is one. */
@@ -10515,7 +10557,7 @@ export class Game {
     if (glass) c.glass = true;
     if (hand) c.hand = true;
     if (level !== undefined) c.level = level;
-    this.crops.set(tileKey(x, y), c);
+    this.crops.set(cropKey(x, y, level ?? 0), c);
     this.sown.set(tileKey(x, y), id);
     this.events.emit('world', x, y);
     return c;
@@ -10536,7 +10578,7 @@ export class Game {
     if (c.planter !== undefined) {
       this.planted.delete(c.planter);
       this.events.emit('world', c.x, c.y);
-    } else this.removeCrop(c.x, c.y);
+    } else this.removeCrop(c.x, c.y, c.level ?? 0);
   }
 
   /** The planter a piece's id names, or nothing when it names anything else. */
@@ -10605,8 +10647,8 @@ export class Game {
     this.sown.delete(tileKey(x, y));
   }
 
-  removeCrop(x: number, y: number): void {
-    this.crops.delete(tileKey(x, y));
+  removeCrop(x: number, y: number, storey = 0): void {
+    this.crops.delete(cropKey(x, y, storey));
     this.events.emit('world', x, y);
   }
 

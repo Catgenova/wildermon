@@ -3,8 +3,8 @@
  * it, in the material the row is set to.
  *
  * Which things have one is read off the models (`previewOf`), never listed: a piece with a model of its own
- * (`pieceModelled`; a smelter, a kiln, a work post, a settlement's stake and a trap as the renderer draws them set
- * down) as it stands set down, turning, by day; a cart, a wagon or a hull the same (`isDriveable`); a piece a body
+ * (`pieceModelled`; a smelter, a kiln, a work post, a settlement's stake, a trap and a crate as the renderer draws them
+ * set down) as it stands set down, turning, by day; a cart, a wagon or a hull the same (`isDriveable`); a piece a body
  * wears that the figure draws (`gearModelled`) on your own figure in your look with nothing else on; a weapon in its
  * hand, in a fight; a tool the figure works with (`CLIP_OF_TOOL`) at a job that uses it; and anything else a body
  * holds that has a model of its own (`propModelled`: a loaf, a candle, a lantern) alone, turning. Anything else has
@@ -47,7 +47,8 @@ import { animationsOff, lessMotion, setAnimations } from '../engine/motion';
 import { drawFigure, drawPropAlone, figureJoint, flatFigures, gearModelled, onScreen, propModelled, sculptSoft, viewOf, type FigurePose, type V3 } from '../render/figure';
 import { drawWorkPost } from '../render/workpost';
 import { drawDeedTotem } from '../render/deedtotem';
-import { drawTrap } from '../render/sprites';
+import { crateSprite, drawTrap, spriteAt, type Sprite } from '../render/sprites';
+import { CRATE_DEFS, type CrateKind } from '../game/crates';
 import { TRAPS } from '../game/trapdefs';
 import { drawFurniture, mossTrim, pieceModelled, pieceView, roseTrim, rowedPiece, vineTrim, WHEELS } from '../render/furniture';
 import { kitIsSync, kitSync } from '../render/kitpieces';
@@ -104,9 +105,22 @@ const KILN_LOOK: KilnLook = { lit: false, firing: false };
 const POST_LOOK = { worked: false };
 const TRAP_LOOK = { baited: false, sprung: false };
 /**
+ * A thing set down that the renderer draws as one picture (`Sprite`, `sprites.ts`), the picture for a way round
+ * (`turn`, 0-7) where it has them: put down at its foot as the renderer puts it (`drawImage` at `ax`, `ay`), made at
+ * the step that holds the zoom it is drawn at. One with one picture is shown still.
+ */
+const sprited = (sprite: (turn: number) => Sprite): SetDown => ({
+  draw: (g, x, y, zoom, turn) => {
+    const s = spriteAt(zoom, () => sprite(turn));
+    g.drawImage(s.canvas, x - s.ax * zoom, y - s.ay * zoom, s.w * zoom, s.h * zoom);
+    return [-s.ax, -s.ay, s.w - s.ax, s.h - s.ay];
+  },
+  stages: [{}],
+});
+/**
  * What is set down that is not furniture, by its item, and how each is drawn as the renderer draws it set down: the
  * smelter and the kiln (`forge.ts`), a work post (`workpost.ts`), the settlement's stake as the token it stands as
- * (`deedtotem.ts`, a block for each level), and the traps (`drawTrap`).
+ * (`deedtotem.ts`, a block for each level), the traps (`drawTrap`), and the crates (`crateSprite`, one way round).
  */
 const STATIONS: Record<string, SetDown> = {
   smelter: { draw: (g, x, y, zoom, turn, _m, look, t) => drawSmelter(g, x, y, zoom, turn, { ...SMELTER_LOOK, ...look }, 0, t, false), stages: flips({ ...SMELTER_LOOK }, 'unlit') },
@@ -120,15 +134,14 @@ const STATIONS: Record<string, SetDown> = {
     stages: Array.from({ length: MAX_DEED_LEVEL }, (_, i) => ({ name: `level ${i + 1}`, look: { level: i + 1 } })),
   },
   ...Object.fromEntries(Object.keys(TRAPS).map((kind): [string, SetDown] => [kind, {
-    draw: (g, x, y, zoom, _turn, _m, look) => {
-      drawTrap(g, x, y, zoom, kind, !!look.baited, !!look.sprung);
-      return [0, 0, 0, 0];
-    },
-    stages: flips({ ...TRAP_LOOK }, 'set'),
+    draw: (g, x, y, zoom, turn, _m, look) => drawTrap(g, x, y, zoom, kind, !!look.baited, !!look.sprung, turn, !!look.worn),
+    // Set, baited and sprung as its flags turn on, and then worn, as one long set down is drawn (`TRAP_WORN`).
+    stages: [...flips({ ...TRAP_LOOK }, 'set'), { name: 'worn', look: { ...TRAP_LOOK, worn: true } }],
   }])),
+  ...Object.fromEntries(Object.entries(CRATE_DEFS).map(([kind, d]): [string, SetDown] => [d.item, sprited(() => crateSprite(kind as CrateKind))])),
 };
 
-/** Whether a thing is set down without being furniture (a station, a work post, a stake, a trap): drawn as the renderer draws it set down. */
+/** Whether a thing is set down without being furniture (a station, a work post, a stake, a trap, a crate): drawn as the renderer draws it set down. */
 export const setDownPiece = (id: string): boolean => !!STATIONS[id];
 
 /** The island's fight (`creatureActions.ts`): the job a body holds its weapon out at (`heldIn`). */

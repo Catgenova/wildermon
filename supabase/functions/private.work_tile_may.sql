@@ -92,7 +92,7 @@ begin
                   and i.gx between v_x0 and v_x1 and i.gy between v_y0 and v_y1
                 group by i.gx, i.gy) ig
       on ig.gx = g.gx and ig.gy = g.gy
-    left join (select c.x, c.y from crop c
+    left join (select distinct c.x, c.y from crop c
                 where p_kind = 'farm' and c.world_id = p_world and c.x between v_x0 and v_x1 and c.y between v_y0 and v_y1) cr
       on cr.x = g.gx and cr.y = g.gy
     -- And a finished garden bed on any storey (`worker_bed` says which may be sown).

@@ -54,7 +54,9 @@ import { visualOf } from '../../src/render/spells/index';
 import { drawShine, shines } from '../../src/render/shine';
 import { campfireHit, drawCampfireNight } from '../../src/render/kit/campfire';
 import { FIRE_CAPACITY } from '../../src/game/campfire';
+import { TRAPS } from '../../src/game/trapdefs';
 import { NIGHT_WASH } from '../../src/render/nightwash';
+import { prospectMark, seam, UNIDENTIFIED_FACE, veinGlints, veinLit, veinLook, VeinNight } from '../../src/render/seams/runecut';
 
 export type Ctx = CanvasRenderingContext2D;
 export type Box = [number, number, number, number];
@@ -419,6 +421,15 @@ const FIRE_STATES: Array<{ label: string; lit: boolean; fuel: number; ash: numbe
   { label: 'lit, full', lit: true, fuel: 1, ash: 0 },
 ];
 
+/** A trap's states on its sheet: as the renderer draws one set, baited, sprung (something in it) and worn (`TRAP_WORN`). */
+const TRAP_STATES: Array<{ label: string; baited: boolean; sprung: boolean; worn: boolean }> = [
+  { label: 'set', baited: false, sprung: false, worn: false },
+  { label: 'baited', baited: true, sprung: false, worn: false },
+  { label: 'sprung', baited: false, sprung: true, worn: false },
+  { label: 'worn', baited: true, sprung: false, worn: true },
+  { label: 'worn, sprung', baited: false, sprung: true, worn: true },
+];
+
 /** How many things lie in the sack on its sheet. */
 const SACK_COUNTS = [1, 4, 20];
 
@@ -438,9 +449,9 @@ const device: Family = {
       variants: [1, 2, 3].map((r) => ({ label: `rare ${r}`, set: { variant: r } })),
       motions: [frames('shine', 'rare shine, rare 3', 6, { variant: 3 }, 1.5)], emissive: false, footprint: [1, 1], ref: 4,
     },
-    ...['snare', 'creel', 'deadfall'].map((k): Asset => ({
-      family: 'device', kind: `trap_${k}`, name: `Trap: ${k}`, register: 'line', style: 'flat', entry: 'drawTrap', file: 'src/render/sprites.ts', views: 'none',
-      states: states(['set', 'baited', 'sprung']), variants: [], motions: [], emissive: false, footprint: [1, 1], ref: 4,
+    ...Object.values(TRAPS).map(({ id: k, name }): Asset => ({
+      family: 'device', kind: `trap_${k}`, name: `Trap: ${name.toLowerCase()}`, register: 'line', style: 'kit', entry: 'drawTrap', file: 'src/render/kit/traps.ts', views: 'turns',
+      states: TRAP_STATES.map((s, state) => ({ label: s.label, set: { state } })), variants: [], motions: [], emissive: false, footprint: [1, 1], ref: 4,
     })),
     ...['plank', 'log', 'stone', 'rope'].map((k): Asset => ({
       family: 'device', kind: `deck_${k}`, name: `Deck: ${k}`, register: 'line', style: 'flat', entry: 'drawDeck', file: 'src/render/sprites.ts', views: 'none',
@@ -460,7 +471,10 @@ const device: Family = {
       if (shines(o.variant)) drawShine(ctx, sx, sy, zoom, o.variant, 3 * 4099 + 4, o.t, spr.w * zoom, spr.ay * zoom);
       return;
     }
-    if (a.kind.startsWith('trap_')) { drawTrap(ctx, sx, sy, zoom, a.kind.slice(5), o.state === 1, o.state === 2); return; }
+    if (a.kind.startsWith('trap_')) {
+      const s = TRAP_STATES[o.state] ?? TRAP_STATES[0];
+      return drawTrap(ctx, sx, sy, zoom, a.kind.slice(5), s.baited, s.sprung, o.turn, s.worn);
+    }
     drawDeck(ctx, sx, sy, zoom, a.kind.slice(5), o.state >= 1, 0, undefined, o.variant / 10, 3);
   },
   night: (ctx, sx, sy, zoom, a, o) => {
@@ -680,6 +694,65 @@ const sceneFamily = (id: string, about: string, file: string, kinds: Array<[stri
   draw: () => {},
 });
 
+/* ---- stone: the seams cut into the rock; stones and outcrops from the scene ---------------- */
+
+/** The seams on the ore sheet, rare first, and the unidentified one the island sends (`UNIDENTIFIED_FACE`): by `ROCK_VARIANTS` place. */
+const ORE_KINDS = [11, 12, 13, 14, 9, 10, 4, 15, 6, 7, 8, 5, 1, 2, 3, UNIDENTIFIED_FACE];
+const ORE_STATES = ['bare', 'prospected, bare', 'prospected, buried'];
+/** A tile's screen corners at (sx, sy), clockwise from the topmost: a diamond at the cardinal turns, a rectangle at the diagonals (`view.ts`). */
+function orePts(sx: number, sy: number, zoom: number, turn: number): number[] {
+  const w = (turn % 2 ? 48 * Math.SQRT1_2 : 48) * zoom, h = (turn % 2 ? 24 * Math.SQRT1_2 : 24) * zoom;
+  return turn % 2
+    ? [sx - w, sy - h, sx + w, sy - h, sx + w, sy + h, sx - w, sy + h]
+    : [sx, sy - h, sx + w, sy, sx, sy + h, sx - w, sy];
+}
+/** The prospector's mark over the night, as `drawProspected` lays it after the wash. */
+function oreProspect(ctx: Ctx, pts: number[], zoom: number, kind: number, o: Opts): void {
+  if (!o.state) return;
+  if (o.state === 1) veinLit(ctx, 3, 5, kind, pts, zoom, 1);
+  prospectMark(ctx, pts, zoom, kind, o.state === 1, 0.8 + Math.sin(o.t * 3) * 0.15);
+}
+const stone: Family = {
+  id: 'stone', register: 'paint', ref: 4,
+  about: 'Seams cut into the rock, one recess a tile, with the prospector\'s mark; stones and outcrops are drawn from the scene: see `world:rock`.',
+  list: () => [
+    ...([['stones', 'Stones', 'src/render/stones.ts'], ['outcrop', 'Outcrop', 'src/render/outcrops.ts']] as const).map(([kind, name, file]): Asset => ({
+      family: 'stone', kind, name, register: 'paint', style: 'scene', entry: 'Renderer (scene)', file, views: 'none', states: [], variants: [], motions: [], emissive: false, ref: 4,
+    })),
+    {
+      family: 'stone', kind: 'ore', name: 'Ore seam', register: 'paint', style: 'kit', entry: 'seam, veinGlints, VeinNight, prospectMark', file: 'src/render/seams/runecut.ts', views: 'turns',
+      states: states(ORE_STATES), variants: ORE_KINDS.map((k, variant) => ({ label: veinLook(k)!.name, set: { variant } })),
+      // Only the precious and rare seams glint.
+      motions: [{ ...frames('twinkle', 'glints', 6), optional: true }], emissive: true, ref: 4,
+    },
+  ],
+  draw: (ctx, sx, sy, zoom, a, o) => {
+    if (a.kind !== 'ore') return;
+    const kind = ORE_KINDS[o.variant] ?? ORE_KINDS[0];
+    const pts = orePts(sx, sy, zoom, o.turn);
+    if (o.state !== 2) {
+      seam(ctx, 3, 5, kind, pts, 0, zoom, 1);
+      veinGlints(ctx, 3, 5, kind, pts, zoom, 1, o.t);
+    }
+    oreProspect(ctx, pts, zoom, kind, o);
+    return [-50 * zoom, -28 * zoom, 50 * zoom, 30 * zoom];
+  },
+  night: (ctx, sx, sy, zoom, a, o) => {
+    if (a.kind !== 'ore') return;
+    const kind = ORE_KINDS[o.variant] ?? ORE_KINDS[0];
+    const look = veinLook(kind)!;
+    const pts = orePts(sx, sy, zoom, o.turn);
+    if (o.state === 0 && look.emit > 0) {
+      // As the renderer lays it over the wash (`VeinNight`).
+      const night = new VeinNight();
+      night.begin(true);
+      night.add(3, 5, kind, pts);
+      night.glow(ctx, zoom, 1, o.night);
+    }
+    oreProspect(ctx, pts, zoom, kind, o);
+  },
+};
+
 const MATERIALS: Array<[string, string]> = [['cobble', 'Cobble'], ['brick', 'Brick'], ['stone', 'Stone'], ['sandstone', 'Sandstone'], ['slate', 'Slate'], ['marble', 'Marble'], ['glass', 'Glass'], ['adobe', 'Adobe'], ['timber', 'Timber'], ['log', 'Log'], ['plank', 'Plank'], ['silver', 'Silver'], ['gold', 'Gold']];
 const SCENE_FAMILIES: Family[] = [
   sceneFamily('masonry', 'Walls by material, drawn from the scene: see `world:cottage`.', 'src/render/masonry.ts', MATERIALS, 4),
@@ -687,7 +760,7 @@ const SCENE_FAMILIES: Family[] = [
   sceneFamily('floor', 'Floors, slabs and glass, drawn from the scene.', 'src/render/flooring.ts', [['plank', 'Plank'], ['slab', 'Slab'], ['concrete', 'Concrete'], ['leaded_glass', 'Leaded glass']], 4),
   sceneFamily('ground', 'The ground by terrain, drawn from the scene: see `world:terrains`.', 'src/render/renderer.ts', [['grass', 'Grass'], ['dirt', 'Dirt'], ['sand', 'Sand'], ['rock', 'Rock'], ['steppe', 'Steppe'], ['tundra', 'Tundra'], ['marsh', 'Marsh'], ['clay', 'Clay'], ['peat', 'Peat'], ['tar', 'Tar'], ['moss', 'Moss'], ['snow', 'Snow'], ['cobblestone', 'Cobblestone'], ['lawn', 'Lawn'], ['slabs', 'Slabs']], 2),
   sceneFamily('water', 'Sea, shore, springs, ponds, pools, falls and the aqueduct, drawn from the scene: see `world:shore` and tools/falls-shot.mjs.', 'src/render/water.ts, shore.ts, ponds.ts, pools.ts, falls.ts, aqueducts.ts', [['sea', 'Sea'], ['shore', 'Shore'], ['spring', 'Spring'], ['pond', 'Pond'], ['pool', 'Pool'], ['falls', 'Falls'], ['aqueduct', 'Aqueduct']], 1),
-  sceneFamily('stone', 'Stones, outcrops and ore faces, drawn from the scene: see `world:rock`.', 'src/render/stones.ts, outcrops.ts', [['stones', 'Stones'], ['outcrop', 'Outcrop'], ['ore', 'Ore seam']], 4),
+  stone,
   sceneFamily('structure', 'Gates, piers, bridges, stairs, cellars and counters, drawn from the scene.', 'src/render/gates.ts, piers.ts, bridgekit.ts, stairing.ts, spiralkit.ts, cellar.ts, counter.ts', [['gate', 'Gate'], ['pier', 'Pier'], ['bridge', 'Bridge'], ['stair', 'Stair'], ['spiral', 'Spiral stair'], ['cellar', 'Cellar'], ['counter', 'Counter']], 4),
   sceneFamily('air', 'Smoke, dust, trails, ivy and moss, drawn from the scene.', 'src/render/smoke.ts, dust.ts, trails.ts, ivy.ts', [['smoke', 'Smoke'], ['dust', 'Dust'], ['trail', 'Trail'], ['ivy', 'Ivy'], ['moss', 'Moss']], 1),
 ];

@@ -17,7 +17,7 @@ begin
   end if;
   insert into crop (world_id, x, y, id, ql, sown_by, pace, level)
   values (p_world, p_x, p_y, cd.id, it.ql, p_uid, sown_pace(p_world, p_uid, p_x, p_y, cd.id), p_level)
-  on conflict (world_id, x, y) do update set id = excluded.id, stage = 0, stage_at = excluded.stage_at,
+  on conflict (world_id, x, y, storey) do update set id = excluded.id, stage = 0, stage_at = excluded.stage_at,
     tended = 0, tended_now = false, ql = excluded.ql, sown_by = excluded.sown_by, pace = excluded.pace,
     level = excluded.level, glass = excluded.glass, still = excluded.still;
   perform crop_sown(p_world, p_x, p_y, cd.id);

@@ -21,6 +21,8 @@ import {
   type StairHand,
   floorBill,
   floorKind,
+  floorSaid,
+  materialSaid,
   GLASS_ROOF,
   heftWord,
   MATERIAL_BY_ID,
@@ -84,7 +86,7 @@ import { isGreenware, kilnState, type PlacedKiln } from '../game/kiln';
 import { stationAnchor, stationCondition, stationCostSaid, stationOfItem, stationPlaceReason, STATIONS, type StationKind, type StationThing } from '../game/stations';
 import { furnitureAnchor, furnitureCapacity, furnitureDef, furnitureHeft, furnitureHolds, furnitureKg, furnitureName, furnitureState, furnitureUnits, isFurniture, isPlanter, rackDeck, rackSpots, type PlacedFurniture, teamOf, turnedFacing, vehicleOf } from '../game/furniture';
 import { DEED_ACTION_BY_ID, joinFromAfar, leaveQuestion, standingWord, upgradeProgress, upgradeReason } from '../game/deed';
-import { CROP_BY_SEED, cropDef, cropReady, describeCrop, emptyFields, FARM_ACTION_BY_ID, planterPace, sownPace, stageNote, type Crop, type CropDef } from '../game/farming';
+import { bedOfJob, CROP_BY_SEED, cropDef, cropOf, cropReady, describeCrop, emptyFields, FARM_ACTION_BY_ID, planterPace, sownPace, stageNote, type Crop, type CropDef } from '../game/farming';
 import { bedLevelOf } from '../game/gardenbed';
 import { armReading, armWords, destinations, destKey, FURNISH_SAID, onTableOk, POINT_ARM, postAt, TABLE_PUT } from '../game/furnish';
 import { CARVE_BUST, FITTING_SAID, SHELF_HERBS, SHELF_PUT } from '../game/fitting';
@@ -1736,7 +1738,7 @@ export class UI {
         // What it is to you: a hidden door you hold no key to is the solid wall it looks like (`gates.ts`).
         const seen = this.game.buildings.seenType(wall);
         const type = WALL_TYPE_BY_ID.get(seen)?.name.toLowerCase() ?? seen;
-        const mat = MATERIALS.find((m) => m.id === wall.material)?.name.toLowerCase() ?? wall.material;
+        const mat = materialSaid(wall.material);
         const gate = seen === 'portcullis' && isDone(wall) ? ` · ${portcullisState(wall)}` : '';
         lines.push(`${SIDE_NAMES[side]} wall: ${type} ${mat}${isDone(wall) ? '' : ` · ${Math.round(progressOf(wall) * 100)}% built`}${gate}`);
       } else {
@@ -1744,9 +1746,11 @@ export class UI {
       }
       const floor = onRoof ? undefined : this.game.buildings.floor(level, pick.x, pick.y);
       if (floor) {
-        const k = floorKind(floor);
-        const mat = MATERIALS.find((m) => m.id === floor.material)?.name.toLowerCase() ?? floor.material;
-        lines.push(`${k === 'ladder' ? 'ladder' : `${mat} ${floorName(floor)}`}${isDone(floor) ? '' : ` · ${Math.round(progressOf(floor) * 100)}% built`}`);
+        // By its material's name, as the island names it (`build_material_def.name`): "Garden bed floor", "Plank floor".
+        lines.push(`${floorSaid(floor)}${isDone(floor) ? '' : ` · ${Math.round(progressOf(floor) * 100)}% built`}`);
+        // And what grows on a garden bed there, on that storey (`gardenbed.ts`); the ground's field is said above.
+        const bedCrop = level > 0 ? this.game.cropAt(pick.x, pick.y, level) : undefined;
+        if (bedCrop) lines.push(this.cropLine(bedCrop));
       }
       // The roof: on Auto, and on its own level when that is pinned (`storeyview.ts`); not on a storey under it.
       const roof = this.game.buildings.floor(b.levels, pick.x, pick.y);
@@ -2269,19 +2273,20 @@ export class UI {
       });
     };
     const sowDef = ACTION_BY_ID.get('plant_seed');
-    if (sowDef && sowDef.applies(target, this.game) && !this.game.cropAt(pick.x, pick.y)) {
+    // Not where the storey it is aimed at has a crop already: that crop's own jobs are offered instead.
+    if (sowDef && sowDef.applies(target, this.game) && !cropOf(this.game, target)) {
       // At the pace this sowing would grow at: a Farmer's Fast Growth and Crop Rotation.
       // Under glass at the glasshouse's share in any season, and in the open at the season's (`glasshouse.ts`).
       // And on a Season's Hand's clock for a sower with Love's Season's Hand, which a winter does not stop.
       // And on a garden bed on the glass clock, as under glass (`gardenbed.ts`).
-      const onBed = bedLevelOf(this.game, pick.x, pick.y) !== null;
+      const onBed = bedOfJob(this.game, target) !== null;
       const clock = onBed || underGlass(this.game.buildings, pick.x, pick.y) ? 'glass' : this.game.pathFx('winter', 0) > 0 ? 'hand' : 'field';
       sowMenu(sowDef, 'Sow', (crop) => stageNote(crop.name, crop.stageSeconds * sownPace(this.game, pick.x, pick.y, crop.id), clock, this.game.wallNow()));
     }
     const patchDef = ACTION_BY_ID.get('sow_patch');
     if (patchDef && patchDef.applies(target, this.game)) {
       const r = this.game.perk('sow_patch', 0);
-      const empty = emptyFields(this.game, pick.x, pick.y, r).length;
+      const empty = emptyFields(this.game, pick.x, pick.y, r, target.level).length;
       sowMenu(patchDef, 'Sow a patch', (crop) => `${crop.name} on ${empty} empty ${empty === 1 ? 'field' : 'fields'} of the ${2 * r + 1}×${2 * r + 1}`);
     }
     return entries;
@@ -2297,9 +2302,10 @@ export class UI {
     const host = g.buildings.buildingAt(pick.x, pick.y) ?? storeyHost(g, pick.x, pick.y, level);
     const onRoof = !!host && g.buildings.buildingAt(pick.x, pick.y) === host && level >= host.levels;
     const entries: MenuItem[] = [...this.buildingEntries(pick, level)];
-    // A garden bed on it, worked from it (`gardenbed.ts`): sown, tended, harvested and pulled up.
-    if (bedLevelOf(g, pick.x, pick.y) === level) {
-      const bedAt = { kind: 'tile' as const, x: pick.x, y: pick.y, cx: pick.cx, cy: pick.cy };
+    // A garden bed on it, worked from it (`gardenbed.ts`): sown, tended, harvested and pulled up, the jobs naming its storey,
+    // so they walk you up to it from wherever you stand.
+    if (bedLevelOf(g, pick.x, pick.y, level) === level) {
+      const bedAt = { kind: 'tile' as const, x: pick.x, y: pick.y, cx: pick.cx, cy: pick.cy, level };
       entries.push(...this.sowEntries(pick, bedAt));
       for (const { def, reason } of g.actionsFor(bedAt)) {
         if (FARM_ACTION_BY_ID.has(def.id)) entries.push(this.jobEntry(def, bedAt, reason, def.labelFor?.(bedAt, g) ?? def.label));
@@ -4224,9 +4230,10 @@ export class UI {
     if (pinned !== null && level + 1 < b.levels && !bld.floor(level + 1, x, y)) entries.push(...stairsUpEntries(g, base, level + 1, side,
       (at, lv, material, kind, sd, hand) => this.startPlacingStairs(at, lv, material, kind, sd, false, hand)));
     if (storey === undefined) entries.push(...cellarEntries(g, base, side, (material, kind, hand) => this.startPlacingStairs(base, 0, material, kind, side, true, hand)));
-    // Pinned, the storeys are the top storey's work, and the roof its own level's (`storeyview.ts`).
+    // Pinned, the storeys are the top storey's work, and the roof its own level's (`storeyview.ts`); the top storey plans the roof over it.
     if (pinned === null || level === b.levels - 1) {
       if (pinned === null) entries.push(...roofEntries(g, b, base, act, item, build, (plan) => this.startPlanArea(plan)));
+      else entries.push(...roofEntries(g, b, base, act, item, build, undefined, true));
       entries.push(item(act('add_floor'), base));
       if (b.levels > 1) entries.push(item(act('remove_storey'), base));
     }
@@ -4278,17 +4285,21 @@ function stairsUpEntries(g: Game, base: Extract<Target, { kind: 'tile' }>, level
   ];
 }
 
-/** The roof's rows for a tile of a building: building or taking out the one there, or planning one. */
+/**
+ * The roof's rows for a tile of a building: building or taking out the one there, or planning one. `planOnly`, on the
+ * top storey's own menu while it is pinned: Plan roof on a tile with none, greyed with the refusal when there is one.
+ */
 function roofEntries(g: Game, b: Building, base: Extract<Target, { kind: 'tile' }>, act: (id: string) => ActionDef,
   item: (def: ActionDef, target: Target, label?: string) => MenuItem,
   build: (def: ActionDef, target: Target, label: string, bill: Bill) => MenuItem,
-  area?: (plan: AreaPlan) => void): MenuItem[] {
+  area?: (plan: AreaPlan) => void, planOnly = false): MenuItem[] {
   const bld = g.buildings;
   const { x, y } = base;
   const entries: MenuItem[] = [];
   const plan = act('plan_floor');
   const roof = bld.floor(b.levels, x, y);
   const roofTarget: Target = { ...base, floorKind: 'roof' };
+  if (roof && planOnly) return entries;
   if (roof) {
     if (!isDone(roof)) entries.push(build(act('build_floor'), roofTarget, `Build roof · needs ${describeNeeds(roof, materialName)}`, roof));
     entries.push(item(act('remove_floor'), roofTarget, 'Remove roof'));
