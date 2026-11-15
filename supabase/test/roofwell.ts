@@ -11,20 +11,22 @@
  * Measured on both sides, on a greenhouse 5 by 3 like the reported one:
  *
  *   * with storey 2 closed in round its floor and open over the well, the
- *     storey is enclosed and every tile of the footprint takes a roof, the
- *     well's included, in the same words; planned over the whole top in one
- *     plan, the island lays a roof tile on all fifteen;
- *   * an outside side of a floored tile with no wall on it still refuses the
- *     roof, in the island's words, and the browser's are the same;
- *   * walls planned round the well and not built refuse it as still going up,
- *     and the nearest of them is named;
+ *     storey is enclosed (`level_gap`, still asked of a storey more) and every
+ *     tile of the footprint takes a roof over storey 2, the well's included,
+ *     in the same words; planned over the whole roof in one plan, every tier
+ *     at its own height (free roofing, `freeroof.ts`), the island lays twelve
+ *     over storey 2 and the well's three over storey 1;
+ *   * an outside side of a floored tile with no wall on it leaves the storey
+ *     open, in the same words, and the roof is allowed all the same: no roof
+ *     asks a storey closed in any more;
+ *   * walls planned round the well and not built are still going up, the
+ *     nearest named, and the roof is allowed;
  *   * a storey with no floor at all is asked every side, as before.
  *
  * And drawn in Chromium (`roofwell-page.ts`): over the well, pinned on storey
- * 2, on the roof's own level and on Auto, Plan roof is offered; with walls
- * planned round the well it is greyed with the refusal. Needs a Chromium as
- * `storeyview.ts` does; without one the drawing is skipped, unless
- * `STOREY_STRICT` is set.
+ * 2, on the roof's own level and on Auto, Plan roof is offered, with walls
+ * planned round the well too. Needs a Chromium as `storeyview.ts` does;
+ * without one the drawing is skipped, unless `STOREY_STRICT` is set.
  *
  * Runs against the database the suite leaves behind: Hoarding, and Dane on it.
  * The greenhouse is building 9402 at four tiles from the middle of Dane's
@@ -205,7 +207,7 @@ const roofAt = (x: number, y: number): Record<string, unknown> => ({ x, y, mater
   const t = roofAt(TX + 2, TY + 2);
   const roofMine = mineSay('plan_floor', t);
   const roofTheirs = theirSay('plan_floor', t);
-  check('and the roof over the well is refused in those words on both sides', roofTheirs === want && roofMine === roofTheirs,
+  check('and the roof over the well is allowed all the same on both sides: no storey closed in asked', roofTheirs === 'ALLOWED' && roofMine === roofTheirs,
     `browser "${roofMine}", island "${roofTheirs}"`);
   wall(1, TX + 4, TY + 1, 'e');
 }
@@ -221,7 +223,7 @@ const roofAt = (x: number, y: number): Record<string, unknown> => ({ x, y, mater
   const t = roofAt(TX, TY);
   const roofMine = mineSay('plan_floor', t);
   const roofTheirs = theirSay('plan_floor', t);
-  check('and the roof is refused in those words on both sides', roofTheirs === want && roofMine === roofTheirs,
+  check('and the roof is allowed all the same on both sides', roofTheirs === 'ALLOWED' && roofMine === roofTheirs,
     `browser "${roofMine}", island "${roofTheirs}"`);
   // Built, they close nothing that was open, and stand in no one's way.
   for (const w of bld.walls.values()) if (w.building === ID) finish(w);
@@ -244,19 +246,22 @@ const roofAt = (x: number, y: number): Record<string, unknown> => ({ x, y, mater
   floors();
 }
 
-/* ---- the whole roof, over the well too ---------------------------------------------- */
+/* ---- the whole roof, the well's at its own height ------------------------------------ */
 {
-  const roof = areaPieces(game, { kind: 'roof', buildingId: ID, level: 1, material: 'log', roofShape: 'gable', anchor: { x: TX, y: TY } });
-  check('the browser lays a roof tile on each of the fifteen, the well\'s three included, every one passing',
-    roof.length === TILES.length && passing(roof).length === TILES.length && TILES.filter(([x, y]) => well(x, y)).every(([x, y]) => roof.some((p) => p.target.x === x && p.target.y === y)),
-    roof.map((p) => `${p.target.x},${p.target.y}:${p.why ?? 'ok'}`).join(' '));
+  const top = areaPieces(game, { kind: 'roof', buildingId: ID, level: 1, material: 'log', roofShape: 'gable', anchor: { x: TX, y: TY } });
+  check('from storey 2 pinned, the browser lays storey 2\'s twelve: the well, with no wall of storey 2 round it, is a tier of storey 1',
+    top.length === TILES.length - 3 && top.every((p) => !well(p.target.x, p.target.y) && p.target.level === 1), top.map((p) => `${p.target.x},${p.target.y}`).join(' '));
+  const roof = areaPieces(game, { kind: 'roof', buildingId: ID, level: 1, tiers: true, material: 'log', roofShape: 'gable', anchor: { x: TX, y: TY } });
+  check('on Auto, a roof tile on each of the fifteen, the well\'s three over storey 1, every one passing',
+    roof.length === TILES.length && passing(roof).length === TILES.length && roof.every((p) => p.target.level === (well(p.target.x, p.target.y) ? 0 : 1)),
+    roof.map((p) => `${p.target.x},${p.target.y}@${p.target.level}:${p.why ?? 'ok'}`).join(' '));
   rested();
   const made = asDane(`rpc_plan_area(${W}, ${lit(areaAsk(roof))})`);
   const rows = psql(`select count(*) || ',' || min(level) || ',' || max(level) from floor_tile where world_id = ${W} and building = ${ID} and kind = 'roof';`);
-  const overWell = psql(`select count(*) from floor_tile where world_id = ${W} and building = ${ID} and kind = 'roof' and level = 2
+  const overWell = psql(`select count(*) from floor_tile where world_id = ${W} and building = ${ID} and kind = 'roof' and level = 1
     and y = ${TY + 2} and x between ${TX + 1} and ${TX + 3};`);
-  check('the island lays all fifteen over storey 2, the three over the well among them',
-    made.planned === TILES.length && rows === `${TILES.length},2,2` && overWell === '3', `${JSON.stringify(made)}; ${rows}; over the well ${overWell}`);
+  check('the island lays all fifteen, twelve over storey 2 and the three over the well over storey 1',
+    made.planned === TILES.length && rows === `${TILES.length},1,2` && overWell === '3', `${JSON.stringify(made)}; ${rows}; over the well ${overWell}`);
 }
 
 /* ---- put the ground back -------------------------------------------------------- */
@@ -312,11 +317,9 @@ if (!options) {
         m.pick?.x === gx + 2 && m.pick?.y === gy + 2 && offered(m), said(m));
     }
     await run('p.planRound();');
-    const want = `Storey 2 not enclosed: 4 still going up, nearest the north side of ${gx + 2},${gy + 2}.`;
     for (const [view, level, where] of [[1, 1, 'pinned on storey 2'], [null, 0, 'on Auto']] as Array<[number | null, number, string]>) {
       const m = await run<Menu>(`return p.menu(${view}, p.gx + 2, p.gy + 2, ${level});`);
-      check(`with four walls planned round it, ${where}: Plan roof greyed, with the refusal`,
-        m.rows.some((r) => r.path === 'Plan roof' && r.disabled && r.hint === want), said(m));
+      check(`with four walls planned round it, ${where}: Plan roof still offered, no storey closed in asked`, offered(m), said(m));
     }
     check('and the page threw nothing', thrown.length === 0, thrown.join('; '));
     await ctx.close();

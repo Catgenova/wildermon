@@ -8,6 +8,7 @@ import { cellarFloorHeight } from './cellar';
 import { HALF_W, HALF_H, HEIGHT_SCALE } from './iso';
 import { PICK_SLACK_TOUCH, PICK_SLACK } from './pickslack';
 import { covering } from './roofing';
+import { roofKey, type RoofPart } from './roofdraw';
 import { type RoofPt, FALLS, type RoofModel } from './roofshape';
 import { depthOf } from './view';
 
@@ -172,8 +173,8 @@ export interface PickHost {
   readonly peerHits: HitRect[];
   readonly postHits: HitRect[];
   readonly pts: Float64Array<ArrayBuffer>;
-  roofFrame(b: Building): { roofs: FloorTile[]; model: RoofModel; eave: number } | null;
-  readonly roofQueue: Map<number, Building[]>;
+  roofFrame(b: Building, level?: number): { roofs: FloorTile[]; model: RoofModel; eave: number } | null;
+  readonly roofQueue: Map<number, RoofPart[]>;
   readonly roofShapes: Map<number, { sig: string; model: RoofModel }>;
   readonly smelterHits: HitRect[];
   readonly stoneHits: HitRect[];
@@ -358,16 +359,16 @@ export class Picker {
   /**
    * The roof tile under a point on the screen, on the level a pitched roof
    * sits on (`storeyview.ts`): of the faces of every such roof drawn there
-   * (`roofFrame`), the nearest the eye that the point is in, picked at the
-   * face's own height; null where none is.
+   * (`roofFrame`), a tier's at its own level among them, the nearest the eye
+   * that the point is in, picked at the face's own height; null where none is.
    */
   private roofPick(sx: number, sy: number, level: number): Pick | null {
     const cam = this.r.camera;
     const V = cam.view;
     let best: { x: number; y: number; h: number; d: number } | null = null;
     for (const b of this.r.game.buildings.list.values()) {
-      if (b.levels !== level || roofShapeOf(b) === 'flat') continue;
-      const frame = this.r.roofFrame(b);
+      if (b.levels < level || roofShapeOf(b) === 'flat' || !this.r.game.buildings.roofParts(b).has(level)) continue;
+      const frame = this.r.roofFrame(b, level);
       if (!frame) continue;
       const pitch = ROOF_PITCH * roofShapeDef(b).rise;
       for (const face of frame.model.faces) {
@@ -489,9 +490,9 @@ export class Picker {
     // A roof laid after it, unless the bay stands in front of that building and is cut out of its roof (`AqueductPainter.before`).
     for (const [row, list] of this.r.roofQueue) {
       if (row <= d0) continue;
-      for (const b of list) {
-        if (this.r.aqueducts.before(b.tiles, row, V).some((c) => c.b.id === bridge && c.b.spans[c.k].x === bx && c.b.spans[c.k].y === by)) continue;
-        if (this.roofCovers(b, sx, sy)) return true;
+      for (const part of list) {
+        if (this.r.aqueducts.before(part.b.tiles, row, V).some((c) => c.b.id === bridge && c.b.spans[c.k].x === bx && c.b.spans[c.k].y === by)) continue;
+        if (this.roofCovers(part, sx, sy)) return true;
       }
     }
     return false;
@@ -515,25 +516,27 @@ export class Picker {
    * ridge or a hip, as wide as it is stroked; the fascia under an eave on the
    * near side; or a gable end on the near side (`drawGable`).
    */
-  private roofCovers(b: Building, sx: number, sy: number): boolean {
-    const kept = this.r.roofShapes.get(b.id);
+  private roofCovers(part: RoofPart, sx: number, sy: number): boolean {
+    const { b, level } = part;
+    const kept = this.r.roofShapes.get(roofKey(b, level));
     if (!kept) return false;
     const cam = this.r.camera;
     const zoom = cam.zoom;
     const world = this.r.game.world;
     const bld = this.r.game.buildings;
+    // The part's own tiles, in the order its shape was made from (`roofFrame`): a tier's roof at its own level.
     const roofs: FloorTile[] = [];
-    for (const k of b.tiles) {
-      const [x, y] = k.split(',').map(Number);
-      const f = bld.floor(b.levels, x, y);
+    for (const [x, y] of bld.roofParts(b).get(level) ?? []) {
+      const f = bld.floor(level, x, y);
       if (f && floorKind(f) === 'roof') roofs.push(f);
     }
     if (!roofs.length) return false;
     let eave = -Infinity;
-    for (const f of roofs) eave = Math.max(eave, world.getHeight(f.x, f.y));
+    for (const f of roofs) if (bld.buildingAt(f.x, f.y)) eave = Math.max(eave, world.getHeight(f.x, f.y));
+    if (eave === -Infinity) for (const f of roofs) eave = Math.max(eave, world.getHeight(f.x, f.y));
     // A building on piers stands on its deck, whatever the ground under it does.
     if (b.deck != null) eave = b.deck;
-    eave += b.levels * WALL_HEIGHT;
+    eave += level * WALL_HEIGHT;
     const pitch = ROOF_PITCH * roofShapeDef(b).rise;
     const model = kept.model;
     const X = (q: RoofPt): number => cam.worldToScreenX(q[0], q[1]);

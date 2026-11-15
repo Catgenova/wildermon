@@ -20,6 +20,9 @@
  * and where the nearest of them is — and it has to be the same sentence on
  * both sides, down to which gap it calls nearest.
  *
+ * A roof no longer asks for any of it (`freeroof.ts`): the sentence is what a
+ * second storey over the ground storey is refused with, and a roof is not.
+ *
  * Runs against the database the suite leaves behind: Hoarding, and Dane on it.
  */
 import { ACTION_BY_ID } from '../../src/game/actions';
@@ -110,6 +113,13 @@ const theirBoth = psql(`select coalesce(level_gap(${W}, 1, 0, 30.5, 30.5), 'CLOS
 check('a hole and a half-built wall are counted apart, and the nearer one named',
   both === 'Storey 1 not enclosed: 1 side with no wall or columns and 1 still going up, nearest the north side of 30,30.'
     && theirBoth === both, `browser "${both}", island "${theirBoth}"`);
+
+/* ---- and a roof asks none of it now: free roofing (`freeroof.ts`) ---- */
+const shortRoof = roof.check?.(target, game) ?? 'ALLOWED';
+const theirShortRoof = psql(`select coalesce(build_refusal(${W}, (select uid from player where world_id = ${W} and name = 'Dane'), 'plan_floor',
+  '${JSON.stringify(target)}'::jsonb), 'ALLOWED')`);
+check('with the storey short, a roof is not refused for it on either side',
+  !shortRoof.includes('not enclosed') && !theirShortRoof.includes('not enclosed'), `browser "${shortRoof}", island "${theirShortRoof}"`);
 
 /* ---- and the storey it names is the one that is short ---- */
 b.levels = 2;

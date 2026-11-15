@@ -537,7 +537,7 @@ import { WaterPainter, type WaterHost } from './waterdraw';
 import { type Swayed, type Entity, PLAN_COLOR, FLIGHT_STEPS, rgb, type Ghost, type BakeAs } from './drawshared';
 import { StairPainter, type StairHost } from './stairdraw';
 import { CellarPainter, type CellarHost } from './cellardraw';
-import { RoofPainter, type RoofHost } from './roofdraw';
+import { RoofPainter, type RoofHost, type RoofPart } from './roofdraw';
 import { WallPainter, type WallHost } from './walldraw';
 export { type Ghost } from './drawshared';
 export { type Pick } from './picking';
@@ -1627,7 +1627,7 @@ export class Renderer {
   /** What has changed about the buildings, and where (`structwatch.ts`): looked over once a frame. */
   private readonly structs = new StructureWatch();
   /** The pitched roofs to lay this frame, by the line of the ground after whose walls each goes on. */
-  private roofQueue = new Map<number, Building[]>();
+  private roofQueue = new Map<number, RoofPart[]>();
   /**
    * Looking into a cellar this frame (`Game.cellarView`); the buildings over
    * the cellars, which are taken off while you are; every tile of every
@@ -5254,7 +5254,8 @@ export class Renderer {
       // anything standing in front of them.
       const roofs = this.roofQueue.get(d);
       if (roofs) {
-        for (const bb of roofs) {
+        for (const part of roofs) {
+          const bb = part.b;
           // And so does its roof, over the water drawn beside its last tiles.
           if (this.wetPierBuildings?.has(bb.id)) this.waters.layWater(ctx, zoom);
           // Not over the bays of an aqueduct standing in front of it, drawn on the lines before this one.
@@ -5263,7 +5264,7 @@ export class Renderer {
             ctx.save();
             this.aqueducts.clipOut(ctx, cut);
           }
-          this.roofs.drawPitchedRoof(bb);
+          this.roofs.drawPitchedRoof(part);
           if (cut?.length) ctx.restore();
         }
       }
@@ -8684,7 +8685,7 @@ export class Renderer {
           // Under a finished roof drawn whole over it -- you are not standing under it, nor looking into the storey --
           // it is not seen, and not drawn.
           const down = level === 0 && climb && !!bld.cellar(x, y);
-          const lid = down && viewLevel === null && !this.roomTiles?.has(`${x},${y}`) ? bld.roofAt(host.levels, x, y) : undefined;
+          const lid = down && viewLevel === null && !this.roomTiles?.has(`${x},${y}`) ? bld.roofOn(x, y) : undefined;
           if (down) {
             if (!lid || !isDone(lid)) this.cellars.drawOpening(floor, x, y, base, alpha);
           } else switch (floorKind(floor)) {
@@ -11213,7 +11214,8 @@ export class Renderer {
    * Pinned on the level a building's roof sits on (`storeyview.ts`), where
    * every storey under it is hidden: each of its roof's tiles not yet planned,
    * marked out at the height of its eaves, so the roof still to plan is there
-   * to click on.
+   * to click on. A tier's tiles too, on the level its roof would sit at, over
+   * its own top storey (`Buildings.roofStoreyAt`).
    */
   private drawRoofSites(ctx: CanvasRenderingContext2D): void {
     const level = this.pinned;
@@ -11222,9 +11224,10 @@ export class Renderer {
     const cam = this.camera;
     let any = false;
     for (const b of bld.list.values()) {
-      if (b.levels !== level || this.cut.has(b.id)) continue;
+      if (b.levels < level || this.cut.has(b.id)) continue;
       for (const [x, y] of bld.roofTiles(b)) {
-        if (bld.floor(level, x, y)) continue;
+        if (bld.floor(level, x, y) || bld.roofOn(x, y)) continue;
+        if (b.levels > level && bld.roofStoreyAt(b, x, y) + 1 !== level) continue;
         if (!any) {
           ctx.save();
           ctx.strokeStyle = PLAN_COLOR;

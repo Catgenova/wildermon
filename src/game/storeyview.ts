@@ -20,10 +20,15 @@
  * the roof is drawn and nothing under it, its tiles still to plan are marked
  * out at its eaves (`Renderer.drawRoofSites`), a pitched roof is clicked on
  * its slopes (`Picker.roofPick`), and its menu is the roof's work and
- * nothing else; a storey under it does not draw it, and of its work only the
- * top storey's menu offers Plan roof, on a tile with none. A
+ * nothing else; a storey under it does not draw it. A
  * click on a pitched roof chooses the tile and walks nowhere
  * (`pitchedRoofAt`): a flat one is a terrace, walked on.
+ *
+ * A tier's roof sits at its own level, over its own top storey
+ * (`Buildings.roofStoreyAt`): a roof over storey 1 is at storey 2's level, and
+ * is drawn, marked out and picked there, as the top roof is on its own. Every
+ * pinned storey's menu offers Plan roof over that storey on a tile with no
+ * roof and no storey over it, and the roof at its own floor's level, a tier's.
  */
 import { OPPOSITE_SIDE, roofShapeDef, WALL_HEIGHT, type Building, type Side } from './building';
 import { jettyBase } from './frame';
@@ -82,11 +87,16 @@ export function storeyHeight(g: Game, x: number, y: number, level: number): numb
   return (base ?? ground) + level * WALL_HEIGHT;
 }
 
-/** The building whose pitched roof a tile is part of on storey `level`, its roof's own level: no walking there. */
+/**
+ * The building whose pitched roof a tile is part of on storey `level`, its roof's own level: no walking there. A
+ * tier's roof is at its own level, over its own top storey (`Buildings.roofParts`).
+ */
 export function pitchedRoofAt(g: Game, x: number, y: number, level: number): Building | undefined {
   const b = storeyHost(g, x, y, level) ?? g.buildings.jettyAt(x, y);
-  if (!b || b.levels !== level || roofShapeDef(b).walkable) return undefined;
-  return g.buildings.roofTiles(b).some(([rx, ry]) => rx === x && ry === y) ? b : undefined;
+  if (!b || roofShapeDef(b).walkable) return undefined;
+  const roof = g.buildings.roofOn(x, y);
+  if (roof) return roof.level === level && roof.building === b.id ? b : undefined;
+  return b.levels === level && g.buildings.roofTiles(b).some(([rx, ry]) => rx === x && ry === y) ? b : undefined;
 }
 
 /** The tallest building's roof level: the highest storey there is to pin. */

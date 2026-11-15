@@ -2014,7 +2014,9 @@ export function helpText(): string {
       building work, <i>Plan staircase up</i> and <i>Build … up</i> (the staircase or ladder planned over it), furniture set down on it. Label <i>1st</i>, <i>2nd</i>…; click for <i>Auto</i> (every storey).
       <kbd>Page Up</kbd> / <kbd>Page Down</kbd> do the same.</li>
       <li>Pinned one above a building's top storey: its <b>roof</b>, alone. Unplanned roof tiles marked out; a pitched roof picked on its slopes, not walked onto;
-      its menu: the roof's work only. A storey under it: no roof drawn; the top storey's menu: <i>Plan roof</i> on that tile.</li>
+      its menu: the roof's work only. A storey under it: no roof drawn.</li>
+      <li>A tier's roof (over a lower storey beside a taller one): drawn, marked out and picked on the level it sits at, the next storey's. Any storey's menu:
+      <i>Plan roof</i> over that storey on a tile with no roof and no storey over it; the tier roof at its floor's level: <i>Build roof</i>, <i>Remove roof</i>.</li>
       <li>Once any cellar is dug: <i>Cellar</i>, below the ground floor: every nearby cellar as dug, buildings over them removed. Contents and people in a cellar
       show only to somebody in it, within their sight.</li>
       <li><b>◪</b>, <kbd>X</kbd> or the Settings box: <b>hides the walls facing you</b>; far walls stay. Always on while a storey is pinned.</li>
@@ -2040,16 +2042,19 @@ export function helpText(): string {
       <li>2nd storey: needs every side of the ground storey finished as a wall, or with a finished column at each end. 3rd and up: planned over a storey still going up. Max ${MAX_LEVELS} storeys.</li>
       <li>Actions go to the storey you are working on (<b>Work on storey N</b> on its menu).</li>
       <li><b>No plan</b>, storey ${NO_PLAN_FROM + 1} and up, on a bare outside side: no plan model drawn there. No tool, no materials. The side still counts as open
-      (next storey, roof, glasshouse). <b>Mark out</b>: the model back. Cleared by a wall planned on it, or the storey or building removed.</li>
+      (next storey, glasshouse). <b>Mark out</b>: the model back. Cleared by a wall planned on it, or the storey or building removed.</li>
       <li>A finished full-height wall with a wall of the storey above on the same side (once any of that wall's materials are in) cannot come down until that upper
       wall does, or a finished column stands at each end; likewise the last wall a jetty rests on. To turn one into a door: <b>Change wall</b>.</li>
       <li><b>Change wall</b> on a wall of a building: wall type, then material, at its bill; mallet. Finished wall: stands, shut and carrying, until the change is
       built (<b>Build change</b>, as Build wall); with the last material, the new wall. Still going up: replanned in place, new bill. Refused: fence, half wall or
       railing on a wall something rests on; a material lighter than the heaviest wall above, glass excepted; a counter with goods or takings; a padlocked portcullis. The standing
       type and material again: change dropped.</li>
-      <li>Roof: <b>Plan roof</b> tile by tile once the top storey's walls are done; neighbours join into ridges and hips. Any tile of the footprint, floor or not.
-      A tile over the ground storey with no floor: an open well, no walls asked on its sides. Every wall planned on the top storey: finished first.</li>
-      <li>Plans over an area, max ${PLAN_AREA_MOST} pieces: <b>Plan walls all round</b>, <b>Plan floor: every tile</b> (the storey shown), <b>Plan roof: every tile</b>;
+      <li>Roof: <b>Plan roof</b> on any tile of the footprint; no walls needed. Height: over the tile's top storey, the highest with a floor on the tile or a wall
+      on a side of it with no floor of that storey across; else over the ground storey. A storey pinned: over that storey. Neighbours at the same height join into ridges and hips;
+      each tier its own roof.</li>
+      <li>Roof refused: a roof on the tile already, at any height; under a floor or wall of a higher storey of the tile. A floor, staircase, ladder or wall on a roofed
+      tile at or over the roof: "Remove the roof first." A storey more: refused only while every tile is roofed, or a jetty is.</li>
+      <li>Plans over an area, max ${PLAN_AREA_MOST} pieces: <b>Plan walls all round</b>, <b>Plan floor: every tile</b> (the storey shown), <b>Plan roof: every tile</b> (every tier at its own height; a storey pinned: that tier);
       <b>Plan building over an area</b>, <b>Add an area to</b>, <b>Extend over an area</b> (rectangle to the cursor). Ghost of every piece first; red: refused.</li>
       <li>Plan bar: each material summed over the plan; Need, Carried, Stored (crates on its tiles, stores within building reach), Short. Plan or click: planned,
       walked to first. Esc or Cancel: dropped.</li>
@@ -2195,7 +2200,7 @@ export function helpText(): string {
       <li>Ground under it: nothing planned or planted; no bridge or aqueduct; corners not dug or raised.</li>
       <li>The last wall it rests on stays up until the jetty is removed or a finished column stands at each end of it.</li>
       <li>Removed only after the walls, railings and columns on it, the floor above and the roof over it are down.</li>
-      <li>Open to its storey, it <b>is part of that storey</b>: its open sides need a wall, railing or columns before the storey counts as closed for a 2nd storey or a roof.</li>
+      <li>Open to its storey, it <b>is part of that storey</b>: its open sides need a wall, railing or columns before the storey counts as closed for a 2nd storey.</li>
       <li><b>Plan roof over the jetty</b>: only on <b>walls or columns</b>; every side out from the storey needs a finished full-height wall, or at each end a finished column or
       a finished full-height wall's end (railings carry nothing). The refusal names the corner missing a column.</li>
       <li>Under a jetty roof: its wall stays until a column at each end carries the roof; a wall end that alone carries a side stays until a column stands on that corner;

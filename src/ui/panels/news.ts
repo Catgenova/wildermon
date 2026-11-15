@@ -415,6 +415,20 @@ const FAIL_EXAMPLE = failFactorSaid(failFactor({ ...FAIL_EXAMPLE_AT, difficulty:
 const SCRUBS_LATER = new Set(['scrub_wall_paint', 'scrub_floor_paint']);
 
 export const NEWS: News[] = [
+  // Free roofing: a roof on any tile, over the tile's own top storey or the storey pinned (`roofLevelFor`, `roof_level`, `roof_plan_refusal`).
+  {
+    n: 640,
+    day: '2026-11-15',
+    lines: () => [
+      'Changed: roofs: no enclosed storey needed; any tile of the footprint.',
+      'New: roof over each tier at its own height: over the tile\'s top storey (floor on the tile, or a wall on a side with no floor across); else over storey 1.',
+      'New: storey pinned: Plan roof over that storey on a tile with no roof and no storey over it; Plan roof: every tile, that tier.',
+      'New: Plan roof: every tile, on Auto: every tier at its own height. Hipped and gabled roofs: shaped over each tier\'s own tiles.',
+      'Changed: refused: a second roof on a tile, "Roof already planned here, over storey N."; a roof under a storey of the tile, "Under storey N on this tile."',
+      'Changed: floor, staircase, ladder or wall on a roofed tile at or over the roof: "Remove the roof first.", that tile only. Add storey: refused only while every tile is roofed.',
+      `Changed: covered: a finished floor or roof on any storey over the tile. Indoors and decay ×${INDOORS_DECAY} under a roof over an open well.`,
+    ],
+  },
   // A floor named by its material's name, and a garden bed up a storey sown, tended and harvested (`floorSaid`, `gardenbed.ts`, `crop.storey`).
   {
     n: 632,

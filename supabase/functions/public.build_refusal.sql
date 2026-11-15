@@ -75,6 +75,7 @@ begin
     if lvl > 0 or on_piers(p_world, tx, ty) then
       select * into f from floor_tile where world_id = p_world and level = lvl and x = tx and y = ty;
       if not found or not bill_done(f.needed) then return 'Build this storey''s floor first.'; end if;
+      if f.kind = 'roof' and not coalesce((p_target->>'terrace')::boolean, false) then return 'Remove the roof first.'; end if;
     end if;
     -- Frame: and on the job's storey.
     if (frame_wall_at(p_world, tx, ty, side, p_target)).world_id is not null then return 'Already a wall on that side.'; end if;
@@ -183,7 +184,13 @@ begin
           || least(100, b.levels * storey_skill()) || '; have '
           || to_char(skill_of(p_world, p_uid, under.skill), 'FM990.0') || '.';
     end if;
-    if has_roof(p_world, b.id) then return 'Remove the roof first.'; end if;
+    if exists (select 1 from floor_tile rf where rf.world_id = p_world and rf.building = b.id and rf.kind = 'roof'
+                 and rf.level = b.levels and building_at(p_world, rf.x, rf.y) is distinct from b.id)
+       or not exists (select 1 from building_tile bt where bt.world_id = p_world and bt.building = b.id
+                        and not exists (select 1 from floor_tile rf where rf.world_id = p_world and rf.level >= 1
+                                          and rf.x = bt.x and rf.y = bt.y and rf.kind = 'roof')) then
+      return 'Remove the roof first.';
+    end if;
     if has_low_wall(p_world, b.id, b.levels - 1) then
       -- Frame: a railing is low work too, and columns close a side.
       return 'Storey below needs walls, or finished columns at both ends of each open side. Fences, half walls and railings carry nothing.';
@@ -203,7 +210,8 @@ begin
     kind := coalesce(p_target->>'floorKind', 'floor');
     lvl := frame_floor_level(p_world, b.id, kind, p_target); -- cellar: storey nought for a flight down; Frame: else the job's storey.
     if kind = 'roof' then
-      v_gap := level_gap(p_world, b.id, b.levels - 1, p_uid);
+      -- Free roofing: on any tile, over its own top storey or the one the job names (`roof_plan_refusal`).
+      v_gap := roof_plan_refusal(p_world, b.id, lvl, tx, ty);
       if v_gap is not null then return v_gap; end if;
     elsif kind in ('stairs', 'ladder') then
       -- cellar: on the ground floor, a way down to the cellar under it.
@@ -226,6 +234,11 @@ begin
       -- cellar: one way off the ground floor a tile: a flight up and a flight down are not stacked on it.
       v_gap := spiral_stack_refusal(p_world, lvl, tx, ty, coalesce(stair_hand(p_target, kind) = 's', false)); -- cellar
       if v_gap is not null then return v_gap; end if; -- cellar
+    end if;
+    -- Free roofing: a storey goes up on a tile only once the roof under it there is off.
+    if kind <> 'roof' and lvl >= 1 and exists (select 1 from floor_tile r where r.world_id = p_world and r.x = tx and r.y = ty
+                                                 and r.kind = 'roof' and r.level between 1 and lvl) then
+      return 'Remove the roof first.';
     end if;
     -- cellar: a flight or a ladder down takes up the ground floor's flooring where it goes (`flooringUnder`).
     if exists (select 1 from floor_tile f2 where f2.world_id = p_world and f2.level = lvl and f2.x = tx and f2.y = ty
@@ -373,7 +386,7 @@ begin
     if exists (select 1 from wall where world_id = p_world and building = b.id and level = lvl) then
       return 'Remove the top storey''s walls first.';
     end if;
-    if exists (select 1 from floor_tile where world_id = p_world and building = b.id and level = lvl) then
+    if exists (select 1 from floor_tile where world_id = p_world and building = b.id and level = lvl and floor_tile.kind <> 'roof') then
       return 'Remove the top storey''s floors first.';
     end if;
     return null;

@@ -111,12 +111,12 @@ export function isGlasshouse(bld: Buildings, b: Building | undefined): boolean {
   return true;
 }
 
-/** Whether any of a building's roof is planned or laid in glass. */
+/** Whether any of a building's roof is planned or laid in glass, over any of its tiers. */
 export function glazing(bld: Buildings, b: Building | undefined): boolean {
   if (!b) return false;
   for (const k of b.tiles) {
     const [xs, ys] = k.split(',');
-    const f = bld.floor(b.levels, Number(xs), Number(ys));
+    const f = bld.roofOn(Number(xs), Number(ys));
     if (f && floorKind(f) === 'roof' && f.material === GLASS) return true;
   }
   return false;
@@ -137,12 +137,12 @@ export function fieldIn(g: Game, b: Building): boolean {
   return false;
 }
 
-/** How many of a building's footprint tiles are under a finished roof of glass, for the line that says how near it is. */
+/** How many of a building's footprint tiles are under a finished roof of glass, over any tier, for the line that says how near it is. */
 export function glassDone(bld: Buildings, b: Building): number {
   let n = 0;
   for (const k of b.tiles) {
     const [xs, ys] = k.split(',');
-    const f = bld.floor(b.levels, Number(xs), Number(ys));
+    const f = bld.roofOn(Number(xs), Number(ys));
     if (f && floorKind(f) === 'roof' && f.material === GLASS && isDone(f)) n++;
   }
   return n;
