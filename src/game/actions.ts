@@ -318,6 +318,11 @@ export interface ActionDef {
   repeat?: boolean;
   /** For item actions: offer "one" and "all" when the stack has more than one. */
   quantity?: boolean;
+  /**
+   * For item actions on things that do not stack: offer "One" and "All (N)" goes when more than one of the kind is
+   * carried, N those carried to `JOB_GOES_MOST`; each go takes the next of the kind (`allOfKindEntry`).
+   */
+  allOfKind?: boolean;
   /** Not listed by the generic menu; the UI offers it in its own way. */
   hidden?: boolean;
   /** For quantity actions: how many times it can be done now, for the "all" entry. */

@@ -1167,7 +1167,7 @@ function artifactHelp(): string {
     <p>Four relics restore into items used on you and your things:</p>
     <ul>
       <li>${fromRelic(WHETSTONE)}: Hone with it, on a damaged tool or weapon in your pack: all damage off, QL kept. Not on an unrestored find, nor ${unmendableSaid()}. Used up.</li>
-      <li>${fromRelic(SEED_JAR)}: Open: ${JAR_SEEDS} seeds of one of ${CROP_LIST.length} crops at random, at the jar's QL. Used up.</li>
+      <li>${fromRelic(SEED_JAR)}: Open: ${JAR_SEEDS} seeds of one of ${CROP_LIST.length} crops at random, at the jar's QL. Used up. Open, All (N): one jar a go, N: jars carried, up to ${JOB_GOES_MOST}.</li>
       <li>${fromRelic(STAMP)}: carried: rare chance ×${STAMP_RARE} on your next ${STAMP_GOES} crafts and forgings (an anvil's casting work). One go each;
       its name says the goes left; used up after the last.</li>
       <li>${fromRelic(TABLET)}: Skills window, <i>Rune tablet +${TABLET_GAIN.toFixed(1)}</i> on a skill under ${TABLET_BELOW}: that skill +${TABLET_GAIN.toFixed(1)}. Used up.</li>

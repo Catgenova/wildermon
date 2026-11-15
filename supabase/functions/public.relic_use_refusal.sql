@@ -8,6 +8,10 @@ AS $function$
 declare v_it item; v_skill text := p_target->>'skill'; v_name text; v_short text[];
 begin
   v_it := carried(p_world, p_uid, target_item(p_target));
+  -- The jar named, or the next one carried (`seed_jar_opened`).
+  if p_action = 'open_seed_jar' then
+    return case when (seed_jar_opened(p_world, p_uid, p_target)).id is null then 'It is gone.' end;
+  end if;
   if v_it.id is null then return 'It is gone.'; end if;
   if p_action = 'hone_whetstone' then
     if pack_count(p_world, p_uid, 'ancient_whetstone') <= 0 then return 'Need an ancient whetstone.'; end if;
@@ -53,9 +57,6 @@ begin
       return book_known_says(book_of_item(v_it.def));
     end if;
     return null;
-  end if;
-  if p_action = 'open_seed_jar' then
-    return case when v_it.def = 'ancient_seed_jar' then null else 'It is gone.' end;
   end if;
   if v_it.def <> 'rune_tablet' then return 'It is gone.'; end if;
   select d.name into v_name from skill_def d where d.id = v_skill;

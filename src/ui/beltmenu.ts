@@ -1,6 +1,7 @@
 import { ACTION_BY_ID, type ActionDef, type Target } from '../game/actions';
 import { pinLabel, type BeltPin } from '../game/belt';
 import type { Game } from '../game/game';
+import { JOB_GOES_MOST } from '../game/mending';
 import type { MenuItem } from './contextmenu';
 
 /**
@@ -27,6 +28,22 @@ export function pinEntry(g: Game, pin: BeltPin): MenuItem {
 
 /** Whether a job is worth a loop at all: a job you might do again and again. */
 export const pinnable = (def: ActionDef): boolean => !def.hidden;
+
+/**
+ * A job over a kind that does not stack (`ActionDef.allOfKind`), with more than one of the kind carried: "One", and
+ * "All (N)" goes, N those carried to `JOB_GOES_MOST`. Null with one, for the plain entry.
+ */
+export function allOfKindEntry(g: Game, def: ActionDef, target: Target, kind: string): MenuItem | null {
+  const all = Math.min(JOB_GOES_MOST, g.inventory.count(kind));
+  if (!def.allOfKind || all < 2) return null;
+  return {
+    label: def.label,
+    children: [
+      { label: 'One', onSelect: () => g.requestAction(def, target) },
+      { label: `All (${all})`, onSelect: () => g.requestAction(def, target, all) },
+    ],
+  };
+}
 
 /** The handfuls a job is offered in. */
 export const COUNTS = [5, 10, 25, 50];
