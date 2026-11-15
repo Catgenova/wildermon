@@ -14,13 +14,31 @@ All of it stays on the `gating` branch until the whole set rolls out together. B
 woodcutting, sprouts by forestry, sowing by farming, a worker at its own level in the gate's skill, and unidentified
 items (§11); wagons, boats, quarried stone, veins (batch B); every crafting recipe, relic and bauble restoring,
 building materials, wall, floor and paving types, Formulas, and each skill's next gate beside its level (batch C,
-§9). What is left below is the plan.
+§9); the answers to batch C's questions: stone brick at 10, pouring by the metal, the trees spread to 70 and 80, a bare
+vein always named, long Unlocks lists one row a level (batch D, §9). What is left below is the plan.
 
 Decided since (the user, on §10's questions): birch 1 and willow 90; taming and fish keep their own numbers (batch B
 moves them into the table); the smelter at masonry 1, the wagon at carpentry 70 and the caravel at carpentry 90; a
 worker reads a gate's own skill at its own level in that skill; a wall keeps both its gates, material and type, a
 carpentry wall's in carpentry and a masonry wall's in masonry; the large cart has no gate (a small cart gives no driving
 to earn it with), the wagon driving 30; and items whose use is gated are unidentified under the gate (§11).
+
+Decided since (the user, on batch C's questions, built in batch D):
+
+1. **Stone brick walls at masonry 10** (was 20); every other material keeps its level.
+2. **Casting a mould stays ungated; pouring is gated by the metal poured**, in blacksmithing (the trade that pours every
+   mould): a mined metal at its seam's mining gate, an alloy at the highest of the mined metals mixed into it. Players
+   and pour workers (nail and ribbon smiths) at their own level, on both sides.
+3. **Formulas by what they enchant** (20/30/40/50): confirmed, no change.
+4. **No empty tree step between 1 and 90**: pine and birch 1, oak 5, maple 10 and willow 90 kept; plum and quince 40
+   (were 40), apple and pear 50 (were 40), pomegranate 60 (was 50), cedar 70 (was 50), olive 80 (was 60). Sprouts follow
+   one step under: plum and quince 30, apple and pear 40, pomegranate 50, cedar 60, olive 70.
+5. **A bare vein is always named, and still mining-gated by name**; only a buried one (under soil or water) found by
+   prospecting is "Unidentified metal" over the reader's prospecting gate, and says no level ("More prospecting
+   required to identify this vein.").
+6. **Long Unlocks lists one row a level**: over 15 gates, so the lists named (taming's 77 kinds, fishing's 16, cooking's
+   20, carpentry's 97) and blacksmithing's, mining's, woodcutting's and forestry's:
+   "1: Bramblet, Briarling, Budscarab, … (+27)", ticked when reached, the whole list as the row's hint.
 
 ## 1. What is gated today
 
@@ -104,7 +122,9 @@ locked one: listed, greyed, the refusal as its line. A gate never hides a thing.
 **One help treatment: each skill's Unlocks, derived.**
 
 * Skills window (K): an opened skill lists every gate on it in level order, each `<name> <level>` with a tick when
-  your level meets it, then "Next: Oak at 5 (yours 1.0)" (`unlocksOf`, `nextUnlockSaid`; src/ui/panels/skills.ts).
+  your level meets it, then "Next: Oak at 5 (yours 1.0)" (`unlocksOf`, `nextUnlockSaid`; src/ui/panels/skills.ts). Over
+  15 gates (`UNLOCKS_GROUPED_OVER`) one row a level, its first three names and "… (+N)", the whole list as its hint
+  (`unlockRows`).
 * Help: "Skill gates", one line per gated skill: what its gates stop and its rungs, "Birch and Pine 1; Oak 5; Maple 10; Fig
   and Peach 20; …" (`unlocksSaid`).
 
@@ -159,7 +179,7 @@ How a level is chosen, in order:
 | Miner workers | `worker_gatherable` → `worker_gate_open`; `mine_idle` → `gate_idle`; `seam` → `gate` | Kept |
 | Taming | `skill_gate('tame', species)` (`TAME_GATE`) the kind's base; +15 per stage (`TAME_STAGE_GATE`) on top; words "Logchewer: needs taming 16; have 1.0." by the stage's name (`tameRefusal`, `tame_gate_refusal`), for Tame and Take catch | Base kept, off the ladder (`KEPT_OFF_LADDER`). Built |
 | Fish | `skill_gate('fish', id)` (`FISH_GATE`); still a pool filter (a gated fish is not caught), and the Unlocks list names them | Kept, off the ladder. Built |
-| Veins by prospecting | `skill_gate('vein', yield)`, each seam's mining level: every vein in reach is marked and glows; one over your prospecting is "Unidentified metal" in Prospect's lines, a find told to you, the tile's reading and name, with "5 prospecting required to identify this vein." (`seenVein`/`veinTip`, `seen_vein`/`vein_tip`), per viewer | Built |
+| Veins by prospecting | `skill_gate('vein', yield)`, each seam's mining level: every vein in reach is marked and glows; a bare one (a Rock tile) is always named; a buried one over your prospecting is "Unidentified metal" in Prospect's lines, a find told to you and the tile's reading, with "More prospecting required to identify this vein." (no level: one level is one metal) (`seenVein`/`veinTip` with `exposed`, `seen_vein_at`/`vein_tip_at`), per viewer; on the wire only a buried one is masked (`mask_rock` with the tiles), and `tile_change` carries the rock of a square gone bare (`rock`) | Built (batch D: bare named) |
 | Stone faces by mining | `skill_gate('stone', yield)` (`STONE_GATE`): Mine and Chip corner on a bare face; a quarrier's work at its own mining (`quarryGate`/`stone_gate`, `workerGateOpen`), idle `gate` naming the stone (`stoneIdle`/`stone_idle`) | Rock 1, sandstone 10, slate 20, marble 30. Built |
 | Storeys, foundation depth | Stay their own rules: a level per storey or per metre is a scale, not a thing | — |
 | Perk, class, path, faith tiers; trade book; trait reading | Stay: choices and readings, not things refused | — |
@@ -191,22 +211,24 @@ A = asked for; S = suggested. Levels on the ladder; crafts by the difficulty rul
 
 ### Woodcutting: felling a tree with logs (A) — built
 
-| Pine, Birch | Oak | Maple | Fig, Peach | Cherry, Lemon, Apricot | Apple, Pear, Plum, Quince | Cedar, Pomegranate | Olive | Willow |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 5 | 10 | 20 | 30 | 40 | 50 | 60 | **90** |
+| Pine, Birch | Oak | Maple | Fig, Peach | Cherry, Lemon, Apricot | Plum, Quince | Apple, Pear | Pomegranate | Cedar | Olive | Willow |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | 5 | 10 | 20 | 30 | 40 | 50 | 60 | 70 | 80 | **90** |
 
-Birch 1 and willow 90, as decided; pine least, oak and maple early: the next two steps. The rest by their wood's
-difficulty (materials.ts): 0–1 → 20, 2 → 30, 3 → 40, 4 → 50, 6 → 60. Workers: the Sapgnaw line, and any hybrid at
-woodcut.
+Birch 1 and willow 90, as decided; pine least, oak and maple early: the next two steps. The rest one step a group by
+their wood's difficulty (materials.ts), spread so no step is empty (decided, batch D): 0–1 → 20, 2 → 30, the four of 3
+over two steps (plum and quince 40, the heavier apple and pear 50), pomegranate 60 and cedar 70 (both 4; cedar higher as
+the user's example had it), olive (6) 80. Moved in batch D: apple and pear 40 → 50, pomegranate 50 → 60, cedar 50 → 70,
+olive 60 → 80. Workers: the Sapgnaw line, and any hybrid at woodcut.
 
 ### Forestry: sprouts (A) — built
 
 Picking, planting and grafting a species' sprout: **one ladder step under its felling gate** (derived, `sproutLevel`),
 so you can grow a wood before you can fell it. Named in the Unlocks as "Willow sprout".
 
-| Pine, Birch, Oak | Maple | Fig, Peach | Cherry, Lemon, Apricot | Apple, Pear, Plum, Quince | Cedar, Pomegranate | Olive | Willow |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 5 | 10 | 20 | 30 | 40 | 50 | 80 |
+| Pine, Birch, Oak | Maple | Fig, Peach | Cherry, Lemon, Apricot | Plum, Quince | Apple, Pear | Pomegranate | Cedar | Olive | Willow |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | 5 | 10 | 20 | 30 | 40 | 50 | 60 | 70 | 80 |
 
 Pick sprout (`pick_sprout`: the tree's species), Plant sprout (`plant`) and Graft (`graft`: the sprout's species; with
 none chosen, the first sprout to hand your forestry may plant, `sproutToHand` / `sprout_to_hand`). S: grape cuttings at a
@@ -266,7 +288,7 @@ Workers: concrete and mortar mixers (1).
 
 | Carpentry | Log 1 · Plank 10 · Timbercraft 20 · Glass (roof) 40 |
 | --- | --- |
-| **Masonry** | Cobblestone 1 · Clay adobe 5 · Clay bricks 10 · Stone brick 20 · Sandstone 30 · Slate 40 · Marble 50 · Ornate silver 60 · Stained glass 60 · Ornate gold 70 |
+| **Masonry** | Cobblestone 1 · Clay adobe 5 · Clay bricks 10 · Stone brick 10 (decided; was 20) · Sandstone 30 · Slate 40 · Marble 50 · Ornate silver 60 · Stained glass 60 · Ornate gold 70 |
 | **Wall type** (either) | Solid, fence, half wall, railing 1 · Window, door, fence gate 5 · Double door, arch, shop counter 10 · Bay window 20 · Iron-bound gate 30 · Hidden door 40 · Portcullis 50 · Rune gate 60 |
 
 Materials by their bill (cheapest first), as the ladder's tier rule. A wall needs both its material's and its type's
@@ -284,13 +306,30 @@ skill: a hod carrier fitting a plank wall checks its carpentry.
   Not built: stepping stones and garden steps.
 * Foundations keep their depth rule.
 
-### Enchanting: formulas (A) — built
+### Enchanting: formulas (A) — built, confirmed
 
 Writing a scroll:
 
 | 20 | 30 | 40 | 50 |
 | --- | --- | --- | --- |
 | One element on a weapon, bow, armour, shield, tool or light: Emberbrand, Razoredge, Concussion, Venomfang, Gale, Nightblade, Sunstrike, Tidecaller, Farsight, Flamearrow, Frostbite, Stoneskin, Emberward, Thornhide, Bulwark, Swiftwork, Truesteel, Bountiful, Lodestone, Lantern's Grace | On jewellery, clothing and gear: Featherstep, Shadowcloak, Scholar's Band, Steady Heart, Hearthbound, Favoured, Stillwater, Packmule, Seal's Coat, Hawk's Eye, Snarecraft, Netmender, Fleetfoot, Tamer's Bridle | On a vessel, cart, store, furnace or station: Ember Heart, Fair Wind, Deep Hold, True Axle | Two elements: Leeching, Knackstone, Masterwork, Bag of Holding, Dreamweave |
+
+### Blacksmithing: pouring, by the metal (decided) — built
+
+Pour a mould and Cast an anvil (`pour_mould`, `cast_anvil`, `firing_refusal`), and a nail or ribbon smith's work
+(`worker_smith_lumps`), in blacksmithing (`MOULD_SKILL`), by the metal poured (`METAL_GATE`, kind `metal`, named
+"Iron pouring"):
+
+| Copper | Iron, Steel | Tin, Bronze | Zinc, Brass | Lead, Pewter | Silver | Gold, Electrum | Adamantine | Glimmersteel | Mithril | Seryll |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | 5 | 10 | 20 | 30 | 40 | 50 | 60 | 70 | 80 | 90 |
+
+A mined metal at its seam's mining gate (`SEAM_GATE`); an alloy at the highest of the mined metals in its mix (bronze:
+copper and tin; steel: iron and coal; brass: copper and zinc; pewter: tin and lead; electrum: silver and gold). Forming
+the mould keeps its recipe's gate. Ingots (a Smith's perk, `pour_ingot`) are not a mould and stay open. Lumps are not
+unidentified: they have uses other than pouring. Workers: a ribbon smith at blacksmithing 1 pours copper only; a nail
+smith (iron) needs 5; with only metal over its level in the stores, idle `gate`: "Idle: Iron pouring in your settlement
+stores needs blacksmithing 5 (yours 1.0)."
 
 ### Driving and sailing (A)
 
@@ -316,7 +355,7 @@ drive: no worker gate. Built (`helmGate`, `helm_gate_refusal`).
 | Stonecutting | By difficulty | Whetstone 5 · bricks, slate and sandstone slabs 10 · stone and marble slabs, bust 20 · quern 30 · telestone 40 |
 | Pottery | By difficulty | Brick, bowl, adobe, potted fern 1 · jar, palm, vase 5 · pot 10 · potter's wheel, amphora 20 |
 | Smelting | Alloys by difficulty | Pewter 5 · bronze, brass 10 · steel, electrum 20 |
-| Blacksmithing, weaponsmithing, armorsmithing, chainsmithing, platesmithing, jewellery | Moulds by difficulty; and **working a metal at its seam's level** (copper 1, iron 5 … seryll 90; alloys at their own making level) | per mould |
+| Blacksmithing, weaponsmithing, armorsmithing, chainsmithing, platesmithing, jewellery | Moulds by difficulty; pouring by the metal (built, above); beating a casting out at the anvil open | per mould |
 | Tailoring | By difficulty | Yarn 1–10 · sack, banner, curtains 5 · cloth, needle, caps, shoes, flagpole 10 · rug, tunic, trousers, tent 20 |
 | Ropemaking | By difficulty | Torch, twine 1 · rope 5 · hammock, skep 10 · creel, sailcloth 20 · net 30 · thick rope, rigging 40 |
 | Leatherworking | By difficulty | Awl 10 · leather, satchel, cap, bridle, yoke 20 · toolbelt, jerkin 30 · backpack, saddle 40 · large harness 50 · scale 80–90 |
@@ -396,30 +435,52 @@ drive: no worker gate. Built (`helmGate`, `helm_gate_refusal`).
 * Test: `supabase/test/skillgates-c.ts`. Batch A's and B's Unlocks checks now compare in level then name order and
   pick the fish out of fishing's list, since a skill's crafts are on it too.
 
+### Fourth set (built): the answers to batch C's questions
+
+* `skillgates.ts`: `TREE_GATE` spread (plum and quince 40, apple and pear 50, pomegranate 60, cedar 70, olive 80); kind
+  `metal`; `VEIN_UNREAD`, `seenVein`/`veinTip`/`seenRock` with exposure (a Rock tile always named); `unlockRows`,
+  `UNLOCKS_GROUPED_OVER`, `UNLOCK_ROW_NAMES`.
+* `craftgates.ts`: `MATERIAL_GATE.stone_brick` 10; `METAL_GATE` (derived from `SEAM_GATE` and the alloys' mixes), the
+  `metal` rows, `metalGate`, `metalGateRefusal`, `workerMetalOpen`.
+* Island (`20261120000073_defs.sql`, `20261120000074_skill_gates_d.sql`): `metal_gate_refusal` (in `firing_refusal`'s
+  Pour a mould and Cast an anvil, after the metal and before its lumps), `worker_smith_lumps` (nail and ribbon smiths in
+  `errand_step`/`errand_do`, idle `gate` naming the metal; `worker_idle` "in your settlement stores"); `vein_tip` with
+  no level, `vein_tip_at`, `seen_vein_at` (Prospect's tally and reading, `read_ground`); `mask_rock(rock, tiles, hide)`
+  in `rpc_land_window` (a Rock tile never masked); `tile_change.rock` (`land_announce`, `land_out`).
+* Browser: `pour_mould`, `cast_anvil` (`metalGateRefusal`); a nail or ribbon smith (`anvilStep`, `workerMetalOpen`,
+  idle `gate`); `idleSays` for a metal; Prospect, `readGround`, `groundReading`/`groundTip`, `tileSeen` with exposure;
+  `layChange` lays a change's rock; the Skills window's grouped Unlocks; the help's pouring and vein lines.
+* Tests: the four decisions in `skillgates.ts` (trees), `skillgates-b.ts` (veins, taming grouped), `skillgates-c.ts`
+  (stone brick, pouring, grouped lists); `window.ts` reads the land by exposure.
+
 ## 10. Open questions
 
-1. Trees between birch 1 and willow 90: oak and maple moved down a step each (5, 10) and the rest kept by their wood
-   (20–60), leaving 70 and 80 empty. Spread the fruit woods, cedar and olive higher instead?
+Answered in batch D (above): 1 (the trees), 4 (a bare vein is always named, so its mining refusal names what everybody
+sees), stone brick in 6, the forge's casting in 7 (pouring gated by metal), 10 (Formulas kept). Still open:
+
 2. The Path's settlement site counts any tree in reach, and a Sapgnaw at woodcutting 1 fells only pine and birch there.
    Count only those?
 3. A farmer or a planter tender with only seed over its level in the stores says "nothing to sow"; name the gate
    instead ("Idle: Wemp seeds need farming 30 (yours 1.0)" would name an unidentified thing to a keeper under 30)?
-4. Mining a vein you cannot identify still names it in its refusal ("Iron vein: needs mining 5; have 2.3."), as asked
-   ("mining is unchanged"). Say "Unidentified metal" there too, under the prospecting gate?
 5. A cellar dug into marble or slate bedrock gives up its shards without the quarry gate (Mine out the cellar keeps only
    the seam gate). Gate it too?
-6. Recipes by difficulty move many everyday things up: bread 5, a bucket 10, a plank wall 10, stone brick walls 20,
-   lye 10 (an ash raker making lye now needs alchemy 10), cheese 10 for a cheese press. Keep, or start the everyday
-   ones lower?
-7. Not gated in batch C: casting at the forge (a mould's casts; the mould itself is a recipe and gated), dye-recipe
-   sheets, brews set going at a barrel, garden steps, stepping stones, a Mason's Repoint (a new stone on a finished
-   wall). Gate them by the same rules?
+6. Recipes by difficulty move many everyday things up: bread 5, a bucket 10, a plank wall 10, lye 10 (an ash raker
+   making lye now needs alchemy 10), cheese 10 for a cheese press. Keep, or start the everyday ones lower? (Stone brick
+   walls answered: 10.)
+7. Not gated yet: dye-recipe sheets, brews set going at a barrel, garden steps, stepping stones, a Mason's Repoint (a
+   new stone on a finished wall); and of pouring, ingots (`pour_ingot`, a perk) and beating a casting out at the anvil
+   (by its mould's skill, open). Gate them by the same rules?
 8. A hod carrier whose only work is over its level says "no work"/"stock", not `gate` naming it (its idle words list
    items, not plans). Name the gate?
 9. A wall type's gate is in its material's skill, so carpentry and masonry each list Door 5, Window 5 …; materials are
    named "Plank building", "Marble building" to tell them from the crafts (a "Plank" recipe is carpentry 1). Better
    names?
-10. Formulas by target (20/30/40/50) rather than by their shared difficulty (which gives 10 for all). Keep?
+11. A nail smith (iron) at blacksmithing 1 now pours nothing until 5, and a ribbon smith only copper: a fresh Dowse is
+    idle `gate` at once on iron. Start pour workers higher, or keep?
+12. A prospector's find reads only bare veins (`read_ground`), which are now always named, so no worker find is ever
+    "Unidentified metal". Let prospectors find buried veins too?
+13. A vein once seen bare and then covered again (soil dropped back) stays named in a browser that saw it until the
+    land is read again: `tile_change` is one row for everybody, so it cannot unname it for one reader. Accept?
 
 ## 11. Unidentified items
 

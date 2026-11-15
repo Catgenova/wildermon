@@ -9,7 +9,7 @@ begin
   select * into c from creature where world_id = p_world and id = p_id;
   if not found or c.keeper is null then return 0; end if;
   v_size := (select size from world where id = p_world);
-  for v_row in select x, y, seen_vein(p_world, c.keeper, bedrock_at(p_world, x, y)) as nm
+  for v_row in select x, y, seen_vein_at(p_world, c.keeper, x, y) as nm
     from generate_series(greatest(0, p_x - p_radius), least(v_size - 1, p_x + p_radius)) x
     cross join generate_series(greatest(0, p_y - p_radius), least(v_size - 1, p_y + p_radius)) y
     where land_tile(p_world, x, y) = tile_id('Rock') and (bedrock_at(p_world, x, y)).ore

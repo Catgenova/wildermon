@@ -13,10 +13,13 @@
  *   * an iron vein at mining 2.3, a marble face at 12: refused in the one rule's words on both sides; at the level,
  *     allowed; a Sapgnaw at taming 0.4 and a Logchewer at 1, refused by the stage's name;
  *   * a quarrier (Chiptail) at mining 1 by marble: not taken, and says why; at 30, taken; by rock as well, the rock;
- *   * prospecting 1 over iron and copper: copper named, iron "Unidentified metal" with what would name it, in the
- *     Prospect lines and the ground's reading, on both sides; at 5, iron named; a find marked for two viewers is read
- *     by each one's own prospecting;
- *   * the Skills window's Unlocks for driving, sailing, mining, taming, fishing and prospecting.
+ *   * prospecting 1 over buried iron and copper: copper named, iron "Unidentified metal" with "More prospecting
+ *     required to identify this vein." and no level, in the Prospect lines and the ground's reading, on both sides; at
+ *     5, iron named; a find marked for two viewers is read by each one's own prospecting;
+ *   * decided since: a bare vein is always named, to everybody: on the wire (`mask_rock` leaves a Rock tile alone, a
+ *     buried one sent unidentified), in `tile_change` (the rock of a square gone bare), in Prospect's lines standing on
+ *     it and in a prospector's find, and its mining refusal names it;
+ *   * the Skills window's Unlocks for driving, sailing, mining, taming (one row a level), fishing and prospecting.
  *
  * The island half makes its own island and rolls it back.
  */
@@ -28,8 +31,10 @@ import { furnitureCentre, type PlacedFurniture } from '../../src/game/furniture'
 import { idleSays } from '../../src/game/workerlog';
 import { groundReading, groundTip } from '../../src/ui/tileinfo';
 import {
-  gateOf, seenRock, skillGateRefusal, SKILL_GATES, UNIDENTIFIED_METAL, unlocksOf, nextUnlockSaid, veinTip,
+  gateOf, seenRock, skillGateRefusal, SKILL_GATES, UNIDENTIFIED_METAL, unlockRows, unlocksOf, nextUnlockSaid, veinTip, VEIN_UNREAD,
+  UNLOCK_ROW_NAMES,
 } from '../../src/game/skillgates';
+import { layChange } from '../../src/net/landpack';
 import { bedrockAt } from '../../src/world/ore';
 import { ROCK_VARIANTS, TileType, UNIDENTIFIED_ROCK } from '../../src/world/tiles';
 import { windAt } from '../../src/game/wind';
@@ -245,9 +250,22 @@ begin
     insert into said select 'SEAMS' || i, e.text from event e where e.world_id = w and e.uid = u and e.text like 'Seams within %' order by e.n desc limit 1;
   end loop;
   insert into said select 'MARKS', (stats->'prospected'->'tiles')::text from player where world_id = w and uid = u;
+  -- The land sent at prospecting 1 while they are buried: the iron unidentified.
+  perform pg_temp.skill(w, u, 'prospecting', 1);
+  insert into said select 'LAND0', encode(decode(j->'rows'->0->>'rock', 'base64'), 'hex')
+    from rpc_land_window(w, ${T - 1}, ${T - 4}, ${T + 1}, ${T - 4}) j;
+  insert into said select 'CHANGE0', coalesce((select rock::text from tile_change where world_id = w and x = ${T + 1} and y = ${T - 4} order by n desc limit 1), 'none');
   -- A prospector's find, bare, told to its keeper by the keeper's prospecting.
   perform pg_temp.bare(w, ${T + 1}, ${T - 4}, ${IRON});
   perform pg_temp.bare(w, ${T - 1}, ${T - 4}, ${COPPER});
+  -- Gone bare: its change carries its rock, named.
+  insert into said select 'CHANGE1', coalesce((select rock::text from tile_change where world_id = w and x = ${T + 1} and y = ${T - 4} order by n desc limit 1), 'none');
+  -- Standing on the bare iron at prospecting 1: named, in the reading and the tally.
+  delete from event where world_id = w and uid = u;
+  perform perform_ground(w, u, 'prospect', jsonb_build_object('kind', 'tile', 'x', ${T + 1}, 'y', ${T - 4}));
+  insert into said select 'HERE3', e.text from event e where e.world_id = w and e.uid = u and e.text like 'Here: %' order by e.n desc limit 1;
+  insert into said select 'SEAMS3', e.text from event e where e.world_id = w and e.uid = u and e.text like 'Seams within %' order by e.n desc limit 1;
+
   v_c := creature_spawn(w, 'magga', ${T}.5, ${T - 3}.5, 'deed', now() - interval '60 days', u);
   update creature set name = 'Pip' where world_id = w and id = v_c;
   for i in 1..2 loop
@@ -405,7 +423,9 @@ const ask = (g: Game, id: string, t: Target): string => ACTION_BY_ID.get(id)?.ch
   g.skills.values.set('mining', 2.3);
   const ironWords = 'Iron vein: needs mining 5; have 2.3.';
   const i2 = ask(g, 'mine', iron);
-  check(`an iron vein at mining 2.3: "${ironWords}", as it always said, on both sides`, i2 === ironWords && said('IRON2') === ironWords,
+  // A bare vein, so named whatever the miner's prospecting (here under iron's 5).
+  check(`an iron vein at mining 2.3 and prospecting ${g.skills.get('prospecting').toFixed(1)}: "${ironWords}", as it always said, on both sides`,
+    i2 === ironWords && said('IRON2') === ironWords && g.skills.get('prospecting') < gateOf('vein', 'iron_ore')!.level,
     `island "${said('IRON2')}" / browser "${i2}"`);
   g.skills.values.set('mining', 5);
   const i5 = ask(g, 'mine', iron);
@@ -514,10 +534,12 @@ const run = (g: Game, c: Creature, secs: number): void => {
     const here = g.log.find((l) => l.text.startsWith('Here: '))?.text ?? '';
     const seams = g.log.find((l) => l.text.startsWith('Seams within '))?.text ?? '';
     said2.push(here, seams);
-    const tip = `${gateOf('vein', 'iron_ore')!.level} prospecting required to identify this vein.`;
+    // No level: the level would name it.
+    const tip = VEIN_UNREAD;
     if (lv === 1) {
-      check(`prospecting 1 over iron: "${here}", the same on both sides`,
-        here === said(`HERE${i}`) && here.startsWith(`Here: ${UNIDENTIFIED_METAL.toLowerCase()}. ${tip}`), `island "${said(`HERE${i}`)}" / browser "${here}"`);
+      check(`prospecting 1 over buried iron: "${here}", the same on both sides, no number before its quality`,
+        here === said(`HERE${i}`) && here.startsWith(`Here: ${UNIDENTIFIED_METAL.toLowerCase()}. ${tip}`) && tip === 'More prospecting required to identify this vein.'
+          && !/\d/.test(here.split(' Max QL')[0]), `island "${said(`HERE${i}`)}" / browser "${here}"`);
       check(`and copper named, iron not: "${seams}", the same on both sides`,
         seams === said(`SEAMS${i}`) && seams.includes('copper vein 1') && seams.includes(`${UNIDENTIFIED_METAL.toLowerCase()} 1`) && !seams.includes('iron'),
         `island "${said(`SEAMS${i}`)}" / browser "${seams}"`);
@@ -561,22 +583,50 @@ const run = (g: Game, c: Creature, secs: number): void => {
     pip.noRoomAt = -1e9;
     k.readGround(pip, T, T - 4, 3);
     const found = k.log.find((l) => l.text.startsWith('Pip found ore: '))?.text ?? '';
-    const want = lv === 1 ? 'Pip found ore: copper vein, unidentified metal.' : 'Pip found ore: copper vein, iron vein.';
-    check(`a prospector's find told to its keeper at prospecting ${lv}: "${want}", on both sides`,
+    // Bare, so named at either level.
+    const want = 'Pip found ore: copper vein, iron vein.';
+    check(`a prospector's find of bare veins told to its keeper at prospecting ${lv}: "${want}", named, on both sides`,
       found === want && said(`FOUND${i}`) === want, `island "${said(`FOUND${i}`)}" / browser "${found}"`);
   }
+  // Standing on the bare iron at prospecting 1: named, in the reading and the tally; its mining refusal names it (above).
+  k.inventory.add('pickaxe', { ql: 40 });
+  k.skills.values.set('prospecting', 1);
+  k.player.x = T + 1.5;
+  k.player.y = T - 3.5;
+  k.log.length = 0;
+  ACTION_BY_ID.get('prospect')!.perform!({ kind: 'tile', x: T + 1, y: T - 4 } as Target, k);
+  const here = k.log.find((l) => l.text.startsWith('Here: '))?.text ?? '';
+  const seams = k.log.find((l) => l.text.startsWith('Seams within '))?.text ?? '';
+  check(`a bare iron vein at prospecting 1 is named: "${here}", on both sides`,
+    here === said('HERE3') && here.startsWith('Here: iron vein. Needs mining 5') && seams === said('SEAMS3') && seams.includes('iron vein 1') && !seams.includes(UNIDENTIFIED_METAL.toLowerCase()),
+    `island "${said('HERE3')}" "${said('SEAMS3')}" / browser "${here}" "${seams}"`);
+  check(`and reads named: "${groundReading(k, T + 1, T - 4)}"`, (groundReading(k, T + 1, T - 4) ?? '').startsWith('Iron vein · mining 5') && groundTip(k, T + 1, T - 4) === null,
+    groundReading(k, T + 1, T - 4) ?? '');
 }
 
 {
   const hex = (n: number): string => n.toString(16).padStart(2, '0');
   const [r1, d1] = said('LAND1').split('|');
   const [r5] = said('LAND2').split('|');
-  check(`the land sent at prospecting 1: copper as itself, plain rock as itself, iron as UNIDENTIFIED_ROCK (${UNIDENTIFIED_ROCK}); and a bare seam's data byte not sent`,
-    r1 === `${hex(COPPER)}${hex(PLAIN)}${hex(UNIDENTIFIED_ROCK)}` && d1 === '000000', said('LAND1'));
+  check(`the land sent at prospecting 1 with both buried: copper as itself, plain rock as itself, iron as UNIDENTIFIED_ROCK (${UNIDENTIFIED_ROCK})`,
+    said('LAND0') === `${hex(COPPER)}${hex(PLAIN)}${hex(UNIDENTIFIED_ROCK)}`, said('LAND0'));
+  check('with both bare at prospecting 1: iron as itself, named to everybody; and a bare seam\'s data byte not sent',
+    r1 === `${hex(COPPER)}${hex(PLAIN)}${hex(IRON)}` && d1 === '000000', said('LAND1'));
   check('and at prospecting 5, iron as itself', r5 === `${hex(COPPER)}${hex(PLAIN)}${hex(IRON)}`, said('LAND2'));
+  check(`tile_change carries the rock of a square gone bare (${said('CHANGE1')}), none before (${said('CHANGE0')})`,
+    said('CHANGE1') === String(IRON) && (said('CHANGE0') === 'none' || said('CHANGE0') === ''), `${said('CHANGE0')} / ${said('CHANGE1')}`);
   const viewer = (lv: number) => ({ skills: { get: () => lv } });
-  check('the browser\'s rule for it is the same (`seenRock`)',
-    seenRock(IRON, viewer(1)) === UNIDENTIFIED_ROCK && seenRock(IRON, viewer(5)) === IRON && seenRock(COPPER, viewer(1)) === COPPER && seenRock(MARBLE, viewer(1)) === MARBLE);
+  check('the browser\'s rule for it is the same (`seenRock`): buried by prospecting, bare always itself',
+    seenRock(IRON, viewer(1)) === UNIDENTIFIED_ROCK && seenRock(IRON, viewer(5)) === IRON && seenRock(COPPER, viewer(1)) === COPPER && seenRock(MARBLE, viewer(1)) === MARBLE
+      && seenRock(IRON, viewer(1), TileType.Rock) === IRON && seenRock(IRON, viewer(1), TileType.Grass) === UNIDENTIFIED_ROCK);
+  {
+    // A change that carries a rock lays it: the vein dug out from under the soil comes named.
+    const g = fresh();
+    g.world.rock[(T - 4) * g.world.w + T + 1] = UNIDENTIFIED_ROCK;
+    layChange(g.world, { x: T + 1, y: T - 4, tile: TileType.Rock, data: 0, corners: [50, 50, 50, 50], soil: [0, 0, 0, 0], rock: IRON });
+    check(`and the browser lays it (${groundReading(g, T + 1, T - 4)})`, g.world.rockKind(T + 1, T - 4) === IRON && (groundReading(g, T + 1, T - 4) ?? '').startsWith('Iron vein'),
+      groundReading(g, T + 1, T - 4) ?? '');
+  }
   const g = fresh();
   g.world.rock[(T - 4) * g.world.w + T + 1] = UNIDENTIFIED_ROCK;
   g.world.setTile(T + 1, T - 4, TileType.Rock, 0);
@@ -604,6 +654,18 @@ const run = (g: Game, c: Creature, secs: number): void => {
     taming.length === Object.keys(OLD_TAME).length && taming.every((u, i) => (i === 0 || taming[i - 1].level <= u.level) && u.met === (u.level <= 14))
       && taming.some((u) => u.name === 'Sapgnaw' && u.level === 1 && u.met) && taming.some((u) => u.name === SPECIES.snout.name && u.level === 50 && !u.met),
     shown('taming', 14));
+  // Decided since: one row a level, the names joined, the first few and "… (+N)", ticked when reached.
+  const rows = unlockRows('taming', 16);
+  const levels = [...new Set(taming.map((u) => u.level))];
+  const at16 = taming.filter((u) => u.level === 16).map((u) => u.name);
+  const row16 = rows.find((r) => r.level === 16);
+  const want16 = `16: ${at16.slice(0, UNLOCK_ROW_NAMES).join(', ')}${at16.length > UNLOCK_ROW_NAMES ? `, … (+${at16.length - UNLOCK_ROW_NAMES})` : ''}`;
+  check(`taming's Unlocks grouped: ${rows.length} rows for ${taming.length} kinds, "${row16?.label}"`,
+    rows.length === levels.length && rows.length < taming.length && row16?.label === want16 && row16.met && row16.names.length === at16.length
+      && rows.every((r, i) => (i === 0 || rows[i - 1].level < r.level) && r.met === (r.level <= 16))
+      && rows.reduce((n, r) => n + r.names.length, 0) === taming.length && nextUnlockSaid('taming', 16) === `Next: ${taming.find((u) => u.level > 16)!.name} at ${taming.find((u) => u.level > 16)!.level} (yours 16.0)`,
+    rows.map((r) => `${r.met ? '✓' : '·'}${r.label}`).join(' | '));
+  check('a short list stays a row a gate (sailing)', unlockRows('sailing', 25).map((r) => r.label).join(', ') === 'Rowing boat 1, Sailing boat 20, Caravel 50');
   // The fish among fishing's gates (its crafts are on the list too since batch C).
   const fishShown = unlocksOf('fishing', 20).filter((u) => FISH.some((f) => f.name === u.name)).map((u) => `${u.met ? '✓' : '·'}${u.name} ${u.level}`).join(', ');
   check('fishing: the eight fish at their levels, ticked at 20',

@@ -1993,7 +1993,7 @@ export class Island {
          * one channel can carry more than one island's blocks.
          */
         const { data, error } = await supabase().from('tile_change')
-          .select('n,x,y,tile,data,corners,soil')
+          .select('n,x,y,tile,data,corners,soil,rock')
           .eq('world_id', info.id).gt('n', after).order('n').limit(take);
         if (error) return { rows: [], error: error.message };
         return { rows: listOf(data, changeRow) };

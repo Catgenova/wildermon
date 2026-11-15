@@ -554,7 +554,7 @@ begin
       if not exists (select 1 from placed p where p.world_id = p_world and p.kind = 'anvil'
                        and on_home_deed(p_world, c.keeper, p.x, p.y)
                        and sqrt((p.cx - c.to_x) ^ 2 + (p.cy - c.to_y) ^ 2) <= 3) then return false; end if;
-      select u.l into v_l from unnest(smith_lumps(kind)) with ordinality u(l, o)
+      select u.l into v_l from unnest(worker_smith_lumps(c, kind)) with ordinality u(l, o)
        where stores_count(p_world, c.keeper, u.l) > 0 order by u.o limit 1;
       if v_l is null then return false; end if;
       select * into v_m from mould_def where id = smith_mould(kind);

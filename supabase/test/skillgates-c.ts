@@ -16,18 +16,25 @@
  *     and refused in their seen names when read or restored; named at the level;
  *   * workers at their own level in each gate's skill: a cook's recipes, a hod carrier's walls and floors, a restorer's
  *     relics; idle `gate` in the stores' words;
- *   * the Skills window: carpentry's and cooking's Unlocks, and each skill's next gate beside its level.
+ *   * the Skills window: carpentry's and cooking's Unlocks, and each skill's next gate beside its level;
+ *   * decided since: stone brick walls at masonry 10; pouring gated by the metal poured, in blacksmithing (a mined metal
+ *     at its seam's mining gate, an alloy at its highest metal's): Pour a mould and Cast an anvil refused in the one
+ *     rule's words on both sides, a nail or ribbon smith pours only what its own blacksmithing may and is idle `gate`
+ *     naming the metal; cooking's and carpentry's long Unlocks one row a level.
  *
  * The island half makes its own island and rolls it back.
  */
 import { Game } from '../../src/game/game';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import { RECIPE_BY_ID, RECIPES, recipeReason } from '../../src/game/recipes';
-import { craftLevel, FORMULA_GATE, hodMay, recipeLevel, workerBuildOpen, workerRecipeOpen } from '../../src/game/craftgates';
+import { craftLevel, FORMULA_GATE, hodMay, METAL_GATE, metalGateRefusal, recipeLevel, workerBuildOpen, workerMetalOpen, workerRecipeOpen } from '../../src/game/craftgates';
+import { METALS, MOULD_SKILL } from '../../src/game/metal';
+import { smithLumps } from '../../src/game/creatures';
 import { idleSays } from '../../src/game/workerlog';
 import { scrollOf } from '../../src/game/enchant';
 import {
-  gateOf, identifySaid, itemGateRefusal, nextUnlockBar, seenName, skillGateRefusal, SKILL_GATES, unlocksOf,
+  gateOf, identifySaid, itemGateRefusal, nextUnlockBar, seenName, SEAM_GATE, skillGateRefusal, SKILL_GATES, unlockRows, unlocksOf,
+  UNLOCKS_GROUPED_OVER,
 } from '../../src/game/skillgates';
 import { TileType } from '../../src/world/tiles';
 import type { Wall, FloorTile } from '../../src/game/building';
@@ -36,7 +43,10 @@ import { psql, check, finish } from './harness';
 const U = '7e5b0000-0000-4000-8000-0000000c7e01';
 const T = 40;
 const SEED = 311;
-const KINDS = ['recipe', 'relic', 'bauble', 'material', 'wall', 'floor', 'paving'];
+const KINDS = ['recipe', 'relic', 'bauble', 'material', 'wall', 'floor', 'paving', 'metal'];
+/** The smelter's tile, beside where you stand for the pours (`T` + 3.5, `T` + 1.5). */
+const SX = T + 4;
+const SY = T + 1;
 const wallAt = { kind: 'tile', x: T + 2, y: T + 2, side: 'n' };
 const target = (o: Record<string, unknown>): string => `'${JSON.stringify(o)}'::jsonb`;
 
@@ -58,7 +68,7 @@ begin
   return c;
 end $m$;
 do $t$
-declare w uuid; u uuid := '${U}'; v_it item; v_id bigint; c creature;
+declare w uuid; u uuid := '${U}'; v_it item; v_id bigint; c creature; v_smelter bigint; v_mould bigint; v_lump bigint; v_copper bigint;
 begin
   insert into said select 'GATES', string_agg(kind || ':' || id || ':' || name || ':' || skill || ':' || level, ',' order by kind collate "C", id collate "C")
     from skill_gate where kind in (${KINDS.map((k) => `'${k}'`).join(', ')});
@@ -100,6 +110,12 @@ begin
   perform pg_temp.skill(w, u, 'masonry', 40);
   insert into said values ('MARBLE40', coalesce(build_refusal(w, u, 'plan_wall', ${target({ ...wallAt, wallType: 'solid', material: 'marble' })}), 'ALLOWED'));
   insert into said values ('PORT40', coalesce(build_gate_refusal(w, u, 'stone_brick', 'portcullis', null, null), 'ALLOWED'));
+  -- Stone brick at masonry 10, as decided.
+  perform pg_temp.skill(w, u, 'masonry', 9);
+  insert into said values ('BRICK9', coalesce(build_refusal(w, u, 'plan_wall', ${target({ ...wallAt, wallType: 'solid', material: 'stone_brick' })}), 'ALLOWED'));
+  perform pg_temp.skill(w, u, 'masonry', 10);
+  insert into said values ('BRICK10', coalesce(build_gate_refusal(w, u, 'stone_brick', 'solid', null, null), 'ALLOWED'));
+  perform pg_temp.skill(w, u, 'masonry', 40);
   perform land_set_tile(w, ${T + 3}, ${T + 1}, 2);
   update player set x = ${T + 3}.5, y = ${T + 1}.5 where world_id = w and uid = u;
   perform give(w, u, 'marble_slab', 1, 40, null);
@@ -110,6 +126,23 @@ begin
   insert into said values ('SLAB50', coalesce(ground_refusal(w, u, 'pave_slabs', ${target({ kind: 'tile', x: T + 3, y: T + 1 })}), 'ALLOWED'));
   perform pg_temp.skill(w, u, 'paving', 1);
   insert into said values ('COBBLE1', coalesce(terrain_refusal(w, u, 'pave_cobble', ${target({ kind: 'tile', x: T + 3, y: T + 1 })}), 'ALLOWED'));
+
+  /* ---- pouring, by the metal ---- */
+  insert into placed (world_id, kind, x, y, sx, sy, cx, cy, ql, fuel, lit, state, made_by)
+    values (w, 'smelter', ${SX}, ${SY}, 0, 0, ${SX}.375, ${SY}.25, 50, 600, true, '{"jobs": [], "output": []}'::jsonb, u)
+    returning id into v_smelter;
+  perform give(w, u, 'hammer', 1, 40, null);
+  v_mould := give(w, u, 'shovel_head_mould', 1, 50, null);
+  perform give(w, u, 'anvil_mould', 1, 50, null);
+  v_lump := give(w, u, 'iron_lump', 50, 40, null);
+  v_copper := give(w, u, 'copper_lump', 1, 40, null);
+  perform pg_temp.skill(w, u, 'blacksmithing', 2.3);
+  insert into said values ('POUR_IRON2', coalesce(firing_refusal(w, u, 'pour_mould', jsonb_build_object('kind', 'smelter', 'id', v_smelter, 'mouldUid', v_mould, 'itemUid', v_lump)), 'ALLOWED'));
+  insert into said values ('ANVIL_IRON2', coalesce(firing_refusal(w, u, 'cast_anvil', jsonb_build_object('kind', 'smelter', 'id', v_smelter, 'itemUid', v_lump)), 'ALLOWED'));
+  insert into said values ('POUR_COPPER2', coalesce(firing_refusal(w, u, 'pour_mould', jsonb_build_object('kind', 'smelter', 'id', v_smelter, 'mouldUid', v_mould, 'itemUid', v_copper)), 'ALLOWED'));
+  perform pg_temp.skill(w, u, 'blacksmithing', 5);
+  insert into said values ('POUR_IRON5', coalesce(firing_refusal(w, u, 'pour_mould', jsonb_build_object('kind', 'smelter', 'id', v_smelter, 'mouldUid', v_mould, 'itemUid', v_lump)), 'ALLOWED'));
+  insert into said values ('ANVIL_IRON5', coalesce(firing_refusal(w, u, 'cast_anvil', jsonb_build_object('kind', 'smelter', 'id', v_smelter, 'itemUid', v_lump)), 'ALLOWED'));
 
   /* ---- a Formula, a fragment, a tarnished bauble ---- */
   perform give(w, u, 'brush', 1, 40, null);
@@ -154,6 +187,13 @@ begin
   insert into said values ('HOD_PLANK', hod_may(w, c, 'wall', 0, 'h', ${T}, ${T}) || '');
   update wall set material = 'log' where world_id = w and x = ${T} and y = ${T};
   insert into said values ('HOD_LOG', hod_may(w, c, 'wall', 0, 'h', ${T}, ${T}) || '');
+  -- A ribbon smith pours only the metals its own blacksmithing may.
+  c := pg_temp.worker(w, u, '{"blacksmithing": 1}');
+  insert into said values ('RIBBON1', array_to_string(worker_smith_lumps(c, 'ribbon'), ','));
+  c := pg_temp.worker(w, u, '{"blacksmithing": 20}');
+  insert into said values ('RIBBON20', array_to_string(worker_smith_lumps(c, 'ribbon'), ','));
+  c := pg_temp.worker(w, u, '{"blacksmithing": 1}');
+  insert into said values ('NAIL1', array_to_string(worker_smith_lumps(c, 'nail'), ','));
 end $t$;
 select k || '=' || coalesce(v, '') from said;
 rollback;
@@ -191,6 +231,17 @@ const said = (k: string): string => isle.get(k) ?? '';
   check('relics and baubles by their restoring difficulty: old pot 10, old lamp 40, ancient helm 70; minor 10, major 40, ancient 70',
     gateOf('relic', 'old pot')?.level === 10 && gateOf('relic', 'old lamp')?.level === 40 && gateOf('relic', 'ancient helm')?.level === 70
       && gateOf('bauble', 'minor')?.level === 10 && gateOf('bauble', 'major')?.level === 40 && gateOf('bauble', 'ancient')?.level === 70);
+  check('stone brick building at masonry 10, as decided; clay bricks 10 and sandstone 30 kept',
+    gateOf('material', 'stone_brick')?.level === 10 && gateOf('material', 'clay_bricks')?.level === 10 && gateOf('material', 'sandstone')?.level === 30);
+  const mined = METALS.filter((m) => m.ore);
+  check(`pouring a mined metal at its seam's mining gate, in ${MOULD_SKILL} (${mined.map((m) => `${m.id} ${METAL_GATE[m.id]}`).join(', ')})`,
+    mined.every((m) => gateOf('metal', m.id)?.level === SEAM_GATE[m.ore!] && gateOf('metal', m.id)?.skill === MOULD_SKILL && gateOf('metal', m.id)?.name === `${m.name} pouring`)
+      && METAL_GATE.copper === 1 && METAL_GATE.iron === 5 && METAL_GATE.tin === 10 && METAL_GATE.gold === 50 && METAL_GATE.seryll === 90);
+  check('an alloy at its highest metal\'s: bronze 10, steel 5, brass 20, pewter 30, electrum 50',
+    METAL_GATE.bronze === 10 && METAL_GATE.steel === 5 && METAL_GATE.brass === 20 && METAL_GATE.pewter === 30 && METAL_GATE.electrum === 50,
+    METALS.filter((m) => !m.ore).map((m) => `${m.id} ${METAL_GATE[m.id]}`).join(', '));
+  check('casting a mould stays its own recipe\'s gate: the shovel head mould by its difficulty',
+    gateOf('recipe', 'make_shovel_head_mould')?.level === craftLevel(RECIPE_BY_ID.get('make_shovel_head_mould')?.difficulty));
   check('a wall type in each building skill, a stone-only one in masonry only',
     gateOf('wall', 'carpentry:door')?.level === 5 && gateOf('wall', 'masonry:door')?.level === 5 && !gateOf('wall', 'carpentry:portcullis')
       && gateOf('wall', 'masonry:portcullis')?.level === 50 && !gateOf('wall', 'carpentry:rune_gate'));
@@ -265,6 +316,12 @@ const isGate = (s: string): boolean => /: needs [a-z ]+ \d+; have \d+\.\d\.$/.te
   const m40 = ask(g, 'plan_wall', { ...wallAt, wallType: 'solid', material: 'marble' } as Target);
   check(`a marble wall at masonry 40: "${marble}", on both sides`, m40 === marble && said('MARBLE40') === marble, `island "${said('MARBLE40')}" / browser "${m40}"`);
   check('a stone brick portcullis at masonry 40: the material met, "Portcullis: needs masonry 50; have 40.0."', said('PORT40') === 'Portcullis: needs masonry 50; have 40.0.', said('PORT40'));
+  set(g, 'masonry', 9);
+  const brick = 'Stone brick building: needs masonry 10; have 9.0.';
+  const k9 = ask(g, 'plan_wall', { ...wallAt, wallType: 'solid', material: 'stone_brick' } as Target);
+  check(`a stone brick wall at masonry 9: "${brick}"; at 10, past it; on both sides`,
+    k9 === brick && said('BRICK9') === brick && said('BRICK10') === 'ALLOWED', `island "${said('BRICK9')}" ${said('BRICK10')} / browser "${k9}"`);
+  set(g, 'masonry', 40);
   g.world.setTile(T + 3, T + 1, TileType.PackedDirt);
   g.player.x = T + 3.5;
   g.player.y = T + 1.5;
@@ -354,6 +411,45 @@ const isGate = (s: string): boolean => /: needs [a-z ]+ \d+; have \d+\.\d\.$/.te
   check(`a restorer with only an old lamp's pieces: "${relic}"`, relic === 'Idle: Old lamp in your settlement stores needs restoration 40 (yours 30.0).', relic);
 }
 
+/* ---- pouring, by the metal ------------------------------------------------------- */
+
+{
+  const g = fresh();
+  g.player.x = T + 3.5;
+  g.player.y = T + 1.5;
+  const smelter = g.addSmelter(SX, SY, 0, 0, 50);
+  smelter.fuel = 600;
+  smelter.lit = true;
+  g.inventory.add('hammer', { ql: 40 });
+  const mould = g.inventory.add('shovel_head_mould', { ql: 50 });
+  g.inventory.add('anvil_mould', { ql: 50 });
+  const iron = g.inventory.add('iron_lump', { ql: 40, count: 50, extra: 'Iron' });
+  const copper = g.inventory.add('copper_lump', { ql: 40, count: 1, extra: 'Copper' });
+  const pour = (lump: number): Target => ({ kind: 'smelter', id: smelter.id, mouldUid: mould.uid, itemUid: lump } as Target);
+  const anvil = { kind: 'smelter', id: smelter.id, itemUid: iron.uid } as Target;
+  set(g, 'blacksmithing', 2.3);
+  const words = 'Iron pouring: needs blacksmithing 5; have 2.3.';
+  const p2 = ask(g, 'pour_mould', pour(iron.uid));
+  const a2 = ask(g, 'cast_anvil', anvil);
+  check(`pouring iron into a shovel head mould at blacksmithing 2.3: "${words}", on both sides`,
+    p2 === words && said('POUR_IRON2') === words && metalGateRefusal(g, 'iron') === words, `island "${said('POUR_IRON2')}" / browser "${p2}"`);
+  check('and casting an iron anvil, the same', a2 === words && said('ANVIL_IRON2') === words, `island "${said('ANVIL_IRON2')}" / browser "${a2}"`);
+  const c2 = ask(g, 'pour_mould', pour(copper.uid));
+  check('copper at 2.3: past the gate on both sides', !isGate(c2) && !isGate(said('POUR_COPPER2')), `island "${said('POUR_COPPER2')}" / browser "${c2}"`);
+  set(g, 'blacksmithing', 5);
+  const p5 = ask(g, 'pour_mould', pour(iron.uid));
+  const a5 = ask(g, 'cast_anvil', anvil);
+  check('iron at 5: poured and cast, on both sides', p5 === 'ALLOWED' && said('POUR_IRON5') === 'ALLOWED' && a5 === 'ALLOWED' && said('ANVIL_IRON5') === 'ALLOWED',
+    `island ${said('POUR_IRON5')} ${said('ANVIL_IRON5')} / browser ${p5} ${a5}`);
+  const ribbon = (lv: number): string => smithLumps('ribbon').filter((id) => workerMetalOpen({ skills: { blacksmithing: lv } }, id)).join(',');
+  check(`a ribbon smith at blacksmithing 1 pours copper only (${ribbon(1)}), at 20 the metals to 20 (${ribbon(20)}); a nail smith at 1 none; on both sides`,
+    ribbon(1) === 'copper_lump' && said('RIBBON1') === ribbon(1) && said('RIBBON20') === ribbon(20) && ribbon(20) === 'copper_lump,iron_lump,tin_lump,zinc_lump,bronze_lump,brass_lump,steel_lump'
+      && said('NAIL1') === '' && !workerMetalOpen({ skills: { blacksmithing: 1 } }, 'iron_lump'),
+    `island ${said('RIBBON1')} / ${said('RIBBON20')} / ${said('NAIL1')} — browser ${ribbon(1)} / ${ribbon(20)}`);
+  const idle = idleSays({ why: 'gate', n: 0, what: ['metal', 'iron'] }, 'nail', null, 1, { blacksmithing: 1 });
+  check(`a nail smith with only iron in the stores: "${idle}"`, idle === 'Idle: Iron pouring in your settlement stores needs blacksmithing 5 (yours 1.0).', idle);
+}
+
 /* ---- the Skills window ----------------------------------------------------------- */
 
 {
@@ -372,6 +468,18 @@ const isGate = (s: string): boolean => /: needs [a-z ]+ \d+; have \d+\.\d\.$/.te
   check(`several at one level: the first in the table's order and how many more ("${nextUnlockBar('cooking', 1)}")`,
     nextUnlockBar('cooking', 1) === `5: ${at5[0]} +${at5.length - 1} more`, nextUnlockBar('cooking', 1) ?? 'none');
   check('none left: nothing', nextUnlockBar('cooking', 30) === null && nextUnlockBar('woodcutting', 90) === null && nextUnlockBar('swimming', 1) === null);
+  // Decided since: a list over twenty rows is one row a level, names joined.
+  for (const skill of ['cooking', 'carpentry', 'fishing']) {
+    const list = unlocksOf(skill, 10);
+    const rows = unlockRows(skill, 10);
+    check(`${skill}'s ${list.length} Unlocks as ${rows.length} rows, one a level (${rows.slice(0, 3).map((r) => r.label).join(' | ')})`,
+      list.length > UNLOCKS_GROUPED_OVER && rows.length === new Set(list.map((u) => u.level)).size
+        && rows.every((r) => r.label.startsWith(`${r.level}: `) && r.met === (r.level <= 10)) && rows.reduce((n, r) => n + r.names.length, 0) === list.length,
+      rows.map((r) => r.label).join(' | ').slice(0, 300));
+  }
+  const smith = unlocksOf('blacksmithing', 5);
+  check('blacksmithing\'s Unlocks name each metal\'s pouring at its level',
+    METALS.every((m) => smith.some((u) => u.name === `${m.name} pouring` && u.level === METAL_GATE[m.id] && u.met === (METAL_GATE[m.id] <= 5))));
 }
 
 finish('Skill gates: recipes, restoring, walls, floors and paving, for you and for workers at their own level');

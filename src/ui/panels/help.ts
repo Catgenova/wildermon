@@ -180,8 +180,11 @@ import { AWARE_PER_LEVEL, AWARE_TRAIT_STEP, awareShareAbove, awareTraitEase, DEE
 import { NIGHT_EYES_FROM } from '../../game/learn';
 import { NO_GO, pointAt, windWord, windWorth } from '../../game/wind';
 import { article, capital, finePercent, listed, listedOr, percent, timeWords } from '../../game/words';
-import { CRAFT_FROM, CRAFT_PER, craftLevel, FORMULA_GATE, FORMULA_TWO_ELEMENTS } from '../../game/craftgates';
-import { CRAFT_GATE_SAID, cropSeed, GATE_LADDER, GATE_STOPS, GATED_ITEMS, GATED_SKILLS, gateOf, identifySaid, SEAM_GATE, seenName, skillGateRefusal, SKILL_GATES, unlocksSaid, type Viewer } from '../../game/skillgates';
+import { CRAFT_FROM, CRAFT_PER, craftLevel, FORMULA_GATE, FORMULA_TWO_ELEMENTS, METAL_GATE } from '../../game/craftgates';
+import {
+  CRAFT_GATE_SAID, cropSeed, GATE_LADDER, GATE_STOPS, GATED_ITEMS, GATED_SKILLS, gateOf, identifySaid, SEAM_GATE, seenName, skillGateRefusal, SKILL_GATES, UNIDENTIFIED_METAL,
+  unlocksSaid, VEIN_UNREAD, type Viewer,
+} from '../../game/skillgates';
 
 /** Somebody at 1 in every skill, for the help's examples of what is unidentified. */
 const FRESH: Viewer = { skills: { get: () => 1 } };
@@ -1939,6 +1942,7 @@ export function helpText(): string {
       <li><b>${itemDef(SMITH_TOOL).name}</b> needed: firing a mould, pouring one, casting an anvil, smithing a casting, striking coins, fitting a padlock.</li>
       <li><b>Anvil mould</b>, poured at the smelter: an anvil of that metal from ${MOULD_BY_ID.get('anvil_mould')!.lumps} lumps; set down on ${ANVIL_SUBTILES * ANVIL_SUBTILES} spots of a tile.</li>
       <li>Other moulds, <b>poured at the smelter</b> in any metal: a <b>casting</b> (shovel head casting, nail casting…) out with the lumps.</li>
+      <li>Pouring, a mould or an anvil: ${skillWord(MOULD_SKILL)} at the metal's level, ${METALS.map((m) => `${m.name.toLowerCase()} ${METAL_GATE[m.id]}`).join(', ')}.</li>
       <li>Castings are finished at an <b>anvil</b> with <b>blacksmithing</b>, <b>weaponsmithing</b> or <b>armoursmithing</b> as the piece needs. Skill sets success and QL,
       with the casting (mould and metal QL) and the anvil. Failure: casting damaged by its QL (${FAIL_DAMAGE_SAID}), not used up.</li>
       ${MOULDS.filter((m) => m.also).map((m) => `<li><b>${itemDef(m.makes).name}</b>: casting + ${m.also?.count} × ${itemDef(m.also?.item ?? '').name.toLowerCase()} at the anvil, spent on success.</li>`).join('')}
@@ -3929,6 +3933,9 @@ export function helpText(): string {
       <li>Recipe level: the ladder step at or below ${CRAFT_PER} × (difficulty − ${CRAFT_FROM}); no difficulty: ${craftLevel(undefined)}. Named: ${Object.entries(CRAFT_GATE_SAID).map(([id, g]) => `${itemDef(id).name} ${skillWord(g.skill)} ${g.level}`).join(', ')}.
       Formula scrolls by target: weapon, bow, armour, shield, tool, light ${FORMULA_GATE.melee}; jewellery, clothing, gear ${FORMULA_GATE.ring}; vessel, cart, store, furnace, station ${FORMULA_GATE.ship}; mixed elements ${FORMULA_TWO_ELEMENTS}.
       Relics and baubles: their restoring difficulty, the same rule.</li>
+      <li>Pouring a metal (Pour a mould, Cast an anvil; nail and ribbon smiths), in ${skillWord(MOULD_SKILL)}: a mined metal at its seam's mining level; an alloy at its highest metal's
+      (${METALS.filter((m) => !m.ore).map((m) => `${m.name.toLowerCase()} ${METAL_GATE[m.id]}`).join(', ')}). Forming the mould: its own recipe's level.</li>
+      <li>Veins: bare, always named; buried, &ldquo;${UNIDENTIFIED_METAL}&rdquo; under its mining level in prospecting; tooltip &ldquo;${VEIN_UNREAD}&rdquo;</li>
       <li>Walls, floors, roofs: the material's gate and the wall or floor type's, both in the material's skill (carpentry or masonry). Planning, and adding to a plan.</li>
       ${GATED_SKILLS.map((id) => `<li><b>${SKILL_BY_ID.get(id)?.name ?? id}</b> (${listed([...new Set(SKILL_GATES.filter((g) => g.skill === id).map((g) => GATE_STOPS[g.kind]))])}): ${unlocksSaid(id)}.</li>`).join('\n      ')}
     </ul>

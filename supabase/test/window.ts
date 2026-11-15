@@ -134,12 +134,12 @@ same(replayed.dirt, readWorld.dirt, 'soil   ');
 same(replayed.tiles, readWorld.tiles, 'tiles  ');
 // A bare seam's data byte, which repeats its rock kind, is not sent (`rockDataSent`; the island's `rock_data_sent`).
 same(replayed.data.map((d, i) => rockDataSent(replayed.tiles[i], d)), readWorld.data, 'data, a bare seam\'s rock kind not sent,');
-// A seam over the reader's prospecting is sent unidentified (`seenRock`; the island's `rock_unseen`, `mask_rock`):
-// the reader here has the prospecting everybody starts with.
+// A buried seam over the reader's prospecting is sent unidentified, a bare one (a Rock tile) always named (`seenRock`;
+// the island's `rock_unseen`, `mask_rock`): the reader here has the prospecting everybody starts with.
 const fresh = { skills: { get: (skill: string): number => SKILL_BY_ID.get(skill)?.start ?? 1 } };
-const seenAtStart = replayed.rock.map((k) => seenRock(k, fresh));
+const seenAtStart = replayed.rock.map((k, i) => seenRock(k, fresh, replayed.tiles[i]));
 const hidden = seenAtStart.filter((k) => k === UNIDENTIFIED_ROCK).length;
-same(seenAtStart, readWorld.rock, 'rock, every seam over prospecting 1 sent unidentified,');
+same(seenAtStart, readWorld.rock, 'rock, every buried seam over prospecting 1 sent unidentified, every bare one named,');
 check(`and there are such seams on it to hide (${hidden} tiles), none of them named`, hidden > 0
   && [...readWorld.rock].every((k, i) => k === UNIDENTIFIED_ROCK ? seenAtStart[i] === k : k === replayed.rock[i]), `${hidden}`);
 // At prospecting 90 every seam is named: the same rock as the history's.
