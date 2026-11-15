@@ -32,6 +32,7 @@ import { AUTO_EAT_AT } from '../../game/autoeat';
 import { CRATE_KINDS_SAID, rackPutLine, STORE_REACH } from '../../game/crates';
 import { BASE_QUEUE, DEED_GAP, DEED_SPACING, DEED_STONE_GAP, DAMAGE_WARN, QUEUE_PER_MIND, FORAGE_COOLDOWN, KIT_LEFT_OUT, KIT_QL, SPROUT_COOLDOWN, STARTER_FOOD, STARTER_FOOD_COUNT, STARTER_KIT, TRAVEL_LEG, deedLevel } from '../../game/game';
 import { ROT_SOON } from '../../game/rot';
+import { FAIL_EXAMPLE_AT, FAIL_FACTORS, FAIL_LEAST, FAIL_WHY_JOBS, failFactor, failFactorSaid } from '../../game/failwhy';
 import {
   BODKIN_HIDE, BURN_WEAR, CONSIDER_EASY, CONSIDER_HARD, CRIT_BASE, CRIT_HIT, CRIT_KNIFE, CRIT_PER_SKILL, DODGE_FROM, DODGE_PER_CONTROL, DODGE_PER_KG, KNIFE_BLEED,
   KNIFE_BLEED_SECS, STAGGER_MAUL, THREAT_HOLD, VENOM_DRAIN, VENOM_SECS,
@@ -404,10 +405,23 @@ const RESET = `daily reset (${hudHour(TREE_DAWN_UTC)} UTC)`;
 
 /** What a boil made and a dyeing took the day dye became a liquid (111), before it went by weight (117). */
 const WAS_DYE = { boil: 3, garment: 1, banner: 2, sail: 3, ship: 5, wall: 1, floor: 1 } as const;
+/** A failed Cut down at `FAIL_EXAMPLE_AT`: the line's factor (`fail_why`). */
+const FAIL_EXAMPLE = failFactorSaid(failFactor({ ...FAIL_EXAMPLE_AT, difficulty: ACTION_BY_ID.get('cut_down')?.difficulty ?? 0 }));
 /** The jobs that scrub paint off with a brush (423), which came after the storey jobs were named (332). */
 const SCRUBS_LATER = new Set(['scrub_wall_paint', 'scrub_floor_paint']);
 
 export const NEWS: News[] = [
+  // A failed skill check names its biggest factor (`failwhy.ts`, `fail_why`).
+  {
+    n: 627,
+    day: '2026-11-15',
+    lines: () => [
+      `New: failed action log line: biggest factor, its cost in success chance. Example: "Cut failed.${FAIL_EXAMPLE}"`,
+      `Factors, each against its best, the others held: ${listed(FAIL_FACTORS.map((f) => `${f.label} ${f.top}`))}. Named at ${FAIL_LEAST * 100}+ percentage points; perk share of failures counted; one factor.`,
+      `On: crafts with a difficulty, ${listed(FAIL_WHY_JOBS.map((id) => (ACTION_BY_ID.get(id)?.label ?? id).toLowerCase()))}.`,
+      'New: Skills window, digging and mining hover: the same factor for Dig and Mine.',
+    ],
+  },
   // The stations set down as furniture is, and decaying off a settlement (`stations.ts`).
   {
     n: 622,

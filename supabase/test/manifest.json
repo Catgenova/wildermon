@@ -3286,5 +3286,11 @@
       "CRAFTPREVIEW_STRICT": "1"
     },
     "why": "Asked for: \"the crafting menu should show a preview of the item for anything that has one, e.g. gear or furniture\", then \"that gear should update when changing material selection, e.g. pine to cedar barrel\", and the recipe that makes what was typed first in the search. Which things have a preview is read off the models; this asks the kinds of a spread of things and none for a plank, a stew or a scroll; in Chrome, a row clicked shows its preview drawn and lit, a row with no model no strip, the pointer on another row that one's and off the window the chosen one's; a barrel in pine and in cedar two pictures and pine again the pine one, a sword in iron and in gold two; \"plank\" the plank first and \"nail\" the nail mould first under Makes, before every recipe that takes nails; the window shut stops the drawing and opened again starts it; Animations Off one still frame."
+  },
+  {
+    "file": "supabase/test/failwhy.ts",
+    "title": "Why it failed: a failed skill check's line names the term that cost it most",
+    "shard": 2,
+    "why": "Asked for: \"a failed action's log line names the biggest factor against it, e.g. 'Missed: tool QL 12 (−18%)', so players learn that quality matters.\" The dice pinned to fail, a craft and a felling each name the tool QL, the skill or the material that cost them most; nothing costing a point says nothing more; stamina is not a term; a perk's share scales the cost; and the browser's reckoning is the island's over a grid, word for word."
   }
 ]

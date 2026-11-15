@@ -94,6 +94,7 @@ import { onLadder } from './ladderclimb';
 import { lyingAt, type Fell } from './fell';
 import { ARMOUR_VS, armsRefusal, blockChance, BLOCKED_SAID, WOUND_SAID, SHIELD_WEAR, BURN_WEAR, CROWD_BLOCK, DODGE_GAIN, dodgeChance, DRAW_WALK, FIGHT_QUIET, VENOM_DRAIN, VENOM_SECS, skillLine, type FightRecord, FIGHT_BACK_STILL, FIGHT_STANCE_NAMES, FLANK_HIT, legPace, FIGHT_TRIES, fightBase, fightWind, armPace, armourSwing, overburdenSwing, swingKgOf, swingBase, swingSeconds, SWING_FLOOR, tiredPace, FOLLOW_RANGE, inFightReach, isFightJob, nextStance, stanceSays, stanceTaken, TARGET_RANGE } from './fight';
 import { Skills, SKILL_BY_ID, SKILL_DEFS, isQuiet } from './skills';
+import { mindEaseAt, skillOdds } from './failwhy';
 import { jewelGain } from './gems';
 import { earnedBy, knackBonus, knackChance, knackLands, KNACK_CAP, TITLE_BY_ID } from './titles';
 import { TileIndex, Tally, keyX, keyY, tileKey } from './tileindex';
@@ -602,9 +603,7 @@ export const ORDINARY_GAIN = 0.45;
  * skill and tool behind it and the body doing it. `Game.duration` asks it of
  * whoever is acting, and the help asks it of somebody new to the work.
  */
-/** Difficulty mind logic takes off a thinking check for every level over the starting mark (`mind_ease`); never more than half the check's. */
-export const MIND_EASE_PER_LEVEL = 0.2;
-export const mindEaseAt = (mind: number): number => Math.max(0, (mind - CHAR_START) * MIND_EASE_PER_LEVEL);
+export { MIND_EASE_PER_LEVEL, mindEaseAt } from './failwhy';
 /** The thinking checks mind logic eases, and only these: every one passes `mindEase()` to its check. */
 export const MIND_EASED_SKILLS: readonly string[] = ['blacksmithing', 'brewing', 'first_aid', 'restoration', 'jewellery'];
 
@@ -6571,10 +6570,8 @@ export class Game {
 
   /** The chance a `skillCheck` comes off: better skill and tools help, difficulty hurts, between 30% and 98%. */
   skillChance(skill: string, difficulty = 10, toolQl = 0, ease = 0): number {
-    const s = this.skills.get(skill);
     // A clear head makes a hard piece of work easier, but never simple.
-    const d = ease > 0 ? Math.max(difficulty * 0.5, difficulty - ease) : difficulty;
-    return Math.min(0.98, Math.max(0.3, 0.6 + (s / 100) * 0.38 + toolQl / 500 - d / 150));
+    return skillOdds(this.skills.get(skill), difficulty, toolQl, ease);
   }
 
   /**
