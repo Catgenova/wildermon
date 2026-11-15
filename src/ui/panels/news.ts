@@ -414,6 +414,17 @@ const FAIL_EXAMPLE = failFactorSaid(failFactor({ ...FAIL_EXAMPLE_AT, difficulty:
 const SCRUBS_LATER = new Set(['scrub_wall_paint', 'scrub_floor_paint']);
 
 export const NEWS: News[] = [
+  // A roof over a storey with floor tiles taken up (`levelGaps`, `level_gap`), and Plan roof on the top storey pinned (`roofEntries`).
+  {
+    n: 634,
+    day: '2026-11-15',
+    lines: () => [
+      'Fixed: Plan roof after a floor tile of the top storey was removed on the building\'s edge: "N sides with no wall or columns", no wall plannable on them. Now: allowed once every other outside side and every planned wall is finished.',
+      'Changed: tile of storey 2 and up with no floor: open well, no walls asked on its sides. Roof: any tile of the footprint, floor or not. Storey with no floor at all: every side asked.',
+      'Changed: "not enclosed" refusal: nearest wall still going up named inside the storey too, e.g. walls planned round a well.',
+      'Fixed: top storey pinned: no Plan roof. Now: Plan roof on a tile with none; refused: greyed, with the reason.',
+    ],
+  },
   // A Decor tab in the crafting window (`craftTabOf`, `isDecor`).
   {
     n: 639,

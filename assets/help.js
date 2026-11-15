@@ -1014,7 +1014,7 @@ import{$C as e,$T as t,$a as n,$r as r,$s as i,$u as a,$w as ee,A as o,AE as te,
       building work, <i>Plan staircase up</i> and <i>Build … up</i> (the staircase or ladder planned over it), furniture set down on it. Label <i>1st</i>, <i>2nd</i>…; click for <i>Auto</i> (every storey).
       <kbd>Page Up</kbd> / <kbd>Page Down</kbd> do the same.</li>
       <li>Pinned one above a building's top storey: its <b>roof</b>, alone. Unplanned roof tiles marked out; a pitched roof picked on its slopes, not walked onto;
-      its menu: the roof's work only. A storey under it: no roof drawn, no roof work.</li>
+      its menu: the roof's work only. A storey under it: no roof drawn; the top storey's menu: <i>Plan roof</i> on that tile.</li>
       <li>Once any cellar is dug: <i>Cellar</i>, below the ground floor: every nearby cellar as dug, buildings over them removed. Contents and people in a cellar
       show only to somebody in it, within their sight.</li>
       <li><b>◪</b>, <kbd>X</kbd> or the Settings box: <b>hides the walls facing you</b>; far walls stay. Always on while a storey is pinned.</li>
@@ -1047,7 +1047,8 @@ import{$C as e,$T as t,$a as n,$r as r,$s as i,$u as a,$w as ee,A as o,AE as te,
       built (<b>Build change</b>, as Build wall); with the last material, the new wall. Still going up: replanned in place, new bill. Refused: fence, half wall or
       railing on a wall something rests on; a material lighter than the heaviest wall above, glass excepted; a counter with goods or takings; a padlocked portcullis. The standing
       type and material again: change dropped.</li>
-      <li>Roof: <b>Plan roof</b> tile by tile once the top storey's walls are done; neighbours join into ridges and hips.</li>
+      <li>Roof: <b>Plan roof</b> tile by tile once the top storey's walls are done; neighbours join into ridges and hips. Any tile of the footprint, floor or not.
+      A tile over the ground storey with no floor: an open well, no walls asked on its sides. Every wall planned on the top storey: finished first.</li>
       <li>Plans over an area, max 64 pieces: <b>Plan walls all round</b>, <b>Plan floor: every tile</b> (the storey shown), <b>Plan roof: every tile</b>;
       <b>Plan building over an area</b>, <b>Add an area to</b>, <b>Extend over an area</b> (rectangle to the cursor). Ghost of every piece first; red: refused.</li>
       <li>Plan bar: each material summed over the plan; Need, Carried, Stored (crates on its tiles, stores within building reach), Short. Plan or click: planned,

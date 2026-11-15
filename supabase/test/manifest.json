@@ -240,6 +240,19 @@
     "why": "Reported: \"cant plan roof on when conditions are met. make sure that doors and window walls etc count as elligible walls if completed.\" They do; what was wrong was a refusal that named neither the storey it meant nor the side that was short."
   },
   {
+    "file": "supabase/test/roofwell.ts",
+    "title": "A roof over an open well",
+    "shard": 1,
+    "external": [
+      "esbuild",
+      "playwright-core"
+    ],
+    "env": {
+      "STOREY_STRICT": "1"
+    },
+    "why": "Reported: \"if previously removing a floor, the option to make a roof disappears. fix\". A storey-2 tile with no floor takes no wall, and its outside sides were asked one before a roof; pinned on the top storey, the menu had no Plan roof."
+  },
+  {
     "file": "supabase/test/thick.ts",
     "title": "A wall is a box, and the face you see is the one you are standing on",
     "shard": 1,
