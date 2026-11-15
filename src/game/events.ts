@@ -119,6 +119,8 @@ export type GameEvents = {
   /** The Path was turned on or off at your asking, and the island said so (`src/net/pathwire.ts`). */
   pathTurned: [on: boolean];
   action: [];
+  /** The surveyor's level was set, moved or cleared (`Game.sawLevel`). */
+  level: [];
   stats: [];
   /** Lain down in a bed and logged off asleep in it, by its name (`Game.fallAsleep`). */
   asleep: [what: string];

@@ -2879,9 +2879,12 @@ import{$T as e,$_ as t,$a as n,$c as r,$d as i,$g as a,$l as ee,$u as o,$v as s,
     <ul>
       <li>Every corner: soil over bedrock. <b>Digging</b> lowers the corner nearest the click (marker) and takes a spadeful of its soil; stops at rock.
       All corners bare: the tile becomes rock (whatever lies there, possibly a seam). <b>Drop dirt</b> at a corner of rock, ore or a seam: +1 soil, tile dirt; <b>Change tile</b> on it as on any dirt. Rock raised by <b>Raise rock</b> (concrete, rubble).</li>
-      <li><b>Take the level here</b> (right-click a corner): that height becomes the target. <b>Flatten</b> aims at it instead of your own tile.
+      <li><b>Set level here</b> (right-click a corner): that height becomes the target. <b>Flatten</b> aims at it instead of your own tile.
       <b>Digging</b> and <b>Chip corner</b> stop at the mark going down; <b>Drop dirt</b> and <b>concrete</b> stop at it going up (a repeat run ends when level).
-      The Tile window shows the cursor corner's distance from it. <b>Clear the level</b> removes it.</li>
+      The Tile window shows the cursor corner's distance from it. <b>Clear level</b> removes it.</li>
+      <li>While a level is set: status panel <b>Level</b> chip with its height; <b>×</b> on it: Clear level.
+      Corners up to 3 away from the cursor's corner (no cursor: yours) marked: green at the level, amber above (stem down), blue below (stem up).
+      Ring: the corner it was set at, set from this browser.</li>
     </ul>
     <h4>Foundations</h4>
     <ul>

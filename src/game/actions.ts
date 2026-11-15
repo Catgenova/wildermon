@@ -1491,7 +1491,9 @@ export const ACTIONS: ActionDef[] = [
     applies: (t, g) => t.kind === 'tile' && g.level !== g.world.getHeight(t.cx, t.cy),
     perform: (t, g) => {
       if (t.kind !== 'tile') return;
+      g.levelAt = { cx: t.cx, cy: t.cy };
       g.level = g.world.getHeight(t.cx, t.cy);
+      g.events.emit('level');
       g.logMsg(`Level set: ${metres(g.level)} m. Flatten works to it; dig, drop and concrete stop at it.`, 'event');
       g.events.emit('action');
     },
@@ -1506,6 +1508,8 @@ export const ACTIONS: ActionDef[] = [
     applies: (_t, g) => g.level !== null,
     perform: (_t, g) => {
       g.level = null;
+      g.levelAt = null;
+      g.events.emit('level');
       g.logMsg('Level cleared. Flatten works to your tile.', 'event');
       g.events.emit('action');
     },

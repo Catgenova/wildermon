@@ -768,6 +768,19 @@
     "why": "\"trails do not appear to draw over tiles with water\": the island wears trails into ground a pond or the sea covers, and the renderer left the path out on every wet tile. Drawn in Chrome, a trail through a pond and one down a beach into the sea, each tile worn against the same tile as grass: the path on a tile the pond's edge crosses and under its shallows, less of it under its deepest middle, up to the sea's edge and on the first tile under it."
   },
   {
+    "file": "supabase/test/levelmark.ts",
+    "title": "The level, shown while set",
+    "shard": 2,
+    "external": [
+      "esbuild",
+      "playwright-core"
+    ],
+    "env": {
+      "LEVELMARK_STRICT": "1"
+    },
+    "why": "\"a potential helper would be adding a visual somewhere on screen if you currently have a level set\": drawn in Chrome with the interface over the world, the island's level coming in with a ground read shows the Level chip at once with its height; corners above it amber, below it blue, at it green; Set level here answered at its corner names the corner; x on the chip asks the island for Clear level; the level cleared hides the chip and the marks."
+  },
+  {
     "file": "supabase/test/flowers.ts",
     "title": "Wildflowers bloom in the same places on both sides",
     "shard": 2,

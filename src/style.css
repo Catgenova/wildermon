@@ -1152,6 +1152,40 @@ button.goal-row:focus-visible {
   font-size: 11px;
 }
 
+/* The surveyor's level, while one is set (`Hud.drawLevel`): a spirit level, the height, and × to clear it. */
+.hud-level {
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-level-mark {
+  display: inline-flex;
+  flex: none;
+}
+
+.hud-level-tube {
+  fill: var(--t-well, #1c1712);
+  stroke: var(--ui-accent);
+}
+
+.hud-level-bubble {
+  fill: var(--t-good, #9ccf7c);
+}
+
+.hud-level-line {
+  stroke: var(--ui-accent);
+  stroke-width: 0.8;
+}
+
+.hud-level-text {
+  flex: 1 1 auto;
+}
+
+.hud-level-clear {
+  padding: 0 5px;
+  font-size: 11px;
+  line-height: 14px;
+}
+
 .pals-body {
   display: flex;
   flex-direction: column;
@@ -7263,6 +7297,29 @@ body.dragging.drag-no, body.dragging.drag-no * { cursor: no-drop !important; }
   border-radius: 0;
   background: var(--rc-stone-2);
   color: var(--rc-carve);
+}
+
+[data-ui='runecut'] .hud-level-text {
+  color: var(--rc-carve);
+  font-size: var(--rc-fs-2);
+}
+
+[data-ui='runecut'] .hud-level-tube {
+  fill: var(--rc-stone-2);
+  stroke: var(--rc-shade);
+}
+
+[data-ui='runecut'] .hud-level-bubble {
+  fill: var(--rc-moss);
+}
+
+[data-ui='runecut'] .hud-level-line {
+  stroke: var(--rc-rune);
+}
+
+[data-ui='runecut'] .hud-level-clear:hover {
+  background: var(--rc-stone-hi);
+  color: var(--rc-ink);
 }
 
 /* Lists of things: rows, column names and scroll areas are the interior kit's (src/ui/interior.css). */

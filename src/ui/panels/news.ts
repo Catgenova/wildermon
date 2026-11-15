@@ -51,6 +51,7 @@ import { RECENT } from './craft';
 import { CAMPFIRE_LOGS } from '../../render/kit/campfire';
 import { SACK_FULL } from '../../render/kit/sack';
 import { STANDING_A, WILDERMON_A } from '../../game/journal-a';
+import { LEVEL_REACH } from '../../render/levelmarks';
 import { DAMAGE_MAX as NEWS_DAMAGE_MAX, PLACED_REACH, QL_TOP as NEWS_QL_TOP } from '../../game/limits';
 import { FAIL_DAMAGE_SAID } from '../../game/faildamage';
 import { SPIRAL_TREADS } from '../../game/spiral';
@@ -4502,6 +4503,17 @@ export const NEWS: News[] = [
       `New: fishing net: ${LIFT_DROPS * NET_LIFT.length} drops off the net as it is lifted, ${SHAKE_DROPS} at each of ${NET_SHAKES.length} shakes.`,
       `New: rowing under way: ${OAR_DROPS} drops a blade at the catch; whirl pair a blade a stroke, ${SWIRL_SECS} s.`,
       'Without a graphics card: swimming strokes\' splashes, rings treading water, the float\'s strike and a catch only.',
+    ],
+  },
+  // The level shown while set: the HUD's chip and the corners' marks (`Hud.drawLevel`, `Renderer.drawLevelMarks`).
+  {
+    n: 621,
+    day: '2026-11-15',
+    lines: () => [
+      'New: status panel Level chip while a level is set: its height; × clears it (Clear level).',
+      `New: corner marks while a level is set, up to ${LEVEL_REACH} corners from the cursor's corner (no cursor: yours): green at the level, amber above (stem down), blue below (stem up).`,
+      'New: ring at the corner the level was set at, set from this browser.',
+      'Fixed: help: Set level here, Clear level (was: Take the level here, Clear the level).',
     ],
   },
   // Trade and class icons before players' names (`badges.ts`, `../../render/emblems.ts`).
