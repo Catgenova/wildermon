@@ -15,6 +15,7 @@ import { ACTION_BY_ID, maxDigSlope } from '../../game/actions';
 import { TABLET, TABLET_BELOW, TABLET_GAIN } from '../../game/relicuse';
 import { SLEEP_BONUS_CAP, SLEEP_BONUS_MULT, SLEEP_BONUS_QL, SLEEP_BONUS_RATE, sleepBonusLabel, sleepHm } from '../../game/sleep';
 import { boundKey } from '../../game/keybinds';
+import { failFactor, failFactorSaid } from '../../game/failwhy';
 
 /** A long action, to read a skill's pace off without the floor (`goSeconds`). */
 const SLOW_GO = 100;
@@ -343,8 +344,10 @@ export class SkillsPanel {
         const dig = ACTION_BY_ID.get('dig');
         const shovel = g.toolQl('shovel');
         const odds = percent(g.skillChance('digging', dig?.difficulty ?? 0, shovel));
+        // The term a failed dig would name (`fail_why`), on hover of the odds.
+        const why = failFactorSaid(failFactor({ skill: v, difficulty: dig?.difficulty ?? 0, tool: shovel }));
         return [`Slope ${slope} m, time ×${time}, dig ${odds}`,
-          `Steepest slope left: ${slope} m. Time per action ×${time} of level 0. Dig success ${odds} (difficulty ${dig?.difficulty ?? 0}, shovel QL ${Math.round(shovel)}).`];
+          `Steepest slope left: ${slope} m. Time per action ×${time} of level 0. Dig success ${odds} (difficulty ${dig?.difficulty ?? 0}, shovel QL ${Math.round(shovel)}).${why}`];
       }
       case 'mining': {
         // A Miner's Ore Sense brings every ore that much nearer (`oreNeeds`).
@@ -353,8 +356,9 @@ export class SkillsPanel {
         const mine = ACTION_BY_ID.get('mine');
         const pick = g.toolQl('pickaxe');
         const odds = percent(g.skillChance('mining', mine?.difficulty ?? 0, pick));
+        const why = failFactorSaid(failFactor({ skill: v, difficulty: mine?.difficulty ?? 0, tool: pick, fail: g.perk('fail:mine', 1) }));
         return [`Ore ${ore}, time ×${time}, mine ${odds}`,
-          `Hardest ore: ${ore}. Time per action ×${time} of level 0. Mine success ${odds} (difficulty ${mine?.difficulty ?? 0}, pickaxe QL ${Math.round(pick)}).`];
+          `Hardest ore: ${ore}. Time per action ×${time} of level 0. Mine success ${odds} (difficulty ${mine?.difficulty ?? 0}, pickaxe QL ${Math.round(pick)}).${why}`];
       }
       case 'climbing': {
         const step = metres(g.climbStep());

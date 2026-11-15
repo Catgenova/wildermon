@@ -12,7 +12,7 @@ declare v_scales int := 0; v_hoard int := 0; r recipe; i record; v_n int; prefer
         v_keep double precision; v_spare recipe_input; v_spare_ql double precision;
         v_tool bigint; v_tool_mark jsonb; v_stone boolean := false;
         v_scroll boolean; v_sheet double precision; v_harm text; v_used int[]; v_hurt text[] := '{}';
-        v_rope double precision; v_sail double precision;
+        v_rope double precision; v_sail double precision; v_why text;
 begin
   select * into r from recipe where id = p_recipe;
   prefer := target_item(p_target);
@@ -53,13 +53,14 @@ begin
 
   -- A Mason's Sure Chisel fails half as often on stonecutting (`fail:` and the recipe).
   if r.difficulty is not null and not perk_pass(skill_check(s, hard, tq), pk(p_world, p_uid, 'fail:' || p_recipe, 1)) then
+    v_why := fail_why(mat);
     -- A scroll that fails loses its motes and damages the sheet it was being written on (`scroll_fails`).
     if v_scroll then
       v_harm := scroll_fails(p_world, p_uid, p_recipe, prefer);
       perform craft_carry_on(p_world, p_uid, p_recipe, p_target, was, mat);
       perform skill_raise(p_world, p_uid, r.skill, try_gain(false));
       perform skill_raise(p_world, p_uid, 'mind_logic', try_gain(false, craft_head()));
-      perform tell(p_world, p_uid, concat_ws(' ', r.fail, nullif(scroll_harm_said(v_harm), '')), 'event');
+      perform tell(p_world, p_uid, concat_ws(' ', r.fail || v_why, nullif(scroll_harm_said(v_harm), '')), 'event');
       return;
     end if;
     -- Nothing used up: what it would have used is damaged by its own QL, off the stacks it would have
@@ -88,7 +89,7 @@ begin
     perform skill_raise(p_world, p_uid, r.skill, try_gain(false));
     perform skill_raise(p_world, p_uid, 'mind_logic', try_gain(false, craft_head()));
     perform tell(p_world, p_uid, fail_damaged_said(
-      coalesce(r.fail, 'Failed: ' || lower((select coalesce(name, r.result) from item_def where id = r.result)) || '.'), v_hurt),
+      coalesce(r.fail, 'Failed: ' || lower((select coalesce(name, r.result) from item_def where id = r.result)) || '.') || v_why, v_hurt),
       'event');
     if spared then perform tell(p_world, p_uid, 'Nothing Wasted: inputs undamaged.', 'event'); end if;
     if v_stone then perform tell(p_world, p_uid, 'Keep the Stone: gem undamaged.', 'event'); end if;

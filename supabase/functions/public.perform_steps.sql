@@ -21,7 +21,7 @@ begin
     if v_tool is not null then perform wear_tool(v_tool); end if;
     if not skill_check(skill_of(p_world, p_uid, d.skill), d.difficulty, tool_ql(p_world, p_uid, d.tool)) then
       perform skill_raise(p_world, p_uid, d.skill, try_gain(false));
-      perform tell(p_world, p_uid, 'Steps failed: materials kept.', 'event');
+      perform tell(p_world, p_uid, 'Steps failed: materials kept.' || fail_why(), 'event');
       return;
     end if;
     if not consume(p_world, p_uid, v_it.def, steps_slabs()::int, v_it.id)
@@ -41,7 +41,7 @@ begin
     if v_tool is not null then perform wear_tool(v_tool); end if;
     if not skill_check(skill_of(p_world, p_uid, d.skill), d.difficulty, tool_ql(p_world, p_uid, d.tool)) then
       perform skill_raise(p_world, p_uid, d.skill, try_gain(false));
-      perform tell(p_world, p_uid, 'Steps failed: materials kept.', 'event');
+      perform tell(p_world, p_uid, 'Steps failed: materials kept.' || fail_why(), 'event');
       return;
     end if;
     -- Planks of the one wood, the stack named first.

@@ -5,5 +5,5 @@ CREATE OR REPLACE FUNCTION public.mind_ease(p_world uuid, p_uid uuid)
  LANGUAGE sql
  STABLE
 AS $function$
-  select greatest(0, (skill_of(p_world, p_uid, 'mind_logic') - 20) * 0.2)
+  select mind_ease_at(skill_of(p_world, p_uid, 'mind_logic'))
 $function$

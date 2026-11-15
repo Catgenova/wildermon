@@ -195,7 +195,7 @@ begin
     if not v_ok then
       perform damage_item(v_it.id, 3 + random() * 5);
       perform tell(p_world, p_uid, 'Improve failed: ' || v_name || ', '
-        || to_char((select dmg from item where id = v_it.id), 'FM990.0') || ' damage.', 'event');
+        || to_char((select dmg from item where id = v_it.id), 'FM990.0') || ' damage.' || fail_why(v_it.extra, skill_of(p_world, p_uid, 'mind_logic')), 'event');
       return;
     end if;
     v_was := v_it.ql;

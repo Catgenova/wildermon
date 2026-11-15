@@ -184,6 +184,7 @@ import { AWARE_PER_LEVEL, AWARE_TRAIT_STEP, awareShareAbove, awareTraitEase, DEE
 import { NIGHT_EYES_FROM } from '../../game/learn';
 import { NO_GO, pointAt, windWord, windWorth } from '../../game/wind';
 import { article, capital, finePercent, listed, listedOr, percent, timeWords } from '../../game/words';
+import { FAIL_EXAMPLE_AT, FAIL_FACTORS, FAIL_LEAST, FAIL_WHY_JOBS, failFactor, failFactorSaid } from '../../game/failwhy';
 import {
   bossSays, garrisonSays, HOARD_SCALE, HOARD_SCALE_CAP, HOARD_SHARE, hoardBook, hoardSays, LAIR_ANNOUNCE, LAIR_KINDS, LAIR_LEASH, LAIR_MOVE_CLEARS, LAIR_MOVE_DAYS,
   LAIR_RING, LAIR_RING_WILD, LAIR_SIGHT, LAIR_TRACK, lairRingUsual, lairRingWant, restockSays, SITE_SAYS,
@@ -2893,6 +2894,9 @@ export function helpText(): string {
       <li><b>Carts need a double door, archway or gate</b>; never a single door. A fence with no gate traps a cart.</li>
       <li><b>Everything rots where it lies.</b> Settlement: ${frac(DEED_DECAY)} the rate; a closed, roofed room: ${frac(INDOORS_DECAY)} again; a crate or sack: lower still.</li>
       <li><b>Refusals give the reason</b> in <b>Trouble</b>: the tool, material, skill or distance at fault.</li>
+      <li><b>Failed action: biggest factor</b> on its log line, with its cost in success chance (Cut down at woodcutting ${FAIL_EXAMPLE_AT.skill}, hatchet QL ${FAIL_EXAMPLE_AT.tool}: "Cut failed.${failFactorSaid(failFactor({ ...FAIL_EXAMPLE_AT, difficulty: ACTION_BY_ID.get('cut_down')?.difficulty ?? 0 }))}").
+      Factors, each against its best, the others held: ${listed(FAIL_FACTORS.map((f) => `${f.label} ${f.top}`))}. Named at ${FAIL_LEAST * 100}+ percentage points; perk share of failures counted; one factor.
+      On: crafts with a difficulty, ${listed(FAIL_WHY_JOBS.map((id) => (ACTION_BY_ID.get(id)?.label ?? id).toLowerCase()))}. Skills window, digging and mining hover: the same for Dig and Mine.</li>
     </ul>
     <h3>Walking, running, and looking into a room</h3>
     <ul>

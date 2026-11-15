@@ -4,12 +4,18 @@ CREATE OR REPLACE FUNCTION public.skill_check(p_skill double precision, p_diffic
  RETURNS boolean
  LANGUAGE plpgsql
 AS $function$
+declare v_ok boolean;
 begin
+  perform set_config('wildermon.fail_odds', '', true);
   if coalesce(current_setting('wildermon.foreknow', true), '') = 'on' then
     perform set_config('wildermon.foreknown', 'on', true);
     return true;
   end if;
-  return random() < least(0.98, greatest(0.3,
-    0.6 + (p_skill / 100) * 0.38 + p_tool_ql / 500
-      - (case when p_ease > 0 then greatest(p_difficulty * 0.5, p_difficulty - p_ease) else p_difficulty end) / 150));
+  v_ok := random() < skill_odds(p_skill, p_difficulty, p_tool_ql, p_ease);
+  -- A failure keeps what it was rolled at, for its line to name the term that cost it most (`fail_why`).
+  if not v_ok then
+    perform set_config('wildermon.fail_odds', jsonb_build_object(
+      's', p_skill, 'd', p_difficulty, 't', p_tool_ql, 'e', p_ease, 'f', 1)::text, true);
+  end if;
+  return v_ok;
 end $function$
