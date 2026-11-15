@@ -3,7 +3,7 @@ import { animationsOff, animNow } from '../engine/motion';
 import { planterHolds, planterTrim } from './plantertrim';
 import { RIPE } from '../game/farming';
 import type { Seat } from './figure';
-import { cropPlant, DAMP_SOIL, DRY_SOIL, WATER_LINE, WEED } from './crops';
+import { cropPlant, DAMP_SOIL, DRY_SOIL, ripeShows, WATER_LINE, WEED } from './crops';
 import { materialOf } from '../game/materials';
 import { WALL_HEIGHT, WALL_THICK, type Side } from '../game/building';
 import { SUBTILES } from '../game/crates';
@@ -3336,7 +3336,7 @@ const MODELS: Record<string, Model> = {
     for (let i = 0; i < n; i++) {
       const px = -x + t + 1.5 + (i * (2 * (x - t) - 3)) / (n - 1);
       const py = (((i * 37) % 5) - 2) * 0.16;
-      sc.sprite([px, py, soil], 1.4, (sx, sy) => cropPlant(sc.g, sx, sy, holds.crop.look, holds.stage, leaf, fruit, i * 0.9, PLANTER_PLANT), 3 + holds.stage * 2.2);
+      sc.sprite([px, py, soil], 1.4, (sx, sy) => cropPlant(sc.g, sx, sy, holds.crop.look, holds.stage, leaf, ripeShows(holds.crop.id, holds.crop.look, fruit), i * 0.9, PLANTER_PLANT), 3 + holds.stage * 2.2);
     }
   },
   firewood_rack: ({ sc, wood, hw, hd }) => {

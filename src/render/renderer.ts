@@ -9246,8 +9246,8 @@ export class Renderer {
     const sx = cam.worldToScreenX(x + 0.5, y + 0.5), sy = cam.worldToScreenY(x + 0.5, y + 0.5, h);
     const def = cropDef(crop.id);
     const spr = this.still
-      ? cropFlatSprite(crop.id, Math.min(3, crop.stage), def.look, def.colors[0], def.colors[1], false, crop.tendedNow, !cam.view.staggered)
-      : cropSprite(crop.id, Math.min(3, crop.stage), def.colors[0], def.colors[1], false, crop.tendedNow, rotation, this.cropStep, Math.floor(hash2(x, y, 6151) * FIELD_LAYOUTS));
+      ? cropFlatSprite(crop.id, Math.min(3, crop.stage), def.look, def.colors[0], def.colors[1], false, crop.tendedNow, !cam.view.staggered, true)
+      : cropSprite(crop.id, Math.min(3, crop.stage), def.colors[0], def.colors[1], false, crop.tendedNow, rotation, this.cropStep, Math.floor(hash2(x, y, 6151) * FIELD_LAYOUTS), true);
     this.take('crop', x, y, sx, sy, spr);
   }
 

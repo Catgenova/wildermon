@@ -48,7 +48,7 @@ import { ACT_SECS } from '../../src/render/beasts';
 import { drawFigure, sculptedFigures, sculptedReady, type GearLook } from '../../src/render/figure';
 import { BUSH3D_SPECIES, log3dSprite, STUMP3D_SPECIES, TREE3D_SPECIES, tree3dFrame, tree3dIdle, type TreeView } from '../../src/render/trees3d/index';
 import { FLOWER_COLOURS, flowerSprite } from '../../src/render/flowers';
-import { fieldBake } from '../../src/render/crops';
+import { cropFrame, fieldBake } from '../../src/render/crops';
 import { spellSheet } from '../../src/render/spells/preview';
 import { visualOf } from '../../src/render/spells/index';
 import { drawShine, shines } from '../../src/render/shine';
@@ -154,6 +154,8 @@ export interface Family {
   fresh?(o: Opts): Opts;
   /** A thing drawn afresh each call from a body kept between frames (the mirror): two draws need not agree. */
   unsteady?: boolean;
+  /** Every state and variant judged, as well as the first view: a family whose states look nothing alike (a crop by stage). */
+  judgeAll?: boolean;
   /** A family that is all splash (a flower): the splash's share is not bounded. */
   splashy?: boolean;
   /**
@@ -642,6 +644,9 @@ const flower: Family = {
     const s = flowerSprite((a as Asset & { colour: number }).colour, o.variant, o.motion === 'sway' ? o.frame - 2 : 0);
     ctx.drawImage(s.canvas, sx - s.ax * zoom, sy - s.ay * zoom, s.w * zoom, s.h * zoom);
   },
+  // The renderer draws a clump in the ground's line, under the night's wash, and nothing of it over the wash.
+  night: () => {},
+  judgeAll: true,
 };
 
 const crop: Family = {
@@ -653,10 +658,16 @@ const crop: Family = {
   })),
   draw: (ctx, sx, sy, zoom, a, o) => {
     const c = CROPS[a.kind];
-    const step = o.motion === 'sun' ? o.frame : 3;
+    // By night the renderer bakes a field under the moon (`sunStepOf`: -1), and lays the wash over it.
+    const step = o.motion === 'sun' ? o.frame : o.night > 0.5 ? -1 : 3;
+    // A frame of its own, as the renderer gives each: never a stand-in for a bake this frame has no time left for.
+    cropFrame();
     const b = fieldBake(c.id, o.state, c.colors[0], c.colors[1], !!o.dormant, !!o.tended, o.turn, step, zoom, 0);
-    ctx.drawImage(b.canvas, sx - b.ax, sy - b.ay, b.w, b.h);
+    ctx.drawImage(b.canvas, sx - b.ax * zoom, sy - b.ay * zoom, b.w * zoom, b.h * zoom);
   },
+  // A field is ground: under the night's wash, nothing of it over the wash.
+  night: () => {},
+  judgeAll: true,
 };
 
 /* ---- spells: each as its own sheet ------------------------------------------------------- */
