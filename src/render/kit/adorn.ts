@@ -458,16 +458,13 @@ function cheeseRackOf(look: KitLook): KitModel {
   const W = woodTone(look.material, undefined, 0.55);
   const n = said(look.trim);
   const parts: KitPart[] = [];
-  // Two shelves of slats between four posts; four wheels a shelf, rind out.
-  const posts: KitPart[] = [];
-  for (const [x, y] of [[-CR_X, -CR_Y], [CR_X, -CR_Y], [CR_X, CR_Y], [-CR_X, CR_Y]]) {
-    const p: KitPart = { faces: leg(x, y, 0, 1.6 + CR_TIER + 1.4, W, 2101), edges: true };
-    parts.push(p); posts.push(p);
-  }
+  // Two shelves of slats between four posts, laid by their boxes (each shelf ends short of the posts, so a post
+  // nearer the eye is drawn over it); four wheels a shelf, rind out.
+  for (const [x, y] of [[-CR_X, -CR_Y], [CR_X, -CR_Y], [CR_X, CR_Y], [-CR_X, CR_Y]]) parts.push({ faces: leg(x, y, 0, 1.6 + CR_TIER + 1.4, W, 2101), edges: true });
   const shelves: KitPart[] = [];
   for (let k = 0; k < 2; k++) {
     const z = 1.6 + k * CR_TIER;
-    const s: KitPart = { faces: slab(-CR_X + 0.5, CR_X - 0.5, -CR_Y + 0.2, CR_Y - 0.2, z - 0.5, z, paler(W, 0.05), { paint: woodSides(2111 + k, 'x'), corner: 0.1 }), edges: true, after: posts };
+    const s: KitPart = { faces: slab(-CR_X + 0.5, CR_X - 0.5, -CR_Y + 0.2, CR_Y - 0.2, z - 0.5, z, paler(W, 0.05), { paint: woodSides(2111 + k, 'x'), corner: 0.1 }), edges: true };
     parts.push(s); shelves.push(s);
   }
   for (let i = 0; i < n; i++) {
@@ -663,13 +660,11 @@ function boardOf(look: KitLook): KitModel {
   const W = woodTone(look.material, undefined, 0.55);
   const on = said(look.trim) > 0;
   const parts: KitPart[] = [];
-  const legs: KitPart[] = [];
-  for (const x of [-PB_X + 0.6, PB_X - 0.6]) {
-    const p: KitPart = { faces: strut([x, 1.4, 0], [x, -0.2, PB_Z1 + 0.8], 0.8, 0.8, W, woodSide(2501, 'y')), edges: true };
-    parts.push(p); legs.push(p);
-  }
+  for (const x of [-PB_X + 0.6, PB_X - 0.6]) parts.push({ faces: strut([x, 1.4, 0], [x, -0.2, PB_Z1 + 0.8], 0.8, 0.8, W, woodSide(2501, 'y')), edges: true });
+  // The board between the legs, its ends against their inner sides: never through them.
+  const bx = PB_X - 1.05;
   parts.push({
-    faces: slab(-PB_X, PB_X, -0.6, 0.2, PB_Z0, PB_Z1, W, {
+    faces: slab(-bx, bx, -0.6, 0.2, PB_Z0, PB_Z1, W, {
       corner: 0.1,
       paint: {
         front: (g, k, s) => {
@@ -687,7 +682,7 @@ function boardOf(look: KitLook): KitModel {
         },
       },
     }),
-    edges: true, after: legs,
+    edges: true,
   });
   return { parts, shade: shadeOf(-PB_X, PB_X, -1, 1.6) };
 }
