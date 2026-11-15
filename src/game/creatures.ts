@@ -1,5 +1,5 @@
 import { describeGoals } from './journal';
-import { hodMay, relicGate, workerMetalOpen, workerRecipeOpen } from './craftgates';
+import { hodMay, relicGate, smeltGate, waterPlantFrom, workerRecipeOpen, workerSmeltOpen, workerSmithOpen, workerWaterPlantOpen } from './craftgates';
 import { LAIR_BY_ID } from './lairs';
 import { TileType, TILE_DEFS, TREE_DEFS, treeAge, treeSpecies, packTreeData, TREE_AGES } from '../world/tiles';
 import { isSeam } from '../world/tiles';
@@ -8289,7 +8289,8 @@ export class Creatures {
     range: number,
   ): boolean {
     const smelt = kind === 'smelt';
-    const fits = (it: Item): boolean => (smelt ? isOreItem(it.id) : isGreenware(it.id));
+    // Ore only of a metal its own smelting smelts (`workerSmeltOpen`, the island's `worker_furnace_fits`).
+    const fits = (it: Item): boolean => (smelt ? isOreItem(it.id) && workerSmeltOpen(c, it.id) : isGreenware(it.id));
     type Furnace = { f: PlacedSmelter | PlacedKiln; at: [number, number]; room: number };
     const all: Furnace[] = [];
     for (const f of smelt ? game.smelters.values() : game.kilns.values()) {
@@ -8313,7 +8314,12 @@ export class Creatures {
     if (!to) return this.why(c, 'range', range);
     if (!holding) {
       const store = this.storeWhere(game, c, fits);
-      if (!store) return this.why(c, 'stock');
+      if (!store) {
+        // Only ore over its own smelting in the stores: `gate`, naming the lowest, then by metal (the island's `errand_step`).
+        const gate = !smelt ? undefined : METALS.filter((m) => m.ore && this.inStores(game, m.ore) > 0).map((m) => smeltGate(m.ore!)!)
+          .sort((a, b) => a.level - b.level || (a.id < b.id ? -1 : 1))[0];
+        return gate ? this.why(c, 'gate', 0, [gate.kind, gate.id]) : this.why(c, 'stock');
+      }
       if (!goto(store.centre[0], store.centre[1])) return true;
       c.carrying = this.takeFrom(store, fits, to.room, game);
       return true;
@@ -8520,9 +8526,9 @@ export class Creatures {
    */
   private anvilStep(game: Game, c: Creature, kind: GatherKind, goto: (x: number, y: number, reach?: number) => boolean, near: (x: number, y: number) => boolean, range: number): boolean {
     if (c.carrying) return this.why(c, 'full');
-    // Only the metals its own blacksmithing pours (`workerMetalOpen`); with only others in the stores, `gate` naming the
-    // first (the island's `worker_smith_lumps`).
-    const lumps = smithLumps(kind).filter((id) => workerMetalOpen(c, id));
+    // Only the metals its own blacksmithing pours and works out of a casting (`workerSmithOpen`: both off `METAL_GATE`);
+    // with only others in the stores, `gate` naming the first (the island's `worker_smith_lumps`).
+    const lumps = smithLumps(kind).filter((id) => workerSmithOpen(c, id, smithMakes(kind)));
     if (!lumps.some((id) => this.inStores(game, id) > 0)) {
       const gated = smithLumps(kind).find((id) => this.inStores(game, id) > 0);
       const metal = gated && METAL_BY_LUMP.get(gated);
@@ -8650,14 +8656,20 @@ export class Creatures {
    * plant one (`plant_lily`, `plant_lotus`). The island's `errand_step` and `errand_do`.
    */
   private lilyStep(game: Game, c: Creature, goto: (x: number, y: number, reach?: number) => boolean, range: number, deed: { x: number; y: number }): boolean {
-    const root = (it: Item): boolean => WATER_PLANT_FROM.has(it.id);
+    // Only roots and seeds of a plant its own botanizing plants (`workerWaterPlantOpen`, the island's `worker_roots`).
+    const root = (it: Item): boolean => WATER_PLANT_FROM.has(it.id) && workerWaterPlantOpen(c, it.id);
     const holding = !!c.carrying && root(c.carrying);
     if (c.carrying && !holding) return false;
     const spot = this.lilySpot(game, deed, range);
     if (!spot) return this.why(c, 'range', range);
     if (!holding) {
       const store = this.storeWhere(game, c, root);
-      if (!store) return this.why(c, 'stock');
+      if (!store) {
+        // Only ones over its level in the stores: `gate`, naming the lowest plant (the island's `errand_step`).
+        const gated = [...WATER_PLANT_FROM.keys()].filter((id) => this.inStores(game, id) > 0).map((id) => gateOf('water_plant', waterPlantFrom(id)!.id)!)
+          .sort((a, b) => a.level - b.level || (a.id < b.id ? -1 : 1))[0];
+        return gated ? this.why(c, 'gate', 0, [gated.kind, gated.id]) : this.why(c, 'stock');
+      }
       if (!goto(store.centre[0], store.centre[1])) return true;
       c.carrying = this.takeFrom(store, root, stageLoads(c), game);
       return true;

@@ -16,12 +16,18 @@
  *   * pouring a metal by its seam's mining gate (iron at 1, `POUR_GATE_SAID`), an alloy by its metals' (`METAL_GATE`). A wall type's and a floor type's gate is in its material's skill: carpentry for
  *     timber, masonry for stone, a row each; a wall or a floor needs both its material's gate and its type's.
  *
+ *   * batch F: grafting (forestry 50) and a listed cross (animal husbandry 50) as they were; a water plant (lily 10,
+ *     lotus 20); a treasure map by its tier (`MAP_GATE_PER_TIER`); a bridge by its material's gate or its difficulty;
+ *     smelting an ore and working a casting by the metal (`METAL_GATE`, the one table pouring reads); a stone set in a
+ *     circlet by its rarity; a spell at its level.
+ *
  * An item whose use one of these stops is unidentified under it (`GATE_ITEMS`): a Recipe or a Formula by its
- * recipe's gate, a fragment by its relic's, a tarnished bauble by its tier's.
+ * recipe's gate, a fragment by its relic's, a tarnished bauble by its tier's, a lily root by the water lily's, a
+ * treasure map by its tier's.
  */
 import {
-  addGates, gateOf, GATE_LADDER, SKILL_GATES, gateOpen, skillGateRefusal, workerGateOpen, CRAFT_GATE_SAID,
-  type GateLevel, type SkillGate, type Viewer,
+  addGates, gateOf, GRAFT_LEVEL, kindGateRefusal, ladderAt, SKILL_GATES, gateOpen, seenDefName, skillGateRefusal, stepsAbove, unidentified,
+  workerGateOpen, CRAFT_GATE_SAID, type GateLevel, type SkillGate, type Viewer,
 } from './skillgates';
 import { bookOf, RECIPES, recipeTitle, type Recipe } from './recipes';
 import { BOOKS } from './bookdrops';
@@ -36,19 +42,20 @@ import { SLAB_VARIANTS } from '../world/tiles';
 import { capital } from './words';
 import type { HodTarget } from './game';
 import { itemDef } from './items';
-import { METAL_BY_ID, METAL_BY_LUMP, METALS, MOULD_SKILL, metalOfBar, type MetalDef } from './metal';
+import { castWhole, METAL_BY_ID, METAL_BY_LUMP, METALS, MOULD_BY_MAKES, MOULD_SKILL, MOULDS, metalOfBar, type MetalDef } from './metal';
 import { SEAM_GATE } from './rockgates';
+import { WATER_PLANTS, type WaterPlantDef } from '../world/waterplants';
+import { TREASURE_TIERS } from './treasure';
+import { BRIDGES, type BridgeDef } from './bridges';
+import { GEMS, type GemDef } from './gems';
+import { CROSS_SKILL } from './hybridlist';
+import { schoolOf, SPELLS, type SpellDef } from './arcane';
 
 /** A craft's level by its difficulty: the ladder step at or below `CRAFT_PER` × (difficulty − `CRAFT_FROM`). */
 export const CRAFT_PER = 2;
 export const CRAFT_FROM = 6;
 /** A craft's level by its difficulty: the ladder step at or below 2 × (difficulty − 6); 1 for none. */
-export const craftLevel = (difficulty: number | undefined): GateLevel => {
-  const at = CRAFT_PER * ((difficulty ?? 0) - CRAFT_FROM);
-  let level: GateLevel = 1;
-  for (const step of GATE_LADDER) if (step <= at) level = step;
-  return level;
-};
+export const craftLevel = (difficulty: number | undefined): GateLevel => ladderAt(CRAFT_PER * ((difficulty ?? 0) - CRAFT_FROM));
 
 /**
  * A Formula's scroll, by what its enchantment goes on: a weapon, a bow, armour, a shield, a tool or a light 20;
@@ -122,6 +129,68 @@ const metalLevel = (m: MetalDef): GateLevel => {
 };
 export const METAL_GATE: Readonly<Record<string, GateLevel>> = Object.fromEntries(METALS.map((m) => [m.id, metalLevel(m)]));
 
+/*
+ * Batch F (docs/gating.md §11): a metal's one table, read three ways. `METAL_GATE` is a metal's level in the furnace
+ * and at the anvil: smelting its ore (kind `smelt`, in smelting), pouring it (kind `metal`, in blacksmithing) and
+ * working a casting of it at the anvil (kind `casting`, in the trade the casting's mould is worked in). A mined metal's
+ * casting is at its smelting gate; an alloy's at the highest smelting gate of the mined metals in it, the same table's
+ * alloy rule. No copy: every row reads `METAL_GATE`.
+ */
+
+/** Smelting a metal's ore (Smelt; a smelter worker's and a stoker's work), in smelting, at the metal's level. */
+export const SMELT_SKILL = 'smelting';
+/** The mined metals: an ore to smelt. */
+const MINED = METALS.filter((m) => m.ore);
+
+/** The trades a casting is worked in at the anvil: each mould's own, for every mould not cast whole. */
+export const CASTING_SKILLS: readonly string[] = [...new Set(MOULDS.filter((m) => !castWhole(m)).map((m) => m.skill))];
+/** A casting gate's id: the trade it is worked in and the metal, "weaponsmithing:tin". */
+export const castingGateId = (skill: string, metal: string): string => `${skill}:${metal}`;
+
+/**
+ * Planting a water plant (Plant a water lily or a lotus; in a lily pond; a water planter's work), in botanizing: the
+ * water lily 10, the lotus 20. A lily root, which is only planted, is unidentified under it; lotus seeds are food too.
+ */
+export const WATER_PLANT_GATE: Readonly<Record<string, GateLevel>> = { lily: 10, lotus: 20 };
+const waterPlantItems = (d: WaterPlantDef): Array<{ item: string; noun: string }> =>
+  (itemDef(d.from).food ? [] : [{ item: d.from, noun: itemDef(d.from).name.split(' ').pop()!.toLowerCase() }]);
+
+/** Reading and digging up a treasure map, in digging, by its tier: the ladder step at or below this many a tier (worn 1, sound 20, fine 40, grand 60). */
+export const MAP_GATE_PER_TIER = 20;
+
+/**
+ * A bridge (Throw a bridge across, Work on the bridge; Lead an aqueduct here, Work on the aqueduct; a hod carrier's
+ * spans), in its trade: a material bridge at its material's gate (`MATERIAL_GATE`), the rest by their difficulty
+ * (`craftLevel`: the garden footbridge 10, the rope bridge 20, the drawbridge 50, the aqueduct 70).
+ */
+export const bridgeLevel = (b: BridgeDef): GateLevel => (b.material ? MATERIAL_GATE[b.material] : craftLevel(b.difficulty));
+
+/**
+ * Setting a stone in a circlet, in jewellery, by its rarity: the commonest at the circlet's own gate, each rarer weight
+ * one ladder step up (topaz, garnet, onyx, amber 30; emerald, peridot, amethyst, jasper 40; ruby, sapphire, opal 50;
+ * diamond 60). Gems have other uses (a ring, a pendant, a focus), so are not unidentified.
+ */
+export const CIRCLET_RECIPE = 'make_circlet';
+const GEM_COMMONEST = Math.max(...GEMS.map((g) => g.weight));
+export const gemLevel = (g: GemDef): GateLevel =>
+  stepsAbove(recipeLevel(RECIPES.find((r) => r.id === CIRCLET_RECIPE)!), GEM_COMMONEST - g.weight);
+
+/** A spell's school's skill. */
+const spellSkill = (s: SpellDef): string => schoolOf(s.school)?.skill ?? s.school;
+
+const F_ROWS: SkillGate[] = [
+  { kind: 'graft', id: 'graft', name: 'Graft', skill: 'forestry', level: GRAFT_LEVEL },
+  ...WATER_PLANTS.map((d): SkillGate => ({ kind: 'water_plant', id: d.id, name: d.name, skill: 'botanizing', level: WATER_PLANT_GATE[d.id] })),
+  ...TREASURE_TIERS.map((t): SkillGate => ({ kind: 'hoard', id: t.id, name: capital(t.name), skill: 'digging', level: ladderAt(MAP_GATE_PER_TIER * t.ord) })),
+  ...Object.values(BRIDGES).map((b): SkillGate => ({ kind: 'bridge', id: b.id, name: b.name, skill: b.skill, level: bridgeLevel(b) })),
+  ...MINED.map((m): SkillGate => ({ kind: 'smelt', id: m.id, name: `${m.name} smelting`, skill: SMELT_SKILL, level: METAL_GATE[m.id] })),
+  ...CASTING_SKILLS.flatMap((skill) => METALS.map((m): SkillGate =>
+    ({ kind: 'casting', id: castingGateId(skill, m.id), name: `${m.name} casting`, skill, level: METAL_GATE[m.id] }))),
+  ...GEMS.map((g): SkillGate => ({ kind: 'gem', id: g.id, name: `${g.name} setting`, skill: 'jewellery', level: gemLevel(g) })),
+  { kind: 'cross', id: 'cross', name: 'Cross', skill: 'animal_husbandry', level: CROSS_SKILL },
+  ...SPELLS.map((s): SkillGate => ({ kind: 'spell', id: s.id, name: s.name, skill: spellSkill(s), level: s.level })),
+];
+
 /** The skills buildings are trained in, and the wall types each lays: stone ones only in masonry. */
 const BUILD_SKILLS = ['carpentry', 'masonry'] as const;
 const wallIn = (skill: string, type: (typeof WALL_TYPES)[number]): boolean => skill === 'masonry' || (!type.stone && !type.laidIn);
@@ -165,6 +234,7 @@ const OTHER_ROWS: SkillGate[] = [
   { kind: 'paving', id: COBBLESTONES, name: 'Cobblestones', skill: 'paving', level: PAVING_GATE[COBBLESTONES] },
   ...SLAB_VARIANTS.map((v): SkillGate => ({ kind: 'paving', id: v.item, name: v.name, skill: 'paving', level: PAVING_GATE[v.item] ?? 1 })),
   ...METALS.map((m): SkillGate => ({ kind: 'metal', id: m.id, name: `${m.name} pouring`, skill: MOULD_SKILL, level: METAL_GATE[m.id] })),
+  ...F_ROWS,
 ];
 const ROWS: SkillGate[] = [...recipeRows(OTHER_ROWS), ...OTHER_ROWS];
 
@@ -181,6 +251,8 @@ addGates(ROWS, {
   },
   relic: (g) => [{ item: 'fragment', extra: g.id, noun: 'fragment' }],
   bauble: (g) => [{ item: TARNISHED, extra: g.id, noun: 'bauble' }],
+  water_plant: (g) => waterPlantItems(WATER_PLANTS.find((d) => d.id === g.id)!),
+  hoard: (g) => [{ item: 'treasure_map', extra: g.id, noun: 'map' }],
 }, { fragment: (extra) => FRAGMENT_OF.exec(extra)?.[1] ?? extra });
 
 /* ---- Readers --------------------------------------------------------------------------------------------------- */
@@ -233,7 +305,8 @@ export const workerBuildOpen = (c: { skills: Record<string, number> }, material:
 export const hodMay = (c: { skills: Record<string, number> }, t: HodTarget): boolean =>
   t.kind === 'wall' ? workerBuildOpen(c, t.wall.material, { wall: t.wall.type })
     : t.kind === 'floor' ? workerBuildOpen(c, t.floor.material, { floor: t.floor.kind ?? 'floor', hand: t.floor.hand })
-      : t.kind === 'column' ? workerBuildOpen(c, t.column.material, {}) : true;
+      : t.kind === 'column' ? workerBuildOpen(c, t.column.material, {})
+        : t.kind === 'span' ? workerGateOpen(c, gateOf('bridge', t.bridge.kind)) : true;
 
 /** Paving with cobblestones or a slab under its gate, or null. */
 export const pavingGateRefusal = (viewer: Viewer, id: string): string | null => {
@@ -261,3 +334,72 @@ export const workerMetalOpen = (c: { skills: Record<string, number> }, bar: stri
   const m = metalOfBar(bar);
   return !m || workerGateOpen(c, metalGate(m.id));
 };
+
+/* ---- Batch F readers ------------------------------------------------------------------------------------------- */
+
+/** The metal a casting or a smithed piece is of, by its `extra` ("Iron"). */
+const METAL_BY_NAME = new Map(METALS.map((m) => [m.name.toLowerCase(), m]));
+const metalNamed = (extra: string | undefined): MetalDef | undefined => (extra ? METAL_BY_NAME.get(extra.toLowerCase()) : undefined);
+
+/** The gate on working a casting of a piece at the anvil, by its metal's name, in the trade its mould is worked in; none for a piece cast whole. */
+export const castingGate = (piece: string | undefined, metal: string | undefined): SkillGate | undefined => {
+  const mould = piece ? MOULD_BY_MAKES.get(piece) : undefined;
+  const m = metalNamed(metal);
+  return mould && m && !castWhole(mould) ? gateOf('casting', castingGateId(mould.skill, m.id)) : undefined;
+};
+
+/** Working a casting at the anvil under its gate: "Tin casting: needs weaponsmithing 10; have 2.3.", or null. The island's `casting_gate_refusal`. */
+export const castingGateRefusal = (viewer: Viewer, casting: { piece?: string; extra?: string }): string | null => {
+  const g = castingGate(casting.piece, casting.extra);
+  return g ? skillGateRefusal(g.name, g.skill, viewer.skills.get(g.skill), g.level) : null;
+};
+
+/**
+ * Whether a nail or ribbon smith may beat a lump of a metal out into its piece: at its own blacksmithing, the metal's
+ * pouring gate and the casting gate of its piece's mould, both off `METAL_GATE`. The island's `worker_smith_lumps`.
+ */
+export const workerSmithOpen = (c: { skills: Record<string, number> }, bar: string, makes: string): boolean => {
+  const m = metalOfBar(bar);
+  return workerMetalOpen(c, bar) && (!m || workerGateOpen(c, castingGate(makes, m.name)));
+};
+
+/** Smelting an ore under its metal's gate: "Tin smelting: needs smelting 10; have 2.3.", or null. The island's `kind_gate_refusal(…, 'smelt', …)`. */
+export const smeltGateRefusal = (viewer: Viewer, ore: string): string | null => {
+  const m = MINED.find((x) => x.ore === ore);
+  return m ? kindGateRefusal(viewer, 'smelt', m.id) : null;
+};
+
+/** The smelting gate on an ore, by its metal. */
+export const smeltGate = (ore: string): SkillGate | undefined => {
+  const m = MINED.find((x) => x.ore === ore);
+  return m ? gateOf('smelt', m.id) : undefined;
+};
+
+/** Whether a worker may smelt an ore, at its own smelting. The island's `worker_furnace_fits`. */
+export const workerSmeltOpen = (c: { skills: Record<string, number> }, ore: string): boolean => workerGateOpen(c, smeltGate(ore));
+
+/**
+ * Planting a water plant under its gate, named as `viewer` sees what is planted: "Unidentified root: needs botanizing
+ * 10; have 2.0." for a lily root, "Lotus: needs botanizing 20; have 4.0." for lotus seeds; or null. The island's
+ * `water_plant_gate_refusal`.
+ */
+export const waterPlantGateRefusal = (viewer: Viewer, d: WaterPlantDef): string | null => {
+  const g = gateOf('water_plant', d.id);
+  if (!g) return null;
+  return skillGateRefusal(unidentified({ id: d.from }, viewer) ? seenDefName(d.from, viewer) : g.name, g.skill, viewer.skills.get(g.skill), g.level);
+};
+
+/** The water plant a root or seed grows into. */
+export const waterPlantFrom = (from: string): WaterPlantDef | undefined => WATER_PLANTS.find((x) => x.from === from);
+
+/** Whether a worker may plant from a root or seed, at its own botanizing. The island's `worker_roots`. */
+export const workerWaterPlantOpen = (c: { skills: Record<string, number> }, from: string): boolean => {
+  const d = waterPlantFrom(from);
+  return !d || workerGateOpen(c, gateOf('water_plant', d.id));
+};
+
+/** Planning or building a bridge or an aqueduct under its gate: "Drawbridge: needs carpentry 50; have 12.0.", or null. */
+export const bridgeGateRefusal = (viewer: Viewer, kind: string): string | null => kindGateRefusal(viewer, 'bridge', kind);
+
+/** Setting a stone in a circlet under its gate: "Diamond setting: needs jewellery 60; have 31.0.", or null. */
+export const gemGateRefusal = (viewer: Viewer, gem: string): string | null => kindGateRefusal(viewer, 'gem', gem);

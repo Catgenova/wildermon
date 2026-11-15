@@ -167,6 +167,7 @@ import { HOARD_METALS, ITEM_DEFS, rollRarity, type Item } from './items';
 import { canImprove } from './improve';
 import { HOARD_HEAD, tryGain } from './learn';
 import { CREATURE_HEALTH_MUL } from './limits';
+import { itemGateRefusal } from './skillgates';
 
 /**
  * The ordinary things in a hoard, beside the lumps: a tool or a blade.
@@ -321,6 +322,9 @@ export const TREASURE_ACTIONS: ActionDef[] = [
       if (t.kind !== 'item') return null;
       const map = g.inventory.get(t.uid);
       if (map?.id !== 'treasure_map') return 'Not a map.';
+      // Its tier's gate (`craftgates.ts`, kind `hoard`), named as you see it: "Unidentified map: needs digging 20; have 4.0."
+      const gated = itemGateRefusal(map, g);
+      if (gated) return gated;
       const h = hoardOf(g, map.uid);
       if (!h) return 'Map is blank: its hoard is gone.';
       const warm = warmthOf(g, h);

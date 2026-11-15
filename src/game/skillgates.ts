@@ -43,7 +43,8 @@ export type GateLevel = (typeof GATE_LADDER)[number];
  * kind of wildermon by its species id; a fish by its id; a wagon or a boat by its piece's id.
  */
 export type GateKind = 'tree' | 'sprout' | 'crop' | 'seam' | 'vein' | 'stone' | 'tame' | 'fish' | 'vehicle' | 'boat'
-  | 'recipe' | 'relic' | 'bauble' | 'material' | 'wall' | 'floor' | 'paving' | 'metal';
+  | 'recipe' | 'relic' | 'bauble' | 'material' | 'wall' | 'floor' | 'paving' | 'metal'
+  | 'graft' | 'water_plant' | 'hoard' | 'bridge' | 'smelt' | 'casting' | 'gem' | 'cross' | 'spell';
 
 /** What each evolution stage past the first adds to a kind's taming gate (`TAME_GATE`). The island's `wild_stage_tame`. */
 export const TAME_STAGE_GATE = 15;
@@ -68,6 +69,15 @@ export const GATE_STOPS: Readonly<Record<GateKind, string>> = {
   floor: 'planning and building the floor type: a hod carrier\'s work',
   paving: 'paving with it',
   metal: 'pouring it: Pour a mould, Cast an anvil; a nail or ribbon smith\'s work',
+  graft: 'grafting a fruit sprout onto a tree: Graft',
+  water_plant: 'planting it: in still water, in a lily pond; a water planter\'s work; a lily root unidentified under it',
+  hoard: 'Read and Dig it up on a treasure map of the tier; unidentified under it',
+  bridge: 'planning and building it: a hod carrier\'s work',
+  smelt: 'smelting its ore: Smelt, a smelter worker\'s and a stoker\'s work',
+  casting: 'working a casting of the metal at the anvil: Smith; a nail or ribbon smith\'s work',
+  gem: 'setting the stone in a circlet',
+  cross: 'breeding a listed cross',
+  spell: 'casting it',
 };
 
 export interface SkillGate {
@@ -114,6 +124,20 @@ export const TREE_GATE: Readonly<Record<string, GateLevel>> = {
 /** One step down the ladder, or 1 at the bottom. */
 export const stepBelow = (level: GateLevel): GateLevel => GATE_LADDER[Math.max(0, GATE_LADDER.indexOf(level) - 1)];
 
+/** `n` steps up the ladder from `level`, or its top. */
+export const stepsAbove = (level: GateLevel, n: number): GateLevel =>
+  GATE_LADDER[Math.min(GATE_LADDER.length - 1, GATE_LADDER.indexOf(level) + n)];
+
+/** The ladder step at or below `at`, 1 at the least. */
+export const ladderAt = (at: number): GateLevel => {
+  let level: GateLevel = 1;
+  for (const step of GATE_LADDER) if (step <= at) level = step;
+  return level;
+};
+
+/** Grafting a fruit sprout onto a tree, by forestry (Graft). The island's `skill_gate('graft', 'graft')`. */
+export const GRAFT_LEVEL: GateLevel = 50;
+
 /**
  * A species' sprouts (picking, planting, grafting), by forestry: one ladder step under its felling gate, so a wood is
  * grown before it is felled.
@@ -149,6 +173,15 @@ export const CRAFT_GATE_SAID: Readonly<Record<string, { skill: string; level: Ga
   smelter: { skill: 'masonry', level: 1 },
   wagon: { skill: 'carpentry', level: 70 },
   caravel: { skill: 'carpentry', level: 90 },
+  // A trade's first steps at 1 (decided, batch F): bowyery's string and short bow, leatherworking's awl and leather,
+  // papyrusmaking's papyrus and the paper press it is pressed at, ropemaking's rope.
+  bow_string: { skill: 'bowyery', level: 1 },
+  short_bow: { skill: 'bowyery', level: 1 },
+  awl: { skill: 'leatherworking', level: 1 },
+  leather: { skill: 'leatherworking', level: 1 },
+  papyrus: { skill: 'papyrusmaking', level: 1 },
+  paper_press: { skill: 'carpentry', level: 1 },
+  rope: { skill: 'ropemaking', level: 1 },
 };
 
 /** A crop's seed item: its id and `_seed` (`farming.ts`). */
@@ -265,6 +298,13 @@ export const gatedFor = (kind: GateKind, id: string, haveOf: (skill: string) => 
   const g = gateOf(kind, id);
   return g ? skillGateRefusal(g.name, g.skill, haveOf(g.skill), g.level) : null;
 };
+
+/**
+ * A thing's gate for somebody, by kind and id, in the one rule's words, or null: "Graft: needs forestry 50; have
+ * 12.0." The island's `kind_gate_refusal`.
+ */
+export const kindGateRefusal = (viewer: Viewer, kind: GateKind, id: string): string | null =>
+  gatedFor(kind, id, (skill) => viewer.skills.get(skill));
 
 /** The felling gate on a tree tile's data, or undefined for a tree with no logs in it: those anybody clears. */
 export const treeGate = (data: number): SkillGate | undefined =>

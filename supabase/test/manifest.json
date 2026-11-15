@@ -1990,6 +1990,12 @@
     "why": "Asked for: \"Gate cooking recipes. Gate bauble and artifact restorations. Gating carpentry crafts, masonry crafts, wall types based on carp/masonry levels. Gating formulas. Gating paving/floor types. Gating these tasks also for wildermon that perform them equal to their own level.\" The island's skill_gate is the browser's for every recipe (by difficulty, the smelter, wagon and caravel as decided, a Formula's scroll by what it goes on), relic, bauble tier, material, wall, floor and paving type; apple pie, the wagon, a long bow, a plank wall, a bay window, an iron-bound gate, a spiral staircase, a marble wall, marble slabs and cobblestones refused in the same words on both sides; a Formula, a fragment and a tarnished bauble unidentified under their gate and refused in those names; cooks and hod carriers at their own level in each gate's skill; carpentry's and cooking's Unlocks and the next gate beside each skill's level."
   },
   {
+    "file": "supabase/test/skillgates-f.ts",
+    "title": "Skill gates: the recommended gates, smelting and castings by the metal, first steps at 1",
+    "shard": 3,
+    "why": "Asked for: \"Add those recommended gates. … Bring the awl and leather down. Same with papyrus milling and ropemaking first steps. For smithing, working a casting should have requirements equal to the smelting gate parallels.\" The island's skill_gate and skill_gate_item are the browser's for graft, water plants, treasure maps, bridges, smelting, castings, stones in a circlet, a cross and spells; smelting, pouring and working a casting read the one metal table; Graft, tin smelting, a tin sword blade casting, a drawbridge, a stone brick bridge, an aqueduct, a diamond in a circlet and a sound map refused in the same words on both sides and allowed at their level; a lily root and a treasure map unidentified under their gate; the bowstring, short bow, awl, leather, papyrus, paper press and rope open at 1; smelter workers, water planters and hod carriers at their own level; the Unlocks lists."
+  },
+  {
     "file": "supabase/test/aroundbehind.ts",
     "title": "A worker round you left behind comes to you",
     "shard": 6,

@@ -180,7 +180,8 @@ import { AWARE_PER_LEVEL, AWARE_TRAIT_STEP, awareShareAbove, awareTraitEase, DEE
 import { NIGHT_EYES_FROM } from '../../game/learn';
 import { NO_GO, pointAt, windWord, windWorth } from '../../game/wind';
 import { article, capital, finePercent, listed, listedOr, percent, timeWords } from '../../game/words';
-import { CRAFT_FROM, CRAFT_PER, craftLevel, FORMULA_GATE, FORMULA_TWO_ELEMENTS, METAL_GATE, POUR_GATE_SAID } from '../../game/craftgates';
+import { bridgeLevel, CASTING_SKILLS, CRAFT_FROM, CRAFT_PER, craftLevel, FORMULA_GATE, FORMULA_TWO_ELEMENTS, gemLevel, METAL_GATE, POUR_GATE_SAID, SMELT_SKILL } from '../../game/craftgates';
+import { TREASURE_TIERS } from '../../game/treasure';
 import {
   CRAFT_GATE_SAID, cropSeed, GATE_LADDER, GATE_STOPS, GATED_ITEMS, GATED_SKILLS, gateOf, identifySaid, SEAM_GATE, seenName, skillGateRefusal, SKILL_GATES, UNIDENTIFIED_METAL,
   unlocksSaid, VEIN_UNREAD, type Viewer,
@@ -1942,8 +1943,8 @@ export function helpText(): string {
       <li><b>${itemDef(SMITH_TOOL).name}</b> needed: firing a mould, pouring one, casting an anvil, smithing a casting, striking coins, fitting a padlock.</li>
       <li><b>Anvil mould</b>, poured at the smelter: an anvil of that metal from ${MOULD_BY_ID.get('anvil_mould')!.lumps} lumps; set down on ${ANVIL_SUBTILES * ANVIL_SUBTILES} spots of a tile.</li>
       <li>Other moulds, <b>poured at the smelter</b> in any metal: a <b>casting</b> (shovel head casting, nail casting…) out with the lumps.</li>
-      <li>Pouring, a mould or an anvil: ${skillWord(MOULD_SKILL)} at the metal's level, ${METALS.map((m) => `${m.name.toLowerCase()} ${METAL_GATE[m.id]}`).join(', ')}.</li>
-      <li>Castings are finished at an <b>anvil</b> with <b>blacksmithing</b>, <b>weaponsmithing</b> or <b>armoursmithing</b> as the piece needs. Skill sets success and QL,
+      <li>Pouring, a mould or an anvil: ${skillWord(MOULD_SKILL)} at the metal's level, ${METALS.map((m) => `${m.name.toLowerCase()} ${METAL_GATE[m.id]}`).join(', ')}. Smelting its ore: the same level in ${skillWord(SMELT_SKILL)}.</li>
+      <li>Castings are finished at an <b>anvil</b> in the piece's own trade (${listed(CASTING_SKILLS.map((s) => `<b>${skillWord(s)}</b>`))}), at the metal's level in it. Skill sets success and QL,
       with the casting (mould and metal QL) and the anvil. Failure: casting damaged by its QL (${FAIL_DAMAGE_SAID}), not used up.</li>
       ${MOULDS.filter((m) => m.also).map((m) => `<li><b>${itemDef(m.makes).name}</b>: casting + ${m.also?.count} × ${itemDef(m.also?.item ?? '').name.toLowerCase()} at the anvil, spent on success.</li>`).join('')}
       <li>Tool heads and blades: fit a shaft. Swords hit far harder than tools. A helm stops most of a cornered wildermon's damage.</li>
@@ -3935,6 +3936,11 @@ export function helpText(): string {
       Relics and baubles: their restoring difficulty, the same rule.</li>
       <li>Pouring a metal (Pour a mould, Cast an anvil; nail and ribbon smiths), in ${skillWord(MOULD_SKILL)}: a mined metal at its seam's mining level, but ${Object.entries(POUR_GATE_SAID).map(([id, lv]) => `${METAL_BY_ID.get(id)?.name.toLowerCase() ?? id} ${lv}`).join(', ')}; an alloy at its highest metal's
       (${METALS.filter((m) => !m.ore).map((m) => `${m.name.toLowerCase()} ${METAL_GATE[m.id]}`).join(', ')}). Forming the mould: its own recipe's level.</li>
+      <li>The same level a metal: smelting its ore, in ${skillWord(SMELT_SKILL)} (Smelt; smelter workers and stokers); working its casting at the anvil, in the casting's own trade
+      (${listed(CASTING_SKILLS.map(skillWord))}; nail and ribbon smiths).</li>
+      <li>Bridges: a material bridge at its material's level; ${listed(Object.values(BRIDGES).filter((b) => !b.material).map((b) => `${b.name.toLowerCase()} ${bridgeLevel(b)}`))}, by difficulty. Planning, and adding to a plan; hod carriers at their own level.</li>
+      <li>Stones in a circlet: ${listed(GEMS.slice().sort((a, b) => gemLevel(a) - gemLevel(b)).map((s) => `${s.name.toLowerCase()} ${gemLevel(s)}`))}, in ${skillWord('jewellery')}.</li>
+      <li>Treasure maps, read and dug up, in ${skillWord('digging')}: ${listed(TREASURE_TIERS.map((t) => `${t.name} ${gateOf('hoard', t.id)!.level}`))}; unidentified under it.</li>
       <li>Veins: bare, always named; buried, &ldquo;${UNIDENTIFIED_METAL}&rdquo; under its mining level in prospecting; tooltip &ldquo;${VEIN_UNREAD}&rdquo;</li>
       <li>Walls, floors, roofs: the material's gate and the wall or floor type's, both in the material's skill (carpentry or masonry). Planning, and adding to a plan.</li>
       ${GATED_SKILLS.map((id) => `<li><b>${SKILL_BY_ID.get(id)?.name ?? id}</b> (${listed([...new Set(SKILL_GATES.filter((g) => g.skill === id).map((g) => GATE_STOPS[g.kind]))])}): ${unlocksSaid(id)}.</li>`).join('\n      ')}

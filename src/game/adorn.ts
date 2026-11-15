@@ -39,6 +39,8 @@ import type { LightSource } from './light';
 import { STATE_TAILS } from './pieceTails';
 import { capital, listed, listedOr } from './words';
 import { itemGateRefusal } from './skillgates';
+import { waterPlantGateRefusal } from './craftgates';
+import { WATER_PLANT_BY_ID } from '../world/waterplants';
 import { CROP_LIST, RIPE, type CropDef } from './farming';
 import { fieldClock } from './growth';
 import { ageGain, CELLAR_AGEING } from './ageing';
@@ -397,7 +399,9 @@ export function adornRefusal(g: Game, id: string, t: Target, now = g.wallNow()):
   if (!g.besidePiece(f)) return lampTooFar(nameOf(f.kind));
   if (id === POND_LILY) {
     if (liliesIn(f) >= POND_LILIES) return ADORN_SAID.pondFull;
-    return g.inventory.items.some((it) => it.id === 'lily_root' && !it.locked) ? null : ADORN_SAID.noLily;
+    if (!g.inventory.items.some((it) => it.id === 'lily_root' && !it.locked)) return ADORN_SAID.noLily;
+    // The water lily's gate, as planting one in open water (`craftgates.ts`, kind `water_plant`).
+    return waterPlantGateRefusal(g, WATER_PLANT_BY_ID.get('lily')!);
   }
   if (id === PEA_SEASON) return d.pea === undefined ? adornSaid('samePea', { what: 'by season' }) : null;
   const pea = PEA_NAMES.find((c) => id === PEA_PICK(c));

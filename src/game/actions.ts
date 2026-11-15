@@ -1,5 +1,5 @@
 export { TRY_LEARN, tryGain } from './learn';
-import { COBBLESTONES, pavingGateRefusal } from './craftgates';
+import { COBBLESTONES, gemGateRefusal, pavingGateRefusal } from './craftgates';
 import { lairFoundingRefusal } from './lairs';
 import { GRASS_PER_CUT, MOSS_PER_CUT } from './limits';
 import { PROSPECT_HEAD, tryGain } from './learn';
@@ -103,7 +103,7 @@ import { capital, listed } from './words';
 import { pct, pickedSaid, qlTag, searchOdds, searchPasses, tagged, taggedWith } from './yields';
 import { fruitRefusal, fruitSeason, fruitingSays, inSeason } from './fruiting';
 import { RECIPE_ACTIONS } from './recipes';
-import { itemGateRefusal, rockGateRefusal, seenDefName, seenName, seenVein, skillGateRefusal, sproutGate, treeGate, unidentified, veinTip } from './skillgates';
+import { itemGateRefusal, kindGateRefusal, rockGateRefusal, seenDefName, seenName, seenVein, skillGateRefusal, sproutGate, treeGate, unidentified, veinTip } from './skillgates';
 import { BRUSH_TOOL, lacksTool, MORTAR_TOOL, REAP_TOOL, TOOL_JOBS } from './jobtools';
 
 /**
@@ -425,8 +425,6 @@ export function treeOutlook(age: TreeAge, treesAt: number): string {
   return out;
 }
 
-/** Forestry it takes to graft: a beginner's graft is a sprout thrown away. */
-export const GRAFT_SKILL = 50;
 /** A sprout of one of the three that bear, which is what a graft is made from. */
 export const fruitSprout = (it: { id: string; extra?: string }): boolean =>
   it.id === 'sprout' && !!TREE_DEFS.find((d) => d.name === it.extra)?.fruit;
@@ -2161,9 +2159,9 @@ export const ACTIONS: ActionDef[] = [
       const age = treeAge(data);
       if (!age.alive) return 'Tree is dead.';
       if (TREE_DEFS[treeSpecies(data)].fruit) return 'Already bears fruit.';
-      // Grafting is the forester's finest work, and a beginner's graft is a
-      // sprout thrown away.
-      if (g.skills.get('forestry') < GRAFT_SKILL) return `Needs forestry ${GRAFT_SKILL}.`;
+      // Its gate (`skillgates.ts`, kind `graft`): "Graft: needs forestry 50; have 12.0."
+      const graftGated = kindGateRefusal(g, 'graft', 'graft');
+      if (graftGated) return graftGated;
       const asked = t.itemUid !== undefined ? g.inventory.get(t.itemUid) : undefined;
       if (asked !== undefined && !(asked?.id === 'sprout' && fruitSprout(asked))) return 'Not a fruit sprout.';
       if (!asked && !g.inventory.items.some((it) => it.id === 'sprout' && fruitSprout(it))) return 'Need a fruit sprout.';
@@ -2838,6 +2836,9 @@ export const ACTIONS: ActionDef[] = [
       if (!item) return 'It is gone.';
       if (item.id !== 'gem' || !gemOf(item)) return 'Gems only.';
       if (!circletWithRoom(g.inventory.items)) return `Need a circlet with an empty setting (${CIRCLET_STONES} per circlet).`;
+      // The stone's gate, by its rarity (`craftgates.ts`, kind `gem`): "Diamond setting: needs jewellery 60; have 31.0."
+      const gemGated = gemGateRefusal(g, gemOf(item)!.id);
+      if (gemGated) return gemGated;
       if (!g.inventory.has('file')) return 'Need a file.';
       return null;
     },

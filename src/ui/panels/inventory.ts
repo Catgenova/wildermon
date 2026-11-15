@@ -27,7 +27,7 @@ import { MOTE_ELEMENTS, STATUE_MOTES } from '../../game/motes';
 import { PATRONS, STATUETTE, statueName } from '../../game/patronlist';
 import { BACK, hasRunestones, RUNESTONES, stoneChoice, stoneDistance, TELESTONE, TELESTONE_SAID, telestoneRange, telestoneWait, timeLeftNote, TRAVEL } from '../../game/runestones';
 import { canImprove, improvable, improveCeiling } from '../../game/improve';
-import { seenName } from '../../game/skillgates';
+import { itemGateRefusal, seenName } from '../../game/skillgates';
 
 const CATEGORY_ORDER: Array<[ItemCategory, string]> = [
   ['tool', 'Tools'],
@@ -313,7 +313,11 @@ export class InventoryPanel {
      * whole of what a map is for is looking at it, and "Dig it up" is a thing
      * you do once, at the end, somewhere else entirely.
      */
-    if (item.id === 'treasure_map') entries.push({ label: 'Read', note: 'View map', onSelect: () => this.readMap?.(item.uid) });
+    if (item.id === 'treasure_map') {
+      // Under its tier's digging gate it is unidentified and not read (`rpc_treasure_map`): greyed, the gate as the hint.
+      const gated = itemGateRefusal(item, this.game);
+      entries.push(gated ? { label: 'Read', hint: gated, disabled: true } : { label: 'Read', note: 'View map', onSelect: () => this.readMap?.(item.uid) });
+    }
     // A soul goes into something else, which is chosen here.
     const absorb = item.id === SOUL ? ACTION_BY_ID.get('absorb_soul') : undefined;
     if (absorb) {

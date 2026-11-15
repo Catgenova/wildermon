@@ -9,7 +9,7 @@ import { chargesFor, itemDef, itemName, markOf, rarityOf, type Item } from './it
 import { MELT_HEAT, MELT_KEEP, MELT_SHARE, meltFits, meltLumps, meltQl, meltRefusal, metalOfItem } from './melt';
 import { fixedTo } from './ageing';
 import { matOf } from './materials';
-import { metalGateRefusal } from './craftgates';
+import { metalGateRefusal, smeltGateRefusal } from './craftgates';
 import {
   castSeconds, castWhole, INGOT_LUMPS, ingotOf, isMetalStock, isOreItem, lumpsIn, METAL_BY_LUMP, METAL_BY_ORE, metalOfBar, MOULD_BY_ID,
   MOULD_DENT, MOULD_SKILL, mouldLumps, SMITH_TOOL, mouldUsesLeft, mouldWear, ORE_PER_LUMP, pourSeconds, smeltSeconds,
@@ -291,6 +291,9 @@ export const SMELTER_ACTIONS: ActionDef[] = [
       if (!nearSmelter(g, s)) return 'Stand next to the smelter.';
       const item = t.kind === 'smelter' && t.itemUid !== undefined ? g.stockEntry(t.itemUid, g.forgeReach())?.item : undefined;
       if (!item || !isOreItem(item.id)) return 'Ore only.';
+      // Its metal's gate (`craftgates.ts`, kind `smelt`, off `METAL_GATE`): "Tin smelting: needs smelting 10; have 2.3."
+      const gated = smeltGateRefusal(g, item.id);
+      if (gated) return gated;
       // A charge is one ore, which comes out as one lump.
       if (item.count < ORE_PER_LUMP) return `Need ${ORE_PER_LUMP} ore; have ${item.count}.`;
       if (s.jobs.length >= smelterCapacity(s)) return 'Smelter full.';

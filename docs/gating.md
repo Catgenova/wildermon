@@ -16,8 +16,10 @@ items (§12); wagons, boats, quarried stone, veins (batch B); every crafting rec
 building materials, wall, floor and paving types, Formulas, and each skill's next gate beside its level (batch C,
 §9); the answers to batch C's questions: stone brick at 10, pouring by the metal, the trees spread to 70 and 80, a bare
 vein always named, long Unlocks lists one row a level (batch D, §9); iron poured at 1, prospectors finding buried veins, the
-Guiding Light counting only trees you fell, cellars cut by the stone's gate (batch E, §9). What is left below is the plan;
-§11 sweeps every skill for the next gates.
+Guiding Light counting only trees you fell, cellars cut by the stone's gate (batch E, §9); the sweep's recommended gates
+(graft, water plants, treasure maps, bridges, smelting, stones in a circlet, a cross, spells), working a casting by the
+metal at the smelting levels, and a trade's first steps at 1 (batch F, §9). What is left below is the plan; §11 sweeps
+every skill for the next gates.
 
 Decided since (the user, on §10's questions): birch 1 and willow 90; taming and fish keep their own numbers (batch B
 moves them into the table); the smelter at masonry 1, the wagon at carpentry 70 and the caravel at carpentry 90; a
@@ -59,7 +61,28 @@ Decided since (the user, on batch D's questions, built in batch E):
    rule's words (`rockGateRefusal`, `rock_gate_refusal`): "Marble: needs mining 30; have 12.0." Dig the cellar cuts only
    soil and stays open. No worker digs cellars.
 6. **These stay ungated**: dye-recipe sheets, brews set going at a barrel, garden steps, stepping stones, a Mason's
-   Repoint, ingots (`pour_ingot`), and beating a casting out at the anvil.
+   Repoint and ingots (`pour_ingot`). Beating a casting out at the anvil was on this list; batch F gates it (below).
+
+Decided since (the user, on §11's sweep, built in batch F): "Add those recommended gates. Coinsmithing needs to be
+removed entirely… Bring the awl and leather down. Same with papyrus milling and ropemaking first steps. For smithing,
+working a casting should have requirements equal to the smelting gate parallels."
+
+1. **Every ★ in §11, built**: Graft onto the rule (forestry 50); the water lily 10 and the lotus 20 (botanizing), water
+   planters at their own level; treasure maps by tier (digging: worn 1, sound 20, fine 40, grand 60), the map
+   unidentified under it; bridges (carpentry: garden footbridge 10, rope bridge 20, drawbridge 50; log, plank and
+   timbercraft at their material's gate; masonry: a stone bridge at its material's gate, the aqueduct 70), hod carriers
+   at their own level; smelting ore by its metal at the metal's pouring level (copper and iron 1, tin 10 … seryll 90),
+   smelter workers and stokers at their own smelting; stones in a circlet by rarity (30/40/50/60); a listed cross onto
+   the rule (animal husbandry 50); spells onto the rule (kind `spell`, kept at 1 and 30).
+2. **Brought down to 1** (their recipe level, `CRAFT_GATE_SAID`, not a new gate): the bowstring (10) and the short bow
+   (20); the awl (10) and leather (`tan_hide`, 20); papyrus (20) and the paper press it is pressed at (carpentry 20), the
+   step before it; rope (5).
+3. **Working a casting is gated by its metal** (replaces "beating a casting stays open"): at the anvil (Smith), in the
+   trade the casting's mould is worked in (blacksmithing, weaponsmithing, armorsmithing, chainsmithing, platesmithing,
+   jewellery), at exactly the level smelting that metal takes: one table (`METAL_GATE`) read by smelting, pouring and
+   working a casting. An alloy's casting at its alloy level (the highest smelting gate of the mined metals in it).
+4. **Coin striking is removed** from the game on `main` by a separate change; it is not gated here, and §11's
+   "Striking coins" proposal is dropped.
 
 ## 1. What is gated today
 
@@ -265,8 +288,8 @@ trellis 20; prune, fruit picking and tapping resin ungated. Workers: sprout pick
 Sow on a field, a glasshouse field or a garden bed (`plant_seed`, `farm_refusal`), Sow a patch (`sow_patch`), a planter
 or herb box (`planter_refusal`), a herb spiral (`spiral_sow`, `adorn_refusal`; with none chosen, the first herb seed
 your farming may sow). Harvest, tend and clear open to anyone. Workers: farmers (`farm`: `sow_seed`, the browser's
-`seedFor`), planter tenders (`patch`: `worker_seeds`). S: botanizing water plants: water lily 10, lotus 20 (`lily`
-workers).
+`seedFor`), planter tenders (`patch`: `worker_seeds`). Botanizing water plants: water lily 10, lotus 20 (`lily`
+workers), built in batch F (§9).
 
 ### Cooking: recipes (A), by difficulty — built
 
@@ -289,7 +312,7 @@ Workers: restorers (`restore`). Archaeology (finding) stays ungated: finds are r
 
 | 1 | 5 | 10 | 20 | 30 | 40 | 70 | 90 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Planks, timbers, shafts, crates, fitting heads and blades, mallet, rope tool, club, thatch, compost bin, footstool, training dummy, mooring post, buoy, snare, nameplate | Settlement stake, small den, signpost, side table, archery target, cheese rack, pedigree board | Bucket, fishing rod, lantern post, flower cart, armour stand, water trough, spice shelf, window seat, garden obelisk, game table | Work post, wooden and metal shields, medium den, rope walk, paper press, butter churn, rose/lavender arches, wisteria pergola, arbour bench, garden swing, tree bench | Large den, gazebo | Large wheel, large cart, rowing boat, deadfall | **Wagon**, sailing boat | **Caravel** |
+| Planks, timbers, shafts, crates, fitting heads and blades, mallet, rope tool, club, thatch, compost bin, footstool, training dummy, mooring post, buoy, snare, nameplate, paper press (batch F) | Settlement stake, small den, signpost, side table, archery target, cheese rack, pedigree board | Bucket, fishing rod, lantern post, flower cart, armour stand, water trough, spice shelf, window seat, garden obelisk, game table | Work post, wooden and metal shields, medium den, rope walk, butter churn, rose/lavender arches, wisteria pergola, arbour bench, garden swing, tree bench | Large den, gazebo | Large wheel, large cart, rowing boat, deadfall | **Wagon**, sailing boat | **Caravel** |
 
 Fine carpentry by the same rule: stool 1; coat rack, planter, trellis, boxes, sign 5; chair, bench, table, cot, coffer,
 spindle, small barrel, bins … 10; bed, chest, cupboard, shelves, barrel, lectern, hive, small cart, signboard … 20;
@@ -353,6 +376,41 @@ pouring. Workers: a ribbon smith at blacksmithing 1 pours copper, iron and steel
 only metal over its level in the stores, idle `gate`: "Idle: Tin pouring in your settlement stores needs blacksmithing
 10 (yours 1.0)."
 
+### Smelting and working a casting, by the metal (decided, batch F) — built
+
+One table, `METAL_GATE`, read three ways: smelting a metal's ore (kind `smelt`, in smelting), pouring it (kind `metal`,
+in blacksmithing, above) and working a casting of it at the anvil (kind `casting`, in the trade the casting's mould is
+worked in: blacksmithing, weaponsmithing, armorsmithing, chainsmithing, platesmithing, jewellery; id
+`weaponsmithing:tin`). A mined metal's casting is at its smelting gate; an alloy's at its alloy level (the highest
+smelting gate of the mined metals in it). A piece cast whole (a bell, a statue) has no casting gate.
+
+| Copper, Iron, Steel | Tin, Bronze | Zinc, Brass | Lead, Pewter | Silver | Gold, Electrum | Adamantine | Glimmersteel | Mithril | Seryll |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | 10 | 20 | 30 | 40 | 50 | 60 | 70 | 80 | 90 |
+
+Smelt (`smelt_ore`, `firing_refusal`): "Tin smelting: needs smelting 10; have 2.3." Smith (`smith`, `forge_refusal`,
+`casting_gate_refusal`): "Tin casting: needs weaponsmithing 10; have 2.3." Workers: a smelter worker and a stoker take
+only ore their own smelting smelts (`worker_furnace_fits`, `workerSmeltOpen`), idle `gate` naming the lowest metal "in
+your settlement stores"; a nail or ribbon smith beats out only metal its blacksmithing both pours and works out of a
+casting (`worker_smith_lumps`, `workerSmithOpen`). No worker works a weapon, armour or jewellery casting. Ore, lumps and
+castings are not unidentified: ore is named by the vein it was mined from, lumps and castings have other uses (melting
+down, alloys).
+
+### Every other batch F gate — built
+
+| Gate | Skill | Levels | Stops | Workers | Unidentified |
+| --- | --- | --- | --- | --- | --- |
+| Graft (kind `graft`) | forestry | 50 (`GRAFT_LEVEL`) | Graft | — | — |
+| Water plant (`water_plant`) | botanizing | Water lily 10 · lotus 20 (`WATER_PLANT_GATE`) | Plant a water lily or a lotus; a lily pond's Plant a water lily | Water planters (`lily`) | A lily root ("Unidentified root"); lotus seeds never (food) |
+| Treasure map (`hoard`) | digging | Worn 1 · sound 20 · fine 40 · grand 60 (`MAP_GATE_PER_TIER` 20 a tier) | Read, Dig it up | — | The map, by its tier ("Unidentified map") |
+| Bridge (`bridge`) | the bridge's trade | A material bridge at its material's gate (log 1, plank 10, timbercraft 20; cobblestone 1, clay adobe 5, clay bricks and stone brick 10, sandstone 30, slate 40, marble 50); garden footbridge 10, rope bridge 20, drawbridge 50, aqueduct 70 by difficulty (`bridgeLevel`) | Throw a bridge across, Work on the bridge, Lead an aqueduct here, Work on the aqueduct | Hod carriers fitting a span (`hod_may`, `hodMay`) | — |
+| Stone in a circlet (`gem`) | jewellery | Topaz, garnet, onyx, amber 30 · emerald, peridot, amethyst, jasper 40 · ruby, sapphire, opal 50 · diamond 60 (`gemLevel`: the circlet's own level, a ladder step a rarer weight) | Set in circlet | — | — (gems have other uses) |
+| A listed cross (`cross`) | animal husbandry | 50 (`CROSS_SKILL`) | Putting a cross to a mate | — | — |
+| Spell (`spell`) | its school's skill | Ember, Snare, Aegis 1 · Pyre, Still field, Bulwark 30 (`SpellDef.level`) | Casting it | — | — |
+
+All in the one rule's words, through one reader (`kindGateRefusal`, `kind_gate_refusal`), but a water plant's
+(`waterPlantGateRefusal`: the root named as the planter sees it) and a casting's (`castingGateRefusal`).
+
 ### Driving and sailing (A)
 
 | Small cart (pulled by hand) | Large cart | Wagon |
@@ -376,19 +434,21 @@ drive: no worker gate. Built (`helmGate`, `helm_gate_refusal`).
 | Fishing | Fish (existing, pool) | Kept |
 | Stonecutting | By difficulty | Whetstone 5 · bricks, slate and sandstone slabs 10 · stone and marble slabs, bust 20 · quern 30 · telestone 40 |
 | Pottery | By difficulty | Brick, bowl, adobe, potted fern 1 · jar, palm, vase 5 · pot 10 · potter's wheel, amphora 20 |
-| Smelting | Alloys by difficulty | Pewter 5 · bronze, brass 10 · steel, electrum 20 |
-| Blacksmithing, weaponsmithing, armorsmithing, chainsmithing, platesmithing, jewellery | Moulds by difficulty; pouring by the metal (built, above); beating a casting out at the anvil open (decided) | per mould |
+| Smelting | Alloys by difficulty; ore by its metal (batch F) | Pewter 5 · bronze, brass 10 · steel, electrum 20; ore at the metal's pouring level, copper and iron 1 … seryll 90 |
+| Blacksmithing, weaponsmithing, armorsmithing, chainsmithing, platesmithing, jewellery | Moulds by difficulty; pouring by the metal (built, above); working a casting at the anvil by its metal, in the casting's own trade, at the smelting level (batch F) | per mould; per metal |
 | Tailoring | By difficulty | Yarn 1–10 · sack, banner, curtains 5 · cloth, needle, caps, shoes, flagpole 10 · rug, tunic, trousers, tent 20 |
-| Ropemaking | By difficulty | Torch, twine 1 · rope 5 · hammock, skep 10 · creel, sailcloth 20 · net 30 · thick rope, rigging 40 |
-| Leatherworking | By difficulty | Awl 10 · leather, satchel, cap, bridle, yoke 20 · toolbelt, jerkin 30 · backpack, saddle 40 · large harness 50 · scale 80–90 |
-| Bowyery, fletching | By difficulty | Short bow 20 · medium 30 · long 40 · composite 80; blunt 1 · javelin 5 · arrows 10 · broadhead 20 · bodkin 40 |
+| Ropemaking | By difficulty | Torch, twine, rope 1 (rope was 5, batch F) · lead rope, hanging basket 5 · hammock, skep 10 · creel, sailcloth 20 · net 30 · thick rope, rigging 40 |
+| Leatherworking | By difficulty | Awl, leather 1 (were 10 and 20, batch F) · pelt rug 10 · satchel, cap, bridle, yoke 20 · toolbelt, jerkin 30 · backpack, saddle 40 · large harness 50 · scale 80–90 |
+| Bowyery, fletching | By difficulty | Bowstring, short bow 1 (were 10 and 20, batch F) · medium 30 · long 40 · composite 80; blunt 1 · javelin 5 · arrows 10 · broadhead 20 · bodkin 40 |
 | Glassblowing | By difficulty | Glass 5 · panel, bottle 20 · stained glass 40 |
 | Alchemy, first aid | By difficulty | Candle, tea 5 · lye, dyes 10–30 · ink, tinctures 20; bandage 1 · covers, salves 10 |
-| Papyrusmaking, milling, brewing | By difficulty | Papyrus 20 · book 40 · trade book 50 (and `TRADE_BOOK_AT`); flour, juice 5 · cornmeal 10 · olive oil, cider 20; ale 10 · cider 20 · mead 30 · wine 40 |
+| Papyrusmaking, milling, brewing | By difficulty | Papyrus 1 (was 20) and the paper press, carpentry 1 (was 20), batch F · paper lantern pole 10 · book 40 · trade book 50 (and `TRADE_BOOK_AT`); flour, juice 5 · cornmeal 10 · olive oil, cider 20; ale 10 · cider 20 · mead 30 · wine 40 |
 | Repair | Kit, sealant (perk recipes) | 20 |
 | Animal husbandry | Trait reading (existing) | Kept |
-| Archaeology, prospecting, digging, foraging, botanizing, tracking, butchering, climbing, swimming, chirurgy | None: finds are rolls, the rest are continuous (§11 sweeps them again) | — |
-| Prayer, meditation, elementalism | Their own tiers | Kept |
+| Digging, botanizing | Treasure maps by tier; water plants (batch F) | Worn map 1 · sound 20 · fine 40 · grand 60; water lily 10 · lotus 20 |
+| Archaeology, prospecting, foraging, tracking, butchering, climbing, swimming, chirurgy | None: finds are rolls, the rest are continuous | — |
+| Prayer, meditation | Their own tiers | Kept |
+| Kindling, binding, warding | Spells (batch F); elementalism's own tiers kept | Ember, Snare, Aegis 1 · Pyre, Still field, Bulwark 30 |
 | Fighting and weapon skills, armour skills | None: gear is open, the skill sets the odds | — |
 
 ## 9. Built
@@ -492,6 +552,34 @@ drive: no worker gate. Built (`helmGate`, `helm_gate_refusal`).
   and an iron seam), `skillgates-c.ts` (iron and steel at 1; tin refused at 2.3 and poured at 10; a fresh nail smith
   pours iron, a ribbon smith at 1 copper, iron and steel).
 
+### Sixth set (built): the sweep's recommended gates, castings by the metal, first steps at 1
+
+* `skillgates.ts`: kinds `graft`, `water_plant`, `hoard`, `bridge`, `smelt`, `casting`, `gem`, `cross`, `spell` and
+  what each stops (`GATE_STOPS`); `GRAFT_LEVEL`; `ladderAt`, `stepsAbove`; `kindGateRefusal` (the one reader by kind and
+  id, the island's `kind_gate_refusal`); `CRAFT_GATE_SAID` with the bowstring, the short bow, the awl, leather, papyrus,
+  the paper press and rope at 1.
+* `craftgates.ts`: the rows (`F_ROWS`): `WATER_PLANT_GATE`, `MAP_GATE_PER_TIER`, `bridgeLevel`, `SMELT_SKILL`,
+  `CASTING_SKILLS`, `castingGateId`, `gemLevel`, all off the tables they name (`MATERIAL_GATE`, `craftLevel`,
+  `METAL_GATE`, the circlet's recipe level, `CROSS_SKILL`, `SpellDef.level`); items: a lily root (`water_plant`, noun
+  "root"; not a seed that is food), a treasure map by tier (`hoard`, noun "map"); readers `castingGate`,
+  `castingGateRefusal`, `smeltGate`, `smeltGateRefusal`, `workerSmeltOpen`, `workerSmithOpen`, `waterPlantGateRefusal`,
+  `waterPlantFrom`, `workerWaterPlantOpen`, `bridgeGateRefusal`, `gemGateRefusal`; `hodMay` reads a span's bridge.
+* Island (`20261120000085_defs.sql`: the rows and the lowered recipes; `20261120000086_skill_gates_f.sql`):
+  `kind_gate_refusal` in `ground_refusal` (Graft), `cross_refuses`, `spell_refusal`, `last_refusal` (Throw a bridge
+  across, Work on the bridge), `aqueduct_refusal` (Lead an aqueduct here, Work on the aqueduct), `firing_refusal`
+  (Smelt), `item_refusal` (Set in circlet); `water_plant_gate_refusal` in `water_garden_refusal` and `adorn_refusal`
+  (a lily pond's lily); `worker_roots` and `worker_furnace_fits` in `errand_step`/`errand_do` (idle `gate` naming the
+  lowest, `worker_idle` "in your settlement stores"); `hod_may` for spans; `casting_gate`, `casting_gate_refusal` in
+  `forge_refusal` (Smith) and `worker_smith_lumps`; `item_gate_refusal` in `treasure_refusal` (Dig it up, and how warm)
+  and `rpc_treasure_map` (Read); `bury_treasure`'s Found: line by `seen_name`.
+* Browser: `graft`, `crossRefuses`, `spellRefusal`, `plant_lily`/`plant_lotus` (and their label for an unidentified
+  root), a lily pond's Plant a water lily, `unearth` and the pack's Read (greyed under the gate), `plan_bridge`,
+  `build_bridge`, `plan_aqueduct`, `build_aqueduct`, `smelt_ore`, `smith`, `set_in_circlet`; `furnaceStep`, `lilyStep`,
+  `anvilStep`; `idleSays` for a smelt and a water plant gate; the help's metal, casting, bridge, circlet and map lines.
+* Not written: no What's new line. The gating branch's batches add none (they roll out together); batch A–E's only
+  touch on `news.ts` kept an existing entry compiling.
+* Test: `supabase/test/skillgates-f.ts`; `hybrids.ts` reads a cross's refusal in the one wording.
+
 ## 10. Open questions
 
 Answered in batch D (above): 1 (the trees), 4 (a bare vein is always named, so its mining refusal names what everybody
@@ -516,13 +604,34 @@ sees), stone brick in 6, the forge's casting in 7 (pouring gated by metal), 10 (
 15. A prospector's find now counts every seam, coal too, as Prospect always did (it counted only metal ores before).
     Keep coal in "found ore", or leave it out of a worker's find?
 
+From batch F:
+
+16. Ropemaking's first steps: rope is at 1 now (was 5) and twine and the torch were already 1, but rope's wemp fibre
+    comes off wemp, a crop sown at farming 30 (wild wemp seed is foraged, the fibre is not). Bring wemp's sowing down,
+    or leave rope's chain to start at farming 30?
+17. Papyrus's step before it is the paper press (carpentry, brought from 20 to 1 with papyrus); its water comes in a
+    bucket, carpentry 10. Keep the press at carpentry 1, and is the bucket an everyday thing for §10's question 6?
+18. Leather at 1 still needs lye (alchemy 10, question 6). Bring lye down too?
+19. An alloy's casting is at its alloy level (bronze 10, brass 20, pewter 30, electrum 50, steel 1), the highest
+    smelting gate of the mined metals in it, as pouring reads it. Alloys are never smelted from ore, so "the smelting
+    level" of one is that rule; or should an alloy's casting follow its mixing recipe's level (bronze and brass 10,
+    pewter 5, steel and electrum 20)?
+20. A smelter worker with only gated ore says `gate` naming the lowest metal; a water planter the same. Ore and lily
+    roots are named there by the plant or the metal, not the item, so nothing unidentified is named to a keeper under
+    it (as question 3 asks of seed). Ore is not unidentified at all: mining already names it. Agree?
+21. The treasure map is unidentified and neither read nor dug up under its tier; a worn map is known to everybody.
+    Its warmth (`rpc_treasure_warm`, "Hoard within 25 tiles.") reads Dig it up's refusal, so it now says the gate under
+    it. Keep reading closed, or let anybody read the picture and gate only the dig?
+22. A hod carrier with only spans over its level says "no work" (question 8 again, for bridges).
+
 ## 11. Sweep: proposals
 
 Every skill read for what it does (actions, recipes, items, tools, stations, workers, perks in `src/game`), what is
 gated already, and what a further gate would give a player to aim at. Same framework throughout: ladder steps, the gate's
 own skill, the one wording, a worker at its own level in the gate's skill, and an item unidentified where its use is
 gated. Each proposal: what · level · why. ★ the ones recommended most. "Flag" marks a thing that should stay open (or
-come down) because it is part of a new player's first loop: first tools, food, water, shelter.
+come down) because it is part of a new player's first loop: first tools, food, water, shelter. Every ★ and the flags
+marked "brought down" are built (batch F, §9); the rest stay proposals.
 
 ### Gathering and the land
 
@@ -541,7 +650,7 @@ come down) because it is part of a new player's first loop: first tools, food, w
 
 **Forestry**. Gated: sprouts 1–80 (17), two recipes at 5.
 
-1. ★ Graft onto the rule · 50 (`GRAFT_SKILL`) · a level gate already, in other words ("Needs forestry 50."): "Graft:
+1. ★ Built (batch F). Graft onto the rule · 50 (`GRAFT_LEVEL`) · a level gate already, in other words ("Needs forestry 50."): "Graft:
    needs forestry 50; have 12.0.", in the Unlocks.
 2. Grape cuttings planted at a trellis · 20 · vines are a later crop than bushes (S from §8).
 3. Flag: pruning, picking fruit, tapping resin and clearing brush stay open (harvest is kept, §7; resin is the first
@@ -553,13 +662,13 @@ come down) because it is part of a new player's first loop: first tools, food, w
 
 **Botanizing**. Gated: none.
 
-1. ★ Planting a water lily · 10, a lotus · 20 (`plant_lily`, `plant_lotus`; the lily root unidentified under it, the
+1. ★ Built (batch F). Planting a water lily · 10, a lotus · 20 (`plant_lily`, `plant_lotus`; the lily root unidentified under it, the
    lotus seed not, being food too; `lily` workers at their own botanizing) · the water garden is a late build with no step of its own (S from §8).
 2. Flag: botanizing for herbs and seeds stays open (the herb seeds it finds are farming-gated already).
 
 **Digging**. Gated: none.
 
-1. ★ Unearthing a treasure map by its tier · worn 1, sound 20, fine 40, grand 60 (the map unidentified under it) · the
+1. ★ Built (batch F; reading the map too). Unearthing a treasure map by its tier · worn 1, sound 20, fine 40, grand 60 (the map unidentified under it) · the
    map's guards and loot already climb the same tiers; a found map becomes a goal.
 2. Dig a spring · 10 (its difficulty 12, §5.2) · a water source anywhere is a step past the shore and the well's
    bucket.
@@ -588,7 +697,7 @@ come down) because it is part of a new player's first loop: first tools, food, w
 
 **Carpentry**. Gated: 73 recipes 1–90, materials 1–40, wall types 1–40, floor types 1–20.
 
-1. ★ Bridges by difficulty, in carpentry · garden footbridge 10 (d14), rope bridge 20 (d18), drawbridge 50 (d34);
+1. ★ Built (batch F). Bridges by difficulty, in carpentry · garden footbridge 10 (d14), rope bridge 20 (d18), drawbridge 50 (d34);
    a log, plank or timbercraft bridge at its material's gate · bridges are big builds with no gate; hod carriers at
    their own level.
 2. Flag: the campfire, the first planks, shafts and crates at 1.
@@ -599,7 +708,7 @@ come down) because it is part of a new player's first loop: first tools, food, w
 
 **Masonry**. Gated: 25 recipes 1–60, materials 1–70, wall types 1–60, floor types 1–20, foundation depth, storeys.
 
-1. ★ Stone bridges and aqueducts · a bridge at its material's gate (cobblestone 1 … marble 50), the aqueduct 70 (d44) ·
+1. ★ Built (batch F). Stone bridges and aqueducts · a bridge at its material's gate (cobblestone 1 … marble 50), the aqueduct 70 (d44) ·
    the same rule as walls, for the largest stone builds.
 2. Dig a pool · by its difficulty (§5.2) · a garden build past the birdbath and lily pond.
 3. Flag: raise rock, rubble fill, a Mason's Repoint (decided open) stay open.
@@ -633,23 +742,25 @@ come down) because it is part of a new player's first loop: first tools, food, w
 
 **Smelting**. Gated: 5 alloys 5–20.
 
-1. ★ Smelting ore by its metal · the metal's pouring level (copper and iron 1, tin 10 … seryll 90), in smelting;
+1. ★ Built (batch F). Smelting ore by its metal · the metal's pouring level (copper and iron 1, tin 10 … seryll 90), in smelting;
    stokers that charge smelters at their own smelting · the trade that makes the lumps gets the ladder pouring has.
 
 **Blacksmithing**. Gated: 48 recipes 1–60 (moulds and tools), pouring by metal (16).
 
-1. Striking coins · the coin metal's pouring level (silver 40, gold 50) · precious coin is a late goal.
+1. Dropped: striking coins. Coin striking is removed from the game (on `main`, a separate change), so it is not gated.
 2. Flag: improving, repairing and fitting padlocks stay open (§7).
+3. Built (batch F): working a casting at the anvil by its metal, at the smelting level, in the casting's own trade
+   (blacksmithing's tool heads, nails and ribbons too).
 
-**Weaponsmithing, armorsmithing, chainsmithing, platesmithing**. Gated: none (their moulds are formed and poured in
-blacksmithing; beating a casting out is open, decided).
+**Weaponsmithing, armorsmithing, chainsmithing, platesmithing**. Gated: working a casting by its metal (batch F: the
+smelting level, tin 10 … seryll 90); their moulds are formed and poured in blacksmithing.
 
 1. Each trade's moulds formed in its own trade · by difficulty (sword blade 20, long sword blade 30, helm 20, chain
    hauberk 40) · otherwise these four trades have no step at all; changes `MOULD_SKILL` from one trade to the mould's.
 
 **Jewellery**. Gated: 5 recipes 5–30.
 
-1. ★ Setting a gem in a circlet by its rarity, from the circlet's own 30 · topaz, garnet, onyx, amber 30; emerald,
+1. ★ Built (batch F). Setting a gem in a circlet by its rarity, from the circlet's own 30 · topaz, garnet, onyx, amber 30; emerald,
    peridot, amethyst, jasper 40; ruby, sapphire, opal 50; diamond 60 (`GEMS` weight 4, 3, 2, 1) · the stones are the
    trade's natural ladder past its last recipe. Gems have other uses (spells, rings), so not unidentified.
 
@@ -663,16 +774,17 @@ blacksmithing; beating a casting out is open, decided).
 
 **Ropemaking**. Gated: 14 recipes 1–40.
 
-1. Flag: rope at 5 (d10) is the first rope; consider 1.
+1. Flag, brought down (batch F, as the user asked): rope at 1 (was 5, d10); twine and the torch were 1 already, and
+   nothing else in ropemaking comes before rope (its wemp fibre is a crop: §10 question 16).
 
 **Leatherworking**. Gated: 25 recipes 10–90.
 
-1. ★ Flag: leatherworking 1 makes nothing: the awl and the pelt rug are 10, leather 20. Start the awl and leather at 1
+1. ★ Flag, brought down (batch F, as the user asked): leatherworking 1 made nothing: the awl and the pelt rug are 10, leather 20. Start the awl and leather at 1
    (`CRAFT_GATE_SAID`).
 
 **Bowyery, fletching**. Gated: 5 bows 10–80; 5 arrows 1–40.
 
-1. ★ Flag: bowyery 1 makes nothing: the bowstring is 10 and the short bow 20. Start both at 1 (`CRAFT_GATE_SAID`), as
+1. ★ Flag, brought down (batch F): bowyery 1 made nothing: the bowstring is 10 and the short bow 20. Start both at 1 (`CRAFT_GATE_SAID`), as
    blunt arrows are.
 
 **Alchemy**. Gated: 22 recipes 5–30.
@@ -682,7 +794,8 @@ blacksmithing; beating a casting out is open, decided).
 
 **Papyrusmaking**. Gated: 17 recipes 10–50; trade books 50.
 
-1. Flag: papyrusmaking 1 makes nothing (the paper lantern pole 10, papyrus 20); consider papyrus at 1.
+1. Flag, brought down (batch F, as the user asked: "papyrus milling"): papyrus at 1 (was 20), and the paper press it
+   is pressed at, the step before it, carpentry 1 (was 20); §10 question 17.
 
 **Enchanting**. Gated: 43 Formulas 20–50.
 
@@ -708,7 +821,7 @@ blacksmithing; beating a casting out is open, decided).
 
 **Animal husbandry**. Gated: trait reading 0/15/35/60, one recipe.
 
-1. ★ A listed cross onto the rule · 50 (`CROSS_SKILL`) · a level gate already, in other words; "Cross: needs animal
+1. ★ Built (batch F). A listed cross onto the rule · 50 (`CROSS_SKILL`) · a level gate already, in other words; "Cross: needs animal
    husbandry 50; have 12.0.", in the Unlocks.
 2. Flag: milking, shearing, grooming, hives and breeding a pair stay open (first wool, milk and honey).
 
@@ -727,7 +840,7 @@ blacksmithing; beating a casting out is open, decided).
 **Kindling, binding, warding (elementalism)**. Gated: Ember, Snare, Aegis 1; Pyre, Still field, Bulwark 30, in their own
 words ("Pyre takes 30 kindling; you have 12.").
 
-1. ★ Spells onto the rule (kind `spell`) · kept at 1 and 30 · "Pyre: needs kindling 30; have 12.0.", in each school's
+1. ★ Built (batch F). Spells onto the rule (kind `spell`) · kept at 1 and 30 · "Pyre: needs kindling 30; have 12.0.", in each school's
    Unlocks. Elementalism keeps its own tiers.
 
 **Prayer, praying, meditation**. Gated: their tiers (faith, path).

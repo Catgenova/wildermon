@@ -139,7 +139,7 @@ sire.care = CROSS_CARE - 0.1;
 const sayCare = crossRefuses(g, dam, sire);
 sire.care = 0.9;
 check('browser: a cross is refused short of the husbandry, and of either parent\'s care',
-  sayLow === `Cross: animal husbandry ${CROSS_SKILL} needed, yours ${CROSS_SKILL - 1}.` && sayCare === `Cross: care 80% each needed, ${sire.name} 70%.`
+  sayLow === `Cross: needs animal husbandry ${CROSS_SKILL}; have ${(CROSS_SKILL - 1).toFixed(1)}.` && sayCare === `Cross: care 80% each needed, ${sire.name} 70%.`
     && pairRefuses(g, dam, sire) === null, `${sayLow} / ${sayCare}`);
 const hyb = put('millhog', 'female', 0.6, 0.9);
 hyb.pedigree = { dam: { id: dam.id, name: dam.name }, sire: { id: sire.id, name: sire.name }, from: {}, stage: 1 };
@@ -297,7 +297,7 @@ const at = (k: string): string => isle.get(k) ?? '(not said)';
 check('island: fifty hybrid kinds, none in the wild table', at('KINDS') === '50' && at('WILD') === '0', `${at('KINDS')} ${at('WILD')}`);
 check('island: with none of its own kind in reach, the mate is the cross', at('MATE') === 'true', at('MATE'));
 check('island: the gates refuse a cross in the browser\'s words, and pass it at both',
-  at('LOW') === `Cross: animal husbandry ${CROSS_SKILL} needed, yours ${CROSS_SKILL - 1}.` && at('CARE').startsWith('Cross: care 80% each needed, ') && at('CARE').endsWith(' 70%.')
+  at('LOW') === `Cross: needs animal husbandry ${CROSS_SKILL}; have ${(CROSS_SKILL - 1).toFixed(1)}.` && at('CARE').startsWith('Cross: care 80% each needed, ') && at('CARE').endsWith(' 70%.')
     && at('OPEN') === 'none', `${at('LOW')} / ${at('CARE')} / ${at('OPEN')}`);
 const [isleChance, isleBreed] = at('CHANCE').split('|').map(Number);
 check('island: a cross\'s odds are the browser\'s, a quarter of the pairing\'s', Math.abs(isleChance - want) < 1e-9 && Math.abs(isleBreed - breedChance(60, 0.9)) < 1e-9, at('CHANCE'));

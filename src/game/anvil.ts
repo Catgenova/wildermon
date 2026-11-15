@@ -9,6 +9,7 @@ import { pressStamp } from './relicuse';
 import { itemDef, makersMark, rareInputSaid, rarityOf, rarityTally, rollRarityFrom, RARITY_ODDS, RARITY_WORD } from './items';
 import { matOf, matOfItem, workingQl } from './materials';
 import { metalOfItem } from './melt';
+import { castingGateRefusal } from './craftgates';
 import { COIN_DIFFICULTY, COIN_METALS, COIN_REFUSAL, coinPurity, COINS_PER_LUMP, DIE_WEAR, isCasting, isMetalStock, METAL_BY_ID, METAL_BY_LUMP, metalOfBar, MOULD_BY_MAKES, SMITH_TOOL, type MouldDef } from './metal';
 import type { CraftStock } from './recipes';
 
@@ -266,6 +267,10 @@ export const ANVIL_ACTIONS: ActionDef[] = [
       if (!casting) return named !== undefined ? 'Choose a casting.' : 'Need a casting (pour a mould at a smelter).';
       const def = MOULD_BY_MAKES.get(casting.piece as string);
       if (!def) return 'Choose a casting.';
+      // Its metal's gate in the trade it is worked in (`craftgates.ts`, kind `casting`, off `METAL_GATE`): "Tin casting:
+      // needs weaponsmithing 10; have 2.3." The island's `casting_gate_refusal`.
+      const gated = castingGateRefusal(g, casting);
+      if (gated) return gated;
       return mouldAlsoRefusal(def, alsoStock(g, def).reduce((n, s) => n + s.item.count, 0));
     },
     perform: (t, g) => {
