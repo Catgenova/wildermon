@@ -61,7 +61,7 @@ export interface IslandPlaced {
   bait_ql: number | null;
   caught: number | null;
   /** A furnace's queue and what it has made; a planter's last crop (`sown`), for a Farmer's Crop Rotation. */
-  state: { jobs?: unknown[]; output?: unknown[]; sown?: string; skep_at?: number; spring?: boolean } | null;
+  state: { jobs?: unknown[]; output?: unknown[]; sown?: string; skep_at?: number; spring?: boolean; uses?: number } | null;
   mine: boolean;
   /** The padlock fitted to it, by the number it shares with its key. */
   lock?: number | null;

@@ -46,6 +46,7 @@ import {
   ASH_BLIND_HIT, ASH_BLIND_SECS, DIED_ON, FIRE_STEEL_CAP, FIRE_STEEL_NAME, FROST_WEAK, ICE_MOTE, OBSIDIAN_BY_KIND, SERYLL_ORE, SERYLL_SUMMON,
   SULFUR_SLATE, SULFUR_STONE, SUMMON_LEAST, SUMMON_MOST, SUMMON_NEAR, SUMMON_SECS, SUMMON_SPREAD, VOLCANO_ISLE, VOLCANO_KINDS,
 } from '../src/game/volcano';
+import { OUTCROP_CLEAR, OUTCROP_DRAWS, OUTCROP_KINDS, OUTCROP_MINE, OUTCROP_QL, OUTCROP_SAID, OUTCROP_USES, OUTCROPS_A_RING } from '../src/game/outcrops';
 import { CHANNELS, TRAITS, WILD_ODDS, TRAIT_SLOTS, SLOTS_PER_STAGE, FIGHT_SHARE, GRADE_STEP, LAMP_TIER_ODDS, MUTATION_ODDS, PEDIGREE_MOST, PEDIGREE_STEP, TIERS } from '../src/game/traits';
 import { BOARD_TOP } from '../src/game/boards';
 import { CRAFT_HEAD, CRAFT_REACH } from '../src/game/recipes';
@@ -1301,7 +1302,7 @@ for (const r of RECIPES) {
   for (const i of r.inputs) if (i.item && !NAMED.has(i.item)) unnamed.add(i.item);
 }
 // A piece of furniture with no row was called by its id and weighed a kilo in a pack: "altar needs a capital".
-const unnamedPieces = FURNITURE.filter((f) => !NAMED.has(f.id) && !f.grave && !f.lair).map((f) => f.id);
+const unnamedPieces = FURNITURE.filter((f) => !NAMED.has(f.id) && !f.grave && !f.lair && !f.outcrop).map((f) => f.id);
 if (unnamedPieces.length) throw new Error(`furniture with no item definition: ${unnamedPieces.join(', ')}`);
 for (const [id, d] of Object.entries(ITEM_DEFS)) {
   out.push(`insert into item_def values (${q(id)}, ${q(d.name)}, ${q(d.category)}, ${q(d.weight)}, ${q(!!d.stackable)}, ${q(d.decay)}, ${q(d.charges)});`);
@@ -3316,6 +3317,24 @@ for (const [fn, v] of [
 }
 for (const [fn, v] of [
   ['died_on_key', DIED_ON], ['seryll_ore_id', SERYLL_ORE], ['sulfur_stone', SULFUR_STONE], ['fire_steel_name', FIRE_STEEL_NAME], ['ice_mote_id', ICE_MOTE],
+] as Array<[string, string]>) {
+  out.push(`create or replace function ${fn}() returns text language sql immutable as $fn$ select ${q(v)} $fn$;`);
+}
+/*
+ * Outcroppings (`outcrops.ts`): each kind, what it yields and how many the island sets down round each centre of the
+ * safe ring at a daily reset; the job; and the numbers every outcropping keeps to.
+ */
+out.push(`create or replace function outcrop_kinds() returns table (id text, name text, yields text, per_ring int) language sql immutable as $fn$ select * from (values ${
+  OUTCROP_KINDS.map((k) => `(${q(k.id)}, ${q(k.name)}, ${q(k.yields)}, ${k.perRing})`).join(', ')
+}) v (id, name, yields, per_ring) $fn$;`);
+for (const [fn, v] of [
+  ['outcrop_uses', OUTCROP_USES], ['outcrop_ql', OUTCROP_QL], ['outcrop_clear', OUTCROP_CLEAR], ['outcrop_draws', OUTCROP_DRAWS],
+  ['outcrops_a_ring', OUTCROPS_A_RING],
+] as Array<[string, number]>) {
+  out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);
+}
+for (const [fn, v] of [
+  ['outcrop_mine', OUTCROP_MINE], ['outcrop_said_gone', OUTCROP_SAID.gone], ['outcrop_said_only', OUTCROP_SAID.only],
 ] as Array<[string, string]>) {
   out.push(`create or replace function ${fn}() returns text language sql immutable as $fn$ select ${q(v)} $fn$;`);
 }

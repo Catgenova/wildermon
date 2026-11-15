@@ -9219,6 +9219,8 @@ export class Game {
           ...(adornFrom(r.garden) ? { adorn: adornFrom(r.garden) } : {}),
           // When a skep was set down or last emptied, which what it has made is worked out from (`bees.ts`).
           ...(typeof r.state?.skep_at === 'number' ? { skepAt: r.state.skep_at } : {}),
+          // An outcropping's swings left before it breaks (`outcrops.ts`).
+          ...(typeof r.state?.uses === 'number' ? { uses: r.state.uses } : {}),
           /*
            * The reins and the shafts, which the island has always sent and
            * this dropped: somebody who took the reins on an island walked

@@ -3227,6 +3227,12 @@
     "why": "Asked for: seryll only within the labyrinth's interior safe area. The generator at 4096 on two seeds lays none outside the heart and about its share inside; an island founded on the old ground, seryll scattered and none in the heart, moved by seryllHome: none outside but on a tile somebody changed, exactly the generator's in the heart, nothing else changed, written down, and a second run changes nothing."
   },
   {
+    "file": "supabase/test/outcrops.ts",
+    "title": "Outcroppings set down daily on grass in the safe ring, mined twenty times at QL 5, gone until the next reset",
+    "shard": 3,
+    "why": "Asked for: iron and rock outcroppings that spawn at random within the Runestone safe zones on grass daily, mined 20 times before breaking and gone until the next daily reset; everything off one at QL 5. Every kind and number the same on both sides; Mine at one is mining's job; a reset sets each kind's count round the spawn and every Runestone, each on dry grass inside its ring, clear of the centres, off settlements, roads, dirt, water and other pieces; the daily tick runs it; Examine says its uses; nothing but Mine is done to one; twenty swings at QL 5, each a use, the last removing it, Mine refused after; the next reset sets a whole new set."
+  },
+  {
     "file": "supabase/test/path.ts",
     "title": "The Path: steps the island confirms, sites, supplies and noted kinds",
     "shard": 5,

@@ -201,7 +201,7 @@ const LEFT_FACINGS: Readonly<Record<string, readonly number[]>> = { saw: [5, 6, 
 const leftyFor = (name: string, facing: number): boolean => { const at = LEFT_FACINGS[name]; return at ? at.includes(((Math.round(facing) % 8) + 8) % 8) : lefty(facing); };
 
 /** The jobs done with the overhead swing whatever is in hand: the pickaxe's (mining, and those its tool routes to the swing: `./routes.ts`). */
-const SWING_JOBS = new Set(['mine', 'chip_corner', 'mine_cellar']);
+const SWING_JOBS = new Set(['mine', 'chip_corner', 'mine_cellar', 'mine_outcrop']);
 const swingJob = (job: string | undefined): boolean => !!job && (SWING_JOBS.has(job) || clipOfJob(job) === 'swing');
 /** Meditating's job. */
 const MEDITATE = 'meditate';

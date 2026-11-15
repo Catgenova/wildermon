@@ -630,7 +630,7 @@ const KNAP_RECIPES: Recipe[] = Object.entries(KNAPPED).map(([id, k]) => ({
 RECIPES.push(...OBSIDIAN_ARMOUR_RECIPES, ...KNAP_RECIPES);
 
 /** The pieces of furniture, each nailed together by a fine carpenter; a grave is dug by dying, a lair is the island's and a trophy comes out of a lair's hoard: none built. */
-const FURNITURE_RECIPES: Recipe[] = FURNITURE.filter((f) => !f.grave && !f.lair && !f.trophy).map((f) => ({
+const FURNITURE_RECIPES: Recipe[] = FURNITURE.filter((f) => !f.grave && !f.lair && !f.trophy && !f.outcrop).map((f) => ({
   id: `make_${f.id}`,
   category: 'Furniture' as RecipeCategory,
   result: f.id,

@@ -18,6 +18,8 @@ begin
     v_grew := tree_day_part(v_world, clock_timestamp() + make_interval(secs => tree_part_secs()));
     -- And the day's mote swirls in place of yesterday's, after the woods (`swirl_day`).
     if v_grew is not null then perform swirl_day(v_world); end if;
+    -- And the day's outcroppings in place of yesterday's (`outcrop_day`).
+    if v_grew is not null then perform outcrop_day(v_world); end if;
     -- And the critter caches of the season: laid at the first dawn of winter, gone at the first after it (`caches_owed`).
     if v_grew is not null then perform caches_owed(v_world); end if;
   end if;

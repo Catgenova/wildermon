@@ -147,6 +147,8 @@ import { drawSwirl, glowSwirl } from './swirls';
 import { drawLava, glowLava } from './lava';
 /** How far from the lava's box it can still be in view, in tiles. */
 const LAVA_VIEW = 160;
+import { isOutcropKind, outcropStage } from '../game/outcrops';
+import { OUTCROP_VARIANTS, outcropTrim } from './kit/outcropping';
 import { activeInfusion } from '../game/infusion';
 import { isRigged } from '../game/sailing';
 import { MOTE_ELEMENTS, type MoteElement } from '../game/motes';
@@ -11550,6 +11552,8 @@ export class Renderer {
   }
 
   private pieceTrim(f: PlacedFurniture): number | undefined {
+    // An outcropping: how far it is mined down, and its shape off its tile (`outcrops.ts`).
+    if (isOutcropKind(f.kind)) return outcropTrim(outcropStage(f.uses), Math.floor(hash2(f.x, f.y, 89) * OUTCROP_VARIANTS));
     // A cart's or a wagon's wheels, as far round as she has rolled.
     if (WHEELS[f.kind]) return this.wheelTurn(f);
     // A rowing boat somebody is rowing has her oars out in their hands, not shipped in her.

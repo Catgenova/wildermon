@@ -1,5 +1,7 @@
 export { TRY_LEARN, tryGain } from './learn';
 import { lairFoundingRefusal } from './lairs';
+import { MINE_JOB, outcropSays, OUTCROP_BY_ID, OUTCROP_USES } from './outcrops';
+import { OUTCROP_ACTIONS } from './outcropAction';
 import { GRASS_PER_CUT, MOSS_PER_CUT } from './limits';
 import { PROSPECT_HEAD, tryGain } from './learn';
 import { BURYABLE, BUSH_DEFS, SLAB_BY_ITEM, SLAB_VARIANTS, TILE_DEFS, TREE_AGES, TREE_DEFS, TileType, bushSpecies, packTreeData, slabVariant, treeAge, treeSpecies, treeVariant, lastDawn, nextDawn, type TreeAge, LAWN_AFTER, MOWN_TODAY, MOWING, mownDays, mownToday } from '../world/tiles';
@@ -1042,6 +1044,11 @@ export const ACTIONS: ActionDef[] = [
       extra += frameSays(g, t.x, t.y);
       const crates = g.cratesOnTile(t.x, t.y);
       if (crates.length) extra += ` Crates: ${crates.length}.`;
+      // And an outcropping on it, with its uses left (`outcrop_says`).
+      for (const f of g.furnitureOnTile(t.x, t.y)) {
+        const k = OUTCROP_BY_ID.get(f.kind);
+        if (k) extra += outcropSays(k, f.uses ?? OUTCROP_USES, itemDef(k.yields).name);
+      }
       g.logMsg(`${text} Height ${metres(avg)} m, slope ${metres(w.slope(t.x, t.y))} m.${water}${extra}`, 'event');
     },
   },
@@ -1599,12 +1606,9 @@ export const ACTIONS: ActionDef[] = [
       return taggedWith(g, 'pickaxe', 'Mine', pct(g.sureChance('mine', 'mining', 12, pick)), qlTag(known ? Math.min(bedrockAt(g.world, t.x, t.y).maxQl, ceiling) : ceiling));
     },
     verb: 'mining',
-    skill: 'mining',
-    tool: 'pickaxe',
+    // Its skill, tool, wind, time and odds, which Mine at an outcropping shares (`outcrops.ts`).
+    ...MINE_JOB,
     corner: true,
-    stamina: 0.06,
-    baseTime: 8,
-    difficulty: 12,
     applies: (t, g) => t.kind === 'tile' && !!TILE_DEFS[tile(t, g)].mineable,
     check: (t, g) => {
       if (t.kind !== 'tile') return null;
@@ -3335,6 +3339,8 @@ export const ACTIONS: ActionDef[] = [
   ...SPRING_ACTIONS,
   ...FLOWER_ACTIONS,
   ...MOTE_ACTIONS,
+  // Mine, at an outcropping (`outcrops.ts`).
+  ...OUTCROP_ACTIONS,
   ...TELESTONE_ACTIONS,
   ...WATER_GARDEN_ACTIONS,
   ...FOUNDATION_ACTIONS,
