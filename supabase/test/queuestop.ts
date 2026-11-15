@@ -10,7 +10,7 @@
  *     once with its own goes; the rest stay queued, in order; "Stopped <verb>." said; with nothing waiting, it only
  *     stops; Stop, by contrast, empties the queue; on an island the × is said to the island (`game.skip`) and
  *     nothing else is decided here;
- *   * the island (`20261120000085_stop_the_job_in_hand.sql`): the same, in the same words, the next job's clock
+ *   * the island (`20261120000088_stop_the_job_in_hand.sql`): the same, in the same words, the next job's clock
  *     started from now and its goes carried; a job waiting that cannot be done when its turn comes is told and put
  *     out of the line, and the one behind it started, as `settle` does; with nothing waiting, it only stops; the
  *     answer is the list as it now is; Stop empties the queue; the door is an account's, not a stranger's;
