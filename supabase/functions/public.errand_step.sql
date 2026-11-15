@@ -30,7 +30,7 @@ begin
   elsif kind = 'hod' then
     -- Carrying a piece some work within reach still wants: that work. Otherwise the nearest work wanting something
     -- the stores hold, and the store nearest it holding that, crates and furniture alike (`hod_needing_stocked`).
-    select * into v_job from hod_needing(p_world, dd.x, dd.y, rng, c.carrying->>'def', c.keeper);
+    select * into v_job from hod_needing(p_world, dd.x, dd.y, rng, c.carrying->>'def', c.keeper, c);
     -- A piece in its arms nothing within reach wants: back to the nearest store with room for it, first.
     if c.carrying is not null and v_job.item is distinct from c.carrying->>'def' then
       select * into v_spot from worker_store(p_world, c, c.carrying->>'def', coalesce((c.carrying->>'count')::int, 1));
@@ -40,7 +40,7 @@ begin
       return;
     end if;
     if c.carrying is null then
-      select * into v_job from hod_needing_stocked(p_world, c.keeper, dd.x, dd.y, rng);
+      select * into v_job from hod_needing_stocked(p_world, c.keeper, dd.x, dd.y, rng, c);
       if v_job.item is null then
         -- Work the stores have for a storey up no staircase goes to: `stairs`, and that storey (`hod_unreached`).
         why_n := hod_unreached(p_world, c.keeper, dd.x, dd.y, rng);
@@ -161,8 +161,8 @@ begin
   elsif kind in ('tan', 'mill', 'saw', 'chisel', 'brick', 'fletch', 'concrete', 'mortar', 'timber', 'shaft', 'bandage', 'cheese') then
     declare v_r record;
     begin
-      select * into v_r from recipe_in_stores(p_world, c.keeper, tend_recipes(kind));
-      if v_r.rid is null then why := 'stock'; why_n := null; return next; return; end if;
+      select * into v_r from recipe_in_stores(p_world, c.keeper, worker_recipes(c, tend_recipes(kind)));
+      if v_r.rid is null then why := 'stock'; why_n := null; why_what := recipe_gate_idle(p_world, c, tend_recipes(kind)); if why_what is not null then why := 'gate'; end if; return next; return; end if;
       if c.around is not null and not around_room(p_world, c, v_r.rid) then why := 'full'; why_n := null; return next; return; end if;
       gx := v_r.cx; gy := v_r.cy; want := null; wx := v_r.x; wy := v_r.y;
       return next;
@@ -235,7 +235,7 @@ begin
         return next;
         return;
       end if;
-      select * into v_r from recipe_in_stores(p_world, c.keeper, tend_recipes('ash'));
+      select * into v_r from recipe_in_stores(p_world, c.keeper, worker_recipes(c, tend_recipes('ash')));
       if v_r.rid is null then why := 'range'; why_n := rng; return next; return; end if;
       gx := v_r.cx; gy := v_r.cy; want := null; wx := v_r.x; wy := v_r.y;
       return next;
@@ -257,8 +257,8 @@ begin
   elsif kind = 'cook' then
     declare v_r record; v_p placed;
     begin
-      select * into v_r from recipe_in_stores(p_world, c.keeper, tend_recipes('cook'));
-      if v_r.rid is null then why := 'stock'; why_n := null; return next; return; end if;
+      select * into v_r from recipe_in_stores(p_world, c.keeper, worker_recipes(c, tend_recipes('cook')));
+      if v_r.rid is null then why := 'stock'; why_n := null; why_what := recipe_gate_idle(p_world, c, tend_recipes('cook')); if why_what is not null then why := 'gate'; end if; return next; return; end if;
       v_p := cook_target(p_world, c, c.to_x, c.to_y);
       if v_p.id is null then why := 'range'; why_n := rng; return next; return; end if;
       gx := v_p.cx; gy := v_p.cy; want := null; wx := floor(v_p.cx)::int; wy := floor(v_p.cy)::int;
@@ -269,8 +269,14 @@ begin
   elsif kind = 'restore' then
     declare v_r record;
     begin
-      select * into v_r from relic_in_stores(p_world, c.keeper);
-      if v_r.name is null then why := 'stock'; why_n := null; return next; return; end if;
+      select * into v_r from relic_in_stores(p_world, c.keeper, c);
+      if v_r.name is null then
+        -- Every relic whose pieces are in the stores over its restoration: `gate`, naming it.
+        why := 'stock'; why_n := null;
+        select array['relic', lower(g.name)] into why_what from relic_in_stores(p_world, c.keeper) g where g.name is not null;
+        if why_what is not null then why := 'gate'; end if;
+        return next; return;
+      end if;
       gx := v_r.cx; gy := v_r.cy; want := null; wx := v_r.x; wy := v_r.y;
       return next;
       return;
@@ -305,8 +311,8 @@ begin
     declare v_r record; v_p placed;
     begin
       if c.carrying is not null then why := 'full'; why_n := null; return next; return; end if;
-      select * into v_r from recipe_in_stores(p_world, c.keeper, tend_recipes('paper'));
-      if v_r.rid is null then why := 'stock'; why_n := null; return next; return; end if;
+      select * into v_r from recipe_in_stores(p_world, c.keeper, worker_recipes(c, tend_recipes('paper')));
+      if v_r.rid is null then why := 'stock'; why_n := null; why_what := recipe_gate_idle(p_world, c, tend_recipes('paper')); if why_what is not null then why := 'gate'; end if; return next; return; end if;
       v_p := press_target(p_world, c, c.to_x, c.to_y);
       if v_p.id is null then why := 'range'; why_n := rng; return next; return; end if;
       gx := v_p.cx; gy := v_p.cy; want := null; wx := floor(v_p.cx)::int; wy := floor(v_p.cy)::int;
@@ -344,8 +350,8 @@ begin
     declare v_r record; v_p placed;
     begin
       if c.carrying is not null then why := 'full'; why_n := null; return next; return; end if;
-      select * into v_r from recipe_in_stores(p_world, c.keeper, tend_recipes('spin'));
-      if v_r.rid is null then why := 'stock'; why_n := null; return next; return; end if;
+      select * into v_r from recipe_in_stores(p_world, c.keeper, worker_recipes(c, tend_recipes('spin')));
+      if v_r.rid is null then why := 'stock'; why_n := null; why_what := recipe_gate_idle(p_world, c, tend_recipes('spin')); if why_what is not null then why := 'gate'; end if; return next; return; end if;
       v_p := station_target(p_world, c, 'spindle', c.to_x, c.to_y);
       if v_p.id is null then why := 'range'; why_n := rng; return next; return; end if;
       gx := v_p.cx; gy := v_p.cy; want := null; wx := floor(v_p.cx)::int; wy := floor(v_p.cy)::int;
@@ -371,8 +377,8 @@ begin
     declare v_r record; v_p placed;
     begin
       if c.carrying is not null then why := 'full'; why_n := null; return next; return; end if;
-      select * into v_r from recipe_in_stores(p_world, c.keeper, tend_recipes('glass'));
-      if v_r.rid is null then why := 'stock'; why_n := null; return next; return; end if;
+      select * into v_r from recipe_in_stores(p_world, c.keeper, worker_recipes(c, tend_recipes('glass')));
+      if v_r.rid is null then why := 'stock'; why_n := null; why_what := recipe_gate_idle(p_world, c, tend_recipes('glass')); if why_what is not null then why := 'gate'; end if; return next; return; end if;
       v_p := glass_target(p_world, c, c.to_x, c.to_y);
       if v_p.id is null then why := 'range'; why_n := rng; return next; return; end if;
       gx := v_p.cx; gy := v_p.cy; want := null; wx := floor(v_p.cx)::int; wy := floor(v_p.cy)::int;
@@ -384,8 +390,8 @@ begin
     declare v_r record; v_p placed;
     begin
       if c.carrying is not null then why := 'full'; why_n := null; return next; return; end if;
-      select * into v_r from recipe_in_stores(p_world, c.keeper, tend_recipes('churn'));
-      if v_r.rid is null then why := 'stock'; why_n := null; return next; return; end if;
+      select * into v_r from recipe_in_stores(p_world, c.keeper, worker_recipes(c, tend_recipes('churn')));
+      if v_r.rid is null then why := 'stock'; why_n := null; why_what := recipe_gate_idle(p_world, c, tend_recipes('churn')); if why_what is not null then why := 'gate'; end if; return next; return; end if;
       v_p := station_target(p_world, c, 'butter_churn', c.to_x, c.to_y);
       if v_p.id is null then why := 'range'; why_n := rng; return next; return; end if;
       gx := v_p.cx; gy := v_p.cy; want := null; wx := floor(v_p.cx)::int; wy := floor(v_p.cy)::int;
@@ -397,8 +403,8 @@ begin
     declare v_r record; v_p placed;
     begin
       if c.carrying is not null then why := 'full'; why_n := null; return next; return; end if;
-      select * into v_r from recipe_in_stores(p_world, c.keeper, tend_recipes('alloy'));
-      if v_r.rid is null then why := 'stock'; why_n := null; return next; return; end if;
+      select * into v_r from recipe_in_stores(p_world, c.keeper, worker_recipes(c, tend_recipes('alloy')));
+      if v_r.rid is null then why := 'stock'; why_n := null; why_what := recipe_gate_idle(p_world, c, tend_recipes('alloy')); if why_what is not null then why := 'gate'; end if; return next; return; end if;
       v_p := glass_target(p_world, c, c.to_x, c.to_y);
       if v_p.id is null then why := 'range'; why_n := rng; return next; return; end if;
       gx := v_p.cx; gy := v_p.cy; want := null; wx := floor(v_p.cx)::int; wy := floor(v_p.cy)::int;

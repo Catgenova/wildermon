@@ -180,7 +180,8 @@ import { AWARE_PER_LEVEL, AWARE_TRAIT_STEP, awareShareAbove, awareTraitEase, DEE
 import { NIGHT_EYES_FROM } from '../../game/learn';
 import { NO_GO, pointAt, windWord, windWorth } from '../../game/wind';
 import { article, capital, finePercent, listed, listedOr, percent, timeWords } from '../../game/words';
-import { cropSeed, GATE_LADDER, GATE_STOPS, GATED_ITEMS, GATED_SKILLS, gateOf, identifySaid, SEAM_GATE, seenName, skillGateRefusal, SKILL_GATES, unlocksSaid, type Viewer } from '../../game/skillgates';
+import { CRAFT_FROM, CRAFT_PER, craftLevel, FORMULA_GATE, FORMULA_TWO_ELEMENTS } from '../../game/craftgates';
+import { CRAFT_GATE_SAID, cropSeed, GATE_LADDER, GATE_STOPS, GATED_ITEMS, GATED_SKILLS, gateOf, identifySaid, SEAM_GATE, seenName, skillGateRefusal, SKILL_GATES, unlocksSaid, type Viewer } from '../../game/skillgates';
 
 /** Somebody at 1 in every skill, for the help's examples of what is unidentified. */
 const FRESH: Viewer = { skills: { get: () => 1 } };
@@ -3925,6 +3926,10 @@ export function helpText(): string {
       <li>Unidentified: ${listed([...new Set(GATED_ITEMS.map((x) => x.noun))].map((n) => `${n}s`))} under the level of their use, named
       &ldquo;${seenName({ id: cropSeed('wemp') }, FRESH)}&rdquo;; tooltip &ldquo;${identifySaid({ id: cropSeed('wemp') }, FRESH)}&rdquo;
       Picked up, carried, stored and traded as any item.</li>
+      <li>Recipe level: the ladder step at or below ${CRAFT_PER} × (difficulty − ${CRAFT_FROM}); no difficulty: ${craftLevel(undefined)}. Named: ${Object.entries(CRAFT_GATE_SAID).map(([id, g]) => `${itemDef(id).name} ${skillWord(g.skill)} ${g.level}`).join(', ')}.
+      Formula scrolls by target: weapon, bow, armour, shield, tool, light ${FORMULA_GATE.melee}; jewellery, clothing, gear ${FORMULA_GATE.ring}; vessel, cart, store, furnace, station ${FORMULA_GATE.ship}; mixed elements ${FORMULA_TWO_ELEMENTS}.
+      Relics and baubles: their restoring difficulty, the same rule.</li>
+      <li>Walls, floors, roofs: the material's gate and the wall or floor type's, both in the material's skill (carpentry or masonry). Planning, and adding to a plan.</li>
       ${GATED_SKILLS.map((id) => `<li><b>${SKILL_BY_ID.get(id)?.name ?? id}</b> (${listed([...new Set(SKILL_GATES.filter((g) => g.skill === id).map((g) => GATE_STOPS[g.kind]))])}): ${unlocksSaid(id)}.</li>`).join('\n      ')}
     </ul>
     <h4>Flatten, decay, skill</h4>

@@ -5,6 +5,7 @@ import type { Game } from './game';
 import { itemName, markOf, RARITY_ODDS, RARITY_WORD, rollRarity, type Item } from './items';
 import { ANCIENT_HELM, ANCIENT_SWORD } from './gear';
 import { SKILL_DEFS } from './skills';
+import { itemGateRefusal, seenName, unidentified } from './skillgates';
 import { pct, pickedSaid, taggedWith } from './yields';
 import {
   BAUBLE_SHARE, BAUBLE_TIER_BY_ID, BAUBLE_TIERS, findKind, readBauble, REGRET, rollBauble, rollTier, TARNISHED, type BaubleTier, type BaubleTierDef,
@@ -276,7 +277,10 @@ export const ARCHAEOLOGY_ACTIONS: ActionDef[] = [
         const found = g.gather(TARNISHED, { ql: Math.max(1, g.productQl('archaeology', toolQl) * (0.55 + g.rand() * 0.35)), extra: tier });
         found.dmg = FIND_DAMAGE + g.rand() * FIND_DAMAGE_SPREAD;
         g.events.emit('inventory');
-        g.logMsg(`Found: tarnished ${tier} bauble, QL ${found.ql.toFixed(1)}, damage ${found.dmg.toFixed(0)}. Restore it to use it.`, 'event');
+        // Under its tier's restoration gate, unidentified (`craftgates.ts`); the island's `perform_dig` the same.
+        g.logMsg(unidentified(found, g)
+          ? `Found: ${seenName(found, g)}, QL ${found.ql.toFixed(1)}, damage ${found.dmg.toFixed(0)}.`
+          : `Found: tarnished ${tier} bauble, QL ${found.ql.toFixed(1)}, damage ${found.dmg.toFixed(0)}. Restore it to use it.`, 'event');
         return;
       }
       const within = relicsWithin(skill);
@@ -316,7 +320,9 @@ export const ARCHAEOLOGY_ACTIONS: ActionDef[] = [
       g.events.emit('inventory');
       const left = partsMissing(g, relic).length;
       const short = left ? ` Missing: ${left}/${relic.parts}.` : ` All ${relic.parts} pieces held.`;
-      g.logMsg(`Found: ${relic.name} fragment ${part}/${relic.parts}, QL ${item.ql.toFixed(1)}, damage ${item.dmg.toFixed(0)}.${short}`, 'event');
+      g.logMsg(unidentified(item, g)
+        ? `Found: ${seenName(item, g)}, QL ${item.ql.toFixed(1)}, damage ${item.dmg.toFixed(0)}.`
+        : `Found: ${relic.name} fragment ${part}/${relic.parts}, QL ${item.ql.toFixed(1)}, damage ${item.dmg.toFixed(0)}.${short}`, 'event');
     },
   },
   {
@@ -337,6 +343,9 @@ export const ARCHAEOLOGY_ACTIONS: ActionDef[] = [
       if (t.kind !== 'item') return null;
       const item = g.inventory.get(t.uid);
       if (!g.inventory.has(RESTORE_TOOL)) return RESTORE_TOOL_NEED;
+      // A relic's or a bauble tier's restoration gate, named as you see it: "Unidentified fragment: needs restoration 30; have 12.0."
+      const gated = item ? itemGateRefusal(item, g) : null;
+      if (gated) return gated;
       // At any damage short of breaking: nothing mends a find before it is
       // restored (`unrestored`), so it is restored as it is or not at all.
       if (item?.id === TARNISHED) return null;

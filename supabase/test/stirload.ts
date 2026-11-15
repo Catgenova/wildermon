@@ -24,7 +24,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { Game } from '../../src/game/game';
-import { psql, ok, bad, check } from './harness';
+import { bad, check, ok, psql, workerHandsJson } from './harness';
 
 const before = readFileSync(resolve('supabase/test/stirload-before.sql'), 'utf8');
 
@@ -180,7 +180,9 @@ begin
   foreach sp in array array['rabba', 'bevere', 'wadd', 'whispet', 'magga', 'rippa', 'cobbe', 'simma', 'sedra'] loop
     i := i + 1;
     k := creature_spawn(w, sp, ${T} + 0.5 + (i % 3) - 1, ${T} + 0.5 + (i / 3) - 1, 'active', now() - interval '60 days', '${A}');
-    update creature set mode = 'deed', traits = '{}', settled_at = now(), until = now() where world_id = w and id = k;
+    -- At every recipe's level up to a first stage's (craftgates.ts): a stone wall's masonry among them.
+    update creature set mode = 'deed', traits = '{}', settled_at = now(), until = now(), skills = skills || '${workerHandsJson()}'::jsonb
+     where world_id = w and id = k;
   end loop;
   -- A companion each, and a wild one near and one far.
   v_c1 := creature_spawn(w, 'rabba', ${T} + 1.5, ${T} + 0.5, 'active', now() - interval '30 days', '${A}');

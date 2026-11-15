@@ -97,7 +97,8 @@ function rise(ids: string[]): void {
 /** A skill's number as its row shows it, and as the book has it. */
 function skillSays(id: string): { row: string; book: string; flash: boolean } {
   const rows = [...win('skills').body.querySelectorAll<HTMLElement>('.skill-row')];
-  const row = rows.find((r) => r.firstElementChild?.textContent === SKILL_BY_ID.get(id)?.name);
+  // The name's own text: the next gate (`skill-next`) is under it, in the same cell.
+  const row = rows.find((r) => r.firstElementChild?.firstChild?.textContent === SKILL_BY_ID.get(id)?.name);
   return { row: row?.querySelector('.skill-value')?.textContent ?? '?', book: game.skills.standing(id).toFixed(2), flash: !!row?.classList.contains('flash') };
 }
 

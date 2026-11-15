@@ -29,7 +29,7 @@ import {
 } from '../../src/game/creatures';
 import { RECIPE_BY_ID } from '../../src/game/recipes';
 import { TileType } from '../../src/world/tiles';
-import { psql, check, finish } from './harness';
+import { check, finish, psql, workerHands, workerHandsJson } from './harness';
 
 const HANDS: Array<[string, string]> = [
   ['kemma', 'groom'], ['sheela', 'dairy'], ['salva', 'heal'], ['carra', 'timber'], ['tanna', 'tan'],
@@ -65,8 +65,9 @@ begin
   insert into hand select s, creature_spawn(w, s, 16.6, 16.6, 'active', now() - interval '60 days', u)
     from unnest(array['kemma', 'sheela', 'salva', 'carra', 'tanna', 'grista', 'wicka', 'brambo', 'grazza']) s;
   insert into said select 'ASK:' || h.species, coalesce(act_refusal(w, u, 'assign_deed', jsonb_build_object('kind', 'creature', 'id', h.id)), 'none') from hand h;
+  -- At every recipe's level up to a first stage's (craftgates.ts): this is about the trade, not its gate.
   update creature set mode = 'deed', stance = 'passive', hunger = 1, settled_at = now(), until = now(), leg_at = now(), leg_ends = now(),
-         from_x = to_x, from_y = to_y
+         from_x = to_x, from_y = to_y, skills = skills || '${workerHandsJson()}'::jsonb
    where world_id = w and id in (select id from hand);
   insert into said select 'LINE:' || h.species, deed_job_line(c2) from hand h join creature c2 on c2.world_id = w and c2.id = h.id;
   -- Only one at work at a time: the rest are put away while each is tried.
@@ -303,6 +304,8 @@ const worker = (g: Game, species: string): Creature => {
   c.mode = 'deed';
   c.stance = 'passive';
   c.hunger = 1;
+  // At every recipe's level up to a first stage's (`craftgates.ts`): this is about the trade, not its gate.
+  Object.assign(c.skills, workerHands());
   return c;
 };
 const run = (g: Game, secs: number): void => {

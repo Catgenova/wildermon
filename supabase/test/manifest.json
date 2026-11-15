@@ -1984,6 +1984,12 @@
     "why": "Asked for: \"Gate using wagons until driving level 30. Gate boat type use by sailing level\", the gates already there on the one rule with their numbers kept (\"6 8 12 etc\"), quarried stone by mining, and veins over your prospecting \"Unidentified metal\". Every seam, kind and fish at the level it had, against the old numbers; a wagon at driving 29 refused at the reins in the same words on both sides and allowed at 30, a large cart open at 0, a passenger aboard at sailing 1; each boat at its sailing level; an iron vein and a marble face in the one rule's words; a Sapgnaw and a Logchewer refused by their stage's name; a Chiptail under marble's gate skips it and says why; copper named and iron unidentified at prospecting 1, named at 5, per viewer; the Unlocks lists."
   },
   {
+    "file": "supabase/test/skillgates-c.ts",
+    "title": "Skill gates: recipes, restoring, walls, floors and paving, for you and for workers at their own level",
+    "shard": 4,
+    "why": "Asked for: \"Gate cooking recipes. Gate bauble and artifact restorations. Gating carpentry crafts, masonry crafts, wall types based on carp/masonry levels. Gating formulas. Gating paving/floor types. Gating these tasks also for wildermon that perform them equal to their own level.\" The island's skill_gate is the browser's for every recipe (by difficulty, the smelter, wagon and caravel as decided, a Formula's scroll by what it goes on), relic, bauble tier, material, wall, floor and paving type; apple pie, the wagon, a long bow, a plank wall, a bay window, an iron-bound gate, a spiral staircase, a marble wall, marble slabs and cobblestones refused in the same words on both sides; a Formula, a fragment and a tarnished bauble unidentified under their gate and refused in those names; cooks and hod carriers at their own level in each gate's skill; carpentry's and cooking's Unlocks and the next gate beside each skill's level."
+  },
+  {
     "file": "supabase/test/aroundbehind.ts",
     "title": "A worker round you left behind comes to you",
     "shard": 6,

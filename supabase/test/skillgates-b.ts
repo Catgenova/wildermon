@@ -604,8 +604,10 @@ const run = (g: Game, c: Creature, secs: number): void => {
     taming.length === Object.keys(OLD_TAME).length && taming.every((u, i) => (i === 0 || taming[i - 1].level <= u.level) && u.met === (u.level <= 14))
       && taming.some((u) => u.name === 'Sapgnaw' && u.level === 1 && u.met) && taming.some((u) => u.name === SPECIES.snout.name && u.level === 50 && !u.met),
     shown('taming', 14));
+  // The fish among fishing's gates (its crafts are on the list too since batch C).
+  const fishShown = unlocksOf('fishing', 20).filter((u) => FISH.some((f) => f.name === u.name)).map((u) => `${u.met ? '✓' : '·'}${u.name} ${u.level}`).join(', ');
   check('fishing: the eight fish at their levels, ticked at 20',
-    shown('fishing', 20) === '✓Minnow 1, ✓Perch 1, ✓Trout 15, ✓Cod 20, ·Pike 35, ·Halibut 45, ·Sturgeon 60, ·Bluefin 70', shown('fishing', 20));
+    fishShown === '✓Minnow 1, ✓Perch 1, ✓Trout 15, ✓Cod 20, ·Pike 35, ·Halibut 45, ·Sturgeon 60, ·Bluefin 70', fishShown);
   check('prospecting: every vein at its mining level, next one named',
     unlocksOf('prospecting', 1).length === Object.keys(OLD_SEAMS).length && nextUnlockSaid('prospecting', 1) === 'Next: Iron vein at 5 (yours 1.0)',
     `${shown('prospecting', 1)} / ${nextUnlockSaid('prospecting', 1)}`);

@@ -100,6 +100,10 @@ begin
                      and not i.locked) then
       return 'Need a cut slab.';
     end if;
+    -- The slab's paving gate (`craftgates.ts`).
+    if paving_gate_refusal(p_world, p_uid, slab_to_lay(p_world, p_uid, p_target)) is not null then
+      return paving_gate_refusal(p_world, p_uid, slab_to_lay(p_world, p_uid, p_target));
+    end if;
 
   elsif p_action = 'remove_paving' then
     if here not in (14, 21) then return 'There is no paving here to break up.'; end if;

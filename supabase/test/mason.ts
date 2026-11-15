@@ -31,7 +31,7 @@ import { perksOf, type PerkDef } from '../../src/game/perks';
 import { failDamage } from '../../src/game/faildamage';
 import { SPARED } from '../../src/game/recipes';
 import { metres } from '../../src/world/tiles';
-import { psql, ok, bad, check } from './harness';
+import { bad, check, hands, ok, psql } from './harness';
 
 const near = (a: number, b: number, by = 1e-5): boolean => Math.abs(a - b) <= by * Math.max(1, Math.abs(b));
 
@@ -214,8 +214,8 @@ begin
   insert into said values ('MIX', v_t || '|' || ${count('concrete')});
   ${clear('concrete', 'mortar', 'ash')};
 
-  /* ---- Quick Chisel: the time a go of Chisel stone brick is started with, at no skill. ---- */
-  update skill set value = 1 where world_id = w and uid = u and id = 'stonecutting';
+  /* ---- Quick Chisel: the time a go of Chisel stone brick is started with, at its gate's stonecutting (craftgates.ts). ---- */
+  update skill set value = 10 where world_id = w and uid = u and id = 'stonecutting';
   v_shard := give(w, u, 'rock_shards', 5, 30);
   perform pg_temp.hold(w, u, '{}');
   v_t := pg_temp.secs(w, u, 'make_stone_brick', jsonb_build_object('kind', 'item', 'uid', v_shard));
@@ -542,6 +542,7 @@ check('and a go spends them and raises the corner a step',
 /* ---- the browser's half ------------------------------------------------------------ */
 
 const game = Game.create(2718);
+hands(game, ['stonecutting'], 10); // no skill gate (`craftgates.ts`) in the way of what this is about
 const rubble = ACTION_BY_ID.get('rubble_fill')!;
 const px = Math.floor(game.player.x);
 const py = Math.floor(game.player.y);

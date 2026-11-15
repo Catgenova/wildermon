@@ -1,4 +1,5 @@
 import { describeGoals } from './journal';
+import { hodMay, relicGate, workerRecipeOpen } from './craftgates';
 import { LAIR_BY_ID } from './lairs';
 import { TileType, TILE_DEFS, TREE_DEFS, treeAge, treeSpecies, packTreeData, TREE_AGES } from '../world/tiles';
 import { isSeam } from '../world/tiles';
@@ -8425,8 +8426,8 @@ export class Creatures {
   private cookStep(game: Game, c: Creature, kind: GatherKind, goto: (x: number, y: number, reach?: number) => boolean, near: (x: number, y: number) => boolean, range: number): boolean {
     if (c.carrying) return false;
     const recipes = fireRecipes(kind);
-    const job = this.recipeInStores(game, recipes);
-    if (!job) return this.why(c, 'stock');
+    const job = this.recipeInStores(game, recipes, c);
+    if (!job) return this.stockWhy(game, c, recipes);
     let at: [number, number] | undefined;
     let bestD = Infinity;
     const look = (p: [number, number]): void => {
@@ -8457,8 +8458,8 @@ export class Creatures {
   private pressStep(game: Game, c: Creature, kind: GatherKind, goto: (x: number, y: number, reach?: number) => boolean, near: (x: number, y: number) => boolean, range: number): boolean {
     if (c.carrying) return this.why(c, 'full');
     const { piece, recipes } = STATION_TRADES[kind]!;
-    const job = this.recipeInStores(game, recipes);
-    if (!job) return this.why(c, 'stock');
+    const job = this.recipeInStores(game, recipes, c);
+    if (!job) return this.stockWhy(game, c, recipes);
     let at: [number, number] | undefined;
     let bestD = Infinity;
     for (const f of game.furniture.values()) {
@@ -8489,8 +8490,8 @@ export class Creatures {
   private glassStep(game: Game, c: Creature, kind: GatherKind, goto: (x: number, y: number, reach?: number) => boolean, near: (x: number, y: number) => boolean, range: number): boolean {
     if (c.carrying) return this.why(c, 'full');
     const recipes = SMELTER_TRADES[kind]!;
-    const job = this.recipeInStores(game, recipes);
-    if (!job) return this.why(c, 'stock');
+    const job = this.recipeInStores(game, recipes, c);
+    if (!job) return this.stockWhy(game, c, recipes);
     let at: [number, number] | undefined;
     let bestD = Infinity;
     for (const sm of game.smelters.values()) {
@@ -8727,14 +8728,18 @@ export class Creatures {
    */
   private restoreStep(game: Game, c: Creature, goto: (x: number, y: number, reach?: number) => boolean): boolean {
     if (c.carrying) return false;
-    const set = this.relicInStores(game);
-    if (!set) return this.why(c, 'stock');
+    const set = this.relicInStores(game, c);
+    if (!set) {
+      // Every one whose pieces are in the stores over its restoration: `gate`, naming it (the island's `errand_step`).
+      const gated = this.relicInStores(game);
+      return gated ? this.why(c, 'gate', 0, ['relic', gated.relic.name.toLowerCase()]) : this.why(c, 'stock');
+    }
     if (!goto(set.at.centre[0], set.at.centre[1])) return true;
     const skill = c.skills[GATHER_SKILL.restore] ?? 1;
     // The relic it came to and, at a stage, the next whose pieces are all in the stores too, its stage's number of
     // them in the one go (`stageLoads`), each put in the store it came to.
     for (let n = 0; n < stageLoads(c); n++) {
-      const one = n === 0 ? set : this.relicInStores(game);
+      const one = n === 0 ? set : this.relicInStores(game, c);
       if (!one) break;
       let worth = 0;
       for (let part = 1; part <= one.relic.parts; part++) {
@@ -8760,9 +8765,11 @@ export class Creatures {
   }
 
   /** The first relic, by name, every piece of which is in the stores; and the store holding its first piece. The island's `relic_in_stores`. */
-  relicInStores(game: Game): { relic: RelicDef; at: DeedStore } | null {
+  relicInStores(game: Game, c?: Creature): { relic: RelicDef; at: DeedStore } | null {
     const stores = game.deedStores();
     for (const relic of [...RELICS].sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))) {
+      // With a worker, only one its own restoration may restore (`craftgates.ts`).
+      if (c && !workerGateOpen(c, relicGate(relic))) continue;
       const have = new Set<number>();
       let at: DeedStore | undefined;
       for (const st of stores) {
@@ -9080,7 +9087,7 @@ export class Creatures {
    * across them. A worker needs no tool, so a recipe's is not looked for. Null
    * when none is. The island's `recipe_in_stores`.
    */
-  recipeInStores(game: Game, recipes: readonly string[]): { recipe: Recipe; at: DeedStore } | null {
+  recipeInStores(game: Game, recipes: readonly string[], c?: Creature): { recipe: Recipe; at: DeedStore } | null {
     const stores = game.deedStores();
     const has = (id: string, n: number): boolean =>
       stores.reduce((sum, st) => sum + st.items.filter((x: Item) => x.id === id && !x.locked).reduce((a, x) => a + x.count, 0), 0) >= n;
@@ -9088,6 +9095,8 @@ export class Creatures {
     const hasLitres = (id: string, n: number): boolean =>
       stores.reduce((sum, st) => sum + st.items.filter((x: Item) => x.id === id && !x.locked).reduce((a, x) => a + litresOf(x) * x.count, 0), 0) >= n;
     for (const id of recipes) {
+      // With a worker, only a recipe its own level in the recipe's skill may make (`craftgates.ts`).
+      if (c && !workerRecipeOpen(c, id)) continue;
       const r = RECIPE_BY_ID.get(id);
       if (!r || !r.inputs.every((i) => (i.litres ? hasLitres(i.item, i.litres) : has(i.item, i.count ?? 1)))) continue;
       const at = stores.find((st) => st.items.some((x: Item) => x.id === r.inputs[0].item && !x.locked));
@@ -9105,8 +9114,8 @@ export class Creatures {
    */
   private recipeStep(game: Game, c: Creature, recipes: readonly string[], goto: (x: number, y: number, reach?: number) => boolean, more = 0): boolean {
     if (c.carrying) return false;
-    const job = this.recipeInStores(game, recipes);
-    if (!job) return this.why(c, 'stock');
+    const job = this.recipeInStores(game, recipes, c);
+    if (!job) return this.stockWhy(game, c, recipes);
     const { recipe: r, at } = job;
     // Round its keeper, only with room in storage in reach for what it makes (the island's `around_room`).
     if (c.around && !this.roomFor(game, c, { uid: 0, id: r.result, ql: 1, dmg: 0, count: (r.count ?? 1) + more })) return this.why(c, 'full');
@@ -9123,7 +9132,7 @@ export class Creatures {
    */
   private moreRecipes(game: Game, c: Creature, recipes: readonly string[], at: DeedStore | null, x: number, y: number, more = 0): void {
     for (let n = 1; n < stageLoads(c); n++) {
-      const next = this.recipeInStores(game, recipes);
+      const next = this.recipeInStores(game, recipes, c);
       if (!next) return;
       if (c.around && !this.roomFor(game, c, { uid: 0, id: next.recipe.result, ql: 1, dmg: 0, count: (next.recipe.count ?? 1) + more })) return;
       this.workRecipe(game, c, next.recipe, at, x, y, false, more);
@@ -9282,7 +9291,8 @@ export class Creatures {
     // What the stores hold to bring, crates and furniture alike, and never what is kept back.
     const takeable = (it: Item, item: string): boolean => it.id === item && it.count > 0 && !it.locked;
     const stocked = (item: string): boolean => game.deedStores().some((st) => st.items.some((it: Item) => takeable(it, item)));
-    const job = game.hodNeeding(near, c.carrying?.id, deed, stocked);
+    // Only work each of whose gates its own level meets, its carpentry for a plank wall (`craftgates.ts`; the island's `hod_may`).
+    const job = game.hodNeeding(near, c.carrying?.id, deed, stocked, (t) => hodMay(c, t));
     // Holding a piece nothing within reach wants: back to the nearest store with room for it (`storeFor`).
     if (c.carrying && job?.item !== c.carrying.id) {
       const held = c.carrying;
@@ -10551,6 +10561,15 @@ export class Creatures {
       return true;
     }
     return false;
+  }
+
+  /**
+   * Nothing a store trade may make: `gate`, naming the first of its recipes the stores hold the makings of, where every
+   * such one is over its level; else `stock`. The island's `errand_step` (`recipe_gate_idle`).
+   */
+  private stockWhy(game: Game, c: Creature, recipes: readonly string[]): false {
+    const gated = this.recipeInStores(game, recipes);
+    return gated ? this.why(c, 'gate', 0, ['recipe', gated.recipe.id]) : this.why(c, 'stock');
   }
 
   /** Nothing to do, and why (`IdleWhy`): kept on it for its card, and false, for a step to return. The island's `idle_why`. */

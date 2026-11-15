@@ -1,4 +1,5 @@
 import { litresAtHand, lyeCarried, LYE_USE, NEED_LYE, takeLitres } from './placeables';
+import { buildGateRefusal } from './craftgates';
 import type { ActionDef, Target } from './actions';
 import {
   borderOf,
@@ -119,6 +120,9 @@ export function changeWallReason(g: Game, t: TileTarget): string | null {
   if (wall.change?.type === t.wallType && wall.change.material === t.material) return 'Change already planned.';
   const glass = glassPlanRefusal(g, t, 'plan_wall');
   if (glass) return glass;
+  // Its material's and its type's skill gates (`craftgates.ts`): "Plank building: needs carpentry 10; have 3.0."
+  const skillGate = buildGateRefusal(g, t.material, { wall: t.wallType });
+  if (skillGate) return skillGate;
   const tool = needTool(g, 'mallet');
   if (tool) return tool;
   const frame = changeFrameReason(g, t, b, wall);
@@ -510,6 +514,9 @@ export const BUILD_ACTIONS: ActionDef[] = [
       // Glass goes on a roof and nowhere else (`glasshouse.ts`).
       const glass = glassPlanRefusal(g, t, 'plan_wall');
       if (glass) return glass;
+      // Its material's and its type's skill gates (`craftgates.ts`): "Plank building: needs carpentry 10; have 3.0."
+      const gate = buildGateRefusal(g, t.material, { wall: t.wallType });
+      if (gate) return gate;
       const tool = needTool(g, 'mallet');
       if (tool) return tool;
       const b = storeyOf(g, t);
@@ -581,6 +588,8 @@ export const BUILD_ACTIONS: ActionDef[] = [
       if (glass) return glass;
       const type = WALL_TYPE_BY_ID.get(t.wallType);
       if (!type?.standalone) return 'Only fences and half walls stand alone.';
+      const gate = buildGateRefusal(g, t.material, { wall: t.wallType });
+      if (gate) return gate;
       const mat = material(t.material);
       const tool = mat ? needTool(g, mat.tool) : 'Choose a material.';
       if (tool) return tool;
@@ -628,6 +637,9 @@ export const BUILD_ACTIONS: ActionDef[] = [
       // A change planned for a finished wall is built as a wall is, the wall standing till it is done (`change_wall`).
       const bill = wall.change ?? wall;
       if (isDone(bill)) return 'Wall finished.';
+      // Added to only at its gates, a plan laid by anybody (`craftgates.ts`); a change is asked when it is planned.
+      const gate = wall.change ? null : buildGateRefusal(g, wall.material, { wall: wall.type });
+      if (gate) return gate;
       // And the standing one goes with the last of it: not a counter with anything on it, nor a padlocked portcullis.
       const goes = wall.change ? wallGoesRefusal(g, wall) : null;
       if (goes) return goes;
@@ -1082,6 +1094,9 @@ export const BUILD_ACTIONS: ActionDef[] = [
       // Glass on a pitched roof and nowhere else, no floor over a field, and no roof but glass on a building with one (`glasshouse.ts`).
       const glass = glassPlanRefusal(g, t, 'plan_floor');
       if (glass) return glass;
+      // Its material's and its floor type's skill gates (`craftgates.ts`).
+      const gate = buildGateRefusal(g, t.material, { floor: t.floorKind ?? 'floor', hand: t.hand });
+      if (gate) return gate;
       const tool = needTool(g, 'mallet');
       if (tool) return tool;
       const b = storeyOf(g, t);
@@ -1167,6 +1182,8 @@ export const BUILD_ACTIONS: ActionDef[] = [
       const floor = b && g.buildings.floor(slotLevel(t, b), t.x, t.y);
       if (!floor) return 'Nothing planned here.';
       if (isDone(floor)) return 'Already finished.';
+      const gate = buildGateRefusal(g, floor.material, { floor: floorKind(floor), hand: floor.hand });
+      if (gate) return gate;
       const mat = material(floor.material);
       const tool = floorKind(floor) === 'ladder' ? needTool(g, 'mallet') : mat ? needTool(g, mat.tool) : null;
       if (tool) return tool;

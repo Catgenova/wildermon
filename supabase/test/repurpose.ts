@@ -46,7 +46,7 @@ import { helpText } from '../../src/ui/panels/help';
 import { BUSH_DEFS, TileType } from '../../src/world/tiles';
 import { fruitsAt } from '../../src/game/fruiting';
 import { DAY_SECONDS } from '../../src/game/pace';
-import { psql, check, finish } from './harness';
+import { check, finish, psql, WORKER_HANDS, workerHands, workerHandsJson } from './harness';
 
 /** Each kind, its new trade, and the action your own hands do it by (for the skill it trains). */
 const KINDS: Array<[id: string, trade: GatherKind]> = [
@@ -214,6 +214,8 @@ const ready = (who: string): string => `
          until = now() - interval '600 seconds', settled_at = now() - interval '600 seconds', phase = 'idle', idle_why = null,
          work_x = null, work_y = null, from_x = 16.6, from_y = 16.6, to_x = 16.6, to_y = 16.6
    where world_id = w and id = (select id from hand where species = '${who}');
+  -- And at every recipe's level up to a first stage's (craftgates.ts): this is about the trade, not its gate.
+  update creature set skills = '${workerHandsJson()}'::jsonb || skills where world_id = w and id = (select id from hand where species = '${who}');
   perform worker_settle(w, (select id from hand where species = '${who}'));`;
 const after = (who: string): string => `update creature set mode = 'stored' where world_id = w and id = (select id from hand where species = '${who}');
   delete from item where world_id = w and holder = 'crate' and crate = ${CRATE};
@@ -508,8 +510,8 @@ for (const c of CASES) {
   if (!c.why) check(`on the island, ${c.k.toLowerCase()}: it learns ${GATHER_SKILL[tradeOf(c.id)]}`, Number(skill) > 1, skill);
   if (c.k === 'ALLOY') {
     const [lo, hi] = ql.split(',').map(Number);
-    check(`on the island, the bronze comes out at its lumps' quality as your own hands' does: ${alloyQl(LUMP_QL, 1).toFixed(3)}`,
-      Math.abs(lo - alloyQl(LUMP_QL, 1)) < 0.01 && Math.abs(hi - alloyQl(LUMP_QL, 1)) < 0.01, ql);
+    check(`on the island, the bronze comes out at its lumps' quality as your own hands' does: ${alloyQl(LUMP_QL, WORKER_HANDS).toFixed(3)}`,
+      Math.abs(lo - alloyQl(LUMP_QL, WORKER_HANDS)) < 0.01 && Math.abs(hi - alloyQl(LUMP_QL, WORKER_HANDS)) < 0.01, ql);
   }
 }
 {
@@ -907,7 +909,8 @@ const worker = (g: Game, id: string): Creature => {
   c.mode = 'deed';
   c.stance = 'passive';
   c.hunger = 1;
-  c.skills = {};
+  // At every recipe's level up to a first stage's (`craftgates.ts`): this is about the trade, not its gate.
+  c.skills = workerHands();
   c.traits = [];
   return c;
 };
@@ -928,8 +931,8 @@ for (const k of CASES) {
   if (!k.why) check(`in the browser, ${k.k.toLowerCase()}: it learns ${GATHER_SKILL[tradeOf(k.id)]}`, (c.skills[GATHER_SKILL[tradeOf(k.id)]] ?? 0) > 1);
   if (k.k === 'ALLOY') {
     const qls = crate.items.filter((i) => i.id === 'bronze_lump').map((i) => i.ql);
-    check(`in the browser, the bronze comes out at its lumps' quality as your own hands' does: ${alloyQl(LUMP_QL, 1).toFixed(3)}`,
-      qls.length > 0 && qls.every((q) => Math.abs(q - alloyQl(LUMP_QL, 1)) < 0.01), qls.join(','));
+    check(`in the browser, the bronze comes out at its lumps' quality as your own hands' does: ${alloyQl(LUMP_QL, WORKER_HANDS).toFixed(3)}`,
+      qls.length > 0 && qls.every((q) => Math.abs(q - alloyQl(LUMP_QL, WORKER_HANDS)) < 0.01), qls.join(','));
   }
 }
 {
@@ -946,7 +949,7 @@ for (const k of CASES) {
   const g = body();
   const crate = stock(g, [['log', 1]]);
   const c = worker(g, 'carra');
-  c.skills = { ...BEAM_SKILLS };
+  c.skills = { ...workerHands(), ...BEAM_SKILLS };
   run(g, 120);
   check(`in the browser, a Beammaster saws a log into ${beamWants()}`, inCrate(crate) === beamWants(), inCrate(crate));
 }
@@ -954,7 +957,7 @@ for (const k of CASES) {
   const g = body();
   const crate = stock(g, [['log', 2]]);
   const c = worker(g, 'awla');
-  c.skills = { [GATHER_SKILL.shaft]: EVOLVE_AT[1] + 5 };
+  c.skills = { ...workerHands(), [GATHER_SKILL.shaft]: EVOLVE_AT[1] + 5 };
   run(g, 120);
   const each = RECIPE_BY_ID.get('make_shafts')!.count! + STAGE_PERKS.awla.n;
   check(`in the browser, a ${SPECIES.awla.stages![1].name} carves ${each} shafts from a log, both logs in one go`,
@@ -964,7 +967,7 @@ for (const k of CASES) {
   const g = body();
   const crate = stock(g, FLETCH_PUT);
   const c = worker(g, 'flecha');
-  c.skills = { ...FLETCH_SKILLS };
+  c.skills = { ...workerHands(), ...FLETCH_SKILLS };
   run(g, 120);
   check(`in the browser, a Fletchercrest fletches one batch into ${fletchWants()}`, inCrate(crate) === fletchWants(), inCrate(crate));
 }
@@ -972,7 +975,7 @@ for (const k of CASES) {
   const g = body();
   const crate = stock(g, MIX_PUT);
   const c = worker(g, 'glossa');
-  c.skills = { ...MIX_SKILLS };
+  c.skills = { ...workerHands(), ...MIX_SKILLS };
   run(g, 120);
   check(`in the browser, a ${SPECIES.glossa.stages![1].name} mixes one batch into ${mixWants()}`, inCrate(crate) === mixWants(), inCrate(crate));
 }
@@ -980,7 +983,7 @@ for (const k of CASES) {
   const g = body();
   const crate = stock(g, CON_PUT);
   const c = worker(g, 'crakka');
-  c.skills = { ...CON_SKILLS };
+  c.skills = { ...workerHands(), ...CON_SKILLS };
   run(g, 120);
   check(`in the browser, a ${MORTARIUM} mixes one batch into ${conWants()}`, inCrate(crate) === conWants(), inCrate(crate));
 }
@@ -988,7 +991,7 @@ for (const k of CASES) {
   const g = body();
   const crate = stock(g, WEAVE_PUT);
   const c = worker(g, 'leecha');
-  c.skills = { ...WEAVE_SKILLS };
+  c.skills = { ...workerHands(), ...WEAVE_SKILLS };
   run(g, 120);
   check(`in the browser, a ${SPECIES.leecha.stages![1].name} cuts one cloth into ${weaveWants()}`, inCrate(crate) === weaveWants(), inCrate(crate));
 }
@@ -996,7 +999,7 @@ for (const k of CASES) {
   const g = body();
   const crate = stock(g, PRESS_PUT);
   const c = worker(g, 'frosta');
-  c.skills = { ...PRESS_SKILLS };
+  c.skills = { ...workerHands(), ...PRESS_SKILLS };
   run(g, 120);
   check(`in the browser, a ${SPECIES.frosta.stages![1].name} presses one bucket of milk into ${pressWants()}`, inCrate(crate) === pressWants(), inCrate(crate));
 }
@@ -1004,7 +1007,7 @@ for (const k of CASES) {
   const g = body();
   const crate = stock(g, CHIP_PUT);
   const c = worker(g, 'chissa');
-  c.skills = { ...CHIP_SKILLS };
+  c.skills = { ...workerHands(), ...CHIP_SKILLS };
   run(g, 120);
   check(`in the browser, a ${SPECIES.chissa.stages![1].name} chisels one shard into ${chipWants()}`, inCrate(crate) === chipWants(), inCrate(crate));
 }
@@ -1013,7 +1016,7 @@ for (const k of CASES) {
   const crate = stock(g, CHURN_PUT);
   g.addFurniture(BUTTER_CHURN, 19, 16, 0, 0, 30);
   const c = worker(g, 'whirla');
-  c.skills = { ...CHURN_SKILLS };
+  c.skills = { ...workerHands(), ...CHURN_SKILLS };
   run(g, 120);
   check(`in the browser, a ${SPECIES.whirla.stages![1].name} churns ${CHURN_GO} buckets of milk a go: ${churnWants()}`,
     stageLoads(c) === CHURN_GO && inCrate(crate) === churnWants(), `${stageLoads(c)} ${inCrate(crate)}`);
@@ -1025,7 +1028,7 @@ for (const k of CASES) {
   sm.lit = true;
   sm.fuel = 100000;
   const c = worker(g, 'scorcha');
-  c.skills = { ...SLAG_SKILLS };
+  c.skills = { ...workerHands(), ...SLAG_SKILLS };
   run(g, 120);
   check(`in the browser, a ${SPECIES.scorcha.stages![1].name} mixes one batch into ${slagWants()}`, perkN(c, 'more') === STAGE_PERKS.scorcha.n && inCrate(crate) === slagWants(), inCrate(crate));
 }

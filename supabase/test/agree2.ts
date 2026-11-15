@@ -199,7 +199,8 @@ const oneGain = (c: Creature, skill: string, base: number): number => skillGain(
 // A hod carrier: a piece out of the stores, and fitted into a floor.
 {
   const shed = g.buildings.create('Shed', T + 2, T + 1);
-  const floor = g.buildings.setFloor(shed, 0, T + 2, T + 1, 'stone_brick', 'floor');
+  // Clay bricks: a floor its masonry 10 may lay (`craftgates.ts`).
+  const floor = g.buildings.setFloor(shed, 0, T + 2, T + 1, 'clay_bricks', 'floor');
   const [item] = Object.keys(floor.needed);
   stock(item, 10);
   const c = worker('cobbe', 'masonry');

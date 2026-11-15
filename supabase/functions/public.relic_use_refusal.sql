@@ -47,6 +47,8 @@ begin
     -- A Recipe or a Formula, each read by its own action, and the recipe it opens not read yet (`readRecipeRefusal`).
     if v_it.def <> book_item(case p_action when 'read_formula' then 'formula' else 'recipe' end)
        or private.book_opens(v_it.def, v_it.extra) is null then return 'It is gone.'; end if;
+    -- Under its recipe's skill gate, unidentified, and not read: "Unidentified formula: needs enchanting 30; have 12.0."
+    if item_gate_refusal(p_world, p_uid, v_it) is not null then return item_gate_refusal(p_world, p_uid, v_it); end if;
     if private.recipe_read(p_world, p_uid, private.book_opens(v_it.def, v_it.extra)) then
       return book_known_says(book_of_item(v_it.def));
     end if;

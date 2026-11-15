@@ -269,7 +269,8 @@ begin
 
   -- Only logs: it saws.
   insert into item (world_id, holder, crate, def, ql, count) values (w, 'crate', 7601, '${LOG}', 30, 2);
-  update creature set mode = 'deed', job = null, carrying = null, skills = '{}'::jsonb, until = now(), settled_at = now(), phase = 'idle'
+  -- At stone brick's stonecutting, its gate (craftgates.ts); its carpentry its own to learn.
+  update creature set mode = 'deed', job = null, carrying = null, skills = '{"stonecutting": 10}'::jsonb, until = now(), settled_at = now(), phase = 'idle'
    where world_id = w and id = v_h;
   perform worker_settle(w, v_h);
   insert into said select 'ONLYB', coalesce(job, '-') from creature where world_id = w and id = v_h;

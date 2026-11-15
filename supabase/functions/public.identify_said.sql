@@ -8,7 +8,7 @@ AS $function$
   select g.level || ' ' || lower(coalesce((select s.name from skill_def s where s.id = g.skill), replace(g.skill, '_', ' ')))
       || ' required to identify this ' || x.noun || '.'
     from skill_gate_item x join skill_gate g on g.kind = x.kind and g.id = x.id
-   where x.item = p_def and x.extra in (lower(coalesce(p_extra, '')), '')
+   where x.item = p_def and x.extra in (gate_item_extra(p_def, p_extra), '')
      and skill_of(p_world, p_uid, g.skill) < g.level
    order by x.extra desc limit 1
 $function$

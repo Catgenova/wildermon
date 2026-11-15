@@ -46,7 +46,7 @@ import {
   runeGatesHeld, sawGateFolk,
 } from '../../src/game/runegate';
 import { TileType } from '../../src/world/tiles';
-import { psql, ok, bad, check } from './harness';
+import { bad, BUILD_HANDS, check, hands, handsSqlEach, ok, psql } from './harness';
 
 const same = (a: Record<string, number>, b: Record<string, number>): boolean =>
   Object.keys(a).length === Object.keys(b).length && Object.entries(a).every(([k, n]) => b[k] === n);
@@ -96,6 +96,8 @@ begin
   insert into player (world_id, uid, name, x, y, stats) values
     (w, '${WHO.ida}', 'Ida', 50.5, 52.5, v_full), (w, '${WHO.bea}', 'Bea', 50.5, 52.5, v_full),
     (w, '${WHO.gus}', 'Gus', 50.5, 52.5, v_full), (w, '${WHO.tom}', 'Tom', 50.5, 52.5, v_full);
+  -- No skill gate in the way of a rune gate, a wall or a half wall (craftgates.ts): this is about rune gates.
+  ${handsSqlEach('w', EVERYBODY, BUILD_HANDS)};
   insert into deed (world_id, name, x, y, radius, founded_by) values (w, 'Runehold', 49, 49, 3, '${WHO.ida}');
   insert into deed_member (world_id, founder, uid, role) values
     (w, '${WHO.ida}', '${WHO.bea}', 'builder'), (w, '${WHO.ida}', '${WHO.gus}', 'guest');
@@ -123,6 +125,7 @@ select rpc_ground(${W}, 40, true)::text;`).split('\n').pop() as string) as Islan
 /** A browser in somebody's shoes: the same ground, the island's word about it, a trowel. */
 const browserFor = (who: Who, x = 50.5, y = 54.5): Game => {
   const g = Game.create(4242);
+  hands(g, BUILD_HANDS); // no skill gate (`craftgates.ts`) in the way of what this is about
   shape(g);
   g.sawGround(groundFor(who, x, y));
   g.inventory.add('trowel', { ql: 40 });

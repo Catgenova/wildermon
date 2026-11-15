@@ -36,7 +36,7 @@ import { bedrockAt } from '../../src/world/ore';
 import { ROCK_VARIANTS, TileType } from '../../src/world/tiles';
 import { groundDecayRate, type Item } from '../../src/game/items';
 import { ALTAR_CAST, ALTAR_REACH } from '../../src/game/light';
-import { psql, ok, bad, check } from './harness';
+import { bad, BUILD_HANDS, check, hands, handsSql, ok, psql } from './harness';
 
 const W = `(select id from world where name = 'Hoarding')`;
 const DANE = `(select uid from player where world_id = ${W} and name = 'Dane')`;
@@ -123,6 +123,8 @@ game.player.level = 0;
 for (const id of ['shovel', 'pickaxe', 'mallet']) game.inventory.add(id, { ql: 50 });
 game.skills.values.set('digging', 90);
 game.skills.values.set('mining', 90);
+// No skill gate in the way of a flight or a floor (`craftgates.ts`): this is about cellars.
+hands(game, BUILD_HANDS);
 
 const wallRow = ([b, x, y, side]: [number, number, number, Side]): string => {
   const bx = side === 'e' ? x + 1 : x;
@@ -175,6 +177,7 @@ island(`
     (w, 'player', u, 'shovel', 50, 1), (w, 'player', u, 'pickaxe', 50, 1), (w, 'player', u, 'mallet', 50, 1);
   insert into skill (world_id, uid, id, value) values (w, u, 'digging', 90), (w, u, 'mining', 90)
     on conflict (world_id, uid, id) do update set value = excluded.value;
+  ${handsSql('w', 'u', BUILD_HANDS)};
   update player set body_at = now(), x = 20.5, y = 44.5, level = 0, aboard = null, act = null, act_queue = '[]'::jsonb,
          stats = jsonb_set(coalesce(stats, '{}'::jsonb), '{stamina}', '1'::jsonb)
    where world_id = w and uid = u;

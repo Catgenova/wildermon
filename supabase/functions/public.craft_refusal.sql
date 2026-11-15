@@ -68,6 +68,9 @@ begin
   if exists (select 1 from locked_recipes() l where l.id = p_recipe) and not private.recipe_read(p_world, p_uid, p_recipe) then
     return 'Need ' || recipe_book(p_recipe) || ': ' || (select l.title from locked_recipes() l where l.id = p_recipe) || '.';
   end if;
+  -- Its skill gate (`craftgates.ts`), after what is known (a perk, a book) and before what is at hand, as the browser's
+  -- `recipeReason` asks it.
+  if recipe_gate_refusal(p_world, p_uid, p_recipe) is not null then return recipe_gate_refusal(p_world, p_uid, p_recipe); end if;
   if r.tool is not null and tool_ql(p_world, p_uid, r.tool) <= 0 then
     return 'Need ' || case when lower((select coalesce(name, r.tool) from item_def where id = r.tool)) ~ '^[aeiou]' then 'an ' else 'a ' end
       || lower((select coalesce(name, r.tool) from item_def where id = r.tool)) || '.';

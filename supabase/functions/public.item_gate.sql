@@ -6,6 +6,6 @@ CREATE OR REPLACE FUNCTION public.item_gate(p_def text, p_extra text)
  STABLE
 AS $function$
   select g.* from skill_gate_item x join skill_gate g on g.kind = x.kind and g.id = x.id
-   where x.item = p_def and x.extra in (lower(coalesce(p_extra, '')), '')
+   where x.item = p_def and x.extra in (gate_item_extra(p_def, p_extra), '')
    order by x.extra desc limit 1
 $function$

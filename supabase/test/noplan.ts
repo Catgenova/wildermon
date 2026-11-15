@@ -33,7 +33,7 @@ import { ACTION_BY_ID } from '../../src/game/actions';
 import { borderOf, gapText, type Side } from '../../src/game/building';
 import { Game } from '../../src/game/game';
 import type { NoPlanLook } from './noplan-page';
-import { psql, ok, bad, check } from './harness';
+import { bad, BUILD_HANDS, check, hands, ok, psql } from './harness';
 
 const W = `(select id from world where name = 'Hoarding')`;
 const DANE = `(select uid from player where world_id = ${W} and name = 'Dane')`;
@@ -54,6 +54,7 @@ const daneWas = psql(`select x || ',' || y || ',' || level from player where wor
 
 /* ---- the tower, on both sides ---------------------------------------------- */
 const game = Game.create(4242);
+hands(game, BUILD_HANDS); // no skill gate (`craftgates.ts`) in the way of what this is about
 const bld = game.buildings;
 game.player.x = TX + 0.5;
 game.player.y = TY + 2.5;
@@ -187,6 +188,7 @@ for (const [x, y, s] of OUTSIDE) both('no_plan', side(x, y, s), 'No plan');
   const sent = (seen.noPlan ?? []).filter((m) => m.building === ID);
   check('the ground read hands a browser the six marks', sent.length === 6, JSON.stringify(sent));
   const g2 = Game.create(4242);
+  hands(g2, BUILD_HANDS); // no skill gate (`craftgates.ts`) in the way of what this is about
   g2.buildings.sawIsland(seen as never);
   const laid = OUTSIDE.filter(([x, y, s]) => g2.buildings.noPlan(1, borderOf(x, y, s))).length;
   const t2 = g2.buildings.list.get(ID);

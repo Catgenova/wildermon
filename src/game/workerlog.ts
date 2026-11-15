@@ -147,6 +147,9 @@ const easiestSeams = (): string => {
   return `${listed(seams.filter((r) => SEAM_GATE[r.yields] === least).map((r) => r.name.toLowerCase()))}: ${least}`;
 };
 
+/** The gates a store trade is idle at: what it makes or restores out of the stores, said "in your settlement stores". */
+const STORE_GATES: ReadonlySet<GateKind> = new Set<GateKind>(['recipe', 'relic', 'bauble']);
+
 /**
  * The sentence for a reason, in the game's own terms and with its number:
  * "Idle: no reed bed within 30 tiles of the token." `kind` is the trade it
@@ -199,6 +202,8 @@ export function idleSays(idle: Idle, kind: GatherKind | null | undefined, carryi
       if (!gate) return `Idle: work ${n} ${n === 1 ? 'tile' : 'tiles'} from ${from} above its level.`;
       const have = skills ? workerLevel({ skills }, gate.skill) : skill;
       const yours = have !== undefined ? ` (yours ${have.toFixed(1)})` : '';
+      // What it would make or restore out of the stores (a recipe, a relic) is in the stores, not tiles off.
+      if (STORE_GATES.has(gate.kind)) return `Idle: ${gate.name} in ${stores} needs ${skillWord(gate.skill)} ${gate.level}${yours}.`;
       return `Idle: ${gate.name} ${n} ${n === 1 ? 'tile' : 'tiles'} from ${from} needs ${skillWord(gate.skill)} ${gate.level}${yours}.`;
     }
     // Bare rock in range and not a seam in any of it (the island's `mine_idle`).
