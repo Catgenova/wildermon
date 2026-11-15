@@ -11,10 +11,10 @@ begin
     ax := least(subtiles() - 2, greatest(0, (p_target->>'sx')::int));
     ay := least(subtiles() - 2, greatest(0, (p_target->>'sy')::int));
     if not consume(p_world, p_uid, 'shaft', 2) then return; end if;
-    insert into placed (world_id, kind, x, y, sx, sy, cx, cy, fuel, made_by)
+    insert into placed (world_id, kind, x, y, sx, sy, cx, cy, fuel, made_by, facing)
     values (p_world, 'campfire', (p_target->>'x')::int, (p_target->>'y')::int, ax, ay,
             (p_target->>'x')::int + (ax + 1.0) / subtiles(), (p_target->>'y')::int + (ay + 1.0) / subtiles(),
-            120, p_uid);
+            120, p_uid, case when p_target->>'facing' in ('n', 'e', 's', 'w') then p_target->>'facing' else 's' end);
     perform tell(p_world, p_uid, 'Campfire built: 2 × shaft. Unlit.', 'event');
     perform land_announce(p_world, (p_target->>'x')::int, (p_target->>'y')::int);
     return;
@@ -174,7 +174,8 @@ begin
     -- And its colour, back on the thing in the pack.
     if p.dye is not null then update item set dye = p.dye where id = made; end if;
     -- And its enchantment and its wear, back on the thing in the pack.
-    update item set enchant = p.enchant, dmg = p.dmg, infuse = p.infuse where id = made;
+    update item set enchant = p.enchant, dmg = case when station_kind(p.kind) then station_dmg(p) else p.dmg end,
+        infuse = p.infuse where id = made;
     -- And a memorial stone's line, carried in the pack as it stood.
     if p.engraving is not null then update item set engraving = p.engraving where id = made; end if;
     -- And a garden piece's flowers, shape or kind, carried in the pack as it stood (`garden.ts`).

@@ -5,6 +5,7 @@ import { burnsFor, heatSaid } from './words';
 import { DEED_PLACE } from './furniture';
 import { SUBTILES } from './crates';
 import type { Game } from './game';
+import type { Side } from './building';
 import { chargesFor, itemDef, itemName, markOf, rarityOf, type Item } from './items';
 import { MELT_HEAT, MELT_KEEP, MELT_SHARE, meltFits, meltLumps, meltQl, meltRefusal, metalOfItem } from './melt';
 import { fixedTo } from './ageing';
@@ -48,9 +49,11 @@ export interface PlacedSmelter {
   id: number;
   x: number;
   y: number;
-  /** Top-left subtile of its three by two block. */
+  /** Top-left subtile of its three by two block, two by three facing east or west (`smelterSize`). */
   sx: number;
   sy: number;
+  /** Which way its mouth faces, as it was set down; south when unsaid. */
+  facing?: Side;
   /** Built quality, which decides how fast it works. */
   ql: number;
   fuel: number;
@@ -106,15 +109,25 @@ export interface Plume { rise: number; size: number; pale: number }
 /** A smelter's stack draws well: a short, thin, pale plume, a third the height of a campfire's; paler still while it works a charge. */
 export const SMELTER_PLUME: Plume = { rise: 0.34, size: 0.5, pale: 0.8 };
 export const SMELTER_PLUME_WORKING: Plume = { rise: 0.3, size: 0.46, pale: 1 };
-export const smelterCentre = (s: PlacedSmelter): [number, number] => [s.x + (s.sx + SMELTER_W / 2) / SUBTILES, s.y + (s.sy + SMELTER_H / 2) / SUBTILES];
+/** One step back from the mouth of a thing set down facing \`facing\`, in the world: north of one facing south. Where a stack or a vent stands. */
+export const backOf = (facing: Side = 's'): [number, number] =>
+  facing === 'n' ? [0, 1] : facing === 'e' ? [-1, 0] : facing === 'w' ? [1, 0] : [0, -1];
+/** Its block of subtiles, across and down: three by two, turned two by three facing east or west (the island's `placed_size`). */
+export const smelterSize = (facing: Side = 's'): [number, number] => (facing === 'e' || facing === 'w' ? [SMELTER_H, SMELTER_W] : [SMELTER_W, SMELTER_H]);
+export const smelterCentre = (s: PlacedSmelter): [number, number] => {
+  const [w, h] = smelterSize(s.facing);
+  return [s.x + (s.sx + w / 2) / SUBTILES, s.y + (s.sy + h / 2) / SUBTILES];
+};
 
-export function smelterCovers(s: { sx: number; sy: number }, sx: number, sy: number): boolean {
-  return sx >= s.sx && sx < s.sx + SMELTER_W && sy >= s.sy && sy < s.sy + SMELTER_H;
+export function smelterCovers(s: { sx: number; sy: number; facing?: Side }, sx: number, sy: number): boolean {
+  const [w, h] = smelterSize(s.facing);
+  return sx >= s.sx && sx < s.sx + w && sy >= s.sy && sy < s.sy + h;
 }
 
 /** Top-left subtile of the block a smelter would take, kept inside the tile. */
-export function smelterAnchor(sx: number, sy: number): [number, number] {
-  return [Math.max(0, Math.min(SUBTILES - SMELTER_W, sx)), Math.max(0, Math.min(SUBTILES - SMELTER_H, sy))];
+export function smelterAnchor(sx: number, sy: number, facing: Side = 's'): [number, number] {
+  const [w, h] = smelterSize(facing);
+  return [Math.max(0, Math.min(SUBTILES - w, sx)), Math.max(0, Math.min(SUBTILES - h, sy))];
 }
 
 /** How long its fuel keeps it hot: longer for an Ember Heart (`furnaceBurn`). */
@@ -159,13 +172,13 @@ export const SMELTER_ACTIONS: ActionDef[] = [
       const item = t.itemUid !== undefined ? g.inventory.get(t.itemUid) : g.inventory.find('smelter');
       if (!item || item.id !== 'smelter') return 'Need a smelter (crafting window).';
       if (!g.onDeed(t.x, t.y)) return DEED_PLACE;
-      return g.smelterPlaceReason(t.x, t.y, t.sx, t.sy);
+      return g.smelterPlaceReason(t.x, t.y, t.sx, t.sy, t.facing);
     },
     perform: (t, g) => {
       if (t.kind !== 'tile' || t.sx === undefined || t.sy === undefined) return;
       const item = t.itemUid !== undefined ? g.inventory.get(t.itemUid) : g.inventory.find('smelter');
       if (!item || item.id !== 'smelter' || !g.inventory.remove(item.uid, 1)) return;
-      const s = g.addSmelter(t.x, t.y, t.sx, t.sy, item.ql);
+      const s = g.addSmelter(t.x, t.y, t.sx, t.sy, item.ql, t.facing);
       // A rare furnace bedded in is a rare furnace: it holds a bigger charge.
       if (item.rare) s.rare = item.rare;
       // Its enchantment and its wear go down with it, and come up again with it (`enchanting.ts`).

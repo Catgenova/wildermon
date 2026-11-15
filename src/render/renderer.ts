@@ -99,7 +99,8 @@ import { ageDef, stageOf } from '../game/creatures';
 import { CRATE_DOOR, CREATURE_CRATE } from '../game/creaturecrate';
 import { FIRE_CAPACITY, fireCentre } from '../game/campfire';
 import { drawCampfireNight } from './kit/campfire';
-import { SMELTER_H, SMELTER_W, smelterCentre } from '../game/smelter';
+import { smelterCentre, smelterSize } from '../game/smelter';
+import { stationCentreAt, stationFootprint, stationTurn } from '../game/stations';
 import { anvilBounds, anvilHit, anvilNight, anvilTone, anvilVariant, drawAnvil, drawAnvilLive, drawAnvilNight, drawKiln, drawKilnLive, drawKilnNight, drawSmelter, drawSmelterLive, drawSmelterNight, kilnBounds, kilnHit, smelterBounds, smelterHit } from './forge';
 import { KILN_SUBTILES, kilnCentre } from '../game/kiln';
 import { furnitureCentre, furnitureDef, hearthCapacity, isBoat, type PlacedFurniture, facingOf as pieceFacing, furnitureFootprint } from '../game/furniture';
@@ -543,6 +544,15 @@ export { type Pick } from './picking';
 import { drawPlinthRunes, plinthNight } from './plinth';
 import { plinthBusy } from '../game/plinth';
 import { ENCHANTERS_PLINTH } from '../game/enchant';
+
+/** The face and shade an anvil of a metal is drawn in: its own (`anvilTone`), or else its ore's. */
+function anvilColours(metal: string): [string, string] {
+  const own = anvilTone(metal);
+  if (own) return [own[0], own[1]];
+  const rock = ROCK_VARIANTS.find((r) => r.yields === `${metal}_ore`);
+  const c = rock ? rock.color : ([150, 150, 156] as const);
+  return [`rgb(${c[0]},${c[1]},${c[2]})`, `rgb(${Math.round(c[0] * 0.68)},${Math.round(c[1] * 0.68)},${Math.round(c[2] * 0.68)})`];
+}
 
 /** How far ahead of its line a piece lying flat sorts (`DrawEnt.key`): ahead of anything standing in it. */
 const FLAT_FIRST = 1e6;
@@ -7465,7 +7475,7 @@ export class Renderer {
          * turned up by what the wash will take off them (`nightOver`).
          * Clicked by its solids.
          */
-        const kiln = ent.kiln, turn = this.camera.rotation, dark = this.game.darkness();
+        const kiln = ent.kiln, turn = this.camera.rotation + stationTurn(kiln.facing), dark = this.game.darkness();
         const look = { lit: kiln.lit, firing: kiln.lit && kiln.jobs.length > 0 };
         const [bl, bt, br, bb] = kilnBounds(turn, zoom);
         const box: [number, number, number, number] = [ent.sx + bl * zoom, ent.sy + bt * zoom, (br - bl) * zoom, (bb - bt) * zoom];
@@ -7491,7 +7501,7 @@ export class Renderer {
          * off them (`nightOver`) -- not the runestones' keeping, which costs a
          * frame a box of everything drawn after it. Clicked by its solids.
          */
-        const sm = ent.smelter, turn = this.camera.rotation, dark = this.game.darkness();
+        const sm = ent.smelter, turn = this.camera.rotation + stationTurn(sm.facing), dark = this.game.darkness();
         const look = { lit: sm.lit, working: sm.lit && sm.jobs.length > 0 };
         const [bl, bt, br, bb] = smelterBounds(turn, zoom);
         const box: [number, number, number, number] = [ent.sx + bl * zoom, ent.sy + bt * zoom, (br - bl) * zoom, (bb - bt) * zoom];
@@ -7503,21 +7513,15 @@ export class Renderer {
         if (look.lit && dark > 0.02) drawSmelterNight(ctx, ent.sx, ent.sy, zoom, turn, look, dark, this.anim, this.nightOver(ent.sx, ent.sy - 30 * zoom, dark));
         const [hl, ht, hr, hb] = smelterHit(turn, zoom);
         this.smelterHits.push({ ...this.shaped(), x: ent.x, y: ent.y, left: ent.sx + hl * zoom, top: ent.sy + ht * zoom, w: (hr - hl) * zoom, h: (hb - ht) * zoom, smelter: sm.id });
-        if (!behind) this.standsOn(...smelterCentre(sm), ent.sy, this.footReach(SMELTER_W, SMELTER_H, hl, hr), zoom);
+        if (!behind) this.standsOn(...smelterCentre(sm), ent.sy, this.footReach(...smelterSize(sm.facing), hl, hr), zoom);
         if (shines(ent.rare)) drawShine(ctx, ent.sx, ent.sy, zoom, ent.rare as number, sm.id, this.anim, (hr - hl) * zoom, (hb - ht) * 0.75 * zoom);
         continue;
       }
       if (ent.kind === 'anvil' && ent.anvil) {
         // An anvil takes the colour of the metal it was cast from, on a block with a rune cut in it (`forge.ts`), lit over the night after dark.
-        const an = ent.anvil, turn = this.camera.rotation, dark = this.game.darkness();
-        let [face, shade] = anvilTone(an.metal) ?? ['', ''];
-        if (!face) {
-          // A metal with no colour of its own drawn: its ore's.
-          const rock = ROCK_VARIANTS.find((r) => r.yields === `${an.metal}_ore`);
-          const c = rock ? rock.color : ([150, 150, 156] as const);
-          face = `rgb(${c[0]},${c[1]},${c[2]})`;
-          shade = `rgb(${Math.round(c[0] * 0.68)},${Math.round(c[1] * 0.68)},${Math.round(c[2] * 0.68)})`;
-        }
+        // Turned the way it was set down (`stationTurn`).
+        const an = ent.anvil, turn = this.camera.rotation + stationTurn(an.facing), dark = this.game.darkness();
+        const [face, shade] = anvilColours(an.metal);
         const variant = anvilVariant(an.x, an.y, an.sx, an.sy);
         const [bl, bt, br, bb] = anvilBounds(face, shade, variant, turn, zoom);
         const box: [number, number, number, number] = [ent.sx + bl * zoom, ent.sy + bt * zoom, (br - bl) * zoom, (bb - bt) * zoom];
@@ -7715,7 +7719,7 @@ export class Renderer {
       }
       if (ent.kind === 'campfire' && ent.fire) {
         const fire = ent.fire;
-        this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => drawCampfire(g, px, py, zoom, fire.lit, fire.fuel, this.anim, this.camera.rotation, fire.ash ?? 0));
+        this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => drawCampfire(g, px, py, zoom, fire.lit, fire.fuel, this.anim, this.camera.rotation + stationTurn(fire.facing), fire.ash ?? 0));
         // Its fire after dark, added as light in its own place (`kit/campfire.ts`), as a smelter's is.
         const dark = fire.lit ? this.game.darkness() : 0;
         if (dark > 0.02) drawCampfireNight(ctx, ent.sx, ent.sy, zoom, fire.fuel, dark, this.anim, this.nightOver(ent.sx, ent.sy - 12 * zoom, dark));
@@ -8515,11 +8519,31 @@ export class Renderer {
      * top, a way down is the hole it would go down through.
      */
     const below = this.cellarFrame && this.game.buildings.cellarDone(ghost.x, ghost.y)
-      && (ghost.kind === 'furniture' || ghost.level === 0);
+      && (ghost.kind === 'furniture' || (ghost.kind === 'stairs' && ghost.level === 0));
     if (below !== this.inCellarPass) return;
     ctx.save();
     ctx.globalAlpha = 0.6;
-    if (ghost.kind === 'furniture') {
+    if (ghost.kind === 'station') {
+      // A station as itself, cold, turned the way it would be set down (`stations.ts`).
+      const [wx, wy] = stationCentreAt(ghost.station, ghost.x, ghost.y, ghost.sx, ghost.sy, ghost.facing);
+      const px = cam.worldToScreenX(wx, wy);
+      const py = cam.worldToScreenY(wx, wy, this.standTop(wx, wy));
+      const turn = cam.rotation + stationTurn(ghost.facing);
+      if (ghost.station === 'campfire') drawCampfire(ctx, px, py, zoom, false, 0, this.anim, turn, 0);
+      else if (ghost.station === 'smelter') drawSmelter(ctx, px, py, zoom, turn, { lit: false, working: false }, 0, this.anim, false);
+      else if (ghost.station === 'kiln') drawKiln(ctx, px, py, zoom, turn, { lit: false, firing: false }, 0, this.anim, false);
+      else {
+        const [face, shade] = anvilColours(ghost.metal ?? 'copper');
+        drawAnvil(ctx, px, py, zoom, face, shade, turn, anvilVariant(ghost.x, ghost.y, ghost.sx, ghost.sy), 0, this.anim, false);
+      }
+      if (!ghost.ok) {
+        const [w, h] = stationFootprint(ghost.station, ghost.facing);
+        ctx.fillStyle = 'rgba(214, 58, 42, 0.5)';
+        ctx.beginPath();
+        ctx.ellipse(px, py, 9 * Math.max(w, h) * zoom, 4.5 * Math.max(w, h) * zoom, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (ghost.kind === 'furniture') {
       const [w, h] = furnitureFootprint(ghost.piece, ghost.facing);
       const wx = ghost.x + (ghost.sx + w / 2) / SUBTILES;
       const wy = ghost.y + (ghost.sy + h / 2) / SUBTILES;

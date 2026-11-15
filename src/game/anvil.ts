@@ -4,6 +4,7 @@ import { swingEnchant, type Enchant } from './enchant';
 import type { ActionDef, Target } from './actions';
 import { SUBTILES } from './crates';
 import type { Game } from './game';
+import type { Side } from './building';
 import { madeBy } from './signing';
 import { pressStamp } from './relicuse';
 import { itemDef, makersMark, rareInputSaid, rarityOf, rarityTally, rollRarityFrom, RARITY_ODDS, RARITY_WORD } from './items';
@@ -36,6 +37,8 @@ export interface PlacedAnvil {
   /** Top-left subtile of its two by two block. */
   sx: number;
   sy: number;
+  /** Which way its horn points, as it was set down; south when unsaid. */
+  facing?: Side;
   /** Metal it was cast from. */
   metal: string;
   ql: number;
@@ -140,7 +143,7 @@ export const ANVIL_ACTIONS: ActionDef[] = [
       if (t.kind !== 'tile' || t.sx === undefined || t.sy === undefined) return;
       const item = t.itemUid !== undefined ? g.inventory.get(t.itemUid) : g.inventory.find('anvil');
       if (!item || item.id !== 'anvil' || !g.inventory.remove(item.uid, 1)) return;
-      const a = g.addAnvil(t.x, t.y, t.sx, t.sy, item.extra ?? 'copper', item.ql);
+      const a = g.addAnvil(t.x, t.y, t.sx, t.sy, item.extra ?? 'copper', item.ql, t.facing);
       // An anvil that was rare on your shoulder is rare on the ground.
       if (item.rare) a.rare = item.rare;
       // Its enchantment and its wear go down with it, and come up again with it (`enchanting.ts`).

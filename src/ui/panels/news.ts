@@ -139,7 +139,8 @@ import { billWords, CHARGE_PER_QL, CHARGE_QL, chargesFor, countOf, DRINK_LITRES,
 import { RUNE_GATE, RUNE_GATE_FADE, RUNE_GATE_GLOW_REACH, RUNE_GATE_REACH, RUNE_GATE_RISE, runeGateName } from '../../game/runegate';
 import { COIN_METALS, METALS, coinPurity, INGOT_LUMPS, INGOT_WEIGHT, MOULD_BY_ID, MOULD_SKILL, MOULDS, SMITH_TOOL } from '../../game/metal';
 import { meltFits, meltLumps, meltQl } from '../../game/melt';
-import { furnaceMadeSaid, meltingSaid } from '../../game/smelter';
+import { furnaceMadeSaid, meltingSaid, SMELTER_H, SMELTER_W } from '../../game/smelter';
+import { STATION_KINDS, STATIONS, stationDecayAt } from '../../game/stations';
 import { TOOL_JOBS } from '../../game/jobtools';
 import { CLIP_OF_TOOL, clipOfJob } from '../../sculpt/anim/routes';
 import { ORDER_LIFE } from '../../game/orders';
@@ -406,6 +407,19 @@ const WAS_DYE = { boil: 3, garment: 1, banner: 2, sail: 3, ship: 5, wall: 1, flo
 const SCRUBS_LATER = new Set(['scrub_wall_paint', 'scrub_floor_paint']);
 
 export const NEWS: News[] = [
+  // The stations set down as furniture is, and decaying off a settlement (`stations.ts`).
+  {
+    n: 622,
+    day: '2026-11-15',
+    lines: () => [
+      `Changed: ${listed(STATION_KINDS.map((k) => STATIONS[k].name.toLowerCase()))}: Set furniture down (ground menu); ghost follows the cursor; Q/E rotate; click to place; red: refused (was: Build campfire here, Set the smelter, kiln or anvil down here).`,
+      `New: smelter facing east or west: ${SMELTER_H} by ${SMELTER_W} spots (was: ${SMELTER_W} by ${SMELTER_H} only).`,
+      'Changed: campfire: refused where anything stands (was: a crate or a fire only); refused on water.',
+      'Changed: smelter: refused off a settlement of yours by the island too.',
+      `New: station decay off any settlement, damage an hour at QL 50: ${listed(STATION_KINDS.map((k) => `${STATIONS[k].name.toLowerCase()} ${stationDecayAt(k, 50).toFixed(2)}`))}; under a roof ×${INDOORS_DECAY}; gone at ${DAMAGE_MAX}. On a settlement: none.`,
+      'New: station menu, hover and Examine: damage, decay an hour, time left.',
+    ],
+  },
   // Iron and rock outcroppings (`outcrops.ts`).
   {
     n: 624,

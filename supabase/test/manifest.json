@@ -3267,5 +3267,11 @@
       "NAMEICONS_STRICT": "1"
     },
     "why": "\"Create runecut trade and class icons to display next to player names in chat and in game.\" Every trade and class has an icon of its own, trades on a round stone and classes on a shield, edged in the stones' ink. On an island of its own: the roster's columns carry each player's trade and class to an islander, and every line of talk from before you came says who said it (`rpc_chat`'s `by`). Then, in Chrome, the event window's talk, the Social window and the name plates over people's heads show each player's trade and class, titled, none for a player with neither; a trade changed on the island changes the lines already drawn; Settings, Name icons, takes them all away and puts them back."
+  },
+  {
+    "file": "supabase/test/stations.ts",
+    "title": "A campfire, a smelter, a kiln and an anvil set down as furniture is, and decaying off a settlement",
+    "shard": 5,
+    "why": "Set down from the furniture placement: a smelter's block turns with its facing on both sides and stands where the browser anchored it; a campfire, a kiln and an anvil keep the way they face; refused where anything stands, a smelter off a settlement of yours, in the browser's words. Off a settlement a station takes its item's damage an hour (a campfire its shafts'), the same number on both sides, charged by the world's round and gone at a hundred; on a settlement none; picked up, its damage goes into the pack."
   }
 ]
