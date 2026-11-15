@@ -26,6 +26,11 @@ import { bridgeLevels, spanTiles } from '../../src/game/bridges';
 import { Game } from '../../src/game/game';
 import { TileType } from '../../src/world/tiles';
 import { psql, check, finish } from './harness';
+import { SKILL_GATES } from '../../src/game/skillgates';
+
+/** The level that opens every gate of a kind in a skill (`skillgates.ts`): what this test's builder works at. */
+const gatesOpen = (kind: string, skill: string): number =>
+  Math.max(1, ...SKILL_GATES.filter((g) => g.kind === kind && g.skill === skill).map((g) => g.level));
 
 /** Storey 4 and storey 5, as both sides count storeys: the ground is nought. */
 const FOUR = 3;
@@ -65,6 +70,8 @@ const deckOf = (c: Case): Array<[number, number]> => spanTiles(AX, c.y, c.bx, c.
 const said = new Map<string, string>();
 for (const c of CASES) {
   const g = Game.create(4243);
+  g.skills.values.set('carpentry', gatesOpen('bridge', 'carpentry'));
+  g.skills.values.set('masonry', gatesOpen('bridge', 'masonry'));
   for (let y = Y0; y <= Y1 + 1; y++) for (let x = X0; x <= X1 + 1; x++) g.world.setHeight(x, y, BASE);
   for (let y = Y0; y <= Y1; y++) for (let x = X0; x <= X1; x++) g.world.setTile(x, y, TileType.Grass, 0);
   for (const [cx, cy] of [[c.bx, c.y], [c.bx + 1, c.y], [c.bx, c.y + 1], [c.bx + 1, c.y + 1]]) g.world.setHeight(cx, cy, BASE + c.raiseB);
@@ -124,6 +131,8 @@ begin
     select w, l, ${x}, ${c.y}, v_id, 'plank', 'floor', '{}', '{}' from unnest(array[${floors!.join(', ')}]) l;`).join('')}
   update player set x = ${AX + 0.5}, y = ${c.y + 0.5}, level = ${FOUR}, body_at = now(), act = null, act_queue = '[]'::jsonb
     where world_id = w and uid = u;
+  insert into skill (world_id, uid, id, value) values (w, u, 'carpentry', ${gatesOpen('bridge', 'carpentry')}), (w, u, 'masonry', ${gatesOpen('bridge', 'masonry')})
+    on conflict (world_id, uid, id) do update set value = greatest(skill.value, excluded.value);
   insert into said values ('island:${c.y}:why', coalesce(last_refusal(w, u, 'plan_bridge', ${q(targetOf(c))}), 'ALLOWED'));
   perform perform_last(w, u, 'plan_bridge', ${q(targetOf(c))});
   select id into v_b from bridge where world_id = w and ay = ${c.y};

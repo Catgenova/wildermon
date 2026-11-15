@@ -5,11 +5,12 @@ import {
 } from '../../game/barter';
 import { occupantOf } from '../../game/creaturecrate';
 import { readsTrait } from '../../game/husbandry';
-import { itemName, type Item } from '../../game/items';
+import { type Item } from '../../game/items';
 import { purse } from '../../game/money';
 import { makeDropZone } from '../dragdrop';
 import type { UIWindow } from '../windows';
 import { kitBody, meaning } from '../kit';
+import { seenName, type Viewer } from '../../game/skillgates';
 
 /**
  * The Trade window: two columns, what you give and what they give, each a
@@ -185,11 +186,11 @@ export class BarterPanel {
       meaning(row, t.has < t.count ? 'bad' : null);
       const name = document.createElement('span');
       name.className = 'barter-name';
-      name.textContent = `${t.count > 1 ? `${t.count} × ` : ''}${thingName(t)}`;
+      name.textContent = `${t.count > 1 ? `${t.count} × ` : ''}${thingName(t, this.game)}`;
       name.title = t.has < t.count ? 'Not enough in pack: barter refused while listed.' : `QL ${t.ql.toFixed(1)}`;
       row.append(name);
       if (mine) {
-        row.append(this.button('×', `Remove ${thingName(t).toLowerCase()}`,
+        row.append(this.button('×', `Remove ${thingName(t, this.game).toLowerCase()}`,
           () => void this.send(b, side.things.filter((x) => x.id !== t.id).map((x) => ({ id: x.id, count: x.count })), side.coins)));
       }
       list.append(row);
@@ -232,7 +233,7 @@ export class BarterPanel {
       const o = document.createElement('option');
       o.value = String(it.uid);
       const who = it.occupant ? undefined : occupantOf(this.game, it);
-      o.textContent = it.count > 1 ? `${itemName(it)} (${it.count})` : who ? `${itemName(it)} (${who})` : itemName(it);
+      o.textContent = it.count > 1 ? `${seenName(it, this.game)} (${it.count})` : who ? `${seenName(it, this.game)} (${who})` : seenName(it, this.game);
       sel.append(o);
     }
     sel.value = String(this.pick);
@@ -334,5 +335,5 @@ export class BarterPanel {
 const keyOf = (b: Barter | null): string => (b ? `${b.n}:${b.state}:${b.rev}:${b.mine.ok}:${b.theirs.ok}` : '');
 
 /** A thing on a side, named as the pack names it. */
-const thingName = (t: BarterThing): string =>
-  itemName({ uid: 0, id: t.def, extra: t.extra ?? undefined, ql: t.ql, count: t.count, dmg: t.dmg, occupant: t.beast?.name } as Item);
+const thingName = (t: BarterThing, v: Viewer): string =>
+  seenName({ uid: 0, id: t.def, extra: t.extra ?? undefined, ql: t.ql, count: t.count, dmg: t.dmg, occupant: t.beast?.name } as Item, v);

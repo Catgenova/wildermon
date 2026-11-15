@@ -26,6 +26,10 @@ begin
 
   if p_action = 'smelt_ore' then
     if not found or (metal_by_ore(v_it.def)).id is null then return 'Ore only.'; end if;
+    -- Its metal's gate (kind `smelt`, off the pouring table): "Tin smelting: needs smelting 10; have 2.3."
+    if kind_gate_refusal(p_world, p_uid, 'smelt', (metal_by_ore(v_it.def)).id) is not null then
+      return kind_gate_refusal(p_world, p_uid, 'smelt', (metal_by_ore(v_it.def)).id);
+    end if;
     -- A charge is twenty kilograms of ore, which is `ore_per_lump` of them.
     if v_it.count < ore_per_lump() then
       return 'Need ' || ore_per_lump()::int || ' ore; have ' || v_it.count || '.';
@@ -77,6 +81,8 @@ begin
     if need_tool(p_world, p_uid, smith_tool()) is not null then return need_tool(p_world, p_uid, smith_tool()); end if;
     v_metal := metal_by_bar(v_it.def);
     if v_it.id is null or v_metal.id is null then return 'Need metal.'; end if;
+    -- Its metal's pouring gate (`craftgates.ts`).
+    if metal_gate_refusal(p_world, p_uid, v_metal.id) is not null then return metal_gate_refusal(p_world, p_uid, v_metal.id); end if;
     v_need := mould_lumps(d.id, v_metal.id);
     -- An ingot counts as its lumps (a Smith's Ingots).
     if v_it.count * (case when v_it.def = v_metal.lump then 1 else ingot_lumps() end) < v_need then
@@ -92,6 +98,7 @@ begin
     if need_tool(p_world, p_uid, smith_tool()) is not null then return need_tool(p_world, p_uid, smith_tool()); end if;
     v_metal := metal_by_bar(v_it.def);
     if not found or v_metal.id is null then return 'Choose the metal to pour.'; end if;
+    if metal_gate_refusal(p_world, p_uid, v_metal.id) is not null then return metal_gate_refusal(p_world, p_uid, v_metal.id); end if;
     v_need := mould_lumps('anvil_mould', v_metal.id);
     if v_it.count * (case when v_it.def = v_metal.lump then 1 else ingot_lumps() end) < v_need then
       return 'Need ' || v_need || ' lumps of ' || lower(v_metal.name) || '.';

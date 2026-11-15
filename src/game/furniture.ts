@@ -6,6 +6,7 @@ import { CROP_BY_SEED } from './farming';
 import type { Game } from './game';
 import { describeFrom, describeWith, isWorked, ITEM_DEFS, itemDef, itemName, markOf, rarityOf, roomFor, storedLine, type Item, type Mark } from './items';
 import { fill, heatSaid } from './words';
+import { gateOf, nameGates } from './skillgates';
 import { world } from './pace';
 import { matOf } from './materials';
 import { climberRule, roseSays, type Climber } from './roses';
@@ -803,6 +804,10 @@ export const FURNITURE: FurnitureDef[] = [
 ];
 
 export const FURNITURE_BY_ID = new Map(FURNITURE.map((f) => [f.id, f]));
+// The driving and sailing gates say a wagon or a boat by its name (`nameGates`); every boat has one.
+nameGates('vehicle', (id) => FURNITURE_BY_ID.get(id)?.name);
+nameGates('boat', (id) => FURNITURE_BY_ID.get(id)?.name);
+for (const f of FURNITURE) if (f.boat && !gateOf('boat', f.id)) throw new Error(`${f.id}: a boat with no sailing gate`);
 /** Why a piece will not be lifted, asked after its padlock: rules that live elsewhere put theirs here (a boat tied up: `fitting.ts`). */
 export const LIFT_REFUSALS: Array<(g: Game, f: PlacedFurniture) => string | null> = [];
 /** Whether a piece is a wildermon bed, and the stage it is sized for (`FurnitureDef.den`). */

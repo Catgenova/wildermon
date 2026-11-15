@@ -164,6 +164,8 @@ const at = (k: string): string => isle.get(k) ?? '(not said)';
 
 /* ---- the browser, on the same ground ------------------------------------------------------------ */
 const game = Game.create(4252);
+// The island's player's farming (above): sowing is gated by the crop (`CROP_GATE`).
+game.skills.values.set('farming', 50);
 for (const c of [...game.creatures.list.values()]) game.creatures.remove(c.id);
 game.creatures.fromIsland = true;
 const w = game.world;

@@ -68,6 +68,10 @@ import {
   type AqueductLine, type Channel,
 } from '../../src/world/aqueducts';
 import { psql } from './harness';
+import { gateOf } from '../../src/game/skillgates';
+
+/** An aqueduct's gate, met by whoever lays one here. */
+const AQUEDUCT_GATE = gateOf('bridge', 'aqueduct')!.level;
 
 let bad = 0;
 const say = (ok: boolean, line: string): void => {
@@ -147,6 +151,9 @@ const ISLAND_SCENE = `
   perform land_set_tile(w, x, y, 0) from generate_series(0, 63) x, generate_series(0, 63) y where land_tile(w, x, y) in (16, 17);
   insert into foundation (world_id, id, x, y, top, needed, total, pool) values ${slabRows.join(', ')};
   update player set body_at = now(), x = 22.5, y = 40.5, level = 0, act = null, act_queue = '[]'::jsonb, aboard = null where world_id = w and uid in (me, them);
+  -- Masonry enough for an aqueduct's gate (skillgates.ts, kind bridge).
+  insert into skill (world_id, uid, id, value) select w, u, 'masonry', ${AQUEDUCT_GATE} from unnest(array[me, them]) u
+    on conflict (world_id, uid, id) do update set value = greatest(skill.value, excluded.value);
   delete from item where world_id = w and holder = 'player' and holder_uid = me;
   insert into item (world_id, def, holder, holder_uid, ql, count) values (w, 'trowel', 'player', me, 40, 1), (w, 'shovel', 'player', me, 40, 1);
 `;
@@ -154,6 +161,7 @@ const ISLAND_SCENE = `
 /** The same scene in a browser's game of its own, the same somebody near the foot with the same tools. */
 function browserScene(): Game {
   const g = Game.create(31337, 64);
+  g.skills.values.set('masonry', AQUEDUCT_GATE);
   const w = g.world;
   for (let y = 0; y <= 64; y++) for (let x = 0; x <= 64; x++) w.setHeight(x, y, height(x, y));
   for (let y = 0; y < 64; y++) for (let x = 0; x < 64; x++) if (w.getTile(x, y) === TileType.Tree || w.getTile(x, y) === TileType.Bush) w.setTile(x, y, TileType.Grass);

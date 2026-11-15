@@ -1,4 +1,5 @@
 export { TRY_LEARN, tryGain } from './learn';
+import { COBBLESTONES, gemGateRefusal, pavingGateRefusal } from './craftgates';
 import { lairFoundingRefusal } from './lairs';
 import { MINE_JOB, outcropSays, OUTCROP_BY_ID, OUTCROP_USES } from './outcrops';
 import { OUTCROP_ACTIONS } from './outcropAction';
@@ -9,9 +10,9 @@ import { FLOWER_ACTIONS, groundSays } from './wildflowers';
 import { MOTE_ACTIONS, WATER_MOTE, WATER_MOTES_EACH } from './motes';
 import { hasRunestones, RUNESTONES, STONE_GUARDED, stoneGap, stoneGroundRefusal, stoneJobTiles, TELESTONE, TELESTONE_ACTIONS, telestoneSays } from './runestones';
 import { LAVA_ACTIONS, LAVA_GUARDED, lavaGroundRefusal } from './lava';
-import { DAILY_RESET, isSeam, metres } from '../world/tiles';
+import { DAILY_RESET, isSeam, metres, rockDef } from '../world/tiles';
 import type { World } from '../world/world';
-import { bedrockAt, oreAt } from '../world/ore';
+import { bedrockAt } from '../world/ore';
 import { BUILD_ACTIONS } from './buildActions';
 import { CELLAR_ACTIONS, cellarFloorSaid, dropRefusal } from './cellar';
 import { FRAME_ACTIONS, frameSays } from './frameActions';
@@ -106,6 +107,7 @@ import { capital, listed } from './words';
 import { pct, pickedSaid, qlTag, searchOdds, searchPasses, tagged, taggedWith } from './yields';
 import { fruitRefusal, fruitSeason, fruitingSays, inSeason } from './fruiting';
 import { RECIPE_ACTIONS } from './recipes';
+import { itemGateRefusal, kindGateRefusal, rockGateRefusal, seenDefName, seenName, seenVein, skillGateRefusal, sproutGate, treeGate, unidentified, veinTip } from './skillgates';
 import { BRUSH_TOOL, lacksTool, MORTAR_TOOL, REAP_TOOL, TOOL_JOBS } from './jobtools';
 
 /**
@@ -427,8 +429,6 @@ export function treeOutlook(age: TreeAge, treesAt: number): string {
   return out;
 }
 
-/** Forestry it takes to graft: a beginner's graft is a sprout thrown away. */
-export const GRAFT_SKILL = 50;
 /** A sprout of one of the three that bear, which is what a graft is made from. */
 export const fruitSprout = (it: { id: string; extra?: string }): boolean =>
   it.id === 'sprout' && !!TREE_DEFS.find((d) => d.name === it.extra)?.fruit;
@@ -626,7 +626,7 @@ function lookOver(g: Game, job: 'forage' | 'botanize', skill: string, all: Array
     const odds = g.perk(`rare:${job}`, 0);
     const rare = odds > 0 ? rollRarity(() => g.rand(), odds) : 0;
     const item = g.gather(id, { ql: g.productQl(skill), rare });
-    found.push(`${rare ? `${RARITIES[rare].name} ` : ''}${itemDef(id).name.toLowerCase()} (QL ${item.ql.toFixed(1)})`);
+    found.push(`${rare ? `${RARITIES[rare].name} ` : ''}${seenDefName(id, g).toLowerCase()} (QL ${item.ql.toFixed(1)})`);
     if (rare) {
       g.note(RARITIES[rare].name);
       g.logMsg(RARITY_WORD[rare], 'skill');
@@ -689,6 +689,36 @@ export const prospectReach = (g: Game): number =>
 export const mineDepth = (g: Game): number => g.perk('depth:mine', MINE_DEPTH);
 /** The mining an ore wants of this body before it can be worked: a Miner's Ore Sense wants less (`ore:below`). */
 export const oreNeeds = (g: Game, level: number): number => Math.max(0, level - g.perk('ore:below', 0));
+/**
+ * A bare face's mining gate for you, or null (`skillgates.ts`): a seam's by its mining, less a Miner's Ore Sense
+ * (`oreNeeds`); a plain stone's (rock, sandstone, slate, marble) by its quarrying. The island's `face_gate_refusal`.
+ */
+export const faceGateRefusal = (g: Game, x: number, y: number): string | null => {
+  if (g.world.getTile(x, y) !== TileType.Rock) return null;
+  return rockGateRefusal(bedrockAt(g.world, x, y), g, g.perk('ore:below', 0));
+};
+/** A tile's name as you see it: a bare vein is always named (`seenVein`, exposed). */
+export const tileSeen = (g: Game, x: number, y: number): string =>
+  (g.world.getTile(x, y) === TileType.Rock ? seenVein(rockDef(g.world.rockFace(x, y)), g, true) : g.world.tileName(x, y));
+/** A tree's felling gate for you (`skillgates.ts`), or null: none, met, or a tree with no logs in it. The island's `tree_gate_refusal`. */
+export const treeGateRefusal = (g: Game, data: number): string | null => {
+  const gate = treeGate(data);
+  return gate ? skillGateRefusal(gate.name, gate.skill, g.skills.get(gate.skill), gate.level) : null;
+};
+/** Picking a tree tile's sprouts: its species' sprout gate for you, or null. The island's `sprout_gate_refusal`. */
+export const sproutGateRefusal = (g: Game, data: number): string | null => {
+  const gate = sproutGate(data);
+  return gate ? skillGateRefusal(gate.name, gate.skill, g.skills.get(gate.skill), gate.level) : null;
+};
+/**
+ * The sprout a Plant or a Graft puts in: the one chosen off the menu, or else the first to hand your forestry may
+ * plant, or else the first (`ok` for which ones count). The island's `perform_ground` takes the same one.
+ */
+export const sproutToHand = (g: Game, asked: number | undefined, ok: (it: Item) => boolean = () => true): Item | undefined => {
+  if (asked !== undefined) return g.inventory.get(asked);
+  const all = g.inventory.items.filter((it) => it.id === 'sprout' && !it.locked && ok(it));
+  return all.find((it) => !itemGateRefusal(it, g)) ?? all[0];
+};
 
 /**
  * A Miner's Pan: how long a go takes. What it brings up is `PAN_ORES` (`worksites.ts`).
@@ -996,7 +1026,7 @@ export const ACTIONS: ActionDef[] = [
       const type = w.getTile(t.x, t.y);
       const c = w.corners(t.x, t.y, [0, 0, 0, 0]);
       const avg = (c[0] + c[1] + c[2] + c[3]) / 4;
-      let text = `${w.tileName(t.x, t.y)} at (${t.x}, ${t.y}).`;
+      let text = `${tileSeen(g, t.x, t.y)} at (${t.x}, ${t.y}).`;
       if (type === TileType.Tree) {
         const data = w.getData(t.x, t.y);
         const age = treeAge(data);
@@ -1619,8 +1649,9 @@ export const ACTIONS: ActionDef[] = [
       const under = cornerUnderBuilding(g, t.cx, t.cy);
       if (under) return under;
       if (g.world.getHeight(t.cx, t.cy) < -mineDepth(g)) return 'Water too deep.';
-      const ore = oreAt(g.world, t.x, t.y);
-      if (ore && g.skills.get('mining') < oreNeeds(g, ore.level)) return `${ore.name}: needs mining ${oreNeeds(g, ore.level)}; have ${g.skills.get('mining').toFixed(1)}.`;
+      // A bare face's gate: its seam's, less Ore Sense, or its plain stone's (`skillgates.ts`; the island's `terrain_refusal`).
+      const gated = faceGateRefusal(g, t.x, t.y);
+      if (gated) return gated;
       return null;
     },
     perform: (t, g) => {
@@ -1677,8 +1708,9 @@ export const ACTIONS: ActionDef[] = [
       const under = cornerUnderBuilding(g, t.cx, t.cy);
       if (under) return under;
       if (g.world.getHeight(t.cx, t.cy) < -mineDepth(g)) return 'Water too deep.';
-      const ore = oreAt(g.world, t.x, t.y);
-      if (ore && g.skills.get('mining') < oreNeeds(g, ore.level)) return `${ore.name}: needs mining ${oreNeeds(g, ore.level)}; have ${g.skills.get('mining').toFixed(1)}.`;
+      // A bare face's gate: its seam's, less Ore Sense, or its plain stone's (`skillgates.ts`; the island's `terrain_refusal`).
+      const gated = faceGateRefusal(g, t.x, t.y);
+      if (gated) return gated;
       return levelStop(g, t.cx, t.cy, -1);
     },
     perform: (t, g) => {
@@ -1728,7 +1760,8 @@ export const ACTIONS: ActionDef[] = [
           // a coal seam yields plain `coal` and so fails the `_ore` test.
           if (!isSeam(rock)) continue;
           tiles.push(y * w.w + x);
-          found.push(rock.name.toLowerCase());
+          // A bare vein named; a buried one only at or over its prospecting gate, "unidentified metal" under it (`seenVein`).
+          found.push(seenVein(rock, g, w.getTile(x, y) === TileType.Rock).toLowerCase());
         }
       }
       g.markProspected(tiles);
@@ -1737,7 +1770,11 @@ export const ACTIONS: ActionDef[] = [
       // Sampling where you stand tells you what that particular rock holds.
       const here = bedrockAt(w, t.x, t.y);
       const buried = w.getTile(t.x, t.y) === TileType.Rock ? '' : ` Under ${Math.max(1, w.getDirt(t.x, t.y))} of ground.`;
-      if (isSeam(here)) {
+      // No level for a buried one under its gate: that would name it (`VEIN_UNREAD`).
+      const unread = veinTip(here, g, w.getTile(t.x, t.y) === TileType.Rock);
+      if (isSeam(here) && unread) {
+        g.logMsg(`Here: ${seenVein(here, g).toLowerCase()}. ${unread} Max QL ${here.maxQl}.${buried}`, 'event');
+      } else if (isSeam(here)) {
         const can = g.skills.get('mining') >= here.level;
         g.logMsg(
           `Here: ${here.name.toLowerCase()}. Needs mining ${here.level}${can ? ' (you have it)' : ''}. Max QL ${here.maxQl}.${buried}`,
@@ -1809,7 +1846,9 @@ export const ACTIONS: ActionDef[] = [
       if (type !== TileType.Tree && type !== TileType.Bush) return 'No tree or bush here.';
       // Not with a tree bench round it (`fitting.ts`; the island's `gather_refusal`).
       if (t.kind === 'tile' && g.furnitureOnTile(t.x, t.y).some((f) => f.kind === TREE_BENCH)) return FITTING_SAID.benchRound;
-      return g.inventory.has('hatchet') ? null : 'Need a hatchet.';
+      if (!g.inventory.has('hatchet')) return 'Need a hatchet.';
+      // A tree with logs in it fells only at its woodcutting (`skillgates.ts`; the island's `skill_gate_refusal`).
+      return type === TileType.Tree && t.kind === 'tile' ? treeGateRefusal(g, g.world.getData(t.x, t.y)) : null;
     },
     perform: (t, g) => {
       if (t.kind !== 'tile') return;
@@ -1909,7 +1948,9 @@ export const ACTIONS: ActionDef[] = [
       if (!age.alive) return 'Tree is dead.';
       // A stage with no timber in it has no sprouts either: a sapling, or one clipped to a shrub.
       if (age.logs === 0) return `${age.name}: no sprouts.`;
-      return g.isForaged(t.x, t.y, 'sprout') ? `Sprout already picked. ${pickedSaid(g, t.x, t.y, 'sprout')}` : null;
+      if (g.isForaged(t.x, t.y, 'sprout')) return `Sprout already picked. ${pickedSaid(g, t.x, t.y, 'sprout')}`;
+      // And only a species your forestry may pick (`skillgates.ts`).
+      return sproutGateRefusal(g, g.world.getData(t.x, t.y));
     },
     perform: (t, g) => {
       if (t.kind !== 'tile') return;
@@ -2075,6 +2116,10 @@ export const ACTIONS: ActionDef[] = [
       const chosen = asked !== undefined ? g.inventory.get(asked) : undefined;
       if (asked !== undefined && chosen?.id !== 'sprout') return 'Not a sprout.';
       if (!chosen && !g.inventory.has('sprout')) return 'Need a sprout.';
+      // And only a species your forestry may plant (`skillgates.ts`), named as you see it.
+      const sprout = sproutToHand(g, asked);
+      const gated = sprout ? itemGateRefusal(sprout, g) : null;
+      if (gated) return gated;
       // A grown tile of tree is something you walk round, not through, and the
       // sprout becomes that tile the moment it goes in. Planted underfoot it
       // closes over the person who planted it.
@@ -2087,7 +2132,7 @@ export const ACTIONS: ActionDef[] = [
     },
     perform: (t, g) => {
       if (t.kind !== 'tile') return;
-      const picked = t.itemUid !== undefined ? g.inventory.get(t.itemUid) : undefined;
+      const picked = sproutToHand(g, t.itemUid);
       const sprout = picked?.id === 'sprout' ? picked : g.inventory.find('sprout');
       if (!sprout) return;
       const species = Math.max(
@@ -2109,6 +2154,7 @@ export const ACTIONS: ActionDef[] = [
     label: 'Graft',
     labelFor: (t, g) => {
       const it = t.kind === 'tile' && t.itemUid !== undefined ? g.inventory.get(t.itemUid) : undefined;
+      if (it && unidentified(it, g)) return `Graft ${seenName(it, g).toLowerCase()}`;
       return it?.extra ? `Graft ${it.extra.toLowerCase()} sprout` : 'Graft';
     },
     verb: 'grafting',
@@ -2125,19 +2171,23 @@ export const ACTIONS: ActionDef[] = [
       const age = treeAge(data);
       if (!age.alive) return 'Tree is dead.';
       if (TREE_DEFS[treeSpecies(data)].fruit) return 'Already bears fruit.';
-      // Grafting is the forester's finest work, and a beginner's graft is a
-      // sprout thrown away.
-      if (g.skills.get('forestry') < GRAFT_SKILL) return `Needs forestry ${GRAFT_SKILL}.`;
+      // Its gate (`skillgates.ts`, kind `graft`): "Graft: needs forestry 50; have 12.0."
+      const graftGated = kindGateRefusal(g, 'graft', 'graft');
+      if (graftGated) return graftGated;
       const asked = t.itemUid !== undefined ? g.inventory.get(t.itemUid) : undefined;
       if (asked !== undefined && !(asked?.id === 'sprout' && fruitSprout(asked))) return 'Not a fruit sprout.';
       if (!asked && !g.inventory.items.some((it) => it.id === 'sprout' && fruitSprout(it))) return 'Need a fruit sprout.';
       if (!g.inventory.has('carving_knife')) return 'Need a carving knife.';
+      // And only a species your forestry may graft (`skillgates.ts`), named as you see it.
+      const graft = sproutToHand(g, t.itemUid, fruitSprout);
+      const gated = graft ? itemGateRefusal(graft, g) : null;
+      if (gated) return gated;
       // Nor under a building (`piers.ts`).
       return underBuilding(g, t.x, t.y);
     },
     perform: (t, g) => {
       if (t.kind !== 'tile') return;
-      const picked = t.itemUid !== undefined ? g.inventory.get(t.itemUid) : undefined;
+      const picked = sproutToHand(g, t.itemUid, fruitSprout);
       const sprout = picked?.id === 'sprout' && fruitSprout(picked) ? picked : g.inventory.items.find((it) => it.id === 'sprout' && fruitSprout(it));
       if (!sprout) return;
       const data = g.world.getData(t.x, t.y);
@@ -2182,7 +2232,7 @@ export const ACTIONS: ActionDef[] = [
       const data = g.world.getData(t.x, t.y);
       if (!treeAge(data).alive) return 'Tree is dead.';
       if (!coppiceable(data)) return `${TREE_DEFS[treeSpecies(data)].name}: too young to coppice.`;
-      return null;
+      return treeGateRefusal(g, data);
     },
     perform: (t, g) => {
       if (t.kind !== 'tile') return;
@@ -2391,8 +2441,9 @@ export const ACTIONS: ActionDef[] = [
     baseTime: 5,
     applies: (t, g) => tile(t, g) === TileType.PackedDirt,
     // The trowel first, as the island's general tool check comes before `terrain_refusal`.
+    // Then its paving gate (`craftgates.ts`), as the island's `terrain_refusal` asks it.
     check: (t, g) => lacksTool(g, MORTAR_TOOL) ?? ((t.kind === 'tile' && underBuilding(g, t.x, t.y)) || unpacked(t, g)
-      || (g.inventory.has('stone_brick') ? null : 'Need a stone brick.')),
+      || pavingGateRefusal(g, COBBLESTONES) || (g.inventory.has('stone_brick') ? null : 'Need a stone brick.')),
     perform: (t, g) => {
       if (t.kind !== 'tile') return;
       if (!g.inventory.consume('stone_brick')) return;
@@ -2421,7 +2472,8 @@ export const ACTIONS: ActionDef[] = [
       if (!g.inventory.has('trowel')) return 'Need a trowel.';
       const slab = t.itemUid !== undefined ? g.inventory.get(t.itemUid) : g.inventory.items.find((it) => SLAB_BY_ITEM.has(it.id));
       if (!slab || !SLAB_BY_ITEM.has(slab.id)) return 'Need a cut slab.';
-      return null;
+      // The slab's paving gate (`craftgates.ts`): "Marble slabs: needs paving 50; have 12.0."
+      return pavingGateRefusal(g, slab.id);
     },
     perform: (t, g) => {
       if (t.kind !== 'tile') return;
@@ -2796,6 +2848,9 @@ export const ACTIONS: ActionDef[] = [
       if (!item) return 'It is gone.';
       if (item.id !== 'gem' || !gemOf(item)) return 'Gems only.';
       if (!circletWithRoom(g.inventory.items)) return `Need a circlet with an empty setting (${CIRCLET_STONES} per circlet).`;
+      // The stone's gate, by its rarity (`craftgates.ts`, kind `gem`): "Diamond setting: needs jewellery 60; have 31.0."
+      const gemGated = gemGateRefusal(g, gemOf(item)!.id);
+      if (gemGated) return gemGated;
       if (!g.inventory.has('file')) return 'Need a file.';
       return null;
     },
@@ -3015,7 +3070,7 @@ export const ACTIONS: ActionDef[] = [
         return;
       }
       const counts = new Map<string, number>();
-      for (const it of got) counts.set(itemDef(it.id).name.toLowerCase(), (counts.get(itemDef(it.id).name.toLowerCase()) ?? 0) + it.count);
+      for (const it of got) counts.set(seenDefName(it.id, g, it.extra).toLowerCase(), (counts.get(seenDefName(it.id, g, it.extra).toLowerCase()) ?? 0) + it.count);
       const what = [...counts.entries()].map(([n, c]) => (c > 1 ? `${c} × ${n}` : n)).join(', ');
       g.logMsg(`Picked up: ${what}.`, 'event');
     },
@@ -3091,7 +3146,7 @@ export const ACTIONS: ActionDef[] = [
       // Down in a cellar, onto its floor, where things keep longest (`CELLAR_DECAY`).
       const floor = floorOf(g.player.level);
       g.dropOnGround(g.player.tileX, g.player.tileY, item, floor);
-      const what = item.count > 1 ? `${item.count} × ${itemName(item).toLowerCase()}` : itemName(item).toLowerCase();
+      const what = item.count > 1 ? `${item.count} × ${seenName(item, g).toLowerCase()}` : seenName(item, g).toLowerCase();
       g.logMsg(`Dropped: ${what}, on the ${floor < 0 ? 'cellar floor' : 'ground'}.`, 'event');
     },
   },
@@ -3108,7 +3163,7 @@ export const ACTIONS: ActionDef[] = [
       const taken = g.takeFromGround(t.x, t.y, t.uid, t.down ? CELLAR_LEVEL : 0);
       if (!taken.length) return;
       for (const item of taken) g.inventory.addItem(item);
-      const names = taken.map((it) => (it.count > 1 ? `${it.count} × ${itemName(it).toLowerCase()}` : itemName(it).toLowerCase()));
+      const names = taken.map((it) => (it.count > 1 ? `${it.count} × ${seenName(it, g).toLowerCase()}` : seenName(it, g).toLowerCase()));
       g.logMsg(`Picked up: ${names.join(', ')}.`, 'event');
     },
   },

@@ -21,7 +21,7 @@ import {
 import { RECIPE_BY_ID } from '../../src/game/recipes';
 import { MOULD_BY_ID, RARE_METALS } from '../../src/game/metal';
 import { TileType } from '../../src/world/tiles';
-import { psql, check, finish } from './harness';
+import { check, finish, psql, workerHands, workerHandsJson } from './harness';
 
 const NEW: Array<[string, GatherKind]> = [['ulva', 'spin'], ['dowse', 'nail'], ['siffa', 'ribbon']];
 type Station = 'spindle' | 'anvil' | 'campfire' | null;
@@ -96,7 +96,8 @@ begin
   insert into hand select s, creature_spawn(w, s, 16.6, 16.6, 'active', now() - interval '60 days', u)
     from unnest(array[${SPECIES_IDS.map((id) => `'${id}'`).join(', ')}]) s;
   insert into said select 'ASK:' || h.species, coalesce(act_refusal(w, u, 'assign_deed', jsonb_build_object('kind', 'creature', 'id', h.id)), 'none') from hand h;
-  update creature set mode = 'deed', stance = 'passive', hunger = 1, skills = '{}'::jsonb, settled_at = now(), until = now(), leg_at = now(), leg_ends = now(),
+  -- At every recipe's level up to a first stage's (craftgates.ts): this is about the trade, not its gate.
+  update creature set mode = 'deed', stance = 'passive', hunger = 1, skills = '${workerHandsJson()}'::jsonb, settled_at = now(), until = now(), leg_at = now(), leg_ends = now(),
          from_x = to_x, from_y = to_y
    where world_id = w and id in (select id from hand);
   insert into said select 'LINE:' || h.species, deed_job_line(c2) from hand h join creature c2 on c2.world_id = w and c2.id = h.id;
@@ -152,7 +153,7 @@ const g0 = Game.create(4251);
 for (const id of SPECIES_IDS) {
   const c = g0.creatures.spawn(id, g0.player.x + 1, g0.player.y, 'active', g0.rand, g0.time - 3600 * 24 * 30);
   c.mode = 'deed';
-  c.skills = {};
+  c.skills = workerHands(); // At every recipe's level up to a first stage's (`craftgates.ts`): this is about the trade, not its gate.
   check(`a ${id} says what it will do in the island's words`, words(deedJobLine(c)) === words(at(`LINE:${id}`)), `${deedJobLine(c)} / ${at(`LINE:${id}`)}`);
 }
 const TOOLS = /needs an? |saw gets|chisel gets|with any bowl|in your settlement stores; needs/;
@@ -193,7 +194,7 @@ const worker = (g: Game, species: string): Creature => {
   c.mode = 'deed';
   c.stance = 'passive';
   c.hunger = 1;
-  c.skills = {};
+  c.skills = workerHands(); // At every recipe's level up to a first stage's (`craftgates.ts`): this is about the trade, not its gate.
   return c;
 };
 const run = (g: Game, secs: number): void => {

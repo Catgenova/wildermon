@@ -1,3 +1,4 @@
+import './craftgates';
 import { Springs, type SpringSave } from './springs';
 import type { LairSeen } from './lairs';
 import { CHAR_START, DAMAGE_MAX, PLACED_REACH, PROSPECT_MARK_TIME, QL_BARE, QL_LOW, QL_SPAN, QL_TOP, wearPerUse, wornShare } from './limits';
@@ -13,7 +14,7 @@ import { dyeChoice, dyeEnough, pickDyeAsks, sourceSays, type DyeSource } from '.
 import type { Hoard } from './treasure';
 import { packTreeData, TILE_DEFS, TileType, TREE_DEFS, TREE_AGES, TREE_ROOM_ONE, TREE_ROOM_TWO, TREE_SEED_BOTH, TREE_SEED_NONE, TREE_SEED_REACH, TREE_SEEDS, lastDawn, treeAge, treeSpecies, treeVariant, LAWN_AFTER, mownDays, mownToday, FLOWERS_PICKED, WEAR_FALL, WEAR_MOST, WEAR_TRAIL, trailGround, wears } from '../world/tiles';
 import { seasonAt, yearOf } from '../world/calendar';
-import { oreAt } from '../world/ore';
+import { bedrockAt } from '../world/ore';
 import { World } from '../world/world';
 import { ACTIONS, ACTION_BY_ID, SPOIL_ORDER, spoilFrom, TEACHES_NOTHING, TRY_LEARN, WEAR_PER_GO, type ActionDef, type Target } from './actions';
 import { needsText } from './buildActions';
@@ -86,7 +87,7 @@ import { BRIDGE_END_HERE, bridgeEndAt, bridgeEndRefusal, deckDown, hingeKey, hin
 import { CLEAR_OF_BUILDINGS, LIFT_PER_MASONRY, concreteFor, foundationBill, foundationDone, liftFor, masonryFor, pourIntoFoundation, soilSays, type Foundation } from './foundations';
 import { poolLevel } from '../world/springs';
 import { deckOver, floorNear, levelGround, pierDrop, pierGround, pierRefusal, pierSays, type PierGround } from './piers';
-import { metres } from '../world/tiles';
+import { isSeam, metres } from '../world/tiles';
 import { greenNow, mossyPiece } from './greening';
 import { WATER_PLANT_BY_ID, type WaterPlant, type WaterPlantKind } from '../world/waterplants';
 import { liveSettings, type Settings } from './settings';
@@ -100,6 +101,7 @@ import { jewelGain } from './gems';
 import { earnedBy, knackBonus, knackChance, knackLands, KNACK_CAP, TITLE_BY_ID } from './titles';
 import { TileIndex, Tally, cropKey, keyX, keyY, tileKey } from './tileindex';
 import { DARK_HIT, NIGHT_EYES_FROM, SOUL_PER_LEVEL, WORK_HAND, WORK_WIND, WORK_WIND_SPENT, HEAVY_SKILLS, WORK_BACK } from './learn';
+import { gateOf, seenVein } from './skillgates';
 import { DRIVING, DRIVING_LEARN, drivingPace, SAILING, SAILING_LEARN, sailingPace, vehicleQlPace } from './travel';
 import { isLayUp, LEAD_PACE, ROPE_WALK, ROPE_WALK_TIME, ROPEMAKING, ropePerLayUp, ropeTime } from './ropework';
 import { laySwirls, swirlLight, type MoteElement, type Swirl } from './motes';
@@ -8589,6 +8591,7 @@ export class Game {
     holding?: string,
     from?: { x: number; y: number },
     stocked?: (item: string) => boolean,
+    may?: (target: HodTarget) => boolean,
   ): HodJob | undefined {
     type Key = { held: boolean; d: number; behind: number; rank: number; level: number; dir: string; x: number; y: number; item: string };
     const before = (a: Key, b: Key): boolean => {
@@ -8605,6 +8608,8 @@ export class Game {
     let best: (Key & { target: HodTarget }) | undefined;
     const consider = (target: HodTarget, bill: Bill, x: number, y: number, level: number, dir: string): void => {
       if (!near(x, y, dir)) return;
+      // Only work its own levels open (`workerBuildOpen`): a hod carrier's gates.
+      if (may && !may(target)) return;
       const d = from ? (x - from.x) ** 2 + (y - from.y) ** 2 : 0;
       for (const [item, n] of Object.entries(bill.needed)) {
         if (n <= 0) continue;
@@ -8650,6 +8655,37 @@ export class Game {
     for (const foundation of this.foundations.values()) if (!foundationDone(foundation)) consider(foundation, foundation.x, foundation.y);
     const items = [...nearest].sort((a, b) => a[1] - b[1] || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)).map(([item]) => item);
     return { items, n: items.length };
+  }
+
+  /**
+   * A hod carrier's only work within reach being bridge spans over its level (`may`): the lowest such bridge's kind,
+   * then the nearest, and how many tiles (rings) from `from` it is; undefined where anything it may fit wants
+   * something, or no span is gated. Its idle reason, `gate` (decided, batch G). The island's `hod_span_gate`.
+   */
+  hodGatedSpan(
+    near: (x: number, y: number, dir?: string) => boolean,
+    from: { x: number; y: number },
+    may: (target: HodTarget) => boolean,
+  ): { kind: string; n: number } | undefined {
+    const wants = (bill: Bill): boolean => Object.values(bill.needed).some((n) => n > 0);
+    const open = (target: HodTarget, bill: Bill, x: number, y: number, dir?: string): boolean => near(x, y, dir) && wants(bill) && may(target);
+    for (const wall of this.buildings.walls.values()) if (!isDone(wall) && open({ kind: 'wall', wall }, wall, wall.x, wall.y, wall.dir)) return undefined;
+    for (const floor of this.buildings.floors.values()) if (!isDone(floor) && open({ kind: 'floor', floor }, floor, floor.x, floor.y)) return undefined;
+    for (const column of this.buildings.columns.values()) if (!isDone(column) && open({ kind: 'column', column }, column, column.x, column.y)) return undefined;
+    for (const foundation of this.foundations.values()) {
+      if (!foundationDone(foundation) && open({ kind: 'foundation', foundation }, foundation, foundation.x, foundation.y)) return undefined;
+    }
+    let best: { kind: string; n: number; level: number } | undefined;
+    for (const bridge of this.bridges.values()) {
+      const span = openSpan(bridge);
+      if (!span || !near(span.x, span.y) || !wants(span)) continue;
+      const target: HodTarget = { kind: 'span', bridge, span };
+      if (may(target)) return undefined;
+      const level = gateOf('bridge', bridge.kind)?.level ?? 0;
+      const n = Math.max(Math.abs(span.x - Math.floor(from.x)), Math.abs(span.y - Math.floor(from.y)));
+      if (!best || level < best.level || (level === best.level && (n < best.n || (n === best.n && bridge.kind < best.kind)))) best = { kind: bridge.kind, n, level };
+    }
+    return best && { kind: best.kind, n: best.n };
   }
 
   /**
@@ -8816,10 +8852,13 @@ export class Game {
     for (let ty = y - radius; ty <= y + radius; ty++) {
       for (let tx = x - radius; tx <= x + radius; tx++) {
         if (!this.world.inBounds(tx, ty)) continue;
-        const ore = oreAt(this.world, tx, ty);
-        if (!ore) continue;
+        // Every seam, wherever it lies, as Prospect reads it: bare, under soil, or below water.
+        const ore = bedrockAt(this.world, tx, ty);
+        if (!isSeam(ore)) continue;
         found.push(ty * this.world.w + tx);
-        names.add(ore.name.toLowerCase());
+        // A bare vein is always named; a buried one by your prospecting, not the finder's: "Unidentified metal" under
+        // its gate (`seenVein`).
+        names.add(seenVein(ore, this, this.world.getTile(tx, ty) === TileType.Rock).toLowerCase());
       }
     }
     if (!found.length) return;

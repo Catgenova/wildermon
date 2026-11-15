@@ -5,6 +5,8 @@ CREATE OR REPLACE FUNCTION public.tame_needs(c creature, OUT level double precis
  LANGUAGE sql
  STABLE
 AS $function$
-  select sd.tame_level + wild_stage_tame() * stage_of(c), sd.tame_chance * wild_stage_chance() ^ stage_of(c)
+  select coalesce((select g.level from skill_gate g where g.kind = 'tame' and g.id = sd.id), sd.tame_level)
+           + wild_stage_tame() * stage_of(c),
+         sd.tame_chance * wild_stage_chance() ^ stage_of(c)
     from species_def sd where sd.id = c.species
 $function$

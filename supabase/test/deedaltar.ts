@@ -26,7 +26,7 @@ import { Game } from '../../src/game/game';
 import { DEED_PLACE, ONE_ALTAR } from '../../src/game/furniture';
 import { DEED_ONLY, RECIPES, recipeReason, recipeStatus } from '../../src/game/recipes';
 import { TileType } from '../../src/world/tiles';
-import { psql, ok, bad, check } from './harness';
+import { bad, BUILD_HANDS, check, hands, handsSql, ok, psql } from './harness';
 
 const ALTAR = RECIPES.find((r) => r.id === 'make_altar');
 const flagged = RECIPES.filter((r) => r.deed).map((r) => r.id).sort();
@@ -48,6 +48,7 @@ begin
    */
   select id into w from world where name = 'Stonehaven';
   select p.uid into u from player p where p.world_id = w order by p.uid limit 1;
+  ${handsSql('w', 'u', BUILD_HANDS)};
   select p.uid into other from player p where p.world_id = w and p.uid <> u order by p.uid limit 1;
   delete from deed where world_id = w;
   -- Plain dry ground under everything asked about: the whole of it, sixteen a side.
@@ -158,6 +159,7 @@ check('and has its own one altar to have', say('NEXTDOORFULL') === ONE_ALTAR, sa
 /* ---- the browser --------------------------------------------------------- */
 if (ALTAR) {
   const game = Game.create(4242);
+  hands(game, BUILD_HANDS); // no skill gate (`craftgates.ts`) in the way of what this is about
   // Plain dry level ground wherever an altar is asked to stand.
   for (let y = 36; y <= 44; y++) for (let x = 34; x <= 50; x++) {
     game.world.setHeight(x, y, 4);

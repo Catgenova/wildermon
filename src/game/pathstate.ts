@@ -31,7 +31,7 @@ export interface PathState {
 export interface PathSite {
   x: number;
   y: number;
-  /** Trees within the reach counted. */
+  /** Trees within the reach counted: only those the player's woodcutting fells (`fellsSaid`). */
   trees: number;
   /** Tiles to the nearest water, the nearest bare rock. */
   water: number;

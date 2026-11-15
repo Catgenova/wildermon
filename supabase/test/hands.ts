@@ -27,6 +27,8 @@
 import { ACTION_BY_ID } from '../../src/game/actions';
 import { Game } from '../../src/game/game';
 import { orderBy } from '../../src/ui/sorting';
+/** Who reads the names: at 1 in every skill. */
+const ANYONE = { skills: { get: () => 1 } };
 import type { Item } from '../../src/game/items';
 import { psql, ok, bad, check } from './harness';
 
@@ -235,19 +237,19 @@ const it = (id: string, ql: number, count: number, dmg: number): Item =>
 const pile = [it('plank', 40, 3, 0), it('anvil', 90, 1, 12), it('nails', 10, 200, 0), it('plank', 70, 1, 4)];
 
 check('a store can be put in order by quality, best first',
-  orderBy(pile, 'ql').map((i) => i.ql).join(',') === '90,70,40,10', orderBy(pile, 'ql').map((i) => i.ql).join(','));
+  orderBy(pile, 'ql', ANYONE).map((i) => i.ql).join(',') === '90,70,40,10', orderBy(pile, 'ql', ANYONE).map((i) => i.ql).join(','));
 check('by how many there are',
-  orderBy(pile, 'count')[0].count === 200, String(orderBy(pile, 'count')[0].count));
+  orderBy(pile, 'count', ANYONE)[0].count === 200, String(orderBy(pile, 'count', ANYONE)[0].count));
 check('by what is most knocked about',
-  orderBy(pile, 'dmg')[0].dmg === 12, String(orderBy(pile, 'dmg')[0].dmg));
+  orderBy(pile, 'dmg', ANYONE)[0].dmg === 12, String(orderBy(pile, 'dmg', ANYONE)[0].dmg));
 /*
  * And ties fall back to the name rather than to wherever the row happened to
  * be, because a crate of two hundred identical planks that reshuffles itself
  * every time something else changes is unusable.
  */
 const twins = [it('plank', 40, 1, 0), it('anvil', 40, 1, 0), it('nails', 40, 1, 0)];
-const once = orderBy(twins, 'ql').map((i) => i.id).join(',');
-const twice = orderBy([...twins].reverse(), 'ql').map((i) => i.id).join(',');
+const once = orderBy(twins, 'ql', ANYONE).map((i) => i.id).join(',');
+const twice = orderBy([...twins].reverse(), 'ql', ANYONE).map((i) => i.id).join(',');
 check('and a tie is broken by name, so a full crate holds still',
   once === twice, `${once} either way round`);
 

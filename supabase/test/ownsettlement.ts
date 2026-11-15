@@ -131,6 +131,8 @@ const hodded = (wx: number, side: Side = 'n'): number => {
   c.mode = 'deed';
   c.job = 'hod' as never;
   c.hunger = 1;
+  // Its carpentry at a plank wall's gate (`craftgates.ts`): this is about whose work it is.
+  c.skills = { ...c.skills, carpentry: 10 };
   for (let i = 0; i < 600; i++) {
     g.time += 0.1;
     g.creatures.update(0.1, g);

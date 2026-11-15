@@ -53,19 +53,8 @@ begin
     if land_height(p_world, cx, cy) < -pk(p_world, p_uid, 'depth:mine', mine_depth()) then
       return 'Water too deep.';
     end if;
-    -- A seam only gives up its metal to somebody who knows how to take it.
-    if land_tile(p_world, tx, ty) = 4 then
-      r := bedrock_at(p_world, tx, ty);
-      mining := skill_of(p_world, p_uid, 'mining');
-      -- Less of it for a Miner's Ore Sense.
-      v_needs := greatest(0, r.level - pk(p_world, p_uid, 'ore:below', 0));
-      if r.ore and mining < v_needs then
-        -- `FM990.9` leaves "5." on a whole number, which reads as a typo in the
-        -- middle of a sentence. The browser prints the number as it is.
-        return r.name || ': needs mining ' || rtrim(rtrim(to_char(v_needs, 'FM990.99'), '0'), '.')
-          || '; have ' || to_char(mining, 'FM990.0') || '.';
-      end if;
-    end if;
+    -- A seam gives up its metal, and a plain face its stone, only at its gate (`skillgates.ts`), a seam's less Ore Sense.
+    if face_gate_refusal(p_world, p_uid, tx, ty) is not null then return face_gate_refusal(p_world, p_uid, tx, ty); end if;
     -- Cutting a face back stops at the level like everything else; working it
     -- for what is in it does not, since that leaves the face where it was.
     if p_action = 'chip_corner' then return level_stop(p_world, p_uid, cx, cy, -1); end if;
@@ -84,6 +73,8 @@ begin
     if here <> 2 then return 'Only packed earth can be broken up.'; end if;
   elsif p_action = 'pave_cobble' then
     if here <> 2 then return 'Pack the ground down before paving it.'; end if;
+    -- Its paving gate (`craftgates.ts`).
+    if paving_gate_refusal(p_world, p_uid, 'cobblestone') is not null then return paving_gate_refusal(p_world, p_uid, 'cobblestone'); end if;
     if pack_count(p_world, p_uid, 'stone_brick') < 1 then
       return 'Need a stone brick.';
     end if;

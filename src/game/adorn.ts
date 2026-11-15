@@ -38,6 +38,9 @@ import { lampTooFar, LAMP_CAST, LAMP_CAST_ALPHA, LAMP_STRENGTH } from './lamps';
 import type { LightSource } from './light';
 import { STATE_TAILS } from './pieceTails';
 import { capital, listed, listedOr } from './words';
+import { itemGateRefusal } from './skillgates';
+import { waterPlantGateRefusal } from './craftgates';
+import { WATER_PLANT_BY_ID } from '../world/waterplants';
 import { CROP_LIST, RIPE, type CropDef } from './farming';
 import { fieldClock } from './growth';
 import { ageGain, CELLAR_AGEING } from './ageing';
@@ -377,6 +380,15 @@ const KIND_OF: Record<string, (k: string) => boolean> = {
 };
 
 /**
+ * The herb seed a Sow at a herb spiral takes when none was chosen: the first to hand your farming may sow, or else the
+ * first. The island's `spiral_seed_to_hand`.
+ */
+export const spiralSeedToHand = (g: Game): Item | undefined => {
+  const all = g.inventory.items.filter((x) => SPIRAL_SEEDS.includes(x.id) && !x.locked);
+  return all.find((x) => !itemGateRefusal(x, g)) ?? all[0];
+};
+
+/**
  * Why a job at an adornment cannot be done now, or null: in the island's
  * order -- there, in reach, whose, and then the piece (`adorn_refusal`).
  */
@@ -387,7 +399,9 @@ export function adornRefusal(g: Game, id: string, t: Target, now = g.wallNow()):
   if (!g.besidePiece(f)) return lampTooFar(nameOf(f.kind));
   if (id === POND_LILY) {
     if (liliesIn(f) >= POND_LILIES) return ADORN_SAID.pondFull;
-    return g.inventory.items.some((it) => it.id === 'lily_root' && !it.locked) ? null : ADORN_SAID.noLily;
+    if (!g.inventory.items.some((it) => it.id === 'lily_root' && !it.locked)) return ADORN_SAID.noLily;
+    // The water lily's gate, as planting one in open water (`craftgates.ts`, kind `water_plant`).
+    return waterPlantGateRefusal(g, WATER_PLANT_BY_ID.get('lily')!);
   }
   if (id === PEA_SEASON) return d.pea === undefined ? adornSaid('samePea', { what: 'by season' }) : null;
   const pea = PEA_NAMES.find((c) => id === PEA_PICK(c));
@@ -397,9 +411,11 @@ export function adornRefusal(g: Game, id: string, t: Target, now = g.wallNow()):
     if (slot === undefined || !SLOTS.includes(slot)) return ADORN_SAID.noSlot;
     if (d.herbs?.[slot]) return adornSaid('slotSown', { n: slot + 1 });
     const uid = (t as { itemUid?: number }).itemUid;
-    const it = uid !== undefined ? g.inventory.get(uid) : g.inventory.items.find((x) => SPIRAL_SEEDS.includes(x.id) && !x.locked);
+    const it = uid !== undefined ? g.inventory.get(uid) : spiralSeedToHand(g);
     if (!it) return ADORN_SAID.noSeed;
-    return SPIRAL_SEEDS.includes(it.id) && !it.locked ? null : ADORN_SAID.notSeed;
+    if (!SPIRAL_SEEDS.includes(it.id) || it.locked) return ADORN_SAID.notSeed;
+    // And only a herb your farming may sow (`skillgates.ts`), the seed named as you see it.
+    return itemGateRefusal(it, g);
   }
   const slot = SLOTS.find((i) => id === SPIRAL_TAKE(i));
   if (slot !== undefined) {

@@ -3,7 +3,7 @@ import { putAway } from '../../game/putaway';
 import { isArrow } from '../../game/fight';
 import { CARRY_STOP, type Game } from '../../game/game';
 import { CARRY_CRAWL } from '../../game/player';
-import { itemDef, itemName, type Item, type ItemCategory, itemWeight, bagRoom, bagUnits, isBag, RARITIES } from '../../game/items';
+import { itemDef, type Item, type ItemCategory, itemWeight, bagRoom, bagUnits, isBag, RARITIES } from '../../game/items';
 import { damageCell, headRow, nameCell, qualityCell } from '../itemcells';
 import { occupantOf } from '../../game/creaturecrate';
 import type { ContextMenu, MenuItem } from '../contextmenu';
@@ -27,6 +27,7 @@ import { MOTE_ELEMENTS, STATUE_MOTES } from '../../game/motes';
 import { PATRONS, STATUETTE, statueName } from '../../game/patronlist';
 import { BACK, hasRunestones, RUNESTONES, stoneChoice, stoneDistance, TELESTONE, TELESTONE_SAID, telestoneRange, telestoneWait, timeLeftNote, TRAVEL } from '../../game/runestones';
 import { canImprove, improvable, improveCeiling } from '../../game/improve';
+import { seenName } from '../../game/skillgates';
 
 const CATEGORY_ORDER: Array<[ItemCategory, string]> = [
   ['tool', 'Tools'],
@@ -146,12 +147,12 @@ export class InventoryPanel {
   private matches(item: Item): boolean {
     if (!this.query) return true;
     const def = itemDef(item.id);
-    return `${itemName(item)} ${def.category} ${def.description ?? ''}`.toLowerCase().includes(this.query);
+    return `${seenName(item, this.game)} ${def.category} ${def.description ?? ''}`.toLowerCase().includes(this.query);
   }
 
   /** The order the list is asked for, which a store window now asks the same way. */
   private ordered(items: Item[]): Item[] {
-    return orderBy(items, this.sort);
+    return orderBy(items, this.sort, this.game);
   }
 
   render(): void {
@@ -235,7 +236,7 @@ export class InventoryPanel {
     const row = document.createElement('div');
     this.order.push(item.uid);
     row.className = 'inv-row rc-row' + (item.uid === this.selected ? ' selected' : '') + (this.picking.uids.has(item.uid) ? ' picked' : '');
-    const name = nameCell(item, { worn: this.game.isEquipped(item.uid), occupant: item.occupant ? undefined : occupantOf(this.game, item) });
+    const name = nameCell(item, this.game, { worn: this.game.isEquipped(item.uid), occupant: item.occupant ? undefined : occupantOf(this.game, item) });
     const ql = qualityCell(this.game, item);
     const dmg = damageCell(item);
     const wt = document.createElement('span');
@@ -263,7 +264,7 @@ export class InventoryPanel {
       row.addEventListener('mousemove', (e) => { if (!dragging()) this.hover?.(item, e.clientX, e.clientY); });
       row.addEventListener('mouseleave', () => this.hover?.(null, 0, 0));
     }
-    makeDraggable(row, () => ({ uid: item.uid, from: 'inventory', name: itemName(item), uids: this.picking.carried(item.uid) }));
+    makeDraggable(row, () => ({ uid: item.uid, from: 'inventory', name: seenName(item, this.game), uids: this.picking.carried(item.uid) }));
     return row;
   }
 
@@ -325,7 +326,7 @@ export class InventoryPanel {
         children: into.map((it) => {
           const t = { kind: 'item' as const, uid: it.uid, soul: item.uid };
           const why = absorb.check?.(t, this.game) ?? null;
-          return { label: itemName(it), note: it.count > 1 ? `one of ${it.count}` : undefined, hint: why ?? undefined, disabled: !!why, onSelect: () => this.game.requestAction(absorb, t) };
+          return { label: seenName(it, this.game), note: it.count > 1 ? `one of ${it.count}` : undefined, hint: why ?? undefined, disabled: !!why, onSelect: () => this.game.requestAction(absorb, t) };
         }),
       });
     }
@@ -350,7 +351,7 @@ export class InventoryPanel {
           ...into.map((it) => {
             const t = { kind: 'item' as const, uid: it.uid, scroll: item.uid };
             const why = enchant.check?.(t, this.game) ?? null;
-            return { label: itemName(it), note: `QL ${it.ql.toFixed(1)}`, hint: why ?? undefined, disabled: !!why, onSelect: () => this.game.requestAction(enchant, t) };
+            return { label: seenName(it, this.game), note: `QL ${it.ql.toFixed(1)}`, hint: why ?? undefined, disabled: !!why, onSelect: () => this.game.requestAction(enchant, t) };
           }),
           ...standing.map(({ target, placed }) => {
             const t = { ...target, scroll: item.uid } as Target;
@@ -432,7 +433,7 @@ export class InventoryPanel {
         disabled: first,
         onSelect: () => {
           this.game.settings.nock = item.id;
-          this.game.logMsg(`Shot first: ${itemName(item).toLowerCase()}.`, 'info');
+          this.game.logMsg(`Shot first: ${seenName(item, this.game).toLowerCase()}.`, 'info');
         },
       });
     }
@@ -490,6 +491,6 @@ export class InventoryPanel {
     this.win.focus();
     entries.push(...(this.storeEntries?.(item) ?? []));
     entries.push(...(this.spellsFor?.(item.uid) ?? []));
-    this.menu.show(x, y, itemName(item), entries);
+    this.menu.show(x, y, seenName(item, this.game), entries);
   }
 }

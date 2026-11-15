@@ -78,6 +78,7 @@ import { MAP_ODDS } from './treasure';
 import { FAIL_DAMAGE_SAID } from './faildamage';
 import { CRAFT_REACH, DISTIL_BUCKETS, isDish, RECIPES, TAILOR_SKILLS, TRADE_BOOK_AT, TRADE_BOOK_SKILLS, type Recipe } from './recipes';
 import { BUSH_DEFS, ROAD_TILES, ROCK_VARIANTS, TILE_DEFS, TileType, TREE_AGES, TREE_DAWN_UTC, TREE_DEFS } from '../world/tiles';
+import { SEAM_GATE } from './skillgates';
 import { walkKey } from './player';
 import { metres } from './piers';
 
@@ -297,7 +298,7 @@ const TERRAFORMER: Seed[] = [
  */
 /** The veins an ore comes out of, from the least mining they want to the most. */
 const ORES = ROCK_VARIANTS.filter((r) => r.yields.endsWith('_ore'))
-  .map((r) => ({ yields: r.yields, level: r.level ?? 0 })).sort((a, b) => a.level - b.level);
+  .map((r) => ({ yields: r.yields, level: SEAM_GATE[r.yields] ?? 0 })).sort((a, b) => a.level - b.level);
 const oreName = (yields: string): string => itemName(yields).replace(/ ore$/, '');
 /** Each ore with the mining it would want of somebody `below` short of it: "gold at 40". */
 const oresAt = (below: number): string => {

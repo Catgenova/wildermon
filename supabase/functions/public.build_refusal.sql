@@ -67,6 +67,9 @@ begin
 
   elsif p_action = 'plan_wall' then
     if side is null or wt.id is null or mat.id is null then return 'Choose a side, wall type and material.'; end if;
+    -- Its material's and its type's skill gates (`craftgates.ts`).
+    v_gap := build_gate_refusal(p_world, p_uid, mat.id, wt.id, null, null);
+    if v_gap is not null then return v_gap; end if;
     tool := need_tool(p_world, p_uid, 'mallet');
     if tool is not null then return tool; end if;
     if b.id is null then return 'No building here.'; end if;
@@ -106,6 +109,8 @@ begin
   elsif p_action = 'plan_fence' then
     if side is null or wt.id is null or mat.id is null then return 'Choose a side, kind and material.'; end if;
     if not wt.standalone then return 'Only fences and half walls stand alone.'; end if;
+    v_gap := build_gate_refusal(p_world, p_uid, mat.id, wt.id, null, null);
+    if v_gap is not null then return v_gap; end if;
     tool := need_tool(p_world, p_uid, mat.tool);
     if tool is not null then return tool; end if;
     if b.id is not null then return 'Part of a building: plan a wall.'; end if;
@@ -143,6 +148,8 @@ begin
     -- A change planned for a finished wall is built as a wall is, the wall standing till it is done (`change_wall`).
     if (wall_change_of(p_world, w)).world_id is not null then return change_build_refusal(p_world, p_uid, w, tx, ty, side); end if;
     if bill_done(w.needed) then return 'Wall finished.'; end if;
+    v_gap := build_gate_refusal(p_world, p_uid, w.material, w.type, null, null);
+    if v_gap is not null then return v_gap; end if;
     -- Nor is one raised over a lantern post's arm (`lamps.ts`).
     v_gap := lamp_wall_refusal(p_world, w.level, tx, ty, side, w.type);
     if v_gap is not null then return v_gap; end if;
@@ -204,6 +211,10 @@ begin
 
   elsif p_action = 'plan_floor' then
     if mat.id is null then return 'Choose a material.'; end if;
+    -- Its material's and its floor type's skill gates (`craftgates.ts`).
+    v_gap := build_gate_refusal(p_world, p_uid, mat.id, null, coalesce(p_target->>'floorKind', 'floor'),
+                                stair_hand(p_target, coalesce(p_target->>'floorKind', 'floor')));
+    if v_gap is not null then return v_gap; end if;
     tool := need_tool(p_world, p_uid, 'mallet');
     if tool is not null then return tool; end if;
     if b.id is null then return 'No building here.'; end if;
@@ -282,6 +293,8 @@ begin
     end if;
     if not found then return 'Nothing planned here.'; end if;
     if bill_done(f.needed) then return 'Already finished.'; end if;
+    v_gap := build_gate_refusal(p_world, p_uid, f.material, null, f.kind, f.hand);
+    if v_gap is not null then return v_gap; end if;
     select * into mat from build_material_def where id = f.material;
     tool := need_tool(p_world, p_uid, case when f.kind = 'ladder' then 'mallet' else mat.tool end);
     if tool is not null then return tool; end if;

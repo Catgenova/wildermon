@@ -35,6 +35,7 @@
  */
 
 import { fill } from './words';
+import { skillGateRefusal } from './skillgates';
 
 /** The stone a spell is cast out of, by the kind it must be. */
 export type Stone = 'ruby' | 'garnet' | 'sapphire' | 'diamond' | 'emerald' | 'topaz';
@@ -198,9 +199,9 @@ export function spellRefusal(
   if (s.school !== mine) {
     return `${s.name} is ${(schoolOf(s.school)?.name ?? s.school).toLowerCase()}, and you are not of it.`;
   }
-  if (skill < s.level) {
-    return `${s.name} takes ${s.level} ${s.school}; you have ${Math.floor(skill)}.`;
-  }
+  // Its gate (kind `spell`, at its level, in its school's skill): "Pyre: needs kindling 30; have 12.0."
+  const gated = skillGateRefusal(s.name, schoolOf(s.school)?.skill ?? s.school, skill, s.level);
+  if (gated) return gated;
   if (!stone) return `${s.name} is cast out of ${s.gem}. You are carrying no ${s.gem} focus.`;
   if (stone.dmg >= 100) return `Your ${s.gem} is spent.`;
   return null;

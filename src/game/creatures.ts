@@ -1,4 +1,5 @@
 import { describeGoals } from './journal';
+import { hodMay, relicGate, smeltGate, waterPlantFrom, workerRecipeOpen, workerSmeltOpen, workerSmithOpen, workerWaterPlantOpen } from './craftgates';
 import { LAIR_BY_ID } from './lairs';
 import { TileType, TILE_DEFS, TREE_DEFS, treeAge, treeSpecies, packTreeData, TREE_AGES } from '../world/tiles';
 import { isSeam } from '../world/tiles';
@@ -62,6 +63,7 @@ import { HYBRID_HARDY, HYBRID_WORK, HYBRIDS, type HybridCross } from './hybridli
 import { world } from './pace';
 import { emptyCrate, shutIn, standingCrate } from './crating';
 import { IDLE_WANTS, IDLE_WHYS, ledgerAdd, ledgerRoll, type Idle, type IdleWhy, type WorkLedger } from './workerledger';
+import { gateOf, nameGates, skillGateRefusal, sproutGate, TAME_GATE, TAME_STAGE_GATE, treeGate, workerGateOpen, workerItemOpen, type SkillGate } from './skillgates';
 import { kindNames } from './journal-b';
 import { workFromLedger, workTime, type WorkStats } from './workstats';
 import { bredForm, formMul, wildFormRoll, type SizeForm } from './wildforms';
@@ -514,6 +516,11 @@ export const RESIN_TAPPED = 1;
 
 /** The faces a quarry cuts: bare rock, and rock under snow (a mountain top's marble). The island's `worker_gatherable`. */
 const STONE_FACES: ReadonlySet<number> = new Set([TileType.Rock, TileType.Snow]);
+/** The gate on a face a quarrier cuts: its plain stone's (`STONE_GATE`), bare or under snow; none for a seam. The island's `stone_gate`. */
+export const quarryGate = (w: Game['world'], x: number, y: number): SkillGate | undefined => {
+  const rock = bedrockAt(w, x, y);
+  return isSeam(rock) ? undefined : gateOf('stone', rock.yields);
+};
 export const GATHER_SKILL: Record<GatherKind, string> = { forage: 'foraging', botanize: 'botanizing', woodcut: 'woodcutting', farm: 'farming', mine: 'mining', sand: 'digging', clay: 'digging', quarry: 'mining', stoke: 'smelting', fetch: 'foraging', guard: 'body_strength', hunt: 'fighting', peat: 'digging', reed: 'foraging', water: 'carrying', prospect: 'prospecting', plant: 'forestry', hod: 'masonry', mend: 'repair', compost: 'farming', seek: 'archaeology', fish: 'fishing', prune: 'forestry', stump: 'digging', fruit: 'forestry' , hive: 'animal_husbandry', groom: 'animal_husbandry', dairy: 'animal_husbandry', heal: 'first_aid', tan: 'leatherworking', mill: 'milling', lamp: 'carrying', bush: 'forestry', grass: 'foraging', pan: 'prospecting', smelt: 'smelting', kiln: 'pottery', ash: 'alchemy', brew: 'brewing', cook: 'cooking', restore: 'restoration', patch: 'farming', worm: 'digging', sprout: 'forestry', resin: 'forestry', flower: 'foraging', scrub: 'masonry', saw: 'carpentry', chisel: 'stonecutting', brick: 'pottery', fletch: 'fletching', paper: 'papyrusmaking', fill: 'carrying', spin: 'tailoring', nail: 'blacksmithing', ribbon: 'blacksmithing', glass: 'glassblowing',
   moss: 'foraging', vine: 'forestry', lily: 'botanizing', concrete: 'masonry', mortar: 'masonry', timber: 'carpentry', shaft: 'carpentry', bandage: 'first_aid',
   cheese: 'cooking', churn: 'cooking', alloy: 'smelting' };
@@ -1191,8 +1198,8 @@ export function kindDescription(c: Pick<Creature, 'species' | 'skills'>): string
  * second, and at its first otherwise. The island's `wild_stage_odds_1` and `wild_stage_odds_2`.
  */
 export const WILD_STAGE_ODDS = [20, 200] as const;
-/** The taming one asks for each stage it is past its first. The island's `wild_stage_tame`. */
-export const WILD_STAGE_TAME = 15;
+/** The taming one asks for each stage it is past its first (`TAME_STAGE_GATE`). The island's `wild_stage_tame`. */
+export const WILD_STAGE_TAME = TAME_STAGE_GATE;
 /** What each stage it is past its first multiplies its kind's base chance an offering by. The island's `wild_stage_chance`. */
 export const WILD_STAGE_CHANCE = 0.5;
 /**
@@ -1225,6 +1232,17 @@ export function tameNeeds(c: Pick<Creature, 'species' | 'skills'>): { level: num
   const def = SPECIES[c.species];
   const stage = stageOf(c);
   return { level: (def?.tameLevel ?? 1) + WILD_STAGE_TAME * stage, chance: (def?.tameChance ?? 0) * WILD_STAGE_CHANCE ** stage };
+}
+
+/**
+ * Taming one under its gate at its stage (`tameNeeds`), in the one rule's words, by its stage's name: "Sapgnaw: needs
+ * taming 1; have 0.4." Null at or over it. The island's `tame_gate_refusal`.
+ */
+export function tameRefusal(c: Pick<Creature, 'species' | 'skills'>, have: number): string | null {
+  const def = SPECIES[c.species];
+  const stage = stageOf(c);
+  const name = stage && def?.stages ? def.stages[stage - 1].name : def?.name ?? c.species;
+  return skillGateRefusal(name, 'taming', have, tameNeeds(c).level);
 }
 
 /**
@@ -1637,7 +1655,21 @@ function sayLine(id: string, job: string, level: string, staged = ''): void {
   ];
 }
 
-export const SPECIES: Record<string, SpeciesDef> = {
+/**
+ * Each kind's taming, off its gate (`TAME_GATE`, skillgates.ts): every kind but a monster, which is not tamed and keeps
+ * its own. A kind with no gate is a mistake, said at load.
+ */
+function withTameGates(defs: Record<string, Omit<SpeciesDef, 'tameLevel'> & { tameLevel?: number }>): Record<string, SpeciesDef> {
+  for (const d of Object.values(defs)) {
+    if (d.monster) continue;
+    const level = TAME_GATE[d.id];
+    if (level === undefined) throw new Error(`${d.id}: no taming gate`);
+    d.tameLevel = level;
+  }
+  return defs as Record<string, SpeciesDef>;
+}
+
+export const SPECIES: Record<string, SpeciesDef> = withTameGates({
   rabba: {
     id: 'rabba',
     name: 'Snufflet',
@@ -1652,7 +1684,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 20,
     attack: 3,
     speed: 2.2,
-    tameLevel: 1,
     tameChance: 0.12,
     diet: ['blueberry', 'raspberry', 'strawberry', 'lingonberry', 'potato', 'onion'],
     baitHint: 'a berry or vegetable',
@@ -1682,7 +1713,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 16,
     attack: 2,
     speed: 1.9,
-    tameLevel: 1,
     tameChance: 0.12,
     diet: ['sage', 'basil', 'thyme', 'mint', 'rosemary', 'potato', 'onion'],
     baitHint: 'a spice or vegetable',
@@ -1712,7 +1742,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 26,
     attack: 3,
     speed: 1.8,
-    tameLevel: 1,
     tameChance: 0.1,
     diet: ['potato', 'carrot', 'cabbage', 'onion', 'corn', 'wheat', 'acorn', 'nuts'],
     baitHint: 'a vegetable or something starchy',
@@ -1747,7 +1776,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 24,
     attack: 5,
     speed: 1.6,
-    tameLevel: 1,
     tameChance: 0.1,
     diet: ['potato', 'carrot', 'cabbage', 'onion'],
     baitHint: 'a vegetable',
@@ -1782,7 +1810,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 26,
     attack: 3,
     speed: 1.5,
-    tameLevel: 1,
     tameChance: 0.12,
     diet: ['carrot', 'onion', 'potato', 'mixed_grass'],
     baitHint: 'a root vegetable',
@@ -1816,7 +1843,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 24,
     attack: 4,
     speed: 1.5,
-    tameLevel: 1,
     tameChance: 0.1,
     diet: ['cooked_meat', 'baked_potato', 'roast_onion', 'roast_nuts', 'berry_compote', 'stew', 'pottage'],
     baitHint: 'something cooked',
@@ -1849,7 +1875,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 34,
     attack: 5,
     speed: 1.2,
-    tameLevel: 1,
     tameChance: 0.09,
     diet: ['clay'],
     baitHint: 'a lump of clay',
@@ -1882,7 +1907,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 26,
     attack: 2,
     speed: 1.3,
-    tameLevel: 1,
     tameChance: 0.2,
     diet: ['mixed_grass', 'cabbage', 'carrot', 'wheat', 'corn'],
     baitHint: 'grass or greens',
@@ -1914,7 +1938,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 34,
     attack: 9,
     speed: 2.1,
-    tameLevel: 30,
     tameChance: 0.06,
     diet: ['meat', 'cooked_meat'],
     baitHint: 'meat',
@@ -1945,7 +1968,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 16,
     attack: 3,
     speed: 2,
-    tameLevel: 1,
     tameChance: 0.14,
     diet: ['blueberry', 'raspberry', 'strawberry', 'lingonberry', 'acorn', 'nuts'],
     baitHint: 'a berry or a handful of nuts',
@@ -1978,7 +2000,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 22,
     attack: 4,
     speed: 1.5,
-    tameLevel: 1,
     tameChance: 0.1,
     diet: ['sage', 'basil', 'thyme', 'mint', 'rosemary'],
     baitHint: 'a spice',
@@ -2012,7 +2033,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 14,
     attack: 2,
     speed: 2.6,
-    tameLevel: 1,
     tameChance: 0.12,
     diet: ['acorn', 'nuts'],
     baitHint: 'an acorn or a handful of nuts',
@@ -2047,7 +2067,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 80,
     attack: 11,
     speed: 1.1,
-    tameLevel: 25,
     tameChance: 0.07,
     diet: ['mixed_grass', 'wheat', 'corn', 'cabbage', 'carrot'],
     baitHint: 'grass or grain',
@@ -2081,7 +2100,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 50,
     attack: 7,
     speed: 3,
-    tameLevel: 30,
     tameChance: 0.07,
     diet: ['mixed_grass', 'wheat', 'corn', 'carrot', 'acorn'],
     baitHint: 'grass, grain or a root',
@@ -2113,7 +2131,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 46,
     attack: 14,
     speed: 2.5,
-    tameLevel: 1,
     tameChance: 0.05,
     diet: ['meat', 'cooked_meat'],
     baitHint: 'meat',
@@ -2149,7 +2166,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 30,
     attack: 4,
     speed: 1.4,
-    tameLevel: 1,
     tameChance: 0.11,
     diet: ['mixed_grass', 'cabbage', 'carrot', 'potato'],
     baitHint: 'grass or a root',
@@ -2179,7 +2195,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 22,
     attack: 3,
     speed: 2,
-    tameLevel: 1,
     tameChance: 0.12,
     diet: ['reed', 'wheat', 'corn', 'nuts'],
     baitHint: 'reeds or grain',
@@ -2209,7 +2224,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 34,
     attack: 3,
     speed: 1.6,
-    tameLevel: 1,
     tameChance: 0.1,
     diet: ['mixed_grass', 'wheat', 'corn', 'cabbage'],
     baitHint: 'grass or grain',
@@ -2239,7 +2253,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 20,
     attack: 3,
     speed: 1.8,
-    tameLevel: 15,
     tameChance: 0.1,
     diet: ['nuts', 'acorn', 'clay', 'potato'],
     baitHint: 'nuts or a root',
@@ -2269,7 +2282,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 26,
     attack: 3,
     speed: 1.7,
-    tameLevel: 10,
     tameChance: 0.12,
     diet: ['acorn', 'nuts', 'sprout', 'blueberry'],
     baitHint: 'nuts or an acorn',
@@ -2298,7 +2310,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 24,
     attack: 2,
     speed: 1.6,
-    tameLevel: 1,
     tameChance: 0.1,
     diet: ['apple', 'cherry', 'olive', 'sprout', 'nuts'],
     baitHint: 'fruit off a tree, or a sprout',
@@ -2328,7 +2339,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 30,
     attack: 4,
     speed: 1.4,
-    tameLevel: 1,
     tameChance: 0.12,
     diet: ['worm', 'acorn', 'nuts', 'potato', 'carrot', 'onion'],
     baitHint: 'worms, or a root out of the ground',
@@ -2357,7 +2367,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 18,
     attack: 1,
     speed: 1.7,
-    tameLevel: 1,
     tameChance: 0.12,
     diet: ['apple', 'cherry', 'olive', 'pear', 'plum', 'peach', 'fig', 'lemon', 'pomegranate', 'apricot', 'quince', 'nuts'],
     baitHint: 'fruit off a tree',
@@ -2388,7 +2397,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 40,
     attack: 5,
     speed: 1.5,
-    tameLevel: 20,
     tameChance: 0.09,
     diet: ['bread', 'baked_potato', 'mixed_grass', 'corn'],
     baitHint: 'bread or something cooked',
@@ -2418,7 +2426,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 16,
     attack: 2,
     speed: 2,
-    tameLevel: 25,
     tameChance: 0.08,
     diet: ['nuts', 'acorn', 'blueberry', 'honey'],
     baitHint: 'nuts or something sweet',
@@ -2446,7 +2453,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 24,
     attack: 3,
     speed: 1.5,
-    tameLevel: 8,
     tameChance: 0.13,
     diet: ['meat', 'potato', 'cabbage', 'corpse'],
     baitHint: 'meat or a vegetable',
@@ -2477,7 +2483,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 18,
     attack: 2,
     speed: 2,
-    tameLevel: 12,
     tameChance: 0.12,
     diet: ['mixed_grass', 'carrot', 'cabbage', 'apple'],
     baitHint: 'grass or a vegetable',
@@ -2506,7 +2511,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 20,
     attack: 2,
     speed: 2.2,
-    tameLevel: 16,
     tameChance: 0.1,
     diet: ['mixed_grass', 'wheat', 'carrot', 'cheese'],
     baitHint: 'grass, grain or cheese',
@@ -2536,7 +2540,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 16,
     attack: 1,
     speed: 2,
-    tameLevel: 20,
     tameChance: 0.09,
     diet: ['blueberry', 'raspberry', 'honey', 'apple'],
     baitHint: 'berries or honey',
@@ -2567,7 +2570,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 30,
     attack: 5,
     speed: 2,
-    tameLevel: 22,
     tameChance: 0.09,
     diet: ['meat', 'offal', 'cooked_meat', 'minnow'],
     baitHint: 'meat or a fish',
@@ -2597,7 +2599,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 22,
     attack: 3,
     speed: 2,
-    tameLevel: 18,
     tameChance: 0.1,
     diet: ['minnow', 'perch', 'trout', 'acorn'],
     baitHint: 'a fish or an acorn',
@@ -2627,7 +2628,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 26,
     attack: 3,
     speed: 1.6,
-    tameLevel: 14,
     tameChance: 0.11,
     diet: ['wheat', 'corn', 'nuts', 'bread'],
     baitHint: 'grain or bread',
@@ -2656,7 +2656,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 10,
     attack: 1,
     speed: 2.6,
-    tameLevel: 24,
     tameChance: 0.08,
     diet: ['honey', 'apple', 'pear', 'plum'],
     baitHint: 'honey or soft fruit',
@@ -2686,7 +2685,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 22,
     attack: 3,
     speed: 2,
-    tameLevel: 1,
     tameChance: 0.12,
     diet: ['blueberry', 'raspberry', 'strawberry', 'grape'],
     baitHint: 'berries or grapes',
@@ -2716,7 +2714,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 24,
     attack: 2,
     speed: 1.8,
-    tameLevel: 1,
     tameChance: 0.14,
     diet: ['mixed_grass', 'wheat', 'carrot', 'cabbage'],
     baitHint: 'grass or a vegetable',
@@ -2747,7 +2744,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 16,
     attack: 2,
     speed: 2.2,
-    tameLevel: 20,
     tameChance: 0.09,
     diet: ['minnow', 'perch', 'trout', 'nuts'],
     baitHint: 'a fish',
@@ -2778,7 +2774,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 22,
     attack: 2,
     speed: 1.8,
-    tameLevel: 14,
     tameChance: 0.11,
     diet: ['potato', 'carrot', 'bread', 'corn'],
     baitHint: 'a vegetable or bread',
@@ -2809,7 +2804,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 18,
     attack: 2,
     speed: 2,
-    tameLevel: 16,
     tameChance: 0.1,
     diet: ['nuts', 'acorn', 'bread', 'potato'],
     baitHint: 'nuts or bread',
@@ -2840,7 +2834,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 22,
     attack: 2,
     speed: 1.8,
-    tameLevel: 18,
     tameChance: 0.1,
     diet: ['wheat', 'apple', 'honey', 'bread'],
     baitHint: 'grain, apples or honey',
@@ -2870,7 +2863,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 20,
     attack: 2,
     speed: 1.8,
-    tameLevel: 16,
     tameChance: 0.1,
     diet: ['meat', 'potato', 'onion', 'bread'],
     baitHint: 'meat or a vegetable',
@@ -2899,7 +2891,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 16,
     attack: 1,
     speed: 1.8,
-    tameLevel: 28,
     tameChance: 0.08,
     diet: ['nuts', 'honey', 'apple', 'blueberry'],
     baitHint: 'nuts or honey',
@@ -2925,7 +2916,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 18,
     attack: 2,
     speed: 1.8,
-    tameLevel: 10,
     tameChance: 0.12,
     diet: ['carrot', 'cabbage', 'wheat', 'potato'],
     baitHint: 'a vegetable or grain',
@@ -2953,7 +2943,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 18,
     attack: 2,
     speed: 1.8,
-    tameLevel: 1,
     tameChance: 0.13,
     diet: ['worm', 'carrot', 'potato', 'cabbage'],
     baitHint: 'worms or a vegetable',
@@ -2982,7 +2971,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 16,
     attack: 2,
     speed: 2.2,
-    tameLevel: 1,
     tameChance: 0.12,
     diet: ['acorn', 'nuts', 'apple', 'blueberry'],
     baitHint: 'acorns, nuts or fruit',
@@ -3011,7 +2999,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 18,
     attack: 2,
     speed: 2,
-    tameLevel: 1,
     tameChance: 0.1,
     diet: ['nuts', 'acorn', 'honey', 'apple'],
     baitHint: 'nuts or honey',
@@ -3040,7 +3027,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 12,
     attack: 1,
     speed: 2.4,
-    tameLevel: 1,
     tameChance: 0.12,
     diet: ['honey', 'blueberry', 'strawberry', 'raspberry'],
     baitHint: 'honey or berries',
@@ -3070,7 +3056,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 22,
     attack: 3,
     speed: 1.8,
-    tameLevel: 1,
     tameChance: 0.11,
     diet: ['mixed_grass', 'carrot', 'cabbage', 'potato'],
     baitHint: 'grass or a vegetable',
@@ -3100,7 +3085,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 24,
     attack: 3,
     speed: 1.8,
-    tameLevel: 14,
     tameChance: 0.11,
     diet: ['nuts', 'apple', 'carrot', 'bread'],
     baitHint: 'nuts or an apple',
@@ -3130,7 +3114,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 28,
     attack: 3,
     speed: 1.8,
-    tameLevel: 16,
     tameChance: 0.1,
     diet: ['carrot', 'potato', 'cabbage', 'mixed_grass'],
     baitHint: 'a vegetable or grass',
@@ -3159,7 +3142,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 20,
     attack: 2,
     speed: 1.8,
-    tameLevel: 8,
     tameChance: 0.13,
     diet: ['mixed_grass', 'carrot', 'cabbage', 'reed'],
     baitHint: 'grass or a vegetable',
@@ -3188,7 +3170,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 18,
     attack: 3,
     speed: 1.8,
-    tameLevel: 20,
     tameChance: 0.09,
     diet: ['nuts', 'blueberry', 'apple', 'meat'],
     baitHint: 'nuts or a berry',
@@ -3217,7 +3198,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 16,
     attack: 1,
     speed: 1.8,
-    tameLevel: 18,
     tameChance: 0.1,
     diet: ['reed', 'mixed_grass', 'apple', 'cabbage'],
     baitHint: 'reeds or grass',
@@ -3246,7 +3226,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 18,
     attack: 2,
     speed: 2,
-    tameLevel: 20,
     tameChance: 0.09,
     diet: ['worm', 'honey', 'peach', 'apricot'],
     baitHint: 'worms, honey, peaches or apricots',
@@ -3278,7 +3257,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 22,
     attack: 2,
     speed: 1.8,
-    tameLevel: 24,
     tameChance: 0.08,
     diet: ['honey', 'apple', 'nuts', 'blueberry'],
     baitHint: 'honey or an apple',
@@ -3308,7 +3286,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 22,
     attack: 2,
     speed: 1.8,
-    tameLevel: 1,
     tameChance: 0.14,
     diet: ['mixed_grass', 'reed', 'carrot', 'cabbage'],
     baitHint: 'grass or reeds',
@@ -3335,7 +3312,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 44,
     attack: 9,
     speed: 1.6,
-    tameLevel: 28,
     tameChance: 0.06,
     diet: ['meat', 'cooked_meat', 'potato'],
     baitHint: 'meat or a potato',
@@ -3367,7 +3343,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 24,
     attack: 6,
     speed: 2.0,
-    tameLevel: 26,
     tameChance: 0.07,
     diet: ['meat', 'cooked_meat', 'perch'],
     baitHint: 'meat or a fish',
@@ -3400,7 +3375,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 30,
     attack: 8,
     speed: 1.9,
-    tameLevel: 24,
     tameChance: 0.07,
     diet: ['meat', 'cooked_meat', 'nuts'],
     baitHint: 'meat or nuts',
@@ -3430,7 +3404,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 60,
     attack: 2,
     speed: 1.9,
-    tameLevel: 6,
     tameChance: 0.12,
     diet: ['apple', 'carrot', 'bread', 'nuts'],
     baitHint: 'an apple or bread',
@@ -3462,7 +3435,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 30,
     attack: 8,
     speed: 2.3,
-    tameLevel: 24,
     tameChance: 0.07,
     diet: ['meat', 'cooked_meat'],
     baitHint: 'meat',
@@ -3496,7 +3468,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 40,
     attack: 9,
     speed: 1.7,
-    tameLevel: 28,
     tameChance: 0.06,
     diet: ['meat', 'potato'],
     baitHint: 'meat or a potato',
@@ -3528,7 +3499,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 32,
     attack: 7,
     speed: 2.1,
-    tameLevel: 30,
     tameChance: 0.06,
     diet: ['meat', 'cooked_meat'],
     baitHint: 'meat',
@@ -3560,7 +3530,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 30,
     attack: 7,
     speed: 1.9,
-    tameLevel: 30,
     tameChance: 0.06,
     diet: ['meat', 'cooked_meat'],
     baitHint: 'meat',
@@ -3592,7 +3561,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 32,
     attack: 7,
     speed: 1.9,
-    tameLevel: 28,
     tameChance: 0.06,
     diet: ['meat', 'cooked_meat'],
     baitHint: 'meat',
@@ -3624,7 +3592,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 30,
     attack: 5,
     speed: 1.8,
-    tameLevel: 1,
     tameChance: 0.07,
     diet: ['meat', 'perch'],
     baitHint: 'meat or a fish',
@@ -3654,7 +3621,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 46,
     attack: 6,
     speed: 1.5,
-    tameLevel: 26,
     tameChance: 0.07,
     diet: ['meat', 'potato', 'carrot'],
     baitHint: 'meat or a vegetable',
@@ -3688,7 +3654,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 28,
     attack: 6,
     speed: 2.0,
-    tameLevel: 28,
     tameChance: 0.06,
     diet: ['meat', 'cooked_meat'],
     baitHint: 'meat',
@@ -3719,7 +3684,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 28,
     attack: 5,
     speed: 2.0,
-    tameLevel: 28,
     tameChance: 0.06,
     diet: ['apple', 'nuts', 'acorn'],
     baitHint: 'an apple or nuts',
@@ -3756,7 +3720,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 52,
     attack: 4,
     speed: 1.5,
-    tameLevel: 28,
     tameChance: 0.06,
     diet: ['honey', 'nuts', 'apple'],
     baitHint: 'honey or nuts',
@@ -3795,7 +3758,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     attack: 6,
     speed: 1.5,
     // Asked: "Reduce taming level requirements for bura to 1" (was 22).
-    tameLevel: 1,
     tameChance: 0.09,
     diet: ['mixed_grass', 'wheat', 'corn', 'carrot'],
     baitHint: 'grass or grain',
@@ -3831,7 +3793,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 40,
     attack: 6,
     speed: 2.2,
-    tameLevel: 1,
     tameChance: 0.07,
     diet: ['meat', 'reed', 'nuts'],
     baitHint: 'meat or reeds',
@@ -3868,7 +3829,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     attack: 6,
     // On land, under a rider or not, half a walker's pace (`SPRINGLET_LAND`); in water a Thistlekit's (`swimSpeed`, set below).
     speed: SPRINGLET_LAND * BASE_SPEED,
-    tameLevel: 40,
     tameChance: 0.05,
     // Every fish a line brings up, raw, and cooked fish.
     diet: [...FISH.map((f) => f.id), 'cooked_fish'],
@@ -3904,7 +3864,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 30,
     attack: 5,
     speed: 1.9,
-    tameLevel: 30,
     tameChance: 0.08,
     diet: ['meat', 'nuts', 'acorn'],
     baitHint: 'meat or nuts',
@@ -3939,7 +3898,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 26,
     attack: 4,
     speed: 1.9,
-    tameLevel: 12,
     tameChance: 0.11,
     diet: ['wheat', 'corn', 'nuts', 'acorn'],
     baitHint: 'grain or nuts',
@@ -3974,7 +3932,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 48,
     attack: 4,
     speed: 1.2,
-    tameLevel: 14,
     tameChance: 0.12,
     diet: ['mixed_grass', 'cabbage', 'carrot', 'wheat'],
     baitHint: 'grass, grain or a root',
@@ -4005,7 +3962,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 12,
     attack: 3,
     speed: 2.4,
-    tameLevel: 1,
     tameChance: 0.1,
     diet: ['blueberry', 'raspberry', 'strawberry', 'honey'],
     baitHint: 'berries or honey',
@@ -4037,7 +3993,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 24,
     attack: 4,
     speed: 1.6,
-    tameLevel: 50,
     tameChance: 0.05,
     diet: ['meat', 'nuts', 'gland', 'cooked_meat'],
     baitHint: 'meat or nuts',
@@ -4287,7 +4242,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     glow: 2,
     defaultStance: 'aggressive',
   },
-};
+});
 // Asked for: a Springlet "operates same speed as a hare mount when swimming in water": in water, a Thistlekit's pace.
 SPECIES.springlet.swimSpeed = SPECIES.orse.speed;
 
@@ -4345,6 +4300,9 @@ function hybridSpecies(h: HybridCross): SpeciesDef {
   return def;
 }
 for (const h of HYBRIDS) SPECIES[h.id] = hybridSpecies(h);
+// The taming gates say a kind by its name (`nameGates`).
+nameGates('tame', (id) => SPECIES[id]?.name);
+for (const id of Object.keys(TAME_GATE)) if (!SPECIES[id] || SPECIES[id].monster || SPECIES[id].hybrid) throw new Error(`${id}: a taming gate on no tameable kind`);
 // Every kind's health and attack as the game uses them, over the figures written in its row (`CREATURE_HEALTH_MUL`,
 // `CREATURE_ATTACK_MUL`), once and before anything else reads them:
 // a hybrid's row is its parents' rows as written (`hybridSpecies`), so it is scaled here once, like theirs.
@@ -6938,6 +6896,54 @@ export class Creatures {
     return bare && !seam ? { why: 'noseam', n: range } : null;
   }
 
+  /**
+   * Why a feller or a sprout picker with no tree to work in `range` of its ground is idle, past "no trees to fell": a
+   * tree with logs (a living one not picked lately, for sprouts) whose gate is over its own level in the gate's skill
+   * (`skillgates.ts`), the lowest gate then the nearest, as `what` its gate's kind and id and `n` its tiles off
+   * (`gate`). Null for none. The tiles asked are trees no other worker is at, with a tile beside to stand on, on ground
+   * it may work. The island's `gate_idle`.
+   */
+  private gateIdle(game: Game, c: Creature, site: { x: number; y: number }, range: number, kind: 'woodcut' | 'sprout'): { why: IdleWhy; n: number; what?: string[] } | null {
+    const w = game.world;
+    let best: SkillGate & { d: number } | null = null;
+    for (let dy = -range; dy <= range; dy++) {
+      for (let dx = -range; dx <= range; dx++) {
+        const x = site.x + dx, y = site.y + dy;
+        if (!w.inBounds(x, y) || w.getTile(x, y) !== TileType.Tree || this.claimed(x, y, c)) continue;
+        if (c.mode === 'deed' && !game.workerGround(x, y)) continue;
+        const data = w.getData(x, y);
+        const gate = kind === 'woodcut' ? treeGate(data)
+          : treeAge(data).alive && treeAge(data).logs > 0 && !game.isForaged(x, y, 'sprout') ? sproutGate(data) : undefined;
+        if (!gate || workerGateOpen(c, gate) || !this.beside(game, x, y)) continue;
+        const d = Math.max(Math.abs(dx), Math.abs(dy));
+        if (!best || gate.level < best.level || (gate.level === best.level && d < best.d)) best = { ...gate, d };
+      }
+    }
+    return best ? { why: 'gate', n: best.d, what: [best.kind, best.id] } : null;
+  }
+
+  /**
+   * Why a quarrier with no face to cut in `range` of its ground is idle, past "no bare rock to cut": a plain face whose
+   * stone's gate (`STONE_GATE`) is over its own level in mining, the lowest gate then the nearest, as `gateIdle` says a tree. The
+   * faces asked are those `gatherable('quarry')` would take but for the gate. The island's `stone_idle`.
+   */
+  private stoneIdle(game: Game, c: Creature, site: { x: number; y: number }, range: number): { why: IdleWhy; n: number; what?: string[] } | null {
+    const w = game.world;
+    let best: { level: number; d: number; id: string } | null = null;
+    for (let dy = -range; dy <= range; dy++) {
+      for (let dx = -range; dx <= range; dx++) {
+        const x = site.x + dx, y = site.y + dy;
+        if (!w.inBounds(x, y) || !STONE_FACES.has(w.getTile(x, y)) || this.claimed(x, y, c)) continue;
+        if (c.mode === 'deed' && !game.workerGround(x, y)) continue;
+        const gate = quarryGate(w, x, y);
+        if (workerGateOpen(c, gate) || w.rockHeight(x, y) <= -MINE_DEPTH || !this.reachableFace(game, x, y)) continue;
+        const d = Math.max(Math.abs(dx), Math.abs(dy));
+        if (!best || gate!.level < best.level || (gate!.level === best.level && d < best.d)) best = { level: gate!.level, d, id: gate!.id };
+      }
+    }
+    return best ? { why: 'gate', n: best.d, what: ['stone', best.id] } : null;
+  }
+
   /** The nearest tile to (x, y) a creature may walk, `reach` tiles off at most, ring by ring, rows from the north; or null. */
   nearestOk(game: Game, x: number, y: number, reach: number): [number, number] | null {
     for (let r = 1; r <= reach; r++) {
@@ -7571,12 +7577,13 @@ export class Creatures {
   /**
    * A seed to put in the ground: one out of its own cheeks first, and failing
    * that one from any store on the deed — the settlement crate, a bin, a chest,
-   * whichever has seed in it. `store` is null when the seed is its own.
+   * whichever has seed in it. `store` is null when the seed is its own. Only a
+   * seed its own farming may sow (`skillgates.ts`; the island's `sow_seed`).
    */
   private seedFor(game: Game, c: Creature): { seed: Item; store: DeedStore | null } | null {
-    if (c.pouch && CROP_BY_SEED.has(c.pouch.id) && c.pouch.count > 0) return { seed: c.pouch, store: null };
+    if (c.pouch && CROP_BY_SEED.has(c.pouch.id) && c.pouch.count > 0 && workerItemOpen(c, c.pouch)) return { seed: c.pouch, store: null };
     for (const store of game.deedStores()) {
-      const seed = store.items.find((it: Item) => CROP_BY_SEED.has(it.id) && it.count > 0);
+      const seed = store.items.find((it: Item) => CROP_BY_SEED.has(it.id) && it.count > 0 && workerItemOpen(c, it));
       if (seed) return { seed, store };
     }
     return null;
@@ -7660,7 +7667,8 @@ export class Creatures {
       // A living tree, picked from beside it, and a sprout taken off it not lately; a pine big enough to tap, not tapped since dawn.
       if (game.world.getTile(x, y) !== TileType.Tree || !this.beside(game, x, y) || this.claimed(x, y, c)) return false;
       const data = game.world.getData(x, y);
-      if (kind === 'sprout') return treeAge(data).alive && treeAge(data).logs > 0 && !game.isForaged(x, y, 'sprout');
+      // And only a species whose sprouts its own forestry may pick (`skillgates.ts`; the island's `worker_gatherable`).
+      if (kind === 'sprout') return treeAge(data).alive && treeAge(data).logs > 0 && !game.isForaged(x, y, 'sprout') && (!c || workerGateOpen(c, sproutGate(data)));
       return treeSpecies(data) === RESIN_TREE && tappable(data) && !game.tappedToday(x, y);
     }
     if (kind === 'flower') {
@@ -7676,6 +7684,8 @@ export class Creatures {
       // Bare stone with no metal in it, snow over it or not, and one cutter to a face.
       const rock = bedrockAt(game.world, x, y);
       if (!STONE_FACES.has(game.world.getTile(x, y)) || isSeam(rock)) return false;
+      // And only a stone its own level in mining may quarry (`STONE_GATE`, `workerGateOpen`; the island's `worker_gatherable`).
+      if (c && !workerGateOpen(c, quarryGate(game.world, x, y))) return false;
       return game.world.rockHeight(x, y) > -MINE_DEPTH && this.reachableFace(game, x, y) && !this.claimed(x, y, c);
     }
     if (kind === 'peat') {
@@ -7709,7 +7719,11 @@ export class Creatures {
       return this.tileOk(game, x, y) && !this.claimed(x, y, c);
     }
     if (kind === 'farm') return !!c && this.farmJobAt(game, c, x, y) !== null;
-    if (kind === 'woodcut') return game.world.getTile(x, y) === TileType.Tree && !!this.beside(game, x, y);
+    if (kind === 'woodcut') {
+      // And only a tree its own woodcutting may fell (`skillgates.ts`; the island's `worker_gatherable`).
+      if (game.world.getTile(x, y) !== TileType.Tree || !this.beside(game, x, y)) return false;
+      return !c || workerGateOpen(c, treeGate(game.world.getData(x, y)));
+    }
     if (kind === 'prune') {
       // What would otherwise die: a stage that prunes back and whose next
       // stage has no life in it. Nothing else is touched — a mature tree
@@ -7900,6 +7914,8 @@ export class Creatures {
    */
   private finishHands(game: Game, c: Creature, kind: GatherKind, x: number, y: number): Item | null {
     if (c.mode !== 'deed') return null;
+    // Never a species' sprout over its own forestry, however it came to be at one (the island's `worker_do`).
+    if (kind === 'sprout' && game.world.getTile(x, y) === TileType.Tree && !workerGateOpen(c, sproutGate(game.world.getData(x, y)))) return null;
     const skillId = GATHER_SKILL[kind];
     const skill = c.skills[skillId] ?? 1;
     this.gainSkill(game, c, skillId, 0.225);
@@ -7984,6 +8000,8 @@ export class Creatures {
     const def = TREE_DEFS[treeSpecies(data)];
     const age = treeAge(data);
     const skill = c.skills[GATHER_SKILL.woodcut] ?? 1;
+    // Never a tree over its own level, however it came to be at one (`skillgates.ts`; the island's `worker_do`).
+    if (!workerGateOpen(c, treeGate(data))) return null;
     this.gainSkill(game, c, GATHER_SKILL.woodcut, 0.225);
     // A worker swings the same number of times a person would, and the notch
     // it leaves is the same notch: anybody may finish the tree it started.
@@ -8059,6 +8077,8 @@ export class Creatures {
     const w = game.world;
     const rock = bedrockAt(w, c.workX, c.workY);
     if (!STONE_FACES.has(w.getTile(c.workX, c.workY)) || isSeam(rock)) return null;
+    // Never a stone over its own level, however it came to be at one (`STONE_GATE`; the island's `worker_do`).
+    if (!workerGateOpen(c, quarryGate(w, c.workX, c.workY))) return null;
     const skill = c.skills[GATHER_SKILL.quarry] ?? 1;
     this.gainSkill(game, c, GATHER_SKILL.quarry, 0.225);
     const ql = Math.min(100, Math.max(1, skill * (0.6 + game.rand() * 0.8) + 1));
@@ -8386,7 +8406,8 @@ export class Creatures {
     range: number,
   ): boolean {
     const smelt = kind === 'smelt';
-    const fits = (it: Item): boolean => (smelt ? isOreItem(it.id) : isGreenware(it.id));
+    // Ore only of a metal its own smelting smelts (`workerSmeltOpen`, the island's `worker_furnace_fits`).
+    const fits = (it: Item): boolean => (smelt ? isOreItem(it.id) && workerSmeltOpen(c, it.id) : isGreenware(it.id));
     type Furnace = { f: PlacedSmelter | PlacedKiln; at: [number, number]; room: number };
     const all: Furnace[] = [];
     for (const f of smelt ? game.smelters.values() : game.kilns.values()) {
@@ -8410,7 +8431,12 @@ export class Creatures {
     if (!to) return this.why(c, 'range', range);
     if (!holding) {
       const store = this.storeWhere(game, c, fits);
-      if (!store) return this.why(c, 'stock');
+      if (!store) {
+        // Only ore over its own smelting in the stores: `gate`, naming the lowest, then by metal (the island's `errand_step`).
+        const gate = !smelt ? undefined : METALS.filter((m) => m.ore && this.inStores(game, m.ore) > 0).map((m) => smeltGate(m.ore!)!)
+          .sort((a, b) => a.level - b.level || (a.id < b.id ? -1 : 1))[0];
+        return gate ? this.why(c, 'gate', 0, [gate.kind, gate.id]) : this.why(c, 'stock');
+      }
       if (!goto(store.centre[0], store.centre[1])) return true;
       c.carrying = this.takeFrom(store, fits, to.room, game);
       return true;
@@ -8523,8 +8549,8 @@ export class Creatures {
   private cookStep(game: Game, c: Creature, kind: GatherKind, goto: (x: number, y: number, reach?: number) => boolean, near: (x: number, y: number) => boolean, range: number): boolean {
     if (c.carrying) return false;
     const recipes = fireRecipes(kind);
-    const job = this.recipeInStores(game, recipes);
-    if (!job) return this.why(c, 'stock');
+    const job = this.recipeInStores(game, recipes, c);
+    if (!job) return this.stockWhy(game, c, recipes);
     let at: [number, number] | undefined;
     let bestD = Infinity;
     const look = (p: [number, number]): void => {
@@ -8555,8 +8581,8 @@ export class Creatures {
   private pressStep(game: Game, c: Creature, kind: GatherKind, goto: (x: number, y: number, reach?: number) => boolean, near: (x: number, y: number) => boolean, range: number): boolean {
     if (c.carrying) return this.why(c, 'full');
     const { piece, recipes } = STATION_TRADES[kind]!;
-    const job = this.recipeInStores(game, recipes);
-    if (!job) return this.why(c, 'stock');
+    const job = this.recipeInStores(game, recipes, c);
+    if (!job) return this.stockWhy(game, c, recipes);
     let at: [number, number] | undefined;
     let bestD = Infinity;
     for (const f of game.furniture.values()) {
@@ -8587,8 +8613,8 @@ export class Creatures {
   private glassStep(game: Game, c: Creature, kind: GatherKind, goto: (x: number, y: number, reach?: number) => boolean, near: (x: number, y: number) => boolean, range: number): boolean {
     if (c.carrying) return this.why(c, 'full');
     const recipes = SMELTER_TRADES[kind]!;
-    const job = this.recipeInStores(game, recipes);
-    if (!job) return this.why(c, 'stock');
+    const job = this.recipeInStores(game, recipes, c);
+    if (!job) return this.stockWhy(game, c, recipes);
     let at: [number, number] | undefined;
     let bestD = Infinity;
     for (const sm of game.smelters.values()) {
@@ -8612,13 +8638,19 @@ export class Creatures {
   /**
    * Smithing nails or ribbons: a lump of one of its trade's metals (`SMITH_TRADES`) out of the stores, beaten out at
    * the nearest anvil of yours into as many pieces as a filling of its mould makes, of that metal and at its own
-   * hand's quality (`madeQl`), and put in the stores. No mould and no hammer. The island's `errand_step` and
-   * `errand_do`.
+   * hand's quality (`madeQl`), and put in the stores. No mould and no hammer. Only a metal its own level pours
+   * (`METAL_GATE`). The island's `errand_step` and `errand_do`.
    */
   private anvilStep(game: Game, c: Creature, kind: GatherKind, goto: (x: number, y: number, reach?: number) => boolean, near: (x: number, y: number) => boolean, range: number): boolean {
     if (c.carrying) return this.why(c, 'full');
-    const lumps = smithLumps(kind);
-    if (!lumps.some((id) => this.inStores(game, id) > 0)) return this.why(c, 'stock');
+    // Only the metals its own blacksmithing pours and works out of a casting (`workerSmithOpen`: both off `METAL_GATE`);
+    // with only others in the stores, `gate` naming the first (the island's `worker_smith_lumps`).
+    const lumps = smithLumps(kind).filter((id) => workerSmithOpen(c, id, smithMakes(kind)));
+    if (!lumps.some((id) => this.inStores(game, id) > 0)) {
+      const gated = smithLumps(kind).find((id) => this.inStores(game, id) > 0);
+      const metal = gated && METAL_BY_LUMP.get(gated);
+      return metal ? this.why(c, 'gate', 0, ['metal', metal.id]) : this.why(c, 'stock');
+    }
     let at: PlacedAnvil | undefined;
     let bestD = Infinity;
     for (const a of game.anvils.values()) {
@@ -8741,14 +8773,20 @@ export class Creatures {
    * plant one (`plant_lily`, `plant_lotus`). The island's `errand_step` and `errand_do`.
    */
   private lilyStep(game: Game, c: Creature, goto: (x: number, y: number, reach?: number) => boolean, range: number, deed: { x: number; y: number }): boolean {
-    const root = (it: Item): boolean => WATER_PLANT_FROM.has(it.id);
+    // Only roots and seeds of a plant its own botanizing plants (`workerWaterPlantOpen`, the island's `worker_roots`).
+    const root = (it: Item): boolean => WATER_PLANT_FROM.has(it.id) && workerWaterPlantOpen(c, it.id);
     const holding = !!c.carrying && root(c.carrying);
     if (c.carrying && !holding) return false;
     const spot = this.lilySpot(game, deed, range);
     if (!spot) return this.why(c, 'range', range);
     if (!holding) {
       const store = this.storeWhere(game, c, root);
-      if (!store) return this.why(c, 'stock');
+      if (!store) {
+        // Only ones over its level in the stores: `gate`, naming the lowest plant (the island's `errand_step`).
+        const gated = [...WATER_PLANT_FROM.keys()].filter((id) => this.inStores(game, id) > 0).map((id) => gateOf('water_plant', waterPlantFrom(id)!.id)!)
+          .sort((a, b) => a.level - b.level || (a.id < b.id ? -1 : 1))[0];
+        return gated ? this.why(c, 'gate', 0, [gated.kind, gated.id]) : this.why(c, 'stock');
+      }
       if (!goto(store.centre[0], store.centre[1])) return true;
       c.carrying = this.takeFrom(store, root, stageLoads(c), game);
       return true;
@@ -8825,14 +8863,18 @@ export class Creatures {
    */
   private restoreStep(game: Game, c: Creature, goto: (x: number, y: number, reach?: number) => boolean): boolean {
     if (c.carrying) return false;
-    const set = this.relicInStores(game);
-    if (!set) return this.why(c, 'stock');
+    const set = this.relicInStores(game, c);
+    if (!set) {
+      // Every one whose pieces are in the stores over its restoration: `gate`, naming it (the island's `errand_step`).
+      const gated = this.relicInStores(game);
+      return gated ? this.why(c, 'gate', 0, ['relic', gated.relic.name.toLowerCase()]) : this.why(c, 'stock');
+    }
     if (!goto(set.at.centre[0], set.at.centre[1])) return true;
     const skill = c.skills[GATHER_SKILL.restore] ?? 1;
     // The relic it came to and, at a stage, the next whose pieces are all in the stores too, its stage's number of
     // them in the one go (`stageLoads`), each put in the store it came to.
     for (let n = 0; n < stageLoads(c); n++) {
-      const one = n === 0 ? set : this.relicInStores(game);
+      const one = n === 0 ? set : this.relicInStores(game, c);
       if (!one) break;
       let worth = 0;
       for (let part = 1; part <= one.relic.parts; part++) {
@@ -8858,9 +8900,11 @@ export class Creatures {
   }
 
   /** The first relic, by name, every piece of which is in the stores; and the store holding its first piece. The island's `relic_in_stores`. */
-  relicInStores(game: Game): { relic: RelicDef; at: DeedStore } | null {
+  relicInStores(game: Game, c?: Creature): { relic: RelicDef; at: DeedStore } | null {
     const stores = game.deedStores();
     for (const relic of [...RELICS].sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))) {
+      // With a worker, only one its own restoration may restore (`craftgates.ts`).
+      if (c && !workerGateOpen(c, relicGate(relic))) continue;
       const have = new Set<number>();
       let at: DeedStore | undefined;
       for (const st of stores) {
@@ -8883,9 +8927,11 @@ export class Creatures {
    */
   private planterStep(game: Game, c: Creature, goto: (x: number, y: number, reach?: number) => boolean, near: (x: number, y: number) => boolean, range: number): boolean {
     const seed = (it: Item): boolean => CROP_BY_SEED.has(it.id);
+    // Out of the stores, only seed its own farming may sow (`skillgates.ts`; the island's `worker_seeds`).
+    const sowable = (it: Item): boolean => seed(it) && workerItemOpen(c, it);
     const holding = !!c.carrying && seed(c.carrying);
     if (c.carrying && !holding) return false;
-    const seedToHave = holding || !!this.storeWhere(game, c, seed);
+    const seedToHave = holding || !!this.storeWhere(game, c, sowable);
     let f: PlacedFurniture | undefined;
     let bestD = Infinity;
     for (const x of game.furniture.values()) {
@@ -8903,11 +8949,11 @@ export class Creatures {
     if (!f) return this.why(c, 'range', range);
     const crop = game.planted.get(f.id);
     if (!crop && !holding) {
-      const store = this.storeWhere(game, c, seed);
+      const store = this.storeWhere(game, c, sowable);
       if (!store) return this.why(c, 'stock');
       if (!goto(store.centre[0], store.centre[1])) return true;
       // Its stage's seeds a trip (`stageLoads`), each sown in a go of its own.
-      c.carrying = this.takeFrom(store, seed, stageLoads(c), game);
+      c.carrying = this.takeFrom(store, sowable, stageLoads(c), game);
       return true;
     }
     const [fx, fy] = furnitureCentre(f);
@@ -9176,7 +9222,7 @@ export class Creatures {
    * across them. A worker needs no tool, so a recipe's is not looked for. Null
    * when none is. The island's `recipe_in_stores`.
    */
-  recipeInStores(game: Game, recipes: readonly string[]): { recipe: Recipe; at: DeedStore } | null {
+  recipeInStores(game: Game, recipes: readonly string[], c?: Creature): { recipe: Recipe; at: DeedStore } | null {
     const stores = game.deedStores();
     const has = (id: string, n: number): boolean =>
       stores.reduce((sum, st) => sum + st.items.filter((x: Item) => x.id === id && !x.locked).reduce((a, x) => a + x.count, 0), 0) >= n;
@@ -9184,6 +9230,8 @@ export class Creatures {
     const hasLitres = (id: string, n: number): boolean =>
       stores.reduce((sum, st) => sum + st.items.filter((x: Item) => x.id === id && !x.locked).reduce((a, x) => a + litresOf(x) * x.count, 0), 0) >= n;
     for (const id of recipes) {
+      // With a worker, only a recipe its own level in the recipe's skill may make (`craftgates.ts`).
+      if (c && !workerRecipeOpen(c, id)) continue;
       const r = RECIPE_BY_ID.get(id);
       if (!r || !r.inputs.every((i) => (i.litres ? hasLitres(i.item, i.litres) : has(i.item, i.count ?? 1)))) continue;
       const at = stores.find((st) => st.items.some((x: Item) => x.id === r.inputs[0].item && !x.locked));
@@ -9201,8 +9249,8 @@ export class Creatures {
    */
   private recipeStep(game: Game, c: Creature, recipes: readonly string[], goto: (x: number, y: number, reach?: number) => boolean, more = 0): boolean {
     if (c.carrying) return false;
-    const job = this.recipeInStores(game, recipes);
-    if (!job) return this.why(c, 'stock');
+    const job = this.recipeInStores(game, recipes, c);
+    if (!job) return this.stockWhy(game, c, recipes);
     const { recipe: r, at } = job;
     // Round its keeper, only with room in storage in reach for what it makes (the island's `around_room`).
     if (c.around && !this.roomFor(game, c, { uid: 0, id: r.result, ql: 1, dmg: 0, count: (r.count ?? 1) + more })) return this.why(c, 'full');
@@ -9219,7 +9267,7 @@ export class Creatures {
    */
   private moreRecipes(game: Game, c: Creature, recipes: readonly string[], at: DeedStore | null, x: number, y: number, more = 0): void {
     for (let n = 1; n < stageLoads(c); n++) {
-      const next = this.recipeInStores(game, recipes);
+      const next = this.recipeInStores(game, recipes, c);
       if (!next) return;
       if (c.around && !this.roomFor(game, c, { uid: 0, id: next.recipe.result, ql: 1, dmg: 0, count: (next.recipe.count ?? 1) + more })) return;
       this.workRecipe(game, c, next.recipe, at, x, y, false, more);
@@ -9378,7 +9426,8 @@ export class Creatures {
     // What the stores hold to bring, crates and furniture alike, and never what is kept back.
     const takeable = (it: Item, item: string): boolean => it.id === item && it.count > 0 && !it.locked;
     const stocked = (item: string): boolean => game.deedStores().some((st) => st.items.some((it: Item) => takeable(it, item)));
-    const job = game.hodNeeding(near, c.carrying?.id, deed, stocked);
+    // Only work each of whose gates its own level meets, its carpentry for a plank wall (`craftgates.ts`; the island's `hod_may`).
+    const job = game.hodNeeding(near, c.carrying?.id, deed, stocked, (t) => hodMay(c, t));
     // Holding a piece nothing within reach wants: back to the nearest store with room for it (`storeFor`).
     if (c.carrying && job?.item !== c.carrying.id) {
       const held = c.carrying;
@@ -9391,6 +9440,10 @@ export class Creatures {
       return true;
     }
     if (!job) {
+      // Only bridge spans over its own level within reach: `gate`, naming the lowest bridge, then the nearest (the
+      // island's `hod_span_gate`).
+      const gated = game.hodGatedSpan(near, deed, (t) => hodMay(c, t));
+      if (gated) return this.why(c, 'gate', gated.n, ['bridge', gated.kind]);
       // Work within reach wanting only what the stores do not hold: `stock`, naming it. None at all: `range`.
       const wanted = game.hodWanted(near, deed);
       return wanted.n > 0 ? this.why(c, 'stock', wanted.n, wanted.items.slice(0, IDLE_WANTS)) : this.why(c, 'range', range);
@@ -9449,7 +9502,7 @@ export class Creatures {
     return true;
   }
 
-  /** Planting: a sprout out of the stores, put in where the wood has gone. */
+  /** Planting: a sprout out of the stores its own forestry may plant (`skillgates.ts`), put in where the wood has gone. */
   private plantStep(
     game: Game,
     c: Creature,
@@ -9459,8 +9512,9 @@ export class Creatures {
     deed: { x: number; y: number },
   ): boolean {
     if (!c.carrying) {
-      const store = game.deedStores().find((st) => st.items.some((it: Item) => it.id === 'sprout'));
-      const sprout = store?.items.find((it: Item) => it.id === 'sprout');
+      const plantable = (it: Item): boolean => it.id === 'sprout' && workerItemOpen(c, it);
+      const store = game.deedStores().find((st) => st.items.some(plantable));
+      const sprout = store?.items.find(plantable);
       if (!store || !sprout) return this.why(c, 'stock');
       const [sx, sy] = store.centre;
       if (!goto(sx, sy)) return true;
@@ -10648,6 +10702,15 @@ export class Creatures {
     return false;
   }
 
+  /**
+   * Nothing a store trade may make: `gate`, naming the first of its recipes the stores hold the makings of, where every
+   * such one is over its level; else `stock`. The island's `errand_step` (`recipe_gate_idle`).
+   */
+  private stockWhy(game: Game, c: Creature, recipes: readonly string[]): false {
+    const gated = this.recipeInStores(game, recipes);
+    return gated ? this.why(c, 'gate', 0, ['recipe', gated.recipe.id]) : this.why(c, 'stock');
+  }
+
   /** Nothing to do, and why (`IdleWhy`): kept on it for its card, and false, for a step to return. The island's `idle_why`. */
   private why(c: Creature, why: IdleWhy, n = 0, what?: string[]): false {
     c.idle = { why, n, post: c.post !== null, ...(c.around ? { around: true } : {}), ...(what?.length ? { what } : {}) };
@@ -11114,8 +11177,12 @@ export class Creatures {
     if (kind && !ERRAND_JOBS.has(kind) && kind !== 'stoke') {
       const range = siteRange(c, def, deed);
       // A miner says what is wrong with the bare rock it has (`mineIdle`).
-      const mine = kind === 'mine' ? this.mineIdle(game, c, deed, range) : null;
-      if (mine) this.why(c, mine.why, mine.n, mine.what);
+      // And a feller or a sprout picker what is wrong with the trees it has (`gateIdle`).
+      const mine = kind === 'mine' ? this.mineIdle(game, c, deed, range) : kind === 'woodcut' || kind === 'sprout' ? this.gateIdle(game, c, deed, range, kind) : null;
+      // And a quarrier what is wrong with the faces it has (`stoneIdle`).
+      const stone = kind === 'quarry' ? this.stoneIdle(game, c, deed, range) : null;
+      const said = mine ?? stone;
+      if (said) this.why(c, said.why, said.n, said.what);
       else this.why(c, 'range', range);
     }
     // Nothing to do right now: potter about near the token.

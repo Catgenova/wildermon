@@ -22,7 +22,8 @@ const SLOW_GO = 100;
 /** A multiplier to two places, trailing zeros dropped. */
 const two = (x: number): number => +x.toFixed(2);
 import { awarenessReach, BASE_SIGHT } from '../../game/vision';
-import { KIT, kitBody } from '../kit';
+import { KIT, kit, kitBody, kitCheck, kitSection, meaning } from '../kit';
+import { hasUnlocks, nextUnlockBar, nextUnlockSaid, skillWord, unlockRows } from '../../game/skillgates';
 
 /** The thinking skills mind logic eases, by name. */
 const MIND_EASED_SAID = listed(MIND_EASED_SKILLS.map((id) => (SKILL_BY_ID.get(id)?.name ?? id).toLowerCase()));
@@ -30,6 +31,8 @@ const MIND_EASED_SAID = listed(MIND_EASED_SKILLS.map((id) => (SKILL_BY_ID.get(id
 export class SkillsPanel {
   private values = new Map<string, HTMLSpanElement>();
   private notes = new Map<string, HTMLSpanElement>();
+  /** Each skill's next gate beside its level: "→ 10: Maple" (`nextUnlockBar`). */
+  private nexts = new Map<string, HTMLSpanElement>();
   private rows = new Map<string, HTMLDivElement>();
   /** Each skill's Rune tablet button, shown with a tablet carried and the skill under `TABLET_BELOW` (`relicuse.ts`). */
   private tablets = new Map<string, HTMLButtonElement>();
@@ -94,10 +97,16 @@ export class SkillsPanel {
           if (it && read) game.requestAction(read, { kind: 'item', uid: it.uid, skill: def.id }, 1);
         });
         this.tablets.set(def.id, tablet);
+        // Its next gate over your level, from the table (`skillgates.ts`), under its name; none left, nothing.
+        const next = document.createElement('span');
+        next.className = 'skill-next';
+        next.hidden = true;
+        name.append(next);
+        this.nexts.set(def.id, next);
         row.append(name, note, value, tablet);
         list.append(row);
         // A skill with numbers behind it opens onto a slider for each (`skilleffects.ts`).
-        if (hasEffects(def.id)) {
+        if (hasEffects(def.id) || hasUnlocks(def.id)) {
           const box = document.createElement('div');
           box.className = 'skill-effects';
           box.hidden = true;
@@ -154,6 +163,11 @@ export class SkillsPanel {
 
   refresh(): void {
     for (const [id, el] of this.values) el.textContent = this.game.skills.standing(id).toFixed(2);
+    for (const [id, el] of this.nexts) {
+      const next = nextUnlockBar(id, this.game.skills.get(id));
+      el.textContent = next ? `→ ${next}` : '';
+      el.hidden = !next;
+    }
     for (const [id, el] of this.notes) {
       const [short, long] = this.note(id);
       el.textContent = short;
@@ -198,7 +212,38 @@ export class SkillsPanel {
     row.classList.toggle(KIT.on, open);
     row.setAttribute('aria-expanded', String(open));
     if (!open) return;
-    box.replaceChildren(...effectTracks(this.game, id).map((t) => this.track(t)));
+    box.replaceChildren(...effectTracks(this.game, id).map((t) => this.track(t)), ...this.unlocks(id));
+  }
+
+  /**
+   * What a skill opens (`skillgates.ts`): every gate on it in level order, ticked when your level meets it (one row a
+   * level where there are many, `unlockRows`), and the next one with your level. The help's list is the same table
+   * (`unlocksSaid`).
+   */
+  private unlocks(id: string): HTMLElement[] {
+    const have = this.game.skills.get(id);
+    const list = unlockRows(id, have);
+    if (!list.length) return [];
+    const rows = list.map((u) => {
+      const { el, input } = kitCheck(u.label, 'skill-unlock');
+      kit(el, 'row');
+      input.checked = u.met;
+      input.disabled = true;
+      input.setAttribute('aria-label', `${skillWord(id)} ${u.level}: ${u.names.join(', ')}${u.met ? ', met' : ''}`);
+      // A level's row names its first few; the whole list is its hint.
+      if (u.names.length > 1) el.title = u.names.join(', ');
+      meaning(el, u.met ? 'good' : 'dim');
+      return el;
+    });
+    const next = nextUnlockSaid(id, have);
+    const out: HTMLElement[] = [kitSection('Unlocks', 'skill-unlocks'), ...rows];
+    if (next) {
+      const note = document.createElement('div');
+      note.className = 'fx-note skill-unlock-next';
+      note.textContent = next;
+      out.push(note);
+    }
+    return out;
   }
 
   private track(t: EffectTrack): HTMLDivElement {

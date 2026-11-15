@@ -27,6 +27,7 @@ begin
        and not ((select cd.id from crop_def cd where cd.seed = it.def) = any (herb_crops())) then
       return herbs_only_said();
     end if;
+    if item_gate_refusal(p_world, p_uid, it) is not null then return item_gate_refusal(p_world, p_uid, it); end if;
   elsif p_action = 'tend_crop' then
     if c.placed is null then return 'No crop there.'; end if;
     if v_stage >= crop_ripe() then return 'Ripe: harvest it.'; end if;

@@ -20,6 +20,8 @@ import { waterDepth } from './fishing';
 import { describeFrom, itemDef } from './items';
 import { SWIM_DEPTH } from './player';
 import { capital, spanWords } from './words';
+import { waterPlantGateRefusal } from './craftgates';
+import { seenDefName, unidentified } from './skillgates';
 import { SLAB_BY_ITEM, SLAB_VARIANTS, STONE_BEDS, TileType, stonesBed, stonesData, stonesKind } from '../world/tiles';
 import {
   WATER_PLANT_BY_ID, WATER_PLANT_DEEPEST, WATER_PLANT_SHALLOWEST, WATER_PLANTS, WATER_ROOTING, waterPlantState,
@@ -237,6 +239,8 @@ export const WATER_GARDEN_ACTIONS: ActionDef[] = [
   ...WATER_PLANTS.map((def): ActionDef => ({
     id: `plant_${def.id}`,
     label: `Plant a ${def.name.toLowerCase()}`,
+    // Named as you see what is planted: "Plant unidentified root" under the water lily's gate.
+    labelFor: (_t, g) => (unidentified({ id: def.from }, g) ? `Plant ${seenDefName(def.from, g).toLowerCase()}` : `Plant a ${def.name.toLowerCase()}`),
     verb: `planting a ${def.name.toLowerCase()}`,
     skill: 'botanizing',
     stamina: 0.02,
@@ -246,7 +250,9 @@ export const WATER_GARDEN_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       const at = tileOf(t);
       if (!at) return null;
-      return plantRefusal(g, def, at[0], at[1]) ?? (g.inventory.has(def.from) ? null : `Need ${itemDef(def.from).name.toLowerCase()}.`);
+      // Then its gate (`craftgates.ts`, kind `water_plant`), named as you see the root: the island's `water_garden_refusal`.
+      return plantRefusal(g, def, at[0], at[1]) ?? (g.inventory.has(def.from) ? null : `Need ${itemDef(def.from).name.toLowerCase()}.`)
+        ?? waterPlantGateRefusal(g, def);
     },
     perform: (t, g) => {
       const at = tileOf(t);

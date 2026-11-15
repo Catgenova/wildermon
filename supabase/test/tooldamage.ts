@@ -23,7 +23,7 @@ import { ACTIONS, ACTION_BY_ID, type ActionDef, type Target } from '../../src/ga
 import { MATERIALS } from '../../src/game/building';
 import { IMPROVE_ACTIONS } from '../../src/game/improve';
 import { wearPerUse } from '../../src/game/limits';
-import { psql, ok, bad, check } from './harness';
+import { bad, check, CRAFT_HANDS, hands, handsSql, ok, psql } from './harness';
 
 const near = (a: number, b: number): boolean => Math.abs(a - b) < 1e-9;
 const QL = 30;
@@ -47,6 +47,7 @@ check('the island\'s go asks for every job\'s own tool (`private.job_tool`)', jo
 
 // A building job's tool, by every material, on both sides.
 const g = Game.create(4112, 96);
+hands(g, CRAFT_HANDS); // no skill gate (`craftgates.ts`) in the way of what this is about
 g.perkFx = {};
 const tx = g.player.tileX;
 const ty = g.player.tileY;
@@ -156,6 +157,7 @@ declare w uuid; u uuid; v_tool bigint; v_why text; v_box bigint; v_b int; r reco
 begin
   select id into w from world where name = 'Stonehaven';
   select p.uid into u from player p where p.world_id = w order by p.uid limit 1;
+  ${handsSql('w', 'u', CRAFT_HANDS)};
   for tx in 4..15 loop for ty in 4..15 loop
     perform land_set_height(w, tx, ty, 40); perform land_set_dirt(w, tx, ty, 20);
     perform land_set_tile(w, tx, ty, tile_id('Packed dirt')); perform land_set_data(w, tx, ty, 0);

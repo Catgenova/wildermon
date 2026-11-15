@@ -2070,6 +2070,36 @@
     "why": "Asked for: \"Remove ore level requirements for oremander line.\" Reported: an Ironemole at mining 1 by bare rock said \"no bare rock with a seam in it\". An Ironemole at mining 1 mines bare iron; another miner and you do not, and its card names the seam and the mining it needs; bare rock with no seam says so; a kind's range per step is the defs' on both sides."
   },
   {
+    "file": "supabase/test/skillgates.ts",
+    "title": "Skill gates: trees, sprouts and crops, for you and for workers at their own level; items unidentified under their gate",
+    "shard": 6,
+    "why": "Asked for: trees gated by woodcutting (birch 1, willow 90), sprouts by forestry, sowing by farming per crop, a worker checking a gate's own skill at its own level, and \"items picked up that you cant use yet show as unidentified\". The island's skill_gate and skill_gate_item are the browser's tables; felling, picking and planting sprouts and sowing refused in the same words on both sides under the level and allowed at it; harvest open; a crate of wemp seeds named \"Unidentified seed\" at farming 20 and \"Wemp seeds\" at 40, the tooltip \"30 farming required to identify this seed.\", and picked up in those words; fellers, sprout pickers, farmers and a hod carrier read gates at their own level in the gate's skill; the Unlocks lists are the table."
+  },
+  {
+    "file": "supabase/test/skillgates-b.ts",
+    "title": "Skill gates: wagons, boats, quarried stone; seams, taming and fish on the one rule; veins named by prospecting",
+    "shard": 5,
+    "why": "Asked for: \"Gate using wagons until driving level 30. Gate boat type use by sailing level\", the gates already there on the one rule with their numbers kept (\"6 8 12 etc\"), quarried stone by mining, and veins over your prospecting \"Unidentified metal\". Every seam, kind and fish at the level it had, against the old numbers; a wagon at driving 29 refused at the reins in the same words on both sides and allowed at 30, a large cart open at 0, a passenger aboard at sailing 1; each boat at its sailing level; an iron vein and a marble face in the one rule's words; a Sapgnaw and a Logchewer refused by their stage's name; a Chiptail under marble's gate skips it and says why; copper named and iron unidentified at prospecting 1, named at 5, per viewer; the Unlocks lists."
+  },
+  {
+    "file": "supabase/test/skillgates-c.ts",
+    "title": "Skill gates: recipes, restoring, walls, floors and paving, for you and for workers at their own level",
+    "shard": 4,
+    "why": "Asked for: \"Gate cooking recipes. Gate bauble and artifact restorations. Gating carpentry crafts, masonry crafts, wall types based on carp/masonry levels. Gating formulas. Gating paving/floor types. Gating these tasks also for wildermon that perform them equal to their own level.\" The island's skill_gate is the browser's for every recipe (by difficulty, the smelter, wagon and caravel as decided, a Formula's scroll by what it goes on), relic, bauble tier, material, wall, floor and paving type; apple pie, the wagon, a long bow, a plank wall, a bay window, an iron-bound gate, a spiral staircase, a marble wall, marble slabs and cobblestones refused in the same words on both sides; a Formula, a fragment and a tarnished bauble unidentified under their gate and refused in those names; cooks and hod carriers at their own level in each gate's skill; carpentry's and cooking's Unlocks and the next gate beside each skill's level."
+  },
+  {
+    "file": "supabase/test/skillgates-g.ts",
+    "title": "Skill gates: the answers to batch F, obsidian at 99, alloys by their recipe, a hod carrier naming a bridge",
+    "shard": 2,
+    "why": "Answered: wemp sown at 1; the bucket and lye at 1; an alloy poured and worked at its mixing recipe's level; everything of obsidian at 99 in its own skill; a treasure map read under its gate; a hod carrier with only spans over its level names the gate. The island's rows are the browser's for all of it; steel and fire-tempered steel pouring, an obsidian vase and obsidian glass building refused in the same words on both sides; the bucket, lye and wemp open at 1; a hod carrier's gate on both sides and its words; the Unlocks at 99."
+  },
+  {
+    "file": "supabase/test/skillgates-f.ts",
+    "title": "Skill gates: the recommended gates, smelting and castings by the metal, first steps at 1",
+    "shard": 3,
+    "why": "Asked for: \"Add those recommended gates. … Bring the awl and leather down. Same with papyrus milling and ropemaking first steps. For smithing, working a casting should have requirements equal to the smelting gate parallels.\" The island's skill_gate and skill_gate_item are the browser's for graft, water plants, treasure maps, bridges, smelting, castings, stones in a circlet, a cross and spells; smelting, pouring and working a casting read the one metal table; Graft, tin smelting, a tin sword blade casting, a drawbridge, a stone brick bridge, an aqueduct, a diamond in a circlet and a sound map refused in the same words on both sides and allowed at their level; a lily root and a treasure map unidentified under their gate; the bowstring, short bow, awl, leather, papyrus, paper press and rope open at 1; smelter workers, water planters and hod carriers at their own level; the Unlocks lists."
+  },
+  {
     "file": "supabase/test/aroundbehind.ts",
     "title": "A worker round you left behind comes to you",
     "shard": 6,

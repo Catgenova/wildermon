@@ -33,7 +33,7 @@ import { ACTION_BY_ID } from '../../src/game/actions';
 import { borderOf, gapText, type Side } from '../../src/game/building';
 import { Game } from '../../src/game/game';
 import type { NoPlanLook } from './noplan-page';
-import { psql, ok, bad, check } from './harness';
+import { bad, BUILD_HANDS, check, hands, handsSql, ok, psql } from './harness';
 
 const W = `(select id from world where name = 'Hoarding')`;
 const DANE = `(select uid from player where world_id = ${W} and name = 'Dane')`;
@@ -54,6 +54,7 @@ const daneWas = psql(`select x || ',' || y || ',' || level from player where wor
 
 /* ---- the tower, on both sides ---------------------------------------------- */
 const game = Game.create(4242);
+hands(game, BUILD_HANDS); // no skill gate (`craftgates.ts`) in the way of what this is about
 const bld = game.buildings;
 game.player.x = TX + 0.5;
 game.player.y = TY + 2.5;
@@ -175,7 +176,13 @@ for (const [x, y, s] of OUTSIDE) both('no_plan', side(x, y, s), 'No plan');
     mine === openMine && theirs === openTheirs && mine === theirs && mine.includes('6 sides with no wall or columns'),
     `before "${openMine}" / "${openTheirs}", after "${mine}" / "${theirs}"`);
   // A roof needs no enclosed storey under it (free roofing): marked sides or not, it is planned the same.
+  // On the island too, no skill gate (`craftgates.ts`) in the way of a plank roof: Dane's building skills raised for the
+  // one ask and put back as they were, for the tests after.
+  const kept = psql(`select coalesce(string_agg(id || '=' || value, ','), '') from skill where world_id = ${W} and uid = ${DANE} and id in (${BUILD_HANDS.map((k) => `'${k}'`).join(', ')});`);
+  psql(`${handsSql(W, DANE, BUILD_HANDS)};`);
   same('and a roof over it is allowed, marked or not, on both sides', 'plan_floor', { x: TX, y: TY, material: 'plank', floorKind: 'roof' }, 'ALLOWED');
+  psql(`delete from skill where world_id = ${W} and uid = ${DANE} and id in (${BUILD_HANDS.map((k) => `'${k}'`).join(', ')});`
+    + kept.split(',').filter(Boolean).map((kv) => `insert into skill (world_id, uid, id, value) values (${W}, ${DANE}, '${kv.split('=')[0]}', ${kv.split('=')[1]});`).join(''));
 }
 
 /* ---- and a fresh browser is handed the marks -------------------------------- */
@@ -188,6 +195,7 @@ for (const [x, y, s] of OUTSIDE) both('no_plan', side(x, y, s), 'No plan');
   const sent = (seen.noPlan ?? []).filter((m) => m.building === ID);
   check('the ground read hands a browser the six marks', sent.length === 6, JSON.stringify(sent));
   const g2 = Game.create(4242);
+  hands(g2, BUILD_HANDS); // no skill gate (`craftgates.ts`) in the way of what this is about
   g2.buildings.sawIsland(seen as never);
   const laid = OUTSIDE.filter(([x, y, s]) => g2.buildings.noPlan(1, borderOf(x, y, s))).length;
   const t2 = g2.buildings.list.get(ID);

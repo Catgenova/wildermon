@@ -23,10 +23,10 @@ begin
     if not found then return; end if;
     update item set locked = (p_action = 'lock_item') where id = it.id;
     if p_action = 'lock_item' then
-      perform tell(p_world, p_uid, 'Locked: ' || lower(item_name(it))
+      perform tell(p_world, p_uid, 'Locked: ' || lower(seen_name(p_world, p_uid, it))
         || '. Not spent, dropped or fed until unlocked.', 'info');
     else
-      perform tell(p_world, p_uid, 'Unlocked: ' || lower(item_name(it)) || '.', 'info');
+      perform tell(p_world, p_uid, 'Unlocked: ' || lower(seen_name(p_world, p_uid, it)) || '.', 'info');
     end if;
 
   elsif p_action = 'drop' then
@@ -59,8 +59,8 @@ begin
               it.rare, it.dye, it.bless, it.maker, it.piece, it.mark, v_cool);
     end if;
     perform tell(p_world, p_uid, 'Dropped: '
-      || case when v_want > 1 then v_want || ' × ' || lower(item_name(it))
-              else lower(item_name(it)) end
+      || case when v_want > 1 then v_want || ' × ' || lower(seen_name(p_world, p_uid, it))
+              else lower(seen_name(p_world, p_uid, it)) end
       || ', on the ground.', 'event');
     perform land_announce(p_world, floor(p.x)::int, floor(p.y)::int);
 
@@ -80,7 +80,7 @@ begin
     -- Onto the pile it came off, rather than beside it.
     perform pack_fold_one(it.id);
     perform tell(p_world, p_uid, 'Picked up: ' ||
-      case when it.count > 1 then it.count || ' × ' else '' end || lower(item_name(it)) || '.', 'event');
+      case when it.count > 1 then it.count || ' × ' else '' end || lower(seen_name(p_world, p_uid, it)) || '.', 'event');
     perform land_announce(p_world, v_x, v_y);
 
   elsif p_action = 'pick_up_all' then
@@ -103,7 +103,7 @@ begin
     if v_took is null then
       perform tell(p_world, p_uid, 'Nothing here to pick up.', 'error');
     else
-      perform tell(p_world, p_uid, 'Picked up: ' || pile_text(v_took) || '.', 'event');
+      perform tell(p_world, p_uid, 'Picked up: ' || seen_pile_text(p_world, p_uid, v_took) || '.', 'event');
       /*
        * After the naming, never during it.
        *

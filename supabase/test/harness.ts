@@ -89,3 +89,37 @@ export const timeScale = (): number => {
   if (!Number.isFinite(n) || n <= 0) throw new Error(`TIME_SCALE must be a positive number, not ${given}`);
   return n;
 };
+
+/**
+ * Hands skilled enough that no skill gate (`src/game/craftgates.ts`) is in the way of a test about something else: these
+ * skills at `level` on the island, for player `u` in world `w` (SQL expressions), never lowered.
+ */
+export const HANDS = 90;
+export const handsSql = (w: string, u: string, skills: readonly string[], level = HANDS): string =>
+  `insert into skill (world_id, uid, id, value) select ${w}, ${u}, s, ${level} from unnest(array[${skills.map((s) => `'${s}'`).join(', ')}]::text[]) s
+     on conflict (world_id, uid, id) do update set value = greatest(skill.value, excluded.value)`;
+/** And the same in a browser's game. */
+export const hands = (g: { skills: { values: Map<string, number> } }, skills: readonly string[], level = HANDS): void => {
+  for (const s of skills) g.skills.values.set(s, Math.max(g.skills.values.get(s) ?? 0, level));
+};
+/** The skills walls, floors, roofs and columns are planned and built in. */
+export const BUILD_HANDS: readonly string[] = ['carpentry', 'masonry'];
+/** The skills recipes are made in (`craftgates.ts`, a gate on every recipe), and paving and restoring. */
+export const CRAFT_HANDS: readonly string[] = [
+  'alchemy', 'blacksmithing', 'bowyery', 'brewing', 'carpentry', 'cooking', 'enchanting', 'fine_carpentry', 'first_aid',
+  'fishing', 'fletching', 'glassblowing', 'jewellery', 'leatherworking', 'masonry', 'milling', 'papyrusmaking', 'pottery',
+  'repair', 'ropemaking', 'smelting', 'stonecutting', 'tailoring', 'paving', 'restoration',
+];
+/**
+ * A worker's skills at every recipe's and sowing's level up to `level` (`craftgates.ts`): under the first evolution
+ * stage, so its level and stage stay a first stage's. As JSON for the island, as an object for the browser.
+ */
+export const WORKER_HANDS = 20;
+export const workerHands = (level = WORKER_HANDS): Record<string, number> =>
+  Object.fromEntries([...CRAFT_HANDS, 'farming'].map((s) => [s, level]));
+export const workerHandsJson = (level = WORKER_HANDS): string => JSON.stringify(workerHands(level));
+/** `handsSql` for every player of a list (`uids`: SQL, comma-separated uuids). */
+export const handsSqlEach = (w: string, uids: string, skills: readonly string[], level = HANDS): string =>
+  `insert into skill (world_id, uid, id, value) select ${w}, p, s, ${level}
+     from unnest(array[${uids}]::uuid[]) p, unnest(array[${skills.map((s) => `'${s}'`).join(', ')}]::text[]) s
+     on conflict (world_id, uid, id) do update set value = greatest(skill.value, excluded.value)`;

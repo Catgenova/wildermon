@@ -15,14 +15,14 @@ begin
     v_want := greatest(1, least(it.count, coalesce((p_target->>'count')::int, 1)));
     v_fits := least(v_want, greatest(0, counter_holds()::int - counter_units(c)));
     if v_fits <= 0 then return; end if;
-    v_name := item_name(it);
+    v_name := seen_name(p_world, p_uid, it);
     perform move_part(it.id, v_fits, 'counter', null, null, c.id);
     perform tell(p_world, p_uid, set_out_line(v_fits, v_name, v_want - v_fits), 'event');
   elsif p_action = 'take_off_counter' then
     select * into it from item where world_id = p_world and id = target_item(p_target) and holder = 'counter' for update;
     if not found then return; end if;
     v_want := greatest(1, least(it.count, coalesce((p_target->>'count')::int, it.count)));
-    v_name := item_name(it);
+    v_name := seen_name(p_world, p_uid, it);
     perform move_part(it.id, v_want, 'player', p_uid, null, null);
     perform tell(p_world, p_uid, take_back_line(v_want, v_name), 'event');
   end if;

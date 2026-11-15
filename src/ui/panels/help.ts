@@ -153,7 +153,7 @@ import { MARK_CAP } from '../../game/marks';
 import { TOOL_JOBS } from '../../game/jobtools';
 import { MATERIAL_BY_ID, OBSIDIAN, type MaterialDef } from '../../game/materials';
 import { calmCap, CHOOSE_AT, PATH_LIST, PATH_TIER_AT, PICKS_PER_TIER, picksOf, SIT_CALM, SIT_REST, SIT_WORTH } from '../../game/meditation';
-import { COINS_PER_LUMP, INGOT_LUMPS, INGOT_WEIGHT, METALS, MOULD_BY_ID, MOULD_SKILL, MOULDS, NAILS_PER_LUMP, PRECIOUS_METALS, RARE_METALS, SMITH_TOOL } from '../../game/metal';
+import { COINS_PER_LUMP, INGOT_LUMPS, INGOT_WEIGHT, METAL_BY_ID, METALS, MOULD_BY_ID, MOULD_SKILL, MOULDS, NAILS_PER_LUMP, PRECIOUS_METALS, RARE_METALS, SMITH_TOOL } from '../../game/metal';
 import { COIN_WORTH } from '../../game/money';
 import { ORDER_LIFE } from '../../game/orders';
 import { KEPT_BEST, NUTRIENT_HOURS, NUTRIENT_NAMES, NUTRIENTS, TABLE_BEST } from '../../game/nutrition';
@@ -184,6 +184,17 @@ import { AWARE_PER_LEVEL, AWARE_TRAIT_STEP, awareShareAbove, awareTraitEase, DEE
 import { NIGHT_EYES_FROM } from '../../game/learn';
 import { NO_GO, pointAt, windWord, windWorth } from '../../game/wind';
 import { article, capital, finePercent, listed, listedOr, percent, timeWords } from '../../game/words';
+import { bridgeLevel, CASTING_SKILLS, CRAFT_FROM, CRAFT_PER, craftLevel, FORMULA_GATE, FORMULA_TWO_ELEMENTS, gemLevel, METAL_GATE, POUR_GATE_SAID, SMELT_SKILL } from '../../game/craftgates';
+import { TREASURE_TIERS } from '../../game/treasure';
+import {
+  CRAFT_GATE_SAID, CROP_GATE, cropSeed, GATE_LADDER, GATE_STOPS, GATED_ITEMS, GATED_SKILLS, gateOf, identifySaid, SEAM_GATE, seenName, skillGateRefusal, SKILL_GATES, UNIDENTIFIED_METAL,
+  unlocksSaid, VEIN_UNREAD, type Viewer,
+} from '../../game/skillgates';
+
+/** Somebody at 1 in every skill, for the help's examples of what is unidentified. */
+const FRESH: Viewer = { skills: { get: () => 1 } };
+/** The help's unidentified seed: the lowest crop sown above farming 1 (`CROP_GATE`), by name. */
+const SEED_SHOWN = cropSeed(Object.entries(CROP_GATE).filter(([, lv]) => lv > 1).sort((a, b) => a[1] - b[1] || (a[0] < b[0] ? -1 : 1))[0][0]);
 import { FAIL_EXAMPLE_AT, FAIL_FACTORS, FAIL_LEAST, FAIL_WHY_JOBS, failFactor, failFactorSaid } from '../../game/failwhy';
 import {
   bossSays, garrisonSays, HOARD_SCALE, HOARD_SCALE_CAP, HOARD_SHARE, hoardBook, hoardSays, LAIR_ANNOUNCE, LAIR_KINDS, LAIR_LEASH, LAIR_MOVE_CLEARS, LAIR_MOVE_DAYS,
@@ -912,7 +923,8 @@ const TIER_SPAN = Object.fromEntries(TIERS.map((tier) => {
   return [tier, [Math.min(...most), Math.max(...most)]];
 })) as Record<TraitTier, [number, number]>;
 /** The seams in the rock, by the mining each asks, and what one is called in a list. */
-const SEAMS = ROCK_VARIANTS.filter((r) => r.level).sort((a, b) => (a.level ?? 0) - (b.level ?? 0));
+const SEAMS = ROCK_VARIANTS.filter((r) => SEAM_GATE[r.yields] !== undefined).map((r) => ({ ...r, level: SEAM_GATE[r.yields] }))
+  .sort((a, b) => a.level - b.level);
 const seamName = (name: string): string => name.replace(/ (vein|seam)$/, '').toLowerCase();
 /** What an ordinary go teaches at a level, and the levels worth showing it at. */
 const GAIN_AT = [1, 50, 90, 99];
@@ -1238,7 +1250,7 @@ function pathHelp(): string {
       <li><b>Guiding Light card</b>: top right, as a step ticks: <b>Done</b>, <b>Next</b>, <b>How</b>, <b>Why</b>, a picture of you at the job; <b>Close</b>, <b>Skip next</b>, <b>Guiding Light tab</b>. Down on Close or the first job started after ${PATH_CARD_HOLD} s. Settings (<kbd>${keyOf('win_settings')}</kbd>), Interface, <b>Guiding Light pop-ups</b>: On.</li>
       <li><b>Ticks</b>: a step done ticks itself, early or late, once the island's own record shows it done.</li>
       <li><b>Field guide</b>: Guiding Light on notes ${PATH_KINDS.length} kinds (${listed(kinds)}): <b>Noted (Guiding Light)</b>; Track as if seen. Noted: no seen count, goal or title.</li>
-      <li><b>Suggested sites</b>: ${PATH_SITE.count} nearest, every ${PATH_SITE.every} tiles within ${PATH_SITE.reach} of you, ${PATH_SITE.apart} apart: every founding check; trees ${PATH_SITE.trees}+ within ${PATH_SITE.treeReach}; water within ${PATH_SITE.water}; bare rock within ${PATH_SITE.rock}.</li>
+      <li><b>Suggested sites</b>: ${PATH_SITE.count} nearest, every ${PATH_SITE.every} tiles within ${PATH_SITE.reach} of you, ${PATH_SITE.apart} apart: every founding check; trees your woodcutting fells ${PATH_SITE.trees}+ within ${PATH_SITE.treeReach}; water within ${PATH_SITE.water}; bare rock within ${PATH_SITE.rock}.</li>
       <li><b>Guiding Light supply</b>: a tame step whose kind eats nothing in season: its favourite food, enough to tame it ${percent(PATH_SURE)} of the time at its own chance, one offering a try. Issued: no sale, no trade, kept at death. Once a step.</li>
       <li><b>Skills</b>: ${PATH_SKILLS.length}: ${listed(PATH_SKILLS.map((id) => (SKILL_BY_ID.get(id)?.name ?? id).toLowerCase()))}.</li>
     </ul>`;
@@ -1969,7 +1981,8 @@ export function helpText(): string {
       <li><b>${itemDef(SMITH_TOOL).name}</b> needed: firing a mould, pouring one, casting an anvil, smithing a casting, fitting a padlock.</li>
       <li><b>Anvil mould</b>, poured at the smelter: an anvil of that metal from ${MOULD_BY_ID.get('anvil_mould')!.lumps} lumps; set down on ${ANVIL_SUBTILES * ANVIL_SUBTILES} spots of a tile.</li>
       <li>Other moulds, <b>poured at the smelter</b> in any metal: a <b>casting</b> (shovel head casting, nail casting…) out with the lumps.</li>
-      <li>Castings are finished at an <b>anvil</b> with <b>blacksmithing</b>, <b>weaponsmithing</b> or <b>armoursmithing</b> as the piece needs. Skill sets success and QL,
+      <li>Pouring, a mould or an anvil: ${skillWord(MOULD_SKILL)} at the metal's level, ${METALS.map((m) => `${m.name.toLowerCase()} ${METAL_GATE[m.id]}`).join(', ')}. Smelting its ore: the same level in ${skillWord(SMELT_SKILL)}.</li>
+      <li>Castings are finished at an <b>anvil</b> in the piece's own trade (${listed(CASTING_SKILLS.map((s) => `<b>${skillWord(s)}</b>`))}), at the metal's level in it. Skill sets success and QL,
       with the casting (mould and metal QL) and the anvil. Failure: casting damaged by its QL (${FAIL_DAMAGE_SAID}), not used up.</li>
       ${MOULDS.filter((m) => m.also).map((m) => `<li><b>${itemDef(m.makes).name}</b>: casting + ${m.also?.count} × ${itemDef(m.also?.item ?? '').name.toLowerCase()} at the anvil, spent on success.</li>`).join('')}
       <li>Tool heads and blades: fit a shaft. Swords hit far harder than tools. A helm stops most of a cornered wildermon's damage.</li>
@@ -3629,7 +3642,8 @@ export function helpText(): string {
       (&ldquo;${idleSays({ why: 'waiting', n: FORAGE_COOLDOWN }, 'sand')}&rdquo;); nothing in your settlement stores to work, naming what it needs
       (&ldquo;${idleSays({ why: 'stock', n: 0 }, 'mend')}&rdquo;); no barrel with room for its water; a load with nowhere to put it; walking home when over ${HOME_SLACK} tiles past
       its range, with the distance; a miner: a bare seam above its mining (&ldquo;${idleSays({ why: 'seam', n: 4, what: ['iron_ore'] }, 'mine', null, 1)}&rdquo;),
-      bare rock with no seam (&ldquo;${idleSays({ why: 'noseam', n: SPECIES.mola.workRange }, 'mine')}&rdquo;); no staircase up to its work's storey (&ldquo;${idleSays({ why: 'stairs', n: 2 }, 'hod')}&rdquo;); no staircase down from where it stands (&ldquo;${idleSays({ why: 'stranded', n: 2 }, 'hod')}&rdquo;): it stays on that storey until one is built.
+      bare rock with no seam (&ldquo;${idleSays({ why: 'noseam', n: SPECIES.mola.workRange }, 'mine')}&rdquo;); only work above its level in its task's skill, the lowest then the nearest
+      (&ldquo;${idleSays({ why: 'gate', n: 3, what: ['tree', 'willow'] }, 'woodcut', null, 12)}&rdquo;); no staircase up to its work's storey (&ldquo;${idleSays({ why: 'stairs', n: 2 }, 'hod')}&rdquo;); no staircase down from where it stands (&ldquo;${idleSays({ why: 'stranded', n: 2 }, 'hod')}&rdquo;): it stays on that storey until one is built.
       Island: no work while its keeper is away or no awake player is near enough; the card says which and how near.</li>
       <li><b>Storeys</b>: a store, station or planned work a storey up is walked to by the building's finished staircases: wide or ${SINGLE_STAIRS_NAME} onto it from
       its foot, off at its head, down off its foot; ${SPIRAL_STAIRS_NAME} on its own tile. Over finished floors only, and a finished bridge's deck between floors
@@ -4017,6 +4031,27 @@ export function helpText(): string {
       <li>Island-specific ground: ${listed(REGIONS.filter((R) => R.ores.length || (R.stone !== 'rock_shards' && !R.mountain)).map((R) => `${listed([...(R.stone !== 'rock_shards' && !R.mountain ? [R.stone] : []), ...R.ores].map((y) => `<b>${rockName(y)}</b>`))} on ${islandName(R.name)}`))}.
       ${REGIONS.filter((R) => R.mountain).map((R) => `${capital(islandName(R.name))}: plain rock, with <b>${rockName(R.stone)}</b> and ${listed((R.mountain ?? []).map((y) => `<b>${rockName(y)}</b>`))} seams only under its mountain, above the alpine line.`).join(' ')}
       Elsewhere, another island's seam is iron instead.</li>
+    </ul>
+    <h4>Skill gates</h4>
+    <ul>
+      <li>Under a thing's level in its skill: refused, greyed in the menu with the need (&ldquo;${skillGateRefusal('Willow', 'woodcutting', 12.4, gateOf('tree', 'willow')!.level)}&rdquo;).
+      A worker skips it at its own level in that skill. Levels: ${GATE_LADDER.join(', ')}. Skills window: each skill's gates, ticked when met.</li>
+      <li>Unidentified: ${listed([...new Set(GATED_ITEMS.map((x) => x.noun))].map((n) => `${n}s`))} under the level of their use, named
+      &ldquo;${seenName({ id: SEED_SHOWN }, FRESH)}&rdquo;; tooltip &ldquo;${identifySaid({ id: SEED_SHOWN }, FRESH)}&rdquo;
+      Picked up, carried, stored and traded as any item.</li>
+      <li>Recipe level: the ladder step at or below ${CRAFT_PER} × (difficulty − ${CRAFT_FROM}); no difficulty: ${craftLevel(undefined)}. Named: ${Object.entries(CRAFT_GATE_SAID).map(([id, g]) => `${itemDef(id).name} ${skillWord(g.skill)} ${g.level}`).join(', ')}.
+      Formula scrolls by target: weapon, bow, armour, shield, tool, light ${FORMULA_GATE.melee}; jewellery, clothing, gear ${FORMULA_GATE.ring}; vessel, cart, store, furnace, station ${FORMULA_GATE.ship}; mixed elements ${FORMULA_TWO_ELEMENTS}.
+      Relics and baubles: their restoring difficulty, the same rule.</li>
+      <li>Pouring a metal (Pour a mould, Cast an anvil; nail and ribbon smiths), in ${skillWord(MOULD_SKILL)}: a mined metal at its seam's mining level, but ${Object.entries(POUR_GATE_SAID).map(([id, lv]) => `${METAL_BY_ID.get(id)?.name.toLowerCase() ?? id} ${lv}`).join(', ')}; an alloy at the level of the recipe that mixes it
+      (${METALS.filter((m) => !m.ore).map((m) => `${m.name.toLowerCase()} ${METAL_GATE[m.id]}`).join(', ')}). Forming the mould: its own recipe's level.</li>
+      <li>The same level a metal: smelting its ore, in ${skillWord(SMELT_SKILL)} (Smelt; smelter workers and stokers); working its casting at the anvil, in the casting's own trade
+      (${listed(CASTING_SKILLS.map(skillWord))}; nail and ribbon smiths).</li>
+      <li>Bridges: a material bridge at its material's level; ${listed(Object.values(BRIDGES).filter((b) => !b.material).map((b) => `${b.name.toLowerCase()} ${bridgeLevel(b)}`))}, by difficulty. Planning, and adding to a plan; hod carriers at their own level.</li>
+      <li>Stones in a circlet: ${listed(GEMS.slice().sort((a, b) => gemLevel(a) - gemLevel(b)).map((s) => `${s.name.toLowerCase()} ${gemLevel(s)}`))}, in ${skillWord('jewellery')}.</li>
+      <li>Treasure maps, dug up, in ${skillWord('digging')}: ${listed(TREASURE_TIERS.map((t) => `${t.name} ${gateOf('hoard', t.id)!.level}`))}; unidentified under it, still read.</li>
+      <li>Veins: bare, always named; buried, &ldquo;${UNIDENTIFIED_METAL}&rdquo; under its mining level in prospecting; tooltip &ldquo;${VEIN_UNREAD}&rdquo;</li>
+      <li>Walls, floors, roofs: the material's gate and the wall or floor type's, both in the material's skill (carpentry or masonry). Planning, and adding to a plan.</li>
+      ${GATED_SKILLS.map((id) => `<li><b>${SKILL_BY_ID.get(id)?.name ?? id}</b> (${listed([...new Set(SKILL_GATES.filter((g) => g.skill === id).map((g) => GATE_STOPS[g.kind]))])}): ${unlocksSaid(id)}.</li>`).join('\n      ')}
     </ul>
     <h4>Flatten, decay, skill</h4>
     <ul>

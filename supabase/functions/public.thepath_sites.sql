@@ -10,7 +10,7 @@ declare
   p player; v_size int; R int := thepath_site_reach(); E int := thepath_site_every();
   TR int := thepath_site_tree_reach(); WR int := thepath_site_water(); KR int := thepath_site_rock();
   M int; x0 int; y0 int; x1 int; y1 int; nx int; ny int; px int; py int; w1 int;
-  v_tree int := tile_id('Tree'); v_rock int := tile_id('Rock');
+  v_tree int := tile_id('Tree'); v_rock int := tile_id('Rock'); v_fell boolean[];
   s_tree int[]; s_wet int[]; s_rock int[];
   c record; v_out jsonb := '[]'::jsonb; v_found int := 0; v_d int; v_w int; v_k int; v_trees int; v_lair record;
   a int; b int; lo int; hi int;
@@ -19,6 +19,8 @@ begin
   select * into p from player where world_id = p_world and uid = p_uid;
   if not found then return '[]'::jsonb; end if;
   select size into v_size from world where id = p_world;
+  -- Only the trees your woodcutting fells count (`fellsSaid`): each tile data byte's species, at your level.
+  select array_agg(tree_fells(d, skill_of(p_world, p_uid, 'woodcutting')) order by d) into v_fell from generate_series(0, 255) d;
   M := greatest(TR, WR, KR);
   px := floor(p.x)::int; py := floor(p.y)::int;
   x0 := greatest(0, px - R - M); y0 := greatest(0, py - R - M);
@@ -31,18 +33,19 @@ begin
    */
   with rw as materialized (
     -- Each row of the window cut out of its land row once: the tiles, and the corners above and below.
-    select ii.i, substr(t.tiles, x0 + 1, nx) as tl, substr(c0.heights, 2 * x0 + 1, 2 * (nx + 1)) as h0,
+    select ii.i, substr(t.tiles, x0 + 1, nx) as tl, substr(t.data, x0 + 1, nx) as dt, substr(c0.heights, 2 * x0 + 1, 2 * (nx + 1)) as h0,
            substr(c1.heights, 2 * x0 + 1, 2 * (nx + 1)) as h1
       from generate_series(0, ny) ii(i)
       left join land_tile t on ii.i > 0 and t.world_id = p_world and t.y = y0 + ii.i - 1
       left join land_corner c0 on ii.i > 0 and c0.world_id = p_world and c0.y = y0 + ii.i - 1
       left join land_corner c1 on ii.i > 0 and c1.world_id = p_world and c1.y = y0 + ii.i
   ), cell as materialized (
-    select rw.i, jj.j, (b.tile = v_tree)::int as vt, (b.tile = v_rock)::int as vk,
+    select rw.i, jj.j, (b.tile = v_tree and v_fell[b.dat + 1])::int as vt, (b.tile = v_rock)::int as vk,
            (jj.j > 0 and rw.tl is not null
             and least(b_i16(rw.h0, jj.j - 1), b_i16(rw.h0, jj.j), b_i16(rw.h1, jj.j - 1), b_i16(rw.h1, jj.j)) < 0)::int as vw
       from rw cross join generate_series(0, nx) jj(j)
-      cross join lateral (select case when jj.j > 0 and rw.tl is not null then get_byte(rw.tl, jj.j - 1) else -1 end as tile) b
+      cross join lateral (select case when jj.j > 0 and rw.tl is not null then get_byte(rw.tl, jj.j - 1) else -1 end as tile,
+                                 case when jj.j > 0 and rw.dt is not null then get_byte(rw.dt, jj.j - 1) else 0 end as dat) b
   )
   select array_agg(q.st order by q.i, q.j), array_agg(q.sw order by q.i, q.j), array_agg(q.sk order by q.i, q.j)
     into s_tree, s_wet, s_rock

@@ -17,6 +17,9 @@ begin
     if not in_reach(p.x, p.y, p_target, false, (select d.range from action_def d where d.id = 'plan_aqueduct')) then
       return 'You are too far away from that.';
     end if;
+    if kind_gate_refusal(p_world, p_uid, 'bridge', 'aqueduct') is not null then
+      return kind_gate_refusal(p_world, p_uid, 'bridge', 'aqueduct');
+    end if;
     return aqueduct_plan(p_world, p_uid, (p_target->'head'->>0)::int, (p_target->'head'->>1)::int,
                          (p_target->>'x')::int, (p_target->>'y')::int)->>'refused';
   end if;
@@ -26,6 +29,9 @@ begin
     select * into s from bridge_span sp where sp.world_id = p_world and sp.bridge = b.id
       and not span_done(sp.needed) order by sp.n limit 1;
     if not found then return 'Finished.'; end if;
+    if kind_gate_refusal(p_world, p_uid, 'bridge', 'aqueduct') is not null then
+      return kind_gate_refusal(p_world, p_uid, 'bridge', 'aqueduct');
+    end if;
     if tool_ql(p_world, p_uid, 'trowel') <= 0 then
       return 'Need a ' || lower((select coalesce(name, 'trowel') from item_def where id = 'trowel')) || '.';
     end if;

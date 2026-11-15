@@ -44,7 +44,7 @@ import {
   counterReach, counterStreetRefusal,
   type CounterWire,
 } from '../../src/game/counters';
-import { psql, ok, bad, check } from './harness';
+import { bad, BUILD_HANDS, check, hands, ok, psql } from './harness';
 
 const same = (what: string, mine: string | null | undefined, theirs: string | null | undefined, want?: string | null): void => {
   const m = mine ?? 'ALLOWED';
@@ -60,6 +60,7 @@ const same = (what: string, mine: string | null | undefined, theirs: string | nu
  */
 const X = 20, Y = 20;
 const game = Game.create(4242);
+hands(game, BUILD_HANDS); // no skill gate (`craftgates.ts`) in the way of what this is about
 const bld = game.buildings;
 const shop = bld.create('Shop', X, Y);
 bld.addTile(shop, X + 1, Y);
@@ -253,8 +254,10 @@ begin
   update deed set x = ${X}, y = ${Y} where world_id = w and founded_by = a;
   insert into wall (world_id, level, dir, x, y, building, type, material, needed, total, planned_by)
     values (w, 0, 'h', ${X + 1}, ${Y}, 91, 'counter', 'plank', '{"plank":1,"timber":0,"hinge":0}', '{"plank":18,"timber":3,"hinge":2}', a);
-  insert into creature (world_id, id, species, name, from_x, from_y, to_x, to_y, health, sex, mode, job, work_x, work_y, keeper, carrying)
-    select w, coalesce(max(id), 0) + 1, 'cobbe', 'Hoddy', ${X} + 1.5, ${Y} - 0.5, ${X} + 1.5, ${Y} - 0.5, 20, 'female', 'deed', 'hod', ${X + 1}, ${Y}, a, '{"def":"plank"}'::jsonb
+  -- At a plank counter's carpentry, its gates (craftgates.ts).
+  insert into creature (world_id, id, species, name, from_x, from_y, to_x, to_y, health, sex, mode, job, work_x, work_y, keeper, carrying, skills)
+    select w, coalesce(max(id), 0) + 1, 'cobbe', 'Hoddy', ${X} + 1.5, ${Y} - 0.5, ${X} + 1.5, ${Y} - 0.5, 20, 'female', 'deed', 'hod', ${X + 1}, ${Y}, a, '{"def":"plank"}'::jsonb,
+           '{"carpentry": 10}'::jsonb
     from creature where world_id = w
     returning id into v_pip;
   -- The errand on its own: what it changes is seen by the statements after it, not by one it is part of.
@@ -282,6 +285,7 @@ same('nor in a wall between two houses', minePlan.nextDoor, said('PLAN_NEXTDOOR'
 {
   // And not upstairs: the storey over the ground floor, floored, is asked on both sides.
   const up = Game.create(4242);
+  hands(up, BUILD_HANDS); // no skill gate (`craftgates.ts`) in the way of what this is about
   const house = up.buildings.create('Tall', 40, 40);
   house.levels = 2;
   house.workLevel = 1;
@@ -324,6 +328,7 @@ check('finished, its store opens behind it, kept by whoever planned it, reached 
 {
   // A worker fitting the last of it opens the store as a builder does.
   const w2 = Game.create(4242);
+  hands(w2, BUILD_HANDS); // no skill gate (`craftgates.ts`) in the way of what this is about
   const house = w2.buildings.create('Workshop', 60, 60);
   const wl = w2.buildings.setWall(house, 0, 60, 60, 'n', 'counter', 'log');
   for (const k of Object.keys(wl.needed)) wl.needed[k] = k === 'log' ? 1 : 0;
@@ -382,6 +387,7 @@ check('its keeper prices what is on it', said('PRICE_MINE') === 'priced', said('
  */
 const row = JSON.parse(said('GROUND')) as CounterWire & { kind?: string };
 const buyer = Game.create(4242);
+hands(buyer, BUILD_HANDS); // no skill gate (`craftgates.ts`) in the way of what this is about
 buyer.counters.saw(row);
 const seen = buyer.counters.list.get(row.id);
 const good = seen?.items.find((it) => it.id === 'plank');

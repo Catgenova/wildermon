@@ -508,6 +508,8 @@ check('Bounty brings on every crop on the caster\'s settlement, the planter stan
 /* ---- and the same planter in the browser --------------------------------------------------------- */
 
 const game = Game.create(3141);
+// The farming the island's player sows at (above), so wheat's gate (`CROP_GATE`) is met on both sides.
+game.skills.values.set('farming', 50);
 for (const t of [REAP_TOOL, TEND_TOOL]) if (!game.inventory.has(t)) game.inventory.add(t, { ql: 20 });
 const heard = (prefix: string): string => [...game.log].reverse().find((l) => l.text.startsWith(prefix))?.text ?? 'unsaid';
 const box = game.addFurniture('planter', BOX.x, BOX.y, BOX.sx, BOX.sy, 40, [], 'Oak');

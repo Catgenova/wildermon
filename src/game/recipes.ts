@@ -33,6 +33,7 @@ import { TREE_DEFS } from '../world/tiles';
 import { CLASSES } from './classes';
 import { CIRCLET_STONES } from './gems';
 import { SKILL_DEFS } from './skills';
+import { gatedFor } from './skillgates';
 import { CANDLE_DRAWN } from './light';
 import { ENCHANTERS_PLINTH, ENCHANTING, ENCHANTMENT_LIST, PAPER_PRESS, PLINTH_NAME, SCROLL_DIFFICULTY, SCROLL_HARM, SCROLL_SHEETS, scrollOf } from './enchant';
 import { DAMAGE_MAX } from './limits';
@@ -1032,6 +1033,8 @@ export interface RecipeStatus {
   inputs: Array<{ item: string; litres: boolean; need: number; have: number; carried: number }>;
   /** Shut, and its Recipe not read (`recipeUnread`): greyed and padlocked, never ready. */
   unread: boolean;
+  /** Under its skill gate (`craftgates.ts`): the refusal, greyed with it as the hint, never ready; or null. */
+  gated: string | null;
   /** Everything is at hand for at least one craft. */
   ready: boolean;
   /** How many times it can be made with what is carried and stored within reach. */
@@ -1167,8 +1170,9 @@ export function recipeStatus(r: Recipe, g: Game, want?: string, stock: readonly 
     return { item: i.item, litres: false, need: needOf(g, r, i), have: countFor(stock, r, i.item, material), carried: countFor(stock, r, i.item, material, true) };
   });
   const unread = recipeUnread(r, g);
-  const max = tool && station && onIsle && deed && !second && !unread ? Math.min(...inputs.map((i) => Math.floor(i.have / i.need))) : 0;
-  return { tool, station: station && onIsle, deed, second, unread, inputs, ready: max >= 1, max, material };
+  const gated = recipeGated(r, g);
+  const max = tool && station && onIsle && deed && !second && !unread && !gated ? Math.min(...inputs.map((i) => Math.floor(i.have / i.need))) : 0;
+  return { tool, station: station && onIsle, deed, second, unread, gated, inputs, ready: max >= 1, max, material };
 }
 
 /**
@@ -1304,6 +1308,9 @@ export function sealFerment(g: Game, r: Recipe, ql: number, rare: number | undef
   return it;
 }
 
+/** A recipe under its skill gate for somebody (`craftgates.ts`): "Apple pie: needs cooking 20; have 4.0.", or null. The island's `recipe_gate_refusal`. */
+export const recipeGated = (r: Pick<Recipe, 'id'>, g: Pick<Game, 'skills'>): string | null => gatedFor('recipe', r.id, (skill) => g.skills.get(skill));
+
 /** Why a recipe cannot be made right now, or null. */
 export function recipeReason(r: Recipe, g: Game, preferUid?: number, stock: readonly CraftStock[] = g.craftStock(preferUid, false, reachFor(g, r))): string | null {
   if (r.perk && g.perk(r.perk, 0) <= 0) return RECIPE_PERK_SAYS[r.perk] ?? 'Need a perk.';
@@ -1313,6 +1320,10 @@ export function recipeReason(r: Recipe, g: Game, preferUid?: number, stock: read
   if (r.writes && g.skills.get(r.writes) < TRADE_BOOK_AT) {
     return `Need ${skillName(r.writes).toLowerCase()} ${TRADE_BOOK_AT}.`;
   }
+  // Its skill gate (`craftgates.ts`), after what is known and before what is at hand, as the island's `craft_refusal`
+  // asks it: "Apple pie: needs cooking 20; have 4.0."
+  const gated = recipeGated(r, g);
+  if (gated) return gated;
   if (r.tool && !g.inventory.has(r.tool)) return `Need ${article(r.tool)}${lower(r.tool)}.`;
   if (r.station && !g.atStation(r.station)) return `Need: ${STATION_NAME[r.station]}.`;
   if (!onRecipeIsle(r, g)) return isleSays(r);

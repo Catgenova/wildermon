@@ -20,6 +20,7 @@ import { cacheDraws, cacheSpotAt } from './winter';
 import { grapesFor } from './vineyard';
 import { woundClose, type Wound } from './wounds';
 import { ROCK_VARIANTS } from '../world/tiles';
+import { SEAM_GATE } from './skillgates';
 import { SKILL_BY_ID, SKILL_TOP } from './skills';
 import { ARMOUR, ARMOUR_BY_ID, ARMOUR_CLASSES, hitChance, pieceSoak, SHIELDS, WEAPONS, WEAPON_BY_ID, weaponDamage, type ArmourClass, type WeaponDef } from './gear';
 import { blockChance, myCritChance, swungWith } from './fight';
@@ -222,7 +223,7 @@ const CHANCE_AT = 10;
 
 /** The ore you may mine at a level: the hardest metal whose level is in reach (`oreNeeds`). */
 export const hardestOre = (level: number): string => {
-  const open = ROCK_VARIANTS.filter((r) => r.level !== undefined && r.level <= level).sort((a, b) => (a.level ?? 0) - (b.level ?? 0));
+  const open = ROCK_VARIANTS.filter((r) => SEAM_GATE[r.yields] !== undefined && SEAM_GATE[r.yields] <= level).sort((a, b) => SEAM_GATE[a.yields] - SEAM_GATE[b.yields]);
   return open.length ? open[open.length - 1].name.replace(/ (vein|seam)$/, '') : 'none';
 };
 

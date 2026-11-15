@@ -59,6 +59,7 @@ begin
     if not found or not exists (select 1 from crop_def where seed = it.def) then
       return 'Choose a seed.';
     end if;
+    if item_gate_refusal(p_world, p_uid, it) is not null then return item_gate_refusal(p_world, p_uid, it); end if;
   elsif p_action = 'tend_crop' then
     if c.id is null then return 'No crop there.'; end if;
     if c.stage >= crop_ripe() then return 'Ripe: harvest it.'; end if;
@@ -81,6 +82,7 @@ begin
     if not found or not exists (select 1 from crop_def where seed = it.def) then
       return 'Choose a seed.';
     end if;
+    if item_gate_refusal(p_world, p_uid, it) is not null then return item_gate_refusal(p_world, p_uid, it); end if;
     v_r := floor(pk(p_world, p_uid, 'sow_patch', 0))::int;
     if not exists (select 1 from generate_series(ty - v_r, ty + v_r) gy, generate_series(tx - v_r, tx + v_r) gx
                     where patch_sowable(p_world, v_lvl, gx, gy)) then

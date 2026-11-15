@@ -34,6 +34,7 @@ begin
     end;
   elsif kind = 'sprout' then
     if here <> tile_id('Tree') then return null; end if;
+    if not worker_gate_open(c, sprout_gate(land_data(p_world, wx, wy))) then return null; end if;
     perform mark_foraged(p_world, wx, wy, 'sprout');
     return jsonb_build_object('def', 'sprout', 'count', 1, 'ql', made_ql,
       'extra', (select td.name from tree_def td where td.id = tree_species(land_data(p_world, wx, wy))));
@@ -99,6 +100,7 @@ begin
     data := land_data(p_world, wx, wy);
     select * into tree from tree_def where id = tree_species(data);
     select * into v_age from tree_age_def where id = tree_age(data);
+    if not worker_gate_open(c, tree_gate(data)) then return null; end if;
     -- A worker swings the same number of times a person would, and the notch it
     -- leaves is the same notch: anybody may finish the tree it started.
     v_cuts := tree_cuts(p_world, wx, wy) + 1;
@@ -156,6 +158,7 @@ begin
 
   elsif kind in ('mine', 'quarry') then
     rock := bedrock_at(p_world, wx, wy);
+    if kind = 'quarry' and not worker_gate_open(c, stone_gate(p_world, wx, wy)) then return null; end if;
     got := case when kind = 'mine' and rock.seam then rock.yields
                 when kind = 'quarry' and not rock.seam then coalesce(rock.yields, 'rock_shards') else 'rock_shards' end;
     made_ql := least(ore_max_ql((select seed from world where id = p_world), wx, wy), made_ql);

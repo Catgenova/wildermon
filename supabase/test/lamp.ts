@@ -51,7 +51,7 @@ import { STORE_REACH } from '../../src/game/crates';
 import { furnitureDef } from '../../src/game/furniture';
 import { RECIPE_BY_ID } from '../../src/game/recipes';
 import { TileType } from '../../src/world/tiles';
-import { psql, ok, bad, check } from './harness';
+import { bad, BUILD_HANDS, check, hands, ok, psql } from './harness';
 
 const same = (what: string, mine: string | null | undefined, theirs: string | undefined, want?: string | null): void => {
   const m = mine ?? 'ALLOWED';
@@ -83,6 +83,7 @@ check('and they cost the same on both sides', bills.split(',').sort((a, b) => a.
 /* ---- a post, in the browser -------------------------------------------------- */
 const X = 30, Y = 30;
 const game = Game.create(4242);
+hands(game, BUILD_HANDS); // no skill gate (`craftgates.ts`) in the way of what this is about
 game.player.x = X + 0.5;
 game.player.y = Y + 0.5;
 const lamp = game.addFurniture('lamp_post', X, Y, 1, 1, 50);

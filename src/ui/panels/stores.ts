@@ -1,12 +1,13 @@
 import { crateCentre, crateCapacity, crateName, crateUnits } from '../../game/crates';
 import { furnitureCapacity, furnitureCentre, furnitureHeft, furnitureHolds, furnitureKg, furnitureName, furnitureUnits } from '../../game/furniture';
 import type { Game } from '../../game/game';
-import { itemDef, itemName, type Item } from '../../game/items';
+import { itemDef, type Item } from '../../game/items';
 import { STORE_SEEN } from '../../game/keep';
 import { CRAFT_REACH } from '../../game/recipes';
 import { pannierCap, pannierName, panniersOffered, pannierUnits } from '../../game/panniers';
 import type { UIWindow } from '../windows';
 import { kitBody, kitButton, kitEmpty, kitPressed, kitSearch, made, meaning } from '../kit';
+import { seenName } from '../../game/skillgates';
 
 /**
  * Where everything is.
@@ -146,7 +147,7 @@ export class StoresPanel {
   /** What in this store answers to what was typed. */
   private hits(h: Holder): Item[] {
     if (!this.query) return [];
-    return h.items.filter((it) => `${itemName(it)} ${itemDef(it.id).category}`.toLowerCase().includes(this.query));
+    return h.items.filter((it) => `${seenName(it, this.game)} ${itemDef(it.id).category}`.toLowerCase().includes(this.query));
   }
 
   /** Within crafting reach, counted as a craft counts it: tiles, the larger way across. */
@@ -203,7 +204,7 @@ export class StoresPanel {
     const hits = this.hits(h);
     const list = (hits.length ? hits : h.items).slice(0, 6);
     what.textContent = list.length
-      ? `${hits.length ? '' : 'holds '}${list.map((it) => `${it.count} × ${itemName(it).toLowerCase()}`).join(', ')}${(hits.length ? hits : h.items).length > 6 ? ' …' : ''}`
+      ? `${hits.length ? '' : 'holds '}${list.map((it) => `${it.count} × ${seenName(it, this.game).toLowerCase()}`).join(', ')}${(hits.length ? hits : h.items).length > 6 ? ' …' : ''}`
       : 'Empty';
     if (hits.length) what.classList.add('store-hit');
     const go = kitButton(d < 2.4 ? 'Open' : 'Walk there');

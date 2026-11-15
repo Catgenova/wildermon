@@ -2003,7 +2003,7 @@ export class Island {
          * one channel can carry more than one island's blocks.
          */
         const { data, error } = await supabase().from('tile_change')
-          .select('n,x,y,tile,data,corners,soil')
+          .select('n,x,y,tile,data,corners,soil,rock')
           .eq('world_id', info.id).gt('n', after).order('n').limit(take);
         if (error) return { rows: [], error: error.message };
         return { rows: listOf(data, changeRow) };
@@ -2093,6 +2093,14 @@ export class Island {
    * far tile in the part of the history that was let go of is in no history
    * anybody could replay now.
    */
+  /**
+   * The land read again because what it may show you has changed: a prospecting gate crossed, so a vein sent as
+   * unidentified (`UNIDENTIFIED_ROCK`) is sent named now.
+   */
+  rereadLand(): void {
+    void this.readLandAgain().catch(() => undefined);
+  }
+
   private async readLandAgain(): Promise<void> {
     const you = this.me;
     if (!you) return;

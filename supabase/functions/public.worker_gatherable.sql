@@ -47,7 +47,8 @@ begin
     if here <> tile_id('Tree') or not exists (select 1 from beside_tile(p_world, p_x, p_y)) then return false; end if;
     if p_kind = 'sprout' then
       return coalesce((select a.alive and a.logs > 0 from tree_age_def a where a.id = tree_age(land_data(p_world, p_x, p_y))), false)
-         and not is_foraged(p_world, p_x, p_y, 'sprout');
+         and not is_foraged(p_world, p_x, p_y, 'sprout')
+         and worker_gate_open(c, sprout_gate(land_data(p_world, p_x, p_y)));
     end if;
     return tree_species(land_data(p_world, p_x, p_y)) = resin_tree()
        and coalesce((select a.alive and a.logs > 0 from tree_age_def a where a.id = tree_age(land_data(p_world, p_x, p_y))), false)
@@ -63,7 +64,8 @@ begin
   end if;
 
   if p_kind = 'woodcut' then
-    return here = tile_id('Tree') and exists (select 1 from beside_tile(p_world, p_x, p_y));
+    return here = tile_id('Tree') and exists (select 1 from beside_tile(p_world, p_x, p_y))
+       and worker_gate_open(c, tree_gate(land_data(p_world, p_x, p_y)));
   elsif p_kind = 'prune' then
     -- What would otherwise die: a stage that prunes back and whose next stage
     -- has no life in it. Nothing else is touched — a mature tree pruned stops
@@ -92,7 +94,7 @@ begin
   elsif p_kind = 'quarry' then
     rock := bedrock_at(p_world, p_x, p_y);
     return here in (tile_id('Rock'), tile_id('Snow')) and not rock.seam and rock_height(p_world, p_x, p_y) > -mine_depth()
-       and face_reach(p_world, p_x, p_y);
+       and face_reach(p_world, p_x, p_y) and worker_gate_open(c, stone_gate(p_world, p_x, p_y));
   elsif p_kind in ('sand', 'clay') then
     -- Collected off the top, as the player's Collect: no timer on the bed.
     return here = tile_id(case p_kind when 'sand' then 'Sand' else 'Clay' end)

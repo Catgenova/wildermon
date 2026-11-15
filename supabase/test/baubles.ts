@@ -500,6 +500,8 @@ check('each with its tier on it and the damage of the ground',
   pack.filter((i) => i.id === TARNISHED).every((i) => BAUBLE_TIER_BY_ID.has(i.extra as BaubleTier) && i.dmg >= 18 && i.dmg <= 68));
 for (const i of pack) if (i.id === TARNISHED || i.id === 'fragment' || i.id === REGRET) game.inventory.remove(i.uid, i.count);
 const restoreDef = ACTION_BY_ID.get('restore_relic')!;
+// At a major bauble's restoration, its gate (`craftgates.ts`), as the island's restorer is.
+game.skills.values.set('restoration', 100);
 game.inventory.add('brush', { ql: 60 });
 const tarn = game.inventory.add(TARNISHED, { ql: 60, extra: 'major' });
 tarn.dmg = 90;

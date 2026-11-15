@@ -87,6 +87,7 @@ import { deckBill, metres, PIER_CLEAR, PIER_DROP, PIER_WALL_DROP, PIER_WATER } f
 import { COOLING_DRAUGHT, DRAUGHT_DROP, DRAUGHT_FILL, DRAUGHT_SECS, HEAT_BURN, HEAT_DRAIN, HEAT_FILL, HEAT_ICE, HEAT_NEAR, HEAT_SCALE, LAVA_BAND, LAVA_BURN, LAVA_CELL, LAVA_DESIGNS, LAVA_HEART, LAVA_PATHS, LAVA_RADIUS, SERYLL_HEART } from '../../game/lava';
 import { COIN_FIND_ONE_IN, COIN_FINDS_A_DAY } from '../../game/forage';
 import { BURYABLE, BUSH_DEFS, ISLAND_FRUIT, ROCK_VARIANTS, TILE_DEFS, TileType, TREE_AGES, TREE_DAWN_UTC, TREE_DEFS } from '../../world/tiles';
+import { SEAM_GATE } from '../../game/skillgates';
 import { OWN_FRUIT_SHARE, REGIONS } from '../../world/regions';
 import { TREASURE_TIERS } from '../../game/treasure';
 import { ISLAND_ELEMENT, MOTES_LEAST, MOTES_MOST, MOTES_MOST_AT, MOTES_STEP, SEASON_ELEMENT, SWIRL_DARK, SWIRL_LIGHT, SWIRL_SEASON, SWIRLS_A_DAY } from '../../game/motes';
@@ -5028,9 +5029,9 @@ export const NEWS: News[] = [
     n: 606,
     day: '2026-11-14',
     lines: () => {
-      const seams = ROCK_VARIANTS.filter((r) => r.level && !r.yields.endsWith('_shards'));
-      const levels = [...new Set(seams.map((r) => r.level ?? 0))].sort((a, b) => a - b);
-      const was = levels.map((lv) => `${seams.filter((r) => r.level === lv).map((r) => r.name.replace(/ (vein|seam)$/, '').toLowerCase()).join(' and ')} at ${lv}`).join(', ');
+      const seams = ROCK_VARIANTS.filter((r) => SEAM_GATE[r.yields] && !r.yields.endsWith('_shards'));
+      const levels = [...new Set(seams.map((r) => SEAM_GATE[r.yields] ?? 0))].sort((a, b) => a - b);
+      const was = levels.map((lv) => `${seams.filter((r) => SEAM_GATE[r.yields] === lv).map((r) => r.name.replace(/ (vein|seam)$/, '').toLowerCase()).join(' and ')} at ${lv}`).join(', ');
       const line = [SPECIES.mola.name, ...(SPECIES.mola.stages ?? []).map((s) => s.name)].join(', ');
       const own = Object.values(SPECIES).filter((d) => d.rangePerStep !== undefined && d.rangePerStep !== RANGE_PER_STEP_606)
         .map((d) => `${d.name} ${d.rangePerStep}`).join(', ');

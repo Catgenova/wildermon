@@ -3709,6 +3709,17 @@ body.dragging.drag-no, body.dragging.drag-no * { cursor: no-drop !important; }
   font-variant-numeric: tabular-nums;
 }
 
+/* A skill's next gate under its name (`nextUnlockBar`): "→ 10: Maple". */
+.skill-next {
+  display: block;
+  color: var(--ui-dim);
+  font-size: 11px;
+}
+
+.skill-next[hidden] {
+  display: none;
+}
+
 /* A rune tablet read into this skill (`relicuse.ts`): on the row, while one is carried. */
 .skill-tablet {
   font-size: 0.85em;

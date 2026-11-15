@@ -26,7 +26,7 @@ import { flowersHere } from '../../src/game/wildflowers';
 import { SKEP, SKEP_REACH } from '../../src/game/bees';
 import { POTTERY } from '../../src/game/kiln';
 import { BUCKET_LITRES, itemDef, lyeAshFor } from '../../src/game/items';
-import { psql, check, finish } from './harness';
+import { check, finish, psql, workerHands, workerHandsJson } from './harness';
 // A bucket's worth of whole ashes and half an ash over, which stays in the fire: one ash a litre of the bucket (`lyeAshFor`).
 const FIRE_ASH = lyeAshFor(BUCKET_LITRES) + 0.5;
 
@@ -63,7 +63,9 @@ begin
   insert into hand select s, creature_spawn(w, s, 16.6, 16.6, 'active', now() - interval '60 days', u)
     from unnest(array[${HANDS.map(([id]) => `'${id}'`).join(', ')}]) s;
   insert into said select 'ASK:' || h.species, coalesce(act_refusal(w, u, 'assign_deed', jsonb_build_object('kind', 'creature', 'id', h.id)), 'none') from hand h;
+  -- At every recipe's level up to a first stage's (craftgates.ts): this is about the trade, not its gate.
   update creature set mode = 'deed', stance = 'passive', hunger = 1, settled_at = now(), until = now(), leg_at = now(), leg_ends = now(),
+         skills = skills || '${workerHandsJson()}'::jsonb,
          from_x = to_x, from_y = to_y
    where world_id = w and id in (select id from hand);
   insert into said select 'LINE:' || h.species, deed_job_line(c2) from hand h join creature c2 on c2.world_id = w and c2.id = h.id;
@@ -236,6 +238,7 @@ const g0 = Game.create(4247);
 for (const [id] of HANDS) {
   const c = g0.creatures.spawn(id, g0.player.x + 1, g0.player.y, 'active', g0.rand, g0.time - 3600 * 24 * 30);
   c.mode = 'deed';
+  Object.assign(c.skills, workerHands()); // At every recipe's level up to a first stage's (`craftgates.ts`): this is about the trade, not its gate.
   check(`a ${id} says what it will do in the island's words`, words(deedJobLine(c)) === words(at(`LINE:${id}`)), `${deedJobLine(c)} / ${at(`LINE:${id}`)}`);
   const quiet = TEND_JOBS.has(SPECIES[id].gathers!) || SPECIES[id].gathers === 'scrub';
   check(`and ${quiet ? 'says nothing of the crate' : 'brings what it finds to the crate'}`, deedJobLine(c).endsWith('; output to the crate') === !quiet, deedJobLine(c));
@@ -294,6 +297,7 @@ const body = (): Game => {
 const worker = (g: Game, species: string): Creature => {
   const c = g.creatures.spawn(species, 20.5, 21.5, 'active', g.rand, g.time - 3600 * 24 * 30);
   c.mode = 'deed';
+  Object.assign(c.skills, workerHands()); // At every recipe's level up to a first stage's (`craftgates.ts`): this is about the trade, not its gate.
   c.stance = 'passive';
   c.hunger = 1;
   return c;
@@ -446,6 +450,7 @@ const held = (crate: ReturnType<Game['addCrate']>): string => crate.items.map((i
   for (let y = oy - 2; y <= oy + 13; y++) for (let x = ox - 2; x <= ox + 13; x++) if (flowersHere(g, x, y, spring) > 0) inFlower.push([x, y]);
   const c = g.creatures.spawn('petta', ox + 6.5, oy + 7.5, 'active', g.rand, g.time - 3600 * 24 * 30);
   c.mode = 'deed';
+  Object.assign(c.skills, workerHands()); // At every recipe's level up to a first stage's (`craftgates.ts`): this is about the trade, not its gate.
   c.stance = 'passive';
   c.hunger = 1;
   check(`in flower, the grass round the token: ${inFlower.length} tiles of it`, inFlower.length > 0);

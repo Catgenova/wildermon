@@ -6,8 +6,8 @@
  * the sentences made from them (`workerlog.ts`), which says them on.
  */
 
-export type IdleWhy = 'range' | 'stock' | 'room' | 'full' | 'far' | 'away' | 'unswept' | 'rest' | 'bed' | 'tired' | 'nospar' | 'yielded' | 'season' | 'flowers' | 'stairs' | 'stranded' | 'waiting' | 'nostore' | 'seam' | 'noseam';
-export const IDLE_WHYS: readonly IdleWhy[] = ['range', 'stock', 'room', 'full', 'far', 'away', 'unswept', 'rest', 'bed', 'tired', 'nospar', 'yielded', 'season', 'flowers', 'stairs', 'stranded', 'waiting', 'nostore', 'seam', 'noseam'];
+export type IdleWhy = 'range' | 'stock' | 'room' | 'full' | 'far' | 'away' | 'unswept' | 'rest' | 'bed' | 'tired' | 'nospar' | 'yielded' | 'season' | 'flowers' | 'stairs' | 'stranded' | 'waiting' | 'nostore' | 'seam' | 'noseam' | 'gate';
+export const IDLE_WHYS: readonly IdleWhy[] = ['range', 'stock', 'room', 'full', 'far', 'away', 'unswept', 'rest', 'bed', 'tired', 'nospar', 'yielded', 'season', 'flowers', 'stairs', 'stranded', 'waiting', 'nostore', 'seam', 'noseam', 'gate'];
 
 /**
  * Why a worker is idle, as kept on it: the code, its number, and whether it works off a post or round its keeper

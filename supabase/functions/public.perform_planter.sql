@@ -48,7 +48,7 @@ begin
     if r.o_produce is null then return; end if;
     perform tell(p_world, p_uid, 'Harvested: ' || r.o_got || ' × ' || coalesce(r.o_rare || ' ', '')
       || lower((select coalesce(name, r.o_produce) from item_def where id = r.o_produce))
-      || ', ' || r.o_seeds || ' ' || lower((select coalesce(name, r.o_seed) from item_def where id = r.o_seed))
+      || ', ' || r.o_seeds || ' ' || lower(seen_name(p_world, p_uid, r.o_seed, null, (select coalesce(name, r.o_seed) from item_def where id = r.o_seed)))
       || ', QL ' || to_char(r.o_ql, 'FM990.0') || '. Planter ready to sow.', 'event');
     if r.o_rare is not null then
       perform journal_note(p_world, p_uid, r.o_rare);

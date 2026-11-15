@@ -53,6 +53,8 @@ import {
 import { PLACEHOLDER, workClipOf } from '../../src/sculpt/anim';
 import type { CardView } from './pathcard-page';
 import { check, finish } from './harness';
+import { SKILL_GATES } from '../../src/game/skillgates';
+import { listedOr } from '../../src/game/words';
 
 /* ---- every step's how and why, from the rules ------------------------------------------------------------------- */
 
@@ -114,8 +116,10 @@ import { check, finish } from './harness';
   const why = (id: string): string => PATH_STEP_BY_ID.get(id)!.why(g).join(' | ');
   const skill = (id: string): string => SKILL_BY_ID.get(id)!.name;
   const cut = ACTION_BY_ID.get('cut_down')!;
+  // The trees your woodcutting fells (`skillgates.ts`): "a birch or pine" at 1.
+  const fells = listedOr(SKILL_GATES.filter((x) => x.kind === 'tree' && x.level <= g.skills.get(x.skill)).map((x) => x.name.toLowerCase()));
   check('a job: where, its menu label, its tool and whether carried, its skill',
-    how('tree') === `Right-click: a tree · ${cut.label} · ${itemDef(cut.tool!).name} (${g.inventory.count(cut.tool!) > 0 ? 'pack' : 'not carried'}) · ${skill(cut.skill!)}`, how('tree'));
+    how('tree') === `Right-click: a ${fells} · ${cut.label} · ${itemDef(cut.tool!).name} (${g.inventory.count(cut.tool!) > 0 ? 'pack' : 'not carried'}) · ${skill(cut.skill!)}`, how('tree'));
   const shafts = RECIPE_BY_ID.get('make_shafts')!;
   check('a recipe: Crafting, its label, its bill and what it makes, its tool, its skill',
     how('shafts').startsWith(`Crafting (R): ${shafts.label} · ${itemDef('log').name} ×${shafts.inputs[0].count ?? 1} → ${itemDef('shaft').name} ×${shafts.count}`)

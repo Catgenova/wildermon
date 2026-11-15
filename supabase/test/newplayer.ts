@@ -225,8 +225,8 @@ check('the handling check pinned at 0.99 fails', isle('TRAPROLL') === 'false', i
 check('the first take out of a trap at that roll: taken, follows, and the first tame spent', isle('TRAPFIRST') === 'active|true|true', isle('TRAPFIRST'));
 check('the second at that roll: still held', isle('TRAPSECOND').startsWith('wild|true|Handling failed:'), isle('TRAPSECOND'));
 
-check(`a first tame refused the taming a kind asks (${HARD.name}: ${HARD.tameLevel})`, isle('GATE:LEVEL') === `Need taming ${HARD.tameLevel}.`, isle('GATE:LEVEL'));
-check(`and the taming one past its first stage asks (${STAGED}: ${SPECIES[KIND].tameLevel} + ${WILD_STAGE_TAME})`, isle('GATE:STAGE') === `Need taming ${STAGED}.`, isle('GATE:STAGE'));
+check(`a first tame refused the taming a kind asks (${HARD.name}: ${HARD.tameLevel})`, isle('GATE:LEVEL') === `${HARD.name}: needs taming ${HARD.tameLevel}; have 1.0.`, isle('GATE:LEVEL'));
+check(`and the taming one past its first stage asks (${STAGED}: ${SPECIES[KIND].tameLevel} + ${WILD_STAGE_TAME})`, isle('GATE:STAGE').endsWith(`: needs taming ${STAGED}; have 1.0.`), isle('GATE:STAGE'));
 check('and without an offering', isle('GATE:FOOD').startsWith('Need an offering: '), isle('GATE:FOOD'));
 check('with all of them: allowed', isle('GATE:OPEN') === 'allowed', isle('GATE:OPEN'));
 check('out of reach: refused', isle('GATE:REACH') !== 'allowed', isle('GATE:REACH'));

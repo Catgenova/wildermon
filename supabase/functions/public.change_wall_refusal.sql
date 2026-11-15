@@ -24,6 +24,8 @@ begin
   -- Glass as a solid wall and nothing else, and a type laid in one material only (`material_only_refusal`).
   v_why := material_only_refusal(mat.id, wt.id, null);
   if v_why is not null then return v_why; end if;
+  v_why := build_gate_refusal(p_world, p_uid, mat.id, wt.id, null, null);
+  if v_why is not null then return v_why; end if;
   v_why := need_tool(p_world, p_uid, 'mallet');
   if v_why is not null then return v_why; end if;
   -- What stands round it, as a wall planned there is asked (`frame_refusal`).

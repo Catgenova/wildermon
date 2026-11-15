@@ -40,7 +40,7 @@ import { furnitureName } from '../../src/game/furniture';
 import type { Item } from '../../src/game/items';
 import { CRAFT_REACH } from '../../src/game/recipes';
 import { MOULD_BY_ID } from '../../src/game/metal';
-import { psql, ok, bad, check } from './harness';
+import { psql, ok, bad, check, hands, handsSql, CRAFT_HANDS } from './harness';
 
 check('the reach is the three tiles asked for, on both sides',
   CRAFT_REACH === 3 && Number(psql('select craft_reach();')) === CRAFT_REACH, `${CRAFT_REACH}`);
@@ -48,6 +48,8 @@ check('the reach is the three tiles asked for, on both sides',
 /* ---- the browser --------------------------------------------------------- */
 
 const game = Game.create(4242);
+// Past every pouring and recipe gate (`craftgates.ts`): this is about where the stock comes from.
+hands(game, CRAFT_HANDS);
 // Dry land with room round it for the stations and the stores.
 let spot: [number, number] | null = null;
 for (let r = 0; r < 80 && !spot; r++) {
@@ -230,6 +232,8 @@ begin
     and (i.def in ('iron_lump', 'iron_ore', 'log', 'shovel_head_mould', 'anvil_mould', 'casting', 'gold_lump',
                    'file', 'whetstone', 'hatchet', 'apple', 'unfired_clay_bowl', 'shovel', 'coin',
                    'plank', 'shaft', 'thatch', 'peat', 'coal', 'timber') or is_bag(i.def));
+  -- Past every pouring and recipe gate (craftgates.ts): this is about where the stock comes from.
+  ${handsSql('w', 'me', CRAFT_HANDS)};
   -- The hammer every smithing job takes (smith_tool()), as the starting kit gives one.
   insert into item (world_id, holder, holder_uid, def, ql, extra)
     select w, 'player', me, smith_tool(), 20, 'Copper'

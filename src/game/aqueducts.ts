@@ -5,6 +5,7 @@ import { BRIDGES, bridgeDone, CLEARANCE, PULL_REACH, pullDownRefusal, spanTiles,
 import type { Game } from './game';
 import { greenNow } from './greening';
 import { itemDef } from './items';
+import { kindGateRefusal } from './skillgates';
 import { isFountain } from './furniture';
 import { lacks } from './ranks';
 import { WATER_MOTE, WATER_MOTE_NEED, WATER_MOTES_EACH } from './motes';
@@ -368,6 +369,9 @@ export const AQUEDUCT_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       if (t.kind !== 'tile') return 'Choose where it pours.';
       if (!t.head) return 'Choose the water it draws from.';
+      // Its gate (`craftgates.ts`, kind `bridge`): "Aqueduct: needs masonry 70; have 12.0."
+      const gated = kindGateRefusal(g, 'bridge', 'aqueduct');
+      if (gated) return gated;
       const plan = aqueductPlan(g, t.head[0], t.head[1], t.x, t.y);
       return typeof plan === 'string' ? plan : null;
     },
@@ -408,6 +412,8 @@ export const AQUEDUCT_ACTIONS: ActionDef[] = [
       if (!b) return 'It is gone.';
       const s = b.spans.find((x) => !isDone(x));
       if (!s) return 'Finished.';
+      const gated = kindGateRefusal(g, 'bridge', 'aqueduct');
+      if (gated) return gated;
       if (!g.inventory.has(AQUEDUCT.tool)) return `Need a ${itemDef(AQUEDUCT.tool).name.toLowerCase()}.`;
       if (Math.hypot(s.x + 0.5 - g.player.x, s.y + 0.5 - g.player.y) > 4.5) return 'Stand by the open span.';
       // Piece by piece, as a bridge: any one thing it wants, out of the pack, a crate on the span or the stores within

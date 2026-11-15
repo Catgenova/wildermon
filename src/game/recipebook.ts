@@ -4,6 +4,7 @@ import { describeFrom, itemDef, type Item } from './items';
 import { BOOK_DROPS, BOOKS, bookDrops, type BookKind } from './bookdrops';
 import { bookOf, lockedRecipes, recipeTitle, type Recipe } from './recipes';
 import { listed, percent } from './words';
+import { itemGateRefusal } from './skillgates';
 
 /**
  * Recipes and Formulas found, read and used up.
@@ -79,6 +80,9 @@ export function readRecipeRefusal(g: Game, t: Target): string | null {
   const it = held(g, t);
   const r = recipeOn(it);
   if (!it || !r) return 'It is gone.';
+  // Under its recipe's skill gate, unidentified, and not read (`craftgates.ts`): "Unidentified formula: needs enchanting 30; have 12.0."
+  const gated = itemGateRefusal(it, g);
+  if (gated) return gated;
   if (g.knowsRecipe(r.id)) return BOOKS[bookOf(r)].known;
   return null;
 }

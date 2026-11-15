@@ -33,6 +33,7 @@ import { FURNITURE } from '../../src/game/furniture';
 import { PLACEABLE_ACTION_BY_ID } from '../../src/game/placeables';
 import { skillGain } from '../../src/game/skills';
 import { DRIVING, DRIVING_LEARN } from '../../src/game/travel';
+import { gateOf } from '../../src/game/skillgates';
 import { psql, ok, bad, check } from './harness';
 
 const near = (a: number, b: number, eps = 1e-9): boolean => Math.abs(a - b) <= eps;
@@ -111,6 +112,8 @@ const loose = beast('roxxen', px + 0.5, py + 1.5);
 const board = PLACEABLE_ACTION_BY_ID.get('board_vehicle');
 if (!board) throw new Error('board_vehicle is missing');
 const reins = { kind: 'furniture' as const, id: wagon.id };
+// A wagon's reins are taken at its driving gate (`skillgates.ts`).
+game.skills.values.set(DRIVING, gateOf('vehicle', 'wagon')!.level);
 check('the reins of the wagon are there to take', board.applies(reins, game) && !board.check?.(reins, game),
   board.check?.(reins, game) ?? 'nothing in the way');
 board.perform(reins, game);

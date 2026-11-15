@@ -32,7 +32,8 @@ import { RECIPE_BY_ID } from './recipes';
 import { hasRunestones, RUNESTONES, stoneGap, stonePoint } from './runestones';
 import { SKILL_BY_ID } from './skills';
 import { bearingTo, trackLevel, trackRange, TRACK_SHOW } from './tracking';
-import { listed, percent } from './words';
+import { capital, listed, listedOr, percent } from './words';
+import { SKILL_GATES } from './skillgates';
 import { PATH_TICK, type PathSite, type PathState } from './pathstate';
 import { TileType } from '../world/tiles';
 import type { Season } from '../world/calendar';
@@ -366,7 +367,8 @@ export const PATH_STEPS: readonly PathStep[] = [
   },
   {
     id: 'tree', phase: 'stone', skills: ['woodcutting'],
-    how: (g) => [jobSays(g, 'a tree', 'cut_down')],
+    // The trees your woodcutting fells (`skillgates.ts`): "Right-click: a birch or pine".
+    how: (g) => [jobSays(g, `a ${fellsSaid(g)}`, 'cut_down')],
     why: () => [`${itemDef('log').name}: shafts ×${recipe('make_shafts').makes} a log (${stepOf('shafts')}) · log crate ×${billOf('make_log_crate', 'log')} (${stepOf('crate')})`],
     show: { job: 'cut_down' },
     label: () => `Cut down a tree: ${name('hatchet')}`,
@@ -428,14 +430,15 @@ export const PATH_STEPS: readonly PathStep[] = [
       g.pathSites.length ? `Walk: the Guiding Light line's arrow · sites ${g.pathSites.length}, the nearest first` : `Sites: within ${PATH_SITE.reach} tiles of you, none yet`,
       `Or any tile: ${jobSays(g, 'the ground', 'found_settlement')} · the refusal names the rule`,
     ],
-    why: () => [
-      `Trees ≥${PATH_SITE.trees} within ${PATH_SITE.treeReach}: logs (${stepOf('walls')})`, `Water within ${PATH_SITE.water}: fish (${stepOf('fish')})`,
+    // Only the trees your woodcutting fells count (`rpc_thepath_sites`): "Birch or pine ≥10 within 10".
+    why: (g) => [
+      `${capital(fellsSaid(g))} ≥${PATH_SITE.trees} within ${PATH_SITE.treeReach}: logs (${stepOf('walls')})`, `Water within ${PATH_SITE.water}: fish (${stepOf('fish')})`,
       `Rock within ${PATH_SITE.rock}: rock shards (${stepOf('bricks')})`,
     ],
     show: { walk: true },
     label: (g) => {
       const s = g.pathSites[0];
-      return s ? `Site: ${siteSays(s)}` : `Site: trees ≥${PATH_SITE.trees} in ${PATH_SITE.treeReach} · water in ${PATH_SITE.water} · rock in ${PATH_SITE.rock}`;
+      return s ? `Site: ${siteSays(s, g)}` : `Site: ${fellsSaid(g)} ≥${PATH_SITE.trees} in ${PATH_SITE.treeReach} · water in ${PATH_SITE.water} · rock in ${PATH_SITE.rock}`;
     },
     where: (g) => {
       const s = g.pathSites[0];
@@ -694,9 +697,16 @@ export const PATH_TAMES: ReadonlyArray<readonly [string, string]> = PATH_STEPS.f
 /** Every skill the Path trains, steps and detours. */
 export const PATH_SKILLS: readonly string[] = [...new Set([...PATH_STEPS, ...PATH_DETOURS].flatMap((s) => s.skills ?? []))];
 
-/** What a site says: "Trees 14 · Water 6 · Rock 11 · Lair: none". */
-export const siteSays = (s: PathSite): string =>
-  `Trees ${s.trees} · Water ${s.water} · Rock ${s.rock} · Lair: ${s.lair ? `${s.lair} ${s.lairAt ?? ''}`.trim() : 'none'}`;
+/**
+ * The trees your woodcutting fells, by their gates (`skillgates.ts`): "birch or pine". A site counts only these
+ * (`rpc_thepath_sites`).
+ */
+export const fellsSaid = (g: Game): string =>
+  listedOr(SKILL_GATES.filter((x) => x.kind === 'tree' && x.level <= g.skills.get(x.skill)).map((x) => x.name.toLowerCase()));
+
+/** What a site says: "Birch or pine 14 · Water 6 · Rock 11 · Lair: none", the trees counted the ones you fell. */
+export const siteSays = (s: PathSite, g: Game): string =>
+  `${capital(fellsSaid(g))} ${s.trees} · Water ${s.water} · Rock ${s.rock} · Lair: ${s.lair ? `${s.lair} ${s.lairAt ?? ''}`.trim() : 'none'}`;
 
 /* ---- where you are on it -------------------------------------------------------------------------------------------- */
 

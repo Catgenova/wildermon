@@ -21,6 +21,10 @@ import type { MenuItem } from '../../src/ui/contextmenu';
 import { UI } from '../../src/ui/ui';
 import { TileType } from '../../src/world/tiles';
 import { psql } from './harness';
+import { SKILL_GATES } from '../../src/game/skillgates';
+
+/** Carpentry and masonry enough for every material and floor type (`craftgates.ts`): this is about the stairs, not their gates. */
+const BUILT = (skill: string): number => Math.max(...SKILL_GATES.filter((g) => (g.kind === 'material' || g.kind === 'floor') && g.skill === skill).map((g) => g.level));
 
 let bad = 0;
 let good = 0;
@@ -59,6 +63,8 @@ const done = { needed: {}, total: {} };
 
 function house(w: Way | null): Game {
   const g = Game.create(9311, 64);
+  g.skills.values.set('carpentry', BUILT('carpentry'));
+  g.skills.values.set('masonry', BUILT('masonry'));
   for (const c of [...g.creatures.list.values()]) g.creatures.list.delete(c.id);
   for (let y = 4; y < 20; y++) for (let x = 36; x < 54; x++) { g.world.setHeight(x, y, H); g.world.setTile(x, y, TileType.PackedDirt, 0); }
   const tiles: string[] = [];
@@ -220,6 +226,8 @@ begin
   select id into w from world where name = 'Hoarding';
   select uid into me from player where world_id = w and name = 'Dane';
   perform set_config('request.jwt.claims', json_build_object('sub', me)::text, true);
+  insert into skill (world_id, uid, id, value) values (w, me, 'carpentry', ${BUILT('carpentry')}), (w, me, 'masonry', ${BUILT('masonry')})
+    on conflict (world_id, uid, id) do update set value = greatest(skill.value, excluded.value);
   delete from building b where b.world_id = w and (b.id = ${ID} or exists (select 1 from building_tile bt
     where bt.world_id = w and bt.building = b.id and bt.x between 36 and 54 and bt.y between 4 and 20));
   delete from deed where world_id = w and x between 16 and 74 and y between 0 and 40;

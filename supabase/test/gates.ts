@@ -65,7 +65,7 @@ import { metres, TileType } from '../../src/world/tiles';
 import { numberWord, spanWords } from '../../src/game/words';
 import { lacksSaid } from '../../src/game/ranks';
 import { PLAN_TOOL } from '../../src/game/buildActions';
-import { psql, ok, bad, check } from './harness';
+import { bad, BUILD_HANDS, check, hands, handsSql, handsSqlEach, ok, psql } from './harness';
 
 const same = (a: Record<string, number>, b: Record<string, number>): boolean =>
   Object.keys(a).length === Object.keys(b).length && Object.entries(a).every(([k, n]) => b[k] === n);
@@ -143,6 +143,8 @@ begin
     (w, '${WHO.gil}', 'Gil', 10.5, 12.5, v_full), (w, '${WHO.kay}', 'Kay', 10.5, 12.5, v_full),
     (w, '${WHO.ben}', 'Ben', 10.5, 12.5, v_full), (w, '${WHO.sim}', 'Sim', 10.5, 12.5, v_full),
     (w, '${WHO.ann}', 'Ann', 14.5, 15.5, v_full), (w, '${WHO.bob}', 'Bob', 14.5, 12.5, v_full);
+  -- No skill gate in the way of a portcullis, a hidden door or a wall (craftgates.ts): this is about gates.
+  ${handsSqlEach('w', EVERYBODY, BUILD_HANDS)};
   insert into deed (world_id, name, x, y, radius, founded_by) values (w, 'Gatehold', 7, 10, 5, '${WHO.gil}');
   insert into deed (world_id, name, x, y, radius, founded_by) values (w, 'Annhold', 15, 16, 1, '${WHO.ann}');
   insert into deed_member (world_id, founder, uid, role) values (w, '${WHO.gil}', '${WHO.ben}', 'builder');
@@ -187,6 +189,7 @@ select rpc_ground(${W}, 40, true)::text;`).split('\n').pop() as string) as Islan
 /** A browser in somebody's shoes: the same ground, the island's word about what stands on it, and their keys. */
 const browserFor = (who: Who, x = 10.5, y = 12.5): Game => {
   const g = Game.create(4242);
+  hands(g, BUILD_HANDS); // no skill gate (`craftgates.ts`) in the way of what this is about
   shape(g);
   g.settings.fog = true;
   (g as unknown as { darkness: () => number }).darkness = () => 0;
@@ -511,6 +514,7 @@ update item set holder_uid = '${WHO.kay}' where world_id = ${W} and def = 'key' 
     items(c3, c4) === '+1' && masters === '1 padlock, 1 key left with Kay', `${masters}; items ${items(c3, c4)}`);
   // And alone, in a browser.
   const g = Game.create(4242);
+  hands(g, BUILD_HANDS); // no skill gate (`craftgates.ts`) in the way of what this is about
   const [hx, hy] = [Math.floor(g.player.x), Math.floor(g.player.y)];
   const crate = g.addCrate('log', hx, hy, 0, 0);
   const lock = g.inventory.add('padlock', { ql: 63 });
@@ -746,6 +750,7 @@ update player set body_at = now(), x = ${at[0]}, y = ${at[1]}, level = 0, act = 
 ${body ? `update player set ${body} where world_id = ${W} and uid = '${WHO[who]}';` : ''}
 delete from skill where world_id = ${W} and uid = '${WHO[who]}';
 insert into skill (world_id, uid, id, value) select ${W}, '${WHO[who]}', d.id, d.start + 0.5 from skill_def d where d.quiet;
+${handsSql(W, `'${WHO[who]}'`, BUILD_HANDS)};
 delete from event where world_id = ${W} and uid = '${WHO[who]}';
 delete from caller where uid = '${WHO[who]}';
 select set_config('request.jwt.claims', json_build_object('sub', '${WHO[who]}')::text, false) \\g /dev/null`;
@@ -1504,6 +1509,7 @@ const shape2 = (g: Game): void => {
 /** Kay's browser in the second box, standing at (x, y), with her mallet. */
 const kayAt = (x: number, y: number): Game => {
   const g = Game.create(4242);
+  hands(g, BUILD_HANDS); // no skill gate (`craftgates.ts`) in the way of what this is about
   shape(g);
   shape2(g);
   g.settings.fog = true;
@@ -1646,6 +1652,7 @@ insert into item (world_id, holder, holder_uid, def, ql, count) values
   (${W}, 'player', '${WHO.kay}', 'padlock', 55, 1), (${W}, 'player', '${WHO.kay}', 'hinge', 40, ${HIDDEN_DOOR_HINGES});
 delete from skill where world_id = ${W} and uid = '${WHO.kay}';
 insert into skill (world_id, uid, id, value) select ${W}, '${WHO.kay}', d.id, d.start + 0.5 from skill_def d where d.quiet;
+${handsSql(W, `'${WHO.kay}'`, BUILD_HANDS)};
 delete from event where world_id = ${W} and uid = '${WHO.kay}';
 delete from caller where uid = '${WHO.kay}';
 select set_config('request.jwt.claims', json_build_object('sub', '${WHO.kay}')::text, false) \\g /dev/null

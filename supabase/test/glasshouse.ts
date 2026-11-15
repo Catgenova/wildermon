@@ -54,7 +54,7 @@ import { SEASONS, YEAR_FROM, type Season } from '../../src/world/calendar';
 import { DAY_SECONDS } from '../../src/game/pace';
 import { TileType } from '../../src/world/tiles';
 import { REAP_TOOL, TEND_TOOL } from '../../src/game/jobtools';
-import { psql, ok, bad, check } from './harness';
+import { bad, BUILD_HANDS, check, hands, handsSql, ok, psql } from './harness';
 
 const HOUR = 3600;
 const DAY = 24 * HOUR;
@@ -346,6 +346,8 @@ begin
     on conflict (world_id, founded_by) do update set x = 21, y = 26, radius = 5;
   insert into skill (world_id, uid, id, value) values (w, u, 'farming', 50), (w, u, 'carpentry', 50)
     on conflict (world_id, uid, id) do update set value = excluded.value;
+  -- No skill gate in the way of a wall, a roof or a sowing (\`craftgates.ts\`): this is about glasshouses.
+  ${handsSql('w', 'u', BUILD_HANDS, 50)};
   -- Level ground, packed under the glasshouse and the flat-roofed shed, grass in the open.
   for v_x in 18 .. 26 loop for v_y in 24 .. 31 loop
     perform land_set_height(w, v_x, v_y, 40);
@@ -680,6 +682,9 @@ game.setPerks({});
 // The island's carpentry: a storey over plank wants 10, and at a fifth of the gain the goes made
 // here no longer carry a body there from where it starts (run 922).
 game.skills.values.set('carpentry', 50);
+game.skills.values.set('farming', 50);
+// No skill gate in the way of a wall or a roof (`craftgates.ts`): this is about glasshouses.
+hands(game, BUILD_HANDS, 50);
 game.productQl = () => 40;
 const at = (x: number, y: number, extra: Record<string, unknown> = {}): Target => ({ kind: 'tile', x, y, cx: x, cy: y, ...extra } as Target);
 const ask = (id: string, t: Target): string => ACTION_BY_ID.get(id)!.check?.(t, game) ?? 'ALLOWED';

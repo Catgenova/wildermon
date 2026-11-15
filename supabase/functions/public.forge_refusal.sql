@@ -85,6 +85,8 @@ begin
                 else 'Need a casting (pour a mould at a smelter).' end;
   end if;
   if not exists (select 1 from mould_def where makes = v_cast.piece) then return 'Choose a casting.'; end if;
+  -- Its metal's gate in the trade it is worked in (kind `casting`, off the pouring table).
+  if casting_gate_refusal(p_world, p_uid, v_cast) is not null then return casting_gate_refusal(p_world, p_uid, v_cast); end if;
   -- And what else the piece takes at the anvil, at hand (`mould_def.also_item`): the plate shawl's fur. The browser's
   -- `mouldAlsoRefusal`.
   return (select 'Need ' || d.also_n || ' × ' || lower(f.name) || '.'

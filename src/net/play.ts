@@ -32,6 +32,7 @@ import { reportErrorsTo } from './errors';
 import { learnChart } from '../game/cartography';
 import { graceLeft } from '../game/deathgrace';
 import { isBarred } from '../game/keeper';
+import { veinGateCrossed } from '../game/skillgates';
 
 /**
  * Off to the landing page, logged off by a keeper of the island or barred from
@@ -589,6 +590,8 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
       for (const r of skillRises(what.skills, (id) => game.skills.standing(id), seeded)) {
         game.events.emit('skill', r.id, r.gain);
       }
+      // A vein gate crossed: the land again, its veins named by the new prospecting (`VEIN_GATE`, `rpc_land_window`).
+      if (seeded && veinGateCrossed(game.skills.get('prospecting'), what.skills.prospecting)) island.rereadLand();
       for (const [id, value] of Object.entries(what.skills)) game.skills.values.set(id, value);
       seeded = true;
       game.events.emit('skill', '', 0);

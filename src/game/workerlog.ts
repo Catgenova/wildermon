@@ -24,6 +24,7 @@ import { SKEP_IDLE } from './bees';
 import { SEASONS } from '../world/calendar';
 import { isSeam, ROCK_VARIANTS } from '../world/tiles';
 import { SKILL_BY_ID } from './skills';
+import { gateOf, SEAM_GATE, skillWord, workerLevel, type GateKind } from './skillgates';
 import { article, listed, listedOr } from './words';
 import { LEDGER_SHOWN, ledgerDays, type Idle, type LedgerDay, type WorkLedger } from './workerledger';
 
@@ -141,17 +142,21 @@ const secondsMore = (secs: number): string => {
 
 /** The seams any mining takes, and their level: "copper vein and coal seam: 1", for a `seam` reason. */
 const easiestSeams = (): string => {
-  const seams = ROCK_VARIANTS.filter((r) => isSeam(r) && r.level);
-  const least = Math.min(...seams.map((r) => r.level ?? 0));
-  return `${listed(seams.filter((r) => r.level === least).map((r) => r.name.toLowerCase()))}: ${least}`;
+  const seams = ROCK_VARIANTS.filter((r) => isSeam(r) && SEAM_GATE[r.yields]);
+  const least = Math.min(...seams.map((r) => SEAM_GATE[r.yields]));
+  return `${listed(seams.filter((r) => SEAM_GATE[r.yields] === least).map((r) => r.name.toLowerCase()))}: ${least}`;
 };
+
+/** The gates a store trade is idle at: what it makes, restores, pours, smelts or plants out of the stores, said "in your settlement stores". */
+const STORE_GATES: ReadonlySet<GateKind> = new Set<GateKind>(['recipe', 'relic', 'bauble', 'metal', 'smelt', 'water_plant']);
 
 /**
  * The sentence for a reason, in the game's own terms and with its number:
  * "Idle: no reed bed within 30 tiles of the token." `kind` is the trade it
- * works; `carrying` the name of what is in its arms, for `full`; `skill` its task skill, for `seam`.
+ * works; `carrying` the name of what is in its arms, for `full`; `skill` its task skill, for `seam`; `skills` its
+ * levels, for `gate`, which names its level in the gate's own skill.
  */
-export function idleSays(idle: Idle, kind: GatherKind | null | undefined, carrying?: string | null, skill?: number): string {
+export function idleSays(idle: Idle, kind: GatherKind | null | undefined, carrying?: string | null, skill?: number, skills?: Record<string, number>): string {
   const n = Math.round(idle.n);
   // Where it works from: its keeper, its post or the totem.
   const from = idle.around ? 'you' : idle.post ? 'its work post' : 'the totem';
@@ -189,7 +194,17 @@ export function idleSays(idle: Idle, kind: GatherKind | null | undefined, carryi
     case 'seam': {
       const rock = ROCK_VARIANTS.find((r) => r.yields === idle.what?.[0]);
       const mining = skill !== undefined ? ` (yours ${skill.toFixed(1)})` : '';
-      return `Idle: ${rock?.name ?? 'a seam'} ${n} ${n === 1 ? 'tile' : 'tiles'} from ${from} needs mining ${rock?.level ?? '?'}${mining}; ${easiestSeams()}.`;
+      return `Idle: ${rock?.name ?? 'a seam'} ${n} ${n === 1 ? 'tile' : 'tiles'} from ${from} needs mining ${rock ? SEAM_GATE[rock.yields] ?? '?' : '?'}${mining}; ${easiestSeams()}.`;
+    }
+    // Work in range only over its level in the gate's skill (the island's `gate_idle`): the lowest gate, then the nearest.
+    case 'gate': {
+      const gate = idle.what && idle.what.length >= 2 ? gateOf(idle.what[0] as GateKind, idle.what[1]) : undefined;
+      if (!gate) return `Idle: work ${n} ${n === 1 ? 'tile' : 'tiles'} from ${from} above its level.`;
+      const have = skills ? workerLevel({ skills }, gate.skill) : skill;
+      const yours = have !== undefined ? ` (yours ${have.toFixed(1)})` : '';
+      // What it would make or restore out of the stores (a recipe, a relic) is in the stores, not tiles off.
+      if (STORE_GATES.has(gate.kind)) return `Idle: ${gate.name} in ${stores} needs ${skillWord(gate.skill)} ${gate.level}${yours}.`;
+      return `Idle: ${gate.name} ${n} ${n === 1 ? 'tile' : 'tiles'} from ${from} needs ${skillWord(gate.skill)} ${gate.level}${yours}.`;
     }
     // Bare rock in range and not a seam in any of it (the island's `mine_idle`).
     case 'noseam':

@@ -6,6 +6,7 @@ import { greenNow } from './pace';
 import { lacks } from './ranks';
 import { itemDef } from './items';
 import { fill } from './words';
+import { kindGateRefusal } from './skillgates';
 import { metres } from '../world/tiles';
 import { MATERIAL_BY_ID, WALL_HEIGHT, type Side } from './building';
 import { AQUEDUCT_FLOW, CHANNEL_WIDE, TILE_METRES } from '../world/aqueducts';
@@ -645,6 +646,9 @@ export const BRIDGE_ACTIONS: ActionDef[] = [
       if (t.kind !== 'tile') return 'Choose the far side.';
       const kind = (t.material ?? 'rope') as BridgeKind;
       if (!BRIDGES[kind]) return 'Choose a material.';
+      // Its gate (`craftgates.ts`, kind `bridge`): "Drawbridge: needs carpentry 50; have 12.0."
+      const gated = kindGateRefusal(g, 'bridge', kind);
+      if (gated) return gated;
       const [ax, ay] = [g.player.tileX, g.player.tileY];
       return g.bridgeReason(kind, ax, ay, t.x, t.y, t.width ?? 1, sideStep(ax, ay, t.x, t.y, t.side) || 1, bridgeUpTo(g, t));
     },
@@ -695,6 +699,9 @@ export const BRIDGE_ACTIONS: ActionDef[] = [
       const def = bridgeDef(b);
       const s = b.spans.find((x) => !isDone(x));
       if (!s) return 'Finished.';
+      // Adding to it, under its gate as planning it is.
+      const gated = kindGateRefusal(g, 'bridge', b.kind);
+      if (gated) return gated;
       if (!g.inventory.has(def.tool)) return `Need a ${itemDef(def.tool).name.toLowerCase()}.`;
       if (Math.hypot(s.x + 0.5 - g.player.x, s.y + 0.5 - g.player.y) > 4.5) return 'Stand by the open span.';
       // Piece by piece, as a wall: any one thing it wants, out of the pack, a crate on the span or the stores within

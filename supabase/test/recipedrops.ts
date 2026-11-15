@@ -31,7 +31,7 @@ import { lockedRecipes, needRecipeSays, RECIPE_BY_ID, recipeReason, RECIPES, rec
 import { lockedHiddenSays, recipeSearch } from '../../src/game/craftsearch';
 import { BOON_BONUS, BOON_FOODS, BOON_SKILLS, boonTime, knacksOf, knackSays } from '../../src/game/boons';
 import { BREWS } from '../../src/game/brewing';
-import { psql, ok, bad, check } from './harness';
+import { bad, check, CRAFT_HANDS, hands, handsSql, ok, psql } from './harness';
 
 const U = 'a9c1e000-0000-4000-8000-0000000000c3';
 const PIE = RECIPE_BY_ID.get('make_cottage_pie')!;
@@ -57,6 +57,7 @@ begin
   perform land_set_tile(w, x, y, tile_id('Grass')) from generate_series(0, 39) x, generate_series(0, 39) y;
   perform set_config('request.jwt.claims', json_build_object('sub', u)::text, true);
   perform rpc_join(w, 'Reader');
+  ${handsSql('w', 'u', CRAFT_HANDS)};
   select floor(x)::int, floor(y)::int into v_x, v_y from player where world_id = w and uid = u;
   aim := jsonb_build_object('kind', 'ground', 'x', v_x, 'y', v_y);
   perform give(w, u, 'butchering_knife', 1, 100);
@@ -223,6 +224,7 @@ check('the beat says the recipes and Formulas read', JSON.stringify(beatRead) ==
 /* ---- the browser -------------------------------------------------------------------- */
 
 const g = Game.create(4242);
+hands(g, CRAFT_HANDS); // no skill gate (`craftgates.ts`) in the way of what this is about
 for (const it of [...g.inventory.items]) if (it.id === RECIPE_ITEM) g.inventory.remove(it.uid, it.count);
 check('in the browser, a shut recipe unread is refused in the same words', recipeReason(PIE, g) === island('NEED'), String(recipeReason(PIE, g)));
 const st = recipeStatus(PIE, g);
@@ -259,6 +261,7 @@ check('read, it is not greyed for its recipe', !recipeStatus(PIE, g).unread);
 
 /* Formulas, in the browser. */
 const f = Game.create(4244);
+hands(f, CRAFT_HANDS); // no skill gate (`craftgates.ts`) in the way of what this is about
 for (const it of [...f.inventory.items]) if (it.id === RECIPE_ITEM || it.id === FORMULA_ITEM) f.inventory.remove(it.uid, it.count);
 check('in the browser, a scroll unread is refused in the same words', recipeReason(EMBER, f) === island('FNEED'), String(recipeReason(EMBER, f)));
 check('and greyed: never ready', recipeStatus(EMBER, f).unread && !recipeStatus(EMBER, f).ready);
@@ -295,6 +298,7 @@ check('read, an emberbrand scroll is no longer refused for its Formula', !String
 
 /* And the whole butchering go, the roll forced: wired in, after the parts are taken. */
 const h = Game.create(4243);
+hands(h, CRAFT_HANDS); // no skill gate (`craftgates.ts`) in the way of what this is about
 for (const it of [...h.inventory.items]) if (it.id === RECIPE_ITEM) h.inventory.remove(it.uid, it.count);
 h.inventory.add('butchering_knife', { ql: 100 });
 const [x, y] = [h.player.tileX, h.player.tileY];
@@ -334,6 +338,7 @@ check('cottage pie: butchering; cherry preserves: foraging, on a dish of their o
     && RECIPE_BY_ID.get('make_cherry_preserves')!.result === 'cherry_preserves' && RECIPE_BY_ID.get('make_preserves')!.result === 'preserves'
     && knacksOf('preserves').length === 0);
 const m = Game.create(4244);
+hands(m, CRAFT_HANDS); // no skill gate (`craftgates.ts`) in the way of what this is about
 m.player.boons = [];
 const none = ['stew', 'baked_potato', 'bread', 'preserves', 'spirit_bucket', 'tincture', ...BREWS.map((b) => `${b.id}_bucket`)].map((id) => m.grantBoon(id, 60));
 check('plain food, brews, spirit and a tincture give none', none.every((x) => x === null) && m.player.boons.length === 0, JSON.stringify(m.player.boons));

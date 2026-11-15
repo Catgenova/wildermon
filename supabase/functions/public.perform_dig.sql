@@ -54,9 +54,12 @@ begin
       v_dmg := 18 + random() * 50;
       v_new := gather(p_world, p_uid, 'tarnished_bauble', 1, v_ql, v_relic);
       update item set dmg = v_dmg where id = v_new;
-      perform tell(p_world, p_uid, 'Found: tarnished ' || v_relic
+      perform tell(p_world, p_uid, case when unidentified_name(p_world, p_uid, 'tarnished_bauble', v_relic) is not null
+        then 'Found: ' || unidentified_name(p_world, p_uid, 'tarnished_bauble', v_relic) || ', QL ' || to_char(v_ql, 'FM990.0')
+          || ', damage ' || to_char(v_dmg, 'FM990') || '.'
+        else 'Found: tarnished ' || v_relic
         || ' bauble, QL ' || to_char(v_ql, 'FM990.0')
-        || ', damage ' || to_char(v_dmg, 'FM990') || '. Restore it to use it.', 'event');
+        || ', damage ' || to_char(v_dmg, 'FM990') || '. Restore it to use it.' end, 'event');
       return;
     end if;
     -- A piece of a relic already begun, now and again, for a Miner's Pieces that Fit.
@@ -98,11 +101,14 @@ begin
     update item set dmg = v_dmg where id = v_new;
     perform journal_note(p_world, p_uid, 'fragment');
     v_left := coalesce(array_length(parts_missing(p_world, p_uid, r.name), 1), 0);
-    perform tell(p_world, p_uid, 'Found: ' || r.name || ' fragment '
+    perform tell(p_world, p_uid, case when unidentified_name(p_world, p_uid, 'fragment', r.name) is not null
+      then 'Found: ' || unidentified_name(p_world, p_uid, 'fragment', r.name) || ', QL ' || to_char(v_ql, 'FM990.0')
+        || ', damage ' || to_char(v_dmg, 'FM990') || '.'
+      else 'Found: ' || r.name || ' fragment '
       || v_part || '/' || r.parts || ', QL ' || to_char(v_ql, 'FM990.0')
       || ', damage ' || to_char(v_dmg, 'FM990') || '.'
       || case when v_left > 0 then ' Missing: ' || v_left || '/' || r.parts || '.'
-              else ' All ' || r.parts || ' pieces held.' end, 'event');
+              else ' All ' || r.parts || ' pieces held.' end end, 'event');
     return;
   end if;
 

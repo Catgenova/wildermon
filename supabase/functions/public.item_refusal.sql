@@ -87,6 +87,10 @@ begin
     if (circlet_with_room(p_world, p_uid)).id is null then
       return 'Need a circlet with an empty setting (' || circlet_stones() || ' per circlet).';
     end if;
+    -- The stone's gate, by its rarity (kind `gem`): "Diamond setting: needs jewellery 60; have 31.0."
+    if kind_gate_refusal(p_world, p_uid, 'gem', (select g.id from gem_def g where lower(g.name) = lower(v_it.extra))) is not null then
+      return kind_gate_refusal(p_world, p_uid, 'gem', (select g.id from gem_def g where lower(g.name) = lower(v_it.extra)));
+    end if;
     if tool_ql(p_world, p_uid, 'file') <= 0 then return 'Need a file.'; end if;
     return null;
 

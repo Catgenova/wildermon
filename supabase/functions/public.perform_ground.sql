@@ -389,10 +389,7 @@ begin
     -- nobody chose. Sprouts come in nine species and what goes in the ground
     -- is what stands there for the next twenty years, so "whichever was picked
     -- up first" was not a choice anybody had made.
-    select * into v_sprout from item where world_id = p_world and holder = 'player'
-      and holder_uid = p_uid and def = 'sprout' and not locked
-      and (target_item(p_target) is null or id = target_item(p_target))
-      order by (id = target_item(p_target)) desc, id limit 1;
+    select * into v_sprout from sprout_to_hand(p_world, p_uid, p_target, false) s where s.id is not null;
     if not found then return; end if;
     v_species := coalesce((select id from tree_def where name = v_sprout.extra), 0);
     if not consume(p_world, p_uid, 'sprout', 1, v_sprout.id) then return; end if;
@@ -415,11 +412,7 @@ begin
 
   elsif p_action = 'graft' then
     -- The sprout named off the menu, or the first fruit sprout to hand.
-    select i.* into v_sprout from item i join tree_def td on td.name = i.extra and td.fruit is not null
-     where i.world_id = p_world and i.holder = 'player' and i.holder_uid = p_uid
-       and i.def = 'sprout' and not i.locked
-       and (target_item(p_target) is null or i.id = target_item(p_target))
-     order by (i.id = target_item(p_target)) desc, i.id limit 1;
+    select * into v_sprout from sprout_to_hand(p_world, p_uid, p_target, true) s where s.id is not null;
     if not found then return; end if;
     select * into v_tree from tree_def where id = tree_species(v_data);
     v_species := (select id from tree_def where name = v_sprout.extra);
@@ -588,7 +581,7 @@ begin
     v_rad := prospect_radius(v_skill) + pk(p_world, p_uid, 'further:prospect', 0)::int + path_fx(p_world, p_uid, 'further', 0)::int;
     v_size := (select size from world where id = p_world);
     -- Metal counts wherever it lies: bare, under soil, or below water.
-    for v_row in select x, y, (bedrock_at(p_world, x, y)).name as nm
+    for v_row in select x, y, seen_vein_at(p_world, p_uid, x, y) as nm
       from generate_series(greatest(0, tx - v_rad), least(v_size - 1, tx + v_rad)) x
       cross join generate_series(greatest(0, ty - v_rad), least(v_size - 1, ty + v_rad)) y
       -- Anything worth mining, not only what is metal: a coal seam is a
@@ -606,7 +599,10 @@ begin
     v_ql := ore_max_ql((select seed from world where id = p_world), tx, ty);
     v_buried := case when here = 4 then ''
       else ' Under ' || greatest(1, land_dirt(p_world, tx, ty)) || ' of ground.' end;
-    if v_rock.seam then
+    if v_rock.seam and vein_tip_at(p_world, p_uid, tx, ty) is not null then
+      perform tell(p_world, p_uid, 'Here: ' || lower(seen_vein_at(p_world, p_uid, tx, ty)) || '. '
+        || vein_tip_at(p_world, p_uid, tx, ty) || ' Max QL ' || to_char(v_ql, 'FM990') || '.' || v_buried, 'event');
+    elsif v_rock.seam then
       perform tell(p_world, p_uid, 'Here: ' || lower(v_rock.name)
         || '. Needs mining ' || to_char(case when v_rock.ore
                                                 then greatest(0, v_rock.level - pk(p_world, p_uid, 'ore:below', 0))

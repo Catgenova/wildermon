@@ -37,11 +37,11 @@ import { baitHint, coaxStep, tameChance } from '../game/creatureActions';
 import { crateOf } from '../game/creaturecrate';
 import { FIRST_TAME_SAYS, firstTameSure } from '../game/firsttame';
 import type { Game } from '../game/game';
-import { itemDef } from '../game/items';
 import { traitOf } from '../game/traits';
 import { traitReadNeeds } from '../game/husbandry';
 import { SKILL_BY_ID } from '../game/skills';
 import { idleSays, ledgerLines } from '../game/workerlog';
+import { seenDefName } from '../game/skillgates';
 
 const pct = (v: number): number => Math.round(v * 100);
 
@@ -164,7 +164,7 @@ export function creatureLines(g: Game, c: Creature): string[] {
     // Who it is sparring with on the settlement (`sparTaskSays`).
     const partner = c.sparWith != null ? g.creatures.get(c.sparWith) : undefined;
     if (partner && partner.mode === 'deed') lines.push(`Sparring with ${partner.name}`);
-    if (c.carrying) lines.push(`Carrying: ${itemDef(c.carrying.id).name.toLowerCase()}`);
+    if (c.carrying) lines.push(`Carrying: ${seenDefName(c.carrying.id, g, c.carrying.extra).toLowerCase()}`);
     // Its stamina and its settlement's specialty in its trade, for a trade with goes to tire it and to quicken; a spar
     // tires a guard and a Sparra as a go does, and quickens nothing.
     const kind = c.trade ?? def.gathers;
@@ -174,7 +174,7 @@ export function creatureLines(g: Game, c: Creature): string[] {
     const unfed = unfedSays(c);
     if (unfed) lines.push(unfed);
     // Why it is standing about, and what it did this island day and the one before.
-    if (c.idle) lines.push(idleSays(c.idle, c.trade ?? def.gathers, c.carrying ? itemDef(c.carrying.id).name : null, taskSkill(c, def)));
+    if (c.idle) lines.push(idleSays(c.idle, c.trade ?? def.gathers, c.carrying ? seenDefName(c.carrying.id, g, c.carrying.extra) : null, taskSkill(c, def), c.skills));
     lines.push(...ledgerLines(c.ledger, g.islandDay()));
   } else lines.push(`Companion · ${STANCE_NAMES[c.stance].toLowerCase()} · blow ${+attackOf(c, def).toFixed(1)} damage`);
   // Not at work: the task it would do on a settlement.

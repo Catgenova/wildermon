@@ -32,13 +32,13 @@ begin
   elsif kind = 'hod' then
     if c.carrying is null then return false; end if;
     -- Whatever on the tile it walked to wants what it is carrying, and in it goes as a builder's piece does.
-    select * into v_job from hod_needing(p_world, c.work_x, c.work_y, 0, c.carrying->>'def', c.keeper);
+    select * into v_job from hod_needing(p_world, c.work_x, c.work_y, 0, c.carrying->>'def', c.keeper, c);
     if v_job.item is null or v_job.item is distinct from c.carrying->>'def' then
       -- Nothing within reach wants it (`errand_step`): into the store it walked to, or the nearest with room.
       if p_again then return false; end if;
       select * into v_job from my_deed(p_world, c.keeper) md where md.world_id is not null;
       if not found then return false; end if;
-      if (select h.item from hod_needing(p_world, v_job.x, v_job.y, work_range(c), c.carrying->>'def', c.keeper) h) is not null then
+      if (select h.item from hod_needing(p_world, v_job.x, v_job.y, work_range(c), c.carrying->>'def', c.keeper, c) h) is not null then
         return false;
       end if;
       perform private.worker_put_back(p_world, c, c.carrying->>'def', coalesce((c.carrying->>'count')::int, 1),
@@ -202,7 +202,7 @@ begin
     -- (a healing cover's herb).
     declare v_r record; r recipe; ri record; v_i int;
     begin
-      select * into v_r from recipe_in_stores(p_world, c.keeper, tend_recipes(kind));
+      select * into v_r from recipe_in_stores(p_world, c.keeper, worker_recipes(c, tend_recipes(kind)));
       if v_r.rid is null then return false; end if;
       select * into r from recipe where id = v_r.rid;
       -- Round its keeper, only with room in storage in reach for what it makes.
@@ -253,7 +253,7 @@ begin
     end;
 
   elsif kind in ('smelt', 'kiln') then
-    declare v_p placed; v_fits text[] := furnace_fits(kind); v_hold boolean := coalesce(c.carrying->>'def' = any(furnace_fits(kind)), false);
+    declare v_p placed; v_fits text[] := worker_furnace_fits(c, kind); v_hold boolean := coalesce(c.carrying->>'def' = any(worker_furnace_fits(c, kind)), false);
             v_jobs jsonb; v_one jsonb; v_n int; v_secs double precision; v_metal metal_def; v_i int; v_makes text; v_room int;
             v_furnace text := case when kind = 'smelt' then 'smelter' else 'kiln' end;
     begin
@@ -335,7 +335,7 @@ begin
         return true;
       end if;
       -- Nothing to rake here: lye out of the stores.
-      select * into v_r from recipe_in_stores(p_world, c.keeper, tend_recipes('ash'));
+      select * into v_r from recipe_in_stores(p_world, c.keeper, worker_recipes(c, tend_recipes('ash')));
       if v_r.rid is null then return false; end if;
       select * into r from recipe where id = v_r.rid;
       for ri in select * from recipe_input where recipe = r.id order by ord loop
@@ -377,7 +377,7 @@ begin
     begin
       if not exists (select 1 from placed p where p.world_id = p_world and (p.kind = 'campfire' or is_oven(p)) and placed_lit(p)
                        and sqrt((p.cx - c.to_x) ^ 2 + (p.cy - c.to_y) ^ 2) <= 3) then return false; end if;
-      select * into v_r from recipe_in_stores(p_world, c.keeper, tend_recipes('cook'));
+      select * into v_r from recipe_in_stores(p_world, c.keeper, worker_recipes(c, tend_recipes('cook')));
       if v_r.rid is null then return false; end if;
       select * into r from recipe where id = v_r.rid;
       for ri in select * from recipe_input where recipe = r.id order by ord loop
@@ -396,7 +396,7 @@ begin
     -- Every piece of the relic out of the stores, the least damaged of each, and the relic back in at what they were worth.
     declare v_r record; rd relic_def; v_part int; v_it item; v_worth double precision := 0;
     begin
-      select * into v_r from relic_in_stores(p_world, c.keeper);
+      select * into v_r from relic_in_stores(p_world, c.keeper, c);
       if v_r.name is null then return false; end if;
       select * into rd from relic_def where name = v_r.name;
       for v_part in 1..rd.parts loop
@@ -461,7 +461,7 @@ begin
         return true;
       end if;
       if not v_hold then
-        update creature set carrying = take_some_stored(p_world, c.keeper, (select array_agg(x.seed) from crop_def x), stage_loads(c), c.work_x, c.work_y)
+        update creature set carrying = take_some_stored(p_world, c.keeper, worker_seeds(c), stage_loads(c), c.work_x, c.work_y)
          where world_id = p_world and id = p_id;
         return true;
       end if;
@@ -476,7 +476,7 @@ begin
       if not exists (select 1 from placed p where p.world_id = p_world and p.kind = 'furniture' and p.sub = 'paper_press'
                        and on_home_deed(p_world, c.keeper, p.x, p.y)
                        and sqrt((p.cx - c.to_x) ^ 2 + (p.cy - c.to_y) ^ 2) <= 3) then return false; end if;
-      select * into v_r from recipe_in_stores(p_world, c.keeper, tend_recipes('paper'));
+      select * into v_r from recipe_in_stores(p_world, c.keeper, worker_recipes(c, tend_recipes('paper')));
       if v_r.rid is null then return false; end if;
       select * into r from recipe where id = v_r.rid;
       for ri in select * from recipe_input where recipe = r.id order by ord loop
@@ -529,7 +529,7 @@ begin
       if not exists (select 1 from placed p where p.world_id = p_world and p.kind = 'furniture' and p.sub = 'spindle'
                        and on_home_deed(p_world, c.keeper, p.x, p.y)
                        and sqrt((p.cx - c.to_x) ^ 2 + (p.cy - c.to_y) ^ 2) <= 3) then return false; end if;
-      select * into v_r from recipe_in_stores(p_world, c.keeper, tend_recipes('spin'));
+      select * into v_r from recipe_in_stores(p_world, c.keeper, worker_recipes(c, tend_recipes('spin')));
       if v_r.rid is null then return false; end if;
       select * into r from recipe where id = v_r.rid;
       for ri in select * from recipe_input where recipe = r.id order by ord loop
@@ -554,7 +554,7 @@ begin
       if not exists (select 1 from placed p where p.world_id = p_world and p.kind = 'anvil'
                        and on_home_deed(p_world, c.keeper, p.x, p.y)
                        and sqrt((p.cx - c.to_x) ^ 2 + (p.cy - c.to_y) ^ 2) <= 3) then return false; end if;
-      select u.l into v_l from unnest(smith_lumps(kind)) with ordinality u(l, o)
+      select u.l into v_l from unnest(worker_smith_lumps(c, kind)) with ordinality u(l, o)
        where stores_count(p_world, c.keeper, u.l) > 0 order by u.o limit 1;
       if v_l is null then return false; end if;
       select * into v_m from mould_def where id = smith_mould(kind);
@@ -576,7 +576,7 @@ begin
       if not exists (select 1 from placed p where p.world_id = p_world and p.kind = 'smelter' and placed_lit(p)
                        and on_home_deed(p_world, c.keeper, p.x, p.y)
                        and sqrt((p.cx - c.to_x) ^ 2 + (p.cy - c.to_y) ^ 2) <= 3) then return false; end if;
-      select * into v_r from recipe_in_stores(p_world, c.keeper, tend_recipes('glass'));
+      select * into v_r from recipe_in_stores(p_world, c.keeper, worker_recipes(c, tend_recipes('glass')));
       if v_r.rid is null then return false; end if;
       select * into r from recipe where id = v_r.rid;
       for ri in select * from recipe_input where recipe = r.id order by ord loop
@@ -599,7 +599,7 @@ begin
       if not exists (select 1 from placed p where p.world_id = p_world and p.kind = 'furniture' and p.sub = 'butter_churn'
                        and on_home_deed(p_world, c.keeper, p.x, p.y)
                        and sqrt((p.cx - c.to_x) ^ 2 + (p.cy - c.to_y) ^ 2) <= 3) then return false; end if;
-      select * into v_r from recipe_in_stores(p_world, c.keeper, tend_recipes('churn'));
+      select * into v_r from recipe_in_stores(p_world, c.keeper, worker_recipes(c, tend_recipes('churn')));
       if v_r.rid is null then return false; end if;
       select * into r from recipe where id = v_r.rid;
       for ri in select * from recipe_input where recipe = r.id order by ord loop
@@ -625,7 +625,7 @@ begin
       if not exists (select 1 from placed p where p.world_id = p_world and p.kind = 'smelter' and placed_lit(p)
                        and on_home_deed(p_world, c.keeper, p.x, p.y)
                        and sqrt((p.cx - c.to_x) ^ 2 + (p.cy - c.to_y) ^ 2) <= 3) then return false; end if;
-      select * into v_r from recipe_in_stores(p_world, c.keeper, tend_recipes('alloy'));
+      select * into v_r from recipe_in_stores(p_world, c.keeper, worker_recipes(c, tend_recipes('alloy')));
       if v_r.rid is null then return false; end if;
       select * into r from recipe where id = v_r.rid;
       for ri in select * from recipe_input where recipe = r.id order by ord loop
@@ -683,7 +683,7 @@ begin
   elsif kind = 'lily' then
     -- Water on your settlement a water plant takes: a water lily root or lotus seeds planted in it, as your own hands
     -- plant one (`perform_water_garden`). At the stores: its stage's roots or seeds into its arms.
-    declare v_kind text; v_hold boolean := coalesce(c.carrying->>'def' = any(array(select w.from_item from water_plant_def w)), false);
+    declare v_kind text; v_hold boolean := coalesce(c.carrying->>'def' = any(worker_roots(c)), false);
     begin
       if v_hold then
         select w.id into v_kind from water_plant_def w where w.from_item = c.carrying->>'def';
@@ -700,7 +700,7 @@ begin
         update creature set carrying = null where world_id = p_world and id = p_id;
         return true;
       end if;
-      update creature set carrying = take_some_stored(p_world, c.keeper, array(select w.from_item from water_plant_def w order by w.id),
+      update creature set carrying = take_some_stored(p_world, c.keeper, worker_roots(c),
                                                       stage_loads(c), c.work_x, c.work_y)
        where world_id = p_world and id = p_id;
       return true;

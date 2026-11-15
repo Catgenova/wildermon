@@ -18,6 +18,8 @@ begin
     if exists (select 1 from placed b where b.world_id = p_world and b.kind = 'furniture' and b.sub = tree_bench_kind() and b.x = tx and b.y = ty) then
       return fitting_said('benchRound', null, null);
     end if;
+    -- A tree with logs in it fells only at its woodcutting (`skillgates.ts`).
+    if here = tile_id('Tree') then return tree_gate_refusal(p_world, p_uid, land_data(p_world, tx, ty)); end if;
   elsif p_action = 'forage' then
     if not t.forage then return 'Nothing grows here worth looking through.'; end if;
     if is_foraged(p_world, tx, ty, 'forage') then return 'Already searched. ' || ready_in(p_world, tx, ty, 'forage'); end if;

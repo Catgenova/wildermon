@@ -24,6 +24,8 @@ function say(what: string, got: unknown, want: unknown): void {
 }
 
 const game = Game.create(4242);
+// At a deed stake's carpentry, its gate (`craftgates.ts`): this is about the wood.
+game.skills.values.set('carpentry', 5);
 const pack = game.inventory;
 for (const it of [...pack.items]) if (['shaft', 'log', 'carving_knife'].includes(it.id)) pack.remove(it.uid, it.count);
 pack.add('carving_knife', { ql: 40 });

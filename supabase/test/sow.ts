@@ -75,7 +75,8 @@ begin
   delete from creature where world_id = w and keeper = u and species = 'seavic';
   perform creature_spawn(w, 'seavic', 30.5, 30.5, 'deed', now() - interval '10 days', u);
   -- Ten minutes owed, so that one settle is ten minutes of work rather than none.
-  update creature set job = 'farm', mode = 'deed', phase = 'idle',
+  -- At farming 5, wheat's (skillgates.ts).
+  update creature set job = 'farm', mode = 'deed', phase = 'idle', skills = coalesce(skills, '{}') || '{"farming": 5}',
       until = now() - interval '600 seconds', leg_at = now() - interval '600 seconds',
       leg_ends = now() - interval '600 seconds', settled_at = now() - interval '600 seconds'
     where world_id = w and keeper = u and species = 'seavic';
@@ -84,6 +85,7 @@ end $$;`);
 // A seavic of Dane's, set to the trade its species keeps anyway.
 const hand = game.creatures.spawn('seavic', 30.5, 30.5, 'deed', game.rand, game.time - 3600 * 3);
 hand.trade = 'farm';
+hand.skills = { ...hand.skills, farming: 5 };
 
 check('the same field on both sides',
   psql(`select count(*) from generate_series(28,31) gx, generate_series(28,31) gy where land_tile(${W}, gx, gy) = tile_id('Field')`) === '16'

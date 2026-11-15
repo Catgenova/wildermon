@@ -18,7 +18,8 @@ import {
   type Creature,
   type SpeciesDef,
 } from './creatures';
-import { CROSS_CARE, CROSS_CHANCE, CROSS_SKILL, crossOf } from './hybridlist';
+import { CROSS_CARE, CROSS_CHANCE, crossOf } from './hybridlist';
+import { kindGateRefusal } from './skillgates';
 import type { Game } from './game';
 import { awareTraitEase } from './limits';
 import { clockLeft } from './boons';
@@ -103,11 +104,14 @@ export const crossFor = (a: Creature, b: Creature): SpeciesDef | undefined => {
   const h = crossOf(a.species, b.species);
   return h ? SPECIES[h.id] : undefined;
 };
-/** Why a listed cross will not be tried, or null: the breeder's husbandry and each parent's care (`CROSS_SKILL`, `CROSS_CARE`). The island's `cross_refuses`. */
+/**
+ * Why a listed cross will not be tried, or null: the breeder's husbandry (its gate, kind `cross`: "Cross: needs animal
+ * husbandry 50; have 12.0.") and each parent's care (`CROSS_CARE`). The island's `cross_refuses`.
+ */
 export function crossRefuses(g: Game, a: Creature, b: Creature): string | null {
   if (!crossFor(a, b)) return null;
-  const skill = g.skills.get(HUSBANDRY);
-  if (skill < CROSS_SKILL) return `Cross: animal husbandry ${CROSS_SKILL} needed, yours ${Math.floor(skill)}.`;
+  const gated = kindGateRefusal(g, 'cross', 'cross');
+  if (gated) return gated;
   for (const c of [a, b]) if (c.care < CROSS_CARE) return `Cross: care ${wholePct(CROSS_CARE)} each needed, ${c.name} ${wholePct(c.care)}.`;
   return null;
 }

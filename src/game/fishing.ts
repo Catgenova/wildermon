@@ -5,6 +5,7 @@ import type { Game } from './game';
 import { ITEM_DEFS, itemDef, markOf, RARITIES, RARITY_WORD, rollRarity } from './items';
 import { swingEnchant } from './enchant';
 import { pct, qlTag, taggedWith } from './yields';
+import { FISH_GATE, nameGates } from './skillgates';
 
 /** What one cast and one sweep of the net teach, fish or no fish. */
 export const ROD_GAIN = 0.4;
@@ -22,7 +23,7 @@ export interface FishDef {
   name: string;
   /** Height units of water it will not be found in less than. */
   depth: number;
-  /** Fishing skill it takes before one will come up at all. */
+  /** Fishing skill it takes before one will come up at all: its gate (`FISH_GATE`, skillgates.ts). */
   level: number;
   /** How readily it takes a hook, against the others that could. */
   weight: number;
@@ -34,19 +35,25 @@ export interface FishDef {
   deep?: boolean;
 }
 
-export const FISH: FishDef[] = [
-  { id: 'minnow', name: 'Minnow', depth: 0, level: 1, weight: 30 },
-  { id: 'perch', name: 'Perch', depth: 3, level: 1, weight: 24 },
-  { id: 'trout', name: 'Trout', depth: 8, level: 15, weight: 16 },
-  { id: 'pike', name: 'Pike', depth: 16, level: 35, weight: 9 },
-  { id: 'sturgeon', name: 'Sturgeon', depth: 28, level: 60, weight: 3 },
+export const FISH: FishDef[] = ([
+  { id: 'minnow', name: 'Minnow', depth: 0, weight: 30 },
+  { id: 'perch', name: 'Perch', depth: 3, weight: 24 },
+  { id: 'trout', name: 'Trout', depth: 8, weight: 16 },
+  { id: 'pike', name: 'Pike', depth: 16, weight: 9 },
+  { id: 'sturgeon', name: 'Sturgeon', depth: 28, weight: 3 },
   // Deep water, from a boat only (`sailing.ts`).
-  { id: 'cod', name: 'Cod', depth: 40, level: 20, weight: 14, deep: true },
-  { id: 'halibut', name: 'Halibut', depth: 55, level: 45, weight: 7, deep: true },
-  { id: 'bluefin', name: 'Bluefin', depth: 70, level: 70, weight: 2, deep: true },
-];
+  { id: 'cod', name: 'Cod', depth: 40, weight: 14, deep: true },
+  { id: 'halibut', name: 'Halibut', depth: 55, weight: 7, deep: true },
+  { id: 'bluefin', name: 'Bluefin', depth: 70, weight: 2, deep: true },
+] as Array<Omit<FishDef, 'level'>>).map((f) => {
+  const level = FISH_GATE[f.id];
+  if (level === undefined) throw new Error(`${f.id}: no fishing gate`);
+  return { ...f, level };
+});
 
 export const FISH_BY_ID = new Map(FISH.map((f) => [f.id, f]));
+// The fishing gates say a fish by its name (`nameGates`).
+nameGates('fish', (id) => FISH_BY_ID.get(id)?.name);
 export const isFish = (id: string): boolean => FISH_BY_ID.has(id);
 
 /**

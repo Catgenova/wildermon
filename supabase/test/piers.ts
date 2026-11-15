@@ -70,7 +70,7 @@ import type { MenuItem } from '../../src/ui/contextmenu';
 import { metres, PIER_CLEAR, PIER_DROP, PIER_SHOO, PIER_WALL_DROP, PIER_WATER, pierBill } from '../../src/game/piers';
 import { onSteps } from '../../src/game/player';
 import { TileType, stonesData } from '../../src/world/tiles';
-import { psql } from './harness';
+import { BUILD_HANDS, hands, handsSql, psql } from './harness';
 
 let bad = 0;
 let good = 0;
@@ -137,6 +137,8 @@ const TOOLS = ['mallet', 'shovel', 'trowel', 'pickaxe'];
 const ISLAND_SCENE = `
   select id into w from world where name = 'Hoarding';
   select uid into me from player where world_id = w and name = 'Crowd4';
+  -- No skill gate in the way of a deck or a wall (\`craftgates.ts\`): this is about piers.
+  ${handsSql('w', 'me', BUILD_HANDS)};
   perform set_config('request.jwt.claims', json_build_object('sub', me)::text, true);
   delete from spring where world_id = w;
   delete from water_plant where world_id = w;
@@ -179,6 +181,7 @@ function browserScene(): Game {
   g.plantWater(LILY_AT[0], LILY_AT[1], 'lily', Date.now() / 1000 - 3 * 86400);
   for (const it of [...g.inventory.items]) g.inventory.remove(it.uid, it.count);
   for (const t of TOOLS) g.inventory.add(t, { ql: 50 });
+  hands(g, BUILD_HANDS);
   g.deed = { ...DEED } as typeof g.deed;
   g.player.x = 28.5;
   g.player.y = 44.5;

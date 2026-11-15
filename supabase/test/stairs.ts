@@ -31,7 +31,7 @@ import { TOP_LEVELS } from '../../src/game/building';
 import { pathOptions } from '../../src/game/player';
 import { findPath } from '../../src/world/pathfinding';
 import { TileType } from '../../src/world/tiles';
-import { psql } from './harness';
+import { BUILD_HANDS, hands, handsSql, psql } from './harness';
 
 let bad = 0;
 let good = 0;
@@ -85,6 +85,7 @@ const MAT = 'plank';
 const ISLAND_SCENE = `
   select id into w from world where name = 'Hoarding';
   select uid into me from player where world_id = w and name = 'Dane';
+  ${handsSql('w', 'me', BUILD_HANDS)};
   perform set_config('request.jwt.claims', json_build_object('sub', me)::text, true);
   delete from building b where b.world_id = w and (b.id = ${HOUSE.id} or exists (select 1 from building_tile bt
     where bt.world_id = w and bt.building = b.id and bt.x between 42 and 50 and bt.y between 8 and 16));
@@ -105,6 +106,8 @@ const ISLAND_SCENE = `
 
 function browserScene(): Game {
   const g = Game.create(9301, 64);
+  // No skill gate in the way of a staircase (`craftgates.ts`): this is about stairs.
+  hands(g, BUILD_HANDS);
   const w = g.world;
   for (let y = 8; y <= 16; y++) for (let x = 42; x <= 50; x++) w.setHeight(x, y, H);
   for (let y = 8; y < 16; y++) for (let x = 42; x < 50; x++) w.setTile(x, y, TileType.PackedDirt, 0);

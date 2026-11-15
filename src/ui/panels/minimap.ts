@@ -4,7 +4,7 @@ import { MARK_COLOURS, MARK_CSS, MARKET_MARK } from '../../game/marks';
 import { furnitureDef, furnitureName } from '../../game/furniture';
 import { hasRunestones, RUNESTONES, STONE_HALF, stoneCentre } from '../../game/runestones';
 import type { Renderer } from '../../render/renderer';
-import { ROCK_VARIANTS, TileType, TILE_DEFS } from '../../world/tiles';
+import { rockDef, TileType, TILE_DEFS } from '../../world/tiles';
 import { UNSEEN, VISIBLE } from '../../game/vision';
 import type { UIWindow } from '../windows';
 import { waterRgb } from '../../render/water';
@@ -518,7 +518,7 @@ export class MinimapPanel {
     const t = w.viewTile(x, y, lit);
     const def = TILE_DEFS[t];
     const h = w.centerHeight(x, y);
-    const base = t === TileType.Rock ? ROCK_VARIANTS[w.rockFace(x, y)].color : def.color;
+    const base = t === TileType.Rock ? rockDef(w.rockFace(x, y)).color : def.color;
     let r = base[0];
     let g = base[1];
     let b = base[2];

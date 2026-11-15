@@ -12,6 +12,7 @@ import { DAILY_RESET, isSeam, metres } from '../world/tiles';
 import type { Game } from '../game/game';
 import { itemDef } from '../game/items';
 import { bedrockAt } from '../world/ore';
+import { seenVein, veinTip } from '../game/skillgates';
 import {
   groundRoll, TILE_DEFS, TileType, dustiness, standCap, stepsGroundRefusal, stepsTimber, STEPS_BRICKS, STEPS_MOST, STEPS_PLANKS, STEPS_SLABS,
   trailGround, WEAR_FALL, WEAR_MOST, WEAR_TRAIL, WEARS, BUSH_DEFS, bushSpecies, TREE_DEFS, treeSpecies, FLOWERS_PICKED,
@@ -44,7 +45,17 @@ export function groundReading(g: Game, x: number, y: number): string | null {
   const bare = w.getTile(x, y) === TileType.Rock;
   if (!bare && !g.isProspected(x, y)) return null;
   const rock = bedrockAt(w, x, y);
+  // A buried vein over your prospecting is "Unidentified metal", and says nothing that would name it (`seenVein`); a
+  // bare one is always named.
+  if (veinTip(rock, g, bare)) return `${seenVein(rock, g, bare)} · up to QL ${rock.maxQl}${bare ? '' : ', buried'}`;
   return `${rock.name}${isSeam(rock) ? ` · mining ${rock.level}` : ''} · up to QL ${rock.maxQl}${bare ? '' : ', buried'}`;
+}
+
+/** Why the ground's reading names no vein: "More prospecting required to identify this vein.", or null (`veinTip`). */
+export function groundTip(g: Game, x: number, y: number): string | null {
+  const bare = g.world.getTile(x, y) === TileType.Rock;
+  if (!bare && !g.isProspected(x, y)) return null;
+  return veinTip(bedrockAt(g.world, x, y), g, bare);
 }
 
 /**

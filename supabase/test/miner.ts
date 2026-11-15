@@ -129,6 +129,9 @@ begin
   /* ---- Ore Sense: gold at forty, and Prospect's sample says so. ---- */
   perform land_set_rock(w, 3, 3, 10);
   update skill set value = 45 where world_id = w and uid = u and id = 'mining';
+  -- Read by a prospector who can name gold (\`VEIN_GATE\`): under it, it is "Unidentified metal".
+  insert into skill (world_id, uid, id, value) values (w, u, 'prospecting', 50)
+    on conflict (world_id, uid, id) do update set value = excluded.value;
   perform pg_temp.hold(w, u, '{}');
   insert into said values ('GOLD', coalesce(act_refusal(w, u, 'mine', ${FACE}), 'ALLOWED'));
   perform perform_ground(w, u, 'prospect', jsonb_build_object('kind', 'tile', 'x', 3, 'y', 3));

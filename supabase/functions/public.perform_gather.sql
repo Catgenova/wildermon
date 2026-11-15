@@ -141,7 +141,7 @@ begin
       -- And now and then a rare one, for a Naturalist's Rare Find.
       v_rare := perk_rare(pk(p_world, p_uid, 'rare:' || p_action, 0));
       perform gather(p_world, p_uid, got, 1, made_ql, null, v_rare);
-      found := found || (coalesce(v_rare || ' ', '') || lower((select coalesce(name, got) from item_def where id = got))
+      found := found || (coalesce(v_rare || ' ', '') || lower(seen_name(p_world, p_uid, got, null, (select coalesce(name, got) from item_def where id = got)))
         || ' (QL ' || to_char(made_ql, 'FM990.0') || ')');
       if v_rare is not null then
         perform journal_note(p_world, p_uid, v_rare);

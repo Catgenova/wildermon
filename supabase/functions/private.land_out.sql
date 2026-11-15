@@ -20,7 +20,7 @@ begin
     end if;
     if r.n <= v_top then
       select jsonb_agg(jsonb_build_object('n', f.n, 'x', f.x, 'y', f.y, 'tile', f.tile, 'data', f.data,
-                                          'corners', f.corners, 'soil', f.soil) order by f.n)
+                                          'corners', f.corners, 'soil', f.soil, 'rock', f.rock) order by f.n)
         into v_rows from fresh f where f.world_id = r.world_id and f.region = r.region;
       perform private.send('land:' || r.world_id || ':' || r.region, 'land', jsonb_build_object('rows', v_rows));
     else

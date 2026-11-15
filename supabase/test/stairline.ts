@@ -71,9 +71,10 @@ begin
     (w, 'furniture', 'chest', ${STORE[0]}, ${STORE[1]}, 0, 0, ${STORE[0]} + 0.375, ${STORE[1]} + 0.375, 40, u) returning id into v_store;
   insert into item (world_id, holder, placed, def, ql, count) values (w, 'furniture', v_store, 'mortar', 30, 20);
   v_hod := creature_spawn(w, 'cobbe', ${START[0]} + 0.5, ${START[1]} + 0.5, 'deed', now() - interval '60 days', u);
+  -- Its carpentry at a plank wall's gate (craftgates.ts): this is about stairs.
   update creature set traits = '{}', rare = null, stance = 'passive', hunger = 1, phase = 'idle', carrying = null, job = null, post = null,
          from_x = to_x, from_y = to_y, until = now() - interval '1 millisecond', leg_at = now() - interval '1 millisecond',
-         leg_ends = now() - interval '1 millisecond'
+         leg_ends = now() - interval '1 millisecond', skills = skills || '{"carpentry": 10}'
    where world_id = w and id = v_hod;
   for i in 1..240 loop
     update creature set worn = 0, hunger = 1, leg_at = leg_at - (until - now()) - interval '1 millisecond',

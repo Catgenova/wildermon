@@ -44,6 +44,11 @@ import {
   WATER_PLANTS, WATER_PLANT_BY_ID, WATER_ROOTING, seasonBegan, stateLine, waterPlantState,
 } from '../../src/world/waterplants';
 import { psql } from './harness';
+import { SKILL_GATES } from '../../src/game/skillgates';
+
+/** The level that opens every gate of a kind in a skill (`skillgates.ts`): what this test's builder works at. */
+const gatesOpen = (kind: string, skill: string): number =>
+  Math.max(1, ...SKILL_GATES.filter((g) => g.kind === kind && g.skill === skill).map((g) => g.level));
 
 let bad = 0;
 const say = (ok: boolean, line: string): void => {
@@ -166,6 +171,8 @@ for (let y = 31; y < 64; y++) for (let x = 0; x < 40; x++) {
 const ISLAND_SCENE = `
   select id into w from world where name = 'Hoarding';
   select uid into me from player where world_id = w and name = 'Crowd4';
+  insert into skill (world_id, uid, id, value) values (w, me, 'botanizing', ${gatesOpen('water_plant', 'botanizing')})
+    on conflict (world_id, uid, id) do update set value = greatest(skill.value, excluded.value);
   perform set_config('request.jwt.claims', json_build_object('sub', me)::text, true);
   delete from spring where world_id = w;
   delete from water_plant where world_id = w;
@@ -190,6 +197,7 @@ const ISLAND_SCENE = `
 /** The same scene in a browser's game of its own. */
 function browserScene(): Game {
   const g = Game.create(31337, 64);
+  g.skills.values.set('botanizing', gatesOpen('water_plant', 'botanizing'));
   const w = g.world;
   for (let y = 0; y <= 64; y++) for (let x = 0; x <= 64; x++) w.setHeight(x, y, height(x, y));
   for (let y = 0; y < 64; y++) for (let x = 0; x < 64; x++) {

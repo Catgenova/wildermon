@@ -38,6 +38,7 @@ import { damageDrawn, failDamagedSaid } from './faildamage';
 import { tryGain } from './learn';
 import type { CraftStock } from './recipes';
 import { bedRest, SLEEP_SAID, sleepNotYours } from './sleep';
+import { helmGate, skillGateRefusal } from './skillgates';
 import { DYE_BUCKET, dyeIn, dyeSays, dyeText, mixDye, readDye, type DyeLiquid } from './dyestuffs';
 import { BELL_ROPE, bellHeard, bellRangSaid, NO_BELL_ROPE } from './ropework';
 import { GALE_ROW_SAID, isGale } from './sailing';
@@ -523,6 +524,10 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       // A wagon driven up a wide staircase is beside you only on its own storey.
       if (!here && (!nearPiece(g, f) || Math.max(0, f.level ?? 0) !== Math.max(0, g.player.level))) return 'Stand beside it.';
       if (g.driving()) return 'Already driving.';
+      // A wagon's reins at its driving, a boat's helm or oars at its sailing (`helmGate`; the island's `helm_gate_refusal`).
+      const gate = helmGate(f.kind);
+      const gated = gate ? skillGateRefusal(gate.name, gate.skill, g.skills.get(gate.skill), gate.level) : null;
+      if (gated) return gated;
       // A padlock on her keeps her helm, or the reins, to whoever has its key.
       const shut = g.lockRefusal(f);
       if (shut) return shut;

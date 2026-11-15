@@ -34,7 +34,7 @@ import { Game } from '../../src/game/game';
 import { wallAcross } from '../../src/game/storeyview';
 import type { PathPoint } from '../../src/world/pathfinding';
 import { TileType } from '../../src/world/tiles';
-import { psql, ok, bad, check } from './harness';
+import { bad, BUILD_HANDS, check, hands, handsSql, ok, psql } from './harness';
 
 /* ---- the manor -------------------------------------------------------------- */
 
@@ -75,6 +75,7 @@ const HEIGHT = GROUND + UP * WALL_HEIGHT;
 /* ---- the browser ------------------------------------------------------------ */
 
 const g = Game.create(4242, 64);
+hands(g, BUILD_HANDS); // no skill gate (`craftgates.ts`) in the way of what this is about
 for (const c of [...g.creatures.list.values()]) g.creatures.list.delete(c.id);
 for (let y = Y0 - 8; y <= Y0 + 10; y++) for (let x = WX - 8; x <= EX + 10; x++) {
   g.world.setHeight(x, y, GROUND);
@@ -197,6 +198,7 @@ begin
   perform land_set_tile(w, x, y, tile_id('Grass')) from generate_series(${WX - 8}, ${EX + 10}) x, generate_series(${Y0 - 8}, ${Y0 + 10}) y;
   perform set_config('request.jwt.claims', json_build_object('sub', u)::text, true);
   perform rpc_join(w, 'Bridger');
+  ${handsSql('w', 'u', BUILD_HANDS)};
   update player set x = ${WX + 1.5}, y = ${Y + 0.5}, level = ${UP}, body_at = now(), swim_at = now(), seen_at = now() where world_id = w and uid = u;
   insert into deed (world_id, name, x, y, radius, level, founded_by) values (w, 'Bridge End', ${(WX + EX) / 2 + 1}, ${Y}, 12, 1, u);
   insert into item (world_id, holder, holder_uid, def, ql, count) values (w, 'player', u, 'mallet', 40, 1);

@@ -35,7 +35,7 @@ begin
       return 'Need ' || lower((select i.name from item_def i join water_plant_def w on w.from_item = i.id where w.id = v_kind))
           || '.';
     end if;
-    return null;
+    return water_plant_gate_refusal(p_world, p_uid, v_kind);
   end if;
   if p_action = 'pick_water_plant' then return pick_refusal(p_world, tx, ty); end if;
   if p_action = 'pull_water_plant' then
