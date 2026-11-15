@@ -78,7 +78,7 @@ import {
 import { tryGain } from '../../game/learn';
 import { DRIVING_LEARN, DRIVING_TOP, drivingPace, SAILING_LEARN, SAILING_TOP, sailingPace, TRAVEL_TOP_AT, VEHICLE_QL_TOP, vehicleQlPace } from '../../game/travel';
 import { deckBill, metres, PIER_CLEAR, PIER_DROP, PIER_WALL_DROP, PIER_WATER } from '../../game/piers';
-import { COOLING_DRAUGHT, DRAUGHT_DROP, DRAUGHT_FILL, DRAUGHT_SECS, HEAT_BURN, HEAT_DRAIN, HEAT_FILL, HEAT_ICE, HEAT_NEAR, HEAT_SCALE, LAVA_BAND, LAVA_BURN, LAVA_CELL } from '../../game/lava';
+import { COOLING_DRAUGHT, DRAUGHT_DROP, DRAUGHT_FILL, DRAUGHT_SECS, HEAT_BURN, HEAT_DRAIN, HEAT_FILL, HEAT_ICE, HEAT_NEAR, HEAT_SCALE, LAVA_BAND, LAVA_BURN, LAVA_CELL, LAVA_DESIGNS, LAVA_HEART, LAVA_PATHS, LAVA_RADIUS, SERYLL_HEART } from '../../game/lava';
 import { COIN_FIND_ONE_IN, COIN_FINDS_A_DAY } from '../../game/forage';
 import { BURYABLE, BUSH_DEFS, ISLAND_FRUIT, ROCK_VARIANTS, TILE_DEFS, TileType, TREE_AGES, TREE_DAWN_UTC, TREE_DEFS } from '../../world/tiles';
 import { OWN_FRUIT_SHARE, REGIONS } from '../../world/regions';
@@ -4490,7 +4490,9 @@ export const NEWS: News[] = [
     n: 616,
     day: '2026-11-14',
     lines: () => [
-      `New: lava on Volcano Isle, ${metres(LAVA_BAND.foot)} m up to the caldera at ${metres(LAVA_BAND.caldera)} m: a maze of ${LAVA_CELL}-tile corridors and walls, new at each daily reset; on the map. Always a way through to the caldera, the dragon roost and every seryll seam.`,
+      `New: lava on Volcano Isle: a labyrinth ${LAVA_RADIUS} tiles round the caldera, on its land; ${LAVA_DESIGNS} designs, a new one at each daily reset, never twice running; corridors ${LAVA_CELL} tiles wide; on the map.`,
+      `${LAVA_PATHS} ways in, each the only way through to the heart (${LAVA_HEART} tiles round the caldera, no lava); every other corridor ends.`,
+      `Changed: seryll lies in the labyrinth's heart only, on ${percent(SERYLL_HEART)} of its dry ground (was: anywhere on Volcano Isle).`,
       `On lava: health −${percent(LAVA_BURN)}/s; no digging, building, setting down or founding; no creature steps on it. Never on a settlement, a road, a building or anything set down.`,
       `New: heat meter (hud, Volcano Isle): +${percent(HEAT_FILL)}/s at ${metres(LAVA_BAND.foot)} m and up, ×${HEAT_NEAR} beside lava; full: health −${percent(HEAT_BURN)}/s; below: −${percent(HEAT_DRAIN)}/s.`,
       `Heat fill: ×${1 - HEAT_SCALE} per dragon-scale piece; ×(1 − ${HEAT_ICE} × strength) per ice-infused piece (ice now infuses armour); ${itemDef(COOLING_DRAUGHT).name} (alchemy; mint, water, ice mote): heat −${percent(DRAUGHT_DROP)}, fill ×${DRAUGHT_FILL} for ${DRAUGHT_SECS / 60} min.`,

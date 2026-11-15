@@ -1,7 +1,7 @@
 /**
- * Pictures of Volcano Isle's lava, drawn by the game's own renderer, map and hud on the cone `tools/lava-page.ts`
- * builds: the maze on the slopes by day and at night, two days side by side, the map with the day's lava on it, and
- * the hud's heat meter at half and full.
+ * Pictures of Volcano Isle's labyrinth of lava, drawn by the game's own renderer, map and hud on the island
+ * `tools/lava-page.ts` builds: a way in by day and at night, the map today and tomorrow, the hud's heat meter at half
+ * and full, the ten designs at the live island's size with their true paths, and the heart's seryll.
  *
  *   node tools/lava-shot.mjs --out /some/dir            # every picture, at twice the pixels
  *   node tools/lava-shot.mjs --out /some/dir --dpr 1
@@ -58,34 +58,41 @@ if (error) {
   process.exit(1);
 }
 const today = await page.evaluate(() => window.lava.today);
-const at = { x: 492, y: 72 };
+const [ex, ey] = await page.evaluate(() => window.lava.entrance(0));
+const at = { x: ex, y: ey };
 const shot = async (name, s) => {
   await page.evaluate((v) => window.lava.shot(v), { day: today, hour: 13, zoom: 1, t: 20, ...at, ...s });
   await page.screenshot({ path: join(out, `${name}.png`) });
   console.log(join(out, `${name}.png`));
 };
-await shot('slopes-day', {});
-await shot('slopes-night', { hour: 23 });
-await shot('slopes-day-wide', { zoom: 0.5 });
-await shot('slopes-night-wide', { zoom: 0.5, hour: 23 });
-await shot('slopes-day-close', { zoom: 2 });
-// The whole cone, the maze on two days running: put side by side afterwards.
-await shot('day-a', { zoom: 0.16, x: 520, y: 105 });
-await shot('day-b', { zoom: 0.16, x: 520, y: 105, day: today + 1 });
+// At the day's first way in, by day and at night, close and wider.
+await shot('entrance-day', {});
+await shot('entrance-night', { hour: 23 });
+await shot('entrance-day-wide', { zoom: 0.45 });
+await shot('entrance-night-wide', { zoom: 0.45, hour: 23 });
+await shot('entrance-day-close', { zoom: 2 });
+// The map, today and tomorrow.
 for (const [name, day] of [['map-a', today], ['map-b', today + 1]]) {
   await page.evaluate((d) => window.lava.map(d), day);
   await page.screenshot({ path: join(out, `${name}.png`), clip: { x: 0, y: 0, width: 520, height: 640 } });
   console.log(join(out, `${name}.png`));
 }
-await page.evaluate(() => document.querySelectorAll('.win').forEach((e) => e.remove()));
 for (const [name, heat] of [['hud-half', 0.5], ['hud-full', 1]]) {
   await page.evaluate((h) => window.lava.hud(h), heat);
   await page.screenshot({ path: join(out, `${name}.png`), clip: { x: 0, y: 0, width: 360, height: 300 } });
   console.log(join(out, `${name}.png`));
 }
-// Each pair side by side, today on the left and tomorrow on the right.
+// The ten designs on one sheet, and the heart's seryll.
+for (const [name, fn] of [['designs', 'sheet'], ['seryll-heart', 'seryll']]) {
+  const r = await page.evaluate((f) => window.lava[f](), fn);
+  await page.setViewportSize({ width: Math.max(960, r.width), height: Math.max(640, r.height) });
+  await page.evaluate((f) => window.lava[f](), fn);
+  await page.screenshot({ path: join(out, `${name}.png`), clip: { x: 0, y: 0, width: r.width, height: r.height } });
+  console.log(join(out, `${name}.png`), r.seams === undefined ? '' : `${r.seams} seryll seams`);
+}
+// The maps side by side, today on the left and tomorrow on the right.
 const side = await context.newPage();
-for (const [name, a, b, w, h] of [['two-days', 'day-a', 'day-b', 960, 640], ['map-two-days', 'map-a', 'map-b', 520, 640]]) {
+for (const [name, a, b, w, h] of [['map-two-days', 'map-a', 'map-b', 520, 640]]) {
   const img = (f) => `data:image/png;base64,${readFileSync(join(out, `${f}.png`)).toString('base64')}`;
   await side.setViewportSize({ width: w * 2 + 12, height: h + 28 });
   await side.setContent(`<body style="margin:0;background:#140f0c;color:#ffd9a0;font:14px system-ui;display:flex;gap:12px">${[[a, 'Today'], [b, 'Tomorrow']].map(([f, t]) =>

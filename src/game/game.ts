@@ -100,7 +100,7 @@ import { DARK_HIT, NIGHT_EYES_FROM, SOUL_PER_LEVEL, WORK_HAND, WORK_WIND, WORK_W
 import { DRIVING, DRIVING_LEARN, drivingPace, SAILING, SAILING_LEARN, sailingPace, vehicleQlPace } from './travel';
 import { isLayUp, LEAD_PACE, ROPE_WALK, ROPE_WALK_TIME, ROPEMAKING, ropePerLayUp, ropeTime } from './ropework';
 import { laySwirls, swirlLight, type MoteElement, type Swirl } from './motes';
-import { gameLava, LAVA_CELL, LAVA_SPARED_TILES, lavaBlock, lavaDay, lavaGrid, lavaLights, type LavaLand } from './lava';
+import { gameLava, LAVA_CELL, LAVA_SPARED_TILES, LB_LAVA, LB_OPENS, LB_WAY, lavaBlockIn, lavaByte, lavaDay, lavaDesign, lavaDesignOf, lavaLights, type LavaDesign, type LavaLand } from './lava';
 import { TRACKING, trackLevel, type Trail } from './tracking';
 import { hasRunestones, runestoneAt, RUNESTONES, stonePoint, stoneTiles } from './runestones';
 import { AWARENESS, Vision } from './vision';
@@ -10292,52 +10292,58 @@ export class Game {
     if (this.waterPlants.delete(tileKey(x, y))) this.events.emit('world', x, y);
   }
 
-  /** The lava's ground as this browser holds it (`gameLava`), and today's blocks of the maze worked out so far, by `bx * 65536 + by`. */
+  /** The lava's ground as this browser holds it (`gameLava`); today's design, and what its blocks a lair or a seam may open came to. */
   private lavaLand: LavaLand | null = null;
-  private lavaMemo: { day: number; made: number; box: [number, number, number, number]; blocks: Map<number, boolean> } | null = null;
+  private lavaMemo: { day: number; made: number; design: LavaDesign; box: [number, number, number, number]; opens: Map<number, boolean> } | null = null;
 
   /** The day today's lava was laid for (`lavaDay`). */
   lavaToday(): number {
     return lavaDay(this.wallNow());
   }
 
-  /** Today's blocks of lava, kept for a few seconds at a time: what the ground under them holds can change. */
-  private lavaBlocks(): NonNullable<Game['lavaMemo']> {
+  /** Today's design of the labyrinth (`lavaDesignOf`), asked again every few seconds: the day turns, and what is on its blocks can change. */
+  lavaNow(): NonNullable<Game['lavaMemo']> {
     const now = performance.now();
     const had = this.lavaMemo;
     if (had && now - had.made <= LAVA_MEMO_MS) return had;
-    const g = lavaGrid(this.world.w);
-    const x0 = g.bx0 * LAVA_CELL, y0 = g.by0 * LAVA_CELL;
-    const m = { day: this.lavaToday(), made: now, box: [x0, y0, x0 + (2 * g.cols - 1) * LAVA_CELL, y0 + (2 * g.rows - 1) * LAVA_CELL] as [number, number, number, number], blocks: new Map<number, boolean>() };
+    const day = this.lavaToday();
+    const design = lavaDesign(this.world.w, lavaDesignOf(this.world.seed, day));
+    const box: [number, number, number, number] = [design.bxa * LAVA_CELL, design.bya * LAVA_CELL, (design.bxa + design.nbx) * LAVA_CELL, (design.bya + design.nby) * LAVA_CELL];
+    const m = { day, made: now, design, box, opens: new Map<number, boolean>() };
     this.lavaMemo = m;
     return m;
   }
 
-  /** Whether a whole block of the maze is lava today (`lavaBlock`): kept for the day, a few seconds at a time. */
+  /** Whether a whole block of the labyrinth is lava today (`lavaBlockIn`): its design's byte, and what a lair or a seam opens. */
   lavaBlockAt(bx: number, by: number): boolean {
-    const m = this.lavaBlocks();
+    const m = this.lavaNow();
+    const b = lavaByte(m.design, bx, by);
+    if (!(b & LB_LAVA)) return false;
+    if (!(b & (LB_OPENS | LB_WAY))) return true;
     const key = bx * 65536 + by;
-    let v = m.blocks.get(key);
+    let v = m.opens.get(key);
     if (v === undefined) {
       this.lavaLand ??= gameLava(this);
-      v = lavaBlock(this.lavaLand, m.day, bx, by);
-      m.blocks.set(key, v);
+      v = lavaBlockIn(this.lavaLand, m.design, bx, by);
+      m.opens.set(key, v);
     }
     return v;
   }
 
-  /** Whether lava lies on a tile today (`lava.ts`, the island's `lava_at`): its block's, and not where lava is spared. */
+  /** Whether lava lies on a tile today (`lava.ts`, the island's `lava_at`): its block's, not on water and not where lava is spared. */
   lavaAt(x: number, y: number): boolean {
-    const m = this.lavaBlocks();
-    if (x < m.box[0] || y < m.box[1] || x >= m.box[2] || y >= m.box[3]) return false;
+    const m = this.lavaNow();
+    if (x < m.box[0] || y < m.box[1] || x >= m.box[2] || y >= m.box[3] || !this.world.inBounds(x, y)) return false;
     if (!this.lavaBlockAt(Math.floor(x / LAVA_CELL), Math.floor(y / LAVA_CELL))) return false;
     this.lavaLand ??= gameLava(this);
-    return !LAVA_SPARED_TILES.includes(this.world.getTile(x, y)) && !this.lavaLand.spared(x, y);
+    const w = this.world;
+    if (w.getHeight(x, y) + w.getHeight(x + 1, y) + w.getHeight(x + 1, y + 1) + w.getHeight(x, y + 1) < 0) return false;
+    return !LAVA_SPARED_TILES.includes(w.getTile(x, y)) && !this.lavaLand.spared(x, y);
   }
 
-  /** Whether the tiles of a box hold any lava's maze at all: the box today's maze lies in. */
+  /** The box today's labyrinth lies in, in tiles: west, north, east, south. */
   lavaBox(): readonly [number, number, number, number] {
-    return this.lavaBlocks().box;
+    return this.lavaNow().box;
   }
 
   /** The mote swirl turning over a tile, if there is one (`motes.ts`). */

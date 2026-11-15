@@ -26,6 +26,9 @@
  *    an island founded before it holds the apple or olive the old generator
  *    grew there. Those trees, on tiles nobody has touched, become the island's
  *    fruit, keeping their age.
+ *  - `seryllHome`: seryll seams outside the heart of Volcano Isle's labyrinth of
+ *    lava become what the generator lays there now (iron), and the heart takes
+ *    the seams the generator lays in it, on tiles nobody has changed.
  *  - `fruitByKind`: the same move by kind rather than by tile. The woods turn
  *    over every six days (`TREE_AGES`), a dead tree seeding its own kind round
  *    it, so after a month and more nothing stands where founding day put it and
@@ -86,6 +89,7 @@ export interface World { id: string; name: string; seed: number; size: number }
 const regionNamed = (key: string): number => REGIONS.findIndex((R) => R.key === key);
 const PLUM = TREE_DEFS.findIndex((t) => t.name === 'Plum');
 const GOLD = ROCK_VARIANTS.findIndex((r) => r.yields === 'gold_ore');
+const SERYLL = ROCK_VARIANTS.findIndex((r) => r.yields === 'seryll_ore');
 
 /** The rows of land from y0 for h rows, by y: the columns asked for, unpacked. */
 function readBand(sql: Sql, world: World, y0: number, h: number, cols: Array<'tiles' | 'data' | 'rock'>): Map<number, Record<string, Uint8Array>> {
@@ -236,6 +240,45 @@ export function goldOff(sql: Sql, world: World): string {
   return `${world.name}: ${moved} gold seams off the islands that no longer hold gold`;
 }
 
+export const SERYLL_MOVE = '2026-11-15 seryll in the heart of the labyrinth of lava only';
+/**
+ * Seryll seams outside the heart of Volcano Isle's labyrinth of lava become what the generator lays there now (iron),
+ * and the heart's dry ground takes the seams the generator now lays there (`rockKindFor`, `lavaland.ts`): on tiles
+ * nobody has changed (`tile_change`), so nothing dug, mined or built moves.
+ */
+export function seryllHome(sql: Sql, world: World): string {
+  const b = boundsOf(world, new Set([regionNamed('Volcano')]));
+  let off = 0, on = 0;
+  if (b) {
+    const atlas = readAtlas();
+    const S = world.size;
+    const told = touched(sql, world);
+    const w = b.xHi - b.xLo + 1;
+    for (let y0 = b.yLo; y0 <= b.yHi; y0 += BAND) {
+      const h = Math.min(BAND, b.yHi + 1 - y0);
+      const land = readBand(sql, world, y0, h, ['rock']);
+      const win = generateAtlasWindow(world.seed, atlas, b.xLo, y0, w, h, S);
+      const statements: string[] = [];
+      for (const [y, { rock }] of land) {
+        const j = y - y0;
+        const xs: number[] = [], to: number[] = [];
+        for (let x = b.xLo; x <= b.xHi; x++) {
+          const now = win.rock[j * w + (x - b.xLo)];
+          if ((rock[x] === SERYLL) === (now === SERYLL) || told.has(y * S + x)) continue;
+          xs.push(x);
+          to.push(now);
+          if (now === SERYLL) on++;
+          else off++;
+        }
+        if (xs.length) statements.push(`select land_regrow_row(${lit(world.id)}, ${y}, ${arr(xs)}, ${arr(to)}, ${arr([])}, ${arr([])}, ${arr([])}, ${TileType.Tree})`);
+      }
+      writeBand(sql, statements);
+    }
+  }
+  finish(sql, world, SERYLL_MOVE, off + on, 0);
+  return `${world.name}: ${off} seryll seams outside the labyrinth's heart made what the ground lays there now, ${on} laid in it`;
+}
+
 /**
  * Each island's own fruit, by region: the kinds `speciesFor` holds to it, past the apple, cherry and olive that grow
  * anywhere. Empty for an island with none.
@@ -339,7 +382,7 @@ export function fruitByKind(sql: Sql, world: World): string {
 }
 
 export const MOVES: Array<[string, (sql: Sql, world: World) => string]> = [
-  [MOVE, move], [CLEAR, clearTrees], [GOLD_MOVE, goldOff], [FRUIT_MOVE, fruitHome], [FRUIT_KIND_MOVE, fruitByKind],
+  [MOVE, move], [CLEAR, clearTrees], [GOLD_MOVE, goldOff], [FRUIT_MOVE, fruitHome], [FRUIT_KIND_MOVE, fruitByKind], [SERYLL_MOVE, seryllHome],
 ];
 
 /** Every move not yet made, on every island that is open. */

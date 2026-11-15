@@ -202,7 +202,8 @@ import {
 import { TURNS } from '../../render/view';
 import { ORE_DENSITY, seamShare } from '../../world/ore';
 import { lairOf, REGIONS } from '../../world/regions';
-import { COOLING_DRAUGHT, DRAUGHT_DROP, DRAUGHT_FILL, DRAUGHT_SECS, HEAT_BURN, HEAT_DRAIN, HEAT_FILL, HEAT_ICE, HEAT_NEAR, HEAT_SCALE, LAVA_BAND, LAVA_BURN, LAVA_CELL, LAVA_SPARED_TILES } from '../../game/lava';
+import { COOLING_DRAUGHT, DRAUGHT_DROP, DRAUGHT_FILL, DRAUGHT_SECS, HEAT_BURN, HEAT_DRAIN, HEAT_FILL, HEAT_ICE, HEAT_NEAR, HEAT_SCALE, LAVA_BAND, LAVA_BURN, LAVA_CELL, LAVA_DESIGNS, LAVA_HEART, LAVA_INLAND, LAVA_PATHS, LAVA_RADIUS, LAVA_SIZE, LAVA_SPARED_TILES, SERYLL_HEART } from '../../game/lava';
+import { LAVA_CHART } from '../../world/lavachart';
 import { ISLAND_ELEMENT, LIFE_MOTES_EACH, MOTE_ELEMENTS, MOTES_LEAST, STATUE_MOTES, MOTES_MOST, MOTES_STEP, POULTICE_HEAL, SEASON_ELEMENT, SWIRL_DARK, SWIRL_LIGHT, SWIRL_SEASON, SWIRLS_A_DAY, WATER_MOTES_EACH } from '../../game/motes';
 import { RESPAWN_GAP, RESPAWN_SPARE, STAY_SAID } from '../../game/respawn';
 import { FALL_SECS } from '../../game/fell';
@@ -3761,9 +3762,11 @@ export function helpText(): string {
     </ul>
     <h3>Volcano Isle: lava and heat</h3>
     <ul>
-      <li><b>Lava</b>: a maze, new at each daily reset (${hudHour(TREE_DAWN_UTC)} UTC), on Volcano Isle from <b>${metres(LAVA_BAND.foot)} m</b> up to the caldera at
-      <b>${metres(LAVA_BAND.caldera)} m</b>. Blocks ${LAVA_CELL} × ${LAVA_CELL} tiles: corridors and walls of lava.</li>
-      <li>Always a way through with no lava: from the foot to the caldera, the dragon roost and every seryll seam.</li>
+      <li><b>Lava</b>: a labyrinth on Volcano Isle, <b>${LAVA_RADIUS}</b> tiles round the caldera, on its land ${LAVA_INLAND * LAVA_SIZE / LAVA_CHART.n} tiles in from the water; one of
+      <b>${LAVA_DESIGNS}</b> designs, a new one at each daily reset (${hudHour(TREE_DAWN_UTC)} UTC), never the same two days running.
+      Corridors ${LAVA_CELL} tiles wide, walls ${LAVA_CELL} tiles thick.</li>
+      <li><b>${LAVA_PATHS}</b> ways in, one a third of the way round: each the only way through to the heart; every other corridor ends.</li>
+      <li><b>Heart</b>: ${LAVA_HEART} tiles round the caldera; no lava. Seryll: in the heart only, ${percent(SERYLL_HEART)} of its dry ground.</li>
       <li>On lava: health <b>−${percent(LAVA_BURN)}/s</b>. No digging, building, setting down or founding on it. No creature steps on it.</li>
       <li>Never on: a settlement, ${listed(LAVA_SPARED_TILES.map((t) => TILE_DEFS[t].name.toLowerCase()))}, a building, a foundation, anything set down.</li>
       <li><b>Heat</b> (hud, on Volcano Isle): at ${metres(LAVA_BAND.foot)} m and up +${percent(HEAT_FILL)}/s, ×${HEAT_NEAR} with lava on or beside your tile;

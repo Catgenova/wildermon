@@ -3176,9 +3176,15 @@
   },
   {
     "file": "supabase/test/lava.ts",
-    "title": "Volcano Isle's lava lies in a maze laid at every dawn, always with a way through, and its heat is held off",
+    "title": "Volcano Isle's labyrinth of lava: ten designs, one a day, three true paths each, and its heat held off",
     "shard": 3,
-    "why": "Asked for: a shifting labyrinth of lava daily on Volcano Isle's upper slopes, and heat to prepare for. The day's maze (a spanning tree of rooms off the seed and the day) the same on both sides for sixty days, and every tile of the box today and tomorrow; a way with no lava from the foot to the caldera, the summit lair, a lair in the band and every seryll seam on sixty days, and on the live island's generated volcano; no lava on a settlement, a road, a building, a piece or a lair; health off on lava, nothing planted, dug, set down or founded on it in the same words, no creature on it; the heat filling, twice beside lava, burning at full only for the part of a stretch it was full, draining below; each of dragon scale, an ice infusion and a cooling draught slowing it by its stated amount; the draught brewed, drunk and refused; and the maze made and a tile asked, timed on both sides."
+    "why": "Asked for: a labyrinth of lava radius 500 round the caldera with only 3 true paths from outside to its heart, 10 designs, one chosen daily; and heat to prepare for. The chart's table of the island's land as the chart works it out; every design the same on both sides block for block, with the same ways in and out, and each with exactly three true paths at 1024 and at 4096: all shut, the heart out of reach; one open, in reach, through its own wedge only; the day's design the same both sides for sixty days, never twice running, all ten coming round; every tile of the box the same lava today and tomorrow; a way with no lava to the heart, both lairs and both seams on sixty days; no lava on water, the heart, a settlement, a road, a building, a piece or a lair; health off on lava, nothing planted, dug, set down or founded on it in the same words, no creature on it; the heat filling, twice beside lava, burning at full only for the part of a stretch it was full, draining below; each of dragon scale, an ice infusion and a cooling draught slowing it by its stated amount; the draught brewed, drunk and refused; and a design made and a tile asked, timed."
+  },
+  {
+    "file": "supabase/test/seryllhome.ts",
+    "title": "Seryll lies in the heart of the labyrinth and nowhere else, on the generator and on an island moved",
+    "shard": 3,
+    "why": "Asked for: seryll only within the labyrinth's interior safe area. The generator at 4096 on two seeds lays none outside the heart and about its share inside; an island founded on the old ground, seryll scattered and none in the heart, moved by seryllHome: none outside but on a tile somebody changed, exactly the generator's in the heart, nothing else changed, written down, and a second run changes nothing."
   },
   {
     "file": "supabase/test/path.ts",

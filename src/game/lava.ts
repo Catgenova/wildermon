@@ -1,53 +1,40 @@
 /**
- * Volcano Isle's lava, laid fresh at every dawn, and the heat of being up there.
+ * Volcano Isle's labyrinth of lava, one of ten laid each dawn, and the heat of being up there.
  *
- * The lava. Each daily reset (`TREE_DAWN_UTC`) a maze of lava lies across the
- * upper slopes of Volcano Isle: the island's ground from `LAVA_BAND.foot` up to
- * `LAVA_BAND.caldera`, below which nothing is lava and above which (the
- * caldera, round the summit) nothing is either. It is worked out, never
- * written into the ground: `lavaAt` here and `lava_at` on the island ask the
- * same rule of the same numbers, off the world's seed and the day.
+ * The labyrinth. Round the caldera (`LAVA_CENTRE`), out to `LAVA_RADIUS` tiles and on Volcano Isle's own land kept
+ * `LAVA_INLAND` chart texels in from the water (`lavaChartAt`), lies a labyrinth of lava walls with three true paths
+ * through it to its heart (`LAVA_HEART` round the centre: the caldera, the summit's lair and every seryll seam, which
+ * lies there and nowhere else, `rockKindFor`). There are `LAVA_DESIGNS` of them, each fixed for a size of world, and
+ * each daily reset (`TREE_DAWN_UTC`) the world's seed and the day pick which one lies (`lavaDesignOf`): never the same
+ * two days running. It is worked out, never written into the ground: `lavaAt` here and `lava_at` on the island ask the
+ * same rule of the same numbers, and the island keeps each design it has laid (`lava_design`).
  *
- *   * The cone's box (`LAVA_BOX`, thousandths of the map, laid over any world
- *     by scale as the chart is) is cut into blocks of `LAVA_CELL` tiles a side.
- *     Every other block both ways is a room; between two rooms is a wall
- *     block; where four walls meet, a pillar.
- *   * The day's maze is a spanning tree of the rooms: every wall weighed by
- *     `hashTile(wall, day, seed)` and Kruskal's rule taking the lightest
- *     that joins two rooms not yet joined (`lavaPasses`). With every weight
- *     different the tree is the one tree, however it is worked out, so the
- *     island's (cached a day at a time in `lava_day`) is this one.
- *   * A wall block the tree goes through, and every room, is never lava. Any
- *     other wall block, and every pillar, is lava where its middle tile is on
- *     Volcano Isle in the band -- unless it holds something that must be
- *     reached (`lavaMustReach`): ground of the caldera, a lair's piece, or a
- *     seryll seam. Such a block is open, and so is the wall east of such a
- *     pillar, which takes it to the rooms either side.
- *   * And a tile is never lava where a settlement is, on a road or a laid
- *     path (`LAVA_SPARED_TILES`), under a building or a foundation, or where
- *     anything is set down (a lair's own piece among them).
+ *   * The ground is cut into blocks of `LAVA_CELL` tiles a side. Every other block both ways is a room; between two
+ *     rooms is a wall block; where four walls meet, a pillar. A room is the labyrinth's where its middle is on its
+ *     land and within its reach, the heart's within `LAVA_HEART`, and outside otherwise.
+ *   * Three rays from the centre, turned by the design (`lavaRays`), part the labyrinth into three wedges. Each
+ *     wedge's rooms are joined into trees by Kruskal's rule over walls weighed by `hashTile(wall, design)`; nothing
+ *     joins two wedges. In each wedge one room beside the heart is opened into it, the one nearest the wedge's middle
+ *     line, and one room on the labyrinth's edge, in the same tree and nearest that line, is opened to the outside.
+ *   * A wall is lava where a room of the labyrinth is beside it and neither the tree nor those two openings go
+ *     through it; a pillar where one is at its corner. So there are three ways in, one a wedge, each the only way
+ *     through its wedge to the heart; every other corridor ends.
+ *   * A block holding a lair's piece or a seryll seam, inside a wedge, is opened, joining two rooms of its own tree
+ *     (`lavaMustReach`): it loops, and reaches nothing new. And a tile is never lava on water, on a settlement, on a
+ *     road or a laid path (`LAVA_SPARED_TILES`), under a building or a foundation, or where anything is set down.
  *
- * So from any room to any other there is a way with no lava on it, the tree's,
- * whatever the heights are: off the band a block is never lava, and on it a
- * room or a wall the tree goes through is not. The foot of the band, the
- * caldera, the summit lair and every seryll seam are joined to it.
+ * Standing on lava costs `LAVA_BURN` of your health a second; nothing can be dug, built, set down or founded on it
+ * (`LAVA_GUARDED`, `LAVA_SAID`); no creature steps on it (`creature_tile_ok`).
  *
- * Standing on lava costs `LAVA_BURN` of your health a second; nothing can be
- * dug, built, set down or founded on it (`LAVA_GUARDED`, `LAVA_SAID`); no
- * creature steps on it (`creature_tile_ok`).
+ * The heat. While you are on Volcano Isle, in the labyrinth's box, at `LAVA_BAND.foot` or above, a heat meter fills at
+ * `HEAT_FILL` a second, `HEAT_NEAR` times that with lava on your tile or one beside it; full, it takes `HEAT_BURN` of
+ * your health a second. Below it drains at `HEAT_DRAIN` a second. What you wear and drink slows the filling
+ * (`heatMul`): every dragon-scale piece by `HEAT_SCALE`, every piece infused with ice by its share of
+ * `INFUSE_INTO.ice.most`, and a cooling draught (`COOLING_DRAUGHT`) halves it for `DRAUGHT_SECS`, taking
+ * `DRAUGHT_DROP` of the heat off as it goes down.
  *
- * The heat. While you are on Volcano Isle at the band's foot or above it, a
- * heat meter fills at `HEAT_FILL` a second, `HEAT_NEAR` times that with lava
- * on your tile or one beside it; full, it takes `HEAT_BURN` of your health a
- * second. Below the foot it drains at `HEAT_DRAIN` a second. What you wear and
- * drink slows the filling (`heatMul`): every dragon-scale piece by
- * `HEAT_SCALE`, every piece infused with ice by its share of
- * `INFUSE_INTO.ice.most`, and a cooling draught (`COOLING_DRAUGHT`) halves it
- * for `DRAUGHT_SECS`, taking `DRAUGHT_DROP` of the heat off as it goes down.
- *
- * The island keeps the heat on the player (`stats.heat`) and settles it with
- * the body (`body_settle`); the browser shows what it is told.
- * `supabase/test/lava.ts` holds the two sides together.
+ * The island keeps the heat on the player (`stats.heat`) and settles it with the body (`body_settle`); the browser
+ * shows what it is told. `supabase/test/lava.ts` holds the two sides together.
  */
 import type { ActionDef } from './actions';
 import type { Game } from './game';
@@ -56,27 +43,26 @@ import { REGIONS } from '../world/regions';
 import { chartRegion } from '../world/chart';
 import { hashTile } from '../world/ore';
 import { ROAD_TILES, ROCK_VARIANTS, TileType, TREE_DAWN_UTC } from '../world/tiles';
+import { lavaChartAt, lavaGeometry } from '../world/lavaland';
 import { INFUSE_INTO, infusedShare, type Infusable } from './infusion';
 import { ARMOUR } from './gear';
 import { LAIR_BY_ID } from './lairs';
 import { percent, waitWords } from './words';
 import { describeFrom } from './items';
 
-/* ---- The maze -------------------------------------------------------------------------------------------------- */
+export { LAVA_CENTRE, LAVA_HEART, LAVA_INLAND, LAVA_RADIUS, LAVA_SIZE, SERYLL_HEART, inLavaHeart, lavaChartAt, lavaGeometry } from '../world/lavaland';
 
-/** Tiles to a side of one block of the maze: a room, a wall or a pillar. */
+/* ---- The labyrinth --------------------------------------------------------------------------------------------- */
+
+/** Tiles to a side of one block: a room, a wall or a pillar. A corridor is a block wide, a step of the labyrinth two. */
 export const LAVA_CELL = 3;
-/**
- * The band the maze lies on, in tenths of a metre: Volcano Isle's ground from `foot` up, to under `caldera`. Ground
- * at `caldera` and above is the caldera, round the summit, and is never lava.
- */
-export const LAVA_BAND = { foot: 450, caldera: 550 } as const;
-/**
- * The cone's box, in thousandths of the map across and down (west, north, east, south): every block of the maze lies
- * in it, laid over any world by scale as the chart is. Measured off the chart's ground: Volcano Isle's ground at
- * `LAVA_BAND.foot` and over is inside it with room to spare (`supabase/test/lava.ts` asks it of a 4096 island).
- */
-export const LAVA_BOX = [440, 40, 575, 170] as const;
+/** Where the heat begins, in tenths of a metre: Volcano Isle's ground from `foot` up. */
+export const LAVA_BAND = { foot: 450 } as const;
+/** How many designs there are, and how many true paths each has to its heart. */
+export const LAVA_DESIGNS = 10;
+export const LAVA_PATHS = 3;
+/** What each design's walls are weighed by: `hashTile(wall, LAVA_SALT + design)`. */
+export const LAVA_SALT = 7919;
 /** The island the lava is on, by its place in `REGIONS`: Volcano Isle. */
 export const LAVA_ISLE = REGIONS.findIndex((r) => r.key === 'Volcano');
 /** The seam a block must be open to: seryll, by its place in `ROCK_VARIANTS`. */
@@ -85,12 +71,12 @@ export const LAVA_SEAM = ROCK_VARIANTS.findIndex((r) => r.yields === 'seryll_ore
 export const LAVA_BURN = 0.04;
 /** Laid ground lava never lies on: the roads, a flight of garden steps, stepping stones. */
 export const LAVA_SPARED_TILES: readonly TileType[] = [...ROAD_TILES, TileType.Steps, TileType.SteppingStones];
-/** Seconds in a day: the maze is laid again at every dawn (`TREE_DAWN_UTC`). */
+/** Seconds in a day: the labyrinth changes at every dawn (`TREE_DAWN_UTC`). */
 const DAY = 86400;
 
-/** The day the maze is laid for at `now` (epoch seconds): whole days since the first dawn of 1970. The island's `lava_day_of`. */
+/** The day the labyrinth is laid for at `now` (epoch seconds): whole days since the first dawn of 1970. The island's `lava_day_of`. */
 export const lavaDay = (now: number): number => Math.floor((now - TREE_DAWN_UTC * 3600) / DAY);
-/** Seconds from `now` until the next maze is laid. */
+/** Seconds from `now` until the next one is laid. */
 export const lavaChangesIn = (now: number): number => (lavaDay(now) + 1) * DAY + TREE_DAWN_UTC * 3600 - now;
 /** What the map says of it: "Lava: changes at dawn, in 3 h". */
 export const lavaLine = (now: number): string => {
@@ -98,47 +84,164 @@ export const lavaLine = (now: number): string => {
   return `Lava: changes at dawn, in ${s >= 3600 ? `${Math.floor(s / 3600)} h` : waitWords(s)}`;
 };
 
-/** Where the rooms are: the block of the first, and how many across and down. The island's `lava_grid`. */
-export interface LavaGrid {
-  bx0: number;
-  by0: number;
-  cols: number;
-  rows: number;
-}
-export function lavaGrid(size: number): LavaGrid {
-  const at = (k: number): number => Math.floor((LAVA_BOX[k] * size) / (1000 * LAVA_CELL));
-  const bx0 = at(0), by0 = at(1);
-  return { bx0, by0, cols: Math.max(1, Math.floor((at(2) - bx0) / 2) + 1), rows: Math.max(1, Math.floor((at(3) - by0) / 2) + 1) };
-}
-
-/** A world's seed as the maze's hash takes it: nought up to 2³¹. The island's `lava_salt`. */
+/** A world's seed as the hash takes it: nought up to 2³¹. The island's `lava_salt`. */
 export const lavaSalt = (seed: number): number => ((seed % 2 ** 31) + 2 ** 31) % 2 ** 31;
-
-/** What a room's byte holds: the wall to its east is open, the wall to its south is open. */
-export const PASS_EAST = 1;
-export const PASS_SOUTH = 2;
-
-const passMemo = new Map<string, Uint8Array>();
+/** The day the designs began to be picked each day, never twice running: the dawn of 14 November 2026. */
+export const LAVA_FROM_DAY = lavaDay(Date.UTC(2026, 10, 14, TREE_DAWN_UTC) / 1000);
+const roll32 = (a: number, b: number, salt: number): number => Math.floor(hashTile(a, b, salt) * 4294967296);
+const designMemo = new Map<number, { day: number; d: number }>();
 /**
- * The day's maze: a byte for every room (`PASS_EAST`, `PASS_SOUTH`), the walls of a spanning tree of the rooms.
- * Wall `k` is room `k >> 1`'s east wall when `k` is even and its south wall when odd, weighed by
- * `hashTile(k, day, lavaSalt(seed))`; lightest first, and the wall number between two of a weight, each is taken
- * where it joins two rooms not yet joined. The island's `lava_passes_make`, kept a day at a time in `lava_day`.
+ * The design a world lays on a day: on `LAVA_FROM_DAY` one by its seed, and each day after it the one before moved on
+ * by one to nine, by the seed and the day, so it is never the same two days running and every one comes round alike.
+ * The island's `lava_design_of`.
  */
-export function lavaPasses(size: number, seed: number, day: number): Uint8Array {
-  const key = `${size}:${seed}:${day}`;
-  const had = passMemo.get(key);
-  if (had) return had;
-  const g = lavaGrid(size);
-  const n = g.cols * g.rows;
+export function lavaDesignOf(seed: number, day: number): number {
   const salt = lavaSalt(seed);
+  const from = Math.min(day, LAVA_FROM_DAY);
+  const had = designMemo.get(seed);
+  let at = from, d = roll32(from, 0, salt) % LAVA_DESIGNS;
+  if (had && had.day <= day && had.day >= from) {
+    at = had.day;
+    d = had.d;
+  }
+  for (let k = at + 1; k <= day; k++) d = (d + 1 + (roll32(k, 1, salt) % (LAVA_DESIGNS - 1))) % LAVA_DESIGNS;
+  designMemo.set(seed, { day, d });
+  return d;
+}
+
+/**
+ * Each design's three rays from the centre and the middle line of each wedge, as whole vectors (ten thousand long):
+ * design `d` turned `d / LAVA_DESIGNS` of a third of a turn on from the first. The island's `lava_rays`.
+ */
+export function lavaRays(d: number): { rays: Array<[number, number]>; mids: Array<[number, number]> } {
+  const vec = (a: number): [number, number] => [Math.round(10000 * Math.cos(a)), Math.round(10000 * Math.sin(a))];
+  const third = (2 * Math.PI) / LAVA_PATHS;
+  const turn = ((d + 0.5) / LAVA_DESIGNS) * third - Math.PI / 2;
+  return {
+    rays: Array.from({ length: LAVA_PATHS }, (_, k) => vec(turn + k * third)),
+    mids: Array.from({ length: LAVA_PATHS }, (_, k) => vec(turn + (k + 0.5) * third)),
+  };
+}
+
+/** The blocks a world's labyrinth is laid over: the first, and how many across and down (odd, a room at each end). The island's `lava_box`. */
+export function lavaBoxOf(size: number): { bxa: number; bya: number; nbx: number; nby: number } {
+  const g = lavaGeometry(size);
+  const even = (v: number): number => v - (((v % 2) + 2) % 2);
+  const bxa = even(Math.floor((g.cx - g.radius) / LAVA_CELL) - 2);
+  const bya = even(Math.floor((g.cy - g.radius) / LAVA_CELL) - 2);
+  const odd = (v: number): number => (v % 2 === 1 ? v : v + 1);
+  return {
+    bxa,
+    bya,
+    nbx: odd(Math.floor((g.cx + g.radius) / LAVA_CELL) + 3 - bxa),
+    nby: odd(Math.floor((g.cy + g.radius) / LAVA_CELL) + 3 - bya),
+  };
+}
+
+/** Whether a tile is in the labyrinth's box. The island's `lava_in_box`. */
+export function lavaInBox(size: number, x: number, y: number): boolean {
+  const b = lavaBoxOf(size);
+  return x >= b.bxa * LAVA_CELL && y >= b.bya * LAVA_CELL && x < (b.bxa + b.nbx) * LAVA_CELL && y < (b.bya + b.nby) * LAVA_CELL;
+}
+
+/** What a block's byte holds: lava; a wall a lair or a seam may open; a pillar's way out, and which wall it is (E, S, W, N). */
+export const LB_LAVA = 1;
+export const LB_OPENS = 2;
+export const LB_WAY = 16;
+/** A room's sort: off the island, the island's land outside the labyrinth, the heart, the labyrinth. */
+export const ROOM_OFF = 0;
+export const ROOM_LAND = 1;
+export const ROOM_HEART = 2;
+export const ROOM_IN = 3;
+
+/** One design laid over a world this size: its blocks' bytes, its rooms, and the walls of its ways in and out. */
+export interface LavaDesign {
+  size: number;
+  design: number;
+  bxa: number;
+  bya: number;
+  nbx: number;
+  nby: number;
+  nrx: number;
+  nry: number;
+  bytes: Uint8Array;
+  /** Each room's sort, and its wedge (-1 for none). */
+  room: Int8Array;
+  wedge: Int8Array;
+  /** Each wedge's way in from the outside and way out into the heart, as wall blocks; and the rooms between, in order. */
+  entrances: Array<[number, number]>;
+  exits: Array<[number, number]>;
+  paths: Array<Array<[number, number]>>;
+}
+
+const designs = new Map<string, LavaDesign>();
+/** A design laid over a world this size: worked out once and kept. The island's `lava_design_make`, kept in `lava_design`. */
+export function lavaDesign(size: number, design: number): LavaDesign {
+  const key = `${size}:${design}`;
+  const had = designs.get(key);
+  if (had) return had;
+  const g = lavaGeometry(size);
+  const { bxa, bya, nbx, nby } = lavaBoxOf(size);
+  const nrx = (nbx + 1) / 2, nry = (nby + 1) / 2;
+  const n = nrx * nry;
+  const { rays, mids } = lavaRays(design);
+  const room = new Int8Array(n);
+  const wedge = new Int8Array(n).fill(-1);
+  const px = new Int32Array(n), py = new Int32Array(n);
+  for (let j = 0; j < nry; j++) {
+    for (let i = 0; i < nrx; i++) {
+      const r = j * nrx + i;
+      const tx = (bxa + 2 * i) * LAVA_CELL + 1, ty = (bya + 2 * j) * LAVA_CELL + 1;
+      const dx = tx - g.cx, dy = ty - g.cy;
+      px[r] = dx;
+      py[r] = dy;
+      const d2 = dx * dx + dy * dy;
+      const chart = lavaChartAt(tx, ty, size);
+      room[r] = d2 < g.heart * g.heart ? ROOM_HEART : chart === 2 && d2 <= g.radius * g.radius ? ROOM_IN : chart >= 1 ? ROOM_LAND : ROOM_OFF;
+      if (room[r] !== ROOM_IN) continue;
+      for (let k = 0; k < LAVA_PATHS; k++) {
+        const a = rays[k], b = rays[(k + 1) % LAVA_PATHS];
+        if (a[0] * dy - a[1] * dx >= 0 && b[0] * dy - b[1] * dx < 0) wedge[r] = k;
+      }
+    }
+  }
+  // The island's land that is outside the labyrinth, joined to the box's edge round it rather than shut in by it (a
+  // lake's shore): what a way in may open onto.
+  const outside = new Uint8Array(n);
+  {
+    const q: number[] = [];
+    for (let r = 0; r < n; r++) {
+      const i = r % nrx, j = (r - i) / nrx;
+      if ((i === 0 || j === 0 || i === nrx - 1 || j === nry - 1) && room[r] < ROOM_HEART) {
+        outside[r] = 1;
+        q.push(r);
+      }
+    }
+    while (q.length) {
+      const r = q.pop()!;
+      const i = r % nrx;
+      for (const s of [i + 1 < nrx ? r + 1 : -1, i > 0 ? r - 1 : -1, r + nrx < n ? r + nrx : -1, r - nrx]) {
+        if (s < 0 || outside[s] || room[s] >= ROOM_HEART) continue;
+        outside[s] = 1;
+        q.push(s);
+      }
+    }
+  }
+  const same = (a: number, b: number): boolean => room[a] === ROOM_IN && room[b] === ROOM_IN && wedge[a] === wedge[b];
+  // The walls within a wedge, lightest first, and Kruskal's trees over them.
   const walls: number[] = [];
   const weight = new Float64Array(2 * n);
-  for (let k = 0; k < 2 * n; k++) {
-    const r = k >> 1;
-    if ((k & 1) === 0 ? r % g.cols < g.cols - 1 : Math.floor(r / g.cols) < g.rows - 1) {
-      walls.push(k);
-      weight[k] = Math.floor(hashTile(k, day, salt) * 4294967296);
+  for (let j = 0; j < nry; j++) {
+    for (let i = 0; i < nrx; i++) {
+      const r = j * nrx + i;
+      if (i + 1 < nrx && same(r, r + 1)) {
+        walls.push(2 * r);
+        weight[2 * r] = roll32(bxa + 2 * i + 1, bya + 2 * j, LAVA_SALT + design);
+      }
+      if (j + 1 < nry && same(r, r + nrx)) {
+        walls.push(2 * r + 1);
+        weight[2 * r + 1] = roll32(bxa + 2 * i, bya + 2 * j + 1, LAVA_SALT + design);
+      }
     }
   }
   walls.sort((a, b) => weight[a] - weight[b] || a - b);
@@ -151,21 +254,128 @@ export function lavaPasses(size: number, seed: number, day: number): Uint8Array 
     }
     return i;
   };
-  const out = new Uint8Array(n);
+  const pass = new Uint8Array(n);
   for (const k of walls) {
-    const a = k >> 1;
-    const b = (k & 1) === 0 ? a + 1 : a + g.cols;
+    const a = k >> 1, b = (k & 1) === 0 ? a + 1 : a + nrx;
     const ra = root(a), rb = root(b);
     if (ra === rb) continue;
     up[ra] = rb;
-    out[a] |= (k & 1) === 0 ? PASS_EAST : PASS_SOUTH;
+    pass[a] |= (k & 1) === 0 ? 1 : 2;
   }
-  if (passMemo.size >= 4) passMemo.delete(passMemo.keys().next().value as string);
-  passMemo.set(key, out);
+  // The ways in and out: in each wedge, the room beside the heart nearest its middle line, and the room beside the land
+  // outside, in the same tree, nearest it: nearest by how far off the line, then the innermost and the outermost.
+  const beside = (r: number, sort: number): number => {
+    const i = r % nrx, j = (r - i) / nrx;
+    const near: Array<[number, number]> = [[i + 1, j], [i, j + 1], [i - 1, j], [i, j - 1]];
+    for (let s = 0; s < 4; s++) {
+      const [a, b] = near[s];
+      if (a < 0 || b < 0 || a >= nrx || b >= nry) continue;
+      const q = b * nrx + a;
+      if (room[q] === sort && (sort !== ROOM_LAND || outside[q])) return s;
+    }
+    return -1;
+  };
+  const wallOf = (r: number, s: number): [number, number] => {
+    const i = r % nrx, j = (r - i) / nrx;
+    const bx = bxa + 2 * i, by = bya + 2 * j;
+    return s === 0 ? [bx + 1, by] : s === 1 ? [bx, by + 1] : s === 2 ? [bx - 1, by] : [bx, by - 1];
+  };
+  const opened = new Set<number>();
+  const entrances: Array<[number, number]> = [], exits: Array<[number, number]> = [];
+  const ends: Array<[number, number]> = [];
+  for (let k = 0; k < LAVA_PATHS; k++) {
+    const m = mids[k];
+    const off = (r: number): number => Math.abs(m[0] * py[r] - m[1] * px[r]);
+    const along = (r: number): number => m[0] * px[r] + m[1] * py[r];
+    const d2 = (r: number): number => px[r] * px[r] + py[r] * py[r];
+    const outs: number[] = [], ins: number[] = [];
+    for (let r = 0; r < n; r++) {
+      if (room[r] !== ROOM_IN || wedge[r] !== k || along(r) <= 0) continue;
+      if (beside(r, ROOM_HEART) >= 0) outs.push(r);
+      if (beside(r, ROOM_LAND) >= 0) ins.push(r);
+    }
+    outs.sort((a, b) => off(a) - off(b) || d2(a) - d2(b) || a - b);
+    ins.sort((a, b) => off(a) - off(b) || d2(b) - d2(a) || a - b);
+    const firstIn = new Map<number, number>();
+    for (const r of ins) if (!firstIn.has(root(r))) firstIn.set(root(r), r);
+    for (const r of outs) {
+      const e = firstIn.get(root(r));
+      if (e === undefined) continue;
+      const ex = wallOf(r, beside(r, ROOM_HEART));
+      const en = wallOf(e, beside(e, ROOM_LAND));
+      exits.push(ex);
+      entrances.push(en);
+      opened.add((ex[1] - bya) * nbx + (ex[0] - bxa));
+      opened.add((en[1] - bya) * nbx + (en[0] - bxa));
+      ends.push([e, r]);
+      break;
+    }
+  }
+  // The blocks.
+  const bytes = new Uint8Array(nbx * nby);
+  const wallByte = (a: number, b: number, bit: number, at: number): number => {
+    const ia = room[a] === ROOM_IN, ib = room[b] === ROOM_IN;
+    if (!ia && !ib) return 0;
+    const s = same(a, b);
+    if ((s && (pass[a] & bit) !== 0) || opened.has(at)) return 0;
+    return LB_LAVA | (s ? LB_OPENS : 0);
+  };
+  for (let v = 0; v < nby; v++) {
+    for (let u = 0; u < nbx; u++) {
+      const at = v * nbx + u;
+      const i = u >> 1, j = v >> 1;
+      if ((u & 1) === 0 && (v & 1) === 0) continue;
+      if ((u & 1) === 1 && (v & 1) === 0) bytes[at] = wallByte(j * nrx + i, j * nrx + i + 1, 1, at);
+      else if ((u & 1) === 0) bytes[at] = wallByte(j * nrx + i, (j + 1) * nrx + i, 2, at);
+      else {
+        const r = j * nrx + i;
+        if (room[r] !== ROOM_IN && room[r + 1] !== ROOM_IN && room[r + nrx] !== ROOM_IN && room[r + nrx + 1] !== ROOM_IN) continue;
+        // Its way out, should a lair or a seam be in it: the first wall round it, E S W N, that joins one wedge's rooms.
+        const ways: Array<[number, number]> = [[r + 1, r + nrx + 1], [r + nrx, r + nrx + 1], [r, r + nrx], [r, r + 1]];
+        const way = ways.findIndex(([a, b]) => same(a, b));
+        bytes[at] = LB_LAVA | (way >= 0 ? LB_WAY | (way << 2) : 0);
+      }
+    }
+  }
+  // Each true path, room by room, for the map's pictures: the tree's way from the room let in to the room let out.
+  const paths = ends.map(([from, to]) => roomPath(from, to, pass, nrx, n).map((r): [number, number] => [bxa + 2 * (r % nrx), bya + 2 * Math.floor(r / nrx)]));
+  const out: LavaDesign = { size, design, bxa, bya, nbx, nby, nrx, nry, bytes, room, wedge, entrances, exits, paths };
+  designs.set(key, out);
   return out;
 }
 
-/** What the maze asks of the ground: the browser's `Game` (`gameLava`), or a test's world. */
+/** The rooms of a tree between two of them, in order, over its open walls. */
+function roomPath(from: number, to: number, pass: Uint8Array, nrx: number, n: number): number[] {
+  const back = new Int32Array(n).fill(-1);
+  back[from] = from;
+  const q = [from];
+  while (q.length) {
+    const r = q.shift()!;
+    if (r === to) break;
+    const next: number[] = [];
+    if (pass[r] & 1) next.push(r + 1);
+    if (pass[r] & 2) next.push(r + nrx);
+    if (r % nrx > 0 && pass[r - 1] & 1) next.push(r - 1);
+    if (r >= nrx && pass[r - nrx] & 2) next.push(r - nrx);
+    for (const s of next) {
+      if (back[s] >= 0) continue;
+      back[s] = r;
+      q.push(s);
+    }
+  }
+  const out: number[] = [];
+  for (let r = to; back[r] >= 0 && r !== from; r = back[r]) out.push(r);
+  out.push(from);
+  return out.reverse();
+}
+
+/** A block's byte in a design, nought off its box. */
+export function lavaByte(D: LavaDesign, bx: number, by: number): number {
+  const u = bx - D.bxa, v = by - D.bya;
+  return u < 0 || v < 0 || u >= D.nbx || v >= D.nby ? 0 : D.bytes[v * D.nbx + u];
+}
+
+/** What the lava asks of the ground: the browser's `Game` (`gameLava`), or a test's world. */
 export interface LavaLand {
   size: number;
   seed: number;
@@ -183,65 +393,49 @@ export interface LavaLand {
 
 /** A tile's middle height, four times over: the sum of its corners. */
 const sum4 = (L: LavaLand, x: number, y: number): number => L.height(x, y) + L.height(x + 1, y) + L.height(x + 1, y + 1) + L.height(x, y + 1);
-/** Whether a tile is on Volcano Isle, at or over a height in tenths of a metre, off its middle (`centre_height`). */
-const upAt = (L: LavaLand, x: number, y: number, h: number): boolean =>
-  chartRegion(x + 0.5, y + 0.5, L.size) === LAVA_ISLE && sum4(L, x, y) >= 4 * h;
 
-/** Whether a tile is in the cone's box, where every block of the maze lies. The island's `lava_in_box`. */
-export function lavaInBox(size: number, x: number, y: number): boolean {
-  const g = lavaGrid(size);
-  return x >= g.bx0 * LAVA_CELL && y >= g.by0 * LAVA_CELL && x < (g.bx0 + 2 * g.cols - 1) * LAVA_CELL && y < (g.by0 + 2 * g.rows - 1) * LAVA_CELL;
-}
+/** Whether a tile is in the heat: in the box, on Volcano Isle at the band's foot or above it. The island's `lava_heat_on`. */
+export const inHeat = (L: LavaLand, x: number, y: number): boolean =>
+  lavaInBox(L.size, x, y) && chartRegion(x + 0.5, y + 0.5, L.size) === LAVA_ISLE && sum4(L, x, y) >= 4 * LAVA_BAND.foot;
 
-/** Whether a tile is in the heat: in the box, Volcano Isle at the band's foot or above it (the band and the caldera). The island's `lava_heat_on`. */
-export const inHeat = (L: LavaLand, x: number, y: number): boolean => lavaInBox(L.size, x, y) && upAt(L, x, y, LAVA_BAND.foot);
-
-/** Whether a block's middle tile is in the band: Volcano Isle, from its foot to under the caldera. */
-export const lavaBand = (L: LavaLand, bx: number, by: number): boolean => {
-  const x = bx * LAVA_CELL + 1, y = by * LAVA_CELL + 1;
-  return upAt(L, x, y, LAVA_BAND.foot) && !upAt(L, x, y, LAVA_BAND.caldera);
-};
-
-/** Whether a block holds what must be reached: caldera ground at its middle, a lair's piece, or a seryll seam. The island's `lava_must_reach`. */
+/** Whether a block holds what must be reached: a lair's piece or a seryll seam. The island's `lava_must_reach`. */
 export function lavaMustReach(L: LavaLand, bx: number, by: number): boolean {
   const x0 = bx * LAVA_CELL, y0 = by * LAVA_CELL;
-  if (upAt(L, x0 + 1, y0 + 1, LAVA_BAND.caldera)) return true;
   for (let y = y0; y < y0 + LAVA_CELL; y++) {
     for (let x = x0; x < x0 + LAVA_CELL; x++) if (L.rock(x, y) === LAVA_SEAM || L.lair(x, y)) return true;
   }
   return false;
 }
 
-/** What a block of the maze is: outside the box, a room, a room's east wall, its south wall, or a pillar. */
-export type LavaPart = 'out' | 'room' | 'east' | 'south' | 'pillar';
-export function lavaPart(size: number, bx: number, by: number): { part: LavaPart; room: number } {
-  const g = lavaGrid(size);
-  const i = bx - g.bx0, j = by - g.by0;
-  if (i < 0 || j < 0 || i > 2 * (g.cols - 1) || j > 2 * (g.rows - 1)) return { part: 'out', room: -1 };
-  const room = (j >> 1) * g.cols + (i >> 1);
-  const part: LavaPart = (i & 1) === 0 ? ((j & 1) === 0 ? 'room' : 'south') : (j & 1) === 0 ? 'east' : 'pillar';
-  return { part, room };
+/**
+ * Whether a whole block is lava in a design, but for what is spared tile by tile: its byte, opened where it holds what
+ * must be reached, or is the way out of a pillar that does. The island's `lava_block`.
+ */
+export function lavaBlockIn(L: LavaLand, D: LavaDesign, bx: number, by: number): boolean {
+  const b = lavaByte(D, bx, by);
+  if (!(b & LB_LAVA)) return false;
+  if (b & LB_WAY) return !lavaMustReach(L, bx, by);
+  if (!(b & LB_OPENS)) return true;
+  if (lavaMustReach(L, bx, by)) return false;
+  // A pillar beside it whose way out it is: E S W N from the pillar is this wall from the W N E S.
+  const odd = ((bx - D.bxa) & 1) === 1;
+  const round: Array<[number, number, number]> = odd ? [[bx, by - 1, 1], [bx, by + 1, 3]] : [[bx - 1, by, 0], [bx + 1, by, 2]];
+  for (const [qx, qy, way] of round) {
+    const q = lavaByte(D, qx, qy);
+    if (q & LB_WAY && (q >> 2) % 4 === way && lavaMustReach(L, qx, qy)) return false;
+  }
+  return true;
 }
 
-/** Whether a whole block is lava today, but for what is spared tile by tile (`lavaAt`). The island's `lava_block`. */
-export function lavaBlock(L: LavaLand, day: number, bx: number, by: number): boolean {
-  const { part, room } = lavaPart(L.size, bx, by);
-  if (part === 'out' || part === 'room') return false;
-  if (!lavaBand(L, bx, by) || lavaMustReach(L, bx, by)) return false;
-  if (part === 'pillar') return true;
-  const pass = lavaPasses(L.size, L.seed, day)[room];
-  if (part === 'east') return (pass & PASS_EAST) === 0;
-  if ((pass & PASS_SOUTH) !== 0) return false;
-  // The wall east of a pillar that must be reached is its way out.
-  const g = lavaGrid(L.size);
-  return !(bx > g.bx0 && lavaMustReach(L, bx - 1, by));
-}
+/** Whether a whole block is lava on a day. */
+export const lavaBlock = (L: LavaLand, day: number, bx: number, by: number): boolean =>
+  lavaBlockIn(L, lavaDesign(L.size, lavaDesignOf(L.seed, day)), bx, by);
 
-/** Whether a tile is lava today: in a block of it, and not on ground lava spares. The island's `lava_at`. */
+/** Whether a tile is lava on a day: in a block of it, not on water and not where lava is spared. The island's `lava_at`. */
 export function lavaAt(L: LavaLand, day: number, x: number, y: number): boolean {
-  if (x < 0 || y < 0 || x >= L.size || y >= L.size) return false;
+  if (x < 0 || y < 0 || x >= L.size || y >= L.size || !lavaInBox(L.size, x, y)) return false;
   if (!lavaBlock(L, day, Math.floor(x / LAVA_CELL), Math.floor(y / LAVA_CELL))) return false;
-  return !LAVA_SPARED_TILES.includes(L.tile(x, y) as TileType) && !L.spared(x, y);
+  return !LAVA_SPARED_TILES.includes(L.tile(x, y) as TileType) && !L.spared(x, y) && sum4(L, x, y) >= 0;
 }
 
 /** Whether lava is on a tile or one of the eight round it: where the heat fills `HEAT_NEAR` times as fast. */

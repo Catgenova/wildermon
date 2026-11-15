@@ -1,25 +1,31 @@
--- Volcano Isle's lava: a maze laid at every dawn across its upper slopes, and the heat of being up there.
+-- Volcano Isle's labyrinth of lava, one of ten laid each dawn, and the heat of being up there.
 --
--- Asked for: "a shifting labyrinth pattern daily of lava" across the upper slopes of Volcano Isle, and a heat meter
--- to prepare for (`src/game/lava.ts`, which says the same rules in the browser's words and numbers).
+-- Asked for: a labyrinth of lava on Volcano Isle, "radius 500, with only 3 true paths from exterior to interior. 10
+-- designs, one of which chosen randomly daily", and a heat meter to prepare for (`src/game/lava.ts` says the same rules
+-- in the browser's words and numbers; `src/world/lavaland.ts` the ground's half).
 --
--- The lava is never written into the ground: `lava_at` works it out, off the world's seed and the day (`lava_day_of`,
--- the daily reset at dawn). The cone's box (`lava_box`, thousandths of the map) is cut into blocks of `lava_cell`
--- tiles; every other block both ways is a room, between two rooms a wall, where walls meet a pillar. The day's maze is
--- the spanning tree of the rooms Kruskal's rule takes off walls weighed by `hash_tile(wall, day, seed)`
--- (`lava_passes_make`), kept a day at a time in `lava_day` (`lava_ready`, on the clock, today's and tomorrow's).
--- A wall the tree goes through, and every room, is never lava; any other wall and every pillar is lava where its
--- middle tile is Volcano Isle's ground from `lava_foot` to under `lava_caldera` -- unless it holds caldera ground, a
--- lair's piece or a seryll seam (`lava_must_reach`), when it is open, and so is the wall east of such a pillar. A
--- settlement, a road or laid path, a building, a foundation or anything set down spares its tile (`lava_spared`).
+-- Round the caldera (`lava_centre`), out to `lava_radius` tiles on Volcano Isle's land kept in from the water
+-- (`lava_chart_rows`, off the survey chart), the ground is cut into blocks of `lava_cell` tiles: rooms, walls between
+-- them and pillars where walls meet. Each design's three rays (`lava_rays`) part the labyrinth into wedges; each wedge's
+-- rooms are joined into trees by Kruskal's rule over walls weighed by `hash_tile(wall, lava_wall_salt + design)`, and
+-- one room of each opened to the heart (`lava_heart` round the centre, never lava) and one, in its tree, to the land
+-- outside: three ways in, each the only way through. A design is the same for every world of a size, worked out once
+-- (`lava_design_make`) and kept a row of blocks at a time (`lava_design`); the world's seed and the day pick which lies
+-- (`lava_design_of`), never the same two days running, kept a day at a time in `lava_day` (`lava_ready`, on the clock,
+-- today's and tomorrow's). So `lava_at` is a lookup: the day's design, one row's byte, and what spares the tile.
 --
+-- A block holding a lair's piece or a seryll seam, inside a wedge, opens into its own tree (`lava_must_reach`). A tile is
+-- never lava on water, a settlement, a road or laid path, a building, a foundation or anything set down (`lava_spared`).
 -- On it: `lava_burn` of your health a second (`body_settle`), nothing dug, built, set down or founded
--- (`lava_ground_refusal`, before whose ground it is), and no creature steps onto it (`creature_tile_ok`).
+-- (`lava_ground_refusal`), and no creature steps onto it (`creature_tile_ok`).
 --
 -- The heat, held on the player (`stats.heat`) and settled with the body: filling at `heat_fill` a second in the heat
--- (`lava_heat_on`), `heat_near` times that beside lava, `heat_burn` of your health a second when full, draining at
--- `heat_drain` below the band; slowed by every dragon-scale piece and ice infusion worn and by a cooling draught
--- (`heat_mul`), which also takes `draught_drop` off as it goes down (`perform_item`).
+-- (`lava_heat_on`: the labyrinth's box, Volcano Isle at `lava_foot` and up), `heat_near` times that beside lava,
+-- `heat_burn` of your health a second when full, draining at `heat_drain` below; slowed by every dragon-scale piece and
+-- ice infusion worn and by a cooling draught (`heat_mul`), which also takes `draught_drop` off as it goes down.
+--
+-- Seryll lies in the labyrinth's heart and nowhere else now (`rockKindFor`); an island founded before that is moved by
+-- `tools/move-ground.ts` (`seryllHome`).
 
 set local lock_timeout = '3s';
 
@@ -35,87 +41,283 @@ begin
   execute replace(v_def, p_old, p_new);
 end $p$;
 
-/* ---- The day's maze -------------------------------------------------------------------------------------------- */
+/* ---- Where it lies --------------------------------------------------------------------------------------------- */
 
-/** The day the maze is laid for at a moment: whole days since the first dawn of 1970 (`lavaDay`). */
+/** The day the labyrinth is laid for at a moment: whole days since the first dawn of 1970 (`lavaDay`). */
 create or replace function lava_day_of(p_at timestamptz) returns int language sql immutable as $$
   select floor((extract(epoch from p_at) - tree_dawn_utc() * 3600) / 86400)::int
 $$;
 
-/** Where the rooms are on a world this size: the block of the first, and how many across and down (`lavaGrid`). */
-create or replace function lava_grid(p_size int, out bx0 int, out by0 int, out cols int, out rows int) language sql immutable as $$
-  select a.x0, a.y0, greatest(1, (a.x1 - a.x0) / 2 + 1), greatest(1, (a.y1 - a.y0) / 2 + 1)
-    from (select (b[1] * p_size) / (1000 * lava_cell()) as x0, (b[2] * p_size) / (1000 * lava_cell()) as y0,
-                 (b[3] * p_size) / (1000 * lava_cell()) as x1, (b[4] * p_size) / (1000 * lava_cell()) as y1
-            from lava_box() b) a
+/** The centre, the reach and the heart on a world this size, in tiles (`lavaGeometry`). */
+create or replace function lava_geometry(p_size int, out cx int, out cy int, out radius int, out heart int) language sql immutable as $$
+  select (lava_centre())[1] * p_size / 10000, (lava_centre())[2] * p_size / 10000,
+         (2 * lava_radius() * p_size + lava_size()) / (2 * lava_size()), (2 * lava_heart() * p_size + lava_size()) / (2 * lava_size())
 $$;
 
-/** A world's seed as the maze's hash takes it, nought up to 2^31 (`lavaSalt`). */
-create or replace function lava_salt(p_seed bigint) returns bigint language sql immutable as $$
-  select ((p_seed % 2147483648) + 2147483648) % 2147483648
+/** The blocks the labyrinth is laid over on a world this size: the first, and how many across and down (`lavaBoxOf`). */
+create or replace function lava_box(p_size int, out bxa int, out bya int, out nbx int, out nby int) language sql immutable as $$
+  select a.x0, a.y0,
+         case when (a.x1 + 3 - a.x0) % 2 = 1 then a.x1 + 3 - a.x0 else a.x1 + 4 - a.x0 end,
+         case when (a.y1 + 3 - a.y0) % 2 = 1 then a.y1 + 3 - a.y0 else a.y1 + 4 - a.y0 end
+    from (select e.x0 - ((e.x0 % 2) + 2) % 2 as x0, e.y0 - ((e.y0 % 2) + 2) % 2 as y0, e.x1, e.y1
+            from (select floor((g.cx - g.radius)::numeric / lava_cell())::int - 2 as x0, floor((g.cy - g.radius)::numeric / lava_cell())::int - 2 as y0,
+                         floor((g.cx + g.radius)::numeric / lava_cell())::int as x1, floor((g.cy + g.radius)::numeric / lava_cell())::int as y1
+                    from lava_geometry(p_size) g) e) a
 $$;
 
-/**
- * The day's maze, worked out: a byte a room, `lava_pass_east` and `lava_pass_south` for its open walls (`lavaPasses`).
- * Wall `k` is room `k / 2`'s east wall when even and its south wall when odd; lightest first by
- * `hash_tile(k, day, salt)`, the wall number between two of a weight, each taken where it joins two rooms not yet
- * joined. With every weight told apart the tree is the one tree, so it is the browser's.
- */
-create or replace function lava_passes_make(p_seed bigint, p_size int, p_day int) returns bytea language plpgsql immutable as $$
-declare g record; n int; up int[]; bits int[]; k int; a int; b int; ra int; rb int; v_salt bigint := lava_salt(p_seed);
+/** Whether a tile is in the labyrinth's box (`lavaInBox`). */
+create or replace function lava_in_box(p_size int, p_x int, p_y int) returns boolean language sql immutable as $$
+  select p_x >= b.bxa * lava_cell() and p_y >= b.bya * lava_cell() and p_x < (b.bxa + b.nbx) * lava_cell() and p_y < (b.bya + b.nby) * lava_cell()
+    from lava_box(p_size) b
+$$;
+
+/** A number written in base 36. */
+create or replace function lava_b36(p text) returns int language sql immutable as $$
+  select coalesce(sum((strpos('0123456789abcdefghijklmnopqrstuvwxyz', substr(p, i, 1)) - 1) * power(36, length(p) - i))::int, 0)
+    from generate_series(1, length(p)) i
+$$;
+
+/** The chart's table unpacked: a byte a texel, row by row (`lavaChartAt`'s). */
+create or replace function lava_chart_cells() returns bytea language plpgsql immutable as $$
+declare v_row text; v_run text; v_out text[] := '{}'; v_line text;
 begin
-  select * into g from lava_grid(p_size);
-  n := g.cols * g.rows;
-  up := array(select generate_series(0, n - 1));
-  bits := array_fill(0, array[n]);
-  for k in
-    select e.k from generate_series(0, 2 * n - 1) e(k)
-     where case when e.k % 2 = 0 then (e.k / 2) % g.cols < g.cols - 1 else (e.k / 2) / g.cols < g.rows - 1 end
-     order by floor(hash_tile(e.k, p_day, v_salt) * 4294967296), e.k
-  loop
-    a := k / 2;
-    b := case when k % 2 = 0 then a + 1 else a + g.cols end;
-    ra := a;
-    while up[ra + 1] <> ra loop up[ra + 1] := up[up[ra + 1] + 1]; ra := up[ra + 1]; end loop;
-    rb := b;
-    while up[rb + 1] <> rb loop up[rb + 1] := up[up[rb + 1] + 1]; rb := up[rb + 1]; end loop;
-    continue when ra = rb;
-    up[ra + 1] := rb;
-    bits[a + 1] := bits[a + 1] | case when k % 2 = 0 then lava_pass_east() else lava_pass_south() end;
+  foreach v_row in array lava_chart_rows() loop
+    v_line := '';
+    foreach v_run in array string_to_array(v_row, '.') loop
+      v_line := v_line || repeat('0' || left(v_run, 1), lava_b36(substr(v_run, 2)));
+    end loop;
+    v_out := v_out || v_line;
   end loop;
-  return decode(array_to_string(array(select lpad(to_hex(u.v), 2, '0') from unnest(bits) with ordinality u(v, o) order by u.o), ''), 'hex');
+  return decode(array_to_string(v_out, ''), 'hex');
 end $$;
 
-/** The day's maze of each island, kept: worked out once, on the clock, the day before it is wanted (`lava_ready`). */
+/** The day's maze of each island: which design lies (`lava_design_of`), kept by `lava_ready`. */
 create table if not exists lava_day (
   world_id uuid not null references world on delete cascade,
   day int not null,
-  passes bytea not null,
+  design int not null,
   primary key (world_id, day)
 );
 alter table lava_day enable row level security;
 
-/** An island's maze for a day: kept, or worked out where it is not (a world nobody's clock has come round yet). */
-create or replace function lava_passes(p_world uuid, p_day int) returns bytea language plpgsql stable as $$
-declare v bytea; w world;
+/** Each design laid over a world of a size, a row of its blocks at a time: a byte a block (`LB_*`). */
+create table if not exists lava_design (
+  size int not null,
+  design int not null,
+  by int not null,
+  bytes bytea not null,
+  primary key (size, design, by)
+);
+/** And each design's ways in and out, wedge by wedge, as wall blocks: for the suite and anybody asking. */
+create table if not exists lava_design_way (
+  size int not null,
+  design int not null,
+  wedge int not null,
+  entrance int[] not null,
+  exit int[] not null,
+  primary key (size, design, wedge)
+);
+
+/**
+ * A design laid over a world this size, worked out and kept (`lavaDesign`): rooms sorted and put in wedges, the
+ * outside land found from the box's edge, Kruskal's trees within each wedge, each wedge's way out to the heart and in
+ * from the land, and every block's byte.
+ */
+create or replace function lava_design_make(p_size int, p_design int) returns int language plpgsql as $$
+declare g record; b record; nrx int; nry int; n int; i int; j int; r int; s int; k int; q int; tx int; ty int; dx bigint; dy bigint;
+        v_chart bytea := lava_chart_cells(); f int[] := lava_chart_frame(); v_c int;
+        room int[]; wedge int[]; px bigint[]; py bigint[]; outside int[]; up int[]; pass int[]; stack int[]; top int;
+        rays int[] := lava_rays(p_design); mids int[] := lava_mids(p_design); ax bigint; ay bigint; cx2 bigint; cy2 bigint;
+        walls int[] := '{}'; weights bigint[] := '{}'; a int; bb int; ra int; rb int; v_rec record;
+        opened int[] := '{}'; first_in int[]; ex int; en int; u int; v int; bytes int[]; way int; v_n int := 0;
+        o1 int; o2 int; o3 int; o4 int;
 begin
-  select d.passes into v from lava_day d where d.world_id = p_world and d.day = p_day;
-  if v is not null then return v; end if;
-  select * into w from world where id = p_world;
-  return lava_passes_make(w.seed, w.size, p_day);
+  if exists (select 1 from lava_design d where d.size = p_size and d.design = p_design) then return 0; end if;
+  select * into g from lava_geometry(p_size);
+  select * into b from lava_box(p_size);
+  nrx := (b.nbx + 1) / 2; nry := (b.nby + 1) / 2; n := nrx * nry;
+  room := array_fill(0, array[n]); wedge := array_fill(-1, array[n]); px := array_fill(0::bigint, array[n]); py := array_fill(0::bigint, array[n]);
+  -- Each room: off the island, the island's land, the heart, the labyrinth; and its wedge.
+  for j in 0 .. nry - 1 loop
+    for i in 0 .. nrx - 1 loop
+      r := j * nrx + i + 1;
+      tx := (b.bxa + 2 * i) * lava_cell() + 1; ty := (b.bya + 2 * j) * lava_cell() + 1;
+      dx := tx - g.cx; dy := ty - g.cy;
+      px[r] := dx; py[r] := dy;
+      a := floor((tx::bigint * f[1])::numeric / p_size)::int - f[2];
+      bb := floor((ty::bigint * f[1])::numeric / p_size)::int - f[3];
+      v_c := case when a < 0 or bb < 0 or a >= f[4] or bb >= f[5] then 0 else get_byte(v_chart, bb * f[4] + a) end;
+      room[r] := case when dx * dx + dy * dy < g.heart * g.heart then 2
+                      when v_c = 2 and dx * dx + dy * dy <= g.radius * g.radius then 3
+                      when v_c >= 1 then 1 else 0 end;
+      continue when room[r] <> 3;
+      for k in 0 .. lava_paths() - 1 loop
+        ax := rays[2 * k + 1]; ay := rays[2 * k + 2];
+        cx2 := rays[2 * ((k + 1) % lava_paths()) + 1]; cy2 := rays[2 * ((k + 1) % lava_paths()) + 2];
+        if ax * dy - ay * dx >= 0 and cx2 * dy - cy2 * dx < 0 then wedge[r] := k; end if;
+      end loop;
+    end loop;
+  end loop;
+  -- The land outside, joined to the box's edge.
+  outside := array_fill(0, array[n]); stack := '{}';
+  for r in 1 .. n loop
+    i := (r - 1) % nrx; j := (r - 1) / nrx;
+    if (i = 0 or j = 0 or i = nrx - 1 or j = nry - 1) and room[r] < 2 then outside[r] := 1; stack := stack || r; end if;
+  end loop;
+  top := cardinality(stack);
+  while top > 0 loop
+    r := stack[top]; top := top - 1;
+    i := (r - 1) % nrx;
+    foreach s in array array[case when i + 1 < nrx then r + 1 else 0 end, case when i > 0 then r - 1 else 0 end,
+                             case when r + nrx <= n then r + nrx else 0 end, case when r - nrx >= 1 then r - nrx else 0 end] loop
+      continue when s = 0 or outside[s] = 1 or room[s] >= 2;
+      outside[s] := 1;
+      top := top + 1;
+      if top > cardinality(stack) then stack := stack || s; else stack[top] := s; end if;
+    end loop;
+  end loop;
+  -- Kruskal's trees over the walls within a wedge, lightest first.
+  for j in 0 .. nry - 1 loop
+    for i in 0 .. nrx - 1 loop
+      r := j * nrx + i + 1;
+      continue when room[r] <> 3;
+      if i + 1 < nrx and room[r + 1] = 3 and wedge[r + 1] = wedge[r] then
+        walls := walls || (2 * (r - 1));
+        weights := weights || floor(hash_tile(b.bxa + 2 * i + 1, b.bya + 2 * j, (lava_wall_salt() + p_design)::bigint) * 4294967296)::bigint;
+      end if;
+      if j + 1 < nry and room[r + nrx] = 3 and wedge[r + nrx] = wedge[r] then
+        walls := walls || (2 * (r - 1) + 1);
+        weights := weights || floor(hash_tile(b.bxa + 2 * i, b.bya + 2 * j + 1, (lava_wall_salt() + p_design)::bigint) * 4294967296)::bigint;
+      end if;
+    end loop;
+  end loop;
+  up := array(select generate_series(0, n - 1)); pass := array_fill(0, array[n]);
+  for k in select w.e from unnest(walls, weights) w(e, wt) order by w.wt, w.e loop
+    a := k / 2; bb := case when k % 2 = 0 then a + 1 else a + nrx end;
+    ra := a; while up[ra + 1] <> ra loop up[ra + 1] := up[up[ra + 1] + 1]; ra := up[ra + 1]; end loop;
+    rb := bb; while up[rb + 1] <> rb loop up[rb + 1] := up[up[rb + 1] + 1]; rb := up[rb + 1]; end loop;
+    continue when ra = rb;
+    up[ra + 1] := rb;
+    pass[a + 1] := pass[a + 1] | case when k % 2 = 0 then 1 else 2 end;
+  end loop;
+  -- Each wedge's way out to the heart and in from the land outside, in one tree, nearest its middle line.
+  for k in 0 .. lava_paths() - 1 loop
+    ax := mids[2 * k + 1]; ay := mids[2 * k + 2];
+    first_in := array_fill(-1, array[n]);
+    for v_rec in
+      select t.r from (
+        select rr as r, abs(ax * py[rr] - ay * px[rr]) as off, px[rr] * px[rr] + py[rr] * py[rr] as d2
+          from generate_series(1, n) rr
+         where room[rr] = 3 and wedge[rr] = k and ax * px[rr] + ay * py[rr] > 0
+           and lava_beside_room(rr - 1, nrx, nry, room, outside, 1) >= 0) t
+       order by t.off, t.d2 desc, t.r
+    loop
+      ra := v_rec.r - 1; while up[ra + 1] <> ra loop ra := up[ra + 1]; end loop;
+      if first_in[ra + 1] < 0 then first_in[ra + 1] := v_rec.r - 1; end if;
+    end loop;
+    for v_rec in
+      select t.r from (
+        select rr as r, abs(ax * py[rr] - ay * px[rr]) as off, px[rr] * px[rr] + py[rr] * py[rr] as d2
+          from generate_series(1, n) rr
+         where room[rr] = 3 and wedge[rr] = k and ax * px[rr] + ay * py[rr] > 0
+           and lava_beside_room(rr - 1, nrx, nry, room, outside, 2) >= 0) t
+       order by t.off, t.d2, t.r
+    loop
+      ra := v_rec.r - 1; while up[ra + 1] <> ra loop ra := up[ra + 1]; end loop;
+      continue when first_in[ra + 1] < 0;
+      ex := v_rec.r - 1; en := first_in[ra + 1];
+      s := lava_beside_room(ex, nrx, nry, room, outside, 2);
+      o1 := b.bxa + 2 * (ex % nrx) + case s when 0 then 1 when 2 then -1 else 0 end;
+      o2 := b.bya + 2 * (ex / nrx) + case s when 1 then 1 when 3 then -1 else 0 end;
+      s := lava_beside_room(en, nrx, nry, room, outside, 1);
+      o3 := b.bxa + 2 * (en % nrx) + case s when 0 then 1 when 2 then -1 else 0 end;
+      o4 := b.bya + 2 * (en / nrx) + case s when 1 then 1 when 3 then -1 else 0 end;
+      opened := opened || ((o2 - b.bya) * b.nbx + (o1 - b.bxa)) || ((o4 - b.bya) * b.nbx + (o3 - b.bxa));
+      insert into lava_design_way (size, design, wedge, entrance, exit) values (p_size, p_design, k, array[o3, o4], array[o1, o2])
+        on conflict do nothing;
+      exit;
+    end loop;
+  end loop;
+  -- Every block's byte, a row at a time.
+  for v in 0 .. b.nby - 1 loop
+    bytes := array_fill(0, array[b.nbx]);
+    for u in 0 .. b.nbx - 1 loop
+      continue when u % 2 = 0 and v % 2 = 0;
+      i := u / 2; j := v / 2; r := j * nrx + i + 1;
+      if u % 2 = 1 and v % 2 = 0 then
+        bytes[u + 1] := lava_wall_byte(room[r], room[r + 1], wedge[r], wedge[r + 1], pass[r] & 1 <> 0, (v * b.nbx + u) = any (opened));
+      elsif u % 2 = 0 then
+        bytes[u + 1] := lava_wall_byte(room[r], room[r + nrx], wedge[r], wedge[r + nrx], pass[r] & 2 <> 0, (v * b.nbx + u) = any (opened));
+      else
+        continue when room[r] <> 3 and room[r + 1] <> 3 and room[r + nrx] <> 3 and room[r + nrx + 1] <> 3;
+        way := case when room[r + 1] = 3 and room[r + nrx + 1] = 3 and wedge[r + 1] = wedge[r + nrx + 1] then 0
+                    when room[r + nrx] = 3 and room[r + nrx + 1] = 3 and wedge[r + nrx] = wedge[r + nrx + 1] then 1
+                    when room[r] = 3 and room[r + nrx] = 3 and wedge[r] = wedge[r + nrx] then 2
+                    when room[r] = 3 and room[r + 1] = 3 and wedge[r] = wedge[r + 1] then 3 end;
+        bytes[u + 1] := lb_lava() | case when way is null then 0 else lb_way() | (way << 2) end;
+      end if;
+    end loop;
+    insert into lava_design (size, design, by, bytes)
+      values (p_size, p_design, b.bya + v, decode(array_to_string(array(select lpad(to_hex(x.c), 2, '0') from unnest(bytes) with ordinality x(c, o) order by x.o), ''), 'hex'))
+      on conflict do nothing;
+    v_n := v_n + 1;
+  end loop;
+  return v_n;
 end $$;
 
-/** Today's maze and tomorrow's kept for an island, each once; the days before yesterday let go. */
+/** Which way from a room (0-based) lies a room of a sort, E S W N, or -1; land only where it is outside (`beside`). */
+create or replace function lava_beside_room(p_r int, p_nrx int, p_nry int, p_room int[], p_outside int[], p_sort int) returns int
+language plpgsql immutable as $$
+declare i int := p_r % p_nrx; j int := p_r / p_nrx; s int; a int; c int; q int;
+begin
+  for s in 0 .. 3 loop
+    a := i + case s when 0 then 1 when 2 then -1 else 0 end;
+    c := j + case s when 1 then 1 when 3 then -1 else 0 end;
+    continue when a < 0 or c < 0 or a >= p_nrx or c >= p_nry;
+    q := c * p_nrx + a + 1;
+    if p_room[q] = p_sort and (p_sort <> 1 or p_outside[q] = 1) then return s; end if;
+  end loop;
+  return -1;
+end $$;
+
+/** A wall's byte between two rooms: nought unless the labyrinth's is beside it; lava unless its tree or a way goes through. */
+create or replace function lava_wall_byte(p_a int, p_b int, p_wa int, p_wb int, p_tree boolean, p_opened boolean) returns int
+language sql immutable as $$
+  select case when p_a <> 3 and p_b <> 3 then 0
+              when (p_a = 3 and p_b = 3 and p_wa = p_wb and p_tree) or p_opened then 0
+              else lb_lava() | case when p_a = 3 and p_b = 3 and p_wa = p_wb then lb_opens() else 0 end end
+$$;
+
+/** A world's seed as the hash takes it, nought up to 2^31 (`lavaSalt`). */
+create or replace function lava_salt(p_seed bigint) returns bigint language sql immutable as $$
+  select ((p_seed % 2147483648) + 2147483648) % 2147483648
+$$;
+
+/** The design a world lays on a day (`lavaDesignOf`): one by its seed on the first day, then moved on by one to nine each day. */
+create or replace function lava_design_of(p_seed bigint, p_day int) returns int language sql immutable as $$
+  select ((floor(hash_tile(least(p_day, a.f), 0, a.s) * 4294967296)::bigint % lava_designs())
+          + coalesce((select sum(1 + floor(hash_tile(k, 1, a.s) * 4294967296)::bigint % (lava_designs() - 1))
+                        from generate_series(a.f + 1, p_day) k), 0))::int % lava_designs()
+    from (select lava_salt(p_seed) as s, lava_from_day() as f) a
+$$;
+
+/** Today's design and tomorrow's for an island, kept and made once each; the days before yesterday let go. */
 create or replace function lava_ready(p_world uuid) returns int language plpgsql as $$
-declare v_day int := lava_day_of(now()); w world; v_n int := 0; d int;
+declare v_day int := lava_day_of(now()); w world; v_n int := 0; d int; v_design int;
 begin
   select * into w from world where id = p_world;
   if not found then return 0; end if;
   for d in v_day .. v_day + 1 loop
-    continue when exists (select 1 from lava_day ld where ld.world_id = p_world and ld.day = d);
-    insert into lava_day (world_id, day, passes) values (p_world, d, lava_passes_make(w.seed, w.size, d))
-      on conflict do nothing;
-    v_n := v_n + 1;
+    select ld.design into v_design from lava_day ld where ld.world_id = p_world and ld.day = d;
+    if v_design is null then
+      v_design := lava_design_of(w.seed, d);
+      insert into lava_day (world_id, day, design) values (p_world, d, v_design) on conflict do nothing;
+    end if;
+    if not exists (select 1 from lava_design ld where ld.size = w.size and ld.design = v_design) then
+      perform pg_advisory_xact_lock(hashtext('lava_design:' || w.size || ':' || v_design)::bigint);
+      v_n := v_n + lava_design_make(w.size, v_design);
+    end if;
+    v_design := null;
   end loop;
   delete from lava_day ld where ld.world_id = p_world and ld.day < v_day - 1;
   return v_n;
@@ -132,7 +334,17 @@ begin
   perform lava_ready(p_world);
 $n$);
 
-/* ---- Where it lies --------------------------------------------------------------------------------------------- */
+/** The design an island lays on a day: kept, or worked out. */
+create or replace function lava_design_on(p_world uuid, p_day int) returns int language sql stable as $$
+  select coalesce((select ld.design from lava_day ld where ld.world_id = p_world and ld.day = p_day),
+                  (select lava_design_of(w.seed, p_day) from world w where w.id = p_world))
+$$;
+
+/** A block's byte in a design on a world this size; nought off its box, and nought for a design not yet made. */
+create or replace function lava_byte(p_size int, p_design int, p_bx int, p_by int) returns int language sql stable as $$
+  select coalesce((select case when p_bx - b.bxa >= 0 and p_bx - b.bxa < b.nbx then get_byte(d.bytes, p_bx - b.bxa) else 0 end
+                     from lava_box(p_size) b join lava_design d on d.size = p_size and d.design = p_design and d.by = p_by), 0)
+$$;
 
 /** A tile's middle height four times over, the sum of its corners; null off the island. */
 create or replace function lava_sum4(p_world uuid, p_x int, p_y int) returns int language sql stable as $$
@@ -141,57 +353,45 @@ create or replace function lava_sum4(p_world uuid, p_x int, p_y int) returns int
    where h0.world_id = p_world and h0.y = p_y
 $$;
 
-/** Whether a tile's middle is on Volcano Isle at or over a height (`upAt`). */
-create or replace function lava_up(p_world uuid, p_x int, p_y int, p_h int) returns boolean language sql stable as $$
-  select coalesce(region_at(p_world, p_x + 0.5, p_y + 0.5) = lava_isle() and lava_sum4(p_world, p_x, p_y) >= 4 * p_h, false)
-$$;
-
-/** Whether a tile is in the cone's box the maze lies in (`lavaInBox`). */
-create or replace function lava_in_box(p_size int, p_x int, p_y int) returns boolean language sql immutable as $$
-  select p_x >= g.bx0 * lava_cell() and p_y >= g.by0 * lava_cell()
-     and p_x < (g.bx0 + 2 * g.cols - 1) * lava_cell() and p_y < (g.by0 + 2 * g.rows - 1) * lava_cell()
-    from lava_grid(p_size) g
-$$;
-
 /** Whether a tile is in the heat: in the box, Volcano Isle at the band's foot or above (`inHeat`). */
 create or replace function lava_heat_on(p_world uuid, p_x int, p_y int) returns boolean language sql stable as $$
   select coalesce((select lava_in_box(w.size, p_x, p_y) from world w where w.id = p_world), false)
-     and lava_up(p_world, p_x, p_y, lava_foot())
+     and coalesce(region_at(p_world, p_x + 0.5, p_y + 0.5) = lava_isle() and lava_sum4(p_world, p_x, p_y) >= 4 * lava_foot(), false)
 $$;
 
-/** Whether a block holds what must be reached: caldera ground at its middle, a lair's piece, a seryll seam (`lavaMustReach`). */
+/** Whether a block holds what must be reached: a lair's piece or a seryll seam (`lavaMustReach`). */
 create or replace function lava_must_reach(p_world uuid, p_bx int, p_by int) returns boolean language sql stable as $$
-  select lava_up(p_world, p_bx * lava_cell() + 1, p_by * lava_cell() + 1, lava_caldera())
-      or exists (select 1 from land_tile t cross join generate_series(p_bx * lava_cell(), p_bx * lava_cell() + lava_cell() - 1) x
+  select exists (select 1 from land_tile t cross join generate_series(p_bx * lava_cell(), p_bx * lava_cell() + lava_cell() - 1) x
                   where t.world_id = p_world and t.y between p_by * lava_cell() and p_by * lava_cell() + lava_cell() - 1
-                    and x < length(t.rock) and get_byte(t.rock, x) = lava_seam())
+                    and x >= 0 and x < length(t.rock) and get_byte(t.rock, x) = lava_seam())
       or exists (select 1 from placed pl where pl.world_id = p_world and pl.kind = 'furniture'
                   and pl.sub in (select k.id from lair_kinds() k)
                   and pl.x between p_bx * lava_cell() and p_bx * lava_cell() + lava_cell() - 1
                   and pl.y between p_by * lava_cell() and p_by * lava_cell() + lava_cell() - 1)
 $$;
 
-/** Whether a whole block is lava on a day, but for what is spared tile by tile (`lavaBlock`). The cheapest asked first. */
-create or replace function lava_block(p_world uuid, p_size int, p_bx int, p_by int, p_day int) returns boolean
+/** Whether a whole block is lava in a design, but for what spares tiles: its byte, opened for what must be reached (`lavaBlockIn`). */
+create or replace function lava_block(p_world uuid, p_size int, p_design int, p_bx int, p_by int) returns boolean
 language plpgsql stable as $$
-declare g record; i int; j int; v_room int; c int := lava_cell();
+declare v int := lava_byte(p_size, p_design, p_bx, p_by); b record; q int;
 begin
-  select * into g from lava_grid(p_size);
-  i := p_bx - g.bx0; j := p_by - g.by0;
-  if i < 0 or j < 0 or i > 2 * (g.cols - 1) or j > 2 * (g.rows - 1) then return false; end if;
-  if i % 2 = 0 and j % 2 = 0 then return false; end if;
-  v_room := (j / 2) * g.cols + (i / 2);
-  if i % 2 = 1 and j % 2 = 0 then
-    if get_byte(lava_passes(p_world, p_day), v_room) & lava_pass_east() <> 0 then return false; end if;
-  elsif i % 2 = 0 and j % 2 = 1 then
-    if get_byte(lava_passes(p_world, p_day), v_room) & lava_pass_south() <> 0 then return false; end if;
-  end if;
-  if not lava_up(p_world, p_bx * c + 1, p_by * c + 1, lava_foot()) or lava_up(p_world, p_bx * c + 1, p_by * c + 1, lava_caldera()) then
-    return false;
-  end if;
+  if v & lb_lava() = 0 then return false; end if;
+  if v & lb_way() <> 0 then return not lava_must_reach(p_world, p_bx, p_by); end if;
+  if v & lb_opens() = 0 then return true; end if;
   if lava_must_reach(p_world, p_bx, p_by) then return false; end if;
-  -- The wall east of a pillar that must be reached is its way out.
-  if i % 2 = 0 and j % 2 = 1 and i > 0 and lava_must_reach(p_world, p_bx - 1, p_by) then return false; end if;
+  select * into b from lava_box(p_size);
+  -- A pillar beside it whose way out it is.
+  if (p_bx - b.bxa) % 2 = 1 then
+    q := lava_byte(p_size, p_design, p_bx, p_by - 1);
+    if q & lb_way() <> 0 and (q >> 2) % 4 = 1 and lava_must_reach(p_world, p_bx, p_by - 1) then return false; end if;
+    q := lava_byte(p_size, p_design, p_bx, p_by + 1);
+    if q & lb_way() <> 0 and (q >> 2) % 4 = 3 and lava_must_reach(p_world, p_bx, p_by + 1) then return false; end if;
+  else
+    q := lava_byte(p_size, p_design, p_bx - 1, p_by);
+    if q & lb_way() <> 0 and (q >> 2) % 4 = 0 and lava_must_reach(p_world, p_bx - 1, p_by) then return false; end if;
+    q := lava_byte(p_size, p_design, p_bx + 1, p_by);
+    if q & lb_way() <> 0 and (q >> 2) % 4 = 2 and lava_must_reach(p_world, p_bx + 1, p_by) then return false; end if;
+  end if;
   return true;
 end $$;
 
@@ -211,7 +411,10 @@ language plpgsql stable as $$
 declare c int := lava_cell();
 begin
   if p_x < 0 or p_y < 0 or p_x >= p_size or p_y >= p_size or not lava_in_box(p_size, p_x, p_y) then return false; end if;
-  if not lava_block(p_world, p_size, p_x / c, p_y / c, coalesce(p_day, lava_day_of(now()))) then return false; end if;
+  if not lava_block(p_world, p_size, lava_design_on(p_world, coalesce(p_day, lava_day_of(now()))), floor(p_x::numeric / c)::int, floor(p_y::numeric / c)::int) then
+    return false;
+  end if;
+  if coalesce(lava_sum4(p_world, p_x, p_y), -1) < 0 then return false; end if;
   return not lava_spared(p_world, p_x, p_y);
 end $$;
 

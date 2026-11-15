@@ -427,7 +427,7 @@ export function generateAtlasWindow(
       haloData[ty * tw + tx] = d;
       // Ore on the seabed is ore nobody can reach, so dry land carries the metal.
       const wet = c0 < 0 || c1 < 0 || c2 < 0 || c3 < 0;
-      haloRock[ty * tw + tx] = rockKindFor(seed, reg, wx, wy, wet ? ORE_DENSITY.water : ORE_DENSITY.land, alpine);
+      haloRock[ty * tw + tx] = rockKindFor(seed, reg, wx, wy, wet ? ORE_DENSITY.water : ORE_DENSITY.land, alpine, size);
     }
   }
 
