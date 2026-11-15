@@ -12,16 +12,18 @@ What a skill level opens, one way for everything. Asked for:
 
 All of it stays on the `gating` branch until the whole set rolls out together. Built: the framework, tree felling by
 woodcutting, sprouts by forestry, sowing by farming, a worker at its own level in the gate's skill, and unidentified
-items (§11); wagons, boats, quarried stone, veins (batch B); every crafting recipe, relic and bauble restoring,
+items (§12); wagons, boats, quarried stone, veins (batch B); every crafting recipe, relic and bauble restoring,
 building materials, wall, floor and paving types, Formulas, and each skill's next gate beside its level (batch C,
 §9); the answers to batch C's questions: stone brick at 10, pouring by the metal, the trees spread to 70 and 80, a bare
-vein always named, long Unlocks lists one row a level (batch D, §9). What is left below is the plan.
+vein always named, long Unlocks lists one row a level (batch D, §9); iron poured at 1, prospectors finding buried veins, the
+Guiding Light counting only trees you fell, cellars cut by the stone's gate (batch E, §9). What is left below is the plan;
+§11 sweeps every skill for the next gates.
 
 Decided since (the user, on §10's questions): birch 1 and willow 90; taming and fish keep their own numbers (batch B
 moves them into the table); the smelter at masonry 1, the wagon at carpentry 70 and the caravel at carpentry 90; a
 worker reads a gate's own skill at its own level in that skill; a wall keeps both its gates, material and type, a
 carpentry wall's in carpentry and a masonry wall's in masonry; the large cart has no gate (a small cart gives no driving
-to earn it with), the wagon driving 30; and items whose use is gated are unidentified under the gate (§11).
+to earn it with), the wagon driving 30; and items whose use is gated are unidentified under the gate (§12).
 
 Decided since (the user, on batch C's questions, built in batch D):
 
@@ -39,6 +41,25 @@ Decided since (the user, on batch C's questions, built in batch D):
 6. **Long Unlocks lists one row a level**: over 15 gates, so the lists named (taming's 77 kinds, fishing's 16, cooking's
    20, carpentry's 97) and blacksmithing's, mining's, woodcutting's and forestry's:
    "1: Bramblet, Briarling, Budscarab, … (+27)", ticked when reached, the whole list as the row's hint.
+
+Decided since (the user, on batch D's questions, built in batch E):
+
+1. **Pouring iron is level 1** (was 5, its seam's mining gate): `POUR_GATE_SAID`. Steel, iron and coal, follows the alloy
+   rule (the highest mined metal in its mix; coal is not a metal) and comes down with it to **1**. A fresh nail smith pours
+   iron; a ribbon smith at 1 pours copper, iron and steel.
+2. **Prospectors find buried veins too**, as a player's Prospect does: every seam in the circle, bare, under soil or below
+   water. The find is told to the keeper and read by the keeper's prospecting (batch B's rule: `seen_vein_at` with the
+   keeper's uid), so a buried vein over the keeper's gate is "Unidentified metal".
+3. **A vein seen bare then covered stays named in that browser** until the land is read again: accepted, no change.
+4. **The Guiding Light counts only trees you can fell**: a suggested site's tree count takes only species at or under the
+   player's woodcutting gate (`tree_fells` in `thepath_sites`); the site step says which ("Birch or pine ≥10 within 10",
+   "Site: Birch or pine 14 · Water 6 …"), derived from the gates (`fellsSaid`).
+5. **Cellars are cut by the rock's gate**: Mine out the cellar asks what Mine asks of a bare face of the same rock, a seam
+   by its mining (less Ore Sense) and a stone by its quarrying (rock 1, sandstone 10, slate 20, marble 30), in the one
+   rule's words (`rockGateRefusal`, `rock_gate_refusal`): "Marble: needs mining 30; have 12.0." Dig the cellar cuts only
+   soil and stays open. No worker digs cellars.
+6. **These stay ungated**: dye-recipe sheets, brews set going at a barrel, garden steps, stepping stones, a Mason's
+   Repoint, ingots (`pour_ingot`), and beating a casting out at the anvil.
 
 ## 1. What is gated today
 
@@ -179,8 +200,8 @@ How a level is chosen, in order:
 | Miner workers | `worker_gatherable` → `worker_gate_open`; `mine_idle` → `gate_idle`; `seam` → `gate` | Kept |
 | Taming | `skill_gate('tame', species)` (`TAME_GATE`) the kind's base; +15 per stage (`TAME_STAGE_GATE`) on top; words "Logchewer: needs taming 16; have 1.0." by the stage's name (`tameRefusal`, `tame_gate_refusal`), for Tame and Take catch | Base kept, off the ladder (`KEPT_OFF_LADDER`). Built |
 | Fish | `skill_gate('fish', id)` (`FISH_GATE`); still a pool filter (a gated fish is not caught), and the Unlocks list names them | Kept, off the ladder. Built |
-| Veins by prospecting | `skill_gate('vein', yield)`, each seam's mining level: every vein in reach is marked and glows; a bare one (a Rock tile) is always named; a buried one over your prospecting is "Unidentified metal" in Prospect's lines, a find told to you and the tile's reading, with "More prospecting required to identify this vein." (no level: one level is one metal) (`seenVein`/`veinTip` with `exposed`, `seen_vein_at`/`vein_tip_at`), per viewer; on the wire only a buried one is masked (`mask_rock` with the tiles), and `tile_change` carries the rock of a square gone bare (`rock`) | Built (batch D: bare named) |
-| Stone faces by mining | `skill_gate('stone', yield)` (`STONE_GATE`): Mine and Chip corner on a bare face; a quarrier's work at its own mining (`quarryGate`/`stone_gate`, `workerGateOpen`), idle `gate` naming the stone (`stoneIdle`/`stone_idle`) | Rock 1, sandstone 10, slate 20, marble 30. Built |
+| Veins by prospecting | `skill_gate('vein', yield)`, each seam's mining level: every vein in reach is marked and glows; a bare one (a Rock tile) is always named; a buried one over your prospecting is "Unidentified metal" in Prospect's lines, a find told to you and the tile's reading, with "More prospecting required to identify this vein." (no level: one level is one metal) (`seenVein`/`veinTip` with `exposed`, `seen_vein_at`/`vein_tip_at`), per viewer; on the wire only a buried one is masked (`mask_rock` with the tiles), and `tile_change` carries the rock of a square gone bare (`rock`); a prospector reads every seam in its circle, buried ones too, by its keeper's prospecting (`read_ground`, `readGround`) | Built (batch D: bare named; batch E: prospectors find buried) |
+| Stone faces by mining | `skill_gate('stone', yield)` (`STONE_GATE`): Mine and Chip corner on a bare face, and Mine out the cellar into the rock under a building (`rockGateRefusal`, `rock_gate_refusal`, batch E); a quarrier's work at its own mining (`quarryGate`/`stone_gate`, `workerGateOpen`), idle `gate` naming the stone (`stoneIdle`/`stone_idle`) | Rock 1, sandstone 10, slate 20, marble 30. Built |
 | Storeys, foundation depth | Stay their own rules: a level per storey or per metre is a scale, not a thing | — |
 | Perk, class, path, faith tiers; trade book; trait reading | Stay: choices and readings, not things refused | — |
 
@@ -202,7 +223,7 @@ or known, and never stops repairing, improving, moving, selling, demolishing or 
 | Formula | Writing its scroll | A Formula read stays known; scrolls written are used by anybody |
 | Wagon, cart | Taking the reins | Owning, loading, hitching, riding as a passenger |
 | Boat | Taking the helm / climbing aboard to row | Owning, loading, mooring, sailing as a passenger |
-| Seam | Mining, chipping it | Ore held |
+| Seam, stone | Mining, chipping it; mining out a cellar into it | Ore and shards held; a cellar dug |
 | Tame | Taming it | Tamed wildermon |
 
 ## 8. The gate table
@@ -303,7 +324,7 @@ skill: a hod carrier fitting a plank wall checks its carpentry.
   material's gate.
 * **Paving** (paving): cobblestones 5 · stone slabs 10 · sandstone slabs 20 · slate slabs 30 · marble slabs 50 (Pave
   (cobblestone), Pave (slabs): the slab the go lays, the one named or else the first carried). Packing stays open.
-  Not built: stepping stones and garden steps.
+  Stepping stones and garden steps stay ungated (decided, batch E).
 * Foundations keep their depth rule.
 
 ### Enchanting: formulas (A) — built, confirmed
@@ -320,16 +341,17 @@ Pour a mould and Cast an anvil (`pour_mould`, `cast_anvil`, `firing_refusal`), a
 (`worker_smith_lumps`), in blacksmithing (`MOULD_SKILL`), by the metal poured (`METAL_GATE`, kind `metal`, named
 "Iron pouring"):
 
-| Copper | Iron, Steel | Tin, Bronze | Zinc, Brass | Lead, Pewter | Silver | Gold, Electrum | Adamantine | Glimmersteel | Mithril | Seryll |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 5 | 10 | 20 | 30 | 40 | 50 | 60 | 70 | 80 | 90 |
+| Copper, Iron, Steel | Tin, Bronze | Zinc, Brass | Lead, Pewter | Silver | Gold, Electrum | Adamantine | Glimmersteel | Mithril | Seryll |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | 10 | 20 | 30 | 40 | 50 | 60 | 70 | 80 | 90 |
 
-A mined metal at its seam's mining gate (`SEAM_GATE`); an alloy at the highest of the mined metals in its mix (bronze:
-copper and tin; steel: iron and coal; brass: copper and zinc; pewter: tin and lead; electrum: silver and gold). Forming
-the mould keeps its recipe's gate. Ingots (a Smith's perk, `pour_ingot`) are not a mould and stay open. Lumps are not
-unidentified: they have uses other than pouring. Workers: a ribbon smith at blacksmithing 1 pours copper only; a nail
-smith (iron) needs 5; with only metal over its level in the stores, idle `gate`: "Idle: Iron pouring in your settlement
-stores needs blacksmithing 5 (yours 1.0)."
+A mined metal at its seam's mining gate (`SEAM_GATE`), but iron at 1 (decided, batch E: `POUR_GATE_SAID`); an alloy at
+the highest of the mined metals in its mix (bronze: copper and tin; steel: iron and coal, so iron's 1; brass: copper and
+zinc; pewter: tin and lead; electrum: silver and gold). Forming the mould keeps its recipe's gate. Ingots (a Smith's
+perk, `pour_ingot`) are not a mould and stay open (decided). Lumps are not unidentified: they have uses other than
+pouring. Workers: a ribbon smith at blacksmithing 1 pours copper, iron and steel; a nail smith (iron) pours from 1; with
+only metal over its level in the stores, idle `gate`: "Idle: Tin pouring in your settlement stores needs blacksmithing
+10 (yours 1.0)."
 
 ### Driving and sailing (A)
 
@@ -355,7 +377,7 @@ drive: no worker gate. Built (`helmGate`, `helm_gate_refusal`).
 | Stonecutting | By difficulty | Whetstone 5 · bricks, slate and sandstone slabs 10 · stone and marble slabs, bust 20 · quern 30 · telestone 40 |
 | Pottery | By difficulty | Brick, bowl, adobe, potted fern 1 · jar, palm, vase 5 · pot 10 · potter's wheel, amphora 20 |
 | Smelting | Alloys by difficulty | Pewter 5 · bronze, brass 10 · steel, electrum 20 |
-| Blacksmithing, weaponsmithing, armorsmithing, chainsmithing, platesmithing, jewellery | Moulds by difficulty; pouring by the metal (built, above); beating a casting out at the anvil open | per mould |
+| Blacksmithing, weaponsmithing, armorsmithing, chainsmithing, platesmithing, jewellery | Moulds by difficulty; pouring by the metal (built, above); beating a casting out at the anvil open (decided) | per mould |
 | Tailoring | By difficulty | Yarn 1–10 · sack, banner, curtains 5 · cloth, needle, caps, shoes, flagpole 10 · rug, tunic, trousers, tent 20 |
 | Ropemaking | By difficulty | Torch, twine 1 · rope 5 · hammock, skep 10 · creel, sailcloth 20 · net 30 · thick rope, rigging 40 |
 | Leatherworking | By difficulty | Awl 10 · leather, satchel, cap, bridle, yoke 20 · toolbelt, jerkin 30 · backpack, saddle 40 · large harness 50 · scale 80–90 |
@@ -365,7 +387,7 @@ drive: no worker gate. Built (`helmGate`, `helm_gate_refusal`).
 | Papyrusmaking, milling, brewing | By difficulty | Papyrus 20 · book 40 · trade book 50 (and `TRADE_BOOK_AT`); flour, juice 5 · cornmeal 10 · olive oil, cider 20; ale 10 · cider 20 · mead 30 · wine 40 |
 | Repair | Kit, sealant (perk recipes) | 20 |
 | Animal husbandry | Trait reading (existing) | Kept |
-| Archaeology, prospecting, digging, foraging, botanizing, tracking, butchering, climbing, swimming, chirurgy | None: finds are rolls, the rest are continuous | — |
+| Archaeology, prospecting, digging, foraging, botanizing, tracking, butchering, climbing, swimming, chirurgy | None: finds are rolls, the rest are continuous (§11 sweeps them again) | — |
 | Prayer, meditation, elementalism | Their own tiers | Kept |
 | Fighting and weapon skills, armour skills | None: gear is open, the skill sets the odds | — |
 
@@ -453,36 +475,278 @@ drive: no worker gate. Built (`helmGate`, `helm_gate_refusal`).
 * Tests: the four decisions in `skillgates.ts` (trees), `skillgates-b.ts` (veins, taming grouped), `skillgates-c.ts`
   (stone brick, pouring, grouped lists); `window.ts` reads the land by exposure.
 
+### Fifth set (built): the answers to batch D's questions
+
+* `craftgates.ts`: `POUR_GATE_SAID` (iron 1), read in `metalLevel` before the seam's gate, so `METAL_GATE` has iron and
+  steel at 1. `skillgates.ts`: `rockGateRefusal(rock, viewer, below)`, the one check for cutting a rock, bare or under a
+  building. `path.ts`: `fellsSaid` (the trees your woodcutting fells, from the gates), in the site step's lines and
+  `siteSays`.
+* Island (`20261120000075_defs.sql`: iron and steel pouring at 1; `20261120000076_skill_gates_e.sql`): `read_ground`
+  reads every seam in its circle, buried ones too (`seam`, any tile), each named by the keeper (`seen_vein_at`);
+  `tree_fells` and `thepath_sites` counting a tree tile only where its species' gate is at or under the player's
+  woodcutting; `rock_gate_refusal`, read by `face_gate_refusal` and by `cellar_refusal`'s Mine out the cellar.
+* Browser: `readGround` (a prospector's find) the same; `faceGateRefusal` and Mine out the cellar through
+  `rockGateRefusal`; the help's pouring line names iron's level, the site line "trees your woodcutting fells".
+* Tests: `skillgates.ts` (the Guiding Light's sites at woodcutting 1 and 5, and in a wood of oak; the site step's
+  words), `skillgates-b.ts` (a prospector's buried find at prospecting 1 and 5; Mine out the cellar into marble, slate
+  and an iron seam), `skillgates-c.ts` (iron and steel at 1; tin refused at 2.3 and poured at 10; a fresh nail smith
+  pours iron, a ribbon smith at 1 copper, iron and steel).
+
 ## 10. Open questions
 
 Answered in batch D (above): 1 (the trees), 4 (a bare vein is always named, so its mining refusal names what everybody
-sees), stone brick in 6, the forge's casting in 7 (pouring gated by metal), 10 (Formulas kept). Still open:
+sees), stone brick in 6, the forge's casting in 7 (pouring gated by metal), 10 (Formulas kept). Answered in batch E: 2
+(the Guiding Light counts only trees you fell), 5 (cellars by the stone's gate), 7 (all stay ungated), 11 (iron at 1),
+12 (prospectors find buried veins), 13 (accepted). Still open:
 
-2. The Path's settlement site counts any tree in reach, and a Sapgnaw at woodcutting 1 fells only pine and birch there.
-   Count only those?
 3. A farmer or a planter tender with only seed over its level in the stores says "nothing to sow"; name the gate
    instead ("Idle: Wemp seeds need farming 30 (yours 1.0)" would name an unidentified thing to a keeper under 30)?
-5. A cellar dug into marble or slate bedrock gives up its shards without the quarry gate (Mine out the cellar keeps only
-   the seam gate). Gate it too?
 6. Recipes by difficulty move many everyday things up: bread 5, a bucket 10, a plank wall 10, lye 10 (an ash raker
    making lye now needs alchemy 10), cheese 10 for a cheese press. Keep, or start the everyday ones lower? (Stone brick
    walls answered: 10.)
-7. Not gated yet: dye-recipe sheets, brews set going at a barrel, garden steps, stepping stones, a Mason's Repoint (a
-   new stone on a finished wall); and of pouring, ingots (`pour_ingot`, a perk) and beating a casting out at the anvil
-   (by its mould's skill, open). Gate them by the same rules?
 8. A hod carrier whose only work is over its level says "no work"/"stock", not `gate` naming it (its idle words list
    items, not plans). Name the gate?
 9. A wall type's gate is in its material's skill, so carpentry and masonry each list Door 5, Window 5 …; materials are
    named "Plank building", "Marble building" to tell them from the crafts (a "Plank" recipe is carpentry 1). Better
    names?
-11. A nail smith (iron) at blacksmithing 1 now pours nothing until 5, and a ribbon smith only copper: a fresh Dowse is
-    idle `gate` at once on iron. Start pour workers higher, or keep?
-12. A prospector's find reads only bare veins (`read_ground`), which are now always named, so no worker find is ever
-    "Unidentified metal". Let prospectors find buried veins too?
-13. A vein once seen bare and then covered again (soil dropped back) stays named in a browser that saw it until the
-    land is read again: `tile_change` is one row for everybody, so it cannot unname it for one reader. Accept?
+14. A buried vein under a building that you cannot identify is sent to your browser unidentified, but Mine out the
+    cellar's refusal on the island names it with its level ("Iron vein: needs mining 5; have 1.0."), and the browser,
+    which cannot know the level, greys nothing until the island answers. Say "Unidentified metal" and "More
+    prospecting required to identify this vein." instead, as the tile's reading does?
+15. A prospector's find now counts every seam, coal too, as Prospect always did (it counted only metal ores before).
+    Keep coal in "found ore", or leave it out of a worker's find?
 
-## 11. Unidentified items
+## 11. Sweep: proposals
+
+Every skill read for what it does (actions, recipes, items, tools, stations, workers, perks in `src/game`), what is
+gated already, and what a further gate would give a player to aim at. Same framework throughout: ladder steps, the gate's
+own skill, the one wording, a worker at its own level in the gate's skill, and an item unidentified where its use is
+gated. Each proposal: what · level · why. ★ the ones recommended most. "Flag" marks a thing that should stay open (or
+come down) because it is part of a new player's first loop: first tools, food, water, shelter.
+
+### Gathering and the land
+
+**Mining**. Gated: seams 1–90 (12), stone faces 1–30 (4), Mine out the cellar (batch E).
+
+1. Ore Sense read inside the one check (`gate:mining:below`) · its perk's amount · planned at rollout (§3).
+2. No new gate: every rock already has one.
+
+**Prospecting**. Gated: veins named 1–90 (12).
+
+1. No new gate: Prospect, a prospector and a Miner's Pan stay open; finds are rolls and reach is continuous.
+
+**Woodcutting**. Gated: trees 1–90 (17), Cut down and Coppice; fellers.
+
+1. No new gate. Flag: pine and birch at 1 are the first log; keep.
+
+**Forestry**. Gated: sprouts 1–80 (17), two recipes at 5.
+
+1. ★ Graft onto the rule · 50 (`GRAFT_SKILL`) · a level gate already, in other words ("Needs forestry 50."): "Graft:
+   needs forestry 50; have 12.0.", in the Unlocks.
+2. Grape cuttings planted at a trellis · 20 · vines are a later crop than bushes (S from §8).
+3. Flag: pruning, picking fruit, tapping resin and clearing brush stay open (harvest is kept, §7; resin is the first
+   tar).
+
+**Foraging**. Gated: none.
+
+1. No new gate. Flag: forage, cut grass, moss and reeds, pick flowers are the first food and the first materials.
+
+**Botanizing**. Gated: none.
+
+1. ★ Planting a water lily · 10, a lotus · 20 (`plant_lily`, `plant_lotus`; the lily root unidentified under it, the
+   lotus seed not, being food too; `lily` workers at their own botanizing) · the water garden is a late build with no step of its own (S from §8).
+2. Flag: botanizing for herbs and seeds stays open (the herb seeds it finds are farming-gated already).
+
+**Digging**. Gated: none.
+
+1. ★ Unearthing a treasure map by its tier · worn 1, sound 20, fine 40, grand 60 (the map unidentified under it) · the
+   map's guards and loot already climb the same tiers; a found map becomes a goal.
+2. Dig a spring · 10 (its difficulty 12, §5.2) · a water source anywhere is a step past the shore and the well's
+   bucket.
+3. Flag: dig, flatten, level, collect dirt, clay and sand, dredge, worms, Dig the cellar, stumps stay open:
+   terraforming and the first clay and sand.
+
+**Fishing**. Gated: fish 1–70 (8, a pool filter), 10 recipes 1–20 (rod, fish pond, mount …).
+
+1. No new gate. Flag: the rod and the first fish at 1.
+
+**Tracking**. Gated: none.
+
+1. No new gate: reach grows with the skill.
+
+**Archaeology**. Gated: none (finds already scale: a relic turns up within 14 of your level, `relicsWithin`).
+
+1. No new gate: finds are rolls; restoring is gated in restoration.
+
+**Butchering**. Gated: none.
+
+1. A lair guard's carcass (goblin, orc, ogre, dragon) · 10, 20, 40, 60 by its treasure tier · the rare parts off a
+   monster are a goal; wildermon and game stay open.
+2. Flag: every animal carcass at 1 (the first meat and hide).
+
+### Building
+
+**Carpentry**. Gated: 73 recipes 1–90, materials 1–40, wall types 1–40, floor types 1–20.
+
+1. ★ Bridges by difficulty, in carpentry · garden footbridge 10 (d14), rope bridge 20 (d18), drawbridge 50 (d34);
+   a log, plank or timbercraft bridge at its material's gate · bridges are big builds with no gate; hod carriers at
+   their own level.
+2. Flag: the campfire, the first planks, shafts and crates at 1.
+
+**Fine carpentry**. Gated: 51 recipes 1–40.
+
+1. No new gate.
+
+**Masonry**. Gated: 25 recipes 1–60, materials 1–70, wall types 1–60, floor types 1–20, foundation depth, storeys.
+
+1. ★ Stone bridges and aqueducts · a bridge at its material's gate (cobblestone 1 … marble 50), the aqueduct 70 (d44) ·
+   the same rule as walls, for the largest stone builds.
+2. Dig a pool · by its difficulty (§5.2) · a garden build past the birdbath and lily pond.
+3. Flag: raise rock, rubble fill, a Mason's Repoint (decided open) stay open.
+
+**Paving**. Gated: cobblestones 5, slabs 10–50.
+
+1. No new gate. Stepping stones and garden steps stay open (decided). Flag: packing a road at 1.
+
+**Stonecutting**. Gated: 12 recipes 5–40.
+
+1. No new gate.
+
+**Pottery**. Gated: 10 recipes 1–20.
+
+1. Glazing an item · by its difficulty (§5.2) · a finishing step with no gate of its own.
+2. Flag: bricks, bowls and adobe at 1.
+
+### Making
+
+**Cooking**. Gated: 33 recipes 1–30.
+
+1. No new gate. Flag: roasts, cooked meat and fish at 1.
+
+**Milling**. Gated: 16 recipes 5–20; millers.
+
+1. No new gate. Flag: milling 1 makes nothing (flour and juice 5); consider flour at 1 with §10's question 6.
+
+**Brewing**. Gated: 5 recipes at 20 (spirit).
+
+1. No new gate: brews set going at a barrel stay open (decided).
+
+**Smelting**. Gated: 5 alloys 5–20.
+
+1. ★ Smelting ore by its metal · the metal's pouring level (copper and iron 1, tin 10 … seryll 90), in smelting;
+   stokers that charge smelters at their own smelting · the trade that makes the lumps gets the ladder pouring has.
+
+**Blacksmithing**. Gated: 48 recipes 1–60 (moulds and tools), pouring by metal (16).
+
+1. Striking coins · the coin metal's pouring level (silver 40, gold 50) · precious coin is a late goal.
+2. Flag: improving, repairing and fitting padlocks stay open (§7).
+
+**Weaponsmithing, armorsmithing, chainsmithing, platesmithing**. Gated: none (their moulds are formed and poured in
+blacksmithing; beating a casting out is open, decided).
+
+1. Each trade's moulds formed in its own trade · by difficulty (sword blade 20, long sword blade 30, helm 20, chain
+   hauberk 40) · otherwise these four trades have no step at all; changes `MOULD_SKILL` from one trade to the mould's.
+
+**Jewellery**. Gated: 5 recipes 5–30.
+
+1. ★ Setting a gem in a circlet by its rarity, from the circlet's own 30 · topaz, garnet, onyx, amber 30; emerald,
+   peridot, amethyst, jasper 40; ruby, sapphire, opal 50; diamond 60 (`GEMS` weight 4, 3, 2, 1) · the stones are the
+   trade's natural ladder past its last recipe. Gems have other uses (spells, rings), so not unidentified.
+
+**Glassblowing**. Gated: 4 recipes 5–40; glass roofs carpentry 40.
+
+1. No new gate.
+
+**Tailoring**. Gated: 18 recipes 1–20.
+
+1. No new gate. Flag: yarn at 1.
+
+**Ropemaking**. Gated: 14 recipes 1–40.
+
+1. Flag: rope at 5 (d10) is the first rope; consider 1.
+
+**Leatherworking**. Gated: 25 recipes 10–90.
+
+1. ★ Flag: leatherworking 1 makes nothing: the awl and the pelt rug are 10, leather 20. Start the awl and leather at 1
+   (`CRAFT_GATE_SAID`).
+
+**Bowyery, fletching**. Gated: 5 bows 10–80; 5 arrows 1–40.
+
+1. ★ Flag: bowyery 1 makes nothing: the bowstring is 10 and the short bow 20. Start both at 1 (`CRAFT_GATE_SAID`), as
+   blunt arrows are.
+
+**Alchemy**. Gated: 22 recipes 5–30.
+
+1. No new gate: dyeing, painting and stripping stay open; dye-recipe sheets stay open (decided). Flag: lye at 10 (§10
+   question 6).
+
+**Papyrusmaking**. Gated: 17 recipes 10–50; trade books 50.
+
+1. Flag: papyrusmaking 1 makes nothing (the paper lantern pole 10, papyrus 20); consider papyrus at 1.
+
+**Enchanting**. Gated: 43 Formulas 20–50.
+
+1. No new gate: a written scroll is used by anybody.
+
+**Restoration**. Gated: relics 10–70 (14), baubles 10/40/70.
+
+1. No new gate.
+
+**Repair**. Gated: kit and sealant (perk recipes) 20.
+
+1. No new gate: repairing is never stopped (§7).
+
+**First aid, chirurgy**. Gated: 11 first aid recipes 1–10; chirurgy none.
+
+1. No new gate. Flag: bandages and binding a wound at 1.
+
+### Creatures, travel, the body
+
+**Taming**. Gated: 77 kinds 1–50, +15 a stage.
+
+1. No new gate.
+
+**Animal husbandry**. Gated: trait reading 0/15/35/60, one recipe.
+
+1. ★ A listed cross onto the rule · 50 (`CROSS_SKILL`) · a level gate already, in other words; "Cross: needs animal
+   husbandry 50; have 12.0.", in the Unlocks.
+2. Flag: milking, shearing, grooming, hives and breeding a pair stay open (first wool, milk and honey).
+
+**Driving**. Gated: the wagon 30.
+
+1. No new gate (the large cart open, decided).
+
+**Sailing**. Gated: rowing boat 1, sailing boat 20, caravel 50.
+
+1. No new gate: a gale's safety (`GALE_SAFE_AT`) is a continuous rule.
+
+**Climbing, swimming**. Gated: none.
+
+1. No new gate: both are continuous.
+
+**Kindling, binding, warding (elementalism)**. Gated: Ember, Snare, Aegis 1; Pyre, Still field, Bulwark 30, in their own
+words ("Pyre takes 30 kindling; you have 12.").
+
+1. ★ Spells onto the rule (kind `spell`) · kept at 1 and 30 · "Pyre: needs kindling 30; have 12.0.", in each school's
+   Unlocks. Elementalism keeps its own tiers.
+
+**Prayer, praying, meditation**. Gated: their tiers (faith, path).
+
+1. No new gate: tiers are choices, not things refused (§6).
+
+**Fighting; swords, axes, mauls, knives, polearms, archery, throwing, shields**. Gated: none.
+
+1. No new gate. Flag: gear stays open; the skill sets the odds, and a weapon gate would leave a new player unarmed.
+
+**Cloth, leather, chain and plate armour**. Gated: none.
+
+1. No new gate. Flag: wearing armour stays open; the skill sets the protection.
+
+**Body strength, body stamina, body control, mind logic, soul strength, awareness**. Gated: none.
+
+1. No new gate: characteristics, raised by everything else.
+
+## 12. Unidentified items
 
 Asked for: "items picked up that you cant use yet show as "unidentified ", e.g. a player with 20 farming sees
 "unidentified seed" for a wemp seed. Tooltip shows just "30 farming required to identify this seed"".

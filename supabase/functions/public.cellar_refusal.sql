@@ -28,15 +28,9 @@ begin
         || ' left, with a shovel.';
     end if;
     if pack_count(p_world, p_uid, 'pickaxe') <= 0 then return 'Need a pickaxe.'; end if;
-    -- A seam under the building gives up its metal only to somebody who knows how to take it, as a face of it would.
-    r := bedrock_at(p_world, v_x, v_y);
-    v_need := greatest(0, r.level - pk(p_world, p_uid, 'ore:below', 0));
-    v_mining := skill_of(p_world, p_uid, 'mining');
-    if r.ore and v_mining < v_need then
-      return r.name || ': needs mining ' || rtrim(rtrim(to_char(v_need, 'FM990.99'), '0'), '.')
-        || '; have ' || to_char(v_mining, 'FM990.0') || '.';
-    end if;
-    return null;
+    -- The rock under the building is cut as a face of it would be: a seam by its mining, a stone (sandstone, slate,
+    -- marble) by its quarrying (`rockGateRefusal`).
+    return rock_gate_refusal(p_world, p_uid, bedrock_at(p_world, v_x, v_y));
   end if;
 
   if p_action = 'fill_cellar' then

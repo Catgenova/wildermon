@@ -103,7 +103,7 @@ import { capital, listed } from './words';
 import { pct, pickedSaid, qlTag, searchOdds, searchPasses, tagged, taggedWith } from './yields';
 import { fruitRefusal, fruitSeason, fruitingSays, inSeason } from './fruiting';
 import { RECIPE_ACTIONS } from './recipes';
-import { itemGateRefusal, rockGate, seenDefName, seenName, seenVein, skillGateRefusal, sproutGate, treeGate, unidentified, veinTip } from './skillgates';
+import { itemGateRefusal, rockGateRefusal, seenDefName, seenName, seenVein, skillGateRefusal, sproutGate, treeGate, unidentified, veinTip } from './skillgates';
 import { BRUSH_TOOL, lacksTool, MORTAR_TOOL, REAP_TOOL, TOOL_JOBS } from './jobtools';
 
 /**
@@ -693,10 +693,7 @@ export const oreNeeds = (g: Game, level: number): number => Math.max(0, level - 
  */
 export const faceGateRefusal = (g: Game, x: number, y: number): string | null => {
   if (g.world.getTile(x, y) !== TileType.Rock) return null;
-  const rock = bedrockAt(g.world, x, y);
-  const gate = rockGate(rock);
-  if (!gate) return null;
-  return skillGateRefusal(rock.name, gate.skill, g.skills.get(gate.skill), gate.kind === 'seam' ? oreNeeds(g, gate.level) : gate.level);
+  return rockGateRefusal(bedrockAt(g.world, x, y), g, g.perk('ore:below', 0));
 };
 /** A tile's name as you see it: a bare vein is always named (`seenVein`, exposed). */
 export const tileSeen = (g: Game, x: number, y: number): string =>

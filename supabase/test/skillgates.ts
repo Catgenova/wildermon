@@ -22,7 +22,9 @@
  *     onion at 1 allowed; a ripe wemp crop harvested at farming 1: allowed;
  *   * a willow sprout at forestry 1: picking off a willow and planting one refused on both sides, a pine's allowed;
  *   * a farmer at farming 1 sows onion and passes wemp by, a sprout picker passes a willow by and says why;
- *   * the Skills window's Unlocks for woodcutting and farming are the table in level order, ticked by your level.
+ *   * the Skills window's Unlocks for woodcutting and farming are the table in level order, ticked by your level;
+ *   * decided since: the Guiding Light's suggested sites count only the trees your woodcutting fells (birch and oak
+ *     stripes: birch only at 1, both at 5, none with every stripe oak at 1), and its site step says which, from the gates.
  *
  * The island half makes its own island and rolls it back.
  */
@@ -38,6 +40,8 @@ import {
   SKILL_GATES, unlocksOf, workerGateOpen, workerItemOpen,
 } from '../../src/game/skillgates';
 import { packTreeData, TileType, TREE_AGES, TREE_DEFS } from '../../src/world/tiles';
+import { fellsSaid, PATH_STEP_BY_ID } from '../../src/game/path';
+import type { PathSite } from '../../src/game/pathstate';
 import { psql, check, finish } from './harness';
 
 const U = '7e5b0000-0000-4000-8000-0000000a7e01';
@@ -504,5 +508,74 @@ for (const skill of ['woodcutting', 'farming', 'forestry']) {
   }
 }
 check('and the next one named with your level: "Next: Oak at 5 (yours 1.0)"', nextUnlockSaid('woodcutting', 1) === 'Next: Oak at 5 (yours 1.0)', nextUnlockSaid('woodcutting', 1) ?? '');
+
+/* ---- decided since: the Guiding Light's sites count only the trees you fell ------------------------------ */
+
+{
+  // A 4096 island, past the stones' gap as the Path's own test has it: woods in stripes, birch and oak a row about; a
+  // shore to the south, rock to the east. Sites asked at woodcutting 1 and 5, and with every stripe oak.
+  const P = { x: 1400, y: 2600 };
+  const OAK = species('Oak');
+  const BIRCH = species('Birch');
+  const sites = new Map(psql(`
+discard temp;
+begin;
+create temp table said (k text, v text);
+do $t$
+declare w uuid; u uuid := '${U}'; j jsonb; i int;
+begin
+  insert into world (name, seed, size, spawn_x, spawn_y, ready) values ('Fellable', 33, 4096, ${P.x}, ${P.y}, true) returning id into w;
+  perform land_blank(w, 4096);
+  update land_tile set tiles = overlay(tiles placing decode(repeat('10', 40), 'hex') from ${P.x - 30} for 40),
+                       data = overlay(data placing decode(repeat(lpad(to_hex(case when y % 6 = 0 then ${packTreeData(BIRCH, 0)} else ${packTreeData(OAK, 0)} end), 2, '0'), 40), 'hex') from ${P.x - 30} for 40)
+   where world_id = w and y between ${P.y - 30} and ${P.y + 30} and y % 3 = 0;
+  update land_corner set heights = overlay(heights placing decode(repeat('f6ff', 120), 'hex') from 2 * ${P.x - 60} + 1 for 240)
+   where world_id = w and y between ${P.y + 20} and ${P.y + 22};
+  update land_tile set tiles = overlay(tiles placing decode(repeat('04', 10), 'hex') from ${P.x + 18} for 10)
+   where world_id = w and y between ${P.y - 40} and ${P.y + 40};
+  perform set_config('request.jwt.claims', json_build_object('sub', u)::text, true);
+  perform rpc_join(w, 'Sitefinder');
+  update player set body_at = now(), x = ${P.x} + 0.5, y = ${P.y} + 0.5 where world_id = w and uid = u;
+  for i in 1..3 loop
+    if i = 3 then
+      -- Every stripe oak.
+      update land_tile set data = overlay(data placing decode(repeat(lpad(to_hex(${packTreeData(OAK, 0)}), 2, '0'), 40), 'hex') from ${P.x - 30} for 40)
+       where world_id = w and y between ${P.y - 30} and ${P.y + 30} and y % 3 = 0;
+    end if;
+    insert into skill (world_id, uid, id, value) values (w, u, 'woodcutting', (array[1, 5, 1])[i])
+      on conflict (world_id, uid, id) do update set value = excluded.value;
+    j := rpc_thepath_sites(w);
+    insert into said values ('N' || i, jsonb_array_length(j)::text);
+    -- Each site's count against the box counted tile by tile: every tree, and the ones your woodcutting fells.
+    insert into said select 'S' || i, coalesce(string_agg((s->>'trees') || ':' || (
+        select count(*) filter (where tree_fells(land_data(w, x, y), (array[1, 5, 1])[i])) || ':' || count(*)
+          from generate_series((s->>'x')::int - thepath_site_tree_reach()::int, (s->>'x')::int + thepath_site_tree_reach()::int) x,
+               generate_series((s->>'y')::int - thepath_site_tree_reach()::int, (s->>'y')::int + thepath_site_tree_reach()::int) y
+         where land_tile(w, x, y) = tile_id('Tree')), ','), '')
+      from jsonb_array_elements(j) s;
+  end loop;
+end $t$;
+select k || '=' || v from said order by k;
+rollback;`).split('\n').filter((l) => l.includes('=')).map((l) => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1)] as [string, string]));
+  const rows = (i: number): Array<[number, number, number]> => (sites.get(`S${i}`) ?? '').split(',').filter(Boolean).map((r) => r.split(':').map(Number) as [number, number, number]);
+  check(`woodcutting 1, birch and oak stripes: ${sites.get('N1')} sites, each counting its birch only (trees:birch:all ${sites.get('S1')})`,
+    Number(sites.get('N1')) > 0 && rows(1).every(([n, fell, all]) => n === fell && fell < all), sites.get('S1') ?? '');
+  check(`woodcutting 5 (oak's gate): ${sites.get('N2')} sites, each counting every tree (${sites.get('S2')})`,
+    Number(sites.get('N2')) > 0 && rows(2).every(([n, fell, all]) => n === all && fell === all), sites.get('S2') ?? '');
+  check(`every stripe oak at woodcutting 1: no site (${sites.get('N3')})`, sites.get('N3') === '0', sites.get('N3') ?? '');
+  // The words, derived from the gates.
+  const g = fresh();
+  g.skills.values.set('woodcutting', 1);
+  const site = PATH_STEP_BY_ID.get('site')!;
+  const label1 = site.label(g);
+  const why1 = site.why(g)[0] ?? '';
+  g.pathSites = [{ x: 0, y: 0, trees: 14, water: 6, rock: 11 } as PathSite];
+  const said1 = site.label(g);
+  g.skills.values.set('woodcutting', 5);
+  const said5 = site.label(g);
+  check(`the Path's site step names the trees counted, from the gates: "${label1}", "${why1}", "${said1}"; at 5 "${said5}"`,
+    label1.startsWith('Site: birch or pine ≥10 in 10') && why1.startsWith('Birch or pine ≥10 within 10') && said1.startsWith('Site: Birch or pine 14 · Water 6')
+      && fellsSaid(g) === 'birch, pine or oak' && said5.startsWith('Site: Birch, pine or oak 14'), `${label1} | ${why1} | ${said1} | ${said5}`);
+}
 
 finish('Skill gates: trees, sprouts and crops, for you and for workers at their own level; items unidentified under their gate');

@@ -13,7 +13,7 @@
  *   * a relic and a bauble tier by its restoring difficulty, the same rule;
  *   * a material, a wall type, a floor type and a paving by tier, the cheapest at 1 (`MATERIAL_GATE`, `WALL_GATE`,
  *     `FLOOR_GATE`, `PAVING_GATE`);
- *   * pouring a metal by its seam's mining gate, an alloy by its metals' (`METAL_GATE`). A wall type's and a floor type's gate is in its material's skill: carpentry for
+ *   * pouring a metal by its seam's mining gate (iron at 1, `POUR_GATE_SAID`), an alloy by its metals' (`METAL_GATE`). A wall type's and a floor type's gate is in its material's skill: carpentry for
  *     timber, masonry for stone, a row each; a wall or a floor needs both its material's gate and its type's.
  *
  * An item whose use one of these stops is unidentified under it (`GATE_ITEMS`): a Recipe or a Formula by its
@@ -100,17 +100,19 @@ export const PAVING_GATE: Readonly<Record<string, GateLevel>> = { [COBBLESTONES]
 
 /**
  * Pouring a metal (Pour a mould, Cast an anvil; a nail or ribbon smith's work), in the trade that pours moulds
- * (`MOULD_SKILL`), by the metal: a mined one at its seam's mining gate (`SEAM_GATE`: copper 1, iron 5, tin 10 … seryll
- * 90), an alloy at the highest of the mined metals mixed into it (bronze 10, steel 5, brass 20, pewter 30, electrum 50).
- * Forming the mould is its own recipe's gate; ingots are not a mould and stay open.
+ * (`MOULD_SKILL`), by the metal: a mined one at its seam's mining gate (`SEAM_GATE`: copper 1, tin 10 … seryll 90) but
+ * the ones named (`POUR_GATE_SAID`: iron 1, as decided, so a fresh nail smith pours), an alloy at the highest of the
+ * mined metals mixed into it (steel 1, bronze 10, brass 20, pewter 30, electrum 50). Forming the mould is its own
+ * recipe's gate; ingots are not a mould and stay open.
  */
+export const POUR_GATE_SAID: Readonly<Record<string, GateLevel>> = { iron: 1 };
 const alloyOf = (m: MetalDef): string[] => {
   const mix = RECIPES.find((r) => r.category === 'Smelting' && r.result === m.lump);
   return (mix?.inputs ?? []).map((i) => METAL_BY_LUMP.get(i.item)?.id).filter((id): id is string => !!id);
 };
 const metalLevel = (m: MetalDef): GateLevel => {
   if (m.ore) {
-    const level = SEAM_GATE[m.ore];
+    const level = POUR_GATE_SAID[m.id] ?? SEAM_GATE[m.ore];
     if (level === undefined) throw new Error(`${m.id}: no seam gate`);
     return level;
   }
@@ -248,7 +250,7 @@ export const pavingOpen = (viewer: Viewer, id: string): boolean => {
 /** The gate on pouring a metal, by its id. */
 export const metalGate = (metalId: string): SkillGate | undefined => gateOf('metal', metalId);
 
-/** Pouring a metal under its gate: "Iron pouring: needs blacksmithing 5; have 2.3.", or null. The island's `metal_gate_refusal`. */
+/** Pouring a metal under its gate: "Tin pouring: needs blacksmithing 10; have 2.3.", or null. The island's `metal_gate_refusal`. */
 export const metalGateRefusal = (viewer: Viewer, metalId: string): string | null => {
   const g = metalGate(metalId);
   return g ? skillGateRefusal(g.name, g.skill, viewer.skills.get(g.skill), g.level) : null;

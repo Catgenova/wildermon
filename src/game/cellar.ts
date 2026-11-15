@@ -8,6 +8,7 @@ import { itemDef } from './items';
 import { maybeGem } from './gems';
 import { maybeMap } from './treasure';
 import { capital } from './words';
+import { rockGateRefusal } from './skillgates';
 import { bedrockAt } from '../world/ore';
 import { metres } from '../world/tiles';
 import type { World } from '../world/world';
@@ -379,11 +380,9 @@ export const CELLAR_ACTIONS: ActionDef[] = [
         return `Dig the soil first: ${metres(cellarSoil(g.world, t.x, t.y) - c)} m left, with a shovel.`;
       }
       if (!g.inventory.has('pickaxe')) return 'Need a pickaxe.';
-      // A seam under the building gives up its metal only to somebody who knows how to take it, as a face of it would.
-      const rock = bedrockAt(g.world, t.x, t.y);
-      const need = Math.max(0, rock.level - g.perk('ore:below', 0));
-      if (rock.ore && g.skills.get('mining') < need) return `${rock.name}: needs mining ${need}; have ${g.skills.get('mining').toFixed(1)}.`;
-      return null;
+      // The rock under the building is cut as a face of it would be: a seam by its mining, a stone (sandstone, slate,
+      // marble) by its quarrying (`rockGateRefusal`). The island's `cellar_refusal`.
+      return rockGateRefusal(bedrockAt(g.world, t.x, t.y), g, g.perk('ore:below', 0));
     },
     perform: (t, g) => {
       const site = siteOf(g, t);

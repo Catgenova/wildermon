@@ -279,6 +279,17 @@ export const sproutGate = (data: number): SkillGate | undefined => gateOf('sprou
 export const rockGate = (rock: { yields: string }): SkillGate | undefined =>
   gateOf(isSeam(rock) ? 'seam' : 'stone', rock.yields);
 
+/**
+ * Cutting a rock, bare or under a building (Mine, Chip corner, Mine out the cellar): its gate for somebody, or null. A
+ * seam's by its mining, less `below` (a Miner's Ore Sense); a plain stone's (rock, sandstone, slate, marble) by its
+ * quarrying. "Marble: needs mining 30; have 12.0." The island's `rock_gate_refusal`.
+ */
+export const rockGateRefusal = (rock: { yields: string; name: string }, viewer: Viewer, below = 0): string | null => {
+  const gate = rockGate(rock);
+  if (!gate) return null;
+  return skillGateRefusal(rock.name, gate.skill, viewer.skills.get(gate.skill), gate.kind === 'seam' ? Math.max(0, gate.level - below) : gate.level);
+};
+
 /** Whoever reads a gate or looks at an item for themselves: a skill by its id. A `Game` is one. */
 export interface Viewer {
   skills: { get(id: string): number };
