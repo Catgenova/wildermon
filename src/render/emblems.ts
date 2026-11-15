@@ -270,8 +270,8 @@ const halberd = (): Piece[] => turned([
 
 /** A bow and its arrow: the Archer. */
 const bow = (): Piece[] => [
-  inkLine(path('M8.6 3.2L8.6 20.8'), 0.7),
-  line(path('M8.6 3.2C2.4 7.6 2.4 16.4 8.6 20.8'), OAK, 2),
+  inkLine(path('M7 3.2L7 20.8'), 0.7),
+  line(path('M7 3.2C13.2 7.6 13.2 16.4 7 20.8'), OAK, 2),
   line(path('M5 12H17'), PINE, 1.1),
   fill(poly(16.4, 9.6, 21.2, 12, 16.4, 14.4), STEEL, 1),
   fill(poly(3.2, 9.6, 6.4, 12, 3.2, 14.4, 4.4, 12), THREAD, 0.8),
