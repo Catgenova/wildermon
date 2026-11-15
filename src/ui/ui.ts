@@ -1706,7 +1706,8 @@ export class UI {
       const who = 'holder' in here && here.holder ? `, ${here.holder}\u2019s` : '';
       const level = here.level && here.level > 1 ? ` \u00b7 level ${here.level}` : '';
       lines.push(`${token ? 'Settlement totem of' : 'Part of'} ${here.name}${who}${level}`);
-      lines.push(mine ? standingWord(mine) : 'Not a citizen: walk only, no building or terraforming.');
+      // Your rank and its powers are in the settlement's window, not on every tile's hover.
+      if (!mine) lines.push('Not a citizen: walk only, no building or terraforming.');
     }
     // A drawbridge says whether it is up (`gates.ts`).
     const span = pick.bridge !== undefined ? this.game.bridges.get(pick.bridge) : undefined;

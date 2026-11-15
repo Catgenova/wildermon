@@ -414,6 +414,12 @@ const FAIL_EXAMPLE = failFactorSaid(failFactor({ ...FAIL_EXAMPLE_AT, difficulty:
 const SCRUBS_LATER = new Set(['scrub_wall_paint', 'scrub_floor_paint']);
 
 export const NEWS: News[] = [
+  // A citizen's rank off the tile hover (`ui.ts`).
+  {
+    n: 635,
+    day: '2026-11-15',
+    lines: () => ['Changed: tile hover on your own settlement: no rank line (in the Settlement window).'],
+  },
   // An evolved wildermon named for its stage in a fight and on its carcass (`kind_name_at`, `corpse_kind`).
   {
     n: 628,
