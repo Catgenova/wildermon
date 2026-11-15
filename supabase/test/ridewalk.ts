@@ -19,6 +19,7 @@
 import { Game } from '../../src/game/game';
 import { TileType } from '../../src/world/tiles';
 import type { Creature } from '../../src/game/creatures';
+import { furnitureCentre } from '../../src/game/furniture';
 import { ok, bad, check } from './harness';
 
 const g = Game.create(4321, 64);
@@ -83,7 +84,9 @@ const drive = (what: string, step: () => void, ahead: () => [number, number]): v
   check(`${what}: ahead of the cart, not under it`, mid.every((f) => f.off > 0.5), `${Math.min(...mid.map((f) => f.off)).toFixed(2)} tiles ahead at the least`);
 };
 g.moveTo(40, 36);
-drive('your own cart', () => g.update(1 / 30), () => [g.player.x, g.player.y]);
+// Ahead of the cart: its team is put to its yokes (`YOKE_SPOTS`) from where the cart stands, which is a step of the
+// ground's subtiles behind the driver's feet as they go, so it is measured from the cart.
+drive('your own cart', () => g.update(1 / 30), () => furnitureCentre(cart));
 
 // Somebody else on the box: the island drags the cart and its team to their feet, a walk of theirs at a time.
 g.player.stop();
