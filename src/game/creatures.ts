@@ -62,7 +62,7 @@ import { HYBRID_HARDY, HYBRID_WORK, HYBRIDS, type HybridCross } from './hybridli
 import { world } from './pace';
 import { emptyCrate, shutIn, standingCrate } from './crating';
 import { IDLE_WANTS, IDLE_WHYS, ledgerAdd, ledgerRoll, type Idle, type IdleWhy, type WorkLedger } from './workerledger';
-import { sproutGate, treeGate, workerGateOpen, workerItemOpen, type SkillGate } from './skillgates';
+import { gateOf, gateOpen, nameGates, skillGateRefusal, sproutGate, TAME_GATE, TAME_STAGE_GATE, treeGate, workerGateOpen, workerItemOpen, type SkillGate } from './skillgates';
 import { kindNames } from './journal-b';
 import { workFromLedger, workTime, type WorkStats } from './workstats';
 import { bredForm, formMul, wildFormRoll, type SizeForm } from './wildforms';
@@ -515,6 +515,11 @@ export const RESIN_TAPPED = 1;
 
 /** The faces a quarry cuts: bare rock, and rock under snow (a mountain top's marble). The island's `worker_gatherable`. */
 const STONE_FACES: ReadonlySet<number> = new Set([TileType.Rock, TileType.Snow]);
+/** The gate on a face a quarrier cuts: its plain stone's (`STONE_GATE`), bare or under snow; none for a seam. The island's `stone_gate`. */
+export const quarryGate = (w: Game['world'], x: number, y: number): SkillGate | undefined => {
+  const rock = bedrockAt(w, x, y);
+  return isSeam(rock) ? undefined : gateOf('stone', rock.yields);
+};
 export const GATHER_SKILL: Record<GatherKind, string> = { forage: 'foraging', botanize: 'botanizing', woodcut: 'woodcutting', farm: 'farming', mine: 'mining', sand: 'digging', clay: 'digging', quarry: 'mining', stoke: 'smelting', fetch: 'foraging', guard: 'body_strength', hunt: 'fighting', peat: 'digging', reed: 'foraging', water: 'carrying', prospect: 'prospecting', plant: 'forestry', hod: 'masonry', mend: 'repair', compost: 'farming', seek: 'archaeology', fish: 'fishing', prune: 'forestry', stump: 'digging', fruit: 'forestry' , hive: 'animal_husbandry', groom: 'animal_husbandry', dairy: 'animal_husbandry', heal: 'first_aid', tan: 'leatherworking', mill: 'milling', lamp: 'carrying', bush: 'forestry', grass: 'foraging', pan: 'prospecting', smelt: 'smelting', kiln: 'pottery', ash: 'alchemy', brew: 'brewing', cook: 'cooking', restore: 'restoration', patch: 'farming', worm: 'digging', sprout: 'forestry', resin: 'forestry', flower: 'foraging', scrub: 'masonry', saw: 'carpentry', chisel: 'stonecutting', brick: 'pottery', fletch: 'fletching', paper: 'papyrusmaking', fill: 'carrying', spin: 'tailoring', nail: 'blacksmithing', ribbon: 'blacksmithing', glass: 'glassblowing',
   moss: 'foraging', vine: 'forestry', lily: 'botanizing', concrete: 'masonry', mortar: 'masonry', timber: 'carpentry', shaft: 'carpentry', bandage: 'first_aid',
   cheese: 'cooking', churn: 'cooking', alloy: 'smelting' };
@@ -1177,8 +1182,8 @@ export function kindDescription(c: Pick<Creature, 'species' | 'skills'>): string
  * second, and at its first otherwise. The island's `wild_stage_odds_1` and `wild_stage_odds_2`.
  */
 export const WILD_STAGE_ODDS = [20, 200] as const;
-/** The taming one asks for each stage it is past its first. The island's `wild_stage_tame`. */
-export const WILD_STAGE_TAME = 15;
+/** The taming one asks for each stage it is past its first (`TAME_STAGE_GATE`). The island's `wild_stage_tame`. */
+export const WILD_STAGE_TAME = TAME_STAGE_GATE;
 /** What each stage it is past its first multiplies its kind's base chance an offering by. The island's `wild_stage_chance`. */
 export const WILD_STAGE_CHANCE = 0.5;
 /**
@@ -1211,6 +1216,17 @@ export function tameNeeds(c: Pick<Creature, 'species' | 'skills'>): { level: num
   const def = SPECIES[c.species];
   const stage = stageOf(c);
   return { level: (def?.tameLevel ?? 1) + WILD_STAGE_TAME * stage, chance: (def?.tameChance ?? 0) * WILD_STAGE_CHANCE ** stage };
+}
+
+/**
+ * Taming one under its gate at its stage (`tameNeeds`), in the one rule's words, by its stage's name: "Sapgnaw: needs
+ * taming 1; have 0.4." Null at or over it. The island's `tame_gate_refusal`.
+ */
+export function tameRefusal(c: Pick<Creature, 'species' | 'skills'>, have: number): string | null {
+  const def = SPECIES[c.species];
+  const stage = stageOf(c);
+  const name = stage && def?.stages ? def.stages[stage - 1].name : def?.name ?? c.species;
+  return skillGateRefusal(name, 'taming', have, tameNeeds(c).level);
 }
 
 /**
@@ -1623,7 +1639,21 @@ function sayLine(id: string, job: string, level: string, staged = ''): void {
   ];
 }
 
-export const SPECIES: Record<string, SpeciesDef> = {
+/**
+ * Each kind's taming, off its gate (`TAME_GATE`, skillgates.ts): every kind but a monster, which is not tamed and keeps
+ * its own. A kind with no gate is a mistake, said at load.
+ */
+function withTameGates(defs: Record<string, Omit<SpeciesDef, 'tameLevel'> & { tameLevel?: number }>): Record<string, SpeciesDef> {
+  for (const d of Object.values(defs)) {
+    if (d.monster) continue;
+    const level = TAME_GATE[d.id];
+    if (level === undefined) throw new Error(`${d.id}: no taming gate`);
+    d.tameLevel = level;
+  }
+  return defs as Record<string, SpeciesDef>;
+}
+
+export const SPECIES: Record<string, SpeciesDef> = withTameGates({
   rabba: {
     id: 'rabba',
     name: 'Snufflet',
@@ -1638,7 +1668,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 20,
     attack: 3,
     speed: 2.2,
-    tameLevel: 1,
     tameChance: 0.12,
     diet: ['blueberry', 'raspberry', 'strawberry', 'lingonberry', 'potato', 'onion'],
     baitHint: 'a berry or vegetable',
@@ -1668,7 +1697,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 16,
     attack: 2,
     speed: 1.9,
-    tameLevel: 1,
     tameChance: 0.12,
     diet: ['sage', 'basil', 'thyme', 'mint', 'rosemary', 'potato', 'onion'],
     baitHint: 'a spice or vegetable',
@@ -1698,7 +1726,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 26,
     attack: 3,
     speed: 1.8,
-    tameLevel: 1,
     tameChance: 0.1,
     diet: ['potato', 'carrot', 'cabbage', 'onion', 'corn', 'wheat', 'acorn', 'nuts'],
     baitHint: 'a vegetable or something starchy',
@@ -1733,7 +1760,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 24,
     attack: 5,
     speed: 1.6,
-    tameLevel: 1,
     tameChance: 0.1,
     diet: ['potato', 'carrot', 'cabbage', 'onion'],
     baitHint: 'a vegetable',
@@ -1768,7 +1794,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 26,
     attack: 3,
     speed: 1.5,
-    tameLevel: 1,
     tameChance: 0.12,
     diet: ['carrot', 'onion', 'potato', 'mixed_grass'],
     baitHint: 'a root vegetable',
@@ -1802,7 +1827,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 24,
     attack: 4,
     speed: 1.5,
-    tameLevel: 1,
     tameChance: 0.1,
     diet: ['cooked_meat', 'baked_potato', 'roast_onion', 'roast_nuts', 'berry_compote', 'stew', 'pottage'],
     baitHint: 'something cooked',
@@ -1835,7 +1859,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 34,
     attack: 5,
     speed: 1.2,
-    tameLevel: 1,
     tameChance: 0.09,
     diet: ['clay'],
     baitHint: 'a lump of clay',
@@ -1868,7 +1891,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 26,
     attack: 2,
     speed: 1.3,
-    tameLevel: 1,
     tameChance: 0.2,
     diet: ['mixed_grass', 'cabbage', 'carrot', 'wheat', 'corn'],
     baitHint: 'grass or greens',
@@ -1900,7 +1922,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 34,
     attack: 9,
     speed: 2.1,
-    tameLevel: 30,
     tameChance: 0.06,
     diet: ['meat', 'cooked_meat'],
     baitHint: 'meat',
@@ -1931,7 +1952,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 16,
     attack: 3,
     speed: 2,
-    tameLevel: 1,
     tameChance: 0.14,
     diet: ['blueberry', 'raspberry', 'strawberry', 'lingonberry', 'acorn', 'nuts'],
     baitHint: 'a berry or a handful of nuts',
@@ -1964,7 +1984,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 22,
     attack: 4,
     speed: 1.5,
-    tameLevel: 1,
     tameChance: 0.1,
     diet: ['sage', 'basil', 'thyme', 'mint', 'rosemary'],
     baitHint: 'a spice',
@@ -1998,7 +2017,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 14,
     attack: 2,
     speed: 2.6,
-    tameLevel: 1,
     tameChance: 0.12,
     diet: ['acorn', 'nuts'],
     baitHint: 'an acorn or a handful of nuts',
@@ -2033,7 +2051,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 80,
     attack: 11,
     speed: 1.1,
-    tameLevel: 25,
     tameChance: 0.07,
     diet: ['mixed_grass', 'wheat', 'corn', 'cabbage', 'carrot'],
     baitHint: 'grass or grain',
@@ -2067,7 +2084,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 50,
     attack: 7,
     speed: 3,
-    tameLevel: 30,
     tameChance: 0.07,
     diet: ['mixed_grass', 'wheat', 'corn', 'carrot', 'acorn'],
     baitHint: 'grass, grain or a root',
@@ -2099,7 +2115,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 46,
     attack: 14,
     speed: 2.5,
-    tameLevel: 1,
     tameChance: 0.05,
     diet: ['meat', 'cooked_meat'],
     baitHint: 'meat',
@@ -2135,7 +2150,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 30,
     attack: 4,
     speed: 1.4,
-    tameLevel: 1,
     tameChance: 0.11,
     diet: ['mixed_grass', 'cabbage', 'carrot', 'potato'],
     baitHint: 'grass or a root',
@@ -2165,7 +2179,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 22,
     attack: 3,
     speed: 2,
-    tameLevel: 1,
     tameChance: 0.12,
     diet: ['reed', 'wheat', 'corn', 'nuts'],
     baitHint: 'reeds or grain',
@@ -2195,7 +2208,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 34,
     attack: 3,
     speed: 1.6,
-    tameLevel: 1,
     tameChance: 0.1,
     diet: ['mixed_grass', 'wheat', 'corn', 'cabbage'],
     baitHint: 'grass or grain',
@@ -2225,7 +2237,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 20,
     attack: 3,
     speed: 1.8,
-    tameLevel: 15,
     tameChance: 0.1,
     diet: ['nuts', 'acorn', 'clay', 'potato'],
     baitHint: 'nuts or a root',
@@ -2255,7 +2266,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 26,
     attack: 3,
     speed: 1.7,
-    tameLevel: 10,
     tameChance: 0.12,
     diet: ['acorn', 'nuts', 'sprout', 'blueberry'],
     baitHint: 'nuts or an acorn',
@@ -2284,7 +2294,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 24,
     attack: 2,
     speed: 1.6,
-    tameLevel: 1,
     tameChance: 0.1,
     diet: ['apple', 'cherry', 'olive', 'sprout', 'nuts'],
     baitHint: 'fruit off a tree, or a sprout',
@@ -2314,7 +2323,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 30,
     attack: 4,
     speed: 1.4,
-    tameLevel: 1,
     tameChance: 0.12,
     diet: ['worm', 'acorn', 'nuts', 'potato', 'carrot', 'onion'],
     baitHint: 'worms, or a root out of the ground',
@@ -2343,7 +2351,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 18,
     attack: 1,
     speed: 1.7,
-    tameLevel: 1,
     tameChance: 0.12,
     diet: ['apple', 'cherry', 'olive', 'pear', 'plum', 'peach', 'fig', 'lemon', 'pomegranate', 'apricot', 'quince', 'nuts'],
     baitHint: 'fruit off a tree',
@@ -2374,7 +2381,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 40,
     attack: 5,
     speed: 1.5,
-    tameLevel: 20,
     tameChance: 0.09,
     diet: ['bread', 'baked_potato', 'mixed_grass', 'corn'],
     baitHint: 'bread or something cooked',
@@ -2404,7 +2410,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 16,
     attack: 2,
     speed: 2,
-    tameLevel: 25,
     tameChance: 0.08,
     diet: ['nuts', 'acorn', 'blueberry', 'honey'],
     baitHint: 'nuts or something sweet',
@@ -2432,7 +2437,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 24,
     attack: 3,
     speed: 1.5,
-    tameLevel: 8,
     tameChance: 0.13,
     diet: ['meat', 'potato', 'cabbage', 'corpse'],
     baitHint: 'meat or a vegetable',
@@ -2463,7 +2467,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 18,
     attack: 2,
     speed: 2,
-    tameLevel: 12,
     tameChance: 0.12,
     diet: ['mixed_grass', 'carrot', 'cabbage', 'apple'],
     baitHint: 'grass or a vegetable',
@@ -2492,7 +2495,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 20,
     attack: 2,
     speed: 2.2,
-    tameLevel: 16,
     tameChance: 0.1,
     diet: ['mixed_grass', 'wheat', 'carrot', 'cheese'],
     baitHint: 'grass, grain or cheese',
@@ -2522,7 +2524,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 16,
     attack: 1,
     speed: 2,
-    tameLevel: 20,
     tameChance: 0.09,
     diet: ['blueberry', 'raspberry', 'honey', 'apple'],
     baitHint: 'berries or honey',
@@ -2553,7 +2554,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 30,
     attack: 5,
     speed: 2,
-    tameLevel: 22,
     tameChance: 0.09,
     diet: ['meat', 'offal', 'cooked_meat', 'minnow'],
     baitHint: 'meat or a fish',
@@ -2583,7 +2583,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 22,
     attack: 3,
     speed: 2,
-    tameLevel: 18,
     tameChance: 0.1,
     diet: ['minnow', 'perch', 'trout', 'acorn'],
     baitHint: 'a fish or an acorn',
@@ -2613,7 +2612,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 26,
     attack: 3,
     speed: 1.6,
-    tameLevel: 14,
     tameChance: 0.11,
     diet: ['wheat', 'corn', 'nuts', 'bread'],
     baitHint: 'grain or bread',
@@ -2642,7 +2640,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 10,
     attack: 1,
     speed: 2.6,
-    tameLevel: 24,
     tameChance: 0.08,
     diet: ['honey', 'apple', 'pear', 'plum'],
     baitHint: 'honey or soft fruit',
@@ -2672,7 +2669,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 22,
     attack: 3,
     speed: 2,
-    tameLevel: 1,
     tameChance: 0.12,
     diet: ['blueberry', 'raspberry', 'strawberry', 'grape'],
     baitHint: 'berries or grapes',
@@ -2702,7 +2698,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 24,
     attack: 2,
     speed: 1.8,
-    tameLevel: 1,
     tameChance: 0.14,
     diet: ['mixed_grass', 'wheat', 'carrot', 'cabbage'],
     baitHint: 'grass or a vegetable',
@@ -2733,7 +2728,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 16,
     attack: 2,
     speed: 2.2,
-    tameLevel: 20,
     tameChance: 0.09,
     diet: ['minnow', 'perch', 'trout', 'nuts'],
     baitHint: 'a fish',
@@ -2764,7 +2758,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 22,
     attack: 2,
     speed: 1.8,
-    tameLevel: 14,
     tameChance: 0.11,
     diet: ['potato', 'carrot', 'bread', 'corn'],
     baitHint: 'a vegetable or bread',
@@ -2795,7 +2788,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 18,
     attack: 2,
     speed: 2,
-    tameLevel: 16,
     tameChance: 0.1,
     diet: ['nuts', 'acorn', 'bread', 'potato'],
     baitHint: 'nuts or bread',
@@ -2826,7 +2818,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 22,
     attack: 2,
     speed: 1.8,
-    tameLevel: 18,
     tameChance: 0.1,
     diet: ['wheat', 'apple', 'honey', 'bread'],
     baitHint: 'grain, apples or honey',
@@ -2856,7 +2847,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 20,
     attack: 2,
     speed: 1.8,
-    tameLevel: 16,
     tameChance: 0.1,
     diet: ['meat', 'potato', 'onion', 'bread'],
     baitHint: 'meat or a vegetable',
@@ -2885,7 +2875,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 16,
     attack: 1,
     speed: 1.8,
-    tameLevel: 28,
     tameChance: 0.08,
     diet: ['nuts', 'honey', 'apple', 'blueberry'],
     baitHint: 'nuts or honey',
@@ -2911,7 +2900,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 18,
     attack: 2,
     speed: 1.8,
-    tameLevel: 10,
     tameChance: 0.12,
     diet: ['carrot', 'cabbage', 'wheat', 'potato'],
     baitHint: 'a vegetable or grain',
@@ -2939,7 +2927,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 18,
     attack: 2,
     speed: 1.8,
-    tameLevel: 1,
     tameChance: 0.13,
     diet: ['worm', 'carrot', 'potato', 'cabbage'],
     baitHint: 'worms or a vegetable',
@@ -2968,7 +2955,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 16,
     attack: 2,
     speed: 2.2,
-    tameLevel: 1,
     tameChance: 0.12,
     diet: ['acorn', 'nuts', 'apple', 'blueberry'],
     baitHint: 'acorns, nuts or fruit',
@@ -2997,7 +2983,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 18,
     attack: 2,
     speed: 2,
-    tameLevel: 1,
     tameChance: 0.1,
     diet: ['nuts', 'acorn', 'honey', 'apple'],
     baitHint: 'nuts or honey',
@@ -3026,7 +3011,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 12,
     attack: 1,
     speed: 2.4,
-    tameLevel: 1,
     tameChance: 0.12,
     diet: ['honey', 'blueberry', 'strawberry', 'raspberry'],
     baitHint: 'honey or berries',
@@ -3056,7 +3040,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 22,
     attack: 3,
     speed: 1.8,
-    tameLevel: 1,
     tameChance: 0.11,
     diet: ['mixed_grass', 'carrot', 'cabbage', 'potato'],
     baitHint: 'grass or a vegetable',
@@ -3086,7 +3069,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 24,
     attack: 3,
     speed: 1.8,
-    tameLevel: 14,
     tameChance: 0.11,
     diet: ['nuts', 'apple', 'carrot', 'bread'],
     baitHint: 'nuts or an apple',
@@ -3116,7 +3098,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 28,
     attack: 3,
     speed: 1.8,
-    tameLevel: 16,
     tameChance: 0.1,
     diet: ['carrot', 'potato', 'cabbage', 'mixed_grass'],
     baitHint: 'a vegetable or grass',
@@ -3145,7 +3126,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 20,
     attack: 2,
     speed: 1.8,
-    tameLevel: 8,
     tameChance: 0.13,
     diet: ['mixed_grass', 'carrot', 'cabbage', 'reed'],
     baitHint: 'grass or a vegetable',
@@ -3174,7 +3154,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 18,
     attack: 3,
     speed: 1.8,
-    tameLevel: 20,
     tameChance: 0.09,
     diet: ['nuts', 'blueberry', 'apple', 'meat'],
     baitHint: 'nuts or a berry',
@@ -3203,7 +3182,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 16,
     attack: 1,
     speed: 1.8,
-    tameLevel: 18,
     tameChance: 0.1,
     diet: ['reed', 'mixed_grass', 'apple', 'cabbage'],
     baitHint: 'reeds or grass',
@@ -3232,7 +3210,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 18,
     attack: 2,
     speed: 2,
-    tameLevel: 20,
     tameChance: 0.09,
     diet: ['worm', 'honey', 'peach', 'apricot'],
     baitHint: 'worms, honey, peaches or apricots',
@@ -3264,7 +3241,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 22,
     attack: 2,
     speed: 1.8,
-    tameLevel: 24,
     tameChance: 0.08,
     diet: ['honey', 'apple', 'nuts', 'blueberry'],
     baitHint: 'honey or an apple',
@@ -3294,7 +3270,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 22,
     attack: 2,
     speed: 1.8,
-    tameLevel: 1,
     tameChance: 0.14,
     diet: ['mixed_grass', 'reed', 'carrot', 'cabbage'],
     baitHint: 'grass or reeds',
@@ -3321,7 +3296,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 44,
     attack: 9,
     speed: 1.6,
-    tameLevel: 28,
     tameChance: 0.06,
     diet: ['meat', 'cooked_meat', 'potato'],
     baitHint: 'meat or a potato',
@@ -3353,7 +3327,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 24,
     attack: 6,
     speed: 2.0,
-    tameLevel: 26,
     tameChance: 0.07,
     diet: ['meat', 'cooked_meat', 'perch'],
     baitHint: 'meat or a fish',
@@ -3386,7 +3359,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 30,
     attack: 8,
     speed: 1.9,
-    tameLevel: 24,
     tameChance: 0.07,
     diet: ['meat', 'cooked_meat', 'nuts'],
     baitHint: 'meat or nuts',
@@ -3416,7 +3388,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 60,
     attack: 2,
     speed: 1.9,
-    tameLevel: 6,
     tameChance: 0.12,
     diet: ['apple', 'carrot', 'bread', 'nuts'],
     baitHint: 'an apple or bread',
@@ -3448,7 +3419,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 30,
     attack: 8,
     speed: 2.3,
-    tameLevel: 24,
     tameChance: 0.07,
     diet: ['meat', 'cooked_meat'],
     baitHint: 'meat',
@@ -3482,7 +3452,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 40,
     attack: 9,
     speed: 1.7,
-    tameLevel: 28,
     tameChance: 0.06,
     diet: ['meat', 'potato'],
     baitHint: 'meat or a potato',
@@ -3514,7 +3483,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 32,
     attack: 7,
     speed: 2.1,
-    tameLevel: 30,
     tameChance: 0.06,
     diet: ['meat', 'cooked_meat'],
     baitHint: 'meat',
@@ -3546,7 +3514,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 30,
     attack: 7,
     speed: 1.9,
-    tameLevel: 30,
     tameChance: 0.06,
     diet: ['meat', 'cooked_meat'],
     baitHint: 'meat',
@@ -3578,7 +3545,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 32,
     attack: 7,
     speed: 1.9,
-    tameLevel: 28,
     tameChance: 0.06,
     diet: ['meat', 'cooked_meat'],
     baitHint: 'meat',
@@ -3610,7 +3576,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 30,
     attack: 5,
     speed: 1.8,
-    tameLevel: 1,
     tameChance: 0.07,
     diet: ['meat', 'perch'],
     baitHint: 'meat or a fish',
@@ -3640,7 +3605,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 46,
     attack: 6,
     speed: 1.5,
-    tameLevel: 26,
     tameChance: 0.07,
     diet: ['meat', 'potato', 'carrot'],
     baitHint: 'meat or a vegetable',
@@ -3674,7 +3638,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 28,
     attack: 6,
     speed: 2.0,
-    tameLevel: 28,
     tameChance: 0.06,
     diet: ['meat', 'cooked_meat'],
     baitHint: 'meat',
@@ -3705,7 +3668,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 28,
     attack: 5,
     speed: 2.0,
-    tameLevel: 28,
     tameChance: 0.06,
     diet: ['apple', 'nuts', 'acorn'],
     baitHint: 'an apple or nuts',
@@ -3742,7 +3704,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 52,
     attack: 4,
     speed: 1.5,
-    tameLevel: 28,
     tameChance: 0.06,
     diet: ['honey', 'nuts', 'apple'],
     baitHint: 'honey or nuts',
@@ -3781,7 +3742,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     attack: 6,
     speed: 1.5,
     // Asked: "Reduce taming level requirements for bura to 1" (was 22).
-    tameLevel: 1,
     tameChance: 0.09,
     diet: ['mixed_grass', 'wheat', 'corn', 'carrot'],
     baitHint: 'grass or grain',
@@ -3817,7 +3777,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 40,
     attack: 6,
     speed: 2.2,
-    tameLevel: 1,
     tameChance: 0.07,
     diet: ['meat', 'reed', 'nuts'],
     baitHint: 'meat or reeds',
@@ -3854,7 +3813,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     attack: 6,
     // On land, under a rider or not, half a walker's pace (`SPRINGLET_LAND`); in water a Thistlekit's (`swimSpeed`, set below).
     speed: SPRINGLET_LAND * BASE_SPEED,
-    tameLevel: 40,
     tameChance: 0.05,
     // Every fish a line brings up, raw, and cooked fish.
     diet: [...FISH.map((f) => f.id), 'cooked_fish'],
@@ -3890,7 +3848,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 30,
     attack: 5,
     speed: 1.9,
-    tameLevel: 30,
     tameChance: 0.08,
     diet: ['meat', 'nuts', 'acorn'],
     baitHint: 'meat or nuts',
@@ -3925,7 +3882,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 26,
     attack: 4,
     speed: 1.9,
-    tameLevel: 12,
     tameChance: 0.11,
     diet: ['wheat', 'corn', 'nuts', 'acorn'],
     baitHint: 'grain or nuts',
@@ -3960,7 +3916,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 48,
     attack: 4,
     speed: 1.2,
-    tameLevel: 14,
     tameChance: 0.12,
     diet: ['mixed_grass', 'cabbage', 'carrot', 'wheat'],
     baitHint: 'grass, grain or a root',
@@ -3991,7 +3946,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 12,
     attack: 3,
     speed: 2.4,
-    tameLevel: 1,
     tameChance: 0.1,
     diet: ['blueberry', 'raspberry', 'strawberry', 'honey'],
     baitHint: 'berries or honey',
@@ -4023,7 +3977,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     health: 24,
     attack: 4,
     speed: 1.6,
-    tameLevel: 50,
     tameChance: 0.05,
     diet: ['meat', 'nuts', 'gland', 'cooked_meat'],
     baitHint: 'meat or nuts',
@@ -4172,7 +4125,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     glow: 5,
     defaultStance: 'aggressive',
   },
-};
+});
 // Asked for: a Springlet "operates same speed as a hare mount when swimming in water": in water, a Thistlekit's pace.
 SPECIES.springlet.swimSpeed = SPECIES.orse.speed;
 
@@ -4230,6 +4183,9 @@ function hybridSpecies(h: HybridCross): SpeciesDef {
   return def;
 }
 for (const h of HYBRIDS) SPECIES[h.id] = hybridSpecies(h);
+// The taming gates say a kind by its name (`nameGates`).
+nameGates('tame', (id) => SPECIES[id]?.name);
+for (const id of Object.keys(TAME_GATE)) if (!SPECIES[id] || SPECIES[id].monster || SPECIES[id].hybrid) throw new Error(`${id}: a taming gate on no tameable kind`);
 // Every kind's health and attack as the game uses them, over the figures written in its row (`CREATURE_HEALTH_MUL`,
 // `CREATURE_ATTACK_MUL`), once and before anything else reads them:
 // a hybrid's row is its parents' rows as written (`hybridSpecies`), so it is scaled here once, like theirs.
@@ -6848,6 +6804,29 @@ export class Creatures {
     return best ? { why: 'gate', n: best.d, what: [best.kind, best.id] } : null;
   }
 
+  /**
+   * Why a quarrier with no face to cut in `range` of its ground is idle, past "no bare rock to cut": a plain face whose
+   * stone's gate (`STONE_GATE`) is over its own level, the lowest gate then the nearest, as `gateIdle` says a tree. The
+   * faces asked are those `gatherable('quarry')` would take but for the gate. The island's `stone_idle`.
+   */
+  private stoneIdle(game: Game, c: Creature, site: { x: number; y: number }, range: number): { why: IdleWhy; n: number; what?: string[] } | null {
+    const w = game.world;
+    const skill = taskSkill(c, this.species(c));
+    let best: { level: number; d: number; id: string } | null = null;
+    for (let dy = -range; dy <= range; dy++) {
+      for (let dx = -range; dx <= range; dx++) {
+        const x = site.x + dx, y = site.y + dy;
+        if (!w.inBounds(x, y) || !STONE_FACES.has(w.getTile(x, y)) || this.claimed(x, y, c)) continue;
+        if (c.mode === 'deed' && !game.workerGround(x, y)) continue;
+        const gate = quarryGate(w, x, y);
+        if (gateOpen(gate, skill) || w.rockHeight(x, y) <= -MINE_DEPTH || !this.reachableFace(game, x, y)) continue;
+        const d = Math.max(Math.abs(dx), Math.abs(dy));
+        if (!best || gate!.level < best.level || (gate!.level === best.level && d < best.d)) best = { level: gate!.level, d, id: gate!.id };
+      }
+    }
+    return best ? { why: 'gate', n: best.d, what: ['stone', best.id] } : null;
+  }
+
   /** The nearest tile to (x, y) a creature may walk, `reach` tiles off at most, ring by ring, rows from the north; or null. */
   nearestOk(game: Game, x: number, y: number, reach: number): [number, number] | null {
     for (let r = 1; r <= reach; r++) {
@@ -7588,6 +7567,8 @@ export class Creatures {
       // Bare stone with no metal in it, snow over it or not, and one cutter to a face.
       const rock = bedrockAt(game.world, x, y);
       if (!STONE_FACES.has(game.world.getTile(x, y)) || isSeam(rock)) return false;
+      // And only a stone its own level, its task skill, may quarry (`STONE_GATE`; the island's `worker_gatherable`).
+      if (c && !gateOpen(quarryGate(game.world, x, y), taskSkill(c, this.species(c)))) return false;
       return game.world.rockHeight(x, y) > -MINE_DEPTH && this.reachableFace(game, x, y) && !this.claimed(x, y, c);
     }
     if (kind === 'peat') {
@@ -7979,6 +7960,8 @@ export class Creatures {
     const w = game.world;
     const rock = bedrockAt(w, c.workX, c.workY);
     if (!STONE_FACES.has(w.getTile(c.workX, c.workY)) || isSeam(rock)) return null;
+    // Never a stone over its own level, however it came to be at one (`STONE_GATE`; the island's `worker_do`).
+    if (!gateOpen(quarryGate(w, c.workX, c.workY), taskSkill(c, this.species(c)))) return null;
     const skill = c.skills[GATHER_SKILL.quarry] ?? 1;
     this.gainSkill(game, c, GATHER_SKILL.quarry, 0.225);
     const ql = Math.min(100, Math.max(1, skill * (0.6 + game.rand() * 0.8) + 1));
@@ -11039,7 +11022,10 @@ export class Creatures {
       // A miner says what is wrong with the bare rock it has (`mineIdle`).
       // And a feller or a sprout picker what is wrong with the trees it has (`gateIdle`).
       const mine = kind === 'mine' ? this.mineIdle(game, c, deed, range) : kind === 'woodcut' || kind === 'sprout' ? this.gateIdle(game, c, deed, range, kind) : null;
-      if (mine) this.why(c, mine.why, mine.n, mine.what);
+      // And a quarrier what is wrong with the faces it has (`stoneIdle`).
+      const stone = kind === 'quarry' ? this.stoneIdle(game, c, deed, range) : null;
+      const said = mine ?? stone;
+      if (said) this.why(c, said.why, said.n, said.what);
       else this.why(c, 'range', range);
     }
     // Nothing to do right now: potter about near the token.

@@ -150,10 +150,12 @@ How a level is chosen, in order:
 
 | Gate | Moves to | Numbers |
 | --- | --- | --- |
-| Seams by mining | `skill_gate('seam', yield)`, emitted from `ROCK_VARIANTS[].level`; `rock_def.level` read from it | Kept: already 1, 5, 10, 20 … 90 |
+| Seams by mining | `skill_gate('seam', yield)` (`SEAM_GATE`; `ROCK_VARIANTS` holds no level now); `rock_def.level` emitted from it; `terrain_refusal` → `face_gate_refusal`, browser `faceGateRefusal` | Kept: already 1, 5, 10, 20 … 90. Built |
 | Miner workers | `worker_gatherable` → `worker_gate_open`; `mine_idle` → `gate_idle`; `seam` → `gate` | Kept |
-| Taming | `skill_gate('tame', species)` the kind's base; +15 per stage stays as a modifier; words become "Wolf: needs taming 25; have 12.3." | Base kept, off the ladder (6, 8, 12 …), decided; batch B |
-| Fish | `skill_gate('fish', id)`; still a pool filter (a gated fish is not caught), and the Unlocks list names them | Kept, off the ladder (15, 35, 45), decided; batch B |
+| Taming | `skill_gate('tame', species)` (`TAME_GATE`) the kind's base; +15 per stage (`TAME_STAGE_GATE`) on top; words "Logchewer: needs taming 16; have 1.0." by the stage's name (`tameRefusal`, `tame_gate_refusal`), for Tame and Take catch | Base kept, off the ladder (`KEPT_OFF_LADDER`). Built |
+| Fish | `skill_gate('fish', id)` (`FISH_GATE`); still a pool filter (a gated fish is not caught), and the Unlocks list names them | Kept, off the ladder. Built |
+| Veins by prospecting | `skill_gate('vein', yield)`, each seam's mining level: every vein in reach is marked and glows; one over your prospecting is "Unidentified metal" in Prospect's lines, a find told to you, the tile's reading and name, with "5 prospecting required to identify this vein." (`seenVein`/`veinTip`, `seen_vein`/`vein_tip`), per viewer | Built |
+| Stone faces by mining | `skill_gate('stone', yield)` (`STONE_GATE`): Mine and Chip corner on a bare face; a quarrier's work at its task skill (`quarryGate`/`stone_gate`), idle `gate` naming the stone (`stoneIdle`/`stone_idle`) | Rock 1, sandstone 10, slate 20, marble 30. Built |
 | Storeys, foundation depth | Stay their own rules: a level per storey or per metre is a scale, not a thing | — |
 | Perk, class, path, faith tiers; trade book; trait reading | Stay: choices and readings, not things refused | — |
 
@@ -288,16 +290,14 @@ Writing a scroll:
 
 | Small cart (pulled by hand) | Large cart | Wagon |
 | --- | --- | --- |
-| open | open (decided: a small cart gives no driving, so nothing could earn a gate on it) | **driving 30** (A) |
-
-The wagon's gate is in the table (`VEHICLE_GATE`, `skill_gate('vehicle', 'wagon')`); batch B wires it.
+| open | open (a small cart teaches no driving, so the large cart is where it is learned) | **driving 30** (A) |
 
 | Rowing boat | Sailing boat | Caravel |
 | --- | --- | --- |
 | sailing 1 | sailing 20 | sailing 50 |
 
 Stops taking the reins or the helm (`board_vehicle`); boarding as a passenger stays open. Wildermon pull, they do not
-drive: no worker gate.
+drive: no worker gate. Built (`helmGate`, `helm_gate_refusal`).
 
 ### Every other skill (S)
 
@@ -349,6 +349,20 @@ drive: no worker gate.
   Unlocks, the help's Skill gates, the Path's tree step (the trees your woodcutting fells).
 * Test: `supabase/test/skillgates.ts`.
 
+### Second set (built): wagons, boats, stone; seams, taming, fish moved; veins
+
+* `skillgates.ts`: `SEAM_GATE`, `VEIN_GATE`, `STONE_GATE`, `TAME_GATE` and `TAME_STAGE_GATE`, `FISH_GATE`,
+  `VEHICLE_GATE`, `BOAT_GATE`; `KEPT_OFF_LADDER` (tame, fish); `rockGate`, `helmGate`, `seenVein`, `veinTip`,
+  `UNIDENTIFIED_METAL`; `nameGates` (a kind, a fish and a piece are named by the module holding them, so this one stays
+  a leaf). `ROCK_VARIANTS`, `SPECIES` and `FISH` read their levels from it.
+* Island (`20261120000069_skill_gates_b.sql`): `helm_gate_refusal` (in `ride_refusal`), `face_gate_refusal` (in
+  `terrain_refusal`), `stone_gate`, `stone_idle`; `tame_needs` reads the gate; `tame_gate_refusal` (in
+  `creature_refusal`, `trap_refusal`); `seen_vein`, `vein_tip` (in `perform_ground`'s Prospect, `read_ground`); patched
+  `worker_gatherable` and `worker_do` (quarry), `worker_settle` (`stone_idle`).
+* Browser: `board_vehicle`, `mine`/`chip_corner` (`faceGateRefusal`), `tame` and `take_catch` (`tameRefusal`),
+  `gatherable('quarry')`, `finishQuarry`, `stoneIdle`; Prospect, `readGround`, `groundReading`/`groundTip`, `tileSeen`.
+* Test: `supabase/test/skillgates-b.ts`.
+
 ## 10. Open questions
 
 1. Trees between birch 1 and willow 90: oak and maple moved down a step each (5, 10) and the rest kept by their wood
@@ -357,6 +371,10 @@ drive: no worker gate.
    Count only those?
 3. A farmer or a planter tender with only seed over its level in the stores says "nothing to sow"; name the gate
    instead ("Idle: Wemp seeds need farming 30 (yours 1.0)" would name an unidentified thing to a keeper under 30)?
+4. Mining a vein you cannot identify still names it in its refusal ("Iron vein: needs mining 5; have 2.3."), as asked
+   ("mining is unchanged"). Say "Unidentified metal" there too, under the prospecting gate?
+5. A cellar dug into marble or slate bedrock gives up its shards without the quarry gate (Mine out the cellar keeps only
+   the seam gate). Gate it too?
 
 ## 11. Unidentified items
 

@@ -94,7 +94,7 @@ begin
   elsif p_kind = 'quarry' then
     rock := bedrock_at(p_world, p_x, p_y);
     return here in (tile_id('Rock'), tile_id('Snow')) and not rock.seam and rock_height(p_world, p_x, p_y) > -mine_depth()
-       and face_reach(p_world, p_x, p_y);
+       and face_reach(p_world, p_x, p_y) and worker_gate_open(c, stone_gate(p_world, p_x, p_y));
   elsif p_kind in ('sand', 'clay') then
     -- Collected off the top, as the player's Collect: no timer on the bed.
     return here = tile_id(case p_kind when 'sand' then 'Sand' else 'Clay' end)

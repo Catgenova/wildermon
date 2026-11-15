@@ -8,7 +8,7 @@ import type { Game } from '../game/game';
 import { EMOTES } from '../game/emotes';
 import type { Pick, Renderer } from '../render/renderer';
 import { TileType, TREE_DEFS, treeAge, treeSpecies, SLAB_BY_ITEM } from '../world/tiles';
-import { ACTION_BY_ID, type ActionDef, type Target, deedAcrossAt, foundingPreview, fruitSprout, SPOIL_ORDER, SPOIL_TILE } from '../game/actions';
+import { ACTION_BY_ID, type ActionDef, type Target, deedAcrossAt, foundingPreview, fruitSprout, SPOIL_ORDER, SPOIL_TILE, tileSeen } from '../game/actions';
 import { BARTER_REACH, BARTER_SAID } from '../game/barter';
 import { BUILD_ACTION_BY_ID, layingBill, materialName } from '../game/buildActions';
 import {
@@ -1628,7 +1628,7 @@ export class UI {
       // A ripe field says so on its first line, for picking it out of a row of them.
       lines.push(`${cropDef(growing.id).name} field${cropReady(growing) ? ' · ripe' : ''}`);
     } else {
-      lines.push(w.tileName(pick.x, pick.y));
+      lines.push(tileSeen(this.game, pick.x, pick.y));
     }
     if (!aloft) {
       if (growing) lines.push(this.cropLine(growing));
@@ -1828,7 +1828,7 @@ export class UI {
    */
   private groundEntries(pick: Pick, go: (ground: Pick) => void): MenuItem[] {
     if (pick.ground === undefined) return [];
-    const named = (p: Pick): string => `${this.game.world.tileName(p.x, p.y)} (${p.x}, ${p.y})`;
+    const named = (p: Pick): string => `${tileSeen(this.game, p.x, p.y)} (${p.x}, ${p.y})`;
     // On a pinned storey, its floor under it (`storeyview.ts`).
     const under: Pick = { x: pick.x, y: pick.y, wx: pick.wx, wy: pick.wy, cx: pick.cx, cy: pick.cy, ...(pick.level !== undefined ? { level: pick.level } : {}) };
     const out: MenuItem[] = [{ label: 'Ground under it', note: named(under), onSelect: () => go(under) }];
@@ -2223,7 +2223,7 @@ export class UI {
         children: hangable.map(({ def }) => ({ label: def.label, children: pinEntry(this.game, { action: def.id }).children })),
       });
     }
-    const title = building ? `${building.name} (${pick.x}, ${pick.y})` : `${this.game.world.tileName(pick.x, pick.y)} (${pick.x}, ${pick.y})`;
+    const title = building ? `${building.name} (${pick.x}, ${pick.y})` : `${tileSeen(this.game, pick.x, pick.y)} (${pick.x}, ${pick.y})`;
     /*
      * What is true of the ground, above the list of what can be done to it.
      *

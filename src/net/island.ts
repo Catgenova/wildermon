@@ -2083,6 +2083,14 @@ export class Island {
    * far tile in the part of the history that was let go of is in no history
    * anybody could replay now.
    */
+  /**
+   * The land read again because what it may show you has changed: a prospecting gate crossed, so a vein sent as
+   * unidentified (`UNIDENTIFIED_ROCK`) is sent named now.
+   */
+  rereadLand(): void {
+    void this.readLandAgain().catch(() => undefined);
+  }
+
   private async readLandAgain(): Promise<void> {
     const you = this.me;
     if (!you) return;

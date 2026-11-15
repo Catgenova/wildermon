@@ -6,7 +6,7 @@ CREATE OR REPLACE FUNCTION public.land_announce(p_world uuid, p_x integer, p_y i
 AS $function$
   insert into tile_change (world_id, x, y, region, tile, data, corners, soil)
   values (p_world, p_x, p_y, region_of(p_x, p_y),
-          land_tile(p_world, p_x, p_y), land_data(p_world, p_x, p_y),
+          land_tile(p_world, p_x, p_y), rock_data_sent(land_tile(p_world, p_x, p_y), land_data(p_world, p_x, p_y)),
           array[land_height(p_world, p_x, p_y), land_height(p_world, p_x + 1, p_y),
                 land_height(p_world, p_x + 1, p_y + 1), land_height(p_world, p_x, p_y + 1)],
           array[land_dirt(p_world, p_x, p_y), land_dirt(p_world, p_x + 1, p_y),

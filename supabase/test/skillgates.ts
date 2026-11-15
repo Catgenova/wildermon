@@ -34,7 +34,7 @@ import { idleSays } from '../../src/game/workerlog';
 import { creatureLines } from '../../src/ui/creatureinfo';
 import { itemCard } from '../../src/ui/compare';
 import {
-  cropSeed, CROP_GATE, GATE_LADDER, GATED_ITEMS, gateOf, identifySaid, itemGateRefusal, seenName, skillGateRefusal, nextUnlockSaid,
+  cropSeed, CROP_GATE, GATE_LADDER, GATED_ITEMS, gateOf, identifySaid, itemGateRefusal, KEPT_OFF_LADDER, seenName, skillGateRefusal, nextUnlockSaid,
   SKILL_GATES, unlocksOf, workerGateOpen, workerItemOpen,
 } from '../../src/game/skillgates';
 import { packTreeData, TileType, TREE_AGES, TREE_DEFS } from '../../src/world/tiles';
@@ -257,7 +257,7 @@ const said = (k: string): string => isle.get(k) ?? '';
   check('the crops as asked: onion, carrot, potato 1; cabbage, wheat 5; corn, thyme 10; cotton, mint, sage 20; wemp, basil 30; rosemary 40',
     Object.entries(asked).every(([id, n]) => gateOf('crop', id)?.level === n && gateOf('crop', id)?.skill === 'farming') && Object.keys(CROP_GATE).length === 13);
   check('a wagon at driving 30, a large cart open', gateOf('vehicle', 'wagon')?.level === 30 && gateOf('vehicle', 'wagon')?.skill === 'driving' && !gateOf('vehicle', 'large_cart'));
-  check(`every gate on the ladder (${GATE_LADDER.join(', ')})`, SKILL_GATES.every((g) => (GATE_LADDER as readonly number[]).includes(g.level)));
+  check(`every gate on the ladder (${GATE_LADDER.join(', ')})`, SKILL_GATES.every((g) => KEPT_OFF_LADDER.has(g.kind) || (GATE_LADDER as readonly number[]).includes(g.level)));
 }
 
 /* ---- you ------------------------------------------------------------------- */

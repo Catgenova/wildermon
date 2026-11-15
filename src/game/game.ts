@@ -97,6 +97,7 @@ import { jewelGain } from './gems';
 import { earnedBy, knackBonus, knackChance, knackLands, KNACK_CAP, TITLE_BY_ID } from './titles';
 import { TileIndex, Tally, keyX, keyY, tileKey } from './tileindex';
 import { DARK_HIT, NIGHT_EYES_FROM, SOUL_PER_LEVEL, WORK_HAND, WORK_WIND, WORK_WIND_SPENT, HEAVY_SKILLS, WORK_BACK } from './learn';
+import { seenVein } from './skillgates';
 import { DRIVING, DRIVING_LEARN, drivingPace, SAILING, SAILING_LEARN, sailingPace, vehicleQlPace } from './travel';
 import { isLayUp, LEAD_PACE, ROPE_WALK, ROPE_WALK_TIME, ROPEMAKING, ropePerLayUp, ropeTime } from './ropework';
 import { laySwirls, swirlLight, type MoteElement, type Swirl } from './motes';
@@ -8667,7 +8668,8 @@ export class Game {
         const ore = oreAt(this.world, tx, ty);
         if (!ore) continue;
         found.push(ty * this.world.w + tx);
-        names.add(ore.name.toLowerCase());
+        // Named by your prospecting, not the finder's (`seenVein`).
+        names.add(seenVein(ore, this).toLowerCase());
       }
     }
     if (!found.length) return;

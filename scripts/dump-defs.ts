@@ -18,7 +18,7 @@ import { EARLY_SKILL_BELOW, EARLY_SKILL_MUL, GAIN_RATE, PAST_TOP, SKILL_DEFS, SK
 import { MATERIALS } from '../src/game/materials';
 import { ACTIONS } from '../src/game/actions';
 import { RECIPES } from '../src/game/recipes';
-import { GATED_ITEMS, SKILL_GATES } from '../src/game/skillgates';
+import { GATED_ITEMS, rockGate, SKILL_GATES } from '../src/game/skillgates';
 import { FURNITURE } from '../src/game/furniture';
 import { FORAGE_TABLE, BOTANIZE_TABLE, BOTANIZE_WATER_TABLE, COIN_FIND_ONE_IN, COIN_FINDS_A_DAY, EMPTY_CHANCE, FIND_CHECK, PER_ROLL } from '../src/game/forage';
 import { STONES_DEPTH, STONES_SLABS } from '../src/game/watergarden';
@@ -1052,7 +1052,7 @@ out.push(`alter table bauble_ancient enable row level security;`);
  *
  * The index is the storage, not the ladder — a tile's rock is written down as
  * a number, so this list may only ever be appended to. `level` is the ladder:
- * what mining a seam takes.
+ * what mining it takes, its seam's or its plain face's gate (`skill_gate`).
  */
 out.push(`create table if not exists rock_def (
   id int primary key, name text not null, yields text not null,
@@ -2596,7 +2596,7 @@ for (const [id, table] of [['forage', FORAGE_TABLE], ['botanize', BOTANIZE_TABLE
 }
 ROCK_VARIANTS.forEach((r, i) => {
   const rock = r as unknown as A;
-  out.push(`insert into rock_def values (${q(i)}, ${q(rock.name)}, ${q(rock.yields)}, ${q(rock.level ?? 1)}, `
+  out.push(`insert into rock_def values (${q(i)}, ${q(rock.name)}, ${q(rock.yields)}, ${q(rockGate(r)?.level ?? 1)}, `
     + `${q(String(rock.yields).endsWith('_ore'))}, ${q(isSeam(rock))});`);
 });
 for (const f of FURNITURE as unknown as A[]) {

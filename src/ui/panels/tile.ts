@@ -3,7 +3,7 @@ import type { Pick } from '../../render/renderer';
 import { buildMenuRows, type MenuItem } from '../contextmenu';
 import { creatureSkills } from '../creatureinfo';
 import { Repaint } from '../repaint';
-import { groundReading, tileUses, yieldLines } from '../tileinfo';
+import { groundReading, groundTip, tileUses, yieldLines } from '../tileinfo';
 import type { Tooltip } from '../tooltip';
 import type { UIWindow } from '../windows';
 import { kit, kitBody, kitEmpty, made } from '../kit';
@@ -197,9 +197,13 @@ export class TilePanel {
     this.info.hidden = false;
     this.reading = groundReading(this.game, this.pick.x, this.pick.y);
     this.yields = yieldLines(this.game, this.pick.x, this.pick.y).join('\u0001');
+    // A vein over your prospecting reads "Unidentified metal", and says what would name it on hover (`groundTip`).
+    const tip = groundTip(this.game, this.pick.x, this.pick.y);
+    this.titleEl.title = tip ?? '';
     this.factsEl.replaceChildren(...(facts ?? []).map((fact) => {
       const line = document.createElement('div');
       line.textContent = fact;
+      if (tip && fact === this.reading) line.title = tip;
       return line;
     }));
     this.factsEl.hidden = !facts?.length;

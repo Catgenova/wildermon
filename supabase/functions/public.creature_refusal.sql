@@ -51,8 +51,8 @@ begin
       return d.name || ': cannot be tamed.';
     end if;
     if c.mode <> 'wild' then return c.name || ' is already yours.'; end if;
-    if skill_of(p_world, p_uid, 'taming') < (tame_needs(c)).level then
-      return 'Need taming ' || to_char((tame_needs(c)).level, 'FM990.#') || '.';
+    if tame_gate_refusal(c, skill_of(p_world, p_uid, 'taming')) is not null then
+      return tame_gate_refusal(c, skill_of(p_world, p_uid, 'taming'));
     end if;
     if bait_in_pack(p_world, p_uid, c.species, pk(p_world, p_uid, 'bait:any', 0) > 0) is null then
       return 'Need an offering: ' || diet_text(c.species) || '.';

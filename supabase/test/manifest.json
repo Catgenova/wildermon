@@ -1978,6 +1978,12 @@
     "why": "Asked for: trees gated by woodcutting (birch 1, willow 90), sprouts by forestry, sowing by farming per crop, a worker checking a gate's own skill at its own level, and \"items picked up that you cant use yet show as unidentified\". The island's skill_gate and skill_gate_item are the browser's tables; felling, picking and planting sprouts and sowing refused in the same words on both sides under the level and allowed at it; harvest open; a crate of wemp seeds named \"Unidentified seed\" at farming 20 and \"Wemp seeds\" at 40, the tooltip \"30 farming required to identify this seed.\", and picked up in those words; fellers, sprout pickers, farmers and a hod carrier read gates at their own level in the gate's skill; the Unlocks lists are the table."
   },
   {
+    "file": "supabase/test/skillgates-b.ts",
+    "title": "Skill gates: wagons, boats, quarried stone; seams, taming and fish on the one rule; veins named by prospecting",
+    "shard": 5,
+    "why": "Asked for: \"Gate using wagons until driving level 30. Gate boat type use by sailing level\", the gates already there on the one rule with their numbers kept (\"6 8 12 etc\"), quarried stone by mining, and veins over your prospecting \"Unidentified metal\". Every seam, kind and fish at the level it had, against the old numbers; a wagon at driving 29 refused at the reins in the same words on both sides and allowed at 30, a large cart open at 0, a passenger aboard at sailing 1; each boat at its sailing level; an iron vein and a marble face in the one rule's words; a Sapgnaw and a Logchewer refused by their stage's name; a Chiptail under marble's gate skips it and says why; copper named and iron unidentified at prospecting 1, named at 5, per viewer; the Unlocks lists."
+  },
+  {
     "file": "supabase/test/aroundbehind.ts",
     "title": "A worker round you left behind comes to you",
     "shard": 6,
