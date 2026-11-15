@@ -243,11 +243,13 @@ begin
   perform pg_temp.nodice();
   insert into said values ('POND:botanized', (${count('lotus_seed')} > 0)::text || '|' || (${count('wemp_seed')} > 0)::text);
   ${at(20, 20)}
-  delete from item where world_id = w and holder_uid = u and def in ('lotus_seed', 'wemp_seed');
+  delete from item where world_id = w and holder_uid = u and (def in ('lotus_seed', 'wemp_seed') or def = roll_table('botanize', 0.5));
   perform pg_temp.dice('0.5,0.5,0.7');
   ${act('botanize', "jsonb_build_object('kind', 'tile', 'x', 20, 'y', 20)")}
   perform pg_temp.nodice();
-  insert into said values ('POND:inland', (${count('lotus_seed')} > 0)::text || '|' || (${count('wemp_seed')} > 0)::text);
+  -- The plain table's find for the pinned roll, whatever is in season today (fruits_now).
+  insert into said values ('POND:inland', (${count('lotus_seed')} > 0)::text || '|' || (coalesce((select sum(i.count) from item i
+    where i.world_id = w and i.holder_uid = u and i.holder = 'player' and i.def = roll_table('botanize', 0.5)), 0) > 0)::text);
   v_g := rpc_ground(w, 40, false);
   insert into said values ('GROUND_POND', v_g::text);
   insert into said values ('POND:id', v_pond::text);
@@ -479,7 +481,7 @@ is('POND:planted', `${adornDone('lily', { held: POND_LILIES, of: POND_LILIES })}
 is('POND:full', ADORN_SAID.pondFull, 'and no more');
 is('POND:near', 'true|true|false', 'by a pond, on its tile or beside it, is the water\'s edge; two tiles off not');
 is('POND:botanized', 'true|false', 'botanizing beside a pond rolls the water\'s-edge table: a roll of 0.7 a lotus seed');
-is('POND:inland', 'false|true', 'and away from it the plain one: the same roll a wemp seed');
+is('POND:inland', 'false|true', "and away from it the plain one: the same roll the plain table's find");
 /* 2. */
 is('PANEL:nowall', MOUNT_SAID.noWall, 'a panel on a wall only');
 is('PANEL:paneled', 'true|false', 'hung on its wall, and not the next');
