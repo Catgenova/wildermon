@@ -36,7 +36,7 @@ const EARTH = toneOf('#866650', '#4a3844');
 const X = 9.2, Y = 4, FEET = 0.6, H = 4.4, T = 0.6, SOIL = H - 0.25;
 
 /** Weeds in a planter still to tend: along its walls, either side of the row. */
-const WEEDS: V3[] = [[-6.6, -2.3, SOIL], [-2.4, 2.4, SOIL], [1.2, -2.4, SOIL], [4.6, 2.3, SOIL], [7, -2.2, SOIL], [-7.4, 2.2, SOIL]];
+const WEEDS: V3[] = [[-6.6, -1.9, SOIL], [-2.4, 2, SOIL], [1.2, -2, SOIL], [4.6, 1.9, SOIL], [7, -1.8, SOIL], [-7.4, 1.8, SOIL]];
 
 /**
  * The earth's top: crumbs darker and paler, the marks of a rake along it; sown,
@@ -127,7 +127,7 @@ function planterOf(look: KitLook): KitModel {
   const weeds = has && has.stage < RIPE && !has.tended ? WEEDS : [];
   if (has && (has.stage > 0 || weeds.length)) {
     const [leaf, fruit] = has.crop.colors;
-    const at: V3[] = Array.from({ length: ROW }, (_, i) => [-X + T + 1.5 + (i * (2 * (X - T) - 3)) / (ROW - 1), ((((i * 37) % 5) - 2) * 0.16), SOIL]);
+    const at: V3[] = Array.from({ length: ROW }, (_, i) => [-X + T + 2 + (i * (2 * (X - T) - 4)) / (ROW - 1), ((((i * 37) % 5) - 2) * 0.16), SOIL]);
     const size = Math.min(PLANT, PLANT_TALL / Math.max(1, planterTall(has.crop.id, has.stage, 1)));
     const tall = has.stage > 0 ? planterTall(has.crop.id, has.stage, size) : 2;
     parts.push({

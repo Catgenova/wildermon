@@ -15,7 +15,8 @@ import { BUSH3D_SPECIES, bush3dSprite, flatBush3d, flatStump3d, flatTree3d, forg
 import { inkOf, READ_BACK } from './ink';
 import { woodOf } from './trees3d/stump';
 import type { Season } from '../world/calendar';
-import { cropPlant, DAMP_SOIL, DORMANT_FRUIT, DORMANT_LEAF, DRY_SOIL, fieldBake, WATER_LINE, WEED } from './crops';
+import { cropPlant, DAMP_SOIL, DORMANT_FRUIT, DORMANT_LEAF, DRY_SOIL, fieldBake, ripeShows, WATER_LINE, WEED } from './crops';
+import { BED_RAIL } from './flooring';
 import { RIPE } from '../game/farming';
 import { SACK_EYE, sackModel, sackSize } from './kit/sack';
 import { layKitModel } from './kitpieces';
@@ -1035,6 +1036,12 @@ export function crateSprite(kind: 'log' | 'plank' = 'plank'): Sprite {
   return spr;
 }
 
+/** A flat field's tones, as a solid one's (`fieldBake`): a furrow (plum-brown, not black), a crest's light, a clod and a seed sown, a plant's shade. */
+const FLAT_FURROW = 'rgba(96,70,88,0.42)';
+const FLAT_CREST = 'rgba(255,240,208,0.32)';
+const FLAT_CLOD = '#8a6656';
+const FLAT_SEED = '#ead7a2';
+const FLAT_SHADE = 'rgba(40,62,96,0.16)';
 /** A crop's colours gone over for a winter it is waiting out, drawn flat. */
 const frosted = (c: string, into: string, k: number): string => {
   const a = parseInt(c.slice(1), 16), b = parseInt(into.slice(1), 16);
@@ -1050,10 +1057,10 @@ const frosted = (c: string, into: string, k: number): string => {
  * its furrows. Before ripe, `tended` (`Crop.tendedNow`) darkens and waters its
  * soil, and untended it is pale and weedy.
  */
-export function cropFlatSprite(cropId: string, stage: number, look: string, leaf: string, fruit: string, dormant: boolean, tended: boolean, rect = false): Sprite {
+export function cropFlatSprite(cropId: string, stage: number, look: string, leaf: string, fruit: string, dormant: boolean, tended: boolean, rect = false, bed = false): Sprite {
   // Tended or not shows before ripe, as on a solid field (`fieldBake`): dry and weedy still to tend, dark and watered tended.
   const care = stage >= 0 && stage < RIPE ? (tended ? 2 : 1) : 0;
-  const key = `${SPRITE_SCALE}|cropflat:${cropId}:${stage}${dormant ? ':dormant' : ''}${rect ? ':rect' : ''}:${care}`;
+  const key = `${SPRITE_SCALE}|cropflat:${cropId}:${stage}${dormant ? ':dormant' : ''}${rect ? ':rect' : ''}${bed ? ':bed' : ''}:${care}`;
   let spr = cache.get(key);
   if (spr) return spr;
   if (dormant) {
@@ -1063,7 +1070,9 @@ export function cropFlatSprite(cropId: string, stage: number, look: string, leaf
   const rng = mulberry32(hashString(cropId) + stage * 7919);
   // How far out of the tile centre anything drawn on the field may reach, as a
   // share of the tile. A hair inside the half-tile, so nothing touches the edge.
-  const EDGE = 0.46;
+  // On a garden bed, inside its frame (`BED_RAIL`): its soil and furrows never over the rails.
+  const EDGE = bed ? 0.5 - BED_RAIL - 0.03 : 0.46;
+  const BOX = bed ? Math.min(0.4, EDGE) : 0.4, RUN = bed ? Math.min(0.36, EDGE - 0.02) : 0.36;
   // A tile's worth of furrows, anchored at the tile centre.
   spr = makeSprite(96, 72, 48, 54, (ctx) => {
     const cx = 48;
@@ -1083,7 +1092,7 @@ export function cropFlatSprite(cropId: string, stage: number, look: string, leaf
       ctx.fillStyle = care === 1 ? DRY_SOIL : DAMP_SOIL;
       ctx.beginPath();
       for (const [k, [u, v]] of [[-1, -1], [1, -1], [1, 1], [-1, 1]].entries()) {
-        const [px, py] = iso(u * (rect ? 0.4 : EDGE), v * (rect ? 0.4 : EDGE));
+        const [px, py] = iso(u * (rect ? BOX : EDGE), v * (rect ? BOX : EDGE));
         if (k) ctx.lineTo(px, py); else ctx.moveTo(px, py);
       }
       ctx.closePath();
@@ -1096,12 +1105,12 @@ export function cropFlatSprite(cropId: string, stage: number, look: string, leaf
      * before the corner barely more than a nick. Drawing them all the same
      * length ran them a third of a tile out over the grass on either side.
      */
-    ctx.strokeStyle = 'rgba(70,50,32,0.45)';
+    ctx.strokeStyle = FLAT_FURROW;
     ctx.lineWidth = 2;
     for (let i = -2; i <= 2; i++) {
       // Across a rectangle every furrow is the whole width of it, and no wider: the sides of one are edges, not corners.
       const f = i * (rect ? 0.17 : 0.19);
-      const half = rect ? 0.36 : EDGE - Math.abs(f);
+      const half = rect ? RUN : EDGE - Math.abs(f);
       if (half <= 0.03) continue;
       const [ax, ay] = rect ? iso(-half, f) : iso(f - half, f + half);
       const [bx, by] = rect ? iso(half, f) : iso(f + half, f - half);
@@ -1109,6 +1118,15 @@ export function cropFlatSprite(cropId: string, stage: number, look: string, leaf
       ctx.moveTo(ax, ay);
       ctx.lineTo(bx, by);
       ctx.stroke();
+      // The ridge's crest beside it, catching the light, kept in off the tile's edge.
+      ctx.strokeStyle = FLAT_CREST;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(ax + (bx - ax) * 0.12, ay + (by - ay) * 0.12 - 2.4);
+      ctx.lineTo(ax + (bx - ax) * 0.88, ay + (by - ay) * 0.88 - 2.4);
+      ctx.stroke();
+      ctx.strokeStyle = FLAT_FURROW;
+      ctx.lineWidth = 2;
       if (care === 2 && !dormant) {
         // Tended: water along the furrow.
         ctx.strokeStyle = WATER_LINE;
@@ -1117,18 +1135,18 @@ export function cropFlatSprite(cropId: string, stage: number, look: string, leaf
         ctx.moveTo(ax, ay + 0.6);
         ctx.lineTo(bx, by + 0.6);
         ctx.stroke();
-        ctx.strokeStyle = 'rgba(70,50,32,0.45)';
+        ctx.strokeStyle = FLAT_FURROW;
         ctx.lineWidth = 2;
       }
       // A winter's rime along the middle of the ridge of each furrow.
       if (dormant) {
-        ctx.strokeStyle = 'rgba(236,240,244,0.45)';
+        ctx.strokeStyle = 'rgba(222,232,248,0.5)';
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(ax + (bx - ax) * 0.2, ay + (by - ay) * 0.2 - 1.2);
         ctx.lineTo(ax + (bx - ax) * 0.8, ay + (by - ay) * 0.8 - 1.2);
         ctx.stroke();
-        ctx.strokeStyle = 'rgba(70,50,32,0.45)';
+        ctx.strokeStyle = FLAT_FURROW;
         ctx.lineWidth = 2;
       }
     }
@@ -1137,11 +1155,11 @@ export function cropFlatSprite(cropId: string, stage: number, look: string, leaf
       const wr = mulberry32(hashString(cropId) + 4409);
       for (let i = 0; i < 12; i++) {
         const f = (Math.floor(wr() * 5) - 2) * (rect ? 0.17 : 0.19) + 0.095 * (rect ? 0.9 : 1);
-        const half = rect ? 0.36 : EDGE - Math.abs(f) - 0.04;
-        if (half <= 0.05) continue;
+        const half = rect ? RUN : EDGE - Math.abs(f) - 0.04;
+        if (half <= 0.05 || (bed && Math.abs(f) > EDGE - 0.03)) continue;
         const t = (wr() * 2 - 1) * half;
         const [px, py] = rect ? iso(t, f) : iso(f + t, f - t);
-        for (const [col, lw] of [['rgba(46,40,56,0.5)', 1.8], [dormant ? frosted(WEED, DORMANT_LEAF, 0.55) : WEED, 0.9]] as const) {
+        for (const [col, lw] of [['rgba(92,110,52,0.45)', 1.8], [dormant ? frosted(WEED, DORMANT_LEAF, 0.55) : WEED, 0.9]] as const) {
           ctx.strokeStyle = col;
           ctx.lineWidth = lw;
           for (const d of [-2, -1, 0, 1, 2]) {
@@ -1154,12 +1172,16 @@ export function cropFlatSprite(cropId: string, stage: number, look: string, leaf
       }
     }
     if (stage === 0) {
-      // Sown: only the seed and the disturbed earth show.
-      ctx.fillStyle = 'rgba(58,42,26,0.7)';
+      // Sown: only the seed and the disturbed earth show, a clod of turned earth and a pale seed by it.
       for (let i = 0; i < 14; i++) {
         const [px, py] = iso((rng() - 0.5) * 0.8, (rng() - 0.5) * 0.8);
+        ctx.fillStyle = FLAT_CLOD;
         ctx.beginPath();
         ctx.ellipse(px, py, 1.5, 1, 0, 0, TAU);
+        ctx.fill();
+        ctx.fillStyle = FLAT_SEED;
+        ctx.beginPath();
+        ctx.ellipse(px - 0.5, py - 0.4, 0.7, 0.45, 0, 0, TAU);
         ctx.fill();
       }
       cache.set(key, spr!);
@@ -1169,9 +1191,19 @@ export function cropFlatSprite(cropId: string, stage: number, look: string, leaf
     for (let u = -1; u <= 1; u++) for (let v = -1; v <= 1; v++) plants.push([u * 0.26 + (rng() - 0.5) * 0.08, v * 0.26 + (rng() - 0.5) * 0.08]);
     // Back to front: down the diamond, or down the rectangle.
     plants.sort((a, b) => (rect ? a[1] - b[1] : a[0] + a[1] - (b[0] + b[1])));
+    // Each plant's shade on the soil, down and to the right of its foot, as the key over the viewer's left shoulder throws it: all under every plant.
+    ctx.fillStyle = FLAT_SHADE;
+    ctx.beginPath();
     for (const [u, v] of plants) {
       const [px, py] = iso(u, v);
-      cropPlant(ctx, px, py, look, stage, leaf, fruit, u);
+      ctx.moveTo(px + 1.6 + 4 + stage, py + 0.6);
+      ctx.ellipse(px + 1.6, py + 0.6, 4 + stage, 1.6 + stage * 0.3, 0, 0, TAU);
+    }
+    ctx.fill();
+    const shows = ripeShows(cropId, look, fruit);
+    for (const [u, v] of plants) {
+      const [px, py] = iso(u, v);
+      cropPlant(ctx, px, py, look, stage, leaf, shows, u);
     }
   });
   cache.set(key, spr);
@@ -1193,10 +1225,10 @@ function hashString(s: string): number {
  * `turn` under the sun's `step`, laid out the `layout`th way (`FIELD_LAYOUTS`).
  * `dormant` is a field waiting out a winter,
  * which grows nothing: its green gone dull and a rime on it. `tended`: its
- * stage tended (`Crop.tendedNow`), shown before ripe.
+ * stage tended (`Crop.tendedNow`), shown before ripe. `bed`: on a garden bed, drawn inside its frame.
  */
-export function cropSprite(cropId: string, stage: number, leaf: string, fruit: string, dormant: boolean, tended: boolean, turn: number, step: number, layout = 0): Sprite {
-  return fieldBake(cropId, stage, leaf, fruit, dormant, tended, turn, step, SPRITE_SCALE, layout);
+export function cropSprite(cropId: string, stage: number, leaf: string, fruit: string, dormant: boolean, tended: boolean, turn: number, step: number, layout = 0, bed = false): Sprite {
+  return fieldBake(cropId, stage, leaf, fruit, dormant, tended, turn, step, SPRITE_SCALE, layout, bed);
 }
 
 /** The campfire, in the kit (`kit/campfire.ts`). */

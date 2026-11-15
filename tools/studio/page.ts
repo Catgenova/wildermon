@@ -329,6 +329,20 @@ async function sheet(spec: Spec): Promise<Report> {
   const dayG = draw(fam, a, litO, cz, w, h, fx, fy, true);
   checks.push(...judgeNight(read(dayG.cv.getContext('2d')!.getImageData(0, 0, dayG.cv.width, dayG.cv.height)), nightR, `${a.kind} first view, night`, a.emissive));
   checks.push(judgeBox(dayR, day.declared, `${a.kind} first view, zoom ${cz}`));
+  if (fam.judgeAll) {
+    // Every other state and variant by day and by night, on the same frame: what holds or fails there (the notes once, on the first view).
+    for (const [label, set] of [...a.states.slice(1), ...a.variants].map((s): [string, Partial<Opts>] => [s.label, s.set])) {
+      const o: Opts = { ...base, ...set };
+      const ob = measure(fam, a, o, cz);
+      const ow = ob[2] - ob[0] + pad * 2, oh = ob[3] - ob[1] + pad * 2, ox = pad - ob[0], oy = pad - ob[1];
+      const px = (cv: HTMLCanvasElement) => read(cv.getContext('2d')!.getImageData(0, 0, cv.width, cv.height));
+      const d = px(draw(fam, a, o, cz, ow, oh, ox, oy, false).cv);
+      const n = px(draw(fam, a, { ...o, night: 1 }, cz, ow, oh, ox, oy, true).cv);
+      const g = px(draw(fam, a, o, cz, ow, oh, ox, oy, true).cv);
+      checks.push(...[...judgeDay(d, a.register, `${a.kind} ${label}, zoom ${cz}`, expectSplash, fam.splashy), ...judgeNight(g, n, `${a.kind} ${label}, night`, a.emissive)]
+        .filter((c) => c.ok !== null || c.id === 'emissive-at-night'));
+    }
+  }
   // The facets, close up.
   const far = 6, fb = measure(fam, a, base, far);
   const close = draw(fam, a, base, far, fb[2] - fb[0] + 16, fb[3] - fb[1] + 16, 8 - fb[0], 8 - fb[1], false);

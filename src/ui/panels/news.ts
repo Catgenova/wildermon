@@ -91,7 +91,7 @@ import { OWN_FRUIT_SHARE, REGIONS } from '../../world/regions';
 import { TREASURE_TIERS } from '../../game/treasure';
 import { ISLAND_ELEMENT, MOTES_LEAST, MOTES_MOST, MOTES_MOST_AT, MOTES_STEP, SEASON_ELEMENT, SWIRL_DARK, SWIRL_LIGHT, SWIRL_SEASON, SWIRLS_A_DAY } from '../../game/motes';
 import { HEMS_A_FRAME, LIGHT_RES, RING_REACH, THREAT_SHADE, THREAT_SHADE_HUNTING } from '../../render/renderer';
-import { FLOWER_COLOURS } from '../../render/flowers';
+import { FLOWER_COLOURS, FLOWER_KINDS } from '../../render/flowers';
 import { BUSH3D_SPECIES, LOGS_DRAWN, STUMP3D_SPECIES, SUN_STEPS, SWAY_MS, TREE3D_SPECIES } from '../../render/trees3d';
 import { FIELD_LAYOUTS } from '../../render/crops';
 import { TURNS } from '../../render/view';
@@ -419,6 +419,15 @@ const VEINS = VEIN_LOOKS.filter((l): l is VeinLook => l !== null);
 const veinsOf = (family: VeinLook['family']): string => listed(VEINS.filter((l) => l.family === family).map((l) => l.name.toLowerCase()));
 
 export const NEWS: News[] = [
+  // The wildflowers and the crops painted in the rune pastel kit (`flowers.ts`, `crops.ts`, `cropFlatSprite`); a bed's crop inside its frame.
+  {
+    n: 642,
+    day: '2026-11-15',
+    lines: () => [
+      `Changed: wildflowers (${FLOWER_COLOURS.map((c) => c.name).join(', ')}; ${num(FLOWER_KINDS.length)} kinds a colour: ${FLOWER_KINDS.map((k) => `${k}s`).join(', ')}): new look.`,
+      `Changed: crop fields (${num(CROP_LIST.length)} crops, ${STAGE_NAMES.join(', ')}), garden beds, planters, herb boxes, low-end graphics: new look.`,
+      'Fixed: crop on a garden bed: ridges, weeds and plants over its frame. Now: inside the frame.',
+      'Fixed: planter: ripe potato tubers and thyme through the end walls; weeds through the side walls.',
   // The low-end graphics' trees, bushes and stumps: the solids in one view (`flatTree3d`).
   {
     n: 645,
