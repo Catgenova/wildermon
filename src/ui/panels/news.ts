@@ -64,6 +64,7 @@ import {
   STOREY_JOBS, describeNeeds, GARDEN_BED,
 } from '../../game/building';
 import { CELLAR_DAYLIGHT } from '../../game/cellar';
+import { wayUpSaid } from '../../game/game';
 import { materialName } from '../../game/buildActions';
 import { BED_COVERED } from '../../game/gardenbed';
 import { LIFE_MOTES_EACH, MOTE_ELEMENTS, POULTICE_HEAL, STATUE_MOTES, WATER_MOTE_NEED, WATER_MOTES_EACH } from '../../game/motes';
@@ -408,6 +409,14 @@ const WAS_DYE = { boil: 3, garment: 1, banner: 2, sail: 3, ship: 5, wall: 1, flo
 const SCRUBS_LATER = new Set(['scrub_wall_paint', 'scrub_floor_paint']);
 
 export const NEWS: News[] = [
+  // A walk up to a storey whose staircase is only planned (`Game.unbuiltWayUp`).
+  {
+    n: 625,
+    day: '2026-11-15',
+    lines: () => [
+      `Fixed: walk up to a storey whose staircase or ladder is planned, not built: "No path to storey 2". Now: its name, tile and bill left, e.g. "${wayUpSaid({ building: 0, level: 1, x: 2508, y: 2256, kind: 'stairs', hand: 'l', facing: 's', material: 'timbercraft', ...floorBill('timbercraft', 'stairs', 'hip', 'l') })}"`,
+    ],
+  },
   // The stations set down as furniture is, and decaying off a settlement (`stations.ts`).
   {
     n: 622,

@@ -16,6 +16,7 @@ import { seasonAt, yearOf } from '../world/calendar';
 import { oreAt } from '../world/ore';
 import { World } from '../world/world';
 import { ACTIONS, ACTION_BY_ID, SPOIL_ORDER, spoilFrom, TEACHES_NOTHING, TRY_LEARN, WEAR_PER_GO, type ActionDef, type Target } from './actions';
+import { needsText } from './buildActions';
 import { feedable, feedFill, riposte } from './creatureActions';
 import { aimPin, BELT_MAX, loopsFor, pinLabel, type BeltPin } from './belt';
 import { bodyForward } from '../net/felt';
@@ -25,7 +26,7 @@ import { furnaceJobs, furnaceOutput } from '../net/rows/furnace';
 import { storedThing } from '../net/rows/stored';
 import { DROWN_RATE, DROWN_WARN, EXHAUSTED, HEAL_FED, HEAL_RATE, HUNGER_RATE, staminaBarAbove, SWIM_LEARN, SWIM_WIND, THIRST_RATE, WIND_PER_LEVEL, WIND_REST, WIND_STARVING, WIND_WALK } from './body';
 import { markName, MARK_CAP, MARK_COLOURS, type Marker } from './marks';
-import { acrossSide, borderOf, Buildings, OPPOSITE_SIDE, type FloorTile, CELLAR_DECAY, CELLAR_FLOOR, CELLAR_LEVEL, connectsDown, floorKind, floorOf, INDOORS_DECAY, isDone, isSpiral, keepJobLevel, SPIRAL_FOOT_SAID, progressOf, roofShapeDef, TOP_LEVELS, WALL_HEIGHT, walkableKind, workLevel, type BuildingsJSON, type Building, type Wall, type Side, type Bill, type Column } from './building';
+import { acrossSide, borderOf, Buildings, OPPOSITE_SIDE, type FloorTile, CELLAR_DECAY, CELLAR_FLOOR, CELLAR_LEVEL, connectsDown, floorKind, floorName, floorOf, INDOORS_DECAY, isDone, isSpiral, keepJobLevel, SPIRAL_FOOT_SAID, progressOf, roofShapeDef, TOP_LEVELS, WALL_HEIGHT, walkableKind, workLevel, type BuildingsJSON, type Building, type Wall, type Side, type Bill, type Column } from './building';
 import { CELLAR_DAYLIGHT, cellarGate, cellarPieceOk, targetFloor } from './cellar';
 import { jettyBase } from './frame';
 import { UNDONE_PLANS, type PlanAnswer } from './planarea';
@@ -319,6 +320,9 @@ export const FOLLOW_LOSE = 40;
  * more than half full under way. Everything else on an island is the island's
  * to count (`Game.tallyFromIsland`).
  */
+/** Why a walk up a storey stops short: the staircase or ladder it needs is only planned (`Game.unbuiltWayUp`). */
+export const wayUpSaid = (f: FloorTile): string => `${capital(floorName(f))} at ${f.x}, ${f.y} not built: needs ${needsText(f)}.`;
+
 export const BROWSER_TALLY: ReadonlySet<string> = new Set(['reach', 'laden']);
 
 // The journal's goals of the wildermon and of a settlement read these, handed over now the game is running (`journal-a.ts`).
@@ -6033,14 +6037,45 @@ export class Game {
       for (const c of candidates) if (p.walkTo(this.world, c.x, c.y, rule, levels, below, aim === CELLAR_LEVEL && !this.buildings.cellarDone(c.x, c.y) ? undefined : aim, lift)) return true;
     }
     if (!quiet) {
+      const unbuilt = floor !== undefined && floor > p.level ? this.unbuiltWayUp(x, y, p.level, floor) : undefined;
       if (floor !== undefined && floor > 0 && !candidates.length) this.logMsg(`No floor on storey ${floor + 1}.`, 'error');
       // Mounted, where your own feet would get there: a single staircase, a ladder or a narrow doorway in the way (`rideRule`).
       else if (floor !== undefined && floor > 0 && this.mounted() && this.onFootTo(x, y, floor)) this.logMsg(MOUNT_STAIRS_SAID, 'error');
+      // Up to a storey whose way up is still only planned: that staircase or ladder, and what it needs (`unbuiltWayUp`).
+      else if (unbuilt) this.logMsg(wayUpSaid(unbuilt), 'error');
       // Pinned on another storey than yours: every click is a walk to that one (`pinnedStorey`).
       else if (floor !== undefined && floor !== p.level && floor === this.pinnedStorey()) this.logMsg(`No path to storey ${floor + 1} (pinned on the storey control).`, 'error');
       else this.logMsg(aim === CELLAR_LEVEL ? this.noWay(x, y, 'No path there.') : 'No path there.', 'error');
     }
     return false;
+  }
+
+  /**
+   * The staircase or ladder of the building at a tile that a walk from storey
+   * `from` up to storey `to` is still waiting on: one planned and not yet
+   * built, climbing to a storey over `from` and no higher than `to`, the
+   * lowest of them and of those the nearest. Undefined where there is none,
+   * no building there, or a finished one up off storey `from` already. A flight planned is drawn faint, and it was walked
+   * to and refused as "no path" with nothing to say what was missing.
+   */
+  unbuiltWayUp(x: number, y: number, from: number, to: number): FloorTile | undefined {
+    const bld = this.buildings;
+    const id = bld.buildingAt(x, y)?.id ?? bld.floor(to, x, y)?.building ?? bld.jettyAt(x, y)?.id;
+    if (id === undefined) return undefined;
+    const p = this.player;
+    let best: FloorTile | undefined;
+    let bestD = Infinity;
+    // A finished way up off the storey you are on is no planned one's to answer for.
+    for (const f of bld.floors.values()) if (f.building === id && f.level === from + 1 && connectsDown(floorKind(f)) && isDone(f)) return undefined;
+    for (const f of bld.floors.values()) {
+      if (f.building !== id || f.level <= from || f.level > to || !connectsDown(floorKind(f)) || isDone(f)) continue;
+      const d = f.level * 1e6 + Math.hypot(f.x + 0.5 - p.x, f.y + 0.5 - p.y);
+      if (d < bestD) {
+        best = f;
+        bestD = d;
+      }
+    }
+    return best;
   }
 
   /**

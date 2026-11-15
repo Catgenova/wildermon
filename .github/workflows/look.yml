@@ -264,7 +264,7 @@ jobs:
           nx=${NEAR%,*}; ny=${NEAR#*,}
           w="world_id::text like 'f3a88670%'"
           box="x between $((nx - 4)) and $((nx + 4)) and y between $((ny - 4)) and $((ny + 4))"
-          ask "floor slots within 4 tiles of $NEAR" "select f.level, f.x, f.y, f.kind, f.hand, f.facing, f.material, bill_done(f.needed) as done,
+          ask "floor slots within 4 tiles of $NEAR" "select f.level, f.x, f.y, f.kind, f.hand, f.facing, f.material, bill_done(f.needed) as done, f.needed::text as needed,
                  f.building, exists (select 1 from building_tile t where t.world_id = f.world_id and t.x = f.x and t.y = f.y and t.building = f.building) as in_footprint,
                  frame_stands(f.world_id, f.x, f.y, f.level) as stands
             from floor_tile f where f.$w and f.$box order by f.level, f.y, f.x limit 200"

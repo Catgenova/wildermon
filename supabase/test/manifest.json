@@ -1367,6 +1367,12 @@
     "why": "Off a flight across its foot is down to the storey under it, a floor over the foot or none; off its head or sides, the storey."
   },
   {
+    "file": "supabase/test/stairplanned.ts",
+    "title": "A walk up to a storey whose staircase is only planned says so",
+    "shard": 3,
+    "why": "\"cant walk up these stairs\": Vinyard's single staircase to storey 2 was planned and never built, and every click on storey 2 said only no path. A walk up refused for want of a way up names the planned staircase or ladder, where it is and what it still needs; built, the same click walks up it; a finished way up off the storey leaves the planned one unnamed."
+  },
+  {
     "file": "supabase/test/mountstairs.ts",
     "title": "Mounts up wide staircases",
     "shard": 3,
