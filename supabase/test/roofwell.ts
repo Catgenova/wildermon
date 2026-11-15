@@ -48,7 +48,15 @@ const lit = (v: unknown): string => `'${JSON.stringify(v).replace(/'/g, "''")}':
 const W = `(select id from world where name = 'Hoarding')`;
 const DANE = `(select uid from player where world_id = ${W} and name = 'Dane')`;
 const ID = 9402;
-const [DX, DY] = psql(`select x || ',' || y from deed where name = 'Latecomer' and world_id = ${W};`).split(',').map(Number);
+/** Latecomer's middle. island.sql stakes it over a hoard, and a test run before this one in its shard may have cleared
+ * it off its own ground (green, cellar), or staked a second (glasshouse): the first, or one staked again. */
+const latecomer = (): string =>
+  psql(`select x || ',' || y from deed where name = 'Latecomer' and world_id = ${W} order by x, y limit 1;`);
+if (!latecomer()) {
+  psql(`insert into deed (world_id, name, x, y, radius, founded_by)
+    select id, 'Latecomer', 30, 32, 5, '44444444-4444-4444-4444-444444444444' from world where name = 'Hoarding';`);
+}
+const [DX, DY] = latecomer().split(',').map(Number);
 /** The greenhouse: 5 by 3 from (TX, TY), four tiles up and to the west of the settlement's middle, clear of its totem. */
 const [TX, TY, TW, TH] = [DX - 4, DY - 4, 5, 3];
 const X0 = TX - 1, X1 = TX + TW, Y0 = TY - 1, Y1 = TY + TH;
