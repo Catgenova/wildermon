@@ -68,6 +68,9 @@ import { decorTrim } from './decorlook';
 import { furnishTrim } from './furnishlook';
 import { fittingTrim } from './fittinglook';
 import { ADORN_LIVE, adornTrim } from './adornlook';
+import { OBSIDIAN_LIVE, obsidianTrim } from './obsidianlook';
+import { dragonShimmer } from './kit/obsidian';
+import { DRAGON_FOUNTAIN, OBSIDIAN_BUST } from '../game/obsidiandefs';
 import { BUOY } from '../game/adorndefs';
 import { BUOY_BOB, PLATE_BOARD } from './kit/adorn';
 import { NAMEPLATE } from '../game/adorndefs';
@@ -110,7 +113,7 @@ import { fieldRate } from '../game/growth';
 import { dyeOf, dyeTint } from '../game/dyestuffs';
 import { castAt, netReach } from '../game/fishing';
 import { sailTrim } from '../game/wind';
-import { FURNITURE_BY_ID, isPlanter, rackDeck, rackSpots } from '../game/furniture';
+import { FURNITURE_BY_ID, isFountain, isPlanter, rackDeck, rackSpots } from '../game/furniture';
 import { isLampPiece, lampBurning } from '../game/lamps';
 import { drawLampBloom, piecesFrame } from './furniture';
 import { zoomHeld } from './settle';
@@ -4452,7 +4455,7 @@ export class Renderer {
         mist: (placed) => this.springWater.mistOf(placed),
         moss: (b, x, y, shade) => Math.round(greenShows(bridgeGreen(this.game, b, this.greenAt) ?? 0, shade, this.walls.wetness(x, y)) * PAVE_STAGES),
         fountain: (x, y) => {
-          const fu = this.game.furnitureOnTile(x, y).find((p) => p.kind === 'fountain');
+          const fu = this.game.furnitureOnTile(x, y).find((p) => isFountain(p.kind));
           if (!fu) return null;
           const [fx, fy] = furnitureCentre(fu);
           return { x: fx, y: fy, base: this.pieceBase(fu, fx, fy) };
@@ -7248,7 +7251,7 @@ export class Renderer {
             drawn = drawMemorial(g, px, py, zoom, facing, turn, piece.engraving, dark, this.anim);
           }, undefined, pieceBox);
           this.runeNight.source(ctx, ent.sx, ent.sy, zoom, memorialNight(facing, turn, zoom, piece.engraving), this.anim);
-        } else if (piece.kind === 'fountain') {
+        } else if (isFountain(piece.kind)) {
           /*
            * A tiered fountain: its stone in three layers with its water drawn
            * live in between them, running while it holds a litre or more to
@@ -7268,6 +7271,8 @@ export class Renderer {
               const b = drawFurniture(g, px, py, zoom, piece.kind, false, undefined, layer, view, piece.material, undefined, 'all', false);
               box = box ? [Math.min(box[0], b[0]), Math.min(box[1], b[1]), Math.max(box[2], b[2]), Math.max(box[3], b[3])] : b;
             });
+            // A dragon-glass fountain's shimmer over its glass and water (`kit/obsidian.ts`).
+            if (piece.kind === DRAGON_FOUNTAIN) dragonShimmer(g, px, py, zoom, view, this.anim, dark);
           }, undefined, pieceBox);
           drawn = box;
         } else if (piece.kind === TREE_BENCH && ent.layer !== undefined) {
@@ -7336,7 +7341,8 @@ export class Renderer {
           // ring under the pointer: a ring round a bloom of light is a blot.
           // (an armour stand's mannequin by which stand it is: `decorlook.ts`)
           drawFurnitureLive(ctx, ent.sx, ent.sy, zoom, piece.kind, view, this.game.darkness(),
-            clothInWind(piece.kind) || piece.kind === ARMOUR_STAND || piece.kind === STONE_BUST || piece.kind === LANTERN_POLE || ADORN_LIVE.includes(piece.kind) ? this.airOf(piece) : undefined);
+            clothInWind(piece.kind) || piece.kind === ARMOUR_STAND || piece.kind === STONE_BUST || piece.kind === LANTERN_POLE || ADORN_LIVE.includes(piece.kind)
+              || piece.kind === OBSIDIAN_BUST || OBSIDIAN_LIVE.includes(piece.kind) ? this.airOf(piece) : undefined);
           // A lantern burning on a post or a pillar blooms as the dark comes on (`lamps.ts`).
           if (lampBurning(piece)) drawLampBloom(ctx, ent.sx, ent.sy, zoom, piece.kind, view, this.game.darkness());
           /*
@@ -11479,6 +11485,9 @@ export class Renderer {
     // An adornment: a pond's lilies, a panel's ivy, an obelisk's sweet peas, a spiral's herbs, a rack's cheese, a rug's kind, a plush, a table's round, a lamp's gem, a board (`adorn.ts`, `adornlook.ts`).
     const adorn = adornTrim(f, this.game);
     if (adorn !== undefined) return adorn;
+    // An obsidian piece: a lantern's candle, an obelisk's glint, a vase's flowers (`obsidian.ts`, `obsidianlook.ts`).
+    const obsidian = obsidianTrim(f, this.game);
+    if (obsidian !== undefined) return obsidian;
     // An arch's roses or lavender: the variety, which is its place's, and how far it has grown (`roses.ts`).
     if (FURNITURE_BY_ID.get(f.kind)?.climber) {
       const r = roseStage(f.setAt, this.game.wallNow());

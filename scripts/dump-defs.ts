@@ -217,6 +217,12 @@ import { DECOR_DONE, DECOR_JOBS, DECOR_SAID, KEPT_WHY, STAND_SLOTS, type DecorSa
 import { FURNISH_DONE, FURNISH_JOBS, FURNISH_SAID, type FurnishDone, type FurnishSaid } from '../src/game/furnish';
 import { BOULDER_AGAIN, BOULDER_NOTHING_YET, FITTING_DONE, FITTING_JOBS, FITTING_SAID, SHELF_HERBS, type FittingDone, type FittingSaid } from '../src/game/fitting';
 import { ADORN_DONE, ADORN_JOBS, ADORN_SAID, PEA_NAMES, SPIRAL_SEEDS, type AdornDone, type AdornSaid } from '../src/game/adorn';
+import { OBSIDIAN_DONE, OBSIDIAN_JOBS, OBSIDIAN_SAID, type ObsidianDone, type ObsidianSaid } from '../src/game/obsidian';
+import {
+  BLACK_LANTERN, BLACK_LANTERN_REACH, DRAGON_FOUNTAIN, EMBER_ORB, GLASS_CHIME_LEAST, LANTERN_CANDLES, LAVA_LAMP, LAVA_LAMP_REACH, OBELISK_GLINT, OBSIDIAN, OBSIDIAN_BUST,
+  OBSIDIAN_OBELISK, OBSIDIAN_THRONE, OBSIDIAN_VASE, ORB_DAY_REACH, ORB_NIGHT_REACH, SHARD_PATH, THRONE_SEATS,
+} from '../src/game/obsidiandefs';
+import { FOUNTAINS } from '../src/game/furniture';
 import {
   BUOY, CAULDRON_HEARTH, CHEESE, CHEESE_AGEING, CHEESE_RACK, GAME_TABLE, GARDEN_OBELISK, GEM_LAMP, HERB_SPIRAL, IVY_CUTTING, IVY_CUTTINGS, IVY_PANEL, IVY_PANEL_DAYS, LILY_POND,
   NAMEPLATE, PEDIGREE_BOARD, PELT_RUG, PLUSH, PLUSH_SAID, POND_LILIES, RACK_HOLDS, SPIRAL_PICK, SPIRAL_SLOTS, STONES_GOAL, STONES_LEAST, STONES_SIDES,
@@ -3171,6 +3177,28 @@ out.push(`create or replace function adorn_said(p_key text, p_name text, p_n int
   (Object.keys(ADORN_SAID) as AdornSaid[]).map((k) => `when ${q(k)} then ${q(ADORN_SAID[k])} `).join('')}end, '{name}', upper(left(coalesce(p_name, ''), 1)) || substr(coalesce(p_name, ''), 2)), '{n}', coalesce(p_n::text, '')), '{what}', coalesce(p_what, '')) $fn$;`);
 out.push(`create or replace function adorn_done(p_key text, p_what text, p_n int, p_held text, p_of int) returns text language sql immutable as $fn$ select replace(replace(replace(replace(case p_key ${
   (Object.keys(ADORN_DONE) as AdornDone[]).map((k) => `when ${q(k)} then ${q(ADORN_DONE[k])} `).join('')}end, '{what}', coalesce(p_what, '')), '{n}', coalesce(p_n::text, '')), '{held}', coalesce(p_held, '')), '{of}', coalesce(p_of::text, '')) $fn$;`);
+/*
+ * The obsidian pieces (`obsidian.ts`, `obsidiandefs.ts`): their jobs, every
+ * number the island's rules read, the fountains, and every sentence they say.
+ */
+out.push(`create or replace function obsidian_action(p_action text) returns boolean language sql immutable as $fn$ select p_action = any (array[${OBSIDIAN_JOBS.map(q).join(', ')}]::text[]) $fn$;`);
+for (const [fn, v] of [
+  ['obsidian_item', OBSIDIAN], ['black_lantern_kind', BLACK_LANTERN], ['obsidian_throne_kind', OBSIDIAN_THRONE], ['obsidian_obelisk_kind', OBSIDIAN_OBELISK],
+  ['dragon_fountain_kind', DRAGON_FOUNTAIN], ['obsidian_vase_kind', OBSIDIAN_VASE], ['lava_lamp_kind', LAVA_LAMP], ['obsidian_bust_kind', OBSIDIAN_BUST],
+  ['shard_path_kind', SHARD_PATH], ['ember_orb_kind', EMBER_ORB],
+] as Array<[string, string]>) out.push(`create or replace function ${fn}() returns text language sql immutable as $fn$ select ${q(v)} $fn$;`);
+for (const [fn, v] of [['lantern_candles', LANTERN_CANDLES], ['throne_seats', THRONE_SEATS]] as Array<[string, number]>) {
+  out.push(`create or replace function ${fn}() returns int language sql immutable as $fn$ select ${q(v)}::int $fn$;`);
+}
+for (const [fn, v] of [
+  ['black_lantern_reach', BLACK_LANTERN_REACH], ['lava_lamp_reach', LAVA_LAMP_REACH], ['orb_night_reach', ORB_NIGHT_REACH], ['orb_day_reach', ORB_DAY_REACH],
+  ['obelisk_glint', OBELISK_GLINT], ['glass_chime_least', GLASS_CHIME_LEAST],
+] as Array<[string, number]>) out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);
+out.push(`create or replace function is_fountain(p_sub text) returns boolean language sql immutable as $fn$ select coalesce(p_sub = any (array[${FOUNTAINS.map(q).join(', ')}]::text[]), false) $fn$;`);
+out.push(`create or replace function obsidian_said(p_key text) returns text language sql immutable as $fn$ select case p_key ${
+  (Object.keys(OBSIDIAN_SAID) as ObsidianSaid[]).map((k) => `when ${q(k)} then ${q(OBSIDIAN_SAID[k])} `).join('')}end $fn$;`);
+out.push(`create or replace function obsidian_done(p_key text, p_what text, p_n int, p_held int, p_of int) returns text language sql immutable as $fn$ select replace(replace(replace(replace(case p_key ${
+  (Object.keys(OBSIDIAN_DONE) as ObsidianDone[]).map((k) => `when ${q(k)} then ${q(OBSIDIAN_DONE[k])} `).join('')}end, '{what}', coalesce(p_what, '')), '{n}', coalesce(p_n::text, '')), '{held}', coalesce(p_held::text, '')), '{of}', coalesce(p_of::text, '')) $fn$;`);
 /*
  * Ropemaking (`ropework.ts`): the lay-ups and what the skill makes of them,
  * its pace on its own jobs, the rope walk, the bell rope and the lead rope.

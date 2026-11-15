@@ -299,6 +299,11 @@ import { STAND_SLOTS } from '../../game/decor';
 import { grassEaters, seatsOf } from '../../game/furnish';
 import { benchTreeWords } from '../../game/fitting';
 import { PEA_NAMES, potDishWords, watersideWords } from '../../game/adorn';
+import { FULL_WIND, glassChimeLoud, glintWords } from '../../game/obsidian';
+import {
+  BLACK_LANTERN, BLACK_LANTERN_REACH, DRAGON_FOUNTAIN, EMBER_ORB, GLASS_CHIME_LEAST, LANTERN_CANDLES, LAVA_LAMP, LAVA_LAMP_REACH, OBSIDIAN_BUST, OBSIDIAN_CHIME,
+  OBSIDIAN_OBELISK, OBSIDIAN_THRONE, OBSIDIAN_VASE, ORB_DAY_REACH, ORB_NIGHT_REACH, SHARD_GARDEN, SHARD_PATH, THRONE_SEATS,
+} from '../../game/obsidiandefs';
 import {
   BUOY, BUOY_REACH, CAULDRON_HEARTH, CAULDRON_SERVINGS, CHEESE_AGEING, CHEESE_RACK, GAME_TABLE, GARDEN_OBELISK, GEM_LAMP, GEM_LAMP_REACH, HERB_SPIRAL, IVY_CUTTINGS, IVY_PANEL,
   IVY_PANEL_DAYS, LILY_POND, NAMEPLATE, PEDIGREE_BOARD, PELT_RUG, PLUSH, POND_LILIES, RACK_HOLDS, SPIRAL_PICK, SPIRAL_SLOTS, STONES_GOAL, TABLE_SEATS,
@@ -311,7 +316,7 @@ import {
 import {
   BIRDBATH, CAIRN, FIREPLACE, FIREPLACE_REACH, FISH_MOUNT, FOOTSTOOL, FOUR_POSTER, FOUR_POSTER_REST, GARDEN_SWING, GAZEBO, HAY_A_DAY, HAY_BALE, HAY_HOLDS, HAY_REACH,
   SIDE_TABLE, SIGN_ARMS, SIGNPOST, STONE_BENCH, SWING_REST, TABLE_HOLDS, TROUGH_CARE, TROUGH_DRINK, TROUGH_HOLDS, TROUGH_REACH, VASE, VASE_FRESH, VASE_HOLDS,
-  WATER_TROUGH,
+  WATER_TROUGH, CAIRN_NAME_MAX,
 } from '../../game/furnishdefs';
 import {
   ARMOUR_STAND, COMPOST_BIN, COMPOST_BOOST, COMPOST_DAYS, COMPOST_HOLDS, COMPOST_PER, COMPOST_SPOILED, CURTAINS, RUG_COLOURS, RUG_PATTERNS, STONE_LANTERN,
@@ -4498,6 +4503,28 @@ export const NEWS: News[] = [
       `New: rowing under way: ${OAR_DROPS} drops a blade at the catch; whirl pair a blade a stroke, ${SWIRL_SECS} s.`,
       'Without a graphics card: swimming strokes\' splashes, rings treading water, the float\'s strike and a catch only.',
     ],
+  },
+  // The obsidian pieces (`obsidian.ts`).
+  {
+    n: 618,
+    day: '2026-11-14',
+    lines: () => {
+      const made = (id: string): string => `${itemDef(id).name} (${skillOf(`make_${id}`)}; ${pieceBill(id)})`;
+      const chimeStill = Math.round(CHIME_STILL * 100);
+      return [
+        `New: ${made(BLACK_LANTERN)}: ${LANTERN_CANDLES} candle; lit, light ${BLACK_LANTERN_REACH} tiles at night.`,
+        `New: ${made(OBSIDIAN_THRONE)}: seats ${THRONE_SEATS}, its settlement's founder only; Examine: the settlement's level, citizens and workers, now.`,
+        `New: ${made(OBSIDIAN_OBELISK)}: named, up to ${CAIRN_NAME_MAX} characters; glint ${glintWords()}.`,
+        `New: ${made(DRAGON_FOUNTAIN)}: a fountain: a well of ${furnitureDef(DRAGON_FOUNTAIN).well} litres, the foot of an aqueduct.`,
+        `New: ${made(SHARD_GARDEN)}: decor, ${furnitureDef(SHARD_GARDEN).w} by ${furnitureDef(SHARD_GARDEN).h} subtiles.`,
+        `New: ${made(OBSIDIAN_VASE)}: ${VASE_HOLDS} wildflowers, fresh ${VASE_FRESH} days.`,
+        `New: ${made(LAVA_LAMP)}: light ${LAVA_LAMP_REACH} tiles at night, always on.`,
+        `New: ${made(OBSIDIAN_CHIME)}: hung; silent under ${chimeStill}% wind; volume ×${GLASS_CHIME_LEAST} at ${chimeStill}%, rising evenly to ×${glassChimeLoud(FULL_WIND)} at ${Math.round(FULL_WIND * 100)}%.`,
+        `New: ${made(OBSIDIAN_BUST)}: a citizen of its settlement, head and hair.`,
+        `New: ${made(SHARD_PATH)}: along one side of a tile, one a side, any length; decor.`,
+        `New: ${made(EMBER_ORB)}: light ${ORB_DAY_REACH} tile by day to ${ORB_NIGHT_REACH} at full night.`,
+      ];
+    },
   },
   // Volcano Isle, part one (`volcano.ts`): its monsters, obsidian, a seryll vein's summons, sulfur, fire-tempered steel.
   {

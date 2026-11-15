@@ -251,13 +251,18 @@ import { ENGRAVE_MAX, ENGRAVE_SKILL, ENGRAVE_TOOL, MEMORIAL } from '../../game/m
 import {
   ARBOUR_BENCH, BIRDHOUSE, BLOOM_COST, BLOOM_SKILL, BLOOM_TIME, BONSAI, CARVED_FIGURE, CLIP_TIME, FLOWER_BED, FLOWER_CART, FOLDING_SCREEN, HANGING_BASKET, HEDGE,
   HEDGE_CLIPS, HERB_BOX, PLANT_STAND, POTTED_FERN, POTTED_PALM, PRUNE_SKILL, PRUNE_TIME, PRUNE_TOOL, SHOW_TIME, TOPIARY_SHAPES, TOPIARY_TUB, TRIM_SKILL, TRIM_TIME,
-  TRIM_TOOL, TROPHY_PLAQUE, WIND_CHIME, WINDOW_BOX, WISTERIA_PERGOLA,
+  TRIM_TOOL, TROPHY_PLAQUE, WIND_CHIME, WINDOW_BOX, WISTERIA_PERGOLA, CHIME_STILL,
 } from '../../game/gardendefs';
 import { GARDEN_SAID } from '../../game/garden';
 import { DECOR_PIECES } from '../../game/decor';
 import { FURNISH_PIECES, FURNISH_SAID, seatRest } from '../../game/furnish';
 import { benchTreeWords, FITTING_PIECES, poleBurn, practiceSkillWords } from '../../game/fitting';
 import { ADORN_PIECES, PEA_NAMES, watersideWords } from '../../game/adorn';
+import { blackLanternBurn, FULL_WIND, glassChimeLoud, glintWords } from '../../game/obsidian';
+import {
+  BLACK_LANTERN_REACH, GLASS_CHIME_LEAST, LANTERN_CANDLES, LAVA_LAMP_REACH, OBSIDIAN, OBSIDIAN_FIT_TIME, OBSIDIAN_PIECES, ORB_DAY_REACH, ORB_NIGHT_REACH, THRONE_SEATS,
+} from '../../game/obsidiandefs';
+import { FOUNTAINS } from '../../game/furniture';
 import {
   ADORN_TIME, BUOY_REACH, CAULDRON_SERVINGS, CHEESE_AGEING, GEM_LAMP_REACH, IVY_CUTTINGS, IVY_PANEL_DAYS, LINEAGE_TIME, NAMEPLATE, PEA_BY_SEASON, POND_LILIES, RACK_HOLDS,
   SPIRAL_PICK, SPIRAL_SLOTS, STONES_GOAL, STONES_LEAST, STONES_SIDES, TABLE_SEATS as ADORN_SEATS, THROW_TIME,
@@ -2317,6 +2322,20 @@ export function helpText(): string {
       <li><b>Throw the stones</b> at a game table (${THROW_TIME} s base): ${STONES_LEAST} to ${STONES_SIDES} points a throw; ${ADORN_SEATS} players, seated or beside it, in turn; first to ${STONES_GOAL} wins. Winner: in both logs, a win on the table's tally.</li>
       <li>Gem lamp: light ${GEM_LAMP_REACH} tiles at night, in its gem's colour.</li>
       <li><b>Show lineage</b> on a pedigree board (${LINEAGE_TIME} s base): a wildermon of yours; whoever set it down. <b>Examine</b>: it, its dam and sire, their dams and sires: names and kinds.</li>
+    </ul>
+    <h3>Obsidian pieces</h3>
+    <ul>
+      <li><b>${itemDef(OBSIDIAN).name}</b>: ${itemDef(OBSIDIAN).description ?? ''} Used in every piece below.</li>
+      ${OBSIDIAN_PIECES.map((id) => `<li><b>${itemDef(id).name}</b>: ${bill(`make_${id}`)} (${workedAt(`make_${id}`)}, ${recipe(`make_${id}`).baseTime} s base). `
+        + `${furnitureDef(id).w} by ${furnitureDef(id).h} subtiles. ${itemDef(id).description ?? ''}</li>`).join('')}
+      <li><b>Put in a candle</b> (${OBSIDIAN_FIT_TIME} s base): ${LANTERN_CANDLES}; burns ${timeWords(blackLanternBurn(QL_LOW))} at QL ${QL_LOW}, ${timeWords(blackLanternBurn(QL_TOP))} at QL ${QL_TOP}. <b>Strike a light</b>: a flame in hand or within reach. <b>Put it out</b>: the candle kept. Light: ${BLACK_LANTERN_REACH} tiles at night.</li>
+      <li>Obsidian throne: <b>Sit</b>, ${THRONE_SEATS} seat, the founder of the settlement it stands on only. <b>Examine</b>: that settlement's name, level, citizens (founder and roll) and workers, as they are now.</li>
+      <li><b>Name</b> an obsidian obelisk (${CAIRN_NAME_TIME} s base): up to ${CAIRN_NAME_MAX} characters; whoever set it down, or a citizen of its settlement. Glint: ${glintWords()}, island clock.</li>
+      <li>Fountains (${listed(FOUNTAINS.map((id) => itemDef(id).name.toLowerCase()))}): each a well, and the foot of an aqueduct.</li>
+      <li>Obsidian vase: <b>Put in wildflowers</b>, <b>Take out wildflowers</b> (${PUT_TIME} s base): to ${VASE_HOLDS}; after ${VASE_FRESH} days wilted.</li>
+      <li>Obsidian wind chime: silent under ${Math.round(CHIME_STILL * 100)}% wind; chime volume ×${GLASS_CHIME_LEAST} at ${Math.round(CHIME_STILL * 100)}%, rising evenly to ×${glassChimeLoud(FULL_WIND)} at ${Math.round(FULL_WIND * 100)}%.</li>
+      <li><b>Carve</b> an obsidian bust (${CARVE_TIME} s base): as a stone bust.</li>
+      <li>Light, always on: lava lamp column ${LAVA_LAMP_REACH} tiles at night; ember orb ${ORB_DAY_REACH} tile by day to ${ORB_NIGHT_REACH} at full night.</li>
     </ul>
     <h3>Calling things by name</h3>
     <ul>

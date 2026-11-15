@@ -43,7 +43,7 @@ begin
   where t.x between 0 and v_size - 1 and t.y between 0 and v_size - 1;
   -- The fountains it kept and keeps now, on their old rate up to here; then which aqueducts it runs along.
   perform well_settle(q.id) from placed q
-   where q.world_id = p_world and q.kind = 'furniture' and q.sub = 'fountain'
+   where q.world_id = p_world and q.kind = 'furniture' and is_fountain(q.sub)
      and exists (select 1 from jsonb_array_elements(v_chain->'streams') st join bridge b on b.world_id = p_world and b.id = (st->>'via')::bigint
                   where coalesce((st->>'fountain')::boolean, false) and b.bx = q.x and b.by = q.y);
   perform aqueduct_unfeed(p_world, s.id);

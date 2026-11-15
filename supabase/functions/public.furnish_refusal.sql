@@ -12,7 +12,7 @@ begin
               when p_action = 'fill_hay' then sub = hay_bale_kind()
               when p_action in ('point_arm', 'read_signpost') or p_action like 'drop\_arm\_%' then sub = signpost_kind()
               when p_action = 'name_cairn' then sub = cairn_kind()
-              when p_action in ('vase_put', 'vase_take') then sub = vase_kind()
+              when p_action in ('vase_put', 'vase_take') then sub in (vase_kind(), obsidian_vase_kind())
               when p_action = 'table_put' or p_action like 'table\_take\_%' then sub = side_table_kind()
               when p_action = 'mount_fish' then sub = fish_mount_kind()
               else false end;
@@ -22,7 +22,12 @@ begin
   g := coalesce(pl.garden, '{}'::jsonb);
   if p_action = 'sit_seat' then
     v_n := seats_of(pl.sub);
-    return case when sitters(p_world, p_uid, pl.id) >= v_n then furnish_said('seatsFull', v_name, v_n, null) end;
+    if sitters(p_world, p_uid, pl.id) >= v_n then return furnish_said('seatsFull', v_name, v_n, null); end if;
+    -- An obsidian throne: its settlement's founder's alone (`obsidian.ts`).
+    if pl.sub = obsidian_throne_kind() and (deed_at(p_world, pl.x, pl.y)).founded_by is distinct from p_uid then
+      return obsidian_said('founder');
+    end if;
+    return null;
   end if;
   if p_action = 'fill_hay' then
     if hay_left(pl) >= hay_holds() then return furnish_said('hayFull', null, null, null); end if;

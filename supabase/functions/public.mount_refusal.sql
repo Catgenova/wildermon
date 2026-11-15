@@ -7,6 +7,8 @@ CREATE OR REPLACE FUNCTION public.mount_refusal(p_world uuid, p_uid uuid, p_moun
 AS $function$
 declare w wall; v_seen text; v_miss text;
 begin
+  -- A glass shard path along a side, from the ground, outside a building, as a hedge (`obsidian.ts`).
+  if p_mount = 'edge' then return hedge_refusal(p_world, p_x, p_y, p_level); end if;
   -- Curtains on either face of a finished window, on their storey, as a plaque on a solid wall (`decor.ts`).
   -- A fireplace as a plaque, inside a building (`furnish.ts`).
   if p_mount = 'hearth' then

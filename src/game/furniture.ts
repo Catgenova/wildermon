@@ -38,6 +38,10 @@ import {
   BUOY, CAULDRON_HEARTH, CHEESE_RACK, FUR, GAME_TABLE, GARDEN_OBELISK, GEM_LAMP, HERB_SPIRAL, IVY_CUTTING, IVY_PANEL, LILY_POND, PEDIGREE_BOARD, PELT_RUG, PLUSH,
   TABLE_SEATS,
 } from './adorndefs';
+import {
+  BLACK_LANTERN, DRAGON_FOUNTAIN, EMBER_ORB, LAVA_LAMP, OBSIDIAN, OBSIDIAN_BUST, OBSIDIAN_CHIME, OBSIDIAN_OBELISK, OBSIDIAN_THRONE, OBSIDIAN_VASE, SHARD_GARDEN, SHARD_PATH,
+  THRONE_SEATS,
+} from './obsidiandefs';
 import { HAMMOCK_REST, ROPE_WALK, ROPE_WALK_QL, ROPE_WALK_TIME, ROPEMAKING } from './ropework';
 import { LAIR_KINDS } from './lairs';
 
@@ -270,7 +274,7 @@ export interface FurnitureDef {
   /** Chimes in the wind, silent in still air (`garden.ts`). */
   chime?: boolean;
   /** Made standing at this station rather than anywhere (a woven rug at a loom: `decor.ts`). */
-  station?: 'loom';
+  station?: 'loom' | 'smelter';
   /** A seat: bodies sat in it at once (`furnish.ts`, `sit_seat`). */
   seats?: number;
 }
@@ -334,6 +338,9 @@ export interface BoatDef {
 export const WELL_HOLDS = 200;
 /** Litres a tiered fountain holds when it is full. */
 export const FOUNTAIN_HOLDS = 50;
+/** The fountains, each a fountain to every rule (a well, and the foot of an aqueduct): the tiered one and a dragon-glass one (`obsidian.ts`). The island's `is_fountain`. */
+export const FOUNTAINS: readonly string[] = ['fountain', DRAGON_FOUNTAIN];
+export const isFountain = (kind: string): boolean => FOUNTAINS.includes(kind);
 /**
  * What a well draws in a second: this much at the least, and this much more
  * the better it was built, all of it at quality 100 (`Game.wellRate`). The
@@ -664,6 +671,23 @@ export const FURNITURE: FurnitureDef[] = [
   piece(GAME_TABLE, 'Game table', 2, 2, [['plank', 10], ['shaft', 4], ['nail', 14]], 12, 10, '', undefined, { skill: 'carpentry', seats: TABLE_SEATS }),
   piece(GEM_LAMP, 'Gem lamp', 1, 1, [['gem', 1], ['stone_brick', 4], ['mortar', 1]], 18, 12, '', undefined, { skill: 'jewellery', tool: 'file', material: 'gem' }),
   piece(PEDIGREE_BOARD, 'Pedigree board', 2, 1, [['plank', 6], ['shaft', 2], ['nail', 8], ['papyrus', 1]], 10, 8, '', undefined, { skill: 'carpentry' }),
+  /*
+   * The obsidian pieces (`obsidian.ts`; their numbers in `obsidiandefs.ts`),
+   * each of obsidian and more: blown at a lit smelter (glassblowing), cut with
+   * a chisel (stonecutting), laid with a trowel (masonry) or filed (jewellery).
+   * A dragon-glass fountain is a fountain to every rule (`isFountain`).
+   */
+  piece(BLACK_LANTERN, 'Black glass lantern', 1, 1, [[OBSIDIAN, 4], ['iron_lump', 1]], 18, 12, '', undefined, { skill: 'glassblowing', station: 'smelter' }),
+  piece(OBSIDIAN_THRONE, 'Obsidian throne', 2, 2, [[OBSIDIAN, 12], ['stone_slab', 2], ['cloth', 2]], 30, 24, '', undefined, { skill: 'stonecutting', tool: 'chisel', seats: THRONE_SEATS }),
+  piece(OBSIDIAN_OBELISK, 'Obsidian obelisk', 2, 2, [[OBSIDIAN, 10], ['stone_slab', 1]], 26, 20, '', undefined, { skill: 'stonecutting', tool: 'chisel' }),
+  piece(DRAGON_FOUNTAIN, 'Dragon-glass fountain', 3, 3, [[OBSIDIAN, 16], ['stone_brick', 24], ['mortar', 12], [WATER_MOTE, WATER_MOTES_EACH]], 34, 28, '', undefined, { skill: 'masonry', tool: 'trowel', well: FOUNTAIN_HOLDS }),
+  piece(SHARD_GARDEN, 'Shard garden', 2, 2, [[OBSIDIAN, 6], ['ash', 4], ['rock_shards', 4]], 14, 10, '', undefined, { skill: 'masonry', tool: 'trowel' }),
+  piece(OBSIDIAN_VASE, 'Obsidian vase', 1, 1, [[OBSIDIAN, 3], ['sand', 1]], 16, 8, '', undefined, { skill: 'glassblowing', station: 'smelter' }),
+  piece(LAVA_LAMP, 'Lava lamp column', 1, 1, [[OBSIDIAN, 4], ['glass', 2], ['copper_lump', 1]], 22, 14, '', undefined, { skill: 'glassblowing', station: 'smelter' }),
+  piece(OBSIDIAN_CHIME, 'Obsidian wind chime', 1, 1, [[OBSIDIAN, 3], ['rope', 1], ['iron_lump', 1]], 16, 8, '', undefined, { skill: 'glassblowing', station: 'smelter', mount: 'hang', chime: true }),
+  piece(OBSIDIAN_BUST, 'Obsidian bust', 1, 1, [[OBSIDIAN, 4], ['stone_brick', 1]], 22, 14, '', undefined, { skill: 'stonecutting', tool: 'chisel' }),
+  piece(SHARD_PATH, 'Glass shard path', SUBTILES, 1, [[OBSIDIAN, 2], ['ash', 1]], 8, 6, '', undefined, { skill: 'masonry', tool: 'trowel', mount: 'edge' }),
+  piece(EMBER_ORB, 'Ember orb on a stand', 1, 1, [[OBSIDIAN, 4], ['copper_lump', 1], ['stone_brick', 2]], 24, 14, '', undefined, { skill: 'jewellery', tool: 'file' }),
   piece('well', 'Well', 2, 2, [['stone_brick', 48], ['mortar', 16], ['shaft', 4], ['thick_rope', 1], ['nail', 16], [WATER_MOTE, WATER_MOTES_EACH]], 30, 24, '', undefined, { skill: 'masonry', tool: 'trowel', well: WELL_HOLDS }),
   /*
    * A tiered fountain: basins of cut slab, each smaller than the one under

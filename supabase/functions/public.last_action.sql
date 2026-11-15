@@ -28,4 +28,6 @@ AS $function$
       or fitting_action(p_action)
       -- The adornments' jobs: a pond, an obelisk, a spiral, a buoy, a rack, a table, a board, a nameplate (`adorn.ts`).
       or adorn_action(p_action)
+      -- The obsidian pieces' jobs: a black glass lantern, a throne, an obelisk (`obsidian.ts`).
+      or obsidian_action(p_action)
 $function$

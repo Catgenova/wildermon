@@ -1239,8 +1239,12 @@ function chimeAt(code: number): { x: number; y: number; disc: number } {
   return hook ? { x: hook.at[0], y: hook.at[1], disc: hook.at[2] - (CHIME_HOOK - CHIME_DISC) } : { x: 0, y: FACE_Y - 3, disc: CHIME_DISC };
 }
 
-function chimeOf(look: KitLook): KitModel {
-  const W = woodTone(look.material, look.tint, 0.6);
+/** An obsidian chime's disc and shards (`obsidian.ts`): the kit's volcanic glass, and its ember edge. */
+const CHIME_GLASS: Tone = toneOf('#8c84a8', '#3e3654');
+const CHIME_EMBER: RGB = hex('#ff7a50');
+
+function chimeOf(look: KitLook, glass = false): KitModel {
+  const W = glass ? CHIME_GLASS : woodTone(look.material, look.tint, 0.6);
   const { code } = hungTrim(look.trim);
   const hung = hangFrom(code, FACE_Y - 3, CHIME_HOOK, W);
   const { x, y, disc } = chimeAt(code);
@@ -1257,19 +1261,19 @@ function chimeOf(look: KitLook): KitModel {
  * air, swung by the wind as hard as it blows and each its own way, knocking
  * together over `CHIME_STILL`.
  */
-function chimeTubes(ctx: Ctx, sx: number, sy: number, zoom: number, view: KitView, air?: KitAir): void {
+function chimeTubes(ctx: Ctx, sx: number, sy: number, zoom: number, view: KitView, air?: KitAir, glass = false): void {
   const e = eyeOfView(view);
   const f = Math.max(0, air?.force ?? 0);
   const t = air?.t ?? 0;
   const { x: hx, y, disc } = chimeAt(air?.hang ?? 0);
-  const W = woodTone();
+  const W = glass ? CHIME_GLASS : woodTone();
   const sway = f < CHIME_STILL ? 0.04 : 0.12 + f * 0.5;
   const wind = air ? Math.atan2(air.y, air.x) : 0;
   ctx.save();
   ctx.translate(sx, sy);
   ctx.scale(zoom, zoom);
   ctx.lineCap = 'round';
-  const hang = (ax: number, ay: number, len: number, w: number, ph: number, fill: RGB): void => {
+  const hang = (ax: number, ay: number, len: number, w: number, ph: number, fill: RGB, shard = false): void => {
     const a = Math.sin(t * (2.2 + ph * 0.3) + ph) * sway + (f >= CHIME_STILL ? Math.cos(wind) * f * 0.25 : 0);
     const top: V3 = [hx + ax, y + ay, disc - 0.1];
     const bot: V3 = [hx + ax + Math.sin(a) * len * 0.45, y + ay + Math.cos(wind + ph) * Math.sin(a) * len * 0.3, disc - 0.1 - len * Math.cos(a)];
@@ -1283,8 +1287,16 @@ function chimeTubes(ctx: Ctx, sx: number, sy: number, zoom: number, view: KitVie
     ctx.strokeStyle = css(mix(fill, [255, 248, 236], 0.45), 0.8);
     ctx.lineWidth = w * 0.35;
     ctx.beginPath(); ctx.moveTo(x0 - w * 0.2, y0); ctx.lineTo(x1 - w * 0.2, y1); ctx.stroke();
+    // A glass shard: its point, and the ember along its edge (an obsidian chime's).
+    if (shard) {
+      ctx.fillStyle = css(fill);
+      ctx.beginPath(); ctx.moveTo(x1 - w * 0.5, y1); ctx.lineTo(x1 + w * 0.5, y1); ctx.lineTo(x1, y1 + w * 1.6); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = css(CHIME_EMBER, 0.75);
+      ctx.lineWidth = w * 0.18;
+      ctx.beginPath(); ctx.moveTo(x0 + w * 0.42, y0); ctx.lineTo(x1 + w * 0.42, y1); ctx.stroke();
+    }
   };
-  for (const [i, [ang, len]] of TUBES.entries()) hang(Math.cos(ang) * 1.1, Math.sin(ang) * 1.1, len, 0.7, i * 1.3, W.lit);
+  for (const [i, [ang, len]] of TUBES.entries()) hang(Math.cos(ang) * 1.1, Math.sin(ang) * 1.1, len, glass ? 0.9 : 0.7, i * 1.3, W.lit, glass);
   // The striker in the middle, and the sail under it.
   hang(0, 0, 4.4, 0.35, 9, ROPE.shade);
   ctx.restore();
@@ -1293,6 +1305,12 @@ function chimeTubes(ctx: Ctx, sx: number, sy: number, zoom: number, view: KitVie
 export const WIND_CHIME: KitPiece = {
   model: (look) => chimeOf(look), uses: { trim: true, material: true, tint: true }, wind: true,
   live: (ctx, sx, sy, zoom, view, _night, _t, air) => chimeTubes(ctx, sx, sy, zoom, view, air),
+};
+
+/** An obsidian wind chime (`obsidian.ts`): a wind chime's hanging, its tubes shards of glass. */
+export const OBSIDIAN_CHIME: KitPiece = {
+  model: (look) => chimeOf(look, true), uses: { trim: true }, wind: true,
+  live: (ctx, sx, sy, zoom, view, _night, _t, air) => chimeTubes(ctx, sx, sy, zoom, view, air, true),
 };
 
 void deeper; void IRON; void hex;

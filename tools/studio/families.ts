@@ -327,6 +327,8 @@ function kitFile(kind: string): string {
     archery_target: 'fittings', mooring_post: 'fittings', stone_bust: 'fittings',
     lily_pond: 'adorn', ivy_panel: 'adorn', garden_obelisk: 'adorn', herb_spiral: 'adorn', buoy: 'adorn', cauldron_hearth: 'adorn', cheese_rack: 'adorn',
     pelt_rug: 'adorn', plush_wildermon: 'adorn', game_table: 'adorn', gem_lamp: 'adorn', pedigree_board: 'adorn', worker_nameplate: 'adorn',
+    black_glass_lantern: 'obsidian', obsidian_throne: 'obsidian', obsidian_obelisk: 'obsidian', dragon_glass_fountain: 'obsidian', shard_garden: 'obsidian',
+    obsidian_vase: 'obsidian', lava_lamp: 'obsidian', obsidian_wind_chime: 'garden', obsidian_bust: 'obsidian', glass_shard_path: 'obsidian', ember_orb: 'obsidian',
   };
   return by[kind] ?? kind;
 }

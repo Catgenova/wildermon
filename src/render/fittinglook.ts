@@ -8,6 +8,7 @@ import type { PlacedFurniture } from '../game/furniture';
 import type { Game } from '../game/game';
 import { ARCHERY_TARGET, LANTERN_POLE, MOORING_POST, SPICE_SHELF, STONE_BUST, TRAINING_DUMMY, TREE_BENCH, WINDOW_SEAT } from '../game/fittingdefs';
 import { poleBurning, poleColours, SHELF_HERBS } from '../game/fitting';
+import { OBSIDIAN_BUST } from '../game/obsidiandefs';
 import type { Look } from '../game/look';
 import { HEIGHT_SCALE } from './iso';
 import { drawFigure } from './figure';
@@ -31,7 +32,7 @@ export function fittingTrim(f: PlacedFurniture, game: Game): number | undefined 
       return shelfTrim(jars);
     }
     case ARCHERY_TARGET: return targetTrim(d?.stuck ?? 0);
-    case STONE_BUST:
+    case STONE_BUST: case OBSIDIAN_BUST:
       if (d?.bust) BUST_LOOK.set(f.id, d.bust.look); else BUST_LOOK.delete(f.id);
       return d?.bust ? 1 : 0;
     // A post's rope to the boat tied to it is the renderer's (`Renderer.drawMooring`), not its bake's.
@@ -48,7 +49,10 @@ export const BUST_KEPT = { on: false };
 /** How far up a body the bust is cut, in tenths of a metre from the feet: under the collarbones. */
 const BUST_CUT = 10.2;
 
-bust.draw = (ctx, sx, sy, zoom, view, seed) => {
+/** The ember along an obsidian bust's edge: a glow round its outline, in pixels at zoom one. */
+const GLASS_EDGE = 1.1;
+
+bust.draw = (ctx, sx, sy, zoom, view, seed, glass = false) => {
   const look = BUST_LOOK.get(seed);
   if (!look) return;
   // Faced the way the bust's front looks on the screen, in eighths: nought toward the viewer (the mannequin's).
@@ -58,9 +62,11 @@ bust.draw = (ctx, sx, sy, zoom, view, seed) => {
   ctx.beginPath();
   ctx.rect(sx - 40 * zoom, sy - 60 * zoom, 80 * zoom, 60 * zoom);
   ctx.clip();
+  // An obsidian bust's glass with an ember edge round it (`obsidian.ts`).
+  if (glass) { ctx.shadowColor = 'rgba(255, 112, 70, 0.85)'; ctx.shadowBlur = GLASS_EDGE * zoom; }
   drawFigure(ctx, sx, sy + BUST_CUT * HEIGHT_SCALE * zoom, zoom, {
-    phase: 0, moving: false, facing, swimming: false, working: false, look, gear: {}, stone: true,
-    ...(BUST_KEPT.on ? { id: `bust:${seed}:${look.gender}:${look.hair}:${look.skin}:${look.hairColour}:${look.hairBright}` } : {}),
+    phase: 0, moving: false, facing, swimming: false, working: false, look, gear: {}, stone: glass ? 'glass' : true,
+    ...(BUST_KEPT.on ? { id: `bust:${glass ? 'glass:' : ''}${seed}:${look.gender}:${look.hair}:${look.skin}:${look.hairColour}:${look.hairBright}` } : {}),
   });
   ctx.restore();
 };

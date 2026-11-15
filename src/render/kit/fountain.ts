@@ -36,7 +36,7 @@ const path = (g: Ctx, p: readonly Pt[]): void => {
  * opening in the rim's top, and inside it the far wall going down in three
  * bands, a step deeper each, to its floor.
  */
-function hollow(inner: number, rim: number, deep: number, layer: number): KitPart {
+export function hollow(inner: number, rim: number, deep: number, layer: number): KitPart {
   return {
     layer,
     reach: [[-inner, -inner, rim - deep], [inner, inner, rim]],
@@ -68,7 +68,7 @@ function hollow(inner: number, rim: number, deep: number, layer: number): KitPar
 }
 
 /** Still water standing in a basin `inner` across at height `z`: shown only when the fountain is drawn whole, its live water being the renderer's. */
-function still(inner: number, z: number, layer: number, under: KitPart): KitPart {
+export function still(inner: number, z: number, layer: number, under: KitPart): KitPart {
   return {
     layer, wholeOnly: true, after: [under],
     reach: [[-inner, -inner, z], [inner, inner, z]],

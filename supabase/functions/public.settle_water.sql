@@ -35,7 +35,7 @@ begin
       v_via := jsonb_build_object('via', a.id,
         'along', (select count(*)::int from bridge_span sp where sp.world_id = p_world and sp.bridge = a.id));
       -- A fountain keeps what it is given, and that is the end of it.
-      if exists (select 1 from placed q where q.world_id = p_world and q.kind = 'furniture' and q.sub = 'fountain'
+      if exists (select 1 from placed q where q.world_id = p_world and q.kind = 'furniture' and is_fountain(q.sub)
                    and q.x = a.bx and q.y = a."by") then
         v_streams := v_streams || jsonb_build_array(jsonb_build_object('from', k, 'path', '[]'::jsonb, 'to', 'lost')
                                   || v_via || jsonb_build_object('fountain', true));

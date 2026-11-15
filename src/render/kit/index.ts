@@ -36,7 +36,7 @@ import { TRELLIS } from './trellis';
 import { WELL } from './well';
 import {
   ARBOUR_BENCH, BIRDHOUSE, BONSAI, CARVED_FIGURE, FLOWER_BED, FLOWER_CART, FOLDING_SCREEN, HANGING_BASKET, HEDGE, HERB_BOX, PLANT_STAND, POTTED_FERN, POTTED_PALM,
-  TOPIARY_TUB, TROPHY_PLAQUE, WIND_CHIME, WINDOW_BOX, WISTERIA_PERGOLA,
+  TOPIARY_TUB, TROPHY_PLAQUE, WIND_CHIME, WINDOW_BOX, WISTERIA_PERGOLA, OBSIDIAN_CHIME,
 } from './garden';
 import { HAMMOCK, ROPE_WALK_PIECE } from './ropework';
 import { ARMOUR_STAND, COMPOST_BIN, CURTAINS, STONE_LANTERN, SUNDIAL, WOVEN_RUG } from './decor';
@@ -49,6 +49,9 @@ import {
 import {
   BUOY, CAULDRON_HEARTH, CHEESE_RACK, GAME_TABLE, GARDEN_OBELISK, GEM_LAMP, HERB_SPIRAL, IVY_PANEL, LILY_POND, NAMEPLATE, PEDIGREE_BOARD, PELT_RUG, PLUSH,
 } from './adorn';
+import {
+  BLACK_LANTERN, DRAGON_FOUNTAIN, EMBER_ORB, LAVA_LAMP, OBSIDIAN_BUST, OBSIDIAN_OBELISK, OBSIDIAN_THRONE, OBSIDIAN_VASE, SHARD_GARDEN, SHARD_PATH,
+} from './obsidian';
 
 /**
  * Every piece of furniture drawn in the kit, by its kind (`FurnitureDef.id`).
@@ -181,6 +184,18 @@ export const KIT_PIECES: Readonly<Record<string, KitPiece>> = {
   gem_lamp: GEM_LAMP,
   pedigree_board: PEDIGREE_BOARD,
   worker_nameplate: NAMEPLATE,
+  // The obsidian pieces (`obsidian.ts`); its wind chime hangs with the wind chime (`garden.ts`).
+  black_glass_lantern: BLACK_LANTERN,
+  obsidian_throne: OBSIDIAN_THRONE,
+  obsidian_obelisk: OBSIDIAN_OBELISK,
+  dragon_glass_fountain: DRAGON_FOUNTAIN,
+  shard_garden: SHARD_GARDEN,
+  obsidian_vase: OBSIDIAN_VASE,
+  lava_lamp: LAVA_LAMP,
+  obsidian_wind_chime: OBSIDIAN_CHIME,
+  obsidian_bust: OBSIDIAN_BUST,
+  glass_shard_path: SHARD_PATH,
+  ember_orb: EMBER_ORB,
   // Ropemaking's pieces (`ropework.ts`).
   hammock: HAMMOCK,
   rope_walk: ROPE_WALK_PIECE,

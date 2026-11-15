@@ -495,8 +495,9 @@ export const FOUR_POSTER: KitPiece = { model: (look) => fourPosterOf(look), uses
 export const vaseTrim = (n: number, wilted: boolean): number => 1 + Math.max(0, Math.min(3, n)) + (wilted && n > 0 ? 4 : 0);
 const BLOOMS: RGB[] = [hex('#f2a6c8'), hex('#fbf3e6'), hex('#f6d660'), hex('#9ab8f0')];
 
-function vaseOf(look: KitLook): KitModel {
-  const G = look.tint ? clothTone(look.tint) : toneOf('#9fc2c6', '#5a7488');
+/** A vase: glazed clay, or another body it is made of (an obsidian vase's glass, `kit/obsidian.ts`). */
+export function vaseOf(look: KitLook, glaze?: Tone): KitModel {
+  const G = glaze ?? (look.tint ? clothTone(look.tint) : toneOf('#9fc2c6', '#5a7488'));
   const parts: KitPart[] = [];
   const t = said(look.trim);
   const n = t < 0 ? 3 : t % 4, wilted = t >= 4;
