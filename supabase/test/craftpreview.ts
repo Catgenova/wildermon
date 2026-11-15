@@ -19,7 +19,7 @@
  *   * a hedge is shown at its growth stages in turn, its stage label changing as it turns; with Animations Off, one
  *     still frame of its last stage, the label held (asked: "previews for items like hedges with multiple stages
  *     should cycle them"); and what else has stages, read off the drawings, is logged;
- *   * the tabs (All, Equipment, Furniture, Stations, Food): each counts what it lists, All at least the four others
+ *   * the tabs (All, Equipment, Furniture, Decor, Stations, Food): each counts what it lists, All at least the four others
  *     together; each lists only its own; the stations are under Stations and not Furniture; a search searches within
  *     the tab open, what makes the thing typed first; an empty tab offers "In All" and it opens All; the tab is kept;
  *   * the material chosen on a row is the preview's at once: a barrel in pine and in cedar are two pictures, a sword
@@ -246,10 +246,11 @@ if (!browser) {
       console.log(`  tabs: ${JSON.stringify(c)}`);
       const items = await call<Record<string, string[]>>('tabItems');
       console.log(`  Stations: ${items.stations.join(', ')}`);
-      check('tabs: each counted, All at least the four others together, none empty',
-        c.all > 0 && c.equipment > 0 && c.furniture > 0 && c.stations > 0 && c.food > 0 && c.equipment + c.furniture + c.stations + c.food <= c.all, JSON.stringify(c));
+      check('tabs: each counted, All at least the five others together, none empty',
+        c.all > 0 && c.equipment > 0 && c.furniture > 0 && c.decor > 0 && c.stations > 0 && c.food > 0
+          && c.equipment + c.furniture + c.decor + c.stations + c.food <= c.all, JSON.stringify(c));
       const each: Record<string, boolean> = {};
-      for (const t of ['equipment', 'furniture', 'stations', 'food']) {
+      for (const t of ['equipment', 'furniture', 'decor', 'stations', 'food']) {
         const got = await call<{ counts: Record<string, number>; on: string; rows: Array<{ result: string; tab: string | null; section: string }> }>('tab', t);
         // (the pinned and the lately made are listed twice: counted once)
         const book = got.rows.filter((r) => r.section !== 'Pinned' && r.section !== 'Recent');
@@ -259,6 +260,9 @@ if (!browser) {
       check('tabs: each lists only its own, as many as it counts', Object.values(each).every(Boolean), JSON.stringify(each));
       check('tabs: the stations (smelter, kiln, oven, loom, work post) under Stations, not Furniture',
         ['Smelter', 'Kiln', 'Oven', 'Work post', 'Loom'].every((n) => items.stations.includes(n) && !items.furniture.includes(n)), items.stations.join(', '));
+      check('tabs: ornaments under Decor, not Furniture; a chest, a bed and a bench with seats stay Furniture',
+        ['Sundial', 'Banner', 'Hedge', 'Training dummy'].every((n) => items.decor?.includes(n) && !items.furniture.includes(n))
+          && ['Chest', 'Bed', 'Tree bench'].every((n) => items.furniture.includes(n) && !items.decor?.includes(n)), (items.decor ?? []).join(', '));
       await call('tab', 'furniture');
       const planks = await call<Array<{ recipe: string; result: string; section: string }>>('search', 'plank');
       const inFurniture = await call<{ rows: Array<{ result: string; tab: string | null; section: string }> }>('tabState');

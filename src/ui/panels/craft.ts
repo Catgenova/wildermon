@@ -8,10 +8,15 @@ import { STATION_KINDS, STATIONS as STATION_DEFS } from '../../game/stations';
 import { WORK_POST } from '../../game/posts';
 import { crateKindOfItem } from '../../game/crates';
 import { lockedHiddenSays, RANK_ROW, recipeRank, recipeSearch } from '../../game/craftsearch';
-import { isFurniture, ONE_ALTAR } from '../../game/furniture';
+import { FURNITURE_BY_ID, isFurniture, ONE_ALTAR } from '../../game/furniture';
+import { ADORN_PIECES } from '../../game/adorn';
+import { DECOR_PIECES } from '../../game/decor';
+import { FITTING_PIECES } from '../../game/fitting';
+import { FURNISH_PIECES } from '../../game/furnish';
+import { OBSIDIAN_PIECES as OBSIDIAN_DECOR } from '../../game/obsidiandefs';
 import { SKILL_DEFS } from '../../game/skills';
 import type { Target } from '../../game/actions';
-import { CARVED_FIGURE } from '../../game/gardendefs';
+import { CARVED_FIGURE, POTS } from '../../game/gardendefs';
 import { PLUSH } from '../../game/adorndefs';
 import { RUG_PATTERNS, WOVEN_RUG, type RugPattern } from '../../game/decordefs';
 import { FIGURE_KINDS } from '../../game/garden';
@@ -48,8 +53,10 @@ for (const r of RECIPES) MAKES.set(r.result, [...(MAKES.get(r.result) ?? []), r]
 export const recipesMaking = (item: string): Recipe[] => MAKES.get(item) ?? [];
 
 /** The tabs over the book: everything, and what is made sorted by what it is (`craftTabOf`). */
-export type CraftTab = 'all' | 'equipment' | 'furniture' | 'stations' | 'food';
-export const CRAFT_TABS: ReadonlyArray<[CraftTab, string]> = [['all', 'All'], ['equipment', 'Equipment'], ['furniture', 'Furniture'], ['stations', 'Stations'], ['food', 'Food']];
+export type CraftTab = 'all' | 'equipment' | 'furniture' | 'decor' | 'stations' | 'food';
+export const CRAFT_TABS: ReadonlyArray<[CraftTab, string]> = [
+  ['all', 'All'], ['equipment', 'Equipment'], ['furniture', 'Furniture'], ['decor', 'Decor'], ['stations', 'Stations'], ['food', 'Food'],
+];
 /**
  * What is set down to work at: every station's item (`stations.ts`), every station a recipe asks for (`Station`),
  * and the work post a wildermon works from.
@@ -57,12 +64,30 @@ export const CRAFT_TABS: ReadonlyArray<[CraftTab, string]> = [['all', 'All'], ['
 const STATION_ITEMS: ReadonlySet<string> = new Set([
   ...STATION_KINDS.map((k) => STATION_DEFS[k].item).filter((i): i is string => !!i), ...Object.keys(STATION_NAME), WORK_POST,
 ]);
+/** The pieces of the decor rounds (`decor.ts`, `furnish.ts`, `fitting.ts`, `adorn.ts`, `obsidiandefs.ts`). */
+const DECOR_ROUNDS: ReadonlySet<string> = new Set([...DECOR_PIECES, ...FURNISH_PIECES, ...FITTING_PIECES, ...ADORN_PIECES, ...OBSIDIAN_DECOR]);
+/** Ornaments from before those rounds, with no mark of their own on the piece. */
+const OLD_ORNAMENTS: ReadonlySet<string> = new Set(['banner', 'flagpole', 'memorial_stone', 'flower_cart', 'folding_screen', ...POTS]);
+/** What a piece is for, beyond being looked at: holding, seating, sleeping, water, fire, a stall, a vehicle, a hive. */
+const PIECE_USES = ['capacity', 'stall', 'post', 'trash', 'cart', 'vehicle', 'boat', 'well', 'hearth', 'bed', 'altar', 'deed', 'hive',
+  'skep', 'crates', 'grave', 'planter', 'seats', 'bell', 'den', 'sign'] as const;
+/** What marks a piece as an ornament: in bloom, clipped, climbed, lit, carved, hung, mossed. */
+const ORNAMENT_MARKS = ['bloom', 'hedge', 'topiary', 'bonsai', 'climber', 'vine', 'figure', 'birds', 'chime', 'lamp', 'runes', 'landmark',
+  'trophy', 'mossy', 'plush', 'shows'] as const;
+/** A piece set down to be looked at: a decor round's or an ornament's, with no use of its own (`PIECE_USES`). */
+export function isDecor(item: string): boolean {
+  const f = FURNITURE_BY_ID.get(item) as Record<string, unknown> | undefined;
+  if (!f) return false;
+  const has = (k: string): boolean => f[k] !== undefined && f[k] !== false && f[k] !== 0;
+  return (DECOR_ROUNDS.has(item) || OLD_ORNAMENTS.has(item) || ORNAMENT_MARKS.some(has)) && !PIECE_USES.some(has);
+}
 /**
  * The tab a thing made is under, off its own data, or null for All only (a material, a part, a scroll): a station;
  * a piece set down (furniture, a hull, a cart, a trap, a stake, a crate); a piece worn or held, or a tool; food or drink.
  */
 export function craftTabOf(item: string): Exclude<CraftTab, 'all'> | null {
   if (STATION_ITEMS.has(item)) return 'stations';
+  if (isDecor(item)) return 'decor';
   if (isFurniture(item) || setDownPiece(item) || crateKindOfItem(item)) return 'furniture';
   const def = itemDef(item);
   if (slotOf(item) || def.category === 'tool') return 'equipment';

@@ -414,6 +414,12 @@ const FAIL_EXAMPLE = failFactorSaid(failFactor({ ...FAIL_EXAMPLE_AT, difficulty:
 const SCRUBS_LATER = new Set(['scrub_wall_paint', 'scrub_floor_paint']);
 
 export const NEWS: News[] = [
+  // A Decor tab in the crafting window (`craftTabOf`, `isDecor`).
+  {
+    n: 639,
+    day: '2026-11-15',
+    lines: () => [`New: Crafting window: Decor tab, ${RECIPES.filter((r) => craftTabOf(r.result) === 'decor').length} recipes: pieces set down to be looked at, out of Furniture.`],
+  },
   // A citizen's rank off the tile hover (`ui.ts`).
   {
     n: 635,
