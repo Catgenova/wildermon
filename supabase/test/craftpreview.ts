@@ -204,8 +204,8 @@ if (!browser) {
     {
       const stages = await call<Record<string, string[]>>('stages');
       console.log(`  things set down with stages: ${Object.entries(stages).map(([id, st]) => `${id} [${st.join(' ')}]`).join('; ')}`);
-      check('stages read off the drawings: a hedge grows, a smelter is lit and works, a trap is baited and sprung',
-        (stages.hedge?.length ?? 0) >= 3 && (stages.smelter?.length ?? 0) === 3 && (stages.snare?.length ?? 0) === 3, JSON.stringify({ hedge: stages.hedge, smelter: stages.smelter, snare: stages.snare }));
+      check('stages read off the drawings: a hedge grows, a smelter is lit and works, a trap is baited, sprung and worn',
+        (stages.hedge?.length ?? 0) >= 3 && (stages.smelter?.length ?? 0) === 3 && (stages.snare?.length ?? 0) === 4, JSON.stringify({ hedge: stages.hedge, smelter: stages.smelter, snare: stages.snare }));
       const hedge = await call<string>('recipeOf', 'hedge');
       await call<PreviewState>('choose', hedge);
       await call('watch');

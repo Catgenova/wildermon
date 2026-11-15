@@ -1202,12 +1202,9 @@ export function cropSprite(cropId: string, stage: number, leaf: string, fruit: s
 /** The campfire, in the kit (`kit/campfire.ts`). */
 export { drawCampfire } from './kit/campfire';
 
-/** An anvil on its block, coloured by the metal it was cast from. */
-/**
- * A trap on the ground. A snare is a bent shaft with a loop of rope pegged
- * open at the foot of it; a deadfall is a board propped on a stick over the
- * bait. Either one is drawn sprung when there is something in it.
- */
+/** The traps, in the kit (`kit/traps.ts`). */
+export { drawTrap } from './kit/traps';
+
 /**
  * Where one tile of deck lies on the screen: its four corners in the world's
  * order -- north, east, south, west -- at the height it is carried at, in
@@ -1422,123 +1419,6 @@ function deckMoss(ctx: CanvasRenderingContext2D, q: Array<[number, number]>, ker
     }
   }
   cushions(ctx, cs);
-}
-
-export function drawTrap(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, kind: string, baited: boolean, sprung: boolean): void {
-  ctx.save();
-  ctx.translate(sx, sy);
-  // A twine snare (`game/trapdefs.ts`) is a snare at two thirds the size, one shaft and a loop of pale twine.
-  const twine = kind === 'twine_snare';
-  ctx.scale(zoom * (twine ? 0.66 : 1), zoom * (twine ? 0.66 : 1));
-  ctx.fillStyle = 'rgba(0,0,0,0.22)';
-  ctx.beginPath();
-  ctx.ellipse(0, 0, 6, 2.6, 0, 0, TAU);
-  ctx.fill();
-  const wood = '#6b543a';
-  const dark = '#4a3a28';
-  if (kind === 'creel') {
-    // A woven basket sitting low, with a float and a line up to the bank.
-    ctx.strokeStyle = '#cfc3a4';
-    ctx.lineWidth = 0.6;
-    ctx.beginPath();
-    ctx.moveTo(4, -5.5);
-    ctx.lineTo(7, -9);
-    ctx.stroke();
-    ctx.fillStyle = '#c9b06a';
-    ctx.beginPath();
-    ctx.ellipse(-2, -2.4, 5.2, 3, 0, 0, TAU);
-    ctx.fill();
-    ctx.fillStyle = '#a68f52';
-    ctx.beginPath();
-    ctx.ellipse(-2, -1.2, 5.2, 3, 0, 0, TAU);
-    ctx.fill();
-    ctx.strokeStyle = '#7d6a3c';
-    ctx.lineWidth = 0.5;
-    for (let i = -1; i <= 1; i++) {
-      ctx.beginPath();
-      ctx.ellipse(-2, -2.4 + i * 1.1, 5.2 - Math.abs(i) * 0.8, 2.6, 0, Math.PI * 0.06, Math.PI * 0.94);
-      ctx.stroke();
-    }
-    // The throat, turned inward.
-    ctx.fillStyle = '#4a3f22';
-    ctx.beginPath();
-    ctx.ellipse(2.4, -2.6, 1.4, 1.1, 0, 0, TAU);
-    ctx.fill();
-    if (sprung) {
-      ctx.fillStyle = '#8fb6c8';
-      for (let i = 0; i < 3; i++) {
-        ctx.beginPath();
-        ctx.ellipse(-3.4 + i * 1.6, -2.2 + (i % 2) * 0.9, 1.2, 0.5, 0, 0, TAU);
-        ctx.fill();
-      }
-    }
-    if (baited) {
-      ctx.fillStyle = '#c06a4a';
-      ctx.beginPath();
-      ctx.ellipse(-2, -2.6, 0.9, 0.6, 0, 0, TAU);
-      ctx.fill();
-    }
-    ctx.restore();
-    return;
-  }
-  if (kind === 'deadfall') {
-    // A board, propped at an angle on a stick, or lying flat once it has gone.
-    ctx.strokeStyle = dark;
-    ctx.lineWidth = 1;
-    if (!sprung) {
-      ctx.beginPath();
-      ctx.moveTo(3, 0);
-      ctx.lineTo(3, -6);
-      ctx.stroke();
-    }
-    ctx.fillStyle = wood;
-    ctx.beginPath();
-    if (sprung) {
-      ctx.moveTo(-6, -1.4);
-      ctx.lineTo(6, -1.4);
-      ctx.lineTo(6, 0.4);
-      ctx.lineTo(-6, 0.4);
-    } else {
-      ctx.moveTo(-6, -1);
-      ctx.lineTo(5, -7);
-      ctx.lineTo(6, -5.6);
-      ctx.lineTo(-5, 0.4);
-    }
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = dark;
-    ctx.fillRect(-6, sprung ? 0.2 : -0.4, 12, 0.7);
-  } else {
-    // A shaft bent over, with a noose off the head of it.
-    ctx.strokeStyle = wood;
-    ctx.lineWidth = 1.2;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(-3, 0);
-    if (sprung) ctx.quadraticCurveTo(-3.4, -8, -2, -10);
-    else ctx.quadraticCurveTo(-2, -8, 3, -7);
-    ctx.stroke();
-    ctx.strokeStyle = twine ? '#e8dcb8' : '#cfc3a4';
-    ctx.lineWidth = twine ? 0.55 : 0.7;
-    ctx.beginPath();
-    if (sprung) ctx.ellipse(-2, -6, 1.1, 1.8, 0, 0, TAU);
-    else ctx.ellipse(3, -2.2, 3.4, 1.5, 0, 0, TAU);
-    ctx.stroke();
-    if (!sprung) {
-      ctx.beginPath();
-      ctx.moveTo(3, -7);
-      ctx.lineTo(3, -3.7);
-      ctx.stroke();
-    }
-  }
-  // A crumb of bait in the middle of it, so a set trap reads as set.
-  if (baited && !sprung) {
-    ctx.fillStyle = '#c06a4a';
-    ctx.beginPath();
-    ctx.ellipse(kind === 'deadfall' ? 0 : 3, -0.6, 1.1, 0.8, 0, 0, TAU);
-    ctx.fill();
-  }
-  ctx.restore();
 }
 
 /** The same colour taken down or brought up, for a far leg or a lit back. */

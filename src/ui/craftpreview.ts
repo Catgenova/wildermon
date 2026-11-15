@@ -134,11 +134,9 @@ const STATIONS: Record<string, SetDown> = {
     stages: Array.from({ length: MAX_DEED_LEVEL }, (_, i) => ({ name: `level ${i + 1}`, look: { level: i + 1 } })),
   },
   ...Object.fromEntries(Object.keys(TRAPS).map((kind): [string, SetDown] => [kind, {
-    draw: (g, x, y, zoom, _turn, _m, look) => {
-      drawTrap(g, x, y, zoom, kind, !!look.baited, !!look.sprung);
-      return [0, 0, 0, 0];
-    },
-    stages: flips({ ...TRAP_LOOK }, 'set'),
+    draw: (g, x, y, zoom, turn, _m, look) => drawTrap(g, x, y, zoom, kind, !!look.baited, !!look.sprung, turn, !!look.worn),
+    // Set, baited and sprung as its flags turn on, and then worn, as one long set down is drawn (`TRAP_WORN`).
+    stages: [...flips({ ...TRAP_LOOK }, 'set'), { name: 'worn', look: { ...TRAP_LOOK, worn: true } }],
   }])),
   ...Object.fromEntries(Object.entries(CRATE_DEFS).map(([kind, d]): [string, SetDown] => [d.item, sprited(() => crateSprite(kind as CrateKind))])),
 };

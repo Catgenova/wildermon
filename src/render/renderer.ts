@@ -99,6 +99,7 @@ import { ageDef, stageOf } from '../game/creatures';
 import { CRATE_DOOR, CREATURE_CRATE } from '../game/creaturecrate';
 import { FIRE_CAPACITY, fireCentre } from '../game/campfire';
 import { drawCampfireNight } from './kit/campfire';
+import { TRAP_WORN, trapTurn } from './kit/traps';
 import { smelterCentre, smelterSize } from '../game/smelter';
 import { stationCentreAt, stationFootprint, stationTurn } from '../game/stations';
 import { anvilBounds, anvilHit, anvilNight, anvilTone, anvilVariant, drawAnvil, drawAnvilLive, drawAnvilNight, drawKiln, drawKilnLive, drawKilnNight, drawSmelter, drawSmelterLive, drawSmelterNight, kilnBounds, kilnHit, smelterBounds, smelterHit } from './forge';
@@ -7713,8 +7714,11 @@ export class Renderer {
       }
       if (ent.kind === 'trap' && ent.trap) {
         const trap = ent.trap;
-        this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => drawTrap(g, px, py, zoom, trap.kind, !!trap.bait, trap.caught !== null));
-        this.trapHits.push({ ...this.shaped(), x: ent.x, y: ent.y, left: ent.sx - 8 * zoom, top: ent.sy - 12 * zoom, w: 16 * zoom, h: 14 * zoom, trap: trap.id });
+        // Turned with the camera and a way of its own by where it stands; worn once most of its life is gone (`TRAP_WORN`).
+        const turn = this.camera.rotation + trapTurn(trap), worn = trap.dmg >= TRAP_WORN;
+        let box: [number, number, number, number] = [-8 * zoom, -12 * zoom, 8 * zoom, 2 * zoom];
+        this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => { box = drawTrap(g, px, py, zoom, trap.kind, !!trap.bait, trap.caught !== null, turn, worn); });
+        this.trapHits.push({ ...this.shaped(), x: ent.x, y: ent.y, left: ent.sx + box[0], top: ent.sy + box[1], w: box[2] - box[0], h: box[3] - box[1], trap: trap.id });
         continue;
       }
       if (ent.kind === 'campfire' && ent.fire) {
