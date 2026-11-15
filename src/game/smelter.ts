@@ -9,6 +9,7 @@ import { chargesFor, itemDef, itemName, markOf, rarityOf, type Item } from './it
 import { MELT_HEAT, MELT_KEEP, MELT_SHARE, meltFits, meltLumps, meltQl, meltRefusal, metalOfItem } from './melt';
 import { fixedTo } from './ageing';
 import { matOf } from './materials';
+import { metalGateRefusal } from './craftgates';
 import {
   castSeconds, castWhole, INGOT_LUMPS, ingotOf, isMetalStock, isOreItem, lumpsIn, METAL_BY_LUMP, METAL_BY_ORE, metalOfBar, MOULD_BY_ID,
   MOULD_DENT, MOULD_SKILL, mouldLumps, SMITH_TOOL, mouldUsesLeft, mouldWear, ORE_PER_LUMP, pourSeconds, smeltSeconds,
@@ -396,6 +397,9 @@ export const SMELTER_ACTIONS: ActionDef[] = [
       const lump = t.kind === 'smelter' && t.itemUid !== undefined ? g.stockEntry(t.itemUid, g.forgeReach())?.item : undefined;
       if (!lump || !isMetalStock(lump.id)) return 'Choose the metal to pour.';
       const metal = metalOfBar(lump.id) as { id: string; name: string };
+      // Its metal's pouring gate (`craftgates.ts`), as the island's `firing_refusal` asks it.
+      const gated = metalGateRefusal(g, metal.id);
+      if (gated) return gated;
       const need = def ? mouldLumps(def, metal.id) : 0;
       if (!need) return 'Need an anvil mould.';
       // An ingot counts as its lumps (a Smith's Ingots).
@@ -445,6 +449,9 @@ export const SMELTER_ACTIONS: ActionDef[] = [
       const lump = t.kind === 'smelter' && t.itemUid !== undefined ? g.stockEntry(t.itemUid, g.forgeReach())?.item : undefined;
       const metal = lump && metalOfBar(lump.id);
       if (!lump || !metal) return 'Need metal.';
+      // Its metal's pouring gate (`craftgates.ts`): "Iron pouring: needs blacksmithing 5; have 2.3."
+      const gated = metalGateRefusal(g, metal.id);
+      if (gated) return gated;
       // A mould wants a weight of metal, and a lump of the rare six weighs a
       // tenth of what an iron one does, so it takes ten times as many of them.
       // An ingot counts as its lumps (a Smith's Ingots).

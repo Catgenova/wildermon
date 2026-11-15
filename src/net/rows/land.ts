@@ -13,6 +13,7 @@ export function changeRow(r: Fields): ChangeRow | null {
   return {
     n, x, y, tile, data, corners,
     ...(Array.isArray(r.soil) ? { soil: r.soil.filter(isNum) } : {}),
+    ...(isNum(r.rock) ? { rock: r.rock } : {}),
     ...(typeof r.world_id === 'string' ? { world_id: r.world_id } : {}),
   };
 }

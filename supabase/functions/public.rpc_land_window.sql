@@ -56,7 +56,7 @@ begin
           -- never think to ask for it again.
           'tiles',   case when c.y <= y1 then encode(substring(t.tiles from x0 + 1 for (x1 - x0 + 1)), 'base64') end,
           'data',    case when c.y <= y1 then encode(mask_rock_data(substring(t.tiles from x0 + 1 for (x1 - x0 + 1)), substring(t.data  from x0 + 1 for (x1 - x0 + 1))), 'base64') end,
-          'rock',    case when c.y <= y1 then encode(mask_rock(substring(t.rock  from x0 + 1 for (x1 - x0 + 1)), v_hide), 'base64') end)
+          'rock',    case when c.y <= y1 then encode(mask_rock(substring(t.rock  from x0 + 1 for (x1 - x0 + 1)), substring(t.tiles from x0 + 1 for (x1 - x0 + 1)), v_hide), 'base64') end)
         order by c.y)
       from land_corner c
       left join land_tile t on t.world_id = c.world_id and t.y = c.y

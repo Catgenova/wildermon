@@ -147,8 +147,8 @@ const easiestSeams = (): string => {
   return `${listed(seams.filter((r) => SEAM_GATE[r.yields] === least).map((r) => r.name.toLowerCase()))}: ${least}`;
 };
 
-/** The gates a store trade is idle at: what it makes or restores out of the stores, said "in your settlement stores". */
-const STORE_GATES: ReadonlySet<GateKind> = new Set<GateKind>(['recipe', 'relic', 'bauble']);
+/** The gates a store trade is idle at: what it makes, restores or pours out of the stores, said "in your settlement stores". */
+const STORE_GATES: ReadonlySet<GateKind> = new Set<GateKind>(['recipe', 'relic', 'bauble', 'metal']);
 
 /**
  * The sentence for a reason, in the game's own terms and with its number:

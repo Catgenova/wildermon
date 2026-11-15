@@ -363,8 +363,14 @@ begin
     declare v_p placed;
     begin
       if c.carrying is not null then why := 'full'; why_n := null; return next; return; end if;
-      if not exists (select 1 from unnest(smith_lumps(kind)) l where stores_count(p_world, c.keeper, l) > 0) then
-        why := 'stock'; why_n := null; return next; return;
+      if not exists (select 1 from unnest(worker_smith_lumps(c, kind)) l where stores_count(p_world, c.keeper, l) > 0) then
+        why := 'stock'; why_n := null;
+        -- Only metals over its own blacksmithing in the stores: `gate`, naming the first.
+        select array['metal', md.id] into why_what
+          from unnest(smith_lumps(kind)) with ordinality u(l, o) join metal_def md on md.lump = u.l
+         where stores_count(p_world, c.keeper, u.l) > 0 order by u.o limit 1;
+        if why_what is not null then why := 'gate'; end if;
+        return next; return;
       end if;
       v_p := anvil_target(p_world, c, c.to_x, c.to_y);
       if v_p.id is null then why := 'range'; why_n := rng; return next; return; end if;

@@ -19,7 +19,7 @@ import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import { Game } from '../../src/game/game';
 import type { Item } from '../../src/game/items';
 import { MOULD_BY_ID, mouldLumps } from '../../src/game/metal';
-import { psql, ok, bad, check } from './harness';
+import { psql, ok, bad, check, hands, HANDS } from './harness';
 
 const MOULD = 'shovel_head_mould';
 const def = MOULD_BY_ID.get(MOULD);
@@ -31,6 +31,8 @@ check('a mithril pour takes the same lumps on both sides', Number(psql(`select m
 
 {
   const g = Game.create(4242);
+  // Past mithril's pouring gate (`craftgates.ts`): this is about which lumps a repeat takes.
+  hands(g, ['blacksmithing']);
   let spot: [number, number] | null = null;
   for (let r = 0; r < 80 && !spot; r++) {
     for (let dx = -r; dx <= r && !spot; dx++) {
@@ -98,7 +100,7 @@ begin
   delete from item where world_id = w and holder = 'player' and holder_uid = u;
   update player set x = 9.5, y = 9.5, body_at = now(), swim_at = now(),
          stats = jsonb_build_object('hunger', 1, 'thirst', 1, 'health', 1, 'stamina', 1) where world_id = w and uid = u;
-  insert into skill (world_id, uid, id, value) values (w, u, 'blacksmithing', 50), (w, u, 'smelting', 50)
+  insert into skill (world_id, uid, id, value) values (w, u, 'blacksmithing', ${HANDS}), (w, u, 'smelting', 50)
     on conflict (world_id, uid, id) do update set value = excluded.value;
   insert into placed (world_id, kind, x, y, sx, sy, cx, cy, ql, fuel, lit, state, made_by)
     values (w, 'smelter', 10, 9, 0, 0, 10.375, 9.25, 50, 600, true, '{"jobs": [], "output": []}'::jsonb, u)

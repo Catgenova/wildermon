@@ -41,6 +41,12 @@ export interface TileChange {
    * wire and the soil never did.
    */
   soil?: number[];
+  /**
+   * The rock under it, on a square that is bare rock now (`land_announce`): a bare vein is named to everybody, so a
+   * vein dug out from under the soil comes named, where the window had sent it unidentified (`mask_rock`). Absent on
+   * any other square, which keeps what it had.
+   */
+  rock?: number;
 }
 
 /**
@@ -89,6 +95,7 @@ export function layChange(world: World, c: TileChange): boolean {
     world.setDirt(c.x + 1, c.y + 1, s[2]);
     world.setDirt(c.x, c.y + 1, s[3]);
   }
+  if (typeof c.rock === 'number') world.setRockKind(c.x, c.y, c.rock);
   world.setTile(c.x, c.y, WAS_GRAVEL(c.tile) as Parameters<World['setTile']>[2], c.data);
   return true;
 }

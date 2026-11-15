@@ -698,9 +698,9 @@ export const faceGateRefusal = (g: Game, x: number, y: number): string | null =>
   if (!gate) return null;
   return skillGateRefusal(rock.name, gate.skill, g.skills.get(gate.skill), gate.kind === 'seam' ? oreNeeds(g, gate.level) : gate.level);
 };
-/** A tile's name as you see it: a bare vein over your prospecting is "Unidentified metal" (`seenVein`). */
+/** A tile's name as you see it: a bare vein is always named (`seenVein`, exposed). */
 export const tileSeen = (g: Game, x: number, y: number): string =>
-  (g.world.getTile(x, y) === TileType.Rock ? seenVein(rockDef(g.world.rockFace(x, y)), g) : g.world.tileName(x, y));
+  (g.world.getTile(x, y) === TileType.Rock ? seenVein(rockDef(g.world.rockFace(x, y)), g, true) : g.world.tileName(x, y));
 /** A tree's felling gate for you (`skillgates.ts`), or null: none, met, or a tree with no logs in it. The island's `tree_gate_refusal`. */
 export const treeGateRefusal = (g: Game, data: number): string | null => {
   const gate = treeGate(data);
@@ -1753,8 +1753,8 @@ export const ACTIONS: ActionDef[] = [
           // a coal seam yields plain `coal` and so fails the `_ore` test.
           if (!isSeam(rock)) continue;
           tiles.push(y * w.w + x);
-          // Named only at or over its prospecting gate: "unidentified metal" under it (`seenVein`).
-          found.push(seenVein(rock, g).toLowerCase());
+          // A bare vein named; a buried one only at or over its prospecting gate, "unidentified metal" under it (`seenVein`).
+          found.push(seenVein(rock, g, w.getTile(x, y) === TileType.Rock).toLowerCase());
         }
       }
       g.markProspected(tiles);
@@ -1763,7 +1763,8 @@ export const ACTIONS: ActionDef[] = [
       // Sampling where you stand tells you what that particular rock holds.
       const here = bedrockAt(w, t.x, t.y);
       const buried = w.getTile(t.x, t.y) === TileType.Rock ? '' : ` Under ${Math.max(1, w.getDirt(t.x, t.y))} of ground.`;
-      const unread = veinTip(here, g);
+      // No level for a buried one under its gate: that would name it (`VEIN_UNREAD`).
+      const unread = veinTip(here, g, w.getTile(t.x, t.y) === TileType.Rock);
       if (isSeam(here) && unread) {
         g.logMsg(`Here: ${seenVein(here, g).toLowerCase()}. ${unread} Max QL ${here.maxQl}.${buried}`, 'event');
       } else if (isSeam(here)) {

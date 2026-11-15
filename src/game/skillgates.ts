@@ -26,7 +26,7 @@
  * Game, UI, defs and tests read it.
  */
 import { SKILL_BY_ID } from './skills';
-import { isSeam, ROCK_VARIANTS, TREE_DEFS, treeAge, treeSpecies, UNIDENTIFIED_ROCK, UNIDENTIFIED_VEIN } from '../world/tiles';
+import { isSeam, ROCK_VARIANTS, TileType, TREE_DEFS, treeAge, treeSpecies, UNIDENTIFIED_ROCK, UNIDENTIFIED_VEIN } from '../world/tiles';
 import { ITEM_DEFS, itemDef, itemName, type Item } from './items';
 import { SEAM_GATE, STONE_GATE, VEIN_GATE } from './rockgates';
 
@@ -43,7 +43,7 @@ export type GateLevel = (typeof GATE_LADDER)[number];
  * kind of wildermon by its species id; a fish by its id; a wagon or a boat by its piece's id.
  */
 export type GateKind = 'tree' | 'sprout' | 'crop' | 'seam' | 'vein' | 'stone' | 'tame' | 'fish' | 'vehicle' | 'boat'
-  | 'recipe' | 'relic' | 'bauble' | 'material' | 'wall' | 'floor' | 'paving';
+  | 'recipe' | 'relic' | 'bauble' | 'material' | 'wall' | 'floor' | 'paving' | 'metal';
 
 /** What each evolution stage past the first adds to a kind's taming gate (`TAME_GATE`). The island's `wild_stage_tame`. */
 export const TAME_STAGE_GATE = 15;
@@ -54,7 +54,7 @@ export const GATE_STOPS: Readonly<Record<GateKind, string>> = {
   sprout: 'picking, planting and grafting the species\' sprouts; a sprout picker\'s and a planter\'s work',
   crop: 'sowing it: a field, a garden bed, a planter, a herb spiral; a farmer\'s and a planter tender\'s work',
   seam: 'mining a seam: Mine, Chip corner, Mine out the cellar, a miner\'s work; less with Ore Sense; the Ironemole line exempt',
-  vein: 'naming a vein: Prospect, a marked tile, a prospector\'s find; under it "Unidentified metal"',
+  vein: 'naming a buried vein: Prospect, a marked tile; under it "Unidentified metal"; a bare vein always named',
   stone: 'quarrying a plain face: Mine, Chip corner, a quarrier\'s work',
   tame: `taming a kind: Tame, Take catch; +${TAME_STAGE_GATE} an evolution stage`,
   fish: 'catching a fish: under it, not in the catch',
@@ -67,6 +67,7 @@ export const GATE_STOPS: Readonly<Record<GateKind, string>> = {
   wall: 'planning and building the wall type: a hod carrier\'s work',
   floor: 'planning and building the floor type: a hod carrier\'s work',
   paving: 'paving with it',
+  metal: 'pouring it: Pour a mould, Cast an anvil; a nail or ribbon smith\'s work',
 };
 
 export interface SkillGate {
@@ -85,9 +86,10 @@ export const KEPT_OFF_LADDER: ReadonlySet<GateKind> = new Set<GateKind>(['tame',
 
 /**
  * Felling a tree that has logs in it (Cut down, Coppice; a feller's work), by woodcutting. Asked for: pine least,
- * birch, oak and maple early, willow most; then birch at 1 and willow at 90. Oak and maple take the next two steps,
- * the rest by their wood's difficulty (`materials.ts`): 0-1 at 20, 2 at 30, 3 at 40, 4 at 50, 6 at 60. A tree with no
- * logs yet is cleared by anybody.
+ * birch, oak and maple early, willow most; then birch at 1 and willow at 90, and no empty step between. Oak and maple
+ * take the next two steps; the rest climb one step a group by their wood's difficulty (`materials.ts`): fig and peach
+ * (0-1) 20, cherry, lemon and apricot (2) 30, the four woods of 3 over two steps (plum and quince 40, the heavier apple
+ * and pear 50), pomegranate 60, cedar 70 and olive (6) 80. A tree with no logs yet is cleared by anybody.
  */
 export const TREE_GATE: Readonly<Record<string, GateLevel>> = {
   Pine: 1,
@@ -99,13 +101,13 @@ export const TREE_GATE: Readonly<Record<string, GateLevel>> = {
   Cherry: 30,
   Lemon: 30,
   Apricot: 30,
-  Apple: 40,
-  Pear: 40,
   Plum: 40,
   Quince: 40,
-  Cedar: 50,
-  Pomegranate: 50,
-  Olive: 60,
+  Apple: 50,
+  Pear: 50,
+  Pomegranate: 60,
+  Cedar: 70,
+  Olive: 80,
   Willow: 90,
 };
 
@@ -285,28 +287,36 @@ export interface Viewer {
 /** What a vein is called by somebody under its prospecting gate (`VEIN_GATE`). */
 export const UNIDENTIFIED_METAL = UNIDENTIFIED_VEIN.name;
 
-/**
- * A vein's name as somebody sees it: its own at or over its prospecting gate, else "Unidentified metal". Plain stone is
- * always itself. The island's `seen_vein`; an item's is `seenName`.
- */
-export const seenVein = (rock: { yields: string; name: string }, viewer: Viewer): string =>
-  (veinTip(rock, viewer) ? UNIDENTIFIED_METAL : rock.name);
+/** What an unidentified vein says of itself: no level, which would name the metal (`VEIN_GATE` is one level a metal). */
+export const VEIN_UNREAD = `More ${skillWord('prospecting')} required to identify this vein.`;
 
-/** Why a vein is "Unidentified metal" to somebody: "5 prospecting required to identify this vein.", or null. The island's `vein_tip`. */
-export const veinTip = (rock: { yields: string }, viewer: Viewer): string | null => {
-  // One the island would not name to you (`UNIDENTIFIED_ROCK`): which gate it is under would name it.
-  if (rock.yields === UNIDENTIFIED_VEIN.yields) return `More ${skillWord('prospecting')} required to identify this vein.`;
+/**
+ * A vein's name as somebody sees it: a bare one (`exposed`, a Rock tile) always its own; a buried one its own at or over
+ * its prospecting gate, else "Unidentified metal". Plain stone is always itself. The island's `seen_vein_at`; an item's
+ * is `seenName`.
+ */
+export const seenVein = (rock: { yields: string; name: string }, viewer: Viewer, exposed = false): string =>
+  (veinTip(rock, viewer, exposed) ? UNIDENTIFIED_METAL : rock.name);
+
+/**
+ * Why a vein is "Unidentified metal" to somebody: "More prospecting required to identify this vein.", or null for a bare
+ * one, one at or over its gate, or plain stone. The island's `vein_tip_at`.
+ */
+export const veinTip = (rock: { yields: string }, viewer: Viewer, exposed = false): string | null => {
+  // One the island did not name to you (`UNIDENTIFIED_ROCK`), bare or not: there is nothing here to name it by.
+  if (rock.yields === UNIDENTIFIED_VEIN.yields) return VEIN_UNREAD;
+  if (exposed) return null;
   const g = gateOf('vein', rock.yields);
-  return g && viewer.skills.get(g.skill) < g.level ? `${g.level} ${skillWord(g.skill)} required to identify this vein.` : null;
+  return g && viewer.skills.get(g.skill) < g.level ? VEIN_UNREAD : null;
 };
 
 /**
- * A rock kind as the island sends it to somebody (`rpc_land_window`): `UNIDENTIFIED_ROCK` for a seam over their
- * prospecting gate, else itself. The island's `rock_unseen` and `mask_rock`.
+ * A rock kind as the island sends it to somebody (`rpc_land_window`): `UNIDENTIFIED_ROCK` for a buried seam over their
+ * prospecting gate, else itself; a bare one (`tile` Rock) always itself. The island's `rock_unseen` and `mask_rock`.
  */
-export const seenRock = (kind: number, viewer: Viewer): number => {
+export const seenRock = (kind: number, viewer: Viewer, tile?: number): number => {
   const rock = ROCK_VARIANTS[kind];
-  return rock && isSeam(rock) && veinTip(rock, viewer) ? UNIDENTIFIED_ROCK : kind;
+  return rock && isSeam(rock) && veinTip(rock, viewer, tile === TileType.Rock) ? UNIDENTIFIED_ROCK : kind;
 };
 
 /** Whether prospecting going from `was` to `now` names a vein it did not (`VEIN_GATE`): the land is read again. */
@@ -472,6 +482,35 @@ export interface Unlock {
 /** A skill's gates in level order, each met or not at `have`; one line a name at a level. */
 export const unlocksOf = (skill: string, have: number): Unlock[] =>
   gatesOn(skill).map((g) => ({ name: g.name, level: g.level, met: have >= g.level }));
+
+/** Over this many gates, a skill's Unlocks list is one row a level (`unlockRows`): taming's kinds, fishing, cooking, carpentry. */
+export const UNLOCKS_GROUPED_OVER = 15;
+/** The names a level's row shows before "… (+N)". */
+export const UNLOCK_ROW_NAMES = 3;
+
+/** One row of a skill's Unlocks list: a gate ("Oak 5"), or a level's gates ("16: Logchewer, Snufflet, Pip, … (+4)"). */
+export interface UnlockRow {
+  label: string;
+  level: number;
+  met: boolean;
+  /** Every name the row stands for. */
+  names: string[];
+}
+
+/**
+ * A skill's Unlocks as the Skills window lists them: a row a gate, or over `UNLOCKS_GROUPED_OVER` gates a row a level,
+ * its names joined, the first `UNLOCK_ROW_NAMES` and "… (+N)" for the rest.
+ */
+export const unlockRows = (skill: string, have: number): UnlockRow[] => {
+  const list = unlocksOf(skill, have);
+  if (list.length <= UNLOCKS_GROUPED_OVER) return list.map((u) => ({ label: `${u.name} ${u.level}`, level: u.level, met: u.met, names: [u.name] }));
+  const rungs = new Map<number, string[]>();
+  for (const u of list) rungs.set(u.level, [...(rungs.get(u.level) ?? []), u.name]);
+  return [...rungs].map(([level, names]) => {
+    const more = names.length - UNLOCK_ROW_NAMES;
+    return { label: `${level}: ${names.slice(0, UNLOCK_ROW_NAMES).join(', ')}${more > 0 ? `, … (+${more})` : ''}`, level, met: have >= level, names };
+  });
+};
 
 /** A skill's gates in level then name order, one a name at a level (five herb teas are one "Herb tea 5"). */
 const gatesOn = (skill: string): SkillGate[] => {

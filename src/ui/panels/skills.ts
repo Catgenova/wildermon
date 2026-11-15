@@ -22,7 +22,7 @@ const SLOW_GO = 100;
 const two = (x: number): number => +x.toFixed(2);
 import { awarenessReach, BASE_SIGHT } from '../../game/vision';
 import { KIT, kit, kitBody, kitCheck, kitSection, meaning } from '../kit';
-import { hasUnlocks, nextUnlockBar, nextUnlockSaid, skillWord, unlocksOf } from '../../game/skillgates';
+import { hasUnlocks, nextUnlockBar, nextUnlockSaid, skillWord, unlockRows } from '../../game/skillgates';
 
 /** The thinking skills mind logic eases, by name. */
 const MIND_EASED_SAID = listed(MIND_EASED_SKILLS.map((id) => (SKILL_BY_ID.get(id)?.name ?? id).toLowerCase()));
@@ -215,19 +215,22 @@ export class SkillsPanel {
   }
 
   /**
-   * What a skill opens (`skillgates.ts`): every gate on it in level order, ticked when your level meets it, and the
-   * next one with your level. The help's list is the same table (`unlocksSaid`).
+   * What a skill opens (`skillgates.ts`): every gate on it in level order, ticked when your level meets it (one row a
+   * level where there are many, `unlockRows`), and the next one with your level. The help's list is the same table
+   * (`unlocksSaid`).
    */
   private unlocks(id: string): HTMLElement[] {
     const have = this.game.skills.get(id);
-    const list = unlocksOf(id, have);
+    const list = unlockRows(id, have);
     if (!list.length) return [];
     const rows = list.map((u) => {
-      const { el, input } = kitCheck(`${u.name} ${u.level}`, 'skill-unlock');
+      const { el, input } = kitCheck(u.label, 'skill-unlock');
       kit(el, 'row');
       input.checked = u.met;
       input.disabled = true;
-      input.setAttribute('aria-label', `${u.name}: ${skillWord(id)} ${u.level}${u.met ? ', met' : ''}`);
+      input.setAttribute('aria-label', `${skillWord(id)} ${u.level}: ${u.names.join(', ')}${u.met ? ', met' : ''}`);
+      // A level's row names its first few; the whole list is its hint.
+      if (u.names.length > 1) el.title = u.names.join(', ');
       meaning(el, u.met ? 'good' : 'dim');
       return el;
     });

@@ -8672,8 +8672,8 @@ export class Game {
         const ore = oreAt(this.world, tx, ty);
         if (!ore) continue;
         found.push(ty * this.world.w + tx);
-        // Named by your prospecting, not the finder's (`seenVein`).
-        names.add(seenVein(ore, this).toLowerCase());
+        // A bare vein is always named; a buried one by your prospecting, not the finder's (`seenVein`).
+        names.add(seenVein(ore, this, this.world.getTile(tx, ty) === TileType.Rock).toLowerCase());
       }
     }
     if (!found.length) return;

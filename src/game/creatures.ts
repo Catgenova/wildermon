@@ -1,5 +1,5 @@
 import { describeGoals } from './journal';
-import { hodMay, relicGate, workerRecipeOpen } from './craftgates';
+import { hodMay, relicGate, workerMetalOpen, workerRecipeOpen } from './craftgates';
 import { LAIR_BY_ID } from './lairs';
 import { TileType, TILE_DEFS, TREE_DEFS, treeAge, treeSpecies, packTreeData, TREE_AGES } from '../world/tiles';
 import { isSeam } from '../world/tiles';
@@ -8515,13 +8515,19 @@ export class Creatures {
   /**
    * Smithing nails or ribbons: a lump of one of its trade's metals (`SMITH_TRADES`) out of the stores, beaten out at
    * the nearest anvil of yours into as many pieces as a filling of its mould makes, of that metal and at its own
-   * hand's quality (`madeQl`), and put in the stores. No mould and no hammer. The island's `errand_step` and
-   * `errand_do`.
+   * hand's quality (`madeQl`), and put in the stores. No mould and no hammer. Only a metal its own level pours
+   * (`METAL_GATE`). The island's `errand_step` and `errand_do`.
    */
   private anvilStep(game: Game, c: Creature, kind: GatherKind, goto: (x: number, y: number, reach?: number) => boolean, near: (x: number, y: number) => boolean, range: number): boolean {
     if (c.carrying) return this.why(c, 'full');
-    const lumps = smithLumps(kind);
-    if (!lumps.some((id) => this.inStores(game, id) > 0)) return this.why(c, 'stock');
+    // Only the metals its own blacksmithing pours (`workerMetalOpen`); with only others in the stores, `gate` naming the
+    // first (the island's `worker_smith_lumps`).
+    const lumps = smithLumps(kind).filter((id) => workerMetalOpen(c, id));
+    if (!lumps.some((id) => this.inStores(game, id) > 0)) {
+      const gated = smithLumps(kind).find((id) => this.inStores(game, id) > 0);
+      const metal = gated && METAL_BY_LUMP.get(gated);
+      return metal ? this.why(c, 'gate', 0, ['metal', metal.id]) : this.why(c, 'stock');
+    }
     let at: PlacedAnvil | undefined;
     let bestD = Infinity;
     for (const a of game.anvils.values()) {

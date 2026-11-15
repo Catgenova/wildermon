@@ -5,7 +5,7 @@ CREATE OR REPLACE FUNCTION public.vein_tip(p_world uuid, p_uid uuid, r rock_def)
  LANGUAGE sql
  STABLE
 AS $function$
-  select g.level || ' ' || lower(coalesce((select s.name from skill_def s where s.id = g.skill), g.skill))
+  select 'More ' || lower(coalesce((select s.name from skill_def s where s.id = g.skill), g.skill))
          || ' required to identify this vein.'
     from skill_gate g where g.kind = 'vein' and g.id = r.yields and skill_of(p_world, p_uid, g.skill) < g.level
 $function$

@@ -249,6 +249,12 @@ const said = (k: string): string => isle.get(k) ?? '';
   check(`birch ${lv('Birch')} and pine ${lv('Pine')} at 1, willow ${lv('Willow')} at 90, alone at the top`,
     lv('Birch') === 1 && lv('Pine') === 1 && lv('Willow') === 90 && trees.filter((g) => g!.level >= most).length === 1);
   check(`oak ${lv('Oak')} and maple ${lv('Maple')}: early (10 or under)`, ['Oak', 'Maple'].every((n) => lv(n) <= 10));
+  // Decided since: no empty step from 1 to 90; pine and birch 1, oak 5, maple 10 and willow 90 kept; cedar 70, olive 80.
+  const empty = GATE_LADDER.filter((l) => !trees.some((g) => g!.level === l));
+  check(`every ladder step from 1 to 90 has a tree (${GATE_LADDER.map((l) => `${l}: ${TREE_DEFS.filter((t) => lv(t.name) === l).map((t) => t.name).join(', ')}`).join('; ')})`,
+    !empty.length && lv('Oak') === 5 && lv('Maple') === 10 && lv('Pomegranate') === 60 && lv('Cedar') === 70 && lv('Olive') === 80,
+    empty.join(', '));
+  check('and their sprouts one step under: olive 70, cedar 60', gateOf('sprout', 'olive')!.level === 70 && gateOf('sprout', 'cedar')!.level === 60);
   const step = (l: number): number => GATE_LADDER[Math.max(0, GATE_LADDER.indexOf(l as (typeof GATE_LADDER)[number]) - 1)];
   check('every species\' sprout one ladder step under its felling (pine and birch 1, willow 80)',
     TREE_DEFS.every((t) => gateOf('sprout', t.name.toLowerCase())?.level === step(lv(t.name)) && gateOf('sprout', t.name.toLowerCase())?.skill === 'forestry')
