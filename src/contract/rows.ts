@@ -49,6 +49,9 @@ export interface PlayerRow {
   hurt_heavy?: boolean | null;
   /** Where they fell, while they may lie there (`player.fell`: `{ x, y, level, at }`, `src/game/fell.ts`); null when not. */
   fell?: unknown;
+  /** Their trade (`player.craft_class`) and class (`player.combat_class`), as class ids; null for none (`src/game/badges.ts`). */
+  craft_class?: string | null;
+  combat_class?: string | null;
   [key: string]: unknown;
 }
 

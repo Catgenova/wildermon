@@ -3217,5 +3217,18 @@
       "PATHCARD_STRICT": "1"
     },
     "why": "Asked for: \"Path needs to also display as a popup as each task is completed, with no-prose description of what to do next, how, and why\", with a moving picture of the action. Every step's how and why built from the rules (no figure written into their text; menu labels, tools, skills, a kind's spawn ground, bait and taming, an upgrade's requirements and the numbers each why names, the rules' own); every picture a clip of its own; one card a look, naming every step it ticked; none on the first look of a page opened with the Path on; turned on mid-game, one card with the next step. Drawn in Chrome: the card up on a tick, its buttons, its picture drawn and moving, Skip next, the Path tab, a job started after the hold taking it down, Path pop-ups Off, Animations Off a still frame."
+  },
+  {
+    "file": "supabase/test/nameicons.ts",
+    "title": "Trade and class icons before players' names, from what the island sends",
+    "shard": 3,
+    "external": [
+      "esbuild",
+      "playwright-core"
+    ],
+    "env": {
+      "NAMEICONS_STRICT": "1"
+    },
+    "why": "\"Create runecut trade and class icons to display next to player names in chat and in game.\" Every trade and class has an icon of its own, trades on a round stone and classes on a shield, edged in the stones' ink. On an island of its own: the roster's columns carry each player's trade and class to an islander, and every line of talk from before you came says who said it (`rpc_chat`'s `by`). Then, in Chrome, the event window's talk, the Social window and the name plates over people's heads show each player's trade and class, titled, none for a player with neither; a trade changed on the island changes the lines already drawn; Settings, Name icons, takes them all away and puts them back."
   }
 ]

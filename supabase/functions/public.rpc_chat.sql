@@ -14,8 +14,8 @@ begin
     raise exception 'you are not on this island';
   end if;
   return coalesce((
-    select jsonb_agg(jsonb_build_object('n', q.n, 'text', q.text, 'at', q.at) order by q.n)
-      from (select e.n, e.text, e.at from event e
+    select jsonb_agg(jsonb_build_object('n', q.n, 'text', q.text, 'at', q.at, 'by', q.said_by) order by q.n)
+      from (select e.n, e.text, e.at, e.said_by from event e
              where e.world_id = p_world and e.kind = 'chat' and e.uid is null
              order by e.n desc limit least(greatest(coalesce(p_limit, 60), 1), chat_lines())) q),
     '[]'::jsonb);

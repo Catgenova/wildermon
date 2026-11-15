@@ -1,4 +1,6 @@
 import { inkOr } from './inks';
+import { drawEmblem } from './emblems';
+import { isTrade } from '../game/badges';
 
 /**
  * The names over creatures and people, drawn in one layer over the frame.
@@ -29,6 +31,8 @@ export interface NameLabel {
   lift?: number;
   /** The body's feet on the screen: the lower, the nearer, and the first placed. */
   z: number;
+  /** A person's trade and class, as class ids, drawn before the name at the writing's height (`src/game/badges.ts`). */
+  icons?: string[];
   /** Drawn over the plate once it is placed, at its middle and its top (a speech bubble). */
   over?: (x: number, top: number) => void;
 }
@@ -37,6 +41,11 @@ export interface NameLabel {
 export const NAME_PX = 12;
 /** A note's size (`NameLabel.note`), the same way. */
 const NOTE_PX = 10;
+/** An icon before a name, square, as a share of the name's size: the height of its capitals and its tails. */
+export const ICON_OF_NAME = 1.15;
+/** Between two icons, and between the last and the name, at 100%. */
+const ICON_GAP = 2;
+const ICON_AFTER = 3;
 /** The plate's padding round the writing, across and up and down, and its corners' radius, at 100%. */
 const PAD_X = 5;
 const PAD_Y = 2;
@@ -163,8 +172,10 @@ export class NameLabels {
     // Nearest first, so the one in front keeps the place over its own head.
     list.sort((a, b) => b.z - a.z);
     const at: Array<{ l: number; t: number; w: number; h: number; moved: boolean }> = [];
+    const icon = Math.round(NAME_PX * s * ICON_OF_NAME);
+    const iconsW = (n: number): number => (n ? n * icon + (n - 1) * ICON_GAP * s + ICON_AFTER * s : 0);
     for (const lab of list) {
-      const tw = this.width(ctx, this.font, lab.text);
+      const tw = this.width(ctx, this.font, lab.text) + iconsW(lab.icons?.length ?? 0);
       const nw = lab.note ? this.width(ctx, this.noteFont, lab.note) : 0;
       const w = Math.ceil(Math.max(tw, nw) + 2 * padX);
       const h = nameH + (lab.note ? noteH : 0) + 2 * padY;
@@ -236,7 +247,20 @@ export class NameLabels {
       }
       ctx.font = this.font;
       ctx.fillStyle = ink;
-      ctx.fillText(lab.text, cx, p.t + p.h - padY - nameH / 2 + 0.5);
+      const mid = p.t + p.h - padY - nameH / 2;
+      // The icons first, the name after them: the two together centred on the plate.
+      const n = lab.icons?.length ?? 0;
+      if (n) {
+        const lead = iconsW(n);
+        let x = cx - (lead + this.width(ctx, this.font, lab.text)) / 2;
+        for (const id of lab.icons!) {
+          drawEmblem(ctx, id, isTrade(id) ? 'stone' : 'shield', x, mid - icon / 2, icon);
+          x += icon + ICON_GAP * s;
+        }
+        ctx.fillText(lab.text, cx + lead / 2, mid + 0.5);
+      } else {
+        ctx.fillText(lab.text, cx, mid + 0.5);
+      }
     }
     ctx.restore();
     for (let i = 0; i < list.length; i++) list[i].over?.(at[i].l + at[i].w / 2, at[i].t);

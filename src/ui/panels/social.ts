@@ -5,6 +5,7 @@ import { leaveQuestion } from '../../game/deed';
 import { BARTER_REACH } from '../../game/barter';
 import type { UIWindow } from '../windows';
 import { kitBody } from '../kit';
+import { nameIcons, refillNameIcons } from '../nameicons';
 
 /** How often the window asks again while it is open. */
 const REFRESH = 6;
@@ -293,6 +294,8 @@ export class SocialPanel {
     win.body.append(this.bar, this.page);
     win.onOpen = () => void this.refresh(true);
     this.draw();
+    // Somebody's trade and class learned or changed, or Name icons turned on or off: their rows' icons put right.
+    game.events.on('badges', (uids) => refillNameIcons(this.page, uids, (u) => game.badges.get(u), game.settings.nameIcons));
   }
 
   /** Ask again now and then, while anybody is looking. */
@@ -431,6 +434,7 @@ export class SocialPanel {
     name.className = 'social-name';
     name.textContent = who.name;
     name.title = who.name;
+    this.iconsBefore(name, who.uid);
     if (rank) {
       const r = document.createElement('span');
       r.className = 'social-rank';
@@ -447,13 +451,14 @@ export class SocialPanel {
     return el;
   }
 
-  /** A row that is a question rather than a person: a name, a note, and buttons. */
-  private plain(text: string, note: string, acts: HTMLButtonElement[]): HTMLDivElement {
+  /** A row that is a question rather than a person: a name, a note, and buttons; with `uid`, a person's icons before it. */
+  private plain(text: string, note: string, acts: HTMLButtonElement[], uid?: string): HTMLDivElement {
     const el = document.createElement('div');
     el.className = 'social-row rc-row social-ask';
     const name = document.createElement('span');
     name.className = 'social-name';
     name.textContent = text;
+    if (uid) this.iconsBefore(name, uid);
     const where = document.createElement('span');
     where.className = 'social-where';
     where.textContent = note;
@@ -462,6 +467,12 @@ export class SocialPanel {
     doing.append(...acts);
     el.append(name, where, doing);
     return el;
+  }
+
+  /** Somebody's trade and class icons, put before what `el` says (`src/game/badges.ts`). */
+  private iconsBefore(el: HTMLElement, uid: string): void {
+    el.prepend(nameIcons(uid, this.game.badges.get(uid), this.game.settings.nameIcons));
+    this.game.badges.want(uid);
   }
 
   /** The settlement Invite asks onto: the one chosen, or the first you may invite to. */
@@ -584,7 +595,7 @@ export class SocialPanel {
         this.page.append(this.plain(q.name, `to ${q.deed} · citizen of ${q.joined}`, [
           letIn,
           this.button('No', `Turn ${q.name} down`, () => void this.did(isle.answerJoin(q.founder, q.uid, false))),
-        ]));
+        ], q.uid));
       }
     }
     if (s.invites.length) {
@@ -607,13 +618,13 @@ export class SocialPanel {
         this.page.append(this.plain(who.name, '', [
           this.button('Yes', `${who.name} becomes a friend`, () => void this.did(isle.befriend(who.uid))),
           this.button('No', `Turn ${who.name} down`, () => void this.did(isle.unfriend(who.uid))),
-        ]));
+        ], who.uid));
       }
     }
     if (s.sent.length) {
       this.page.append(this.head('Invitations sent'));
       for (const who of s.sent) {
-        this.page.append(this.plain(who.name, who.deed ? `to ${who.deed}, not answered` : 'not answered', []));
+        this.page.append(this.plain(who.name, who.deed ? `to ${who.deed}, not answered` : 'not answered', [], who.uid));
       }
     }
     if (requesting.length) {
@@ -627,7 +638,7 @@ export class SocialPanel {
       this.page.append(this.head('Friend requests sent'));
       for (const who of s.asking) {
         this.page.append(this.plain(who.name, 'not answered',
-          [this.button('Withdraw', 'Withdraw request', () => void this.did(isle.unfriend(who.uid)))]));
+          [this.button('Withdraw', 'Withdraw request', () => void this.did(isle.unfriend(who.uid)))], who.uid));
       }
     }
   }
@@ -770,6 +781,7 @@ export class SocialPanel {
     const name = document.createElement('span');
     name.className = 'social-name';
     name.textContent = `${who.name} · ${this.whereabouts(who)}`;
+    this.iconsBefore(name, who.uid);
     const acts = document.createElement('span');
     acts.className = 'social-acts';
     acts.append(this.button('Back', 'All letters', () => {

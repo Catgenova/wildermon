@@ -200,6 +200,8 @@ export const SETTING_DEFAULTS = {
   deedBanner: true,
   /** Somebody's name near the top of the screen as they log on or off (`src/ui/deedbanner.ts`). */
   presenceBanner: true,
+  /** Trade and class icons before players' names: chat, over their heads, Social (`src/game/badges.ts`). */
+  nameIcons: true,
 };
 
 /** The action effects' settings, most first: All, Fewer and Off. */

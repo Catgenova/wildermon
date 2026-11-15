@@ -49,6 +49,7 @@ import { HOST_ID } from '../net/protocol';
 import { Roster } from './roster';
 import { runeGateLights } from './runegate';
 import { GameEmitter, isTalk, TALK_LOG, type LogEntry, type LogKind } from './events';
+import { BadgeBook } from './badges';
 import { bagTake, DEED_DECAY, describeWith, foldInto, foodFill, groundDecayRate, Inventory, ITEM_DEFS, itemName, type Item, markOf, rarityOf, rarityStep, itemDef, sameMark, sameStack, spendOut, unmendable, unrestored } from './items';
 import { ENCHANTERS_PLINTH, ENCHANTMENTS, furnaceBurn, moreSaid, NETMENDER_WEAR, swingEnchant, wornEnchant, type Enchant, type EnchantEffect } from './enchant';
 import { BASE_SPEED, CARRY_CRAWL, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER_LEVEL, groundStep, MAX_STAND, MAX_STEP, pathOptions, Player, readPlayer, type LiftRule, standsOn, walkKey, SWIM_DEPTH, SWIM_SPEED } from './player';
@@ -754,6 +755,8 @@ export class Game {
    * everything that reads it can ask once and skip.
    */
   readonly roster = new Roster();
+  /** Everybody's trade and class, for the icons before their names (`badges.ts`). */
+  readonly badges = new BadgeBook((uids) => this.events.emit('badges', uids));
   /**
    * Hoards in the ground, by the map that points at each.
    *
@@ -4642,7 +4645,7 @@ export class Game {
    * the moment it arrived, so a conversation from this morning read back as
    * sixty lines all said at once, at the second somebody opened the page.
    */
-  write(text: string, kind: LogKind = 'info', at?: number): void {
+  write(text: string, kind: LogKind = 'info', at?: number, by?: string): void {
     // A fight is going on from its first blow until `FIGHT_QUIET` seconds pass without one.
     if (kind === 'fight') this.fightGoing();
     // And a critical one is drawn larger, when the island's word of it comes before its number (`critPending`).
@@ -4656,7 +4659,7 @@ export class Game {
         return;
       }
     }
-    const entry: LogEntry = { time: at ?? Date.now(), text, kind };
+    const entry: LogEntry = by ? { time: at ?? Date.now(), text, kind, by } : { time: at ?? Date.now(), text, kind };
     this.log.push(entry);
     trimLog(this.log);
     // The island's word of a sounding of yours: the water round you, read off the land here, on the map a while (`sailActions.ts`).

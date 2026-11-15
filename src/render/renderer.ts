@@ -461,6 +461,7 @@ function drawStill(g: CanvasRenderingContext2D, px: number, py: number, zoom: nu
 import { FLOAT_COLOURS, Floaters } from './floaters';
 import { inkOr, WORLD_INK } from './inks';
 import { NameLabels } from './namelabels';
+import { badgeIds } from '../game/badges';
 import { drawSpeech } from './bubble';
 import { SKILL_BY_ID } from '../game/skills';
 import { PUFFS, PUFF_DRIFT, PUFF_RISE, puffAge, puffOf } from './smoke';
@@ -7115,6 +7116,8 @@ export class Renderer {
           text: peer.name,
           note: peer.act ? ACTION_BY_ID.get(peer.act)?.verb : undefined,
           ink: 'player',
+          // Their trade and class before the name, off the island's row of them (`../game/badges.ts`).
+          icons: badgeIds(this.game.badges.get(peer.uid), this.game.settings.nameIcons),
           x: nx,
           head: ny,
           z: swayedAt(ent.sway, ex, ey)[1],
