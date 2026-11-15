@@ -5,6 +5,7 @@ CREATE OR REPLACE FUNCTION public.floor_level(p_world uuid, p_building integer, 
  LANGUAGE sql
  STABLE
 AS $function$
-  select case when p_kind <> 'roof' and coalesce((p_target->>'down')::boolean, false) then 0
+  select case when p_kind = 'roof' then roof_level(p_world, p_building, p_target)
+              when coalesce((p_target->>'down')::boolean, false) then 0
               else floor_level(p_world, p_building, p_kind) end
 $function$

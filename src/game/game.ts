@@ -79,7 +79,7 @@ import {
   type TrapKind,
 } from './traps';
 import { BAIT_BY_ID, FISH, fishHere, pickFish, waterDepth } from './fishing';
-import { across, BRIDGES, sideStep, bridgeDone, deckLane, bridgeLevels, CLEARANCE, deckFurnitureRefusal, deckHeight, deckTiles, deckWheels, END_SLOP, endTiles, isMaterialBridge, laneOffsets, pierSpans, pierStoreys, RAMP_SLOPE, rampDeck, rampRefusal, rampRise, fitIntoSpan, openSpan, spanBill, spanTiles, WIDEST, type Bridge, type BridgeKind, type BridgeSpan } from './bridges';
+import { across, BRIDGES, sideStep, bridgeDone, deckLane, bridgeLevels, CLEARANCE, deckFurnitureRefusal, deckHeight, deckTiles, deckWalk, deckWheels, END_SLOP, endTiles, isMaterialBridge, laneOffsets, pierSpans, pierStoreys, RAMP_SLOPE, rampDeck, rampRefusal, rampRise, fitIntoSpan, openSpan, spanBill, spanTiles, WIDEST, type Bridge, type BridgeKind, type BridgeSpan } from './bridges';
 import { AQ_NOT_THROWN, AQ_OVER, channelOf, fitIntoChannel } from './aqueducts';
 import { AQUEDUCT_LPS, aqueductShut, type Channel } from '../world/aqueducts';
 import { BRIDGE_END_HERE, bridgeEndAt, bridgeEndRefusal, deckDown, hingeKey, hingeOf, isDrawbridge, keepHiddenAsks } from './gates';
@@ -6804,13 +6804,13 @@ export class Game {
 
   /**
    * The height of finished deck at a point, or null for open ground: up its
-   * slope on a ramp (`deckHeight`), which is where a body walking it stands.
-   * The island's `deck_height_at`.
+   * slope on a ramp (`deckHeight`) and over a garden footbridge's arch (`deckWalk`), which is where a body walking it stands.
+   * The island's `deck_height_at`, the arch aside: where a body is drawn standing, which the island does not ask.
    */
   deckHeightAt(x: number, y: number): number | null {
     const b = this.bridgeAt(Math.floor(x), Math.floor(y));
     // A drawbridge drawn up has no deck: what is under it is what there is (`gates.ts`).
-    return b && deckDown(b) && b.kind !== 'aqueduct' ? deckHeight(b, x, y) : null;
+    return b && deckDown(b) && b.kind !== 'aqueduct' ? deckWalk(b, x, y) : null;
   }
 
   /** Whether a tile is walked on a bridge's deck rather than on the ground: under an aqueduct it is the ground, worn and climbed as ever. */
@@ -7852,7 +7852,7 @@ export class Game {
    * tiles". So whatever a smelter, a kiln, a fire, an oven, an anvil, a
    * barrel or an improvement uses up comes from the same stock a craft does,
    * in the same order and by the same rules (see `craftStock`). The tools --
-   * a mould, a coin die, a file -- are still the ones you carry.
+   * a mould, a file -- are still the ones you carry.
    */
   stockEntry(uid: number, reach = CRAFT_REACH): CraftStock | undefined {
     return this.craftStock(uid, false, reach).find((s) => s.item.uid === uid);

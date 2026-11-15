@@ -10,9 +10,11 @@
  * age, which of `FORMS` grown shapes the tile has, the day's dress, the turn,
  * the sun's step and the wind's frame. A frame makes bakes for at most
  * `BAKE_MS`; past that a tree is shown by its nearest bake already made --
- * the same sun a frame of the wind back, the sun's last step, the last turn --
- * or, with none, flat for that frame, so a step of the sun or a turn of the
- * camera is made over a few frames rather than in one.
+ * the same sun a frame of the wind back, the sun's last step, the last turn,
+ * the same kind grown in another form -- so a step of the sun or a turn of
+ * the camera is made over a few frames rather than in one. A kind with no
+ * bake at all to stand in is made there and then: anything else standing in
+ * would be seen to change into it.
  *
  * What a frame had to stand in for is made in the frames' spare time after
  * (`tree3dIdle`), nearest the middle of the view first, and then the next step
@@ -64,6 +66,7 @@ import { thorn } from './species/thorn';
 import { willow } from './species/willow';
 import { logsOf, paintLogs3d, paintStump3d, STUMP_SHAPES, stumpOf, thrown, woodOf, woodSpec, type StumpModel, type StumpShape } from './stump';
 import { SWAY_FRAMES, type Build, type Bush3D, type Dress, type Skeleton, type Species3D, type V3 } from './types';
+import { unit } from './vec';
 
 export { nextSunStep, sunStepOf, SUN_STEPS } from './light';
 
@@ -114,7 +117,7 @@ export const SWAY_MS = 1040;
  */
 const BAKE_MS = 4;
 const SHADE_MS = 2;
-/** And for a tree with no bake at all to stand in, which would otherwise be drawn flat. */
+/** And for a tree with no bake of its own to stand in, which would otherwise be shown by its kind in another form. */
 const BARE_MS = 16;
 /** Pixels of bakes kept, and of shades. */
 const PIXELS = 20_000_000;
@@ -146,11 +149,21 @@ export interface TreeView {
   dark: number;
   /** The wind's frame, 0 to `SWAY_FRAMES - 1`. */
   sway: number;
+  /** Drawn flat, with the low-end graphics (`flatTree3d`): only whether it is night is read off the hour. */
+  flat?: boolean;
 }
 
 /** Which of `FORMS` a tile's tree is grown as, and which of its own species' forms (`Species3D.forms`). */
 export const formAt = (x: number, y: number): number => Math.floor(hash2(Math.round(x), Math.round(y), 5309) * FORMS) % FORMS;
-const formOf = (species: number, x: number, y: number): number => formAt(x, y) % Math.max(1, Math.min(FORMS, SPECIES.get(species)?.forms ?? FORMS));
+/** How many forms a species grows. */
+const formsOf = (species: number): number => Math.max(1, Math.min(FORMS, SPECIES.get(species)?.forms ?? FORMS));
+const formOf = (species: number, x: number, y: number): number => formAt(x, y) % formsOf(species);
+/** The heads of a kind in each of its `n` forms but `form`, the first form first. */
+const kinOf = (n: number, form: number, head: (form: number) => string): string[] => {
+  const out: string[] = [];
+  for (let f = 0; f < n; f++) if (f !== form) out.push(head(f));
+  return out;
+};
 /** The wind's frame a tile's tree is at: each its own beat. */
 export const swayAt = (x: number, y: number, ms: number): number =>
   Math.floor(ms / SWAY_MS + hash2(Math.round(x), Math.round(y), 811) * SWAY_FRAMES) % SWAY_FRAMES;
@@ -233,7 +246,7 @@ let drawing = false;
 /** Saved up for `tree3dIdle`, in milliseconds. */
 let credit = 0;
 /** What has been made, and how often an older one stood in: for a harness, and for the renderer to know a shade is not yet its sun's own. */
-export const tree3dStats = { bakes: 0, ms: 0, standIns: 0, paintMs: 0, shadeStandIns: 0, flats: 0, ahead: 0, aheadLook: 0, stored: 0, shades: 0, shadeMs: 0, idleMs: 0 };
+export const tree3dStats = { bakes: 0, ms: 0, standIns: 0, paintMs: 0, shadeStandIns: 0, flats: 0, firsts: 0, flatMade: 0, flatStandIns: 0, ahead: 0, aheadLook: 0, stored: 0, shades: 0, shadeMs: 0, idleMs: 0 };
 
 /** A bake under a head at a step of the sun and a frame of the wind, for a tile. */
 type MakeAt = (step: number, frame: number) => TreeSprite;
@@ -472,6 +485,8 @@ interface Maker {
   throwOf: ThrowOf;
   /** The same tile's maker as it will be dressed on another day: what its next look is made ahead from (`tree3dIdle`). Without it, a kind's next look is made when it comes. */
   lookAt?: LookAt;
+  /** The heads of the same kind grown in its other forms (`FORMS`): what stands in before any bake of its own is made. */
+  kin: () => string[];
 }
 /** A tile's maker on a day of a season. */
 type LookAt = (season: Season, day: number) => Maker;
@@ -482,6 +497,7 @@ function treeMaker(species: number, variant: number, season: Season, day: number
   return {
     lookAt: (s, d) => treeMaker(species, variant, s, d, x, y, turn, scale),
     head: `${scale}|${species}|${variant}|${form}|${look}`,
+    kin: () => kinOf(formsOf(species), form, (f) => `${scale}|${species}|${variant}|${f}|${look}`),
     // The bare wood has no leaf to move.
     leafy: dress.full > 0,
     makeAt: (step, frame) => {
@@ -508,14 +524,16 @@ function treeMaker(species: number, variant: number, season: Season, day: number
 /**
  * The picture of a tree drawn as a solid, at a scale of pixels to a pixel at
  * zoom one: made now, or a near one standing in while this frame has made
- * all it may, or null -- drawn flat this frame -- with none to stand in.
+ * all it may -- its own from another turn or step of the sun, or its kind's
+ * in another form -- or, with none of its kind made at all, made now
+ * whatever the frame has spent.
  */
 export function tree3dSprite(species: number, variant: number, season: Season, day: number, at: TreeView, scale: number): TreeSprite | null {
   const m = treeMaker(species, variant, season, day, at.x, at.y, at.turn, scale);
   return baked(m, at.turn, sunStepOf(at.hour, at.dark), m.leafy ? at.sway : 0, at.x, at.y);
 }
 
-/** The bake under a maker's head at a turn, a step of the sun and a frame of the wind: kept, fetched from the browser's store, made now, or a near one standing in; null when there is none. */
+/** The bake under a maker's head at a turn, a step of the sun and a frame of the wind: kept, fetched from the browser's store, made now, or a near one standing in; made now when its kind has none to stand in. */
 function baked(m: Maker, turn: number, step: number, frame: number, x: number, y: number): TreeSprite | null {
   const { head } = m;
   const key = `${head}|${turn}|${step}|${frame}`;
@@ -536,13 +554,25 @@ function baked(m: Maker, turn: number, step: number, frame: number, x: number, y
     return spr;
   }
   if (!missing.has(key)) missing.set(key, job);
-  if (near) {
+  // Out of time this frame: the nearest bake of its own, or of the same kind in another form, the same dress under the same light from the same turn.
+  let stand = near;
+  if (!stand) for (const k of m.kin()) if ((stand = standIn(k, turn, step, 0))) break;
+  if (stand) {
     tree3dStats.standIns++;
-    if (bakes.has(near[0])) touch(near[0], near[1]);
-    return near[1];
+    if (bakes.has(stand[0])) touch(stand[0], stand[1]);
+    return stand[1];
   }
-  tree3dStats.flats++;
-  return null;
+  /*
+   * None of its kind at all yet: made now, whatever this frame has spent. A
+   * flat picture standing in costs as much to make (`flatTree3d`) and is
+   * then seen to change into it; this one stands in for every form of its
+   * kind after it.
+   */
+  const t0 = performance.now();
+  const spr = make(job);
+  spent += performance.now() - t0;
+  tree3dStats.firsts++;
+  return spr;
 }
 
 /** The nearest bake already made of the same tree in the same dress: still air, the sun's nearest step, then any turn at this step, then any turn at any step. */
@@ -944,11 +974,12 @@ export function tree3dFoot(species: number, variant: number, x: number, y: numbe
 /**
  * How far out from a tile's tree's foot its wood stands between two heights, in tenths of a metre: the trunk,
  * its flare and its roots, and any limb that low, each to its bark. What a tree bench is built round
- * (`kit/fittings.ts`). Null for a species drawn flat.
+ * (`kit/fittings.ts`); with `flat`, of the first form, as the low-end graphics draw it. Null for a species not drawn as a solid.
  */
-export function tree3dGirth(species: number, variant: number, x: number, y: number, z0: number, z1: number): number | null {
+export function tree3dGirth(species: number, variant: number, x: number, y: number, z0: number, z1: number, flat = false): number | null {
   if (!TREE3D_SPECIES.has(species)) return null;
-  const form = formOf(species, x, y), key = `${species}|${variant}|${form}|${z0}|${z1}`;
+  // Drawn flat, a tree is its first form whatever its tile (`flatTree3d`).
+  const form = flat ? 0 : formOf(species, x, y), key = `${species}|${variant}|${form}|${z0}|${z1}`;
   const had = girths.get(key);
   if (had !== undefined) return had;
   const sk = skeletonOf(species, variant, form);
@@ -984,6 +1015,7 @@ function bushMaker(species: number, season: Season, day: number, x: number, y: n
   return {
     lookAt: (s, d) => bushMaker(species, s, d, x, y, turn, scale),
     head: `${scale}|bush${species}|${form}|${season}${look.key}`,
+    kin: () => kinOf(FORMS, form, (f) => `${scale}|bush${species}|${f}|${season}${look.key}`),
     // Bare canes have no leaf to move.
     leafy: look.full > 0,
     makeAt: (step, frame) => {
@@ -1006,7 +1038,7 @@ function bushMaker(species: number, season: Season, day: number, x: number, y: n
   };
 }
 
-/** The picture of a bush drawn as a solid, as `tree3dSprite` makes a tree's: its day's dress is `bushYear`'s. Null to be drawn flat this frame. */
+/** The picture of a bush drawn as a solid, as `tree3dSprite` makes a tree's: its day's dress is `bushYear`'s. */
 export function bush3dSprite(species: number, season: Season, day: number, at: TreeView, scale: number): TreeSprite | null {
   const m = bushMaker(species, season, day, at.x, at.y, at.turn, scale);
   return baked(m, at.turn, sunStepOf(at.hour, at.dark), m.leafy ? at.sway : 0, at.x, at.y);
@@ -1069,6 +1101,7 @@ function stumpMaker(species: number, season: Season, x: number, y: number, turn:
   return {
     lookAt: (s) => stumpMaker(species, s, x, y, turn, scale),
     head: `${scale}|stump${species}|${form}|${stumpLook(species, season)}`,
+    kin: () => kinOf(formsOf(species), form, (f) => `${scale}|stump${species}|${f}|${stumpLook(species, season)}`),
     leafy: false,
     makeAt: (step) => {
       const p = stumpPainter(species, form, season, lightOf(step), scale);
@@ -1085,7 +1118,7 @@ function stumpMaker(species: number, season: Season, x: number, y: number, turn:
  * The picture of a stump drawn as a solid, as `tree3dSprite` makes a tree's:
  * the foot of its species' tree on that tile, sawn off, and its shade.
  * Moss over its rim outside the summer where its bark has moss, and snow on
- * its top in winter. Null to be drawn flat this frame.
+ * its top in winter.
  */
 export function stump3dSprite(species: number, season: Season, _day: number, at: TreeView, scale: number): TreeSprite | null {
   return baked(stumpMaker(species, season, at.x, at.y, at.turn, scale), at.turn, sunStepOf(at.hour, at.dark), 0, at.x, at.y);
@@ -1120,6 +1153,7 @@ function logMaker(species: number, n: number, season: Season, x: number, y: numb
   return {
     lookAt: (s) => logMaker(species, n, s, x, y, turn, scale, beside),
     head: `${scale}|log${kind}|${beside ? stumpLook(species, season) : season === 'winter' ? 'w' : 'x'}`,
+    kin: () => [],
     leafy: false,
     makeAt: (step) => {
       const m = model();
@@ -1147,8 +1181,361 @@ function logMaker(species: number, n: number, season: Season, x: number, y: numb
  * The picture of felled logs of a species lying on a tile, drawn as solids:
  * one to three of them (`n`), lying a way the tile picks. On a stump's tile
  * (`beside`), the stump with them, the logs to one side of it. Each a length
- * of its kind of stump's stem, both ends sawn. Null to be drawn flat this frame.
+ * of its kind of stump's stem, both ends sawn.
  */
 export function log3dSprite(species: number, n: number, season: Season, at: TreeView, scale: number, beside: boolean): TreeSprite | null {
   return baked(logMaker(species, n, season, at.x, at.y, at.turn, scale, beside), at.turn, sunStepOf(at.hour, at.dark), 0, at.x, at.y);
+}
+
+
+/* ---- drawn flat: the low-end graphics ------------------------------------------------- */
+
+/**
+ * The trees, bushes and stumps of the low-end graphics (`drawsLow`), each its
+ * solid in one view: its first form, from the camera's first turn, in still
+ * air, under `FLAT_DAY` by day and the night's own light after dark. One
+ * picture a kind -- species, age, the day's dress, day or night, the scale --
+ * on whatever tile and at whatever turn, so a wood of a few kinds is a few
+ * pictures, made once and put down whole as the solids' are
+ * (`Renderer.drawTree`), on the middle of its tile as they are (`centred`).
+ *
+ * A frame makes them for `FLAT_MS`. Past that the same kind under the other
+ * light or at another scale stands in, or the same species in another dress
+ * or at another age drawn to its height, and what it stood in for is made
+ * after the frame (`flatIdle`); with nothing of its species made, it is made
+ * there and then. Kept in the browser as the solids' bakes are (`./store`),
+ * and made round where you come ashore while the island is read
+ * (`preloadFlats`).
+ */
+export interface FlatSprite {
+  canvas: HTMLCanvasElement;
+  w: number;
+  h: number;
+  ax: number;
+  ay: number;
+  ink: [number, number, number, number];
+  /** Stood on the middle of its tile, its foot at the model's, as a solid is (`Renderer` puts it there). */
+  centred: true;
+}
+
+/** The light by day: from over the viewer's left shoulder at the first turn, high. */
+const FLAT_DAY: Light = (() => {
+  const e = eyeOf(0, 0);
+  // The ground's way to the left across the screen, and toward the eye.
+  const det = e.ux * e.vy - e.vx * e.uy;
+  const left = unit([-e.vy / det, e.uy / det, 0]);
+  const toward = unit([e.toward[0], e.toward[1], 0]);
+  const sun = unit([left[0] * 0.7 + toward[0] * 0.35, left[1] * 0.7 + toward[1] * 0.35, 0.75]);
+  return { sun, direct: 0.82, ambient: 0.26, night: false, throw: 0 };
+})();
+/** And by night: the solids' (`lightOf`), with no shade thrown. */
+const FLAT_NIGHT: Light = { ...lightOf(-1), throw: 0 };
+
+/** Milliseconds a frame spends making flat pictures, and the pixels of them kept. */
+const FLAT_MS = 6;
+const FLAT_PIXELS = 6_000_000;
+/** The contact shade at a flat tree's or bush's foot, by day and by night: the solids' shade's ink (`drawShade`). */
+const FOOT_SHADE = ['rgba(30,56,66,0.3)', 'rgba(30,56,66,0.12)'];
+
+interface FlatJob {
+  key: string;
+  /** Its species: what stands in for it. */
+  kin: string;
+  /** Its kind less its light and scale: the same picture under the other light, or at another scale, stands in first. */
+  kind: string;
+  /** Its model's height, for one of another age to be drawn to. */
+  tall: number;
+  x: number;
+  y: number;
+  make: () => FlatSprite;
+}
+interface FlatKept { spr: FlatSprite; kind: string; tall: number; used: number }
+
+const flats = new Map<string, FlatKept>();
+let flatPx = 0;
+/** The flat pictures kept, by species. */
+const flatKin = new Map<string, Set<string>>();
+/** What this frame stood in for, by key: made after it (`flatIdle`). */
+const flatMissing = new Map<string, FlatJob>();
+let flatSpent = 0;
+let flatFrame = -1;
+
+/** The flat pictures kept: for a harness. */
+export const flatMemory = (): { flats: number; px: number; missing: number } => ({ flats: flats.size, px: flatPx, missing: flatMissing.size });
+
+/** A flat picture kept, and room made for it by letting go the least lately drawn, never one drawn this frame. */
+function keepFlat(j: FlatJob, spr: FlatSprite): void {
+  const was = flats.get(j.key);
+  if (was) flatPx -= was.spr.canvas.width * was.spr.canvas.height;
+  flats.delete(j.key);
+  flats.set(j.key, { spr, kind: j.kind, tall: j.tall, used: frameNo });
+  flatPx += spr.canvas.width * spr.canvas.height;
+  let kin = flatKin.get(j.kin);
+  if (!kin) flatKin.set(j.kin, (kin = new Set()));
+  kin.add(j.key);
+  for (const [k, f] of flats) {
+    if (flatPx <= FLAT_PIXELS) break;
+    if (f.used >= frameNo) continue;
+    flats.delete(k);
+    flatPx -= f.spr.canvas.width * f.spr.canvas.height;
+    for (const set of flatKin.values()) set.delete(k);
+  }
+}
+
+/** A job's picture made and kept, and put by to be kept in the browser too. */
+function makeFlat(j: FlatJob): FlatSprite {
+  const t0 = performance.now();
+  const spr = j.make();
+  if (toStore.length < 256) toStore.push([j.key, { ...spr, solid: true }]);
+  keepFlat(j, spr);
+  tree3dStats.flatMade++;
+  flatSpent += performance.now() - t0;
+  return spr;
+}
+
+/** A job's picture fetched from the browser's store, kept when it comes. */
+function fetchFlat(j: FlatJob): void {
+  if (loading.has(j.key)) return;
+  loading.add(j.key);
+  void fetchStored(j.key).then((got) => {
+    loading.delete(j.key);
+    if (!got || flats.has(j.key)) return;
+    tree3dStats.stored++;
+    keepFlat(j, { canvas: got.canvas, w: got.w, h: got.h, ax: got.ax, ay: got.ay, ink: got.ink, centred: true });
+  });
+}
+
+/** The nearest picture kept of a job's species: its own kind first, then the same height, then the nearest height, drawn to its own. */
+function flatStandIn(j: FlatJob): FlatSprite | null {
+  const kin = flatKin.get(j.kin);
+  if (!kin) return null;
+  let best: FlatKept | null = null;
+  let score = Infinity;
+  for (const k of kin) {
+    const f = flats.get(k);
+    if (!f) continue;
+    const s = f.kind === j.kind ? 0 : f.tall === j.tall ? 1 : 2 + Math.abs(Math.log(f.tall / j.tall));
+    if (s < score) {
+      score = s;
+      best = f;
+    }
+  }
+  if (!best) return null;
+  best.used = frameNo;
+  const k = j.tall / best.tall;
+  if (Math.abs(k - 1) < 1e-6) return best.spr;
+  const b = best.spr;
+  return { ...b, w: b.w * k, h: b.h * k, ax: b.ax * k, ay: b.ay * k };
+}
+
+/** A flat picture: kept, fetched, made while this frame has time, or one standing in; made now with none to. */
+function flat(j: FlatJob): FlatSprite {
+  if (flatFrame !== frameNo) {
+    flatFrame = frameNo;
+    flatSpent = 0;
+    flatMissing.clear();
+  }
+  const had = flats.get(j.key);
+  if (had) {
+    had.used = frameNo;
+    return had.spr;
+  }
+  const stored = isStored(j.key);
+  if (stored) fetchFlat(j);
+  else if (flatSpent < FLAT_MS) return makeFlat(j);
+  const near = flatStandIn(j);
+  if (near) {
+    tree3dStats.flatStandIns++;
+    if (!stored && !flatMissing.has(j.key)) flatMissing.set(j.key, j);
+    return near;
+  }
+  return makeFlat(j);
+}
+
+/** Its solid painted in one view under a light, with the contact shade at its foot first where it has one (`foot`), as a flat picture. */
+function flatBake(scale: number, sk: Skeleton, night: boolean, foot: number, paint: (g: CanvasRenderingContext2D, e: Eye) => void): FlatSprite {
+  const b = bake(scale, sk, 0, (g, e) => {
+    if (foot > 0) {
+      const rx = Math.min(14, foot * 1.25);
+      const ink = FOOT_SHADE[night ? 1 : 0];
+      g.save();
+      g.scale(1, 0.5);
+      const grad = g.createRadialGradient(0, 0, 0, 0, 0, rx);
+      grad.addColorStop(0, ink);
+      grad.addColorStop(0.55, ink);
+      grad.addColorStop(1, 'rgba(30,56,66,0)');
+      g.fillStyle = grad;
+      g.beginPath();
+      g.arc(0, 0, rx, 0, Math.PI * 2);
+      g.fill();
+      g.restore();
+    }
+    paint(g, e);
+  });
+  return { canvas: b.canvas, w: b.w, h: b.h, ax: b.ax, ay: b.ay, ink: b.ink, centred: true };
+}
+
+/** Whether a view is at night, for a flat picture: day when there is no view. */
+const nightOf = (at: TreeView | null): boolean => !!at && sunStepOf(at.hour, at.dark) < 0;
+
+function flatTreeJob(species: number, variant: number, season: Season, day: number, night: boolean, x: number, y: number, scale: number): FlatJob {
+  const { dress, key: look } = dressFor(species, variant, season, day);
+  const spec = SPECIES.get(species) ?? maple;
+  const def = TREE_DEFS[species] ?? TREE_DEFS[0];
+  const age = TREE_AGES[variant] ?? TREE_AGES[0];
+  const kind = `t${species}|${variant}|${look}`;
+  return {
+    key: `flat|${scale}|${kind}|${night ? 'n' : 'd'}`, kin: `t${species}`, kind, x, y,
+    tall: buildOf(spec, ageKeyOf(age)).height * def.size * age.size,
+    make: () => {
+      const sk = skeletonOf(species, variant, 0);
+      const light = night ? FLAT_NIGHT : FLAT_DAY;
+      return flatBake(scale, sk, night, footReach(sk), (g, e) => paintTree3d(g, { sk, spec, dress, light, e, seed: seedOf(species, variant, 0), frame: 0, frames: SWAY_FRAMES, scale }));
+    },
+  };
+}
+
+function flatBushJob(species: number, season: Season, day: number, night: boolean, x: number, y: number, scale: number): FlatJob {
+  const def = BUSH_DEFS[species] ?? BUSH_DEFS[0];
+  const look = bushYear(def, species, season, day);
+  const kind = `b${species}|${season}${look.key}`;
+  return {
+    key: `flat|${scale}|${kind}|${night ? 'n' : 'd'}`, kin: `b${species}`, kind, x, y, tall: 1,
+    make: () => {
+      const sk = bushModelOf(species, 0);
+      const spec = BUSH3D.get(species) ?? rose;
+      const light = night ? FLAT_NIGHT : FLAT_DAY;
+      return flatBake(scale, sk, night, footReach(sk), (g, e) => spec.paint(g, { sk, look, season, def, light, e, seed: bushSeedOf(species, 0), frame: 0 }));
+    },
+  };
+}
+
+function flatStumpJob(species: number, season: Season, night: boolean, x: number, y: number, scale: number): FlatJob {
+  const kind = `s${species}|${stumpLook(species, season)}`;
+  return {
+    key: `flat|${scale}|${kind}|${night ? 'n' : 'd'}`, kin: `s${species}`, kind, x, y, tall: 1,
+    make: () => {
+      // Its shade at its foot is in its picture (`paintStump3d`), thrown nowhere.
+      const p = stumpPainter(species, 0, season, night ? FLAT_NIGHT : FLAT_DAY, scale);
+      return flatBake(scale, p.sk, night, 0, p.paint);
+    },
+  };
+}
+
+/**
+ * The jobs asked for, by what they are drawn from: a frame asks for every tree in sight, and a
+ * job is the same for the whole of a look (`lookStep`).
+ */
+const flatJobs = new Map<string, FlatJob>();
+function flatJobOf(id: string, x: number, y: number, job: () => FlatJob): FlatJob {
+  let j = flatJobs.get(id);
+  if (!j) {
+    if (flatJobs.size > 4096) flatJobs.clear();
+    flatJobs.set(id, (j = job()));
+  }
+  j.x = x;
+  j.y = y;
+  return j;
+}
+
+/** A tree drawn flat (`FlatSprite`), as it is dressed on a day, by day or by night as `at` has it. */
+export function flatTree3d(species: number, variant: number, season: Season, day: number, at: TreeView | null, scale: number): FlatSprite {
+  const night = nightOf(at);
+  return flat(flatJobOf(`${scale}|t${species}|${variant}|${season}${lookStep(day)}|${night ? 1 : 0}`, at?.x ?? 0, at?.y ?? 0,
+    () => flatTreeJob(species, variant, season, day, night, 0, 0, scale)));
+}
+/** A bush drawn flat. */
+export function flatBush3d(species: number, season: Season, day: number, at: TreeView | null, scale: number): FlatSprite {
+  const night = nightOf(at);
+  return flat(flatJobOf(`${scale}|b${species}|${season}${lookStep(day)}|${night ? 1 : 0}`, at?.x ?? 0, at?.y ?? 0,
+    () => flatBushJob(species, season, day, night, 0, 0, scale)));
+}
+/** A stump drawn flat. */
+export function flatStump3d(species: number, season: Season, at: TreeView | null, scale: number): FlatSprite {
+  const night = nightOf(at);
+  return flat(flatJobOf(`${scale}|s${species}|${season}|${night ? 1 : 0}`, at?.x ?? 0, at?.y ?? 0, () => flatStumpJob(species, season, night, 0, 0, scale)));
+}
+
+/**
+ * The flat pictures' work after a frame, as `tree3dIdle` the solids': what the
+ * frame stood in for, nearest `(fx, fy)` first, in its spare milliseconds and
+ * `TRICKLE_MS` more saved up each frame, and one picture put in the store.
+ */
+export function flatIdle(spare: number, fx: number, fy: number): void {
+  const avg = tree3dStats.bakes ? Math.min(40, tree3dStats.ms / tree3dStats.bakes) : 8;
+  credit = Math.min(Math.max(CREDIT_MOST, avg * 1.25), credit + TRICKLE_MS + Math.max(0, spare));
+  const put = toStore.shift();
+  if (put) void putStored(put[0], put[1]);
+  const t0 = performance.now();
+  const far = (j: FlatJob): number => (j.x - fx) ** 2 + (j.y - fy) ** 2;
+  let going = true;
+  for (const j of [...flatMissing.values()].sort((a, b) => far(a) - far(b))) {
+    if (flats.has(j.key) || loading.has(j.key)) continue;
+    if (isStored(j.key)) {
+      fetchFlat(j);
+      continue;
+    }
+    if (credit < avg) {
+      going = false;
+      break;
+    }
+    const t = performance.now();
+    makeFlat(j);
+    credit -= performance.now() - t;
+    flatMissing.delete(j.key);
+  }
+  if (going) credit = Math.min(credit, TRICKLE_MS);
+  tree3dStats.idleMs += performance.now() - t0;
+}
+
+/**
+ * The flat pictures of every tree, bush and stump in `tiles` made ahead of the
+ * first frame, as `preloadTrees3d` the solids', by day or by night as the hour
+ * is: fetched from the browser's store where it has them, a slice at a time,
+ * stopping once the renderer draws.
+ */
+export async function preloadFlats(
+  tiles: ReadonlyArray<{ bush: boolean; stump?: boolean; species: number; variant: number; x: number; y: number }>,
+  at: { season: Season; day: number; hour: number; dark: number; scale: number },
+): Promise<void> {
+  await openStore();
+  const night = sunStepOf(at.hour, at.dark) < 0;
+  const jobs = new Map<string, FlatJob>();
+  for (const t of tiles) {
+    const set = t.bush ? BUSH3D_SPECIES : t.stump ? STUMP3D_SPECIES : TREE3D_SPECIES;
+    if (!set.has(t.species)) continue;
+    const j = t.bush ? flatBushJob(t.species, at.season, at.day, night, t.x, t.y, at.scale)
+      : t.stump ? flatStumpJob(t.species, at.season, night, t.x, t.y, at.scale)
+      : flatTreeJob(t.species, t.variant, at.season, at.day, night, t.x, t.y, at.scale);
+    if (!jobs.has(j.key)) jobs.set(j.key, j);
+  }
+  const fetches: Promise<void>[] = [];
+  for (const j of jobs.values()) {
+    if (flats.has(j.key) || !isStored(j.key)) continue;
+    loading.add(j.key);
+    fetches.push(fetchStored(j.key).then((got) => {
+      loading.delete(j.key);
+      if (got && !flats.has(j.key)) {
+        tree3dStats.stored++;
+        keepFlat(j, { canvas: got.canvas, w: got.w, h: got.h, ax: got.ax, ay: got.ay, ink: got.ink, centred: true });
+      }
+    }));
+  }
+  let t0 = performance.now();
+  for (const j of jobs.values()) {
+    if (drawing) return;
+    if (flats.has(j.key) || isStored(j.key)) continue;
+    makeFlat(j);
+    if (performance.now() - t0 > 12) {
+      const put = toStore.shift();
+      if (put) void putStored(put[0], put[1]);
+      await new Promise((ok) => setTimeout(ok, 0));
+      t0 = performance.now();
+    }
+  }
+  await Promise.all(fetches);
+  for (const j of jobs.values()) {
+    if (drawing) return;
+    if (!flats.has(j.key)) makeFlat(j);
+  }
 }

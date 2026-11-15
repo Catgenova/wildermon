@@ -277,12 +277,12 @@ const buildingOf = (g: Game, t: TileTarget): Building | undefined => g.buildings
 /** The storey a floor job is for: the one it names, or the one being worked (`jobLevel`). */
 const topLevel = (b: Building, t: TileTarget): number => jobLevel(b, t);
 /**
- * The storey a floor job works on: the roof's, over the top storey; the
- * ground floor's, for a flight or a ladder down to a cellar (`down`), whatever
- * storey the building is being worked on; and otherwise the one the job names,
- * or the one being worked (`jobLevel`).
+ * The storey a floor job works on: the roof's, over the storey the job names or the tile's own top storey
+ * (`Buildings.roofLevelFor`); the ground floor's, for a flight or a ladder down to a cellar (`down`), whatever
+ * storey the building is being worked on; and otherwise the one the job names, or the one being worked (`jobLevel`).
  */
-const slotLevel = (t: TileTarget, b: Building): number => (t.floorKind === 'roof' ? b.levels : t.down ? 0 : topLevel(b, t));
+const slotLevel = (t: TileTarget, b: Building, g: Game): number =>
+  (t.floorKind === 'roof' ? g.buildings.roofLevelFor(b, t) : t.down ? 0 : topLevel(b, t));
 /**
  * The staircase or ladder planned and not finished on the floor slot of the storey over `level` at a tile, built from
  * `level`, the storey it is climbed from: its target names the storey it is on (`level + 1`), which `build_floor` and
@@ -536,6 +536,8 @@ export const BUILD_ACTIONS: ActionDef[] = [
       if (level > 0 || g.buildings.onPiers(t.x, t.y)) {
         const floor = g.buildings.floor(level, t.x, t.y);
         if (!floor || !isDone(floor)) return 'Build this storey\'s floor first.';
+        // A wall on a roof: a terrace's railing and nothing else.
+        if (floorKind(floor) === 'roof' && !t.terrace) return 'Remove the roof first.';
       }
       if (g.buildings.wall(level, t.x, t.y, t.side)) return 'Already a wall on that side.';
       // A shop counter faces the street from the ground floor (`counters.ts`).
@@ -1060,7 +1062,8 @@ export const BUILD_ACTIONS: ActionDef[] = [
       if (under && g.skills.get(under.skill) < want) {
         return `Storey ${b.levels + 1} over ${under.name.toLowerCase()} needs ${under.skill} ${want}; have ${g.skills.get(under.skill).toFixed(1)}.`;
       }
-      if (g.buildings.hasRoof(b)) return 'Remove the roof first.';
+      // Refused while every tile of the footprint is roofed, at whatever height, or a jetty is: a tile open to the sky takes a floor.
+      if (g.buildings.topRoofed(b)) return 'Remove the roof first.';
       if (g.buildings.hasLowWall(b, b.levels - 1)) {
         return 'Storey below needs walls, or finished columns at both ends of each open side. Fences, half walls and railings carry nothing.';
       }
@@ -1101,18 +1104,16 @@ export const BUILD_ACTIONS: ActionDef[] = [
       const b = storeyOf(g, t);
       if (!b) return 'No building here.';
       const kind: FloorKind = t.floorKind ?? 'floor';
-      const level = slotLevel(t, b);
+      const level = slotLevel(t, b, g);
       // Out past the footprint: a jetty, or the roof over one (`frame.ts`).
       if (!buildingOf(g, t)) {
         const jetty = jettyReason(g, t, b, kind, level);
         if (jetty) return jetty;
       }
       if (kind === 'roof') {
-        // Which storey and which border, because "all walls must be built"
-        // reads like a lie while you are standing in a finished room and the
-        // storey that is short of a wall is the one planned over your head.
-        const top = gapText(b.levels, g.buildings.levelGaps(b, b.levels - 1, g.player.x, g.player.y));
-        if (top) return top;
+        // Free roofing: on any tile, over its own top storey or the one the job names; one a tile, none inside.
+        const roof = g.buildings.roofPlanRefusal(b, level, t.x, t.y);
+        if (roof) return roof;
       } else if (kind === 'stairs' || kind === 'ladder') {
         // A spiral staircase is stepped on across any side, and has none to choose.
         const spiral = kind === 'stairs' && t.hand === SPIRAL;
@@ -1126,6 +1127,11 @@ export const BUILD_ACTIONS: ActionDef[] = [
         if ((level > 1 || g.buildings.onPiers(t.x, t.y)) && !g.buildings.floor(level - 1, t.x, t.y)) return 'Plan the floor below first.';
         const stacked = stackedFlightReason(g, t, level, spiral);
         if (stacked) return stacked;
+      }
+      // A storey goes up on a tile only once the roof under it there is off.
+      if (kind !== 'roof' && level >= 1) {
+        const roof = g.buildings.roofOn(t.x, t.y);
+        if (roof && roof.level <= level) return 'Remove the roof first.';
       }
       // A flight or a ladder down takes up the ground floor's flooring where it goes (`flooringUnder`).
       if (g.buildings.floor(level, t.x, t.y) && !flooringUnder(g, t, level, kind)) {
@@ -1141,7 +1147,7 @@ export const BUILD_ACTIONS: ActionDef[] = [
       const b = storeyOf(g, t);
       if (!b) return;
       const kind: FloorKind = t.floorKind ?? 'floor';
-      const level = slotLevel(t, b);
+      const level = slotLevel(t, b, g);
       /*
        * A building has one roof, so the first tile of it decides the shape and
        * the rest follow. Changing your mind means taking the roof off, which
@@ -1165,7 +1171,7 @@ export const BUILD_ACTIONS: ActionDef[] = [
     id: 'build_floor',
     toolFor: (t, g) => {
       const b = isTile(t) ? storeyOf(g, t) : undefined;
-      const floor = b && isTile(t) ? g.buildings.floor(slotLevel(t, b), t.x, t.y) : undefined;
+      const floor = b && isTile(t) ? g.buildings.floor(slotLevel(t, b, g), t.x, t.y) : undefined;
       return !floor ? undefined : floorKind(floor) === 'ladder' ? PLAN_TOOL : material(floor.material)?.tool;
     },
     label: 'Build floor',
@@ -1178,7 +1184,7 @@ export const BUILD_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       if (!isTile(t)) return null;
       const b = storeyOf(g, t);
-      const floor = b && g.buildings.floor(slotLevel(t, b), t.x, t.y);
+      const floor = b && g.buildings.floor(slotLevel(t, b, g), t.x, t.y);
       if (!floor) return 'Nothing planned here.';
       if (isDone(floor)) return 'Already finished.';
       const mat = material(floor.material);
@@ -1190,7 +1196,7 @@ export const BUILD_ACTIONS: ActionDef[] = [
     perform: (t, g) => {
       if (!isTile(t)) return false;
       const b = storeyOf(g, t);
-      const floor = b && g.buildings.floor(slotLevel(t, b), t.x, t.y);
+      const floor = b && g.buildings.floor(slotLevel(t, b, g), t.x, t.y);
       if (!floor || isDone(floor)) return false;
       const used = consumeUnit(g, floor, t);
       if (!used) return false;
@@ -1204,11 +1210,11 @@ export const BUILD_ACTIONS: ActionDef[] = [
       const what = floorWords(floor);
       if (isDone(floor)) {
         // A floor finished on a second storey or higher, for the journal (the island's `perform_building` the same).
-        if (kind === 'floor' && slotLevel(t, b) >= 1) g.note('storey');
+        if (kind === 'floor' && slotLevel(t, b, g) >= 1) g.note('storey');
         // And for the journal's third storey, pier and outside staircase (the island's the same).
-        if (kind === 'floor' && slotLevel(t, b) >= 1) g.note(`storey:${slotLevel(t, b) + 1}`);
-        if (kind === 'floor' && slotLevel(t, b) === 0 && b.piers?.includes(`${t.x},${t.y}`)) g.note('pier');
-        if (g.buildings.outsideStair(t.x, t.y, slotLevel(t, b)) === floor) g.note('outstair');
+        if (kind === 'floor' && slotLevel(t, b, g) >= 1) g.note(`storey:${slotLevel(t, b, g) + 1}`);
+        if (kind === 'floor' && slotLevel(t, b, g) === 0 && b.piers?.includes(`${t.x},${t.y}`)) g.note('pier');
+        if (g.buildings.outsideStair(t.x, t.y, slotLevel(t, b, g)) === floor) g.note('outstair');
         g.logMsg(`Built: ${what}.`, 'event');
         return false;
       }
@@ -1228,7 +1234,7 @@ export const BUILD_ACTIONS: ActionDef[] = [
       if (!isTile(t)) return null;
       const b = storeyOf(g, t);
       if (!b) return 'No building here.';
-      const level = slotLevel(t, b);
+      const level = slotLevel(t, b, g);
       const floor = g.buildings.floor(level, t.x, t.y);
       if (!floor) return 'Nothing to remove.';
       // A flight down is let into the ground floor, and the walls round it stand on the ground;
@@ -1262,7 +1268,7 @@ export const BUILD_ACTIONS: ActionDef[] = [
       if (!isTile(t)) return;
       const b = storeyOf(g, t);
       if (!b) return;
-      const level = slotLevel(t, b);
+      const level = slotLevel(t, b, g);
       const floor = g.buildings.floor(level, t.x, t.y);
       if (!floor) return;
       g.buildings.removeFloor(level, t.x, t.y);
@@ -1289,7 +1295,8 @@ export const BUILD_ACTIONS: ActionDef[] = [
       const level = b.levels - 1;
       if (g.buildings.hasRoof(b)) return 'Remove the roof first.';
       for (const w of g.buildings.walls.values()) if (w.building === b.id && w.level === level) return 'Remove the top storey\'s walls first.';
-      for (const f of g.buildings.floors.values()) if (f.building === b.id && f.level === level) return 'Remove the top storey\'s floors first.';
+      // A lower tier's roof at its floor's level stays, and is the top roof once it is off.
+      for (const f of g.buildings.floors.values()) if (f.building === b.id && f.level === level && floorKind(f) !== 'roof') return 'Remove the top storey\'s floors first.';
       for (const c of g.buildings.columns.values()) if (c.building === b.id && c.level === level) return 'Remove the top storey\'s columns first.';
       return null;
     },

@@ -42,7 +42,7 @@ import { foundationDone } from '../game/foundations';
 import { hash2 } from '../world/noise';
 import { bareRock, DAMP_SAND, dustiness, FLAT, growth, oreWash, PAVED, ROCK_VARIANTS, SLAB_VARIANTS, STREWN, TileType, TILE_DEFS, COVERED, bushSpecies, slabVariant, trailGround, stonesBed, treeSpecies, treeVariant } from '../world/tiles';
 import { drawRunestone, runestoneHit, RunestoneNight, softHole, type NightHole, type OccluderClip } from './runestone';
-import { BUSH3D_SPECIES, bush3dFoot, bush3dShadow, formAt, nextSunStep, STUMP3D_SPECIES, SWAY_FRAMES, sunStepOf, swayAt, TREE3D_SPECIES, tree3dFoot, tree3dFrame, tree3dGirth, tree3dIdle, tree3dShadow, tree3dStats, type TreeView } from './trees3d';
+import { BUSH3D_SPECIES, bush3dFoot, bush3dShadow, flatIdle, formAt, nextSunStep, STUMP3D_SPECIES, SWAY_FRAMES, sunStepOf, swayAt, TREE3D_SPECIES, tree3dFoot, tree3dFrame, tree3dGirth, tree3dIdle, tree3dShadow, tree3dStats, type TreeView } from './trees3d';
 import { drawRuneLantern, drawRuneLanternBloom, drawRuneLanternLive, runeLanternHit, runeLanternNight, runeLanternPool, runeLanternVariant, type RuneLanternLook } from './runelantern';
 import { deedTotemBounds, deedTotemHits, deedTotemNight, deedTotemVariant, drawDeedTotem, drawDeedTotemBloom, drawDeedTotemLive } from './deedtotem';
 import { drawWorkPost, drawWorkPostLive, drawWorkPostNight, workPostBounds, workPostHit, workPostNight, workPostVariant, type WorkPostLook } from './workpost';
@@ -482,15 +482,15 @@ import { clumpOf, FLOWER_COLOURS, flowerSprite, swayFrame, tileColour } from './
 import { flowerSeason, flowersOn } from '../world/flowers';
 import { drawFace, EDGES, ROCK_MOSS, sprigOf, topEdges, type Face } from './outcrops';
 import { cropFrame, FIELD_LAYOUTS } from './crops';
-import { forgetTrees, grownAt, stumpGrown, spriteScaleFor, bushSprite, crateSprite, cropFlatSprite, cropSprite, drawCampfire, drawCreature, creatureTop, type CreaturePose, drawPlayer, facingOf, lyingSprite, treeSprite, type Sprite, drawTrap, drawDeck, stumpSprite } from './sprites';
+import { forgetTrees, grownAt, stumpGrown, spriteScaleFor, bushSprite, crateSprite, cropFlatSprite, cropSprite, drawCampfire, drawCreature, creatureTop, type CreaturePose, drawPlayer, facingOf, lyingSprite, treeSprite, type Sprite, drawTrap, stumpSprite } from './sprites';
 import { inkOf, READ_BACK } from './ink';
 import { wildermonHead, wildermonSaddle, wildermonSeat, wildermonTop } from './wildermon';
 import {
   drawDrawbridgeSpan,
 } from './gates';
 import { hingeKey, hingeOf, isDrawbridge, landingOf } from '../game/gates';
-import { bridgeDone, bridgeLevels, deckHeight, type Bridge } from '../game/bridges';
-import { bridgeNight, deckKey, drawBridgePiece, kitBridge, piecesAt, ropeKey, type BridgeFrame } from './bridgekit';
+import { bridgeDone, bridgeLevels, type Bridge } from '../game/bridges';
+import { bridgeNight, deckKey, drawBridgePiece, kitBridge, piecesAt, type BridgeFrame } from './bridgekit';
 import { SmallLife } from './life';
 import { personBody, SpellStage, type Aim, type Told, type Who } from './spells/stage';
 import { ActionFx } from './fx/actions';
@@ -540,7 +540,7 @@ import { WaterPainter, type WaterHost } from './waterdraw';
 import { type Swayed, type Entity, PLAN_COLOR, FLIGHT_STEPS, rgb, type Ghost, type BakeAs } from './drawshared';
 import { StairPainter, type StairHost } from './stairdraw';
 import { CellarPainter, type CellarHost } from './cellardraw';
-import { RoofPainter, type RoofHost } from './roofdraw';
+import { RoofPainter, type RoofHost, type RoofPart } from './roofdraw';
 import { WallPainter, type WallHost } from './walldraw';
 export { type Ghost } from './drawshared';
 export { type Pick } from './picking';
@@ -928,32 +928,6 @@ const clamp255 = (v: number): number => (v < 0 ? 0 : v > 255 ? 255 : v | 0);
 
 /** The crops whose plants flower, which a butterfly will come to in a planter: the herbs and the fibre crops. */
 const FLOWERING_LOOKS: ReadonlySet<CropLook> = new Set<CropLook>(['herb', 'fibre']);
-
-/** How deep the lip `drawDeck` lays under a deck's edges that run left to right is, in zoom-one pixels. */
-const DECK_EDGE = 2.5;
-
-/**
- * The outlines a bridge's deck is drawn in on the screen, each as x, y
- * pairs: its tile at the deck's height (`q`, from the deck's middle in
- * zoom-one pixels), a tile's diamond where it has no shape, and the lip
- * `drawDeck` lays under each of its edges that runs left to right.
- */
-function deckOutline(q: ReadonlyArray<readonly [number, number]> | undefined, sx: number, sy: number, zoom: number): Float64Array[] {
-  const top = q ?? [[0, -24], [48, 0], [0, 24], [-48, 0]];
-  const out = [new Float64Array(top.flatMap(([x, y]) => [sx + x * zoom, sy + y * zoom]))];
-  top.forEach(([x, y], i) => {
-    const [nx, ny] = top[(i + 1) % top.length];
-    if (nx - x <= 0) return;
-    const ax = sx + x * zoom, ay = sy + y * zoom, bx = sx + nx * zoom, by = sy + ny * zoom;
-    out.push(Float64Array.of(ax, ay, bx, by, bx, by + DECK_EDGE * zoom, ax, ay + DECK_EDGE * zoom));
-  });
-  return out;
-}
-
-/** How far down the pier `drawDeck` stands a deck on reaches from just under its middle, in zoom-one pixels: nought for none. */
-function deckPier(kind: string, drop: number): number {
-  return drop > 2 && kind !== 'rope' ? Math.min(34, drop * 0.8) : 0;
-}
 
 /** You, as the spell stage names whoever casts. */
 const PLAYER_CASTS: Who = { kind: 'player' };
@@ -1632,7 +1606,7 @@ export class Renderer {
   /** What has changed about the buildings, and where (`structwatch.ts`): looked over once a frame. */
   private readonly structs = new StructureWatch();
   /** The pitched roofs to lay this frame, by the line of the ground after whose walls each goes on. */
-  private roofQueue = new Map<number, Building[]>();
+  private roofQueue = new Map<number, RoofPart[]>();
   /**
    * Looking into a cellar this frame (`Game.cellarView`); the buildings over
    * the cellars, which are taken off while you are; every tile of every
@@ -3996,6 +3970,9 @@ export class Renderer {
         // The look turns before the sun next steps: the sun's next step would be made in the look going out.
         if (look && look.step === sunStepOf(this.solidHour, this.solidDark)) next = null;
         tree3dIdle(IDLE_FRAME_MS - (performance.now() - now), next, this.game.player.x, this.game.player.y, look);
+      } else if (this.still) {
+        // And the flat ones' (`flatIdle`).
+        flatIdle(IDLE_FRAME_MS - (performance.now() - now), this.game.player.x, this.game.player.y);
       }
     } finally {
       cam.cx = cx;
@@ -4835,7 +4812,7 @@ export class Renderer {
             const data = world.viewData(x, y, false);
             const spr = t === TileType.Tree ? treeSprite(treeSpecies(data), treeVariant(data), this.year.season, this.year.day, this.treeAt(treeSpecies(data), x, y)) : t === TileType.Bush ? bushSprite(bushSpecies(data), this.year.season, this.year.day, this.bushAt(bushSpecies(data), x, y)) : stumpSprite(treeSpecies(data), this.year.season, this.year.day, this.stumpAt(treeSpecies(data), x, y));
             const avg = (c[0] + c[1] + c[2] + c[3]) / 4;
-            this.take(t === TileType.Tree ? 'tree' : t === TileType.Bush ? 'bush' : 'stump', x, y, baseX + (spr.solid ? solidX : 0), baseY + hh - avg * hs + (spr.solid ? solidY : 0), spr);
+            this.take(t === TileType.Tree ? 'tree' : t === TileType.Bush ? 'bush' : 'stump', x, y, baseX + (spr.solid || spr.centred ? solidX : 0), baseY + hh - avg * hs + (spr.solid || spr.centred ? solidY : 0), spr);
           }
           if (this.structs.nearAny(x, y)) this.drawStructures(x, y, V, d > playerDepth);
           if (!aloft && this.hingeTiles.has(x * 65536 + y)) this.walls.drawGateAt(x, y, V);
@@ -4850,16 +4827,16 @@ export class Renderer {
         if (stone && !aloft) this.takeStone(stone, x, y, V);
         // A stump with felled logs on its tile drawn as solids is drawn with them, in their picture (`log3dSprite`).
         const logged = t === TileType.Stump && !cutHere && !aloft && this.game.ground.size > 0 && this.game.groundAt(x, y).length > 0
-          && !this.still && lyingSprite(this.game.groundAt(x, y), x, y, this.solidAt(x, y), this.year.season, true).solid === true;
+          && !this.still && lyingSprite(this.game.groundAt(x, y), x, y, this.solidAt(x, y), this.year.season, true, this.camera.rotation).solid === true;
         if (!stone && !logged && (t === TileType.Tree || t === TileType.Bush || t === TileType.Stump)) {
           const data = world.getData(x, y);
           const spr = t === TileType.Tree ? treeSprite(treeSpecies(data), treeVariant(data), this.year.season, this.year.day, this.treeAt(treeSpecies(data), x, y)) : t === TileType.Bush ? bushSprite(bushSpecies(data), this.year.season, this.year.day, this.bushAt(bushSpecies(data), x, y)) : stumpSprite(treeSpecies(data), this.year.season, this.year.day, this.stumpAt(treeSpecies(data), x, y));
           const avg = (c[0] + c[1] + c[2] + c[3]) / 4;
-          this.take(t === TileType.Tree ? 'tree' : t === TileType.Bush ? 'bush' : 'stump', x, y, baseX + (spr.solid ? solidX : 0), baseY + hh - avg * hs + (spr.solid ? solidY : 0), spr);
+          this.take(t === TileType.Tree ? 'tree' : t === TileType.Bush ? 'bush' : 'stump', x, y, baseX + (spr.solid || spr.centred ? solidX : 0), baseY + hh - avg * hs + (spr.solid || spr.centred ? solidY : 0), spr);
         }
         if (!cutHere && !aloft && this.game.ground.size && this.game.groundAt(x, y).length) {
           const avg = (this.game.buildings.pierTiles.size ? this.game.pierDeckAt(x, y) : null) ?? (c[0] + c[1] + c[2] + c[3]) / 4;
-          const lying = lyingSprite(this.game.groundAt(x, y), x, y, this.logsAt(x, y), this.year.season, t === TileType.Stump);
+          const lying = lyingSprite(this.game.groundAt(x, y), x, y, this.logsAt(x, y), this.year.season, t === TileType.Stump, this.camera.rotation);
           const pile = this.take('pile', x, y, baseX + (lying.solid ? solidX : 0), baseY + hh - avg * hs + (lying.solid ? solidY : 0), lying);
           // A heap shines for the best thing in it: one fantastic hatchet under
           // a hundred rocks is still a fantastic hatchet lying in the grass.
@@ -4971,30 +4948,12 @@ export class Renderer {
                 { kind: 'draw', done: Object.values(bridge.spans[i].needed).every((n) => n <= 0), drop: 0, id: bridge.id, span: i };
             }
           } else if (bridge && kitBridge(bridge)) {
-            // A material bridge in its pieces, each sorted round whoever is under or on the deck (`bridgekit.ts`).
+            // A material bridge, a rope bridge or a garden footbridge in its pieces, each sorted round whoever is under or on the deck (`bridgekit.ts`).
             for (const p of piecesAt(bridge, x, y, this.bridgeFrame())) {
               const be = this.take('deck', x, y, p.sx, p.sy, null);
               be.bp = p;
               be.key = p.key;
             }
-          } else if (bridge && bridge.kind !== 'aqueduct') {
-            const span = bridge.spans.find((sp) => sp.x === x && sp.y === y);
-            const wx = x + 0.5;
-            const wy = y + 0.5;
-            // On a ramp the deck is at its own height at every point along it, up its slope (`deckHeight`).
-            const mid = deckHeight(bridge, wx, wy);
-            const dx = cam.worldToScreenX(wx, wy), dy = cam.worldToScreenY(wx, wy, mid);
-            // The tile it spans, corner by corner at the deck's height there, so it is that tile at every turn of the view.
-            const q = ([[x, y], [x + 1, y], [x + 1, y + 1], [x, y + 1]] as Array<[number, number]>)
-              .map(([a, b]): [number, number] => [(cam.worldToScreenX(a, b) - dx) / zoom, (cam.worldToScreenY(a, b, deckHeight(bridge, a, b)) - dy) / zoom]);
-            const re = this.take('deck', x, y, dx, dy, null);
-            // In front of anybody under it, behind anybody on it (`ropeKey`).
-            re.key = ropeKey(this.bridgeFrame(), x, y);
-            re.deck =
-              { kind: bridge.kind, done: !!span && Object.values(span.needed).every((n) => n <= 0), drop: mid - world.centerHeight(x, y), id: bridge.id,
-                shape: { q, along: bridge.ay === bridge.by ? 'x' : 'y' },
-                // How far the moss on a stone arch has got (`greening.ts`): over water, always by it.
-                green: greenShows(bridgeGreen(this.game, bridge, this.greenAt) ?? 0, 0, this.walls.wetness(x, y)) };
           }
         }
         /*
@@ -5079,7 +5038,7 @@ export class Renderer {
             if ((crate.level ?? 0) < 0 || this.game.rackAt(crate.x, crate.y, crate.sx, crate.sy, crate.level)) continue;
             if (this.pinned !== null && (crate.level ?? 0) !== this.pinned) continue;
             const [wx, wy] = crateCentre(crate);
-            const ce = this.take('crate', x, y, cam.worldToScreenX(wx, wy), cam.worldToScreenY(wx, wy, this.standTop(wx, wy)), crateSprite(crate.kind));
+            const ce = this.take('crate', x, y, cam.worldToScreenX(wx, wy), cam.worldToScreenY(wx, wy, this.standTop(wx, wy)), crateSprite(crate.kind, crate.material, this.camera.rotation, (crate.sx + crate.sy) & 3));
             ce.crateId = crate.id;
             if (crate.rare) ce.rare = crate.rare;
           }
@@ -5265,7 +5224,8 @@ export class Renderer {
       // anything standing in front of them.
       const roofs = this.roofQueue.get(d);
       if (roofs) {
-        for (const bb of roofs) {
+        for (const part of roofs) {
+          const bb = part.b;
           // And so does its roof, over the water drawn beside its last tiles.
           if (this.wetPierBuildings?.has(bb.id)) this.waters.layWater(ctx, zoom);
           // Not over the bays of an aqueduct standing in front of it, drawn on the lines before this one.
@@ -5274,7 +5234,7 @@ export class Renderer {
             ctx.save();
             this.aqueducts.clipOut(ctx, cut);
           }
-          this.roofs.drawPitchedRoof(bb);
+          this.roofs.drawPitchedRoof(part);
           if (cut?.length) ctx.restore();
         }
       }
@@ -6540,7 +6500,7 @@ export class Renderer {
     const world = this.game.world;
     if (world.getTile(x, y) !== TileType.Tree) return undefined;
     const data = world.getData(x, y);
-    return benchRound(tree3dGirth(treeSpecies(data), treeVariant(data), x, y, BENCH_BAND[0], BENCH_BAND[1]));
+    return benchRound(tree3dGirth(treeSpecies(data), treeVariant(data), x, y, BENCH_BAND[0], BENCH_BAND[1], this.still));
   }
 
   /** Whether a tile stands on piers, for the pond painter (`WaterFrame.decked`). */
@@ -7706,26 +7666,6 @@ export class Renderer {
         this.deckHits.push({ x: ent.x, y: ent.y, left: ent.sx - 40 * zoom, top: ent.sy - 22 * zoom, w: 80 * zoom, h: 44 * zoom, bridge: ent.deck.id });
         continue;
       }
-      if (ent.kind === 'deck' && ent.deck) {
-        const deck = ent.deck;
-        this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => drawDeck(g, px, py, zoom, deck.kind, deck.done, deck.drop, deck.shape, deck.green, ent.x * 31 + ent.y * 17));
-        // The deck as it is laid: the tile at the deck's height and its edge under it, not a box round it.
-        const poly = deckOutline(deck.shape?.q, ent.sx, ent.sy, zoom);
-        let l = Infinity, t = Infinity, r = -Infinity, b = -Infinity;
-        for (const o of poly) {
-          for (let k = 0; k < o.length; k += 2) {
-            l = Math.min(l, o[k]);
-            r = Math.max(r, o[k]);
-            t = Math.min(t, o[k + 1]);
-            b = Math.max(b, o[k + 1]);
-          }
-        }
-        // And the pier under it, which the deck is laid over.
-        const pier = deckPier(deck.kind, deck.drop);
-        if (pier > 0) this.deckHits.push({ x: ent.x, y: ent.y, left: ent.sx - 5 * zoom, top: ent.sy + 2 * zoom, w: 10 * zoom, h: pier * zoom, bridge: deck.id });
-        this.deckHits.push({ x: ent.x, y: ent.y, left: l, top: t, w: r - l, h: b - t, bridge: deck.id, poly });
-        continue;
-      }
       if (ent.kind === 'trap' && ent.trap) {
         const trap = ent.trap;
         // Turned with the camera and a way of its own by where it stands; worn once most of its life is gone (`TRAP_WORN`).
@@ -7765,8 +7705,8 @@ export class Renderer {
        * as big or better, one in four is half size or less, and the rest
        * fill the middle. That is what puts a top and a floor on a canopy.
        */
-      // A stump drawn as a solid is the foot of the tree that grew there: bigger or smaller with it, by less (`stumpGrown`).
-      const grew = ent.kind === 'tree' || ent.kind === 'bush' ? grownAt(ent.x, ent.y) : ent.kind === 'stump' && spr.solid ? stumpGrown(ent.x, ent.y) : 1;
+      // A stump drawn as a solid, or flat as one, is the foot of the tree that grew there: bigger or smaller with it, by less (`stumpGrown`).
+      const grew = ent.kind === 'tree' || ent.kind === 'bush' ? grownAt(ent.x, ent.y) : ent.kind === 'stump' && (spr.solid || spr.centred) ? stumpGrown(ent.x, ent.y) : 1;
       const dw = spr.w * zoom * grew;
       const dh = spr.h * zoom * grew;
       const left = ent.sx - spr.ax * zoom * grew;
@@ -7808,19 +7748,19 @@ export class Renderer {
     if (this.ghost && !this.inCellarPass) this.drawGhost(ctx, zoom, this.ghost);
   }
 
-  /** The view a tree of a species drawn as a solid is baked for (`./trees3d`); nothing for any other. */
+  /** The view a tree of a species drawn as a solid is baked for (`./trees3d`), drawn flat with the low-end graphics (`flatTree3d`); nothing for any other. */
   private treeAt(species: number, x: number, y: number): TreeView | undefined {
-    return TREE3D_SPECIES.has(species) && !this.still ? this.solidAt(x, y) : undefined;
+    return TREE3D_SPECIES.has(species) ? this.solidAt(x, y) : undefined;
   }
 
   /** And a bush's. */
   private bushAt(species: number, x: number, y: number): TreeView | undefined {
-    return BUSH3D_SPECIES.has(species) && !this.still ? this.solidAt(x, y) : undefined;
+    return BUSH3D_SPECIES.has(species) ? this.solidAt(x, y) : undefined;
   }
 
   /** And a stump's. */
   private stumpAt(species: number, x: number, y: number): TreeView | undefined {
-    return STUMP3D_SPECIES.has(species) && !this.still ? this.solidAt(x, y) : undefined;
+    return STUMP3D_SPECIES.has(species) ? this.solidAt(x, y) : undefined;
   }
 
   /** And felled logs': none on the low-end graphics, which draw them in the heap. */
@@ -7829,6 +7769,7 @@ export class Renderer {
   }
 
   private solidAt(x: number, y: number): TreeView {
+    if (this.still) return { x, y, turn: 0, hour: this.solidHour, dark: this.solidDark, sway: 0, flat: true };
     return { x, y, turn: this.camera.rotation, hour: this.solidHour, dark: this.solidDark, sway: this.solidSway ? swayAt(x, y, this.anim * 1000) : 0 };
   }
 
@@ -8699,7 +8640,7 @@ export class Renderer {
           // Under a finished roof drawn whole over it -- you are not standing under it, nor looking into the storey --
           // it is not seen, and not drawn.
           const down = level === 0 && climb && !!bld.cellar(x, y);
-          const lid = down && viewLevel === null && !this.roomTiles?.has(`${x},${y}`) ? bld.roofAt(host.levels, x, y) : undefined;
+          const lid = down && viewLevel === null && !this.roomTiles?.has(`${x},${y}`) ? bld.roofOn(x, y) : undefined;
           if (down) {
             if (!lid || !isDone(lid)) this.cellars.drawOpening(floor, x, y, base, alpha);
           } else switch (floorKind(floor)) {
@@ -9264,8 +9205,8 @@ export class Renderer {
     const sx = cam.worldToScreenX(x + 0.5, y + 0.5), sy = cam.worldToScreenY(x + 0.5, y + 0.5, h);
     const def = cropDef(crop.id);
     const spr = this.still
-      ? cropFlatSprite(crop.id, Math.min(3, crop.stage), def.look, def.colors[0], def.colors[1], false, crop.tendedNow, !cam.view.staggered)
-      : cropSprite(crop.id, Math.min(3, crop.stage), def.colors[0], def.colors[1], false, crop.tendedNow, rotation, this.cropStep, Math.floor(hash2(x, y, 6151) * FIELD_LAYOUTS));
+      ? cropFlatSprite(crop.id, Math.min(3, crop.stage), def.look, def.colors[0], def.colors[1], false, crop.tendedNow, !cam.view.staggered, true)
+      : cropSprite(crop.id, Math.min(3, crop.stage), def.colors[0], def.colors[1], false, crop.tendedNow, rotation, this.cropStep, Math.floor(hash2(x, y, 6151) * FIELD_LAYOUTS), true);
     this.take('crop', x, y, sx, sy, spr);
   }
 
@@ -11236,7 +11177,8 @@ export class Renderer {
    * Pinned on the level a building's roof sits on (`storeyview.ts`), where
    * every storey under it is hidden: each of its roof's tiles not yet planned,
    * marked out at the height of its eaves, so the roof still to plan is there
-   * to click on.
+   * to click on. A tier's tiles too, on the level its roof would sit at, over
+   * its own top storey (`Buildings.roofStoreyAt`).
    */
   private drawRoofSites(ctx: CanvasRenderingContext2D): void {
     const level = this.pinned;
@@ -11245,9 +11187,10 @@ export class Renderer {
     const cam = this.camera;
     let any = false;
     for (const b of bld.list.values()) {
-      if (b.levels !== level || this.cut.has(b.id)) continue;
+      if (b.levels < level || this.cut.has(b.id)) continue;
       for (const [x, y] of bld.roofTiles(b)) {
-        if (bld.floor(level, x, y)) continue;
+        if (bld.floor(level, x, y) || bld.roofOn(x, y)) continue;
+        if (b.levels > level && bld.roofStoreyAt(b, x, y) + 1 !== level) continue;
         if (!any) {
           ctx.save();
           ctx.strokeStyle = PLAN_COLOR;

@@ -1,4 +1,4 @@
-import { bridgeBays, bridgeDone, bridgeWidth, BRIDGES, deckHeight, isMaterialBridge, laneOffsets, laneStep, rampDeck, type Bridge } from '../game/bridges';
+import { bridgeBays, bridgeDone, bridgeWidth, BRIDGES, deckArch, deckWalk, laneOffsets, laneStep, rampDeck, type Bridge, type BridgeSpan } from '../game/bridges';
 import { isDone } from '../game/building';
 import { HALF_H, HALF_W, UNITS_PER_TILE } from './iso';
 import { kitBaked, kitIsSync, kitMayBake } from './kitpieces';
@@ -8,7 +8,7 @@ import { buildSlice, layGlowMask, layPiece, piecePoints, planOf, type Part3, typ
 import { BRIDGE_STYLES } from './kit/bridge/index';
 
 /**
- * A bridge of a wall material on the screen: its plan, its slices and their
+ * A bridge of a wall material, a rope bridge or a garden footbridge on the screen: its plan, its slices and their
  * pictures (`kit/bridge/core.ts` builds them).
  *
  * Every tile of deck of every lane is three pieces (`Part3`), each taken into
@@ -16,8 +16,11 @@ import { BRIDGE_STYLES } from './kit/bridge/index';
  * back of it a hair in front of the tile's far corner, so it is laid behind
  * anything standing under the deck there; the front of it just short of the
  * tile's near corner, in front of anything under the deck and behind anybody
- * on it (`deckKey`); and the near parapet after both. A rope bridge's deck is
- * sorted the same way (`ropeKey`).
+ * on it (`deckKey`); and the near parapet after both. A rope bridge and a
+ * garden footbridge are drawn and sorted the same way (`rope.ts`,
+ * `footbridge.ts`): what stands on their far edge before the deck, and seen
+ * side on in the back piece (`edgesAt`). A piece a slice has nothing in at a
+ * turn is not taken at all.
  *
  * Pictures are baked once for each view and scale, counted against the same
  * share of a frame as the kit's furniture (`kitMayBake`), kept by their
@@ -34,6 +37,9 @@ export interface BridgePieceAt {
   sy: number;
   /** What it sorts by among what stands on its line. */
   key: number;
+  /** The plan and the slice it was taken from this frame, so drawing it looks neither up again. */
+  pl?: Planned;
+  sl?: Sliced;
 }
 
 /** What the renderer gives: its camera and the ground. */
@@ -76,9 +82,21 @@ interface Planned {
   plan: Plan;
   A: [number, number];
   P: [number, number];
-  /** Slices built for a view, by `i|o`. */
-  slices: Map<string, Map<string, Record<Part3, PieceModel> & { box: Record<Part3, [number, number, number, number]> }>>;
+  /** Slices built for a view, by `sliceKey`. */
+  slices: Map<string, Map<number, Sliced>>;
+  /**
+   * Of a style that shows a tile being built (`BridgeStyle.stage`), what each tile of deck shows, and how many times
+   * that has changed: a tile's pictures are made again when it does, and nothing else of the bridge is.
+   */
+  stages: string[];
+  ver: number[];
+  /** Which tile of deck and which lane each tile it covers is, by `tileKey`. */
+  tiles: Map<number, { i: number; o: number }>;
 }
+/** A tile as a number, for looking it up. */
+const tileKey = (x: number, y: number): number => x * 65536 + y;
+/** A slice as a number, by its tile of deck and its lane (-1 to 1), for looking it up. */
+const sliceKey = (i: number, o: number): number => i * 4 + o + 1;
 const plans = new Map<number, Planned>();
 let planUid = 0;
 
@@ -114,21 +132,47 @@ function planAnew(b: Bridge, f: BridgeFrame): Planned | null {
     return f.heightAt(wx, wy);
   };
   const done = b.spans.map((s) => isDone(s));
+  const fitted = b.spans.map(fittedOf);
+  const staged = !!style.stage;
+  const stages = staged ? fitted.map((ft, i) => (done[i] ? 'done' : style.stage!(ft))) : [];
   const moss = style.family === 'stone' ? f.greenStage(b) : 0;
   // What it is built from, as a key: the ground under it read at its piers and its middles, coarsely.
   let gk = '';
   for (let s = 0; s <= n; s += 0.5) for (const t of [Math.min(...lanes) - 0.5, Math.max(...lanes) + 0.5]) gk += `${Math.round(ground(s, t))},`;
-  const key = `${b.kind}|${n}|${b.height}|${b.rise ?? 0}|${lanes.join(',')}|${done.map((d) => (d ? 1 : 0)).join('')}|${moss}|${gk}`;
+  // A style that shows a tile being built keeps its plan as its tiles go in, and makes only the tile that changed again.
+  const key = `${b.kind}|${n}|${b.height}|${b.rise ?? 0}|${lanes.join(',')}|${staged ? '' : done.map((d) => (d ? 1 : 0)).join('')}|${moss}|${gk}`;
   const had = plans.get(b.id);
-  if (had && had.key === key) return had;
+  if (had && had.key === key) {
+    if (staged) {
+      for (let i = 0; i < n; i++) {
+        if (had.stages[i] === stages[i]) continue;
+        had.stages[i] = stages[i];
+        had.plan.done[i] = done[i];
+        had.plan.fitted[i] = fitted[i];
+        had.ver[i]++;
+        for (const byView of had.slices.values()) for (const o of lanes) byView.delete(sliceKey(i, o));
+      }
+    }
+    return had;
+  }
   const plan = planOf({
-    n, lanes, ground, done, rise: b.rise ?? 0, width: bridgeWidth(b), moss, style,
-    deck: (s) => rampDeck(b.height, b.rise ?? 0, n, s),
+    n, lanes, ground, done, fitted, rise: b.rise ?? 0, width: bridgeWidth(b), moss, style,
+    // Where a body walking it stands (`deckWalk`): up a ramp, over a garden footbridge's arch.
+    deck: (s) => rampDeck(b.height, b.rise ?? 0, n, s) + deckArch(b.kind, n, s, b.rise ?? 0),
     bays: drawnBays(n, BRIDGES[b.kind].bay, !!b.rise),
   });
-  const p: Planned = { key, uid: ++planUid, plan, A, P, slices: new Map() };
+  const tiles = new Map<number, { i: number; o: number }>();
+  for (const o of lanes) b.spans.forEach((sp, i) => tiles.set(tileKey(sp.x + o * P[0], sp.y + o * P[1]), { i, o }));
+  const p: Planned = { key, uid: ++planUid, plan, A, P, slices: new Map(), stages, ver: new Array<number>(n).fill(0), tiles };
   plans.set(b.id, p);
   return p;
+}
+
+/** Of a tile of deck, how much of each thing its bill asks for is in, nought to one. */
+function fittedOf(s: BridgeSpan): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const [id, total] of Object.entries(s.total)) out[id] = total > 0 ? 1 - (s.needed[id] ?? 0) / total : 1;
+  return out;
 }
 
 /**
@@ -149,11 +193,13 @@ export function forgetBridges(keep: (id: number) => boolean): void {
   for (const id of [...plans.keys()]) if (!keep(id)) plans.delete(id);
 }
 
-function sliceOf(pl: Planned, i: number, o: number, rotation: number): (Record<Part3, PieceModel> & { box: Record<Part3, [number, number, number, number]> }) {
+/** A slice as drawn: its pieces, the box each is drawn in, and the keys of its pictures by part and scale, made once. */
+type Sliced = Record<Part3, PieceModel> & { box: Record<Part3, [number, number, number, number]>; keys: Map<number, Record<Part3, string>> };
+function sliceOf(pl: Planned, i: number, o: number, rotation: number): Sliced {
   const { e, key } = viewOfTurn(rotation);
   let byView = pl.slices.get(key);
   if (!byView) { byView = new Map(); pl.slices.set(key, byView); }
-  const k = `${i}|${o}`;
+  const k = sliceKey(i, o);
   let got = byView.get(k);
   if (!got) {
     const plan = pl.plan;
@@ -175,7 +221,7 @@ function sliceOf(pl: Planned, i: number, o: number, rotation: number): (Record<P
       }
       box[part] = x0 === Infinity ? [0, 0, 0, 0] : [Math.floor(x0 - 3), Math.floor(y0 - 3), Math.ceil(x1 + 3), Math.ceil(y1 + 3)];
     }
-    got = { ...built, box };
+    got = { ...built, box, keys: new Map() };
     byView.set(k, got);
   }
   return got;
@@ -204,40 +250,36 @@ export function piecesAt(b: Bridge, x: number, y: number, f: BridgeFrame): Bridg
   }
 }
 function piecesOn(b: Bridge, x: number, y: number, f: BridgeFrame): BridgePieceAt[] {
-  if (!isMaterialBridge(b.kind)) return [];
+  if (!kitBridge(b)) return [];
   const pl = planFor(b, f);
   if (!pl) return [];
   const { A, P } = pl;
-  let o: number | null = null;
-  let i = -1;
-  for (const lo of laneOffsets(bridgeWidth(b), b.side)) {
-    const cx = x - lo * P[0], cy = y - lo * P[1];
-    const k = b.spans.findIndex((s) => s.x === cx && s.y === cy);
-    if (k >= 0) { o = lo; i = k; break; }
-  }
-  if (o === null) return [];
+  const at = pl.tiles.get(tileKey(x, y));
+  if (!at) return [];
+  const { i, o } = at;
   const [wx, wy] = worldOf(b, A, P, i + 0.5, o);
   const sx = f.sx(wx, wy), sy = f.sy(wx, wy, pl.plan.base);
   const [far, near] = cornersSy(f, x, y, f.heightAt(x + 0.5, y + 0.5));
-  return [
-    { b, i, o, part: 'back', sx, sy, key: far + 0.5 },
-    { b, i, o, part: 'front', sx, sy, key: near - 0.5 },
-    { b, i, o, part: 'rail', sx, sy, key: near - 0.3 },
-  ];
+  // Only the pieces the slice has at this turn: a lane with no outer edge has no parapet of its own.
+  const sl = sliceOf(pl, i, o, f.rotation);
+  const out: BridgePieceAt[] = [];
+  if (sl.back.parts.length) out.push({ b, i, o, part: 'back', sx, sy, key: far + 0.5, pl, sl });
+  if (sl.front.parts.length) out.push({ b, i, o, part: 'front', sx, sy, key: near - 0.5, pl, sl });
+  if (sl.rail.parts.length) out.push({ b, i, o, part: 'rail', sx, sy, key: near - 0.3, pl, sl });
+  return out;
 }
 
 /** What anybody standing on the deck of a bridge on this tile sorts by: after the deck's front, before its near parapet. */
 export function deckKey(f: BridgeFrame, x: number, y: number): number {
   return cornersSy(f, x, y, f.heightAt(x + 0.5, y + 0.5))[1] - 0.4;
 }
-/** And a rope bridge's deck, in front of anybody under it. */
-export function ropeKey(f: BridgeFrame, x: number, y: number): number {
-  return cornersSy(f, x, y, f.heightAt(x + 0.5, y + 0.5))[1] - 0.5;
-}
 
 /* ---- baking -------------------------------------------------------------------------------------- */
 
-interface Sheet { canvas: HTMLCanvasElement; x: number; y: number; w: number; h: number }
+interface Sheet { canvas: HTMLCanvasElement; x: number; y: number; w: number; h: number; drawn?: number }
+/** Pictures drawn so far, counted: a picture is moved to the newest end of what is kept only once in a while (`TOUCH`). */
+let drawn = 0;
+const TOUCH = 256;
 const kept = new Map<string, Sheet>();
 let keptArea = 0;
 /** Pixels of bridge pictures kept before the least lately drawn is let go. */
@@ -309,13 +351,20 @@ export function drawBridgePiece(ctx: CanvasRenderingContext2D, p: BridgePieceAt,
 function drawPiece(ctx: CanvasRenderingContext2D, p: BridgePieceAt, zoom: number, rotation: number): [number, number, number, number] | null {
   const pl = plans.get(p.b.id);
   if (!pl) return null;
-  const sl = sliceOf(pl, p.i, p.o, rotation);
+  const { e, key: vk } = viewOfTurn(rotation);
+  // The slice taken with the piece this frame, where the plan is still the one it was taken from.
+  const sl = p.sl && p.pl === pl ? p.sl : sliceOf(pl, p.i, p.o, rotation);
   const pm = sl[p.part];
   if (!pm.parts.length) return null;
-  const { e, key: vk } = viewOfTurn(rotation);
   const scale = scaleFor(zoom);
-  const base = `${pl.uid}|${vk}|${p.i}|${p.o}|${p.part}`;
-  const key = `${base}|${scale}`;
+  const ver = pl.ver[p.i] ?? 0;
+  let keys = sl.keys.get(scale);
+  if (!keys) {
+    const at = (part: Part3): string => `${pl.uid}|${vk}|${p.i}|${p.o}|${part}|${ver}|${scale}`;
+    keys = { back: at('back'), front: at('front'), rail: at('rail') };
+    sl.keys.set(scale, keys);
+  }
+  const key = keys[p.part];
   let sh = kept.get(key);
   const make = (): Sheet => {
     const t0 = performance.now();
@@ -325,15 +374,24 @@ function drawPiece(ctx: CanvasRenderingContext2D, p: BridgePieceAt, zoom: number
     keep(key, s);
     return s;
   };
-  if (sh) { kept.delete(key); kept.set(key, sh); }
+  if (sh) {
+    drawn++;
+    if ((sh.drawn ?? 0) < drawn - TOUCH) { kept.delete(key); kept.set(key, sh); sh.drawn = drawn; }
+  }
   else if (kitIsSync() || kitMayBake()) {
     const t0 = performance.now();
     sh = make();
     kitBaked(performance.now() - t0);
   } else {
-    for (const s2 of BAKE_STEPS) {
-      const other = kept.get(`${base}|${s2}`);
-      if (other) { sh = other; break; }
+    // Another scale's picture stands in while this one is made; for a tile just built further, its last picture.
+    const base = `${pl.uid}|${vk}|${p.i}|${p.o}|${p.part}|${ver}`;
+    const was = `${pl.uid}|${vk}|${p.i}|${p.o}|${p.part}|${ver - 1}`;
+    for (const b2 of ver > 0 ? [base, was] : [base]) {
+      for (const s2 of BAKE_STEPS) {
+        const other = kept.get(`${b2}|${s2}`);
+        if (other) { sh = other; break; }
+      }
+      if (sh) break;
     }
     later(key, () => { if (!kept.has(key)) make(); });
   }
@@ -365,7 +423,7 @@ export function bridgeNight(p: BridgePieceAt, zoom: number, rotation: number): {
   const pad = g.lamps.length ? 40 : 16;
   const box: [number, number, number, number] = [Math.floor(x0 - pad), Math.floor(y0 - pad), Math.ceil(x1 + pad), Math.ceil(y1 + pad)];
   const scale = scaleFor(zoom);
-  const mkey = `${pl.uid}|${vk}|${p.i}|${p.o}|glow|${scale}`;
+  const mkey = `${pl.uid}|${vk}|${p.i}|${p.o}|glow|${pl.ver[p.i] ?? 0}|${scale}`;
   return {
     box: [p.sx + box[0] * zoom, p.sy + box[1] * zoom, p.sx + box[2] * zoom, p.sy + box[3] * zoom],
     holes: (dx, dy) => [
@@ -403,11 +461,13 @@ function lineHoles(lines: Array<[[number, number], [number, number]]>): Array<[n
   return out;
 }
 
-/** Whether a bridge is drawn by this kit. */
-export const kitBridge = (b: Bridge): boolean => isMaterialBridge(b.kind) && !!BRIDGE_STYLES[b.kind];
+/** Whether a bridge is drawn by this kit: a material bridge, a rope bridge or a garden footbridge (`BRIDGE_STYLES`). */
+export function kitBridge(b: Bridge): boolean {
+  return !!BRIDGE_STYLES[b.kind];
+}
 
-/** The deck's height at the middle of a tile of a bridge, any lane's (`deckHeight`). */
-export const deckMid = (b: Bridge, x: number, y: number): number => deckHeight(b, x + 0.5, y + 0.5);
+/** The deck's height at the middle of a tile of a bridge, any lane's, where a body walking it stands (`deckWalk`). */
+export const deckMid = (b: Bridge, x: number, y: number): number => deckWalk(b, x + 0.5, y + 0.5);
 export { bridgeDone };
 
 /** Let go of every plan and picture: for a harness timing them cold. */

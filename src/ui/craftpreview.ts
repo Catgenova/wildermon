@@ -47,11 +47,13 @@ import { animationsOff, lessMotion, setAnimations } from '../engine/motion';
 import { drawFigure, drawPropAlone, figureJoint, flatFigures, gearModelled, onScreen, propModelled, sculptSoft, viewOf, type FigurePose, type V3 } from '../render/figure';
 import { drawWorkPost } from '../render/workpost';
 import { drawDeedTotem } from '../render/deedtotem';
-import { crateSprite, drawTrap, spriteAt, type Sprite } from '../render/sprites';
-import { CRATE_DEFS, type CrateKind } from '../game/crates';
+import { drawTrap } from '../render/sprites';
 import { TRAPS } from '../game/trapdefs';
 import { drawFurniture, mossTrim, pieceModelled, pieceView, roseTrim, rowedPiece, vineTrim, WHEELS } from '../render/furniture';
-import { kitIsSync, kitSync } from '../render/kitpieces';
+import { kitIsSync, kitSync, layKitModel } from '../render/kitpieces';
+import { storeCrateModel } from '../render/kit/storecrate';
+import { eyeOf } from '../render/runestone';
+import { CRATE_DEFS, type CrateKind } from '../game/crates';
 import { drawKiln, drawSmelter, type KilnLook, type SmelterLook } from '../render/forge';
 import { drawMemorial } from '../render/memorial';
 import { drawRuneLantern } from '../render/runelantern';
@@ -105,22 +107,10 @@ const KILN_LOOK: KilnLook = { lit: false, firing: false };
 const POST_LOOK = { worked: false };
 const TRAP_LOOK = { baited: false, sprung: false };
 /**
- * A thing set down that the renderer draws as one picture (`Sprite`, `sprites.ts`), the picture for a way round
- * (`turn`, 0-7) where it has them: put down at its foot as the renderer puts it (`drawImage` at `ax`, `ay`), made at
- * the step that holds the zoom it is drawn at. One with one picture is shown still.
- */
-const sprited = (sprite: (turn: number) => Sprite): SetDown => ({
-  draw: (g, x, y, zoom, turn) => {
-    const s = spriteAt(zoom, () => sprite(turn));
-    g.drawImage(s.canvas, x - s.ax * zoom, y - s.ay * zoom, s.w * zoom, s.h * zoom);
-    return [-s.ax, -s.ay, s.w - s.ax, s.h - s.ay];
-  },
-  stages: [{}],
-});
-/**
  * What is set down that is not furniture, by its item, and how each is drawn as the renderer draws it set down: the
  * smelter and the kiln (`forge.ts`), a work post (`workpost.ts`), the settlement's stake as the token it stands as
- * (`deedtotem.ts`, a block for each level), the traps (`drawTrap`), and the crates (`crateSprite`, one way round).
+ * (`deedtotem.ts`, a block for each level), the traps (`drawTrap`), and the crates in the wood they are made of
+ * (`kit/storecrate.ts`).
  */
 const STATIONS: Record<string, SetDown> = {
   smelter: { draw: (g, x, y, zoom, turn, _m, look, t) => drawSmelter(g, x, y, zoom, turn, { ...SMELTER_LOOK, ...look }, 0, t, false), stages: flips({ ...SMELTER_LOOK }, 'unlit') },
@@ -133,12 +123,24 @@ const STATIONS: Record<string, SetDown> = {
     draw: (g, x, y, zoom, turn, _m, look, t) => drawDeedTotem(g, x, y, zoom, { level: 1, variant: 0, ...look }, turn, 0, t, false),
     stages: Array.from({ length: MAX_DEED_LEVEL }, (_, i) => ({ name: `level ${i + 1}`, look: { level: i + 1 } })),
   },
+  ...Object.fromEntries((Object.keys(CRATE_DEFS) as CrateKind[]).map((kind): [string, SetDown] => [CRATE_DEFS[kind].item, {
+    draw: (g, x, y, zoom, turn, material) => {
+      const m = storeCrateModel(kind, material);
+      const e = eyeOf(0, turn);
+      g.save();
+      g.translate(x, y);
+      g.scale(zoom, zoom);
+      const { hit } = layKitModel(g, m, e);
+      g.restore();
+      return hit.map((v) => v * zoom) as Box;
+    },
+    stages: [{}],
+  }])),
   ...Object.fromEntries(Object.keys(TRAPS).map((kind): [string, SetDown] => [kind, {
     draw: (g, x, y, zoom, turn, _m, look) => drawTrap(g, x, y, zoom, kind, !!look.baited, !!look.sprung, turn, !!look.worn),
     // Set, baited and sprung as its flags turn on, and then worn, as one long set down is drawn (`TRAP_WORN`).
     stages: [...flips({ ...TRAP_LOOK }, 'set'), { name: 'worn', look: { ...TRAP_LOOK, worn: true } }],
   }])),
-  ...Object.fromEntries(Object.entries(CRATE_DEFS).map(([kind, d]): [string, SetDown] => [d.item, sprited(() => crateSprite(kind as CrateKind))])),
 };
 
 /** Whether a thing is set down without being furniture (a station, a work post, a stake, a trap, a crate): drawn as the renderer draws it set down. */

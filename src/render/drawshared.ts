@@ -20,7 +20,7 @@ import type { PieceView } from './furniture';
 import type { Mote } from './life';
 import type { WorldRec as SpellRec } from './spells/kit';
 import type { SpiralPieceAt } from './spiralkit';
-import type { Sprite, DeckShape } from './sprites';
+import type { Sprite } from './sprites';
 import type { StationKind } from '../game/stations';
 
 /**
@@ -48,8 +48,8 @@ export interface Entity {
   anvil?: PlacedAnvil;
   post?: PlacedPost;
   trap?: PlacedTrap;
-  deck?: { kind: string; done: boolean; drop: number; id: number; shape?: DeckShape; green?: number; span?: number };
-  /** A piece of a material bridge: a slice of its deck, its back, its front or its near parapet (`bridgekit.ts`). */
+  deck?: { kind: string; done: boolean; drop: number; id: number; span?: number };
+  /** A piece of a material bridge, a rope bridge or a garden footbridge: a slice of its deck, its back, its front or its near parapet (`bridgekit.ts`). */
   bp?: BridgePieceAt;
   /** A piece of a spiral staircase: a tread, a stretch of its rail, its post or its cap (`spiralkit.ts`), and how much of it shows. */
   sp?: SpiralPieceAt;

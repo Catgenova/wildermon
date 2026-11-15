@@ -5,6 +5,6 @@ CREATE OR REPLACE FUNCTION public.has_roof(p_world uuid, p_building integer)
  LANGUAGE sql
  STABLE
 AS $function$
-  select exists (select 1 from floor_tile f where f.world_id = p_world
-    and f.building = p_building and f.kind = 'roof')
+  select exists (select 1 from floor_tile f join building b on b.world_id = f.world_id and b.id = f.building
+                  where f.world_id = p_world and f.building = p_building and f.kind = 'roof' and f.level = b.levels)
 $function$

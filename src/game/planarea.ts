@@ -55,8 +55,10 @@ export interface AreaPlan {
   kind: AreaKind;
   /** The building it is for: walls, floor and roof always; a footprint when it is added to one. */
   buildingId?: number;
-  /** The storey: walls and floor; the top storey for a roof; 0 for a footprint. */
+  /** The storey: walls and floor; for a roof, the storey it is over (its tier); 0 for a footprint. */
   level: number;
+  /** A roof over every tier at once, each tile over its own top storey (`Buildings.roofStoreyAt`), not `level`'s alone. */
+  tiers?: boolean;
   material?: string;
   wallType?: WallType;
   /** A roof's shape, chosen with its first tile; after that the building's. */
@@ -131,10 +133,13 @@ function buildingPieces(g: Game, plan: AreaPlan, b: Building): AreaPiece[] {
     const shape = b.roof ?? plan.roofShape ?? roofShapeOf(b);
     // Over its jetties as well as its footprint (`roofTiles`): a jetty's tile names its building.
     for (const [x, y] of bld.roofTiles(b)) {
-      if (bld.floor(b.levels, x, y)) continue;
+      // One roof a tile; each tile over its own top storey, its tier: the tier asked for, or every tier.
+      if (bld.roofOn(x, y)) continue;
+      const over = bld.roofStoreyAt(b, x, y);
+      if (!plan.tiers && over !== plan.level) continue;
       const out1 = !inside.has(`${x},${y}`);
       const target = tileTarget(x, y, {
-        material, floorKind: 'roof', level: b.levels - 1,
+        material, floorKind: 'roof', level: over,
         ...(b.roof ? {} : { roofShape: shape }),
         ...(out1 ? { buildingId: b.id } : {}),
       });

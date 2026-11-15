@@ -1048,6 +1048,85 @@ export function drawKind(g: CanvasRenderingContext2D, kind: Kind, kit: readonly 
   if (kind.glow && !bare) glows(g, view, kind.glow(b, a));
 }
 
+/* ---- a body dead on the ground ----------------------------------------------------- */
+
+/** How far a carcass is rolled over onto its side, in degrees about the way it faced: its right side down, its legs out to its left. */
+const LIE_ROLL = 84;
+
+/**
+ * A kind dead on the ground (`carcassSprite`): its bones as it stands still, eyes shut, rolled onto its side about the
+ * way it faced, set down so its lowest point is on the ground and its middle over the origin. The same bones every
+ * time, worked out once for each kit: a carcass does not breathe.
+ */
+export interface Lying { b: Bones; a: Anim; parts: Part[]; half: [number, number] }
+const lyings = new WeakMap<readonly Piece[], Lying>();
+export function lyingBones(kind: Kind, kit: readonly Piece[]): Lying {
+  const had = lyings.get(kit);
+  if (had) return had;
+  const a: Anim = { t: 0, u: 0, go: 0, gait: 0, graze: 0, blink: true, breath: 0.5, fleece: 1, seed: 0 };
+  const b0 = kind.bones(a);
+  const p = b0.body?.t ?? [0, 0, 0];
+  const r = LIE_ROLL * DEG, c = Math.cos(r), s = Math.sin(r);
+  const R: number[] = [c, 0, s, 0, 1, 0, -s, 0, c];
+  const turn = (v: V3): V3 => [R[0] * v[0] + R[2] * v[2], v[1], R[6] * v[0] + R[8] * v[2]];
+  const rolled: Bones = {};
+  for (const k of Object.keys(b0)) {
+    const m = b0[k].m, t = b0[k].t;
+    const mm: number[] = [
+      R[0] * m[0] + R[2] * m[6], R[0] * m[1] + R[2] * m[7], R[0] * m[2] + R[2] * m[8],
+      m[3], m[4], m[5],
+      R[6] * m[0] + R[8] * m[6], R[6] * m[1] + R[8] * m[7], R[6] * m[2] + R[8] * m[8],
+    ];
+    const d = turn([t[0] - p[0], t[1] - p[1], t[2] - p[2]]);
+    rolled[k] = { m: mm, t: [d[0] + p[0], d[1] + p[1], d[2] + p[2]] };
+  }
+  // Where it reaches now, every corner as it is drawn (a fleece grown, a piece bent): down to the ground, and centred over the origin.
+  let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity, z0 = Infinity;
+  for (const part of partsOf(kit, rolled, a, a.breath)) {
+    for (const v of part.v ?? part.mesh.v) {
+      const q = place(part.xf, v);
+      if (!Number.isFinite(q[0] + q[1] + q[2])) continue;
+      if (q[0] < x0) x0 = q[0];
+      if (q[0] > x1) x1 = q[0];
+      if (q[1] < y0) y0 = q[1];
+      if (q[1] > y1) y1 = q[1];
+      if (q[2] < z0) z0 = q[2];
+    }
+  }
+  const dx = z0 === Infinity ? 0 : -(x0 + x1) / 2, dy = z0 === Infinity ? 0 : -(y0 + y1) / 2, dz = z0 === Infinity ? 0 : -z0;
+  const b: Bones = {};
+  for (const k of Object.keys(rolled)) b[k] = { m: rolled[k].m, t: [rolled[k].t[0] + dx, rolled[k].t[1] + dy, rolled[k].t[2] + dz] };
+  const out: Lying = { b, a, parts: partsOf(kit, b, a, a.breath), half: z0 === Infinity ? [1, 1] : [(x1 - x0) / 2, (y1 - y0) / 2] };
+  lyings.set(kit, out);
+  return out;
+}
+
+/** A kind dead on the ground, at a facing, with its middle at the origin of `g` in its own units: no shadow of its own, nothing it glows with. */
+export function drawLying(g: CanvasRenderingContext2D, kind: Kind, kit: readonly Piece[], pal: Palette, facing: number, ink: number, px: number): void {
+  render(g, lyingBones(kind, kit).parts, pal, viewOf(facing), ink, px);
+}
+
+/** Where a kind dead on the ground puts ink at a facing, in its own units from its middle on the ground. */
+export function lyingExtent(kind: Kind, kit: readonly Piece[], facing: number): { x0: number; y0: number; x1: number; y1: number; half: [number, number] } {
+  const { parts, half } = lyingBones(kind, kit);
+  const view = viewOf(facing);
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const part of parts) {
+    for (const v of part.v ?? part.mesh.v) {
+      const [x, y] = onScreen(view, place(part.xf, v));
+      if (!Number.isFinite(x + y)) continue;
+      if (x < x0) x0 = x;
+      if (x > x1) x1 = x;
+      if (y < y0) y0 = y;
+      if (y > y1) y1 = y;
+    }
+  }
+  return { x0, y0, x1, y1, half };
+}
+
+/** The ink width a body is drawn at, at a step of the zoom, for a picture of it made elsewhere. */
+export const beastInk = (step: number, size = 1): number => inkAt(step, size);
+
 /** Where a kind standing still puts ink round its feet, at a facing, in its own units: for a page that frames it. */
 export function extentOf(kind: Kind, kit: readonly Piece[], facing: number, a: Anim): { x0: number; y0: number; x1: number; y1: number } {
   const b = kind.bones(a);

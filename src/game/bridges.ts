@@ -500,12 +500,32 @@ export const rampDeck = (height: number, rise: number, n: number, s: number): nu
 /** The storeys a bridge's two ends land on, end a's first. */
 export const bridgeLevels = (b: Bridge): [number, number] => [b.level ?? 0, b.levelB ?? b.level ?? 0];
 
+/** How far along a bridge's deck a point is, in tiles from the edge of end a's tile. */
+const deckAlong = (b: Bridge, x: number, y: number): number =>
+  b.ay === b.by ? (b.bx > b.ax ? x - (b.ax + 1) : b.ax - x) : (b.by > b.ay ? y - (b.ay + 1) : b.ay - y);
+
 /** The height of a bridge's deck at a point over it: its `height` all the way across a level one, and up its slope on a ramp. */
 export function deckHeight(b: Bridge, x: number, y: number): number {
   if (!b.rise) return b.height;
-  const s = b.ay === b.by ? (b.bx > b.ax ? x - (b.ax + 1) : b.ax - x) : (b.by > b.ay ? y - (b.ay + 1) : b.ay - y);
-  return rampDeck(b.height, b.rise, b.spans.length, s);
+  return rampDeck(b.height, b.rise, b.spans.length, deckAlong(b, x, y));
 }
+
+/** How high a garden footbridge's deck arches over its ends at its middle, in height units, when its ends are level. */
+export const FOOT_RISE = 4.5;
+
+/**
+ * How far a deck of `n` tiles of a kind rising `rise` stands over `deckHeight` at `s` tiles along it: a garden
+ * footbridge's arch, nought at both ends and `FOOT_RISE` at its middle, lowered on a ramp so that it is nowhere
+ * steeper than `RAMP_SLOPE` a tile; nought for every other kind.
+ */
+export function deckArch(kind: string, n: number, s: number, rise = 0): number {
+  if (kind !== 'footbridge' || n <= 0) return 0;
+  const top = Math.min(FOOT_RISE, Math.max(0, (RAMP_SLOPE * n - Math.abs(rise)) / Math.PI));
+  return top * Math.sin(Math.PI * Math.min(1, Math.max(0, s / n)));
+}
+
+/** The height a body walking a bridge's deck stands at, at a point over it: `deckHeight`, over a garden footbridge's arch too (`deckArch`). */
+export const deckWalk = (b: Bridge, x: number, y: number): number => deckHeight(b, x, y) + deckArch(b.kind, b.spans.length, deckAlong(b, x, y), b.rise ?? 0);
 
 /** What a body's storey is called in what is said of a bridge's ends. */
 const storeyNamed = (level: number): string => (level ? `storey ${level + 1}` : 'the ground');

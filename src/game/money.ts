@@ -3,12 +3,10 @@ import type { Item } from './items';
 /**
  * What a coin is worth, and how a pile of them is counted.
  *
- * Coins have existed on this island since there was an anvil to strike them
- * on. They are struck twenty to a lump from gold (silver ones were, once), they go in a
- * pocket, they melt back down into the lump they came from — and they have
- * never once bought anything, because there has never been anything to buy
- * them with or anybody to buy from. A currency nobody can spend is a metal
- * with a picture on it.
+ * Coins are found foraging (gold) and given as change (silver); nobody
+ * strikes them. They go in a pocket, they melt down twenty to a lump — and
+ * before the market they never once bought anything, because there was
+ * nothing to buy with them and nobody to buy from.
  *
  * So, one number: **a gold coin is worth ten silver**, and every price on
  * this island is named in silver. That is the whole of the exchange. It is

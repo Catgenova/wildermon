@@ -194,6 +194,13 @@ export function kitLoops(kind: string, look: KitLook, view: KitView): { rings: n
   return { rings, order, parts: m.parts, e };
 }
 
+/** The same for a model drawn in the kit that is not a piece of furniture (a crate, a sack), seen by `e`: for a harness. */
+export function modelLoops(m: KitModel, e: Eye): { rings: number[][]; order: number[]; parts: readonly KitPart[]; e: Eye } {
+  const rings: number[][] = [];
+  const order = laid(m.parts, e, (left) => rings.push(left.map((p) => m.parts.indexOf(p)))).map((p) => m.parts.indexOf(p));
+  return { rings, order, parts: m.parts, e };
+}
+
 /* ---- baking ------------------------------------------------------------------------- */
 
 /** A picture and where it goes, in pixels at zoom one from the footprint's middle. */
