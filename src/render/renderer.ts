@@ -115,7 +115,7 @@ import { fieldRate } from '../game/growth';
 import { dyeOf, dyeTint } from '../game/dyestuffs';
 import { castAt, netReach } from '../game/fishing';
 import { sailTrim } from '../game/wind';
-import { FURNITURE_BY_ID, isFountain, isPlanter, rackDeck, rackSpots } from '../game/furniture';
+import { FURNITURE_BY_ID, isFountain, isPlanter, rackDeck, rackSpots, teamOf } from '../game/furniture';
 import { isLampPiece, lampBurning } from '../game/lamps';
 import { drawLampBloom, piecesFrame } from './furniture';
 import { zoomHeld } from './settle';
@@ -523,6 +523,9 @@ const saddleTuck = (seat: number): number => Math.max(0, Math.min(1, (TUCK_NONE 
 /** Reins: dark leather, inked. */
 const REIN_LEATHER = 'rgb(112, 74, 46)';
 const REIN_LINE = 'rgba(46, 30, 22, 0.85)';
+/** A hull's bob on the water, in heights and seconds: under the buoy's (`BUOY_BOB`), and slower. */
+const HULL_BOB: readonly [number, number] = [0.3, 3.6];
+
 /** A mooring rope's hemp, and the ink round it (`drawMooring`). */
 const ROPE_HEMP = 'rgb(214, 190, 150)';
 const ROPE_LINE = 'rgba(92, 66, 58, 0.85)';
@@ -6334,7 +6337,9 @@ export class Renderer {
     // Driven by somebody else, she is where their hands are, which is read a dozen times a second; where she was set down
     // is read once, so her wheels stood still under her while she went along, and a re-read over two tiles was not rolled.
     // Animations off: where they were, sharp.
-    if (this.held) return wheelTrim(f.kind, this.rolled.get(f.id)?.turns ?? 0, 0);
+    // A team in its yokes holds the pole up at their necks; with none it lies on the ground.
+    const yoked = teamOf(f).length > 0;
+    if (this.held) return wheelTrim(f.kind, this.rolled.get(f.id)?.turns ?? 0, 0, yoked);
     const [x, y] = f.helm ? this.game.hullCentre(f) : furnitureCentre(f);
     let r = this.rolled.get(f.id);
     if (!r) {
@@ -6358,7 +6363,7 @@ export class Renderer {
       r.at = this.time;
       r.blur = wheelBlur(r.rate * w.spokes * r.dt, r.blur);
     }
-    return wheelTrim(f.kind, r.turns, r.blur);
+    return wheelTrim(f.kind, r.turns, r.blur, yoked);
   }
 
   /** Somebody on `f`, drawn at `wx`, `wy` on her rather than where they sort, `lift` up. */
@@ -6485,7 +6490,7 @@ export class Renderer {
     ctx.restore();
   }
 
-  private pieceBase(f: { kind: string; level?: number }, wx: number, wy: number): number {
+  private pieceBase(f: { kind: string; level?: number; id?: number }, wx: number, wy: number): number {
     // A wagon driven up a wide staircase stands on the floor of its storey, as a body up there does.
     const up = f.level ?? 0;
     if (up > 0) return this.footOn(wx, wy, up) + up * WALL_HEIGHT;
@@ -6493,7 +6498,9 @@ export class Renderer {
     // On a bridge's deck, or on the ground under it (`pieceOnDeck`).
     // A buoy rides the water as a hull does, bobbing on it (`adorn.ts`, `BUOY_BOB`).
     if (f.kind === BUOY) return Math.max(h, 0) + Math.sin((this.anim * 2 * Math.PI) / BUOY_BOB[1] + wx * 1.7 + wy) * BUOY_BOB[0];
-    return furnitureDef(f.kind).boat ? Math.max(h, 0) : this.standTop(wx, wy, this.game.bridges.size > 0 && this.game.pieceOnDeck(f, Math.floor(wx), Math.floor(wy)));
+    // A hull afloat rides it too, more slowly and by less, the whole of her and everybody aboard at once (her own phase, not the spot's).
+    if (furnitureDef(f.kind).boat) return h < 0 ? Math.sin((this.anim * 2 * Math.PI) / HULL_BOB[1] + (f.id ?? 0) * 2.3) * HULL_BOB[0] : Math.max(h, 0);
+    return this.standTop(wx, wy, this.game.bridges.size > 0 && this.game.pieceOnDeck(f, Math.floor(wx), Math.floor(wy)));
   }
 
   /**

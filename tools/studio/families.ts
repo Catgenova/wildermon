@@ -28,8 +28,11 @@ import type { Side } from '../../src/game/building';
 import { BUSH_DEFS, TREE_AGES, TREE_DEFS } from '../../src/world/tiles';
 import { SEASONS, type Season } from '../../src/world/calendar';
 import {
-  drawFurniture, drawFurnitureLive, drawLampBloom, FURNITURE_HEIGHT, furnitureHoles, glowsAtNight, pieceView, WHEELS, WHEEL_STEPS, type PieceView,
+  crewOrder, drawFurniture, drawFurnitureLive, drawLampBloom, driverOn, FURNITURE_HEIGHT, furnitureHoles, glowsAtNight, helmSeat, pieceView, VEHICLES, WHEELS, WHEEL_STEPS, wheelTrim,
+  type Crew, type PieceView,
 } from '../../src/render/furniture';
+import { HALF_H, HALF_W, HEIGHT_SCALE, UNITS_PER_TILE } from '../../src/render/iso';
+import { eyeOfView, proj } from '../../src/render/runestone';
 import { isKit, kitBypass, kitSync } from '../../src/render/kitpieces';
 import { KIT_PIECES } from '../../src/render/kit/index';
 import { denSync, drawDen, isDen } from '../../src/render/dens';
@@ -45,7 +48,7 @@ import {
 } from '../../src/render/sprites';
 import { loadAllWildermon, modelled } from '../../src/render/wildermon';
 import { ACT_SECS } from '../../src/render/beasts';
-import { drawFigure, sculptedFigures, sculptedReady, type GearLook } from '../../src/render/figure';
+import { drawFigure, FIGURE_TOP, sculptedFigures, sculptedReady, type GearLook } from '../../src/render/figure';
 import { BUSH3D_SPECIES, log3dSprite, STUMP3D_SPECIES, TREE3D_SPECIES, tree3dFrame, tree3dIdle, type TreeView } from '../../src/render/trees3d/index';
 import { FLOWER_COLOURS, flowerSprite } from '../../src/render/flowers';
 import { fieldBake } from '../../src/render/crops';
@@ -204,7 +207,8 @@ const DYE = '#4f7ec8';
 const furniture: Family = {
   id: 'furniture', register: 'line', ref: 4,
   about: 'Furniture, stations and stores: drawFurniture, in the rune pastel kit (KIT_PIECES) or the old box models (MODELS), plus the wildermon beds and the enchanter\'s plinth.',
-  list: () => FURNITURE.map((f): Asset => {
+  // The vehicles and the hulls are their own family (`vehicle`), with their states: driven, rowed, sailed, crewed.
+  list: () => FURNITURE.filter((f) => !VEHICLES.has(f.id)).map((f): Asset => {
     const kit = isKit(f.id) ? KIT_PIECES[f.id] : undefined;
     const den = isDen(f.id);
     const wheels = WHEELS[f.id];
@@ -270,6 +274,105 @@ const furniture: Family = {
       drawLampBloom(ctx, sx, sy, zoom, a.kind, view, o.night);
       drawFurnitureLive(ctx, sx, sy, zoom, a.kind, view, o.night);
     });
+  },
+};
+
+/* ---- vehicles: the carts and the hulls, empty, driven, rowed, sailed and crewed --------------- */
+
+/**
+ * A vehicle's states: what its `trim` is (a sail's set, oars out) and who is aboard -- a driver on the bench, a rower at
+ * the oars, a helmsman at the tiller, and on the caravel a helmsman stood at her whipstaff and three on her deck.
+ */
+interface VehicleState { label: string; trim?: number; yoked?: boolean; aboard: 'none' | 'driver' | 'crew' }
+const VEHICLE_STATES: Record<string, VehicleState[]> = {
+  cart: [{ label: 'empty', aboard: 'none' }],
+  large_cart: [{ label: 'empty, pole down', aboard: 'none' }, { label: 'team yoked', yoked: true, aboard: 'none' }, { label: 'yoked, driver on the bench', yoked: true, aboard: 'driver' }],
+  wagon: [{ label: 'empty, pole down', aboard: 'none' }, { label: 'team yoked', yoked: true, aboard: 'none' }, { label: 'yoked, driver on the bench', yoked: true, aboard: 'driver' }],
+  rowing_boat: [{ label: 'moored, oars shipped', trim: 0, aboard: 'none' }, { label: 'rowed', trim: 1, aboard: 'driver' }],
+  sailing_boat: [
+    { label: 'moored, sail slack', trim: 0.25, aboard: 'none' }, { label: 'helm, reaching to port', trim: -0.8, aboard: 'crew' },
+    { label: 'helm, running to starboard', trim: 1, aboard: 'crew' }, { label: 'helm, in irons', trim: 0.1, aboard: 'crew' },
+  ],
+  caravel: [
+    { label: 'moored, sails slack', trim: 0.25, aboard: 'none' }, { label: 'crewed, reaching to port', trim: -0.7, aboard: 'crew' },
+    { label: 'crewed, running to starboard', trim: 1, aboard: 'crew' }, { label: 'crewed, in irons', trim: 0.1, aboard: 'crew' },
+  ],
+};
+/** Where the people on a hull stand, as the renderer has them (`crewOf` in renderer.ts). */
+function crewFor(kind: string): Crew | null {
+  const boat = furnitureDef(kind).boat;
+  const sat = helmSeat(kind);
+  if (boat && (boat.helm || boat.deck?.length)) {
+    return {
+      tall: FIGURE_TOP / HEIGHT_SCALE,
+      at: [
+        [(boat.helm?.[0] ?? 0) * UNITS_PER_TILE, (boat.helm?.[1] ?? 0) * UNITS_PER_TILE, boat.seat / HEIGHT_SCALE],
+        ...(boat.deck ?? []).map(([along, across]): [number, number, number] => [along * UNITS_PER_TILE, across * UNITS_PER_TILE, (boat.waist ?? boat.seat) / HEIGHT_SCALE]),
+      ],
+    };
+  }
+  return sat ? { tall: FIGURE_TOP / HEIGHT_SCALE, at: [sat] } : null;
+}
+/** The way a body faces stood along a piece seen as `view`, one of the eight or between (`driverOn`). */
+function alongFacing(view: PieceView, aft = false): number {
+  const a = (view.ux * UNITS_PER_TILE) / HALF_W, b = (view.uy * UNITS_PER_TILE) / HALF_H;
+  const ahead = Math.atan2((b - a) / 2, (a + b) / 2);
+  return (((1 - (4 * ahead) / Math.PI + (aft ? 4 : 0)) % 8) + 8) % 8;
+}
+
+const vehicle: Family = {
+  id: 'vehicle', register: 'line', ref: 4,
+  about: 'The carts and the hulls: the small cart, the large cart and the wagon (kit solids, wheels turned a step at a time), the rowing boat, the sailing boat and the caravel (baked in layers round their crew), empty, driven, rowed, sailed and crewed.',
+  list: () => Object.keys(VEHICLE_STATES).map((kind): Asset => {
+    const f = furnitureDef(kind), wheels = WHEELS[kind];
+    const motions: Motion[] = wheels
+      ? [frames('wheels', `wheels, ${wheels.spokes} spokes, rolling`, 8), frames('blur', 'wheels at a run, smeared', 4, { variant: 2 })]
+      : [frames('live', 'water lapping at her waterline', 6)];
+    return {
+      family: 'vehicle', kind, name: f.name, register: 'line', style: 'kit', entry: `drawFurniture MODELS.${kind}`, file: wheels ? 'src/render/kit/vehicles.ts' : 'src/render/furniture.ts',
+      views: 'turns', states: VEHICLE_STATES[kind].map((v, state) => ({ label: v.label, set: { state } })),
+      variants: [{ label: `dyed ${DYE}`, set: { tint: DYE } }, ...WOODS.map((m) => ({ label: m, set: { material: m } }))],
+      motions, emissive: false, footprint: [f.w, f.h], heightPx: FURNITURE_HEIGHT[kind], ref: 4,
+    };
+  }),
+  // Whoever is aboard is a sculpted body: the bodies on and drawing before they are drawn.
+  prepare: async (_a, o) => { if (VEHICLE_STATES[_a.kind]?.[o.state]?.aboard !== 'none') await mannequinBaked(); },
+  // Nothing on them burns or glows: the wash over the lot, and nothing over it.
+  night: () => undefined,
+  draw: (ctx, sx, sy, zoom, a, o) => {
+    const kind = a.kind, view = pieceView(o.side, o.turn), t = o.t;
+    const st = VEHICLE_STATES[kind][o.state] ?? VEHICLE_STATES[kind][0];
+    const tint = o.tint ? dyeTint(o.tint) ?? undefined : undefined;
+    const wheels = WHEELS[kind];
+    const trim = wheels ? wheelTrim(kind, o.motion === 'wheels' || o.motion === 'blur' ? o.frame / (wheels.spokes * 2) : 0, o.motion === 'blur' ? 2 : 0, !!st.yoked) : st.trim;
+    const look = lookOf(7);
+    const body = (dx: number, dy: number, pose: Partial<Parameters<typeof drawFigure>[4]>): void =>
+      withClock(t, () => drawFigure(ctx, sx + dx * zoom, sy + dy * zoom, zoom, { phase: 0, moving: false, facing: 0, swimming: false, working: false, look, ...pose }));
+    const seated = (): void => {
+      const d = driverOn(kind, view);
+      if (d) body(d.dx, d.dy, { facing: d.facing, driving: true, seat: d.seat });
+    };
+    const crew = st.aboard === 'crew' ? crewFor(kind) : null;
+    const manned = st.aboard === 'crew' && kind === 'sailing_boat';
+    if (!crew) {
+      const box = withClock(t, () => drawFurniture(ctx, sx, sy, zoom, kind, false, tint, trim, view, o.material, undefined, 'all', true, null, false));
+      if (st.aboard === 'driver') seated();
+      return box;
+    }
+    // Baked in layers round her people, each drawn between the layer before their place and the one after (`takeAboard`).
+    const e = eyeOfView(view);
+    const order = crewOrder(zoom, kind, false, tint, trim, view, o.material, crew, manned);
+    const box = withClock(t, () => drawFurniture(ctx, sx, sy, zoom, kind, false, tint, trim, view, o.material, crew, 0, false, null, manned));
+    order.forEach((spot, n) => {
+      if (kind === 'sailing_boat' && spot === 0) seated();
+      else {
+        const [x, y, z] = crew.at[spot];
+        const [px, py] = proj(e, [x, y, z]);
+        body(px, py, { facing: alongFacing(view) });
+      }
+      withClock(t, () => drawFurniture(ctx, sx, sy, zoom, kind, false, tint, trim, view, o.material, crew, n + 1, n + 1 === order.length, null, manned));
+    });
+    return box;
   },
 };
 
@@ -694,7 +797,7 @@ const SCENE_FAMILIES: Family[] = [
 
 /* ---- the registry ------------------------------------------------------------------------- */
 
-export const FAMILIES: Family[] = [furniture, forge, rune, device, creature, player, portrait, tree, bush, stump, flower, crop, spell, ...SCENE_FAMILIES];
+export const FAMILIES: Family[] = [furniture, vehicle, forge, rune, device, creature, player, portrait, tree, bush, stump, flower, crop, spell, ...SCENE_FAMILIES];
 export const familyOf = (id: string): Family | undefined => FAMILIES.find((f) => f.id === id);
 
 /** The kit and the beds drawn as the game draws them, not the old models (`kitSync`, `denSync`). */

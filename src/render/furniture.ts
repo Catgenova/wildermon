@@ -19,10 +19,13 @@ import { LAMP_ARM, LAMP_GLASS, LAMP_HANG } from '../game/lamps';
 import { ENCHANTERS_PLINTH } from '../game/enchant';
 import { drawPlinth, drawPlinthRunes } from './plinth';
 import { drawDen, isDen } from './dens';
-import { drawKit, drawKitLive, isKit, kitFrame, kitGlows, kitHeight, kitHoles, kitWind } from './kitpieces';
+import { drawKit, drawKitLive, isKit, kitFrame, kitGlows, kitHeight, kitHoles, kitWind, layKitPart } from './kitpieces';
+import { BOX_BOARD, boxOf, cartBuilt, HUB_OUT, partBox } from './kit/vehicles';
+import { eyeOfView, proj, type Eye } from './runestone';
+import type { KitPart } from './kit/core';
 import { BRASS_PAINT, IRON_PAINT, LINEN_PAINT, WOOD_TONE } from './materials';
 import {
-  band as kitBand, boards as kitBoards, BRASS as KIT_BRASS, clothTone, CREASE_INK, deeper, grain as kitGrain, IRON as KIT_IRON, KIT_INK, KIT_INK_W, paler, seam as kitSeam, woodTone,
+  band as kitBand, BRASS as KIT_BRASS, clothTone, CREASE_INK, deeper, grain as kitGrain, IRON as KIT_IRON, KIT_INK, KIT_INK_W, paler, woodTone,
   type PaintCtx, type Tone,
 } from './kit/core';
 
@@ -104,9 +107,12 @@ export function headingView(angle: number, rotation: number): PieceView {
   return { ux, uy, vx, vy };
 }
 
+/** What is driven, pulled, rowed or sailed: built along its length, the way it goes, and drawn in the kit. */
+export const VEHICLES: ReadonlySet<string> = new Set(['cart', 'large_cart', 'wagon', 'rowing_boat', 'sailing_boat', 'caravel']);
+
 /**
- * The wheels of what is driven with reins, which turn as it goes: the
- * radius of the big ones, how many spokes each has, and how many times the
+ * The wheels of what is pulled or driven -- the small cart by hand, the large
+ * cart and the wagon with reins -- which turn as it goes: the radius of the big ones, how many spokes each has, and how many times the
  * small front wheels of a wagon go round to her rear's once. They went
  * round with the rear, a quarter of a turn short every turn. Four fifths of
  * the rear's size, they turn a quarter of a spoke further at each of the
@@ -116,6 +122,7 @@ export function headingView(angle: number, rotation: number): PieceView {
  * back where it started then.
  */
 export const WHEELS: Partial<Record<string, { r: number; spokes: number; front?: number }>> = {
+  cart: { r: 3.3, spokes: 8 },
   large_cart: { r: 4.8, spokes: 10 },
   wagon: { r: 5.4, spokes: 12, front: 5 / 4 },
 };
@@ -153,15 +160,21 @@ const WHEEL_SMEAR: Array<{ over: number; strokes: number[] }> = [
   { over: 0.45, strokes: [0.62, 0.34, 0.2] },
   { over: 1, strokes: [0.16, 0.16, 0.16, 0.16, 0.16] },
 ];
-/** A piece's wheels as its `trim`: how blurred, and which step of the way round they are when `turns` round. */
-export function wheelTrim(kind: string, turns: number, blur: number): number {
+/**
+ * A piece's wheels as its `trim`: how blurred, which step of the way round they are when `turns` round, and whether a
+ * team is in its yokes (`YOKED`), its pole then up at their necks, else down on the ground.
+ */
+export function wheelTrim(kind: string, turns: number, blur: number, yoked = false): number {
   const steps = WHEELS[kind]!.spokes * WHEEL_STEPS;
-  return blur * 1000 + (((Math.floor(turns * steps) % steps) + steps) % steps);
+  return (yoked ? YOKED : 0) + blur * 1000 + (((Math.floor(turns * steps) % steps) + steps) % steps);
 }
-function wheelsOf(kind: string, trim: number | undefined): { turn: number; front: number; blur: number } {
-  const w = WHEELS[kind]!, t = trim ?? 0, blur = Math.floor(t / 1000);
+/** What of a wheeled piece's `trim` says its team is in its yokes: the one part of it its picture is baked by, the wheels being turned over it. */
+const YOKED = 10000;
+const yokedOf = (trim: number | undefined): number => ((trim ?? 0) >= YOKED ? YOKED : 0);
+function wheelsOf(kind: string, trim: number | undefined): { turn: number; front: number; blur: number; yoked: boolean } {
+  const w = WHEELS[kind]!, t = (trim ?? 0) % YOKED, blur = Math.floor(t / 1000);
   const turn = (t % 1000) / (w.spokes * WHEEL_STEPS);
-  return { turn, front: (turn * (w.front ?? 1)) % 1, blur };
+  return { turn, front: (turn * (w.front ?? 1)) % 1, blur, yoked: yokedOf(trim) > 0 };
 }
 
 /* ---- colour --------------------------------------------------------------- */
@@ -248,6 +261,10 @@ interface Part {
   floor?: boolean;
   /** Room kept for what is drawn live over the bake (`drawFurnitureLive`): measured and clicked, never drawn or baked. */
   room?: boolean;
+  /** A solid of the kit it draws (`Scene.solid`), for a harness that checks the order (`vehicleParts`). */
+  kit?: KitPart;
+  /** And a wheel's middle, radius, thickness and axle, likewise. */
+  round?: { c: V3; r: number; thick: number; axis: 'x' | 'y' };
   /** A wheel that turns, the how-manyth of the piece's: drawn on its own over the rest (`bake`), a stage at a time (`WheelStage`). */
   wheel?: number;
   staged?: (stage: WheelStage) => void;
@@ -298,6 +315,10 @@ class Scene {
   readonly toward: V3;
   /** The patches of floor it shades, when it says; otherwise its footprint, drawn in a little. */
   shadows?: Array<[number, number, number, number]>;
+  /** Whether a ring of parts each in front of the next is broken as the kit breaks one, never at a part over what it stands on (`flush`): the vehicles'. */
+  hard = false;
+  /** How many rings of parts each in front of the next the last `flush` had to break: for a harness (`vehicleParts`). */
+  rings = 0;
   /** How many wheels have been put in so far. */
   wheels = 0;
   /** The light on the face of a box being decorated, and its colour, for a kit painter (`kitDeco`). */
@@ -358,6 +379,19 @@ class Scene {
   room(x0: number, x1: number, y0: number, y1: number, z0: number, z1: number): void {
     this.part(x0, x1, y0, y1, z0, z1, () => undefined);
     this.parts[this.parts.length - 1].room = true;
+  }
+
+  /** The eye a kit solid is drawn from (`eyeOfView`): the same turn as `P`, made when first wanted. */
+  private seen?: Eye;
+  get eye(): Eye {
+    return (this.seen ??= eyeOfView(this.v));
+  }
+
+  /** A solid of the kit (`KitPart`), sorted by its box among the rest and drawn as the kit draws one: lit, painted, creased and ruled round once. */
+  solid(p: KitPart, floor = false): void {
+    const [x0, x1, y0, y1, z0, z1] = partBox(p), salt = this.parts.length * 31 + 5;
+    this.part(x0, x1, y0, y1, z0, z1, () => layKitPart(this.g, this.eye, p, salt), floor);
+    this.parts[this.parts.length - 1].kit = p;
   }
 
   /**
@@ -807,10 +841,12 @@ class Scene {
    */
   wheel(c: V3, axis: 'x' | 'y', r: number, thick: number, spokes: number, p: Paint, turn = 0, blur = 0, mark = false): void {
     const [cx, cy, cz] = c;
-    const ax = axis === 'x' ? thick / 2 : r, ay = axis === 'y' ? thick / 2 : r;
+    // Grown by the hub, which stands out past either face, so nothing of it is drawn past the box it is sorted and measured by.
+    const ax = axis === 'x' ? thick / 2 + HUB_OUT : r, ay = axis === 'y' ? thick / 2 + HUB_OUT : r;
     this.part(cx - ax, cx + ax, cy - ay, cy + ay, cz - r, cz + r, () => this.drawWheel(c, axis, r, thick, spokes, p, turn, blur, mark));
     const part = this.parts[this.parts.length - 1];
     part.wheel = this.wheels++;
+    part.round = { c, r, thick, axis };
     part.staged = (stage) => this.drawWheel(c, axis, r, thick, spokes, p, turn, blur, mark, stage);
   }
 
@@ -988,29 +1024,48 @@ class Scene {
       else if (v.uy < -E) { if (a.x0 >= b.x1 - E) return -1; if (b.x0 >= a.x1 - E) return 1; }
       if (v.vy > E) { if (a.y1 <= b.y0 + E) return -1; if (b.y1 <= a.y0 + E) return 1; }
       else if (v.vy < -E) { if (a.y0 >= b.y1 - E) return -1; if (b.y0 >= a.y1 - E) return 1; }
-      if (a.z1 <= b.z0 + E) return -1;
-      if (b.z1 <= a.z0 + E) return 1;
+      if (a.z1 <= b.z0 + E) return -2;
+      if (b.z1 <= a.z0 + E) return 2;
       return 0;
     };
     const after: number[][] = ps.map(() => []);
     const need = new Array(n).fill(0);
+    // Of what each waits for, what it must: a part wholly under it, which is never wrong from wherever it is seen (`hard`).
+    const must = new Array(n).fill(0);
+    const hard = ps.map(() => new Set<number>());
+    /*
+     * For a piece that says so (`hard`), two parts are ordered only where the outlines of their boxes on the screen
+     * overlap, not their rectangles: a wagon's front axle, long and thin and slanting across the screen, had a rectangle
+     * reaching over her rear wheel, was put after it, and being under her floor put the floor after the wheel too.
+     */
+    const outlines = this.hard ? ps.map((p) => {
+      const pts: Pt[] = [];
+      for (const x of [p.x0, p.x1]) for (const y of [p.y0, p.y1]) for (const z of [p.z0, p.z1]) pts.push(this.P(x, y, z));
+      return hullOf(pts);
+    }) : null;
     for (let i = 0; i < n; i++) {
       for (let j = i + 1; j < n; j++) {
         const a = rects[i], b = rects[j];
         if (a[2] <= b[0] || b[2] <= a[0] || a[3] <= b[1] || b[3] <= a[1]) continue;
+        if (outlines && apart(outlines[i], outlines[j])) continue;
         const o = before(ps[i], ps[j]);
-        if (o < 0) { after[i].push(j); need[j]++; }
-        else if (o > 0) { after[j].push(i); need[i]++; }
+        if (!o) continue;
+        const [x, y] = o < 0 ? [i, j] : [j, i];
+        after[x].push(y); need[y]++;
+        if (this.hard && Math.abs(o) === 2) { must[y]++; hard[x].add(y); }
       }
     }
     const done = new Array(n).fill(false);
     for (let k = 0; k < n; k++) {
-      // The nearest-to-the-back of what is free to go; failing that, of everything left, which breaks a cycle.
+      // The nearest-to-the-back of what is free to go; failing that, of everything left, which breaks a cycle -- for a
+      // piece that says so (`hard`), never at a part over one it stands on, as the kit breaks one (`laid` in kitpieces.ts).
       let pick = -1;
       for (let i = 0; i < n; i++) if (!done[i] && need[i] === 0 && (pick < 0 || depth[i] < depth[pick])) pick = i;
+      if (pick < 0) this.rings++;
+      if (pick < 0 && this.hard) for (let i = 0; i < n; i++) if (!done[i] && must[i] === 0 && (pick < 0 || depth[i] < depth[pick])) pick = i;
       if (pick < 0) for (let i = 0; i < n; i++) if (!done[i] && (pick < 0 || depth[i] < depth[pick])) pick = i;
       done[pick] = true;
-      for (const j of after[pick]) need[j]--;
+      for (const j of after[pick]) { need[j]--; if (hard[pick].has(j)) must[j]--; }
       ps[pick].draw();
     }
     this.parts.length = 0;
@@ -1360,24 +1415,14 @@ const kitDeco = (sc: Scene, paint: (g: CanvasRenderingContext2D, k: PaintCtx, w:
  * round their crew) but are toned as the rune kit tones a piece: its wood (`woodTone`) a step creamier in the light and
  * mauve in the shade, a step paler on its tops and deeper underneath, the kit's iron and brass, and the kit's finer ink.
  */
-function vehicleKit(sc: Scene, material?: string): { wood: Paint; top: Paint; deep: Paint; tone: Tone } {
+function vehicleKit(sc: Scene, material?: string, tint?: Tint): { wood: Paint; top: Paint; deep: Paint; tone: Tone } {
   // The kit's ink against the old 0.9, kept as much thicker zoomed out as the old was, so it never goes under a pixel.
   sc.ink *= KIT_INK_W / 0.9;
-  const tone = woodTone(material);
+  // Dyed, a piece of wood alone is painted in the dye over its boards (`woodTone`); one with cloth takes it on the cloth.
+  const tone = woodTone(material, tint, 0.75);
   return { wood: kitPaint(tone), top: kitPaint(paler(tone, 0.1)), deep: kitPaint(deeper(tone, 0.16)), tone };
 }
 
-/** A stake up a boarded side, standing proud of the boards: a step deeper, a lit edge up its left and a seam each side. */
-function kitStake(g: CanvasRenderingContext2D, k: PaintCtx, x0: number, x1: number, h: number): void {
-  const fill = mix(k.fill, hex('#5a4458'), 0.16);
-  g.fillStyle = rgb(fill);
-  g.fillRect(x0, 0, x1 - x0, h);
-  kitGrain(g, [fill[0], fill[1], fill[2]], x1 - x0, h, Math.round(x0 * 7 + 3), 'y', 0.5);
-  kitSeam(g, k.fill, x0, 0, x0, h, 0.14);
-  kitSeam(g, k.fill, x1, 0, x1, h, 0.14);
-  g.fillStyle = rgb(mix(fill, [255, 248, 232], 0.4), 1, 0.6);
-  g.fillRect(x0 + 0.08, 0, 0.12, h);
-}
 const SHINGLE = (wood: Paint): Paint => paintOf(mix(wood.body, [120, 104, 98], 0.3));
 
 /**
@@ -2088,6 +2133,13 @@ function grapevine(sc: Scene, trim: number, X0: number, X1: number, ly: number, 
 /** A hull's sheer, `S` high amidships: rising to both ends, and most to the bow, `t` running from stern to stem. */
 const sheerOf = (S: number) => (t: number): number => S + 0.9 * (2 * t - 1) ** 2 + 1.2 * t ** 8;
 
+/**
+ * The light on the inside of a hull's sides, whichever way a face of it is turned: her own sides shade it from the key,
+ * and her floor throws light back up it, so it is lit all round as a side turned square to you is, a step under (`light`).
+ * Lit by which way each face of it turned, the inside of whichever side was on the left looked away from the key and
+ * that of the right toward it: from astern, the left of every open boat was in mauve and her right pale.
+ */
+const insideLight = (_k: number): number => 0.8;
 /** How many lengths a hull is built in, stern to stem. */
 const HULL_STATIONS = 14;
 /** Her floor, boarded over the bottom, above the waterline. */
@@ -2191,7 +2243,7 @@ function hull(sc: Scene, wood: Paint, xs: number, xb: number, B: number, S: numb
     };
     // The far side from inside, darker, with its gunwale along the top.
     for (const f of inner) {
-      const P = fill(f, sc.light(f.n[0], f.n[1], f.n[2]) * 0.8);
+      const P = fill(f, insideLight(sc.light(f.n[0], f.n[1], f.n[2])));
       sc.line(P[3], P[2], rgb(wood.ink), sc.ink * 2.2);
       sc.line(P[3], P[2], shadeOf(wood, 1.12), sc.ink * 1.1);
       if (f.end) for (const [a, b] of [[0, 3], [1, 2]]) sc.line(P[a], P[b], rgb(wood.ink, 1, 0.6), sc.ink * 0.8);
@@ -2199,11 +2251,11 @@ function hull(sc: Scene, wood: Paint, xs: number, xb: number, B: number, S: numb
     // Her floor, boarded fore and aft, from her transom to her stem: started a station in and ended two short, it left open water showing in the corners.
     const fl = HULL_FLOOR, span = st.slice(0, N);
     const floor: Pt[] = [...span.map((q) => sc.P(q.xw + 0.3, -q.w * 0.8, fl)), ...[...span].reverse().map((q) => sc.P(q.xw + 0.3, q.w * 0.8, fl))];
-    sc.fillInk(floor, shadeOf(wood, 0.82), wood.ink, 0.6);
+    sc.fillInk(floor, shadeOf(wood, 1), wood.ink, 0.6);
     g.save();
     sc.poly(floor);
     g.clip();
-    for (const yy of [-0.75, -0.25, 0.25, 0.75]) lap(sc.P(xs, yy * B * 0.5, fl), sc.P(xb, yy * B * 0.5, fl), 0.82);
+    for (const yy of [-0.75, -0.25, 0.25, 0.75]) lap(sc.P(xs, yy * B * 0.5, fl), sc.P(xb, yy * B * 0.5, fl), 1);
     g.restore();
     inside(
       (x, z, w) => {
@@ -2271,6 +2323,14 @@ const caravelWale = (t: number): number => CARAVEL.D + 0.5 * (2 * t - 1) ** 2 + 
 /** How high her waist's rail stands over her wale. */
 const WAIST_RAIL = 3;
 
+/** A boat's masthead pennant: the splash on her, a clear red. */
+const PENNANT: RGB = hex('#d65a4c');
+
+/** How slack a sail hangs at `set` (`sailTrim`): none once it draws (three tenths and up), the most in irons. */
+const slackOf = (set: number): number => Math.max(0, Math.min(1, (0.3 - Math.abs(set)) / 0.2));
+/** The shake in a slack sail, `u` across it from its luff and `v` down it, in units off its belly: folds run down it, none at the luff or the leech. */
+const luffing = (slack: number, u: number, v: number): number => slack * 0.6 * Math.sin(u * 9.4 + v * 4.2) * Math.sin(Math.PI * u);
+
 /** One thing in a ship's rig -- a panel of sail, a spar, a rope -- with how near it is, to be laid in order with the rest. */
 type RigItem = { d: number; draw: () => void };
 
@@ -2322,7 +2382,76 @@ function sailCloth(sc: Scene, grid: V3[][], p: Paint): RigItem[] {
 }
 
 /** What is drawn over a piece's bake every frame, by the kind of piece: only the altar's stars, so far. */
-const LIVE: Record<string, typeof drawSky> = { altar: drawSky };
+const LIVE: Record<string, typeof drawSky> = {
+  altar: drawSky,
+  rowing_boat: (g, sx, sy, zoom, view, t, night) => lapping(g, sx, sy, zoom, view, t, night ?? 0, 'rowing_boat'),
+  sailing_boat: (g, sx, sy, zoom, view, t, night) => lapping(g, sx, sy, zoom, view, t, night ?? 0, 'sailing_boat'),
+  caravel: (g, sx, sy, zoom, view, t, night) => lapping(g, sx, sy, zoom, view, t, night ?? 0, 'caravel'),
+};
+
+/**
+ * A hull's waterline, all round her, in her own frame: where her sides go into the water (`hull`, and the caravel's
+ * stations), stern to stem along her starboard side and back along her port.
+ */
+function waterlineOf(kind: string): V3[] | null {
+  let w = waterlines.get(kind);
+  if (w !== undefined) return w;
+  const def = furnitureDef(kind), hw = def.w * 5, hd = def.h * 5;
+  w = null;
+  if (kind === 'rowing_boat' || kind === 'sailing_boat') {
+    const h = HULLS[kind](hw, hd), st = stationsOf(h.xs, h.xb, h.B, h.S);
+    w = [...st.map((q): V3 => [q.xw, q.w, 0]), ...[...st].reverse().map((q): V3 => [q.xw, -q.w, 0])];
+  } else if (kind === 'caravel') {
+    const { xs, xb, B, xf } = CARAVEL, L = xb - xs, tf = (xf - xs) / L;
+    const st = Array.from({ length: 17 }, (_, i) => {
+      const t = i / 16, b = B * shipBreadth(t);
+      return { x: xs + L * t - 5 * Math.max(0, (t - tf) / (1 - tf)) ** 2, w: b * (0.8 - 0.3 * Math.max(0, 1 - t / 0.25) ** 2) };
+    });
+    w = [...st.map((q): V3 => [q.x, q.w, 0]), ...[...st].reverse().map((q): V3 => [q.x, -q.w, 0])];
+  }
+  waterlines.set(kind, w);
+  return w;
+}
+const waterlines = new Map<string, V3[] | null>();
+/** How long a ring of the water lapping at a hull takes to run out from her side and go, in seconds, and how far it runs, in units. */
+const LAP_SECS = 2.6, LAP_OUT = 1.8;
+
+/**
+ * The water lapping at a hull, drawn over her each frame: two thin rings of foam along the side of her nearer you, each
+ * running out from her waterline and fading as the next comes off her, so a boat lying still is seen to lie in water.
+ * Only along the side you see: the far side of her waterline is behind her.
+ */
+function lapping(g: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, view: PieceView, t: number, night: number, kind: string): void {
+  const loop = waterlineOf(kind);
+  if (!loop) return;
+  const e = eyeOfView(view), n = loop.length;
+  const c = loop.reduce<[number, number]>((m, q) => [m[0] + q[0] / n, m[1] + q[1] / n], [0, 0]);
+  g.save();
+  g.lineCap = 'round';
+  g.lineWidth = Math.max(0.6, 0.7 * zoom);
+  for (let k = 0; k < 2; k++) {
+    const f = ((t / LAP_SECS + k / 2) % 1 + 1) % 1, d = 0.35 + LAP_OUT * f;
+    g.strokeStyle = `rgba(238, 248, 246, ${(0.6 * (1 - f) * (1 - 0.45 * night)).toFixed(3)})`;
+    g.beginPath();
+    let open = false;
+    for (let i = 0; i < n; i++) {
+      const a = loop[i], b = loop[(i + 1) % n];
+      // Out of her side, away from her middle: seen when it is turned toward you.
+      let ox = b[1] - a[1], oy = -(b[0] - a[0]);
+      const l = Math.hypot(ox, oy) || 1;
+      ox /= l; oy /= l;
+      if (ox * ((a[0] + b[0]) / 2 - c[0]) + oy * ((a[1] + b[1]) / 2 - c[1]) < 0) { ox = -ox; oy = -oy; }
+      if (ox * e.toward[0] + oy * e.toward[1] <= 0.05) { open = false; continue; }
+      const P = (q: V3): Pt => { const [px, py] = proj(e, [q[0] + ox * d, q[1] + oy * d, 0]); return [sx + px * zoom, sy + py * zoom]; };
+      const [ax, ay] = P(a), [bx, by] = P(b);
+      if (!open) g.moveTo(ax, ay);
+      g.lineTo(bx, by);
+      open = true;
+    }
+    g.stroke();
+  }
+  g.restore();
+}
 /** And where each of those takes the night back off itself. */
 const HOLES: Record<string, typeof skyHoles> = { altar: skyHoles };
 
@@ -2628,6 +2757,21 @@ function stoneRoseArch({ sc, trim }: Build, lav: boolean): void {
 }
 
 type Model = (b: Build) => void;
+
+/**
+ * A cart, a large cart or a wagon: its solids in the kit (`kit/vehicles.ts`), each laid in the scene as a part of its own
+ * and drawn as the kit draws a solid, and its wheels the scene's own, put in where the model says and turned as far round
+ * as `trim` has them (`wheelsOf`), every one of them for the small cart as for the others.
+ */
+function cartModel({ sc, hw, hd, trim, material, tint }: Build, kind: 'cart' | 'large_cart' | 'wagon'): void {
+  const { wood } = vehicleKit(sc, material);
+  sc.hard = true;
+  const built = cartBuilt(kind, hw, hd, material, tint, WHEELS[kind], wheelsOf(kind, trim).yoked);
+  sc.shadows = built.shade;
+  for (const p of built.parts) sc.solid(p);
+  const { turn, front, blur } = wheelsOf(kind, trim);
+  for (const w of built.wheels) sc.wheel(w.c, 'y', w.r, w.thick, w.spokes, wood, w.front ? front : turn, blur, w.mark);
+}
 
 const MODELS: Record<string, Model> = {
   /*
@@ -4197,101 +4341,9 @@ const MODELS: Record<string, Model> = {
    * wagon is a long bed on four wheels, smaller at the front, staked and
    * banded, a bench across the middle and two pairs of yokes on its pole.
    */
-  cart: ({ sc, hw, hd, material }) => {
-    const { wood, top, deep } = vehicleKit(sc, material);
-    const L0 = -hw + 1.2, L1 = hw - 5.2, W = hd - 1.6, z0 = 3.6, zb = 4.2, zt = 7, t = 0.5;
-    const r = 3.3, ax = -2.4, wy = W + 0.9;
-    sc.shadows = [[L0, L1, -W - 1, W + 1]];
-    sc.rod([ax, -W + 0.2, r], [ax, W - 0.2, r], 0.35, KIT_IRON_PAINT);
-    for (const s of [-1, 1]) sc.wheel([ax, s * wy, r], 'y', r, 0.6, 8, wood);
-    sc.box(L0, L1, -W, W, z0, zb, deep, { top: kitDeco(sc, (g, k, w, h) => kitBoards(g, k.fill, w, h, 3, 7)) });
-    // Its sides boarded, an iron strap up each end of each.
-    const side = (seed: number) => kitDeco(sc, (g, k, w, h) => {
-      kitBoards(g, k.fill, w, h, 2, seed);
-      kitBand(g, k, 0.5, 1.1, 0, h, 2, true);
-      kitBand(g, k, w - 1.1, w - 0.5, 0, h, 2, true);
-    });
-    sc.box(L0, L1, -W, -W + t, zb, zt, wood, { front: side(11), back: side(12) });
-    sc.box(L0, L1, W - t, W, zb, zt, wood, { front: side(13), back: side(14) });
-    sc.box(L0, L0 + t, -W + t, W - t, zb, zt, wood, { left: side(15), right: side(16) });
-    sc.box(L1 - t, L1, -W + t, W - t, zb, zt, wood, { left: side(17), right: side(18) });
-    for (const s of [-1, 1]) sc.rod([L1 + 0.4, s * (W - 0.6), z0], [hw - 0.4, s * (W - 1.1), 2], 0.35, top);
-    sc.rod([hw - 0.5, -W + 0.9, 2.05], [hw - 0.5, W - 0.9, 2.05], 0.3, top);
-  },
-  large_cart: ({ sc, hw, hd, trim, material }) => {
-    const { wood, top, deep } = vehicleKit(sc, material);
-    const { L0, L1, W, floor, top: rim, bench } = boxOf('large_cart', hw, hd), t = BOX_BOARD.large_cart;
-    const { r, spokes } = WHEELS.large_cart!, ax = -2, wy = W + 1;
-    sc.shadows = [[L0, L1, -W - 1.4, W + 1.4]];
-    sc.rod([ax, -W + 0.4, r], [ax, W - 0.4, r], 0.45, KIT_IRON_PAINT);
-    const { turn, blur } = wheelsOf('large_cart', trim);
-    for (const s of [-1, 1]) sc.wheel([ax, s * wy, r], 'y', r, 0.9, spokes, wood, turn, blur, true);
-    for (const s of [-1, 1]) sc.box(L0 + 1, L1 - 1, s * (W - 1.8) - 0.5, s * (W - 1.8) + 0.5, floor - 1.8, floor - 0.8, deep);
-    const along = (seed: number) => kitDeco(sc, (g, k, w, h) => kitGrain(g, k.fill, w, h, seed, 'x', 0.8));
-    sc.box(L0, L1, -W, W, floor - 0.8, floor, deep, { front: along(21), back: along(22), left: along(23), right: along(24), top: kitDeco(sc, (g, k, w, h) => kitBoards(g, k.fill, w, h, 5, 25)) });
-    // Its sides: three boards, a stake up them every few units, and an iron band round under the rim.
-    const staked = (seed: number) => kitDeco(sc, (g, k, w, h) => {
-      kitBoards(g, k.fill, w, h, 3, seed);
-      for (let s = 0.4; s < w - 0.5; s += Math.max(3.2, (w - 1) / Math.round((w - 1) / 3.6))) kitStake(g, k, s, s + 0.7, h);
-      kitBand(g, k, 0, w, h - 0.7, h - 0.2, Math.max(2, Math.round(w / 3)), false);
-    });
-    sc.box(L0, L1, -W, -W + t, floor, rim, wood, { front: staked(31), back: staked(32) });
-    sc.box(L0, L1, W - t, W, floor, rim, wood, { front: staked(33), back: staked(34) });
-    sc.box(L0, L0 + t, -W + t, W - t, floor, rim, wood, { left: staked(35), right: staked(36) });
-    sc.box(L1 - t, L1, -W + t, W - t, floor, rim, wood, { left: staked(37), right: staked(38) });
-    for (const s of [-1, 1]) sc.box(-0.6, 0.6, s * (W - 1.6) - 0.5, s * (W - 1.6) + 0.5, floor, bench - 0.6, deep);
-    sc.box(-1.2, 1.2, -W + t, W - t, bench - 0.6, bench, top, { top: kitDeco(sc, (g, k, w, h) => kitBoards(g, k.fill, w, h, 2, 41, 'y')) });
-    sc.rod([L1 + 0.2, 0, floor - 1.3], [hw - 0.6, 0, 4.4], 0.5, wood);
-    sc.box(hw - 1.6, hw - 0.6, -6.4, 6.4, 4.1, 5, top, { left: along(43), right: along(44) });
-    for (const s of [-1, 1]) sc.part(hw - 1.4, hw - 0.8, s * 3.6 - 1.6, s * 3.6 + 1.6, 1.8, 4.1, () => {
-      const pts: Pt[] = [];
-      for (let i = 0; i <= 10; i++) { const a = (i / 10) * Math.PI; pts.push(sc.P(hw - 1.1, s * 3.6 + Math.cos(a) * 1.5, 4.1 - Math.sin(a) * 2.2)); }
-      sc.g.lineCap = 'round';
-      sc.poly(pts); sc.g.strokeStyle = rgb(wood.ink); sc.g.lineWidth = 1.2 + sc.ink * 2; sc.g.stroke();
-      sc.g.strokeStyle = shadeOf(wood, 0.9); sc.g.lineWidth = 1.2; sc.g.stroke();
-      sc.g.lineCap = 'butt';
-    });
-  },
-  wagon: ({ sc, hw, hd, trim, material }) => {
-    const { wood, top, deep } = vehicleKit(sc, material);
-    const { L0, L1, W, floor, top: rim, bench } = boxOf('wagon', hw, hd), t = BOX_BOARD.wagon;
-    const { r: big, spokes, front: more } = WHEELS.wagon!, { turn, front: ahead, blur } = wheelsOf('wagon', trim);
-    const wy = W + 1.2, rear = [-12, big, turn] as const, front = [6, big / more!, ahead] as const;
-    sc.shadows = [[L0, L1, -W - 1.6, W + 1.6]];
-    for (const [ax, r, t] of [rear, front]) {
-      sc.rod([ax, -W + 0.4, r], [ax, W - 0.4, r], 0.5, KIT_IRON_PAINT);
-      for (const s of [-1, 1]) sc.wheel([ax, s * wy, r], 'y', r, 1, spokes, wood, t, blur, r === big);
-    }
-    sc.box(L0 + 2, L1 - 2, -0.6, 0.6, 4.6, 5.8, deep);
-    for (const s of [-1, 1]) sc.box(L0 + 1, L1 - 1, s * (W - 2.2) - 0.6, s * (W - 2.2) + 0.6, floor - 2, floor - 0.9, deep);
-    const along = (seed: number) => kitDeco(sc, (g, k, w, h) => kitGrain(g, k.fill, w, h, seed, 'x', 0.8));
-    sc.box(L0, L1, -W, W, floor - 0.9, floor, deep, { front: along(21), back: along(22), left: along(23), right: along(24), top: kitDeco(sc, (g, k, w, h) => kitBoards(g, k.fill, w, h, 6, 25)) });
-    // Its sides: three boards, staked, and banded in iron along the foot and under the rim.
-    const staked = (seed: number) => kitDeco(sc, (g, k, w, h) => {
-      kitBoards(g, k.fill, w, h, 3, seed);
-      const n = Math.max(2, Math.round((w - 1) / 4.2));
-      for (let i = 0; i <= n; i++) { const s = 0.3 + (i * (w - 1.3)) / n; kitStake(g, k, s, s + 0.7, h); }
-      for (const tt of [0.5, h - 0.9]) kitBand(g, k, 0, w, tt, tt + 0.5, Math.max(2, n), false);
-    });
-    sc.box(L0, L1, -W, -W + t, floor, rim, wood, { front: staked(31), back: staked(32) });
-    sc.box(L0, L1, W - t, W, floor, rim, wood, { front: staked(33), back: staked(34) });
-    sc.box(L0, L0 + t, -W + t, W - t, floor, rim, wood, { left: staked(35), right: staked(36) });
-    sc.box(L1 - t, L1, -W + t, W - t, floor, rim, wood, { left: staked(37), right: staked(38) });
-    for (const s of [-1, 1]) sc.box(-0.7, 0.7, s * (W - 2) - 0.6, s * (W - 2) + 0.6, floor, bench - 0.6, deep);
-    sc.box(-1.4, 1.4, -W + t, W - t, bench - 0.6, bench, top, { top: kitDeco(sc, (g, k, w, h) => kitBoards(g, k.fill, w, h, 2, 41, 'y')) });
-    sc.rod([L1 + 0.2, 0, 5.2], [hw - 0.4, 0, 4.6], 0.55, wood);
-    for (const yx of [L1 + 3.2, hw - 1.2]) {
-      sc.box(yx - 0.5, yx + 0.5, -6.6, 6.6, 4.4, 5.3, top, { left: along(43), right: along(44) });
-      for (const s of [-1, 1]) sc.part(yx - 0.3, yx + 0.3, s * 3.6 - 1.6, s * 3.6 + 1.6, 2.2, 4.4, () => {
-        const pts: Pt[] = [];
-        for (let i = 0; i <= 10; i++) { const a = (i / 10) * Math.PI; pts.push(sc.P(yx, s * 3.6 + Math.cos(a) * 1.5, 4.4 - Math.sin(a) * 2.1)); }
-        sc.g.lineCap = 'round';
-        sc.poly(pts); sc.g.strokeStyle = rgb(wood.ink); sc.g.lineWidth = 1.2 + sc.ink * 2; sc.g.stroke();
-        sc.g.strokeStyle = shadeOf(wood, 0.9); sc.g.lineWidth = 1.2; sc.g.stroke();
-        sc.g.lineCap = 'butt';
-      });
-    }
-  },
+  cart: (o) => cartModel(o, 'cart'),
+  large_cart: (o) => cartModel(o, 'large_cart'),
+  wagon: (o) => cartModel(o, 'wagon'),
 
   /*
    * Boats, built along their width with the bow at the far end of it, and
@@ -4302,8 +4354,8 @@ const MODELS: Record<string, Model> = {
    * the sail swings out to leeward and fills as far as `trim` says, which is
    * the wind's side and how hard it is drawing.
    */
-  rowing_boat: ({ sc, hw, hd, trim, material }) => {
-    const { wood, tone } = vehicleKit(sc, material);
+  rowing_boat: ({ sc, hw, hd, trim, material, tint }) => {
+    const { wood, tone } = vehicleKit(sc, material, tint);
     sc.shadows = [];
     const OAR = kitPaint(paler(tone, 0.25));
     const { xs, xb, B, S, thwarts, thwart } = HULLS.rowing_boat(hw, hd);
@@ -4326,6 +4378,7 @@ const MODELS: Record<string, Model> = {
     // The wind's side is the sign of the trim; the sail goes out on the other side, and fills as far as the size of it says.
     const side = set < 0 ? 1 : -1;
     const swing = 0.12 + Math.abs(set) * 1.05, belly = 0.3 + Math.abs(set) * 1.5;
+    const slack = slackOf(set);
     const aft = (len: number, z: number, turn = 1): V3 => [xm - Math.cos(swing * turn) * len, side * Math.sin(swing * turn) * len, z];
     const tack: V3 = [xm, 0, zb], clew = aft(boom, zb), throat: V3 = [xm, 0, zb + luff], peak = aft(gaff, zb + luff + gaff * 0.55, 0.9);
     const lee: V3 = [Math.sin(swing), side * Math.cos(swing), 0];
@@ -4351,7 +4404,7 @@ const MODELS: Record<string, Model> = {
       const n = 6;
       const pt = (u: number, v: number): V3 => {
         const p = lerp(lerp(tack, clew, u), lerp(throat, peak, u), v);
-        const o = belly * 4 * u * (1 - u) * (1 - 0.35 * v);
+        const o = belly * 4 * u * (1 - u) * (1 - 0.35 * v) + luffing(slack, u, v);
         return [p[0] + lee[0] * o, p[1] + lee[1] * o, p[2]];
       };
       // Its cloths, head to foot and luff to leech: seamed between the cloths and ruled round once (`sailCloth`).
@@ -4364,6 +4417,11 @@ const MODELS: Record<string, Model> = {
       sc.drawRod(tack, clew, 0.32, SPAR);
       sc.drawRod(throat, peak, 0.28, SPAR);
       if (!behind) mast();
+      // The peak halyard from the masthead down to the gaff, and a pennant at the masthead streaming out over the lee quarter.
+      sc.line(sc.P(xm, 0, zt - 0.4), sc.P(peak[0], peak[1], peak[2]), rgb(KIT_ROPE, 1, 0.7), sc.ink * 0.6);
+      const fly = aft(4.2, zt - 0.9, 1.15), mid = aft(2.2, zt - 0.35, 1.1);
+      const flag: Pt[] = [sc.P(xm, 0, zt + 0.1), sc.P(mid[0], mid[1], mid[2] + 0.35 + 0.25 * slack), sc.P(fly[0], fly[1], fly[2]), sc.P(xm, 0, zt - 1.2)];
+      sc.fillInk(flag, rgb(PENNANT), mix(PENNANT, hex('#3e2430'), 0.55));
     } });
     /*
      * The shrouds down to either side, and the mainsheet from the end of the
@@ -4521,7 +4579,7 @@ const MODELS: Record<string, Model> = {
         // The inside of her far side, darker, with its rail along the top.
         for (const f of inner) {
           const P = f.q.map(S);
-          const k = sc.light(f.n[0], f.n[1], f.n[2]) * 0.8;
+          const k = insideLight(sc.light(f.n[0], f.n[1], f.n[2]));
           fill(P, k);
           g.strokeStyle = seamOf(k, 0.6);
           g.lineWidth = sc.ink * 0.6;
@@ -4681,7 +4739,7 @@ const MODELS: Record<string, Model> = {
      */
     const set = trim ?? 0.25;
     const lee = set < 0 ? 1 : -1;
-    const pull = Math.abs(set);
+    const pull = Math.abs(set), slack = slackOf(set);
     const SAIL = kitPaint(clothTone(tint));
     const brace = 0.15 + pull * 0.45;
     const ax = Math.sin(brace), ay = -lee * Math.cos(brace), nx = Math.cos(brace), ny = lee * Math.sin(brace);
@@ -4690,7 +4748,7 @@ const MODELS: Record<string, Model> = {
       Array.from({ length: 4 }, (_, i) => {
         const v = i / 3;
         return Array.from({ length: 7 }, (_, j) => {
-          const u = j / 6, s = (2 * u - 1) * (yh + (yf - yh) * v), f = off + full * 4 * u * (1 - u) * Math.sin(v * Math.PI * 0.65);
+          const u = j / 6, s = (2 * u - 1) * (yh + (yf - yh) * v), f = off + full * 4 * u * (1 - u) * Math.sin(v * Math.PI * 0.65) + luffing(slack, u, v) * 1.6;
           return [x + s * ax + f * nx, s * ay + f * ny, zh + (zf - zh) * v] as V3;
         });
       });
@@ -4773,7 +4831,7 @@ const MODELS: Record<string, Model> = {
         const v = i / 3;
         return Array.from({ length: 6 }, (_, j) => {
           const u = j / 5, fa = T[0] + (C[0] - T[0]) * u, fz = T[1] + (C[1] - T[1]) * u, ha = T[0] + (P[0] - T[0]) * u, hz = T[1] + (P[1] - T[1]) * u;
-          return mz(fa + (ha - fa) * v, fz + (hz - fz) * v, off + full * 4 * u * (1 - u) * Math.sin(Math.PI * (1 - v) * 0.7));
+          return mz(fa + (ha - fa) * v, fz + (hz - fz) * v, off + full * 4 * u * (1 - u) * Math.sin(Math.PI * (1 - v) * 0.7) + luffing(slack, u, v) * 1.3);
         });
       });
       const cloth = sailCloth(sc, grid, SAIL);
@@ -4855,22 +4913,6 @@ const PLANTER_PLANT = 0.85;
 export { planterTrim };
 
 /* ---- where a driver sits ---------------------------------------------------- */
-
-/**
- * The box of a large cart and of a wagon: its ends along it (`L0` at the
- * back, `L1` at the front) and its half-width, its floor, the top of its
- * sides, and the top of the bench across it over the axle.
- */
-const BOX_MEASURES = {
-  large_cart: { back: 1, front: 6, side: 3, floor: 6.7, rise: 3.4, bench: 9.4 },
-  wagon: { back: 1, front: 8, side: 5, floor: 8.4, rise: 3.8, bench: 11.2 },
-};
-/** How thick a box's boards are. */
-const BOX_BOARD = { large_cart: 0.6, wagon: 0.7 };
-function boxOf(kind: keyof typeof BOX_MEASURES, hw: number, hd: number): { L0: number; L1: number; W: number; floor: number; top: number; bench: number } {
-  const m = BOX_MEASURES[kind];
-  return { L0: -hw + m.back, L1: hw - m.front, W: hd - m.side, floor: m.floor, top: m.floor + m.rise, bench: m.bench };
-}
 
 /**
  * The two small hulls' lines: stern and stem, half her beam, her sheer
@@ -5000,6 +5042,21 @@ export function driverOn(kind: string, view: PieceView): { dx: number; dy: numbe
   };
 }
 
+/** Whether two convex outlines on the screen are clear of each other, by a line between them along one of their edges' normals. */
+function apart(a: readonly Pt[], b: readonly Pt[]): boolean {
+  for (const poly of [a, b]) {
+    for (let i = 0; i < poly.length; i++) {
+      const p = poly[i], q = poly[(i + 1) % poly.length];
+      const nx = q[1] - p[1], ny = p[0] - q[0];
+      let a0 = Infinity, a1 = -Infinity, b0 = Infinity, b1 = -Infinity;
+      for (const r of a) { const d = r[0] * nx + r[1] * ny; a0 = Math.min(a0, d); a1 = Math.max(a1, d); }
+      for (const r of b) { const d = r[0] * nx + r[1] * ny; b0 = Math.min(b0, d); b1 = Math.max(b1, d); }
+      if (a1 <= b0 + 1e-6 || b1 <= a0 + 1e-6) return true;
+    }
+  }
+  return false;
+}
+
 /** The outline round a set of points on the screen: the smallest convex shape holding them all. */
 function hullOf(ps: Pt[]): Pt[] {
   const s = [...ps].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
@@ -5057,6 +5114,13 @@ export const FURNITURE_HEIGHT: Record<string, number> = Object.fromEntries(FURNI
   if (isKit(f.id)) return [f.id, kitHeight(f.id)];
   const sc = new Scene(null as unknown as CanvasRenderingContext2D, pieceView('s', 0), 1);
   build(sc, f.id, false, undefined, undefined, undefined, 0);
+  /*
+   * A vehicle or a hull is long and low, and lies along the screen: the top of its box over its floor contact is its
+   * height and as much again of its length, which rises up the screen behind it. Its height is that, the top of the box
+   * it is clicked by, as it stands set down (the side it is set down by, from the first turn); measured off its sides
+   * rather than its tallest part, a wagon said 28 pixels and stood 46.
+   */
+  if (VEHICLES.has(f.id)) return [f.id, Math.ceil(Math.max(0, ...sc.parts.flatMap((p) => [p.x0, p.x1].flatMap((x) => [p.y0, p.y1].map((y) => -sc.P(x, y, p.z1)[1])))) + 1.2)];
   return [f.id, Math.ceil(Math.max(0, ...sc.parts.map((p) => p.z1)) * HEIGHT_SCALE)];
 }));
 
@@ -5147,7 +5211,9 @@ function bake(kind: string, lit: boolean, tint: Tint | undefined, trim: number |
   // What is clicked includes the room kept for anything drawn live over it; what is baked does not.
   for (const p of sc.parts) for (const x of [p.x0, p.x1]) for (const y of [p.y0, p.y1]) for (const z of [p.z0, p.z1]) take(x, y, z);
   for (const [a, b, c, d] of sc.shadows ?? []) for (const x of [a, b]) for (const y of [c, d]) take(x, y, 0);
-  const bounds: [number, number, number, number] = [x0, y0, x1, y1];
+  // A vehicle's solids are ruled round in the kit's ink (`Scene.solid`), which runs past the boxes they are sorted by: the box it is clicked by and declares takes it in.
+  const inked = VEHICLES.has(kind) ? 1.2 : 0;
+  const bounds: [number, number, number, number] = [x0 - inked, y0 - inked, x1 + inked, y1 + inked];
   x0 = Infinity; y0 = Infinity; x1 = -Infinity; y1 = -Infinity;
   for (const p of sc.parts) if (!p.room) for (const x of [p.x0, p.x1]) for (const y of [p.y0, p.y1]) for (const z of [p.z0, p.z1]) take(x, y, z);
   for (const [a, b, c, d] of sc.shadows ?? []) for (const x of [a, b]) for (const y of [c, d]) take(x, y, 0);
@@ -5408,7 +5474,7 @@ export function drawFurniture(ctx: CanvasRenderingContext2D, sx: number, sy: num
   // Redrawn in the same kit, whatever the piece (`kitpieces.ts`): its model there, not in `MODELS`. A layered one lays the layer `trim` names.
   if (isKit(kind)) return drawKit(ctx, sx, sy, zoom, kind, { lit, tint, trim, material }, view, live, 0, tint ? { ...STILL, tint } : undefined);
   const rolling = !crew && !!WHEELS[kind];
-  const b = bakedFor(zoom, kind, lit, tint, rolling ? undefined : trim, view, material, crew, manned, rolling, rigged);
+  const b = bakedFor(zoom, kind, lit, tint, rolling ? yokedOf(trim) || undefined : trim, view, material, crew, manned, rolling, rigged);
   const k = zoom / b.scale;
   const sheets = [b.canvas, ...(b.layers ?? [])];
   if (b.rolled && b.wheelAt && b.sheets) {
@@ -5568,6 +5634,20 @@ export function swayOnScreen(view: PieceView, s: Sway, zoom: number, long = 2.5)
  * piece baked round them: the first of these is drawn after layer 0, the
  * second after layer 1, and so on (`drawFurniture` with a `layer`).
  */
+/**
+ * For a harness (the clipping scan): a piece's parts as it lays them from `view`, in the order they go down -- each a
+ * kit solid (`Scene.solid`), a wheel, or something of the old builder's -- with the box each is sorted by.
+ */
+export function vehicleParts(kind: string, view: PieceView, trim?: number, material?: string): Array<{ box: [number, number, number, number, number, number]; kit?: KitPart; round?: Part['round'] }> {
+  const sc = new Scene(null as unknown as CanvasRenderingContext2D, view, 1);
+  build(sc, kind, false, undefined, trim, material, 0);
+  const out: Array<{ box: [number, number, number, number, number, number]; kit?: KitPart; round?: Part['round'] }> = [];
+  for (const p of sc.parts) p.draw = () => out.push({ box: [p.x0, p.x1, p.y0, p.y1, p.z0, p.z1], kit: p.kit, round: p.round });
+  sc.flush();
+  (out as unknown as { rings: number }).rings = sc.rings;
+  return out;
+}
+
 export function crewOrder(zoom: number, kind: string, lit: boolean, tint: Tint | undefined, trim: number | undefined, view: PieceView, material: string | undefined, crew: Crew, manned = false): number[] {
   return bakedFor(zoom, kind, lit, tint, trim, view, material, crew, manned).order ?? [];
 }

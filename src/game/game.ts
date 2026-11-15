@@ -35,7 +35,7 @@ import { anvilAnchor, anvilCentre, anvilCovers, anvilName, ANVIL_SUBTILES, type 
 import { fireAnchor, fireCentre, fireCovers, FIRE_SUBTILES, type PlacedCampfire } from './campfire';
 import { backOf, furnaceMadeSaid, smelterAnchor, smelterCentre, smelterCovers, smelterName, smelterSize, SMELTER_PLUME, SMELTER_PLUME_WORKING, SMELTER_STACK_BACK, SMELTER_STACK_UP, type PlacedSmelter, type Plume } from './smelter';
 import { kilnAnchor, kilnCentre, kilnCovers, kilnName, KILN_GLOW, KILN_GLOW_FIRING, KILN_PLUME, KILN_PLUME_FIRING, KILN_SUBTILES, KILN_VENT_BACK, KILN_VENT_UP, type PlacedKiln } from './kiln';
-import { WELL_TRICKLE, WELL_TRICKLE_AT, WELL_TRICKLE_QL, ACROSS_OF, DEED_PLACE, FURNITURE, ONE_ALTAR, deckSpot, isPlanter, furnitureAnchor, furnitureCapacity, furnitureCentre, furnitureCovers, furnitureDef, furnitureHeft, furnitureHolds, furnitureKg, furnitureRefuses, furnitureRoom, furnitureUnits, hiveRoom, POND_EVERY, rackDeck, rackSpots, teamOf, vehicleOf, type LiquidKind, type PlacedFurniture, furnitureName, facingOf, LIQUID_NAME, isBoat, furnitureFootprint, holdsLiquid, WATER_AT_HAND, STATION_REACH, type BoatDef, pieceShut, isFountain } from './furniture';
+import { WELL_TRICKLE, WELL_TRICKLE_AT, WELL_TRICKLE_QL, ACROSS_OF, DEED_PLACE, FURNITURE, ONE_ALTAR, deckSpot, isPlanter, furnitureAnchor, furnitureCapacity, furnitureCentre, furnitureCovers, furnitureDef, furnitureHeft, furnitureHolds, furnitureKg, furnitureRefuses, furnitureRoom, furnitureUnits, hiveRoom, POND_EVERY, rackDeck, rackSpots, teamOf, vehicleOf, type LiquidKind, type PlacedFurniture, furnitureName, facingOf, LIQUID_NAME, isBoat, furnitureFootprint, holdsLiquid, WATER_AT_HAND, STATION_REACH, type BoatDef, pieceShut, isFountain, NECK_BACK, YOKE_SPOTS } from './furniture';
 import { hiveTakes } from './bees';
 import { crateTheRest, CREATURE_CRATE, emptyCrate, occupiedRefusal, shutIn, teamOut, teamOutRefusal } from './creaturecrate';
 import { bury, crumble, graveAt, graveRefusal, graveSays, GRAVE_MARK } from './graves';
@@ -8960,10 +8960,13 @@ export class Game {
    * one): abreast of one another, a pace and a half ahead of the shafts; on the vehicle where that is no ground to stand
    * on. For your own team (`haulVehicle`) and the team of a vehicle somebody else drives (`Creatures.walkLegs`).
    */
-  traceSpot(cx: number, cy: number, fx: number, fy: number, i: number, n: number): [number, number] {
-    const off = n === 1 ? 0 : (i / (n - 1) - 0.5) * 1.6;
-    const tx = cx + fx * TRACE_LENGTH - fy * off;
-    const ty = cy + fy * TRACE_LENGTH + fx * off;
+  traceSpot(cx: number, cy: number, fx: number, fy: number, i: number, n: number, kind?: string): [number, number] {
+    // At its yoke, its neck in the bow, where the vehicle has yokes drawn on it (`YOKE_SPOTS`); else abreast, out ahead.
+    const yoke = kind ? YOKE_SPOTS[kind]?.[i] : undefined;
+    const ahead = yoke ? yoke[0] - NECK_BACK : TRACE_LENGTH;
+    const off = yoke ? yoke[1] : n === 1 ? 0 : (i / (n - 1) - 0.5) * 1.6;
+    const tx = cx + fx * ahead - fy * off;
+    const ty = cy + fy * ahead + fx * off;
     return this.world.inBounds(Math.floor(tx), Math.floor(ty)) && this.world.isPassable(Math.floor(tx), Math.floor(ty)) ? [tx, ty] : [cx, cy];
   }
 
@@ -9002,7 +9005,7 @@ export class Game {
     const fy = this.player.dirY / len;
     for (let i = 0; i < team.length; i++) {
       const c = team[i];
-      [c.x, c.y] = this.traceSpot(cx, cy, fx, fy, i, team.length);
+      [c.x, c.y] = this.traceSpot(cx, cy, fx, fy, i, team.length, f.kind);
       c.moving = moving;
       if (moving) {
         c.dirX = fx;

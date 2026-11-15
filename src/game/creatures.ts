@@ -6627,7 +6627,7 @@ export class Creatures {
         }
         const len = Math.hypot(c.dirX, c.dirY) || 1;
         const team = cart.team ?? [];
-        [c.x, c.y] = game.traceSpot(dx, dy, c.dirX / len, c.dirY / len, Math.max(0, team.indexOf(c.id)), Math.max(1, team.length));
+        [c.x, c.y] = game.traceSpot(dx, dy, c.dirX / len, c.dirY / len, Math.max(0, team.indexOf(c.id)), Math.max(1, team.length), cart.kind);
         this.place(c);
         continue;
       }

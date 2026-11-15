@@ -304,6 +304,20 @@ export interface VehicleDef {
 }
 
 /**
+ * Where the bow of each yoke of a vehicle is, in tiles from its middle: ahead the way it goes, and across to its
+ * right. A team is put to them in order, the pair at the pole first and the leaders ahead of them, each beast with its
+ * neck in its bow (`NECK_BACK` behind it is its middle); the vehicle's yokes are drawn where they are (`kit/vehicles.ts`).
+ * They walked abreast a tile and a half ahead of it, the four of a wagon spread over a tile and a half, and the yokes
+ * on its pole stood empty half a tile short of the nearest of them.
+ */
+export const YOKE_SPOTS: Readonly<Record<string, ReadonlyArray<readonly [number, number]>>> = {
+  large_cart: [[0.8, -0.24], [0.8, 0.24]],
+  wagon: [[0.95, -0.26], [0.95, 0.26], [1.7, -0.26], [1.7, 0.26]],
+};
+/** How far behind the bow round its neck a beast in a yoke has its middle, in tiles. */
+export const NECK_BACK = 0.2;
+
+/**
  * What it takes to float. A boat goes on water and nowhere else: it is
  * launched into it, it will not cross dry land, and the one aboard has to
  * find a shore again before getting out. Nothing is hitched to it; the pace

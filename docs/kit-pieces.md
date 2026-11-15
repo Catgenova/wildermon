@@ -75,22 +75,24 @@ interface KitPart {
 
 ### What stays on the old path
 
-- **Wheeled pieces** (`WHEELS`: `large_cart`, `wagon`). Their wheels are baked in
-  sheets round each wheel and turned per frame (`bakeRound`, `wheelsFor`). The kit has
-  no wheel stage. Restyle these in the `Scene` builder: kit palette, softer ink.
-  The small `cart` stays with them: its wheels do not turn, but they are the same
-  `Scene.wheel` as theirs, and the kit has no part for a spoked wheel seen through.
-- **How they are restyled.** `vehicleKit(sc, material)` in furniture.ts gives the kit's
-  wood as a `Paint` with a `tone` and sets the kit's ink width. Every `Scene` drawing
-  (`drawBox`, `drawLathe`, `drawRod`, `drawPanel`, `drawWheel`, `hull`, `sailCloth`) fills
-  a toned paint through `shadeOf` (`kitShade`: lit toward mauve, as `faceColour`), and a
-  toned box is drawn as the kit draws a solid (`drawKitBox`: ruled round once, creased,
-  lit top edges). `kitDeco` runs a kit painter (`boards`, `grain`, `band`) on a box face.
-  A paint without a `tone` draws exactly as before.
+- **Wheeled pieces** (`WHEELS`: `cart`, `large_cart`, `wagon`). Their solids are kit parts
+  (`src/render/kit/vehicles.ts`: `slab`, beams, painted boards, stakes and iron bands),
+  laid in the old builder's `Scene` one part each (`Scene.solid`, drawn by `layKitPart`)
+  so the wheels can stay the scene's: baked in sheets round each wheel and turned per
+  frame (`bakeRound`, `wheelsFor`). A vehicle's scene breaks a ring of parts as the kit
+  does, never at a part over what it stands on, and orders two parts only where their
+  outlines on the screen overlap (`Scene.hard`). Their `trim` is the wheels' step and
+  blur, and whether a team is yoked (`wheelTrim`): yoked, the pole is up with a yoke at
+  each pair's necks where the team stands (`YOKE_SPOTS` in `game/furniture.ts`); else it
+  lies on the ground. `vehicleParts` lists the parts in the order they are laid, for a
+  clipping scan.
 - **Boats with a crew** (`sailing_boat`, `caravel`, rowing boats: `crewOf`). They are
   baked in layers round the people on deck (`Crew`, `crewOrder`, `seeThrough` for the
   helmsman), with sway, tiller and oars as trims. Keep them on `MODELS`. A kit kind
-  ignores `crew`, `layer` and `seeHelm`, so never register one.
+  ignores `crew`, `layer` and `seeHelm`, so never register one. They are toned in the
+  kit (`vehicleKit`: the wood a `Paint` with a kit `Tone`, filled through `kitShade`),
+  the inside of a hull lit evenly (`insideLight`), a slack sail shaking in folds
+  (`luffing`), and the water lapping at the waterline drawn live (`lapping`).
 - **Pieces whose `trim` packs data the model must decode.** Check what
   `Renderer.pieceTrim` sends before converting one: racks and crate shelves (a crate
   mask), trellis vines and roses (stage and variant), moss (`mossTrim`), planters

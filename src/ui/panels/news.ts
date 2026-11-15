@@ -264,7 +264,7 @@ import {
 } from '../../world/tiles';
 import { STEPS_BACK, stepsBack, STONE_STEPS_BILL, TIMBER_STEPS_BILL } from '../../game/steps';
 import { LAVENDER_RULE, ROSE_BUD, ROSE_FLOWER, ROSE_LEAFY, ROSES_RULE } from '../../game/roses';
-import { DEVICE_COUNT } from '../../render/furniture';
+import { DEVICE_COUNT, WHEELS } from '../../render/furniture';
 import { TRAPS } from '../../game/trapdefs';
 import {
   BELL_HEARD_BASE, BELL_HEARD_PER_QL, bellHeard, HAMMOCK_REST, LAY_UP_EVERY, LAY_UP_FAIL_SHARE, LAY_UP_SPARE_ABOVE, LEAD_PACE,
@@ -296,7 +296,7 @@ import { WATER_PLANT_BY_ID, WATER_PLANT_DEEPEST, WATER_PLANT_SHALLOWEST, WATER_R
 import { ENGRAVE_MAX, ENGRAVE_TOOL, MEMORIAL } from '../../game/memorial';
 import { CHAT_KEEP_DAYS, EVENT_KEEP_DAYS, TALK_LOG } from '../../game/events';
 import { gemFound } from '../../game/gems';
-import { BRAZIER_CAPACITY, DEPLOY_REACH, OVEN_CAPACITY } from '../../game/furniture';
+import { BRAZIER_CAPACITY, DEPLOY_REACH, OVEN_CAPACITY, YOKE_SPOTS } from '../../game/furniture';
 import { SLEEP_BONUS_CAP, SLEEP_BONUS_MULT, SLEEP_BONUS_QL, SLEEP_BONUS_RATE, sleepHm } from '../../game/sleep';
 import {
   ARBOUR_BENCH, BASKET_SLOTS, BED_SLOTS, BIRDHOUSE, BIRDS_AWAY, BIRDS_MOST, BLOOM_COST, BLOOM_KINDS, BONSAI, BONSAI_GROWN, BONSAI_STEPS, BOX_SLOTS, CARVED_FIGURE,
@@ -414,6 +414,24 @@ const FAIL_EXAMPLE = failFactorSaid(failFactor({ ...FAIL_EXAMPLE_AT, difficulty:
 const SCRUBS_LATER = new Set(['scrub_wall_paint', 'scrub_floor_paint']);
 
 export const NEWS: News[] = [
+  // The vehicles and the hulls redrawn in the kit (`kit/vehicles.ts`, `MODELS` in render/furniture.ts), a team at its yokes (`YOKE_SPOTS`).
+  {
+    n: 644,
+    day: '2026-11-15',
+    lines: () => {
+      const name = (k: string): string => furnitureDef(k).name;
+      const carts = ['cart', 'large_cart', 'wagon'], hulls = ['rowing_boat', 'sailing_boat', 'caravel'];
+      const pairs = (k: string): number => new Set((YOKE_SPOTS[k] ?? []).map((q) => q[0])).size;
+      return [
+        `Changed: ${listed(carts.map(name))}: rune pastel kit. Wood by material; dye on box and bench.`,
+        `New: ${name('cart')}: wheels turn while pulled, ${WHEELS.cart?.spokes} spokes.`,
+        `Changed: hitched team: neck in its yoke's bow, pairs either side of the pole. ${name('large_cart')}: ${pairs('large_cart')} pair; ${name('wagon')}: ${pairs('wagon')} pairs. No team: pole on the ground.`,
+        `Changed: ${listed(hulls.map(name))}: rune pastel kit. Inside of the hull lit evenly; slack sail: folds.`,
+        'New: hulls: water lapping at the waterline; afloat: bob, everyone aboard with her.',
+        `New: ${name('sailing_boat')}: peak halyard, masthead pennant. ${name('rowing_boat')}: dye on the hull.`,
+      ];
+    },
+  },
   // A Decor tab in the crafting window (`craftTabOf`, `isDecor`).
   {
     n: 639,

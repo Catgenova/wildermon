@@ -19,7 +19,7 @@
 // esbuild from node_modules; never `playwright install`.
 import { build } from 'esbuild';
 import { chromium } from 'playwright-core';
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 
 const args = process.argv.slice(2);
@@ -64,6 +64,11 @@ const bundled = await build({
   define: { 'import.meta.env': '{}', __DEPLOY__: 'undefined' },
 });
 const js = bundled.outputFiles[0].text;
+// The page and its script as files beside the sheets: a bundle of forty-odd megabytes handed over the wire as one string
+// (`addScriptTag`) crashed the page's process when memory was short; read from a file it is not copied about.
+const pageFile = join(out, '.studio.html');
+writeFileSync(join(out, '.studio.js'), js);
+writeFileSync(pageFile, '<html><body style="margin:0;background:#2a2622"><div id=root style="display:inline-block;padding-bottom:8px;min-width:1900px"></div><script src=".studio.js"></script></body></html>');
 
 const kept = '/opt/pw-browsers/chromium';
 const browser = await chromium.launch(existsSync(kept) ? { executablePath: kept } : {});
@@ -72,8 +77,7 @@ async function page(scale = 1) {
   const errors = [];
   p.on('pageerror', (e) => errors.push(e.message));
   p.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
-  await p.setContent('<html><body style="margin:0;background:#2a2622"><div id=root style="display:inline-block;padding-bottom:8px;min-width:1900px"></div></body></html>');
-  await p.addScriptTag({ content: js });
+  await p.goto(`file://${pageFile}`);
   await p.waitForFunction('window.studio && window.studio.ready', null, { timeout: 60000 });
   const err = await p.evaluate(() => window.studio.error);
   if (err) console.error(err);

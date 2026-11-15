@@ -365,6 +365,9 @@ function kitFaces(g: Ctx, e: Eye, faces0: readonly Face[], ink: number, inkColou
   for (const o of overs) o();
 }
 
+/** One part laid from `e`: a solid lit, painted, creased and ruled round, its tops' arrises caught if it says, or a loose drawing. For the old builder's scene too (`Scene.solid` in furniture.ts). */
+export const layKitPart = (g: Ctx, e: Eye, p: KitPart, salt: number): void => layPart(g, e, p, salt);
+
 function layPart(g: Ctx, e: Eye, p: KitPart, salt: number): void {
   if (p.faces) {
     kitFaces(g, e, p.faces, p.ink ?? KIT_INK_W, p.inkColour ?? KIT_INK);
