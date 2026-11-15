@@ -13,7 +13,7 @@ begin
     from placed bp join furniture_def fd on fd.id = bp.sub
    where bp.world_id = p_world and bp.x between dd.x - dd.radius and dd.x + dd.radius
      and bp.y between dd.y - dd.radius and dd.y + dd.radius
-     and bp.kind = 'furniture' and fd.takes in ('raw', 'worked');
+     and bp.kind = 'furniture' and fd.takes in ('raw', 'worked') and private.hoard_items(bp.name) is null;
   -- No bin on the settlement is nothing to sort, and nothing else is looked at.
   if v_bins is null then return; end if;
   for r in
@@ -26,9 +26,10 @@ begin
                     where furniture_takes(fd.takes, (s.it).def) is null)
        and case when s.kind = 'crate'
                 then exists (select 1 from crate cr where cr.world_id = p_world and cr.id = s.sid
-                                and cr.lock is null and cr.store_of is null)
+                                and cr.lock is null and cr.store_of is null and private.hoard_items(cr.name) is null)
                 else exists (select 1 from placed pl join furniture_def fd on fd.id = pl.sub
                               where pl.id = s.sid and pl.lock is null and pl.store_of is null and fd.takes is null
+                                and private.hoard_items(pl.name) is null
                                 and store_markable_refusal(pl) is null) end
      order by (s.cx - p_fx) ^ 2 + (s.cy - p_fy) ^ 2, s.kind, s.sid, (s.it).id
   loop

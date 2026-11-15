@@ -11,7 +11,7 @@
  *   * the logs go to the raw bin, the nails to the craft bin; the hatchet, which no bin takes, stays in the crate;
  *   * a larder of flour (a bin itself), a padlocked chest of logs and a locked stack of logs are never touched;
  *   * with the raw bin four short of full, four of ten more logs go in and six stay; full, nothing more goes;
- *   * and with nothing to sort it says why, in the same words on both sides.
+ *   * and with nothing to sort it says why (no container named for an item, `noname`), in the same words on both sides.
  *
  * The island half makes its own island and rolls it back.
  */
@@ -216,11 +216,11 @@ check('and the crate keeps the hatchet it was given, which no bin takes',
 check('never out of a bin (a larder of flour), a padlocked chest or a locked stack',
   isle.get('KEPT') === '5|3|4' && browser.kept === '5|3|4', `${isle.get('KEPT')} / ${browser.kept}`);
 const reach = workRangeOf(magga, SPECIES.magga);
-const sentence = idleSays({ why: 'range', n: reach }, 'fetch');
+const sentence = idleSays({ why: 'noname', n: reach }, 'fetch');
 const says = (idle: Idle | null): string => (idle ? idleSays(idle, SPECIES.magga.gathers as GatherKind) : '');
 check(`with nothing to sort: "${sentence}" on both sides`,
-  islandIdle('IDLE')?.why === 'range' && magga.idle !== null && says(islandIdle('IDLE')) === sentence
-    && browser.idle === `range|${reach}` && Number((isle.get('IDLE') ?? '').split('|')[2]) === reach,
+  islandIdle('IDLE')?.why === 'noname' && magga.idle !== null && says(islandIdle('IDLE')) === sentence
+    && browser.idle === `noname|${reach}` && Number((isle.get('IDLE') ?? '').split('|')[2]) === reach,
   `${isle.get('IDLE')} / ${browser.idle}`);
 check('the look for something to sort, with nothing to sort, costs less than the ring search for something lying about it follows',
   Number(isle.get('COST')) < Number(isle.get('RING')), `${isle.get('COST')} ms against ${isle.get('RING')} ms`);
@@ -230,6 +230,6 @@ check(`the raw bin four short of full: four of ${MORE} more logs go in, ${MORE -
 check('one load of four, and nothing more once the bin is full', isle.get('FULLSEQ') === 'log:4' && browserFull.seq === 'log',
   `${isle.get('FULLSEQ')} / ${browserFull.seq}`);
 check('and it says why it stands idle again, the same on both sides',
-  islandIdle('FULLIDLE')?.why === 'range' && browserFull.idle === `range|${reach}`, `${isle.get('FULLIDLE')} / ${browserFull.idle}`);
+  islandIdle('FULLIDLE')?.why === 'noname' && browserFull.idle === `noname|${reach}`, `${isle.get('FULLIDLE')} / ${browserFull.idle}`);
 
 finish('a magga sorts the bins');

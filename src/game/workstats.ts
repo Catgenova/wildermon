@@ -105,7 +105,7 @@ export const IDLE_LABEL: Record<IdleWhy, string> = {
   nospar: 'no guard free to spar', yielded: 'yielded a spar', season: 'out of season', flowers: 'no wildflowers by its hive',
   stairs: 'no stairs up to its work', stranded: 'no stairs down', waiting: 'work in reach on its wait',
   nostore: 'no storage in reach', seam: 'bare seam above its mining', noseam: 'no seam in the bare rock',
-  gate: 'work above its level',
+  gate: 'work above its level', noname: 'no named container', nomove: 'nothing to move', namedfull: 'named containers full',
 };
 
 /** The reason it has been idle longest for, and how long; null with no idle time. */

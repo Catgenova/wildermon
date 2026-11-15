@@ -1,8 +1,10 @@
 import type { ActionDef, Target } from './actions';
-import { crateName } from './crates';
-import { furnitureName } from './furniture';
+import { crateName, crateNotYours } from './crates';
+import { furnitureName, furnitureNameInLine, pieceShut } from './furniture';
 import type { Game } from './game';
 import { postName } from './posts';
+import { lacks } from './ranks';
+import { isSettlementStore } from './stores';
 import { trapName } from './traps';
 
 /**
@@ -35,6 +37,26 @@ function thingOf(g: Game, t: Target): { name?: string } | null {
   return null;
 }
 
+/**
+ * Why you may not name it, or null, in the island's words (`hands_refusal`, `private.name_shut`). A crate: yours to
+ * use. A piece: a settlement store by its rule and a padlock by its key (`pieceShut`); otherwise yours, or on a
+ * settlement of yours whose rank for you holds Crates and stores.
+ */
+export function nameThingRefusal(g: Game, t: Target): string | null {
+  if (t.kind === 'crate') {
+    const c = g.crates.get(t.id);
+    if (!c) return 'That is not there any more.';
+    return crateNotYours(g, c) ? 'That is not yours to name.' : null;
+  }
+  if (t.kind !== 'furniture') return null;
+  const f = g.furniture.get(t.id);
+  if (!f) return 'That is not there any more.';
+  const shut = pieceShut(g, f);
+  if (shut || isSettlementStore(f) || f.mine !== false) return shut;
+  const d = g.deedOfMineAt(f.x, f.y);
+  return d ? lacks(d, 'stores') : `Not yours to name: ${furnitureNameInLine(f)}.`;
+}
+
 export const NAMING_ACTIONS: ActionDef[] = [
   {
     id: 'name_thing',
@@ -55,6 +77,7 @@ export const NAMING_ACTIONS: ActionDef[] = [
     stamina: 0,
     baseTime: 0,
     applies: (t, g) => thingOf(g, t) !== null,
+    check: (t, g) => nameThingRefusal(g, t),
     labelFor: (t, g) => (thingOf(g, t)?.name ? 'Call it something else' : 'Give it a name'),
     perform: (t, g) => {
       const thing = thingOf(g, t);

@@ -224,7 +224,7 @@ begin
     begin
       select * into lying from item where world_id = p_world and holder = 'ground'
         and gx = wx and gy = wy order by id limit 1;
-      if not found then return sort_take(p_world, c, wx, wy); end if;
+      if not found then return coalesce(private.hoard_take(p_world, c, wx, wy), sort_take(p_world, c, wx, wy)); end if;
       delete from item where id = lying.id;
       return jsonb_build_object('def', lying.def, 'count', lying.count,
         'ql', lying.ql, 'extra', lying.extra);

@@ -190,6 +190,8 @@ export interface DeedStore {
   centre: [number, number];
   items: Item[];
   name: string;
+  /** The name a player gave it (`name_thing`), which a magga reads (`hoard.ts`); absent for none. */
+  named?: string;
   /** The settlement's own crate, which a worker fills before any other. */
   deed: boolean;
   /**
@@ -10126,6 +10128,7 @@ export class Game {
       centre: crateCentre(c),
       items: c.items,
       name: crateName(c),
+      ...(c.name ? { named: c.name } : {}),
       deed: !!c.deed,
       bin: false,
       workerMay: !crateShut(this, c),
@@ -10145,6 +10148,7 @@ export class Game {
       centre: furnitureCentre(f),
       items: f.items,
       name: def.name,
+      ...(f.name ? { named: f.name } : {}),
       deed: false,
       bin: !!def.takes,
       // Somebody else's piece only as a settlement store you may use: under the square of a settlement of yours it is

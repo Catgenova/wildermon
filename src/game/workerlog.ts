@@ -47,7 +47,10 @@ import { LEDGER_SHOWN, ledgerDays, type Idle, type LedgerDay, type WorkLedger } 
  *   * `nostore`: working round its keeper (`Creature.around`), no storage within the number of tiles of them it may put
  *     into (`aroundStores`);
  *   * `stairs`: its store, station or planned work a storey up, the number that storey counted from 1 for the ground,
- *     with no finished staircase going up to it (`creature_way`, `hod_unreached`).
+ *     with no finished staircase going up to it (`creature_way`, `hod_unreached`);
+ *   * `noname`, `nomove`, `namedfull`: a magga on its settlement with nothing lying within its range (the number) and
+ *     nothing to sort into a bin, and no container on the settlement named for an item, nothing in the others for one,
+ *     or every one for what is in the others full (`hoardMove`, the island's `private.hoard_move`).
  *
  * And three that are not idleness but rest, which its card says in the same place (`TIRE_GOES`, `REST_FOR`):
  *
@@ -134,6 +137,12 @@ function recipeWants(kind: GatherKind): string {
   return listedOr(recipes.map(bill));
 }
 
+/** A magga on its settlement with nothing lying about and nothing to sort into a bin (`sortStack`), `n` its range. */
+const fetchIdle = (n: number): string => {
+  const bins = `${itemDef('bulk_bin').name.toLowerCase()} or ${itemDef('craft_bin').name.toLowerCase()}`;
+  return `Idle: nothing lying on the ground within ${n} tiles of the totem; nothing in your settlement stores for a ${bins} with room`;
+};
+
 /** Seconds left, whole and never under one: "1 more second", "37 more seconds". */
 const secondsMore = (secs: number): string => {
   const n = Math.max(1, Math.ceil(secs));
@@ -165,11 +174,15 @@ export function idleSays(idle: Idle, kind: GatherKind | null | undefined, carryi
   switch (idle.why) {
     case 'range':
       // A magga with nothing lying about sorts the stores (`sortStack`), off a work post nothing but what lies about.
-      if (kind === 'fetch') {
-        const bins = `${itemDef('bulk_bin').name.toLowerCase()} or ${itemDef('craft_bin').name.toLowerCase()}`;
-        return `Idle: nothing lying on the ground within ${n} tiles of ${idle.post || idle.around ? `${from}.` : `the totem; nothing in your settlement stores for a ${bins} with room.`}`;
-      }
+      if (kind === 'fetch') return idle.post || idle.around ? `Idle: nothing lying on the ground within ${n} tiles of ${from}.` : `${fetchIdle(n)}.`;
       return `Idle: no ${(kind && IDLE_SOURCE[kind]) ?? 'work of its task'} within ${n} tiles of ${from}.`;
+    // And, on its settlement, nothing to move to a container named for an item (`hoardMove`).
+    case 'noname':
+      return `${fetchIdle(n)}; no container named for an item.`;
+    case 'nomove':
+      return `${fetchIdle(n)}; nothing in other containers for a container named for it.`;
+    case 'namedfull':
+      return `${fetchIdle(n)}; containers named for what is in the others: full.`;
     case 'stock': {
       // What the work in range wants, by name, and how many more past those: "no marble brick or glass".
       if (idle.what?.length) {

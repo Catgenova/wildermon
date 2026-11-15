@@ -55,6 +55,7 @@ begin
                        and kind = 'furniture') then
         return 'That is not there any more.';
       end if;
+      return private.name_shut(p_world, p_uid, (p_target->>'id')::bigint);
     else
       return 'That is not something that takes a name.';
     end if;

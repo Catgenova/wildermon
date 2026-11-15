@@ -20,7 +20,8 @@ import { fireSeconds, firedQl, kilnCapacity, kilnCentre, POTTERY, POTTERY_BY_UNF
 import { brewTime, BREWS, isWorking, type BrewDef } from './brewing';
 import { fragmentOf, RELICS, RESTORE_AGE, type RelicDef } from './archaeology';
 import { fitsDen, furnitureDef, furnitureRefuses, furnitureRoom, holdsLiquid, isPlanter, isWell, litresIn } from './furniture';
-import { crateCentre } from './crates';
+import { crateCapacity, crateCentre, crateKindOfItem, crateUnits } from './crates';
+import { hoardItems, hoardOther } from './hoard';
 import { storeMarkable } from './stores';
 
 import { MILK_READY, milkLitres } from './dairy';
@@ -528,7 +529,7 @@ export const GATHER_VERB: Record<GatherKind, string> = { forage: 'foraging', bot
   moss: 'cutting moss', vine: 'planting vines', lily: 'planting water lilies and lotus', concrete: 'mixing concrete', mortar: 'mixing mortar', timber: 'sawing timbers',
   shaft: 'carving shafts', bandage: 'making bandages, covers and salves', cheese: 'pressing cheese', churn: 'churning butter', alloy: 'mixing alloys' };
 /** The plain form, for "it will forage" rather than "it will foraging". */
-export const GATHER_DO: Record<GatherKind, string> = { forage: 'forage', botanize: 'botanize', woodcut: 'fell trees', farm: 'sow, tend and harvest fields', mine: 'mine ore', sand: 'collect sand', clay: 'collect clay', quarry: 'cut stone', stoke: 'keep your campfires, ovens, braziers, smelters and kilns fuelled', fetch: 'pick up dropped items; sort raw and worked materials from your settlement stores into your raw and craft material bins', guard: 'guard the settlement', hunt: 'hunt round the settlement and bring carcasses home', peat: 'collect peat and tar', reed: 'cut reeds', water: 'carry water to your barrels from the shore or a well', prospect: 'prospect for metal and mark finds', plant: 'plant sprouts where trees were cut', hod: 'carry what planned building work wants from your settlement stores and fit it: walls and columns on their storey; floors, roofs, staircases and ladders from the storey under; bridge or aqueduct spans, foundations; storeys up by staircase, not ladder', mend: 'mend damaged gear in your settlement stores', compost: 'turn rotting items into compost', seek: 'find buried relics and mark dig sites', fish: 'fish round the settlement and bring the catch home', prune: 'prune dying wood', stump: 'dig out stumps', fruit: 'pick fruit trees' , hive: 'fill your hives with honey and beeswax', groom: `brush your wildermon under ${percent(CARE_WANTING)} care`, get dairy() { return `milk your ${milkers()} into empty buckets in your settlement stores; shear or pluck your others at ${percent(DAIRY_FULL)} regrowth; output to your settlement stores`; }, heal: `dress your wildermon that are bleeding or under ${percent(HEAL_BELOW)} health, with a bandage or cover from your settlement stores`, tan: 'tan hides in your settlement stores with lye', mill: 'grind wheat and corn and press olives in your settlement stores', lamp: 'put candles from your settlement stores in your empty lantern posts and pillars; light them after dark, put them out by day', bush: 'pick bushes and trellis vines', grass: 'cut grass and moss', pan: 'pan sand at the water\'s edge', smelt: 'charge your smelters with ore from your settlement stores and empty them', get kiln() { return `load your kilns with ${kilnLoads()} from your settlement stores and empty them`; }, ash: 'rake ashes from your campfires, ovens, smelters and kilns into your settlement stores; leach ash and buckets of water from your settlement stores into lye', brew: 'start a brew in each idle water barrel of yours from makings in your settlement stores', cook: 'cook from your settlement stores at your lit campfires and ovens', restore: 'restore relics whose pieces are all in your settlement stores', patch: 'sow, tend and harvest your planters from your settlement stores', worm: 'dig worms', sprout: 'pick tree sprouts', resin: 'tap pines for tar, once a day each', flower: 'pick wildflowers, except those a skep or hive feeds on', scrub: 'scrub moss off your paving, foundations, statues and stone lanterns and ivy off your stone walls',
+export const GATHER_DO: Record<GatherKind, string> = { forage: 'forage', botanize: 'botanize', woodcut: 'fell trees', farm: 'sow, tend and harvest fields', mine: 'mine ore', sand: 'collect sand', clay: 'collect clay', quarry: 'cut stone', stoke: 'keep your campfires, ovens, braziers, smelters and kilns fuelled', fetch: 'pick up dropped items; move items from your other containers into a container named for the item; sort raw and worked materials from your settlement stores into your raw and craft material bins', guard: 'guard the settlement', hunt: 'hunt round the settlement and bring carcasses home', peat: 'collect peat and tar', reed: 'cut reeds', water: 'carry water to your barrels from the shore or a well', prospect: 'prospect for metal and mark finds', plant: 'plant sprouts where trees were cut', hod: 'carry what planned building work wants from your settlement stores and fit it: walls and columns on their storey; floors, roofs, staircases and ladders from the storey under; bridge or aqueduct spans, foundations; storeys up by staircase, not ladder', mend: 'mend damaged gear in your settlement stores', compost: 'turn rotting items into compost', seek: 'find buried relics and mark dig sites', fish: 'fish round the settlement and bring the catch home', prune: 'prune dying wood', stump: 'dig out stumps', fruit: 'pick fruit trees' , hive: 'fill your hives with honey and beeswax', groom: `brush your wildermon under ${percent(CARE_WANTING)} care`, get dairy() { return `milk your ${milkers()} into empty buckets in your settlement stores; shear or pluck your others at ${percent(DAIRY_FULL)} regrowth; output to your settlement stores`; }, heal: `dress your wildermon that are bleeding or under ${percent(HEAL_BELOW)} health, with a bandage or cover from your settlement stores`, tan: 'tan hides in your settlement stores with lye', mill: 'grind wheat and corn and press olives in your settlement stores', lamp: 'put candles from your settlement stores in your empty lantern posts and pillars; light them after dark, put them out by day', bush: 'pick bushes and trellis vines', grass: 'cut grass and moss', pan: 'pan sand at the water\'s edge', smelt: 'charge your smelters with ore from your settlement stores and empty them', get kiln() { return `load your kilns with ${kilnLoads()} from your settlement stores and empty them`; }, ash: 'rake ashes from your campfires, ovens, smelters and kilns into your settlement stores; leach ash and buckets of water from your settlement stores into lye', brew: 'start a brew in each idle water barrel of yours from makings in your settlement stores', cook: 'cook from your settlement stores at your lit campfires and ovens', restore: 'restore relics whose pieces are all in your settlement stores', patch: 'sow, tend and harvest your planters from your settlement stores', worm: 'dig worms', sprout: 'pick tree sprouts', resin: 'tap pines for tar, once a day each', flower: 'pick wildflowers, except those a skep or hive feeds on', scrub: 'scrub moss off your paving, foundations, statues and stone lanterns and ivy off your stone walls',
   // Read when asked for rather than when this module loads, so the recipes and the glaze are there to be read.
   get saw() { return `saw logs in your settlement stores into planks, ${recipeMakes('make_planks')} a log`; },
   get chisel() { return `chisel rock shards in your settlement stores into stone brick, ${recipeMakes('make_stone_brick')} a shard`; },
@@ -1008,6 +1009,30 @@ export function packLoads(c: Pick<Creature, 'species' | 'skills'> & Partial<Pick
 }
 /** The loads in its arms: the one it is carrying and the ones gathered before it this trip (`Creature.laden`). */
 export const loadsIn = (c: Pick<Creature, 'carrying' | 'laden'>): number => (c.carrying ? 1 : 0) + (c.laden?.length ?? 0);
+/** How many of a thing are in its arms, over every load of the trip. The island's `private.arms_count`. */
+export const inArms = (c: Pick<Creature, 'carrying' | 'laden'>, id: string): number =>
+  [c.carrying, ...(c.laden ?? [])].reduce((n, it) => n + (it?.id === id ? it.count : 0), 0);
+
+/** A container a magga's named sort looks at (`Creatures.hoardBoxes`): crate 0 or piece 1, its id, tile, centre and store. */
+interface HoardBox {
+  kind: 0 | 1;
+  id: number;
+  x: number;
+  y: number;
+  centre: [number, number];
+  store: DeedStore;
+  /** The items its name is for (`hoardItems`); none for a source. */
+  ids: readonly string[];
+  /** Padlocked or marked a settlement store: never a source. */
+  shut: boolean;
+  /** How many of a thing it has room for. */
+  room(item: Item): number;
+}
+
+/** The stack a magga moves to a container named for it next, or why there is none (`Creatures.hoardMove`). */
+export type HoardMove =
+  | { x: number; y: number; centre: [number, number]; store: DeedStore; item: Item; n: number }
+  | { why: 'noname' | 'nomove' | 'namedfull' };
 
 /*
  * Rest. Asked for: "Workers tire after N goes and rest for a short while. A bed or pen on the deed shortens the rest",
@@ -1960,7 +1985,7 @@ export const SPECIES: Record<string, SpeciesDef> = withTameGates({
     name: 'Chestkit',
     was: ['Magga'],
     // Chestkit, Lootvent, Hoardback.
-    description: 'Settlement task: carry items lying on the settlement home; sort raw and worked materials from the settlement stores into raw and craft material bins.',
+    description: 'Settlement task: carry items lying on the settlement home; move items from other containers into a container named for the item; sort raw and worked materials from the settlement stores into raw and craft material bins.',
     stages: [
       { name: 'Lootvent', description: '' },
       { name: 'Hoardback', description: '' },
@@ -8178,14 +8203,16 @@ export class Creatures {
   }
 
   /**
-   * Pick up one thing lying on the tile a fetcher walked to; with nothing lying there, the stack it sorts out of the
-   * store standing on it (`sortStack`), as many of it as the roomiest bin that takes it has room for. The island's
-   * `worker_do` and `sort_take`.
+   * Pick up one thing lying on the tile a fetcher walked to; with nothing lying there, the stack it moves out of the
+   * store standing on it to a container named for it (`hoardMove`), as many as fit there; else the stack it sorts out
+   * of it (`sortStack`), as many of it as the roomiest bin that takes it has room for. The island's `worker_do`,
+   * `private.hoard_take` and `sort_take`.
    */
   private finishFetch(game: Game, c: Creature): Item | null {
     const pile = game.groundAt(c.workX, c.workY);
     if (!pile.length) {
-      const sort = this.sortStack(game, c, c.workX, c.workY);
+      const named = this.hoardMove(game, c, c.workX, c.workY);
+      const sort = 'item' in named ? named : this.sortStack(game, c, c.workX, c.workY);
       if (!sort) return null;
       this.gainSkill(game, c, GATHER_SKILL.fetch, 0.225);
       return this.takeFrom(sort.store, (it) => it === sort.item, sort.n, game);
@@ -11096,7 +11123,8 @@ export class Creatures {
         const wy = apart ? c.workY : Math.floor(c.y);
         // A Vesp works the flower it flew to, its hive being its work (`vespTrip`), as the island's `out` does.
         if (kind === 'hive') this.beginForage(game, c, kind);
-        else if (kind && (this.gatherable(game, wx, wy, kind, c) || (kind === 'fetch' && this.sortStack(game, c, wx, wy)))) this.beginForage(game, c, kind);
+        else if (kind && (this.gatherable(game, wx, wy, kind, c)
+          || (kind === 'fetch' && ('item' in this.hoardMove(game, c, wx, wy) || this.sortStack(game, c, wx, wy))))) this.beginForage(game, c, kind);
         else c.state = 'idle';
       } else if (r === 'blocked') {
         c.state = 'idle';
@@ -11131,6 +11159,8 @@ export class Creatures {
       c.until = game.time + this.idleRest(c);
       return;
     }
+    // A magga's move to a container named for an item, or why there is none (`hoardMove`), for its idle reason below.
+    let hoard: HoardMove | null = null;
     // An errand worker never walks out to a tile to work it, so it does not
     // join the search below: when its errand has nothing in it, it waits.
     if (kind && !ERRAND_JOBS.has(kind)) {
@@ -11151,9 +11181,12 @@ export class Creatures {
           return;
         }
       }
-      // Nothing lying about: a magga on its settlement sorts the stores into the bins (`sortStack`), the island's
-      // `worker_settle` off `sort_stack`.
-      const sort = kind === 'fetch' && c.post === null && !c.around ? this.sortStack(game, c) : null;
+      // Nothing lying about: a magga on its settlement moves an item into a container named for it (`hoardMove`), then
+      // sorts the stores into the bins (`sortStack`), the island's `worker_settle` off `private.hoard_move` and
+      // `sort_stack`.
+      const hoarding = kind === 'fetch' && c.post === null && !c.around;
+      hoard = hoarding ? this.hoardMove(game, c) : null;
+      const sort = hoard && 'item' in hoard ? hoard : hoarding ? this.sortStack(game, c) : null;
       if (sort) {
         c.idle = null;
         c.job = null;
@@ -11183,6 +11216,8 @@ export class Creatures {
       const stone = kind === 'quarry' ? this.stoneIdle(game, c, deed, range) : null;
       const said = mine ?? stone;
       if (said) this.why(c, said.why, said.n, said.what);
+      // A magga on its settlement: why nothing moved to a container named for it (`hoardMove`).
+      else if (hoard && 'why' in hoard) this.why(c, hoard.why, range);
       else this.why(c, 'range', range);
     }
     // Nothing to do right now: potter about near the token.
@@ -11217,12 +11252,20 @@ export class Creatures {
    * and the sprout bin, joined the rule without a clause each.
    */
   storeFor(game: Game, c: Creature, item: Item): DeedStore | null {
+    // A magga on its settlement: a container named for the item first (`hoardStore`), and never one named for another
+    // (`hoardOther`), as the island's `worker_store` off `private.hoard_into` and `private.hoard_other`.
+    const hoarding = (c.trade ?? this.species(c).gathers) === 'fetch' && c.post === null && !c.around;
+    if (hoarding) {
+      const named = this.hoardStore(game, c, item);
+      if (named) return named;
+    }
     // A worker out on a post fills whatever stands beside the post before it
     // walks the load all the way home; a worker on the deed fills the
     // settlement's own crate first, as it always has.
     // Only its keeper's to fill (`workerMay`), at the post and at home alike.
     const near = game.postStores(c).filter((s) => s.workerMay && s.room(item));
-    const stores = near.length ? near : game.deedStores().filter((s) => s.workerMay && s.room(item));
+    const stores = near.length ? near
+      : game.deedStores().filter((s) => s.workerMay && s.room(item) && !(hoarding && hoardOther(s.named, item.id)));
     if (!stores.length) return null;
     const nearest = (of: DeedStore[]): DeedStore | null => {
       let best: DeedStore | null = null;
@@ -11271,18 +11314,105 @@ export class Creatures {
   }
 
   /**
+   * The containers a magga's named sort looks at (`hoard.ts`): every crate and every piece that may be marked a store
+   * (`storeMarkable`) on its keeper's settlement, with the items its name is for (`hoardItems`, none for a source),
+   * whether it is padlocked or marked a settlement store, and how many of a thing it has room for. The island's
+   * `private.hoard_boxes`.
+   */
+  private hoardBoxes(game: Game): HoardBox[] {
+    const stores = game.deedStores();
+    const storeAt = (x: number, y: number, items: Item[]): DeedStore | undefined => stores.find((s) => s.x === x && s.y === y && s.items === items);
+    const out: HoardBox[] = [];
+    for (const cr of game.crates.values()) {
+      if (!game.onHomeDeed(cr.x, cr.y)) continue;
+      const store = storeAt(cr.x, cr.y, cr.items);
+      if (!store) continue;
+      out.push({
+        kind: 0, id: cr.id, x: cr.x, y: cr.y, centre: crateCentre(cr), store, ids: hoardItems(cr.name), shut: !!cr.lock || !!cr.storeOf,
+        room: (it) => (crateKindOfItem(it.id) ? 0 : Math.max(0, crateCapacity(cr) - crateUnits(cr))),
+      });
+    }
+    for (const f of game.furniture.values()) {
+      const def = furnitureDef(f.kind);
+      if (!storeMarkable(f.kind, def) || !game.onHomeDeed(f.x, f.y)) continue;
+      const store = storeAt(f.x, f.y, f.items);
+      if (!store) continue;
+      out.push({
+        kind: 1, id: f.id, x: f.x, y: f.y, centre: furnitureCentre(f), store, ids: hoardItems(f.name), shut: !!f.lock || !!f.storeOf,
+        room: (it) => (furnitureRefuses(f, it) ? 0 : furnitureRoom(f, it)),
+      });
+    }
+    return out;
+  }
+
+  /**
+   * The stack a magga moves next to a container named for it (`hoard.ts`), or why there is none: out of the source
+   * standing on (`atX`, `atY`) when given, the nearest otherwise -- a crate or storage piece on the settlement not named
+   * for an item, not padlocked or marked a settlement store, that it may use (`workerMay`) -- the first stack in it,
+   * not locked, of an item a target is named for; into the target for it nearest the source that it may fill, with
+   * room for some of it past what of it is in its arms already; as many as that room. `noname` with no target on the
+   * settlement, `namedfull` with something to move and every target for it full, `nomove` with nothing to move. The
+   * island's `private.hoard_move`.
+   */
+  hoardMove(game: Game, c: Creature, atX?: number, atY?: number): HoardMove {
+    const boxes = this.hoardBoxes(game);
+    const targets = boxes.filter((b) => b.ids.length);
+    if (!targets.length) return { why: 'noname' };
+    const wanted = new Set(targets.flatMap((t) => t.ids));
+    const d2 = (b: HoardBox, x: number, y: number): number => (b.centre[0] - x) ** 2 + (b.centre[1] - y) ** 2;
+    const [fx, fy] = atX === undefined ? [c.x, c.y] : [atX + 0.5, (atY ?? 0) + 0.5];
+    const sources = boxes.filter((b) => !b.ids.length && !b.shut && b.store.workerMay && (atX === undefined || (b.x === atX && b.y === atY)));
+    sources.sort((a, b) => d2(a, fx, fy) - d2(b, fx, fy) || a.kind - b.kind || a.id - b.id);
+    let seen = false;
+    for (const s of sources) {
+      for (const item of s.store.items) {
+        if (item.count <= 0 || item.locked || !wanted.has(item.id)) continue;
+        seen = true;
+        const [sx, sy] = s.centre;
+        const into = targets.filter((t) => t.ids.includes(item.id) && t.store.workerMay)
+          .sort((a, b) => d2(a, sx, sy) - d2(b, sx, sy) || a.kind - b.kind || a.id - b.id);
+        for (const t of into) {
+          const room = t.room(item) - inArms(c, item.id);
+          if (room > 0) return { x: s.x, y: s.y, centre: s.centre, store: s.store, item, n: Math.min(item.count, room) };
+        }
+      }
+    }
+    return { why: seen ? 'namedfull' : 'nomove' };
+  }
+
+  /**
+   * Where a magga on its settlement puts a load: the container named for it (`hoardItems`) nearest to it that it may
+   * fill with room for all of it; null with none. The island's `private.hoard_into`.
+   */
+  private hoardStore(game: Game, c: Creature, item: Item): DeedStore | null {
+    let best: HoardBox | null = null;
+    let bestD = Infinity;
+    for (const b of this.hoardBoxes(game)) {
+      if (!b.ids.includes(item.id) || !b.store.workerMay || b.room(item) < item.count) continue;
+      const d = (b.centre[0] - c.x) ** 2 + (b.centre[1] - c.y) ** 2;
+      if (d < bestD || (d === bestD && best && (b.kind - best.kind || b.id - best.id) < 0)) {
+        best = b;
+        bestD = d;
+      }
+    }
+    return best?.store ?? null;
+  }
+
+  /**
    * The stack a magga sorts next (`GATHER_DO.fetch`): out of the store standing on (`atX`, `atY`) when given, the
    * nearest to it otherwise; with how many of it the roomiest raw or craft material bin on the settlement that takes it
    * (`furnitureRefuses`) has room for (`furnitureRoom`). Out of a crate, or furniture that may be marked a store
-   * (`storeMarkable`) and takes anything; never out of a bin, a padlocked or marked store, or a locked item. Null
-   * when there is none, or no such bin. The island's `sort_stack`.
+   * (`storeMarkable`) and takes anything; never out of a bin, a padlocked or marked store, a container named for an
+   * item (`hoardItems`) or a locked item, nor into a bin named for one. Null when there is none, or no such bin. The
+   * island's `sort_stack`.
    */
   sortStack(game: Game, c: Creature, atX?: number, atY?: number):
     { x: number; y: number; centre: [number, number]; store: DeedStore; item: Item; n: number } | null {
     const bins: PlacedFurniture[] = [];
     for (const f of game.furniture.values()) {
       const takes = furnitureDef(f.kind).takes;
-      if ((takes === 'raw' || takes === 'worked') && game.onHomeDeed(f.x, f.y)) bins.push(f);
+      // Not a bin named for an item (`hoardItems`): what goes in that is the named sort's (`hoardMove`).
+      if ((takes === 'raw' || takes === 'worked') && game.onHomeDeed(f.x, f.y) && !hoardItems(f.name).length) bins.push(f);
     }
     if (!bins.length) return null;
     const rooms = new Map<string, number>();
@@ -11301,13 +11431,15 @@ export class Creatures {
     const storeAt = (x: number, y: number, items: Item[]): DeedStore | undefined => stores.find((s) => s.x === x && s.y === y && s.items === items);
     const at = (x: number, y: number): boolean => atX === undefined || (x === atX && y === atY);
     for (const cr of game.crates.values()) {
-      if (cr.lock || cr.storeOf || !at(cr.x, cr.y) || !game.onHomeDeed(cr.x, cr.y)) continue;
+      // Nor out of a container named for an item (`hoardItems`).
+      if (cr.lock || cr.storeOf || !at(cr.x, cr.y) || !game.onHomeDeed(cr.x, cr.y) || hoardItems(cr.name).length) continue;
       const store = storeAt(cr.x, cr.y, cr.items);
       if (store) sources.push({ kind: 0, id: cr.id, x: cr.x, y: cr.y, centre: crateCentre(cr), store });
     }
     for (const f of game.furniture.values()) {
       const def = furnitureDef(f.kind);
-      if (def.takes || f.lock || f.storeOf || !storeMarkable(f.kind, def) || !at(f.x, f.y) || !game.onHomeDeed(f.x, f.y)) continue;
+      if (def.takes || f.lock || f.storeOf || !storeMarkable(f.kind, def) || !at(f.x, f.y) || !game.onHomeDeed(f.x, f.y)
+        || hoardItems(f.name).length) continue;
       const store = storeAt(f.x, f.y, f.items);
       if (store) sources.push({ kind: 1, id: f.id, x: f.x, y: f.y, centre: furnitureCentre(f), store });
     }

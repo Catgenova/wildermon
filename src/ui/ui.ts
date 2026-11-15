@@ -62,7 +62,10 @@ import { COMPANION_STANCES, isBaitFor, SPECIES, tameNeeds, STANCE_HINTS, STANCE_
 import { itemDef, itemName, markOf, storedLine, type Item } from '../game/items';
 import { LYE_USE } from '../game/placeables';
 import { nearestSide } from '../render/renderer';
-import { crateHolds, crateKindOfItem, crateName, crateCapacity, crateUnits, rackSpotOf, subtileOf } from '../game/crates';
+import { CRATE_DEFS, crateHolds, crateKindOfItem, crateName, crateCapacity, crateUnits, rackSpotOf, subtileOf } from '../game/crates';
+import { hoardExamine, hoardHover, type HoardSeen } from '../game/hoard';
+import { NAME_MAX } from '../game/naming';
+import { storeMarkable } from '../game/stores';
 import { trellisFacing } from '../game/vineyard';
 import { butcherPreview } from '../game/butcher';
 import { anvilName, type PlacedAnvil } from '../game/anvil';
@@ -1611,6 +1614,8 @@ export class UI {
     }
     if (fu) {
       lines.push(furnitureName(fu));
+      // Named: what it is, and what its name is for (`hoardHover`).
+      if (fu.name) lines.push([furnitureDef(fu.kind).name, storeMarkable(fu.kind, furnitureDef(fu.kind)) ? hoardHover(fu) : null].filter((l) => l).join(' · '));
       lines.push(furnitureState(fu));
       // A lantern post's lantern, what it throws and its candle, as its menu says them (`lamps.ts`).
       if (isLampPiece(fu)) lines.push(lampState(fu));
@@ -1656,6 +1661,7 @@ export class UI {
     const crate = pick.crate !== undefined ? this.game.crates.get(pick.crate) : undefined;
     if (crate) {
       lines.push(crateName(crate));
+      if (crate.name) lines.push(`${CRATE_DEFS[crate.kind].name} · ${hoardHover(crate)}`);
       lines.push(`${crateUnits(crate)} / ${crateCapacity(crate)} things · spot ${crate.sx + 1},${crate.sy + 1} of tile ${crate.x}, ${crate.y}`);
       this.tooltip.show(sx, sy, lines);
       return;
@@ -1921,6 +1927,7 @@ export class UI {
         const reason = def.check?.(ct, this.game) ?? null;
         entries.push({ label: def.label, hint: reason ?? undefined, disabled: !!reason, onSelect: () => this.game.requestAction(def, ct) });
       }
+      entries.push(this.examineContainer(CRATE_DEFS[crate.kind].name, `${crateUnits(crate)} / ${crateCapacity(crate)} things`, crate));
       entries.push(...this.nameEntry(ct));
       return { title: crateName(crate), entries };
     }
@@ -2896,6 +2903,7 @@ export class UI {
       const heft = furnitureHeft(f);
       const note = heft ? `${furnitureKg(f).toFixed(0)} / ${heft} kg` : `${furnitureUnits(f)} / ${furnitureCapacity(f)} things`;
       entries.push({ label: 'Open', note, onSelect: () => this.cratePanel.openFurniture(f.id) });
+      if (storeMarkable(f.kind, def)) entries.push(this.examineContainer(`${def.name}${f.material ? ` (${f.material.toLowerCase()})` : ''}`, note, f));
     }
     if (def.stall && this.island) entries.push(...this.stallEntries(f));
     /*
@@ -3876,7 +3884,17 @@ export class UI {
   private nameEntry(t: Target): MenuItem[] {
     const def = ACTION_BY_ID.get('name_thing');
     if (!def || !def.applies(t, this.game)) return [];
-    return [{ label: def.labelFor?.(t, this.game) ?? def.label, onSelect: () => this.game.requestAction(def, t) }];
+    // Refused in the island's words where you may not use it (`nameThingRefusal`).
+    const reason = def.check?.(t, this.game) ?? null;
+    return [{ label: def.labelFor?.(t, this.game) ?? def.label, hint: reason ?? undefined, disabled: !!reason, onSelect: () => this.game.requestAction(def, t) }];
+  }
+
+  /** Examine on a crate or a storage piece: what it is, its room, its name and what the Chestkit line does with it (`hoardExamine`). */
+  private examineContainer(what: string, room: string, s: HoardSeen): MenuItem {
+    return {
+      label: 'Examine',
+      onSelect: () => this.game.logMsg(`${what}: ${room} · ${hoardExamine(s, SPECIES.magga.name, NAME_MAX).join(' · ')}.`, 'event'),
+    };
   }
 
   /** What the tile menu can do at a shop counter: the store window, and on an island buying, the till and the prices. */

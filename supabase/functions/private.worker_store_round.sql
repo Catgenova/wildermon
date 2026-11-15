@@ -26,6 +26,7 @@ begin
          and abs(pl.x + p_half - p_x) <= p_r and abs(pl.y + p_half - p_y) <= p_r) q
     order by q.s_bin desc, q.s_own desc, (q.s_cx - v_x) ^ 2 + (q.s_cy - v_y) ^ 2
   loop
+    if private.hoard_other(c, coalesce((r.s_cr).name, (r.s_pl).name), p_def) then continue; end if;
     if r.s_kind = 'crate' then
       if not coalesce(private.worker_crate_ok(p_world, c.keeper, r.s_cr), false) then continue; end if;
       if (r.s_cr).level > 0 and not coalesce(storey_reached(p_world, (r.s_cr).x, (r.s_cr).y, (r.s_cr).level), false) then continue; end if;
