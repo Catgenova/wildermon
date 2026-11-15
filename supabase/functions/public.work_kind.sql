@@ -5,11 +5,13 @@ CREATE OR REPLACE FUNCTION public.work_kind(p_world uuid, p_action text, p_targe
  LANGUAGE plpgsql
  STABLE
 AS $function$
-declare v_mat text; v_building int; tx int; ty int;
+declare v_mat text; v_building int; tx int; ty int; w wall;
 begin
   tx := (p_target->>'x')::int; ty := (p_target->>'y')::int;
   if p_action = 'build_wall' then
-    v_mat := (wall_at(p_world, tx, ty, p_target->>'side')).material;
+    -- On the storey the job names, and a change planned on it in its own material (`change_wall`).
+    w := frame_wall_at(p_world, tx, ty, p_target->>'side', p_target);
+    v_mat := coalesce((wall_change_of(p_world, w)).material, w.material);
   elsif p_action = 'build_floor' then
     v_building := building_at(p_world, tx, ty);
     if v_building is null then return null; end if;

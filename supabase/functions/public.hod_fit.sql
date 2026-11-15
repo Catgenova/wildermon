@@ -4,9 +4,21 @@ CREATE OR REPLACE FUNCTION public.hod_fit(p_world uuid, p_kind text, p_level int
  RETURNS boolean
  LANGUAGE plpgsql
 AS $function$
-declare w wall; s bridge_span; b bridge; fo foundation; v_left int;
+declare w wall; ch wall_change; s bridge_span; b bridge; fo foundation; v_left int;
 begin
   if p_kind = 'wall' then
+    -- A change planned for a finished wall takes the piece; with the last of it the wall is the new one (`change_built`).
+    update wall_change set needed = jsonb_set(needed, array[p_item], to_jsonb((needed->>p_item)::int - 1))
+     where world_id = p_world and level = p_level and dir = p_dir and x = p_x and y = p_y
+       and coalesce((needed->>p_item)::int, 0) > 0
+    returning * into ch;
+    if ch.world_id is not null then
+      if bill_done(ch.needed) then
+        select * into w from wall where world_id = p_world and level = p_level and dir = p_dir and x = p_x and y = p_y;
+        perform change_built(p_world, w);
+      end if;
+      return true;
+    end if;
     update wall set needed = jsonb_set(needed, array[p_item], to_jsonb((needed->>p_item)::int - 1))
      where world_id = p_world and level = p_level and dir = p_dir and x = p_x and y = p_y
        and coalesce((needed->>p_item)::int, 0) > 0

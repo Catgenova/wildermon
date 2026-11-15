@@ -62,6 +62,21 @@ const CLEARS_GREEN: ReadonlySet<string> = new Set(['clear_ivy', 'scrub_moss']);
  * slow half.
  */
 const WORKS_A_GATE: ReadonlySet<string> = new Set(['raise_portcullis', 'lower_portcullis', 'raise_drawbridge', 'lower_drawbridge', 'fit_lock', 'take_off_lock']);
+/**
+ * And the building jobs (the island's `build_action`): what one does to a
+ * building -- a wall, a floor, a column, a change planned on a wall and built
+ * (`change_wall`) -- rides the slow half with the walls. Asked for as the job
+ * is asked, that read went before the go landed, and the next came a minute
+ * on (`NEAR_WHOLE_EVERY`): a change planned showed no change on the wall and
+ * no Build change row, and a change built the old wall.
+ */
+export const BUILDS: ReadonlySet<string> = new Set([
+  'plan_building', 'add_to_building', 'remove_from_plan', 'rename_building',
+  'plan_wall', 'plan_fence', 'build_wall', 'remove_wall', 'change_wall', 'repoint_wall',
+  'add_floor', 'plan_floor', 'build_floor', 'remove_floor', 'remove_storey',
+  'paint_wall', 'strip_wall_paint', 'paint_floor', 'scrub_wall_paint', 'scrub_floor_paint',
+  'no_plan', 'mark_out', 'plan_column', 'build_column', 'remove_column',
+]);
 
 /**
  * Playing on an island that lives in Postgres.
@@ -2405,9 +2420,9 @@ export class Island {
        * A clearing of ivy or moss has landed: what it cleared rides the
        * ground's slow half, so that is what the next ground read brings, and
        * the stone shows bare a second after the job rather than at the next
-       * reconcile.
+       * reconcile. A gate worked, and a building job's go (`BUILDS`), the same.
        */
-      if ((said.settled ?? 0) > 0 && this.doing !== null && (CLEARS_GREEN.has(this.doing) || WORKS_A_GATE.has(this.doing))) this.groundSlow = true;
+      if ((said.settled ?? 0) > 0 && this.doing !== null && (CLEARS_GREEN.has(this.doing) || WORKS_A_GATE.has(this.doing) || BUILDS.has(this.doing))) this.groundSlow = true;
       this.doing = said.act ?? null;
       this.doingTool = said.act ? said.act_tool ?? null : null;
       if (typeof said.blocked_at === 'string') this.sawBlock(Date.parse(said.blocked_at));

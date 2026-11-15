@@ -6,7 +6,10 @@ CREATE OR REPLACE FUNCTION public.hod_may(p_world uuid, c creature, p_kind text,
  STABLE
 AS $function$
   select case p_kind
-    when 'wall' then coalesce((select worker_build_open(c, w.material, w.type, null, null) from wall w
+    when 'wall' then coalesce((select worker_build_open(c, coalesce(ch.material, w.material), coalesce(ch.type, w.type), null, null)
+                                 from wall w
+                                 left join wall_change ch on ch.world_id = w.world_id and ch.level = w.level and ch.dir = w.dir
+                                                         and ch.x = w.x and ch.y = w.y
                                 where w.world_id = p_world and w.level = p_level and w.dir = p_dir and w.x = p_x and w.y = p_y), true)
     when 'floor' then coalesce((select worker_build_open(c, f.material, null, f.kind, f.hand) from floor_tile f
                                  where f.world_id = p_world and f.level = p_level and f.x = p_x and f.y = p_y), true)

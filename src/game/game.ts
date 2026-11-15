@@ -131,7 +131,7 @@ import { LANTERN_POLE, MOORING_POST, TREE_BENCH } from './fittingdefs';
 import { atWaterEdge } from './watergarden';
 import { FIREPLACE, FIREPLACE_REACH, GAZEBO } from './furnishdefs';
 import { STONE_LANTERN } from './decordefs';
-import { counterFinished, counterInto, counterMiddle, Counters, type CountersJSON, type CounterWire } from './counters';
+import { counterFinished, counterGone, counterInto, counterMiddle, Counters, type CountersJSON, type CounterWire } from './counters';
 import { burnLamps, isLampPiece, lampArmRefusal, lampBurning, lampFrom, lampLight, lampTurnsTo } from './lamps';
 import { settleTrellises, trellisShares, trellisTurnsTo, trellisWallRefusal, VINE_SAID } from './vineyard';
 import { isRuneLantern, runeLanternLight } from './runelantern';
@@ -172,6 +172,9 @@ export type HodTarget =
   | { kind: 'column'; column: Column }
   | { kind: 'span'; bridge: Bridge; span: BridgeSpan }
   | { kind: 'foundation'; foundation: Foundation };
+
+/** What is left to build of a wall: the change planned on it (`change_wall`), or the wall's own bill. The island's `hod_work`. */
+export const hodBill = (wall: Wall): Bill => wall.change ?? wall;
 
 /** The work a hod carrier is to fit a piece into, the piece, and the tile it is worked from. */
 export interface HodJob {
@@ -8619,7 +8622,11 @@ export class Game {
         if (!best || before(key, best)) best = { ...key, target };
       }
     };
-    for (const wall of this.buildings.walls.values()) if (!isDone(wall)) consider({ kind: 'wall', wall }, wall, wall.x, wall.y, wall.level, wall.dir);
+    // A change planned for a finished wall (`change_wall`) is the wall's work, at the change's bill (`hodBill`).
+    for (const wall of this.buildings.walls.values()) {
+      const bill = hodBill(wall);
+      if (!isDone(bill)) consider({ kind: 'wall', wall }, bill, wall.x, wall.y, wall.level, wall.dir);
+    }
     for (const floor of this.buildings.floors.values()) if (!isDone(floor)) consider({ kind: 'floor', floor }, floor, floor.x, floor.y, floor.level, '');
     for (const column of this.buildings.columns.values()) if (!isDone(column)) consider({ kind: 'column', column }, column, column.x, column.y, column.level, '');
     for (const bridge of this.bridges.values()) {
@@ -8645,7 +8652,7 @@ export class Game {
       const d = (x - from.x) ** 2 + (y - from.y) ** 2;
       for (const [item, n] of Object.entries(bill.needed)) if (n > 0 && d < (nearest.get(item) ?? Infinity)) nearest.set(item, d);
     };
-    for (const wall of this.buildings.walls.values()) if (!isDone(wall)) consider(wall, wall.x, wall.y, wall.dir);
+    for (const wall of this.buildings.walls.values()) if (!isDone(hodBill(wall))) consider(hodBill(wall), wall.x, wall.y, wall.dir);
     for (const floor of this.buildings.floors.values()) if (!isDone(floor)) consider(floor, floor.x, floor.y);
     for (const column of this.buildings.columns.values()) if (!isDone(column)) consider(column, column.x, column.y);
     for (const bridge of this.bridges.values()) {
@@ -8669,7 +8676,7 @@ export class Game {
   ): { kind: string; n: number } | undefined {
     const wants = (bill: Bill): boolean => Object.values(bill.needed).some((n) => n > 0);
     const open = (target: HodTarget, bill: Bill, x: number, y: number, dir?: string): boolean => near(x, y, dir) && wants(bill) && may(target);
-    for (const wall of this.buildings.walls.values()) if (!isDone(wall) && open({ kind: 'wall', wall }, wall, wall.x, wall.y, wall.dir)) return undefined;
+    for (const wall of this.buildings.walls.values()) if (!isDone(hodBill(wall)) && open({ kind: 'wall', wall }, hodBill(wall), wall.x, wall.y, wall.dir)) return undefined;
     for (const floor of this.buildings.floors.values()) if (!isDone(floor) && open({ kind: 'floor', floor }, floor, floor.x, floor.y)) return undefined;
     for (const column of this.buildings.columns.values()) if (!isDone(column) && open({ kind: 'column', column }, column, column.x, column.y)) return undefined;
     for (const foundation of this.foundations.values()) {
@@ -8728,17 +8735,45 @@ export class Game {
 
   /** How many more of `item` a piece of planned work wants. The island's `hod_left`. */
   hodWants(target: HodTarget, item: string): number {
-    const bill = target.kind === 'wall' ? target.wall : target.kind === 'floor' ? target.floor : target.kind === 'column' ? target.column
+    const bill = target.kind === 'wall' ? hodBill(target.wall) : target.kind === 'floor' ? target.floor : target.kind === 'column' ? target.column
       : target.kind === 'span' ? target.span : target.foundation;
     return Math.max(0, (bill.needed as Record<string, number>)[item] ?? 0);
   }
 
-  /** Fit one piece into a planned wall, the way a builder does by hand. */
+  /** Fit one piece into a planned wall, or the change planned on it, the way a builder does by hand. */
   fitIntoWall(wall: Wall, item: string): void {
-    if ((wall.needed[item] ?? 0) <= 0) return;
-    wall.needed[item] -= 1;
-    this.wallFitted(wall);
+    const bill = hodBill(wall);
+    if ((bill.needed[item] ?? 0) <= 0) return;
+    bill.needed[item] -= 1;
+    if (wall.change) this.changeBuilt(wall);
+    else this.wallFitted(wall);
     this.events.emit('world', wall.x, wall.y);
+  }
+
+  /**
+   * A change planned for a finished wall (`change_wall`) with the last of its
+   * bill in, a builder's or a hod carrier's: the wall is the new one -- its
+   * type, material and bill, bare of paint, its ivy from nothing, no padlock
+   * and no pane's colour -- the standing one's counter shut and the new one's
+   * opened (`counters.ts`). The ivy stays on the same material (the island's
+   * `green_wall`). The island's `change_built`.
+   */
+  changeBuilt(wall: Wall): void {
+    const change = wall.change;
+    if (!change || !isDone(change)) return;
+    counterGone(this, wall);
+    const green = wall.material === change.material ? wall.greenSince : undefined;
+    wall.type = change.type;
+    wall.material = change.material;
+    wall.needed = { ...change.needed };
+    wall.total = { ...change.total };
+    delete wall.change;
+    delete wall.dye;
+    delete wall.glass;
+    delete wall.lock;
+    delete wall.lowered;
+    this.wallFitted(wall);
+    if (green !== undefined) wall.greenSince = green;
   }
 
   /**
