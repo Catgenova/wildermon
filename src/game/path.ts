@@ -112,9 +112,9 @@ export const needsSupply = (def: SpeciesDef, season: Season | null): boolean => 
 export function baitSays(g: Game, step: string, def: SpeciesDef): string {
   const season = fruitSeason(g.wallNow());
   const got = g.thePath?.supply[step];
-  if (got) return `Bait: ${name(got.item)} ×${got.n} (Path supply, ${got.season})`;
+  if (got) return `Bait: ${name(got.item)} ×${got.n} (Guiding Light supply, ${got.season})`;
   const now = dietInSeason(def, season);
-  if (!now.length) return `Bait: ${name(supplyItem(def))} ×${supplySize(def)} (Path supply, ${season})`;
+  if (!now.length) return `Bait: ${name(supplyItem(def))} ×${supplySize(def)} (Guiding Light supply, ${season})`;
   return `Bait: ${now.map(name).join(', ')} (in season)`;
 }
 
@@ -335,7 +335,7 @@ export const PATH_STEPS: readonly PathStep[] = [
   },
   {
     id: 'track', phase: 'stone', tame: 'bevere', skills: ['tracking'],
-    how: () => [trackSays('bevere'), `Noted (Path): ${PATH_KINDS.length} kinds, Track as if seen`],
+    how: () => [trackSays('bevere'), `Noted (Guiding Light): ${PATH_KINDS.length} kinds, Track as if seen`],
     why: (g) => [`Track: arrow to the nearest ${kind('bevere').name}, ${TRACK_SHOW} s · reach ${trackRange(trackLevel(g.skills.get('tracking')))} tiles`],
     show: { job: 'track', kind: 'bevere' },
     label: () => `Track ${kind('bevere').name}: Field guide (${defaultKey('win_guide')}), Track`,
@@ -402,7 +402,7 @@ export const PATH_STEPS: readonly PathStep[] = [
   // B. Set out.
   {
     id: 'walk', phase: 'out', skills: [],
-    how: (g) => [`Walk: the Path line's arrow · away from ${nearestStone(g, g.player.tileX, g.player.tileY)?.name ?? 'the runestone'}`],
+    how: (g) => [`Walk: the Guiding Light line's arrow · away from ${nearestStone(g, g.player.tileX, g.player.tileY)?.name ?? 'the runestone'}`],
     why: () => [`Found a settlement: ${DEED_STONE_GAP} tiles or more from every runestone`],
     show: { walk: true },
     label: (g) => {
@@ -422,7 +422,7 @@ export const PATH_STEPS: readonly PathStep[] = [
   {
     id: 'site', phase: 'out', skills: [],
     how: (g) => [
-      g.pathSites.length ? `Walk: the Path line's arrow · sites ${g.pathSites.length}, the nearest first` : `Sites: within ${PATH_SITE.reach} tiles of you, none yet`,
+      g.pathSites.length ? `Walk: the Guiding Light line's arrow · sites ${g.pathSites.length}, the nearest first` : `Sites: within ${PATH_SITE.reach} tiles of you, none yet`,
       `Or any tile: ${jobSays(g, 'the ground', 'found_settlement')} · the refusal names the rule`,
     ],
     why: () => [
@@ -709,7 +709,7 @@ export const stepNumber = (s: PathStep): number => PATH_STEPS.indexOf(s) + 1;
 /** The strip's line: "7/34 · Tame Sapgnaw · Bait: … · Taming 1". */
 export function stripSays(g: Game): string {
   const s = currentStep(g);
-  if (!s) return `Path: ${PATH_STEPS.length}/${PATH_STEPS.length} done`;
+  if (!s) return `Guiding Light: ${PATH_STEPS.length}/${PATH_STEPS.length} done`;
   return `${stepNumber(s)}/${PATH_STEPS.length} · ${s.label(g)}`;
 }
 
@@ -755,7 +755,7 @@ export function pathCheck(g: Game): void {
     g.tickedGoal?.(`${PATH_TICK}${s.id}`);
     if (fresh) {
       const step = PATH_STEP_BY_ID.get(s.id);
-      g.logMsg(step ? `Path: ${stepNumber(step)}/${PATH_STEPS.length} done.` : `Path: ${s.label(g)}: done.`, 'skill');
+      g.logMsg(step ? `Guiding Light: ${stepNumber(step)}/${PATH_STEPS.length} done.` : `Guiding Light: ${s.label(g)}: done.`, 'skill');
       g.events.emit('path');
       ticked.push(s.id);
     }

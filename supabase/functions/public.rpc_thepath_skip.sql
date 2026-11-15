@@ -11,12 +11,12 @@ begin
   perform private.pace(auth.uid(), 'act');
   perform private.once();
   if p_skip is null then perform private.bad_request('rpc_thepath_skip', 'p_skip: want true or false'); end if;
-  if p_step is null or not (p_step = any (thepath_steps())) then perform private.bad_request('rpc_thepath_skip', 'p_step: not a step of the Path'); end if;
+  if p_step is null or not (p_step = any (thepath_steps())) then perform private.bad_request('rpc_thepath_skip', 'p_step: not a step of the Guiding Light'); end if;
   if me is null then raise exception 'not signed in'; end if;
   if too_fast(me) then raise exception 'you are asking too quickly; slow down'; end if;
   select thepath_state(thepath) into v from player where world_id = p_world and uid = me for update;
   if not found then raise exception 'not on this island'; end if;
-  if not (v->>'on')::boolean then raise exception 'Path: off.'; end if;
+  if not (v->>'on')::boolean then raise exception 'Guiding Light: off.'; end if;
   update player set thepath = v || jsonb_build_object('skip',
       (select coalesce(jsonb_agg(s order by s), '[]'::jsonb) from (
          select distinct s from jsonb_array_elements_text(v->'skip') s where s <> p_step

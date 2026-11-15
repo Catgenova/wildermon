@@ -60,7 +60,7 @@ export class PathCard {
     const foot = document.createElement('div');
     foot.className = 'path-card-foot';
     this.skip = this.button('Skip next', 'Skip: the step after is current; done later, it still ticks', () => this.skipNext());
-    const tab = this.button(`Path tab (${boundKey('win_path')})`, 'Journal, Path tab', () => {
+    const tab = this.button(`Guiding Light tab (${boundKey('win_path')})`, 'Journal, Guiding Light tab', () => {
       this.close();
       this.openTab();
     });
@@ -129,8 +129,8 @@ export class PathCard {
     if (key === this.drawn) return;
     const nextWas = this.drawn ? (JSON.parse(this.drawn) as PathCardSays).next?.id : undefined;
     this.drawn = key;
-    this.doneEl.textContent = c.done.length ? `Done: ${c.done.join(' · ')}` : 'Path';
-    this.nextEl.textContent = c.next ? `Next ${c.next.line}` : 'Path: every step done';
+    this.doneEl.textContent = c.done.length ? `Done: ${c.done.join(' · ')}` : 'Guiding Light';
+    this.nextEl.textContent = c.next ? `Next ${c.next.line}` : 'Guiding Light: every step done';
     const lines = (el: HTMLElement, head: string, xs: readonly string[]): void => {
       el.replaceChildren();
       for (const [i, x] of xs.entries()) {

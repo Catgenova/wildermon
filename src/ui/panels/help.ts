@@ -1226,17 +1226,17 @@ function firstHour(): string {
 function pathHelp(): string {
   const kinds = PATH_KINDS.map((k) => SPECIES[k]?.name ?? k);
   return `
-    <h3>Path</h3>
+    <h3>Guiding Light</h3>
     <ul>
-      <li><b>Path</b>: ${PATH_STEPS.length} steps in ${PATH_PHASES.length} phases, runestone to settlement level ${MAX_DEED_LEVEL}; ${PATH_DETOURS.length} detours, never in the way. Optional; kept on the island.</li>
-      <li><b>On, off</b>: first coming ashore, the runestone card: <b>Path: On</b> unless switched. After: Settings (<kbd>${keyOf('win_settings')}</kbd>), Interface, <b>Path</b>; or the Path tab. Turned on later: starts at the first step not done.</li>
-      <li><b>Line at the top</b>: step number of ${PATH_STEPS.length}, the step, its bait and taming. Arrow: away from the stone to ${DEED_STONE_GAP} tiles, to a suggested site, or the last track on a tame step. <b>−</b>: folded to the step number. Click: the Path tab.</li>
-      <li><b>Path tab</b>: Journal (<kbd>${keyOf('win_path')}</kbd>): every step by phase, the current one marked, <b>Skip</b> per step (<b>Unskip</b> back), detours under their step.</li>
-      <li><b>Path card</b>: top right, as a step ticks: <b>Done</b>, <b>Next</b>, <b>How</b>, <b>Why</b>, a picture of you at the job; <b>Close</b>, <b>Skip next</b>, <b>Path tab</b>. Down on Close or the first job started after ${PATH_CARD_HOLD} s. Settings (<kbd>${keyOf('win_settings')}</kbd>), Interface, <b>Path pop-ups</b>: On.</li>
+      <li><b>Guiding Light</b>: ${PATH_STEPS.length} steps in ${PATH_PHASES.length} phases, runestone to settlement level ${MAX_DEED_LEVEL}; ${PATH_DETOURS.length} detours, never in the way. Optional; kept on the island.</li>
+      <li><b>On, off</b>: first coming ashore, the runestone card: <b>Guiding Light: On</b> unless switched. After: Settings (<kbd>${keyOf('win_settings')}</kbd>), Interface, <b>Guiding Light</b>; or the Guiding Light tab. Turned on later: starts at the first step not done.</li>
+      <li><b>Line at the top</b>: step number of ${PATH_STEPS.length}, the step, its bait and taming. Arrow: away from the stone to ${DEED_STONE_GAP} tiles, to a suggested site, or the last track on a tame step. <b>−</b>: folded to the step number. Click: the Guiding Light tab.</li>
+      <li><b>Guiding Light tab</b>: Journal (<kbd>${keyOf('win_path')}</kbd>): every step by phase, the current one marked, <b>Skip</b> per step (<b>Unskip</b> back), detours under their step.</li>
+      <li><b>Guiding Light card</b>: top right, as a step ticks: <b>Done</b>, <b>Next</b>, <b>How</b>, <b>Why</b>, a picture of you at the job; <b>Close</b>, <b>Skip next</b>, <b>Guiding Light tab</b>. Down on Close or the first job started after ${PATH_CARD_HOLD} s. Settings (<kbd>${keyOf('win_settings')}</kbd>), Interface, <b>Guiding Light pop-ups</b>: On.</li>
       <li><b>Ticks</b>: a step done ticks itself, early or late, once the island's own record shows it done.</li>
-      <li><b>Field guide</b>: Path on notes ${PATH_KINDS.length} kinds (${listed(kinds)}): <b>Noted (Path)</b>; Track as if seen. Noted: no seen count, goal or title.</li>
+      <li><b>Field guide</b>: Guiding Light on notes ${PATH_KINDS.length} kinds (${listed(kinds)}): <b>Noted (Guiding Light)</b>; Track as if seen. Noted: no seen count, goal or title.</li>
       <li><b>Suggested sites</b>: ${PATH_SITE.count} nearest, every ${PATH_SITE.every} tiles within ${PATH_SITE.reach} of you, ${PATH_SITE.apart} apart: every founding check; trees ${PATH_SITE.trees}+ within ${PATH_SITE.treeReach}; water within ${PATH_SITE.water}; bare rock within ${PATH_SITE.rock}.</li>
-      <li><b>Path supply</b>: a tame step whose kind eats nothing in season: its favourite food, enough to tame it ${percent(PATH_SURE)} of the time at its own chance, one offering a try. Issued: no sale, no trade, kept at death. Once a step.</li>
+      <li><b>Guiding Light supply</b>: a tame step whose kind eats nothing in season: its favourite food, enough to tame it ${percent(PATH_SURE)} of the time at its own chance, one offering a try. Issued: no sale, no trade, kept at death. Once a step.</li>
       <li><b>Skills</b>: ${PATH_SKILLS.length}: ${listed(PATH_SKILLS.map((id) => (SKILL_BY_ID.get(id)?.name ?? id).toLowerCase()))}.</li>
     </ul>`;
 }

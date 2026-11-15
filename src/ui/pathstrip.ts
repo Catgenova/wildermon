@@ -31,7 +31,7 @@ export class PathStrip {
     this.arrow.hidden = true;
     this.text = document.createElement('span');
     this.text.className = 'path-text';
-    this.text.title = 'Path tab';
+    this.text.title = 'Guiding Light tab';
     this.text.addEventListener('click', open);
     this.far = document.createElement('span');
     this.far.className = 'path-far';
@@ -55,7 +55,7 @@ export class PathStrip {
     if (!on) return;
     const folded = g.settings.pathFolded;
     const s = currentStep(g);
-    const line = folded ? (s ? `Path ${stepNumber(s)}/${PATH_STEPS.length}` : 'Path done') : stripSays(g);
+    const line = folded ? (s ? `Guiding Light ${stepNumber(s)}/${PATH_STEPS.length}` : 'Guiding Light done') : stripSays(g);
     if (line !== this.said) {
       this.said = line;
       this.text.textContent = line;

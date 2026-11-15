@@ -251,7 +251,7 @@ check('and a step not met dropped', said('TICKS_UNMET') === '[]', said('TICKS_UN
 }
 check('a beat says the record', said('BEAT') === 'true', said('BEAT'));
 check('a skip is kept, and taken back', said('SKIP') === '["fish"]' && said('UNSKIP') === '[]', `${said('SKIP')} ${said('UNSKIP')}`);
-check('a step that is not one is refused', said('SKIP_BAD').includes('not a step of the Path'), said('SKIP_BAD'));
+check('a step that is not one is refused', said('SKIP_BAD').includes('not a step of the Guiding Light'), said('SKIP_BAD'));
 check('off: kept, and the rest of the record with it', said('OFF') === 'false' && said('OFF_KEEPS') === '[]', said('OFF'));
 
 /* ---- the labels say the rules' numbers ------------------------------------------------------------------------- */

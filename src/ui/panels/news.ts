@@ -4532,6 +4532,14 @@ export const NEWS: News[] = [
       'Without a graphics card: swimming strokes\' splashes, rings treading water, the float\'s strike and a catch only.',
     ],
   },
+  // The Path renamed the Guiding Light (`src/game/path.ts`).
+  {
+    n: 623,
+    day: '2026-11-15',
+    lines: () => [
+      'Renamed: Path → Guiding Light.',
+    ],
+  },
   // Obsidian gear and obsidian glass (`gear.ts` OBSIDIAN_PIECES, `recipes.ts` KNAPPED, `building.ts` OBSIDIAN_GLASS).
   {
     n: 617,
