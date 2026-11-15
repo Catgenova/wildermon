@@ -6,7 +6,7 @@ CREATE OR REPLACE FUNCTION public.unidentified_name(p_world uuid, p_uid uuid, p_
  STABLE
 AS $function$
   select 'Unidentified ' || x.noun from skill_gate_item x join skill_gate g on g.kind = x.kind and g.id = x.id
-   where x.item = p_def and x.extra in (lower(coalesce(p_extra, '')), '')
+   where x.item = p_def and x.extra in (gate_item_extra(p_def, p_extra), '')
      and skill_of(p_world, p_uid, g.skill) < g.level
    order by x.extra desc limit 1
 $function$

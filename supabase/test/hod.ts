@@ -51,8 +51,8 @@ begin
     (w, 0, 'h', ${LOGS[0]}, ${LOGS[1]}, 2, 'solid', 'log', wall_bill('log', 'solid'), wall_bill('log', 'solid'), u);
   v_id := creature_spawn(w, 'cobbe', ${TOKEN[0]} + 0.6, ${TOKEN[1]} + 0.6, 'active', now() - interval '60 days', u);
   insert into said select 'LEVEL', creature_level(c.skills, c.species) || '|' || work_range(c) from creature c where c.world_id = w and c.id = v_id;
-  -- An hour of it, played back.
-  update creature set mode = 'deed', stance = 'passive', hunger = 1, phase = 'idle', from_x = to_x, from_y = to_y,
+  -- An hour of it, played back, at a marble wall's masonry (its gate, craftgates.ts).
+  update creature set mode = 'deed', stance = 'passive', hunger = 1, phase = 'idle', from_x = to_x, from_y = to_y, skills = skills || '{"masonry": 50}',
          until = now() - interval '3600 seconds', settled_at = now() - interval '3600 seconds', leg_at = now() - interval '3600 seconds',
          leg_ends = now() - interval '3600 seconds'
    where world_id = w and id = v_id;
@@ -96,6 +96,8 @@ const logs = g.buildings.setFence(tx + 1, ty + 2, 'n', 'solid', 'log');
 const marbleBill = { ...marble.needed }, logBill = { ...logs.needed };
 const cobbe = g.creatures.spawn('cobbe', tx + 3.5, ty + 1.5, 'deed');
 check('in the browser: a level 1 cobbe reaches past seven tiles from the token', workRangeOf(cobbe, SPECIES.cobbe) >= 7, String(workRangeOf(cobbe, SPECIES.cobbe)));
+// At a marble wall's masonry: its gate (`craftgates.ts`).
+cobbe.skills = { ...cobbe.skills, masonry: 50 };
 for (let i = 0; i < 72000; i++) {
   g.player.stats.stamina = 1;
   cobbe.hunger = 1;

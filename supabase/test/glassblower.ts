@@ -27,6 +27,8 @@ import { helpText } from '../../src/ui/panels/help';
 import { TileType } from '../../src/world/tiles';
 import { psql, check, finish } from './harness';
 
+/** A glimmip with no level asked for: at glass's glassblowing, its gate (`craftgates.ts`). */
+const GLASS_AT = 5;
 const ID = 'glimmip';
 const R = RECIPE_BY_ID.get(GLASS_RECIPES[0])!;
 const SAND = R.inputs[0].count ?? 1;
@@ -98,7 +100,7 @@ ${CASES.map(({ k, at, sand, level }) => `
   -- ${k}: ${sand} sand, ${at === 'none' ? 'no smelter' : `a smelter ${at}`}${level ? `, at level ${level}` : ''}.
   ${sand ? `insert into item (world_id, holder, crate, def, ql, count) values (w, 'crate', 7501, 'sand', 30, ${sand});` : ''}
   ${smelterAt(at)}
-  update creature set mode = 'deed', carrying = null, skills = ${level ? `jsonb_build_object('${GATHER_SKILL.glass}', ${level})` : `'{}'::jsonb`},
+  update creature set mode = 'deed', carrying = null, skills = ${level ? `jsonb_build_object('${GATHER_SKILL.glass}', ${level})` : `jsonb_build_object('${GATHER_SKILL.glass}', ${GLASS_AT})`},
          until = now() - interval '600 seconds', settled_at = now() - interval '600 seconds', phase = 'idle', idle_why = null
    where world_id = w and id = v_id;
   ${k === 'LIT' ? `insert into said select 'LINE', deed_job_line(c2) from creature c2 where c2.world_id = w and c2.id = v_id;` : ''}
@@ -198,7 +200,7 @@ for (const { k, at: st, sand, level, after: want, why } of CASES) {
   c.mode = 'deed';
   c.stance = 'passive';
   c.hunger = 1;
-  c.skills = level ? { [GATHER_SKILL.glass]: level } : {};
+  c.skills = { [GATHER_SKILL.glass]: level || GLASS_AT };
   run(g, 120);
   check(`in the browser, ${k.toLowerCase()}: the stores hold ${want}${why ? `, idle: ${why}` : ''}`, inCrate(crate) === want && (!why || c.idle?.why === why),
     `${inCrate(crate)} ${c.idle?.why}`);

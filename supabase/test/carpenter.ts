@@ -33,7 +33,7 @@ import { bowRange, WEAPON_BY_ID, weaponDamage } from '../../src/game/gear';
 import { makersMark, roomFor, sameMark, type Item } from '../../src/game/items';
 import { perksOf, type PerkDef } from '../../src/game/perks';
 import { needOf, RECIPE_BY_ID, recipeReason } from '../../src/game/recipes';
-import { psql, ok, bad, check } from './harness';
+import { bad, check, hands, handsSql, ok, psql } from './harness';
 
 const near = (a: number, b: number, by = 1e-5): boolean => Math.abs(a - b) <= by * Math.max(1, Math.abs(b));
 
@@ -124,6 +124,7 @@ begin
   -- The suite's own island and its first body, who founded Lambfold and may shape it.
   select id into w from world where name = 'Stonehaven';
   select p.uid into u from player p where p.world_id = w order by p.uid limit 1;
+  ${handsSql('w', 'u', ['bowyery'], 10)};
   for tx in 0..15 loop for ty in 0..15 loop
     perform land_set_height(w, tx, ty, 40); perform land_set_dirt(w, tx, ty, 20);
     perform land_set_tile(w, tx, ty, tile_id('Dirt')); perform land_set_data(w, tx, ty, 0);
@@ -528,6 +529,7 @@ check(`and what a bag, a smelter or a kiln holds: the island's room for every si
 /* ---- the browser's half ------------------------------------------------------------ */
 
 const game = Game.create(2718);
+hands(game, ['bowyery'], 10); // no skill gate (`craftgates.ts`) in the way of what this is about
 const bowstring = RECIPE_BY_ID.get('make_bow_string')!;
 game.inventory.add('yarn', { count: 1, ql: 30 });
 check('the browser refuses a bowstring from one yarn without String Maker',

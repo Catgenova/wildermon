@@ -73,6 +73,8 @@ begin
     if here <> 2 then return 'Only packed earth can be broken up.'; end if;
   elsif p_action = 'pave_cobble' then
     if here <> 2 then return 'Pack the ground down before paving it.'; end if;
+    -- Its paving gate (`craftgates.ts`).
+    if paving_gate_refusal(p_world, p_uid, 'cobblestone') is not null then return paving_gate_refusal(p_world, p_uid, 'cobblestone'); end if;
     if pack_count(p_world, p_uid, 'stone_brick') < 1 then
       return 'Need a stone brick.';
     end if;

@@ -485,7 +485,9 @@ const run = (g: Game, c: Creature, secs: number): void => {
 /* ---- the Skills window's lists ---------------------------------------------- */
 
 for (const skill of ['woodcutting', 'farming', 'forestry']) {
-  const table = SKILL_GATES.filter((g) => g.skill === skill);
+  // One line a name at a level, in level then name order (a skill's crafts are on it too since batch C).
+  const table = [...new Map(SKILL_GATES.filter((g) => g.skill === skill).map((g) => [`${g.level}:${g.name}`, g])).values()]
+    .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
   for (const have of [1, 25]) {
     const list = unlocksOf(skill, have);
     const same = list.length === table.length && list.every((u, i) => u.name === table[i].name && u.level === table[i].level);

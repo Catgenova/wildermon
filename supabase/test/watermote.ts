@@ -21,7 +21,7 @@ import { RECIPE_BY_ID, recipeReason } from '../../src/game/recipes';
 import { WATER_MOTE, WATER_MOTE_NEED, WATER_MOTES_EACH } from '../../src/game/motes';
 import { itemDef } from '../../src/game/items';
 import { furnitureDef } from '../../src/game/furniture';
-import { psql, ok, bad, check } from './harness';
+import { bad, check, CRAFT_HANDS, hands, handsSqlEach, ok, psql } from './harness';
 
 /** The three pieces, by recipe. */
 const PIECES = [
@@ -63,6 +63,7 @@ begin
   select id into w from world where name = 'Hoarding';
   select uid into me from player where world_id = w and name = 'Crowd2';
   select uid into u from player where world_id = w and name = 'Dane';
+  ${handsSqlEach('w', 'me, u', CRAFT_HANDS)};
   perform set_config('request.jwt.claims', json_build_object('sub', me)::text, true);
   delete from spring where world_id = w;
   delete from foundation where world_id = w;
@@ -152,6 +153,7 @@ const ask = (id: string, t: Target, g: Game): string => act(id).check?.(t, g) ??
 {
   // Dig a spring: the same bowl beside where the player stands.
   const g = Game.create(31337, 128);
+  hands(g, CRAFT_HANDS); // no skill gate (`craftgates.ts`) in the way of what this is about
   const w = g.world;
   const [px, py] = [g.player.tileX, g.player.tileY];
   const bx = px + 2;
@@ -173,6 +175,7 @@ const ask = (id: string, t: Target, g: Game): string => act(id).check?.(t, g) ??
 {
   // Dig a pool: the same plinth beside where the player stands.
   const g = Game.create(31337, 128);
+  hands(g, CRAFT_HANDS); // no skill gate (`craftgates.ts`) in the way of what this is about
   const w = g.world;
   const [px, py] = [g.player.tileX, g.player.tileY];
   const bx = px + 2;
@@ -193,6 +196,7 @@ const ask = (id: string, t: Target, g: Game): string => act(id).check?.(t, g) ??
 {
   // The pieces: a Fisher with the Fish Pond perk, on a settlement of their own.
   const g = Game.create(4242);
+  hands(g, CRAFT_HANDS); // no skill gate (`craftgates.ts`) in the way of what this is about
   g.setPerks({ fish_pond: 1 });
   g.deed = { name: 'Latecomer', x: g.player.tileX, y: g.player.tileY, radius: 5, level: 1, mine: true } as typeof g.deed;
   g.sureCheck = () => true;

@@ -39,7 +39,7 @@ import { frameSays } from '../../src/game/frameActions';
 import { jettyOnWall, jettyOver } from '../../src/game/frame';
 import { Game } from '../../src/game/game';
 import { TileType } from '../../src/world/tiles';
-import { psql, ok, bad, check } from './harness';
+import { bad, BUILD_HANDS, check, hands, handsSql, ok, psql } from './harness';
 
 const W = `(select id from world where name = 'Hoarding')`;
 const DANE = `(select uid from player where world_id = ${W} and name = 'Dane')`;
@@ -66,6 +66,8 @@ for (let y = Y0; y <= Y1; y++) for (let x = X0; x <= X1; x++) world.setTile(x, y
 for (const it of [...game.inventory.items]) game.inventory.remove(it.uid, it.count);
 game.inventory.add('mallet', { ql: 40 });
 game.skills.values.set('carpentry', 90);
+// No skill gate in the way of a wall or a flight (`craftgates.ts`): this is about outside staircases.
+hands(game, BUILD_HANDS);
 game.player.x = 20.5;
 game.player.y = 27.5;
 game.player.level = 0;
@@ -91,6 +93,7 @@ begin
   end loop; end loop;
   insert into skill (world_id, uid, id, value) values (w, u, 'carpentry', 90)
     on conflict (world_id, uid, id) do update set value = 90;
+  ${handsSql('w', 'u', BUILD_HANDS)};
   if exists (select 1 from deed where world_id = w and founded_by = u) then
     update deed set x = 21, y = 26, radius = 5, level = 1 where world_id = w and founded_by = u;
   else

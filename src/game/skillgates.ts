@@ -42,7 +42,8 @@ export type GateLevel = (typeof GATE_LADDER)[number];
  * it, `sprout` for its sprouts); a crop by its id (`crop`); a seam, a vein and a stone face by what the rock yields; a
  * kind of wildermon by its species id; a fish by its id; a wagon or a boat by its piece's id.
  */
-export type GateKind = 'tree' | 'sprout' | 'crop' | 'seam' | 'vein' | 'stone' | 'tame' | 'fish' | 'vehicle' | 'boat';
+export type GateKind = 'tree' | 'sprout' | 'crop' | 'seam' | 'vein' | 'stone' | 'tame' | 'fish' | 'vehicle' | 'boat'
+  | 'recipe' | 'relic' | 'bauble' | 'material' | 'wall' | 'floor' | 'paving';
 
 /** What each evolution stage past the first adds to a kind's taming gate (`TAME_GATE`). The island's `wild_stage_tame`. */
 export const TAME_STAGE_GATE = 15;
@@ -59,6 +60,13 @@ export const GATE_STOPS: Readonly<Record<GateKind, string>> = {
   fish: 'catching a fish: under it, not in the catch',
   vehicle: 'taking the reins',
   boat: 'taking the helm or the oars',
+  recipe: 'making it: the crafting window, a worker\'s recipe; a Recipe or Formula unidentified under it',
+  relic: 'restoring it: Restore, a restorer\'s work; its fragments unidentified under it',
+  bauble: 'restoring a tarnished bauble of the tier; unidentified under it',
+  material: 'planning and building walls, floors and roofs of it: a hod carrier\'s work',
+  wall: 'planning and building the wall type: a hod carrier\'s work',
+  floor: 'planning and building the floor type: a hod carrier\'s work',
+  paving: 'paving with it',
 };
 
 export interface SkillGate {
@@ -206,8 +214,14 @@ const rockRows = (): SkillGate[] => ROCK_VARIANTS.flatMap((r): SkillGate[] => {
   return seam ? [g('seam', 'mining'), g('vein', 'prospecting')] : [g('stone', 'mining')];
 });
 
-/** Every gate, in skill then level then id order. */
-export const SKILL_GATES: readonly SkillGate[] = [
+const bySkillLevel = (a: SkillGate, b: SkillGate): number => a.skill.localeCompare(b.skill) || a.level - b.level || a.kind.localeCompare(b.kind) || a.id.localeCompare(b.id);
+
+/**
+ * Every gate, in skill then level then id order. The kinds whose things live in modules that are not leaves (a recipe,
+ * a relic, a bauble, a building material, a wall type, a floor type, a paving) are added by `craftgates.ts` at load
+ * (`addGates`), so this module stays a leaf and every page, test and dump that loads the game has them all.
+ */
+const ALL: SkillGate[] = [
   ...TREE_DEFS.map((t): SkillGate => {
     const level = TREE_GATE[t.name];
     if (level === undefined) throw new Error(`${t.name}: no woodcutting gate`);
@@ -220,14 +234,16 @@ export const SKILL_GATES: readonly SkillGate[] = [
   ...rows('fish', 'fishing', FISH_GATE),
   ...rows('vehicle', 'driving', VEHICLE_GATE),
   ...rows('boat', 'sailing', BOAT_GATE),
-].sort((a, b) => a.skill.localeCompare(b.skill) || a.level - b.level || a.id.localeCompare(b.id));
+].sort(bySkillLevel);
+export const SKILL_GATES: readonly SkillGate[] = ALL;
 
-for (const g of SKILL_GATES) {
+const checkGate = (g: SkillGate): void => {
   if (!KEPT_OFF_LADDER.has(g.kind) && !(GATE_LADDER as readonly number[]).includes(g.level)) throw new Error(`${g.kind} ${g.id}: ${g.level} is not on the ladder`);
   if (!SKILL_BY_ID.has(g.skill)) throw new Error(`${g.kind} ${g.id}: no skill ${g.skill}`);
-}
+};
+for (const g of ALL) checkGate(g);
 
-const BY_KEY = new Map(SKILL_GATES.map((g) => [`${g.kind}:${g.id}`, g]));
+const BY_KEY = new Map(ALL.map((g) => [`${g.kind}:${g.id}`, g]));
 
 /** The gate on a thing, or undefined: it is open to all. The island's `skill_gate`. */
 export const gateOf = (kind: GateKind, id: string): SkillGate | undefined => BY_KEY.get(`${kind}:${id}`);
@@ -337,17 +353,66 @@ export const GATE_ITEMS: Partial<Record<GateKind, (g: SkillGate) => Array<{ item
   sprout: (g) => [{ item: 'sprout', extra: g.id, noun: itemDef('sprout').name.toLowerCase() }],
 };
 
+const itemsOf = (gate: SkillGate): GatedItem[] =>
+  (GATE_ITEMS[gate.kind]?.(gate) ?? []).map((x) => ({ item: x.item, extra: x.extra ?? '', gate, noun: x.noun }));
+
 /** Every gated item, in the table's order. */
-export const GATED_ITEMS: readonly GatedItem[] = SKILL_GATES.flatMap((gate) =>
-  (GATE_ITEMS[gate.kind]?.(gate) ?? []).map((x) => ({ item: x.item, extra: x.extra ?? '', gate, noun: x.noun })));
+const ITEMS: GatedItem[] = ALL.flatMap(itemsOf);
+export const GATED_ITEMS: readonly GatedItem[] = ITEMS;
 
-for (const x of GATED_ITEMS) if (!ITEM_DEFS[x.item]) throw new Error(`${x.gate.kind} ${x.gate.id}: no item ${x.item}`);
+const checkItem = (x: GatedItem): void => {
+  if (!ITEM_DEFS[x.item]) throw new Error(`${x.gate.kind} ${x.gate.id}: no item ${x.item}`);
+};
+for (const x of ITEMS) checkItem(x);
 
-const ITEM_GATE = new Map(GATED_ITEMS.map((x) => [`${x.item}:${x.extra}`, x]));
+const ITEM_GATE = new Map(ITEMS.map((x) => [`${x.item}:${x.extra}`, x]));
+
+/**
+ * What of an item's `extra` says which gate is on it, by item id, where not all of it does: a fragment's relic, not its
+ * part ("old pot 1/2" is "old pot"). The island's `gate_item_extra`.
+ */
+const EXTRA_KEYS: Record<string, (extra: string) => string> = {};
+/** The lower-case key of an item's `extra` its gate is found by (`EXTRA_KEYS`). */
+export const gateExtra = (item: { id: string; extra?: string }): string => {
+  const extra = (item.extra ?? '').toLowerCase();
+  return EXTRA_KEYS[item.id]?.(extra) ?? extra;
+};
+
+/** The skills with gates, in the order the Skills window lists skills. */
+const SKILLS_GATED: string[] = [...new Set(ALL.map((g) => g.skill))];
+export const GATED_SKILLS: readonly string[] = SKILLS_GATED;
+
+/**
+ * Gates and gated items added by the module that holds the things (`craftgates.ts`), once, at load: rows of kinds not
+ * held here, their items (`GATE_ITEMS`), and how an item's `extra` names its thing (`EXTRA_KEYS`).
+ */
+export const addGates = (
+  rowsAdded: readonly SkillGate[],
+  items: Partial<Record<GateKind, (g: SkillGate) => Array<{ item: string; extra?: string; noun: string }>>> = {},
+  extraKeys: Record<string, (extra: string) => string> = {},
+): void => {
+  Object.assign(GATE_ITEMS, items);
+  Object.assign(EXTRA_KEYS, extraKeys);
+  for (const g of rowsAdded) {
+    checkGate(g);
+    if (BY_KEY.has(`${g.kind}:${g.id}`)) throw new Error(`${g.kind} ${g.id}: gated twice`);
+    BY_KEY.set(`${g.kind}:${g.id}`, g);
+    ALL.push(g);
+    for (const x of itemsOf(g)) {
+      checkItem(x);
+      if (ITEM_GATE.has(`${x.item}:${x.extra}`)) throw new Error(`${x.item} ${x.extra}: gated twice`);
+      ITEMS.push(x);
+      ITEM_GATE.set(`${x.item}:${x.extra}`, x);
+    }
+  }
+  ALL.sort(bySkillLevel);
+  ITEMS.sort((a, b) => bySkillLevel(a.gate, b.gate) || a.item.localeCompare(b.item) || a.extra.localeCompare(b.extra));
+  SKILLS_GATED.splice(0, SKILLS_GATED.length, ...new Set(ALL.map((g) => g.skill)));
+};
 
 /** The gate on an item's use, or undefined: anybody uses it. */
 export const itemGate = (item: { id: string; extra?: string }): GatedItem | undefined =>
-  ITEM_GATE.get(`${item.id}:${(item.extra ?? '').toLowerCase()}`) ?? ITEM_GATE.get(`${item.id}:`);
+  ITEM_GATE.get(`${item.id}:${gateExtra(item)}`) ?? ITEM_GATE.get(`${item.id}:`);
 
 /** The gate an item is unidentified under for `viewer`, or undefined: it knows the thing. */
 export const unidentified = (item: { id: string; extra?: string }, viewer: Viewer): GatedItem | undefined => {
@@ -404,13 +469,28 @@ export interface Unlock {
   met: boolean;
 }
 
-/** A skill's gates in level order, each met or not at `have`. */
+/** A skill's gates in level order, each met or not at `have`; one line a name at a level. */
 export const unlocksOf = (skill: string, have: number): Unlock[] =>
   gatesOn(skill).map((g) => ({ name: g.name, level: g.level, met: have >= g.level }));
 
-/** A skill's gates in level then name order. */
-const gatesOn = (skill: string): SkillGate[] =>
-  SKILL_GATES.filter((g) => g.skill === skill).sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
+/** A skill's gates in level then name order, one a name at a level (five herb teas are one "Herb tea 5"). */
+const gatesOn = (skill: string): SkillGate[] => {
+  const seen = new Set<string>();
+  return SKILL_GATES.filter((g) => g.skill === skill).sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))
+    .filter((g) => !seen.has(`${g.level}:${g.name}`) && !!seen.add(`${g.level}:${g.name}`));
+};
+
+/**
+ * A skill's next threshold, for its bar in the Skills window: "10: Maple", the lowest gate over `have`, the first of
+ * that level in the table's order, "+2 more" for the others there; null with none left.
+ */
+export const nextUnlockBar = (skill: string, have: number): string | null => {
+  const over = gatesOn(skill).filter((g) => g.level > have);
+  if (!over.length) return null;
+  const at = SKILL_GATES.filter((g) => g.skill === skill && g.level === over[0].level);
+  const names = [...new Set(at.map((g) => g.name))];
+  return `${over[0].level}: ${names[0]}${names.length > 1 ? ` +${names.length - 1} more` : ''}`;
+};
 
 /** Whether a skill has any gate on it. */
 export const hasUnlocks = (skill: string): boolean => SKILL_GATES.some((g) => g.skill === skill);
@@ -429,5 +509,3 @@ export const unlocksSaid = (skill: string): string => {
   return [...rungs].map(([level, names]) => `${and(names)} ${level}`).join('; ');
 };
 
-/** The skills with gates, in the order the Skills window lists skills. */
-export const GATED_SKILLS: readonly string[] = [...new Set(SKILL_GATES.map((g) => g.skill))];

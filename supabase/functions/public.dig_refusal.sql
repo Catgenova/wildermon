@@ -34,6 +34,8 @@ begin
 
   -- Restoring, a relic or a bauble: with a brush.
   if pack_count(p_world, p_uid, 'brush') < 1 then return 'Need a brush.'; end if;
+  -- A relic's or a bauble tier's restoration gate (`craftgates.ts`): "Unidentified fragment: needs restoration 30; have 12.0."
+  if item_gate_refusal(p_world, p_uid, it) is not null then return item_gate_refusal(p_world, p_uid, it); end if;
   -- At any damage short of breaking: nothing mends a find before it is restored.
   if it.def = 'tarnished_bauble' then return null; end if;
 

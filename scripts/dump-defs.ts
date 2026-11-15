@@ -18,6 +18,7 @@ import { EARLY_SKILL_BELOW, EARLY_SKILL_MUL, GAIN_RATE, PAST_TOP, SKILL_DEFS, SK
 import { MATERIALS } from '../src/game/materials';
 import { ACTIONS } from '../src/game/actions';
 import { RECIPES } from '../src/game/recipes';
+import '../src/game/craftgates';
 import { GATED_ITEMS, rockGate, SKILL_GATES } from '../src/game/skillgates';
 import { FURNITURE } from '../src/game/furniture';
 import { FORAGE_TABLE, BOTANIZE_TABLE, BOTANIZE_WATER_TABLE, COIN_FIND_ONE_IN, COIN_FINDS_A_DAY, EMPTY_CHANCE, FIND_CHECK, PER_ROLL } from '../src/game/forage';

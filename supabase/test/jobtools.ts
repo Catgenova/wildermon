@@ -23,7 +23,7 @@ import { itemDef } from '../../src/game/items';
 import { MORTAR_TOOL, needToolSaid, REAP_TOOL, TOOL_JOBS } from '../../src/game/jobtools';
 import { RECIPE_BY_ID, recipeReason } from '../../src/game/recipes';
 import { CUTTING_TOOL, VINE_SAID } from '../../src/game/vineyard';
-import { psql, ok, bad, check } from './harness';
+import { bad, check, CRAFT_HANDS, hands, handsSql, ok, psql } from './harness';
 
 // The jobs, off the list the help and the news name them from (`TOOL_JOBS`): the recipes, and the actions.
 const all = Object.entries(TOOL_JOBS).flatMap(([tool, ids]) => ids.map((id) => [id, tool] as const));
@@ -52,6 +52,7 @@ check('the island cuts a vine with the browser\'s tool (`cutting_tool`)', psql('
 
 // ---- The browser: refused without the tool, in the island's words, and not for that with it.
 const g = Game.create(4111, 96);
+hands(g, CRAFT_HANDS); // no skill gate (`craftgates.ts`) in the way of what this is about
 g.perkFx = { glaze_item: 1, tend_patch: 1, harvest_patch: 1 };
 const strip = (tool: string): void => {
   for (const it of [...g.inventory.items]) if (it.id === tool) g.inventory.remove(it.uid, it.count);
@@ -106,6 +107,7 @@ declare w uuid; u uuid; v_pot bigint; v_cloth bigint; v_box bigint; t jsonb; r r
 begin
   select id into w from world where name = 'Stonehaven';
   select p.uid into u from player p where p.world_id = w order by p.uid limit 1;
+  ${handsSql('w', 'u', CRAFT_HANDS)};
   update player set x = 9.5, y = 9.5, level = 0, act = null, act_queue = '[]',
          class_mul = jsonb_set(coalesce(class_mul, '{}'::jsonb), '{fx}',
            coalesce(class_mul->'fx', '{}'::jsonb) || '{"glaze_item": 1, "tend_patch": 1, "harvest_patch": 1}'::jsonb)

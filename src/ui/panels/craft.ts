@@ -370,7 +370,7 @@ export class CraftPanel {
 
   private row(r: Recipe, st: RecipeStatus, stock: readonly CraftStock[]): HTMLDivElement {
     const row = document.createElement('div');
-    row.className = 'craft-row rc-row' + (st.ready ? '' : ' locked') + (st.unread ? ' craft-unread' : '');
+    row.className = 'craft-row rc-row' + (st.ready ? '' : ' locked') + (st.unread ? ' craft-unread' : '') + (st.gated ? ' craft-gated' : '');
     row.dataset.recipe = r.id;
     const name = document.createElement('div');
     name.className = 'craft-name';
@@ -378,6 +378,9 @@ export class CraftPanel {
     name.textContent = count > 1 ? `${itemDef(r.result).name} × ${count}` : itemDef(r.result).name;
     // A shut recipe whose Recipe you have not read: a padlock before its name, and the row greyed (`recipebook.ts`).
     if (st.unread) name.prepend(padlock(needRecipeSays(r)));
+    // Under its skill gate: greyed, padlocked, the refusal as the hint (`craftgates.ts`).
+    else if (st.gated) name.prepend(padlock(st.gated));
+    if (st.gated) row.title = st.gated;
     const meta = document.createElement('small');
     meta.className = 'craft-meta';
     meta.textContent = `${skillName(r.skill)} · ${this.game.duration(ACTION_BY_ID.get(r.id)!).toFixed(0)} s`;

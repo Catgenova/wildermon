@@ -82,8 +82,9 @@ begin
       and it.def in ('copper_lump', 'tin_lump');
     insert into item (world_id, holder, holder_uid, def, ql, count) values
       (w, 'player', u, 'copper_lump', 20, 3), (w, 'player', u, 'tin_lump', 20, 1);
-    insert into skill (world_id, uid, id, value) values (w, u, 'smelting', 1)
-      on conflict (world_id, uid, id) do update set value = 1;
+    -- At bronze's smelting, its gate (craftgates.ts).
+    insert into skill (world_id, uid, id, value) values (w, u, 'smelting', 10)
+      on conflict (world_id, uid, id) do update set value = 10;
     delete from event where uid = u;
     perform perform_craft(w, u, 'make_bronze', '{}'::jsonb);
     exit when exists (select 1 from event where uid = u and text like 'Failed: bronze lump.%');
@@ -107,7 +108,8 @@ check('and says what it was worth, which is the half that was missing',
 
 /* ---- and the same failed craft in the browser ---------------------------- */
 const game = Game.create(4242);
-game.skills.values.set('smelting', 1);
+// At bronze's smelting, its gate (`craftgates.ts`).
+game.skills.values.set('smelting', 10);
 /*
  * Dry land first. An island is mostly not: stood where the number said, this
  * spent the whole craft swimming, and a body that is drowning stops what it is

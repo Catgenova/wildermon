@@ -1,4 +1,5 @@
 export { TRY_LEARN, tryGain } from './learn';
+import { COBBLESTONES, pavingGateRefusal } from './craftgates';
 import { lairFoundingRefusal } from './lairs';
 import { GRASS_PER_CUT, MOSS_PER_CUT } from './limits';
 import { PROSPECT_HEAD, tryGain } from './learn';
@@ -2432,8 +2433,9 @@ export const ACTIONS: ActionDef[] = [
     baseTime: 5,
     applies: (t, g) => tile(t, g) === TileType.PackedDirt,
     // The trowel first, as the island's general tool check comes before `terrain_refusal`.
+    // Then its paving gate (`craftgates.ts`), as the island's `terrain_refusal` asks it.
     check: (t, g) => lacksTool(g, MORTAR_TOOL) ?? ((t.kind === 'tile' && underBuilding(g, t.x, t.y)) || unpacked(t, g)
-      || (g.inventory.has('stone_brick') ? null : 'Need a stone brick.')),
+      || pavingGateRefusal(g, COBBLESTONES) || (g.inventory.has('stone_brick') ? null : 'Need a stone brick.')),
     perform: (t, g) => {
       if (t.kind !== 'tile') return;
       if (!g.inventory.consume('stone_brick')) return;
@@ -2462,7 +2464,8 @@ export const ACTIONS: ActionDef[] = [
       if (!g.inventory.has('trowel')) return 'Need a trowel.';
       const slab = t.itemUid !== undefined ? g.inventory.get(t.itemUid) : g.inventory.items.find((it) => SLAB_BY_ITEM.has(it.id));
       if (!slab || !SLAB_BY_ITEM.has(slab.id)) return 'Need a cut slab.';
-      return null;
+      // The slab's paving gate (`craftgates.ts`): "Marble slabs: needs paving 50; have 12.0."
+      return pavingGateRefusal(g, slab.id);
     },
     perform: (t, g) => {
       if (t.kind !== 'tile') return;

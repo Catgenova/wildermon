@@ -17,7 +17,7 @@ import { smithMakes, smithPer, SPIN_RECIPES, type Creature } from '../../src/gam
 import { RECIPE_BY_ID } from '../../src/game/recipes';
 import { TileType } from '../../src/world/tiles';
 import { article } from '../../src/game/words';
-import { psql, check, finish } from './harness';
+import { check, finish, psql, workerHands, workerHandsJson } from './harness';
 
 type Station = 'spindle' | 'anvil' | 'campfire' | 'smelter' | null;
 const recipeMakes = (id: string): Record<string, number> => ({ [RECIPE_BY_ID.get(id)!.result]: RECIPE_BY_ID.get(id)!.count ?? 1 });
@@ -89,7 +89,8 @@ begin
   insert into crate (world_id, id, kind, x, y, sx, sy, deed, made_by) values (w, 7402, 'plank', 17, 16, 0, 0, true, u);
   insert into hand select s, creature_spawn(w, s, 16.6, 16.6, 'active', now() - interval '60 days', u)
     from unnest(array[${SPECIES_IDS.map((id) => `'${id}'`).join(', ')}]) s;
-  update creature set mode = 'stored', stance = 'passive', hunger = 1, skills = '{}'::jsonb, settled_at = now(), until = now(), leg_at = now(), leg_ends = now(),
+  -- At every recipe's level up to a first stage's (craftgates.ts): this is about the trade, not its gate.
+  update creature set mode = 'stored', stance = 'passive', hunger = 1, skills = '${workerHandsJson()}'::jsonb, settled_at = now(), until = now(), leg_at = now(), leg_ends = now(),
          from_x = to_x, from_y = to_y
    where world_id = w and id in (select id from hand);
 ${CASES.map(({ id, items, at }) => `
@@ -161,7 +162,7 @@ const worker = (g: Game, species: string): Creature => {
   c.mode = 'deed';
   c.stance = 'passive';
   c.hunger = 1;
-  c.skills = {};
+  c.skills = workerHands(); // At every recipe's level up to a first stage's (`craftgates.ts`): this is about the trade, not its gate.
   return c;
 };
 const run = (g: Game, secs: number): void => {

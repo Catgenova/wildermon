@@ -255,8 +255,10 @@ begin
   insert into wall (world_id, level, dir, x, y, building, type, material, needed, total, planned_by)
     values (w, 1, '${wall2.dir}', ${wall2.x}, ${wall2.y}, 1, 'solid', 'stone_brick', ${j(wall2.needed)}, ${j(wall2.total)}, u);
   v_id := creature_spawn(w, 'cobbe', ${T} + 0.6, ${T} + 0.6, 'active', now() - interval '60 days', u);
-  -- No blood of its own: a deep-pocketed one carries two a trip, and ends the hour with two in hand.
+  -- No blood of its own: a deep-pocketed one carries two a trip, and ends the hour with two in hand. At stone brick's
+  -- masonry, its gate (craftgates.ts).
   update creature set mode = 'deed', stance = 'passive', hunger = 1, phase = 'idle', from_x = to_x, from_y = to_y, traits = '{}', rare = null,
+         skills = skills || '{"masonry": 20}',
          until = now() - interval '3600 seconds', settled_at = now() - interval '3600 seconds', leg_at = now() - interval '3600 seconds',
          leg_ends = now() - interval '3600 seconds'
    where world_id = w and id = v_id;
@@ -270,6 +272,8 @@ rollback;
 `));
 const cobbe = g2.creatures.spawn('cobbe', T + 0.6, T + 0.6, 'deed');
 cobbe.traits = [];
+// At stone brick's masonry, its gate (`craftgates.ts`).
+cobbe.skills = { ...cobbe.skills, masonry: 20 };
 for (let i = 0; i < 72000; i++) {
   g2.player.stats.stamina = 1;
   cobbe.hunger = 1;

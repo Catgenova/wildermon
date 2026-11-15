@@ -12,7 +12,9 @@ What a skill level opens, one way for everything. Asked for:
 
 All of it stays on the `gating` branch until the whole set rolls out together. Built: the framework, tree felling by
 woodcutting, sprouts by forestry, sowing by farming, a worker at its own level in the gate's skill, and unidentified
-items (§11). The rest below is the plan.
+items (§11); wagons, boats, quarried stone, veins (batch B); every crafting recipe, relic and bauble restoring,
+building materials, wall, floor and paving types, Formulas, and each skill's next gate beside its level (batch C,
+§9). What is left below is the plan.
 
 Decided since (the user, on §10's questions): birch 1 and willow 90; taming and fish keep their own numbers (batch B
 moves them into the table); the smelter at masonry 1, the wagon at carpentry 70 and the caravel at carpentry 90; a
@@ -141,7 +143,10 @@ How a level is chosen, in order:
 2. **Crafts by their difficulty**: `level = the ladder step at or below 2 × (difficulty − 6)`; no difficulty → 1. So
    d8 → 1, d10 → 5, d12–14 → 10, d16–20 → 20, d22–24 → 30, d26–30 → 40, d32–34 → 50, d36–40 → 60, d42–45 → 70,
    d46–50 → 80, d51+ → 90. Recipes, furniture, moulds, relics, baubles and brews all have a difficulty already, so the
-   whole craft table falls out of the numbers players already see, and moves with them.
+   whole craft table falls out of the numbers players already see, and moves with them (`craftLevel`,
+   `src/game/craftgates.ts`). Every recipe in `RECIPES` is on it, in its own skill (`recipe` gates, by recipe id), but
+   the named ones (`CRAFT_GATE_SAID`) and a Formula's scroll: all 43 scrolls share one difficulty (14, which would put
+   them all at 10), so they go by what the enchantment goes on (`FORMULA_GATE`), a tier rule as below.
 3. **Kinds of a thing by tier**: the cheapest/commonest at 1, then one step per tier (woods by their wood difficulty,
    wall materials by their bill, metals by their seam).
 4. **Existing gates keep their numbers** (seams are on the ladder already).
@@ -220,7 +225,7 @@ your farming may sow). Harvest, tend and clear open to anyone. Workers: farmers 
 `seedFor`), planter tenders (`patch`: `worker_seeds`). S: botanizing water plants: water lily 10, lotus 20 (`lily`
 workers).
 
-### Cooking: recipes (A), by difficulty
+### Cooking: recipes (A), by difficulty — built
 
 | 1 | 5 | 10 | 20 | 30 |
 | --- | --- | --- | --- | --- |
@@ -228,7 +233,7 @@ workers).
 
 Workers: cooks (`cook`), cheese presses (`cheese`), churners (`churn`). Cooked fish stay at 1: the catch is gated.
 
-### Restoration (A), by difficulty
+### Restoration (A), by difficulty — built
 
 | | 10 | 20 | 30 | 40 | 50 | 60 | 70 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -237,7 +242,7 @@ Workers: cooks (`cook`), cheese presses (`cheese`), churners (`churn`). Cooked f
 
 Workers: restorers (`restore`). Archaeology (finding) stays ungated: finds are rolls.
 
-### Carpentry crafts (A), by difficulty
+### Carpentry crafts (A), by difficulty — built
 
 | 1 | 5 | 10 | 20 | 30 | 40 | 70 | 90 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -248,7 +253,7 @@ spindle, small barrel, bins … 10; bed, chest, cupboard, shelves, barrel, lecte
 desk, wardrobe, stall, crate shelf, bell, loom, four-poster 30; larder, large barrel 40. Wagon 70 and caravel 90 as
 decided (`CRAFT_GATE_SAID`). Workers: sawyers (`saw`, `timber`, `shaft`: all 1).
 
-### Masonry crafts (A), by difficulty
+### Masonry crafts (A), by difficulty — built
 
 | 1 | 10 | 20 | 30 | 40 | 50 | 60 |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -257,7 +262,7 @@ decided (`CRAFT_GATE_SAID`). Workers: sawyers (`saw`, `timber`, `shaft`: all 1).
 The smelter at 1 as decided (`CRAFT_GATE_SAID`; its difficulty would put it at 30): the Path's stone phase makes one.
 Workers: concrete and mortar mixers (1).
 
-### Walls (A): material and type, in the material's skill
+### Walls (A): material and type, in the material's skill — built
 
 | Carpentry | Log 1 · Plank 10 · Timbercraft 20 · Glass (roof) 40 |
 | --- | --- |
@@ -269,16 +274,17 @@ gate (decided). A carpentry wall's gates are in carpentry and a masonry wall's i
 material's skill. Storeys keep their own rule. Workers: hod carriers (`hod`), each gate at its own level in the gate's
 skill: a hod carrier fitting a plank wall checks its carpentry.
 
-### Floors and paving (A)
+### Floors and paving (A) — built
 
-* **Floors, roofs, stairs**: the material's gate above; floor kind: floor, ladder 1 · staircase 10 · spiral and
-  single staircases 20.
-* **Paving** (paving): packed dirt 1 · cobblestone 5 · stone slabs 10 · sandstone slabs 20 · slate slabs 30 · marble
-  slabs 50. Stepping stones as their slab. Garden steps by their difficulty: timber (carpentry, d12) 10, stone (masonry,
-  d15) 10.
+* **Floors, roofs, stairs**: the material's gate above; floor type, in the material's skill: floor, roof, ladder 1 ·
+  staircase 10 · spiral and single staircases 20. The garden bed is a carpentry material at 1. A column: its
+  material's gate.
+* **Paving** (paving): cobblestones 5 · stone slabs 10 · sandstone slabs 20 · slate slabs 30 · marble slabs 50 (Pave
+  (cobblestone), Pave (slabs): the slab the go lays, the one named or else the first carried). Packing stays open.
+  Not built: stepping stones and garden steps.
 * Foundations keep their depth rule.
 
-### Enchanting: formulas (A)
+### Enchanting: formulas (A) — built
 
 Writing a scroll:
 
@@ -363,6 +369,33 @@ drive: no worker gate. Built (`helmGate`, `helm_gate_refusal`).
   `gatherable('quarry')`, `finishQuarry`, `stoneIdle`; Prospect, `readGround`, `groundReading`/`groundTip`, `tileSeen`.
 * Test: `supabase/test/skillgates-b.ts`.
 
+### Third set (built): recipes, restoring, building, paving, Formulas
+
+* `src/game/craftgates.ts`, which adds its rows to the one table at load (`addGates` in `skillgates.ts`, so that module
+  stays a leaf; `game.ts`, the help and `scripts/dump-defs.ts` load it): `craftLevel`, `recipeLevel`, `FORMULA_GATE`,
+  `MATERIAL_GATE`, `WALL_GATE`, `FLOOR_GATE`, `PAVING_GATE`; kinds `recipe` (by recipe id; named by its title, or by
+  its label or title and first input where two at different levels share a title: "Smoke the trout", "Yarn (wool)"),
+  `relic` (by name), `bauble` (by tier), `material`, `wall` and `floor` (`carpentry:door`, `masonry:spiral`: one row a
+  building skill; the stone-only types in masonry only), `paving`; readers `recipeGated` (recipes.ts),
+  `buildGateRefusal`, `workerBuildOpen`, `workerRecipeOpen`, `hodMay`, `pavingGateRefusal`. Items: a shut recipe's
+  Recipe or Formula (by its title), a relic's fragments (by relic: `gateExtra` reads "old pot" off "old pot 1/2"), a
+  tarnished bauble (by tier). `nextUnlockBar`: "10: Maple", the Skills window's line beside each level.
+* Island (`20261120000072_skill_gates_c.sql`): `recipe_gate_refusal` (in `craft_refusal` after a perk, a trade book's
+  trade and a shut recipe's book, before the tool, the station and the makings, as `recipeReason`), `worker_recipes` and
+  `recipe_gate_idle` (every store trade in `errand_step`/`errand_do`, idle `gate` naming the recipe), `gate_item_extra`
+  (in `item_gate`, `identify_said`, `unidentified_name`), Restore at the gate in `dig_refusal`, finds told unidentified
+  in `perform_dig`, `relic_in_stores(…, c)` for a restorer, `worker_idle` "in your settlement stores", a Formula or
+  Recipe not read under its gate (`relic_use_refusal`); `floor_type`, `build_gates`, `build_gate_refusal` (plan wall,
+  plan fence, build wall, plan floor, build floor in `build_refusal`; `change_wall_refusal`), `worker_build_open`,
+  `hod_may`, `hod_needing(…, c)` and `hod_needing_stocked(…, c)`; `paving_gate_refusal` (`terrain_refusal`'s Pave
+  (cobblestone)), `slab_to_lay` (`ground_refusal`'s Pave (slabs)).
+* Browser: `recipeReason` and `recipeStatus` (`gated`: the crafting window greys the row, a padlock and the refusal as
+  its hint), Restore, Read formula/recipe, the finds' lines; plan wall, plan fence, build wall, change wall, plan floor,
+  build floor; Pave; workers' `recipeInStores`/`relicInStores` with the worker, `stockWhy`, `hodNeeding(…, may)`;
+  `idleSays` for a store gate; the Skills window's next gate (`skill-next`), the help's recipe rule.
+* Test: `supabase/test/skillgates-c.ts`. Batch A's and B's Unlocks checks now compare in level then name order and
+  pick the fish out of fishing's list, since a skill's crafts are on it too.
+
 ## 10. Open questions
 
 1. Trees between birch 1 and willow 90: oak and maple moved down a step each (5, 10) and the rest kept by their wood
@@ -375,6 +408,18 @@ drive: no worker gate. Built (`helmGate`, `helm_gate_refusal`).
    ("mining is unchanged"). Say "Unidentified metal" there too, under the prospecting gate?
 5. A cellar dug into marble or slate bedrock gives up its shards without the quarry gate (Mine out the cellar keeps only
    the seam gate). Gate it too?
+6. Recipes by difficulty move many everyday things up: bread 5, a bucket 10, a plank wall 10, stone brick walls 20,
+   lye 10 (an ash raker making lye now needs alchemy 10), cheese 10 for a cheese press. Keep, or start the everyday
+   ones lower?
+7. Not gated in batch C: casting at the forge (a mould's casts; the mould itself is a recipe and gated), dye-recipe
+   sheets, brews set going at a barrel, garden steps, stepping stones, a Mason's Repoint (a new stone on a finished
+   wall). Gate them by the same rules?
+8. A hod carrier whose only work is over its level says "no work"/"stock", not `gate` naming it (its idle words list
+   items, not plans). Name the gate?
+9. A wall type's gate is in its material's skill, so carpentry and masonry each list Door 5, Window 5 …; materials are
+   named "Plank building", "Marble building" to tell them from the crafts (a "Plank" recipe is carpentry 1). Better
+   names?
+10. Formulas by target (20/30/40/50) rather than by their shared difficulty (which gives 10 for all). Keep?
 
 ## 11. Unidentified items
 

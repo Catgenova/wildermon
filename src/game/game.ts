@@ -1,3 +1,4 @@
+import './craftgates';
 import { Springs, type SpringSave } from './springs';
 import type { LairSeen } from './lairs';
 import { CHAR_START, DAMAGE_MAX, PLACED_REACH, PROSPECT_MARK_TIME, QL_BARE, QL_LOW, QL_SPAN, QL_TOP, wearPerUse, wornShare } from './limits';
@@ -8438,6 +8439,7 @@ export class Game {
     holding?: string,
     from?: { x: number; y: number },
     stocked?: (item: string) => boolean,
+    may?: (target: HodTarget) => boolean,
   ): HodJob | undefined {
     type Key = { held: boolean; d: number; behind: number; rank: number; level: number; dir: string; x: number; y: number; item: string };
     const before = (a: Key, b: Key): boolean => {
@@ -8454,6 +8456,8 @@ export class Game {
     let best: (Key & { target: HodTarget }) | undefined;
     const consider = (target: HodTarget, bill: Bill, x: number, y: number, level: number, dir: string): void => {
       if (!near(x, y, dir)) return;
+      // Only work its own levels open (`workerBuildOpen`): a hod carrier's gates.
+      if (may && !may(target)) return;
       const d = from ? (x - from.x) ** 2 + (y - from.y) ** 2 : 0;
       for (const [item, n] of Object.entries(bill.needed)) {
         if (n <= 0) continue;
