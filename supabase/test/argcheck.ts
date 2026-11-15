@@ -65,6 +65,9 @@ const targets: Array<[string, Target & Record<string, unknown>]> = [
   ['pick_up', { kind: 'ground', x: AT, y: AT, uid: null }],
   ['pick_up', { kind: 'ground', x: AT, y: AT, uid: 4, down: true }],
   ['set_stance', { kind: 'creature', id: 1, stance: 'defensive', itemUid: 1, job: 'mining', sex: 'female', foe: 2, arrow: 'arrow' }],
+  // And what the crafting window adds to a craft's target: a woven rug's pattern, a figure's kind (`craft.ts`).
+  ['make_woven_rug', { kind: 'item', uid: 1, pattern: 'border' }],
+  ['make_carved_figure', { kind: 'item', uid: 1, species: 'roxxen' }],
   // And what a menu adds on the way: a name, a yes, which dye.
   ['name_thing', { kind: 'item', uid: 1, name: 'Old Faithful', sure: true, dyeFrom: 'barrel:1' }],
 ];

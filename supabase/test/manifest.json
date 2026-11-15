@@ -3420,5 +3420,14 @@
     "title": "Why it failed: a failed skill check's line names the term that cost it most",
     "shard": 2,
     "why": "Asked for: \"a failed action's log line names the biggest factor against it, e.g. 'Missed: tool QL 12 (−18%)', so players learn that quality matters.\" The dice pinned to fail, a craft and a felling each name the tool QL, the skill or the material that cost them most; nothing costing a point says nothing more; stamina is not a term; a perk's share scales the cost; and the browser's reckoning is the island's over a grid, word for word."
+  },
+  {
+    "file": "supabase/test/seedjarsall.ts",
+    "title": "Ancient seed jars: Open, All (N), one jar a go",
+    "shard": 4,
+    "external": [
+      "typescript"
+    ],
+    "why": "Asked for: \"add an open all option on ancient jars\". Seed jars do not stack, so Open opens the jar named while it is carried and else the next one in the pack; All (N) runs N goes, the same jars in the same order and the same refusal on both sides."
   }
 ]

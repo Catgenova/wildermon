@@ -28,7 +28,7 @@ AS $function$ select $j$
   "hand": {"t": "text"}, "roofShape": {"t": "text"}, "facing": {"t": "text"}, "spell": {"t": "text"},
   "species": {"t": "text"}, "stance": {"t": "text"}, "job": {"t": "text"}, "sex": {"t": "text"},
   "arrow": {"t": "text"}, "stone": {"t": "text"}, "wound": {"t": "text"}, "skill": {"t": "text"},
-  "brew": {"t": "text"}, "dyeFrom": {"t": "text"}, "patron": {"t": "text"},
+  "brew": {"t": "text"}, "dyeFrom": {"t": "text"}, "patron": {"t": "text"}, "pattern": {"t": "text", "len": 32},
   "mend": {"t": "bool"}, "cycles": {"t": "int", "min": 1, "max": 100}, "stock": {"t": "text", "len": 64}, "stockOf": {"t": "text", "len": 64},
   "all": {"t": "int", "min": 1, "max": 1000}
 }}
