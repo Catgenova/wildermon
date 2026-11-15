@@ -19,21 +19,15 @@ begin
   end loop;
   if coalesce(array_length(v_laid, 1), 0) = 0 then return; end if;
   perform skill_raise(p_world, p_uid, mat.skill, 0.4);
+  update wall_change set needed = bill
+   where world_id = p_world and level = w.level and dir = w.dir and x = w.x and y = w.y;
   if not bill_done(bill) then
-    update wall_change set needed = bill
-     where world_id = p_world and level = w.level and dir = w.dir and x = w.x and y = w.y;
     perform tell(p_world, p_uid, 'Added: ' || laid_text(v_laid) || '. Still needed: '
       || bill_text(ch.material, bill) || '.', 'event');
     return;
   end if;
-  perform counter_gone(p_world, w);
-  delete from wall_change where world_id = p_world and level = w.level and dir = w.dir and x = w.x and y = w.y;
-  update wall set type = ch.type, material = ch.material, needed = bill, total = ch.total,
-         dye = null, glass = null, lock = null, lowered = false, planned_by = coalesce(ch.planned_by, planned_by)
-   where world_id = p_world and level = w.level and dir = w.dir and x = w.x and y = w.y
-  returning * into w;
-  -- A shop counter's store opens as it is finished (`counters.ts`).
-  perform counter_finished(p_world, w);
+  -- The wall is the new one (`change_built`), as with a hod carrier's last piece.
+  perform change_built(p_world, w);
   select * into wt from wall_type_def where id = ch.type;
   -- A wall of a building finished, for the journal, and by its type; a fence is not one.
   if not coalesce(wt.low, false) then perform journal_note(p_world, p_uid, 'walled'); end if;

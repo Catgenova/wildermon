@@ -162,7 +162,7 @@ import { RELICS } from '../../game/archaeology';
 import { BRACE_MOST, BRACE_STEP, BRIDLE_PACE, COLLAR_CUT } from '../../game/creatures';
 import { cropYield, RIPE, seedSays, STAGE_NAMES } from '../../game/farming';
 import { SEAT_ELSEWHERE, SEAT_STALE_S } from '../../net/supabase';
-import { HEARTBEAT, IDLE_LOGOUT, LAND_STEP, LAND_UNFOGGED_EVERY, RECONCILE_EVERY, WORKER_REST_EVERY, WORKER_REST_FIRST, WORKER_REST_MOST, UNSTICK_REACH, UNSTICK_SEARCH } from '../../game/keep';
+import { HEARTBEAT, IDLE_LOGOUT, LAND_STEP, LAND_UNFOGGED_EVERY, NEAR_WHOLE_EVERY, RECONCILE_EVERY, WORKER_REST_EVERY, WORKER_REST_FIRST, WORKER_REST_MOST, UNSTICK_REACH, UNSTICK_SEARCH } from '../../game/keep';
 import { REPORTS_A_SESSION } from '../../net/errors';
 import { ACT_MANY_MOST, VIA_MAX } from '../../net/island';
 import { SAID_LAG_MS } from '../../net/heardlines';
@@ -422,6 +422,17 @@ const VEINS = VEIN_LOOKS.filter((l): l is VeinLook => l !== null);
 const veinsOf = (family: VeinLook['family']): string => listed(VEINS.filter((l) => l.family === family).map((l) => l.name.toLowerCase()));
 
 export const NEWS: News[] = [
+  // Change wall built and shown (`20261120000103_change_wall_built.sql`, `BUILDS` in net/island.ts, `Game.changeBuilt`).
+  {
+    n: 647,
+    day: '2026-11-15',
+    lines: () => [
+      `Fixed: Change wall: change planned, and the new wall once built, shown when the action lands (was: up to ${NEAR_WHOLE_EVERY} s later; no Build change row till then).`,
+      `Fixed: every building action (walls, floors, roofs, columns, paint): shown when it lands (was: up to ${NEAR_WHOLE_EVERY} s later).`,
+      'Fixed: Change wall: hod carrier brings and fits the change\'s materials; last piece: the new wall (was: never brought).',
+      'Fixed: Build change: time per action by the change\'s material (was: the standing wall\'s).',
+    ],
+  },
   // The vehicles and the hulls redrawn in the kit (`kit/vehicles.ts`, `MODELS` in render/furniture.ts), a team at its yokes (`YOKE_SPOTS`).
   {
     n: 644,

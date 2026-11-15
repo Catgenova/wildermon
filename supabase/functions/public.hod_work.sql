@@ -28,6 +28,13 @@ AS $function$
       offset 0) w  -- kept a scan of its own a storey, so it is the key's range and not the whole island's walls
    where wl.l is not null
   union all
+  -- A change planned for a finished wall (`change_wall`): the wall's work, at the change's bill.
+  select 'wall', c.level, c.dir, c.x, c.y, null, null, c.needed, c.total
+    from wall_change c
+   where c.world_id = p_world
+     and c.x between p_cx - p_range and p_cx + p_range and c.y between p_cy - p_range and p_cy + p_range
+     and c.needed @? '$.* ? (@ > 0)'
+  union all
   -- A garden bed's iron ribbons are a builder's to lay (`hod_needed`).
   select 'floor', f.level, '', f.x, f.y, null, null, hod_needed(f.material, f.needed), f.total
     from floor_tile f

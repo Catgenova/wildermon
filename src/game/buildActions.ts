@@ -180,20 +180,8 @@ function buildChange(g: Game, t: TileTarget, wall: Wall, change: WallChange): bo
     g.events.emit('world', t.x, t.y);
     return nextAvailable(g, change, t) !== null;
   }
-  counterGone(g, wall);
-  // The ivy starts from nothing on another material, and stays on the same one (the island's `green_wall`).
-  const green = wall.material === change.material ? wall.greenSince : undefined;
-  wall.type = change.type;
-  wall.material = change.material;
-  wall.needed = { ...change.needed };
-  wall.total = { ...change.total };
-  delete wall.change;
-  delete wall.dye;
-  delete wall.glass;
-  delete wall.lock;
-  delete wall.lowered;
-  g.wallFitted(wall);
-  if (green !== undefined) wall.greenSince = green;
+  // The wall is the new one, as with a hod carrier's last piece (`Game.changeBuilt`).
+  g.changeBuilt(wall);
   const low = WALL_TYPE_BY_ID.get(wall.type)?.low;
   if (!low) g.note('walled');
   g.note(`built:${wall.type}`);

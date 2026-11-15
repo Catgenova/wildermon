@@ -880,6 +880,12 @@
     "why": "Change wall: another type or material planned on a wall of a building, offered and allowed on the wall storey 3 rests on, which Remove refuses. The wall standing stays finished, shut and carrying while the change is built a unit a go, and is the new wall with the last of it; a type that carries nothing is refused in Remove's words, a material too light for the walls above as a Repoint is, and the rest as Plan wall refuses them, all in the same words on both sides. A wall still going up is planned again in place."
   },
   {
+    "file": "supabase/test/changewallbuilt.ts",
+    "title": "A wall changed where it stands, built and shown",
+    "shard": 2,
+    "why": "Asked: Change wall kept the old wall and no materials could be added. By hand through rpc_act on the ground and a storey up, a type and a material: planned, carried by the ground read's slow half with its Build change row, built, and the new wall in the slow half and the browser. The browser's Island asks the slow half after a building job's go lands (BUILDS is the island's build_action). A hod carrier fits a change piece for piece in the same order on both sides, and a cobbe finishes one a storey up in an hour on both sides."
+  },
+  {
     "file": "supabase/test/traces.ts",
     "title": "A team stays in the traces until it is taken out",
     "shard": 2,

@@ -308,9 +308,12 @@ export const buildGateRefusal = (viewer: Viewer, material: string | undefined, a
 export const workerBuildOpen = (c: { skills: Record<string, number> }, material: string | undefined, as: BuildType): boolean =>
   buildGates(material, as).every((g) => workerGateOpen(c, g));
 
-/** Whether a hod carrier may fit what a piece of work wants: every gate on it at its own level (a wall, a floor, a column by its material). The island's `hod_may`. */
+/**
+ * Whether a hod carrier may fit what a piece of work wants: every gate on it at its own level (a wall, a floor, a
+ * column by its material; a change planned on a wall by the change's). The island's `hod_may`.
+ */
 export const hodMay = (c: { skills: Record<string, number> }, t: HodTarget): boolean =>
-  t.kind === 'wall' ? workerBuildOpen(c, t.wall.material, { wall: t.wall.type })
+  t.kind === 'wall' ? workerBuildOpen(c, (t.wall.change ?? t.wall).material, { wall: (t.wall.change ?? t.wall).type })
     : t.kind === 'floor' ? workerBuildOpen(c, t.floor.material, { floor: t.floor.kind ?? 'floor', hand: t.floor.hand })
       : t.kind === 'column' ? workerBuildOpen(c, t.column.material, {})
         : t.kind === 'span' ? workerGateOpen(c, gateOf('bridge', t.bridge.kind)) : true;
