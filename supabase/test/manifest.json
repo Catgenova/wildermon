@@ -253,6 +253,19 @@
     "why": "Reported: \"if previously removing a floor, the option to make a roof disappears. fix\". A storey-2 tile with no floor takes no wall, and its outside sides were asked one before a roof; pinned on the top storey, the menu had no Plan roof."
   },
   {
+    "file": "supabase/test/freeroof.ts",
+    "title": "Free roofing: a roof on any tile, over the tile's own top storey",
+    "shard": 1,
+    "external": [
+      "esbuild",
+      "playwright-core"
+    ],
+    "env": {
+      "STOREY_STRICT": "1"
+    },
+    "why": "Reported on the Southern Greenhouse: \"bug: story 2 is enclosed, but cant roof because i want to tier my building\", then \"allow free roofing\". A roof sat over the top storey only and asked it closed in; a tier beside storey 2 could not be roofed at its own height."
+  },
+  {
     "file": "supabase/test/thick.ts",
     "title": "A wall is a box, and the face you see is the one you are standing on",
     "shard": 1,
