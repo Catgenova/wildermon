@@ -883,7 +883,8 @@ class Scene {
       g.closePath();
       backIn.forEach(([x, y], j) => (j ? g.lineTo(x, y) : g.moveTo(x, y)));
       g.closePath();
-      g.fillStyle = shadeOf(p, 0.62);
+      // In the kit, the far rim a step into the wood's mauve shade, not past it, and the felloe's inside likewise.
+      g.fillStyle = shadeOf(p, p.tone ? 0.74 : 0.62);
       g.fill('evenodd');
       // The inside of the felloe, where it faces up at you through the hole.
       for (let j = 0; j < N; j++) {
@@ -891,7 +892,7 @@ class Scene {
         const nx = -u[0] * Math.cos(am), ny = -u[1] * Math.cos(am), nz = -Math.sin(am);
         if (!this.faces(nx, ny, nz)) continue;
         this.poly([at(a0, rin, far), at(a1, rin, far), at(a1, rin, near), at(a0, rin, near)]);
-        g.fillStyle = shadeOf(p, this.light(nx, ny, nz) * 0.8);
+        g.fillStyle = shadeOf(p, this.light(nx, ny, nz) * (p.tone ? 0.9 : 0.8));
         g.fill();
       }
     }
@@ -908,11 +909,16 @@ class Scene {
       g.lineCap = 'round';
       const smear = WHEEL_SMEAR[Math.max(0, Math.min(2, Math.round(blur)))];
       const spokeW = Math.max(0.7, r * 0.11);
+      /*
+       * In the kit, ruled in its finer ink, a step toward the wood, and the spoke itself turned wood catching the light: at
+       * the old width and ink a spoked wheel was more ink than wood, the darkest thing on a cart, and put her left in shade.
+       */
+      const spokeInk = p.tone ? rgb(mix(p.ink, kitShade(p.tone, 0.8), 0.3)) : rgb(p.ink);
       const spoke = (): void => {
-        g.strokeStyle = rgb(p.ink);
-        g.lineWidth = spokeW + this.ink * 1.4;
+        g.strokeStyle = spokeInk;
+        g.lineWidth = spokeW + this.ink * (p.tone ? 0.9 : 1.4);
         g.stroke();
-        g.strokeStyle = shadeOf(p, 0.92);
+        g.strokeStyle = shadeOf(p, p.tone ? 1 : 0.92);
         g.lineWidth = spokeW;
         g.stroke();
       };

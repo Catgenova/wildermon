@@ -44,6 +44,8 @@ export const HUB_OUT = 0.45;
 const YOKE_Z = 11.5;
 /** A yoke's bow round a neck: half as wide as it is, and how far down from the yoke it hangs. */
 const BOW_R = 2.1, BOW_DEEP = 3.4;
+/** How far out past the front of the box a pole let down meets the ground, in units: it goes down, not out along it. */
+const POLE_DOWN = 11;
 
 /* ---- a beam between two points --------------------------------------------------------- */
 
@@ -52,7 +54,7 @@ const BOW_R = 2.1, BOW_DEEP = 3.4;
  * line, its far end capped: a shaft, a pole, an axle, an evener. Its sides
  * paint along it (`x` from `a`, `y` across), with a faint grain unless told.
  */
-function beam(a: V3, b: V3, w: number, h: number, tone: Tone, paint?: (g: Ctx, k: PaintCtx, s: Side) => void): Face[] {
+function beam(a: V3, b: V3, w: number, h: number, tone: Tone, paint?: ((g: Ctx, k: PaintCtx, s: Side) => void) | null): Face[] {
   const d = unit(sub(b, a));
   let u = cross(d, [0, 0, 1]);
   if (Math.hypot(...u) < 1e-6) u = [1, 0, 0];
@@ -61,7 +63,8 @@ function beam(a: V3, b: V3, w: number, h: number, tone: Tone, paint?: (g: Ctx, k
   const ringAt = (p: V3): V3[] => [add(add(p, mul(u, -w)), mul(v, -h)), add(add(p, mul(u, w)), mul(v, -h)), add(add(p, mul(u, w)), mul(v, h)), add(add(p, mul(u, -w)), mul(v, h))];
   const ra = ringAt(a), rb = ringAt(b);
   const seed = Math.round(Math.abs(a[0] * 13 + a[1] * 7 + b[2] * 3));
-  const dress = (_k: number, _i: number, s: Side): Partial<Face> => ({ crease: 0.36, paint: (g, k) => (paint ? paint(g, k, s) : grain(g, k.fill, s.w, s.h, seed, 'x', 0.6)) });
+  // `null`: left plain, for what is seen only in glimpses (under the floor, in a bow): painting costs its bake a clip a face.
+  const dress = (_k: number, _i: number, s: Side): Partial<Face> => ({ crease: 0.36, ...(paint === null ? {} : { paint: (g: Ctx, k: PaintCtx) => (paint ? paint(g, k, s) : grain(g, k.fill, s.w, s.h, seed, 'x', 0.6)) }) });
   const faces = prism([ra, rb], tone, dress, { crease: 0.3 });
   // The near end, which `prism` leaves open.
   const cap = ra.slice().reverse();
@@ -122,8 +125,8 @@ function smallCart(hw: number, hd: number, body: Tone, gear: Tone): CartBuilt {
   const r = 3.3, ax = -2.4, wy = W + 0.75, thick = 0.6;
   const DEEP = deeper(body, 0.2), RIM = paler(body, 0.1), GEAR = gear;
   // The axle under it, the bed laid over the axle on two sills, the tray's floor over them.
-  add(beam([ax, -wy + thick / 2 + HUB_OUT, r], [ax, wy - thick / 2 - HUB_OUT, r], 0.32, 0.32, IRON, (g, k, s) => band(g, k, -0.2, s.w + 0.2, -0.2, s.h + 0.2, 0, false)));
-  for (const s of [-1, 1]) add(slab(L0 + 0.6, L1 - 0.4, s * (W - 1.2) - 0.45, s * (W - 1.2) + 0.45, r + 0.32, z0, GEAR, { paint: { front: (g, k, sd) => grain(g, k.fill, sd.w, sd.h, 3, 'x', 0.6), back: (g, k, sd) => grain(g, k.fill, sd.w, sd.h, 4, 'x', 0.6) } }));
+  add(beam([ax, -wy + thick / 2 + HUB_OUT, r], [ax, wy - thick / 2 - HUB_OUT, r], 0.32, 0.32, IRON, null));
+  for (const s of [-1, 1]) add(slab(L0 + 0.6, L1 - 0.4, s * (W - 1.2) - 0.45, s * (W - 1.2) + 0.45, r + 0.32, z0, GEAR));
   add(slab(L0, L1, -W, W, z0, zb, DEEP, { paint: { top: deckOf(3, 7) } }));
   // Its sides: two boards and an iron band, the ends a step lower so it can be tipped.
   const side = (seed: number) => boardedSide(2, seed, [0.25, 0.75], false);
@@ -159,12 +162,12 @@ function boxCart(kind: BoxKind, hw: number, hd: number, body: Tone, gear: Tone, 
   // The running gear: an axle under each pair, a bolster up from it to the sills, and the sills along under the floor.
   const sill = floor - 0.8, sillY = W - (wagon ? 2.2 : 1.8);
   for (const a of axles) {
-    add(beam([a.x, -wy + thick / 2 + HUB_OUT, a.r], [a.x, wy - thick / 2 - HUB_OUT, a.r], 0.42, 0.42, IRON, (g, k, s) => band(g, k, -0.2, s.w + 0.2, -0.2, s.h + 0.2, 0, false)));
-    add(slab(a.x - 0.75, a.x + 0.75, -sillY - 0.9, sillY + 0.9, a.r + 0.42, sill - 1.1, GEAR_DEEP, { bevel: 0.15, paint: { left: banded(40, [0.1, 0.9]), right: banded(41, [0.1, 0.9]) } }));
+    add(beam([a.x, -wy + thick / 2 + HUB_OUT, a.r], [a.x, wy - thick / 2 - HUB_OUT, a.r], 0.42, 0.42, IRON, null));
+    add(slab(a.x - 0.75, a.x + 0.75, -sillY - 0.9, sillY + 0.9, a.r + 0.42, sill - 1.1, GEAR_DEEP, { bevel: 0.15 }));
   }
-  for (const s of [-1, 1]) add(slab(L0 + 1, L1 - 1, s * sillY - 0.55, s * sillY + 0.55, sill - 1.1, sill, GEAR, { paint: { front: (g, k, sd) => grain(g, k.fill, sd.w, sd.h, 50 + s, 'x', 0.6), back: (g, k, sd) => grain(g, k.fill, sd.w, sd.h, 52 + s, 'x', 0.6) } }));
+  for (const s of [-1, 1]) add(slab(L0 + 1, L1 - 1, s * sillY - 0.55, s * sillY + 0.55, sill - 1.1, sill, GEAR));
   // The floor, its boards run along it, and the box's four sides.
-  add(slab(L0, L1, -W, W, sill, floor, DEEP, { paint: { top: deckOf(wagon ? 6 : 5, 25), front: (g, k, s) => grain(g, k.fill, s.w, s.h, 21, 'x', 0.8), back: (g, k, s) => grain(g, k.fill, s.w, s.h, 22, 'x', 0.8) } }));
+  add(slab(L0, L1, -W, W, sill, floor, DEEP, { paint: { top: deckOf(wagon ? 6 : 5, 25) } }));
   const n = 3;
   const stakesAt = (len: number): number[] => {
     const m = Math.max(2, Math.round(len / (wagon ? 7 : 6)));
@@ -194,7 +197,7 @@ function boxCart(kind: BoxKind, hw: number, hd: number, body: Tone, gear: Tone, 
     for (const u of along) {
       const x = Math.max(L0 + stake, Math.min(L1 - stake, L0 + (L1 - L0) * u));
       const y0 = s < 0 ? -W : W - t, y1 = s < 0 ? -W + t : W;
-      add(slab(x - stake, x + stake, y0, y1, top, top + 0.55, GEAR, { bevel: 0.12 }), { edges: true });
+      add(slab(x - stake, x + stake, y0, y1, top, top + 0.55, GEAR, { bevel: 0.12 }));
     }
   }
   // The bench across it over the axle, on a block each side.
@@ -222,7 +225,7 @@ function boxCart(kind: BoxKind, hw: number, hd: number, body: Tone, gear: Tone, 
   const zAt1 = YOKE_Z - 0.42 - 0.08 - 0.42 * rise;
   // With no team in it, its pole is let down to the ground, its end on it, and its yokes are off it.
   if (!yoked) {
-    add(beam(knee, [x1 * 0.8, 0, 0.45], 0.42, 0.42, GEAR, banded(60, [0.45, 0.9])));
+    add(beam(knee, [L1 + POLE_DOWN, 0, 0.45], 0.42, 0.42, GEAR, banded(60, [0.45, 0.9])));
     return { parts, wheels: wheelsAt(), shade };
   }
   add(beam(knee, [x1, 0, zAt1], 0.42, 0.42, GEAR, banded(60, [0.35, 0.7, 0.97])));
@@ -236,11 +239,11 @@ function boxCart(kind: BoxKind, hw: number, hd: number, body: Tone, gear: Tone, 
     const yz = yc - 0.42 - 0.23;
     for (const s of [-1, 1]) {
       const cy = s * reach, bow: Face[] = [];
-      const pts = Array.from({ length: 9 }, (_, i) => {
-        const a = (i / 8) * Math.PI;
+      const pts = Array.from({ length: 7 }, (_, i) => {
+        const a = (i / 6) * Math.PI;
         return [yx, cy + Math.cos(a) * BOW_R, yz - Math.sin(a) * BOW_DEEP] as V3;
       });
-      for (let i = 0; i + 1 < pts.length; i++) bow.push(...beam(pts[i], pts[i + 1], 0.24, 0.24, GEAR_DEEP, (g, k, sd) => grain(g, k.fill, sd.w, sd.h, i, 'x', 0.4)));
+      for (let i = 0; i + 1 < pts.length; i++) bow.push(...beam(pts[i], pts[i + 1], 0.24, 0.24, GEAR_DEEP, null));
       add(bow);
     }
   }
