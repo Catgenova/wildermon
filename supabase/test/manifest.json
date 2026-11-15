@@ -845,7 +845,20 @@
     "file": "supabase/test/gardenbed.ts",
     "title": "A garden bed is a field on any storey, open to the sky or under glass",
     "shard": 6,
-    "why": "A floor of garden bed, laid as a floor and nothing else, at its bill through `floorBill` and with iron ribbons only; finished, sown, tended and harvested on the ground and on storey 2 from the storey stood on, on the glass clock in a winter, open to the sky or under glass; covered by a floor or a roof not of glass, refused a sowing, its crop held on the still clock and grown on from there when uncovered; one crop a tile; taken up with its bed; worked by a farm worker up the stairs; a glasshouse field and a planter as they were."
+    "why": "A floor of garden bed, laid as a floor and nothing else, at its bill through `floorBill` and with iron ribbons only; finished, sown, tended and harvested on the ground and on storey 2 from the storey stood on, on the glass clock in a winter, open to the sky or under glass; covered by a floor or a roof not of glass, refused a sowing, its crop held on the still clock and grown on from there when uncovered; a crop to each storey of a tile; taken up with its bed; worked by a farm worker up the stairs; a glasshouse field and a planter as they were."
+  },
+  {
+    "file": "supabase/test/upperbed.ts",
+    "title": "A garden bed up a storey: named, sown, tended and harvested over a crop under it",
+    "shard": 6,
+    "external": [
+      "esbuild",
+      "playwright-core"
+    ],
+    "env": {
+      "STOREY_STRICT": "1"
+    },
+    "why": "Reported from the island: a storey-2 garden bed floor named \"garden_bed floor\" and not sown. Its floor named \"Garden bed floor\" over the tile and in Examine on both sides; a storey-2 bed sown, tended, grown on the glass clock under a glass roof and harvested from storey 2 over a still crop on the storey-1 bed under it, which stays its own; a job naming storey 2 refused from the ground on the island and walked up to by the browser; the ground read carrying both crops by storey; and drawn in Chromium: the tooltip and the menu of a storey-2 bed."
   },
   {
     "file": "supabase/test/changewall.ts",

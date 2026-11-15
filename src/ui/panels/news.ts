@@ -64,12 +64,12 @@ import { FIGHT_QUIET, ARM_SLOW_MOST, ARMOUR_VS, armourSays, BLINDSIDE, blowSays,
 import {
   CELLAR_DECAY, CELLAR_DEPTH, CELLAR_SOIL, COLUMN_SHARE, SINGLE_STAIRS_NAME, SINGLE_STAIRS_SHARE, SPIRAL_STAIRS_NAME, STAIRS_SHARE, columnBill, floorBill, GLASS_ROOF, heftWord, OBSIDIAN_GLASS, OBSIDIAN_GLASS_OPACITY, onlySaid, takesAs, INDOORS_DECAY, INDOORS_REST, JETTY_REACH, MATERIAL_BY_ID, MATERIALS as WALL_MATERIALS, RAILING_HEIGHT,
   NO_PLAN_FROM, OUTSIDE_STAIR_LEVEL, roofShapeDef, roofShapeOf, WALL_HEIGHT, WALL_TYPE_BY_ID, wallBill as typeBill,
-  STOREY_JOBS, describeNeeds, GARDEN_BED,
+  STOREY_JOBS, describeNeeds, GARDEN_BED, floorSaid,
 } from '../../game/building';
 import { CELLAR_DAYLIGHT } from '../../game/cellar';
 import { wayUpSaid } from '../../game/game';
 import { materialName } from '../../game/buildActions';
-import { BED_COVERED } from '../../game/gardenbed';
+import { BED, BED_COVERED, bedStoreySaid } from '../../game/gardenbed';
 import { LIFE_MOTES_EACH, MOTE_ELEMENTS, POULTICE_HEAL, STATUE_MOTES, WATER_MOTE_NEED, WATER_MOTES_EACH } from '../../game/motes';
 import { COUNTER_HOLDS, COUNTER_REACH, COUNTER_WALL } from '../../game/counters';
 import { candleBurn, lanternReach, PLINTH_BUSY_REACH, PLINTH_REACH, torchBurn } from '../../game/light';
@@ -415,6 +415,18 @@ const FAIL_EXAMPLE = failFactorSaid(failFactor({ ...FAIL_EXAMPLE_AT, difficulty:
 const SCRUBS_LATER = new Set(['scrub_wall_paint', 'scrub_floor_paint']);
 
 export const NEWS: News[] = [
+  // A floor named by its material's name, and a garden bed up a storey sown, tended and harvested (`floorSaid`, `gardenbed.ts`, `crop.storey`).
+  {
+    n: 632,
+    day: '2026-11-15',
+    lines: () => [
+      `Fixed: tile tooltip floor line: material id, e.g. "${BED} floor". Now: its name, "${floorSaid({ building: 0, level: 0, x: 0, y: 0, material: BED, needed: {}, total: {} })}".`,
+      'Fixed: garden bed on storey 2 and up over a crop on the storey under it: no Sow; "one crop per tile". Now: one crop per storey of a tile.',
+      `Fixed: garden bed on a pinned storey, picked from another storey: no Sow, Tend or Harvest. Now: offered; walks you to that storey first. Asked from another storey: "${bedStoreySaid(1)}"`,
+      'Fixed: tile tooltip over a garden bed on a pinned storey: no crop line. Now: its crop, stage and time.',
+      `Fixed: Examine on a building tile: no floor names. Now: each storey's finished floor, e.g. "Storey 2: ${floorSaid({ building: 0, level: 1, x: 0, y: 0, material: BED, needed: {}, total: {} })}."`,
+    ],
+  },
   // The traps redrawn in the kit (`kit/traps.ts`).
   {
     n: 637,

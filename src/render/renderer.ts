@@ -4888,9 +4888,8 @@ export class Renderer {
             this.take('swirl', x, y, cam.worldToScreenX(x + 0.5, y + 0.5), cam.worldToScreenY(x + 0.5, y + 0.5, h), null).swirl = swirl;
           }
         }
-        // A crop on a garden bed, on whatever storey the bed is: at the bed's soil, as a field's crop stands on its ground.
-        const bedCrop = this.game.crops.size && !cutHere ? this.game.cropAt(x, y) : undefined;
-        if (bedCrop && bedCrop.level !== undefined) this.takeBedCrop(bedCrop, x, y, cam.rotation);
+        // A crop on a garden bed, on whatever storey the bed is, each storey's its own: at the bed's soil, as a field's crop stands on its ground.
+        if (this.game.crops.size && !cutHere) for (const bedCrop of this.game.cropsAt(x, y)) if (bedCrop.level !== undefined) this.takeBedCrop(bedCrop, x, y, cam.rotation);
         if (t === TileType.Field && !aloft) {
           const fieldCrop = this.game.crops.size ? this.game.cropAt(x, y) : undefined;
           // Only the field's own: one on a bed over it is drawn up there.

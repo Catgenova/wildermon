@@ -36,6 +36,8 @@ export const STRIDE = 8192;
  */
 export const tileKey = (x: number, y: number): number => y * STRIDE + x;
 /** And back again, for the two places that iterate and want the tile. */
+/** A crop's key: its tile and its storey (a bed's, the ground's for a field), one crop a storey of a tile, as the island's `crop_pkey`. */
+export const cropKey = (x: number, y: number, storey: number): number => tileKey(x, y) * 64 + storey;
 export const keyX = (key: number): number => key % STRIDE;
 export const keyY = (key: number): number => (key - (key % STRIDE)) / STRIDE;
 

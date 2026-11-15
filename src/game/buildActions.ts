@@ -7,6 +7,7 @@ import {
   scaledBill,
   FLOOR_KIND_NAMES,
   floorName,
+  floorWords,
   floorKind,
   connectsDown,
   isDone,
@@ -1200,7 +1201,7 @@ export const BUILD_ACTIONS: ActionDef[] = [
       // Floors are paving, but a garden bed, which is joinery; stairs, ladders and roofs are carpentry or masonry by material.
       g.gainSkill(kind === 'floor' && mat?.id !== GARDEN_BED.id ? 'paving' : kind === 'ladder' ? 'carpentry' : (mat?.skill ?? 'carpentry'), 0.4);
       g.events.emit('world', t.x, t.y);
-      const what = kind === 'ladder' ? 'ladder' : `${mat?.name.toLowerCase()} ${floorName(floor)}`;
+      const what = floorWords(floor);
       if (isDone(floor)) {
         // A floor finished on a second storey or higher, for the journal (the island's `perform_building` the same).
         if (kind === 'floor' && slotLevel(t, b) >= 1) g.note('storey');

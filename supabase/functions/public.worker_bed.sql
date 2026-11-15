@@ -10,5 +10,6 @@ AS $function$
      and f.material = bed_material() and f.kind = 'floor' and bill_done(f.needed)
      and bed_open(p_world, f.level, p_x, p_y)
      and (f.level <= 0 or storey_reached(p_world, p_x, p_y, f.level))
+     and not exists (select 1 from crop cr where cr.world_id = p_world and cr.x = p_x and cr.y = p_y and cr.storey = f.level)
    order by f.level limit 1
 $function$

@@ -89,7 +89,7 @@ import { CACHE_ACTIONS } from './cacheAction';
 import { SPECIES, type Stance, takeArms } from './creatures';
 import { BOTANIZE_TABLE, BOTANIZE_WATER_TABLE, COIN_FIND_ONE_IN, COIN_FINDS_A_DAY, EMPTY_CHANCE, FIND_CHECK, FORAGE_TABLE, listOf, rollTable } from './forage';
 import { atWaterEdge, WATER_GARDEN_ACTIONS } from './watergarden';
-import { CELLAR_DEPTH, CELLAR_LEVEL, floorOf, type FloorKind, type RoofShape, type Side, type StairHand, type WallType } from './building';
+import { CELLAR_DEPTH, CELLAR_LEVEL, floorOf, floorsSaid, type FloorKind, type RoofShape, type Side, type StairHand, type WallType } from './building';
 import type { Game } from './game';
 import { DEED_RADIUS, DEED_SPACING, DEED_STONE_GAP, deedNearStone, deedRadiusAt, deedTooClose, MAX_DEED_LEVEL } from './deedsize';
 import { PROSPECT_MARK_TIME } from './limits';
@@ -1034,6 +1034,8 @@ export const ACTIONS: ActionDef[] = [
       extra += glassSays(g.buildings, b);
       // And its deck, if the tile stands on piers (`pier_says`).
       if (b) extra += g.pierSays(t.x, t.y);
+      // And what is laid on each storey of it, by its material's name: the island's `floors_said`.
+      if (b) extra += floorsSaid(g.buildings, b, t.x, t.y);
       // And what is dug out under it: the island's `examine_tile_text` says the same.
       const under = g.buildings.cellar(t.x, t.y);
       if (under) {

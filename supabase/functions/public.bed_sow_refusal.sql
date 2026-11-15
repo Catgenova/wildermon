@@ -8,7 +8,7 @@ AS $function$
 declare c crop;
 begin
   if p_level is not null and not bed_open(p_world, p_level, p_x, p_y) then return bed_covered_said(); end if;
-  select * into c from crop cr where cr.world_id = p_world and cr.x = p_x and cr.y = p_y;
+  select * into c from crop cr where cr.world_id = p_world and cr.x = p_x and cr.y = p_y and cr.storey = coalesce(p_level, 0);
   if c.id is null then return null; end if;
   return case when c.level is not distinct from p_level then 'Already growing a crop.' else bed_one_crop_said() end;
 end $function$
