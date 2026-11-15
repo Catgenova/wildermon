@@ -43,6 +43,7 @@ import {
   MAX_LEVELS, NO_PLAN_FROM, RAILING_HEIGHT, roofShapeDef, SINGLE_STAIRS_NAME, SINGLE_STAIRS_SHARE, SPIRAL_STAIRS_NAME, STAIRS_SHARE, roofShapeOf, SIDE_NAMES, WALL_HEIGHT, wallBill, WALL_TYPE_BY_ID, WALL_TYPES,
   describeNeeds, GARDEN_BED,
 } from '../../game/building';
+import { MINE_JOB, OUTCROP_CLEAR, OUTCROP_KINDS, OUTCROP_MINE, OUTCROP_QL, OUTCROP_STAGES, OUTCROP_USES, OUTCROPS_A_RING } from '../../game/outcrops';
 import { CELLAR_ACTION_BY_ID, CELLAR_DAYLIGHT, cellarOutdoor } from '../../game/cellar';
 import { SPIRAL_TREADS } from '../../game/spiral';
 import { materialName } from '../../game/buildActions';
@@ -2588,6 +2589,18 @@ export function helpText(): string {
       Yours, set by the stone used: carrying several does not help. Not used up.</li>
       <li><b>Travel back</b> on it in the pack: to the spot your last journey left from (or the nearest free tile if it cannot be stood on). Once a journey, no cooldown, any distance.</li>
       <li>Refused while: fighting or hunted; driving, pulling, riding or aboard anything; swimming; overloaded; a wildermon follows you; mid-action.</li>
+    </ul>
+    <h3>Outcroppings</h3>
+    <ul>
+      <li>At each daily reset (<b>${hudHour(TREE_DAWN_UTC)} UTC</b>): every outcropping removed; per safe ring (${SAFE_RING} tiles round the island's spawn and each Runestone):
+      ${listed(OUTCROP_KINDS.map((k) => `<b>${k.perRing} ${k.name.toLowerCase()}s</b>`))}, ${OUTCROPS_A_RING} in all.</li>
+      <li>Placed on: grass, dry, a random tile in the ring. Never on a settlement, a building, a road, a Runestone, a crate, a spring or a pool;
+      never beside another placed piece; never within ${OUTCROP_CLEAR} tiles of the spawn or a Runestone's centre.</li>
+      <li><b>${ACTION_BY_ID.get(OUTCROP_MINE)?.label}</b> (right-click it): pickaxe, ${MINE_JOB.skill}; time, stamina and success chance as Mine at a rock face (Miner's Sure Swing counted).</li>
+      <li>Per success: ${listed(OUTCROP_KINDS.map((k) => `${k.name.toLowerCase()} 1 ${itemDef(k.yields).name.toLowerCase()}`))}, all at <b>QL ${OUTCROP_QL}</b>
+      (skill and pickaxe QL do not change it); ${MINE_JOB.skill} trained as at a rock face. A failed swing uses none.</li>
+      <li><b>${OUTCROP_USES} uses</b> each; at 0 it breaks and is removed until the next daily reset. Examine its tile: uses left.</li>
+      <li>Drawn smaller and cracked as uses run down: ${OUTCROP_STAGES + 1} stages.</li>
     </ul>
     <h3>Enchanting</h3>
     ${enchantingHelp()}

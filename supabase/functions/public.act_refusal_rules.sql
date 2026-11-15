@@ -55,6 +55,10 @@ begin
   if swirl_action(p_action) then
     return swirl_refusal(p_world, p_uid, p_action, p_target);
   end if;
+  -- And Mine at an outcropping, for its own reach and tool, and whether it is still there (`outcrops.ts`).
+  if outcrop_action(p_action) then
+    return outcrop_refusal(p_world, p_uid, p_action, p_target);
+  end if;
   -- And a track, which asks only that the kind is a wildermon in your field guide (`tracking.ts`).
   if track_action(p_action) then
     return track_refusal(p_world, p_uid, p_action, p_target);

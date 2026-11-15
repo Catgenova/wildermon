@@ -17,6 +17,7 @@ import { FIREWOOD_RACK } from './firewood';
 import { FOUNTAIN } from './fountain';
 import { GRAVE } from './grave';
 import { DRAGON_ROOST, GOBLIN_WARREN, OGRE_CAVE, ORC_CAMP } from './lairs';
+import { IRON_OUTCROP, ROCK_OUTCROP } from './outcropping';
 import { CHIEF_EAR, GREAT_DRAGON_SCALE, OGRE_KING_JAW, WARLORD_TUSK } from './trophies';
 import { LAMP_PILLAR, LAMP_POST } from './lamps';
 import { MAILBOX } from './mailbox';
@@ -192,4 +193,7 @@ export const KIT_PIECES: Readonly<Record<string, KitPiece>> = {
   warlord_tusk: WARLORD_TUSK,
   ogre_king_jaw: OGRE_KING_JAW,
   great_dragon_scale: GREAT_DRAGON_SCALE,
+  // The outcroppings (`outcrops.ts`).
+  iron_outcrop: IRON_OUTCROP,
+  rock_outcrop: ROCK_OUTCROP,
 };

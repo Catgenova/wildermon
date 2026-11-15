@@ -3184,6 +3184,12 @@
     "why": "Asked for: monsters come only from lairs, with no wandering spawns and no raiding patrols. Every lair kind and number the same on both sides; each sited on its ground, kept from every token and every other lair, the dragon on Volcano Isle's highest ground, and no settlement founded that near one; its garrison up, no monster out of the wild, none past its leash however it is moved, none hunting past it; the boss out after the garrison and told round; a hoard share for each who dealt a tenth of its health, never silver or rare, the map and the book at their odds held at their lines and over a seeded draw; the cleared ring safe and stocked half again; every restock a second either side of its time, the dragon's day; three clears in seven days and it moves; Track to the nearest lair; hoard scales' raised cap. Every clock moved on the lair, never the wall's."
   },
   {
+    "file": "supabase/test/outcrops.ts",
+    "title": "Outcroppings set down daily on grass in the safe ring, mined twenty times at QL 5, gone until the next reset",
+    "shard": 3,
+    "why": "Asked for: iron and rock outcroppings that spawn at random within the Runestone safe zones on grass daily, mined 20 times before breaking and gone until the next daily reset; everything off one at QL 5. Every kind and number the same on both sides; Mine at one is mining's job; a reset sets each kind's count round the spawn and every Runestone, each on dry grass inside its ring, clear of the centres, off settlements, roads, dirt, water and other pieces; the daily tick runs it; Examine says its uses; nothing but Mine is done to one; twenty swings at QL 5, each a use, the last removing it, Mine refused after; the next reset sets a whole new set."
+  },
+  {
     "file": "supabase/test/path.ts",
     "title": "The Path: steps the island confirms, sites, supplies and noted kinds",
     "shard": 5,

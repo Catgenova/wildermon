@@ -58,6 +58,8 @@ export const STROKE_BY_ID: Record<string, Stroke> = {
   drop_dirt: 'earth', drop_dirt_here: 'earth', change_tile: 'earth', dig_stump: 'earth',
   // A critter cache dug out of the winter ground by hand (`winter.ts`).
   dig_cache: 'earth',
+  // A pick into an outcropping (`outcrops.ts`), as into a face.
+  mine_outcrop: 'stone',
   take_ashes_oven: 'earth', take_ashes_fire: 'earth', take_ashes_smelter: 'earth', take_ashes_kiln: 'earth',
   // Stone, whether it is being cut or merely shifted.
   pave_cobble: 'stone', pave_slabs: 'stone', remove_paving: 'stone',

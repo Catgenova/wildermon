@@ -55,6 +55,7 @@ import { FIELD_GLASS_ONLY, glassDone, glazing, isGlasshouse, underGlass } from '
 import { GLASSHOUSE_GROWTH } from '../game/growth';
 import { crateLine, crateOf, CREATURE_CRATE, CREATURE_CRATE_ACTION_BY_ID, occupiedRefusal } from '../game/creaturecrate';
 import { graveLine, graveName, graveSays, graveUnits, isGrave } from '../game/graves';
+import { isOutcropKind, OUTCROP_MINE } from '../game/outcrops';
 import { COMPANION_STANCES, isBaitFor, SPECIES, tameNeeds, STANCE_HINTS, STANCE_NAMES, GATHER_VERB, GATHER_DO } from '../game/creatures';
 import { itemDef, itemName, markOf, storedLine, type Item } from '../game/items';
 import { LYE_USE } from '../game/placeables';
@@ -1876,6 +1877,8 @@ export class UI {
     if (smelter) return { title: `Smelter (${smelterState(smelter)})`, entries: this.smelterEntries(smelter) };
     const piece = pick.furniture !== undefined ? this.game.furniture.get(pick.furniture) : undefined;
     if (piece && isGrave(piece)) return { title: `${graveName(this.game, piece)} (${graveLine(this.game, piece)})`, entries: this.graveEntries(piece) };
+    // An outcropping: Mine and Examine, and its uses left (`outcrops.ts`).
+    if (piece && isOutcropKind(piece.kind)) return { title: `${furnitureName(piece)} (${furnitureState(piece)})`, entries: this.outcropEntries(piece) };
     if (piece) {
       const state = rackSpots(piece) ? `${furnitureState(piece)} · ${this.rackLine(piece)}`
         : piece.kind === CREATURE_CRATE ? `${furnitureState(piece)} · ${crateLine(this.game, piece)}`
@@ -2743,6 +2746,21 @@ export class UI {
    * Picking it up is listed for the one reason it is refused, which says so
    * plainly, as does every entry to somebody whose grave it is not.
    */
+  /** An outcropping's menu: Mine, which the island answers (`outcrop_refusal`), and Examine of its tile. */
+  private outcropEntries(f: PlacedFurniture): MenuItem[] {
+    const g = this.game;
+    const ft: Target = { kind: 'furniture', id: f.id };
+    const entries: MenuItem[] = [];
+    const mine = ACTION_BY_ID.get(OUTCROP_MINE);
+    if (mine) {
+      const reason = mine.check?.(ft, g) ?? null;
+      entries.push({ label: mine.labelFor?.(ft, g) ?? mine.label, hint: reason ?? undefined, disabled: !!reason, onSelect: () => g.requestAction(mine, ft) });
+    }
+    const look = ACTION_BY_ID.get('examine');
+    if (look) entries.push({ label: look.label, onSelect: () => g.requestAction(look, { kind: 'tile', x: f.x, y: f.y, cx: f.x, cy: f.y }) });
+    return entries;
+  }
+
   private graveEntries(f: PlacedFurniture): MenuItem[] {
     const g = this.game;
     const ft: Target = { kind: 'furniture', id: f.id };

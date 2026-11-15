@@ -109,6 +109,7 @@ import { CELLAR_AGEING, WINE_AGE_CAP, WINE_AGE_RATE } from '../../game/ageing';
 import { CUT_VINE, GRAPE_SEASON, TRELLIS_RULE, VINE_BEARS } from '../../game/vineyard';
 import { SEASONS } from '../../world/calendar';
 import { ARTIFACT_FOR, SHEAR_FROM, SHEAR_WOOL } from '../../game/creatureActions';
+import { MINE_JOB, OUTCROP_KINDS, OUTCROP_MINE, OUTCROP_QL, OUTCROP_USES } from '../../game/outcrops';
 import { BREW_SPRING, BREW_SPRING_ALREADY, BREW_SPRING_MUL, BREWING_ACTION_BY_ID, BREWS, GRAPE_WINE_GRAPES, UNDRINKABLE } from '../../game/brewing';
 import { CHART_LEAST, CHART_QL_PER_TILE, CHART_SHEET } from '../../game/cartography';
 import { MEAD_AGE_CAP, MEAD_AGE_RATE } from '../../game/ageing';
@@ -383,6 +384,16 @@ const WAS_DYE = { boil: 3, garment: 1, banner: 2, sail: 3, ship: 5, wall: 1, flo
 const SCRUBS_LATER = new Set(['scrub_wall_paint', 'scrub_floor_paint']);
 
 export const NEWS: News[] = [
+  // Iron and rock outcroppings (`outcrops.ts`).
+  {
+    n: 624,
+    day: '2026-11-15',
+    lines: () => [
+      `New: outcroppings. At each ${RESET}: per safe ring (${SAFE_RING} tiles round the spawn and each Runestone), ${listed(OUTCROP_KINDS.map((k) => `${k.perRing} ${k.name.toLowerCase()}s`))}, on random dry grass; the day's before removed.`,
+      `${ACTION_BY_ID.get(OUTCROP_MINE)?.label ?? 'Mine'} (right-click): pickaxe, ${MINE_JOB.skill}; time, stamina and success chance as at a rock face. Per success: ${listed(OUTCROP_KINDS.map((k) => `${k.name.toLowerCase()} 1 ${itemDef(k.yields).name.toLowerCase()}`))}, QL ${OUTCROP_QL} (skill and pickaxe QL do not change it).`,
+      `${OUTCROP_USES} uses each; at 0: broken, removed until the next ${RESET}. Examine its tile: uses left.`,
+    ],
+  },
   {
     n: 1,
     day: '2026-09-25',

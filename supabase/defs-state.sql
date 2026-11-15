@@ -1624,6 +1624,7 @@ insert into action_def (id, label, verb, skill, tool, corner, range, stamina, ba
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('stop_spring', 'Stop up the spring', 'stopping up the spring', 'digging', 'shovel', false, null, 0.06, 10, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('pick_flowers', 'Pick flowers', 'picking flowers', 'foraging', null, false, null, 0.02, 3, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('collect_motes', 'Collect motes', 'collecting motes', 'elementalism', null, false, null, 0.02, 3, null, false, false);
+insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('mine_outcrop', 'Mine', 'mining', 'mining', 'pickaxe', false, null, 0.06, 8, 12, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('travel_runestone', 'Travel to a Runestone', 'travelling', null, null, false, null, 0, 0, null, true, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('lay_stones', 'Lay stepping stones', 'laying stepping stones', 'masonry', 'trowel', false, null, 0.04, 7, 12, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('lift_stones', 'Take up the stepping stones', 'taking up the stepping stones', 'masonry', null, false, null, 0.03, 5, null, false, false);
@@ -7982,6 +7983,8 @@ insert into furniture_def values ('goblin_warren', 'Goblin warren', 4, 4, null, 
 insert into furniture_def values ('orc_camp', 'Orc camp', 4, 4, null, false, false);
 insert into furniture_def values ('ogre_cave', 'Ogre cave', 4, 4, null, false, false);
 insert into furniture_def values ('dragon_roost', 'Dragon roost', 4, 4, null, false, false);
+insert into furniture_def values ('iron_outcrop', 'Iron outcropping', 4, 4, null, false, false);
+insert into furniture_def values ('rock_outcrop', 'Rock outcropping', 4, 4, null, false, false);
 insert into furniture_def values ('chief_ear', 'Goblin chief''s ear', 1, 1, null, false, false);
 insert into furniture_def values ('warlord_tusk', 'Warlord''s tusk', 1, 1, null, false, false);
 insert into furniture_def values ('ogre_king_jaw', 'Ogre king''s jaw', 1, 1, null, false, false);
@@ -10985,6 +10988,15 @@ create or replace function open_slope() returns double precision language sql im
 create or replace function hill_slope() returns double precision language sql immutable as $fn$ select 24::double precision $fn$;
 create or replace function lair_ring_want() returns int language sql immutable as $fn$ select 4 $fn$;
 create or replace function hoard_scale() returns text language sql immutable as $fn$ select 'hoard' $fn$;
+create or replace function outcrop_kinds() returns table (id text, name text, yields text, per_ring int) language sql immutable as $fn$ select * from (values ('iron_outcrop', 'Iron outcropping', 'iron_ore', 3), ('rock_outcrop', 'Rock outcropping', 'rock_shards', 5)) v (id, name, yields, per_ring) $fn$;
+create or replace function outcrop_uses() returns double precision language sql immutable as $fn$ select 20::double precision $fn$;
+create or replace function outcrop_ql() returns double precision language sql immutable as $fn$ select 5::double precision $fn$;
+create or replace function outcrop_clear() returns double precision language sql immutable as $fn$ select 8::double precision $fn$;
+create or replace function outcrop_draws() returns double precision language sql immutable as $fn$ select 40::double precision $fn$;
+create or replace function outcrops_a_ring() returns double precision language sql immutable as $fn$ select 8::double precision $fn$;
+create or replace function outcrop_mine() returns text language sql immutable as $fn$ select 'mine_outcrop' $fn$;
+create or replace function outcrop_said_gone() returns text language sql immutable as $fn$ select 'Outcropping gone.' $fn$;
+create or replace function outcrop_said_only() returns text language sql immutable as $fn$ select 'Mine only.' $fn$;
 create or replace function thepath_steps() returns text[] language sql immutable as $fn$ select array['cheese', 'forage', 'track', 'tame', 'around', 'tree', 'shafts', 'fish', 'cook', 'walk', 'site', 'found', 'assign', 'crate', 'campfire', 'up2', 'clay', 'chiptail', 'bricks', 'mortar', 'smelter', 'up3', 'prospect', 'ironemole', 'lumps', 'anvil', 'up4', 'snailglow', 'pack', 'plan', 'walls', 'workers', 'up5', 'chestkit']::text[] $fn$;
 create or replace function thepath_detours() returns text[] language sql immutable as $fn$ select array['snufflet', 'finlet', 'puddlehop', 'mudlet', 'sandpip', 'botanize', 'mine']::text[] $fn$;
 create or replace function thepath_kinds() returns text[] language sql immutable as $fn$ select array['bevere', 'quarra', 'mola', 'embra', 'magga', 'rabba', 'wadd', 'holla', 'noot', 'crawler']::text[] $fn$;

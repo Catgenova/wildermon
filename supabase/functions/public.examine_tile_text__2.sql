@@ -82,5 +82,7 @@ begin
   if n >= 1 then v_extra := v_extra || ' Crates: ' || n || '.'; end if;
   -- And the lair it is by (`lair_says`).
   v_extra := v_extra || lair_says(p_world, p_x, p_y);
+  -- And an outcropping on it, with its uses left (`outcrop_says`).
+  v_extra := v_extra || outcrop_says(p_world, p_x, p_y);
   return v_out || v_extra;
 end $function$
