@@ -29,6 +29,7 @@ import { burnsFor, listed, percent } from '../../game/words';
 import { DONE_AFTER, NOTICE_MS } from '../notices';
 import { RING_FADE_MS } from '../pointerring';
 import { COMBAT_CLASSES, CRAFT_CLASSES, MAGIC_CLASSES } from '../../game/classes';
+import { NEW_DAYS } from '../../game/badges';
 import { BANNER_AGAIN, BANNER_DEPTH, BANNER_MS, LEAVING_MS } from '../deedbanner';
 import { RING_REACH, THREAT_SHADE, THREAT_SHADE_HUNTING } from '../../render/renderer';
 import { FIRE_CAPACITY } from '../../game/campfire';
@@ -445,7 +446,7 @@ export class SettingsPanel {
     add(
       'Name icons',
       `Before player names: trade (round, ${CRAFT_CLASSES.length}) and class (shield, ${COMBAT_CLASSES.length + MAGIC_CLASSES.length}). `
-        + 'Chat lines, names over players, Social lists. Hover: name.',
+        + `New: sprout, first ${NEW_DAYS} days ashore. Chat lines, names over players, Social lists. Hover: name, or day of ${NEW_DAYS}.`,
       () => game.settings.nameIcons,
       (v) => {
         game.settings.nameIcons = v;

@@ -3269,6 +3269,19 @@
     "why": "\"Create runecut trade and class icons to display next to player names in chat and in game.\" Every trade and class has an icon of its own, trades on a round stone and classes on a shield, edged in the stones' ink. On an island of its own: the roster's columns carry each player's trade and class to an islander, and every line of talk from before you came says who said it (`rpc_chat`'s `by`). Then, in Chrome, the event window's talk, the Social window and the name plates over people's heads show each player's trade and class, titled, none for a player with neither; a trade changed on the island changes the lines already drawn; Settings, Name icons, takes them all away and puts them back."
   },
   {
+    "file": "supabase/test/newplayer.ts",
+    "title": "First tame sure, and a New sprout before a name for the first week ashore",
+    "shard": 4,
+    "external": [
+      "esbuild",
+      "playwright-core"
+    ],
+    "env": {
+      "NEWPLAYER_STRICT": "1"
+    },
+    "why": "Asked for: a new player's first tame cannot fail on the roll, and a New badge for 7 days. On the island: a body just ashore has tamed nothing and the beat says its first tame is to come; its first offering is taken with the roll pinned to fail, the second at the same roll refused; the same out of a trap; the taming a kind asks, the taming past a wild one's first stage, the offering, reach and room still refuse a first tame and spend nothing; a monster is refused and never a first tame. In the browser: First tame: sure on the card, beside Tame and on the Guiding Light's tame step, and the odds once it is spent. An islander reads everybody's day ashore off the roster's columns; in Chrome a player on their third day has the sprout, titled New: day 3 of 7, in chat, in Social and over their head by day and night, one ashore eight days none; Settings, Name icons, takes it away and puts it back."
+  },
+  {
     "file": "supabase/test/stations.ts",
     "title": "A campfire, a smelter, a kiln and an anvil set down as furniture is, and decaying off a settlement",
     "shard": 5,

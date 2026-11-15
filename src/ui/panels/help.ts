@@ -115,6 +115,8 @@ import { SOUL_CHANCE } from '../../game/sacrifice';
 import { FIRST_AID_ACTION_BY_ID, HERB_HEAL, healAmount, SUITS_HEAL } from '../../game/firstaid';
 import { groomGain } from '../../game/husbandry';
 import { ARTIFACT_FOR, SHEAR_FEATHERS, SHEAR_WOOL } from '../../game/creatureActions';
+import { FIRST_TAME_SAYS } from '../../game/firsttame';
+import { NEW_DAYS, newTitle } from '../../game/badges';
 import { COOKED_MEAT_TOO, OLD_FOR } from '../../game/creatures';
 import { JAR_SEEDS, SEED_JAR, STAMP, STAMP_GOES, STAMP_RARE, TABLET, TABLET_BELOW, TABLET_GAIN, WHETSTONE } from '../../game/relicuse';
 import { BAIT_BY_ID, biteShare, FISH, LINE_REACH } from '../../game/fishing';
@@ -1450,6 +1452,7 @@ export function helpText(): string {
     <ul>
       <li>Before a player's name: trade on a round stone (${CLASSES.filter((c) => c.kind === 'craft').length}), class on a shield (${CLASSES.filter((c) => c.kind !== 'craft').length}). None taken: none shown.</li>
       <li>Where: chat lines, names over players, Social lists. Hover: trade or class name.</li>
+      <li><b>New</b>: a sprout after them, for ${NEW_DAYS} days from the day they came ashore. Hover: <i>${newTitle(3)}</i>.</li>
       <li>Off switch: Settings, Interface, <b>Name icons</b>.</li>
     </ul>
     <h3>What a tool is worth</h3>
@@ -3489,6 +3492,8 @@ export function helpText(): string {
     <ul>
       <li>Carry its food (Snufflet: a berry or vegetable; ${SPECIES.vola.name}: a spice or vegetable), long-press or right-click it, <b>Tame</b>. Food is used up; low taming rarely succeeds;
       a failure has no lasting effect.</li>
+      <li><b>${FIRST_TAME_SAYS}</b>: a player's first tame of a wildermon (offering, or taking one out of a trap): roll cannot fail. Once per player; monsters never.
+      Still asked: taming needed, offering, reach, room. Shown on the card, Tame and the trap's take-out entry until then.</li>
       <li><b>Keep at it</b>: after a refused offering, <b>+${percent(COAX_STEP)} chance</b> per attempt in a row, capped only by the overall cap. Lapses after ${dur(COAX_LAPSE)};
       <b>hitting it ends the run</b>. Examine shows progress.</li>
       <li><b>Taming gained</b> per attempt (offering, taking a catch out of a trap, Call of the Wild): <b>+${percent(1 / TAME_HARD)} per point of taming needed</b>.

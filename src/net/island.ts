@@ -462,10 +462,10 @@ interface GroundAsk {
  * queues -- to every browser on the island: the square of the people on it in kilobytes, 265 kB a read with 150
  * awake against 48 kB of this.
  */
-export const PEOPLE_COLUMNS = 'world_id,uid,name,x,y,level,look,act,act_ends,act_tool,blocked_at,hurt_at,hurt_where,hurt_heavy,fell,craft_class,combat_class';
+export const PEOPLE_COLUMNS = 'world_id,uid,name,x,y,level,look,act,act_ends,act_tool,blocked_at,hurt_at,hurt_where,hurt_heavy,fell,craft_class,combat_class,joined_at';
 
-/** Somebody's trade and class (`src/game/badges.ts`), off their `player` row: for a speaker or a friend not ashore. */
-const BADGE_COLUMNS = 'uid,craft_class,combat_class';
+/** Somebody's trade, class and day ashore (`src/game/badges.ts`), off their `player` row: for a speaker or a friend not ashore. */
+const BADGE_COLUMNS = 'uid,craft_class,combat_class,joined_at';
 
 const PACK_COLUMNS = 'id,def,ql,dmg,count,extra,holder,inside,gx,gy,charges,locked,issued,rare,dye,bless,'
   + 'maker,piece,creature,mark,enchant,engraving,lit,lit_at,infuse';
@@ -1046,6 +1046,8 @@ export interface IslandHooks {
     skin?: SkinSaid;
     /** Seconds of the death grace left (`rpc_settle`'s `grace`), null once it is over (`deathgrace.ts`); every beat says it. */
     grace?: number | null;
+    /** Whether your next tame is your first, and sure (`rpc_settle`'s `first_tame`, `firsttame.ts`); every beat says it. */
+    firstTame?: boolean;
     /**
      * And the journal, which on an island could not tick a single one of its
      * eighty-five goals: forty-six of them count things done, the counting was
@@ -2327,6 +2329,7 @@ export class Island {
         land_from?: number;
         fallen?: unknown;
         grace?: number | null;
+        first_tame?: boolean | null;
       };
       if (typeof said.land_from === 'number') this.landFrom = Math.max(this.landFrom, said.land_from);
       // The hour, on the beat every browser makes anyway. Nothing else has to
@@ -2380,6 +2383,8 @@ export class Island {
         thepath: said.thepath,
         // Not said (the beat leaves nulls out) once it is over.
         grace: graceIn(said.grace),
+        // Not said by an island from before it: what was known stands.
+        firstTame: typeof said.first_tame === 'boolean' ? said.first_tame : undefined,
       });
       // After a death, where to wake, while the body may still pick: shown over the world (`src/ui/respawn.ts`).
       if (!error) this.hooks.fallen?.(fallenIn(said.fallen));

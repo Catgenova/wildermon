@@ -127,6 +127,7 @@ import { areaAsk, areaCount, areaPieces, areaRefusals, areaTotals, passing, PLAN
 import { PlanBar } from './planbar';
 import { jobEntry, pinEntry, pinnable } from './beltmenu';
 import { creatureLines } from './creatureinfo';
+import { FIRST_TAME_SAYS, firstTameSure } from '../game/firsttame';
 import { MARK_COLOURS } from '../game/marks';
 import type { MapSettlement } from './panels/minimap';
 /** How often the map asks the island where every settlement is, in ms, while it is open. */
@@ -3306,7 +3307,10 @@ export class UI {
       const a = ACTION_BY_ID.get(id);
       if (!a || !a.applies(tt, g)) continue;
       const reason = a.check?.(tt, g) ?? null;
-      entries.push({ label: a.labelFor?.(tt, g) ?? a.label, hint: reason ?? undefined, disabled: !!reason, onSelect: () => g.requestAction(a, tt) });
+      // First tame: sure, beside Take out, where it is not refused (`firsttame.ts`).
+      const caught = id === 'take_catch' && t.caught !== null ? g.creatures.get(t.caught) : undefined;
+      const sure = !reason && !!caught && firstTameSure(g.player.firstTame, caught.species);
+      entries.push({ label: a.labelFor?.(tt, g) ?? a.label, hint: reason ?? undefined, ...(sure ? { note: FIRST_TAME_SAYS } : {}), disabled: !!reason, onSelect: () => g.requestAction(a, tt) });
     }
     return entries;
   }
@@ -3553,7 +3557,10 @@ export class UI {
       if (m) entries.push(m);
     };
     push(item('examine_creature'));
-    push(item('tame', target, `Tame (uses ${baitHint(c)})`));
+    // First tame: sure, beside it, where it is not refused (`firsttame.ts`).
+    const tame = item('tame', target, `Tame (uses ${baitHint(c)})`);
+    if (tame && !tame.disabled && firstTameSure(g.player.firstTame, c.species)) tame.note = FIRST_TAME_SAYS;
+    push(tame);
     // One in a crate is let out by opening the crate it is in, standing or carried.
     if (c.mode === 'stored') {
       const h = crateOf(g, c.id);

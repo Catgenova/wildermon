@@ -69,6 +69,8 @@ begin
     end if;
     if not consume(p_world, p_uid, food, 1) then return; end if;
     chance := tame_chance(p_world, p_uid, c);
+    -- First tame: sure (`firstTameSure`).
+    if first_tame(p_world, p_uid, c) then chance := 1; end if;
     perform faith_kinship_spent(p_world, p_uid, c.id);
     update creature set hunger = least(1, hunger + 0.25) where world_id = p_world and id = c.id;
     if random() < chance then

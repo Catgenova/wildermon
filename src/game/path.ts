@@ -8,6 +8,7 @@
  *
  * What only this side shows, and the island never needs: the labels, the arrows and which step is current.
  */
+import { FIRST_TAME_SAYS, firstTameSure } from './firsttame';
 import { KIT_QL, STARTER_FOOD, STARTER_FOOD_COUNT, type Game } from './game';
 import { ACTION_BY_ID, foundingRefusal } from './actions';
 import { layingBill, PLAN_TOOL } from './buildActions';
@@ -264,6 +265,8 @@ function tameHow(g: Game, step: string, sp: string, o: { track?: boolean; assign
     ...(o.track ? [trackSays(sp)] : []),
     // (the job's skill last: its level after it, "Taming 1")
     `${jobSays(g, `wild ${def.name}`, 'tame')} ${def.tameLevel}`,
+    // Your first tame, sure (`firsttame.ts`).
+    ...(firstTameSure(g.player.firstTame, sp) ? [FIRST_TAME_SAYS] : []),
     baitSays(g, step, def),
     ...(o.assign ? [assignSays(g, sp, o.assign)] : []),
   ];
