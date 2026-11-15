@@ -4,6 +4,10 @@ CREATE OR REPLACE FUNCTION public.guide_mark(p_world uuid, p_uid uuid, p_species
  RETURNS void
  LANGUAGE sql
 AS $function$
+  with tamed_first as (
+    update player set tamed_at = now()
+     where p_what = 'tamed' and world_id = p_world and uid = p_uid and tamed_at is null
+  )
   insert into guide as g (world_id, uid, species, tamed, bred)
   select p_world, p_uid, p_species, p_what = 'tamed', p_what = 'bred'
    where p_uid is not null and p_what in ('seen', 'tamed', 'bred')

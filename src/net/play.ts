@@ -519,6 +519,8 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
     game.player.graceEnds = left === null ? null : Date.now() / 1000 + left;
   };
   if (typeof me.played === 'number') sawGrace(graceLeft(me.played));
+  // And whether your first tame is still to come (`firsttame.ts`): no tame on your row yet, until the first beat says it.
+  game.player.firstTame = 'tamed_at' in me && me.tamed_at === null;
 
   /*
    * The rest of you, which the browser had no way of hearing about.
@@ -630,6 +632,8 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
     else if (what.stats && typeof what.stats.aegis === 'number') sawSkin(skinOfStats(what.stats));
     // And the death grace left, which every beat says (`deathgrace.ts`).
     if (what.grace !== undefined) sawGrace(what.grace);
+    // And whether your next tame is your first (`firsttame.ts`).
+    if (what.firstTame !== undefined) game.player.firstTame = what.firstTame;
     if (what.boons) game.player.boons = what.boons as typeof game.player.boons;
     if (what.knacks) game.player.knacks = what.knacks;
     if (what.titles) game.player.titles = what.titles;

@@ -52,6 +52,10 @@ export interface PlayerRow {
   /** Their trade (`player.craft_class`) and class (`player.combat_class`), as class ids; null for none (`src/game/badges.ts`). */
   craft_class?: string | null;
   combat_class?: string | null;
+  /** When they came ashore (`player.joined_at`, written once): New for `NEW_DAYS` after it (`src/game/badges.ts`). */
+  joined_at?: string | null;
+  /** When they first tamed anything (`player.tamed_at`); null until then, and their first tame is sure (`src/game/firsttame.ts`). */
+  tamed_at?: string | null;
   [key: string]: unknown;
 }
 

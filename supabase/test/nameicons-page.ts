@@ -198,3 +198,6 @@ const api = {
   },
 };
 (window as unknown as { nameIcons: typeof api }).nameIcons = api;
+
+/** The page's pieces, for a page built on this one (`newplayer-page.ts`). */
+export const page = { game, ui, renderer, uiRoot, canvasEl, frame, hideAll, rest, at: { x: cx, y: cy } };

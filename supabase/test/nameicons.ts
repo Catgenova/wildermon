@@ -98,7 +98,9 @@ let social: Social | null = null;
 try {
   for (const [uid, name] of FOLK) as(uid, `select rpc_join('${W}', '${name}') \\g /dev/null`);
   for (const [uid, , craft, combat] of FOLK) {
-    psql(`update player set craft_class = ${craft ? `'${craft}'` : 'null'}, combat_class = ${combat ? `'${combat}'` : 'null'}, away = false
+    psql(`update player set craft_class = ${craft ? `'${craft}'` : 'null'}, combat_class = ${combat ? `'${combat}'` : 'null'}, away = false,
+      -- Ashore a month: past New (\`NEW_DAYS\`, newplayer.ts asks after that).
+      joined_at = now() - interval '30 days'
       where world_id = '${W}' and uid = '${uid}';`);
   }
   for (const [uid, name] of FOLK) as(uid, `select rpc_say('${W}', 'Morning from ${name}.') \\g /dev/null`);

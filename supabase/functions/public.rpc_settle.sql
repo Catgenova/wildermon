@@ -314,5 +314,7 @@ begin
     -- Logged off asleep in a bed, by its name: the page logs off (`sleep_fall`).
     || jsonb_build_object('asleep', (select a.name from private.asleep a where a.world_id = v_world and a.uid = me))
     -- The Path's record (`player.thepath`): on, skipped, supplied, counted; null for a body that never turned it on.
-    || jsonb_build_object('thepath', p.thepath));
+    || jsonb_build_object('thepath', p.thepath)
+    -- Whether your next tame is your first, and sure (`first_tame`); null with no body here.
+    || jsonb_build_object('first_tame', case when p.uid is null then null else p.tamed_at is null end));
 end $function$

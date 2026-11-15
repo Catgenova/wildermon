@@ -3,7 +3,8 @@ import { COMBAT_CLASSES, CRAFT_CLASSES, MAGIC_CLASSES, classDef } from './classe
 /**
  * The trade and the class somebody holds, as icons before their name: in
  * chat, over their head and in the Social window (`src/render/emblems.ts`
- * draws them).
+ * draws them). And a sprout after them for `NEW_DAYS` from the day they came
+ * ashore (`player.joined_at`): New, day N of `NEW_DAYS`.
  *
  * A trade is a craft class (`CRAFT_CLASSES`, `player.craft_class` on the
  * island) and a class is a fighting or a magic one (`COMBAT_CLASSES`,
@@ -13,13 +14,32 @@ import { COMBAT_CLASSES, CRAFT_CLASSES, MAGIC_CLASSES, classDef } from './classe
  * none, as a body nobody has taken a trade on is none.
  */
 
-/** Somebody's trade and class, by class id; null for none. */
+/** Somebody's trade and class, by class id; null for none. And when they came ashore, for New. */
 export interface NameBadges {
   trade: string | null;
   cls: string | null;
+  /** When they came ashore (`player.joined_at`), in milliseconds; null when not known. */
+  since: number | null;
 }
 
-export const NO_BADGES: NameBadges = Object.freeze({ trade: null, cls: null });
+export const NO_BADGES: NameBadges = Object.freeze({ trade: null, cls: null, since: null });
+
+/** Days somebody is New for, from the day they came ashore (`player.joined_at`): a sprout before their name. */
+export const NEW_DAYS = 7;
+/** A day, in milliseconds. */
+export const DAY_MS = 86_400_000;
+/** The id of the New sprout among a name's icons. */
+export const NEW_BADGE = 'new';
+
+/** Which day ashore somebody is on, from 1, while they are New; null after `NEW_DAYS`, or not known. */
+export function newDay(since: number | null | undefined, now = Date.now()): number | null {
+  if (typeof since !== 'number' || !Number.isFinite(since)) return null;
+  const day = Math.floor(Math.max(0, now - since) / DAY_MS) + 1;
+  return day <= NEW_DAYS ? day : null;
+}
+
+/** The New sprout's tooltip: "New: day 3 of 7". */
+export const newTitle = (day: number): string => `New: day ${day} of ${NEW_DAYS}`;
 
 const TRADE_IDS: ReadonlySet<string> = new Set(CRAFT_CLASSES.map((c) => c.id));
 const CLASS_IDS: ReadonlySet<string> = new Set([...COMBAT_CLASSES, ...MAGIC_CLASSES].map((c) => c.id));
@@ -30,19 +50,25 @@ export const BADGE_IDS: readonly string[] = [...TRADE_IDS, ...CLASS_IDS];
 /** Whether an id is a trade's (round badge) rather than a class's (shield). */
 export const isTrade = (id: string): boolean => TRADE_IDS.has(id);
 
-/** A `player` row's two columns, checked against the trades and classes there are. */
-export function badgesOf(craft: unknown, combat: unknown): NameBadges {
+/** Which badge an icon is cut on: a trade's round stone, a class's shield, or the New sprout bare. */
+export const badgeShape = (id: string): 'stone' | 'shield' | 'bare' => (id === NEW_BADGE ? 'bare' : isTrade(id) ? 'stone' : 'shield');
+
+/** A `player` row's columns, checked against the trades and classes there are, with when they came ashore. */
+export function badgesOf(craft: unknown, combat: unknown, joined?: unknown): NameBadges {
   const trade = typeof craft === 'string' && TRADE_IDS.has(craft) ? craft : null;
   const cls = typeof combat === 'string' && CLASS_IDS.has(combat) ? combat : null;
-  return trade || cls ? { trade, cls } : NO_BADGES;
+  const at = typeof joined === 'string' ? Date.parse(joined) : NaN;
+  const since = Number.isFinite(at) ? at : null;
+  return trade || cls || since !== null ? { trade, cls, since } : NO_BADGES;
 }
 
-/** The icons to show, trade first, as ids; none with the setting off. */
-export const badgeIds = (b: NameBadges | undefined, on: boolean): string[] =>
-  !on || !b ? [] : [b.trade, b.cls].filter((x): x is string => x !== null);
+/** The icons to show, trade first, then the New sprout while they are New, as ids; none with the setting off. */
+export const badgeIds = (b: NameBadges | undefined, on: boolean, now = Date.now()): string[] =>
+  !on || !b ? [] : [b.trade, b.cls, newDay(b.since, now) !== null ? NEW_BADGE : null].filter((x): x is string => x !== null);
 
-/** An icon's tooltip: "Trade: Smith", "Class: Sworn Blade". */
-export const badgeTitle = (id: string): string => `${isTrade(id) ? 'Trade' : 'Class'}: ${classDef(id)?.name ?? id}`;
+/** An icon's tooltip: "Trade: Smith", "Class: Sworn Blade", "New: day 3 of 7". */
+export const badgeTitle = (id: string, b?: NameBadges, now = Date.now()): string =>
+  id === NEW_BADGE ? newTitle(newDay(b?.since, now) ?? NEW_DAYS) : `${isTrade(id) ? 'Trade' : 'Class'}: ${classDef(id)?.name ?? id}`;
 
 /** Seconds before a uid the island had no row for is asked after again. */
 export const BADGE_ASK_AGAIN = 300;
@@ -65,7 +91,7 @@ export class BadgeBook {
   private waiting = new Set<string>();
   private timer: ReturnType<typeof setTimeout> | null = null;
   /** Reads the rows of these uids; set on an island (`play.ts`). Unset, nothing is asked. */
-  ask: ((uids: string[]) => Promise<Array<{ uid: string; craft_class?: unknown; combat_class?: unknown }>>) | null = null;
+  ask: ((uids: string[]) => Promise<Array<{ uid: string; craft_class?: unknown; combat_class?: unknown; joined_at?: unknown }>>) | null = null;
 
   constructor(
     /** Told the uids whose icons changed. */
@@ -79,14 +105,14 @@ export class BadgeBook {
   }
 
   /** Rows read off the island: each one's trade and class, as of now. */
-  saw(rows: ReadonlyArray<{ uid: string; craft_class?: unknown; combat_class?: unknown }>): void {
+  saw(rows: ReadonlyArray<{ uid: string; craft_class?: unknown; combat_class?: unknown; joined_at?: unknown }>): void {
     const moved: string[] = [];
     for (const r of rows) {
       if (typeof r.uid !== 'string' || !r.uid) continue;
-      const b = badgesOf(r.craft_class, r.combat_class);
       const had = this.by.get(r.uid);
+      const b = badgesOf(r.craft_class, r.combat_class, r.joined_at);
       this.waiting.delete(r.uid);
-      if (had && had.trade === b.trade && had.cls === b.cls) continue;
+      if (had && had.trade === b.trade && had.cls === b.cls && had.since === b.since) continue;
       this.by.set(r.uid, b);
       moved.push(r.uid);
     }

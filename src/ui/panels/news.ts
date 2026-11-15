@@ -1,4 +1,6 @@
 import { PICK_SLACK, PICK_SLACK_TOUCH } from '../../render/pickslack';
+import { FIRST_TAME_SAYS } from '../../game/firsttame';
+import { NEW_DAYS, newTitle } from '../../game/badges';
 import { MONSTER_GROWTH } from '../../render/monster-size';
 import { CROSS_CARE, CROSS_CHANCE, CROSS_SKILL, HYBRID_HARDY, HYBRID_WORK, HYBRIDS } from '../../game/hybridlist';
 import { FORGET_AFTER, LOADING_AT_ONCE, SLICE_MS } from '../../render/wildermon';
@@ -409,6 +411,16 @@ const WAS_DYE = { boil: 3, garment: 1, banner: 2, sail: 3, ship: 5, wall: 1, flo
 const SCRUBS_LATER = new Set(['scrub_wall_paint', 'scrub_floor_paint']);
 
 export const NEWS: News[] = [
+  // First tame sure, and New before a name for a week (`firsttame.ts`, `badges.ts`).
+  {
+    n: 626,
+    day: '2026-11-15',
+    lines: () => [
+      `New: ${FIRST_TAME_SAYS}. A player's first tame of a wildermon (offering, or out of a trap): roll cannot fail. Once per player; monsters never. Still asked: taming needed, offering, reach, room.`,
+      `New: ${FIRST_TAME_SAYS} on the creature card, the Tame entry, the trap's take-out entry and the Guiding Light's tame steps, until that first tame.`,
+      `New: sprout after a player's name, first ${NEW_DAYS} days ashore: chat lines, names over players, Social lists. Hover: ${newTitle(3)}. Off: Settings, Interface, Name icons.`,
+    ],
+  },
   // A walk up to a storey whose staircase is only planned (`Game.unbuiltWayUp`).
   {
     n: 625,

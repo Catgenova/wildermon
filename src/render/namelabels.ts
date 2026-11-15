@@ -1,6 +1,6 @@
 import { inkOr } from './inks';
 import { drawEmblem } from './emblems';
-import { isTrade } from '../game/badges';
+import { badgeShape } from '../game/badges';
 
 /**
  * The names over creatures and people, drawn in one layer over the frame.
@@ -254,7 +254,7 @@ export class NameLabels {
         const lead = iconsW(n);
         let x = cx - (lead + this.width(ctx, this.font, lab.text)) / 2;
         for (const id of lab.icons!) {
-          drawEmblem(ctx, id, isTrade(id) ? 'stone' : 'shield', x, mid - icon / 2, icon);
+          drawEmblem(ctx, id, badgeShape(id), x, mid - icon / 2, icon);
           x += icon + ICON_GAP * s;
         }
         ctx.fillText(lab.text, cx + lead / 2, mid + 0.5);

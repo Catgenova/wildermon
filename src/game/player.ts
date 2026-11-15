@@ -260,6 +260,8 @@ export class Player {
    * Null once it is over.
    */
   graceEnds: number | null = null;
+  /** Whether your next tame is your first, and sure (`firsttame.ts`): as the island said it, at the join and on every beat. */
+  firstTame = false;
   /** Game time each path ability was last called on. */
   usedAt: Record<string, number> = {};
   /**

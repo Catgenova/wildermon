@@ -1,9 +1,10 @@
-import { badgeIds, badgeTitle, isTrade, type NameBadges } from '../game/badges';
+import { badgeIds, badgeShape, badgeTitle, type NameBadges } from '../game/badges';
 import { emblemSvg } from '../render/emblems';
 
 /**
- * The trade and class icons before a name in a window: a line of chat, a row
- * of the Social window (`src/game/badges.ts`, `src/render/emblems.ts`).
+ * The trade and class icons before a name in a window, and the New sprout:
+ * a line of chat, a row of the Social window (`src/game/badges.ts`,
+ * `src/render/emblems.ts`).
  *
  * A span that holds them, kit part `rc-emblem` each, sized to the writing it
  * stands in; each with its name as its title. The span is there whether or
@@ -23,17 +24,19 @@ export function nameIcons(uid: string, b: NameBadges | undefined, on: boolean): 
 /** Put somebody's icons in their box, in place of whatever was there; empty for none, or with Name icons off. */
 export function fillNameIcons(box: HTMLElement, b: NameBadges | undefined, on: boolean): void {
   const ids = badgeIds(b, on);
-  const now = ids.join(' ');
+  const titles = ids.map((id) => badgeTitle(id, b));
+  // The titles with the ids: New's day moves on.
+  const now = titles.join('|');
   if (box.dataset.ids === now) return;
   box.dataset.ids = now;
-  box.replaceChildren(...ids.map((id) => {
+  box.replaceChildren(...ids.map((id, i) => {
     const el = document.createElement('span');
     el.className = 'name-icon rc-emblem';
     el.dataset.emblem = id;
-    el.title = badgeTitle(id);
+    el.title = titles[i];
     el.setAttribute('role', 'img');
-    el.setAttribute('aria-label', badgeTitle(id));
-    el.append(emblemSvg(id, isTrade(id) ? 'stone' : 'shield'));
+    el.setAttribute('aria-label', titles[i]);
+    el.append(emblemSvg(id, badgeShape(id)));
     return el;
   }));
 }

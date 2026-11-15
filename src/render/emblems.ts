@@ -5,7 +5,8 @@ import { IRON_PAINT, METAL_TONE, WOOD_TONE } from './materials';
  * The trade and class icons before a player's name (`src/game/badges.ts`):
  * one emblem per trade and per class, each cut on a badge -- the trades on a
  * round runestone, the classes on a heater shield -- in the island's own
- * colours and edged in the stones' ink (`STONE_INK`).
+ * colours and edged in the stones' ink (`STONE_INK`); and the New sprout,
+ * on no badge, the same way.
  *
  * Written once, as paths in a 24-unit square, and drawn two ways from the
  * same paths: an inline SVG in the windows (`emblemSvg`) and on the canvas
@@ -46,6 +47,9 @@ const OAK = WOOD_TONE.oak;
 const PINE = WOOD_TONE.pine;
 const CHERRY = WOOD_TONE.cherry;
 const LEAF = '#9cc47a';
+/** The New sprout's stem and its larger leaf, a step lighter than the forester's fir. */
+const SPROUT_STEM = '#7fae5e';
+const SPROUT_LEAF = '#b6d98f';
 const SEA = '#8fb8d8';
 const FLAME = '#f2a35e';
 const FLAME_HI = '#ffd98c';
@@ -318,6 +322,19 @@ const algiz = (): Piece[] => [
   line(path('M12 21.4L12 3M12 12.4L5.4 4.6M12 12.4L18.6 4.6'), WARD, 2.4),
 ];
 
+/** A sprout out of a mound of earth: New (`NEW_BADGE`), cut on no badge. */
+const sprout = (): Piece[] => [
+  fill(path('M5.4 21.8Q12 16.4 18.6 21.8Z'), OAK),
+  line(path('M12 20L12 11.6'), SPROUT_STEM, 1.7),
+  fill(path('M12 14.2C8.4 15 4.2 13 3.4 8.2C8 7.6 11.4 9.8 12 14.2Z'), LEAF),
+  fill(path('M12 11.8C12.4 6.6 16.2 3.2 21 3.4C21.2 8.6 17.2 12 12 11.8Z'), SPROUT_LEAF),
+  inkLine(path('M12 11.8L17.4 6.6'), 0.6),
+  inkLine(path('M12 14.2L6.6 10.6'), 0.6),
+];
+
+/** The icons cut on no badge, by id: the New sprout. */
+const BARE_ART: Record<string, () => Piece[]> = { new: sprout };
+
 /** Each trade's and class's emblem, by its id in `classes.ts`. */
 const EMBLEM_ART: Record<string, () => Piece[]> = {
   terraformer: spade, miner: pick, mason: blocks, carpenter: saw, smith: anvil, forester: fir, farmer: sickle,
@@ -333,6 +350,7 @@ export const EMBLEM_NAMES: Record<string, string> = {
   naturalist: 'leaf', fisher: 'fish', mender: 'spanner', artisan: 'cut gem',
   blade: 'sword', berserker: 'double axe', pikeman: 'halberd', archer: 'bow and arrow',
   skirmisher: 'crossed knives', chirurgeon: 'cross', beastmaster: 'paw', kindler: 'flame', binder: 'chain', warder: 'algiz rune',
+  new: 'sprout',
 };
 
 /* ---- the badges ------------------------------------------------------------------------------ */
@@ -354,8 +372,8 @@ const CLASS_BADGE: Piece[] = [
 /** Every id with an emblem. */
 export const EMBLEM_IDS: readonly string[] = Object.keys(EMBLEM_ART);
 
-/** Which badge an id is cut on. */
-export type BadgeShape = 'stone' | 'shield';
+/** Which badge an id is cut on; `bare`, none: the New sprout (`badgeShape` in `src/game/badges.ts`). */
+export type BadgeShape = 'stone' | 'shield' | 'bare';
 
 const built = new Map<string, EmblemPart[]>();
 
@@ -364,7 +382,7 @@ export function emblemParts(id: string, badge: BadgeShape): EmblemPart[] {
   const key = `${badge}:${id}`;
   let got = built.get(key);
   if (got) return got;
-  const art = EMBLEM_ART[id];
+  const art = badge === 'bare' ? BARE_ART[id] : EMBLEM_ART[id];
   if (!art) return [];
   // The emblem made small enough to sit inside the face, its middle on the face's.
   const inner = badge === 'stone' ? { k: 0.8, dx: -0.4, dy: -0.4 } : { k: 0.74, dx: -0.4, dy: -1 };
@@ -373,7 +391,8 @@ export function emblemParts(id: string, badge: BadgeShape): EmblemPart[] {
     const s = xf(p.s, 0, 12, 12, inner.k, inner.dx, inner.dy);
     return p.cased === undefined ? { ...p, s } : { ...p, s, cased: p.cased * inner.k, w: p.cased * inner.k + CASING };
   };
-  const pieces = [...(badge === 'stone' ? TRADE_BADGE : CLASS_BADGE), ...art().map(small)];
+  // One on no badge is drawn the whole square.
+  const pieces = badge === 'bare' ? art() : [...(badge === 'stone' ? TRADE_BADGE : CLASS_BADGE), ...art().map(small)];
   got = pieces.map((p) => ({
     d: svgOf(p.s),
     fill: p.fill ?? null,
