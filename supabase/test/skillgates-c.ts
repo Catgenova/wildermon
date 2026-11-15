@@ -20,14 +20,15 @@
  *   * decided since: stone brick walls at masonry 10; pouring gated by the metal poured, in blacksmithing (a mined metal
  *     at its seam's mining gate, an alloy at its highest metal's): Pour a mould and Cast an anvil refused in the one
  *     rule's words on both sides, a nail or ribbon smith pours only what its own blacksmithing may and is idle `gate`
- *     naming the metal; cooking's and carpentry's long Unlocks one row a level.
+ *     naming the metal; cooking's and carpentry's long Unlocks one row a level;
+ *   * decided since: pouring iron at blacksmithing 1 (steel, its alloy, with it), for you and a fresh nail smith.
  *
  * The island half makes its own island and rolls it back.
  */
 import { Game } from '../../src/game/game';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import { RECIPE_BY_ID, RECIPES, recipeReason } from '../../src/game/recipes';
-import { craftLevel, FORMULA_GATE, hodMay, METAL_GATE, metalGateRefusal, recipeLevel, workerBuildOpen, workerMetalOpen, workerRecipeOpen } from '../../src/game/craftgates';
+import { craftLevel, FORMULA_GATE, hodMay, METAL_GATE, metalGateRefusal, POUR_GATE_SAID, recipeLevel, workerBuildOpen, workerMetalOpen, workerRecipeOpen } from '../../src/game/craftgates';
 import { METALS, MOULD_SKILL } from '../../src/game/metal';
 import { smithLumps } from '../../src/game/creatures';
 import { idleSays } from '../../src/game/workerlog';
@@ -68,7 +69,7 @@ begin
   return c;
 end $m$;
 do $t$
-declare w uuid; u uuid := '${U}'; v_it item; v_id bigint; c creature; v_smelter bigint; v_mould bigint; v_lump bigint; v_copper bigint;
+declare w uuid; u uuid := '${U}'; v_it item; v_id bigint; c creature; v_smelter bigint; v_mould bigint; v_lump bigint; v_copper bigint; v_iron bigint;
 begin
   insert into said select 'GATES', string_agg(kind || ':' || id || ':' || name || ':' || skill || ':' || level, ',' order by kind collate "C", id collate "C")
     from skill_gate where kind in (${KINDS.map((k) => `'${k}'`).join(', ')});
@@ -134,15 +135,20 @@ begin
   perform give(w, u, 'hammer', 1, 40, null);
   v_mould := give(w, u, 'shovel_head_mould', 1, 50, null);
   perform give(w, u, 'anvil_mould', 1, 50, null);
-  v_lump := give(w, u, 'iron_lump', 50, 40, null);
+  v_lump := give(w, u, 'tin_lump', 50, 40, null);
   v_copper := give(w, u, 'copper_lump', 1, 40, null);
+  v_iron := give(w, u, 'iron_lump', 50, 40, null);
   perform pg_temp.skill(w, u, 'blacksmithing', 2.3);
-  insert into said values ('POUR_IRON2', coalesce(firing_refusal(w, u, 'pour_mould', jsonb_build_object('kind', 'smelter', 'id', v_smelter, 'mouldUid', v_mould, 'itemUid', v_lump)), 'ALLOWED'));
-  insert into said values ('ANVIL_IRON2', coalesce(firing_refusal(w, u, 'cast_anvil', jsonb_build_object('kind', 'smelter', 'id', v_smelter, 'itemUid', v_lump)), 'ALLOWED'));
+  insert into said values ('POUR_TIN2', coalesce(firing_refusal(w, u, 'pour_mould', jsonb_build_object('kind', 'smelter', 'id', v_smelter, 'mouldUid', v_mould, 'itemUid', v_lump)), 'ALLOWED'));
+  insert into said values ('ANVIL_TIN2', coalesce(firing_refusal(w, u, 'cast_anvil', jsonb_build_object('kind', 'smelter', 'id', v_smelter, 'itemUid', v_lump)), 'ALLOWED'));
   insert into said values ('POUR_COPPER2', coalesce(firing_refusal(w, u, 'pour_mould', jsonb_build_object('kind', 'smelter', 'id', v_smelter, 'mouldUid', v_mould, 'itemUid', v_copper)), 'ALLOWED'));
-  perform pg_temp.skill(w, u, 'blacksmithing', 5);
-  insert into said values ('POUR_IRON5', coalesce(firing_refusal(w, u, 'pour_mould', jsonb_build_object('kind', 'smelter', 'id', v_smelter, 'mouldUid', v_mould, 'itemUid', v_lump)), 'ALLOWED'));
-  insert into said values ('ANVIL_IRON5', coalesce(firing_refusal(w, u, 'cast_anvil', jsonb_build_object('kind', 'smelter', 'id', v_smelter, 'itemUid', v_lump)), 'ALLOWED'));
+  perform pg_temp.skill(w, u, 'blacksmithing', 10);
+  insert into said values ('POUR_TIN10', coalesce(firing_refusal(w, u, 'pour_mould', jsonb_build_object('kind', 'smelter', 'id', v_smelter, 'mouldUid', v_mould, 'itemUid', v_lump)), 'ALLOWED'));
+  insert into said values ('ANVIL_TIN10', coalesce(firing_refusal(w, u, 'cast_anvil', jsonb_build_object('kind', 'smelter', 'id', v_smelter, 'itemUid', v_lump)), 'ALLOWED'));
+  -- Decided since: iron at blacksmithing 1, poured and cast by a fresh hand.
+  perform pg_temp.skill(w, u, 'blacksmithing', 1);
+  insert into said values ('POUR_IRON1', coalesce(firing_refusal(w, u, 'pour_mould', jsonb_build_object('kind', 'smelter', 'id', v_smelter, 'mouldUid', v_mould, 'itemUid', v_iron)), 'ALLOWED'));
+  insert into said values ('ANVIL_IRON1', coalesce(firing_refusal(w, u, 'cast_anvil', jsonb_build_object('kind', 'smelter', 'id', v_smelter, 'itemUid', v_iron)), 'ALLOWED'));
 
   /* ---- a Formula, a fragment, a tarnished bauble ---- */
   perform give(w, u, 'brush', 1, 40, null);
@@ -234,11 +240,11 @@ const said = (k: string): string => isle.get(k) ?? '';
   check('stone brick building at masonry 10, as decided; clay bricks 10 and sandstone 30 kept',
     gateOf('material', 'stone_brick')?.level === 10 && gateOf('material', 'clay_bricks')?.level === 10 && gateOf('material', 'sandstone')?.level === 30);
   const mined = METALS.filter((m) => m.ore);
-  check(`pouring a mined metal at its seam's mining gate, in ${MOULD_SKILL} (${mined.map((m) => `${m.id} ${METAL_GATE[m.id]}`).join(', ')})`,
-    mined.every((m) => gateOf('metal', m.id)?.level === SEAM_GATE[m.ore!] && gateOf('metal', m.id)?.skill === MOULD_SKILL && gateOf('metal', m.id)?.name === `${m.name} pouring`)
-      && METAL_GATE.copper === 1 && METAL_GATE.iron === 5 && METAL_GATE.tin === 10 && METAL_GATE.gold === 50 && METAL_GATE.seryll === 90);
-  check('an alloy at its highest metal\'s: bronze 10, steel 5, brass 20, pewter 30, electrum 50',
-    METAL_GATE.bronze === 10 && METAL_GATE.steel === 5 && METAL_GATE.brass === 20 && METAL_GATE.pewter === 30 && METAL_GATE.electrum === 50,
+  check(`pouring a mined metal at its seam's mining gate, in ${MOULD_SKILL}, but iron at 1 as decided (${mined.map((m) => `${m.id} ${METAL_GATE[m.id]}`).join(', ')})`,
+    mined.every((m) => gateOf('metal', m.id)?.level === (POUR_GATE_SAID[m.id] ?? SEAM_GATE[m.ore!]) && gateOf('metal', m.id)?.skill === MOULD_SKILL && gateOf('metal', m.id)?.name === `${m.name} pouring`)
+      && METAL_GATE.copper === 1 && METAL_GATE.iron === 1 && SEAM_GATE.iron_ore === 5 && METAL_GATE.tin === 10 && METAL_GATE.gold === 50 && METAL_GATE.seryll === 90);
+  check('an alloy at its highest metal\'s: steel 1 (iron and coal: iron\'s), bronze 10, brass 20, pewter 30, electrum 50',
+    METAL_GATE.bronze === 10 && METAL_GATE.steel === 1 && METAL_GATE.brass === 20 && METAL_GATE.pewter === 30 && METAL_GATE.electrum === 50,
     METALS.filter((m) => !m.ore).map((m) => `${m.id} ${METAL_GATE[m.id]}`).join(', '));
   check('casting a mould stays its own recipe\'s gate: the shovel head mould by its difficulty',
     gateOf('recipe', 'make_shovel_head_mould')?.level === craftLevel(RECIPE_BY_ID.get('make_shovel_head_mould')?.difficulty));
@@ -423,31 +429,43 @@ const isGate = (s: string): boolean => /: needs [a-z ]+ \d+; have \d+\.\d\.$/.te
   g.inventory.add('hammer', { ql: 40 });
   const mould = g.inventory.add('shovel_head_mould', { ql: 50 });
   g.inventory.add('anvil_mould', { ql: 50 });
-  const iron = g.inventory.add('iron_lump', { ql: 40, count: 50, extra: 'Iron' });
+  const tin = g.inventory.add('tin_lump', { ql: 40, count: 50, extra: 'Tin' });
   const copper = g.inventory.add('copper_lump', { ql: 40, count: 1, extra: 'Copper' });
+  const iron = g.inventory.add('iron_lump', { ql: 40, count: 50, extra: 'Iron' });
   const pour = (lump: number): Target => ({ kind: 'smelter', id: smelter.id, mouldUid: mould.uid, itemUid: lump } as Target);
-  const anvil = { kind: 'smelter', id: smelter.id, itemUid: iron.uid } as Target;
+  const anvil = (lump: number): Target => ({ kind: 'smelter', id: smelter.id, itemUid: lump } as Target);
   set(g, 'blacksmithing', 2.3);
-  const words = 'Iron pouring: needs blacksmithing 5; have 2.3.';
-  const p2 = ask(g, 'pour_mould', pour(iron.uid));
-  const a2 = ask(g, 'cast_anvil', anvil);
-  check(`pouring iron into a shovel head mould at blacksmithing 2.3: "${words}", on both sides`,
-    p2 === words && said('POUR_IRON2') === words && metalGateRefusal(g, 'iron') === words, `island "${said('POUR_IRON2')}" / browser "${p2}"`);
-  check('and casting an iron anvil, the same', a2 === words && said('ANVIL_IRON2') === words, `island "${said('ANVIL_IRON2')}" / browser "${a2}"`);
+  const words = 'Tin pouring: needs blacksmithing 10; have 2.3.';
+  const p2 = ask(g, 'pour_mould', pour(tin.uid));
+  const a2 = ask(g, 'cast_anvil', anvil(tin.uid));
+  check(`pouring tin into a shovel head mould at blacksmithing 2.3: "${words}", on both sides`,
+    p2 === words && said('POUR_TIN2') === words && metalGateRefusal(g, 'tin') === words, `island "${said('POUR_TIN2')}" / browser "${p2}"`);
+  check('and casting a tin anvil, the same', a2 === words && said('ANVIL_TIN2') === words, `island "${said('ANVIL_TIN2')}" / browser "${a2}"`);
   const c2 = ask(g, 'pour_mould', pour(copper.uid));
   check('copper at 2.3: past the gate on both sides', !isGate(c2) && !isGate(said('POUR_COPPER2')), `island "${said('POUR_COPPER2')}" / browser "${c2}"`);
-  set(g, 'blacksmithing', 5);
-  const p5 = ask(g, 'pour_mould', pour(iron.uid));
-  const a5 = ask(g, 'cast_anvil', anvil);
-  check('iron at 5: poured and cast, on both sides', p5 === 'ALLOWED' && said('POUR_IRON5') === 'ALLOWED' && a5 === 'ALLOWED' && said('ANVIL_IRON5') === 'ALLOWED',
-    `island ${said('POUR_IRON5')} ${said('ANVIL_IRON5')} / browser ${p5} ${a5}`);
+  set(g, 'blacksmithing', 10);
+  const p10 = ask(g, 'pour_mould', pour(tin.uid));
+  const a10 = ask(g, 'cast_anvil', anvil(tin.uid));
+  check('tin at 10: poured and cast, on both sides', p10 === 'ALLOWED' && said('POUR_TIN10') === 'ALLOWED' && a10 === 'ALLOWED' && said('ANVIL_TIN10') === 'ALLOWED',
+    `island ${said('POUR_TIN10')} ${said('ANVIL_TIN10')} / browser ${p10} ${a10}`);
+  // Decided since: pouring iron is level 1.
+  set(g, 'blacksmithing', 1);
+  const i1 = ask(g, 'pour_mould', pour(iron.uid));
+  const ia1 = ask(g, 'cast_anvil', anvil(iron.uid));
+  check('iron at blacksmithing 1: poured and cast, on both sides (iron 1, as decided)',
+    i1 === 'ALLOWED' && said('POUR_IRON1') === 'ALLOWED' && ia1 === 'ALLOWED' && said('ANVIL_IRON1') === 'ALLOWED' && metalGateRefusal(g, 'iron') === null,
+    `island ${said('POUR_IRON1')} ${said('ANVIL_IRON1')} / browser ${i1} ${ia1}`);
   const ribbon = (lv: number): string => smithLumps('ribbon').filter((id) => workerMetalOpen({ skills: { blacksmithing: lv } }, id)).join(',');
-  check(`a ribbon smith at blacksmithing 1 pours copper only (${ribbon(1)}), at 20 the metals to 20 (${ribbon(20)}); a nail smith at 1 none; on both sides`,
-    ribbon(1) === 'copper_lump' && said('RIBBON1') === ribbon(1) && said('RIBBON20') === ribbon(20) && ribbon(20) === 'copper_lump,iron_lump,tin_lump,zinc_lump,bronze_lump,brass_lump,steel_lump'
-      && said('NAIL1') === '' && !workerMetalOpen({ skills: { blacksmithing: 1 } }, 'iron_lump'),
-    `island ${said('RIBBON1')} / ${said('RIBBON20')} / ${said('NAIL1')} — browser ${ribbon(1)} / ${ribbon(20)}`);
-  const idle = idleSays({ why: 'gate', n: 0, what: ['metal', 'iron'] }, 'nail', null, 1, { blacksmithing: 1 });
-  check(`a nail smith with only iron in the stores: "${idle}"`, idle === 'Idle: Iron pouring in your settlement stores needs blacksmithing 5 (yours 1.0).', idle);
+  const nail = (lv: number): string => smithLumps('nail').filter((id) => workerMetalOpen({ skills: { blacksmithing: lv } }, id)).join(',');
+  check(`a ribbon smith at blacksmithing 1 pours copper, iron and steel (${ribbon(1)}), at 20 the metals to 20 (${ribbon(20)}); on both sides`,
+    ribbon(1) === 'copper_lump,iron_lump,steel_lump' && said('RIBBON1') === ribbon(1) && said('RIBBON20') === ribbon(20)
+      && ribbon(20) === 'copper_lump,iron_lump,tin_lump,zinc_lump,bronze_lump,brass_lump,steel_lump',
+    `island ${said('RIBBON1')} / ${said('RIBBON20')} — browser ${ribbon(1)} / ${ribbon(20)}`);
+  check(`a fresh nail smith (blacksmithing 1) pours iron (${nail(1)}), on both sides`,
+    nail(1) === 'iron_lump' && said('NAIL1') === 'iron_lump' && workerMetalOpen({ skills: { blacksmithing: 1 } }, 'iron_lump'),
+    `island ${said('NAIL1')} — browser ${nail(1)}`);
+  const idle = idleSays({ why: 'gate', n: 0, what: ['metal', 'tin'] }, 'ribbon', null, 1, { blacksmithing: 1 });
+  check(`a ribbon smith with only tin in the stores: "${idle}"`, idle === 'Idle: Tin pouring in your settlement stores needs blacksmithing 10 (yours 1.0).', idle);
 }
 
 /* ---- the Skills window ----------------------------------------------------------- */

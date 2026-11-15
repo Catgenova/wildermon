@@ -14,7 +14,7 @@ import { dyeChoice, dyeEnough, pickDyeAsks, sourceSays, type DyeSource } from '.
 import type { Hoard } from './treasure';
 import { packTreeData, TILE_DEFS, TileType, TREE_DEFS, TREE_AGES, TREE_ROOM_ONE, TREE_ROOM_TWO, TREE_SEED_BOTH, TREE_SEED_NONE, TREE_SEED_REACH, TREE_SEEDS, lastDawn, treeAge, treeSpecies, treeVariant, LAWN_AFTER, mownDays, mownToday, FLOWERS_PICKED, WEAR_FALL, WEAR_MOST, WEAR_TRAIL, trailGround, wears } from '../world/tiles';
 import { seasonAt, yearOf } from '../world/calendar';
-import { oreAt } from '../world/ore';
+import { bedrockAt } from '../world/ore';
 import { World } from '../world/world';
 import { ACTIONS, ACTION_BY_ID, SPOIL_ORDER, spoilFrom, TEACHES_NOTHING, TRY_LEARN, WEAR_PER_GO, type ActionDef, type Target } from './actions';
 import { feedable, feedFill, riposte } from './creatureActions';
@@ -85,7 +85,7 @@ import { BRIDGE_END_HERE, bridgeEndAt, bridgeEndRefusal, deckDown, hingeKey, hin
 import { CLEAR_OF_BUILDINGS, LIFT_PER_MASONRY, concreteFor, foundationBill, foundationDone, liftFor, masonryFor, pourIntoFoundation, soilSays, type Foundation } from './foundations';
 import { poolLevel } from '../world/springs';
 import { deckOver, floorNear, levelGround, pierDrop, pierGround, pierRefusal, pierSays, type PierGround } from './piers';
-import { metres } from '../world/tiles';
+import { isSeam, metres } from '../world/tiles';
 import { greenNow, mossyPiece } from './greening';
 import { WATER_PLANT_BY_ID, type WaterPlant, type WaterPlantKind } from '../world/waterplants';
 import { liveSettings, type Settings } from './settings';
@@ -8669,10 +8669,12 @@ export class Game {
     for (let ty = y - radius; ty <= y + radius; ty++) {
       for (let tx = x - radius; tx <= x + radius; tx++) {
         if (!this.world.inBounds(tx, ty)) continue;
-        const ore = oreAt(this.world, tx, ty);
-        if (!ore) continue;
+        // Every seam, wherever it lies, as Prospect reads it: bare, under soil, or below water.
+        const ore = bedrockAt(this.world, tx, ty);
+        if (!isSeam(ore)) continue;
         found.push(ty * this.world.w + tx);
-        // A bare vein is always named; a buried one by your prospecting, not the finder's (`seenVein`).
+        // A bare vein is always named; a buried one by your prospecting, not the finder's: "Unidentified metal" under
+        // its gate (`seenVein`).
         names.add(seenVein(ore, this, this.world.getTile(tx, ty) === TileType.Rock).toLowerCase());
       }
     }

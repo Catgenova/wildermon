@@ -5,12 +5,7 @@ CREATE OR REPLACE FUNCTION public.face_gate_refusal(p_world uuid, p_uid uuid, p_
  LANGUAGE plpgsql
  STABLE
 AS $function$
-declare r rock_def; g skill_gate;
 begin
   if land_tile(p_world, p_x, p_y) <> tile_id('Rock') then return null; end if;
-  r := bedrock_at(p_world, p_x, p_y);
-  g := skill_gate_of(case when r.seam then 'seam' else 'stone' end, r.yields);
-  if g.kind is null then return null; end if;
-  return skill_gate_refusal(r.name, g.skill, skill_of(p_world, p_uid, g.skill),
-    case when r.seam then greatest(0, g.level - pk(p_world, p_uid, 'ore:below', 0))::int else g.level end);
+  return rock_gate_refusal(p_world, p_uid, bedrock_at(p_world, p_x, p_y));
 end $function$

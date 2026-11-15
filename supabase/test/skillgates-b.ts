@@ -19,6 +19,10 @@
  *   * decided since: a bare vein is always named, to everybody: on the wire (`mask_rock` leaves a Rock tile alone, a
  *     buried one sent unidentified), in `tile_change` (the rock of a square gone bare), in Prospect's lines standing on
  *     it and in a prospector's find, and its mining refusal names it;
+ *   * decided since: Mine out the cellar into stone bedrock asks the stone's quarry gate (marble 30, slate 20) and a
+ *     seam's mining gate, in the one rule's words, on both sides;
+ *   * decided since: a prospector finds buried veins too, told to its keeper as "Unidentified metal" over the keeper's
+ *     prospecting gate, as a Prospect would;
  *   * the Skills window's Unlocks for driving, sailing, mining, taming (one row a level), fishing and prospecting.
  *
  * The island half makes its own island and rolls it back.
@@ -35,6 +39,8 @@ import {
   UNLOCK_ROW_NAMES,
 } from '../../src/game/skillgates';
 import { layChange } from '../../src/net/landpack';
+import { cellarGate, cellarSoil } from '../../src/game/cellar';
+import type { Side } from '../../src/game/building';
 import { bedrockAt } from '../../src/world/ore';
 import { ROCK_VARIANTS, TileType, UNIDENTIFIED_ROCK } from '../../src/world/tiles';
 import { windAt } from '../../src/game/wind';
@@ -48,6 +54,10 @@ const IRON = rockOf('iron_ore');
 const COPPER = rockOf('copper_ore');
 const MARBLE = rockOf('marble_shards');
 const PLAIN = rockOf('rock_shards');
+const SLATE = rockOf('slate_shards');
+/** A one-tile hut, walled all round, with its cellar dug down to the rock: Mine out the cellar is asked there. */
+const HUT: [number, number] = [T - 5, T + 6];
+const HUT_ID = 9101;
 /** The harbour: dry corners to `HX`, deep water past it; boats at (`HX` + 1, `HY`), you on the bank. */
 const HX = 54;
 const HY = 58;
@@ -208,6 +218,24 @@ begin
   perform pg_temp.skill(w, u, 'mining', 30);
   insert into said values ('MARBLE30', pg_temp.ask(w, u, 'mine', jsonb_build_object('kind', 'tile', 'x', ${T + 4}, 'y', ${T + 3}, 'cx', ${T + 4}, 'cy', ${T + 3})));
 
+  /* ---- decided since: a cellar cut into stone bedrock, by the stone's gate as a face of it ---- */
+  insert into building (world_id, id, name, levels, work_level, planned_by) values (w, ${HUT_ID}, 'Gate hut', 1, 0, u);
+  insert into building_tile (world_id, building, x, y) values (w, ${HUT_ID}, ${HUT[0]}, ${HUT[1]});
+  insert into wall (world_id, level, dir, x, y, building, type, material, needed, total) values
+    (w, 0, 'h', ${HUT[0]}, ${HUT[1]}, ${HUT_ID}, 'solid', 'log', '{"log": 0}', '{"log": 4}'),
+    (w, 0, 'h', ${HUT[0]}, ${HUT[1] + 1}, ${HUT_ID}, 'solid', 'log', '{"log": 0}', '{"log": 4}'),
+    (w, 0, 'v', ${HUT[0]}, ${HUT[1]}, ${HUT_ID}, 'solid', 'log', '{"log": 0}', '{"log": 4}'),
+    (w, 0, 'v', ${HUT[0] + 1}, ${HUT[1]}, ${HUT_ID}, 'solid', 'log', '{"log": 0}', '{"log": 4}');
+  insert into cellar_tile (world_id, x, y, building, dug) values (w, ${HUT[0]}, ${HUT[1]}, ${HUT_ID}, cellar_soil(w, ${HUT[0]}, ${HUT[1]}));
+  update player set x = ${HUT[0]}.5, y = ${HUT[1]}.5, level = 0 where world_id = w and uid = u;
+  for i in 1..4 loop
+    perform land_set_rock(w, ${HUT[0]}, ${HUT[1]}, (array[${MARBLE}, ${MARBLE}, ${SLATE}, ${IRON}])[i]);
+    perform pg_temp.skill(w, u, 'mining', (array[12, 30, 12, 2.3])[i]);
+    insert into said values ('CELLAR' || i, pg_temp.ask(w, u, 'mine_cellar',
+      jsonb_build_object('kind', 'tile', 'x', ${HUT[0]}, 'y', ${HUT[1]}, 'cx', ${HUT[0]}, 'cy', ${HUT[1]})));
+  end loop;
+  perform land_set_rock(w, ${HUT[0]}, ${HUT[1]}, ${PLAIN});
+
   /* ---- a quarrier at mining 1 by the marble (the iron is a miner's, not a quarrier's) ---- */
   update player set x = ${T}.5, y = ${T + 1}.5 where world_id = w and uid = u;
   v_m := pg_temp.quarrier(w, u, 1);
@@ -255,6 +283,16 @@ begin
   insert into said select 'LAND0', encode(decode(j->'rows'->0->>'rock', 'base64'), 'hex')
     from rpc_land_window(w, ${T - 1}, ${T - 4}, ${T + 1}, ${T - 4}) j;
   insert into said select 'CHANGE0', coalesce((select rock::text from tile_change where world_id = w and x = ${T + 1} and y = ${T - 4} order by n desc limit 1), 'none');
+  -- Decided since: a prospector finds buried veins too, told to its keeper by the keeper's prospecting.
+  v_c := creature_spawn(w, 'magga', ${T}.5, ${T - 3}.5, 'deed', now() - interval '60 days', u);
+  update creature set name = 'Pip' where world_id = w and id = v_c;
+  for i in 1..2 loop
+    perform pg_temp.skill(w, u, 'prospecting', (array[1, 5])[i]);
+    delete from event where world_id = w and uid = u;
+    insert into said values ('BURIED_N' || i, read_ground(w, v_c, ${T}, ${T - 4}, 3)::text);
+    insert into said select 'BURIED' || i, e.text from event e where e.world_id = w and e.uid = u and e.text like 'Pip found ore: %' order by e.n desc limit 1;
+  end loop;
+  delete from creature where world_id = w and id = v_c;
   -- A prospector's find, bare, told to its keeper by the keeper's prospecting.
   perform pg_temp.bare(w, ${T + 1}, ${T - 4}, ${IRON});
   perform pg_temp.bare(w, ${T - 1}, ${T - 4}, ${COPPER});
@@ -447,6 +485,36 @@ const ask = (g: Game, id: string, t: Target): string => ACTION_BY_ID.get(id)?.ch
   check('and at 30, allowed on both sides', m30 === 'ALLOWED' && said('MARBLE30') === 'ALLOWED', `island ${said('MARBLE30')} / browser ${m30}`);
 }
 
+/* ---- decided since: a cellar cut into stone bedrock ----------------------------------------- */
+
+{
+  const g = fresh();
+  g.inventory.add('pickaxe', { ql: 40 });
+  const [hx, hy] = HUT;
+  const b = g.buildings.create('Gate hut', hx, hy);
+  for (const side of ['n', 'e', 's', 'w'] as Side[]) {
+    const wall = g.buildings.setWall(b, 0, hx, hy, side, 'solid', 'log');
+    for (const k of Object.keys(wall.needed)) wall.needed[k] = 0;
+  }
+  g.buildings.setCellar(b.id, hx, hy, cellarSoil(g.world, hx, hy));
+  g.player.x = hx + 0.5;
+  g.player.y = hy + 0.5;
+  g.player.level = 0;
+  const t = { kind: 'tile', x: hx, y: hy, cx: hx, cy: hy } as Target;
+  const asked: string[] = [];
+  for (const [rock, lv] of [[MARBLE, 12], [MARBLE, 30], [SLATE, 12], [IRON, 2.3]] as const) {
+    buried(g, hx, hy, rock);
+    g.skills.values.set('mining', lv);
+    asked.push(cellarGate(g, 'mine_cellar', t) ?? ask(g, 'mine_cellar', t));
+  }
+  const want = [skillGateRefusal('Marble', 'mining', 12, gateOf('stone', 'marble_shards')!.level), 'ALLOWED',
+    skillGateRefusal('Slate', 'mining', 12, gateOf('stone', 'slate_shards')!.level), 'Iron vein: needs mining 5; have 2.3.'];
+  check(`Mine out the cellar into marble at mining 12: "${want[0]}"; at 30, allowed; slate at 12: "${want[2]}"; an iron seam at 2.3: "${want[3]}"; the quarry and seam gates in the one rule's words, on both sides`,
+    want[0] === 'Marble: needs mining 30; have 12.0.' && want[2] === 'Slate: needs mining 20; have 12.0.'
+      && asked.every((a, i) => a === want[i] && said(`CELLAR${i + 1}`) === want[i]),
+    `island ${[1, 2, 3, 4].map((i) => `"${said(`CELLAR${i}`)}"`).join(' ')} / browser ${asked.map((a) => `"${a}"`).join(' ')}`);
+}
+
 /* ---- a quarrier ------------------------------------------------------------- */
 
 const quarrier = (g: Game, skill: number): Creature => {
@@ -570,6 +638,27 @@ const run = (g: Game, c: Creature, secs: number): void => {
     (groundReading(g, T + 1, T - 4) ?? '').startsWith('Iron vein') && (groundReading(other, T + 1, T - 4) ?? '').startsWith(UNIDENTIFIED_METAL)
       && veinTip(bedrockAt(other.world, T + 1, T - 4), other) !== null,
     `${groundReading(g, T + 1, T - 4)} / ${groundReading(other, T + 1, T - 4)}`);
+  // Decided since: a prospector finds buried veins too; over the keeper's prospecting gate, "Unidentified metal".
+  {
+    const b = fresh();
+    buried(b, T + 1, T - 4, IRON);
+    buried(b, T - 1, T - 4, COPPER);
+    const pip = b.creatures.spawn('magga', T + 0.5, T - 3.5, 'deed', () => 0.5, -1e9);
+    pip.name = 'Pip';
+    for (const [i, lv] of [[1, 1], [2, 5]] as const) {
+      b.skills.values.set('prospecting', lv);
+      b.log.length = 0;
+      b.prospected = null;
+      pip.noRoomAt = -1e9;
+      b.readGround(pip, T, T - 4, 3);
+      const found = b.log.find((l) => l.text.startsWith('Pip found ore: '))?.text ?? '';
+      const want = lv < gateOf('vein', 'iron_ore')!.level
+        ? `Pip found ore: copper vein, ${UNIDENTIFIED_METAL.toLowerCase()}.` : 'Pip found ore: copper vein, iron vein.';
+      check(`a prospector's find of buried veins told to its keeper at prospecting ${lv}: "${want}", on both sides, both marked`,
+        found === want && said(`BURIED${i}`) === want && said(`BURIED_N${i}`) === '2' && b.isProspected(T + 1, T - 4) && b.isProspected(T - 1, T - 4),
+        `island "${said(`BURIED${i}`)}" (${said(`BURIED_N${i}`)} tiles) / browser "${found}"`);
+    }
+  }
   // A prospector's find, told to its keeper by the keeper's prospecting, on both sides.
   const k = fresh();
   bare(k, T + 1, T - 4, IRON);

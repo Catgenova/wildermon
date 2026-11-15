@@ -7660,6 +7660,8 @@ insert into skill_gate values ('recipe', 'make_tincture_thyme', 'Tincture', 'alc
 insert into skill_gate values ('recipe', 'make_dye_strawberry', 'Boil strawberries for red dye', 'alchemy', 30);
 insert into skill_gate values ('recipe', 'make_brush', 'Brush', 'animal_husbandry', 1);
 insert into skill_gate values ('metal', 'copper', 'Copper pouring', 'blacksmithing', 1);
+insert into skill_gate values ('metal', 'iron', 'Iron pouring', 'blacksmithing', 1);
+insert into skill_gate values ('metal', 'steel', 'Steel pouring', 'blacksmithing', 1);
 insert into skill_gate values ('recipe', 'make_anvil_mould', 'Anvil mould', 'blacksmithing', 1);
 insert into skill_gate values ('recipe', 'make_arrow_head_mould', 'Arrow head mould', 'blacksmithing', 1);
 insert into skill_gate values ('recipe', 'make_bracket_mould', 'Bracket mould', 'blacksmithing', 1);
@@ -7681,8 +7683,6 @@ insert into skill_gate values ('recipe', 'make_short_sword_blade_mould', 'Short 
 insert into skill_gate values ('recipe', 'make_shovel_head_mould', 'Shovel head mould', 'blacksmithing', 1);
 insert into skill_gate values ('recipe', 'make_sickle_blade_mould', 'Sickle blade mould', 'blacksmithing', 1);
 insert into skill_gate values ('recipe', 'make_trowel_blade_mould', 'Trowel blade mould', 'blacksmithing', 1);
-insert into skill_gate values ('metal', 'iron', 'Iron pouring', 'blacksmithing', 5);
-insert into skill_gate values ('metal', 'steel', 'Steel pouring', 'blacksmithing', 5);
 insert into skill_gate values ('recipe', 'make_coin_die_mould', 'Coin die mould', 'blacksmithing', 5);
 insert into skill_gate values ('recipe', 'make_helm_mould', 'Helm mould', 'blacksmithing', 5);
 insert into skill_gate values ('recipe', 'make_pendant_mould', 'Pendant mould', 'blacksmithing', 5);
