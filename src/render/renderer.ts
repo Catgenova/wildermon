@@ -42,7 +42,7 @@ import { foundationDone } from '../game/foundations';
 import { hash2 } from '../world/noise';
 import { bareRock, DAMP_SAND, dustiness, FLAT, growth, oreWash, PAVED, ROCK_VARIANTS, SLAB_VARIANTS, STREWN, TileType, TILE_DEFS, COVERED, bushSpecies, slabVariant, trailGround, stonesBed, treeSpecies, treeVariant } from '../world/tiles';
 import { drawRunestone, runestoneHit, RunestoneNight, softHole, type NightHole, type OccluderClip } from './runestone';
-import { BUSH3D_SPECIES, bush3dFoot, bush3dShadow, formAt, nextSunStep, STUMP3D_SPECIES, SWAY_FRAMES, sunStepOf, swayAt, TREE3D_SPECIES, tree3dFoot, tree3dFrame, tree3dGirth, tree3dIdle, tree3dShadow, tree3dStats, type TreeView } from './trees3d';
+import { BUSH3D_SPECIES, bush3dFoot, bush3dShadow, flatIdle, formAt, nextSunStep, STUMP3D_SPECIES, SWAY_FRAMES, sunStepOf, swayAt, TREE3D_SPECIES, tree3dFoot, tree3dFrame, tree3dGirth, tree3dIdle, tree3dShadow, tree3dStats, type TreeView } from './trees3d';
 import { drawRuneLantern, drawRuneLanternBloom, drawRuneLanternLive, runeLanternHit, runeLanternNight, runeLanternPool, runeLanternVariant, type RuneLanternLook } from './runelantern';
 import { deedTotemBounds, deedTotemHits, deedTotemNight, deedTotemVariant, drawDeedTotem, drawDeedTotemBloom, drawDeedTotemLive } from './deedtotem';
 import { drawWorkPost, drawWorkPostLive, drawWorkPostNight, workPostBounds, workPostHit, workPostNight, workPostVariant, type WorkPostLook } from './workpost';
@@ -3993,6 +3993,9 @@ export class Renderer {
         // The look turns before the sun next steps: the sun's next step would be made in the look going out.
         if (look && look.step === sunStepOf(this.solidHour, this.solidDark)) next = null;
         tree3dIdle(IDLE_FRAME_MS - (performance.now() - now), next, this.game.player.x, this.game.player.y, look);
+      } else if (this.still) {
+        // And the flat ones' (`flatIdle`).
+        flatIdle(IDLE_FRAME_MS - (performance.now() - now), this.game.player.x, this.game.player.y);
       }
     } finally {
       cam.cx = cx;
@@ -4832,7 +4835,7 @@ export class Renderer {
             const data = world.viewData(x, y, false);
             const spr = t === TileType.Tree ? treeSprite(treeSpecies(data), treeVariant(data), this.year.season, this.year.day, this.treeAt(treeSpecies(data), x, y)) : t === TileType.Bush ? bushSprite(bushSpecies(data), this.year.season, this.year.day, this.bushAt(bushSpecies(data), x, y)) : stumpSprite(treeSpecies(data), this.year.season, this.year.day, this.stumpAt(treeSpecies(data), x, y));
             const avg = (c[0] + c[1] + c[2] + c[3]) / 4;
-            this.take(t === TileType.Tree ? 'tree' : t === TileType.Bush ? 'bush' : 'stump', x, y, baseX + (spr.solid ? solidX : 0), baseY + hh - avg * hs + (spr.solid ? solidY : 0), spr);
+            this.take(t === TileType.Tree ? 'tree' : t === TileType.Bush ? 'bush' : 'stump', x, y, baseX + (spr.solid || spr.centred ? solidX : 0), baseY + hh - avg * hs + (spr.solid || spr.centred ? solidY : 0), spr);
           }
           if (this.structs.nearAny(x, y)) this.drawStructures(x, y, V, d > playerDepth);
           if (!aloft && this.hingeTiles.has(x * 65536 + y)) this.walls.drawGateAt(x, y, V);
@@ -4852,7 +4855,7 @@ export class Renderer {
           const data = world.getData(x, y);
           const spr = t === TileType.Tree ? treeSprite(treeSpecies(data), treeVariant(data), this.year.season, this.year.day, this.treeAt(treeSpecies(data), x, y)) : t === TileType.Bush ? bushSprite(bushSpecies(data), this.year.season, this.year.day, this.bushAt(bushSpecies(data), x, y)) : stumpSprite(treeSpecies(data), this.year.season, this.year.day, this.stumpAt(treeSpecies(data), x, y));
           const avg = (c[0] + c[1] + c[2] + c[3]) / 4;
-          this.take(t === TileType.Tree ? 'tree' : t === TileType.Bush ? 'bush' : 'stump', x, y, baseX + (spr.solid ? solidX : 0), baseY + hh - avg * hs + (spr.solid ? solidY : 0), spr);
+          this.take(t === TileType.Tree ? 'tree' : t === TileType.Bush ? 'bush' : 'stump', x, y, baseX + (spr.solid || spr.centred ? solidX : 0), baseY + hh - avg * hs + (spr.solid || spr.centred ? solidY : 0), spr);
         }
         if (!cutHere && !aloft && this.game.ground.size && this.game.groundAt(x, y).length) {
           const avg = (this.game.buildings.pierTiles.size ? this.game.pierDeckAt(x, y) : null) ?? (c[0] + c[1] + c[2] + c[3]) / 4;
@@ -6534,7 +6537,7 @@ export class Renderer {
     const world = this.game.world;
     if (world.getTile(x, y) !== TileType.Tree) return undefined;
     const data = world.getData(x, y);
-    return benchRound(tree3dGirth(treeSpecies(data), treeVariant(data), x, y, BENCH_BAND[0], BENCH_BAND[1]));
+    return benchRound(tree3dGirth(treeSpecies(data), treeVariant(data), x, y, BENCH_BAND[0], BENCH_BAND[1], this.still));
   }
 
   /** Whether a tile stands on piers, for the pond painter (`WaterFrame.decked`). */
@@ -7759,8 +7762,8 @@ export class Renderer {
        * as big or better, one in four is half size or less, and the rest
        * fill the middle. That is what puts a top and a floor on a canopy.
        */
-      // A stump drawn as a solid is the foot of the tree that grew there: bigger or smaller with it, by less (`stumpGrown`).
-      const grew = ent.kind === 'tree' || ent.kind === 'bush' ? grownAt(ent.x, ent.y) : ent.kind === 'stump' && spr.solid ? stumpGrown(ent.x, ent.y) : 1;
+      // A stump drawn as a solid, or flat as one, is the foot of the tree that grew there: bigger or smaller with it, by less (`stumpGrown`).
+      const grew = ent.kind === 'tree' || ent.kind === 'bush' ? grownAt(ent.x, ent.y) : ent.kind === 'stump' && (spr.solid || spr.centred) ? stumpGrown(ent.x, ent.y) : 1;
       const dw = spr.w * zoom * grew;
       const dh = spr.h * zoom * grew;
       const left = ent.sx - spr.ax * zoom * grew;
@@ -7802,19 +7805,19 @@ export class Renderer {
     if (this.ghost && !this.inCellarPass) this.drawGhost(ctx, zoom, this.ghost);
   }
 
-  /** The view a tree of a species drawn as a solid is baked for (`./trees3d`); nothing for any other. */
+  /** The view a tree of a species drawn as a solid is baked for (`./trees3d`), drawn flat with the low-end graphics (`flatTree3d`); nothing for any other. */
   private treeAt(species: number, x: number, y: number): TreeView | undefined {
-    return TREE3D_SPECIES.has(species) && !this.still ? this.solidAt(x, y) : undefined;
+    return TREE3D_SPECIES.has(species) ? this.solidAt(x, y) : undefined;
   }
 
   /** And a bush's. */
   private bushAt(species: number, x: number, y: number): TreeView | undefined {
-    return BUSH3D_SPECIES.has(species) && !this.still ? this.solidAt(x, y) : undefined;
+    return BUSH3D_SPECIES.has(species) ? this.solidAt(x, y) : undefined;
   }
 
   /** And a stump's. */
   private stumpAt(species: number, x: number, y: number): TreeView | undefined {
-    return STUMP3D_SPECIES.has(species) && !this.still ? this.solidAt(x, y) : undefined;
+    return STUMP3D_SPECIES.has(species) ? this.solidAt(x, y) : undefined;
   }
 
   /** And felled logs': none on the low-end graphics, which draw them in the heap. */
@@ -7823,6 +7826,7 @@ export class Renderer {
   }
 
   private solidAt(x: number, y: number): TreeView {
+    if (this.still) return { x, y, turn: 0, hour: this.solidHour, dark: this.solidDark, sway: 0, flat: true };
     return { x, y, turn: this.camera.rotation, hour: this.solidHour, dark: this.solidDark, sway: this.solidSway ? swayAt(x, y, this.anim * 1000) : 0 };
   }
 

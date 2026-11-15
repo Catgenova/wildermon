@@ -11,7 +11,7 @@ import { drawWildermon, drawWildermonPortrait, modelled, wildermonTop } from './
 import { BUSH_WOOD, bushYear, leafageOf } from './foliage';
 import { LIT, contact, wob } from './trees/kit';
 import { paintTree } from './trees';
-import { BUSH3D_SPECIES, bush3dSprite, forgetTrees3d, log3dSprite, STUMP3D_SPECIES, stump3dSprite, TREE3D_SPECIES, tree3dSprite, type TreeView } from './trees3d';
+import { BUSH3D_SPECIES, bush3dSprite, flatBush3d, flatStump3d, flatTree3d, forgetTrees3d, log3dSprite, STUMP3D_SPECIES, stump3dSprite, TREE3D_SPECIES, tree3dSprite, type TreeView } from './trees3d';
 import { inkOf, READ_BACK } from './ink';
 import { woodOf } from './trees3d/stump';
 import type { Season } from '../world/calendar';
@@ -30,6 +30,8 @@ export interface Sprite {
   ay: number;
   /** A tree or a bush drawn as a solid (`./trees3d`): a bake of one view of it, which its tile's pictures follow from bake to bake. */
   solid?: boolean;
+  /** Stood on the middle of its tile with its foot at the model's, as a solid is: a tree, bush or stump drawn flat (`flatTree3d`). */
+  centred?: boolean;
   /** Where in it there is anything, as `inkOf` reads it, when that is already known. */
   ink?: [number, number, number, number];
 }
@@ -614,11 +616,11 @@ export function forgetTrees(): void {
  * look the season does not touch is the one picture all year.
  */
 export function treeSprite(species: number, variant: number, season: Season = 'summer', day = 1, at?: TreeView): Sprite {
-  // A species drawn as a solid, seen from where the camera is and lit as the hour has it.
-  // None yet, and none to stand in: drawn flat this frame.
-  if (at && TREE3D_SPECIES.has(species)) {
-    const solid = tree3dSprite(species, variant, season, day, at, SPRITE_SCALE);
-    if (solid) return solid;
+  // A species drawn as a solid, seen from where the camera is and lit as the hour has it; with the low-end graphics, or seen
+  // from nowhere, the same solid in one view (`flatTree3d`).
+  if (TREE3D_SPECIES.has(species)) {
+    const solid = at && !at.flat ? tree3dSprite(species, variant, season, day, at, SPRITE_SCALE) : null;
+    return solid ?? flatTree3d(species, variant, season, day, at ?? null, SPRITE_SCALE);
   }
   const look = leafageOf(species, variant, season, day);
   const key = `${SPRITE_SCALE}|tree:${species}:${variant}${look.key ? `:${look.key}` : ''}`;
@@ -638,10 +640,9 @@ export function treeSprite(species: number, variant: number, season: Season = 's
  * hour has it, with its season's moss and snow.
  */
 export function stumpSprite(species: number, season: Season = 'summer', day = 1, at?: TreeView): Sprite {
-  // None yet, and none to stand in: drawn flat this frame.
-  if (at && STUMP3D_SPECIES.has(species)) {
-    const solid = stump3dSprite(species, season, day, at, SPRITE_SCALE);
-    if (solid) return solid;
+  if (STUMP3D_SPECIES.has(species)) {
+    const solid = at && !at.flat ? stump3dSprite(species, season, day, at, SPRITE_SCALE) : null;
+    return solid ?? flatStump3d(species, season, at ?? null, SPRITE_SCALE);
   }
   const key = `${SPRITE_SCALE}|stump:${species}`;
   let spr = cache.get(key);
@@ -691,10 +692,9 @@ export function stumpSprite(species: number, season: Season = 'summer', day = 1,
  * solid is seen from where the camera is and lit as the hour has it.
  */
 export function bushSprite(species: number, season: Season = 'summer', day = 1, at?: TreeView): Sprite {
-  // None yet, and none to stand in: drawn flat this frame.
-  if (at && BUSH3D_SPECIES.has(species)) {
-    const solid = bush3dSprite(species, season, day, at, SPRITE_SCALE);
-    if (solid) return solid;
+  if (BUSH3D_SPECIES.has(species)) {
+    const solid = at && !at.flat ? bush3dSprite(species, season, day, at, SPRITE_SCALE) : null;
+    return solid ?? flatBush3d(species, season, day, at ?? null, SPRITE_SCALE);
   }
   const def = BUSH_DEFS[species];
   const look = bushYear(def, species, season, day);

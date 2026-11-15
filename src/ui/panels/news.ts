@@ -419,6 +419,13 @@ const VEINS = VEIN_LOOKS.filter((l): l is VeinLook => l !== null);
 const veinsOf = (family: VeinLook['family']): string => listed(VEINS.filter((l) => l.family === family).map((l) => l.name.toLowerCase()));
 
 export const NEWS: News[] = [
+  // The low-end graphics' trees, bushes and stumps: the solids in one view (`flatTree3d`).
+  {
+    n: 645,
+    day: '2026-11-15',
+    lines: () => [
+      `Changed: trees, bushes, stumps on low-end graphics: drawn as the 3D trees, one view, light from the left; ${TREE_DEFS.length} trees, ${BUSH_DEFS.length} bushes, stumps; every season, age, day and night.`,
+      'Changed: a 3D tree before its own picture is made: the same species, age and season in another shape, not the old flat drawing.',
   // Free roofing: a roof on any tile, over the tile's own top storey or the storey pinned (`roofLevelFor`, `roof_level`, `roof_plan_refusal`).
   {
     n: 640,
