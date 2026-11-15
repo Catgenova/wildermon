@@ -6,7 +6,7 @@
  * Chromium, of the window as players get it (the built page's head, its stylesheets and policy):
  *
  *   * which things have one, read off the models (`previewOf`): every recipe's thing that is a piece with a model, a
- *     hull or a vehicle, what else is set down (a work post, a trap), a piece the figure draws worn, a weapon, a tool
+ *     hull or a vehicle, what else is set down (a work post, a trap, a crate), a piece the figure draws worn, a weapon, a tool
  *     the figure works with, or a thing with a model of its own (a loaf, a candle) has the kind it should, and what
  *     has no model (a stew, a plank, a scroll) has none;
  *   * a row clicked shows its thing's preview, of the right kind, drawn, the row lit; a recipe with no model shows the
@@ -30,7 +30,7 @@
  *   * Animations Off draws a still frame and then nothing.
  *
  * With `CRAFTPREVIEW_SHOTS` set to a directory, it saves pictures there at twice the pixels: the window with a piece of
- * furniture, armour, a weapon, a tool, a vehicle and a loaf chosen; the barrel in pine and cedar and the sword in iron and gold;
+ * furniture, a crate of each kind, armour, a weapon, a tool, a vehicle and a loaf chosen; the barrel in pine and cedar and the sword in iron and gold;
  * nothing chosen and a thing with no model; a hedge mid-cycle and the frames of it cycling (`hedge-*.png`); each tab;
  * the window narrow and on a phone; by night; in Classic; and the frames of the preview turning (`turn-*.png`).
  *
@@ -126,7 +126,7 @@ if (!browser) {
     const kinds = await call<Record<string, string | null>>('kinds');
     const want: Record<string, string | null> = {
       barrel: 'furniture', chair: 'furniture', chest: 'furniture', smelter: 'furniture', kiln: 'furniture', memorial_stone: 'furniture',
-      work_post: 'furniture', snare: 'furniture', deed_stake: 'furniture', bread: 'model', candle: 'model', lantern: 'model',
+      work_post: 'furniture', snare: 'furniture', deed_stake: 'furniture', crate_log: 'furniture', crate_plank: 'furniture', bread: 'model', candle: 'model', lantern: 'model',
       rowing_boat: 'vehicle', sailing_boat: 'vehicle', cart: 'vehicle', wagon: 'vehicle',
       leather_jerkin: 'gear', scale_helm: 'gear', cloth_tunic: 'gear', wooden_shield: 'gear', toolbelt: 'gear', jewelled_ring: 'gear',
       sword: 'held', long_bow: 'held', battle_axe: 'held', mallet: 'held', saw: 'held', shovel: 'held', needle: 'held',
@@ -137,13 +137,15 @@ if (!browser) {
     const counts: Record<string, number> = {};
     for (const k of Object.values(kinds)) counts[k ?? 'none'] = (counts[k ?? 'none'] ?? 0) + 1;
     console.log(`  recipes' things by preview: ${JSON.stringify(counts)}`);
+    const unshown = await call<string[]>('setDownUnshown');
+    check('every recipe\'s thing set down in the world (a piece, a station, a trap, a stake, a crate) has a preview', unshown.length === 0, unshown.join(', '));
 
     // A row chosen: its preview, of its kind, drawn, the row lit.
     const barrel = await call<string>('recipeOf', 'barrel');
     const sword = await call<string>('recipeOf', 'sword');
     const plank = await call<string>('recipeOf', 'plank');
     const each: Array<[string, string, string]> = [
-      ['furniture', 'barrel', 'furniture'], ['gear', 'leather_jerkin', 'armour'], ['held', 'sword', 'weapon'], ['held', 'mallet', 'tool'], ['vehicle', 'rowing_boat', 'vehicle'], ['model', 'bread', 'food'],
+      ['furniture', 'barrel', 'furniture'], ['furniture', 'crate_plank', 'crate'], ['furniture', 'crate_log', 'crate-log'], ['gear', 'leather_jerkin', 'armour'], ['held', 'sword', 'weapon'], ['held', 'mallet', 'tool'], ['vehicle', 'rowing_boat', 'vehicle'], ['model', 'bread', 'food'],
     ];
     for (const [kind, item, name] of each) {
       const id = await call<string>('recipeOf', item);
