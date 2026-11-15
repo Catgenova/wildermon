@@ -60,12 +60,14 @@ const W = `(select id from world where name = 'Hoarding')`;
 const DANE = `(select uid from player where world_id = ${W} and name = 'Dane')`;
 const ID = 9403;
 /** Latecomer's middle. island.sql stakes it over a hoard, and a test run before this one in its shard may have cleared
- * it off its own ground (green, cellar), or staked a second (glasshouse): the first, or one staked again. */
+ * it off its own ground (green, cellar), renamed it or staked a second (glasshouse): the first, or its founder's deed named
+ * Latecomer again, or one staked again. */
 const latecomer = (): string =>
   psql(`select x || ',' || y from deed where name = 'Latecomer' and world_id = ${W} order by x, y limit 1;`);
 if (!latecomer()) {
   psql(`insert into deed (world_id, name, x, y, radius, founded_by)
-    select id, 'Latecomer', 30, 32, 5, '44444444-4444-4444-4444-444444444444' from world where name = 'Hoarding';`);
+    select id, 'Latecomer', 30, 32, 5, '44444444-4444-4444-4444-444444444444' from world where name = 'Hoarding'
+    on conflict (world_id, founded_by) do update set name = 'Latecomer';`);
 }
 const [DX, DY] = latecomer().split(',').map(Number);
 /** The building: 5 by 3 from (TX, TY), four tiles up and to the west of the settlement's middle, clear of its totem. */
