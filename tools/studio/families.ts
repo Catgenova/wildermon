@@ -54,6 +54,7 @@ import { visualOf } from '../../src/render/spells/index';
 import { drawShine, shines } from '../../src/render/shine';
 import { campfireHit, drawCampfireNight } from '../../src/render/kit/campfire';
 import { FIRE_CAPACITY } from '../../src/game/campfire';
+import { TRAPS } from '../../src/game/trapdefs';
 import { NIGHT_WASH } from '../../src/render/nightwash';
 
 export type Ctx = CanvasRenderingContext2D;
@@ -419,6 +420,15 @@ const FIRE_STATES: Array<{ label: string; lit: boolean; fuel: number; ash: numbe
   { label: 'lit, full', lit: true, fuel: 1, ash: 0 },
 ];
 
+/** A trap's states on its sheet: as the renderer draws one set, baited, sprung (something in it) and worn (`TRAP_WORN`). */
+const TRAP_STATES: Array<{ label: string; baited: boolean; sprung: boolean; worn: boolean }> = [
+  { label: 'set', baited: false, sprung: false, worn: false },
+  { label: 'baited', baited: true, sprung: false, worn: false },
+  { label: 'sprung', baited: false, sprung: true, worn: false },
+  { label: 'worn', baited: true, sprung: false, worn: true },
+  { label: 'worn, sprung', baited: false, sprung: true, worn: true },
+];
+
 /** How many things lie in the sack on its sheet. */
 const SACK_COUNTS = [1, 4, 20];
 
@@ -438,9 +448,9 @@ const device: Family = {
       variants: [1, 2, 3].map((r) => ({ label: `rare ${r}`, set: { variant: r } })),
       motions: [frames('shine', 'rare shine, rare 3', 6, { variant: 3 }, 1.5)], emissive: false, footprint: [1, 1], ref: 4,
     },
-    ...['snare', 'creel', 'deadfall'].map((k): Asset => ({
-      family: 'device', kind: `trap_${k}`, name: `Trap: ${k}`, register: 'line', style: 'flat', entry: 'drawTrap', file: 'src/render/sprites.ts', views: 'none',
-      states: states(['set', 'baited', 'sprung']), variants: [], motions: [], emissive: false, footprint: [1, 1], ref: 4,
+    ...Object.values(TRAPS).map(({ id: k, name }): Asset => ({
+      family: 'device', kind: `trap_${k}`, name: `Trap: ${name.toLowerCase()}`, register: 'line', style: 'kit', entry: 'drawTrap', file: 'src/render/kit/traps.ts', views: 'turns',
+      states: TRAP_STATES.map((s, state) => ({ label: s.label, set: { state } })), variants: [], motions: [], emissive: false, footprint: [1, 1], ref: 4,
     })),
     ...['plank', 'log', 'stone', 'rope'].map((k): Asset => ({
       family: 'device', kind: `deck_${k}`, name: `Deck: ${k}`, register: 'line', style: 'flat', entry: 'drawDeck', file: 'src/render/sprites.ts', views: 'none',
@@ -460,7 +470,10 @@ const device: Family = {
       if (shines(o.variant)) drawShine(ctx, sx, sy, zoom, o.variant, 3 * 4099 + 4, o.t, spr.w * zoom, spr.ay * zoom);
       return;
     }
-    if (a.kind.startsWith('trap_')) { drawTrap(ctx, sx, sy, zoom, a.kind.slice(5), o.state === 1, o.state === 2); return; }
+    if (a.kind.startsWith('trap_')) {
+      const s = TRAP_STATES[o.state] ?? TRAP_STATES[0];
+      return drawTrap(ctx, sx, sy, zoom, a.kind.slice(5), s.baited, s.sprung, o.turn, s.worn);
+    }
     drawDeck(ctx, sx, sy, zoom, a.kind.slice(5), o.state >= 1, 0, undefined, o.variant / 10, 3);
   },
   night: (ctx, sx, sy, zoom, a, o) => {

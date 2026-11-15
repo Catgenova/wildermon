@@ -266,6 +266,7 @@ import { STEPS_BACK, stepsBack, STONE_STEPS_BILL, TIMBER_STEPS_BILL } from '../.
 import { LAVENDER_RULE, ROSE_BUD, ROSE_FLOWER, ROSE_LEAFY, ROSES_RULE } from '../../game/roses';
 import { DEVICE_COUNT } from '../../render/furniture';
 import { TRAPS } from '../../game/trapdefs';
+import { TRAP_WORN } from '../../render/kit/traps';
 import {
   BELL_HEARD_BASE, BELL_HEARD_PER_QL, bellHeard, HAMMOCK_REST, LAY_UP_EVERY, LAY_UP_FAIL_SHARE, LAY_UP_SPARE_ABOVE, LEAD_PACE,
   ROPE_SHARE_BOAT, ROPE_SHARE_TRAP, ROPE_TIME_PER_LEVEL, ROPE_WALK, ROPE_WALK_QL, ROPE_WALK_TIME, ropePerLayUp, ropeTime, TWINE_MADE,
@@ -414,6 +415,16 @@ const FAIL_EXAMPLE = failFactorSaid(failFactor({ ...FAIL_EXAMPLE_AT, difficulty:
 const SCRUBS_LATER = new Set(['scrub_wall_paint', 'scrub_floor_paint']);
 
 export const NEWS: News[] = [
+  // The traps redrawn in the kit (`kit/traps.ts`).
+  {
+    n: 637,
+    day: '2026-11-15',
+    lines: () => [
+      `Changed: traps: ${listed(Object.values(TRAPS).map((t) => t.name.toLowerCase()))}: new look, 8 facings.`,
+      `New: trap look: worn at ${TRAP_WORN}% of its life gone.`,
+      'Changed: Crafting preview: traps: set, baited, sprung, worn.',
+    ],
+  },
   // A citizen's rank off the tile hover (`ui.ts`).
   {
     n: 635,
