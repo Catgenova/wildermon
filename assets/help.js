@@ -499,6 +499,7 @@ import{$C as e,$T as t,$a as n,$r as r,$s as i,$u as a,$w as ee,A as o,AE as te,
       <li>Crafting window foot: every queued action, current first, with its count, time at your current pace (speed multiplier) and, for a craft, what it will use and from where
       (pack, bags or a named store) after the actions ahead.</li>
       <li>Reorder: drag by the grip, or <b>&uarr;</b> / <b>&darr;</b>. <b>&times;</b> removes. The current action never moves.</li>
+      <li>Current action's <b>&times;</b>: stops it and its remaining repeats, starts the next in queue; the rest stay queued. Queue empty: stop only.</li>
     </ul>
     <h3>What the characteristics are for</h3>
     <ul>

@@ -330,6 +330,10 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
     lastTarget = null;
     void island.hold();
   };
+  game.skip = () => {
+    lastTarget = null;
+    void island.skip();
+  };
   game.reorder = (seen, order) => void island.queueOrder(seen, order);
   // A plan over an area, and the last plan taken back: one call each (`planarea.ts`).
   game.planArea = (asks) => island.planArea(asks);

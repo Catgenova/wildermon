@@ -5472,6 +5472,31 @@ export class Game {
     this.events.emit('action');
   }
 
+  /**
+   * Stop the job in hand, every go of it left, and start the next one waiting,
+   * as it would start had the job finished: the × on the job in hand in the
+   * queue window. Unlike `cancelAction` the jobs behind it stay where they are.
+   * On an island the island does it (`rpc_skip`) and the beat that follows
+   * says what is in hand now; here the next comes off the queue at once.
+   */
+  skipAction(): void {
+    const a = this.action;
+    if (!a) return;
+    this.travel = null;
+    this.fightTarget = null;
+    this.held = false;
+    this.action = null;
+    if (this.skip) this.skip();
+    else {
+      if (a.state === 'performing') this.logMsg(`Stopped ${a.def.verb}.`, 'info');
+      this.nextInQueue();
+    }
+    this.events.emit('action');
+  }
+
+  /** Said to the island by `skipAction` (`rpc_skip`); filled in by `play.ts`. */
+  skip: (() => void) | null = null;
+
   /** Actions that apply to a target, with the reason each may be unavailable. */
   actionsFor(target: Target): Array<{ def: ActionDef; reason: string | null }> {
     const out: Array<{ def: ActionDef; reason: string | null }> = [];

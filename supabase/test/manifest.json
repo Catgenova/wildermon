@@ -1624,6 +1624,19 @@
     "why": "Asked for: the jobs queued listed in the crafting window, dragged into another order and taken out with a cross. The jobs waiting go into the order asked and the job in hand stays in hand; a job left out is put out of mind and said so; a list that changed since it was seen, or an order that is not one, is refused and nothing moves; a job put down by a walk moves like any other. Both sides, in the same words."
   },
   {
+    "file": "supabase/test/queuestop.ts",
+    "title": "The job in hand's × in the queue list",
+    "shard": 3,
+    "external": [
+      "esbuild",
+      "playwright-core"
+    ],
+    "env": {
+      "QUEUESTOP_STRICT": "1"
+    },
+    "why": "Asked for: \"add an x to stop the current process and begin next in queue\". Stop empties the queue; the × on the job in hand stops it, every go left of it, and starts the next job waiting at once, the rest kept, as a job ending would start it: a job that cannot be done told and put out, the one behind it started. With nothing waiting it only stops. Both sides, in the same words; and the window in Runecut and Classic, the × pressed by mouse, Enter, Space and a tap."
+  },
+  {
     "file": "supabase/test/market.ts",
     "title": "Goods that change hands",
     "shard": 3,

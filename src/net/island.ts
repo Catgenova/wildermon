@@ -4991,6 +4991,26 @@ export class Island {
   }
 
   /**
+   * Stop the job in hand and start the next one waiting, the rest of the queue
+   * kept: the × on the job in hand. The same beat and pulse as `stop`;
+   * `rpc_skip` drops every go left of the job in hand and starts the next as
+   * `settle` starts one when a job ends, and answers with the list as it now
+   * is, in `rpc_act`'s shape.
+   */
+  async skip(): Promise<void> {
+    if (!this.info) return;
+    if (this.beat) clearTimeout(this.beat);
+    this.beat = null;
+    const { data, error } = await rpc('rpc_skip', { p_world: this.info.id });
+    if (error) this.hooks.say(refusedSaid(error.message), 'error');
+    else {
+      const said = (data ?? {}) as { queue?: unknown; capacity?: number | null };
+      this.hooks.mine?.({ queue: lineUp(said.queue), cap: said.capacity ?? null });
+    }
+    await this.pulse();
+  }
+
+  /**
    * The jobs waiting put in another order, or some taken out (`jobqueue.ts`).
    * The island checks the list it was seen as and says the list back either
    * way, so a refusal puts the browser's list back to what is really there.

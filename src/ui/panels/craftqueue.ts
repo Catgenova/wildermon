@@ -45,7 +45,9 @@ interface Use {
  * list have had their share first, so the list says which job will run short.
  *
  * The jobs waiting are put in order by their grip, dragged, or by ↑ and ↓,
- * and taken out with ×. The job in hand is not one of them and has neither.
+ * and taken out with ×. The job in hand is not one of them and is never
+ * moved; its × stops it, every go left of it, and starts the next waiting
+ * (`Game.skipAction`), the rest of the list kept.
  */
 export class QueueView {
   readonly el: HTMLElement;
@@ -64,8 +66,11 @@ export class QueueView {
   /** The jobs as drawn, which is what a reorder says it saw. */
   private seen: SeenJob[] = [];
   private dragging = false;
-  /** The button to put the focus back on once the list is drawn again: a row's ↑ or ↓, by place. */
-  private refocus: { at: number; dir: 'up' | 'down' | 'drop' } | null = null;
+  /**
+   * The button to put the focus back on once the list is drawn again: a row's ↑ or ↓, by place, or the job in
+   * hand's × (`stop`), waited for until `until` while the island starts the next.
+   */
+  private refocus: { at: number; dir: 'up' | 'down' | 'drop' | 'stop'; until?: number } | null = null;
 
   constructor(private readonly game: Game) {
     this.el = document.createElement('section');
@@ -233,7 +238,11 @@ export class QueueView {
     this.list.replaceChildren(...rows);
     const back = this.refocus;
     this.refocus = null;
-    if (back) {
+    if (back?.dir === 'stop') {
+      const stop = this.list.querySelector<HTMLButtonElement>('.cq-now .cq-stop');
+      if (stop) stop.focus();
+      else if (performance.now() < (back.until ?? 0)) this.refocus = back;
+    } else if (back) {
       const at = Math.max(0, Math.min(q.length - 1, back.at));
       const row = this.list.querySelector<HTMLElement>(`.cq-row[data-at="${at}"]`);
       const btn = row?.querySelector<HTMLButtonElement>(`.cq-${back.dir}:not(:disabled)`) ?? row?.querySelector<HTMLButtonElement>('button:not(:disabled)');
@@ -303,7 +312,27 @@ export class QueueView {
       main.append(uses);
     }
     li.append(grip, main);
-    if (at >= 0) {
+    if (at < 0) {
+      // The job in hand: stopped, every go left of it, and the next waiting started.
+      const btns = document.createElement('div');
+      btns.className = 'cq-btns';
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'tb-btn tb-small rc-btn rc-icon cq-stop';
+      b.textContent = '×';
+      const label = this.game.queue.length ? 'Stop · next in queue' : 'Stop';
+      b.title = label;
+      b.setAttribute('aria-label', `${label}: ${def.label.toLowerCase()}`);
+      b.addEventListener('click', () => {
+        b.disabled = true;
+        // To the next job's ×, once it is in hand: the island's answer, within a few seconds.
+        this.refocus = this.game.queue.length ? { at: 0, dir: 'stop', until: performance.now() + 3000 } : null;
+        this.game.skipAction();
+        this.repaint.force();
+      });
+      btns.append(b);
+      li.append(btns);
+    } else {
       const n = this.seen.length;
       const btns = document.createElement('div');
       btns.className = 'cq-btns';
