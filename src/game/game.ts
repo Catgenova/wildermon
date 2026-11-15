@@ -95,7 +95,7 @@ import { onLadder } from './ladderclimb';
 import { lyingAt, type Fell } from './fell';
 import { ARMOUR_VS, armsRefusal, blockChance, BLOCKED_SAID, WOUND_SAID, SHIELD_WEAR, BURN_WEAR, CROWD_BLOCK, DODGE_GAIN, dodgeChance, DRAW_WALK, FIGHT_QUIET, VENOM_DRAIN, VENOM_SECS, skillLine, type FightRecord, FIGHT_BACK_STILL, FIGHT_STANCE_NAMES, FLANK_HIT, legPace, FIGHT_TRIES, fightBase, fightWind, armPace, armourSwing, overburdenSwing, swingKgOf, swingBase, swingSeconds, SWING_FLOOR, tiredPace, FOLLOW_RANGE, inFightReach, isFightJob, nextStance, stanceSays, stanceTaken, TARGET_RANGE } from './fight';
 import { Skills, SKILL_BY_ID, SKILL_DEFS, isQuiet } from './skills';
-import { mindEaseAt, skillOdds } from './failwhy';
+import { type CheckAt, failFactor, failFactorSaid, mindEaseAt, skillOdds } from './failwhy';
 import { jewelGain } from './gems';
 import { earnedBy, knackBonus, knackChance, knackLands, KNACK_CAP, TITLE_BY_ID } from './titles';
 import { TileIndex, Tally, keyX, keyY, tileKey } from './tileindex';
@@ -6591,16 +6591,36 @@ export class Game {
   sureCheck(job: string, skill: string, difficulty = 10, toolQl = 0, ease = 0): boolean {
     const ok = this.skillCheck(skill, difficulty, toolQl, ease);
     const fail = this.perk(`fail:${job}`, 1);
-    return ok || (fail < 1 && this.rand() >= fail);
+    if (ok) return true;
+    // A perk's second chance (the island's `perk_pass`): a failure it lets stand keeps its share for the line.
+    if (fail < 1 && this.rand() >= fail) {
+      this.failOdds = null;
+      return true;
+    }
+    if (this.failOdds) this.failOdds = { ...this.failOdds, fail: fail * (this.failOdds.fail ?? 1) };
+    return false;
+  }
+
+  /** What the last failed check was rolled at, for its line to name the term that cost it most (the island's `wildermon.fail_odds`). */
+  failOdds: CheckAt | null = null;
+
+  /** The failed check's biggest factor, said once (the island's `fail_why`): "" when no check failed. */
+  failWhy(material = 0): string {
+    const at = this.failOdds;
+    this.failOdds = null;
+    return at ? failFactorSaid(failFactor({ ...at, material })) : '';
   }
 
   skillCheck(skill: string, difficulty = 10, toolQl = 0, ease = 0): boolean {
+    this.failOdds = null;
     // A Foreknow's goes cannot fail: the roll is taken as a success, and the go is spent when it is done (`completeAction`).
     if (this.player.foreknow > 0) {
       this.foreknown = true;
       return true;
     }
-    return this.rand() < this.skillChance(skill, difficulty, toolQl, ease);
+    const ok = this.rand() < this.skillChance(skill, difficulty, toolQl, ease);
+    if (!ok) this.failOdds = { skill: this.skills.get(skill), difficulty, tool: toolQl, ease, fail: 1 };
+    return ok;
   }
 
   /** The chance a `skillCheck` comes off: better skill and tools help, difficulty hurts, between 30% and 98%. */

@@ -1563,13 +1563,15 @@ export function recipeAction(r: Recipe): ActionDef {
       const hard = (r.difficulty ?? 0) + matOf(mat).difficulty;
       // Surer for a perk on the recipe (a Mason's Sure Chisel, a Tailor's Sure Needle).
       if (r.difficulty !== undefined && !g.sureCheck(r.id, r.skill, hard, toolQl(g), ease)) {
+        // The term that cost the go most, as the island's `perform_craft` reads it (`fail_why(mat)`).
+        const why = g.failWhy(matOf(mat).difficulty);
         // A scroll that fails loses its motes and damages the sheet it was being written on (`scrollFails`).
         if (scrollOf(r.result)) {
           const harm = scrollFails(stock, r, t.uid);
           carryOn(t, g, was, mat);
           g.missed();
           g.gainSkill('mind_logic', tryGain(false, CRAFT_HEAD));
-          g.logMsg([r.fail, scrollHarmSaid(harm)].filter(Boolean).join(' '), 'event');
+          g.logMsg([r.fail && r.fail + why, scrollHarmSaid(harm)].filter(Boolean).join(' '), 'event');
           return more(t, g);
         }
         // Nothing used up: what it would have used is damaged, by its own QL
@@ -1599,7 +1601,7 @@ export function recipeAction(r: Recipe): ActionDef {
         }
         g.missed();
         g.gainSkill('mind_logic', tryGain(false, CRAFT_HEAD));
-        g.logMsg(failDamagedSaid(r.fail ?? `Failed: ${lower(r.result)}.`, hurt), 'event');
+        g.logMsg(failDamagedSaid((r.fail ?? `Failed: ${lower(r.result)}.`) + why, hurt), 'event');
         if (spared) g.logMsg(SPARED, 'event');
         if (stone) g.logMsg(STONE_KEPT, 'event');
         return more(t, g);
