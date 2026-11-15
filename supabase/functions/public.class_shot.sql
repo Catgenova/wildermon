@@ -13,6 +13,7 @@ begin
   select * into c from creature where world_id = p_world and id = p_id;
   if c.id is null then return jsonb_build_object('landed', false, 'died', false, 'name', 'creature'); end if;
   select * into d from species_def where id = c.species;
+  d.name := kind_name_at(c);
   held := worn(p_world, p_uid, 'weapon');
   select bw.* into bow from weapon_def bw where bw.id = held.def and bw.ammo is not null;
   select i.* into arrow from item i

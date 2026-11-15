@@ -11,7 +11,7 @@ begin
    where world_id = p_world and id = p_id and health > 0
    returning * into c;
   if c.id is null or c.health > 0 then return false; end if;
-  select name into v_name from species_def where id = c.species;
+  v_name := kind_name_at(c);
   cx := creature_x(c); cy := creature_y(c);
   delete from creature where world_id = p_world and id = p_id;
   update creature set enemy = null where world_id = p_world and enemy = p_id;

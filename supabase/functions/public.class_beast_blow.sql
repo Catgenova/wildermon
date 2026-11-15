@@ -13,6 +13,7 @@ begin
     return jsonb_build_object('landed', false, 'died', false, 'dmg', 0, 'name', 'creature');
   end if;
   select * into d from species_def where id = t.species;
+  d.name := kind_name_at(t);
   v_before := t.health;
   v_dmg := attack_of(a) * (1 + coalesce((a.skills->>'fighting')::double precision, 0) / 200) * (0.7 + random() * 0.6)
          * companion_dealt(a) * p_more;

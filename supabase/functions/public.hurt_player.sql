@@ -21,13 +21,13 @@ begin
   end if;
   -- A creature's blow lands on an Archer's Decoy instead, while it holds.
   if v_from.id is not null and (p.blessings->'decoy'->>'until')::timestamptz > now() then
-    perform tell(p_world, p_uid, 'The ' || coalesce((select lower(name) from species_def where id = v_from.species), 'creature')
+    perform tell(p_world, p_uid, 'The ' || coalesce(lower(kind_name_at(v_from)), 'creature')
       || ' strikes your decoy.', 'fight');
     return;
   end if;
   -- And none lands at all inside a Warder's Unbreakable.
   if v_from.id is not null and (p.blessings->'unbreakable'->>'until')::timestamptz > now() then
-    perform tell(p_world, p_uid, 'The ' || coalesce((select lower(name) from species_def where id = v_from.species), 'creature')
+    perform tell(p_world, p_uid, 'The ' || coalesce(lower(kind_name_at(v_from)), 'creature')
       || '’s blow does not land: ' || (select name from class_spell where id = 'warder_unbreakable') || '.', 'fight');
     perform fight_back(p_world, p_uid, (p.stats->>'hurtBy')::int);
     return;
@@ -37,9 +37,9 @@ begin
     v_guard := class_guardian(p_world, p.x, p.y, p_uid);
     if v_guard is not null then
       perform class_guard_take(p_world, v_guard, p_raw,
-        coalesce((select lower(name) from species_def where id = v_from.species), 'creature'), p.name);
+        coalesce(lower(kind_name_at(v_from)), 'creature'), p.name);
       perform tell(p_world, p_uid, (select name from player where world_id = p_world and uid = v_guard)
-        || ' takes the ' || coalesce((select lower(name) from species_def where id = v_from.species), 'creature')
+        || ' takes the ' || coalesce(lower(kind_name_at(v_from)), 'creature')
         || '’s blow on a shield.', 'fight');
       perform fight_back(p_world, p_uid, (p.stats->>'hurtBy')::int);
       return;
@@ -47,7 +47,7 @@ begin
   end if;
   -- A creature's blow misses more for dark infused in what you wield or wear (`dark_miss`); no roll without it.
   if v_from.id is not null and dark_miss(p_world, p_uid) > 0 and random() < dark_miss(p_world, p_uid) then
-    perform tell(p_world, p_uid, 'Missed: ' || coalesce((select lower(name) from species_def where id = v_from.species), 'blow')
+    perform tell(p_world, p_uid, 'Missed: ' || coalesce(lower(kind_name_at(v_from)), 'blow')
       || ', dark infusion.', 'fight');
     perform fight_back(p_world, p_uid, (p.stats->>'hurtBy')::int);
     return;
@@ -57,7 +57,7 @@ begin
   if v_dodge > 0 and random() < v_dodge then
     perform skill_raise(p_world, p_uid, 'body_control', dodge_gain());
     perform tell(p_world, p_uid, 'Dodged: '
-      || coalesce((select lower(name) from species_def where id = v_from.species), 'blow') || '.', 'fight');
+      || coalesce(lower(kind_name_at(v_from)), 'blow') || '.', 'fight');
     -- And answered, for a Skirmisher's Riposte: owed now, struck once its row is written (`class_riposte`).
     if v_from.id is not null and pk(p_world, p_uid, 'riposte:blow', 0) > 0 then
       insert into class_mark (world_id, creature_id, kind, val, n, until, by_uid)

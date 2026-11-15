@@ -10,6 +10,7 @@ begin
   select * into c from creature where world_id = p_world and id = p_id and health > 0 and mode = 'wild';
   if pl.uid is null or c.id is null or c.hunting is not distinct from p_uid then return; end if;
   select * into d from species_def where id = c.species;
+  d.name := kind_name_at(c);
   if coalesce(d.timid, false) then return; end if;
   update creature set hunting = p_uid, brawl = null, windup_at = null, hunt_again = null,
       hunt_x = creature_x(c), hunt_y = creature_y(c), threat_at = now()

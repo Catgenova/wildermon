@@ -12,6 +12,7 @@ begin
   select * into c from creature where world_id = p_world and id = p_id;
   if c.id is null then return jsonb_build_object('landed', false, 'died', false, 'name', 'creature'); end if;
   select * into d from species_def where id = c.species;
+  d.name := kind_name_at(c);
   w := swung_with(p_world, p_uid);
   held := swung_item(p_world, p_uid);
   v_hit := hit_chance(p_world, p_uid, w.kind, mark_of(held.mark, 'aim')) * beast_mul(c, 'evade');

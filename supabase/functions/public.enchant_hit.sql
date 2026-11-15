@@ -35,6 +35,6 @@ begin
   end if;
   if enchant_hit_said(e.effect) is not null then
     perform tell(p_world, p_uid, e.name || ': '
-      || replace(enchant_hit_said(e.effect), '{t}', lower((select s.name from species_def s where s.id = c.species))), 'fight');
+      || replace(enchant_hit_said(e.effect), '{t}', lower(kind_name_at(c))), 'fight');
   end if;
 end $function$

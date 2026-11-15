@@ -43,7 +43,7 @@ begin
     if c.enemy is distinct from q.id then
       c.enemy := q.id;
       perform wtell(p_world, c.keeper, c.name || ' attacks: '
-        || lower((select name from species_def where id = q.species)) || '.', 'fight');
+        || lower(kind_name_at(q)) || '.', 'fight');
     end if;
     ax := creature_x(q); ay := creature_y(q);
     dist := sqrt((ax - cx) ^ 2 + (ay - cy) ^ 2);

@@ -134,7 +134,7 @@ begin
       c.leg_ends := now() + make_interval(secs => greatest(0.2, sqrt((c.to_x - v_cx) ^ 2 + (c.to_y - v_cy) ^ 2)
                                                  / greatest(0.1, d.speed * a.speed * beast_mul(c, 'speed') * flee_pace())));
       c.until := greatest(c.leg_ends, now() + make_interval(secs => flee_secs()));
-      perform tell(p_world, p.uid, d.name || ' fled.', 'fight');
+      perform tell(p_world, p.uid, kind_name_at(c) || ' fled.', 'fight');
       return c;
     end if;
     c.hunting := p.uid;
@@ -164,8 +164,8 @@ begin
     c.fight_blows := 0; c.windup_at := null;
     -- The first of a pack leads it; the rest follow whoever the one they heard follows.
     c.pack_lead := case when not d.pack then null when m.id is not null then coalesce(m.pack_lead, m.id) else c.id end;
-    perform tell(p_world, p.uid, case when m.id is not null then 'Another ' || lower(d.name) || ' joins.'
-                                      else d.name || ' hunting you.' end, 'fight');
+    perform tell(p_world, p.uid, case when m.id is not null then 'Another ' || lower(kind_name_at(c)) || ' joins.'
+                                      else kind_name_at(c) || ' hunting you.' end, 'fight');
   end if;
 
   -- What the one it is after holds that changes its steps: a Pikeman's Fend Off, and Brace for the Charge at the edge of their reach.
@@ -217,7 +217,7 @@ begin
         c.leg_ends := c.leg_at + make_interval(secs => sqrt((c.to_x - c.from_x) ^ 2 + (c.to_y - c.from_y) ^ 2) / shove_pace());
         c.until := c.leg_ends;
         perform tell(p_world, p.uid, (select name from class_spell where id = 'pikeman_fend_off') || ': you push the '
-          || lower(d.name) || ' back.', 'fight');
+          || lower(kind_name_at(c)) || ' back.', 'fight');
         continue;
       end if;
     end if;
@@ -232,11 +232,11 @@ begin
         perform mark_attacker(p_world, p.uid, c.id);
         -- With less of its extra weight on Power's Unshaken (`heavyOn`).
         perform hurt_player(p_world, p.uid, attack_of(c) * 0.012 * (1 + (heavy_hit() - 1) * path_fx(p_world, p.uid, 'heavy', 1)),
-          'The ' || lower(d.name) || '''s heavy blow lands', coalesce(d.wound, 'bite'));
+          'The ' || lower(kind_name_at(c)) || '''s heavy blow lands', coalesce(d.wound, 'bite'));
         -- Landed (its `hurt_at` this transaction's): a heavy one, for the body drawn stumbling (`player.hurt_heavy`).
         update player set hurt_heavy = true where world_id = p_world and uid = p.uid and hurt_at = now() and not hurt_heavy;
       else
-        perform tell(p_world, p.uid, d.name || ' heavy blow: missed.', 'fight');
+        perform tell(p_world, p.uid, kind_name_at(c) || ' heavy blow: missed.', 'fight');
       end if;
       c.until := c.until + make_interval(secs => blow_every(d) / (beast_mul(c, 'haste') * class_limbs(p_world, c.id))) + class_stagger_owed(p_world, c.id);
       continue;
@@ -264,7 +264,7 @@ begin
         c.fight_blows := c.fight_blows + 1;
         perform mark_attacker(p_world, p.uid, c.id);
         perform hurt_player(p_world, p.uid, attack_of(c) * 0.012 * throw_hit(),
-          'The ' || lower(d.name) || '''s stone finds you', 'crush');
+          'The ' || lower(kind_name_at(c)) || '''s stone finds you', 'crush');
         c.until := c.until + make_interval(secs => blow_every(d) / (beast_mul(c, 'haste') * class_limbs(p_world, c.id))) + class_stagger_owed(p_world, c.id);
         continue;
       else
@@ -343,12 +343,12 @@ begin
       -- Every `heavy_every`th blow of a kind that hits heavy is drawn back for first.
       c.windup_at := c.until + make_interval(secs => wind_up());
       c.until := c.windup_at;
-      perform tell(p_world, p.uid, d.name || ' winding up a heavy blow: step out of reach.', 'fight');
+      perform tell(p_world, p.uid, kind_name_at(c) || ' winding up a heavy blow: step out of reach.', 'fight');
     else
       c.fight_blows := c.fight_blows + 1;
       perform mark_attacker(p_world, p.uid, c.id);
       perform hurt_player(p_world, p.uid, attack_of(c) * 0.012,
-        'The ' || lower(d.name) || ' is on you', coalesce(d.wound, 'bite'));
+        'The ' || lower(kind_name_at(c)) || ' is on you', coalesce(d.wound, 'bite'));
       c.until := c.until + make_interval(secs => blow_every(d) / (beast_mul(c, 'haste') * class_limbs(p_world, c.id))) + class_stagger_owed(p_world, c.id);
     end if;
   end loop;

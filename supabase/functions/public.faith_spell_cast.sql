@@ -23,6 +23,7 @@ begin
     select * into c from creature where world_id = p_world and id = v_id;
     if not found then return jsonb_build_object('why', 'Target not here.'); end if;
     select * into d from species_def where id = c.species;
+    d.name := kind_name_at(c);
   elsif p_target->>'kind' = 'area' then
     v_x := (p_target->>'x')::double precision;
     v_y := (p_target->>'y')::double precision;

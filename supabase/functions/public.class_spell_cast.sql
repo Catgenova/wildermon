@@ -23,6 +23,7 @@ begin
     select * into c from creature where world_id = p_world and id = v_id and health > 0;
     if not found then return jsonb_build_object('why', 'Target not here.'); end if;
     select * into d from species_def where id = c.species;
+    d.name := kind_name_at(c);
     v_dist := sqrt((creature_x(c) - me.x) ^ 2 + (creature_y(c) - me.y) ^ 2);
     -- A blow wants it within reach of what is in your hand; a Lunge within its stride; a Challenge as far as any spell;
     -- an Overreach its share past your reach, and a Hook as far as it says.

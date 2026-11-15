@@ -43,7 +43,7 @@ import { cropStageSeconds, RIPE, settleCrop, type Crop } from './farming';
 import { fieldClock, fieldRate, GLASSHOUSE_GROWTH, handClock, handRate, PLANTER_GROWTH, STILL_CLOCK } from './growth';
 import { glassResync, underGlass } from './glasshouse';
 import { pannierName, pannierRefusal, panniersOffered, pannierTake } from './panniers';
-import { ageDef, inWorld, kindName, stageOf, bridleTeam, harnessTeam, tameNeeds, attackOf, bloodMul, BLOW_SHARE, markOn, CALL_WINDOW, Creatures, setLocalKept, FIGHT_BACK_GOES, footing, HAUL_SKILL, haulLearn, MAX_MOUNT_SPEED, MOUNT_STAIRS_SAID, isBaitFor, tracesSkill, isShod, landRidden, maxHealth, PLAYER_ATTACKER, PULL_DEFAULT, SHOE_PACE, SHOE_STEP, shoeTeam, shoeTeamStep, tackSpeed, type Creature, type CreatureJSON, type WorkSite } from './creatures';
+import { ageDef, inWorld, kindName, stageName, stageOf, bridleTeam, harnessTeam, tameNeeds, attackOf, bloodMul, BLOW_SHARE, markOn, CALL_WINDOW, Creatures, setLocalKept, FIGHT_BACK_GOES, footing, HAUL_SKILL, haulLearn, MAX_MOUNT_SPEED, MOUNT_STAIRS_SAID, isBaitFor, tracesSkill, isShod, landRidden, maxHealth, PLAYER_ATTACKER, PULL_DEFAULT, SHOE_PACE, SHOE_STEP, shoeTeam, shoeTeamStep, tackSpeed, type Creature, type CreatureJSON, type WorkSite } from './creatures';
 import { CRAFT_REACH, type CraftStock, type Station } from './recipes';
 import { Actor, type ActiveAction } from './actor';
 import { HOST_ID } from '../net/protocol';
@@ -3545,7 +3545,7 @@ export class Game {
     if (dodge > 0 && this.rand() < dodge) {
       this.gainSkill('body_control', DODGE_GAIN);
       this.player.attackedAt = this.time;
-      this.logMsg(`Dodged: ${from ? this.creatures.species(from).name.toLowerCase() : 'blow'}.`, 'fight');
+      this.logMsg(`Dodged: ${from ? stageName(from).toLowerCase() : 'blow'}.`, 'fight');
       // And answer it, for a Skirmisher's Riposte (`class_riposte`).
       const share = this.perk('riposte:blow', 0);
       if (share > 0 && from) riposte(this, from, share);
@@ -3686,7 +3686,7 @@ export class Game {
     const target: Target = { kind: 'creature', id };
     if (this.action) this.queue.unshift({ def: this.action.def, target: this.action.target, goes: this.action.left });
     this.action = null;
-    this.logMsg(`Fighting back: ${this.creatures.species(c).name.toLowerCase()}.`, 'fight');
+    this.logMsg(`Fighting back: ${stageName(c).toLowerCase()}.`, 'fight');
     this.fightTarget = id;
     this.startAction(def, target, FIGHT_BACK_GOES);
   }
@@ -3774,7 +3774,7 @@ export class Game {
     if (a && isFightJob(a.def.id) && a.state === 'performing') this.fightTries = 0;
     if (a || this.queue.length || this.time < this.fightNext) return;
     const p = this.player;
-    const name = this.creatures.species(c).name.toLowerCase();
+    const name = stageName(c).toLowerCase();
     if (Math.hypot(c.x - p.x, c.y - p.y) > FOLLOW_RANGE) {
       this.fightTarget = null;
       this.logMsg(`${capital(name)} out of range.`, 'fight');
@@ -3808,7 +3808,7 @@ export class Game {
     if (!this.fightRec) {
       this.fightRec = {
         foe: c ? c.id : null,
-        foeName: c ? this.creatures.species(c).name.toLowerCase() : 'it',
+        foeName: c ? stageName(c).toLowerCase() : 'it',
         foeAt: c ? c.health : 0,
         youAt: this.player.stats.health,
         started: this.time,
@@ -3817,7 +3817,7 @@ export class Game {
       };
     } else if (this.fightRec.foe === null && c) {
       this.fightRec.foe = c.id;
-      this.fightRec.foeName = this.creatures.species(c).name.toLowerCase();
+      this.fightRec.foeName = stageName(c).toLowerCase();
       this.fightRec.foeAt = c.health;
     }
     this.fightRec.last = this.time;

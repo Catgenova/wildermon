@@ -29,7 +29,7 @@ begin
          and (o.hunting is not null or o.brawl is not null
               or exists (select 1 from creature e where e.world_id = p_world and e.id = o.enemy and e.mode <> 'wild'))
          and sqrt((creature_x(o) - creature_x(a)) ^ 2 + (creature_y(o) - creature_y(a)) ^ 2) <= guard_range()
-      returning lower(sd.name) as name
+      returning lower(kind_name_at(o)) as name
     loop
       if a.mode = 'active' and a.keeper is not null then
         perform tell(p_world, a.keeper, upper(left(r.name, 1)) || substr(r.name, 2) || ' attacks ' || a.name || '.', 'fight');
