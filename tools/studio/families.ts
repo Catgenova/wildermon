@@ -40,7 +40,7 @@ import { drawRuneLantern, RUNE_LANTERN_VARIANTS } from '../../src/render/runelan
 import { drawRuneGate } from '../../src/render/runegate';
 import { drawMemorial } from '../../src/render/memorial';
 import {
-  bushSprite, drawCampfire, drawCreature, drawDeck, drawPlayer, drawPortrait, drawTrap, lyingSprite, spriteScaleFor, stumpSprite, treeSprite,
+  bushSprite, carcassSprite, crateSprite, drawCampfire, drawCreature, drawDeck, drawPlayer, drawPortrait, drawTrap, lyingSprite, spriteScaleFor, stumpSprite, treeSprite,
   type CreaturePose, type PlayerPose, type PortraitMotion, type Sprite,
 } from '../../src/render/sprites';
 import { loadAllWildermon, modelled } from '../../src/render/wildermon';
@@ -55,6 +55,7 @@ import { drawShine, shines } from '../../src/render/shine';
 import { campfireHit, drawCampfireNight } from '../../src/render/kit/campfire';
 import { FIRE_CAPACITY } from '../../src/game/campfire';
 import { TRAPS } from '../../src/game/trapdefs';
+import { CRATE_DEFS } from '../../src/game/crates';
 import { NIGHT_WASH } from '../../src/render/nightwash';
 import { prospectMark, seam, UNIDENTIFIED_FACE, veinGlints, veinLit, veinLook, VeinNight } from '../../src/render/seams/runecut';
 
@@ -437,6 +438,9 @@ const TRAP_STATES: Array<{ label: string; baited: boolean; sprung: boolean; worn
 /** How many things lie in the sack on its sheet. */
 const SACK_COUNTS = [1, 4, 20];
 
+/** The carcasses on the sheet: a kind and the stage it died at, small to big, a monster and a flyer among them. */
+const CARCASSES: Array<[string, number]> = [['cindra', 1], ['rabba', 0], ['rabba', 2], ['woola', 0], ['orse', 0], ['whispet', 0], ['goblin', 0]];
+
 const device: Family = {
   id: 'device', register: 'line', ref: 4,
   about: 'Things laid on the ground and drawn flat each frame: the campfire, the traps and a bridge\'s deck pieces.',
@@ -453,6 +457,15 @@ const device: Family = {
       variants: [1, 2, 3].map((r) => ({ label: `rare ${r}`, set: { variant: r } })),
       motions: [frames('shine', 'rare shine, rare 3', 6, { variant: 3 }, 1.5)], emissive: false, footprint: [1, 1], ref: 4,
     },
+    ...(['log', 'plank'] as const).map((k): Asset => ({
+      family: 'device', kind: `crate_${k}`, name: CRATE_DEFS[k].name, register: 'line', style: 'kit', entry: 'crateSprite', file: 'src/render/kit/storecrate.ts', views: 'turns',
+      states: [], variants: WOODS.map((m) => ({ label: m, set: { material: m } })), motions: [], emissive: false, footprint: [1, 1], ref: 4,
+    })),
+    {
+      family: 'device', kind: 'carcass', name: 'Carcass', register: 'line', style: 'model', entry: 'carcassSprite → drawLying', file: 'src/render/beasts.ts', views: 'facings',
+      states: CARCASSES.map(([sp, st], state) => ({ label: `${sp}${st ? ` stage ${st}` : ''}`, set: { state } })),
+      variants: [{ label: 'with goods', set: { variant: 1 } }], motions: [], emissive: false, footprint: [1, 1], ref: 6,
+    },
     ...Object.values(TRAPS).map(({ id: k, name }): Asset => ({
       family: 'device', kind: `trap_${k}`, name: `Trap: ${name.toLowerCase()}`, register: 'line', style: 'kit', entry: 'drawTrap', file: 'src/render/kit/traps.ts', views: 'turns',
       states: TRAP_STATES.map((s, state) => ({ label: s.label, set: { state } })), variants: [], motions: [], emissive: false, footprint: [1, 1], ref: 4,
@@ -462,6 +475,8 @@ const device: Family = {
       states: states(['building', 'done']), variants: [0, 0.5, 1].map((g) => ({ label: `moss ${g}`, set: { variant: Math.round(g * 10) } })), motions: [], emissive: false, footprint: [1, 1], ref: 2,
     })),
   ],
+  // A carcass is its kind's model lying down: every line in before it is drawn.
+  prepare: async (a) => { if (a.kind === 'carcass') await loadAllWildermon(); },
   draw: (ctx, sx, sy, zoom, a, o) => {
     if (a.kind === 'campfire') {
       const f = FIRE_STATES[o.state] ?? FIRE_STATES[0];
@@ -473,6 +488,17 @@ const device: Family = {
       const spr = lyingSprite([{ id: 'rock', count: o.state || 1 }], 3, 4);
       sprite(ctx, sx, sy, zoom, spr);
       if (shines(o.variant)) drawShine(ctx, sx, sy, zoom, o.variant, 3 * 4099 + 4, o.t, spr.w * zoom, spr.ay * zoom);
+      return;
+    }
+    if (a.kind.startsWith('crate_')) {
+      spriteScaleFor(zoom);
+      sprite(ctx, sx, sy, zoom, crateSprite(a.kind.slice(6) as 'log' | 'plank', o.material, o.turn));
+      return;
+    }
+    if (a.kind === 'carcass') {
+      spriteScaleFor(zoom);
+      const [sp, st] = CARCASSES[o.state] ?? CARCASSES[0];
+      sprite(ctx, sx, sy, zoom, carcassSprite(sp, st, o.facing, o.variant === 1 ? 1 : -1));
       return;
     }
     if (a.kind.startsWith('trap_')) {

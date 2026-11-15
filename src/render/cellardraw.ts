@@ -348,7 +348,7 @@ export class CellarPainter {
     const cam = this.r.camera;
     const pile = g.groundAt(x, y, CELLAR_LEVEL);
     if (pile.length) {
-      const e = this.r.take('pile', x, y, cam.worldToScreenX(x + 0.5, y + 0.5), cam.worldToScreenY(x + 0.5, y + 0.5, floor), lyingSprite(pile, x, y, this.r.logsAt(x, y), this.r.year.season));
+      const e = this.r.take('pile', x, y, cam.worldToScreenX(x + 0.5, y + 0.5), cam.worldToScreenY(x + 0.5, y + 0.5, floor), lyingSprite(pile, x, y, this.r.logsAt(x, y), this.r.year.season, false, this.r.camera.rotation));
       let best = 0;
       for (const it of pile) if ((it.rare ?? 0) > best) best = it.rare ?? 0;
       if (best) e.rare = best;
@@ -365,7 +365,7 @@ export class CellarPainter {
       for (const crate of g.cratesOnTile(x, y)) {
         if ((crate.level ?? 0) >= 0 || g.rackAt(crate.x, crate.y, crate.sx, crate.sy, crate.level)) continue;
         const [wx, wy] = crateCentre(crate);
-        const ce = this.r.take('crate', x, y, cam.worldToScreenX(wx, wy), cam.worldToScreenY(wx, wy, floor), crateSprite(crate.kind));
+        const ce = this.r.take('crate', x, y, cam.worldToScreenX(wx, wy), cam.worldToScreenY(wx, wy, floor), crateSprite(crate.kind, crate.material, this.r.camera.rotation, (crate.sx + crate.sy) & 3));
         ce.crateId = crate.id;
         if (crate.rare) ce.rare = crate.rare;
       }

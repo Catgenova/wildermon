@@ -421,6 +421,16 @@ const VEINS = VEIN_LOOKS.filter((l): l is VeinLook => l !== null);
 const veinsOf = (family: VeinLook['family']): string => listed(VEINS.filter((l) => l.family === family).map((l) => l.name.toLowerCase()));
 
 export const NEWS: News[] = [
+  // The crates and the carcasses in the kit (`kit/storecrate.ts`, `carcassSprite`), and the site icon (`scripts/emit-icons.mjs`).
+  {
+    n: 641,
+    day: '2026-11-15',
+    lines: () => [
+      `Changed: ${listed(Object.values(CRATE_DEFS).map((c) => c.name.toLowerCase()))}: new look, 8 facings, in their wood.`,
+      `Changed: ${itemDef('corpse').name.toLowerCase()}s on the ground: new look, the kind's own model and colours lying down, at its stage's size, 8 facings; other items on the tile: dropped items sack behind it.`,
+      'Changed: site icon: wildermon crate.',
+    ],
+  },
   // No coinsmithing (`20261120000091_no_coinsmithing.sql`): a die held anywhere came back as its two lumps.
   {
     n: 646,
