@@ -4245,9 +4245,10 @@ export class UI {
     if (pinned !== null && level + 1 < b.levels && !bld.floor(level + 1, x, y)) entries.push(...stairsUpEntries(g, base, level + 1, side,
       (at, lv, material, kind, sd, hand) => this.startPlacingStairs(at, lv, material, kind, sd, false, hand)));
     if (storey === undefined) entries.push(...cellarEntries(g, base, side, (material, kind, hand) => this.startPlacingStairs(base, 0, material, kind, side, true, hand)));
-    // Pinned, the storeys are the top storey's work, and the roof its own level's (`storeyview.ts`).
+    // Pinned, the storeys are the top storey's work, and the roof its own level's (`storeyview.ts`); the top storey plans the roof over it.
     if (pinned === null || level === b.levels - 1) {
       if (pinned === null) entries.push(...roofEntries(g, b, base, act, item, build, (plan) => this.startPlanArea(plan)));
+      else entries.push(...roofEntries(g, b, base, act, item, build, undefined, true));
       entries.push(item(act('add_floor'), base));
       if (b.levels > 1) entries.push(item(act('remove_storey'), base));
     }
@@ -4299,17 +4300,21 @@ function stairsUpEntries(g: Game, base: Extract<Target, { kind: 'tile' }>, level
   ];
 }
 
-/** The roof's rows for a tile of a building: building or taking out the one there, or planning one. */
+/**
+ * The roof's rows for a tile of a building: building or taking out the one there, or planning one. `planOnly`, on the
+ * top storey's own menu while it is pinned: Plan roof on a tile with none, greyed with the refusal when there is one.
+ */
 function roofEntries(g: Game, b: Building, base: Extract<Target, { kind: 'tile' }>, act: (id: string) => ActionDef,
   item: (def: ActionDef, target: Target, label?: string) => MenuItem,
   build: (def: ActionDef, target: Target, label: string, bill: Bill) => MenuItem,
-  area?: (plan: AreaPlan) => void): MenuItem[] {
+  area?: (plan: AreaPlan) => void, planOnly = false): MenuItem[] {
   const bld = g.buildings;
   const { x, y } = base;
   const entries: MenuItem[] = [];
   const plan = act('plan_floor');
   const roof = bld.floor(b.levels, x, y);
   const roofTarget: Target = { ...base, floorKind: 'roof' };
+  if (roof && planOnly) return entries;
   if (roof) {
     if (!isDone(roof)) entries.push(build(act('build_floor'), roofTarget, `Build roof · needs ${describeNeeds(roof, materialName)}`, roof));
     entries.push(item(act('remove_floor'), roofTarget, 'Remove roof'));

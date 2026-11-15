@@ -25,7 +25,7 @@
  * And drawn in Chromium (`plantools-page.ts`), at desktop and phone width: the ghost of a storey's walls all
  * round, every piece passing; the bar with its totals, inside the screen; Plan asking for every piece on the
  * storey shown, and Undo offered after; pinned on a shed's roof, its menu is the roof's (Plan roof: every tile)
- * with no storey work, the storey under a roof offers no roof work, a planned pitched roof is picked on its
+ * with no storey work, the top storey offers Plan roof (greyed while open) and not the whole roof, a planned pitched roof is picked on its
  * slope and is no place to walk; a footprint's ghost follows the cursor. Needs a Chromium as `storeyview.ts`
  * does; without one the drawing is skipped, unless `STOREY_STRICT` is set.
  *
@@ -373,7 +373,8 @@ if (!options) {
       const menu = await run<Menu>('return p.menu(1, p.hx + 1, p.hy + 1, 1, false);');
       check(`${at}: storey 2's menu offers its walls all round and its floor is whole`, menu.rows.some((r) => r.startsWith('Plan walls all round (storey 2)'))
         && !menu.rows.some((r) => r.startsWith('Plan floor: every tile')), menu.rows.filter((r) => !r.includes(' > ')).join(' / '));
-      check(`${at}: and the storey under the roof offers no roof work while pinned`, !menu.rows.some((r) => r.startsWith('Plan roof')), menu.rows.filter((r) => !r.includes(' > ')).join(' / '));
+      check(`${at}: and the top storey offers Plan roof while pinned, greyed while its sides are bare, and not the whole roof`,
+        menu.rows.includes('Plan roof') && !menu.rows.some((r) => r.startsWith('Plan roof >') || r.startsWith('Plan roof: every tile')), menu.rows.filter((r) => !r.includes(' > ')).join(' / '));
       await run('p.choose(1, p.hx + 1, p.hy + 1, 1, ["Plan walls all round", "Solid", "Log"]); p.frame(1);');
       const laid = await run<State>('return p.state();');
       check(`${at}: laid out, the ghost is the hall's fourteen sides on storey 2, every one passing`,
