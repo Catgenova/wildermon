@@ -582,7 +582,7 @@ check(`an Ember Heart at QL ${sm.enchant?.ql.toFixed(1)}: ten seconds of heat ta
 loom.enchant = { id: MASTER.id, ql: 60 };
 check(`a Masterwork at QL 60 on a loom adds ${enchantValue(MASTER, 60)} to the quality of what is made at it, and nothing at a fire, on both sides; the island's craft and forge add it`,
   near(g.masterAt('loom'), enchantValue(MASTER, 60)) && g.masterAt('campfire') === 0 && near(num('MASTER', 0), enchantValue(MASTER, 60)) && num('MASTER', 1) === 0
-    && isle.get('MASTERSRC') === 'true|2', `${isle.get('MASTER')} ${isle.get('MASTERSRC')} / ${g.masterAt('loom')}`);
+    && isle.get('MASTERSRC') === 'true|1', `${isle.get('MASTER')} ${isle.get('MASTERSRC')} / ${g.masterAt('loom')}`);
 
 /* 9. Fair Wind, Deep Hold, True Axle and Bag of Holding. */
 const boat = g.addFurniture('rowing_boat', 30, 30, 0, 0, 50);

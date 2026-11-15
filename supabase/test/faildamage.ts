@@ -14,8 +14,7 @@
  *     instead, and nothing is handed back;
  *   * a Tailor's Nothing Wasted spares the damage, an Artisan's Keep the Stone
  *     the gem, a Smith's Second Heat the casting;
- *   * at the anvil a failed piece damages its casting and a failed strike its
- *     lump; a failed brew damages what would have gone in and loses the barrel
+ *   * at the anvil a failed piece damages its casting; a failed brew damages what would have gone in and loses the barrel
  *     that share of its water;
  *   * and every one of them says so in the same words on both sides.
  *
@@ -57,7 +56,7 @@ const BARREL_QL = 40;
 const WORN = 60;
 
 /* What every case leaves behind, the same way on both sides: count:damage of each thing asked after, and what was said. */
-const CASES = ['STACK1', 'STACK50', 'STACK99', 'GONE', 'LITRE', 'SMELT', 'COOK', 'PLAIN_SACK', 'SPARE', 'STONE', 'SMITH', 'HEAT', 'COINS', 'BREW'] as const;
+const CASES = ['STACK1', 'STACK50', 'STACK99', 'GONE', 'LITRE', 'SMELT', 'COOK', 'PLAIN_SACK', 'SPARE', 'STONE', 'SMITH', 'HEAT', 'BREW'] as const;
 type Case = typeof CASES[number];
 
 /* ---- the island ------------------------------------------------------------------------- */
@@ -188,7 +187,7 @@ begin
   ${craft('set_focus', newest('silver_lump'))};
   ${record('STONE', 'gem', 'silver_lump')}
 
-  /* ---- The anvil: a casting, Second Heat, and a strike. ---- */
+  /* ---- The anvil: a casting, and Second Heat. ---- */
   update player set craft_class = 'smith' where world_id = w and uid = u;
   perform pg_temp.hold(w, u, '{}');
   insert into item (world_id, holder, holder_uid, def, ql, count, extra, piece) values (w, 'player', u, 'casting', 1, 1, 'Iron', 'rake_head')
@@ -201,10 +200,6 @@ begin
   perform act_perform(w, u, 'smith', ${atAnvil('v_id')});
   ${record('HEAT', 'casting', 'rake_head')}
   perform pg_temp.hold(w, u, '{}');
-  perform give(w, u, 'coin_die', 1, 50);
-  perform give(w, u, 'gold_lump', 2, 1);
-  perform act_perform(w, u, 'strike_coins', ${atAnvil(newest('gold_lump'))});
-  ${record('COINS', 'gold_lump', 'coin')}
 
   /* ---- A brew. ---- */
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, material, made_by, litres, liquid, since)
@@ -298,10 +293,6 @@ g.inventory.add('hammer', { ql: 50 });
 forge('smith', g.inventory.add('casting', { ql: 1, extra: 'Iron', piece: 'rake_head' }));
 recordHere('HEAT', 'casting', 'rake_head');
 g.setPerks({});
-g.inventory.add('hammer', { ql: 50 });
-g.inventory.add('coin_die', { ql: 50 });
-forge('strike_coins', g.inventory.add('gold_lump', { count: 2, ql: 1 }));
-recordHere('COINS', 'gold_lump', 'coin');
 
 const barrel = g.addFurniture('barrel', Math.floor(g.player.x), Math.floor(g.player.y), 0, 0, BARREL_QL, [], 'Oak');
 Object.assign(barrel, { liquid: 'water', litres: BARREL_L });
@@ -344,8 +335,6 @@ same('STONE', `${STONE.name}: the gem undamaged, the silver damaged`,
   `1:${dm(0)},1:${dm(d(1))}|Failed: focus. Inputs damaged: silver lump ×1, +${d(1)} damage.#${STONE_KEPT}`);
 same('SMITH', 'a failed rake head damages its casting and does not use it', `1:${dm(d(1))},0:-|Failed: rake head. Inputs damaged: casting ×1, +${d(1)} damage.`);
 same('HEAT', `${HEAT.name} spares the casting`, `1:${dm(0)},0:-|Failed: rake head. ${SECOND_HEAT}`);
-same('COINS', 'a failed strike damages one lump of two and spends none',
-  `2:${dm(d(1) / 2)},0:-|Failed: coins, skill check. Inputs damaged: gold lump ×1, +${d(1)} damage.`);
 const waterLost = Math.floor(ALE.litres * d(BARREL_QL) / DAMAGE_MAX + 0.5);
 same('BREW', `a failed ale damages its ${name(ALE.input)} and loses ${waterLost} of the ${ALE.litres} L of water it would have taken`,
   `${ALE.count}:${dm(d(1))}|Failed: ale. Inputs damaged: ${name(ALE.input)} ×${ALE.count}, +${d(1)} damage; water ${ALE.litres} L, ${waterLost} L lost.`);

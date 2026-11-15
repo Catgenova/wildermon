@@ -7822,7 +7822,7 @@ export class Game {
    * tiles". So whatever a smelter, a kiln, a fire, an oven, an anvil, a
    * barrel or an improvement uses up comes from the same stock a craft does,
    * in the same order and by the same rules (see `craftStock`). The tools --
-   * a mould, a coin die, a file -- are still the ones you carry.
+   * a mould, a file -- are still the ones you carry.
    */
   stockEntry(uid: number, reach = CRAFT_REACH): CraftStock | undefined {
     return this.craftStock(uid, false, reach).find((s) => s.item.uid === uid);

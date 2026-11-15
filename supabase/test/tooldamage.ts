@@ -118,7 +118,6 @@ const FAMILY_GOES: Array<[string, string, string]> = [
 ];
 const DIRECT: Array<[string, string, string]> = [
   ['the forge', 'smith', 'hammer'],
-  ['the forge', 'strike_coins', 'hammer'],
   ['the smelter', 'pour_mould', 'hammer'],
   ['the smelter', 'cast_anvil', 'hammer'],
   ['a lock', 'fit_lock', 'hammer'],
@@ -231,7 +230,7 @@ begin
   for r in select * from (values ${DIRECT.map(([, job, tool]) => `('${job}', '${tool}')`).join(', ')}) as v(job, tool) loop
     perform pg_temp.only(w, u, r.tool);
     t := jsonb_build_object('kind', case r.job when 'groom' then 'creature' when 'shoe_creature' then 'creature'
-      when 'cut_vine' then 'tile' when 'fit_lock' then 'crate' when 'smith' then 'anvil' when 'strike_coins' then 'anvil'
+      when 'cut_vine' then 'tile' when 'fit_lock' then 'crate' when 'smith' then 'anvil'
       else 'smelter' end, 'id', -1, 'x', 4, 'y', 4, 'cx', 4, 'cy', 4);
     perform private.act_go(w, u, r.job, t);
     insert into said values (r.job, '-|' || pg_temp.dmg(w, u, r.tool));

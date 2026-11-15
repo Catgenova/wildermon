@@ -17,7 +17,7 @@
  *     carried into the sword whoever fits it, Mail Maker's hauberk, Plate
  *     Maker's breastplate -- each read where its rule is;
  *   * Ingots: poured, weighed, and counted as their lumps by a mould, a mix, a
- *     strike and a pass of Improve, with the rest coming back as lumps;
+ *     pass of Improve, with the rest coming back as lumps;
  *   * Forge Reach's stores, Metal Polisher's pass, Master's Mark's odds of a rare, and
  *     Temper Bath's quench, once, at water;
  *   * and the browser reads the same numbers where it asks or offers them.
@@ -29,9 +29,8 @@ import { ARMOUR_BY_ID, HIT_CAP, hitChance, pieceSoak, SOAK_CAP, WEAPON_BY_ID } f
 import { improveStep, improveStepAt } from '../../src/game/improve';
 import { ITEM_DEFS, makersMark, markSays, partsMark, RARITY_ODDS, rarityStep, rollRarity, temperOf, type Item } from '../../src/game/items';
 import { MELT_KEEP, MELT_SHARE, meltLumps, meltQl } from '../../src/game/melt';
-import { COIN_REFUSAL, COINS_PER_LUMP, coinPurity, FORGE_WORK, INGOT_LUMPS, INGOT_WEIGHT, ingotOf, lumpsIn, METAL_BY_ID, MOULD_BY_ID, MOULD_DENT, mouldUsesLeft } from '../../src/game/metal';
+import { FORGE_WORK, INGOT_LUMPS, INGOT_WEIGHT, ingotOf, lumpsIn, METAL_BY_ID, MOULD_BY_ID, MOULD_DENT, mouldUsesLeft } from '../../src/game/metal';
 import { perksOf, type PerkDef } from '../../src/game/perks';
-import { failDamage } from '../../src/game/faildamage';
 import { SECOND_HEAT } from '../../src/game/anvil';
 import { CRAFT_REACH, RECIPE_BY_ID, RECIPES, recipeStatus } from '../../src/game/recipes';
 import { psql, ok, bad, check } from './harness';
@@ -222,21 +221,17 @@ begin
   ${emptyFurnace};
   ${clear('shovel_head_mould', 'copper_lump')};
 
-  /* ---- Sure Hammer: Smith and Strike coins, failing every time without it and never with it. ---- */
+  /* ---- Sure Hammer: Smith, failing every time without it and never with it. ---- */
   ${checks(false)};
-  ${patch('Sure Hammer', { 'fail:smith': 0, 'fail:strike_coins': 0 })};
+  ${patch('Sure Hammer', { 'fail:smith': 0 })};
   perform pg_temp.hold(w, u, '{}');
   ${casting('rake_head', 2)};
   perform act_perform(w, u, 'smith', ${atAnvil('v_cast')});
   v_t := ${count('rake_head')} || ':' || ${count('casting')};
-  perform give(w, u, 'coin_die', 1, 50); perform give(w, u, 'gold_lump', 2, 100);
-  perform act_perform(w, u, 'strike_coins', ${atAnvil(newest('gold_lump'))});
-  v_t := v_t || ':' || ${count('coin')};
   ${hold('Sure Hammer')};
   perform act_perform(w, u, 'smith', ${atAnvil('v_cast')});
-  perform act_perform(w, u, 'strike_coins', ${atAnvil(newest('gold_lump'))});
-  insert into said values ('HAMMER', v_t || '|' || ${count('rake_head')} || ':' || ${count('coin')});
-  ${clear('rake_head', 'casting', 'coin', 'gold_lump')};
+  insert into said values ('HAMMER', v_t || '|' || ${count('rake_head')});
+  ${clear('rake_head', 'casting')};
 
   /* ---- Second Heat: a failed go leaves its casting undamaged. ---- */
   ${hold('Second Heat')};
@@ -353,30 +348,6 @@ begin
   ${craft('make_bronze', newest('tin_lump'))};
   insert into said values ('BARMIX', v_t || '|' || ${count('bronze_lump')} || ':' || ${count('copper_lump')} || ':' || ${count('copper_ingot')});
   ${clear('bronze_lump', 'copper_lump', 'copper_ingot', 'tin_lump')};
-  -- Coins from a gold bar.
-  perform give(w, u, 'coin_die', 1, 50); perform give(w, u, 'gold_ingot', 1, 100);
-  v_t := ${refused('strike_coins', atAnvil(newest('gold_ingot')))};
-  perform act_perform(w, u, 'strike_coins', ${atAnvil(newest('gold_ingot'))});
-  insert into said values ('BARCOIN', v_t || '|' || ${count('coin')} || ':' || ${count('gold_lump')} || ':' || ${count('gold_ingot')});
-  ${clear('coin', 'gold_lump', 'gold_ingot')};
-  -- Not from silver any more.
-  perform give(w, u, 'silver_lump', 1, 50);
-  insert into said values ('SILVERNO', ${refused('strike_coins', atAnvil(newest('silver_lump')))} || '|' || ${count('silver_lump')});
-  ${clear('silver_lump')};
-  -- The gold decides, past a hand that never misses: always at QL 100, about half the time at QL 0; a lump spent only on a strike that comes off.
-  perform give(w, u, 'coin_die', 2, 100);
-  perform give(w, u, 'gold_lump', 20, 100);
-  perform act_perform(w, u, 'strike_coins', ${atAnvil(newest('gold_lump'))}) from generate_series(1, 20);
-  v_t := ${count('coin')} || ':' || ${count('gold_lump')};
-  ${clear('coin')};
-  perform give(w, u, 'gold_lump', 60, 0);
-  -- The dice seeded for the 60: a share of 60 strikes falls outside the band about one run in five hundred by chance,
-  -- as a live run's 44 of 60 did; seeded, it is the same 60 strikes every run (as archer.ts seeds its rolls).
-  perform setseed(0.25);
-  perform act_perform(w, u, 'strike_coins', ${atAnvil(newest('gold_lump'))}) from generate_series(1, 60);
-  insert into said values ('PURE', v_t || '|' || ${count('coin')} || ':' || ${count('gold_lump')} || '|' || coalesce(${last('Failed: coins, gold too poor%')}, 'unsaid'));
-  ${clear('coin', 'gold_lump', 'coin_die')};
-
   /* ---- Metal Polisher: a pass of Improve on an iron hatchet, from an iron bar. ---- */
   perform give(w, u, 'file', 1, 50); perform give(w, u, 'whetstone', 1, 50);
   update skill set value = 50 where world_id = w and uid = u and id = 'blacksmithing';
@@ -474,8 +445,8 @@ check(`${P('Clean Pour').name}: a QL 60 mould at 40 damage pours as ${60 - 40 * 
 /* ---- the anvil ---------------------------------------------------------------------------- */
 
 const [hamA, hamB] = say('HAMMER').split('|').map((s) => s.split(':').map(Number));
-check(`${P('Sure Hammer').name}: Smith and Strike coins fail every time without it, the casting damaged and kept, and come off with it (its failure put at none)`,
-  hamA[0] === 0 && hamA[1] === 2 && hamA[2] === 0 && hamB[0] === 1 && hamB[1] > 0, say('HAMMER'));
+check(`${P('Sure Hammer').name}: Smith fails every time without it, the casting damaged and kept, and comes off with it (its failure put at none)`,
+  hamA[0] === 0 && hamA[1] === 2 && hamB[0] === 1, say('HAMMER'));
 const [heatLeft, heatSaid] = say('HEAT').split('|');
 check(`${P('Second Heat').name}: a failed go leaves its casting undamaged, and says so`,
   Number(heatLeft) === 1 && heatSaid.includes(SECOND_HEAT), say('HEAT'));
@@ -536,20 +507,6 @@ const [mixOk, mixAfter] = say('BARMIX').split('|');
 const [bronze, copperLeft, copperBars] = mixAfter.split(':').map(Number);
 check('a mix counts a copper bar as its lumps, and gives back what it does not use',
   mixOk === 'ALLOWED' && bronze === BRONZE.count && copperLeft === INGOT_LUMPS - (BRONZE.inputs[0].count ?? 1) && copperBars === 0, say('BARMIX'));
-const [coinOk, coinAfter] = say('BARCOIN').split('|');
-const [coins, goldLeft, goldBars] = coinAfter.split(':').map(Number);
-check('and a strike of coins a gold bar', coinOk === 'ALLOWED' && coins > 0 && goldLeft === INGOT_LUMPS - 1 && goldBars === 0,
-  say('BARCOIN'));
-const [silverNo, silverKept] = say('SILVERNO').split('|');
-check(`no coin is struck from silver: "${COIN_REFUSAL}"`, silverNo === COIN_REFUSAL && silverKept === '1', say('SILVERNO'));
-const [pureTop, pureLow, pureSaid] = say('PURE').split('|');
-const [topCoins, topLeft] = pureTop.split(':').map(Number);
-const [lowCoins, lowLeft] = pureLow.split(':').map(Number);
-const lowShare = lowCoins / COINS_PER_LUMP / 60;
-check(`gold at QL 100 takes the die every time, at QL 0 about ${coinPurity(0)} of the time (${lowShare.toFixed(2)}), and a strike that fails damages the lump and spends none`,
-  topCoins === 20 * COINS_PER_LUMP && topLeft === 0 && lowLeft === 60 - lowCoins / COINS_PER_LUMP
-    && lowShare > coinPurity(0) - 0.2 && lowShare < coinPurity(0) + 0.2
-    && pureSaid.startsWith(`Failed: coins, gold too poor for the die. Inputs damaged: gold lump ×1, +${failDamage(0)} damage.`), say('PURE'));
 const kgs = say('KG').split(',').map((s) => s.split(':'));
 check('every metal has an ingot on the island, weighing what the browser says',
   kgs.length === Object.keys(ITEM_DEFS).filter((id) => id.endsWith('_ingot')).length

@@ -153,7 +153,7 @@ import { MARK_CAP } from '../../game/marks';
 import { TOOL_JOBS } from '../../game/jobtools';
 import { MATERIAL_BY_ID, OBSIDIAN, type MaterialDef } from '../../game/materials';
 import { calmCap, CHOOSE_AT, PATH_LIST, PATH_TIER_AT, PICKS_PER_TIER, picksOf, SIT_CALM, SIT_REST, SIT_WORTH } from '../../game/meditation';
-import { COIN_METALS, COIN_QL_WEIGHT, COINS_PER_LUMP, coinPurity, INGOT_LUMPS, INGOT_WEIGHT, METALS, MOULD_BY_ID, MOULD_SKILL, MOULDS, NAILS_PER_LUMP, PRECIOUS_METALS, RARE_METALS, SMITH_TOOL } from '../../game/metal';
+import { COINS_PER_LUMP, INGOT_LUMPS, INGOT_WEIGHT, METALS, MOULD_BY_ID, MOULD_SKILL, MOULDS, NAILS_PER_LUMP, PRECIOUS_METALS, RARE_METALS, SMITH_TOOL } from '../../game/metal';
 import { COIN_WORTH } from '../../game/money';
 import { ORDER_LIFE } from '../../game/orders';
 import { KEPT_BEST, NUTRIENT_HOURS, NUTRIENT_NAMES, NUTRIENTS, TABLE_BEST } from '../../game/nutrition';
@@ -895,7 +895,7 @@ const lowerFirst = (t: string): string => (t ? `${t[0].toLowerCase()}${t.slice(1
 /** The things that are not wildermon, how far off they notice you, and how their weights add up. */
 const MONSTER_SORTS = Object.values(SPECIES).filter((s) => s.monster);
 const NOTICED = MONSTER_SORTS.map((s) => s.notice ?? HUNT_SIGHT).sort((a, b) => a - b);
-/** A hoard's deep metals: the ones nobody strikes a coin from. */
+/** A hoard's deep metals: all but silver and gold. */
 const HOARD_DEEP = HOARD_METALS.filter((id) => !PRECIOUS_METALS.some((m) => id === `${m}_lump`));
 /** The composite bow, the best of the wooden ones, and what a suit of scale takes. */
 const COMPOSITE = WEAPONS.find((w) => w.id === 'composite_bow') ?? WEAPONS[0];
@@ -998,7 +998,7 @@ const DEED_ACROSS = DEED_RADIUS * 2 + 1;
 /** What a gold coin is worth in silver, and a handful of small change for the example. */
 const GOLD = (COIN_WORTH.Gold ?? 0) / (COIN_WORTH.Silver ?? 1);
 const POCKET = 5;
-/** The metals out of the deep seams: the rare ones nobody strikes a coin from. */
+/** The metals out of the deep seams: the rare ones other than silver and gold. */
 const DEEP_METALS = [...RARE_METALS].filter((m) => !PRECIOUS_METALS.includes(m));
 /** A quality to show a hatchet at, and a helping at. */
 const HATCHET_QL = 40;
@@ -1710,16 +1710,16 @@ export function helpText(): string {
       ${FAIL_DAMAGE_SAID}, straight line between.</li>
       <li>Only the units it would have used: a pile's damage rises by that over its count. Reaching ${BROKEN_AT} damage: those units gone.</li>
       <li>Litre inputs: that damage as a share of the litres it would have taken, lost, to the whole litre; the vessel undamaged.</li>
-      <li>Every recipe with a skill check, smelting, alloys, cooking, kilns and glass included; the anvil, coins, brewing and dye recipes the same.
+      <li>Every recipe with a skill check, smelting, alloys, cooking, kilns and glass included; the anvil, brewing and dye recipes the same.
       Scrolls: their own rule (Enchanting).</li>
     </ul>
     <h4>What is at hand</h4>
     <ul>
       <li>Crafts and station work that use materials take from: pack, then bags on your back, then your stores within <b>${CRAFT_REACH} tiles</b>, nearest first.</li>
       <li>A run of goes started on a stack: the next stack of the same thing and wood or metal once it is used up; stops when none is left (${ranOutSaid(1, 'log', 'Pine')}), not on in another wood or metal.</li>
-      <li>At stations: mould or anvil metal, smelter ore and scrap, kiln clay, fuel for a campfire, smelter, kiln or oven, casting or coin metal at an anvil,
+      <li>At stations: mould or anvil metal, smelter ore and scrap, kiln clay, fuel for a campfire, smelter, kiln or oven, a casting at an anvil,
       improving stock, brew ingredients. Stacks in a store are marked with the store's name on the station's menu.</li>
-      <li>Tools must be carried (moulds, coin die, files and so on).</li>
+      <li>Tools must be carried (moulds, files and so on).</li>
       <li>Never taken from: a store behind a padlock you have no key to, one set down off your settlement by somebody else, a trash crate, a market stall,
       or anything put by. Carts, wagons and boats are anybody's store.</li>
       <li>Settings, <b>Crafting</b>: <i>Use stores within reach</i> unticked: pack and back bags only. <i>Keep rare materials out of crafting</i>: no automatic pick of a
@@ -1965,7 +1965,7 @@ export function helpText(): string {
       <li>Every mould: <b>${SKILL_BY_ID.get(MOULD_SKILL)?.name.toLowerCase()}</b>; QL = your ${SKILL_BY_ID.get(MOULD_SKILL)?.name.toLowerCase()}, not the sand's; pouring
       also trains ${SKILL_BY_ID.get(MOULD_SKILL)?.name.toLowerCase()}.</li>
       <li>Wears on every filling; <b>cannot be mended</b>; higher QL lasts more fillings.</li>
-      <li><b>${itemDef(SMITH_TOOL).name}</b> needed: firing a mould, pouring one, casting an anvil, smithing a casting, striking coins, fitting a padlock.</li>
+      <li><b>${itemDef(SMITH_TOOL).name}</b> needed: firing a mould, pouring one, casting an anvil, smithing a casting, fitting a padlock.</li>
       <li><b>Anvil mould</b>, poured at the smelter: an anvil of that metal from ${MOULD_BY_ID.get('anvil_mould')!.lumps} lumps; set down on ${ANVIL_SUBTILES * ANVIL_SUBTILES} spots of a tile.</li>
       <li>Other moulds, <b>poured at the smelter</b> in any metal: a <b>casting</b> (shovel head casting, nail casting…) out with the lumps.</li>
       <li>Castings are finished at an <b>anvil</b> with <b>blacksmithing</b>, <b>weaponsmithing</b> or <b>armoursmithing</b> as the piece needs. Skill sets success and QL,
@@ -2738,12 +2738,11 @@ export function helpText(): string {
     <ul>
       <li><b>A gold coin = ${GOLD} silver</b>. Prices are in silver; change comes in silver.</li>
       <li>Paying uses your largest coins first (${GOLD + 1} silver from a gold and ${POCKET} silver leaves ${POCKET - 1}).</li>
-      <li><b>Struck from ${COIN_METALS.join(' or ')} only</b>, ${COINS_PER_LUMP} per lump, at an anvil with a coin die in the pack. One lump spent a strike that comes off; a failure damages it by its QL (${FAIL_DAMAGE_SAID}).</li>
-      <li>After the smith's check, gold quality (QL): takes the die every time at QL ${QL_TOP}, ${percent(coinPurity(QL_TOP / 2))} at QL ${QL_TOP / 2}, ${percent(1 - COIN_QL_WEIGHT)} at the bottom; linear between.</li>
+      <li>Metal: ${COINS_PER_LUMP} coins to a lump (<b>Melt down</b>).</li>
       <li>Gold ore: only under the mountain of ${REGIONS.filter((R) => R.mountain?.includes('gold_ore')).map((R) => islandName(R.name)).join(' and ')}; never panned or in a hoard.</li>
       <li>Gold coins in the grass: a <b>foraging</b> action finds one one time in ${COIN_FIND_ONE_IN}, max ${COIN_FINDS_A_DAY} a day per person (daily reset (${hudHour(TREE_DAWN_UTC)} UTC) to the next).
       Your own foraging only, never a settlement worker's.</li>
-      <li>Silver coins: circulate and come back as change; none are struck.</li>
+      <li>Silver coins: circulate and come back as change.</li>
     </ul>
     <h4>Market</h4>
     <ul>

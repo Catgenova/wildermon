@@ -15,8 +15,7 @@
  *   * a pot out of two clay, both fantastic, is fantastic every time; one out
  *     of a supreme clay and a plain one says one of two units;
  *   * a bucket of water is not an ingredient, and says nothing however rare;
- *   * at the anvil a rare lump strikes coins at least as rare, and a supreme
- *     casting beats out a piece at least supreme, and says so.
+ *   * at the anvil a supreme casting beats out a piece at least supreme, and says so.
  *
  * Runs against the database the suite leaves behind, and puts it back.
  */
@@ -146,19 +145,9 @@ begin
   insert into said values ('DOUGH', ${last('Rare ingredients:%')} || '|' || (select count(*) from item where world_id = w and holder = 'player' and holder_uid = u and def = 'dough'));
   ${clear('dough', 'flour', 'water_bucket', 'bucket')};
 
-  /* ---- the anvil: a rare lump's coins and a supreme casting's piece. ---- */
+  /* ---- the anvil: a supreme casting's piece. ---- */
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by)
     values (w, 'anvil', 'iron', 9, 10, 0, 0, 9.25, 10.25, 50, u) returning id into v_anvil;
-  perform give(w, u, 'coin_die', 1, 100);
-  for i in 1..10 loop
-    select coalesce(max(n), 0) into v_mark from event where world_id = w and uid = u;
-    v_it := give(w, u, 'gold_lump', 1, 100, 'Gold', 'rare');
-    perform perform_forge(w, u, 'strike_coins', jsonb_build_object('kind', 'anvil', 'id', v_anvil, 'itemUid', v_it));
-    insert into rolled values ('COINS', coalesce((select rare from item where id = ${newest('coin')}), 'none'));
-    ${clear('coin', 'gold_lump')};
-    update item set dmg = 0 where world_id = w and holder = 'player' and holder_uid = u and def = 'coin_die';
-  end loop;
-  insert into said values ('COINSAID', ${last('Rare ingredients:%')});
   for i in 1..10 loop
     select coalesce(max(n), 0) into v_mark from event where world_id = w and uid = u;
     insert into item (world_id, holder, holder_uid, def, ql, count, extra, piece, rare)
@@ -226,9 +215,7 @@ check('a pot of two fantastic clay is fantastic every time', atLeast(rolledOn('P
 check('and one of a supreme clay and a plain one, two stacks, says one of two units and uses both',
   at('POTSAID') === `${rareInputSaid(one)}|0`, at('POTSAID'));
 check('a fantastic bucket of water is no ingredient: the dough says nothing of it', at('DOUGH') === 'unsaid|1', at('DOUGH'));
-check('at the anvil a rare gold lump strikes coins at least rare, and says so',
-  atLeast(rolledOn('COINS'), STEP('rare')) && at('COINSAID') === rareInputSaid(units({ rare: 1 })), `${at('ROLLED:COINS')} / ${at('COINSAID')}`);
-check('and a supreme casting beats out a piece at least supreme, and says so',
+check('at the anvil a supreme casting beats out a piece at least supreme, and says so',
   atLeast(rolledOn('PIECE'), SUPREME) && at('PIECESAID') === rareInputSaid(units({ supreme: 1 })), `${at('ROLLED:PIECE')} / ${at('PIECESAID')}`);
 
 /* ---- in the browser --------------------------------------------------------------------- */
@@ -303,17 +290,6 @@ check('a fantastic bucket of water is no ingredient in the browser either', `${t
 empty();
 const anvil = g.addAnvil(Math.floor(g.player.x), Math.floor(g.player.y) + 1, 0, 0, 'iron', 50);
 const atAnvil = (itemUid: number): Target => ({ kind: 'anvil', id: anvil.id, itemUid } as unknown as Target);
-const die = g.inventory.add('coin_die', { count: 1, ql: 100 });
-const coinSteps: number[] = [];
-for (let i = 0; i < 10; i++) {
-  empty();
-  die.dmg = 0;
-  const lump = g.inventory.add('gold_lump', { count: 1, ql: 100, extra: 'Gold', rare: 1 });
-  ANVIL_ACTION_BY_ID.get('strike_coins')!.perform(atAnvil(lump.uid), g);
-  coinSteps.push(...stepsOf('coin'));
-}
-check('at the browser\'s anvil a rare gold lump strikes coins at least rare, and says so as the island does',
-  coinSteps.length === 10 && coinSteps.every((s) => s >= 1) && told().at(-1) === at('COINSAID'), `${coinSteps.join(',')} / ${told().at(-1)}`);
 const pieceSteps: number[] = [];
 for (let i = 0; i < 10; i++) {
   empty();
@@ -322,7 +298,7 @@ for (let i = 0; i < 10; i++) {
   ANVIL_ACTION_BY_ID.get('smith')!.perform(atAnvil(cast.uid), g);
   pieceSteps.push(...stepsOf('shovel_head'));
 }
-check('and a supreme casting beats out a piece at least supreme, and says so as the island does',
+check('at the browser\'s anvil a supreme casting beats out a piece at least supreme, and says so as the island does',
   pieceSteps.length === 10 && pieceSteps.every((s) => s >= SUPREME) && told().at(-1) === at('PIECESAID'), `${pieceSteps.join(',')} / ${told().at(-1)}`);
 
 finish('rare ingredients');

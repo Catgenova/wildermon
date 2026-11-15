@@ -77,7 +77,7 @@ import { FED_SAID, SACRIFICE_SAID, sacrificeable } from '../game/sacrifice';
 import { abilitiesOf, CHOOSE_AT, MEDITATION, nextStep, PATH_PICK_BY_ID, PATH_TIER_AT, PATHS, PATH_LIST, picksOf, sittingWorth } from '../game/meditation';
 import { brewTime, BREWS } from '../game/brewing';
 import { fireState, FIRE_COST, isFuel, type PlacedCampfire } from '../game/campfire';
-import { COIN_METALS, COIN_REFUSAL, DIE_WEAR, INGOT_LUMPS, MOULD_BY_ID, MOULD_BY_MAKES, isCasting, isIngot, isLump, isMetalStock, isMould, isOreItem, lumpsIn, metalOfBar, mouldLumps, mouldUsesLeft } from '../game/metal';
+import { INGOT_LUMPS, MOULD_BY_ID, MOULD_BY_MAKES, isCasting, isIngot, isLump, isMetalStock, isMould, isOreItem, lumpsIn, metalOfBar, mouldLumps, mouldUsesLeft } from '../game/metal';
 import { meltable } from '../game/melt';
 import { jobName, smelterState, type PlacedSmelter } from '../game/smelter';
 import { isGreenware, kilnState, type PlacedKiln } from '../game/kiln';
@@ -3321,10 +3321,9 @@ export class UI {
     const at: Target = { kind: 'anvil', id: a.id };
     const entries: MenuItem[] = [];
     const smithDef = ACTION_BY_ID.get('smith');
-    // Castings poured at the smelter, each named for the piece it is of, and
-    // the metal for coins: from the pack, a bag, or a store within reach.
+    // Castings poured at the smelter, each named for the piece it is of: from
+    // the pack, a bag, or a store within reach.
     const castings = g.stockChoices(isCasting, g.forgeReach());
-    const lumps = g.stockChoices((it) => isMetalStock(it.id), g.forgeReach());
     // Pieces to a filling, and more of them for a Smith's Nail Maker.
     const per = (def: { makes: string; per?: number }): number => g.perk(`count:${def.makes}`, def.per ?? 1);
     if (smithDef) {
@@ -3348,27 +3347,6 @@ export class UI {
               };
             })
           : undefined,
-      });
-    }
-    // Coins: a die in the pack, and a lump of gold named off the menu.
-    const strikeDef = ACTION_BY_ID.get('strike_coins');
-    const die = g.inventory.find('coin_die');
-    const precious = lumps.filter((s) => COIN_METALS.includes(metalOfBar(s.item.id)?.id ?? ''));
-    if (strikeDef) {
-      entries.push({
-        label: 'Strike coins',
-        disabled: !die || !precious.length,
-        hint: !die ? 'Need a coin die.' : !precious.length ? COIN_REFUSAL : undefined,
-        note: die ? `${Math.ceil((100 - die.dmg) / DIE_WEAR)} strikes left in the die` : undefined,
-        children:
-          die && precious.length
-            ? precious.map((s) => {
-                const lump = s.item;
-                const t: Target = { ...at, itemUid: lump.uid };
-                const reason = strikeDef.check?.(t, g) ?? null;
-                return { label: metalLabel(lump), note: storedIn(s), hint: reason ?? undefined, disabled: !!reason, onSelect: () => g.requestAction(strikeDef, t) };
-              })
-            : undefined,
       });
     }
     const up = ACTION_BY_ID.get('pick_up_anvil');

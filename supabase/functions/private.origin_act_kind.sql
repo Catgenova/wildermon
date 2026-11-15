@@ -20,7 +20,7 @@ begin
                         'take_off_lock', 'take_apart_campfire', 'place_anvil', 'place_crate', 'place_furniture',
                         'place_kiln', 'place_post', 'place_smelter', 'load_kiln', 'pour_into_barrel', 'crate_creature',
                         'take_creature', 'free_catch']) then return 'move'; end if;
-  if p_act = any (array['smith', 'strike_coins', 'quench_item']) or exists (select 1 from recipe r where r.id = p_act) then
+  if p_act = any (array['smith', 'quench_item']) or exists (select 1 from recipe r where r.id = p_act) then
     return 'craft';
   end if;
   if p_act = any (array['shear', 'milk_creature', 'take_honey', 'take_catch', 'take_ashes_fire', 'take_ashes_kiln',
