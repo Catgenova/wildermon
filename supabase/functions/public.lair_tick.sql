@@ -6,6 +6,8 @@ CREATE OR REPLACE FUNCTION public.lair_tick(p_world uuid)
 AS $function$
 declare k record; v_l record; v_stood int := 0;
 begin
+  -- Today's and tomorrow's lava kept (`lava_ready`).
+  perform lava_ready(p_world);
   -- And the summoned ones whose time is up, gone (`summon_sweep`).
   perform summon_sweep(p_world);
   for k in select * from lair_kinds() order by keep_off desc loop

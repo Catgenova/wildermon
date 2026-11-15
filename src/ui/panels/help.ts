@@ -2645,7 +2645,7 @@ export function helpText(): string {
       <li><b>${ACTION_BY_ID.get(OUTCROP_MINE)?.label}</b> (right-click it): pickaxe, ${MINE_JOB.skill}; time, stamina and success chance as Mine at a rock face (Miner's Sure Swing counted).</li>
       <li>Per success: ${listed(OUTCROP_KINDS.map((k) => `${k.name.toLowerCase()} 1 ${itemDef(k.yields).name.toLowerCase()}`))}, all at <b>QL ${OUTCROP_QL}</b>
       (skill and pickaxe QL do not change it); ${MINE_JOB.skill} trained as at a rock face. A failed swing uses none.</li>
-      <li><b>${OUTCROP_USES} uses</b> each; at 0 it breaks and is removed until the next daily reset. Examine its tile: uses left.</li>
+      <li><b>${OUTCROP_USES} uses</b> each; the last used: it breaks and is removed until the next daily reset. Examine its tile: uses left.</li>
       <li>Drawn smaller and cracked as uses run down: ${OUTCROP_STAGES + 1} stages.</li>
     </ul>
     <h3>Enchanting</h3>
