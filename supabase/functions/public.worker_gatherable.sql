@@ -47,7 +47,8 @@ begin
     if here <> tile_id('Tree') or not exists (select 1 from beside_tile(p_world, p_x, p_y)) then return false; end if;
     if p_kind = 'sprout' then
       return coalesce((select a.alive and a.logs > 0 from tree_age_def a where a.id = tree_age(land_data(p_world, p_x, p_y))), false)
-         and not is_foraged(p_world, p_x, p_y, 'sprout');
+         and not is_foraged(p_world, p_x, p_y, 'sprout')
+         and worker_gate_open(c, sprout_gate(land_data(p_world, p_x, p_y)));
     end if;
     return tree_species(land_data(p_world, p_x, p_y)) = resin_tree()
        and coalesce((select a.alive and a.logs > 0 from tree_age_def a where a.id = tree_age(land_data(p_world, p_x, p_y))), false)

@@ -176,6 +176,7 @@ import { applyLook, runeFor } from './theme';
 import { RunecutArt } from './runecut-dress';
 import { FRAME_RIM, RIMS } from './runecut-art';
 import { moduleMissed } from '../version';
+import { identifySaid, seenName } from '../game/skillgates';
 
 export interface UICallbacks {
   /** Quarter-turn the camera: +1 or -1. */
@@ -505,7 +506,7 @@ export class UI {
       (item, x, y) => this.compareCard(item, x, y),
       () => this.cratePanel?.pickedTo((uid) => {
         const it = game.inventory.get(uid);
-        if (it) this.moveDraggedN({ uid, from: 'inventory', name: itemName(it) }, 'store');
+        if (it) this.moveDraggedN({ uid, from: 'inventory', name: seenName(it, this.game) }, 'store');
       }) ?? null);
     const skills = this.windows.create({ id: 'skills', title: 'Skills', x: 364, y: 56, width: 260, height: 380, anchor: 'tr', open: false });
     new SkillsPanel(skills, game);
@@ -825,7 +826,7 @@ export class UI {
   /** A weapon or armour under the pointer in the pack or a store, set against what you have on; anything else, what it is and is for (`itemCard`). */
   private compareCard(item: Item | null, x: number, y: number): void {
     // And for anything, what its like has sold for on the island this month (`priceLine`).
-    const sold = item ? priceLine(this.market.prices[item.id]) : null;
+    const sold = item && !identifySaid(item, this.game) ? priceLine(this.market.prices[item.id]) : null;
     const lines = item ? compareLines(this.game, item) ?? itemCard(this.game, item) : null;
     if (lines && sold) lines.push(sold);
     if (lines) this.tooltip.show(x, y, lines, this.compareHolder, false, true);
@@ -994,7 +995,7 @@ export class UI {
       const store = this.cratePanel.currentStore();
       for (const uid of p.uids) {
         const it = to === 'inventory' ? store?.items.find((i) => i.uid === uid) : this.game.inventory.get(uid);
-        if (it) this.moveDraggedN({ uid, from: p.from, name: itemName(it) }, to);
+        if (it) this.moveDraggedN({ uid, from: p.from, name: seenName(it, this.game) }, to);
       }
       return;
     }
@@ -1215,8 +1216,8 @@ export class UI {
     this.placing = { kind: 'furniture', itemUid: item.uid, piece: item.id, material: item.extra, facing: 's' };
     // A trellis turns itself to the wall it goes against (`placingFacing`).
     this.game.logMsg(furnitureDef(item.id).vine
-      ? `Placing ${itemName(item).toLowerCase()}: snaps to the nearest wall side. Click: place. Esc: cancel.`
-      : `Placing ${itemName(item).toLowerCase()}: Q/E rotate. Click: place. Esc: cancel.`, 'info');
+      ? `Placing ${seenName(item, this.game).toLowerCase()}: snaps to the nearest wall side. Click: place. Esc: cancel.`
+      : `Placing ${seenName(item, this.game).toLowerCase()}: Q/E rotate. Click: place. Esc: cancel.`, 'info');
   }
 
   /**
@@ -1719,7 +1720,7 @@ export class UI {
     const pile = aloft ? [] : this.game.groundAt(pick.x, pick.y);
     if (pile.length === 1) {
       const it = pile[0];
-      lines.push(`On the ground: ${itemName(it).toLowerCase()}${it.count > 1 ? ` ×${it.count}` : ''}${it.dmg >= 1 ? ` · ${Math.round(it.dmg)}% damage` : ''} · ${rotLine(this.game, it, pick.x, pick.y)}`);
+      lines.push(`On the ground: ${seenName(it, this.game).toLowerCase()}${it.count > 1 ? ` ×${it.count}` : ''}${it.dmg >= 1 ? ` · ${Math.round(it.dmg)}% damage` : ''} · ${rotLine(this.game, it, pick.x, pick.y)}`);
     } else if (pile.length) {
       // The first of them to go, which is the one worth knowing about.
       const soonest = Math.min(...pile.map((it) => rotSeconds(this.game, it, pick.x, pick.y)));
@@ -1934,7 +1935,7 @@ export class UI {
       for (const it of crateItems) {
         const pt: Target = { ...target, sx: sx0, sy: sy0, itemUid: it.uid };
         const reason = placeDef.check?.(pt, this.game) ?? null;
-        entries.push({ label: `Place ${itemName(it).toLowerCase()} here (spot ${sx0 + 1},${sy0 + 1})`, hint: reason ?? undefined, disabled: !!reason, onSelect: () => this.game.requestAction(placeDef, pt) });
+        entries.push({ label: `Place ${seenName(it, this.game).toLowerCase()} here (spot ${sx0 + 1},${sy0 + 1})`, hint: reason ?? undefined, disabled: !!reason, onSelect: () => this.game.requestAction(placeDef, pt) });
       }
     }
     // Driving a carried work post into the spot under the cursor.
@@ -1946,7 +1947,7 @@ export class UI {
         const pt: Target = { ...target, sx: px0, sy: py0, itemUid: it.uid };
         const reason = postDef.check?.(pt, this.game) ?? null;
         entries.push({
-          label: `Drive ${itemName(it).toLowerCase()} in here (spot ${px0 + 1},${py0 + 1})`,
+          label: `Drive ${seenName(it, this.game).toLowerCase()} in here (spot ${px0 + 1},${py0 + 1})`,
           note: reason ? undefined : `${Math.round(postLife(it.ql) * postKeep(this.game) / 60)} min · reaches ${postRadius(it.ql)} tiles`,
           hint: reason ?? undefined,
           disabled: !!reason,
@@ -2046,7 +2047,7 @@ export class UI {
         const reason = trapSet.check?.(tt, this.game) ?? null;
         const kind = TRAPS[it.id as 'snare' | 'deadfall' | 'creel'];
         entries.push({
-          label: `Set ${itemName(it).toLowerCase()} here (spot ${tx0 + 1},${ty0 + 1})`,
+          label: `Set ${seenName(it, this.game).toLowerCase()} here (spot ${tx0 + 1},${ty0 + 1})`,
           note: reason ? undefined : `${Math.round(trapLife(it.id as 'snare' | 'deadfall' | 'creel', it.ql) * trapKeep(this.game, it.id as 'snare' | 'deadfall' | 'creel') / 60)} min · ${kind.water ? `holds ${Math.round((kind.hold ?? 8) * markOf(it, 'hold'))} fish` : `holds to taming ${Math.round(kind.holds * (0.6 + Math.max(1, Math.min(100, it.ql)) / 250))}`}`,
           hint: reason ?? undefined,
           disabled: !!reason,
@@ -2103,7 +2104,7 @@ export class UI {
     const pickUp = ACTION_BY_ID.get('pick_up');
     if (pile.length && pickUp) {
       const children: MenuItem[] = pile.map((item) => ({
-        label: (item.count > 1 ? `${itemName(item)} (${item.count})` : itemName(item)) + (item.dmg >= 1 ? ` · dmg ${Math.round(item.dmg)}` : ''),
+        label: (item.count > 1 ? `${seenName(item, this.game)} (${item.count})` : seenName(item, this.game)) + (item.dmg >= 1 ? ` · dmg ${Math.round(item.dmg)}` : ''),
         // How long it has lying here: nothing rots in a pack or a store.
         note: rotLine(this.game, item, pick.x, pick.y),
         onSelect: () => this.game.requestAction(pickUp, { kind: 'ground', x: pick.x, y: pick.y, uid: item.uid }),
@@ -2132,7 +2133,7 @@ export class UI {
       for (const { def, reason } of this.game.actionsFor(gt)) {
         if (def.id === 'pick_up') continue;
         entries.push({
-          label: `${def.label} the ${itemName(item).toLowerCase()}`,
+          label: `${def.label} the ${seenName(item, this.game).toLowerCase()}`,
           hint: reason ?? undefined,
           note: def.id === 'butcher' ? butcherPreview(this.game, item) : undefined,
           disabled: !!reason,
@@ -2154,7 +2155,7 @@ export class UI {
             children: slabs.map((it) => {
               const st: Target = { ...target, itemUid: it.uid };
               const why = def.check?.(st, this.game) ?? null;
-              return { label: it.count > 1 ? `${itemName(it)} (${it.count})` : itemName(it), hint: why ?? undefined, disabled: !!why, onSelect: () => this.game.requestAction(def, st) };
+              return { label: it.count > 1 ? `${seenName(it, this.game)} (${it.count})` : seenName(it, this.game), hint: why ?? undefined, disabled: !!why, onSelect: () => this.game.requestAction(def, st) };
             }),
           });
           continue;
@@ -2169,7 +2170,7 @@ export class UI {
             children: stacks.map((it) => {
               const st: Target = { ...target, itemUid: it.uid };
               const why = def.check?.(st, this.game) ?? null;
-              return { label: def.labelFor?.(st, this.game) ?? itemName(it), note: it.count > 1 ? `${itemName(it)} (${it.count})` : itemName(it), hint: why ?? undefined, disabled: !!why, onSelect: () => this.game.requestAction(def, st) };
+              return { label: def.labelFor?.(st, this.game) ?? seenName(it, this.game), note: it.count > 1 ? `${seenName(it, this.game)} (${it.count})` : seenName(it, this.game), hint: why ?? undefined, disabled: !!why, onSelect: () => this.game.requestAction(def, st) };
             }),
           });
           continue;
@@ -2187,7 +2188,7 @@ export class UI {
               const st: Target = { ...target, itemUid: stacks[0].uid };
               const why = def.check?.(st, this.game) ?? null;
               const n = stacks.reduce((sum, it) => sum + it.count, 0);
-              return { label: `${itemName(stacks[0])} (${n})`, hint: why ?? undefined, disabled: !!why, onSelect: () => this.game.requestAction(def, st) };
+              return { label: `${seenName(stacks[0], this.game)} (${n})`, hint: why ?? undefined, disabled: !!why, onSelect: () => this.game.requestAction(def, st) };
             }),
           });
           continue;
@@ -2204,7 +2205,7 @@ export class UI {
             children: sprouts.map((it) => {
               const st: Target = { ...target, itemUid: it.uid };
               const why = def.check?.(st, this.game) ?? null;
-              return { label: it.count > 1 ? `${itemName(it)} (${it.count})` : itemName(it), hint: why ?? undefined, disabled: !!why, onSelect: () => this.game.requestAction(def, st) };
+              return { label: it.count > 1 ? `${seenName(it, this.game)} (${it.count})` : seenName(it, this.game), hint: why ?? undefined, disabled: !!why, onSelect: () => this.game.requestAction(def, st) };
             }),
           });
           continue;
@@ -2266,7 +2267,7 @@ export class UI {
               const st: Target = { ...target, itemUid: it.uid };
               const reason = def.check?.(st, this.game) ?? null;
               return {
-                label: it.count > 1 ? `${itemName(it)} (${it.count})` : itemName(it),
+                label: it.count > 1 ? `${seenName(it, this.game)} (${it.count})` : seenName(it, this.game),
                 note: note(crop),
                 hint: reason ?? undefined,
                 disabled: !!reason,
@@ -2331,7 +2332,7 @@ export class UI {
     if (planBridge && (pick.x !== this.game.player.tileX || pick.y !== this.game.player.tileY)) {
       // An aqueduct is not thrown from a bank but led to where it pours (`aqueductMenu`).
       const g = this.game;
-      const billSaid = (bill: Array<[string, number]>, k = 1): string => bill.map(([id, n]) => `${n * k} ${itemName({ uid: 0, id, ql: 1, dmg: 0, count: 1 }).toLowerCase()}`).join(', ');
+      const billSaid = (bill: Array<[string, number]>, k = 1): string => bill.map(([id, n]) => `${n * k} ${seenName({ uid: 0, id, ql: 1, dmg: 0, count: 1 }, this.game).toLowerCase()}`).join(', ');
       const [ax, ay] = [g.player.tileX, g.player.tileY];
       // Lanes on offer: one; two, the second either side of the line; three. Labels, and what each lets over.
       const widths: Array<{ width: number; side?: Side; label: string; crosses: string }> = [
@@ -2381,7 +2382,7 @@ export class UI {
     return [{
       label: 'Set furniture down',
       children: carried.map((it) => ({
-        label: it.count > 1 ? `${itemName(it)} (${it.count})` : itemName(it),
+        label: it.count > 1 ? `${seenName(it, this.game)} (${it.count})` : seenName(it, this.game),
         note: 'follows the cursor · Q/E rotate · click to place',
         onSelect: () => this.startPlacing(it),
       })),
@@ -2449,7 +2450,7 @@ export class UI {
       for (const it of crateItems) {
         const pt: Target = { ...target, sx: sx0, sy: sy0, itemUid: it.uid };
         const reason = cellarReason(g, placeDef, pt);
-        entries.push({ label: `Place ${itemName(it).toLowerCase()} here (spot ${sx0 + 1},${sy0 + 1})`, hint: reason ?? undefined, disabled: !!reason, onSelect: () => g.requestAction(placeDef, pt) });
+        entries.push({ label: `Place ${seenName(it, this.game).toLowerCase()} here (spot ${sx0 + 1},${sy0 + 1})`, hint: reason ?? undefined, disabled: !!reason, onSelect: () => g.requestAction(placeDef, pt) });
       }
     }
     const carried = g.inventory.items.filter((it) => isFurniture(it.id));
@@ -2457,7 +2458,7 @@ export class UI {
       entries.push({
         label: 'Set furniture down',
         children: carried.map((it) => ({
-          label: it.count > 1 ? `${itemName(it)} (${it.count})` : itemName(it),
+          label: it.count > 1 ? `${seenName(it, this.game)} (${it.count})` : seenName(it, this.game),
           note: 'follows the cursor · Q/E rotate · click to place',
           onSelect: () => this.startPlacing(it),
         })),
@@ -2470,7 +2471,7 @@ export class UI {
         const t: Target = { kind: 'ground', x, y, uid: it.uid, down: true };
         const reason = cellarReason(g, pickUp, t);
         return {
-          label: (it.count > 1 ? `${itemName(it)} (${it.count})` : itemName(it)) + (it.dmg >= 1 ? ` · dmg ${Math.round(it.dmg)}` : ''),
+          label: (it.count > 1 ? `${seenName(it, this.game)} (${it.count})` : seenName(it, this.game)) + (it.dmg >= 1 ? ` · dmg ${Math.round(it.dmg)}` : ''),
           hint: reason ?? undefined,
           disabled: !!reason,
           onSelect: () => g.requestAction(pickUp, t),
@@ -2547,7 +2548,7 @@ export class UI {
     const it = stack.item;
     const put = (count: number) => (): void => g.requestAction(def, { ...target, itemUid: it.uid, count } as Target);
     return {
-      label: `${it.count > 1 ? `${itemName(it)} (${it.count})` : itemName(it)} · QL ${it.ql.toFixed(1)}`,
+      label: `${it.count > 1 ? `${seenName(it, this.game)} (${it.count})` : seenName(it, this.game)} · QL ${it.ql.toFixed(1)}`,
       note: storedIn(stack),
       children: it.count > 1 ? [{ label: 'One', onSelect: put(1) }, { label: `All (${it.count})`, onSelect: put(it.count) }] : undefined,
       onSelect: it.count > 1 ? undefined : put(1),
@@ -2612,7 +2613,7 @@ export class UI {
     // Every other mould is poured here too, and cools into a casting for the anvil.
     const pourDef = ACTION_BY_ID.get('pour_mould');
     // In one order however the pack shifts as they are filled, and each with its QL, which is how two of a kind are told apart.
-    const moulds = orderBy(g.inventory.items.filter((it) => isMould(it.id) && MOULD_BY_ID.get(it.id)?.makes !== 'anvil'), 'name');
+    const moulds = orderBy(g.inventory.items.filter((it) => isMould(it.id) && MOULD_BY_ID.get(it.id)?.makes !== 'anvil'), 'name', g);
     if (pourDef) {
       entries.push({
         label: 'Pour a mould',
@@ -2623,7 +2624,7 @@ export class UI {
             ? moulds.map((mould) => {
                 const def = MOULD_BY_ID.get(mould.id)!;
                 return {
-                  label: `${itemName(mould)} · QL ${mould.ql.toFixed(1)}`,
+                  label: `${seenName(mould, this.game)} · QL ${mould.ql.toFixed(1)}`,
                   note: `${itemDef(def.makes).name.toLowerCase()} · ${def.lumps} lump${def.lumps > 1 ? 's' : ''} · damage ${mould.dmg.toFixed(1)} · ${mouldUsesLeft(mould.ql, mould.dmg, markOf(mould, 'last'))} fillings left`,
                   children: lumps.map((k) => {
                     const lump = k.item;
@@ -2668,7 +2669,7 @@ export class UI {
       const job = s.jobs[0];
       entries.push({ label: `In the furnace: ${jobName(job)}`, note: `${Math.ceil(job.left)} s left, ${s.jobs.length} total`, disabled: true });
     }
-    if (s.output.length) entries.push({ label: `Finished: ${s.output.map((o) => `${o.count > 1 ? `${o.count} × ` : ''}${itemName(o).toLowerCase()}`).join(', ')}`, disabled: true });
+    if (s.output.length) entries.push({ label: `Finished: ${s.output.map((o) => `${o.count > 1 ? `${o.count} × ` : ''}${seenName(o, this.game).toLowerCase()}`).join(', ')}`, disabled: true });
     return entries;
   }
 
@@ -2718,7 +2719,7 @@ export class UI {
               const st: Target = { kind: 'furniture', id: f.id, itemUid: it.uid };
               const reason = sow.check?.(st, g) ?? null;
               return {
-                label: it.count > 1 ? `${itemName(it)} (${it.count})` : itemName(it),
+                label: it.count > 1 ? `${seenName(it, this.game)} (${it.count})` : seenName(it, this.game),
                 // A stage in real time: the crop's, at the pace this sowing would grow at, at a planter's share of it.
                 note: stageNote(crop.name, crop.stageSeconds * planterPace(g, f, crop.id), true, g.wallNow()),
                 hint: reason ?? undefined,
@@ -2775,7 +2776,7 @@ export class UI {
       children: offered.map((it) => {
         const t: Target = { kind: 'furniture', id: f.id, itemUid: it.uid };
         const why = def.check?.(t, g) ?? null;
-        return { label: itemName(it), note: it.count > 1 ? `one of ${it.count}` : undefined, hint: why ?? undefined, disabled: !!why, onSelect: () => g.requestAction(def, t) };
+        return { label: seenName(it, this.game), note: it.count > 1 ? `one of ${it.count}` : undefined, hint: why ?? undefined, disabled: !!why, onSelect: () => g.requestAction(def, t) };
       }),
     };
   }
@@ -2819,7 +2820,7 @@ export class UI {
           })
         : [];
       return {
-        label: `Set ${itemName(it).toLowerCase()}`,
+        label: `Set ${seenName(it, this.game).toLowerCase()}`,
         hint: b ? undefined : why ?? undefined,
         disabled: !b,
         children: b
@@ -2889,7 +2890,7 @@ export class UI {
           const pt: Target = { kind: 'tile', x: f.x, y: f.y, cx: f.x, cy: f.y, sx: free?.[0] ?? 0, sy: free?.[1] ?? 0, itemUid: it.uid };
           const reason = free ? placeDef.check?.(pt, g) ?? null : 'All spots taken.';
           entries.push({
-            label: `Put ${itemName(it).toLowerCase()} on it`,
+            label: `Put ${seenName(it, this.game).toLowerCase()} on it`,
             note: reason ? undefined : `spot ${on.length + 1} of ${rackSpots(f)}`,
             hint: reason ?? undefined,
             disabled: !!reason,
@@ -3024,7 +3025,7 @@ export class UI {
         children: things.length ? things.map((it) => {
           const t = { ...ft, itemUid: it.uid } as Target;
           const reason = put.check?.(t, g) ?? null;
-          return { label: it.count > 1 ? `${itemName(it)} (${it.count})` : itemName(it), hint: reason ?? undefined, disabled: !!reason, onSelect: () => g.requestAction(put, t) };
+          return { label: it.count > 1 ? `${seenName(it, this.game)} (${it.count})` : seenName(it, this.game), hint: reason ?? undefined, disabled: !!reason, onSelect: () => g.requestAction(put, t) };
         }) : undefined,
       });
     }
@@ -3050,7 +3051,7 @@ export class UI {
         children: herbs.length ? herbs.map((it) => {
           const t = { ...ft, itemUid: it.uid } as Target;
           const reason = put.check?.(t, g) ?? null;
-          return { label: it.count > 1 ? `${itemName(it)} (${it.count})` : itemName(it), hint: reason ?? undefined, disabled: !!reason, onSelect: () => g.requestAction(put, t) };
+          return { label: it.count > 1 ? `${seenName(it, this.game)} (${it.count})` : seenName(it, this.game), hint: reason ?? undefined, disabled: !!reason, onSelect: () => g.requestAction(put, t) };
         }) : undefined,
       });
     }
@@ -3106,7 +3107,7 @@ export class UI {
         children: seeds.length && open.length ? open.map((i) => ({
           label: `Slot ${i + 1}`,
           children: seeds.map((it) => line(SPIRAL_SOW, { ...ft, slot: i, itemUid: it.uid } as Target,
-            `${SPIRAL_HERBS.find((c) => c.seed === it.id)?.name ?? itemName(it)} (${it.count})`)).filter((m): m is MenuItem => !!m),
+            `${(identifySaid(it, g) ? null : SPIRAL_HERBS.find((c) => c.seed === it.id)?.name) ?? seenName(it, g)} (${it.count})`)).filter((m): m is MenuItem => !!m),
         })) : undefined,
       });
     }
@@ -3117,7 +3118,7 @@ export class UI {
         label: put.label,
         disabled: !cheeses.length,
         hint: cheeses.length ? undefined : ADORN_SAID.noCheese,
-        children: cheeses.length ? cheeses.map((it) => line(RACK_PUT, { ...ft, itemUid: it.uid } as Target, `${itemName(it)} (${it.count}, QL ${it.ql.toFixed(1)})`))
+        children: cheeses.length ? cheeses.map((it) => line(RACK_PUT, { ...ft, itemUid: it.uid } as Target, `${seenName(it, this.game)} (${it.count}, QL ${it.ql.toFixed(1)})`))
           .filter((m): m is MenuItem => !!m) : undefined,
       });
     }
@@ -3163,7 +3164,7 @@ export class UI {
       const job = k.jobs[0];
       entries.push({ label: `In the kiln: ${itemDef(job.makes).name.toLowerCase()}`, note: `${Math.ceil(job.left)} s left, ${k.jobs.length} total`, disabled: true });
     }
-    if (k.output.length) entries.push({ label: `Fired: ${k.output.map((o) => `${o.count > 1 ? `${o.count} × ` : ''}${itemName(o).toLowerCase()}`).join(', ')}`, disabled: true });
+    if (k.output.length) entries.push({ label: `Fired: ${k.output.map((o) => `${o.count > 1 ? `${o.count} × ` : ''}${seenName(o, this.game).toLowerCase()}`).join(', ')}`, disabled: true });
     return entries;
   }
 
@@ -3254,7 +3255,7 @@ export class UI {
       const choices = baitInPack(g);
       const reason = bait.check?.(tt, g) ?? null;
       entries.push({
-        label: t.bait ? `Change bait (${itemName(t.bait).toLowerCase()})` : 'Bait',
+        label: t.bait ? `Change bait (${seenName(t.bait, this.game).toLowerCase()})` : 'Bait',
         disabled: !!reason,
         hint: reason ?? undefined,
         children: choices.length
@@ -3262,7 +3263,7 @@ export class UI {
               const comers = Object.values(SPECIES).filter((sp) => !sp.hybrid && isBaitFor(sp, it.id) && sp.tameLevel <= trapHolds(t));
               const fishy = BAIT_BY_ID.get(it.id);
               return {
-                label: itemName(it),
+                label: seenName(it, this.game),
                 note: def.water
                   ? fishy ? fishy.favours.map((f) => itemDef(f).name.toLowerCase()).join(', ') : 'nothing comes to that'
                   : comers.length ? comers.map((sp) => sp.name).slice(0, 4).join(', ') : 'nothing this will hold',
@@ -3310,7 +3311,7 @@ export class UI {
               const reason = smithDef.check?.(t, g) ?? null;
               const where = storedIn(s);
               return {
-                label: `${itemName(c)} (${c.count})`,
+                label: `${seenName(c, this.game)} (${c.count})`,
                 note: def ? `${per(def) > 1 ? `${per(def)} ` : 'a '}${itemDef(def.makes).name.toLowerCase()} · QL ${c.ql.toFixed(0)}${where ? ` · ${where}` : ''}` : where,
                 hint: reason ?? undefined,
                 disabled: !!reason,
@@ -3565,7 +3566,7 @@ export class UI {
       if (food.length) {
         entries.push({
           label: 'Feed',
-          children: food.map((it) => ({ label: it.count > 1 ? `${itemName(it)} (${it.count})` : itemName(it), onSelect: () => g.requestAction(CREATURE_ACTION_BY_ID.get('feed') as ActionDef, { ...target, itemUid: it.uid }) })),
+          children: food.map((it) => ({ label: it.count > 1 ? `${seenName(it, this.game)} (${it.count})` : seenName(it, this.game), onSelect: () => g.requestAction(CREATURE_ACTION_BY_ID.get('feed') as ActionDef, { ...target, itemUid: it.uid }) })),
         });
       } else push(item('feed'));
     }
@@ -3888,7 +3889,7 @@ export class UI {
       children: priced.map((it) => {
         const why = stallBuyRefusal(this.game, f, it);
         return {
-          label: `${itemName(it)}${it.count > 1 ? ` (${it.count})` : ''} — ${priceWords(it.price ?? 0)}`,
+          label: `${seenName(it, this.game)}${it.count > 1 ? ` (${it.count})` : ''} — ${priceWords(it.price ?? 0)}`,
           hint: why ?? undefined, disabled: !!why, onSelect: () => void this.buyOffCounter(it),
         };
       }),
@@ -3900,7 +3901,7 @@ export class UI {
     if (!this.island || it.price === undefined) return;
     const price = it.price;
     const why = await this.island.atCounter('buy', it.uid);
-    this.game.logMsg(why ?? boughtLine(it.count, itemName(it), price), why ? 'error' : 'event');
+    this.game.logMsg(why ?? boughtLine(it.count, seenName(it, this.game), price), why ? 'error' : 'event');
   }
 
   /**

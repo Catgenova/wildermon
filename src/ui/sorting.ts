@@ -1,4 +1,5 @@
-import { itemName, itemWeight, type Item } from '../game/items';
+import { itemWeight, type Item } from '../game/items';
+import { seenName, type Viewer } from '../game/skillgates';
 
 /**
  * How a list of things is put in order.
@@ -25,8 +26,8 @@ export const SORTS: Array<[SortKey, string]> = [
   ['count', 'Count'],
 ];
 
-const BY: Record<SortKey, (a: Item, b: Item) => number> = {
-  name: (a, b) => itemName(a).localeCompare(itemName(b)),
+const BY: Record<SortKey, (a: Item, b: Item, v: Viewer) => number> = {
+  name: (a, b, v) => seenName(a, v).localeCompare(seenName(b, v)),
   ql: (a, b) => b.ql - a.ql,
   weight: (a, b) => itemWeight(b) - itemWeight(a),
   dmg: (a, b) => b.dmg - a.dmg,
@@ -38,9 +39,11 @@ const BY: Record<SortKey, (a: Item, b: Item) => number> = {
  * best first, then the thing itself (`uid`, which never changes), so a crate
  * of two hundred identical planks -- or three nail moulds -- keeps one order
  * however the pack underneath it is rearranged by what is being done with it.
+ * Names as `viewer` sees them (`seenName`), so an unidentified thing sorts as
+ * what it is to them.
  */
-export const orderBy = (items: readonly Item[], key: SortKey): Item[] =>
-  [...items].sort((a, b) => BY[key](a, b) || itemName(a).localeCompare(itemName(b)) || b.ql - a.ql || a.uid - b.uid);
+export const orderBy = (items: readonly Item[], key: SortKey, viewer: Viewer): Item[] =>
+  [...items].sort((a, b) => BY[key](a, b, viewer) || seenName(a, viewer).localeCompare(seenName(b, viewer)) || b.ql - a.ql || a.uid - b.uid);
 
 /** The select itself, since both windows want the same one. */
 export function sortSelect(title: string, onPick: (key: SortKey) => void): HTMLSelectElement {

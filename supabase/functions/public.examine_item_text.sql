@@ -10,6 +10,7 @@ declare d item_def; m material_def; r rarity_def; v_worth double precision;
 begin
   select * into d from item_def where id = it.def;
   if not found then return 'It is nothing you have a name for.'; end if;
+  if identify_said(p_world, p_uid, it.def, it.extra) is not null then return identify_said(p_world, p_uid, it.def, it.extra); end if;
   m := mat_of(it.extra);
   select * into r from rarity_def where id = it.rare;
   v_worth := tool_worth(it.ql, it.dmg, it.extra, it.rare, it.bless);

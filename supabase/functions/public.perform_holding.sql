@@ -18,8 +18,8 @@ begin
       v_why := store_refusal(p_world, p_uid, v_kept, lower(placed_name(p)));
       if v_why is not null then perform tell(p_world, p_uid, v_why, 'error'); return; end if;
     end if;
-    select string_agg(case when q.count > 1 then q.count || ' × ' || lower(item_name(q))
-                           else lower(item_name(q)) end, ', ' order by q.id), count(*)
+    select string_agg(case when q.count > 1 then q.count || ' × ' || lower(seen_name(p_world, p_uid, q))
+                           else lower(seen_name(p_world, p_uid, q)) end, ', ' order by q.id), count(*)
       into v_names, v_n
       from item q where q.placed = p.id and q.holder = 'furniture';
     if v_n = 0 then return; end if;
@@ -52,7 +52,7 @@ begin
     if v_fit <= 0 then return; end if;
     v_moved := move_part(it.id, v_fit, 'bag', p_uid, v_bag.id, null);
     if v_moved is null then return; end if;
-    perform tell(p_world, p_uid, stored_line(v_fit, item_name(it),
+    perform tell(p_world, p_uid, stored_line(v_fit, seen_name(p_world, p_uid, it),
       (select name from item_def where id = v_bag.def), v_want - v_fit), 'event');
 
   elsif p_action = 'empty_bag' then
@@ -86,7 +86,7 @@ begin
       perform journal_once(p_world, p_uid, 'binfull');
     end if;
     perform tell(p_world, p_uid,
-      stored_line(v_fit, item_name(it), placed_name(p), v_want - v_fit), 'event');
+      stored_line(v_fit, seen_name(p_world, p_uid, it), placed_name(p), v_want - v_fit), 'event');
     if v_kept.founded_by is not null then
       perform store_log_add(p_world, v_kept.founded_by, p_uid, true, it.def, lower(item_name(it)), v_fit, placed_name(p));
     end if;
@@ -97,7 +97,7 @@ begin
     v_moved := move_part(it.id, v_want, 'furniture', null, null, p.id);
     if v_moved is null then return; end if;
     perform tell(p_world, p_uid, 'Trashed: '
-      || case when v_want > 1 then v_want || ' × ' else '' end || lower(item_name(it))
+      || case when v_want > 1 then v_want || ' × ' else '' end || lower(seen_name(p_world, p_uid, it))
       || '.', 'event');
   end if;
 end $function$

@@ -43,10 +43,10 @@ begin
   perform pack_fold_one(v_it.id);
   perform note_sale(p_world, v_it.def, v_it.count, v_it.price, v_it.ql);
   if v_pl.made_by is not null then
-    perform tell(p_world, v_pl.made_by, 'Sold: ' || v_name || ' to ' || folk_name(p_world, me)
+    perform tell(p_world, v_pl.made_by, 'Sold: ' || lower(seen_name(p_world, v_pl.made_by, v_it.def, v_it.extra, v_name)) || ' to ' || folk_name(p_world, me)
       || ', ' || v_it.price || ' silver.', 'event');
     perform away_count(p_world, v_pl.made_by, 'sold', v_it.def, v_it.count, v_it.price);
     perform journal_note(p_world, v_pl.made_by, 'sold');
   end if;
-  return jsonb_build_object('bought', v_name, 'paid', v_it.price);
+  return jsonb_build_object('bought', lower(seen_name(p_world, me, v_it.def, v_it.extra, v_name)), 'paid', v_it.price);
 end $function$

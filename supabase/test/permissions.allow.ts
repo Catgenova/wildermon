@@ -121,6 +121,7 @@ export const TABLES: Record<string, Read> = {
   shield_def: 'rules',
   skill_def: 'rules',
   skill_gate: 'rules',
+  skill_gate_item: 'rules',
   slab_def: 'rules',
   species_butcher: 'rules',
   species_def: 'rules',

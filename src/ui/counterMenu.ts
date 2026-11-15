@@ -5,12 +5,13 @@ import {
   counterRefuses, counterSpare, counterWall, keeps, type Counter,
 } from '../game/counters';
 import type { Game } from '../game/game';
-import { itemName, type Item } from '../game/items';
+import { type Item } from '../game/items';
 import { priceWords } from '../game/money';
 import { nearestSide, type Pick } from '../render/renderer';
 import type { MenuItem } from './contextmenu';
 import type { DragPayload } from './dragdrop';
 import type { Store } from './panels/crate';
+import { seenName, type Viewer } from '../game/skillgates';
 
 /**
  * A shop counter, as the windows and the menus meet it.
@@ -72,8 +73,8 @@ export function counterStore(g: Game, c: Counter, buy?: (item: Item) => void): S
 }
 
 /** One thing on a counter, as a row of the Buy list says it: what, how many and the price of the lot. */
-const goodLine = (it: Item): string =>
-  `${itemName(it)}${it.count > 1 ? ` (${it.count})` : ''} — ${it.price !== undefined ? priceWords(it.price) : 'not for sale'}`;
+const goodLine = (it: Item, g: Viewer): string =>
+  `${seenName(it, g)}${it.count > 1 ? ` (${it.count})` : ''} — ${it.price !== undefined ? priceWords(it.price) : 'not for sale'}`;
 
 /** What the tile menu does with a counter: open it, and the island's doors for buying and the till. */
 export interface CounterWays {
@@ -157,7 +158,7 @@ export function counterEntries(g: Game, pick: Pick, ways: CounterWays): MenuItem
       label,
       children: priced.map((it) => {
         const why = buyRefusal(g, c, it);
-        return { label: goodLine(it), hint: why ?? undefined, disabled: !!why, onSelect: () => buy(it) };
+        return { label: goodLine(it, g), hint: why ?? undefined, disabled: !!why, onSelect: () => buy(it) };
       }),
     });
   }

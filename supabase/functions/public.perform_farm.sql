@@ -85,7 +85,7 @@ begin
     if r.o_produce is null then return; end if;
     perform tell(p_world, p_uid, 'Harvested: ' || r.o_got || ' × ' || coalesce(r.o_rare || ' ', '')
       || lower((select coalesce(name, r.o_produce) from item_def where id = r.o_produce))
-      || ', ' || r.o_seeds || ' ' || lower((select coalesce(name, r.o_seed) from item_def where id = r.o_seed))
+      || ', ' || r.o_seeds || ' ' || lower(seen_name(p_world, p_uid, r.o_seed, null, (select coalesce(name, r.o_seed) from item_def where id = r.o_seed)))
       || ', QL ' || to_char(r.o_ql, 'FM990.0') || '. ' || case when v_bed is not null then bed_name() else 'Field' end || ' ready to sow.', 'event');
     if r.o_rare is not null then
       perform journal_note(p_world, p_uid, r.o_rare);
@@ -179,7 +179,7 @@ begin
     end loop;
     if v_n = 0 then return; end if;
     perform tell(p_world, p_uid, 'Harvested: ' || v_n || case when v_n = 1 then ' field: ' else ' fields: ' end
-      || (select string_agg(t.n || ' × ' || lower(coalesce(dd.name, t.id)), ', ' order by t.o)
+      || (select string_agg(t.n || ' × ' || lower(seen_name(p_world, p_uid, t.id, null, coalesce(dd.name, t.id))), ', ' order by t.o)
             from unnest(v_ids, v_counts) with ordinality t(id, n, o) left join item_def dd on dd.id = t.id)
       || case when v_n = 1 then '. Field' else '. Fields' end || ' ready to sow.', 'event');
     foreach v_rare in array v_rares loop

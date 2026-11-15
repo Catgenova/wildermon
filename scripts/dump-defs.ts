@@ -18,7 +18,7 @@ import { EARLY_SKILL_BELOW, EARLY_SKILL_MUL, GAIN_RATE, PAST_TOP, SKILL_DEFS, SK
 import { MATERIALS } from '../src/game/materials';
 import { ACTIONS } from '../src/game/actions';
 import { RECIPES } from '../src/game/recipes';
-import { SKILL_GATES } from '../src/game/skillgates';
+import { GATED_ITEMS, SKILL_GATES } from '../src/game/skillgates';
 import { FURNITURE } from '../src/game/furniture';
 import { FORAGE_TABLE, BOTANIZE_TABLE, BOTANIZE_WATER_TABLE, COIN_FIND_ONE_IN, COIN_FINDS_A_DAY, EMPTY_CHANCE, FIND_CHECK, PER_ROLL } from '../src/game/forage';
 import { STONES_DEPTH, STONES_SLABS } from '../src/game/watergarden';
@@ -1080,6 +1080,11 @@ out.push(`alter table tree_def drop column if exists logs;`);
 out.push(`create table if not exists skill_gate (
   kind text not null, id text not null, name text not null, skill text not null, level int not null, primary key (kind, id)
 );`);
+/* The items each gate stops the use of (`GATED_ITEMS`): unidentified to whoever is under it (`seen_name`). `extra` is
+ * the lower-case qualifier that says which (a sprout's species), '' where the def alone says it. */
+out.push(`create table if not exists skill_gate_item (
+  item text not null, extra text not null, kind text not null, id text not null, noun text not null, primary key (item, extra)
+);`);
 /* How many landed cuts each age takes, what it leaves on the ground, and
  * whether it is grown enough to fruit. */
 out.push(`create table if not exists tree_age_def (
@@ -1161,8 +1166,9 @@ begin
   execute 'alter table bait_def enable row level security';
   execute 'alter table bait_favours enable row level security';
   execute 'alter table skill_gate enable row level security';
+  execute 'alter table skill_gate_item enable row level security';
 end $rls$;`);
-for (const t of ['action_def', 'recipe', 'recipe_input', 'recipe_gives', 'furniture_def', 'rock_def', 'tree_def', 'bush_def', 'loot_table', 'crop_def', 'fish_def', 'bait_def', 'bait_favours', 'skill_gate']) {
+for (const t of ['action_def', 'recipe', 'recipe_input', 'recipe_gives', 'furniture_def', 'rock_def', 'tree_def', 'bush_def', 'loot_table', 'crop_def', 'fish_def', 'bait_def', 'bait_favours', 'skill_gate', 'skill_gate_item']) {
   out.push(`drop policy if exists ${t}_read on ${t};`);
   out.push(`create policy ${t}_read on ${t} for select to anon, authenticated using (true);`);
   out.push(`grant select on ${t} to anon, authenticated;`);
@@ -1372,7 +1378,7 @@ for (const a of ACTIONS as unknown as A[]) {
  */
 out.push('');
 out.push(emptied(['melt_def', 'wall_fitting', 'recipe', 'recipe_input', 'recipe_gives',
-  'furniture_def', 'rock_def', 'tree_def', 'tree_age_def', 'skill_gate', 'bush_def', 'loot_table',
+  'furniture_def', 'rock_def', 'tree_def', 'tree_age_def', 'skill_gate', 'skill_gate_item', 'bush_def', 'loot_table',
   'crop_def', 'fish_def', 'bait_favours', 'bait_def', 'wall_type_def', 'roof_shape_def',
   'build_material_def', 'build_material_bill', 'species_def', 'species_diet', 'wild_table',
   'trait_def', 'trait_effect', 'channel_def', 'age_def', 'tier_odds', 'gather_def', 'learn_pace_def',
@@ -2544,6 +2550,9 @@ TREE_DEFS.forEach((t, i) => {
 });
 for (const g of SKILL_GATES) {
   out.push(`insert into skill_gate values (${q(g.kind)}, ${q(g.id)}, ${q(g.name)}, ${q(g.skill)}, ${q(g.level)});`);
+}
+for (const x of GATED_ITEMS) {
+  out.push(`insert into skill_gate_item values (${q(x.item)}, ${q(x.extra)}, ${q(x.gate.kind)}, ${q(x.gate.id)}, ${q(x.noun)});`);
 }
 for (const a of TREE_AGES) {
   out.push(`insert into tree_age_def values (${q(a.id)}, ${q(a.name)}, ${q(a.hits)}, ${q(a.logs)}, ${q(a.bears)}, ${q(a.next)}, ${q(a.pruned)}, ${q(a.alive)});`);

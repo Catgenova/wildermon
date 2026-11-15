@@ -2,6 +2,7 @@ import type { ActionDef, Target } from './actions';
 import type { Game } from './game';
 import { roomMul, type Enchant } from './enchant';
 import { describeFrom, foldInto, itemDef, itemName, rarityOf, roomFor, sameStack, storedLine, type Item } from './items';
+import { seenName } from './skillgates';
 import { matOf } from './materials';
 import { STORE_REACH, SUBTILES } from './limits';
 import { furnitureCentre, furnitureDef, furnitureName, pieceShut, rackDeck, rackSpots, type PlacedFurniture } from './furniture';
@@ -288,7 +289,7 @@ export const CRATE_ACTIONS: ActionDef[] = [
       const items = c.items.splice(0, c.items.length);
       for (const it of items) g.inventory.addItem(it);
       g.events.emit('crate');
-      const names = items.map((it) => (it.count > 1 ? `${it.count} × ${itemName(it).toLowerCase()}` : itemName(it).toLowerCase()));
+      const names = items.map((it) => (it.count > 1 ? `${it.count} × ${seenName(it, g).toLowerCase()}` : seenName(it, g).toLowerCase()));
       g.logMsg(`Taken from crate: ${names.join(', ')}.`, 'event');
     },
   },
@@ -322,7 +323,7 @@ export const CRATE_ACTIONS: ActionDef[] = [
         g.logMsg(`${crateName(c)} full.`, 'error');
         return;
       }
-      g.logMsg(storedLine(item.count, itemName(item), crateName(c), want - item.count), 'event');
+      g.logMsg(storedLine(item.count, seenName(item, g), crateName(c), want - item.count), 'event');
     },
   },
 ];
@@ -586,7 +587,7 @@ CRATE_ACTIONS.push({
     g.inventory.addItem(got);
     // Honey out of a hive, for the journal (the island's `perform_crate` the same).
     if (got.id === 'honey' && where.piece?.kind === 'hive') g.note('honey');
-    g.logMsg(`Taken from ${where.what}: ${got.count > 1 ? `${got.count} × ` : ''}${itemName(got).toLowerCase()}.`, 'event');
+    g.logMsg(`Taken from ${where.what}: ${got.count > 1 ? `${got.count} × ` : ''}${seenName(got, g).toLowerCase()}.`, 'event');
   },
 });
 

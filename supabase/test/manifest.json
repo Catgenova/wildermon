@@ -1973,9 +1973,9 @@
   },
   {
     "file": "supabase/test/skillgates.ts",
-    "title": "Skill gates: tree felling by woodcutting, for you and for a feller",
+    "title": "Skill gates: trees, sprouts and crops, for you and for workers at their own level; items unidentified under their gate",
     "shard": 6,
-    "why": "Asked for: \"cutting trees is similarly gated, with willow requiring the highest level and pine the least. Oak birch and maple early on\", one uniform rule for every gate, for players and for wildermon at their own level, and each skill's gates ticked or not in the Skills window. The island's skill_gate is the browser's SKILL_GATES; you under a tree's level are refused in the same words on both sides and allowed at it; a sapling with no logs is anybody's; a Sapgnaw under its level skips the tree and its card says why, and takes a pine it may fell; the Unlocks list for woodcutting is the table, ticked at 1 and at 25."
+    "why": "Asked for: trees gated by woodcutting (birch 1, willow 90), sprouts by forestry, sowing by farming per crop, a worker checking a gate's own skill at its own level, and \"items picked up that you cant use yet show as unidentified\". The island's skill_gate and skill_gate_item are the browser's tables; felling, picking and planting sprouts and sowing refused in the same words on both sides under the level and allowed at it; harvest open; a crate of wemp seeds named \"Unidentified seed\" at farming 20 and \"Wemp seeds\" at 40, the tooltip \"30 farming required to identify this seed.\", and picked up in those words; fellers, sprout pickers, farmers and a hod carrier read gates at their own level in the gate's skill; the Unlocks lists are the table."
   },
   {
     "file": "supabase/test/aroundbehind.ts",

@@ -38,10 +38,11 @@ begin
       select * into it from item i where i.world_id = p_world and i.holder = 'player' and i.holder_uid = p_uid and i.id = (p_target->>'itemUid')::bigint;
     else
       select * into it from item i where i.world_id = p_world and i.holder = 'player' and i.holder_uid = p_uid
-         and i.def = any (spiral_seeds()) and not i.locked order by i.id limit 1;
+         and i.def = any (spiral_seeds()) and not i.locked order by (item_gate_refusal(p_world, p_uid, i) is null) desc, i.id limit 1;
     end if;
     if it.id is null then return adorn_said('noSeed', null, null, null); end if;
-    return case when it.def = any (spiral_seeds()) and not it.locked then null else adorn_said('notSeed', null, null, null) end;
+    if not (it.def = any (spiral_seeds()) and not it.locked) then return adorn_said('notSeed', null, null, null); end if;
+    return item_gate_refusal(p_world, p_uid, it);
   elsif p_action like 'spiral\_pick\_%' then
     v_slot := substr(p_action, 13)::int;
     h := g->'herbs'->v_slot;

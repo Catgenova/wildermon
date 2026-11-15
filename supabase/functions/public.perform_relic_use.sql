@@ -66,7 +66,7 @@ begin
     if not spend_stack(p_world, p_uid, v_it.id, 1) then return; end if;
     perform give(p_world, p_uid, v_seed, jar_seeds()::int, v_it.ql);
     perform tell(p_world, p_uid, 'Seed jar opened: ' || jar_seeds()::int || ' × '
-      || lower((select d.name from item_def d where d.id = v_seed)) || ', QL ' || round(v_it.ql::numeric, 1) || '.', 'event');
+      || lower(seen_name(p_world, p_uid, v_seed, null, (select d.name from item_def d where d.id = v_seed))) || ', QL ' || round(v_it.ql::numeric, 1) || '.', 'event');
 
   elsif p_action = 'enchant_statue' then
     -- `statue_motes` of every element used up, and the statuette the patron's statue where it lies, as it was.

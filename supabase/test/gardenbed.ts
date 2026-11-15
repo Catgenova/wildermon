@@ -268,8 +268,9 @@ begin
 
   /* ---- A farm worker on storey 2, up the stairs ---- */
   perform drop_on_ground(w, 15, 10, 'wheat_seed', 30);
-  insert into creature (world_id, id, species, name, from_x, from_y, to_x, to_y, health, sex, mode, job, work_x, work_y, keeper)
-    select w, coalesce(max(id), 0) + 1, 'seavic', 'Sower', 15.5, 10.5, 15.5, 10.5, 20, 'female', 'deed', 'farm', 15, 10, u
+  -- At farming 5, wheat's (skillgates.ts).
+  insert into creature (world_id, id, species, name, from_x, from_y, to_x, to_y, health, sex, mode, job, work_x, work_y, keeper, skills)
+    select w, coalesce(max(id), 0) + 1, 'seavic', 'Sower', 15.5, 10.5, 15.5, 10.5, 20, 'female', 'deed', 'farm', 15, 10, u, '{"farming": 5}'
     from creature where world_id = w returning id into v_c;
   insert into said values ('WORKASK', worker_gatherable(w, 15, 10, 'farm', (select c from creature c where c.world_id = w and c.id = v_c))
     || '|' || farm_work_level(w, 15, 10) || '|' || worker_gatherable(w, 14, 10, 'farm', (select c from creature c where c.world_id = w and c.id = v_c)));
@@ -386,6 +387,8 @@ done(bld.setFloor(gh, 1, 20, 10, 'glass', 'roof'));
 done(bld.setFloor(gh, 1, 21, 10, 'glass', 'roof'));
 bld.changed();
 for (const t of [REAP_TOOL, TEND_TOOL, 'mallet']) if (!game.inventory.has(t)) game.inventory.add(t, { ql: 40 });
+// At the island's farming, 50: wheat is sown from 5 (`skillgates.ts`).
+game.skills.values.set('farming', 50);
 const seed = game.inventory.add('wheat_seed', { count: 10, ql: 50 });
 const tgt = (x: number, y: number, extra: Record<string, unknown> = {}): Target => ({ kind: 'tile', x, y, cx: x, cy: y, ...extra } as Target);
 const ask = (id: string, t: Target): string => ACTION_BY_ID.get(id)!.check?.(t, game) ?? 'none';

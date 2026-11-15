@@ -34,6 +34,7 @@ begin
     end;
   elsif kind = 'sprout' then
     if here <> tile_id('Tree') then return null; end if;
+    if not worker_gate_open(c, sprout_gate(land_data(p_world, wx, wy))) then return null; end if;
     perform mark_foraged(p_world, wx, wy, 'sprout');
     return jsonb_build_object('def', 'sprout', 'count', 1, 'ql', made_ql,
       'extra', (select td.name from tree_def td where td.id = tree_species(land_data(p_world, wx, wy))));

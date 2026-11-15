@@ -146,6 +146,7 @@ begin
       return (select name from tree_age_def where id = tree_age(v_data)) || ': no sprouts.';
     end if;
     if is_foraged(p_world, tx, ty, 'sprout') then return 'Sprout already picked. ' || ready_in(p_world, tx, ty, 'sprout'); end if;
+    if sprout_gate_refusal(p_world, p_uid, v_data) is not null then return sprout_gate_refusal(p_world, p_uid, v_data); end if;
 
   elsif p_action = 'prune' then
     if here <> 16 then return 'No tree here.'; end if;
@@ -168,6 +169,8 @@ begin
       return 'Nothing will take root in that.';
     end if;
     if pack_count(p_world, p_uid, 'sprout') < 1 then return 'Need a sprout.'; end if;
+    v_spoil := item_gate_refusal(p_world, p_uid, sprout_to_hand(p_world, p_uid, p_target, false));
+    if v_spoil is not null then return v_spoil; end if;
     -- A grown tile of tree is something you walk round, not through, and the
     -- sprout becomes that tile the moment it goes in.
     select * into p from player where world_id = p_world and uid = p_uid;
@@ -204,6 +207,8 @@ begin
            and i.def = 'sprout' and not i.locked) then
       return 'Need a fruit sprout.';
     end if;
+    v_spoil := item_gate_refusal(p_world, p_uid, sprout_to_hand(p_world, p_uid, p_target, true));
+    if v_spoil is not null then return v_spoil; end if;
     -- Piers: nor under a building (`underBuilding`).
     v_under := under_building(p_world, tx, ty);
     if v_under is not null then return v_under; end if;

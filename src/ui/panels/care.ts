@@ -16,6 +16,7 @@ import { percent, timeWords } from '../../game/words';
 import type { MenuItem } from '../contextmenu';
 import { DUE_SOON, HUNGRY_AT, HURT_AT } from './attention';
 import { fullness, meaning, type Meaning } from '../kit';
+import { seenDefName } from '../../game/skillgates';
 
 /**
  * The Wildermon window's Care tab: everything one of yours wants doing, worst
@@ -155,7 +156,7 @@ export function needsOf(g: Game, c: Creature): Need[] {
         `Rest ${timeWords(restFor(false, c))}; ${timeWords(restFor(true, c))} in a free ${bedName(size).toLowerCase()} on the settlement`, null);
     } else if (!RESTING.has(c.idle.why)) {
       const def = SPECIES[c.species];
-      const said = idleSays(c.idle, c.trade ?? def?.gathers, c.carrying ? itemDef(c.carrying.id).name : null);
+      const said = idleSays(c.idle, c.trade ?? def?.gathers, c.carrying ? seenDefName(c.carrying.id, g, c.carrying.extra) : null);
       add('idle', 500, said.replace(/^Idle: /, '').replace(/\.$/, ''), said, null);
     }
   }

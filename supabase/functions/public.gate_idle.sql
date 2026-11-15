@@ -5,9 +5,9 @@ CREATE OR REPLACE FUNCTION public.gate_idle(p_world uuid, p_cx integer, p_cy int
  LANGUAGE plpgsql
  STABLE
 AS $function$
-declare v_may boolean[]; v_w int := 2 * p_range + 1; v_best int; v_d int; v_id text; r record; g skill_gate;
+declare v_may boolean[]; v_w int := 2 * p_range + 1; v_best int; v_d int; v_g skill_gate; r record; g skill_gate; v_data int;
 begin
-  if p_range < 0 or p_kind is distinct from 'woodcut' then return; end if;
+  if p_range < 0 or p_kind not in ('woodcut', 'sprout') then return; end if;
   v_may := private.work_tile_may(p_world, p_cx, p_cy, p_range, p_kind, c.id);
   if v_may is null then return; end if;
   for r in
@@ -15,14 +15,23 @@ begin
       from (select (u.i - 1)::int % v_w - p_range as dx, (u.i - 1)::int / v_w - p_range as dy
               from unnest(v_may) with ordinality u(m, i) where u.m) t
   loop
+    if land_tile(p_world, r.gx, r.gy) <> tile_id('Tree') then continue; end if;
     if c.keeper is not null and not private.worker_ground(p_world, c.keeper, r.gx, r.gy) then continue; end if;
-    g := tree_gate(land_data(p_world, r.gx, r.gy));
-    if worker_gate_open(c, g) then continue; end if;
+    v_data := land_data(p_world, r.gx, r.gy);
+    if p_kind = 'woodcut' then
+      g := tree_gate(v_data);
+    elsif coalesce((select a.alive and a.logs > 0 from tree_age_def a where a.id = tree_age(v_data)), false)
+          and not is_foraged(p_world, r.gx, r.gy, 'sprout') then
+      g := sprout_gate(v_data);
+    else
+      g := null;
+    end if;
+    if g.kind is null or worker_gate_open(c, g) then continue; end if;
     if v_best is not null and (g.level > v_best or (g.level = v_best and r.d >= v_d)) then continue; end if;
     if not exists (select 1 from beside_tile(p_world, r.gx, r.gy)) then continue; end if;
-    v_best := g.level; v_d := r.d; v_id := g.id;
+    v_best := g.level; v_d := r.d; v_g := g;
   end loop;
   if v_best is not null then
-    why := 'gate'; n := v_d; what := array['tree', v_id];
+    why := 'gate'; n := v_d; what := array[v_g.kind, v_g.id];
   end if;
 end $function$

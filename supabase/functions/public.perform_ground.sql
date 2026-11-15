@@ -389,10 +389,7 @@ begin
     -- nobody chose. Sprouts come in nine species and what goes in the ground
     -- is what stands there for the next twenty years, so "whichever was picked
     -- up first" was not a choice anybody had made.
-    select * into v_sprout from item where world_id = p_world and holder = 'player'
-      and holder_uid = p_uid and def = 'sprout' and not locked
-      and (target_item(p_target) is null or id = target_item(p_target))
-      order by (id = target_item(p_target)) desc, id limit 1;
+    select * into v_sprout from sprout_to_hand(p_world, p_uid, p_target, false) s where s.id is not null;
     if not found then return; end if;
     v_species := coalesce((select id from tree_def where name = v_sprout.extra), 0);
     if not consume(p_world, p_uid, 'sprout', 1, v_sprout.id) then return; end if;
@@ -415,11 +412,7 @@ begin
 
   elsif p_action = 'graft' then
     -- The sprout named off the menu, or the first fruit sprout to hand.
-    select i.* into v_sprout from item i join tree_def td on td.name = i.extra and td.fruit is not null
-     where i.world_id = p_world and i.holder = 'player' and i.holder_uid = p_uid
-       and i.def = 'sprout' and not i.locked
-       and (target_item(p_target) is null or i.id = target_item(p_target))
-     order by (i.id = target_item(p_target)) desc, i.id limit 1;
+    select * into v_sprout from sprout_to_hand(p_world, p_uid, p_target, true) s where s.id is not null;
     if not found then return; end if;
     select * into v_tree from tree_def where id = tree_species(v_data);
     v_species := (select id from tree_def where name = v_sprout.extra);
