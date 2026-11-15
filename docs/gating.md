@@ -10,8 +10,15 @@ What a skill level opens, one way for everything. Asked for:
 > them equal to their own level. Make sure the approach is sensible and uniform. Gate using wagons until driving
 > level 30. Gate boat type use by sailing level.
 
-All of it stays on the `gating` branch until the whole set rolls out together. The framework and one gate (tree
-felling by woodcutting) are built; everything else below is the plan.
+All of it stays on the `gating` branch until the whole set rolls out together. Built: the framework, tree felling by
+woodcutting, sprouts by forestry, sowing by farming, a worker at its own level in the gate's skill, and unidentified
+items (§11). The rest below is the plan.
+
+Decided since (the user, on §10's questions): birch 1 and willow 90; taming and fish keep their own numbers (batch B
+moves them into the table); the smelter at masonry 1, the wagon at carpentry 70 and the caravel at carpentry 90; a
+worker reads a gate's own skill at its own level in that skill; a wall keeps both its gates, material and type, a
+carpentry wall's in carpentry and a masonry wall's in masonry; the large cart has no gate (a small cart gives no driving
+to earn it with), the wagon driving 30; and items whose use is gated are unidentified under the gate (§11).
 
 ## 1. What is gated today
 
@@ -79,7 +86,7 @@ unmet is named.
 **One check, one set of words.** `skillGateRefusal(name, skill, have, need)` in the browser, `skill_gate_refusal(name, skill,
 have, need)` on the island, word for word, in the form mining already used:
 
-> Willow: needs woodcutting 70; have 12.4.
+> Willow: needs woodcutting 90; have 12.4.
 
 Helpers: `gateOf(kind, id)` / `skill_gate_of(kind, id)`; per kind a reader (`treeGate(data)` / `tree_gate(data)`) and a
 person's refusal (`treeGateRefusal(g, data)` / `tree_gate_refusal(world, uid, data)`).
@@ -95,25 +102,29 @@ locked one: listed, greyed, the refusal as its line. A gate never hides a thing.
 **One help treatment: each skill's Unlocks, derived.**
 
 * Skills window (K): an opened skill lists every gate on it in level order, each `<name> <level>` with a tick when
-  your level meets it, then "Next: Birch at 5 (yours 1.0)" (`unlocksOf`, `nextUnlockSaid`; src/ui/panels/skills.ts).
-* Help: "Skill gates", one line per gated skill: what its gates stop and its rungs, "Pine 1; Birch 5; Oak 10; Fig,
-  Maple and Peach 20; …" (`unlocksSaid`).
+  your level meets it, then "Next: Oak at 5 (yours 1.0)" (`unlocksOf`, `nextUnlockSaid`; src/ui/panels/skills.ts).
+* Help: "Skill gates", one line per gated skill: what its gates stop and its rungs, "Birch and Pine 1; Oak 5; Maple 10; Fig
+  and Peach 20; …" (`unlocksSaid`).
 
 ## 4. Workers use the same gate
 
-A worker reads a gate against **its own level, its task skill** (`taskSkill`, `task_skill(c)`); its level in the
-gate's skill is the same number wherever the gate is on the trade's own skill, and for the few where it is not (a hod
-carrier, masonry, at a plank wall's carpentry gate) its trade's level stands in for it. `gateOpen(gate, level)` /
-`worker_gate_open(c, gate)`.
+A worker reads a gate against **its own level in the gate's skill** (`workerGateOpen`, `worker_gate_open(c, gate)`,
+off `workerLevel` / `worker_level(c, skill)`: its `skills` entry, 1 where it has none), not its trade's. Where the gate
+is on the trade's own skill that is its task skill; where it is not, it is its own level there: a hod carrier fitting a
+plank wall checks its carpentry, not its masonry. An item's gate the same (`workerItemOpen`, `worker_item_open`).
 
 * It never picks gated work (`worker_gatherable`, recipe choice), and never does it if it is at it anyway (`worker_do`).
 * With nothing else to do and gated work in reach, it is idle for one reason, `gate`, naming the lowest gate in reach,
   then the nearest: `idle_what = [kind, id]`, `idle_n` = tiles off (`gate_idle`, browser `gateIdle`):
 
-  > Idle: Willow 3 tiles from the totem needs woodcutting 70 (yours 1.0).
+  > Idle: Willow 3 tiles from the totem needs woodcutting 90 (yours 1.0).
 
   and after an hour to its keeper: "Pip idle: only work above its level within 8 tiles of the totem at 40,40. Willow:
-  needs woodcutting 70; have 1.0."
+  needs woodcutting 90; have 1.0." Both name its level in the gate's skill. A sprout picker the same over its trees'
+  sprouts ("Idle: Willow sprout 3 tiles from the totem needs forestry 80 (yours 1.0).").
+* A worker that uses an item (a farmer's or a planter tender's seed, a planter's sprout) takes out of the stores only
+  what its level may use (`sow_seed`, `worker_seeds`, `stocked_for`, `take_usable_stored`; the browser's `seedFor`,
+  `planterStep`, `plantStep`); seed it may not sow stays in the stores.
 * Mining's `seam` reason becomes `gate` at rollout (`mine_idle` folded into `gate_idle`); the Ironemole line's
   `anySeam` stays as the one kind exempt from one kind of gate (`species_def.any_seam`), named in the gate's help line.
 
@@ -141,8 +152,8 @@ How a level is chosen, in order:
 | --- | --- | --- |
 | Seams by mining | `skill_gate('seam', yield)`, emitted from `ROCK_VARIANTS[].level`; `rock_def.level` read from it | Kept: already 1, 5, 10, 20 … 90 |
 | Miner workers | `worker_gatherable` → `worker_gate_open`; `mine_idle` → `gate_idle`; `seam` → `gate` | Kept |
-| Taming | `skill_gate('tame', species)` the kind's base; +15 per stage stays as a modifier; words become "Wolf: needs taming 25; have 12.3." | Base kept (off-ladder: 6, 8, 12 … see question 3) |
-| Fish | `skill_gate('fish', id)`; still a pool filter (a gated fish is not caught), and the Unlocks list names them | Kept (15, 35, 45 off-ladder: question 3) |
+| Taming | `skill_gate('tame', species)` the kind's base; +15 per stage stays as a modifier; words become "Wolf: needs taming 25; have 12.3." | Base kept, off the ladder (6, 8, 12 …), decided; batch B |
+| Fish | `skill_gate('fish', id)`; still a pool filter (a gated fish is not caught), and the Unlocks list names them | Kept, off the ladder (15, 35, 45), decided; batch B |
 | Storeys, foundation depth | Stay their own rules: a level per storey or per metre is a scale, not a thing | — |
 | Perk, class, path, faith tiers; trade book; trait reading | Stay: choices and readings, not things refused | — |
 
@@ -173,33 +184,39 @@ A = asked for; S = suggested. Levels on the ladder; crafts by the difficulty rul
 
 ### Woodcutting: felling a tree with logs (A) — built
 
-| Pine | Birch | Oak | Maple, Fig, Peach | Cherry, Lemon, Apricot | Apple, Pear, Plum, Quince | Cedar, Pomegranate | Olive | Willow |
+| Pine, Birch | Oak | Maple | Fig, Peach | Cherry, Lemon, Apricot | Apple, Pear, Plum, Quince | Cedar, Pomegranate | Olive | Willow |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 5 | 10 | 20 | 30 | 40 | 50 | 60 | 70 |
+| 1 | 5 | 10 | 20 | 30 | 40 | 50 | 60 | **90** |
 
-Pine least, birch/oak/maple early, willow most, as asked; the rest by their wood's difficulty (materials.ts): 0–1 → 20,
-2 → 30, 3 → 40, 4–5 → 50, 6 → 60. Workers: the Sapgnaw line, and any hybrid at woodcut.
+Birch 1 and willow 90, as decided; pine least, oak and maple early: the next two steps. The rest by their wood's
+difficulty (materials.ts): 0–1 → 20, 2 → 30, 3 → 40, 4 → 50, 6 → 60. Workers: the Sapgnaw line, and any hybrid at
+woodcut.
 
-### Forestry: sprouts (A)
+### Forestry: sprouts (A) — built
 
-Picking, planting and grafting a species' sprout: **one ladder step under its felling gate** (derived), so you can grow
-a wood before you can fell it.
+Picking, planting and grafting a species' sprout: **one ladder step under its felling gate** (derived, `sproutLevel`),
+so you can grow a wood before you can fell it. Named in the Unlocks as "Willow sprout".
 
-| Pine, Birch | Oak | Maple, Fig, Peach | Cherry, Lemon, Apricot | Apple, Pear, Plum, Quince | Cedar, Pomegranate | Olive | Willow |
+| Pine, Birch, Oak | Maple | Fig, Peach | Cherry, Lemon, Apricot | Apple, Pear, Plum, Quince | Cedar, Pomegranate | Olive | Willow |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 5 | 10 | 20 | 30 | 40 | 50 | 60 |
+| 1 | 5 | 10 | 20 | 30 | 40 | 50 | 80 |
 
-S: grape cuttings at a trellis 20; prune, fruit picking and tapping resin ungated. Workers: sprout pickers (`sprout`),
-planters (`plant`), vine planters (`vine`).
+Pick sprout (`pick_sprout`: the tree's species), Plant sprout (`plant`) and Graft (`graft`: the sprout's species; with
+none chosen, the first sprout to hand your forestry may plant, `sproutToHand` / `sprout_to_hand`). S: grape cuttings at a
+trellis 20; prune, fruit picking and tapping resin ungated. Workers: sprout pickers (`sprout`: `worker_gatherable`,
+`worker_do`, `gate_idle`), planters (`plant`: only a sprout they may plant, `stocked_for`, `take_usable_stored`).
 
-### Farming: sowing (A)
+### Farming: sowing (A) — built
 
 | Onion, Carrot, Potato | Cabbage, Wheat | Corn, Thyme | Cotton, Mint, Sage | Wemp, Basil | Rosemary |
 | --- | --- | --- | --- | --- | --- |
 | 1 | 5 | 10 | 20 | 30 | 40 |
 
-Staples first, fibres and the costlier herbs later. Workers: farmers (`farm`), planter tenders (`patch`). S:
-botanizing water plants: water lily 10, lotus 20 (`lily` workers).
+Sow on a field, a glasshouse field or a garden bed (`plant_seed`, `farm_refusal`), Sow a patch (`sow_patch`), a planter
+or herb box (`planter_refusal`), a herb spiral (`spiral_sow`, `adorn_refusal`; with none chosen, the first herb seed
+your farming may sow). Harvest, tend and clear open to anyone. Workers: farmers (`farm`: `sow_seed`, the browser's
+`seedFor`), planter tenders (`patch`: `worker_seeds`). S: botanizing water plants: water lily 10, lotus 20 (`lily`
+workers).
 
 ### Cooking: recipes (A), by difficulty
 
@@ -222,19 +239,20 @@ Workers: restorers (`restore`). Archaeology (finding) stays ungated: finds are r
 
 | 1 | 5 | 10 | 20 | 30 | 40 | 70 | 90 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Planks, timbers, shafts, crates, fitting heads and blades, mallet, rope tool, club, thatch, compost bin, footstool, training dummy, mooring post, buoy, snare, nameplate | Settlement stake, small den, signpost, side table, archery target, cheese rack, pedigree board | Bucket, fishing rod, lantern post, flower cart, armour stand, water trough, spice shelf, window seat, garden obelisk, game table | Work post, wooden and metal shields, medium den, rope walk, paper press, butter churn, rose/lavender arches, wisteria pergola, arbour bench, garden swing, tree bench | Large den, gazebo | Large wheel, large cart, rowing boat, deadfall | Wagon, sailing boat | Caravel |
+| Planks, timbers, shafts, crates, fitting heads and blades, mallet, rope tool, club, thatch, compost bin, footstool, training dummy, mooring post, buoy, snare, nameplate | Settlement stake, small den, signpost, side table, archery target, cheese rack, pedigree board | Bucket, fishing rod, lantern post, flower cart, armour stand, water trough, spice shelf, window seat, garden obelisk, game table | Work post, wooden and metal shields, medium den, rope walk, paper press, butter churn, rose/lavender arches, wisteria pergola, arbour bench, garden swing, tree bench | Large den, gazebo | Large wheel, large cart, rowing boat, deadfall | **Wagon**, sailing boat | **Caravel** |
 
 Fine carpentry by the same rule: stool 1; coat rack, planter, trellis, boxes, sign 5; chair, bench, table, cot, coffer,
 spindle, small barrel, bins … 10; bed, chest, cupboard, shelves, barrel, lectern, hive, small cart, signboard … 20;
-desk, wardrobe, stall, crate shelf, bell, loom, four-poster 30; larder, large barrel 40. Workers: sawyers (`saw`,
-`timber`, `shaft`: all 1).
+desk, wardrobe, stall, crate shelf, bell, loom, four-poster 30; larder, large barrel 40. Wagon 70 and caravel 90 as
+decided (`CRAFT_GATE_SAID`). Workers: sawyers (`saw`, `timber`, `shaft`: all 1).
 
 ### Masonry crafts (A), by difficulty
 
 | 1 | 10 | 20 | 30 | 40 | 50 | 60 |
 | --- | --- | --- | --- | --- | --- | --- |
-| Concrete, mortar, cairn, moss boulder | Birdbath, stone bench, lily pond, herb spiral | Kiln, brazier, lantern pillar, sundial, stone lantern | Smelter, statue, oven, rune lantern post, memorial stone, stone arches, fireplace | Enchanter's plinth, well | Fountain | Altar |
+| Concrete, mortar, cairn, moss boulder, **smelter** | Birdbath, stone bench, lily pond, herb spiral | Kiln, brazier, lantern pillar, sundial, stone lantern | Statue, oven, rune lantern post, memorial stone, stone arches, fireplace | Enchanter's plinth, well | Fountain | Altar |
 
+The smelter at 1 as decided (`CRAFT_GATE_SAID`; its difficulty would put it at 30): the Path's stone phase makes one.
 Workers: concrete and mortar mixers (1).
 
 ### Walls (A): material and type, in the material's skill
@@ -245,7 +263,9 @@ Workers: concrete and mortar mixers (1).
 | **Wall type** (either) | Solid, fence, half wall, railing 1 · Window, door, fence gate 5 · Double door, arch, shop counter 10 · Bay window 20 · Iron-bound gate 30 · Hidden door 40 · Portcullis 50 · Rune gate 60 |
 
 Materials by their bill (cheapest first), as the ladder's tier rule. A wall needs both its material's and its type's
-gate. Storeys keep their own rule. Workers: hod carriers (`hod`), at their task skill.
+gate (decided). A carpentry wall's gates are in carpentry and a masonry wall's in masonry, the type's gate in its
+material's skill. Storeys keep their own rule. Workers: hod carriers (`hod`), each gate at its own level in the gate's
+skill: a hod carrier fitting a plank wall checks its carpentry.
 
 ### Floors and paving (A)
 
@@ -268,7 +288,9 @@ Writing a scroll:
 
 | Small cart (pulled by hand) | Large cart | Wagon |
 | --- | --- | --- |
-| open | driving 10 (S) | **driving 30** (A) |
+| open | open (decided: a small cart gives no driving, so nothing could earn a gate on it) | **driving 30** (A) |
+
+The wagon's gate is in the table (`VEHICLE_GATE`, `skill_gate('vehicle', 'wagon')`); batch B wires it.
 
 | Rowing boat | Sailing boat | Caravel |
 | --- | --- | --- |
@@ -302,27 +324,59 @@ drive: no worker gate.
 | Prayer, meditation, elementalism | Their own tiers | Kept |
 | Fighting and weapon skills, armour skills | None: gear is open, the skill sets the odds | — |
 
-## 9. The pilot (built)
+## 9. Built
 
-* `src/game/skillgates.ts`: `GATE_LADDER`, `SKILL_GATES`, `TREE_GATE`, `gateOf`, `skillGateRefusal`, `treeGate`,
-  `gateOpen`, `unlocksOf`, `nextUnlockSaid`, `unlocksSaid`, `GATE_STOPS`.
-* `skill_gate` emitted by `scripts/dump-defs.ts`; read by anybody, as the rulebook is (permissions.allow.ts).
-* Island (`20261120000065_skill_gates.sql`): `skill_gate_refusal`, `skill_gate_of`, `worker_gate_open`, `tree_gate`,
+* `src/game/skillgates.ts`: `GATE_LADDER`, `SKILL_GATES` (`TREE_GATE`, `sproutLevel`, `CROP_GATE`, `VEHICLE_GATE`),
+  `CRAFT_GATE_SAID`, `gateOf`, `skillGateRefusal`, `treeGate`, `sproutGate`, `gateOpen`, `workerLevel`,
+  `workerGateOpen`; items: `GATE_ITEMS`, `GATED_ITEMS`, `itemGate`, `unidentified`, `seenName`, `seenDefName`,
+  `identifySaid`, `itemGateRefusal`, `workerItemOpen`; `unlocksOf`, `nextUnlockSaid`, `unlocksSaid`, `GATE_STOPS`.
+* `skill_gate` and `skill_gate_item` emitted by `scripts/dump-defs.ts`; read by anybody, as the rulebook is
+  (permissions.allow.ts).
+* Island, the pilot (`20261120000065_skill_gates.sql`): `skill_gate_refusal`, `skill_gate_of`, `tree_gate`,
   `tree_gate_refusal`, `gate_idle`; patched `gather_refusal` (cut down), `ground_refusal` (coppice),
   `worker_gatherable`, `worker_do`, `worker_settle`, `worker_idle`, `rpc_creatures`.
-* Browser: `cut_down` and `coppice` checks (`treeGateRefusal`), `gatherable('woodcut')`, `gateIdle`, `finishFelling`,
-  `IdleWhy` 'gate' and its words (`idleSays`, `IDLE_LABEL`), the Skills window's Unlocks, the help's Skill gates.
+* Island, batch A (`20261120000067_skill_gates_a.sql`): `worker_level`, `worker_gate_open` (the gate's own skill),
+  `sprout_gate`, `sprout_gate_refusal`, `item_gate`, `unidentified_name`, `seen_name` (an item; a def with the line's own
+  name), `identify_said`, `item_gate_refusal`, `worker_item_open`, `worker_seeds`, `seen_pile_text`, `sprout_to_hand`,
+  `stocked_for`, `take_usable_stored`, `sow_seed`; `gate_idle` for sprouts; patched `ground_refusal` (pick sprout,
+  plant, graft), `perform_ground`, `farm_refusal`, `planter_refusal`, `adorn_refusal`, `perform_adorn`, `errand_do`,
+  `errand_step`, `worker_gatherable`, `worker_do`, `worker_settle`, `worker_idle`, and the names in `perform_gather`,
+  `perform_hands`, `perform_crate`, `perform_holding`, `perform_farm`, `perform_planter`, `perform_relic_use`,
+  `perform_counter`, `rpc_buy`, `examine_item_text`.
+* Browser: the checks of `cut_down`, `coppice`, `pick_sprout`, `plant`, `graft`, `plant_seed`, `sow_patch` and the herb
+  spiral's Sow; `gatherable('woodcut' | 'sprout')`, `gateIdle`, `finishFelling`, `finishHands`, `seedFor`,
+  `planterStep`, `plantStep`; `IdleWhy` 'gate' and its words (`idleSays`, with the worker's levels); the Skills window's
+  Unlocks, the help's Skill gates, the Path's tree step (the trees your woodcutting fells).
 * Test: `supabase/test/skillgates.ts`.
 
 ## 10. Open questions
 
-1. Trees: maple at 20 and birch at 5 read as "early"; lowland woods are about a third birch and an eighth pine, so a
-   new player fells mostly pine at first (young trees with no logs, bushes and saplings still teach woodcutting).
-   Birch at 1 too?
-2. Willow at 70 is the top of the trees; shore woods are mostly willow. 70, or 90 to match the deepest seam?
-3. Existing gates off the ladder (taming bases 6, 8, 12 …; fish 15, 35, 45): keep their numbers, or snap them?
-4. The difficulty rule puts a wagon at carpentry 70, a caravel at 90 and scale armour at 80–90, and the smelter (the
-   Path's stone phase) at masonry 30. Cap big builds, or move the Path's steps onto what the gates open first?
-5. A worker reads every gate at its task skill (a hod carrier's masonry for a plank wall's carpentry gate). Or its own
-   level in the gate's skill?
-6. Walls: a material and a wall type are two gates (a marble portcullis needs both). Or one gate per material only?
+1. Trees between birch 1 and willow 90: oak and maple moved down a step each (5, 10) and the rest kept by their wood
+   (20–60), leaving 70 and 80 empty. Spread the fruit woods, cedar and olive higher instead?
+2. The Path's settlement site counts any tree in reach, and a Sapgnaw at woodcutting 1 fells only pine and birch there.
+   Count only those?
+3. A farmer or a planter tender with only seed over its level in the stores says "nothing to sow"; name the gate
+   instead ("Idle: Wemp seeds need farming 30 (yours 1.0)" would name an unidentified thing to a keeper under 30)?
+
+## 11. Unidentified items
+
+Asked for: "items picked up that you cant use yet show as "unidentified ", e.g. a player with 20 farming sees
+"unidentified seed" for a wemp seed. Tooltip shows just "30 farming required to identify this seed"".
+
+* **Which**: every item whose use a gate stops. Each kind of gate names its items (`GATE_ITEMS`): a crop its seed
+  (`wemp_seed`), a species its sprout (`sprout` with the species as `extra`). Emitted as `skill_gate_item (item, extra,
+  kind, id, noun)`, so a gate added on an item (a formula, a relic, a bauble: batch C) makes it unidentified with
+  nothing else written: add its kind to `GATE_ITEMS`.
+* **The noun**: from the data: a seed's id after its crop ("seed"), a sprout's own name ("sprout").
+* **Per viewer**: under the gate's level in its skill, the item is "Unidentified seed" to that person
+  (`seenName(item, viewer)`, `seen_name(world, uid, item)`); at it, its own name. A crate seen by a player at farming 20
+  and one at 40 names the same stack each way.
+* **The tooltip and the examine**: exactly "30 farming required to identify this seed." and nothing else
+  (`identifySaid`, `identify_said`; `itemCard`, `examine_item_text`), the market price line left off too.
+* **Everywhere a name is made**: the pack, crates and stores (`nameCell`), the trade window, the market and counters,
+  tooltips, the crafting window's inputs, the context menu (Sow, Plant sprout, Graft, a herb spiral's seeds), a
+  worker's card ("Carrying"), and the island's lines: Found:, Picked up:, Dropped:, put in and taken from crates and
+  stores, Harvested: (the seed), an ancient seed jar, set out on and bought off a counter (to the buyer and to the
+  seller, each as they see it).
+* **Refusals**: using one names it as you see it: "Unidentified seed: needs farming 30; have 20.0."
+  (`itemGateRefusal`, `item_gate_refusal`). Gathering, picking up, carrying, storing, trading and selling stay open.

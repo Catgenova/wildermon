@@ -5,7 +5,7 @@ import { graveLine, graveName, graveSays, isGrave } from '../../game/graves';
 import { pannierAdd, pannierCap, pannierFullSaid, pannierName, panniersOffered, pannierSpare, pannierTake } from '../../game/panniers';
 import { ACTION_BY_ID, type ActionDef, type Target } from '../../game/actions';
 import type { Game } from '../../game/game';
-import { bagAdd, bagRefuses, bagRoom, bagSpare, bagTake, itemDef, type Item, itemName } from '../../game/items';
+import { bagAdd, bagRefuses, bagRoom, bagSpare, bagTake, itemDef, type Item } from '../../game/items';
 import type { MenuItem } from '../contextmenu';
 import { dragging, makeDraggable, makeDropZone, type DragPayload } from '../dragdrop';
 import { Picking } from '../picking';
@@ -19,6 +19,7 @@ import { counterStore } from '../counterMenu';
 import { stallBuyRefusal } from '../../game/counters';
 import { deedAt, isSettlementStore, storeMarkable, storeMarkedLine, storeMarkRefusal, storeUse, type Keepable } from '../../game/stores';
 import { kit, kitBody, kitButton, kitEmpty, kitSearch, made, meaning } from '../kit';
+import { seenName } from '../../game/skillgates';
 
 /** A crate or a piece of storage furniture, seen through the same window. */
 export interface Store {
@@ -288,7 +289,7 @@ export class CratePanel {
     const bag = this.bagUid !== null ? this.game.inventory.get(this.bagUid) : undefined;
     if (bag && bagRoom(bag)) {
       return {
-        title: `${itemName(bag)} (QL ${bag.ql.toFixed(0)})`,
+        title: `${seenName(bag, this.game)} (QL ${bag.ql.toFixed(0)})`,
         id: bag.uid,
         kind: 'bag',
         items: bag.inside ?? [],
@@ -693,7 +694,7 @@ export class CratePanel {
   private matches(item: Item): boolean {
     if (!this.query) return true;
     const def = itemDef(item.id);
-    return `${itemName(item)} ${def.category} ${def.description ?? ''}`.toLowerCase().includes(this.query);
+    return `${seenName(item, this.game)} ${def.category} ${def.description ?? ''}`.toLowerCase().includes(this.query);
   }
 
   render(): void {
@@ -748,7 +749,7 @@ export class CratePanel {
           ? `The ${store.what} is empty.`
           : `${capital(store.what)} empty. Drag from your pack, or Put all in.`));
     }
-    const listed = orderBy(store.items.filter((it) => this.matches(it)), this.sort);
+    const listed = orderBy(store.items.filter((it) => this.matches(it)), this.sort, this.game);
     this.picking.keep(new Set(listed.map((it) => it.uid)));
     this.order = listed.map((it) => it.uid);
     for (const item of listed) {
@@ -767,7 +768,7 @@ export class CratePanel {
        * one list you go to when you are looking for a particular thing was
        * the one list that told you least about what was in it.
        */
-      const name = nameCell(item, { worn: this.game.isEquipped(item.uid), occupant: item.occupant ? undefined : occupantOf(this.game, item) });
+      const name = nameCell(item, this.game, { worn: this.game.isEquipped(item.uid), occupant: item.occupant ? undefined : occupantOf(this.game, item) });
       if (store.priced) name.textContent += ` — ${item.price !== undefined ? priceWords(item.price) : 'not for sale'}`;
       const at = store.where?.(item);
       if (at) {
@@ -820,7 +821,7 @@ export class CratePanel {
         row.addEventListener('mousemove', (e) => { if (!dragging()) this.hover?.(item, e.clientX, e.clientY); });
         row.addEventListener('mouseleave', () => this.hover?.(null, 0, 0));
       }
-      makeDraggable(row, () => ({ uid: item.uid, from: 'store', name: itemName(item), uids: this.picking.carried(item.uid) }));
+      makeDraggable(row, () => ({ uid: item.uid, from: 'store', name: seenName(item, this.game), uids: this.picking.carried(item.uid) }));
       this.list.append(row);
     }
     this.drawPickBar(store);
@@ -851,7 +852,7 @@ export class CratePanel {
     // Only a bag's things are worked on where they lie; anything else in a store is taken out first.
     if (this.store()?.kind !== 'bag') {
       this.win.focus();
-      this.showMenu?.(x, y, itemName(item), [{ label: 'Take out', onSelect: () => this.takeOne(item) }, ...(kind ? [kind] : [])]);
+      this.showMenu?.(x, y, seenName(item, this.game), [{ label: 'Take out', onSelect: () => this.takeOne(item) }, ...(kind ? [kind] : [])]);
       return;
     }
     const entries: MenuItem[] = [{
@@ -878,7 +879,7 @@ export class CratePanel {
       });
     }
     this.win.focus();
-    this.showMenu?.(x, y, itemName(item), entries);
+    this.showMenu?.(x, y, seenName(item, this.game), entries);
   }
 
   open(id: number): void {

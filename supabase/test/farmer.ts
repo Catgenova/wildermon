@@ -595,6 +595,8 @@ check('and the Farmer\'s tree is gone', say('NODES') === '0', say('NODES'));
 /* ---- the browser's half ------------------------------------------------------------------ */
 
 const game = Game.create(3141);
+// At the island's farming, 60: wheat is sown from 5 (`skillgates.ts`).
+game.skills.values.set('farming', 60);
 const tile = (x: number, y: number, itemUid?: number): Target => ({ kind: 'tile', x, y, ...(itemUid !== undefined ? { itemUid } : {}) } as Target);
 const ask = (id: string, x: number, y: number, itemUid?: number): string =>
   ACTION_BY_ID.get(id)!.check?.(tile(x, y, itemUid), game) ?? 'ALLOWED';

@@ -30,7 +30,8 @@ import { RECIPE_BY_ID } from './recipes';
 import { hasRunestones, RUNESTONES, stoneGap, stonePoint } from './runestones';
 import { SKILL_BY_ID } from './skills';
 import { bearingTo, trackLevel, trackRange, TRACK_SHOW } from './tracking';
-import { listed, percent } from './words';
+import { listed, listedOr, percent } from './words';
+import { SKILL_GATES } from './skillgates';
 import { PATH_TICK, type PathSite, type PathState } from './pathstate';
 import { TileType } from '../world/tiles';
 import type { Season } from '../world/calendar';
@@ -359,7 +360,8 @@ export const PATH_STEPS: readonly PathStep[] = [
   },
   {
     id: 'tree', phase: 'stone', skills: ['woodcutting'],
-    how: (g) => [jobSays(g, 'a tree', 'cut_down')],
+    // The trees your woodcutting fells (`skillgates.ts`): "Right-click: a birch or pine".
+    how: (g) => [jobSays(g, `a ${listedOr(SKILL_GATES.filter((x) => x.kind === 'tree' && x.level <= g.skills.get(x.skill)).map((x) => x.name.toLowerCase()))}`, 'cut_down')],
     why: () => [`${itemDef('log').name}: shafts ×${recipe('make_shafts').makes} a log (${stepOf('shafts')}) · log crate ×${billOf('make_log_crate', 'log')} (${stepOf('crate')})`],
     show: { job: 'cut_down' },
     label: () => `Cut down a tree: ${name('hatchet')}`,

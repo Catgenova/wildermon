@@ -1,7 +1,7 @@
 import { LETTER_MAX, type BoardSpot, type Deal, type Good, type Island, type Occupant, type Order, type Parcel, type Stall } from '../../net/island';
 import type { Enchant } from '../../game/enchant';
 import type { Game } from '../../game/game';
-import { billWords, ITEM_DEFS, itemDef, itemName, RARITIES, type Item } from '../../game/items';
+import { billWords, ITEM_DEFS, itemDef, RARITIES, type Item } from '../../game/items';
 import { dailyEach, SALE_DAYS, saleLine, SALES_SHOWN, silverEach, summarise, summaryWords, type Prices, type Sale, type SaleDay, type SaleSummary } from '../../game/prices';
 import { againstAverage, againstWords, answers, FIND_SHOWN, FIND_SORTS, kindsOnSale, offersFor, tilesTo, type FindSort } from '../../game/marketfind';
 import { MARKET_MARK } from '../../game/marks';
@@ -14,6 +14,7 @@ import { COUNTER_BUY_FROM, COUNTER_REACH, sellsTooFar } from '../../game/counter
 import { durationSaid } from '../../game/boons';
 import type { UIWindow } from '../windows';
 import { kitBody } from '../kit';
+import { seenName, type Viewer } from '../../game/skillgates';
 
 /** How often the window asks again while it is open. */
 const REFRESH = 5;
@@ -434,7 +435,7 @@ export class MarketPanel {
 
   /** What a deal is, in one line: the goods, and the coins one way or the other. */
   private terms(d: Deal): string {
-    const things = d.things.map((t) => (t.count > 1 ? `${t.count} × ${nameOf(t)}` : nameOf(t)));
+    const things = d.things.map((t) => (t.count > 1 ? `${t.count} × ${nameOf(t, this.game)}` : nameOf(t, this.game)));
     const coins = d.want > 0 ? `for ${priceWords(d.want)}`
       : d.give > 0 ? `and ${priceWords(d.give)} with it` : 'for nothing';
     return `${things.length ? things.join(', ') : 'nothing'} ${coins}`;
@@ -534,11 +535,11 @@ export class MarketPanel {
         box.className = 'panel-select rc-field market-price';
         box.value = String(good.price ?? 0);
         box.title = 'Silver price. 0: off sale.';
-        box.setAttribute('aria-label', `Silver for ${goodName(good)}`);
+        box.setAttribute('aria-label', `Silver for ${goodName(good, this.game)}`);
         const unit = document.createElement('label');
         unit.className = 'market-field';
         unit.append(box, 'silver');
-        this.page.append(this.good(this.lines(goodName(good), good.price ? `on sale at ${priceWords(good.price)}` : 'not for sale'), unit,
+        this.page.append(this.good(this.lines(goodName(good, this.game), good.price ? `on sale at ${priceWords(good.price)}` : 'not for sale'), unit,
           this.button('Set', '0: off sale', () => void this.act(this.island!.setPrice(good.id, Math.max(0, Number(box.value) || 0))))));
       }
     }
@@ -607,7 +608,7 @@ export class MarketPanel {
       for (const good of st.goods) {
         if (!good.price) continue;
         const each = good.price / Math.max(1, good.count);
-        this.page.append(this.good(this.lines(`${goodName(good)}, QL ${Math.round(good.ql)}`, good.count > 1 ? `${silverEach(each)} silver each` : ''),
+        this.page.append(this.good(this.lines(`${goodName(good, this.game)}, QL ${Math.round(good.ql)}`, good.count > 1 ? `${silverEach(each)} silver each` : ''),
           priceWords(good.price), ...(this.within(st) ? [this.buyButton(st, good)] : [])));
       }
     }
@@ -630,7 +631,7 @@ export class MarketPanel {
       const vs = againstWords(againstAverage(o.each, summarise(this.prices[o.good.def])?.each));
       if (vs) cost.append(Object.assign(document.createElement('small'), { className: 'market-vs', textContent: vs }));
       const acts = this.within(o.stall) ? [this.buyButton(o.stall, o.good)] : [this.walkButton(spot)];
-      const row = this.good(this.lines(`${goodName(o.good)}, QL ${Math.round(o.good.ql)}`,
+      const row = this.good(this.lines(`${goodName(o.good, this.game)}, QL ${Math.round(o.good.ql)}`,
         `${spot.name} · ${o.stall.x},${o.stall.y}${o.stall.deed ? ` on ${o.stall.deed}` : ''} · ${o.far} ${o.far === 1 ? 'tile' : 'tiles'}`
         + (o.good.count > 1 ? ` · ${priceWords(o.good.price ?? 0)} for ${o.good.count}` : '')),
         cost, ...acts, this.pinButton(spot));
@@ -834,7 +835,7 @@ export class MarketPanel {
       });
       const name = document.createElement('span');
       const occupant = it.creature === undefined ? undefined : this.game.creatures.get(it.creature);
-      const named = occupant ? `${itemName(it)} — ${occupant.name}, ${occupant.rare ? `${RARITIES[occupant.rare].name} ` : ''}${speciesName(occupant.species)}` : itemName(it);
+      const named = occupant ? `${seenName(it, this.game)} — ${occupant.name}, ${occupant.rare ? `${RARITIES[occupant.rare].name} ` : ''}${speciesName(occupant.species)}` : seenName(it, this.game);
       name.textContent = it.count > 1 ? `${named} (${it.count})` : named;
       label.append(box, name);
       list.append(label);
@@ -853,7 +854,7 @@ export class MarketPanel {
     for (const t of this.waiting.things) {
       const row = document.createElement('div');
       row.className = 'skill-row rc-row market-row';
-      row.append(this.lines(`${t.count > 1 ? `${t.count} × ` : ''}${nameOf(t)}`, t.from ? `from ${t.from}` : ''));
+      row.append(this.lines(`${t.count > 1 ? `${t.count} × ` : ''}${nameOf(t, this.game)}`, t.from ? `from ${t.from}` : ''));
       this.page.append(row);
     }
     if (this.waiting.things.length) {
@@ -923,14 +924,14 @@ const stallSpot = (st: Stall): Spot => ({ x: st.x, y: st.y, name: `${st.owner}'s
 const PICK_SHOWN = 40;
 
 /** A thing in a deal or in the post, named the way the pack names it, and a crate with who is in it. */
-const nameOf = (t: { def: string; extra: string | null; ql: number; count: number; creature?: Occupant | null; enchant?: Enchant | null }): string => {
+const nameOf = (t: { def: string; extra: string | null; ql: number; count: number; creature?: Occupant | null; enchant?: Enchant | null }, v: Viewer): string => {
   // With what is enchanted into it, which the island sends with every thing on offer (`enchant.ts`).
-  const named = itemName({ uid: 0, id: t.def, extra: t.extra ?? undefined, ql: t.ql, count: t.count, dmg: 0, enchant: t.enchant ?? undefined } as Item);
+  const named = seenName({ uid: 0, id: t.def, extra: t.extra ?? undefined, ql: t.ql, count: t.count, dmg: 0, enchant: t.enchant ?? undefined } as Item, v);
   return t.creature ? `${named} — ${t.creature.name}, ${t.creature.rare ? `${t.creature.rare} ` : ''}${speciesName(t.creature.species)}` : named;
 };
 /** A species as a sentence names it. */
 const speciesName = (id: string): string => (SPECIES[id]?.name ?? id).toLowerCase();
-const goodName = (g: Good): string => (g.count > 1 ? `${g.count} × ${nameOf(g)}` : nameOf(g));
+const goodName = (g: Good, v: Viewer): string => (g.count > 1 ? `${g.count} × ${nameOf(g, v)}` : nameOf(g, v));
 
 /**
  * Every kind of thing an order may ask for, as the pack names it: all but

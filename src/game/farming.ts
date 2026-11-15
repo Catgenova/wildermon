@@ -4,6 +4,7 @@ import type { ActionDef, Target } from './actions';
 import type { Game } from './game';
 import type { PlacedFurniture } from './furniture';
 import { describeFrom, itemDef, itemName, type Item } from './items';
+import { itemGateRefusal, seenDefName } from './skillgates';
 import { world } from './pace';
 import { clockNamed, cropClockOf, fieldClock, fieldMoment, fieldRate, fieldStops, fieldWakes, GLASSHOUSE_GROWTH, handClock, handMoment, handRate, PLANTER_GROWTH, steadyRate, type CropClock } from './growth';
 import { clearedSaid, clearedTo, glassTillRefusal, glazing, isGlasshouse } from './glasshouse';
@@ -524,7 +525,8 @@ export const FARM_ACTIONS: ActionDef[] = [
       if (!seed || !CROP_BY_SEED.has(seed.id)) return 'Choose a seed.';
       // A herb box grows herbs and nothing else (`garden.ts`).
       if (box?.kind === HERB_BOX && CROP_BY_SEED.get(seed.id)?.kind !== 'spice') return HERBS_ONLY();
-      return null;
+      // And only a crop your farming may sow (`skillgates.ts`), the seed named as you see it.
+      return itemGateRefusal(seed, g);
     },
     perform: (t, g) => {
       const box = planterOf(g, t);
@@ -598,7 +600,7 @@ export const FARM_ACTIONS: ActionDef[] = [
       const def = cropDef(c.id);
       const r = reapOne(g, c);
       g.logMsg(
-        `Harvested: ${r.got} × ${itemName(r.produce).toLowerCase()}, ${r.seeds} ${itemDef(def.seed).name.toLowerCase()}, QL ${r.ql.toFixed(1)}. ${sowsAgain(c)} ready to sow.`,
+        `Harvested: ${r.got} × ${itemName(r.produce).toLowerCase()}, ${r.seeds} ${seenDefName(def.seed, g).toLowerCase()}, QL ${r.ql.toFixed(1)}. ${sowsAgain(c)} ready to sow.`,
         'event',
       );
     },
@@ -662,6 +664,8 @@ export const FARM_ACTIONS: ActionDef[] = [
       if (g.perk('sow_patch', 0) <= 0) return unlearned('Sow a Patch');
       const seed = t.itemUid !== undefined ? g.inventory.get(t.itemUid) : undefined;
       if (!seed || !CROP_BY_SEED.has(seed.id)) return 'Choose a seed.';
+      const gated = itemGateRefusal(seed, g);
+      if (gated) return gated;
       if (!emptyFields(g, t.x, t.y, g.perk('sow_patch', 0)).length) return 'No empty field in the patch.';
       return null;
     },
@@ -738,7 +742,7 @@ export const FARM_ACTIONS: ActionDef[] = [
       }
       if (!crops.length) return;
       g.logMsg(`Harvested: ${crops.length} ${crops.length === 1 ? 'field' : 'fields'}: `
-        + `${[...tally].map(([id, n]) => `${n} × ${itemDef(id).name.toLowerCase()}`).join(', ')}. `
+        + `${[...tally].map(([id, n]) => `${n} × ${seenDefName(id, g).toLowerCase()}`).join(', ')}. `
         + `${crops.length === 1 ? 'Field' : 'Fields'} ready to sow.`, 'event');
     },
   },

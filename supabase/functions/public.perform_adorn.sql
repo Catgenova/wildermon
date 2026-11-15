@@ -27,7 +27,7 @@ begin
       select * into it from item i where i.id = (p_target->>'itemUid')::bigint;
     else
       select * into it from item i where i.world_id = p_world and i.holder = 'player' and i.holder_uid = p_uid
-         and i.def = any (spiral_seeds()) and not i.locked order by i.id limit 1;
+         and i.def = any (spiral_seeds()) and not i.locked order by (item_gate_refusal(p_world, p_uid, i) is null) desc, i.id limit 1;
     end if;
     if not consume(p_world, p_uid, it.def, 1, it.id) then return; end if;
     select cd.id into v_crop from crop_def cd where cd.seed = it.def;

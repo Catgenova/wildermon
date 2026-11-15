@@ -20,6 +20,7 @@ import { Repaint } from '../repaint';
 const MOST_GOES = 100;
 import { RecipeTree } from '../recipetree';
 import { QueueView } from './craftqueue';
+import { seenDefName } from '../../game/skillgates';
 
 const skillName = (id: string): string => SKILL_DEFS.find((s) => s.id === id)?.name ?? id;
 const lower = (id: string): string => itemDef(id).name.toLowerCase();
@@ -476,7 +477,7 @@ export class CraftPanel {
       span.className = i.have >= i.need ? 'have' : 'lack';
       // Litres of a liquid by the litre: "2 L water (12 L)".
       const l = i.litres ? ' L' : '';
-      span.textContent = i.litres ? `${i.need} L ${capital(liquidWord(i.item))}` : `${i.need} ${itemDef(i.item).name}`;
+      span.textContent = i.litres ? `${i.need} L ${capital(liquidWord(i.item))}` : `${i.need} ${seenDefName(i.item, this.game)}`;
       // Where they are, so a crate that empties itself into a chest is never
       // a surprise: what is on you goes first, then the nearest store.
       // Litres to the tenth below, so a well part refilled reads "0.4 L", never a float's tail.

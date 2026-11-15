@@ -8,7 +8,7 @@ import { CHANNELS, figSays, isGain, mirrorTrait, pct, TIER_CSS, TRAIT_SOURCES, t
 import { readsTrait, TIER_LEVEL, traitReadNeeds } from '../../game/husbandry';
 
 import type { Game } from '../../game/game';
-import { itemDef, rarityOf } from '../../game/items';
+import { rarityOf } from '../../game/items';
 import { furnitureDef } from '../../game/furniture';
 import { SKILL_BY_ID } from '../../game/skills';
 import type { MenuItem } from '../contextmenu';
@@ -19,6 +19,7 @@ import { idleSays, ledgerLines } from '../../game/workerlog';
 import { workLines } from '../../game/workstats';
 import { formLabels } from '../../game/wildforms';
 import { CarePanel } from './care';
+import { seenDefName } from '../../game/skillgates';
 
 /**
  * Where a wildermon is, as the list groups it: under a rider or in a
@@ -665,7 +666,7 @@ export class WildermonPanel {
         const verb = def.gathers ? GATHER_VERB[def.gathers] : 'working';
         // Resting (`REST_FOR`) before anything it holds: a tired water carrier rests with its bucket.
         const rest = c.idle?.why === 'bed' ? 'Asleep in its bed' : c.idle?.why === 'rest' ? 'Resting' : c.idle?.why === 'tired' ? 'Walking to its bed' : '';
-        parts.push(rest || (c.carrying ? `Carrying ${itemDef(c.carrying.id).name.toLowerCase()} to the ${(c.trade ?? def.gathers) === 'hive' ? 'hive' : 'crate'}` : c.state === 'forage' ? `${verb[0].toUpperCase()}${verb.slice(1)}` : c.state === 'toForage' ? `Walking out: ${def.gathers ?? 'work'}` : c.idle ? 'Idle' : 'Finding work'));
+        parts.push(rest || (c.carrying ? `Carrying ${seenDefName(c.carrying.id, this.game, c.carrying.extra).toLowerCase()} to the ${(c.trade ?? def.gathers) === 'hive' ? 'hive' : 'crate'}` : c.state === 'forage' ? `${verb[0].toUpperCase()}${verb.slice(1)}` : c.state === 'toForage' ? `Walking out: ${def.gathers ?? 'work'}` : c.idle ? 'Idle' : 'Finding work'));
       }
       if (c.mode === 'deed' && def.gathers) {
         const toNext = SKILL_STEP - (taskSkill(c, def) % SKILL_STEP);
@@ -680,7 +681,7 @@ export class WildermonPanel {
       const said = parts.join(' · ');
       if (info.textContent !== said) info.textContent = said;
       const job = c.trade ?? def.gathers;
-      const idle = (place === 'deed' || place === 'around') && c.idle ? idleSays(c.idle, job, c.carrying ? itemDef(c.carrying.id).name : null, taskSkill(c, def)) : '';
+      const idle = (place === 'deed' || place === 'around') && c.idle ? idleSays(c.idle, job, c.carrying ? seenDefName(c.carrying.id, this.game, c.carrying.extra) : null, taskSkill(c, def), c.skills) : '';
       if (idleLine.textContent !== idle) idleLine.textContent = idle;
       hide(idleLine, !idle);
       const ledger = c.mode === 'deed' ? ledgerLines(c.ledger, this.game.islandDay()).join('\n') : '';

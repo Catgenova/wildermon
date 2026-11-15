@@ -2,7 +2,7 @@ import { activeInfusion, infuseSays } from '../game/infusion';
 import type { Game } from '../game/game';
 import { ARMOUR_BY_ID, ARMOUR_CLASSES, hitChance, pieceBurden, pieceSoak, SHIELDS, SLOT_NAMES, slotOf, WEAPON_BY_ID, weaponDamage } from '../game/gear';
 import { armourSwingKg, blockChance, blockNote, reachOf, SWING_FLOOR, swingByOf, swingKgOf, THROWN_PAST } from '../game/fight';
-import { bagRoom, bagUnits, DRINK_LITRES, isBag, itemDef, itemName, itemWeight, litresOf, unitWeight, type Item } from '../game/items';
+import { bagRoom, bagUnits, DRINK_LITRES, isBag, itemDef, itemWeight, litresOf, unitWeight, type Item } from '../game/items';
 import { finePercent, listed, percent } from '../game/words';
 import { ACTIONS, tasteSays } from '../game/actions';
 import { RECIPES } from '../game/recipes';
@@ -10,6 +10,7 @@ import { MATERIALS } from '../game/improve';
 import { SKILL_BY_ID } from '../game/skills';
 import { NUTRIENT_NAMES, NUTRIENTS } from '../game/nutrition';
 import type { TipLine } from './tooltip';
+import { identifySaid, seenName } from '../game/skillgates';
 
 /**
  * A weapon, a piece of armour or a shield set against what you have on in its
@@ -134,7 +135,7 @@ function compared(g: Game, item: Item): TipLine[] | null {
   const on = g.worn(slot);
   const same = on?.uid === item.uid;
   const theirs = on && !same ? statsOf(g, on) : null;
-  const lines: TipLine[] = [`${itemName(item)} · Quality ${item.ql.toFixed(1)}`];
+  const lines: TipLine[] = [`${seenName(item, g)} · Quality ${item.ql.toFixed(1)}`];
   mine.forEach((s, i) => {
     const o = theirs?.[i];
     if (!o || o.label !== s.label) {
@@ -156,7 +157,7 @@ function compared(g: Game, item: Item): TipLine[] | null {
   lines.push(same
     ? 'Worn.'
     : on
-      ? `Compared with: ${itemName(on).toLowerCase()} (Quality ${on.ql.toFixed(1)}) ${where}.`
+      ? `Compared with: ${seenName(on, g).toLowerCase()} (Quality ${on.ql.toFixed(1)}) ${where}.`
       : `Nothing ${where} to compare.`);
   return lines;
 }
@@ -197,8 +198,11 @@ export const isJobTool = (id: string): boolean => toolSkills().has(id);
  * (`tasteSays`). Every figure is the rule's own.
  */
 export function itemCard(g: Game, item: Item): TipLine[] {
+  // An unidentified thing says only what identifies it (`skillgates.ts`): "30 farming required to identify this seed."
+  const unknown = identifySaid(item, g);
+  if (unknown) return [unknown];
   const def = itemDef(item.id);
-  const lines: TipLine[] = [`${itemName(item)} · Quality ${item.ql.toFixed(1)}`];
+  const lines: TipLine[] = [`${seenName(item, g)} · Quality ${item.ql.toFixed(1)}`];
   lines.push({ text: `Weighs ${itemWeight(item).toFixed(1)} kg${item.count > 1 ? `, ${unitWeight(item).toFixed(2)} kg each` : ''}` });
   if (item.dmg > 0) lines.push({ text: `Damage ${item.dmg.toFixed(1)} of 100` });
   const skills = toolSkills().get(item.id);

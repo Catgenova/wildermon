@@ -102,7 +102,7 @@ import { capital, listed } from './words';
 import { pct, pickedSaid, qlTag, searchOdds, searchPasses, tagged, taggedWith } from './yields';
 import { fruitRefusal, fruitSeason, fruitingSays, inSeason } from './fruiting';
 import { RECIPE_ACTIONS } from './recipes';
-import { skillGateRefusal, treeGate } from './skillgates';
+import { itemGateRefusal, seenDefName, seenName, skillGateRefusal, sproutGate, treeGate, unidentified } from './skillgates';
 import { BRUSH_TOOL, lacksTool, MORTAR_TOOL, REAP_TOOL, TOOL_JOBS } from './jobtools';
 
 /**
@@ -623,7 +623,7 @@ function lookOver(g: Game, job: 'forage' | 'botanize', skill: string, all: Array
     const odds = g.perk(`rare:${job}`, 0);
     const rare = odds > 0 ? rollRarity(() => g.rand(), odds) : 0;
     const item = g.gather(id, { ql: g.productQl(skill), rare });
-    found.push(`${rare ? `${RARITIES[rare].name} ` : ''}${itemDef(id).name.toLowerCase()} (QL ${item.ql.toFixed(1)})`);
+    found.push(`${rare ? `${RARITIES[rare].name} ` : ''}${seenDefName(id, g).toLowerCase()} (QL ${item.ql.toFixed(1)})`);
     if (rare) {
       g.note(RARITIES[rare].name);
       g.logMsg(RARITY_WORD[rare], 'skill');
@@ -690,6 +690,20 @@ export const oreNeeds = (g: Game, level: number): number => Math.max(0, level - 
 export const treeGateRefusal = (g: Game, data: number): string | null => {
   const gate = treeGate(data);
   return gate ? skillGateRefusal(gate.name, gate.skill, g.skills.get(gate.skill), gate.level) : null;
+};
+/** Picking a tree tile's sprouts: its species' sprout gate for you, or null. The island's `sprout_gate_refusal`. */
+export const sproutGateRefusal = (g: Game, data: number): string | null => {
+  const gate = sproutGate(data);
+  return gate ? skillGateRefusal(gate.name, gate.skill, g.skills.get(gate.skill), gate.level) : null;
+};
+/**
+ * The sprout a Plant or a Graft puts in: the one chosen off the menu, or else the first to hand your forestry may
+ * plant, or else the first (`ok` for which ones count). The island's `perform_ground` takes the same one.
+ */
+export const sproutToHand = (g: Game, asked: number | undefined, ok: (it: Item) => boolean = () => true): Item | undefined => {
+  if (asked !== undefined) return g.inventory.get(asked);
+  const all = g.inventory.items.filter((it) => it.id === 'sprout' && !it.locked && ok(it));
+  return all.find((it) => !itemGateRefusal(it, g)) ?? all[0];
 };
 
 /**
@@ -1905,7 +1919,9 @@ export const ACTIONS: ActionDef[] = [
       if (!age.alive) return 'Tree is dead.';
       // A stage with no timber in it has no sprouts either: a sapling, or one clipped to a shrub.
       if (age.logs === 0) return `${age.name}: no sprouts.`;
-      return g.isForaged(t.x, t.y, 'sprout') ? `Sprout already picked. ${pickedSaid(g, t.x, t.y, 'sprout')}` : null;
+      if (g.isForaged(t.x, t.y, 'sprout')) return `Sprout already picked. ${pickedSaid(g, t.x, t.y, 'sprout')}`;
+      // And only a species your forestry may pick (`skillgates.ts`).
+      return sproutGateRefusal(g, g.world.getData(t.x, t.y));
     },
     perform: (t, g) => {
       if (t.kind !== 'tile') return;
@@ -2071,6 +2087,10 @@ export const ACTIONS: ActionDef[] = [
       const chosen = asked !== undefined ? g.inventory.get(asked) : undefined;
       if (asked !== undefined && chosen?.id !== 'sprout') return 'Not a sprout.';
       if (!chosen && !g.inventory.has('sprout')) return 'Need a sprout.';
+      // And only a species your forestry may plant (`skillgates.ts`), named as you see it.
+      const sprout = sproutToHand(g, asked);
+      const gated = sprout ? itemGateRefusal(sprout, g) : null;
+      if (gated) return gated;
       // A grown tile of tree is something you walk round, not through, and the
       // sprout becomes that tile the moment it goes in. Planted underfoot it
       // closes over the person who planted it.
@@ -2083,7 +2103,7 @@ export const ACTIONS: ActionDef[] = [
     },
     perform: (t, g) => {
       if (t.kind !== 'tile') return;
-      const picked = t.itemUid !== undefined ? g.inventory.get(t.itemUid) : undefined;
+      const picked = sproutToHand(g, t.itemUid);
       const sprout = picked?.id === 'sprout' ? picked : g.inventory.find('sprout');
       if (!sprout) return;
       const species = Math.max(
@@ -2105,6 +2125,7 @@ export const ACTIONS: ActionDef[] = [
     label: 'Graft',
     labelFor: (t, g) => {
       const it = t.kind === 'tile' && t.itemUid !== undefined ? g.inventory.get(t.itemUid) : undefined;
+      if (it && unidentified(it, g)) return `Graft ${seenName(it, g).toLowerCase()}`;
       return it?.extra ? `Graft ${it.extra.toLowerCase()} sprout` : 'Graft';
     },
     verb: 'grafting',
@@ -2128,12 +2149,16 @@ export const ACTIONS: ActionDef[] = [
       if (asked !== undefined && !(asked?.id === 'sprout' && fruitSprout(asked))) return 'Not a fruit sprout.';
       if (!asked && !g.inventory.items.some((it) => it.id === 'sprout' && fruitSprout(it))) return 'Need a fruit sprout.';
       if (!g.inventory.has('carving_knife')) return 'Need a carving knife.';
+      // And only a species your forestry may graft (`skillgates.ts`), named as you see it.
+      const graft = sproutToHand(g, t.itemUid, fruitSprout);
+      const gated = graft ? itemGateRefusal(graft, g) : null;
+      if (gated) return gated;
       // Nor under a building (`piers.ts`).
       return underBuilding(g, t.x, t.y);
     },
     perform: (t, g) => {
       if (t.kind !== 'tile') return;
-      const picked = t.itemUid !== undefined ? g.inventory.get(t.itemUid) : undefined;
+      const picked = sproutToHand(g, t.itemUid, fruitSprout);
       const sprout = picked?.id === 'sprout' && fruitSprout(picked) ? picked : g.inventory.items.find((it) => it.id === 'sprout' && fruitSprout(it));
       if (!sprout) return;
       const data = g.world.getData(t.x, t.y);
@@ -3011,7 +3036,7 @@ export const ACTIONS: ActionDef[] = [
         return;
       }
       const counts = new Map<string, number>();
-      for (const it of got) counts.set(itemDef(it.id).name.toLowerCase(), (counts.get(itemDef(it.id).name.toLowerCase()) ?? 0) + it.count);
+      for (const it of got) counts.set(seenDefName(it.id, g, it.extra).toLowerCase(), (counts.get(seenDefName(it.id, g, it.extra).toLowerCase()) ?? 0) + it.count);
       const what = [...counts.entries()].map(([n, c]) => (c > 1 ? `${c} × ${n}` : n)).join(', ');
       g.logMsg(`Picked up: ${what}.`, 'event');
     },
@@ -3087,7 +3112,7 @@ export const ACTIONS: ActionDef[] = [
       // Down in a cellar, onto its floor, where things keep longest (`CELLAR_DECAY`).
       const floor = floorOf(g.player.level);
       g.dropOnGround(g.player.tileX, g.player.tileY, item, floor);
-      const what = item.count > 1 ? `${item.count} × ${itemName(item).toLowerCase()}` : itemName(item).toLowerCase();
+      const what = item.count > 1 ? `${item.count} × ${seenName(item, g).toLowerCase()}` : seenName(item, g).toLowerCase();
       g.logMsg(`Dropped: ${what}, on the ${floor < 0 ? 'cellar floor' : 'ground'}.`, 'event');
     },
   },
@@ -3104,7 +3129,7 @@ export const ACTIONS: ActionDef[] = [
       const taken = g.takeFromGround(t.x, t.y, t.uid, t.down ? CELLAR_LEVEL : 0);
       if (!taken.length) return;
       for (const item of taken) g.inventory.addItem(item);
-      const names = taken.map((it) => (it.count > 1 ? `${it.count} × ${itemName(it).toLowerCase()}` : itemName(it).toLowerCase()));
+      const names = taken.map((it) => (it.count > 1 ? `${it.count} × ${seenName(it, g).toLowerCase()}` : seenName(it, g).toLowerCase()));
       g.logMsg(`Picked up: ${names.join(', ')}.`, 'event');
     },
   },

@@ -461,7 +461,7 @@ begin
         return true;
       end if;
       if not v_hold then
-        update creature set carrying = take_some_stored(p_world, c.keeper, (select array_agg(x.seed) from crop_def x), stage_loads(c), c.work_x, c.work_y)
+        update creature set carrying = take_some_stored(p_world, c.keeper, worker_seeds(c), stage_loads(c), c.work_x, c.work_y)
          where world_id = p_world and id = p_id;
         return true;
       end if;

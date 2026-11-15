@@ -58,7 +58,7 @@ begin
     end if;
     for v_r in select * from item where world_id = p_world and holder = 'crate' and crate = v_c.id order by id for update loop
       v_names := v_names || (case when v_r.count > 1 then v_r.count || ' × ' else '' end
-        || made_name(v_r.def, v_r.piece));
+        || seen_name(p_world, p_uid, v_r.def, v_r.extra, made_name(v_r.def, v_r.piece)));
       update item set holder = 'player', holder_uid = p_uid, crate = null, gx = null, gy = null
         where id = v_r.id;
       if v_kept.founded_by is not null then
@@ -90,7 +90,7 @@ begin
     end if;
     if v_fit <= 0 then return; end if;
     perform tell(p_world, p_uid,
-      stored_line(v_fit, made_name(v_it.def, v_it.piece), crate_name(v_c), v_want - v_fit), 'event');
+      stored_line(v_fit, seen_name(p_world, p_uid, v_it.def, v_it.extra, made_name(v_it.def, v_it.piece)), crate_name(v_c), v_want - v_fit), 'event');
 
   elsif p_action = 'rack_put' then
     perform perform_rack_put(p_world, p_uid, p_target);
@@ -141,7 +141,7 @@ begin
     end if;
     perform tell(p_world, p_uid, coalesce('Taken from ' || lower(v_store) || ': ', 'Taken: ')
       || case when v_want > 1 then v_want || ' × ' else '' end
-      || lower((select coalesce(name, v_it.def) from item_def where id = v_it.def))
+      || lower(seen_name(p_world, p_uid, v_it.def, v_it.extra, (select coalesce(name, v_it.def) from item_def where id = v_it.def)))
       || '.', 'event');
   end if;
 end $function$

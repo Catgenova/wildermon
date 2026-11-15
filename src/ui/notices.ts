@@ -2,8 +2,8 @@ import type { LogEntry } from '../game/events';
 import { SKILL_DEFS } from '../game/skills';
 import { DAMAGE_MAX, DAMAGE_WARN, type Game } from '../game/game';
 import { SLOTS } from '../game/gear';
-import { itemName } from '../game/items';
 import { rotSaid, rottingNear } from '../game/rot';
+import { seenName } from '../game/skillgates';
 
 /**
  * Notices: a line near the top of the screen for the few moments worth
@@ -121,7 +121,7 @@ export class Notices {
       now.add(it.uid);
       if (this.worn.has(it.uid)) continue;
       this.worn.add(it.uid);
-      if (this.wornSeen) this.show('wear', `Your ${itemName(it).toLowerCase()} is ${Math.floor(it.dmg)}% worn; at ${DAMAGE_MAX}% it breaks.`);
+      if (this.wornSeen) this.show('wear', `Your ${seenName(it, this.game).toLowerCase()} is ${Math.floor(it.dmg)}% worn; at ${DAMAGE_MAX}% it breaks.`);
     }
     for (const uid of [...this.worn]) if (!now.has(uid)) this.worn.delete(uid);
     this.wornSeen = true;
@@ -137,7 +137,7 @@ export class Notices {
       if (this.rotting.has(r.item.uid)) continue;
       this.rotting.add(r.item.uid);
       const off = Math.round(Math.hypot(r.x + 0.5 - g.player.x, r.y + 0.5 - g.player.y));
-      this.show('rot', `Rotting: ${r.item.count > 1 ? `${r.item.count} × ` : ''}${itemName(r.item).toLowerCase()} on the ground ${off < 1 ? 'here' : `${off} tiles away`}, gone in ${rotSaid(r.secs)}. No rot in packs or stores.`);
+      this.show('rot', `Rotting: ${r.item.count > 1 ? `${r.item.count} × ` : ''}${seenName(r.item, this.game).toLowerCase()} on the ground ${off < 1 ? 'here' : `${off} tiles away`}, gone in ${rotSaid(r.secs)}. No rot in packs or stores.`);
     }
   }
 

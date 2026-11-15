@@ -62,7 +62,7 @@ import { HYBRID_HARDY, HYBRID_WORK, HYBRIDS, type HybridCross } from './hybridli
 import { world } from './pace';
 import { emptyCrate, shutIn, standingCrate } from './crating';
 import { IDLE_WANTS, IDLE_WHYS, ledgerAdd, ledgerRoll, type Idle, type IdleWhy, type WorkLedger } from './workerledger';
-import { gateOpen, treeGate } from './skillgates';
+import { sproutGate, treeGate, workerGateOpen, workerItemOpen, type SkillGate } from './skillgates';
 import { kindNames } from './journal-b';
 import { workFromLedger, workTime, type WorkStats } from './workstats';
 import { bredForm, formMul, wildFormRoll, type SizeForm } from './wildforms';
@@ -6823,27 +6823,29 @@ export class Creatures {
   }
 
   /**
-   * Why a feller with no tree to work in `range` of its ground is idle, past "no trees to fell": a tree with logs whose
-   * woodcutting gate is over its own (`skillgates.ts`), the lowest gate then the nearest, as `what` its gate's kind and
-   * id and `n` its tiles off (`gate`). Null for none. The tiles asked are trees no other worker is at, with a tile beside
-   * to stand on, on ground it may work. The island's `gate_idle`.
+   * Why a feller or a sprout picker with no tree to work in `range` of its ground is idle, past "no trees to fell": a
+   * tree with logs (a living one not picked lately, for sprouts) whose gate is over its own level in the gate's skill
+   * (`skillgates.ts`), the lowest gate then the nearest, as `what` its gate's kind and id and `n` its tiles off
+   * (`gate`). Null for none. The tiles asked are trees no other worker is at, with a tile beside to stand on, on ground
+   * it may work. The island's `gate_idle`.
    */
-  private gateIdle(game: Game, c: Creature, site: { x: number; y: number }, range: number): { why: IdleWhy; n: number; what?: string[] } | null {
+  private gateIdle(game: Game, c: Creature, site: { x: number; y: number }, range: number, kind: 'woodcut' | 'sprout'): { why: IdleWhy; n: number; what?: string[] } | null {
     const w = game.world;
-    const skill = taskSkill(c, this.species(c));
-    let best: { level: number; d: number; id: string } | null = null;
+    let best: SkillGate & { d: number } | null = null;
     for (let dy = -range; dy <= range; dy++) {
       for (let dx = -range; dx <= range; dx++) {
         const x = site.x + dx, y = site.y + dy;
         if (!w.inBounds(x, y) || w.getTile(x, y) !== TileType.Tree || this.claimed(x, y, c)) continue;
         if (c.mode === 'deed' && !game.workerGround(x, y)) continue;
-        const gate = treeGate(w.getData(x, y));
-        if (gateOpen(gate, skill) || !this.beside(game, x, y)) continue;
+        const data = w.getData(x, y);
+        const gate = kind === 'woodcut' ? treeGate(data)
+          : treeAge(data).alive && treeAge(data).logs > 0 && !game.isForaged(x, y, 'sprout') ? sproutGate(data) : undefined;
+        if (!gate || workerGateOpen(c, gate) || !this.beside(game, x, y)) continue;
         const d = Math.max(Math.abs(dx), Math.abs(dy));
-        if (!best || gate!.level < best.level || (gate!.level === best.level && d < best.d)) best = { level: gate!.level, d, id: gate!.id };
+        if (!best || gate.level < best.level || (gate.level === best.level && d < best.d)) best = { ...gate, d };
       }
     }
-    return best ? { why: 'gate', n: best.d, what: ['tree', best.id] } : null;
+    return best ? { why: 'gate', n: best.d, what: [best.kind, best.id] } : null;
   }
 
   /** The nearest tile to (x, y) a creature may walk, `reach` tiles off at most, ring by ring, rows from the north; or null. */
@@ -7479,12 +7481,13 @@ export class Creatures {
   /**
    * A seed to put in the ground: one out of its own cheeks first, and failing
    * that one from any store on the deed — the settlement crate, a bin, a chest,
-   * whichever has seed in it. `store` is null when the seed is its own.
+   * whichever has seed in it. `store` is null when the seed is its own. Only a
+   * seed its own farming may sow (`skillgates.ts`; the island's `sow_seed`).
    */
   private seedFor(game: Game, c: Creature): { seed: Item; store: DeedStore | null } | null {
-    if (c.pouch && CROP_BY_SEED.has(c.pouch.id) && c.pouch.count > 0) return { seed: c.pouch, store: null };
+    if (c.pouch && CROP_BY_SEED.has(c.pouch.id) && c.pouch.count > 0 && workerItemOpen(c, c.pouch)) return { seed: c.pouch, store: null };
     for (const store of game.deedStores()) {
-      const seed = store.items.find((it: Item) => CROP_BY_SEED.has(it.id) && it.count > 0);
+      const seed = store.items.find((it: Item) => CROP_BY_SEED.has(it.id) && it.count > 0 && workerItemOpen(c, it));
       if (seed) return { seed, store };
     }
     return null;
@@ -7568,7 +7571,8 @@ export class Creatures {
       // A living tree, picked from beside it, and a sprout taken off it not lately; a pine big enough to tap, not tapped since dawn.
       if (game.world.getTile(x, y) !== TileType.Tree || !this.beside(game, x, y) || this.claimed(x, y, c)) return false;
       const data = game.world.getData(x, y);
-      if (kind === 'sprout') return treeAge(data).alive && treeAge(data).logs > 0 && !game.isForaged(x, y, 'sprout');
+      // And only a species whose sprouts its own forestry may pick (`skillgates.ts`; the island's `worker_gatherable`).
+      if (kind === 'sprout') return treeAge(data).alive && treeAge(data).logs > 0 && !game.isForaged(x, y, 'sprout') && (!c || workerGateOpen(c, sproutGate(data)));
       return treeSpecies(data) === RESIN_TREE && tappable(data) && !game.tappedToday(x, y);
     }
     if (kind === 'flower') {
@@ -7618,9 +7622,9 @@ export class Creatures {
     }
     if (kind === 'farm') return !!c && this.farmJobAt(game, c, x, y) !== null;
     if (kind === 'woodcut') {
-      // And only a tree its own level, its task skill, may fell (`skillgates.ts`; the island's `worker_gatherable`).
+      // And only a tree its own woodcutting may fell (`skillgates.ts`; the island's `worker_gatherable`).
       if (game.world.getTile(x, y) !== TileType.Tree || !this.beside(game, x, y)) return false;
-      return !c || gateOpen(treeGate(game.world.getData(x, y)), taskSkill(c, this.species(c)));
+      return !c || workerGateOpen(c, treeGate(game.world.getData(x, y)));
     }
     if (kind === 'prune') {
       // What would otherwise die: a stage that prunes back and whose next
@@ -7812,6 +7816,8 @@ export class Creatures {
    */
   private finishHands(game: Game, c: Creature, kind: GatherKind, x: number, y: number): Item | null {
     if (c.mode !== 'deed') return null;
+    // Never a species' sprout over its own forestry, however it came to be at one (the island's `worker_do`).
+    if (kind === 'sprout' && game.world.getTile(x, y) === TileType.Tree && !workerGateOpen(c, sproutGate(game.world.getData(x, y)))) return null;
     const skillId = GATHER_SKILL[kind];
     const skill = c.skills[skillId] ?? 1;
     this.gainSkill(game, c, skillId, 0.225);
@@ -7897,7 +7903,7 @@ export class Creatures {
     const age = treeAge(data);
     const skill = c.skills[GATHER_SKILL.woodcut] ?? 1;
     // Never a tree over its own level, however it came to be at one (`skillgates.ts`; the island's `worker_do`).
-    if (!gateOpen(treeGate(data), taskSkill(c, this.species(c)))) return null;
+    if (!workerGateOpen(c, treeGate(data))) return null;
     this.gainSkill(game, c, GATHER_SKILL.woodcut, 0.225);
     // A worker swings the same number of times a person would, and the notch
     // it leaves is the same notch: anybody may finish the tree it started.
@@ -8797,9 +8803,11 @@ export class Creatures {
    */
   private planterStep(game: Game, c: Creature, goto: (x: number, y: number, reach?: number) => boolean, near: (x: number, y: number) => boolean, range: number): boolean {
     const seed = (it: Item): boolean => CROP_BY_SEED.has(it.id);
+    // Out of the stores, only seed its own farming may sow (`skillgates.ts`; the island's `worker_seeds`).
+    const sowable = (it: Item): boolean => seed(it) && workerItemOpen(c, it);
     const holding = !!c.carrying && seed(c.carrying);
     if (c.carrying && !holding) return false;
-    const seedToHave = holding || !!this.storeWhere(game, c, seed);
+    const seedToHave = holding || !!this.storeWhere(game, c, sowable);
     let f: PlacedFurniture | undefined;
     let bestD = Infinity;
     for (const x of game.furniture.values()) {
@@ -8817,11 +8825,11 @@ export class Creatures {
     if (!f) return this.why(c, 'range', range);
     const crop = game.planted.get(f.id);
     if (!crop && !holding) {
-      const store = this.storeWhere(game, c, seed);
+      const store = this.storeWhere(game, c, sowable);
       if (!store) return this.why(c, 'stock');
       if (!goto(store.centre[0], store.centre[1])) return true;
       // Its stage's seeds a trip (`stageLoads`), each sown in a go of its own.
-      c.carrying = this.takeFrom(store, seed, stageLoads(c), game);
+      c.carrying = this.takeFrom(store, sowable, stageLoads(c), game);
       return true;
     }
     const [fx, fy] = furnitureCentre(f);
@@ -9363,7 +9371,7 @@ export class Creatures {
     return true;
   }
 
-  /** Planting: a sprout out of the stores, put in where the wood has gone. */
+  /** Planting: a sprout out of the stores its own forestry may plant (`skillgates.ts`), put in where the wood has gone. */
   private plantStep(
     game: Game,
     c: Creature,
@@ -9373,8 +9381,9 @@ export class Creatures {
     deed: { x: number; y: number },
   ): boolean {
     if (!c.carrying) {
-      const store = game.deedStores().find((st) => st.items.some((it: Item) => it.id === 'sprout'));
-      const sprout = store?.items.find((it: Item) => it.id === 'sprout');
+      const plantable = (it: Item): boolean => it.id === 'sprout' && workerItemOpen(c, it);
+      const store = game.deedStores().find((st) => st.items.some(plantable));
+      const sprout = store?.items.find(plantable);
       if (!store || !sprout) return this.why(c, 'stock');
       const [sx, sy] = store.centre;
       if (!goto(sx, sy)) return true;
@@ -11028,8 +11037,8 @@ export class Creatures {
     if (kind && !ERRAND_JOBS.has(kind) && kind !== 'stoke') {
       const range = siteRange(c, def, deed);
       // A miner says what is wrong with the bare rock it has (`mineIdle`).
-      // And a feller what is wrong with the trees it has (`gateIdle`).
-      const mine = kind === 'mine' ? this.mineIdle(game, c, deed, range) : kind === 'woodcut' ? this.gateIdle(game, c, deed, range) : null;
+      // And a feller or a sprout picker what is wrong with the trees it has (`gateIdle`).
+      const mine = kind === 'mine' ? this.mineIdle(game, c, deed, range) : kind === 'woodcut' || kind === 'sprout' ? this.gateIdle(game, c, deed, range, kind) : null;
       if (mine) this.why(c, mine.why, mine.n, mine.what);
       else this.why(c, 'range', range);
     }

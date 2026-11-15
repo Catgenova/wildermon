@@ -5,5 +5,5 @@ CREATE OR REPLACE FUNCTION public.worker_gate_open(c creature, g skill_gate)
  LANGUAGE sql
  STABLE
 AS $function$
-  select g.kind is null or task_skill(c) >= g.level
+  select g.kind is null or worker_level(c, g.skill) >= g.level
 $function$

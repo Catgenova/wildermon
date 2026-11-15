@@ -2,7 +2,8 @@ import { DAMAGE_WARN, type Game } from '../game/game';
 
 /** Damage past which the pack calls a thing about to go to pieces. */
 export const DAMAGE_BREAKING = 90;
-import { itemName, type Item, rarityOf } from '../game/items';
+import { type Item, rarityOf } from '../game/items';
+import { identifySaid, seenName, type Viewer } from '../game/skillgates';
 import { dyeHexOf } from '../game/dyestuffs';
 import { isJobTool } from './compare';
 
@@ -29,18 +30,20 @@ import { isJobTool } from './compare';
  * `itemName` already puts the word -- rare, supreme, fantastic -- into the
  * name; what this adds is the colour, which is the thing anybody actually
  * scans a list for, and the marks for what is worn and what is kept back.
+ * Named as `viewer` sees it (`seenName`): an unidentified one says only what
+ * identifies it.
  */
-export function nameCell(item: Item, opts: { worn?: boolean; occupant?: string } = {}): HTMLSpanElement {
+export function nameCell(item: Item, viewer: Viewer, opts: { worn?: boolean; occupant?: string } = {}): HTMLSpanElement {
   const name = document.createElement('span');
   name.className = 'inv-name';
   const worn = opts.worn ?? false;
   // A wildermon crate says who is in it.
   const marks = [worn ? 'worn' : '', item.locked ? 'kept' : '', opts.occupant ? `${opts.occupant} inside` : ''].filter(Boolean);
-  const full = (item.count > 1 ? `${itemName(item)} (${item.count})` : itemName(item))
+  const full = (item.count > 1 ? `${seenName(item, viewer)} (${item.count})` : seenName(item, viewer))
     + (marks.length ? ` · ${marks.join(' · ')}` : '');
   name.textContent = full;
   // The column is narrow and some of these names are long.
-  name.title = item.locked ? `${full}. Kept back: never spent, dropped or fed away.` : full;
+  name.title = identifySaid(item, viewer) ?? (item.locked ? `${full}. Kept back: never spent, dropped or fed away.` : full);
   // A swatch of its colour after the name, for a thing dyed and a bucket of dye, so names line up; the hex on hover.
   const hex = dyeHexOf(item.dye);
   if (hex) {

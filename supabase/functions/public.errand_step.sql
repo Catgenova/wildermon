@@ -277,7 +277,7 @@ begin
     end;
 
   elsif kind = 'patch' then
-    declare v_p placed; v_s record; v_seeds text[] := (select array_agg(cd.seed) from crop_def cd);
+    declare v_p placed; v_s record; v_seeds text[] := worker_seeds(c);
             v_hold boolean := coalesce(c.carrying->>'def' = any(array(select cd.seed from crop_def cd)), false);
     begin
       if c.carrying is not null and not v_hold then
@@ -455,7 +455,7 @@ begin
 
   elsif kind = 'plant' then
     if c.carrying->>'def' is distinct from 'sprout' then
-      v_store := stocked(p_world, 'sprout');
+      v_store := stocked_for(p_world, c, 'sprout');
       if v_store.id is null then why := 'stock'; why_n := null; return next; return; end if;
       select * into v_crate from crate where world_id = p_world and id = v_store.crate;
       gx := crate_centre_x(v_crate); gy := crate_centre_y(v_crate);
