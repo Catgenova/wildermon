@@ -40,7 +40,7 @@ import { drawRuneLantern, RUNE_LANTERN_VARIANTS } from '../../src/render/runelan
 import { drawRuneGate } from '../../src/render/runegate';
 import { drawMemorial } from '../../src/render/memorial';
 import {
-  bushSprite, carcassSprite, crateSprite, drawCampfire, drawCreature, drawDeck, drawPlayer, drawPortrait, drawTrap, lyingSprite, spriteScaleFor, stumpSprite, treeSprite,
+  bushSprite, carcassSprite, crateSprite, drawCampfire, drawCreature, drawPlayer, drawPortrait, drawTrap, lyingSprite, spriteScaleFor, stumpSprite, treeSprite,
   type CreaturePose, type PlayerPose, type PortraitMotion, type Sprite,
 } from '../../src/render/sprites';
 import { loadAllWildermon, modelled } from '../../src/render/wildermon';
@@ -58,6 +58,10 @@ import { TRAPS } from '../../src/game/trapdefs';
 import { CRATE_DEFS } from '../../src/game/crates';
 import { NIGHT_WASH } from '../../src/render/nightwash';
 import { prospectMark, seam, UNIDENTIFIED_FACE, veinGlints, veinLit, veinLook, VeinNight } from '../../src/render/seams/runecut';
+import { bridgeNight, drawBridgePiece, piecesAt, type BridgeFrame, type BridgePieceAt } from '../../src/render/bridgekit';
+import { BRIDGES, spanBill, type Bridge, type BridgeKind } from '../../src/game/bridges';
+import { VIEWS } from '../../src/render/view';
+import { HALF_H, HALF_W, HEIGHT_SCALE } from '../../src/render/iso';
 
 export type Ctx = CanvasRenderingContext2D;
 export type Box = [number, number, number, number];
@@ -434,6 +438,114 @@ const TRAP_STATES: Array<{ label: string; baited: boolean; sprung: boolean; worn
   { label: 'worn', baited: true, sprung: false, worn: true },
   { label: 'worn, sprung', baited: false, sprung: true, worn: true },
 ];
+/**
+ * A rope bridge's and a garden footbridge's sheets: a bridge set out along x
+ * over level ground, drawn by the bridge kit as the renderer draws it
+ * (`piecesAt`, `drawBridgePiece`, sorted by their keys), its middle at the
+ * floor contact, in each building stage (what of its bill is in, by item)
+ * and each size (tiles of deck, lanes, a ramp's rise).
+ */
+const BRIDGE_STATES: Record<'rope' | 'footbridge', Array<{ label: string; fitted: Record<string, number> | null }>> = {
+  rope: [
+    { label: 'finished', fitted: null },
+    { label: 'set out', fitted: {} },
+    { label: 'nails in', fitted: { nail: 1 } },
+    { label: 'slats 1/3', fitted: { nail: 1, plank: 0.34 } },
+    { label: 'slats 2/3', fitted: { nail: 1, plank: 0.67 } },
+    { label: 'slats laid', fitted: { nail: 1, plank: 1 } },
+    { label: 'rope half', fitted: { nail: 1, plank: 1, thick_rope: 0.5 } },
+  ],
+  footbridge: [
+    { label: 'finished', fitted: null },
+    { label: 'set out', fitted: {} },
+    { label: 'boards half', fitted: { nail: 1, plank: 0.5 } },
+    { label: 'boards laid', fitted: { nail: 1, plank: 1 } },
+    { label: 'posts half', fitted: { nail: 1, plank: 1, shaft: 0.5 } },
+  ],
+};
+const BRIDGE_SIZES: Record<'rope' | 'footbridge', Array<{ label: string; n: number; width: number; rise: number; height: number }>> = {
+  rope: [
+    { label: '3 tiles, 1 lane', n: 3, width: 1, rise: 0, height: 12 },
+    { label: '1 tile', n: 1, width: 1, rise: 0, height: 12 },
+    { label: '2 lanes', n: 3, width: 2, rise: 0, height: 12 },
+    { label: '3 lanes', n: 3, width: 3, rise: 0, height: 12 },
+    { label: 'ramp, rise 30', n: 3, width: 1, rise: 30, height: 27 },
+  ],
+  footbridge: [
+    { label: '1 lane', n: 1, width: 1, rise: 0, height: 4 },
+    { label: 'rise 10', n: 1, width: 1, rise: 10, height: 9 },
+  ],
+};
+
+/** The bridge a cell draws, each stage and size its own. */
+function studioBridgeOf(kind: BridgeKind, o: Opts): Bridge {
+  const k = kind === 'footbridge' ? 'footbridge' : 'rope';
+  const st = BRIDGE_STATES[k][o.state] ?? BRIDGE_STATES[k][0];
+  const v = BRIDGE_SIZES[k][o.variant] ?? BRIDGE_SIZES[k][0];
+  const spans = Array.from({ length: v.n }, (_, i) => {
+    const bill = spanBill(kind, i === 0, v.width);
+    const needed: Record<string, number> = {};
+    for (const [id, total] of Object.entries(bill.total)) needed[id] = st.fitted ? Math.round(total * (1 - (st.fitted[id] ?? 0))) : 0;
+    return { x: i + 1, y: 0, needed, total: bill.total };
+  });
+  return { id: 900000 + (k === 'rope' ? 0 : 1000) + o.state * 10 + o.variant, kind, ax: 0, ay: 0, bx: v.n + 1, by: 0, height: v.height, rise: v.rise || undefined, spans, width: v.width > 1 ? v.width : undefined, side: v.width > 1 ? 1 : undefined };
+}
+
+/** The bridge's pieces as the renderer has them at a turn, its middle at (sx, sy) on the ground at height nought, sorted as they are drawn. */
+function studioBridgePieces(sx: number, sy: number, zoom: number, b: Bridge, turn: number): BridgePieceAt[] {
+  const { cos, sin } = VIEWS[((turn % 8) + 8) % 8];
+  const w = b.width ?? 1;
+  const mx = (b.ax + b.bx) / 2 + 0.5, my = 0.5 + (w === 3 ? 0 : w === 2 ? 0.5 : 0);
+  const at = (wx: number, wy: number): [number, number] => {
+    const dx = wx - mx, dy = wy - my;
+    const u = dx * cos + dy * sin, v = dy * cos - dx * sin;
+    return [(u - v) * HALF_W, (u + v) * HALF_H];
+  };
+  const f: BridgeFrame = {
+    rotation: turn,
+    sx: (wx, wy) => sx + at(wx, wy)[0] * zoom,
+    sy: (wx, wy, h) => sy + (at(wx, wy)[1] - h * HEIGHT_SCALE) * zoom,
+    heightAt: () => 0,
+    greenStage: () => 0,
+  };
+  const out: BridgePieceAt[] = [];
+  for (const s of b.spans) for (const o of [-1, 0, 1]) out.push(...piecesAt(b, s.x, s.y + o, f));
+  return out.sort((p, q) => p.key - q.key);
+}
+
+function drawStudioBridge(ctx: Ctx, sx: number, sy: number, zoom: number, kind: BridgeKind, o: Opts): Box {
+  const b = studioBridgeOf(kind, o);
+  let box: Box | null = null;
+  for (const p of studioBridgePieces(sx, sy, zoom, b, o.turn)) {
+    const r = drawBridgePiece(ctx, p, zoom, o.turn);
+    if (r) box = box ? [Math.min(box[0], r[0]), Math.min(box[1], r[1]), Math.max(box[2], r[2]), Math.max(box[3], r[3])] : r;
+  }
+  return box ? [box[0] - sx, box[1] - sy, box[2] - sx, box[3] - sy] : [0, 0, 0, 0];
+}
+
+/** After the wash: the soft light round its rune lines and plaques cut in the wash, and the day's picture back in their shapes (`bridgeNight`). */
+function studioBridgeNight(ctx: Ctx, sx: number, sy: number, zoom: number, kind: BridgeKind, o: Opts, hole: (x: number, y: number, r: number, alpha: number) => void): void {
+  const b = studioBridgeOf(kind, o);
+  const pieces = studioBridgePieces(sx, sy, zoom, b, o.turn);
+  const lit = pieces.map((p) => bridgeNight(p, zoom, o.turn)).filter((n): n is NonNullable<typeof n> => !!n);
+  for (const n of lit) for (const h of n.holes(0, 0)) hole(h.x, h.y, h.r, h.a);
+  const W = ctx.canvas.width, H = ctx.canvas.height;
+  const day = document.createElement('canvas'); day.width = W; day.height = H;
+  const dg = day.getContext('2d')!;
+  dg.setTransform(ctx.getTransform());
+  for (const p of pieces) drawBridgePiece(dg, p, zoom, o.turn);
+  const mask = document.createElement('canvas'); mask.width = W; mask.height = H;
+  const mg = mask.getContext('2d')!;
+  mg.setTransform(ctx.getTransform());
+  for (const n of lit) for (const m of n.masks(0, 0)) { mg.globalAlpha = m.a; mg.drawImage(m.canvas, m.x, m.y, m.w, m.h); }
+  dg.setTransform(1, 0, 0, 1, 0, 0);
+  dg.globalCompositeOperation = 'destination-in';
+  dg.drawImage(mask, 0, 0);
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.drawImage(day, 0, 0);
+  ctx.restore();
+}
 
 /** How many things lie in the sack on its sheet. */
 const SACK_COUNTS = [1, 4, 20];
@@ -443,7 +555,7 @@ const CARCASSES: Array<[string, number]> = [['cindra', 1], ['rabba', 0], ['rabba
 
 const device: Family = {
   id: 'device', register: 'line', ref: 4,
-  about: 'Things laid on the ground and drawn flat each frame: the campfire, the traps and a bridge\'s deck pieces.',
+  about: 'Things laid on the ground and drawn flat each frame: the campfire, the traps; and the rope bridge and the garden footbridge, drawn by the bridge kit.',
   list: () => [
     {
       family: 'device', kind: 'campfire', name: 'Campfire', register: 'line', style: 'kit', entry: 'drawCampfire', file: 'src/render/kit/campfire.ts', views: 'turns',
@@ -470,9 +582,12 @@ const device: Family = {
       family: 'device', kind: `trap_${k}`, name: `Trap: ${name.toLowerCase()}`, register: 'line', style: 'kit', entry: 'drawTrap', file: 'src/render/kit/traps.ts', views: 'turns',
       states: TRAP_STATES.map((s, state) => ({ label: s.label, set: { state } })), variants: [], motions: [], emissive: false, footprint: [1, 1], ref: 4,
     })),
-    ...['plank', 'log', 'stone', 'rope'].map((k): Asset => ({
-      family: 'device', kind: `deck_${k}`, name: `Deck: ${k}`, register: 'line', style: 'flat', entry: 'drawDeck', file: 'src/render/sprites.ts', views: 'none',
-      states: states(['building', 'done']), variants: [0, 0.5, 1].map((g) => ({ label: `moss ${g}`, set: { variant: Math.round(g * 10) } })), motions: [], emissive: false, footprint: [1, 1], ref: 2,
+    ...(['rope', 'footbridge'] as const).map((k): Asset => ({
+      family: 'device', kind: `deck_${k}`, name: BRIDGES[k].name, register: 'line', style: 'kit', entry: 'piecesAt → drawBridgePiece', file: `src/render/kit/bridge/${k}.ts`, views: 'turns',
+      // Built in order, finished last: the first view and the lit one are the finished bridge (state nought).
+      states: [...BRIDGE_STATES[k].map((st, state) => ({ label: st.label, set: { state } })).slice(1), { label: BRIDGE_STATES[k][0].label, set: { state: 0 } }],
+      variants: BRIDGE_SIZES[k].map((v, variant) => ({ label: v.label, set: { variant } })),
+      motions: [], emissive: true, ref: 2,
     })),
   ],
   // A carcass is its kind's model lying down: every line in before it is drawn.
@@ -505,9 +620,10 @@ const device: Family = {
       const s = TRAP_STATES[o.state] ?? TRAP_STATES[0];
       return drawTrap(ctx, sx, sy, zoom, a.kind.slice(5), s.baited, s.sprung, o.turn, s.worn);
     }
-    drawDeck(ctx, sx, sy, zoom, a.kind.slice(5), o.state >= 1, 0, undefined, o.variant / 10, 3);
+    if (a.kind.startsWith('deck_')) return drawStudioBridge(ctx, sx, sy, zoom, a.kind.slice(5) as BridgeKind, o);
   },
-  night: (ctx, sx, sy, zoom, a, o) => {
+  night: (ctx, sx, sy, zoom, a, o, hole) => {
+    if (a.kind.startsWith('deck_')) { studioBridgeNight(ctx, sx, sy, zoom, a.kind.slice(5) as BridgeKind, o, hole); return; }
     // A lit campfire's fire laid again as light over the wash, as the renderer lays it.
     const f = FIRE_STATES[o.state];
     if (a.kind === 'campfire' && f?.lit) drawCampfireNight(ctx, sx, sy, zoom, f.fuel * FIRE_CAPACITY, o.night, o.t, NIGHT_WASH.alpha * o.night);

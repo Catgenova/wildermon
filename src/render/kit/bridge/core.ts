@@ -88,6 +88,11 @@ export interface BridgeStyle {
   paint?: Partial<Record<Role, BridgePainter>> & { any?: BridgePainter };
   /** Any of the builders, done this material's own way. */
   build?: Partial<Builders>;
+  /**
+   * What an unfinished tile shows, off how much of each thing its bill asks for is in (`Plan.fitted`): a tile's
+   * pictures are made again only when this changes. A style without one shows every unfinished tile alike.
+   */
+  stage?: (fitted: Record<string, number>) => string;
 }
 
 /* ---- the plan: one bridge's bays, piers and forms ---------------------------------------- */
@@ -141,6 +146,8 @@ export interface Plan {
   piers: Pier[];
   /** Whether each tile of deck is finished. */
   done: boolean[];
+  /** Of each tile of deck, how much of each thing its bill asks for is in, nought to one, by item: what an unfinished one shows (`Builders.unfinished`). */
+  fitted: Array<Record<string, number>>;
   /** Whether the deck rises (a ramp), and how many treads a tile it climbs in. */
   ramp: boolean;
   width: number;
@@ -157,6 +164,7 @@ export interface PlanInput {
   ground: (s: number, t: number) => number;
   bays: number[];
   done: boolean[];
+  fitted?: Array<Record<string, number>>;
   rise: number;
   width: number;
   moss: number;
@@ -219,7 +227,7 @@ export function planOf(p: PlanInput): Plan {
   }
   const base = Math.min(...piers.map((q) => q.foot), minGround(0, p.n)) - 2;
   return {
-    n: p.n, lanes: p.lanes, tLo, tHi, deck: p.deck, thick, ground: p.ground, base, bays, piers, done: p.done,
+    n: p.n, lanes: p.lanes, tLo, tHi, deck: p.deck, thick, ground: p.ground, base, bays, piers, done: p.done, fitted: p.fitted ?? p.done.map(() => ({})),
     ramp: Math.abs(p.rise) > 0, width: p.width, moss: p.moss, style: p.style,
   };
 }
