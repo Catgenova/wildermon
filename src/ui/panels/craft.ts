@@ -2,7 +2,11 @@ import { capital } from '../../game/words';
 import { ACTION_BY_ID } from '../../game/actions';
 import type { Game } from '../../game/game';
 import { itemDef } from '../../game/items';
-import { CRAFT_REACH, DEED_ONLY, liquidWord, needRecipeSays, RECIPE_BY_ID, recipeNow, RECIPE_CATEGORIES, RECIPES, materialChoices, prospect, reachFor, recipeReason, recipeStatus, recipeUnread, stationName, type CraftStock, type Recipe, type RecipeStatus } from '../../game/recipes';
+import { CRAFT_REACH, DEED_ONLY, liquidWord, needRecipeSays, RECIPE_BY_ID, recipeNow, RECIPE_CATEGORIES, RECIPES, materialChoices, prospect, reachFor, recipeReason, recipeStatus, recipeUnread, STATION_NAME, stationName, type CraftStock, type Recipe, type RecipeStatus } from '../../game/recipes';
+import { slotOf } from '../../game/gear';
+import { STATION_KINDS, STATIONS as STATION_DEFS } from '../../game/stations';
+import { WORK_POST } from '../../game/posts';
+import { crateKindOfItem } from '../../game/crates';
 import { lockedHiddenSays, RANK_ROW, recipeRank, recipeSearch } from '../../game/craftsearch';
 import { isFurniture, ONE_ALTAR } from '../../game/furniture';
 import { SKILL_DEFS } from '../../game/skills';
@@ -13,8 +17,8 @@ import { RUG_PATTERNS, WOVEN_RUG, type RugPattern } from '../../game/decordefs';
 import { FIGURE_KINDS } from '../../game/garden';
 import { SPECIES } from '../../game/creatures';
 import type { UIWindow } from '../windows';
-import { KIT, kitBody, kitButton, kitEmpty, kitPressed, kitPreview, kitSearch, kitSection, made } from '../kit';
-import { CraftPreview, previewOf, type PreviewOf } from '../craftpreview';
+import { KIT, kitBody, kitButton, kitEmpty, kitPressed, kitPreview, kitSearch, kitSection, kitTab, kitTabOn, kitTabs, made } from '../kit';
+import { CraftPreview, previewOf, setDownPiece, type PreviewOf } from '../craftpreview';
 import { Repaint } from '../repaint';
 
 /** The most goes one ask runs to: the island's `rpc_act` takes no more than this at once. */
@@ -28,6 +32,8 @@ const lower = (id: string): string => itemDef(id).name.toLowerCase();
 export const MAKES_SECTION = 'Makes';
 /** How long the pointer rests on a row before the preview shows what it makes, ms. */
 const HOVER_MS = 140;
+/** The preview pane's label for nothing chosen, or a thing with no model. */
+const NO_PREVIEW = 'No preview';
 /** The button on a box that asks how many to make. */
 const QUANTITY = 'Select Quantity';
 
@@ -41,11 +47,37 @@ for (const r of RECIPES) MAKES.set(r.result, [...(MAKES.get(r.result) ?? []), r]
 /** The recipes that make an item, if any do. */
 export const recipesMaking = (item: string): Recipe[] => MAKES.get(item) ?? [];
 
+/** The tabs over the book: everything, and what is made sorted by what it is (`craftTabOf`). */
+export type CraftTab = 'all' | 'equipment' | 'furniture' | 'stations' | 'food';
+export const CRAFT_TABS: ReadonlyArray<[CraftTab, string]> = [['all', 'All'], ['equipment', 'Equipment'], ['furniture', 'Furniture'], ['stations', 'Stations'], ['food', 'Food']];
+/**
+ * What is set down to work at: every station's item (`stations.ts`), every station a recipe asks for (`Station`),
+ * and the work post a wildermon works from.
+ */
+const STATION_ITEMS: ReadonlySet<string> = new Set([
+  ...STATION_KINDS.map((k) => STATION_DEFS[k].item).filter((i): i is string => !!i), ...Object.keys(STATION_NAME), WORK_POST,
+]);
+/**
+ * The tab a thing made is under, off its own data, or null for All only (a material, a part, a scroll): a station;
+ * a piece set down (furniture, a hull, a cart, a trap, a stake, a crate); a piece worn or held, or a tool; food or drink.
+ */
+export function craftTabOf(item: string): Exclude<CraftTab, 'all'> | null {
+  if (STATION_ITEMS.has(item)) return 'stations';
+  if (isFurniture(item) || setDownPiece(item) || crateKindOfItem(item)) return 'furniture';
+  const def = itemDef(item);
+  if (slotOf(item) || def.category === 'tool') return 'equipment';
+  if (def.category === 'food' || (def.food ?? 0) > 0 || (def.drink ?? 0) > 0) return 'food';
+  return null;
+}
+const isTab = (v: unknown): v is CraftTab => CRAFT_TABS.some(([t]) => t === v);
+
 interface Kept {
   pinned: string[];
   recent: string[];
   /** "Show locked": shut recipes not yet read listed, greyed and padlocked. Off unless ticked. */
   showLocked?: boolean;
+  /** The tab open. */
+  tab?: CraftTab;
 }
 
 function readKept(): Kept {
@@ -54,7 +86,7 @@ function readKept(): Kept {
     // Kept under an id since renamed: read under the new one, written back so the next time it is (`recipeNow`).
     const ids = (v: unknown): string[] => (Array.isArray(v)
       ? [...new Set(v.filter((x): x is string => typeof x === 'string').map(recipeNow))].filter((x) => RECIPE_BY_ID.has(x)) : []);
-    return { pinned: ids(got.pinned), recent: ids(got.recent).slice(0, RECENT), showLocked: got.showLocked === true };
+    return { pinned: ids(got.pinned), recent: ids(got.recent).slice(0, RECENT), showLocked: got.showLocked === true, tab: isTab(got.tab) ? got.tab : 'all' };
   } catch {
     return { pinned: [], recent: [] };
   }
@@ -112,7 +144,9 @@ export class CraftPanel {
   /** What the recipe chosen (clicked) or pointed at makes, drawn (`craftpreview.ts`); its strip, and what names it. */
   readonly preview: CraftPreview;
   private readonly previewStrip: HTMLDivElement;
-  private readonly previewSays: (name: string | null, line?: string) => void;
+  private readonly previewSays: (name: string, line?: string, empty?: boolean) => void;
+  /** The tabs, each its button. */
+  private readonly tabButtons = new Map<CraftTab, HTMLButtonElement>();
   /** The recipe chosen by a click on its row, and the one the pointer or the keyboard is on, whose preview stands in for it. */
   private chosen: string | null = null;
   private pointed: string | null = null;
@@ -172,7 +206,25 @@ export class CraftPanel {
     const strip = kitPreview(this.preview.el, 'craft-preview', 'craft-preview-text');
     this.previewStrip = strip.el;
     this.previewSays = strip.set;
-    win.body.append(search.el, head, this.list, this.previewStrip, this.queue.el, this.footer);
+    this.preview.onStage = strip.stage;
+    const tabs = kitTabs('craft-tabs');
+    tabs.setAttribute('aria-label', 'Recipes');
+    for (const [t, label] of CRAFT_TABS) {
+      const b = kitTab(label, 'craft-tab');
+      b.dataset.tab = t;
+      b.addEventListener('click', () => this.setTab(t));
+      b.addEventListener('keydown', (e) => {
+        if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+        e.preventDefault();
+        const i = CRAFT_TABS.findIndex(([k]) => k === this.tab);
+        const to = CRAFT_TABS[(i + (e.key === 'ArrowRight' ? 1 : CRAFT_TABS.length - 1)) % CRAFT_TABS.length][0];
+        this.setTab(to);
+        this.tabButtons.get(to)?.focus();
+      });
+      tabs.append(b);
+      this.tabButtons.set(t, b);
+    }
+    win.body.append(tabs, search.el, head, this.list, this.previewStrip, this.queue.el, this.footer);
     this.watchPointer();
     // Scrolled out from under it, or the window shut, a part's tree goes with it.
     this.list.addEventListener('scroll', () => this.tree.hide(), { passive: true });
@@ -228,6 +280,25 @@ export class CraftPanel {
     this.render(performance.now(), true);
   }
 
+  /** The tab open, kept for next time. */
+  private get tab(): CraftTab {
+    return this.kept.tab ?? 'all';
+  }
+
+  /** Open a tab, kept for next time; the search stays, searched within it. */
+  setTab(t: CraftTab): void {
+    if (t === this.tab) return;
+    this.kept.tab = t;
+    this.putKept();
+    this.list.scrollTop = 0;
+    this.render(performance.now(), true);
+  }
+
+  /** All open, where none of the recipes asked for is under the tab open. */
+  private tabFor(ids: readonly string[]): void {
+    if (this.tab !== 'all' && !ids.some((id) => craftTabOf(RECIPE_BY_ID.get(id)?.result ?? '') === this.tab)) this.kept.tab = 'all';
+  }
+
   /** Clear the search and the switch, so whatever is asked for next is on the page. */
   private unfilter(): void {
     this.search.value = '';
@@ -244,6 +315,7 @@ export class CraftPanel {
     this.unfilter();
     // A shut recipe unread is asked for by itself, "Show locked" or not.
     if (recipeUnread(r, this.game) && !this.kept.showLocked) this.only = new Set([id]);
+    this.tabFor([id]);
     this.reveal = id;
     this.win.open();
     this.render(performance.now(), true);
@@ -259,6 +331,7 @@ export class CraftPanel {
     if (!makes.length) return false;
     this.unfilter();
     this.only = new Set(makes.map((r) => r.id));
+    this.tabFor(makes.map((r) => r.id));
     this.search.value = itemDef(item).name;
     this.reveal = makes[0].id;
     this.win.open();
@@ -318,7 +391,7 @@ export class CraftPanel {
     // What the book would say. Standing at an anvil hammering, this is the
     // same from one second to the next, so nothing is touched.
     const { fromStores, spareRare } = this.game.settings;
-    const sig = `${this.query}\u0000${this.only ? [...this.only].join() : ''}\u0000${this.kept.pinned.join()}\u0000${this.kept.recent.join()}\u0000${this.readyOnly ? 1 : 0}${this.kept.showLocked ? 1 : 0}${fromStores ? 1 : 0}${spareRare ? 1 : 0}\u0000${RECIPES.map((r) => {
+    const sig = `${this.tab}\u0000${this.query}\u0000${this.only ? [...this.only].join() : ''}\u0000${this.kept.pinned.join()}\u0000${this.kept.recent.join()}\u0000${this.readyOnly ? 1 : 0}${this.kept.showLocked ? 1 : 0}${fromStores ? 1 : 0}${spareRare ? 1 : 0}\u0000${RECIPES.map((r) => {
       const st = statuses.get(r);
       return `${r.id}${st?.ready ? 1 : 0}${st?.unread ? 1 : 0}${st?.max ?? 0}${st?.inputs.map((i) => `.${i.have}.${i.carried}`).join('') ?? ''}`;
     }).join('')}`;
@@ -339,9 +412,29 @@ export class CraftPanel {
     this.tree.hide();
     let shown = 0;
     let ready = 0;
-    const wanted = (r: Recipe): boolean => (this.only ? this.only.has(r.id) : this.searched(r) === 'listed') && (!this.readyOnly || !!statuses.get(r)?.ready);
+    // Listed under any tab as the book stands, searched and switched; then under the tab open.
+    const listed = (r: Recipe): boolean => (this.only ? this.only.has(r.id) : this.searched(r) === 'listed') && (!this.readyOnly || !!statuses.get(r)?.ready);
+    const tab = this.tab;
+    const inTab = (r: Recipe): boolean => tab === 'all' || craftTabOf(r.result) === tab;
+    const wanted = (r: Recipe): boolean => inTab(r) && listed(r);
+    const counts = new Map<CraftTab, number>(CRAFT_TABS.map(([t]) => [t, 0]));
+    for (const r of RECIPES) {
+      if (!listed(r)) continue;
+      counts.set('all', counts.get('all')! + 1);
+      const t = craftTabOf(r.result);
+      if (t) counts.set(t, counts.get(t)! + 1);
+    }
+    for (const [t, label] of CRAFT_TABS) {
+      const b = this.tabButtons.get(t)!;
+      const n = document.createElement('small');
+      n.className = 'craft-tab-count';
+      n.textContent = String(counts.get(t));
+      b.replaceChildren(`${label} `, n);
+      kitTabOn(b, t === tab);
+      b.tabIndex = t === tab ? 0 : -1;
+    }
     // Shut recipes unread a search would have found with "Show locked" ticked, for the line at the foot.
-    const hiddenLocked = this.query && !this.only && !this.readyOnly ? RECIPES.filter((r) => this.searched(r) === 'hidden').length : 0;
+    const hiddenLocked = this.query && !this.only && !this.readyOnly ? RECIPES.filter((r) => inTab(r) && this.searched(r) === 'hidden').length : 0;
     /*
      * Pinned, and lately made, above the book and in the order they were
      * pinned or made: the few things somebody makes over and over, without
@@ -382,9 +475,14 @@ export class CraftPanel {
       }
     }
     if (!shown) {
+      const tabName = CRAFT_TABS.find(([t]) => t === tab)?.[1] ?? '';
+      const where = tab === 'all' ? '' : ` in ${tabName}`;
       this.list.append(kitEmpty(this.query || this.only
-        ? `No recipe matches “${this.search.value.trim()}”${this.readyOnly ? ' (makeable only)' : ''}. Esc clears.`
-        : `Nothing makeable with ${atHand}. Untick "Makeable only" to see requirements.`));
+        ? `No recipe matches “${this.search.value.trim()}”${where}${this.readyOnly ? ' (makeable only)' : ''}. Esc clears.`
+        : this.readyOnly ? `Nothing makeable with ${atHand}${where}. Untick "Makeable only" to see requirements.` : `No recipes${where}.`));
+      // The same asked of every tab: All, and how many it lists.
+      const all = counts.get('all') ?? 0;
+      if (tab !== 'all' && all) this.list.append(kitButton(`In All: ${all}`, { also: 'craft-in-all tb-btn tb-small', onClick: () => this.setTab('all') }));
     }
     if (hiddenLocked) {
       const more = document.createElement('button');
@@ -408,7 +506,9 @@ export class CraftPanel {
       const row = rows[rows.length - 1];
       this.reveal = null;
       if (row) {
-        row.scrollIntoView({ block: 'center' });
+        // The list scrolled, and only the list: the window round it, and the preview pane under it, stay where they are.
+        const at = row.getBoundingClientRect(), box = this.list.getBoundingClientRect();
+        this.list.scrollTop += at.top - box.top - (this.list.clientHeight - at.height) / 2;
         row.classList.remove('found-flash');
         void row.offsetWidth;
         row.classList.add('found-flash');
@@ -480,7 +580,10 @@ export class CraftPanel {
     this.preview.show(what);
     const on = this.preview.showing;
     const kind = on?.what.figure ? SPECIES[on.what.figure]?.name : on?.what.pattern;
-    this.previewSays(on ? itemDef(on.what.item).name : null, on ? [on.what.material ? capital(on.what.material.toLowerCase()) : '', kind ?? ''].filter(Boolean).join(' · ') : '');
+    // The pane is always there: with nothing chosen, or a thing with no model, its empty state.
+    if (on) this.previewSays(itemDef(on.what.item).name, [on.what.material ? capital(on.what.material.toLowerCase()) : '', kind ?? ''].filter(Boolean).join(' · '));
+    else if (r) this.previewSays(itemDef(r.result).name, NO_PREVIEW, true);
+    else this.previewSays(NO_PREVIEW, '', true);
   }
 
   private row(r: Recipe, st: RecipeStatus, stock: readonly CraftStock[]): HTMLDivElement {

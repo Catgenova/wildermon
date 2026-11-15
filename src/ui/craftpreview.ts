@@ -8,12 +8,21 @@
  * wears that the figure draws (`gearModelled`) on your own figure in your look with nothing else on; a weapon in its
  * hand, in a fight; a tool the figure works with (`CLIP_OF_TOOL`) at a job that uses it; and anything else a body
  * holds that has a model of its own (`propModelled`: a loaf, a candle, a lantern) alone, turning. Anything else has
- * none, and the window shows no box for it.
+ * none, and the pane shows its empty state (`empty`).
  *
- * One small canvas, drawn only while the window is open and a recipe with a preview is chosen, at most `PREVIEW_FPS`
- * frames a second and never more than a `PREVIEW_SHARE`th of the page's time (as the Path card's, `pathpreview.ts`).
- * A still frame with Animations off, with less motion, where bodies are drawn by the processor (`sculptSoft`) and where
- * they are drawn flat (`flatFigures`): drawn a few times while what it is drawn of lands, then not again.
+ * A piece set down is shown at each of its stages in turn (`stagesOf`), `STAGE_SECS` each, as it turns: what its
+ * drawing is given that changes how it looks, found by drawing it -- its trim at every age from set down to two
+ * months on (a hedge filling out, a bed's flowers, an arch's roses, a bonsai), lit and unlit, a lantern post with
+ * its lantern in it, and a station's look turned on one flag at a time (a smelter lit, then working; a trap baited,
+ * then sprung) or a settlement stake's levels -- each kept only where it draws differently from the one before.
+ *
+ * One small canvas, sized when its box is laid out (`fit`, on a `ResizeObserver`) and never per frame. Each frame is
+ * drawn on a canvas of its own (`buf`) and put on the one on the page only once something is drawn on it, so the
+ * last picture stays up until the next is ready, and nothing blank is ever shown between two pictures. Drawn only
+ * while the window is open and a recipe with a preview is chosen, at most `PREVIEW_FPS` frames a second and never
+ * more than a `PREVIEW_SHARE`th of the page's time (as the Path card's, `pathpreview.ts`). A still frame of the last
+ * stage with Animations off, with less motion, where bodies are drawn by the processor (`sculptSoft`) and where they
+ * are drawn flat (`flatFigures`): drawn a few times while what it is drawn of lands, then not again.
  */
 import { ACTIONS } from '../game/actions';
 import { capital } from '../game/words';
@@ -27,6 +36,9 @@ import { materialOf } from '../game/materials';
 import { MEMORIAL } from '../game/memorial';
 import { mossyPiece } from '../game/greening';
 import { roseStage } from '../game/roses';
+import { bloomStage } from '../game/garden';
+import { MAX_DEED_LEVEL } from '../game/deedsize';
+import { DAY_SECONDS } from '../game/pace';
 import { isRuneLantern } from '../game/runelantern';
 import { isTrellis, vineStage } from '../game/vineyard';
 import type { RugPattern } from '../game/decordefs';
@@ -39,7 +51,7 @@ import { drawTrap } from '../render/sprites';
 import { TRAPS } from '../game/trapdefs';
 import { drawFurniture, mossTrim, pieceModelled, pieceView, roseTrim, rowedPiece, vineTrim, WHEELS } from '../render/furniture';
 import { kitIsSync, kitSync } from '../render/kitpieces';
-import { drawKiln, drawSmelter } from '../render/forge';
+import { drawKiln, drawSmelter, type KilnLook, type SmelterLook } from '../render/forge';
 import { drawMemorial } from '../render/memorial';
 import { drawRuneLantern } from '../render/runelantern';
 import { gardenTrim } from '../render/gardenlook';
@@ -53,21 +65,71 @@ import { CLIP_OF_TOOL, clipOfJob } from '../sculpt/anim/routes';
 export type PreviewKind = 'furniture' | 'vehicle' | 'gear' | 'held' | 'model';
 
 type Box = [number, number, number, number];
+/** A look a station's drawing takes: its own flags and numbers. */
+type Look = Record<string, unknown>;
+
+/**
+ * One stage a thing is shown at: what its drawing is given -- a piece's trim and whether it is lit, or a station's
+ * look -- and the island's word for it, where it has one.
+ */
+export interface Stage {
+  name?: string;
+  trim?: number;
+  lit?: boolean;
+  look?: Look;
+}
+
+/**
+ * A look's flags turned on one after another from all off, as its drawing reads them: the stages a station is drawn
+ * at, named by the flag (`base` names the first, all off). A smelter: unlit, lit, working.
+ */
+const flips = (look: Look, base: string): Stage[] => {
+  const out: Stage[] = [{ name: base, look }];
+  let at = look;
+  for (const [k, v] of Object.entries(look)) {
+    if (v !== false) continue;
+    at = { ...at, [k]: true };
+    out.push({ name: k, look: at });
+  }
+  return out;
+};
+
+/** How a thing set down that is not furniture is drawn, and the stages it is drawn at. */
+interface SetDown {
+  draw: (g: CanvasRenderingContext2D, x: number, y: number, zoom: number, turn: number, material: string | undefined, look: Look, t: number) => Box;
+  stages: Stage[];
+}
+const SMELTER_LOOK: SmelterLook = { lit: false, working: false };
+const KILN_LOOK: KilnLook = { lit: false, firing: false };
+const POST_LOOK = { worked: false };
+const TRAP_LOOK = { baited: false, sprung: false };
 /**
  * What is set down that is not furniture, by its item, and how each is drawn as the renderer draws it set down: the
  * smelter and the kiln (`forge.ts`), a work post (`workpost.ts`), the settlement's stake as the token it stands as
- * (`deedtotem.ts`), and the traps (`drawTrap`).
+ * (`deedtotem.ts`, a block for each level), and the traps (`drawTrap`).
  */
-const STATIONS: Record<string, (g: CanvasRenderingContext2D, x: number, y: number, zoom: number, turn: number, material?: string) => Box> = {
-  smelter: (g, x, y, zoom, turn) => drawSmelter(g, x, y, zoom, turn, { lit: false, working: false }, 0, 0, false),
-  kiln: (g, x, y, zoom, turn) => drawKiln(g, x, y, zoom, turn, { lit: false, firing: false }, 0, 0, false),
-  work_post: (g, x, y, zoom, turn, material) => drawWorkPost(g, x, y, zoom, { wood: material, left: 1, worked: false, variant: 0 }, turn, 0, 0, false),
-  deed_stake: (g, x, y, zoom, turn) => drawDeedTotem(g, x, y, zoom, { level: 1, variant: 0 }, turn, 0, 0, false),
-  ...Object.fromEntries(Object.keys(TRAPS).map((kind) => [kind, (g: CanvasRenderingContext2D, x: number, y: number, zoom: number): Box => {
-    drawTrap(g, x, y, zoom, kind, false, false);
-    return [0, 0, 0, 0];
+const STATIONS: Record<string, SetDown> = {
+  smelter: { draw: (g, x, y, zoom, turn, _m, look, t) => drawSmelter(g, x, y, zoom, turn, { ...SMELTER_LOOK, ...look }, 0, t, false), stages: flips({ ...SMELTER_LOOK }, 'unlit') },
+  kiln: { draw: (g, x, y, zoom, turn, _m, look, t) => drawKiln(g, x, y, zoom, turn, { ...KILN_LOOK, ...look }, 0, t, false), stages: flips({ ...KILN_LOOK }, 'unlit') },
+  work_post: {
+    draw: (g, x, y, zoom, turn, material, look, t) => drawWorkPost(g, x, y, zoom, { wood: material, left: 1, variant: 0, ...POST_LOOK, ...look }, turn, 0, t, false),
+    stages: flips({ ...POST_LOOK }, 'idle'),
+  },
+  deed_stake: {
+    draw: (g, x, y, zoom, turn, _m, look, t) => drawDeedTotem(g, x, y, zoom, { level: 1, variant: 0, ...look }, turn, 0, t, false),
+    stages: Array.from({ length: MAX_DEED_LEVEL }, (_, i) => ({ name: `level ${i + 1}`, look: { level: i + 1 } })),
+  },
+  ...Object.fromEntries(Object.keys(TRAPS).map((kind): [string, SetDown] => [kind, {
+    draw: (g, x, y, zoom, _turn, _m, look) => {
+      drawTrap(g, x, y, zoom, kind, !!look.baited, !!look.sprung);
+      return [0, 0, 0, 0];
+    },
+    stages: flips({ ...TRAP_LOOK }, 'set'),
   }])),
 };
+
+/** Whether a thing is set down without being furniture (a station, a work post, a stake, a trap): drawn as the renderer draws it set down. */
+export const setDownPiece = (id: string): boolean => !!STATIONS[id];
 
 /** The island's fight (`creatureActions.ts`): the job a body holds its weapon out at (`heldIn`). */
 const FIGHT_JOB = 'attack_creature';
@@ -84,7 +146,7 @@ for (const a of ACTIONS) {
 
 /** What kind of preview a thing made has, or null for none: read off what the island draws it by. */
 export function previewOf(id: string): PreviewKind | null {
-  if (STATIONS[id]) return 'furniture';
+  if (setDownPiece(id)) return 'furniture';
   if (isFurniture(id)) return !pieceModelled(id) && id !== MEMORIAL && !isRuneLantern({ kind: id }) ? null : isDriveable({ kind: id }) || furnitureDef(id).cart ? 'vehicle' : 'furniture';
   const slot = slotOf(id);
   if (slot === 'weapon' && gearModelled(id)) return 'held';
@@ -145,18 +207,52 @@ const STILL_TURN = 0;
 /** The made-up piece a furniture preview reads its look off: one id, so what the look keeps by id is kept once. */
 const PREVIEW_ID = -7;
 
+/** Seconds each stage of a thing is held before the next (`stagesOf`). */
+export const STAGE_SECS = 1.2;
+/** The ages a piece's trim is read at for its stages, days after it is set down: every half day of two months. */
+const AGES = Array.from({ length: 121 }, (_, i) => i / 2);
+/** The most trims of those that are drawn to see which differ, and the most stages shown of those that do. */
+const MOST_TRIED = 12;
+const MOST_STAGES = 5;
+/** The scratch two stages are told apart on, and where the floor contact is on it, at zoom one. */
+const TELL = 256;
+const TELL_AT: [number, number] = [128, 200];
+/** Seconds a thing that draws nothing yet is waited for before the pane shows its empty state instead of the last picture. */
+const GIVE_UP = 1.5;
+/** The things whose stages and box are kept, the least lately shown let go past this. */
+const KNOWN_KEPT = 24;
+
 /** Whether a preview is drawn still: a harness on software GL that is there to see it move clears `stillOnSoft`. */
 export const craftPreviewKnobs = { stillOnSoft: true };
 
+/** A stage as the pane labels it: the island's word for it, or "Stage", and which of how many. */
+export const stageLabel = (stage: Stage, k: number, n: number): string => `${stage.name ? capital(stage.name) : 'Stage'} ${k + 1}/${n}`;
+
+/** A scratch canvas of a size, made once, cleared for each use. */
+const scratches = new Map<number, CanvasRenderingContext2D | null>();
+function scratch(size: number): CanvasRenderingContext2D | null {
+  if (!scratches.has(size)) {
+    const c = document.createElement('canvas');
+    c.width = c.height = size;
+    scratches.set(size, c.getContext('2d', { willReadFrequently: true }));
+  }
+  const g = scratches.get(size) ?? null;
+  if (g) {
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.globalAlpha = 1;
+    g.globalCompositeOperation = 'source-over';
+    g.clearRect(0, 0, size, size);
+  }
+  return g;
+}
+
 /**
  * What a drawing covers, by its pixels, from the point it was drawn at on a scratch canvas: left, top, right, bottom;
- * the box it returns where it drew nothing (a bake not made yet).
+ * the box it returns where it drew nothing (a bake not made yet); and whether it drew anything.
  */
-function inkOf(draw: (g: CanvasRenderingContext2D, x: number, y: number) => Box): Box {
-  const c = document.createElement('canvas');
-  c.width = c.height = MEASURE;
-  const g = c.getContext('2d', { willReadFrequently: true });
-  if (!g) return [-20, -40, 20, 10];
+function inkOf(draw: (g: CanvasRenderingContext2D, x: number, y: number) => Box): { box: Box; drawn: boolean } {
+  const g = scratch(MEASURE);
+  if (!g) return { box: [-20, -40, 20, 10], drawn: false };
   const [ax, ay] = MEASURE_AT;
   const hit = draw(g, ax, ay);
   const d = g.getImageData(0, 0, MEASURE, MEASURE).data;
@@ -171,24 +267,68 @@ function inkOf(draw: (g: CanvasRenderingContext2D, x: number, y: number) => Box)
     }
   }
   // Nothing drawn (not baked yet): its box as its drawing returns it.
-  return r < 0 ? hit : [l - ax, t - ay, r + 1 - ax, b + 1 - ay];
+  return r < 0 ? { box: hit, drawn: false } : { box: [l - ax, t - ay, r + 1 - ax, b + 1 - ay], drawn: true };
+}
+
+/** A sum of a drawing's pixels at zoom one, to tell two stages apart by. */
+function pictureSum(draw: (g: CanvasRenderingContext2D, x: number, y: number) => void): number {
+  const g = scratch(TELL);
+  if (!g) return 0;
+  draw(g, TELL_AT[0], TELL_AT[1]);
+  const d = g.getImageData(0, 0, TELL, TELL).data;
+  let sum = 0;
+  for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 8) sum = (sum * 31 + d[i] + d[i + 1] * 3 + d[i + 2] * 7 + d[i + 3] * 11 + i) % 1000000007;
+  return sum;
+}
+
+/** So many of a list, spread evenly along it, its first and its last kept. */
+function thin<T>(list: T[], most: number): T[] {
+  if (list.length <= most) return list;
+  return Array.from({ length: most }, (_, k) => list[Math.round((k * (list.length - 1)) / (most - 1))]);
+}
+
+/** Whether any pixel of a canvas is drawn on. */
+function inked(g: CanvasRenderingContext2D, w: number, h: number): boolean {
+  if (!w || !h) return false;
+  const d = g.getImageData(0, 0, w, h).data;
+  for (let i = 3; i < d.length; i += 4) if (d[i] > 8) return true;
+  return false;
 }
 
 export class CraftPreview {
+  /** The canvas on the page: only a whole picture is ever put on it, or the empty state. */
   readonly el: HTMLCanvasElement;
+  /** Where each frame is drawn before it is put on `el`. */
+  private readonly buf: HTMLCanvasElement;
   private what: PreviewOf | null = null;
   private kind: PreviewKind | null = null;
   private key = '';
   private frame = 0;
   private last = 0;
   private started = 0;
+  /** Device pixels to a CSS pixel, as the canvas was last sized (`fit`). */
+  private dpr = 1;
   /** Frames drawn since the page opened, and what the last cost, ms: for the tests. */
   frames = 0;
   cost = 0;
+  /** Frames put on the page, and frames drawn with nothing on them that were not: for the tests. */
+  shown = 0;
+  held = 0;
   /** A still frame drawn for long enough: no more drawing until something changes. */
   private stillDone = false;
-  /** A piece's box at zoom one across the ways it was measured, left, top, right, bottom from its floor contact. */
-  private box: [number, number, number, number] | null = null;
+  /** A piece's box at zoom one across the ways and stages it is seen, left, top, right, bottom from its floor contact. */
+  private box: Box | null = null;
+  /** The stages it is shown at, in order (one, for a thing with none). */
+  private stages: Stage[] = [];
+  /** Whether a picture of what it shows now is on the page, and whether the empty state is. */
+  private drawn = false;
+  private blank = false;
+  /** Stages and boxes worked out, by what was shown and whether still. */
+  private readonly known = new Map<string, { stages: Stage[]; box: Box }>();
+  /** Told the stage on the page whenever it changes: its label, or null for a thing with one stage or none. */
+  onStage: ((label: string | null) => void) | null = null;
+  /** The stage label on the page now. */
+  stageSays: string | null = null;
 
   constructor(private readonly game: Game, private readonly open: () => boolean) {
     this.el = document.createElement('canvas');
@@ -196,6 +336,9 @@ export class CraftPreview {
     this.el.width = PREVIEW_W;
     this.el.height = PREVIEW_H;
     this.el.setAttribute('role', 'img');
+    this.buf = document.createElement('canvas');
+    // Sized when its box is laid out, and again only when that changes; never by a frame (a canvas sized is a canvas cleared).
+    if (typeof ResizeObserver !== 'undefined') new ResizeObserver(() => this.fit()).observe(this.el);
   }
 
   /** Whether it is drawn still. */
@@ -218,21 +361,62 @@ export class CraftPreview {
     return this.what && this.kind ? { what: this.what, kind: this.kind } : null;
   }
 
-  /** Show a thing, from the start; nothing for a thing with no preview, or none. The same thing asked again goes on as it was. */
+  /** How many stages what it shows is shown at. */
+  get stageCount(): number {
+    return this.stages.length;
+  }
+
+  /**
+   * The canvas sized to its box as laid out, in device pixels, the picture on it kept across the change, scaled:
+   * nothing is shown blank for a resize. A box not laid out (the window shut) leaves it as it is.
+   */
+  fit(): void {
+    const c = this.el;
+    const W = c.clientWidth, H = c.clientHeight;
+    if (!W || !H) return;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const w = Math.round(W * dpr), h = Math.round(H * dpr);
+    this.dpr = dpr;
+    if (c.width === w && c.height === h) return;
+    const keep = document.createElement('canvas');
+    keep.width = c.width;
+    keep.height = c.height;
+    keep.getContext('2d')?.drawImage(c, 0, 0);
+    c.width = w;
+    c.height = h;
+    if (this.blank || !this.key) this.empty();
+    else {
+      c.getContext('2d')?.drawImage(keep, 0, 0, w, h);
+      // And a fresh frame at the new size where the drawing has stopped (a still frame).
+      if (!this.frame) this.draw(Math.max(0, performance.now() - this.started) / 1000, this.still);
+    }
+  }
+
+  /**
+   * Show a thing, from the start; the empty state for a thing with no preview, or for none. The same thing asked
+   * again goes on as it was. What is on the page stays there until the new thing has a picture.
+   */
   show(what: PreviewOf | null): void {
     const kind = what ? previewOf(what.item) : null;
     const key = what && kind ? `${what.item}|${what.material ?? ''}|${what.figure ?? ''}|${what.pattern ?? ''}|${this.game.player.look ? JSON.stringify(this.game.player.look) : ''}` : '';
     if (key === this.key) {
-      this.wake();
+      if (key) this.wake();
+      else if (!this.blank) this.empty();
       return;
     }
     this.stop();
     this.what = kind ? what : null;
     this.kind = kind;
-    if (!kind || !what) return;
+    this.box = null;
+    this.stages = [];
+    this.drawn = false;
+    if (!kind || !what) {
+      this.el.setAttribute('aria-label', what ? `${itemDef(what.item).name}: no preview` : 'No preview');
+      this.empty();
+      return;
+    }
     this.key = key;
     this.el.setAttribute('aria-label', what.material ? `${itemDef(what.item).name}: ${capital(what.material.toLowerCase())}` : itemDef(what.item).name);
-    this.box = null;
     this.started = performance.now();
     this.stillDone = false;
     this.loop();
@@ -242,6 +426,8 @@ export class CraftPreview {
   wake(): void {
     if (this.key && !this.frame && !(this.still && this.stillDone)) {
       this.stillDone = false;
+      // Its stages and box again: a still frame measures only the one stage it shows.
+      this.box = null;
       this.started = performance.now();
       this.loop();
     }
@@ -274,7 +460,7 @@ export class CraftPreview {
     this.frame = requestAnimationFrame(step);
   }
 
-  /** Stop drawing and forget what it showed: the window is shut, or what it shows has changed. */
+  /** Stop drawing and forget what it showed: the window is shut, or what it shows has changed. The picture stays on the page. */
   stop(): void {
     cancelAnimationFrame(this.frame);
     this.frame = 0;
@@ -286,47 +472,181 @@ export class CraftPreview {
     this.draw(t, still);
   }
 
-  private draw(t: number, still: boolean): void {
-    const what = this.what, kind = this.kind;
-    const c = this.el;
-    const g = c.getContext('2d');
-    if (!what || !kind || !g) return;
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
-    const W = c.clientWidth || PREVIEW_W, H = c.clientHeight || PREVIEW_H;
-    if (c.width !== Math.round(W * dpr) || c.height !== Math.round(H * dpr)) {
-      c.width = Math.round(W * dpr);
-      c.height = Math.round(H * dpr);
-    }
-    g.setTransform(1, 0, 0, 1, 0, 0);
-    g.clearRect(0, 0, c.width, c.height);
-    // One of the eight ways round, the next every `TURN_SECS`.
-    const turn = still ? STILL_TURN : Math.floor(t / TURN_SECS) % 8;
-    if (kind === 'furniture' || kind === 'vehicle') this.drawPiece(g, what, turn, W * dpr, H * dpr, still);
-    else if (kind === 'model') this.drawModel(g, what, still ? STILL_FACING : STILL_FACING + t / TURN_SECS, W * dpr, H * dpr, still);
-    else this.drawBody(g, what, kind, still ? STILL_FACING : (STILL_FACING + turn) % 8, t, W, H, dpr, still);
+  /** The stage label as it now stands, told on when it changes. */
+  private sayStage(label: string | null): void {
+    if (label === this.stageSays) return;
+    this.stageSays = label;
+    this.onStage?.(label);
   }
 
-  /** A piece set down, its floor contact placed so the whole of it fills the canvas. */
-  private drawPiece(g: CanvasRenderingContext2D, what: PreviewOf, turn: number, W: number, H: number, still: boolean): void {
+  /** The empty state: a faint box seen three-quarters on, in the pane's own ink, where a thing would stand. */
+  private empty(): void {
+    const c = this.el, g = c.getContext('2d');
+    this.blank = true;
+    this.drawn = false;
+    this.sayStage(null);
+    if (!g) return;
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, c.width, c.height);
+    const s = Math.min(c.width, c.height) * 0.24, x = c.width / 2, y = c.height / 2, dx = s * 0.87, dy = s * 0.5;
+    g.globalAlpha = 0.3;
+    g.strokeStyle = getComputedStyle(c).color || 'grey';
+    g.lineWidth = Math.max(1, c.height / PREVIEW_H) * 1.25;
+    g.lineJoin = 'round';
+    g.beginPath();
+    g.moveTo(x, y - s);
+    g.lineTo(x + dx, y - s + dy);
+    g.lineTo(x + dx, y + dy);
+    g.lineTo(x, y + s);
+    g.lineTo(x - dx, y + dy);
+    g.lineTo(x - dx, y - s + dy);
+    g.closePath();
+    g.moveTo(x - dx, y - s + dy);
+    g.lineTo(x, y);
+    g.lineTo(x + dx, y - s + dy);
+    g.moveTo(x, y);
+    g.lineTo(x, y + s);
+    g.stroke();
+    g.globalAlpha = 1;
+  }
+
+  /**
+   * A frame, drawn on `buf` and put on the page only if anything was drawn on it: until what it shows has landed, the
+   * last picture stays up (or, after `GIVE_UP` with none of this thing yet, the empty state).
+   */
+  private draw(t: number, still: boolean): void {
+    const what = this.what, kind = this.kind;
+    const c = this.el, b = this.buf;
+    if (!what || !kind) return;
+    if (b.width !== c.width || b.height !== c.height) {
+      b.width = c.width;
+      b.height = c.height;
+    }
+    const g = b.getContext('2d', { willReadFrequently: true });
+    if (!g) return;
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, b.width, b.height);
+    const dpr = this.dpr, W = b.width, H = b.height;
+    // One of the eight ways round, the next every `TURN_SECS`; and one of its stages, the next every `STAGE_SECS`.
+    const turn = still ? STILL_TURN : Math.floor(t / TURN_SECS) % 8;
+    let stage = -1;
+    if (kind === 'furniture' || kind === 'vehicle') stage = this.drawPiece(g, what, turn, t, W, H, still);
+    else if (kind === 'model') this.drawModel(g, what, still ? STILL_FACING : STILL_FACING + t / TURN_SECS, W, H, still);
+    else this.drawBody(g, what, kind, still ? STILL_FACING : (STILL_FACING + turn) % 8, t, W / dpr, H / dpr, dpr, still);
+    if (!inked(g, W, H)) {
+      this.held++;
+      if (!this.drawn && !this.blank && t >= GIVE_UP) this.empty();
+      return;
+    }
+    const v = c.getContext('2d');
+    if (!v) return;
+    v.setTransform(1, 0, 0, 1, 0, 0);
+    v.clearRect(0, 0, c.width, c.height);
+    v.drawImage(b, 0, 0);
+    this.shown++;
+    this.drawn = true;
+    this.blank = false;
+    const n = this.stages.length;
+    this.sayStage(n > 1 && stage >= 0 ? stageLabel(this.stages[stage], stage, n) : null);
+  }
+
+  /** Which of `n` stages is shown `t` seconds in: still, the last (the grown, the lit, the finished one). */
+  private stageOf(t: number, n: number, still: boolean): number {
+    return n <= 1 ? 0 : still ? n - 1 : Math.floor(t / STAGE_SECS) % n;
+  }
+
+  /**
+   * The stages a piece set down is shown at: a station's from its look (`STATIONS`); a piece's from its trim at each
+   * age from set down to two months on (`AGES`; a trellis first with no vine), a lantern post empty and with its
+   * lantern in it (as the renderer reads it), and the last of those lit. Each kept only where its picture differs
+   * from the one kept before it, and no more than `MOST_STAGES`, spread from the first to the last.
+   */
+  private stagesOf(what: PreviewOf): Stage[] {
+    const station = STATIONS[what.item];
+    const tried: Stage[] = [];
+    if (station) tried.push(...station.stages);
+    else if (what.item === MEMORIAL || isRuneLantern({ kind: what.item })) tried.push({});
+    else if (isLampPiece({ kind: what.item })) tried.push({ name: 'empty', trim: 0 }, { trim: 1 });
+    else {
+      const now = this.game.wallNow(), def = furnitureDef(what.item);
+      const trellis = isTrellis(this.placed(what, now, now));
+      const add = (setAt: number, vineAt?: number): void => {
+        const trim = this.trim(what, now, setAt, vineAt);
+        if (tried.length && tried[tried.length - 1].trim === trim) return;
+        const name = trellis ? vineStage({ vineAt, pickedAt: undefined }, now)
+          : def.bloom ? bloomStage(setAt, now).stage : def.climber ? roseStage(setAt, now, def.climber).stage : undefined;
+        tried.push({ trim, ...(name ? { name } : {}) });
+      };
+      for (const d of AGES) add(now - d * DAY_SECONDS, trellis && d > 0 ? now - d * DAY_SECONDS : undefined);
+    }
+    const list = station ? tried : thin(tried, MOST_TRIED);
+    // And the last of them lit, for a piece whose drawing takes it (kept below only if it draws differently).
+    if (!station && list.length) list.push({ ...list[list.length - 1], name: 'lit', lit: true });
+    if (list.length <= 1) return list.length ? list : [{}];
+    const kept: Stage[] = [];
+    let was = -1;
+    for (const st of list) {
+      const sum = pictureSum((g, x, y) => this.piece(g, what, STILL_TURN, x, y, 1, st, 0));
+      if (sum === was) continue;
+      was = sum;
+      kept.push(st);
+    }
+    // The one before a lit last is the same, unlit.
+    const n = kept.length;
+    if (n > 1 && kept[n - 1].lit && !kept[n - 2].name) kept[n - 2] = { ...kept[n - 2], name: 'unlit' };
+    return thin(kept, MOST_STAGES);
+  }
+
+  /**
+   * A piece set down, its floor contact placed so the whole of it, at every stage and way round it is seen, fills
+   * the canvas: the stage drawn, of its stages.
+   */
+  private drawPiece(g: CanvasRenderingContext2D, what: PreviewOf, turn: number, t: number, W: number, H: number, still: boolean): number {
     // Each bake made when it is wanted, here only: the island's own frame share is not this canvas's.
     const was = kitIsSync();
     kitSync(true);
     try {
       if (!this.box) {
-        // Measured at zoom one by what it draws, the ways it will be seen: four of the eight and each mirrored (the
-        // other four are those seen from behind, as wide), or the one still.
-        let box: [number, number, number, number] = [0, 0, 0, 0];
-        for (const k of still ? [turn] : [0, 1, 2, 3]) {
-          const b = this.measure(what, k);
-          box = [Math.min(box[0], b[0]), Math.min(box[1], b[1]), Math.max(box[2], b[2]), Math.max(box[3], b[3])];
-          if (!still) box = [Math.min(box[0], -box[2]), box[1], Math.max(box[2], -box[0]), box[3]];
+        const known = `${this.key}|${still ? 1 : 0}`;
+        const got = this.known.get(known);
+        if (got) {
+          this.known.delete(known);
+          this.known.set(known, got);
+          this.stages = got.stages;
+          this.box = got.box;
+        } else {
+          const stages = this.stagesOf(what);
+          // Measured at zoom one by what it draws: moving, its last stage the ways it will be seen (four of the eight
+          // and each mirrored: the other four are those seen from behind, as wide) and every other stage three-quarters
+          // on; still, the one stage and way it is shown.
+          let box: Box = [0, 0, 0, 0];
+          let drawn = true;
+          const take = (st: Stage, k: number): void => {
+            const m = inkOf((sg, x, y) => this.piece(sg, what, k, x, y, 1, st, 0));
+            drawn &&= m.drawn;
+            const b = m.box;
+            box = [Math.min(box[0], b[0]), Math.min(box[1], b[1]), Math.max(box[2], b[2]), Math.max(box[3], b[3])];
+          };
+          if (still) take(stages[stages.length - 1], turn);
+          else {
+            stages.forEach((st, i) => (i === stages.length - 1 ? [0, 1, 2, 3] : [STILL_TURN]).forEach((k) => take(st, k)));
+            box = [Math.min(box[0], -box[2]), box[1], Math.max(box[2], -box[0]), box[3]];
+          }
+          this.stages = stages;
+          this.box = box;
+          // Kept only once it has all landed, so a box measured off a bake not made yet is measured again.
+          if (drawn) {
+            this.known.set(known, { stages, box });
+            if (this.known.size > KNOWN_KEPT) this.known.delete(this.known.keys().next().value as string);
+          }
         }
-        this.box = box;
       }
-      const [l, t, r, b] = this.box;
-      const zoom = Math.min(MOST_ZOOM, (W - 2 * PAD) / Math.max(1, r - l), (H - 2 * PAD) / Math.max(1, b - t));
-      const sx = W / 2 - ((l + r) / 2) * zoom, sy = H / 2 - ((t + b) / 2) * zoom;
-      this.piece(g, what, turn, sx, sy, zoom);
+      const [l, tp, r, b] = this.box;
+      const zoom = Math.min(MOST_ZOOM, (W - 2 * PAD) / Math.max(1, r - l), (H - 2 * PAD) / Math.max(1, b - tp));
+      const sx = W / 2 - ((l + r) / 2) * zoom, sy = H / 2 - ((tp + b) / 2) * zoom;
+      const k = this.stageOf(t, this.stages.length, still);
+      this.piece(g, what, turn, sx, sy, zoom, this.stages[k] ?? {}, still ? 0 : t);
+      return k;
     } finally {
       kitSync(was);
     }
@@ -356,38 +676,45 @@ export class CraftPreview {
     drawPropAlone(g, W / 2 - ((l + r) / 2) * zoom, H / 2 - ((t + b) / 2) * zoom, zoom, piece, facing, 1);
   }
 
-  /** What a piece covers seen one way round, at zoom one from its floor contact, by its pixels: left, top, right, bottom. */
-  private measure(what: PreviewOf, turn: number): Box {
-    return inkOf((g, x, y) => this.piece(g, what, turn, x, y, 1));
-  }
-
-  /** One piece drawn with its floor contact at (sx, sy), as the placing ghost draws it (`drawGhost`), by day: its box, as its drawing returns it. */
-  private piece(g: CanvasRenderingContext2D, what: PreviewOf, turn: number, sx: number, sy: number, zoom: number): [number, number, number, number] {
+  /**
+   * One piece at a stage drawn with its floor contact at (sx, sy), as the placing ghost draws it (`drawGhost`), by
+   * day, `t` seconds into what moves on it: its box, as its drawing returns it.
+   */
+  private piece(g: CanvasRenderingContext2D, what: PreviewOf, turn: number, sx: number, sy: number, zoom: number, stage: Stage, t: number): Box {
     const kind = what.item;
     const station = STATIONS[kind];
-    if (station) return station(g, sx, sy, zoom, turn, what.material);
+    if (station) return station.draw(g, sx, sy, zoom, turn, what.material, stage.look ?? {}, t);
     if (kind === MEMORIAL) return drawMemorial(g, sx, sy, zoom, 's', turn, undefined, 0, 0);
     if (isRuneLantern({ kind })) return drawRuneLantern(g, sx, sy, zoom, { facing: 's', stage: 0, stages: 1, variant: 0 }, turn, 0, 0, false);
-    return drawFurniture(g, sx, sy, zoom, kind, false, undefined, this.trim(what), pieceView('s', turn), what.material);
+    const trim = 'trim' in stage ? stage.trim : this.trim(what, this.game.wallNow(), this.game.wallNow());
+    return drawFurniture(g, sx, sy, zoom, kind, !!stage.lit, undefined, trim, pieceView('s', turn), what.material);
   }
 
-  /** What a piece just made shows of what it holds or grows (as the renderer reads it off a placed piece, `pieceTrim`): nothing yet, in its pattern or kind. */
-  private trim(what: PreviewOf): number | undefined {
-    const now = this.game.wallNow();
-    const f = {
-      id: PREVIEW_ID, kind: what.item, x: 0, y: 0, sx: 0, sy: 0, facing: 's', ql: 1, items: [], material: what.material, setAt: now,
+  /** The made-up piece a preview reads its look off: set down at `setAt`, its vine planted at `vineAt`, in its row's choices. */
+  private placed(what: PreviewOf, now: number, setAt: number, vineAt?: number): PlacedFurniture {
+    return {
+      id: PREVIEW_ID, kind: what.item, x: 0, y: 0, sx: 0, sy: 0, facing: 's', ql: 1, items: [], material: what.material, setAt, vineAt,
       decor: what.pattern ? { pattern: what.pattern } : undefined, adorn: what.figure ? { plush: what.figure } : undefined, garden: what.figure ? { figure: what.figure } : undefined,
     } as unknown as PlacedFurniture;
+  }
+
+  /**
+   * What a piece shows of what it holds or grows at `now`, set down at `setAt` (as the renderer reads it off a placed
+   * piece, `pieceTrim`): nothing in it yet, in its pattern or kind.
+   */
+  private trim(what: PreviewOf, now: number, setAt: number, vineAt?: number): number | undefined {
+    const f = this.placed(what, now, setAt, vineAt);
     if (WHEELS[f.kind] || rowedPiece(f.kind) || isLampPiece(f) || isPlanter(f) || rackSpots(f)) return 0;
     if (isTrellis(f)) return vineTrim(vineStage(f, now));
     const own = gardenTrim(f, now) ?? decorTrim(f, now) ?? furnishTrim(f, this.game) ?? fittingTrim(f, this.game) ?? adornTrim(f, this.game);
     if (own !== undefined) return own;
-    if (furnitureDef(f.kind).climber) {
-      const r = roseStage(now, now);
+    const def = furnitureDef(f.kind);
+    if (def.climber) {
+      const r = roseStage(setAt, now, def.climber);
       return roseTrim(0, r.days, r.blooms);
     }
     if (mossyPiece(f)) return mossTrim(0, 's');
-    return furnitureDef(f.kind).boat?.sail ? 0.25 : undefined;
+    return def.boat?.sail ? 0.25 : undefined;
   }
 
   /** You, in your look, wearing the piece and nothing else, or holding it, or at work with it; as tall as the canvas allows, or close on a small piece. */
