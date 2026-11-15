@@ -56,6 +56,7 @@ import { LAMP_INTO_WALL } from '../../game/lamps';
 import { STORE_REACH } from '../../game/crates';
 import { GREEN_ACTIONS, GREEN_DAY, GREEN_DAYS, GREEN_SHADE, GREEN_SUN, GREEN_WET, GREEN_WET_REACH } from '../../game/greening';
 import { FIRE_COST, FIRE_SUBTILES, FUELS } from '../../game/campfire';
+import { STATION_KINDS, STATIONS, stationDecayAt } from '../../game/stations';
 import {
   CHANNELS, CLASS_AT, CLASS_COLUMNS, CLASS_NODES, CLASS_TIER_AT, CLASSES, channelSays, NODES_PER_TRADE, PERK_CLASSES,
   PERK_TIER_AT, PERKS_PER_TIER, riteDef, RITES, type Channel,
@@ -284,6 +285,8 @@ import { fixed, setMarkup } from '../html';
 import { PATH_CARD_HOLD, PATH_DETOURS, PATH_KINDS, PATH_PHASES, PATH_SITE, PATH_SKILLS, PATH_STEPS, PATH_SURE } from '../../game/path';
 import { KIT, kitBody, made as kitMade } from '../kit';
 
+/** The QL the help reads a station's decay an hour at. */
+const STATION_HELP_QL = 50;
 /** What a cellar's rock gives, by the stone: every stone's own shards. */
 const CELLAR_SHARDS = listed(ROCK_VARIANTS.filter((r) => r.yields.endsWith('_shards')).map((r) => itemDef(r.yields).name.toLowerCase()));
 /** The perk that lowers what a vein wants of a miner (`ore:below`). */
@@ -1171,7 +1174,7 @@ const jobSaid = (id: string): string => {
 const FIRST_HOUR_DO: Record<string, () => string> = {
   tree: () => `Right-click a tree: ${jobSaid('cut_down')}`,
   plank: () => `Crafting (<kbd>${keyOf('win_craft')}</kbd>): ${craftSaid('make_planks')}, ${made('make_planks')} planks a log`,
-  fire: () => `Crafting (<kbd>${keyOf('win_craft')}</kbd>): ${craftSaid('make_shafts')}, ${FIRE_COST} shafts; right-click the ground: ${jobSaid('build_campfire')}; right-click the fire: ${jobSaid('light_campfire')}`,
+  fire: () => `Crafting (<kbd>${keyOf('win_craft')}</kbd>): ${craftSaid('make_shafts')}, ${FIRE_COST} shafts; right-click the ground: <b>Set furniture down</b> → <b>${STATIONS.campfire.name}</b>; right-click the fire: ${jobSaid('light_campfire')}`,
   cook: () => `Crafting (<kbd>${keyOf('win_craft')}</kbd>), next to a lit fire: ${cookSaid('cook_meat')}, ${cookSaid('bake_potato')}`,
   crate: () => `Crafting (<kbd>${keyOf('win_craft')}</kbd>): ${craftSaid('make_log_crate')}; right-click the ground: ${jobSaid('place_crate')}`,
   deed: () => `Right-click the ground: ${jobSaid('found_settlement')} (${lowName('deed_stake')}, in the pack)`,
@@ -1878,7 +1881,7 @@ export function helpText(): string {
     </ul>
     <h3>Campfires and cooking</h3>
     <ul>
-      <li><b>Build campfire</b> on any dry, open spot: ${FIRE_COST} shafts; fills a ${FIRE_SUBTILES} by ${FIRE_SUBTILES} block of the tile's spots.</li>
+      <li><b>Campfire</b>: right-click the ground, <b>Set furniture down</b> → <b>${STATIONS.campfire.name}</b>; ${FIRE_COST} shafts; a ${FIRE_SUBTILES} by ${FIRE_SUBTILES} block of the tile's spots, on dry open ground where nothing stands.</li>
       <li>Fuel, burn time a piece: ${FUELS.map((f) => `${f.said} ${dur(f.secs)}`).join(', ')}. Then <b>Light</b>.</li>
       <li>Peat: dug off a peat bed with a shovel; free.</li>
       <li><b>Cook</b> at a lit fire: cooked meat fills ${percent(itemDef('cooked_meat').food ?? 0)} of the food bar (raw ${percent(itemDef('meat').food ?? 0)}); baked potatoes;
@@ -1915,7 +1918,7 @@ export function helpText(): string {
     <h4>Smelter</h4>
     <ul>
       <li>Mining a seam gives <b>ore</b>. <b>Stone smelter</b>: masonry, ${bill('make_smelter', true)}, with a trowel; made in the crafting window, carried,
-      <b>set down</b> on ${SMELTER_W * SMELTER_H} spots of a tile on your own settlement. Picked up whole when cold, empty and raked out.</li>
+      <b>set down</b> (<b>Set furniture down</b>) on ${SMELTER_W} by ${SMELTER_H} spots of a tile, ${SMELTER_H} by ${SMELTER_W} facing east or west, on your own settlement. Picked up whole when cold, empty and raked out.</li>
       <li>Charges: <b>${CHARGE_PER_QL} a QL</b> of the smelter, up to ${chargesFor({ ql: CHARGE_QL })} at QL ${CHARGE_QL}; × its rarity's (Rarity). Fuel as a campfire (coal burns longest); light; charge with ore. Smelt time per piece: longer for fine ore and harder metal, shorter in a better smelter.
       Draw the lumps off when done.</li>
       <li>Lumps of one metal merge into one lump; quality (QL) = average weighted by size.</li>
@@ -3916,6 +3919,9 @@ export function helpText(): string {
     <ul>
       <li><b>Flatten</b>: brings a tile to your standing height corner by corner; cuts above (dirt to pack), fills below (dirt from pack). On your own tile: to its lowest corner.</li>
       <li>Dropped items lie on your tile (pick up from its menu). Items outside decay, even while away: food within the hour, stone over days; higher QL lasts longer.</li>
+      <li><b>Stations</b> (${listed(STATION_KINDS.map((k) => STATIONS[k].name.toLowerCase()))}): set down from <b>Set furniture down</b> on the ground's menu; ghost follows the cursor; Q/E rotate; click to place; red: refused.
+      Decay off any settlement, damage an hour at QL ${STATION_HELP_QL}: ${listed(STATION_KINDS.map((k) => `${STATIONS[k].name.toLowerCase()} ${stationDecayAt(k, STATION_HELP_QL).toFixed(2)}`))};
+      under a roof ×${INDOORS_DECAY}; gone at ${DAMAGE_MAX}. On a settlement: none. Menu and Examine: damage, decay an hour, time left.</li>
       <li>Water skin: fill at any shore.</li>
       <li>Skill gain per ordinary action: about ${listed(GAIN_AT.map((v, i) => `<b>${gainSaid(v)}</b> at ${i === 0 ? 'level ' : ''}${v}`))}:
       ${Math.round(1 / gainAt(GAIN_AT[0]))} actions for the first point, ${Math.round(1 / gainAt(GAIN_AT[2]))} for the point after ${GAIN_AT[2]}, about <b>${Math.round(1 / (MIN_GAIN * GAIN_RATE))}</b>

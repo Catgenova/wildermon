@@ -3205,5 +3205,11 @@
       "PATHCARD_STRICT": "1"
     },
     "why": "Asked for: \"Path needs to also display as a popup as each task is completed, with no-prose description of what to do next, how, and why\", with a moving picture of the action. Every step's how and why built from the rules (no figure written into their text; menu labels, tools, skills, a kind's spawn ground, bait and taming, an upgrade's requirements and the numbers each why names, the rules' own); every picture a clip of its own; one card a look, naming every step it ticked; none on the first look of a page opened with the Path on; turned on mid-game, one card with the next step. Drawn in Chrome: the card up on a tick, its buttons, its picture drawn and moving, Skip next, the Path tab, a job started after the hold taking it down, Path pop-ups Off, Animations Off a still frame."
+  },
+  {
+    "file": "supabase/test/stations.ts",
+    "title": "A campfire, a smelter, a kiln and an anvil set down as furniture is, and decaying off a settlement",
+    "shard": 5,
+    "why": "Set down from the furniture placement: a smelter's block turns with its facing on both sides and stands where the browser anchored it; a campfire, a kiln and an anvil keep the way they face; refused where anything stands, a smelter off a settlement of yours, in the browser's words. Off a settlement a station takes its item's damage an hour (a campfire its shafts'), the same number on both sides, charged by the world's round and gone at a hundred; on a settlement none; picked up, its damage goes into the pack."
   }
 ]

@@ -96,11 +96,12 @@ begin
     v_sx := least(subtiles() - anvil_subtiles(), greatest(0, coalesce((p_target->>'sx')::int, 0)));
     v_sy := least(subtiles() - anvil_subtiles(), greatest(0, coalesce((p_target->>'sy')::int, 0)));
     -- An anvil's metal rides in `sub`, and its rarity now rides beside it.
-    insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by, rare, enchant, dmg)
+    insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by, rare, enchant, dmg, facing)
     values (p_world, 'anvil', coalesce(it.extra, 'copper'),
             (p_target->>'x')::int, (p_target->>'y')::int, v_sx, v_sy,
             (p_target->>'x')::int + (v_sx + 1.0) / subtiles(),
-            (p_target->>'y')::int + (v_sy + 1.0) / subtiles(), it.ql, p_uid, it.rare, it.enchant, it.dmg)
+            (p_target->>'y')::int + (v_sy + 1.0) / subtiles(), it.ql, p_uid, it.rare, it.enchant, it.dmg,
+            case when p_target->>'facing' in ('n', 'e', 's', 'w') then p_target->>'facing' else 's' end)
     returning * into p;
     delete from item where id = it.id;
     perform tell(p_world, p_uid, 'Set down: ' || lower(anvil_name(p)) || '.', 'event');
@@ -114,7 +115,7 @@ begin
   if p_action = 'pick_up_anvil' then
     v_made := give(p_world, p_uid, 'anvil', 1, p.ql, p.sub, p.rare);
     -- Its enchantment and its wear come up with it (`enchanting.ts`).
-    update item set enchant = p.enchant, dmg = p.dmg where id = v_made;
+    update item set enchant = p.enchant, dmg = station_dmg(p) where id = v_made;
     perform tell(p_world, p_uid, 'Picked up: ' || lower(anvil_name(p)) || '.', 'event');
     delete from placed where id = p.id;
     perform land_announce(p_world, p.x, p.y);

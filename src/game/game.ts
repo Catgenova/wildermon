@@ -32,7 +32,7 @@ import { UNDONE_PLANS, type PlanAnswer } from './planarea';
 import { CRATE_DEFS, crateCentre, crateName, crateCapacity, crateShut, crateUnits, STORE_REACH, SUBTILES, subtileOf, type CrateKind, type PlacedCrate } from './crates';
 import { anvilAnchor, anvilCentre, anvilCovers, anvilName, ANVIL_SUBTILES, type PlacedAnvil } from './anvil';
 import { fireAnchor, fireCentre, fireCovers, FIRE_SUBTILES, type PlacedCampfire } from './campfire';
-import { furnaceMadeSaid, smelterAnchor, smelterCentre, smelterCovers, smelterName, SMELTER_H, SMELTER_PLUME, SMELTER_PLUME_WORKING, SMELTER_STACK_BACK, SMELTER_STACK_UP, SMELTER_W, type PlacedSmelter, type Plume } from './smelter';
+import { backOf, furnaceMadeSaid, smelterAnchor, smelterCentre, smelterCovers, smelterName, smelterSize, SMELTER_PLUME, SMELTER_PLUME_WORKING, SMELTER_STACK_BACK, SMELTER_STACK_UP, type PlacedSmelter, type Plume } from './smelter';
 import { kilnAnchor, kilnCentre, kilnCovers, kilnName, KILN_GLOW, KILN_GLOW_FIRING, KILN_PLUME, KILN_PLUME_FIRING, KILN_SUBTILES, KILN_VENT_BACK, KILN_VENT_UP, type PlacedKiln } from './kiln';
 import { WELL_TRICKLE, WELL_TRICKLE_AT, WELL_TRICKLE_QL, ACROSS_OF, DEED_PLACE, FURNITURE, ONE_ALTAR, deckSpot, isPlanter, furnitureAnchor, furnitureCapacity, furnitureCentre, furnitureCovers, furnitureDef, furnitureHeft, furnitureHolds, furnitureKg, furnitureRefuses, furnitureRoom, furnitureUnits, hiveRoom, POND_EVERY, rackDeck, rackSpots, teamOf, vehicleOf, type LiquidKind, type PlacedFurniture, furnitureName, facingOf, LIQUID_NAME, isBoat, furnitureFootprint, holdsLiquid, WATER_AT_HAND, STATION_REACH, type BoatDef, pieceShut } from './furniture';
 import { hiveTakes } from './bees';
@@ -4098,12 +4098,14 @@ export class Game {
     for (const k of this.kilns.values()) {
       if (!k.lit || !near(k.x, k.y)) continue;
       const [cx, cy] = kilnCentre(k);
-      out.push({ x: cx, y: cy - KILN_VENT_BACK, heat: 0.85, lift: KILN_VENT_UP, plume: k.jobs.length ? KILN_PLUME_FIRING : KILN_PLUME });
+      const [bx, by] = backOf(k.facing);
+      out.push({ x: cx + bx * KILN_VENT_BACK, y: cy + by * KILN_VENT_BACK, heat: 0.85, lift: KILN_VENT_UP, plume: k.jobs.length ? KILN_PLUME_FIRING : KILN_PLUME });
     }
     for (const sm of this.smelters.values()) {
       if (!sm.lit || !near(sm.x, sm.y)) continue;
       const [cx, cy] = smelterCentre(sm);
-      out.push({ x: cx, y: cy - SMELTER_STACK_BACK, heat: 1, lift: SMELTER_STACK_UP, plume: sm.jobs.length ? SMELTER_PLUME_WORKING : SMELTER_PLUME });
+      const [bx, by] = backOf(sm.facing);
+      out.push({ x: cx + bx * SMELTER_STACK_BACK, y: cy + by * SMELTER_STACK_BACK, heat: 1, lift: SMELTER_STACK_UP, plume: sm.jobs.length ? SMELTER_PLUME_WORKING : SMELTER_PLUME });
     }
     return out;
   }
@@ -7777,9 +7779,9 @@ export class Game {
     return undefined;
   }
 
-  addCampfire(x: number, y: number, sx: number, sy: number, fuel = 0, lit = false): PlacedCampfire {
+  addCampfire(x: number, y: number, sx: number, sy: number, fuel = 0, lit = false, facing: Side = 's'): PlacedCampfire {
     const [ax, ay] = fireAnchor(sx, sy);
-    const fire: PlacedCampfire = { id: this.nextFireId++, x, y, sx: ax, sy: ay, fuel, lit };
+    const fire: PlacedCampfire = { id: this.nextFireId++, x, y, sx: ax, sy: ay, fuel, lit, facing };
     this.campfires.set(fire.id, fire);
     this.placed.campfires.add(fire);
     this.events.emit('crate');
@@ -7810,12 +7812,13 @@ export class Game {
     if (this.world.slope(x, y) > steepest) return `Too steep: slope over ${metres(steepest)} m.`;
     if (this.isToken(x, y)) return 'Not on the totem.';
     if (this.buildings.buildingAt(x, y)) return 'Not inside a building.';
+    // Whatever stands there, as for any piece set down (the island's `piece_block_taken`).
     for (let dy = 0; dy < FIRE_SUBTILES; dy++) {
       for (let dx = 0; dx < FIRE_SUBTILES; dx++) {
-        if (this.crateAt(x, y, ax + dx, ay + dy)) return 'A crate is in the way.';
-        if (this.campfireAt(x, y, ax + dx, ay + dy)) return 'Already a fire there.';
+        if (this.occupiedSubtile(x, y, ax + dx, ay + dy)) return 'Something is already standing there.';
       }
     }
+    if (this.columnInBlock(x, y, ax, ay, FIRE_SUBTILES, FIRE_SUBTILES)) return 'Something is already standing there.';
     return null;
   }
 
@@ -9061,17 +9064,19 @@ export class Game {
       // Down in a cellar: only furniture goes down there, and says so.
       // Down in a cellar, or a storey up: a wagon driven up a wide staircase (`driveStorey`).
       const down = (r.level ?? 0) < 0 ? { level: CELLAR_LEVEL } : (r.level ?? 0) > 0 ? { level: r.level as number } : {};
+      // Which way a station was set down (`stations.ts`): south for one set down before it could be turned.
+      const facing = (r.facing ?? 's') as Side;
       if (r.kind === 'campfire' || r.kind === 'fire') {
-        built.campfires.set(r.id, { ...at, fuel: r.fuel ?? 0, lit: !!r.lit, ash: r.ash ?? 0, ...(r.infuse ? { infuse: r.infuse } : {}) });
+        built.campfires.set(r.id, { ...at, facing, ql: r.ql ?? 20, ...(r.dmg ? { dmg: r.dmg } : {}), fuel: r.fuel ?? 0, lit: !!r.lit, ash: r.ash ?? 0, ...(r.infuse ? { infuse: r.infuse } : {}) });
       } else if (r.kind === 'smelter') {
         built.smelters.set(r.id, {
-          ...at, ...kept, ql: r.ql ?? 20, rare: rarityStep(r.rare), fuel: r.fuel ?? 0, lit: !!r.lit, ash: r.ash ?? 0,
+          ...at, ...kept, facing, ql: r.ql ?? 20, rare: rarityStep(r.rare), fuel: r.fuel ?? 0, lit: !!r.lit, ash: r.ash ?? 0,
           jobs: furnaceJobs(r.state?.jobs),
           output: furnaceOutput(r.id, r.state?.output),
         });
       } else if (r.kind === 'kiln') {
         built.kilns.set(r.id, {
-          ...at, ...kept, ql: r.ql ?? 20, rare: rarityStep(r.rare), fuel: r.fuel ?? 0, lit: !!r.lit, ash: r.ash ?? 0,
+          ...at, ...kept, facing, ql: r.ql ?? 20, rare: rarityStep(r.rare), fuel: r.fuel ?? 0, lit: !!r.lit, ash: r.ash ?? 0,
           jobs: furnaceJobs(r.state?.jobs),
           output: furnaceOutput(r.id, r.state?.output),
         });
@@ -9081,7 +9086,7 @@ export class Game {
         // `anvil_ql` read it back from there; `material` is never written for
         // one. Reported as "made a copper anvil and placed down an iron anvil":
         // this read `material`, found nothing, and called every anvil iron.
-        built.anvils.set(r.id, { ...at, ...kept, ql: r.ql ?? 20, metal: r.sub ?? 'copper', rare: rarityStep(r.rare) });
+        built.anvils.set(r.id, { ...at, ...kept, facing, ql: r.ql ?? 20, metal: r.sub ?? 'copper', rare: rarityStep(r.rare) });
       } else if (r.kind === 'post') {
         const p: PlacedPost = { ...at, ql: r.ql ?? 20, dmg: r.dmg ?? 0, worker: null, name: r.name ?? undefined, material: r.material ?? undefined };
         built.posts.set(r.id, p);
@@ -9622,9 +9627,9 @@ export class Game {
     return p.tiles.has(y * this.world.w + x);
   }
 
-  addSmelter(x: number, y: number, sx: number, sy: number, ql: number): PlacedSmelter {
-    const [ax, ay] = smelterAnchor(sx, sy);
-    const s: PlacedSmelter = { id: this.nextSmelterId++, x, y, sx: ax, sy: ay, ql, fuel: 0, lit: false, jobs: [], output: [] };
+  addSmelter(x: number, y: number, sx: number, sy: number, ql: number, facing: Side = 's'): PlacedSmelter {
+    const [ax, ay] = smelterAnchor(sx, sy, facing);
+    const s: PlacedSmelter = { id: this.nextSmelterId++, x, y, sx: ax, sy: ay, facing, ql, fuel: 0, lit: false, jobs: [], output: [] };
     this.smelters.set(s.id, s);
     this.placed.smelters.add(s);
     this.events.emit('smelter');
@@ -9643,26 +9648,27 @@ export class Game {
   }
 
   /** Why a smelter cannot stand on this block of subtiles, or null. */
-  smelterPlaceReason(x: number, y: number, sx: number, sy: number): string | null {
-    const [ax, ay] = smelterAnchor(sx, sy);
+  smelterPlaceReason(x: number, y: number, sx: number, sy: number, facing: Side = 's'): string | null {
+    const [ax, ay] = smelterAnchor(sx, sy, facing);
+    const [w, h] = smelterSize(facing);
     const deck = this.deckFooting(x, y);
     if (deck === false || (deck === null && (!this.world.isPassable(x, y) || this.world.hasWater(x, y)))) return 'Smelter needs dry, solid ground.';
     const steepest = 12;
     if (deck === null && this.world.slope(x, y) > steepest) return `Too uneven: slope over ${metres(steepest)} m.`;
     if (this.isToken(x, y)) return 'Not on the totem.';
-    for (let dy = 0; dy < SMELTER_H; dy++) {
-      for (let dx = 0; dx < SMELTER_W; dx++) {
+    for (let dy = 0; dy < h; dy++) {
+      for (let dx = 0; dx < w; dx++) {
         if (this.occupiedSubtile(x, y, ax + dx, ay + dy)) return 'Something is already standing there.';
       }
     }
     // Nor in the corner a column stands in (`columnInBlock`).
-    if (this.columnInBlock(x, y, ax, ay, SMELTER_W, SMELTER_H)) return 'Something is already standing there.';
+    if (this.columnInBlock(x, y, ax, ay, w, h)) return 'Something is already standing there.';
     return null;
   }
 
-  addKiln(x: number, y: number, sx: number, sy: number, ql: number): PlacedKiln {
+  addKiln(x: number, y: number, sx: number, sy: number, ql: number, facing: Side = 's'): PlacedKiln {
     const [ax, ay] = kilnAnchor(sx, sy);
-    const k: PlacedKiln = { id: this.nextKilnId++, x, y, sx: ax, sy: ay, ql, fuel: 0, lit: false, jobs: [], output: [] };
+    const k: PlacedKiln = { id: this.nextKilnId++, x, y, sx: ax, sy: ay, facing, ql, fuel: 0, lit: false, jobs: [], output: [] };
     this.kilns.set(k.id, k);
     this.placed.kilns.add(k);
     this.events.emit('smelter');
@@ -10064,9 +10070,9 @@ export class Game {
     return item;
   }
 
-  addAnvil(x: number, y: number, sx: number, sy: number, metal: string, ql: number): PlacedAnvil {
+  addAnvil(x: number, y: number, sx: number, sy: number, metal: string, ql: number, facing: Side = 's'): PlacedAnvil {
     const [ax, ay] = anvilAnchor(sx, sy);
-    const a: PlacedAnvil = { id: this.nextAnvilId++, x, y, sx: ax, sy: ay, metal, ql };
+    const a: PlacedAnvil = { id: this.nextAnvilId++, x, y, sx: ax, sy: ay, facing, metal, ql };
     this.anvils.set(a.id, a);
     this.placed.anvils.add(a);
     this.events.emit('smelter');
@@ -10096,6 +10102,8 @@ export class Game {
         if (this.occupiedSubtile(x, y, ax + dx, ay + dy)) return 'Something is already standing there.';
       }
     }
+    // Nor in the corner a column stands in (the island's `block_taken`).
+    if (this.columnInBlock(x, y, ax, ay, ANVIL_SUBTILES, ANVIL_SUBTILES)) return 'Something is already standing there.';
     return null;
   }
 
