@@ -414,6 +414,14 @@ const FAIL_EXAMPLE = failFactorSaid(failFactor({ ...FAIL_EXAMPLE_AT, difficulty:
 const SCRUBS_LATER = new Set(['scrub_wall_paint', 'scrub_floor_paint']);
 
 export const NEWS: News[] = [
+  // The job in hand's × in the queue list (`QueueView`, `Game.skipAction`, `rpc_skip`).
+  {
+    n: 636,
+    day: '2026-11-15',
+    lines: () => [
+      'New: Action queue: × on the running action: stops it and its remaining repeats, starts the next in queue. Rest of the queue kept. Queue empty: stop only.',
+    ],
+  },
   // A citizen's rank off the tile hover (`ui.ts`).
   {
     n: 635,
